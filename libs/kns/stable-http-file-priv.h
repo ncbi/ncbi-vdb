@@ -36,10 +36,12 @@ typedef struct KStableHttpFile KStableHttpFile;
 /*--------------------------------------------------------------------------
  * KStableHttpFile
  */
+
+/* retrier states */
 typedef enum {
-    eRSJustRetry,
-    eRSReopen,
-    eRSIncTO,
+    eRSJustRetry, /* just retry read */
+    eRSReopen,    /* reopen the underlying file */
+    eRSIncTO,     /* increase sleep between calls to retry */
     eRSMax,
 } ERetryState;
 
@@ -47,6 +49,9 @@ struct KStableHttpFile
 {
     KFile dad;
 
+    const struct KFile * file; /* underlying file */
+
+    /* arguments to reopen the underlying file */
     const struct KNSManager * mgr;
     struct KStream * conn;
     ver_t vers;
@@ -56,12 +61,12 @@ struct KStableHttpFile
     char * url;
     KDataBuffer buf;
 
-    const struct KFile * file;
-    bool live;
+    bool live; /* there was a successfull read on the file */
 
-    bool _failed;
-    KTime_t _tFailed;
-    ERetryState _state;
+    /* retrier properties */
+    bool _failed;       /* KStableHttpFile is in failed state */
+    KTime_t _tFailed;   /* timestamp when retry loop started */
+    ERetryState _state; /* retrier state */
     uint32_t _sleepTO;
 };
 

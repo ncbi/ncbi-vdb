@@ -42,6 +42,10 @@
 
 #include "stable-http-file-priv.h" /* KStableHttpFile */
 
+
+/*********************************** RETRIER **********************************/
+
+/* the last call to the file was successful */
 static
 void RetrierReset(const KStableHttpFile * cself, const char * func)
 {
@@ -60,7 +64,10 @@ void RetrierReset(const KStableHttpFile * cself, const char * func)
     }
 }
 
-static rc_t RetrierReopenRemote(KStableHttpFile * self) {
+/* reopen the underlying file */
+static
+rc_t RetrierReopenRemote(KStableHttpFile * self)
+{
     rc_t rc = 0;
 
     uint32_t timeout = 1;
@@ -82,7 +89,10 @@ static rc_t RetrierReopenRemote(KStableHttpFile * self) {
     return rc;
 }
 
-static bool RetrierIncSleepTO(KStableHttpFile * self) {
+/* increase time before next call to the file */
+static
+bool RetrierIncSleepTO(KStableHttpFile * self)
+{
     if (self->_sleepTO == 0)
         self->_sleepTO = 1;
     else
@@ -97,8 +107,10 @@ static bool RetrierIncSleepTO(KStableHttpFile * self) {
         return true;
 }
 
-static rc_t RetrierAgain
-(const KStableHttpFile * cself, rc_t rc, const char * func)
+/* the last call to the file was failed: prepare to retry */
+static
+rc_t RetrierAgain(const KStableHttpFile * cself,
+    rc_t rc, const char * func)
 {
     KStableHttpFile * self = (KStableHttpFile *)cself;
 
@@ -210,8 +222,11 @@ static rc_t RetrierAgain
     return rc;
 }
 
+
+/************************ wrapper KFile implementation ************************/
+
 static
-rc_t CC KHttpFileDestroy (KStableHttpFile *self)
+rc_t CC KHttpFileDestroy(KStableHttpFile *self)
 {
     rc_t rc = 0, r2 = 0;
 
@@ -233,20 +248,21 @@ rc_t CC KHttpFileDestroy (KStableHttpFile *self)
 
     memset(self, 0, sizeof *self);
 
-    free ( self );
+    free(self);
 
     return rc;
 }
 
-static struct KSysFile* CC KHttpFileGetSysFile
-( const KStableHttpFile *self, uint64_t *offset )
+static
+struct KSysFile* CC KHttpFileGetSysFile(const KStableHttpFile *self,
+    uint64_t *offset)
 {
     *offset = 0;
     return NULL;
 }
 
 static
-rc_t CC KHttpFileRandomAccess ( const KStableHttpFile *self )
+rc_t CC KHttpFileRandomAccess(const KStableHttpFile *self)
 {
     return KFileRandomAccess(self->file);
 }
@@ -254,21 +270,20 @@ rc_t CC KHttpFileRandomAccess ( const KStableHttpFile *self )
 /* KHttpFile must have a file size to be created
    impossible for this funciton to fail */
 static
-rc_t CC KHttpFileSize ( const KStableHttpFile *self, uint64_t *size )
+rc_t CC KHttpFileSize(const KStableHttpFile *self, uint64_t *size)
 {
     return KFileSize(self->file, size);
 }
 
 static
-rc_t CC KHttpFileSetSize (KStableHttpFile *self, uint64_t size )
+rc_t CC KHttpFileSetSize(KStableHttpFile *self, uint64_t size)
 {
     return RC(rcNS, rcFile, rcUpdating, rcFile, rcReadonly);
 }
 
 static
-rc_t CC KHttpFileTimedRead ( const KStableHttpFile *self,
-    uint64_t pos, void *buffer, size_t bsize,
-    size_t *num_read, struct timeout_t *tm )
+rc_t CC KHttpFileTimedRead(const KStableHttpFile *self, uint64_t pos,
+    void *buffer, size_t bsize, size_t *num_read, struct timeout_t *tm)
 {
     rc_t(CC * quitting) (void) = NULL; /* TODO */
 
@@ -292,8 +307,8 @@ rc_t CC KHttpFileTimedRead ( const KStableHttpFile *self,
 }
 
 static
-rc_t CC KHttpFileRead ( const KStableHttpFile *self, uint64_t pos,
-     void *buffer, size_t bsize, size_t *num_read )
+rc_t CC KHttpFileRead(const KStableHttpFile *self, uint64_t pos,
+    void *buffer, size_t bsize, size_t *num_read)
 {
     while (true) {
         rc_t rc = KFileRead(self->file, pos, buffer, bsize, num_read);
@@ -310,22 +325,22 @@ rc_t CC KHttpFileRead ( const KStableHttpFile *self, uint64_t pos,
 }
 
 static
-rc_t CC KHttpFileWrite (KStableHttpFile *self, uint64_t pos,
-    const void *buffer, size_t size, size_t *num_writ )
+rc_t CC KHttpFileWrite(KStableHttpFile *self, uint64_t pos,
+    const void *buffer, size_t size, size_t *num_writ)
 {
     return RC(rcNS, rcFile, rcUpdating, rcInterface, rcUnsupported);
 }
 
 static
-rc_t CC KHttpFileTimedWrite (KStableHttpFile *self, uint64_t pos,
+rc_t CC KHttpFileTimedWrite(KStableHttpFile *self, uint64_t pos,
     const void *buffer, size_t size, size_t *num_writ,
-    struct timeout_t *tm )
+    struct timeout_t *tm)
 {
     return RC(rcNS, rcFile, rcUpdating, rcInterface, rcUnsupported);
 }
 
 static
-uint32_t CC KHttpFileGetType ( const KStableHttpFile *self )
+uint32_t CC KHttpFileGetType(const KStableHttpFile *self)
 {
     return KFileType(self->file);
 }
@@ -333,9 +348,9 @@ uint32_t CC KHttpFileGetType ( const KStableHttpFile *self )
 #if SUPPORT_CHUNKED_READ
 
 static
-rc_t CC KHttpFileTimedReadChunked ( const KStableHttpFile * self, uint64_t pos,
+rc_t CC KHttpFileTimedReadChunked(const KStableHttpFile * self, uint64_t pos,
     KChunkReader * chunks, size_t bytes, size_t * num_read,
-    struct timeout_t * tm )
+    struct timeout_t * tm)
 {
     while (true) {
         rc_t rc =
@@ -353,8 +368,8 @@ rc_t CC KHttpFileTimedReadChunked ( const KStableHttpFile * self, uint64_t pos,
 }
 
 static
-rc_t CC KHttpFileReadChunked ( const KStableHttpFile * self, uint64_t pos,
-    KChunkReader * chunks, size_t bytes, size_t * num_read )
+rc_t CC KHttpFileReadChunked(const KStableHttpFile * self, uint64_t pos,
+    KChunkReader * chunks, size_t bytes, size_t * num_read)
 {
     while (true) {
         rc_t rc = KFileReadChunked(self->file, pos, chunks, bytes, num_read);
@@ -397,8 +412,9 @@ static KFile_vt_v1 vtKHttpFile =
 #endif
 };
 
-static rc_t KHttpFileMake
-(KStableHttpFile ** self, const char * url, va_list args)
+static
+rc_t KHttpFileMake(KStableHttpFile ** self,
+    const char * url, va_list args)
 {
     rc_t rc;
     KStableHttpFile * f = calloc(1, sizeof *f);
@@ -428,7 +444,11 @@ static rc_t KHttpFileMake
     return rc;
 }
 
-static rc_t KNSManagerVMakeHttpFileInt(const KNSManager *self,
+
+/********************************* constructor ********************************/
+
+static
+rc_t KNSManagerVMakeHttpFileInt(const KNSManager *self,
     const KFile **file, struct KStream *conn, ver_t vers, bool reliable,
     bool need_env_token, bool payRequired, const char *url,
     va_list args)
@@ -484,7 +504,9 @@ static rc_t KNSManagerVMakeHttpFileInt(const KNSManager *self,
     return rc;
 }
 
+
 /******************************************************************************/
+
 
 LIB_EXPORT rc_t CC KNSManagerMakeHttpFile(const KNSManager *self,
     const KFile **file, struct KStream *conn, ver_t vers,
@@ -506,13 +528,13 @@ LIB_EXPORT rc_t CC KNSManagerMakeReliableHttpFile(const KNSManager *self,
     rc_t rc = 0;
     va_list args;
     va_start(args, url);
-    rc = KNSManagerVMakeHttpFileInt( self, file, conn,
+    rc = KNSManagerVMakeHttpFileInt(self, file, conn,
         vers, true, need_env_token, payRequired, url, args);
     va_end(args);
     return rc;
 }
 
-LIB_EXPORT bool CC KFileIsKHttpFile( const struct KFile * self )
+LIB_EXPORT bool CC KFileIsKHttpFile(const struct KFile * self)
 {
     return self != NULL && &self->vt->v1 == &vtKHttpFile;
 }
