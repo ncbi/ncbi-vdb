@@ -232,10 +232,14 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *self,
     const char *path, va_list args, const struct VPath *vpath )
 {
     rc_t rc;
-    char aTblpath[4096];
+    char aTblpath[4096] = "";
     char * tblpath = aTblpath;
-    int z = ( args == NULL ) ?
-        snprintf ( aTblpath, sizeof aTblpath, "%s", path ):
+    int z = 0;
+    if (args == NULL) {
+        if (path != NULL)
+            z = snprintf(aTblpath, sizeof aTblpath, "%s", path);
+    }
+    else
         vsnprintf ( aTblpath, sizeof aTblpath, path, args );
     if ( z < 0 || ( size_t ) z >= sizeof aTblpath )
         rc = RC ( rcDB, rcMgr, rcOpening, rcPath, rcExcessive );
@@ -244,15 +248,17 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *self,
         KTable *tbl;
         const KDirectory *dir;
         bool prerelease = false;
+        const VPath *path2 = NULL;
 
         {
+            rc_t rc = 0;
             VPath *path = NULL;
-            rc_t rc = VFSManagerMakePath(self->vfsmgr, & path, "%s", aTblpath);
+            if (vpath == NULL)
+                rc = VFSManagerMakePath(self->vfsmgr, &path, "%s", aTblpath);
             if (rc == 0) {
-                const VPath *path2 = NULL;
-                KDBManagerCheckAd(self, path, &path2);
+                const String * str = NULL;
+                KDBManagerCheckAd(self, path != NULL ? path : vpath, &path2);
                 if (path2 != NULL) {
-                    const String * str = NULL;
                     rc = VPathMakeString(path2, &str);
                     if (rc == 0) {
                         assert(str);
@@ -262,24 +268,53 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *self,
                                 "%S", str);
                         StringWhack(str);
                     }
-                    VPathRelease(path2);
+                }
+                else {
+                    rc = VPathMakeString(path != NULL ? path : vpath, &str);
+                    if (rc == 0) {
+                        assert(str);
+                        tblpath = calloc(1, str->size + 1);
+                        if (tblpath != NULL)
+                            string_printf(tblpath, str->size + 1, NULL,
+                                "%S", str);
+                        StringWhack(str);
+                    }
                 }
                 VPathRelease(path);
             }
         }
 
         rc = KDBOpenPathTypeRead ( self, wd, tblpath, &dir, kptTable, NULL,
-            try_srapath, vpath );
+            try_srapath, path2 != NULL ? path2 : vpath );
         if ( rc != 0 )
         {
             prerelease = true;
-            rc = KDBOpenPathTypeRead ( self, wd, tblpath, &dir, kptPrereleaseTbl, NULL,
-                try_srapath, vpath );
+            rc = KDBOpenPathTypeRead ( self, wd, tblpath, &dir,
+                kptPrereleaseTbl, NULL,
+                try_srapath, path2 != NULL ? path2 : vpath);
         }
 
-        if ( rc == 0 )
+        if (rc == 0)
         {
-            rc = KTableMake ( & tbl, dir, tblpath );
+            String str;
+            const char * p = tblpath;
+            if (p == NULL) {
+                if (path2 != NULL) {
+                    rc_t rc = VPathGetPath(vpath, &str);
+                    if (rc == 0)
+                        p = str.addr;
+                }
+                else if (vpath != NULL) {
+                    rc_t rc = VPathGetPath(vpath, &str);
+                    if (rc == 0)
+                        p = str.addr;
+                }
+            }
+
+            VPathRelease(path2);
+            path2 = NULL;
+
+            rc = KTableMake ( & tbl, dir, p );
             if ( rc == 0 )
             {
                 tbl -> mgr = KDBManagerAttach ( self );
