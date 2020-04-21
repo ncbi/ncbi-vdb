@@ -75,33 +75,41 @@ static
 rc_t CC color_from_dna_drvr ( void *self, const VXformInfo *info, int64_t row_id,
     VRowResult *rslt, uint32_t argc, const VRowData argv [] )
 {
+    enum COLUMN_ID {
+        COL_DNA_BIN,
+        COL_READ_START,
+        COL_READ_LEN,
+        COL_CSKEY,
+        COL_COLORMATRIX
+    };
+    
     rc_t rc;
     uint8_t *csbin;
 
     uint32_t i;
-    uint64_t row_len = argv [ 0 ] . u . data . elem_count;
-    uint64_t out_len, nreads = argv [ 1 ] . u . data . elem_count;
+    uint64_t row_len = argv [ COL_DNA_BIN ] . u . data . elem_count;
+    uint64_t out_len, nreads = argv [ COL_READ_START ] . u . data . elem_count;
 
-    const uint8_t *dnabin = argv [ 0 ] . u . data . base;
-    const uint32_t *read_start = argv [ 1 ] . u . data . base;
-    const uint32_t *read_len = argv [ 2 ] . u . data . base;
-    const uint8_t *cskey = argv [ 3 ] . u . data . base;
-    const uint8_t *cmatrx = argv [ 4 ] . u . data . base;
+    const uint8_t *dnabin = argv [ COL_DNA_BIN ] . u . data . base;
+    const uint32_t *read_start = argv [ COL_READ_START ] . u . data . base;
+    const uint32_t *read_len = argv [ COL_READ_LEN ] . u . data . base;
+    const uint8_t *cskey = argv [ COL_CSKEY ] . u . data . base;
+    const uint8_t *cmatrx = argv [ COL_COLORMATRIX ] . u . data . base;
     
-    assert(argv[0].u.data.elem_bits == 8);
-    assert(argv[1].u.data.elem_bits == 32);
-    assert(argv[2].u.data.elem_bits == 32);
-    assert(argv[3].u.data.elem_bits == 8);
-    assert(argv[4].u.data.elem_bits == 8);
+    assert(argv[COL_DNA_BIN].u.data.elem_bits == 8);
+    assert(argv[COL_READ_START].u.data.elem_bits == 32);
+    assert(argv[COL_READ_LEN].u.data.elem_bits == 32);
+    assert(argv[COL_CSKEY].u.data.elem_bits == 8);
+    assert(argv[COL_COLORMATRIX].u.data.elem_bits == 8);
 
-    assert(argv[2].u.data.elem_count == nreads);
-    assert(argv[3].u.data.elem_count == nreads);
+    assert(argv[COL_READ_LEN].u.data.elem_count == nreads);
+    assert(argv[COL_CSKEY].u.data.elem_count == nreads);
 
-    dnabin += argv [ 0 ] . u . data . first_elem;
-    read_start += argv [ 1 ] . u . data . first_elem;
-    read_len += argv [ 2 ] . u . data . first_elem;
-    cskey += argv [ 3 ] . u . data . first_elem;
-    cmatrx += argv [ 4 ] . u . data . first_elem;
+    dnabin += argv [ COL_DNA_BIN ] . u . data . first_elem;
+    read_start += argv [ COL_READ_START ] . u . data . first_elem;
+    read_len += argv [ COL_READ_LEN ] . u . data . first_elem;
+    cskey += argv [ COL_CSKEY ] . u . data . first_elem;
+    cmatrx += argv [ COL_COLORMATRIX ] . u . data . first_elem;
 
     /* safety check that read structure is within bounds */
     for ( i = 0, out_len = 0; i < nreads; ++i )
