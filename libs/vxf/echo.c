@@ -97,9 +97,18 @@ rc_t CC echo_func_1(
     assert(argv[0].u.data.elem_count >> 32 == 0);
     rc = grow_and_fill(self, (uint32_t)argv[0].u.data.elem_count);
     if (rc == 0) {
+#if 0
+        /* this doesn't seem to work any more; re-blob-ing broke it */
         KDataBufferWhack(rslt->data);
         rslt->elem_count = argv[0].u.data.elem_count;
         rc = KDataBufferSub(&self->val, rslt->data, 0, rslt->elem_count);
+#else
+        rc = KDataBufferResize(rslt->data, argv[0].u.data.elem_count);
+        if (rc == 0) {
+            rslt->elem_count = argv[0].u.data.elem_count;
+            bitcpy(rslt->data->base, 0, self->val.base, 0, rslt->elem_count * self->csize);
+        }
+#endif
     }
     return rc;
 }
