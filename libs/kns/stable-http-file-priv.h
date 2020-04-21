@@ -33,6 +33,8 @@ typedef struct KStableHttpFile KStableHttpFile;
 
 #include <klib/data-buffer.h>
 
+#include <kns/manager.h> /* quitting_t */
+
 /*--------------------------------------------------------------------------
  * KStableHttpFile: retry wrapper on KHttpFile
  */
@@ -68,6 +70,8 @@ struct KStableHttpFile
     KTime_t _tFailed;   /* timestamp when retry loop started */
     ERetryState _state; /* retrier state */
     uint32_t _sleepTO;
+
+    quitting_t quitting;
 };
 
 #endif

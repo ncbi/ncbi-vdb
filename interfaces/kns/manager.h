@@ -111,6 +111,10 @@ KNS_EXTERN rc_t CC KNSManagerSetClientIP  ( KNSManager *self, const char * clien
 KNS_EXTERN rc_t CC KNSManagerSetSessionID ( KNSManager *self, const char * sessionid );
 KNS_EXTERN rc_t CC KNSManagerSetPageHitID ( KNSManager *self, const char * pagehitid );
 
+typedef rc_t(CC *quitting_t)(void);
+KNS_EXTERN rc_t CC KNSManagerSetQuitting ( KNSManager *self,
+    quitting_t quitting );
+KNS_EXTERN quitting_t CC KNSManagerGetQuitting ( const KNSManager *self );
 
 #ifdef __cplusplus
 }

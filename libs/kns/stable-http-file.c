@@ -27,7 +27,6 @@
 
 #include <kns/extern.h>
 
-#include <kns/manager.h> /* KNSManagerRelease */
 #include <kns/stream.h> /* KStreamRelease */
 
 #include <klib/debug.h> /* KStsLevel */
@@ -291,7 +290,7 @@ static
 rc_t CC KHttpFileTimedRead(const KStableHttpFile *self, uint64_t pos,
     void *buffer, size_t bsize, size_t *num_read, struct timeout_t *tm)
 {
-    rc_t(CC * quitting) (void) = NULL; /* TODO */
+    quitting_t quitting = self->quitting;
 
     while (true) {
         rc_t rc = KFileTimedRead(self->file, pos, buffer, bsize, num_read, tm);
@@ -300,14 +299,14 @@ rc_t CC KHttpFileTimedRead(const KStableHttpFile *self, uint64_t pos,
             return rc;
         }
         else {
+            if (quitting != NULL) {
+                rc_t r2 = (*quitting)();
+                if (r2 != 0)
+                    return rc;
+            }
             rc = RetrierAgain(self, rc, __func__);
             if (rc != 0)
                 return rc;
-            if (quitting != NULL) {
-                rc = quitting();
-                if (rc != 0)
-                    return rc;
-            }
         }
     }
 }
@@ -316,6 +315,8 @@ static
 rc_t CC KHttpFileRead(const KStableHttpFile *self, uint64_t pos,
     void *buffer, size_t bsize, size_t *num_read)
 {
+    quitting_t quitting = self->quitting;
+
     while (true) {
         rc_t rc = KFileRead(self->file, pos, buffer, bsize, num_read);
         if (rc == 0) {
@@ -323,6 +324,11 @@ rc_t CC KHttpFileRead(const KStableHttpFile *self, uint64_t pos,
             return rc;
         }
         else {
+            if (quitting != NULL) {
+                rc_t r2 = (*quitting)();
+                if (r2 != 0)
+                    return rc;
+            }
             rc = RetrierAgain(self, rc, __func__);
             if (rc != 0)
                 return rc;
@@ -358,6 +364,8 @@ rc_t CC KHttpFileTimedReadChunked(const KStableHttpFile * self, uint64_t pos,
     KChunkReader * chunks, size_t bytes, size_t * num_read,
     struct timeout_t * tm)
 {
+    quitting_t quitting = self->quitting;
+
     while (true) {
         rc_t rc =
             KFileTimedReadChunked(self->file, pos, chunks, bytes, num_read, tm);
@@ -366,6 +374,11 @@ rc_t CC KHttpFileTimedReadChunked(const KStableHttpFile * self, uint64_t pos,
             return rc;
         }
         else {
+            if (quitting != NULL) {
+                rc_t r2 = (*quitting)();
+                if (r2 != 0)
+                    return rc;
+            }
             rc = RetrierAgain(self, rc, __func__);
             if (rc != 0)
                 return rc;
@@ -377,6 +390,8 @@ static
 rc_t CC KHttpFileReadChunked(const KStableHttpFile * self, uint64_t pos,
     KChunkReader * chunks, size_t bytes, size_t * num_read)
 {
+    quitting_t quitting = self->quitting;
+
     while (true) {
         rc_t rc = KFileReadChunked(self->file, pos, chunks, bytes, num_read);
         if (rc == 0) {
@@ -384,6 +399,11 @@ rc_t CC KHttpFileReadChunked(const KStableHttpFile * self, uint64_t pos,
             return rc;
         }
         else {
+            if (quitting != NULL) {
+                rc_t r2 = (*quitting)();
+                if (r2 != 0)
+                    return rc;
+            }
             rc = RetrierAgain(self, rc, __func__);
             if (rc != 0)
                 return rc;
@@ -498,6 +518,8 @@ rc_t KNSManagerVMakeHttpFileInt(const KNSManager *self,
                             f->need_env_token = need_env_token;
                             f->payRequired = payRequired;
                             f->url = string_dup_measure(url, NULL);
+
+                            f->quitting = KNSManagerGetQuitting(self);
 
                             *file = &f->dad;
                         }

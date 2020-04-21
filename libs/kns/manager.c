@@ -89,6 +89,8 @@ static KDataBuffer kns_manager_pagehitid;
 static KDataBuffer kns_manager_ua_suffix;
 static KDataBuffer kns_manager_guid;
 
+quitting_t quitting;
+
 #if USE_SINGLETON
 static atomic_ptr_t kns_singleton;
 #endif
@@ -1213,4 +1215,18 @@ LIB_EXPORT rc_t CC KNSManagerSetPageHitID (
     if ( kns_manager_lock ) { KLockUnlock ( kns_manager_lock ); }
 
     return rc;
+}
+
+
+LIB_EXPORT
+rc_t CC KNSManagerSetQuitting(KNSManager *self, quitting_t aQuitting)
+{
+    quitting = aQuitting;
+    return 0;
+}
+
+LIB_EXPORT
+quitting_t CC KNSManagerGetQuitting(const KNSManager *self)
+{
+    return quitting;
 }
