@@ -121,24 +121,19 @@ rc_t RetrierAgain(const KStableHttpFile * cself,
 
     bool retry = true;
 
-    static bool INITED = false;
-    static KTime_t D_T = ~0;
-    static bool RETRY_FIRST = false;
+    KTime_t total = ~0;
+    bool retryFirst = false;
 
     assert(self && self->mgr);
 
-    if (!INITED) {
-        D_T = self->mgr->maxTotalWaitForReliableURLs_ms / 1000;
-        RETRY_FIRST = self->mgr->retryFirstRead;
+    total = self->mgr->maxTotalWaitForReliableURLs_ms / 1000;
+    retryFirst = self->mgr->retryFirstRead;
 
-        INITED = true;
-    }
-
-    if (D_T == 0)             /* don't retry when overall retry time == 0 */
+    if (total == 0)           /* don't retry when overall retry time == 0 */
         retry = false;
     else if (!self->live      /* don't retry when no READ calls succeed */
         && (!self->reliable   /* unless file is reliable */
-            || !RETRY_FIRST)) /* and retry was not disabled by env.var. */
+            || !retryFirst))  /* and retry was not disabled by env.var. */
     {
         retry = false;
     }
@@ -153,7 +148,7 @@ rc_t RetrierAgain(const KStableHttpFile * cself,
         case eRSIncTO:
             if (!RetrierIncSleepTO(self))
                 retry = false;
-            else if (D_T != ~0 && KTimeStamp() - self->_tFailed > D_T)
+            else if (total != ~0 && KTimeStamp() - self->_tFailed > total)
                 retry = false;
             break;
         default: assert(0); break;
@@ -272,8 +267,6 @@ rc_t CC KHttpFileRandomAccess(const KStableHttpFile *self)
     return KFileRandomAccess(self->file);
 }
 
-/* KHttpFile must have a file size to be created
-   impossible for this funciton to fail */
 static
 rc_t CC KHttpFileSize(const KStableHttpFile *self, uint64_t *size)
 {
