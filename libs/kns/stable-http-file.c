@@ -33,6 +33,7 @@
 #include <klib/log.h> /* PLOGERR */
 #include <klib/printf.h> /* KDataBufferVPrintf */
 #include <klib/rc.h> /* RC */
+#include <klib/status.h> /* KStsLevelGet */
 #include <klib/time.h> /* KSleep */
 
 #include <strtol.h> /* strtou64 */
