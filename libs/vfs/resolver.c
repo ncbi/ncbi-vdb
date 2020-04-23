@@ -26,6 +26,7 @@
 
 #include <vfs/extern.h>
 
+#include <kfg/kfg-priv.h> /* KRepositoryFromNgc */
 #include <kfg/ngc.h> /* KNgcObjGetTicket */
 
 #include <kfs/file.h>
@@ -2263,6 +2264,7 @@ struct VResolver
     /* if there is a working protected repository,
        store the download ticket here */
     const String *ticket;
+    bool ticketFromNgc;
 
     KRefcount refcount;
 
@@ -4201,7 +4203,11 @@ rc_t VResolverQueryAcc ( const VResolver * self, VRemoteProtocols protocols,
         bool has_fragment = false;
 
         /* REMOTE RESOLUTION */
-        if ( remote != NULL || ( self -> ticket != NULL && cache != NULL ) )
+        if ( remote != NULL ||
+            ( self -> ticket != NULL  &&
+              ! self -> ticketFromNgc        /* ignore ticket from protected  */
+                    /* repository from --ngc: it's resolved using public apps */
+              && cache != NULL ) ) 
         {
             /* will need to map if protected */
             const VPath ** mapped_ptr = ( self -> ticket != NULL && cache != NULL ) ?
@@ -6003,9 +6009,11 @@ static rc_t VResolverLoad(VResolver *self, const KRepository *protectedRepo,
         /* check to see what the current directory is */
         char buffer [ 256 ] = "";
         self->ticket = NULL;
-        if (protectedRepo != NULL)
+        if (protectedRepo != NULL) {
             self -> ticket = VResolverGetDownloadTicket ( self, protectedRepo,
                 buffer, sizeof buffer );
+            self -> ticketFromNgc = KRepositoryFromNgc ( protectedRepo );
+        }
         else if (ngc != NULL) {
             char b[512] = "";
             rc = KNgcObjGetTicket(ngc, b, sizeof b, NULL);
