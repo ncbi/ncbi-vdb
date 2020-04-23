@@ -70,6 +70,7 @@ struct KRepository
     KRefcount refcount;
     KRepCategory category;
     KRepSubCategory subcategory;
+    bool fromNgc; /* auto-generated from --ngc */
 };
 
 
@@ -1397,7 +1398,7 @@ static rc_t KRepositoryCurrentProtectedRepositoryForNgc(
             uint32_t count = VectorLength(&vc);
             for (i = 0; i < count; ++i) {
                 bool found = false;
-                const KRepository * r = (const void*)VectorGet(&vc, i);
+                KRepository * r = (void*)VectorGet(&vc, i);
                 if (r->subcategory == krepProtectedSubCategory) {
                     char lclName[512] = "";
                     size_t lNumWrit = 0;
@@ -1414,6 +1415,7 @@ static rc_t KRepositoryCurrentProtectedRepositoryForNgc(
                 if (found) {
                     rc = KRepositoryAddRef(r);
                     if (rc == 0) {
+                        r->fromNgc = true;
                         *self = r;
                         break;
                     }
@@ -2076,4 +2078,11 @@ bool CC KRepositoryMgrHasRemoteAccess(const KRepositoryMgr *self)
     }
 
     return has;
+}
+
+bool KRepositoryFromNgc(const struct KRepository * self) {
+    if (self == NULL)
+        return false;
+    else
+        return self->fromNgc;
 }
