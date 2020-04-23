@@ -490,8 +490,8 @@ LIB_EXPORT rc_t CC KDBManagerGetTableModDate ( const KDBManager *self,
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 && !rc) { rc = rc2; } obj = NULL; } while (false)
 
-void KDBManagerCheckAd(
-    const KDBManager *self, const VPath *aPath, const VPath **path)
+LIB_EXPORT void CC KDBManagerCheckAd(
+    const KDBManager *self, const VPath * inPath, const VPath ** outPath)
 {
     /* path = "/S/S.sra";
     or path = "/S/S_dbGaP-NNN.sra" */
@@ -504,7 +504,7 @@ void KDBManagerCheckAd(
 
     assert(self);
 
-    if (VPathGetPath(aPath, &spath) != 0)
+    if (VPathGetPath(inPath, &spath) != 0)
         return;
     if ((KDirectoryPathType(self->wd, spath.addr) & ~kptAlias) != kptDir)
         return;
@@ -522,7 +522,7 @@ void KDBManagerCheckAd(
             if ((KDirectoryPathType(self->wd, "%s/%s_dbGaP-%d.sra",
                 spath.addr, slash, projectId) & ~kptAlias) == kptFile)
             {
-                VFSManagerMakePath(self->vfsmgr, (VPath **)path,
+                VFSManagerMakePath(self->vfsmgr, (VPath **)outPath,
                     "%s/%s_dbGaP-%d.sra", spath.addr, slash, projectId);
                 found = true;
             }
@@ -532,7 +532,7 @@ void KDBManagerCheckAd(
         if ((KDirectoryPathType(self->wd, "%s/%s.sra", spath.addr, slash)
             & ~kptAlias) == kptFile)
         {
-            VFSManagerMakePath(self->vfsmgr, (VPath **)path,
+            VFSManagerMakePath(self->vfsmgr, (VPath **)outPath,
                 "%s/%s.sra", spath.addr, slash);
             found = true;
         }

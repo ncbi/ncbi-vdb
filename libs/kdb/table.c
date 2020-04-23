@@ -24,6 +24,8 @@
 *
 */
 
+#include <kdb/kdb-priv.h> /* KDBManagerCheckAd */
+
 #define TRACK_REFERENCES 0
 
 #define KONST const
