@@ -89,6 +89,57 @@ KNS_EXTERN rc_t CC KNSManagerSetConnectionTimeouts ( KNSManager *self,
     int32_t connectMillis, int32_t readMillis, int32_t writeMillis );
 
 
+/******************************************************************************/
+/**************** API to manage HTTP File read retry behavior *****************/
+/******************************************************************************/
+
+/* SetRetryFailedReads
+ *  manages retry layer on HttpFileRead
+ *
+ *  "retry" [ IN ] - true : turn on retry layer,
+ *                   false: don't create retry layer.
+ */
+KNS_EXTERN rc_t CC KNSManagerSetRetryFailedReads ( KNSManager *self,
+    bool retry );
+
+/* GetRetryFailedReads
+ *  returns whether or not retry layer on HttpFileRead is turned on
+ */
+KNS_EXTERN rc_t CC KNSManagerGetRetryFailedReads ( const KNSManager *self,
+    bool *retry );
+
+
+/* SetMaxReadRetryTime
+ *  sets maximum time in HttpFileRead retry loop
+ *
+ *  "millis" [ IN ] - when negative, infinite timeout
+ */
+KNS_EXTERN rc_t CC KNSManagerSetMaxReadRetryTime ( KNSManager *self,
+    int32_t millis );
+
+/* GetMaxReadRetryTime
+ *  returns maximum time in HttpFileRead retry loop
+ *
+ *  "millis" [ OUT ] - when negative, infinite timeout
+ */
+KNS_EXTERN rc_t CC KNSManagerGetMaxReadRetryTime ( const KNSManager *self,
+    int32_t *millis );
+
+
+/* SetRetryFirstReads
+ *  manages retry on the first HttpFileRead
+ */
+KNS_EXTERN rc_t CC KNSManagerSetRetryFirstReads ( KNSManager *self,
+    bool retry );
+
+/* GetRetryFirstReads
+ *  returns whether or not retry on the first HttpFileRead is turned on
+ */
+KNS_EXTERN rc_t CC KNSManagerGetRetryFirstReads ( const KNSManager *self,
+    bool *retry );
+
+/******************************************************************************/
+
 /* Set/Get UserAgent
  *  for http connections
  */

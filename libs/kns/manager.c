@@ -1230,3 +1230,113 @@ quitting_t CC KNSManagerGetQuitting(const KNSManager *self)
 {
     return quitting;
 }
+
+/******************************************************************************/
+/**************** API to manage HTTP File read retry behavior *****************/
+/******************************************************************************/
+
+/* SetRetryFailedReads
+ *  manages retry layer on HttpFileRead
+ *
+ *  "retry" [ IN ] - true : turn on retry layer,
+ *                   false: don't create retry layer.
+ */
+KNS_EXTERN rc_t CC KNSManagerSetRetryFailedReads(KNSManager *self,
+    bool retry)
+{
+    if (self == NULL)
+        return RC(rcNS, rcMgr, rcUpdating, rcSelf, rcNull);
+    else {
+        self->retryFile = retry;
+        return 0;
+    }
+}
+
+/* GetRetryFailedReads
+ *  returns whether or not retry layer on HttpFileRead is turned on
+ */
+LIB_EXPORT rc_t CC KNSManagerGetRetryFailedReads(const KNSManager *self,
+    bool *retry)
+{
+    if (self == NULL)
+        return RC(rcNS, rcMgr, rcAccessing, rcSelf, rcNull);
+    else if (retry == NULL)
+        return RC(rcNS, rcMgr, rcAccessing, rcParam, rcNull);
+    else {
+        *retry = self->retryFile;
+        return 0;
+    }
+}
+
+/* SetMaxReadRetryTime
+ *  sets maximum time in HttpFileRead retry loop
+ *
+ *  "millis" - when negative, infinite timeout
+ */
+LIB_EXPORT rc_t CC KNSManagerSetMaxReadRetryTime(KNSManager *self,
+    int32_t millis)
+{
+    if (self == NULL)
+        return RC(rcNS, rcMgr, rcUpdating, rcSelf, rcNull);
+    else {
+        if (millis < 0)
+            self->maxTotalWaitForReliableURLs_ms = ~0;
+        else
+            self->maxTotalWaitForReliableURLs_ms = millis;
+
+        return 0;
+    }
+}
+
+/* GetMaxReadRetryTime
+ *  returns maximum time in HttpFileRead retry loop
+ */
+LIB_EXPORT rc_t CC KNSManagerGetMaxReadRetryTime(const KNSManager *self,
+    int32_t *millis)
+{
+    if (self == NULL)
+        return RC(rcNS, rcMgr, rcAccessing, rcSelf, rcNull);
+    else if (millis == NULL)
+        return RC(rcNS, rcMgr, rcAccessing, rcParam, rcNull);
+    else {
+        if (self->maxTotalWaitForReliableURLs_ms == ~0)
+            *millis = -1;
+        else
+            *millis = self->maxTotalWaitForReliableURLs_ms;
+
+        return 0;
+    }
+}
+
+
+/* SetRetryFirstReads
+ *  manages retry on the first HttpFileRead
+ */
+LIB_EXPORT rc_t CC KNSManagerSetRetryFirstReads(KNSManager *self,
+    bool retry)
+{
+    if (self == NULL)
+        return RC(rcNS, rcMgr, rcUpdating, rcSelf, rcNull);
+    else {
+        self->retryFirstRead = retry;
+        return 0;
+    }
+}
+
+/* GetRetryFirstReads
+ *  returns whether or not retry on the first HttpFileRead is turned on
+ */
+LIB_EXPORT rc_t CC KNSManagerGetRetryFirstReads(const KNSManager *self,
+    bool *retry)
+{
+    if (self == NULL)
+        return RC(rcNS, rcMgr, rcAccessing, rcSelf, rcNull);
+    else if (retry == NULL)
+        return RC(rcNS, rcMgr, rcAccessing, rcParam, rcNull);
+    else {
+        *retry = self->retryFirstRead;
+        return 0;
+    }
+}
+
+/******************************************************************************/
