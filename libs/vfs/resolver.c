@@ -26,6 +26,7 @@
 
 #include <vfs/extern.h>
 
+#include <kfg/kfg-priv.h> /* KRepositoryFromNgc */
 #include <kfg/ngc.h> /* KNgcObjGetTicket */
 
 #include <kfs/file.h>
@@ -2263,6 +2264,7 @@ struct VResolver
     /* if there is a working protected repository,
        store the download ticket here */
     const String *ticket;
+    bool ticketFromNgc;
 
     KRefcount refcount;
 
@@ -3046,17 +3048,13 @@ rc_t VResolverLocalResolve ( const VResolver *self, const String * accession,
 
     VResolverAppID app;
 
-/*
-    bool resolveAllAccToCache = true;
-    if ( dir != NULL )
-        resolveAllAccToCache = false;
-*/
-
     assert(path);
 
-    if ( VResolverFuseMountedResolve ( self, accession, path ) == 0 ) {
+    if ( VResolverFuseMountedResolve ( self, accession, path ) == 0 )
         return 0;
-    }
+
+    if (projectId == -1 && self->ticket != NULL)
+        projectId = self->projectId;
 
     app = get_accession_app ( accession, refseq_ctx, & tok,
         & legacy_wgs_refseq, resolveAllAccToCache, NULL, parentAcc, projectId );
@@ -3715,6 +3713,11 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
         if (dir != NULL)    /* out-dir is provided */
             useAd = true;   /* [when prefetch downloads to out-dir]
                                 - use AD, too */
+
+        /* cache references to AD */
+        if (!useAd && app == appREFSEQ && tok.accOfParentDb.size != 0)
+            useAd = true;
+
 #if 0
         if (!protected && VPathGetProjectId(query, NULL)) {
             useAd = true;     /* resolving protected URL returned by SDL */
@@ -4200,7 +4203,11 @@ rc_t VResolverQueryAcc ( const VResolver * self, VRemoteProtocols protocols,
         bool has_fragment = false;
 
         /* REMOTE RESOLUTION */
-        if ( remote != NULL || ( self -> ticket != NULL && cache != NULL ) )
+        if ( remote != NULL ||
+            ( self -> ticket != NULL  &&
+              ! self -> ticketFromNgc        /* ignore ticket from protected  */
+                    /* repository from --ngc: it's resolved using public apps */
+              && cache != NULL ) ) 
         {
             /* will need to map if protected */
             const VPath ** mapped_ptr = ( self -> ticket != NULL && cache != NULL ) ?
@@ -6002,9 +6009,11 @@ static rc_t VResolverLoad(VResolver *self, const KRepository *protectedRepo,
         /* check to see what the current directory is */
         char buffer [ 256 ] = "";
         self->ticket = NULL;
-        if (protectedRepo != NULL)
+        if (protectedRepo != NULL) {
             self -> ticket = VResolverGetDownloadTicket ( self, protectedRepo,
                 buffer, sizeof buffer );
+            self -> ticketFromNgc = KRepositoryFromNgc ( protectedRepo );
+        }
         else if (ngc != NULL) {
             char b[512] = "";
             rc = KNgcObjGetTicket(ngc, b, sizeof b, NULL);

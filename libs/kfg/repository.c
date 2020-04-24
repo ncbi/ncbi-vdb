@@ -41,7 +41,7 @@
 #include <klib/rc.h>
 
 #include "kfg-priv.h" /* KConfigGetNgcFile */
-#include "ngc-priv.h"
+#include "ngc-priv.h" /* KNgcObjMakeFromCmdLine */
 
 #include <sysalloc.h>
 
@@ -70,6 +70,7 @@ struct KRepository
     KRefcount refcount;
     KRepCategory category;
     KRepSubCategory subcategory;
+    bool fromNgc; /* auto-generated from --ngc */
 };
 
 
@@ -107,14 +108,14 @@ rc_t KRepositoryMake ( KRepository **rp, const KConfigNode *node,
     const char *name, KRepCategory category, KRepSubCategory subcategory )
 {
     rc_t rc;
-    KRepository *r;
+    KRepository *r = NULL;
     String name_str;
 
     /* measure string */
     StringInitCString ( & name_str, name );
 
     /* create object */
-    r = malloc ( sizeof * r + name_str . size + 1 );
+    r = calloc ( 1, sizeof * r + name_str . size + 1 );
     if ( r == NULL )
         return RC ( rcKFG, rcNode, rcConstructing, rcMemory, rcExhausted );
 
@@ -1340,17 +1341,17 @@ LIB_EXPORT rc_t CC KRepositoryMgrRemoteRepositories ( const KRepositoryMgr *self
 static rc_t KRepositoryCurrentProtectedRepositoryForNgc(
     const KRepository ** self)
 {
-    rc_t rc = 0;
+    const KNgcObj * ngc = NULL;
 
-    const char * ngc_file = KConfigGetNgcFile();
+    rc_t rc = KNgcObjMakeFromCmdLine(&ngc);
 
-    if (ngc_file == NULL)
-        return SILENT_RC(rcKFG, rcMgr, rcAccessing,
-            rcNode, rcNotFound);
+    if (ngc == NULL) {
+        if (rc != 0)
+            return rc;
+        else
+            return SILENT_RC(rcKFG, rcMgr, rcAccessing, rcNode, rcNotFound);
+    }
     else {
-        KDirectory * dir = NULL;
-        const KFile * f = NULL;
-        const KNgcObj * ngc = NULL;
         KConfig * kfg = NULL;
         const KRepositoryMgr * mgr = NULL;
         KRepositoryVector vc;
@@ -1360,11 +1361,6 @@ static rc_t KRepositoryCurrentProtectedRepositoryForNgc(
         char n[512] = "";
         char v[512] = "";
 
-        rc = KDirectoryNativeDir(&dir);
-        if (rc == 0)
-            rc = KDirectoryOpenFileRead(dir, &f, "%s", ngc_file);
-        if (rc == 0)
-            rc = KNgcObjMakeFromFile(&ngc, f);
         if (rc == 0)
             rc = KNgcObjGetProjectId(ngc, &id);
         if (rc == 0)
@@ -1402,7 +1398,7 @@ static rc_t KRepositoryCurrentProtectedRepositoryForNgc(
             uint32_t count = VectorLength(&vc);
             for (i = 0; i < count; ++i) {
                 bool found = false;
-                const KRepository * r = (const void*)VectorGet(&vc, i);
+                KRepository * r = (void*)VectorGet(&vc, i);
                 if (r->subcategory == krepProtectedSubCategory) {
                     char lclName[512] = "";
                     size_t lNumWrit = 0;
@@ -1419,6 +1415,7 @@ static rc_t KRepositoryCurrentProtectedRepositoryForNgc(
                 if (found) {
                     rc = KRepositoryAddRef(r);
                     if (rc == 0) {
+                        r->fromNgc = true;
                         *self = r;
                         break;
                     }
@@ -1433,8 +1430,6 @@ static rc_t KRepositoryCurrentProtectedRepositoryForNgc(
         RELEASE(KRepositoryMgr, mgr);
         RELEASE(KConfig, kfg);
         RELEASE(KNgcObj, ngc);
-        RELEASE(KFile, f);
-        RELEASE(KDirectory, dir);
     }
 
     return rc;
@@ -2083,4 +2078,11 @@ bool CC KRepositoryMgrHasRemoteAccess(const KRepositoryMgr *self)
     }
 
     return has;
+}
+
+bool KRepositoryFromNgc(const struct KRepository * self) {
+    if (self == NULL)
+        return false;
+    else
+        return self->fromNgc;
 }

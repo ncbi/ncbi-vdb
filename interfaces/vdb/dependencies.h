@@ -98,6 +98,17 @@ VDB_EXTERN rc_t CC VDatabaseListDependenciesWithCaching (
     const VDBDependencies **dep, bool missing,
     bool disableCaching );
 
+/* FindDependencies
+ *  create dependencies object: list dependencies
+ *
+ *  Don't resolve remote location if dependency was found locally.
+ *
+ *  "dep" [ OUT ] - return for VDBDependencies object
+ */
+VDB_EXTERN rc_t CC VDatabaseFindDependencies(struct VDatabase const *self,
+    const VDBDependencies **dep);
+
+
 /* Count
  *  retrieve the number of dependencies
  *
