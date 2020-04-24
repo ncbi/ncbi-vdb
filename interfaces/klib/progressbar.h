@@ -40,7 +40,7 @@
 extern "C" {
 #endif
 
-struct progressbar;
+typedef struct progressbar progressbar;
 typedef uint32_t percent_t;
 
 /*--------------------------------------------------------------------------

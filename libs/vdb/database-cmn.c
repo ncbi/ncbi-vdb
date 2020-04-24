@@ -49,13 +49,14 @@
 #include <vfs/manager.h>
 #include <vfs/resolver.h>
 #include <vfs/path.h>
-#include <klib/debug.h>
+#include <klib/debug.h> /* DBGMSG */
 #include <klib/printf.h>
 #include <klib/rc.h>
 #include <klib/namelist.h>
 #include <klib/log.h>
 #include <sysalloc.h>
 
+#include "../kdb/kdb-priv.h" /* KDBManagerCheckAd */
 #include "../vfs/path-priv.h"     /* VPath */
 #include "../vfs/resolver-priv.h" /* rcResolver */
 
@@ -319,30 +320,6 @@ rc_t VDBManagerVPathOpenRemoteDBRead ( const VDBManager *self,
     }
 
     return rc;
-}
-
-#include "../kdb/dbmgr-priv.h"
-static void ad(const KDBManager *self, const VPath *aPath, const VPath **path)
-{
-    String spath;
-    const char *slash;
-    assert(self);
-    if (VPathGetPath(aPath, &spath) != 0)
-        return;
-    if ((KDirectoryPathType(self->wd, spath.addr) & ~kptAlias) != kptDir)
-        return;
-    slash = strrchr(spath.addr, '/');
-    if (slash)
-        ++slash;
-    else
-        slash = spath.addr;
-    if ((KDirectoryPathType(self->wd, "%s/%s.sra", spath.addr, slash)
-        & ~kptAlias) != kptFile)
-    {
-        return;
-    }
-    VFSManagerMakePath(self->vfsmgr, (VPath **)path,
-        "%s/%s.sra", spath.addr, slash);
 }
 
 typedef enum {
@@ -613,7 +590,7 @@ LIB_EXPORT rc_t CC VDBManagerOpenDBReadVPath ( const VDBManager *self,
                         const VPath * orig = aOrig;
                         bool is_accession;
 
-                        ad(self->kmgr, aOrig, &orig);
+                        KDBManagerCheckAd(self->kmgr, aOrig, &orig);
 
                         /* check whether we were given a path or accession */
                         is_accession = VPathIsAccessionOrOID ( orig );
@@ -1426,6 +1403,52 @@ LIB_EXPORT bool CC VDatabaseIsCSRA ( const VDatabase *self )
     return false;
 }
 
+static bool validName(const String * acc, const String * file) {
+    assert(acc && file);
+    const char ext[] = ".sra";
+    if (file->size == acc->size + 4) {
+        if (string_cmp(file->addr, file->size,
+            acc->addr, acc->size, acc->size) == 0)
+        {
+            if (string_cmp(file->addr + acc->size, file->size - acc->size,
+                ext, sizeof ext - 1, sizeof ext - 1) == 0)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+    else {
+        if (string_cmp(file->addr, file->size,
+            acc->addr, acc->size, acc->size) == 0)
+        {
+            const char sfx[] = "_dbGaP-";
+            if (string_cmp(file->addr + acc->size, sizeof sfx - 1,
+                sfx, sizeof sfx - 1, sizeof sfx - 1) == 0)
+            {
+                int i = 0;
+                for (i = acc->size + sizeof sfx - 1;
+                    i < file->size; ++i)
+                {
+                    char c = file->addr[i];
+                    if (c < '0' || c > '9') {
+                        if (c == '.')
+                            break;
+                        else
+                            return false;
+                    }
+                }
+                if (string_cmp(file->addr + i, file->size - acc->size,
+                    ext, sizeof ext - 1, sizeof ext - 1) == 0)
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+}
+
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 && !rc) { rc = rc2; } obj = NULL; } while (false)
 
@@ -1453,15 +1476,18 @@ rc_t CC VDatabaseGetAccession(const VDatabase * self, const String ** aAcc)
         rc = KDatabaseGetPath(kdb, &path);
 
     if (rc == 0) {
-        /* path = "/S/S.sra"; */
+        /* path = "/S/S.sra";
+        or path = "/S/S_dbGaP-NNN.sra" */
         uint32_t pathLen = string_measure(path, NULL);
-        const char * last = string_rchr(path, pathLen, '/'); /* find the last '/' */
+
+        /* find the last '/' */
+        const char * last = string_rchr(path, pathLen, '/');
         if (last != NULL) {
             uint32_t fileLen = pathLen - (last - path) - 1;
             uint32_t l = pathLen - fileLen - 1;
             const char * start = NULL;
             uint32_t accLen = 0;
-            String acc;
+            String acc, file;
 
             start = string_rchr(path, l, '/'); /* find the second last '/' */
             if (start == NULL)
@@ -1471,20 +1497,10 @@ rc_t CC VDatabaseGetAccession(const VDatabase * self, const String ** aAcc)
 
             accLen = last - start;
             StringInit(&acc, start, accLen, accLen);
+            StringInit(&file, last + 1, fileLen, fileLen);
 
-            if (fileLen == accLen + 4) {
-                const char * file = last + 1;
-                if (string_cmp(file, fileLen,
-                    acc.addr, acc.size, acc.size) == 0)
-                {
-                    const char ext[] = ".sra";
-                    if (string_cmp(file + accLen, fileLen - accLen,
-                        ext, sizeof ext - 1, sizeof ext - 1) == 0)
-                    {
-                        rc = StringCopy(aAcc, &acc);
-                    }
-                }
-            }
+            if (validName(&acc, &file))
+                rc = StringCopy(aAcc, &acc);
         }
     }
 
