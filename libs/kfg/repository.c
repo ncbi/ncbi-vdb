@@ -108,14 +108,14 @@ rc_t KRepositoryMake ( KRepository **rp, const KConfigNode *node,
     const char *name, KRepCategory category, KRepSubCategory subcategory )
 {
     rc_t rc;
-    KRepository *r;
+    KRepository *r = NULL;
     String name_str;
 
     /* measure string */
     StringInitCString ( & name_str, name );
 
     /* create object */
-    r = malloc ( sizeof * r + name_str . size + 1 );
+    r = calloc ( 1, sizeof * r + name_str . size + 1 );
     if ( r == NULL )
         return RC ( rcKFG, rcNode, rcConstructing, rcMemory, rcExhausted );
 
