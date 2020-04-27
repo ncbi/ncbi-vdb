@@ -2812,6 +2812,32 @@ rc_t VResolverFuseMountedResolve ( const VResolver * self,
     return rc;
 }
 
+static rc_t VResolverCheckAD(const VResolver *self, const VPath ** path,
+    VResolverAppID app, const VResolverAccToken * tok, bool legacy_wgs_refseq,
+    const char * dir)
+{
+    uint32_t i = 0, count = 0;
+
+    assert(self);
+
+    /* check AD */
+    count = VectorLength(&self->ad);
+    for (i = 0; i < count; ++i)
+    {
+        const VResolverAlg *alg = VectorGet(&self->ad, i);
+        if (alg->app_id == app)
+        {
+            const bool for_cache = false;
+            rc_t rc = VResolverAlgLocalResolve(alg, self->wd,
+                tok, path, legacy_wgs_refseq, for_cache, dir, true);
+            if (rc == 0)
+                return 0;
+        }
+    }
+
+    return RC(rcVFS, rcResolver, rcResolving, rcName, rcNotFound);
+}
+
 typedef enum {
     eCheckExistFalse,
     eCheckExistTrue,
@@ -2831,12 +2857,18 @@ static rc_t VResolverMagicResolve(const VResolver * self, const VPath ** path,
     const String * accession, VResolverAppID app, const char * name,
     ECheckExist checkExist,
     ECheckFilePath checkPath,
-    ECheckUrl checkUrl)
+    ECheckUrl checkUrl,
+    bool * checkAd)
 {
     rc_t rc = 0;
 
     KPathType kpt = kptNotFound;
     const char * magic;
+
+    bool dummy;
+    if (checkAd == NULL)
+        checkAd = &dummy;
+    *checkAd = false;
 
     /* resolver is not confused by shell variables
         when retrieving reference objects */
@@ -2895,9 +2927,16 @@ static rc_t VResolverMagicResolve(const VResolver * self, const VPath ** path,
                   && (*path)->path_type != vpRelPath
                   && (*path)->path_type != vpUNCPath)
             {
-                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
-                    "'%s' magic '%s' is not path\n", name, magic));
-                rc = RC(rcVFS, rcResolver, rcResolving, rcName, rcInvalid);
+                if (checkExist == eCheckExistTrue ||
+                    (*path)->path_type == vpNameOrAccession)
+                {
+                    *checkAd = true;
+                }
+                else {
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                        "'%s' magic '%s' is not path\n", name, magic));
+                    rc = RC(rcVFS, rcResolver, rcResolving, rcName, rcInvalid);
+                }
             }
         }
 
@@ -2939,21 +2978,51 @@ static rc_t VResolverCacheMagicResolve(
     const VResolver * self, const VPath ** path, VResolverAppID app)
 {
     return VResolverMagicResolve(self, path, NULL, app,
-        ENV_MAGIC_CACHE, eCheckExistFalse, eCheckFilePathTrue, eCheckUrlFalse);
+        ENV_MAGIC_CACHE,
+        eCheckExistFalse, eCheckFilePathTrue, eCheckUrlFalse, NULL);
 }
 
-static rc_t VResolverLocalMagicResolve(
-    const VResolver * self, const VPath ** path, VResolverAppID app)
+static rc_t VResolverLocalMagicResolve(const VResolver * self,
+    const VPath ** path, VResolverAppID app, const VResolverAccToken * tok,
+    bool legacy_wgs_refseq, const char * dir)
 {
-    return VResolverMagicResolve(self, path, NULL, app,
-        ENV_MAGIC_LOCAL, eCheckExistTrue, eCheckFilePathTrue, eCheckUrlFalse);
+    const VPath * magic = NULL;
+    bool checkAd = false;
+    rc_t rc = 0;
+
+    assert(path);
+    *path = NULL;
+
+    rc = VResolverMagicResolve(self, &magic, NULL, app,
+        ENV_MAGIC_LOCAL,
+        eCheckExistTrue, eCheckFilePathTrue, eCheckUrlFalse, &checkAd);
+    if (rc != 0)
+        return rc;
+
+    if (!checkAd) {
+        *path = magic;
+        return rc;
+    }
+    else {
+        /* When LOCAL magic env.var. is found and it refers to AD
+           (the same as accession but it's a directory in cwd)
+           - we still need to resolve it to real path. */
+        const VPath * local = NULL;
+        rc = VResolverCheckAD(self, &local, app, tok, legacy_wgs_refseq, dir);
+        if (rc == 0)
+            *path = local;
+        RELEASE(VPath, magic);
+
+        return rc;
+    }
 }
 
 static rc_t VResolverRemoteMagicResolve(const VResolver * self,
     const VPath ** path, const String * accession, VResolverAppID app)
 {
     return VResolverMagicResolve(self, path, accession, app,
-        ENV_MAGIC_REMOTE, eCheckExistFalse, eCheckFilePathFalse, eCheckUrlTrue);
+        ENV_MAGIC_REMOTE,
+        eCheckExistFalse, eCheckFilePathFalse, eCheckUrlTrue, NULL);
 }
 
 /* LocalResolve
@@ -2992,24 +3061,14 @@ rc_t VResolverLocalResolve ( const VResolver *self, const String * accession,
     app = get_accession_app ( accession, refseq_ctx, & tok,
         & legacy_wgs_refseq, resolveAllAccToCache, NULL, parentAcc, projectId );
 
-    rc = VResolverLocalMagicResolve(self, path, app);
+    rc = VResolverLocalMagicResolve(
+        self, path, app, &tok, legacy_wgs_refseq, dir);
     if (rc != 0 || *path != NULL)
         return rc;
 
-    /* check AD */
-    count = VectorLength ( & self -> ad );
-    for ( i = 0; i < count; ++ i )
-    {
-        const VResolverAlg *alg = VectorGet ( & self ->ad, i );
-        if ( alg -> app_id == app )
-        {
-            const bool for_cache = false;
-            rc_t rc = VResolverAlgLocalResolve ( alg, self -> wd,
-                & tok, path, legacy_wgs_refseq, for_cache, dir, true );
-            if ( rc == 0 )
-                return 0;
-        }
-    }
+    rc = VResolverCheckAD(self, path, app, &tok, legacy_wgs_refseq, dir);
+    if (rc == 0)
+        return 0;
 
     /* search all local volumes by app and accession algorithm expansion */
 
