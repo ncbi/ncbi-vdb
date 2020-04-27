@@ -1596,7 +1596,8 @@ rc_t CC right_soft_clip_5_impl ( void *data, const VXformInfo *info, int64_t row
         
         for (n = 0; n < nreads; ++n) {
             unsigned const len = read_len[n];
-            unsigned clip = 0;
+            unsigned last = 0;
+            unsigned prev = 0;
             unsigned j;
             
             for (j = 0; j < len; ++j, ++cur) {
@@ -1606,12 +1607,12 @@ rc_t CC right_soft_clip_5_impl ( void *data, const VXformInfo *info, int64_t row
                     
                     ++cur_ro;
                     if (j > 0 && offset < 0 && type == 1) {
-                        assert(clip == 0);
-                        clip = -offset;
+                        prev = last;
+                        last = -offset;
                     }
                 }
             }
-            result[n] = clip;
+            result[n] = prev == 0 ? last : prev;
         }
     }
     
