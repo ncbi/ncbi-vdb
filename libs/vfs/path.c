@@ -480,6 +480,14 @@ void VPathCaptureFragment ( VPath * self, const char * uri, size_t start, size_t
     StringInit ( & self -> fragment, & uri [ start ], end - start, count );
 }
 
+static void VPathFixForHs37d5(VPath * self) {
+    String hs37d5;
+    CONST_STRING(&hs37d5, "hs37d5");
+    assert(self);
+    if (StringEqual(&self->path, &hs37d5))
+        self->path_type = vpAccession;
+}
+
 #define VPathParseResetAnchor( i ) \
     do { anchor = ( i ); count = 0; } while ( 0 )
 
@@ -1988,6 +1996,8 @@ rc_t VPathParseInt ( VPath * self, char * uri, size_t uri_size,
     case vppAccUnderNamePath:
     case vppNamePathOrScheme:
         VPathCapturePath ( self, uri, anchor, i, count, vpName );
+        if ( state == vppNamePathOrScheme )
+            VPathFixForHs37d5 ( self );
         break;
     case vppAccOidRelOrSlash:
         return RC ( rcVFS, rcPath, rcParsing, rcData, rcInsufficient );
