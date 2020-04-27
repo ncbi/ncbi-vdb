@@ -382,7 +382,8 @@ table NCBI:tbl:base_space #3
     INSDC:dna:text out_dnarna_text
         = < INSDC:4na:bin, INSDC:dna:text > map < INSDC:4na:map:BINSET, INSDC:4na:map:CHARSET > ( out_4na_bin );
     INSDC:dna:text out_dna_text
-        = NCBI:SRA:useRnaFlag ( out_dnarna_text );
+        = NCBI:SRA:useRnaFlag ( out_dnarna_text )
+        | out_dnarna_text;
 
 	/* INSDC:tbl:sequence inherited productions
 	 *  out_signal
