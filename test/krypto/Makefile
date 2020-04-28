@@ -36,7 +36,6 @@ INT_TOOLS += \
 endif
 
 TEST_TOOLS = \
-	hash-in-pwd \
 	test-modes \
 	test-encdec \
 	test-reenc \
