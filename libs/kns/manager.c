@@ -174,6 +174,8 @@ LIB_EXPORT rc_t CC KNSManagerRelease ( const KNSManager *self )
             return RC ( rcNS, rcMgr, rcAttaching, rcRefcount, rcInvalid );
         }
     }
+    else
+         return KDataBufferWhack(&kns_manager_user_agent);
     return 0;
 }
 
@@ -214,8 +216,10 @@ static rc_t CC KNSManagerMakeSingleton (
                 rc = KLockMake ( &kns_manager_lock );
                 if ( rc ) { return rc; }
             }
-            rc = KDataBufferMakeBytes ( &kns_manager_user_agent, 0 );
-            if ( rc ) { return rc; }
+            if (kns_manager_user_agent.base == NULL) {
+                rc = KDataBufferMakeBytes ( &kns_manager_user_agent, 0 );
+                if ( rc ) { return rc; }
+            }
             rc = KDataBufferPrintf ( &kns_manager_user_agent, "%s", "" );
             if ( rc ) { return rc; }
 
