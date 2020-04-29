@@ -463,6 +463,8 @@ rc_t KMane ( int argc, char *argv [] )
         KNSManagerSetUserAgent ( kns, PKGNAMESTR " sra-toolkit %.*s.%V", ( uint32_t ) tool_size, tool, vers );
     }
 
+    KNSManagerSetQuitting ( kns, Quitting );
+
     /* initialize logging */
     rc = KWrtInit(argv[0], vers);
     if ( rc == 0 )
