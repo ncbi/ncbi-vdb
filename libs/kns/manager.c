@@ -216,42 +216,57 @@ static rc_t CC KNSManagerMakeSingleton (
                 rc = KLockMake ( &kns_manager_lock );
                 if ( rc ) { return rc; }
             }
+
             if (kns_manager_user_agent.base == NULL) {
                 rc = KDataBufferMakeBytes ( &kns_manager_user_agent, 0 );
                 if ( rc ) { return rc; }
+                rc = KDataBufferPrintf ( &kns_manager_user_agent, "%s", "" );
+                if ( rc ) { return rc; }
             }
-            rc = KDataBufferPrintf ( &kns_manager_user_agent, "%s", "" );
-            if ( rc ) { return rc; }
 
-            rc = KDataBufferMakeBytes ( &kns_manager_user_agent_append, 0 );
-            if ( rc ) { return rc; }
-            rc = KDataBufferPrintf ( &kns_manager_user_agent_append, "%s", "" );
-            if ( rc ) { return rc; }
+            if (kns_manager_user_agent_append.base == NULL) {
+                rc = KDataBufferMakeBytes ( &kns_manager_user_agent_append, 0 );
+                if ( rc ) { return rc; }
 
-            rc = KDataBufferMakeBytes ( &kns_manager_clientip, 0 );
-            if ( rc ) { return rc; }
-            rc = KDataBufferPrintf ( &kns_manager_clientip, "%s", "" );
-            if ( rc ) { return rc; }
+                rc = KDataBufferPrintf ( &kns_manager_user_agent_append, "%s",
+                                                                           "" );
+                if ( rc ) { return rc; }
+            }
 
-            rc = KDataBufferMakeBytes ( &kns_manager_sessionid, 0 );
-            if ( rc ) { return rc; }
-            rc = KDataBufferPrintf ( &kns_manager_sessionid, "%s", "" );
-            if ( rc ) { return rc; }
+            if (kns_manager_clientip.base == NULL) {
+                rc = KDataBufferMakeBytes ( &kns_manager_clientip, 0 );
+                if ( rc ) { return rc; }
+                rc = KDataBufferPrintf ( &kns_manager_clientip, "%s", "" );
+                if ( rc ) { return rc; }
+            }
 
-            rc = KDataBufferMakeBytes ( &kns_manager_pagehitid, 0 );
-            if ( rc ) { return rc; }
-            rc = KDataBufferPrintf ( &kns_manager_pagehitid, "%s", "" );
-            if ( rc ) { return rc; }
+            if (kns_manager_sessionid.base == NULL) {
+                rc = KDataBufferMakeBytes ( &kns_manager_sessionid, 0 );
+                if ( rc ) { return rc; }
+                rc = KDataBufferPrintf ( &kns_manager_sessionid, "%s", "" );
+                if ( rc ) { return rc; }
+            }
 
-            rc = KDataBufferMakeBytes ( &kns_manager_ua_suffix, 0 );
-            if ( rc ) { return rc; }
-            rc = KDataBufferPrintf ( &kns_manager_ua_suffix, "%s", "" );
-            if ( rc ) { return rc; }
+            if (kns_manager_pagehitid.base == NULL) {
+                rc = KDataBufferMakeBytes ( &kns_manager_pagehitid, 0 );
+                if ( rc ) { return rc; }
+                rc = KDataBufferPrintf ( &kns_manager_pagehitid, "%s", "" );
+                if ( rc ) { return rc; }
+            }
 
-            rc = KDataBufferMakeBytes ( &kns_manager_guid, 0 );
-            if ( rc ) { return rc; }
-            rc = KDataBufferPrintf ( &kns_manager_guid, "%s", "" );
-            if ( rc ) { return rc; }
+            if (kns_manager_ua_suffix.base == NULL) {
+                rc = KDataBufferMakeBytes ( &kns_manager_ua_suffix, 0 );
+                if ( rc ) { return rc; }
+                rc = KDataBufferPrintf ( &kns_manager_ua_suffix, "%s", "" );
+                if ( rc ) { return rc; }
+            }
+
+            if (kns_manager_guid.base == NULL) {
+                rc = KDataBufferMakeBytes ( &kns_manager_guid, 0 );
+                if ( rc ) { return rc; }
+                rc = KDataBufferPrintf ( &kns_manager_guid, "%s", "" );
+                if ( rc ) { return rc; }
+            }
 
             rc = KNSManagerMakeConfigImpl ( &our_mgr, kfg );
 
