@@ -3016,6 +3016,19 @@ void KConfigReadRemoteProtocols ( const KConfig * self, VRemoteProtocols * remot
     }
 }
 
+static void VFSManagerLoadLogNamesServiceErrors(VFSManager * self) {
+    rc_t rc = 0;
+
+    bool enabled = true;
+
+    assert(self);
+
+    rc = KConfigReadBool(self->cfg, "/name-resolver/log-names-service-errors",
+        &enabled);
+    if (rc == 0)
+        VFSManagerLogNamesServiceErrors(self, enabled);
+}
+
 /* Make
  */
 LIB_EXPORT rc_t CC VFSManagerMake ( VFSManager ** pmanager )
@@ -3096,6 +3109,8 @@ static rc_t CC VFSManagerMakeFromKfgImpl ( struct VFSManager ** pmanager,
                                 LOGERR ( klogWarn, rc, "could not build vfs-resolver" );
                                 rc = 0;
                             }
+
+                            VFSManagerLoadLogNamesServiceErrors(obj);
 
                             *pmanager = obj;
                             if (!local)
@@ -3292,7 +3307,7 @@ LIB_EXPORT rc_t CC VFSManagerUpdateKryptoPassword (const VFSManager * self,
     {
         size_t old_password_file_size;
         char old_password_file [8193];
-        
+
         rc = VFSManagerGetConfigPWFile (self, old_password_file,
                                         sizeof old_password_file - 1,
                                         &old_password_file_size);

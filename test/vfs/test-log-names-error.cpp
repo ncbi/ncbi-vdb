@@ -41,7 +41,7 @@ TEST_SUITE ( TestLogNames );
 #define ALL
 
 #ifdef ALL
-TEST_CASE(TestSilentNamesError) {
+TEST_CASE(TestAPI) {
     putenv((char*)"NCBI_VDB_NO_ETC_NCBI_KFG=1");
 
     KConfig * kfg = NULL;
@@ -59,13 +59,115 @@ TEST_CASE(TestSilentNamesError) {
     const VTable * tbl = NULL;
 
     std::cerr << "Expect 'name not found' error messages: vvvvvvvvvvvvvvvvvv\n";
-    REQUIRE_RC_FAIL(VDBManagerOpenDBRead(mgr, &db, NULL, "SRR0000001"));
+    REQUIRE_RC_FAIL(VDBManagerOpenDBRead(mgr, &db, NULL, "NA000001672.1"));
     REQUIRE_RC_FAIL(VDBManagerOpenTableRead(mgr, &tbl, NULL, "SRR0000001"));
     std::cerr << "^^^^^^^^^^^^^^^^^^^^^^^^^ No more error messages expected.\n";
 
     bool enabled = false;
     REQUIRE_RC(VFSManagerGetLogNamesServiceErrors(vmgr, &enabled));
     REQUIRE(enabled);
+
+    REQUIRE_RC(VFSManagerLogNamesServiceErrors(vmgr, false));
+
+    REQUIRE_RC_FAIL(VDBManagerOpenDBRead(mgr, &db, NULL, "SRR0000001"));
+    REQUIRE_RC_FAIL(VDBManagerOpenTableRead(mgr, &tbl, NULL, "SRR0000001"));
+
+    REQUIRE_RC(VFSManagerGetLogNamesServiceErrors(vmgr, &enabled));
+    REQUIRE(!enabled);
+
+    REQUIRE_RC(VDBManagerRelease(mgr));
+    REQUIRE_RC(VFSManagerRelease(vmgr));
+
+    REQUIRE_RC(KConfigRelease(kfg));
+}
+#endif
+
+#ifdef ALL
+TEST_CASE(TestDisableInConfig) {
+    putenv((char*)"NCBI_VDB_NO_ETC_NCBI_KFG=1");
+
+    KConfig * kfg = NULL;
+    REQUIRE_RC(KConfigMakeLocal(&kfg, NULL));
+    REQUIRE_RC(KConfigWriteString(kfg,
+        "/name-resolver/log-names-service-errors", "false"));
+    REQUIRE_RC(KConfigWriteString(kfg,
+        "/repository/remote/main/SDL.2/resolver-cgi",
+        "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve"));
+
+    VFSManager * vmgr = NULL;
+    REQUIRE_RC(VFSManagerMakeLocal(&vmgr, kfg));
+    const VDBManager * mgr = NULL;
+    REQUIRE_RC(VDBManagerMakeReadWithVFSManager(&mgr, NULL, vmgr));
+
+    const VDatabase * db = NULL;
+    const VTable * tbl = NULL;
+
+    REQUIRE_RC_FAIL(VDBManagerOpenDBRead(mgr, &db, NULL, "NA000001672.1"));
+    REQUIRE_RC_FAIL(VDBManagerOpenTableRead(mgr, &tbl, NULL, "SRR0000001"));
+
+    bool enabled = true;
+    REQUIRE_RC(VFSManagerGetLogNamesServiceErrors(vmgr, &enabled));
+    REQUIRE(!enabled);
+
+    REQUIRE_RC(VFSManagerLogNamesServiceErrors(vmgr, true));
+    std::cerr << "Expect 'name not found' error messages: vvvvvvvvvvvvvvvvvv\n";
+    REQUIRE_RC_FAIL(VDBManagerOpenDBRead(mgr, &db, NULL, "NA000001672.1"));
+    REQUIRE_RC_FAIL(VDBManagerOpenTableRead(mgr, &tbl, NULL, "SRR0000001"));
+    std::cerr << "^^^^^^^^^^^^^^^^^^^^^^^^^ No more error messages expected.\n";
+
+    REQUIRE_RC(VFSManagerGetLogNamesServiceErrors(vmgr, &enabled));
+    REQUIRE(enabled);
+
+    REQUIRE_RC(VFSManagerLogNamesServiceErrors(vmgr, false));
+
+    REQUIRE_RC_FAIL(VDBManagerOpenDBRead(mgr, &db, NULL, "SRR0000001"));
+    REQUIRE_RC_FAIL(VDBManagerOpenTableRead(mgr, &tbl, NULL, "SRR0000001"));
+
+    REQUIRE_RC(VFSManagerGetLogNamesServiceErrors(vmgr, &enabled));
+    REQUIRE(!enabled);
+
+    REQUIRE_RC(VDBManagerRelease(mgr));
+    REQUIRE_RC(VFSManagerRelease(vmgr));
+
+    REQUIRE_RC(KConfigRelease(kfg));
+}
+#endif
+
+#ifdef ALL
+TEST_CASE(TestEnableInConfig) {
+    putenv((char*)"NCBI_VDB_NO_ETC_NCBI_KFG=1");
+
+    KConfig * kfg = NULL;
+    REQUIRE_RC(KConfigMakeLocal(&kfg, NULL));
+    REQUIRE_RC(KConfigWriteString(kfg,
+        "/name-resolver/log-names-service-errors", "true"));
+    REQUIRE_RC(KConfigWriteString(kfg,
+        "/repository/remote/main/SDL.2/resolver-cgi",
+        "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve"));
+
+    VFSManager * vmgr = NULL;
+    REQUIRE_RC(VFSManagerMakeLocal(&vmgr, kfg));
+    const VDBManager * mgr = NULL;
+    REQUIRE_RC(VDBManagerMakeReadWithVFSManager(&mgr, NULL, vmgr));
+
+    const VDatabase * db = NULL;
+    const VTable * tbl = NULL;
+
+    std::cerr << "Expect 'name not found' error messages: vvvvvvvvvvvvvvvvvv\n";
+    REQUIRE_RC_FAIL(VDBManagerOpenDBRead(mgr, &db, NULL, "NA000001672.1"));
+    REQUIRE_RC_FAIL(VDBManagerOpenTableRead(mgr, &tbl, NULL, "SRR0000001"));
+    std::cerr << "^^^^^^^^^^^^^^^^^^^^^^^^^ No more error messages expected.\n";
+
+    bool enabled = false;
+    REQUIRE_RC(VFSManagerGetLogNamesServiceErrors(vmgr, &enabled));
+    REQUIRE(enabled);
+
+    REQUIRE_RC(VFSManagerLogNamesServiceErrors(vmgr, false));
+    REQUIRE_RC_FAIL(VDBManagerOpenDBRead(mgr, &db, NULL, "NA000001672.1"));
+    REQUIRE_RC_FAIL(VDBManagerOpenTableRead(mgr, &tbl, NULL, "SRR0000001"));
+
+    REQUIRE_RC(VFSManagerGetLogNamesServiceErrors(vmgr, &enabled));
+    REQUIRE(!enabled);
 
     REQUIRE_RC(VFSManagerLogNamesServiceErrors(vmgr, false));
 
