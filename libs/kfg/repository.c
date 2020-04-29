@@ -1435,6 +1435,43 @@ static rc_t KRepositoryCurrentProtectedRepositoryForNgc(
     return rc;
 }
 
+/* vdb-config -i, when importing an ngc file,
+    sometimes created an unuable protected repository
+    having juts a single 'root' node.
+    This function detects such repository. */
+static
+rc_t KRepositoryIsBadRepository(const KRepository * self, bool * bad)
+{
+    rc_t rc = 0;
+
+    KNamelist * names = NULL;
+    uint32_t count = 0;
+
+    assert(self && bad);
+    *bad = false;
+
+    rc = KConfigNodeListChildren(self->node, &names);
+    if (rc == 0)
+        rc = KNamelistCount(names, &count);
+
+    if (rc == 0 && count == 1) {
+        const char * name = NULL;
+        rc = KNamelistGet(names, 0, &name);
+        if (rc == 0) {
+            const char root[] = "root";
+            if (string_cmp(root, sizeof root - 1, name,
+                string_measure(name, NULL), sizeof root) == 0)
+            {
+                *bad = true;
+            }
+        }
+    }
+
+    RELEASE(KNamelist, names);
+
+    return rc;
+}
+
 /* CurrentProtectedRepository
  *  returns the currently active user protected repository
  */
@@ -1483,6 +1520,13 @@ LIB_EXPORT rc_t CC KRepositoryMgrCurrentProtectedRepository ( const KRepositoryM
                                 const KRepository *r = ( const void* ) VectorGet ( & v, i );
                                 if ( r -> subcategory == krepProtectedSubCategory )
                                 {
+                                  bool bad = false;
+                                  rc = KRepositoryIsBadRepository(r, &bad);
+                                  if (rc != 0)
+                                    break;
+                                  else if (bad)
+                                    continue;
+                                  else {
                                     rc_t rc2 = 0;
                                     size_t resolved_size;
                                     char *resolved = wd_path + path_size;
@@ -1528,6 +1572,8 @@ LIB_EXPORT rc_t CC KRepositoryMgrCurrentProtectedRepository ( const KRepositoryM
                                             break;
                                         }
                                     }
+                                
+                                  }
                                 }
                             }
                         }
@@ -1585,14 +1631,19 @@ LIB_EXPORT rc_t CC KRepositoryMgrGetProtectedRepository ( const KRepositoryMgr *
                 for ( i = 0; i < count; ++ i )
                 {
                     const KRepository *r = ( const void* ) VectorGet ( & v, i );
+                    assert(r);
                     if ( r -> subcategory == krepProtectedSubCategory )
                     {
-                        char localName[512] = "";
-                        size_t localNumWrit = 0;
-                        KRepositoryName(r, localName, sizeof(localName), &localNumWrit);
-                        assert(localNumWrit < sizeof(localName));
-                        if (strcase_cmp(repNodeName, numWrit, localName, localNumWrit, sizeof(localName)) == 0)
+                        char nm[512] = "";
+                        size_t w = 0;
+                        KRepositoryName(r, nm, sizeof nm, &w);
+                        assert(w < sizeof nm);
+                        if (strcase_cmp(repNodeName, numWrit, nm, w, sizeof nm)
+                            == 0)
                         {
+                          bool bad = false;
+                          rc = KRepositoryIsBadRepository(r, &bad);
+                          if (rc == 0 && !bad) {
                             rc = KRepositoryAddRef ( r );
                             if ( rc == 0 )
                             {
@@ -1600,6 +1651,7 @@ LIB_EXPORT rc_t CC KRepositoryMgrGetProtectedRepository ( const KRepositoryMgr *
                                 KRepositoryVectorWhack(&v);
                                 return 0;
                             }
+                          }
                         }
                     }
                 }
