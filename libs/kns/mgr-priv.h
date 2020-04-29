@@ -64,12 +64,15 @@ struct KNSManager
     int32_t conn_timeout;
     int32_t conn_read_timeout;
     int32_t conn_write_timeout;
-    int32_t http_read_timeout;
     int32_t http_write_timeout;
+    int32_t http_read_timeout;
+    int32_t max_http_read_timeout;
 
     uint32_t maxTotalWaitForReliableURLs_ms;
-
     uint8_t  maxNumberOfRetriesOnFailureForReliableURLs;
+
+    bool retryFirstRead;
+    bool retryFile;
 
     struct KNSProxies * proxies;
 

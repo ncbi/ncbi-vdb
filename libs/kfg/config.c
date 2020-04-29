@@ -3770,17 +3770,21 @@ LIB_EXPORT rc_t CC KConfigNodeReadI64 ( const KConfigNode *self, int64_t *result
         else
         {
             /* allow for leading zeros */
-            char buf [ 256 ];
+            char buf [ 256 ] = "";
 
             rc = ReadNodeValueFixed(self, buf, sizeof(buf));
             if (rc == 0)
             {
+              if ( buf [ 0 ] == '\0' )
+                rc = RC(rcKFG, rcNode, rcReading, rcNode, rcEmpty);
+              else {
                 char* endptr;
                 int64_t res = strtoi64(buf, &endptr, 0);
                 if ( *endptr == '\0' )
                     *result = res;
                 else
                     rc = RC(rcKFG, rcNode, rcReading, rcFormat, rcIncorrect);
+              }
             }
         }
     }
@@ -3809,17 +3813,21 @@ LIB_EXPORT rc_t CC KConfigNodeReadU64 ( const KConfigNode *self, uint64_t* resul
         else
         {
             /* allow for leading zeros */
-            char buf [ 256 ];
+            char buf [ 256 ] = "";
 
             rc = ReadNodeValueFixed(self, buf, sizeof(buf));
             if (rc == 0)
             {
+              if ( buf [ 0 ] == '\0' )
+                rc = RC(rcKFG, rcNode, rcReading, rcNode, rcEmpty);
+              else {
                 char* endptr;
                 int64_t res = strtou64(buf, &endptr, 0);
                 if ( *endptr == '\0' )
                     *result = res;
                 else
                     rc = RC(rcKFG, rcNode, rcReading, rcFormat, rcIncorrect);
+              }
             }
         }
     }
@@ -3848,17 +3856,21 @@ LIB_EXPORT rc_t CC KConfigNodeReadF64( const KConfigNode *self, double* result )
         else
         {
             /* allow for leading zeros, trailing digits */
-            char buf [ 256 ];
+            char buf [ 256 ] = "";
 
             rc = ReadNodeValueFixed(self, buf, sizeof(buf));
             if (rc == 0)
             {
+              if ( buf [ 0 ] == '\0' )
+                rc = RC(rcKFG, rcNode, rcReading, rcNode, rcEmpty);
+              else {
                 char* endptr;
                 double res = strtod(buf, &endptr);
                 if ( *endptr == '\0' )
                     *result = res;
                 else
                     rc = RC(rcKFG, rcNode, rcReading, rcFormat, rcIncorrect);
+              }
             }
         }
     }

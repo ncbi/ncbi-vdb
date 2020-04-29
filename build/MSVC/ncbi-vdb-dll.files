@@ -1101,6 +1101,10 @@
       <ObjectFileName>$(IntDir)kns-%(Filename).obj</ObjectFileName>
       <AdditionalIncludeDirectories>$(ProjectDir)../../../libs/kns;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\kns\stable-http-file.c">
+      <ObjectFileName>$(IntDir)kns-%(Filename).obj</ObjectFileName>
+      <AdditionalIncludeDirectories>$(ProjectDir)../../../libs/kns;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
     <ClCompile Include="..\..\..\libs\kns\http-retrier.c">
       <ObjectFileName>$(IntDir)kns-%(Filename).obj</ObjectFileName>
       <AdditionalIncludeDirectories>$(ProjectDir)../../../libs/kns;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
