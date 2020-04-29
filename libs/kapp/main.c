@@ -498,6 +498,11 @@ rc_t KMane ( int argc, char *argv [] )
 #endif
 
             }
+            {
+                rc_t r2 = KNSManagerRelease(kns);
+                if (rc == 0 && r2 != 0)
+                    rc = r2;
+            }
 #if KFG_COMMON_CREATION
             KConfigRelease ( kfg );
         }
