@@ -819,13 +819,17 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
     return rc;
 }
 
-static rc_t CC VFSManagerGetConfigPWFile (const VFSManager * self, char * b, size_t bz, size_t * pz)
+static rc_t CC VFSManagerGetConfigPWFile (const VFSManager * self,
+    char * b, size_t bz, size_t * pz, bool * pwdItself)
 {
     const char * env;
     const KConfigNode * node;
     size_t oopsy;
     size_t z = 0;
     rc_t rc;
+
+    assert(self && b && pwdItself);
+    *pwdItself = false;
 
     if (pz)
         *pz = 0;
@@ -857,8 +861,11 @@ static rc_t CC VFSManagerGetConfigPWFile (const VFSManager * self, char * b, siz
             if (rc == 0)
             {
                 rc = KRepositoryEncryptionKeyFile (prot, b, bz, pz);
-                if (rc != 0 || b[0] == '\0')
+                if (rc != 0 || b[0] == '\0') {
                     rc = KRepositoryEncryptionKey (prot, b, bz, pz);
+                    if (rc == 0)
+                        *pwdItself = true;
+                }
 
                 KRepositoryRelease(prot);
             }
@@ -3249,10 +3256,15 @@ LIB_EXPORT rc_t CC VFSManagerGetKryptoPassword (const VFSManager * self,
     {
         size_t z;
         char obuff [4096 + 16];
+        bool pwdItself = false;
 
-        rc = VFSManagerGetConfigPWFile(self, obuff, sizeof obuff, &z);
+        rc = VFSManagerGetConfigPWFile(self, obuff, sizeof obuff, &z,
+            &pwdItself);
         if (rc == 0)
         {
+          if (pwdItself)
+              *size = string_copy(password, max_size, obuff, z);
+          else {
             VPath * vpath;
             rc_t rc2;
             rc = VPathMake (&vpath, obuff);
@@ -3261,11 +3273,14 @@ LIB_EXPORT rc_t CC VFSManagerGetKryptoPassword (const VFSManager * self,
             rc2 = VPathRelease (vpath);
             if (rc == 0)
                 rc = rc2;
+          }
         }
     }
     return rc;
 }
 
+/* N.B. This finction might fail if password is stored in configuration,
+	not file (pwdItself == true after ) VFSManagerGetConfigPWFile */
 LIB_EXPORT rc_t CC VFSManagerUpdateKryptoPassword (const VFSManager * self, 
                                                    const char * password,
                                                    size_t size,
@@ -3292,10 +3307,11 @@ LIB_EXPORT rc_t CC VFSManagerUpdateKryptoPassword (const VFSManager * self,
     {
         size_t old_password_file_size;
         char old_password_file [8193];
-        
+        bool pwdItself = false;
+
         rc = VFSManagerGetConfigPWFile (self, old_password_file,
                                         sizeof old_password_file - 1,
-                                        &old_password_file_size);
+                                        &old_password_file_size, &pwdItself);
         if (rc) {
             if (rc ==
                 SILENT_RC(rcKrypto, rcMgr, rcReading, rcBuffer, rcInsufficient))
