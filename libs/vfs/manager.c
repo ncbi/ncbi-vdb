@@ -716,39 +716,45 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
     }
 
     if ( rc == 0 ) {
-        bool hasMagic = getenv(ENV_MAGIC_LOCAL);
         bool ceRequired = false;
         bool payRequired = false;
+
         {
             const char * name = path->sraClass == eSCvdbcache ?
                 ENV_MAGIC_CACHE_NEED_CE : ENV_MAGIC_REMOTE_NEED_CE;
             const char * magic = getenv(name);
+            bool hasMagic = magic != NULL;
             if (is_refseq) {
-                if (magic != NULL)
+                if (magic != NULL) {
                     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
                         "'%s' magic ignored for refseq\n", name));
+                    magic = NULL;
+                }
             }
-            else
-                if (magic != NULL) {
+            if (magic != NULL) {
                     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
                         "'%s' magic found\n", name));
                     ceRequired = true;
-                }
-                else {
+            }
+            else {
                     ceRequired = path->ceRequired;
-                    if (hasMagic)
+                    if (!hasMagic)
                         DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
                             "'%s' magic not set\n", name));
-                }
+            }
         }
+
         {
             const char * name = path->sraClass == eSCvdbcache ?
                 ENV_MAGIC_CACHE_NEED_PMT : ENV_MAGIC_REMOTE_NEED_PMT;
             const char * magic = getenv(name);
+            bool hasMagic = magic != NULL;
             if (is_refseq) {
-                if (magic != NULL)
+                if (magic != NULL) {
                     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
                         "'%s' pmtReq magic ignored for refseq\n", name));
+                    magic = NULL;
+                }
             }
             if (magic != NULL) {
                 DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
@@ -757,11 +763,12 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
             }
             else {
                 payRequired = path->payRequired;
-                if (hasMagic)
+                if (!hasMagic)
                     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
                         "'%s' magic not set\n", name));
             }
         }
+
         rc = KNSManagerMakeReliableHttpFile ( self -> kns,
                                               cfp,
                                               NULL,
