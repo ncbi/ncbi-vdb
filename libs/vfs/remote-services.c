@@ -76,6 +76,25 @@
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 && !rc) { rc = rc2; } obj = NULL; } while (false)
 
+/******************************************************************************/
+static bool sLogNamesServiceErrors = true;
+LIB_EXPORT rc_t CC VFSManagerLogNamesServiceErrors(VFSManager * self,
+    bool enabled)
+{
+    sLogNamesServiceErrors = enabled;
+    return 0;
+}
+LIB_EXPORT rc_t CC VFSManagerGetLogNamesServiceErrors(VFSManager * self,
+    bool * enabled)
+{
+    if (enabled == NULL)
+        return RC(rcVFS, rcMgr, rcUpdating, rcParam, rcNull);
+    else {
+        *enabled = sLogNamesServiceErrors;
+        return 0;
+    }
+}
+/******************************************************************************/
 
 /******************************************************************************/
 /* service type - names of search */
@@ -1883,7 +1902,7 @@ static rc_t EVPathInit ( EVPath * self, const STyped * src,
 {
     rc_t rc = 0;
     bool made = false;
-    bool logError = true;
+    bool logError = sLogNamesServiceErrors;
     KLogLevel lvl = klogInt;
     assert ( self && src && r );
 
@@ -1976,10 +1995,10 @@ static rc_t EVPathInit ( EVPath * self, const STyped * src,
             rc = RC ( rcVFS, rcQuery, rcResolving, rcQuery, rcUnauthorized );
             break;
         case 404: /* 404|no data :
-          If it is a real response then this assession is not found.
+          If it is a real response then this accession is not found.
           What if it is a DB failure? Will be retried if configured to do so? */
             rc = RC ( rcVFS, rcQuery, rcResolving, rcName, rcNotFound );
-            logError = false;
+/*          logError = false; */
             break;
         case 410:
             rc = RC ( rcVFS, rcQuery, rcResolving, rcName, rcNotFound );
@@ -4121,7 +4140,8 @@ static rc_t KServiceProcessJson ( KService * self ) {
         return self->resp.rc;
 
     if (self->req.sdl)
-        rc = Response4MakeSdl ( & r, self -> helper . input );
+        rc = Response4MakeSdl ( & r, self -> helper . input,
+            sLogNamesServiceErrors );
     else
         rc = Response4Make4 ( & r, self -> helper . input );
 
@@ -4791,7 +4811,7 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
         rc = KSrvResponseGetR4 ( self -> resp .list, & r4 );
 
     if (rc == 0 && r4 == NULL)
-        rc = Response4MakeEmpty(&r4);
+        rc = Response4MakeEmpty(&r4, sLogNamesServiceErrors);
 
     for ( i = 0; rc == 0 && i < self -> req . request . objects; ++ i )
         if ( self -> req . request . object [ i ] . isUri )

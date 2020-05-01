@@ -41,6 +41,7 @@ TEST_TOOLS = \
 	test-resolver \
 	test-vfsmanager \
 	test-json-response \
+	test-log-names-error \
 	test-resolver4 \
 
 include $(TOP)/build/Makefile.env
@@ -121,6 +122,18 @@ J_OBJ = \
 	$(addsuffix .$(OBJX),$(J_SRC))
 
 $(TEST_BINDIR)/test-json-response: $(J_OBJ)
+	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
+
+#----------------------------------------------------------------
+# log-names-error
+
+LNE_SRC = \
+	test-log-names-error
+
+LNE_OBJ = \
+	$(addsuffix .$(OBJX),$(LNE_SRC))
+
+$(TEST_BINDIR)/test-log-names-error: $(LNE_OBJ)
 	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
 
 #----------------------------------------------------------------

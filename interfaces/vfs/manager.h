@@ -323,7 +323,17 @@ VFS_EXTERN rc_t CC VFSManagerGetObject(const struct VFSManager* self, uint32_t o
  */
 VFS_EXTERN
 rc_t CC VFSManagerSetAdCaching(struct VFSManager* self, bool enabled);
-                                                  
+   
+
+/* LogNamesServiceErrors
+ *  Enable/disable logging of error messages coming from names service
+ */
+VFS_EXTERN rc_t CC VFSManagerLogNamesServiceErrors(struct VFSManager* self,
+    bool enabled);
+VFS_EXTERN rc_t CC VFSManagerGetLogNamesServiceErrors(VFSManager * self,
+    bool * enabled);
+
+
 #ifdef __cplusplus
 }
 #endif

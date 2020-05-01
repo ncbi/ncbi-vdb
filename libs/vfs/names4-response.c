@@ -99,6 +99,8 @@ struct Container {
     Item * files;
     uint32_t nFiles;
     rc_t rc;
+
+    bool dontLogNamesServiceErrors;
 };
 
 struct Response4 { /* Response object */
@@ -108,6 +110,8 @@ struct Response4 { /* Response object */
     uint32_t nItems;
     char * nextToken;
     rc_t rc;
+
+    bool dontLogNamesServiceErrors;
 };
 
 struct KSrvRespObj {
@@ -1143,6 +1147,8 @@ rc_t Response4AddAccOrId ( Response4 * self, const char * acc,
     item = & self -> items [ self -> nItems - 1 ];
     memset ( item, 0, sizeof * item );
 
+    item->dontLogNamesServiceErrors = self->dontLogNamesServiceErrors;
+
     if ( acc != NULL ) {
         item -> acc = string_dup_measure( acc, NULL);
         if ( item -> acc == NULL )
@@ -1888,7 +1894,7 @@ void ContainerProcessStatus(Container * self, const Data * data) {
 
     if (self->status.code != 200) {
         KLogLevel lvl = klogInt;
-        bool logError = true;
+        bool logError = !self->dontLogNamesServiceErrors;
 
         switch (self->status.code / 100) {
         case 0:
@@ -1926,7 +1932,7 @@ void ContainerProcessStatus(Container * self, const Data * data) {
                     rcQuery, rcUnauthorized);
                 break;
             case 404: /* 404|no data :
-                      If it is a real response then this assession is not found.
+                      If it is a real response then this accession is not found.
                       What if it is a DB failure?
                       Will be retried if configured to do so? */
                 self->rc = RC(rcVFS, rcQuery, rcResolving, rcName, rcNotFound);
@@ -2172,7 +2178,7 @@ static rc_t Response4Init4 ( Response4 * self, const char * input ) {
     return rc;
 }
 
-rc_t Response4MakeEmpty ( Response4 ** self ) {
+rc_t Response4MakeEmpty (Response4 ** self, bool logNamesServiceErrors) {
     const char * env = NULL;
 
     assert ( self );
@@ -2180,6 +2186,8 @@ rc_t Response4MakeEmpty ( Response4 ** self ) {
     * self = ( Response4 * ) calloc ( 1, sizeof ** self );
     if ( * self == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
+
+    (*self)->dontLogNamesServiceErrors = ! logNamesServiceErrors;
 
     env = getenv("NCBI_VDB_JSON");
 
@@ -2211,7 +2219,7 @@ rc_t Response4Make4 ( Response4 ** self, const char * input ) {
 
     assert ( self );
 
-    rc = Response4MakeEmpty ( & r );
+    rc = Response4MakeEmpty ( & r, true );
     if ( rc != 0 )
         return rc;
 
