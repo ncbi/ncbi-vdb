@@ -539,6 +539,27 @@ rc_t KSocketHandleSocketCallWin ()
 }
 
 static
+rc_t KSocketHandleIoctlsocketCallWin()
+{
+	switch (WSAGetLastError())
+	{
+	case WSANOTINITIALISED:
+		return RC(rcNS, rcSocket, rcCreating, rcEnvironment, rcInvalid);
+	case WSAENETDOWN: /* ENETUNREACH */
+		return RC(rcNS, rcSocket, rcCreating, rcConnection, rcNotAvailable);
+	case WSAEINPROGRESS:
+		return RC(rcNS, rcSocket, rcCreating, rcConnection, rcBusy);
+	case WSAENOTSOCK:
+		return RC(rcNS, rcSocket, rcCreating, rcSocket, rcIncorrect);
+	case WSAEFAULT:
+		return RC(rcNS, rcSocket, rcCreating, rcParam, rcInvalid);
+	}
+
+	return RC(rcNS, rcSocket, rcCreating, rcError, rcUnknown);
+}
+
+
+static
 rc_t KSocketHandleBindCallWin ()
 {
     switch ( WSAGetLastError () )
@@ -608,7 +629,66 @@ rc_t KSocketHandleConnectCallWin ()
     return RC ( rcNS, rcSocket, rcCreating, rcError, rcUnknown );
 }
 
-static 
+static
+rc_t KSocketHandleWSACreateEventCall()
+{
+	switch (WSAGetLastError())
+	{
+	case WSANOTINITIALISED:
+		return RC(rcNS, rcSocket, rcCreating, rcEnvironment, rcInvalid);
+	case WSAENETDOWN:
+		return RC(rcNS, rcSocket, rcCreating, rcConnection, rcNotAvailable);
+	case WSAEINPROGRESS:
+		return RC(rcNS, rcSocket, rcCreating, rcConnection, rcBusy);
+	case WSA_NOT_ENOUGH_MEMORY:
+		return RC(rcNS, rcSocket, rcCreating, rcMemory, rcExhausted);
+	}
+
+	return RC(rcNS, rcSocket, rcCreating, rcError, rcUnknown);
+}
+
+static
+rc_t KSocketHandleWSAEventSelectCallWin()
+{
+	switch (WSAGetLastError())
+	{
+	case WSANOTINITIALISED:
+		return RC(rcNS, rcSocket, rcCreating, rcEnvironment, rcInvalid);
+	case WSAENETDOWN:
+		return RC(rcNS, rcSocket, rcCreating, rcConnection, rcNotAvailable);
+	case WSAEINVAL:
+		return RC(rcNS, rcSocket, rcCreating, rcParam, rcInvalid);
+	case WSAEINPROGRESS:
+		return RC(rcNS, rcSocket, rcCreating, rcConnection, rcBusy);
+	case WSAENOTSOCK:
+		return RC(rcNS, rcSocket, rcCreating, rcSocket, rcIncorrect);
+	}
+
+	return RC(rcNS, rcSocket, rcCreating, rcError, rcUnknown);
+}
+
+static
+rc_t KSocketWSAWaitForMultipleEventsCall()
+{
+	switch (WSAGetLastError())
+	{
+	case WSANOTINITIALISED:
+		return RC(rcNS, rcSocket, rcCreating, rcEnvironment, rcInvalid);
+	case WSAENETDOWN:
+		return RC(rcNS, rcSocket, rcCreating, rcConnection, rcNotAvailable);
+	case WSAEINPROGRESS:
+		return RC(rcNS, rcSocket, rcCreating, rcConnection, rcBusy);
+	case WSA_NOT_ENOUGH_MEMORY:
+		return RC(rcNS, rcSocket, rcCreating, rcMemory, rcExhausted);
+	case WSA_INVALID_HANDLE:
+	case WSA_INVALID_PARAMETER:
+		return RC(rcNS, rcSocket, rcCreating, rcParam, rcInvalid);
+	}
+
+	return RC(rcNS, rcSocket, rcCreating, rcError, rcUnknown);
+}
+
+static
 rc_t KSocketHandleListenCallWin ()
 {
     switch ( WSAGetLastError () )
@@ -693,7 +773,7 @@ rc_t KSocketHandleSocknameCallWin ()
 }
 
 static
-rc_t KSocketConnectIPv4 ( KSocket * self, const KEndPoint * from, const KEndPoint * to )
+rc_t KSocketConnectIPv4 ( KSocket * self, const KEndPoint * from, const KEndPoint * to, int32_t timeoutMs )
 {
     rc_t rc = 0;
 
@@ -702,6 +782,8 @@ rc_t KSocketConnectIPv4 ( KSocket * self, const KEndPoint * from, const KEndPoin
         rc = KSocketHandleSocketCallWin ();
     else
     {
+		u_long nonBlockingMode = 1; // non-blocking mode
+		int res;
         struct sockaddr_in ss;
         memset ( & ss, 0, sizeof ss );
         ss . sin_family = AF_INET;
@@ -711,27 +793,66 @@ rc_t KSocketConnectIPv4 ( KSocket * self, const KEndPoint * from, const KEndPoin
             ss . sin_addr . s_addr = htonl ( from -> u . ipv4 . addr );
         }
 
-        if ( bind ( self -> type_data . ipv4_data . fd, ( struct sockaddr * ) & ss, sizeof ss  ) == SOCKET_ERROR ) 
-            rc = KSocketHandleBindCallWin ();
-                
-        if ( rc == 0 )
-        {
-            ss . sin_port = htons ( to -> u . ipv4 . port );
-            ss . sin_addr . s_addr = htonl ( to -> u . ipv4 . addr );
-                
-            if ( connect ( self -> type_data . ipv4_data . fd, ( struct sockaddr * ) & ss, sizeof ss ) == SOCKET_ERROR )
-                rc = KSocketHandleConnectCallWin ();
-            else
-            {
-                /* not doing non-blocking */
-                return 0;
-            }
+		// set nonblocking mode
+		res = ioctlsocket(self->type_data.ipv4_data.fd, FIONBIO, &nonBlockingMode);
+		if (res != NO_ERROR)
+			rc = KSocketHandleIoctlsocketCallWin();
 
-            /* dump socket */
-            closesocket ( self -> type_data . ipv4_data . fd );
-            self -> type_data . ipv4_data . fd = INVALID_SOCKET;
-        }
-    }
+		if (rc == 0 && bind(self->type_data.ipv4_data.fd, (struct sockaddr *) & ss, sizeof ss) == SOCKET_ERROR)
+			rc = KSocketHandleBindCallWin();
+
+		if (rc == 0)
+		{
+			WSAEVENT connEvent = WSACreateEvent(); 
+			if (connEvent != WSA_INVALID_EVENT)
+			{
+				int res;
+				if (WSAEventSelect(self->type_data.ipv4_data.fd, connEvent, FD_CONNECT) == 0)
+				{
+					ss.sin_port = htons(to->u.ipv4.port);
+					ss.sin_addr.s_addr = htonl(to->u.ipv4.addr);
+
+					res = connect(self->type_data.ipv4_data.fd, (struct sockaddr *) & ss, sizeof ss);
+					if (res == SOCKET_ERROR && WSAGetLastError() == WSAEWOULDBLOCK)
+					{ /* asynch connect */
+						switch (WSAWaitForMultipleEvents(1, &connEvent, false, timeoutMs, false))
+						{
+						case WSA_WAIT_FAILED:
+							rc = KSocketWSAWaitForMultipleEventsCall();
+							break;
+						case WSA_WAIT_TIMEOUT:
+							rc = SILENT_RC(rcNS, rcSocket, rcCreating, rcTimeout, rcExhausted);
+							break;
+						default:
+							// success
+							WSACloseEvent(connEvent);
+							return 0;
+						}
+					}
+					else if (res == 0)
+					{	/* should not happen with a non-blocking socket */
+						DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ("%p: non-blocking connect() returned 0\n", self));
+						WSACloseEvent(connEvent);
+						return 0;
+					}
+					else
+					{
+						rc = KSocketHandleConnectCallWin();
+					}
+				}
+				else
+				{
+					rc = KSocketHandleWSAEventSelectCallWin();
+				}
+				WSACloseEvent(connEvent);
+			}
+			else
+				rc = KSocketHandleWSACreateEventCall();
+		}
+		/* dump socket */
+		closesocket(self->type_data.ipv4_data.fd);
+		self->type_data.ipv4_data.fd = INVALID_SOCKET;
+	}
 
     DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketConnectIPv4 failed - %R\n", self, rc ) );    
     return rc;
@@ -1877,7 +1998,7 @@ KNS_EXTERN rc_t CC KNSManagerMakeRetryTimedConnection ( struct KNSManager const 
                         switch ( to -> type )
                         {
                         case epIPV4:
-                            rc = KSocketConnectIPv4 ( conn, from, to );
+                            rc = KSocketConnectIPv4 ( conn, from, to, retryTimeout -> mS);
                             break;
 
                         case epIPV6:
