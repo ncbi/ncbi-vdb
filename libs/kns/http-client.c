@@ -1795,6 +1795,14 @@ rc_t KClientHttpResultWhack ( KClientHttpResult * self )
     return 0;
 }
 
+static void KClientHttpKSocketTimedWriteErrGcpHack(KClientHttp *self) {
+    String googleapis;
+    CONST_STRING(&googleapis, "storage.googleapis.com");
+    assert(self);
+    if (StringEqual(&googleapis, &self->hostname)) {
+        KClientHttpClose(self);
+    }
+}
 
 /* Sends the request and receives the response into a KClientHttpResult obj */
 rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
@@ -1813,6 +1821,9 @@ rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
     DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_HTTP),
         ("HTTP send '%S' '%.*s'\n\n", &self->hostname, len, buffer));
 
+#ifndef DEBUG_GCP_KSOCKET_TIMED_WRITE_MBEDTLS_SSL_WRITE_UNKNOWN_ERROR_MESSAGE
+    KClientHttpKSocketTimedWriteErrGcpHack(self);
+#endif
     /* reopen connection if NULL */
     if ( self -> sock == NULL )
         rc = KClientHttpOpen ( self, & self -> hostname, self -> port );
