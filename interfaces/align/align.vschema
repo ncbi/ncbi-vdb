@@ -1148,7 +1148,7 @@ I64 NCBI:align:sorted:alignment_id_encoding #1.0
 
  table NCBI:align:tbl:seq #2 =
     NCBI:tbl:base_space #3,
-    NCBI:tbl:phred_quality #2.0.4,
+    NCBI:tbl:phred_quality #2.0,
     NCBI:align:tbl:cmp_base_space #1,
     NCBI:SRA:tbl:spotdesc #1.0.2,
     NCBI:SRA:tbl:stats #1.2.1

@@ -463,6 +463,8 @@ rc_t KMane ( int argc, char *argv [] )
         KNSManagerSetUserAgent ( kns, PKGNAMESTR " sra-toolkit %.*s.%V", ( uint32_t ) tool_size, tool, vers );
     }
 
+    KNSManagerSetQuitting ( kns, Quitting );
+
     /* initialize logging */
     rc = KWrtInit(argv[0], vers);
     if ( rc == 0 )
@@ -497,6 +499,11 @@ rc_t KMane ( int argc, char *argv [] )
                 }
 #endif
 
+            }
+            {
+                rc_t r2 = KNSManagerRelease(kns);
+                if (rc == 0 && r2 != 0)
+                    rc = r2;
             }
 #if KFG_COMMON_CREATION
             KConfigRelease ( kfg );

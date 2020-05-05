@@ -710,14 +710,16 @@ static rc_t Response4InitSdl(Response4 * self, const char * input) {
     return rc;
 }
 
-rc_t Response4MakeSdl(Response4 ** self, const char * input) {
+rc_t Response4MakeSdl(Response4 ** self, const char * input,
+    bool logNamesServiceErrors)
+{
     rc_t rc = 0;
 
     Response4 * r = NULL;
 
     assert(self);
 
-    rc = Response4MakeEmpty(&r);
+    rc = Response4MakeEmpty(&r, logNamesServiceErrors);
     if (rc != 0)
         return rc;
 

@@ -510,6 +510,9 @@
     <ClCompile Include="..\..\..\libs\kns\http-file.c">
       <Filter>kns</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\kns\stable-http-file.c">
+      <Filter>kns</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\libs\kns\http.c">
       <Filter>kns</Filter>
     </ClCompile>

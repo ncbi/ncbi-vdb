@@ -44,7 +44,7 @@ include 'ncbi/sra.vschema';
 table NCBI:SRA:Nanopore:consensus #2
     = NCBI:SRA:tbl:sra #2.1.4
     , NCBI:tbl:base_space #3
-    , NCBI:tbl:phred_quality #2.0.3
+    , NCBI:tbl:phred_quality #2.0
 {
     extern column < U32 > izip_encoding #1 CHANNEL;
 

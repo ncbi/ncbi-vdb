@@ -1,6 +1,3 @@
-#ifndef _h_kfg_ngc_priv_
-#define _h_kfg_ngc_priv_
-
 /*===========================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
@@ -23,48 +20,8 @@
 *
 *  Please cite the author in any work or product based on this material.
 *
-* ===========================================================================
-*
-*/
+* ============================================================================= */
 
+#include <kfs/file.h> /* KFile */
 
-#ifndef _h_kfg_ngc_
-#include <kfg/ngc.h>
-#endif
-
-#ifndef _h_klib_data_buffer
-#include <klib/data-buffer.h>
-#endif
-
-#ifndef _h_klib_text_
-#include <klib/text.h>
-#endif
-
-#ifndef _h_klib_refcount_
-#include <klib/refcount.h>
-#endif
-
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-struct KNgcObj
-{
-    KRefcount refcount;
-    KDataBuffer buffer;
-    String version, encryptionKey, downloadTicket, description;
-    uint32_t projectId;
-};
-
-
-rc_t KNgcObjGetEncryptionKey(const KNgcObj *self,
-    char * buffer, size_t buffer_size, size_t * written);
-
-rc_t KNgcObjMakeFromCmdLine(const KNgcObj ** self);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* _h_kfg_ngc_priv_ */
+const KFile * InnerKFileFromKStableHttpFile(KFile *);

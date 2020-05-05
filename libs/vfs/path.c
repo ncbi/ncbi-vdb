@@ -480,6 +480,14 @@ void VPathCaptureFragment ( VPath * self, const char * uri, size_t start, size_t
     StringInit ( & self -> fragment, & uri [ start ], end - start, count );
 }
 
+static void VPathFixForHs37d5(VPath * self) {
+    String hs37d5;
+    CONST_STRING(&hs37d5, "hs37d5");
+    assert(self);
+    if (StringEqual(&self->path, &hs37d5))
+        self->path_type = vpAccession;
+}
+
 #define VPathParseResetAnchor( i ) \
     do { anchor = ( i ); count = 0; } while ( 0 )
 
@@ -1988,6 +1996,8 @@ rc_t VPathParseInt ( VPath * self, char * uri, size_t uri_size,
     case vppAccUnderNamePath:
     case vppNamePathOrScheme:
         VPathCapturePath ( self, uri, anchor, i, count, vpName );
+        if ( state == vppNamePathOrScheme )
+            VPathFixForHs37d5 ( self );
         break;
     case vppAccOidRelOrSlash:
         return RC ( rcVFS, rcPath, rcParsing, rcData, rcInsufficient );
@@ -4152,7 +4162,7 @@ rc_t VPathMakeFromUrl ( VPath ** new_path, const String * url,
         if (string_chr(url->addr, url->size, '?') == NULL)
             fmt = "%S?tic=%S";
         else
-            fmt = "%S&tic=%S";
+            fmt = "%S?tic=%S";
         return VPathMakeFmtExt(new_path, ext, id, tick, osize, date, md5,
             exp_date, service, objectType, type, ceRequired, payRequired, name,
             projectId, version, fmt, url, tick);
@@ -4163,7 +4173,7 @@ rc_t VPathMakeFromUrl ( VPath ** new_path, const String * url,
         if (string_chr(url->addr, url->size, '?') == NULL)
             fmt = "%S?pId=%d";
         else
-            fmt = "%S&pId=%d";
+            fmt = "%S?pId=%d";
         return VPathMakeFmtExt(new_path, ext, id, tick, osize, date, md5,
             exp_date, service, objectType, type, ceRequired, payRequired, name,
             projectId, version, fmt, url, projectId);
@@ -4265,16 +4275,16 @@ VPUri_t LegacyVPathGetUri_t ( const VPath * self )
     return uri_type;
 }
 
-bool VPathGetProjectId(const VPath * self, uint32_t * projectId) {
+LIB_EXPORT
+bool CC VPathGetProjectId(const VPath * self, uint32_t * projectId)
+{
     uint32_t dummy = 0;
     if (projectId == NULL)
         projectId = &dummy;
 
-    assert(self);
-
     *projectId = 0;
 
-    if (self->projectId < 0)
+    if (self == NULL || self->projectId < 0)
         return false;
 
     *projectId = self->projectId;

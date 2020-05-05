@@ -716,39 +716,45 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
     }
 
     if ( rc == 0 ) {
-        bool hasMagic = getenv(ENV_MAGIC_LOCAL);
         bool ceRequired = false;
         bool payRequired = false;
+
         {
             const char * name = path->sraClass == eSCvdbcache ?
                 ENV_MAGIC_CACHE_NEED_CE : ENV_MAGIC_REMOTE_NEED_CE;
             const char * magic = getenv(name);
+            bool hasMagic = magic != NULL;
             if (is_refseq) {
-                if (magic != NULL)
+                if (magic != NULL) {
                     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
                         "'%s' magic ignored for refseq\n", name));
+                    magic = NULL;
+                }
             }
-            else
-                if (magic != NULL) {
+            if (magic != NULL) {
                     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
                         "'%s' magic found\n", name));
                     ceRequired = true;
-                }
-                else {
+            }
+            else {
                     ceRequired = path->ceRequired;
-                    if (hasMagic)
+                    if (!hasMagic)
                         DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
                             "'%s' magic not set\n", name));
-                }
+            }
         }
+
         {
             const char * name = path->sraClass == eSCvdbcache ?
                 ENV_MAGIC_CACHE_NEED_PMT : ENV_MAGIC_REMOTE_NEED_PMT;
             const char * magic = getenv(name);
+            bool hasMagic = magic != NULL;
             if (is_refseq) {
-                if (magic != NULL)
+                if (magic != NULL) {
                     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
                         "'%s' pmtReq magic ignored for refseq\n", name));
+                    magic = NULL;
+                }
             }
             if (magic != NULL) {
                 DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
@@ -757,11 +763,12 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
             }
             else {
                 payRequired = path->payRequired;
-                if (hasMagic)
+                if (!hasMagic)
                     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
                         "'%s' magic not set\n", name));
             }
         }
+
         rc = KNSManagerMakeReliableHttpFile ( self -> kns,
                                               cfp,
                                               NULL,
@@ -819,13 +826,17 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
     return rc;
 }
 
-static rc_t CC VFSManagerGetConfigPWFile (const VFSManager * self, char * b, size_t bz, size_t * pz)
+static rc_t CC VFSManagerGetConfigPWFile (const VFSManager * self,
+    char * b, size_t bz, size_t * pz, bool * pwdItself)
 {
     const char * env;
     const KConfigNode * node;
     size_t oopsy;
     size_t z = 0;
     rc_t rc;
+
+    assert(self && b && pwdItself);
+    *pwdItself = false;
 
     if (pz)
         *pz = 0;
@@ -857,8 +868,11 @@ static rc_t CC VFSManagerGetConfigPWFile (const VFSManager * self, char * b, siz
             if (rc == 0)
             {
                 rc = KRepositoryEncryptionKeyFile (prot, b, bz, pz);
-                if (rc != 0 || b[0] == '\0')
+                if (rc != 0 || b[0] == '\0') {
                     rc = KRepositoryEncryptionKey (prot, b, bz, pz);
+                    if (rc == 0)
+                        *pwdItself = true;
+                }
 
                 KRepositoryRelease(prot);
             }
@@ -3016,6 +3030,19 @@ void KConfigReadRemoteProtocols ( const KConfig * self, VRemoteProtocols * remot
     }
 }
 
+static void VFSManagerLoadLogNamesServiceErrors(VFSManager * self) {
+    rc_t rc = 0;
+
+    bool enabled = true;
+
+    assert(self);
+
+    rc = KConfigReadBool(self->cfg, "/name-resolver/log-names-service-errors",
+        &enabled);
+    if (rc == 0)
+        VFSManagerLogNamesServiceErrors(self, enabled);
+}
+
 /* Make
  */
 LIB_EXPORT rc_t CC VFSManagerMake ( VFSManager ** pmanager )
@@ -3096,6 +3123,8 @@ static rc_t CC VFSManagerMakeFromKfgImpl ( struct VFSManager ** pmanager,
                                 LOGERR ( klogWarn, rc, "could not build vfs-resolver" );
                                 rc = 0;
                             }
+
+                            VFSManagerLoadLogNamesServiceErrors(obj);
 
                             *pmanager = obj;
                             if (!local)
@@ -3249,10 +3278,15 @@ LIB_EXPORT rc_t CC VFSManagerGetKryptoPassword (const VFSManager * self,
     {
         size_t z;
         char obuff [4096 + 16];
+        bool pwdItself = false;
 
-        rc = VFSManagerGetConfigPWFile(self, obuff, sizeof obuff, &z);
+        rc = VFSManagerGetConfigPWFile(self, obuff, sizeof obuff, &z,
+            &pwdItself);
         if (rc == 0)
         {
+          if (pwdItself)
+              *size = string_copy(password, max_size, obuff, z);
+          else {
             VPath * vpath;
             rc_t rc2;
             rc = VPathMake (&vpath, obuff);
@@ -3261,11 +3295,14 @@ LIB_EXPORT rc_t CC VFSManagerGetKryptoPassword (const VFSManager * self,
             rc2 = VPathRelease (vpath);
             if (rc == 0)
                 rc = rc2;
+          }
         }
     }
     return rc;
 }
 
+/* N.B. This finction might fail if password is stored in configuration,
+	not file (pwdItself == true after ) VFSManagerGetConfigPWFile */
 LIB_EXPORT rc_t CC VFSManagerUpdateKryptoPassword (const VFSManager * self, 
                                                    const char * password,
                                                    size_t size,
@@ -3292,10 +3329,11 @@ LIB_EXPORT rc_t CC VFSManagerUpdateKryptoPassword (const VFSManager * self,
     {
         size_t old_password_file_size;
         char old_password_file [8193];
-        
+        bool pwdItself = false;
+
         rc = VFSManagerGetConfigPWFile (self, old_password_file,
                                         sizeof old_password_file - 1,
-                                        &old_password_file_size);
+                                        &old_password_file_size, &pwdItself);
         if (rc) {
             if (rc ==
                 SILENT_RC(rcKrypto, rcMgr, rcReading, rcBuffer, rcInsufficient))

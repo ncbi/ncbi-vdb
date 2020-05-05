@@ -44,6 +44,7 @@ extern "C" {
  */
 struct KDirectory;
 struct KNamelist;
+struct KRepository;
 
 
 /*--------------------------------------------------------------------------
@@ -108,6 +109,9 @@ KFG_EXTERN rc_t CC KConfigPrintPartial
 */
 KFG_EXTERN rc_t CC
 KConfigParse ( KConfig * self, const char* path, const char * src );
+
+
+bool KRepositoryFromNgc(const struct KRepository * self);
 
 #ifdef __cplusplus
 }

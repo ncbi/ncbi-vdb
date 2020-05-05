@@ -55,7 +55,7 @@ table NCBI:SRA:PacBio:common #1.0.4 = NCBI:SRA:tbl:sra #2.1.4
 table NCBI:SRA:PacBio:smrt:fastq #2
     = NCBI:SRA:PacBio:common #1.0.4
     , NCBI:tbl:base_space #3
-    , NCBI:tbl:phred_quality #2.0.3
+    , NCBI:tbl:phred_quality #2.0
 {
     /* PLATFORM
      *  platform name is always "PACBIO_SMRT"

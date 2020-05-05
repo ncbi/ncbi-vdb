@@ -58,7 +58,7 @@ extern function NCBI:SRA:spot_name_token
 table NCBI:SRA:Helicos:tbl:v2 #2
     = NCBI:SRA:tbl:sra #2.1.4
     , NCBI:tbl:base_space #3
-    , NCBI:tbl:phred_quality #2.0.3
+    , NCBI:tbl:phred_quality #2.0
 {
     ascii platform_name
         = < ascii > echo < "HELICOS" > ();

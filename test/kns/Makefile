@@ -290,6 +290,7 @@ connect: test-connect
 #
 REFRESH_SRC = \
 	HttpFixture \
+	KStableHttpFile \
 	test-refresh-expired-url \
 
 REFRESH_OBJ = \

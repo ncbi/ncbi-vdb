@@ -2667,13 +2667,16 @@ LIB_EXPORT rc_t CC BAMAlignmentGetAlignmentDetail(
         rslt[i].read_pos = rpos;
         rslt[i].length = len;
         rslt[i].type = (BAMCigarType)op;
+
+        /* because we're assigning unsigned to signed below */
+        assert ( ( int32_t ) i >= 0 );
         
         switch ((BAMCigarType)op) {
         case ct_Match:
         case ct_Equal:
             if (first == -1)
-                first = i;
-            last = i;
+                first = ( int32_t ) i;
+            last = ( int32_t ) i;
             gpos += len;
             rpos += len;
             break;

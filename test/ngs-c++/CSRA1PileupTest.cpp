@@ -30,6 +30,8 @@
 
 #include "ngsfixture.hpp"
 
+#include <kapp/args.h> /* ArgsMakeAndHandle */
+
 #include <kfg/config.h> /* KConfigDisableUserSettings */
 
 #include <ngs/ncbi/NGS.hpp>
@@ -45,7 +47,8 @@
 
 using namespace ncbi::NK;
 
-TEST_SUITE(NgsCsra1PileupCppTestSuite);
+static rc_t argsHandler(int argc, char* argv[]);
+TEST_SUITE_WITH_ARGS_HANDLER(NgsCsra1PileupCppTestSuite, argsHandler);
 
 FIXTURE_TEST_CASE(CSRA1_PileupIterator_GetDepth, NgsFixture)
 {
@@ -710,6 +713,11 @@ FIXTURE_TEST_CASE(CSRA1_PileupIterator_TestAllFunctions, NgsFixture)
 }
 
 //////////////////////////////////////////// Main
+
+static rc_t argsHandler(int argc, char* argv[]) {
+    return ArgsMakeAndHandle ( NULL, argc, argv, 0, NULL, 0 );
+}
+
 extern "C"
 {
 

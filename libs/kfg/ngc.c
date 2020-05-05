@@ -35,12 +35,15 @@
 #include <klib/refcount.h>
 
 #include <kfg/ngc.h>
+
+#include <kfs/directory.h> /* KDirectoryOpenFileRead */
 #include <kfs/file.h>
 #include <kfs/subfile.h>
 #include <kfs/gzip.h>
 
 #include <strtol.h>
 
+#include "kfg-priv.h" /* KConfigGetNgcFile */
 #include "ngc-priv.h"
 
 #include <string.h>
@@ -53,6 +56,11 @@
 #define MAX_DNLD_TICKET_LEN 256
 #define MIN_DESCRIPTION_LEN 1
 #define MAX_DESCRIPTION_LEN 256
+
+
+#define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
+    if (rc2 && !rc) { rc = rc2; } obj = NULL; } while (false)
+
 
 static rc_t KNgcObjWhack ( KNgcObj * self )
 {
@@ -514,4 +522,35 @@ rc_t KNgcObjGetEncryptionKey(const KNgcObj *self,
             &self->encryptionKey);
 
     return rc;
+}
+
+rc_t KNgcObjMakeFromCmdLine(const KNgcObj ** self) {
+    const char * ngc_file = NULL;
+
+    assert(self);
+
+    *self = NULL;
+
+    ngc_file = KConfigGetNgcFile();
+
+    if (ngc_file == NULL)
+        return 0;
+    else {
+        KDirectory * dir = NULL;
+        const KFile * f = NULL;
+
+        rc_t rc = KDirectoryNativeDir(&dir);
+
+        if (rc == 0)
+            rc = KDirectoryOpenFileRead(dir, &f, "%s", ngc_file);
+
+        if (rc == 0)
+            rc = KNgcObjMakeFromFile(self, f);
+
+        RELEASE(KFile, f);
+
+        RELEASE(KDirectory, dir);
+
+        return rc;
+    }
 }
