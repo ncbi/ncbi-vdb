@@ -772,6 +772,63 @@ rc_t KSocketHandleSocknameCallWin ()
     return RC ( rcNS, rcSocket, rcIdentifying, rcError, rcUnknown );
 }
 
+rc_t 
+connect_wait(int sock, int32_t timeoutMs)
+{   /* asynch connect */
+    RC_CTX(rcSocket, rcCreating);
+    rc_t rc = 0;
+    WSAEVENT connEvent = WSACreateEvent();
+    if (connEvent != WSA_INVALID_EVENT)
+    {
+        if (WSAEventSelect(sock, connEvent, FD_CONNECT) == 0)
+        {
+            int w = WSAWaitForMultipleEvents(1, &connEvent, false, timeoutMs, false);
+            switch (w)
+            {
+            case WSA_WAIT_FAILED:
+                rc = KSocketWSAWaitForMultipleEventsCall();
+                break;
+            case WSA_WAIT_TIMEOUT:
+                rc = RC(rcNS, rcSocket, rcCreating, rcTimeout, rcExhausted); 
+                break;
+            default:
+                {   // make sure the socket is writeable
+                    struct timeval ts;
+                    fd_set writeFds;
+                    int selectRes;
+
+                    /* convert timeout (relative time) */
+                    ts.tv_sec = timeoutMs / 1000;
+                    ts.tv_usec = (timeoutMs % 1000) * 1000;
+
+                    FD_ZERO(&writeFds);
+                    FD_SET(sock, &writeFds);
+
+                    selectRes = select(0, NULL, &writeFds, NULL, &ts);
+                    if (selectRes == -1)
+                        rc = KSocketHandleSelectCallWin(rcCreating);
+                    else if (selectRes == 0)
+                        rc = RC(rcNS, rcSocket, rcCreating, rcTimeout, rcExhausted); /* timeout */
+                    else if (!FD_ISSET(sock, &writeFds))
+                        rc = HandleErrno(); /* cannot determine return codes of FD_ISSET */
+                    else
+                        rc = 0;
+                }
+            }
+            WSACloseEvent(connEvent);
+        }
+        else
+        {
+            rc = KSocketHandleWSAEventSelectCallWin();
+        }
+    }
+    else
+    {
+        rc = KSocketHandleWSACreateEventCall();
+    }
+    return rc;
+}
+
 static
 rc_t KSocketConnectIPv4 ( KSocket * self, const KEndPoint * from, const KEndPoint * to, int32_t timeoutMs )
 {
@@ -803,51 +860,29 @@ rc_t KSocketConnectIPv4 ( KSocket * self, const KEndPoint * from, const KEndPoin
 
 		if (rc == 0)
 		{
-			WSAEVENT connEvent = WSACreateEvent(); 
-			if (connEvent != WSA_INVALID_EVENT)
-			{
-				int res;
-				if (WSAEventSelect(self->type_data.ipv4_data.fd, connEvent, FD_CONNECT) == 0)
-				{
-					ss.sin_port = htons(to->u.ipv4.port);
-					ss.sin_addr.s_addr = htonl(to->u.ipv4.addr);
+			int res;
+            SOCKET sock = self->type_data.ipv4_data.fd;
+			ss.sin_port = htons(to->u.ipv4.port);
+			ss.sin_addr.s_addr = htonl(to->u.ipv4.addr);
 
-					res = connect(self->type_data.ipv4_data.fd, (struct sockaddr *) & ss, sizeof ss);
-					if (res == SOCKET_ERROR && WSAGetLastError() == WSAEWOULDBLOCK)
-					{ /* asynch connect */
-						switch (WSAWaitForMultipleEvents(1, &connEvent, false, timeoutMs, false))
-						{
-						case WSA_WAIT_FAILED:
-							rc = KSocketWSAWaitForMultipleEventsCall();
-							break;
-						case WSA_WAIT_TIMEOUT:
-							rc = SILENT_RC(rcNS, rcSocket, rcCreating, rcTimeout, rcExhausted);
-							break;
-						default:
-							// success
-							WSACloseEvent(connEvent);
-							return 0;
-						}
-					}
-					else if (res == 0)
-					{	/* should not happen with a non-blocking socket */
-						DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ("%p: non-blocking connect() returned 0\n", self));
-						WSACloseEvent(connEvent);
-						return 0;
-					}
-					else
-					{
-						rc = KSocketHandleConnectCallWin();
-					}
-				}
-				else
-				{
-					rc = KSocketHandleWSAEventSelectCallWin();
-				}
-				WSACloseEvent(connEvent);
+			res = connect(sock, (struct sockaddr *) & ss, sizeof ss);
+            if (res == SOCKET_ERROR && WSAGetLastError() == WSAEWOULDBLOCK)
+            {
+                rc = connect_wait((int)sock, timeoutMs);
+                if (rc == 0)
+                {
+                    return 0;
+                }
+            }
+			else if (res == 0)
+			{	/* should not happen with a non-blocking socket */
+				DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ("%p: non-blocking connect() returned 0\n", self));
+				return 0;
 			}
 			else
-				rc = KSocketHandleWSACreateEventCall();
+			{
+				rc = KSocketHandleConnectCallWin();
+			}
 		}
 		/* dump socket */
 		closesocket(self->type_data.ipv4_data.fd);

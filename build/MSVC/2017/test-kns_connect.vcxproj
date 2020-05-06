@@ -23,6 +23,9 @@
     <ClCompile>
       <AdditionalIncludeDirectories>$(VDB_ROOT)libs/kns;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
+    <Link>
+      <ForceFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MultiplyDefinedSymbolOnly</ForceFileOutput>
+    </Link>
   </ItemDefinitionGroup>
   <Import Project="..\test-kns_connect.files" />
   <PropertyGroup Label="Globals">
