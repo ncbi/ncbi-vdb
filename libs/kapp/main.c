@@ -408,8 +408,8 @@ void CC atexit_task ( void )
 
 rc_t KMane ( int argc, char *argv [] )
 {
-    rc_t rc;
-    KNSManager * kns;
+    rc_t rc = 0;
+    KNSManager * kns = NULL;
 #if NO_KRSRC
     int status;
 #else
@@ -434,7 +434,7 @@ rc_t KMane ( int argc, char *argv [] )
     if ( rc != 0 )
         return rc;
 
-    kns = ( KNSManager* ) ( size_t ) -1;
+    kns = NULL;
 #else
     ON_FAIL ( KRsrcGlobalInit ( & local_ctx, & s_func_loc, false ) )
     {
@@ -501,9 +501,10 @@ rc_t KMane ( int argc, char *argv [] )
 
             }
             {
-                rc_t r2 = KNSManagerRelease(kns);
-                if (rc == 0 && r2 != 0)
+                rc_t r2 = KNSManagerRelease ( kns );
+                if ( rc == 0 && r2 != 0 )
                     rc = r2;
+                kns = NULL;
             }
 #if KFG_COMMON_CREATION
             KConfigRelease ( kfg );
