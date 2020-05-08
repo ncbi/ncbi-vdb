@@ -694,6 +694,8 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
                              bool is_refseq,
                              bool promote )
 {
+    bool is_wgs = false;
+
     const String * uri = NULL;
     rc_t rc = VPathMakeString ( path, &uri );
 
@@ -708,6 +710,11 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
             if (!is_refseq) {
                 assert(uri);
                 is_refseq = strstr(uri->addr, refseq.addr) != NULL;
+            }
+            if (!is_refseq) {
+                String wgs;
+                CONST_STRING(&wgs, "wgs");
+                is_refseq = is_wgs = StringEqual(&objectType, &wgs);
             }
         }
     }
@@ -724,7 +731,8 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
             if (is_refseq) {
                 if (magic != NULL) {
                     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
-                        "'%s' magic ignored for refseq\n", name));
+                        "'%s' magic ignored for %s\n",
+                        name, is_wgs ? "WGS" : "refseq"));
                     magic = NULL;
                 }
             }
@@ -749,7 +757,8 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
             if (is_refseq) {
                 if (magic != NULL) {
                     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
-                        "'%s' pmtReq magic ignored for refseq\n", name));
+                        "'%s' pmtReq magic ignored for %s\n",
+                        name, is_wgs ? "WGS" : "refseq"));
                     magic = NULL;
                 }
             }
