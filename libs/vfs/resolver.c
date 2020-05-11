@@ -2879,6 +2879,11 @@ static rc_t VResolverMagicResolve(const VResolver * self, const VPath ** path,
             ("'%s' magic ignored for refseq\n", name));
         return 0;
     }
+    else if (app == appWGS) {
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
+            ("'%s' magic ignored for WGS\n", name));
+        return 0;
+    }
 
     magic = getenv(name);
     if (magic == NULL) {
