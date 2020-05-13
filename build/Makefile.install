@@ -60,7 +60,7 @@ LIBRARIES_TO_INSTALL = \
     ncbi-vdb.$(VERSION_SHLX) \
     ncbi-wvdb.$(VERSION_LIBX) \
     ncbi-wvdb.$(VERSION_SHLX) \
-    ncbi-ngs-c++.$(VERSION_LIBX) \
+    ncbi-ngs.$(VERSION_LIBX) \
 
 LIB_TARGET = $(INST_LIBDIR)$(BITS)
 

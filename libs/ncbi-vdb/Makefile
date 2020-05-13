@@ -30,7 +30,8 @@ MODULE = libs/ncbi-vdb
 
 EXT_LIBS = \
 	libncbi-vdb \
-	libncbi-wvdb
+	libncbi-wvdb \
+	libncbi-ngs \
 
 ALL_LIBS = \
 	$(EXT_LIBS)
@@ -64,6 +65,24 @@ clean: stdclean cleanfuzz
 .PHONY: clean
 
 #-------------------------------------------------------------------------------
+# NGS support library, static
+$(LIBDIR)/libncbi-ngs: $(addprefix $(LIBDIR)/libncbi-ngs.,$(LIBX))
+
+VDB_NGS = \
+	ngs-py                \
+	ngs                   \
+	ncbi-ngs-c++               \
+
+VDB_NGS_OBJ = \
+	$(addprefix $(ILIBDIR)/lib,$(addsuffix .a,$(VDB_NGS)))
+
+VDB_NGS_LIB = \
+	$(addprefix -s,$(VDB_NGS))
+
+$(LIBDIR)/libncbi-ngs.$(LIBX): $(VDB_NGS_OBJ)
+	$(LD) --slib --vers $(SRCDIR)/libncbi-vdb.vers -o $@ $(VDB_NGS_LIB)
+
+#-------------------------------------------------------------------------------
 # virtual db library
 # made in both static and shared versions
 $(LIBDIR)/libncbi-vdb: $(addprefix $(LIBDIR)/libncbi-vdb.,$(LIBX) $(SHLX))
@@ -80,6 +99,7 @@ else
 LIBKQ = kq
 endif
 
+$(warning HAVE_XML2=$(HAVE_XML2))
 ifeq (1,$(HAVE_XML2))
 LIBKXML = kxml kxfs
 ifneq (,$(XML2_LIBDIR))
@@ -106,7 +126,8 @@ VDB_LIB_CMN =    \
 	$(LIBKQ)     \
 	kfc          \
 	bz2          \
-	z
+	z            \
+	ngs-jni      \
 
 VDB_LIB_RD =              \
 	align-reader          \
@@ -118,9 +139,6 @@ VDB_LIB_RD =              \
 	vdb                   \
 	kdb                   \
 	$(VDB_LIB_CMN)        \
-	ngs-jni               \
-	ngs-py                \
-	ngs                   \
 
 VDB_OBJ = \
 	$(addprefix $(ILIBDIR)/lib,$(addsuffix .a,$(VDB_LIB_RD)))
@@ -128,12 +146,12 @@ VDB_OBJ = \
 VDB_LIB = \
 	$(addprefix -s,$(VDB_LIB_RD))
 
-$(LIBDIR)/libncbi-vdb.$(SHLX): $(VDB_OBJ)
-	echo $(SRCDIR)
-	$(LD) --dlib --vers $(SRCDIR)/libncbi-vdb.vers -o $@ $(VDB_LIB)
-
 $(LIBDIR)/libncbi-vdb.$(LIBX): $(VDB_OBJ)
 	$(LD) --slib --vers $(SRCDIR)/libncbi-vdb.vers -o $@ $(VDB_LIB)
+
+# the shared library includes libncbi-ngs
+$(LIBDIR)/libncbi-vdb.$(SHLX): $(VDB_OBJ) $(LIBDIR)/libncbi-ngs.$(LIBX)
+	$(LD) --dlib --vers $(SRCDIR)/libncbi-vdb.vers -o $@ $(VDB_LIB) $(VDB_NGS_LIB)
 
 #-------------------------------------------------------------------------------
 # update version
@@ -164,7 +182,7 @@ $(LIBDIR)/libncbi-wvdb.$(LIBX): $(WVDB_OBJ)
 # fuzz
 #
 fuzz:
-	$(TOP)/build/ld.sh linux x86_64 gcc --build dbg --ldflags "-g  -m64" --objx o --shlx so --libx a --srcdir $(SRCDIR) --bindir $(BINDIR) --slib -o $(FLIBDIR)/libncbi-vdb.$(LIBX) -L$(FLIBDIR) $(VDB_LIB)
+	$(TOP)/build/ld.sh linux x86_64 gcc --build dbg --ldflags "-g  -m64" --objx o --shlx so --libx a --srcdir $(SRCDIR) --bindir $(BINDIR) --slib -o $(FLIBDIR)/libncbi-vdb.$(LIBX) -L$(FLIBDIR) $(VDB_LIB) $(VDB_NGS_LIB)
 
 cleanfuzz:
 	rm -rf $(FLIBDIR)/*
