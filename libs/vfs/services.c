@@ -42,14 +42,16 @@
 #include <vfs/resolver-priv.h> /* VResolverQueryWithDir */
 #include <vfs/services-priv.h> /* KServiceNamesExecuteExt */
 
+#include "path-priv.h" /* EVPathInitError */
+#include "resolver-priv.h" /* VResolverResolveName */
+#include "services-priv.h" /* KServiceGetResolver */
+
+#include <ctype.h> /* isdigit */
+
 #include <limits.h> /* PATH_MAX */
 #ifndef PATH_MAX
 #define PATH_MAX 4096
 #endif
-
-#include "path-priv.h" /* EVPathInitError */
-#include "resolver-priv.h" /* VResolverResolveName */
-#include "services-priv.h" /* KServiceGetResolver */
 
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 && !rc) { rc = rc2; } obj = NULL; } while (false)
@@ -488,6 +490,40 @@ static rc_t VResolversQuery ( const VResolver * self, const VFSManager * mgr,
     return rc;
 }
 
+static void _StringFixSrrWithVersion(String * self) {
+    size_t dot = 0;
+    size_t i = 0;
+
+    const char * p = NULL;
+
+    assert(self);
+
+    p = self->addr;
+
+    if (self->size < 4)
+        return;
+
+    if (self->size != self->len)
+        return;
+
+    if (p[0] != 'S' || p[1] != 'R' || p[2] != 'R')
+        return;
+
+    for (i = 3; i < self->size; ++i)
+        if (p[i] == '.') {
+            dot = i;
+            break;
+        }
+    if (dot == 0)
+        return;
+
+    for (++i; i < self->size; ++i)
+        if (!isdigit(p[i]))
+            return;
+
+    self->size = self->len = dot;
+}
+
 static rc_t _VPathGetId ( const VPath * self, const String ** newId,
                           String * oldId, const VFSManager * mgr ) 
 {
@@ -568,8 +604,10 @@ static rc_t _VPathGetId ( const VPath * self, const String ** newId,
     if ( rc == 0 )
         rc = VPathGetPath ( acc_or_oid, & id );
 
-    if ( rc == 0 )
+    if ( rc == 0 ) {
+        _StringFixSrrWithVersion ( & id );
         rc = StringCopy ( newId, & id );
+    }
 
     RELEASE ( VPath, acc_or_oid );
 

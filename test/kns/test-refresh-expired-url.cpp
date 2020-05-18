@@ -22,6 +22,8 @@
 *
 * =========================================================================== */
 
+#include "KStableHttpFile.hpp" // InnerKFileFromKStableHttpFile
+
 #include "HttpFixture.hpp"
 
 #include <ktst/unit_test.hpp>
@@ -118,7 +120,14 @@ public:
     {
         THROW_ON_RC ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, true, ce_required, payer_required, url . c_str () ) );
         THROW_ON_FALSE ( m_file != NULL ) ;
-        return * reinterpret_cast < const struct KHttpFile* > ( m_file );
+        if (getenv("NCBI_VDB_HTTP_FILE_NO_RETRY") != NULL)
+            return * reinterpret_cast < const struct KHttpFile* > ( m_file );
+        else {
+            const struct KFile* f = InnerKFileFromKStableHttpFile(m_file);
+            const struct KHttpFile* hf =
+                reinterpret_cast <const struct KHttpFile*> (f);
+            return *hf;
+        }
     }
 
     const struct KHttpFile& SetUpForExpiration( const string & url, bool ce_required, bool payer_required )
@@ -187,8 +196,8 @@ FIXTURE_TEST_CASE( HttpRefreshTestSuite_RedirectSignedURL_NotCloud, CloudFixture
 // for AWS, autorization is only added with the payer info
 FIXTURE_TEST_CASE( HttpRefreshTestSuite_RedirectSignedURL_AWS_NoToken_NoPayer, CloudFixture )
 {
-    putenv ( "AWS_ACCESS_KEY_ID=access_key_id" );
-    putenv ( "AWS_SECRET_ACCESS_KEY=secret_access_key" );
+    putenv ( (char*) "AWS_ACCESS_KEY_ID=access_key_id" );
+    putenv ( (char*) "AWS_SECRET_ACCESS_KEY=secret_access_key" );
 
     RespondWithRedirect ( AwsUrl, KTimeStamp () + 65 );
     RespondToHEAD ( string( 256, 'q' ) );

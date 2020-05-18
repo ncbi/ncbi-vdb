@@ -3,5 +3,6 @@
   <ItemGroup>
     <ClCompile Include="..\..\..\test\kns\test-refresh-expired-url.cpp" />
     <ClCompile Include="..\..\..\test\kns\HttpFixture.cpp" />
+    <ClCompile Include="..\..\..\test\kns\KStableHttpFile.cpp" />
   </ItemGroup>
 </Project>

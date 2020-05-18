@@ -1489,9 +1489,11 @@ LIB_EXPORT rc_t CC KDirectoryCopyPath ( const KDirectory_v1 *src_dir,
             rc = KDirectoryCreateFile ( dst_dir, &f_dst, false, access, kcmCreate, "%s", dst_path );
             if ( rc == 0 )
             {
-                rc = copy_loop( f_src, f_dst, 1024 * 16 );
+                rc = copy_loop( f_src, f_dst, 1024 * 1024 );
+                KFileRelease(f_dst);
             }
         }
+        KFileRelease(f_src);
     }
     return rc;
 }

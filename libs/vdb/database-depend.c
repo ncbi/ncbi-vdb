@@ -369,7 +369,7 @@ static bool NotFoundByResolver(rc_t rc) {
 
 /* find remote reference using VResolver */
 static rc_t FindRef(Ctx* ctx, const char* seqId, Resolved* resolved,
-    int cacheState)
+    int cacheState, bool alwaysResolveRemote)
 {
     rc_t rc = 0;
 
@@ -386,6 +386,8 @@ static rc_t FindRef(Ctx* ctx, const char* seqId, Resolved* resolved,
     if (rc == 0) {
         rc = string_printf(ncbiAcc, sizeof ncbiAcc, &num_writ,
             "ncbi-acc:%s?vdb-ctx=refseq", seqId);
+        rc = string_printf(ncbiAcc, sizeof ncbiAcc, &num_writ,
+            "%s", seqId);
         if (rc == 0 && num_writ > sizeof ncbiAcc) {
             return RC(rcExe, rcFile, rcCopying, rcBuffer, rcInsufficient);
         }
@@ -409,46 +411,49 @@ static rc_t FindRef(Ctx* ctx, const char* seqId, Resolved* resolved,
         rc = VResolverLocal(ctx->resolver, acc, &resolved->localP);
         if (rc == 0)
             rc = VPathMakeString(resolved->localP, &resolved->local);
-        else if (NotFoundByResolver(rc)) {
+        else if (NotFoundByResolver(rc))
             rc = 0;
-        }
 
-        if (rc == 0) {
-            resolved->remoteRc = VResolverRemote(
-                ctx->resolver, 0, acc, &resolved->remoteP);
-            if (resolved->remoteRc == 0) {
-                rc = VPathMakeString(resolved->remoteP, &resolved->remote);
-                if (rc == 0) {
-                    char *fragment = string_chr(resolved->remote->addr,
-                        resolved->remote->size, '#');
-                    if (fragment != NULL) {
-                        *fragment = '\0';
+        if (resolved->localP == NULL || alwaysResolveRemote) {
+            if (rc == 0) {
+                resolved->remoteRc = VResolverRemote(
+                    ctx->resolver, 0, acc, &resolved->remoteP);
+                if (resolved->remoteRc == 0) {
+                    if (rc == 0)
+                        rc = VPathSetAccOfParentDb((VPath*)resolved->remoteP,
+                            ctx->dbAcc);
+                    if (rc == 0)
+                        rc = VPathMakeString(resolved->remoteP, &resolved->remote);
+                    if (rc == 0) {
+                        char *fragment = string_chr(resolved->remote->addr,
+                            resolved->remote->size, '#');
+                        if (fragment != NULL)
+                            *fragment = '\0';
                     }
                 }
             }
-        }
 
-        if (rc == 0 && resolved->remoteRc == 0) {
-            uint64_t file_size = 0;
-            resolved->cacheRc = VResolverCache(
-                ctx->resolver, resolved->remoteP, &resolved->cacheP, file_size);
-            if (resolved->cacheRc == 0)
-                rc = VPathMakeString(resolved->cacheP, &resolved->cache);
-        }
-
-        if (rc == 0) {
-            if (ctx->last == NULL) {
-                ctx->last = resolved;
+            if (rc == 0 && resolved->remoteRc == 0) {
+                uint64_t file_size = 0;
+                resolved->cacheRc = VResolverCache(ctx->resolver,
+                    resolved->remoteP, &resolved->cacheP, file_size);
+                if (resolved->cacheRc == 0)
+                    rc = VPathMakeString(resolved->cacheP, &resolved->cache);
             }
-            else {
-                const String *last = ctx->last->remote;
-                const String *crnt = resolved->remote;
-                if (last != NULL && crnt != NULL &&
-                    last->addr != NULL && crnt->addr != NULL)
-                {
-                    int min = crnt->size < last->size ? crnt->size : last->size;
-                    if (strncmp(last->addr, crnt->addr, min) == 0) {
-                        ctx->hasDuplicates = true;
+
+            if (rc == 0) {
+                if (ctx->last == NULL)
+                    ctx->last = resolved;
+                else {
+                    const String *last = ctx->last->remote;
+                    const String *crnt = resolved->remote;
+                    if (last != NULL && crnt != NULL &&
+                        last->addr != NULL && crnt->addr != NULL)
+                    {
+                        int min
+                            = crnt->size < last->size ? crnt->size : last->size;
+                        if (strncmp(last->addr, crnt->addr, min) == 0)
+                            ctx->hasDuplicates = true;
                     }
                 }
             }
@@ -474,9 +479,10 @@ typedef struct {
 /* we do not read CMP_READ value, just its row_len */
     uint32_t row_lenCMP_READ;
 } Row;
+
 /* Add a REFERENCE table Row to BSTree */
-static
-rc_t AddRow(BSTree* tr, Row* data, Ctx* ctx, int cacheState)
+static rc_t AddRow(BSTree* tr, Row* data,
+    Ctx* ctx, int cacheState, bool alwaysResolveRemote)
 {
     rc_t rc = 0;
     bool newRemote = false;
@@ -524,9 +530,9 @@ rc_t AddRow(BSTree* tr, Row* data, Ctx* ctx, int cacheState)
         sn->readLen += data->readLen;
     }
 
-    if (rc == 0 && newRemote) {
-        rc = FindRef(ctx, sn->seqId, &sn->resolved, cacheState);
-    }
+    if (rc == 0 && newRemote)
+        rc = FindRef(
+            ctx, sn->seqId, &sn->resolved, cacheState, alwaysResolveRemote);
 
     return rc;
 }
@@ -603,7 +609,8 @@ static void CC bstProcess(BSTNode* n, void* data) {
 /* Read REFERENCE table; fill in BSTree */
 static
 rc_t CC VDatabaseDependencies(const VDatabase *self, BSTree* tr,
-    bool* has_no_REFERENCE, bool* hasDuplicates, bool disableCaching)
+    bool* has_no_REFERENCE, bool* hasDuplicates,
+    bool disableCaching, bool alwaysResolveRemote)
 {
     rc_t rc = 0;
 
@@ -712,28 +719,23 @@ rc_t CC VDatabaseDependencies(const VDatabase *self, BSTree* tr,
                     "id=%ld", i));
             }
         }
-        if (rc == 0) {
-            rc = AddRow(tr, &data, &ctx, cacheState);
-        }
+        if (rc == 0)
+            rc = AddRow(tr, &data, &ctx, cacheState, alwaysResolveRemote);
     }
 
-    if (rc == 0 && hasDuplicates != NULL) {
+    if (rc == 0 && hasDuplicates != NULL)
         *hasDuplicates = ctx.hasDuplicates;
-    }
 
-    if (*has_no_REFERENCE) {
+    if (*has_no_REFERENCE)
         rc = 0;
-    }
 
-    if (cacheState != -1) {
+    if (cacheState != -1)
         VResolverCacheEnable(ctx.resolver, cacheState);
-    }
 
     {
         rc_t rc2 = CtxDestroy(&ctx);
-        if (rc == 0 && rc2 != 0) {
+        if (rc == 0 && rc2 != 0)
             rc = rc2;
-        }
     }
 
     RELEASE(VCursor, curs);
@@ -1172,11 +1174,20 @@ static void CC bstCopy(BSTNode* n, void* data) {
         sn->resolved.local = elm->resolved.local;
         elm->resolved.local = NULL;
 
+        sn->resolved.localP = elm->resolved.localP;
+        elm->resolved.localP = NULL;
+
         sn->resolved.remote = elm->resolved.remote;
         elm->resolved.remote = NULL;
 
+        sn->resolved.remoteP = elm->resolved.remoteP;
+        elm->resolved.remoteP = NULL;
+
         sn->resolved.cache = elm->resolved.cache;
         elm->resolved.cache = NULL;
+
+        sn->resolved.cacheP = elm->resolved.cacheP;
+        elm->resolved.cacheP = NULL;
 
         BSTreeInsert(tr, (BSTNode*)sn, bstSortByRemote);
         ++x->count;
@@ -1284,7 +1295,8 @@ static void CC bstCopy(BSTNode* n, void* data) {
  *     just one refseq dependency will be returned for 'container' Refseq files.
  */
 static rc_t VDatabaseListDependenciesImpl(const VDatabase* self,
-    const VDBDependencies** dep, bool missing, bool disableCaching)
+    const VDBDependencies** dep,
+    bool missing, bool disableCaching, bool alwaysResolveRemote)
 {
     rc_t rc = 0;
     VDBDependencies* obj = NULL;
@@ -1313,7 +1325,7 @@ static rc_t VDatabaseListDependenciesImpl(const VDatabase* self,
 
     /* initialize dependencie tree */
     rc = VDatabaseDependencies(self, obj->tr,
-        &has_no_REFERENCE, &hasDuplicates, disableCaching);
+        &has_no_REFERENCE, &hasDuplicates, disableCaching, alwaysResolveRemote);
     if (rc == 0 && has_no_REFERENCE) {
         KRefcountInit(&obj->refcount, 1, CLSNAME, "make", "nodep");
         *dep = obj;
@@ -1404,7 +1416,7 @@ static rc_t VDatabaseListDependenciesImpl(const VDatabase* self,
 LIB_EXPORT rc_t CC VDatabaseListDependencies(const VDatabase* self,
     const VDBDependencies** dep, bool missing)
 {
-    return VDatabaseListDependenciesImpl(self, dep, missing, false);
+    return VDatabaseListDependenciesImpl(self, dep, missing, false, true);
 }
 
 
@@ -1427,7 +1439,21 @@ LIB_EXPORT rc_t CC VDatabaseListDependenciesWithCaching (
     const VDBDependencies **dep, bool missing,
     bool disableCaching )
 {
-    return VDatabaseListDependenciesImpl(self, dep, missing, disableCaching);
+    return VDatabaseListDependenciesImpl(
+        self, dep, missing, disableCaching, true);
+}
+
+/* FindDependencies
+ *  create dependencies object: list dependencies
+ *
+ *  Don't resolve remote location if dependency was found locally.
+ *
+ *  "dep" [ OUT ] - return for VDBDependencies object
+ */
+LIB_EXPORT rc_t CC VDatabaseFindDependencies(struct VDatabase const *self,
+    const VDBDependencies **dep)
+{
+    return VDatabaseListDependenciesImpl(self, dep, false, false, false);
 }
 
 

@@ -133,7 +133,7 @@ rc_t KClientHttpGetStatusLine ( struct KClientHttp * self,
 
 struct KClientHttp
 {
-    const KNSManager *mgr;
+    const struct KNSManager *mgr;
     struct KStream * sock;
     struct KStream * test_sock; /* if not NULL, use to communicate with a mocked server in testing, do not reopen on redirects */
 
@@ -260,8 +260,19 @@ struct KClientHttpResult
     bool rangeRequested;
 };
 
-/* internal encodiung  function, exposed for testing */
+/* internal encoding  function, exposed for testing */
 extern rc_t KClientHttpRequestUrlEncodeBase64(const String ** encoding);
+
+#define SUPPORT_CHUNKED_READ 1
+
+rc_t KNSManagerVMakeHttpFileIntUnstableFromBuffer(const struct KNSManager *self,
+    const struct KFile **file, struct KStream *conn, ver_t vers, bool reliable,
+    bool need_env_token, bool payRequired, const char *url,
+    const KDataBuffer *buf);
+
+rc_t KNSManagerVMakeHttpFileIntUnstable(const struct KNSManager *self,
+    const struct KFile **file, struct KStream *conn, ver_t vers, bool reliable,
+    bool need_env_token, bool payRequired, const char *url, va_list args);
 
 #ifdef __cplusplus
 }

@@ -36,6 +36,7 @@
 #include <ngs/ncbi/NGS.hpp>
 
 #include <ktst/unit_test.hpp>
+#include <klib/time.h>
 
 #include <sysalloc.h>
 #include <assert.h>
@@ -77,6 +78,7 @@ public:
         {
             return c -> second;
         }
+        KSleepMs(500); // trying to reduce the incidence of network timeouts on access to SDL in the following call
         ncbi::ReadCollection ret = ncbi :: NGS :: openReadCollection ( acc );
         colls->insert( Collections::value_type(ac, ret) );
         return ret;

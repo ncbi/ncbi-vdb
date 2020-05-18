@@ -31,10 +31,12 @@
 #include "kdb-priv.h"
 #undef KONST
 
-#include <klib/namelist.h>
+#include <klib/debug.h> /* DBGMSG */
 #include <klib/log.h>
-#include <klib/rc.h>
+#include <klib/namelist.h>
 #include <klib/printf.h>
+#include <klib/rc.h>
+
 #include <os-native.h>
 #include <sysalloc.h>
 
@@ -199,6 +201,11 @@ rc_t KDatabaseMake ( KDatabase **dbp, const KDirectory *dir, const char *path )
 
     KRefcountInit ( & db -> refcount, 1, "KDatabase", "make", path );
     strcpy ( db -> path, path );
+
+    /* YES,
+     DBG_VFS should be used here to be printed along with other VFS messages */
+    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
+        ("Making KDatabase '%s'\n", path));
 
     * dbp = db;
     return 0;

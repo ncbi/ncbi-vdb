@@ -429,6 +429,13 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
     KEndPointArgsIterator it;
     const KNSManager * mgr = NULL;
 
+    static bool INITED = false;
+    static bool PRINT_STAT = false;
+    if (!INITED) {
+        PRINT_STAT = getenv("NCBI_VDB_STS_SILENT") == NULL;
+        INITED = true;
+    }
+
     STATUS ( STAT_QA, "%s - opening socket to %S:%u\n", __func__, aHostname, aPort );
 
     assert ( self );
@@ -493,13 +500,15 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
     else
     {
         rc_t r = KSocketGetLocalEndpoint ( sock, & self -> local_ep );
-        if ( r == 0 )
+        if (PRINT_STAT) {
+          if ( r == 0 )
             STATUS ( STAT_USR, "%s - connected from '%s' to %S (%s)\n",
                                __func__, self -> local_ep . ip_address,
                                hostname, self -> ep . ip_address );
-        else
+          else
             STATUS ( STAT_USR, "%s - connected to %S (%s)\n",
                                __func__, hostname, self -> ep . ip_address );
+        }
 
         if ( self -> tls )
         {
@@ -537,7 +546,8 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
 
             if ( rc == 0 )
             {
-                STATUS ( STAT_USR, "%s - verifying CA cert\n", __func__ );
+                if (PRINT_STAT)
+                    STATUS ( STAT_USR, "%s - verifying CA cert\n", __func__ );
                 rc = KTLSStreamVerifyCACert ( tls_stream );
                 if ( rc != 0 )
                 {
@@ -1785,6 +1795,14 @@ rc_t KClientHttpResultWhack ( KClientHttpResult * self )
     return 0;
 }
 
+static void KClientHttpKSocketTimedWriteErrGcpHack(KClientHttp *self) {
+    String googleapis;
+    CONST_STRING(&googleapis, "storage.googleapis.com");
+    assert(self);
+    if (StringEqual(&googleapis, &self->hostname)) {
+        KClientHttpClose(self);
+    }
+}
 
 /* Sends the request and receives the response into a KClientHttpResult obj */
 rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
@@ -1803,6 +1821,9 @@ rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
     DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_HTTP),
         ("HTTP send '%S' '%.*s'\n\n", &self->hostname, len, buffer));
 
+#ifndef DEBUG_GCP_KSOCKET_TIMED_WRITE_MBEDTLS_SSL_WRITE_UNKNOWN_ERROR_MESSAGE
+    KClientHttpKSocketTimedWriteErrGcpHack(self);
+#endif
     /* reopen connection if NULL */
     if ( self -> sock == NULL )
         rc = KClientHttpOpen ( self, & self -> hostname, self -> port );

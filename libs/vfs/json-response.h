@@ -86,9 +86,10 @@ typedef struct Data {
     const char * vsblt;
 } Data;
 
-rc_t Response4MakeEmpty  (       Response4 ** self );
+rc_t Response4MakeEmpty  (       Response4 ** self, bool logNamesServiceErrors);
 rc_t Response4Make4      (       Response4 ** self, const char * input );
-rc_t Response4MakeSdl    (       Response4 ** self, const char * input );
+rc_t Response4MakeSdl    (       Response4 ** self, const char * input,
+                                                   bool logNamesServiceErrors );
 rc_t Response4AddRef     ( const Response4  * self );
 rc_t Response4Release    ( const Response4  * self );
 rc_t Response4AppendUrl  (       Response4  * self, const char * url );

@@ -634,7 +634,7 @@ class VCursor :
     def __del__( self ) :
         rc = self.__mgr.VCursorRelease( self.__ptr )
         if rc != 0 :
-            self.__mgr.raise_rc( rc, "VCursorRelease( '%s' )"%( self.__tab.name ), self )
+            self.__mgr.raise_rc( rc, "VCursorRelease( '%s' )"%( self.__tab._VTable__name ), self )
 
     def __enter__( self ) :
         return self
@@ -673,43 +673,43 @@ class VCursor :
     def Open( self ) :
         rc = self.__mgr.VCursorOpen( self.__ptr )
         if rc != 0 :
-            self.__mgr.raise_rc( rc, "VCursorOpen( '%s' )"%( self.__tab.name ), self )
+            self.__mgr.raise_rc( rc, "VCursorOpen( '%s' )"%( self.__tab._VTable__name ), self )
 
     def Commit( self ) :
         rc = self.__mgr.VCursorCommit( self.__ptr )
         if rc != 0 :
-            self.__mgr.raise_rc( rc, "VCursorCommit( %s )"%( self.__tab.name ), self )
+            self.__mgr.raise_rc( rc, "VCursorCommit( %s )"%( self.__tab._VTable__name ), self )
 
     def OpenRow( self ) :
         rc = self.__mgr.VCursorOpenRow( self.__ptr )
         if rc != 0 :
-            self.__mgr.raise_rc( rc, "VCursorOpenRow( '%s' )"%( self.__tab.name ), self )
+            self.__mgr.raise_rc( rc, "VCursorOpenRow( '%s' )"%( self.__tab._VTable__name ), self )
         
     def CommitRow( self ) :
         rc = self.__mgr.VCursorCommitRow( self.__ptr )
         if rc != 0 :
-            self.__mgr.raise_rc( rc, "VCursorCommitRow( %s )"%( self.__tab.name ), self )
+            self.__mgr.raise_rc( rc, "VCursorCommitRow( %s )"%( self.__tab._VTable__name ), self )
 
     def RepeatRow( self, count ) :
         rc = self.__mgr.VCursorRepeatRow( self.__ptr, count )
         if rc != 0 :
-            self.__mgr.raise_rc( rc, "VCursorRepeatRow( %s, %d )"%( self.__tab.name, count ), self )
+            self.__mgr.raise_rc( rc, "VCursorRepeatRow( %s, %d )"%( self.__tab._VTable__name, count ), self )
 
     def CloseRow( self ) :
         rc = self.__mgr.VCursorCloseRow( self.__ptr )
         if rc != 0 :
-            self.__mgr.raise_rc( rc, "VCursorCloseRow( '%s' )"%( self.__tab.name ), self )
+            self.__mgr.raise_rc( rc, "VCursorCloseRow( '%s' )"%( self.__tab._VTable__name ), self )
 
     def FlushPage( self ) :
         rc = self.__mgr.VCursorFlushPage( self.__ptr )
         if rc != 0 :
-            self.__mgr.raise_rc( rc, "VCursorFlushPage( %s )"%( self.__tab.name ), self )
+            self.__mgr.raise_rc( rc, "VCursorFlushPage( %s )"%( self.__tab._VTable__name ), self )
 
     def RowId( self ) :
         row_id = c_longlong()
         rc = self.__mgr.VCursorRowId( self.__ptr, byref( row_id ) )
         if rc != 0 :
-            self.__mgr.raise_rc( rc, "VCursorRowId( '%s' )"%( self.__tab.name ), self )
+            self.__mgr.raise_rc( rc, "VCursorRowId( '%s' )"%( self.__tab._VTable__name ), self )
         return row_id.value
 
     def ReferenceList( self ) :
