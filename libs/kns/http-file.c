@@ -1269,11 +1269,12 @@ rc_t KHttpFileMake( KHttpFile ** self,
                 rc = KDataBufferMake( buf, 8, 0 );
                 if ( rc == 0 )
                 {
-                  if (aBuf != NULL)
-                    rc = KDataBufferPrintf(buf,
+                    if (aBuf != NULL)
+                        rc = KDataBufferPrintf(buf,
                           "%.*s", aBuf->elem_count, aBuf->base);
-                  else
-                    rc = KDataBufferVPrintf ( buf, url, args );
+                    else
+                        rc = KDataBufferVPrintf ( buf, url, args );
+
                     if ( rc == 0 )
                     {
                         rc = ParseUrl ( & f -> block, buf -> base, buf -> elem_count - 1 );
@@ -1290,6 +1291,7 @@ rc_t KHttpFileMake( KHttpFile ** self,
         }
         free ( f );
     }
+
     return rc;
 }
 
