@@ -38,12 +38,15 @@ struct KSysDirListing;
 #include <kfs/extern.h>
 #include "sysdir-priv.h"
 #include "sysfile-priv.h"
-#include <klib/sort.h>
+
+#include <klib/debug.h> /* DBGMSG */
 #include <klib/impl.h>
+#include <klib/klib-priv.h>
 #include <klib/log.h>
 #include <klib/out.h>
 #include <klib/rc.h>
-#include <klib/klib-priv.h>
+#include <klib/sort.h>
+
 #include <sysalloc.h>
 
 #include "os-native.h"
@@ -852,7 +855,12 @@ rc_t KSysDirResolvePath_v1 ( const KSysDir_v1 * self, bool absolute,
     if ( rc == 0 )
     {
         uint32_t path_size = strlen ( full );
+
+        /*
         PLOGMSG(klogDebug, (klogDebug, "KSysDirResolvePath_v1 = '$(res)'", "res=%s", full));
+        */
+        DBGMSG(DBG_KFS, DBG_FLAG(DBG_KFS_DIR),
+            ("KSysDirResolvePath_v1 = '%s'\n", full));
 
         if ( absolute )
         {
