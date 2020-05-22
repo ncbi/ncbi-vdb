@@ -1,6 +1,11 @@
 # NCBI External Developer Release:
 
 
+## NCBI VDB 2.10.7
+**May 21, 2020**
+  **kns, ngs-tools, sra-tools**: added new header to HTTP requests to communicate VDB version 
+
+
 ## NCBI VDB 2.10.6
 **May 15, 2020**
 
