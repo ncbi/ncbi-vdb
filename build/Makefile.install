@@ -56,13 +56,17 @@ endif
 # install
 #
 LIBRARIES_TO_INSTALL = \
-    kdf5.$(VERSION_LIBX) \
-    kdf5.$(VERSION_SHLX) \
     ncbi-ngs-c++.$(VERSION_LIBX) \
     ncbi-vdb.$(VERSION_LIBX) \
     ncbi-vdb.$(VERSION_SHLX) \
     ncbi-wvdb.$(VERSION_LIBX) \
     ncbi-wvdb.$(VERSION_SHLX) \
+
+ifeq (1,$(HAVE_HDF5))
+    LIBRARIES_TO_INSTALL += kdf5.$(VERSION_LIBX)
+    LIBRARIES_TO_INSTALL += kdf5.$(VERSION_SHLX)
+endif
+
 
 LIB_TARGET = $(INST_LIBDIR)$(BITS)
 
