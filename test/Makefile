@@ -44,7 +44,6 @@ SUBDIRS =       \
     klib        \
     kfg         \
     kapp        \
-    vfs         \
     cloud       \
     kdb         \
     kproc       \
@@ -61,6 +60,7 @@ SUBDIRS =       \
     kns         \
     schema      \
     install     \
+    vfs         \
     ngs-java    \
 
 # common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
