@@ -58,10 +58,10 @@ SUBDIRS =       \
     ngs         \
     ngs-c++     \
     ngs-python  \
-    ngs-java    \
+    kns         \
     schema      \
     install     \
-    kns         \
+    ngs-java    \
 
 # common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
 include $(TOP)/build/Makefile.targets
