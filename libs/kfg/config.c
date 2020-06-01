@@ -65,6 +65,8 @@ struct KfgConfigNamelist;
     #include <sys/utsname.h>
 #endif
 
+#include "default_kfg.h" /* DEFAUTL_KFG */
+
 #include "kfg-parse.h"
 #include "config-tokens.h"
 
@@ -82,29 +84,7 @@ static bool s_disable_user_settings = false;
 
 static const char * s_ngc_file = NULL;
 
-
-/*----------------------------------------------------------------------------*/
-static const char default_kfg[] = {
-"/config/default = \"true\"\n"
-"/repository/user/main/public/apps/file/volumes/flat = \"files\"\n"
-"/repository/user/main/public/apps/nakmer/volumes/nakmerFlat = \"nannot\"\n"
-"/repository/user/main/public/apps/nannot/volumes/nannotFlat = \"nannot\"\n"
-"/repository/user/main/public/apps/refseq/volumes/refseq = \"refseq\"\n"
-"/repository/user/main/public/apps/sra/volumes/sraFlat = \"sra\"\n"
-"/repository/user/main/public/apps/sraPileup/volumes/withExtFlat = \"sra\"\n"
-"/repository/user/main/public/apps/sraRealign/volumes/withExtFlat = \"sra\"\n"
-"/repository/user/main/public/apps/wgs/volumes/wgsFlat = \"wgs\"\n"
-"/repository/remote/main/CGI/resolver-cgi = "
-             "\"https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi\"\n"
-"/repository/remote/protected/CGI/resolver-cgi = "
-             "\"https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi\"\n"
-"/repository/remote/main/SDL.2/resolver-cgi = "
-             "\"https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve\"\n"
-"/repository/remote/protected/SDL.2/resolver-cgi = "
-             "\"https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve\"\n"
-"/tools/ascp/max_rate = \"450m\"\n"
-};
-/*----------------------------------------------------------------------------*/
+static const char default_kfg[] = { DEFAUTL_KFG };
 
 /*--------------------------------------------------------------------------
  * KConfig
