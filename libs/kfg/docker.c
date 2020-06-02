@@ -68,7 +68,7 @@ int KConfig_Get_GUID_Add_Container(  char *const value
                     memmove(value + (value_size - 12), &cgroup[start], 12);
                     result = 0;
                 }
-                munmap(mm);
+                munmap(mm, fs);
             }
         }
     }
