@@ -43,7 +43,7 @@ int KConfig_Get_GUID_Add_Container(  char *const value
 #if CAN_HAVE_CONTAINER_ID
         char line[1024];
         snprintf(line, sizeof(line), "/proc/%i/cgroup", getpid());
-        FILE *fp = fopen(line, "r");
+        FILE *fp = fopen("/proc/self/cgroup", "r");
         if (fp) {
             pLogMsg(klogDebug, "opened $(line)", "line=%s", line);
             while (fgets(line, sizeof(line), fp) != NULL) {
@@ -64,7 +64,7 @@ int KConfig_Get_GUID_Add_Container(  char *const value
                         break;
                     }
                 }
-                if (end < start) {
+                if (end > start) {
                     char const *id = &line[start];
                     size_t len = end - start;
                     if (len >= 8 && strncmp(id, "/docker/", 8) == 0) {
