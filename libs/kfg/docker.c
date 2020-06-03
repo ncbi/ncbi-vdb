@@ -45,6 +45,7 @@ int KConfig_Get_GUID_Add_Container(  char *const value
         snprintf(line, sizeof(line), "/proc/%i/cgroup", getpid());
         FILE *fp = fopen(line, "r");
         if (fp) {
+            pLogMsg(klogDebug, "opened $(line)", "line=%s", line);
             while (fgets(line, sizeof(line), fp) != NULL) {
                 int start = 0;
                 int end = 0;
