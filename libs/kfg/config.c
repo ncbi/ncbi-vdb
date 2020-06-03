@@ -71,6 +71,7 @@ struct KfgConfigNamelist;
 #include "config-tokens.h"
 
 #include "../vfs/resolver-cgi.h" /* RESOLVER_CGI */
+#include "docker.h"
 
 #ifndef PATH_MAX
 #define PATH_MAX 4096
@@ -3094,6 +3095,49 @@ static rc_t _KConfigFixRepeatedDrives(KConfig *self,
 
 #endif
 
+#if CAN_HAVE_CONTAINER_ID
+static rc_t _KConfigGetContainerGUID(KConfig *const self, bool *const updated)
+{
+    rc_t rc = 0;
+    KConfigNode const *node = NULL;
+    struct String *string = NULL;
+
+    *updated = false;
+    rc = KConfigOpenNodeRead(self, &node, IMAGE_GUID_KEY);
+    if (rc) {
+        LOGERR(klogDebug, rc, "no image guid");
+        return 0; // nothing to do
+    }
+
+    rc = KConfigNodeReadString(node, &string);
+    KConfigNodeRelease(node);
+    if (rc == 0) {
+        if (0 == KConfig_Get_GUID_Add_Container((char *)string->addr, string->size)) {
+            KConfigNode *node = NULL;
+            rc = KConfigOpenNodeUpdate(self, &node, "/LIBS/GUID");
+            if (rc == 0) {
+                rc = KConfigNodeWrite(node, string->addr, string->size);
+                KConfigNodeRelease(node);
+                if (rc) {
+                    LOGERR(klogErr, rc, "can't write guid value");
+                }
+                else {
+                    *updated = true;
+                }
+            }
+            else {
+                LOGERR(klogErr, rc, "can't update guid node");
+            }
+        }
+        free(string);
+    }
+    else {
+        LOGERR(klogErr, rc, "can't read image guid value");
+    }
+    return rc;
+}
+#endif
+
 static rc_t StringRelease(const String *self) {
     StringWhack(self);
     return 0;
@@ -3405,7 +3449,11 @@ rc_t KConfigMakeImpl ( KConfig ** cfg, const KDirectory * cfgdir, bool local,
                 if ( rc == 0 && updated )
                     rc = KConfigCommit ( mgr );
 #endif
-
+#if CAN_HAVE_CONTAINER_ID
+                rc = _KConfigGetContainerGUID(mgr, &updated);
+                if ( rc == 0 && updated )
+                    rc = KConfigCommit ( mgr );
+#endif
                 if ( rc == 0 )
                     _KConfigCheckAd ( mgr );
             }

@@ -25,17 +25,90 @@
  */
 
 #include <klib/defs.h>
+#include <klib/log.h>
 
 #include "docker.h"
 
 #if CAN_HAVE_CONTAINER_ID
 
-#include <unistd.h>
-#include <sys/mman.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
+#include <kfs/directory.h>
+#include <kfs/file.h>
+#include <sysalloc.h>
 
+#define CGROUP_FILE_NAME "/proc/self/cgroup"
+
+static char *readCGroups(size_t *const size)
+{
+    KDirectory *ndir = NULL;
+    KFile const *fp = NULL;
+    rc_t rc;
+
+    rc = KDirectoryNativeDir(&ndir);
+    assert(rc == 0 && ndir != NULL);
+    rc = KDirectoryOpenFileRead(ndir, &fp, CGROUP_FILE_NAME);
+    KDirectoryRelease(ndir);
+    if (rc == 0) {
+        uint64_t fs = 0;
+        rc = KFileSize(fp, &fs);
+        *size = fs;
+        if (rc == 0) {
+            char *const data = malloc(*size);
+            if (data) {
+                rc = KFileReadExactly(fp, 0, data, *size);
+                if (rc == 0) {
+                    KFileRelease(fp);
+                    return data;
+                }
+                else {
+                    LogErr(klogDebug, rc, "can't read " CGROUP_FILE_NAME);
+                }
+                free(data);
+            }
+            else {
+                LogMsg(klogFatal, "OUT OF MEMORY!!!");
+            }
+        }
+        else {
+            LogErr(klogFatal, rc, "can't stat " CGROUP_FILE_NAME);
+        }
+        KFileRelease(fp);
+    }
+    else {
+        LogErr(klogDebug, rc, "can't open " CGROUP_FILE_NAME);
+    }
+    return NULL;
+}
+
+static char const *parseContainerID(char const *const cgroup, size_t const size)
+{
+    size_t start = 0;
+    size_t end = 0;
+    size_t i;
+
+    for (i = 0; i < size; ++i) {
+        int const ch = cgroup[i];
+        if (ch == ':') {
+            start = i + 1;
+            continue;
+        }
+        if (ch == '\n') {
+            end = i;
+            break;
+        }
+    }
+    if (end > start) {
+        char const *id = &cgroup[start];
+        size_t len = end - start;
+        if (len >= 8 && strncmp(id, "/docker/", 8) == 0) {
+            id += 8; len -= 8;
+            pLogMsg(klogDebug, "container-id: $(id)", "id=%.*s", (int)(len), id);
+            if (len >= 12) {
+                return id;
+            }
+        }
+    }
+    return NULL;
+}
 #endif
 
 int KConfig_Get_GUID_Add_Container(  char *const value
@@ -43,37 +116,23 @@ int KConfig_Get_GUID_Add_Container(  char *const value
 {
     int result = -1;
 #if CAN_HAVE_CONTAINER_ID
-    int const fd = open("/proc/self/cgroup", O_RDONLY);
-    if (fd >= 0) {
-        off_t const sfs = lseek(fd, 0, SEEK_END);
-        if (sfs > 0) {
-            size_t const fs = (size_t)sfs;
-            void *const mm = mmap(NULL, fs, PROT_READ, MAP_FILE|MAP_SHARED, fd, 0);
-            close(fd);
-            if (mm != MAP_FAILED) {
-                char const *const cgroup = mm;
-                size_t start = 0;
-                size_t end = 0;
-                size_t i;
-
-                for (i = 0; i < fs; ++i) {
-                    int const ch = cgroup[i];
-                    if (ch == ':') {
-                        start = i + 1;
-                        continue;
-                    }
-                    if (ch == '\n') {
-                        end = i;
-                        break;
-                    }
-                }
-                if (end > start && (value_size > 12) && end - start >= 12) {
-                    memmove(value + (value_size - 12), &cgroup[start], 12);
-                    result = 0;
-                }
-                munmap(mm, fs);
+    if (value_size >= 12) {
+        size_t fs = 0;
+        char *const data = readCGroups(&fs);
+        if (data) {
+            char const *const id = parseContainerID(data, fs);
+            if (id) {
+                memmove(value + (value_size - 12), id, 12);
+                result = 0;
             }
+            if (result != 0) {
+                LogMsg(klogDebug, "no container id found in " CGROUP_FILE_NAME);
+            }
+            free(data);
         }
+    }
+    else {
+        LogMsg(klogDebug, "image guid too short");
     }
 #endif
     return result;

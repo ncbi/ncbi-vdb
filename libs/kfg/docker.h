@@ -27,11 +27,11 @@
 #ifndef _h_docker_
 #define _h_docker_
 
-#if LINUX
+#if LINUX || MAC
 #define CAN_HAVE_CONTAINER_ID 1
 #endif
 
-#define IMAGE_GUID_KEY "LIBS/IMAGE_GUID"
+#define IMAGE_GUID_KEY "/LIBS/IMAGE_GUID"
 
 int KConfig_Get_GUID_Add_Container(  char *const value
                                    , size_t const value_size);

@@ -41,8 +41,6 @@
 
 #include <va_copy.h>
 
-#include "docker.h"
-
 /* ---------------------------------------------------------------------------------------------------- */
 
 static rc_t KConfig_Get_Repository_State( const KConfig *self,
@@ -1113,20 +1111,15 @@ LIB_EXPORT rc_t CC KConfig_Set_CacheDebug( KConfig *self, bool value )
 #define GUID_KEY "LIBS/GUID"
 LIB_EXPORT rc_t CC KConfig_Get_GUID( const KConfig *self, char * value, size_t value_size, size_t * written )
 {
-    size_t local_written = 0;
+    size_t local_written;
     rc_t rc = KConfig_Get_Repository_String( self, value, value_size, &local_written, GUID_KEY );
-
-#if CAN_HAVE_CONTAINER_ID
-    if (rc != 0) {
-        rc_t const rc2 = KConfig_Get_Repository_String( self, value, value_size, &local_written, IMAGE_GUID_KEY );
-        if (rc2 == 0 && KConfig_Get_GUID_Add_Container(value, local_written) == 0)
-            rc = 0;
+    if ( rc == 0 )
+    {
+        if ( written != NULL )
+            *written = local_written;
     }
-#endif
-    if ( written != NULL )
-        *written = local_written;
-
     return rc;
+
 }
 
 LIB_EXPORT rc_t CC KConfig_Set_GUID( KConfig *self, const char * value )
