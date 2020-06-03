@@ -32,8 +32,7 @@
 #if CAN_HAVE_CONTAINER_ID
 
 #include <stdio.h>
-
-#define CGROUP_FILE_NAME "/proc/self/cgroup"
+#include <unistd.h>
 
 #endif
 
@@ -42,14 +41,15 @@ int KConfig_Get_GUID_Add_Container(  char *const value
 {
     if (value_size >= 12) {
 #if CAN_HAVE_CONTAINER_ID
-        FILE *fp = fopen(CGROUP_FILE_NAME, "r");
+        char line[1024];
+        snprintf(line, sizeof(line), "/proc/%i/cgroup", getpid());
+        FILE *fp = fopen(line, "r");
         if (fp) {
-            char line[1024];
             while (fgets(line, sizeof(line), fp) != NULL) {
                 int start = 0;
                 int end = 0;
                 int i;
-
+                pLogMsg(klogDebug, "$(line)", "line=%s", line);
                 for (i = 0; i < sizeof(line); ++i) {
                     int const ch = line[i];
                     if (ch == '\0')
