@@ -31,82 +31,55 @@
 
 #if CAN_HAVE_CONTAINER_ID
 
-#include <unistd.h>
-#include <sys/mman.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
+#include <stdio.h>
 
 #define CGROUP_FILE_NAME "/proc/self/cgroup"
 
-static char const *parseContainerID(char const *const cgroup, size_t const size)
-{
-    size_t start = 0;
-    size_t end = 0;
-    size_t i;
-
-    for (i = 0; i < size; ++i) {
-        int const ch = cgroup[i];
-        if (ch == ':') {
-            start = i + 1;
-            continue;
-        }
-        if (ch == '\n') {
-            end = i;
-            break;
-        }
-    }
-    if (end > start) {
-        char const *id = &cgroup[start];
-        size_t len = end - start;
-        if (len >= 8 && strncmp(id, "/docker/", 8) == 0) {
-            id += 8; len -= 8;
-            pLogMsg(klogDebug, "container-id: $(id)", "id=%.*s", (int)(len), id);
-            if (len >= 12) {
-                return id;
-            }
-        }
-    }
-    return NULL;
-}
 #endif
 
 int KConfig_Get_GUID_Add_Container(  char *const value
                                    , size_t const value_size)
 {
-    int result = -1;
     if (value_size >= 12) {
 #if CAN_HAVE_CONTAINER_ID
-        int const fd = open(CGROUP_FILE_NAME, O_RDONLY);
-        if (fd >= 0) {
-            off_t const sfs = lseek(fd, 0, SEEK_END);
-            if (sfs > 0) {
-                size_t const fs = (size_t)sfs;
-                void *const mm = mmap(NULL, fs, PROT_READ, MAP_FILE|MAP_SHARED, fd, 0);
-                close(fd);
-                if (mm != MAP_FAILED) {
-                    char const *id = parseContainerID(mm, fs);
-                    if (id) {
-                        memmove(value + (value_size - 12), id, 12);
-                        result = 0;
+        FILE *fp = fopen(CGROUP_FILE_NAME, "r");
+        if (fp) {
+            char line[1024];
+            while (fgets(line, sizeof(line), fp) != NULL) {
+                int start = 0;
+                int end = 0;
+                int i;
+
+                for (i = 0; i < sizeof(line); ++i) {
+                    int const ch = line[i];
+                    if (ch == '\0')
+                        break;
+                    if (ch == ':') {
+                        start = i + 1;
+                        continue;
                     }
-                    if (result != 0) {
-                        LogMsg(klogDebug, "no container id found in /proc/self/cgroup");
+                    if (ch == '\n') {
+                        end = i;
+                        break;
                     }
-                    munmap(mm, fs);
                 }
-                else {
-                    LogMsg(klogDebug, "can't mmap /proc/self/cgroup");
+                if (end < start) {
+                    char const *id = &line[start];
+                    size_t len = end - start;
+                    if (len >= 8 && strncmp(id, "/docker/", 8) == 0) {
+                        id += 8; len -= 8;
+                        pLogMsg(klogDebug, "container-id: $(id)", "id=%.*s", (int)(len), id);
+                        if (len >= 12) {
+                            memmove(value + (value_size - 12), id, 12);
+                            fclose(fp);
+                            return 0;
+                        }
+                    }
                 }
             }
-            else {
-                LogMsg(klogDebug, "/proc/self/cgroup is empty");
-            }
-        }
-        else {
-            LogMsg(klogDebug, "can't read /proc/self/cgroup");
+            fclose(fp);
         }
     }
 #endif
-    return result;
+    return -1;
 }
