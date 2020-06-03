@@ -85,6 +85,8 @@ static char const *parseContainerID(char const *const cgroup, size_t const size)
     size_t end = 0;
     size_t i;
 
+
+    pLogMsg(klogDebug, "cgroup\n$(id)", "id=%.*s", (int)(size), cgroup);
     for (i = 0; i < size; ++i) {
         int const ch = cgroup[i];
         if (ch == ':') {
