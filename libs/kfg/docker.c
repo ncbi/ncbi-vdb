@@ -56,6 +56,7 @@ static char *readCGroups(size_t *const size)
             if (data) {
                 rc = KFileReadExactly(fp, 0, data, *size);
                 if (rc == 0) {
+                    pLogMsg(klogDebug, "read $(bytes)", "bytes=%zu", *size);
                     KFileRelease(fp);
                     return data;
                 }
