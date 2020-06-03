@@ -31,54 +31,13 @@
 
 #if CAN_HAVE_CONTAINER_ID
 
-#include <kfs/directory.h>
-#include <kfs/file.h>
-#include <sysalloc.h>
+#include <unistd.h>
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #define CGROUP_FILE_NAME "/proc/self/cgroup"
-
-static char *readCGroups(size_t *const size)
-{
-    KDirectory *ndir = NULL;
-    KFile const *fp = NULL;
-    rc_t rc;
-
-    rc = KDirectoryNativeDir(&ndir);
-    assert(rc == 0 && ndir != NULL);
-    rc = KDirectoryOpenFileRead(ndir, &fp, CGROUP_FILE_NAME);
-    KDirectoryRelease(ndir);
-    if (rc == 0) {
-        uint64_t fs = 0;
-        rc = KFileSize(fp, &fs);
-        *size = fs;
-        if (rc == 0) {
-            char *const data = malloc(*size);
-            if (data) {
-                rc = KFileReadExactly(fp, 0, data, *size);
-                if (rc == 0) {
-                    pLogMsg(klogDebug, "read $(bytes)", "bytes=%zu", *size);
-                    KFileRelease(fp);
-                    return data;
-                }
-                else {
-                    LogErr(klogDebug, rc, "can't read " CGROUP_FILE_NAME);
-                }
-                free(data);
-            }
-            else {
-                LogMsg(klogFatal, "OUT OF MEMORY!!!");
-            }
-        }
-        else {
-            LogErr(klogFatal, rc, "can't stat " CGROUP_FILE_NAME);
-        }
-        KFileRelease(fp);
-    }
-    else {
-        LogErr(klogDebug, rc, "can't open " CGROUP_FILE_NAME);
-    }
-    return NULL;
-}
 
 static char const *parseContainerID(char const *const cgroup, size_t const size)
 {
@@ -86,8 +45,6 @@ static char const *parseContainerID(char const *const cgroup, size_t const size)
     size_t end = 0;
     size_t i;
 
-
-    pLogMsg(klogDebug, "cgroup\n$(id)", "id=%.*s", (int)(size), cgroup);
     for (i = 0; i < size; ++i) {
         int const ch = cgroup[i];
         if (ch == ':') {
@@ -118,24 +75,37 @@ int KConfig_Get_GUID_Add_Container(  char *const value
                                    , size_t const value_size)
 {
     int result = -1;
-#if CAN_HAVE_CONTAINER_ID
     if (value_size >= 12) {
-        size_t fs = 0;
-        char *const data = readCGroups(&fs);
-        if (data) {
-            char const *const id = parseContainerID(data, fs);
-            if (id) {
-                memmove(value + (value_size - 12), id, 12);
-                result = 0;
+#if CAN_HAVE_CONTAINER_ID
+        int const fd = open(CGROUP_FILE_NAME, O_RDONLY);
+        if (fd >= 0) {
+            off_t const sfs = lseek(fd, 0, SEEK_END);
+            if (sfs > 0) {
+                size_t const fs = (size_t)sfs;
+                void *const mm = mmap(NULL, fs, PROT_READ, MAP_FILE|MAP_SHARED, fd, 0);
+                close(fd);
+                if (mm != MAP_FAILED) {
+                    char const *id = parseContainerID(mm, fs);
+                    if (id) {
+                        memmove(value + (value_size - 12), id, 12);
+                        result = 0;
+                    }
+                    if (result != 0) {
+                        LogMsg(klogDebug, "no container id found in /proc/self/cgroup");
+                    }
+                    munmap(mm, fs);
+                }
+                else {
+                    LogMsg(klogDebug, "can't mmap /proc/self/cgroup");
+                }
             }
-            if (result != 0) {
-                LogMsg(klogDebug, "no container id found in " CGROUP_FILE_NAME);
+            else {
+                LogMsg(klogDebug, "/proc/self/cgroup is empty");
             }
-            free(data);
         }
-    }
-    else {
-        LogMsg(klogDebug, "image guid too short");
+        else {
+            LogMsg(klogDebug, "can't read /proc/self/cgroup");
+        }
     }
 #endif
     return result;
