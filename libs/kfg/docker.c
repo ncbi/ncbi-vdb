@@ -38,9 +38,9 @@
 #include <kfs/directory.h>
 
 #define CGROUP_FILE_PATH "/proc/self/cgroup"
-/* /proc/self/cgroup is lines like this:
- * 14:name=systemd:/docker/<container hash id>
+/* /proc/self/cgroup lines like this:
  * 14:name=systemd:/docker/2b644fadb9fbf627caeede280d3d00e9c4cc59022ae4ee186a92c41e96eb8106
+ * ^ unimportant ^         ^--------------- this part is the container id ----------------^
  */
 #endif
 
@@ -50,7 +50,6 @@ int KConfig_Get_GUID_Add_Container(  char *const value
     if (value_size >= 12) {
 #if CAN_HAVE_CONTAINER_ID
         char buffer[4096];
-#if 1
         size_t inbuf = 0;
         size_t nread = 0;
         uint64_t pos = 0;
@@ -100,44 +99,6 @@ int KConfig_Get_GUID_Add_Container(  char *const value
         }
         KFileRelease(fp);
         return good ? 0 : -1;
-#else
-        FILE *fp = fopen(CGROUP_FILE_PATH, "r");
-        if (fp) {
-            while (fgets(line, sizeof(line), fp) != NULL) {
-                int start = 0;
-                int end = 0;
-                int i;
-
-                for (i = 0; i < sizeof(line); ++i) {
-                    int const ch = line[i];
-                    if (ch == '\0')
-                        break;
-                    if (ch == ':') {
-                        start = i + 1;
-                        continue;
-                    }
-                    if (ch == '\n') {
-                        end = i;
-                        break;
-                    }
-                }
-                if (end > start) {
-                    char const *id = &line[start];
-                    size_t len = end - start;
-                    if (len >= 8 && strncmp(id, "/docker/", 8) == 0) {
-                        id += 8; len -= 8;
-                        pLogMsg(klogDebug, "container-id: $(id)", "id=%.*s", (int)(len), id);
-                        if (len >= 12) {
-                            memmove(value + (value_size - 12), id, 12);
-                            fclose(fp);
-                            return 0;
-                        }
-                    }
-                }
-            }
-            fclose(fp);
-        }
-#endif
     }
 #endif
     return -1;
