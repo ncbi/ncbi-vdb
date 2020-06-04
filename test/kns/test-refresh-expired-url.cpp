@@ -62,7 +62,10 @@ public:
         CloudMgr * cloudMgr;
         THROW_ON_RC ( CloudMgrMake ( & cloudMgr, nullptr, m_mgr ) );
         THROW_ON_RC ( CloudMgrCurrentProvider ( cloudMgr, & m_cloudProviderId ) );
-        THROW_ON_RC ( CloudMgrGetCurrentCloud ( cloudMgr, & m_cloud ) );
+        if ( m_cloudProviderId != cloud_provider_none )
+        {
+            THROW_ON_RC ( CloudMgrGetCurrentCloud ( cloudMgr, & m_cloud ) );
+        }
         THROW_ON_RC ( CloudMgrRelease ( cloudMgr ) );
     }
 
