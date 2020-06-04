@@ -89,6 +89,7 @@ int KConfig_Get_GUID_Add_Container(  char *const value
                         if (len >= 12) {
                             memmove(value + (value_size - 12), id, 12);
                             good = true;
+                            break;
                         }
                     }
                     inbuf -= i;
