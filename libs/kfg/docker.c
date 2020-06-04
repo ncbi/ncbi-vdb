@@ -64,7 +64,7 @@ int KConfig_Get_GUID_Add_Container(  char *const value
 
         rc = KDirectoryOpenFileRead(ndir, &fp, CGROUP_FILE_PATH);
         KDirectoryRelease(ndir);
-        if (rc == 0) {
+        if (rc) {
             LogErr(klogDebug, rc, "can not open " CGROUP_FILE_PATH);
             return -1;
         }
