@@ -67,10 +67,12 @@ using namespace std;
 static rc_t argsHandler(int argc, char* argv[]);
 TEST_SUITE_WITH_ARGS_HANDLER(KfgTestSuite, argsHandler);
 
+#ifdef ALL
 FIXTURE_TEST_CASE(testKConfigPrint, KfgFixture)
 {
 	REQUIRE_RC(KConfigPrint(kfg, 0));
 }
+#endif
 
 ///////////////////////////////////////////////// KFG parser test cases
 
@@ -873,6 +875,7 @@ FIXTURE_TEST_CASE(KConfigImportNgc_Basic, KfgFixture)
 }
 #endif
 
+#ifdef ALL
 FIXTURE_TEST_CASE(KConfigImportNgc_NullLocation, KfgFixture)
 {
     CreateAndLoad(GetName(), "\n");
@@ -888,6 +891,94 @@ FIXTURE_TEST_CASE(KConfigImportNgc_NullLocation_NullNewRepo, KfgFixture)
     Cleaner cleaner(wd);
     REQUIRE_RC(KConfigImportNgc(kfg, "./prj_2956.ngc", NULL, NULL));
 }
+#endif
+
+#ifdef ALL
+TEST_CASE(TestAdCreating) { // create AD automaticlly
+#define NAME "tmp.kfg"
+    putenv((char*)"VDB_CONFIG=" NAME);
+    KDirectory * wd = NULL;
+    REQUIRE_RC(KDirectoryNativeDir(&wd));
+    KFile * file = NULL;
+    REQUIRE_RC(KDirectoryCreateFile(wd, &file, true, 0664, kcmInit, NAME));
+    const char contents[] = "foo = \"bar\"\n";
+    REQUIRE_RC(KFileWrite(file, 0, contents, strlen(contents), NULL));
+    KfgFixture f;
+    const KConfigNode * node = NULL;
+
+    const char * name = "/repository/user/ad/public/apps/sra/volumes/sraAd";
+    REQUIRE_RC(KConfigOpenNodeRead(f.kfg, &node, name));
+    REQUIRE_RC(KConfigNodeRelease(node));
+
+    name = "/repository/user/ad/public/apps/sra/volumes/sraAd";
+    REQUIRE_RC(KConfigOpenNodeRead(f.kfg, &node, name));
+    REQUIRE_RC(KConfigNodeRelease(node));
+
+    name = "/repository/user/ad/public/apps/sraPileup/volumes/ad";
+    REQUIRE_RC(KConfigOpenNodeRead(f.kfg, &node, name));
+    REQUIRE_RC(KConfigNodeRelease(node));
+
+    name = "/repository/user/ad/public/apps/sraRealign/volumes/ad";
+    REQUIRE_RC(KConfigOpenNodeRead(f.kfg, &node, name));
+    REQUIRE_RC(KConfigNodeRelease(node));
+
+    name = "/repository/user/ad/public/apps/refseq/volumes/refseqAd";
+    REQUIRE_RC(KConfigOpenNodeRead(f.kfg, &node, name));
+    REQUIRE_RC(KConfigNodeRelease(node));
+
+    name = "/repository/user/ad/public/root";
+    REQUIRE_RC(KConfigOpenNodeRead(f.kfg, &node, name));
+    REQUIRE_RC(KConfigNodeRelease(node));
+
+    REQUIRE_RC(KFileRelease(file));
+    REQUIRE_RC(KDirectoryRemove(wd, true, NAME));
+    REQUIRE_RC(KDirectoryRelease(wd));
+}
+#endif
+
+#ifdef ALL
+TEST_CASE(TestAdRepair) { // VDB-4276: automaticlly repait incomplete AD
+#define NAME "tmp.kfg"
+    putenv((char*)"VDB_CONFIG=" NAME);
+    KDirectory * wd = NULL;
+    REQUIRE_RC(KDirectoryNativeDir(&wd));
+    KFile * file = NULL;
+    REQUIRE_RC(KDirectoryCreateFile(wd, &file, true, 0664, kcmInit, NAME));
+    const char contents[]
+        = "/repository/user/ad/public/apps/sra/volumes/sraAd = \".\"\n";
+    REQUIRE_RC(KFileWrite(file, 0, contents, strlen(contents), NULL));
+    KfgFixture f;
+    const KConfigNode * node = NULL;
+
+    const char * name = "/repository/user/ad/public/apps/sra/volumes/sraAd";
+    REQUIRE_RC(KConfigOpenNodeRead(f.kfg, &node, name));
+    REQUIRE_RC(KConfigNodeRelease(node));
+
+    name = "/repository/user/ad/public/apps/sra/volumes/sraAd";
+    REQUIRE_RC(KConfigOpenNodeRead(f.kfg, &node, name));
+    REQUIRE_RC(KConfigNodeRelease(node));
+
+    name = "/repository/user/ad/public/apps/sraPileup/volumes/ad";
+    REQUIRE_RC(KConfigOpenNodeRead(f.kfg, &node, name));
+    REQUIRE_RC(KConfigNodeRelease(node));
+
+    name = "/repository/user/ad/public/apps/sraRealign/volumes/ad";
+    REQUIRE_RC(KConfigOpenNodeRead(f.kfg, &node, name));
+    REQUIRE_RC(KConfigNodeRelease(node));
+
+    name = "/repository/user/ad/public/apps/refseq/volumes/refseqAd";
+    REQUIRE_RC(KConfigOpenNodeRead(f.kfg, &node, name));
+    REQUIRE_RC(KConfigNodeRelease(node));
+
+    name = "/repository/user/ad/public/root";
+    REQUIRE_RC(KConfigOpenNodeRead(f.kfg, &node, name));
+    REQUIRE_RC(KConfigNodeRelease(node));
+
+    REQUIRE_RC(KFileRelease(file));
+    REQUIRE_RC(KDirectoryRemove(wd, true, NAME));
+    REQUIRE_RC(KDirectoryRelease(wd));
+}
+#endif
 
 //////////////////////////////////////////// Main
 static rc_t argsHandler(int argc, char* argv[]) {
