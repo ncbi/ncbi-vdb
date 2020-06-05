@@ -214,7 +214,7 @@ extern function INSDC:SRA:xread_type
  */
 table NCBI:WGS:tbl:nucleotide #2
     = NCBI:tbl:base_space #3
-    , NCBI:tbl:phred_quality #2.0.4
+    , NCBI:tbl:phred_quality #2.0.5
     , NCBI:SRA:tbl:stats #1.2.1
 {
     /* ACCESSION
