@@ -37,6 +37,8 @@
 
 #include <sysalloc.h>
 
+#include "procmgr-whack.h" /* WHACK_PROC_MGR */
+
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -225,6 +227,9 @@ LIB_EXPORT rc_t CC KProcMgrRelease ( const KProcMgr *self )
                 switch ( rc )
                 {
                 case krefWhack:
+#ifdef WHACK_PROC_MGR
+                    KProcMgrWhack(); KLockRelease(cleanup_lock);
+#endif
                     return 0;
                 case krefNegative:
                     return RC ( rcPS, rcMgr, rcReleasing, rcRange, rcExcessive );
