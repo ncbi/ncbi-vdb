@@ -101,7 +101,7 @@ protected:
     }
     ~BaseMgrFixture()
     {
-        if (KDirectoryRemove(wd, true, pwFileName))
+        if (wd != NULL && KDirectoryRemove(wd, true, pwFileName))
            throw logic_error("~MgrFixture: KDirectoryRemove failed");   
         if (vpath && VPathRelease(vpath) != 0)
            throw logic_error("~MgrFixture: VPathRelease failed");
