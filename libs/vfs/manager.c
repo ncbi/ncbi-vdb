@@ -85,6 +85,8 @@
 #include "path-priv.h"
 #include "resolver-priv.h"
 
+#include "../kfg/ngc-priv.h" /* KNgcObjMakeFromCmdLine */
+
 #include <strtol.h>
 
 #include <sysalloc.h>
@@ -93,6 +95,11 @@
 #include <ctype.h>
 #include <os-native.h>
 #include <assert.h>
+
+#include <limits.h> /* PATH_MAX */
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
 
 
 #if _DEBUGGING
@@ -4284,8 +4291,77 @@ LIB_EXPORT rc_t CC VFSManagerDeleteCacheOlderThan ( const VFSManager * self,
     return rc;
 }
 
-LIB_EXPORT rc_t CC VFSManagerSetAdCaching(VFSManager * self, bool enabled) {
+LIB_EXPORT
+rc_t CC VFSManagerSetAdCaching(VFSManager * self, bool enabled)
+{
     if (self != NULL)
         return KNSManagerSetAdCaching(self->kns, enabled);
     return 0;
+}
+
+#define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
+    if (rc2 && !rc) { rc = rc2; } obj = NULL; } while (false)
+
+/* CheckAd
+ *  Verify that inPath is path/to/Accession-as-Directory (AD)
+ *  if inPath is AD - resolve run in AD as outPath and return true
+ *  otherwise - return false, don't set outPath
+ */
+LIB_EXPORT bool CC VFSManagerCheckAd(const VFSManager * self,
+    const VPath * inPath, const VPath ** outPath)
+{
+    /* if path = "/S/S.sra";
+       or path = "/S/S_dbGaP-NNN.sra"
+       then inPath  is S
+            outPath is /S/S*.sra */
+    bool found = false;
+    rc_t rc = 0;
+    const KNgcObj * ngc = NULL;
+    uint32_t projectId = 0;
+    String spath;
+    const char *slash = NULL;
+    char rs[PATH_MAX] = "";
+
+    assert(self);
+
+    if (VPathGetPath(inPath, &spath) != 0)
+        return false;
+    if ((KDirectoryPathType(self->cwd, spath.addr) & ~kptAlias) != kptDir)
+        return false;
+
+    rc = KDirectoryResolvePath(self->cwd, true, rs, sizeof rs, "%s", spath.addr);
+    if (rc != 0)
+        return false;
+
+    slash = strrchr(rs, '/');
+    if (slash)
+        ++slash;
+    else
+        slash = rs;
+
+    rc = KNgcObjMakeFromCmdLine(&ngc);
+    if (ngc != NULL) {
+        rc = KNgcObjGetProjectId(ngc, &projectId);
+        if (rc == 0)
+            if ((KDirectoryPathType(self->cwd, "%s/%s_dbGaP-%d.sra",
+                rs, slash, projectId) & ~kptAlias) == kptFile)
+            {
+                VFSManagerMakePath(self, (VPath **)outPath,
+                    "%s/%s_dbGaP-%d.sra", rs, slash, projectId);
+                found = true;
+            }
+    }
+
+    if (!found)
+        if ((KDirectoryPathType(self->cwd, "%s/%s.sra", rs, slash)
+            & ~kptAlias) == kptFile)
+        {
+            VFSManagerMakePath(self, (VPath **)outPath,
+                "%s/%s.sra", rs, slash);
+            found = true;
+        }
+
+    RELEASE(KNgcObj, ngc);
+
+    return found;
 }

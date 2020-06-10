@@ -49,8 +49,6 @@
 #include <string.h>
 #include <assert.h>
 
-#include "../kfg/ngc-priv.h" /* KNgcObjMakeFromCmdLine */
-
 
 /*--------------------------------------------------------------------------
  * KDBManager
@@ -485,57 +483,4 @@ LIB_EXPORT rc_t CC KDBManagerGetTableModDate ( const KDBManager *self,
     va_end ( args );
 
     return rc;
-}
-
-#define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
-    if (rc2 && !rc) { rc = rc2; } obj = NULL; } while (false)
-
-LIB_EXPORT void CC KDBManagerCheckAd(
-    const KDBManager *self, const VPath * inPath, const VPath ** outPath)
-{
-    /* path = "/S/S.sra";
-    or path = "/S/S_dbGaP-NNN.sra" */
-    bool found = false;
-    rc_t rc = 0;
-    const KNgcObj * ngc = NULL;
-    uint32_t projectId = 0;
-    String spath;
-    const char *slash = NULL;
-
-    assert(self);
-
-    if (VPathGetPath(inPath, &spath) != 0)
-        return;
-    if ((KDirectoryPathType(self->wd, spath.addr) & ~kptAlias) != kptDir)
-        return;
-
-    slash = strrchr(spath.addr, '/');
-    if (slash)
-        ++slash;
-    else
-        slash = spath.addr;
-
-    rc = KNgcObjMakeFromCmdLine(&ngc);
-    if (ngc != NULL) {
-        rc = KNgcObjGetProjectId(ngc, &projectId);
-        if (rc == 0)
-            if ((KDirectoryPathType(self->wd, "%s/%s_dbGaP-%d.sra",
-                spath.addr, slash, projectId) & ~kptAlias) == kptFile)
-            {
-                VFSManagerMakePath(self->vfsmgr, (VPath **)outPath,
-                    "%s/%s_dbGaP-%d.sra", spath.addr, slash, projectId);
-                found = true;
-            }
-    }
-
-    if (!found)
-        if ((KDirectoryPathType(self->wd, "%s/%s.sra", spath.addr, slash)
-            & ~kptAlias) == kptFile)
-        {
-            VFSManagerMakePath(self->vfsmgr, (VPath **)outPath,
-                "%s/%s.sra", spath.addr, slash);
-            found = true;
-        }
-
-    RELEASE(KNgcObj, ngc);
 }
