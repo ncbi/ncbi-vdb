@@ -108,7 +108,7 @@ static DWORD WINAPI int_ThreadProc( LPVOID lpParameter )
  *
  *  "data" [ IN, OPAQUE ] - user-supplied thread data
  */
-LIB_EXPORT rc_t CC KThreadMake ( KThread **tp,
+LIB_EXPORT rc_t CC KThreadMakeStackSize ( KThread **tp, size_t stacksize,
     rc_t ( CC * run_thread ) ( const KThread*, void* ), void *data )
 {
     rc_t rc;
@@ -136,7 +136,7 @@ LIB_EXPORT rc_t CC KThreadMake ( KThread **tp,
                 /* attempt to create thread */
                 t -> thread_handle = CreateThread(
                     NULL,               /* default security attributes */
-                    0,                  /* use default stack size */
+                    stacksize,          /* use default stack size */
                     int_ThreadProc,     /* thread function */
                     t,                  /* argument to thread function */
                     0,                  /* run immediately */

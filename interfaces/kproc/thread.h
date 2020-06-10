@@ -52,10 +52,14 @@ typedef struct KThread KThread;
  *  "run_thread" [ IN ] - thread entrypoint
  *
  *  "data" [ IN, OPAQUE ] - user-supplied thread data
+ *
+ *  "stacksize" [ IN ] - number of bytes to request for stack size; 0 = default
  */
-KPROC_EXTERN rc_t CC KThreadMake ( KThread **t,
-    rc_t ( CC * run_thread ) ( const KThread *self, void *data ), void *data );
+KPROC_EXTERN rc_t CC KThreadMakeStackSize ( KThread **t,
+    rc_t ( CC * run_thread ) ( const KThread *self, void *data ), void *data,
+    size_t stacksize);
 
+#define KThreadMake(RSLT, FUNC, DATA) (KThreadMakeStackSize((RSLT), (FUNC), (DATA), 0))
 
 /* AddRef
  * Release

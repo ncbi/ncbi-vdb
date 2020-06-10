@@ -27,6 +27,7 @@
 #include <kproc/extern.h>
 #include <kproc/thread.h>
 #include <klib/rc.h>
+#include <klib/log.h>
 #include <sysalloc.h>
 #include <atomic32.h>
 
@@ -94,8 +95,9 @@ void *KThreadRun ( void *td )
  *
  *  "data" [ IN, OPAQUE ] - user-supplied thread data
  */
-LIB_EXPORT rc_t CC KThreadMake ( KThread **tp,
-    rc_t ( CC * run_thread ) ( const KThread*, void* ), void *data )
+LIB_EXPORT rc_t CC KThreadMakeStackSize ( KThread **tp,
+    rc_t ( CC * run_thread ) ( const KThread*, void* ), void *data,
+    size_t stacksize )
 {
     rc_t rc;
     if ( tp == NULL )
@@ -112,6 +114,17 @@ LIB_EXPORT rc_t CC KThreadMake ( KThread **tp,
             else
             {
                 int status;
+                pthread_attr_t attr;
+
+                pthread_attr_init(&attr); // initializes to default values
+                if (stacksize != 0)
+                {
+                    size_t default_stacksize = 0;
+
+                    pthread_attr_getstacksize(&attr, &default_stacksize);
+                    pthread_attr_setstacksize(&attr, stacksize);
+                    pLogMsg(klogDebug, "requesting stack size $(sz), default was $(ds)", "sz=%zu,ds=%zu", stacksize, default_stacksize);
+                }
 
                 /* finish constructing thread */
                 t -> run = run_thread;
@@ -122,7 +135,8 @@ LIB_EXPORT rc_t CC KThreadMake ( KThread **tp,
                 t -> join = true;
 
                 /* attempt to create thread */
-                status = pthread_create ( & t -> thread, 0, KThreadRun, t );
+                status = pthread_create ( & t -> thread, &attr, KThreadRun, t );
+                pthread_attr_destroy(&attr);
                 if ( status == 0 )
                 {
                     * tp = t;
