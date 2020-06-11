@@ -27,6 +27,7 @@
 
 #include <kns/extern.h>
 
+#include <kns/http-priv.h> /* HttpFileGetTotalWait */
 #include <kns/stream.h> /* KStreamRelease */
 
 #include <klib/debug.h> /* KStsLevel */
@@ -107,6 +108,37 @@ bool RetrierIncSleepTO(KStableHttpFile * self)
     else
         return true;
 }
+
+
+/* Get Maximum TotalWait time for Read calls */
+rc_t HttpFileGetTotalWait(const KFile * self, int32_t * millis) {
+    const KStableHttpFile * obj = (const KStableHttpFile*)self;
+
+    if (millis == NULL)
+        return RC(rcNS, rcFile, rcAccessing, rcParam, rcNull);
+
+    if (obj == NULL)
+        return RC(rcNS, rcFile, rcAccessing, rcSelf, rcNull);
+
+    *millis = obj->totalReadWaitMillis;
+
+    return 0;
+}
+
+/* CALCULATE totalReadWaitMillis FOR HttpFileGetTotalWait() */
+static int32_t CalculateTotalReadWait(const KStableHttpFile * self) {
+    assert(self && self->mgr);
+
+    if (!self->reliable)
+        /* There is no retry for not reliable files.
+           Max wait timeout for regular HTTP file is http_read_timeout */
+        return self->mgr->http_read_timeout;
+    else
+        /* Max wait timeout for reliable files is
+           maxTotalWaitForReliableURLs_ms : see RetrierAgain() */
+        return self->mgr->maxTotalWaitForReliableURLs_ms;
+}
+
 
 /* The last call to the file was failed: prepare to retry.
  *
@@ -479,7 +511,7 @@ rc_t KNSManagerVMakeHttpFileInt(const KNSManager *self,
         rc = RC(rcNS, rcFile, rcConstructing, rcParam, rcNull);
     else {
         if (self == NULL)
-            rc = RC(rcNS, rcNoTarg, rcConstructing, rcParam, rcNull);
+            rc = RC(rcNS, rcFile, rcConstructing, rcParam, rcNull);
         else if (url == NULL)
             rc = RC(rcNS, rcFile, rcConstructing, rcPath, rcNull);
         else if (url[0] == 0)
@@ -510,6 +542,10 @@ rc_t KNSManagerVMakeHttpFileInt(const KNSManager *self,
                             f->url = string_dup_measure(url, NULL);
 
                             f->quitting = KNSManagerGetQuitting(self);
+
+                            /* totalReadWaitMillis IS NEEDED BY
+                               HttpFileGetTotalWait() */
+                            f->totalReadWaitMillis = CalculateTotalReadWait(f);
 
                             *file = &f->dad;
                         }

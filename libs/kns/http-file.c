@@ -1419,6 +1419,12 @@ static rc_t KNSManagerVMakeHttpFileIntUnstableImpl( const KNSManager *self,
                                         f -> need_env_token = need_env_token;
                                         f -> payRequired = payRequired;
 
+                             /* totalReadWaitMillis IS NEEDED BY
+                                stable-http-file.c : HttpFileGetTotalWait().
+                                Max read wait timeout is http_read_timeout. */
+                                        f -> totalReadWaitMillis
+                                            = self -> http_read_timeout;
+
                                         * file = & f -> dad;
                                         return 0;
                                     }

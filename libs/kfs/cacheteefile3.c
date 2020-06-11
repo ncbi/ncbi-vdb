@@ -43,6 +43,9 @@ struct KCacheTeeChunkReader;
 #include <klib/status.h>
 #include <klib/vector.h>
 #include <klib/container.h>
+
+#include <kns/http-priv.h> /* HttpFileGetTotalWait */
+
 #include <kproc/lock.h>
 #include <kproc/cond.h>
 #include <kproc/thread.h>
@@ -1187,9 +1190,34 @@ rc_t CC KCacheTeeFileRead ( const KCacheTeeFile_v3 *self, uint64_t pos,
     void *buffer, size_t bsize, size_t *num_read )
 {
     struct timeout_t tm;
-    /* TBD - need a default timeout on the manager object */
-    TimeoutInit ( & tm, 100 * 1000 );
-    return KCacheTeeFileTimedRead ( self, pos, buffer, bsize, num_read, & tm );
+
+    rc_t rc = 0;
+    int32_t msec = 0;
+
+    assert(self);
+    rc = HttpFileGetTotalWait(self->source, &msec);
+
+#if 0
+    const char * v = getenv("NCBI_VDB_CACHE_TEE_FILE_TO");
+    if (v != NULL)
+        msec = atoi(v);
+#endif
+
+    if (rc == 0) {
+        if (msec < 0)
+            /* negative timeout is infinite */
+            return KCacheTeeFileTimedRead(
+                self, pos, buffer, bsize, num_read, NULL);
+        else {
+            TimeoutInit(&tm, msec);
+            return KCacheTeeFileTimedRead(
+                self, pos, buffer, bsize, num_read, &tm);
+        }
+    }
+    else {
+        TimeoutInit(&tm, 100 * 1000);
+        return KCacheTeeFileTimedRead(self, pos, buffer, bsize, num_read, &tm);
+    }
 }
 
 static
