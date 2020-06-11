@@ -89,9 +89,6 @@ KDB_EXTERN rc_t CC KDBManagerVPathOpenRemoteDBRead ( struct KDBManager const * s
 KDB_EXTERN int CC KDBManagerVPathTypeUnreliable (
     const struct KDBManager * self, const char *object, va_list args );
 
-KDB_EXTERN void CC KDBManagerCheckAd(const struct KDBManager * self,
-    const struct VPath * inPath, const struct VPath ** outPath);
-
 /*--------------------------------------------------------------------------
  * KDatabase
  */
