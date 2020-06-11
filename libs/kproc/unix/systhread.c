@@ -125,6 +125,13 @@ LIB_EXPORT rc_t CC KThreadMakeStackSize ( KThread **tp,
                     pthread_attr_setstacksize(&attr, stacksize);
                     pLogMsg(klogDebug, "requesting stack size $(sz), default was $(ds)", "sz=%zu,ds=%zu", stacksize, default_stacksize);
                 }
+                {
+                    size_t default_guardsize = 0, guardsize = 64 * 1024;
+
+                    pthread_attr_getguardsize(&attr, &default_guardsize);
+                    pthread_attr_setguardsize(&attr, guardsize);
+                    pLogMsg(klogDebug, "requesting guard size $(sz), default was $(ds)", "sz=%zu,ds=%zu", guardsize, default_guardsize);
+                }
 
                 /* finish constructing thread */
                 t -> run = run_thread;
