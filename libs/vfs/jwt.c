@@ -178,6 +178,8 @@ rc_t JwtKartValidateFile(const char * path, const String ** aJwt) {
         }
     }
 
+    free( buffer );
+
     RELEASE(KFile, f);
 
     RELEASE(KDirectory, dir);
