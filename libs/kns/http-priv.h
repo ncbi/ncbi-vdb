@@ -59,13 +59,21 @@
 #include <kns/endpoint.h>
 #endif
 
+/* timeout on Http Read */
 #ifndef MAX_HTTP_READ_LIMIT
 #define MAX_HTTP_READ_LIMIT ( 5 * 60 * 1000 ) /* 5 minutes */
 #endif
 
+/* timeout on Http Write */
 #ifndef MAX_HTTP_WRITE_LIMIT
 #define MAX_HTTP_WRITE_LIMIT ( 15 * 1000 )
 #endif
+
+/* timeout on Http Read loop */
+#ifndef MAX_HTTP_TOTAL_READ_LIMIT
+#define MAX_HTTP_TOTAL_READ_LIMIT ( 10 * 60 * 1000 ) /* 10 minutes */
+#endif
+
 
 #ifdef __cplusplus
 extern "C" {

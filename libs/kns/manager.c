@@ -693,7 +693,7 @@ static int32_t KNSManagerLoadTotalWaitForReliableURLs(const KConfig *kfg)
     if (rc != 0
         || result < 0)  /* no support for infinite wait in HTTP retry loop in */
     {     /* StableHttpFile: it might lead to infinite loop of reding errors */
-        result = 10 * 60 * 1000; /* 10 min */
+        result = MAX_HTTP_TOTAL_READ_LIMIT;
     }
 
     return result;
