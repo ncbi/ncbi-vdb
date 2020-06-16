@@ -146,6 +146,8 @@ int32_t CalculateTotalReadWait(const KStableHttpFile * self,
            maxTotalWaitForReliableURLs_ms : see RetrierAgain() */
         if (self->mgr->http_read_timeout < 0)
             return self->mgr->http_read_timeout;
+        else if (self->mgr->maxTotalWaitForReliableURLs_ms < 0)
+            return self->mgr->maxTotalWaitForReliableURLs_ms;
         else if (self->mgr->http_read_timeout >
             self->mgr->maxTotalWaitForReliableURLs_ms)
         {
@@ -604,7 +606,7 @@ LIB_EXPORT rc_t CC KNSManagerMakeReliableHttpFile(const KNSManager *self,
     va_list args;
     va_start(args, url);
     rc = KNSManagerVMakeHttpFileInt(self, file, conn,
-        vers, true, need_env_token, payRequired, url, args);
+        vers, reliable, need_env_token, payRequired, url, args);
     va_end(args);
     return rc;
 }
