@@ -611,7 +611,10 @@ LIB_EXPORT rc_t CC KNSManagerMakeReliableHttpFile(const KNSManager *self,
     return rc;
 }
 
-LIB_EXPORT bool CC KFileIsKHttpFile(const struct KFile * self)
+LIB_EXPORT bool CC KFileIsKHttpFile(const KFile * self)
 {
-    return self != NULL && &self->vt->v1 == &vtKHttpFile;
+    if (self != NULL && &self->vt->v1 == &vtKHttpFile)
+        return true;
+    else
+        return KUnstableFileIsKHttpFile(self);
 }

@@ -282,6 +282,8 @@ rc_t KNSManagerVMakeHttpFileIntUnstable(const struct KNSManager *self,
     const struct KFile **file, struct KStream *conn, ver_t vers, bool reliable,
     bool need_env_token, bool payRequired, const char *url, va_list args);
 
+bool KUnstableFileIsKHttpFile(const struct KFile * self);
+
 #ifdef __cplusplus
 }
 #endif

@@ -1531,3 +1531,7 @@ rc_t KNSManagerVMakeHttpFileIntUnstable(const KNSManager *self,
     return KNSManagerVMakeHttpFileIntUnstableImpl(self, file, conn, vers,
         reliable, need_env_token, payRequired, NULL, url, args);
 }
+
+bool KUnstableFileIsKHttpFile(const KFile * self) {
+    return self != NULL && &self->vt->v1 == &vtKHttpFile;
+}
