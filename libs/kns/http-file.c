@@ -199,7 +199,6 @@ rc_t KHttpFileMakeRequest ( const KHttpFile *cself, uint64_t pos, size_t req_siz
                 KClientHttpRequestSetCloudParams(req, cself -> need_env_token, cself -> payRequired);
                 if ( cself -> need_env_token && ! cself -> url_is_temporary)
                 {
-                    KClientHttpRequestSetCloudParams(req, true, cself -> payRequired);
                     KClientHttpRequestAttachEnvironmentToken ( req );
                     /* TBD - there should be a version of POST that takes a timeout */
                     rc = KClientHttpRequestPOST ( req, rslt );
@@ -1331,11 +1330,11 @@ static rc_t KNSManagerVMakeHttpFileIntUnstableImpl( const KNSManager *self,
                     {
                         KClientHttpResult *rslt;
 
+                        KClientHttpRequestSetCloudParams ( req, need_env_token, payRequired );
                         if ( need_env_token )
                         {
                             KClientHttpRequestAttachEnvironmentToken ( req );
                         }
-                        KClientHttpRequestSetCloudParams ( req, need_env_token, payRequired );
 
                         rc = KClientHttpRequestHEAD ( req, & rslt );
                         if ( rc == 0 && rslt -> expiration != NULL )

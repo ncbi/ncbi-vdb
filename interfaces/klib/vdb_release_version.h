@@ -1,7 +1,7 @@
-#ifndef _h_libs_klib_release_vers_
-#define _h_libs_klib_release_vers_
+#ifndef _h_klib_vdb_release_version_
+#define _h_klib_vdb_release_version_
 
-/*===========================================================================
+/*==============================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
 *               National Center for Biotechnology Information
@@ -23,29 +23,9 @@
 *
 *  Please cite the author in any work or product based on this material.
 *
-* ===========================================================================
-*
+* ==============================================================================
 */
 
-#include <klib/vdb-features.h> /* VDB_RELEASE_VERSION */
+#define VDB_RELEASE_VERSION 0x020A0007
 
-/* THIS FILE IS NOT GENERATED AUTOMATICALLY! */
-
-
-/* Version of current SRA Toolkit Release */
-#define RELEASE_VERS VDB_RELEASE_VERSION
-
-
-/* Type of Version of current SRA Toolkit Release is one of:
- *  'd' - development
- *  'a' - alpha
- *  'b' - beta
- *  'c' - release candidate
- *  'r' - final
- */
-#define RELEASE_TYPE 'r'
-
-/* Revision of Version of current SRA Toolkit Release */
-#define RELEASE_REVISION 0
-
-#endif /* _h_libs_klib_release_vers_ */
+#endif /* _h_klib_vdb_release_version_ */

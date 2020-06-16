@@ -1,6 +1,3 @@
-#ifndef _h_libs_klib_release_vers_
-#define _h_libs_klib_release_vers_
-
 /*===========================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
@@ -27,25 +24,7 @@
 *
 */
 
-#include <klib/vdb-features.h> /* VDB_RELEASE_VERSION */
+#include "ngsfixture.hpp"
 
-/* THIS FILE IS NOT GENERATED AUTOMATICALLY! */
+NgsFixture::Collections * NgsFixture::colls = nullptr;
 
-
-/* Version of current SRA Toolkit Release */
-#define RELEASE_VERS VDB_RELEASE_VERSION
-
-
-/* Type of Version of current SRA Toolkit Release is one of:
- *  'd' - development
- *  'a' - alpha
- *  'b' - beta
- *  'c' - release candidate
- *  'r' - final
- */
-#define RELEASE_TYPE 'r'
-
-/* Revision of Version of current SRA Toolkit Release */
-#define RELEASE_REVISION 0
-
-#endif /* _h_libs_klib_release_vers_ */

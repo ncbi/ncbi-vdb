@@ -381,23 +381,25 @@ void mimic_sra_pileup (
     print_line ( line_prev, canonical_name.c_str(), pos_start, pos - 1, strRefSlice, os );
 }
 
-FIXTURE_TEST_CASE(CSRA1_PileupEventIterator_AdjacentIndels, NgsFixture)
-{
-    // This test crashed in CSRA1_PileupEvent.c because of
-    // insertion followed by deletion (see vdb-dump SRR1164787 -T PRIMARY_ALIGNMENT -R 209167)
-    // So now this test has to just run with no crashes to be considered as passed successfully
+// Moved to CSRA1PileUpTest_Slow.cpp, to be run under 'make slowtests'
+//
+// FIXTURE_TEST_CASE(CSRA1_PileupEventIterator_AdjacentIndels, NgsFixture)
+// {
+//     // This test crashed in CSRA1_PileupEvent.c because of
+//     // insertion followed by deletion (see vdb-dump SRR1164787 -T PRIMARY_ALIGNMENT -R 209167)
+//     // So now this test has to just run with no crashes to be considered as passed successfully
 
-    char const db_path[] = "SRR1164787";
-    char const ref_name[] = "chr1";
+//     char const db_path[] = "SRR1164787";
+//     char const ref_name[] = "chr1";
 
-    int64_t const pos_start = 1386093;
-    int64_t const pos_end = 9999999;
-    uint64_t const len = (uint64_t)(pos_end - pos_start + 1);
+//     int64_t const pos_start = 1386093;
+//     int64_t const pos_end = 9999999;
+//     uint64_t const len = (uint64_t)(pos_end - pos_start + 1);
 
-    std::ostringstream sstream;
+//     std::ostringstream sstream;
 
-    mimic_sra_pileup ( open(db_path), ref_name, ngs::Alignment::primaryAlignment, pos_start, len, sstream );
-}
+//     mimic_sra_pileup ( open(db_path), ref_name, ngs::Alignment::primaryAlignment, pos_start, len, sstream );
+// }
 
 FIXTURE_TEST_CASE(CSRA1_PileupEventIterator_DeletionAndEnding, NgsFixture)
 {
@@ -643,74 +645,6 @@ FIXTURE_TEST_CASE(CSRA1_PileupIterator_FalseMismatch, NgsFixture)
     //REQUIRE_EQ ( sstream.str (), sstream_ref.str () );
 }
 #endif
-
-uint64_t pileup_test_all_functions (
-            ncbi::ReadCollection run,
-            char const* ref_name,
-            ngs::Alignment::AlignmentCategory category,
-            int64_t const pos_start, uint64_t const len)
-{
-    uint64_t ret = 0;
-
-    ngs::Reference r = run.getReference ( ref_name );
-
-    // in strRefSlice we want to have bases to report current base and deletions
-    // for current base it would be enough to have only slice [pos_start, len]
-    // but for deletions we might have situation when we want
-    // to report a deletion that goes beyond (pos_start + len) on the reference
-    // so we have to read some bases beyond our slice end
-    ngs::String strRefSlice = r.getReferenceBases ( pos_start, len + 100);
-
-    ngs::PileupIterator pi = r.getPileupSlice ( pos_start, len, category );
-
-    int64_t pos = pos_start;
-    for (; pi.nextPileup (); ++ pos)
-    {
-        ret += 1000000;
-
-        size_t event_count = 0;
-        for (; pi.nextPileupEvent () && pos % 17 != 0; ++ event_count)
-        {
-            //ngs::Alignment alignment = pi.getAlignment();
-            //ret += (uint64_t)(alignment.getAlignmentLength() + alignment.getAlignmentPosition());
-
-            ret += (uint64_t)pi.getAlignmentBase();
-            ret += (uint64_t)pi.getAlignmentPosition();
-            ret += (uint64_t)pi.getAlignmentQuality();
-            ret += (uint64_t)pi.getEventIndelType();
-            ret += (uint64_t)pi.getEventRepeatCount();
-            ret += (uint64_t)pi.getEventType();
-            ret += (uint64_t)pi.getFirstAlignmentPosition();
-            ret += (uint64_t)pi.getInsertionBases().size();
-            ret += (uint64_t)pi.getInsertionQualities().size();
-            ret += (uint64_t)pi.getLastAlignmentPosition();
-            ret += (uint64_t)pi.getMappingQuality();
-            ret += (uint64_t)pi.getPileupDepth();
-            ret += (uint64_t)pi.getReferenceBase();
-            ret += (uint64_t)pi.getReferencePosition();
-            ret += (uint64_t)pi.getReferenceSpec().size();
-
-            if ( (event_count + 1) % 67 == 0 )
-            {
-                ret += 100000;
-                pi.resetPileupEvent();
-                break;
-            }
-        }
-    }
-
-    return ret;
-}
-
-FIXTURE_TEST_CASE(CSRA1_PileupIterator_TestAllFunctions, NgsFixture)
-{
-    uint64_t ret = 0;
-    ret = pileup_test_all_functions ( open ("SRR822962"), "chr2"/*"NC_000002.11"*/, ngs::Alignment::all, 0, 20000 );
-    // this magic sum was taken from an observed result,
-    // but due to a bug in "resetPileupEvent()", is likely to be wrong
-    // resetting the magic sum to what is being returned now.
-    REQUIRE_EQ ( ret, (uint64_t)/*46433887435*/ /*46436925309*/ 46436941625 );
-}
 
 //////////////////////////////////////////// Main
 

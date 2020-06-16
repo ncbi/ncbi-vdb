@@ -24,8 +24,6 @@
 *
 */
 
-#include <kdb/kdb-priv.h> /* KDBManagerCheckAd */
-
 #define TRACK_REFERENCES 0
 
 #define KONST const
@@ -43,6 +41,7 @@
 #include <klib/printf.h>
 #include <klib/rc.h>
 
+#include <vfs/manager.h> /* VFSManagerCheckAd */
 #include <vfs/path.h> /* VFSManagerMakePath */
 
 #include <kfs/arc.h>
@@ -259,7 +258,8 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *self,
                 rc = VFSManagerMakePath(self->vfsmgr, &path, "%s", aTblpath);
             if (rc == 0) {
                 const String * str = NULL;
-                KDBManagerCheckAd(self, path != NULL ? path : vpath, &path2);
+                VFSManagerCheckAd(self->vfsmgr,
+                    path != NULL ? path : vpath, &path2);
                 if (path2 != NULL) {
                     rc = VPathMakeString(path2, &str);
                     if (rc == 0) {
