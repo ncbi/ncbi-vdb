@@ -3295,33 +3295,78 @@ static rc_t _KConfigUseTraceCgi(KConfig * self, bool * updated) {
 /* create Accession as Directory repository when it does not exist */
 static rc_t _KConfigCheckAd(KConfig * self) {
     const KConfigNode * kfg = NULL;
-    rc_t rc = KConfigOpenNodeRead(self, &kfg, "/repository/user/ad");
-    if (rc != 0) {
-        rc = 0;
-        /* create Accession as Directory repository
-           when it does not exist */
-        if (rc == 0)
-            rc = KConfigWriteString(self,
-                "/repository/user/ad/public/apps/file/volumes/flatAd", ".");
-        if (rc == 0)
-            rc = KConfigWriteString(self,
-                "/repository/user/ad/public/apps/sra/volumes/sraAd", ".");
-        if (rc == 0)
-            rc = KConfigWriteString(self,
-                "/repository/user/ad/public/apps/sraPileup/volumes/ad", ".");
-        if (rc == 0)
-            rc = KConfigWriteString(self,
-                "/repository/user/ad/public/apps/sraRealign/volumes/ad", ".");
-        if (rc == 0)
-            rc = KConfigWriteString(self,
-                "/repository/user/ad/public/apps/refseq/volumes/refseqAd",
-                ".");
-        if (rc == 0)
-            rc = KConfigWriteString(self,
-                "/repository/user/ad/public/root", ".");
+    KConfigNode * flat = NULL;
+
+    const char * name = "/repository/user/ad/public/apps/file/volumes/flat";
+    rc_t rc = KConfigOpenNodeUpdate(self, &flat, name);
+    if (rc == 0) {
+        rc_t r2 = 0;
+        char buffer[1] = "";
+        size_t num_read = 0, remaining = 0;
+        rc = KConfigNodeRead(flat, 0,
+            buffer, sizeof buffer, &num_read, &remaining);
+        /* fix invalid app: writing empty string will force to ignore it */
+        if (rc == 0 && num_read == 1 && remaining == 0 && buffer[0] == '.')
+            rc = KConfigNodeWrite(flat, "", 0);
+        r2 = KConfigNodeRelease(flat);
+        if (r2 != 0 && rc == 0)
+            rc = r2;
     }
-    else
-        rc = KConfigNodeRelease(kfg);
+
+    if (rc == 0) {
+        name = "/repository/user/ad/public/apps/file/volumes/flatAd";
+        rc = KConfigOpenNodeRead(self, &kfg, name);
+        if (rc != 0)
+            rc = KConfigWriteString(self, name, ".");
+        else
+            rc = KConfigNodeRelease(kfg);
+    }
+
+    if (rc == 0) {
+        name = "/repository/user/ad/public/apps/sra/volumes/sraAd";
+        rc = KConfigOpenNodeRead(self, &kfg, name);
+        if (rc != 0)
+            rc = KConfigWriteString(self, name, ".");
+        else
+            rc = KConfigNodeRelease(kfg);
+    }
+
+    if (rc == 0) {
+        name = "/repository/user/ad/public/apps/sraPileup/volumes/ad";
+        rc = KConfigOpenNodeRead(self, &kfg, name);
+        if (rc != 0)
+            rc = KConfigWriteString(self, name, ".");
+        else
+            rc = KConfigNodeRelease(kfg);
+    }
+
+    if (rc == 0) {
+        name = "/repository/user/ad/public/apps/sraRealign/volumes/ad";
+        rc = KConfigOpenNodeRead(self, &kfg, name);
+        if (rc != 0)
+            rc = KConfigWriteString(self, name, ".");
+        else
+            rc = KConfigNodeRelease(kfg);
+    }
+
+    if (rc == 0) {
+        name = "/repository/user/ad/public/apps/refseq/volumes/refseqAd";
+        rc = KConfigOpenNodeRead(self, &kfg, name);
+        if (rc != 0)
+            rc = KConfigWriteString(self, name, ".");
+        else
+            rc = KConfigNodeRelease(kfg);
+    }
+
+    if (rc == 0) {
+        name = "/repository/user/ad/public/root";
+        rc = KConfigOpenNodeRead(self, &kfg, name);
+        if (rc != 0)
+            rc = KConfigWriteString(self, name, ".");
+        else
+            rc = KConfigNodeRelease(kfg);
+    }
+
     return rc;
 }
 

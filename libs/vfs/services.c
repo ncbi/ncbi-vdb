@@ -363,15 +363,14 @@ static rc_t VResolversQuery ( const VResolver * self, const VFSManager * mgr,
     else
         oid = id;
 
-    if ( oid == 0 ) {
+    if ( oid == 0 )
         rc = VFSManagerMakePath ( mgr, & query, "%S", acc );
-        if (rc == 0 && path != NULL && path->projectId >= 0) {
-            assert(query);
-            query->projectId = path->projectId;
-        }
-    }
     else
         rc = VFSManagerMakeOidPath ( mgr, & query, oid );
+    if (rc == 0 && path != NULL && path->projectId >= 0) {
+        assert(query);
+        query->projectId = path->projectId;
+    }
 
     if ( rc == 0 ) {
         bool isSource = false;
@@ -537,6 +536,8 @@ static rc_t _VPathGetId ( const VPath * self, const String ** newId,
     String http;
     String https;
 
+    bool replace = true;
+
     assert ( newId && oldId );
 
     * newId = NULL;
@@ -551,11 +552,11 @@ static rc_t _VPathGetId ( const VPath * self, const String ** newId,
     if ( oldId -> size <= https . size )
         return 0;
 
-    /* what is being attempted with this code? */
+    /* what is being attempted with this code?
     if ( string_cmp ( oldId -> addr, oldId -> size, https . addr, https. size, https. size ) != 0 &&
          string_cmp ( oldId -> addr, oldId -> size, fasp  . addr, fasp . size, fasp . size ) != 0 &&
          string_cmp ( oldId -> addr, oldId -> size, http  . addr, fasp . size, fasp . size ) != 0 )
-    {   return 0; }
+    {   return 0; } */
 
     rc = VPathGetId ( self, & id );
     if ( rc == 0 && id . size == 0 ) {
@@ -599,19 +600,30 @@ static rc_t _VPathGetId ( const VPath * self, const String ** newId,
 
             free ( ( void * ) str );
         }
+
+        if ( rc == 0 )
+            rc = VPathGetPath ( acc_or_oid, & id );
     }
 
-    if ( rc == 0 )
-        rc = VPathGetPath ( acc_or_oid, & id );
-
     if ( rc == 0 ) {
-        _StringFixSrrWithVersion ( & id );
-        rc = StringCopy ( newId, & id );
+        /* return ID just when it's different from oldId
+        (replace file name by numeric [dbGaP] id) */
+        if (oldId != NULL &&
+            oldId->addr != NULL && oldId->size > 0 &&
+            id.addr != NULL && id.size > 0 &&
+            oldId->addr[0] == id.addr[0])
+        {
+            replace = false;
+        }
+        else {
+            _StringFixSrrWithVersion(&id);
+            rc = StringCopy(newId, &id);
+        }
     }
 
     RELEASE ( VPath, acc_or_oid );
 
-    if ( rc == 0 )
+    if ( rc == 0 && replace )
         * oldId = * * newId;
 
     return rc;
