@@ -27,7 +27,7 @@
 
 #include <kns/extern.h>
 
-#include <kns/http-priv.h> /* HttpFileGetTotalWait */
+#include <kns/http-priv.h> /* HttpFileGetReadTimeouts */
 #include <kns/stream.h> /* KStreamRelease */
 
 #include <klib/debug.h> /* KStsLevel */
@@ -110,24 +110,32 @@ bool RetrierIncSleepTO(KStableHttpFile * self)
 }
 
 
-/* Get Maximum TotalWait time for Read calls */
-rc_t HttpFileGetTotalWait(const KFile * self, int32_t * millis) {
+/* Get read timeout and Maximum TotalWait time for Read calls */
+rc_t HttpFileGetReadTimeouts(const KFile * self, int32_t * millis,
+    int32_t * totalMillis)
+{
     const KStableHttpFile * obj = (const KStableHttpFile*)self;
 
-    if (millis == NULL)
+    if (millis == NULL || totalMillis == NULL)
         return RC(rcNS, rcFile, rcAccessing, rcParam, rcNull);
 
     if (obj == NULL)
         return RC(rcNS, rcFile, rcAccessing, rcSelf, rcNull);
 
-    *millis = obj->totalReadWaitMillis;
+    *millis = obj->readWaitMillis;
+    *totalMillis = obj->totalReadWaitMillis;
 
     return 0;
 }
 
-/* CALCULATE totalReadWaitMillis FOR HttpFileGetTotalWait() */
-static int32_t CalculateTotalReadWait(const KStableHttpFile * self) {
-    assert(self && self->mgr);
+/* SET readWaitMillis and totalReadWaitMillis FOR HttpFileGetReadTimeouts() */
+static
+int32_t CalculateTotalReadWait(const KStableHttpFile * self,
+    int32_t * ms)
+{
+    assert(self && self->mgr && ms);
+
+    *ms = self->mgr->http_read_timeout;
 
     if (!self->reliable)
         /* There is no retry for not reliable files.
@@ -136,7 +144,15 @@ static int32_t CalculateTotalReadWait(const KStableHttpFile * self) {
     else
         /* Max wait timeout for reliable files is
            maxTotalWaitForReliableURLs_ms : see RetrierAgain() */
-        return self->mgr->maxTotalWaitForReliableURLs_ms;
+        if (self->mgr->http_read_timeout < 0)
+            return self->mgr->http_read_timeout;
+        else if (self->mgr->http_read_timeout >
+            self->mgr->maxTotalWaitForReliableURLs_ms)
+        {
+            return self->mgr->http_read_timeout;
+        }
+        else
+            return self->mgr->maxTotalWaitForReliableURLs_ms;
 }
 
 
@@ -159,7 +175,11 @@ rc_t RetrierAgain(const KStableHttpFile * cself,
 
     assert(self && self->mgr);
 
-    total = self->mgr->maxTotalWaitForReliableURLs_ms / 1000;
+    if (self->mgr->maxTotalWaitForReliableURLs_ms >= 0)
+        total = self->mgr->maxTotalWaitForReliableURLs_ms / 1000;
+    else
+        total = ~0;
+
     retryFirst = self->mgr->retryFirstRead;
 
     if (total == 0)           /* don't retry when overall retry time == 0 */
@@ -255,7 +275,7 @@ rc_t RetrierAgain(const KStableHttpFile * cself,
 /************************ wrapper KFile implementation ************************/
 
 static
-rc_t CC KHttpFileDestroy(KStableHttpFile *self)
+rc_t CC KStblHttpFileDestroy(KStableHttpFile *self)
 {
     rc_t rc = 0, r2 = 0;
 
@@ -283,7 +303,7 @@ rc_t CC KHttpFileDestroy(KStableHttpFile *self)
 }
 
 static
-struct KSysFile* CC KHttpFileGetSysFile(const KStableHttpFile *self,
+struct KSysFile* CC KStblHttpFileGetSysFile(const KStableHttpFile *self,
     uint64_t *offset)
 {
     *offset = 0;
@@ -291,25 +311,25 @@ struct KSysFile* CC KHttpFileGetSysFile(const KStableHttpFile *self,
 }
 
 static
-rc_t CC KHttpFileRandomAccess(const KStableHttpFile *self)
+rc_t CC KStblHttpFileRandomAccess(const KStableHttpFile *self)
 {
     return KFileRandomAccess(self->file);
 }
 
 static
-rc_t CC KHttpFileSize(const KStableHttpFile *self, uint64_t *size)
+rc_t CC KStblHttpFileSize(const KStableHttpFile *self, uint64_t *size)
 {
     return KFileSize(self->file, size);
 }
 
 static
-rc_t CC KHttpFileSetSize(KStableHttpFile *self, uint64_t size)
+rc_t CC KStblHttpFileSetSize(KStableHttpFile *self, uint64_t size)
 {
     return RC(rcNS, rcFile, rcUpdating, rcFile, rcReadonly);
 }
 
 static
-rc_t CC KHttpFileTimedRead(const KStableHttpFile *self, uint64_t pos,
+rc_t CC KStblHttpFileTimedRead(const KStableHttpFile *self, uint64_t pos,
     void *buffer, size_t bsize, size_t *num_read, struct timeout_t *tm)
 {
     quitting_t quitting = self->quitting;
@@ -334,7 +354,7 @@ rc_t CC KHttpFileTimedRead(const KStableHttpFile *self, uint64_t pos,
 }
 
 static
-rc_t CC KHttpFileRead(const KStableHttpFile *self, uint64_t pos,
+rc_t CC KStblHttpFileRead(const KStableHttpFile *self, uint64_t pos,
     void *buffer, size_t bsize, size_t *num_read)
 {
     quitting_t quitting = self->quitting;
@@ -359,14 +379,14 @@ rc_t CC KHttpFileRead(const KStableHttpFile *self, uint64_t pos,
 }
 
 static
-rc_t CC KHttpFileWrite(KStableHttpFile *self, uint64_t pos,
+rc_t CC KStblHttpFileWrite(KStableHttpFile *self, uint64_t pos,
     const void *buffer, size_t size, size_t *num_writ)
 {
     return RC(rcNS, rcFile, rcUpdating, rcInterface, rcUnsupported);
 }
 
 static
-rc_t CC KHttpFileTimedWrite(KStableHttpFile *self, uint64_t pos,
+rc_t CC KStblHttpFileTimedWrite(KStableHttpFile *self, uint64_t pos,
     const void *buffer, size_t size, size_t *num_writ,
     struct timeout_t *tm)
 {
@@ -374,7 +394,7 @@ rc_t CC KHttpFileTimedWrite(KStableHttpFile *self, uint64_t pos,
 }
 
 static
-uint32_t CC KHttpFileGetType(const KStableHttpFile *self)
+uint32_t CC KStblHttpFileGetType(const KStableHttpFile *self)
 {
     return KFileType(self->file);
 }
@@ -382,8 +402,8 @@ uint32_t CC KHttpFileGetType(const KStableHttpFile *self)
 #if SUPPORT_CHUNKED_READ
 
 static
-rc_t CC KHttpFileTimedReadChunked(const KStableHttpFile * self, uint64_t pos,
-    KChunkReader * chunks, size_t bytes, size_t * num_read,
+rc_t CC KStblHttpFileTimedReadChunked(const KStableHttpFile * self,
+    uint64_t pos, KChunkReader * chunks, size_t bytes, size_t * num_read,
     struct timeout_t * tm)
 {
     quitting_t quitting = self->quitting;
@@ -409,7 +429,7 @@ rc_t CC KHttpFileTimedReadChunked(const KStableHttpFile * self, uint64_t pos,
 }
 
 static
-rc_t CC KHttpFileReadChunked(const KStableHttpFile * self, uint64_t pos,
+rc_t CC KStblHttpFileReadChunked(const KStableHttpFile * self, uint64_t pos,
     KChunkReader * chunks, size_t bytes, size_t * num_read)
 {
     quitting_t quitting = self->quitting;
@@ -444,19 +464,19 @@ static KFile_vt_v1 vtKHttpFile =
     2,
 #endif
 
-    KHttpFileDestroy,
-    KHttpFileGetSysFile,
-    KHttpFileRandomAccess,
-    KHttpFileSize,
-    KHttpFileSetSize,
-    KHttpFileRead,
-    KHttpFileWrite,
-    KHttpFileGetType,
-    KHttpFileTimedRead,
-    KHttpFileTimedWrite
+    KStblHttpFileDestroy,
+    KStblHttpFileGetSysFile,
+    KStblHttpFileRandomAccess,
+    KStblHttpFileSize,
+    KStblHttpFileSetSize,
+    KStblHttpFileRead,
+    KStblHttpFileWrite,
+    KStblHttpFileGetType,
+    KStblHttpFileTimedRead,
+    KStblHttpFileTimedWrite
 #if SUPPORT_CHUNKED_READ
-    , KHttpFileReadChunked
-    , KHttpFileTimedReadChunked
+    , KStblHttpFileReadChunked
+    , KStblHttpFileTimedReadChunked
 #endif
 };
 
@@ -543,9 +563,10 @@ rc_t KNSManagerVMakeHttpFileInt(const KNSManager *self,
 
                             f->quitting = KNSManagerGetQuitting(self);
 
-                            /* totalReadWaitMillis IS NEEDED BY
-                               HttpFileGetTotalWait() */
-                            f->totalReadWaitMillis = CalculateTotalReadWait(f);
+                            /* readWaitMillis and totalReadWaitMillis
+                               ARE NEEDED BY HttpFileGetReadTimeouts() */
+                            f->totalReadWaitMillis
+                                = CalculateTotalReadWait(f, &f->readWaitMillis);
 
                             *file = &f->dad;
                         }

@@ -848,9 +848,16 @@ rc_t CC KHttpFileRead ( const KHttpFile *self, uint64_t pos,
      void *buffer, size_t bsize, size_t *num_read )
 {
     struct timeout_t tm;
-    TimeoutInit ( & tm, self -> kns -> http_read_timeout );
+    timeout_t * ptm = NULL;
 
-    return KHttpFileTimedRead ( self, pos, buffer, bsize, num_read, & tm );
+    assert(self && self->kns);
+
+    if (self -> kns -> http_read_timeout >= 0) {
+        TimeoutInit ( & tm, self -> kns -> http_read_timeout );
+        ptm = &tm;
+    }
+
+    return KHttpFileTimedRead ( self, pos, buffer, bsize, num_read, ptm );
 }
 
 static
@@ -1215,9 +1222,17 @@ rc_t CC KHttpFileReadChunked ( const KHttpFile * self, uint64_t pos,
     KChunkReader * chunks, size_t bytes, size_t * num_read )
 {
     struct timeout_t tm;
-    TimeoutInit ( & tm, self -> kns -> http_read_timeout );
+    timeout_t * ptm = NULL;
 
-    return KHttpFileTimedReadChunked ( self, pos, chunks, bytes, num_read, & tm );
+    assert(self && self->kns);
+
+    if (self -> kns -> http_read_timeout >= 0) {
+        TimeoutInit ( & tm, self -> kns -> http_read_timeout );
+        ptm = &tm;
+    }
+
+    return KHttpFileTimedReadChunked ( self, pos, chunks, bytes, num_read,
+        ptm );
 }
 #endif /* SUPPORT_CHUNKED_READ */
 
@@ -1419,10 +1434,12 @@ static rc_t KNSManagerVMakeHttpFileIntUnstableImpl( const KNSManager *self,
                                         f -> need_env_token = need_env_token;
                                         f -> payRequired = payRequired;
 
-                             /* totalReadWaitMillis IS NEEDED BY
-                                stable-http-file.c : HttpFileGetTotalWait().
-                                Max read wait timeout is http_read_timeout. */
-                                        f -> totalReadWaitMillis
+                               /* readWaitMillis and totalReadWaitMillis
+                                  ARE NEEDED BY
+                                  stable-http-file.c : HttpFileGetReadTimeouts()
+                                */
+                                        f -> totalReadWaitMillis =
+                                            f -> readWaitMillis
                                             = self -> http_read_timeout;
 
                                         * file = & f -> dad;
