@@ -44,6 +44,7 @@ struct KCacheTeeChunkReader;
 #include <klib/vector.h>
 #include <klib/container.h>
 
+#include <kns/http.h> /* KFileIsKHttpFile */
 #include <kns/http-priv.h> /* HttpFileGetReadTimeouts */
 
 #include <kproc/lock.h>
@@ -1206,13 +1207,15 @@ rc_t CC KCacheTeeFileRead ( const KCacheTeeFile_v3 *self, uint64_t pos,
 
     rc_t rc = 0;
     const int32_t minMsec = 100 * 1000;
-    int32_t msec = 0;
-    int32_t totalMsec = 0;
+    int32_t msec = minMsec;
+    int32_t totalMsec = minMsec;
 
     assert(self);
-    rc = HttpFileGetReadTimeouts(self->source, &msec, &totalMsec);
-    if (rc != 0)
-        totalMsec = msec = minMsec;
+    if (KFileIsKHttpFile(self->source)) {
+        rc = HttpFileGetReadTimeouts(self->source, &msec, &totalMsec);
+        if (rc != 0)
+            totalMsec = msec = minMsec;
+    }
 
 #if 0
     const char * v = getenv("NCBI_VDB_CACHE_TEE_FILE_TO");
