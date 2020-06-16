@@ -47,8 +47,8 @@
 int KConfig_Get_GUID_Add_Container(  char *const value
                                    , size_t const value_size)
 {
-    if (value_size >= 12) {
 #if CAN_HAVE_CONTAINER_ID
+    if (value_size >= 12) {
         char buffer[4096];
         size_t inbuf = 0;
         size_t nread = 0;

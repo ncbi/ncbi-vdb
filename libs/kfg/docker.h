@@ -27,7 +27,7 @@
 #ifndef _h_docker_
 #define _h_docker_
 
-#if LINUX || MAC
+#if LINUX
 #define CAN_HAVE_CONTAINER_ID 1
 #endif
 
@@ -36,4 +36,4 @@
 int KConfig_Get_GUID_Add_Container(  char *const value
                                    , size_t const value_size);
 
-#endif /* _h_kfg_priv_ */
+#endif /* _h_docker_ */
