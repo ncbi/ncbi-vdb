@@ -4154,9 +4154,18 @@ static rc_t KServiceProcessJson ( KService * self ) {
     if (self->resp.rc != 0)
         return self->resp.rc;
 
-    if (self->req.sdl)
-        rc = Response4MakeSdl ( & r, self -> helper . input,
-            sLogNamesServiceErrors );
+    if (self->req.sdl) {
+        int64_t projectId = -1;
+        if (self->req._ngc.ngcObj != NULL) {
+            uint32_t id = 0;
+            rc = KNgcObjGetProjectId(self->req._ngc.ngcObj, &id);
+            if (rc == 0)
+                projectId = id;
+        }
+        if (rc == 0)
+            rc = Response4MakeSdl ( & r, self -> helper . input,
+                sLogNamesServiceErrors, projectId );
+    }
     else
         rc = Response4Make4 ( & r, self -> helper . input );
 
@@ -4828,7 +4837,7 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
         rc = KSrvResponseGetR4 ( self -> resp .list, & r4 );
 
     if (rc == 0 && r4 == NULL)
-        rc = Response4MakeEmpty(&r4, sLogNamesServiceErrors);
+        rc = Response4MakeEmpty(&r4, sLogNamesServiceErrors, -1);
 
     for ( i = 0; rc == 0 && i < self -> req . request . objects; ++ i )
         if ( self -> req . request . object [ i ] . isUri )
