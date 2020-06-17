@@ -1163,7 +1163,7 @@ LIB_EXPORT rc_t CC BSTreeInsert ( BSTree *bt, BSTNode *n,
 {
     if ( bt != NULL && n != NULL )
     {
-        int64_t diff;
+        int64_t diff = 0;
 
         BSTNode *p = bt -> root;
         BSTNode *q = NULL;
@@ -1221,7 +1221,7 @@ LIB_EXPORT rc_t CC BSTreeInsertUnique ( BSTree *bt, BSTNode *n, BSTNode **exist,
 {
     if ( bt != NULL && n != NULL )
     {
-        int64_t diff;
+        int64_t diff = 0;
 
         BSTNode *p = bt -> root;
         BSTNode *q = NULL;

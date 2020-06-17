@@ -372,8 +372,10 @@ LIB_EXPORT rc_t CC foreach_String_part( const String * src, const uint32_t delim
         if ( cptr != NULL ) last_cptr_char = cptr[ 0 ];
         while ( rc == 0 && cptr != NULL && tmp.len > 0 )
         {
-            uint32_t l = ( cptr - tmp.addr );
-            StringInit( &part, tmp.addr, l, l );
+            size_t l = ( cptr - tmp.addr );
+            assert(cptr >= tmp.addr);
+            assert(l <= UINT32_MAX);
+            StringInit( &part, tmp.addr, l, (uint32_t)l );
             rc = f( &part, data );
             if ( rc == 0 )
             {

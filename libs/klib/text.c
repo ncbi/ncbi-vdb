@@ -170,7 +170,8 @@ LIB_EXPORT String * CC StringTrim ( const String * str, String * trimmed )
                     break;
             }
 
-            StringInit ( trimmed, & addr [ i ], end - i, len - ( i + sz - end ) );
+            assert(len - ( i + sz - end ) <= UINT32_MAX);
+            StringInit ( trimmed, & addr [ i ], end - i, (uint32_t)(len - ( i + sz - end )) );
         }
     }
 
