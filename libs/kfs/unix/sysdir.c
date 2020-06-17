@@ -565,8 +565,10 @@ rc_t KSysDirList_v1 ( const KSysDir_v1 * self, KNamelist **listp,
         full . path, sizeof full . path, path, args );
     if ( rc == 0 )
     {
+        size_t const full_path_len = strlen(full.path);
+        assert(full_path_len <= UINT32_MAX);
         rc = KSysDirInit_v1 ( & full, rcListing, self -> root,
-            NULL, strlen ( full . path ), 0, 0 );
+            NULL, (uint32_t)full_path_len, 0, 0 );
         if ( rc == 0 )
         {
             KSysDirListing *list = malloc ( sizeof * list );
@@ -692,7 +694,8 @@ rc_t KSysDirVisitDir ( KSysDirVisitData *pb )
         else for ( pb -> dir . size = size, name = KSysDirEnumNext ( & listing );
                    name != NULL; name = KSysDirEnumNext ( & listing ) )
         {
-            uint32_t type, len = strlen ( name );
+            uint32_t type;
+            size_t len = strlen ( name );
             if ( size + len >= sizeof pb -> dir . path )
             {
                 rc = RC ( rcFS, rcDirectory, rcVisiting, rcPath, rcExcessive );
@@ -737,7 +740,7 @@ rc_t KSysDirVisit_v1 ( const KSysDir_v1 * self, bool recur,
         pb . dir . path, sizeof pb . dir . path, path, args );
     if ( rc == 0 )
     {
-        uint32_t path_size;
+        size_t path_size;
 
         switch ( KSysDirFullPathType_v1 ( pb . dir . path ) & ( kptAlias - 1 ) )
         {
@@ -755,8 +758,9 @@ rc_t KSysDirVisit_v1 ( const KSysDir_v1 * self, bool recur,
         while ( path_size > 1 && path_size > self -> root && pb . dir . path [ path_size - 1 ] == '/' )
             -- path_size;
 
+        assert(path_size <= UINT32_MAX);
         rc = KSysDirInit_v1 ( & pb . dir, rcVisiting, self -> root,
-            NULL, path_size, self -> dad . read_only ? 0 : 1, 0 );
+            NULL, (uint32_t)path_size, self -> dad . read_only ? 0 : 1, 0 );
         if ( rc == 0 )
         {
             pb . f = f;
@@ -854,7 +858,7 @@ rc_t KSysDirResolvePath_v1 ( const KSysDir_v1 * self, bool absolute,
     rc_t rc = KSysDirMakePath_v1 ( self, rcResolving, true, full, sizeof full, path, args );
     if ( rc == 0 )
     {
-        uint32_t path_size = strlen ( full );
+        size_t path_size = strlen ( full );
 
         /*
         PLOGMSG(klogDebug, (klogDebug, "KSysDirResolvePath_v1 = '$(res)'", "res=%s", full));
@@ -907,7 +911,7 @@ rc_t KSysDirResolveAlias_v1 ( const KSysDir_v1 * self, bool absolute,
     if ( rc == 0 )
     {
         char link [ PATH_MAX ];
-        int len = readlink ( full . path, link, sizeof link );
+        ssize_t len = readlink ( full . path, link, sizeof link );
         if ( len < 0 ) switch ( errno )
         {
         case ENOENT:
@@ -938,12 +942,14 @@ rc_t KSysDirResolveAlias_v1 ( const KSysDir_v1 * self, bool absolute,
         }
         else
         {
-            char *f = strrchr ( full . path, '/' );
+            char *const f = strrchr ( full . path, '/' );
+            size_t const full_size = (f + 1) - full.path;
             assert ( f != NULL );
-            full . size = ++f - full . path;
-            if ( full . size + len >= sizeof full . path )
+            assert(full_size <= UINT32_MAX);
+            full . size = (uint32_t)full_size;
+            if ( full_size + len >= sizeof full . path )
                 return RC ( rcFS, rcDirectory, rcResolving, rcBuffer, rcInsufficient );
-            strcpy ( f, link );
+            strcpy ( f + 1, link );
         }
 
         full . root = 0;
@@ -2173,7 +2179,8 @@ rc_t KSysDirOpenDirRead_v1 ( const KSysDir_v1 * self,
             rc = RC ( rcFS, rcDirectory, rcOpening, rcMemory, rcExhausted );
         else
         {
-            rc = KSysDirInit_v1 ( sub, rcOpening, self -> root, full, path_size, false, chroot );
+            assert(path_size <= UINT32_MAX);
+            rc = KSysDirInit_v1 ( sub, rcOpening, self -> root, full, (uint32_t)path_size, false, chroot );
             if ( rc == 0 )
             {
                 * subp = & sub -> dad;
@@ -2220,7 +2227,8 @@ rc_t KSysDirOpenDirUpdate_v1 ( KSysDir_v1 * self,
             rc = RC ( rcFS, rcDirectory, rcOpening, rcMemory, rcExhausted );
         else
         {
-            rc = KSysDirInit_v1 ( sub, rcOpening, self -> root, full, path_size, true, chroot );
+            assert(path_size <= UINT32_MAX);
+            rc = KSysDirInit_v1 ( sub, rcOpening, self -> root, full, (uint32_t)path_size, true, chroot );
             if ( rc == 0 )
             {
                 * subp = & sub -> dad;
@@ -2447,7 +2455,7 @@ LIB_EXPORT rc_t CC KDirectoryNativeDir_v1 ( KDirectory_v1 **dirp )
 {
     rc_t rc;
     KSysDir_v1 *dir;
-    uint32_t size;
+    size_t size;
     char wd [ PATH_MAX ];
 
     static bool latch;
@@ -2485,7 +2493,8 @@ LIB_EXPORT rc_t CC KDirectoryNativeDir_v1 ( KDirectory_v1 **dirp )
         rc = RC ( rcFS, rcDirectory, rcAccessing, rcMemory, rcExhausted );
     else
     {
-        rc = KSysDirInit_v1 ( dir, rcAccessing, 0, wd, size, true, false );
+        assert(size <= UINT32_MAX);
+        rc = KSysDirInit_v1 ( dir, rcAccessing, 0, wd, (uint32_t)size, true, false );
         if ( rc == 0 )
         {
             * dirp = & dir -> dad;

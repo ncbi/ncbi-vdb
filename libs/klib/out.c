@@ -100,18 +100,18 @@ rc_t KOutMsgCharFmt ( uint32_t u32 )
 static
 int match_format(const char * format, const char * literal, size_t s)
 {
-    static const size_t MAX = 5;
-
-    assert(s <= MAX);
-
     if (format == NULL)
         return 1;
     else {
-        size_t x = 0;
+        int x = 0;
 
-        for (x = 0; x < MAX - 1; ++x)
+#define FORMAT_MAX 5
+        assert(s <= FORMAT_MAX);
+
+        for (x = 0; x < FORMAT_MAX - 1; ++x)
             if (format[x] == '\0')
                 break;
+#undef FORMAT_MAX
         ++x;
 
         if (x < s)
