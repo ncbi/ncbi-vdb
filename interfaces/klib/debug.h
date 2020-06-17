@@ -519,8 +519,8 @@ KLIB_EXTERN void* CC KDbgWriterDataGet ( void );
  */
 KLIB_EXTERN rc_t CC KDbgHandlerSet ( KWrtWriter writer, void * data );
 
-KLIB_EXTERN rc_t CC KDbgHandlerSetStdOut();
-KLIB_EXTERN rc_t CC KDbgHandlerSetStdErr();
+KLIB_EXTERN rc_t CC KDbgHandlerSetStdOut(void);
+KLIB_EXTERN rc_t CC KDbgHandlerSetStdErr(void);
 
 
 KLIB_EXTERN void CC KDbgSetRowId( uint64_t row_id );
