@@ -31,8 +31,8 @@
 extern "C" {
 #endif
 
-rc_t KNSManagerInit();
-void KNSManagerCleanup();
+rc_t KNSManagerInit(void);
+void KNSManagerCleanup(void);
 
 #ifdef __cplusplus
 }

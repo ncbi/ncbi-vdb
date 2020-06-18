@@ -1809,7 +1809,7 @@ rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
     const char *buffer, size_t len, const KDataBuffer *body, const char *url )
 {
     rc_t rc = 0;
-    size_t sent;
+    size_t sent = 0;
     timeout_t tm;
     uint32_t status;
 

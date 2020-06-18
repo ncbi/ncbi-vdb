@@ -1040,7 +1040,7 @@ LIB_EXPORT rc_t CC KConfigNodeWrite ( KConfigNode *self, const char *buffer, siz
         rc = RC ( rcKFG, rcNode, rcWriting, rcSelf, rcReadonly );
     else if ( size == 0 )
     {
-        free ( self -> val_buffer ), self -> val_buffer = NULL;
+        (void)(free ( self -> val_buffer )), self -> val_buffer = NULL;
         StringInit ( & self -> value, "", 0, 0 );
         KConfigNodeSetDirty ( self );
         rc = 0;
@@ -1663,7 +1663,8 @@ static rc_t KConfigNodePrintWithIncluded (const KConfigNode *self, int indent,
         rc_t rc = KConfigNodeReadData(self, data, sizeof data, &num_data);
         DISP_RC2(rc, "KConfigNodeReadData()", root);
         if (rc == 0 && num_data > 0) {
-            _printNodeData(root, data, num_data,
+            assert(num_data <= UINT32_MAX);
+            _printNodeData(root, data, (uint32_t)num_data,
                 native, aFullpath, !native, pb);
         }
         if (debug && self->came_from) {
@@ -1916,7 +1917,7 @@ LIB_EXPORT rc_t CC KConfigLoadFile ( KConfig * self, const char * path, const KF
         rc = KMMapMakeRead ( & mm, file );
         if ( rc == 0 )
         {
-            size_t size;
+            size_t size = 0;
             const void * ptr;
             rc = KMMapAddrRead ( mm, & ptr );
             if ( rc == 0 )

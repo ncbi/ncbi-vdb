@@ -549,7 +549,7 @@ rc_t GetAccessToken(const GCP * self, const char * jwt, struct KStream * opt_con
     rc_t rc;
     rc_t rc2;
     KClientHttp * client;
-    KClientHttpRequest * req;
+    KClientHttpRequest * req = NULL;
     char jsonResponse[4096];
 
     String host;

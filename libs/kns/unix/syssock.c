@@ -854,7 +854,8 @@ TimedConnect( int socketFd, const struct sockaddr* ss, size_t ss_size, int32_t t
         return KSocketHandleConnectCall ( errno );
     }
 
-    res = connect ( socketFd, ss, ss_size );
+    assert(ss_size == (size_t)((socklen_t)ss_size));
+    res = connect ( socketFd, ss, (socklen_t)ss_size );
     if ( res == 0 )
     {
         return 0;

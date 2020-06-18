@@ -584,7 +584,8 @@ LIB_EXPORT rc_t CC KartPrintNumbered(const Kart *self) {
     }
     else {
         ++next;
-        len = next - start;
+        assert(next >= start && next - start <= INT32_MAX);
+        len = (int32_t)(next - start);
     }
     remaining -= len;
     rc2 = OUTMSG(("%.*s", len, start));
@@ -615,7 +616,8 @@ LIB_EXPORT rc_t CC KartPrintNumbered(const Kart *self) {
         }
         else {
             ++next;
-            len = next - start;
+            assert(next >= start && next - start <= INT32_MAX);
+            len = (int32_t)(next - start);
         }
         remaining -= len;
         if (done) {
@@ -681,7 +683,8 @@ rc_t KartRegisterObject ( const Kart * self, const KartItem * item )
         rc = KartItemName ( item, & name );
 
     if ( rc == 0 ) {
-        rc = KRepositoryMgrGetProtectedRepository ( self -> mgr, projId,
+        assert(projId <= UINT32_MAX);
+        rc = KRepositoryMgrGetProtectedRepository ( self -> mgr, (uint32_t)projId,
                                                     & repo );
         if ( GetRCModule ( rc ) == rcKFG && GetRCState ( rc ) == rcNotFound )
             rc = RC ( rcKFG, rcNode, rcAccessing, rcNode, rcNotFound );
@@ -701,13 +704,15 @@ rc_t KartRegisterObject ( const Kart * self, const KartItem * item )
             else
                 rc = string_printf ( b, sizeof b, & id . size,
                                  "ncbi-file:%S?tic=%s", name, ticket );
-            id . len = id . size;
+            assert(id.size <= UINT32_MAX);
+            id . len = (uint32_t)id . size;
         }
     }
 
-    if ( rc == 0 )
-        rc = KKeyStoreRegisterObject ( self->keystore, itemId, & id );
-
+    if ( rc == 0 ) {
+        assert(itemId <= UINT32_MAX);
+        rc = KKeyStoreRegisterObject ( self->keystore, (uint32_t)itemId, & id );
+    }
     RELEASE ( KRepository, repo );
     
     return rc;

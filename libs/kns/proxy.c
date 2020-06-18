@@ -482,8 +482,8 @@ rc_t KNSProxiesVSetHTTPProxyPath ( KNSProxies * self,
                     const char * port_spec = NULL;
                     long port_num = 0;
 
-                    int have = colon - p;
-                    int remains = s - have;
+                    ptrdiff_t have = colon - p;
+                    ptrdiff_t remains = s - have;
                     if ( remains > 2 ) {
                         assert ( colon [ 0 ] == ':' );
                         if ( colon [ 1 ] == '/' && colon [ 2 ] == '/' ) {
@@ -658,8 +658,9 @@ KNSProxies * KNSManagerKNSProxiesMake ( struct KNSManager * mgr,
     }
 
     self -> tmpS = 0;
-    n = self -> http_proxies_cnt;
-    srand ( time ( NULL ) );
+    assert(self->http_proxies_cnt <= INT_MAX);
+    n = (int)(self -> http_proxies_cnt);
+    srand ( (unsigned)time ( NULL ) );
     while ( n > 0 ) {
         self -> rand = rand () % n;
         self -> tmpI = 0;

@@ -1766,7 +1766,8 @@ static rc_t _KRepositoryAppsNodeFix(KConfigNode *self,
         size_t remaining = 0;
         rc_t rc = KConfigNodeRead(node, 0,
             buffer, sizeof buffer, &num_read, &remaining);
-        if ((rc != 0) || (string_cmp(buffer, num_read, val, len, len) != 0)) {
+        assert(len <= UINT32_MAX);
+        if ((rc != 0) || (string_cmp(buffer, num_read, val, len, (uint32_t)len) != 0)) {
             update = true;
         }
 

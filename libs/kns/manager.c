@@ -620,16 +620,20 @@ static int32_t KNSManagerLoadConnTimeout ( KConfig *kfg )
     rc_t rc = KConfigReadI64 ( kfg, "/libs/kns/connect/timeout", &result );
     if ( rc != 0 || result < 0 ) { return MAX_CONN_LIMIT; }
 
-    return result;
+    assert(INT32_MIN <= result && result <= INT32_MAX);
+    return (int32_t)result;
 }
+
 static int32_t KNSManagerLoadConnReadTimeout ( KConfig *kfg )
 {
     int64_t result = 0;
     rc_t rc = KConfigReadI64 ( kfg, "/libs/kns/connect/timeout/read", &result );
     if ( rc != 0 || result < 0 ) { return MAX_CONN_READ_LIMIT; }
 
-    return result;
+    assert(INT32_MIN <= result && result <= INT32_MAX);
+    return (int32_t)result;
 }
+
 static int32_t KNSManagerLoadConnWriteTimeout ( KConfig *kfg )
 {
     int64_t result = 0;
@@ -637,7 +641,8 @@ static int32_t KNSManagerLoadConnWriteTimeout ( KConfig *kfg )
         = KConfigReadI64 ( kfg, "/libs/kns/connect/timeout/write", &result );
     if ( rc != 0 || result < 0 ) { return MAX_CONN_WRITE_LIMIT; }
 
-    return result;
+    assert(INT32_MIN <= result && result <= INT32_MAX);
+    return (int32_t)result;
 }
 
 static int32_t KNSManagerLoadHttpReadTimeout ( KConfig *kfg )
@@ -646,7 +651,8 @@ static int32_t KNSManagerLoadHttpReadTimeout ( KConfig *kfg )
     rc_t rc = KConfigReadI64 ( kfg, "/http/timeout/read", &result );
     if ( rc != 0 || result < 0 ) { return MAX_HTTP_READ_LIMIT; }
 
-    return result;
+    assert(INT32_MIN <= result && result <= INT32_MAX);
+    return (int32_t)result;
 }
 static int32_t KNSManagerLoadHttpWriteTimeout ( KConfig *kfg )
 {
@@ -654,28 +660,30 @@ static int32_t KNSManagerLoadHttpWriteTimeout ( KConfig *kfg )
     rc_t rc = KConfigReadI64 ( kfg, "/http/timeout/write", &result );
     if ( rc != 0 || result < 0 ) { return MAX_HTTP_WRITE_LIMIT; }
 
-    return result;
+    assert(INT32_MIN <= result && result <= INT32_MAX);
+    return (int32_t)result;
 }
 
 static uint32_t KNSManagerLoadTotalWaitForReliableURLs(const KConfig *kfg)
 {
-    rc_t rc = 0;
-
-    int64_t result = 0;
-
     const char * str = getenv("NCBI_VDB_RELIABLE_WAIT");
     if (str != NULL) {
         char *end = NULL;
-        result = strtou64(str, &end, 0);
-        if (end[0] == 0)
-            return result;
+        uint64_t result = strtou64(str, &end, 0);
+        if (end[0] == 0) {
+            assert(result <= UINT32_MAX);
+            return (uint32_t)result;
+        }
     }
+    {
+        int64_t result = 0;
+        rc_t rc = KConfigReadI64(kfg, "/http/reliable/wait", &result);
+        if (rc != 0 || result < 0)
+            result = 10 * 60 * 1000; /* 10 min */
 
-    rc = KConfigReadI64(kfg, "/http/reliable/wait", &result);
-    if (rc != 0 || result < 0)
-        result = 10 * 60 * 1000; /* 10 min */
-
-    return result;
+        assert(0 <= result && result <= UINT32_MAX);
+        return (uint32_t)result;
+    }
 }
 
 static bool KNSManagerLoadRetryFirstRead(const KConfig *kfg) {
