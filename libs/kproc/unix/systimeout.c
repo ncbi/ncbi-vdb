@@ -122,7 +122,10 @@ LIB_EXPORT uint32_t TimeoutRemaining ( timeout_t * self )
     /* never return negative */
     if ( cur_micros >= end_micros )
         return 0;
-
-    /* return positive difference as mS - truncated */
-    return ( end_micros - cur_micros ) / 1000;
+    else {
+        /* return positive difference as mS - truncated */
+        int64_t diff_secs = ( end_micros - cur_micros ) / 1000;
+        assert(diff_secs <= UINT32_MAX);
+        return (uint32_t)diff_secs;
+    }
 }
