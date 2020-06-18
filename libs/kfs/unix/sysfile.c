@@ -602,7 +602,7 @@ rc_t CC KSysFileReadChunked_v1 ( const KSysFile_v1 * self, uint64_t pos,
     KChunkReader * chunks, size_t bsize, size_t * total_read )
 {
     rc_t rc = 0;
-    size_t total, num_read;
+    size_t total, num_read = 0;
 
     assert ( chunks != NULL );
 
@@ -637,7 +637,7 @@ rc_t CC KSysFileTimedReadChunked_v1 ( const KFILE_IMPL *self, uint64_t pos,
     KChunkReader * chunks, size_t bsize, size_t * total_read, struct timeout_t * tm )
 {
     rc_t rc = 0;
-    size_t total, num_read;
+    size_t total, num_read = 0;
 
     assert ( chunks != NULL );
 

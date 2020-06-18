@@ -489,7 +489,7 @@ LIB_EXPORT rc_t CC KFileTimedReadAll_v1 ( const KFile_v1 *self, uint64_t pos,
 LIB_EXPORT rc_t CC KFileReadExactly_v1 ( const KFile_v1 *self,
     uint64_t pos, void *buffer, size_t bytes )
 {
-    rc_t rc;
+    rc_t rc = 0;
     uint8_t *b;
     size_t total, count;
 
@@ -533,7 +533,7 @@ LIB_EXPORT rc_t CC KFileReadExactly_v1 ( const KFile_v1 *self,
 LIB_EXPORT rc_t CC KFileTimedReadExactly_v1 ( const KFile_v1 *self,
     uint64_t pos, void *buffer, size_t bytes, struct timeout_t *tm )
 {
-    rc_t rc;
+    rc_t rc = 0;
     uint8_t *b;
     size_t total, count;
 
@@ -905,7 +905,7 @@ LIB_EXPORT rc_t CC KFileTimedWriteAll_v1 ( KFile_v1 *self, uint64_t pos,
 LIB_EXPORT rc_t CC KFileWriteExactly_v1 ( KFile_v1 *self, uint64_t pos,
     const void *buffer, size_t size )
 {
-    rc_t rc;
+    rc_t rc = 0;
     const uint8_t *b;
     size_t total, count;
 
@@ -949,7 +949,7 @@ LIB_EXPORT rc_t CC KFileWriteExactly_v1 ( KFile_v1 *self, uint64_t pos,
 LIB_EXPORT rc_t CC KFileTimedWriteExactly_v1 ( KFile_v1 *self, uint64_t pos,
     const void *buffer, size_t size, struct timeout_t *tm )
 {
-    rc_t rc;
+    rc_t rc = 0;
     const uint8_t *b;
     size_t total, count;
 
