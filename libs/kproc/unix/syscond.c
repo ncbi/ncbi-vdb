@@ -24,7 +24,11 @@
 *
 */
 
+#if XCODE
+#include "../bsd/syslock-priv.h"
+#else
 #include "syslock-priv.h"
+#endif
 #include "syscond-priv.h"
 
 #include <kproc/extern.h>
