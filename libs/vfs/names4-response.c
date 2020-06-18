@@ -112,6 +112,7 @@ struct Response4 { /* Response object */
     rc_t rc;
 
     bool dontLogNamesServiceErrors;
+    int64_t projectId; /* when -1: not set */
 };
 
 struct KSrvRespObj {
@@ -2178,7 +2179,9 @@ static rc_t Response4Init4 ( Response4 * self, const char * input ) {
     return rc;
 }
 
-rc_t Response4MakeEmpty (Response4 ** self, bool logNamesServiceErrors) {
+rc_t Response4MakeEmpty (Response4 ** self,
+    bool logNamesServiceErrors, int64_t projectId)
+{
     const char * env = NULL;
 
     assert ( self );
@@ -2187,7 +2190,8 @@ rc_t Response4MakeEmpty (Response4 ** self, bool logNamesServiceErrors) {
     if ( * self == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
 
-    (*self)->dontLogNamesServiceErrors = ! logNamesServiceErrors;
+    (*self)->dontLogNamesServiceErrors = !logNamesServiceErrors;
+    (*self)->projectId = projectId;
 
     env = getenv("NCBI_VDB_JSON");
 
@@ -2219,7 +2223,7 @@ rc_t Response4Make4 ( Response4 ** self, const char * input ) {
 
     assert ( self );
 
-    rc = Response4MakeEmpty ( & r, true );
+    rc = Response4MakeEmpty ( & r, true, -1 );
     if ( rc != 0 )
         return rc;
 
@@ -2231,46 +2235,6 @@ rc_t Response4Make4 ( Response4 ** self, const char * input ) {
 
     return rc;
 }
-
-/*rc_t JResponseMake ( JResponse ** self, const char * input ) {
-    rc_t rc = 0;
-
-    JResponse * r = ( JResponse * ) calloc ( 1, sizeof * self );
-    if ( r == NULL )
-        return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
-
-    assert ( self );
-
-    rc = Response4Init4 ( & r -> r, input );
-    if ( rc != 0 )
-        free ( r );
-    else {
-        atomic32_set ( & r -> refcount, 1 );
-        * self = r;
-    }
-
-    return rc;
-}
-
-rc_t JResponseRelease ( const JResponse * cself ) {
-    rc_t rc = 0;
-
-    JResponse * self = ( JResponse * ) cself;
-
-    if ( self == NULL )
-        return 0;
-
-    if ( ! atomic32_dec_and_test ( & self -> refcount ) )
-        return 0;
-
-    rc = Response4Fini ( & self -> r );
-
-    memset ( self, 0, sizeof * self );
-
-    free ( self );
-
-    return rc;
-}*/
 
 rc_t Response4AddRef ( const Response4 * self ) {
     if ( self != NULL )
@@ -2303,6 +2267,12 @@ rc_t Response4GetRc ( const Response4 * self, rc_t * rc ) {
     * rc = self -> rc;
 
     return 0;
+}
+
+int64_t Response4GetProjectId(const Response4 * self) {
+    assert(self);
+
+    return self->projectId;
 }
 
 rc_t Response4GetNextToken(const Response4 * self, const char ** nextToken) {
