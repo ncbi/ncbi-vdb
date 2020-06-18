@@ -888,14 +888,15 @@ rc_t KClientHttpRequestUrlEncodeBase64(const String ** encoding) {
         size_t iFrom = 0, iTo = 0;
         const char *from = (*encoding)->addr;
         char *to = NULL;
-        uint32_t len = (*encoding)->size + n + n;
+        size_t len = (*encoding)->size + n + n;
 
         String * encoded = (String *) calloc(1, sizeof * encoded + len + 1);
         if (encoded == NULL)
             return RC(rcNS, rcString, rcAllocating, rcMemory, rcExhausted);
 
         to = (char*)(encoded + 1);
-        StringInit(encoded, to, len, len);
+        assert(len <= UINT32_MAX);
+        StringInit(encoded, to, len, (uint32_t)len);
 
         for (iFrom = 0; iFrom < (*encoding)->size; ++iFrom) {
             if (from[iFrom] == '+') {
@@ -1153,7 +1154,7 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
     skip = hostname->size - stor31.size;
     if (hostname->size >= stor31.size &&
         string_cmp(stor31.addr, stor31.size, hostname->addr + skip,
-            hostname->size - skip, stor31.size) == 0)
+            hostname->size - skip, (uint32_t)stor31.size) == 0)
     {
         cpId = cloud_provider_aws;
     }
@@ -1165,7 +1166,7 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
         if (hostname->size >= amazonaws.size &&
             string_cmp(amazonaws.addr, amazonaws.size,
                 hostname->addr + skip, hostname->size - skip,
-                amazonaws.size) == 0)
+                (uint32_t)amazonaws.size) == 0)
         {
             cpId = cloud_provider_aws;
         }
@@ -1176,7 +1177,7 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
             if (hostname->size >= google.size &&
                 string_cmp(google.addr, google.size,
                     hostname->addr + skip, hostname->size - skip,
-                    google.size) == 0)
+                    (uint32_t)google.size) == 0)
             {
                 cpId = cloud_provider_gcp;
             }
@@ -1819,7 +1820,7 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
         default:
 
       /*    if ( ! rslt -> len_zero || self -> http -> close_connection ) */
-            if ( false )
+            if ( /* DISABLES CODE */ (false) )
             {
                 /* the connection is no good */
                 KClientHttpClose ( self -> http );
@@ -1856,9 +1857,10 @@ static bool GovSiteByHttp ( const char * path ) {
         CONST_STRING ( & http, "http://" );
         size = http . size;
 
+        assert(size <= UINT32_MAX);
         /* resolver-cgi is called over http */
         if ( path_size > size &&
-             strcase_cmp ( path, size, http . addr, size, size ) == 0 )
+             strcase_cmp ( path, size, http . addr, size, (uint32_t)size ) == 0 )
         {
             EUrlParseState state = eUPSBegin;
             unsigned i = 0;
@@ -1887,8 +1889,9 @@ static bool GovSiteByHttp ( const char * path ) {
                 String gov;
                 CONST_STRING ( & gov, ".gov" );
                 size = gov . size;
+                assert(size <= UINT32_MAX);
                 if ( strcase_cmp
-                    ( path + i - 5, size, gov . addr, size, size ) == 0 )
+                    ( path + i - 5, size, gov . addr, size, (uint32_t)size ) == 0 )
                 {
                     return true;
                 }
