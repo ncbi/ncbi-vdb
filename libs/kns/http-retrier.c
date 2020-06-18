@@ -206,7 +206,7 @@ rc_t HttpRetrySpecsFromConfig ( HttpRetrySpecs* self, const KConfigNode* node )
     bool has4xx = false;
     bool has5xx = false;
     KNamelist * names;
-    uint32_t nameCount;
+    uint32_t nameCount = 0;
     rc_t rc = KConfigNodeListChildren ( node, & names );
     if ( rc == 0 )
     {   /* count 4xx and 5xx */
