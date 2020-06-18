@@ -25,7 +25,11 @@
 */
 
 #include <klib/rc.h>
+#if XCODE
+#include "../sysmgr.h"
+#else
 #include "sysmgr.h"
+#endif
 
 rc_t KNSManagerInit ( void )
 {

@@ -32,7 +32,11 @@
 #include <klib/status.h> /* STATUS */
 #include <klib/data-buffer.h>
 
+#if XCODE
+#include "../stream-priv.h"
+#else
 #include "stream-priv.h"
+#endif
 
 #include <string.h>
 #include <netdb.h>

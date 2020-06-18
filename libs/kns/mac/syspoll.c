@@ -30,7 +30,11 @@
 #include <klib/out.h>
 #include <kproc/timeout.h>
 
+#if XCODE
+#include "../poll-priv.h"
+#else
 #include "poll-priv.h"
+#endif
 
 #include <stdlib.h>
 #include <assert.h>

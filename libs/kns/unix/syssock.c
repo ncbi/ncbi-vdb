@@ -50,9 +50,15 @@
 
 #include <kproc/timeout.h>
 
+#if XCODE
+#include "../mgr-priv.h"
+#include "../stream-priv.h"
+#include "../poll-priv.h"
+#else
 #include "mgr-priv.h"
 #include "stream-priv.h"
 #include "poll-priv.h"
+#endif
 
 #include <sysalloc.h>
 

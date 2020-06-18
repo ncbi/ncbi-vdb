@@ -37,7 +37,11 @@ typedef struct KStdIOStream KStdIOStream;
 #include <klib/log.h>
 #include <sysalloc.h>
 
+#if XCODE
+#include "../stream-priv.h"
+#else
 #include "stream-priv.h"
+#endif
 
 #include <unistd.h>
 #include <stdlib.h>

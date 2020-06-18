@@ -26,8 +26,13 @@
 
 #include <kfs/extern.h>
 #include "mmap-priv.h"
+#if XCODE
+#include "unix/sysmmap-priv.h"
+#include "unix/sysfile-priv.h"
+#else
 #include "sysmmap-priv.h"
 #include "sysfile-priv.h"
+#endif
 #include <klib/refcount.h>
 #include <klib/rc.h>
 #include <sysalloc.h>
