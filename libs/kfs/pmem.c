@@ -35,6 +35,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <limits.h>
 
 #define NUM_HOT_ENTRIES ((1024u * 1024u))
 
@@ -317,6 +318,7 @@ static rc_t freeBlock(KMemBank *const self, BlockID const id)
     if (entry) {
         struct HotEntryInUse const inuse = entry->inuse;
         struct HotEntryFree *const pfree = &entry->free;
+        ptrdiff_t nextFree = entry - self->hot;
 
         if (inuse.size == 0) {
             PLOGMSG(klogFatal, (klogFatal, "PROGRAMMER ERROR - DOUBLE FREE - " __FILE__ ":$(line)", "line=%i", __LINE__));
@@ -328,7 +330,8 @@ static rc_t freeBlock(KMemBank *const self, BlockID const id)
         pfree->size = (int64_t)(-1);
         pfree->id = id;
         pfree->next = self->nextFree;
-        self->nextFree = entry - self->hot;
+        assert(entry >= self->hot && nextFree <= UINT_MAX);
+        self->nextFree = (unsigned)nextFree;
         return 0;
     }
     else

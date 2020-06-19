@@ -26,7 +26,11 @@
 
 #include <vfs/extern.h>
 
+#if XCODE
+#include "../path-priv.h"
+#else
 #include "path-priv.h"
+#endif
 
 #include <vfs/manager.h>
 #include <klib/text.h>

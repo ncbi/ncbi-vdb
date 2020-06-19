@@ -24,7 +24,12 @@
 *
 */
 
+#if XCODE
+#include "unix/syscond-priv.h"
+#else
 #include "syscond-priv.h"
+#endif
+
 #include <kproc/extern.h>
 #include <kproc/sem.h>
 #include <kproc/cond.h>

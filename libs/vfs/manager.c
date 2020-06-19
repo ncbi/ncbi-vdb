@@ -395,12 +395,13 @@ static rc_t wrap_in_cachetee( KDirectory * dir,
     if ( rc == 0 )
     {
         const KFile * temp_file;
+        assert(cps -> cache_page_size <= UINT32_MAX);
         if ( cps -> promote )
         {
             rc = KDirectoryMakeCacheTeePromote ( dir,
                                                  &temp_file,
                                                  *cfp,
-                                                 cps -> cache_page_size, 
+                                                 (uint32_t)cps -> cache_page_size,
                                                  "%s",
                                                  loc );
         
@@ -410,7 +411,7 @@ static rc_t wrap_in_cachetee( KDirectory * dir,
             rc = KDirectoryMakeCacheTee ( dir,
                                           &temp_file,
                                           *cfp,
-                                          cps -> cache_page_size,
+                                          (uint32_t)cps -> cache_page_size,
                                           "%s",
                                           loc );
         }
@@ -437,10 +438,11 @@ static rc_t wrap_in_cachetee2( KDirectory * dir,
     if ( rc == 0 )
     {
         const KFile * temp_file;
+        assert(cps -> cache_page_size <= UINT32_MAX);
         rc_t rc = KDirectoryMakeCacheTee2 ( dir,
                                             &temp_file,
                                             *cfp,
-                                            cps -> cache_page_size,
+                                            (uint32_t)cps -> cache_page_size,
                                             "%s",
                                             loc );
         if ( rc == 0 )
@@ -466,7 +468,8 @@ static rc_t wrap_in_rr_cache( KDirectory * dir,
     if ( rc == 0 )
     {
         const KFile * temp_file;
-        rc_t rc = MakeRRCached ( &temp_file, *cfp, cps -> cache_page_size, cps -> cache_page_count );
+        rc_t rc = MakeRRCached ( &temp_file, *cfp, (uint32_t)cps -> cache_page_size, cps -> cache_page_count );
+        assert(cps->cache_page_size <= UINT32_MAX);
         if ( rc == 0 )
         {
             KFileRelease ( * cfp );
@@ -560,7 +563,7 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
                                const VPath * path )
 {
     rc_t rc = 0;
-    const KFile * temp_file;
+    const KFile * temp_file = NULL;
     uint32_t cluster_factor = ( 1 << ( cps -> cluster_factor_bits - 1 ) );
     size_t page_size = ( 1 << ( cps -> page_size_bits - 1 ));
     size_t cache_amount = ( ( size_t )cps -> cache_amount_mb * 1024 * 1024 );
@@ -642,17 +645,20 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
             KOutMsg( "cache location: '%s', rc = %R\n", location, rc );
         }
         
-        if ( rc == 0 )
+        if ( rc == 0 ) {
             /* check if location is writable... */
+            assert(page_size <= UINT32_MAX);
+            assert(ram_page_count <= UINT32_MAX);
             rc = KDirectoryMakeKCacheTeeFile_v3 ( dir,
                                                   &temp_file,
                                                   *cfp,
-                                                  page_size,
+                                                  (uint32_t)page_size,
                                                   cluster_factor,
-                                                  ram_page_count,
+                                                  (uint32_t)ram_page_count,
                                                   promote,
                                                   remove_on_close,
                                                   "%s", location );
+        }
         ram_only = ( rc != 0 );
     }
     
@@ -661,12 +667,14 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
         if ( cps -> debug )
             KOutMsg( "use no file-cache\n" );
 
+        assert(page_size <= UINT32_MAX);
+        assert(ram_page_count <= UINT32_MAX);
         rc = KDirectoryMakeKCacheTeeFile_v3 ( dir,
                                               &temp_file,
                                               *cfp,
-                                              page_size,
+                                              (uint32_t)page_size,
                                               cluster_factor,
-                                              ram_page_count,
+                                              (uint32_t)ram_page_count,
                                               false,
                                               false,
                                               "" );
@@ -1210,7 +1218,7 @@ static rc_t VFSManagerResolvePathInt (const VFSManager * self,
              * assumes path within VPath is ASCIZ
              */
             size_t s;
-            VPath * v;
+            VPath * v = NULL;
             char u [32 * 1024];
 
             switch ( uri_type )
@@ -3368,7 +3376,7 @@ LIB_EXPORT rc_t CC VFSManagerUpdateKryptoPassword (const VFSManager * self,
         else
         {
             KPathType ftype;
-            bool old_exists;
+            bool old_exists = false;
 
             old_password_file[old_password_file_size] = '\0';
             ftype = KDirectoryPathType (self->cwd, "%s", old_password_file);

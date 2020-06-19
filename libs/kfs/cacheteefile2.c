@@ -557,7 +557,8 @@ static rc_t KCacheTee2FileRead_from_wrapped_using_page ( const KCacheTee2File *c
         uint64_t pos, void * buffer, size_t bsize, size_t *num_read, read_info * info )
 {
     /* we have control of the page and can make as much buffer as we need to */
-    rc_t rc = pool_page_prepare( pp, info -> available . count, info -> first_block_pos );
+    rc_t rc = pool_page_prepare( pp, (uint32_t)(info -> available . count), info -> first_block_pos );
+    assert(info->available.count <= UINT32_MAX);
     if ( rc == 0 )
     {
         size_t from_wrapped;
@@ -605,7 +606,8 @@ static rc_t KCacheTee2FileRead_from_wrapped_using_page ( const KCacheTee2File *c
 static rc_t KCacheTee2FileRead_from_cache_using_page ( const KCacheTee2File *cself, struct PoolPage * pp,
         uint64_t pos, void * buffer, size_t bsize, size_t *num_read, read_info * info )
 {
-    rc_t rc = pool_page_prepare( pp, info -> available . count, info -> first_block_pos );
+    rc_t rc = pool_page_prepare( pp, (uint32_t)(info -> available . count), info -> first_block_pos );
+    assert(info->available.count <= UINT32_MAX);
     if ( rc == 0 )
     {
         size_t from_cache;
@@ -640,7 +642,8 @@ static rc_t KCacheTee2FileRead_rw_using_caller_buffer ( const KCacheTee2File *cs
         {
             /* set the block-bits in the bitmap... */
             set_bitmap ( cself -> bitmap, info -> available . first, info -> available . count );
-            rc = write_bitmap ( cself, info -> available . first, info -> available . count );
+            assert(info -> available . count <= UINT32_MAX);
+            rc = write_bitmap ( cself, info -> available . first, (uint32_t)(info -> available . count) );
             if ( rc != 0 )
             {
                 /* switch to read-only, because for some reason we cannot write any more... */

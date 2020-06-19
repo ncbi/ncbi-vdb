@@ -144,7 +144,8 @@ LIB_EXPORT rc_t CC KStreamMakeFromBuffer ( KStream ** self, const char * buffer,
     rc = KStreamInit ( & obj -> dad, ( const KStream_vt* ) & vtKBufferStream,
         "KBufferStream", "KBufferStream", true, false );
     if ( rc == 0 ) {
-        StringInit ( & obj -> buffer, buffer, size, size );
+        assert(size <= UINT32_MAX);
+        StringInit ( & obj -> buffer, buffer, size, (uint32_t)size );
         * self = & obj -> dad;
     }
     else {

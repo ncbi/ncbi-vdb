@@ -165,8 +165,10 @@ static lru_page * get_tail_page( lru_cache * self )
         rc = KVectorUnset ( self -> page_lookup, res -> block_nr );
         
 #if _DEBUGGING
-        if ( rc == 0 && self -> handler != NULL )
-            self -> handler( self -> handler_data, CE_DISCARD, res -> pos, self -> page_size, res -> block_nr );
+        if ( rc == 0 && self -> handler != NULL ) {
+            assert(res->block_nr <= UINT32_MAX);
+            self -> handler( self -> handler_data, CE_DISCARD, res -> pos, self -> page_size, (uint32_t)(res -> block_nr) );
+        }
 #endif
     }
     return res;
@@ -217,8 +219,10 @@ static rc_t push_to_lru_cache( lru_cache * self, lru_page * page )
     }
 
 #if _DEBUGGING
-    if ( rc == 0 && self -> handler != NULL )
-        self -> handler( self -> handler_data, CE_ENTER, page -> pos, self -> page_size, page -> block_nr );
+    if ( rc == 0 && self -> handler != NULL ) {
+        assert(page->block_nr <= UINT32_MAX);
+        self -> handler( self -> handler_data, CE_ENTER, page -> pos, self -> page_size, (uint32_t)(page -> block_nr) );
+    }
 #endif
     return rc;
 }
@@ -365,8 +369,10 @@ rc_t read_lru_cache ( lru_cache * self,
         uint64_t block_nr = pos / self -> page_size;
         
 #if _DEBUGGING
-        if ( self -> handler != NULL )
-            self -> handler ( self -> handler_data, CE_REQUEST, pos, bsize, block_nr );
+        if ( self -> handler != NULL ) {
+            assert(block_nr <= UINT32_MAX);
+            self -> handler ( self -> handler_data, CE_REQUEST, pos, bsize, (uint32_t)block_nr );
+        }
 #endif
 
         rc = KVectorGetPtr ( self -> page_lookup, block_nr, &ptr );
@@ -384,8 +390,10 @@ rc_t read_lru_cache ( lru_cache * self,
                     DLListPushHead ( & self -> lru, ( DLNode * )page );
                     lr = DONE;  /* we are done! */
 #if _DEBUGGING
-                    if ( self -> handler != NULL )
-                        self -> handler ( self -> handler_data, CE_FOUND, pos, self -> page_size, page -> block_nr );
+                    if ( self -> handler != NULL ) {
+                        assert(page->block_nr <= UINT32_MAX);
+                        self -> handler ( self -> handler_data, CE_FOUND, pos, self -> page_size, (uint32_t)(page -> block_nr) );
+                    }
 #endif
                 }
             }

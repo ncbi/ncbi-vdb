@@ -2453,7 +2453,7 @@ static rc_t CC KArcDirResolveAlias (const KArcDir * self,
     char *		full_path;
     const char *	link_path;
     const KTocEntry * pnode;
-    KTocEntryType	type;
+    KTocEntryType	type = 0;
     rc_t		rc;
     size_t		ssize;
 

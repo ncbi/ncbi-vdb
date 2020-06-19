@@ -966,7 +966,8 @@ static rc_t STypedInitUrls ( STyped * self ) {
             default:
                 return RC ( rcVFS, rcQuery, rcResolving, rcMessage, rcCorrupt );
         }
-        StringInit ( dst, str -> addr, len, len );
+        assert(len <= UINT32_MAX);
+        StringInit ( dst, str -> addr, len, (uint32_t)len );
         if ( n != NULL )
             ++ len;
         str -> addr += len;
@@ -1005,7 +1006,8 @@ static rc_t STypedInitUrls ( STyped * self ) {
             default:
                 return RC ( rcVFS, rcQuery, rcResolving, rcMessage, rcCorrupt );
         }
-        StringInit ( dst, str -> addr, len, len );
+        assert(len <= UINT32_MAX);
+        StringInit ( dst, str -> addr, len, (uint32_t)len );
         if ( n != NULL )
             ++ len;
         str -> addr += len;
@@ -1066,7 +1068,8 @@ bool cmpStringAndObjectType ( const String * s, const char * val )
 {
     size_t sz = string_size (val );
     String v;
-    StringInit ( & v, val, sz, sz );
+    assert(sz <= UINT32_MAX);
+    StringInit ( & v, val, sz, (uint32_t)sz );
     return StringCompare ( s, & v ) == 0;
 }
 
@@ -1566,7 +1569,8 @@ rc_t SOrderedInit ( SOrdered * self, const SRaw * raw, int fields )
             }
             else {
                 String * s = & self -> s [ self -> n ++ ];
-                StringInit ( s, str, len, len );
+                assert(size <= UINT32_MAX);
+                StringInit ( s, str, len, (uint32_t)len );
                 if ( n != NULL )
                     ++ len;
                 str += len;
@@ -1636,8 +1640,10 @@ rc_t KSrvErrorMake4(const struct KSrvError ** self,
             e->message.addr = string_dup_measure(msg, &e->message.size);
             if (e->message.addr == NULL)
                 rc = RC(rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted);
-            else
-                e->message.len = e->message.size;
+            else {
+                assert(e->message.size <= UINT32_MAX);
+                e->message.len = (uint32_t)e->message.size;
+            }
         }
         if (rc == 0)
             *self = e;
@@ -1770,7 +1776,8 @@ static bool VPathMakeOrNot ( VPath ** new_path, const String * src,
                     -- bug . addr;
                     ++ bug . size;
                 }
-                bug . len = bug . size;
+                assert(bug.size <= UINT32_MAX);
+                bug . len = (uint32_t)bug . size;
                 id = & bug;
             }
         }
@@ -2128,8 +2135,9 @@ static rc_t SRowMake ( SRow ** self, const String * src, const SRequest * req,
         if ( req -> request . objects == 1 ) {
             size_t l = string_measure
                 ( req -> request . object [ 0 ] . objectId, NULL );
+            assert(l < UINT32_MAX);
             StringInit ( & acc,
-                        req -> request . object [ 0 ] . objectId, l, l );
+                        req -> request . object [ 0 ] . objectId, l, (uint32_t)l );
             assert ( acc . size == 0 || acc . addr != NULL );
             if ( acc . size > 2 && acc . addr [1] == 'R'
                                 && acc . addr [2] == 'R' )
@@ -2157,8 +2165,9 @@ static rc_t SRowMake ( SRow ** self, const String * src, const SRequest * req,
                 {
                     size_t l = string_measure
                         ( req -> request . object [ i ] . objectId, NULL );
+                    assert(l <= UINT32_MAX);
                     StringInit ( & acc,
-                        req -> request . object [ i ] . objectId, l, l );
+                        req -> request . object [ i ] . objectId, l, (uint32_t)l );
                     assert ( acc . size == 0 || acc . addr != NULL );
                     p -> reqId = string_dup
                         ( req -> request . object [ i ] . objectId, l );
@@ -2401,8 +2410,10 @@ rc_t SKVMake ( const SKV ** self, const char * k, const char * v )
                 rc = RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
             }
             else {
-                StringInit ( & kv -> k, p, sk, sk );
-                StringInit ( & kv -> v, p + sk + 1, sv, sv );
+                assert(sk <= UINT32_MAX);
+                StringInit ( & kv -> k, p, sk, (uint32_t)sk );
+                assert(sv <= UINT32_MAX);
+                StringInit ( & kv -> v, p + sk + 1, sv, (uint32_t)sv );
                 rc = string_printf(kv ->n, sizeof kv->n, &num_writ, "%s", k);
                 * self = kv;
             }
@@ -2465,8 +2476,10 @@ rc_t SKVMakeObj ( const SKV ** self, const SObject * obj,
         }
         else {
             -- num_writ;
-            StringInit ( & kv -> k, p, sk, sk );
-            StringInit ( & kv -> v, p + sk + 1, num_writ, num_writ );
+            assert(sk <= UINT32_MAX);
+            StringInit ( & kv -> k, p, sk, (uint32_t)sk );
+            assert(num_writ <= UINT32_MAX);
+            StringInit ( & kv -> v, p + sk + 1, num_writ, (uint32_t)num_writ );
             * self = kv;
         }
     }
@@ -2839,9 +2852,10 @@ static int64_t CC BSTItemCmp ( const void * item, const BSTNode * n ) {
     const BSTItem * i = ( BSTItem * ) n;
 
     assert ( s && i );
+    assert(s->size <= UINT32_MAX);
 
     return string_cmp ( s -> addr, s -> size,
-        i -> ticket, string_measure ( i -> ticket, NULL ), s -> size );
+        i -> ticket, string_measure ( i -> ticket, NULL ), (uint32_t)s -> size );
 }
 
 static
@@ -2922,12 +2936,13 @@ static rc_t STicketsAppend ( STickets * self, uint32_t project,
                 rc = RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
             else {
                 const char * addr = p + self -> size;
-                uint32_t len = num_writ;
+                size_t len = num_writ;
                 if ( comma [ 0 ] != '\0' ) {
                     ++ addr;
                     -- len;
                 }
-                StringInit ( s, addr, len, len );
+                assert(len <= UINT32_MAX);
+                StringInit ( s, addr, len, (uint32_t)len );
                 r2 = VectorAppend ( & self -> tickets, NULL, s );
                 if ( r2 != 0 ) {
                     rc = r2;
@@ -4352,8 +4367,9 @@ rc_t KServiceProcessStreamAll ( KService * self, KStream * stream )
                 else {
                     size_t size = newline - ( buffer + offR );
                     String s;
+                    assert(size <= UINT32_MAX);
                     s . addr = buffer + offR;
-                    s . len = s . size = size;
+                    s . len = (uint32_t)(s . size = size);
                     if ( start ) {
                         if ( size + 1 == num_read )
                             DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ),
@@ -4398,7 +4414,7 @@ rc_t KServiceProcessStreamAll ( KService * self, KStream * stream )
 static rc_t KServiceProcessStreamByParts ( KService * self,
                                            KStream * stream )
 {
-    rc_t rc = 0, rx;
+    rc_t rc = 0, rx = 0;
     bool start = true;
     char buffer [ 4096 ] = "";
     size_t num_read = 0;
@@ -4483,8 +4499,9 @@ static rc_t KServiceProcessStreamByParts ( KService * self,
         else {
             size_t size = newline - ( buffer + offR );
             String s;
+            assert(size <= UINT32_MAX);
             s . addr = buffer + offR;
-            s . len = s . size = size;
+            s . len = (uint32_t)(s . size = size);
             if ( start ) {
                 if ( size + 1 == num_read )
                     DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( "\n" ) );

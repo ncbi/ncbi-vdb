@@ -59,7 +59,7 @@ rc_t JwtKartValidateString(const String * cart, size_t * size) {
 
     size_t j = 0;
 
-    uint64_t dummy = 0;
+    size_t dummy = 0;
     if (size == NULL)
         size = &dummy;
 
@@ -134,7 +134,7 @@ rc_t JwtKartValidateFile(const char * path, const String ** aJwt) {
 
     char * buffer = NULL;
 
-    uint64_t size = ~0;
+    uint64_t size = 0;
 
     if (path == NULL)
         return RC(rcVFS, rcQuery, rcValidating, rcParam, rcNull);
@@ -164,7 +164,8 @@ rc_t JwtKartValidateFile(const char * path, const String ** aJwt) {
         rc = KFileReadExactly(f, 0, buffer, size);
 
     if (rc == 0) {
-        StringInit(&s, buffer, size, size);
+        assert(size < UINT32_MAX);
+        StringInit(&s, buffer, size, (uint32_t)size);
         rc = JwtKartValidateString(&s, &osize);
     }
 
@@ -172,9 +173,10 @@ rc_t JwtKartValidateFile(const char * path, const String ** aJwt) {
         String * jwt = NULL;
         rc = StringCopy(aJwt, &s);
         if (rc == 0) {
+            assert(osize < UINT32_MAX);
             assert(*aJwt);
             jwt = (String *)(*aJwt);
-            jwt->len = jwt->size = osize;
+            jwt->len = jwt->size = (uint32_t)osize;
         }
     }
 

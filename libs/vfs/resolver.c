@@ -1055,7 +1055,7 @@ rc_t VResolverAlgParseResolverCGIResponse_1_0 ( const char *start, size_t size,
     rc_t rc;
     KLogLevel lvl;
     char *rslt_end;
-    uint32_t result_code;
+    unsigned long result_code;
 
     String accession, download_ticket, url, rslt_code, msg;
 
@@ -1254,7 +1254,7 @@ rc_t VResolverAlgParseResolverCGIResponse_1_1 ( const char *astart, size_t size,
     rc_t rc = 0;
     KLogLevel lvl;
     char *rslt_end;
-    uint32_t result_code;
+    unsigned long result_code;
 
     String accession, obj_id, name, size_str, mod_date, md5, download_ticket, url, rslt_code, msg;
 
@@ -2260,7 +2260,7 @@ rc_t VResolverAlgMakeCachePath ( const VResolverAlg *self,
 
     /* now search all volumes */
     count = VectorLength ( & self -> vols );
-    for ( i = 0; i < count; ++ i )
+    for ( i = 0; i < count; /* ++ i */ )
     {
         vol = VectorGet ( & self -> vols, i );
         return VResolverAlgMakeLocalPath ( self, vol, & exp, path, wd );
@@ -2290,7 +2290,7 @@ rc_t VResolverAlgMakeCacheFilePath ( const VResolverAlg *self,
 
     /* now search all volumes */
     uint32_t i, count = VectorLength ( & self -> vols );
-    for ( i = 0; i < count; ++ i )
+    for ( i = 0; i < count; /* ++ i */)
     {
         const String *vol = VectorGet ( & self -> vols, i );
         return VResolverAlgMakeLocalFilePath ( self, vol, & fname,
@@ -2564,22 +2564,23 @@ uint32_t get_accession_code ( const String * accession, VResolverAccToken *tok )
     size -= i;
 
     /* check pileup extension */
-    if ( string_cmp( acc, size, "pileup", 6, size + 6 ) == 0 )
+    assert(size + 8 <= UINT32_MAX);
+    if ( string_cmp( acc, size, "pileup", 6, (uint32_t)(size + 6) ) == 0 )
     {
         i = 6;
     }
     /* check realign extension */
-    else if (string_cmp(acc, size, "realign", 7, size + 7) == 0)
+    else if (string_cmp(acc, size, "realign", 7, (uint32_t)(size + 7)) == 0)
     {
         i = 7;
     }
     /* check vdbcache extension */
-    else if (string_cmp(acc, size, "vdbcache", 8, size + 8) == 0)
+    else if (string_cmp(acc, size, "vdbcache", 8, (uint32_t)(size + 8)) == 0)
     {   /* vdbcache uses the same code as its accession */
         tok -> vdbcache = true;
         return code;
     }
-    else if (string_cmp(acc, size, "sra.vdbcache", 12, size + 8) == 0)
+    else if (string_cmp(acc, size, "sra.vdbcache", 12, (uint32_t)(size + 8)) == 0)
     {   /* vdbcache uses the same code as its accession */
         tok->vdbcache = true;
         return code;

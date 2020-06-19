@@ -81,9 +81,9 @@ static int64_t CC BSTItemCmp ( const void * item, const BSTNode * n ) {
     const BSTItem * i = ( BSTItem * ) n;
  
     assert ( s && i );
- 
+    assert(s->size <= UINT32_MAX);
     return string_cmp ( s -> addr, s -> size,
-        i -> ticket -> addr, i -> ticket -> size, s -> size );
+        i -> ticket -> addr, i -> ticket -> size, (uint32_t)s -> size );
 }
 
 static
@@ -346,7 +346,7 @@ static rc_t VResolversQuery ( const VResolver * self, const VFSManager * mgr,
 
     VPath * query = NULL;
 
-    uint32_t oid = 0;
+    uint64_t oid = 0;
     uint32_t i = 0;
 
     assert ( self && result );
@@ -365,8 +365,10 @@ static rc_t VResolversQuery ( const VResolver * self, const VFSManager * mgr,
 
     if ( oid == 0 )
         rc = VFSManagerMakePath ( mgr, & query, "%S", acc );
-    else
-        rc = VFSManagerMakeOidPath ( mgr, & query, oid );
+    else {
+        assert(oid <= UINT32_MAX);
+        rc = VFSManagerMakeOidPath ( mgr, & query, (uint32_t)oid );
+    }
     if (rc == 0 && path != NULL && path->projectId >= 0) {
         assert(query);
         query->projectId = path->projectId;
@@ -520,7 +522,8 @@ static void _StringFixSrrWithVersion(String * self) {
         if (!isdigit(p[i]))
             return;
 
-    self->size = self->len = dot;
+    assert(dot <= UINT32_MAX);
+    self->len = (uint32_t)(self->size = dot);
 }
 
 static rc_t _VPathGetId ( const VPath * self, const String ** newId,

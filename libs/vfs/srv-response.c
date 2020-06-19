@@ -1014,8 +1014,10 @@ rc_t KSrvResponseGetPath ( const KSrvResponse * self, uint32_t idx,
         if (rx != 0) {
             if (error == NULL)
                 return RC(rcVFS, rcQuery, rcExecuting, rcError, rcExists);
-            else
-                return KSrvErrorMake4(error, rx, code, msg);
+            else {
+                assert(code <= UINT32_MAX);
+                return KSrvErrorMake4(error, rx, (uint32_t)code, msg);
+            }
         }
         else {
             KSrvRespObjIterator * it = NULL;

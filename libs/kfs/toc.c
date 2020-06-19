@@ -287,7 +287,7 @@ rc_t KTocCreateEntryIndex (KToc * self, const char * path, uint64_t * file_offse
     /* 	    else */
             {
                 uint64_t offset;
-                uint64_t new_offset;
+                uint64_t new_offset = 0;
                 switch (type)
                 {
                 case ktocentrytype_dir:
@@ -1685,7 +1685,7 @@ rc_t KTocPersist ( const KToc * self,
     size_t treesize;
     KSraHeader * header;
     uint8_t * bbuffer;
-    uint64_t filesize;
+    uint64_t filesize = 0;
 
     TOC_FUNC_ENTRY();
 

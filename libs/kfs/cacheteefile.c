@@ -544,7 +544,7 @@ static rc_t read_bitmap( KCacheTeeFile * cf )
 
 static rc_t verify_existing_local_file( KCacheTeeFile * cf, bool * fully_in_cache )
 {
-    uint64_t bitmap_bytes, content_size, block_count;
+    uint64_t bitmap_bytes = 0, content_size = 0, block_count = 0;
     uint32_t block_size;
     bool cached = false;
     

@@ -741,8 +741,9 @@ size_t KCacheTeeFileReadFromRAM ( const KCacheTeeFile_v3 *self, uint64_t pos,
     uint8_t *buffer, size_t bsize, size_t *num_read, size_t initial_page_idx )
 {
     uint32_t offset = ( uint32_t ) pos & ( self -> page_size - 1 );
-    uint32_t num_copied, to_copy = self -> page_size - offset;
 
+    size_t num_copied;
+    size_t to_copy = self -> page_size - offset;
     size_t i, total;
 
     STATUS ( STAT_PRG, "%s - reading contiguous pages from RAM cache\n", __func__ );
@@ -1225,7 +1226,7 @@ rc_t CC KCacheTeeFileReadChunked ( const KCacheTeeFile_v3 *self, uint64_t pos,
     KChunkReader * chunks, size_t bsize, size_t * total_read )
 {
     rc_t rc = 0;
-    size_t total, num_read;
+    size_t total, num_read = 0;
 
     assert ( chunks != NULL );
 
@@ -1274,7 +1275,7 @@ rc_t CC KCacheTeeFileTimedReadChunked ( const KCacheTeeFile_v3 *self, uint64_t p
     KChunkReader * chunks, size_t bsize, size_t * total_read, struct timeout_t * tm )
 {
     rc_t rc = 0;
-    size_t total, num_read;
+    size_t total, num_read = 0;
 
     assert ( chunks != NULL );
 

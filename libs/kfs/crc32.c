@@ -244,7 +244,9 @@ rc_t KCRC32SumFmtExtract ( KCRC32SumFmt *self, const char *line, size_t size )
     {
         /* read checksum */
         char *p;
-        entry -> crc32 = strtoul ( line, & p, 16 );
+        unsigned long const crc32 = strtoul ( line, & p, 16 );
+        assert(crc32 < UINT32_MAX);
+        entry -> crc32 = (uint32_t)crc32;
         if ( ( ( const char* ) p - line ) != 8 )
             rc = RC ( rcFS, rcFile, rcConverting, rcFormat, rcInvalid );
 

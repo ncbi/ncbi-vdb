@@ -495,9 +495,9 @@ static
 rc_t VPathParseInt ( VPath * self, char * uri, size_t uri_size,
                     bool uri_is_utf )
 {
-    rc_t rc;
+    rc_t rc = 0;
     int bytes;
-    uint32_t port;
+    uint32_t port = 0;
     size_t i, anchor;
     uint32_t count, total;
     VPathParseState state = vppStart;
@@ -510,13 +510,13 @@ rc_t VPathParseInt ( VPath * self, char * uri, size_t uri_size,
     uint32_t acc_suffix = 0;
 
     /* for accummulating ip addresses */
-    uint32_t ip;
+    uint32_t ip = 0;
     uint32_t ipv4 [ 4 ];
     uint32_t ipv6 [ 8 ];
 
     /* for accumulating oid */
-    uint64_t oid;
-    uint32_t oid_anchor;
+    uint64_t oid = 0;
+    uint32_t oid_anchor = 0;
     
     bool pileup_ext_present = false;
     const char pileup_ext[] = ".pileup";
@@ -3060,7 +3060,7 @@ LIB_EXPORT rc_t CC VPathMakeString ( const VPath * self, const String ** str )
             rc = RC ( rcVFS, rcPath, rcAccessing, rcSelf, rcNull );
         else
         {
-            size_t bytes, host;
+            size_t bytes = 0, host;
             char buffer [ 8192 ];
 
             if ( self -> from_uri || self -> query . size != 0 || self -> fragment . size != 0 )
@@ -4045,7 +4045,8 @@ rc_t VPathMakeVFmtExt ( EVPathType ext, VPath ** new_path, const String * id,
                     if ( srv == NULL )
                         return RC ( rcVFS,
                             rcPath, rcAllocating, rcMemory, rcExhausted );
-                    StringInit ( & path -> service, srv, size, size );
+                    assert(size < UINT32_MAX);
+                    StringInit ( & path -> service, srv, size, (uint32_t)size );
                 }
 
                 if (objectType != NULL && objectType->size > 0) {
@@ -4072,14 +4073,16 @@ rc_t VPathMakeVFmtExt ( EVPathType ext, VPath ** new_path, const String * id,
                     if (c == NULL)
                         return RC(rcVFS,
                             rcPath, rcAllocating, rcMemory, rcExhausted);
-                    StringInit(&path->name, c, size, size);
+                    assert(size <= UINT32_MAX);
+                    StringInit(&path->name, c, size, (uint32_t)size);
 
                     c = string_chr(path->name.addr, path->name.size, '.');
                     if (c == NULL)
                         size = 0;
                     else
                         size = path->name.size - (++c - path->name.addr);
-                    StringInit(&path->nameExtension, c, size, size);
+                    assert(size <= UINT32_MAX);
+                    StringInit(&path->nameExtension, c, size, (uint32_t)size);
                 }
 
                 rc = VPathSetId(path, id);
@@ -4287,7 +4290,8 @@ bool CC VPathGetProjectId(const VPath * self, uint32_t * projectId)
     if (self == NULL || self->projectId < 0)
         return false;
 
-    *projectId = self->projectId;
+    assert(self->projectId <= UINT32_MAX);
+    *projectId = (uint32_t)self->projectId;
     return true;
 }
 

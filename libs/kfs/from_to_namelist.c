@@ -156,8 +156,10 @@ static rc_t LoadFromFile( struct KFile const * f, VNamelist * nl )
             done = ( num_read == 0 );
             if ( !done )
             {
+                size_t const count = range.processed + num_read;
+                assert(count <= UINT32_MAX);
                 range.start = buffer;
-                range.count = range.processed + num_read;
+                range.count = (uint32_t)count;
 
                 LoadFromBuffer( nl, &range );
                 if ( range.count > 0 )
@@ -361,8 +363,10 @@ static rc_t ProcessLineByLine( struct KFile const * f,
             done = ( num_read == 0 );
             if ( !done )
             {
+                size_t const count = range.processed + num_read;
+                assert(count <= UINT32_MAX);
                 range.start = buffer;
-                range.count = range.processed + num_read;
+                range.count = (uint32_t)count;
 
                 rc = ProcessFromBuffer( &range, on_line, data );
                 if ( range.count > 0 )

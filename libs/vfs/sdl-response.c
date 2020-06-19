@@ -237,10 +237,12 @@ rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
                 size_t size = 0;
                 uint32_t len = 0;
                 const char * c = strchr(ldata.object, '|');
-                if (c != NULL)
-                    size = len = c - data.object;
+                if (c != NULL) {
+                    len = (uint32_t)(size = c - data.object);
+                    assert(size <= UINT32_MAX);
+                }
                 else
-                    len = string_measure(data.object, &size);;
+                    len = string_measure(data.object, &size);
                 StringInit(&objectType, ldata.object, size, len);
             }
 

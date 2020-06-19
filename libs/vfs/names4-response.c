@@ -337,9 +337,7 @@ static rc_t FileRelease ( File * self ) {
     if ( self == NULL )
         return 0;
 
-    for ( i = 0; i < MAX_PATHS; ++ i ) {
-        if ( self -> path [ i ] == NULL )
-            break;
+    for ( i = 0; i < MAX_PATHS && self->path[i] != NULL; ++ i ) {
         RELEASE ( VPath, self->path[ i ] );
     }
 
@@ -356,18 +354,7 @@ static rc_t FileRelease ( File * self ) {
 }
 
 static bool FileEmpty ( const File * self ) {
-    int i = 0;
-
-    if ( self == NULL )
-        return true;
-
-    for ( i = 0; i < MAX_PATHS; ++ i ) {
-        if (self->path [ i ] == NULL )
-            break;
-        return false;
-    }
-
-    return true;
+    return self != NULL && self->path[0] != NULL ? true : false;
 }
 
 static rc_t FileSetHttp(File * self, const VPath * path) {
@@ -554,7 +541,7 @@ rc_t ItemAddFormat ( Item * self, const char * cType, const Data * dad,
             type = eSFFMax;
     }
     if ( self -> elm == NULL )  {
-        size_t n = 1;
+        uint32_t n = 1;
         switch ( type ) {
             case eSFFSkipped : idx = 0; n = 1; break;
             case eSFFSra     : idx = 0; n = 1; break;
@@ -1158,8 +1145,8 @@ rc_t Response4AddAccOrId ( Response4 * self, const char * acc,
                 ( "Added to response: container '%s'\n", item -> acc ) );
     }
     else {
-        assert ( id >= 0 );
-        item -> id = id;
+        assert ( id >= 0 && id <= UINT32_MAX);
+        item -> id = (uint32_t)id;
         if (THRESHOLD > THRESHOLD_ERROR)
             DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
                 ( "Added to response: container %u\n", item -> id ) );
@@ -2644,7 +2631,8 @@ rc_t KSrvRespFileGetAccOrId(const KSrvRespFile * self,
     assert(self && self -> item && acc);
 
     *acc = self->item->acc;
-    *id = self->item->id;
+    assert(self->item->id <= UINT32_MAX);
+    *id = (uint32_t)self->item->id;
 
     return 0;
 }

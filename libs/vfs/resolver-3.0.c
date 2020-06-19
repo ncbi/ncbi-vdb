@@ -163,7 +163,7 @@ static rc_t _ProcessCode(EObjectType objectType, const String *object_id,
 {
     rc_t rc = 0;
     KLogLevel lvl = 0;
-    uint32_t result_code = 0;
+    unsigned long result_code = 0;
     char *rslt_end = NULL;
     assert(objectType && object_id && code && download_ticket && url);
     if (code->size == 0)
