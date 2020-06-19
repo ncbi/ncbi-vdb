@@ -492,11 +492,12 @@ rc_t MEMBER(Make) (KCipher ** new_obj, kcipher_type type)
     {
     default:
         return RC (rcKrypto, rcCipher, rcConstructing, rcParam, rcInvalid);
-
+#if XCODE
+#else
     case kcipher_null:
         rc = NULLBCMEMBER(Make)(&block_cipher);
         break;
-
+#endif
     case kcipher_AES:
         rc = AESBCMEMBER(Make)(&block_cipher);
         break;

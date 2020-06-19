@@ -447,6 +447,8 @@ BLOCK_FUNC(DecryptCTR,decrypt_ctr)
 #define USE_SLOW_ONES _DEBUGGING
 #endif
 
+#if XCODE
+#else
 #include <stdio.h>
 rc_t KCipherMakeInt (KCipher ** new_cipher, kcipher_type type)
 {
@@ -487,6 +489,7 @@ rc_t KCipherMakeInt (KCipher ** new_cipher, kcipher_type type)
 #endif
     return rc;
 }
+#endif
 
 kcipher_subtype KCipherSubType = ksubcipher_none;
 
@@ -498,6 +501,9 @@ rc_t KCipherMake (KCipher ** new_cipher, kcipher_type type)
 
     else
     {
+#if XCODE
+        rc = KCipherByteMake (new_cipher, type);
+#else
         switch (type)
         {
         case kcipher_null:
@@ -531,6 +537,7 @@ rc_t KCipherMake (KCipher ** new_cipher, kcipher_type type)
             rc = RC (rcKrypto, rcCipher, rcConstructing, rcBlockCipher, rcInvalid);
             break;
         }
+#endif
     }
     return rc;
 }
