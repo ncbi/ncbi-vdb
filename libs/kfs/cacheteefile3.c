@@ -32,7 +32,11 @@ struct KCacheTeeChunkReader;
 #define KCHUNKREADER_IMPL struct KCacheTeeChunkReader
 
 #include <kfs/impl.h>
+#if XCODE
+#include "unix/sysfile-priv.h"
+#else
 #include "sysfile-priv.h"
+#endif
 
 #include <klib/rc.h>
 #include <klib/debug.h>
