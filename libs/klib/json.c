@@ -96,11 +96,13 @@ static void CC NameValueWhack ( BSTNode * p_n, void * p_data )
 static
 int StringCmp( const char * a, const char * b )
 {
-    size_t sizeA = string_size ( a );
-    size_t sizeB = string_size ( b );
+    size_t const sizeA = string_size ( a );
+    size_t const sizeB = string_size ( b );
+    size_t const mini = sizeA < sizeB ? sizeB : sizeA;
+    assert(mini <= UINT32_MAX);
     return string_cmp ( a, sizeA,
                         b, sizeB,
-                        sizeA < sizeB ? sizeB : sizeA );
+                        (uint32_t)mini );
 }
 
 int64_t CC NameValueSort ( const BSTNode * p_item, const BSTNode * p_n )

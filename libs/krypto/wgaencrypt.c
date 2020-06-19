@@ -1028,7 +1028,7 @@ KRYPTO_EXTERN rc_t CC WGAEncValidate (const KFile * encrypted,
 
         else
         {
-            uint64_t file_size;
+            uint64_t file_size = 0;
             uint64_t header_file_size;
             char ascii_md5 [32];
             char header_ascii_md5 [32];

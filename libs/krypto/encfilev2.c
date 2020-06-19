@@ -717,7 +717,7 @@ rc_t KEncFileBlockEncrypt (KEncFile * self, KEncFileBlock * d,
              ++ bindex)
         {
             /* this goes beyond the end of the data array by design */
-            rindex = (size_t)pw[windex];
+            rindex = pw[windex];
             rindex %= bindex;
 
             d->data[bindex] = d->data[rindex];

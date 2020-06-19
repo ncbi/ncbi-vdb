@@ -98,9 +98,9 @@ struct KBlockCipherByte_vt_v1
     /* start minor version == 0 */
     void        (* destroy         )(const BLOCKCIPHER_BYTE_IMPL * self);
 
-    uint32_t    (* block_size      )();
+    uint32_t    (* block_size      )(void);
 
-    uint32_t    (* key_size        )();
+    uint32_t    (* key_size        )(void);
 
     rc_t        (* set_encrypt_key )(void * encrypt_key,
                                      const char * user_key,
@@ -148,9 +148,9 @@ struct KBlockCipherVec_vt_v1
     /* start minor version == 0 */
     void        (* destroy         )(const BLOCKCIPHER_VEC_IMPL * self);
 
-    uint32_t    (* block_size      )();
+    uint32_t    (* block_size      )(void);
 
-    uint32_t    (* key_size        )();
+    uint32_t    (* key_size        )(void);
 
     rc_t        (* set_encrypt_key )(void * encrypt_key,
                                      const char * user_key,

@@ -159,7 +159,7 @@ static __inline__ void SHA_64b_Append(struct SHA64bitState *ctx, const uint8_t d
     for (i = 0; i != length; i += n) {
         n = length - i > 128 ? 128 : (unsigned)(length - i);
         if (ctx->cur + n > 128)
-            n = 128 - ctx->cur;
+            n = (unsigned)(128 - ctx->cur);
         memmove(&ctx->W[ctx->cur], &data[i], n);
         ctx->cur += n;
         if (ctx->cur == 128) {
@@ -181,7 +181,7 @@ static __inline__ void SHA_64b_Append(struct SHA64bitState *ctx, const uint8_t d
 static __inline__ void SHA_64b_Finish(const struct SHA64bitState *ctx, uint64_t rslt[8])
 {
     unsigned j;
-    unsigned const n = (ctx->cur + 7) >> 3;
+    unsigned const n = (unsigned)((ctx->cur + 7) >> 3);
     uint64_t W[32];
     
     memset(W, 0, sizeof(W));
