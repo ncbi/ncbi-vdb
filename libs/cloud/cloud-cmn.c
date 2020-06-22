@@ -48,18 +48,16 @@ rc_t KNSManager_Read(const struct KNSManager *cself, char *buffer, size_t bsize,
     KClientHttpRequest *req = NULL;
 
     int32_t cmsec;
-    int32_t wmsec;
 
     assert(self);
 
     /* save existing timeouts */
     cmsec = self->conn_timeout;
-    wmsec = self->http_write_timeout;
 
     /* minimize timeouts to check cloudy URLs */
     self->conn_timeout = self->http_write_timeout = 500;
 
-    rc = KNSManagerMakeRequest(self, &req, 0x01010000, NULL, url);
+    rc = KNSManagerMakeTimedClientRequest(self, &req, 0x01010000, 500, NULL, url);
 
     if (rc == 0 && hdrName != NULL)
         rc = KClientHttpRequestAddHeader(req, hdrName, hdrValue);
@@ -90,7 +88,6 @@ rc_t KNSManager_Read(const struct KNSManager *cself, char *buffer, size_t bsize,
 
     /* restore timeouts in KNSManager */
     self->conn_timeout = cmsec;
-    self->http_write_timeout = wmsec;
 
     RELEASE(KClientHttpRequest, req);
 
