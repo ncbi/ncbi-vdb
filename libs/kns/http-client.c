@@ -32,6 +32,7 @@
 
 typedef struct KClientHttpStream KClientHttpStream;
 
+#include <kns/http-priv.h> /* KHttpStreamIsNull */
 #include <kns/manager.h>
 #include <kns/socket.h>
 #include <kns/stream.h>
@@ -670,11 +671,13 @@ rc_t KNSManagerMakeClientHttpInt ( const KNSManager *self, KClientHttp **_http,
     ver_t vers, int32_t readMillis, int32_t writeMillis,
     const String *host, uint32_t port, bool reliable, bool tls )
 {
-    rc_t rc;
+    rc_t rc = 0;
 
     KClientHttp * http = ( KClientHttp * ) calloc ( 1, sizeof * http );
     if ( http == NULL )
-        rc = RC ( rcNS, rcNoTarg, rcAllocating, rcMemory, rcNull );
+        rc = RC ( rcNS, rcNoTarg, rcAllocating, rcMemory, rcExhausted);
+    else if (self == NULL )
+        rc = RC ( rcNS, rcNoTarg, rcConstructing, rcSelf, rcNull );
     else
     {
         rc = KNSManagerAddRef ( self );
@@ -744,20 +747,20 @@ rc_t KNSManagerMakeTimedClientHttpInt ( const KNSManager *self,
 
     /* check return parameters */
     if ( _http == NULL )
-        rc = RC ( rcNS, rcMgr, rcConstructing, rcParam, rcNull );
+        rc = RC ( rcNS, rcNoTarg, rcConstructing, rcParam, rcNull );
     else
     {
         /* check input parameters */
         if ( self == NULL )
-            rc = RC ( rcNS, rcMgr, rcConstructing, rcSelf, rcNull );
+            rc = RC ( rcNS, rcNoTarg, rcConstructing, rcSelf, rcNull );
         /* make sure we have one of the two versions supported - 1.0, 1.1 */
         else if ( vers < 0x01000000 || vers > 0x01010000 )
-            rc = RC ( rcNS, rcMgr, rcConstructing, rcParam, rcBadVersion );
+            rc = RC ( rcNS, rcNoTarg, rcConstructing, rcParam, rcBadVersion );
         else if ( host == NULL )
-            rc = RC ( rcNS, rcMgr, rcConstructing, rcPath, rcNull );
+            rc = RC ( rcNS, rcNoTarg, rcConstructing, rcPath, rcNull );
         /* make sure there is data in the host name */
         else if ( host -> size == 0 )
-            rc = RC ( rcNS, rcMgr, rcConstructing, rcPath, rcEmpty );
+            rc = RC ( rcNS, rcNoTarg, rcConstructing, rcPath, rcEmpty );
         else
         {
             KDataBuffer hostname_buffer;
@@ -823,11 +826,11 @@ LIB_EXPORT rc_t CC KNSManagerMakeClientHttp ( const KNSManager *self,
     if ( self == NULL )
     {
         if ( http == NULL )
-            return RC ( rcNS, rcMgr, rcValidating, rcParam, rcNull );
+            return RC ( rcNS, rcNoTarg, rcValidating, rcParam, rcNull );
 
         * http = NULL;
 
-        return RC ( rcNS, rcMgr, rcValidating, rcSelf, rcNull );
+        return RC ( rcNS, rcNoTarg, rcValidating, rcSelf, rcNull );
     }
 
     return KNSManagerMakeTimedClientHttp ( self, http, opt_conn, vers,
@@ -847,11 +850,11 @@ LIB_EXPORT rc_t CC KNSManagerMakeClientHttps ( const KNSManager *self,
     if ( self == NULL )
     {
         if ( https == NULL )
-            return RC ( rcNS, rcMgr, rcValidating, rcParam, rcNull );
+            return RC ( rcNS, rcNoTarg, rcValidating, rcParam, rcNull );
 
         * https = NULL;
 
-        return RC ( rcNS, rcMgr, rcValidating, rcSelf, rcNull );
+        return RC ( rcNS, rcNoTarg, rcValidating, rcSelf, rcNull );
     }
 
     return KNSManagerMakeTimedClientHttps ( self, https, opt_conn, vers,
@@ -1085,7 +1088,7 @@ rc_t KClientHttpAddHeaderString
             /* node doesnt exist - allocate memory for a new one */
             node = ( KHttpHeader * ) calloc ( 1, sizeof * node );
             if ( node == NULL )
-                rc = RC ( rcNS, rcNoTarg, rcAllocating, rcMemory, rcNull );
+                rc = RC ( rcNS, rcNoTarg, rcAllocating, rcMemory, rcExhausted );
             else
             {
                 rc = KDataBufferMakeBytes ( & node -> value_storage, 0 );
@@ -1585,7 +1588,7 @@ rc_t CC KClientHttpStreamTimedReadChunked ( const KClientHttpStream *cself,
         if ( http -> line_valid != 0 )
         {
             KClientHttpClose ( http );
-            rc = RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcIncorrect);
+            rc = RC ( rcNS, rcStream, rcParsing, rcNoObj, rcIncorrect);
             self -> state = error_state;
             break;
         }
@@ -1615,7 +1618,7 @@ rc_t CC KClientHttpStreamTimedReadChunked ( const KClientHttpStream *cself,
         if ( sep == http -> line_buffer . base || ( * sep != 0 && * sep != ';' ) )
         {
             KClientHttpClose ( http );
-            rc = RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcIncorrect);
+            rc = RC ( rcNS, rcStream, rcParsing, rcNoObj, rcIncorrect);
             self -> state = error_state;
             break;
         }
@@ -1656,12 +1659,12 @@ rc_t CC KClientHttpStreamTimedReadChunked ( const KClientHttpStream *cself,
         return 0;
 
     case error_state:
-        rc = RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcIncorrect );
+        rc = RC ( rcNS, rcStream, rcParsing, rcNoObj, rcIncorrect );
         break;
 
     default:
         /* internal error */
-        rc = RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcError );
+        rc = RC ( rcNS, rcStream, rcParsing, rcNoObj, rcError );
     }
 
     return rc;
@@ -1679,14 +1682,14 @@ static
 rc_t CC KClientHttpStreamTimedWrite ( KClientHttpStream *self,
     const void *buffer, size_t size, size_t *num_writ, struct timeout_t *tm )
 {
-    return RC ( rcNS, rcNoTarg, rcWriting, rcFunction, rcUnsupported );
+    return RC ( rcNS, rcStream, rcWriting, rcFunction, rcUnsupported );
 }
 
 static
 rc_t CC KClientHttpStreamWrite ( KClientHttpStream *self,
     const void *buffer, size_t size, size_t *num_writ )
 {
-    return RC ( rcNS, rcNoTarg, rcWriting, rcFunction, rcUnsupported );
+    return RC ( rcNS, rcStream, rcWriting, rcFunction, rcUnsupported );
 }
 
 static KStream_vt_v1 vtKClientHttpStream =
@@ -1716,7 +1719,7 @@ rc_t KClientHttpStreamMake ( KClientHttp *self, KStream **sp, const char *strnam
     rc_t rc;
     KClientHttpStream * s = ( KClientHttpStream * ) calloc ( 1, sizeof * s );
     if ( s == NULL )
-        rc = RC ( rcNS, rcNoTarg, rcConstructing, rcMemory, rcExhausted );
+        rc = RC ( rcNS, rcStream, rcConstructing, rcMemory, rcExhausted );
     else
     {
         rc = KStreamInit ( & s -> dad, ( const KStream_vt * ) & vtKClientHttpStream,
@@ -1746,7 +1749,7 @@ rc_t KClientHttpStreamMakeChunked ( KClientHttp *self, KStream **sp, const char 
     rc_t rc;
     KClientHttpStream * s = ( KClientHttpStream * ) calloc ( 1, sizeof * s );
     if ( s == NULL )
-        rc = RC ( rcNS, rcNoTarg, rcConstructing, rcMemory, rcExhausted );
+        rc = RC ( rcNS, rcStream, rcConstructing, rcMemory, rcExhausted );
     else
     {
         rc = KStreamInit ( & s -> dad, ( const KStream_vt * ) & vtKClientHttpStreamChunked,
@@ -2563,6 +2566,20 @@ LIB_EXPORT rc_t CC KClientHttpResultGetInputStream ( KClientHttpResult *self, KS
     * s = NULL;
 
     return rc;
+}
+
+bool KHttpStreamIsNull(const KStream * self) {
+    if (self == NULL)
+        return true;
+    else {
+        const KClientHttpStream * s = (const KClientHttpStream*)self;
+        if (s->http == NULL)
+            return true;
+        else if (s->http->sock == NULL)
+            return true;
+        else
+            return false;
+    }
 }
 
 static void KClientHttpGetEndpoint ( const KClientHttp * self, KEndPoint * ep, bool remote ) {
