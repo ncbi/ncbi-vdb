@@ -46,6 +46,7 @@ extern "C" {
  * forwards
  */
 struct VDatabase;
+struct VPath;
 struct VTable;
 
 
