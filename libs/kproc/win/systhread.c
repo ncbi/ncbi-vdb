@@ -108,8 +108,8 @@ static DWORD WINAPI int_ThreadProc( LPVOID lpParameter )
  *
  *  "data" [ IN, OPAQUE ] - user-supplied thread data
  */
-LIB_EXPORT rc_t CC KThreadMakeStackSize ( KThread **tp, size_t stacksize,
-    rc_t ( CC * run_thread ) ( const KThread*, void* ), void *data )
+LIB_EXPORT rc_t CC KThreadMakeStackSize ( KThread **tp,
+    rc_t ( CC * run_thread ) ( const KThread*, void* ), void *data, size_t stacksize )
 {
     rc_t rc;
     if ( tp == NULL )
