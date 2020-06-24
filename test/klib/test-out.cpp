@@ -140,6 +140,15 @@ TEST_CASE(KOutMsgShortcut_no_shortcut)
     REQUIRE_EQ(output, string("str\n"));
 }
 
+TEST_CASE(KOutMsgInvalidRC)
+{
+    rc_t invalid_rc = -1;
+    string output;
+    REQUIRE_RC(KOutHandlerSet(writerFn, &output));
+    REQUIRE_RC(KOutMsg("%R", invalid_rc));
+    REQUIRE_EQ(output, string("str\n"));
+}
+
 
 //////////////////////////////////////////////////// Main
 extern "C"
