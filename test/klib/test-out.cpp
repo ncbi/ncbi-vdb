@@ -140,13 +140,71 @@ TEST_CASE(KOutMsgShortcut_no_shortcut)
     REQUIRE_EQ(output, string("str\n"));
 }
 
+TEST_CASE(KOutMsgZeroOne)
+{
+    rc_t const rc = RC(  0
+                       , 0
+                       , 0
+                       , 0
+                       , rcDone
+                       );
+    string const expected = string("rcExe,rcNoTarg,rcAllocating,rcNoObj,rcDone)");
+    string output;
+    REQUIRE_RC(KOutHandlerSet(writerFn, &output));
+    REQUIRE_RC(KOutMsg("%R", rc));
+    REQUIRE_EQ(expected, output.substr(output.size() - expected.size()));
+}
+
+TEST_CASE(KOutMsgUriLink)
+{
+    rc_t const rc = RC(  rcCloud
+                       , rcUri // last proper valid value before error was introduced
+                       , rcIdentifying
+                       , rcLink // first valid value, overlaps with error in RCContext
+                       , rcWrongType);
+    string const expected = string("rcCloud,rcUri,rcIdentifying,rcLink,rcWrongType)");
+    string output;
+    REQUIRE_RC(KOutHandlerSet(writerFn, &output));
+    REQUIRE_RC(KOutMsg("%R", rc));
+    REQUIRE_EQ(expected, output.substr(output.size() - expected.size()));
+}
+
+TEST_CASE(KOutMsgProviderLink)
+{
+    rc_t const rc = RC(  rcCloud
+                       , rcProvider // value overlaps with rcLink
+                       , rcIdentifying
+                       , rcLink // first valid value, overlaps with rcProvider
+                       , rcWrongType);
+    string const expected = string("rcCloud,rcProvider,rcIdentifying,rcLink,rcWrongType)");
+    string output;
+    REQUIRE_RC(KOutHandlerSet(writerFn, &output));
+    REQUIRE_RC(KOutMsg("%R", rc));
+    REQUIRE_EQ(expected, output.substr(output.size() - expected.size()));
+}
+
+TEST_CASE(KOutMsgUriProvider)
+{
+    rc_t const rc = RC(  rcCloud
+                       , rcUri // last proper valid value before error was introduced
+                       , rcIdentifying
+                       , rcProvider // should come out as rcLink
+                       , rcWrongType);
+    string const expected = string("rcCloud,rcUri,rcIdentifying,rcLink,rcWrongType)");
+    string output;
+    REQUIRE_RC(KOutHandlerSet(writerFn, &output));
+    REQUIRE_RC(KOutMsg("%R", rc));
+    REQUIRE_EQ(expected, output.substr(output.size() - expected.size()));
+}
+
 TEST_CASE(KOutMsgInvalidRC)
 {
+    string const expected = string("INVALID,INVALID,INVALID,INVALID,INVALID)");
     rc_t invalid_rc = -1;
     string output;
     REQUIRE_RC(KOutHandlerSet(writerFn, &output));
     REQUIRE_RC(KOutMsg("%R", invalid_rc));
-    REQUIRE_EQ(output, string("str\n"));
+    REQUIRE_EQ(expected, output.substr(output.size() - expected.size()));
 }
 
 
