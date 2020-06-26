@@ -1,8 +1,19 @@
 # NCBI External Developer Release:
 
 
+## NCBI VDB 2.10.8
+**June 24, 2020**
+
+  **fasterq-dump, kproc**: fixed problem with seg-faults caused by too small stack used by threads  
+  **kdb, sra-tools, vdb, vfs**: fixed bug preventing use of path to directory created by prefetch if it ends with '/'  
+  **ngs-tools, sra-tools, vfs**: report an error when file was encrypted for a different ngc file  
+  **prefetch, vfs**: download encrypted phenotype files with encrypted extension  
+  **sra-docker, vdb**: config can auto-generate LIBS/GUID when in a docker container  
+
+
 ## NCBI VDB 2.10.7
 **May 21, 2020**
+
   **kns, ngs-tools, sra-tools**: added new header to HTTP requests to communicate VDB version 
 
 
