@@ -1200,14 +1200,14 @@ class VTable :
         return KIndex( self.__mgr, k_idx, name )
 
     def OpenMetadata( self, open_mode = OpenMode.Read ) :
-        if self.__kdb_ptr == None :
-            self.__OpenKTableRead__()
         k_meta = c_void_p()
         if open_mode == OpenMode.Write :
-            rc = self.__mgr.KTableOpenMetadataUpdate( self.__kdb_ptr, byref( k_meta ) )
+            rc = self.__mgr.VTableOpenMetadataUpdate(self.__ptr, byref(k_meta))
             if rc != 0 :
-                self.__mgr.raise_rc( rc, "KTableOpenMetadataUpdate( '%s' )"%( self.__name ), self )
+                self.__mgr.raise_rc( rc, "VTableOpenMetadataUpdate( '%s' )"%( self.__name ), self )
         else :
+            if self.__kdb_ptr == None :
+                self.__OpenKTableRead__()
             rc = self.__mgr.KTableOpenMetadataRead( self.__kdb_ptr, byref( k_meta ) )
             if rc != 0 :
                 self.__mgr.raise_rc( rc, "KTableOpenMetadataRead( '%s' )"%( self.__name ), self )
@@ -1876,7 +1876,9 @@ class manager :
         self.VTableCreateCachedCursorRead = self.__func__( "VTableCreateCachedCursorRead", [ c_void_p, c_void_p, c_longlong ] )
         self.VTableLocked = self.__func__( "VTableLocked", [ c_void_p ], c_bool )
         self.VTableOpenKTableRead = self.__func__( "VTableOpenKTableRead", [ c_void_p, c_void_p ] )
-        
+        self.VTableOpenMetadataRead = self.__func__("VTableOpenMetadataRead", [ c_void_p, c_void_p ] )
+        self.VTableOpenMetadataUpdate = self.__func__("VTableOpenMetadataUpdate", [ c_void_p, c_void_p ] )
+
         self.KNamelistCount = self.__func__( "KNamelistCount", [ c_void_p, c_void_p ] )
         self.KNamelistGet = self.__func__( "KNamelistGet", [ c_void_p, c_int, c_void_p ] )
         self.KNamelistRelease = self.__func__( "KNamelistRelease", [ c_void_p ] )

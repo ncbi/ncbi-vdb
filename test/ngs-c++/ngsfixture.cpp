@@ -24,4 +24,7 @@
 *
 */
 
-#define LIBVDB_VERS 0x02070028
+#include "ngsfixture.hpp"
+
+NgsFixture::Collections * NgsFixture::colls = nullptr;
+

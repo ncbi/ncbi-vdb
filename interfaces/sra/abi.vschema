@@ -161,7 +161,7 @@ physical NCBI:SRA:swapped_fsamp4 NCBI:SRA:ABI:encoding:SIGNAL #2
 table NCBI:SRA:ABI:tbl:v2 #1.0.5
     = NCBI:SRA:tbl:sra #2.1.4
     , NCBI:tbl:color_space #2.1.0
-    , NCBI:tbl:phred_quality #2.0.4
+    , NCBI:tbl:phred_quality #2.0.5
     , NCBI:SRA:ABI:common #1.0.4
 {
     /* NAME tokenizing and coordinates

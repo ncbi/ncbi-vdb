@@ -31,8 +31,8 @@
 */
 
 #include <stdint.h>
-
 #include <string>
+#include <cmath>
 
 #include <klib/text.h>
 

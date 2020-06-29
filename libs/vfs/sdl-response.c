@@ -153,7 +153,7 @@ static rc_t DataUpdate(const Data * self,
 /* We are adding a location to file */
 static
 rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
-    const Data * dad, JsonStack * path)
+    const Data * dad, JsonStack * path, int64_t aProjectId)
 {
     rc_t rc = 0;
 
@@ -254,7 +254,16 @@ rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
                 ceRequired = true;
             if (ldata.payRequired == eTrue)
                 payRequired = true;
+
             projectId = ldata.encryptedForProjectId;
+            if (aProjectId >= 0 && projectId >= 0 && aProjectId != projectId) {
+                rc = RC(rcVFS, rcQuery, rcExecuting, rcItem, rcIncorrect);
+                PLOGERR(klogInt, (klogInt, rc,
+                    "'$(name)' was encrypted for project 'dbGaP-$(id)'. "
+                    "Please contact sra-tools@ncbi.nlm.nih.gov for details.",
+                    "name=%s,id=%lu", data.name, projectId));
+                return rc;
+            }
 
             if (ldata.md5 != NULL) {
                 int i = 0;
@@ -301,7 +310,7 @@ rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
 /* We are scanning files(Item(Run)) to find all its locations */
 static
 rc_t ItemAddSdlFile(Item * self, const KJsonObject * node,
-    const Data * dad, JsonStack * path)
+    const Data * dad, JsonStack * path, int64_t projectId)
 {
     rc_t rc = 0;
 
@@ -339,7 +348,7 @@ rc_t ItemAddSdlFile(Item * self, const KJsonObject * node,
 
             value = KJsonArrayGetElement ( array, i );
             object = KJsonValueToObject ( value );
-            r2 = FileAddSdlLocation( file, object, & data, path );
+            r2 = FileAddSdlLocation ( file, object, & data, path, projectId );
             if ( r2 != 0 && rc == 0 )
                 rc = r2;
 
@@ -352,7 +361,7 @@ rc_t ItemAddSdlFile(Item * self, const KJsonObject * node,
 
     value = KJsonObjectGetMember(node, "link");
     if (value != NULL) {
-        rc = FileAddSdlLocation(file, node, &data, path);
+        rc = FileAddSdlLocation(file, node, &data, path, projectId);
         /*rc = ItemAddFormat(self, data.type, &data, &file, false);
         if (file == NULL || rc != 0)
             return rc;
@@ -517,6 +526,8 @@ static rc_t Response4AddItemsSdl(Response4 * self,
         if (value != NULL) {
             uint32_t i = 0;
 
+            int64_t projectId = Response4GetProjectId(self);
+
             const KJsonArray * array = KJsonValueToArray(value);
             uint32_t n = KJsonArrayGetLength(array);
             rc = JsonStackPushArr(path, name);
@@ -529,7 +540,7 @@ static rc_t Response4AddItemsSdl(Response4 * self,
 
                 value = KJsonArrayGetElement(array, i);
                 object = KJsonValueToObject(value);
-                r2 = ItemAddSdlFile(item, object, &data, path);
+                r2 = ItemAddSdlFile(item, object, &data, path, projectId);
                 if (r2 != 0 && rc == 0)
                     rc = r2;
 
@@ -711,7 +722,7 @@ static rc_t Response4InitSdl(Response4 * self, const char * input) {
 }
 
 rc_t Response4MakeSdl(Response4 ** self, const char * input,
-    bool logNamesServiceErrors)
+    bool logNamesServiceErrors, int64_t projectId)
 {
     rc_t rc = 0;
 
@@ -719,7 +730,7 @@ rc_t Response4MakeSdl(Response4 ** self, const char * input,
 
     assert(self);
 
-    rc = Response4MakeEmpty(&r, logNamesServiceErrors);
+    rc = Response4MakeEmpty(&r, logNamesServiceErrors, projectId);
     if (rc != 0)
         return rc;
 

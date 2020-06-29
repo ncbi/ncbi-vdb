@@ -1,4 +1,7 @@
-/*===========================================================================
+#ifndef _h_klib_vdb_features_
+#define _h_klib_vdb_features_
+
+/*==============================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
 *               National Center for Biotechnology Information
@@ -20,8 +23,13 @@
 *
 *  Please cite the author in any work or product based on this material.
 *
-* ===========================================================================
-*
+* ==============================================================================
 */
 
-#define LIBVDB_VERS 0x02070028
+#ifndef _h_klib_vdb_release_version_
+#include <klib/vdb_release_version.h>
+#endif
+
+#define HAVE_VDB_RELEASE_VERSION
+
+#endif /* _h_klib_vdb_features_ */

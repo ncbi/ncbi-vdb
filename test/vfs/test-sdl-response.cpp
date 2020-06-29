@@ -76,7 +76,7 @@ TEST_CASE(testArrayExample) {
         "}"
     "]"
 "}"
-,false) );
+,false, -1) );
     REQUIRE_RC      ( Response4Release ( response ) );
 }
 #endif
@@ -120,7 +120,7 @@ TEST_CASE(testExample) {
         "}"
     "]"
 "}"
-, false) );
+, false, -1) );
     REQUIRE_RC      ( Response4Release ( response ) );
 }
 #endif
@@ -128,7 +128,7 @@ TEST_CASE(testExample) {
 #ifdef ALL
 TEST_CASE(doubleWhack) {
     Response4 * response = NULL;
-    REQUIRE_RC_FAIL(Response4MakeSdl(&response, "{}", false));
+    REQUIRE_RC_FAIL(Response4MakeSdl(&response, "{}", false, -1));
     REQUIRE_RC(Response4Release(response));
 }
 #endif
@@ -312,7 +312,7 @@ TEST_CASE(nullMsg) {
     REQUIRE_RC_FAIL(Response4MakeSdl(&response,
         "{"
         "    \"status\": 200"
-        "}", false));
+        "}", false, -1));
 
     REQUIRE_RC(Response4Release(response));
 }
@@ -327,7 +327,7 @@ TEST_CASE(noMsg) {
         "{"
         "    \"status\": 200,"
         "    \"message\" : \"\""
-        "}", false));
+        "}", false, -1));
 
     rc_t rc = 0;
     REQUIRE_RC(Response4GetRc(response, &rc));
@@ -348,7 +348,7 @@ TEST_CASE(noMsgWithRes) {
         "    {"
         "    }"
         "  ]"
-        "}", false));
+        "}", false, -1));
 
     REQUIRE_RC(Response4Release(response));
 }
@@ -363,7 +363,7 @@ TEST_CASE(invalidExpiration) {
         "{"
         "    \"status\": 200,"
         "    \"message\" : \"Claims have expired\""
-        "}", false));
+        "}", false, -1));
 
     rc_t rc = 0;
     REQUIRE_RC(Response4GetRc(response, &rc));
@@ -382,7 +382,7 @@ TEST_CASE(invalidMsg) {
         "{"
         "    \"status\": 200,"
         "    \"msg\" : \"Signature not recognized\""
-        "}", false));
+        "}", false, -1));
 
     rc_t rc = 0;
     REQUIRE_RC(Response4GetRc(response, &rc));
@@ -401,7 +401,7 @@ TEST_CASE(expired) {
         "{"
         "    \"status\": 440,"
         "    \"message\" : \"Claims have expired\""
-        "}", false));
+        "}", false, -1));
     
     rc_t rc = 0;
     REQUIRE_RC(Response4GetRc(response, &rc));
@@ -420,7 +420,7 @@ TEST_CASE(expiredNsg) {
         "{"
         "    \"status\": 440,"
         "    \"msg\" : \"Claims have expired\""
-        "}", false));
+        "}", false, -1));
 
     rc_t rc = 0;
     REQUIRE_RC(Response4GetRc(response, &rc));
