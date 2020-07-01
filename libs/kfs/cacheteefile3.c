@@ -43,6 +43,10 @@ struct KCacheTeeChunkReader;
 #include <klib/status.h>
 #include <klib/vector.h>
 #include <klib/container.h>
+
+#include <kns/http.h> /* KFileIsKHttpFile */
+#include <kns/http-priv.h> /* HttpFileGetReadTimeouts */
+
 #include <kproc/lock.h>
 #include <kproc/cond.h>
 #include <kproc/thread.h>
@@ -1044,8 +1048,9 @@ rc_t KCacheTeeFileReadFromFile ( const KCacheTeeFile_v3 *self, uint64_t pos,
 }
 
 static
-rc_t CC KCacheTeeFileTimedRead ( const KCacheTeeFile_v3 *cself, uint64_t pos,
-    void *buffer, size_t bsize, size_t *num_read, struct timeout_t *tm )
+rc_t CC KCacheTeeFileTimedReadImpl ( const KCacheTeeFile_v3 *cself,
+    uint64_t pos, void *buffer, size_t bsize, size_t *num_read,
+    struct timeout_t *readTm, struct timeout_t *totalTm)
 {
     rc_t rc = 0;
     size_t count, initial_page_idx;
@@ -1091,9 +1096,9 @@ rc_t CC KCacheTeeFileTimedRead ( const KCacheTeeFile_v3 *cself, uint64_t pos,
             msg . size = bsize;
             msg . initial_page_idx = initial_page_idx;
             msg . have_tm = false;
-            if ( tm != NULL )
+            if ( readTm != NULL )
             {
-                msg . tm = * tm;
+                msg . tm = * readTm;
                 msg . have_tm = true;
             }
 
@@ -1135,7 +1140,8 @@ rc_t CC KCacheTeeFileTimedRead ( const KCacheTeeFile_v3 *cself, uint64_t pos,
             
             /* 6. wait for event */
             STATUS ( STAT_PRG, "%lu: %s - waiting on broadcast from bg thread\n", cur_thread_id, __func__ );
-            rc = KConditionTimedWait ( self -> fgcond, self -> cache_lock, tm );
+            rc = KConditionTimedWait ( self -> fgcond, self -> cache_lock,
+                totalTm );
 
             /* remove msg from queue */
             STATUS ( STAT_PRG, "%lu: %s - acquiring queue lock\n", cur_thread_id, __func__ );
@@ -1181,15 +1187,67 @@ rc_t CC KCacheTeeFileTimedRead ( const KCacheTeeFile_v3 *cself, uint64_t pos,
 
     return rc;
 }
+static
+rc_t CC KCacheTeeFileTimedRead ( const KCacheTeeFile_v3 *cself, uint64_t pos,
+    void *buffer, size_t bsize, size_t *num_read, struct timeout_t *tm )
+{
+    return KCacheTeeFileTimedReadImpl(cself, pos, buffer, bsize, num_read, tm,
+        tm);
+}
 
 static
 rc_t CC KCacheTeeFileRead ( const KCacheTeeFile_v3 *self, uint64_t pos,
     void *buffer, size_t bsize, size_t *num_read )
 {
     struct timeout_t tm;
-    /* TBD - need a default timeout on the manager object */
-    TimeoutInit ( & tm, 100 * 1000 );
-    return KCacheTeeFileTimedRead ( self, pos, buffer, bsize, num_read, & tm );
+    struct timeout_t * ptm = NULL;
+
+    struct timeout_t totalTm;
+    struct timeout_t * ptotalTm = NULL;
+
+    rc_t rc = 0;
+    const int32_t minMsec = 100 * 1000;
+    int32_t msec = minMsec;
+    int32_t totalMsec = minMsec;
+
+    assert(self);
+    if (KFileIsKHttpFile(self->source)) {
+        rc = HttpFileGetReadTimeouts(self->source, &msec, &totalMsec);
+        if (rc != 0)
+            totalMsec = msec = minMsec;
+    }
+
+#if 0
+    const char * v = getenv("NCBI_VDB_CACHE_TEE_FILE_TO");
+    if (v != NULL)
+        msec = atoi(v);
+    v = getenv("NCBI_VDB_CACHE_TEE_FILE_TOTAL_TO");
+    if (v != NULL)
+        totalMsec = atoi(v);
+#endif
+
+    if (msec < 0)
+        /* negative timeout is infinite */
+        ptm = NULL;
+    else {
+/*      if (msec < minMsec)
+            msec = minMsec; */
+        TimeoutInit(&tm, msec);
+        ptm = &tm;
+    }
+
+    if (totalMsec < 0)
+        /* negative timeout is infinite */
+        ptotalTm = NULL;
+    else {
+/*      if (totalMsec < minMsec)
+            totalMsec = minMsec; */
+        TimeoutInit(&totalTm, totalMsec);
+        ptotalTm = &totalTm;
+    }
+
+    return KCacheTeeFileTimedReadImpl(
+        self, pos, buffer, bsize, num_read, ptm, ptotalTm);
 }
 
 static
