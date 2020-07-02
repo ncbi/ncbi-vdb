@@ -57,6 +57,8 @@ using namespace std;
 
 TEST_SUITE(MbedTlsTestSuite);
 
+#define HOST "www.nih.gov"
+
 struct BasicIO
 {
     KStream * ciphertext;
@@ -68,7 +70,7 @@ struct BasicIO
         THROW_ON_RC( KNSManagerMake ( & kns ) );
         KEndPoint ep;
         String strEp;
-        CONST_STRING( & strEp, "www.nlm.nih.gov" );
+        CONST_STRING( & strEp, HOST );
         THROW_ON_RC( KNSManagerInitDNSEndpoint ( kns, & ep, & strEp, 443 ) );
         THROW_ON_RC( KNSManagerMakeConnection ( kns, & conn, NULL, & ep ) );
         THROW_ON_RC( KSocketGetStream ( conn, & ciphertext ) );
@@ -204,15 +206,15 @@ FIXTURE_TEST_CASE(ParseCert, MbedTlsFixture)
 FIXTURE_TEST_CASE(Config, MbedTlsFixture)
 {
     REQUIRE_EQ ( 0, vdb_mbedtls_x509_crt_parse_file( & m_chain, "./ca-certificates.crt" ) );
-    BasicIO bio( "www.nlm.nih.gov" );
+    BasicIO bio( HOST );
     REQUIRE( Config( bio ) );
 }
 FIXTURE_TEST_CASE(Handshake_AllowAll, MbedTlsFixture)
 {
     REQUIRE_EQ ( 0, vdb_mbedtls_x509_crt_parse_file( & m_chain, "./ca-certificates.crt" ) );
-    BasicIO bio( "www.nlm.nih.gov" );
+    BasicIO bio( HOST );
     REQUIRE( Config( bio, true )  );
-    REQUIRE_EQ ( 0, vdb_mbedtls_ssl_set_hostname( & m_ssl, "www.nlm.nih.gov" ) );
+    REQUIRE_EQ ( 0, vdb_mbedtls_ssl_set_hostname( & m_ssl, HOST ) );
     int ret = vdb_mbedtls_ssl_handshake( & m_ssl );
     if ( ret != 0 )
     {
@@ -226,17 +228,17 @@ FIXTURE_TEST_CASE(Handshake_AllowAll, MbedTlsFixture)
 FIXTURE_TEST_CASE(Handshake_Success, MbedTlsFixture)
 {
     REQUIRE_EQ ( 0, vdb_mbedtls_x509_crt_parse_file( & m_chain, "./ca-certificates.crt" ) );
-    BasicIO bio("www.nlm.nih.gov");
+    BasicIO bio(HOST);
     REQUIRE(Config(bio, false));
-    REQUIRE_EQ(0, vdb_mbedtls_ssl_set_hostname(&m_ssl, "www.nlm.nih.gov"));
+    REQUIRE_EQ(0, vdb_mbedtls_ssl_set_hostname(&m_ssl, HOST));
     REQUIRE_EQ(0, vdb_mbedtls_ssl_handshake(&m_ssl));
 }
 FIXTURE_TEST_CASE(Handshake_NoCertFail, MbedTlsFixture)
 {
     //not doing this: REQUIRE_EQ ( 0, vdb_mbedtls_x509_crt_parse_file( & m_chain, "./ca-certificates.crt" ) );
-    BasicIO bio("www.nlm.nih.gov");
+    BasicIO bio(HOST);
     REQUIRE(Config(bio, false));
-    REQUIRE_EQ(0, vdb_mbedtls_ssl_set_hostname(&m_ssl, "www.nlm.nih.gov"));
+    REQUIRE_EQ(0, vdb_mbedtls_ssl_set_hostname(&m_ssl, HOST));
     REQUIRE_EQ(MBEDTLS_ERR_X509_CERT_VERIFY_FAILED, vdb_mbedtls_ssl_handshake(&m_ssl));
 }
 
@@ -264,9 +266,9 @@ FIXTURE_TEST_CASE(WindowsRootStore, MbedTlsFixture)
     }
     REQUIRE(CertCloseStore(hSystemStore, 0));
 
-    BasicIO bio("www.nlm.nih.gov");
+    BasicIO bio(HOST);
     REQUIRE(Config(bio, false));
-    REQUIRE_EQ(0, vdb_mbedtls_ssl_set_hostname(&m_ssl, "www.nlm.nih.gov"));
+    REQUIRE_EQ(0, vdb_mbedtls_ssl_set_hostname(&m_ssl, HOST));
     REQUIRE_EQ(0, vdb_mbedtls_ssl_handshake(&m_ssl));
 }
 
