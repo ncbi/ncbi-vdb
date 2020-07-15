@@ -3447,6 +3447,7 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
             const VResolverAlg *alg = VectorGet ( & self -> remote, i );
             assert(alg);
             if ( ( alg -> app_id == app || alg -> app_id == wildCard ) )
+            {
               if ( remote_state != vrAlwaysEnable && alg -> disabled )
                 /* test for forced enable, which applies only to main guys
                    TBD - limit to main sub-category */
@@ -3479,6 +3480,7 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
                     alg4 = alg;
                 }
               }
+            }
         }
         if (rc == 0 && count > 0) {
             if (v > VERSION_4_0 && alg4 != NULL) {
