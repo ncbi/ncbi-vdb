@@ -723,10 +723,40 @@ rc_t VResolverAlgLocalResolve ( const VResolverAlg *self,
                 rc = VResolverAlgMakeLocalPath ( self, vol, & exp, path,
                     ad ? wd : NULL );
                 if (rc == 0) {
+                    const String * thePath = NULL;
                     assert(path);
+                    thePath = &(*path)->path;
                     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (
                         "VResolverAlgLocalResolve: '%S' found in '%S%s'\n",
-                        &tok->acc, &(*path)->path, for_cache ? ".cache" : ""));
+                        &tok->acc, thePath, for_cache ? ".cache" : ""));
+                    if (thePath->size > 4 && strncmp(
+                        thePath->addr + thePath->size - 4, ".sra", 4) == 0)
+                    {
+                        VPath * vdbcache = NULL;
+                        if (KDirectoryPathType(wd, "%.*s.vdbcache",
+                            (int)thePath->size, thePath->addr)
+                                == kptFile)
+                        {
+                            rc = VPathMakeFmt(&vdbcache,
+                                "%S.vdbcache", thePath);
+                            if (rc == 0) {
+                                assert(vdbcache);
+                                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (
+                                    "VResolverAlgLocalResolve: "
+                                    "'%S.vdbcache' found in '%S'\n",
+                                    &tok->acc, &vdbcache->path));
+                            }
+                        }
+                        else {
+                            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (
+                                "VResolverLocalResolve: "
+                                "local location of '%S.vdbcache' not found\n",
+                                &tok->acc));
+                        }
+                        if (rc == 0)
+                            rc = VPathAttachVdbcache((VPath*)(*path), vdbcache);
+                        RELEASE(VPath, vdbcache);
+                    }
                 }
                 return rc;
             default:
@@ -3332,6 +3362,10 @@ VResolverEnableState CC VResolverRemoteEnable ( const VResolver * self, VResolve
     return prior;
 }
 
+VResolverEnableState VResolverGetRemoteEnable() {
+    return atomic32_read(&enable_remote);
+}
+
 
 /* CacheEnable
  *  modify settings for caching files in user repositories
@@ -3495,10 +3529,10 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
             }
             else {
                 rc = RC(rcVFS, rcResolver, rcResolving, rcName, rcNotFound);
-                PLOGERR(klogErr, (klogErr, rc,
+/*              PLOGERR(klogErr, (klogErr, rc,
                     "cannot find names service version $(vers). "
                     "Hint: run \"vdb-config --restore-defaults\"",
-                    "vers=%V", v));
+                    "vers=%V", v));*/
             }
         }
     }
