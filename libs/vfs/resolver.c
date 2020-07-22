@@ -3439,25 +3439,6 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
     /* TBD - determine whether these settings interfere with
        case of resolving oid to cache location */
 
-    /* test for forced enable, which applies only to main guys
-       TBD - limit to main sub-category */
-    if ( remote_state == vrAlwaysEnable )
-    {
-        for ( i = 0; i < count; ++ i )
-        {
-            const VResolverAlg *alg = VectorGet ( & self -> remote, i );
-            if ( alg -> app_id == app || alg -> app_id == wildCard )
-            {
-                try_rc = VResolverAlgRemoteResolve ( alg, self -> kns, protocols,
-                    & tok, path, mapping, opt_file_rtn, legacy_wgs_refseq, version );
-                if ( try_rc == 0 )
-                    return 0;
-                if ( rc == 0 )
-                    rc = try_rc;
-            }
-        }
-    }
-    else
     {
         const VResolverAlg * alg4 = NULL;
         ver_t v = InitVersion(version, self->ticket);
@@ -3465,8 +3446,14 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
         {
             const VResolverAlg *alg = VectorGet ( & self -> remote, i );
             assert(alg);
-            if ( ( alg -> app_id == app || alg -> app_id == wildCard ) && ! alg -> disabled )
+            if ( ( alg -> app_id == app || alg -> app_id == wildCard ) )
             {
+              if ( remote_state != vrAlwaysEnable && alg -> disabled )
+                /* test for forced enable, which applies only to main guys
+                   TBD - limit to main sub-category */
+                continue;
+              else
+              {
                 bool ok = false;
                 if (v == 0);
                 else if (v <= VERSION_4_0) {
@@ -3492,6 +3479,7 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
                 {
                     alg4 = alg;
                 }
+              }
             }
         }
         if (rc == 0 && count > 0) {
