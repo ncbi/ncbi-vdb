@@ -3199,6 +3199,13 @@ static rc_t SRequestAddTicket ( SRequest * self, uint32_t project,
     return STicketsAppend ( & self -> tickets, project, ticket );
 }
 
+const char * KServiceGetId(const KService * self, uint32_t idx) {
+    assert(self);
+    if (idx >= self->req.request.objects)
+        return NULL;
+    return self->req.request.object[idx].objectId;
+}
+
 static rc_t SObjectCheckUrl ( SObject * self ) {
     rc_t rc = 0;
 
@@ -3389,8 +3396,11 @@ static rc_t SRequestSetDisabled(SRequest * self, SHelper * helper) {
 
     rc = SHelperInitKfg(helper);
 
-    if (rc == 0)
+    if (rc == 0) {
         KConfigReadBool(helper->kfg, "/repository/remote/disabled", &self->disabled);
+        if (self->disabled && VResolverGetRemoteEnable() == vrAlwaysEnable)
+            self->disabled = false;
+    }
 
     return rc;
 }
@@ -4531,7 +4541,7 @@ static rc_t KServiceProcessStreamByParts ( KService * self,
     return rc;
 }
 
-static rc_t KServiceGetResponse(const KService * self,
+rc_t KServiceGetResponse(const KService * self,
     const KSrvResponse ** response)
 {
     if (self == NULL)
@@ -4928,6 +4938,35 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
     return rc;
 }
 
+rc_t KServiceAddLocalAndCacheToResponse(KService * self,
+    const char * acc, const VPathSet * vps)
+{
+    rc_t rc = 0;
+
+    Response4 * r4 = NULL;
+
+    assert(self);
+
+    rc = KSrvResponseGetR4(self->resp.list, &r4);
+
+    if (rc == 0 && r4 == NULL)
+        rc = Response4MakeEmpty(&r4, sLogNamesServiceErrors, -1);
+
+    if (rc == 0) {
+        const VFSManager * mgr = NULL;
+        rc = KServiceGetVFSManager(self, &mgr);
+        if (rc == 0)
+            rc = Response4AppendLocalAndCache(r4, acc, vps, mgr);
+        RELEASE(VFSManager, mgr);
+    }
+
+    if (rc == 0)
+        rc = KSrvResponseSetR4(self->resp.list, r4);
+
+    RELEASE(Response4, r4);
+
+    return rc;
+}
 
 rc_t KServiceGetConfig ( struct KService * self, const KConfig ** kfg) {
     rc_t rc = 0;

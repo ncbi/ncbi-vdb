@@ -387,9 +387,11 @@ static rc_t VResolversQuery ( const VResolver * self, const VFSManager * mgr,
         CONST_STRING(&srapub_files, "srapub_files");
         CONST_STRING(&remote      , "remote"      );
 
-        isSource = StringEqual(&path->objectType, &srapub_files);
-        if ( ! isSource )
-            isSource = StringEqual(&path->objectType, &remote);
+        if (path != NULL) {
+            isSource = StringEqual(&path->objectType, &srapub_files);
+            if (!isSource)
+                isSource = StringEqual(&path->objectType, &remote);
+        }
 
         if ( outFile != NULL ) {
             bool exists = false;
@@ -668,6 +670,34 @@ static rc_t KSrvResponseRegisterLocalAndCache(KSrvResponse * self,
     return rc;
 }
 
+static rc_t KServiceResolvers(const KService * self, VRemoteProtocols protocols,
+    const char * outDir, const char * outFile,
+    H * h, VPathSet ** vps, const VPath * path,
+    ESrvFileFormat ff, const char * tic, uint64_t iid, const VPath * mapping,
+    String * id)
+{
+    rc_t rc = 0;
+    VResolver * resolver = NULL;
+    const String * pId = NULL;
+    String ticket;
+    memset(&ticket, 0, sizeof ticket);
+    assert(h);
+    if (rc == 0 && tic != NULL)
+        StringInitCString(&ticket, tic);
+    if (rc == 0)
+        rc = HResolver(h, self, &ticket, &resolver, path);
+    if (rc == 0 && path != NULL)
+        rc = _VPathGetId(path, &pId, id, h->mgr);
+    if (rc == 0) {
+        assert(resolver);
+        VResolverResolveName(resolver, KServiceGetResolveName(self));
+        rc = VResolversQuery(resolver, h->mgr, protocols, path, id, iid,
+            vps, ff, outDir, outFile, mapping);
+    }
+    free((void *)pId);
+    return rc;
+}
+
 static
 rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols, 
     const char * cgi, const char * version, const KSrvResponse ** aResponse,
@@ -745,31 +775,10 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
                                         fi, &path);
                                     if (rc == 0) {
                                         if (error == NULL) {
-                                            VResolver * resolver = NULL;
-                                            const String * pId = NULL;
-                                            String ticket;
-                                            memset(&ticket,
-                                                0, sizeof ticket);
-                                            if (rc == 0 && tic != NULL)
-                                                StringInitCString(&ticket,
-                                                    tic);
-                                            if (rc == 0)
-                                                rc = HResolver(&h, self,
-                                                    &ticket, &resolver, path);
-                                            if (rc == 0)
-                                                rc = _VPathGetId(path, &pId,
-                                                    &id, h.mgr);
-                                            if (rc == 0) {
-                                                assert(resolver);
-                                                VResolverResolveName(resolver,
-                                                    KServiceGetResolveName(
-                                                        self));
-                                                rc = VResolversQuery(resolver,
-                                                    h.mgr, protocols, path,
-                                                    &id, iid, &vps, ff,
-                                                    outDir, outFile, mapping);
-                                            }
-                                            free((void *)pId);
+                                            rc = KServiceResolvers(self,
+                                                protocols, outDir, outFile,
+                                                &h, &vps, path,
+                                                ff, tic, iid, mapping, &id);
                                         }
                                         else
                                             RELEASE(KSrvError, error);
@@ -835,6 +844,44 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
             rc_t r2 = HFini ( & h );
             if ( rc == 0 )
                 rc = r2;
+        }
+    }
+    else if (rc
+        == SILENT_RC(rcVFS, rcQuery, rcResolving, rcName, rcNotFound))
+    {
+        if (KServiceGetId(self, 0) == NULL) /* request is empty */
+            return rc;
+        else {
+            uint32_t i = 0;
+            H h;
+            rc = HInit(&h, self);
+            for (i = 0; ; ++i) {
+                VPathSet * vps = NULL;
+                ESrvFileFormat ff = eSFFInvalid;
+                uint64_t iid = 0;
+                String id;
+                const char * acc = KServiceGetId(self, i);
+                if (acc == NULL)
+                    break;
+                StringInitCString(&id, acc);
+                if (rc == 0)
+                    rc = KServiceResolvers(self, protocols, outDir, outFile,
+                        &h, &vps, NULL, ff, NULL, iid, NULL, &id);
+                if (rc == 0) {
+                    if (rc == 0)
+                        rc = KServiceAddLocalAndCacheToResponse(self, acc, vps);
+                    else
+                        rc = 0;
+                    RELEASE(VPathSet, vps);
+                    if (rc == 0)
+                        rc = KServiceGetResponse(self, aResponse);
+                }
+            }
+            {
+                rc_t r2 = HFini(&h);
+                if (r2 != 0 && rc == 0)
+                    rc = r2;
+            }
         }
     }
 
