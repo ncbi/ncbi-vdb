@@ -260,6 +260,8 @@ rc_t VResolverResolveName ( VResolver *self, int resolve );
 
 bool VResolverResolveToAd(const VResolver *self);
 
+VResolverEnableState VResolverGetRemoteEnable();
+
 /*rc_t VFSManagerMakeDbgapResolver(const struct VFSManager * self,
     VResolver ** new_resolver, const struct KConfig * cfg,
     const struct KNgcObj * ngc);*/
