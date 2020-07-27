@@ -442,6 +442,8 @@ static rc_t SHelperInit ( SHelper * self,
     if ( self -> input == NULL )
         return RC ( rcVFS, rcStorage, rcAllocating, rcMemory, rcExhausted );
 
+    self -> input [0] = '\0';
+
     if ( kMgr == NULL ) {
         if (vMgr == NULL) {
             KNSManager * kns = NULL;
@@ -4557,7 +4559,10 @@ rc_t KServiceGetResponse(const KService * self,
 const char * KServiceGetResponseCStr(const KService * self) {
     if (self == NULL)
         return NULL;
-    return self->helper.input;
+    else if (self->helper.input[0] == '\0')
+        return NULL;
+    else
+        return self->helper.input;
 }
 
 
