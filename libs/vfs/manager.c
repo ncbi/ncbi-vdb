@@ -4329,7 +4329,8 @@ LIB_EXPORT bool CC VFSManagerCheckAd(const VFSManager * self,
     if ((KDirectoryPathType(self->cwd, spath.addr) & ~kptAlias) != kptDir)
         return false;
 
-    rc = KDirectoryResolvePath(self->cwd, true, rs, sizeof rs, "%s", spath.addr);
+    rc = KDirectoryResolvePath(self->cwd, true,
+        rs, sizeof rs, "%s", spath.addr);
     if (rc != 0)
         return false;
 
@@ -4346,9 +4347,10 @@ LIB_EXPORT bool CC VFSManagerCheckAd(const VFSManager * self,
             if ((KDirectoryPathType(self->cwd, "%s/%s_dbGaP-%d.sra",
                 rs, slash, projectId) & ~kptAlias) == kptFile)
             {
-                VFSManagerMakePath(self, (VPath **)outPath,
+                rc_t r = VFSManagerMakePath(self, (VPath **)outPath,
                     "%s/%s_dbGaP-%d.sra", rs, slash, projectId);
-                found = true;
+                if (r == 0)
+                    found = true;
             }
     }
 
@@ -4356,10 +4358,39 @@ LIB_EXPORT bool CC VFSManagerCheckAd(const VFSManager * self,
         if ((KDirectoryPathType(self->cwd, "%s/%s.sra", rs, slash)
             & ~kptAlias) == kptFile)
         {
-            VFSManagerMakePath(self, (VPath **)outPath,
+            rc_t r = VFSManagerMakePath(self, (VPath **)outPath,
                 "%s/%s.sra", rs, slash);
-            found = true;
+            if (r == 0)
+                found = true;
+            rc = 0;
         }
+
+    if (found) {
+        VPath * vdbcache = NULL;
+        const String * thePath = NULL;
+
+        assert(outPath && *outPath);
+        thePath = &((*outPath)->path);
+
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (
+            "VFSManagerCheckAd: '%s' found in '%S'\n", slash, thePath));
+
+        if (KDirectoryPathType(self->cwd, "%.*s.vdbcache",
+            (int)thePath->size, thePath->addr) == kptFile)
+        {
+            rc = VPathMakeFmt(&vdbcache, "%S.vdbcache", thePath);
+            if (rc == 0) {
+                assert(vdbcache);
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (
+                    "VFSManagerCheckAd: '%s.vdbcache' found in '%S'\n",
+                    slash, &vdbcache->path));
+            }
+        }
+        if (rc == 0)
+            rc = VPathAttachVdbcache((VPath*)(*outPath), vdbcache);
+
+        RELEASE(VPath, vdbcache);
+    }
 
     RELEASE(KNgcObj, ngc);
 
