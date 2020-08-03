@@ -4302,14 +4302,12 @@ rc_t CC VFSManagerSetAdCaching(VFSManager * self, bool enabled)
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 && !rc) { rc = rc2; } obj = NULL; } while (false)
 
-/* CheckAd
- *  Verify that inPath is path/to/Accession-as-Directory (AD)
- *  if inPath is AD - resolve run in AD as outPath and return true
- *  otherwise - return false, don't set outPath
- */
-LIB_EXPORT bool CC VFSManagerCheckAd(const VFSManager * self,
-    const VPath * inPath, const VPath ** outPath)
+static bool VFSManagerCheckEnvAndAdImpl(const VFSManager * self,
+    const VPath * inPath, const VPath ** outPath, bool checkEnv)
 {
+    /* *outPath can be not NULL: in this case it's just reset to a new value;
+                                 DON'T RELEASE THE OLD ONE! */
+
     /* if path = "/S/S.sra";
        or path = "/S/S_dbGaP-NNN.sra"
        then inPath  is S
@@ -4322,10 +4320,23 @@ LIB_EXPORT bool CC VFSManagerCheckAd(const VFSManager * self,
     const char *slash = NULL;
     char rs[PATH_MAX] = "";
 
-    assert(self);
+    if (outPath == NULL)
+        return RC(rcVFS, rcPath, rcResolving, rcParam, rcNull);
+
+    if (self == NULL)
+        return RC(rcVFS, rcPath, rcResolving, rcMgr, rcNull);
 
     if (VPathGetPath(inPath, &spath) != 0)
         return false;
+    if (checkEnv) {
+        const VPath * adPath = NULL;
+        if (LocalMagicResolve(self->cwd, &spath, &adPath) == 0
+            && adPath != NULL)
+        {
+            *outPath = adPath;
+            return true;
+        }
+    }
     if ((KDirectoryPathType(self->cwd, spath.addr) & ~kptAlias) != kptDir)
         return false;
 
@@ -4373,7 +4384,7 @@ LIB_EXPORT bool CC VFSManagerCheckAd(const VFSManager * self,
         thePath = &((*outPath)->path);
 
         DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (
-            "VFSManagerCheckAd: '%s' found in '%S'\n", slash, thePath));
+            "VFSManagerCheckEnvAndAd: '%s' found in '%S'\n", slash, thePath));
 
         if (KDirectoryPathType(self->cwd, "%.*s.vdbcache",
             (int)thePath->size, thePath->addr) == kptFile)
@@ -4382,7 +4393,7 @@ LIB_EXPORT bool CC VFSManagerCheckAd(const VFSManager * self,
             if (rc == 0) {
                 assert(vdbcache);
                 DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (
-                    "VFSManagerCheckAd: '%s.vdbcache' found in '%S'\n",
+                    "VFSManagerCheckEnvAndAd: '%s.vdbcache' found in '%S'\n",
                     slash, &vdbcache->path));
             }
         }
@@ -4395,4 +4406,30 @@ LIB_EXPORT bool CC VFSManagerCheckAd(const VFSManager * self,
     RELEASE(KNgcObj, ngc);
 
     return found;
+}
+
+/* CheckEnvAndAd
+ *  Verify that inPath is path/to/Accession-as-Directory (AD)
+ *  if inPath is AD - resolve run in AD as outPath and return true
+ *  otherwise - return false, don't set outPath.
+ *
+ *  Magic env. var. is respected.
+ */
+LIB_EXPORT bool CC VFSManagerCheckEnvAndAd(const VFSManager * self,
+    const VPath * inPath, const VPath ** outPath)
+{
+    return VFSManagerCheckEnvAndAdImpl(self, inPath, outPath, true);
+}
+
+/* CheckAd
+ *  Verify that inPath is path/to/Accession-as-Directory (AD)
+ *  if inPath is AD - resolve run in AD as outPath and return true
+ *  otherwise - return false, don't set outPath.
+ *
+ *  Magic env. var. is ignored.
+ */
+LIB_EXPORT bool CC VFSManagrCheckAd(const VFSManager * self,
+    const VPath * inPath, const VPath ** outPath)
+{
+    return VFSManagerCheckEnvAndAdImpl(self, inPath, outPath, false);
 }
