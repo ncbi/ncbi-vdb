@@ -4428,7 +4428,7 @@ LIB_EXPORT bool CC VFSManagerCheckEnvAndAd(const VFSManager * self,
  *
  *  Magic env. var. is ignored.
  */
-LIB_EXPORT bool CC VFSManagrCheckAd(const VFSManager * self,
+LIB_EXPORT bool CC VFSManagerCheckAd(const VFSManager * self,
     const VPath * inPath, const VPath ** outPath)
 {
     return VFSManagerCheckEnvAndAdImpl(self, inPath, outPath, false);
