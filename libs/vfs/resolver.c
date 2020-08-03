@@ -2946,7 +2946,7 @@ typedef enum {
     eCheckUrlTrue,
 } ECheckUrl;
 
-static rc_t VResolverMagicResolve(const VResolver * self, const VPath ** path,
+static rc_t KDirectoryMagicResolve(const KDirectory * dir, const VPath ** path,
     const String * accession, VResolverAppID app, const char * name,
     ECheckExist checkExist,
     ECheckFilePath checkPath,
@@ -2965,20 +2965,28 @@ static rc_t VResolverMagicResolve(const VResolver * self, const VPath ** path,
 
     /* resolver is not confused by shell variables
         when retrieving reference objects */
-    if (app == appREFSEQ) {
-        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
-            ("'%s' magic ignored for refseq\n", name));
-        return 0;
-    }
-    else if (app == appWGS) {
-        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
-            ("'%s' magic ignored for WGS\n", name));
-        return 0;
-    }
-
     magic = getenv(name);
     if (magic == NULL) {
         DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), ("'%s' magic not set\n", name));
+        return 0;
+    }
+
+    if (app == appREFSEQ) {
+        if (accession != NULL)
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                "'%s' magic ignored for refseq '%S'\n", name, accession));
+        else
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                "'%s' magic ignored for refseq\n", name));
+        return 0;
+    }
+    else if (app == appWGS) {
+        if (accession != NULL)
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                "'%s' magic ignored for WGS '%S'\n", name, accession));
+        else
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                "'%s' magic ignored for WGS\n", name));
         return 0;
     }
 
@@ -2989,8 +2997,7 @@ static rc_t VResolverMagicResolve(const VResolver * self, const VPath ** path,
     }
 
     if (checkExist == eCheckExistTrue) {
-        assert(self->wd);
-        kpt = KDirectoryPathType(self->wd, magic) & ~kptAlias;
+        kpt = KDirectoryPathType(dir, magic) & ~kptAlias;
         if (kpt != kptFile && kpt != kptDir) {
             DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
                 "'%s' magic '%s' not found\n", name, magic));
@@ -3072,15 +3079,26 @@ static rc_t VResolverMagicResolve(const VResolver * self, const VPath ** path,
     return rc;
 }
 
+rc_t LocalMagicResolve(const KDirectory * dir, const String * accession,
+    const VPath ** path)
+{
+    VResolverAppID app = get_accession_app(accession,
+        false, NULL, NULL, false, NULL, NULL, -1);
+    return KDirectoryMagicResolve(dir, path, accession, app, ENV_MAGIC_LOCAL,
+        eCheckExistTrue, eCheckFilePathTrue, eCheckUrlFalse, NULL);
+}
+
 static rc_t VResolverCacheMagicResolve(
     const VResolver * self, const VPath ** path, VResolverAppID app)
 {
-    return VResolverMagicResolve(self, path, NULL, app,
+    assert(self);
+    return KDirectoryMagicResolve(self->wd, path, NULL, app,
         ENV_MAGIC_CACHE,
         eCheckExistFalse, eCheckFilePathTrue, eCheckUrlFalse, NULL);
 }
 
 static rc_t VResolverLocalMagicResolve(const VResolver * self,
+    const String * accession,
     const VPath ** path, VResolverAppID app, const VResolverAccToken * tok,
     bool legacy_wgs_refseq, const char * dir)
 {
@@ -3088,10 +3106,10 @@ static rc_t VResolverLocalMagicResolve(const VResolver * self,
     bool checkAd = false;
     rc_t rc = 0;
 
-    assert(path);
+    assert(path && self);
     *path = NULL;
 
-    rc = VResolverMagicResolve(self, &magic, NULL, app,
+    rc = KDirectoryMagicResolve(self->wd, &magic, accession, app,
         ENV_MAGIC_LOCAL,
         eCheckExistTrue, eCheckFilePathTrue, eCheckUrlFalse, &checkAd);
     if (rc != 0)
@@ -3118,7 +3136,8 @@ static rc_t VResolverLocalMagicResolve(const VResolver * self,
 static rc_t VResolverRemoteMagicResolve(const VResolver * self,
     const VPath ** path, const String * accession, VResolverAppID app)
 {
-    return VResolverMagicResolve(self, path, accession, app,
+    assert(self);
+    return KDirectoryMagicResolve(self->wd, path, accession, app,
         ENV_MAGIC_REMOTE,
         eCheckExistFalse, eCheckFilePathFalse, eCheckUrlTrue, NULL);
 }
@@ -3156,7 +3175,7 @@ rc_t VResolverLocalResolve ( const VResolver *self, const String * accession,
         & legacy_wgs_refseq, resolveAllAccToCache, NULL, parentAcc, projectId );
 
     rc = VResolverLocalMagicResolve(
-        self, path, app, &tok, legacy_wgs_refseq, dir);
+        self, accession, path, app, &tok, legacy_wgs_refseq, dir);
     if (rc != 0 || *path != NULL)
         return rc;
 
