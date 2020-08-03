@@ -320,7 +320,7 @@ static int CC KDBManagerPathTypeVPImpl ( const KDBManager * self,
     int path_type;
     rc_t rc;
 
-    VFSManagerCheckAd(self->vfsmgr, aPath, &path);
+    VFSManagerCheckEnvAndAd(self->vfsmgr, aPath, &path);
 
     path_type = kptBadPath;
     if ((self != NULL) && (path != NULL))
