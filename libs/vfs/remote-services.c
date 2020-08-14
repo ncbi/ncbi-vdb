@@ -2513,7 +2513,7 @@ void SHttpRequestHelperAddPostParam ( void * item, void * data )
 
     assert ( kv && p );
 
-    rc = KHttpRequestAddPostParam ( p -> httpReq, kv -> k . addr );
+    rc = KHttpRequestAddPostParam ( p -> httpReq, "%s", kv -> k . addr );
     if ( p -> rc == 0 )
         p -> rc = rc;
 }
