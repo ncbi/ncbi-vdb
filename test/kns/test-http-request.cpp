@@ -34,6 +34,7 @@
 #include <kns/manager.h>
 #include <kns/kns-mgr-priv.h>
 
+#include "../libs/klib/base64.c" // BASE64_PAD_ENCODING
 #include "../libs/kns/http-priv.h"
 #include "../libs/vfs/resolver-cgi.h" /* SDL_CGI */
 
@@ -218,7 +219,12 @@ FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_NonEmptyFile, HttpRequestFixture)
 {
     MakeRequest( GetName() );
     REQUIRE_RC ( KClientHttpRequestAddPostFileParam ( m_req, "name", "data/file-to-post.txt" ) );
-    REQUIRE_EQ ( string ("name=Y29udGVudHMgb2YgdGhlIGZpbGUKCg=="),
+    REQUIRE_EQ ( 
+#if BASE64_PAD_ENCODING
+                 string ("name=Y29udGVudHMgb2YgdGhlIGZpbGUKCg=="),
+#else
+                 string ("name=Y29udGVudHMgb2YgdGhlIGZpbGUKCg"),
+#endif
                  string ( KClientHttpRequestGetBody( m_req ) ) );
 }
 
@@ -251,7 +257,12 @@ FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_MixedPOSTparams, HttpRequestFixtur
     REQUIRE_RC ( KClientHttpRequestAddPostParam ( m_req, "acc=%s", "SRR2043623" ) );
     REQUIRE_RC ( KClientHttpRequestAddPostFileParam ( m_req, "name", "data/file-to-post.txt" ) );
     // the file goes into the body
-    REQUIRE_EQ ( string ("acc=SRR2043623&name=Y29udGVudHMgb2YgdGhlIGZpbGUKCg=="),
+    REQUIRE_EQ (
+#if BASE64_PAD_ENCODING
+                 string ("acc=SRR2043623&name=Y29udGVudHMgb2YgdGhlIGZpbGUKCg=="),
+#else
+                 string ("acc=SRR2043623&name=Y29udGVudHMgb2YgdGhlIGZpbGUKCg"),
+#endif
                  string ( KClientHttpRequestGetBody( m_req ) ) );
 }
 
