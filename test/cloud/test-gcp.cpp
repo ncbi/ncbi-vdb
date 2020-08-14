@@ -138,7 +138,7 @@ public:
         THROW_ON_RC ( CloudMgrMakeWithProvider ( & mgr, cloud_provider_gcp ) );
 
         THROW_ON_RC ( CloudMgrMakeCloud ( mgr, & cloud, cloud_provider_gcp ) );
-        putenv ( "GOOGLE_APPLICATION_CREDENTIALS=" );
+        putenv ( (char *) "GOOGLE_APPLICATION_CREDENTIALS=" );
     }
 
     void MakeClient()
