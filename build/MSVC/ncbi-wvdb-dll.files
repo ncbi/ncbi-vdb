@@ -19,6 +19,9 @@
     <ClCompile Include="..\..\..\libs\cloud\gcp.c">
       <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\cloud\gcp-authentication.c">
+      <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
+    </ClCompile>
     <ClCompile Include="..\..\..\libs\ext\bzip2\blocksort.c" />
     <ClCompile Include="..\..\..\libs\ext\bzip2\bzlib.c" />
     <ClCompile Include="..\..\..\libs\ext\bzip2\compress.c">
