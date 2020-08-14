@@ -1180,7 +1180,7 @@ rc_t Response4AppendUrl ( Response4 * self, const char * url ) {
     Item * item = NULL;
     File * l = NULL;
 
-    rc = VPathMake ( & path, url );
+    rc = VFSManagerMakePath((VFSManager *)1, & path, "%s", url);
     if ( rc != 0 )
         return rc;
 
