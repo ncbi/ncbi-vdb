@@ -34,7 +34,7 @@
 #include <kns/manager.h>
 #include <kns/kns-mgr-priv.h>
 
-#include "../libs/klib/base64.c" // BASE64_PAD_ENCODING
+#include "../libs/klib/base64-priv.h" // BASE64_PAD_ENCODING
 #include "../libs/kns/http-priv.h"
 #include "../libs/vfs/resolver-cgi.h" /* SDL_CGI */
 

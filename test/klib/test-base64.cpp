@@ -34,7 +34,7 @@
 #include <klib/text.h>
 #include <klib/data-buffer.h>
 
-#include "../../libs/klib/base64.c" // BASE64_PAD_ENCODING
+#include "../libs/klib/base64-priv.h" // BASE64_PAD_ENCODING
 
 TEST_SUITE(KBase64TestSuite);
 
