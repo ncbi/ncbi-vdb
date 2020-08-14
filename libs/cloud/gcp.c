@@ -66,21 +66,10 @@ struct GCP;
 
 #include "cloud-cmn.h" /* KNSManager_Read */
 #include "cloud-priv.h"
+#include "gcp-priv.h" /* GCPAddAuthentication */
 
 #ifndef PATH_MAX
 #define PATH_MAX 4096
-#endif
-
-/*TODO: use log.h instead, or promote to cloud-priv.h (there is a copy in cloud-mgr.c) */
-#if 0
-#include <stdio.h>
-#define TRACE( ... )                                              \
-    do { fprintf ( stderr, "%s:%d - ", __func__, __LINE__ );      \
-         fprintf ( stderr, __VA_ARGS__ );                         \
-         fputc ( '\n', stderr ); } while ( 0 )
-#else
-#define TRACE( ... ) \
-    ( ( void ) 0 )
 #endif
 
 static rc_t PopulateCredentials(GCP * self);
@@ -205,15 +194,6 @@ rc_t CC GCPAddComputeEnvironmentTokenForSigner ( const GCP * self, KClientHttpRe
     }
 
     return rc;
-}
-
-/* AddAuthentication
-*  prepare a request object with credentials for authentication
-*/
-static
-rc_t CC GCPAddAuthentication(const GCP * self, KClientHttpRequest * req, const char * http_method)
-{
-    return 0; /* TODO, if needed */
 }
 
 static
@@ -487,12 +467,11 @@ MakeJWT(const GCP * self, char ** jwt)
     {
         return rc;
     }
-    TRACE("jwt='%s'\n\n", jwt);
+    TRACE("jwt='%s'\n\n", *jwt);
 
     return 0;
 }
 
-static
 rc_t
 GetJsonStringMember(const KJsonObject *obj, const char * name, const char ** value)
 {
@@ -514,7 +493,6 @@ GetJsonStringMember(const KJsonObject *obj, const char * name, const char ** val
     return KJsonGetString(member, value);
 }
 
-static
 rc_t
 GetJsonNumMember(const KJsonObject *obj, const char * name, int64_t * value)
 {
@@ -1047,6 +1025,16 @@ rc_t PopulateCredentials(GCP * self)
                             if (self->privateKey == NULL)
                             {
                                 rc = RC(rcNS, rcMgr, rcAllocating, rcMemory, rcExhausted);
+                            }
+                        }
+                        if (strcmp("private_key_id", required[i]) == 0)
+                        {
+                            self->private_key_id
+                                = string_dup(value, string_size(value));
+                            if (self->private_key_id == NULL)
+                            {
+                                rc = RC(rcNS, rcMgr, rcAllocating,
+                                    rcMemory, rcExhausted);
                             }
                         }
                         else if (strcmp("client_email", required[i]) == 0)
