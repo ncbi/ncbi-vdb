@@ -34,6 +34,8 @@
 #include <klib/text.h>
 #include <klib/data-buffer.h>
 
+#include "../../libs/klib/base64.c" // BASE64_PAD_ENCODING
+
 TEST_SUITE(KBase64TestSuite);
 
 ///////////////////////////////////////////////// text
@@ -129,7 +131,11 @@ TEST_CASE ( KBase64_encodeBase64_rfc2 )
     
     REQUIRE_RC ( rc );
     
+#if BASE64_PAD_ENCODING
     std :: string expected ( "Zg==" );
+#else
+    std :: string expected ( "Zg" );
+#endif
     std :: string result ( encoded -> addr, encoded -> size );
     
     REQUIRE_EQ ( expected, result );
@@ -169,7 +175,11 @@ TEST_CASE ( KBase64_encodeBase64_rfc3 )
     
     REQUIRE_RC ( rc );
     
+#if BASE64_PAD_ENCODING
     std :: string expected ( "Zm8=" );
+#else
+    std :: string expected ( "Zm8" );
+#endif
     std :: string result ( encoded -> addr, encoded -> size );
     
     REQUIRE_EQ ( expected, result );
@@ -249,7 +259,11 @@ TEST_CASE ( KBase64_encodeBase64_rfc5 )
     
     REQUIRE_RC ( rc );
     
+#if BASE64_PAD_ENCODING
     std :: string expected ( "Zm9vYg==" );
+#else
+    std :: string expected ( "Zm9vYg" );
+#endif
     std :: string result ( encoded -> addr, encoded -> size );
     
     REQUIRE_EQ ( expected, result );
@@ -289,7 +303,11 @@ TEST_CASE ( KBase64_encodeBase64_rfc6 )
     
     REQUIRE_RC ( rc );
     
+#if BASE64_PAD_ENCODING
     std :: string expected ( "Zm9vYmE=" );
+#else
+    std :: string expected ( "Zm9vYmE" );
+#endif
     std :: string result ( encoded -> addr, encoded -> size );
     
     REQUIRE_EQ ( expected, result );
