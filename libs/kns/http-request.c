@@ -1171,7 +1171,7 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
         }
         else {
             String google;
-            CONST_STRING(&google, "storage.googleapis.com");
+            CONST_STRING(&google, "storage.cloud.google.com");
             skip = 0;
             if (hostname->size >= google.size &&
                 string_cmp(google.addr, google.size,
@@ -1179,6 +1179,16 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
                     google.size) == 0)
             {
                 cpId = cloud_provider_gcp;
+            }
+            else {
+                CONST_STRING(&google, "storage.googleapis.com");
+                if (hostname->size >= google.size &&
+                    string_cmp(google.addr, google.size,
+                        hostname->addr + skip, hostname->size - skip,
+                        google.size) == 0)
+                {
+                    cpId = cloud_provider_gcp;
+                }
             }
         }
     }
