@@ -219,12 +219,14 @@ FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_NonEmptyFile, HttpRequestFixture)
 {
     MakeRequest( GetName() );
     REQUIRE_RC ( KClientHttpRequestAddPostFileParam ( m_req, "name", "data/file-to-post.txt" ) );
-    REQUIRE_EQ ( 
+
 #if BASE64_PAD_ENCODING
-                 string ("name=Y29udGVudHMgb2YgdGhlIGZpbGUKCg=="),
+	string expected ("name=Y29udGVudHMgb2YgdGhlIGZpbGUKCg==");
 #else
-                 string ("name=Y29udGVudHMgb2YgdGhlIGZpbGUKCg"),
+	string expected ("name=Y29udGVudHMgb2YgdGhlIGZpbGUKCg");
 #endif
+	REQUIRE_EQ (
+                 expected,
                  string ( KClientHttpRequestGetBody( m_req ) ) );
 }
 
@@ -257,12 +259,14 @@ FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_MixedPOSTparams, HttpRequestFixtur
     REQUIRE_RC ( KClientHttpRequestAddPostParam ( m_req, "acc=%s", "SRR2043623" ) );
     REQUIRE_RC ( KClientHttpRequestAddPostFileParam ( m_req, "name", "data/file-to-post.txt" ) );
     // the file goes into the body
-    REQUIRE_EQ (
+
 #if BASE64_PAD_ENCODING
-                 string ("acc=SRR2043623&name=Y29udGVudHMgb2YgdGhlIGZpbGUKCg=="),
+	string expected ("acc=SRR2043623&name=Y29udGVudHMgb2YgdGhlIGZpbGUKCg==");
 #else
-                 string ("acc=SRR2043623&name=Y29udGVudHMgb2YgdGhlIGZpbGUKCg"),
+	string expected ("acc=SRR2043623&name=Y29udGVudHMgb2YgdGhlIGZpbGUKCg");
 #endif
+	REQUIRE_EQ (
+                 expected,
                  string ( KClientHttpRequestGetBody( m_req ) ) );
 }
 
