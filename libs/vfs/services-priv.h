@@ -134,6 +134,7 @@ rc_t KServiceNamesExecuteExtImpl ( struct KService * self,
     const struct KSrvResponse ** response, const char * expected );
 
 /***************** Interface services.c -> remote-services.c  *****************/
+rc_t KServiceGetResponse(const KService * self, const KSrvResponse ** response);
 rc_t KServiceGetConfig ( struct KService * self, const struct KConfig ** kfg);
 rc_t KServiceGetVFSManager ( const KService * self,
     const struct VFSManager ** mgr );
@@ -148,6 +149,13 @@ rc_t KServiceGetRepoMgr(KService * self, const struct KRepositoryMgr ** mgr);
 
 const struct KNgcObj * KServiceGetNgcFile(const KService * self,
     bool * isProtected);
+
+/* don't release returned string */
+const char * KServiceGetId(const KService * self, uint32_t idx);
+
+rc_t KServiceAddLocalAndCacheToResponse(KService * self,
+    const char * acc, const struct VPathSet * vps);
+
 /******************************** TESTS ***************************************/
 typedef struct {
     const char * id;
