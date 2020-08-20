@@ -24,28 +24,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-sra-release-version", 
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-agrep", "test-agrep.vcxproj", "{4358639B-761B-9F2C-4DA0-3E34CBE23FCF}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-ngs", "test-ngs.vcxproj", "{0BDFEB3D-A04F-EEEF-EE76-19CAC434BEFA}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-ngs_sra", "test-ngs_sra.vcxproj", "{61FFB765-AE04-8844-98E3-36514873AFD9}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-ngs_sradb", "test-ngs_sradb.vcxproj", "{E0EBD555-7989-DB5E-FAC0-E9DA217B9F4B}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-ngs_csra1_readcollection", "test-ngs_csra1_readcollection.vcxproj", "{7E762FA5-45C9-34A1-0203-DD0FF94C1264}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-ngs_csra1", "test-ngs_csra1.vcxproj", "{B1C553D5-5208-D511-36EA-AA9CDB324FFF}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-ngs_csra1_refwin", "test-ngs_csra1_refwin.vcxproj", "{D441AAA3-EE5F-0837-354E-9F4C715960CD}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-ngs_csra1_pileup", "test-ngs_csra1_pileup.vcxproj", "{D9E83B3F-65E3-17FB-6467-1395D673F2F8}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-ngs_sra-c++", "test-ngs_sra-c++.vcxproj", "{2B7D7C76-4248-318D-B850-193B0205A209}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-ngs_sradb-c++", "test-ngs_sradb-c++.vcxproj", "{17547BA6-6904-01E3-F9FC-4B71C67C487B}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-ngs_csra1-c++", "test-ngs_csra1-c++.vcxproj", "{57236A02-8B0E-F68C-093F-144AB6DC0AFD}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-ngs_csra1pileup-c++", "test-ngs_csra1pileup-c++.vcxproj", "{B7D5FF8B-9A50-FFD8-BFD3-188BA4E43421}"
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wb-test-kfg", "wb-test-kfg.vcxproj", "{480983D4-4BE2-1571-A0EC-6D5B823C7D2A}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-kfg", "test-kfg.vcxproj", "{7C0FF344-E779-3FF2-4DBD-C44CD7B9DB13}"
