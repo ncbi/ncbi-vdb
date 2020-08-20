@@ -298,7 +298,7 @@ LIB_EXPORT rc_t CC XMLLogger_Make(const XMLLogger** cself, KDirectory* dir, cons
                     rc = RC(rcApp, rcArgv, rcReading, rcParam, rcInvalid);
                     break;
                 }
-                fd = val;
+                fd = (int)val;
             }
             rc = XMLLogger_Make2(cself, dir, path, fd);
         } while( false );

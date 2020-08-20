@@ -99,8 +99,8 @@ physical NCBI:usamp4 NCBI:usamp4_encoding #1.0
 
 table NCBI:sra:tbl:trace #1                     // declare the table
     = NCBI:SRA:tbl:sra_nopos #2.1.4             // inherit interface AND implementation for (original) SRA model
-    , NCBI:tbl:base_space #2.0.3                // columns for storing and compressing READ as dna
-    , NCBI:tbl:phred_quality #2.0.4             // columns for storing and compressing QUALITY as phred
+    , NCBI:tbl:base_space #3                    // columns for storing and compressing READ as dna
+    , NCBI:tbl:phred_quality #2.0.5             // columns for storing and compressing QUALITY as phred
     , NCBI:SRA:tbl:stats #1.2.1                 // accumulate statistics upon writing
     , NCBI:SRA:tbl:clip #1.0.2                  // clips 
 {

@@ -139,6 +139,7 @@ extern "C" {
 #define rcResolver   rcTree
 
 struct KDataBuffer;
+struct KDirectory;
 struct KNgcObj;
 struct KNSManager;
 struct String;
@@ -260,9 +261,14 @@ rc_t VResolverResolveName ( VResolver *self, int resolve );
 
 bool VResolverResolveToAd(const VResolver *self);
 
+VResolverEnableState VResolverGetRemoteEnable();
+
 /*rc_t VFSManagerMakeDbgapResolver(const struct VFSManager * self,
     VResolver ** new_resolver, const struct KConfig * cfg,
     const struct KNgcObj * ngc);*/
+
+rc_t LocalMagicResolve(const struct KDirectory * dir, const String * accession,
+    const VPath ** path);
 
 /* default behavior to resolve oid->file mapping inside of VFS */
 #define DEFAULT_RESOVE_OID_NAME true

@@ -24,8 +24,6 @@
 *
 */
 
-#include <kdb/kdb-priv.h> /* KDBManagerCheckAd */
-
 #define TRACK_REFERENCES 0
 
 #define KONST const
@@ -43,6 +41,7 @@
 #include <klib/printf.h>
 #include <klib/rc.h>
 
+#include <vfs/manager.h> /* VFSManagerCheckEnvAndAd */
 #include <vfs/path.h> /* VFSManagerMakePath */
 
 #include <kfs/arc.h>
@@ -231,7 +230,8 @@ rc_t KTableMake ( KTable **tblp, const KDirectory *dir, const char *path )
 static
 rc_t KDBManagerVOpenTableReadInt ( const KDBManager *self,
     const KTable **tblp, const KDirectory *wd, bool try_srapath,
-    const char *path, va_list args, const struct VPath *vpath )
+    const char *path, va_list args, const struct VPath *vpath,
+    bool tryEnvAndAd )
 {
     rc_t rc;
     char aTblpath[4096] = "";
@@ -259,7 +259,9 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *self,
                 rc = VFSManagerMakePath(self->vfsmgr, &path, "%s", aTblpath);
             if (rc == 0) {
                 const String * str = NULL;
-                KDBManagerCheckAd(self, path != NULL ? path : vpath, &path2);
+                if (tryEnvAndAd)
+                    VFSManagerCheckEnvAndAd(self->vfsmgr,
+                        path != NULL ? path : vpath, &path2);
                 if (path2 != NULL) {
                     rc = VPathMakeString(path2, &str);
                     if (rc == 0) {
@@ -363,8 +365,8 @@ LIB_EXPORT rc_t CC KDBManagerVOpenTableRead ( const KDBManager *self,
     if ( self == NULL )
         return RC ( rcDB, rcMgr, rcOpening, rcSelf, rcNull );
 
-    return KDBManagerVOpenTableReadInt ( self, tbl, self -> wd, true, path, args,
-        NULL );
+    return KDBManagerVOpenTableReadInt ( self, tbl, self -> wd, true, path,
+        args, NULL, true );
 }
 
 LIB_EXPORT rc_t CC KDBManagerOpenTableReadVPath ( const KDBManager *self,
@@ -378,7 +380,8 @@ LIB_EXPORT rc_t CC KDBManagerOpenTableReadVPath ( const KDBManager *self,
     if ( self == NULL )
         return RC ( rcDB, rcMgr, rcOpening, rcSelf, rcNull );
 
-    return KDBManagerVOpenTableReadInt ( self, tbl, self->wd, true, NULL, NULL, path );
+    return KDBManagerVOpenTableReadInt ( self, tbl, self->wd, true, NULL,
+        NULL, path, true );
 }
 
 
@@ -417,7 +420,7 @@ LIB_EXPORT rc_t CC KDatabaseVOpenTableRead ( const KDatabase *self,
     if ( rc == 0 )
     {
         rc = KDBManagerVOpenTableReadInt ( self -> mgr, tblp,
-                                          self -> dir, false, path, NULL, NULL );
+                                self -> dir, false, path, NULL, NULL, false );
         if ( rc == 0 )
         {
             KTable *tbl = ( KTable* ) * tblp;

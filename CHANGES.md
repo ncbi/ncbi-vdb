@@ -1,6 +1,43 @@
 # NCBI External Developer Release:
 
 
+## NCBI VDB 2.10.8
+**June 29, 2020**
+
+  **kproc, fasterq-dump**: fixed problem with seg-faults caused by too small stack used by threads  
+  **kdb, vdb, vfs, sra-tools**: fixed bug preventing use of path to directory created by prefetch if it ends with '/'  
+  **vfs, sra-tools, ngs-tools**: report an error when file was encrypted for a different ngc file  
+  **vfs, prefetch**: download encrypted phenotype files with encrypted extension  
+  **vdb, sra-docker**: config can auto-generate LIBS/GUID when in a docker container  
+
+
+## NCBI VDB 2.10.7
+**May 21, 2020**
+
+  **kns, ngs-tools, sra-tools**: added new header to HTTP requests to communicate VDB version 
+
+
+## NCBI VDB 2.10.6
+**May 15, 2020**
+
+  **align, sra-tools**: fixed fetching of reference sequences from cloud  
+  **align, sra-tools, vfs**: fixed resolving of hs37d5 reference sequence  
+  **axf**: fixed invalid soft clips with hard clipped secondary alignments  
+  **kfg, sra-tools**: ignore configuration with invalid protected user repository having a single 'root' node  
+  **kns, sra-tools**: added new header to HTTP requests to communicate SRA version  
+  **kns, sra-tools**: close socket when accessing GCP files  
+  **kns, sra-tools**: introduced a additional configurable network retry loop  
+  **kns**: Windows connect() is now asynchronous and supporting timeouts  
+  **krypto, sra-tools, vfs**: fixed decryption when password contains # symbol  
+  **sratools, vdb-dump, vfs**: fixed vdb-dump <accession of prefetched run>  
+  **sra-tools, vdb**: restored possibility to cache WGS references to user repository  
+  **sra-tools, vfs**: fixed working with runs having WGS reference sequences  
+  **sraxf**: synthetic qualities are now generated per read  
+  **sraxf**: synthetic qualities are now generated per read  
+  **vdb**: fixed segfault in VSchemaDumpToKMDataNode  
+  **vfs**: added possibility to control the verbosity of negative response of names service  
+
+
 ## NCBI VDB 2.10.5
 **April 1, 2020**
 

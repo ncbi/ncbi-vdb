@@ -162,6 +162,9 @@
     <ClCompile Include="..\..\..\libs\cloud\gcp.c">
       <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\cloud\gcp-authentication.c">
+      <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
+    </ClCompile>
 
     <ClCompile Include="..\..\..\libs\ext\mbedtls\aes.c">
       <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>

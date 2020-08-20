@@ -101,7 +101,7 @@ protected:
     }
     ~BaseMgrFixture()
     {
-        if (KDirectoryRemove(wd, true, pwFileName))
+        if (wd != NULL && KDirectoryRemove(wd, true, pwFileName))
            throw logic_error("~MgrFixture: KDirectoryRemove failed");   
         if (vpath && VPathRelease(vpath) != 0)
            throw logic_error("~MgrFixture: VPathRelease failed");
@@ -287,6 +287,7 @@ FIXTURE_TEST_CASE(GetKryptoPassword, MgrFixture)
 }
 #endif
 
+#ifdef ALL
 /* VDB-3590 */
 /* Non-Ascii encryption key - invalid UNICODE : see s_password in fixture */
 FIXTURE_TEST_CASE(GetNonAscii1KryptoPassword, NonAsciiInvalidUnicodeMgrFixture)
@@ -300,6 +301,7 @@ FIXTURE_TEST_CASE(GetNonAscii2KryptoPassword, NonAsciiValidUnicodeMgrFixture)
     REQUIRE_RC(VFSManagerGetKryptoPassword(mgr, buf, BufSize, &num_read));
     REQUIRE_EQ(getPassword(), string(buf, num_read));
 }
+#endif
 
 #ifdef ALL
 FIXTURE_TEST_CASE(UpdateKryptoPassword_NoOutput, MgrFixture)
@@ -592,6 +594,33 @@ FIXTURE_TEST_CASE(RegistrerGoodAccPath, ObjIdBindingFixture) {
     REQUIRE(p);
 
     REQUIRE_RC(Register(1154149, p));
+}
+#endif
+
+#ifdef ALL
+FIXTURE_TEST_CASE(TestVFSManagerCheckAd, MgrFixture) {
+    const VPath * outPath = NULL;
+
+    const char a[] = "SRR053325";
+    REQUIRE_RC(KDirectoryCreateDir(wd, 0775, kcmOpen | kcmInit | kcmCreate, a));
+
+    REQUIRE_RC(VFSManagerMakePath(mgr, &vpath, "%s", a));
+    REQUIRE(!VFSManagerCheckAd(mgr, vpath, &outPath));
+    REQUIRE_NULL(outPath);
+
+    CreateFile("SRR053325/SRR053325.sra", "");
+
+    REQUIRE(VFSManagerCheckAd(mgr, vpath, &outPath));
+    REQUIRE_NOT_NULL(outPath);
+    REQUIRE_RC(VPathRelease(outPath)); outPath = NULL;
+    REQUIRE_RC(VPathRelease(vpath)); vpath = NULL;
+
+    REQUIRE_RC(VFSManagerMakePath(mgr, &vpath, "%s/", a));
+    REQUIRE(VFSManagerCheckAd(mgr, vpath, &outPath));
+    REQUIRE_NOT_NULL(outPath);
+    REQUIRE_RC(VPathRelease(outPath)); outPath = NULL;
+
+    REQUIRE_RC(KDirectoryRemove(wd, true, a));
 }
 #endif
 

@@ -85,6 +85,8 @@
 #include "path-priv.h"
 #include "resolver-priv.h"
 
+#include "../kfg/ngc-priv.h" /* KNgcObjMakeFromCmdLine */
+
 #include <strtol.h>
 
 #include <sysalloc.h>
@@ -93,6 +95,11 @@
 #include <ctype.h>
 #include <os-native.h>
 #include <assert.h>
+
+#include <limits.h> /* PATH_MAX */
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
 
 
 #if _DEBUGGING
@@ -4284,8 +4291,145 @@ LIB_EXPORT rc_t CC VFSManagerDeleteCacheOlderThan ( const VFSManager * self,
     return rc;
 }
 
-LIB_EXPORT rc_t CC VFSManagerSetAdCaching(VFSManager * self, bool enabled) {
+LIB_EXPORT
+rc_t CC VFSManagerSetAdCaching(VFSManager * self, bool enabled)
+{
     if (self != NULL)
         return KNSManagerSetAdCaching(self->kns, enabled);
     return 0;
+}
+
+#define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
+    if (rc2 && !rc) { rc = rc2; } obj = NULL; } while (false)
+
+static bool VFSManagerCheckEnvAndAdImpl(const VFSManager * self,
+    const VPath * inPath, const VPath ** outPath, bool checkEnv)
+{
+    /* *outPath can be not NULL: in this case it's just reset to a new value;
+                                 DON'T RELEASE THE OLD ONE! */
+
+    /* if path = "/S/S.sra";
+       or path = "/S/S_dbGaP-NNN.sra"
+       then inPath  is S
+            outPath is /S/S*.sra */
+    bool found = false;
+    rc_t rc = 0;
+    const KNgcObj * ngc = NULL;
+    uint32_t projectId = 0;
+    String spath;
+    const char *slash = NULL;
+    char rs[PATH_MAX] = "";
+
+    if (outPath == NULL)
+        return RC(rcVFS, rcPath, rcResolving, rcParam, rcNull);
+
+    if (self == NULL)
+        return RC(rcVFS, rcPath, rcResolving, rcMgr, rcNull);
+
+    if (VPathGetPath(inPath, &spath) != 0)
+        return false;
+    if (checkEnv) {
+        const VPath * adPath = NULL;
+        if (LocalMagicResolve(self->cwd, &spath, &adPath) == 0
+            && adPath != NULL)
+        {
+            *outPath = adPath;
+            return true;
+        }
+    }
+    if ((KDirectoryPathType(self->cwd, spath.addr) & ~kptAlias) != kptDir)
+        return false;
+
+    rc = KDirectoryResolvePath(self->cwd, true,
+        rs, sizeof rs, "%s", spath.addr);
+    if (rc != 0)
+        return false;
+
+    slash = strrchr(rs, '/');
+    if (slash)
+        ++slash;
+    else
+        slash = rs;
+
+    rc = KNgcObjMakeFromCmdLine(&ngc);
+    if (ngc != NULL) {
+        rc = KNgcObjGetProjectId(ngc, &projectId);
+        if (rc == 0)
+            if ((KDirectoryPathType(self->cwd, "%s/%s_dbGaP-%d.sra",
+                rs, slash, projectId) & ~kptAlias) == kptFile)
+            {
+                rc_t r = VFSManagerMakePath(self, (VPath **)outPath,
+                    "%s/%s_dbGaP-%d.sra", rs, slash, projectId);
+                if (r == 0)
+                    found = true;
+            }
+    }
+
+    if (!found)
+        if ((KDirectoryPathType(self->cwd, "%s/%s.sra", rs, slash)
+            & ~kptAlias) == kptFile)
+        {
+            rc_t r = VFSManagerMakePath(self, (VPath **)outPath,
+                "%s/%s.sra", rs, slash);
+            if (r == 0)
+                found = true;
+            rc = 0;
+        }
+
+    if (found) {
+        VPath * vdbcache = NULL;
+        const String * thePath = NULL;
+
+        assert(outPath && *outPath);
+        thePath = &((*outPath)->path);
+
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (
+            "VFSManagerCheckEnvAndAd: '%s' found in '%S'\n", slash, thePath));
+
+        if (KDirectoryPathType(self->cwd, "%.*s.vdbcache",
+            (int)thePath->size, thePath->addr) == kptFile)
+        {
+            rc = VPathMakeFmt(&vdbcache, "%S.vdbcache", thePath);
+            if (rc == 0) {
+                assert(vdbcache);
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (
+                    "VFSManagerCheckEnvAndAd: '%s.vdbcache' found in '%S'\n",
+                    slash, &vdbcache->path));
+            }
+        }
+        if (rc == 0)
+            rc = VPathAttachVdbcache((VPath*)(*outPath), vdbcache);
+
+        RELEASE(VPath, vdbcache);
+    }
+
+    RELEASE(KNgcObj, ngc);
+
+    return found;
+}
+
+/* CheckEnvAndAd
+ *  Verify that inPath is path/to/Accession-as-Directory (AD)
+ *  if inPath is AD - resolve run in AD as outPath and return true
+ *  otherwise - return false, don't set outPath.
+ *
+ *  Magic env. var. is respected.
+ */
+LIB_EXPORT bool CC VFSManagerCheckEnvAndAd(const VFSManager * self,
+    const VPath * inPath, const VPath ** outPath)
+{
+    return VFSManagerCheckEnvAndAdImpl(self, inPath, outPath, true);
+}
+
+/* CheckAd
+ *  Verify that inPath is path/to/Accession-as-Directory (AD)
+ *  if inPath is AD - resolve run in AD as outPath and return true
+ *  otherwise - return false, don't set outPath.
+ *
+ *  Magic env. var. is ignored.
+ */
+LIB_EXPORT bool CC VFSManagerCheckAd(const VFSManager * self,
+    const VPath * inPath, const VPath ** outPath)
+{
+    return VFSManagerCheckEnvAndAdImpl(self, inPath, outPath, false);
 }

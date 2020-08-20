@@ -49,8 +49,11 @@
 
 using namespace std;
 
+#define ALL
 
 TEST_SUITE(KlibTestSuite);
+
+#ifdef ALL
 
 ///////////////////////////////////////////////// text
 
@@ -1087,6 +1090,36 @@ TEST_CASE(TimeRoundTrip)
     REQUIRE_EQ( t1, t2 );
     REQUIRE_EQ( string(str1), string(str2) );
 }
+
+#endif
+
+#ifdef ALL
+TEST_CASE(KnowIfTheFunctionExistsAtCompileTime) {
+#ifdef HAVE_VDB_RELEASE_VERSION
+    cout << "no include: HAVE_VDB_RELEASE_VERSION defined\n";
+#else
+    cout << "no include: HAVE_VDB_RELEASE_VERSION not defined\n";
+#endif
+#ifdef HAVE_VFSManagerLogNamesServiceErrors
+    cout << "no include: HAVE_VFSManagerLogNamesServiceErrors defined\n";
+#else
+    cout << "no include: HAVE_VFSManagerLogNamesServiceErrors not defined\n";
+#endif
+
+#include "vdb-features.h"
+#ifdef HAVE_VDB_RELEASE_VERSION
+    cout << "after include: HAVE_VDB_RELEASE_VERSION defined\n";
+    cout << "VDB_RELEASE_VERSION = 0x" << hex << VDB_RELEASE_VERSION << "\n";
+#else
+    cout << "after include: HAVE_VDB_RELEASE_VERSION not defined\n";
+#endif
+#ifdef HAVE_VFSManagerLogNamesServiceErrors
+    cout << "after include: HAVE_VFSManagerLogNamesServiceErrors defined\n";
+#else
+    cout << "after include: HAVE_VFSManagerLogNamesServiceErrors not defined\n";
+#endif
+}
+#endif
 
 //////////////////////////////////////////////////// Main
 extern "C" {

@@ -56,7 +56,6 @@
 #include <klib/log.h>
 #include <sysalloc.h>
 
-#include "../kdb/kdb-priv.h" /* KDBManagerCheckAd */
 #include "../vfs/path-priv.h"     /* VPath */
 #include "../vfs/resolver-priv.h" /* rcResolver */
 
@@ -590,7 +589,7 @@ LIB_EXPORT rc_t CC VDBManagerOpenDBReadVPath ( const VDBManager *self,
                         const VPath * orig = aOrig;
                         bool is_accession;
 
-                        KDBManagerCheckAd(self->kmgr, aOrig, &orig);
+                        VFSManagerCheckEnvAndAd(vfs, aOrig, &orig);
 
                         /* check whether we were given a path or accession */
                         is_accession = VPathIsAccessionOrOID ( orig );

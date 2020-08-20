@@ -41,7 +41,9 @@ struct KSrvRespObj;
 struct Node;
 struct Status;
 struct String;
+struct VFSManager;
 struct VPath;
+struct VPathSet;
 
 typedef struct Container Container;
 typedef struct Item Item;
@@ -86,20 +88,24 @@ typedef struct Data {
     const char * vsblt;
 } Data;
 
-rc_t Response4MakeEmpty  (       Response4 ** self, bool logNamesServiceErrors);
+rc_t Response4MakeEmpty  (       Response4 ** self, bool logNamesServiceErrors,
+                                                            int64_t projectId );
 rc_t Response4Make4      (       Response4 ** self, const char * input );
 rc_t Response4MakeSdl    (       Response4 ** self, const char * input,
-                                                   bool logNamesServiceErrors );
+                                bool logNamesServiceErrors, int64_t projectId );
 rc_t Response4AddRef     ( const Response4  * self );
 rc_t Response4Release    ( const Response4  * self );
 rc_t Response4AppendUrl  (       Response4  * self, const char * url );
+rc_t Response4AppendLocalAndCache(Response4  * self,const char * acc,
+                   const struct VPathSet * vps, const struct VFSManager * mgr );
 rc_t Response4AddAccOrId (       Response4 * self, const char * acc,
                                  int64_t id, Container ** newItem );
 rc_t Response4SetNextToken(Response4 * self, const char * nextToken);
 rc_t Response4GetNextToken(const Response4 * self, const char ** nextToken);
 rc_t Response4StatusInit(Response4 * self, int64_t code, const char * msg,
     bool error);
-rc_t Response4GetRc      ( const Response4 * self, rc_t * rc );
+rc_t Response4GetRc(const Response4 * self, rc_t * rc);
+int64_t Response4GetProjectId(const Response4 * self);
 rc_t ContainerStatusInit(Container * self, int64_t code, const char * msg);
 bool ContainerIs200AndEmpty(const Container * self);
 void ContainerProcessStatus(Container * self, const Data * data);

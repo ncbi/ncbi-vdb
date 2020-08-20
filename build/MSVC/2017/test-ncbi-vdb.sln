@@ -156,7 +156,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-kns_connect", "test-kn
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-kns_refresh-expired", "test-kns_refresh-expired.vcxproj", "{E0248BFA-274D-4271-94FC-EE67335E6CEE}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-vfs_redirect-rejected-names-cgi-http-to-https", "test-vfs_redirect-rejected-names-cgi-http-to-https.vcxproj", "{312B160B-F2B3-4FE9-BDED-7DE81D180F7D}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-vfs_redirect", "test-vfs_redirect.vcxproj", "{312B160B-F2B3-4FE9-BDED-7DE81D180F7D}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-vfs_resolver-with-log", "test-vfs_resolver-with-log.vcxproj", "{A3800D12-978F-44E2-BD28-4F222F884413}"
 EndProject

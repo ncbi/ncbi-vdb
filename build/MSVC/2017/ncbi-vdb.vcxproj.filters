@@ -1453,6 +1453,7 @@
     <ClCompile Include="..\..\..\libs\cloud\cloud-mgr.c" />
     <ClCompile Include="..\..\..\libs\cloud\cloud.c" />
     <ClCompile Include="..\..\..\libs\cloud\gcp.c" />
+    <ClCompile Include="..\..\..\libs\cloud\gcp-authentication.c" />
     <ClCompile Include="..\..\..\libs\ext\mbedtls\aria.c" />
     <ClCompile Include="..\..\..\libs\ext\mbedtls\chacha20.c" />
     <ClCompile Include="..\..\..\libs\ext\mbedtls\chachapoly.c" />

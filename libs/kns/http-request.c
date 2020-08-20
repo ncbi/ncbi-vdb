@@ -1171,7 +1171,7 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
         }
         else {
             String google;
-            CONST_STRING(&google, "storage.googleapis.com");
+            CONST_STRING(&google, "storage.cloud.google.com");
             skip = 0;
             if (hostname->size >= google.size &&
                 string_cmp(google.addr, google.size,
@@ -1179,6 +1179,16 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
                     google.size) == 0)
             {
                 cpId = cloud_provider_gcp;
+            }
+            else {
+                CONST_STRING(&google, "storage.googleapis.com");
+                if (hostname->size >= google.size &&
+                    string_cmp(google.addr, google.size,
+                        hostname->addr + skip, hostname->size - skip,
+                        google.size) == 0)
+                {
+                    cpId = cloud_provider_gcp;
+                }
             }
         }
     }
@@ -1207,9 +1217,8 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
             if (rc == 0) {
                 if (cself->payRequired)
                     rc = CloudAddUserPaysCredentials(cloud, self, method);
-                else if (cself->ceRequired)
-                    rc = CloudAddComputeEnvironmentTokenForSigner(
-                        cloud, self);
+                if (cself->ceRequired)
+                    rc = CloudAddComputeEnvironmentTokenForSigner(cloud, self);
                 CloudRelease ( cloud );
             }
         }
@@ -1232,9 +1241,11 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
     bool have_accept = false;
     bool have_user_agent = false;
     bool have_sra_release = false;
+    bool have_vdb_release = false;
 
     String accept_string;
     String sra_release_string;
+    String vdb_release_string;
     String user_agent_string;
 
     const KHttpHeader *node;
@@ -1248,6 +1259,7 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
 
     CONST_STRING ( &accept_string     , "Accept" );        /*  6 */
     CONST_STRING ( &sra_release_string, "X-SRA-Release" ); /* 13 */
+    CONST_STRING ( &vdb_release_string, "X-VDB-Release" ); /* 13 */
     CONST_STRING ( &user_agent_string , "User-Agent" );    /* 10 */
 
     assert(method);
@@ -1285,6 +1297,11 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
             if (StringCaseCompare(&node->name, &sra_release_string) == 0)
                 have_sra_release = true;
         }
+        /* look for "X-VDB-Release" */
+        else if (!have_vdb_release && node->name.len == 13) {
+            if (StringCaseCompare(&node->name, &vdb_release_string) == 0)
+                have_vdb_release = true;
+        }
 
         /* add header line */
         rc = KDataBufferPrintf ( buffer, "%S: %S\r\n"
@@ -1292,7 +1309,7 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
                                 , & node -> value );
     }
 
-    /* add an Accept header if we did not find one already in the header tree */
+  /* add an Accept header if we did not find one already in the header tree */
     if (!have_accept) {
         r2 = KDataBufferPrintf(buffer, "Accept: */*\r\n");
         if (rc == 0 && r2 != 0)
@@ -1306,6 +1323,19 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
         r2 = SraReleaseVersionGet(&version);
         if (r2 == 0) {
             r2 = KDataBufferPrintf(buffer, "X-SRA-Release: %V\r\n",
+                version.version);
+        }
+        if (rc == 0 && r2 != 0)
+            rc = r2;
+    }
+
+    /* add a X-VDB-Release header if we did not find one
+       already in the header tree */
+    if (!have_vdb_release) {
+        SraReleaseVersion version;
+        r2 = SraReleaseVersionGet(&version);
+        if (r2 == 0) {
+            r2 = KDataBufferPrintf(buffer, "X-VDB-Release: %V\r\n",
                 version.version);
         }
         if (rc == 0 && r2 != 0)

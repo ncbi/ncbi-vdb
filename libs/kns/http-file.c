@@ -199,7 +199,6 @@ rc_t KHttpFileMakeRequest ( const KHttpFile *cself, uint64_t pos, size_t req_siz
                 KClientHttpRequestSetCloudParams(req, cself -> need_env_token, cself -> payRequired);
                 if ( cself -> need_env_token && ! cself -> url_is_temporary)
                 {
-                    KClientHttpRequestSetCloudParams(req, true, cself -> payRequired);
                     KClientHttpRequestAttachEnvironmentToken ( req );
                     /* TBD - there should be a version of POST that takes a timeout */
                     rc = KClientHttpRequestPOST ( req, rslt );
@@ -849,9 +848,16 @@ rc_t CC KHttpFileRead ( const KHttpFile *self, uint64_t pos,
      void *buffer, size_t bsize, size_t *num_read )
 {
     struct timeout_t tm;
-    TimeoutInit ( & tm, self -> kns -> http_read_timeout );
+    timeout_t * ptm = NULL;
 
-    return KHttpFileTimedRead ( self, pos, buffer, bsize, num_read, & tm );
+    assert(self && self->kns);
+
+    if (self -> kns -> http_read_timeout >= 0) {
+        TimeoutInit ( & tm, self -> kns -> http_read_timeout );
+        ptm = &tm;
+    }
+
+    return KHttpFileTimedRead ( self, pos, buffer, bsize, num_read, ptm );
 }
 
 static
@@ -1216,9 +1222,17 @@ rc_t CC KHttpFileReadChunked ( const KHttpFile * self, uint64_t pos,
     KChunkReader * chunks, size_t bytes, size_t * num_read )
 {
     struct timeout_t tm;
-    TimeoutInit ( & tm, self -> kns -> http_read_timeout );
+    timeout_t * ptm = NULL;
 
-    return KHttpFileTimedReadChunked ( self, pos, chunks, bytes, num_read, & tm );
+    assert(self && self->kns);
+
+    if (self -> kns -> http_read_timeout >= 0) {
+        TimeoutInit ( & tm, self -> kns -> http_read_timeout );
+        ptm = &tm;
+    }
+
+    return KHttpFileTimedReadChunked ( self, pos, chunks, bytes, num_read,
+        ptm );
 }
 #endif /* SUPPORT_CHUNKED_READ */
 
@@ -1269,11 +1283,12 @@ rc_t KHttpFileMake( KHttpFile ** self,
                 rc = KDataBufferMake( buf, 8, 0 );
                 if ( rc == 0 )
                 {
-                  if (aBuf != NULL)
-                    rc = KDataBufferPrintf(buf,
+                    if (aBuf != NULL)
+                        rc = KDataBufferPrintf(buf,
                           "%.*s", aBuf->elem_count, aBuf->base);
-                  else
-                    rc = KDataBufferVPrintf ( buf, url, args );
+                    else
+                        rc = KDataBufferVPrintf ( buf, url, args );
+
                     if ( rc == 0 )
                     {
                         rc = ParseUrl ( & f -> block, buf -> base, buf -> elem_count - 1 );
@@ -1290,6 +1305,7 @@ rc_t KHttpFileMake( KHttpFile ** self,
         }
         free ( f );
     }
+
     return rc;
 }
 
@@ -1329,11 +1345,11 @@ static rc_t KNSManagerVMakeHttpFileIntUnstableImpl( const KNSManager *self,
                     {
                         KClientHttpResult *rslt;
 
+                        KClientHttpRequestSetCloudParams ( req, need_env_token, payRequired );
                         if ( need_env_token )
                         {
                             KClientHttpRequestAttachEnvironmentToken ( req );
                         }
-                        KClientHttpRequestSetCloudParams ( req, need_env_token, payRequired );
 
                         rc = KClientHttpRequestHEAD ( req, & rslt );
                         if ( rc == 0 && rslt -> expiration != NULL )
@@ -1417,6 +1433,14 @@ static rc_t KNSManagerVMakeHttpFileIntUnstableImpl( const KNSManager *self,
                                         f -> no_cache = size >= NO_CACHE_LIMIT;
                                         f -> need_env_token = need_env_token;
                                         f -> payRequired = payRequired;
+
+                               /* readWaitMillis and totalReadWaitMillis
+                                  ARE NEEDED BY
+                                  stable-http-file.c : HttpFileGetReadTimeouts()
+                                */
+                                        f -> totalReadWaitMillis =
+                                            f -> readWaitMillis
+                                            = self -> http_read_timeout;
 
                                         * file = & f -> dad;
                                         return 0;
@@ -1506,4 +1530,8 @@ rc_t KNSManagerVMakeHttpFileIntUnstable(const KNSManager *self,
 {
     return KNSManagerVMakeHttpFileIntUnstableImpl(self, file, conn, vers,
         reliable, need_env_token, payRequired, NULL, url, args);
+}
+
+bool KUnstableFileIsKHttpFile(const KFile * self) {
+    return self != NULL && &self->vt->v1 == &vtKHttpFile;
 }
