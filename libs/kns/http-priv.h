@@ -74,6 +74,11 @@
 #define MAX_HTTP_TOTAL_READ_LIMIT ( 10 * 60 * 1000 ) /* 10 minutes */
 #endif
 
+/* timeout on Http Connect loop */
+#ifndef MAX_HTTP_TOTAL_CONNECT_LIMIT
+#define MAX_HTTP_TOTAL_CONNECT_LIMIT ( 10 * 60 * 1000 ) /* 10 minutes */
+#endif
+
 
 #ifdef __cplusplus
 extern "C" {
