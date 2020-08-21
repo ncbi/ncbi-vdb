@@ -564,7 +564,7 @@ FIXTURE_TEST_CASE(HttpReliable_Make_500_Fail, RetrierFixture)
 {
     Configure ( GetName(), "http/reliable/500=\"\"\n"); // do not retry 500
     TestStream::AddResponse("HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n");
-    REQUIRE_RC_FAIL ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, true, false, false, MakeURL(GetName()).c_str() ) );
+    REQUIRE_RC_FAIL ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, false, false, false, MakeURL(GetName()).c_str() ) );
 }
 
 FIXTURE_TEST_CASE(HttpReliable_Make_500_Retry, RetrierFixture)
@@ -581,7 +581,7 @@ FIXTURE_TEST_CASE(HttpReliable_Make_500_TooManyRetries, RetrierFixture)
     Configure ( GetName(), "http/reliable/500=\"0\"\n" "http/reliable/5xx=\"\"\n"); // do not retry 5xx, retry 500 once
     TestStream::AddResponse("HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n");
     TestStream::AddResponse("HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n");
-    REQUIRE_RC_FAIL ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, true, false, false, MakeURL(GetName()).c_str() ) );
+    REQUIRE_RC_FAIL ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, false, false, false, MakeURL(GetName()).c_str() ) );
 }
 
 #ifdef _DEBUGGING
@@ -879,6 +879,112 @@ FIXTURE_TEST_CASE(GET_WITHOUT_CONTENT_LENGHT, HttpFixture) {
     REQUIRE_EQ((uint64_t)num_read, size);
 
     delete[](buffer);
+}
+#endif
+
+#ifdef ALL // this test exersizes functions related to HttpFile connect loop
+FIXTURE_TEST_CASE(CONNECT_LOOP, HttpFixture) {
+    const char * url("http://www.nlm.nih.gov");
+    ver_t vers(0x01010000);
+    char buffer[9] = "";
+    size_t num_read = 0;
+    bool retry = false;
+    int32_t connect = 0;
+    int32_t read = 0;
+
+    /********************** have retry loops by default  **********************/
+    // have retry loop for connect
+    REQUIRE_RC(KNSManagerGetRetryFailedReads(m_mgr, &retry));
+    REQUIRE(retry);
+    REQUIRE_RC(KNSManagerMakeReliableHttpFile(m_mgr, (const KFile**)&m_file,
+        NULL, vers, true, false, false, url));
+    // have retry loop for read
+    REQUIRE_RC(KFileRead(m_file, 0, buffer, sizeof buffer, &num_read));
+    REQUIRE_RC(KFileRelease(m_file)); m_file = NULL;
+
+    /********************** don't have any retry loops ************************/
+    // turn off retry loops
+    REQUIRE_RC(KNSManagerSetRetryFailedReads(m_mgr, false));
+    REQUIRE_RC(KNSManagerGetRetryFailedReads(m_mgr, &retry));
+    REQUIRE(!retry);
+    // don't have retry loop for connect
+    REQUIRE_RC(KNSManagerMakeReliableHttpFile(m_mgr, (const KFile**)&m_file,
+        NULL, vers, true, false, false, url));
+    // don't have retry loop for read
+    REQUIRE_RC(KFileRead(m_file, 0, buffer, sizeof buffer, &num_read));
+    REQUIRE_RC(KFileRelease(m_file)); m_file = NULL;
+
+    /********************** turn on retry loops again *************************/
+    // turn on retry loops
+    REQUIRE_RC(KNSManagerSetRetryFailedReads(m_mgr, true));
+    REQUIRE_RC(KNSManagerGetRetryFailedReads(m_mgr, &retry));
+    REQUIRE(retry);
+    // have retry loop for connect
+    REQUIRE_RC(KNSManagerMakeReliableHttpFile(m_mgr, (const KFile**)&m_file,
+        NULL, vers, true, false, false, url));
+    // have retry loop for read
+    REQUIRE_RC(KFileRead(m_file, 0, buffer, sizeof buffer, &num_read));
+    REQUIRE_RC(KFileRelease(m_file)); m_file = NULL;
+
+    /********************** default timeouts in loops *************************/
+    REQUIRE_RC(KNSManagerGetMaxConnectRetryTime(m_mgr, &connect));
+    REQUIRE_EQ(connect, MAX_HTTP_TOTAL_CONNECT_LIMIT);
+    REQUIRE_RC(KNSManagerGetMaxReadRetryTime(m_mgr, &read));
+    REQUIRE_EQ(read, MAX_HTTP_TOTAL_READ_LIMIT);
+    // have retry loop for connect
+    REQUIRE_RC(KNSManagerMakeReliableHttpFile(m_mgr, (const KFile**)&m_file,
+        NULL, vers, true, false, false, url));
+    // have retry loop for read
+    REQUIRE_RC(KFileRead(m_file, 0, buffer, sizeof buffer, &num_read));
+    REQUIRE_RC(KFileRelease(m_file)); m_file = NULL;
+
+    /********************** custom timeouts in loops *************************/
+    int32_t newconnect(444444);
+    int32_t newread(555555);
+    REQUIRE_RC(KNSManagerSetMaxConnectRetryTime(m_mgr, newconnect));
+    REQUIRE_RC(KNSManagerSetMaxReadRetryTime(m_mgr, newread));
+    REQUIRE_RC(KNSManagerGetMaxConnectRetryTime(m_mgr, &connect));
+    REQUIRE_EQ(connect, newconnect);
+    REQUIRE_RC(KNSManagerGetMaxReadRetryTime(m_mgr, &read));
+    REQUIRE_EQ(read, newread);
+    // have retry loop for connect
+    REQUIRE_RC(KNSManagerMakeReliableHttpFile(m_mgr, (const KFile**)&m_file,
+        NULL, vers, true, false, false, url));
+    // have retry loop for read
+    REQUIRE_RC(KFileRead(m_file, 0, buffer, sizeof buffer, &num_read));
+    REQUIRE_RC(KFileRelease(m_file)); m_file = NULL;
+
+    /********************** disable retry by setting total timeout to 0 *******/
+    newconnect = 0;
+    newread = 0;
+    REQUIRE_RC(KNSManagerSetMaxConnectRetryTime(m_mgr, newconnect));
+    REQUIRE_RC(KNSManagerSetMaxReadRetryTime(m_mgr, newread));
+    REQUIRE_RC(KNSManagerGetMaxConnectRetryTime(m_mgr, &connect));
+    REQUIRE_EQ(connect, newconnect);
+    REQUIRE_RC(KNSManagerGetMaxReadRetryTime(m_mgr, &read));
+    REQUIRE_EQ(read, newread);
+    // retry loop for connect runs no more than once
+    REQUIRE_RC(KNSManagerMakeReliableHttpFile(m_mgr, (const KFile**)&m_file,
+        NULL, vers, true, false, false, url));
+    // retry loop for read runs no more than once
+    REQUIRE_RC(KFileRead(m_file, 0, buffer, sizeof buffer, &num_read));
+    REQUIRE_RC(KFileRelease(m_file)); m_file = NULL;
+
+    /********************* make retry loop infinite: WILL HANG IF URL IS DOWN */
+    newconnect = -1;
+    newread = -1;
+    REQUIRE_RC(KNSManagerSetMaxConnectRetryTime(m_mgr, newconnect));
+    REQUIRE_RC(KNSManagerSetMaxReadRetryTime(m_mgr, newread));
+    REQUIRE_RC(KNSManagerGetMaxConnectRetryTime(m_mgr, &connect));
+    REQUIRE_EQ(connect, newconnect);
+    REQUIRE_RC(KNSManagerGetMaxReadRetryTime(m_mgr, &read));
+    REQUIRE_EQ(read, newread);
+    // retry loop for connect can be infinite
+    REQUIRE_RC(KNSManagerMakeReliableHttpFile(m_mgr, (const KFile**)&m_file,
+        NULL, vers, true, false, false, url));
+    // retry loop for read can be infinite
+    REQUIRE_RC(KFileRead(m_file, 0, buffer, sizeof buffer, &num_read));
+    REQUIRE_RC(KFileRelease(m_file)); m_file = NULL;
 }
 #endif
 
