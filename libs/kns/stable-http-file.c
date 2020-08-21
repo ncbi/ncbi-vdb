@@ -61,31 +61,78 @@ void RetrierReset(const KStableHttpFile * cself, const char * func)
         self->_state = eRSJustRetry;
         self->_sleepTO = 0;
 
-        if (KStsLevelGet() >= 1)
+        if (KStsLevelGet() > 0)
             PLOGERR(klogErr, (klogErr, 0, "$(f) success", "f=%s", func));
     }
 }
 
+typedef enum {
+    eLogOrNotLog,
+    eNotLog,
+    eLog,
+} EToLog;
+
 /* reopen the underlying file */
 static
-rc_t RetrierReopenRemote(KStableHttpFile * self)
+rc_t RetrierReopenRemote(KStableHttpFile * self, bool neverBefore)
 {
     rc_t rc = 0;
 
     uint32_t timeout = 1;
 
+    KTime_t started = KTimeStamp();
+    bool first = true;
+    int i = 1;
+
+    static EToLog toLog = eLogOrNotLog;
+    if (toLog == eLogOrNotLog) {
+        toLog = eNotLog;
+        const char * e = getenv("NCBI_VDB_LOG_HTTP_RETRY");
+        if (e != NULL && e[0] == '1')
+            toLog = eLog;
+    }
+
     KFileRelease(self->file);
     self->file = NULL;
 
-    while (timeout < 10 * 60 /* 10 minutes */) {
+    while ( first 
+        || ( self->totalConnectWaitMillis < 0 )
+        || ( KTimeStamp() - started
+            < self->totalConnectWaitMillis / 1000 ) )
+    {
         rc = KNSManagerVMakeHttpFileIntUnstableFromBuffer(self->mgr,
             &self->file, self->conn, self->vers, self->reliable,
             self->need_env_token, self->payRequired, self->url, &self->buf);
-        if (rc == 0)
+        if (rc == 0) {
+            if (neverBefore && !first && toLog == eLog)
+                PLOGERR(klogErr, (klogErr, rc,
+                    "OpenRemoteFile success: attempt $(n)", "n=%d", i));
             break;
+        }
+        else if (neverBefore) {
+            if (!self->reliable)
+                break;
+            else {
+                if (GetRCObject(rc) ==                 rcConnection ||
+                    GetRCObject(rc) == (enum RCObject)(rcTimeout))
+                {
+                    if (toLog == eLog)
+                        PLOGERR(klogErr, (klogErr, rc, "Cannot OpenRemoteFile: "
+                            "retrying $(n)...", "n=%d", i));
+                }
+                else {
+                    if (toLog == eLog)
+                        LOGERR(klogErr, rc, "Cannot OpenRemoteFile");
+                    break;
+                }
+            }
+        }
 
+        first = false;
         KSleep(timeout);
-        timeout *= 2;
+        ++timeout;
+        if (neverBefore)
+            ++i;
     }
 
     return rc;
@@ -95,15 +142,7 @@ rc_t RetrierReopenRemote(KStableHttpFile * self)
 static
 bool RetrierIncSleepTO(KStableHttpFile * self)
 {
-    if (self->_sleepTO == 0)
-        self->_sleepTO = 1;
-    else
-        self->_sleepTO *= 2;
-
-    if (self->_sleepTO == 16)
-        self->_sleepTO = 15;
-
-    if (self->_sleepTO > 20 * 60 /* 20 minutes */)
+    if (++self->_sleepTO > 20 * 60 /* 20 minutes */)
         return false;
     else
         return true;
@@ -197,7 +236,7 @@ rc_t RetrierAgain(const KStableHttpFile * cself,
         case eRSJustRetry:
             break;
         case eRSReopen:
-            if (RetrierReopenRemote(self) != 0)
+            if (RetrierReopenRemote(self, false) != 0)
                 retry = false;
             break;
         case eRSIncTO:
@@ -514,6 +553,12 @@ rc_t KHttpFileMake(KStableHttpFile ** self,
     return rc;
 }
 
+enum {
+    eUninitialized,
+    eNotSet,
+    eUnreliable,
+    eReliable,
+};
 
 /********************************* constructor ********************************/
 
@@ -532,6 +577,8 @@ rc_t KNSManagerVMakeHttpFileInt(const KNSManager *self,
     if (file == NULL)
         rc = RC(rcNS, rcFile, rcConstructing, rcParam, rcNull);
     else {
+        *file = NULL;
+
         if (self == NULL)
             rc = RC(rcNS, rcFile, rcConstructing, rcParam, rcNull);
         else if (url == NULL)
@@ -543,38 +590,56 @@ rc_t KNSManagerVMakeHttpFileInt(const KNSManager *self,
             rc = KHttpFileMake(&f, url, args);
 
             if (rc == 0) {
-                rc = KNSManagerVMakeHttpFileIntUnstableFromBuffer(self,
-                    &f->file, conn, vers, reliable, need_env_token, payRequired,
-                    url, &f->buf);
+                rc = KNSManagerAddRef(self);
+                if (rc == 0)
+                    f->mgr = self;
 
+                if (rc == 0)
+                    rc = KStreamAddRef(conn);
                 if (rc == 0) {
-                    rc = KNSManagerAddRef(self);
-
-                    if (rc == 0) {
-                        f->mgr = self;
-
-                        rc = KStreamAddRef(conn);
-                        if (rc == 0) {
-                            f->conn = conn;
-
-                            f->vers = vers;
-                            f->reliable = reliable;
-                            f->need_env_token = need_env_token;
-                            f->payRequired = payRequired;
-                            f->url = string_dup_measure(url, NULL);
-
-                            f->quitting = KNSManagerGetQuitting(self);
-
-                            /* readWaitMillis and totalReadWaitMillis
-                               ARE NEEDED BY HttpFileGetReadTimeouts() */
-                            f->totalReadWaitMillis
-                                = CalculateTotalReadWait(f, &f->readWaitMillis);
-
-                            *file = &f->dad;
-                        }
+                    static int sReliable = eUninitialized;
+                    if (sReliable == eUninitialized) {
+                        const char * e = getenv("NCBI_VDB_RELIABLE");
+                        if (e == NULL)
+                            sReliable = eNotSet;
+                        else if (e[0] == '\0')
+                            sReliable = eUnreliable;
+                        else
+                            sReliable = eReliable;
                     }
+                    if (sReliable == eUnreliable)
+                        reliable = false;
+                    else if (sReliable == eReliable)
+                        reliable = true;
+
+                    f->conn = conn;
+
+                    f->vers = vers;
+                    f->reliable = reliable;
+                    f->need_env_token = need_env_token;
+                    f->payRequired = payRequired;
+                    f->url = string_dup_measure(url, NULL);
+
+                    f->quitting = KNSManagerGetQuitting(self);
+
+                    /* readWaitMillis and totalReadWaitMillis
+                       ARE NEEDED BY HttpFileGetReadTimeouts() */
+                    f->totalReadWaitMillis
+                        = CalculateTotalReadWait(f, &f->readWaitMillis);
+
+                    f->totalConnectWaitMillis 
+                        = self->maxTotalConnectWaitForReliableURLs_ms;
                 }
             }
+
+            if (rc == 0) {
+                rc = RetrierReopenRemote(f, true);
+                if (rc == 0)
+                    *file = &f->dad;
+            }
+
+            if (rc != 0)
+                KStblHttpFileDestroy(f);
         }
     }
 
