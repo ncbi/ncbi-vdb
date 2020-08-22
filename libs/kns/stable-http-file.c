@@ -72,6 +72,8 @@ typedef enum {
     eLog,
 } EToLog;
 
+#define ENV_VAR_LOG_HTTP_RETRY "NCBI_VDB_LOG_HTTP_RETRY"
+
 /* reopen the underlying file */
 static
 rc_t RetrierReopenRemote(KStableHttpFile * self, bool neverBefore)
@@ -87,8 +89,8 @@ rc_t RetrierReopenRemote(KStableHttpFile * self, bool neverBefore)
     static EToLog toLog = eLogOrNotLog;
     if (toLog == eLogOrNotLog) {
         toLog = eNotLog;
-        const char * e = getenv("NCBI_VDB_LOG_HTTP_RETRY");
-        if (e != NULL && e[0] == '1')
+        const char * e = getenv(ENV_VAR_LOG_HTTP_RETRY);
+        if ((e != NULL) && (e[0] == '1' || (e[0] == '2')))
             toLog = eLog;
     }
 
@@ -255,7 +257,17 @@ rc_t RetrierAgain(const KStableHttpFile * cself,
 
     if (retry) {
         KStsLevel lvl = KStsLevelGet();
-        if (lvl > 0) {
+        bool toLog = lvl > 0;
+        static EToLog sToLog = eLogOrNotLog;
+        if (sToLog == eLogOrNotLog) {
+            sToLog = eNotLog;
+            const char * e = getenv(ENV_VAR_LOG_HTTP_RETRY);
+            if (e != NULL && e[0] == '2')
+                sToLog = eLog;
+        }
+        if (sToLog == eLog)
+            toLog = true;
+        if (toLog) {
             switch (self->_state) {
             case eRSJustRetry:
                 if (self->live)
