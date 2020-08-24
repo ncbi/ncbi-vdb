@@ -24,66 +24,64 @@
  *
  */
 
-extern "C" {
-#include <klib/defs.h>
-#include <klib/rc.h>
-#include <vdb/manager.h>
-#include <vdb/database.h>
-#include <vdb/table.h>
-#include <vdb/vdb-priv.h>
-#include <klib/text.h>
-#include <kdb/kdb-priv.h> /* KDBManagerGetVFSManager */
-#include <kdb/manager.h>
-#include <kdb/meta.h>
-#include <vfs/manager.h> /* VFSManagerRelease */
-#include <vfs/path-priv.h> /* VPathSetAccOfParentDb */
-}
+#include <string>
+#include <cstdint>
 
 struct WGS {
 private:
-    VPath const *url;
-    VTable const *tbl;
+    using ReadResult = struct { uint8_t const *string; unsigned length; };
+
+    struct VPath const *url;
+    struct VCursor const *curs;
+    uint32_t colID;
+    uint64_t lastAccessStamp;
+
+    void stamp();
+
+    void openCursor(struct VDatabase const *db);
+    ReadResult read(int64_t row) const;
+
 public:
-    WGS(VPath const *url, VTable const *tbl)
+    friend bool operator <(WGS const &a, WGS const &b) {
+        return a.lastAccessStamp < b.lastAccessStamp;
+    }
+
+    static bool isScheme(std::string const &scheme) {
+        return scheme == std::string("NCBI:WGS:db:contig");
+    }
+
+    WGS(VPath const *url, struct VDatabase const *db)
     : url(url)
-    , tbl(tbl)
-    {}
-
-    ~WGS() {
-        VPathRelease(url);
-        VTableRelease(tbl);
-    }
-
-    bool is_open() const { return tbl != NULL; }
-
-    void close() {
-        VTableRelease(tbl);
-        tbl = NULL;
-    }
-
-    rc_t reopen(VDBManager const *mgr, std::string const &seq_id)
+    , curs(NULL)
     {
-        VDatabase const *db = NULL;
-        rc_t rc = 0;
-
-        if (url)
-            rc = VDBManagerOpenDBReadVPath(mgr, &db, NULL, url);
-        else
-            rc = VDBManagerOpenDBRead(mgr, &db, NULL, "%s", seq_id.c_str());
-
-        if (rc) return rc;
-
-        rc = VDatabaseOpenTableRead(db, &tbl, "SEQUENCE");
-        VDatabaseRelease(db);
-
-        return rc;
+        stamp();
+        openCursor(db);
     }
 
-    unsigned getBases(uint8_t *const dst, unsigned const start, unsigned const len, int64_t const row) const
+    ~WGS();
+
+    bool is_open() const { return curs != NULL; }
+
+    void close();
+    void reopen(struct VDBManager const *mgr, std::string const &seq_id);
+
+    unsigned getBases(uint8_t *const dst, unsigned const start, unsigned const len, int64_t const row)
     {
+        stamp();
+
+        try {
+            auto const value = read(row);
+            if (start < value.length) {
+                auto const n = std::min(len, value.length - start);
+                memmove(dst, value.string + start, n);
+                return n;
+            }
+        }
+        catch (...) {}
         return 0;
     }
-    static std::pair<std::string, int64_t> splitName(std::string const &name) {
+    using SplitName = std::pair<std::string, int64_t>;
+    static SplitName splitName(std::string const &name) {
         auto accession = std::string();
         int64_t row = 0;
         unsigned digits = 0;

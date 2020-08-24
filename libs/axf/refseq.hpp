@@ -26,61 +26,59 @@
 
 #include "range-list.hpp"
 #include <vector>
+#include <string>
 
 struct RefSeq {
 private:
     using Bases = std::vector<uint8_t>;
 
-    RangeList Ns;
     Bases bases;
+    RangeList Ns;
     unsigned length; ///< this may be slightly less than bases.size() * (circular ? 2 : 4)
     bool circular;
 
-    RefSeq(RangeList && Ns, Bases && bases, unsigned length)
-    : Ns(Ns)
-    , bases(bases)
+    RefSeq(Bases && bases, unsigned const length, bool const circular, RangeList && Ns)
+    : bases(bases)
+    , Ns(Ns)
     , length(length)
-    , circular(false)
+    , circular(circular)
     {
-        assert(bases.size() == (length + 3) / 4);
-        if (!Ns.empty()) {
-            assert(Range(0, length).contains(Ns.fullRange()));
+        if (circular) {
+            assert(bases.size() == (length + 1) / 2);
+        }
+        else {
+            assert(bases.size() == (length + 3) / 4);
+            if (!Ns.empty()) {
+                assert(Range(0, length).contains(Ns.fullRange()));
+            }
         }
     }
 
-    RefSeq(Bases && bases, unsigned length)
-    : bases(bases)
-    , length(length)
-    , circular(true)
-    {
-        assert(bases.size() == (length + 1) / 2);
-    }
-
-    void fillNs(char *const dst, Range const &activeRange) const {
+    void fillNs(uint8_t *const dst, Range const &activeRange) const {
         for (auto && range : Ns.intersecting(activeRange)) {
             auto const sub = range.intersectedWith(activeRange).offsetFrom(activeRange);
-            memset(dst + sub.start, 'N', sub.size());
+            memset(dst + sub.start, 15, sub.size());
         }
     }
 
-    void unpack_2na(char dst[4], unsigned const position) const {
+    // packed 2na to unpacked 4na
+    void unpack_2na(uint8_t dst[4], unsigned const position) const {
         auto const packed = bases[position / 4];
         auto const b2na_1 = packed >> 6;
         auto const b2na_2 = (packed >> 4) & 0x03;
         auto const b2na_3 = (packed >> 2) & 0x03;
         auto const b2na_4 = packed & 0x03;
-        static auto const ACGT = "ACGT";
 
-        dst[0] = ACGT[b2na_1];
-        dst[1] = ACGT[b2na_2];
-        dst[2] = ACGT[b2na_3];
-        dst[3] = ACGT[b2na_4];
+        dst[0] = 1 << b2na_1;
+        dst[1] = 1 << b2na_2;
+        dst[2] = 1 << b2na_3;
+        dst[3] = 1 << b2na_4;
     }
 
-    unsigned partial_unpack_2na(char *const dst, unsigned const offset, unsigned const limit, unsigned const pos) const
+    unsigned partial_unpack_2na(uint8_t *const dst, unsigned const offset, unsigned const limit, unsigned const pos) const
     {
         auto const j = pos % 4;
-        char temp[4];
+        uint8_t temp[4];
         unsigned n;
 
         unpack_2na(temp, pos);
@@ -90,7 +88,7 @@ private:
         return n;
     }
 
-    void getBases_2na(char *const dst, unsigned const start, unsigned const len) const
+    void getBases_2na(uint8_t *const dst, unsigned const start, unsigned const len) const
     {
         unsigned pos = start;
         unsigned i = 0;
@@ -111,42 +109,44 @@ private:
         assert(i == len);
         assert(start + len == pos);
 
+        // 2na will have 'A's in place of 'N's, put the 'N's back
         fillNs(dst, Range(start, start + len));
     }
 
-    unsigned getBases_4na(char *const dst, unsigned const start, unsigned const len) const
+    unsigned getBases_4na(uint8_t *const dst, unsigned const start, unsigned const len) const
     {
-                              //  0123456789ABCDEF
-        static char const tr[] = "NACNGNNNTNNNNNNN";
         unsigned i = 0;
         unsigned j = start % length;
 
         if (j % 2 == 1 && i < len) {
             auto const b4na_2 = bases[j >> 1];
             auto const b4na2 = b4na_2 & 0x0F;
-            dst[i++] = tr[b4na2];
+            dst[i++] = b4na2;
             j = (j + 1) % length;
         }
         while ((i + 2) <= len) {
             auto const b4na_2 = bases[j >> 1];
             auto const b4na1 = b4na_2 >> 4;
             auto const b4na2 = b4na_2 & 0x0F;
-            dst[i++] = tr[b4na1];
-            dst[i++] = tr[b4na2];
+            dst[i++] = b4na1;
+            dst[i++] = b4na2;
             j = (j + 2) % length;
         }
         if (i < len) {
             auto const b4na_2 = bases[j >> 1];
             auto const b4na1 = b4na_2 >> 4;
             auto const b4na2 = b4na_2 & 0x0F;
-            dst[i++] = tr[(j % 2) == 0 ? b4na1 : b4na2];
+            dst[i++] = (j % 2) == 0 ? b4na1 : b4na2;
         }
         assert(i == len);
         return i;
     }
 
 public:
-    unsigned getBases(char *const dst, unsigned const start, unsigned const len) const
+    static bool isScheme(std::string const &scheme) {
+        return scheme == std::string("NCBI:refseq:tbl:reference");
+    }
+    unsigned getBases(uint8_t *const dst, unsigned const start, unsigned const len) const
     {
         if (!circular) {
             auto const actlen = (start + len) < length ? len : start < length ? length - start : 0;

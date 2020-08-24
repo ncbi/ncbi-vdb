@@ -24,22 +24,20 @@
  *
  */
 
+#include <vdb/database.h>
 #include <vdb/table.h>
 #include <vdb/cursor.h>
-#include <vdb/column.h>
 #include <vfs/path.h>
 #include "refseq.hpp"
 #include <cctype>
+#include <memory>
 
-static VCursor createCursor(VTable const *const tbl, rc_t *const rcp)
+static inline VCursor const *createCursor(VTable const *const tbl)
 {
     VCursor const *curs = NULL;
     rc_t const rc = VTableCreateCachedCursorRead(tbl, &curs, 0);
-    if (rcp) *rcp = rc;
-    if (rc == 0)
-        return curs;
-    VCursorRelease(curs);
-    return NULL;
+    if (rc) throw rc;
+    return curs;
 }
 
 struct CursorAddResult {
@@ -47,138 +45,184 @@ struct CursorAddResult {
     uint32_t colID;
 };
 
-CursorAddResult addColumn(VCursor const *curs, char const *name, rc_t *const rcp)
+static inline CursorAddResult addColumn(char const *name, VCursor const *curs)
 {
     uint32_t index = 0;
-    rc_t rc = VCursorAddColumn(curs, &index, "%s", name);
-    if (rcp) *rcp = rc;
+    rc_t const rc = VCursorAddColumn(curs, &index, name);
+    if (rc) throw rc;
     return { name, index };
 }
 
-static RefSeq RefSeq::load(VPath const *const url, VTable const *const tbl)
+struct RowRange {
+    int64_t first;
+    uint64_t count;
+};
+
+static inline RowRange getRowRange(VCursor const *curs)
 {
-    CursorAddResult cols[3];
-    void const *data = NULL;
-    rc_t rc = 0;
-    auto const curs = createCursor(tbl, &rc);
-    if (rc) throw rc;
-
-    VTableRelease(tbl);
-    VPathRelease(url);
-
-    cols[0] = addColumn(curs, "CIRCULAR", &rc);
-    if (rc) throw rc;
-
-    cols[1] = addColumn(curs, "(I32)SEQ_LEN", &rc);
-    if (rc) throw rc;
-
-    cols[2] = addColumn(curs, "(INSDC:dna:text)READ", &rc);
-    if (rc) throw rc;
-
-    rc = VCursorOpen(curs);
-    if (rc) throw rc;
-
     int64_t first = 0;
     uint64_t count = 0;
-    rc = VCursorIdRange(curs, 0, &first, &count);
+    rc_t const rc = VCursorIdRange(curs, 0, &first, &count);
     if (rc) throw rc;
+    return { first, count };
+}
 
-    rc = VCursorCellDataDirect(curs, first, cols[0].colID, NULL, &data, NULL, NULL);
+using ReadResult = struct { void const *data; uint32_t count; uint32_t bits; uint32_t offset; };
+static inline ReadResult read(CursorAddResult const &colInfo, int64_t const row, VCursor const *const curs)
+{
+    void const *data = NULL;
+    uint32_t count = 0;
+    uint32_t bits = 0;
+    uint32_t offset = 0;
+    rc_t const rc = VCursorCellDataDirect(curs, row, colInfo.colID, &bits, &data, &offset, &count);
     if (rc) throw rc;
+    return { data, count, bits, offset };
+}
 
-    auto const circular = *reinterpret_cast<bool const *>(data)
+bool inline readBool(CursorAddResult const &colInfo, int64_t const row, VCursor const *const curs)
+{
+    auto const rr = read(colInfo, row, curs);
+    assert(rr.bits == sizeof(bool) * 8);
+    assert(rr.offset == 0);
+    assert(rr.count == 1);
+    return *reinterpret_cast<bool const *>(rr.data);
+}
+
+static inline int32_t readI32(CursorAddResult const &colInfo, int64_t const row, VCursor const *const curs)
+{
+    auto const rr = read(colInfo, row, curs);
+    assert(rr.bits == sizeof(int32_t) * 8);
+    assert(rr.offset == 0);
+    assert(rr.count == 1);
+    return *reinterpret_cast<int32_t const *>(rr.data);
+}
+
+using ReadStringResult = struct {
+    uint8_t const *value; uint32_t length;
+    char operator [](decltype(length) i) const { return i < length ? value[i] : 'N'; }
+};
+static inline ReadStringResult readString(CursorAddResult const &colInfo, int64_t const row, VCursor const *const curs)
+{
+    auto const rr = read(colInfo, row, curs);
+    assert(rr.bits == 8);
+    assert(rr.offset == 0);
+    return { reinterpret_cast<uint8_t const *>(rr.data), rr.count };
+}
+
+class AccumulatorBase {
+protected:
+    unsigned position;
+    int n;
+    int value;
+
+    virtual void accumulate_bin(int const base, std::vector<uint8_t> *bases) = 0;
+    virtual void accumulateN(std::vector<uint8_t> *bases, RangeList *Ns) = 0;
+public:
+    AccumulatorBase() : position(0), n(0), value(0) {}
+    virtual ~AccumulatorBase() {}
+
+    virtual void add(uint8_t const base, std::vector<uint8_t> *bases, RangeList *Ns) = 0;
+    virtual unsigned finish(std::vector<uint8_t> *bases) = 0;
+};
+
+template <int SHIFT, int A_VALUE, int C_VALUE, int G_VALUE, int T_VALUE, bool NRA>
+class Accumulator final : public AccumulatorBase {
+    enum { limit = 8 / SHIFT };
+
+    void accumulate_bin(int const base, std::vector<uint8_t> *bases) override
+    {
+        value = (value << SHIFT) | base;
+        n += 1;
+        if (n == limit) {
+            bases->push_back(value);
+            value = 0;
+            n = 0;
+        }
+        position += 1;
+    }
+    void accumulateN(std::vector<uint8_t> *bases, RangeList *Ns) override
+    {
+        auto const pos = position;
+        accumulate_bin(0, bases);
+        if (NRA) Ns->add(pos);
+    }
+public:
+    void add(uint8_t const base, std::vector<uint8_t> *bases, RangeList *Ns) override
+    {
+        if (SHIFT == 4) {
+            accumulate_bin(base, bases);
+            return;
+        }
+
+        switch (base) {
+        case 1: accumulate_bin(A_VALUE, bases); return;
+        case 2: accumulate_bin(C_VALUE, bases); return;
+        case 4: accumulate_bin(G_VALUE, bases); return;
+        case 8: accumulate_bin(T_VALUE, bases); return;
+        }
+        accumulateN(bases, Ns);
+    }
+
+    unsigned finish(std::vector<uint8_t> *bases) override
+    {
+        if (n > 0) {
+            while (n < limit) {
+                value <<= SHIFT;
+                n += 1;
+            }
+            bases->push_back(value);
+        }
+        return position;
+    }
+};
+
+static inline std::unique_ptr<AccumulatorBase> makeAccumulator(bool circular)
+{
+    using Accumulator_2na = Accumulator<2, 0, 1, 2, 3, true>;
+    using Accumulator_4na = Accumulator<4, 1, 2, 4, 8, false>;
+    auto result = circular ? std::unique_ptr<AccumulatorBase>(new Accumulator_4na())
+                           : std::unique_ptr<AccumulatorBase>(new Accumulator_2na());
+    return result;
+}
+
+RefSeq RefSeq::load(VPath const *const url, VTable const *const tbl)
+{
+    VPathRelease(url);
+
+    CursorAddResult cols[3];
+    rc_t rc = 0;
+    auto const curs = createCursor(tbl);
+
+    cols[0] = addColumn("(BOOL)CIRCULAR", curs);
+    cols[1] = addColumn("(I32)SEQ_LEN", curs);
+    cols[2] = addColumn("(INSDC:4na:bin)READ", curs);
+
+    rc = VCursorOpen(curs);
+    assert(rc == 0);
+
+    VTableRelease(tbl);
+
+    auto const rowRange = getRowRange(curs);
+    auto const circular = readBool(cols[0], rowRange.first, curs);
     RangeList Ns;
     std::vector<uint8_t> bases;
-    unsigned position = 0;
-    int n = 0;
-    int accum = 0;
+    unsigned length = 0;
 
-    auto const &do_2na = [&](int32_t const seqLen, uint32_t const readLen, char const *read)
     {
-        for (auto j = decltype(seqLen)(0); j < seqLen; ++j) {
-            int b2na = 0;
-            int N = 1;
+        auto const accum = makeAccumulator(circular);
 
-            if (j < readLen) {
-                switch (toupper(read[j])) {
-                case 'A': b2na = 0; N = 0; break;
-                case 'C': b2na = 1; N = 0; break;
-                case 'G': b2na = 2; N = 0; break;
-                case 'T': b2na = 3; N = 0; break;
-                }
+        for (auto i = decltype(rowRange.count)(0); i < rowRange.count; ++i) {
+            auto const row = rowRange.first + i;
+            auto const seqLen = readI32(cols[1], row, curs);
+            auto const read = readString(cols[2], row, curs);
+
+            for (auto j = decltype(seqLen)(0); j < seqLen; ++j) {
+                accum->add(read[j], &bases, &Ns);
             }
-            accum = (accum << 2) | b2na;
-            n += 1;
-            if (n == 4) {
-                bases.push_back(accum);
-                accum = 0;
-                n = 0;
-            }
-            if (N) Ns.add(position);
-            position += 1;
         }
-    };
-    auto const &do_4na = [&](int32_t const seqLen, uint32_t const readLen, char const *read)
-    {
-        for (auto j = decltype(seqLen)(0); j < seqLen; ++j) {
-            int b4na = 0;
-
-            if (j < readLen) {
-                switch (toupper(read[j])) {
-                case 'A': b4na = 1; break;
-                case 'C': b4na = 2; break;
-                case 'G': b4na = 4; break;
-                case 'T': b4na = 8; break;
-                }
-            }
-            accum = (accum << 4) | b4na;
-            n += 1;
-            if (n == 2) {
-                bases.push_back(accum);
-                accum = 0;
-                n = 0;
-            }
-            position += 1;
-        }
-    };
-    auto const &do_row = circular ? do_4na : do_2na;
-
-    for (auto i = decltype(count)(0); i < count; ++i) {
-        auto const row = first + i;
-        int32_t seqLen = 0;
-        uint32_t readLen = 0;
-        char const *read = NULL;
-
-        rc = VCursorCellDataDirect(curs, row, cols[1].colID, NULL, &data, NULL, NULL);
-        if (rc) throw rc;
-        seqLen = *reinterpret_cast<int32_t const *>(data);
-
-        rc = VCursorCellDataDirect(curs, row, cols[2].colID, NULL, &data, NULL, &readLen);
-        if (rc) throw rc;
-
-        do_row((seqLen, readLen, reinterpret_cast<char const *>(data)));
+        length = accum->finish(&bases);
     }
-    if (circular) {
-        if (n != 0) {
-            while (n < 2) {
-                accum <<= 4;
-                n += 1;
-            }
-            bases.push_back(accum);
-        }
-    }
-    else {
-        if (n != 0) {
-            while (n < 4) {
-                accum <<= 2;
-                n += 1;
-            }
-            bases.push_back(accum);
-        }
-    }
-
     VCursorRelease(curs);
 
-    return circular ? RefSeq(std::move(bases), position)
-                    : RefSeq(std::move(Ns), std::move(bases), position);
+    return RefSeq(std::move(bases), length, circular, std::move(Ns));
 }
