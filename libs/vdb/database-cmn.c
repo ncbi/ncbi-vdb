@@ -589,7 +589,7 @@ LIB_EXPORT rc_t CC VDBManagerOpenDBReadVPath ( const VDBManager *self,
                         const VPath * orig = aOrig;
                         bool is_accession;
 
-                        VFSManagerCheckAd(vfs, aOrig, &orig);
+                        VFSManagerCheckEnvAndAd(vfs, aOrig, &orig);
 
                         /* check whether we were given a path or accession */
                         is_accession = VPathIsAccessionOrOID ( orig );

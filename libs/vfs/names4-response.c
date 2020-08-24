@@ -1180,7 +1180,7 @@ rc_t Response4AppendUrl ( Response4 * self, const char * url ) {
     Item * item = NULL;
     File * l = NULL;
 
-    rc = VPathMake ( & path, url );
+    rc = VFSManagerMakePath((VFSManager *)1, & path, "%s", url);
     if ( rc != 0 )
         return rc;
 
@@ -1196,6 +1196,50 @@ rc_t Response4AppendUrl ( Response4 * self, const char * url ) {
         rc = FileAddVPath ( l, path, NULL, false, 0 );
 
     RELEASE ( VPath, path );
+
+    return rc;
+}
+
+rc_t Response4AppendLocalAndCache(Response4 * self,
+    const char * acc, const VPathSet * vps, const VFSManager * mgr)
+{
+    rc_t rc = 0, aRc = 0;
+    Container * box = NULL;
+    Item * item = NULL;
+    File * l = NULL;
+
+    const VPath * cache = NULL;
+    const VPath * local = NULL;
+
+    assert(self);
+
+    rc = VPathSetGetLocal(vps, &local);
+    if (rc != 0) {
+        if (!self->dontLogNamesServiceErrors)
+            PLOGERR(klogErr, (klogErr,
+                rc, "failed to resolve accession '$(acc)'", "acc=%s", acc));
+        return rc;
+    }
+
+    aRc = VPathSetGetCache(vps, &cache);
+
+    if (rc == 0)
+        rc = Response4AddAccOrId(self, acc, -1, &box);
+
+    if (rc == 0)
+        rc = ContainerAdd(box, acc, -1, &item, NULL);
+
+    if (rc == 0)
+        rc = ItemAddFormat(item, "", NULL, &l, true);
+
+    if (rc == 0)
+        rc = FileAddLocal(l, local, 0);
+
+    if (rc == 0)
+        rc = FileAddCache(l, cache, aRc);
+
+    RELEASE(VPath, cache);
+    RELEASE(VPath, local);
 
     return rc;
 }

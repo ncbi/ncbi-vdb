@@ -32,6 +32,7 @@
 #include <cloud/aws.h>
 #include <cloud/gcp.h>
 
+#include "cloud_manager-singleton.h" /* USE_SINGLETON */
 #include "cloud-priv.h"
 
 #include <atomic.h>
@@ -253,11 +254,14 @@ LIB_EXPORT rc_t CC CloudMgrMake ( CloudMgr ** mgrp,
             rc = CloudMgrInit ( & our_mgr, kfg, kns, cloud_provider_none );
             if ( rc == 0 )
             {
-                CloudMgr * new_mgr;
+                CloudMgr * new_mgr = NULL;
 
                 /* try to set single-shot ( set once, never reset ) */
                 TRACE ( "attempting to set CloudMgr singleton" );
+		
+#ifdef USE_SINGLETON		
                 new_mgr = atomic_test_and_set_ptr ( & cloud_singleton, our_mgr, NULL );
+#endif
 
                 /* if "new_mgr" is NULL, then our thread won the race */
                 if ( new_mgr == NULL )
