@@ -35,6 +35,7 @@
 #include <klib/printf.h> /* KDataBufferVPrintf */
 #include <klib/rc.h> /* RC */
 #include <klib/status.h> /* KStsLevelGet */
+#include <klib/strings.h> /* ENV_VAR_LOG_HTTP_RETRY */
 #include <klib/time.h> /* KSleep */
 
 #include <strtol.h> /* strtou64 */
@@ -52,6 +53,15 @@ static
 void RetrierReset(const KStableHttpFile * cself, const char * func)
 {
     KStableHttpFile * self = (KStableHttpFile *)cself;
+
+    static int logLevel = -1;
+    if (logLevel == -1) {
+        logLevel = 0;
+        const char * e = getenv(ENV_VAR_LOG_HTTP_RETRY);
+        if (e != NULL)
+            logLevel = atoi(e);
+    }
+
     self->live = true;
 
     if (self->_failed) {
@@ -61,18 +71,10 @@ void RetrierReset(const KStableHttpFile * cself, const char * func)
         self->_state = eRSJustRetry;
         self->_sleepTO = 0;
 
-        if (KStsLevelGet() > 0)
+        if (logLevel > 1 || KStsLevelGet() > 0)
             PLOGERR(klogErr, (klogErr, 0, "$(f) success", "f=%s", func));
     }
 }
-
-typedef enum {
-    eLogOrNotLog,
-    eNotLog,
-    eLog,
-} EToLog;
-
-#define ENV_VAR_LOG_HTTP_RETRY "NCBI_VDB_LOG_HTTP_RETRY"
 
 /* reopen the underlying file */
 static
@@ -86,12 +88,12 @@ rc_t RetrierReopenRemote(KStableHttpFile * self, bool neverBefore)
     bool first = true;
     int i = 1;
 
-    static EToLog toLog = eLogOrNotLog;
-    if (toLog == eLogOrNotLog) {
-        toLog = eNotLog;
+    int logLevel = -1;
+    if (logLevel == -1) {
+        logLevel = 0;
         const char * e = getenv(ENV_VAR_LOG_HTTP_RETRY);
-        if ((e != NULL) && (e[0] == '1' || (e[0] == '2')))
-            toLog = eLog;
+        if (e != NULL)
+            logLevel = atoi(e);
     }
 
     KFileRelease(self->file);
@@ -106,7 +108,7 @@ rc_t RetrierReopenRemote(KStableHttpFile * self, bool neverBefore)
             &self->file, self->conn, self->vers, self->reliable,
             self->need_env_token, self->payRequired, self->url, &self->buf);
         if (rc == 0) {
-            if (neverBefore && !first && toLog == eLog)
+            if (neverBefore && !first && logLevel > 0)
                 PLOGERR(klogErr, (klogErr, rc,
                     "OpenRemoteFile success: attempt $(n)", "n=%d", i));
             break;
@@ -118,12 +120,12 @@ rc_t RetrierReopenRemote(KStableHttpFile * self, bool neverBefore)
                 if (GetRCObject(rc) ==                 rcConnection ||
                     GetRCObject(rc) == (enum RCObject)(rcTimeout))
                 {
-                    if (toLog == eLog)
+                    if (logLevel > 0)
                         PLOGERR(klogErr, (klogErr, rc, "Cannot OpenRemoteFile: "
                             "retrying $(n)...", "n=%d", i));
                 }
                 else {
-                    if (toLog == eLog)
+                    if (logLevel > 0)
                         LOGERR(klogErr, rc, "Cannot OpenRemoteFile");
                     break;
                 }
@@ -257,17 +259,14 @@ rc_t RetrierAgain(const KStableHttpFile * cself,
 
     if (retry) {
         KStsLevel lvl = KStsLevelGet();
-        bool toLog = lvl > 0;
-        static EToLog sToLog = eLogOrNotLog;
-        if (sToLog == eLogOrNotLog) {
-            sToLog = eNotLog;
+        static int logLevel = -1;
+        if (logLevel == -1) {
+            logLevel = 0;
             const char * e = getenv(ENV_VAR_LOG_HTTP_RETRY);
-            if (e != NULL && e[0] == '2')
-                sToLog = eLog;
+            if (e != NULL)
+                logLevel = atoi(e);
         }
-        if (sToLog == eLog)
-            toLog = true;
-        if (toLog) {
+        if (logLevel > 1 || lvl > 0) {
             switch (self->_state) {
             case eRSJustRetry:
                 if (self->live)
