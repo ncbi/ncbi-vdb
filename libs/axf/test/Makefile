@@ -22,12 +22,15 @@
 #
 # ===========================================================================
 
-runtests: test-range-list test-RefSeq
-	./test-range-list && \
-	./test-RefSeq
+runtests: test-range-list # test-RefSeq
+	./test-range-list # && \
+#	./test-RefSeq
 
-test-range-list: test_RangeList.cpp ../range-list.hpp
-	$(CXX) $(CFLAGS) -std=c++11 $< -o $@
+range-list.o: ../range-list.c | ../range-list.h
+	$(CC) -c $(CFLAGS) $^ -o $@
 
-test-RefSeq: test_RefSeq.cpp ../refseq.hpp ../range-list.hpp
-	$(CXX) $(CFLAGS) -std=c++11 $< -o $@
+test-range-list: test_RangeList.cpp ../range-list.o | range-list.hpp ../range-list.h
+	$(CXX) $(CFLAGS) -std=c++11 $^ -o $@
+
+#test-RefSeq: test_RefSeq.cpp ../refseq.hpp ../range-list.hpp
+#	$(CXX) $(CFLAGS) -std=c++11 $< -o $@

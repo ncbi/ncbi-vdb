@@ -24,15 +24,18 @@
  *
  */
 
-typedef struct RestoreRead RestoreRead;
+typedef struct WGS WGS;
+struct WGS {
+    struct VPath const *url;
+    struct VCursor const *curs;
+    uint32_t colID;
+    uint64_t lastAccessStamp;
+};
 
-void RestoreReadFree(void *const self);
-
-RestoreRead *RestoreReadMake(VDBManager const *vmgr, rc_t *rcp);
-
-rc_t RestoreReadGetSequence(  RestoreRead *const self
-                            , unsigned const start
-                            , size_t const length, uint8_t *const dst
-                            , size_t const id_len, char const *const seq_id
-                            , unsigned *actual
-                            , VTable const *const forTable);
+bool WGS_isScheme(char const *scheme);
+unsigned WGS_splitName(int64_t *prow, unsigned const namelen, char const *name);
+unsigned WGS_getBases(WGS *self, uint8_t *dst, unsigned start, unsigned len, int64_t row);
+void WGS_whack(WGS *self);
+rc_t WGS_init(WGS *self, VPath const *url, VDatabase const *db);
+void WGS_close(WGS *self);
+rc_t WGS_reopen(WGS *self, VDBManager const *mgr, unsigned seq_id_len, char const *seq_id);

@@ -24,15 +24,25 @@
  *
  */
 
-typedef struct RestoreRead RestoreRead;
+typedef struct Range Range;
+typedef struct RangeList RangeList;
 
-void RestoreReadFree(void *const self);
+struct Range {
+    unsigned start, end;
+};
 
-RestoreRead *RestoreReadMake(VDBManager const *vmgr, rc_t *rcp);
+struct RangeList {
+    Range *ranges;
+    unsigned count;
+    unsigned allocated;
+};
 
-rc_t RestoreReadGetSequence(  RestoreRead *const self
-                            , unsigned const start
-                            , size_t const length, uint8_t *const dst
-                            , size_t const id_len, char const *const seq_id
-                            , unsigned *actual
-                            , VTable const *const forTable);
+void intersectRanges(Range *result, Range const *a, Range const *b);
+
+void intersectRangeList(RangeList const *list, Range const **begin, Range const **end, Range const *query);
+
+Range *appendRange(RangeList *list, Range const *newValue);
+
+void extendRangeList(RangeList *list, unsigned position);
+
+void RangeListFree(RangeList *list);

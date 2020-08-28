@@ -24,15 +24,20 @@
  *
  */
 
-typedef struct RestoreRead RestoreRead;
+#include "range-list.h"
 
-void RestoreReadFree(void *const self);
+typedef struct RefSeq RefSeq;
+struct RefSeq {
+    RangeList Ns; ///< exclusion list
+    uint8_t *bases;
+    unsigned length; ///< logical length, is base count of the reference
+    bool circular;
+};
 
-RestoreRead *RestoreReadMake(VDBManager const *vmgr, rc_t *rcp);
+bool RefSeq_isScheme(char const *scheme);
 
-rc_t RestoreReadGetSequence(  RestoreRead *const self
-                            , unsigned const start
-                            , size_t const length, uint8_t *const dst
-                            , size_t const id_len, char const *const seq_id
-                            , unsigned *actual
-                            , VTable const *const forTable);
+unsigned RefSeq_getBases(RefSeq const *self, uint8_t *const dst, unsigned const start, unsigned const len);
+
+rc_t RefSeq_load(RefSeq *result, VTable const *tbl);
+
+void RefSeqFree(RefSeq *);
