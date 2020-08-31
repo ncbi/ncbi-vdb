@@ -34,7 +34,7 @@ struct RefSeq {
     bool circular;
 };
 
-bool RefSeq_isScheme(char const *scheme);
+char const *RefSeq_Scheme(void);
 
 unsigned RefSeq_getBases(RefSeq const *self, uint8_t *const dst, unsigned const start, unsigned const len);
 

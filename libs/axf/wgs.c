@@ -146,7 +146,6 @@ unsigned WGS_splitName(int64_t *prow, unsigned const namelen, char const *name)
     }
     return 0;
 }
-
-bool WGS_isScheme(char const *scheme) {
-    return strcmp(scheme, "NCBI:WGS:db:contig") == 0;
+char const *WGS_Scheme(void) {
+    return "NCBI:WGS:db:contig";
 }

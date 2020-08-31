@@ -38,6 +38,8 @@
 #include <vfs/manager.h> /* VFSManagerRelease */
 #include <vfs/path-priv.h> /* VPathSetAccOfParentDb */
 
+#include <ctype.h>
+
 #define DEFAULT_WGS_OPEN_LIMIT 8
 
 #include "restore-read.h"
@@ -47,17 +49,16 @@
 static VFSManager *getVFSManager(VDBManager const *mgr)
 {
     VFSManager *result = NULL;
-#if 0
     KDBManager const *kmgr = NULL;
     rc_t rc = 0;
 
-    rc = VDBManagerGetKDBManager(mgr, &kmgr);
+    rc = VDBManagerGetKDBManagerRead(mgr, &kmgr);
     assert(rc == 0);
 
     rc = KDBManagerGetVFSManager(kmgr, &result);
     KDBManagerRelease(kmgr);
     assert(rc == 0);
-#endif
+
     return result;
 }
 
@@ -131,6 +132,30 @@ static char *getSchemaName_Table(char *result, size_t *actsize, VTable const *tb
     if (rc) return NULL;
 
     return getSchemaName_Node(result, actsize, node);
+}
+
+static bool schemaNameIsEqual(char const *name, unsigned namelen, char const *query)
+{
+    unsigned i;
+    for (i = 0; i < namelen; ++i) {
+        if (query[i] == '\0') break;
+        if (query[i] != name[i]) return false;
+    }
+    return i == namelen || (i + 1 < namelen && name[i] == '#' && isdigit(name[i + 1]));
+}
+
+static bool tableSchemaNameIsEqual(VTable const *tbl, char const *name)
+{
+    char buffer[1024];
+    size_t size = sizeof(buffer);
+    return getSchemaName_Table(buffer, &size, tbl) == NULL ? false : schemaNameIsEqual(buffer, size, name);
+}
+
+static bool dbSchemaNameIsEqual(VDatabase const *db, char const *name)
+{
+    char buffer[1024];
+    size_t size = sizeof(buffer);
+    return getSchemaName_DB(buffer, &size, db) == NULL ? false : schemaNameIsEqual(buffer, size, name);
 }
 
 static int name_cmp(char const *name, unsigned const qlen, char const *qry)
@@ -430,7 +455,6 @@ static rc_t openSeqID(  RestoreRead *const self
                       , char const *const seq_id
                       , VTable const *const forTable)
 {
-    char buffer[4096];
     VDatabase const *db = NULL;
     VTable const *tbl = NULL;
     VPath const *url = getURL(self->mgr, id_len, seq_id, forTable);
@@ -449,9 +473,7 @@ static rc_t openSeqID(  RestoreRead *const self
             rc = VDBManagerOpenDBRead(self->mgr, &db, NULL, "%.*s", (int)id_len, seq_id);
     }
     if (tbl != NULL) {
-        size_t actsize = sizeof(buffer);
-        char const *scheme = getSchemaName_Table(buffer, &actsize, tbl);
-        if (scheme && actsize < sizeof(buffer) && RefSeq_isScheme(scheme)) {
+        if (tableSchemaNameIsEqual(tbl, RefSeq_Scheme())) {
             RefSeq object;
             rc = RefSeq_load(&object, tbl);
             if (rc == 0) {
@@ -470,9 +492,7 @@ static rc_t openSeqID(  RestoreRead *const self
         }
     }
     else if (db != NULL) {
-        size_t actsize = sizeof(buffer);
-        char const *scheme = getSchemaName_DB(buffer, &actsize, db);
-        if (scheme && actsize < sizeof(buffer) && WGS_isScheme(scheme)) {
+        if (dbSchemaNameIsEqual(db, WGS_Scheme())) {
             WGS object;
             rc = WGS_init(&object, url, db);
             if (rc == 0) {

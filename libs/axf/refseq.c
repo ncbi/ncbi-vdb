@@ -136,8 +136,8 @@ static unsigned getBases_4na(RefSeq const *self, uint8_t *const dst, unsigned co
     return i;
 }
 
-bool RefSeq_isScheme(char const *scheme) {
-    return strcmp(scheme, "NCBI:refseq:tbl:reference") == 0;
+char const *RefSeq_Scheme(void) {
+    return "NCBI:refseq:tbl:reference";
 }
 
 unsigned RefSeq_getBases(RefSeq const *self, uint8_t *const dst, unsigned const start, unsigned const len)
@@ -205,17 +205,17 @@ static inline Cell *readCell(Cell *result, CursorAddResult const *colInfo, int64
 static bool inline readBool(CursorAddResult const *colInfo, int64_t const row, VCursor const *const curs, rc_t *prc)
 {
     Cell rr, *const prr = readCell(&rr, colInfo, row, curs, prc);
-    assert(rr.bits == sizeof(bool) * 8);
+    assert(rr.bits == 8);
     assert(rr.offset == 0);
-    return prr ? *(bool *)rr.data : false;
+    return prr ? (*(uint8_t *)rr.data != 0) : false;
 }
 
-static inline int32_t readI32(CursorAddResult const *colInfo, int64_t const row, VCursor const *const curs, rc_t *prc)
+static inline uint32_t readU32(CursorAddResult const *colInfo, int64_t const row, VCursor const *const curs, rc_t *prc)
 {
     Cell rr, *const prr = readCell(&rr, colInfo, row, curs, prc);
-    assert(rr.bits == sizeof(int32_t) * 8);
+    assert(rr.bits == sizeof(uint32_t) * 8);
     assert(rr.offset == 0);
-    return prr ? *(int32_t *)rr.data : 0;
+    return prr ? *(uint32_t *)rr.data : 0;
 }
 
 static inline uint64_t readU64(CursorAddResult const *colInfo, int64_t const row, VCursor const *const curs, rc_t *prc)
@@ -264,7 +264,7 @@ static rc_t loadCircular(  RefSeq *result
 
     for (i = 0; i < rowRange->count; ++i) {
         int64_t const row = rowRange->first + i;
-        int32_t const seqLen = readI32(seqLenInfo, row, curs, &rc);
+        int32_t const seqLen = readU32(seqLenInfo, row, curs, &rc);
         int32_t ri; ///< index within current row
         ReadStringResult read;
 
@@ -300,6 +300,7 @@ static rc_t loadCircular(  RefSeq *result
     }
     assert(j == allocated);
     result->length = position;
+    result->circular = true;
     return 0;
 }
 
@@ -324,7 +325,7 @@ static rc_t load(  RefSeq *result
 
     for (i = 0; i < rowRange->count; ++i) {
         int64_t const row = rowRange->first + i;
-        int32_t const seqLen = readI32(seqLenInfo, row, curs, &rc);
+        int32_t const seqLen = readU32(seqLenInfo, row, curs, &rc);
         int32_t ri; ///< index within current row
         ReadStringResult read;
 
@@ -384,10 +385,10 @@ rc_t RefSeq_load(RefSeq *result, VTable const *const tbl)
     memset(result, 0, sizeof(*result));
     if (curs == NULL) return rc;
 
-    if (!addColumn(&cols[0], "(BOOL)CIRCULAR", curs, &rc)) return rc;
-    if (!addColumn(&cols[1], "(I32)SEQ_LEN", curs, &rc)) return rc;
+    if (!addColumn(&cols[0], "CIRCULAR", curs, &rc)) return rc;
+    if (!addColumn(&cols[1], "SEQ_LEN", curs, &rc)) return rc;
     if (!addColumn(&cols[2], "(INSDC:4na:bin)READ", curs, &rc)) return rc;
-    if (!addColumn(&cols[3], "(U64)TOTAL_SEQ_LEN", curs, &rc)) return rc;
+    if (!addColumn(&cols[3], "TOTAL_SEQ_LEN", curs, &rc)) return rc;
 
     rc = VCursorOpen(curs);
     assert(rc == 0);

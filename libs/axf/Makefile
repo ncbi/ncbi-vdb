@@ -97,6 +97,7 @@ AXF_SRC = \
 	ref-tbl \
 	make-cmp-read_desc \
 	get_mate_align_ids \
+	range-list \
 	refseq \
 	wgs \
 	restore-read

@@ -32,7 +32,7 @@ struct WGS {
     uint64_t lastAccessStamp;
 };
 
-bool WGS_isScheme(char const *scheme);
+char const *WGS_Scheme(void);
 unsigned WGS_splitName(int64_t *prow, unsigned const namelen, char const *name);
 unsigned WGS_getBases(WGS *self, uint8_t *dst, unsigned start, unsigned len, int64_t row);
 void WGS_whack(WGS *self);
