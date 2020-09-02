@@ -561,7 +561,7 @@ static rc_t load(  RefSeq *result
 
                 temp = malloc(sizeof(*temp));
                 if (temp) {
-                    memcpy(temp, result, sizeof(*result));
+                    *temp = *result;
 
                     KLockAcquire(sema->lock);
                     KSemaphoreWait(sema->sema, sema->lock);
