@@ -411,7 +411,7 @@ static rc_t runAsyncLoad(KThread const *th, void *data)
     rc_t rc;
     LOGMSG(klogDebug, "Starting async load of reference");
     rc = asyncLoad(data);
-    LOGMSG(klogDebug, "Ended async load of reference");
+    LOGMSG(klogDebug, "Finished async load of reference");
     if (rc)
         LOGERR(klogDebug, rc, "async load of reference failed");
     return rc;
