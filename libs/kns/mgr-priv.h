@@ -68,8 +68,12 @@ struct KNSManager
     int32_t http_read_timeout;
     int32_t max_http_read_timeout;
 
+    /* retry read */
     int32_t maxTotalWaitForReliableURLs_ms;
     uint8_t  maxNumberOfRetriesOnFailureForReliableURLs;
+
+    /* retry connect */
+    int32_t maxTotalConnectWaitForReliableURLs_ms;
 
     bool retryFirstRead;
     bool retryFile;

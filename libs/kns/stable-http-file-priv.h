@@ -61,6 +61,8 @@ struct KStableHttpFile
 
     const struct KFile * file; /* underlying file */
 
+    int32_t totalConnectWaitMillis;
+
     /* arguments to reopen the underlying file */
     const struct KNSManager * mgr;
     struct KStream * conn;

@@ -3017,6 +3017,8 @@ static rc_t KDirectoryMagicResolve(const KDirectory * dir, const VPath ** path,
         rc = VPathSetId((VPath*)*path, accession);
 
     if (rc == 0) {
+        bool high_reliability = true;
+
         assert(path);
 
         assert(checkPath == eCheckFilePathTrue || checkUrl == eCheckUrlTrue);
@@ -3061,14 +3063,26 @@ static rc_t KDirectoryMagicResolve(const KDirectory * dir, const VPath ** path,
             }
         }
 
+        if (rc == 0) {
+            const char * e = getenv("NCBI_VDB_RELIABLE");
+            if (e != NULL && e[0] == '\0')
+                high_reliability = false;
+            if (high_reliability)
+                rc = VPathMarkHighReliability((VPath*)*path, true);
+        }
+
         if (rc != 0) {
             VPathRelease(*path);
             *path = NULL;
             return rc;
         }
         else
-            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
-                "'%s' magic '%s' found\n", name, magic));
+            if (high_reliability)
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                    "'%s' reliable magic '%s' found\n", name, magic));
+            else
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                    "'%s' unreliable magic '%s' found\n", name, magic));
     }
 
     else
