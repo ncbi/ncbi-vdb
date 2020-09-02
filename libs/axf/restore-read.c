@@ -244,79 +244,6 @@ static void ErrorListFree(ErrorList *list)
     free(list->entry);
 }
 
-typedef struct WGS_ListEntry WGS_ListEntry;
-struct WGS_ListEntry {
-    char *name;
-    WGS object;
-};
-
-typedef struct WGS_List WGS_List;
-struct WGS_List {
-    WGS_ListEntry *entry;
-    unsigned entries;
-    unsigned allocated;
-};
-
-static bool WGS_Find(WGS_List *list, unsigned *at, unsigned const qlen, char const *qry)
-{
-    unsigned f = 0;
-    unsigned e = list->entries;
-
-    while (f < e) {
-        unsigned const m = f + (e - f) / 2;
-        int const d = name_cmp(list->entry[m].name, qlen, qry);
-        if (d == 0) {
-            *at = m;
-            return true;
-        }
-        if (d < 0)
-            f = m + 1;
-        else
-            e = m;
-    }
-    *at = f; // it could be inserted here
-    return false;
-}
-
-static rc_t WGS_Insert(WGS_List *list, unsigned at, unsigned const qlen, char const *qry, WGS *const value)
-{
-    WGS_ListEntry temp;
-
-    temp.name = malloc(qlen + 1);
-    if (temp.name == NULL) {
-        return RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted);
-    }
-    memmove(temp.name, qry, qlen);
-    temp.name[qlen] = '\0';
-    temp.object = *value;
-
-    if (list->entries >= list->allocated) {
-        unsigned const new_alloc = list->allocated == 0 ? 16 : (list->allocated * 2);
-        void *tmp = realloc(list->entry, new_alloc * sizeof(*list->entry));
-        if (tmp == NULL) {
-            free(temp.name);
-            return RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted);
-        }
-        list->entry = tmp;
-        list->allocated = new_alloc;
-    }
-    memmove(&list->entry[at + 1], &list->entry[at], sizeof(*list->entry) * (list->entries - at));
-    ++list->entries;
-    list->entry[at] = temp;
-
-    return 0;
-}
-
-static void WGS_ListFree(WGS_List *list)
-{
-    unsigned i;
-    for (i = 0; i != list->entries; ++i) {
-        WGS_whack(&list->entry[i].object);
-        free(list->entry[i].name);
-    }
-    free(list->entry);
-}
-
 struct RestoreRead {
     VDBManager const *mgr;
     RefSeqList refSeqs;
@@ -329,8 +256,6 @@ struct RestoreRead {
             WGS_ListEntry *w;
         } u;
     } last;
-    unsigned wgsOpenCount;
-    unsigned wgsOpenCountLimit;
 };
 
 void RestoreReadFree(void *const vp)
@@ -350,31 +275,9 @@ RestoreRead *RestoreReadMake(VDBManager const *vmgr, rc_t *rcp)
     RestoreRead *self = calloc(1, sizeof(*self));
     self->mgr = vmgr;
     *rcp = VDBManagerAddRef(self->mgr);
-    self->wgsOpenCountLimit = DEFAULT_WGS_OPEN_LIMIT;
+    WGS_ListInit(&self->wgs, DEFAULT_WGS_OPEN_LIMIT);
     *rcp = RefSeqListInit(&self->refSeqs);
     return self;
-}
-
-static void limitOpenWGS(RestoreRead *const self)
-{
-    if (self->wgsOpenCount >= self->wgsOpenCountLimit) {
-        WGS_ListEntry *const entry = self->wgs.entry;
-        unsigned const entries = self->wgs.entries;
-        unsigned oldest = entries;
-        unsigned i;
-
-        assert(entries >= self->wgsOpenCount);
-        for (i = 0; i < entries; ++i) {
-            WGS const *const object = &entry[i].object;
-            if (object->curs == NULL) continue;
-            if (oldest == entries || entry[oldest].object.lastAccessStamp > object->lastAccessStamp)
-                oldest = i;
-        }
-        assert(oldest != entries);
-        WGS_close(&entry[oldest].object);
-        --self->wgsOpenCount;
-    }
-    assert(self->wgsOpenCount < self->wgsOpenCountLimit);
 }
 
 static rc_t openSeqID(  RestoreRead *const self
@@ -402,18 +305,9 @@ static rc_t openSeqID(  RestoreRead *const self
     }
     if (tbl != NULL) {
         if (tableSchemaNameIsEqual(tbl, RefSeq_Scheme())) {
-            RefSeq object;
-            rc = RefSeq_load(&object, tbl, &self->refSeqs.sema);
-            if (rc == 0) {
-                unsigned at = 0;
-
-                RefSeq_Find(&self->refSeqs, &at, id_len, seq_id);
-                rc = RefSeq_Insert(&self->refSeqs, at, id_len, seq_id, &object);
-                if (rc == 0) {
-                    self->last.type = refSeq_type;
-                    self->last.u.r = &self->refSeqs.entry[at];
-                }
-            }
+            self->last.u.r = RefSeqInsert(&self->refSeqs, id_len, seq_id, tbl, &rc);
+            if (self->last.u.r)
+                self->last.type = refSeq_type;
         }
         else {
             rc = RC(rcAlign, rcTable, rcAccessing, rcType, rcUnexpected);
@@ -421,21 +315,9 @@ static rc_t openSeqID(  RestoreRead *const self
     }
     else if (db != NULL) {
         if (dbSchemaNameIsEqual(db, WGS_Scheme())) {
-            WGS object;
-            rc = WGS_init(&object, url, db);
-            if (rc == 0) {
-                unsigned at = 0;
-                unsigned wgs_namelen = wgs_id_len;
-
-                limitOpenWGS(self);
-                WGS_Find(&self->wgs, &at, wgs_namelen, seq_id);
-                rc = WGS_Insert(&self->wgs, at, wgs_namelen, seq_id, &object);
-                if (rc == 0) {
-                    ++self->wgsOpenCount;
-                    self->last.type = wgs_type;
-                    self->last.u.w = &self->wgs.entry[at];
-                }
-            }
+            self->last.u.w = WGS_Insert(&self->wgs, wgs_id_len, seq_id, url, db, &rc);
+            if (self->last.u.w)
+                self->last.type = wgs_type;
         }
         else {
             rc = RC(rcAlign, rcTable, rcAccessing, rcType, rcUnexpected);
@@ -460,7 +342,6 @@ rc_t RestoreReadGetSequence(  RestoreRead *const self
     unsigned wgs_namelen = 0;
     int64_t wgs_row = 0;
     unsigned error_at = 0;
-    unsigned at = 0;
     rc_t rc = 0;
     unsigned loops;
 
@@ -492,28 +373,26 @@ WGS_FROM_LAST:
 
         // check error list
         if (Error_Find(&self->errors, &error_at, id_len, seq_id))
-            return self->errors.entry[at].error;
+            return self->errors.entry[error_at].error;
 
         // check refSeq list
-        if (RefSeq_Find(&self->refSeqs, &at, id_len, seq_id)) {
+        if ((self->last.u.r = RefSeqFind(&self->refSeqs, id_len, seq_id)) != NULL) {
             self->last.type = refSeq_type;
-            self->last.u.r = &self->refSeqs.entry[at];
             goto REFSEQ_FROM_LAST;
         }
 
         // check WGS list
         wgs_namelen = WGS_splitName(&wgs_row, id_len, seq_id);
-        if (wgs_namelen > 0 && WGS_Find(&self->wgs, &at, wgs_namelen, seq_id)) {
-            if (self->wgs.entry[at].object.curs == NULL) {
+        if (wgs_namelen > 0 && (self->last.u.w = WGS_Find(&self->wgs, wgs_namelen, seq_id)) != NULL) {
+            if (self->last.u.w->object.curs == NULL) {
                 rc_t rc = 0;
 
-                limitOpenWGS(self);
-                rc = WGS_reopen(&self->wgs.entry[at].object, self->mgr, wgs_namelen, seq_id);
+                WGS_limitOpen(&self->wgs);
+                rc = WGS_reopen(&self->last.u.w->object, self->mgr, wgs_namelen, seq_id);
                 if (rc) return rc;
-                ++self->wgsOpenCount;
+                ++self->wgs.openCount;
             }
             self->last.type = wgs_type;
-            self->last.u.w = &self->wgs.entry[at];
             goto WGS_FROM_LAST;
         }
 

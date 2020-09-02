@@ -35,6 +35,10 @@
 #include <stdlib.h>
 #include <assert.h>
 
+typedef RefSeqList List;
+typedef RefSeqListEntry Entry;
+typedef RefSeq Object;
+
 // packed 2na to unpacked 4na
 static void unpack_2na(uint8_t const *bases, uint8_t dst[4], unsigned const position)
 {
@@ -76,7 +80,7 @@ static void fillNs(RangeList const *self, uint8_t *const dst, Range const *activ
     }
 }
 
-static void getBases_2na(RefSeq const *self, uint8_t *const dst, unsigned const start, unsigned const len)
+static void getBases_2na(Object const *self, uint8_t *const dst, unsigned const start, unsigned const len)
 {
     unsigned pos = start;
     unsigned i = 0;
@@ -102,11 +106,11 @@ static void getBases_2na(RefSeq const *self, uint8_t *const dst, unsigned const 
         Range full;
         full.start = start;
         full.end = start + len;
-        fillNs(self->Ns, dst, &full);
+        fillNs(&self->Ns, dst, &full);
     }
 }
 
-static unsigned getBases_4na(RefSeq const *self, uint8_t *const dst, unsigned const start, unsigned const len)
+static unsigned getBases_4na(Object const *self, uint8_t *const dst, unsigned const start, unsigned const len)
 {
     unsigned const length = self->length;
     uint8_t const *const bases = self->bases;
@@ -137,12 +141,12 @@ static unsigned getBases_4na(RefSeq const *self, uint8_t *const dst, unsigned co
     return i;
 }
 
-static unsigned readCircular(RefSeq const *self, uint8_t *const dst, unsigned const start, unsigned const len)
+static unsigned readCircular(Object const *self, uint8_t *const dst, unsigned const start, unsigned const len)
 {
     return getBases_4na(self, dst, start, len);
 }
 
-static unsigned readNormal(RefSeq const *self, uint8_t *const dst, unsigned const start, unsigned const len)
+static unsigned readNormal(Object const *self, uint8_t *const dst, unsigned const start, unsigned const len)
 {
     unsigned const length = self->length;
     unsigned const actlen = (start + len) < length ? len : start < length ? length - start : 0;
@@ -155,7 +159,7 @@ char const *RefSeq_Scheme(void) {
     return "NCBI:refseq:tbl:reference";
 }
 
-unsigned RefSeq_getBases(RefSeq const *self, uint8_t *const dst, unsigned const start, unsigned const len)
+unsigned RefSeq_getBases(Object const *self, uint8_t *const dst, unsigned const start, unsigned const len)
 {
     return self->reader(self, dst, start, len);
 }
@@ -314,8 +318,7 @@ static rc_t loadCircular_1(  uint8_t *result
     return 0;
 }
 
-static rc_t load_1(  uint8_t *bases
-                   , RangeList *Ns
+static rc_t load_1(  Object *self
                    , VCursor const *const curs
                    , RowRange const *const rowRange
                    , CursorAddResult const *const seqLenInfo
@@ -323,6 +326,8 @@ static rc_t load_1(  uint8_t *bases
                    , KQueue *queue
                    )
 {
+    uint8_t *const bases = self->bases;
+    RangeList *const Ns = &self->Ns;
     int accum = 0;
     int n = 0;
     unsigned j = 0; ///< current index in bases
@@ -384,17 +389,14 @@ static rc_t load_1(  uint8_t *bases
 
 #if USE_ASYNC_LOADING
 
-static rc_t asyncLoad(RefSeq *temp)
+static rc_t asyncLoad(Object *self)
 {
-    uint8_t *bases = temp->bases;
-    RangeList *Ns = temp->Ns;
-    RefSeqAsyncLoadInfo const *const info = temp->asyncLoader;
+    RefSeqAsyncLoadInfo const *const info = self->asyncLoader;
     CursorAddResult const *const seqLenInfo = &info->info[0];
     CursorAddResult const *const readInfo = &info->info[1];
     rc_t rc = 0;
 
-    free(temp);
-    rc = load_1(bases, Ns, info->curs, &info->rowRange, seqLenInfo, readInfo, info->queue);
+    rc = load_1(self, info->curs, &info->rowRange, seqLenInfo, readInfo, info->queue);
     KQueueSeal(info->queue);
 
     KLockAcquire(info->sema->lock);
@@ -409,13 +411,13 @@ static rc_t runAsyncLoad(KThread const *th, void *data)
     rc_t rc;
     LOGMSG(klogDebug, "Starting async load of reference");
     rc = asyncLoad(data);
-    LOGMSG(klogDebug, "Starting async load of reference");
+    LOGMSG(klogDebug, "Ended async load of reference");
     if (rc)
         LOGERR(klogDebug, rc, "async load of reference failed");
     return rc;
 }
 
-static unsigned asyncReadNormal(RefSeq const *self, uint8_t *const dst, unsigned const start, unsigned const len)
+static unsigned asyncReadNormal(Object const *self, uint8_t *const dst, unsigned const start, unsigned const len)
 {
     RefSeqAsyncLoadInfo *const info = self->asyncLoader;
     unsigned const length = self->length;
@@ -426,8 +428,8 @@ static unsigned asyncReadNormal(RefSeq const *self, uint8_t *const dst, unsigned
         rc_t rc;
 
     QUEUE_IS_SEALED:
-        ((RefSeq *)self)->reader = readNormal;
-        ((RefSeq *)self)->asyncLoader = NULL;
+        ((Object *)self)->reader = readNormal;
+        ((Object *)self)->asyncLoader = NULL;
 
         rc = 0;
         KThreadWait(info->th, &rc);
@@ -436,17 +438,17 @@ static unsigned asyncReadNormal(RefSeq const *self, uint8_t *const dst, unsigned
         KQueueRelease(info->queue);
         VCursorRelease(info->curs); /* undo addref in makeAsyncLoadInfo */
 
-        free(info);
-
-        if (rc) {
-            LOGERR(klogErr, rc, "async load of reference failed");
-            return 0;
+        if (rc == 0) {
+            PLOGMSG(klogDebug, (klogDebug
+                                , "Async load of reference is complete (stall rate: $(p)%)"
+                                , "p=% 5.1f", info->miss * 100.0 / info->hits)
+                    );
         }
-        PLOGMSG(klogDebug, (klogDebug
-                            , "Async load of reference is complete (stall rate: $(p)%)"
-                            , "p=% 5.1f", info->miss * 100.0 / info->hits)
-                );
-        return readNormal(self, dst, start, len);
+        else {
+            LOGERR(klogErr, rc, "async load of reference failed");
+        }
+        free(info);
+        return rc == 0 ? readNormal(self, dst, start, len) : 0;
     }
 
     if (actlen == 0)
@@ -498,7 +500,7 @@ static rc_t makeAsyncLoadInfo(  RefSeqAsyncLoadInfo **result
 }
 #endif
 
-static rc_t loadCircular(  RefSeq *result
+static rc_t loadCircular(  Object *result
                          , VCursor const *const curs
                          , RowRange const *const rowRange
                          , CursorAddResult const *const seqLenInfo
@@ -525,7 +527,7 @@ static rc_t loadCircular(  RefSeq *result
     return rc;
 }
 
-static rc_t load(  RefSeq *result
+static rc_t load(  Object *result
                  , VCursor const *const curs
                  , RowRange const *const rowRange
                  , CursorAddResult const *const seqLenInfo
@@ -542,44 +544,31 @@ static rc_t load(  RefSeq *result
 
     result->bases = bases;
     result->length = baseCount;
-    result->Ns = calloc(1, sizeof(*result->Ns));
-    if (result->Ns == NULL)
-        return RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted);
 
 #if USE_ASYNC_LOADING
     if (rowRange->count >= 20000) {
-        /* this includes only about 7% of RefSeq objects but over 55% of the data */
+        /* this includes only about 7% of Object objects but over 55% of the data */
         RefSeqAsyncLoadInfo *info = 0;
         rc = makeAsyncLoadInfo(&info, curs, rowRange, seqLenInfo, readInfo, sema);
         if (rc == 0) {
             rc = KQueueMake(&info->queue, 1024);
             if (rc == 0) {
-                RefSeq *temp = NULL;
+                KLockAcquire(sema->lock);
+                KSemaphoreWait(sema->sema, sema->lock);
+                KLockUnlock(sema->lock);
 
-                result->asyncLoader = info;
                 result->reader = asyncReadNormal;
-
-                temp = malloc(sizeof(*temp));
-                if (temp) {
-                    *temp = *result;
-
-                    KLockAcquire(sema->lock);
-                    KSemaphoreWait(sema->sema, sema->lock);
-                    KLockUnlock(sema->lock);
-
-                    rc = KThreadMake(&info->th, runAsyncLoad, temp);
-                    if (rc == 0) {
-                        LOGMSG(klogDebug, "Requesting async load of reference");
-                        return 0;
-                    }
-                    free(temp);
-
-                    KLockAcquire(sema->lock);
-                    KSemaphoreSignal(sema->sema);
-                    KLockUnlock(sema->lock);
+                result->asyncLoader = info;
+                rc = KThreadMake(&info->th, runAsyncLoad, result);
+                if (rc == 0) {
+                    LOGMSG(klogDebug, "Requesting async load of reference");
+                    return 0;
                 }
-                else
-                    rc = RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted);
+
+                KLockAcquire(sema->lock);
+                KSemaphoreSignal(sema->sema);
+                KLockUnlock(sema->lock);
+
                 KQueueRelease(info->queue);
             }
             VCursorRelease(curs); /* undo addref in makeAsyncLoadInfo */
@@ -591,7 +580,7 @@ static rc_t load(  RefSeq *result
 #endif
 
     LOGMSG(klogDebug, "Synchronous load of reference");
-    rc = load_1(bases, result->Ns, curs, rowRange, seqLenInfo, readInfo, NULL);
+    rc = load_1(result, curs, rowRange, seqLenInfo, readInfo, NULL);
     if (rc == 0)
         result->reader = readNormal;
     else
@@ -599,7 +588,7 @@ static rc_t load(  RefSeq *result
     return rc;
 }
 
-rc_t RefSeq_load(RefSeq *result, VTable const *const tbl, semaphore *sema)
+static rc_t load_2(Object *result, VTable const *const tbl, semaphore *sema)
 {
     CursorAddResult cols[4];
     RowRange rowRange;
@@ -629,10 +618,9 @@ rc_t RefSeq_load(RefSeq *result, VTable const *const tbl, semaphore *sema)
     return rc;
 }
 
-void RefSeqFree(RefSeq *self)
+void RefSeqFree(Object *self)
 {
-    RangeListFree(self->Ns);
-    free(self->Ns);
+    RangeListFree(&self->Ns);
     free(self->bases);
 #if USE_ASYNC_LOADING
     if (self->asyncLoader) {
@@ -661,7 +649,7 @@ static int name_cmp(char const *name, unsigned const qlen, char const *qry)
     return name[qlen] - '\0';
 }
 
-bool RefSeq_Find(RefSeqList *list, unsigned *at, unsigned const qlen, char const *qry)
+static bool find(List *list, unsigned *at, unsigned const qlen, char const *qry)
 {
     unsigned f = 0;
     unsigned e = list->entries;
@@ -682,36 +670,49 @@ bool RefSeq_Find(RefSeqList *list, unsigned *at, unsigned const qlen, char const
     return false;
 }
 
-rc_t RefSeq_Insert(RefSeqList *list, unsigned at, unsigned const qlen, char const *qry, RefSeq *value)
+Entry *RefSeqFind(List *list, unsigned const qlen, char const *qry)
 {
-    RefSeqListEntry temp;
+    unsigned at = 0;
+    return find(list, &at, qlen, qry) ? &list->entry[at] : NULL;
+}
 
-    temp.name = malloc(qlen + 1);
-    if (temp.name == NULL) {
-        return RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted);
+Entry *RefSeqInsert(List *list, unsigned const qlen, char const *qry, VTable const *tbl, rc_t *prc)
+{
+    unsigned at = 0;
+    if (find(list, &at, qlen, qry)) {
+        assert(!"entry exists!!!");
+        abort();
     }
-    memmove(temp.name, qry, qlen);
-    temp.name[qlen] = '\0';
-    temp.object = *value;
 
     if (list->entries >= list->allocated) {
         unsigned const new_alloc = list->allocated == 0 ? 16 : (list->allocated * 2);
         void *tmp = realloc(list->entry, new_alloc * sizeof(*list->entry));
         if (tmp == NULL) {
-            free(temp.name);
-            return RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted);
+            LOGERR(klogFatal, (*prc = RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted)), "");
+            abort();
         }
         list->entry = tmp;
         list->allocated = new_alloc;
     }
     memmove(&list->entry[at + 1], &list->entry[at], sizeof(*list->entry) * (list->entries - at));
-    ++list->entries;
-    list->entry[at] = temp;
-
-    return 0;
+    memset(&list->entry[at], 0, sizeof(list->entry[at]));
+    *prc = load_2(&list->entry[at].object, tbl, &list->sema);
+    if (*prc == 0) {
+        list->entry[at].name = malloc(qlen + 1);
+        if (list->entry[at].name == NULL) {
+            LOGERR(klogFatal, (*prc = RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted)), "");
+            abort();
+        }
+        memmove(list->entry[at].name, qry, qlen);
+        list->entry[at].name[qlen] = '\0';
+        ++list->entries;
+        return &list->entry[at];
+    }
+    memmove(&list->entry[at], &list->entry[at + 1], sizeof(*list->entry) * (list->entries - at));
+    return NULL;
 }
 
-void RefSeqListFree(RefSeqList *list)
+void RefSeqListFree(List *list)
 {
     unsigned i;
     for (i = 0; i != list->entries; ++i) {
@@ -732,7 +733,7 @@ void RefSeqListFree(RefSeqList *list)
 #endif
 }
 
-rc_t RefSeqListInit(RefSeqList *list)
+rc_t RefSeqListInit(List *list)
 {
     rc_t rc = 0;
 #if USE_ASYNC_LOADING

@@ -32,10 +32,28 @@ struct WGS {
     uint64_t lastAccessStamp;
 };
 
+typedef struct WGS_ListEntry WGS_ListEntry;
+struct WGS_ListEntry {
+    char *name;
+    WGS object;
+};
+
+typedef struct WGS_List WGS_List;
+struct WGS_List {
+    WGS_ListEntry *entry;
+    unsigned entries;
+    unsigned allocated;
+    unsigned openCount;
+    unsigned const openCountLimit;
+};
+
+WGS_ListEntry *WGS_Find(WGS_List *list, unsigned const qlen, char const *qry);
+WGS_ListEntry *WGS_Insert(WGS_List *list, unsigned const qlen, char const *qry, VPath const *url, VDatabase const *db, rc_t *prc);
+void WGS_ListInit(WGS_List *list, unsigned openLimit);
+void WGS_ListFree(WGS_List *list);
 char const *WGS_Scheme(void);
 unsigned WGS_splitName(int64_t *prow, unsigned const namelen, char const *name);
 unsigned WGS_getBases(WGS *self, uint8_t *dst, unsigned start, unsigned len, int64_t row);
-void WGS_whack(WGS *self);
-rc_t WGS_init(WGS *self, VPath const *url, VDatabase const *db);
 void WGS_close(WGS *self);
 rc_t WGS_reopen(WGS *self, VDBManager const *mgr, unsigned seq_id_len, char const *seq_id);
+void WGS_limitOpen(WGS_List *list);

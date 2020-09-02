@@ -31,7 +31,7 @@ typedef unsigned (*RefSeqReaderFunc)(RefSeq const *self, uint8_t *dst, unsigned 
 typedef struct RefSeqAsyncLoadInfo RefSeqAsyncLoadInfo;
 
 struct RefSeq {
-    RangeList *Ns; ///< exclusion list
+    RangeList Ns; ///< exclusion list
     uint8_t *bases;
     RefSeqAsyncLoadInfo *asyncLoader;
     RefSeqReaderFunc reader;
@@ -47,8 +47,6 @@ struct semaphore {
     struct KSemaphore *sema;
     struct KLock *lock;
 };
-
-rc_t RefSeq_load(RefSeq *result, VTable const *tbl, semaphore *sema);
 
 void RefSeqFree(RefSeq *self);
 
@@ -66,9 +64,9 @@ struct RefSeqList {
     unsigned allocated;
 };
 
-bool RefSeq_Find(RefSeqList *list, unsigned *at, unsigned const qlen, char const *qry);
+RefSeqListEntry *RefSeqFind(RefSeqList *list, unsigned const qlen, char const *qry);
 
-rc_t RefSeq_Insert(RefSeqList *list, unsigned at, unsigned const qlen, char const *qry, RefSeq *value);
+RefSeqListEntry *RefSeqInsert(RefSeqList *list, unsigned const qlen, char const *qry, VTable const *tbl, rc_t *prc);
 
 void RefSeqListFree(RefSeqList *list);
 

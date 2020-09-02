@@ -27,6 +27,7 @@
 
 #include <klib/defs.h>
 #include <klib/rc.h>
+#include <klib/log.h>
 #include <vdb/manager.h>
 #include <vdb/database.h>
 #include <vdb/table.h>
@@ -35,12 +36,24 @@
 
 #include "wgs.h"
 
-static void WGS_stamp(WGS *self) {
+struct M_WGS_List {
+    WGS_ListEntry *entry;
+    unsigned entries;
+    unsigned allocated;
+    unsigned openCount;
+    unsigned openCountLimit;
+};
+
+typedef WGS_List List;
+typedef WGS_ListEntry Entry;
+typedef WGS Object;
+
+static void WGS_stamp(Object *self) {
     static uint64_t generation = 0;
     self->lastAccessStamp = generation++;
 }
 
-static rc_t openCursor(WGS* self, VDatabase const *db)
+static rc_t openCursor(Object* self, VDatabase const *db)
 {
     VTable const *tbl = NULL;
     rc_t rc = VDatabaseOpenTableRead(db, &tbl, "SEQUENCE");
@@ -63,7 +76,7 @@ static rc_t openCursor(WGS* self, VDatabase const *db)
     return rc;
 }
 
-rc_t WGS_reopen(WGS *self, VDBManager const *mgr, unsigned seq_id_len, char const *seq_id)
+rc_t WGS_reopen(Object *self, VDBManager const *mgr, unsigned seq_id_len, char const *seq_id)
 {
     VDatabase const *db = NULL;
     rc_t rc = 0;
@@ -78,19 +91,19 @@ rc_t WGS_reopen(WGS *self, VDBManager const *mgr, unsigned seq_id_len, char cons
     return openCursor(self, db);
 }
 
-void WGS_close(WGS *self)
+void WGS_close(Object *self)
 {
     VCursorRelease(self->curs);
     self->curs = NULL;
 }
 
-void WGS_whack(WGS *self)
+static void whack(Object *self)
 {
     VCursorRelease(self->curs);
     VPathRelease(self->url);
 }
 
-rc_t WGS_init(WGS *self, VPath const *url, VDatabase const *db)
+static rc_t init(Object *self, VPath const *url, VDatabase const *db)
 {
     rc_t rc = 0;
 
@@ -104,7 +117,7 @@ rc_t WGS_init(WGS *self, VPath const *url, VDatabase const *db)
     return rc;
 }
 
-unsigned WGS_getBases(WGS *self, uint8_t *dst, unsigned start, unsigned len, int64_t row)
+unsigned WGS_getBases(Object *self, uint8_t *dst, unsigned start, unsigned len, int64_t row)
 {
     void const *value = NULL;
     uint32_t length = 0;
@@ -146,6 +159,125 @@ unsigned WGS_splitName(int64_t *prow, unsigned const namelen, char const *name)
     }
     return 0;
 }
+
 char const *WGS_Scheme(void) {
     return "NCBI:WGS:db:contig";
+}
+
+static int name_cmp(char const *name, unsigned const qlen, char const *qry)
+{
+    unsigned i;
+    for (i = 0; i < qlen; ++i) {
+        int const a = name[i];
+        int const b = qry[i];
+        int const d = a - b;
+        if (a == 0) return d;
+        if (d == 0) continue;
+        return d;
+    }
+    return name[qlen] - '\0';
+}
+
+static bool find(List *list, unsigned *at, unsigned const qlen, char const *qry)
+{
+    unsigned f = 0;
+    unsigned e = list->entries;
+
+    while (f < e) {
+        unsigned const m = f + (e - f) / 2;
+        int const d = name_cmp(list->entry[m].name, qlen, qry);
+        if (d == 0) {
+            *at = m;
+            return true;
+        }
+        if (d < 0)
+            f = m + 1;
+        else
+            e = m;
+    }
+    *at = f; // it could be inserted here
+    return false;
+}
+
+Entry *WGS_Find(List *list, unsigned const qlen, char const *qry)
+{
+    unsigned at = 0;
+    return find(list, &at, qlen, qry) ? &list->entry[at] : NULL;
+}
+
+Entry *WGS_Insert(List *list, unsigned const qlen, char const *qry, VPath const *url, VDatabase const *db, rc_t *prc)
+{
+    unsigned at = 0;
+    if (find(list, &at, qlen, qry)) {
+        assert(!"entry exists!!!");
+        abort();
+    }
+
+    if (list->entries >= list->allocated) {
+        unsigned const new_alloc = list->allocated == 0 ? 16 : (list->allocated * 2);
+        void *tmp = realloc(list->entry, new_alloc * sizeof(*list->entry));
+        if (tmp == NULL) {
+            LOGERR(klogFatal, (*prc = RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted)), "");
+            abort();
+        }
+        list->entry = tmp;
+        list->allocated = new_alloc;
+    }
+    memmove(&list->entry[at + 1], &list->entry[at], sizeof(*list->entry) * (list->entries - at));
+    memset(&list->entry[at], 0, sizeof(list->entry[at]));
+    *prc = init(&list->entry[at].object, url, db);
+    if (*prc == 0) {
+        list->entry[at].name = malloc(qlen + 1);
+        if (list->entry[at].name == NULL) {
+            LOGERR(klogFatal, (*prc = RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted)), "");
+            abort();
+        }
+        memmove(list->entry[at].name, qry, qlen);
+        list->entry[at].name[qlen] = '\0';
+        ++list->entries;
+        ++list->openCount;
+        WGS_limitOpen(list);
+        return &list->entry[at];
+    }
+    memmove(&list->entry[at], &list->entry[at + 1], sizeof(*list->entry) * (list->entries - at));
+    return NULL;
+}
+
+void WGS_ListFree(List *list)
+{
+    unsigned i;
+    for (i = 0; i != list->entries; ++i) {
+        whack(&list->entry[i].object);
+        free(list->entry[i].name);
+    }
+    free(list->entry);
+}
+
+void WGS_ListInit(List *list, unsigned openLimit)
+{
+    struct M_WGS_List mself = *(struct M_WGS_List *)list;
+    mself.openCountLimit = openLimit;
+    *(struct M_WGS_List *)list = mself;
+}
+
+void WGS_limitOpen(List *self)
+{
+    if (self->openCount >= self->openCountLimit) {
+        Entry *const entry = self->entry;
+        unsigned const entries = self->entries;
+        unsigned oldest = entries;
+        unsigned i;
+
+        assert(entries >= self->openCount);
+        for (i = 0; i < entries; ++i) {
+            Object const *const object = &entry[i].object;
+            if (object->curs == NULL) continue;
+            if (oldest == entries || entry[oldest].object.lastAccessStamp > object->lastAccessStamp)
+                oldest = i;
+        }
+        assert(oldest != entries);
+        WGS_close(&entry[oldest].object);
+        --self->openCount;
+    }
+    assert(self->openCount < self->openCountLimit);
 }
