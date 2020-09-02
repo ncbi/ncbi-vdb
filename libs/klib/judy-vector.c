@@ -208,7 +208,7 @@ rc_t NancyLGet ( const void *nancy, uint64_t idx, Word_t *value )
     JError_t err;
     PPvoid_t datap = JudyLGet ( nancy, ( Word_t ) idx, & err );
     if ( datap == NULL )
-        return RC ( rcCont, rcVector, rcAccessing, rcItem, rcNotFound );
+        return SILENT_RC ( rcCont, rcVector, rcAccessing, rcItem, rcNotFound );
     if ( datap == PPJERR )
         return NancyError ( & err, rcAccessing );
 
@@ -669,7 +669,7 @@ rc_t NancyLGetPrev ( const void *nancy, uint64_t* prev, uint64_t idx, Word_t *va
     *prev = idx;
     datap = JudyLPrev ( nancy, ( Word_t* ) prev, & err );
     if ( datap == NULL )
-        return RC ( rcCont, rcVector, rcAccessing, rcItem, rcNotFound );
+        return SILENT_RC ( rcCont, rcVector, rcAccessing, rcItem, rcNotFound );
     if ( datap == PPJERR )
         return NancyError ( & err, rcAccessing );
 
