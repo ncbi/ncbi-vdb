@@ -244,79 +244,6 @@ static void ErrorListFree(ErrorList *list)
     free(list->entry);
 }
 
-typedef struct RefSeqListEntry RefSeqListEntry;
-struct RefSeqListEntry {
-    char *name;
-    RefSeq object;
-};
-
-typedef struct RefSeqList RefSeqList;
-struct RefSeqList {
-    RefSeqListEntry *entry;
-    unsigned entries;
-    unsigned allocated;
-};
-
-static bool RefSeq_Find(RefSeqList *list, unsigned *at, unsigned const qlen, char const *qry)
-{
-    unsigned f = 0;
-    unsigned e = list->entries;
-
-    while (f < e) {
-        unsigned const m = f + (e - f) / 2;
-        int const d = name_cmp(list->entry[m].name, qlen, qry);
-        if (d == 0) {
-            *at = m;
-            return true;
-        }
-        if (d < 0)
-            f = m + 1;
-        else
-            e = m;
-    }
-    *at = f; // it could be inserted here
-    return false;
-}
-
-static rc_t RefSeq_Insert(RefSeqList *list, unsigned at, unsigned const qlen, char const *qry, RefSeq *value)
-{
-    RefSeqListEntry temp;
-
-    temp.name = malloc(qlen + 1);
-    if (temp.name == NULL) {
-        return RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted);
-    }
-    memmove(temp.name, qry, qlen);
-    temp.name[qlen] = '\0';
-    temp.object = *value;
-
-    if (list->entries >= list->allocated) {
-        unsigned const new_alloc = list->allocated == 0 ? 16 : (list->allocated * 2);
-        void *tmp = realloc(list->entry, new_alloc * sizeof(*list->entry));
-        if (tmp == NULL) {
-            free(temp.name);
-            return RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted);
-        }
-        list->entry = tmp;
-        list->allocated = new_alloc;
-    }
-    memmove(&list->entry[at + 1], &list->entry[at], sizeof(*list->entry) * (list->entries - at));
-    ++list->entries;
-    list->entry[at] = temp;
-
-    return 0;
-}
-
-static void RefSeqListFree(RefSeqList *list)
-{
-    unsigned i;
-    for (i = 0; i != list->entries; ++i) {
-        RefSeqFree(&list->entry[i].object);
-        free(list->entry[i].name);
-    }
-    free(list->entry);
-}
-
 typedef struct WGS_ListEntry WGS_ListEntry;
 struct WGS_ListEntry {
     char *name;
@@ -424,6 +351,7 @@ RestoreRead *RestoreReadMake(VDBManager const *vmgr, rc_t *rcp)
     self->mgr = vmgr;
     *rcp = VDBManagerAddRef(self->mgr);
     self->wgsOpenCountLimit = DEFAULT_WGS_OPEN_LIMIT;
+    *rcp = RefSeqListInit(&self->refSeqs);
     return self;
 }
 
@@ -475,7 +403,7 @@ static rc_t openSeqID(  RestoreRead *const self
     if (tbl != NULL) {
         if (tableSchemaNameIsEqual(tbl, RefSeq_Scheme())) {
             RefSeq object;
-            rc = RefSeq_load(&object, tbl);
+            rc = RefSeq_load(&object, tbl, &self->refSeqs.sema);
             if (rc == 0) {
                 unsigned at = 0;
 

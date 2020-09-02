@@ -27,17 +27,49 @@
 #include "range-list.h"
 
 typedef struct RefSeq RefSeq;
+typedef unsigned (*RefSeqReaderFunc)(RefSeq const *self, uint8_t *dst, unsigned start, unsigned len);
+typedef struct RefSeqAsyncLoadInfo RefSeqAsyncLoadInfo;
+
 struct RefSeq {
-    RangeList Ns; ///< exclusion list
+    RangeList *Ns; ///< exclusion list
     uint8_t *bases;
+    RefSeqAsyncLoadInfo *asyncLoader;
+    RefSeqReaderFunc reader;
     unsigned length; ///< logical length, is base count of the reference
-    bool circular;
 };
 
 char const *RefSeq_Scheme(void);
 
 unsigned RefSeq_getBases(RefSeq const *self, uint8_t *const dst, unsigned const start, unsigned const len);
 
-rc_t RefSeq_load(RefSeq *result, VTable const *tbl);
+typedef struct semaphore semaphore;
+struct semaphore {
+    struct KSemaphore *sema;
+    struct KLock *lock;
+};
 
-void RefSeqFree(RefSeq *);
+rc_t RefSeq_load(RefSeq *result, VTable const *tbl, semaphore *sema);
+
+void RefSeqFree(RefSeq *self);
+
+typedef struct RefSeqListEntry RefSeqListEntry;
+struct RefSeqListEntry {
+    char *name;
+    RefSeq object;
+};
+
+typedef struct RefSeqList RefSeqList;
+struct RefSeqList {
+    semaphore sema;
+    RefSeqListEntry *entry;
+    unsigned entries;
+    unsigned allocated;
+};
+
+bool RefSeq_Find(RefSeqList *list, unsigned *at, unsigned const qlen, char const *qry);
+
+rc_t RefSeq_Insert(RefSeqList *list, unsigned at, unsigned const qlen, char const *qry, RefSeq *value);
+
+void RefSeqListFree(RefSeqList *list);
+
+rc_t RefSeqListInit(RefSeqList *list);
