@@ -39,6 +39,8 @@ typedef RefSeqList List;
 typedef RefSeqListEntry Entry;
 typedef RefSeq Object;
 
+#include "list.c"
+
 // packed 2na to unpacked 4na
 static void unpack_2na(uint8_t const *bases, uint8_t dst[4], unsigned const position)
 {
@@ -334,8 +336,10 @@ static rc_t load_1(  Object *self
     uint64_t i;
     unsigned position = 0;
     rc_t rc = 0;
+#if USE_ASYNC_LOADING
     uint64_t const reportFreq = rowRange->count < 1024 ? 0 : (rowRange->count / 1024);
     uint64_t nextReport = (reportFreq == 0 || queue == NULL) ? rowRange->count : reportFreq;
+#endif
 
     for (i = 0; i < rowRange->count; ++i) {
         int64_t const row = rowRange->first + i;
@@ -368,14 +372,14 @@ static rc_t load_1(  Object *self
                 extendRangeList(Ns, position);
             ++position;
         }
-        if (i >= nextReport) {
 #if USE_ASYNC_LOADING
+        if (i >= nextReport) {
             rc = KQueuePush(queue, (void const *)(uintptr_t)position, NULL);
             if (rc)
                 return rc;
-#endif
             nextReport += reportFreq;
         }
+#endif
     }
     if (n != 0) {
         while (n < 4) {
@@ -635,41 +639,6 @@ void RefSeqFree(Object *self)
     memset(self, 0, sizeof(*self));
 }
 
-static int name_cmp(char const *name, unsigned const qlen, char const *qry)
-{
-    unsigned i;
-    for (i = 0; i < qlen; ++i) {
-        int const a = name[i];
-        int const b = qry[i];
-        int const d = a - b;
-        if (a == 0) return d;
-        if (d == 0) continue;
-        return d;
-    }
-    return name[qlen] - '\0';
-}
-
-static bool find(List *list, unsigned *at, unsigned const qlen, char const *qry)
-{
-    unsigned f = 0;
-    unsigned e = list->entries;
-
-    while (f < e) {
-        unsigned const m = f + (e - f) / 2;
-        int const d = name_cmp(list->entry[m].name, qlen, qry);
-        if (d == 0) {
-            *at = m;
-            return true;
-        }
-        if (d < 0)
-            f = m + 1;
-        else
-            e = m;
-    }
-    *at = f; // it could be inserted here
-    return false;
-}
-
 Entry *RefSeqFind(List *list, unsigned const qlen, char const *qry)
 {
     unsigned at = 0;
@@ -678,37 +647,24 @@ Entry *RefSeqFind(List *list, unsigned const qlen, char const *qry)
 
 Entry *RefSeqInsert(List *list, unsigned const qlen, char const *qry, VTable const *tbl, rc_t *prc)
 {
+    Entry *result = NULL;
     unsigned at = 0;
     if (find(list, &at, qlen, qry)) {
         assert(!"entry exists!!!");
         abort();
     }
 
-    if (list->entries >= list->allocated) {
-        unsigned const new_alloc = list->allocated == 0 ? 16 : (list->allocated * 2);
-        void *tmp = realloc(list->entry, new_alloc * sizeof(*list->entry));
-        if (tmp == NULL) {
-            LOGERR(klogFatal, (*prc = RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted)), "");
-            abort();
-        }
-        list->entry = tmp;
-        list->allocated = new_alloc;
+    result = insert(list, at, qlen, qry);
+    if (result == NULL) {
+        LOGERR(klogFatal, (*prc = RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted)), "");
+        return NULL;
     }
-    memmove(&list->entry[at + 1], &list->entry[at], sizeof(*list->entry) * (list->entries - at));
-    memset(&list->entry[at], 0, sizeof(list->entry[at]));
-    *prc = load_2(&list->entry[at].object, tbl, &list->sema);
-    if (*prc == 0) {
-        list->entry[at].name = malloc(qlen + 1);
-        if (list->entry[at].name == NULL) {
-            LOGERR(klogFatal, (*prc = RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted)), "");
-            abort();
-        }
-        memmove(list->entry[at].name, qry, qlen);
-        list->entry[at].name[qlen] = '\0';
-        ++list->entries;
-        return &list->entry[at];
-    }
-    memmove(&list->entry[at], &list->entry[at + 1], sizeof(*list->entry) * (list->entries - at));
+
+    *prc = load_2(&result->object, tbl, &list->sema);
+    if (*prc == 0)
+        return result;
+
+    undo_insert(list, at);
     return NULL;
 }
 

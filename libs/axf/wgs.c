@@ -36,17 +36,11 @@
 
 #include "wgs.h"
 
-struct M_WGS_List {
-    WGS_ListEntry *entry;
-    unsigned entries;
-    unsigned allocated;
-    unsigned openCount;
-    unsigned openCountLimit;
-};
-
 typedef WGS_List List;
 typedef WGS_ListEntry Entry;
 typedef WGS Object;
+
+#include "list.c"
 
 static void WGS_stamp(Object *self) {
     static uint64_t generation = 0;
@@ -164,41 +158,6 @@ char const *WGS_Scheme(void) {
     return "NCBI:WGS:db:contig";
 }
 
-static int name_cmp(char const *name, unsigned const qlen, char const *qry)
-{
-    unsigned i;
-    for (i = 0; i < qlen; ++i) {
-        int const a = name[i];
-        int const b = qry[i];
-        int const d = a - b;
-        if (a == 0) return d;
-        if (d == 0) continue;
-        return d;
-    }
-    return name[qlen] - '\0';
-}
-
-static bool find(List *list, unsigned *at, unsigned const qlen, char const *qry)
-{
-    unsigned f = 0;
-    unsigned e = list->entries;
-
-    while (f < e) {
-        unsigned const m = f + (e - f) / 2;
-        int const d = name_cmp(list->entry[m].name, qlen, qry);
-        if (d == 0) {
-            *at = m;
-            return true;
-        }
-        if (d < 0)
-            f = m + 1;
-        else
-            e = m;
-    }
-    *at = f; // it could be inserted here
-    return false;
-}
-
 Entry *WGS_Find(List *list, unsigned const qlen, char const *qry)
 {
     unsigned at = 0;
@@ -207,39 +166,24 @@ Entry *WGS_Find(List *list, unsigned const qlen, char const *qry)
 
 Entry *WGS_Insert(List *list, unsigned const qlen, char const *qry, VPath const *url, VDatabase const *db, rc_t *prc)
 {
+    Entry *result = NULL;
     unsigned at = 0;
     if (find(list, &at, qlen, qry)) {
         assert(!"entry exists!!!");
         abort();
     }
 
-    if (list->entries >= list->allocated) {
-        unsigned const new_alloc = list->allocated == 0 ? 16 : (list->allocated * 2);
-        void *tmp = realloc(list->entry, new_alloc * sizeof(*list->entry));
-        if (tmp == NULL) {
-            LOGERR(klogFatal, (*prc = RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted)), "");
-            abort();
-        }
-        list->entry = tmp;
-        list->allocated = new_alloc;
+    result = insert(list, at, qlen, qry);
+    if (result == NULL) {
+        LOGERR(klogFatal, (*prc = RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted)), "");
+        return NULL;
     }
-    memmove(&list->entry[at + 1], &list->entry[at], sizeof(*list->entry) * (list->entries - at));
-    memset(&list->entry[at], 0, sizeof(list->entry[at]));
-    *prc = init(&list->entry[at].object, url, db);
-    if (*prc == 0) {
-        list->entry[at].name = malloc(qlen + 1);
-        if (list->entry[at].name == NULL) {
-            LOGERR(klogFatal, (*prc = RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted)), "");
-            abort();
-        }
-        memmove(list->entry[at].name, qry, qlen);
-        list->entry[at].name[qlen] = '\0';
-        ++list->entries;
-        ++list->openCount;
-        WGS_limitOpen(list);
-        return &list->entry[at];
-    }
-    memmove(&list->entry[at], &list->entry[at + 1], sizeof(*list->entry) * (list->entries - at));
+
+    *prc = init(&result->object, url, db);
+    if (*prc == 0)
+        return result;
+
+    undo_insert(list, at);
     return NULL;
 }
 
@@ -255,9 +199,7 @@ void WGS_ListFree(List *list)
 
 void WGS_ListInit(List *list, unsigned openLimit)
 {
-    struct M_WGS_List mself = *(struct M_WGS_List *)list;
-    mself.openCountLimit = openLimit;
-    *(struct M_WGS_List *)list = mself;
+    *((unsigned *)(&list->openCountLimit)) = openLimit;
 }
 
 void WGS_limitOpen(List *self)

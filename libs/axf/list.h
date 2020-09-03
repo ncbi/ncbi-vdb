@@ -24,50 +24,14 @@
  *
  */
 
-#include "range-list.h"
 
-typedef struct RefSeq RefSeq;
-typedef struct RefSeqListEntry RefSeqListEntry;
-typedef struct RefSeqList RefSeqList;
-typedef struct RefSeqAsyncLoadInfo RefSeqAsyncLoadInfo;
-typedef unsigned (*RefSeqReaderFunc)(RefSeq const *self, uint8_t *dst, unsigned start, unsigned len);
-
-struct RefSeq {
-    RangeList Ns; ///< exclusion list
-    uint8_t *bases;
-    RefSeqAsyncLoadInfo *asyncLoader;
-    RefSeqReaderFunc reader;
-    unsigned length; ///< logical length, is base count of the reference
+typedef struct LIST_ENTRY LIST_ENTRY;
+struct LIST_ENTRY {
+    char *name;
+    LIST_OBJECT object;
 };
 
-typedef struct semaphore semaphore;
-struct semaphore {
-    struct KSemaphore *sema;
-    struct KLock *lock;
-};
-
-#define LIST_OBJECT RefSeq
-#define LIST_ENTRY RefSeqListEntry
-#include "list.h"
-
-struct RefSeqList {
-    semaphore sema;
-    LIST;
-};
-#undef LIST
-#undef LIST_ENTRY
-#undef LIST_OBJECT
-
-char const *RefSeq_Scheme(void);
-
-unsigned RefSeq_getBases(RefSeq const *self, uint8_t *const dst, unsigned const start, unsigned const len);
-
-void RefSeqFree(RefSeq *self);
-
-RefSeqListEntry *RefSeqFind(RefSeqList *list, unsigned const qlen, char const *qry);
-
-RefSeqListEntry *RefSeqInsert(RefSeqList *list, unsigned const qlen, char const *qry, VTable const *tbl, rc_t *prc);
-
-void RefSeqListFree(RefSeqList *list);
-
-rc_t RefSeqListInit(RefSeqList *list);
+#define LIST           \
+    LIST_ENTRY *entry; \
+    unsigned entries;  \
+    unsigned allocated

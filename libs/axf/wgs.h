@@ -25,6 +25,9 @@
  */
 
 typedef struct WGS WGS;
+typedef struct WGS_ListEntry WGS_ListEntry;
+typedef struct WGS_List WGS_List;
+
 struct WGS {
     struct VPath const *url;
     struct VCursor const *curs;
@@ -32,20 +35,18 @@ struct WGS {
     uint64_t lastAccessStamp;
 };
 
-typedef struct WGS_ListEntry WGS_ListEntry;
-struct WGS_ListEntry {
-    char *name;
-    WGS object;
-};
+#define LIST_OBJECT WGS
+#define LIST_ENTRY WGS_ListEntry
+#include "list.h"
 
-typedef struct WGS_List WGS_List;
 struct WGS_List {
-    WGS_ListEntry *entry;
-    unsigned entries;
-    unsigned allocated;
+    LIST;
     unsigned openCount;
     unsigned const openCountLimit;
 };
+#undef LIST
+#undef LIST_ENTRY
+#undef LIST_OBJECT
 
 WGS_ListEntry *WGS_Find(WGS_List *list, unsigned const qlen, char const *qry);
 WGS_ListEntry *WGS_Insert(WGS_List *list, unsigned const qlen, char const *qry, VPath const *url, VDatabase const *db, rc_t *prc);
