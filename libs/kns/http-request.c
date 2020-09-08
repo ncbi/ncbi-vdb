@@ -1492,7 +1492,10 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
         /* create message */
         rc = KClientHttpRequestFormatMsgInt ( self, & buffer, method, uriForm );
         if ( rc != 0 )
+        {
+            KDataBufferWhack( & buffer );
             break;
+        }
 
         /* send the message and create a response */
         rc = KClientHttpSendReceiveMsg ( self -> http, _rslt,
@@ -1505,8 +1508,13 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
                 (char *) buffer.base, buffer.elem_count - 1, NULL,
                 (char *) self -> url_buffer . base );
             if ( rc != 0 )
+            {
+                KDataBufferWhack( & buffer );
                 break;
+            }
         }
+
+        KDataBufferWhack( & buffer );
 
         rslt = * _rslt;
         rslt -> expiration = expiration; /* expiration has to reach the caller */
