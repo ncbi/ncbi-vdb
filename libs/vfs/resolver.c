@@ -376,7 +376,7 @@ rc_t VResolverAlgMakeLocalFilePath(const VResolverAlg *self,
         if (projectId < 0)
             rc = KDirectoryResolvePath(wd, true, resolved, sizeof resolved,
                 "%.*s/%.*s/%.*s%s", (int)self->root->size, self->root->addr,
-                (int)vol->size, vol->addr, (int)exp->size, exp->addr, 
+                (int)vol->size, vol->addr, (int)exp->size, exp->addr,
                 krypto_ext);
         else
             rc = KDirectoryResolvePath(wd, true, resolved, sizeof resolved,
@@ -1716,7 +1716,7 @@ rc_t oldVResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), ("names.cgi = %S\n", self -> root));
     if(((self)->root)->addr[self->root->size - 1] == 'i')
         rc = KNSManagerMakeReliableClientRequest ( kns, & req, 0x01010000, NULL,
-            self -> root -> addr ); 
+            self -> root -> addr );
     else if (((self)->root)->addr[4] == 's')
         rc = KNSManagerMakeReliableClientRequest ( kns, & req, 0x01010000, NULL,
             RESOLVER_CGI);
@@ -4354,7 +4354,7 @@ rc_t VResolverQueryAcc ( const VResolver * self, VRemoteProtocols protocols,
             ( self -> ticket != NULL  &&
               ! self -> ticketFromNgc        /* ignore ticket from protected  */
                     /* repository from --ngc: it's resolved using public apps */
-              && cache != NULL ) ) 
+              && cache != NULL ) )
         {
             /* will need to map if protected */
             const VPath ** mapped_ptr = ( self -> ticket != NULL && cache != NULL ) ?

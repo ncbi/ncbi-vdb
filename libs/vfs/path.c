@@ -517,11 +517,11 @@ rc_t VPathParseInt ( VPath * self, char * uri, size_t uri_size,
     /* for accumulating oid */
     uint64_t oid;
     uint32_t oid_anchor;
-    
+
     bool pileup_ext_present = false;
     const char pileup_ext[] = ".pileup";
     size_t pileup_ext_size = sizeof( pileup_ext ) / sizeof( pileup_ext[0] ) - 1;
-    
+
     bool realign_ext_present = false;
     const char realign_ext[] = ".realign";
     size_t realign_ext_size = sizeof(realign_ext) / sizeof(realign_ext[0]) - 1;
@@ -1949,7 +1949,7 @@ rc_t VPathParseInt ( VPath * self, char * uri, size_t uri_size,
             count += pileup_ext_size;
         }
         uri_size += pileup_ext_size;
-        
+
         if ( acc_alpha && acc_digit )
             ++acc_ext;
 
@@ -2687,7 +2687,7 @@ rc_t VPathReadPathInt ( const VPath * self,
     switch ( self -> path_type )
     {
     case vpOID:
-            
+
         rc = string_printf ( buffer, buffer_size, num_read
                              , "%u"
                              , self -> obj_id
@@ -3939,15 +3939,15 @@ LIB_EXPORT rc_t CC VPathOption ( const VPath * self, VPOption_t option,
         case vpopt_readgroup:
             param1 = "readgroup";
             break;
-#if 0            
+#if 0
         case vpopt_temporary_pw_hack:
             param1 = "temporary_pw_hack";
             break;
-#endif            
+#endif
         case vpopt_vdb_ctx:
             param1 = "vdb-ctx";
             break;
-        case vpopt_gap_ticket: 
+        case vpopt_gap_ticket:
             param1 = "tic";
             break;
         case vpopt_gap_prjId:
@@ -4134,7 +4134,7 @@ rc_t VPathMakeFmtExt ( VPath ** new_path, bool ext, const String * id,
     const String * type, bool ceRequired, bool payRequired, const char * name,
     int64_t projectId, uint32_t version, const char * fmt, ... )
 {
-    EVPathType t = ext ? eVPext : eVPWithId; 
+    EVPathType t = ext ? eVPext : eVPWithId;
     rc_t rc;
 
     va_list args;
