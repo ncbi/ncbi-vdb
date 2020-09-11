@@ -29,21 +29,15 @@
 typedef struct RefSeq RefSeq;
 typedef struct RefSeqListEntry RefSeqListEntry;
 typedef struct RefSeqList RefSeqList;
-typedef struct RefSeqAsyncLoadInfo RefSeqAsyncLoadInfo;
-typedef unsigned (*RefSeqReaderFunc)(RefSeq const *self, uint8_t *dst, unsigned start, unsigned len);
+typedef struct RefSeqSyncLoadInfo RefSeqSyncLoadInfo;
+typedef unsigned (*RefSeqReaderFunc)(RefSeq *self, uint8_t *dst, unsigned start, unsigned len);
 
 struct RefSeq {
     RangeList Ns; ///< exclusion list
     uint8_t *bases;
-    RefSeqAsyncLoadInfo *asyncLoader;
     RefSeqReaderFunc reader;
+    RefSeqSyncLoadInfo *info;
     unsigned length; ///< logical length, is base count of the reference
-};
-
-typedef struct semaphore semaphore;
-struct semaphore {
-    struct KSemaphore *sema;
-    struct KLock *lock;
 };
 
 #define LIST_OBJECT RefSeq
@@ -51,7 +45,6 @@ struct semaphore {
 #include "list.h"
 
 struct RefSeqList {
-    semaphore sema;
     LIST;
 };
 #undef LIST

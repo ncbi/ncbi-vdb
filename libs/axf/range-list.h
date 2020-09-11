@@ -33,16 +33,25 @@ struct Range {
 
 struct RangeList {
     Range *ranges;
+    void *sync;
     unsigned count;
     unsigned allocated;
+    unsigned last;
 };
 
 void intersectRanges(Range *result, Range const *a, Range const *b);
 
 void intersectRangeList(RangeList const *list, Range const **begin, Range const **end, Range const *query);
 
+typedef void (*IntersectRangeListCallback)(void *data, Range const *intersectingRange);
+void withIntersectRangeList(RangeList const *list, Range const *query, IntersectRangeListCallback callback, void *data);
+
 Range *appendRange(RangeList *list, Range const *newValue);
 
-void extendRangeList(RangeList *list, unsigned position);
+RangeList *extendRangeList(RangeList *list, unsigned const position);
 
 void RangeListFree(RangeList *list);
+
+RangeList const *copyRangeList(RangeList *list);
+
+int checkRangeList(RangeList const *);

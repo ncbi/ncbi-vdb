@@ -88,12 +88,11 @@ static bool randomTest(cRangeList const &list, cRange const &wholeRange)
         auto i = list.begin();
         auto j = intersecting.begin();
 
-        if (verbose >= 2) {
-            VERBOSE(2) << "intersected with " << sub << ": [ ";
+        if (verbose >= 5) {
+            VERBOSE(5) << "intersected with " << sub << ": [ ";
             for (auto && r : intersecting)
                 std::cerr << r << " ";
             std::cerr << "]" << std::endl;
-            return false;
         }
         if (sub.empty()) {
             if (intersecting.begin() != intersecting.end()) {
@@ -114,7 +113,7 @@ static bool randomTest(cRangeList const &list, cRange const &wholeRange)
                 return false;
             }
             else {
-                VERBOSE(2) << *i << " and " << sub << " do not intersect" << std::endl;
+                VERBOSE(4) << *i << " and " << sub << " do not intersect" << std::endl;
             }
         }
         // verify that every range in the intersecting list does intersect
@@ -125,7 +124,7 @@ static bool randomTest(cRangeList const &list, cRange const &wholeRange)
                 return false;
             }
             else {
-                VERBOSE(2) << *i << " and " << sub << " do intersect" << std::endl;
+                VERBOSE(4) << *i << " and " << sub << " do intersect" << std::endl;
             }
         }
         // verify that every range after the intersecting list does NOT intersect
@@ -135,7 +134,7 @@ static bool randomTest(cRangeList const &list, cRange const &wholeRange)
                 return false;
             }
             else {
-                VERBOSE(2) << *i << " and " << sub << " do not intersect" << std::endl;
+                VERBOSE(4) << *i << " and " << sub << " do not intersect" << std::endl;
             }
         }
     }
@@ -152,6 +151,17 @@ static bool testIntersection(cRangeList const &list, cRange const &testvalue, un
     return intersection.size() == intersects;
 }
 
+static bool test_append_0()
+{
+    cRangeList list;
+
+    list.append(cRange(95739, 100000));
+
+    list.add(0);
+
+    return true;
+}
+
 /// The first set of tests only check for the expected number of intersecting ranges.
 /// The last test checks that a large number of randomly generated ranges correctly intersect the list.
 bool cRangeList::test() {
@@ -164,6 +174,8 @@ bool cRangeList::test() {
 
     VERBOSE(1) << "list: " << list << std::endl;
 
+    test_append_0();
+    
     { // before the first range
         auto const testvalue = cRange(0, first);
         if (!testIntersection(list, testvalue, 0)) {
@@ -259,7 +271,63 @@ bool cRangeList::test() {
             return false;
         }
     }
-    return randomTest(list, cRange(0, 200));
+
+    if (!randomTest(list, cRange(0, 200)))
+        return false;
+
+    list.add(first + 90);
+    VERBOSE(2) << "list: " << list << std::endl;
+    if (!list.check() || list[2].end != first + 91) {
+        ERROR << "extend last test failed: " << list << std::endl;
+        return false;
+    }
+    list.add(first + 50);
+    VERBOSE(2) << "list: " << list << std::endl;
+    if (!list.check() || list[1].end != first + 51) {
+        ERROR << "extend middle test failed: " << list << std::endl;
+        return false;
+    }
+    list.add(first + 100);
+    VERBOSE(2) << "list: " << list << std::endl;
+    if (!list.check() || list.size() != 4 || (list[3].start != first + 100 && list[3].end != first + 101)) {
+        ERROR << "extend new at end test failed: " << list << std::endl;
+        return false;
+    }
+    list.add(first + 60);
+    VERBOSE(2) << "list: " << list << std::endl;
+    if (!list.check() || list.size() != 5 || (list[2].start != first + 60 && list[2].end != first + 61)) {
+        ERROR << "extend new test failed: " << list << std::endl;
+        return false;
+    }
+    list.add(5);
+    VERBOSE(2) << "list: " << list << std::endl;
+    if (!list.check() || list.size() != 6 || (list[0].start != 5 && list[0].end != 6)) {
+        ERROR << "extend new at front test failed: " << list << std::endl;
+        return false;
+    }
+    list.add(first + 91);
+    VERBOSE(3) << "list: " << list << std::endl;
+    list.add(first + 92);
+    VERBOSE(3) << "list: " << list << std::endl;
+    list.add(first + 93);
+    VERBOSE(3) << "list: " << list << std::endl;
+    list.add(first + 94);
+    VERBOSE(3) << "list: " << list << std::endl;
+    list.add(first + 95);
+    VERBOSE(3) << "list: " << list << std::endl;
+    list.add(first + 96);
+    VERBOSE(3) << "list: " << list << std::endl;
+    list.add(first + 97);
+    VERBOSE(3) << "list: " << list << std::endl;
+    list.add(first + 98);
+    VERBOSE(3) << "list: " << list << std::endl;
+    list.add(first + 99);
+    VERBOSE(2) << "list: " << list << std::endl;
+    if (list.size() != 5 || (list[4].start != first + 70 && list[4].end != 101)) {
+        ERROR << "extend to collapse test failed: " << list << std::endl;
+        return false;
+    }
+    return true;
 }
 
 bool cRange::test() {

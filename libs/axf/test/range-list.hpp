@@ -176,6 +176,14 @@ public:
         return result;
     }
 
+    bool check() const {
+        return 0 != checkRangeList(this);
+    }
+
+    cRange const &operator [](int i) const {
+        return *static_cast<cRange *>(ranges + i);
+    }
+
 #if TESTING
 public:
     static bool test();

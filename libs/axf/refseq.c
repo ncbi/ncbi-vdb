@@ -29,7 +29,8 @@
 #include <vdb/database.h>
 #include <vdb/table.h>
 #include <vdb/cursor.h>
-#include <vfs/path.h>
+#include <kproc/lock.h>
+#include <kproc/thread.h>
 #include "refseq.h"
 
 #include <stdlib.h>
@@ -40,6 +41,37 @@ typedef RefSeqListEntry Entry;
 typedef RefSeq Object;
 
 #include "list.c"
+#include "util.h"
+
+struct RefSeqSyncLoadInfo {
+    KThread *th;
+    KLock *mutex;               /**< mostly guards the cursor against concurrent use */
+    VCursor const *curs;        /**< can be used by either thread after acquiring the mutex */
+    RowRange rr;                /**< of the table */
+    CursorAddResult car[2];     /**< column name and id */
+    int64_t volatile loaded;    /**< rows less than this have been loaded already */
+    unsigned volatile count;    /**< number of rows left to load, will cause bg thread to exit if set = 0 */
+    unsigned max_seq_len;       /**< max length of any READ in the table */
+    unsigned hits;              /**< statistics to give some idea of ... */
+    unsigned miss;              /**< ... how effective the bg thread was */
+};
+
+static rc_t RefSeqSyncLoadInfoFree(RefSeqSyncLoadInfo *const self)
+{
+    rc_t rc = 0;
+    if (self) {
+        KLockAcquire(self->mutex);
+        self->count = 0;
+        KLockUnlock(self->mutex);
+        KThreadWait(self->th, &rc);
+        KLockRelease(self->mutex);
+        VCursorRelease(self->curs);
+        free(self);
+    }
+    if (rc)
+        LOGERR(klogErr, rc, "async loader thread failed");
+    return rc;
+}
 
 // packed 2na to unpacked 4na
 static void unpack_2na(uint8_t const *bases, uint8_t dst[4], unsigned const position)
@@ -69,35 +101,33 @@ static unsigned partial_unpack_2na(uint8_t const *bases, uint8_t *const dst, uns
     return n;
 }
 
-static void fillNs(RangeList const *self, uint8_t *const dst, Range const *activeRange) {
-    Range const *beg = NULL;
-    Range const *end = NULL;
-    Range const *cur = NULL;
-
-    intersectRangeList(self, &beg, &end, activeRange);
-    for (cur = beg; cur != end; ++cur) {
-        unsigned start = cur->start < activeRange->start ? activeRange->start : cur->start;
-        unsigned end = cur->end > activeRange->end ? activeRange->end : cur->end;
-        memset(dst + (start - activeRange->start), 15, (end - start));
-    }
+struct FillNsData {
+    uint8_t *dst;
+    Range full;
+};
+static void fillNs(void *vp, Range const *intersectingRange)
+{
+    struct FillNsData const *data = vp;
+    unsigned const offset = intersectingRange->start - data->full.start;
+    memset(data->dst + offset, 15, intersectingRange->end - intersectingRange->start);
 }
 
-static void getBases_2na(Object const *self, uint8_t *const dst, unsigned const start, unsigned const len)
+static void getBases_2na(uint8_t *const dst, unsigned const start, unsigned const len, uint8_t const *bases, RangeList const *Ns)
 {
     unsigned pos = start;
     unsigned i = 0;
 
     if (pos % 4 != 0) {
-        unsigned const n = partial_unpack_2na(self->bases, dst, i, len, pos);
+        unsigned const n = partial_unpack_2na(bases, dst, i, len, pos);
         i += n; pos += n;
     }
     while ((i + 4) <= len) {
-        unpack_2na(self->bases, dst + i, pos);
+        unpack_2na(bases, dst + i, pos);
         i += 4;
         pos += 4;
     }
     if (i < len) {
-        unsigned const n = partial_unpack_2na(self->bases, dst, i, len, pos);
+        unsigned const n = partial_unpack_2na(bases, dst, i, len, pos);
         i += n; pos += n;
     }
     assert(i == len);
@@ -105,10 +135,11 @@ static void getBases_2na(Object const *self, uint8_t *const dst, unsigned const 
 
     // 2na will have 'A's in place of 'N's, put the 'N's back
     {
-        Range full;
-        full.start = start;
-        full.end = start + len;
-        fillNs(&self->Ns, dst, &full);
+        struct FillNsData data;
+        data.full.start = start;
+        data.full.end = start + len;
+        data.dst = dst;
+        withIntersectRangeList(Ns, &data.full, fillNs, &data);
     }
 }
 
@@ -143,18 +174,203 @@ static unsigned getBases_4na(Object const *self, uint8_t *const dst, unsigned co
     return i;
 }
 
-static unsigned readCircular(Object const *self, uint8_t *const dst, unsigned const start, unsigned const len)
+static unsigned readCircular(Object *self, uint8_t *const dst, unsigned const start, unsigned const len)
 {
     return getBases_4na(self, dst, start, len);
 }
 
-static unsigned readNormal(Object const *self, uint8_t *const dst, unsigned const start, unsigned const len)
+static unsigned readNormal(Object *self, uint8_t *const dst, unsigned const start, unsigned const len)
 {
     unsigned const length = self->length;
     unsigned const actlen = (start + len) < length ? len : start < length ? length - start : 0;
     if (actlen > 0)
-        getBases_2na(self, dst, start, actlen);
+        getBases_2na(dst, start, actlen, self->bases, &self->Ns);
     return actlen;
+}
+
+/* read one row from the cursor and populate the bases array and Ns structure */
+static rc_t read1Row(Object *self, int64_t row)
+{
+    RefSeqSyncLoadInfo *const info = self->info;
+    VCursor const *const curs = info->curs;
+    CursorAddResult *const seqLenInfo = &info->car[0];
+    CursorAddResult *const readInfo = &info->car[1];
+    unsigned position = (row - info->rr.first) * info->max_seq_len;
+    int accum = 0;
+    int n = 0;
+    rc_t rc = 0;
+    int32_t const seqLen = readU32(seqLenInfo, row, curs, &rc);
+    int32_t ri; ///< index within current row
+    ReadStringResult read;
+    unsigned j = position / 4;
+
+    assert(position % 4 == 0);
+    if (seqLen == 0 || NULL == readString(&read, readInfo, row, curs, &rc))
+        return rc;
+    for (ri = 0; ri < seqLen; ++ri) {
+        int base = 0;
+        int isN = 1;
+        if (ri < read.length) {
+            switch (read.value[ri]) {
+            case 1: base = 0; isN = 0; break;
+            case 2: base = 1; isN = 0; break;
+            case 4: base = 2; isN = 0; break;
+            case 8: base = 3; isN = 0; break;
+            }
+        }
+        accum = (accum << 2) | base;
+        ++n;
+        if (n == 4) {
+            self->bases[j++] = accum;
+            accum = 0;
+            n = 0;
+        }
+        if (isN) {
+            if (NULL == extendRangeList(&self->Ns, position))
+                return RC(rcXF, rcFunction, rcReading, rcMemory, rcExhausted);
+        }
+        ++position;
+    }
+    if (n) {
+        while (n < 4) {
+            accum <<= 2;
+            ++n;
+        }
+        self->bases[j++] = accum;
+    }
+    assert(0 != checkRangeList(&self->Ns));
+    return 0;
+}
+
+static void rowWasLoaded(RefSeqSyncLoadInfo *info, int64_t row)
+{
+    /* the lock is held during this function */
+    assert(info->count > 0);
+
+    info->loaded = row;
+    --info->count;
+}
+
+static bool rowIsLoaded(RefSeqSyncLoadInfo const *info, int64_t row)
+{
+    /* the lock is NOT held during this function */
+    return row < info->loaded;
+}
+
+static int64_t positionToRow(RefSeqSyncLoadInfo const *info, unsigned const position)
+{
+    assert(info != NULL);
+    return info->rr.first + (position / info->max_seq_len);
+}
+
+static unsigned rowToPosition(RefSeqSyncLoadInfo const *info, int64_t const row)
+{
+    assert(info != NULL);
+    return (row - info->rr.first) * info->max_seq_len;
+}
+
+/* this is called on the main thread */
+static unsigned readNormalIncomplete(Object *self, uint8_t *const dst, unsigned const start, unsigned const len)
+{
+    unsigned const length = self->length;
+    unsigned const actlen = (start + len) < length ? len : start < length ? length - start : 0;
+    if (actlen > 0) {
+        RefSeqSyncLoadInfo *info = self->info;
+        int64_t const first = positionToRow(info, start);
+        int64_t const last = positionToRow(info, start + actlen - 1);
+        unsigned const max_bases = ((last + 1) - first) * info->max_seq_len;
+        uint8_t *const buffer = (max_bases <= len && start == rowToPosition(info, first)) ? dst : malloc(max_bases);
+        uint8_t *buf = buffer;
+        int64_t row;
+        rc_t rc = 0;
+
+        if (buffer == NULL) {
+            LOGERR(klogFatal, RC(rcXF, rcFunction, rcReading, rcMemory, rcExhausted), "Error reading reference");
+            return 0;
+        }
+        for (row = first; row <= last && rc == 0; ++row) {
+            ++info->hits;
+            ++info->miss;
+            if (rowIsLoaded(info, row)) {
+                --info->miss;
+                getBases_2na(buf, rowToPosition(info, row), info->max_seq_len, self->bases, &self->Ns);
+            }
+            else {
+                ReadStringResult read;
+
+                memset(buf, 15, info->max_seq_len);
+                KLockAcquire(info->mutex);
+                if (readString(&read, &info->car[1], row, info->curs, &rc) != NULL) {
+                    unsigned i;
+                    for (i = 0; i < read.length; ++i) {
+                        char base = read.value[i];
+                        switch (base) {
+                        case 1:
+                        case 2:
+                        case 4:
+                        case 8:
+                            break;
+                        default:
+                            base = 15;
+                        }
+                        buf[i] = base;
+                    }
+                }
+                KLockUnlock(info->mutex);
+            }
+            buf += info->max_seq_len;
+        }
+        if (buffer != dst) {
+            unsigned const offset = start - rowToPosition(info, first);
+            memmove(dst, buffer + offset, actlen);
+            free(buffer);
+        }
+        if (rc) {
+            LOGERR(klogErr, rc, "Error reading reference");
+            return 0;
+        }
+        if (info->count == 0) {
+            float const pct = 100.0 * (info->hits - info->miss) / ((float)(info->hits));
+
+            self->info = NULL;
+            self->reader = readNormal;
+            rc = RefSeqSyncLoadInfoFree(info);
+            if (rc)
+                return 0;
+            PLOGMSG(klogDebug, (klogDebug, "Done with dual-mode loading of reference; preload was $(pct)%", "pct=% 3.1f", pct));
+        }
+    }
+    return actlen;
+}
+
+/* this is called on the background thread */
+static rc_t runLoadThread(Object *self)
+{
+    RefSeqSyncLoadInfo *const info = self->info;
+    uint64_t const count = info->rr.count;
+    int64_t const first = info->rr.first;
+    uint64_t i;
+
+    LOGMSG(klogDebug, "Starting background loading of reference");
+    for (i = 0; i < count; ++i) {
+        bool done = false;
+        int64_t const row = i + first;
+        rc_t rc = 0;
+
+        KLockAcquire(info->mutex);
+        if (info->count != 0) {
+            rc = read1Row(self, row);
+            if (rc == 0)
+                rowWasLoaded(info, row);
+        }
+        else
+            done = true;
+        KLockUnlock(info->mutex);
+        if (rc) return rc;
+        if (done) break;
+    }
+    LOGMSG(klogDebug, "Done background loading of reference");
+    return 0;
 }
 
 char const *RefSeq_Scheme(void) {
@@ -163,120 +379,8 @@ char const *RefSeq_Scheme(void) {
 
 unsigned RefSeq_getBases(Object const *self, uint8_t *const dst, unsigned const start, unsigned const len)
 {
-    return self->reader(self, dst, start, len);
+    return self->reader((Object *)self, dst, start, len);
 }
-
-static inline VCursor const *createCursor(VTable const *const tbl, rc_t *prc)
-{
-    VCursor const *curs = NULL;
-    rc_t const rc = VTableCreateCachedCursorRead(tbl, &curs, 0);
-    if (prc) *prc = rc;
-    return curs;
-}
-
-typedef struct CursorAddResult CursorAddResult;
-struct CursorAddResult {
-    char const *name;
-    uint32_t colID;
-};
-
-static inline CursorAddResult *addColumn(CursorAddResult *result, char const *name, VCursor const *curs, rc_t *prc)
-{
-    rc_t const rc = VCursorAddColumn(curs, &result->colID, result->name = name);
-    if (prc) *prc = rc;
-    return rc == 0 ? result : NULL;
-}
-
-typedef struct RowRange RowRange;
-struct RowRange {
-    int64_t first;
-    uint64_t count;
-};
-
-static inline RowRange *getRowRange(RowRange *result, VCursor const *curs, rc_t *prc)
-{
-    rc_t const rc = VCursorIdRange(curs, 0, &result->first, &result->count);
-    if (prc) *prc = rc;
-    return rc == 0 ? result : NULL;
-}
-
-typedef struct Cell Cell;
-struct Cell {
-    void const *data;
-    uint32_t count;
-    uint32_t bits;
-    uint32_t offset;
-};
-
-static inline Cell *readCell(Cell *result, CursorAddResult const *colInfo, int64_t const row, VCursor const *const curs, rc_t *prc)
-{
-    rc_t const rc = VCursorCellDataDirect(curs, row, colInfo->colID, &result->bits, &result->data, &result->offset, &result->count);
-    if (prc) *prc = rc;
-    return rc == 0 ? result : NULL;
-}
-
-static bool inline readBool(CursorAddResult const *colInfo, int64_t const row, VCursor const *const curs, rc_t *prc)
-{
-    Cell rr, *const prr = readCell(&rr, colInfo, row, curs, prc);
-    assert(rr.bits == 8);
-    assert(rr.offset == 0);
-    return prr ? (*(uint8_t *)rr.data != 0) : false;
-}
-
-static inline uint32_t readU32(CursorAddResult const *colInfo, int64_t const row, VCursor const *const curs, rc_t *prc)
-{
-    Cell rr, *const prr = readCell(&rr, colInfo, row, curs, prc);
-    assert(rr.bits == sizeof(uint32_t) * 8);
-    assert(rr.offset == 0);
-    return prr ? *(uint32_t *)rr.data : 0;
-}
-
-static inline uint64_t readU64(CursorAddResult const *colInfo, int64_t const row, VCursor const *const curs, rc_t *prc)
-{
-    Cell rr, *const prr = readCell(&rr, colInfo, row, curs, prc);
-    assert(rr.bits == sizeof(uint64_t) * 8);
-    assert(rr.offset == 0);
-    return prr ? *(uint64_t *)rr.data : 0;
-}
-
-typedef struct ReadStringResult ReadStringResult;
-struct ReadStringResult {
-    uint8_t const *value;
-    uint32_t length;
-};
-
-static inline ReadStringResult *readString(ReadStringResult *result, CursorAddResult const *colInfo, int64_t const row, VCursor const *const curs, rc_t *prc)
-{
-    Cell rr, *const prr = readCell(&rr, colInfo, row, curs, prc);
-    if (prr) {
-        result->value = rr.data;
-        result->length = rr.count;
-        return result;
-    }
-    return NULL;
-}
-
-#define USE_ASYNC_LOADING 1
-#if USE_ASYNC_LOADING
-#include <kproc/thread.h>
-#include <kproc/queue.h>
-#include <kproc/lock.h>
-#include <kproc/sem.h>
-
-struct RefSeqAsyncLoadInfo {
-    KThread *th;
-    KQueue *queue;
-    VCursor const *curs;
-    semaphore const *sema;
-    RowRange rowRange;
-    CursorAddResult info[2];
-    unsigned currentBaseCount;
-    unsigned hits;
-    unsigned miss;
-};
-#else
-typedef struct KQueue KQueue;
-#endif
 
 static rc_t loadCircular_1(  uint8_t *result
                            , VCursor const *const curs
@@ -320,281 +424,101 @@ static rc_t loadCircular_1(  uint8_t *result
     return 0;
 }
 
-static rc_t load_1(  Object *self
-                   , VCursor const *const curs
-                   , RowRange const *const rowRange
-                   , CursorAddResult const *const seqLenInfo
-                   , CursorAddResult const *const readInfo
-                   , KQueue *queue
-                   )
-{
-    uint8_t *const bases = self->bases;
-    RangeList *const Ns = &self->Ns;
-    int accum = 0;
-    int n = 0;
-    unsigned j = 0; ///< current index in bases
-    uint64_t i;
-    unsigned position = 0;
-    rc_t rc = 0;
-#if USE_ASYNC_LOADING
-    uint64_t const reportFreq = rowRange->count < 1024 ? 0 : (rowRange->count / 1024);
-    uint64_t nextReport = (reportFreq == 0 || queue == NULL) ? rowRange->count : reportFreq;
-#endif
-
-    for (i = 0; i < rowRange->count; ++i) {
-        int64_t const row = rowRange->first + i;
-        int32_t const seqLen = readU32(seqLenInfo, row, curs, &rc);
-        int32_t ri; ///< index within current row
-        ReadStringResult read;
-
-        if (seqLen == 0 || NULL == readString(&read, readInfo, row, curs, &rc))
-            return rc;
-        for (ri = 0; ri < seqLen; ++ri) {
-            int base = 0;
-            int isN = 1;
-            if (ri < read.length) {
-                switch (read.value[ri]) {
-                case 1: base = 0; isN = 0; break;
-                case 2: base = 1; isN = 0; break;
-                case 4: base = 2; isN = 0; break;
-                case 8: base = 3; isN = 0; break;
-                }
-            }
-            assert(base >= 0 && base <= 3);
-            accum = (accum << 2) | base;
-            ++n;
-            if (n == 4) {
-                bases[j++] = accum;
-                accum = 0;
-                n = 0;
-            }
-            if (isN)
-                extendRangeList(Ns, position);
-            ++position;
-        }
-#if USE_ASYNC_LOADING
-        if (i >= nextReport) {
-            rc = KQueuePush(queue, (void const *)(uintptr_t)position, NULL);
-            if (rc)
-                return rc;
-            nextReport += reportFreq;
-        }
-#endif
-    }
-    if (n != 0) {
-        while (n < 4) {
-            accum = accum << 2;
-            ++n;
-        }
-        bases[j++] = accum;
-    }
-    return 0;
-}
-
-#if USE_ASYNC_LOADING
-
-static rc_t asyncLoad(Object *self)
-{
-    RefSeqAsyncLoadInfo const *const info = self->asyncLoader;
-    CursorAddResult const *const seqLenInfo = &info->info[0];
-    CursorAddResult const *const readInfo = &info->info[1];
-    rc_t rc = 0;
-
-    rc = load_1(self, info->curs, &info->rowRange, seqLenInfo, readInfo, info->queue);
-    KQueueSeal(info->queue);
-
-    KLockAcquire(info->sema->lock);
-    KSemaphoreSignal(info->sema->sema);
-    KLockUnlock(info->sema->lock);
-
-    return rc;
-}
-
-static rc_t runAsyncLoad(KThread const *th, void *data)
-{
-    rc_t rc;
-    LOGMSG(klogDebug, "Starting async load of reference");
-    rc = asyncLoad(data);
-    LOGMSG(klogDebug, "Finished async load of reference");
-    if (rc)
-        LOGERR(klogWarn, rc, "async load of reference failed");
-    return rc;
-}
-
-static unsigned asyncReadNormal(Object const *self, uint8_t *const dst, unsigned const start, unsigned const len)
-{
-    RefSeqAsyncLoadInfo *const info = self->asyncLoader;
-    unsigned const length = self->length;
-    unsigned const actlen = (start + len) < length ? len : start < length ? length - start : 0;
-
-    assert(info != NULL);
-    if (KQueueSealed(info->queue)) {
-        rc_t rc;
-
-    QUEUE_IS_SEALED:
-        ((Object *)self)->reader = readNormal;
-        ((Object *)self)->asyncLoader = NULL;
-
-        rc = 0;
-        KThreadWait(info->th, &rc);
-        KThreadRelease(info->th);
-
-        KQueueRelease(info->queue);
-        VCursorRelease(info->curs); /* undo addref in makeAsyncLoadInfo */
-
-        if (rc == 0) {
-            PLOGMSG(klogDebug, (klogDebug
-                                , "Async load of reference is complete (stall rate: $(p)%)"
-                                , "p=% 5.1f", info->miss * 100.0 / info->hits)
-                    );
-        }
-        else {
-            LOGERR(klogErr, rc, "async load of reference failed");
-        }
-        free(info);
-        return rc == 0 ? readNormal(self, dst, start, len) : 0;
-    }
-
-    if (actlen == 0)
-        return 0;
-
-    ++info->hits;
-    ++info->miss;
-    for ( ; ; ) {
-        if (start + actlen <= info->currentBaseCount) {
-            --info->miss;
-            getBases_2na(self, dst, start, actlen);
-            return actlen;
-        }
-        else {
-            void *popped = NULL;
-            rc_t const rc = KQueuePop(info->queue, &popped, NULL);
-
-            ++info->miss;
-            if (rc == 0)
-                info->currentBaseCount = (uintptr_t)popped;
-            else if ((int)GetRCObject(rc) == rcData && (int)GetRCState(rc) == rcDone)
-                goto QUEUE_IS_SEALED;
-            else {
-                LOGERR(klogErr, rc, "async load of reference failed, the queue is dead");
-                return 0;
-            }
-        }
-    }
-}
-
-static rc_t makeAsyncLoadInfo(  RefSeqAsyncLoadInfo **result
-                              , VCursor const *const curs
-                              , RowRange const *const rowRange
-                              , CursorAddResult const *const seqLenInfo
-                              , CursorAddResult const *const readInfo
-                              , semaphore *sema)
-{
-    *result = calloc(1, sizeof(**result));
-    if (*result) {
-        VCursorAddRef(curs);
-        (**result).curs = curs;
-        (**result).rowRange = *rowRange;
-        (**result).info[0] = *seqLenInfo;
-        (**result).info[1] = *readInfo;
-        (**result).sema = sema;
-        return 0;
-    }
-    return RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted);
-}
-#endif
-
 static rc_t loadCircular(  Object *result
                          , VCursor const *const curs
                          , RowRange const *const rowRange
-                         , CursorAddResult const *const seqLenInfo
-                         , CursorAddResult const *const readInfo
-                         , unsigned const baseCount
-                         , semaphore *sema)
+                         , CursorAddResult const *const info
+                         )
 {
-    unsigned const allocated = (baseCount + 1) / 2;
-    uint8_t *bases = malloc(allocated);
     rc_t rc = 0;
-
-    if (bases == NULL)
-        return RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted);
-
-    rc = loadCircular_1(bases, curs, rowRange, seqLenInfo, readInfo);
+    unsigned const baseCount = readU64(&info[0], rowRange->first, curs, &rc);
     if (rc == 0) {
-        result->bases = bases;
-        result->length = baseCount;
-        result->reader = readCircular;
-    }
-    else {
-        free(bases);
+        unsigned const allocated = (baseCount + 1) / 2;
+        uint8_t *bases = malloc(allocated);
+
+        if (bases == NULL)
+            return RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted);
+
+        rc = loadCircular_1(bases, curs, rowRange, &info[1], &info[2]);
+        if (rc == 0) {
+            result->bases = bases;
+            result->length = baseCount;
+            result->reader = readCircular;
+        }
+        else {
+            free(bases);
+        }
     }
     return rc;
+}
+
+static RefSeqSyncLoadInfo *RefSeqSyncLoadInfoMake(  VCursor const *curs
+                                                  , RowRange const *rr
+                                                  , CursorAddResult const *car
+                                                  , rc_t *prc)
+{
+    RefSeqSyncLoadInfo *result = calloc(1, sizeof(*result));
+    if (result == NULL) {
+        LOGERR(klogFatal, RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted), "OUT OF MEMORY!!!");
+        abort();
+    }
+    *prc = KLockMake(&result->mutex);
+    if (*prc == 0) {
+        result->max_seq_len = readU32(&car[2], rr->first, curs, prc);
+        assert(result->max_seq_len % 4 == 0);
+        if (*prc == 0) {
+            result->curs = curs;
+            VCursorAddRef(curs);
+            result->rr = *rr;
+            result->count = rr->count;
+            result->car[0] = car[0];
+            result->car[1] = car[1];
+            return result;
+        }
+        KLockRelease(result->mutex);
+    }
+    free(result);
+    return NULL;
+}
+
+static rc_t run_load_thread(const KThread *self, void *data)
+{
+    return runLoadThread(data);
 }
 
 static rc_t load(  Object *result
                  , VCursor const *const curs
                  , RowRange const *const rowRange
-                 , CursorAddResult const *const seqLenInfo
-                 , CursorAddResult const *const readInfo
-                 , unsigned const baseCount
-                 , semaphore *sema)
+                 , CursorAddResult const *const info
+                 )
 {
-    unsigned const allocated = (baseCount + 3) / 4;
-    uint8_t *bases = malloc(allocated);
     rc_t rc = 0;
+    unsigned const baseCount = readU64(&info[0], rowRange->first, curs, &rc);
+    if (rc == 0) {
+        unsigned const allocated = (baseCount + 3) / 4;
+        uint8_t *bases = malloc(allocated);
 
-    if (bases == NULL)
-        return RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted);
+        if (bases == NULL)
+            return RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted);
 
-    result->bases = bases;
-    result->length = baseCount;
-
-#if USE_ASYNC_LOADING
-    if (rowRange->count >= 20000) {
-        /* this includes only about 7% of Object objects but over 55% of the data */
-        RefSeqAsyncLoadInfo *info = 0;
-        rc = makeAsyncLoadInfo(&info, curs, rowRange, seqLenInfo, readInfo, sema);
+        result->bases = bases;
+        result->length = baseCount;
+        result->info = RefSeqSyncLoadInfoMake(curs, rowRange, info + 1, &rc);
         if (rc == 0) {
-            rc = KQueueMake(&info->queue, 1024);
+            rc = KThreadMake(&result->info->th, run_load_thread, result);
             if (rc == 0) {
-                KLockAcquire(sema->lock);
-                KSemaphoreWait(sema->sema, sema->lock);
-                KLockUnlock(sema->lock);
-
-                result->reader = asyncReadNormal;
-                result->asyncLoader = info;
-                rc = KThreadMake(&info->th, runAsyncLoad, result);
-                if (rc == 0) {
-                    LOGMSG(klogDebug, "Requesting async load of reference");
-                    return 0;
-                }
-
-                KLockAcquire(sema->lock);
-                KSemaphoreSignal(sema->sema);
-                KLockUnlock(sema->lock);
-
-                KQueueRelease(info->queue);
+                result->reader = readNormalIncomplete;
+                return 0;
             }
-            VCursorRelease(curs); /* undo addref in makeAsyncLoadInfo */
-            free(info);
         }
-        LOGERR(klogErr, rc, "Failed to start async load of reference, trying synchronous load");
-    }
-    /* fall through to synchronous loading */
-#endif
-
-    LOGMSG(klogDebug, "Synchronous load of reference");
-    rc = load_1(result, curs, rowRange, seqLenInfo, readInfo, NULL);
-    if (rc == 0)
-        result->reader = readNormal;
-    else
         RefSeqFree(result);
+    }
     return rc;
 }
 
-static rc_t load_2(Object *result, VTable const *const tbl, semaphore *sema)
+static rc_t init(Object *result, VTable const *const tbl)
 {
-    CursorAddResult cols[4];
+    CursorAddResult cols[5];
     RowRange rowRange;
     rc_t rc = 0;
     VCursor const *const curs = createCursor(tbl, &rc);
@@ -603,19 +527,18 @@ static rc_t load_2(Object *result, VTable const *const tbl, semaphore *sema)
     if (curs == NULL) return rc;
 
     if (!addColumn(&cols[0], "CIRCULAR", curs, &rc)) return rc;
-    if (!addColumn(&cols[1], "SEQ_LEN", curs, &rc)) return rc;
-    if (!addColumn(&cols[2], "(INSDC:4na:bin)READ", curs, &rc)) return rc;
-    if (!addColumn(&cols[3], "TOTAL_SEQ_LEN", curs, &rc)) return rc;
+    if (!addColumn(&cols[1], "TOTAL_SEQ_LEN", curs, &rc)) return rc;
+    if (!addColumn(&cols[2], "SEQ_LEN", curs, &rc)) return rc;
+    if (!addColumn(&cols[3], "(INSDC:4na:bin)READ", curs, &rc)) return rc;
+    if (!addColumn(&cols[4], "(U32)MAX_SEQ_LEN", curs, &rc)) return rc;
 
     rc = VCursorOpen(curs);
     assert(rc == 0);
-
-    if (getRowRange(&rowRange, curs, &rc) != NULL) {
-        uint64_t const baseCount = readU64(&cols[3], rowRange.first, curs, &rc);
-        if (baseCount > 0) {
+    if (rc == 0) {
+        if (getRowRange(&rowRange, curs, &rc) != NULL) {
             bool const circular = readBool(&cols[0], rowRange.first, curs, &rc);
 
-            rc = (circular ? loadCircular : load)(result, curs, &rowRange, &cols[1], &cols[2], baseCount, sema);
+            rc = (circular ? loadCircular : load)(result, curs, &rowRange, &cols[1]);
         }
     }
     VCursorRelease(curs);
@@ -624,18 +547,9 @@ static rc_t load_2(Object *result, VTable const *const tbl, semaphore *sema)
 
 void RefSeqFree(Object *self)
 {
+    RefSeqSyncLoadInfoFree(self->info);
     RangeListFree(&self->Ns);
     free(self->bases);
-#if USE_ASYNC_LOADING
-    if (self->asyncLoader) {
-        rc_t rc2 = 0;
-        KQueueSeal(self->asyncLoader->queue);
-        KThreadWait(self->asyncLoader->th, &rc2);
-        KQueueRelease(self->asyncLoader->queue);
-        KThreadRelease(self->asyncLoader->th);
-        free(self->asyncLoader);
-    }
-#endif
     memset(self, 0, sizeof(*self));
 }
 
@@ -660,7 +574,7 @@ Entry *RefSeqInsert(List *list, unsigned const qlen, char const *qry, VTable con
         return NULL;
     }
 
-    *prc = load_2(&result->object, tbl, &list->sema);
+    *prc = init(&result->object, tbl);
     if (*prc == 0)
         return result;
 
@@ -676,29 +590,10 @@ void RefSeqListFree(List *list)
         free(list->entry[i].name);
     }
     free(list->entry);
-#if USE_ASYNC_LOADING
-    if (list->sema.lock) {
-        semaphore *const sema = &list->sema;
-        LOGMSG(klogDebug, "Destructing synchronization for async load of reference");
-        KLockAcquire(sema->lock);
-        KSemaphoreCancel(sema->sema);
-        KLockUnlock(sema->lock);
-        KLockRelease(sema->lock);
-        KSemaphoreRelease(sema->sema);
-    }
-#endif
 }
 
 rc_t RefSeqListInit(List *list)
 {
     rc_t rc = 0;
-#if USE_ASYNC_LOADING
-    semaphore *const sema = &list->sema;
-
-    LOGMSG(klogDebug, "Creating synchronization for async load of reference");
-    rc = KLockMake(&sema->lock);
-    if (rc == 0)
-        rc = KSemaphoreMake(&sema->sema, 2);
-#endif
     return rc;
 }
