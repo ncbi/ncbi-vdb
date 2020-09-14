@@ -25,6 +25,7 @@
             <arg value="setup.py" />
             <arg value="install" />
             <arg value="--user" />
+            <arg value="-v" />
         </exec>
     </target>
 
