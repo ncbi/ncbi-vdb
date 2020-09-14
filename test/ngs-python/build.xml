@@ -22,10 +22,14 @@
 
     <target name="install">
         <exec executable="${python.exe}" dir="${ngs-source.dir}\ngs-python" failonerror="true" >
+            <arg value="-m" />
+            <arg value="site" />
+            <arg value="--user-site" />
+        </exec>
+        <exec executable="${python.exe}" dir="${ngs-source.dir}\ngs-python" failonerror="true" >
             <arg value="setup.py" />
             <arg value="install" />
             <arg value="--user" />
-            <arg value="-vv" />
         </exec>
     </target>
 
