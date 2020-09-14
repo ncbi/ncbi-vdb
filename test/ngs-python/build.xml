@@ -24,6 +24,11 @@
         <exec executable="${python.exe}" dir="${ngs-source.dir}\ngs-python" failonerror="true" >
             <arg value="-m" />
             <arg value="site" />
+            <arg value="--user-base" />
+        </exec>
+        <exec executable="${python.exe}" dir="${ngs-source.dir}\ngs-python" failonerror="true" >
+            <arg value="-m" />
+            <arg value="site" />
             <arg value="--user-site" />
         </exec>
         <exec executable="${python.exe}" dir="${ngs-source.dir}\ngs-python" failonerror="true" >
