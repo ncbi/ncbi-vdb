@@ -24,34 +24,95 @@
  *
  */
 
+/* ********* NOTE!!! ********* */
+/*                             */
+/* CONCURRENT USE IS ONLY SAFE */
+/* IN EXACTLY THE WAY THAT     */
+/* refseq.c USES THIS.         */
+/*                             */
+/* That is, inserts only occur */
+/* at the end and are outside  */
+/* the region that another     */
+/* thread would be using.      */
+/*                             */
+/* There is no provision for   */
+/* synchronizing multiple      */
+/* writers.                    */
+/*                             */
+/* ********* NOTE!!! ********* */
+
 typedef struct Range Range;
 typedef struct RangeList RangeList;
+typedef struct Sync Sync;
 
+/**
+ * @note start must be less than or equal to end
+ */
 struct Range {
     unsigned start, end;
 };
 
+/**
+ * @brief An ordered list of Range, memset(0) to initialize.
+ * @note ranges do not overlap
+ */
 struct RangeList {
     Range *ranges;
-    void *sync;
-    unsigned count;
+    Sync *sync;
     unsigned allocated;
     unsigned last;
+    unsigned volatile count;
 };
 
-void intersectRanges(Range *result, Range const *a, Range const *b);
-
-void intersectRangeList(RangeList const *list, Range const **begin, Range const **end, Range const *query);
-
 typedef void (*IntersectRangeListCallback)(void *data, Range const *intersectingRange);
+
+/**
+ * @brief intersect the query range with the ranges in the list and callback with the intersecting ranges
+ * @note thread safe
+ *
+ * This is the main function used by a reader.
+ */
 void withIntersectRangeList(RangeList const *list, Range const *query, IntersectRangeListCallback callback, void *data);
 
-Range *appendRange(RangeList *list, Range const *newValue);
-
+/**
+ * @brief Extend the last range in the list or insert a new range if position is not contiguous
+ * @note thread safe
+ *
+ * This is the main function used by a writer.
+ */
 RangeList *extendRangeList(RangeList *list, unsigned const position);
 
+/**
+ * @brief performs a consistency check
+ */
+int checkRangeList(RangeList const *);
+
+/**
+ * @brief free the memory for the ranges and any synchronization
+ * @param list this pointer is not freed
+ * @note *NOT* thread safe, only call after any writer thread has exited
+ */
 void RangeListFree(RangeList *list);
 
-RangeList const *copyRangeList(RangeList *list);
+/**
+ * @brief intersect two ranges
+ * @note not used directly by refseq.c
+ */
+void intersectRanges(Range *result, Range const *a, Range const *b);
 
-int checkRangeList(RangeList const *);
+/**
+ * @brief add a range to the end of the list
+ * @note not used directly by refseq.c and not thread safe in general
+ */
+Range *appendRange(RangeList *list, Range const *newValue);
+
+/**
+ * @brief intersect the query range with the ranges in the list
+ * @note not used by refseq.c and not thread safe or easy to use, exists for testing
+ */
+void intersectRangeList(RangeList const *list, Range const **begin, Range const **end, Range const *query);
+
+/**
+ * @note not used by refseq.c and not thread safe or easy to use, exists for testing, don't use otherwise
+ */
+RangeList const *copyRangeList(RangeList *list);

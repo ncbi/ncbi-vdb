@@ -29,12 +29,65 @@
 #include <assert.h>
 #include "range-list.h"
 #include <atomic.h>
+#include <kproc/lock.h>
 
-typedef struct Sync Sync;
+/* Note: This synchronization is very specific to this use.
+ * Give a good thought or two before using it somewhere else.
+ * In particular, there is only one writer, and it needs to
+ * synchronize very rarely, but the readers happen many
+ * tens of thousands of times while the writer is running.
+ * Furthermore, the readers continue to access the structure
+ * long after the writer has finished and there's no longer
+ * any possibility of a race condition.
+ */
 struct Sync {
-    atomic64_t readers;
-    atomic64_t writers;
+    /* low order bit indicates that a writer is waiting (or active)
+     * remainder of bits is the count of active readers
+     */
+    atomic64_t counter;
+    KLock *mutex;
 };
+
+static void readerStart(Sync *const sync)
+{
+    if ((atomic_read_and_add_even(&sync->counter, 2) & 1) != 0) {
+        /* a writer is waiting or active */
+        KLockAcquire(sync->mutex);
+        atomic_add(&sync->counter, 2);
+        KLockUnlock(sync->mutex);
+    }
+}
+
+static void readerDone(Sync *const sync)
+{
+    atomic_add(&sync->counter, -2);
+}
+
+static void writerStart(Sync *const sync)
+{
+    assert((atomic_read(&sync->counter) & 1) == 0); /* there is only one writer */
+
+    atomic_inc(&sync->counter); /* tell readers to wait */
+    KLockAcquire(sync->mutex);
+    while (atomic_read(&sync->counter) != 1) /* wait for readers to finish */
+        ;
+}
+
+static void writerDone(Sync *const sync)
+{
+    atomic_dec(&sync->counter);
+    KLockUnlock(sync->mutex);
+}
+
+static void updateRanges(  RangeList *const self
+                         , Range *const ranges
+                         , unsigned const allocated)
+{
+    writerStart(self->sync);
+    self->ranges = ranges;
+    self->allocated = allocated;
+    writerDone(self->sync);
+}
 
 void intersectRanges(Range *result, Range const *a, Range const *b)
 {
@@ -83,61 +136,63 @@ void intersectRangeList(RangeList const *list, Range const **begin, Range const 
 void withIntersectRangeList(RangeList const *list, Range const *query, IntersectRangeListCallback callback, void *data)
 {
     if (list->sync) {
-        Sync *const sync = list->sync;
-
-        atomic_inc(&sync->readers);
-        while (atomic_read(&sync->writers) != 0)
-            ;
+        readerStart(list->sync);
         {
+            Range const *const ranges = list->ranges;
+            unsigned const count = list->count;
             unsigned f = 0;
-            unsigned e = list->count;
+            unsigned e = count;
 
             while (f < e) {
                 unsigned const m = f + (e - f) / 2;
-                Range const *const M = &list->ranges[m];
+                Range const *const M = &ranges[m];
                 if (M->end <= query->start)
                     f = m + 1;
                 else
                     e = m;
             }
-            while (f < list->count) {
+            while (f < count) {
                 Range intersected;
 
-                intersectRanges(&intersected, &list->ranges[f++], query);
+                intersectRanges(&intersected, &ranges[f++], query);
                 if (intersected.end == intersected.start)
                     break;
 
                 callback(data, &intersected);
             }
         }
-        atomic_dec(&sync->readers);
+        readerDone(list->sync);
     }
 }
 
 static RangeList *grow(RangeList *list)
 {
-    if (list->count == list->allocated) {
-        if (list->sync == NULL)
-            list->sync = calloc(1, sizeof(Sync));
-        if (list->sync) {
-            Sync *const sync = list->sync;
-            unsigned const new_allocated = (list->allocated == 0 ? 16 : list->allocated * 2);
-            void *tmp = malloc(new_allocated * sizeof(list->ranges[0]));
-            if (tmp == NULL)
+    if (list->sync == NULL) {
+        Sync *sync = calloc(1, sizeof(*sync));
+        if (sync) {
+            rc_t const rc = KLockMake(&sync->mutex);
+            if (rc == 0)
+                list->sync = sync;
+            else {
+                free(sync);
                 return NULL;
-            memmove(tmp, list->ranges, list->allocated * sizeof(list->ranges[0]));
-            list->allocated = new_allocated;
-
-            atomic_inc(&sync->writers);
-            while (atomic_read(&sync->readers) != 0)
-                ;
-
-            list->ranges = tmp;
-
-            atomic_dec(&sync->writers);
+            }
         }
         else
             return NULL;
+    }
+
+    if (list->count == list->allocated) {
+        void *const old = list->ranges;
+        unsigned const allocated = list->allocated;
+        unsigned const new_allocated = allocated == 0 ? 16 : (allocated * 2);
+        void *tmp = malloc(new_allocated * sizeof(list->ranges[0]));
+        if (tmp == NULL)
+            return NULL;
+        memmove(tmp, old, allocated * sizeof(list->ranges[0]));
+
+        updateRanges(list, tmp, new_allocated);
+        free(old);
     }
     return list;
 }
@@ -176,10 +231,10 @@ Range *appendRange(RangeList *list, Range const *newValue)
     if (grow(list) != NULL) {
         Range *nr = &list->ranges[list->count];
 
-        list->last = list->count;
-        ++list->count;
         if (newValue)
             *nr = *newValue;
+        list->last = list->count;
+        ++list->count;
 
         return nr;
     }
@@ -239,12 +294,10 @@ static RangeList *extendRangeList_1(RangeList *const list, unsigned const positi
         }
     }
     {
-        Range *new_range = appendRange(list, NULL);
-        if (new_range) {
-            new_range->start = position;
-            new_range->end = position + 1;
+        Range nr;
+        nr.end = (nr.start = position) + 1;
+        if (appendRange(list, &nr))
             return list;
-        }
     }
     return NULL;
 }
@@ -256,10 +309,7 @@ RangeList *extendRangeList(RangeList *const list, unsigned const position)
 
 void RangeListFree(RangeList *list)
 {
-    assert(list->sync == NULL || atomic_read(&((Sync *)(list->sync))->readers) == 0);
-    assert(list->sync == NULL || atomic_read(&((Sync *)(list->sync))->writers) == 0);
     free(list->ranges);
-    free(list->sync);
 }
 
 RangeList const *copyRangeList(RangeList *list)
