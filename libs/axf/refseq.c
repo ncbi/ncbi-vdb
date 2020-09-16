@@ -301,22 +301,23 @@ static unsigned readNormalIncomplete(Object *self, uint8_t *const dst, unsigned 
                 memset(buf, 15, info->max_seq_len);
                 KLockAcquire(info->mutex);
                 if (readString(&read, &info->car[1], row, info->curs, &rc) != NULL) {
+                    memmove(buf, read.value, read.length);
+                }
+                KLockUnlock(info->mutex);
+                {
                     unsigned i;
                     for (i = 0; i < read.length; ++i) {
-                        char base = read.value[i];
-                        switch (base) {
+                        switch (buf[i]) {
                         case 1:
                         case 2:
                         case 4:
                         case 8:
                             break;
                         default:
-                            base = 15;
+                            buf[i] = 15;
                         }
-                        buf[i] = base;
                     }
                 }
-                KLockUnlock(info->mutex);
             }
             buf += info->max_seq_len;
         }
@@ -337,7 +338,7 @@ static unsigned readNormalIncomplete(Object *self, uint8_t *const dst, unsigned 
             rc = RefSeqSyncLoadInfoFree(info);
             if (rc)
                 return 0;
-            PLOGMSG(klogDebug, (klogDebug, "Done with dual-mode loading of reference; preload was $(pct)%", "pct=% 3.1f", pct));
+            PLOGMSG(klogDebug, (klogDebug, "Done with background loading of reference; preload was $(pct)%", "pct=%5.1f", pct));
         }
     }
     return actlen;
