@@ -32,6 +32,9 @@
 #include <vdb/table.h>
 #include <vdb/vdb-priv.h>
 #include <klib/text.h>
+#include <klib/refcount.h>
+#include <atomic.h>
+#include <kproc/lock.h>
 #include <kdb/kdb-priv.h> /* KDBManagerGetVFSManager */
 #include <kdb/manager.h>
 #include <kdb/meta.h>
@@ -244,17 +247,128 @@ static void ErrorListFree(ErrorList *list)
     free(list->entry);
 }
 
-struct RestoreRead {
-    VDBManager const *mgr;
+typedef struct RestoreReadShared RestoreReadShared;
+struct RestoreReadShared {
+    KRefcount refcount;
+    KRWLock *rwl;
     RefSeqList refSeqs;
     WGS_List wgs;
     ErrorList errors;
+};
+
+static atomic_ptr_t g_shared;
+
+static void RestoreReadSharedReader(RestoreReadShared *self)
+{
+    rc_t const rc = KRWLockAcquireShared(self->rwl);
+    assert(rc == 0);
+}
+
+static void RestoreReadSharedReaderDone(RestoreReadShared *self)
+{
+    rc_t const rc = KRWLockUnlock(self->rwl);
+    assert(rc == 0);
+}
+
+static void RestoreReadSharedWriter(RestoreReadShared *self)
+{
+    RestoreReadSharedReaderDone(self);
+    {
+        rc_t const rc = KRWLockAcquireExcl(self->rwl);
+        assert(rc == 0);
+    }
+}
+
+static void RestoreReadSharedWriterDone(RestoreReadShared *self)
+{
+    {
+        rc_t const rc = KRWLockUnlock(self->rwl);
+        assert(rc == 0);
+    }
+    RestoreReadSharedReader(self);
+}
+
+static bool isSameCountRefSeqs(RestoreReadShared *const self, unsigned const count)
+{
+    return count == self->refSeqs.entries;
+}
+
+static bool isSameCountWGS(RestoreReadShared *const self, unsigned const count)
+{
+    return count == self->wgs.entries;
+}
+
+static rc_t RestoreReadSharedMake(RestoreReadShared **const pnew)
+{
+    rc_t rc = 0;
+    RestoreReadShared *const rslt = calloc(1, sizeof(*rslt));
+
+    *pnew = NULL;
+    if (rslt) {
+        KRefcountInit(&rslt->refcount, 0, "RestoreReadShared", "init", "global");
+        rc = KRWLockMake(&rslt->rwl);
+        if (rc == 0)
+            *pnew = rslt;
+        else
+            free(rslt);
+    }
+    return rc;
+}
+
+static void RestoreReadSharedFree(RestoreReadShared *const self)
+{
+    RefSeqListFree(&self->refSeqs);
+    WGS_ListFree(&self->wgs);
+    ErrorListFree(&self->errors);
+    KRWLockRelease(self->rwl);
+    KRefcountWhack(&self->refcount, "RestoreReadShared");
+    free(self);
+}
+
+static void RestoreReadSharedRelease(RestoreReadShared *const self)
+{
+    switch (KRefcountDrop(&self->refcount, "RestoreReadShared")) {
+    case krefWhack:
+        atomic_test_and_set_ptr(&g_shared, NULL, self);
+        RestoreReadSharedFree(self);
+        /* no break */
+    case krefOkay:
+        return;
+    default:
+        assert(!"valid refcount");
+        abort();
+    }
+}
+
+static RestoreReadShared *getRestoreReadShared(rc_t *const prc)
+{
+    if (g_shared.ptr == NULL) {
+        RestoreReadShared *temp = NULL;
+        *prc = RestoreReadSharedMake(&temp);
+        if (temp) {
+            WGS_ListInit(&temp->wgs, DEFAULT_WGS_OPEN_LIMIT);
+            *prc = RefSeqListInit(&temp->refSeqs);
+
+            if (atomic_test_and_set_ptr(&g_shared, temp, NULL) != NULL)
+                RestoreReadSharedFree(temp);
+        }
+    }
+    if (g_shared.ptr)
+        KRefcountAdd(&((RestoreReadShared *)g_shared.ptr)->refcount, "RestoreReadShared");
+
+    return g_shared.ptr;
+}
+
+struct RestoreRead {
+    VDBManager const *mgr;
+    RestoreReadShared *shared;
     struct Last {
-        enum { L_none, refSeq_type, wgs_type } type;
         union U {
             RefSeqListEntry *r;
             WGS_ListEntry *w;
         } u;
+        unsigned count; /**< the pointer is invalid if count != current count */
+        enum { L_none, refSeq_type, wgs_type } type;
     } last;
 };
 
@@ -262,10 +376,8 @@ void RestoreReadFree(void *const vp)
 {
     RestoreRead *const self = (RestoreRead *)vp;
 
-    RefSeqListFree(&self->refSeqs);
-    WGS_ListFree(&self->wgs);
-    ErrorListFree(&self->errors);
     VDBManagerRelease(self->mgr);
+    RestoreReadSharedRelease(self->shared);
 
     free(self);
 }
@@ -273,10 +385,11 @@ void RestoreReadFree(void *const vp)
 RestoreRead *RestoreReadMake(VDBManager const *vmgr, rc_t *rcp)
 {
     RestoreRead *self = calloc(1, sizeof(*self));
-    self->mgr = vmgr;
-    *rcp = VDBManagerAddRef(self->mgr);
-    WGS_ListInit(&self->wgs, DEFAULT_WGS_OPEN_LIMIT);
-    *rcp = RefSeqListInit(&self->refSeqs);
+    if (self) {
+        self->mgr = vmgr;
+        *rcp = VDBManagerAddRef(self->mgr);
+        self->shared = getRestoreReadShared(rcp);
+    }
     return self;
 }
 
@@ -305,7 +418,10 @@ static rc_t openSeqID(  RestoreRead *const self
     }
     if (tbl != NULL) {
         if (tableSchemaNameIsEqual(tbl, RefSeq_Scheme())) {
-            self->last.u.r = RefSeqInsert(&self->refSeqs, id_len, seq_id, tbl, &rc);
+            RestoreReadSharedWriter(self->shared);
+            self->last.u.r = RefSeqInsert(&self->shared->refSeqs, id_len, seq_id, tbl, &rc);
+            self->last.count = self->shared->refSeqs.entries;
+            RestoreReadSharedWriterDone(self->shared);
             if (self->last.u.r)
                 self->last.type = refSeq_type;
         }
@@ -315,7 +431,10 @@ static rc_t openSeqID(  RestoreRead *const self
     }
     else if (db != NULL) {
         if (dbSchemaNameIsEqual(db, WGS_Scheme())) {
-            self->last.u.w = WGS_Insert(&self->wgs, wgs_id_len, seq_id, url, db, &rc);
+            RestoreReadSharedWriter(self->shared);
+            self->last.u.w = WGS_Insert(&self->shared->wgs, wgs_id_len, seq_id, url, db, &rc);
+            self->last.count = self->shared->wgs.entries;
+            RestoreReadSharedWriterDone(self->shared);
             if (self->last.u.w)
                 self->last.type = wgs_type;
         }
@@ -332,12 +451,12 @@ static rc_t openSeqID(  RestoreRead *const self
     return rc;
 }
 
-rc_t RestoreReadGetSequence(  RestoreRead *const self
-                            , unsigned const start
-                            , size_t const length, uint8_t *const dst
-                            , size_t const id_len, char const *const seq_id
-                            , unsigned *const actual
-                            , VTable const *const forTable)
+static rc_t getSequence(  RestoreRead *const self
+                        , unsigned const start
+                        , size_t const length, uint8_t *const dst
+                        , size_t const id_len, char const *const seq_id
+                        , unsigned *const actual
+                        , VTable const *const forTable)
 {
     unsigned wgs_namelen = 0;
     int64_t wgs_row = 0;
@@ -348,7 +467,7 @@ rc_t RestoreReadGetSequence(  RestoreRead *const self
     for (loops = 0; loops != 2; ++loops) {
         switch (self->last.type) {
         case refSeq_type:
-            if (name_cmp(self->last.u.r->name, id_len, seq_id) == 0) {
+            if (isSameCountRefSeqs(self->shared, self->last.count) && name_cmp(self->last.u.r->name, id_len, seq_id) == 0) {
 REFSEQ_FROM_LAST:
                 *actual = RefSeq_getBases(&self->last.u.r->object, dst, start, length);
                 return 0;
@@ -356,7 +475,7 @@ REFSEQ_FROM_LAST:
             break;
         case wgs_type:
             wgs_namelen = WGS_splitName(&wgs_row, id_len, seq_id);
-            if (wgs_namelen > 0 && name_cmp(self->last.u.w->name, wgs_namelen, seq_id) == 0) {
+            if (wgs_namelen > 0 && isSameCountWGS(self->shared, self->last.count) && name_cmp(self->last.u.w->name, wgs_namelen, seq_id) == 0) {
                 assert(self->last.u.w->object.curs != NULL);
 WGS_FROM_LAST:
                 *actual = WGS_getBases(&self->last.u.w->object, dst, start, length, wgs_row);
@@ -372,26 +491,28 @@ WGS_FROM_LAST:
             return RC(rcAlign, rcTable, rcAccessing, rcType, rcUnexpected);
 
         // check error list
-        if (Error_Find(&self->errors, &error_at, id_len, seq_id))
-            return self->errors.entry[error_at].error;
+        if (Error_Find(&self->shared->errors, &error_at, id_len, seq_id))
+            return self->shared->errors.entry[error_at].error;
 
         // check refSeq list
-        if ((self->last.u.r = RefSeqFind(&self->refSeqs, id_len, seq_id)) != NULL) {
+        if ((self->last.u.r = RefSeqFind(&self->shared->refSeqs, id_len, seq_id)) != NULL) {
+            self->last.count = self->shared->refSeqs.entries;
             self->last.type = refSeq_type;
             goto REFSEQ_FROM_LAST;
         }
 
         // check WGS list
         wgs_namelen = WGS_splitName(&wgs_row, id_len, seq_id);
-        if (wgs_namelen > 0 && (self->last.u.w = WGS_Find(&self->wgs, wgs_namelen, seq_id)) != NULL) {
+        if (wgs_namelen > 0 && (self->last.u.w = WGS_Find(&self->shared->wgs, wgs_namelen, seq_id)) != NULL) {
             if (self->last.u.w->object.curs == NULL) {
                 rc_t rc = 0;
 
-                WGS_limitOpen(&self->wgs);
+                WGS_limitOpen(&self->shared->wgs);
                 rc = WGS_reopen(&self->last.u.w->object, self->mgr, wgs_namelen, seq_id);
                 if (rc) return rc;
-                ++self->wgs.openCount;
+                ++self->shared->wgs.openCount;
             }
+            self->last.count = self->shared->wgs.entries;
             self->last.type = wgs_type;
             goto WGS_FROM_LAST;
         }
@@ -399,10 +520,25 @@ WGS_FROM_LAST:
         // it is a new seq_id
         rc = openSeqID(self, id_len, wgs_namelen, seq_id, forTable);
         if (rc) {
-            Error_Insert(&self->errors, error_at, id_len, seq_id, rc);
+            Error_Insert(&self->shared->errors, error_at, id_len, seq_id, rc);
             return rc;
         }
     }
     assert(!"reachable");
     abort();
+}
+
+rc_t RestoreReadGetSequence(  RestoreRead *const self
+                            , unsigned const start
+                            , size_t const length, uint8_t *const dst
+                            , size_t const id_len, char const *const seq_id
+                            , unsigned *const actual
+                            , VTable const *const forTable)
+{
+    rc_t rc;
+
+    RestoreReadSharedReader(self->shared);
+    rc = getSequence(self, start, length, dst, id_len, seq_id, actual, forTable);
+    RestoreReadSharedReaderDone(self->shared);
+    return rc;
 }
