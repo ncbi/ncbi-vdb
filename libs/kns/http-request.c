@@ -1494,6 +1494,8 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
         if ( rc != 0 )
         {
             KDataBufferWhack( & buffer );
+        if ( rc != 0 ) {
+            KDataBufferWhack( & buffer );
             break;
         }
 
@@ -1507,7 +1509,7 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
             rc = KClientHttpSendReceiveMsg ( self -> http, _rslt,
                 (char *) buffer.base, buffer.elem_count - 1, NULL,
                 (char *) self -> url_buffer . base );
-            if ( rc != 0 )
+            if ( rc != 0 ) {
             {
                 KDataBufferWhack( & buffer );
                 break;
@@ -1519,6 +1521,11 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
         rslt = * _rslt;
         rslt -> expiration = expiration; /* expiration has to reach the caller */
         expiration = NULL;
+
+        assert(!rc);
+        rc = KDataBufferWhack(&buffer);
+        if (rc != 0)
+            return rc;
 
         /* look at status code */
         switch ( rslt -> status )
