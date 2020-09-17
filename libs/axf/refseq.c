@@ -51,8 +51,9 @@ struct RefSeqSyncLoadInfo {
     VCursor const *curs;        /**< can be used by either thread after acquiring the mutex */
     RowRange rr;                /**< of the table */
     CursorAddResult car[2];     /**< column name and id */
-    atomic64_t loaded;    /**< rows less than this have been loaded already */
+    atomic64_t loaded;          /**< rows less than this have been loaded already */
     atomic64_t count;           /**< number of rows left to load, will cause bg thread to exit if set = 0 */
+    atomic64_t sync;
     unsigned max_seq_len;       /**< max length of any READ in the table */
     unsigned hits;              /**< statistics to give some idea of ... */
     unsigned miss;              /**< ... how effective the bg thread was */
@@ -270,8 +271,7 @@ static unsigned rowToPosition(RefSeqSyncLoadInfo const *info, int64_t const row)
     return (unsigned)((row - info->rr.first) * info->max_seq_len);
 }
 
-/* this is called on the main thread */
-static unsigned readNormalIncomplete(Object *self, uint8_t *const dst, unsigned const start, unsigned const len)
+static unsigned readNormalIncomplete_1(Object *self, uint8_t *const dst, unsigned const start, unsigned const len)
 {
     unsigned const length = self->length;
     unsigned const actlen = (start + len) < length ? len : start < length ? length - start : 0;
@@ -331,18 +331,20 @@ static unsigned readNormalIncomplete(Object *self, uint8_t *const dst, unsigned 
             LOGERR(klogErr, rc, "Error reading reference");
             return 0;
         }
-        if (atomic64_read(&info->count) == 0) {
-            double const pct = 100.0 * (info->hits - info->miss) / ((double)(info->hits));
-
-            rc = RefSeqSyncLoadInfoFree(info);
-            self->info = NULL;
-            self->reader = readNormal;
-            if (rc)
-                return 0;
-            PLOGMSG(klogDebug, (klogDebug, "Done with background loading of reference; preload was $(pct)%", "pct=%5.1f", (float)pct));
-        }
     }
     return actlen;
+}
+
+/* this is called on the main thread */
+static unsigned readNormalIncomplete(Object *self, uint8_t *const dst, unsigned const start, unsigned const len)
+{
+    if (self->info == NULL || (atomic64_read_and_add_even(&self->info->sync, 2) & 1) != 0)
+        return readNormal(self, dst, start, len);
+    {
+        unsigned const actlen = readNormalIncomplete_1(self, dst, start, len);
+        atomic64_add(&self->info->sync, -2);
+        return actlen;
+    }
 }
 
 /* this is called on the background thread */
@@ -372,6 +374,23 @@ static rc_t runLoadThread(Object *self)
         if (done) break;
     }
     LOGMSG(klogDebug, "Done background loading of reference");
+
+    self->reader = readNormal;
+    self->info = NULL;
+
+    atomic64_inc(&info->sync); /* tell readers to bail out */
+    KLockAcquire(info->mutex);
+    while (atomic_read(&info->sync) != 1) /* wait for readers to finish */
+        ;
+    {
+        double const pct = (100.0 * (info->hits - info->miss)) / info->hits;
+
+        KLockRelease(info->mutex);
+        VCursorRelease(info->curs);
+        free(info);
+
+        PLOGMSG(klogDebug, (klogDebug, "Done with background loading of reference; preload was $(pct)%", "pct=%5.1f", (float)pct));
+    }
     return 0;
 }
 

@@ -195,7 +195,7 @@ static RangeList *grow(RangeList *const list)
         void *const old = list->ranges;
         unsigned const allocated = list->allocated;
         unsigned const new_allocated = allocated == 0 ? 16 : (allocated * 2);
-        void *tmp = malloc(new_allocated * sizeof(list->ranges[0]));
+        void *tmp = calloc(new_allocated, sizeof(list->ranges[0]));
         if (tmp == NULL)
             return NULL;
         memmove(tmp, old, allocated * sizeof(list->ranges[0]));
