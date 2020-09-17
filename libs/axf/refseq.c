@@ -67,9 +67,6 @@ static rc_t RefSeqSyncLoadInfoFree(RefSeqSyncLoadInfo *const self)
         atomic64_set(&self->count, 0);
         KLockUnlock(self->mutex);
         KThreadWait(self->th, &rc);
-        KLockRelease(self->mutex);
-        VCursorRelease(self->curs);
-        free(self);
     }
     if (rc)
         LOGERR(klogErr, rc, "async loader thread failed");
