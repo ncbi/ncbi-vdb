@@ -376,7 +376,6 @@ static rc_t runLoadThread(Object *self)
     self->info = NULL;
 
     atomic64_inc(&info->sync); /* tell readers to bail out */
-    KLockAcquire(info->mutex);
     while (atomic_read(&info->sync) != 1) /* wait for readers to finish */
         ;
     {
