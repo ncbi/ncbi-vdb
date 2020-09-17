@@ -53,7 +53,7 @@ static void readerStart(Sync *const sync)
     if ((atomic64_read_and_add_even(&sync->counter, 2) & 1) != 0) {
         /* a writer is waiting or active */
         KLockAcquire(sync->mutex);
-        atomic_add(&sync->counter, 2);
+        atomic64_add(&sync->counter, 2);
         KLockUnlock(sync->mutex);
     }
 }

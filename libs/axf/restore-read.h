@@ -26,13 +26,13 @@
 
 typedef struct RestoreRead RestoreRead;
 
-void RestoreReadFree(void *const self);
+void RestoreReadFree(void *self);
 
 RestoreRead *RestoreReadMake(VDBManager const *vmgr, rc_t *rcp);
 
-rc_t RestoreReadGetSequence(  RestoreRead *const self
-                            , unsigned const start
-                            , size_t const length, uint8_t *const dst
-                            , size_t const id_len, char const *const seq_id
+rc_t RestoreReadGetSequence(  RestoreRead *self
+                            , unsigned start
+                            , size_t length, uint8_t *dst
+                            , size_t id_len, char const *seq_id
                             , unsigned *actual
-                            , VTable const *const forTable);
+                            , VTable const *forTable);

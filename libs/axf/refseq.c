@@ -200,7 +200,7 @@ static rc_t read1Row(Object *self, int64_t row)
     int accum = 0;
     int n = 0;
     rc_t rc = 0;
-    int32_t const seqLen = readU32(seqLenInfo, row, curs, &rc);
+    uint32_t const seqLen = readU32(seqLenInfo, row, curs, &rc);
     uint32_t ri; ///< index within current row
     ReadStringResult read;
     unsigned j = position / 4;
@@ -398,7 +398,7 @@ static rc_t loadCircular_1(  uint8_t *result
 
     for (i = 0; i < rowRange->count; ++i) {
         int64_t const row = rowRange->first + i;
-        int32_t const seqLen = readU32(seqLenInfo, row, curs, &rc);
+        uint32_t const seqLen = readU32(seqLenInfo, row, curs, &rc);
         uint32_t ri; ///< index within current row
         ReadStringResult read;
 
@@ -445,7 +445,7 @@ static rc_t loadCircular(  Object *result
         rc = loadCircular_1(bases, curs, rowRange, &info[1], &info[2]);
         if (rc == 0) {
             result->bases = bases;
-            result->length = baseCount;
+            result->length = (unsigned)baseCount;
             result->reader = readCircular;
         }
         else {
@@ -473,7 +473,7 @@ static RefSeqSyncLoadInfo *RefSeqSyncLoadInfoMake(  VCursor const *curs
             result->curs = curs;
             VCursorAddRef(curs);
             result->rr = *rr;
-            result->count = rr->count;
+            result->count = (unsigned)rr->count;
             result->car[0] = car[0];
             result->car[1] = car[1];
             return result;
@@ -506,7 +506,7 @@ static rc_t load(  Object *result
             return RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted);
 
         result->bases = bases;
-        result->length = baseCount;
+        result->length = (unsigned)baseCount;
         result->info = RefSeqSyncLoadInfoMake(curs, rowRange, info + 1, &rc);
         if (rc == 0) {
             rc = KThreadMake(&result->info->th, run_load_thread, result);
@@ -542,6 +542,7 @@ static rc_t init(Object *result, VTable const *const tbl)
         if (getRowRange(&rowRange, curs, &rc) != NULL) {
             bool const circular = readBool(&cols[0], rowRange.first, curs, &rc);
 
+            assert(rowRange.count < UINT_MAX);
             rc = (circular ? loadCircular : load)(result, curs, &rowRange, &cols[1]);
         }
     }

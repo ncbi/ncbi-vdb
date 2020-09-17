@@ -374,7 +374,7 @@ struct RestoreRead {
     } last;
 };
 
-void RestoreReadFree(void *const vp)
+void RestoreReadFree(void *vp)
 {
     RestoreRead *const self = (RestoreRead *)vp;
 
