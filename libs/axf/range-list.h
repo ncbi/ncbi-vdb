@@ -80,7 +80,7 @@ void withIntersectRangeList(RangeList const *list, Range const *query, Intersect
  *
  * This is the main function used by a writer.
  */
-RangeList *extendRangeList(RangeList *list, unsigned const position);
+RangeList *extendRangeList(RangeList *list, unsigned position);
 
 /**
  * @brief performs a consistency check

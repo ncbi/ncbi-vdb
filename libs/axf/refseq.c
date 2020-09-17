@@ -35,6 +35,7 @@
 
 #include <stdlib.h>
 #include <assert.h>
+#include <limits.h>
 
 typedef RefSeqList List;
 typedef RefSeqListEntry Entry;
@@ -195,12 +196,12 @@ static rc_t read1Row(Object *self, int64_t row)
     VCursor const *const curs = info->curs;
     CursorAddResult *const seqLenInfo = &info->car[0];
     CursorAddResult *const readInfo = &info->car[1];
-    unsigned position = (row - info->rr.first) * info->max_seq_len;
+    unsigned position = (unsigned)((row - info->rr.first) * info->max_seq_len);
     int accum = 0;
     int n = 0;
     rc_t rc = 0;
     int32_t const seqLen = readU32(seqLenInfo, row, curs, &rc);
-    int32_t ri; ///< index within current row
+    uint32_t ri; ///< index within current row
     ReadStringResult read;
     unsigned j = position / 4;
 
@@ -266,7 +267,7 @@ static int64_t positionToRow(RefSeqSyncLoadInfo const *info, unsigned const posi
 static unsigned rowToPosition(RefSeqSyncLoadInfo const *info, int64_t const row)
 {
     assert(info != NULL);
-    return (row - info->rr.first) * info->max_seq_len;
+    return (unsigned)((row - info->rr.first) * info->max_seq_len);
 }
 
 /* this is called on the main thread */
@@ -278,7 +279,7 @@ static unsigned readNormalIncomplete(Object *self, uint8_t *const dst, unsigned 
         RefSeqSyncLoadInfo *info = self->info;
         int64_t const first = positionToRow(info, start);
         int64_t const last = positionToRow(info, start + actlen - 1);
-        unsigned const max_bases = ((last + 1) - first) * info->max_seq_len;
+        size_t const max_bases = ((last + 1) - first) * info->max_seq_len;
         uint8_t *const buffer = (max_bases <= len && start == rowToPosition(info, first)) ? dst : malloc(max_bases);
         uint8_t *buf = buffer;
         int64_t row;
@@ -331,14 +332,14 @@ static unsigned readNormalIncomplete(Object *self, uint8_t *const dst, unsigned 
             return 0;
         }
         if (info->count == 0) {
-            float const pct = 100.0 * (info->hits - info->miss) / ((float)(info->hits));
+            double const pct = 100.0 * (info->hits - info->miss) / ((double)(info->hits));
 
             self->info = NULL;
             self->reader = readNormal;
             rc = RefSeqSyncLoadInfoFree(info);
             if (rc)
                 return 0;
-            PLOGMSG(klogDebug, (klogDebug, "Done with background loading of reference; preload was $(pct)%", "pct=%5.1f", pct));
+            PLOGMSG(klogDebug, (klogDebug, "Done with background loading of reference; preload was $(pct)%", "pct=%5.1f", (float)pct));
         }
     }
     return actlen;
@@ -398,7 +399,7 @@ static rc_t loadCircular_1(  uint8_t *result
     for (i = 0; i < rowRange->count; ++i) {
         int64_t const row = rowRange->first + i;
         int32_t const seqLen = readU32(seqLenInfo, row, curs, &rc);
-        int32_t ri; ///< index within current row
+        uint32_t ri; ///< index within current row
         ReadStringResult read;
 
         if (seqLen == 0 || NULL == readString(&read, readInfo, row, curs, &rc))
@@ -432,9 +433,10 @@ static rc_t loadCircular(  Object *result
                          )
 {
     rc_t rc = 0;
-    unsigned const baseCount = readU64(&info[0], rowRange->first, curs, &rc);
+    uint64_t const baseCount = readU64(&info[0], rowRange->first, curs, &rc);
+    assert(baseCount < UINT_MAX);
     if (rc == 0) {
-        unsigned const allocated = (baseCount + 1) / 2;
+        unsigned const allocated = (unsigned)((baseCount + 1) / 2);
         uint8_t *bases = malloc(allocated);
 
         if (bases == NULL)
@@ -494,9 +496,10 @@ static rc_t load(  Object *result
                  )
 {
     rc_t rc = 0;
-    unsigned const baseCount = readU64(&info[0], rowRange->first, curs, &rc);
+    uint64_t const baseCount = readU64(&info[0], rowRange->first, curs, &rc);
+    assert(baseCount < UINT_MAX);
     if (rc == 0) {
-        unsigned const allocated = (baseCount + 3) / 4;
+        unsigned const allocated = (unsigned)((baseCount + 3) / 4);
         uint8_t *bases = malloc(allocated);
 
         if (bases == NULL)

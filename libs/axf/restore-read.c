@@ -42,6 +42,8 @@
 #include <vfs/path-priv.h> /* VPathSetAccOfParentDb */
 
 #include <ctype.h>
+#include <assert.h>
+#include <limits.h>
 
 #define DEFAULT_WGS_OPEN_LIMIT 8
 
@@ -151,14 +153,14 @@ static bool tableSchemaNameIsEqual(VTable const *tbl, char const *name)
 {
     char buffer[1024];
     size_t size = sizeof(buffer);
-    return getSchemaName_Table(buffer, &size, tbl) == NULL ? false : schemaNameIsEqual(buffer, size, name);
+    return getSchemaName_Table(buffer, &size, tbl) == NULL ? false : schemaNameIsEqual(buffer, (unsigned)size, name);
 }
 
 static bool dbSchemaNameIsEqual(VDatabase const *db, char const *name)
 {
     char buffer[1024];
     size_t size = sizeof(buffer);
-    return getSchemaName_DB(buffer, &size, db) == NULL ? false : schemaNameIsEqual(buffer, size, name);
+    return getSchemaName_DB(buffer, &size, db) == NULL ? false : schemaNameIsEqual(buffer, (unsigned)size, name);
 }
 
 static int name_cmp(char const *name, unsigned const qlen, char const *qry)
@@ -394,8 +396,8 @@ RestoreRead *RestoreReadMake(VDBManager const *vmgr, rc_t *rcp)
 }
 
 static rc_t openSeqID(  RestoreRead *const self
-                      , size_t const id_len
-                      , size_t const wgs_id_len
+                      , unsigned const id_len
+                      , unsigned const wgs_id_len
                       , char const *const seq_id
                       , VTable const *const forTable)
 {
@@ -453,8 +455,8 @@ static rc_t openSeqID(  RestoreRead *const self
 
 static rc_t getSequence(  RestoreRead *const self
                         , unsigned const start
-                        , size_t const length, uint8_t *const dst
-                        , size_t const id_len, char const *const seq_id
+                        , unsigned const length, uint8_t *const dst
+                        , unsigned const id_len, char const *const seq_id
                         , unsigned *const actual
                         , VTable const *const forTable)
 {
@@ -467,7 +469,7 @@ static rc_t getSequence(  RestoreRead *const self
     for (loops = 0; loops != 2; ++loops) {
         switch (self->last.type) {
         case refSeq_type:
-            if (isSameCountRefSeqs(self->shared, self->last.count) && name_cmp(self->last.u.r->name, id_len, seq_id) == 0) {
+            if (isSameCountRefSeqs(self->shared, self->last.count) && name_cmp(self->last.u.r->name, (unsigned)id_len, seq_id) == 0) {
 REFSEQ_FROM_LAST:
                 *actual = RefSeq_getBases(&self->last.u.r->object, dst, start, length);
                 return 0;
@@ -528,17 +530,20 @@ WGS_FROM_LAST:
     abort();
 }
 
-rc_t RestoreReadGetSequence(  RestoreRead *const self
-                            , unsigned const start
-                            , size_t const length, uint8_t *const dst
-                            , size_t const id_len, char const *const seq_id
-                            , unsigned *const actual
-                            , VTable const *const forTable)
+rc_t RestoreReadGetSequence(  RestoreRead *self
+                            , unsigned start
+                            , size_t length, uint8_t *dst
+                            , size_t id_len, char const *seq_id
+                            , unsigned *actual
+                            , VTable const *forTable)
 {
     rc_t rc;
 
+    assert(length < UINT_MAX);
+    assert(id_len < UINT_MAX);
+
     RestoreReadSharedReader(self->shared);
-    rc = getSequence(self, start, length, dst, id_len, seq_id, actual, forTable);
+    rc = getSequence(self, start, (unsigned)length, dst, (unsigned)id_len, seq_id, actual, forTable);
     RestoreReadSharedReaderDone(self->shared);
     return rc;
 }

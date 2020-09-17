@@ -50,7 +50,7 @@ struct Sync {
 
 static void readerStart(Sync *const sync)
 {
-    if ((atomic_read_and_add_even(&sync->counter, 2) & 1) != 0) {
+    if ((atomic64_read_and_add_even(&sync->counter, 2) & 1) != 0) {
         /* a writer is waiting or active */
         KLockAcquire(sync->mutex);
         atomic_add(&sync->counter, 2);
@@ -60,14 +60,14 @@ static void readerStart(Sync *const sync)
 
 static void readerDone(Sync *const sync)
 {
-    atomic_add(&sync->counter, -2);
+    atomic64_add(&sync->counter, -2);
 }
 
 static void writerStart(Sync *const sync)
 {
-    assert((atomic_read(&sync->counter) & 1) == 0); /* there is only one writer */
+    assert((atomic64_read(&sync->counter) & 1) == 0); /* there is only one writer */
 
-    atomic_inc(&sync->counter); /* tell readers to wait */
+    atomic64_inc(&sync->counter); /* tell readers to wait */
     KLockAcquire(sync->mutex);
     while (atomic_read(&sync->counter) != 1) /* wait for readers to finish */
         ;
@@ -75,7 +75,7 @@ static void writerStart(Sync *const sync)
 
 static void writerDone(Sync *const sync)
 {
-    atomic_dec(&sync->counter);
+    atomic64_dec(&sync->counter);
     KLockUnlock(sync->mutex);
 }
 
@@ -133,7 +133,10 @@ void intersectRangeList(RangeList const *list, Range const **begin, Range const 
     }
 }
 
-void withIntersectRangeList(RangeList const *list, Range const *query, IntersectRangeListCallback callback, void *data)
+static void withIntersectRangeList_1(  RangeList const *const list
+                                     , Range const *const query
+                                     , IntersectRangeListCallback const callback
+                                     , void *const data)
 {
     if (list->sync) {
         readerStart(list->sync);
@@ -165,7 +168,13 @@ void withIntersectRangeList(RangeList const *list, Range const *query, Intersect
     }
 }
 
-static RangeList *grow(RangeList *list)
+
+void withIntersectRangeList(RangeList const *list, Range const *query, IntersectRangeListCallback callback, void *data)
+{
+    withIntersectRangeList_1(list, query, callback, data);
+}
+
+static RangeList *grow(RangeList *const list)
 {
     if (list->sync == NULL) {
         Sync *sync = calloc(1, sizeof(*sync));
@@ -197,7 +206,7 @@ static RangeList *grow(RangeList *list)
     return list;
 }
 
-static void insert(RangeList *list, unsigned at)
+static void insert(RangeList *const list, unsigned const at)
 {
     unsigned i = list->count;
     while (i > at) {
@@ -207,7 +216,7 @@ static void insert(RangeList *list, unsigned at)
     ++list->count;
 }
 
-static void remove(RangeList *list, unsigned at)
+static void remove(RangeList *const list, unsigned at)
 {
     while (at + 1 < list->count) {
         list->ranges[at] = list->ranges[at + 1];
@@ -217,7 +226,7 @@ static void remove(RangeList *list, unsigned at)
 }
 
 /* merge [at] and [at + 1] */
-static void collapse(RangeList *list, unsigned at)
+static void collapse(RangeList *const list, unsigned const at)
 {
     if (at + 1 < list->count && list->ranges[at].end == list->ranges[at + 1].start) {
         unsigned const start = list->ranges[at].start;
@@ -302,7 +311,7 @@ static RangeList *extendRangeList_1(RangeList *const list, unsigned const positi
     return NULL;
 }
 
-RangeList *extendRangeList(RangeList *const list, unsigned const position)
+RangeList *extendRangeList(RangeList *list, unsigned position)
 {
     return extendRangeList_1(list, position);
 }
