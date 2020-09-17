@@ -129,6 +129,18 @@
     <ClCompile Include="..\..\..\libs\axf\template-len.c">
       <ObjectFileName >$(IntDir)axf-%(Filename).obj</ObjectFileName>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\axf\range-list.c">
+      <ObjectFileName>$(IntDir)axf-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\axf\refseq.c">
+      <ObjectFileName>$(IntDir)axf-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\axf\wgs.c">
+      <ObjectFileName>$(IntDir)axf-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\axf\restore-read.c">
+      <ObjectFileName>$(IntDir)axf-%(Filename).obj</ObjectFileName>
+    </ClCompile>
 
     <ClCompile Include="..\..\..\libs\blast\blast-mgr.c">
       <ObjectFileName >$(IntDir)blast-%(Filename).obj</ObjectFileName>
