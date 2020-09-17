@@ -31,6 +31,7 @@
 #include <vdb/cursor.h>
 #include <kproc/lock.h>
 #include <kproc/thread.h>
+#include <atomic.h>
 #include "refseq.h"
 
 #include <stdlib.h>
@@ -50,8 +51,8 @@ struct RefSeqSyncLoadInfo {
     VCursor const *curs;        /**< can be used by either thread after acquiring the mutex */
     RowRange rr;                /**< of the table */
     CursorAddResult car[2];     /**< column name and id */
-    int64_t volatile loaded;    /**< rows less than this have been loaded already */
-    unsigned volatile count;    /**< number of rows left to load, will cause bg thread to exit if set = 0 */
+    atomic64_t loaded;    /**< rows less than this have been loaded already */
+    atomic64_t count;           /**< number of rows left to load, will cause bg thread to exit if set = 0 */
     unsigned max_seq_len;       /**< max length of any READ in the table */
     unsigned hits;              /**< statistics to give some idea of ... */
     unsigned miss;              /**< ... how effective the bg thread was */
@@ -62,7 +63,7 @@ static rc_t RefSeqSyncLoadInfoFree(RefSeqSyncLoadInfo *const self)
     rc_t rc = 0;
     if (self) {
         KLockAcquire(self->mutex);
-        self->count = 0;
+        atomic64_set(&self->count, 0);
         KLockUnlock(self->mutex);
         KThreadWait(self->th, &rc);
         KLockRelease(self->mutex);
@@ -245,17 +246,16 @@ static rc_t read1Row(Object *self, int64_t row)
 
 static void rowWasLoaded(RefSeqSyncLoadInfo *info, int64_t row)
 {
-    /* the lock is held during this function */
-    assert(info->count > 0);
+    assert(atomic64_read(&info->count) > 0);
 
-    info->loaded = row;
-    --info->count;
+    atomic64_set(&info->loaded, row);
+    atomic64_dec(&info->count);
 }
 
 static bool rowIsLoaded(RefSeqSyncLoadInfo const *info, int64_t row)
 {
     /* the lock is NOT held during this function */
-    return row < info->loaded;
+    return row < atomic64_read(&info->loaded);
 }
 
 static int64_t positionToRow(RefSeqSyncLoadInfo const *info, unsigned const position)
@@ -331,12 +331,12 @@ static unsigned readNormalIncomplete(Object *self, uint8_t *const dst, unsigned 
             LOGERR(klogErr, rc, "Error reading reference");
             return 0;
         }
-        if (info->count == 0) {
+        if (atomic64_read(&info->count) == 0) {
             double const pct = 100.0 * (info->hits - info->miss) / ((double)(info->hits));
 
+            rc = RefSeqSyncLoadInfoFree(info);
             self->info = NULL;
             self->reader = readNormal;
-            rc = RefSeqSyncLoadInfoFree(info);
             if (rc)
                 return 0;
             PLOGMSG(klogDebug, (klogDebug, "Done with background loading of reference; preload was $(pct)%", "pct=%5.1f", (float)pct));
@@ -360,7 +360,7 @@ static rc_t runLoadThread(Object *self)
         rc_t rc = 0;
 
         KLockAcquire(info->mutex);
-        if (info->count != 0) {
+        if (atomic64_read(&info->count) != 0) {
             rc = read1Row(self, row);
             if (rc == 0)
                 rowWasLoaded(info, row);
@@ -473,7 +473,7 @@ static RefSeqSyncLoadInfo *RefSeqSyncLoadInfoMake(  VCursor const *curs
             result->curs = curs;
             VCursorAddRef(curs);
             result->rr = *rr;
-            result->count = (unsigned)rr->count;
+            atomic64_set(&result->count, rr->count);
             result->car[0] = car[0];
             result->car[1] = car[1];
             return result;
