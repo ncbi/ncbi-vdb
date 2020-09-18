@@ -31,7 +31,6 @@
 #include <vdb/cursor.h>
 #include <kproc/lock.h>
 #include <kproc/thread.h>
-#include <atomic.h>
 #include "refseq.h"
 
 #include <stdlib.h>
@@ -51,12 +50,11 @@ struct RefSeqSyncLoadInfo {
     VCursor const *curs;        /**< can be used by either thread after acquiring the mutex */
     RowRange rr;                /**< of the table */
     CursorAddResult car[2];     /**< column name and id */
-    atomic64_t loaded;          /**< rows less than this have been loaded already */
-    atomic64_t count;           /**< number of rows left to load, will cause bg thread to exit if set = 0 */
-    atomic64_t sync;
+    int64_t volatile loaded;    /**< rows less than this have been loaded already */
+    unsigned volatile count;    /**< number of rows left to load, will cause bg thread to exit if set = 0 */
     unsigned max_seq_len;       /**< max length of any READ in the table */
-    unsigned hits;              /**< statistics to give some idea of ... */
-    unsigned miss;              /**< ... how effective the bg thread was */
+    unsigned volatile hits;     /**< statistics to give some idea of ... */
+    unsigned volatile miss;     /**< ... how effective the bg thread was */
 };
 
 static rc_t RefSeqSyncLoadInfoFree(RefSeqSyncLoadInfo *const self)
@@ -64,12 +62,12 @@ static rc_t RefSeqSyncLoadInfoFree(RefSeqSyncLoadInfo *const self)
     rc_t rc = 0;
     if (self) {
         KLockAcquire(self->mutex);
-        atomic64_set(&self->count, 0);
+        self->count = 0;
         KLockUnlock(self->mutex);
         KThreadWait(self->th, &rc);
+        if (rc)
+            LOGERR(klogErr, rc, "async loader thread failed");
     }
-    if (rc)
-        LOGERR(klogErr, rc, "async loader thread failed");
     return rc;
 }
 
@@ -174,18 +172,23 @@ static unsigned getBases_4na(Object const *self, uint8_t *const dst, unsigned co
     return i;
 }
 
-static unsigned readCircular(Object *self, uint8_t *const dst, unsigned const start, unsigned const len)
+static unsigned readCircular(Object const *self, uint8_t *const dst, unsigned const start, unsigned const len)
 {
     return getBases_4na(self, dst, start, len);
 }
 
-static unsigned readNormal(Object *self, uint8_t *const dst, unsigned const start, unsigned const len)
+static unsigned readNormal(Object const *self, uint8_t *const dst, unsigned const start, unsigned const len)
 {
     unsigned const length = self->length;
     unsigned const actlen = (start + len) < length ? len : start < length ? length - start : 0;
     if (actlen > 0)
         getBases_2na(dst, start, actlen, self->bases, &self->Ns);
     return actlen;
+}
+
+static unsigned readZero(Object const *self, uint8_t *const dst, unsigned const start, unsigned const len)
+{
+    return 0;
 }
 
 /* read one row from the cursor and populate the bases array and Ns structure */
@@ -244,16 +247,17 @@ static rc_t read1Row(Object *self, int64_t row)
 
 static void rowWasLoaded(RefSeqSyncLoadInfo *info, int64_t row)
 {
-    assert(atomic64_read(&info->count) > 0);
+    /* the lock is held during this function */
+    assert(info->count > 0);
 
-    atomic64_set(&info->loaded, row);
-    atomic64_dec(&info->count);
+    info->loaded = row;
+    --info->count;
 }
 
 static bool rowIsLoaded(RefSeqSyncLoadInfo const *info, int64_t row)
 {
     /* the lock is NOT held during this function */
-    return row < atomic64_read(&info->loaded);
+    return row < info->loaded;
 }
 
 static int64_t positionToRow(RefSeqSyncLoadInfo const *info, unsigned const position)
@@ -268,7 +272,8 @@ static unsigned rowToPosition(RefSeqSyncLoadInfo const *info, int64_t const row)
     return (unsigned)((row - info->rr.first) * info->max_seq_len);
 }
 
-static unsigned readNormalIncomplete_1(Object *self, uint8_t *const dst, unsigned const start, unsigned const len)
+/* this is called on the main thread */
+static unsigned readNormalIncomplete(Object const *self, uint8_t *const dst, unsigned const start, unsigned const len)
 {
     unsigned const length = self->length;
     unsigned const actlen = (start + len) < length ? len : start < length ? length - start : 0;
@@ -288,14 +293,13 @@ static unsigned readNormalIncomplete_1(Object *self, uint8_t *const dst, unsigne
         }
         for (row = first; row <= last && rc == 0; ++row) {
             ++info->hits;
-            ++info->miss;
             if (rowIsLoaded(info, row)) {
-                --info->miss;
                 getBases_2na(buf, rowToPosition(info, row), info->max_seq_len, self->bases, &self->Ns);
             }
             else {
                 ReadStringResult read;
 
+                ++info->miss;
                 memset(buf, 15, info->max_seq_len);
                 KLockAcquire(info->mutex);
                 if (readString(&read, &info->car[1], row, info->curs, &rc) != NULL) {
@@ -332,18 +336,6 @@ static unsigned readNormalIncomplete_1(Object *self, uint8_t *const dst, unsigne
     return actlen;
 }
 
-/* this is called on the main thread */
-static unsigned readNormalIncomplete(Object *self, uint8_t *const dst, unsigned const start, unsigned const len)
-{
-    if (self->info == NULL || (atomic64_read_and_add_even(&self->info->sync, 2) & 1) != 0)
-        return readNormal(self, dst, start, len);
-    {
-        unsigned const actlen = readNormalIncomplete_1(self, dst, start, len);
-        atomic64_add(&self->info->sync, -2);
-        return actlen;
-    }
-}
-
 /* this is called on the background thread */
 static rc_t runLoadThread(Object *self)
 {
@@ -351,15 +343,15 @@ static rc_t runLoadThread(Object *self)
     uint64_t const count = info->rr.count;
     int64_t const first = info->rr.first;
     uint64_t i;
+    bool done = false;
+    rc_t rc = 0;
 
     LOGMSG(klogDebug, "Starting background loading of reference");
-    for (i = 0; i < count; ++i) {
-        bool done = false;
+    for (i = 0; i < count && rc == 0 && !done; ++i) {
         int64_t const row = i + first;
-        rc_t rc = 0;
 
         KLockAcquire(info->mutex);
-        if (atomic64_read(&info->count) != 0) {
+        if (info->count != 0) {
             rc = read1Row(self, row);
             if (rc == 0)
                 rowWasLoaded(info, row);
@@ -367,27 +359,26 @@ static rc_t runLoadThread(Object *self)
         else
             done = true;
         KLockUnlock(info->mutex);
-        if (rc) return rc;
-        if (done) break;
     }
     LOGMSG(klogDebug, "Done background loading of reference");
 
-    self->reader = readNormal;
-    self->info = NULL;
-
-    atomic64_inc(&info->sync); /* tell readers to bail out */
-    while (atomic_read(&info->sync) != 1) /* wait for readers to finish */
+    assert((atomic64_read(&self->rwl) & 1) == 0); /* there is only one writer */
+    atomic64_inc(&self->rwl); /* tell readers we want to update the state */
+    while (atomic64_read(&self->rwl) != 1)
         ;
-    {
-        double const pct = (100.0 * (info->hits - info->miss)) / info->hits;
-
-        KLockRelease(info->mutex);
-        VCursorRelease(info->curs);
-        free(info);
+    self->reader = rc == 0 ? readNormal : readZero;
+    self->info = NULL;
+    atomic64_dec(&self->rwl); /* state is updated; readers can continue */
+    if (rc == 0 && i == count) {
+        double const pct = 100.0 * (info->hits - info->miss) / info->hits;
 
         PLOGMSG(klogDebug, (klogDebug, "Done with background loading of reference; preload was $(pct)%", "pct=%5.1f", (float)pct));
     }
-    return 0;
+    KLockRelease(info->mutex);
+    VCursorRelease(info->curs);
+    free(info);
+
+    return rc;
 }
 
 char const *RefSeq_Scheme(void) {
@@ -396,7 +387,21 @@ char const *RefSeq_Scheme(void) {
 
 unsigned RefSeq_getBases(Object const *self, uint8_t *const dst, unsigned const start, unsigned const len)
 {
-    return self->reader((Object *)self, dst, start, len);
+    if (self->info == NULL) {
+        /* there is no writer */
+        return self->reader(self, dst, start, len);
+    }
+    /* there is a writer */
+    if ((atomic64_read_and_add_even(&((Object *)self)->rwl, 2) & 1) == 0) {
+        /* but it is not trying to update the state */
+        unsigned const actlen = self->reader(self, dst, start, len);
+        atomic64_add(&((Object *)self)->rwl, -2);
+        return actlen;
+    }
+    /* there is a writer trying to update the state */
+    while ((atomic64_read(&((Object *)self)->rwl) & 1) != 0)
+        ;
+    return self->reader(self, dst, start, len);
 }
 
 static rc_t loadCircular_1(  uint8_t *result
@@ -488,7 +493,7 @@ static RefSeqSyncLoadInfo *RefSeqSyncLoadInfoMake(  VCursor const *curs
             result->curs = curs;
             VCursorAddRef(curs);
             result->rr = *rr;
-            atomic64_set(&result->count, rr->count);
+            result->count = (unsigned)rr->count;
             result->car[0] = car[0];
             result->car[1] = car[1];
             return result;

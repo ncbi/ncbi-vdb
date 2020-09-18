@@ -24,19 +24,21 @@
  *
  */
 
+#include <atomic.h>
 #include "range-list.h"
 
 typedef struct RefSeq RefSeq;
 typedef struct RefSeqListEntry RefSeqListEntry;
 typedef struct RefSeqList RefSeqList;
 typedef struct RefSeqSyncLoadInfo RefSeqSyncLoadInfo;
-typedef unsigned (*RefSeqReaderFunc)(RefSeq *self, uint8_t *dst, unsigned start, unsigned len);
+typedef unsigned (*RefSeqReaderFunc)(RefSeq const *, uint8_t *, unsigned, unsigned);
 
 struct RefSeq {
     RangeList Ns; ///< exclusion list
     uint8_t *bases;
     RefSeqReaderFunc reader;
     RefSeqSyncLoadInfo *info;
+    atomic64_t rwl;
     unsigned length; ///< logical length, is base count of the reference
 };
 
