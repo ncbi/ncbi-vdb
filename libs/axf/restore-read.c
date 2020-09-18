@@ -445,7 +445,9 @@ static rc_t openSeqID(  RestoreRead *const self
         }
     }
     else {
-        rc = RC(rcAlign, rcTable, rcAccessing, rcType, rcUnexpected);
+        if (rc == 0)
+            rc = RC(rcAlign, rcTable, rcAccessing, rcType, rcUnexpected);
+        PLOGERR(klogWarn, (klogWarn, rc, "can't open $(name) as a RefSeq or as a WGS", "name=%.*s", (int)id_len, seq_id));
     }
     VPathRelease(url);
     VTableRelease(tbl);
