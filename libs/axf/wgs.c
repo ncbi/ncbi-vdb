@@ -95,6 +95,7 @@ static void whack(Object *self)
 {
     VCursorRelease(self->curs);
     VPathRelease(self->url);
+    free(self);
 }
 
 static rc_t init(Object *self, VPath const *url, VDatabase const *db)
@@ -179,7 +180,12 @@ Entry *WGS_Insert(List *list, unsigned const qlen, char const *qry, VPath const 
         return NULL;
     }
 
-    *prc = init(&result->object, url, db);
+    result->object = calloc(1, sizeof(*result->object));
+    if (result->object == NULL) {
+        LOGERR(klogFatal, (*prc = RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted)), "");
+        return NULL;
+    }
+    *prc = init(result->object, url, db);
     if (*prc == 0)
         return result;
 
@@ -191,7 +197,7 @@ void WGS_ListFree(List *list)
 {
     unsigned i;
     for (i = 0; i != list->entries; ++i) {
-        whack(&list->entry[i].object);
+        whack(list->entry[i].object);
         free(list->entry[i].name);
     }
     free(list->entry);
@@ -212,13 +218,13 @@ void WGS_limitOpen(List *self)
 
         assert(entries >= self->openCount);
         for (i = 0; i < entries; ++i) {
-            Object const *const object = &entry[i].object;
+            Object const *const object = entry[i].object;
             if (object->curs == NULL) continue;
-            if (oldest == entries || entry[oldest].object.lastAccessStamp > object->lastAccessStamp)
+            if (oldest == entries || entry[oldest].object->lastAccessStamp > object->lastAccessStamp)
                 oldest = i;
         }
         assert(oldest != entries);
-        WGS_close(&entry[oldest].object);
+        WGS_close(entry[oldest].object);
         --self->openCount;
     }
     assert(self->openCount < self->openCountLimit);

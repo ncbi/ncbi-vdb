@@ -28,7 +28,7 @@
 typedef struct LIST_ENTRY LIST_ENTRY;
 struct LIST_ENTRY {
     char *name;
-    LIST_OBJECT object;
+    LIST_OBJECT *object;
 };
 
 #define LIST           \

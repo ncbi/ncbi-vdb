@@ -575,7 +575,7 @@ void RefSeqFree(Object *self)
     RefSeqSyncLoadInfoFree(self->info);
     RangeListFree(&self->Ns);
     free(self->bases);
-    memset(self, 0, sizeof(*self));
+    free(self);
 }
 
 Entry *RefSeqFind(List *list, unsigned const qlen, char const *qry)
@@ -599,7 +599,13 @@ Entry *RefSeqInsert(List *list, unsigned const qlen, char const *qry, VTable con
         return NULL;
     }
 
-    *prc = init(&result->object, tbl);
+    result->object = calloc(1, sizeof(*result->object));
+    if (result == NULL) {
+        LOGERR(klogFatal, (*prc = RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted)), "");
+        return NULL;
+    }
+
+    *prc = init(result->object, tbl);
     if (*prc == 0)
         return result;
 
@@ -611,7 +617,7 @@ void RefSeqListFree(List *list)
 {
     unsigned i;
     for (i = 0; i != list->entries; ++i) {
-        RefSeqFree(&list->entry[i].object);
+        RefSeqFree(list->entry[i].object);
         free(list->entry[i].name);
     }
     free(list->entry);

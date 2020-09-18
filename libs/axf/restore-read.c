@@ -471,16 +471,16 @@ static rc_t getSequence(  RestoreRead *const self
         case refSeq_type:
             if (isSameCountRefSeqs(self->shared, self->last.count) && name_cmp(self->last.u.r->name, (unsigned)id_len, seq_id) == 0) {
 REFSEQ_FROM_LAST:
-                *actual = RefSeq_getBases(&self->last.u.r->object, dst, start, length);
+                *actual = RefSeq_getBases(self->last.u.r->object, dst, start, length);
                 return 0;
             }
             break;
         case wgs_type:
             wgs_namelen = WGS_splitName(&wgs_row, id_len, seq_id);
             if (wgs_namelen > 0 && isSameCountWGS(self->shared, self->last.count) && name_cmp(self->last.u.w->name, wgs_namelen, seq_id) == 0) {
-                assert(self->last.u.w->object.curs != NULL);
+                assert(self->last.u.w->object->curs != NULL);
 WGS_FROM_LAST:
-                *actual = WGS_getBases(&self->last.u.w->object, dst, start, length, wgs_row);
+                *actual = WGS_getBases(self->last.u.w->object, dst, start, length, wgs_row);
                 return 0;
             }
             break;
@@ -506,11 +506,11 @@ WGS_FROM_LAST:
         // check WGS list
         wgs_namelen = WGS_splitName(&wgs_row, id_len, seq_id);
         if (wgs_namelen > 0 && (self->last.u.w = WGS_Find(&self->shared->wgs, wgs_namelen, seq_id)) != NULL) {
-            if (self->last.u.w->object.curs == NULL) {
+            if (self->last.u.w->object->curs == NULL) {
                 rc_t rc = 0;
 
                 WGS_limitOpen(&self->shared->wgs);
-                rc = WGS_reopen(&self->last.u.w->object, self->mgr, wgs_namelen, seq_id);
+                rc = WGS_reopen(self->last.u.w->object, self->mgr, wgs_namelen, seq_id);
                 if (rc) return rc;
                 ++self->shared->wgs.openCount;
             }
