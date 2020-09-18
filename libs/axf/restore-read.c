@@ -429,6 +429,7 @@ static rc_t openSeqID(  RestoreRead *const self
         }
         else {
             rc = RC(rcAlign, rcTable, rcAccessing, rcType, rcUnexpected);
+            PLOGERR(klogWarn, (klogWarn, rc, "can't open $(name) as a RefSeq", "name=%.*s", (int)id_len, seq_id));
         }
     }
     else if (db != NULL) {
@@ -442,6 +443,7 @@ static rc_t openSeqID(  RestoreRead *const self
         }
         else {
             rc = RC(rcAlign, rcTable, rcAccessing, rcType, rcUnexpected);
+            PLOGERR(klogWarn, (klogWarn, rc, "can't open $(name) as a WGS", "name=%.*s", (int)id_len, seq_id));
         }
     }
     else {

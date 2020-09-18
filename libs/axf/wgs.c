@@ -128,7 +128,7 @@ unsigned WGS_getBases(Object *self, uint8_t *dst, unsigned start, unsigned len, 
     return 0;
 }
 
-unsigned WGS_splitName(int64_t *prow, unsigned const namelen, char const *name)
+unsigned WGS_splitName(int64_t *prow, unsigned namelen, char const *name)
 {
     unsigned digits = 0;
     unsigned i;
@@ -137,6 +137,10 @@ unsigned WGS_splitName(int64_t *prow, unsigned const namelen, char const *name)
         int const ch = name[i];
         if (ch >= '0' && ch <= '9')
             ++digits;
+        else if (ch == '.') {
+            namelen = i;
+            break;
+        }
         else
             digits = 0;
     }
