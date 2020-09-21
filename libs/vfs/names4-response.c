@@ -104,7 +104,7 @@ struct Container {
 };
 
 struct Response4 { /* Response object */
-    atomic32_t refcount; 
+    atomic32_t refcount;
     Status status;
     Container * items;
     uint32_t nItems;
@@ -1069,7 +1069,7 @@ rc_t Response4Fini ( Response4 * self ) {
 
 rc_t Response4Release ( const Response4 * cself ) {
     rc_t rc = 0;
-    
+
     Response4 * self = ( Response4 * ) cself;
 
     if ( self == NULL )
@@ -1676,7 +1676,7 @@ static rc_t ItemMappingByAcc(const Item * self) {
     const char vdbcache[] = "vdbcache";
     const char pileup[] = "pileup";
     const char realign[] = "realign";
-    
+
     assert( self );
 
     if (self->acc != NULL) {
@@ -2065,7 +2065,7 @@ static rc_t Response4AddItems4 ( Response4 * self, Container * aBox,
 
     value = KJsonObjectGetMember ( node, "link" );
 
-    if ( ( ( data . cls != NULL ) && ( strcmp ( data .cls, "run"  ) == 0 
+    if ( ( ( data . cls != NULL ) && ( strcmp ( data .cls, "run"  ) == 0
                                     || strcmp ( data .cls, "file" ) == 0 ) )
         || value != NULL )
     {
@@ -2667,7 +2667,7 @@ static
 rc_t KSrvRespFileGetAccNoTic ( const KSrvRespFile * self, const char ** acc )
 {
     assert ( self && self -> item && acc );
-    
+
     *acc = self->item->acc;
 
     if (self->item->id <= 0) {
@@ -2712,7 +2712,7 @@ rc_t KSrvRespFileGetId ( const KSrvRespFile * self, uint64_t * id,
 
     return 0;
 }
-                                                           
+
 rc_t KSrvRespFileGetHttp ( const KSrvRespFile * self,
                             const VPath ** path )
 {
