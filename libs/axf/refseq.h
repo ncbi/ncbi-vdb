@@ -30,14 +30,14 @@
 typedef struct RefSeq RefSeq;
 typedef struct RefSeqListEntry RefSeqListEntry;
 typedef struct RefSeqList RefSeqList;
-typedef struct RefSeqSyncLoadInfo RefSeqSyncLoadInfo;
+typedef struct RefSeqAsyncLoadInfo RefSeqAsyncLoadInfo;
 typedef unsigned (*RefSeqReaderFunc)(RefSeq const *, uint8_t *, unsigned, unsigned);
 
 struct RefSeq {
     RangeList Ns; ///< exclusion list
     uint8_t *bases;
     RefSeqReaderFunc reader;
-    RefSeqSyncLoadInfo *info;
+    RefSeqAsyncLoadInfo *async;
     atomic64_t rwl;
     unsigned length; ///< logical length, is base count of the reference
 };

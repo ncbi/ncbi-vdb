@@ -44,20 +44,20 @@ typedef RefSeq Object;
 #include "list.c"
 #include "util.h"
 
-struct RefSeqSyncLoadInfo {
+struct RefSeqAsyncLoadInfo {
     KThread *th;
     KLock *mutex;               /**< mostly guards the cursor against concurrent use */
     VCursor const *curs;        /**< can be used by either thread after acquiring the mutex */
     RowRange rr;                /**< of the table */
     CursorAddResult car[2];     /**< column name and id */
     int64_t volatile loaded;    /**< rows less than this have been loaded already */
-    unsigned volatile count;    /**< number of rows left to load, will cause bg thread to exit if set = 0 */
+    unsigned count;             /**< number of rows left to load, will cause bg thread to exit if set = 0 */
     unsigned max_seq_len;       /**< max length of any READ in the table */
     unsigned volatile hits;     /**< statistics to give some idea of ... */
     unsigned volatile miss;     /**< ... how effective the bg thread was */
 };
 
-static rc_t RefSeqSyncLoadInfoFree(RefSeqSyncLoadInfo *const self)
+static rc_t RefSeqAsyncLoadInfoFree(RefSeqAsyncLoadInfo *const self)
 {
     rc_t rc = 0;
     if (self) {
@@ -188,88 +188,28 @@ static unsigned readNormal(Object const *self, uint8_t *const dst, unsigned cons
 
 static unsigned readZero(Object const *self, uint8_t *const dst, unsigned const start, unsigned const len)
 {
-    return 0;
+    /* this should not be reachable; an rc != 0 should have propagated up the
+     * call stack and ended the program before we could get here */
+    assert(!"reachable");
+    abort();
 }
 
-/* read one row from the cursor and populate the bases array and Ns structure */
-static rc_t read1Row(Object *self, int64_t row)
-{
-    RefSeqSyncLoadInfo *const info = self->info;
-    VCursor const *const curs = info->curs;
-    CursorAddResult *const seqLenInfo = &info->car[0];
-    CursorAddResult *const readInfo = &info->car[1];
-    unsigned position = (unsigned)((row - info->rr.first) * info->max_seq_len);
-    int accum = 0;
-    int n = 0;
-    rc_t rc = 0;
-    uint32_t const seqLen = readU32(seqLenInfo, row, curs, &rc);
-    uint32_t ri; ///< index within current row
-    ReadStringResult read;
-    unsigned j = position / 4;
-
-    assert(position % 4 == 0);
-    if (seqLen == 0 || NULL == readString(&read, readInfo, row, curs, &rc))
-        return rc;
-    for (ri = 0; ri < seqLen; ++ri) {
-        int base = 0;
-        int isN = 1;
-        if (ri < read.length) {
-            switch (read.value[ri]) {
-            case 1: base = 0; isN = 0; break;
-            case 2: base = 1; isN = 0; break;
-            case 4: base = 2; isN = 0; break;
-            case 8: base = 3; isN = 0; break;
-            }
-        }
-        accum = (accum << 2) | base;
-        ++n;
-        if (n == 4) {
-            self->bases[j++] = accum;
-            accum = 0;
-            n = 0;
-        }
-        if (isN) {
-            if (NULL == extendRangeList(&self->Ns, position))
-                return RC(rcXF, rcFunction, rcReading, rcMemory, rcExhausted);
-        }
-        ++position;
-    }
-    if (n) {
-        while (n < 4) {
-            accum <<= 2;
-            ++n;
-        }
-        self->bases[j++] = accum;
-    }
-    assert(0 != checkRangeList(&self->Ns));
-    return 0;
-}
-
-static void rowWasLoaded(RefSeqSyncLoadInfo *info, int64_t row)
-{
-    /* the lock is held during this function */
-    assert(info->count > 0);
-
-    info->loaded = row;
-    --info->count;
-}
-
-static bool rowIsLoaded(RefSeqSyncLoadInfo const *info, int64_t row)
+static bool rowIsLoaded(RefSeqAsyncLoadInfo const *async, int64_t row)
 {
     /* the lock is NOT held during this function */
-    return row < info->loaded;
+    return row < async->loaded;
 }
 
-static int64_t positionToRow(RefSeqSyncLoadInfo const *info, unsigned const position)
+static int64_t positionToRow(RefSeqAsyncLoadInfo const *async, unsigned const position)
 {
-    assert(info != NULL);
-    return info->rr.first + (position / info->max_seq_len);
+    assert(async != NULL);
+    return async->rr.first + (position / async->max_seq_len);
 }
 
-static unsigned rowToPosition(RefSeqSyncLoadInfo const *info, int64_t const row)
+static unsigned rowToPosition(RefSeqAsyncLoadInfo const *async, int64_t const row)
 {
-    assert(info != NULL);
-    return (unsigned)((row - info->rr.first) * info->max_seq_len);
+    assert(async != NULL);
+    return (unsigned)((row - async->rr.first) * async->max_seq_len);
 }
 
 /* this is called on the main thread */
@@ -278,11 +218,11 @@ static unsigned readNormalIncomplete(Object const *self, uint8_t *const dst, uns
     unsigned const length = self->length;
     unsigned const actlen = (start + len) < length ? len : start < length ? length - start : 0;
     if (actlen > 0) {
-        RefSeqSyncLoadInfo *info = self->info;
-        int64_t const first = positionToRow(info, start);
-        int64_t const last = positionToRow(info, start + actlen - 1);
-        size_t const max_bases = ((last + 1) - first) * info->max_seq_len;
-        uint8_t *const buffer = (max_bases <= len && start == rowToPosition(info, first)) ? dst : malloc(max_bases);
+        RefSeqAsyncLoadInfo *async = self->async;
+        int64_t const first = positionToRow(async, start);
+        int64_t const last = positionToRow(async, start + actlen - 1);
+        size_t const max_bases = ((last + 1) - first) * async->max_seq_len;
+        uint8_t *const buffer = (max_bases <= len && start == rowToPosition(async, first)) ? dst : malloc(max_bases);
         uint8_t *buf = buffer;
         int64_t row;
         rc_t rc = 0;
@@ -292,20 +232,20 @@ static unsigned readNormalIncomplete(Object const *self, uint8_t *const dst, uns
             return 0;
         }
         for (row = first; row <= last && rc == 0; ++row) {
-            ++info->hits;
-            if (rowIsLoaded(info, row)) {
-                getBases_2na(buf, rowToPosition(info, row), info->max_seq_len, self->bases, &self->Ns);
+            ++async->hits;
+            if (rowIsLoaded(async, row)) {
+                getBases_2na(buf, rowToPosition(async, row), async->max_seq_len, self->bases, &self->Ns);
             }
             else {
                 ReadStringResult read;
 
-                ++info->miss;
-                memset(buf, 15, info->max_seq_len);
-                KLockAcquire(info->mutex);
-                if (readString(&read, &info->car[1], row, info->curs, &rc) != NULL) {
+                memset(buf, 15, async->max_seq_len);
+                KLockAcquire(async->mutex);
+                ++async->miss;
+                if (readString(&read, &async->car[1], row, async->curs, &rc) != NULL) {
                     memmove(buf, read.value, read.length);
                 }
-                KLockUnlock(info->mutex);
+                KLockUnlock(async->mutex);
                 {
                     unsigned i;
                     for (i = 0; i < read.length; ++i) {
@@ -321,10 +261,10 @@ static unsigned readNormalIncomplete(Object const *self, uint8_t *const dst, uns
                     }
                 }
             }
-            buf += info->max_seq_len;
+            buf += async->max_seq_len;
         }
         if (buffer != dst) {
-            unsigned const offset = start - rowToPosition(info, first);
+            unsigned const offset = start - rowToPosition(async, first);
             memmove(dst, buffer + offset, actlen);
             free(buffer);
         }
@@ -339,26 +279,100 @@ static unsigned readNormalIncomplete(Object const *self, uint8_t *const dst, uns
 /* this is called on the background thread */
 static rc_t runLoadThread(Object *self)
 {
-    RefSeqSyncLoadInfo *const info = self->info;
-    uint64_t const count = info->rr.count;
-    int64_t const first = info->rr.first;
+    RefSeqAsyncLoadInfo *const async = self->async;
+    uint8_t *const buffer = malloc(async->max_seq_len);
+    uint64_t const count = async->rr.count;
+    int64_t const first = async->rr.first;
+    VCursor const *const curs = async->curs;
+    CursorAddResult *const seqLenInfo = &async->car[0];
+    CursorAddResult *const readInfo = &async->car[1];
+    ReadStringResult read;
+    int accum = 0;
+    int n = 0;
     uint64_t i;
     bool done = false;
     rc_t rc = 0;
+    unsigned j = 0;
+    unsigned position = 0;
+
+    if (buffer == NULL)
+        rc = RC(rcXF, rcFunction, rcReading, rcMemory, rcExhausted);
 
     LOGMSG(klogDebug, "Starting background loading of reference");
-    for (i = 0; i < count && rc == 0 && !done; ++i) {
+    for (i = 0; i < count && !done && rc == 0; ++i) {
         int64_t const row = i + first;
+        uint32_t seqLen = 0;
 
-        KLockAcquire(info->mutex);
-        if (info->count != 0) {
-            rc = read1Row(self, row);
-            if (rc == 0)
-                rowWasLoaded(info, row);
+        KLockAcquire(async->mutex);
+        {
+            done = async->count == 0;
+            async->loaded = row - 1;
+            seqLen = readU32(seqLenInfo, row, curs, &rc);
+            if (seqLen == 0 || NULL == readString(&read, readInfo, row, curs, &rc) || read.length > async->max_seq_len)
+                ;
+            else
+                memmove(buffer, read.value, read.length);
+            --async->count;
         }
-        else
-            done = true;
-        KLockUnlock(info->mutex);
+        KLockUnlock(async->mutex);
+        if (!done && rc == 0 && read.length <= async->max_seq_len && position + seqLen <= self->length) {
+            uint32_t ri; ///< index within current row
+
+            for (ri = 0; ri < read.length; ++ri) {
+                int base = 0;
+                int isN = 1;
+
+                switch (buffer[ri]) {
+                case 1: base = 0; isN = 0; break;
+                case 2: base = 1; isN = 0; break;
+                case 4: base = 2; isN = 0; break;
+                case 8: base = 3; isN = 0; break;
+                }
+                accum = (accum << 2) | base;
+                ++n;
+                if (n == 4) {
+                    self->bases[j++] = accum;
+                    accum = 0;
+                    n = 0;
+                }
+                if (isN) {
+                    if (NULL == extendRangeList(&self->Ns, position)) {
+                        rc = RC(rcXF, rcFunction, rcReading, rcMemory, rcExhausted);
+                        break;
+                    }
+                }
+                ++position;
+            }
+            for ( ; ri < seqLen; ++ri) {
+                accum = accum << 2;
+                ++n;
+                if (n == 4) {
+                    self->bases[j++] = accum;
+                    accum = 0;
+                    n = 0;
+                }
+                if (NULL == extendRangeList(&self->Ns, position)) {
+                    rc = RC(rcXF, rcFunction, rcReading, rcMemory, rcExhausted);
+                    break;
+                }
+                ++position;
+            }
+        }
+        else if (!done && rc == 0)
+            rc = RC(rcXF, rcFunction, rcReading, rcData, rcInvalid);
+    }
+    if (rc == 0 && i == count) {
+        if (n != 0) {
+            while (n < 4) {
+                accum <<= 2;
+                ++n;
+            }
+            self->bases[j++] = accum;
+        }
+        KLockAcquire(async->mutex);
+        async->loaded = i + first; /* last row was loaded */
+        async->count = 0;
+        KLockUnlock(async->mutex);
     }
     LOGMSG(klogDebug, "Done background loading of reference");
 
@@ -367,16 +381,17 @@ static rc_t runLoadThread(Object *self)
     while (atomic64_read(&self->rwl) != 1)
         ;
     self->reader = rc == 0 ? readNormal : readZero;
-    self->info = NULL;
+    self->async = NULL;
     atomic64_dec(&self->rwl); /* state is updated; readers can continue */
     if (rc == 0 && i == count) {
-        double const pct = 100.0 * (info->hits - info->miss) / info->hits;
+        double const pct = 100.0 * (async->hits - async->miss) / async->hits;
 
         PLOGMSG(klogDebug, (klogDebug, "Done with background loading of reference; preload was $(pct)%", "pct=%5.1f", (float)pct));
     }
-    KLockRelease(info->mutex);
-    VCursorRelease(info->curs);
-    free(info);
+    KLockRelease(async->mutex);
+    free(buffer);
+    VCursorRelease(async->curs);
+    free(async);
 
     return rc;
 }
@@ -385,23 +400,28 @@ char const *RefSeq_Scheme(void) {
     return "NCBI:refseq:tbl:reference";
 }
 
-unsigned RefSeq_getBases(Object const *self, uint8_t *const dst, unsigned const start, unsigned const len)
+unsigned RefSeq_getBases(Object const *const self, uint8_t *const dst, unsigned const start, unsigned const len)
 {
-    if (self->info == NULL) {
-        /* there is no writer */
+    atomic64_t *const rwl = &((Object *)self)->rwl;
+
+    if (self->async == NULL) {
+        /* this is the fast path and the most common for normal use */
+        /* there is no background thread running */
         return self->reader(self, dst, start, len);
     }
-    /* there is a writer */
-    if ((atomic64_read_and_add_even(&((Object *)self)->rwl, 2) & 1) == 0) {
+    /* there is a background thread running */
+    if ((atomic64_read_and_add_even(rwl, 2) & 1) == 0) {
         /* but it is not trying to update the state */
         unsigned const actlen = self->reader(self, dst, start, len);
-        atomic64_add(&((Object *)self)->rwl, -2);
+        atomic64_add(rwl, -2);
         return actlen;
     }
-    /* there is a writer trying to update the state */
-    while ((atomic64_read(&((Object *)self)->rwl) & 1) != 0)
+    /* very unlikely, but likelihood increases with the number of readers */
+    /* there is a background thread trying to update the state */
+    while ((atomic64_read(rwl) & 1) != 0)
         ;
-    return self->reader(self, dst, start, len);
+    /* the state has been updated; use the new state */
+    return RefSeq_getBases(self, dst, start, len);
 }
 
 static rc_t loadCircular_1(  uint8_t *result
@@ -475,12 +495,12 @@ static rc_t loadCircular(  Object *result
     return rc;
 }
 
-static RefSeqSyncLoadInfo *RefSeqSyncLoadInfoMake(  VCursor const *curs
-                                                  , RowRange const *rr
-                                                  , CursorAddResult const *car
-                                                  , rc_t *prc)
+static RefSeqAsyncLoadInfo *RefSeqAsyncLoadInfoMake(  VCursor const *curs
+                                                    , RowRange const *rr
+                                                    , CursorAddResult const *car
+                                                    , rc_t *prc)
 {
-    RefSeqSyncLoadInfo *result = calloc(1, sizeof(*result));
+    RefSeqAsyncLoadInfo *result = calloc(1, sizeof(*result));
     if (result == NULL) {
         LOGERR(klogFatal, RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted), "OUT OF MEMORY!!!");
         abort();
@@ -527,9 +547,9 @@ static rc_t load(  Object *result
 
         result->bases = bases;
         result->length = (unsigned)baseCount;
-        result->info = RefSeqSyncLoadInfoMake(curs, rowRange, info + 1, &rc);
+        result->async = RefSeqAsyncLoadInfoMake(curs, rowRange, info + 1, &rc);
         if (rc == 0) {
-            rc = KThreadMake(&result->info->th, run_load_thread, result);
+            rc = KThreadMake(&result->async->th, run_load_thread, result);
             if (rc == 0) {
                 result->reader = readNormalIncomplete;
                 return 0;
@@ -572,7 +592,7 @@ static rc_t init(Object *result, VTable const *const tbl)
 
 void RefSeqFree(Object *self)
 {
-    RefSeqSyncLoadInfoFree(self->info);
+    RefSeqAsyncLoadInfoFree(self->async);
     RangeListFree(&self->Ns);
     free(self->bases);
     free(self);
