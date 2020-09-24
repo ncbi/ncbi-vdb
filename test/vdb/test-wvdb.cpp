@@ -487,6 +487,19 @@ FIXTURE_TEST_CASE ( VCursorCommit_BufferOverflow, WVDB_Fixture )
     {
         VCursor* cursor = CreateTable ( TableName );
 
+        // make sure we have enough memory
+        try
+        {
+           char * mem = (char*)new char[20][1000][1000][1000];
+cout<<"enough memory"<<endl;
+           delete [] mem;
+        }
+        catch (...)
+        { 
+           cout << "not enough memory, skipping VCursorCommit_BufferOverflow" << endl;
+           return;
+        }
+
         uint32_t column_idx1;
         REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx1, ColumnName1 ) );
         REQUIRE_RC ( VCursorOpen ( cursor ) );
