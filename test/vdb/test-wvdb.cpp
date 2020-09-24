@@ -491,11 +491,10 @@ FIXTURE_TEST_CASE ( VCursorCommit_BufferOverflow, WVDB_Fixture )
         try
         {
            char * mem = (char*)new char[20][1000][1000][1000];
-cout<<"enough memory"<<endl;
            delete [] mem;
         }
         catch (...)
-        { 
+        {
            cout << "not enough memory, skipping VCursorCommit_BufferOverflow" << endl;
            return;
         }
