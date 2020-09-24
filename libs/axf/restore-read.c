@@ -492,9 +492,6 @@ WGS_FROM_LAST:
             break;
         }
         self->last.type = L_none;
-        assert(loops == 0);
-        if (loops > 0)
-            return RC(rcAlign, rcTable, rcAccessing, rcType, rcUnexpected);
 
         // check error list
         if (Error_Find(&self->shared->errors, &error_at, id_len, seq_id))
