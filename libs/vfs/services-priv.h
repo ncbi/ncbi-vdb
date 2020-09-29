@@ -43,6 +43,7 @@ struct KSrvRespObj;
 struct KNSManager;
 struct KRepositoryMgr;
 struct KService;
+struct ServicesCache;
 struct KSrvRespFile;
 struct KSrvResponse;
 struct Locations;
@@ -91,6 +92,10 @@ rc_t KSrvResponseGetOSize(const KSrvResponse * self, uint32_t idx,
 rc_t KSrvResponseGetR4 ( const struct KSrvResponse * self,
                          struct Response4 ** r );
 rc_t KSrvResponseSetR4 ( struct KSrvResponse * self, struct Response4 * r );
+
+/* don't release cache */
+rc_t KSrvResponseGetServiceCache(const struct KSrvResponse * self,
+    struct ServicesCache ** cache);
 
 rc_t KSrvRespFileAddRef(const struct KSrvRespFile * self);
 rc_t KSrvRespFileAddLocalAndCache ( struct KSrvRespFile * file,
@@ -150,11 +155,16 @@ rc_t KServiceGetRepoMgr(KService * self, const struct KRepositoryMgr ** mgr);
 const struct KNgcObj * KServiceGetNgcFile(const KService * self,
     bool * isProtected);
 
+bool KServiceCallsSdl(const KService * self);
+
 /* don't release returned string */
 const char * KServiceGetId(const KService * self, uint32_t idx);
 
 rc_t KServiceAddLocalAndCacheToResponse(KService * self,
     const char * acc, const struct VPathSet * vps);
+
+/* don't release cache */
+rc_t KServiceGetServiceCache(KService * self, struct ServicesCache ** cache);
 
 /******************************** TESTS ***************************************/
 typedef struct {

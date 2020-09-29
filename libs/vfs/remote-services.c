@@ -419,6 +419,7 @@ struct KService {
     SResponse resp;
 
     bool resoveOidName;
+    VQuality quality; /* quality type - 0: default, 1: no-qual, 2: full-qual */
 };
 
 
@@ -1785,7 +1786,7 @@ static bool VPathMakeOrNot ( VPath ** new_path, const String * src,
             useDates ? typed -> date : 0,
             typed -> md5 . has_md5 ? typed -> md5 . md5 : NULL,
             useDates ? typed -> expiration : 0, NULL, NULL, NULL,
-            false, false, NULL, -1, 0 );
+            false, false, NULL, -1, 0, NULL );
         if ( * rc == 0 )
             VPathMarkHighReliability ( * new_path, true );
 
@@ -3135,6 +3136,10 @@ rc_t KServiceSetNgcFile(KService * self, const char * path) {
     return SNgcInit(&self->req._ngc, path);
 }
 
+bool KServiceCallsSdl(const KService * self) {
+    assert(self);
+    return self->req.sdl;
+}
 
 /* SRequest *******************************************************************/
 static rc_t SRequestInit ( SRequest * self ) {
@@ -3454,7 +3459,8 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
     if (rc != 0)
         return rc;
     if (request->disabled) {
-        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
+        request->sdl = true;               /* need to set it to allow to work */
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),     /* without remote repo */
             ("remote repo disabled in config\n"));
         return rc;
     }
@@ -4160,8 +4166,9 @@ static rc_t KServiceProcessJson ( KService * self ) {
                 projectId = id;
         }
         if (rc == 0)
-            rc = Response4MakeSdl ( & r, self -> helper . input,
-                sLogNamesServiceErrors, projectId );
+            rc = Response4MakeSdlExt(&r, self->helper.vMgr, self->helper.kMgr,
+                self->helper.kfg, self->helper.input,
+                sLogNamesServiceErrors, projectId, self->quality);
     }
     else
         rc = Response4Make4 ( & r, self -> helper . input );
@@ -4835,7 +4842,8 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
         rc = KSrvResponseGetR4 ( self -> resp .list, & r4 );
 
     if (rc == 0 && r4 == NULL)
-        rc = Response4MakeEmpty(&r4, sLogNamesServiceErrors, -1);
+        rc = Response4MakeEmpty(&r4, NULL, NULL, NULL,
+            sLogNamesServiceErrors, -1, 0);
 
     for ( i = 0; rc == 0 && i < self -> req . request . objects; ++ i )
         if ( self -> req . request . object [ i ] . isUri )
@@ -4943,6 +4951,25 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
     return rc;
 }
 
+rc_t KServiceGetServiceCache(KService * self,
+    struct ServicesCache ** cache)
+{
+    rc_t rc = 0;
+    Response4 * r4 = NULL;
+    assert(self);
+    rc = KSrvResponseGetR4(self->resp.list, &r4);
+    if (rc == 0 && r4 == NULL) {
+        rc = Response4MakeEmpty(&r4, self->helper.vMgr, self->helper.kMgr,
+            self->helper.kfg, sLogNamesServiceErrors, -1, self->quality);
+        if (rc == 0)
+            rc = KSrvResponseSetR4(self->resp.list, r4);
+    }
+    if (rc == 0)
+        rc = KSrvResponseGetServiceCache(self->resp.list, cache);
+    RELEASE(Response4, r4);
+    return rc;
+}
+
 rc_t KServiceAddLocalAndCacheToResponse(KService * self,
     const char * acc, const VPathSet * vps)
 {
@@ -4955,7 +4982,8 @@ rc_t KServiceAddLocalAndCacheToResponse(KService * self,
     rc = KSrvResponseGetR4(self->resp.list, &r4);
 
     if (rc == 0 && r4 == NULL)
-        rc = Response4MakeEmpty(&r4, sLogNamesServiceErrors, -1);
+        rc = Response4MakeEmpty(&r4, NULL, NULL, NULL,
+            sLogNamesServiceErrors, -1, 0);
 
     if (rc == 0) {
         const VFSManager * mgr = NULL;
@@ -4971,6 +4999,12 @@ rc_t KServiceAddLocalAndCacheToResponse(KService * self,
     RELEASE(Response4, r4);
 
     return rc;
+}
+
+rc_t KServiceSetQuality(KService * self, VQuality quality) {
+    assert(self);
+    self->quality = quality;
+    return 0;
 }
 
 rc_t KServiceGetConfig ( struct KService * self, const KConfig ** kfg) {

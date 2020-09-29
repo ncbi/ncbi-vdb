@@ -211,6 +211,7 @@ rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
 
             VPath * path = NULL;
 
+            String acc;
             String id;
             String objectType;
             String type;
@@ -220,6 +221,7 @@ rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
 
             StringInitCString(&id, ldata.acc);
 
+            memset(&acc, 0, sizeof acc);
             memset(&objectType, 0, sizeof objectType);
             memset(&type, 0, sizeof type);
 
@@ -242,6 +244,12 @@ rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
                 else
                     len = string_measure(data.object, &size);;
                 StringInit(&objectType, ldata.object, size, len);
+
+                if (c != NULL) {
+                    size = len = string_measure(data.object, NULL) - len;
+                    if (len > 0)
+                        StringInit(&acc, c + 1, size - 1, len - 1);
+                }
             }
 
             if (ldata.type != NULL) {
@@ -256,7 +264,9 @@ rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
                 payRequired = true;
 
             projectId = ldata.encryptedForProjectId;
-            if (aProjectId >= 0 && projectId >= 0 && aProjectId != projectId) {
+            if (aProjectId >= 0 && projectId >= 0 &&
+                aProjectId != projectId)
+            {
                 rc = RC(rcVFS, rcQuery, rcExecuting, rcItem, rcIncorrect);
                 PLOGERR(klogInt, (klogInt, rc,
                     "'$(name)' was encrypted for project 'dbGaP-$(id)'. "
@@ -287,7 +297,7 @@ rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
 
             rc = VPathMakeFromUrl(&path, &url, NULL, true, &id, ldata.sz,
                 mod, hasMd5 ? md5 : NULL, 0, ldata.srv, &objectType, &type,
-                ceRequired, payRequired, ldata.name, projectId, 128);
+                ceRequired, payRequired, ldata.name, projectId, 128, &acc);
 
             if (rc == 0)
                 VPathMarkHighReliability(path, true);
@@ -721,8 +731,9 @@ static rc_t Response4InitSdl(Response4 * self, const char * input) {
     return rc;
 }
 
-rc_t Response4MakeSdl(Response4 ** self, const char * input,
-    bool logNamesServiceErrors, int64_t projectId)
+rc_t Response4MakeSdlExt(Response4 ** self, const struct VFSManager * vfs,
+    const struct KNSManager * kns, struct KConfig * kfg, const char * input,
+    bool logNamesServiceErrors, int64_t projectId, unsigned quality)
 {
     rc_t rc = 0;
 
@@ -730,7 +741,8 @@ rc_t Response4MakeSdl(Response4 ** self, const char * input,
 
     assert(self);
 
-    rc = Response4MakeEmpty(&r, logNamesServiceErrors, projectId);
+    rc = Response4MakeEmpty(&r, vfs, kns, kfg,
+        logNamesServiceErrors, projectId, quality);
     if (rc != 0)
         return rc;
 
@@ -741,4 +753,9 @@ rc_t Response4MakeSdl(Response4 ** self, const char * input,
         * self = r;
 
     return rc;
+}
+
+rc_t Response4MakeSdl(Response4 ** self, const char * input) {
+    return Response4MakeSdlExt(self, NULL, NULL, NULL,
+        input, false, -1, 0);
 }

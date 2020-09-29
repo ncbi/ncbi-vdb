@@ -35,10 +35,13 @@ extern "C" {
 #endif
 
 struct Data;
+struct KConfig;
 struct KJsonValue;
+struct KNSManager;
 struct KSrvRespFile;
 struct KSrvRespObj;
 struct Node;
+struct ServicesCache;
 struct Status;
 struct String;
 struct VFSManager;
@@ -88,11 +91,14 @@ typedef struct Data {
     const char * vsblt;
 } Data;
 
-rc_t Response4MakeEmpty  (       Response4 ** self, bool logNamesServiceErrors,
-                                                            int64_t projectId );
+rc_t Response4MakeEmpty  (  Response4 ** self, const struct VFSManager * vfs,
+            const struct KNSManager * kns, struct KConfig * kfg,
+            bool logNamesServiceErrors, int64_t projectId, unsigned quality);
 rc_t Response4Make4      (       Response4 ** self, const char * input );
-rc_t Response4MakeSdl    (       Response4 ** self, const char * input,
-                                bool logNamesServiceErrors, int64_t projectId );
+rc_t Response4MakeSdl(Response4 ** self, const char * input);
+rc_t Response4MakeSdlExt(Response4 ** self, const struct VFSManager * vfs,
+    const struct KNSManager * kns, struct KConfig * kfg, const char * input,
+    bool logNamesServiceErrors, int64_t projectId, unsigned quality);
 rc_t Response4AddRef     ( const Response4  * self );
 rc_t Response4Release    ( const Response4  * self );
 rc_t Response4AppendUrl  (       Response4  * self, const char * url );
@@ -127,6 +133,9 @@ rc_t Response4GetKSrvRespObjByIdx ( const Response4 * self, uint32_t i,
 rc_t Response4GetKSrvRespObjByAcc ( const Response4 * self, const char * acc,
                                     const struct KSrvRespObj ** box );
 rc_t Response4Fini(Response4 * self);
+
+rc_t Response4GetServiceCache(const Response4 * self,
+    struct ServicesCache ** cache);
 
 typedef struct {
     struct Node * nodes;

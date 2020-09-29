@@ -298,6 +298,7 @@ VFS_EXTERN uint32_t CC VPathGetOid ( const VPath * self );
 /* GetId: retrieve object-id returned by name resolver */
 VFS_EXTERN rc_t CC VPathGetId ( const VPath * self, struct String * str );
 VFS_EXTERN rc_t CC VPathGetTicket ( const VPath * self, struct String * str );
+VFS_EXTERN rc_t CC VPathGetAcc ( const VPath * self, struct String * str );
 
 /* s3, gs, sra-ncbi, ftp-ncbi, sra-sos, etc. */
 VFS_EXTERN rc_t CC VPathGetService(const VPath * self, struct String * str);

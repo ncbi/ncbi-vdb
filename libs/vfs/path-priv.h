@@ -129,6 +129,7 @@ struct VPath
     String     service;      /* s3, gs, sra-ncbi, ftp-ncbi, sra-sos, etc. */
     String     objectType;
     String     type;
+    String     acc;
 
     String     name;
     String     nameExtension; /* file extension in name. don't free */
@@ -224,7 +225,7 @@ rc_t VPathMakeFromUrl ( VPath ** new_path, const String * url,
     KTime_t date, const uint8_t md5 [ 16 ], KTime_t exp_date,
     const char * service, const String * objectType, const String * type,
     bool ceRequired, bool payRequired, const char * name,
-    int64_t projectId, uint32_t version );
+    int64_t projectId, uint32_t version, const String * acc );
 
 rc_t VPathAttachVdbcache(VPath * self, const VPath * vdbcache);
 
@@ -246,6 +247,7 @@ rc_t VPathEqual ( const VPath * l, const VPath * r, int * notequal );
 rc_t VPathClose ( const VPath * l, const VPath * r, int * notequal,
                   KTime_t expirationRange );
 
+rc_t VPathGetAccession(const VPath * self, String * acc);
 
 /***** VPathSet - set of VPath's - genetated from name resolver response ******/
 

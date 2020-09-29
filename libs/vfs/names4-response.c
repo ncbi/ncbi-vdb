@@ -20,9 +20,7 @@
 *
 *  Please cite the author in any work or product based on this material.
 *
-* ===========================================================================
-*
-*/
+* =========================================================================== */
 
 #include <klib/debug.h> /* DBGMSG */
 #include <klib/json.h> /* KJsonObject */
@@ -38,6 +36,7 @@
 
 #include "path-priv.h" /* VPathMake */
 #include "resolver-priv.h" /* DEFAULT_PROTOCOLS */
+#include "services-cache.h" /* ServicesCacheWhack */
 
 #include <ctype.h> /* isdigit */
 
@@ -113,6 +112,8 @@ struct Response4 { /* Response object */
 
     bool dontLogNamesServiceErrors;
     int64_t projectId; /* when -1: not set */
+
+    ServicesCache * cache;
 };
 
 struct KSrvRespObj {
@@ -678,104 +679,6 @@ rc_t ItemSetTicket ( Item * self, const String * tic ) {
     return 0;
 }
 
-/*rc_t ItemGetId ( const Item * self, const char ** id ) {
-    assert ( self && id );
-
-    * id = self -> acc;
-
-    return 0;
-}
-
-static rc_t ItemAdd ( Item * self, const VPath * path,
-               EType type, const char * cType)
-{
-    int idx = -1;
-    File * elm = NULL;
-    if ( self == NULL )
-        return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
-    if ( path == NULL )
-        return 0;
-    if ( type >= eMax )
-        type = eInvalid;
-    if ( cType == NULL ) {
-        if ( type == eInvalid )
-            return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
-    }
-    else if ( type == eInvalid ) {
-        if      ( strcmp ( cType, "sra"      ) == 0 )
-            type = eSra;
-        else if ( strcmp ( cType, "vdbcache" ) == 0 )
-            type = eVdbcache;
-        else
-            type = eMax;
-    }
-    if ( self -> elm == NULL )  {
-        size_t n = 2;
-        switch ( type ) {
-            case eSra     : idx = 0; n = 2; break;
-            case eVdbcache: idx = 1; n = 2; break;
-            case eMax     : idx = 2; n = 3; break;
-            default       :  assert ( 0 );
-        }
-        self -> elm = ( File * ) calloc ( n, sizeof * self -> elm );
-        if ( self -> elm == NULL )
-            return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
-        self -> nElm = n;
-    }
-    else {
-        switch ( type ) {
-            case eSra     : idx = 0; break;
-            case eVdbcache: idx = 1; break;
-            case eMax     : {
-                uint32_t i =0 ;
-                for ( i = 2; i < self -> nElm; ++ i ) {
-                    assert ( cType && self -> elm [ i ] . cType );
-                    if ( strcmp ( self -> elm [ i ] . cType, cType ) == 0 ) {
-                        idx = i;
-                        break;
-                    }
-                }
-                if ( idx == -1 ) {
-                    void * tmp = realloc ( self -> elm,
-                        ( self -> nElm + 1 ) * sizeof * self -> elm );
-                    if ( tmp == NULL )
-                        return RC ( rcVFS, rcQuery, rcExecuting,
-                                    rcMemory, rcExhausted );
-                    self -> elm = ( File * ) tmp;
-                    idx = self -> nElm ++;
-                    elm = & self -> elm [ idx ];
-                    memset ( elm, 0, sizeof * elm );
-                }
-                break;
-            }
-            default       :  assert ( 0 );
-        }
-    }
-    assert ( idx >= 0 );
-    elm = & self -> elm [ idx ];
-    if ( elm -> cType == NULL ) {
-        elm -> cType = strdup ( cType );
-        if ( elm -> cType == NULL )
-            return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
-        elm -> type = type;
-    }
-    return FileAddVCache ( & self -> elm [ idx ], path );
-}
-
-static rc_t ItemAddVPath ( Item * self, const VPath * path ) {
-    if ( self == NULL )
-        return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
-
-    return ItemAdd ( self, path, eSra, "sra" );
-}
-
-static rc_t ItemAddVbdcache ( Item * self, const VPath * path ) {
-    if ( self == NULL )
-        return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
-
-    return ItemAdd ( self, path, eVdbcache, "vdbcache" );
-}*/
-
 /******************************** Status **************************************/
 
 rc_t StatusInit(Status * self, int64_t code, const char * msg) {
@@ -1044,7 +947,7 @@ rc_t ContainerAddId ( Container * self, uint32_t id, Item ** newItem )
 /********************************* Response4 **********************************/
 
 rc_t Response4Fini ( Response4 * self ) {
-    rc_t rc = 0;
+    rc_t rc = 0, r2 = 0;
 
     uint32_t i = 0;
 
@@ -1060,7 +963,13 @@ rc_t Response4Fini ( Response4 * self ) {
     StatusFini(&self->status);
 
     free ( self -> items );
-    free(self->nextToken);
+    free ( self->nextToken );
+
+    /* not ref-counted */
+    r2 = ServicesCacheWhack(self->cache);
+    if (r2 != 0 && rc == 0)
+        rc = r2;
+    self->cache = NULL;
 
     memset ( self, 0, sizeof * self );
 
@@ -1244,35 +1153,13 @@ rc_t Response4AppendLocalAndCache(Response4 * self,
     return rc;
 }
 
-/*rc_t Response4AppendFile( Response4 * self, const char * acc,
-                          struct Item ** file )
+rc_t Response4GetServiceCache(const Response4 * self,
+    ServicesCache ** cache)
 {
-    rc_t rc = 0;
-    Container * box = NULL;
-    rc = Response4AddAccOrId ( self, acc, -1, & box );
-    if ( rc == 0 )
-        rc = ContainerAdd ( box, acc, -1, file );
-    return rc;
+    assert(self && cache);
+    *cache = self->cache;
+    return 0;
 }
-
-
-static rc_t Response4AddAcc
-    ( Response4 * self, const char * acc, Container ** newItem )
-{
-    if ( acc == NULL )
-        return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );;
-
-    return Response4AddAccOrId ( self, acc, 0, newItem );
-}
-
-static rc_t Response4AddId
-    ( Response4 * self, uint32_t id, Container ** newItem )
-{
-    if ( id == 0 )
-        return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
-
-    return Response4AddAccOrId ( self, NULL, id, newItem );
-}*/
 
 /******************************** Data setters ********************************/
 
@@ -1518,7 +1405,7 @@ static rc_t FileAddLink ( File * self, const KJsonValue * node,
         const String * objectType = NULL;
         rc = VPathMakeFromUrl ( & path, & url, NULL, true, & acc, dad -> sz,
             dad -> mod, hasMd5 ? md5 : NULL, 0, dad -> srv, objectType, NULL,
-            false, false, NULL, -1, 0 );
+            false, false, NULL, -1, 0, NULL );
     }
     else {
         const String * objectType = NULL;
@@ -1526,7 +1413,7 @@ static rc_t FileAddLink ( File * self, const KJsonValue * node,
         StringInitCString ( & ticket, dad -> tic );
         rc = VPathMakeFromUrl ( & path, & url, & ticket, true, & acc, dad -> sz,
             dad -> mod, hasMd5 ? md5 : NULL, 0, dad -> srv, objectType, NULL,
-            false, false, NULL, -1, 0 );
+            false, false, NULL, -1, 0, NULL );
     }
 
     if ( rc == 0 )
@@ -2224,8 +2111,11 @@ static rc_t Response4Init4 ( Response4 * self, const char * input ) {
 }
 
 rc_t Response4MakeEmpty (Response4 ** self,
-    bool logNamesServiceErrors, int64_t projectId)
+    const VFSManager * vfs, const struct KNSManager * kns, struct KConfig * kfg,
+    bool logNamesServiceErrors, int64_t projectId, unsigned quality)
 {
+    rc_t rc = 0;
+
     const char * env = NULL;
 
     assert ( self );
@@ -2236,6 +2126,13 @@ rc_t Response4MakeEmpty (Response4 ** self,
 
     (*self)->dontLogNamesServiceErrors = !logNamesServiceErrors;
     (*self)->projectId = projectId;
+
+    rc = ServicesCacheMake(&(*self)->cache, vfs, kns, kfg, projectId, quality);
+    if (rc != 0) {
+        free(*self);
+        *self = NULL;
+        return rc;
+    }
 
     env = getenv("NCBI_VDB_JSON");
 
@@ -2267,7 +2164,7 @@ rc_t Response4Make4 ( Response4 ** self, const char * input ) {
 
     assert ( self );
 
-    rc = Response4MakeEmpty ( & r, true, -1 );
+    rc = Response4MakeEmpty ( & r, NULL, NULL, NULL, true, -1, 0 );
     if ( rc != 0 )
         return rc;
 
@@ -2319,7 +2216,9 @@ int64_t Response4GetProjectId(const Response4 * self) {
     return self->projectId;
 }
 
-rc_t Response4GetNextToken(const Response4 * self, const char ** nextToken) {
+rc_t Response4GetNextToken(const Response4 * self,
+    const char ** nextToken)
+{
     const char * dummy = NULL;
     if (nextToken == NULL)
         nextToken = &dummy;
