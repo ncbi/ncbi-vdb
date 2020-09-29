@@ -108,6 +108,10 @@ LIB_EXPORT const char * CC CloudProviderAsString(CloudProviderId cloud_provider)
 static
 CloudProviderId CloudMgrDetermineCurrentCloud ( const CloudMgr * self )
 {
+#ifdef OUTSIDE_OF_CLOUD
+    return cloud_provider_none;
+#endif
+
 #ifdef _h_cloud_gcp_
     TRACE ( "probing operation within GCP" );
     if ( CloudMgrWithinGCP ( self ) )
