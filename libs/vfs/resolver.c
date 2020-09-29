@@ -67,8 +67,6 @@
 
 #include <sysalloc.h>
 
-#include "../kns/mgr-priv.h" /* KNSManager */
-
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
@@ -729,13 +727,10 @@ rc_t VResolverAlgLocalResolve ( const VResolverAlg *self,
                     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (
                         "VResolverAlgLocalResolve: '%S' found in '%S%s'\n",
                         &tok->acc, thePath, for_cache ? ".cache" : ""));
-                    if (thePath->size > 4 && strncmp(
-                        thePath->addr + thePath->size - 4, ".sra", 4) == 0)
-                    {
+                    if (thePath->size > 4) {
                         VPath * vdbcache = NULL;
                         if (KDirectoryPathType(wd, "%.*s.vdbcache",
-                            (int)thePath->size, thePath->addr)
-                                == kptFile)
+                            (int)thePath->size, thePath->addr) == kptFile)
                         {
                             rc = VPathMakeFmt(&vdbcache,
                                 "%S.vdbcache", thePath);
@@ -747,12 +742,11 @@ rc_t VResolverAlgLocalResolve ( const VResolverAlg *self,
                                     &tok->acc, &vdbcache->path));
                             }
                         }
-                        else {
+                        else
                             DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (
                                 "VResolverLocalResolve: "
                                 "local location of '%S.vdbcache' not found\n",
                                 &tok->acc));
-                        }
                         if (rc == 0)
                             rc = VPathAttachVdbcache((VPath*)(*path), vdbcache);
                         RELEASE(VPath, vdbcache);
@@ -1446,7 +1440,7 @@ rc_t VResolverAlgParseResolverCGIResponse_1_1 ( const char *astart, size_t size,
                 rc = VPathMakeFromUrl ( ( VPath** ) path, & url,
                     & download_ticket, true, id, osize, date,
                     has_md5 ? ud5 : NULL, 0, NULL, NULL, NULL, false, false,
-                    NULL, -1, 0 );
+                    NULL, -1, 0, NULL );
             }
             /*else
             {
@@ -3710,10 +3704,11 @@ rc_t VPathExtractAcc ( const VPath * url, VPath ** acc )
 }
 
 bool VResolverResolveToAd(const VResolver *self) {
-    if (self != NULL && self->kns != NULL)
-        return self->kns->enabledResolveToAd;
-    else
-        return false;
+    bool enabled = false;
+    if (self != NULL)
+        KNSManagerGetAdCaching(self->kns, &enabled);
+
+    return enabled;
 }
 
 static
@@ -3749,7 +3744,10 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
 
     VResolverEnableState cache_state = atomic32_read ( & enable_cache );
 
- /* bool ad = false; */
+    bool resolveToCache = false;
+    rc = KNSManagerGetResolveToCache(self->kns, &resolveToCache);
+    if (rc != 0)
+        return rc;
 
     rc = VResolverCacheMagicResolve(self, cache, app);
     if (rc != 0 || *cache != NULL)
@@ -3763,8 +3761,8 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
     {
         DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS),
                ("VResolverCacheResolve: app = %d\n", app));
-        assert(self->kns);
-        if (self->kns->resolveToCache) {
+
+        if (resolveToCache) {
             for (i = 0; i < count; ++i)
             {
                 alg = VectorGet(&self->local, i);
@@ -3841,7 +3839,7 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
     else
     {
         /* we use user cache when it is allowed by kns manager */
-        bool useCache = self->kns->resolveToCache;
+        bool useCache = resolveToCache;
 
         /* check AD */
         bool useAd = false;
@@ -6401,6 +6399,11 @@ LIB_EXPORT rc_t CC VResolverGetProject ( const VResolver * self,
     return 0;
 }
 
+bool VResolverIsProtected ( const VResolver * self ){
+    assert ( self );
+    return self -> ticket != NULL;
+}
+
 static rc_t VResolverInitVersion(VResolver * self, const KConfig *kfg) {
     rc_t rc = 0;
 
@@ -6653,5 +6656,17 @@ rc_t CC KRepositoryMakeResolver ( const KRepository *self,
         *new_resolver = NULL;
     }
 
+    return rc;
+}
+
+LIB_EXPORT rc_t CC VResolverGetKNSManager(const VResolver * self,
+    const KNSManager ** mgr)
+{
+    rc_t rc = 0;
+    assert(self && mgr);
+    *mgr = NULL;
+    rc = KNSManagerAddRef(self->kns);
+    if (rc == 0)
+        *mgr = self->kns;
     return rc;
 }

@@ -235,6 +235,8 @@ rc_t VResolverAlgRemoteProtectedResolve( const struct VResolverAlg *self,
 /** get projectId ( valid for protected user repository ) */
 rc_t VResolverGetProjectId ( const VResolver * self, uint32_t * projectId );
 
+bool VResolverIsProtected ( const VResolver * self );
+
 /* RemoteResolve
  *  resolve an accession into a remote VPath or not found
  *  may optionally open a KFile to the object in the process
