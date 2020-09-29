@@ -22,7 +22,7 @@
 *
 * ============================================================================*/
 
-#include <klib/defs.h> /* rc_t */
+#include <vfs/services.h> /* VQuality */
 
 struct KConfig;
 struct KNSManager;
