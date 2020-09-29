@@ -114,6 +114,10 @@ VFS_EXTERN const struct KConfig* CC VFSManagerGetConfig(const struct VFSManager 
 VFS_EXTERN rc_t CC VFSManagerMakeFromKfg ( struct VFSManager ** pmanager,
     struct KConfig * cfg );
 
+/* Make using a custom KConfig and KNSManager */
+VFS_EXTERN rc_t CC VFSManagerMakeFromKns(struct VFSManager ** pmanager,
+    struct KConfig * cfg, struct KNSManager * kns);
+
 /* Make non-singleton version
  */
 VFS_EXTERN rc_t CC VFSManagerMakeLocal ( struct VFSManager ** pmanager,

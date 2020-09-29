@@ -3066,7 +3066,7 @@ LIB_EXPORT rc_t CC VFSManagerMake ( VFSManager ** pmanager )
 /* Make
  */
 static rc_t CC VFSManagerMakeFromKfgImpl ( struct VFSManager ** pmanager,
-    struct KConfig * cfg, bool local )
+    struct KConfig * cfg, KNSManager * kmgr, bool local )
 {
     rc_t rc;
 
@@ -3119,7 +3119,12 @@ static rc_t CC VFSManagerMakeFromKfgImpl ( struct VFSManager ** pmanager,
                         rc = KKeyStoreMake ( & obj -> keystore, obj -> cfg );
                         if ( rc == 0 )
                         {
-                            if (local)
+                            if (kmgr != NULL) {
+                                rc = KNSManagerAddRef(kmgr);
+                                if (rc == 0)
+                                    obj->kns = kmgr;
+                            }
+                            else if (local)
                                 rc = KNSManagerMakeLocal ( & obj -> kns, cfg );
                             else
                                 rc = KNSManagerMakeWithConfig
@@ -3158,13 +3163,19 @@ static rc_t CC VFSManagerMakeFromKfgImpl ( struct VFSManager ** pmanager,
 LIB_EXPORT rc_t CC VFSManagerMakeFromKfg ( struct VFSManager ** pmanager,
     struct KConfig * cfg)
 {
-    return VFSManagerMakeFromKfgImpl(pmanager, cfg, false);
+    return VFSManagerMakeFromKfgImpl(pmanager, cfg, NULL, false);
+}
+
+LIB_EXPORT rc_t CC VFSManagerMakeFromKns(struct VFSManager ** pmanager,
+    struct KConfig * cfg, KNSManager * kns)
+{
+    return VFSManagerMakeFromKfgImpl(pmanager, cfg, kns, false);
 }
 
 LIB_EXPORT rc_t CC VFSManagerMakeLocal ( struct VFSManager ** pmanager,
     struct KConfig * cfg)
 {
-    return VFSManagerMakeFromKfgImpl(pmanager, cfg, true);
+    return VFSManagerMakeFromKfgImpl(pmanager, cfg, NULL, true);
 }
 
 LIB_EXPORT rc_t CC VFSManagerGetCWD (const VFSManager * self, KDirectory ** cwd)
