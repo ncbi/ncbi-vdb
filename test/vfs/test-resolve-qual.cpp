@@ -85,7 +85,7 @@ public:
         , path(0), qLocal(0), qRemote(0), qCache(0)
     {
         REQUIRE_RC(KDirectoryNativeDir(&dir));
-        const char tmp[]("tmp");
+        const char tmp[] = "tmp";
         REQUIRE_RC(KDirectoryResolvePath(dir, true, root, sizeof root, tmp));
         REQUIRE_RC(KDirectoryRemove(dir, true, tmp));
         REQUIRE_RC(KDirectoryRemove(dir, true, ACC));
