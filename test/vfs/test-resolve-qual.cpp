@@ -43,7 +43,7 @@
 #define PATH_MAX 4096
 #endif
 
-TEST_SUITE ( TestResolveQualSuite )
+TEST_SUITE(TestResolveQualSuite)
 
 //#define ALL
 //#ifndef
@@ -57,7 +57,9 @@ TEST_SUITE ( TestResolveQualSuite )
 #define FAIL_QUERY 2
 #define FAIL_REMOTE 3
 
-class SrvFixture : protected ncbi::NK::TestCase {
+struct TRQFixture { unsetenv((char*)ACC); };
+
+class TRQHelper : protected ncbi::NK::TestCase {
 public:
     KDirectory * dir;
     KConfig * kfg;
@@ -79,7 +81,7 @@ public:
     char root[PATH_MAX];
     char spath[PATH_MAX];
 
-    SrvFixture(const std::string & name) : TestCase(name)
+    TRQHelper(const std::string & name) : TestCase(name)
         , dir(0), kfg(0), f(0), kns(0), service(0), response(0)
         , obj(0), it(0), file(0), fi(0), ri(0), run(0)
         , path(0), qLocal(0), qRemote(0), qCache(0)
@@ -282,7 +284,7 @@ public:
         REQUIRE_RC(KDirectoryRelease(dir)); dir = 0;
     }
 
-    ~SrvFixture() {
+    ~TRQHelper() {
         Release();
 
         assert(!dir && !kfg && !kns && !service && !response &&

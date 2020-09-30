@@ -24,7 +24,7 @@
 
 // no quality / remote:no-qual / no-cache / no-local
 #ifndef ALL
-TEST_CASE(_110_00) {
+FIXTURE_TEST_CASE(_110_00, TRQFixture) {
     putenv((char*)ACC "="
         "{"
         " \"result\":["
@@ -41,7 +41,7 @@ TEST_CASE(_110_00) {
         "  }"
         " ]"
         "}");
-    SrvFixture f(GetName());
+    TRQHelper f(GetName());
 
     f.Start(NO_AD_CACHING, eQualNo);
     f.PathEquals(f.path, "http://h/ns");
@@ -67,7 +67,7 @@ TEST_CASE(_110_00) {
 
 // no quality / remote:no-qual&no vdbcache / cache-in-AD / no-local
 #ifdef ALL
-TEST_CASE(_110_10) {
+FIXTURE_TEST_CASE(_110_10, TRQFixture) {
     putenv((char*)ACC "="
         "{"
         " \"result\":["
@@ -83,7 +83,7 @@ TEST_CASE(_110_10) {
         "  }"
         " ]"
         "}");
-    SrvFixture f(GetName());
+    TRQHelper f(GetName());
 
     f.Start(AD_CACHING, eQualNo);
     f.PathEquals(f.path, "http://h/ns");
@@ -114,7 +114,7 @@ TEST_CASE(_110_10) {
 
 // no quality / remote:no-qual&no vdbcache / cache-in-AD / local-in-AD
 #ifdef ALL
-TEST_CASE(_110_11) {
+FIXTURE_TEST_CASE(_110_11, TRQFixture) {
     putenv((char*)ACC "="
         "{"
         " \"result\":["
@@ -130,7 +130,7 @@ TEST_CASE(_110_11) {
         "  }"
         " ]"
         "}");
-    SrvFixture f(GetName());
+    TRQHelper f(GetName());
     REQUIRE_RC(KDirectoryCreateDir(f.dir, 0775, kcmOpen | kcmInit | kcmCreate,
         ACC));
 
@@ -171,7 +171,7 @@ TEST_CASE(_110_11) {
 
 // no quality / remote:no-qual&no vdbcache / cache-in-AD / local-w-wrong-quality
 #ifdef ALL
-TEST_CASE(_110_13) {
+FIXTURE_TEST_CASE(_110_13, TRQFixture) {
     putenv((char*)ACC "="
         "{"
         " \"result\":["
@@ -188,7 +188,7 @@ TEST_CASE(_110_13) {
         "  }"
         " ]"
         "}");
-    SrvFixture f(GetName());
+    TRQHelper f(GetName());
     REQUIRE_RC(KDirectoryCreateDir(f.dir, 0775, kcmOpen | kcmInit | kcmCreate,
         ACC));
 
@@ -225,7 +225,7 @@ TEST_CASE(_110_13) {
 
 // no quality / remote:no-qual&vdbcache / no-cache / no-local
 #ifndef ALL
-TEST_CASE(_111_00) {
+FIXTURE_TEST_CASE(_111_00, TRQFixture) {
     putenv((char*)ACC "="
         "{"
         " \"result\":["
@@ -247,7 +247,7 @@ TEST_CASE(_111_00) {
         "  }"
         " ]"
         "}");
-    SrvFixture f(GetName());
+    TRQHelper f(GetName());
 
     f.Start(NO_AD_CACHING, eQualNo);
     f.PathEquals(f.path, "http://h/ns");
@@ -279,7 +279,7 @@ TEST_CASE(_111_00) {
 
 // no quality / remote:no-qual&vdbcache / cache-in-AD / no-local
 #ifdef ALL
-TEST_CASE(_111_10) {
+FIXTURE_TEST_CASE(_111_10, TRQFixture) {
     putenv((char*)ACC "="
         "{"
         " \"result\":["
@@ -301,7 +301,7 @@ TEST_CASE(_111_10) {
         "  }"
         " ]"
         "}");
-    SrvFixture f(GetName());
+    TRQHelper f(GetName());
 
     f.Start(AD_CACHING, eQualNo);
     f.PathEquals(f.path, "http://h/ns");
@@ -344,7 +344,7 @@ TEST_CASE(_111_10) {
 
 // no quality / remote:no-qual&vdbcache / cache-in-AD / local-in-AD
 #ifdef ALL
-TEST_CASE(_111_11) {
+FIXTURE_TEST_CASE(_111_11, TRQFixture) {
     putenv((char*)ACC "_noqual="
         "{"
         " \"result\":["
@@ -366,7 +366,7 @@ TEST_CASE(_111_11) {
         "  }"
         " ]"
         "}");
-    SrvFixture f(GetName());
+    TRQHelper f(GetName());
     REQUIRE_RC(KDirectoryCreateDir(f.dir, 0775, kcmOpen | kcmInit | kcmCreate,
         ACC));
 
@@ -426,7 +426,7 @@ TEST_CASE(_111_11) {
 
 // no quality / remote:has-qual / no-remote / no-cache / no-local
 #ifdef ALL
-TEST_CASE(_120_00_empty) {
+FIXTURE_TEST_CASE(_120_00_empty, TRQFixture) {
     putenv((char*)ACC "="
         "{"
         " \"result\":["
@@ -434,7 +434,7 @@ TEST_CASE(_120_00_empty) {
         "  }"
         " ]"
         "}");
-    SrvFixture f(GetName());
+    TRQHelper f(GetName());
 
     f.Start(NO_AD_CACHING, eQualNo, FAIL_DATA);
     REQUIRE_NULL(f.file);
@@ -444,7 +444,7 @@ TEST_CASE(_120_00_empty) {
 
 // no quality / remote:has-qual / no-remote / no-cache / no-local
 #ifndef ALL
-TEST_CASE(_120_00) {
+FIXTURE_TEST_CASE(_120_00, TRQFixture) {
     putenv((char*)ACC "="
         "{"
         " \"result\":["
@@ -461,7 +461,7 @@ TEST_CASE(_120_00) {
         "  }"
         " ]"
         "}");
-    SrvFixture f(GetName());
+    TRQHelper f(GetName());
 
     f.Start(NO_AD_CACHING, eQualNo);
     f.PathEquals(f.path, "http://h/ns");
@@ -483,9 +483,8 @@ TEST_CASE(_120_00) {
 
 // no quality / remote repo is disabled; local not found
 #ifdef ALL
-TEST_CASE(_140_00) {
-    unsetenv((char*)ACC);
-    SrvFixture f(GetName());
+FIXTURE_TEST_CASE(_140_00, TRQFixture) {
+    TRQHelper f(GetName());
     f.DisableRemoteRepo();
     f.Start(NO_AD_CACHING, eQualNo, FAIL_QUERY);
     f.Release();
@@ -495,9 +494,8 @@ TEST_CASE(_140_00) {
 // no quality / remote repo is disabled;
 //  local: .sra in AD -> found because it can be double quality
 #ifndef ALL
-TEST_CASE(_141_00_0) {
-    unsetenv((char*)ACC);
-    SrvFixture f(GetName());
+FIXTURE_TEST_CASE(_141_00_0, TRQFixture) {
+    TRQHelper f(GetName());
 
     REQUIRE_RC(KDirectoryCreateDir(f.dir, 0775, kcmOpen | kcmInit | kcmCreate,
         ACC));
@@ -539,9 +537,8 @@ TEST_CASE(_141_00_0) {
 
 // no quality / remote repo is disabled / local: noqual.sra in AD
 #ifndef ALL //TODO
-TEST_CASE(_141_00_1) {
-    unsetenv((char*)ACC);
-    SrvFixture f(GetName());
+FIXTURE_TEST_CASE(_141_00_1, TRQFixture) {
+    TRQHelper f(GetName());
 
     REQUIRE_RC(KDirectoryCreateDir(f.dir, 0775, kcmOpen | kcmInit | kcmCreate,
         ACC));
