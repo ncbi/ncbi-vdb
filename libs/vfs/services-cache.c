@@ -2004,7 +2004,7 @@ static rc_t KRunRemote(KRun * self) {
         }
     }
 
-    else if (self->dad->quality == qQualFullOnly) {
+    else if (self->dad->quality == eQualFullOnly) {
         if (self->remote[eIdxYes].cnt > 0)
             idx = eIdxYes;
         else if (self->remote[eIdxAsk].cnt > 0)
@@ -2154,7 +2154,7 @@ static rc_t KRunLocal(KRun * self) {
             path = self->local[idx].path;
     }
 
-    else if (self->dad->quality == qQualFullOnly) {
+    else if (self->dad->quality == eQualFullOnly) {
         if (self->local[eIdxYes].path != NULL
             && self->localVc[eIdxYes].path != NULL)
         {
@@ -2388,7 +2388,7 @@ static rc_t ServicesCacheInit(ServicesCache * self, const VFSManager * vfs,
 {
     rc_t rc = 0;
 
-    assert(self);
+    assert(self && quality < eQualLast);
 
     self->projectId = projectId;
     self->quality = quality;

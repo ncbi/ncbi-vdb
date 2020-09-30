@@ -31,6 +31,10 @@
 #include <vdb/extern.h>
 #endif
 
+#ifndef _h_vdb_quality_
+#include <vdb/quality.h> /* VQuality */
+#endif
+
 #ifndef _h_vdb_manager_
 #include <vdb/manager.h>
 #endif
@@ -82,6 +86,9 @@ struct VDBManager
 
     /* open references */
     KRefcount refcount;
+
+    /* requested quality */
+    VQuality quality;
 };
 
 /* Attach

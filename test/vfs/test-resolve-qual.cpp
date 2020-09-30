@@ -38,6 +38,8 @@
 #include <vfs/path.h> /* VPathRelease */
 #include <vfs/services-priv.h> /* KServiceMakeWithMgr */
 
+#include "../libs/vfs/services-priv.h" /* KServiceSetQuality */
+
 #include <limits.h> /* PATH_MAX */
 #ifndef PATH_MAX
 #define PATH_MAX 4096

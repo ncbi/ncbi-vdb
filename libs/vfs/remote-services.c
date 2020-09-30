@@ -54,6 +54,8 @@
 
 #include <kproc/timeout.h> /* TimeoutInit */
 
+#include <vdb/vdb-priv.h> /* VDBManagerGetQuality */
+
 #include <vfs/manager.h> /* VFSManager */
 #include <vfs/services.h> /* KServiceMake */
 
@@ -419,7 +421,7 @@ struct KService {
     SResponse resp;
 
     bool resoveOidName;
-    VQuality quality; /* quality type - 0: default, 1: no-qual, 2: full-qual */
+    int32_t quality; /* quality type - 0: default, 1: no-qual, 2: full-qual */
 };
 
 
@@ -3433,8 +3435,8 @@ static rc_t SRequestAddFile(SRequest * self,
 
 static
 rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
-    VRemoteProtocols protocols, const char * cgi,
-    const char * version, bool aProtected, bool adjustVersion )
+    VRemoteProtocols protocols, const char * cgi, const char * version,
+    bool aProtected, bool adjustVersion, VQuality quality )
 {
     SCgiRequest * self = NULL;
     rc_t rc = 0;
@@ -3692,15 +3694,32 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
                     && request->jwtKartFile != NULL) )) /* and for jwt carts */
         {
             const char n[] = "filetype";
-            const char v[] = "run";
-            rc = SKVMake(&kv, n, v);
-            if (rc == 0) {
-                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
-                    ("  %s=%s\n", n, v));
-                rc = VectorAppend(&self->params, NULL, kv);
+            if (quality == eQualDefault || quality == eQualFull
+                || quality == eQualFullOnly || quality == eQualDblOnly)
+            {
+                const char v[] = "run";
+                rc = SKVMake(&kv, n, v);
+                if (rc == 0) {
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
+                        ("  %s=%s\n", n, v));
+                    rc = VectorAppend(&self->params, NULL, kv);
+                }
+                if (rc != 0)
+                    return rc;
             }
-            if (rc != 0)
-                return rc;
+            if (quality == eQualDefault || quality == eQualNo
+                || quality == eQualDblOnly)
+            {
+                const char v[] = "noqual_run";
+                rc = SKVMake(&kv, n, v);
+                if (rc == 0) {
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
+                        ("  %s=%s\n", n, v));
+                    rc = VectorAppend(&self->params, NULL, kv);
+                }
+                if (rc != 0)
+                    return rc;
+            }
         }
     }
 
@@ -3992,10 +4011,17 @@ rc_t KServiceInitNamesRequestWithVersion ( KService * self,
     VRemoteProtocols protocols, const char * cgi, const char * version,
     bool aProtected, bool adjustVersion )
 {
+    VQuality quality = eQualDefault;
+
     assert ( self );
 
+    if (self->quality < 0)
+        self->quality = VDBManagerGetQuality(0);
+    if (self->quality >= 0)
+        quality = self->quality;
+
     return SRequestInitNamesSCgiRequest ( & self -> req,  & self -> helper,
-        protocols, cgi, version, aProtected, adjustVersion );
+        protocols, cgi, version, aProtected, adjustVersion, quality );
 }
 
 
@@ -4036,6 +4062,7 @@ static rc_t KServiceInit ( KService * self,
         rc = SRequestInit ( & self -> req );
 
     self -> resoveOidName = DEFAULT_RESOVE_OID_NAME;
+    self -> quality = -1; /* not set */
 
     return rc;
 }

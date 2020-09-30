@@ -60,16 +60,6 @@ typedef enum {
     eSFFMax,
 } ESrvFileFormat;
 
-typedef uint32_t VQuality;
-typedef enum { /* Run Quality */
-    eQualDefault, /* default: in most cases: 'no'- if found, 'full' otherwise */
-    eQualNo,      /* no-quality = synthetic */
-    eQualFull,    /* full quality (can be delivered by full-quality-only run
-                                                       or double-quality run) */
-    qQualFullOnly,/* use full quality run only, no double-quality run */
-    eQualDblOnly, /* use double quality run only */
-} EQuality;
-
 /******************************************************************************/
 /* KService - EXTERNAL Service */
 
@@ -99,9 +89,6 @@ rc_t KServiceSetJwtKartFile(KService * self, const char * path);
 
 /* Set ngc file argument in service request */
 rc_t KServiceSetNgcFile(KService * self, const char * path);
-
-/* Set quality type in service request */
-rc_t KServiceSetQuality(KService * self, VQuality quality);
 
 /************************** name service - version 3 **************************/
 /* Execute Names Service Call using current default protocol version;

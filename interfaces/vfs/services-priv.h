@@ -78,5 +78,6 @@ rc_t KSrvRespFileGetName(const struct KSrvRespFile * self, const char ** name);
 }
 #endif
 
+#define USE_SERVICES_CACHE
 
 #endif /* _h_vfs_services_priv_ */

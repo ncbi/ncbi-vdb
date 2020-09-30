@@ -22,6 +22,7 @@
 *
 * ============================================================================*/
 
+#include <vdb/quality.h> /* VQuality */
 #include <vfs/services.h> /* VQuality */
 
 struct KConfig;

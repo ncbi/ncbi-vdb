@@ -29,7 +29,10 @@
 */
 
 
-#include <kfg/kart.h>      /* EObjectType */
+#include <kfg/kart.h> /* EObjectType */
+
+#include <vdb/quality.h> /* VQuality */
+
 #include <vfs/resolver.h> /* VRemoteProtocols */
 #include <vfs/services.h> /* ESrvFileFormat */
 
@@ -121,6 +124,9 @@ rc_t LocationsAddLocal ( struct Locations * self,
    1: resolve
    2: don't resolve */
 rc_t KServiceResolveName ( struct KService * service, int resolve );
+
+/* Set quality type in service request */
+rc_t KServiceSetQuality(KService * self, VQuality quality);
 
 /* call to set VResolverCacheEnable to vrAlwaysEnable
    to simulate prefetch mode

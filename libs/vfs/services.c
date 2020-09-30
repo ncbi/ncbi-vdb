@@ -767,9 +767,7 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
             response = ( KSrvResponse* ) r;
     }
 
-#define USE_CACHE
-
-#ifdef USE_CACHE
+#ifdef USE_SERVICES_CACHE
     if ((rc == 0 || rc == RC_NOT_FND) && KServiceCallsSdl(self))
         rcc = KServiceGetServiceCache(self, &cache);
 
@@ -829,7 +827,7 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
                 rc = rcc;
         }
     }
-#endif /* USE_CACHE */
+#endif /* USE_SERVICES_CACHE */
 
     if ( rc == 0 ) {
         H h;
