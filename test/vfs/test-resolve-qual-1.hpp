@@ -345,7 +345,7 @@ FIXTURE_TEST_CASE(_111_10, TRQFixture) {
 // no quality / remote:no-qual&vdbcache / cache-in-AD / local-in-AD
 #ifdef ALL
 FIXTURE_TEST_CASE(_111_11, TRQFixture) {
-    putenv((char*)ACC "_noqual="
+    putenv((char*)ACC "="
         "{"
         " \"result\":["
         "  {"
