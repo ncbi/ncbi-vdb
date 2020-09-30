@@ -23,7 +23,7 @@
 * =========================================================================== */
 
 // no quality / remote:no-qual / no-cache / no-local
-#ifdef ALL
+#ifndef ALL
 TEST_CASE(_110_00) {
     putenv((char*)ACC "="
         "{"
@@ -224,7 +224,7 @@ TEST_CASE(_110_13) {
 #endif
 
 // no quality / remote:no-qual&vdbcache / no-cache / no-local
-#ifdef ALL
+#ifndef ALL
 TEST_CASE(_111_00) {
     putenv((char*)ACC "="
         "{"
@@ -443,7 +443,7 @@ TEST_CASE(_120_00_empty) {
 #endif
 
 // no quality / remote:has-qual / no-remote / no-cache / no-local
-#ifdef ALL
+#ifndef ALL
 TEST_CASE(_120_00) {
     putenv((char*)ACC "="
         "{"
@@ -494,7 +494,7 @@ TEST_CASE(_140_00) {
 
 // no quality / remote repo is disabled;
 //  local: .sra in AD -> found because it can be double quality
-#ifdef ALL
+#ifndef ALL
 TEST_CASE(_141_00_0) {
     unsetenv((char*)ACC);
     SrvFixture f(GetName());
@@ -538,7 +538,7 @@ TEST_CASE(_141_00_0) {
 #endif
 
 // no quality / remote repo is disabled / local: noqual.sra in AD
-#ifdef ALL //TODO
+#ifndef ALL //TODO
 TEST_CASE(_141_00_1) {
     unsetenv((char*)ACC);
     SrvFixture f(GetName());

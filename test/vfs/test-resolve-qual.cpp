@@ -45,7 +45,7 @@
 
 TEST_SUITE ( TestResolveQualSuite )
 
-#define ALL
+//#define ALL
 //#ifndef
 
 #define ACC "SRR053325"
@@ -300,7 +300,7 @@ extern "C" {
         if (
 1)          VFSManagerLogNamesServiceErrors(0, false);
         if (
-0)          KDbgSetString("VFS");
+1)          KDbgSetString("VFS");
         KConfigDisableUserSettings();
         return TestResolveQualSuite(argc, argv);
     }

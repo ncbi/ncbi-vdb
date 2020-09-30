@@ -39,8 +39,51 @@ TEST_CASE(_210_00) {
 }
 #endif
 
+// full quality / remote:has-qual / no-cache / no-local
+#ifndef ALL
+TEST_CASE(_220_00) {
+    putenv((char*)ACC "="
+        "{"
+        " \"result\":["
+        "  {"
+        "   \"bundle\": \"SRR053325\","
+        "   \"files\":["
+        "    {"
+        "     \"object\": \"srapub|SRR053325\","
+        "     \"type\":\"sra\","
+        "     \"name\":\"SRR053325\","
+        "     \"locations\":[ { \"link\":\"http://h/s\" } ]"
+        "    }"
+        "   ]"
+        "  }"
+        " ]"
+        "}");
+    SrvFixture f(GetName());
+
+    f.Start(NO_AD_CACHING, eQualFull);
+    f.PathEquals(f.path, "http://h/s");
+    f.VdbcacheEquals();
+
+    const VPath * path = NULL;
+    REQUIRE_RC_FAIL(KSrvRespFileGetLocal(f.file, &path));
+    REQUIRE_RC_FAIL(KSrvRespFileGetCache(f.file, &path));
+
+    REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
+    REQUIRE(!f.qVc);
+    f.PathEquals(f.qRemote, "http://h/s");
+    f.VdbcacheEquals("", f.qRemote);
+    REQUIRE_NULL(f.qLocal);
+    REQUIRE_NULL(f.qCache);
+
+    f.NextRun();
+    f.NextPath();
+    f.NextFile();
+    f.Release();
+}
+#endif
+
 // full quality / remote:has-qual / no-cache / local-in-AD
-#ifdef ALL
+#ifndef ALL
 TEST_CASE(_220_01) {
     putenv((char*)ACC "="
         "{"
@@ -80,49 +123,6 @@ TEST_CASE(_220_01) {
     f.VdbcacheEquals("", f.qRemote);
     f.PathEquals(f.qLocal, f.spath);
     f.VdbcacheEquals("", f.qLocal);
-    REQUIRE_NULL(f.qCache);
-
-    f.NextRun();
-    f.NextPath();
-    f.NextFile();
-    f.Release();
-}
-#endif
-
-// full quality / remote:has-qual / no-cache / no-local
-#ifdef ALL
-TEST_CASE(_220_00) {
-    putenv((char*)ACC "="
-        "{"
-        " \"result\":["
-        "  {"
-        "   \"bundle\": \"SRR053325\","
-        "   \"files\":["
-        "    {"
-        "     \"object\": \"srapub|SRR053325\","
-        "     \"type\":\"sra\","
-        "     \"name\":\"SRR053325\","
-        "     \"locations\":[ { \"link\":\"http://h/s\" } ]"
-        "    }"
-        "   ]"
-        "  }"
-        " ]"
-        "}");
-    SrvFixture f(GetName());
-
-    f.Start(NO_AD_CACHING, eQualFull);
-    f.PathEquals(f.path, "http://h/s");
-    f.VdbcacheEquals();
-
-    const VPath * path = NULL;
-    REQUIRE_RC_FAIL(KSrvRespFileGetLocal(f.file, &path));
-    REQUIRE_RC_FAIL(KSrvRespFileGetCache(f.file, &path));
-
-    REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
-    REQUIRE(!f.qVc);
-    f.PathEquals(f.qRemote, "http://h/s");
-    f.VdbcacheEquals("", f.qRemote);
-    REQUIRE_NULL(f.qLocal);
     REQUIRE_NULL(f.qCache);
 
     f.NextRun();
@@ -237,7 +237,7 @@ TEST_CASE(_220_11) {
 #endif
 
 // full quality / remote:has-qual&vdbcache / no-cache / no-local
-#ifdef ALL
+#ifndef ALL
 TEST_CASE(_222_00) {
     putenv((char*)ACC "="
         "{"
@@ -292,7 +292,7 @@ TEST_CASE(_222_00) {
 #endif
 
 // full quality / remote:has-qual / no-cache / local-has-wrong-quality
-#ifdef ALL
+#ifndef ALL
 TEST_CASE(_222_02) {
     putenv((char*)ACC "="
         "{"
@@ -483,7 +483,7 @@ TEST_CASE(_222_11) {
 #endif
 
 // full quality / remote repo is disabled / local: noqual.sra in AD -> not found
-#ifdef ALL
+#ifndef ALL
 TEST_CASE(_241_00_1) {
     unsetenv((char*)ACC);
     SrvFixture f(GetName());

@@ -296,7 +296,7 @@ TEST_CASE(_010_20_noqual) {
 #endif
 
 // default quality / remote:no-qual&has vdbcache / no-cache / no-local
-#ifdef ALL
+#ifndef ALL
 TEST_CASE(_011_00) {
     putenv((char*)ACC "="
         "{"
@@ -664,7 +664,7 @@ TEST_CASE(_011_22) {
 #endif
 
 // default quality / remote:has-qual / no-cache / no-local
-#ifdef ALL
+#ifndef ALL
 TEST_CASE(_020_00) {
     putenv((char*)ACC "="
         "{"
@@ -861,7 +861,7 @@ TEST_CASE(_020_11) {
 #endif
 
 // default quality / remote:has-qual&vdbcache / no-cache / no-local
-#ifdef ALL
+#ifndef ALL
 TEST_CASE(_022_00) {
     putenv((char*)ACC "="
         "{"
@@ -1064,7 +1064,7 @@ TEST_CASE(_022_11) {
 #endif
 
 // default quality / remote:no-qual+has-qual&no vdbcache / no-cache / no-local
-#ifdef ALL
+#ifndef ALL
 TEST_CASE(_030_00) {
     putenv((char*)ACC "="
         "{"
@@ -1120,7 +1120,7 @@ TEST_CASE(_030_00) {
 
 // dfl quality / remote:no-qual+has-qual&vdbcache / no-cache
 // local-with-full-qual-in-AD, no-vc
-#ifdef ALL
+#ifndef ALL
 TEST_CASE(_033_04) {
     putenv((char*)ACC "="
         "{"
@@ -1449,7 +1449,7 @@ TEST_CASE(_040_00) {
 #endif
 
 // remote repo is disabled; local .sra in AD
-#ifdef ALL
+#ifndef ALL
 TEST_CASE(_040_01_0) {
     unsetenv((char*)ACC);
     SrvFixture f(GetName());
@@ -1484,7 +1484,7 @@ TEST_CASE(_040_01_0) {
 #endif
 
 // remote repo is disabled; local .sra in AD
-#ifdef ALL
+#ifndef ALL
 TEST_CASE(_040_01_1) {
     unsetenv((char*)ACC);
     SrvFixture f(GetName());
@@ -1522,7 +1522,7 @@ TEST_CASE(_040_01_1) {
 #endif
 
 // remote repo is disabled; vdbcache; local .sra in user repo
-#ifdef ALL
+#ifndef ALL
 TEST_CASE(_043_02_0) {
     unsetenv((char*)ACC);
     SrvFixture f(GetName());
