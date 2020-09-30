@@ -304,7 +304,7 @@ extern "C" {
         if (
 1)          VFSManagerLogNamesServiceErrors(0, false);
         if (
-1)          KDbgSetString("VFS");
+0)          KDbgSetString("VFS");
         KConfigDisableUserSettings();
         return TestResolveQualSuite(argc, argv);
     }
