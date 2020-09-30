@@ -49,7 +49,7 @@ FIXTURE_TEST_CASE(_000_00, TRQFixture) {
 #endif
 
 // default quality / remote:no-qual&no vdbcache / no-cache / no-local
-#ifndef ALL
+#ifdef ALL
 FIXTURE_TEST_CASE(_010_00, TRQFixture) {
     putenv((char*)ACC "="
         "{"
@@ -92,7 +92,7 @@ FIXTURE_TEST_CASE(_010_00, TRQFixture) {
 #endif
 
 // default quality / remote:no-qual&no vdbcache / cache-in-AD / no-local
-#ifndef ALL
+#ifdef ALL
 FIXTURE_TEST_CASE(_010_10, TRQFixture) {
     putenv((char*)ACC "="
         "{"
@@ -139,7 +139,7 @@ FIXTURE_TEST_CASE(_010_10, TRQFixture) {
 #endif
 
 // default quality / remote:no-qual&no vdbcache / cache-in-AD / local-in-AD
-#ifndef ALL
+#ifdef ALL
 FIXTURE_TEST_CASE(_010_11, TRQFixture) {
     putenv((char*)ACC "="
         "{"
@@ -196,7 +196,7 @@ FIXTURE_TEST_CASE(_010_11, TRQFixture) {
 #endif
 
 // default quality / remote:no-qual&no vdbcache / user-cache / no-local
-#ifndef ALL
+#ifdef ALL
 FIXTURE_TEST_CASE(_010_20, TRQFixture) {
     putenv((char*)ACC "="
         "{"
@@ -247,7 +247,7 @@ FIXTURE_TEST_CASE(_010_20, TRQFixture) {
 
 /* default quality / remote:no-qual&no vdbcache / user-cache / no-local
    name with .noqual */
-#ifndef ALL
+#ifdef ALL
 FIXTURE_TEST_CASE(_010_20_noqual, TRQFixture) {
     putenv((char*)ACC "="
         "{"
@@ -296,7 +296,7 @@ FIXTURE_TEST_CASE(_010_20_noqual, TRQFixture) {
 #endif
 
 // default quality / remote:no-qual&has vdbcache / no-cache / no-local
-#ifndef ALL
+#ifdef ALL
 FIXTURE_TEST_CASE(_011_00, TRQFixture) {
     putenv((char*)ACC "="
         "{"
@@ -664,7 +664,7 @@ FIXTURE_TEST_CASE(_011_22, TRQFixture) {
 #endif
 
 // default quality / remote:has-qual / no-cache / no-local
-#ifndef ALL
+#ifdef ALL
 FIXTURE_TEST_CASE(_020_00, TRQFixture) {
     putenv((char*)ACC "="
         "{"
@@ -861,7 +861,7 @@ FIXTURE_TEST_CASE(_020_11, TRQFixture) {
 #endif
 
 // default quality / remote:has-qual&vdbcache / no-cache / no-local
-#ifndef ALL
+#ifdef ALL
 FIXTURE_TEST_CASE(_022_00, TRQFixture) {
     putenv((char*)ACC "="
         "{"
@@ -1064,7 +1064,7 @@ FIXTURE_TEST_CASE(_022_11, TRQFixture) {
 #endif
 
 // default quality / remote:no-qual+has-qual&no vdbcache / no-cache / no-local
-#ifndef ALL
+#ifdef ALL
 FIXTURE_TEST_CASE(_030_00, TRQFixture) {
     putenv((char*)ACC "="
         "{"
@@ -1120,7 +1120,7 @@ FIXTURE_TEST_CASE(_030_00, TRQFixture) {
 
 // dfl quality / remote:no-qual+has-qual&vdbcache / no-cache
 // local-with-full-qual-in-AD, no-vc
-#ifndef ALL
+#ifdef ALL
 FIXTURE_TEST_CASE(_033_04, TRQFixture) {
     putenv((char*)ACC "="
         "{"
@@ -1448,7 +1448,7 @@ FIXTURE_TEST_CASE(_040_00, TRQFixture) {
 #endif
 
 // remote repo is disabled; local .sra in AD
-#ifndef ALL
+#ifdef ALL
 FIXTURE_TEST_CASE(_040_01_0, TRQFixture) {
     TRQHelper f(GetName());
     f.DisableRemoteRepo();
@@ -1482,7 +1482,7 @@ FIXTURE_TEST_CASE(_040_01_0, TRQFixture) {
 #endif
 
 // remote repo is disabled; local .sra in AD
-#ifndef ALL
+#ifdef ALL
 FIXTURE_TEST_CASE(_040_01_1, TRQFixture) {
     TRQHelper f(GetName());
     f.DisableRemoteRepo();
@@ -1519,7 +1519,7 @@ FIXTURE_TEST_CASE(_040_01_1, TRQFixture) {
 #endif
 
 // remote repo is disabled; vdbcache; local .sra in user repo
-#ifndef ALL
+#ifdef ALL
 FIXTURE_TEST_CASE(_043_02_0, TRQFixture) {
     TRQHelper f(GetName());
     f.DisableRemoteRepo();

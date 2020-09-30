@@ -45,7 +45,7 @@
 
 TEST_SUITE(TestResolveQualSuite)
 
-//#define ALL
+#define ALL
 //#ifndef
 
 #define ACC "SRR053325"

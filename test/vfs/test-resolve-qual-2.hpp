@@ -40,7 +40,7 @@ FIXTURE_TEST_CASE(_210_00, TRQFixture) {
 #endif
 
 // full quality / remote:has-qual / no-cache / no-local
-#ifndef ALL
+#ifdef ALL
 FIXTURE_TEST_CASE(_220_00, TRQFixture) {
     putenv((char*)ACC "="
         "{"
@@ -83,7 +83,7 @@ FIXTURE_TEST_CASE(_220_00, TRQFixture) {
 #endif
 
 // full quality / remote:has-qual / no-cache / local-in-AD
-#ifndef ALL
+#ifdef ALL
 FIXTURE_TEST_CASE(_220_01, TRQFixture) {
     putenv((char*)ACC "="
         "{"
@@ -237,7 +237,7 @@ FIXTURE_TEST_CASE(_220_11, TRQFixture) {
 #endif
 
 // full quality / remote:has-qual&vdbcache / no-cache / no-local
-#ifndef ALL
+#ifdef ALL
 FIXTURE_TEST_CASE(_222_00, TRQFixture) {
     putenv((char*)ACC "="
         "{"
@@ -292,7 +292,7 @@ FIXTURE_TEST_CASE(_222_00, TRQFixture) {
 #endif
 
 // full quality / remote:has-qual / no-cache / local-has-wrong-quality
-#ifndef ALL
+#ifdef ALL
 FIXTURE_TEST_CASE(_222_02, TRQFixture) {
     putenv((char*)ACC "="
         "{"
@@ -483,7 +483,7 @@ FIXTURE_TEST_CASE(_222_11, TRQFixture) {
 #endif
 
 // full quality / remote repo is disabled / local: noqual.sra in AD -> not found
-#ifndef ALL
+#ifdef ALL
 FIXTURE_TEST_CASE(_241_00_1, TRQFixture) {
     TRQHelper f(GetName());
 
