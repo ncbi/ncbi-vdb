@@ -57,7 +57,7 @@ TEST_SUITE(TestResolveQualSuite)
 #define FAIL_QUERY 2
 #define FAIL_REMOTE 3
 
-struct TRQFixture { unsetenv((char*)ACC); };
+struct TRQFixture { TRQFixture() { unsetenv((char*)ACC); } };
 
 class TRQHelper : protected ncbi::NK::TestCase {
 public:
@@ -121,9 +121,11 @@ public:
     void Start(bool setAdCaching,
         VQuality quality = eQualDefault, int fail = 0)
     {
-        REQUIRE_RC(KNSManagerMake(&kns));
+        REQUIRE_RC(KNSManagerMakeLocal(&kns, kfg));
         if (setAdCaching)
             REQUIRE_RC(KNSManagerSetAdCaching(kns, true));
+        else
+            REQUIRE_RC(KNSManagerSetAdCaching(kns, false));
 
         REQUIRE_RC(KServiceMakeWithMgr(&service, NULL, kns, kfg));
         if (quality > 0)
