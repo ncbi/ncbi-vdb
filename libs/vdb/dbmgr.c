@@ -79,7 +79,7 @@ LIB_EXPORT rc_t CC VDBManagerMakeReadWithVFSManager ( const VDBManager ** mgrp,
         rc = RC ( rcVDB, rcMgr, rcConstructing, rcParam, rcNull );
     else
     {
-        VDBManager *mgr = malloc ( sizeof * mgr );
+        VDBManager *mgr = calloc ( 1, sizeof * mgr );
         if ( mgr == NULL )
             rc = RC ( rcVDB, rcMgr, rcConstructing, rcMemory, rcExhausted );
         else
