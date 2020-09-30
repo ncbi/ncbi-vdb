@@ -46,6 +46,7 @@ extern "C" {
 struct VFSManager;
 struct KDirectory;
 struct KFile;
+struct KNSManager;
 struct VPath;
 struct VResolver;
 struct SRAPath;
