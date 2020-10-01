@@ -468,9 +468,8 @@ static rc_t getSequence(  RestoreRead *const self
     int64_t wgs_row = 0;
     unsigned error_at = 0;
     rc_t rc = 0;
-    unsigned loops;
 
-    for (loops = 0; loops != 2; ++loops) {
+    for ( ; ; ) {
         switch (self->last.type) {
         case refSeq_type:
             if (isSameCountRefSeqs(self->shared, self->last.count) && name_cmp(self->last.u.r->name, (unsigned)id_len, seq_id) == 0) {
