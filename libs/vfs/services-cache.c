@@ -29,6 +29,7 @@
 #include <kfs/directory.h> /* KDirectoryRelease */
 
 #include <klib/container.h> /* BSTree */
+#include <klib/debug.h> /* DBGMSG */
 #include <klib/printf.h> /* string_printf */
 #include <klib/rc.h> /* RC */
 #include <klib/text.h> /* StringWhack */
@@ -765,7 +766,7 @@ static void KRunFindLocal(KRun * self,
             const VPath * path = NULL;
             rc_t r2 = VPathMake(&accession, self->acc->addr);
             if (r2 == 0)
-                r2 = VResolverLocal(sc->resolver, accession, &path);
+                r2 = VResolverLocalForCache(sc->resolver, accession, &path);
             if (r2 == 0) {
                 r2 = LocalSetResolverPath(&self->local[eIdxAsk], path);
                 if (r2 != 0) {
@@ -2211,6 +2212,8 @@ static rc_t KSrvRunPrepareQuery(KRun * self)
 {
     rc_t rc = 0;
 
+    const VPath * path = NULL;
+
     if (rc == 0)
         rc = KRunLocal(self);
 
@@ -2233,6 +2236,49 @@ static rc_t KSrvRunPrepareQuery(KRun * self)
                 self->result.vdbcache = true;
     }
 
+    path = self->result.local;
+    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS),
+        ("KSrvRunQuery: local location of '%S' resolved to '%s'. "
+            "It %s vdbcache\n",
+            self->acc, path == NULL ? "<NULL>" : path->path.addr,
+            self->result.vdbcache ? "has" : "doesn't have"));
+    if (path != NULL && self->result.vdbcache)
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), ("KSrvRunQuery: "
+            "local location of '%S'.vdbcache resolved to '%s'\n", self->acc,
+            path->vdbcache == NULL ? "<NULL>" : path->vdbcache->path.addr));
+
+    path = self->result.remote;
+    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS),
+        ("KSrvRunQuery: remote location of '%S' resolved to '%s'. "
+            "It %s vdbcache\n",
+            self->acc, path == NULL ? "<NULL>" : path->scheme.addr,
+            self->result.vdbcache ? "has" : "doesn't have"));
+    if (path != NULL) {
+        if (self->result.vdbcache)
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), ("KSrvRunQuery: "
+                "remote location of '%S'.vdbcache resolved to '%s'\n",
+                self->acc,
+                path->vdbcache == NULL
+                ? "<NULL>" : path->vdbcache->scheme.addr));
+
+        path = self->result.cache;
+        if (path != NULL && self->result.vdbcache)
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), ("KSrvRunQuery: "
+                "local location of '%S'.vdbcache resolved to '%s'\n", self->acc,
+                path->vdbcache == NULL ? "<NULL>" : path->vdbcache->path.addr));
+
+        path = self->result.cache;
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS),
+            ("KSrvRunQuery: cache location of '%S' resolved to '%s'\n",
+                self->acc, path == NULL ? "<NULL>" : path->scheme.addr,
+                self->result.vdbcache ? "has" : "doesn't have"));
+        if (path != NULL && self->result.vdbcache)
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), ("KSrvRunQuery: "
+                "cache location of '%S'.vdbcache resolved to '%s'\n",
+                self->acc,
+                path->vdbcache == NULL
+                    ? "<NULL>" : path->vdbcache->scheme.addr));
+    }
     return rc;
 }
 

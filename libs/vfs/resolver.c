@@ -59,6 +59,7 @@
 #include <vfs/path.h>
 #include <vfs/path-priv.h>
 #include <vfs/resolver-priv.h> /* VResolverQueryWithDir */
+#include <vfs/services-priv.h> /* KServiceMakeWithMgr */
 
 #include "services-priv.h"
 #include "path-priv.h"
@@ -3267,21 +3268,16 @@ bool CC VPathHasRefseqContext ( const VPath * accession )
                            option, num_read, (uint32_t)num_read ) == 0 );
 }
 
+LIB_EXPORT rc_t CC VResolverQueryDo(const VResolver * self,
+    VRemoteProtocols protocols, const VPath * query, const VPath ** local,
+    const VPath ** remote, const VPath ** cache, bool forCache);
 
-/* Local - DEPRECATED
- *  Find an existing local file/directory that is named by the accession.
- *  rcState of rcNotFound means it does not exist.
- *
- *  other rc code for failure are possible.
- *
- *  Accession must be an ncbi-acc scheme or a simple name with no
- *  directory paths.
- */
-LIB_EXPORT
-rc_t CC VResolverLocal ( const VResolver * self,
-    const VPath * accession, const VPath ** path )
+static
+rc_t CC VResolverLocalDo ( const VResolver * self,
+    const VPath * accession, const VPath ** path, bool forCache )
 {
-    rc_t rc =  VResolverQuery ( self, self -> protocols, accession, path, NULL, NULL );
+    rc_t rc =  VResolverQueryDo ( self, self -> protocols, accession, path,
+        NULL, NULL, forCache );
     if ( rc == 0 )
     {
         switch ( accession -> path_type )
@@ -3305,6 +3301,27 @@ rc_t CC VResolverLocal ( const VResolver * self,
         rc = RC ( rcVFS, rcResolver, rcResolving, rcPath, rcNotFound );
     }
     return rc;
+}
+
+/* Local - DEPRECATED
+ *  Find an existing local file/directory that is named by the accession.
+ *  rcState of rcNotFound means it does not exist.
+ *
+ *  other rc code for failure are possible.
+ *
+ *  Accession must be an ncbi-acc scheme or a simple name with no
+ *  directory paths.
+ */
+LIB_EXPORT rc_t CC VResolverLocal(const VResolver * self,
+    const VPath * accession, const VPath ** path)
+{
+    return VResolverLocalDo(self, accession, path, false);
+}
+
+rc_t VResolverLocalForCache(const VResolver * self,
+    const VPath * accession, const VPath ** path)
+{
+    return VResolverLocalDo(self, accession, path, true);
 }
 
 
@@ -5116,12 +5133,106 @@ rc_t CC VResolverQueryImpl ( const VResolver * self, VRemoteProtocols protocols,
 }
 
 LIB_EXPORT
-rc_t CC VResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
-    const VPath * query, const VPath ** local, const VPath ** remote,
-    const VPath ** cache )
+rc_t CC VResolverQueryDo ( const VResolver * self, VRemoteProtocols protocols,
+    const VPath * query, const VPath ** aLocal, const VPath ** aRemote,
+    const VPath ** aCache, bool forCache )
 {
-    return VResolverQueryImpl ( self, protocols, query, local, remote, cache,
+#ifdef USE_SERVICES_CACHE
+    rc_t rc = 0;
+    const KNSManager * mgr = NULL;
+    KService * service = NULL;
+    const KSrvResponse * response = NULL;
+    KSrvRunIterator * ri = NULL;
+    const KSrvRun * run = NULL;
+    const VPath * local = NULL;
+    const VPath * remote = NULL;
+    const VPath * cache = NULL;
+    char s[512] = "";
+    const char * p = s;
+    if (!forCache) {
+        rc_t ra = 0;
+        VPath * acc_or_oid = NULL;
+        String acc;
+        rc = VResolverGetKNSManager(self, &mgr);
+        if (rc == 0)
+            rc = KServiceMakeWithMgr(&service, NULL, mgr, NULL);
+        if (rc == 0) {
+            ra = VPathGetAcc(query, &acc);
+            if (ra == 0 && acc.size > 0 && acc.addr != NULL)
+                p = acc.addr;
+            else {
+                ra = VFSManagerExtractAccessionOrOID((VFSManager*)1,
+                    &acc_or_oid, query);
+                if (ra == 0)
+                    rc = VPathReadPath(acc_or_oid, s, sizeof s, NULL);
+            }
+        }
+        if (rc == 0 && ra == 0) {
+            if (rc == 0)
+                rc = KServiceAddId(service, p);
+            if (rc == 0)
+                rc = KServiceNamesQuery(service, protocols, &response);
+            if (rc == 0)
+                rc = KSrvResponseMakeRunIterator(response, &ri);
+            if (rc == 0)
+                rc = KSrvRunIteratorNextRun(ri, &run);
+        }
+        RELEASE(VPath, acc_or_oid);
+    }
+    if (rc == 0) {
+        if (run != NULL) { /* SRR accessions go here */
+            bool notFound = true;
+            KSrvRunQuery(run, &local, &remote, &cache, NULL);
+            if (rc == 0) {
+                if (aLocal != NULL) {
+                    *aLocal = local;
+                    if (local != NULL)
+                        notFound = false;
+                }
+                else
+                    RELEASE(VPath, local);
+            }
+            if (rc == 0) {
+                if (aRemote != NULL) {
+                    *aRemote = remote;
+                    if (remote != NULL)
+                        notFound = false;
+                }
+                else
+                    RELEASE(VPath, remote);
+            }
+            if (rc == 0) {
+                if (aCache != NULL)
+                    *aCache = cache;
+                else
+                    RELEASE(VPath, cache);
+            }
+            if (notFound && rc == 0)
+                rc = RC(rcVFS, rcResolver, rcResolving, rcPath, rcNotFound);
+        }
+        else /* non - SRR accessions go here */
+            rc = VResolverQueryImpl(self, protocols, query,
+                aLocal, aRemote, aCache, false, NULL, NULL, false, NULL, NULL);
+    }
+    RELEASE(KSrvRun, run);
+    RELEASE(KSrvRunIterator, ri);
+    RELEASE(KSrvResponse, response);
+    RELEASE(KService, service);
+    RELEASE(KNSManager, mgr);
+    return rc;
+#else
+    return VResolverQueryImpl ( self, protocols, query, aLocal, aRemote, aCache,
                                false, NULL, NULL, false, NULL, NULL );
+#endif
+}
+
+LIB_EXPORT
+rc_t CC VResolverQuery(const VResolver * self, VRemoteProtocols protocols,
+    const VPath * query, const VPath ** local, const VPath ** remote,
+    const VPath ** cache)
+{
+    return VResolverQueryDo(self, protocols, query, local, remote,
+        cache, false);
 }
 
 LIB_EXPORT

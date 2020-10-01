@@ -1130,86 +1130,7 @@ static rc_t VFSManagerResolvePathResolver (const VFSManager * self,
     else
     {
         bool not_done = true;
-#ifdef USE_SERVICES_CACHE
-        rc_t r2 = 0;
-        const KNSManager * mgr = NULL;
-        KService * service = NULL;
-        const KSrvResponse * response = NULL;
-        KSrvRunIterator * ri = NULL;
-        const KSrvRun * run = NULL;
-        VPath * local = NULL;
-        VPath * remote = NULL;
-        char p[512] = "";
-        rc = VResolverGetKNSManager(self->resolver, &mgr);
-        if (rc == 0)
-            rc = KServiceMakeWithMgr(&service, NULL, mgr, NULL);
-        if (rc == 0)
-            rc = VPathReadPath(in_path, p, sizeof p, NULL);
-        if (rc == 0)
-            rc = KServiceAddId(service, p);
-        if (rc == 0)
-            rc = KServiceNamesQuery(service, self->protocols, &response);
-        if (rc == 0)
-            rc = KSrvResponseMakeRunIterator(response, &ri);
-        if (rc == 0)
-            rc = KSrvRunIteratorNextRun(ri, &run);
-        if (rc == 0) {
-            if (run != NULL) { /* SRR accessions go here */
-                KSrvRunQuery(run,
-                    (const VPath**)&local, (const VPath**)&remote, NULL, NULL);
-                if (rc == 0) {
-                    if ((flags & vfsmgr_rflag_no_acc_local) == 0
-                        && local != NULL)
-                    {
-                        not_done = false;
-                        *out_path = local;
-                        r2 = VPathRelease(remote); remote = NULL;
-                        if (r2 != 0 && rc == 0)
-                            rc = r2;
-                    }
-                    if (not_done
-                        && ((flags & vfsmgr_rflag_no_acc_remote) == 0))
-                    {
-                        *out_path = remote;
-                        r2 = VPathRelease(local); local = NULL;
-                        if (r2 != 0 && rc == 0)
-                            rc = r2;
-                    }
-                }
-            }
-            else { /* non - SRR accessions go here */
-                /* cast because we seem to have the restriction on the
-                 * output from VResolver that seems too restrictive */
-                if ((flags & vfsmgr_rflag_no_acc_local) == 0) {
-                    rc = VResolverQuery(self->resolver, 0, in_path,
-                        (const VPath **)out_path, NULL, NULL);
-                    if (rc == 0)
-                        not_done = false;
-                }
-                if (not_done
-                    && ((flags & vfsmgr_rflag_no_acc_remote) == 0))
-                {
-                    rc = VResolverRemote(self->resolver, self->protocols,
-                        in_path, (const VPath **)out_path);
-                }
-            }
-        }
-        r2 = KSrvRunRelease(run);
-        if (r2 != 0 && rc == 0)
-            rc = r2;
-        r2 = KSrvRunIteratorRelease(ri);
-        if (r2 != 0 && rc == 0)
-            rc = r2;
-        r2 = KSrvResponseRelease(response);
-        if (r2 != 0 && rc == 0)
-            rc = r2;
-        r2 = KServiceRelease(service);
-        if (r2 != 0 && rc == 0)
-            rc = r2;
-        r2 = KNSManagerRelease(mgr);
-        if (r2 != 0 && rc == 0)
-            rc = r2;
-#else
+
         /*
          * cast because we seem to have the restriction on the output from
          * VResolver that seems too restrictive
@@ -1227,7 +1148,6 @@ static rc_t VFSManagerResolvePathResolver (const VFSManager * self,
             rc = VResolverRemote (self->resolver, self -> protocols,
                 in_path, (const VPath **)out_path);
         }
-#endif
     }
     return rc;
 }

@@ -251,6 +251,9 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
     const struct VPath ** path, const struct VPath **mapping,
     const struct KFile ** opt_file_rtn, bool refseq_ctx, bool is_oid, const char * version );
 
+rc_t VResolverLocalForCache(const VResolver * self,
+    const VPath * accession, const VPath ** path);
+
 /* version of name service protocol */
 rc_t VResolverSetVersion ( VResolver *self, const char * version );
 
@@ -281,6 +284,10 @@ VResolverAppID get_accession_app(const String * accession, bool refseq_ctx,
     struct VResolverAccToken *tok, bool *legacy_wgs_refseq,
     bool resolveAllAccToCache, bool * forDirAdjusted,
     const String * parentAcc, int64_t projectId);
+
+
+#define USE_SERVICES_CACHE /* use ServicesCache */
+
 
 #ifdef __cplusplus
 }
