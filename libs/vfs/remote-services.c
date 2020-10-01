@@ -3139,8 +3139,10 @@ rc_t KServiceSetNgcFile(KService * self, const char * path) {
 }
 
 bool KServiceCallsSdl(const KService * self) {
-    assert(self);
-    return self->req.sdl;
+    if (self == NULL)
+        return false;
+    else
+        return self->req.sdl;
 }
 
 /* SRequest *******************************************************************/
