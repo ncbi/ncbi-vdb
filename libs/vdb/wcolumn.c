@@ -594,11 +594,19 @@ bool WColumnCommitRowData ( WColumn *self, int64_t *end_id )
     cur_size = ( size_t ) ( self -> bits_in_buffer + 7 ) >> 3;
     if ( cur_size >= self -> trigger )
     {
+        DBGMSG(DBG_VDB, DBG_FLAG(DBG_VDB_VDB), ("cur_size = %lu\n", cur_size));
         /* if size just crossed the trigger boundary and
          * cutoff_id has not been advanced yet */
         if ( self -> cutoff_id == self -> start_id )
         {
-            self -> cutoff_id = * end_id;
+            if ( ( cur_size + cur_size ) >= self -> trigger * 3 )
+            {
+                * end_id = self -> start_id; /*VDB-4341: request an immediate page commit */
+            }
+            else
+            {
+                self -> cutoff_id = * end_id;
+            }
         }
 
         /* or perhaps the buffer is too large */

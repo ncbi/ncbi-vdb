@@ -282,7 +282,7 @@ rc_t VDBManagerVPathOpenLocalDBRead ( const VDBManager *self,
                 return 0;
             }
         }
-        
+
         VDatabaseWhack ( db );
     }
 
@@ -314,7 +314,7 @@ rc_t VDBManagerVPathOpenRemoteDBRead ( const VDBManager *self,
                 return 0;
             }
         }
-        
+
         VDatabaseWhack ( db );
     }
 
@@ -329,7 +329,7 @@ typedef enum {
 typedef enum {
     eCheckFilePathFalse,
     eCheckFilePathTrue,
-} ECheckFilePath; 
+} ECheckFilePath;
 
 typedef enum {
     eCheckUrlFalse,
@@ -451,7 +451,8 @@ static rc_t DBManagerOpenVdbcache(const VDBManager *self,
     const VFSManager * vfs, const VDatabase * db, const VSchema *schema,
     const VPath * orig, bool is_accession, const VResolver * resolver,
     const VPath ** pcache,
-    const VPath * plocal, const VPath * premote)
+    const VPath * plocal,
+    const VPath ** premote)
     /* just one of plocal | premote is set */
 {
     rc_t rc2 = 0;
@@ -487,7 +488,6 @@ static rc_t DBManagerOpenVdbcache(const VDBManager *self,
                     rc2 = VFSManagerExtractAccessionOrOID(vfs, &acc, orig);
                     if (rc2 == 0)
                     {
-                        VPathRelease(orig);
                         orig = acc;
                     }
                 }
@@ -501,7 +501,7 @@ static rc_t DBManagerOpenVdbcache(const VDBManager *self,
                      */
                     KLogLevel lvl = KLogLevelGet();
                     KLogLevelSet(klogFatal);
-                    assert(premote == NULL);
+                    assert(*premote == NULL);
                     assert(pcache && *pcache == NULL);
      /* YES,
       DBG_VFS should be used here to be printed along with other VFS messages */
@@ -509,29 +509,30 @@ static rc_t DBManagerOpenVdbcache(const VDBManager *self,
                 (">>>>>>>>>>>>>> calling VResolverQuery to locate vdbcache..."
                             "\n"));
                     rc2 = VResolverQuery(
-                        resolver, 0, orig, NULL, &premote, pcache);
+                        resolver, 0, orig, NULL, premote, pcache);
                     assert((rc2 == 0) ||
-                        (rc2 != 0 && premote == NULL));
+                        (rc2 != 0 && *premote == NULL));
 
                     /* Here we are restoring log level
                      */
                     KLogLevelSet(lvl);
+                    VPathRelease(orig);
                 }
             }
         }
     }
 
     /* if principal was remote, or attempting remote vdbcache */
-    if (premote != NULL)
+    if (*premote != NULL)
     {
         rc2 = VFSManagerRemoteMagicResolve(vfs, &cremote, &magicWasSet);
         if (rc2 == 0 && cremote == NULL) {
             /* check if names service returned vdbcache */
             bool vdbcacheChecked = false;
 
-            /* check remote path to vdbcache 
+            /* check remote path to vdbcache
                just when magic variable is not set */
-            rc2 = VPathGetVdbcache(premote,
+            rc2 = VPathGetVdbcache(*premote,
                 (const VPath **)& cremote, &vdbcacheChecked);
 
             /* try to manually build remote vdbcache path
@@ -539,7 +540,7 @@ static rc_t DBManagerOpenVdbcache(const VDBManager *self,
                should never happen these days */
             if (rc2 != 0 || vdbcacheChecked == false)
                 rc2 = VFSManagerMakePathWithExtension(
-                    vfs, (VPath**)& cremote, premote, ".vdbcache");
+                    vfs, (VPath**)& cremote, *premote, ".vdbcache");
         }
 
         if (rc2 == 0) {
@@ -663,8 +664,8 @@ LIB_EXPORT rc_t CC VDBManagerOpenDBReadVPath ( const VDBManager *self,
                                 if ( VDatabaseIsCSRA ( db ) )
                                 {
                                     DBManagerOpenVdbcache(self, vfs, db,
-                                        schema, orig, is_accession, resolver, 
-                                        &pcache, plocal, premote);
+                                        schema, orig, is_accession, resolver,
+                                        &pcache, plocal, &premote);
 #if 0
                                     /* CSRA databases may have an associated "vdbcache" */
                                     const VDatabase * vdbcache = NULL;
@@ -694,7 +695,7 @@ LIB_EXPORT rc_t CC VDBManagerOpenDBReadVPath ( const VDBManager *self,
                                                 /* was not found locally - try to get one remotely */
                                                 if ( rc2 == 0 )
                                                 {
-                                                        /* We need suppress error message in the 
+                                                        /* We need suppress error message in the
                                                          * case if here any error happened
                                                          */
                                                     KLogLevel lvl = KLogLevelGet ();
@@ -866,7 +867,7 @@ LIB_EXPORT rc_t CC VDBManagerVOpenDBRead ( const VDBManager *self,
                                 if ( VDatabaseIsCSRA ( db ) )
                                 {
                                     DBManagerOpenVdbcache(self, vfs, db,
-                                        schema, orig, is_accession, resolver, 
+                                        schema, orig, is_accession, resolver,
                                         &pcache, plocal, premote);
 #if 0
                                     /* CSRA databases may have an associated "vdbcache" */
@@ -897,7 +898,7 @@ LIB_EXPORT rc_t CC VDBManagerVOpenDBRead ( const VDBManager *self,
                                                 /* was not found locally - try to get one remotely */
                                                 if ( rc2 == 0 )
                                                 {
-                                                        /* We need suppress error message in the 
+                                                        /* We need suppress error message in the
                                                          * case if here any error happened
                                                          */
                                                     KLogLevel lvl = KLogLevelGet ();
@@ -1060,7 +1061,7 @@ LIB_EXPORT bool CC VDatabaseLocked ( const VDatabase *self )
  *  valid values are kptDatabase, kptTable and kptIndex
  *
  *  "resolved" [ OUT ] and "rsize" [ IN ] - optional output buffer
- *  for fundamenta object name if "alias" is not a fundamental name, 
+ *  for fundamenta object name if "alias" is not a fundamental name,
  *
  *  "name" [ IN ] - NUL terminated object name
  */
@@ -1086,7 +1087,7 @@ LIB_EXPORT bool CC VDatabaseIsAlias ( const VDatabase *self, uint32_t type,
  *
  *  "path" [ IN ] - NUL terminated path
  */
-LIB_EXPORT rc_t CC VDatabaseVWritable ( const VDatabase *self, uint32_t type, 
+LIB_EXPORT rc_t CC VDatabaseVWritable ( const VDatabase *self, uint32_t type,
         const char *name, va_list args )
 {
     rc_t rc;
@@ -1238,8 +1239,8 @@ LIB_EXPORT rc_t CC VDatabaseOpenSchema ( const VDatabase *self, const VSchema **
 
 
 /* lists the tables of the database
- * 
- * "names" [ OUT ] - return parameter for tables 
+ *
+ * "names" [ OUT ] - return parameter for tables
  */
 LIB_EXPORT rc_t CC VDatabaseListTbl ( const VDatabase *self, KNamelist **names )
 {
@@ -1266,8 +1267,8 @@ LIB_EXPORT rc_t CC VDatabaseListTbl ( const VDatabase *self, KNamelist **names )
 }
 
 /* lists the sub-databases of the database
- * 
- * "names" [ OUT ] - return parameter for databases 
+ *
+ * "names" [ OUT ] - return parameter for databases
  */
 LIB_EXPORT rc_t CC VDatabaseListDB ( const VDatabase *self, KNamelist **names )
 {
