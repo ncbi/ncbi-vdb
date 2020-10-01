@@ -1153,26 +1153,50 @@ static rc_t VFSManagerResolvePathResolver (const VFSManager * self,
             rc = KSrvResponseMakeRunIterator(response, &ri);
         if (rc == 0)
             rc = KSrvRunIteratorNextRun(ri, &run);
-        if (rc == 0)
-            r2 = KSrvRunRelease(run);
-        if (rc == 0)
-            KSrvRunQuery(
-                run, (const VPath**)&local, (const VPath**)&remote, NULL, NULL);
         if (rc == 0) {
-            if ((flags & vfsmgr_rflag_no_acc_local) == 0 && local != NULL) {
-                not_done = false;
-                *out_path = local;
-                r2 = VPathRelease(remote); remote = NULL;
-                if (r2 != 0 && rc == 0)
-                    rc = r2;
+            if (run != NULL) { /* SRR accessions go here */
+                KSrvRunQuery(run,
+                    (const VPath**)&local, (const VPath**)&remote, NULL, NULL);
+                if (rc == 0) {
+                    if ((flags & vfsmgr_rflag_no_acc_local) == 0
+                        && local != NULL)
+                    {
+                        not_done = false;
+                        *out_path = local;
+                        r2 = VPathRelease(remote); remote = NULL;
+                        if (r2 != 0 && rc == 0)
+                            rc = r2;
+                    }
+                    if (not_done
+                        && ((flags & vfsmgr_rflag_no_acc_remote) == 0))
+                    {
+                        *out_path = remote;
+                        r2 = VPathRelease(local); local = NULL;
+                        if (r2 != 0 && rc == 0)
+                            rc = r2;
+                    }
+                }
             }
-            if (not_done && ((flags & vfsmgr_rflag_no_acc_remote) == 0)) {
-                *out_path = remote;
-                r2 = VPathRelease(local); local = NULL;
-                if (r2 != 0 && rc == 0)
-                    rc = r2;
+            else { /* non - SRR accessions go here */
+                /* cast because we seem to have the restriction on the
+                 * output from VResolver that seems too restrictive */
+                if ((flags & vfsmgr_rflag_no_acc_local) == 0) {
+                    rc = VResolverQuery(self->resolver, 0, in_path,
+                        (const VPath **)out_path, NULL, NULL);
+                    if (rc == 0)
+                        not_done = false;
+                }
+                if (not_done
+                    && ((flags & vfsmgr_rflag_no_acc_remote) == 0))
+                {
+                    rc = VResolverRemote(self->resolver, self->protocols,
+                        in_path, (const VPath **)out_path);
+                }
             }
         }
+        r2 = KSrvRunRelease(run);
+        if (r2 != 0 && rc == 0)
+            rc = r2;
         r2 = KSrvRunIteratorRelease(ri);
         if (r2 != 0 && rc == 0)
             rc = r2;
