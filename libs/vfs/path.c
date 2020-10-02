@@ -3770,14 +3770,19 @@ LIB_EXPORT rc_t CC VFSManagerMakeOidPath ( const VFSManager * self,
  *  decide whether "posix_path" was standalone or directory relative.
  */
 static
-rc_t LegacyVPathResolveAccession ( VPath ** new_path, const VPath * path )
+rc_t LegacyVPathResolveAccession ( VFSManager * aMgr,
+    VPath ** new_path, const VPath * path )
 {
-    rc_t rc;
+    rc_t rc = 0;
     VFSManager * mgr;
 
+    assert(new_path);
     * new_path = NULL;
 
-    rc = VFSManagerMake ( & mgr );
+    if (aMgr != NULL)
+        mgr = aMgr;
+    else
+        rc = VFSManagerMake ( & mgr );
     if ( rc == 0 )
     {
         VResolver * resolver;
@@ -3791,7 +3796,8 @@ rc_t LegacyVPathResolveAccession ( VPath ** new_path, const VPath * path )
             VResolverRelease ( resolver );
         }
 
-        VFSManagerRelease ( mgr );
+        if (aMgr == NULL)
+            VFSManagerRelease ( mgr );
     }
 
     return rc;
@@ -3826,8 +3832,9 @@ rc_t LegacyVPathMakeKDirRelative ( VPath ** new_path, const KDirectory * dir, co
     return rc;
 }
 
-LIB_EXPORT rc_t CC VPathMakeDirectoryRelativeVPath ( VPath ** new_path,
-    const KDirectory * dir, const char * posix_path, const VPath * vpath )
+LIB_EXPORT rc_t CC VFSManagerMakeDirectoryRelativeVPath (
+    const VFSManager * cself, VPath ** new_path, const KDirectory * dir,
+    const char * posix_path, const VPath * vpath )
 {
     rc_t rc = 0;
 
@@ -3846,6 +3853,8 @@ LIB_EXPORT rc_t CC VPathMakeDirectoryRelativeVPath ( VPath ** new_path,
                 * new_path = ( VPath * ) vpath;
             if ( rc == 0 )
             {
+                VFSManager * self = (VFSManager*)cself;
+
                 VPath * path = * new_path;
 
                 /* now try to interpret the thing */
@@ -3858,7 +3867,8 @@ LIB_EXPORT rc_t CC VPathMakeDirectoryRelativeVPath ( VPath ** new_path,
                     case vpuri_ncbi_obj:
                     case vpuri_ncbi_legrefseq:
                         /* try to resolve using VResolver */
-                        rc = LegacyVPathResolveAccession ( new_path, path );
+                        rc = LegacyVPathResolveAccession (
+                            self, new_path, path );
                         break;
 
                     case vpuri_ncbi_vfs:
@@ -3894,7 +3904,8 @@ LIB_EXPORT rc_t CC VPathMakeDirectoryRelativeVPath ( VPath ** new_path,
                     case vpNameOrOID:
                     case vpNameOrAccession:
                         /* try to resolve using VResolver */
-                        rc = LegacyVPathResolveAccession ( new_path, path );
+                        rc = LegacyVPathResolveAccession (
+                            self, new_path, path );
                         if ( rc == 0 )
                             break;
 
@@ -3926,6 +3937,14 @@ LIB_EXPORT rc_t CC VPathMakeDirectoryRelativeVPath ( VPath ** new_path,
     }
 
     return rc;
+}
+
+LIB_EXPORT rc_t CC VPathMakeDirectoryRelativeVPath ( VPath ** new_path,
+    const KDirectory * dir, const char * posix_path,
+    const VPath * vpath )
+{
+    return VFSManagerMakeDirectoryRelativeVPath(NULL, new_path,
+        dir, posix_path, vpath);
 }
 
 LIB_EXPORT rc_t CC LegacyVPathMakeDirectoryRelative ( VPath ** new_path,
