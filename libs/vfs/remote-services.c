@@ -108,7 +108,7 @@ typedef enum {
 
 /* request/response/processing helper objects */
 typedef struct {
-    KConfig        * kfg;
+    const KConfig        * kfg;
 
     const KNSManager     * kMgr;
        /* KNSManagerMakeReliableClientRequest */
@@ -430,7 +430,7 @@ struct KService {
 
 /* SHelper ********************************************************************/
 static rc_t SHelperInit ( SHelper * self,
-    const VFSManager * vMgr, const KNSManager * kMgr, KConfig * kfg )
+    const VFSManager * vMgr, const KNSManager * kMgr, const KConfig * kfg )
 {
     rc_t rc = 0;
 
@@ -507,7 +507,7 @@ static rc_t SHelperInitKfg ( SHelper * self ) {
     assert ( self );
 
     if ( self -> kfg == NULL )
-        rc = KConfigMake ( & self -> kfg, NULL );
+        rc = KConfigMake ( (KConfig**) & self -> kfg, NULL );
 
     return rc;
 }
@@ -4047,7 +4047,7 @@ rc_t KServiceInitSearchRequestWithVersion ( KService * self, const char * cgi,
 
 
 static rc_t KServiceInit ( KService * self,
-    const VFSManager * vMgr, const KNSManager * mgr, KConfig * kfg )
+    const VFSManager * vMgr, const KNSManager * mgr, const KConfig * kfg )
 {
     rc_t rc = 0;
 
@@ -4104,7 +4104,7 @@ static rc_t KServiceInitNames1 ( KService * self, const KNSManager * mgr,
 
 
 rc_t KServiceMakeWithMgr ( KService ** self,
-    const VFSManager * vMgr, const KNSManager * mgr, KConfig * kfg )
+    const VFSManager * vMgr, const KNSManager * mgr, const KConfig * kfg )
 {
     rc_t rc = 0;
 

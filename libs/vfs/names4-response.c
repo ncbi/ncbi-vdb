@@ -2110,8 +2110,8 @@ static rc_t Response4Init4 ( Response4 * self, const char * input ) {
     return rc;
 }
 
-rc_t Response4MakeEmpty (Response4 ** self,
-    const VFSManager * vfs, const struct KNSManager * kns, struct KConfig * kfg,
+rc_t Response4MakeEmpty (Response4 ** self, const VFSManager * vfs,
+    const struct KNSManager * kns, const struct KConfig * kfg,
     bool logNamesServiceErrors, int64_t projectId, unsigned quality)
 {
     rc_t rc = 0;

@@ -45,6 +45,7 @@
 #include <stdint.h> /* uint32_t */
 
 #include "path-priv.h" /* VPathAttachVdbcache */
+#include "resolver-priv.h" /* VResolverLocalForCache */
 
 #include <limits.h> /* PATH_MAX */
 #ifndef PATH_MAX
@@ -1897,14 +1898,68 @@ static rc_t KRunResolve(const KRun * self, const VPath * remote,
 }
 
 /* find cache for remote */
-rc_t KRunsCacheForRemote(KRun * self,
+static rc_t KRunsCacheForRemote(KRun * self,
     const char * outDir, const char * outFile)
 {
     rc_t rc = 0;
 
     int32_t i = 0;
 
-    assert(self);
+    assert(self && self->dad);
+
+    if (self->dad->kfg != NULL) {
+        rc_t rc = 0;
+        VResolver * r = NULL;
+        KConfig * k = self->dad->kfg;
+        bool val = false;
+
+        VResolverEnableState state = vrUseConfig;
+        if (self->dad->resolver != NULL)
+            r = self->dad->resolver;
+        else {
+            if (self->dad->vfs == NULL) {
+                VFSManager * p = NULL;
+                rc = VFSManagerMakeFromKns(&p, k, (KNSManager*)self->dad->kns);
+                self->dad->vfs = p;
+            }
+            if (rc == 0)
+                rc = VFSManagerMakeResolver(self->dad->vfs, &r, k);
+        }
+        if (r != NULL) {
+            state = VResolverCacheEnable(r, vrUseConfig);
+            VResolverCacheEnable(r, state);
+            if (r != self->dad->resolver)
+                VResolverRelease(r);
+        }
+
+        if (state == vrAlwaysDisable) /* resolver was set to always-disable */
+            return 0;
+        else if (state != vrAlwaysEnable) {
+            rc = KConfigReadBool(k, "/repository/user/cache-disabled", &val);
+            if (rc == 0 && val) /* disabled by configuration */
+                return 0;
+
+            rc = KConfigReadBool(k,
+                "/repository/user/main/public/cache-enabled", &val);
+            if (rc == 0 && !val) /* disabled by configuration */
+                return 0;
+
+            rc = KConfigReadBool(k,
+                "/repository/user/main/public/disabled", &val);
+            if (rc == 0 && val) /* disabled by configuration */
+                return 0;
+
+            rc = KConfigReadBool(k,
+                "/repository/user/main/public/apps/sra/cache-enabled", &val);
+            if (rc == 0 && !val) /* disabled by configuration */
+                return 0;
+        }
+
+        rc = KConfigReadBool(k,
+            "/repository/user/ad/public/apps/sra/disabled", &val);
+        if (rc == 0 && val) /* disabled by configuration */
+            return 0;
+    }
 
     for (i = 0; i < eIdxMx && rc == 0; ++i) {
         if (self->remoteVc[i].path != NULL) {
@@ -2262,22 +2317,15 @@ static rc_t KSrvRunPrepareQuery(KRun * self)
                 ? "<NULL>" : path->vdbcache->scheme.addr));
 
         path = self->result.cache;
-        if (path != NULL && self->result.vdbcache)
-            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), ("KSrvRunQuery: "
-                "local location of '%S'.vdbcache resolved to '%s'\n", self->acc,
-                path->vdbcache == NULL ? "<NULL>" : path->vdbcache->path.addr));
-
-        path = self->result.cache;
         DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS),
             ("KSrvRunQuery: cache location of '%S' resolved to '%s'\n",
-                self->acc, path == NULL ? "<NULL>" : path->scheme.addr,
-                self->result.vdbcache ? "has" : "doesn't have"));
+                self->acc, path == NULL ? "<NULL>" : path->path.addr));
         if (path != NULL && self->result.vdbcache)
             DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), ("KSrvRunQuery: "
                 "cache location of '%S'.vdbcache resolved to '%s'\n",
                 self->acc,
                 path->vdbcache == NULL
-                    ? "<NULL>" : path->vdbcache->scheme.addr));
+                    ? "<NULL>" : path->vdbcache->path.addr));
     }
     return rc;
 }
@@ -2429,7 +2477,7 @@ static void CC BSTNodeLinkLocalsToRemotes(BSTNode *n, void *data) {
 
 /* Initialize */
 static rc_t ServicesCacheInit(ServicesCache * self, const VFSManager * vfs,
-    const KNSManager * kns, KConfig * kfg,
+    const KNSManager * kns, const KConfig * kfg,
     int64_t projectId, EQuality quality)
 {
     rc_t rc = 0;
@@ -2442,8 +2490,9 @@ static rc_t ServicesCacheInit(ServicesCache * self, const VFSManager * vfs,
     if (rc == 0) {
         if (kfg != NULL)
             rc = KConfigAddRef(kfg);
+/*KConfigPrint(kfg, 0);*/
         if (rc == 0)
-            self->kfg = kfg;
+            self->kfg = (KConfig*)kfg;
     }
 
     if (rc == 0) {
@@ -2465,7 +2514,7 @@ static rc_t ServicesCacheInit(ServicesCache * self, const VFSManager * vfs,
 
 /* Make */
 rc_t ServicesCacheMake(ServicesCache ** self, const VFSManager * vfs,
-    const KNSManager * kns, KConfig * kfg,
+    const KNSManager * kns, const KConfig * kfg,
     int64_t projectId, unsigned quality)
 {
     rc_t rc = 0;
