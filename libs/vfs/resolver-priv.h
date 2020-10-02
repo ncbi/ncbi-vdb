@@ -253,6 +253,9 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
 
 rc_t VResolverLocalForCache(const VResolver * self,
     const VPath * accession, const VPath ** path);
+rc_t VResolverQueryForCache(const VResolver * self, VRemoteProtocols protocols,
+    const VPath * query, const VPath ** local, const VPath ** remote,
+    const VPath ** cache);
 
 /* version of name service protocol */
 rc_t VResolverSetVersion ( VResolver *self, const char * version );

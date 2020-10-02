@@ -2347,6 +2347,8 @@ struct VResolver
        we will need a KNS manager */
     const KNSManager *kns;
 
+    const KConfig *kfg;
+
     /* if there is a working protected repository,
        store the download ticket here */
     const String *ticket;
@@ -2381,6 +2383,8 @@ static atomic32_t enable_local, enable_remote, enable_cache;
 static
 rc_t VResolverWhack ( VResolver *self )
 {
+    rc_t rc = 0;
+
     assert ( self );
 
     free ( self -> version );
@@ -2403,15 +2407,16 @@ rc_t VResolverWhack ( VResolver *self )
     VectorWhack ( & self -> roots, string_whack, NULL );
 
     /* release kns */
-    if ( self -> kns != NULL )
-        KNSManagerRelease ( self -> kns );
+    RELEASE ( KNSManager, self -> kns );
 
     /* release directory onto local file system */
-    KDirectoryRelease ( self -> wd );
+    RELEASE ( KDirectory, self -> wd );
+
+    RELEASE ( KConfig, self -> kfg );
 
     memset ( self, 0, sizeof * self );
     free ( self );
-    return 0;
+    return rc;
 }
 
 
@@ -5155,7 +5160,8 @@ rc_t CC VResolverQueryDo ( const VResolver * self, VRemoteProtocols protocols,
         String acc;
         rc = VResolverGetKNSManager(self, &mgr);
         if (rc == 0)
-            rc = KServiceMakeWithMgr(&service, NULL, mgr, NULL);
+            rc = KServiceMakeWithMgr(&service, NULL, mgr, self->kfg);
+/*KConfigPrint(self->kfg,0);*/
         if (rc == 0) {
             ra = VPathGetAcc(query, &acc);
             if (ra == 0 && acc.size > 0 && acc.addr != NULL)
@@ -5202,8 +5208,11 @@ rc_t CC VResolverQueryDo ( const VResolver * self, VRemoteProtocols protocols,
                     RELEASE(VPath, remote);
             }
             if (rc == 0) {
-                if (aCache != NULL)
+                if (aCache != NULL) {
                     *aCache = cache;
+                    if (aRemote == NULL && cache != NULL)
+                        notFound = false;
+                }
                 else
                     RELEASE(VPath, cache);
             }
@@ -5233,6 +5242,14 @@ rc_t CC VResolverQuery(const VResolver * self, VRemoteProtocols protocols,
 {
     return VResolverQueryDo(self, protocols, query, local, remote,
         cache, false);
+}
+
+rc_t VResolverQueryForCache(const VResolver * self, VRemoteProtocols protocols,
+    const VPath * query, const VPath ** local, const VPath ** remote,
+    const VPath ** cache)
+{
+    return VResolverQueryDo(self, protocols, query, local, remote,
+        cache, true);
 }
 
 LIB_EXPORT
@@ -6604,6 +6621,11 @@ rc_t VResolverMake ( VResolver ** objp, const KDirectory *wd,
         obj -> protocols = obj -> dflt_protocols;
 
         rc = VResolverLoad ( obj, protected, kfg, kns, ngc );
+
+        if (rc == 0)
+            rc = KConfigAddRef(kfg);
+        if (rc == 0)
+            obj->kfg = kfg;
 
         if (obj->kns == NULL)
             obj->kns = kns;
