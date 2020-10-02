@@ -499,9 +499,9 @@ static rc_t VResolversQuery ( const VResolver * self,
         }
 
         else {
-            cacheRc = VResolverQuery ( self, protocols, query,
+            cacheRc = VResolverQueryForCache ( self, protocols, query,
                                     NULL, NULL, & cache );
-            localRc = VResolverQuery ( self, protocols, query,
+            localRc = VResolverQueryForCache ( self, protocols, query,
                                     & local, NULL, NULL );
         }
 
