@@ -654,6 +654,8 @@ static rc_t KRunAddRemote(KRun * self, const VPath * path) {
     return rc;
 }
 
+#define STS_FIN  3
+
 /* resolve local[-s] */
 static void KRunFindLocal(KRun * self,
     int64_t projectId, const char * outDir, const char * outFile)
@@ -663,13 +665,18 @@ static void KRunFindLocal(KRun * self,
     const KDirectory * dir = NULL;
     const ServicesCache * sc = NULL;
     char path[PATH_MAX] = "";
+    STSMSG(STS_FIN, ("%s: entered", __func__));
     assert(self && self->dad);
     sc = self->dad;
     dir = sc->dir;
     kfg = sc->kfg;
 
     if (outFile != NULL) {
-        rc_t r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
+        rc_t r2 = 0;
+
+        STSMSG(STS_FIN, ("%s: outFile != NULL...", __func__));
+
+        r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
             "%s", outFile);
         if (r2 == 0 &&
             (KDirectoryPathType(dir, path) & ~kptAlias) == kptFile)
@@ -681,7 +688,11 @@ static void KRunFindLocal(KRun * self,
     }
 
     else if (outDir != NULL) {
-        rc_t r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
+        rc_t r2 = 0;
+
+        STSMSG(STS_FIN, ("%s: outDir != NULL...", __func__));
+
+        r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
             "%s/%.*s.noqual.sra", outDir, self->acc->size, self->acc->addr);
         if (r2 == 0 &&
             (KDirectoryPathType(dir, path) & ~kptAlias) == kptFile)
@@ -763,10 +774,15 @@ static void KRunFindLocal(KRun * self,
     else {
         String * volume = NULL;
         String * root = NULL;
+
+        STSMSG(STS_FIN, ("%s: outFile & outDir = NULL...", __func__));
+
         if (sc->resolver != NULL) {
             VPath * accession = NULL;
             const VPath * path = NULL;
-            rc_t r2 = VPathMake(&accession, self->acc->addr);
+            rc_t r2 = 0;
+            STSMSG(STS_FIN, ("%s: sc->resolver != NULL...", __func__));
+            r2 = VPathMake(&accession, self->acc->addr);
             if (r2 == 0)
                 r2 = VResolverLocalForCache(sc->resolver, accession, &path);
             if (r2 == 0) {
@@ -796,6 +812,7 @@ static void KRunFindLocal(KRun * self,
         if ((KDirectoryPathType(dir, "%.*s", self->acc->size, self->acc->addr)
             & ~kptAlias) == kptDir)
         {
+            STSMSG(STS_FIN, ("%s: KDirectoryPathType == kptDir...",__func__));
             if (projectId < 0) {
                 rc_t r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
                     "%.*s/%.*s.noqual.sra", self->acc->size, self->acc->addr,
@@ -996,6 +1013,8 @@ static void KRunFindLocal(KRun * self,
             if ((KDirectoryPathType(dir, "%.*s/%.*s", root->size, root->addr,
                 volume->size, volume->addr) & ~kptAlias) == kptDir)
             {
+                STSMSG(STS_FIN, ("%s: root != NULL && volume != NULL "
+                    "&& KDirectoryPathType == kptDir...", __func__));
                 if (projectId < 0) {
                     rc_t r2 = KDirectoryResolvePath(dir, true,
                         path, sizeof path,
@@ -1312,6 +1331,8 @@ static void KRunFindLocal(KRun * self,
         StringWhack(volume);
         StringWhack(root);
     }
+
+    STSMSG(STS_FIN, ("%s: exiting with void", __func__));
 }
 
 /* attach vdbcaches to local[-s] and remote[-s] */
@@ -2693,8 +2714,6 @@ rc_t ServicesCacheAddId(ServicesCache * self, const char * acc) {
 
     return rc;
 }
-
-#define STS_FIN  3
 
 /* resolve local[-s] */
 static rc_t ServicesCacheFindLocal(ServicesCache * self,
