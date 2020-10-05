@@ -833,7 +833,11 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
             }
         }
         if (rcc == 0 && (rc == 0 || rc == RC_NOT_FND)) {
+            STSMSG(STS_FIN, ("%s: entering ServicesCacheComplete...",
+                __func__));
             rcc = ServicesCacheComplete(cache, outDir, outFile);
+            STSMSG(STS_FIN, ("%s: ...ServicesCacheComplete done with %R",
+                __func__, rcc));
             if (rcc != 0 && rc == 0)
                 rc = rcc;
         }
