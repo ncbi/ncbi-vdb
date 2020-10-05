@@ -2694,12 +2694,16 @@ rc_t ServicesCacheAddId(ServicesCache * self, const char * acc) {
     return rc;
 }
 
+#define STS_FIN  3
+
 /* resolve local[-s] */
 static rc_t ServicesCacheFindLocal(ServicesCache * self,
     const char * outDir, const char * outFile)
 {
     String * site = NULL;
     rc_t rc = 0, r2 = 0;
+
+    STSMSG(STS_FIN, ("%s: entered", __func__));
 
     assert(self);
 
@@ -2728,14 +2732,19 @@ static rc_t ServicesCacheFindLocal(ServicesCache * self,
         data.outFile = outFile;
         data.projectId = self->projectId;
 
-        if (self->run != NULL)
+        if (self->run != NULL) {
+            STSMSG(STS_FIN, ("%s: before calling KRunFindLocal...", __func__));
             KRunFindLocal(self->run, self->projectId, outDir, outFile);
+        }
 
+        STSMSG(STS_FIN, ("%s: before calling Each BSTNodeFindLocal...",
+            __func__));
         BSTreeForEach(&self->runs, false, BSTNodeFindLocal, &data);
         if (data.rc != 0 && rc == 0)
             rc = data.rc;
     }
 
+    STSMSG(STS_FIN, ("%s: exiting with %R", __func__, rc));
     return rc;
 }
 
@@ -2772,8 +2781,6 @@ static rc_t ServicesCacheLinkLocalToRemote(ServicesCache * self) {
 
     return rc;
 }
-
-#define STS_FIN  3
 
 /* The cache has all remote[-s]; now resolve all cache[-s] and local[-s]
    Prepare results for KSrvRunQuery() */
