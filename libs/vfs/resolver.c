@@ -5154,7 +5154,8 @@ rc_t CC VResolverQueryDo ( const VResolver * self, VRemoteProtocols protocols,
     const VPath * cache = NULL;
     char s[512] = "";
     const char * p = s;
-    if (!forCache) {
+    assert(query);
+    if (!forCache && query->accOfParentDb == NULL) {
         rc_t ra = 0;
         VPath * acc_or_oid = NULL;
         String acc;
