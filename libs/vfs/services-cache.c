@@ -32,6 +32,7 @@
 #include <klib/debug.h> /* DBGMSG */
 #include <klib/printf.h> /* string_printf */
 #include <klib/rc.h> /* RC */
+#include <klib/status.h> /* STSMSG */
 #include <klib/text.h> /* StringWhack */
 
 #include <kns/kns-mgr-priv.h> /* KNSManagerGetResolveToCache */
@@ -2772,6 +2773,8 @@ static rc_t ServicesCacheLinkLocalToRemote(ServicesCache * self) {
     return rc;
 }
 
+#define STS_FIN  3
+
 /* The cache has all remote[-s]; now resolve all cache[-s] and local[-s]
    Prepare results for KSrvRunQuery() */
 rc_t ServicesCacheComplete(ServicesCache * self,
@@ -2779,19 +2782,27 @@ rc_t ServicesCacheComplete(ServicesCache * self,
 {
     rc_t rc = 0;
 
+    STSMSG(STS_FIN, ("%s: entered", __func__));
+
     assert(self);
 
+    STSMSG(STS_FIN, ("%s: before calling ServicesCacheFindLocal...", __func__));
     if (rc == 0) /* resolve local[-s] */
         rc = ServicesCacheFindLocal(self, outDir, outFile);
 
+    STSMSG(STS_FIN, ("%s: before calling ServicesCacheAttachVdbcaches...",
+        __func__));
     if (rc == 0) /* attach vdbcaches to local[-s] and remote[-s] */
         rc = ServicesCacheAttachVdbcaches(self);
 
+    STSMSG(STS_FIN, ("%s: before calling ServicesCacheLinkLocalToRemote...",
+        __func__));
     if (rc == 0) /* find local for each remote */
         rc = ServicesCacheLinkLocalToRemote(self);
 
     /* find cache for each remote */
 
+    STSMSG(STS_FIN, ("%s: before calling KRunsCacheForRemote...", __func__));
     if (rc == 0) {
         KRun * run = self->run;
         if (run == NULL)
@@ -2810,7 +2821,7 @@ rc_t ServicesCacheComplete(ServicesCache * self,
     }
 
     /* find the best local if there are multiple */
-
+    STSMSG(STS_FIN, ("%s: before calling KRunLocalResolve...", __func__));
     KRunLocalResolve(self->run);
     if (rc == 0) {
         BSTData data;
@@ -2821,6 +2832,7 @@ rc_t ServicesCacheComplete(ServicesCache * self,
     }
 
     /* prepare results for KSrvRunQuery() */
+    STSMSG(STS_FIN, ("%s: before calling KSrvRunPrepareQuery...", __func__));
     if (rc == 0) {
         rc = KSrvRunPrepareQuery(self->run);
         if (rc == 0) {
@@ -2832,6 +2844,7 @@ rc_t ServicesCacheComplete(ServicesCache * self,
         }
     }
 
+    STSMSG(STS_FIN, ("%s: exiting with %R", __func__, rc));
     return rc;
 }
 
