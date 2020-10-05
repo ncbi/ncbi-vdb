@@ -738,6 +738,8 @@ static rc_t KServiceResolvers(const KService * self, VRemoteProtocols protocols,
     return rc;
 }
 
+#define STS_FIN  3
+
 static
 rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols, 
     const char * cgi, const char * version, const KSrvResponse ** aResponse,
@@ -755,25 +757,32 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
     KSrvRespObjIterator * it = NULL;
     KSrvRespFile * file = NULL;
     KSrvRespFileIterator * fi = NULL;
+    STSMSG(STS_FIN, ("%s: entered", __func__));
     if ( aResponse == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
     * aResponse = NULL;
 
     {   /* call External Services */
         const KSrvResponse * r = NULL;
+        STSMSG(STS_FIN, ("%s: entering KServiceNamesExecuteExtImpl...",
+            __func__));
         rc = KServiceNamesExecuteExtImpl ( self, protocols, cgi,
                                        version, & r, expected );
+        STSMSG(STS_FIN, ("%s: ...KServiceNamesExecuteExtImpl done with %R",
+            __func__, rc));
         if ( rc == 0 )
             response = ( KSrvResponse* ) r;
     }
 
 #ifdef USE_SERVICES_CACHE
+    STSMSG(STS_FIN, ("%s: calling KServiceGetServiceCache...", __func__));
     if ((rc == 0 || rc == RC_NOT_FND) && KServiceCallsSdl(self))
         rcc = KServiceGetServiceCache(self, &cache);
 
     if (rc == 0 && KServiceCallsSdl(self)) {
         /* add each file from External Services result to cache */
         uint32_t n = KSrvResponseLength(response);
+        STSMSG(STS_FIN, ("%s: calling ServicesCacheAddRemote...", __func__));
         for (i = 0; rc == 0 && i < n; ++i) {
             rc = KSrvResponseGetObjByIdx(response, i, &obj);
             if (rc == 0) {
@@ -812,6 +821,8 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
     }
 
     if (rcc == 0 && KServiceCallsSdl(self)) {
+        STSMSG(STS_FIN, ("%s: before calling ServicesCacheComplete...",
+            __func__));
         if (rc == RC_NOT_FND) {
             uint32_t i = 0;
             for (i = 0; ; ++i) {
@@ -832,6 +843,8 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
     if ( rc == 0 ) {
         H h;
         rc = HInit ( & h, self, cache );
+
+        STSMSG(STS_FIN, ("%s: iterating  KSrvResponse...", __func__));
 
         if ( protocols == eProtocolDefault )
              protocols = DEFAULT_PROTOCOLS;
@@ -962,6 +975,9 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
             uint32_t i = 0;
             H h;
             rc = HInit(&h, self, cache);
+
+            STSMSG(STS_FIN, ("%s: iterating  KServiceGetId...", __func__));
+
             for (i = 0; ; ++i) {
                 VPathSet * vps = NULL;
                 ESrvFileFormat ff = eSFFInvalid;
@@ -997,6 +1013,7 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
         rc = rx;
     cache = NULL;*/
 
+    STSMSG(STS_FIN, ("%s: exiting with %R", __func__, rc));
     return rc;
 }
 
