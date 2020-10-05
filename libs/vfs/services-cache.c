@@ -1016,7 +1016,11 @@ static void KRunFindLocal(KRun * self,
                 STSMSG(STS_FIN, ("%s: root != NULL && volume != NULL "
                     "&& KDirectoryPathType == kptDir...", __func__));
                 if (projectId < 0) {
-                    rc_t r2 = KDirectoryResolvePath(dir, true,
+                    rc_t r2 = 0;
+
+                    STSMSG(STS_FIN, ("%s: projectId < 0...", __func__));
+
+                    r2 = KDirectoryResolvePath(dir, true,
                         path, sizeof path,
                         "%.*s/%.*s/%.*s.noqual.sra%s", root->size, root->addr,
                         volume->size, volume->addr,
@@ -1227,7 +1231,12 @@ static void KRunFindLocal(KRun * self,
                 }
 
                 else {
-                    rc_t r2 = KDirectoryResolvePath(dir, true,
+                rc_t r2 = 0;
+                
+                STSMSG(STS_FIN, ("%s: projectId == %d...", __func__,
+                    projectId));
+
+                r2 = KDirectoryResolvePath(dir, true,
                         path, sizeof path, "%.*s/%.*s/%.*s_dbGaP-%d.noqual.sra",
                         root->size, root->addr, volume->size, volume->addr,
                         self->acc->size, self->acc->addr, sc->projectId);
@@ -1240,7 +1249,7 @@ static void KRunFindLocal(KRun * self,
                             rc = r2;
                     }
                     r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                        "%%.*s/%.*s/%.*s_dbGaP-%d.hasqual.sra",
+                        "%.*s/%.*s/%.*s_dbGaP-%d.hasqual.sra",
                         root->size, root->addr, volume->size, volume->addr,
                         self->acc->size, self->acc->addr, sc->projectId);
                     if (r2 == 0 &&
@@ -1252,7 +1261,7 @@ static void KRunFindLocal(KRun * self,
                             rc = r2;
                     }
                     r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                        "%%.*s/%.*s/%.*s_dbGaP-%d.dblqual.sra",
+                        "%.*s/%.*s/%.*s_dbGaP-%d.dblqual.sra",
                         root->size, root->addr, volume->size, volume->addr,
                         self->acc->size, self->acc->addr, sc->projectId);
                     if (r2 == 0 &&
