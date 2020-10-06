@@ -155,8 +155,6 @@ static void withIntersectRangeList_1(  RangeList const volatile *const vol
                                      , IntersectRangeListCallback const callback
                                      , void *const data)
 {
-    /// this is not a solid check since there is no active lock, but ranges only ever increase
-    assert(vol->count == 0 || query->end <= vol->ranges[vol->count - 1].end);
     if (vol->sync) {
         RangeList const *const list = readerStart(vol);
         Range const *ranges = list->ranges; ///< this pointer will not change while the read lock is held
