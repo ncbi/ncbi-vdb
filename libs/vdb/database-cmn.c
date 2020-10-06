@@ -1420,12 +1420,25 @@ LIB_EXPORT bool CC VDatabaseIsCSRA ( const VDatabase *self )
 static bool validName(const String * acc, const String * file) {
     assert(acc && file);
     const char ext[] = ".sra";
+    const char next[] = ".noqual.sra";
     if (file->size == acc->size + 4) {
         if (string_cmp(file->addr, file->size,
             acc->addr, acc->size, acc->size) == 0)
         {
             if (string_cmp(file->addr + acc->size, file->size - acc->size,
                 ext, sizeof ext - 1, sizeof ext - 1) == 0)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+    else if (file->size == acc->size + 4 + 7) {
+        if (string_cmp(file->addr, file->size,
+            acc->addr, acc->size, acc->size) == 0)
+        {
+            if (string_cmp(file->addr + acc->size, file->size - acc->size,
+                next, sizeof next - 1, sizeof next - 1) == 0)
             {
                 return true;
             }
@@ -1454,6 +1467,11 @@ static bool validName(const String * acc, const String * file) {
                 }
                 if (string_cmp(file->addr + i, file->size - acc->size,
                     ext, sizeof ext - 1, sizeof ext - 1) == 0)
+                {
+                    return true;
+                }
+                if (string_cmp(file->addr + i, file->size - acc->size,
+                    next, sizeof next - 1, sizeof next - 1) == 0)
                 {
                     return true;
                 }
