@@ -59,9 +59,9 @@ struct Range {
 struct RangeList {
     Range *ranges;
     Sync *sync;
-    unsigned allocated;
-    unsigned last;
-    unsigned volatile count;
+    unsigned count;
+    unsigned allocated; ///< used only by the writer
+    unsigned last;      ///< used only by the writer
 };
 
 typedef void (*IntersectRangeListCallback)(void *data, Range const *intersectingRange);
@@ -71,6 +71,9 @@ typedef void (*IntersectRangeListCallback)(void *data, Range const *intersecting
  * @note thread safe
  *
  * This is the main function used by a reader.
+ *
+ * There is an unchecked assertion is that readers have checked that
+ * their query can not possibly overlap the end of the list before they got on this code path.
  */
 void withIntersectRangeList(RangeList const *list, Range const *query, IntersectRangeListCallback callback, void *data);
 

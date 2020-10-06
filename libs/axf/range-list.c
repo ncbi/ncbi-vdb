@@ -48,23 +48,34 @@ struct Sync {
     KLock *mutex;
 };
 
-static void readerStart(Sync *const sync)
+static RangeList const *readerStart(RangeList const volatile *const list)
 {
+    Sync *const sync = list->sync;
     if ((atomic64_read_and_add_even(&sync->counter, 2) & 1) != 0) {
         /* a writer is waiting or active */
         KLockAcquire(sync->mutex);
         atomic64_add(&sync->counter, 2);
         KLockUnlock(sync->mutex);
     }
+
+    // list is not volatile now
+    return (RangeList const *)list;
 }
 
-static void readerDone(Sync *const sync)
+static RangeList const volatile *readerDone(RangeList const *const list)
 {
+    Sync *const sync = list->sync;
     atomic64_add(&sync->counter, -2);
+
+    // list is volatile again
+    return (RangeList const volatile *)list;
 }
 
-static void writerStart(Sync *const sync)
+/// Note: One the writer's side, the list is not volatile since there are no changes being made by other threads
+
+static void writerStart(RangeList *const list)
 {
+    Sync *const sync = list->sync;
     assert((atomic64_read(&sync->counter) & 1) == 0); /* there is only one writer */
 
     atomic64_inc(&sync->counter); /* tell readers to wait */
@@ -73,20 +84,21 @@ static void writerStart(Sync *const sync)
         ;
 }
 
-static void writerDone(Sync *const sync)
+static void writerDone(RangeList *const list)
 {
+    Sync *const sync = list->sync;
     atomic64_dec(&sync->counter);
     KLockUnlock(sync->mutex);
 }
 
-static void updateRanges(  RangeList *const self
+static void updateRanges(  RangeList *const list
                          , Range *const ranges
                          , unsigned const allocated)
 {
-    writerStart(self->sync);
-    self->ranges = ranges;
-    self->allocated = allocated;
-    writerDone(self->sync);
+    writerStart(list);
+    list->ranges = ranges;
+    list->allocated = allocated;
+    writerDone(list);
 }
 
 void intersectRanges(Range *result, Range const *a, Range const *b)
@@ -133,45 +145,50 @@ void intersectRangeList(RangeList const *list, Range const **begin, Range const 
     }
 }
 
-static void withIntersectRangeList_1(  RangeList const *const list
+/// This is the main reader function, and a read lock is maintained throughout.
+/// The read lock does not prevent new elements from being appended,
+/// it only prevents reallocation of the list (which would invalidate the list pointer).
+/// There is an assertion is that readers can never be interested in elements
+/// that might get appended during the duration of this call.
+static void withIntersectRangeList_1(  RangeList const volatile *const vol
                                      , Range const *const query
                                      , IntersectRangeListCallback const callback
                                      , void *const data)
 {
-    if (list->sync) {
-        readerStart(list->sync);
-        {
-            Range const *const ranges = list->ranges;
-            unsigned const count = list->count;
-            unsigned f = 0;
-            unsigned e = count;
+    /// this is not a solid check since there is no active lock, but ranges only ever increase
+    assert(vol->count == 0 || query->end <= vol->ranges[vol->count - 1].end);
+    if (vol->sync) {
+        RangeList const *const list = readerStart(vol);
+        Range const *ranges = list->ranges; ///< this pointer will not change while the read lock is held
+        unsigned const count = list->count; ///< this can change, but it can only increase
+        unsigned f = 0;
+        unsigned e = count;
 
-            while (f < e) {
-                unsigned const m = f + (e - f) / 2;
-                Range const *const M = &ranges[m];
-                if (M->end <= query->start)
-                    f = m + 1;
-                else
-                    e = m;
-            }
-            while (f < count) {
-                Range intersected;
-
-                intersectRanges(&intersected, &ranges[f++], query);
-                if (intersected.end == intersected.start)
-                    break;
-
-                callback(data, &intersected);
-            }
+        while (f < e) {
+            unsigned const m = f + (e - f) / 2;
+            Range const *const M = &ranges[m];
+            if (M->end <= query->start)
+                f = m + 1;
+            else
+                e = m;
         }
-        readerDone(list->sync);
+        while (f < count) {
+            Range intersected;
+
+            intersectRanges(&intersected, &ranges[f++], query);
+            if (intersected.end == intersected.start)
+                break;
+
+            callback(data, &intersected);
+        }
+        (void)readerDone(list);
     }
 }
 
 
 void withIntersectRangeList(RangeList const *list, Range const *query, IntersectRangeListCallback callback, void *data)
 {
-    withIntersectRangeList_1(list, query, callback, data);
+    withIntersectRangeList_1((RangeList const volatile *)list, query, callback, data);
 }
 
 static RangeList *grow(RangeList *const list)
@@ -297,7 +314,7 @@ static RangeList *extendRangeList_1(RangeList *const list, unsigned const positi
                 }
                 if (position == list->ranges[f].end) {
                     list->last = f;
-                    return extendRangeList(list, position);
+                    return extendRangeList_1(list, position);
                 }
             }
         }
