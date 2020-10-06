@@ -51,7 +51,7 @@ struct RefSeqAsyncLoadInfo {
     RowRange rr;                /**< of the table */
     CursorAddResult car[2];     /**< column name and id */
     int64_t volatile loaded;    /**< rows less than this have been loaded already */
-    unsigned count;             /**< number of rows left to load, will cause bg thread to exit if set = 0 */
+    unsigned volatile count;    /**< number of rows left to load, will cause bg thread to exit if set = 0 */
     unsigned max_seq_len;       /**< max length of any READ in the table */
     unsigned volatile hits;     /**< statistics to give some idea of ... */
     unsigned volatile miss;     /**< ... how effective the bg thread was */

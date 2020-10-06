@@ -36,8 +36,8 @@ typedef unsigned (*RefSeqReaderFunc)(RefSeq const *, uint8_t *, unsigned, unsign
 struct RefSeq {
     RangeList Ns; ///< exclusion list
     uint8_t *bases;
-    RefSeqReaderFunc reader;
-    RefSeqAsyncLoadInfo *async;
+    RefSeqReaderFunc volatile reader;
+    RefSeqAsyncLoadInfo *volatile async;
     atomic64_t rwl;
     unsigned length; ///< logical length, is base count of the reference
 };
