@@ -1367,7 +1367,7 @@ rc_t VResolverAlgParseResolverCGIResponse_1_1 ( const char *astart, size_t size,
     assert(acc);
     if ( ! StringEqual ( & accession, acc ) && ! StringEqual ( & obj_id, acc ) ) {
         DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_ERR), (
-            "@@@@@@@@2 %%s:%s:%d: %s"
+            "@@@@@@@@2 %s:%s:%d: %s"
                 "\n", __FILE__, __func__, __LINE__, astart));
         return RC ( rcVFS, rcResolver, rcResolving, rcMessage, rcCorrupt );
     }
@@ -5155,7 +5155,12 @@ rc_t CC VResolverQueryDo ( const VResolver * self, VRemoteProtocols protocols,
     char s[512] = "";
     const char * p = s;
     assert(query);
-    if (!forCache && query->accOfParentDb == NULL) {
+    if (!forCache && query->accOfParentDb == NULL
+#ifndef SRA_9080_FIXED
+        && protocols != eProtocolFasp /* SDL does not work for fasp */
+#endif
+        )
+    {
         rc_t ra = 0;
         VPath * acc_or_oid = NULL;
         String acc;
