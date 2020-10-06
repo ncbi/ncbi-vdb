@@ -587,7 +587,9 @@ static rc_t VPath_IdxForRemote(const VPath * self,
     rc = VPathGetAcc(self, &str);
     if (rc != 0)
         return rc;
-    if (str.size < 1 || str.addr == NULL || str.addr[0] != 'S') {
+    if (str.size < 3 || str.addr == NULL || str.addr[0] == '\0'
+        || str.addr[1] != 'R' || str.addr[2] != 'R')
+    {
         *notFound = true;
         return 0;
     }
@@ -2705,17 +2707,17 @@ rc_t ServicesCacheAddId(ServicesCache * self, const char * acc) {
 
     String s;
     String srr;
-    CONST_STRING(&srr, "SRR");
+    CONST_STRING(&srr, "RR");
     StringInitCString(&s, acc);
 
-    /* we are adding just SRR accessions */
+    /* we are adding just *RR accessions */
 
     if (s.size < 3)
         return 0;
 
-    assert(srr.size == 3);
+    assert(srr.size == 2);
 
-    if (string_cmp(srr.addr, srr.size, s.addr, srr.size, srr.size) != 0)
+    if (string_cmp(srr.addr, srr.size, s.addr + 1, srr.size, srr.size) != 0)
         return 0;
 
     if (rc == 0)

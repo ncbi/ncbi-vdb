@@ -797,7 +797,8 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
                             const char * acc = NULL;
                             rc = KSrvRespFileGetAccOrId(file, &acc, NULL);
                             if (rc == 0
-                                && acc != NULL && acc[0] == 'S')
+                                && acc != NULL && acc[0] != '\0'
+                                && acc[1] == 'R' && acc[2] == 'R')
                             {
                                 rc = KSrvRespFileMakeIterator(file, &fi);
                                 if (rc == 0) {
