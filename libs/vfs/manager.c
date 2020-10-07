@@ -3053,11 +3053,11 @@ static void VFSManagerLoadLogNamesServiceErrors(VFSManager * self) {
     bool enabled = true;
 
     assert(self);
-/*KConfigPrint(self->cfg,0);*/
+/* KConfigPrint(self->cfg,0); */
     rc = KConfigReadBool(self->cfg, "/name-resolver/log-names-service-errors",
         &enabled);
     if (rc == 0)
-        VFSManagerLogNamesServiceErrorsInit(self, enabled);
+        LogNamesServiceErrorsInit(enabled);
 }
 
 /* Make

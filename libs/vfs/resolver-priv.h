@@ -288,8 +288,8 @@ VResolverAppID get_accession_app(const String * accession, bool refseq_ctx,
     bool resolveAllAccToCache, bool * forDirAdjusted,
     const String * parentAcc, int64_t projectId);
 
-rc_t VFSManagerLogNamesServiceErrorsInit(struct VFSManager * self,
-    bool enabled);
+void LogNamesServiceErrorsInit(bool enabled);
+void LogNamesServiceErrorsReset();
 
 #define USE_SERVICES_CACHE /* use ServicesCache */
 

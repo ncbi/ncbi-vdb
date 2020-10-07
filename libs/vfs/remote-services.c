@@ -82,12 +82,12 @@
 /******************************************************************************/
 static bool sLogNamesServiceErrors = true;
 static bool sLogNamesServiceErrorsSet = false;
-rc_t VFSManagerLogNamesServiceErrorsInit(VFSManager * self,
-    bool enabled)
-{
+void LogNamesServiceErrorsReset() {
+    sLogNamesServiceErrorsSet = false;
+}
+void LogNamesServiceErrorsInit(bool enabled) {
     if (!sLogNamesServiceErrorsSet)
         sLogNamesServiceErrors = enabled;
-    return 0;
 }
 LIB_EXPORT rc_t CC VFSManagerLogNamesServiceErrors(VFSManager * self,
     bool enabled)
