@@ -57,6 +57,7 @@
 #include <vdb/vdb-priv.h> /* VDBManagerGetQuality */
 
 #include <vfs/manager.h> /* VFSManager */
+#include <vfs/manager-priv.h> /* VFSManagerMakeFromKfg */
 #include <vfs/services.h> /* KServiceMake */
 
 #include "../kfg/kfg-priv.h" /* KConfigGetNgcFile */
@@ -80,10 +81,19 @@
 
 /******************************************************************************/
 static bool sLogNamesServiceErrors = true;
+static bool sLogNamesServiceErrorsSet = false;
+rc_t VFSManagerLogNamesServiceErrorsInit(VFSManager * self,
+    bool enabled)
+{
+    if (!sLogNamesServiceErrorsSet)
+        sLogNamesServiceErrors = enabled;
+    return 0;
+}
 LIB_EXPORT rc_t CC VFSManagerLogNamesServiceErrors(VFSManager * self,
     bool enabled)
 {
     sLogNamesServiceErrors = enabled;
+    sLogNamesServiceErrorsSet = true;
     return 0;
 }
 LIB_EXPORT rc_t CC VFSManagerGetLogNamesServiceErrors(VFSManager * self,
@@ -5089,7 +5099,8 @@ rc_t KServiceGetVFSManager(const KService * self,
         return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
 
     if (self->helper.vMgr == NULL)
-        rc = VFSManagerMake((VFSManager**)(&self->helper.vMgr));
+        rc = VFSManagerMakeFromKfg((VFSManager**)(&self->helper.vMgr),
+                (KConfig*)self->helper.kfg);
 
     if (rc == 0)
         rc = VFSManagerAddRef(self->helper.vMgr);
