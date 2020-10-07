@@ -91,6 +91,49 @@ FIXTURE_TEST_CASE(_010_00, TRQFixture) {
 }
 #endif
 
+// default quality / remote:no-qual&no vdbcache / no-cache / no-local
+#ifdef ALL
+FIXTURE_TEST_CASE(_010_00_noqual, TRQFixture) {
+    putenv((char*)ACC "="
+        "{"
+        " \"result\":["
+        "  {"
+        "   \"bundle\": \"SRR053325\","
+        "   \"files\":["
+        "    {"
+        "     \"object\":\"srapub|SRR053325\","
+        "     \"type\":\"noqual_sra\","
+        "     \"name\":\"SRR053325.noqual.sra\","
+        "     \"locations\":[ { \"link\":\"http://h/ns\" } ]"
+        "    }"
+        "   ]"
+        "  }"
+        " ]"
+        "}");
+    TRQHelper f(GetName());
+
+    f.Start(NO_AD_CACHING);
+    REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
+    REQUIRE(!f.qVc);
+    REQUIRE_NULL(f.qLocal);
+    REQUIRE_NULL(f.qCache);
+    f.PathEquals(f.qRemote, "http://h/ns");
+    f.PathEquals(f.path, "http://h/ns");
+    f.VdbcacheEquals();
+    f.VdbcacheEquals("", f.qRemote);
+
+    const VPath * path = NULL;
+    REQUIRE_RC_FAIL(KSrvRespFileGetLocal(f.file, &path));
+    REQUIRE_RC_FAIL(KSrvRespFileGetCache(f.file, &path));
+
+    f.NextRun();
+    f.NextPath();
+    f.NextFile();
+
+    f.Release();
+}
+#endif
+
 // default quality / remote:no-qual&no vdbcache / cache-in-AD / no-local
 #ifdef ALL
 FIXTURE_TEST_CASE(_010_10, TRQFixture) {
@@ -138,6 +181,53 @@ FIXTURE_TEST_CASE(_010_10, TRQFixture) {
 }
 #endif
 
+// default quality / remote:no-qual&no vdbcache / cache-in-AD / no-local
+#ifdef ALL
+FIXTURE_TEST_CASE(_010_10_noqual, TRQFixture) {
+    putenv((char*)ACC "="
+        "{"
+        " \"result\":["
+        "  {"
+        "   \"bundle\": \"SRR053325\","
+        "   \"files\":["
+        "    {"
+        "     \"object\":\"srapub|SRR053325\","
+        "     \"type\":\"noqual_sra\","
+        "     \"name\":\"SRR053325.noqual.sra\","
+        "     \"locations\":[ { \"link\":\"http://h/ns\" } ]"
+        "    }"        "   ]"
+        "  }"
+        " ]"
+        "}");
+    TRQHelper f(GetName());
+
+    f.Start(AD_CACHING);
+    f.PathEquals(f.path, "http://h/ns");
+    f.VdbcacheEquals();
+
+    const VPath * path = NULL;
+    REQUIRE_RC_FAIL(KSrvRespFileGetLocal(f.file, &path));
+    REQUIRE_RC(KSrvRespFileGetCache(f.file, &path));
+    REQUIRE_RC(KDirectoryResolvePath(f.dir, true, f.spath, sizeof f.spath,
+        "%s/%s.noqual.sra", ACC, ACC));
+    f.PathEquals(path, f.spath);
+    REQUIRE_RC(VPathRelease(path)); path = NULL;
+
+    REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
+    REQUIRE(!f.qVc);
+    f.PathEquals(f.qRemote, "http://h/ns");
+    f.VdbcacheEquals("", f.qRemote);
+    f.PathEquals(f.qCache, f.spath);
+    f.VdbcacheEquals("", f.qCache);
+    REQUIRE_NULL(f.qLocal);
+
+    f.NextRun();
+    f.NextPath();
+    f.NextFile();
+    f.Release();
+}
+#endif
+
 // default quality / remote:no-qual&no vdbcache / cache-in-AD / local-in-AD
 #ifdef ALL
 FIXTURE_TEST_CASE(_010_11, TRQFixture) {
@@ -151,6 +241,63 @@ FIXTURE_TEST_CASE(_010_11, TRQFixture) {
         "     \"object\":\"srapub|SRR053325\","
         "     \"type\":\"noqual_sra\","
         "     \"name\":\"SRR053325\","
+        "     \"locations\":[ { \"link\":\"http://h/ns\" } ]"
+        "    }"        "   ]"
+        "  }"
+        " ]"
+        "}");
+    TRQHelper f(GetName());
+    REQUIRE_RC(KDirectoryCreateDir(f.dir, 0775, kcmOpen | kcmInit | kcmCreate,
+        ACC));
+
+    REQUIRE_RC(KDirectoryResolvePath(f.dir, true, f.spath, sizeof f.spath,
+        "%s/%s.noqual.sra", ACC, ACC));
+    f.CreateFile();
+
+    f.Start(AD_CACHING);
+    f.PathEquals(f.path, "http://h/ns");
+    f.VdbcacheEquals();
+
+    REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
+    REQUIRE(!f.qVc);
+    f.PathEquals(f.qRemote, "http://h/ns");
+    f.VdbcacheEquals("", f.qRemote);
+
+    const VPath * path = NULL;
+    REQUIRE_RC(KSrvRespFileGetLocal(f.file, &path));
+    f.PathEquals(path, f.spath);
+    REQUIRE_RC(VPathRelease(path)); path = NULL;
+    f.PathEquals(f.qLocal, f.spath);
+    f.VdbcacheEquals("", f.qLocal);
+
+    REQUIRE_RC(KSrvRespFileGetCache(f.file, &path));
+    REQUIRE_RC(KDirectoryResolvePath(f.dir, true, f.spath, sizeof f.spath,
+        "%s/%s.noqual.sra", ACC, ACC));
+    f.PathEquals(path, f.spath);
+    REQUIRE_RC(VPathRelease(path)); path = NULL;
+    f.PathEquals(f.qCache, f.spath);
+    f.VdbcacheEquals("", f.qCache);
+
+    f.NextRun();
+    f.NextPath();
+    f.NextFile();
+    f.Release();
+}
+#endif
+
+// default quality / remote:no-qual&no vdbcache / cache-in-AD / local-in-AD
+#ifdef ALL
+FIXTURE_TEST_CASE(_010_11_noqual, TRQFixture) {
+    putenv((char*)ACC "="
+        "{"
+        " \"result\":["
+        "  {"
+        "   \"bundle\": \"SRR053325\","
+        "   \"files\":["
+        "    {"
+        "     \"object\":\"srapub|SRR053325\","
+        "     \"type\":\"noqual_sra\","
+        "     \"name\":\"SRR053325.noqual.sra\","
         "     \"locations\":[ { \"link\":\"http://h/ns\" } ]"
         "    }"        "   ]"
         "  }"
@@ -349,6 +496,60 @@ FIXTURE_TEST_CASE(_011_00, TRQFixture) {
 }
 #endif
 
+// default quality / remote:no-qual&has vdbcache / no-cache / no-local
+#ifdef ALL
+FIXTURE_TEST_CASE(_011_00_noqual, TRQFixture) {
+    putenv((char*)ACC "="
+        "{"
+        " \"result\":["
+        "  {"
+        "   \"bundle\": \"SRR053325\","
+        "   \"files\":["
+        "    {"
+        "     \"object\":\"srapub|SRR053325\","
+        "     \"type\":\"noqual_sra\","
+        "     \"name\":\"SRR053325.noqual.sra\","
+        "     \"locations\":[ { \"link\":\"http://h/ns\" } ]"
+        "    },"
+        "    {"
+        "     \"object\":\"srapub|SRR053325\","
+        "     \"type\":\"noqual_vdbcache\","
+        "     \"name\":\"SRR053325.noqual.vdbcache\","
+        "     \"locations\":[ { \"link\":\"http://h/nv\" } ]"
+        "    }"        "   ]"
+        "  }"
+        " ]"
+        "}");
+    TRQHelper f(GetName());
+
+    f.Start(NO_AD_CACHING);
+    f.PathEquals(f.path, "http://h/ns");
+    f.VdbcacheEquals("http://h/nv");
+
+    REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
+    REQUIRE(f.qVc);
+    f.PathEquals(f.qRemote, "http://h/ns");
+    f.VdbcacheEquals("http://h/nv", f.qRemote);
+    REQUIRE_NULL(f.qCache);
+    REQUIRE_NULL(f.qLocal);
+
+    const VPath * path = NULL;
+    REQUIRE_RC_FAIL(KSrvRespFileGetLocal(f.file, &path));
+    REQUIRE_RC_FAIL(KSrvRespFileGetCache(f.file, &path));
+
+    f.NextPath();
+    f.NextFile(true);
+
+    f.PathEquals(f.path, "http://h/nv");
+    f.VdbcacheNotChecked();
+
+    f.NextRun();
+    f.NextPath();
+    f.NextFile();
+    f.Release();
+}
+#endif
+
 // default quality / remote:no-qual&has vdbcache / cache-in-AD / no-local
 #ifdef ALL
 FIXTURE_TEST_CASE(_011_10, TRQFixture) {
@@ -368,6 +569,71 @@ FIXTURE_TEST_CASE(_011_10, TRQFixture) {
         "     \"object\":\"srapub|SRR053325\","
         "     \"type\":\"noqual_vdbcache\","
         "     \"name\":\"SRR053325.vdbcache\","
+        "     \"locations\":[ { \"link\":\"http://h/nv\" } ]"
+        "    }"        "   ]"
+        "  }"
+        " ]"
+        "}");
+    TRQHelper f(GetName());
+
+    f.Start(AD_CACHING);
+    f.PathEquals(f.path, "http://h/ns");
+    f.VdbcacheEquals("http://h/nv");
+
+    const VPath * path = NULL;
+    REQUIRE_RC_FAIL(KSrvRespFileGetLocal(f.file, &path));
+    REQUIRE_RC(KSrvRespFileGetCache(f.file, &path));
+    REQUIRE_RC(KDirectoryResolvePath(f.dir, true, f.spath, sizeof f.spath,
+        "%s/%s.noqual.sra", ACC, ACC));
+    f.PathEquals(path, f.spath);
+    REQUIRE_RC(VPathRelease(path)); path = NULL;
+
+    REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
+    REQUIRE(f.qVc);
+    f.PathEquals(f.qRemote, "http://h/ns");
+    f.VdbcacheEquals("http://h/nv", f.qRemote);
+    f.PathEquals(f.qCache, f.spath);
+    REQUIRE_NULL(f.qLocal);
+
+    f.NextPath();
+    f.NextFile(true);
+
+    f.PathEquals(f.path, "http://h/nv");
+    f.VdbcacheNotChecked();
+    REQUIRE_RC_FAIL(KSrvRespFileGetLocal(f.file, &path));
+    REQUIRE_RC(KSrvRespFileGetCache(f.file, &path));
+    REQUIRE_RC(KDirectoryResolvePath(f.dir, true, f.spath, sizeof f.spath,
+        "%s/%s.noqual.sra.vdbcache", ACC, ACC));
+    f.PathEquals(path, f.spath);
+    REQUIRE_RC(VPathRelease(path)); path = NULL;
+    f.VdbcacheEquals(f.spath, f.qCache);
+
+    f.NextRun();
+    f.NextPath();
+    f.NextFile();
+    f.Release();
+}
+#endif
+
+// default quality / remote:no-qual&has vdbcache / cache-in-AD / no-local
+#ifdef ALL
+FIXTURE_TEST_CASE(_011_10_noqual, TRQFixture) {
+    putenv((char*)ACC "="
+        "{"
+        " \"result\":["
+        "  {"
+        "   \"bundle\": \"SRR053325\","
+        "   \"files\":["
+        "    {"
+        "     \"object\":\"srapub|SRR053325\","
+        "     \"type\":\"noqual_sra\","
+        "     \"name\":\"SRR053325.noqual.sra\","
+        "     \"locations\":[ { \"link\":\"http://h/ns\" } ]"
+        "    },"
+        "    {"
+        "     \"object\":\"srapub|SRR053325\","
+        "     \"type\":\"noqual_vdbcache\","
+        "     \"name\":\"SRR053325.noqual.vdbcache\","
         "     \"locations\":[ { \"link\":\"http://h/nv\" } ]"
         "    }"        "   ]"
         "  }"
@@ -597,6 +863,91 @@ FIXTURE_TEST_CASE(_011_22, TRQFixture) {
         "     \"object\": \"srapub|SRR053325\","
         "     \"type\":\"noqual_vdbcache\","
         "     \"name\":\"SRR053325.vdbcache\","
+        "     \"locations\":[ { \"link\":\"http://h/nv\" } ]"
+        "    }"
+        "   ]"
+        "  }"
+        " ]"
+        "}");
+    TRQHelper f(GetName());
+    REQUIRE_RC(KDirectoryCreateDir(f.dir, 0775,
+        kcmOpen | kcmInit | kcmCreate | kcmParents, "tmp/sra"));
+
+    REQUIRE_RC(KDirectoryResolvePath(f.dir, true, f.spath, sizeof f.spath,
+        "tmp/sra/%s.noqual.sra", ACC));
+    f.CreateFile();
+
+    REQUIRE_RC(KDirectoryResolvePath(f.dir, true, f.spath, sizeof f.spath,
+        "tmp/sra/%s.noqual.sra.vdbcache", ACC));
+    f.CreateFile();
+
+    f.SetUserRepo();
+
+    f.Start(AD_CACHING);
+    f.PathEquals(f.path, "http://h/ns");
+    f.VdbcacheEquals("http://h/nv");
+
+    REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
+    REQUIRE(f.qVc);
+    f.PathEquals(f.qRemote, "http://h/ns");
+    f.VdbcacheEquals("http://h/nv", f.qRemote);
+
+    const VPath * path = NULL;
+    REQUIRE_RC(KDirectoryResolvePath(f.dir, true, f.spath, sizeof f.spath,
+        "tmp/sra/%s.noqual.sra", ACC));
+    REQUIRE_RC(KSrvRespFileGetLocal(f.file, &path));
+    f.PathEquals(path, f.spath);
+    REQUIRE_RC(VPathRelease(path)); path = NULL;
+    f.PathEquals(f.qLocal, f.spath);
+
+    REQUIRE_RC(KSrvRespFileGetCache(f.file, &path));
+    f.PathEquals(path, f.spath);
+    REQUIRE_RC(VPathRelease(path)); path = NULL;
+    f.PathEquals(f.qCache, f.spath);
+
+    f.NextPath();
+    f.NextFile(true);
+
+    f.PathEquals(f.path, "http://h/nv");
+    f.VdbcacheNotChecked();
+    REQUIRE_RC(KDirectoryResolvePath(f.dir, true, f.spath, sizeof f.spath,
+        "tmp/sra/%s.noqual.sra.vdbcache", ACC));
+    REQUIRE_RC(KSrvRespFileGetLocal(f.file, &path));
+    f.PathEquals(path, f.spath);
+    REQUIRE_RC(VPathRelease(path)); path = NULL;
+    f.VdbcacheEquals(f.spath, f.qLocal);
+
+    REQUIRE_RC(KSrvRespFileGetCache(f.file, &path));
+    f.PathEquals(path, f.spath);
+    REQUIRE_RC(VPathRelease(path)); path = NULL;
+    f.VdbcacheEquals(f.spath, f.qCache);
+
+    f.NextRun();
+    f.NextPath();
+    f.NextFile();
+    f.Release();
+}
+#endif
+
+// default quality / remote:no-qual&has vdbcache / user-cache / no-local
+#ifdef ALL
+FIXTURE_TEST_CASE(_011_22_noqual, TRQFixture) {
+    putenv((char*)ACC "="
+        "{"
+        " \"result\":["
+        "  {"
+        "   \"bundle\": \"SRR053325\","
+        "   \"files\":["
+        "    {"
+        "     \"object\": \"srapub|SRR053325\","
+        "     \"type\":\"noqual_sra\","
+        "     \"name\":\"SRR053325.noqual.sra\","
+        "     \"locations\":[ { \"link\":\"http://h/ns\" } ]"
+        "    },"
+        "    {"
+        "     \"object\": \"srapub|SRR053325\","
+        "     \"type\":\"noqual_vdbcache\","
+        "     \"name\":\"SRR053325.noqual.vdbcache\","
         "     \"locations\":[ { \"link\":\"http://h/nv\" } ]"
         "    }"
         "   ]"
@@ -1118,6 +1469,61 @@ FIXTURE_TEST_CASE(_030_00, TRQFixture) {
 }
 #endif
 
+// default quality / remote:no-qual+has-qual&no vdbcache / no-cache / no-local
+#ifdef ALL
+FIXTURE_TEST_CASE(_030_00_noqual, TRQFixture) {
+    putenv((char*)ACC "="
+        "{"
+        " \"result\":["
+        "  {"
+        "   \"bundle\": \"SRR053325\","
+        "   \"files\":["
+        "    {"
+        "     \"object\":\"srapub|SRR053325\","
+        "     \"type\":\"sra\","
+        "     \"name\":\"SRR053325\","
+        "     \"locations\":[ { \"link\":\"http://h/s\" } ]"
+        "    },"
+        "    {"
+        "     \"object\":\"srapub|SRR053325\","
+        "     \"type\":\"noqual_sra\","
+        "     \"name\":\"SRR053325.noqual.sra\","
+        "     \"locations\":[ { \"link\":\"http://h/ns\" } ]"
+        "    }"
+        "   ]"
+        "  }"
+        " ]"
+        "}");
+    TRQHelper f(GetName());
+
+    f.Start(NO_AD_CACHING);
+    f.PathEquals(f.path, "http://h/s");
+    f.VdbcacheEquals();
+
+    const VPath * path = NULL;
+    REQUIRE_RC_FAIL(KSrvRespFileGetLocal(f.file, &path));
+    REQUIRE_RC_FAIL(KSrvRespFileGetCache(f.file, &path));
+
+    f.NextPath();
+    f.NextFile(true);
+
+    f.PathEquals(f.path, "http://h/ns");
+    f.VdbcacheEquals();
+
+    REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
+    REQUIRE(!f.qVc);
+    f.PathEquals(f.qRemote, "http://h/ns");
+    f.VdbcacheEquals("", f.qRemote);
+    REQUIRE_NULL(f.qCache);
+    REQUIRE_NULL(f.qLocal);
+
+    f.NextRun();
+    f.NextPath();
+    f.NextFile();
+    f.Release();
+}
+#endif
+
 // dfl quality / remote:no-qual+has-qual&vdbcache / no-cache
 // local-with-full-qual-in-AD, no-vc
 #ifdef ALL
@@ -1241,6 +1647,84 @@ FIXTURE_TEST_CASE(_030_13, TRQFixture) {
         "     \"object\":\"srapub|SRR053325\","
         "     \"type\":\"noqual_sra\","
         "     \"name\":\"SRR053325\","
+        "     \"locations\":[ { \"link\":\"http://h/ns\" } ]"
+        "    }"
+        "   ]"
+        "  }"
+        " ]"
+        "}");
+    TRQHelper f(GetName());
+
+    REQUIRE_RC(KDirectoryCreateDir(f.dir, 0775, kcmOpen | kcmInit | kcmCreate,
+        ACC));
+
+    REQUIRE_RC(KDirectoryResolvePath(f.dir, true, f.spath, sizeof f.spath,
+        "%s/%s.sra", ACC, ACC));
+    f.CreateFile();
+
+    f.Start(AD_CACHING);
+    f.PathEquals(f.path, "http://h/s");
+    f.VdbcacheEquals();
+
+    REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
+    REQUIRE(!f.qVc);
+    f.PathEquals(f.qRemote, "http://h/ns");
+    f.VdbcacheEquals("", f.qRemote);
+
+    REQUIRE_RC(KDirectoryResolvePath(f.dir, true, f.spath, sizeof f.spath,
+        "%s/%s.sra", ACC, ACC));
+    const VPath * path = NULL;
+    f.PathEquals(f.qLocal, f.spath);
+    f.VdbcacheEquals("", f.qLocal);
+    REQUIRE_RC(KSrvRespFileGetLocal(f.file, &path));
+    f.PathEquals(path, f.spath);
+    REQUIRE_RC(VPathRelease(path)); path = NULL;
+
+    REQUIRE_RC(KSrvRespFileGetCache(f.file, &path));
+    f.PathEquals(path, f.spath);
+    REQUIRE_RC(VPathRelease(path)); path = NULL;
+
+    f.NextPath();
+    f.NextFile(true);
+
+    f.PathEquals(f.path, "http://h/ns");
+    f.VdbcacheEquals();
+
+    REQUIRE_RC(KDirectoryResolvePath(f.dir, true, f.spath, sizeof f.spath,
+        "%s/%s.noqual.sra", ACC, ACC));
+    f.PathEquals(f.qCache, f.spath);
+    REQUIRE_RC(KSrvRespFileGetCache(f.file, &path));
+    f.PathEquals(path, f.spath);
+    REQUIRE_RC(VPathRelease(path)); path = NULL;
+
+    REQUIRE_RC_FAIL(KSrvRespFileGetLocal(f.file, &path));
+
+    f.NextRun();
+    f.NextPath();
+    f.NextFile();
+    f.Release();
+}
+#endif
+
+// dfl qlt / remote:no-qual+has-qual&no vdbcache / cache-in-AD / local-with-qual
+#ifdef ALL
+FIXTURE_TEST_CASE(_030_13_noqual, TRQFixture) {
+    putenv((char*)ACC "="
+        "{"
+        " \"result\":["
+        "  {"
+        "   \"bundle\": \"SRR053325\","
+        "   \"files\":["
+        "    {"
+        "     \"object\":\"srapub|SRR053325\","
+        "     \"type\":\"sra\","
+        "     \"name\":\"SRR053325\","
+        "     \"locations\":[ { \"link\":\"http://h/s\" } ]"
+        "    },"
+        "    {"
+        "     \"object\":\"srapub|SRR053325\","
+        "     \"type\":\"noqual_sra\","
+        "     \"name\":\"SRR053325.noqual.sra\","
         "     \"locations\":[ { \"link\":\"http://h/ns\" } ]"
         "    }"
         "   ]"
