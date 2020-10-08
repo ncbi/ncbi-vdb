@@ -62,4 +62,4 @@ rc_t ServicesCacheResolve(ServicesCache * self, const struct VPath * remote,
 
 /* Get the first run or the first run from tree from ServicesCache */
 rc_t ServicesCacheGetRun(const ServicesCache * self, bool tree,
-    const struct KSrvRun ** run);
+    const struct KSrvRun ** run, KSrvRunIterator * it);

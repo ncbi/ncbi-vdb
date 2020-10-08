@@ -89,6 +89,13 @@ struct KSrvRunIterator {
     const BSTNode * crnt;
 };
 
+const KSrvResponse * KSrvRunIteratorGetResponse(
+    const KSrvRunIterator * self)
+{
+    assert(self);
+    return self->response;
+}
+
 /* VPathSet */
 rc_t VPathSetAddRef ( const VPathSet * self ) {
     if ( self != NULL )
@@ -1274,7 +1281,7 @@ rc_t KSrvRunIteratorNextRun(KSrvRunIterator * self,
 
     if (rc == 0) {
         if (self->idx < 2)
-            rc = ServicesCacheGetRun(cache, self->idx++ > 0, run);
+            rc = ServicesCacheGetRun(cache, self->idx++ > 0, run, self);
         else; /* TODO */
     }
 

@@ -47,6 +47,7 @@
 
 #include "path-priv.h" /* VPathAttachVdbcache */
 #include "resolver-priv.h" /* VResolverLocalForCache */
+#include "services-priv.h" /* KSrvRunIteratorGetResponse */
 
 #include <limits.h> /* PATH_MAX */
 #ifndef PATH_MAX
@@ -134,6 +135,7 @@ typedef struct KSrvRun {
     CacheFile cacheVcFile[eIdxMx];
 
     Result result;
+    KSrvRunIterator * it;
 } KSrvRun;
 typedef KSrvRun KRun;
 
@@ -166,6 +168,7 @@ struct ServicesCache {
 
     KRun * run;
     BSTree runs;
+    KRun * disabledRun;
 
     BSTree responses; /* TODO */
 };
@@ -562,6 +565,58 @@ static rc_t KRunMake(KRun ** self, const String * acc,
     return 0;
 }
 
+static rc_t KRunMakeWhenDisabled(KRun ** self,
+    const ServicesCache * sc, KSrvRunIterator * it)
+{
+    rc_t rc = 0;
+    KRun * p = NULL;
+
+    bool found = false;
+
+    const KSrvResponse * response = NULL; 
+    uint32_t i = 0;
+    uint32_t l = 0;
+
+    assert(self);
+
+    *self = NULL;
+    
+    response = KSrvRunIteratorGetResponse(it);
+    l = KSrvResponseLength(response);
+
+    for (i = 0; i < l && rc == 0; ++i) {
+        const KSrvRespObj * obj = NULL;
+        KSrvRespObjIterator * it = NULL;
+        rc = KSrvResponseGetObjByIdx(response, i, &obj);
+        if (rc == 0)
+            rc = KSrvRespObjMakeIterator(obj, &it);
+        while (rc == 0) {
+            KSrvRespFile * file = NULL;
+            rc = KSrvRespObjIteratorNextFile(it, &file);
+            if (rc != 0 || file == NULL)
+                break;
+            found = true;
+            RELEASE(KSrvRespFile, file);
+            break;
+        }
+        RELEASE(KSrvRespObjIterator, it);
+        RELEASE(KSrvRespObj, obj);
+    }
+
+    if (found) {
+        p = calloc(1, sizeof *p);
+        if (p == NULL)
+            return RC(rcVFS, rcStorage, rcAllocating, rcMemory, rcExhausted);
+
+        p->dad = (ServicesCache*)sc;
+        p->it = it;
+
+        *self = p;
+    }
+
+    return rc;
+}
+
 /* find path index for remote path */
 static rc_t VPath_IdxForRemote(const VPath * self,
     int * idx, bool * vc, bool * notFound)
@@ -656,7 +711,9 @@ static rc_t KRunAddRemote(KRun * self, const VPath * path) {
     return rc;
 }
 
+#ifdef DBGNG
 #define STS_FIN  3
+#endif
 
 /* resolve local[-s] */
 static void KRunFindLocal(KRun * self,
@@ -667,7 +724,9 @@ static void KRunFindLocal(KRun * self,
     const KDirectory * dir = NULL;
     const ServicesCache * sc = NULL;
     char path[PATH_MAX] = "";
+#ifdef DBGNG
     STSMSG(STS_FIN, ("%s: entered", __func__));
+#endif
     assert(self && self->dad);
     sc = self->dad;
     dir = sc->dir;
@@ -676,7 +735,9 @@ static void KRunFindLocal(KRun * self,
     if (outFile != NULL) {
         rc_t r2 = 0;
 
+#ifdef DBGNG
         STSMSG(STS_FIN, ("%s: outFile != NULL...", __func__));
+#endif
 
         r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
             "%s", outFile);
@@ -692,7 +753,9 @@ static void KRunFindLocal(KRun * self,
     else if (outDir != NULL) {
         rc_t r2 = 0;
 
+#ifdef DBGNG
         STSMSG(STS_FIN, ("%s: outDir != NULL...", __func__));
+#endif
 
         r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
             "%s/%.*s.noqual.sra", outDir, self->acc->size, self->acc->addr);
@@ -777,13 +840,17 @@ static void KRunFindLocal(KRun * self,
         String * volume = NULL;
         String * root = NULL;
 
+#ifdef DBGNG
         STSMSG(STS_FIN, ("%s: outFile & outDir = NULL...", __func__));
+#endif
 
         if (sc->resolver != NULL) {
             VPath * accession = NULL;
             const VPath * path = NULL;
             rc_t r2 = 0;
+#ifdef DBGNG
             STSMSG(STS_FIN, ("%s: sc->resolver != NULL...", __func__));
+#endif
             r2 = VPathMake(&accession, self->acc->addr);
             if (r2 == 0)
                 r2 = VResolverLocalForCache(sc->resolver, accession, &path);
@@ -814,7 +881,9 @@ static void KRunFindLocal(KRun * self,
         if ((KDirectoryPathType(dir, "%.*s", self->acc->size, self->acc->addr)
             & ~kptAlias) == kptDir)
         {
+#ifdef DBGNG
             STSMSG(STS_FIN, ("%s: KDirectoryPathType == kptDir...",__func__));
+#endif
             if (projectId < 0) {
                 rc_t r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
                     "%.*s/%.*s.noqual.sra", self->acc->size, self->acc->addr,
@@ -1015,12 +1084,16 @@ static void KRunFindLocal(KRun * self,
             if ((KDirectoryPathType(dir, "%.*s/%.*s", root->size, root->addr,
                 volume->size, volume->addr) & ~kptAlias) == kptDir)
             {
+#ifdef DBGNG
                 STSMSG(STS_FIN, ("%s: root != NULL && volume != NULL "
                     "&& KDirectoryPathType == kptDir...", __func__));
+#endif
                 if (projectId < 0) {
                     rc_t r2 = 0;
 
+#ifdef DBGNG
                     STSMSG(STS_FIN, ("%s: projectId < 0...", __func__));
+#endif
 
                     r2 = KDirectoryResolvePath(dir, true,
                         path, sizeof path,
@@ -1235,8 +1308,10 @@ static void KRunFindLocal(KRun * self,
                 else {
                 rc_t r2 = 0;
                 
+#ifdef DBGNG
                 STSMSG(STS_FIN, ("%s: projectId == %d...", __func__,
                     projectId));
+#endif
 
                 r2 = KDirectoryResolvePath(dir, true,
                         path, sizeof path, "%.*s/%.*s/%.*s_dbGaP-%d.noqual.sra",
@@ -1343,7 +1418,9 @@ static void KRunFindLocal(KRun * self,
         StringWhack(root);
     }
 
+#ifdef DBGNG
     STSMSG(STS_FIN, ("%s: exiting with void", __func__));
+#endif
 }
 
 /* attach vdbcaches to local[-s] and remote[-s] */
@@ -2373,6 +2450,96 @@ rc_t KSrvRunQuery(const KRun * self, const VPath ** local,
     if (self == NULL)
         return RC(rcVFS, rcQuery, rcExecuting, rcSelf, rcNull);
 
+    assert(self->dad);
+    if (self->dad->quality >= eQualLast && self->it != NULL) {
+        KSrvRunIterator * ri = self->it;
+        const KSrvResponse * response = KSrvRunIteratorGetResponse(ri);
+        uint32_t i = 0;
+        uint32_t l = KSrvResponseLength(response);
+        for (i = 0; i < l && rc == 0; ++i) {
+            const KSrvRespObj * obj = NULL;
+            KSrvRespObjIterator * it = NULL;
+            KSrvRespFile * vcFile = NULL;
+            ESrvFileFormat type = eSFFInvalid;
+            const VPath * path = NULL;
+            rc = KSrvResponseGetObjByIdx(response, i, &obj);
+            if (rc == 0)
+                rc = KSrvRespObjMakeIterator(obj, &it);
+            while (rc == 0) {
+                KSrvRespFile * file = NULL;
+                rc_t r2 = 0;
+                rc = KSrvRespObjIteratorNextFile(it, &file);
+                if (rc != 0 || file == NULL)
+                    break;
+                r2 = KSrvRespFileGetFormat(file, &type);
+                if (r2 != 0 || type != eSFFVdbcache) {
+                    if (local != NULL) {
+                        *local = NULL;
+                        rc_t rc = KSrvRespFileGetLocal(file, &path);
+                        if (rc == 0)
+                            *local = path;
+                    }
+                    if (remote != NULL) {
+                        *remote = NULL;
+                        KSrvRespFileIterator * fi = NULL;
+                        rc = KSrvRespFileMakeIterator(file, &fi);
+                        if (rc == 0)
+                            rc = KSrvRespFileIteratorNextPath(fi, &path);
+                        if (rc == 0)
+                            *remote = path;
+                        RELEASE(KSrvRespFileIterator, fi);
+                    }
+                    if (cache != NULL) {
+                        *cache = NULL;
+                        rc_t rc = KSrvRespFileGetCache(file, &path);
+                        if (rc == 0)
+                            *cache = path;
+                    }
+                }
+                if (type == eSFFVdbcache)
+                    vcFile = file;
+                else
+                    RELEASE(KSrvRespFile, file);
+            }
+            if (vcFile == NULL) {
+                if (vdbcache != NULL)
+                    *vdbcache = false;
+                if (local != NULL && *local != NULL)
+                    rc = VPathAttachVdbcache((VPath*)*local, NULL);
+                if (remote != NULL && *remote != NULL)
+                    rc = VPathAttachVdbcache((VPath*)*remote, NULL);
+                if (cache != NULL && *cache != NULL)
+                    rc = VPathAttachVdbcache((VPath*)*cache, NULL);
+            }
+            else {
+                if (vdbcache != NULL)
+                    *vdbcache = true;
+                if (local != NULL && *local != NULL) {
+                    rc_t rc = KSrvRespFileGetLocal(vcFile, &path);
+                    if (rc == 0)
+                        rc = VPathAttachVdbcache((VPath*)*local, path);
+                }
+                if (remote != NULL && *remote != NULL) {
+                    KSrvRespFileIterator * fi = NULL;
+                    rc = KSrvRespFileMakeIterator(vcFile, &fi);
+                    if (rc == 0)
+                        rc = KSrvRespFileIteratorNextPath(fi, &path);
+                    if (rc == 0)
+                        rc = VPathAttachVdbcache((VPath*)*remote, path);
+                    RELEASE(KSrvRespFileIterator, fi);
+                }
+                if (cache != NULL && *cache != NULL) {
+                    rc_t rc = KSrvRespFileGetCache(vcFile, &path);
+                    if (rc == 0)
+                        rc = VPathAttachVdbcache((VPath*)*cache, path);
+                }
+            }
+            RELEASE(KSrvRespObjIterator, it);
+            RELEASE(KSrvRespObj, obj);
+        }
+        return rc;
+    }
+
     if (local != NULL) {
         path = self->result.local;
         rc = VPathAddRef(path);
@@ -2515,7 +2682,7 @@ static rc_t ServicesCacheInit(ServicesCache * self, const VFSManager * vfs,
 {
     rc_t rc = 0;
 
-    assert(self && quality < eQualLast);
+    assert(self && quality >= 0);
 
     self->projectId = projectId;
     self->quality = quality;
@@ -2589,6 +2756,9 @@ static rc_t ServicesCacheFini(ServicesCache * self) {
 
     rc = KRunWhack(self->run);
     self->run = NULL;
+
+    rc = KRunWhack(self->disabledRun);
+    self->disabledRun = NULL;
 
     RELEASE(KDirectory, self->dir);
     RELEASE(KConfig, self->kfg);
@@ -2693,8 +2863,13 @@ We'll resolve its cache/local locations in ServicesCacheComplete */
 rc_t ServicesCacheAddRemote(ServicesCache * self, const VPath * path) {
     KRun * run = NULL;
     bool notFound = false;
+    rc_t rc = 0;
 
-    rc_t rc = ServicesCacheFindRun(self, path, &run, &notFound);
+    assert(self);
+    if (self->quality >= eQualLast)
+        return 0;
+
+    rc = ServicesCacheFindRun(self, path, &run, &notFound);
     if (rc == 0 && !notFound)
         rc = KRunAddRemote(run, path);
 
@@ -2707,6 +2882,11 @@ rc_t ServicesCacheAddId(ServicesCache * self, const char * acc) {
 
     String s;
     String srr;
+
+    assert(self);
+    if (self->quality >= eQualLast)
+        return 0;
+
     CONST_STRING(&srr, "RR");
     StringInitCString(&s, acc);
 
@@ -2733,9 +2913,14 @@ static rc_t ServicesCacheFindLocal(ServicesCache * self,
     String * site = NULL;
     rc_t rc = 0, r2 = 0;
 
+#ifdef DBGNG
     STSMSG(STS_FIN, ("%s: entered", __func__));
+#endif
 
     assert(self);
+
+    if (self->quality >= eQualLast)
+        return 0;
 
     if (self->dir == NULL)
         rc = KDirectoryNativeDir(&self->dir);
@@ -2763,18 +2948,24 @@ static rc_t ServicesCacheFindLocal(ServicesCache * self,
         data.projectId = self->projectId;
 
         if (self->run != NULL) {
+#ifdef DBGNG
             STSMSG(STS_FIN, ("%s: before calling KRunFindLocal...", __func__));
+#endif
             KRunFindLocal(self->run, self->projectId, outDir, outFile);
         }
 
+#ifdef DBGNG
         STSMSG(STS_FIN, ("%s: before calling Each BSTNodeFindLocal...",
             __func__));
+#endif
         BSTreeForEach(&self->runs, false, BSTNodeFindLocal, &data);
         if (data.rc != 0 && rc == 0)
             rc = data.rc;
     }
 
+#ifdef DBGNG
     STSMSG(STS_FIN, ("%s: exiting with %R", __func__, rc));
+#endif
     return rc;
 }
 
@@ -2819,27 +3010,40 @@ rc_t ServicesCacheComplete(ServicesCache * self,
 {
     rc_t rc = 0;
 
+#ifdef DBGNG
     STSMSG(STS_FIN, ("%s: entered", __func__));
+#endif
 
     assert(self);
 
+    if (self->quality >= eQualLast)
+        return 0;
+
+#ifdef DBGNG
     STSMSG(STS_FIN, ("%s: before calling ServicesCacheFindLocal...", __func__));
+#endif
     if (rc == 0) /* resolve local[-s] */
         rc = ServicesCacheFindLocal(self, outDir, outFile);
 
+#ifdef DBGNG
     STSMSG(STS_FIN, ("%s: before calling ServicesCacheAttachVdbcaches...",
         __func__));
+#endif
     if (rc == 0) /* attach vdbcaches to local[-s] and remote[-s] */
         rc = ServicesCacheAttachVdbcaches(self);
 
+#ifdef DBGNG
     STSMSG(STS_FIN, ("%s: before calling ServicesCacheLinkLocalToRemote...",
         __func__));
+#endif
     if (rc == 0) /* find local for each remote */
         rc = ServicesCacheLinkLocalToRemote(self);
 
     /* find cache for each remote */
 
+#ifdef DBGNG
     STSMSG(STS_FIN, ("%s: before calling KRunsCacheForRemote...", __func__));
+#endif
     if (rc == 0) {
         KRun * run = self->run;
         if (run == NULL)
@@ -2858,7 +3062,9 @@ rc_t ServicesCacheComplete(ServicesCache * self,
     }
 
     /* find the best local if there are multiple */
+#ifdef DBGNG
     STSMSG(STS_FIN, ("%s: before calling KRunLocalResolve...", __func__));
+#endif
     KRunLocalResolve(self->run);
     if (rc == 0) {
         BSTData data;
@@ -2868,8 +3074,10 @@ rc_t ServicesCacheComplete(ServicesCache * self,
             rc = data.rc;
     }
 
+#ifdef DBGNG
     /* prepare results for KSrvRunQuery() */
     STSMSG(STS_FIN, ("%s: before calling KSrvRunPrepareQuery...", __func__));
+#endif
     if (rc == 0) {
         rc = KSrvRunPrepareQuery(self->run);
         if (rc == 0) {
@@ -2881,7 +3089,9 @@ rc_t ServicesCacheComplete(ServicesCache * self,
         }
     }
 
+#ifdef DBGNG
     STSMSG(STS_FIN, ("%s: exiting with %R", __func__, rc));
+#endif
     return rc;
 }
 
@@ -2892,7 +3102,13 @@ rc_t ServicesCacheResolve(ServicesCache * self, const VPath * remote,
     KRun * run = NULL;
     bool notFound = false;
 
-    rc_t rc = ServicesCacheFindRun(self, remote, &run, &notFound);
+    rc_t rc = 0;
+    
+    assert(self);
+    if (self->quality >= eQualLast)
+        return 0;
+
+    rc = ServicesCacheFindRun(self, remote, &run, &notFound);
     if (rc == 0 && !notFound)
         rc = KRunResolve(run, remote, local, cache);
 
@@ -2900,10 +3116,30 @@ rc_t ServicesCacheResolve(ServicesCache * self, const VPath * remote,
 }
 
 /* get the first run or the first run from tree from ServicesCache */
-rc_t ServicesCacheGetRun(const ServicesCache * self, bool tree,
-    const struct KSrvRun ** run)
+rc_t ServicesCacheGetRun(const ServicesCache * cself, bool tree,
+    const struct KSrvRun ** run, KSrvRunIterator * it)
 {
+    ServicesCache * self = (ServicesCache*) cself;
+
     assert(self && run);
+
+    *run = NULL;
+
+    if (self->quality >= eQualLast) {
+        KSrvRun * r = NULL;
+        rc_t rc = 0;
+        if (self->disabledRun == NULL)
+            KRunMakeWhenDisabled(&r, self, it);
+        else {
+            rc = KRunWhack(self->disabledRun);
+            self->disabledRun = NULL;
+        }
+        if (rc == 0) {
+            self->disabledRun = r;
+            *run = r;
+        }
+        return rc;
+    }
 
     *run = tree ? (KRun*)BSTreeFirst(&self->runs) : self->run;
 
@@ -2914,6 +3150,10 @@ rc_t ServicesCacheGetRun(const ServicesCache * self, bool tree,
 rc_t ServicesCacheGetResponse(const ServicesCache * self,
     const char * acc, const struct KSrvResponse ** response)
 {
+    assert(self);
+    if (self->quality >= eQualLast)
+        return 0;
+
     return 1;
 }
 static rc_t ServicesCacheAddResponse4(
