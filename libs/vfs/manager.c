@@ -4336,7 +4336,7 @@ static bool VFSManagerCheckEnvAndAdImpl(const VFSManager * self,
     char rs[PATH_MAX] = "";
 
     VQuality quality = VDBManagerGetQuality(NULL);
-    assert(quality >= 0 && quality < eQualLast);
+    assert(quality >= 0);
 
     if (outPath == NULL)
         return RC(rcVFS, rcPath, rcResolving, rcParam, rcNull);
@@ -4373,7 +4373,9 @@ static bool VFSManagerCheckEnvAndAdImpl(const VFSManager * self,
     if (ngc != NULL) {
         rc = KNgcObjGetProjectId(ngc, &projectId);
         if (rc == 0) {
-            if (quality == eQualDefault || quality == eQualNo)
+            if (quality < eQualLast
+                && (quality == eQualDefault || quality == eQualNo))
+            {
                 if ((KDirectoryPathType(self->cwd, "%s/%s_dbGaP-%d.noqual.sra",
                     rs, slash, projectId) & ~kptAlias) == kptFile)
                 {
@@ -4382,7 +4384,10 @@ static bool VFSManagerCheckEnvAndAdImpl(const VFSManager * self,
                     if (r == 0)
                         found = true;
                 }
-            if (!found && (quality == eQualDefault || quality == eQualFull))
+            }
+            if (!found && (quality == eQualDefault || quality == eQualFull
+                || quality >= eQualLast))
+            {
                 if ((KDirectoryPathType(self->cwd, "%s/%s_dbGaP-%d.sra",
                     rs, slash, projectId) & ~kptAlias) == kptFile)
                 {
@@ -4391,11 +4396,14 @@ static bool VFSManagerCheckEnvAndAdImpl(const VFSManager * self,
                     if (r == 0)
                         found = true;
                 }
+            }
         }
     }
 
     if (!found) {
-        if (quality == eQualDefault || quality == eQualNo)
+        if (quality < eQualLast
+            && (quality == eQualDefault || quality == eQualNo))
+        {
             if ((KDirectoryPathType(self->cwd, "%s/%s.noqual.sra", rs, slash) &
                 ~kptAlias) == kptFile)
             {
@@ -4405,7 +4413,10 @@ static bool VFSManagerCheckEnvAndAdImpl(const VFSManager * self,
                     found = true;
                 rc = 0;
             }
-        if (!found && (quality == eQualDefault || quality == eQualFull))
+        }
+        if (!found && (quality == eQualDefault || quality == eQualFull
+            || quality >= eQualLast))
+        {
             if ((KDirectoryPathType(self->cwd, "%s/%s.sra", rs, slash) &
                 ~kptAlias) == kptFile)
             {
@@ -4415,6 +4426,7 @@ static bool VFSManagerCheckEnvAndAdImpl(const VFSManager * self,
                     found = true;
                 rc = 0;
             }
+        }
     }
 
     /* TODO: add processing of eQualFullOnly and eQualDblOnly */
