@@ -3132,14 +3132,14 @@ static rc_t VResolverLocalMagicResolve(const VResolver * self,
         return rc;
 
     if (!checkAd) {
-        VPath * vdbcache = NULL;
-        rc = KDirectoryMagicResolve(self->wd, &magic, accession, app,
+        const VPath * vdbcache = NULL;
+        rc = KDirectoryMagicResolve(self->wd, &vdbcache, accession, app,
             "VDB_LOCAL_VDBCACHE",
             eCheckExistTrue, eCheckFilePathTrue, eCheckUrlFalse, &checkAd);
         if (rc == 0) {
-            if (vdbcache == NULL) {
+            if (vdbcache == NULL && magic != NULL) {
                 rc = VFSManagerMakePathWithExtension((VFSManager*)1,
-                    &vdbcache, magic, ".vdbcache");
+                    (VPath**)&vdbcache, magic, ".vdbcache");
                 if (rc == 0) {
                     assert(vdbcache);
                     if ((KDirectoryPathType(self->wd, vdbcache->path.addr)
