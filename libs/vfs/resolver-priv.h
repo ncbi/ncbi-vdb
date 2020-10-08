@@ -291,8 +291,6 @@ VResolverAppID get_accession_app(const String * accession, bool refseq_ctx,
 void LogNamesServiceErrorsInit(bool enabled);
 void LogNamesServiceErrorsReset();
 
-#define USE_SERVICES_CACHE /* use ServicesCache */
-
 
 #ifdef __cplusplus
 }

@@ -55,6 +55,8 @@
 #include <kns/manager.h>
 #include <kns/stream.h>
 
+#include <vdb/vdb-priv.h> /* VDBManagerGetQuality */
+
 #include <vfs/manager.h>
 #include <vfs/path.h>
 #include <vfs/path-priv.h>
@@ -1863,7 +1865,7 @@ rc_t oldVResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
                         KStreamRelease ( response );
                     }
                 }
-                else if ( code == 403 ) { // TODO CHECK AGAINS SERVICES
+                else if ( code == 403 ) { /* TODO CHECK AGAINST SERVICES */
                     /* HTTP/1.1 403 Forbidden
                      - resolver CGI was called over http insted of https */
                     rc = RC ( rcVFS, rcResolver, rcResolving,
@@ -5018,7 +5020,7 @@ rc_t CC VResolverQueryImpl ( const VResolver * self, VRemoteProtocols protocols,
         RELEASE ( VPath, oath );
         RELEASE ( VPath, cath );
     }
-    if ( true ) { // ! queryIsUrl ) {
+    if ( true ) { /* ! queryIsUrl ) { */
         const VPath * oath = NULL;
         const VPath ** p = remote ? & oath : NULL;
         const VPath * cath = NULL;
@@ -5142,103 +5144,103 @@ rc_t CC VResolverQueryDo ( const VResolver * self, VRemoteProtocols protocols,
     const VPath * query, const VPath ** aLocal, const VPath ** aRemote,
     const VPath ** aCache, bool forCache )
 {
-#ifdef USE_SERVICES_CACHE
-    rc_t rc = 0;
-    const KNSManager * mgr = NULL;
-    KService * service = NULL;
-    const KSrvResponse * response = NULL;
-    KSrvRunIterator * ri = NULL;
-    const KSrvRun * run = NULL;
-    const VPath * local = NULL;
-    const VPath * remote = NULL;
-    const VPath * cache = NULL;
-    char s[512] = "";
-    const char * p = s;
-    assert(query);
-    if (!forCache && query->accOfParentDb == NULL
+    if (VDBManagerGetQuality(NULL) < eQualLast) {
+        rc_t rc = 0;
+        const KNSManager * mgr = NULL;
+        KService * service = NULL;
+        const KSrvResponse * response = NULL;
+        KSrvRunIterator * ri = NULL;
+        const KSrvRun * run = NULL;
+        const VPath * local = NULL;
+        const VPath * remote = NULL;
+        const VPath * cache = NULL;
+        char s[512] = "";
+        const char * p = s;
+        assert(query);
+        if (!forCache && query->accOfParentDb == NULL
 #ifndef SRA_9080_FIXED
-        && protocols != eProtocolFasp /* SDL does not work for fasp */
+            && protocols != eProtocolFasp /* SDL does not work for fasp */
 #endif
-        )
-    {
-        rc_t ra = 0;
-        VPath * acc_or_oid = NULL;
-        String acc;
-        rc = VResolverGetKNSManager(self, &mgr);
-        if (rc == 0)
-            rc = KServiceMakeWithMgr(&service, NULL, mgr, self->kfg);
-/*KConfigPrint(self->kfg,0);*/
+            )
+        {
+            rc_t ra = 0;
+            VPath * acc_or_oid = NULL;
+            String acc;
+            rc = VResolverGetKNSManager(self, &mgr);
+            if (rc == 0)
+                rc = KServiceMakeWithMgr(&service, NULL, mgr, self->kfg);
+            /*KConfigPrint(self->kfg,0);*/
+            if (rc == 0) {
+                ra = VPathGetAcc(query, &acc);
+                if (ra == 0 && acc.size > 0 && acc.addr != NULL)
+                    p = acc.addr;
+                else {
+                    ra = VFSManagerExtractAccessionOrOID((VFSManager*)1,
+                        &acc_or_oid, query);
+                    if (ra == 0)
+                        rc = VPathReadPath(acc_or_oid, s, sizeof s, NULL);
+                }
+            }
+            if (rc == 0 && ra == 0) {
+                if (rc == 0)
+                    rc = KServiceAddId(service, p);
+                if (rc == 0)
+                    rc = KServiceNamesQuery(service, protocols, &response);
+                if (rc == 0)
+                    rc = KSrvResponseMakeRunIterator(response, &ri);
+                if (rc == 0)
+                    rc = KSrvRunIteratorNextRun(ri, &run);
+            }
+            RELEASE(VPath, acc_or_oid);
+        }
         if (rc == 0) {
-            ra = VPathGetAcc(query, &acc);
-            if (ra == 0 && acc.size > 0 && acc.addr != NULL)
-                p = acc.addr;
-            else {
-                ra = VFSManagerExtractAccessionOrOID((VFSManager*)1,
-                    &acc_or_oid, query);
-                if (ra == 0)
-                    rc = VPathReadPath(acc_or_oid, s, sizeof s, NULL);
+            if (run != NULL) { /* SRR accessions go here */
+                bool notFound = true;
+                KSrvRunQuery(run, &local, &remote, &cache, NULL);
+                if (rc == 0) {
+                    if (aLocal != NULL) {
+                        *aLocal = local;
+                        if (local != NULL)
+                            notFound = false;
+                    }
+                    else
+                        RELEASE(VPath, local);
+                }
+                if (rc == 0) {
+                    if (aRemote != NULL) {
+                        *aRemote = remote;
+                        if (remote != NULL)
+                            notFound = false;
+                    }
+                    else
+                        RELEASE(VPath, remote);
+                }
+                if (rc == 0) {
+                    if (aCache != NULL) {
+                        *aCache = cache;
+                        if (aRemote == NULL && cache != NULL)
+                            notFound = false;
+                    }
+                    else
+                        RELEASE(VPath, cache);
+                }
+                if (notFound && rc == 0)
+                    rc = RC(rcVFS, rcResolver, rcResolving, rcPath, rcNotFound);
             }
+            else /* non - SRR accessions go here */
+                rc = VResolverQueryImpl(self, protocols, query,
+                    aLocal, aRemote, aCache, false, NULL, NULL, false, NULL, NULL);
         }
-        if (rc == 0 && ra == 0) {
-            if (rc == 0)
-                rc = KServiceAddId(service, p);
-            if (rc == 0)
-                rc = KServiceNamesQuery(service, protocols, &response);
-            if (rc == 0)
-                rc = KSrvResponseMakeRunIterator(response, &ri);
-            if (rc == 0)
-                rc = KSrvRunIteratorNextRun(ri, &run);
-        }
-        RELEASE(VPath, acc_or_oid);
+        RELEASE(KSrvRun, run);
+        RELEASE(KSrvRunIterator, ri);
+        RELEASE(KSrvResponse, response);
+        RELEASE(KService, service);
+        RELEASE(KNSManager, mgr);
+        return rc;
     }
-    if (rc == 0) {
-        if (run != NULL) { /* SRR accessions go here */
-            bool notFound = true;
-            KSrvRunQuery(run, &local, &remote, &cache, NULL);
-            if (rc == 0) {
-                if (aLocal != NULL) {
-                    *aLocal = local;
-                    if (local != NULL)
-                        notFound = false;
-                }
-                else
-                    RELEASE(VPath, local);
-            }
-            if (rc == 0) {
-                if (aRemote != NULL) {
-                    *aRemote = remote;
-                    if (remote != NULL)
-                        notFound = false;
-                }
-                else
-                    RELEASE(VPath, remote);
-            }
-            if (rc == 0) {
-                if (aCache != NULL) {
-                    *aCache = cache;
-                    if (aRemote == NULL && cache != NULL)
-                        notFound = false;
-                }
-                else
-                    RELEASE(VPath, cache);
-            }
-            if (notFound && rc == 0)
-                rc = RC(rcVFS, rcResolver, rcResolving, rcPath, rcNotFound);
-        }
-        else /* non - SRR accessions go here */
-            rc = VResolverQueryImpl(self, protocols, query,
-                aLocal, aRemote, aCache, false, NULL, NULL, false, NULL, NULL);
-    }
-    RELEASE(KSrvRun, run);
-    RELEASE(KSrvRunIterator, ri);
-    RELEASE(KSrvResponse, response);
-    RELEASE(KService, service);
-    RELEASE(KNSManager, mgr);
-    return rc;
-#else
-    return VResolverQueryImpl ( self, protocols, query, aLocal, aRemote, aCache,
-                               false, NULL, NULL, false, NULL, NULL );
-#endif
+    else
+        return VResolverQueryImpl ( self, protocols, query, 
+            aLocal, aRemote, aCache, false, NULL, NULL, false, NULL, NULL );
 }
 
 LIB_EXPORT
