@@ -34,6 +34,8 @@
 
 #include <ktst/unit_test.hpp> /* KMain */
 
+#include <vdb/vdb-priv.h> /* VDBManagerGetQuality */
+
 #include <vfs/manager.h> /* VFSManagerLogNamesServiceErrors */
 #include <vfs/path.h> /* VPathRelease */
 #include <vfs/services-priv.h> /* KServiceMakeWithMgr */
@@ -58,6 +60,8 @@ TEST_SUITE(TestResolveQualSuite)
 #define FAIL_DATA 1
 #define FAIL_QUERY 2
 #define FAIL_REMOTE 3
+
+static bool servicesCacheDisabled = VDBManagerGetQuality(NULL) >= eQualLast;
 
 struct TRQFixture { TRQFixture() { unsetenv((char*)ACC); } };
 

@@ -155,6 +155,7 @@ FIXTURE_TEST_CASE(_010_10, TRQFixture) {
     TRQHelper f(GetName());
 
     f.Start(AD_CACHING);
+    REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
     f.PathEquals(f.path, "http://h/ns");
     f.VdbcacheEquals();
 
@@ -163,10 +164,10 @@ FIXTURE_TEST_CASE(_010_10, TRQFixture) {
     REQUIRE_RC(KSrvRespFileGetCache(f.file, &path));
     REQUIRE_RC(KDirectoryResolvePath(f.dir, true, f.spath, sizeof f.spath,
         "%s/%s.noqual.sra", ACC, ACC));
+if (servicesCacheDisabled) return;
     f.PathEquals(path, f.spath);
     REQUIRE_RC(VPathRelease(path)); path = NULL;
 
-    REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
     REQUIRE(!f.qVc);
     f.PathEquals(f.qRemote, "http://h/ns");
     f.VdbcacheEquals("", f.qRemote);
@@ -202,6 +203,7 @@ FIXTURE_TEST_CASE(_010_10_noqual, TRQFixture) {
     TRQHelper f(GetName());
 
     f.Start(AD_CACHING);
+    REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
     f.PathEquals(f.path, "http://h/ns");
     f.VdbcacheEquals();
 
@@ -210,10 +212,10 @@ FIXTURE_TEST_CASE(_010_10_noqual, TRQFixture) {
     REQUIRE_RC(KSrvRespFileGetCache(f.file, &path));
     REQUIRE_RC(KDirectoryResolvePath(f.dir, true, f.spath, sizeof f.spath,
         "%s/%s.noqual.sra", ACC, ACC));
+if (servicesCacheDisabled) return;
     f.PathEquals(path, f.spath);
     REQUIRE_RC(VPathRelease(path)); path = NULL;
 
-    REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
     REQUIRE(!f.qVc);
     f.PathEquals(f.qRemote, "http://h/ns");
     f.VdbcacheEquals("", f.qRemote);
@@ -255,16 +257,17 @@ FIXTURE_TEST_CASE(_010_11, TRQFixture) {
     f.CreateFile();
 
     f.Start(AD_CACHING);
+    REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
     f.PathEquals(f.path, "http://h/ns");
     f.VdbcacheEquals();
 
-    REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
     REQUIRE(!f.qVc);
     f.PathEquals(f.qRemote, "http://h/ns");
     f.VdbcacheEquals("", f.qRemote);
 
     const VPath * path = NULL;
     REQUIRE_RC(KSrvRespFileGetLocal(f.file, &path));
+if (servicesCacheDisabled) return;
     f.PathEquals(path, f.spath);
     REQUIRE_RC(VPathRelease(path)); path = NULL;
     f.PathEquals(f.qLocal, f.spath);
@@ -312,16 +315,17 @@ FIXTURE_TEST_CASE(_010_11_noqual, TRQFixture) {
     f.CreateFile();
 
     f.Start(AD_CACHING);
+    REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
     f.PathEquals(f.path, "http://h/ns");
     f.VdbcacheEquals();
 
-    REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
     REQUIRE(!f.qVc);
     f.PathEquals(f.qRemote, "http://h/ns");
     f.VdbcacheEquals("", f.qRemote);
 
     const VPath * path = NULL;
     REQUIRE_RC(KSrvRespFileGetLocal(f.file, &path));
+if (servicesCacheDisabled) return;
     f.PathEquals(path, f.spath);
     REQUIRE_RC(VPathRelease(path)); path = NULL;
     f.PathEquals(f.qLocal, f.spath);
@@ -365,6 +369,7 @@ FIXTURE_TEST_CASE(_010_20, TRQFixture) {
     f.SetUserRepo();
 
     f.Start(AD_CACHING);
+    REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
     f.PathEquals(f.path, "http://h/ns");
     f.VdbcacheEquals();
 
@@ -373,11 +378,11 @@ FIXTURE_TEST_CASE(_010_20, TRQFixture) {
     REQUIRE_RC(KSrvRespFileGetCache(f.file, &path));
     REQUIRE_RC(KDirectoryResolvePath(f.dir, true, f.spath, sizeof f.spath,
         "tmp/sra/%s.noqual.sra", ACC));
+if (servicesCacheDisabled) return;
     f.PathEquals(path, f.spath);
     f.VdbcacheEquals("", path);
     REQUIRE_RC(VPathRelease(path)); path = NULL;
 
-    REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
     REQUIRE(!f.qVc);
     f.PathEquals(f.qRemote, "http://h/ns");
     f.VdbcacheEquals("", f.qRemote);
@@ -416,6 +421,7 @@ FIXTURE_TEST_CASE(_010_20_noqual, TRQFixture) {
     f.SetUserRepo();
 
     f.Start(AD_CACHING);
+    REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
     f.PathEquals(f.path, "http://h/ns");
     f.VdbcacheEquals();
 
@@ -424,10 +430,10 @@ FIXTURE_TEST_CASE(_010_20_noqual, TRQFixture) {
     REQUIRE_RC(KSrvRespFileGetCache(f.file, &path));
     REQUIRE_RC(KDirectoryResolvePath(f.dir, true, f.spath, sizeof f.spath,
         "tmp/sra/%s.noqual.sra", ACC));
+if (servicesCacheDisabled) return;
     f.PathEquals(path, f.spath);
     REQUIRE_RC(VPathRelease(path)); path = NULL;
 
-    REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
     REQUIRE(!f.qVc);
     f.PathEquals(f.qRemote, "http://h/ns");
     f.VdbcacheEquals("", f.qRemote);
@@ -470,6 +476,7 @@ FIXTURE_TEST_CASE(_011_00, TRQFixture) {
 
     f.Start(NO_AD_CACHING);
     f.PathEquals(f.path, "http://h/ns");
+if (servicesCacheDisabled) return;
     f.VdbcacheEquals("http://h/nv");
 
     REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
@@ -524,6 +531,7 @@ FIXTURE_TEST_CASE(_011_00_noqual, TRQFixture) {
 
     f.Start(NO_AD_CACHING);
     f.PathEquals(f.path, "http://h/ns");
+if (servicesCacheDisabled) return;
     f.VdbcacheEquals("http://h/nv");
 
     REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
@@ -578,6 +586,7 @@ FIXTURE_TEST_CASE(_011_10, TRQFixture) {
 
     f.Start(AD_CACHING);
     f.PathEquals(f.path, "http://h/ns");
+if (servicesCacheDisabled) return;
     f.VdbcacheEquals("http://h/nv");
 
     const VPath * path = NULL;
@@ -643,6 +652,7 @@ FIXTURE_TEST_CASE(_011_10_noqual, TRQFixture) {
 
     f.Start(AD_CACHING);
     f.PathEquals(f.path, "http://h/ns");
+if (servicesCacheDisabled) return;
     f.VdbcacheEquals("http://h/nv");
 
     const VPath * path = NULL;
@@ -718,6 +728,7 @@ FIXTURE_TEST_CASE(_011_11, TRQFixture) {
 
     f.Start(AD_CACHING);
     f.PathEquals(f.path, "http://h/ns");
+if (servicesCacheDisabled) return;
     f.VdbcacheEquals("http://h/nv");
 
     REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
@@ -800,6 +811,7 @@ FIXTURE_TEST_CASE(_011_11_noqual, TRQFixture) {
 
     f.Start(AD_CACHING);
     f.PathEquals(f.path, "http://h/ns");
+if (servicesCacheDisabled) return;
     f.VdbcacheEquals("http://h/nv");
 
     REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
@@ -885,6 +897,7 @@ FIXTURE_TEST_CASE(_011_22, TRQFixture) {
 
     f.Start(AD_CACHING);
     f.PathEquals(f.path, "http://h/ns");
+if (servicesCacheDisabled) return;
     f.VdbcacheEquals("http://h/nv");
 
     REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
@@ -970,6 +983,7 @@ FIXTURE_TEST_CASE(_011_22_noqual, TRQFixture) {
 
     f.Start(AD_CACHING);
     f.PathEquals(f.path, "http://h/ns");
+if (servicesCacheDisabled) return;
     f.VdbcacheEquals("http://h/nv");
 
     REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
@@ -1036,6 +1050,7 @@ FIXTURE_TEST_CASE(_020_00, TRQFixture) {
     TRQHelper f(GetName());
 
     f.Start(NO_AD_CACHING);
+    REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
     f.PathEquals(f.path, "http://h/s");
     f.VdbcacheEquals();
 
@@ -1043,7 +1058,6 @@ FIXTURE_TEST_CASE(_020_00, TRQFixture) {
     REQUIRE_RC_FAIL(KSrvRespFileGetLocal(f.file, &path));
     REQUIRE_RC_FAIL(KSrvRespFileGetCache(f.file, &path));
 
-    REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
     REQUIRE(!f.qVc);
     f.PathEquals(f.qRemote, "http://h/s");
     f.VdbcacheEquals("", f.qRemote);
@@ -1442,6 +1456,7 @@ FIXTURE_TEST_CASE(_030_00, TRQFixture) {
     TRQHelper f(GetName());
 
     f.Start(NO_AD_CACHING);
+    REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
     f.PathEquals(f.path, "http://h/s");
     f.VdbcacheEquals();
 
@@ -1455,7 +1470,6 @@ FIXTURE_TEST_CASE(_030_00, TRQFixture) {
     f.PathEquals(f.path, "http://h/ns");
     f.VdbcacheEquals();
 
-    REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
     REQUIRE(!f.qVc);
     f.PathEquals(f.qRemote, "http://h/ns");
     f.VdbcacheEquals("", f.qRemote);
@@ -1497,6 +1511,7 @@ FIXTURE_TEST_CASE(_030_00_noqual, TRQFixture) {
     TRQHelper f(GetName());
 
     f.Start(NO_AD_CACHING);
+    REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
     f.PathEquals(f.path, "http://h/s");
     f.VdbcacheEquals();
 
@@ -1510,7 +1525,6 @@ FIXTURE_TEST_CASE(_030_00_noqual, TRQFixture) {
     f.PathEquals(f.path, "http://h/ns");
     f.VdbcacheEquals();
 
-    REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
     REQUIRE(!f.qVc);
     f.PathEquals(f.qRemote, "http://h/ns");
     f.VdbcacheEquals("", f.qRemote);
@@ -1575,6 +1589,7 @@ FIXTURE_TEST_CASE(_033_04, TRQFixture) {
     f.VdbcacheNotChecked();
 
     const VPath * path = NULL;
+    if (servicesCacheDisabled) return;
     REQUIRE_RC_FAIL(KSrvRespFileGetLocal(f.file, &path));
 
     REQUIRE_RC_FAIL(KSrvRespFileGetCache(f.file, &path));
@@ -1692,6 +1707,7 @@ FIXTURE_TEST_CASE(_030_13, TRQFixture) {
 
     REQUIRE_RC(KDirectoryResolvePath(f.dir, true, f.spath, sizeof f.spath,
         "%s/%s.noqual.sra", ACC, ACC));
+if (servicesCacheDisabled) return;
     f.PathEquals(f.qCache, f.spath);
     REQUIRE_RC(KSrvRespFileGetCache(f.file, &path));
     f.PathEquals(path, f.spath);
@@ -1770,6 +1786,7 @@ FIXTURE_TEST_CASE(_030_13_noqual, TRQFixture) {
 
     REQUIRE_RC(KDirectoryResolvePath(f.dir, true, f.spath, sizeof f.spath,
         "%s/%s.noqual.sra", ACC, ACC));
+if (servicesCacheDisabled) return;
     f.PathEquals(f.qCache, f.spath);
     REQUIRE_RC(KSrvRespFileGetCache(f.file, &path));
     f.PathEquals(path, f.spath);
@@ -1848,6 +1865,7 @@ FIXTURE_TEST_CASE(_033_11, TRQFixture) {
     const VPath * path = NULL;
     REQUIRE_RC(KDirectoryResolvePath(f.dir, true, f.spath, sizeof f.spath,
         "%s/%s.noqual.sra.vdbcache", ACC, ACC));
+if (servicesCacheDisabled) return;
     REQUIRE_RC(KSrvRespFileGetLocal(f.file, &path));
     f.PathEquals(path, f.spath);
     REQUIRE_RC(VPathRelease(path)); path = NULL;
@@ -1993,6 +2011,7 @@ FIXTURE_TEST_CASE(_040_01_1, TRQFixture) {
     REQUIRE(!f.qVc);
     REQUIRE_NULL(f.qRemote);
     REQUIRE_NULL(f.qCache);
+if (servicesCacheDisabled) return;
     f.PathEquals(f.qLocal, f.spath);
     f.VdbcacheEquals("", f.qLocal);
 
@@ -2021,10 +2040,11 @@ FIXTURE_TEST_CASE(_043_02_0, TRQFixture) {
     REQUIRE_NULL(f.path);
 
     REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
-    REQUIRE(f.qVc);
     REQUIRE_NULL(f.qRemote);
+if (servicesCacheDisabled) return;
     REQUIRE_NULL(f.qCache);
     f.PathEquals(f.qLocal, f.spath);
+    REQUIRE(f.qVc);
 
     const VPath * path = NULL;
     REQUIRE_RC(KSrvRespFileGetCache(f.file, &path));
@@ -2074,8 +2094,9 @@ FIXTURE_TEST_CASE(_043_01_2, TRQFixture) {
     REQUIRE_RC_FAIL(KSrvRespFileGetCache(f.file, &path));
 
     REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
-    REQUIRE(f.qVc);
     REQUIRE_NULL(f.qRemote);
+if (servicesCacheDisabled) return;
+    REQUIRE(f.qVc);
     REQUIRE_NULL(f.qCache);
     f.PathEquals(f.qLocal, f.spath);
 
