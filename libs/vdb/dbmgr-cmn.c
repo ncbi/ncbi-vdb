@@ -992,9 +992,15 @@ LIB_EXPORT rc_t CC VDBManagerSetQuality(VDBManager * self,
     return 0;
 }
 
+#define USE_SERVICES_CACHE
+
 LIB_EXPORT VQuality CC VDBManagerGetQuality(const VDBManager * self) {
     rc_t rc = 0;
     bool fullQuality = false;
+
+#ifndef USE_SERVICES_CACHE
+    return eQualLast;
+#endif
 
     if (s_SetQuality >= 0)
         return s_SetQuality;
@@ -1013,6 +1019,7 @@ LIB_EXPORT VQuality CC VDBManagerGetQuality(const VDBManager * self) {
 
     if (s_LoadedQuality < 0) {
         const KConfig * kfg = NULL;
+        int64_t quality = -1;
         if (self != NULL) {
             const KDBManager * kmgr = NULL;
             VFSManager * vfs = NULL;
@@ -1027,10 +1034,19 @@ LIB_EXPORT VQuality CC VDBManagerGetQuality(const VDBManager * self) {
         if (kfg == NULL)
             KConfigMake((KConfig**)&kfg, NULL);
         s_LoadedQuality = eQualDefault;
-        rc = KConfig_Get_FullQuality(kfg, &fullQuality);
-        if (rc == 0 && fullQuality)
-            s_LoadedQuality = eQualFull;
+        rc = KConfigReadI64(kfg, "/libs/vdb/quality", &quality);
+        if (rc == 0) {
+            if (quality < 0 || quality > eQualLast)
+                quality = eQualLast;
+            s_LoadedQuality = quality;
+        }
+        else {
+            rc = KConfig_Get_FullQuality(kfg, &fullQuality);
+            if (rc == 0 && fullQuality)
+                s_LoadedQuality = eQualFull;
+        }
         KConfigRelease(kfg);
     }
+
     return s_LoadedQuality;
 }
