@@ -33,6 +33,7 @@
 #include <klib/printf.h> /* string_printf */
 #include <klib/rc.h> /* RC */
 #include <klib/status.h> /* STSMSG */
+#include <klib/strings.h> /* ENV_MAGIC_LOCAL */
 #include <klib/text.h> /* StringWhack */
 
 #include <kns/kns-mgr-priv.h> /* KNSManagerGetResolveToCache */
@@ -84,6 +85,7 @@ typedef struct {
 typedef struct {
     const VPath * path; /* don't release */
 
+    VPath * magic;
     VPath * ad;
     VPath * repo;
     VPath * out;
@@ -286,6 +288,7 @@ static rc_t LocalFini(Local * self) {
     assert(self);
 
     RELEASE(VPath, self->ad);
+    RELEASE(VPath, self->magic);
     RELEASE(VPath, self->out);
     RELEASE(VPath, self->repo);
     RELEASE(VPath, self->resolved);
@@ -302,6 +305,16 @@ static void LocalInit(Local * self) {
     memset(self, 0, sizeof *self);
 
     self->remoteIdx = -1;
+}
+
+static rc_t LocalSetMagicPath(Local * self, const char * path) {
+    rc_t rc = 0;
+    assert(self);
+
+    RELEASE(VPath, self->magic);
+    rc = VPathMakeFmt(&self->magic, path);
+
+    return rc;
 }
 
 /* Set resolved Path in Local */
@@ -366,7 +379,11 @@ static rc_t LocalAttachVdbcache(Local * self, const Local * vc) {
 
     assert(self && vc);
 
-    rc = VPathAttachVdbcache(self->ad, vc->ad);
+    if (rc == 0)
+        rc = VPathAttachVdbcache(self->magic, vc->magic);
+
+    if (rc == 0)
+        rc = VPathAttachVdbcache(self->ad, vc->ad);
 
     if (rc == 0)
         rc = VPathAttachVdbcache(self->repo, vc->repo);
@@ -411,7 +428,12 @@ static rc_t LocalAttachRemoteVdbcache(
 static rc_t LocalResolve(Local * self, Local * vc) {
     assert(self && !self->path && !vc->path);
 
-    if (self->out != NULL && vc->out != NULL) {
+    if (self->magic != NULL) {
+        self->path = self->magic;
+        vc->path = vc->magic;
+    }
+
+    else if (self->out != NULL && vc->out != NULL) {
         self->path = self->out;
         vc->path = vc->out;
     }
@@ -744,7 +766,7 @@ static void KRunFindLocal(KRun * self,
         if (r2 == 0 &&
             (KDirectoryPathType(dir, path) & ~kptAlias) == kptFile)
         {
-            r2 = LocalSetOutPath(&self->local[eIdxNo], path);
+            r2 = LocalSetOutPath(&self->local[eIdxAsk], path);
             if (r2 != 0 && rc == 0)
                 rc = r2;
         }
@@ -840,9 +862,22 @@ static void KRunFindLocal(KRun * self,
         String * volume = NULL;
         String * root = NULL;
 
+        const char * magic = getenv(ENV_MAGIC_LOCAL);
+        const char * magicVc = getenv("VDB_LOCAL_VDBCACHE");
+
 #ifdef DBGNG
         STSMSG(STS_FIN, ("%s: outFile & outDir = NULL...", __func__));
 #endif
+        if (magic != NULL && magic[0] != '\0') {
+            rc_t r2 = LocalSetMagicPath(&self->local[eIdxAsk], magic);
+            if (r2 != 0 && rc == 0)
+                rc = r2;
+            if (magicVc != NULL && magicVc[0] != '\0') {
+                rc_t r2 = LocalSetMagicPath(&self->localVc[eIdxAsk], magicVc);
+                if (r2 != 0 && rc == 0)
+                    rc = r2;
+            }
+        }
 
         if (sc->resolver != NULL) {
             VPath * accession = NULL;
@@ -2229,7 +2264,12 @@ static rc_t KRunLocal(KRun * self) {
 
     self->result.localIdx = eIdxMx;
 
-    if (self->dad->quality == eQualDefault) {
+    if (self->local[eIdxAsk].magic != NULL) {
+        idx = eIdxAsk;
+        path = self->local[eIdxAsk].magic;
+    }
+
+    else if (self->dad->quality == eQualDefault) {
         if (self->local[eIdxNo].path != NULL
             && self->localVc[eIdxNo].path != NULL)
         {
