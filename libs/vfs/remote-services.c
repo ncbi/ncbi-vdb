@@ -3707,7 +3707,8 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
         {
             const char n[] = "filetype";
             if (quality == eQualDefault || quality == eQualFull
-                || quality == eQualFullOnly || quality == eQualDblOnly)
+                || quality == eQualFullOnly || quality == eQualDblOnly
+                || quality >= eQualLast || quality < 0)
             {
                 const char v[] = "run";
                 rc = SKVMake(&kv, n, v);
@@ -5021,8 +5022,8 @@ rc_t KServiceAddLocalAndCacheToResponse(KService * self,
     rc = KSrvResponseGetR4(self->resp.list, &r4);
 
     if (rc == 0 && r4 == NULL)
-        rc = Response4MakeEmpty(&r4, NULL, NULL, NULL,
-            sLogNamesServiceErrors, -1, 0);
+        rc = Response4MakeEmpty(&r4, self->helper.vMgr, self->helper.kMgr,
+            self->helper.kfg, sLogNamesServiceErrors, -1, self->quality);
 
     if (rc == 0) {
         const VFSManager * mgr = NULL;
@@ -5043,6 +5044,18 @@ rc_t KServiceAddLocalAndCacheToResponse(KService * self,
 rc_t KServiceSetQuality(KService * self, VQuality quality) {
     assert(self);
     self->quality = quality;
+    return 0;
+}
+
+rc_t KServiceGetQuality(const KService * self, int32_t * quality) {
+    assert(quality);
+
+    *quality = -1;
+
+    if (self == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcSelf, rcNull);
+
+    *quality = self->quality;
     return 0;
 }
 
@@ -5099,8 +5112,8 @@ rc_t KServiceGetVFSManager(const KService * self,
         return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
 
     if (self->helper.vMgr == NULL)
-        rc = VFSManagerMakeFromKfg((VFSManager**)(&self->helper.vMgr),
-                (KConfig*)self->helper.kfg);
+        rc = VFSManagerMakeFromKns((VFSManager**)(&self->helper.vMgr),
+            (KConfig*)self->helper.kfg, (KNSManager*)self->helper.kMgr);
 
     if (rc == 0)
         rc = VFSManagerAddRef(self->helper.vMgr);

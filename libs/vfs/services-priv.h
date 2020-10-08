@@ -117,6 +117,9 @@ rc_t LocationsAddCache ( struct Locations * self,
 rc_t LocationsAddLocal ( struct Locations * self,
                          const struct VPath * path, rc_t rc );
 
+const KSrvResponse * KSrvRunIteratorGetResponse(
+    const KSrvRunIterator * self);
+
 /**************************** KService ****************************************/
 /* resolve oid->file mapping inside of VFS:
   resolve (resolve oid<->name mapping in resolver):
@@ -127,6 +130,7 @@ rc_t KServiceResolveName ( struct KService * service, int resolve );
 
 /* Set quality type in service request */
 rc_t KServiceSetQuality(KService * self, VQuality quality);
+rc_t KServiceGetQuality(const KService * self, int32_t * quality);
 
 /* call to set VResolverCacheEnable to vrAlwaysEnable
    to simulate prefetch mode
