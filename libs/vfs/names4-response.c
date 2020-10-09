@@ -1080,29 +1080,39 @@ rc_t Response4AddAccOrId ( Response4 * self, const char * acc,
     return 0;
 }
 
-rc_t Response4AppendUrl ( Response4 * self, const char * url ) {
+rc_t Response4AppendUrlPath ( Response4 * self, const char * acc,
+    const char * url, const VPath * path )
+{
     rc_t rc = 0;
-
-    VPath * path = NULL;
 
     Container * box = NULL;
     Item * item = NULL;
     File * l = NULL;
 
-    rc = VFSManagerMakePath((VFSManager *)1, & path, "%s", url);
-    if ( rc != 0 )
-        return rc;
-
-    rc = Response4AddAccOrId ( self, url, -1, & box );
+    rc = Response4AddAccOrId ( self, acc, -1, & box );
 
     if ( rc == 0 )
-        rc = ContainerAdd ( box, url, -1, & item, NULL );
+        rc = ContainerAdd ( box, acc, -1, & item, NULL );
 
     if ( rc == 0 )
         rc = ItemAddFormat ( item, "", NULL, & l, true );
 
     if ( rc == 0 )
         rc = FileAddVPath ( l, path, NULL, false, 0 );
+
+    RELEASE ( VPath, path );
+
+    return rc;
+}
+
+rc_t Response4AppendUrl ( Response4 * self, const char * url ) {
+    VPath * path = NULL;
+
+    rc_t rc = VFSManagerMakePath((VFSManager *)1, & path, "%s", url);
+    if ( rc != 0 )
+        return rc;
+
+    rc = Response4AppendUrlPath ( self, url, url, path );
 
     RELEASE ( VPath, path );
 

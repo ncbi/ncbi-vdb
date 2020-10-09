@@ -103,6 +103,8 @@ rc_t Response4MakeSdlExt(Response4 ** self, const struct VFSManager * vfs,
 rc_t Response4AddRef     ( const Response4  * self );
 rc_t Response4Release    ( const Response4  * self );
 rc_t Response4AppendUrl  (       Response4  * self, const char * url );
+rc_t Response4AppendUrlPath(Response4 * self,
+    const char * acc, const char * url, const struct VPath * path);
 rc_t Response4AppendLocalAndCache(Response4  * self,const char * acc,
                    const struct VPathSet * vps, const struct VFSManager * mgr );
 rc_t Response4AddAccOrId (       Response4 * self, const char * acc,
