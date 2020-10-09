@@ -204,12 +204,7 @@ static void RemoteInit(Remote * self) {
     self->localIdx = -1;
 }
 
-/* Add a VPath to Remote */
-static rc_t RemoteAddVPath(Remote * self, const VPath * aPath) {
-    rc_t rc = 0;
-
-    VPath * path = (VPath*)aPath;
-
+static rc_t RemoteRealloc(Remote * self, bool first) {
     assert(self);
 
     if (self->allocated == 0) {
@@ -219,6 +214,9 @@ static rc_t RemoteAddVPath(Remote * self, const VPath * aPath) {
             return RC(rcVFS, rcStorage, rcAllocating, rcMemory, rcExhausted);
         self->allocated = nmemb;
     }
+
+    if (first)
+        return 0;
 
     assert(self->cnt <= self->allocated);
 
@@ -232,6 +230,19 @@ static rc_t RemoteAddVPath(Remote * self, const VPath * aPath) {
         self->allocated = nmemb;
         self->path[self->cnt] = NULL;
     }
+
+    return 0;
+}
+
+/* Add a VPath to Remote */
+static rc_t RemoteAddVPath(Remote * self, const VPath * aPath) {
+    rc_t rc = 0;
+
+    VPath * path = (VPath*)aPath;
+
+    assert(self);
+
+    rc = RemoteRealloc(self, false);
 
     if (rc == 0)
         rc = VPathAddRef(path);
@@ -254,6 +265,22 @@ static rc_t RemoteAttachVdbcache(Remote * self, const Remote * vc) {
             vcp = vc->path[0];
         rc = VPathAttachVdbcache(self->path[0], vcp);
     }
+
+    return rc;
+}
+
+/* Set magic Path in Remote */
+static rc_t RemoteSetMagicPath(Remote * self, const char * path) {
+    rc_t rc = 0;
+    assert(self);
+
+    rc = RemoteRealloc(self, true);
+
+    RELEASE(VPath, self->path[0]);
+
+    rc = VPathMakeFmt(&self->path[0], path);
+    if (rc == 0 && self->cnt == 0)
+        ++self->cnt;
 
     return rc;
 }
@@ -307,6 +334,7 @@ static void LocalInit(Local * self) {
     self->remoteIdx = -1;
 }
 
+/* Set magic Path in Local */
 static rc_t LocalSetMagicPath(Local * self, const char * path) {
     rc_t rc = 0;
     assert(self);
@@ -705,6 +733,24 @@ static rc_t VPath_IdxForRemote(const VPath * self,
             rc = RC(rcVFS, rcType, rcComparing, rcType, rcUnexpected);
     }
 
+    return rc;
+}
+
+/* resolve magic env.vars. */
+static rc_t KRunResolveMagic(KRun * self) {
+    rc_t rc = 0;
+    const char * magic = getenv(ENV_MAGIC_REMOTE);
+    const char * magicVc = getenv("VDB_REMOTE_VDBCACHE");
+    if (magic != NULL && magic[0] != '\0') {
+        rc_t r2 = RemoteSetMagicPath(&self->remote[eIdxAsk], magic);
+        if (r2 != 0 && rc == 0)
+            rc = r2;
+        if (magicVc != NULL && magicVc[0] != '\0') {
+            rc_t r2 = RemoteSetMagicPath(&self->remoteVc[eIdxAsk], magicVc);
+            if (r2 != 0 && rc == 0)
+                rc = r2;
+        }
+    }
     return rc;
 }
 
@@ -2946,6 +2992,15 @@ rc_t ServicesCacheAddId(ServicesCache * self, const char * acc) {
     return rc;
 }
 
+/* resolve magic env.vars. */
+static rc_t ServicesCacheResolveMagic(ServicesCache * self) {
+    assert(self);
+    if (self->run == NULL)
+        return 0;
+    /* TODO multiple runs? error? */
+    return KRunResolveMagic(self->run);
+}
+
 /* resolve local[-s] */
 static rc_t ServicesCacheFindLocal(ServicesCache * self,
     const char * outDir, const char * outFile)
@@ -3058,6 +3113,9 @@ rc_t ServicesCacheComplete(ServicesCache * self,
 
     if (self->quality >= eQualLast)
         return 0;
+
+    if (rc == 0) /* resolve magic env.vars. */
+        rc = ServicesCacheResolveMagic(self);
 
 #ifdef DBGNG
     STSMSG(STS_FIN, ("%s: before calling ServicesCacheFindLocal...", __func__));
