@@ -5214,36 +5214,49 @@ rc_t CC VResolverQueryDo ( const VResolver * self, VRemoteProtocols protocols,
         }
         if (rc == 0) {
             if (run != NULL) { /* SRR accessions go here */
-                bool notFound = true;
+                bool found = false;
+                bool hasLocal = false;
                 KSrvRunQuery(run, &local, &remote, &cache, NULL);
                 if (rc == 0) {
                     if (aLocal != NULL) {
                         *aLocal = local;
                         if (local != NULL)
-                            notFound = false;
+                            found = hasLocal = true;
                     }
                     else
                         RELEASE(VPath, local);
                 }
                 if (rc == 0) {
                     if (aRemote != NULL) {
-                        *aRemote = remote;
-                        if (remote != NULL)
-                            notFound = false;
+                        if (hasLocal) {
+                            *aRemote = NULL;
+                            RELEASE(VPath, remote);
+                        }
+                        else {
+                            *aRemote = remote;
+                            if (remote != NULL)
+                                found = true;
+                        }
                     }
                     else
                         RELEASE(VPath, remote);
                 }
                 if (rc == 0) {
                     if (aCache != NULL) {
-                        *aCache = cache;
-                        if (aRemote == NULL && cache != NULL)
-                            notFound = false;
+                        if (hasLocal) {
+                            *aCache = NULL;
+                            RELEASE(VPath, cache);
+                        }
+                        else {
+                            *aCache = cache;
+                            if (aRemote == NULL && cache != NULL)
+                                found = true;
+                        }
                     }
                     else
                         RELEASE(VPath, cache);
                 }
-                if (notFound && rc == 0)
+                if (!found && rc == 0)
                     rc = RC(rcVFS, rcResolver, rcResolving, rcPath, rcNotFound);
             }
             else /* non - SRR accessions go here */
