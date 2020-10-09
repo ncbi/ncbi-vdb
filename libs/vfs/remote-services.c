@@ -67,6 +67,7 @@
 #include "path-priv.h" /* VPathMakeFmt */
 #include "resolver-cgi.h" /* RESOLVER_CGI */
 #include "resolver-priv.h" /* VPathCheckFromNamesCGI */
+#include "services-cache.h" /* ServicesCacheAddId */
 #include "services-priv.h"
 
 #include <ctype.h> /* isdigit */
@@ -1209,114 +1210,6 @@ static rc_t uint64_tInit ( void * p, const String * src ) {
     }
     return rc;
 }
-
-
-#if 0 && LINUX
-#define TODO 1;
-static
-rc_t YYYY_MM_DDThh_mm_ssZToTm ( const char * src, struct tm * result )
-{
-/*YYYY-MM-DDThh:mm:ssTZD ISO 8601
-tm_sec	int	seconds after the minute	0-61*
-tm_min	int	minutes after the hour	0-59
-tm_hour	int	hours since midnight	0-23
-tm_mday	int	day of the month	1-31
-tm_mon	int	months since January	0-11
-tm_year	int	years since 1900
-tm_wday	int	days since Sunday	0-6
-tm_yday	int	days since January 1	0-365
-tm_isdst	int	Daylight Saving Time flag	*/
-    int i = 0;
-    int tmp = 0;
-    char c = 0;
-    assert ( src && result );
-    memset ( result, 0, sizeof * result );
-    for ( i = 0, tmp = 0; i < 4; ++ i ) {
-        char c = src [ i ];
-        if ( ! isdigit ( c ) )
-            return TODO;
-        tmp = tmp * 10 + c - '0';
-    }
-    if ( tmp < 1900 )
-        return TODO;
-    result -> tm_year = tmp - 1900;
-    if ( src [ i ] != '-' )
-        return TODO;
-    c = src [ ++ i ];
-    if ( ! isdigit ( c ) )
-        return TODO;
-    tmp = c - '0';
-    c = src [ ++ i ];
-    if ( ! isdigit ( c ) )
-        return TODO;
-    tmp = tmp * 10 + c - '0';
-    if ( tmp == 0 || tmp > 12 )
-        return TODO;
-    result -> tm_mon = tmp - 1;
-    c = src [ ++ i ];
-    if ( c != '-' )
-        return TODO;
-    c = src [ ++ i ];
-    if ( ! isdigit ( c ) )
-        return TODO;
-    tmp = c - '0';
-    c = src [ ++ i ];
-    if ( ! isdigit ( c ) )
-        return TODO;
-    tmp = tmp * 10 + c - '0';
-    if ( tmp == 0 || tmp > 31 )
-        return TODO;
-    result -> tm_mday = tmp;
-    c = src [ ++ i ];
-    if ( c != 'T' )
-        return TODO;
-    c = src [ ++ i ];
-    if ( ! isdigit ( c ) )
-        return TODO;
-    tmp = c - '0';
-    c = src [ ++ i ];
-    if ( ! isdigit ( c ) )
-        return TODO;
-    tmp = tmp * 10 + c - '0';
-    if ( tmp > 23 )
-        return TODO;
-    result -> tm_hour = tmp;
-    c = src [ ++ i ];
-    if ( c != ':' )
-        return TODO;
-    c = src [ ++ i ];
-    if ( ! isdigit ( c ) )
-        return TODO;
-    tmp = c - '0';
-    c = src [ ++ i ];
-    if ( ! isdigit ( c ) )
-        return TODO;
-    tmp = tmp * 10 + c - '0';
-    if ( tmp > 59 )
-        return TODO;
-    result -> tm_min = tmp;
-    c = src [ ++ i ];
-    if ( c != ':' )
-        return TODO;
-    c = src [ ++ i ];
-    if ( ! isdigit ( c ) )
-        return TODO;
-    tmp = c - '0';
-    c = src [ ++ i ];
-    if ( ! isdigit ( c ) )
-        return TODO;
-    tmp = tmp * 10 + c - '0';
-    if ( tmp > 59 )
-        return TODO;
-    result -> tm_sec = tmp;
-    c = src [ ++ i ];
-    if ( c != 'Z' )
-        return TODO;
-    /*time_t time = 0;
-    struct tm * t = gmtime_r ( & time, result );*/
-    return 0;
-}
-#endif
 
 
 static rc_t KTimeInit ( void * p, const String * src ) {
@@ -4856,6 +4749,21 @@ static rc_t KSrvRespObj_AttachVdbcaches(const KSrvRespObj * self) {
     return rc;
 }
 
+static rc_t KServiceAddIdToCache(KService * self, const char * objId) {
+    rc_t rc = 0;
+    ServicesCache * cache = NULL;
+    int32_t q = -1;
+    KServiceGetQuality(self, &q);
+    if (q >= eQualLast || q < 0)
+        return 0;
+    if (!KServiceCallsSdl(self))
+        return 0;
+    rc = KServiceGetServiceCache(self, &cache);
+    if (rc == 0)
+        rc = ServicesCacheAddId(cache, objId);
+    return rc;
+}
+
 static
 rc_t KServiceProcessStream ( KService * self, KStream * stream )
 {
@@ -4865,15 +4773,41 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
 
     Response4 * r4 = NULL;
 
+    const char * magic = getenv(ENV_MAGIC_REMOTE);
+    const char * objectId = NULL;
+
     assert ( self );
+
+    if (magic != NULL) {
+        if (self->req.request.objects != 1) {
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), ("%s: '%s' magic ignored "
+                "when multiple objects in query\n",
+                __func__, ENV_MAGIC_REMOTE));
+            magic = NULL;
+        }
+        else {
+            const char * o = self->req.request.object[0].objectId;
+            objectId = o;
+            if (o != NULL && o[0] != '\0' && o[1] != 'R' && o[2] != 'R') {
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), ("%s: '%s' magic "
+                    "ignored for non-runs\n", __func__, ENV_MAGIC_REMOTE));
+                magic = NULL;
+            }
+        }
+    }
 
     if ( self -> req . request. objects == 0 && self->req.jwtKartFile == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcString, rcInsufficient );
     else if ( self -> req . hasQuery
-           || self -> req . serviceType == eSTsearch)
+           || self -> req . serviceType == eSTsearch )
     {
-        if ( SVersionResponseInJson (self -> req . version, self -> req . sdl) )
+        if (magic != NULL)
+            rc = KServiceAddIdToCache(self, objectId);
+        else if ( SVersionResponseInJson (self -> req . version,
+            self -> req . sdl) )
+        {
             rc = KServiceProcessStreamAll     ( self, stream );
+        }
         else
             rc = KServiceProcessStreamByParts ( self, stream );
     }
