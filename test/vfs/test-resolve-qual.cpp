@@ -28,6 +28,7 @@
 #include <kfs/file.h> /* KFileRelease */
 
 #include <klib/debug.h> /* KDbgSetString */
+#include <klib/strings.h> /* ENV_MAGIC_REMOTE */
 
 #include <kns/kns-mgr-priv.h> /* KNSManagerSetAdCaching */
 #include <kns/manager.h> /* KNSManagerMake */
@@ -60,10 +61,19 @@ TEST_SUITE(TestResolveQualSuite)
 #define FAIL_DATA 1
 #define FAIL_QUERY 2
 #define FAIL_REMOTE 3
+#define FAIL_ENV 4
 
 static bool servicesCacheDisabled = VDBManagerGetQuality(NULL) >= eQualLast;
 
-struct TRQFixture { TRQFixture() { unsetenv((char*)ACC); } };
+struct TRQFixture { TRQFixture() {
+    unsetenv((char*)ACC);
+    unsetenv(ENV_MAGIC_REMOTE);
+    unsetenv(ENV_MAGIC_REMOTE_VDBCACHE);
+    unsetenv(ENV_MAGIC_LOCAL);
+    unsetenv(ENV_MAGIC_LOCAL_VDBCACHE);
+    unsetenv(ENV_MAGIC_CACHE);
+    unsetenv(ENV_MAGIC_CACHE_VDBCACHE);
+} };
 
 class TRQHelper : protected ncbi::NK::TestCase {
 public:
@@ -147,18 +157,24 @@ public:
 
             REQUIRE_RC(KSrvRunIteratorNextRun(ri, &run));
 
-            REQUIRE_RC(KSrvResponseGetObjByIdx(response, 0, &obj));
-            REQUIRE_RC(KSrvRespObjMakeIterator(obj, &it));
+            if (fail == FAIL_ENV)
+                REQUIRE_RC_FAIL(KSrvResponseGetObjByIdx(response, 0, &obj));
+            else {
+                REQUIRE_RC(KSrvResponseGetObjByIdx(response, 0, &obj));
+                REQUIRE_RC(KSrvRespObjMakeIterator(obj, &it));
 
-            REQUIRE_RC(KSrvRespObjIteratorNextFile(it, &file));
+                REQUIRE_RC(KSrvRespObjIteratorNextFile(it, &file));
+            }
             if (fail == FAIL_DATA) {
                 REQUIRE_NULL(file);
                 REQUIRE_NULL(run);
             }
             else if (fail != FAIL_REMOTE) {
                 REQUIRE_NOT_NULL(run);
-                REQUIRE_RC(KSrvRespFileMakeIterator(file, &fi));
-                REQUIRE_RC(KSrvRespFileIteratorNextPath(fi, &path));
+                if (fail != FAIL_ENV) {
+                    REQUIRE_RC(KSrvRespFileMakeIterator(file, &fi));
+                    REQUIRE_RC(KSrvRespFileIteratorNextPath(fi, &path));
+                }
             }
         }
     }
