@@ -48,6 +48,42 @@ FIXTURE_TEST_CASE(_000_00, TRQFixture) {
 }
 #endif
 
+#ifdef ALL
+FIXTURE_TEST_CASE(_000_00_env, TRQFixture) {
+    putenv((char*)ACC "="
+        "{"
+        " \"result\":["
+        "  {"
+        "   \"status\": 404"
+        "  }"
+        " ]"
+        "}");
+    putenv((char*)ENV_MAGIC_REMOTE "=h");
+    putenv((char*)ENV_MAGIC_REMOTE_VDBCACHE "=hv");
+    putenv((char*)ENV_MAGIC_LOCAL "=/");
+    putenv((char*)ENV_MAGIC_LOCAL_VDBCACHE "=/tmp");
+    putenv((char*)ENV_MAGIC_CACHE "=/t");
+    putenv((char*)ENV_MAGIC_CACHE_VDBCACHE "=/tv");
+
+    TRQHelper f(GetName());
+
+    f.Start(NO_AD_CACHING, eQualDefault, FAIL_ENV);
+    REQUIRE_NULL(f.file);
+
+    REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
+    REQUIRE(f.qVc);
+    f.PathEquals(f.qLocal, "/");
+    f.VdbcacheEquals("/tmp", f.qLocal);
+    f.PathEquals(f.qCache, "/t");
+    f.VdbcacheEquals("/tv", f.qCache);
+    f.PathEquals(f.qRemote, "h");
+    f.VdbcacheEquals("hv", f.qRemote);
+
+    f.NextRun();
+    f.Release();
+}
+#endif
+
 // default quality / remote:no-qual&no vdbcache / no-cache / no-local
 #ifdef ALL
 FIXTURE_TEST_CASE(_010_00, TRQFixture) {
@@ -769,6 +805,70 @@ if (servicesCacheDisabled) return;
     f.NextRun();
     f.NextPath();
     f.NextFile();
+    f.Release();
+}
+#endif
+
+// default quality / remote:no-qual&has vdbcache / cache-in-AD / local-in-AD
+#ifdef ALL
+FIXTURE_TEST_CASE(_011_11_env, TRQFixture) {
+    putenv((char*)ACC "="
+        "{"
+        " \"result\":["
+        "  {"
+        "   \"bundle\": \"SRR053325\","
+        "   \"files\":["
+        "    {"
+        "     \"object\":\"srapub|SRR053325\","
+        "     \"type\":\"noqual_sra\","
+        "     \"name\":\"SRR053325\","
+        "     \"locations\":[ { \"link\":\"http://h/ns\" } ]"
+        "    },"
+        "    {"
+        "     \"object\":\"srapub|SRR053325\","
+        "     \"type\":\"noqual_vdbcache\","
+        "     \"name\":\"SRR053325.vdbcache\","
+        "     \"locations\":[ { \"link\":\"http://h/nv\" } ]"
+        "    }"        "   ]"
+        "  }"
+        " ]"
+        "}");
+    putenv((char*)ENV_MAGIC_REMOTE "=h");
+    putenv((char*)ENV_MAGIC_REMOTE_VDBCACHE "=hv");
+    putenv((char*)ENV_MAGIC_LOCAL "=/");
+    putenv((char*)ENV_MAGIC_LOCAL_VDBCACHE "=/tmp");
+    putenv((char*)ENV_MAGIC_CACHE "=/t");
+    putenv((char*)ENV_MAGIC_CACHE_VDBCACHE "=/tv");
+    TRQHelper f(GetName());
+    REQUIRE_RC(KDirectoryCreateDir(f.dir, 0775, kcmOpen | kcmInit | kcmCreate,
+        ACC));
+
+    REQUIRE_RC(KDirectoryResolvePath(f.dir, true, f.spath, sizeof f.spath,
+        "%s/%s.noqual.sra", ACC, ACC));
+    f.CreateFile();
+
+    REQUIRE_RC(KDirectoryResolvePath(f.dir, true, f.spath, sizeof f.spath,
+        "%s/%s.noqual.sra.vdbcache", ACC, ACC));
+    f.CreateFile();
+
+    f.Start(AD_CACHING, eQualDefault, FAIL_ENV);
+    REQUIRE_NULL(f.path);
+    if (servicesCacheDisabled) return;
+
+    REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
+    REQUIRE(f.qVc);
+    f.PathEquals(f.qLocal, "/");
+    f.VdbcacheEquals("/tmp", f.qLocal);
+    f.PathEquals(f.qCache, "/t");
+    f.VdbcacheEquals("/tv", f.qCache);
+    f.PathEquals(f.qRemote, "h");
+    f.VdbcacheEquals("hv", f.qRemote);
+
+    const VPath * path = NULL;
+    REQUIRE_RC_FAIL(KSrvRespFileGetLocal(f.file, &path));
+    REQUIRE_RC_FAIL(KSrvRespFileGetCache(f.file, &path));
+
+    f.NextRun();
     f.Release();
 }
 #endif
