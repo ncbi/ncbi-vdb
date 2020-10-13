@@ -1,8 +1,3 @@
-/* TODO: move them to interfaces/klib/strings.h */
-#define MAGIC_CACHE_VDBCACHE  "VDB_CACHE_VDBCACHE"
-#define MAGIC_LOCAL_VDBCACHE  "VDB_LOCAL_VDBCACHE"
-#define MAGIC_REMOTE_VDBCACHE "VDB_REMOTE_VDBCACHE"
-
 /*===========================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
@@ -49,11 +44,14 @@
 #include <vfs/manager.h>
 #include <vfs/resolver.h>
 #include <vfs/path.h>
+
 #include <klib/debug.h> /* DBGMSG */
-#include <klib/printf.h>
-#include <klib/rc.h>
-#include <klib/namelist.h>
 #include <klib/log.h>
+#include <klib/namelist.h>
+#include <klib/printf.h>
+#include <klib/strings.h> /* ENV_MAGIC_REMOTE_VDBCACHE */
+#include <klib/rc.h>
+
 #include <sysalloc.h>
 
 #include "../vfs/path-priv.h"     /* VPath */
@@ -427,7 +425,7 @@ static rc_t VFSManagerCacheMagicResolve(
     const VFSManager * self, VPath ** path, bool * envVarWasSet)
 {
     return VFSManagerMagicResolve(self, path,
-        MAGIC_CACHE_VDBCACHE,
+        ENV_MAGIC_CACHE_VDBCACHE,
         eCheckExistFalse, eCheckFilePathTrue, eCheckUrlFalse, envVarWasSet);
 }
 
@@ -435,7 +433,7 @@ static rc_t VFSManagerLocalMagicResolve(
     const VFSManager * self, VPath ** path, bool * envVarWasSet)
 {
     return VFSManagerMagicResolve(self, path,
-        MAGIC_LOCAL_VDBCACHE,
+        ENV_MAGIC_LOCAL_VDBCACHE,
         eCheckExistTrue, eCheckFilePathTrue, eCheckUrlFalse, envVarWasSet);
 }
 
@@ -443,7 +441,7 @@ static rc_t VFSManagerRemoteMagicResolve(
     const VFSManager * self, VPath ** path, bool * envVarWasSet)
 {
     return VFSManagerMagicResolve(self, path,
-        MAGIC_REMOTE_VDBCACHE,
+        ENV_MAGIC_REMOTE_VDBCACHE,
         eCheckExistFalse, eCheckFilePathFalse, eCheckUrlTrue, envVarWasSet);
 }
 
