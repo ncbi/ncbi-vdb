@@ -740,7 +740,7 @@ static rc_t VPath_IdxForRemote(const VPath * self,
 static rc_t KRunResolveMagic(KRun * self) {
     rc_t rc = 0;
     const char * magic = getenv(ENV_MAGIC_REMOTE);
-    const char * magicVc = getenv("VDB_REMOTE_VDBCACHE");
+    const char * magicVc = getenv(ENV_MAGIC_REMOTE_VDBCACHE);
     if (magic != NULL && magic[0] != '\0') {
         rc_t r2 = RemoteSetMagicPath(&self->remote[eIdxAsk], magic);
         if (r2 != 0 && rc == 0)
@@ -909,7 +909,7 @@ static void KRunFindLocal(KRun * self,
         String * root = NULL;
 
         const char * magic = getenv(ENV_MAGIC_LOCAL);
-        const char * magicVc = getenv("VDB_LOCAL_VDBCACHE");
+        const char * magicVc = getenv(ENV_MAGIC_LOCAL_VDBCACHE);
 
 #ifdef DBGNG
         STSMSG(STS_FIN, ("%s: outFile & outDir = NULL...", __func__));
@@ -1922,10 +1922,31 @@ static rc_t KRunCacheForRemote(KRun * self, int32_t idx, bool vdbcache,
     String * root = NULL;
     char path[PATH_MAX] = "";
     ServicesCache * sc = NULL;
+    const char * p = NULL;
+    bool resolved = false;
+    const VFSManager * m = (VFSManager*)1;
+
     assert(self);
+
+    p = getenv(ENV_MAGIC_CACHE);
+    if (p != NULL) {
+        resolved = true;
+
+        if (vdbcache) {
+            const char * c = getenv(ENV_MAGIC_CACHE_VDBCACHE);
+            if (c != NULL)
+                rc = VFSManagerMakePath(m, &(self->cacheVc[idx].path), "%s", c);
+            else
+                rc = VFSManagerMakePath(m, &(self->cacheVc[idx].path),
+                    "%s.vdbcache", p);
+        }
+        else
+            rc = VFSManagerMakePath(m, &(self->cache[idx].path), "%s", p);
+    }
+
     sc = self->dad;
 
-    if (sc->kns == NULL)
+    if (rc == 0 && sc->kns == NULL)
         rc = KNSManagerMake((KNSManager**)&sc->kns);
     if (rc == 0)
         rc = KNSManagerGetResolveToCache(sc->kns, &resolveToCache);
@@ -1933,8 +1954,6 @@ static rc_t KRunCacheForRemote(KRun * self, int32_t idx, bool vdbcache,
         rc = KNSManagerGetAdCaching(sc->kns, &adCaching);
 
     if (rc == 0) {
-        bool resolved = false;
-
         if (!resolved && outFile != NULL) {
             resolved = true;
             rc = string_printf(path, sizeof path, NULL, "%s", outFile);
