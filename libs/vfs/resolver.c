@@ -3150,6 +3150,7 @@ static rc_t VResolverLocalMagicResolve(const VResolver * self,
                 }
             }
             VPathAttachVdbcache((VPath*)magic, vdbcache);
+            RELEASE(VPath, vdbcache);
         }
         *path = magic;
         return rc;
