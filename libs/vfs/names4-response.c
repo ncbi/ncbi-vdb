@@ -1100,8 +1100,6 @@ rc_t Response4AppendUrlPath ( Response4 * self, const char * acc,
     if ( rc == 0 )
         rc = FileAddVPath ( l, path, NULL, false, 0 );
 
-    RELEASE ( VPath, path );
-
     return rc;
 }
 
