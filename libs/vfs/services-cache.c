@@ -58,6 +58,12 @@
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 && !rc) { rc = rc2; } obj = NULL; } while (false)
 
+/* #if WINDOWS
+#define SLASH "\\"
+#else
+#endif */
+#define SLASH "/"
+
 struct Response4;
 
 typedef enum {
@@ -77,7 +83,7 @@ typedef enum {
 
 typedef struct {
     VPath ** path;
-    uint32_t allocated;
+    size_t allocated;
     uint32_t cnt;
     int32_t localIdx;
 } Remote;
@@ -181,7 +187,7 @@ struct ServicesCache {
 static rc_t RemoteFini(Remote * self) {
     rc_t rc = 0;
 
-    int i = 0;
+    uint32_t i = 0;
 
     assert(self);
 
@@ -208,7 +214,7 @@ static rc_t RemoteRealloc(Remote * self, bool first) {
     assert(self);
 
     if (self->allocated == 0) {
-        size_t nmemb = 1;
+        uint32_t nmemb = 1;
         self->path = calloc(1, sizeof *self->path);
         if (self->path == NULL)
             return RC(rcVFS, rcStorage, rcAllocating, rcMemory, rcExhausted);
@@ -826,7 +832,7 @@ static void KRunFindLocal(KRun * self,
 #endif
 
         r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-            "%s/%.*s.noqual.sra", outDir, self->acc->size, self->acc->addr);
+            "%s" SLASH "%.*s.noqual.sra", outDir, self->acc->size, self->acc->addr);
         if (r2 == 0 &&
             (KDirectoryPathType(dir, path) & ~kptAlias) == kptFile)
         {
@@ -835,7 +841,7 @@ static void KRunFindLocal(KRun * self,
                 rc = r2;
         }
         r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-            "%s/%.*s.hasqual.sra", outDir, self->acc->size, self->acc->addr);
+            "%s" SLASH "%.*s.hasqual.sra", outDir, self->acc->size, self->acc->addr);
         if (r2 == 0 &&
             (KDirectoryPathType(dir, path) & ~kptAlias) == kptFile)
         {
@@ -844,7 +850,7 @@ static void KRunFindLocal(KRun * self,
                 rc = r2;
         }
         r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-            "%s/%.*s.dblqual.sra", outDir, self->acc->size, self->acc->addr);
+            "%s" SLASH "%.*s.dblqual.sra", outDir, self->acc->size, self->acc->addr);
         if (r2 == 0 &&
             (KDirectoryPathType(dir, path) & ~kptAlias) == kptFile)
         {
@@ -853,7 +859,7 @@ static void KRunFindLocal(KRun * self,
                 rc = r2;
         }
         r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-            "%s/%.*s.sra", outDir, self->acc->size, self->acc->addr);
+            "%s" SLASH "%.*s.sra", outDir, self->acc->size, self->acc->addr);
         if (r2 == 0 &&
             (KDirectoryPathType(dir, path) & ~kptAlias) == kptFile)
         {
@@ -863,7 +869,7 @@ static void KRunFindLocal(KRun * self,
         }
 
         r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-            "%s/%.*s.noqual.sra.vdbcache",
+            "%s" SLASH "%.*s.noqual.sra.vdbcache",
             outDir, self->acc->size, self->acc->addr);
         if (r2 == 0 &&
             (KDirectoryPathType(dir, path) & ~kptAlias) == kptFile)
@@ -873,7 +879,7 @@ static void KRunFindLocal(KRun * self,
                 rc = r2;
         }
         r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-            "%s/%.*s.hasqual.sra.vdbcache",
+            "%s" SLASH "%.*s.hasqual.sra.vdbcache",
             outDir, self->acc->size, self->acc->addr);
         if (r2 == 0 &&
             (KDirectoryPathType(dir, path) & ~kptAlias) == kptFile)
@@ -883,7 +889,7 @@ static void KRunFindLocal(KRun * self,
                 rc = r2;
         }
         r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-            "%s/%.*s.dblqual.sra.vdbcache",
+            "%s" SLASH "%.*s.dblqual.sra.vdbcache",
             outDir, self->acc->size, self->acc->addr);
         if (r2 == 0 &&
             (KDirectoryPathType(dir, path) & ~kptAlias) == kptFile)
@@ -893,7 +899,7 @@ static void KRunFindLocal(KRun * self,
                 rc = r2;
         }
         r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-            "%s/%.*s.sra.vdbcache",
+            "%s" SLASH "%.*s.sra.vdbcache",
             outDir, self->acc->size, self->acc->addr);
         if (r2 == 0 &&
             (KDirectoryPathType(dir, path) & ~kptAlias) == kptFile)
@@ -967,7 +973,7 @@ static void KRunFindLocal(KRun * self,
 #endif
             if (projectId < 0) {
                 rc_t r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                    "%.*s/%.*s.noqual.sra", self->acc->size, self->acc->addr,
+                    "%.*s" SLASH "%.*s.noqual.sra", self->acc->size, self->acc->addr,
                     self->acc->size, self->acc->addr);
                 if (r2 == 0 &&
                     (KDirectoryPathType(dir, path) & ~kptAlias)
@@ -978,7 +984,7 @@ static void KRunFindLocal(KRun * self,
                         rc = r2;
                 }
                 r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                    "%.*s/%.*s.hasqual.sra", self->acc->size, self->acc->addr,
+                    "%.*s" SLASH "%.*s.hasqual.sra", self->acc->size, self->acc->addr,
                     self->acc->size, self->acc->addr);
                 if (r2 == 0 &&
                     (KDirectoryPathType(dir, path) & ~kptAlias)
@@ -989,7 +995,7 @@ static void KRunFindLocal(KRun * self,
                         rc = r2;
                 }
                 r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                    "%.*s/%.*s.dblqual.sra", self->acc->size, self->acc->addr,
+                    "%.*s" SLASH "%.*s.dblqual.sra", self->acc->size, self->acc->addr,
                     self->acc->size, self->acc->addr);
                 if (r2 == 0 &&
                     (KDirectoryPathType(dir, path) & ~kptAlias)
@@ -1000,7 +1006,7 @@ static void KRunFindLocal(KRun * self,
                         rc = r2;
                 }
                 r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                    "%.*s/%.*s.sra", self->acc->size, self->acc->addr,
+                    "%.*s" SLASH "%.*s.sra", self->acc->size, self->acc->addr,
                     self->acc->size, self->acc->addr);
                 if (r2 == 0 &&
                     (KDirectoryPathType(dir, path) & ~kptAlias)
@@ -1012,7 +1018,7 @@ static void KRunFindLocal(KRun * self,
                 }
 
                 r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                    "%.*s/%.*s.noqual.sra.vdbcache",
+                    "%.*s" SLASH "%.*s.noqual.sra.vdbcache",
                     self->acc->size, self->acc->addr,
                     self->acc->size, self->acc->addr);
                 if (r2 == 0 &&
@@ -1024,7 +1030,7 @@ static void KRunFindLocal(KRun * self,
                         rc = r2;
                 }
                 r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                    "%.*s/%.*s.hasqual.sra.vdbcache",
+                    "%.*s" SLASH "%.*s.hasqual.sra.vdbcache",
                     self->acc->size, self->acc->addr,
                     self->acc->size, self->acc->addr);
                 if (r2 == 0 &&
@@ -1036,7 +1042,7 @@ static void KRunFindLocal(KRun * self,
                         rc = r2;
                 }
                 r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                    "%.*s/%.*s.dblqual.sra.vdbcache",
+                    "%.*s" SLASH "%.*s.dblqual.sra.vdbcache",
                     self->acc->size, self->acc->addr,
                     self->acc->size, self->acc->addr);
                 if (r2 == 0 &&
@@ -1048,7 +1054,7 @@ static void KRunFindLocal(KRun * self,
                         rc = r2;
                 }
                 r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                    "%.*s/%.*s.sra.vdbcache",
+                    "%.*s" SLASH "%.*s.sra.vdbcache",
                     self->acc->size, self->acc->addr,
                     self->acc->size, self->acc->addr);
                 if (r2 == 0 &&
@@ -1063,7 +1069,7 @@ static void KRunFindLocal(KRun * self,
 
             else {
                 rc_t r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                    "%.*s/%.*s_dbGaP-%d.noqual.sra",
+                    "%.*s" SLASH "%.*s_dbGaP-%d.noqual.sra",
                     self->acc->size, self->acc->addr,
                     self->acc->size, self->acc->addr, sc->projectId);
                 if (r2 == 0 &&
@@ -1074,7 +1080,7 @@ static void KRunFindLocal(KRun * self,
                         rc = r2;
                 }
                 r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                    "%.*s/%.*s_dbGaP-%d.hasqual.sra",
+                    "%.*s" SLASH "%.*s_dbGaP-%d.hasqual.sra",
                     self->acc->size, self->acc->addr,
                     self->acc->size, self->acc->addr, sc->projectId);
                 if (r2 == 0 &&
@@ -1086,7 +1092,7 @@ static void KRunFindLocal(KRun * self,
                         rc = r2;
                 }
                 r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                    "%.*s/%.*s_dbGaP-%d.dblqual.sra",
+                    "%.*s" SLASH "%.*s_dbGaP-%d.dblqual.sra",
                     self->acc->size, self->acc->addr,
                     self->acc->size, self->acc->addr, sc->projectId);
                 if (r2 == 0 &&
@@ -1098,7 +1104,7 @@ static void KRunFindLocal(KRun * self,
                         rc = r2;
                 }
                 r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                    "%.*s/%.*s_dbGaP-%d.sra",
+                    "%.*s" SLASH "%.*s_dbGaP-%d.sra",
                     self->acc->size, self->acc->addr,
                     self->acc->size, self->acc->addr, sc->projectId);
                 if (r2 == 0 &&
@@ -1111,7 +1117,7 @@ static void KRunFindLocal(KRun * self,
                 }
 
                 r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                    "%.*s/%.*s_dbGaP-%d.noqual.sra.vdbcache",
+                    "%.*s" SLASH "%.*s_dbGaP-%d.noqual.sra.vdbcache",
                     self->acc->size, self->acc->addr,
                     self->acc->size, self->acc->addr, sc->projectId);
                 if (r2 == 0 &&
@@ -1123,7 +1129,7 @@ static void KRunFindLocal(KRun * self,
                         rc = r2;
                 }
                 r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                    "%.*s/%.*s_dbGaP-%d.hasqual.sra.vdbcache",
+                    "%.*s" SLASH "%.*s_dbGaP-%d.hasqual.sra.vdbcache",
                     self->acc->size, self->acc->addr,
                     self->acc->size, self->acc->addr, sc->projectId);
                 if (r2 == 0 &&
@@ -1135,7 +1141,7 @@ static void KRunFindLocal(KRun * self,
                         rc = r2;
                 }
                 r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                    "%.*s/%.*s_dbGaP-%d.dblqual.sra.vdbcache",
+                    "%.*s" SLASH "%.*s_dbGaP-%d.dblqual.sra.vdbcache",
                     self->acc->size, self->acc->addr,
                     self->acc->size, self->acc->addr, sc->projectId);
                 if (r2 == 0 &&
@@ -1147,7 +1153,7 @@ static void KRunFindLocal(KRun * self,
                         rc = r2;
                 }
                 r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                    "%.*s/%.*s_dbGaP-%d.sra.vdbcache",
+                    "%.*s" SLASH "%.*s_dbGaP-%d.sra.vdbcache",
                     self->acc->size, self->acc->addr,
                     self->acc->size, self->acc->addr, sc->projectId);
                 if (r2 == 0 &&
@@ -1162,7 +1168,7 @@ static void KRunFindLocal(KRun * self,
         }
 
         if (root != NULL && volume != NULL) {
-            if ((KDirectoryPathType(dir, "%.*s/%.*s", root->size, root->addr,
+            if ((KDirectoryPathType(dir, "%.*s" SLASH "%.*s", root->size, root->addr,
                 volume->size, volume->addr) & ~kptAlias) == kptDir)
             {
 #ifdef DBGNG
@@ -1178,7 +1184,7 @@ static void KRunFindLocal(KRun * self,
 
                     r2 = KDirectoryResolvePath(dir, true,
                         path, sizeof path,
-                        "%.*s/%.*s/%.*s.noqual.sra%s", root->size, root->addr,
+                        "%.*s" SLASH "%.*s" SLASH "%.*s.noqual.sra%s", root->size, root->addr,
                         volume->size, volume->addr,
                         self->acc->size, self->acc->addr, "");
                     if (r2 == 0 &&
@@ -1190,7 +1196,7 @@ static void KRunFindLocal(KRun * self,
                             rc = r2;
                     }
                     r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                        "%.*s/%.*s/%.*s.hasqual.sra%s", root->size, root->addr,
+                        "%.*s" SLASH "%.*s" SLASH "%.*s.hasqual.sra%s", root->size, root->addr,
                         volume->size, volume->addr,
                         self->acc->size, self->acc->addr, "");
                     if (r2 == 0 &&
@@ -1202,7 +1208,7 @@ static void KRunFindLocal(KRun * self,
                             rc = r2;
                     }
                     r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                        "%.*s/%.*s/%.*s.dblqual.sra%s", root->size, root->addr,
+                        "%.*s" SLASH "%.*s" SLASH "%.*s.dblqual.sra%s", root->size, root->addr,
                         volume->size, volume->addr,
                         self->acc->size, self->acc->addr, "");
                     if (r2 == 0 &&
@@ -1214,7 +1220,7 @@ static void KRunFindLocal(KRun * self,
                             rc = r2;
                     }
                     r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                        "%.*s/%.*s/%.*s.sra%s", root->size, root->addr,
+                        "%.*s" SLASH "%.*s" SLASH "%.*s.sra%s", root->size, root->addr,
                         volume->size, volume->addr,
                         self->acc->size, self->acc->addr, "");
                     if (r2 == 0 &&
@@ -1227,7 +1233,7 @@ static void KRunFindLocal(KRun * self,
                     }
 
                     r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                        "%.*s/%.*s/%.*s.noqual.sra.vdbcache%s",
+                        "%.*s" SLASH "%.*s" SLASH "%.*s.noqual.sra.vdbcache%s",
                         root->size, root->addr,
                         volume->size, volume->addr,
                         self->acc->size, self->acc->addr, "");
@@ -1240,7 +1246,7 @@ static void KRunFindLocal(KRun * self,
                             rc = r2;
                     }
                     r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                        "%.*s/%.*s/%.*s.hasqual.sra.vdbcache%s",
+                        "%.*s" SLASH "%.*s" SLASH "%.*s.hasqual.sra.vdbcache%s",
                         root->size, root->addr,
                         volume->size, volume->addr,
                         self->acc->size, self->acc->addr, "");
@@ -1253,7 +1259,7 @@ static void KRunFindLocal(KRun * self,
                             rc = r2;
                     }
                     r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                        "%.*s/%.*s/%.*s.dblqual.sra.vdbcache%s",
+                        "%.*s" SLASH "%.*s" SLASH "%.*s.dblqual.sra.vdbcache%s",
                         root->size, root->addr,
                         volume->size, volume->addr,
                         self->acc->size, self->acc->addr, "");
@@ -1266,7 +1272,7 @@ static void KRunFindLocal(KRun * self,
                             rc = r2;
                     }
                     r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                        "%.*s/%.*s/%.*s.sra.vdbcache%s", root->size, root->addr,
+                        "%.*s" SLASH "%.*s" SLASH "%.*s.sra.vdbcache%s", root->size, root->addr,
                         volume->size, volume->addr,
                         self->acc->size, self->acc->addr, "");
                     if (r2 == 0 &&
@@ -1279,7 +1285,7 @@ static void KRunFindLocal(KRun * self,
                     }
 
                     r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                        "%.*s/%.*s/%.*s.noqual.sra%s", root->size, root->addr,
+                        "%.*s" SLASH "%.*s" SLASH "%.*s.noqual.sra%s", root->size, root->addr,
                         volume->size, volume->addr,
                         self->acc->size, self->acc->addr, ".cache");
                     if (r2 == 0 &&
@@ -1291,7 +1297,7 @@ static void KRunFindLocal(KRun * self,
                             rc = r2;
                     }
                     r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                        "%.*s/%.*s/%.*s.hasqual.sra%s",
+                        "%.*s" SLASH "%.*s" SLASH "%.*s.hasqual.sra%s",
                         root->size, root->addr,
                         volume->size, volume->addr,
                         self->acc->size, self->acc->addr, ".cache");
@@ -1304,7 +1310,7 @@ static void KRunFindLocal(KRun * self,
                             rc = r2;
                     }
                     r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                        "%.*s/%.*s/%.*s.dblqual.sra%s",
+                        "%.*s" SLASH "%.*s" SLASH "%.*s.dblqual.sra%s",
                         root->size, root->addr,
                         volume->size, volume->addr,
                         self->acc->size, self->acc->addr, ".cache");
@@ -1317,7 +1323,7 @@ static void KRunFindLocal(KRun * self,
                             rc = r2;
                     }
                     r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                        "%.*s/%.*s/%.*s.sra%s", root->size, root->addr,
+                        "%.*s" SLASH "%.*s" SLASH "%.*s.sra%s", root->size, root->addr,
                         volume->size, volume->addr,
                         self->acc->size, self->acc->addr, ".cache");
                     if (r2 == 0 &&
@@ -1330,7 +1336,7 @@ static void KRunFindLocal(KRun * self,
                     }
 
                     r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                        "%.*s/%.*s/%.*s.noqual.sra.vdbcache%s",
+                        "%.*s" SLASH "%.*s" SLASH "%.*s.noqual.sra.vdbcache%s",
                         root->size, root->addr,
                         volume->size, volume->addr,
                         self->acc->size, self->acc->addr, ".cache");
@@ -1343,7 +1349,7 @@ static void KRunFindLocal(KRun * self,
                             rc = r2;
                     }
                     r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                        "%.*s/%.*s/%.*s.hasqual.sra.vdbcache%s",
+                        "%.*s" SLASH "%.*s" SLASH "%.*s.hasqual.sra.vdbcache%s",
                         root->size, root->addr,
                         volume->size, volume->addr,
                         self->acc->size, self->acc->addr, ".cache");
@@ -1357,7 +1363,7 @@ static void KRunFindLocal(KRun * self,
                             rc = r2;
                     }
                     r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                        "%.*s/%.*s/%.*s.dblqual.sra.vdbcache%s",
+                        "%.*s" SLASH "%.*s" SLASH "%.*s.dblqual.sra.vdbcache%s",
                         root->size, root->addr,
                         volume->size, volume->addr,
                         self->acc->size, self->acc->addr, ".cache");
@@ -1371,7 +1377,7 @@ static void KRunFindLocal(KRun * self,
                             rc = r2;
                     }
                     r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                        "%.*s/%.*s/%.*s.sra.vdbcache%s",
+                        "%.*s" SLASH "%.*s" SLASH "%.*s.sra.vdbcache%s",
                         root->size, root->addr,
                         volume->size, volume->addr,
                         self->acc->size, self->acc->addr, ".cache");
@@ -1395,7 +1401,7 @@ static void KRunFindLocal(KRun * self,
 #endif
 
                 r2 = KDirectoryResolvePath(dir, true,
-                        path, sizeof path, "%.*s/%.*s/%.*s_dbGaP-%d.noqual.sra",
+                        path, sizeof path, "%.*s" SLASH "%.*s" SLASH "%.*s_dbGaP-%d.noqual.sra",
                         root->size, root->addr, volume->size, volume->addr,
                         self->acc->size, self->acc->addr, sc->projectId);
                     if (r2 == 0 &&
@@ -1407,7 +1413,7 @@ static void KRunFindLocal(KRun * self,
                             rc = r2;
                     }
                     r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                        "%.*s/%.*s/%.*s_dbGaP-%d.hasqual.sra",
+                        "%.*s" SLASH "%.*s" SLASH "%.*s_dbGaP-%d.hasqual.sra",
                         root->size, root->addr, volume->size, volume->addr,
                         self->acc->size, self->acc->addr, sc->projectId);
                     if (r2 == 0 &&
@@ -1419,7 +1425,7 @@ static void KRunFindLocal(KRun * self,
                             rc = r2;
                     }
                     r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                        "%.*s/%.*s/%.*s_dbGaP-%d.dblqual.sra",
+                        "%.*s" SLASH "%.*s" SLASH "%.*s_dbGaP-%d.dblqual.sra",
                         root->size, root->addr, volume->size, volume->addr,
                         self->acc->size, self->acc->addr, sc->projectId);
                     if (r2 == 0 &&
@@ -1431,7 +1437,7 @@ static void KRunFindLocal(KRun * self,
                             rc = r2;
                     }
                     r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                        "%.*s/%.*s/%.*s_dbGaP-%d.sra",
+                        "%.*s" SLASH "%.*s" SLASH "%.*s_dbGaP-%d.sra",
                         root->size, root->addr, volume->size, volume->addr,
                         self->acc->size, self->acc->addr, sc->projectId);
                     if (r2 == 0 &&
@@ -1444,7 +1450,7 @@ static void KRunFindLocal(KRun * self,
                     }
 
                     r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                        "%.*s/%.*s/%.*s_dbGaP-%d.noqual.sra.vdbcache",
+                        "%.*s" SLASH "%.*s" SLASH "%.*s_dbGaP-%d.noqual.sra.vdbcache",
                         root->size, root->addr, volume->size, volume->addr,
                         self->acc->size, self->acc->addr, sc->projectId);
                     if (r2 == 0 &&
@@ -1456,7 +1462,7 @@ static void KRunFindLocal(KRun * self,
                             rc = r2;
                     }
                     r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                        "%.*s/%.*s/%.*s_dbGaP-%d.hasqual.sra.vdbcache",
+                        "%.*s" SLASH "%.*s" SLASH "%.*s_dbGaP-%d.hasqual.sra.vdbcache",
                         root->size, root->addr, volume->size, volume->addr,
                         self->acc->size, self->acc->addr, sc->projectId);
                     if (r2 == 0 &&
@@ -1468,7 +1474,7 @@ static void KRunFindLocal(KRun * self,
                             rc = r2;
                     }
                     r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                        "%.*s/%.*s/%.*s_dbGaP-%d.dblqual.sra.vdbcache",
+                        "%.*s" SLASH "%.*s" SLASH "%.*s_dbGaP-%d.dblqual.sra.vdbcache",
                         root->size, root->addr, volume->size, volume->addr,
                         self->acc->size, self->acc->addr, sc->projectId);
                     if (r2 == 0 &&
@@ -1480,7 +1486,7 @@ static void KRunFindLocal(KRun * self,
                             rc = r2;
                     }
                     r2 = KDirectoryResolvePath(dir, true, path, sizeof path,
-                        "%.*s/%.*s/%.*s_dbGaP-%d.sra.vdbcache",
+                        "%.*s" SLASH "%.*s" SLASH "%.*s_dbGaP-%d.sra.vdbcache",
                         root->size, root->addr, volume->size, volume->addr,
                         self->acc->size, self->acc->addr, sc->projectId);
                     if (r2 == 0 &&
@@ -1970,7 +1976,7 @@ static rc_t KRunCacheForRemote(KRun * self, int32_t idx, bool vdbcache,
 
         if (!resolved && outDir != NULL) {
             resolved = true;
-            rc = string_printf(path, sizeof path, NULL, "%s/%S.%s%s",
+            rc = string_printf(path, sizeof path, NULL, "%s" SLASH "%S.%s%s",
                 outDir, self->acc, idx == eIdxNo ? "noqual.sra" : "sra",
                 vdbcache ? ".vdbcache" : "");
             if (rc == 0)
@@ -1995,27 +2001,34 @@ static rc_t KRunCacheForRemote(KRun * self, int32_t idx, bool vdbcache,
                     &root);
             }
             if (rc == 0 && volume != NULL && root != NULL) {
+                char rslvd[PATH_MAX] = "";
                 if (sc->projectId >= 0)
                     rc = string_printf(path, sizeof path, NULL,
-                        "%S/%S/%S_dbGaP-%d.%s%s",
+                        "%S" SLASH "%S" SLASH "%S_dbGaP-%d.%s%s",
                         root, volume, self->acc, sc->projectId,
                         idx == eIdxNo ? "noqual.sra" : "sra",
                         vdbcache ? ".vdbcache" : "");
                 else
-                    rc = string_printf(path, sizeof path, NULL, "%S/%S/%S.%s%s",
+                    rc = string_printf(path, sizeof path, NULL, "%S" SLASH "%S" SLASH "%S.%s%s",
                         root, volume, self->acc,
                         idx == eIdxNo ? "noqual.sra" : "sra",
                         vdbcache ? ".vdbcache" : "");
                 if (rc == 0) {
                     rc = KDirectoryResolvePath(sc->dir, true,
-                            path, sizeof path, path);
+                        rslvd, sizeof rslvd, path);
                     if (rc == 0) {
-                        resolved = true;
+                        if (vdbcache)
+                            rc = VPathMakeFmt(&(self->cacheVc[idx].path), rslvd);
+                        else
+                            rc = VPathMakeFmt(&(self->cache[idx].path), rslvd);
+                    }
+                    else {
                         if (vdbcache)
                             rc = VPathMakeFmt(&(self->cacheVc[idx].path), path);
                         else
                             rc = VPathMakeFmt(&(self->cache[idx].path), path);
                     }
+                    resolved = true;
                 }
             }
         }
@@ -2023,11 +2036,11 @@ static rc_t KRunCacheForRemote(KRun * self, int32_t idx, bool vdbcache,
         if (rc == 0 && !resolved && adCaching) {
             if (sc->projectId >= 0)
                 rc = string_printf(path, sizeof path, NULL,
-                    "%S/%S_dbGaP-%d.%s%s", self->acc, self->acc, sc->projectId,
+                    "%S" SLASH "%S_dbGaP-%d.%s%s", self->acc, self->acc, sc->projectId,
                     idx == eIdxNo ? "noqual.sra" : "sra",
                     vdbcache ? ".vdbcache" : "");
             else
-                rc = string_printf(path, sizeof path, NULL, "%S/%S.%s%s",
+                rc = string_printf(path, sizeof path, NULL, "%S" SLASH "%S.%s%s",
                     self->acc, self->acc, idx == eIdxNo ? "noqual.sra" : "sra",
                     vdbcache ? ".vdbcache" : "");
             if (rc == 0)
@@ -2892,7 +2905,7 @@ static rc_t ServicesCacheAddRun(ServicesCache * self,
 {
     rc_t rc = 0;
 
-    bool dummy = NULL;
+    bool dummy = false;
     KRun * rummy = NULL;
     KRun * run = NULL;
     BSTItem * i = NULL;
@@ -3002,7 +3015,7 @@ rc_t ServicesCacheAddId(ServicesCache * self, const char * acc) {
 
     assert(srr.size == 2);
 
-    if (string_cmp(srr.addr, srr.size, s.addr + 1, srr.size, srr.size) != 0)
+    if (string_cmp(srr.addr, srr.size, s.addr + 1, srr.size, srr.len) != 0)
         return 0;
 
     if (rc == 0)
