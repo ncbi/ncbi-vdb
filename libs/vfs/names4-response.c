@@ -556,7 +556,7 @@ rc_t ItemAddFormat ( Item * self, const char * cType, const Data * dad,
             type = eSFFMax;
     }
     if ( self -> elm == NULL )  {
-        size_t n = 1;
+        uint32_t n = 1;
         switch ( type ) {
             case eSFFSkipped : idx = 0; n = 1; break;
             case eSFFSra     : idx = 0; n = 1; break;
