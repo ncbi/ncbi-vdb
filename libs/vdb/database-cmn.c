@@ -1421,7 +1421,7 @@ static bool validName(const String * acc, const String * file) {
     const char next[] = ".noqual.sra";
     if (file->size == acc->size + 4) {
         if (string_cmp(file->addr, file->size,
-            acc->addr, acc->size, acc->size) == 0)
+            acc->addr, acc->size, acc->len) == 0)
         {
             if (string_cmp(file->addr + acc->size, file->size - acc->size,
                 ext, sizeof ext - 1, sizeof ext - 1) == 0)
@@ -1433,7 +1433,7 @@ static bool validName(const String * acc, const String * file) {
     }
     else if (file->size == acc->size + 4 + 7) {
         if (string_cmp(file->addr, file->size,
-            acc->addr, acc->size, acc->size) == 0)
+            acc->addr, acc->size, acc->len) == 0)
         {
             if (string_cmp(file->addr + acc->size, file->size - acc->size,
                 next, sizeof next - 1, sizeof next - 1) == 0)
@@ -1445,13 +1445,13 @@ static bool validName(const String * acc, const String * file) {
     }
     else {
         if (string_cmp(file->addr, file->size,
-            acc->addr, acc->size, acc->size) == 0)
+            acc->addr, acc->size, acc->len) == 0)
         {
             const char sfx[] = "_dbGaP-";
             if (string_cmp(file->addr + acc->size, sizeof sfx - 1,
                 sfx, sizeof sfx - 1, sizeof sfx - 1) == 0)
             {
-                int i = 0;
+                size_t i = 0;
                 for (i = acc->size + sizeof sfx - 1;
                     i < file->size; ++i)
                 {

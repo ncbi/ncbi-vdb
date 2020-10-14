@@ -257,7 +257,7 @@ rc_t ParseUrl ( URLBlock * b, const char * url, size_t url_size )
         if (b->host.size >= stor31.size) {
             size_t skip = b->host.size - stor31.size;
             if (string_cmp(stor31.addr, stor31.size, b->host.addr + skip,
-                b->host.size - skip, stor31.size) == 0)
+                b->host.size - skip, stor31.len) == 0)
             {
                 b->cloud_type = ct_S3;
             }
@@ -265,7 +265,7 @@ rc_t ParseUrl ( URLBlock * b, const char * url, size_t url_size )
         if (b->host.size >= amazonaws.size) {
             size_t skip = b->host.size - amazonaws.size;
             if (string_cmp(amazonaws.addr, amazonaws.size, b->host.addr + skip,
-                b->host.size - skip, amazonaws.size) == 0)
+                b->host.size - skip, amazonaws.len) == 0)
             {
                 b->cloud_type = ct_S3;
             }

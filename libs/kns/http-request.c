@@ -1153,7 +1153,7 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
     skip = hostname->size - stor31.size;
     if (hostname->size >= stor31.size &&
         string_cmp(stor31.addr, stor31.size, hostname->addr + skip,
-            hostname->size - skip, stor31.size) == 0)
+            hostname->size - skip, stor31.len) == 0)
     {
         cpId = cloud_provider_aws;
     }
@@ -1165,7 +1165,7 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
         if (hostname->size >= amazonaws.size &&
             string_cmp(amazonaws.addr, amazonaws.size,
                 hostname->addr + skip, hostname->size - skip,
-                amazonaws.size) == 0)
+                amazonaws.len) == 0)
         {
             cpId = cloud_provider_aws;
         }
@@ -1176,7 +1176,7 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
             if (hostname->size >= google.size &&
                 string_cmp(google.addr, google.size,
                     hostname->addr + skip, hostname->size - skip,
-                    google.size) == 0)
+                    google.len) == 0)
             {
                 cpId = cloud_provider_gcp;
             }
@@ -1185,7 +1185,7 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
                 if (hostname->size >= google.size &&
                     string_cmp(google.addr, google.size,
                         hostname->addr + skip, hostname->size - skip,
-                        google.size) == 0)
+                        google.len) == 0)
                 {
                     cpId = cloud_provider_gcp;
                 }
@@ -1879,7 +1879,7 @@ static bool GovSiteByHttp ( const char * path ) {
 
         /* resolver-cgi is called over http */
         if ( path_size > size &&
-             strcase_cmp ( path, size, http . addr, size, size ) == 0 )
+             strcase_cmp ( path, size, http . addr, size, http.len ) == 0 )
         {
             EUrlParseState state = eUPSBegin;
             unsigned i = 0;
@@ -1909,7 +1909,7 @@ static bool GovSiteByHttp ( const char * path ) {
                 CONST_STRING ( & gov, ".gov" );
                 size = gov . size;
                 if ( strcase_cmp
-                    ( path + i - 5, size, gov . addr, size, size ) == 0 )
+                    ( path + i - 5, size, gov . addr, size, gov.len ) == 0 )
                 {
                     return true;
                 }

@@ -84,7 +84,7 @@ static int64_t CC BSTItemCmp ( const void * item, const BSTNode * n ) {
     assert ( s && i );
  
     return string_cmp ( s -> addr, s -> size,
-        i -> ticket -> addr, i -> ticket -> size, s -> size );
+        i -> ticket -> addr, i -> ticket -> size, s -> len );
 }
 
 static

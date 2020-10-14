@@ -2034,10 +2034,11 @@ static rc_t SRowMake ( SRow ** self, const String * src, const SRequest * req,
     if ( rc == 0 /* && p -> typed . code == 200 */ ) {
         String acc;
         if ( req -> request . objects == 1 ) {
-            size_t l = string_measure
-                ( req -> request . object [ 0 ] . objectId, NULL );
+			size_t s = 0;
+            uint32_t l = string_measure
+                ( req -> request . object [ 0 ] . objectId, &s );
             StringInit ( & acc,
-                        req -> request . object [ 0 ] . objectId, l, l );
+                        req -> request . object [ 0 ] . objectId, s, l );
             assert ( acc . size == 0 || acc . addr != NULL );
             if ( acc . size > 2 && acc . addr [1] == 'R'
                                 && acc . addr [2] == 'R' )
@@ -2063,10 +2064,11 @@ static rc_t SRowMake ( SRow ** self, const String * src, const SRequest * req,
                 if ( req -> request . object [ i ] . ordId ==
                      p -> typed . ordId )
                 {
-                    size_t l = string_measure
-                        ( req -> request . object [ i ] . objectId, NULL );
+					size_t s = 0;
+					uint32_t l = string_measure
+                        ( req -> request . object [ i ] . objectId, &s );
                     StringInit ( & acc,
-                        req -> request . object [ i ] . objectId, l, l );
+                        req -> request . object [ i ] . objectId, s, l );
                     assert ( acc . size == 0 || acc . addr != NULL );
                     p -> reqId = string_dup
                         ( req -> request . object [ i ] . objectId, l );
@@ -2749,7 +2751,7 @@ static int64_t CC BSTItemCmp ( const void * item, const BSTNode * n ) {
     assert ( s && i );
 
     return string_cmp ( s -> addr, s -> size,
-        i -> ticket, string_measure ( i -> ticket, NULL ), s -> size );
+        i -> ticket, string_measure ( i -> ticket, NULL ), s -> len );
 }
 
 static
