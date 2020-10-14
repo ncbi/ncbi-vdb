@@ -1927,6 +1927,7 @@ static rc_t KRunCacheForRemote(KRun * self, int32_t idx, bool vdbcache,
     String * volume = NULL;
     String * root = NULL;
     char path[PATH_MAX] = "";
+    char rslvd[PATH_MAX] = "";
     ServicesCache * sc = NULL;
     const char * p = NULL;
     bool resolved = false;
@@ -1964,9 +1965,15 @@ static rc_t KRunCacheForRemote(KRun * self, int32_t idx, bool vdbcache,
             resolved = true;
             rc = string_printf(path, sizeof path, NULL, "%s", outFile);
             if (rc == 0)
-                rc = KDirectoryResolvePath(sc->dir, true, path, sizeof path,
+                rc = KDirectoryResolvePath(sc->dir, true, rslvd, sizeof rslvd,
                     path);
             if (rc == 0) {
+                if (vdbcache)
+                    rc = VPathMakeFmt(&(self->cacheVc[idx].path), rslvd);
+                else
+                    rc = VPathMakeFmt(&(self->cache[idx].path), rslvd);
+            }
+            else {
                 if (vdbcache)
                     rc = VPathMakeFmt(&(self->cacheVc[idx].path), path);
                 else
@@ -1980,9 +1987,15 @@ static rc_t KRunCacheForRemote(KRun * self, int32_t idx, bool vdbcache,
                 outDir, self->acc, idx == eIdxNo ? "noqual.sra" : "sra",
                 vdbcache ? ".vdbcache" : "");
             if (rc == 0)
-                rc = KDirectoryResolvePath(sc->dir, true, path, sizeof path,
+                rc = KDirectoryResolvePath(sc->dir, true, rslvd, sizeof rslvd,
                     path);
             if (rc == 0) {
+                if (vdbcache)
+                    rc = VPathMakeFmt(&(self->cacheVc[idx].path), rslvd);
+                else
+                    rc = VPathMakeFmt(&(self->cache[idx].path), rslvd);
+            }
+            else {
                 if (vdbcache)
                     rc = VPathMakeFmt(&(self->cacheVc[idx].path), path);
                 else
@@ -2003,7 +2016,6 @@ static rc_t KRunCacheForRemote(KRun * self, int32_t idx, bool vdbcache,
             if (rc == 0 && volume != NULL && volume->size != 0
                 && root != NULL && root->size != 0)
             {
-                char rslvd[PATH_MAX] = "";
                 if (sc->projectId >= 0)
                     rc = string_printf(path, sizeof path, NULL,
                         "%S" SLASH "%S" SLASH "%S_dbGaP-%d.%s%s",
@@ -2046,9 +2058,15 @@ static rc_t KRunCacheForRemote(KRun * self, int32_t idx, bool vdbcache,
                     self->acc, self->acc, idx == eIdxNo ? "noqual.sra" : "sra",
                     vdbcache ? ".vdbcache" : "");
             if (rc == 0)
-                rc = KDirectoryResolvePath(sc->dir, true, path, sizeof path,
+                rc = KDirectoryResolvePath(sc->dir, true, rslvd, sizeof rslvd,
                     path);
             if (rc == 0) {
+                if (vdbcache)
+                    rc = VPathMakeFmt(&(self->cacheVc[idx].path), rslvd);
+                else
+                    rc = VPathMakeFmt(&(self->cache[idx].path), rslvd);
+            }
+            else {
                 if (vdbcache)
                     rc = VPathMakeFmt(&(self->cacheVc[idx].path), path);
                 else
