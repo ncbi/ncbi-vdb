@@ -2000,7 +2000,9 @@ static rc_t KRunCacheForRemote(KRun * self, int32_t idx, bool vdbcache,
                 KConfigReadString(sc->kfg, "/repository/user/main/public/root",
                     &root);
             }
-            if (rc == 0 && volume != NULL && root != NULL) {
+            if (rc == 0 && volume != NULL && volume->size != 0
+                && root != NULL && root->size != 0)
+            {
                 char rslvd[PATH_MAX] = "";
                 if (sc->projectId >= 0)
                     rc = string_printf(path, sizeof path, NULL,
