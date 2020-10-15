@@ -96,7 +96,11 @@ AXF_SRC = \
 	ref-preserve_qual \
 	ref-tbl \
 	make-cmp-read_desc \
-	get_mate_align_ids
+	get_mate_align_ids \
+	range-list \
+	refseq \
+	wgs \
+	restore-read
 
 AXF_OBJ = \
 	$(addsuffix .$(LOBX),$(AXF_SRC))
