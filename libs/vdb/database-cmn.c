@@ -1525,3 +1525,39 @@ rc_t CC VDatabaseGetAccession(const VDatabase * self, const String ** aAcc)
 
     return rc;
 }
+
+
+/* GetQualityCapability
+ *  can the database deliver full quality? synthetic quallity?
+ */
+LIB_EXPORT rc_t CC VDatabaseGetQualityCapability ( const VDatabase *self,
+    bool *fullQuality, bool *synthQuality )
+{   /* function stub */
+    if ( self == NULL )
+        return RC ( rcVDB, rcDatabase, rcListing, rcSelf, rcNull );
+    if ( fullQuality != NULL )
+        *fullQuality = true;
+    if ( synthQuality != NULL )
+        *synthQuality = false;
+    return 0;
+}
+
+/* SetFullQualityType
+ *  switch database to deliver full quality
+ */
+LIB_EXPORT rc_t CC VDatabaseSetFullQualityType ( VDatabase *self )
+{   /* function stub */
+    if ( self == NULL )
+        return RC ( rcVDB, rcDatabase, rcResetting, rcSelf, rcNull );
+    return 0;
+}
+
+/* SetSynthQualityType
+ *  switch database to deliver synthetic quality
+ */
+LIB_EXPORT rc_t CC VDatabaseSetSynthQualityType ( VDatabase *self )
+{   /* function stub */
+    if (self == NULL)
+        return RC ( rcVDB, rcDatabase, rcResetting, rcSelf, rcNull );
+    return RC ( rcVDB, rcDatabase, rcResetting, rcMode, rcNotAvailable );
+}
