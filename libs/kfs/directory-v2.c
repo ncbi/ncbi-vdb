@@ -487,7 +487,7 @@ LIB_EXPORT KTime_t CC KDirectoryDate_v2 ( const KDirectory_v2 *self, ctx_t ctx, 
     FUNC_ENTRY ( ctx, rcFS, rcDirectory, rcAccessing );
 
     if ( self == NULL )
-        INTERNAL_ERROR ( xcSelfNull, "failed to get directory date" );
+        INTERNAL_ERROR ( xcSelfNull, "failed to get directory data" );
 
     else if ( path == NULL )
         INTERNAL_ERROR ( xcPathNull, "path is null" );
@@ -521,7 +521,7 @@ LIB_EXPORT void CC KDirectorySetDate_v2 ( KDirectory_v2 *self, ctx_t ctx, bool r
     FUNC_ENTRY ( ctx, rcFS, rcDirectory, rcUpdating );
 
     if ( self == NULL )
-        INTERNAL_ERROR ( xcSelfNull, "failed to get directory date" );
+        INTERNAL_ERROR ( xcSelfNull, "failed to get directory data" );
 
     else if ( path == NULL )
         INTERNAL_ERROR ( xcPathNull, "path is null" );
@@ -558,7 +558,7 @@ LIB_EXPORT void CC KDirectoryCreateAlias_v2 ( KDirectory_v2 *self, ctx_t ctx,
     FUNC_ENTRY ( ctx, rcFS, rcDirectory, rcUpdating );
 
     if ( self == NULL )
-        INTERNAL_ERROR ( xcSelfNull, "failed to get directory date" );
+        INTERNAL_ERROR ( xcSelfNull, "failed to get directory data" );
 
     if ( targ == NULL || alias == NULL )
         INTERNAL_ERROR ( xcPathNull, "path is null" );
@@ -599,7 +599,7 @@ LIB_EXPORT void CC KDirectoryCreateLink_v2 ( KDirectory_v2 *self, ctx_t ctx,
     FUNC_ENTRY ( ctx, rcFS, rcDirectory, rcUpdating );
 
     if ( self == NULL )
-        INTERNAL_ERROR ( xcSelfNull, "failed to get directory date" );
+        INTERNAL_ERROR ( xcSelfNull, "failed to get directory data" );
 
     if ( oldpath == NULL || newpath == NULL )
         INTERNAL_ERROR ( xcPathNull, "path is null" );
@@ -636,7 +636,7 @@ LIB_EXPORT const KFile_v2 * CC KDirectoryOpenFileRead_v2 ( const KDirectory_v2 *
     FUNC_ENTRY ( ctx, rcFS, rcDirectory, rcOpening );
 
     if ( self == NULL )
-        INTERNAL_ERROR ( xcSelfNull, "failed to get directory date" );
+        INTERNAL_ERROR ( xcSelfNull, "failed to get directory data" );
 
     else if ( path == NULL )
         INTERNAL_ERROR ( xcPathNull, "path is null" );
@@ -669,7 +669,7 @@ LIB_EXPORT KFile_v2 * CC KDirectoryOpenFileWrite_v2 ( KDirectory_v2 *self, ctx_t
     FUNC_ENTRY ( ctx, rcFS, rcDirectory, rcOpening );
 
     if ( self == NULL )
-        INTERNAL_ERROR ( xcSelfNull, "failed to get directory date" );
+        INTERNAL_ERROR ( xcSelfNull, "failed to get directory data" );
 
     else if ( path == NULL )
         INTERNAL_ERROR ( xcPathNull, "path is null" );
@@ -710,7 +710,7 @@ LIB_EXPORT KFile_v2 * CC KDirectoryCreateFile_v2 ( KDirectory_v2 *self, ctx_t ct
     FUNC_ENTRY ( ctx, rcFS, rcDirectory, rcCreating );
 
     if ( self == NULL )
-        INTERNAL_ERROR ( xcSelfNull, "failed to get directory date" );
+        INTERNAL_ERROR ( xcSelfNull, "failed to get directory data" );
 
     else if ( path == NULL )
         INTERNAL_ERROR ( xcPathNull, "path is null" );
@@ -744,7 +744,7 @@ LIB_EXPORT uint64_t CC KDirectoryFileLocator_v2 ( const KDirectory_v2 *self, ctx
     FUNC_ENTRY ( ctx, rcFS, rcDirectory, rcAccessing );
 
     if ( self == NULL )
-        INTERNAL_ERROR ( xcSelfNull, "failed to get directory date" );
+        INTERNAL_ERROR ( xcSelfNull, "failed to get directory data" );
 
     else if ( path == NULL )
         INTERNAL_ERROR ( xcPathNull, "path is null" );
@@ -773,7 +773,7 @@ LIB_EXPORT uint64_t CC KDirectoryFileSize_v2 ( const KDirectory_v2 *self, ctx_t 
     FUNC_ENTRY ( ctx, rcFS, rcDirectory, rcAccessing );
 
     if ( self == NULL )
-        INTERNAL_ERROR ( xcSelfNull, "failed to get directory date" );
+        INTERNAL_ERROR ( xcSelfNull, "failed to get directory data" );
 
     else if ( path == NULL )
         INTERNAL_ERROR ( xcPathNull, "path is null" );
@@ -802,7 +802,7 @@ LIB_EXPORT uint64_t CC KDirectoryFilePhysicalSize_v2 ( const KDirectory_v2 *self
     FUNC_ENTRY ( ctx, rcFS, rcDirectory, rcAccessing );
 
     if ( self == NULL )
-        INTERNAL_ERROR ( xcSelfNull, "failed to get directory date" );
+        INTERNAL_ERROR ( xcSelfNull, "failed to get directory data" );
 
     else if ( path == NULL )
         INTERNAL_ERROR ( xcPathNull, "path is null" );
@@ -832,7 +832,7 @@ LIB_EXPORT void CC KDirectorySetFileSize_v2 ( KDirectory_v2 *self, ctx_t ctx,
     FUNC_ENTRY ( ctx, rcFS, rcDirectory, rcUpdating );
 
     if ( self == NULL )
-        INTERNAL_ERROR ( xcSelfNull, "failed to get directory date" );
+        INTERNAL_ERROR ( xcSelfNull, "failed to get directory data" );
 
     else if ( path == NULL )
         INTERNAL_ERROR ( xcPathNull, "path is null" );
@@ -865,7 +865,7 @@ LIB_EXPORT bool CC KDirectoryFileContiguous_v2 ( const KDirectory_v2 *self, ctx_
     FUNC_ENTRY ( ctx, rcFS, rcDirectory, rcAccessing );
 
     if ( self == NULL )
-        INTERNAL_ERROR ( xcSelfNull, "failed to get directory date" );
+        INTERNAL_ERROR ( xcSelfNull, "failed to get directory data" );
 
     else if ( path == NULL )
         INTERNAL_ERROR ( xcPathNull, "path is null" );
@@ -898,7 +898,7 @@ LIB_EXPORT const KDirectory_v2 * CC KDirectoryOpenDirRead_v2 ( const KDirectory_
     FUNC_ENTRY ( ctx, rcFS, rcDirectory, rcOpening );
 
     if ( self == NULL )
-        INTERNAL_ERROR ( xcSelfNull, "failed to get directory date" );
+        INTERNAL_ERROR ( xcSelfNull, "failed to get directory data" );
 
     if ( path == NULL )
         /* FIX ME path = "." */;
@@ -921,7 +921,7 @@ LIB_EXPORT KDirectory_v2 * CC KDirectoryOpenDirUpdate_v2 ( KDirectory_v2 *self, 
     FUNC_ENTRY ( ctx, rcFS, rcDirectory, rcOpening );
 
     if ( self == NULL )
-        INTERNAL_ERROR ( xcSelfNull, "failed to get directory date" );
+        INTERNAL_ERROR ( xcSelfNull, "failed to get directory data" );
 
     if ( self -> read_only )
         INTERNAL_ERROR ( xcDirectoryWriteOnly, "directory does not have read permissions" );
@@ -957,7 +957,7 @@ LIB_EXPORT void CC KDirectoryCreateDir_v2 ( KDirectory_v2 *self, ctx_t ctx,
     FUNC_ENTRY ( ctx, rcFS, rcDirectory, rcAccessing );
 
     if ( self == NULL )
-        INTERNAL_ERROR ( xcSelfNull, "failed to get directory date" );
+        INTERNAL_ERROR ( xcSelfNull, "failed to get directory data" );
 
     else if ( path == NULL )
         INTERNAL_ERROR ( xcPathNull, "path is null" );
