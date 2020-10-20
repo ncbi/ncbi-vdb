@@ -3131,7 +3131,7 @@ static KDirectory_vt_v1 vtKSysDir =
     /* end minor version 3 */
 
     /* start minor version 4 */
-    KSysDirOpenFileSharedWrite
+    KSysDirOpenFileSharedWrite,
     /* end minor version 4 */
 
     /* start minor version 5 */
