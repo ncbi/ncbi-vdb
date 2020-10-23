@@ -2766,7 +2766,10 @@ rc_t KSrvRespFileGetLocal ( const KSrvRespFile * self,
 
     * path = NULL;
 
-    assert ( self && self -> file );
+    if (self == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcSelf, rcNull);
+
+    assert ( self -> file );
 
     if ( self -> file -> localRc != 0 )
         return self -> file -> localRc;
