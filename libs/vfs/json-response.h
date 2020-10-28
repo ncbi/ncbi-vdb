@@ -29,6 +29,7 @@
 
 #include <kfc/defs.h> /* rc_t */
 #include <klib/time.h> /* KTime */
+#include <vdb/quality.h> /* VQuality */
 
 #ifdef __cplusplus
 extern "C" {
@@ -89,6 +90,7 @@ typedef struct Data {
     int64_t      sz;   /* size */
     const char * type;
     const char * vsblt;
+    VQuality     quality;
 } Data;
 
 rc_t Response4MakeEmpty  (  Response4 ** self, const struct VFSManager * vfs,
