@@ -24,6 +24,8 @@
 
 #include "services-cache.h" /* ServicesCache */
 
+#include <kdb/manager.h> /* kptTable */
+
 #include <kfg/config.h> /* KConfigRelease */
 
 #include <kfs/directory.h> /* KDirectoryRelease */
@@ -38,6 +40,11 @@
 
 #include <kns/kns-mgr-priv.h> /* KNSManagerGetResolveToCache */
 #include <kns/manager.h> /* KNSManagerRelease */
+
+#include <vdb/database.h> /* VDatabaseRelease */
+#include <vdb/manager.h> /* VDBManagerRelease */
+#include <vdb/table.h> /* VTableRelease */
+#include <vdb/vdb-priv.h> /* VDBManagerMakeReadWithVFSManager */
 
 #include <vfs/manager.h> /* VFSManagerRelease */
 #include <vfs/manager-priv.h> /* VFSManagerMakeFromKfg */
@@ -172,6 +179,7 @@ struct ServicesCache {
     KConfig * kfg;
     const VFSManager * vfs;
     const KNSManager * kns;
+    const VDBManager * vdb;
     VResolver * resolver;
 
     KRun * run;
@@ -183,17 +191,60 @@ struct ServicesCache {
 
 /******************************************************************************/
 
-static rc_t VPath_DetectQuality(VPath * self) {
+static rc_t VPath_DetectQuality(VPath * self, ServicesCache * sc) {
     /* Try to load sra description file... */
     rc_t rc = VPathLoadQuality(self);
-    if (rc == 0 && self->quality == eQualLast)
+    if (rc == 0 && self->quality == eQualLast) {
         /* Sra description file was not found.
            Try to open run to detect quality it supports... */
-        ;
+        bool fullQualt = false, synthQualt = false;
+        String path;
+        int type = kptNotFound;
+        assert(sc);
+        rc = VPathGetPath(self, &path);
+        if (rc == 0 && sc->vdb == NULL)
+            rc = VDBManagerMakeReadWithVFSManager(&sc->vdb,
+                sc->dir, (VFSManager*)sc->vfs);
+        if (rc == 0)
+            type = VDBManagerPathType(sc->vdb, "%.*s", path.size, path.addr);
+        if (rc == 0) switch (type) {
+        case kptDatabase: {
+            const VDatabase * db = NULL;
+            rc = VDBManagerOpenDBReadVPath(sc->vdb, &db, NULL, self);
+            if (rc == 0)
+                rc = VDatabaseGetQualityCapability(db, &fullQualt, &synthQualt);
+            RELEASE(VDatabase, db);
+            break;
+        }
+        case kptTable: {
+            const VTable * tbl = NULL;
+            rc = VDBManagerOpenTableReadVPath(sc->vdb, &tbl, NULL, self);
+            if (rc == 0)
+                rc = VTableGetQualityCapability(tbl, &fullQualt, &synthQualt);
+            RELEASE(VTable, tbl);
+            break;
+        }
+        default: return 0;
+        }
+        if (rc == 0) {
+            VQuality q = eQualLast;
+            if (fullQualt && synthQualt)
+                q = eQualDefault;
+            else if (synthQualt)
+                q = eQualNo;
+            else if (fullQualt)
+                q = eQualFull;
+            else
+                assert(0);
+            rc = VPathSetQuality(self, q);
+        }
+    }
     return rc;
 }
 
-static rc_t VPath_SetQuality(const VPath * cself, VQuality q) {
+static rc_t VPath_SetQuality(const VPath * cself, VQuality q,
+    ServicesCache * sc)
+{
     VPath * self = (VPath*)cself;
     if (self == NULL)
         return 0;
@@ -201,7 +252,7 @@ static rc_t VPath_SetQuality(const VPath * cself, VQuality q) {
     case eQualNo:
     case eQualFull:
     case eQualDefault: return VPathSetQuality(self, q);
-    case eQualLast: return VPath_DetectQuality(self);
+    case eQualLast: return VPath_DetectQuality(self, sc);
     default: assert(0); return 1;
     }
 }
@@ -527,25 +578,27 @@ static rc_t LocalResolve(Local * self, Local * vc) {
     return VPathAttachVdbcache((VPath*)self->path, vc->path);
 }
 
-static rc_t LocalSetQuality(Local * self, VQuality quality) {
+static rc_t LocalSetQuality(Local * self, VQuality quality,
+    ServicesCache * sc)
+{
     rc_t rc = 0, r2 = 0;
     assert(self);
-    r2 = VPath_SetQuality(self->path, quality);
+    r2 = VPath_SetQuality(self->path, quality, sc);
     if (r2 != 0 && rc == 0)
         rc = r2;
-    r2 = VPath_SetQuality(self->magic, quality);
+    r2 = VPath_SetQuality(self->magic, quality, sc);
     if (r2 != 0 && rc == 0)
         rc = r2;
-    r2 = VPath_SetQuality(self->ad, quality);
+    r2 = VPath_SetQuality(self->ad, quality, sc);
     if (r2 != 0 && rc == 0)
         rc = r2;
-    r2 = VPath_SetQuality(self->repo, quality);
+    r2 = VPath_SetQuality(self->repo, quality, sc);
     if (r2 != 0 && rc == 0)
         rc = r2;
-    r2 = VPath_SetQuality(self->out, quality);
+    r2 = VPath_SetQuality(self->out, quality, sc);
     if (r2 != 0 && rc == 0)
         rc = r2;
-    r2 = VPath_SetQuality(self->resolved, quality);
+    r2 = VPath_SetQuality(self->resolved, quality, sc);
     if (r2 != 0 && rc == 0)
         rc = r2;
     return rc;
@@ -1572,7 +1625,7 @@ static rc_t KRunSetQualities(KRun * self) {
     int i = 0;
     assert(self && sizeof transate / sizeof transate[0] == eIdxMx);
     for (i = 0; i < eIdxMx; ++i) {
-        rc_t r2 = LocalSetQuality(&self->local[i], transate[i]);
+        rc_t r2 = LocalSetQuality(&self->local[i], transate[i], self->dad);
         if (r2 != 0 && rc == 0)
             rc = r2;
     }
@@ -2984,6 +3037,7 @@ static rc_t ServicesCacheFini(ServicesCache * self) {
     RELEASE(KNSManager, self->kns);
     RELEASE(VResolver, self->resolver);
     RELEASE(VFSManager, self->vfs);
+    RELEASE(VDBManager, self->vdb);
 
     return rc;
 }
