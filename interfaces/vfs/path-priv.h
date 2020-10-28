@@ -117,6 +117,8 @@ VFS_EXTERN rc_t CC VPathOption ( const VPath * self, VPOption_t option,
  */
 rc_t VPathSetAccOfParentDb(VPath * self, const struct String * acc);
 
+rc_t VPathSaveQuality(const VPath * self);
+
 #ifdef __cplusplus
 }
 #endif
