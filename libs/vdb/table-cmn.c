@@ -1459,3 +1459,39 @@ LIB_EXPORT rc_t CC VTableIsEmpty ( const struct VTable *self, bool * empty )
     }
     return rc;
 }
+
+
+/* GetQualityCapability
+ *  can the table deliver full quality? synthetic quallity?
+ */
+LIB_EXPORT rc_t CC VTableGetQualityCapability ( const VTable *self,
+    bool *fullQuality, bool *synthQuality )
+{   /* function stub */
+    if ( self == NULL )
+        return RC ( rcVDB, rcTable, rcListing, rcSelf, rcNull );
+    if ( fullQuality != NULL )
+        *fullQuality = true;
+    if ( synthQuality != NULL )
+        *synthQuality = false;
+    return 0;
+}
+
+/* SetFullQualityType
+ *  switch table to deliver full quality
+ */
+LIB_EXPORT rc_t CC VTableSetFullQualityType ( VTable *self )
+{   /* function stub */
+    if ( self == NULL )
+        return RC ( rcVDB, rcTable, rcResetting, rcSelf, rcNull );
+    return 0;
+}
+
+/* SetSynthQualityType
+ *  switch table to deliver synthetic quality
+ */
+LIB_EXPORT rc_t CC VTableSetSynthQualityType ( VTable *self )
+{   /* function stub */
+    if (self == NULL)
+        return RC ( rcVDB, rcTable, rcResetting, rcSelf, rcNull );
+    return RC ( rcVDB, rcTable, rcResetting, rcMode, rcNotAvailable );
+}
