@@ -155,6 +155,33 @@ FIXTURE_TEST_CASE(LoalFullQualityTest, SraDescTestFixture) {
     REQUIRE_RC(Fini());
 }
 #endif
+#ifdef ALL
+FIXTURE_TEST_CASE(LoalObsoleteQualityTest, SraDescTestFixture) {
+    const char sra[] = "0.sra";
+    char path[PATH_MAX] = "";
+    REQUIRE_RC(KDirectoryResolvePath(dir, true, path, sizeof path,
+        "%s/%s", DIR, sra));
+    REQUIRE_RC(KDirectoryCreateFile(dir, &f, false,
+        0664, kcmInit | kcmParents, "%s", path));
+    char b[512] = "";
+    REQUIRE_RC(KFileWrite(f, 0, b, sizeof b, NULL));
+    REQUIRE_RC(KFileRelease(f)); f = 0;
+    SraDesc sd;
+    VQuality q(eQualFull);
+    SraDescSet(&sd, q, sizeof b - 1, eBin);
+    REQUIRE_RC(KDirectoryCreateFile(dir, &f, false,
+        0664, kcmInit | kcmParents, "%s.dsc", path));
+    REQUIRE_RC(SraDescSave(&sd, f));
+    VPath * p = NULL;
+    REQUIRE_RC(VPathMake(&p, path));
+    REQUIRE_NOT_NULL(p);
+    REQUIRE_EQ(p->quality, (uint32_t)eQualLast);
+    REQUIRE_RC(VPathLoadQuality(p));
+    REQUIRE_EQ(p->quality, (uint32_t)eQualLast);
+    REQUIRE_RC(VPathRelease(p));
+    REQUIRE_RC(Fini());
+}
+#endif
 extern "C" {
     ver_t CC KAppVersion(void) { return 0; }
     rc_t CC KMain(int argc, char * argv[]) {
