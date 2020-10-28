@@ -46,6 +46,7 @@ static void DataInit(Data * self) {
     self->id = -1;
     self->exp = -1;
     self->encryptedForProjectId = -1;
+    self->quality = eQualLast;
 }
 
 static void DataClone(const Data * self, Data * clone) {
@@ -78,12 +79,14 @@ static void DataClone(const Data * self, Data * clone) {
     clone->tic = self->tic;
     clone->type = self->type;
     clone->vsblt = self->vsblt;
+    clone->quality = self->quality;
 }
 
 static rc_t DataUpdate(const Data * self,
     Data * next, const KJsonObject * node, JsonStack * path)
 {
     const char * name = NULL;
+    const char * str = NULL;
 
     assert(next);
 
@@ -147,7 +150,39 @@ static rc_t DataUpdate(const Data * self,
     name = "type";
     StrSet(&next->type, KJsonObjectGetMember(node, name), name, path);
 
+    name = "quality";
+    StrSet(&str, KJsonObjectGetMember(node, name), name, path);
+    if (str != NULL) {
+        String no, full, dbl;
+        CONST_STRING(&no, "no");
+        CONST_STRING(&full, "full");
+        CONST_STRING(&dbl, "dbl");
+        if (string_cmp(str, string_measure(str, NULL),
+            no.addr, no.size, full.size) == 0)
+        {
+            next->quality = eQualNo;
+        }
+        else if (string_cmp(str, string_measure(str, NULL),
+            full.addr, full.size, full.size) == 0)
+        {
+            next->quality = eQualFull;
+        }
+        else if (string_cmp(str, string_measure(str, NULL),
+            dbl.addr, dbl.size, dbl.size) == 0)
+        {
+            next->quality = eQualDefault;
+        }
+    }
+
     return 0;
+}
+
+static rc_t VPath_SetQuality(VPath * self, const Data * data) {
+    rc_t rc = 0;
+    assert(data);
+    if (data->quality < eQualLast)
+        rc = VPathSetQuality(self, data->quality);
+    return rc;
 }
 
 /* We are adding a location to file */
@@ -165,33 +200,7 @@ rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
     DataUpdate(dad, &data, node, path);
 
     value = KJsonObjectGetMember(node, name);
-
     assert(!value);
-    /*if (value != NULL) {
-          uint32_t i = 0;
-
-          const KJsonArray * array = KJsonValueToArray(value);
-          uint32_t n = KJsonArrayGetLength(array);
-          rc = JsonStackPushArr(path, name);
-          if (rc != 0)
-              return rc;
-          for (i = 0; i < n; ++i) {
-              rc_t r2 = 0;
-
-              const KJsonObject * object = NULL;
-
-              value = KJsonArrayGetElement(array, i);
-              object = KJsonValueToObject(value);
-              r2 = ItemAddElmsSdl(self, object, &data, path);
-              if (r2 != 0 && rc == 0)
-                  rc = r2;
-
-              if (i + 1 < n)
-                  JsonStackArrNext(path);
-          }
-
-          JsonStackPop(path);
-      }*/
 
     value = KJsonObjectGetMember(node, "link");
     if (value != NULL) {
@@ -298,6 +307,9 @@ rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
             rc = VPathMakeFromUrl(&path, &url, NULL, true, &id, ldata.sz,
                 mod, hasMd5 ? md5 : NULL, 0, ldata.srv, &objectType, &type,
                 ceRequired, payRequired, ldata.name, projectId, 128, &acc);
+
+            if (rc == 0)
+                rc = VPath_SetQuality(path, &data);
 
             if (rc == 0)
                 VPathMarkHighReliability(path, true);
