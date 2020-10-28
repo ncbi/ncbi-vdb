@@ -21,6 +21,14 @@
 *  Please cite the author in any work or product based on this material.
 * =========================================================================== */
 
+FIXTURE_TEST_CASE(Setup, TRQFixture) {
+    TRQHelper f(GetName());
+    REQUIRE_RC(KDirectoryResolvePath(f.dir, true, f.spath, sizeof f.spath,
+        "/tmp/vdb"));
+    f.CreateFile();
+    f.Release();
+}
+
 // default quality / remote:not found
 #ifdef ALL
 /*         v requested quality - 0:dflt 1:no 2:full
@@ -60,7 +68,7 @@ FIXTURE_TEST_CASE(_000_00_env, TRQFixture) {
         "}");
     putenv((char*)ENV_MAGIC_REMOTE "=h");
     putenv((char*)ENV_MAGIC_REMOTE_VDBCACHE "=hv");
-    putenv((char*)ENV_MAGIC_LOCAL "=/");
+    putenv((char*)ENV_MAGIC_LOCAL "=/tmp/vdb");
     putenv((char*)ENV_MAGIC_LOCAL_VDBCACHE "=/tmp");
     putenv((char*)ENV_MAGIC_CACHE "=/t");
     putenv((char*)ENV_MAGIC_CACHE_VDBCACHE "=/tv");
@@ -72,7 +80,7 @@ FIXTURE_TEST_CASE(_000_00_env, TRQFixture) {
 
     REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
     REQUIRE(f.qVc);
-    f.PathEquals(f.qLocal, "/");
+    f.PathEquals(f.qLocal, "/tmp/vdb");
     f.VdbcacheEquals("/tmp", f.qLocal);
     f.PathEquals(f.qCache, "/t");
     f.VdbcacheEquals("/tv", f.qCache);
@@ -835,7 +843,7 @@ FIXTURE_TEST_CASE(_011_11_env, TRQFixture) {
         "}");
     putenv((char*)ENV_MAGIC_REMOTE "=h");
     putenv((char*)ENV_MAGIC_REMOTE_VDBCACHE "=hv");
-    putenv((char*)ENV_MAGIC_LOCAL "=/");
+    putenv((char*)ENV_MAGIC_LOCAL "=/tmp/vdb");
     putenv((char*)ENV_MAGIC_LOCAL_VDBCACHE "=/tmp");
     putenv((char*)ENV_MAGIC_CACHE "=/t");
     putenv((char*)ENV_MAGIC_CACHE_VDBCACHE "=/tv");
@@ -857,7 +865,7 @@ FIXTURE_TEST_CASE(_011_11_env, TRQFixture) {
 
     REQUIRE_RC(KSrvRunQuery(f.run, &f.qLocal, &f.qRemote, &f.qCache, &f.qVc));
     REQUIRE(f.qVc);
-    f.PathEquals(f.qLocal, "/");
+    f.PathEquals(f.qLocal, "/tmp/vdb");
     f.VdbcacheEquals("/tmp", f.qLocal);
     f.PathEquals(f.qCache, "/t");
     f.VdbcacheEquals("/tv", f.qCache);
