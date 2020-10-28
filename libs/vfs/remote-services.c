@@ -433,6 +433,8 @@ struct KService {
 
     bool resoveOidName;
     int32_t quality; /* quality type - 0: default, 1: no-qual, 2: full-qual */
+    bool skipLocal;
+    bool skipRemote;
 };
 
 
@@ -5100,6 +5102,21 @@ rc_t KServiceGetResolver ( KService * self, const String * ticket,
     }
 
     return 0;
+}
+
+
+rc_t KServiceResolve(KService * self, bool local, bool remote) {
+    assert(self);
+
+    self->skipLocal = !local;
+    self->skipRemote = !remote;
+
+    return 0;
+}
+
+bool KServiceSkipLocal(const KService * self) {
+    assert(self);
+    return self->skipLocal;
 }
 
 rc_t KServiceNamesExecuteExtImpl ( KService * self, VRemoteProtocols protocols,

@@ -3289,7 +3289,7 @@ static rc_t ServicesCacheLinkLocalToRemote(ServicesCache * self) {
 /* The cache has all remote[-s]; now resolve all cache[-s] and local[-s]
    Prepare results for KSrvRunQuery() */
 rc_t ServicesCacheComplete(ServicesCache * self,
-    const char * outDir, const char * outFile)
+    const char * outDir, const char * outFile, bool skipLocal)
 {
     rc_t rc = 0;
 
@@ -3308,7 +3308,7 @@ rc_t ServicesCacheComplete(ServicesCache * self,
 #ifdef DBGNG
     STSMSG(STS_FIN, ("%s: before calling ServicesCacheFindLocal...", __func__));
 #endif
-    if (rc == 0) /* resolve local[-s] */
+    if (rc == 0 && !skipLocal) /* resolve local[-s] */
         rc = ServicesCacheFindLocal(self, outDir, outFile);
 
 #ifdef DBGNG
