@@ -56,6 +56,11 @@
  *  opaque handle to library
  */
 
+LIB_EXPORT rc_t CC VDBManagerMakeWithVFSManager(const VDBManager ** mgrp,
+    const KDirectory *wd, struct VFSManager *vmgr)
+{
+    return VDBManagerMakeReadWithVFSManager(mgrp, wd, NULL);
+}
 
 /* MakeRead
  * MakeReadWithVFSManager

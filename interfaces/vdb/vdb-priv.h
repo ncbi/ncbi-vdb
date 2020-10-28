@@ -115,7 +115,8 @@ VDB_EXTERN rc_t CC VDBManagerMakeReadWithVFSManager (
     struct KDirectory const *wd, struct VFSManager *vmgr );
 VDB_EXTERN rc_t CC VDBManagerMakeUpdateWithVFSManager (
     struct VDBManager **mgr, struct KDirectory *wd, struct VFSManager *vmgr );
-
+VDB_EXTERN rc_t CC VDBManagerMakeWithVFSManager ( struct VDBManager const **mgr,
+    struct KDirectory const *wd, struct VFSManager *vmgr );
 
 /** Reset VResolver to set protected repository context */
 VDB_EXTERN rc_t CC VDBManagerSetResolver
