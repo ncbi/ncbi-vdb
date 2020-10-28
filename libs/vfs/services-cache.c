@@ -44,7 +44,7 @@
 #include <vdb/database.h> /* VDatabaseRelease */
 #include <vdb/manager.h> /* VDBManagerRelease */
 #include <vdb/table.h> /* VTableRelease */
-#include <vdb/vdb-priv.h> /* VDBManagerMakeReadWithVFSManager */
+#include <vdb/vdb-priv.h> /* VDBManagerMakeWithVFSManager */
 
 #include <vfs/manager.h> /* VFSManagerRelease */
 #include <vfs/manager-priv.h> /* VFSManagerMakeFromKfg */
@@ -203,7 +203,7 @@ static rc_t VPath_DetectQuality(VPath * self, ServicesCache * sc) {
         assert(sc);
         rc = VPathGetPath(self, &path);
         if (rc == 0 && sc->vdb == NULL)
-            rc = VDBManagerMakeReadWithVFSManager(&sc->vdb,
+            rc = VDBManagerMakeWithVFSManager(&sc->vdb,
                 sc->dir, (VFSManager*)sc->vfs);
         if (rc == 0)
             type = VDBManagerPathType(sc->vdb, "%.*s", path.size, path.addr);
