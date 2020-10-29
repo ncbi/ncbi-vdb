@@ -474,7 +474,7 @@ static const char * SDExt(const SraDesc * self) {
     }
 }
 
-static rc_t SraDescSaveQuality(const String * sra, VQuality quality) {
+rc_t SraDescSaveQuality(const String * sra, VQuality quality) {
     rc_t rc = 0;
 
     KDirectory * dir = NULL;
@@ -483,11 +483,13 @@ static rc_t SraDescSaveQuality(const String * sra, VQuality quality) {
     uint64_t size = 0;
     SraDesc sd;
 
+    assert(sra);
+
     if (rc == 0)
         rc = KDirectoryNativeDir(&dir);
 
     if (rc == 0)
-        rc = KDirectoryOpenFileRead(dir, &in, "%S", sra);
+        rc = KDirectoryOpenFileRead(dir, &in, "%.*s", sra->size, sra->addr);
 
     if (rc == 0)
         rc = KFileSize(in, &size);
@@ -495,8 +497,8 @@ static rc_t SraDescSaveQuality(const String * sra, VQuality quality) {
     SraDescSet(&sd, quality, size, eBin);
 
     if (rc == 0)
-        rc = KDirectoryCreateFile(dir, &out, false,
-            0664, kcmInit | kcmParents, "%S%s", sra, SDExt(&sd));
+        rc = KDirectoryCreateFile(dir, &out, false, 0664,
+            kcmInit | kcmParents, "%.*s%s", sra->size, sra->addr, SDExt(&sd));
 
     if (rc == 0)
         SraDescSave(&sd, out);
@@ -508,7 +510,7 @@ static rc_t SraDescSaveQuality(const String * sra, VQuality quality) {
     return rc;
 }
 
-static rc_t SraDescLoadQuality(const String * sra, VQuality * quality) {
+rc_t SraDescLoadQuality(const String * sra, VQuality * quality) {
     rc_t rc = 0;
 
     char path[PATH_MAX] = "";
