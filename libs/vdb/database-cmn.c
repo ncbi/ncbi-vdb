@@ -711,7 +711,7 @@ LIB_EXPORT rc_t CC VDBManagerOpenDBReadVPath ( const VDBManager *self,
     return VDBManagerOpenDBReadVPathImpl ( self, dbp, schema, path, true );
 }
 
-LIB_EXPORT rc_t CC VDBManagerOpenDBReadVPathWoVdbcache ( const VDBManager *self,
+LIB_EXPORT rc_t CC VDBManagerOpenDBReadVPathLight ( const VDBManager *self,
     const VDatabase ** dbp, const VSchema *schema,
     const VPath * path )
 {

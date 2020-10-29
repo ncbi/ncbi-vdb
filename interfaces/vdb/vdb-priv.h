@@ -163,10 +163,12 @@ VDB_EXTERN rc_t CC VSchemaDumpToKMDataNode ( struct VSchema const * self,
  * VDatabase
  */
 
-/* OpenDBRead Without Vdbcache
- *  don't try to locate and open vdbcache - just to analyze VDatabase
+/* OpenDBReadVPathLight
+ *  used just to analyze VDatabase:
+ *  - don't try to locate and open vdbcache
+ *  - don't fail if database's quality does not match requested one
  */
-VDB_EXTERN rc_t CC VDBManagerOpenDBReadVPathWoVdbcache(
+VDB_EXTERN rc_t CC VDBManagerOpenDBReadVPathLight(
     struct VDBManager const *self, const struct VDatabase **db,
     struct VSchema const *schema, const struct VPath *path);
 
