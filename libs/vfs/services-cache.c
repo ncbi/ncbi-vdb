@@ -2202,7 +2202,15 @@ static rc_t KRunCacheForRemote(KRun * self, int32_t idx, bool vdbcache,
                 else
                     rc = VPathMakeFmt(&(self->cache[idx].path), path);
             }
+            resolved = true;
         }
+    }
+
+    if (resolved && !vdbcache) {
+        VQuality q = eQualLast;
+        assert(self->remote[idx].path);
+        q = VPathGetQuality(*self->remote[idx].path);
+        rc = VPathSetQuality(self->cache[idx].path, q);
     }
 
     StringWhack(root);
