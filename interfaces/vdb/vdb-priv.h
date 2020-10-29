@@ -57,6 +57,7 @@ struct KDBManager;
 struct KDirectory;
 struct VDBManager;
 struct VFSManager;
+struct VPath;
 struct VResolver;
 struct VSchema;
 struct VTypedef;
@@ -161,6 +162,13 @@ VDB_EXTERN rc_t CC VSchemaDumpToKMDataNode ( struct VSchema const * self,
 /*--------------------------------------------------------------------------
  * VDatabase
  */
+
+/* OpenDBRead Without Vdbcache
+ *  don't try to locate and open vdbcache - just to analyze VDatabase
+ */
+VDB_EXTERN rc_t CC VDBManagerOpenDBReadVPathWoVdbcache(
+    struct VDBManager const *self, const struct VDatabase **db,
+    struct VSchema const *schema, const struct VPath *path);
 
 /* OpenKDatabase
  *  returns a new reference to underlying KDatabase
