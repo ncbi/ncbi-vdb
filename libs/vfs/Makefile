@@ -82,6 +82,7 @@ VFS_SRC_CMN = \
 	sdl-response \
 	services \
 	services-cache \
+	SraDesc \
 	srv-response \
 	syspath \
 

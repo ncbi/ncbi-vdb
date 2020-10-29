@@ -34,6 +34,7 @@ TEST_TOOLS = \
 	test-resolver-with-log \
 	test-sdl-response \
 	test-services \
+	test-SraDesc \
 	test-caching \
 	test-names-30 \
 	test-path \
@@ -263,4 +264,16 @@ SERVICES_OBJ = \
 	$(addsuffix .$(OBJX),$(SERVICES_SRC))
 
 $(TEST_BINDIR)/test-services: $(SERVICES_OBJ)
+	$(LP) --exe -o $@ $^ $(RESOLVERTEST_LIB)
+
+#----------------------------------------------------------------
+# Test SraDesc
+#
+SD_SRC = \
+	test-SraDesc
+
+SD_OBJ = \
+	$(addsuffix .$(OBJX),$(SD_SRC))
+
+$(TEST_BINDIR)/test-SraDesc: $(SD_OBJ)
 	$(LP) --exe -o $@ $^ $(RESOLVERTEST_LIB)

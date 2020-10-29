@@ -869,11 +869,12 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
                 }
             }
             if (rcc == 0 && (rc == 0 || rc == RC_NOT_FND)) {
+                bool skipLocal = KServiceSkipLocal(self);
 #ifdef DBGNG
                 STSMSG(STS_FIN, ("%s: entering ServicesCacheComplete...",
                     __func__));
 #endif
-                rcc = ServicesCacheComplete(cache, outDir, outFile);
+                rcc = ServicesCacheComplete(cache, outDir, outFile, skipLocal);
 #ifdef DBGNG
                 STSMSG(STS_FIN, ("%s: ...ServicesCacheComplete done with %R",
                     __func__, rcc));

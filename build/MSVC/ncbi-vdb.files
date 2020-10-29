@@ -1789,6 +1789,9 @@
     <ClCompile Include="..\..\..\libs\vfs\services-cache.c">
         <ObjectFileName >$(IntDir)vfs-%(Filename).obj</ObjectFileName>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\vfs\SraDesc.c">
+        <ObjectFileName >$(IntDir)vfs-%(Filename).obj</ObjectFileName>
+    </ClCompile>
     <ClCompile Include="..\..\..\libs\vfs\remote-services.c">
         <ObjectFileName >$(IntDir)vfs-%(Filename).obj</ObjectFileName>
     </ClCompile>
