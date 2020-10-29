@@ -28,6 +28,7 @@
 */
 
 
+#include <vdb/quality.h> /* VQuality */
 #include <vfs/services.h> /* KService */
 
 
