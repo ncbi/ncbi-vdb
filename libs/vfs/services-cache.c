@@ -210,7 +210,7 @@ static rc_t VPath_DetectQuality(VPath * self, ServicesCache * sc) {
         if (rc == 0) switch (type) {
         case kptDatabase: {
             const VDatabase * db = NULL;
-            rc = VDBManagerOpenDBReadVPath(sc->vdb, &db, NULL, self);
+            rc = VDBManagerOpenDBReadVPathWoVdbcache(sc->vdb, &db, NULL, self);
             if (rc == 0)
                 rc = VDatabaseGetQualityCapability(db, &fullQualt, &synthQualt);
             RELEASE(VDatabase, db);
