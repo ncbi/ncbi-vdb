@@ -992,7 +992,7 @@ LIB_EXPORT rc_t CC VDBManagerSetQuality(VDBManager * self,
     return 0;
 }
 
-#define USE_SERVICES_CACHE
+/*#define USE_SERVICES_CACHE*/
 
 LIB_EXPORT VQuality CC VDBManagerGetQuality(const VDBManager * self) {
     rc_t rc = 0;
