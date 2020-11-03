@@ -328,7 +328,11 @@ extern "C" {
         if (
 0)          KDbgSetString("VFS");
         KConfigDisableUserSettings();
+#ifndef USE_SERVICES_CACHE
+        return 0;
+#else
         return TestResolveQualSuite(argc, argv);
+#endif
     }
 }
 
