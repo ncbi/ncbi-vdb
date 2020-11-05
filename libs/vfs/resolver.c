@@ -5190,6 +5190,8 @@ rc_t CC VResolverQueryDo ( const VResolver * self, VRemoteProtocols protocols,
             if (rc == 0)
                 rc = KServiceMakeWithMgr(&service, NULL, mgr, self->kfg);
             /*KConfigPrint(self->kfg,0);*/
+            if (rc == 0)
+                rc = KServiceResolve(service, aLocal!=NULL, aRemote != NULL);
             if (rc == 0) {
                 ra = VPathGetAcc(query, &acc);
                 if (ra == 0 && acc.size > 0 && acc.addr != NULL)

@@ -4407,11 +4407,14 @@ static bool VFSManagerCheckEnvAndAdImpl(const VFSManager * self,
             if ((KDirectoryPathType(self->cwd, "%s/%s.noqual.sra", rs, slash) &
                 ~kptAlias) == kptFile)
             {
-                rc_t r = VFSManagerMakePath(self, (VPath **)outPath,
+                rc_t r = VFSManagerMakePath(self, (VPath**)outPath,
                     "%s/%s.noqual.sra", rs, slash);
-                if (r == 0)
+                if (r != 0)
+                    rc = 0;
+                else {
+                    rc = VPathSetQuality((VPath*)outPath, eQualNo);
                     found = true;
-                rc = 0;
+                }
             }
         }
         if (!found && (quality == eQualDefault || quality == eQualFull

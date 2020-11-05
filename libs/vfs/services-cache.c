@@ -24,6 +24,8 @@
 
 #include "services-cache.h" /* ServicesCache */
 
+#include <kdb/manager.h> /* kptTable */
+
 #include <kfg/config.h> /* KConfigRelease */
 
 #include <kfs/directory.h> /* KDirectoryRelease */
@@ -38,6 +40,11 @@
 
 #include <kns/kns-mgr-priv.h> /* KNSManagerGetResolveToCache */
 #include <kns/manager.h> /* KNSManagerRelease */
+
+#include <vdb/database.h> /* VDatabaseRelease */
+#include <vdb/manager.h> /* VDBManagerRelease */
+#include <vdb/table.h> /* VTableRelease */
+#include <vdb/vdb-priv.h> /* VDBManagerMakeWithVFSManager */
 
 #include <vfs/manager.h> /* VFSManagerRelease */
 #include <vfs/manager-priv.h> /* VFSManagerMakeFromKfg */
@@ -172,6 +179,7 @@ struct ServicesCache {
     KConfig * kfg;
     const VFSManager * vfs;
     const KNSManager * kns;
+    const VDBManager * vdb;
     VResolver * resolver;
 
     KRun * run;
@@ -180,6 +188,74 @@ struct ServicesCache {
 
     BSTree responses; /* TODO */
 };
+
+/******************************************************************************/
+
+static rc_t VPath_DetectQuality(VPath * self, ServicesCache * sc) {
+    /* Try to load sra description file... */
+    rc_t rc = VPathLoadQuality(self);
+    if (rc == 0 && self->quality == eQualLast) {
+        /* Sra description file was not found.
+           Try to open run to detect quality it supports... */
+        bool fullQualt = false, synthQualt = false;
+        String path;
+        int type = kptNotFound;
+        assert(sc);
+        rc = VPathGetPath(self, &path);
+        if (rc == 0 && sc->vdb == NULL)
+            rc = VDBManagerMakeWithVFSManager(&sc->vdb,
+                sc->dir, (VFSManager*)sc->vfs);
+        if (rc == 0)
+            type = VDBManagerPathType(sc->vdb, "%.*s", path.size, path.addr);
+        if (rc == 0) switch (type) {
+        case kptDatabase: {
+            const VDatabase * db = NULL;
+            rc = VDBManagerOpenDBReadVPathLight(sc->vdb, &db, NULL, self);
+            if (rc == 0)
+                rc = VDatabaseGetQualityCapability(db, &fullQualt, &synthQualt);
+            RELEASE(VDatabase, db);
+            break;
+        }
+        case kptTable: {
+            const VTable * tbl = NULL;
+            rc = VDBManagerOpenTableReadVPath(sc->vdb, &tbl, NULL, self);
+            if (rc == 0)
+                rc = VTableGetQualityCapability(tbl, &fullQualt, &synthQualt);
+            RELEASE(VTable, tbl);
+            break;
+        }
+        default: return 0;
+        }
+        if (rc == 0) {
+            VQuality q = eQualLast;
+            if (fullQualt && synthQualt)
+                q = eQualDefault;
+            else if (synthQualt)
+                q = eQualNo;
+            else if (fullQualt)
+                q = eQualFull;
+            else
+                assert(0);
+            rc = VPathSetQuality(self, q);
+        }
+    }
+    return rc;
+}
+
+static rc_t VPath_SetQuality(const VPath * cself, VQuality q,
+    ServicesCache * sc)
+{
+    VPath * self = (VPath*)cself;
+    if (self == NULL)
+        return 0;
+    switch (q) {
+    case eQualNo:
+    case eQualFull:
+    case eQualDefault: return VPathSetQuality(self, q);
+    case eQualLast: return VPath_DetectQuality(self, sc);
+    default: assert(0); return 1;
+    }
+}
 
 /******************************************************************************/
 
@@ -331,7 +407,7 @@ static rc_t LocalFini(Local * self) {
     return rc;
 }
 
-/* initialize */
+/* Initialize */
 static void LocalInit(Local * self) {
     assert(self);
 
@@ -425,7 +501,7 @@ static rc_t LocalAttachVdbcache(Local * self, const Local * vc) {
     return rc;
 }
 
-/* does Local have vdbcache ? */
+/* Does Local have vdbcache ? */
 static rc_t LocalHasVdbcache(
     const Local * self, bool * has, bool * vdbcacheChecked)
 {
@@ -458,7 +534,7 @@ static rc_t LocalAttachRemoteVdbcache(
     return 0;
 }
 
-/* find the best local path if there are multiple */
+/* Find the best local path if there are multiple */
 static rc_t LocalResolve(Local * self, Local * vc) {
     assert(self && !self->path && !vc->path);
 
@@ -500,6 +576,32 @@ static rc_t LocalResolve(Local * self, Local * vc) {
         self->path = self->repo;
 
     return VPathAttachVdbcache((VPath*)self->path, vc->path);
+}
+
+static rc_t LocalSetQuality(Local * self, VQuality quality,
+    ServicesCache * sc)
+{
+    rc_t rc = 0, r2 = 0;
+    assert(self);
+    r2 = VPath_SetQuality(self->path, quality, sc);
+    if (r2 != 0 && rc == 0)
+        rc = r2;
+    r2 = VPath_SetQuality(self->magic, quality, sc);
+    if (r2 != 0 && rc == 0)
+        rc = r2;
+    r2 = VPath_SetQuality(self->ad, quality, sc);
+    if (r2 != 0 && rc == 0)
+        rc = r2;
+    r2 = VPath_SetQuality(self->repo, quality, sc);
+    if (r2 != 0 && rc == 0)
+        rc = r2;
+    r2 = VPath_SetQuality(self->out, quality, sc);
+    if (r2 != 0 && rc == 0)
+        rc = r2;
+    r2 = VPath_SetQuality(self->resolved, quality, sc);
+    if (r2 != 0 && rc == 0)
+        rc = r2;
+    return rc;
 }
 
 /******************************************************************************/
@@ -789,7 +891,7 @@ static rc_t KRunAddRemote(KRun * self, const VPath * path) {
 #define STS_FIN  3
 #endif
 
-/* resolve local[-s] */
+/* find local[-s] */
 static void KRunFindLocal(KRun * self,
     int64_t projectId, const char * outDir, const char * outFile)
 {
@@ -1508,6 +1610,34 @@ static void KRunFindLocal(KRun * self,
 #ifdef DBGNG
     STSMSG(STS_FIN, ("%s: exiting with void", __func__));
 #endif
+}
+
+/* set qualities to local[-s]  */
+static rc_t KRunSetQualities(KRun * self) {
+    static int transate[] = {
+        eQualNo, /* eIdxNo */
+        eQualFull, /* eIdxYes */
+        eQualDefault, /* eIdxDbl */
+        eQualLast, /* eIdxAsk */
+        eQualLast, /* eIdxRunDir */
+    };
+    rc_t rc = 0;
+    int i = 0;
+    assert(self && sizeof transate / sizeof transate[0] == eIdxMx);
+    for (i = 0; i < eIdxMx; ++i) {
+        rc_t r2 = LocalSetQuality(&self->local[i], transate[i], self->dad);
+        if (r2 != 0 && rc == 0)
+            rc = r2;
+    }
+    return rc;
+}
+
+/* resolve local[-s] */
+static rc_t KRunResolveLocals(KRun * self,
+    int64_t projectId, const char * outDir, const char * outFile)
+{
+    KRunFindLocal(self, projectId, outDir, outFile);
+    return KRunSetQualities(self);
 }
 
 /* attach vdbcaches to local[-s] and remote[-s] */
@@ -2778,11 +2908,15 @@ static void CC BSTNodePrepareQuery(BSTNode *n, void *data) {
 
 /* resolve local[-s] */
 static void CC BSTNodeFindLocal(BSTNode *n, void *data) {
+    rc_t rc = 0;
+
     BSTData * p = data;
     const BSTItem *sn = (const BSTItem*)n;
     assert(sn && p);
 
-    KRunFindLocal(sn->run, p->projectId, p->outDir, p->outFile);
+    rc = KRunResolveLocals(sn->run, p->projectId, p->outDir, p->outFile);
+    if (rc != 0 && p->rc == 0)
+        p->rc = rc;
 }
 
 /* attach vdbcaches to local[-s] and remote[-s] */
@@ -2903,6 +3037,7 @@ static rc_t ServicesCacheFini(ServicesCache * self) {
     RELEASE(KNSManager, self->kns);
     RELEASE(VResolver, self->resolver);
     RELEASE(VFSManager, self->vfs);
+    RELEASE(VDBManager, self->vdb);
 
     return rc;
 }
@@ -3096,9 +3231,10 @@ static rc_t ServicesCacheFindLocal(ServicesCache * self,
 
         if (self->run != NULL) {
 #ifdef DBGNG
-            STSMSG(STS_FIN, ("%s: before calling KRunFindLocal...", __func__));
+            STSMSG(STS_FIN,
+                ("%s: before calling KRunResolveLocals...", __func__));
 #endif
-            KRunFindLocal(self->run, self->projectId, outDir, outFile);
+            rc = KRunResolveLocals(self->run, self->projectId, outDir, outFile);
         }
 
 #ifdef DBGNG
@@ -3153,7 +3289,7 @@ static rc_t ServicesCacheLinkLocalToRemote(ServicesCache * self) {
 /* The cache has all remote[-s]; now resolve all cache[-s] and local[-s]
    Prepare results for KSrvRunQuery() */
 rc_t ServicesCacheComplete(ServicesCache * self,
-    const char * outDir, const char * outFile)
+    const char * outDir, const char * outFile, bool skipLocal)
 {
     rc_t rc = 0;
 
@@ -3172,7 +3308,7 @@ rc_t ServicesCacheComplete(ServicesCache * self,
 #ifdef DBGNG
     STSMSG(STS_FIN, ("%s: before calling ServicesCacheFindLocal...", __func__));
 #endif
-    if (rc == 0) /* resolve local[-s] */
+    if (rc == 0 && !skipLocal) /* resolve local[-s] */
         rc = ServicesCacheFindLocal(self, outDir, outFile);
 
 #ifdef DBGNG

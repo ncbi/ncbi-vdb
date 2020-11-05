@@ -74,6 +74,10 @@ rc_t KSrvRespFileGetHttp ( const KSrvRespFile * self,
 rc_t KSrvRespFileGetName(const struct KSrvRespFile * self, const char ** name);
 
 
+rc_t SraDescConvert(struct KDirectory * dir, const char * path,
+    bool * recognized);
+
+
 #ifdef __cplusplus
 }
 #endif
