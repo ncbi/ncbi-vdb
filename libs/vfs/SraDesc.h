@@ -1,4 +1,4 @@
-/*===========================================================================
+/*==============================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
 *               National Center for Biotechnology Information
@@ -19,11 +19,4 @@
 *  purpose.
 *
 *  Please cite the author in any work or product based on this material.
-* =========================================================================== */
-
-#include <klib/defs.h> /* rc_t */
-
-struct KDirectory;
-
-rc_t SraDescConvert(struct KDirectory * dir, const char * path,
-    bool * recognized);
+* ============================================================================*/

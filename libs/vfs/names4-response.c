@@ -59,6 +59,7 @@ typedef struct File {
     char * name;
 
     int64_t size;
+    VQuality quality;
 
     const VPath * http; /* http path from path[]
 when all path[] are alternative ways to get the same acc by different protocols:
@@ -568,6 +569,7 @@ rc_t ItemAddFormat ( Item * self, const char * cType, const Data * dad,
         if ( self -> elm == NULL )
             return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
         self->elm->size = -1; /* unknown */
+        self->elm->quality = dad == NULL ? eQualLast : dad->quality;
         self -> nElm = n;
     }
     else {
@@ -2531,7 +2533,28 @@ rc_t KSrvRespFileGetFormat ( const KSrvRespFile * self,
     return 0;
 }
 
-rc_t KSrvRespFileGetClass(const KSrvRespFile * self, const char ** itemClass) {
+rc_t KSrvRespFileGetQuality(const KSrvRespFile * self, VQuality * quality)
+{
+    assert(self && self->file && quality);
+
+    *quality = self->file->quality;
+
+    return 0;
+}
+
+rc_t KSrvRespFileGetAccession(const KSrvRespFile * self,
+    const char ** acc)
+{
+    assert(self && self->item && acc);
+
+    *acc = self->item->acc;
+
+    return 0;
+}
+
+rc_t KSrvRespFileGetClass(const KSrvRespFile * self,
+    const char ** itemClass)
+{
     assert(self && self->item && itemClass);
 
     *itemClass = self->item->itemClass;

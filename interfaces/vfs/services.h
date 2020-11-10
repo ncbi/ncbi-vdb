@@ -29,6 +29,7 @@
 
 
 #include <kfg/kart.h>     /* EObjectType */
+#include <vdb/quality.h> /* VQuality */
 #include <vfs/resolver.h> /* VRemoteProtocols */
 
 
@@ -219,11 +220,14 @@ rc_t KSrvRespObjIteratorNextFile ( KSrvRespObjIterator * self,
 rc_t KSrvRespFileGetAccOrId(const KSrvRespFile * self,
     const char ** acc, uint32_t * id);
 rc_t KSrvRespFileGetClass(const KSrvRespFile * self, const char ** itemClass);
+rc_t KSrvRespFileGetAccession(const KSrvRespFile * self, const char ** acc);
 
 /* type: sra, vdbcache, etc. */
 rc_t KSrvRespFileGetType(const KSrvRespFile * self, const char ** type);
 rc_t KSrvRespFileGetFormat(const struct KSrvRespFile * self,
     ESrvFileFormat * ff);
+
+rc_t KSrvRespFileGetQuality(const KSrvRespFile * self, VQuality * quality);
 
 rc_t KSrvRespFileGetSize(const KSrvRespFile * self, uint64_t *size);
 rc_t KSrvRespFileGetCache ( const KSrvRespFile * self,

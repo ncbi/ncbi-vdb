@@ -28,6 +28,7 @@
 */
 
 
+#include <vdb/quality.h> /* VQuality */
 #include <vfs/services.h> /* KService */
 
 
@@ -77,6 +78,8 @@ rc_t KSrvRespFileGetName(const struct KSrvRespFile * self, const char ** name);
 rc_t SraDescConvert(struct KDirectory * dir, const char * path,
     bool * recognized);
 
+rc_t SraDescLoadQuality(const String * sra, VQuality * quality);
+rc_t SraDescSaveQuality(const String * sra, VQuality quality);
 
 #ifdef __cplusplus
 }
