@@ -694,19 +694,29 @@ rc_t VTableWriteCursorCommitRow ( VTableCursor *self )
 
         /* tell columns to commit the row, and allow
            each to return an earlier cutoff id ( half-closed ) */
-        if ( VectorDoUntil ( & self -> dad . row, false, WColumnCommitRow, & self -> dad . end_id ) )
+        int64_t new_end_id = self -> dad . end_id;
+        if ( VectorDoUntil ( & self -> dad . row, false, WColumnCommitRow, & new_end_id ) )
         {
             self -> dad . state = vcFailed;
             return RC ( rcVDB, rcCursor, rcCommitting, rcMemory, rcExhausted );
         }
 
-        /* returned result should never be <= start id */
-        assert ( self -> dad . end_id > self -> dad . start_id );
+        /* returned result should never be < start id */
+        assert ( new_end_id >= self -> dad . start_id );
 
-        /* if returned result dips down into the range of buffered rows
-           then one or more columns has requested an automatic page commit */
-        self -> dad . state = ( self -> dad . end_id <= self -> dad . row_id ) ? vcPageCommit : vcRowCommitted;
+        if ( new_end_id == self -> dad . start_id )
+        {   /* one or more columns had a cell that is too long and requested an automatic (1-row) page commit */
+            self -> dad . state = vcPageCommit;
+        }
+        else
+        {
+            /* if returned result dips down into the range of buffered rows
+               then one or more columns has requested an automatic page commit */
+            self -> dad . end_id = new_end_id;
+            self -> dad . state = ( self -> dad . end_id <= self -> dad . row_id ) ? vcPageCommit : vcRowCommitted;
+        }
     }
+
 
     return rc;
 }

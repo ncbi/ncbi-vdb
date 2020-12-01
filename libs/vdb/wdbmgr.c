@@ -81,7 +81,7 @@ LIB_EXPORT rc_t CC VDBManagerMakeUpdateWithVFSManager ( VDBManager ** mgrp,
         rc = RC ( rcVDB, rcMgr, rcConstructing, rcParam, rcNull );
     else
     {
-        VDBManager *mgr = malloc ( sizeof * mgr );
+        VDBManager *mgr = calloc ( 1, sizeof * mgr );
         if ( mgr == NULL )
             rc = RC ( rcVDB, rcMgr, rcConstructing, rcMemory, rcExhausted );
         else
@@ -297,10 +297,11 @@ LIB_EXPORT rc_t CC VSchemaDumpToKMDataNode ( const VSchema * self,
         size_t num_writ;
         char expr [ 256 ];
         const char * type_string = "";
+        const SNameOverload *name;
 
         /* try to find object by spec - typically full name but only major version */
         uint32_t type;
-        const void * obj = VSchemaFind ( self, NULL, & type, spec, __func__, false );
+        const void * obj = VSchemaFind ( self, & name, & type, spec, __func__, false );
         if ( obj == NULL )
         {
             /* not found - do nothing */

@@ -375,16 +375,15 @@ static rc_t encode_header_v2(
     return 0;
 }
 
-static
-    rc_t PageMapProcessRequestLock(PageMapProcessRequest *self)
+static rc_t PageMapProcessRequestLock(PageMapProcessRequest *self)
 {
     rc_t rc = 0;
-    if(self)
+    if (self)
     {
         /*** no plans to wait here the thread should be released by now ****/
-        rc = KLockAcquire(self->lock);
-        if(rc == 0){
-            if(self->state != ePMPR_STATE_NONE){ /*** thread is not released yet **/
+        rc = self->lock ? KLockAcquire(self->lock) : SILENT_RC(rcVDB, rcPagemap, rcConstructing, rcLock, rcNull);
+        if (rc == 0){
+            if (self->state != ePMPR_STATE_NONE) { /*** thread is not released yet **/
                 assert(0); /** should not happen ***/
                 KLockUnlock(self->lock);
                 rc=RC(rcVDB, rcPagemap, rcConstructing, rcThread, rcBusy);
@@ -406,42 +405,45 @@ void PageMapProcessRequestLaunch(PageMapProcessRequest *self)
 
 rc_t PageMapProcessGetPagemap(const PageMapProcessRequest *cself,struct PageMap **pm)
 {
-	rc_t rc=RC(rcVDB,rcPagemap, rcConstructing, rcSelf, rcNull);
-        if(cself){
-	    PageMapProcessRequest *self=(PageMapProcessRequest*)cself;
-	    if(self->lock == NULL){
-		/** NOT LOCKABLE **/
-		rc=0;
-	    } else if((rc = KLockAcquire ( self->lock ))==0){
-CHECK_AGAIN:
-		switch(self->state){
-		 case ePMPR_STATE_DESERIALIZE_REQUESTED:
-			/*fprintf(stderr,"Waiting for pagemap %p\n",cself->lock);*/
-			rc = KConditionWait ( self -> cond, self -> lock );
-                        goto CHECK_AGAIN;
-		 case ePMPR_STATE_DESERIALIZE_DONE:
-			assert(self->pm);
-			/*fprintf(stderr,"Pagemap %p Used R:%6d|DR:%d|LR:%d\n",self->lock, self->pm->row_count,self->pm->data_recs,self->pm->leng_recs);*/
-			*pm=self->pm;
-			self->pm = NULL;
-			KDataBufferWhack(&self->data);
-			self->row_count = 0;
-			self->state = ePMPR_STATE_NONE;
-			KConditionSignal(self->cond);
-			KLockUnlock(self -> lock);
-			break;
-		case ePMPR_STATE_NONE: /* not requested */
-			KLockUnlock(self -> lock);
-		    rc = 0;
-		    break;
-		 default: /** should never happen ***/
-			assert(0);
-			KLockUnlock(self -> lock);
-			return RC(rcVDB, rcPagemap, rcConverting, rcParam, rcInvalid );
-		}
-	    }
+    if (cself == NULL)
+        return RC(rcVDB, rcPagemap, rcConstructing, rcSelf, rcNull);
+    else {
+        rc_t rc = 0;
+        PageMapProcessRequest *self=(PageMapProcessRequest*)cself;
+        if (self->lock == NULL){
+            /** NOT LOCKABLE **/
+            rc=0;
+        }
+        else if ((rc = KLockAcquire(self->lock)) == 0) {
+        CHECK_AGAIN:
+            switch(self->state) {
+            case ePMPR_STATE_DESERIALIZE_REQUESTED:
+                /*fprintf(stderr,"Waiting for pagemap %p\n",cself->lock);*/
+                rc = KConditionWait ( self -> cond, self -> lock );
+                goto CHECK_AGAIN;
+            case ePMPR_STATE_DESERIALIZE_DONE:
+                assert(self->pm);
+                /*fprintf(stderr,"Pagemap %p Used R:%6d|DR:%d|LR:%d\n",self->lock, self->pm->row_count,self->pm->data_recs,self->pm->leng_recs);*/
+                *pm=self->pm;
+                self->pm = NULL;
+                KDataBufferWhack(&self->data);
+                self->row_count = 0;
+                self->state = ePMPR_STATE_NONE;
+                KConditionSignal(self->cond);
+                KLockUnlock(self -> lock);
+                break;
+            case ePMPR_STATE_NONE: /* not requested */
+                KLockUnlock(self -> lock);
+                rc = 0;
+                break;
+            default: /** should never happen ***/
+                assert(0);
+                KLockUnlock(self -> lock);
+                return RC(rcVDB, rcPagemap, rcConverting, rcParam, rcInvalid );
+            }
         }
         return rc;
+    }
 }
 
 

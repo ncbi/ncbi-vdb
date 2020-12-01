@@ -59,9 +59,9 @@ SUBDIRS =       \
     ngs-python  \
     kns         \
     schema      \
-    install     \
     vfs         \
     ngs-java    \
+    install     \
 
 # common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
 include $(TOP)/build/Makefile.targets

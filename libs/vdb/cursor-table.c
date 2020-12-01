@@ -557,7 +557,7 @@ rc_t VTableCursorAddSColumn ( VCURSOR_IMPL *self, uint32_t *idx,
     if ( col != NULL )
     {
         * idx = col -> ord;
-        return RC ( rcVDB, rcCursor, rcUpdating, rcColumn, rcExists );
+        return SILENT_RC ( rcVDB, rcCursor, rcUpdating, rcColumn, rcExists );
     }
 
     /* make object */

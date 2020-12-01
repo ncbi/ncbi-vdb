@@ -29,6 +29,7 @@ TOP ?= $(abspath ../..)
 MODULE = test/vfs
 
 TEST_TOOLS = \
+	test-log-names-error \
 	test-redirect-rejected-names-cgi-http-to-https \
 	test-resolver-with-log \
 	test-sdl-response \
@@ -42,6 +43,7 @@ TEST_TOOLS = \
 	test-vfsmanager \
 	test-json-response \
 	test-resolver4 \
+	test-resolve-qual \
 
 include $(TOP)/build/Makefile.env
 
@@ -124,6 +126,18 @@ $(TEST_BINDIR)/test-json-response: $(J_OBJ)
 	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
 
 #----------------------------------------------------------------
+# log-names-error
+
+LNE_SRC = \
+	test-log-names-error
+
+LNE_OBJ = \
+	$(addsuffix .$(OBJX),$(LNE_SRC))
+
+$(TEST_BINDIR)/test-log-names-error: $(LNE_OBJ)
+	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
+
+#----------------------------------------------------------------
 # sdl-response
 
 S_SRC = \
@@ -172,6 +186,18 @@ TP_OBJ = \
 	$(addsuffix .$(OBJX),$(TP_SRC))
 
 $(TEST_BINDIR)/test-perm: $(TP_OBJ)
+	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
+
+#----------------------------------------------------------------
+# test-resolve-qual
+
+RQ_SRC = \
+	test-resolve-qual
+
+RQ_OBJ = \
+	$(addsuffix .$(OBJX),$(RQ_SRC))
+
+$(TEST_BINDIR)/test-resolve-qual: $(RQ_OBJ)
 	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
 
 #----------------------------------------------------------------

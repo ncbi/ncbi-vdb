@@ -1119,10 +1119,15 @@ LIB_EXPORT rc_t CC KConfig_Get_GUID( const KConfig *self, char * value, size_t v
             *written = local_written;
     }
     return rc;
-
 }
 
 LIB_EXPORT rc_t CC KConfig_Set_GUID( KConfig *self, const char * value )
 {
     return KConfig_Set_Repository_String( self, value, GUID_KEY );
 }
+
+#define FULL_QUALITY_KEY "libs/vdb/full-quality"
+LIB_EXPORT rc_t CC KConfig_Get_FullQuality( const KConfig *self, bool * value )
+{ return get_bool_value( self, FULL_QUALITY_KEY, value, false ); }
+LIB_EXPORT rc_t CC KConfig_Set_FullQuality( KConfig *self, bool value )
+{ return set_bool_value( self, FULL_QUALITY_KEY, value ); }

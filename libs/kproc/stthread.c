@@ -59,8 +59,9 @@ rc_t KThreadWhack ( KThread *self )
  *
  *  "data" [ IN, OPAQUE ] - user-supplied thread data
  */
-LIB_EXPORT rc_t CC KThreadMake ( KThread **tp,
-    rc_t ( * run_thread ) ( const KThread*, void* ), void *data )
+LIB_EXPORT rc_t CC KThreadMakeStackSize ( KThread **tp,
+    rc_t ( * run_thread ) ( const KThread*, void* ), void *data,
+    size_t stacksize)
 {
     rc_t rc;
     if ( tp == NULL )

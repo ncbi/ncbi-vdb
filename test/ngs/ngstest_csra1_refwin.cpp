@@ -30,6 +30,8 @@
 
 #include "ngs_c_fixture.hpp"
 
+#include <kapp/args.h> /* Args */
+
 #include <kdb/manager.h>
 
 #include <kfg/config.h> /* KConfigDisableUserSettings */
@@ -44,7 +46,14 @@
 using namespace std;
 using namespace ncbi::NK;
 
-TEST_SUITE(NgsCsra1RefWinTestSuite);
+static rc_t argsHandler(int argc, char* argv[]) {
+    Args* args = NULL;
+    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
+    ArgsWhack(args);
+    return rc;
+}
+
+TEST_SUITE_WITH_ARGS_HANDLER(NgsCsra1RefWinTestSuite, argsHandler);
 
 const char* CSRA1_PrimaryOnly   = "SRR1063272";
 const char* CSRA1_WithSecondary = "SRR833251";
@@ -103,6 +112,7 @@ public:
 
     bool NextId (const string& p_expected)
     {
+        KSleepMs(100); // trying to reduce the incidence of network timeouts in the following call
         if ( ! NGS_AlignmentIteratorNext ( m_align, m_ctx ) || m_ctx -> rc != 0 )
         {
             cout << "NextId: NGS_AlignmentIteratorNext FAILED" << endl;

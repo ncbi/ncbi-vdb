@@ -59,13 +59,26 @@
 #include <kns/endpoint.h>
 #endif
 
+/* timeout on Http Read */
 #ifndef MAX_HTTP_READ_LIMIT
 #define MAX_HTTP_READ_LIMIT ( 5 * 60 * 1000 ) /* 5 minutes */
 #endif
 
+/* timeout on Http Write */
 #ifndef MAX_HTTP_WRITE_LIMIT
 #define MAX_HTTP_WRITE_LIMIT ( 15 * 1000 )
 #endif
+
+/* timeout on Http Read loop */
+#ifndef MAX_HTTP_TOTAL_READ_LIMIT
+#define MAX_HTTP_TOTAL_READ_LIMIT ( 10 * 60 * 1000 ) /* 10 minutes */
+#endif
+
+/* timeout on Http Connect loop */
+#ifndef MAX_HTTP_TOTAL_CONNECT_LIMIT
+#define MAX_HTTP_TOTAL_CONNECT_LIMIT ( 10 * 60 * 1000 ) /* 10 minutes */
+#endif
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -133,7 +146,7 @@ rc_t KClientHttpGetStatusLine ( struct KClientHttp * self,
 
 struct KClientHttp
 {
-    const KNSManager *mgr;
+    const struct KNSManager *mgr;
     struct KStream * sock;
     struct KStream * test_sock; /* if not NULL, use to communicate with a mocked server in testing, do not reopen on redirects */
 
@@ -212,6 +225,8 @@ struct KClientHttpRequest
 
     bool ceRequired; /* computing environment token required to access this URL */
     bool payRequired; /* payment info required to access this URL */
+
+    bool rangeRequested;
 };
 
 void KClientHttpGetRemoteEndpoint ( const struct KClientHttp * self,
@@ -254,10 +269,25 @@ struct KClientHttpResult
     bool len_zero;
 
     char * expiration;
+
+    bool rangeRequested;
 };
 
-/* internal encodiung  function, exposed for testing */
+/* internal encoding  function, exposed for testing */
 extern rc_t KClientHttpRequestUrlEncodeBase64(const String ** encoding);
+
+#define SUPPORT_CHUNKED_READ 1
+
+rc_t KNSManagerVMakeHttpFileIntUnstableFromBuffer(const struct KNSManager *self,
+    const struct KFile **file, struct KStream *conn, ver_t vers, bool reliable,
+    bool need_env_token, bool payRequired, const char *url,
+    const KDataBuffer *buf);
+
+rc_t KNSManagerVMakeHttpFileIntUnstable(const struct KNSManager *self,
+    const struct KFile **file, struct KStream *conn, ver_t vers, bool reliable,
+    bool need_env_token, bool payRequired, const char *url, va_list args);
+
+bool KUnstableFileIsKHttpFile(const struct KFile * self);
 
 #ifdef __cplusplus
 }

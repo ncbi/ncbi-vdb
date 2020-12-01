@@ -341,68 +341,81 @@ rc_t KClientHttpProxyConnect ( KClientHttp * self, const String * hostname, uint
         self -> port = pport;
 
         /* format CONNECT request */
-		rc = KDataBufferClear( & buffer );
-		if (rc == 0)
-		{
-			rc = KDataBufferPrintf( & buffer,
-				"CONNECT %S:%u HTTP/1.1\r\n"
-				"Host: %S:%u\r\n\r\n"
-				, &hostname_copy
-				, port
-				, &hostname_copy
-				, port
-			);
+        rc = KDataBufferClear( & buffer );
+        if (rc == 0)
+        {
+            rc = KDataBufferPrintf( & buffer,
+                "CONNECT %S:%u HTTP/1.1\r\n"
+                "Host: %S:%u\r\n\r\n"
+                , &hostname_copy
+                , port
+                , &hostname_copy
+                , port
+            );
 
-			if (rc != 0)
-				DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS), ("Failed to create proxy request: %R\n", rc));
-			else
-			{
-				size_t sent;
-				timeout_t tm;
-                                size_t size = buffer.elem_count - 1;
+            if (rc != 0)
+                DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS), ("Failed to create proxy request: %R\n", rc));
+            else
+            {
+                size_t sent;
+                timeout_t tm;
+                timeout_t * ptm = NULL;
+                size_t size = buffer.elem_count - 1;
 
-				STATUS(STAT_QA, "%s - created proxy request '%.*s'\n", __func__,
+                STATUS(STAT_QA, "%s - created proxy request '%.*s'\n", __func__,
                                     (uint32_t)size, (char*)buffer.base);
 
-				/* send request and receive a response */
-				STATUS(STAT_PRG, "%s - sending proxy request\n", __func__);
-				TimeoutInit(&tm, self->write_timeout);
-				rc = KStreamTimedWriteAll(self->sock, buffer.base, size, &sent, &tm);
-				if (rc != 0)
-					DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS), ("Failed to send proxy request: %R\n", rc));
-				else
-				{
-					String msg;
-					ver_t version;
-					uint32_t status;
+                /* send request and receive a response */
+                STATUS(STAT_PRG, "%s - sending proxy request\n", __func__);
+                if (self->write_timeout >= 0) {
+                    TimeoutInit(&tm, self->write_timeout);
+                    ptm = &tm;
+                }
+                else
+                    ptm = NULL;
+                rc = KStreamTimedWriteAll(self->sock, buffer.base, size, &sent,
+                    ptm);
+                if (rc != 0)
+                    DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS), ("Failed to send proxy request: %R\n", rc));
+                else
+                {
+                    String msg;
+                    ver_t version;
+                    uint32_t status;
 
-					assert(sent == size);
+                    assert(sent == size);
 
-					STATUS(STAT_PRG, "%s - reading proxy response status line\n", __func__);
-					TimeoutInit(&tm, self->read_timeout);
-					rc = KClientHttpGetStatusLine(self, &tm, &msg, &status, &version);
-					if (rc != 0)
-						DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS), ("Failed to read proxy response: %R\n", rc));
-					else
-					{
-						if ((status / 100) != 2)
-						{
-							rc = RC(rcNS, rcNoTarg, rcOpening, rcConnection, rcFailed);
-							DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS), ("Failed to create proxy tunnel: %03u '%S'\n", status, &msg));
-							KClientHttpBlockBufferReset(self);
-							KClientHttpLineBufferReset(self);
-						}
-						else
-						{
-							STATUS(STAT_QA, "%s - read proxy response status line: %03u '%S'\n", __func__, status, &msg);
-							do
-								rc = KClientHttpGetLine(self, &tm);
-							while (self->line_valid != 0);
-						}
-					}
-				}
-			}
-		}
+                    STATUS(STAT_PRG, "%s - reading proxy response status line\n", __func__);
+                    if (self->read_timeout >= 0) {
+                        TimeoutInit(&tm, self->read_timeout);
+                        ptm = &tm;
+                    }
+                    else
+                        ptm = NULL;
+                    rc = KClientHttpGetStatusLine(self, ptm, &msg, &status,
+                        &version);
+                    if (rc != 0)
+                        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS), ("Failed to read proxy response: %R\n", rc));
+                    else
+                    {
+                        if ((status / 100) != 2)
+                        {
+                            rc = RC(rcNS, rcNoTarg, rcOpening, rcConnection, rcFailed);
+                            DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS), ("Failed to create proxy tunnel: %03u '%S'\n", status, &msg));
+                            KClientHttpBlockBufferReset(self);
+                            KClientHttpLineBufferReset(self);
+                        }
+                        else
+                        {
+                            STATUS(STAT_QA, "%s - read proxy response status line: %03u '%S'\n", __func__, status, &msg);
+                            do
+                                rc = KClientHttpGetLine(self, ptm);
+                            while (self->line_valid != 0);
+                        }
+                    }
+                }
+            }
+        }
 
         STATUS ( STAT_GEEK, "%s - restoring hostname and port\n", __func__ );
         self -> hostname = hostname_save;
@@ -428,6 +441,13 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
     bool proxy_ep = false;
     KEndPointArgsIterator it;
     const KNSManager * mgr = NULL;
+
+    static bool INITED = false;
+    static bool PRINT_STAT = false;
+    if (!INITED) {
+        PRINT_STAT = getenv("NCBI_VDB_STS_SILENT") == NULL;
+        INITED = true;
+    }
 
     STATUS ( STAT_QA, "%s - opening socket to %S:%u\n", __func__, aHostname, aPort );
 
@@ -462,13 +482,15 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
         }
         if ( rc == 0 )
         {
-			/* try to establish a connection */
-			rc = KNSManagerMakeTimedConnection(mgr, &sock,
-				self->read_timeout, self->write_timeout, NULL, &self->ep);
+            /* try to establish a connection */
+            /*  "read_timeout", "write_timeout"
+                    - when negative,  infinite timeout */
+            rc = KNSManagerMakeTimedConnection(mgr, &sock,
+                self->read_timeout, self->write_timeout, NULL, &self->ep);
 
-			/* if we connected to a proxy, try to follow-through to server */
-			if (proxy_ep && self->tls && rc == 0)
-				rc = KClientHttpProxyConnect(self, aHostname, aPort, sock, hostname, port);
+            /* if we connected to a proxy, try to follow-through to server */
+            if (proxy_ep && self->tls && rc == 0)
+                rc = KClientHttpProxyConnect(self, aHostname, aPort, sock, hostname, port);
 
             if ( rc == 0 )
             {
@@ -493,13 +515,15 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
     else
     {
         rc_t r = KSocketGetLocalEndpoint ( sock, & self -> local_ep );
-        if ( r == 0 )
+        if (PRINT_STAT) {
+          if ( r == 0 )
             STATUS ( STAT_USR, "%s - connected from '%s' to %S (%s)\n",
                                __func__, self -> local_ep . ip_address,
                                hostname, self -> ep . ip_address );
-        else
+          else
             STATUS ( STAT_USR, "%s - connected to %S (%s)\n",
                                __func__, hostname, self -> ep . ip_address );
+        }
 
         if ( self -> tls )
         {
@@ -537,7 +561,8 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
 
             if ( rc == 0 )
             {
-                STATUS ( STAT_USR, "%s - verifying CA cert\n", __func__ );
+                if (PRINT_STAT)
+                    STATUS ( STAT_USR, "%s - verifying CA cert\n", __func__ );
                 rc = KTLSStreamVerifyCACert ( tls_stream );
                 if ( rc != 0 )
                 {
@@ -1785,6 +1810,14 @@ rc_t KClientHttpResultWhack ( KClientHttpResult * self )
     return 0;
 }
 
+static void KClientHttpKSocketTimedWriteErrGcpHack(KClientHttp *self) {
+    String googleapis;
+    CONST_STRING(&googleapis, "storage.googleapis.com");
+    assert(self);
+    if (StringEqual(&googleapis, &self->hostname)) {
+        KClientHttpClose(self);
+    }
+}
 
 /* Sends the request and receives the response into a KClientHttpResult obj */
 rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
@@ -1793,6 +1826,7 @@ rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
     rc_t rc = 0;
     size_t sent;
     timeout_t tm;
+    timeout_t * ptm = NULL;
     uint32_t status;
 
     /* TBD - may want to assert that there is an empty line in "buffer" */
@@ -1803,6 +1837,9 @@ rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
     DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_HTTP),
         ("HTTP send '%S' '%.*s'\n\n", &self->hostname, len, buffer));
 
+#ifndef DEBUG_GCP_KSOCKET_TIMED_WRITE_MBEDTLS_SSL_WRITE_UNKNOWN_ERROR_MESSAGE
+    KClientHttpKSocketTimedWriteErrGcpHack(self);
+#endif
     /* reopen connection if NULL */
     if ( self -> sock == NULL )
         rc = KClientHttpOpen ( self, & self -> hostname, self -> port );
@@ -1810,15 +1847,26 @@ rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
     /* ALWAYS want to use write all when sending */
     if ( rc == 0 )
     {
-        TimeoutInit ( & tm, self -> write_timeout );
-        rc = KStreamTimedWriteAll ( self -> sock, buffer, len, & sent, & tm );
+        if (self->write_timeout >= 0) {
+            TimeoutInit ( & tm, self -> write_timeout );
+            ptm = &tm;
+        }
+        else
+            ptm = NULL;
+        rc = KStreamTimedWriteAll ( self -> sock, buffer, len, & sent, ptm );
         if ( rc != 0 )
         {
             rc_t rc2 = KClientHttpReopen ( self );
             if ( rc2 == 0 )
             {
-                TimeoutInit ( & tm, self -> write_timeout );
-                rc2 = KStreamTimedWriteAll ( self -> sock, buffer, len, & sent, & tm );
+                if (self->write_timeout >= 0) {
+                    TimeoutInit ( & tm, self -> write_timeout );
+                    ptm = &tm;
+                }
+                else
+                    ptm = NULL;
+                rc2 = KStreamTimedWriteAll ( self -> sock, buffer, len, & sent,
+                    ptm );
                 if ( rc2 == 0 )
                     rc = 0;
             }
@@ -1835,7 +1883,8 @@ rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
     {
         /* "body" contains bytes plus trailing NUL */
         size_t to_send = ( size_t ) body -> elem_count - 1;
-        rc = KStreamTimedWriteAll ( self -> sock, body -> base, to_send, & sent, & tm );
+        rc = KStreamTimedWriteAll ( self -> sock, body -> base, to_send, & sent,
+            ptm );
         if ( rc == 0 && sent != to_send )
         {
             rc = RC ( rcNS, rcNoTarg, rcWriting, rcTransfer, rcIncomplete );
@@ -1849,11 +1898,16 @@ rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
         ver_t version;
 
         /* reinitialize the timeout for reading */
-        TimeoutInit ( & tm, self -> read_timeout );
+        if (self->write_timeout >= 0) {
+            TimeoutInit ( & tm, self -> read_timeout );
+            ptm = &tm;
+        }
+        else
+            ptm = NULL;
 
         /* we have now received a response
            start reading the header lines */
-        rc = KClientHttpGetStatusLine ( self, & tm, & msg, & status, & version );
+        rc = KClientHttpGetStatusLine ( self, ptm, & msg, & status, & version );
         if ( rc == 0 )
         {
             /* create a result object with enough space for msg string + nul */
@@ -1895,7 +1949,8 @@ rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
                        blank = end of headers */
                     for ( blank = false; ! blank && rc == 0; )
                     {
-                        rc = KClientHttpGetHeaderLine ( self, & tm, & result -> hdrs,
+                        rc = KClientHttpGetHeaderLine ( self, ptm,
+                            & result -> hdrs,
                             & blank, & result -> len_zero, & self -> close_connection );
                     }
 

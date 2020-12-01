@@ -129,6 +129,18 @@
     <ClCompile Include="..\..\..\libs\axf\template-len.c">
       <ObjectFileName >$(IntDir)axf-%(Filename).obj</ObjectFileName>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\axf\range-list.c">
+      <ObjectFileName>$(IntDir)axf-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\axf\refseq.c">
+      <ObjectFileName>$(IntDir)axf-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\axf\wgs.c">
+      <ObjectFileName>$(IntDir)axf-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\axf\restore-read.c">
+      <ObjectFileName>$(IntDir)axf-%(Filename).obj</ObjectFileName>
+    </ClCompile>
 
     <ClCompile Include="..\..\..\libs\blast\blast-mgr.c">
       <ObjectFileName >$(IntDir)blast-%(Filename).obj</ObjectFileName>
@@ -159,6 +171,9 @@
       <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\cloud\gcp.c">
+      <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\cloud\gcp-authentication.c">
       <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
     </ClCompile>
 
@@ -1101,6 +1116,10 @@
       <ObjectFileName>$(IntDir)kns-%(Filename).obj</ObjectFileName>
       <AdditionalIncludeDirectories>$(ProjectDir)../../../libs/kns;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\kns\stable-http-file.c">
+      <ObjectFileName>$(IntDir)kns-%(Filename).obj</ObjectFileName>
+      <AdditionalIncludeDirectories>$(ProjectDir)../../../libs/kns;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
     <ClCompile Include="..\..\..\libs\kns\http-retrier.c">
       <ObjectFileName>$(IntDir)kns-%(Filename).obj</ObjectFileName>
       <AdditionalIncludeDirectories>$(ProjectDir)../../../libs/kns;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -1789,6 +1808,9 @@
         <ObjectFileName>$(IntDir)vfs-%(Filename).obj</ObjectFileName>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\vfs\services.c">
+        <ObjectFileName>$(IntDir)vfs-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vfs\services-cache.c">
         <ObjectFileName>$(IntDir)vfs-%(Filename).obj</ObjectFileName>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\vfs\remote-services.c">

@@ -306,29 +306,6 @@ LIB_EXPORT rc_t CC KDBManagerRunPeriodicTasks ( const KDBManager *self )
     return 0;
 }
 
-static void ad(const KDBManager *self, const VPath *aPath, const VPath **path)
-{
-    String spath;
-    const char *slash;
-    assert(self);
-    if (VPathGetPath(aPath, &spath) != 0)
-        return;
-    if ((KDirectoryPathType(self->wd, spath.addr) & ~kptAlias) != kptDir)
-        return;
-    slash = strrchr(spath.addr, '/');
-    if (slash)
-        ++slash;
-    else
-        slash = spath.addr;
-    if ((KDirectoryPathType(self->wd, "%s/%s.sra", spath.addr, slash)
-        & ~kptAlias) != kptFile)
-    {
-        return;
-    }
-    VFSManagerMakePath(self->vfsmgr, (VPath **)path,
-        "%s/%s.sra", spath.addr, slash);
-}
-
 /* PathType
  *  check the path type of an object/directory path.
  *  this is an extension of the KDirectoryPathType and will return
@@ -343,7 +320,7 @@ static int CC KDBManagerPathTypeVPImpl ( const KDBManager * self,
     int path_type;
     rc_t rc;
 
-    ad(self, aPath, &path);
+    VFSManagerCheckEnvAndAd(self->vfsmgr, aPath, &path);
 
     path_type = kptBadPath;
     if ((self != NULL) && (path != NULL))

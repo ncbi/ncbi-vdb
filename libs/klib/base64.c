@@ -31,7 +31,7 @@
 #include <klib/rc.h>
 
 /* don't yet have any indication of how else to do it */
-#define BASE64_PAD_ENCODING 1
+#define BASE64_PAD_ENCODING 0
 
 /* from binary 0..63 to standard BASE64 encoding */
 static
@@ -138,7 +138,7 @@ rc_t encodeBase64Impl ( const String ** encoded, const void * data, size_t bytes
 
     esize = ( ( bytes + 2 ) / 3 ) * 4;
     
-    encoding = malloc ( sizeof *encoding + esize + 1 );
+    encoding = (String *) malloc ( sizeof *encoding + esize + 1 );
     if ( encoding == NULL )
         return RC ( rcRuntime, rcString, rcEncoding, rcMemory, rcExhausted );
 
@@ -279,7 +279,7 @@ rc_t decodeBase64Impl ( KDataBuffer *decoded, const String *encoding, const char
     if ( rc != 0 )
         return rc;
     
-    buff = decoded -> base;
+    buff = (unsigned char *) decoded -> base;
     
     /* walk across the input string a byte at a time
      * avoid temptation to consume 4 bytes at a time,

@@ -35,6 +35,10 @@
 #include <klib/defs.h>
 #endif
 
+#ifndef _h_vdb_quality_
+#include <vdb/quality.h> /* VQuality */
+#endif
+
 #include <stdarg.h>
 
 #ifdef __cplusplus
@@ -354,6 +358,8 @@ typedef rc_t ( CC * VNoHdrBlobFunc ) ( void *self,
 typedef bool ( CC * VUntypedFunc )
     ( struct KTable const *tbl, struct KMetadata const *meta );
 
+
+VDB_EXTERN VQuality CC VDBManagerGetQuality(const struct VDBManager * self);
 
 
 #ifdef __cplusplus

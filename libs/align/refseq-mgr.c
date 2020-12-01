@@ -615,6 +615,7 @@ static int AccessionType(VDBManager const *const mgr,
     assert(rc);
 
     scheme[0] = '\0';
+
     {
         KMetadata const *meta = NULL;
         {
@@ -626,46 +627,45 @@ static int AccessionType(VDBManager const *const mgr,
             *rc = VDBManagerGetKDBManagerRead(mgr, &kmgr);
             if (*rc == 0)
                 *rc = KDBManagerGetVFSManager(kmgr, &vfs);
-            if (*rc == 0)
+
+            if (*rc == 0) /* create VPath from 'accession' */
                 *rc = VFSManagerMakePath(vfs, &aOrig, "%.*s", (int)N, accession);
             if (*rc == 0)
                 VPathSetAccOfParentDb(aOrig, accOfParentDb);
 
-            if (*rc == 0)
+            if (*rc == 0) /* use created VPath... */
                 *rc = VDBManagerOpenDBReadVPath(mgr, &db, NULL, aOrig);
+            /* ... or 'accession' if we were not able to create VPath
+               (should never happen, really) */
             else
                 *rc = VDBManagerOpenDBRead(mgr, &db, NULL, "%.*s", (int)N, accession);
 
-            if (db) {
+            /* 'accession' was resolved to DataBase */
+            if (db != NULL) {
                 *rc = VDatabaseOpenMetadataRead(db, &meta);
                 VDatabaseRelease(db);
             }
-            else {
+            else { /* try to resolve created accession as Table */
                 VTable const *tbl = NULL;
 
-                *rc = VDBManagerOpenTableReadVPath(mgr, &tbl, NULL, aOrig);
-                if (tbl) {
+          /* VDBManagerOpenTableReadVPath calls names service to resolve path */
+                if (aOrig != NULL)
+                    *rc = VDBManagerOpenTableReadVPath(mgr, &tbl, NULL, aOrig);
+                else { /* should never happen, really) */
+                    isOdd = true;
+                    *rc = VDBManagerOpenTableRead(mgr, &tbl, NULL,
+                        "ncbi-acc:%.*s?vdb-ctx=refseq", (int)N, accession);
+                }
+                if (tbl != NULL) {
                     *rc = VTableOpenMetadataRead(tbl, &meta);
                     VTableRelease(tbl);
-                }
-                else {
-                    isOdd = true;
-                    if (aOrig == NULL)
-                        *rc = VDBManagerOpenTableRead(mgr, &tbl, NULL,
-                            "ncbi-acc:%.*s?vdb-ctx=refseq", (int)N, accession);
-                    else
-                        *rc = VDBManagerOpenTableReadVPath(mgr, &tbl, NULL, aOrig);
-                    if (tbl) {
-                        *rc = VTableOpenMetadataRead(tbl, &meta);
-                        VTableRelease(tbl);
-                    }
                 }
             }
             VPathRelease(aOrig);
             VFSManagerRelease(vfs);
             KDBManagerRelease(kmgr);
         }
-        if (meta) {
+        if (meta != NULL) {
             KMDataNode const *node = NULL;
 
             *rc = KMetadataOpenNodeRead(meta, &node, "schema");
@@ -686,6 +686,7 @@ static int AccessionType(VDBManager const *const mgr,
             }
         }
     }
+
     if (strcmp(scheme, "NCBI:WGS:db:contig") == 0)
         return refSeqType_WGS;
     if (strcmp(scheme, "NCBI:refseq:tbl:reference") == 0)

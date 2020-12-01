@@ -1,3 +1,6 @@
+#ifndef _h_kfg_ngc_priv_
+#define _h_kfg_ngc_priv_
+
 /*===========================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
@@ -24,8 +27,10 @@
 *
 */
 
-#ifndef _h_kfg_ngc_priv_
-#define _h_kfg_ngc_priv_
+
+#ifndef _h_kfg_ngc_
+#include <kfg/ngc.h>
+#endif
 
 #ifndef _h_klib_data_buffer
 #include <klib/data-buffer.h>
@@ -38,6 +43,7 @@
 #ifndef _h_klib_refcount_
 #include <klib/refcount.h>
 #endif
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -55,6 +61,7 @@ struct KNgcObj
 rc_t KNgcObjGetEncryptionKey(const KNgcObj *self,
     char * buffer, size_t buffer_size, size_t * written);
 
+rc_t KNgcObjMakeFromCmdLine(const KNgcObj ** self);
 
 #ifdef __cplusplus
 }

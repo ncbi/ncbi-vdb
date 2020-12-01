@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="kfc">
@@ -652,6 +652,9 @@
       <Filter>kns</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\kns\http-file.c">
+      <Filter>kns</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kns\stable-http-file.c">
       <Filter>kns</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\kns\http.c">
@@ -1440,6 +1443,7 @@
     <ClCompile Include="..\..\..\libs\vdb\schema-view.c" />
     <ClCompile Include="..\..\..\libs\vdb\view.c" />
     <ClCompile Include="..\..\..\libs\vfs\services.c" />
+    <ClCompile Include="..\..\..\libs\vfs\services-cache.c" />
     <ClCompile Include="..\..\..\libs\vfs\remote-services.c" />
     <ClCompile Include="..\..\..\libs\vfs\srv-response.c" />
     <ClCompile Include="..\..\..\libs\diagnose\diagnose.c" />
@@ -1450,6 +1454,7 @@
     <ClCompile Include="..\..\..\libs\cloud\cloud-mgr.c" />
     <ClCompile Include="..\..\..\libs\cloud\cloud.c" />
     <ClCompile Include="..\..\..\libs\cloud\gcp.c" />
+    <ClCompile Include="..\..\..\libs\cloud\gcp-authentication.c" />
     <ClCompile Include="..\..\..\libs\ext\mbedtls\aria.c" />
     <ClCompile Include="..\..\..\libs\ext\mbedtls\chacha20.c" />
     <ClCompile Include="..\..\..\libs\ext\mbedtls\chachapoly.c" />

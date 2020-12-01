@@ -66,21 +66,10 @@ struct GCP;
 
 #include "cloud-cmn.h" /* KNSManager_Read */
 #include "cloud-priv.h"
+#include "gcp-priv.h" /* GCPAddAuthentication */
 
 #ifndef PATH_MAX
 #define PATH_MAX 4096
-#endif
-
-/*TODO: use log.h instead, or promote to cloud-priv.h (there is a copy in cloud-mgr.c) */
-#if 0
-#include <stdio.h>
-#define TRACE( ... )                                              \
-    do { fprintf ( stderr, "%s:%d - ", __func__, __LINE__ );      \
-         fprintf ( stderr, __VA_ARGS__ );                         \
-         fputc ( '\n', stderr ); } while ( 0 )
-#else
-#define TRACE( ... ) \
-    ( ( void ) 0 )
 #endif
 
 static rc_t PopulateCredentials(GCP * self);
@@ -109,7 +98,8 @@ static char const *envCE()
     char const *const env = firstTime ? getenv(ENV_MAGIC_CE_TOKEN) : NULL;
     firstTime = false;
     if (env != NULL)
-        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), ("Got location from environment"));
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+            "Got location from environment\n"));
     return env;
 }
 
@@ -204,15 +194,6 @@ rc_t CC GCPAddComputeEnvironmentTokenForSigner ( const GCP * self, KClientHttpRe
     }
 
     return rc;
-}
-
-/* AddAuthentication
-*  prepare a request object with credentials for authentication
-*/
-static
-rc_t CC GCPAddAuthentication(const GCP * self, KClientHttpRequest * req, const char * http_method)
-{
-    return 0; /* TODO, if needed */
 }
 
 static
@@ -486,12 +467,11 @@ MakeJWT(const GCP * self, char ** jwt)
     {
         return rc;
     }
-    TRACE("jwt='%s'\n\n", jwt);
+    TRACE("jwt='%s'\n\n", *jwt);
 
     return 0;
 }
 
-static
 rc_t
 GetJsonStringMember(const KJsonObject *obj, const char * name, const char ** value)
 {
@@ -513,7 +493,6 @@ GetJsonStringMember(const KJsonObject *obj, const char * name, const char ** val
     return KJsonGetString(member, value);
 }
 
-static
 rc_t
 GetJsonNumMember(const KJsonObject *obj, const char * name, int64_t * value)
 {
@@ -907,10 +886,27 @@ bool CloudMgrWithinGCP(const CloudMgr * self)
     rc_t rc;
     KEndPoint ep;
     String hostname;
+    const char host[] = "metadata.google.internal";
 
     /* describe address "metadata.google.internal" on port 80 */
-    CONST_STRING(&hostname, "metadata.google.internal");
+    CONST_STRING(&hostname, host);
     rc = KNSManagerInitDNSEndpoint(self->kns, &ep, &hostname, 80);
+    if (rc == 0)
+    {
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+            "'%s' DNS was resolved to '%s'\n", host, ep.ip_address));
+        /* some DNS servers afford themselves the luxury of returning
+           a non-authoritative answer in order to direct a web-browser
+           to some other server, e.g. Verizon. This may also occur with
+           wireless network access control... */
+        if ((ep.u.ipv4.addr >> 16) != ((169U << 8) | 254U)) {
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                "'%s' DNS endpoint was resolved "
+                "but IP is not in range 169.254...: ignored\n", host));
+            return false;
+        }
+    }
+
     if (rc == 0)
     {
         KSocket * conn;
@@ -920,9 +916,11 @@ bool CloudMgrWithinGCP(const CloudMgr * self)
         if (rc == 0)
         {
             /* TBD - is there any sense in finishing the HTTP transaction?
-            somebody answered our call, so it looks like they\"re there,
-            if we use the URL to verify a little more, it will confirm... something.
-            But we\"re not prepared to retain any information, unless it\"s region */
+            somebody answered our call, so it looks like they're there,
+            if we use the URL to verify a little more, it will confirm...
+            something.
+            But we're not prepared to retain any information,
+            unless it's region */
             KSocketRelease(conn);
             return true;
         }
@@ -1027,6 +1025,16 @@ rc_t PopulateCredentials(GCP * self)
                             if (self->privateKey == NULL)
                             {
                                 rc = RC(rcNS, rcMgr, rcAllocating, rcMemory, rcExhausted);
+                            }
+                        }
+                        if (strcmp("private_key_id", required[i]) == 0)
+                        {
+                            self->private_key_id
+                                = string_dup(value, string_size(value));
+                            if (self->private_key_id == NULL)
+                            {
+                                rc = RC(rcNS, rcMgr, rcAllocating,
+                                    rcMemory, rcExhausted);
                             }
                         }
                         else if (strcmp("client_email", required[i]) == 0)
