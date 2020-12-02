@@ -609,8 +609,8 @@ Entry *RefSeqInsert(List *list, unsigned const qlen, char const *qry, VTable con
     Entry *result = NULL;
     unsigned at = 0;
     if (find(list, &at, qlen, qry)) {
-        assert(!"entry exists!!!");
-        abort();
+        *prc = 0;
+        return &list->entry[at];
     }
 
     result = insert(list, at, qlen, qry);
