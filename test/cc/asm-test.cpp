@@ -56,6 +56,22 @@ TEST_CASE(a32_add_and_read)
     REQUIRE_EQ ( ( int ) atomic32_add_and_read ( & v, 3 ), 5 );
 }
 
+TEST_CASE(a32_inc)
+{
+    atomic32_t v;
+    atomic32_set ( & v, 2 );
+    atomic32_inc( & v );
+    REQUIRE_EQ ( ( int ) atomic32_read ( & v ), 3 );
+}
+
+TEST_CASE(a32_dec)
+{
+    atomic32_t v;
+    atomic32_set ( & v, 2 );
+    atomic32_dec( & v );
+    REQUIRE_EQ ( ( int ) atomic32_read ( & v ), 1 );
+}
+
 TEST_CASE(a32_read_and_add_lt_true)
 {
     atomic32_t v;
@@ -311,6 +327,22 @@ TEST_CASE(a64_add_and_read)
     REQUIRE_EQ ( ( int64_t ) atomic64_add_and_read ( & v, 3 ), ( int64_t ) 5 );
 }
 
+TEST_CASE(a64_inc)
+{
+    atomic64_t v;
+    atomic64_set ( & v, 2 );
+    atomic64_inc( & v );
+    REQUIRE_EQ ( ( int ) atomic64_read ( & v ), 3 );
+}
+
+TEST_CASE(a64_dec)
+{
+    atomic64_t v;
+    atomic64_set ( & v, 2 );
+    atomic64_dec( & v );
+    REQUIRE_EQ ( ( int ) atomic64_read ( & v ), 1 );
+}
+
 TEST_CASE(a64_read_and_add_lt_true)
 {
     atomic64_t v;
@@ -431,6 +463,32 @@ TEST_CASE(a64_read_and_add_even_false)
     REQUIRE_EQ ( ( int64_t ) atomic64_read ( & v ), ( int64_t ) 1 );
 }
 
+TEST_CASE(atomic64_inc_and_test_true)
+{
+    atomic64_t v;
+    atomic64_set ( & v, -1 );
+    REQUIRE ( atomic64_inc_and_test ( & v ) );
+}
+TEST_CASE(atomic64_inc_and_test_false)
+{
+    atomic64_t v;
+    atomic64_set ( & v, 1 );
+    REQUIRE ( ! atomic64_inc_and_test ( & v ) );
+}
+
+TEST_CASE(atomic64_dec_and_test_true)
+{
+    atomic64_t v;
+    atomic64_set ( & v, 1 );
+    REQUIRE ( atomic64_dec_and_test ( & v ) );
+}
+TEST_CASE(atomic64_dec_and_test_false)
+{
+    atomic64_t v;
+    atomic64_set ( & v, 2 );
+    REQUIRE ( ! atomic64_dec_and_test ( & v ) );
+}
+
 TEST_CASE(a64_test_and_set_ptr_success)
 {
     atomic_ptr_t v = { (void*)0 };
@@ -443,6 +501,21 @@ TEST_CASE(a64_test_and_set_ptr_failure)
     atomic_ptr_t v = { (void*)0 };
     REQUIRE_EQ ( (void*)0, (void*) atomic_test_and_set_ptr ( & v, (void*)1, (void*)2 ) ); // v.ptr != 2, not changed
     REQUIRE_EQ ( (void*)0, (void*) v . ptr ); // did not change
+}
+
+TEST_CASE(atomic64_test_and_set_true)
+{
+    atomic64_t v;
+    atomic64_set ( & v, 0 );
+    REQUIRE_EQ ( ( int ) 0, ( int ) atomic64_test_and_set ( & v, 1, 0 ) );  // returns prior value of v
+    REQUIRE_EQ ( ( int ) atomic64_read ( & v ), 1 );
+}
+TEST_CASE(atomic64_test_and_set_false)
+{
+    atomic64_t v;
+    atomic64_set ( & v, 0 );
+    REQUIRE_EQ ( ( int ) 0,  ( int ) atomic64_test_and_set ( & v, 1, 2 ) ); // returns prior value of v
+    REQUIRE_EQ ( ( int ) atomic64_read ( & v ), 0 );
 }
 
 #endif
