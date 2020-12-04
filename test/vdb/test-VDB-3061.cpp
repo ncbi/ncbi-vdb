@@ -47,7 +47,8 @@ TEST_SUITE( VDB_3061 )
 const char HomeSub[] = "test_root_history";
 char new_home[ 4096 ];
 
-static rc_t create_cache_file( KDirectory * dir, const char * path, const char * sub, const char * name, int64_t age )
+static rc_t create_cache_file( KDirectory * dir, const char * path, const char * sub, const char * name,
+                               int64_t age_in_seconds )
 {
     KFile * f;
     rc_t rc = KDirectoryCreateFile( dir, &f, false, 0775, kcmInit, "%s/ncbi/%s/%s", path, sub, name );
@@ -55,13 +56,14 @@ static rc_t create_cache_file( KDirectory * dir, const char * path, const char *
     {
         KFileRelease( f );
         
-        KTime_t date = KTimeStamp() - age;
+        KTime_t date = KTimeStamp() - age_in_seconds;
         rc = KDirectorySetDate ( dir, false, date, "%s/ncbi/%s/%s", path, sub, name );
     }
     return rc;
 }
 
-static rc_t create_repo_dirs( KDirectory * dir, const char * path, const char * sub, uint32_t age )
+static rc_t create_repo_dirs( KDirectory * dir, const char * path, const char * sub,
+                              uint32_t age_in_days, int32_t offset_in_seconds )
 {
     rc_t rc = KDirectoryCreateDir( dir, 0775, kcmInit | kcmParents, "%s/ncbi/%s/files", path, sub );
     if ( rc == 0 )
@@ -73,7 +75,12 @@ static rc_t create_repo_dirs( KDirectory * dir, const char * path, const char * 
     if ( rc == 0 )
         rc = KDirectoryCreateDir( dir, 0775, kcmInit | kcmParents, "%s/ncbi/%s/wgs", path, sub );
     if ( rc == 0 )
-        rc = create_cache_file( dir, path, sub, "/sra/file1.txt", 60 * 60 * 24 * age  );
+    {
+        int64_t age_in_seconds = age_in_days;
+        age_in_seconds *= ( 60 * 60 * 24 );
+        age_in_seconds += offset_in_seconds;
+        rc = create_cache_file( dir, path, sub, "/sra/file1.txt", age_in_seconds );
+    }
     return rc;
 }
 
@@ -101,9 +108,9 @@ TEST_CASE( CLEAR_CACHE_1 )
     /* create a repository-structure equivalent to the config-values, with 3 files in it */
     KDirectory * dir;
     REQUIRE_RC( KDirectoryNativeDir( &dir ) );
-    REQUIRE_RC( create_repo_dirs( dir, new_home, "public", 10 ) ); /* 10 days old */
-    REQUIRE_RC( create_repo_dirs( dir, new_home, "dbGaP-2956", 4 ) ); /* 4 days old */
-    REQUIRE_RC( create_repo_dirs( dir, new_home, "dbGaP-4831", 5 ) ); /* 5 days old*/
+    REQUIRE_RC( create_repo_dirs( dir, new_home, "public", 10, 0 ) ); /* 10 days old */
+    REQUIRE_RC( create_repo_dirs( dir, new_home, "dbGaP-2956", 4, 0 ) ); /* 4 days old */
+    REQUIRE_RC( create_repo_dirs( dir, new_home, "dbGaP-4831", 5, -5 ) ); /* 5 days - 5 seconds old */
     REQUIRE_RC( KDirectoryRelease ( dir ) );
     
     /* we run the new function VDBManagerDeleteCacheOlderThan() with a 5-day threshold */

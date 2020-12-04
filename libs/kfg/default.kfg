@@ -28,20 +28,27 @@
 #  when the user has not yet performed any configuration.
 /config/default = "true"
 
-# The user's default public repository
+# The user's default public repository: disabled by default
 /repository/user/main/public/apps/file/volumes/flat = "files"
 /repository/user/main/public/apps/nakmer/volumes/nakmerFlat = "nannot"
 /repository/user/main/public/apps/nannot/volumes/nannotFlat = "nannot"
 /repository/user/main/public/apps/refseq/volumes/refseq = "refseq"
 /repository/user/main/public/apps/sra/volumes/sraFlat = "sra"
+/repository/user/main/public/apps/sraPileup/volumes/withExtFlat = "sra"
+/repository/user/main/public/apps/sraRealign/volumes/withExtFlat = "sra"
 /repository/user/main/public/apps/wgs/volumes/wgsFlat = "wgs"
-/repository/user/main/public/root = "$(HOME)/ncbi/public"
 
 # Remote access to NCBI's public repository
-/repository/remote/main/CGI/resolver-cgi = "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi"
+/repository/remote/main/CGI/resolver-cgi = "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi"
 
 # Remote access to NCBI's protected repository
-/repository/remote/protected/CGI/resolver-cgi = "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi"
+/repository/remote/protected/CGI/resolver-cgi = "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi"
+
+# Remote access to SDL-2
+/repository/remote/main/SDL.2/resolver-cgi = "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve"
+
+# Remote access to protected SDL-2
+/repository/remote/protected/SDL.2/resolver-cgi = "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve"
 
 # Aspera configuration
-/tools/ascp/max_rate = "1000m"
+/tools/ascp/max_rate = "450m"

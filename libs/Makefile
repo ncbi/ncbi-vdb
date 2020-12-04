@@ -40,6 +40,7 @@ MAIN_SUBDIRS = \
 	klib     \
 	kproc    \
 	kfs      \
+	cloud    \
 	kns      \
 	kfg      \
 	krypto   \
@@ -65,7 +66,8 @@ MAIN_SUBDIRS = \
 	ngs-py   \
 	kxml     \
 	hdf5     \
-	tui
+	diagnose \
+	tui		 \
 
 NCBI_VDB_SUBDIRS =   \
 	$(MAIN_SUBDIRS) \
@@ -80,7 +82,7 @@ include $(TOP)/build/Makefile.targets
 
 $(SUBDIRS):
 	@ $(MAKE) -C $@
-	
+
 ncbi-vdb: $(MAIN_SUBDIRS)
 
 vdb-sqlite: $(NCBI_VDB_SUBDIRS)

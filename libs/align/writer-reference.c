@@ -288,6 +288,17 @@ static void addToHashTable(ReferenceMgr *const self, ReferenceSeq const *const r
         addToHashBucket(&self->ht[hash0(rs->seqId)], index);
 }
 
+static void freeHashTableEntries(ReferenceMgr *const self)
+{
+    unsigned i;
+    for (i = 0; i < BUCKETS; ++i) {
+        if (self->ht[i].count > 0)
+            free(self->ht[i].index);
+        if (self->used[i].count > 0)
+            free(self->used[i].index);
+    }
+}
+
 static
 void CC ReferenceSeq_Whack(ReferenceSeq *self)
 {
@@ -1520,6 +1531,12 @@ static rc_t findSeq(ReferenceMgr *const self,
     return rc;
 }
 
+static ReferenceSeq *ReferenceMgr_FindSeq(ReferenceMgr const *const self, char const id[])
+{
+    int const fnd = findId(self, id);
+    return (fnd >= 0) ? &self->refSeq[fnd] : NULL;
+}
+
 static
 rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self,
                           ReferenceSeq **const rslt,
@@ -1529,13 +1546,10 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self,
                           bool const allowMultiMapping,
                           bool wasRenamed[])
 {
-    int const fnd = findId(self, id);
-    
-    assert(rslt != NULL);
-    *rslt = NULL;
-    if (fnd >= 0) {
-        ReferenceSeq *const obj = &self->refSeq[fnd];
-        
+    ReferenceSeq *const obj = ReferenceMgr_FindSeq(self, id);
+    if (obj) {
+        assert(rslt != NULL);
+        *rslt = NULL;
         if (obj->type == rst_dead)
             return RC(rcAlign, rcIndex, rcSearching, rcItem, rcInvalid);
         if (obj->type == rst_renamed) {
@@ -2087,6 +2101,8 @@ LIB_EXPORT rc_t CC ReferenceMgr_Release(const ReferenceMgr *cself,
         uint64_t rows = 0;
         unsigned i;
 
+        freeHashTableEntries(self);
+        
         rc = TableWriterRef_Whack(self->writer, commit, &rows);
         if (Rows) *Rows = rows;
         KDirectoryRelease(self->dir);
@@ -2300,6 +2316,22 @@ LIB_EXPORT rc_t CC ReferenceMgr_Verify(ReferenceMgr const *const cself,
         }
         return rc;
     }
+}
+
+LIB_EXPORT rc_t CC ReferenceMgr_Get1stRow(const ReferenceMgr* cself, int64_t* row_id, char const id[])
+{
+    rc_t rc = 0;
+    ReferenceSeq *seq;
+
+    if (cself == NULL || row_id == NULL) {
+        rc = RC(rcAlign, rcFile, rcReading, rcParam, rcNull);
+    }
+    else if ((seq = ReferenceMgr_FindSeq(cself, id)) == NULL)
+        rc = RC(rcAlign, rcFile, rcReading, rcId, rcNotFound);
+    else {
+        *row_id = seq->start_rowid;
+    }
+    return rc;
 }
 
 LIB_EXPORT rc_t CC ReferenceMgr_FastaPath(const ReferenceMgr* cself, const char* fasta_path)
@@ -2814,6 +2846,11 @@ LIB_EXPORT rc_t CC ReferenceMgr_Compress(const ReferenceMgr* cself,
     return rc;
 }
 
+static bool isMatchingBase(int const refBase, int const seqBase)
+{
+    return (refBase == seqBase || seqBase == '=' || (refBase == 'T' && seqBase == 'U'));
+}
+
 LIB_EXPORT rc_t CC ReferenceSeq_Compress(ReferenceSeq const *const cself,
                                          uint32_t options,
                                          INSDC_coord_zero offset,
@@ -3009,8 +3046,8 @@ LIB_EXPORT rc_t CC ReferenceSeq_Compress(ReferenceSeq const *const cself,
                             ref_pos += length;
                             ++ro;
                         }
-                        if (ref_pos < 0 || ref_pos >= max_rl ||
-                            ((toupper(ref_buf[ref_pos]) != toupper(seq[seq_pos])) && (seq[seq_pos] != '=')))
+                        if (ref_pos < 0 || ref_pos >= max_rl
+                            || !isMatchingBase(toupper(ref_buf[ref_pos]), toupper(seq[seq_pos])))
                         {
                             has_mismatch[seq_pos] = 1;
                             mismatch[data->mismatch.elements++] = seq[seq_pos];

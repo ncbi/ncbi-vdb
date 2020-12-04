@@ -384,7 +384,8 @@ rc_t KDBManagerVCreateDBInt ( KDBManager *self,
 	case kptFile | kptAlias:
 	    /* if we find a file, vary the failure if it is an archive that is a database
 	     * or a non related file */
-	    if ( KDBOpenPathTypeRead ( self, wd, dbpath, NULL, kptDatabase, NULL, false ) == 0 )
+	    if ( KDBOpenPathTypeRead ( self, wd, dbpath, NULL, kptDatabase, NULL, false,
+            NULL ) == 0 )
 		return RC ( rcDB, rcMgr, rcCreating, rcDirectory, rcUnauthorized );
 	    /* fall through */
         default:
@@ -596,7 +597,8 @@ rc_t KDBManagerVOpenDBReadInt ( const KDBManager *cself,
 				* cached = false;
 
 			/* open the directory if its a database */
-			rc = KDBOpenPathTypeRead ( cself, wd, short_path, &dir, kptDatabase, NULL, try_srapath );
+			rc = KDBOpenPathTypeRead ( cself, wd, short_path, &dir, kptDatabase, NULL,
+                try_srapath, NULL );
 			if ( rc == 0 )
 			{
 				KDatabase *db;
@@ -755,7 +757,8 @@ rc_t KDBManagerVOpenDBUpdateInt ( KDBManager *self,
 	case kptFile | kptAlias:
 	    /* if we find a file, vary the failure if it is an archive that is a database
 	     * or a non related file */
-	    if ( KDBOpenPathTypeRead ( self, wd, dbpath, NULL, kptDatabase, NULL, false ) == 0 )
+	    if ( KDBOpenPathTypeRead ( self, wd, dbpath, NULL, kptDatabase, NULL, false,
+            NULL ) == 0 )
 		return RC ( rcDB, rcMgr, rcOpening, rcDirectory, rcUnauthorized );
 	    /* fall through */
         default:
@@ -1472,7 +1475,8 @@ static
 bool CC KDatabaseListFilter ( const KDirectory *dir, const char *name, void *data_ )
 {
     struct FilterData * data = data_;
-    return ( KDBOpenPathTypeRead ( data->mgr, dir, name, NULL, data->type, NULL, false ) == 0 );
+    return ( KDBOpenPathTypeRead ( data->mgr, dir, name, NULL, data->type, NULL, false,
+        NULL ) == 0 );
 }
 
 LIB_EXPORT rc_t CC KDatabaseListDB ( const KDatabase *self, KNamelist **names )

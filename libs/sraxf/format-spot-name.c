@@ -46,8 +46,10 @@
  *  "name_fmt" [ DATA ] - name format string ( see format explanation below )
  *
  *  "X" [ DATA ] - X coordinate for spot
+ *                 it's expected to be empty: VDB-4097
  *
  *  "Y" [ DATA ] - Y coordinate for spot
+ *                 it's expected to be empty: VDB-4097
  *
  *  "spot_name" [ DATA, OPTIONAL ] - potential source of unformatted names
  *
@@ -91,13 +93,21 @@ rc_t CC format_spot_name ( void *self,
         char sname[1024]; /** name on stack **/
         const char *name_fmt = ((char*)argv[0].u.data.base) + argv[0].u.data.first_elem;
         uint32_t i, j, x, y;
+        bool have_x = false, have_y = false;
         const uint32_t fmt_size = argv [ 0 ] . u . data . elem_count;
 
         /* the coordinates to substitute */
-        x = ( ( const int32_t* ) argv [ 1 ] . u . data . base )
-            [ argv [ 1 ] . u . data . first_elem ];
-        y = ( ( const int32_t* ) argv [ 2 ] . u . data . base )
-            [ argv [ 2 ] . u . data . first_elem ];
+        have_x = argv [ 1 ] . u . data . elem_count > 0
+              && argv [ 1 ] . u . data . base != NULL;
+        have_y = argv [ 2 ] . u . data . elem_count > 0
+              && argv [ 2 ] . u . data . base != NULL;
+
+        if ( have_x )
+            x = ( ( const int32_t* ) argv [ 1 ] . u . data . base )
+                [ argv [ 1 ] . u . data . first_elem ];
+        if ( have_y )
+            y = ( ( const int32_t* ) argv [ 2 ] . u . data . base )
+                [ argv [ 2 ] . u . data . first_elem ];
 
         for ( i=j=0; i < fmt_size -1;){
             if( name_fmt [ i ] == '$' ){
@@ -105,7 +115,7 @@ rc_t CC format_spot_name ( void *self,
                 case 'x': case 'X':
                     if( j > sizeof(sname) - 11){
     					return RC ( rcXF, rcFunction, rcDecoding, rcBuffer, rcInsufficient );
-                    } else {
+                    } else if( have_x ){
                         i+=2;
                         if( i < fmt_size -1 && name_fmt [ i ] == '%' && isdigit(name_fmt [ i+1 ])) {
                             x += 24*1024*(name_fmt [ i+1 ]-'0');
@@ -113,11 +123,14 @@ rc_t CC format_spot_name ( void *self,
                         }
                         j+=sprintf(sname+j,"%d",x);
                     }
+                    else
+                        return RC ( rcXF, rcFunction, rcDecoding,
+                            rcData, rcNotFound );
                     break;
                 case 'y': case 'Y':
                     if( j > sizeof(sname) - 11){
     					return RC ( rcXF, rcFunction, rcDecoding, rcBuffer, rcInsufficient );
-                    } else {
+                    } else if( have_y ){
                         i+=2;
                         if( i < fmt_size -1 && name_fmt [ i ] == '%' && isdigit(name_fmt [ i+1 ])) {
                             y += 24*1024*(name_fmt [ i+1 ]-'0');
@@ -125,6 +138,9 @@ rc_t CC format_spot_name ( void *self,
                         }
                         j+=sprintf(sname+j,"%d",y);
                     }
+                    else
+                        return RC ( rcXF, rcFunction, rcDecoding,
+                            rcData, rcNotFound );
                     break;
                 case 'q': case 'Q':
                     if( j > sizeof(sname) - 5) {

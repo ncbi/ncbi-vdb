@@ -40,19 +40,22 @@ include 'ncbi/sra.vschema';
  * history:
  *  1.0.2 - updated ancestry
  *  1.0.3 - updated ancestry
+ *  1.0.4 - updated ancestry
  */
-table NCBI:SRA:PacBio:common #1.0.3 = NCBI:SRA:tbl:sra #2.1.3
+table NCBI:SRA:PacBio:common #1.0.4 = NCBI:SRA:tbl:sra #2.1.4
 {
 }
 
 /* history:
  *  1.0.2 - updated ancestry
  *  1.0.3 - updated ancestry
+ *  1.0.4 - updated ancestry
+ *  2.0.0 - updated ancestry
  */
-table NCBI:SRA:PacBio:smrt:fastq #1.0.3
-    = NCBI:SRA:PacBio:common #1.0.3
-    , NCBI:tbl:base_space #2.0.3
-    , NCBI:tbl:phred_quality #2.0.3
+table NCBI:SRA:PacBio:smrt:fastq #2
+    = NCBI:SRA:PacBio:common #1.0.4
+    , NCBI:tbl:base_space #3
+    , NCBI:tbl:phred_quality #2.0
 {
     /* PLATFORM
      *  platform name is always "PACBIO_SMRT"
@@ -107,10 +110,11 @@ const PacBio:hole:status PacBio:hole:OUTSIDEFOV  = 8;
 /* history:
  *  1.0.1 - updated ancestry
  *  1.0.2 - updated ancestry
+ *  2.0.0 - updated ancestry
  */
-table NCBI:SRA:PacBio:smrt:basecalls #1.0.2
+table NCBI:SRA:PacBio:smrt:basecalls #2
     = INSDC:SRA:tbl:spotcoord #1
-    , NCBI:tbl:base_space #2.0.3
+    , NCBI:tbl:base_space #3
     , NCBI:tbl:phred_quality #2.0.3
     , NCBI:SRA:PacBio:smrt:indelsubst #1
 {
@@ -159,10 +163,12 @@ table NCBI:SRA:PacBio:smrt:basecalls #1.0.2
 /* history:
  *  1.0.1 - updated ancestry
  *  1.0.2 - updated ancestry
+ *  1.0.3 - updated ancestry
+ *  2.0.0 - updated ancestry
  */
-table NCBI:SRA:PacBio:smrt:sequence #1.0.2
-    = NCBI:SRA:PacBio:smrt:basecalls #1.0.2
-    , NCBI:SRA:tbl:sra_nopos #2.1.3
+table NCBI:SRA:PacBio:smrt:sequence #2
+    = NCBI:SRA:PacBio:smrt:basecalls #2
+    , NCBI:SRA:tbl:sra_nopos #2.1.4
 {
     // pulse information
     column < U16 > izip_encoding PRE_BASE_FRAMES;
@@ -211,10 +217,12 @@ table NCBI:SRA:PacBio:smrt:sequence #1.0.2
 /* history:
  *  1.0.1 - updated ancestry
  *  1.0.2 - updated ancestry
+ *  1.0.3 - updated ancestry
+ *  2.0.0 - updated ancestry
  */
-table NCBI:SRA:PacBio:smrt:cons #1.0.2
-    = NCBI:SRA:PacBio:smrt:basecalls #1.0.2
-    , NCBI:SRA:tbl:sra #2.1.3
+table NCBI:SRA:PacBio:smrt:cons #2
+    = NCBI:SRA:PacBio:smrt:basecalls #2
+    , NCBI:SRA:tbl:sra #2.1.4
 {
     // documented in both hdf5 and xsd as signed...
     column < I32 > izip_encoding NUM_PASSES;
@@ -298,10 +306,10 @@ table NCBI:SRA:PacBio:smrt:passes #1
     column < I32 > izip_encoding PASS_START_BASE;
 };
 
-database NCBI:SRA:PacBio:smrt:db #1.0.1
+database NCBI:SRA:PacBio:smrt:db #2
 {
-    table NCBI:SRA:PacBio:smrt:sequence #1.0 SEQUENCE;
-    table NCBI:SRA:PacBio:smrt:cons #1.0 CONSENSUS;
+    table NCBI:SRA:PacBio:smrt:sequence #2.0 SEQUENCE;
+    table NCBI:SRA:PacBio:smrt:cons #2.0 CONSENSUS;
     table NCBI:SRA:PacBio:smrt:passes #1.0 PASSES;
     table NCBI:SRA:PacBio:smrt:zmw_metrics #1.0 ZMW_METRICS;
 };

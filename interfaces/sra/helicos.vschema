@@ -52,11 +52,13 @@ extern function NCBI:SRA:spot_name_token
  *  1.0.2 - base explicitly upon latest ancestry
  *  1.0.3 - base explicitly upon latest ancestry
  *  1.0.4 - base explicitly upon latest ancestry
+ *  1.0.5 - base explicitly upon latest ancestry
+ *  2.0.0 - NCBI:tbl:base_space uses metadata RNA_Flag to support RNA reads
  */
-table NCBI:SRA:Helicos:tbl:v2 #1.0.4
-    = NCBI:SRA:tbl:sra #2.1.3
-    , NCBI:tbl:base_space #2.0.3
-    , NCBI:tbl:phred_quality #2.0.3
+table NCBI:SRA:Helicos:tbl:v2 #2
+    = NCBI:SRA:tbl:sra #2.1.4
+    , NCBI:tbl:base_space #3
+    , NCBI:tbl:phred_quality #2.0
 {
     ascii platform_name
         = < ascii > echo < "HELICOS" > ();

@@ -31,10 +31,12 @@
 #include "kdb-priv.h"
 #undef KONST
 
-#include <klib/namelist.h>
+#include <klib/debug.h> /* DBGMSG */
 #include <klib/log.h>
-#include <klib/rc.h>
+#include <klib/namelist.h>
 #include <klib/printf.h>
+#include <klib/rc.h>
+
 #include <os-native.h>
 #include <sysalloc.h>
 
@@ -200,6 +202,11 @@ rc_t KDatabaseMake ( KDatabase **dbp, const KDirectory *dir, const char *path )
     KRefcountInit ( & db -> refcount, 1, "KDatabase", "make", path );
     strcpy ( db -> path, path );
 
+    /* YES,
+     DBG_VFS should be used here to be printed along with other VFS messages */
+    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
+        ("Making KDatabase '%s'\n", path));
+
     * dbp = db;
     return 0;
 }
@@ -247,7 +254,8 @@ rc_t KDBManagerVOpenDBReadInt ( const KDBManager *self, const KDatabase **dbp,
         const KDirectory *dir;
 
         /* open the directory if its a database */
-        rc = KDBOpenPathTypeRead ( self, wd, dbpath, &dir, kptDatabase, NULL, try_srapath );
+        rc = KDBOpenPathTypeRead ( self, wd, dbpath, &dir, kptDatabase, NULL,
+            try_srapath, NULL );
         if ( rc == 0 )
         {
             KDatabase *db;
@@ -670,7 +678,8 @@ static
 bool CC KDatabaseListFilter ( const KDirectory *dir, const char *name, void *data_ )
 {
     struct FilterData * data = data_;
-    return ( KDBOpenPathTypeRead ( data->mgr, dir, name, NULL, data->type, NULL, false ) == 0 );
+    return ( KDBOpenPathTypeRead ( data->mgr, dir, name,
+        NULL, data->type, NULL, false, NULL ) == 0 );
 }
 
 LIB_EXPORT rc_t CC KDatabaseListDB ( const KDatabase *self, KNamelist **names )

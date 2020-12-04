@@ -60,7 +60,7 @@ rc_t VProdResolveColumnRoot ( const VProdResolve *self,
 {
     rc_t rc = VProdResolveColumnRead ( self, out, scol );
     if ( rc == 0 && * out <= FAILED_PRODUCTION )
-        return RC ( rcVDB, rcCursor, rcOpening, rcColumn, rcUndefined );
+        return SILENT_RC ( rcVDB, rcCursor, rcOpening, rcColumn, rcUndefined );
     return rc;
 }
 
@@ -134,3 +134,4 @@ rc_t VColumnProdRead ( VColumnProd *self, struct VBlob **vblob, int64_t id )
 {
     return RC ( rcVDB, rcColumn, rcReading, rcSchema, rcInvalid );
 }
+

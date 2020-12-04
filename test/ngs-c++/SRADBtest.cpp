@@ -43,7 +43,7 @@ class SRADBFixture : public NgsFixture
 {
 public:
     static const char* SRADB_Accession;
-    
+
 public:
     SRADBFixture()
     {
@@ -54,11 +54,11 @@ public:
 
     ngs :: ReadIterator getReads ( ngs :: Read :: ReadCategory cat = ngs :: Read :: all )
     {
-        return NgsFixture :: getReads ( SRADB_Accession, cat ); 
+        return NgsFixture :: getReads ( SRADB_Accession, cat );
     }
     ngs :: Read getRead ( const ngs :: String& p_id)
     {
-        return NgsFixture :: getRead ( SRADB_Accession, p_id ); 
+        return NgsFixture :: getRead ( SRADB_Accession, p_id );
     }
     ngs :: Read getFragment (const ngs :: String& p_readId, uint32_t p_fragIdx)
     {
@@ -66,7 +66,7 @@ public:
     }
     ngs :: Reference getReference ( const char* spec )
     {
-        return NgsFixture :: getReference ( SRADB_Accession, spec ); 
+        return NgsFixture :: getReference ( SRADB_Accession, spec );
     }
 };
 const char* SRADBFixture::SRADB_Accession = "SRR600096";
@@ -78,17 +78,17 @@ const char* SRADBFixture::SRADB_Accession = "SRR600096";
 //TODO: error cases
 
 
-TEST_CASE (SRADB_ReadCollection_GetName)
+FIXTURE_TEST_CASE(SRADB_ReadCollection_GetName, SRADBFixture)
 {
     ngs::String name1, name2;
     {
-        ngs::ReadCollection run = ncbi::NGS::openReadCollection ("./SRR600096");
+        ngs::ReadCollection run = open ("data/SRR600096");
         name1 = run.getName();
         char const* pNoSlash = string_rchr( name1.c_str(), name1.length(), '/' );
         REQUIRE ( pNoSlash == NULL );
     }
     {
-        ngs::ReadCollection run = ncbi::NGS::openReadCollection ("SRR600096");
+        ngs::ReadCollection run = open ("SRR600096");
         name2 = run.getName();
     }
     REQUIRE_EQ ( name1, name2 );
@@ -96,35 +96,35 @@ TEST_CASE (SRADB_ReadCollection_GetName)
 
 FIXTURE_TEST_CASE(SRADB_ReadCollection_Open, SRADBFixture)
 {
-    ngs :: ReadCollection run = ncbi :: NGS :: openReadCollection ( SRADB_Accession );
+    ngs :: ReadCollection run = open ( SRADB_Accession );
 }
 
 FIXTURE_TEST_CASE(SRADB_ReadCollection_Open_Failed, SRADBFixture)
 {
-    REQUIRE_THROW ( ngs :: ReadCollection run = ncbi :: NGS :: openReadCollection ( string(SRADB_Accession) + "_BS" ) );
+    REQUIRE_THROW ( ngs :: ReadCollection run = open ( "idonotopen" ) );
 }
 
 FIXTURE_TEST_CASE(SRADB_ReadCollection_GetReads, SRADBFixture)
 {
-    ngs :: ReadIterator readIt = ncbi :: NGS :: openReadCollection ( SRADB_Accession ) . getReads ( ngs :: Read :: all ); 
-} 
+    ngs :: ReadIterator readIt = open ( SRADB_Accession ) . getReads ( ngs :: Read :: all );
+}
 FIXTURE_TEST_CASE(SRADB_ReadCollection_GetReads_Filtered, SRADBFixture)
 {
-    ngs :: ReadIterator readIt = ncbi :: NGS :: openReadCollection ( SRADB_Accession ) . getReads ( ngs :: Read :: unaligned ); 
-} 
+    ngs :: ReadIterator readIt = open ( SRADB_Accession ) . getReads ( ngs :: Read :: unaligned );
+}
 FIXTURE_TEST_CASE(SRADB_ReadCollection_GetReadRange, SRADBFixture)
 {
-    ngs :: ReadIterator readIt = ncbi :: NGS :: openReadCollection ( SRADB_Accession ) . getReadRange ( 100, 200 ); 
-} 
+    ngs :: ReadIterator readIt = open ( SRADB_Accession ) . getReadRange ( 100, 200 );
+}
 
 FIXTURE_TEST_CASE(SRADB_ReadCollection_GetRead, SRADBFixture)
 {
-    ngs :: Read read = getRead ( ngs :: String ( SRADB_Accession ) + ".R.1" ); 
+    ngs :: Read read = getRead ( ngs :: String ( SRADB_Accession ) + ".R.1" );
 }
 
 FIXTURE_TEST_CASE(SRADB_ReadCollection_GetRead_Failed, SRADBFixture)
 {
-    REQUIRE_THROW ( ngs :: Read read = ncbi :: NGS :: openReadCollection ( SRADB_Accession ) . getRead ( "notthere" ) );
+    REQUIRE_THROW ( ngs :: Read read = open ( SRADB_Accession ) . getRead ( "notthere" ) );
 }
 
 FIXTURE_TEST_CASE(SRADB_ReadCollection_GetReference_Failed, SRADBFixture)
@@ -134,9 +134,9 @@ FIXTURE_TEST_CASE(SRADB_ReadCollection_GetReference_Failed, SRADBFixture)
 
 FIXTURE_TEST_CASE(SRADB_ReadCollection_ReadCount, SRADBFixture)
 {
-    ngs :: ReadCollection run = ncbi :: NGS :: openReadCollection ( SRADB_Accession );
-    REQUIRE_EQ( (uint64_t)16, run . getReadCount() ); 
-}    
+    ngs :: ReadCollection run = open ( SRADB_Accession );
+    REQUIRE_EQ( (uint64_t)16, run . getReadCount() );
+}
 
 FIXTURE_TEST_CASE(SRADB_ReadCollection_Getreferences, SRADBFixture)
 {
@@ -145,31 +145,31 @@ FIXTURE_TEST_CASE(SRADB_ReadCollection_Getreferences, SRADBFixture)
 
 FIXTURE_TEST_CASE(SRADB_ReadCollection_GetAlignment, SRADBFixture)
 {
-    ngs :: ReadCollection run = ncbi :: NGS :: openReadCollection ( SRADB_Accession );
+    ngs :: ReadCollection run = open ( SRADB_Accession );
     REQUIRE_THROW ( ngs :: Alignment align = run . getAlignment ( "1" ) );
 }
 
 FIXTURE_TEST_CASE(SRADB_ReadCollection_GetAlignmentCount, SRADBFixture)
 {
-    ngs :: ReadCollection run = ncbi :: NGS :: openReadCollection ( SRADB_Accession );
+    ngs :: ReadCollection run = open ( SRADB_Accession );
     REQUIRE_EQ( (uint64_t)0, run . getAlignmentCount() );
 }
 
 FIXTURE_TEST_CASE(SRADB_ReadCollection_GetAlignmentCountFiltered, SRADBFixture)
 {
-    ngs :: ReadCollection run = ncbi :: NGS :: openReadCollection ( SRADB_Accession );
+    ngs :: ReadCollection run = open ( SRADB_Accession );
     REQUIRE_EQ( (uint64_t)0, run . getAlignmentCount( ngs :: Alignment :: all ) );
 }
 
 FIXTURE_TEST_CASE(SRADB_ReadCollection_GetAlignmentRange, SRADBFixture)
 {
-    ngs :: ReadCollection run = ncbi :: NGS :: openReadCollection ( SRADB_Accession );
+    ngs :: ReadCollection run = open ( SRADB_Accession );
     REQUIRE ( ! run . getAlignmentRange ( 1, 2 ) . nextAlignment () );
 }
 
 FIXTURE_TEST_CASE(SRADB_ReadCollection_GetAlignmentRangeFiltered, SRADBFixture)
 {
-    ngs :: ReadCollection run = ncbi :: NGS :: openReadCollection ( SRADB_Accession );
+    ngs :: ReadCollection run = open ( SRADB_Accession );
     REQUIRE ( ! run . getAlignmentRange ( 1, 2, ngs :: Alignment :: all ) . nextAlignment () );
 }
 
@@ -178,7 +178,7 @@ FIXTURE_TEST_CASE(SRADB_ReadCollection_GetAlignmentRangeFiltered, SRADBFixture)
 
 FIXTURE_TEST_CASE(SRADB_Read_ReadId, SRADBFixture)
 {
-    REQUIRE_EQ( ngs :: String ( SRADB_Accession ) + ".R.1", getRead ( ngs :: String ( SRADB_Accession ) + ".R.1" ) . getReadId() . toString () ); 
+    REQUIRE_EQ( ngs :: String ( SRADB_Accession ) + ".R.1", getRead ( ngs :: String ( SRADB_Accession ) + ".R.1" ) . getReadId() . toString () );
 }
 
 FIXTURE_TEST_CASE(SRADB_Read_ReadName, SRADBFixture)
@@ -193,7 +193,7 @@ FIXTURE_TEST_CASE(SRADB_Read_ReadGroup, SRADBFixture)
 
 FIXTURE_TEST_CASE(SRADB_Read_getNumFragments, SRADBFixture)
 {
-    REQUIRE_EQ( ( uint32_t ) 2, getRead ( ngs :: String ( SRADB_Accession ) + ".R.1" ) . getNumFragments() ); 
+    REQUIRE_EQ( ( uint32_t ) 2, getRead ( ngs :: String ( SRADB_Accession ) + ".R.1" ) . getNumFragments() );
 }
 
 FIXTURE_TEST_CASE(SRADB_Read_ReadCategory, SRADBFixture)
@@ -203,112 +203,112 @@ FIXTURE_TEST_CASE(SRADB_Read_ReadCategory, SRADBFixture)
 
 FIXTURE_TEST_CASE(SRADB_Read_getReadBases, SRADBFixture)
 {
-    ngs :: String bases = getRead ( ngs :: String ( SRADB_Accession ) + ".R.1" ) . getReadBases () . toString (); 
+    ngs :: String bases = getRead ( ngs :: String ( SRADB_Accession ) + ".R.1" ) . getReadBases () . toString ();
     ngs :: String expected(
         "TACGGAGGGGGCTAGCGTTGCTCGGAATTACTGGGCGTAAAGGGCGCGTAGGCGGACAGTTAAGTCGGGGGTGAAAGCCCCGGGCTCAACCTCGGAATTG"
         "CCTTCGATACTGGCTGGCTTGAGTACGGTAGAGGGGGGTGGAACTCCTAGTGTAGAGGTGAAATTCGTAGAGATTCCTGTTTGCTCCCCACGCTTTCGCG"
         "CCTCAGCGTCAGTAACGGTCCAGTGTGTCGCCTTCGCCACTGGTACTCTTCCTGCTATCTACGCATCTCATTCTACACACGTCGCGCGCCACACCTCTCT"
         "AACACACGTGACACAGCCACTCTCTGCCGTTACTTCGCTGCTCTGCCGCC"
     );
-    REQUIRE_EQ( expected, bases );    
+    REQUIRE_EQ( expected, bases );
 }
 
 FIXTURE_TEST_CASE(SRADB_Read_getSubReadBases_Offset, SRADBFixture)
 {
-    ngs :: String bases = getRead ( ngs :: String ( SRADB_Accession ) + ".R.1" ) . getReadBases ( 300 ) . toString( ); 
+    ngs :: String bases = getRead ( ngs :: String ( SRADB_Accession ) + ".R.1" ) . getReadBases ( 300 ) . toString( );
     ngs :: String expected("AACACACGTGACACAGCCACTCTCTGCCGTTACTTCGCTGCTCTGCCGCC");
-    REQUIRE_EQ( expected, bases );    
+    REQUIRE_EQ( expected, bases );
 }
 
 FIXTURE_TEST_CASE(SRADB_Read_getSubReadBases_OffsetLength, SRADBFixture)
 {
-    ngs :: String bases = getRead ( ngs :: String ( SRADB_Accession ) + ".R.1" ) . getReadBases ( 300, 6 ) . toString (); 
+    ngs :: String bases = getRead ( ngs :: String ( SRADB_Accession ) + ".R.1" ) . getReadBases ( 300, 6 ) . toString ();
     ngs :: String expected("AACACA");
-    REQUIRE_EQ( expected, bases );    
+    REQUIRE_EQ( expected, bases );
 }
 
 FIXTURE_TEST_CASE(SRADB_Read_getReadQualities, SRADBFixture)
 {
-    ngs :: String quals = getRead ( ngs :: String ( SRADB_Accession ) + ".R.1" ) . getReadQualities() . toString (); 
+    ngs :: String quals = getRead ( ngs :: String ( SRADB_Accession ) + ".R.1" ) . getReadQualities() . toString ();
     ngs :: String expected(
         "====,<==@7<@<@@@CEE=CCEECCEEEEFFFFEECCCEEF=EEDDCCDCEEDDDDDEEEEDDEE*=))9;;=EE(;?E(4;<<;<<EEEE;--'9<;?"
         "EEE=;E=EE<E=EE<9(9EE;(6<?E#################################################?????BBBBDDDDDBBDEEFFFEE7"
         "CHH58E=EECCEG///75,5CF-5A5-5C@FEEDFDEE:E--55----5,@@@,,5,5@=?7?#####################################"
         "##################################################"
     );
-    REQUIRE_EQ( expected, quals );    
+    REQUIRE_EQ( expected, quals );
 }
 
 FIXTURE_TEST_CASE(SRADB_Read_getSubReadQualities_Offset, SRADBFixture)
 {
-    ngs :: String quals = getRead ( ngs :: String ( SRADB_Accession ) + ".R.1" ) . getReadQualities( 300 ) . toString (); 
+    ngs :: String quals = getRead ( ngs :: String ( SRADB_Accession ) + ".R.1" ) . getReadQualities( 300 ) . toString ();
     ngs :: String expected("##################################################");
-    REQUIRE_EQ( expected, quals );    
+    REQUIRE_EQ( expected, quals );
 }
 
 FIXTURE_TEST_CASE(SRADB_Read_getSubReadQualities_OffsetLength, SRADBFixture)
 {
-    ngs :: String quals = getRead ( ngs :: String ( SRADB_Accession ) + ".R.1" ) . getReadQualities( 200, 10 ) . toString (); 
+    ngs :: String quals = getRead ( ngs :: String ( SRADB_Accession ) + ".R.1" ) . getReadQualities( 200, 10 ) . toString ();
     ngs :: String expected("CHH58E=EEC");
-    REQUIRE_EQ( expected, quals );    
+    REQUIRE_EQ( expected, quals );
 }
 
 ///// ReadIterator
 //TODO: read category selection
 //TODO: range on a collection that represents a slice (read[0].id != 1)
 //TODO: range and filtering
-//TODO: empty range 
+//TODO: empty range
 //TODO: ReadIterator over a ReadGroup (use a ReadGroup that is not immediately at the beginning of the run)
 //TODO: ReadIterator over a ReadIterator, to allow creation of a sub-iterator
 //TODO: ReadIterator returning less than the range requested
 //TODO: error cases (?)
 FIXTURE_TEST_CASE(SRADB_ReadIterator_NoReadBeforeNext, SRADBFixture)
 {
-    ngs :: ReadIterator readIt = getReads (); 
+    ngs :: ReadIterator readIt = getReads ();
     // accessing the read through an iterator before a call to nextRead() throws
     REQUIRE_THROW ( readIt . getReadId() );
 }
 
 FIXTURE_TEST_CASE(SRADB_ReadIterator_Open_All, SRADBFixture)
 {
-    ngs :: ReadIterator readIt = getReads (); 
+    ngs :: ReadIterator readIt = getReads ();
     REQUIRE( readIt . nextRead () );
-    
-    REQUIRE_EQ( ngs :: String ( ngs :: String ( SRADB_Accession ) + ".R.1" ), readIt . getReadId() . toString() ); 
+
+    REQUIRE_EQ( ngs :: String ( ngs :: String ( SRADB_Accession ) + ".R.1" ), readIt . getReadId() . toString() );
 }
 
 #if SHOW_UNIMPLEMENTED
 FIXTURE_TEST_CASE(SRADB_ReadIterator_Open_Filtered, SRADBFixture)
 {
-    ngs :: ReadIterator readIt = getReads ( ngs :: Read :: partiallyAligned ); 
+    ngs :: ReadIterator readIt = getReads ( ngs :: Read :: partiallyAligned );
     REQUIRE( readIt . nextRead () );
 
-    REQUIRE_EQ( ngs :: String ( SRADB_Accession ) + ".R.5", readIt . getReadId() . toString () ); 
+    REQUIRE_EQ( ngs :: String ( SRADB_Accession ) + ".R.5", readIt . getReadId() . toString () );
 }
 #endif
 
 FIXTURE_TEST_CASE(SRADB_ReadIterator_Next, SRADBFixture)
 {
-    ngs :: ReadIterator readIt = getReads (); 
+    ngs :: ReadIterator readIt = getReads ();
     REQUIRE( readIt . nextRead () );
     REQUIRE( readIt . nextRead () );
-    REQUIRE_EQ( ngs :: String ( SRADB_Accession ) + ".R.2", readIt . getReadId() . toString() ); 
+    REQUIRE_EQ( ngs :: String ( SRADB_Accession ) + ".R.2", readIt . getReadId() . toString() );
 }
 
 FIXTURE_TEST_CASE(SRADB_ReadIterator_End, SRADBFixture)
 {
-    ngs :: ReadIterator readIt = getReads (); 
+    ngs :: ReadIterator readIt = getReads ();
     ngs :: String lastId;
     while (readIt . nextRead ())
     {
         lastId = readIt . getReadId() . toString ();
     }
-    REQUIRE_EQ( ngs :: String ( SRADB_Accession ) + ".R.16", lastId ); 
+    REQUIRE_EQ( ngs :: String ( SRADB_Accession ) + ".R.16", lastId );
 }
 
 FIXTURE_TEST_CASE(SRADB_ReadIterator_BeyondEnd, SRADBFixture)
 {
-    ngs :: ReadIterator readIt = getReads (); 
+    ngs :: ReadIterator readIt = getReads ();
     while (readIt . nextRead ())
     {
     }
@@ -317,17 +317,17 @@ FIXTURE_TEST_CASE(SRADB_ReadIterator_BeyondEnd, SRADBFixture)
 
 FIXTURE_TEST_CASE(SRADB_ReadIterator_Range, SRADBFixture)
 {
-    ngs :: ReadIterator readIt = ncbi :: NGS :: openReadCollection ( SRADB_Accession ) . getReadRange ( 10, 5 ); 
+    ngs :: ReadIterator readIt = open ( SRADB_Accession ) . getReadRange ( 10, 5 );
     REQUIRE( readIt . nextRead () );
-    REQUIRE_EQ( ngs :: String ( SRADB_Accession ) + ".R.10", readIt . getReadId() . toString() ); 
+    REQUIRE_EQ( ngs :: String ( SRADB_Accession ) + ".R.10", readIt . getReadId() . toString() );
     REQUIRE( readIt . nextRead () );
-    REQUIRE_EQ( ngs :: String ( SRADB_Accession ) + ".R.11", readIt . getReadId() . toString() ); 
+    REQUIRE_EQ( ngs :: String ( SRADB_Accession ) + ".R.11", readIt . getReadId() . toString() );
     REQUIRE( readIt . nextRead () );
-    REQUIRE_EQ( ngs :: String ( SRADB_Accession ) + ".R.12", readIt . getReadId() . toString() ); 
+    REQUIRE_EQ( ngs :: String ( SRADB_Accession ) + ".R.12", readIt . getReadId() . toString() );
     REQUIRE( readIt . nextRead () );
-    REQUIRE_EQ( ngs :: String ( SRADB_Accession ) + ".R.13", readIt . getReadId() . toString() ); 
+    REQUIRE_EQ( ngs :: String ( SRADB_Accession ) + ".R.13", readIt . getReadId() . toString() );
     REQUIRE( readIt . nextRead () );
-    REQUIRE_EQ( ngs :: String ( SRADB_Accession ) + ".R.14", readIt . getReadId() . toString() ); 
+    REQUIRE_EQ( ngs :: String ( SRADB_Accession ) + ".R.14", readIt . getReadId() . toString() );
     REQUIRE( ! readIt . nextRead () );
 }
 
@@ -360,19 +360,19 @@ FIXTURE_TEST_CASE(SRADB_Fragment_getFragmentBases, SRADBFixture)
         "CCTGTTTGCTCCCCACGCTTTCGCGCCTCAGCGTCAGTAACGGTCCAGTGTGTCGCCTTCGCCACTGGTACTCTTCCTGCTATCTACGCATCTCATTCTA"
         "CACACGTCGCGCGCCACACCTCTCTAACACACGTGACACAGCCACTCTCTGCCGTTACTTCGCTGCTCTGCCGCC"
     );
-    REQUIRE_EQ( expected, getFragment ( ngs :: String ( SRADB_Accession ) + ".R.1", 2 ) . getFragmentBases () . toString () );    
+    REQUIRE_EQ( expected, getFragment ( ngs :: String ( SRADB_Accession ) + ".R.1", 2 ) . getFragmentBases () . toString () );
 }
 
 FIXTURE_TEST_CASE(SRADB_Fragment_getSubFragmentBases_Offset, SRADBFixture)
 {
     ngs :: String expected("CACACGTCGCGCGCCACACCTCTCTAACACACGTGACACAGCCACTCTCTGCCGTTACTTCGCTGCTCTGCCGCC");
-    REQUIRE_EQ( expected, getFragment ( ngs :: String ( SRADB_Accession ) + ".R.1", 2 ) . getFragmentBases ( 100 ) . toString () );    
+    REQUIRE_EQ( expected, getFragment ( ngs :: String ( SRADB_Accession ) + ".R.1", 2 ) . getFragmentBases ( 100 ) . toString () );
 }
 
 FIXTURE_TEST_CASE(SRADB_Fragment_getSubFragmentBases_OffsetLength, SRADBFixture)
 {
     ngs :: String expected("CACACG");
-    REQUIRE_EQ( expected, getFragment ( ngs :: String ( SRADB_Accession ) + ".R.1", 2 ) . getFragmentBases ( 100, 6 ) . toString () );    
+    REQUIRE_EQ( expected, getFragment ( ngs :: String ( SRADB_Accession ) + ".R.1", 2 ) . getFragmentBases ( 100, 6 ) . toString () );
 }
 
 FIXTURE_TEST_CASE(SRADB_Fragment_getFragmentQualities, SRADBFixture)
@@ -381,19 +381,19 @@ FIXTURE_TEST_CASE(SRADB_Fragment_getFragmentQualities, SRADBFixture)
         "?????BBBBDDDDDBBDEEFFFEE7CHH58E=EECCEG///75,5CF-5A5-5C@FEEDFDEE:E--55----5,@@@,,5,5@=?7?############"
         "###########################################################################"
     );
-    REQUIRE_EQ( expected, getFragment ( ngs :: String ( SRADB_Accession ) + ".R.1", 2 ) . getFragmentQualities () . toString () );    
+    REQUIRE_EQ( expected, getFragment ( ngs :: String ( SRADB_Accession ) + ".R.1", 2 ) . getFragmentQualities () . toString () );
 }
 
 FIXTURE_TEST_CASE(SRADB_Fragment_getSubFragmentQualities_Offset, SRADBFixture)
 {
     ngs :: String expected("###########################################################################");
-    REQUIRE_EQ( expected, getFragment ( ngs :: String ( SRADB_Accession ) + ".R.1", 2 ) . getFragmentQualities ( 100 ) . toString () );    
+    REQUIRE_EQ( expected, getFragment ( ngs :: String ( SRADB_Accession ) + ".R.1", 2 ) . getFragmentQualities ( 100 ) . toString () );
 }
 
 FIXTURE_TEST_CASE(SRADB_Fragment_getSubFragmentQualities_OffsetLength, SRADBFixture)
 {
     ngs :: String expected("5,5@=?");
-    REQUIRE_EQ( expected, getFragment ( ngs :: String ( SRADB_Accession ) + ".R.1", 2 ) . getFragmentQualities ( 80, 6 ) . toString () );    
+    REQUIRE_EQ( expected, getFragment ( ngs :: String ( SRADB_Accession ) + ".R.1", 2 ) . getFragmentQualities ( 80, 6 ) . toString () );
 }
 
 /////ReferenceIterator
@@ -412,13 +412,13 @@ FIXTURE_TEST_CASE(SRADB_ReferenceIterator_Next, SRADBFixture)
 /////AlignmentIterator
 FIXTURE_TEST_CASE(SRADB_AlignmentIterator_Open, SRADBFixture)
 {
-    ngs :: AlignmentIterator alIt = ncbi :: NGS :: openReadCollection ( SRADB_Accession ) .  getAlignments ( ngs :: Alignment :: all );  // always an empty iterator
+    ngs :: AlignmentIterator alIt = open ( SRADB_Accession ) .  getAlignments ( ngs :: Alignment :: all );  // always an empty iterator
     REQUIRE_THROW ( alIt . getAlignmentId () );
 }
 
 FIXTURE_TEST_CASE(SRADB_AlignmentIterator_Next, SRADBFixture)
 {
-    ngs :: AlignmentIterator alIt = ncbi :: NGS :: openReadCollection ( SRADB_Accession ) .  getAlignments ( ngs :: Alignment :: all );  // always an empty iterator
+    ngs :: AlignmentIterator alIt = open ( SRADB_Accession ) .  getAlignments ( ngs :: Alignment :: all );  // always an empty iterator
     REQUIRE( ! alIt . nextAlignment () );
 }
 
@@ -427,17 +427,17 @@ FIXTURE_TEST_CASE(SRADB_AlignmentIterator_Next, SRADBFixture)
 ///// ReadGroup
 FIXTURE_TEST_CASE(SRADB_ReadGroup_GetName, SRADBFixture)
 {
-    ngs :: ReadGroup rg = ncbi :: NGS :: openReadCollection ( SRADB_Accession ) . getReadGroup ( "A1DLC.1" );
+    ngs :: ReadGroup rg = open ( SRADB_Accession ) . getReadGroup ( "A1DLC.1" );
     REQUIRE_EQ ( ngs :: String("A1DLC.1"), rg . getName () );
 }
 FIXTURE_TEST_CASE(SRADB_HasReadGroup, SRADBFixture)
 {
-    REQUIRE ( ncbi::NGS::openReadCollection( SRADB_Accession ).hasReadGroup ( "A1DLC.1" ) );
-    REQUIRE ( ! ncbi::NGS::openReadCollection( SRADB_Accession ).hasReadGroup ( "non-existent read group" ) );
+    REQUIRE ( open( SRADB_Accession ).hasReadGroup ( "A1DLC.1" ) );
+    REQUIRE ( ! open( SRADB_Accession ).hasReadGroup ( "non-existent read group" ) );
 }
 FIXTURE_TEST_CASE(SRADB_ReadGroup_GetStatistics, SRADBFixture)
 {
-    ngs :: ReadGroup rg = ncbi :: NGS :: openReadCollection ( SRADB_Accession ) . getReadGroup ( "A1DLC.1" );
+    ngs :: ReadGroup rg = open ( SRADB_Accession ) . getReadGroup ( "A1DLC.1" );
     ngs :: Statistics stats = rg . getStatistics ();
 }
 
@@ -446,7 +446,7 @@ FIXTURE_TEST_CASE(SRADB_ReadGroup_GetStatistics, SRADBFixture)
 ///// Statistics
 FIXTURE_TEST_CASE(SRADB_ReadGroup_GetStatistics_getValueType, SRADBFixture)
 {
-    ngs :: ReadGroup rg = ncbi :: NGS :: openReadCollection ( SRADB_Accession ) . getReadGroup ( "A1DLC.1" );
+    ngs :: ReadGroup rg = open ( SRADB_Accession ) . getReadGroup ( "A1DLC.1" );
     ngs :: Statistics stats = rg . getStatistics ();
 
     REQUIRE_EQ ( ngs :: Statistics :: uint64, stats . getValueType ( "BASE_COUNT" ) );
@@ -454,7 +454,7 @@ FIXTURE_TEST_CASE(SRADB_ReadGroup_GetStatistics_getValueType, SRADBFixture)
 
 FIXTURE_TEST_CASE(SRADB_ReadGroup_GetStatistics_getAsU64, SRADBFixture)
 {
-    ngs :: ReadGroup rg = ncbi :: NGS :: openReadCollection ( SRADB_Accession ) . getReadGroup ( "A1DLC.1" );
+    ngs :: ReadGroup rg = open ( SRADB_Accession ) . getReadGroup ( "A1DLC.1" );
     ngs :: Statistics stats = rg . getStatistics ();
 
     REQUIRE_EQ ( (uint64_t)5600, stats . getAsU64 ( "BASE_COUNT" ) );
@@ -462,7 +462,7 @@ FIXTURE_TEST_CASE(SRADB_ReadGroup_GetStatistics_getAsU64, SRADBFixture)
 
 FIXTURE_TEST_CASE(SRADB_ReadGroup_GetStatistics_getAsI64, SRADBFixture)
 {
-    ngs :: ReadGroup rg = ncbi :: NGS :: openReadCollection ( SRADB_Accession ) . getReadGroup ( "A1DLC.1" );
+    ngs :: ReadGroup rg = open ( SRADB_Accession ) . getReadGroup ( "A1DLC.1" );
     ngs :: Statistics stats = rg . getStatistics ();
 
     REQUIRE_EQ ( (int64_t)5600, stats . getAsI64 ( "BASE_COUNT" ) );
@@ -470,7 +470,7 @@ FIXTURE_TEST_CASE(SRADB_ReadGroup_GetStatistics_getAsI64, SRADBFixture)
 
 FIXTURE_TEST_CASE(SRADB_ReadGroup_GetStatistics_getAsDouble, SRADBFixture)
 {
-    ngs :: ReadGroup rg = ncbi :: NGS :: openReadCollection ( SRADB_Accession ) . getReadGroup ( "A1DLC.1" );
+    ngs :: ReadGroup rg = open ( SRADB_Accession ) . getReadGroup ( "A1DLC.1" );
     ngs :: Statistics stats = rg . getStatistics ();
 
     REQUIRE_EQ ( 5600.0, stats . getAsDouble ( "BASE_COUNT" ) );
@@ -478,7 +478,7 @@ FIXTURE_TEST_CASE(SRADB_ReadGroup_GetStatistics_getAsDouble, SRADBFixture)
 
 FIXTURE_TEST_CASE(SRADB_ReadGroup_GetStatistics_nextPath, SRADBFixture)
 {
-    ngs :: ReadGroup rg = ncbi :: NGS :: openReadCollection ( SRADB_Accession ) . getReadGroup ( "A1DLC.1" );
+    ngs :: ReadGroup rg = open ( SRADB_Accession ) . getReadGroup ( "A1DLC.1" );
     ngs :: Statistics stats = rg . getStatistics ();
 
     REQUIRE_EQ ( string("BIO_BASE_COUNT"), stats . nextPath ( "BASE_COUNT" ) );
@@ -486,7 +486,7 @@ FIXTURE_TEST_CASE(SRADB_ReadGroup_GetStatistics_nextPath, SRADBFixture)
 
 FIXTURE_TEST_CASE(SRADB_ReadGroup_GetStatistics_iteration, SRADBFixture)
 {
-    ngs :: ReadGroup rg = ncbi :: NGS :: openReadCollection ( SRADB_Accession ) . getReadGroup ( "A1DLC.1" );
+    ngs :: ReadGroup rg = open ( SRADB_Accession ) . getReadGroup ( "A1DLC.1" );
     ngs :: Statistics stats = rg . getStatistics ();
 
 	string path = stats . nextPath ( "" );
@@ -527,7 +527,9 @@ const char UsageDefaultName[] = "test-ngs_sradb-c++";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
+    KConfigDisableUserSettings();
     rc_t rc=NgsSradbCppTestSuite(argc, argv);
+    NgsFixture::ReleaseCache();
     return rc;
 }
 

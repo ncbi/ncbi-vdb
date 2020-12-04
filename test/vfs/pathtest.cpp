@@ -295,6 +295,7 @@ FIXTURE_TEST_CASE(NAME_SERVER_PROTECTED_HTTP, PathFixture) {
     {
 #define HOST "gap-download.ncbi.nlm.nih.gov"
 #define PATH "/1234ABCD-22BB-CC33-4C4C-D5E6F7890A1B/SRR123456.sra"
+#undef URL
 #define URL "http://" HOST PATH
 #define TIC "1A2B3C4D-2B3C-4D5E-6F78-90A1B23C4D5E"
         String download_ticket, url;
@@ -692,6 +693,78 @@ FIXTURE_TEST_CASE(UTF8_FILENAME, PathFixture) {
         REQUIRE_EQ(num_read, e.size());
         REQUIRE_EQ(string(buffer), e);
     }
+}
+
+FIXTURE_TEST_CASE(Http, PathFixture)
+{
+#undef SRC
+#define SRC "http://u@h.d:9/d/f"
+    REQUIRE_RC(VFSManagerMakePath ( vfs, &path, SRC));
+    char buffer[4096] = "";
+    size_t num_read = 0;
+    REQUIRE_RC(VPathReadUri(path, buffer, sizeof buffer, &num_read));
+    REQUIRE_EQ(num_read, sizeof SRC - 1);
+    REQUIRE_EQ(string(buffer), string(SRC));
+}
+
+FIXTURE_TEST_CASE(Fasp, PathFixture)
+{
+#undef SRC
+#define SRC "fasp://u@hst.com:dir/file"
+    REQUIRE_RC(VFSManagerMakePath ( vfs, &path, SRC));
+    char buffer[4096] = "";
+    size_t num_read = 0;
+    REQUIRE_RC(VPathReadUri(path, buffer, sizeof buffer, &num_read));
+    REQUIRE_EQ(num_read, sizeof SRC - 1);
+    REQUIRE_EQ(string(buffer), string(SRC));
+
+    string e("dir/file");
+    REQUIRE_RC(VPathReadPath(path, buffer, sizeof buffer, &num_read));
+    REQUIRE_EQ(num_read, e.size());
+    REQUIRE_EQ(string(buffer), e);
+}
+
+FIXTURE_TEST_CASE(F_asp, PathFixture)
+{
+#undef SRC
+#define SRC "fasp://u@hst.com:a-dir/file"
+    REQUIRE_RC(VFSManagerMakePath ( vfs, &path, SRC));
+    char buffer[4096] = "";
+    size_t num_read = 0;
+    REQUIRE_RC(VPathReadUri(path, buffer, sizeof buffer, &num_read));
+    REQUIRE_EQ(num_read, sizeof SRC - 1);
+    REQUIRE_EQ(string(buffer), string(SRC));
+
+    string e("a-dir/file");
+    REQUIRE_RC(VPathReadPath(path, buffer, sizeof buffer, &num_read));
+    REQUIRE_EQ(num_read, e.size());
+    REQUIRE_EQ(string(buffer), e);
+}
+
+FIXTURE_TEST_CASE(Fasp1G, PathFixture)
+{
+#undef SRC
+#define SRC "fasp://u@ftp.gov:1G"
+    REQUIRE_RC(VFSManagerMakePath ( vfs, &path, SRC));
+    char buffer[4096] = "";
+    size_t num_read = 0;
+    REQUIRE_RC(VPathReadUri(path, buffer, sizeof buffer, &num_read));
+    REQUIRE_EQ(num_read, sizeof SRC - 1);
+    REQUIRE_EQ(string(buffer), string(SRC));
+
+    string e("1G");
+    REQUIRE_RC(VPathReadPath(path, buffer, sizeof buffer, &num_read));
+    REQUIRE_EQ(num_read, e.size());
+    REQUIRE_EQ(string(buffer), e);
+}
+
+FIXTURE_TEST_CASE(Pileup, PathFixture)
+{
+    REQUIRE_RC(VFSManagerMakePath(vfs, &path, "http://s/4.pileup"));
+
+    String str;
+    REQUIRE_RC(VPathGetPath(path, & str));
+    REQUIRE_EQ ( static_cast<size_t> (str.len), str.size  );
 }
 
 //////////////////////////////////////////// Main

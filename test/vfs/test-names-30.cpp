@@ -25,22 +25,33 @@
 */
 
 
-#include <klib/time.h> /* KTimeMakeTime */
-#include <vfs/services-priv.h> /* KServiceTestNamesExecuteExt */
 #include "../../libs/vfs/services-priv.h" /* KServiceNames3_0StreamTest */
 #include "../../libs/vfs/path-priv.h" /* VPathEqual */
-#include <vfs/services.h> /* KSrvResponse */
-#include <vfs/path.h> /* VPath */
+#include <kapp/args.h> /* ArgsMakeAndHandle */
+#include <kfg/config.h> /* KConfigDisableUserSettings */
 #include <klib/debug.h> /* KDbgSetString */
 #include <klib/rc.h>
 #include <klib/text.h> /* CONST_STRING */
+#include <klib/time.h> /* KTimeMakeTime */
 #include <ktst/unit_test.hpp> /* KMain */
+#include <vfs/path.h> /* VPath */
+#include <vfs/services.h> /* KSrvResponse */
+#include <vfs/services-priv.h> /* KServiceTestNamesExecuteExt */
+
+#include "../../libs/vfs/resolver-cgi.h" /* RESOLVER_CGI */
 
 //#include <cstdio> // printf
 
 using std :: string;
 
-TEST_SUITE ( Names3_0_TestSuite );
+static rc_t argsHandler(int argc, char* argv[]) {
+    return ArgsMakeAndHandle ( NULL, argc, argv, 0, NULL, 0 );
+}
+
+TEST_SUITE_WITH_ARGS_HANDLER ( Names3_0_TestSuite, argsHandler );
+
+#define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
+    if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (false)
 
 class P {
     String _tick;
@@ -103,7 +114,8 @@ public:
 
         VPath * p = NULL;
         rc_t rc = VPathMakeFromUrl ( & p, & url, & _tick, true, & _id, _size, t,
-                                     pd5, expiration );
+                pd5, expiration, NULL, NULL, NULL, false, false, NULL, -1, 0,
+            NULL);
 
         if ( rc == 0 )
             rc = VPathMarkHighReliability ( p, true );
@@ -286,14 +298,14 @@ TEST_CASE ( DOUBLE ) {
     const KTime_t exp = 1489700000  ;
     const string date1 (  "1981-01-13T13:25:31" );
     const KTime_t exp1 = 1489710000  ;
-    REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.0\n"
+    REQUIRE_RC ( KServiceNames3_0StreamTestMany ( "#3.0\n"
         "0|| object-id |90|1981-01-13T13:25:30||ticket|"
 "http://url/$fasp://frl/$https://hsl/$file:///p$s3:p||||"
 "http://vdbcacheUrl/$fasp://fvdbcache/$https://vdbcache/$file:///vdbcache$s3:v|"
             "1489700000|200| message\n"
         "1|| object-i1 |10|1981-01-13T13:25:31|| ticke1 |"
           "http://ur1/||||https://vdbcacheUrl1/|1489710000|200| messag1\n"
-        "$1489690000\n", & response, 0 ) );
+        "$1489690000\n", & response, 0, 2 ) );
 
     CHECK_NOT_NULL ( response );
     REQUIRE_EQ ( KSrvResponseLength ( response ), 2u );
@@ -426,6 +438,8 @@ TEST_CASE ( AND_ERROR ) {
 }
 #endif
 
+static KConfig * KFG = NULL;
+
 TEST_CASE ( FULL_TEST_NO_HTTP ) {
 //  assert ( ! KDbgSetString ( "VFS" ) );
 
@@ -439,6 +453,7 @@ TEST_CASE ( FULL_TEST_NO_HTTP ) {
         NULL, NULL ) );
 
     const KSrvResponse * response = NULL;
+
 if ( 1 )
     REQUIRE_RC_FAIL ( KServiceTestNamesExecuteExt ( service, 0, NULL, NULL,
         & response, "" ) );
@@ -491,13 +506,24 @@ if ( 1 )
         NULL, NULL ) );
 }
 
-TEST_CASE ( TEST_KFG ) {
-}
-
 extern "C" {
+    const char UsageDefaultName[] = "test-names-30";
+    rc_t CC UsageSummary ( const char     * progname) { return 0; }
+    rc_t CC Usage        ( const struct Args * args ) { return 0; }
     ver_t CC KAppVersion ( void ) { return 0; }
     rc_t CC KMain ( int argc, char * argv [] ) {
         if ( 0 ) assert ( ! KDbgSetString ( "VFS" ) );
-        return Names3_0_TestSuite ( argc, argv );
+        KConfigDisableUserSettings ();
+
+        rc_t rc = KConfigMake ( & KFG, NULL );
+        if ( rc == 0 )
+            rc = KConfigWriteString ( KFG,
+                "repository/remote/main/CGI/resolver-cgi", RESOLVER_CGI );
+
+        rc = Names3_0_TestSuite ( argc, argv );
+
+        RELEASE ( KConfig, KFG );
+
+        return rc;
     }
 }

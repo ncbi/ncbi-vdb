@@ -39,6 +39,8 @@
 
 #include <kdb/manager.h>
 
+#include <kfg/config.h> /* KConfigDisableUserSettings */
+
 #include <vdb/manager.h>
 #include <vdb/vdb-priv.h>
 
@@ -62,7 +64,7 @@ class SRA_Fixture : public NGS_C_Fixture { };
 FIXTURE_TEST_CASE(SRA_ReadCollection_Open, SRA_Fixture)
 {
     ENTRY;
-    m_coll = NGS_ReadCollectionMake ( ctx, SRA_Accession );
+    m_coll = open ( ctx, SRA_Accession );
     REQUIRE ( ! FAILED () );
     REQUIRE_NOT_NULL ( m_coll );
     EXIT;
@@ -1063,8 +1065,10 @@ rc_t CC KMain ( int argc, char *argv [] )
 {
     //assert(!KDbgSetString("KFG"));
     //assert(!KDbgSetString("VFS"));
-    rc_t m_coll=NgsSraTestSuite(argc, argv);
-    return m_coll;
+    KConfigDisableUserSettings();
+    rc_t ret=NgsSraTestSuite(argc, argv);
+    NGS_C_Fixture::ReleaseCache();
+    return ret ;
 }
 
 }

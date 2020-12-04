@@ -29,14 +29,16 @@ TOP ?= $(abspath ../..)
 MODULE = test/sraxf
 
 TEST_TOOLS = \
+	test-format_spot_name \
 	test-fix_read_seg \
+	test_syn_quality \
 
 include $(TOP)/build/Makefile.env
 
 $(TEST_TOOLS): makedirs
 	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
 
-.PHONY: $(TEST_TOOLS)
+.PHONY: $(TEST_TOOLS) produce_test_src
 
 clean: stdclean
 
@@ -58,3 +60,42 @@ SRATEST_LIB = \
 $(TEST_BINDIR)/test-fix_read_seg: $(SRATEST_OBJ)
 	$(LP) --exe -o $@ $^ $(SRATEST_LIB)
 
+
+#----------------------------------------------------------------
+# test-format_spot_name
+#
+
+TFSN_SRC = \
+	test-format_spot_name
+
+TFSN_OBJ = \
+	$(addsuffix .$(OBJX),$(TFSN_SRC))
+
+$(TEST_BINDIR)/test-format_spot_name: $(TFSN_OBJ)
+	$(LP) --exe -o $@ $^ $(SRATEST_LIB)
+
+
+#----------------------------------------------------------------
+# test_syn_quality
+#
+
+TST_SYN_QUAL_SRC = \
+	test_syn_quality
+
+TST_SYN_QUAL_OBJ = \
+	$(addsuffix .$(OBJX),$(TST_SYN_QUAL_SRC))
+
+TST_SYN_QUAL_LIB = \
+	-skapp \
+	-sktst \
+	-sncbi-vdb \
+
+$(TEST_BINDIR)/test_syn_quality: $(TST_SYN_QUAL_OBJ)
+	$(LP) --exe -o $@ $^ $(TST_SYN_QUAL_LIB)
+
+#----------------------------------------------------------------
+# overriden runtests, to pass the SRCDIR into test_syn_quality
+#
+#runtests: test_syn_quality test-fix_read_seg
+#	test-fix_read_seg
+#	test_syn_quality $(SRCDIR)

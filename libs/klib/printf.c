@@ -92,8 +92,8 @@
 #define OCTAL_PREFIX_COUNTS_TOWARD_PRECISION  STDC_COMPATIBILITY
 #define HEX_PREFIX_FOLLOWS_CASE               STDC_COMPATIBILITY
 /* Present in 2.3.3 (from SLES 9.3), absent in 2.5 (from CentOS 5.6) */
-#define EMULATE_SMALLINT_EXTENSION_BUG      ( STDC_COMPATIBILITY && defined(__GLIBC__) && (__GLIBC__ < 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ < 5) ) )
-#define ZERO_PAD_ONLY_NUMBERS               ( !STDC_COMPATIBILITY || defined(__GLIBC__) )
+#define EMULATE_SMALLINT_EXTENSION_BUG      ( STDC_COMPATIBILITY && __GLIBC__ != 0 && (__GLIBC__ < 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ < 5) ) )
+#define ZERO_PAD_ONLY_NUMBERS               ( !STDC_COMPATIBILITY || __GLIBC__ != 0 )
 
 #define USE_LIB_FLOAT 1
 
@@ -1407,6 +1407,9 @@ rc_t parse_format_string ( const char *fmt_str, va_list vargs,
 
     PrintFmt *fmt = * fmtp;
     PrintArg *args = * argp;
+
+    if ( fmt_str == NULL )
+        return RC ( rcText, rcString, rcFormatting, rcParam, rcNull );
 
     /* loop over format string */
     for ( rc = 0, i = str_idx = fmt_idx = arg_idx = 0; fmt_str [ i ] != 0; ++ i )
@@ -3295,7 +3298,7 @@ LIB_EXPORT rc_t CC structured_printf ( const KWrtHandler *handler,
     if ( handler != NULL )
     {
         rc_t rc;
-        char buff [ 4096 ];
+        char buff [ 16 * 1024 ];
 
         KBufferedWrtHandler out;
         out . handler = handler;
@@ -3456,6 +3459,25 @@ LIB_EXPORT rc_t CC new_kfprintf ( const KWrtHandler *out,
     return rc;
 }
 
+#define USE_SMARTER_BUFFER_PRINT 1
+#if USE_SMARTER_BUFFER_PRINT
+static rc_t KDataBufferWriter(void *vself, char const *content, size_t size, size_t *num_writ)
+{
+    KDataBuffer *const self = vself;
+    size_t const orig_size = (size_t)self->elem_count; /* includes nul */
+    rc_t rc = KDataBufferResize(self, orig_size + size);
+    if (rc == 0) {
+        char *const base = self->base;
+        
+        memmove(base + orig_size - 1 /* overwrite nul */, content, size);
+        *num_writ = size;
+
+        base[orig_size + size - 1] = '\0'; /* add nul */
+    }
+    return rc;
+}
+#endif
+
 LIB_EXPORT rc_t CC KDataBufferVPrintf ( KDataBuffer * buf, const char * fmt, va_list args )
 {
     rc_t rc;
@@ -3468,59 +3490,126 @@ LIB_EXPORT rc_t CC KDataBufferVPrintf ( KDataBuffer * buf, const char * fmt, va_
         rc = RC ( rcText, rcString, rcFormatting, rcParam, rcEmpty );
     else
     {
+#if USE_SMARTER_BUFFER_PRINT
+        KWrtHandler handler;
+        uint64_t const orig_size = buf->elem_count;
+        
+        handler.writer = KDataBufferWriter;
+        handler.data = buf;
+        
+        if (orig_size == 0) {
+            if (buf->elem_bits == 0)
+                buf->elem_bits = 8;
+            if (buf->elem_bits == 8) {
+                rc = KDataBufferResize(buf, 1);
+                if (rc)
+                    return rc;
+                ((char *)buf->base)[0] = '\0';
+            }
+        }
+        if (buf->elem_bits != 8)
+            return RC ( rcText, rcString, rcFormatting, rcParam, rcIncorrect );
+
+        /* nul terminator is required */
+        if (((char const *)buf->base)[buf->elem_count - 1] != '\0')
+            return RC ( rcText, rcString, rcFormatting, rcParam, rcIncorrect );
+
+        rc = vkfprintf(&handler, NULL, fmt, args);
+        if (rc)
+            (void)KDataBufferResize(buf, orig_size);
+#else
         size_t bsize;
-        char *buffer;
+        char * buffer;
         size_t content;
         size_t num_writ;
+        uint64_t orig_size;
 
         /* the C library ruins a va_list upon use
            in case we ever need to use it a second time,
            make a copy first */
         va_list args_copy;
-        va_copy ( args_copy, args );
 
         /* begin to calculate content and bsize */
-        content = ( size_t ) buf -> elem_count;
+        content = ( size_t ) ( orig_size = buf -> elem_count );
 
         /* check for an empty buffer */
         if ( content == 0 )
         {
-            /* detect buffers initialized by memset */
+            /* detect buffers initialized by memset to zero */
             if ( buf -> elem_bits == 0 )
                 buf -> elem_bits = 8;
 
+            /* size to 4K */
             rc = KDataBufferResize ( buf, bsize = 4096 );
             if ( rc != 0 )
+            {
+                buf -> elem_count = 0;
                 return rc;
+            }
+        }
+        else if ( buf -> elem_bits != 8 )
+        {
+            return RC ( rcText, rcString, rcFormatting, rcParam, rcIncorrect );
         }
         else
         {
-            /* generate even multiple of 4K */
+            /* recover actual size of buffer, assuming 4K increments */
             bsize = ( content + 4095 ) & ~ ( size_t ) 4095;
 
             /* discount NUL byte */
             content -= 1;
         }
+
+        /* prepare for a second attempt after a resize */
+        va_copy ( args_copy, args );
             
-        /* convert the 2-part url into a flat string */
+        /* nothing has yet been written, buffer pointer is stable */
+        num_writ = 0;
         buffer = buf -> base;
-        rc = string_vprintf ( &buffer [ content ], bsize - content, & num_writ, fmt, args );
-        /* Make sure there is enough room to store data including NUL */
-        if ( rc != 0 || ( content + num_writ ) == bsize )
+
+        /* try to print into the buffer and ALWAYS leave room for a NUL byte */
+        rc = string_vprintf ( & buffer [ content ], bsize - 1 - content, & num_writ, fmt, args );
+
+        /* the error we are EXPECTING and can fix is where the buffer was too small */
+        if ( GetRCState ( rc ) == rcInsufficient && GetRCObject ( rc ) == rcBuffer )
         {
-            bsize = ( content + num_writ + 4095 + 1 ) & ~ ( size_t ) 4095;
-            rc = KDataBufferResize ( buf, bsize );
+            /* calculate a new needed size */
+            size_t new_size = ( content + num_writ + 4095 + 1 ) & ~ ( size_t ) 4095;
+
+            /* mark that nothing has yet been successfully written */
+            num_writ = 0;
+
+            /* resize the buffer */
+            rc = KDataBufferResize ( buf, new_size );
             if ( rc == 0 )
             {
+                /* assume reallocation took place */
+                buffer = buf -> base;
+                bsize = new_size;
+
                 /* try again with the newly sized buffer */
-                rc = string_vprintf ( &buffer [ content ], bsize - content, & num_writ, fmt, args_copy );
+                rc = string_vprintf ( & buffer [ content ], bsize - 1 - content, & num_writ, fmt, args_copy );
+
+                /* any error means nothing was printed */
+                if ( rc != 0 )
+                    num_writ = 0;
             }
         }
+
+        /* destroy copy */
         va_end ( args_copy );
+
+        /* NUL terminate even if redundant */
+        assert ( content + num_writ < bsize );
+        assert ( num_writ + 1 == bsize || rc != 0 || buffer [ content + num_writ ] == 0 );
+        buffer [ content + num_writ ] = 0;
     
         /* size down to bsize + NUL */
-        if ( rc == 0 )
+        if ( rc != 0 )
+            KDataBufferResize ( buf, orig_size );
+        else
             KDataBufferResize ( buf, content + num_writ + 1 );
+#endif
     }
 
     return rc;

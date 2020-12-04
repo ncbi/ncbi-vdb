@@ -45,20 +45,22 @@ SUBDIRS =       \
     kfg         \
     kapp        \
     vfs         \
-    kns         \
+    cloud       \
     kdb         \
     kproc       \
     vdb         \
-    ngs         \
-    ngs-c++     \
-    ngs-java    \
-    ngs-python  \
     search      \
     sraxf       \
     vxf         \
     loader      \
     krypto      \
     cipher      \
+    ngs         \
+    ngs-c++     \
+    ngs-python  \
+    ngs-java    \
+    schema      \
+    kns         \
     install     \
 
 # common targets for non-leaf Makefiles; must follow a definition of SUBDIRS

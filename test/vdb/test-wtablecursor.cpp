@@ -27,9 +27,15 @@
 #include <sstream>
 
 #include <klib/rc.h>
+#include <klib/symbol.h>
+
 #include <vdb/table.h>
+#include <vdb/vdb-priv.h>
 
 #include <../libs/vdb/schema-priv.h>
+#include <../libs/vdb/table-priv.h>
+#include <../libs/vdb/cursor-priv.h>
+#include <../libs/vdb/prod-priv.h>
 
 #include "WVDB_Fixture.hpp"
 
@@ -91,6 +97,11 @@ public:
     uint32_t  m_columnIdx;
 };
 
+// The original purpose of these tests was to cover all VTableCursor methods in the process of
+// introducing a vtable, so the tests cases themselves are rather simplistic, just making sure
+// methods are plugged in correctly (i.e. do not crash).
+// Evolve as required.
+
 static const char * SimpleSchema =
     "table T#1 { column ascii c; };"
     "database db #1 { table T#1 t; };"
@@ -109,7 +120,7 @@ FIXTURE_TEST_CASE( VTableCursor_MakeWrite, TableCursorFixture )
     REQUIRE_RC ( VTableRelease ( table ) );
 }
 
-FIXTURE_TEST_CASE( VTableCursor_AddRef, TableCursorFixture )
+FIXTURE_TEST_CASE( VTableCursor_AddRef_Release, TableCursorFixture )
 {
     MakeWriteCursor ( GetName(), SimpleSchema );
 
@@ -120,8 +131,8 @@ FIXTURE_TEST_CASE( VTableCursor_AddRef, TableCursorFixture )
 FIXTURE_TEST_CASE( VTableCursor_AddColumn, TableCursorFixture )
 {
     MakeWriteCursor ( GetName(), SimpleSchema );
-
     REQUIRE_RC ( VCursorAddColumn ( m_cur, & m_columnIdx, "%s", "c" ) );
+    // also covers VCursorMakeColumn
 }
 
 FIXTURE_TEST_CASE( VTableCursor_GetColumnIdx, TableCursorFixture )
@@ -150,7 +161,6 @@ FIXTURE_TEST_CASE( VTableCursor_Datatype, TableCursorFixture )
 FIXTURE_TEST_CASE( VTableCursor_Open, TableCursorFixture )
 {
     MakeWriteCursorAddColumn ( GetName(), SimpleSchema );
-
     REQUIRE_RC ( VCursorOpen ( m_cur ) );
 }
 
@@ -161,8 +171,8 @@ FIXTURE_TEST_CASE( VTableCursor_IdRange, TableCursorFixture )
     int64_t first = 0;
     uint64_t count = 0;
     REQUIRE_RC ( VCursorIdRange ( m_cur, m_columnIdx, & first, & count ) );
-    REQUIRE_EQ( 1l, first );
-    REQUIRE_EQ( 0lu, count );
+    REQUIRE_EQ((int64_t)1, first);
+    REQUIRE_EQ((uint64_t)0, count);
 }
 
 FIXTURE_TEST_CASE( VTableCursor_RowId, TableCursorFixture )
@@ -171,7 +181,7 @@ FIXTURE_TEST_CASE( VTableCursor_RowId, TableCursorFixture )
 
     int64_t rowId = 0;
     REQUIRE_RC ( VCursorRowId ( m_cur, & rowId ) );
-    REQUIRE_EQ( 1l, rowId );
+    REQUIRE_EQ((int64_t)1, rowId);
 }
 
 FIXTURE_TEST_CASE( VTableCursor_SetRowId, TableCursorFixture )
@@ -206,7 +216,6 @@ FIXTURE_TEST_CASE( VTableCursor_FindNextRowIdDirect_Empty, TableCursorFixture )
 FIXTURE_TEST_CASE( VTableCursor_OpenRow, TableCursorFixture )
 {
     MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
-
     REQUIRE_RC ( VCursorOpenRow ( m_cur ) );
 }
 
@@ -367,18 +376,20 @@ FIXTURE_TEST_CASE( VTableCursor_OpenParentRead, TableCursorFixture )
 {
     MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
 
-    struct VTable const * tbl = 0;
+    const VTable * tbl = 0;
     REQUIRE_RC ( VCursorOpenParentRead ( m_cur, & tbl ) );
     REQUIRE_NOT_NULL ( tbl );
+    REQUIRE_RC ( VTableRelease ( (VTable*)tbl ) );
 }
 
 FIXTURE_TEST_CASE( VTableCursor_OpenParentUpdate, TableCursorFixture )
 {
     MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
 
-    struct VTable * tbl = 0;
+    VTable * tbl = 0;
     REQUIRE_RC ( VCursorOpenParentUpdate ( m_cur, & tbl ) );
     REQUIRE_NOT_NULL ( tbl );
+    REQUIRE_RC ( VTableRelease ( tbl ) );
 }
 
 FIXTURE_TEST_CASE( VTableCursor_GetUserData, TableCursorFixture )
@@ -393,8 +404,192 @@ FIXTURE_TEST_CASE( VTableCursor_GetUserData, TableCursorFixture )
 FIXTURE_TEST_CASE( VTableCursor_SetUserData, TableCursorFixture )
 {
     MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
-
     REQUIRE_RC ( VCursorSetUserData ( m_cur, 0, 0 ) );
+}
+
+FIXTURE_TEST_CASE( VTableCursor_PermitPostOpenAdd, TableCursorFixture )
+{
+    MakeWriteCursor ( GetName(), SimpleSchema );
+    REQUIRE_RC ( VCursorPermitPostOpenAdd ( m_cur ) );
+}
+
+FIXTURE_TEST_CASE( VTableCursor_SuspendTriggers, TableCursorFixture )
+{
+    MakeWriteCursor ( GetName(), SimpleSchema );
+    REQUIRE_RC ( VCursorSuspendTriggers ( m_cur ) );
+}
+
+FIXTURE_TEST_CASE( VTableCursor_GetSchema, TableCursorFixture )
+{
+    MakeWriteCursor ( GetName(), SimpleSchema );
+    REQUIRE_NOT_NULL ( VCursorGetSchema ( m_cur ) );
+}
+
+FIXTURE_TEST_CASE( VTableCursor_PageIdRange, TableCursorFixture )
+{
+    MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
+    OpenRowWriteCommit("abc");
+    REQUIRE_RC ( VCursorCloseRow ( m_cur ) );
+    OpenRowWriteCommit("def");
+    REQUIRE_RC ( VCursorCloseRow ( m_cur ) );
+    REQUIRE_RC ( VCursorCommit ( m_cur ) );
+
+    int64_t first=-1;
+    int64_t last=-1;
+    REQUIRE_RC ( VCursorPageIdRange ( m_cur, m_columnIdx, 1, & first, & last ) );
+    REQUIRE_EQ((int64_t)1, first);
+    REQUIRE_EQ((int64_t)2, last);
+}
+
+FIXTURE_TEST_CASE( VTableCursor_IsStaticColumn, TableCursorFixture )
+{
+    MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
+    OpenRowWriteCommit("abc");
+    REQUIRE_RC ( VCursorCloseRow ( m_cur ) );
+    OpenRowWriteCommit("abc");
+    REQUIRE_RC ( VCursorCloseRow ( m_cur ) );
+    REQUIRE_RC ( VCursorCommit ( m_cur ) );
+
+    bool is_static = false;
+    REQUIRE_RC ( VCursorIsStaticColumn ( m_cur, m_columnIdx, & is_static ) );
+    REQUIRE ( is_static );
+}
+
+FIXTURE_TEST_CASE( VTableCursor_LinkedCursorGet, TableCursorFixture )
+{
+    MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
+
+    const VCursor * curs = 0;
+    REQUIRE_RC_FAIL ( VCursorLinkedCursorGet ( m_cur, "tbl", & curs ) );
+}
+
+FIXTURE_TEST_CASE( VTableCursor_LinkedCursorSet, TableCursorFixture )
+{
+    MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
+
+    // reuse m_cur
+    REQUIRE_RC ( VCursorLinkedCursorSet ( m_cur, "tbl", m_cur ) ); // calls AddRef(m_cur)
+    REQUIRE_RC ( VCursorRelease ( m_cur ) );
+
+    const VCursor * curs = 0;
+    REQUIRE_RC ( VCursorLinkedCursorGet ( m_cur, "tbl", & curs ) );
+    REQUIRE_EQ ( (const VCursor*)m_cur, curs );
+    REQUIRE_RC ( VCursorRelease ( curs ) );
+}
+
+FIXTURE_TEST_CASE( VTableCursor_GetCacheCapacity, TableCursorFixture )
+{
+    MakeWriteCursor ( GetName(), SimpleSchema );
+    REQUIRE_EQUAL((uint64_t)0, VCursorGetCacheCapacity(m_cur));
+}
+
+FIXTURE_TEST_CASE( VTableCursor_SetCacheCapacity, TableCursorFixture )
+{
+    MakeWriteCursor ( GetName(), SimpleSchema );
+
+    // this cursor is not cached, so SetCapacity has no effect
+    REQUIRE_EQUAL((uint64_t)0, VCursorSetCacheCapacity((VCursor*)m_cur, 100));
+    REQUIRE_EQUAL((uint64_t)0, VCursorGetCacheCapacity(m_cur));
+}
+
+FIXTURE_TEST_CASE( VTableCursor_Columns, TableCursorFixture )
+{
+    MakeWriteCursorAddColumn ( GetName(), SimpleSchema );
+    VCursorCache * cols = VCursorColumns ( (VCursor*)m_cur );
+    REQUIRE_EQ ( 1u, VectorLength ( & cols -> cache ) );
+}
+
+FIXTURE_TEST_CASE( VTableCursor_PhysicalColumns, TableCursorFixture )
+{
+    MakeWriteCursorAddColumn ( GetName(), SimpleSchema );
+    VCursorCache * cols = VCursorPhysicalColumns ( (VCursor*)m_cur );
+    REQUIRE_EQ ( 0u, VectorLength ( & cols -> cache ) );
+}
+
+// VCursorMakeColumn is covered indirectly (see VTableCursor_AddColumn)
+
+FIXTURE_TEST_CASE( VTableCursor_GetRow, TableCursorFixture )
+{
+    MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
+    Vector * row = VCursorGetRow ( (VCursor*)m_cur );
+    REQUIRE_EQ ( 1u, VectorLength ( row ) );
+}
+
+FIXTURE_TEST_CASE( VTableCursor_GetTable, TableCursorFixture )
+{
+    MakeWriteCursor ( GetName(), SimpleSchema );
+
+    const VTable * tbl = VCursorGetTable ( m_cur );
+    REQUIRE_NOT_NULL ( tbl );
+    // Oddly, there is no easy way to get the database members's name (t)
+    // through the VTable's API. Easier to get to it's schema type name (T),
+    // which suffices here:
+    REQUIRE_EQ ( string ( "T" ), ToCppString ( tbl -> stbl -> name -> name ) );
+}
+
+FIXTURE_TEST_CASE( VTableCursor_IsReadOnly, TableCursorFixture )
+{
+    MakeWriteCursor ( GetName(), SimpleSchema );
+    REQUIRE ( ! VCursorIsReadOnly ( m_cur ) );
+}
+
+FIXTURE_TEST_CASE( VTableCursor_GetBlobMruCache, TableCursorFixture )
+{
+    MakeWriteCursor ( GetName(), SimpleSchema );
+    // this cursor is not cached
+    REQUIRE_NULL ( VCursorGetBlobMruCache ( (VCursor*)m_cur ) );
+}
+
+FIXTURE_TEST_CASE( VTableCursor_IncrementPhysicalProductionCount, TableCursorFixture )
+{
+    MakeWriteCursor ( GetName(), SimpleSchema );
+    REQUIRE_EQ ( 1u, VCursorIncrementPhysicalProductionCount ( (VCursor*)m_cur ) );
+    REQUIRE_EQ ( 2u, VCursorIncrementPhysicalProductionCount ( (VCursor*)m_cur ) );
+}
+
+FIXTURE_TEST_CASE( VTableCursor_FindOverride, TableCursorFixture )
+{
+    const char * SchemaWithOverrides =
+    "table T0#1 { column ascii c=x; };"
+    "table T#1 = T0 { column U8 c=2; ascii x=\"a\"; };"
+    "database db #1 { table T#1 t; };"
+    ;
+
+    MakeWriteCursor ( GetName(), SchemaWithOverrides );
+    VCtxId id = {0, 1}; // 0 is the id of T0 which first introduced x, 1 is its column id in T
+    const KSymbol * sym = VCursorFindOverride ( m_cur, & id );
+    REQUIRE_NOT_NULL ( sym );
+    REQUIRE_EQ ( string ("x"), ToCppString ( sym -> name ) );
+}
+
+FIXTURE_TEST_CASE( VTableCursor_LaunchPagemapThread, TableCursorFixture )
+{
+    MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
+    REQUIRE_RC ( VCursorLaunchPagemapThread ( (VCursor*)m_cur ) );
+}
+
+FIXTURE_TEST_CASE( VTableCursor_PageMapProcessRequest, TableCursorFixture )
+{
+    MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
+
+    REQUIRE_RC ( VCursorLaunchPagemapThread ( (VCursor*)m_cur ) );
+    const PageMapProcessRequest * req = VCursorPageMapProcessRequest ( m_cur );
+    REQUIRE_NOT_NULL ( req );
+}
+
+FIXTURE_TEST_CASE( VTableCursor_CacheActive, TableCursorFixture )
+{
+    MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
+    int64_t end;
+    REQUIRE ( ! VCursorCacheActive ( m_cur, & end ) );
+    REQUIRE_EQ((int64_t)0, end);
+}
+
+FIXTURE_TEST_CASE( VTableCursor_InstallTrigger, TableCursorFixture )
+{
+    MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
+    VProduction prod;
+    REQUIRE_RC ( VCursorInstallTrigger ( (VCursor*)m_cur, & prod ) );
 }
 
 //////////////////////////////////////////// Main

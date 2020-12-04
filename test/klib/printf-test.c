@@ -134,7 +134,7 @@ rc_t final ( const char *flags, int32_t *field_width, int32_t *precision,
              char size_modifier, char storage_class, va_list args )
 {
     rc_t rc;
-    uint32_t i, j, len;
+    uint32_t i, j;
     va_list arg_copy;
     char stdcfmt [ 32 ], fmt [ 32 ], expected [ 4096 ];
 
@@ -205,7 +205,7 @@ rc_t final ( const char *flags, int32_t *field_width, int32_t *precision,
 
     /* generate expected string */
     va_copy ( arg_copy, args );
-    len = vsnprintf ( expected, sizeof expected, stdcfmt, arg_copy );
+    vsnprintf ( expected, sizeof expected, stdcfmt, arg_copy );
     va_end ( arg_copy );
 
     /* execute test */
@@ -505,7 +505,10 @@ rc_t run ( const char *progname )
             rc = make_initial_test ( field_width, precision, " ", "s", "Kurt is having a fit" );
 #if !defined(__SunOS)  &&  !defined(__sun__)
             /* Solaris printf doesn't cope with NULLs */
+#if 0
+            /* The standard says this result is undefined, we shouldn't test for it, it is not consistent */
             rc = make_initial_test ( field_width, precision, " ", "s", NULL );
+#endif
 #endif            
             rc = make_initial_test ( field_width, precision, " ", "s", "" );
             rc = make_initial_test ( field_width, precision, " ", "s", "OK" );

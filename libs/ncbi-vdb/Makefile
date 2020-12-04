@@ -59,7 +59,7 @@ $(TARGDIR)/std: \
 #-------------------------------------------------------------------------------
 # clean
 #
-clean: stdclean
+clean: stdclean cleanfuzz
 
 .PHONY: clean
 
@@ -91,6 +91,7 @@ VDB_LIB_CMN =    \
 	align-access \
 	ncbi-bam     \
 	vfs          \
+	cloud                  \
 	$(LIBKXML)   \
 	mbedx509     \
 	mbedtls      \
@@ -158,3 +159,12 @@ $(LIBDIR)/libncbi-wvdb.$(SHLX): $(WVDB_OBJ)
 
 $(LIBDIR)/libncbi-wvdb.$(LIBX): $(WVDB_OBJ)
 	$(LD) --slib --vers $(SRCDIR)/libncbi-vdb.vers -o $@ $(WVDB_LIB)
+
+#-------------------------------------------------------------------------------
+# fuzz
+#
+fuzz:
+	$(TOP)/build/ld.sh linux x86_64 gcc --build dbg --ldflags "-g  -m64" --objx o --shlx so --libx a --srcdir $(SRCDIR) --bindir $(BINDIR) --slib -o $(FLIBDIR)/libncbi-vdb.$(LIBX) -L$(FLIBDIR) $(VDB_LIB)
+
+cleanfuzz:
+	rm -rf $(FLIBDIR)/*

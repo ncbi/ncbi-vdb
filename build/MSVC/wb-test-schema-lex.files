@@ -1,0 +1,10 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="..\..\..\test\schema\wb-test-schema-lex.cpp" />
+    <ClCompile Include="..\..\..\libs\schema\schema-lex.c" />
+    <ClCompile Include="..\..\..\libs\schema\Token.cpp" />
+    <ClCompile Include="..\..\..\libs\schema\SchemaScanner.cpp" />
+  </ItemGroup>
+
+</Project>

@@ -151,7 +151,7 @@ physical NCBI:SRA:swapped_qual4 NCBI:SRA:qual4_encoding #1
     {
         // gunzip
         NCBI:SRA:encoded_qual4 unzipped = unzip ( @ );
-        
+
         // inflate to swapped
         return NCBI:SRA:qual4_decode ( unzipped );
     }
@@ -175,9 +175,10 @@ table NCBI:SRA:Illumina:qual4 #1.0.1 = NCBI:SRA:Illumina:qual4_nocol #1.0.1
  *  2.0.3 - base upon updated ancestry
  *  2.0.4 - base upon updated ancestry
  *  2.1.0 - base upon updated ancestry, added in_qual_log_odds
+ *  3.0.0 - NCBI:tbl:base_space uses metadata RNA_Flag to support RNA reads
  */
-table NCBI:SRA:Illumina:qual4 #2.1.0
-    = NCBI:tbl:base_space #2.0.3
+table NCBI:SRA:Illumina:qual4 #3
+    = NCBI:tbl:base_space #3
     , NCBI:tbl:log_odds_quality_nocol #2.1.0
 {
     /* QUALITY
@@ -218,8 +219,9 @@ table NCBI:SRA:Illumina:qual4 #2.1.0
  *  1.0.1 - explictly base upon sra #1.0.1
  *  1.0.2 - base explicitly upon sra #1.0.2
  *  1.0.3 - base explicitly upon sra #1.0.3
+ *  1.0.4 - base explicitly upon sra #1.0.4
  */
-table NCBI:SRA:Illumina:common #1.0.3 = INSDC:SRA:tbl:sra #1.0.3
+table NCBI:SRA:Illumina:common #1.0.4 = INSDC:SRA:tbl:sra #1.0.4
 {
     // platform name is always 'ILLUMINA'
     ascii platform_name
@@ -243,7 +245,7 @@ table NCBI:SRA:Illumina:common #1.0.3 = INSDC:SRA:tbl:sra #1.0.3
 
 
 /*--------------------------------------------------------------------------
- * NCBI:SRA:Illumina:tbl:v2 #1
+ * NCBI:SRA:Illumina:tbl:v2 #2
  *  normalized v2 table
  *  still has variants based upon quality type
  *
@@ -251,6 +253,8 @@ table NCBI:SRA:Illumina:common #1.0.3 = INSDC:SRA:tbl:sra #1.0.3
  *  1.0.1 - explictly base upon sra #1.0.1 and related tables
  *  1.0.2 - updated ancestry
  *  1.0.3 - updated ancestry
+ *  1.0.4 - updated ancestry
+ *  2.0.0 - updated ancestry
  */
 
 physical NCBI:SRA:swapped_fsamp4 NCBI:SRA:Illumina:encoding:SIGNAL #2
@@ -280,10 +284,10 @@ physical NCBI:SRA:swapped_fsamp4 NCBI:SRA:Illumina:encoding:INTENSITY #2
 }
 
 // v2 base table
-table NCBI:SRA:Illumina:tbl:v2 #1.0.4
-    = NCBI:SRA:tbl:sra #2.1.3
-    , NCBI:tbl:base_space #2.0.3
-    , NCBI:SRA:Illumina:common #1.0.3
+table NCBI:SRA:Illumina:tbl:v2 #2
+    = NCBI:SRA:tbl:sra #2.1.4
+    , NCBI:tbl:base_space #3
+    , NCBI:SRA:Illumina:common #1.0.4
 {
     /* NAME tokenizing and coordinates
      *  most work happens in skeyname table
@@ -364,10 +368,12 @@ table NCBI:SRA:Illumina:tbl:v2 #1.0.4
  *  1.0.3 - updated ancestry
  *  1.0.4 - updated ancestry
  *  1.1.0 - updated ancestry
+ *  1.1.1 - updated ancestry
+ *  2.0.0 - updated ancestry
  */
-table NCBI:SRA:Illumina:tbl:q4:v2 #1.1.0
-    = NCBI:SRA:Illumina:tbl:v2 #1.0.4
-    , NCBI:SRA:Illumina:qual4 #2.1.0
+table NCBI:SRA:Illumina:tbl:q4:v2 #2
+    = NCBI:SRA:Illumina:tbl:v2 #2
+    , NCBI:SRA:Illumina:qual4 #3
 {
 	/* INSDC:SRA:tbl:spotdesc inherited virtual productions
 	 *  static_fixed_spot_len
@@ -381,9 +387,11 @@ table NCBI:SRA:Illumina:tbl:q4:v2 #1.1.0
  *  1.0.3 - updated ancestry
  *  1.0.4 - updated ancestry
  *  1.1.0 - updated ancestry
+ *  1.1.1 - updated ancestry
+ *  2.0.0 - updated ancestry
  */
-table NCBI:SRA:Illumina:tbl:q1:v2 #1.1
-    = NCBI:SRA:Illumina:tbl:v2 #1.0.4
+table NCBI:SRA:Illumina:tbl:q1:v2 #2
+    = NCBI:SRA:Illumina:tbl:v2 #2
     , NCBI:tbl:log_odds_quality #2.1.0
 {
 	/* INSDC:SRA:tbl:spotdesc inherited productions
@@ -397,10 +405,12 @@ table NCBI:SRA:Illumina:tbl:q1:v2 #1.1
  *  1.0.2 - updated ancestry
  *  1.0.3 - updated ancestry
  *  1.0.4 - updated ancestry
+ *  1.0.5 - updated ancestry
+ *  2.0.0 - updated ancestry
  */
-table NCBI:SRA:Illumina:tbl:phred:v2 #1.0.4
-    = NCBI:SRA:Illumina:tbl:v2 #1.0.4
-    , NCBI:tbl:phred_quality #2.0.3
+table NCBI:SRA:Illumina:tbl:phred:v2 #2
+    = NCBI:SRA:Illumina:tbl:v2 #2
+    , NCBI:tbl:phred_quality #2.0
 {
 	/* INSDC:SRA:tbl:spotdesc inherited virtual productions
 	 *  static_fixed_spot_len

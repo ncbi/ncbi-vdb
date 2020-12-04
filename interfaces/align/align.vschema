@@ -58,7 +58,7 @@ const NCBI:align:ro_type NCBI:align:ro_soft_clip         = 1; // soft-clipping
 const NCBI:align:ro_type NCBI:align:ro_intron_plus       = 2; // intron on positive strand
 const NCBI:align:ro_type NCBI:align:ro_intron_minus      = 3; // intron on negative strand
 const NCBI:align:ro_type NCBI:align:ro_intron_unknown    = 4; // intron strand not specified
-const NCBI:align:ro_type NCBI:align:ro_complete_genomics = 5; // 
+const NCBI:align:ro_type NCBI:align:ro_complete_genomics = 5; //
 
 
 /*--------------------------------------------------------------------------
@@ -580,12 +580,13 @@ table NCBI:align:tbl:local_ref_block #1.0.0
  *  common interface and implementation for alignment object
  *
  * History:
- *  2.1 - added REF_OFFSET_TYPE and RNA_ORIENTATION columns
- *        updated all cigar calculations
+ *  2.1.0 - added REF_OFFSET_TYPE and RNA_ORIENTATION columns
+ *          updated all cigar calculations
+ *  2.1.1 - update ancestry
  */
-table NCBI:align:tbl:align_cmn #2.1
+table NCBI:align:tbl:align_cmn #2.1.1
     = NCBI:tbl:base_space_common #1.0.3
-    , NCBI:SRA:tbl:stats #1.2.0
+    , NCBI:SRA:tbl:stats #1.2.1
     , NCBI:align:tbl:ref_block_cmn #1.0.0
 {
     bool is_secondary = out_is_secondary;
@@ -896,10 +897,11 @@ table NCBI:align:tbl:align_cmn #2.1
  *  alignment transcript is calculated
  *
  * History:
- *  1.1 - respond to changes in base table
+ *  1.1.0 - respond to changes in base table
+ *  1.1.1 - respond to changes in base table
  */
-table NCBI:align:tbl:align_full #1.1
-    = NCBI:align:tbl:align_cmn #2.1
+table NCBI:align:tbl:align_full #1.1.1
+    = NCBI:align:tbl:align_cmn #2.1.1
 {
     bool out_is_secondary = <bool> echo < true > ();
     // restore reads to its raw form (orientation is restored)
@@ -975,10 +977,11 @@ table NCBI:align:tbl:align_full #1.1
  *  original sequence is reconstructed
  *
  * History:
- *  1.2 - respond to changes in base table
+ *  1.2.0 - respond to changes in base table
+ *  1.2.1 - respond to changes in base table
  */
-table NCBI:align:tbl:compressed_by_reference #1.2
-    = NCBI:align:tbl:align_cmn #2.1
+table NCBI:align:tbl:compressed_by_reference #1.2.1
+    = NCBI:align:tbl:align_cmn #2.1.1
 {
     bool out_is_secondary = <bool> echo < false > ();
 
@@ -1044,10 +1047,11 @@ table NCBI:align:tbl:compressed_by_reference #1.2
  *  deflated alignment data sorted against reference
  *
  * History:
- *  1.2 - respond to changes in base table
+ *  1.2.0 - respond to changes in base table
+ *  1.2.1 - respond to changes in base table
  */
-table NCBI:align:tbl:align_sorted #1.2
-    = NCBI:align:tbl:compressed_by_reference #1.2
+table NCBI:align:tbl:align_sorted #1.2.1
+    = NCBI:align:tbl:compressed_by_reference #1.2.1
     , NCBI:align:tbl:global_ref_block #1.0.0
 {
     // 128K
@@ -1059,10 +1063,11 @@ table NCBI:align:tbl:align_sorted #1.2
  *  deflated alignment unsorted data
  *
  * History:
- *  1.2 - respond to changes in base table
+ *  1.2.0 - respond to changes in base table
+ *  1.2.1 - respond to changes in base table
  */
-table NCBI:align:tbl:align_unsorted #1.2
-    = NCBI:align:tbl:compressed_by_reference #1.2
+table NCBI:align:tbl:align_unsorted #1.2.1
+    = NCBI:align:tbl:compressed_by_reference #1.2.1
     , NCBI:align:tbl:local_ref_block #1.0.0
 {
     // 128K
@@ -1073,10 +1078,11 @@ table NCBI:align:tbl:align_unsorted #1.2
 /* align_mate_sorted
  *
  * History:
- *  1.1 - respond to changes in base table
+ *  1.1.0 - respond to changes in base table
+ *  1.1.1 - respond to changes in base table
  */
-table NCBI:align:tbl:align_mate_sorted #1.1
-    = NCBI:align:tbl:align_full #1.1
+table NCBI:align:tbl:align_mate_sorted #1.1.1
+    = NCBI:align:tbl:align_full #1.1.1
     , NCBI:align:tbl:global_ref_block #1.0.0
 {
     // 128K
@@ -1087,10 +1093,11 @@ table NCBI:align:tbl:align_mate_sorted #1.1
 /* align_mate_unsorted
  *
  * History:
- *  1.1 - respond to changes in base table
+ *  1.1.0 - respond to changes in base table
+ *  1.1.1 - respond to changes in base table
  */
-table NCBI:align:tbl:align_mate_unsorted #1.1
-    = NCBI:align:tbl:align_full #1.1
+table NCBI:align:tbl:align_mate_unsorted #1.1.1
+    = NCBI:align:tbl:align_full #1.1.1
     , NCBI:align:tbl:local_ref_block #1.0.0
 {
     // 128K
@@ -1101,10 +1108,11 @@ table NCBI:align:tbl:align_mate_unsorted #1.1
  *  alleles coverage extension
  *
  * History:
- *  1.2 - respond to changes in base table
+ *  1.2.0 - respond to changes in base table
+ *  1.2.1 - respond to changes in base table
  */
-table NCBI:align:tbl:align_allele #1.2
-    = NCBI:align:tbl:align_unsorted #1.2
+table NCBI:align:tbl:align_allele #1.2.1
+    = NCBI:align:tbl:align_unsorted #1.2.1
 {
     extern column < I64 > izip_encoding EVIDENCE_ALIGNMENT_IDS;
 
@@ -1117,6 +1125,10 @@ table NCBI:align:tbl:align_allele #1.2
 /*--------------------------------------------------------------------------
  * seq
  *  alignment sequence table
+ *
+ * history:
+ *  1.1.1 - respond to changes in base table
+ *  2.0.0 - NCBI:tbl:base_space uses metadata RNA_Flag to support RNA reads
  */
 physical
 I64 NCBI:align:sorted:alignment_id_encoding #1.0
@@ -1134,13 +1146,12 @@ I64 NCBI:align:sorted:alignment_id_encoding #1.0
     }
 }
 
-
-table NCBI:align:tbl:seq #1.1 =
-    NCBI:tbl:base_space #2.0.3,
-    NCBI:tbl:phred_quality #2.0.4,
+ table NCBI:align:tbl:seq #2 =
+    NCBI:tbl:base_space #3,
+    NCBI:tbl:phred_quality #2.0,
     NCBI:align:tbl:cmp_base_space #1,
     NCBI:SRA:tbl:spotdesc #1.0.2,
-    NCBI:SRA:tbl:stats #1.2.0
+    NCBI:SRA:tbl:stats #1.2.1
 {
     // 128K
     column default limit = 131072;
@@ -1155,8 +1166,11 @@ table NCBI:align:tbl:seq #1.1 =
     // size is NREADS
     extern column < U8 > zip_encoding ALIGNMENT_COUNT;
 
+    // unparsed read name
+    extern column < ascii > zip_encoding RAW_NAME;
+
     // auto-generate name from row-id
-    ascii out_name_fmt = < ascii > echo < '$R' > ();
+    ascii out_name_fmt = .RAW_NAME | < ascii > echo < '$R' > ();
 
     // temparary column
     extern column < U64 > izip_encoding TMP_KEY_ID;
@@ -1172,275 +1186,8 @@ table NCBI:align:tbl:seq #1.1 =
     // restored LINKAGE_GROUP
     readonly column ascii LINKAGE_GROUP = NCBI:align:seq_restore_linkage_group(.CMP_LINKAGE_GROUP, .PRIMARY_ALIGNMENT_ID)
                                         | .CMP_LINKAGE_GROUP;
-};
-
-
-table NCBI:align:tbl:cs_seq #1.2
-{
-    /* writable columns */
-    extern column INSDC:color:text CMP_CSREAD
-        = out_cmp_color_text
-        ;
-
-    extern column < INSDC:dna:text > zip_encoding CS_KEY;
-
-    extern default column < INSDC:quality:phred > zip_encoding QUALITY;
-
-    extern column < I64 > izip_encoding PRIMARY_ALIGNMENT_ID;
-
-    extern column < U8 > zip_encoding ALIGNMENT_COUNT;
-
-    extern column < INSDC:SRA:platform_id > zip_encoding PLATFORM;
-
-    extern column < ascii > zip_encoding LABEL;
-    extern column < INSDC:coord:zero > izip_encoding LABEL_START;
-    extern column < INSDC:coord:len > izip_encoding LABEL_LEN;
-
-    extern column < INSDC:SRA:xread_type > zip_encoding READ_TYPE;
-    extern column < INSDC:coord:zero > izip_encoding READ_START;
-    extern column < INSDC:coord:len > izip_encoding READ_LEN;
-    extern column < INSDC:SRA:read_filter > zip_encoding READ_FILTER;
-
-    extern column < U64 > izip_encoding TMP_KEY_ID;
-
-    extern column < ascii > zip_encoding SPOT_GROUP;
-
-    extern column < U64 > izip_encoding TI;
-
-    /* writing rules */
-    INSDC:x2cs:bin in_cmp_x2cs_bin
-        = < INSDC:color:text, INSDC:x2cs:bin > map < INSDC:x2cs:map:CHARSET, INSDC:x2cs:map:BINSET > ( CMP_CSREAD )
-        ;
-    INSDC:2cs:bin in_cmp_2cs_bin
-        = < INSDC:x2cs:bin, INSDC:2cs:bin > map < INSDC:x2cs:map:BINSET, [ 0, 1, 2, 3, 0 ] > ( in_cmp_x2cs_bin )
-        ;
-    INSDC:x2cs:bin in_cmp_alt_x2cs_bin
-        = < INSDC:x2cs:bin, INSDC:x2cs:bin > map < INSDC:x2cs:map:BINSET, [ 0, 0, 0, 0, 4 ] > ( in_cmp_x2cs_bin )
-        ;
-    physical column INSDC:2cs:packed .CMP_CSREAD
-        = ( INSDC:2cs:packed ) pack ( in_cmp_2cs_bin )
-        ;
-    physical column < INSDC:x2cs:bin > zip_encoding .CMP_ALTCSREAD
-        = < INSDC:x2cs:bin > trim < ALIGN_LEFT, 0 > ( in_cmp_alt_x2cs_bin )
-        ;
-
-    /* reading rules */
-    INSDC:2cs:packed phys_cmp_2cs_packed
-        = .CMP_CSREAD
-        ;
-    INSDC:x2cs:bin phys_cmp_alt_x2cs_bin
-        = .CMP_ALTCSREAD
-        ;
-    INSDC:2cs:packed phys_2cs_packed
-        = .CSREAD
-        ;
-    INSDC:x2cs:bin phys_alt_x2cs_bin
-        = .ALTCSREAD
-        ;
-    INSDC:2cs:bin out_cmp_2cs_bin
-        = ( INSDC:2cs:bin ) unpack ( phys_cmp_2cs_packed )
-        ;
-    INSDC:2cs:bin out_2cs_bin
-        = ( INSDC:2cs:bin ) unpack ( phys_2cs_packed )
-        ;
-    INSDC:x2cs:bin out_cmp_x2cs_bin
-        = ( INSDC:x2cs:bin ) < U8 > bit_or < ALIGN_RIGHT > ( out_cmp_2cs_bin, phys_cmp_alt_x2cs_bin )
-        | ( INSDC:x2cs:bin ) out_cmp_2cs_bin
-        ;
-    INSDC:x2cs:bin out_x2cs_bin
-        = ( INSDC:x2cs:bin ) < U8 > bit_or < ALIGN_RIGHT > ( out_2cs_bin, phys_alt_x2cs_bin )
-        | ( INSDC:x2cs:bin ) out_2cs_bin
-        ;
-     INSDC:color:text out_cmp_color_text
-        = < INSDC:x2cs:bin, INSDC:color:text > map <  INSDC:x2cs:map:BINSET, INSDC:x2cs:map:CHARSET > ( out_cmp_x2cs_bin )
-        ;
-     INSDC:color:text out_color_text
-        = < INSDC:x2cs:bin, INSDC:color:text > map <  INSDC:x2cs:map:BINSET, INSDC:x2cs:map:CHARSET > ( out_x2cs_bin )
-        ;
-
-    /* triggers from stats */
-    INSDC:quality:phred in_qual_phred
-        = QUALITY
-        ;
-    INSDC:coord:len in_read_len
-        = READ_LEN
-        ;
-    INSDC:SRA:xread_type in_read_type
-        = READ_TYPE
-        ;
-    ascii in_spot_group
-        = SPOT_GROUP
-        ;
-    trigger meta_stats
-        = NCBI:SRA:cmp_stats_trigger ( in_cmp_x2cs_bin, in_qual_phred, in_read_len, in_read_type, in_spot_group )
-        | NCBI:SRA:cmp_stats_trigger ( in_cmp_x2cs_bin, in_qual_phred, in_read_len, in_read_type )
-        ;
-    trigger qual_stats
-        = NCBI:SRA:phred_stats_trigger #1 ( in_qual_phred )
-        ;
-
-    extern column <ascii> zip_encoding CMP_LINKAGE_GROUP;
-
-    // restored LINKAGE_GROUP
-    readonly column ascii LINKAGE_GROUP = NCBI:align:seq_restore_linkage_group(.CMP_LINKAGE_GROUP, .PRIMARY_ALIGNMENT_ID)
-                                        | .CMP_LINKAGE_GROUP;
-};
-
-table NCBI:align:view:cs_seq #1.1 = NCBI:align:tbl:cs_seq #1.2
-{
-    // various READ columns
-    default readonly column INSDC:dna:text READ
-        = < INSDC:4na:bin, INSDC:dna:text > map < INSDC:4na:map:BINSET, INSDC:4na:map:CHARSET > ( out_dcmp_4na_bin )
-        | < INSDC:4na:bin, INSDC:dna:text > map < INSDC:4na:map:BINSET, INSDC:4na:map:CHARSET > ( out_4na_bin )
-        ;
-    readonly column INSDC:4na:bin READ = out_dcmp_4na_bin | out_4na_bin;
-    readonly column INSDC:4na:packed READ = pack ( out_dcmp_4na_bin ) | pack ( out_4na_bin );
-    readonly column INSDC:x2na:bin READ = out_dcmp_x2na_bin | out_x2na_bin;
-    readonly column INSDC:2na:bin READ = out_dcmp_2na_bin | out_2na_bin;
-    INSDC:2na:bin out_dcmp_2na_bin
-        = < INSDC:x2na:bin, INSDC:2na:bin > map < INSDC:x2na:map:BINSET, [ 0, 1, 2, 3, 0 ] > ( out_dcmp_x2na_bin )
-        ;
-    INSDC:2na:bin out_2na_bin
-        = < INSDC:x2na:bin, INSDC:2na:bin > map < INSDC:x2na:map:BINSET, [ 0, 1, 2, 3, 0 ] > ( out_x2na_bin )
-        ;
-    readonly column INSDC:2na:packed READ = pack ( out_dcmp_2na_bin ) | pack ( out_2na_bin );
-
-    // decompression in base space
-    INSDC:coord:len cmp_read_len
-        = < INSDC:coord:len > NCBI:align:make_cmp_read_desc #1 < true > ( .READ_LEN, .PRIMARY_ALIGNMENT_ID )
-        ;
-    INSDC:coord:zero cmp_read_start
-        = NCBI:align:make_read_start #1 ( cmp_read_len )
-        ;
-    INSDC:x2na:bin out_cmp_x2na_bin
-        = NCBI:dna_from_color #1 ( out_cmp_x2cs_bin, cmp_read_start, cmp_read_len, .CS_KEY, color_matrix )
-        ;
-    INSDC:x2na:bin out_x2na_bin
-        = NCBI:dna_from_color #1 ( out_x2cs_bin, .READ_START, .READ_LEN, .CS_KEY, color_matrix )
-        ;
-    INSDC:4na:bin out_cmp_4na_bin
-        = < INSDC:x2na:bin, INSDC:4na:bin > map < INSDC:x2na:map:BINSET, [ 1, 2, 4, 8, 15 ] > ( out_cmp_x2na_bin )
-        ;
-    INSDC:4na:bin out_4na_bin
-        = < INSDC:x2na:bin, INSDC:4na:bin > map < INSDC:x2na:map:BINSET, [ 1, 2, 4, 8, 15 ] > ( out_x2na_bin )
-        ;
-    INSDC:4na:bin out_dcmp_4na_bin
-        = NCBI:align:seq_restore_read ( out_cmp_4na_bin, .PRIMARY_ALIGNMENT_ID, .READ_LEN, .READ_TYPE )
-        ;
-
-
-    // various CSREAD columns
-    default readonly column INSDC:color:text CSREAD
-        = < INSDC:x2cs:bin, INSDC:color:text > map <  INSDC:x2cs:map:BINSET, INSDC:x2cs:map:CHARSET > ( out_dcmp_x2cs_bin )
-        | out_color_text;
-    readonly column INSDC:x2cs:bin CSREAD = out_dcmp_x2cs_bin | out_x2cs_bin;
-    readonly column INSDC:2cs:bin CSREAD = out_dcmp_2cs_bin | out_2cs_bin;
-    INSDC:2cs:bin out_dcmp_2cs_bin
-        = < INSDC:x2cs:bin, INSDC:2cs:bin > map < INSDC:x2cs:map:BINSET, [ 0, 1, 2, 3, 0 ] > ( out_dcmp_x2cs_bin )
-        ;
-    readonly column INSDC:2cs:packed CSREAD = pack ( out_dcmp_2cs_bin ) | out_2cs_bin;
-
-
-    // decompression in color space
-    INSDC:x2na:bin out_dcmp_x2na_bin
-        = < INSDC:4na:bin, INSDC:x2na:bin > map < INSDC:4na:map:BINSET, [ 4,0,1,4,2,4,4,4,3,4,4,4,4,4,4,4 ] > ( out_dcmp_4na_bin )
-        ;
-    INSDC:x2cs:bin out_dcmp_x2na_x2cs_bin
-        = NCBI:color_from_dna #1 ( out_dcmp_x2na_bin, .READ_START, .READ_LEN, .CS_KEY, color_matrix )
-        ;
-    INSDC:coord:len aligned_read_len
-        = < INSDC:coord:len > NCBI:align:make_cmp_read_desc #1 < false > ( .READ_LEN, .PRIMARY_ALIGNMENT_ID )
-        ;
-    INSDC:x2cs:bin out_dcmp_x2cs_bin
-        = < INSDC:x2cs:bin > NCBI:align:seq_construct_read #1 ( out_dcmp_x2na_x2cs_bin, .READ_LEN, out_cmp_x2cs_bin, cmp_read_len )
-        ;
-
-    // CS_NATIVE - dynamic
-    U32 cmp_csread_row_len
-        = row_len #1 ( phys_cmp_2cs_packed )
-        ;
-    U32 cmp_csread_not_zero
-        = < U32 > clip < 0, 1 > ( cmp_csread_row_len )
-        ;
-    readonly column bool CS_NATIVE
-        = < U32, bool > map < [ 0, 1 ], [ false, true ] > ( cmp_cs_read_not_zero )
-        ;
-
-    // COLOR_MATRIX
-    readonly column U8 COLOR_MATRIX
-        = color_matrix
-        ;
-    U8 color_matrix
-        = < U8 > echo < INSDC:color:default_matrix > ()
-        ;
-
-    // various QUALITY types
-    readonly column INSDC:quality:text:phred_33 QUALITY
-        = out_qual_text_phred_33
-        | ( INSDC:quality:text:phred_33 ) < B8 > sum < 33 > ( .QUALITY );
-    readonly column INSDC:quality:text:phred_64 QUALITY
-        = out_qual_text_phred_64
-        | ( INSDC:quality:text:phred_64 ) < B8 > sum < 64 > ( .QUALITY );
-
-    // SPOT_LEN
-    INSDC:coord:len spot_len
-        = ( INSDC:coord:len ) row_len ( out_dcmp_4na_bin )
-        | ( INSDC:coord:len ) row_len ( out_4na_bin )
-        ;
-    readonly column INSDC:coord:len SPOT_LEN = spot_len;
-
-    // TRIM_START
-    readonly column INSDC:coord:zero TRIM_START
-        = < INSDC:coord:zero > echo < 0 > ()
-        ;
-    readonly column INSDC:coord:one TRIM_START
-        = < INSDC:coord:one > echo < 1 > ()
-        ;
-    // TRIM_LEN
-    readonly column INSDC:coord:len TRIM_LEN = spot_len;
-
-    // MIN_SPOT_ID
-    readonly column INSDC:SRA:spotid_t MIN_SPOT_ID
-        = < INSDC:SRA:spotid_t > meta:value < "STATS/TABLE/SPOT_MIN" > ()
-        ;
-    // MAX_SPOT_ID
-    readonly column INSDC:SRA:spotid_t MAX_SPOT_ID
-        = < INSDC:SRA:spotid_t > meta:value < "STATS/TABLE/SPOT_MAX" > ()
-        ;
-    // SPOT_COUNT
-    readonly column U64 SPOT_COUNT
-        = < U64 > meta:value < "STATS/TABLE/SPOT_COUNT" > ()
-        ;
-    // BASE_COUNT
-    U64 base_count
-        = < U64 > meta:value < "STATS/TABLE/BASE_COUNT" > ()
-        ;
-    readonly column U64 BASE_COUNT = base_count;
-    // BIO_BASE_COUNT
-    readonly column U64 BIO_BASE_COUNT
-        = < U64 > meta:value < "STATS/TABLE/BIO_BASE_COUNT" > ()
-        ;
-    // CMP_BASE_COUNT
-    readonly column U64 CMP_BASE_COUNT
-        = < U64 > meta:value < "STATS/TABLE/CMP_BASE_COUNT" > ()
-        | base_count
-        ;
-
-    // various PLATFORM
-    // TBD
-
-    // SPOT_ID
-    I64 rowid_64 = row_id ();
-    readonly column INSDC:SRA:spotid_t SPOT_ID
-        = cast ( rowid_64 )
-        ;
-
-    readonly column ascii NAME
-        = sprintf < "%u" > ( SPOT_ID )
-        ;
 
 };
-
 
 /***********************************
 * Reference table - to store reference sequences
@@ -1457,13 +1204,16 @@ table NCBI:align:view:cs_seq #1.1 = NCBI:align:tbl:cs_seq #1.2
 * - rowlen(.READ) = 0  && SEQ_START==0 (used as flag) -  the sequence is SEQ_LEN repetition of 'N'
 * - rowlen(.READ) = 0  && SEQ_START >= 1 - the sequence have to be fetched from external sources
 * - 0 < rowlen(.READ)< SEQ_LEN -- the sequence have to be filled with 'N's
-*
-v***********************************/
-table NCBI:align:tbl:reference #2 =
+ *
+ * history:
+ *  2.0.1 - respond to changes in base table
+ *  3.0.0 - NCBI:tbl:base_space uses metadata RNA_Flag to support RNA reads
+***********************************/
+table NCBI:align:tbl:reference #3 =
     NCBI:align:tbl:cmp_base_space #1,
-    NCBI:tbl:base_space #2.0.3,
+    NCBI:tbl:base_space #3,
     NCBI:tbl:seqloc #1,
-    NCBI:SRA:tbl:stats #1.2.0
+    NCBI:SRA:tbl:stats #1.2.1
 {
     INSDC:quality:phred out_qual_phred
         = < INSDC:quality:phred > echo < 30 > ( out_dcmp_4na_bin );
@@ -1558,53 +1308,48 @@ table NCBI:align:tbl:reference #2 =
 }
 
 // THE DATABASES
-database NCBI:align:db:alignment_sorted #1.3
+database NCBI:align:db:alignment_sorted #2
 {
-    table NCBI:align:tbl:reference #2 REFERENCE;
-    table NCBI:align:tbl:align_sorted #1.2 PRIMARY_ALIGNMENT;
-    table NCBI:align:tbl:align_mate_sorted #1.1 SECONDARY_ALIGNMENT;
-    table NCBI:align:tbl:seq #1.1 SEQUENCE;
-    table NCBI:align:view:cs_seq #1.1 CS_SEQUENCE;
+    table NCBI:align:tbl:reference #3 REFERENCE;
+    table NCBI:align:tbl:align_sorted #1.2.1 PRIMARY_ALIGNMENT;
+    table NCBI:align:tbl:align_mate_sorted #1.1.1 SECONDARY_ALIGNMENT;
+    table NCBI:align:tbl:seq #2 SEQUENCE;
     table NCBI:align:tbl:qstat #1.0 QUAL_STAT;
 };
 
-database NCBI:align:db:alignment_unsorted #1.3
+database NCBI:align:db:alignment_unsorted #2
 {
-    table NCBI:align:tbl:reference #2 REFERENCE;
-    table NCBI:align:tbl:align_unsorted #1.2 PRIMARY_ALIGNMENT;
-    table NCBI:align:tbl:align_mate_unsorted #1.1 SECONDARY_ALIGNMENT;
-    table NCBI:align:tbl:seq #1.1 SEQUENCE;
-    table NCBI:align:view:cs_seq #1.1 CS_SEQUENCE;
+    table NCBI:align:tbl:reference #3 REFERENCE;
+    table NCBI:align:tbl:align_unsorted #1.2.1 PRIMARY_ALIGNMENT;
+    table NCBI:align:tbl:align_mate_unsorted #1.1.1 SECONDARY_ALIGNMENT;
+    table NCBI:align:tbl:seq #2 SEQUENCE;
     table NCBI:align:tbl:qstat #1.0 QUAL_STAT;
 };
 
-database NCBI:align:db:alignment_evidence #1.3
+database NCBI:align:db:alignment_evidence #2
 {
-    table NCBI:align:tbl:reference #2 REFERENCE;
-    table NCBI:align:tbl:align_unsorted #1.2 PRIMARY_ALIGNMENT;
-    table NCBI:align:tbl:align_mate_unsorted #1.1 SECONDARY_ALIGNMENT;
-    table NCBI:align:tbl:align_allele #1.2 EVIDENCE_INTERVAL;
-    table NCBI:align:tbl:align_mate_unsorted #1.1 EVIDENCE_ALIGNMENT;
-    table NCBI:align:tbl:seq #1.1 SEQUENCE;
-    table NCBI:align:view:cs_seq #1.1 CS_SEQUENCE;
+    table NCBI:align:tbl:reference #3 REFERENCE;
+    table NCBI:align:tbl:align_unsorted #1.2.1 PRIMARY_ALIGNMENT;
+    table NCBI:align:tbl:align_mate_unsorted #1.1.1 SECONDARY_ALIGNMENT;
+    table NCBI:align:tbl:align_allele #1.2.1 EVIDENCE_INTERVAL;
+    table NCBI:align:tbl:align_mate_unsorted #1.1.1 EVIDENCE_ALIGNMENT;
+    table NCBI:align:tbl:seq #2 SEQUENCE;
     table NCBI:align:tbl:qstat #1.0 QUAL_STAT;
 };
 
-database NCBI:align:db:alignment_evidence_sorted #1.2
+database NCBI:align:db:alignment_evidence_sorted #2
 {
-    table NCBI:align:tbl:reference #2 REFERENCE;
-    table NCBI:align:tbl:align_sorted #1.2 PRIMARY_ALIGNMENT;
-    table NCBI:align:tbl:align_mate_sorted #1.1 SECONDARY_ALIGNMENT;
-    table NCBI:align:tbl:align_allele #1.2 EVIDENCE_INTERVAL;
-    table NCBI:align:tbl:align_mate_unsorted #1.1 EVIDENCE_ALIGNMENT;
-    table NCBI:align:tbl:seq #1.1 SEQUENCE;
-    table NCBI:align:view:cs_seq #1.1 CS_SEQUENCE;
+    table NCBI:align:tbl:reference #3 REFERENCE;
+    table NCBI:align:tbl:align_sorted #1.2.1 PRIMARY_ALIGNMENT;
+    table NCBI:align:tbl:align_mate_sorted #1.1.1 SECONDARY_ALIGNMENT;
+    table NCBI:align:tbl:align_allele #1.2.1 EVIDENCE_INTERVAL;
+    table NCBI:align:tbl:align_mate_unsorted #1.1.1 EVIDENCE_ALIGNMENT;
+    table NCBI:align:tbl:seq #2 SEQUENCE;
     table NCBI:align:tbl:qstat #1.0 QUAL_STAT;
 };
 
-database NCBI:align:db:unaligned #1
+database NCBI:align:db:unaligned #2
 {
-    table NCBI:align:tbl:seq #1.1 SEQUENCE;
-    table NCBI:SRA:ABI:tbl:v2 #1.0.4 CS_SEQUENCE;
+    table NCBI:align:tbl:seq #2 SEQUENCE;
     table NCBI:align:tbl:qstat #1.0 QUAL_STAT;
 };

@@ -31,14 +31,22 @@ TOP ?= $(abspath ../..)
 MODULE = test/kns
 
 TEST_TOOLS = \
+	test_allow_all_certificates \
+	test_dis_allow_all_certificates \
+	test-google-proxy \
+	test200for-whole-file \
 	test-kns \
+	test-http \
 	test-http-dropconn \
+	test-http-request \
 	KNSManagerSingletonTest \
+	test-connect \
+	test-refresh-expired \
+	test-timeouts \
 
 include $(TOP)/build/Makefile.env
 
 EXT_TOOLS = \
-	test-http \
 	test-proxy \
 	test-proxy-with-env \
 	test-proxy-with-scheme \
@@ -127,6 +135,54 @@ kns: test-kns
 	$(TEST_BINDIR)/test-kns  #-l=all
 
 #----------------------------------------------------------------
+# test_allow_all_certificates
+#
+AAA_SRC = \
+	test_allow_all_certificates
+
+AAA_OBJ = \
+	$(addsuffix .$(OBJX),$(AAA_SRC))
+
+$(TEST_BINDIR)/test_allow_all_certificates: $(AAA_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
+
+#----------------------------------------------------------------
+# test_dis_allow_all_certificates
+#
+DAA_SRC = \
+	test_dis_allow_all_certificates
+
+DAA_OBJ = \
+	$(addsuffix .$(OBJX),$(DAA_SRC))
+
+$(TEST_BINDIR)/test_dis_allow_all_certificates: $(DAA_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
+
+#----------------------------------------------------------------
+# test-google-proxy
+#
+P_SRC = \
+	test-google-proxy
+
+P_OBJ = \
+	$(addsuffix .$(OBJX),$(P_SRC))
+
+$(TEST_BINDIR)/test-google-proxy: $(P_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
+
+#----------------------------------------------------------------
+# test200for-whole-file
+#
+K2_SRC = \
+	test200for-whole-file \
+
+K2_OBJ = \
+	$(addsuffix .$(OBJX),$(K2_SRC))
+
+$(TEST_BINDIR)/test200for-whole-file: $(K2_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
+
+#----------------------------------------------------------------
 # test-proxy
 #
 PROXYTEST_SRC = \
@@ -157,16 +213,17 @@ $(BINDIR)/test-proxy-with-scheme: $(PROXYSCH_OBJ)
 # test-http
 #
 HTTPTEST_SRC = \
+	HttpFixture \
 	httptest
 
 HTTPTEST_OBJ = \
 	$(addsuffix .$(OBJX),$(HTTPTEST_SRC))
 
-$(BINDIR)/test-http: $(HTTPTEST_OBJ)
+$(TEST_BINDIR)/test-http: $(HTTPTEST_OBJ)
 	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
 
 http: test-http
-	unset http_proxy ; $(BINDIR)/test-http  # -l=all
+	unset http_proxy ; $(TEST_BINDIR)/test-http  # -l=all
 
 #----------------------------------------------------------------
 # test-http-dropconn
@@ -184,6 +241,22 @@ dropconn: test-http-dropconn
 	$(TEST_BINDIR)/test-http-dropconn  # -l=all
 
 #----------------------------------------------------------------
+# test-http-request
+#
+HTTP_REQUEST_TEST_SRC = \
+	HttpFixture \
+	test-http-request
+
+HTTP_REQUEST_TEST_OBJ = \
+	$(addsuffix .$(OBJX),$(HTTP_REQUEST_TEST_SRC))
+
+$(TEST_BINDIR)/test-http-request: $(HTTP_REQUEST_TEST_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
+
+req: test-http-request
+	$(TEST_BINDIR)/test-http-request
+
+#----------------------------------------------------------------
 # test-proxy-with-env
 #
 TOOL_SRC = \
@@ -196,11 +269,54 @@ TOOL_OBJ = \
 $(BINDIR)/test-proxy-with-env: $(TOOL_OBJ)
 	$(LP) --exe -o $@ $^ -L$(VDB_LIBDIR) -L$(VDB_LIBDIR)/../ilib $(KNSTEST_LIB)
 
+#----------------------------------------------------------------
+# test-connect
+#
+CONNECT_SRC = \
+	test-connect \
+
+CONNECT_OBJ = \
+	$(addsuffix .$(OBJX),$(CONNECT_SRC))
+
+$(TEST_BINDIR)/test-connect: $(CONNECT_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
+
+connect: test-connect
+	$(TEST_BINDIR)/test-connect
+
+#----------------------------------------------------------------
+# test-refresh-expired
+#
+REFRESH_SRC = \
+	HttpFixture \
+	KStableHttpFile \
+	test-refresh-expired-url \
+
+REFRESH_OBJ = \
+	$(addsuffix .$(OBJX),$(REFRESH_SRC))
+
+$(TEST_BINDIR)/test-refresh-expired: $(REFRESH_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
+
+refresh: test-refresh-expired
+	$(TEST_BINDIR)/test-refresh-expired
+
+#----------------------------------------------------------------
+# test-timeouts
+#
+TO_SRC = \
+	test-timeouts \
+
+TO_OBJ = \
+	$(addsuffix .$(OBJX),$(TO_SRC))
+
+$(TEST_BINDIR)/test-timeouts: $(TO_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
 
 #----------------------------------------------------------------
 
 run-tests:
-	unset http_proxy ; $(BINDIR)/test-http
+	unset http_proxy ; $(TEST_BINDIR)/test-http
 	unset http_proxy ; $(BINDIR)/test-proxy
 
 # test-proxy-with-scheme never does direct internet connection
@@ -212,67 +328,67 @@ run-test-proxy-with-scheme:
 	@ echo test-proxy-with-scheme: BEGIN ...
 
 	# no proxy specified: fail
-	unset http_proxy ; $(BINDIR)/test-proxy-with-scheme
+	@ unset http_proxy ; $(BINDIR)/test-proxy-with-scheme
 
 	# bad proxy in configuration: fail
-	unset http_proxy ; \
+	@ unset http_proxy ; \
                 $(BINDIR)/test-proxy-with-scheme =BAD.proxy.ncbi.nlm.nih.gov
 
 	# good proxy in configuration: success
-	ping -c1 webproxy > /dev/null \
+	@ ping -c1 webproxy > /dev/null \
         && $(BINDIR)/test-proxy-with-scheme =webproxy.ncbi.nlm.nih.gov  SUCCESS \
         || echo skipped
 
 	# bad proxy in environment: fail
-	http_proxy=BAD.proxy.ncbi.nlm.nih.gov $(BINDIR)/test-proxy-with-scheme
+	@ http_proxy=BAD.proxy.ncbi.nlm.nih.gov $(BINDIR)/test-proxy-with-scheme
 
 	# good proxy in environment: success
-	ping -c1 webproxy > /dev/null && all_proxy=webproxy.ncbi.nlm.nih.gov \
+	@ ping -c1 webproxy > /dev/null && all_proxy=webproxy.ncbi.nlm.nih.gov \
 		$(BINDIR)/test-proxy-with-scheme                       SUCCESS || echo skipped
 
 	# good proxy with schema in environment: success
-	ping -c1 webproxy > /dev/null && ALL_PROXY=http://webproxy.ncbi.nlm.nih.gov \
+	@ ping -c1 webproxy > /dev/null && ALL_PROXY=http://webproxy.ncbi.nlm.nih.gov \
 		$(BINDIR)/test-proxy-with-scheme                       SUCCESS || echo skipped
 
 	# good proxy with schema and port in environment: success
-	ping -c1 webproxy > /dev/null && \
+	@ ping -c1 webproxy > /dev/null && \
         http_proxy=http://webproxy.ncbi.nlm.nih.gov:3128 \
 		$(BINDIR)/test-proxy-with-scheme                       SUCCESS || echo skipped
 
 	# good proxy with any schema in environment: success
-	ping -c1 webproxy > /dev/null && \
+	@ ping -c1 webproxy > /dev/null && \
         HTTP_PROXY=anySchemaWillBeIgnored://webproxy.ncbi.nlm.nih.gov \
 		$(BINDIR)/test-proxy-with-scheme                       SUCCESS || echo skipped
 
 	# bad proxy port in environment: fail
-	http_proxy=http://webproxy.ncbi.nlm.nih.gov:3 \
+	@ http_proxy=http://webproxy.ncbi.nlm.nih.gov:3 \
 		$(BINDIR)/test-proxy-with-scheme
 
 	# bad proxy specifications in environment: fail
-	http_proxy=h            $(BINDIR)/test-proxy-with-scheme
-	http_proxy=:            $(BINDIR)/test-proxy-with-scheme
-	http_proxy=:a           $(BINDIR)/test-proxy-with-scheme
-	http_proxy=:2           $(BINDIR)/test-proxy-with-scheme
-	http_proxy=h:/w.g:3128  $(BINDIR)/test-proxy-with-scheme
-	http_proxy=http://      $(BINDIR)/test-proxy-with-scheme
-	http_proxy=http://:3128 $(BINDIR)/test-proxy-with-scheme
+	@ http_proxy=h            $(BINDIR)/test-proxy-with-scheme
+	@ http_proxy=:            $(BINDIR)/test-proxy-with-scheme
+	@ http_proxy=:a           $(BINDIR)/test-proxy-with-scheme
+	@ http_proxy=:2           $(BINDIR)/test-proxy-with-scheme
+	@ http_proxy=h:/w.g:3128  $(BINDIR)/test-proxy-with-scheme
+	@ http_proxy=http://      $(BINDIR)/test-proxy-with-scheme
+	@ http_proxy=http://:3128 $(BINDIR)/test-proxy-with-scheme
 
 	# VDB-3329: http_proxy specification with trailing slash
-	ping -c1 webproxy > /dev/null && \
+	@ ping -c1 webproxy > /dev/null && \
 	http_proxy=http://webproxy.ncbi.nlm.nih.gov:3128/     \
 		$(BINDIR)/test-proxy-with-scheme                       SUCCESS || echo skipped
-	ping -c1 webproxy > /dev/null && \
+	@ ping -c1 webproxy > /dev/null && \
 	http_proxy=http://webproxy.ncbi.nlm.nih.gov:3128///   \
 		$(BINDIR)/test-proxy-with-scheme                       SUCCESS || echo skipped
-	ping -c1 webproxy > /dev/null && \
+	@ ping -c1 webproxy > /dev/null && \
 	http_proxy=http://webproxy.ncbi.nlm.nih.gov:3128/:    \
 		$(BINDIR)/test-proxy-with-scheme                       SUCCESS || echo skipped
-	ping -c1 webproxy > /dev/null && \
+	@ ping -c1 webproxy > /dev/null && \
 	http_proxy=http://webproxy.ncbi.nlm.nih.gov:3128???XY \
 		$(BINDIR)/test-proxy-with-scheme                       SUCCESS || echo skipped
-	http_proxy=http://webproxy.ncbi.nlm.nih.gov/X         \
+	@ http_proxy=http://webproxy.ncbi.nlm.nih.gov/X         \
 		$(BINDIR)/test-proxy-with-scheme
-	http_proxy=http://webproxy.ncbi.nlm.nih.gov?X         \
+	@ http_proxy=http://webproxy.ncbi.nlm.nih.gov?X         \
 		$(BINDIR)/test-proxy-with-scheme
 
 	@ echo ... test-proxy-with-scheme: END

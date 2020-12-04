@@ -43,6 +43,7 @@ extern "C" {
 #include <sysalloc.h>
 #include <cstdlib>
 #include <stdexcept>
+#include <map>
 
 using namespace std;
 
@@ -196,11 +197,18 @@ TEST_CASE(SimultaneousCursors)
 class VdbFixture
 {
 public:
+    typedef std :: map< std :: string, const VDatabase * > Databases;
+
+public:
     VdbFixture()
     : mgr(0), curs(0)
     {
         if ( VDBManagerMakeRead(&mgr, NULL) != 0 )
             throw logic_error ( "VdbFixture: VDBManagerMakeRead failed" );
+        if ( dbs == nullptr )
+        {
+            dbs = new Databases();
+        }
     }
 
     ~VdbFixture()
@@ -211,11 +219,39 @@ public:
             throw logic_error ( "~VdbFixture: VCursorRelease failed" );
     }
 
-    rc_t Setup( const char * acc, const char* column[] )
+    // call once per process
+    static void ReleaseCache()
     {
-        const VDatabase *db = NULL;
-        rc_t rc = VDBManagerOpenDBRead ( mgr, &db, NULL, acc );
+        for (auto d : *dbs )
+        {
+            VDatabaseRelease ( d.second );
+        }
+        delete dbs;
+        dbs = nullptr;
+    }
+
+    rc_t Setup( const char * acc, const char* column[], bool open = true )
+    {
+        rc_t rc = 0;
         rc_t rc2;
+        const VDatabase *db = NULL;
+
+        std :: string ac(acc);
+        auto d = dbs->find(ac);
+        if ( d != dbs->end() )
+        {
+            db = d->second;
+            rc = VDatabaseAddRef( db );
+        }
+        else
+        {
+            rc = VDBManagerOpenDBRead ( mgr, &db, NULL, acc );
+            if ( rc == 0 )
+            {
+                dbs->insert( Databases::value_type( ac, db) );
+                rc = VDatabaseAddRef( db );
+            }
+        }
 
         const VTable *tbl = NULL;
         if (rc == 0)
@@ -254,10 +290,10 @@ public:
                 for (i = 0; column[i] != NULL && rc == 0; ++i) {
                     assert(i < N);
                     rc = VCursorAddColumn ( curs, col_idx + i, column[i] );
-                    if ( rc == 0 )
-                    {
-                        rc = VCursorOpen(curs);
-                    }
+                }
+                if ( rc == 0 && open )
+                {
+                    rc = VCursorOpen(curs);
                 }
             }
         }
@@ -309,7 +345,10 @@ public:
     const VDBManager * mgr;
     const VCursor * curs;
     uint32_t col_idx[20];
+    static Databases * dbs;
 };
+
+VdbFixture::Databases * VdbFixture::dbs = nullptr;
 
 FIXTURE_TEST_CASE(TestCursorIsStatic_SingleRowRun1, VdbFixture)
 {
@@ -368,7 +407,6 @@ FIXTURE_TEST_CASE(VCursor_GetBlob_SRA, VdbFixture)
 {   // multiple fragments per row (some are technical), multiple rows per blob
     static char const *columns[] = { "READ", 0 };
     REQUIRE_RC ( Setup ( "SRR000123", columns ) );
-    REQUIRE_RC ( VCursorOpen (curs ) );
 
     {
         REQUIRE_RC ( VCursorSetRowId (curs, 1 ) );
@@ -439,7 +477,6 @@ FIXTURE_TEST_CASE(VCursor_GetBlob_WGS, VdbFixture)
 {   // single fragment per row, multiple rows per blob
     static char const *columns[] = { "READ", 0 };
     REQUIRE_RC ( Setup ( "ALWZ01", columns ) );
-    REQUIRE_RC ( VCursorOpen (curs ) );
 
     {
         REQUIRE_RC ( VCursorSetRowId (curs, 1 ) );
@@ -510,7 +547,6 @@ FIXTURE_TEST_CASE(VCursor_GetBlob_SequentialAccess, VdbFixture)
 {   // VDB-2858: sequential access to blobs broken
     static char const *columns[] = { "READ", 0 };
     REQUIRE_RC ( Setup ( "ALAI01", columns ) );
-    REQUIRE_RC ( VCursorOpen (curs ) );
 
     int64_t first;
     uint64_t count;
@@ -543,7 +579,6 @@ FIXTURE_TEST_CASE(VCursor_GetBlob_RandomAccess, VdbFixture)
 {
     static char const *columns[] = { "READ", 0 };
     REQUIRE_RC ( Setup ( "SRR000001", columns ) );
-    REQUIRE_RC ( VCursorOpen (curs ) );
 
     // when accessing randomly, blob sizes stay very small
     REQUIRE ( CheckBlobRange ( 1, 1, 4 ) );
@@ -561,7 +596,6 @@ FIXTURE_TEST_CASE(PageMapIterator_WGS, VdbFixture)
 {   // single fragment per row, multiple rows per blob
     static char const *columns[] = { "READ", 0 };
     REQUIRE_RC ( Setup ( "ALWZ01", columns ) );
-    REQUIRE_RC ( VCursorOpen (curs ) );
 
     {
         REQUIRE_RC ( VCursorSetRowId (curs, 1 ) );
@@ -602,12 +636,39 @@ FIXTURE_TEST_CASE ( VCursor_FindNextRowIdDirect, VdbFixture )
 {
     static char const *columns[] = { "SPOT_ID", "READ", 0 };
     REQUIRE_RC ( Setup ( "SRR000001", columns ) );
-    REQUIRE_RC ( VCursorOpen (curs ) );
     int64_t next;
     REQUIRE_RC ( VCursorFindNextRowIdDirect ( curs, 0, 1, & next ) );
     REQUIRE_EQ ( (int64_t)1, next ) ;
     REQUIRE_RC ( VCursorFindNextRowIdDirect ( curs, 0, 2, & next ) );
     REQUIRE_EQ ( (int64_t)2, next ) ; // VDB-3075: next == 1
+}
+
+FIXTURE_TEST_CASE ( DoubleOpen, VdbFixture )
+{
+    const char SRR619505[] = "SRR619505";
+
+    const VDatabase *db = NULL;
+    REQUIRE_RC ( VDBManagerOpenDBRead ( mgr, &db, NULL, SRR619505 ) );
+    const VTable * tbl;
+    REQUIRE_RC ( VDatabaseOpenTableRead ( db, &tbl, "REFERENCE") );
+    //DumpScope( tbl -> stbl -> scope, "Table" );
+    REQUIRE_RC ( VTableRelease ( tbl ) );
+    //DumpScope( db -> schema -> dad -> scope, "Db->dad" );
+    //DumpScope( db -> schema -> scope, "Db" );
+
+    // this used to corrupt the heap
+    REQUIRE_RC ( VDatabaseOpenTableRead ( db, &tbl, "SEQUENCE") );
+    // DumpScope( tbl -> stbl -> scope, "Table" );
+    REQUIRE_RC ( VTableRelease ( tbl ) );
+
+    REQUIRE_RC ( VDatabaseRelease ( db ) );
+}
+
+FIXTURE_TEST_CASE(VCursor_PermitPostOpenAdd, VdbFixture)
+{
+    static char const *columns[] = { "SPOT_ID", 0 };
+    REQUIRE_RC(Setup("SRR000001", columns, false));
+    REQUIRE_RC(VCursorPermitPostOpenAdd(curs));
 }
 
 //////////////////////////////////////////// Main

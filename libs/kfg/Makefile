@@ -100,7 +100,8 @@ KFG_SRC = \
 	properties \
 	ngc \
 	report-kfg \
-    keystore
+	keystore \
+	docker
 
 # flex/bison should only be invoked manually in an environment ensures the correct versions:
 # bison 2.5, flex 2.5.35
@@ -108,7 +109,7 @@ bison:
 	bison -o $(SRCDIR)/config-grammar.c --defines=$(SRCDIR)/config-tokens.h -v --no-lines $(SRCDIR)/config-grammar.y
 
 flex:
-	flex -t $(SRCDIR)/config-lex.l | grep -v '^#line' > $(SRCDIR)/config-lex.c
+	flex --noline -t $(SRCDIR)/config-lex.l > $(SRCDIR)/config-lex.c
 
 #$(SRCDIR)/config-grammar.c $(SRCDIR)/config-tokens.h: $(SRCDIR)/config-grammar.y
 #	$(YACC) -o $(SRCDIR)/config-grammar.c --defines=$(SRCDIR)/config-tokens.h $^
@@ -126,3 +127,12 @@ $(ILIBDIR)/libkfg.$(LIBX): $(KFG_OBJ)
 compile: stdcompile
 
 $(TARGDIR)/compile: $(OBJFILES)
+
+#-------------------------------------------------------------------------------
+# fuzz
+#
+FUZZ_OBJ = \
+	$(addprefix $(OBJDIR)/,$(addsuffix .fuzz.$(LOBX),$(KFG_SRC)))
+
+fuzz: std $(FUZZ_OBJ)
+	$(AR) $(FLIBDIR)/libkfg.$(LIBX) $(FUZZ_OBJ)

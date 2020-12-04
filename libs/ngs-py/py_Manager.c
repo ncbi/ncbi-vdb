@@ -8,6 +8,8 @@
 
 #include <kfc/rsrc-global.h>
 
+#include <klib/text.h>
+
 #include "NGS_String.h"
 #include "NGS_ReadCollection.h"
 #include "NGS_ReferenceSequence.h"
@@ -27,9 +29,14 @@
 static PY_RES_TYPE NGSErrorHandler(ctx_t ctx, char* pStrError, size_t nStrErrorBufferSize)
 {
     char const* pszErrorDesc = WHAT();
+    size_t source_size = string_size ( pszErrorDesc );
+    size_t copied;
     assert(pStrError);
-    strncpy(pStrError, pszErrorDesc, nStrErrorBufferSize);
-    pStrError[nStrErrorBufferSize - 1] = '\n';
+    copied = string_copy( pStrError, nStrErrorBufferSize, pszErrorDesc, source_size );
+    if ( copied == nStrErrorBufferSize ) // no space for 0-terminator
+    {
+        pStrError [ copied - 1 ] = 0;
+    }
     CLEAR();
     return PY_RES_ERROR; /* TODO: return error (exception) type */
 }

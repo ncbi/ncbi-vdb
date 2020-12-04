@@ -68,7 +68,7 @@
 
 
 /* Copy the first part of user declarations.  */
-#line 27 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:339  */
+
 
     #define YYDEBUG 1
 
@@ -80,19 +80,18 @@
     #include "schema-ast-tokens.h"
 
     #define AST_lex NextToken
-    static int NextToken ( YYSTYPE* p_token, ParseTreeScanner& p_sb )
+    static int NextToken ( YYSTYPE * p_token, ParseTreeScanner & p_sb )
     {
         return p_sb . NextToken ( p_token -> tok );
     }
 
-    void AST_error ( void* parser, ASTBuilder& p_builder, ParseTreeScanner&, const char* msg )
+    void AST_error ( void * p_parser, ASTBuilder & p_builder, ParseTreeScanner & p_sb, const char * p_msg )
     {
-        /*TODO: retrieve name/location data from the scanner, add to the report */
-        p_builder . ReportError ( "%s", msg );
+        p_builder . ReportInternalError ( p_msg, p_sb . GetSourceFileName () );
     }
 
 
-#line 96 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:339  */
+
 
 # ifndef YY_NULLPTR
 #  if defined __cplusplus && 201103L <= __cplusplus
@@ -112,8 +111,8 @@
 
 /* In a future release of Bison, this section will be replaced
    by #include "schema-ast-tokens.h".  */
-#ifndef YY_AST_HOME_BOSHKINS_DEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_AST_TOKENS_H_INCLUDED
-# define YY_AST_HOME_BOSHKINS_DEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_AST_TOKENS_H_INCLUDED
+#ifndef YY_AST_HOME_BOSHKINS_NCBI_DEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_AST_TOKENS_H_INCLUDED
+# define YY_AST_HOME_BOSHKINS_NCBI_DEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_AST_TOKENS_H_INCLUDED
 /* Debug traces.  */
 #ifndef YYDEBUG
 # define YYDEBUG 0
@@ -134,7 +133,7 @@ extern int AST_debug;
     DECIMAL = 261,
     OCTAL = 262,
     HEX = 263,
-    FLOAT = 264,
+    FLOAT_ = 264,
     EXP_FLOAT = 265,
     STRING = 266,
     ESCAPED_STRING = 267,
@@ -144,117 +143,123 @@ extern int AST_debug;
     UNTERM_STRING = 271,
     UNTERM_ESCAPED_STRING = 272,
     VERS_1_0 = 273,
-    KW___no_header = 274,
-    KW___row_length = 275,
-    KW___untyped = 276,
-    KW_alias = 277,
-    KW_column = 278,
-    KW_const = 279,
-    KW_control = 280,
-    KW_database = 281,
-    KW_decode = 282,
-    KW_default = 283,
-    KW_encode = 284,
-    KW_extern = 285,
-    KW_false = 286,
-    KW_fmtdef = 287,
-    KW_function = 288,
-    KW_include = 289,
-    KW_limit = 290,
-    KW_physical = 291,
-    KW_read = 292,
-    KW_readonly = 293,
-    KW_return = 294,
-    KW_schema = 295,
-    KW_static = 296,
-    KW_table = 297,
-    KW_template = 298,
-    KW_trigger = 299,
-    KW_true = 300,
-    KW_type = 301,
-    KW_typedef = 302,
-    KW_typeset = 303,
-    KW_validate = 304,
-    KW_version = 305,
-    KW_view = 306,
-    KW_virtual = 307,
-    KW_void = 308,
-    KW_write = 309,
-    PT_ASTLIST = 310,
-    PT_PARSE = 311,
-    PT_SOURCE = 312,
-    PT_VERSION_1_0 = 313,
-    PT_VERSION_2 = 314,
-    PT_SCHEMA_1_0 = 315,
-    PT_INCLUDE = 316,
-    PT_TYPEDEF = 317,
-    PT_FQN = 318,
-    PT_IDENT = 319,
-    PT_PHYSIDENT = 320,
-    PT_UINT = 321,
-    PT_TYPESET = 322,
-    PT_TYPESETDEF = 323,
-    PT_FORMAT = 324,
-    PT_CONST = 325,
-    PT_ALIAS = 326,
-    PT_EXTERN = 327,
-    PT_FUNCTION = 328,
-    PT_UNTYPED = 329,
-    PT_ROWLENGTH = 330,
-    PT_FUNCDECL = 331,
-    PT_EMPTY = 332,
-    PT_SCHEMASIG = 333,
-    PT_SCHEMAFORMAL = 334,
-    PT_RETURNTYPE = 335,
-    PT_FACTSIG = 336,
-    PT_FUNCSIG = 337,
-    PT_FUNCPARAMS = 338,
-    PT_FORMALPARAM = 339,
-    PT_ELLIPSIS = 340,
-    PT_FUNCPROLOGUE = 341,
-    PT_RETURN = 342,
-    PT_PRODSTMT = 343,
-    PT_PRODTRIGGER = 344,
-    PT_SCHEMA = 345,
-    PT_VALIDATE = 346,
-    PT_PHYSICAL = 347,
-    PT_PHYSPROLOGUE = 348,
-    PT_PHYSSTMT = 349,
-    PT_PHYSBODYSTMT = 350,
-    PT_TABLE = 351,
-    PT_TABLEPARENTS = 352,
-    PT_TABLEBODY = 353,
-    PT_FUNCEXPR = 354,
-    PT_FACTPARMS = 355,
-    PT_COLUMN = 356,
-    PT_COLUMNEXPR = 357,
-    PT_COLDECL = 358,
-    PT_TYPEDCOL = 359,
-    PT_COLSTMT = 360,
-    PT_DFLTVIEW = 361,
-    PT_PHYSMBR = 362,
-    PT_PHYSCOL = 363,
-    PT_PHYSCOLDEF = 364,
-    PT_COLSCHEMAPARMS = 365,
-    PT_COLSCHEMAPARAM = 366,
-    PT_COLUNTYPED = 367,
-    PT_DATABASE = 368,
-    PT_TYPEEXPR = 369,
-    PT_DBBODY = 370,
-    PT_DBDAD = 371,
-    PT_DBMEMBER = 372,
-    PT_TBLMEMBER = 373,
-    PT_NOHEADER = 374,
-    PT_CASTEXPR = 375,
-    PT_CONSTVECT = 376,
-    PT_NEGATE = 377,
-    PT_UNARYPLUS = 378,
-    PT_VERSNAME = 379,
-    PT_ARRAY = 380,
-    PT_AT = 381,
-    PT_PHYSENCEXPR = 382,
+    VERS_2_0 = 274,
+    KW___no_header = 275,
+    KW___row_length = 276,
+    KW___untyped = 277,
+    KW_alias = 278,
+    KW_column = 279,
+    KW_const = 280,
+    KW_control = 281,
+    KW_database = 282,
+    KW_decode = 283,
+    KW_default = 284,
+    KW_encode = 285,
+    KW_extern = 286,
+    KW_false = 287,
+    KW_fmtdef = 288,
+    KW_function = 289,
+    KW_include = 290,
+    KW_limit = 291,
+    KW_physical = 292,
+    KW_read = 293,
+    KW_readonly = 294,
+    KW_return = 295,
+    KW_schema = 296,
+    KW_static = 297,
+    KW_table = 298,
+    KW_template = 299,
+    KW_trigger = 300,
+    KW_true = 301,
+    KW_type = 302,
+    KW_typedef = 303,
+    KW_typeset = 304,
+    KW_validate = 305,
+    KW_version = 306,
+    KW_view = 307,
+    KW_virtual = 308,
+    KW_void = 309,
+    KW_write = 310,
+    PT_ASTLIST = 311,
+    PT_PARSE = 312,
+    PT_SOURCE = 313,
+    PT_VERSION_1_0 = 314,
+    PT_VERSION_2 = 315,
+    PT_SCHEMA_1_0 = 316,
+    PT_SCHEMA_2_0 = 317,
+    PT_INCLUDE = 318,
+    PT_TYPEDEF = 319,
+    PT_FQN = 320,
+    PT_IDENT = 321,
+    PT_PHYSIDENT = 322,
+    PT_UINT = 323,
+    PT_TYPESET = 324,
+    PT_TYPESETDEF = 325,
+    PT_FORMAT = 326,
+    PT_CONST = 327,
+    PT_ALIAS = 328,
+    PT_EXTERN = 329,
+    PT_FUNCTION = 330,
+    PT_UNTYPED = 331,
+    PT_ROWLENGTH = 332,
+    PT_FUNCDECL = 333,
+    PT_EMPTY = 334,
+    PT_SCHEMASIG = 335,
+    PT_SCHEMAFORMAL = 336,
+    PT_RETURNTYPE = 337,
+    PT_FACTSIG = 338,
+    PT_FUNCSIG = 339,
+    PT_FUNCPARAMS = 340,
+    PT_FORMALPARAM = 341,
+    PT_ELLIPSIS = 342,
+    PT_FUNCPROLOGUE = 343,
+    PT_RETURN = 344,
+    PT_PRODSTMT = 345,
+    PT_PRODTRIGGER = 346,
+    PT_SCHEMA = 347,
+    PT_VALIDATE = 348,
+    PT_PHYSICAL = 349,
+    PT_PHYSPROLOGUE = 350,
+    PT_PHYSSTMT = 351,
+    PT_PHYSBODYSTMT = 352,
+    PT_TABLE = 353,
+    PT_TABLEPARENTS = 354,
+    PT_TABLEBODY = 355,
+    PT_FUNCEXPR = 356,
+    PT_FACTPARMS = 357,
+    PT_COLUMN = 358,
+    PT_COLUMNEXPR = 359,
+    PT_COLDECL = 360,
+    PT_TYPEDCOL = 361,
+    PT_COLSTMT = 362,
+    PT_DFLTVIEW = 363,
+    PT_PHYSMBR = 364,
+    PT_PHYSCOL = 365,
+    PT_PHYSCOLDEF = 366,
+    PT_COLSCHEMAPARMS = 367,
+    PT_COLSCHEMAPARAM = 368,
+    PT_COLUNTYPED = 369,
+    PT_DATABASE = 370,
+    PT_TYPEEXPR = 371,
+    PT_DBBODY = 372,
+    PT_DBDAD = 373,
+    PT_DBMEMBER = 374,
+    PT_TBLMEMBER = 375,
+    PT_NOHEADER = 376,
+    PT_CASTEXPR = 377,
+    PT_CONSTVECT = 378,
+    PT_NEGATE = 379,
+    PT_UNARYPLUS = 380,
+    PT_VERSNAME = 381,
+    PT_ARRAY = 382,
     PT_PHYSENCREF = 383,
-    PT_TYPEDCOLEXPR = 384
+    PT_TYPEDCOLEXPR = 384,
+    PT_VIEW = 385,
+    PT_VIEWPARAM = 386,
+    PT_VIEWPARENTS = 387,
+    PT_VIEWPARENT = 388,
+    PT_MEMBEREXPR = 389,
+    PT_JOINEXPR = 390
   };
 #endif
 
@@ -263,16 +268,14 @@ extern int AST_debug;
 
 union YYSTYPE
 {
-#line 58 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:355  */
+
 
   const Token*  tok;
   AST*          node;
   AST_FQN*      fqn;
   AST_Expr*     expr;
-  AST_ParamSig* paramSig;
-  bool          boolean;
 
-#line 276 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:355  */
+
 };
 
 typedef union YYSTYPE YYSTYPE;
@@ -284,11 +287,11 @@ typedef union YYSTYPE YYSTYPE;
 
 int AST_parse (AST*& p_ast, ASTBuilder& p_builder, ParseTreeScanner& p_sb);
 
-#endif /* !YY_AST_HOME_BOSHKINS_DEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_AST_TOKENS_H_INCLUDED  */
+#endif /* !YY_AST_HOME_BOSHKINS_NCBI_DEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_AST_TOKENS_H_INCLUDED  */
 
 /* Copy the second part of user declarations.  */
 
-#line 292 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:358  */
+
 
 #ifdef short
 # undef short
@@ -530,21 +533,21 @@ union yyalloc
 /* YYFINAL -- State number of the termination state.  */
 #define YYFINAL  4
 /* YYLAST -- Last index in YYTABLE.  */
-#define YYLAST   863
+#define YYLAST   1085
 
 /* YYNTOKENS -- Number of terminals.  */
-#define YYNTOKENS  146
+#define YYNTOKENS  155
 /* YYNNTS -- Number of nonterminals.  */
-#define YYNNTS  90
+#define YYNNTS  113
 /* YYNRULES -- Number of rules.  */
-#define YYNRULES  191
+#define YYNRULES  242
 /* YYNSTATES -- Number of states.  */
-#define YYNSTATES  688
+#define YYNSTATES  856
 
 /* YYTRANSLATE[YYX] -- Symbol number corresponding to YYX as returned
    by yylex, with out-of-bounds checking.  */
 #define YYUNDEFTOK  2
-#define YYMAXUTOK   384
+#define YYMAXUTOK   390
 
 #define YYTRANSLATE(YYX)                                                \
   ((unsigned int) (YYX) <= YYMAXUTOK ? yytranslate[YYX] : YYUNDEFTOK)
@@ -557,15 +560,15 @@ static const yytype_uint8 yytranslate[] =
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-     130,   131,   136,     2,   133,     2,     2,   144,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,   145,   132,
-     140,   139,   141,     2,   142,     2,     2,     2,     2,     2,
+     137,   138,   143,   150,   140,   151,   153,   152,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,   154,   139,
+     147,   146,   148,     2,   136,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,   134,     2,   135,     2,     2,     2,     2,     2,     2,
+       2,   141,     2,   142,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,   137,   143,   138,     2,     2,     2,     2,
+       2,     2,     2,   144,   149,   145,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
@@ -591,33 +594,39 @@ static const yytype_uint8 yytranslate[] =
       95,    96,    97,    98,    99,   100,   101,   102,   103,   104,
      105,   106,   107,   108,   109,   110,   111,   112,   113,   114,
      115,   116,   117,   118,   119,   120,   121,   122,   123,   124,
-     125,   126,   127,   128,   129
+     125,   126,   127,   128,   129,   130,   131,   132,   133,   134,
+     135
 };
 
 #if YYDEBUG
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   255,   255,   256,   260,   261,   262,   266,   270,   274,
-     278,   283,   284,   290,   291,   292,   293,   294,   295,   296,
-     297,   298,   299,   300,   301,   302,   303,   307,   312,   313,
-     317,   318,   322,   326,   327,   331,   336,   337,   341,   342,
-     346,   350,   354,   358,   359,   360,   365,   366,   370,   371,
-     375,   376,   380,   381,   385,   386,   390,   394,   395,   396,
-     397,   398,   402,   406,   407,   411,   412,   416,   417,   421,
-     422,   423,   427,   431,   432,   436,   437,   441,   442,   446,
-     449,   450,   454,   459,   468,   473,   474,   477,   479,   484,
-     485,   489,   491,   493,   495,   502,   507,   508,   512,   513,
-     517,   518,   522,   523,   527,   528,   529,   530,   531,   532,
-     533,   539,   543,   544,   548,   549,   553,   554,   555,   559,
-     560,   565,   567,   568,   572,   573,   574,   578,   579,   583,
-     584,   588,   589,   593,   594,   595,   596,   602,   606,   607,
-     610,   611,   615,   616,   617,   618,   622,   624,   629,   630,
-     636,   638,   640,   642,   644,   649,   653,   654,   658,   659,
-     663,   664,   668,   669,   675,   676,   677,   678,   683,   687,
-     688,   692,   693,   697,   698,   699,   710,   711,   715,   716,
-     717,   721,   722,   726,   727,   733,   737,   738,   742,   746,
-     747,   751
+       0,   261,   261,   262,   266,   267,   268,   272,   276,   280,
+     284,   289,   290,   296,   297,   298,   299,   300,   301,   302,
+     303,   304,   305,   306,   307,   308,   309,   310,   314,   319,
+     320,   324,   325,   329,   333,   334,   338,   343,   344,   348,
+     349,   353,   357,   361,   365,   366,   367,   372,   373,   377,
+     378,   382,   383,   387,   388,   392,   393,   397,   401,   402,
+     403,   404,   405,   409,   413,   414,   418,   419,   423,   424,
+     428,   429,   430,   434,   438,   439,   443,   444,   448,   449,
+     453,   456,   457,   461,   466,   475,   480,   481,   484,   486,
+     491,   492,   496,   498,   500,   502,   509,   514,   515,   519,
+     520,   524,   525,   529,   530,   534,   535,   536,   537,   538,
+     539,   540,   541,   542,   546,   550,   551,   555,   556,   560,
+     561,   562,   566,   567,   571,   573,   574,   578,   579,   580,
+     584,   585,   589,   590,   594,   595,   599,   600,   601,   602,
+     606,   608,   610,   612,   617,   621,   622,   626,   627,   631,
+     632,   636,   637,   642,   646,   647,   650,   651,   655,   656,
+     657,   658,   662,   664,   669,   670,   676,   682,   686,   687,
+     691,   692,   693,   694,   695,   696,   697,   698,   699,   700,
+     701,   702,   703,   704,   708,   713,   714,   717,   718,   722,
+     723,   724,   728,   729,   733,   737,   738,   742,   743,   747,
+     748,   752,   753,   754,   758,   759,   763,   764,   768,   772,
+     773,   777,   780,   784,   785,   789,   790,   802,   809,   813,
+     814,   818,   822,   823,   827,   832,   838,   839,   843,   847,
+     848,   852,   853,   857,   858,   859,   863,   864,   868,   869,
+     873,   878,   879
 };
 #endif
 
@@ -627,24 +636,25 @@ static const yytype_uint16 yyrline[] =
 static const char *const yytname[] =
 {
   "\"end of source\"", "error", "$undefined", "UNRECOGNIZED", "ELLIPSIS",
-  "INCREMENT", "DECIMAL", "OCTAL", "HEX", "FLOAT", "EXP_FLOAT", "STRING",
+  "INCREMENT", "DECIMAL", "OCTAL", "HEX", "FLOAT_", "EXP_FLOAT", "STRING",
   "ESCAPED_STRING", "IDENTIFIER_1_0", "PHYSICAL_IDENTIFIER_1_0", "VERSION",
-  "UNTERM_STRING", "UNTERM_ESCAPED_STRING", "VERS_1_0", "KW___no_header",
-  "KW___row_length", "KW___untyped", "KW_alias", "KW_column", "KW_const",
-  "KW_control", "KW_database", "KW_decode", "KW_default", "KW_encode",
-  "KW_extern", "KW_false", "KW_fmtdef", "KW_function", "KW_include",
-  "KW_limit", "KW_physical", "KW_read", "KW_readonly", "KW_return",
-  "KW_schema", "KW_static", "KW_table", "KW_template", "KW_trigger",
-  "KW_true", "KW_type", "KW_typedef", "KW_typeset", "KW_validate",
-  "KW_version", "KW_view", "KW_virtual", "KW_void", "KW_write",
-  "PT_ASTLIST", "PT_PARSE", "PT_SOURCE", "PT_VERSION_1_0", "PT_VERSION_2",
-  "PT_SCHEMA_1_0", "PT_INCLUDE", "PT_TYPEDEF", "PT_FQN", "PT_IDENT",
-  "PT_PHYSIDENT", "PT_UINT", "PT_TYPESET", "PT_TYPESETDEF", "PT_FORMAT",
-  "PT_CONST", "PT_ALIAS", "PT_EXTERN", "PT_FUNCTION", "PT_UNTYPED",
-  "PT_ROWLENGTH", "PT_FUNCDECL", "PT_EMPTY", "PT_SCHEMASIG",
-  "PT_SCHEMAFORMAL", "PT_RETURNTYPE", "PT_FACTSIG", "PT_FUNCSIG",
-  "PT_FUNCPARAMS", "PT_FORMALPARAM", "PT_ELLIPSIS", "PT_FUNCPROLOGUE",
-  "PT_RETURN", "PT_PRODSTMT", "PT_PRODTRIGGER", "PT_SCHEMA", "PT_VALIDATE",
+  "UNTERM_STRING", "UNTERM_ESCAPED_STRING", "VERS_1_0", "VERS_2_0",
+  "KW___no_header", "KW___row_length", "KW___untyped", "KW_alias",
+  "KW_column", "KW_const", "KW_control", "KW_database", "KW_decode",
+  "KW_default", "KW_encode", "KW_extern", "KW_false", "KW_fmtdef",
+  "KW_function", "KW_include", "KW_limit", "KW_physical", "KW_read",
+  "KW_readonly", "KW_return", "KW_schema", "KW_static", "KW_table",
+  "KW_template", "KW_trigger", "KW_true", "KW_type", "KW_typedef",
+  "KW_typeset", "KW_validate", "KW_version", "KW_view", "KW_virtual",
+  "KW_void", "KW_write", "PT_ASTLIST", "PT_PARSE", "PT_SOURCE",
+  "PT_VERSION_1_0", "PT_VERSION_2", "PT_SCHEMA_1_0", "PT_SCHEMA_2_0",
+  "PT_INCLUDE", "PT_TYPEDEF", "PT_FQN", "PT_IDENT", "PT_PHYSIDENT",
+  "PT_UINT", "PT_TYPESET", "PT_TYPESETDEF", "PT_FORMAT", "PT_CONST",
+  "PT_ALIAS", "PT_EXTERN", "PT_FUNCTION", "PT_UNTYPED", "PT_ROWLENGTH",
+  "PT_FUNCDECL", "PT_EMPTY", "PT_SCHEMASIG", "PT_SCHEMAFORMAL",
+  "PT_RETURNTYPE", "PT_FACTSIG", "PT_FUNCSIG", "PT_FUNCPARAMS",
+  "PT_FORMALPARAM", "PT_ELLIPSIS", "PT_FUNCPROLOGUE", "PT_RETURN",
+  "PT_PRODSTMT", "PT_PRODTRIGGER", "PT_SCHEMA", "PT_VALIDATE",
   "PT_PHYSICAL", "PT_PHYSPROLOGUE", "PT_PHYSSTMT", "PT_PHYSBODYSTMT",
   "PT_TABLE", "PT_TABLEPARENTS", "PT_TABLEBODY", "PT_FUNCEXPR",
   "PT_FACTPARMS", "PT_COLUMN", "PT_COLUMNEXPR", "PT_COLDECL",
@@ -653,28 +663,34 @@ static const char *const yytname[] =
   "PT_COLUNTYPED", "PT_DATABASE", "PT_TYPEEXPR", "PT_DBBODY", "PT_DBDAD",
   "PT_DBMEMBER", "PT_TBLMEMBER", "PT_NOHEADER", "PT_CASTEXPR",
   "PT_CONSTVECT", "PT_NEGATE", "PT_UNARYPLUS", "PT_VERSNAME", "PT_ARRAY",
-  "PT_AT", "PT_PHYSENCEXPR", "PT_PHYSENCREF", "PT_TYPEDCOLEXPR", "'('",
-  "')'", "';'", "','", "'['", "']'", "'*'", "'{'", "'}'", "'='", "'<'",
-  "'>'", "'@'", "'|'", "'/'", "':'", "$accept", "parse", "source",
-  "version_1", "version_2", "schema_1", "schema_2", "schema_decls",
-  "schema_decl", "typedef", "new_type_names", "typespec", "arrayspec",
-  "dim", "typeset", "typeset_spec", "fmtdef", "const", "alias", "function",
-  "func_decl", "schema_sig_opt", "schema_formals", "schema_formal",
-  "return_type", "fact_sig", "param_sig", "param_signature",
-  "formals_list", "formals", "formal", "vararg", "prologue",
-  "script_prologue", "script_stmts", "script_stmt", "production",
-  "extern_function", "script", "script_decl", "validate", "physical",
-  "phys_return_type", "phys_prologue", "phys_body", "phys_body_stmt",
-  "table", "parents_opt", "tbl_parents", "tbl_body", "tbl_stmts",
-  "tbl_stmt", "column_decl", "col_modifiers_opt", "col_modifiers",
-  "col_modifier", "col_decl", "phys_enc_ref", "typed_col", "col_ident",
-  "col_body_opt", "col_body", "col_stmt", "database", "opt_dbdad",
-  "dbbody", "db_members", "db_member", "template_opt", "include",
-  "physmbr_decl", "phys_coldef", "col_schema_parms_opt",
-  "col_schema_parms", "col_schema_parm", "col_schema_value", "expr",
-  "cond_expr", "cond_chain", "type_expr", "uint_expr", "schema_parms",
-  "schema_parm", "factory_parms_opt", "factory_parms", "fqn", "qualnames",
-  "ident", "fqn_opt_vers", "fqn_vers", YY_NULLPTR
+  "PT_PHYSENCREF", "PT_TYPEDCOLEXPR", "PT_VIEW", "PT_VIEWPARAM",
+  "PT_VIEWPARENTS", "PT_VIEWPARENT", "PT_MEMBEREXPR", "PT_JOINEXPR", "'@'",
+  "'('", "')'", "';'", "','", "'['", "']'", "'*'", "'{'", "'}'", "'='",
+  "'<'", "'>'", "'|'", "'+'", "'-'", "'/'", "'.'", "':'", "$accept",
+  "parse", "source", "version_1", "version_2", "schema_1", "schema_2",
+  "schema_decls", "schema_decl", "typedef", "new_type_names", "typespec",
+  "arrayspec", "dim", "typeset", "typeset_spec", "fmtdef", "const",
+  "alias", "function", "func_decl", "schema_sig_opt", "schema_formals",
+  "schema_formal", "return_type", "fact_sig", "param_sig",
+  "param_signature", "formals_list", "formals", "formal", "vararg",
+  "prologue", "script_prologue", "script_stmts", "script_stmt",
+  "production", "extern_function", "script", "script_decl", "validate",
+  "physical", "phys_return_type", "phys_prologue", "phys_body",
+  "phys_body_stmt", "table", "parents_opt", "tbl_parents", "tbl_body",
+  "tbl_stmts", "tbl_stmt", "column_decl", "col_modifiers_opt",
+  "col_modifiers", "col_modifier", "col_decl", "phys_enc_ref", "typed_col",
+  "col_ident", "col_body_opt", "col_body", "col_stmt", "physmbr_decl",
+  "phys_coldef", "col_schema_parms_opt", "col_schema_parms",
+  "col_schema_parm", "col_schema_value", "database", "dbdad_opt", "dbbody",
+  "db_members", "db_member", "template_opt", "include", "cond_expr",
+  "cond_chain", "expr", "func_expr", "schema_parts_opt", "schema_parms",
+  "schema_parm", "factory_parms_opt", "factory_parms_list",
+  "factory_parms", "func_parms_opt", "expr_list", "uint_expr",
+  "float_expr", "string_expr", "const_vect_expr", "bool_expr",
+  "negate_expr", "cast_expr", "type_expr", "member_expr", "join_expr",
+  "fqn", "qualnames", "ident", "fqn_opt_vers", "fqn_vers", "view",
+  "view_parms", "view_parm", "view_body_opt", "view_body", "view_member",
+  "view_parents_opt", "view_parents", "view_parent", "view_parent_parms", YY_NULLPTR
 };
 #endif
 
@@ -696,15 +712,16 @@ static const yytype_uint16 yytoknum[] =
      355,   356,   357,   358,   359,   360,   361,   362,   363,   364,
      365,   366,   367,   368,   369,   370,   371,   372,   373,   374,
      375,   376,   377,   378,   379,   380,   381,   382,   383,   384,
-      40,    41,    59,    44,    91,    93,    42,   123,   125,    61,
-      60,    62,    64,   124,    47,    58
+     385,   386,   387,   388,   389,   390,    64,    40,    41,    59,
+      44,    91,    93,    42,   123,   125,    61,    60,    62,   124,
+      43,    45,    47,    46,    58
 };
 # endif
 
-#define YYPACT_NINF -576
+#define YYPACT_NINF -664
 
 #define yypact_value_is_default(Yystate) \
-  (!!((Yystate) == (-576)))
+  (!!((Yystate) == (-664)))
 
 #define YYTABLE_NINF -1
 
@@ -715,75 +732,92 @@ static const yytype_uint16 yytoknum[] =
      STATE-NUM.  */
 static const yytype_int16 yypact[] =
 {
-       4,    29,   271,    41,  -576,   178,   190,   321,  -576,   234,
-     192,   194,   195,   196,   262,  -576,   197,  -576,   277,   279,
-     122,   199,   200,  -576,   314,   324,   204,   205,   208,   210,
-     211,   213,   215,   216,   217,   218,   219,   222,   223,  -576,
-     107,  -576,  -576,  -576,  -576,  -576,  -576,  -576,  -576,  -576,
-    -576,  -576,  -576,  -576,  -576,  -576,  -576,   224,   225,   302,
-     290,   291,   310,   330,   333,   328,   326,   320,   312,   327,
-     323,   336,  -576,  -576,   236,   238,   359,   308,   308,   308,
-     -21,   308,   299,   221,    10,   300,   209,   250,   250,  -576,
-    -576,   244,   246,   322,   311,   -24,   248,   308,  -576,  -576,
-     308,   249,   251,   253,   254,   255,   309,   257,   258,   260,
-    -576,   261,    77,   263,   156,    84,  -576,   331,   264,   266,
-     267,   265,   308,   268,   270,  -576,   371,   379,   209,  -576,
-     269,   209,  -576,   370,   272,   275,   276,  -576,   250,   308,
-    -576,   278,   313,  -576,   280,   294,   283,   127,   -21,   281,
-    -576,   285,   286,    11,   288,   308,   308,   334,  -576,   334,
-     345,   367,    31,   404,   207,   409,   287,   295,   289,   297,
-     298,   417,  -576,   368,   103,  -576,   376,  -576,     2,  -576,
-     303,  -576,   305,  -576,  -576,  -576,   304,   315,     6,     6,
-     316,   317,   307,   318,  -576,   319,   334,  -576,   325,   347,
-     329,   386,   306,     6,   332,  -576,   335,   337,   338,   -21,
-     341,  -576,   339,  -576,   292,   342,   346,   348,  -576,   207,
-    -576,   207,   209,   363,  -576,   308,  -576,   349,   343,   351,
-     353,  -576,   352,   389,   354,   -22,  -576,   438,   355,  -576,
-     -21,   356,   358,   360,   361,  -576,   362,   364,   372,   372,
-     334,   366,   173,  -576,   350,  -576,   206,   168,  -576,     6,
-     369,   340,  -576,   373,   374,   375,  -576,  -576,   177,  -576,
-    -576,  -576,  -576,  -576,  -576,   377,   378,   382,     6,     8,
-     357,   363,   308,  -576,   380,   381,   397,   365,   181,  -576,
-     155,   383,   108,  -576,  -576,   385,   -21,   387,   388,   384,
-    -576,   390,   393,   207,   392,   392,   394,  -576,   395,   -19,
-     396,   391,   398,   399,     6,   401,   403,   405,   406,   407,
-    -576,   121,  -576,  -576,   408,   410,   411,  -576,   133,  -576,
-     412,  -576,   206,   142,  -576,   413,  -576,   372,   414,   415,
-     418,  -576,  -576,   421,   402,    75,  -576,   424,   416,  -576,
-    -576,   -25,   419,   112,   430,    15,  -576,  -576,  -576,    89,
-      89,   400,  -576,  -576,   344,   423,   425,   442,   308,   378,
-     445,  -576,  -576,   420,   191,  -576,   422,   426,   402,   428,
-     427,   -36,  -576,   446,   392,   392,  -576,   431,   439,   245,
-     441,    17,  -576,  -576,   436,   458,   432,   433,   434,  -576,
-     437,   440,   435,   443,   447,   182,  -576,   444,   448,   402,
-     191,  -576,    -1,   449,  -576,   452,   450,   451,   239,   453,
-     454,   467,   455,   456,   457,   441,   460,     6,     6,  -576,
-    -576,  -576,   214,   461,   462,  -576,   -11,  -576,   420,  -576,
-     468,   191,   464,   459,   475,   476,   465,   469,   214,   474,
-     474,  -576,  -576,  -576,   232,  -576,   -23,  -576,   463,    11,
-       9,  -576,   470,  -576,   392,   392,   473,    -6,  -576,  -576,
-    -576,   477,   -21,   495,  -576,   478,   479,  -576,   308,   481,
-     482,  -576,  -576,    76,   483,   472,   484,   486,  -576,   485,
-      98,    98,    11,   487,   490,   488,   498,  -576,   489,   491,
-     506,   492,  -576,  -576,   496,   493,  -576,  -576,   497,   494,
-     499,   500,    11,   501,   502,  -576,   -17,   504,   505,   508,
-     509,   510,   512,   520,    96,    23,   513,   514,   474,   515,
-     516,  -576,   517,   518,   521,   519,  -576,   135,  -576,  -576,
-     523,   466,   104,    33,    33,  -576,  -576,   522,  -576,   143,
-    -576,   507,     6,   524,   474,  -576,  -576,   525,  -576,  -576,
-     527,   511,   526,   528,  -576,    11,   530,    11,  -576,   531,
-     532,  -576,   153,  -576,   529,  -576,   533,   474,   480,   104,
-    -576,   534,   536,  -576,   214,   214,  -576,  -576,    22,  -576,
-     -78,   535,  -576,   538,    -5,   474,  -576,   539,   550,   541,
-     542,  -576,    99,   128,  -576,  -576,   185,  -576,  -576,    11,
-     543,   552,  -576,   540,  -576,   544,   545,   547,   546,  -576,
-    -576,   548,   549,   551,    22,  -576,  -576,   553,   116,   554,
-     557,  -576,    74,   558,   559,     6,  -576,    11,   561,  -576,
-     114,  -576,  -576,  -576,   563,    -2,  -576,  -576,  -576,  -576,
-     564,   565,   104,   186,   212,  -576,  -576,   308,   556,  -576,
-    -576,  -576,   567,   560,   555,   566,   568,   569,   571,  -576,
-     572,   562,   474,   474,    83,  -576,  -576,   574,   577,   578,
-     573,   580,   581,   582,  -576,  -576,  -576,  -576
+      22,   -94,    69,    86,  -664,   -50,    31,   221,  -664,   338,
+      92,   159,   186,   208,   232,   246,   224,  -664,   321,   322,
+     261,   240,   251,   263,  -664,   366,   383,   279,   302,   305,
+     306,   307,   310,   311,   312,   316,   317,   318,   320,   324,
+     325,  -664,   180,  -664,  -664,  -664,  -664,  -664,  -664,  -664,
+    -664,  -664,  -664,  -664,  -664,  -664,  -664,  -664,  -664,   261,
+    -664,   319,   326,   415,   404,   410,   427,   438,   441,   435,
+     433,   429,   418,   434,   430,   445,   422,  -664,  -664,   228,
+     340,   341,   469,   416,   416,   416,   -20,   416,   409,   330,
+     101,   411,   315,   361,   361,   361,  -664,  -664,  -664,   351,
+     353,   436,   421,    -8,   356,   416,  -664,  -664,   416,   358,
+     360,   362,   363,   364,   423,   367,   365,   368,  -664,   369,
+     -26,   370,   125,    62,   371,  -664,   442,   372,   373,   374,
+     375,   416,   376,   378,  -664,   491,   498,   315,  -664,   382,
+     315,  -664,   487,   377,   386,   388,  -664,   361,   416,  -664,
+     389,   428,  -664,   390,   412,   474,   394,   -84,   -20,   391,
+    -664,   395,   393,    64,   398,   416,   416,   450,  -664,   450,
+     459,   482,   -18,   519,   268,   525,   397,   407,   399,   413,
+     414,   417,   534,  -664,   483,   110,  -664,   492,  -664,    91,
+    -664,  -664,  -664,  -664,  -664,  -664,  -664,   419,   420,   424,
+     425,   426,   431,   432,   437,  -664,   439,  -664,  -664,  -664,
+    -664,  -664,  -664,  -664,  -664,  -664,  -664,  -664,  -664,   440,
+     443,    -6,    -6,   444,   446,   447,   449,  -664,   451,   450,
+    -664,   453,   456,   455,   497,   452,    -6,   454,  -664,   448,
+     457,   460,   461,   -20,   462,  -664,   464,  -664,   403,   408,
+     465,   463,   458,   466,   494,   494,   470,   472,   475,  -664,
+     268,  -664,   268,   315,   477,  -664,   416,  -664,   476,   468,
+     480,   481,  -664,   484,   508,   485,   -17,   488,   225,  -664,
+    -664,   552,   486,  -664,   -20,   489,   490,   493,   495,   510,
+      -6,    75,   511,    64,    64,   499,     7,   471,  -664,   500,
+     501,   503,   503,   450,   504,   252,  -664,   478,  -664,   127,
+     271,  -664,    -6,   505,   473,  -664,   506,   502,    -6,   496,
+     448,   507,  -664,  -664,   281,  -664,  -664,  -664,  -664,   509,
+     185,   512,   514,   515,   516,   557,   517,   494,   526,  -664,
+    -664,   520,   513,   532,    -6,     3,   518,   477,   416,  -664,
+     521,   522,   535,   479,   282,  -664,   172,   523,   229,  -664,
+     494,   -41,  -664,  -664,   524,   -20,   -13,  -664,   527,   528,
+    -664,    64,    64,  -664,  -664,   529,  -664,   530,   536,   533,
+     537,   540,   541,  -664,   543,   544,   268,   494,   494,   545,
+    -664,   546,   -22,   547,   549,   550,   551,    -6,   553,   554,
+     555,   556,   558,   559,  -664,  -664,   128,  -664,  -664,   560,
+     562,   563,  -664,   218,  -664,   564,  -664,   566,   561,   568,
+    -664,  -664,   285,  -664,  -664,  -664,   531,   161,   569,  -664,
+     286,  -664,  -664,    64,   548,   127,   235,  -664,   565,  -664,
+     503,   570,   572,  -664,  -664,   567,   538,    29,  -664,   574,
+     571,  -664,  -664,    75,   577,    34,   579,   140,   585,  -664,
+    -664,  -664,   129,   129,   573,  -664,  -664,  -664,   542,   234,
+     575,   576,   -13,   581,   580,  -664,   578,  -664,   539,    64,
+     160,  -664,   494,   583,   584,   591,   416,   513,  -664,  -664,
+     586,   -15,  -664,   582,   587,   538,   588,   590,   -44,  -664,
+     592,   494,   494,  -664,   594,   589,   276,   602,    25,   593,
+    -664,  -664,   599,   606,   595,   596,   597,  -664,   598,   600,
+    -664,  -664,   603,    64,   607,   608,  -664,  -664,    64,   609,
+     610,  -664,   604,   605,   611,   613,   289,  -664,   614,   615,
+     538,   -15,  -664,    12,   612,  -664,   616,   617,   618,   313,
+     619,   620,   623,   621,   622,   624,   602,   627,   416,    -6,
+      -6,  -664,   629,   138,   630,  -664,    64,   290,  -664,  -664,
+    -664,  -664,  -664,   323,   631,   632,    20,  -664,   586,  -664,
+     625,   -15,   633,   626,   601,   636,   635,   637,   323,   526,
+     526,  -664,  -664,  -664,   346,  -664,    39,  -664,   628,    64,
+      11,  -664,   638,  -664,   640,   494,   494,   645,   642,   643,
+    -664,   130,  -664,  -664,  -664,   293,  -664,   644,   156,  -664,
+    -664,  -664,   646,   -20,   647,  -664,   648,   649,  -664,   416,
+     651,   652,  -664,  -664,   169,   653,   654,   656,  -664,   658,
+     198,   198,    64,   657,   650,   660,   698,  -664,   661,   659,
+     662,   663,   294,  -664,   -20,   639,  -664,  -664,   634,    64,
+     683,   664,  -664,  -664,   712,   665,  -664,  -664,   667,   641,
+     666,   668,   669,   670,  -664,   -14,   674,   675,   676,   677,
+     678,   680,   715,    97,   200,   681,   684,   685,    -6,   686,
+     645,   494,   -20,   687,  -664,   526,   688,   689,  -664,   690,
+     679,   695,   691,  -664,  -664,   727,   700,   185,    47,    47,
+    -664,  -664,   692,  -664,   247,  -664,   682,    -6,   693,   526,
+     694,  -664,  -664,   696,  -664,  -664,   699,   494,  -664,   697,
+    -664,  -664,   701,   703,   704,   706,   705,   708,   709,  -664,
+     243,  -664,   702,  -664,   711,   526,   707,   185,  -664,   713,
+    -664,   734,   526,   710,   717,  -664,   323,   323,  -664,   -13,
+    -664,  -664,   719,   250,   526,  -664,   714,   735,   720,   721,
+     723,   722,   526,  -664,   190,   226,   297,  -664,   725,  -664,
+     671,   724,   726,   728,  -664,  -664,   494,   729,   730,   731,
+     732,   673,    83,   733,   736,  -664,    84,  -664,   298,  -664,
+     737,   740,   741,    -6,   743,  -664,    57,  -664,  -664,  -664,
+     744,    -2,  -664,  -664,  -664,  -664,   718,   494,  -664,   745,
+     746,   185,   333,  -664,  -664,   416,   738,  -664,   747,  -664,
+    -664,  -664,   749,   742,   748,   750,   751,   752,  -664,  -664,
+     765,   526,   526,   171,  -664,   753,   754,   756,   760,   761,
+     762,   763,  -664,  -664,  -664,  -664
 };
 
   /* YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
@@ -792,102 +826,125 @@ static const yytype_int16 yypact[] =
 static const yytype_uint8 yydefact[] =
 {
        0,     0,     0,     0,     1,     0,     0,     0,     2,     0,
-       0,     0,     0,     0,     0,    10,     0,     3,     0,     0,
-       0,     0,     0,     4,     0,     0,     0,     0,     0,     0,
-       0,     0,     0,     0,     0,     0,     0,     0,     0,    26,
-       0,    11,    13,    14,    15,    16,    17,    18,    19,    20,
-      21,    22,    23,    24,    25,     5,     6,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     3,     0,     0,
+       0,     0,     0,     0,     4,     0,     0,     0,     0,     0,
        0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
-       0,     0,     9,    12,     0,     0,     0,     0,     0,     0,
-       0,     0,     0,     0,     0,     0,     0,     0,     0,     7,
-       8,     0,     0,     0,     0,     0,     0,     0,    31,    30,
+       0,    27,     0,    11,    13,    14,    15,    16,    17,    18,
+      19,    20,    21,    22,    23,    24,    25,    26,     5,     0,
+       6,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     9,    12,     0,
        0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
-      46,     0,     0,     0,     0,     0,   150,     0,     0,     0,
-       0,     0,     0,     0,     0,    79,     0,     0,     0,    42,
-       0,     0,    80,     0,     0,     0,     0,    85,     0,     0,
-      96,     0,     0,   138,     0,     0,     0,     0,     0,     0,
-      38,     0,     0,     0,     0,     0,     0,     0,    81,     0,
+       0,     0,     0,     0,     0,     0,    10,     7,     8,     0,
+       0,     0,     0,     0,     0,     0,    32,    31,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,    47,     0,
+       0,     0,     0,     0,     0,   166,     0,     0,     0,     0,
+       0,     0,     0,     0,    80,     0,     0,     0,    43,     0,
+       0,    81,     0,     0,     0,     0,    86,     0,     0,    97,
+       0,     0,   154,     0,     0,     0,     0,     0,     0,     0,
+      39,     0,     0,     0,     0,     0,     0,     0,    82,     0,
        0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
-       0,     0,   185,     0,     0,    28,     0,    39,     0,   167,
-       0,   166,     0,   164,   165,    41,     0,     0,     0,     0,
-       0,     0,     0,     0,   171,     0,     0,    54,     0,     0,
-       0,     0,     0,     0,     0,   137,     0,     0,     0,     0,
-       0,    34,     0,    33,     0,     0,     0,     0,   189,     0,
-     190,     0,     0,     0,    52,     0,    53,     0,     0,     0,
-       0,   191,     0,   100,     0,     0,   186,     0,     0,    29,
-       0,     0,     0,     0,     0,    40,     0,     0,     0,     0,
-       0,     0,     0,    48,     0,    86,     0,     0,    84,     0,
-       0,     0,   139,     0,     0,     0,    27,    36,     0,    32,
-     173,   175,   174,    43,    44,     0,     0,     0,     0,     0,
-       0,     0,     0,    57,     0,     0,     0,     0,     0,    98,
-       0,     0,     0,   141,   187,     0,     0,     0,     0,     0,
-      71,     0,     0,     0,     0,     0,     0,    49,     0,     0,
+       0,     0,     0,   218,     0,     0,    29,     0,    40,     0,
+     204,   205,   206,   207,   171,   210,   209,     0,     0,     0,
+       0,     0,     0,     0,     0,   172,     0,   173,   174,   175,
+     176,   177,   178,   179,   181,   182,   183,   170,    42,     0,
+       0,     0,     0,     0,     0,     0,     0,   213,     0,     0,
+      55,     0,     0,     0,     0,     0,     0,     0,   153,     0,
+       0,     0,     0,     0,     0,    35,     0,    34,     0,   185,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,   222,
+       0,   223,     0,     0,     0,    53,     0,    54,     0,     0,
+       0,     0,   224,     0,   101,     0,     0,     0,     0,   226,
+     219,     0,     0,    30,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,    41,     0,
+       0,     0,     0,     0,     0,     0,    49,     0,    87,     0,
+       0,    85,     0,     0,     0,   155,     0,     0,     0,     0,
+       0,     0,    28,    37,     0,    33,   201,   203,   202,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,    44,
+      45,     0,     0,     0,     0,     0,     0,     0,     0,    58,
+       0,     0,     0,     0,     0,    99,     0,     0,     0,   157,
+       0,     0,   227,   220,     0,     0,     0,   192,     0,     0,
+     193,     0,     0,   211,   180,     0,   216,     0,     0,     0,
+       0,     0,     0,    72,     0,     0,     0,     0,     0,     0,
+      50,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,   113,   105,     0,   103,   106,     0,
+       0,     0,   159,     0,   158,     0,   236,     0,     0,     0,
+      38,   190,     0,   187,   191,   189,     0,     0,     0,   199,
+       0,   221,   215,     0,     0,     0,     0,    46,     0,    83,
+       0,     0,     0,    48,   214,     0,     0,     0,    56,     0,
+       0,    98,   100,     0,     0,     0,     0,     0,     0,   102,
+     104,    96,     0,     0,     0,   161,   160,   228,     0,     0,
+       0,     0,     0,     0,     0,   197,     0,   212,     0,     0,
+       0,   168,     0,     0,     0,     0,     0,     0,    51,    52,
+       0,     0,    68,     0,     0,     0,     0,     0,     0,    90,
+       0,     0,     0,   115,     0,     0,     0,     0,     0,     0,
+     165,   164,     0,     0,     0,     0,     0,   229,     0,     0,
+     186,   188,     0,     0,     0,     0,   200,   167,     0,     0,
+       0,    70,     0,     0,     0,     0,     0,    64,     0,     0,
+       0,     0,    59,     0,     0,    91,     0,     0,     0,     0,
        0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
-     104,     0,   102,   105,     0,     0,     0,   143,     0,   142,
-       0,    37,     0,     0,    45,     0,    82,     0,     0,     0,
-       0,    47,   172,     0,     0,     0,    55,     0,     0,    97,
-      99,     0,     0,     0,     0,     0,   101,   103,    95,     0,
-       0,     0,   145,   144,     0,     0,     0,     0,     0,     0,
-       0,    50,    51,     0,     0,    67,     0,     0,     0,     0,
-       0,     0,    89,     0,     0,     0,   112,     0,     0,     0,
-       0,     0,   149,   148,     0,     0,     0,     0,     0,    69,
-       0,     0,     0,     0,     0,     0,    63,     0,     0,     0,
-       0,    58,     0,     0,    90,     0,     0,     0,     0,     0,
-       0,     0,     0,     0,     0,     0,     0,     0,     0,   140,
-      35,    56,     0,     0,     0,   188,     0,    62,     0,    59,
+       0,   156,     0,     0,     0,    36,     0,     0,   184,   208,
+     169,   217,    57,     0,     0,     0,     0,    63,     0,    60,
        0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
-       0,   116,   117,   118,     0,   114,     0,   111,     0,     0,
-       0,   109,     0,   108,     0,     0,     0,     0,    73,    76,
-      70,     0,     0,     0,    64,     0,     0,    60,     0,     0,
-       0,    91,    88,     0,     0,     0,     0,     0,   115,     0,
-       0,     0,     0,     0,     0,     0,     0,   110,     0,     0,
-       0,     0,    74,    83,     0,     0,    68,    61,     0,     0,
-       0,     0,     0,     0,     0,   113,     0,     0,     0,     0,
+       0,   119,   120,   121,     0,   117,     0,   114,     0,     0,
+       0,   110,     0,   109,     0,     0,     0,     0,     0,     0,
+     235,     0,   231,   225,   195,     0,   198,     0,     0,    74,
+      77,    71,     0,     0,     0,    65,     0,     0,    61,     0,
+       0,     0,    92,    89,     0,     0,     0,     0,   118,     0,
+       0,     0,     0,     0,     0,     0,     0,   111,     0,     0,
+       0,     0,     0,   238,     0,     0,   230,   232,     0,     0,
+       0,     0,    75,    84,     0,     0,    69,    62,     0,     0,
+       0,     0,     0,     0,   116,     0,     0,     0,     0,     0,
        0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
-       0,    65,     0,     0,     0,     0,   169,     0,    77,    78,
-       0,     0,     0,     0,     0,   119,   120,     0,   106,     0,
-     156,     0,     0,     0,     0,   146,   147,     0,    72,    66,
-       0,     0,     0,     0,   168,     0,     0,     0,   181,     0,
-       0,   128,     0,   127,     0,   107,     0,     0,     0,     0,
-     151,     0,     0,    94,     0,     0,    87,   170,     0,   183,
-       0,     0,   122,     0,     0,     0,   152,     0,     0,     0,
-       0,    75,     0,     0,   179,   180,     0,   176,   178,     0,
-       0,     0,   126,     0,   129,     0,     0,     0,     0,   155,
-     153,     0,     0,     0,     0,   184,   123,     0,     0,     0,
-       0,   154,     0,     0,     0,     0,   177,     0,     0,   133,
-       0,   131,   124,   125,     0,     0,   158,   161,   163,   162,
-       0,     0,     0,     0,     0,   130,   132,     0,     0,   159,
-      92,    93,     0,     0,     0,     0,     0,     0,     0,   121,
-       0,     0,     0,     0,     0,   157,   182,     0,     0,     0,
-       0,     0,     0,     0,   160,   136,   134,   135
+       0,     0,     0,     0,   196,     0,     0,     0,    66,     0,
+       0,     0,     0,    78,    79,     0,     0,     0,     0,     0,
+     122,   123,     0,   107,     0,   145,     0,     0,     0,     0,
+       0,   162,   163,     0,   237,   239,     0,     0,   194,     0,
+      73,    67,     0,     0,     0,     0,     0,     0,     0,   131,
+       0,   130,     0,   108,     0,     0,     0,     0,   140,     0,
+     112,     0,     0,     0,     0,    95,     0,     0,    88,     0,
+     126,   125,     0,     0,     0,   141,     0,     0,     0,     0,
+       0,     0,     0,    76,     0,     0,     0,   129,     0,   132,
+       0,     0,     0,     0,   144,   142,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,   143,     0,   241,     0,   233,
+       0,     0,     0,     0,     0,   136,     0,   134,   127,   128,
+       0,     0,   147,   150,   152,   151,     0,     0,   234,     0,
+       0,     0,     0,   133,   135,     0,     0,   148,     0,   242,
+      93,    94,     0,     0,     0,     0,     0,     0,   240,   124,
+       0,     0,     0,     0,   146,     0,     0,     0,     0,     0,
+       0,     0,   149,   139,   137,   138
 };
 
   /* YYPGOTO[NTERM-NUM].  */
 static const yytype_int16 yypgoto[] =
 {
-    -576,  -576,  -576,  -576,  -576,   570,  -576,  -576,   585,  -576,
-    -576,   -68,  -449,  -576,  -576,  -576,  -576,  -576,  -576,   583,
-    -576,  -107,  -576,   184,  -130,  -184,  -227,   247,  -251,  -576,
-      78,  -307,   144,   471,  -442,  -452,  -246,  -576,  -576,   575,
-    -576,  -576,  -576,  -576,  -576,   233,  -576,  -576,  -576,  -576,
-    -576,   301,  -576,  -576,  -576,   117,  -576,  -576,   138,    82,
-    -576,  -576,    12,  -576,  -576,  -576,  -576,   429,   503,  -576,
-    -201,   157,  -576,  -576,    34,   -20,  -148,  -441,  -576,  -245,
-    -575,  -576,    25,  -531,    43,   -77,  -576,  -294,  -186,   -80
+    -664,  -664,  -664,  -664,  -664,   791,  -664,   775,   115,  -664,
+    -664,   -81,  -354,  -664,  -664,  -664,  -664,  -664,  -664,   780,
+    -664,  -109,  -664,   288,  -140,  -236,  -279,   136,  -414,  -664,
+      54,  -454,   175,   655,  -572,  -604,  -201,  -664,  -664,   758,
+    -664,  -664,  -664,  -664,  -664,   158,  -664,  -664,  -664,  -664,
+    -664,   331,  -664,  -664,  -664,   142,  -664,  -664,   113,   126,
+    -664,  -664,     0,  -459,   193,  -664,  -664,    27,     8,  -664,
+    -664,  -664,  -664,   672,   387,  -664,  -571,  -664,  -148,  -664,
+    -664,   111,   401,  -663,   176,  -664,  -664,   379,  -355,  -664,
+    -664,  -664,  -664,  -664,  -664,  -278,  -664,  -664,   -83,  -664,
+    -245,  -219,   -87,  -664,  -664,   716,  -664,  -664,   278,  -664,
+    -664,   201,  -664
 };
 
   /* YYDEFGOTO[NTERM-NUM].  */
 static const yytype_int16 yydefgoto[] =
 {
-      -1,     2,     7,    14,    15,    16,    22,    40,    41,    42,
-     174,   194,    98,   212,    43,   268,    44,    45,    46,    47,
-     105,   112,   252,   253,   137,   199,   276,   285,   345,   405,
-     406,   379,   299,   300,   467,   468,   469,    48,    49,   108,
-      50,    51,   138,   230,   381,   382,    52,   142,   288,   261,
-     321,   322,   323,   388,   454,   455,   420,   491,   519,   572,
-     615,   640,   641,    53,   145,   170,   328,   329,   394,    54,
-     424,   496,   552,   645,   646,   647,   589,   485,   537,   195,
-     183,   606,   607,   570,   590,    99,   147,   573,   219,   220
+      -1,     2,     7,    14,    15,    16,    23,    42,    43,    44,
+     185,   227,   106,   246,    45,   324,    46,    47,    48,    49,
+     113,   120,   305,   306,   146,   232,   342,   351,   447,   536,
+     537,   496,   382,   383,   618,   619,   620,    50,    51,   116,
+      52,    53,   147,   271,   498,   499,    54,   151,   354,   314,
+     406,   407,   408,   505,   594,   595,   551,   641,   678,   740,
+     780,   806,   807,   555,   646,   717,   811,   812,   813,    55,
+     154,   180,   413,   414,   512,    56,   379,   480,   429,   207,
+     290,   422,   423,   369,   370,   615,   476,   430,   208,   209,
+     210,   211,   212,   213,   214,   228,   215,   216,   107,   157,
+     741,   260,   261,    57,   278,   279,   518,   611,   612,   418,
+     652,   653,   798
 };
 
   /* YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
@@ -895,309 +952,380 @@ static const yytype_int16 yydefgoto[] =
      number is the opposite.  If YYTABLE_NINF, syntax error.  */
 static const yytype_uint16 yytable[] =
 {
-      93,    94,    95,   221,   100,   182,   483,   114,   115,   486,
-     339,   340,    97,   605,   472,   502,   179,   234,   121,   443,
-     123,   157,   277,   124,   159,   179,   444,   188,   445,   189,
-     213,   502,   494,   263,   305,   248,   343,   249,    92,    92,
-      92,     5,    92,   106,   320,   152,    92,   571,   599,   605,
-     613,   390,    92,   425,   304,   609,   391,   648,   164,   380,
-       1,    92,   165,   610,   180,    92,   227,   407,   180,    92,
-     648,    92,   614,   289,    92,   320,   184,   180,   186,   187,
-     175,   466,   315,   316,   192,    92,   107,   557,   180,   193,
-     416,   417,   303,   374,    92,   413,   677,   338,     6,   648,
-      96,   184,    96,   442,    96,   489,   384,   113,   120,   644,
-     369,   218,   218,   581,    96,   250,   264,   344,   495,   337,
-     278,   662,   193,   540,   423,   501,   218,   410,   350,   658,
-     113,   446,   392,    96,   476,   386,   597,    92,   211,   604,
-     180,   239,   602,   603,   181,   193,    92,    96,   254,   180,
-     502,   502,   375,   181,   616,   553,    96,   135,   441,     3,
-     376,   143,   554,   466,   315,   316,   393,   387,    26,    27,
-     498,   499,   267,   550,    28,   604,    29,    30,    31,    32,
-      33,   568,   218,    26,    27,   644,   466,   315,   316,    28,
-     426,    29,    30,    31,    32,    33,   136,    34,    35,    36,
-     144,   218,   517,    37,   569,   308,   551,   511,   377,   315,
-     316,   378,    34,    35,    36,   466,   315,   316,    37,   638,
-      38,   638,   317,   318,   462,   325,   326,   518,   331,   319,
-     621,   678,   679,   140,   208,    38,   209,   218,    72,    39,
-     327,   464,   465,   315,   316,   655,   639,   664,   639,   665,
-     325,   326,   356,   141,    39,   487,   317,   318,   172,   622,
-     451,   666,   452,   319,   361,   362,   564,   451,   375,   452,
-     453,     4,   173,   421,   366,   576,   376,   453,   565,   367,
-     422,   368,   577,   283,   197,   593,   110,   111,   198,   284,
-     594,   401,    11,    12,    13,   102,   103,   104,   242,   243,
-     244,   466,   315,   316,   280,   286,   281,   287,   295,     8,
-     296,   493,   313,   437,   314,   438,   623,   663,   624,   609,
-       9,    10,    13,    17,    18,    19,    20,    24,    23,    25,
-      55,    56,    57,    58,    59,    60,    76,    77,    61,    78,
-      62,    63,    79,    64,   521,    65,    66,    67,    68,    69,
-     218,   218,    70,    71,    80,    81,    74,    75,    82,    83,
-      84,    85,    88,    86,   536,    87,   579,    89,   473,    90,
-      91,    92,    33,   109,   113,   116,   117,   118,   122,   119,
-     125,   126,   184,   127,   128,   107,   129,   131,   490,   132,
-     133,   134,   155,   139,   148,   146,   149,   151,   150,   156,
-     158,   508,   154,   160,   504,   162,   163,   153,   166,   169,
-     168,   167,   161,   171,   135,   184,   177,   587,   176,   185,
-     178,   190,   191,   196,   200,   202,   201,   204,   203,   205,
-     206,   210,   207,   214,   216,   184,   542,   215,   224,   541,
-     229,   232,   251,   233,   260,   217,   222,   223,   225,   652,
-     226,   265,   311,   389,   275,   228,   338,   343,   403,   312,
-     231,   625,   427,   385,   298,   307,   236,   237,   301,   235,
-     238,   240,   475,   245,   241,   218,   397,   246,   291,   247,
-     255,   257,   259,   256,   258,   262,   266,   269,   184,   270,
-     184,   271,   272,   273,   282,   274,   279,   400,   306,   290,
-     428,   415,   458,   292,   404,   293,   294,   297,   505,   530,
-     309,   608,   525,   402,   324,   334,   474,   332,   333,   380,
-     335,   347,   310,   330,   336,   341,   342,   346,   348,   484,
-     349,   351,   184,   352,   549,   353,   354,   355,   396,   358,
-     359,   360,   419,   364,   370,   528,   371,   608,   423,   372,
-     367,   373,   408,   383,   398,   649,   399,   412,   218,   411,
-     184,   418,   409,   429,   430,   431,   434,   432,   649,   479,
-     480,   488,   433,   561,   435,   439,   562,   436,   566,   365,
-     667,   440,   448,   456,    21,   457,   460,   447,   461,   449,
-     450,   463,   470,   471,   459,   477,   481,   649,   478,   495,
-     482,   497,   492,   500,   513,   618,   567,   627,   503,   506,
-     507,   509,   510,   512,   414,   516,   514,   515,   524,   522,
-     598,   526,   357,   527,   531,    73,   574,   532,   180,   520,
-     529,   533,   538,   539,   543,   544,   534,   578,   535,   545,
-     546,   584,   547,   548,   555,   556,   558,   559,   560,   636,
-     563,   523,   656,   575,   680,   580,   585,   582,   583,   586,
-     588,   591,     0,   592,   596,   101,   600,   601,   595,   612,
-     628,   617,   619,   620,   626,   611,   632,   630,   631,   659,
-     653,   130,   629,   637,     0,   642,   633,   634,   643,   650,
-     651,   654,   635,   657,   671,   660,   661,   668,   669,     0,
-       0,   670,   675,   676,   684,   672,   681,   673,   674,   682,
-     683,   685,   686,   687,     0,     0,     0,     0,     0,     0,
+     101,   102,   103,   262,   108,   105,   122,   123,   124,   296,
+     297,   424,   421,   331,   662,   206,   634,   275,   635,   636,
+     130,   336,   132,   343,   301,   133,   302,   221,   167,   222,
+     662,   169,   491,   583,   445,   644,   225,   538,   416,   316,
+     584,   247,   585,     3,   738,   100,   623,   100,   162,   557,
+     387,   100,   100,   497,   183,   197,   144,   100,   503,   100,
+     174,   739,   556,   100,   492,   175,   197,   388,   100,     4,
+     184,   330,   493,   190,   191,   192,   193,   186,   194,     1,
+     217,   541,   219,   220,   768,   100,     5,   582,     8,   268,
+     504,   417,   377,   355,   544,   145,   195,   602,   226,   360,
+     190,   191,   192,   193,   100,   194,   217,   104,   492,   104,
+     196,   810,   121,   295,   104,   415,   493,   424,   421,   226,
+     121,   446,   645,   195,   729,   386,   581,   627,   317,   100,
+     104,   129,   197,   705,   554,   114,   826,   196,   259,   259,
+     100,   152,   441,   442,     6,   333,   334,   104,   749,   100,
+     440,   586,   197,   259,   303,   405,   100,    78,   832,   197,
+     337,   487,   283,   344,   804,   198,   104,   639,     9,   494,
+     662,   662,   495,   510,   766,   501,   715,   507,   452,   115,
+     153,   771,   508,   307,   774,   775,   199,   200,   201,   202,
+     804,   226,   198,   781,    78,   823,   805,   810,   203,   204,
+     205,   788,   104,   323,   149,   405,   349,   259,   511,   716,
+     217,   217,   350,   199,   200,   201,   202,   474,   398,   399,
+     608,    10,   805,   428,   150,   203,   204,   205,   608,   259,
+      17,   400,   401,   609,   245,   259,   100,   529,   402,   197,
+     475,   609,   403,    27,    28,   617,   398,   399,   242,    29,
+     243,    30,    31,    32,    33,    34,   547,   548,   617,   398,
+     399,   259,   398,   399,   367,   391,   459,   404,   656,   610,
+     846,   847,    35,    36,    37,   400,   401,   610,    38,   617,
+     398,   399,   402,   425,   420,   481,   403,   368,   217,   217,
+     516,    27,    28,    13,   661,    39,    18,    29,   527,    30,
+      31,    32,    33,    34,   676,   552,   778,   671,    22,   528,
+      40,   404,   553,   517,   259,   617,   398,   399,    77,    41,
+      35,    36,    37,    19,    27,    28,    38,   677,   789,   779,
+      29,   526,    30,    31,    32,    33,    34,   410,   411,   718,
+     605,   606,   591,    39,   592,    20,   719,   230,   410,   411,
+     217,   231,   593,    35,    36,    37,   464,   465,    40,    38,
+     649,   650,    24,   319,   790,   320,    96,    41,   412,   833,
+     637,   834,    25,    26,   484,   591,    39,   592,    58,   485,
+     570,   486,   762,   835,    61,   593,   744,   763,    59,   425,
+     346,    40,   347,   745,   118,   119,   217,    11,    12,    13,
+      41,    60,    62,   533,   424,   421,   110,   111,   112,   286,
+     287,   288,   617,   398,   399,   352,    63,   353,   614,   364,
+     396,   365,   397,   471,   478,   472,   479,   577,   616,   578,
+     479,   658,   689,   659,   690,   791,   816,   472,   817,    64,
+     217,   814,    65,    66,    67,   217,   726,    68,    69,    70,
+      82,   643,    83,    71,    72,    73,   814,    74,    80,    84,
+      85,    75,    76,    86,    87,    81,    88,    89,    91,   723,
+      90,    92,    94,    93,    95,   604,   259,   259,    97,    98,
+      99,   100,   753,   217,    34,   845,   117,   121,   814,   125,
+     126,   128,   127,   131,   680,   624,   134,   135,   747,   136,
+     137,   115,   138,   141,   140,   142,   143,   148,   156,   158,
+     159,   694,   160,   165,   161,   640,   217,   164,   155,   166,
+     168,   170,   163,   172,   171,   173,   176,   178,   177,   179,
+     181,   182,   144,   188,   189,   187,   218,   223,   224,   229,
+     233,   797,   664,   234,   235,   236,   668,   240,   244,   241,
+     237,   270,   238,   273,   239,   289,   248,   249,   304,   217,
+     295,   250,   251,   252,   313,   321,   329,   332,   253,   254,
+     375,   483,   829,   691,   255,   395,   217,   257,   256,   277,
+     258,   263,   378,   264,   821,   265,   266,   341,   707,   267,
+     269,   394,   706,   272,   445,   280,   274,   281,   276,   284,
+     282,   381,   291,   506,   292,   259,   285,   509,   298,   293,
+     299,   727,   338,   300,   308,   309,   294,   310,   357,   311,
+     384,   312,   502,   315,   322,   318,   559,   325,   326,   626,
+     348,   327,   625,   328,   259,   390,   335,   522,   339,   340,
+     359,   345,   356,   358,   361,   363,   366,   532,   546,   560,
+     371,   372,   562,   373,   374,   376,   545,   380,   392,   598,
+     665,   409,   534,   692,   426,   427,   389,   431,   432,   419,
+     393,   497,   535,   433,   435,   434,   425,   436,   473,   437,
+     438,   525,   439,   443,   444,   448,   449,   450,   515,   451,
+     453,   454,   455,   456,   550,   457,   458,   630,   461,   462,
+     463,   482,   467,   468,   490,   469,   470,   477,   488,   485,
+     489,   554,   684,   815,   519,   500,   524,   523,   514,   539,
+     259,   530,   531,   695,   520,   697,   542,   543,   815,   714,
+     540,   549,   631,   561,   563,   733,   638,   460,   565,   558,
+     566,   573,   836,   564,   574,   568,   569,   571,   572,   575,
+     576,   734,   579,   588,   679,   580,   596,   587,   597,   600,
+     815,   645,   601,   589,   590,   603,   607,   599,   613,   621,
+     622,   628,   629,   632,   642,   633,   647,   648,   651,   654,
+     655,   660,   693,   736,   663,   700,   666,   667,   669,   670,
+     770,   783,   672,   673,   674,   675,   681,   683,   686,   685,
+     688,   687,   368,   698,   699,    21,   824,   703,   704,   696,
+     701,   708,   709,   702,   710,   711,   793,   712,   713,   746,
+     720,   803,   721,   722,   724,   728,   730,   731,   732,   735,
+     743,   748,   750,   197,    79,   742,   754,   682,   827,   755,
+     756,   757,   759,   751,   758,   752,   760,   761,   764,   765,
+     513,   848,   769,   782,   767,   773,   772,   777,   784,   785,
+     786,   787,   792,   794,   795,   796,   828,   799,   109,   800,
+     776,   808,   139,   521,   809,   818,   801,   802,   819,   820,
+     822,   825,   737,   830,   831,   838,   837,   839,   840,   657,
+     844,   725,   849,   850,   841,   851,   842,   843,   852,   853,
+     854,   855,   567,     0,     0,     0,     0,     0,     0,     0,
        0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
        0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
-       0,     0,     0,     0,     0,     0,     0,     0,   302,     0,
-       0,     0,     0,     0,     0,     0,     0,   363,     0,     0,
        0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
        0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
        0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
        0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
        0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
        0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,   385,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,   362,     0,     0,     0,
        0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
        0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
        0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
        0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
-       0,     0,     0,   395
+       0,     0,     0,     0,     0,   466
 };
 
 static const yytype_int16 yycheck[] =
 {
-      77,    78,    79,   189,    81,   153,   448,    87,    88,   450,
-     304,   305,    80,   588,    25,   467,    14,   203,    95,    20,
-      97,   128,   249,   100,   131,    14,    27,   157,    29,   159,
-     178,   483,    23,    55,   279,   219,    55,   221,    63,    63,
-      63,     0,    63,    33,   290,   122,    63,    14,   579,   624,
-      55,    36,    63,    36,    46,   133,    41,   632,   138,    95,
-      56,    63,   139,   141,    66,    63,   196,   374,    66,    63,
-     645,    63,    77,   259,    63,   321,   153,    66,   155,   156,
-     148,    87,    88,    89,    53,    63,    76,   528,    66,   114,
-     384,   385,   278,   344,    63,   131,   671,    64,    57,   674,
-     125,   178,   125,   410,   125,   128,   351,   124,   132,   111,
-     337,   188,   189,   554,   125,   222,   138,   136,   109,   303,
-     250,   652,   114,   140,   107,   131,   203,   378,   314,   131,
-     124,   132,    43,   125,   441,    23,   577,    63,   136,   588,
-      66,   209,   584,   585,   142,   114,    63,   125,   225,    66,
-     602,   603,    77,   142,   595,   132,   125,    80,   409,   130,
-      85,    77,   139,    87,    88,    89,    77,    55,    61,    62,
-     464,   465,   240,    77,    67,   624,    69,    70,    71,    72,
-      73,    77,   259,    61,    62,   111,    87,    88,    89,    67,
-     391,    69,    70,    71,    72,    73,   119,    90,    91,    92,
-     116,   278,   104,    96,   100,   282,   110,   131,   133,    88,
-      89,   136,    90,    91,    92,    87,    88,    89,    96,   105,
-     113,   105,   101,   102,   425,   117,   118,   129,   296,   108,
-     131,   672,   673,    77,   131,   113,   133,   314,   131,   132,
-     132,   427,   428,    88,    89,   131,   132,    35,   132,    37,
-     117,   118,   131,    97,   132,    23,   101,   102,   131,   131,
-      28,    49,    30,   108,   131,   132,   131,    28,    77,    30,
-      38,     0,   145,    28,   132,   132,    85,    38,   143,   137,
-      35,   139,   139,    77,    77,   132,    77,    78,    81,    83,
-     137,   368,    58,    59,    60,    74,    75,    76,     6,     7,
-       8,    87,    88,    89,   131,   137,   133,   139,   131,   131,
-     133,   459,   131,   131,   133,   133,   131,   131,   133,   133,
-     130,     0,    60,   131,   130,   130,   130,    50,   131,    50,
-     131,   131,    18,     9,   130,   130,    34,    47,   130,    48,
-     130,   130,    32,   130,   492,   130,   130,   130,   130,   130,
-     427,   428,   130,   130,    24,    22,   132,   132,    30,    33,
-      40,    49,    26,    36,   512,    42,   552,   131,   436,   131,
-      11,    63,    73,    73,   124,   131,   130,    55,   130,    68,
-     131,   130,   459,   130,   130,    76,   131,   130,   456,   131,
-     130,   130,    21,   130,   130,    64,   130,   132,   131,    20,
-     131,   478,   132,    33,   472,   130,   130,   139,   130,   115,
-     130,    98,   140,   130,    80,   492,   131,   565,   137,   131,
-     134,    76,    55,    19,    15,   130,   139,   130,   139,   131,
-      13,    55,    64,   130,   130,   512,   516,   132,   131,   516,
-      93,    55,    79,   137,    55,   130,   130,   130,   130,   635,
-     131,    13,    55,    23,    82,   130,    64,    55,    13,    94,
-     131,   609,    26,    44,    86,   281,   131,   130,    86,   137,
-     132,   130,     4,   131,   135,   552,   132,   131,   138,   131,
-     131,   130,   130,   140,   131,   131,   131,   131,   565,   131,
-     567,   131,   131,   131,   144,   131,   130,    55,   141,   130,
-      42,    55,    35,   130,    84,   131,   131,   130,    13,    13,
-     130,   588,    14,   369,   131,   131,   438,   130,   130,    95,
-     130,   130,   141,   138,   131,   131,   131,   131,   130,    55,
-     131,   130,   609,   130,    14,   130,   130,   130,   138,   131,
-     130,   130,   103,   131,   130,    39,   131,   624,   107,   131,
-     137,   130,   130,   137,   131,   632,   131,   130,   635,   131,
-     637,   130,   136,   131,   131,   131,   131,   130,   645,    94,
-      94,   454,   132,    55,   131,   131,    55,   130,    55,   332,
-     657,   133,   130,   130,    14,   131,   130,   138,   131,   139,
-     139,   131,   131,   131,   139,   131,   131,   674,   139,   109,
-     131,   131,   139,   130,   132,    55,   140,    55,   131,   131,
-     131,   130,   130,   130,   381,   130,   132,   131,   130,   132,
-     140,   132,   321,   132,   131,    40,   544,   130,    66,   491,
-     138,   137,   131,   131,   130,   130,   137,   130,   138,   131,
-     131,   130,   132,   131,   131,   131,   131,   131,   131,   624,
-     131,   494,   640,   131,   674,   131,   130,   132,   131,   131,
-     130,   130,    -1,   131,   131,    82,   132,   131,   139,   131,
-     130,   132,   131,   131,   131,   140,   130,   132,   131,   645,
-     637,   106,   138,   130,    -1,   131,   138,   138,   131,   131,
-     131,   130,   141,   130,   139,   131,   131,   141,   131,    -1,
-      -1,   141,   131,   131,   131,   139,   132,   139,   139,   132,
-     132,   131,   131,   131,    -1,    -1,    -1,    -1,    -1,    -1,
+      83,    84,    85,   222,    87,    86,    93,    94,    95,   254,
+     255,   366,   366,   291,   618,   163,   588,   236,   589,   590,
+     103,    14,   105,   302,   260,   108,   262,   167,   137,   169,
+     634,   140,   446,    21,    56,    24,    54,   491,    79,    56,
+      28,   189,    30,   137,   707,    65,    26,    65,   131,   508,
+      47,    65,    65,    97,   138,    68,    82,    65,    24,    65,
+     147,    14,    37,    65,    79,   148,    68,   345,    65,     0,
+     154,   290,    87,     9,    10,    11,    12,   158,    14,    57,
+     163,   495,   165,   166,   747,    65,     0,   541,   138,   229,
+      56,   132,   337,   312,   138,   121,    32,   556,   116,   318,
+       9,    10,    11,    12,    65,    14,   189,   127,    79,   127,
+      46,   113,   126,    66,   127,   360,    87,   472,   472,   116,
+     126,   143,   111,    32,   695,   344,   540,   581,   145,    65,
+     127,   139,    68,   147,   109,    34,   138,    46,   221,   222,
+      65,    79,   387,   388,    58,   293,   294,   127,   719,    65,
+     386,   139,    68,   236,   263,   356,    65,    42,   821,    68,
+     153,   440,   243,   303,   107,   101,   127,   128,   137,   140,
+     774,   775,   143,    44,   745,   453,    79,    37,   397,    78,
+     118,   752,    42,   266,   756,   757,   122,   123,   124,   125,
+     107,   116,   101,   764,    79,   138,   139,   113,   134,   135,
+     136,   772,   127,   284,    79,   406,    79,   290,    79,   112,
+     293,   294,    85,   122,   123,   124,   125,    56,    90,    91,
+      90,     0,   139,   371,    99,   134,   135,   136,    90,   312,
+     138,   103,   104,   103,   143,   318,    65,   482,   110,    68,
+      79,   103,   114,    63,    64,    89,    90,    91,   138,    69,
+     140,    71,    72,    73,    74,    75,   501,   502,    89,    90,
+      91,   344,    90,    91,    79,   348,   138,   139,   138,   139,
+     841,   842,    92,    93,    94,   103,   104,   139,    98,    89,
+      90,    91,   110,   366,   365,   433,   114,   102,   371,   372,
+      56,    63,    64,    61,   138,   115,   137,    69,   138,    71,
+      72,    73,    74,    75,   106,    29,    56,   138,    62,   149,
+     130,   139,    36,    79,   397,    89,    90,    91,   138,   139,
+      92,    93,    94,   137,    63,    64,    98,   129,   138,    79,
+      69,   479,    71,    72,    73,    74,    75,   119,   120,   139,
+     559,   560,    29,   115,    31,   137,   146,    79,   119,   120,
+     433,    83,    39,    92,    93,    94,   138,   139,   130,    98,
+     605,   606,   138,   138,   138,   140,   138,   139,   139,    36,
+      24,    38,    51,    51,   139,    29,   115,    31,   138,   144,
+     528,   146,   139,    50,    18,    39,   139,   144,   137,   472,
+     138,   130,   140,   146,    79,    80,   479,    59,    60,    61,
+     139,   138,    19,   486,   759,   759,    76,    77,    78,     6,
+       7,     8,    89,    90,    91,   144,   137,   146,   566,   138,
+     138,   140,   140,   138,   138,   140,   140,   138,   138,   140,
+     140,   138,   138,   140,   140,   138,   138,   140,   140,   137,
+     523,   796,   137,   137,   137,   528,   691,   137,   137,   137,
+      35,   599,    48,   137,   137,   137,   811,   137,   139,    49,
+      33,   137,   137,    25,    23,   139,    31,    34,    50,   688,
+      41,    37,    27,    43,    52,   558,   559,   560,   138,   138,
+      11,    65,   727,   566,    75,   840,    75,   126,   843,   138,
+     137,    70,    56,   137,   642,   576,   138,   137,   717,   137,
+     137,    78,   138,   138,   137,   137,   137,   137,    66,   137,
+     137,   659,   138,    22,   139,   596,   599,   139,   147,    21,
+     138,    34,   146,   137,   147,   137,   137,   137,   100,   117,
+      56,   137,    82,   138,   141,   144,   138,    78,    56,    20,
+      15,   786,   623,   146,   137,   146,   629,    13,    56,    66,
+     137,    95,   138,    56,   137,   147,   137,   137,    81,   642,
+      66,   137,   137,   137,    56,    13,    56,    56,   137,   137,
+      13,   435,   817,   654,   137,    96,   659,   137,   139,   131,
+     137,   137,    56,   137,   803,   138,   137,    84,   675,   138,
+     137,    56,   675,   138,    56,   138,   144,   137,   144,   137,
+     139,    88,   137,    24,   141,   688,   142,    22,   138,   151,
+     138,   692,   141,   138,   138,   147,   150,   137,   145,   138,
+      88,   137,    45,   138,   138,   137,    27,   138,   138,     4,
+     152,   138,   578,   138,   717,   347,   137,    56,   138,   138,
+     138,   137,   137,   137,   148,   138,   137,    56,    56,    43,
+     138,   137,    56,   138,   138,   138,   498,   137,   137,    36,
+      13,   138,   487,    24,   137,   137,   148,   138,   138,   145,
+     148,    97,    86,   137,   137,   142,   759,   137,   147,   138,
+     137,   142,   138,   138,   138,   138,   137,   137,   146,   138,
+     137,   137,   137,   137,   105,   137,   137,    96,   138,   137,
+     137,   153,   138,   137,   137,   144,   138,   138,   138,   144,
+     138,   109,    14,   796,   139,   144,   138,   137,   145,   137,
+     803,   138,   138,    40,   148,    13,   138,   137,   811,    14,
+     143,   137,    96,   138,   137,    56,   594,   406,   138,   146,
+     137,   137,   825,   145,   139,   138,   138,   138,   138,   138,
+     137,    56,   138,   137,   641,   140,   137,   145,   138,   137,
+     843,   111,   138,   146,   146,   138,   137,   146,   138,   138,
+     138,   138,   146,   138,   146,   138,   138,   137,   133,   137,
+     137,   137,   148,    56,   138,   144,   138,   138,   137,   137,
+      56,    56,   139,   139,   138,   137,   139,   137,   139,   138,
+     137,   139,   102,   138,   137,    14,   806,   138,   138,   145,
+     144,   137,   137,   145,   138,   138,   145,   139,   138,   137,
+     139,   148,   138,   138,   138,   138,   138,   138,   138,   138,
+     138,   138,   138,    68,    59,   709,   139,   644,   811,   138,
+     137,   137,   137,   147,   138,   146,   138,   138,   146,   138,
+     463,   843,   139,   139,   147,   138,   146,   138,   138,   138,
+     137,   139,   137,   139,   138,   137,   148,   138,    88,   139,
+     759,   138,   114,   472,   138,   138,   145,   145,   138,   138,
+     137,   137,   706,   138,   138,   138,   148,   138,   146,   611,
+     138,   690,   139,   139,   146,   139,   146,   146,   138,   138,
+     138,   138,   523,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
       -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
       -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
-      -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,   277,    -1,
-      -1,    -1,    -1,    -1,    -1,    -1,    -1,   328,    -1,    -1,
       -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
       -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
       -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
       -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
       -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
       -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
+      -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,   343,    -1,
+      -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
+      -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
+      -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
+      -1,    -1,    -1,    -1,    -1,    -1,   320,    -1,    -1,    -1,
       -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
       -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
       -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
       -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
-      -1,    -1,    -1,   360
+      -1,    -1,    -1,    -1,    -1,   413
 };
 
   /* YYSTOS[STATE-NUM] -- The (internal number of the) accessing
      symbol of state STATE-NUM.  */
-static const yytype_uint8 yystos[] =
+static const yytype_uint16 yystos[] =
 {
-       0,    56,   147,   130,     0,     0,    57,   148,   131,   130,
-       0,    58,    59,    60,   149,   150,   151,   131,   130,   130,
-     130,   151,   152,   131,    50,    50,    61,    62,    67,    69,
-      70,    71,    72,    73,    90,    91,    92,    96,   113,   132,
-     153,   154,   155,   160,   162,   163,   164,   165,   183,   184,
-     186,   187,   192,   209,   215,   131,   131,    18,     9,   130,
-     130,   130,   130,   130,   130,   130,   130,   130,   130,   130,
-     130,   130,   131,   154,   132,   132,    34,    47,    48,    32,
-      24,    22,    30,    33,    40,    49,    36,    42,    26,   131,
-     131,    11,    63,   231,   231,   231,   125,   157,   158,   231,
-     231,   165,    74,    75,    76,   166,    33,    76,   185,    73,
-      77,    78,   167,   124,   235,   235,   131,   130,    55,    68,
-     132,   231,   130,   231,   231,   131,   130,   130,   130,   131,
-     185,   130,   131,   130,   130,    80,   119,   170,   188,   130,
-      77,    97,   193,    77,   116,   210,    64,   232,   130,   130,
-     131,   132,   231,   139,   132,    21,    20,   167,   131,   167,
-      33,   140,   130,   130,   235,   231,   130,    98,   130,   115,
-     211,   130,   131,   145,   156,   157,   137,   131,   134,    14,
-      66,   142,   222,   226,   231,   131,   231,   231,   170,   170,
-      76,    55,    53,   114,   157,   225,    19,    77,    81,   171,
-      15,   139,   130,   139,   130,   131,    13,    64,   131,   133,
-      55,   136,   159,   222,   130,   132,   130,   130,   231,   234,
-     235,   234,   130,   130,   131,   130,   131,   170,   130,    93,
-     189,   131,    55,   137,   234,   137,   131,   130,   132,   157,
-     130,   135,     6,     7,     8,   131,   131,   131,   171,   171,
-     167,    79,   168,   169,   231,   131,   140,   130,   131,   130,
-      55,   195,   131,    55,   138,    13,   131,   157,   161,   131,
-     131,   131,   131,   131,   131,    82,   172,   172,   170,   130,
-     131,   133,   144,    77,    83,   173,   137,   139,   194,   234,
-     130,   138,   130,   131,   131,   131,   133,   130,    86,   178,
-     179,    86,   179,   234,    46,   225,   141,   169,   231,   130,
-     141,    55,    94,   131,   133,    88,    89,   101,   102,   108,
-     182,   196,   197,   198,   131,   117,   118,   132,   212,   213,
-     138,   157,   130,   130,   131,   130,   131,   171,    64,   233,
-     233,   131,   131,    55,   136,   174,   131,   130,   130,   131,
-     234,   130,   130,   130,   130,   130,   131,   197,   131,   130,
-     130,   131,   132,   213,   131,   173,   132,   137,   139,   172,
-     130,   131,   131,   130,   174,    77,    85,   133,   136,   177,
-      95,   190,   191,   137,   225,    44,    23,    55,   199,    23,
-      36,    41,    43,    77,   214,   214,   138,   132,   131,   131,
-      55,   231,   178,    13,    84,   175,   176,   177,   130,   136,
-     174,   131,   130,   131,   191,    55,   233,   233,   130,   103,
-     202,    28,    35,   107,   216,    36,   216,    26,    42,   131,
-     131,   131,   130,   132,   131,   131,   130,   131,   133,   131,
-     133,   174,   177,    20,    27,    29,   132,   138,   130,   139,
-     139,    28,    30,    38,   200,   201,   130,   131,    35,   139,
-     130,   131,   216,   131,   234,   234,    87,   180,   181,   182,
-     131,   131,    25,   157,   176,     4,   177,   131,   139,    94,
-      94,   131,   131,   180,    55,   223,   223,    23,   201,   128,
-     157,   203,   139,   222,    23,   109,   217,   131,   233,   233,
-     130,   131,   181,   131,   157,    13,   131,   131,   231,   130,
-     130,   131,   130,   132,   132,   131,   130,   104,   129,   204,
-     204,   222,   132,   217,   130,    14,   132,   132,    39,   138,
-      13,   131,   130,   137,   137,   138,   222,   224,   131,   131,
-     140,   231,   235,   130,   130,   131,   131,   132,   131,    14,
-      77,   110,   218,   132,   139,   131,   131,   223,   131,   131,
-     131,    55,    55,   131,   131,   143,    55,   140,    77,   100,
-     229,    14,   205,   233,   205,   131,   132,   139,   130,   234,
-     131,   223,   132,   131,   130,   130,   131,   222,   130,   222,
-     230,   130,   131,   132,   137,   139,   131,   223,   140,   229,
-     132,   131,   180,   180,   158,   226,   227,   228,   231,   133,
-     141,   140,   131,    55,    77,   206,   223,   132,    55,   131,
-     131,   131,   131,   131,   133,   222,   131,    55,   130,   138,
-     132,   131,   130,   138,   138,   141,   228,   130,   105,   132,
-     207,   208,   131,   131,   111,   219,   220,   221,   226,   231,
-     131,   131,   234,   230,   130,   131,   208,   130,   131,   220,
-     131,   131,   229,   131,    35,    37,    49,   231,   141,   131,
-     141,   139,   139,   139,   139,   131,   131,   226,   223,   223,
-     221,   132,   132,   132,   131,   131,   131,   131
+       0,    57,   156,   137,     0,     0,    58,   157,   138,   137,
+       0,    59,    60,    61,   158,   159,   160,   138,   137,   137,
+     137,   160,    62,   161,   138,    51,    51,    63,    64,    69,
+      71,    72,    73,    74,    75,    92,    93,    94,    98,   115,
+     130,   139,   162,   163,   164,   169,   171,   172,   173,   174,
+     192,   193,   195,   196,   201,   224,   230,   258,   138,   137,
+     138,    18,    19,   137,   137,   137,   137,   137,   137,   137,
+     137,   137,   137,   137,   137,   137,   137,   138,   163,   162,
+     139,   139,    35,    48,    49,    33,    25,    23,    31,    34,
+      41,    50,    37,    43,    27,    52,   138,   138,   138,    11,
+      65,   253,   253,   253,   127,   166,   167,   253,   253,   174,
+      76,    77,    78,   175,    34,    78,   194,    75,    79,    80,
+     176,   126,   257,   257,   257,   138,   137,    56,    70,   139,
+     253,   137,   253,   253,   138,   137,   137,   137,   138,   194,
+     137,   138,   137,   137,    82,   121,   179,   197,   137,    79,
+      99,   202,    79,   118,   225,   147,    66,   254,   137,   137,
+     138,   139,   253,   146,   139,    22,    21,   176,   138,   176,
+      34,   147,   137,   137,   257,   253,   137,   100,   137,   117,
+     226,    56,   137,   138,   154,   165,   166,   144,   138,   141,
+       9,    10,    11,    12,    14,    32,    46,    68,   101,   122,
+     123,   124,   125,   134,   135,   136,   233,   234,   243,   244,
+     245,   246,   247,   248,   249,   251,   252,   253,   138,   253,
+     253,   179,   179,    78,    56,    54,   116,   166,   250,    20,
+      79,    83,   180,    15,   146,   137,   146,   137,   138,   137,
+      13,    66,   138,   140,    56,   143,   168,   233,   137,   137,
+     137,   137,   137,   137,   137,   137,   139,   137,   137,   253,
+     256,   257,   256,   137,   137,   138,   137,   138,   179,   137,
+      95,   198,   138,    56,   144,   256,   144,   131,   259,   260,
+     138,   137,   139,   166,   137,   142,     6,     7,     8,   147,
+     235,   137,   141,   151,   150,    66,   255,   255,   138,   138,
+     138,   180,   180,   176,    81,   177,   178,   253,   138,   147,
+     137,   138,   137,    56,   204,   138,    56,   145,   137,   138,
+     140,    13,   138,   166,   170,   138,   138,   138,   138,    56,
+     256,   250,    56,   233,   233,   137,    14,   153,   141,   138,
+     138,    84,   181,   181,   179,   137,   138,   140,   152,    79,
+      85,   182,   144,   146,   203,   256,   137,   145,   137,   138,
+     256,   148,   260,   138,   138,   140,   137,    79,   102,   238,
+     239,   138,   137,   138,   138,    13,   138,   255,    56,   231,
+     137,    88,   187,   188,    88,   188,   256,    47,   250,   148,
+     178,   253,   137,   148,    56,    96,   138,   140,    90,    91,
+     103,   104,   110,   114,   139,   191,   205,   206,   207,   138,
+     119,   120,   139,   227,   228,   255,    79,   132,   264,   145,
+     166,   167,   236,   237,   243,   253,   137,   137,   233,   233,
+     242,   138,   138,   137,   142,   137,   137,   138,   137,   138,
+     180,   255,   255,   138,   138,    56,   143,   183,   138,   137,
+     137,   138,   256,   137,   137,   137,   137,   137,   137,   138,
+     206,   138,   137,   137,   138,   139,   228,   138,   137,   144,
+     138,   138,   140,   147,    56,    79,   241,   138,   138,   140,
+     232,   233,   153,   182,   139,   144,   146,   181,   138,   138,
+     137,   183,    79,    87,   140,   143,   186,    97,   199,   200,
+     144,   250,    45,    24,    56,   208,    24,    37,    42,    22,
+      44,    79,   229,   229,   145,   146,    56,    79,   261,   139,
+     148,   237,    56,   137,   138,   142,   233,   138,   149,   255,
+     138,   138,    56,   253,   187,    86,   184,   185,   186,   137,
+     143,   183,   138,   137,   138,   200,    56,   255,   255,   137,
+     105,   211,    29,    36,   109,   218,    37,   218,   146,    27,
+      43,   138,    56,   137,   145,   138,   137,   242,   138,   138,
+     233,   138,   138,   137,   139,   138,   137,   138,   140,   138,
+     140,   183,   186,    21,    28,    30,   139,   145,   137,   146,
+     146,    29,    31,    39,   209,   210,   137,   138,    36,   146,
+     137,   138,   218,   138,   253,   256,   256,   137,    90,   103,
+     139,   262,   263,   138,   233,   240,   138,    89,   189,   190,
+     191,   138,   138,    26,   166,   185,     4,   186,   138,   146,
+      96,    96,   138,   138,   189,   231,   231,    24,   210,   128,
+     166,   212,   146,   233,    24,   111,   219,   138,   137,   255,
+     255,   133,   265,   266,   137,   137,   138,   263,   138,   140,
+     137,   138,   190,   138,   166,    13,   138,   138,   253,   137,
+     137,   138,   139,   139,   138,   137,   106,   129,   213,   213,
+     233,   139,   219,   137,    14,   138,   139,   139,   137,   138,
+     140,   166,    24,   148,   233,    40,   145,    13,   138,   137,
+     144,   144,   145,   138,   138,   147,   253,   257,   137,   137,
+     138,   138,   139,   138,    14,    79,   112,   220,   139,   146,
+     139,   138,   138,   256,   138,   266,   255,   166,   138,   231,
+     138,   138,   138,    56,    56,   138,    56,   239,   238,    14,
+     214,   255,   214,   138,   139,   146,   137,   256,   138,   231,
+     138,   147,   146,   255,   139,   138,   137,   137,   138,   137,
+     138,   138,   139,   144,   146,   138,   231,   147,   238,   139,
+      56,   231,   146,   138,   189,   189,   236,   138,    56,    79,
+     215,   231,   139,    56,   138,   138,   137,   139,   231,   138,
+     138,   138,   137,   145,   139,   138,   137,   255,   267,   138,
+     139,   145,   145,   148,   107,   139,   216,   217,   138,   138,
+     113,   221,   222,   223,   243,   253,   138,   140,   138,   138,
+     138,   256,   137,   138,   217,   137,   138,   222,   148,   255,
+     138,   138,   238,    36,    38,    50,   253,   148,   138,   138,
+     146,   146,   146,   146,   138,   243,   231,   231,   223,   139,
+     139,   139,   138,   138,   138,   138
 };
 
   /* YYR1[YYN] -- Symbol number of symbol that rule YYN derives.  */
-static const yytype_uint8 yyr1[] =
+static const yytype_uint16 yyr1[] =
 {
-       0,   146,   147,   147,   148,   148,   148,   149,   150,   151,
-     152,   153,   153,   154,   154,   154,   154,   154,   154,   154,
-     154,   154,   154,   154,   154,   154,   154,   155,   156,   156,
-     157,   157,   158,   159,   159,   160,   161,   161,   162,   162,
-     163,   164,   165,   166,   166,   166,   167,   167,   168,   168,
-     169,   169,   170,   170,   171,   171,   172,   173,   173,   173,
-     173,   173,   174,   175,   175,   176,   176,   177,   177,   178,
-     178,   178,   179,   180,   180,   181,   181,   182,   182,   183,
-     184,   184,   185,   186,   187,   188,   188,   189,   189,   190,
-     190,   191,   191,   191,   191,   192,   193,   193,   194,   194,
-     195,   195,   196,   196,   197,   197,   197,   197,   197,   197,
-     197,   198,   199,   199,   200,   200,   201,   201,   201,   202,
-     202,   203,   203,   203,   204,   204,   204,   205,   205,   206,
-     206,   207,   207,   208,   208,   208,   208,   209,   210,   210,
-     211,   211,   212,   212,   212,   212,   213,   213,   214,   214,
-     215,   216,   216,   216,   216,   217,   218,   218,   219,   219,
-     220,   220,   221,   221,   222,   222,   222,   222,   223,   224,
-     224,   225,   225,   226,   226,   226,   227,   227,   228,   228,
-     228,   229,   229,   230,   230,   231,   232,   232,   233,   234,
-     234,   235
+       0,   155,   156,   156,   157,   157,   157,   158,   159,   160,
+     161,   162,   162,   163,   163,   163,   163,   163,   163,   163,
+     163,   163,   163,   163,   163,   163,   163,   163,   164,   165,
+     165,   166,   166,   167,   168,   168,   169,   170,   170,   171,
+     171,   172,   173,   174,   175,   175,   175,   176,   176,   177,
+     177,   178,   178,   179,   179,   180,   180,   181,   182,   182,
+     182,   182,   182,   183,   184,   184,   185,   185,   186,   186,
+     187,   187,   187,   188,   189,   189,   190,   190,   191,   191,
+     192,   193,   193,   194,   195,   196,   197,   197,   198,   198,
+     199,   199,   200,   200,   200,   200,   201,   202,   202,   203,
+     203,   204,   204,   205,   205,   206,   206,   206,   206,   206,
+     206,   206,   206,   206,   207,   208,   208,   209,   209,   210,
+     210,   210,   211,   211,   212,   212,   212,   213,   213,   213,
+     214,   214,   215,   215,   216,   216,   217,   217,   217,   217,
+     218,   218,   218,   218,   219,   220,   220,   221,   221,   222,
+     222,   223,   223,   224,   225,   225,   226,   226,   227,   227,
+     227,   227,   228,   228,   229,   229,   230,   231,   232,   232,
+     233,   233,   233,   233,   233,   233,   233,   233,   233,   233,
+     233,   233,   233,   233,   234,   235,   235,   236,   236,   237,
+     237,   237,   238,   238,   239,   240,   240,   241,   241,   242,
+     242,   243,   243,   243,   244,   244,   245,   245,   246,   247,
+     247,   248,   249,   250,   250,   251,   251,   252,   253,   254,
+     254,   255,   256,   256,   257,   258,   259,   259,   260,   261,
+     261,   262,   262,   263,   263,   263,   264,   264,   265,   265,
+     266,   267,   267
 };
 
   /* YYR2[YYN] -- Number of symbols on the right hand side of rule YYN.  */
 static const yytype_uint8 yyr2[] =
 {
        0,     2,     4,     5,     4,     5,     5,     6,     6,     4,
-       0,     1,     2,     1,     1,     1,     1,     1,     1,     1,
-       1,     1,     1,     1,     1,     1,     1,    10,     1,     3,
-       1,     1,     7,     1,     1,    15,     1,     3,     6,     7,
-       9,     7,     5,     7,     7,     9,     1,     9,     1,     3,
-       5,     5,     4,     4,     1,     6,     6,     1,     5,     6,
-       7,     8,     4,     1,     3,     5,     6,     1,     5,     4,
-       6,     1,     9,     1,     2,     6,     1,     8,     8,     5,
-       5,     6,     9,    17,     9,     1,     5,    13,     9,     1,
-       2,     4,    13,    13,     8,    12,     1,     8,     1,     3,
-       0,     4,     1,     2,     1,     1,     8,     9,     5,     5,
-       6,     5,     1,     5,     1,     2,     1,     1,     1,     5,
-       5,    11,     5,     7,     7,     7,     5,     1,     1,     1,
-       4,     1,     2,     1,     7,     7,     7,     7,     1,     5,
-       9,     5,     1,     1,     2,     2,     8,     8,     1,     1,
-       5,     6,     7,     8,     9,     6,     1,     9,     1,     2,
-       6,     1,     1,     1,     1,     1,     1,     1,     4,     1,
-       3,     1,     6,     4,     4,     4,     1,     3,     1,     1,
-       1,     1,     9,     1,     3,     4,     4,     6,     4,     1,
-       1,     5
+       4,     1,     2,     1,     1,     1,     1,     1,     1,     1,
+       1,     1,     1,     1,     1,     1,     1,     1,    10,     1,
+       3,     1,     1,     7,     1,     1,    15,     1,     3,     6,
+       7,     9,     7,     5,     7,     7,     9,     1,     9,     1,
+       3,     5,     5,     4,     4,     1,     6,     6,     1,     5,
+       6,     7,     8,     4,     1,     3,     5,     6,     1,     5,
+       4,     6,     1,     9,     1,     2,     6,     1,     8,     8,
+       5,     5,     6,     9,    17,     9,     1,     5,    13,     9,
+       1,     2,     4,    13,    13,     8,    12,     1,     8,     1,
+       3,     0,     4,     1,     2,     1,     1,     8,     9,     5,
+       5,     6,     9,     1,     5,     1,     5,     1,     2,     1,
+       1,     1,     5,     5,    11,     5,     5,     7,     7,     5,
+       1,     1,     1,     4,     1,     2,     1,     7,     7,     7,
+       6,     7,     8,     9,     6,     1,     9,     1,     2,     6,
+       1,     1,     1,     7,     1,     5,     9,     5,     1,     1,
+       2,     2,     8,     8,     1,     1,     5,     4,     1,     3,
+       1,     1,     1,     1,     1,     1,     1,     1,     1,     1,
+       5,     1,     1,     1,     9,     0,     6,     1,     3,     1,
+       1,     1,     1,     1,     9,     1,     3,     1,     4,     1,
+       3,     4,     4,     4,     1,     1,     1,     1,     9,     1,
+       1,     5,     7,     1,     6,     6,     5,     9,     4,     4,
+       6,     4,     1,     1,     5,    15,     1,     3,     5,     1,
+       4,     1,     2,     8,     9,     1,     1,     8,     1,     3,
+      10,     1,     3
 };
 
 
@@ -1884,1141 +2012,1454 @@ yyreduce:
   switch (yyn)
     {
         case 2:
-#line 255 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+
     { p_ast = new AST ( (yyvsp[-1].tok) ); }
-#line 1890 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
     break;
 
   case 3:
-#line 256 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+
     { p_ast = (yyvsp[-2].node); }
-#line 1896 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
     break;
 
   case 4:
-#line 260 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+
     { (yyval.node) = (yyvsp[-1].node); }
-#line 1902 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
     break;
 
   case 5:
-#line 261 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[-1].node); }
-#line 1908 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[-2].tok) ); }
+
     break;
 
   case 6:
-#line 262 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[-1].node); dynamic_cast < AST_Schema* > ( (yyval.node) ) -> SetVersion ( (yyvsp[-2].tok) -> GetValue () ); }
-#line 1914 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[-2].tok) ); }
+
     break;
 
   case 7:
-#line 266 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+
     { (yyval.tok) = (yyvsp[-5].tok); }
-#line 1920 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
     break;
 
   case 8:
-#line 270 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.tok) = (yyvsp[-2].tok); }
-#line 1926 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.tok) = (yyvsp[-5].tok); }
+
     break;
 
   case 9:
-#line 274 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST_Schema ( (yyvsp[-3].tok), (yyvsp[-1].node) ); }
-#line 1932 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-3].tok), (yyvsp[-1].node) ); }
+
     break;
 
   case 10:
-#line 278 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST_Schema (); }
-#line 1938 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-3].tok), (yyvsp[-1].node) ); }
+
     break;
 
   case 11:
-#line 283 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+
     { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 1944 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
     break;
 
   case 12:
-#line 284 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+
     { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 1950 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
     break;
 
   case 13:
-#line 290 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+
     { (yyval.node) = (yyvsp[0].node); }
-#line 1956 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
     break;
 
   case 14:
-#line 291 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+
     { (yyval.node) = (yyvsp[0].node); }
-#line 1962 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
     break;
 
   case 15:
-#line 292 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+
     { (yyval.node) = (yyvsp[0].node); }
-#line 1968 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
     break;
 
   case 16:
-#line 293 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+
     { (yyval.node) = (yyvsp[0].node); }
-#line 1974 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
     break;
 
   case 17:
-#line 294 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+
     { (yyval.node) = (yyvsp[0].node); }
-#line 1980 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
     break;
 
   case 18:
-#line 295 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+
     { (yyval.node) = (yyvsp[0].node); }
-#line 1986 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
     break;
 
   case 19:
-#line 296 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+
     { (yyval.node) = (yyvsp[0].node); }
-#line 1992 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
     break;
 
   case 20:
-#line 297 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+
     { (yyval.node) = (yyvsp[0].node); }
-#line 1998 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
     break;
 
   case 21:
-#line 298 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+
     { (yyval.node) = (yyvsp[0].node); }
-#line 2004 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
     break;
 
   case 22:
-#line 299 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+
     { (yyval.node) = (yyvsp[0].node); }
-#line 2010 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
     break;
 
   case 23:
-#line 300 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+
     { (yyval.node) = (yyvsp[0].node); }
-#line 2016 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
     break;
 
   case 24:
-#line 301 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+
     { (yyval.node) = (yyvsp[0].node); }
-#line 2022 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
     break;
 
   case 25:
-#line 302 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+
     { (yyval.node) = (yyvsp[0].node); }
-#line 2028 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
     break;
 
   case 26:
-#line 303 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); }
-#line 2034 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[0].node); }
+
     break;
 
   case 27:
-#line 308 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = p_builder . TypeDef ( (yyvsp[-9].tok), (yyvsp[-6].fqn), (yyvsp[-3].node) ); }
-#line 2040 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST (); }
+
     break;
 
   case 28:
-#line 312 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2046 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = p_builder . TypeDef ( (yyvsp[-9].tok), (yyvsp[-6].fqn), (yyvsp[-3].node) ); }
+
     break;
 
   case 29:
-#line 313 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2052 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 30:
-#line 317 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[0].fqn); }
-#line 2058 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 31:
-#line 318 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[0].node); }
-#line 2064 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[0].fqn); }
+
     break;
 
   case 32:
-#line 322 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-6].tok), (yyvsp[-4].fqn), (yyvsp[-2].node) ); }
-#line 2070 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[0].node); }
+
     break;
 
   case 33:
-#line 326 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[0].expr); }
-#line 2076 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-6].tok), (yyvsp[-4].fqn), (yyvsp[-2].node) ); }
+
     break;
 
   case 34:
-#line 327 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( PT_EMPTY ); }
-#line 2082 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[0].expr); }
+
     break;
 
   case 35:
-#line 332 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = p_builder . TypeSet ( (yyvsp[-14].tok), (yyvsp[-11].fqn), (yyvsp[-5].node) ); }
-#line 2088 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( PT_EMPTY ); }
+
     break;
 
   case 36:
-#line 336 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2094 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = p_builder . TypeSet ( (yyvsp[-14].tok), (yyvsp[-11].fqn), (yyvsp[-5].node) ); }
+
     break;
 
   case 37:
-#line 337 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2100 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 38:
-#line 341 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = p_builder . FmtDef ( (yyvsp[-5].tok), (yyvsp[-2].fqn), 0 ); }
-#line 2106 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 39:
-#line 342 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = p_builder . FmtDef ( (yyvsp[-6].tok), (yyvsp[-2].fqn), (yyvsp[-3].fqn) ); }
-#line 2112 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = p_builder . FmtDef ( (yyvsp[-5].tok), (yyvsp[-2].fqn), 0 ); }
+
     break;
 
   case 40:
-#line 346 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = p_builder . ConstDef ( (yyvsp[-8].tok), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
-#line 2118 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = p_builder . FmtDef ( (yyvsp[-6].tok), (yyvsp[-2].fqn), (yyvsp[-3].fqn) ); }
+
     break;
 
   case 41:
-#line 350 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = p_builder . AliasDef ( (yyvsp[-6].tok), (yyvsp[-3].fqn), (yyvsp[-2].fqn) ); }
-#line 2124 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = p_builder . ConstDef ( (yyvsp[-8].tok), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
+
     break;
 
   case 42:
-#line 354 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[-1].node); }
-#line 2130 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = p_builder . AliasDef ( (yyvsp[-6].tok), (yyvsp[-3].fqn), (yyvsp[-2].fqn) ); }
+
     break;
 
   case 43:
-#line 358 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = p_builder . UntypedFunctionDecl ( (yyvsp[-6].tok), (yyvsp[-3].fqn) ); }
-#line 2136 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[-1].node); }
+
     break;
 
   case 44:
-#line 359 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = p_builder . RowlenFunctionDecl ( (yyvsp[-6].tok), (yyvsp[-3].fqn) ); }
-#line 2142 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = p_builder . UntypedFunctionDecl ( (yyvsp[-6].tok), (yyvsp[-3].fqn) ); }
+
     break;
 
   case 45:
-#line 361 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = p_builder . FunctionDecl ( (yyvsp[-8].tok), false, (yyvsp[-6].node), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-3].paramSig), (yyvsp[-2].paramSig), (yyvsp[-1].node) ); }
-#line 2148 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = p_builder . RowlenFunctionDecl ( (yyvsp[-6].tok), (yyvsp[-3].fqn) ); }
+
     break;
 
   case 46:
-#line 365 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
-#line 2154 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = p_builder . FunctionDecl ( (yyvsp[-8].tok), false, (yyvsp[-6].node), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-3].node), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+
     break;
 
   case 47:
-#line 366 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[-3].node); }
-#line 2160 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
     break;
 
   case 48:
-#line 370 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2166 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[-3].node); }
+
     break;
 
   case 49:
-#line 371 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2172 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 50:
-#line 375 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-1].fqn) ); }
-#line 2178 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 51:
-#line 376 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].fqn) ); }
-#line 2184 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-1].fqn) ); }
+
     break;
 
   case 52:
-#line 380 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); }
-#line 2190 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].fqn) ); }
+
     break;
 
   case 53:
-#line 381 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[-1].node); }
-#line 2196 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST (); }
+
     break;
 
   case 54:
-#line 385 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.paramSig) = new AST_ParamSig ( (yyvsp[0].tok), 0, 0, false); }
-#line 2202 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[-1].node); }
+
     break;
 
   case 55:
-#line 386 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.paramSig) = (yyvsp[-2].paramSig); }
-#line 2208 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
     break;
 
   case 56:
-#line 390 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.paramSig) = (yyvsp[-2].paramSig); }
-#line 2214 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[-2].node); }
+
     break;
 
   case 57:
-#line 394 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.paramSig) = new AST_ParamSig ( (yyvsp[0].tok), 0, 0, false); }
-#line 2220 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[-2].node); }
+
     break;
 
   case 58:
-#line 395 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.paramSig) = new AST_ParamSig ( (yyvsp[-4].tok), (yyvsp[-2].node), 0, (yyvsp[-1].boolean) ); }
-#line 2226 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
     break;
 
   case 59:
-#line 396 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.paramSig) = new AST_ParamSig ( (yyvsp[-5].tok), 0, (yyvsp[-2].node), (yyvsp[-1].boolean) ); }
-#line 2232 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), new AST (), (yyvsp[-1].node) ); }
+
     break;
 
   case 60:
-#line 397 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.paramSig) = new AST_ParamSig ( (yyvsp[-6].tok), (yyvsp[-4].node), (yyvsp[-2].node), (yyvsp[-1].boolean) ); }
-#line 2238 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-5].tok), new AST (), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+
     break;
 
   case 61:
-#line 398 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.paramSig) = new AST_ParamSig ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-2].node), (yyvsp[-1].boolean) ); }
-#line 2244 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-6].tok), (yyvsp[-4].node), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+
     break;
 
   case 62:
-#line 402 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[-1].node); }
-#line 2250 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+
     break;
 
   case 63:
-#line 406 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2256 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[-1].node); }
+
     break;
 
   case 64:
-#line 407 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2262 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 65:
-#line 411 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST_Formal ( (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].tok), false ); }
-#line 2268 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 66:
-#line 412 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST_Formal ( (yyvsp[-5].tok), (yyvsp[-2].node), (yyvsp[-1].tok), true ); }
-#line 2274 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), new AST ( (yyvsp[-1].tok) ), new AST () ); }
+
     break;
 
   case 67:
-#line 416 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.boolean) = false; }
-#line 2280 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-2].node), new AST ( (yyvsp[-1].tok) ), new AST ( (yyvsp[-3].tok) ) ); }
+
     break;
 
   case 68:
-#line 417 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.boolean) = true; }
-#line 2286 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
     break;
 
   case 69:
-#line 421 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( PT_EMPTY ); }
-#line 2292 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-4].tok) ); }
+
     break;
 
   case 70:
-#line 422 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[-2].fqn); }
-#line 2298 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( PT_EMPTY ); }
+
     break;
 
-  case 72:
-#line 427 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[-3].node); }
-#line 2304 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+  case 71:
+
+    { (yyval.node) = (yyvsp[-2].fqn); }
+
     break;
 
   case 73:
-#line 431 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2310 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[-3].node); }
+
     break;
 
   case 74:
-#line 432 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2316 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 75:
-#line 436 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-2].expr) ); }
-#line 2322 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 76:
-#line 437 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[0].node); }
-#line 2328 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-3].tok), (yyvsp[-2].expr) ); }
+
     break;
 
   case 77:
-#line 441 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
-#line 2334 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[0].node); }
+
     break;
 
   case 78:
-#line 442 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
-#line 2340 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
+
     break;
 
   case 79:
-#line 446 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[-1].node); }
-#line 2346 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
+
     break;
 
   case 80:
-#line 449 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+
     { (yyval.node) = (yyvsp[-1].node); }
-#line 2352 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
     break;
 
   case 81:
-#line 450 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+
     { (yyval.node) = (yyvsp[-1].node); }
-#line 2358 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
     break;
 
   case 82:
-#line 455 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = p_builder . FunctionDecl ( (yyvsp[-8].tok), true, (yyvsp[-6].node), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-3].paramSig), (yyvsp[-2].paramSig), (yyvsp[-1].node) ); }
-#line 2364 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[-1].node); }
+
     break;
 
   case 83:
-#line 464 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = p_builder . FunctionDecl ( (yyvsp[-16].tok), false, (yyvsp[-8].node), (yyvsp[-7].node), (yyvsp[-6].fqn), (yyvsp[-5].paramSig), (yyvsp[-4].paramSig), (yyvsp[-3].node) ); }
-#line 2370 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = p_builder . FunctionDecl ( (yyvsp[-8].tok), true, (yyvsp[-6].node), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-3].node), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+
     break;
 
   case 84:
-#line 469 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = p_builder . PhysicalDecl ( (yyvsp[-8].tok), (yyvsp[-5].node), (yyvsp[-4].node), (yyvsp[-3].fqn), (yyvsp[-2].paramSig), (yyvsp[-1].node) ); }
-#line 2376 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = p_builder . FunctionDecl ( (yyvsp[-16].tok), false, (yyvsp[-8].node), (yyvsp[-7].node), (yyvsp[-6].fqn), (yyvsp[-5].node), (yyvsp[-4].node), (yyvsp[-3].node) ); }
+
     break;
 
   case 85:
-#line 473 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[0].node); }
-#line 2382 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = p_builder . PhysicalDecl ( (yyvsp[-8].tok), (yyvsp[-5].node), (yyvsp[-4].node), (yyvsp[-3].fqn), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+
     break;
 
   case 86:
-#line 474 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-1].node) ); }
-#line 2388 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[0].node); }
+
     break;
 
   case 87:
-#line 478 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-9].tok), (yyvsp[-4].node) ); }
-#line 2394 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-1].node) ); }
+
     break;
 
   case 88:
-#line 480 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[-3].node); }
-#line 2400 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-9].tok), (yyvsp[-4].node) ); }
+
     break;
 
   case 89:
-#line 484 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2406 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[-3].node); }
+
     break;
 
   case 90:
-#line 485 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2412 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 91:
-#line 490 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( PT_EMPTY ); }
-#line 2418 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 92:
-#line 492 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-10].tok), (yyvsp[-4].node) ) ; }
-#line 2424 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( PT_EMPTY ); }
+
     break;
 
   case 93:
-#line 494 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-10].tok), (yyvsp[-4].node) ); }
-#line 2430 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-10].tok), (yyvsp[-4].node) ) ; }
+
     break;
 
   case 94:
-#line 496 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-3].fqn) ); }
-#line 2436 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-10].tok), (yyvsp[-4].node) ); }
+
     break;
 
   case 95:
-#line 503 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = p_builder . TableDef ( (yyvsp[-11].tok), (yyvsp[-8].fqn), (yyvsp[-7].node), (yyvsp[-3].node) ); }
-#line 2442 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-3].fqn) ); }
+
     break;
 
   case 96:
-#line 507 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
-#line 2448 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = p_builder . TableDef ( (yyvsp[-11].tok), (yyvsp[-8].fqn), (yyvsp[-7].node), (yyvsp[-3].node) ); }
+
     break;
 
   case 97:
-#line 508 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[-2].node); }
-#line 2454 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
     break;
 
   case 98:
-#line 512 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].fqn) ); }
-#line 2460 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[-2].node); }
+
     break;
 
   case 99:
-#line 513 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].fqn) ); }
-#line 2466 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].fqn) ); }
+
     break;
 
   case 100:
-#line 517 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( PT_EMPTY ); }
-#line 2472 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].fqn) ); }
+
     break;
 
   case 101:
-#line 518 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[-1].node); }
-#line 2478 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( PT_EMPTY ); }
+
     break;
 
   case 102:
-#line 522 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2484 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[-1].node); }
+
     break;
 
   case 103:
-#line 523 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2490 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 104:
-#line 527 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[0].node); }
-#line 2496 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 105:
-#line 528 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+
     { (yyval.node) = (yyvsp[0].node); }
-#line 2502 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
     break;
 
   case 106:
-#line 529 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-2].expr) ); }
-#line 2508 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[0].node); }
+
     break;
 
   case 107:
-#line 530 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-8].tok), (yyvsp[-2].expr) ); }
-#line 2514 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-2].expr) ); }
+
     break;
 
   case 108:
-#line 531 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-2].tok), (yyvsp[-1].node) ); }
-#line 2520 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-8].tok), (yyvsp[-2].expr) ); }
+
     break;
 
   case 109:
-#line 532 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+
     { (yyval.node) = new AST ( (yyvsp[-2].tok), (yyvsp[-1].node) ); }
-#line 2526 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
     break;
 
   case 110:
-#line 533 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-3].tok), (yyvsp[-1].node) ); }
-#line 2532 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-2].tok), (yyvsp[-1].node) ); }
+
     break;
 
   case 111:
-#line 539 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].node) ); }
-#line 2538 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-3].tok), (yyvsp[-1].node) ); }
+
     break;
 
   case 112:
-#line 543 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
-#line 2544 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-8].tok), (yyvsp[-4].fqn) ); }
+
     break;
 
   case 113:
-#line 544 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[-2].node); }
-#line 2550 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST (); }
+
     break;
 
   case 114:
-#line 548 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2556 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+
     break;
 
   case 115:
-#line 549 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2562 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
     break;
 
   case 116:
-#line 553 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
-#line 2568 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[-2].node); }
+
     break;
 
   case 117:
-#line 554 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
-#line 2574 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 118:
-#line 555 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
-#line 2580 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 119:
-#line 559 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].node) ); }
-#line 2586 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
     break;
 
   case 120:
-#line 560 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].node) ); }
-#line 2592 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
     break;
 
   case 121:
-#line 566 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-10].tok), (yyvsp[-5].node), (yyvsp[-2].fqn), (yyvsp[-1].node) ); }
-#line 2598 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
     break;
 
   case 122:
-#line 567 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].fqn), (yyvsp[-1].node) ); }
-#line 2604 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+
     break;
 
   case 123:
-#line 568 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-6].tok), (yyvsp[-4].fqn), (yyvsp[-2].node) ); }
-#line 2610 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+
     break;
 
   case 124:
-#line 572 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    {  (yyval.node) = new AST ( (yyvsp[-6].tok), (yyvsp[-4].node), (yyvsp[-2].node) ); }
-#line 2616 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-10].tok), (yyvsp[-5].node), (yyvsp[-2].fqn), (yyvsp[-1].node) ); }
+
     break;
 
   case 125:
-#line 573 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    {  (yyval.node) = new AST ( (yyvsp[-6].tok), (yyvsp[-4].node), (yyvsp[-2].expr) ); }
-#line 2622 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].fqn), (yyvsp[-1].node) ); }
+
     break;
 
   case 126:
-#line 574 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    {  (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node) ); }
-#line 2628 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].fqn), (yyvsp[-1].node) ); }
+
     break;
 
   case 127:
-#line 578 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[0].fqn); }
-#line 2634 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    {  (yyval.node) = new AST ( (yyvsp[-6].tok), (yyvsp[-4].node), (yyvsp[-2].node) ); }
+
     break;
 
   case 128:
-#line 579 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
-#line 2640 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    {  (yyval.node) = new AST ( (yyvsp[-6].tok), (yyvsp[-4].node), (yyvsp[-2].expr) ); }
+
     break;
 
   case 129:
-#line 583 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); }
-#line 2646 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    {  (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node) ); }
+
     break;
 
   case 130:
-#line 584 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[-1].node); }
-#line 2652 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[0].fqn); }
+
     break;
 
   case 131:
-#line 588 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2658 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
     break;
 
   case 132:
-#line 589 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2664 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST (); }
+
     break;
 
   case 133:
-#line 593 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); }
-#line 2670 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[-1].node); }
+
     break;
 
   case 134:
-#line 594 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-6].tok), new AST ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
-#line 2676 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 135:
-#line 595 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-6].tok), new AST ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
-#line 2682 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 136:
-#line 596 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-6].tok), new AST ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
-#line 2688 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST (); }
+
     break;
 
   case 137:
-#line 602 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = p_builder . DatabaseDef ( (yyvsp[-6].tok), (yyvsp[-3].fqn), (yyvsp[-2].node), (yyvsp[-1].node) ); }
-#line 2694 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-6].tok), new AST ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
+
     break;
 
   case 138:
-#line 606 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
-#line 2700 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-6].tok), new AST ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
+
     break;
 
   case 139:
-#line 607 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[-1].fqn); }
-#line 2706 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-6].tok), new AST ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
+
     break;
 
   case 140:
-#line 610 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[-3].node); }
-#line 2712 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-3].node), new AST ( (yyvsp[-2].tok) ) ); }
+
     break;
 
   case 141:
-#line 611 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-4].tok) ); }
-#line 2718 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-6].tok), (yyvsp[-3].node), new AST ( (yyvsp[-2].tok) ) ); }
+
     break;
 
   case 142:
-#line 615 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2724 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), new AST ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
+
     break;
 
   case 143:
-#line 616 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); }
-#line 2730 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-8].tok), (yyvsp[-5].node), new AST ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
+
     break;
 
   case 144:
-#line 617 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2736 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-3].node), (yyvsp[-2].fqn), (yyvsp[-1].node) ); }
+
     break;
 
   case 145:
-#line 618 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[-1].node); }
-#line 2742 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST (); }
+
     break;
 
   case 146:
-#line 623 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-3].fqn), (yyvsp[-2].fqn) ); }
-#line 2748 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[-3].node); }
+
     break;
 
   case 147:
-#line 625 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-3].fqn), (yyvsp[-2].fqn) ); }
-#line 2754 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 148:
-#line 629 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
-#line 2760 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 149:
-#line 630 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
-#line 2766 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-3].fqn), (yyvsp[-1].node) ); }
+
     break;
 
   case 150:
-#line 636 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = p_builder . Include ( (yyvsp[-4].tok), (yyvsp[-1].tok) ); }
-#line 2772 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[0].node); }
+
     break;
 
   case 151:
-#line 639 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-3].node), new AST ( (yyvsp[-2].tok) ) ); }
-#line 2778 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[0].fqn); }
+
     break;
 
   case 152:
-#line 641 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-6].tok), (yyvsp[-3].node), new AST ( (yyvsp[-2].tok) ) ); }
-#line 2784 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[0].expr); }
+
     break;
 
   case 153:
-#line 643 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), new AST ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
-#line 2790 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = p_builder . DatabaseDef ( (yyvsp[-6].tok), (yyvsp[-3].fqn), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+
     break;
 
   case 154:
-#line 645 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-8].tok), (yyvsp[-5].node), new AST ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
-#line 2796 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
     break;
 
   case 155:
-#line 649 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-3].node), (yyvsp[-2].fqn), (yyvsp[-1].node) ); }
-#line 2802 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[-1].fqn); }
+
     break;
 
   case 156:
-#line 653 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); }
-#line 2808 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[-3].node); }
+
     break;
 
   case 157:
-#line 654 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[-3].node); }
-#line 2814 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-4].tok) ); }
+
     break;
 
   case 158:
-#line 658 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+
     { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2820 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
     break;
 
   case 159:
-#line 659 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2826 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST (); }
+
     break;
 
   case 160:
-#line 663 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-3].fqn), (yyvsp[-1].node) ); }
-#line 2832 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 161:
-#line 664 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[0].node); }
-#line 2838 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[-1].node); }
+
     break;
 
   case 162:
-#line 668 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[0].fqn); }
-#line 2844 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-3].fqn), (yyvsp[-2].fqn) ); }
+
     break;
 
   case 163:
-#line 669 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[0].expr); }
-#line 2850 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-3].fqn), (yyvsp[-2].fqn) ); }
+
     break;
 
   case 164:
-#line 675 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.expr) = (yyvsp[0].expr); }
-#line 2856 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
     break;
 
   case 165:
-#line 676 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.expr) = new AST_Expr ( (yyvsp[0].fqn) ); }
-#line 2862 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
     break;
 
   case 166:
-#line 677 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.expr) = new AST_Expr ( PT_AT ); }
-#line 2868 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = p_builder . Include ( (yyvsp[-2].tok), (yyvsp[-1].tok) ); }
+
     break;
 
   case 167:
-#line 678 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
-#line 2874 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.expr) = (yyvsp[-1].expr); }
+
     break;
 
   case 168:
-#line 683 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.expr) = (yyvsp[-1].expr); }
-#line 2880 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.expr) = new AST_Expr ( (yyvsp[0].expr) ); }
+
     break;
 
   case 169:
-#line 687 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.expr) = new AST_Expr ( (yyvsp[0].expr) ); }
-#line 2886 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.expr) = (yyvsp[-2].expr); (yyval.expr) -> AddNode ( (yyvsp[0].expr) ); }
+
     break;
 
   case 170:
-#line 688 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.expr) = (yyvsp[-2].expr); (yyval.expr) -> AddNode ( (yyvsp[0].expr) ); }
-#line 2892 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.expr) = new AST_Expr ( (yyvsp[0].fqn) ); }
+
     break;
 
   case 171:
-#line 692 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[0].node); }
-#line 2898 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+
     break;
 
   case 172:
-#line 693 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-3].fqn), (yyvsp[-1].fqn) ); }
-#line 2904 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+
     break;
 
   case 173:
-#line 697 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.expr) = new AST_Expr ( (yyvsp[-3].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-1].tok) ); }
-#line 2910 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.expr) = (yyvsp[0].expr); }
+
     break;
 
   case 174:
-#line 698 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.expr) = new AST_Expr ( (yyvsp[-3].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-1].tok) ); }
-#line 2916 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.expr) = (yyvsp[0].expr); }
+
     break;
 
   case 175:
-#line 699 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.expr) = new AST_Expr ( (yyvsp[-3].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-1].tok) ); }
-#line 2922 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.expr) = (yyvsp[0].expr); }
+
     break;
 
   case 176:
-#line 710 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2928 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.expr) = (yyvsp[0].expr); }
+
     break;
 
   case 177:
-#line 711 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2934 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.expr) = (yyvsp[0].expr); }
+
     break;
 
   case 178:
-#line 715 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[0].fqn); }
-#line 2940 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.expr) = (yyvsp[0].expr); }
+
     break;
 
   case 179:
-#line 716 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[0].node); }
-#line 2946 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.expr) = (yyvsp[0].expr); }
+
     break;
 
   case 180:
-#line 717 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[0].expr); }
-#line 2952 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.expr) = (yyvsp[-1].expr); }
+
     break;
 
   case 181:
-#line 721 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
-#line 2958 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.expr) = (yyvsp[0].expr); }
+
     break;
 
   case 182:
-#line 722 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[-3].node); }
-#line 2964 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.expr) = (yyvsp[0].expr); }
+
     break;
 
   case 183:
-#line 726 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].expr) ); }
-#line 2970 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.expr) = (yyvsp[0].expr); }
+
     break;
 
   case 184:
-#line 727 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].expr) ); }
-#line 2976 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.expr) = new AST_Expr ( (yyvsp[-8].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-6].node) ); (yyval.expr) -> AddNode ( (yyvsp[-5].fqn) ); (yyval.expr) -> AddNode ( (yyvsp[-4].node) ); (yyval.expr) -> AddNode ( (yyvsp[-2].node) ); }
+
     break;
 
   case 185:
-#line 733 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.fqn) = (yyvsp[-1].fqn); }
-#line 2982 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST ( PT_EMPTY ); }
+
     break;
 
   case 186:
-#line 737 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.fqn) = new AST_FQN ( (yyvsp[-3].tok) ); (yyval.fqn) -> AddNode ( (yyvsp[-1].tok) ); }
-#line 2988 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[-2].node); }
+
     break;
 
   case 187:
-#line 738 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.fqn) = (yyvsp[-5].fqn); (yyval.fqn) -> AddNode ( (yyvsp[-1].tok) ); }
-#line 2994 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 188:
-#line 742 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.fqn) = new AST_FQN ( (yyvsp[-3].tok) ); (yyval.fqn) -> AddNode ( (yyvsp[-1].tok) ); }
-#line 3000 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 189:
-#line 746 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.fqn) = (yyvsp[0].fqn); }
-#line 3006 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[0].fqn); }
+
     break;
 
   case 190:
-#line 747 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.fqn) = (yyvsp[0].fqn); }
-#line 3012 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[0].node); }
+
     break;
 
   case 191:
-#line 751 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+
+    { (yyval.node) = (yyvsp[0].expr); }
+
+    break;
+
+  case 192:
+
+    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
+    break;
+
+  case 193:
+
+    { (yyval.node) = (yyvsp[0].node); }
+
+    break;
+
+  case 194:
+
+    { (yyval.node) = (yyvsp[-3].node); }
+
+    break;
+
+  case 195:
+
+    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].expr) ); }
+
+    break;
+
+  case 196:
+
+    { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].expr) ); }
+
+    break;
+
+  case 197:
+
+    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
+    break;
+
+  case 198:
+
+    { (yyval.node) = (yyvsp[-1].node); }
+
+    break;
+
+  case 199:
+
+    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].expr) ); }
+
+    break;
+
+  case 200:
+
+    { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].expr) ); }
+
+    break;
+
+  case 201:
+
+    { (yyval.expr) = new AST_Expr ( (yyvsp[-3].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-1].tok) ); }
+
+    break;
+
+  case 202:
+
+    { (yyval.expr) = new AST_Expr ( (yyvsp[-3].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-1].tok) ); }
+
+    break;
+
+  case 203:
+
+    { (yyval.expr) = new AST_Expr ( (yyvsp[-3].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-1].tok) ); }
+
+    break;
+
+  case 204:
+
+    { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+
+    break;
+
+  case 205:
+
+    { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+
+    break;
+
+  case 206:
+
+    { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+
+    break;
+
+  case 207:
+
+    { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+
+    break;
+
+  case 208:
+
+    { (yyval.expr) = new AST_Expr ( (yyvsp[-8].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-3].node) ); }
+
+    break;
+
+  case 209:
+
+    { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+
+    break;
+
+  case 210:
+
+    { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+
+    break;
+
+  case 211:
+
+    { (yyval.expr) = new AST_Expr ( (yyvsp[-4].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-1].expr) ); }
+
+    break;
+
+  case 212:
+
+    { (yyval.expr) = new AST_Expr ( (yyvsp[-6].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-3].node) ); (yyval.expr) -> AddNode ( (yyvsp[-1].expr) ); }
+
+    break;
+
+  case 213:
+
+    { (yyval.node) = (yyvsp[0].node); }
+
+    break;
+
+  case 214:
+
+    { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-3].fqn), (yyvsp[-1].fqn) ); }
+
+    break;
+
+  case 215:
+
+    { (yyval.expr) = new AST_Expr ( (yyvsp[-5].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-3].fqn) ); (yyval.expr) -> AddNode ( (yyvsp[-1].fqn) ); }
+
+    break;
+
+  case 216:
+
+    {   /* remove leading '.'*/
+            (yyval.expr) = new AST_Expr ( (yyvsp[-4].tok) );
+            (yyval.expr) -> AddNode ( (yyvsp[-2].fqn) );
+            AST * ident = new AST ( PT_IDENT );
+            Token t ( IDENTIFIER_1_0, (yyvsp[-1].tok) -> GetValue() + 1, (yyval.expr) -> GetLocation() );
+            ident -> AddNode ( & t );
+            (yyval.expr) -> AddNode ( ident );
+        }
+
+    break;
+
+  case 217:
+
+    { (yyval.expr) = new AST_Expr ( (yyvsp[-8].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-6].fqn) ); (yyval.expr) -> AddNode ( (yyvsp[-4].expr) ); (yyval.expr) -> AddNode ( (yyvsp[-1].fqn) ); }
+
+    break;
+
+  case 218:
+
+    { (yyval.fqn) = (yyvsp[-1].fqn); }
+
+    break;
+
+  case 219:
+
+    { (yyval.fqn) = new AST_FQN ( (yyvsp[-3].tok) ); (yyval.fqn) -> AddNode ( (yyvsp[-1].tok) ); }
+
+    break;
+
+  case 220:
+
+    { (yyval.fqn) = (yyvsp[-5].fqn); (yyval.fqn) -> AddNode ( (yyvsp[-1].tok) ); }
+
+    break;
+
+  case 221:
+
+    { (yyval.fqn) = new AST_FQN ( (yyvsp[-3].tok) ); (yyval.fqn) -> AddNode ( (yyvsp[-1].tok) ); }
+
+    break;
+
+  case 222:
+
+    { (yyval.fqn) = (yyvsp[0].fqn); }
+
+    break;
+
+  case 223:
+
+    { (yyval.fqn) = (yyvsp[0].fqn); }
+
+    break;
+
+  case 224:
+
     { (yyval.fqn) = (yyvsp[-2].fqn); (yyval.fqn) -> SetVersion ( (yyvsp[-1].tok) -> GetValue () ); }
-#line 3018 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
+    break;
+
+  case 225:
+
+    { (yyval.node) = p_builder . ViewDef ( (yyvsp[-14].tok), (yyvsp[-11].fqn), (yyvsp[-7].node), (yyvsp[-4].node), (yyvsp[-2].node) ); }
+
+    break;
+
+  case 226:
+
+    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
+    break;
+
+  case 227:
+
+    { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
+    break;
+
+  case 228:
+
+    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].fqn), (yyvsp[-1].fqn) ); }
+
+    break;
+
+  case 229:
+
+    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
+    break;
+
+  case 230:
+
+    { (yyval.node) = (yyvsp[-1].node); }
+
+    break;
+
+  case 231:
+
+    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
+    break;
+
+  case 232:
+
+    { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
+    break;
+
+  case 233:
+
+    { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
+
+    break;
+
+  case 234:
+
+    { (yyval.node) = new AST ( (yyvsp[-8].tok), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
+
+    break;
+
+  case 235:
+
+    { (yyval.node) = new AST ( PT_EMPTY ); }
+
+    break;
+
+  case 236:
+
+    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
+    break;
+
+  case 237:
+
+    { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-2].node) ); }
+
+    break;
+
+  case 238:
+
+    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
+    break;
+
+  case 239:
+
+    { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
+    break;
+
+  case 240:
+
+    { (yyval.node) = new AST ( (yyvsp[-9].tok), (yyvsp[-7].fqn), (yyvsp[-3].node) ); }
+
+    break;
+
+  case 241:
+
+    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].fqn) ); }
+
+    break;
+
+  case 242:
+
+    { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].fqn) ); }
+
     break;
 
 
-#line 3022 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires

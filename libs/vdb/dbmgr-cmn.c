@@ -41,9 +41,6 @@
 #include <vdb/table.h>
 #include <vdb/vdb-priv.h>
 
-#include <vfs/manager.h> /* VFSManager */
-#include <vfs/manager-priv.h> /* VFSManagerSetResolver */
-
 #include <kdb/manager.h>
 #include <kdb/database.h>
 #include <kdb/kdb-priv.h> /* KDBManagerGetVFSManager */
@@ -51,11 +48,17 @@
 #include <kdb/meta.h>
 
 #include <kfg/config.h>
+#include <kfg/properties.h> /* KConfig_Get_FullQuality */
+
 #include <kfs/directory.h>
 #include <kfs/dyload.h>
 #include <klib/log.h>
 #include <klib/text.h>
 #include <klib/rc.h>
+
+#include <vfs/manager.h> /* VFSManager */
+#include <vfs/manager-priv.h> /* VFSManagerSetResolver */
+
 #include <sysalloc.h>
 
 #include <stdlib.h>
@@ -316,7 +319,13 @@ rc_t VDBManagerConfigFromKfg ( VDBManager *self, bool update )
 
         /* look for schema paths */
         if ( rc == 0 )
+        {
             rc = VDBManagerGetKfgPath ( kfg, "vdb/schema/paths", full, sizeof full, & num_read );
+            if ( rc == 0 )
+            {
+                DEBUG_PRINT ( "VDBManagerConfigFromKfg: vdb/schema/paths = '%s'", full );
+            }
+        }
         if ( rc != 0 )
             rc = 0;
         else
@@ -833,6 +842,30 @@ LIB_EXPORT int CC VDBManagerVPathType ( const VDBManager * self,
     return kptBadPath;
 }
 
+static int CC VDBManagerVPathTypeUnreliable ( const VDBManager * self,
+    const char *path, va_list args )
+{
+    if ( self != NULL )
+        return KDBManagerVPathTypeUnreliable ( self -> kmgr, path, args );
+
+    return kptBadPath;
+}
+
+LIB_EXPORT int CC VDBManagerPathTypeUnreliable ( const VDBManager * self,
+    const char *path, ... )
+{
+    int type;
+
+    va_list args;
+    va_start ( args, path );
+
+    type = VDBManagerVPathTypeUnreliable ( self, path, args );
+
+    va_end ( args );
+
+    return type;
+}
+
 /** Reset VResolver to set protected repository context */
 LIB_EXPORT rc_t CC VDBManagerSetResolver
     ( const VDBManager * self, struct VResolver * resolver )
@@ -940,4 +973,80 @@ LIB_EXPORT rc_t CC VDBManagerDeleteCacheOlderThan ( const VDBManager * self,
         }
     }
     return rc;
+}
+
+
+/******************************************************************************/
+
+static int32_t s_EnvQuality = -2; /* from environment */
+static int32_t s_LoadedQuality = -2; /* default or from configuration */
+static int32_t s_SetQuality = -2; /* explicitly set VDBManagerSetQuality */
+
+LIB_EXPORT rc_t CC VDBManagerSetQuality(VDBManager * self,
+    VQuality quality)
+{
+    if (quality < 0 || quality >= eQualLast)
+        return RC(rcVDB, rcMgr, rcUpdating, rcPath, rcExcessive);
+
+    s_SetQuality = quality;
+    return 0;
+}
+
+/*#define USE_SERVICES_CACHE*/
+
+LIB_EXPORT VQuality CC VDBManagerGetQuality(const VDBManager * self) {
+    rc_t rc = 0;
+    bool fullQuality = false;
+
+#ifndef USE_SERVICES_CACHE
+    return eQualLast;
+#endif
+
+    if (s_SetQuality >= 0)
+        return s_SetQuality;
+
+    if (s_EnvQuality < -1) {
+        char * e = getenv("NCBI_VDB_QUALITY");
+        s_EnvQuality = -1;
+        if (e != NULL) {
+            int i = atoi(e);
+            if (i >= eQualDefault && i < eQualLast)
+                s_EnvQuality = i;
+        }
+    }
+    if (s_EnvQuality >= 0)
+        return s_EnvQuality;
+
+    if (s_LoadedQuality < 0) {
+        const KConfig * kfg = NULL;
+        int64_t quality = -1;
+        if (self != NULL) {
+            const KDBManager * kmgr = NULL;
+            VFSManager * vfs = NULL;
+            rc = VDBManagerOpenKDBManagerRead(self, &kmgr);
+            if (rc == 0)
+                rc = KDBManagerGetVFSManager(kmgr, &vfs);
+            if (rc == 0)
+                kfg = VFSManagerGetConfig(vfs);
+            VFSManagerRelease(vfs);
+            KDBManagerRelease(kmgr);
+        }
+        if (kfg == NULL)
+            KConfigMake((KConfig**)&kfg, NULL);
+        s_LoadedQuality = eQualDefault;
+        rc = KConfigReadI64(kfg, "/libs/vdb/quality", &quality);
+        if (rc == 0) {
+            if (quality < 0 || quality > eQualLast)
+                quality = eQualLast;
+            s_LoadedQuality = quality;
+        }
+        else {
+            rc = KConfig_Get_FullQuality(kfg, &fullQuality);
+            if (rc == 0 && fullQuality)
+                s_LoadedQuality = eQualFull;
+        }
+        KConfigRelease(kfg);
+    }
+
+    return s_LoadedQuality;
 }

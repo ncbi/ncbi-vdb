@@ -38,6 +38,8 @@
 #include <NGS_FragmentBlob.h>
 #include <NGS_FragmentBlobIterator.h>
 
+#include <kfg/config.h> /* KConfigDisableUserSettings */
+
 #include <vdb/table.h>
 #include <vdb/database.h>
 
@@ -67,14 +69,7 @@ public:
 
     void MakeBlob ( const char* acc, int64_t rowId )
     {
-        if ( m_tbl != 0 )
-        {
-            VTableRelease ( m_tbl );
-        }
-        if ( VDBManagerOpenTableRead ( m_ctx -> rsrc -> vdb, & m_tbl, NULL, acc ) != 0 )
-        {
-            throw logic_error ("FragmentBlobFixture::MakeBlob VDBManagerOpenTableRead failed");
-        }
+        m_tbl = openTable( acc );
         m_curs = NGS_CursorMake ( m_ctx, m_tbl, sequence_col_specs, seq_NUM_COLS );
         if ( m_curs == 0 )
         {
@@ -132,7 +127,7 @@ FIXTURE_TEST_CASE ( NGS_FragmentBlobMake_NullRunName, FragmentBlobFixture )
 {
     ENTRY;
 
-    REQUIRE_RC ( VDBManagerOpenTableRead ( m_ctx -> rsrc -> vdb, & m_tbl, NULL, SRA_Accession ) );
+    m_tbl = openTable( SRA_Accession );
     m_curs = NGS_CursorMake ( m_ctx, m_tbl, sequence_col_specs, seq_NUM_COLS );
     REQUIRE_NOT_NULL ( m_curs );
 
@@ -146,7 +141,8 @@ FIXTURE_TEST_CASE ( NGS_FragmentBlobMake_NullRunName, FragmentBlobFixture )
 FIXTURE_TEST_CASE ( NGS_FragmentBlobMake_BadRowId, FragmentBlobFixture )
 {
     ENTRY;
-    REQUIRE_RC ( VDBManagerOpenTableRead ( m_ctx -> rsrc -> vdb, & m_tbl, NULL, SRA_Accession ) );
+
+    m_tbl = openTable( SRA_Accession );
     m_curs = NGS_CursorMake ( m_ctx, m_tbl, sequence_col_specs, seq_NUM_COLS );
     REQUIRE_NOT_NULL ( m_curs );
     NGS_String* run = NGS_StringMake ( m_ctx, SRA_Accession, string_size ( SRA_Accession ) );
@@ -311,8 +307,7 @@ FIXTURE_TEST_CASE ( NGS_FragmentBlob_InfoByOffset_WithRepeat, FragmentBlobFixtur
     const uint64_t OffsetIntoRepeatedRowId = 8889;
     const char* acc = "SRR341578";
 
-    const VDatabase *db;
-    REQUIRE_RC ( VDBManagerOpenDBRead ( m_ctx -> rsrc -> vdb, & db, NULL, acc ) );
+    const VDatabase *db = openDB( acc );
     REQUIRE_RC ( VDatabaseOpenTableRead ( db, & m_tbl, "SEQUENCE" ) );
     REQUIRE_RC ( VDatabaseRelease ( db ) );
 
@@ -382,16 +377,9 @@ public:
     {
     }
 
-    void MakeSRA( const char* acc )
-    {
-        if ( m_tbl != 0 )
-            VTableRelease ( m_tbl );
-        if ( VDBManagerOpenTableRead ( m_ctx -> rsrc -> vdb, & m_tbl, NULL, acc ) != 0 )
-            throw logic_error ("BlobIteratorFixture::MakeSRA VDBManagerOpenTableRead failed");
-    }
     void MakeIterator( const char* acc )
     {
-        MakeSRA ( acc );
+        m_tbl = openTable( acc );
         NGS_String* run = NGS_StringMake ( m_ctx, acc, string_size ( acc ) );
         m_blobIt = NGS_FragmentBlobIteratorMake ( m_ctx, run, m_tbl );
         NGS_StringRelease ( run, m_ctx );
@@ -434,7 +422,7 @@ FIXTURE_TEST_CASE ( NGS_FragmentBlobIterator_BadMake, BlobIteratorFixture )
 FIXTURE_TEST_CASE ( NGS_FragmentBlobIterator_CreateRelease, BlobIteratorFixture )
 {
     ENTRY;
-    MakeSRA ( SRA_Accession );
+    m_tbl = openTable( SRA_Accession );
 
     NGS_String* run = NGS_StringMake ( m_ctx, SRA_Accession, string_size ( SRA_Accession ) );
     REQUIRE ( ! FAILED () );
@@ -547,8 +535,7 @@ FIXTURE_TEST_CASE ( NGS_FragmentBlobIterator_IteratorRetreats, BlobIteratorFixtu
 {   // VDB-2809: NGS_FragmentBlobIterator returns overlapping blobs on CSRA1 accessions
     ENTRY;
     const char* acc = "SRR833251";
-    const VDatabase *db;
-    REQUIRE_RC ( VDBManagerOpenDBRead ( m_ctx -> rsrc -> vdb, & db, NULL, acc ) );
+    const VDatabase *db = openDB( acc );
     REQUIRE_RC ( VDatabaseOpenTableRead ( db, & m_tbl, "SEQUENCE" ) );
     REQUIRE_RC ( VDatabaseRelease ( db ) );
 
@@ -600,8 +587,10 @@ const char UsageDefaultName[] = "test-ngs";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
-    rc_t m_coll=NgsFragmentBlobTestSuite(argc, argv);
-    return m_coll;
+    KConfigDisableUserSettings();
+    rc_t ret=NgsFragmentBlobTestSuite(argc, argv);
+    NGS_C_Fixture::ReleaseCache();
+    return ret;
 }
 
 }

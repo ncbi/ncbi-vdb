@@ -62,6 +62,8 @@ typedef enum {
     eOT_wgs,
     eOT_na,
     eOT_nakmer,
+
+    eOT_sdlObject, /* a special type for KServiceAddObject */
 } EObjectType;
 
 
@@ -78,6 +80,8 @@ KFG_EXTERN rc_t CC KartItemRelease(const KartItem *self);
 /** Do not release the returned String !
  *  N.B. returned String is not required to be NULL-terminated !
  */
+KFG_EXTERN rc_t CC KartItemGetTicket(const KartItem *self,
+    char * buffer, size_t buffer_size, size_t * written);
 /* VERSION 1.0 ****************************************************************/
 KFG_EXTERN rc_t CC KartItemProjId(const KartItem *self, const String **elem);
 KFG_EXTERN rc_t CC KartItemProjIdNumber(const KartItem *self, uint64_t *id);
@@ -106,6 +110,8 @@ KFG_EXTERN rc_t CC KartRelease(const Kart *self);
 
 KFG_EXTERN rc_t CC KartMake(const struct KDirectory *dir, const char *path,
     Kart **kart, bool *isKart);
+KFG_EXTERN rc_t CC KartMakeWithNgc(const struct KDirectory *dir,
+    const char *path, Kart **kart, bool *isKart, const char *ngcPath);
 #ifdef _DEBUGGING
 KFG_EXTERN rc_t CC KartMakeText(const struct KDirectory *dir, const char *path,
     Kart **kart, bool *isKart);
@@ -114,7 +120,10 @@ KFG_EXTERN rc_t CC KartMakeText(const struct KDirectory *dir, const char *path,
 KFG_EXTERN rc_t CC KartPrint(const Kart *self);
 KFG_EXTERN rc_t CC KartPrintNumbered(const Kart *self);
 
+/* kart iterator */
 KFG_EXTERN rc_t CC KartMakeNextItem(const Kart *self, const KartItem **item);
+/* reset kart iterator */
+KFG_EXTERN rc_t CC KartReset(const Kart *self);
 
 KFG_EXTERN rc_t CC KartItemsProcessed(const Kart *self, uint16_t *number);
 

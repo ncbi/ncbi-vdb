@@ -82,8 +82,9 @@ extern function NCBI:SRA:spot_name_token
  *  1.0.2 - bring in clip processing from external table
  *  1.0.3 - base explicitly upon sra #1.0.2, clip #1.0.1
  *  1.0.4 - base explicitly upon sra #1.0.3, clip #1.0.2
+ *  1.0.5 - base explicitly upon sra #1.0.4
  */
-table NCBI:SRA:_454_:common #1.0.4 = INSDC:SRA:tbl:sra #1.0.3, NCBI:SRA:tbl:clip #1.0.2
+table NCBI:SRA:_454_:common #1.0.5 = INSDC:SRA:tbl:sra #1.0.4, NCBI:SRA:tbl:clip #1.0.2
 {
     /* PLATFORM
      *  platform name is always 454
@@ -215,9 +216,9 @@ physical INSDC:position:one NCBI:SRA:_454_:encoding:POSITION #2
         return ( INSDC:position:one ) < I32 > integral ( pos_1st_deriv );
     }
     encode
-    { 
+    {
         I32 pos_1st_deriv = < I32 > deriv ( @ );
-        return izip ( pos_1st_deriv ); 
+        return izip ( pos_1st_deriv );
     }
 }
 
@@ -226,12 +227,14 @@ physical INSDC:position:one NCBI:SRA:_454_:encoding:POSITION #2
  * history:
  *  1.0.6 - base upon updated ancestry
  *  1.0.7 - base upon updated ancestry
+ *  1.0.8 - base upon sra_nopos #2.1.4, common #1.0.5
+ *  2.0.0 - NCBI:tbl:base_space uses metadata RNA_Flag to support RNA reads
  */
-table NCBI:SRA:_454_:tbl:v2 #1.0.7
-    = NCBI:SRA:tbl:sra_nopos #2.1.3
-    , NCBI:tbl:base_space #2.0.3
+table NCBI:SRA:_454_:tbl:v2 #2
+    = NCBI:SRA:tbl:sra_nopos #2.1.4
+    , NCBI:tbl:base_space #3
     , NCBI:tbl:phred_quality #2.0.3
-    , NCBI:SRA:_454_:common #1.0.4
+    , NCBI:SRA:_454_:common #1.0.5
 {
     /* NAME tokenizing and coordinates
      *  most work happens in skeyname table

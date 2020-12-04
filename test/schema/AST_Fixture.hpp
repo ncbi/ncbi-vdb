@@ -31,8 +31,8 @@
 */
 
 #include <stdint.h>
-
 #include <string>
+#include <cmath>
 
 #include <klib/text.h>
 
@@ -43,12 +43,7 @@
 using namespace ncbi::SchemaParser;
 #include "../../libs/schema/schema-tokens.h"
 
-// hide an unfortunately named C function
-#define typename __typename
 #include "../../libs/vdb/schema-parse.h"
-#undef typename
-
-#define KW_TOKEN(v,k) SchemaToken v = { KW_##k, #k, strlen(#k), 0, 0 }
 
 struct KSymbol;
 struct SDatatype;
@@ -57,6 +52,13 @@ struct SDatatype;
 const uint32_t U8_id     = 9;
 const uint32_t U16_id    = 10;
 const uint32_t U32_id    = 11;
+const uint32_t U64_id    = 12;
+const uint32_t I8_id     = 13;
+const uint32_t F32_id    = 17;
+const uint32_t F64_id    = 18;
+const uint32_t Bool_id   = 19;
+const uint32_t ASCII_id  = 23;
+const uint32_t UTF8_id   = 24;
 
 class AST_Fixture
 {
@@ -68,7 +70,7 @@ public:
 
     AST * MakeAst ( const char* p_source );
 
-    void VerifyErrorMessage ( const char* p_source, const char* p_expectedError );
+    void VerifyErrorMessage ( const char* p_source, const char* p_expectedError, uint32_t p_line = 0, uint32_t p_column = 0 );
 
     enum yytokentype TokenType ( const ParseTree * p_node ) const
     {
@@ -97,6 +99,14 @@ public:
 
     void CreateFile ( const char * p_name, const char * p_content );
 
+    const STable * GetTable ( uint32_t p_idx )
+    {
+        return static_cast < const STable* > ( VectorGet ( & GetSchema () -> tbl, p_idx ) );
+    }
+
+    static void DumpSymbolTable ( const KSymTable & self );
+    static void DumpScope ( const BSTree & scope, const char * title = "" );
+
     // set to true to control debugging output (all false by default)
     bool m_debugParse;
     bool m_printTree;
@@ -111,6 +121,21 @@ public:
     VSchema *   m_schema;
     bool        m_newParse;
 
+};
+
+// convernience wrapper for Vector ( a KVector of void * )
+template <typename T>
+class VdbVector
+{
+public:
+    VdbVector( const Vector & p_v ) : m_v ( p_v ) {}
+    uint32_t Count() const { return  VectorLength ( & m_v ); }
+    const T * Get( uint32_t p_idx ) const
+    {
+        return static_cast < const T * > ( VectorGet ( & m_v, VectorStart ( & m_v ) + p_idx ) );
+    }
+
+    const Vector & m_v;
 };
 
 #endif

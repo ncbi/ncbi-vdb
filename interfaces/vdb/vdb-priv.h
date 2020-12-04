@@ -35,6 +35,10 @@
 #include <klib/defs.h>
 #endif
 
+#ifndef _h_vdb_quality_
+#include <vdb/quality.h> /* VQuality */
+#endif
+
 #include <stdarg.h>
 
 #ifdef __cplusplus
@@ -48,10 +52,12 @@ extern "C" {
 struct KDatabase;
 struct KTable;
 struct KMetadata;
+struct KMDataNode;
 struct KDBManager;
 struct KDirectory;
 struct VDBManager;
 struct VFSManager;
+struct VPath;
 struct VResolver;
 struct VSchema;
 struct VTypedef;
@@ -62,6 +68,7 @@ struct VCursorParams;
 struct VXformInfo;
 struct KDataBuffer;
 struct KNamelist;
+struct String;
 
 
 /*--------------------------------------------------------------------------
@@ -109,11 +116,18 @@ VDB_EXTERN rc_t CC VDBManagerMakeReadWithVFSManager (
     struct KDirectory const *wd, struct VFSManager *vmgr );
 VDB_EXTERN rc_t CC VDBManagerMakeUpdateWithVFSManager (
     struct VDBManager **mgr, struct KDirectory *wd, struct VFSManager *vmgr );
-
+VDB_EXTERN rc_t CC VDBManagerMakeWithVFSManager ( struct VDBManager const **mgr,
+    struct KDirectory const *wd, struct VFSManager *vmgr );
 
 /** Reset VResolver to set protected repository context */
 VDB_EXTERN rc_t CC VDBManagerSetResolver
     ( struct VDBManager const * self, struct VResolver * resolver );
+
+
+/** Unreliable object: do not report occured erros */
+VDB_EXTERN int CC VDBManagerPathTypeUnreliable ( const struct VDBManager * self,
+     const char *object, ... );
+
 
 /*--------------------------------------------------------------------------
  * VSchema
@@ -136,10 +150,27 @@ VDB_EXTERN uint32_t CC VSchemaLastIntrinsicTypeId ( struct VSchema const *self )
  */
 VDB_EXTERN rc_t CC VSchemaListLegacyTables ( struct VSchema const *self, struct KNamelist **list );
 
+/* DumpToKMDataNode
+ *  given a VSchema, an updatable KMDataNode, an object spec string and object type,
+ *  find the typed object within VSchema by name, dump its schema text into the node,
+ *  and set the attribute name to the full object name and version.
+ */
+VDB_EXTERN rc_t CC VSchemaDumpToKMDataNode ( struct VSchema const * self,
+    struct KMDataNode * node, const char * spec );
+
 
 /*--------------------------------------------------------------------------
  * VDatabase
  */
+
+/* OpenDBReadVPathLight
+ *  used just to analyze VDatabase:
+ *  - don't try to locate and open vdbcache
+ *  - don't fail if database's quality does not match requested one
+ */
+VDB_EXTERN rc_t CC VDBManagerOpenDBReadVPathLight(
+    struct VDBManager const *self, const struct VDatabase **db,
+    struct VSchema const *schema, const struct VPath *path);
 
 /* OpenKDatabase
  *  returns a new reference to underlying KDatabase
@@ -153,6 +184,11 @@ VDB_EXTERN rc_t CC VDatabaseOpenKDatabaseUpdate ( struct VDatabase *self, struct
  */
 VDB_EXTERN bool CC VDatabaseIsCSRA ( struct VDatabase const *self );
 
+/* Get accession of database (is avalibable)
+ *  acc needs to be released
+ */
+VDB_EXTERN rc_t CC
+VDatabaseGetAccession(const struct VDatabase * self, const struct String ** acc);
 
 /*--------------------------------------------------------------------------
  * VTable
@@ -333,6 +369,8 @@ typedef rc_t ( CC * VNoHdrBlobFunc ) ( void *self,
 typedef bool ( CC * VUntypedFunc )
     ( struct KTable const *tbl, struct KMetadata const *meta );
 
+
+VDB_EXTERN VQuality CC VDBManagerGetQuality(const struct VDBManager * self);
 
 
 #ifdef __cplusplus

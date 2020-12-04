@@ -54,7 +54,7 @@
  *  "obj" [ IN, NULL OKAY ] - optional object mapping
  *
  */
-KLIB_EXTERN rc_t CC KSymbolInit ( KSymbol * self, 
+KLIB_EXTERN rc_t CC KSymbolInit ( KSymbol * self,
     const String * name, uint32_t type, const void * obj)
 {
     rc_t rc;
@@ -733,4 +733,24 @@ LIB_EXPORT KSymbol * CC KSymTableFindNext ( const KSymTable *self, const KSymbol
     }
 
     return next;
+}
+
+#include <stdio.h>
+
+void DumpSymbol ( BSTNode *n, void *data )
+{
+    const KSymbol * sym = (const KSymbol*) n;
+    printf ( "\t%.*s\n", sym -> name . len, sym -> name . addr );
+}
+
+LIB_EXPORT void CC KSymTableDump ( const KSymTable *self )
+{
+    uint32_t i = 0 ;
+    uint32_t count = VectorLength ( & self -> stack );
+    for ( i = 0 ; i < count; ++ i )
+    {
+        BSTree *scope = VectorGet ( & self -> stack, i );
+        printf("Scope %d\n", i);
+        BSTreeForEach ( scope, false, DumpSymbol, 0 );
+    }
 }

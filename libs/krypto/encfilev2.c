@@ -143,6 +143,34 @@ bool BufferAllZero (const void * buffer_, size_t size)
     return ret;
 }
 
+/* Compensate that KFileReadAll became non-blocking.
+   Keep calling KFileReadAll until buffer fills up
+   to satisfy caller's expectations */
+static rc_t KFile_ReadAllBlocking(const KFile *self, uint64_t pos,
+    void *buffer, size_t bsize, size_t *num_read)
+{
+    size_t count = 0;
+    rc_t rc = KFileReadAll(self, pos, buffer, bsize, &count);
+    size_t total = count;
+
+    if (rc == 0 && count != 0 && count < bsize) {
+        uint8_t *b = buffer;
+        for (b = buffer; total < bsize; total += count) {
+            count = 0;
+            rc = KFileReadAll(self, pos + total, b + total, bsize - total,
+                &count);
+            if (rc != 0 || count == 0)
+                break;
+        }
+    }
+
+    if (total != 0) {
+        *num_read = total;
+        return 0;
+    }
+
+    return rc;
+}
 
 /* ----------
  * BufferRead
@@ -162,7 +190,8 @@ rc_t KEncFileBufferRead (KEncFile * self, uint64_t offset, void * buffer,
     assert (bsize > 0);
     assert (num_read);
 
-    rc = KFileReadAll (self->encrypted, offset, buffer, bsize, num_read);
+    rc = KFile_ReadAllBlocking (self->encrypted, offset, buffer, bsize,
+        num_read);
     if (rc == 0)
     {
         if (self->enc_size < offset + *num_read)
@@ -243,8 +272,9 @@ rc_t KEncFileBufferWrite (KEncFile * self, uint64_t offset, const void * buffer,
  *  The first is a common "NCBI"
  *  The second is the format specific "nenc"
  */
+#if 0
 static const KEncFileSig KEncFileSignature = "NCBInenc";
-
+#endif
 
 /* -----
  * the common constant used throughout the project to check the byte order 
@@ -276,10 +306,11 @@ const KEncFileHeader const_header_sra
 = { "NCBIsenc", eEncFileByteOrderTag, eCurrentVersion };
 
 
+#if 0
 static
 const KEncFileHeader const_bswap_header_sra
 = { "NCBIsenc", eEncFileByteOrderReverse, eCurrentVersionReverse };
-
+#endif
     
 /* ----------
  * HeaderRead

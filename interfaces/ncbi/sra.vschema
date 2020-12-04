@@ -262,7 +262,7 @@ function merged_fmt NCBI:SRA:fsamp4:encode #2 < U32 called, U32 alt > ( NCBI:SRA
  *  1.0.1 - base explicitly upon sequence #1.0.1, spotdesc #1.0.1
  *  1.0.2 - spotdesc #1.0.2
  */
-table NCBI:SRA:tbl:spotdesc_nocol #1.0.2 = INSDC:tbl:sequence #1.0.1, INSDC:SRA:tbl:spotdesc #1.0.2
+table NCBI:SRA:tbl:spotdesc_nocol #1.1 = INSDC:tbl:sequence #1.0.1, INSDC:SRA:tbl:spotdesc #1.0.2
 {
     /* LABEL_SEG
      */
@@ -343,14 +343,16 @@ table NCBI:SRA:tbl:spotdesc_nocol #1.0.2 = INSDC:tbl:sequence #1.0.1, INSDC:SRA:
 /* history:
  *  1.0.1 - base explicitly upon spotdesc_nocol #1.0.1
  *  1.0.2 - base explicitly upon spotdesc_nocol #1.0.2
+ *  1.1 - base explicitly upon spotdesc_nocol #1.1
  */
-table NCBI:SRA:tbl:spotdesc_nophys #1.0.2 = NCBI:SRA:tbl:spotdesc_nocol #1.0.2
+table NCBI:SRA:tbl:spotdesc_nophys #1.1 = NCBI:SRA:tbl:spotdesc_nocol #1.1
 {
     // resolve virtual productions
-    U8 out_nreads = .NREADS; 
+    U8 out_nreads = .NREADS;
     ascii out_label = .LABEL;
     INSDC:SRA:xread_type out_read_type = .READ_TYPE;
     INSDC:SRA:read_filter out_rd_filter  = .RD_FILTER;
+    INSDC:SRA:spot_filter out_spot_filter = .SPOT_FILTER;
 
     INSDC:coord:zero out_label_start
         = .LABEL_START
@@ -400,8 +402,9 @@ table NCBI:SRA:tbl:spotdesc_nophys #1.0.2 = NCBI:SRA:tbl:spotdesc_nocol #1.0.2
 /* history:
  *  1.0.1 - base explicitly upon spotdesc_nophys #1.0.1
  *  1.0.2 - base explicitly upon spotdesc_nophys #1.0.2
+ *  1.1 - base explicitly upon spotdesc_nophys #1.1
  */
-table NCBI:SRA:tbl:spotdesc #1.0.2 = NCBI:SRA:tbl:spotdesc_nophys #1.0.2
+table NCBI:SRA:tbl:spotdesc #1.1 = NCBI:SRA:tbl:spotdesc_nophys #1.1
 {
     // physical column encodings
     // TBD - this has to be looked at, where dynamic segmentation is involved
@@ -409,10 +412,11 @@ table NCBI:SRA:tbl:spotdesc #1.0.2 = NCBI:SRA:tbl:spotdesc_nophys #1.0.2
     physical column < ascii > zip_encoding .LABEL = LABEL;
     physical column < INSDC:coord:zero > izip_encoding .LABEL_START = LABEL_START;
     physical column < INSDC:coord:len > izip_encoding .LABEL_LEN = LABEL_LEN;
-    physical column < INSDC:coord:zero > izip_encoding .READ_START = READ_START;
+    physical column < INSDC:coord:zero > izip_encoding .READ_START = in_read_start;
     physical column < INSDC:coord:len > izip_encoding .READ_LEN = in_read_len;
     physical column < INSDC:SRA:xread_type > zip_encoding .READ_TYPE = in_read_type;
-    physical column < INSDC:SRA:read_filter > zip_encoding .RD_FILTER = READ_FILTER;
+    physical column < INSDC:SRA:read_filter > zip_encoding .RD_FILTER = in_read_filter;
+    physical column < INSDC:SRA:spot_filter > zip_encoding .SPOT_FILTER = in_spot_filter;
 
 
 	/* INSDC:SRA:tbl:spotdesc inherited productions
@@ -457,8 +461,9 @@ table NCBI:SRA:tbl:pos #1.0.1 = INSDC:tbl:sequence #1.0.1
  *  1.0.1 - base explicitly upon sra #1.0.1
  *  1.0.2 - base explicitly upon sra #1.0.2, spotdesc_nocol #1.0.1
  *  1.0.3 - base explicitly upon sra #1.0.3, spotdesc_nocol #1.0.2
+ *  1.0.4 - base explicitly upon sra #1.0.4
  */
-table NCBI:SRA:tbl:sra_nopos #1.0.3 = INSDC:SRA:tbl:sra #1.0.3, NCBI:SRA:tbl:spotdesc_nocol #1.0.2
+table NCBI:SRA:tbl:sra_nopos #1.0.4 = INSDC:SRA:tbl:sra #1.0.4, NCBI:SRA:tbl:spotdesc_nocol #1.0.2
 {
     // v1 declares the POSITION column for all tables
     // but leaves all physical columns unstated
@@ -554,8 +559,9 @@ table NCBI:SRA:tbl:sra_nopos #1.0.3 = INSDC:SRA:tbl:sra #1.0.3, NCBI:SRA:tbl:spo
  *  1.0.1 - base explicitly upon sra #1.0.1
  *  1.0.2 - base explicitly upon sra_nopos #1.0.2, pos #1.0.1
  *  1.0.3 - base explicitly upon sra_nopos #1.0.3
+ *  1.0.4 - base explicitly upon sra_nopos #1.0.4
  */
-table NCBI:SRA:tbl:sra #1.0.3 = NCBI:SRA:tbl:sra_nopos #1.0.3, NCBI:SRA:tbl:pos #1.0.1
+table NCBI:SRA:tbl:sra #1.0.4 = NCBI:SRA:tbl:sra_nopos #1.0.4, NCBI:SRA:tbl:pos #1.0.1
 {
     // the POSITION column is synthesized for all contemporary platforms but 454
 
@@ -627,15 +633,19 @@ table NCBI:SRA:tbl:sra #1.0.3 = NCBI:SRA:tbl:sra_nopos #1.0.3, NCBI:SRA:tbl:pos 
  * left out are reads, qualities and platform-specific columns
  *
  * history:
- * 2.1.2 - base upon sra #1.0.3, spotdesc #1.0.2, stats #1.1.2
+ *  2.1.2 - base upon sra #1.0.3, spotdesc #1.0.2, stats #1.1.2
+ *  2.1.4 - base upon sra #1.0.4, skeyname #3.0.2, stats #1.2.1
  */
-table NCBI:SRA:tbl:sra_nopos #2.1.3 = INSDC:SRA:tbl:sra #1.0.3,
-    NCBI:SRA:tbl:skeyname #3.0.1, NCBI:SRA:tbl:spotdesc #1.0.2, NCBI:SRA:tbl:stats #1.2.0
+table NCBI:SRA:tbl:sra_nopos #2.1.4
+    = INSDC:SRA:tbl:sra #1.0.4
+    , NCBI:SRA:tbl:skeyname #3.0.2
+    , NCBI:SRA:tbl:spotdesc #1.0.2
+    , NCBI:SRA:tbl:stats #1.2.1
 {
     // this is already specified in INSDC:SRA:tbl:sra #1
     // but putting it here will quiet down outputs
     INSDC:SRA:platform_id out_platform = .PLATFORM;
-    
+
     column INSDC:position:one POSITION
         = out_position;
     readonly column NCBI:SRA:pos16 POSITION
@@ -702,10 +712,14 @@ table NCBI:SRA:tbl:sra_nopos #2.1.3 = INSDC:SRA:tbl:sra #1.0.3,
  *
  * history:
  *  2.1.2 - base upon sra#1.0.3, spotdesc #1.0.2, stats #1.1.2
+ *  2.1.4 - base upon sra #1.0.4, skeyname #3.0.2, stats #1.2.1
  */
-table NCBI:SRA:tbl:sra #2.1.3 = INSDC:SRA:tbl:sra #1.0.3,
-    NCBI:SRA:tbl:skeyname #3.0.1, NCBI:SRA:tbl:spotdesc #1.0.2,
-    NCBI:SRA:tbl:stats #1.2.0, NCBI:SRA:tbl:pos #1.0.1
+table NCBI:SRA:tbl:sra #2.1.4
+    = INSDC:SRA:tbl:sra #1.0.4
+    , NCBI:SRA:tbl:skeyname #3.0.2
+    , NCBI:SRA:tbl:spotdesc #1.0.2
+    , NCBI:SRA:tbl:stats #1.2.1
+    , NCBI:SRA:tbl:pos #1.0.1
 {
     readonly column INSDC:position:one POSITION
         = out_position;

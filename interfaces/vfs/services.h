@@ -1,7 +1,6 @@
 #ifndef _h_vfs_services_
 #define _h_vfs_services_
 
-
 /*===========================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
@@ -24,12 +23,13 @@
 *
 *  Please cite the author in any work or product based on this material.
 *
-* ===========================================================================
-*
+* ==============================================================================
+* external SERVICES
 */
 
 
 #include <kfg/kart.h>     /* EObjectType */
+#include <vdb/quality.h> /* VQuality */
 #include <vfs/resolver.h> /* VRemoteProtocols */
 
 
@@ -41,10 +41,25 @@ extern "C" {
 struct Kart;
 struct KNSManager;
 
+typedef struct KSrvRunIterator KSrvRunIterator;
 typedef struct KService KService;
 typedef struct KSrvError KSrvError;
 typedef struct KSrvResponse KSrvResponse;
+typedef struct KSrvRun KSrvRun;
 
+typedef struct KSrvRespObj KSrvRespObj;
+typedef struct KSrvRespObjIterator KSrvRespObjIterator;
+typedef struct KSrvRespFile KSrvRespFile;
+typedef struct KSrvRespFileIterator KSrvRespFileIterator;
+
+/* File Format from name resolver response - verson 4 */
+typedef enum {
+    eSFFInvalid,
+    eSFFSkipped,
+    eSFFSra,
+    eSFFVdbcache,
+    eSFFMax,
+} ESrvFileFormat;
 
 /******************************************************************************/
 /* KService - EXTERNAL Service */
@@ -58,9 +73,23 @@ rc_t KServiceRelease ( KService * self );
 /* Add an Id ( Accession or Object-Id ) to service request */
 rc_t KServiceAddId     ( KService * self, const char * id );
 
+/* Add an Object ( ObjectId or dbgap|ObjectId ) to service request */
+rc_t KServiceAddObject(KService * self, const char * id);
+
 /* Add a dbGaP Project to service request */
 rc_t KServiceAddProject ( KService * self, uint32_t id );
 
+/* Set location of data in service request */
+rc_t KServiceSetLocation(KService * self, const char * location );
+
+/* Set accept-format-in of service request */
+rc_t KServiceSetFormat(KService * self, const char * format);
+
+/* Set jwt kart argument in service request */
+rc_t KServiceSetJwtKartFile(KService * self, const char * path);
+
+/* Set ngc file argument in service request */
+rc_t KServiceSetNgcFile(KService * self, const char * path);
 
 /************************** name service - version 3 **************************/
 /* Execute Names Service Call using current default protocol version;
@@ -71,11 +100,20 @@ rc_t KServiceAddProject ( KService * self, uint32_t id );
 rc_t KServiceNamesQuery ( KService * self, VRemoteProtocols protocols, 
                           const KSrvResponse ** response );
 
+rc_t KServiceNamesQueryTo ( KService * self, VRemoteProtocols protocols,
+    const char * outDir, const char * outFile, const KSrvResponse ** response );
+
 /************************** search service - version 1 ************************/
 /* Execute Search Service Call; get Kart response */
 rc_t KServiceSearchExecute ( KService * self,
                              const struct Kart ** response );
 
+/******************************************************************************/
+/* GetResponseCStr
+ * Returns a pointer to an array that contains a null-terminated sequence
+ * of characters representing the current server response.
+ */
+const char * KServiceGetResponseCStr(const struct KService * self);
 
 /************************** KSrvResponse **************************/
 /* Release:
@@ -95,17 +133,41 @@ rc_t KSrvResponseGetPath ( const KSrvResponse * self, uint32_t idx,
     VRemoteProtocols p, const struct VPath ** path,
     const struct VPath ** vdbcache, const KSrvError ** error );
 
-/* GetLocal:
- *  get local path
+/* GetCache
+ * get cache location for KSrvResponse element number "idx"
  */
-rc_t KSrvResponseGetLocal ( const KSrvResponse * self, uint32_t idx,
-                            const struct VPath ** local );
+rc_t KSrvResponseGetCache(const KSrvResponse * self, uint32_t idx,
+    const struct VPath ** path);
 
-/* GetCache:
- *  get cache path
+/* GetNextToken:
+ * is returned in case user need to ask for next page.
+ * Do not release returned value.
+ *
+ * When returned rc == RC(rcVFS, rcQuery, rcExecuting, rcToken, rcUnexpected):
+ *  the server returned nextToken but its processing is not implemented yet.
  */
-rc_t KSrvResponseGetCache ( const KSrvResponse * self, uint32_t idx,
-                            const struct VPath ** cache );
+rc_t KSrvResponseGetNextToken(const KSrvResponse * self,
+    const char ** nextToken);
+
+/* obsolete - use KSrvResponseGetLocation2() instead */
+rc_t KSrvResponseGetLocation(const KSrvResponse * self,
+    const char * acc, const char * name,
+    const struct VPath ** local, rc_t * localRc,
+    const struct VPath ** cache, rc_t * cacheRc);
+rc_t KSrvResponseGetLocation2(const KSrvResponse * self,
+    const char * acc, const char * name, const char * type,
+    const struct VPath ** local, rc_t * localRc,
+    const struct VPath ** cache, rc_t * cacheRc);
+
+/************************** KSrvRun ******************************/
+
+rc_t KSrvResponseMakeRunIterator(const KSrvResponse * self,
+    KSrvRunIterator ** it);
+rc_t KSrvRunIteratorRelease(const KSrvRunIterator * self);
+rc_t KSrvRunIteratorNextRun(KSrvRunIterator * self, const KSrvRun ** run);
+rc_t KSrvRunRelease(const KSrvRun * self);
+rc_t KSrvRunQuery(const KSrvRun * self, struct VPath const ** local,
+    struct VPath const ** remote, struct VPath const ** cache, bool * vdbcache);
 
 /************************** KSrvError ******************************
  * KSrvError is generated for Id-s from request that produced an error response
@@ -129,6 +191,59 @@ rc_t KSrvErrorObject  ( const KSrvError * self,
                         String * id, EObjectType * type );
 /******************************************************************************/
 
+/************************** KSrvRespObj ******************************/
+
+rc_t KSrvRespObjRelease ( const KSrvRespObj * self );
+rc_t KSrvResponseGetObjByIdx ( const struct KSrvResponse * self,
+                               uint32_t idx, const KSrvRespObj ** obj );
+rc_t KSrvResponseGetObjByAcc ( const struct KSrvResponse * self,
+                               const char * acc, const KSrvRespObj ** obj );
+
+/* Do not release returned acc */
+rc_t KSrvRespObjGetAccOrId(const KSrvRespObj * self,
+	                       const char ** acc, uint32_t * id);
+
+/* Do not release returned msg */
+rc_t KSrvRespObjGetError(const KSrvRespObj * self,
+                         rc_t * rc, int64_t * code, const char ** msg);
+
+rc_t KSrvRespObjGetFileCount ( const KSrvRespObj * self, uint32_t * count ); 
+
+rc_t KSrvRespObjMakeIterator ( const KSrvRespObj * self,
+                               KSrvRespObjIterator ** it ); 
+rc_t KSrvRespObjIteratorRelease ( const KSrvRespObjIterator * self );
+
+rc_t KSrvRespObjIteratorNextFile ( KSrvRespObjIterator * self,
+                                   KSrvRespFile ** file );
+
+/* Do not release returned char pointers */
+rc_t KSrvRespFileGetAccOrId(const KSrvRespFile * self,
+    const char ** acc, uint32_t * id);
+rc_t KSrvRespFileGetClass(const KSrvRespFile * self, const char ** itemClass);
+rc_t KSrvRespFileGetAccession(const KSrvRespFile * self, const char ** acc);
+
+/* type: sra, vdbcache, etc. */
+rc_t KSrvRespFileGetType(const KSrvRespFile * self, const char ** type);
+rc_t KSrvRespFileGetFormat(const struct KSrvRespFile * self,
+    ESrvFileFormat * ff);
+
+rc_t KSrvRespFileGetQuality(const KSrvRespFile * self, VQuality * quality);
+
+rc_t KSrvRespFileGetSize(const KSrvRespFile * self, uint64_t *size);
+rc_t KSrvRespFileGetCache ( const KSrvRespFile * self,
+                            const struct VPath ** path );
+rc_t KSrvRespFileGetLocal ( const KSrvRespFile * self,
+                            const struct VPath ** path );
+
+rc_t KSrvRespFileRelease  ( const KSrvRespFile * self );
+
+rc_t KSrvRespFileMakeIterator ( const KSrvRespFile * self,
+    KSrvRespFileIterator ** it );
+rc_t KSrvRespFileIteratorRelease ( const KSrvRespFileIterator * self );
+rc_t KSrvRespFileIteratorNextPath ( KSrvRespFileIterator * self,
+                                    const struct VPath ** path );
+
+/******************************************************************************/
 
 #ifdef __cplusplus
 }

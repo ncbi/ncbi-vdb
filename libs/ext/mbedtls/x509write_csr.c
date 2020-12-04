@@ -35,6 +35,7 @@
 #include "mbedtls/x509_csr.h"
 #include "mbedtls/oid.h"
 #include "mbedtls/asn1write.h"
+#include "mbedtls/platform_util.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -43,14 +44,9 @@
 #include "mbedtls/pem.h"
 #endif
 
-/* Implementation that should never be optimized out by the compiler */
-static void mbedtls_zeroize( void *v, size_t n ) {
-    volatile unsigned char *p = v; while( n-- ) *p++ = 0;
-}
-
 void vdb_mbedtls_x509write_csr_init( mbedtls_x509write_csr *ctx )
 {
-    memset( ctx, 0, sizeof(mbedtls_x509write_csr) );
+    memset( ctx, 0, sizeof( mbedtls_x509write_csr ) );
 }
 
 void vdb_mbedtls_x509write_csr_free( mbedtls_x509write_csr *ctx )
@@ -58,7 +54,7 @@ void vdb_mbedtls_x509write_csr_free( mbedtls_x509write_csr *ctx )
     vdb_mbedtls_asn1_free_named_data_list( &ctx->subject );
     vdb_mbedtls_asn1_free_named_data_list( &ctx->extensions );
 
-    mbedtls_zeroize( ctx, sizeof(mbedtls_x509write_csr) );
+    vdb_mbedtls_platform_zeroize( ctx, sizeof( mbedtls_x509write_csr ) );
 }
 
 void vdb_mbedtls_x509write_csr_set_md_alg( mbedtls_x509write_csr *ctx, mbedtls_md_type_t md_alg )
@@ -194,14 +190,21 @@ int vdb_mbedtls_x509write_csr_der( mbedtls_x509write_csr *ctx, unsigned char *bu
      */
     vdb_mbedtls_md( vdb_mbedtls_md_info_from_type( ctx->md_alg ), c, len, hash );
 
-    pk_alg = vdb_mbedtls_pk_get_type( ctx->key );
-    if( pk_alg == MBEDTLS_PK_ECKEY )
-        pk_alg = MBEDTLS_PK_ECDSA;
-
     if( ( ret = vdb_mbedtls_pk_sign( ctx->key, ctx->md_alg, hash, 0, sig, &sig_len,
-                         f_rng, p_rng ) ) != 0 ||
-        ( ret = vdb_mbedtls_oid_get_oid_by_sig_alg( pk_alg, ctx->md_alg,
-                                        &sig_oid, &sig_oid_len ) ) != 0 )
+                                 f_rng, p_rng ) ) != 0 )
+    {
+        return( ret );
+    }
+
+    if( vdb_mbedtls_pk_can_do( ctx->key, MBEDTLS_PK_RSA ) )
+        pk_alg = MBEDTLS_PK_RSA;
+    else if( vdb_mbedtls_pk_can_do( ctx->key, MBEDTLS_PK_ECDSA ) )
+        pk_alg = MBEDTLS_PK_ECDSA;
+    else
+        return( MBEDTLS_ERR_X509_INVALID_ALG );
+
+    if( ( ret = vdb_mbedtls_oid_get_oid_by_sig_alg( pk_alg, ctx->md_alg,
+                                                &sig_oid, &sig_oid_len ) ) != 0 )
     {
         return( ret );
     }

@@ -65,7 +65,8 @@ enum eVPOption_t
     vpopt_temporary_pw_hack,
 #endif    
     vpopt_vdb_ctx,
-    vpopt_gap_ticket, 
+    vpopt_gap_ticket,
+    vpopt_gap_prjId,
     vpopt_count
 };
 
@@ -100,6 +101,8 @@ VFS_EXTERN rc_t CC VPathMakeCurrentPath ( VPath ** new_path );
 VFS_EXTERN rc_t CC VPathMakeURI ( VPath ** new_path, const char * uri );
 #endif
 
+VFS_EXTERN bool CC VPathHasRefseqContext ( const VPath * accession );
+
 
 /* Option
  *  rc == 0 if the option has been specified
@@ -109,6 +112,12 @@ VFS_EXTERN rc_t CC VPathOption ( const VPath * self, VPOption_t option,
                                 char * buffer, size_t buffer_size,
                                 size_t * num_read);
 
+/* SetParentAcc
+ * set accession of parent DB for refseqs
+ */
+rc_t VPathSetAccOfParentDb(VPath * self, const struct String * acc);
+
+rc_t VPathSaveQuality(const VPath * self);
 
 #ifdef __cplusplus
 }

@@ -98,6 +98,11 @@ KLIB_EXTERN size_t CC KTimeIso8601 ( KTime_t ts, char * s, size_t size );
 KLIB_EXTERN const KTime* CC KTimeFromIso8601 ( KTime *kt, const char * s,
                                            size_t size );
 
+/* Iso8601
+ *  populate "s" from "ks" according to RFC 2616:
+ *         Sun Nov 6 08:49:37 1994 +0000 ; ANSI C's asctime() format
+ */
+KLIB_EXTERN size_t CC KTimeRfc2616(KTime_t ts, char * s, size_t size);
 
 /* MakeTime
  *  make a KTime_t from KTime

@@ -142,7 +142,8 @@ const char * reference_col_specs [] =
     "(I64)PRIMARY_ALIGNMENT_IDS",
     "(I64)SECONDARY_ALIGNMENT_IDS",
     "(INSDC:coord:len)OVERLAP_REF_LEN",
-    "(INSDC:coord:zero)OVERLAP_REF_POS"
+    "(INSDC:coord:zero)OVERLAP_REF_POS",
+    "(INSDC:dna:text)CMP_READ",
 };
 
 const NGS_Cursor* CSRA1_ReadCollectionMakeAlignmentCursor ( CSRA1_ReadCollection * self,

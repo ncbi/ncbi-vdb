@@ -78,29 +78,16 @@ public:
 
     void MakeSRA( const char* acc )
     {
-        if ( m_tbl != 0 )
-            VTableRelease ( m_tbl );
-        if ( VDBManagerOpenTableRead ( m_ctx -> rsrc -> vdb, & m_tbl, NULL, acc ) != 0 )
-            throw logic_error ("ReadGroupInfo_Fixture::MakeSRA VDBManagerOpenTableRead failed");
-
-        if (m_rgi != 0 )
-            SRA_ReadGroupInfoRelease ( m_rgi, m_ctx );
+        m_tbl = openTable( acc );
         m_rgi = SRA_ReadGroupInfoMake ( m_ctx, m_tbl );
     }
     void MakeSRADB( const char* acc )
     {
-        if ( m_tbl != 0 )
-            VTableRelease ( m_tbl );
-        const VDatabase* db;
-        if ( VDBManagerOpenDBRead ( m_ctx -> rsrc -> vdb, & db, NULL, acc ) != 0 )
-            throw logic_error ("ReadGroupInfo_Fixture::MakeSRADB VDBManagerOpenTableRead failed");
+        const VDatabase* db = openDB( acc );
         if ( VDatabaseOpenTableRead ( db, & m_tbl, "SEQUENCE" ) != 0 )
             throw logic_error ("ReadGroupInfo_Fixture::MakeSRADB VDatabaseOpenTableRead failed");
-
         VDatabaseRelease ( db );
 
-        if (m_rgi != 0 )
-            SRA_ReadGroupInfoRelease ( m_rgi, m_ctx );
         m_rgi = SRA_ReadGroupInfoMake ( m_ctx, m_tbl );
     }
 
@@ -794,6 +781,7 @@ TEST_CASE(NGS_FailedToOpen)
     }
     REQUIRE_FAILED ();
     REQUIRE_RC ( KRepositoryMgrRelease ( repoMgr ) );
+    REQUIRE_RC ( KConfigRelease ( kfg ) );
 }
 
 //////////////////////////////////////////// Open read collection using system path
@@ -948,6 +936,7 @@ const char UsageDefaultName[] = "test-ngs";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
+    KConfigDisableUserSettings();
     rc_t m_coll=NgsTestSuite(argc, argv);
     return m_coll;
 }

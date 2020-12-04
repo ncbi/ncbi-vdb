@@ -322,6 +322,32 @@ KFS_EXTERN void CC KDirectoryCreateAlias_v2 ( KDirectory_v2 *self, ctx_t ctx,
     uint32_t access, KCreateMode mode,
     struct KPath const *targ, struct KPath const *alias );
 
+
+/* CreateLink ( v1.5 )
+ *  creates a new link (also known as a hard link).
+ *
+ *  "access" [ IN ] - standard Unix directory access mode
+ *  used when "mode" has kcmParents set and new link path does
+ *  not exist.
+ *
+ *  "mode" [ IN ] - a creation mode ( see explanation in kfs/defs.h ).
+ *
+ *  "oldpath" [ IN ] - NUL terminated string in directory-native
+ *  character set denoting existing object. THE PATH IS GIVEN RELATIVE
+ *  TO DIRECTORY ( "self" ), NOT LINK ( "newpath" )!
+ *
+ *  "newpath" [ IN ] - NUL terminated string in directory-native
+ *  character set denoting a new link.
+ */
+KFS_EXTERN rc_t CC KDirectoryCreateLink_v1 ( KDirectory_v1 *self,
+    uint32_t access, KCreateMode mode,
+    const char *oldpath, const char *newpath );
+
+KFS_EXTERN void CC KDirectoryCreateLink_v2 ( KDirectory_v2 *self, ctx_t ctx,
+    uint32_t access, KCreateMode mode,
+    struct KPath const *oldpath, struct KPath const *newpath );
+
+
 /* OpenFileRead
  *  opens an existing file with read-only access
  *
@@ -349,6 +375,22 @@ KFS_EXTERN rc_t CC KDirectoryVOpenFileRead ( const KDirectory_v1 *self,
 KFS_EXTERN rc_t CC KDirectoryOpenFileWrite_v1 ( KDirectory_v1 *self,
     struct KFile **f, bool update, const char *path, ... );
 KFS_EXTERN rc_t CC KDirectoryVOpenFileWrite ( KDirectory_v1 *self,
+    struct KFile **f, bool update, const char *path, va_list args );
+
+/* OpenFileSharedWrite ( v1.4 )
+ *  opens an existing file with shared write access
+ *
+ *  "f" [ OUT ] - return parameter for newly opened file
+ *
+ *  "update" [ IN ] - if true, open in read/write mode
+ *  otherwise, open in write-only mode
+ *
+ *  "path" [ IN ] - NUL terminated string in directory-native
+ *  character set denoting target file
+ */
+KFS_EXTERN rc_t CC KDirectoryOpenFileSharedWrite_v1 ( KDirectory_v1 *self,
+    struct KFile **f, bool update, const char *path, ... );
+KFS_EXTERN rc_t CC KDirectoryVOpenFileSharedWrite ( KDirectory_v1 *self,
     struct KFile **f, bool update, const char *path, va_list args );
 
 /* CreateFile
@@ -570,8 +612,10 @@ typedef struct NAME_VERS ( KDirectory, KDIRECTORY_VERS ) KDirectory;
 #define KDirectoryDate NAME_VERS ( KDirectoryDate , KDIRECTORY_VERS ) 
 #define KDirectorySetDate NAME_VERS ( KDirectorySetDate , KDIRECTORY_VERS ) 
 #define KDirectoryCreateAlias NAME_VERS ( KDirectoryCreateAlias , KDIRECTORY_VERS )
+#define KDirectoryCreateLink NAME_VERS ( KDirectoryCreateLink , KDIRECTORY_VERS )
 #define KDirectoryOpenFileRead NAME_VERS ( KDirectoryOpenFileRead , KDIRECTORY_VERS )
 #define KDirectoryOpenFileWrite NAME_VERS ( KDirectoryOpenFileWrite , KDIRECTORY_VERS ) 
+#define KDirectoryOpenFileSharedWrite NAME_VERS ( KDirectoryOpenFileSharedWrite , KDIRECTORY_VERS ) 
 #define KDirectoryCreateFile NAME_VERS ( KDirectoryCreateFile , KDIRECTORY_VERS )
 #define KDirectoryFileSize NAME_VERS ( KDirectoryFileSize , KDIRECTORY_VERS ) 
 #define KDirectoryFilePhysicalSize NAME_VERS ( KDirectoryFilePhysicalSize , KDIRECTORY_VERS ) 

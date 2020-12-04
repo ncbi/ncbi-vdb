@@ -36,6 +36,8 @@
 
 #include <kdb/manager.h>
 
+#include <kfg/config.h> /* KConfigDisableUserSettings */
+
 #include <vdb/manager.h>
 #include <vdb/vdb-priv.h>
 
@@ -799,17 +801,15 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReadGroupNext_BeyondEnd, CSRA1_Fixture)
     EXIT;
 }
 
-TEST_CASE(CSRA1_NGS_ReadCollectionHasReference)
+FIXTURE_TEST_CASE(CSRA1_NGS_ReadCollectionHasReference, CSRA1_Fixture)
 {
-    HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
+    ENTRY_ACC(CSRA1_PrimaryOnly);
 
-    NGS_ReadCollection* read_coll = NGS_ReadCollectionMake ( ctx, CSRA1_PrimaryOnly );
+    REQUIRE ( m_coll != NULL );
+    REQUIRE ( NGS_ReadCollectionHasReference ( m_coll, ctx, "supercont2.2" ) );
+    REQUIRE ( ! NGS_ReadCollectionHasReference ( m_coll, ctx, "non-existent acc" ) );
 
-    REQUIRE ( read_coll != NULL );
-    REQUIRE ( NGS_ReadCollectionHasReference ( read_coll, ctx, "supercont2.2" ) );
-    REQUIRE ( ! NGS_ReadCollectionHasReference ( read_coll, ctx, "non-existent acc" ) );
-
-    NGS_ReadCollectionRelease ( read_coll, ctx );
+    EXIT;
 }
 
 // Fragment Blobs
@@ -856,7 +856,10 @@ const char UsageDefaultName[] = "test-ngs_csra1";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
-    return NgsCsra1TestSuite(argc, argv);
+    KConfigDisableUserSettings();
+    rc_t ret = NgsCsra1TestSuite(argc, argv);
+    NGS_C_Fixture::ReleaseCache();
+    return ret;
 }
 
 }

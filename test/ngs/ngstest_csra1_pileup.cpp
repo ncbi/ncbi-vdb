@@ -35,6 +35,8 @@
 
 #include <kdb/manager.h>
 
+#include <kfg/config.h> /* KConfigDisableUserSettings */
+
 #include <vdb/manager.h>
 #include <vdb/vdb-priv.h>
 
@@ -59,7 +61,7 @@ const char* CSRA1_WithCircularReference = "SRR821492";
 #define ENTRY_GET_PILEUP_NEXT(acc,ref) \
     ENTRY_GET_PILEUP(acc,ref) \
     REQUIRE ( NGS_PileupIteratorNext ( m_pileup, ctx ) );
-    
+
 #define ENTRY_GET_PILEUP_SLICE(acc,ref,offset,size) \
     ENTRY_GET_REF(acc,ref) \
     m_pileup = NGS_ReferenceGetPileupSlice( m_ref, ctx, offset, size, true, false); \
@@ -68,7 +70,7 @@ const char* CSRA1_WithCircularReference = "SRR821492";
 #define ENTRY_GET_PILEUP_SLICE_NEXT(acc,ref,offset,size) \
     ENTRY_GET_PILEUP_SLICE(acc,ref,offset,size); \
     REQUIRE ( NGS_PileupIteratorNext ( m_pileup, ctx ) );
-    
+
 class CSRA1_Fixture : public NGS_C_Fixture
 {
 public:
@@ -88,7 +90,7 @@ public:
         }
         NGS_C_Fixture :: Release ();
     }
-    
+
     void Advance ( uint32_t count )
     {
         while ( count > 0 )
@@ -98,7 +100,7 @@ public:
             --count;
         }
     }
-    
+
     void PrintAll ()
     {
         HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
@@ -118,7 +120,7 @@ public:
         }
     }
 
-    
+
     NGS_Pileup*     m_pileup;
 };
 
@@ -130,36 +132,36 @@ FIXTURE_TEST_CASE(CSRA1_PileupIterator_NoAccessBeforeNext_PileupGetReferenceSpec
 {
     ENTRY_GET_PILEUP ( CSRA1_PrimaryOnly, "supercont2.1" );
 
-    REQUIRE_NULL ( NGS_PileupGetReferenceSpec ( m_pileup, ctx ) ); 
+    REQUIRE_NULL ( NGS_PileupGetReferenceSpec ( m_pileup, ctx ) );
     REQUIRE_FAILED ();
-    
+
     EXIT;
 }
 FIXTURE_TEST_CASE(CSRA1_PileupIterator_NoAccessBeforeNext_PileupGetReferencePosition, CSRA1_Fixture)
 {
     ENTRY_GET_PILEUP ( CSRA1_PrimaryOnly, "supercont2.1" );
 
-    NGS_PileupGetReferencePosition ( m_pileup, ctx ); 
+    NGS_PileupGetReferencePosition ( m_pileup, ctx );
     REQUIRE_FAILED ();
-    
+
     EXIT;
 }
 FIXTURE_TEST_CASE(CSRA1_PileupIterator_NoAccessBeforeNext_PileupGetReferenceBase, CSRA1_Fixture)
 {
     ENTRY_GET_PILEUP ( CSRA1_PrimaryOnly, "supercont2.1" );
 
-    REQUIRE_EQ ( (char)0, NGS_PileupGetReferenceBase ( m_pileup, ctx ) ); 
+    REQUIRE_EQ ( (char)0, NGS_PileupGetReferenceBase ( m_pileup, ctx ) );
     REQUIRE_FAILED ();
-    
+
     EXIT;
 }
 FIXTURE_TEST_CASE(CSRA1_PileupIterator_NoAccessBeforeNext_PileupGetPileupDepth, CSRA1_Fixture)
 {
     ENTRY_GET_PILEUP ( CSRA1_PrimaryOnly, "supercont2.1" );
 
-    NGS_PileupGetPileupDepth ( m_pileup, ctx ); 
+    NGS_PileupGetPileupDepth ( m_pileup, ctx );
     REQUIRE_FAILED ();
-    
+
     EXIT;
 }
 
@@ -168,7 +170,7 @@ FIXTURE_TEST_CASE(CSRA1_PileupIterator_NoAccessBeforeNext_PileupGetPileupDepth, 
 FIXTURE_TEST_CASE(CSRA1_PileupIterator_AccessAfterNext_PileupGetReferenceSpec, CSRA1_Fixture)
 {
     ENTRY_GET_PILEUP_NEXT ( CSRA1_PrimaryOnly, "supercont2.1" );
-    REQUIRE_STRING ( "supercont2.1", NGS_PileupGetReferenceSpec ( m_pileup, ctx ) ); 
+    REQUIRE_STRING ( "supercont2.1", NGS_PileupGetReferenceSpec ( m_pileup, ctx ) );
     EXIT;
 }
 
@@ -176,9 +178,9 @@ FIXTURE_TEST_CASE(CSRA1_PileupIterator_AccessAfterNext_PileupGetReferencePositio
 {
     ENTRY_GET_PILEUP_NEXT ( CSRA1_PrimaryOnly, "supercont2.1" );
 
-    REQUIRE_EQ ( (int64_t)0, NGS_PileupGetReferencePosition ( m_pileup, ctx ) ); 
+    REQUIRE_EQ ( (int64_t)0, NGS_PileupGetReferencePosition ( m_pileup, ctx ) );
     REQUIRE ( ! FAILED () );
-    
+
     EXIT;
 }
 
@@ -186,16 +188,16 @@ FIXTURE_TEST_CASE(CSRA1_PileupIterator_AccessAfterNext_PileupGetReferenceBase, C
 {
     ENTRY_GET_PILEUP_NEXT ( CSRA1_PrimaryOnly, "supercont2.1" );
 
-    char base = NGS_PileupGetReferenceBase ( m_pileup, ctx ); 
+    char base = NGS_PileupGetReferenceBase ( m_pileup, ctx );
     //REQUIRE ( ! FAILED () && base != 0 );
-    
+
     EXIT;
 }
 
 FIXTURE_TEST_CASE(CSRA1_PileupIterator_AccessAfterNext_PileupGetPileupDepth, CSRA1_Fixture)
 {
     ENTRY_GET_PILEUP_NEXT ( CSRA1_PrimaryOnly, "supercont2.1" );
-    REQUIRE_EQ ( (unsigned int)0, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
+    REQUIRE_EQ ( (unsigned int)0, NGS_PileupGetPileupDepth ( m_pileup, ctx ) );
     EXIT;
 }
 
@@ -205,19 +207,19 @@ FIXTURE_TEST_CASE(CSRA1_PileupIterator_NoAccessAfterEnd_PileupGetReferenceSpec, 
     ENTRY_GET_PILEUP ( CSRA1_PrimaryOnly, "supercont2.1" );
     while ( NGS_PileupIteratorNext ( m_pileup, ctx ) ) {}
 
-    REQUIRE_NULL ( NGS_PileupGetReferenceSpec ( m_pileup, ctx ) ); 
+    REQUIRE_NULL ( NGS_PileupGetReferenceSpec ( m_pileup, ctx ) );
     REQUIRE_FAILED ();
-    
+
     EXIT;
 }
 FIXTURE_TEST_CASE(CSRA1_PileupIterator_NoAccessAfterEnd_PileupGetReferencePosition, CSRA1_Fixture)
 {
     ENTRY_GET_PILEUP ( CSRA1_PrimaryOnly, "supercont2.1" );
     while ( NGS_PileupIteratorNext ( m_pileup, ctx ) ) {}
-    
-    NGS_PileupGetReferencePosition ( m_pileup, ctx ); 
+
+    NGS_PileupGetReferencePosition ( m_pileup, ctx );
     REQUIRE_FAILED ();
-    
+
     EXIT;
 }
 FIXTURE_TEST_CASE(CSRA1_PileupIterator_NoAccessAfterEnd_PileupGetReferenceBase, CSRA1_Fixture)
@@ -225,9 +227,9 @@ FIXTURE_TEST_CASE(CSRA1_PileupIterator_NoAccessAfterEnd_PileupGetReferenceBase, 
     ENTRY_GET_PILEUP ( CSRA1_PrimaryOnly, "supercont2.1" );
     while ( NGS_PileupIteratorNext ( m_pileup, ctx ) ) {}
 
-    REQUIRE_EQ ( (char)0, NGS_PileupGetReferenceBase ( m_pileup, ctx ) ); 
+    REQUIRE_EQ ( (char)0, NGS_PileupGetReferenceBase ( m_pileup, ctx ) );
     REQUIRE_FAILED ();
-    
+
     EXIT;
 }
 FIXTURE_TEST_CASE(CSRA1_PileupIterator_NoAccessAfterEnd_PileupGetPileupDepth, CSRA1_Fixture)
@@ -235,9 +237,9 @@ FIXTURE_TEST_CASE(CSRA1_PileupIterator_NoAccessAfterEnd_PileupGetPileupDepth, CS
     ENTRY_GET_PILEUP ( CSRA1_PrimaryOnly, "supercont2.1" );
     while ( NGS_PileupIteratorNext ( m_pileup, ctx ) ) {}
 
-    NGS_PileupGetPileupDepth ( m_pileup, ctx ); 
+    NGS_PileupGetPileupDepth ( m_pileup, ctx );
     REQUIRE_FAILED ();
-    
+
     EXIT;
 }
 FIXTURE_TEST_CASE(CSRA1_PileupIterator_NoAccessAfterEnd_PileupIteratorNext, CSRA1_Fixture)
@@ -245,8 +247,8 @@ FIXTURE_TEST_CASE(CSRA1_PileupIterator_NoAccessAfterEnd_PileupIteratorNext, CSRA
     ENTRY_GET_PILEUP ( CSRA1_PrimaryOnly, "supercont2.1" );
     while ( NGS_PileupIteratorNext ( m_pileup, ctx ) ) {}
 
-    REQUIRE ( ! NGS_PileupIteratorNext ( m_pileup, ctx ) ); 
-    
+    REQUIRE ( ! NGS_PileupIteratorNext ( m_pileup, ctx ) );
+
     EXIT;
 }
 
@@ -255,13 +257,13 @@ FIXTURE_TEST_CASE(CSRA1_PileupIterator_NoAccessAfterEnd_PileupIteratorNext, CSRA
 FIXTURE_TEST_CASE(CSRA1_PileupIterator_PileupGetReferencePosition, CSRA1_Fixture)
 {
     ENTRY_GET_PILEUP_NEXT ( CSRA1_PrimaryOnly, "supercont2.1" );
-    
-    REQUIRE_EQ ( (int64_t)0, NGS_PileupGetReferencePosition ( m_pileup, ctx ) ); 
+
+    REQUIRE_EQ ( (int64_t)0, NGS_PileupGetReferencePosition ( m_pileup, ctx ) );
     REQUIRE ( NGS_PileupIteratorNext ( m_pileup, ctx ) );
-    REQUIRE_EQ ( (int64_t)1, NGS_PileupGetReferencePosition ( m_pileup, ctx ) ); 
+    REQUIRE_EQ ( (int64_t)1, NGS_PileupGetReferencePosition ( m_pileup, ctx ) );
     REQUIRE ( NGS_PileupIteratorNext ( m_pileup, ctx ) );
-    REQUIRE_EQ ( (int64_t)2, NGS_PileupGetReferencePosition ( m_pileup, ctx ) ); 
-    
+    REQUIRE_EQ ( (int64_t)2, NGS_PileupGetReferencePosition ( m_pileup, ctx ) );
+
     EXIT;
 }
 
@@ -271,14 +273,14 @@ FIXTURE_TEST_CASE(CSRA1_PileupIterator_PileupGetPileupDepth_1, CSRA1_Fixture)
 
     Advance(85);
 
-    REQUIRE_EQ ( (int64_t)84, NGS_PileupGetReferencePosition ( m_pileup, ctx ) ); 
-    REQUIRE_EQ ( (unsigned int)0, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
+    REQUIRE_EQ ( (int64_t)84, NGS_PileupGetReferencePosition ( m_pileup, ctx ) );
+    REQUIRE_EQ ( (unsigned int)0, NGS_PileupGetPileupDepth ( m_pileup, ctx ) );
 
     Advance(1);
 
-    REQUIRE_EQ ( (int64_t)85, NGS_PileupGetReferencePosition ( m_pileup, ctx ) ); 
-    REQUIRE_EQ ( (unsigned int)1, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
-    
+    REQUIRE_EQ ( (int64_t)85, NGS_PileupGetReferencePosition ( m_pileup, ctx ) );
+    REQUIRE_EQ ( (unsigned int)1, NGS_PileupGetPileupDepth ( m_pileup, ctx ) );
+
     EXIT;
 }
 FIXTURE_TEST_CASE(CSRA1_PileupIterator_PileupGetPileupDepth_2, CSRA1_Fixture)
@@ -286,9 +288,9 @@ FIXTURE_TEST_CASE(CSRA1_PileupIterator_PileupGetPileupDepth_2, CSRA1_Fixture)
     ENTRY_GET_PILEUP ( CSRA1_PrimaryOnly, "supercont2.1" );
 
     Advance(186);
-    REQUIRE_EQ ( (int64_t)185, NGS_PileupGetReferencePosition ( m_pileup, ctx ) ); 
-    REQUIRE_EQ ( (unsigned int)2, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
-    
+    REQUIRE_EQ ( (int64_t)185, NGS_PileupGetReferencePosition ( m_pileup, ctx ) );
+    REQUIRE_EQ ( (unsigned int)2, NGS_PileupGetPileupDepth ( m_pileup, ctx ) );
+
     EXIT;
 }
 FIXTURE_TEST_CASE(CSRA1_PileupIterator_PileupGetPileupDepth_3, CSRA1_Fixture)
@@ -297,14 +299,14 @@ FIXTURE_TEST_CASE(CSRA1_PileupIterator_PileupGetPileupDepth_3, CSRA1_Fixture)
 
     Advance(5491);
 
-    REQUIRE_EQ ( (int64_t)5490, NGS_PileupGetReferencePosition ( m_pileup, ctx ) ); 
-    REQUIRE_EQ ( (unsigned int)2, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
+    REQUIRE_EQ ( (int64_t)5490, NGS_PileupGetReferencePosition ( m_pileup, ctx ) );
+    REQUIRE_EQ ( (unsigned int)2, NGS_PileupGetPileupDepth ( m_pileup, ctx ) );
 
     Advance(1);
 
-    REQUIRE_EQ ( (int64_t)5491, NGS_PileupGetReferencePosition ( m_pileup, ctx ) ); 
-    REQUIRE_EQ ( (unsigned int)3, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
-    
+    REQUIRE_EQ ( (int64_t)5491, NGS_PileupGetReferencePosition ( m_pileup, ctx ) );
+    REQUIRE_EQ ( (unsigned int)3, NGS_PileupGetPileupDepth ( m_pileup, ctx ) );
+
     EXIT;
 }
 
@@ -325,36 +327,36 @@ FIXTURE_TEST_CASE(CSRA1_PileupIteratorSlice_NoAccessBeforeNext_PileupGetReferenc
 {
     ENTRY_GET_PILEUP_SLICE( CSRA1_PrimaryOnly, "supercont2.1", 5431, 4 );
 
-    REQUIRE_NULL ( NGS_PileupGetReferenceSpec ( m_pileup, ctx ) ); 
+    REQUIRE_NULL ( NGS_PileupGetReferenceSpec ( m_pileup, ctx ) );
     REQUIRE_FAILED ();
-    
+
     EXIT;
 }
 FIXTURE_TEST_CASE(CSRA1_PileupIteratorSlice_NoAccessBeforeNext_PileupGetReferencePosition, CSRA1_Fixture)
 {
     ENTRY_GET_PILEUP_SLICE( CSRA1_PrimaryOnly, "supercont2.1", 5431, 4 );
 
-    NGS_PileupGetReferencePosition ( m_pileup, ctx ); 
+    NGS_PileupGetReferencePosition ( m_pileup, ctx );
     REQUIRE_FAILED ();
-    
+
     EXIT;
 }
 FIXTURE_TEST_CASE(CSRA1_PileupIteratorSlice_NoAccessBeforeNext_PileupGetReferenceBase, CSRA1_Fixture)
 {
     ENTRY_GET_PILEUP_SLICE( CSRA1_PrimaryOnly, "supercont2.1", 5431, 4 );
 
-    REQUIRE_EQ ( (char)0, NGS_PileupGetReferenceBase ( m_pileup, ctx ) ); 
+    REQUIRE_EQ ( (char)0, NGS_PileupGetReferenceBase ( m_pileup, ctx ) );
     REQUIRE_FAILED ();
-    
+
     EXIT;
 }
 FIXTURE_TEST_CASE(CSRA1_PileupIteratorSlice_NoAccessBeforeNext_PileupGetPileupDepth, CSRA1_Fixture)
 {
     ENTRY_GET_PILEUP_SLICE( CSRA1_PrimaryOnly, "supercont2.1", 5431, 4 );
 
-    NGS_PileupGetPileupDepth ( m_pileup, ctx ); 
+    NGS_PileupGetPileupDepth ( m_pileup, ctx );
     REQUIRE_FAILED ();
-    
+
     EXIT;
 }
 
@@ -363,7 +365,7 @@ FIXTURE_TEST_CASE(CSRA1_PileupIteratorSlice_NoAccessBeforeNext_PileupGetPileupDe
 FIXTURE_TEST_CASE(CSRA1_PileupIteratorSlice_AccessAfterNext_PileupGetReferenceSpec, CSRA1_Fixture)
 {
     ENTRY_GET_PILEUP_SLICE_NEXT( CSRA1_PrimaryOnly, "supercont2.1", 5431, 4 );
-    REQUIRE_STRING ( "supercont2.1", NGS_PileupGetReferenceSpec ( m_pileup, ctx ) ); 
+    REQUIRE_STRING ( "supercont2.1", NGS_PileupGetReferenceSpec ( m_pileup, ctx ) );
     EXIT;
 }
 
@@ -371,9 +373,9 @@ FIXTURE_TEST_CASE(CSRA1_PileupIteratorSlice_AccessAfterNext_PileupGetReferencePo
 {
     ENTRY_GET_PILEUP_SLICE_NEXT( CSRA1_PrimaryOnly, "supercont2.1", 5431, 4 );
 
-    REQUIRE_EQ ( (int64_t)5431, NGS_PileupGetReferencePosition ( m_pileup, ctx ) ); 
+    REQUIRE_EQ ( (int64_t)5431, NGS_PileupGetReferencePosition ( m_pileup, ctx ) );
     REQUIRE ( ! FAILED () );
-    
+
     EXIT;
 }
 
@@ -381,16 +383,16 @@ FIXTURE_TEST_CASE(CSRA1_PileupIteratorSlice_AccessAfterNext_PileupGetReferenceBa
 {
     ENTRY_GET_PILEUP_SLICE_NEXT( CSRA1_PrimaryOnly, "supercont2.1", 5431, 4 );
 
-    char base = NGS_PileupGetReferenceBase ( m_pileup, ctx ); 
+    char base = NGS_PileupGetReferenceBase ( m_pileup, ctx );
     //REQUIRE ( ! FAILED () && base != 0 );
-    
+
     EXIT;
 }
 
 FIXTURE_TEST_CASE(CSRA1_PileupIteratorSlice_AccessAfterNext_PileupGetPileupDepth, CSRA1_Fixture)
 {
     ENTRY_GET_PILEUP_SLICE_NEXT( CSRA1_PrimaryOnly, "supercont2.1", 5431, 4 );
-    REQUIRE_EQ ( (unsigned int)1, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
+    REQUIRE_EQ ( (unsigned int)1, NGS_PileupGetPileupDepth ( m_pileup, ctx ) );
     EXIT;
 }
 
@@ -401,9 +403,9 @@ FIXTURE_TEST_CASE(CSRA1_PileupIteratorSlice_NoAccessAfterEnd_PileupGetReferenceS
     ENTRY_GET_PILEUP_SLICE( CSRA1_PrimaryOnly, "supercont2.1", 5431, 4 );
     while ( NGS_PileupIteratorNext ( m_pileup, ctx ) ) {}
 
-    REQUIRE_NULL ( NGS_PileupGetReferenceSpec ( m_pileup, ctx ) ); 
+    REQUIRE_NULL ( NGS_PileupGetReferenceSpec ( m_pileup, ctx ) );
     REQUIRE_FAILED ();
-    
+
     EXIT;
 }
 FIXTURE_TEST_CASE(CSRA1_PileupIteratorSlice_NoAccessAfterEnd_PileupGetReferencePosition, CSRA1_Fixture)
@@ -411,9 +413,9 @@ FIXTURE_TEST_CASE(CSRA1_PileupIteratorSlice_NoAccessAfterEnd_PileupGetReferenceP
     ENTRY_GET_PILEUP_SLICE( CSRA1_PrimaryOnly, "supercont2.1", 5431, 4 );
     while ( NGS_PileupIteratorNext ( m_pileup, ctx ) ) {}
 
-    NGS_PileupGetReferencePosition ( m_pileup, ctx ); 
+    NGS_PileupGetReferencePosition ( m_pileup, ctx );
     REQUIRE_FAILED ();
-    
+
     EXIT;
 }
 FIXTURE_TEST_CASE(CSRA1_PileupIteratorSlice_NoAccessAfterEnd_PileupGetReferenceBase, CSRA1_Fixture)
@@ -421,9 +423,9 @@ FIXTURE_TEST_CASE(CSRA1_PileupIteratorSlice_NoAccessAfterEnd_PileupGetReferenceB
     ENTRY_GET_PILEUP_SLICE( CSRA1_PrimaryOnly, "supercont2.1", 5431, 4 );
     while ( NGS_PileupIteratorNext ( m_pileup, ctx ) ) {}
 
-    REQUIRE_EQ ( (char) 0, NGS_PileupGetReferenceBase ( m_pileup, ctx ) ); 
+    REQUIRE_EQ ( (char) 0, NGS_PileupGetReferenceBase ( m_pileup, ctx ) );
     REQUIRE_FAILED ();
-    
+
     EXIT;
 }
 FIXTURE_TEST_CASE(CSRA1_PileupIteratorSlice_NoAccessAfterEnd_PileupGetPileupDepth, CSRA1_Fixture)
@@ -431,9 +433,9 @@ FIXTURE_TEST_CASE(CSRA1_PileupIteratorSlice_NoAccessAfterEnd_PileupGetPileupDept
     ENTRY_GET_PILEUP_SLICE( CSRA1_PrimaryOnly, "supercont2.1", 5431, 4 );
     while ( NGS_PileupIteratorNext ( m_pileup, ctx ) ) {}
 
-    NGS_PileupGetPileupDepth ( m_pileup, ctx ); 
+    NGS_PileupGetPileupDepth ( m_pileup, ctx );
     REQUIRE_FAILED ();
-    
+
     EXIT;
 }
 
@@ -442,13 +444,13 @@ FIXTURE_TEST_CASE(CSRA1_PileupIteratorSlice_NoAccessAfterEnd_PileupGetPileupDept
 FIXTURE_TEST_CASE(CSRA1_PileupIteratorSlice_PileupGetReferencePosition, CSRA1_Fixture)
 {
     ENTRY_GET_PILEUP_SLICE( CSRA1_PrimaryOnly, "supercont2.1", 5431, 2 );
-    
+
     REQUIRE ( NGS_PileupIteratorNext ( m_pileup, ctx ) );
-    REQUIRE_EQ ( (int64_t)5431, NGS_PileupGetReferencePosition ( m_pileup, ctx ) ); 
+    REQUIRE_EQ ( (int64_t)5431, NGS_PileupGetReferencePosition ( m_pileup, ctx ) );
     REQUIRE ( NGS_PileupIteratorNext ( m_pileup, ctx ) );
-    REQUIRE_EQ ( (int64_t)5432, NGS_PileupGetReferencePosition ( m_pileup, ctx ) ); 
+    REQUIRE_EQ ( (int64_t)5432, NGS_PileupGetReferencePosition ( m_pileup, ctx ) );
     REQUIRE ( ! NGS_PileupIteratorNext ( m_pileup, ctx ) );
-    
+
     EXIT;
 }
 FIXTURE_TEST_CASE(CSRA1_PileupIteratorSlice_PileupGetPileupDepth_NoFiltering, CSRA1_Fixture)
@@ -456,15 +458,15 @@ FIXTURE_TEST_CASE(CSRA1_PileupIteratorSlice_PileupGetPileupDepth_NoFiltering, CS
     ENTRY_GET_PILEUP_SLICE( CSRA1_PrimaryOnly, "supercont2.1", 404, 4 );
 
     REQUIRE ( NGS_PileupIteratorNext ( m_pileup, ctx ) );
-    REQUIRE_EQ ( (unsigned int)1, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
+    REQUIRE_EQ ( (unsigned int)1, NGS_PileupGetPileupDepth ( m_pileup, ctx ) );
     REQUIRE ( NGS_PileupIteratorNext ( m_pileup, ctx ) );
-    REQUIRE_EQ ( (unsigned int)1, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
+    REQUIRE_EQ ( (unsigned int)1, NGS_PileupGetPileupDepth ( m_pileup, ctx ) );
     REQUIRE ( NGS_PileupIteratorNext ( m_pileup, ctx ) );
-    REQUIRE_EQ ( (unsigned int)2, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
+    REQUIRE_EQ ( (unsigned int)2, NGS_PileupGetPileupDepth ( m_pileup, ctx ) );
     REQUIRE ( NGS_PileupIteratorNext ( m_pileup, ctx ) );
-    REQUIRE_EQ ( (unsigned int)2, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
+    REQUIRE_EQ ( (unsigned int)2, NGS_PileupGetPileupDepth ( m_pileup, ctx ) );
     REQUIRE ( ! NGS_PileupIteratorNext ( m_pileup, ctx ) );
-    
+
     EXIT;
 }
 
@@ -475,25 +477,25 @@ FIXTURE_TEST_CASE(CSRA1_PileupIteratorSlice_PileupGetPileupDepth_WithFiltering, 
 // positions 5505-5508 match a rejected alignment; with filtering turned off the reported depths would be 3, 3, 4, 4.
 
     REQUIRE ( NGS_PileupIteratorNext ( m_pileup, ctx ) );
-    REQUIRE_EQ ( (unsigned int)2, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
+    REQUIRE_EQ ( (unsigned int)2, NGS_PileupGetPileupDepth ( m_pileup, ctx ) );
     REQUIRE ( NGS_PileupIteratorNext ( m_pileup, ctx ) );
-    REQUIRE_EQ ( (unsigned int)2, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
+    REQUIRE_EQ ( (unsigned int)2, NGS_PileupGetPileupDepth ( m_pileup, ctx ) );
     REQUIRE ( NGS_PileupIteratorNext ( m_pileup, ctx ) );
-    REQUIRE_EQ ( (unsigned int)3, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
+    REQUIRE_EQ ( (unsigned int)3, NGS_PileupGetPileupDepth ( m_pileup, ctx ) );
     REQUIRE ( NGS_PileupIteratorNext ( m_pileup, ctx ) );
-    REQUIRE_EQ ( (unsigned int)3, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
+    REQUIRE_EQ ( (unsigned int)3, NGS_PileupGetPileupDepth ( m_pileup, ctx ) );
     REQUIRE ( ! NGS_PileupIteratorNext ( m_pileup, ctx ) );
-    
+
     EXIT;
 }
 //TODO: alignment filtering-related schema variations
-// no RD_FILTER physically exists in either PRIMARY_ALIGNMENT or SEQUENCE (no filtering) 
+// no RD_FILTER physically exists in either PRIMARY_ALIGNMENT or SEQUENCE (no filtering)
 //      (use VTableListPhysColumns) (NB. READ_FILTER may be present but virtual!)
 // RD_FILTER physically exists in PRIMARY_ALIGNMENT
 // RD_FILTER_CACHE appears to exist virtually in PRIMARY_ALIGNMENT:
 // RD_FILTER physically exists in SEQUENCE and RD_FILTER_CACHE does not exist in PRIMARY_ALIGNMENT
 
-////TODO: PileupIterator, full circular reference 
+////TODO: PileupIterator, full circular reference
 ////TODO: PileupIterator, circular reference slice
 
 // discrepancies with sra-pileup
@@ -505,13 +507,13 @@ FIXTURE_TEST_CASE(CSRA1_Pileup_ExtraPileupReported, CSRA1_Fixture)
     // sra-pileup stops at position 19417 (0-based), ngs-pileup at position 19418
 
     REQUIRE ( NGS_PileupIteratorNext ( m_pileup, ctx ) );
-    REQUIRE_EQ ( (int64_t)19416, NGS_PileupGetReferencePosition ( m_pileup, ctx ) ); 
-    REQUIRE_EQ ( (unsigned int)1, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
+    REQUIRE_EQ ( (int64_t)19416, NGS_PileupGetReferencePosition ( m_pileup, ctx ) );
+    REQUIRE_EQ ( (unsigned int)1, NGS_PileupGetPileupDepth ( m_pileup, ctx ) );
     REQUIRE ( NGS_PileupIteratorNext ( m_pileup, ctx ) );
-    REQUIRE_EQ ( (int64_t)19417, NGS_PileupGetReferencePosition ( m_pileup, ctx ) ); 
-    REQUIRE_EQ ( (unsigned int)0, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
+    REQUIRE_EQ ( (int64_t)19417, NGS_PileupGetReferencePosition ( m_pileup, ctx ) );
+    REQUIRE_EQ ( (unsigned int)0, NGS_PileupGetPileupDepth ( m_pileup, ctx ) );
     REQUIRE ( ! NGS_PileupIteratorNext ( m_pileup, ctx ) );
-    
+
     EXIT;
 }
 
@@ -521,9 +523,9 @@ FIXTURE_TEST_CASE(CSRA1_Pileup_ExtraEventReported, CSRA1_Fixture)
     // at position 12980 (0-based) sra-pileup reports depth of 15, ngs-pileup 16
 
     REQUIRE ( NGS_PileupIteratorNext ( m_pileup, ctx ) );
-    REQUIRE_EQ ( (int64_t)12979, NGS_PileupGetReferencePosition ( m_pileup, ctx ) ); 
-    REQUIRE_EQ ( (unsigned int)15, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
-    
+    REQUIRE_EQ ( (int64_t)12979, NGS_PileupGetReferencePosition ( m_pileup, ctx ) );
+    REQUIRE_EQ ( (unsigned int)15, NGS_PileupGetPileupDepth ( m_pileup, ctx ) );
+
     EXIT;
 }
 #endif
@@ -569,8 +571,10 @@ const char UsageDefaultName[] = "test-ngs_csra1_pileup";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
-    rc_t m_coll=NgsCsra1PileupTestSuite(argc, argv);
-    return m_coll;
+    KConfigDisableUserSettings();
+    rc_t ret=NgsCsra1PileupTestSuite(argc, argv);
+    NGS_C_Fixture::ReleaseCache();
+    return ret;
 }
 
 }

@@ -396,46 +396,49 @@ struct KSysDir
 static
 rc_t translate_file_error( DWORD error, enum RCContext ctx )
 {
+    rc_t rc;
     switch ( error )
     {
-    case ERROR_FILE_NOT_FOUND :
-    case ERROR_PATH_NOT_FOUND :
-    case ERROR_INVALID_DRIVE :
-        return RC ( rcFS, rcDirectory, ctx, rcPath, rcNotFound );
+        case ERROR_FILE_NOT_FOUND :
+        case ERROR_PATH_NOT_FOUND :
+        case ERROR_INVALID_DRIVE :
+            rc = RC ( rcFS, rcDirectory, ctx, rcPath, rcNotFound ); break;
 
-    case ERROR_ALREADY_EXISTS:
-    case ERROR_FILE_EXISTS :
-        return RC ( rcFS, rcDirectory, ctx, rcPath, rcExists );
+        case ERROR_ALREADY_EXISTS:
+        case ERROR_FILE_EXISTS :
+            rc = RC ( rcFS, rcDirectory, ctx, rcPath, rcExists ); break;
 
-/*    case ERROR_PATH_NOT_FOUND : */
-    case ERROR_INVALID_NAME :
-    case ERROR_BAD_PATHNAME :
-        return RC ( rcFS, rcDirectory, ctx, rcPath, rcInvalid );
+    /*    case ERROR_PATH_NOT_FOUND : */
+        case ERROR_INVALID_NAME :
+        case ERROR_BAD_PATHNAME :
+            rc = RC ( rcFS, rcDirectory, ctx, rcPath, rcInvalid ); break;
 
-    case ERROR_ACCESS_DENIED :
-    case ERROR_INVALID_ACCESS :
-    case ERROR_SHARING_VIOLATION :
-    case ERROR_LOCK_VIOLATION :
-    case ERROR_PATH_BUSY :
-    case ERROR_WRITE_PROTECT :
-    case ERROR_DELETE_PENDING :
-        return RC ( rcFS, rcDirectory, ctx, rcDirectory, rcUnauthorized );
+        case ERROR_ACCESS_DENIED :
+        case ERROR_INVALID_ACCESS :
+        case ERROR_SHARING_VIOLATION :
+        case ERROR_LOCK_VIOLATION :
+        case ERROR_PATH_BUSY :
+        case ERROR_WRITE_PROTECT :
+        case ERROR_DELETE_PENDING :
+            rc = RC ( rcFS, rcDirectory, ctx, rcDirectory, rcUnauthorized ); break;
 
-    case ERROR_NOT_ENOUGH_MEMORY :
-    case ERROR_OUTOFMEMORY :
-        return RC ( rcFS, rcDirectory, ctx, rcMemory, rcExhausted );
+        case ERROR_NOT_ENOUGH_MEMORY :
+        case ERROR_OUTOFMEMORY :
+            rc = RC ( rcFS, rcDirectory, ctx, rcMemory, rcExhausted ); break;
 
-    case ERROR_TOO_MANY_OPEN_FILES :
-        return RC ( rcFS, rcDirectory, ctx, rcFileDesc, rcExhausted );
+        case ERROR_TOO_MANY_OPEN_FILES :
+            rc = RC ( rcFS, rcDirectory, ctx, rcFileDesc, rcExhausted ); break;
 
-    case ERROR_HANDLE_DISK_FULL :
-        return RC ( rcFS, rcDirectory, ctx, rcStorage, rcExhausted );
+        case ERROR_HANDLE_DISK_FULL :
+            rc = RC ( rcFS, rcDirectory, ctx, rcStorage, rcExhausted ); break;
 
-    case ERROR_BUFFER_OVERFLOW :
-    case ERROR_FILENAME_EXCED_RANGE :
-        return RC ( rcFS, rcDirectory, ctx, rcPath, rcExcessive );
+        case ERROR_BUFFER_OVERFLOW :
+        case ERROR_FILENAME_EXCED_RANGE :
+            rc = RC ( rcFS, rcDirectory, ctx, rcPath, rcExcessive );
+        
+        default : RC ( rcFS, rcDirectory, ctx, rcNoObj, rcUnknown );
     }
-    return RC ( rcFS, rcDirectory, ctx, rcNoObj, rcUnknown );
+    return rc;
 }
 
 
@@ -2315,6 +2318,54 @@ rc_t CC KSysDirCreateAlias ( KSysDir *self, uint32_t access, KCreateMode mode,
 }
 
 
+/* CreateLink ( v1.5 )
+ *  creates a new link (also known as a hard link).
+ *
+ *  "access" [ IN ] - standard Unix directory access mode
+ *  used when "mode" has kcmParents set and alias path does
+ *  not exist.
+ *
+ *  "mode" [ IN ] - a creation mode ( see explanation above ).
+ *
+ *  "oldpath" [ IN ] - NUL terminated string in directory-native
+ *  character set denoting existing object. THE PATH IS GIVEN RELATIVE
+ *  TO DIRECTORY ( "self" ), NOT LINK ( "newpath" )!
+ *
+ *  "newpath" [ IN ] - NUL terminated string in directory-native
+ *  character set denoting a new link.
+ */
+static
+rc_t KSysDirCreateLink ( KSysDir * self, uint32_t access, KCreateMode mode,
+    const char *oldpath, const char *newpath )
+    {
+    wchar_t w_target[ MAX_PATH ];
+    rc_t rc = KSysDirMakePath ( self, rcCreating, true,
+        w_target, sizeof w_target, oldpath, NULL );
+    if ( rc == 0 )
+    {
+        wchar_t w_alias[ MAX_PATH ];
+        rc = KSysDirMakePath ( self, rcCreating, true,
+            w_alias, sizeof w_alias, newpath, NULL );
+        if ( rc == 0 )
+        {
+            /* if "self" is chroot'd, "w_alias" must be made relative */
+            if ( self -> root != 0 )
+            {
+                rc = KSysDirRelativePath ( self, rcCreating, w_alias,
+                    w_target, sizeof w_target );
+                if ( rc != 0 )
+                    return rc;
+            }
+            if (CreateSymbolicLinkA( w_alias, w_target, 0x0 ) )
+                rc = 0;
+            else
+                rc = translate_file_error( GetLastError (), rcCreating );
+        }
+    }
+    return rc;
+}
+
+
 /* KSysDirOpenFileRead
  *  opens an existing file with read-only access
  *
@@ -2370,6 +2421,46 @@ rc_t CC KSysDirOpenFileWrite ( KSysDir *self,
     {
         DWORD dwDesiredAccess = update ? GENERIC_READ | GENERIC_WRITE : GENERIC_WRITE;
         HANDLE file_handle = CreateFileW( file_name, dwDesiredAccess, FILE_SHARE_READ, NULL, 
+                                OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL );
+
+        if ( file_handle == INVALID_HANDLE_VALUE )
+        {
+            rc = print_error_for( GetLastError(), file_name, "CreateFileW", rcAccessing, klogErr );
+
+        }
+        else
+        {
+            char buffer[ MAX_PATH ];
+            wchar_2_char( file_name, buffer, sizeof buffer );
+            rc = KSysFileMake ( ( KSysFile** ) f, file_handle, buffer, update, true );
+            if ( rc != 0 )
+                CloseHandle ( file_handle );
+        }
+    }
+    return rc;
+}
+
+/* KSysDirOpenFileWrite
+ *  opens an existing file with write access
+ *
+ *  "f" [ OUT ] - return parameter for newly opened file
+ *
+ *  "path" [ IN ] - NUL terminated string in directory-native
+ *  character set denoting target file
+ *
+ *  "update" [ IN ] - if non-zero, open in read/write mode
+ *  otherwise, open in write-only mode
+ */
+static
+rc_t CC KSysDirOpenFileSharedWrite ( KSysDir *self,
+    KFile **f, bool update, const char *path, va_list args )
+{
+    wchar_t file_name[ MAX_PATH ];
+    rc_t rc = KSysDirMakePath ( self, rcOpening, false, file_name, sizeof file_name, path, args );
+    if ( rc == 0 )
+    {
+        DWORD dwDesiredAccess = update ? GENERIC_READ | GENERIC_WRITE : GENERIC_WRITE;
+        HANDLE file_handle = CreateFileW( file_name, dwDesiredAccess, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, 
                                 OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL );
 
         if ( file_handle == INVALID_HANDLE_VALUE )
@@ -2926,12 +3017,73 @@ KSysDir *CC KSysDirGetSysdir ( const KSysDir *cself )
     return ( KSysDir* ) cself;
 }
 
+
+/* FileLocator
+ *  returns a 64-bit key pertinent only to the particular file
+ *  system device holding that file.
+ *
+ *  It can be used as a form of sort key except that it is not 
+ *  guaranteed to be unique.
+ *
+ *  "locator" [ OUT ] - return parameter for file locator
+ *
+ *  "path" [ IN ] - NUL terminated string in directory-native
+ *  character set denoting target file
+ */
+static
+rc_t CC KSysDirFileLocator_v1 ( const KSysDir_v1 *self,
+    uint64_t *locator, const char *path, va_list args )
+{
+    /* TBD - could return an inode or equivalent */
+    assert ( locator != NULL );
+    * locator = 0;
+    return RC ( rcFS, rcDirectory, rcAccessing, rcFunction, rcUnsupported );
+}
+
+/* FilePhysicalSize
+ *  returns physical allocated size in bytes of target file.  It might
+ * or might not differ from FileSize
+ *
+ *  "size" [ OUT ] - return parameter for file size
+ *
+ *  "path" [ IN ] - NUL terminated string in directory-native
+ *  character set denoting target file
+ */
+static
+rc_t CC KSysDirFilePhysicalSize_v1 ( const KSysDir_v1 *self,
+    uint64_t *size, const char *path, va_list args )
+{
+    /* TBD - can be completed */
+    assert ( size != NULL );
+    * size = 0;
+    return RC ( rcFS, rcDirectory, rcAccessing, rcFunction, rcUnsupported );
+}
+
+/* FileContiguous
+ *  returns true if the file is "contiguous".  Chunked or sparse files are not
+ *  contiguous while most data files are.  Virtual generated files would likely
+ *  not be contiguous.  
+ *
+ *  "contiguous" [ OUT ] - return parameter for file contiguous
+ *
+ *  "path" [ IN ] - NUL terminated string in directory-native
+ *  character set denoting target file
+ */
+static
+rc_t CC KSysDirFileContiguous_v1 ( const KSysDir_v1 *self,
+    bool *contiguous, const char *path, va_list args )
+{
+    assert ( contiguous != NULL );
+    * contiguous = true;
+    return 0;
+}
+
 static KDirectory_vt_v1 vtKSysDir =
 {
-    /* version 1.0 */
-    1, 1,
+    /* version 1.5 */
+    1, 5,
 
-    /* start minor version 0 methods*/
+    /* start minor version 0*/
     KSysDirDestroy,
     KSysDirList,
 
@@ -2961,13 +3113,30 @@ static KDirectory_vt_v1 vtKSysDir =
     KSysDirOpenDirUpdate,
     KSysDirCreateDir,
     NULL, /* we don't track files*/
-    /* end minor version 0 methods*/
+    /* end minor version 0 */
 
-    /* start minor version 1 methods*/
+    /* start minor version 1 */
     KSysDirVDate,
     KSysDirVSetDate,
-    KSysDirGetSysdir
-    /* end minor version 1 methods*/
+    KSysDirGetSysdir,
+    /* end minor version 1 */
+
+    /* start minor version 2 */
+    KSysDirFileLocator_v1,
+    /* end minor version 2 */
+
+    /* start minor version 3 */
+    KSysDirFilePhysicalSize_v1,
+    KSysDirFileContiguous_v1,
+    /* end minor version 3 */
+
+    /* start minor version 4 */
+    KSysDirOpenFileSharedWrite,
+    /* end minor version 4 */
+
+    /* start minor version 5 */
+    KSysDirCreateLink,
+    /* end minor version 5 */
 };
 
 /* KSysDirInit

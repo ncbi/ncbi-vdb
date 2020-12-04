@@ -20,14 +20,14 @@
  *
  *  Please cite the author in any work or product based on this material.
  *
- * ===========================================================================
+ * =============================================================================
  *
  */
 
 #include <kfg/extern.h>
 
 #include <kfg/repository.h>
-#include <kfg/config.h>
+#include <kfg/kfg-priv.h> /* KConfigMakeLocal */
 #include <kfg/ngc.h>
 
 #include <kfs/file.h>
@@ -40,7 +40,8 @@
 #include <klib/namelist.h>
 #include <klib/rc.h>
 
-#include "ngc-priv.h"
+#include "kfg-priv.h" /* KConfigGetNgcFile */
+#include "ngc-priv.h" /* KNgcObjMakeFromCmdLine */
 
 #include <sysalloc.h>
 
@@ -69,6 +70,7 @@ struct KRepository
     KRefcount refcount;
     KRepCategory category;
     KRepSubCategory subcategory;
+    bool fromNgc; /* auto-generated from --ngc */
 };
 
 
@@ -106,14 +108,14 @@ rc_t KRepositoryMake ( KRepository **rp, const KConfigNode *node,
     const char *name, KRepCategory category, KRepSubCategory subcategory )
 {
     rc_t rc;
-    KRepository *r;
+    KRepository *r = NULL;
     String name_str;
 
     /* measure string */
     StringInitCString ( & name_str, name );
 
     /* create object */
-    r = malloc ( sizeof * r + name_str . size + 1 );
+    r = calloc ( 1, sizeof * r + name_str . size + 1 );
     if ( r == NULL )
         return RC ( rcKFG, rcNode, rcConstructing, rcMemory, rcExhausted );
 
@@ -1333,12 +1335,149 @@ LIB_EXPORT rc_t CC KRepositoryMgrRemoteRepositories ( const KRepositoryMgr *self
 }
 
 
+#define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
+    if (rc2 && !rc) { rc = rc2; } obj = NULL; } while (false)
+
+static rc_t KRepositoryCurrentProtectedRepositoryForNgc(
+    const KRepository ** self)
+{
+    const KNgcObj * ngc = NULL;
+
+    rc_t rc = KNgcObjMakeFromCmdLine(&ngc);
+
+    if (ngc == NULL) {
+        if (rc != 0)
+            return rc;
+        else
+            return SILENT_RC(rcKFG, rcMgr, rcAccessing, rcNode, rcNotFound);
+    }
+    else {
+        KConfig * kfg = NULL;
+        const KRepositoryMgr * mgr = NULL;
+        KRepositoryVector vc;
+        uint32_t id = 0;
+        char name[512] = "";
+        size_t nameLen = 0;
+        char n[512] = "";
+        char v[512] = "";
+
+        if (rc == 0)
+            rc = KNgcObjGetProjectId(ngc, &id);
+        if (rc == 0)
+            rc = KConfigMakeLocal(&kfg, NULL);
+
+        if (rc == 0)
+            rc = string_printf(name, sizeof name, &nameLen, "dbGaP-%d", id);
+
+        if (rc == 0)
+            rc = KNgcObjGetEncryptionKey(ngc, v, sizeof v, NULL);
+        if (rc == 0)
+            rc = string_printf(n, sizeof n, NULL,
+                "/repository/user/protected/%s/encryption-key", name);
+        if (rc == 0)
+            rc = KConfigWriteString(kfg, n, v);
+
+        if (rc == 0)
+            rc = KNgcObjGetTicket(ngc, v, sizeof v, NULL);
+        if (rc == 0)
+            rc = string_printf(n, sizeof n, NULL,
+                "/repository/user/protected/%s/download-ticket", name);
+        if (rc == 0)
+            rc = KConfigWriteString(kfg, n, v);
+
+        if (rc == 0)
+            rc = KConfigMakeRepositoryMgrRead(kfg, &mgr);
+        if (rc == 0)
+            rc = KRepositoryMgrUserRepositories(mgr, &vc);
+
+        assert(self);
+        *self = NULL;
+
+        if (rc == 0) {
+            uint32_t i = 0;
+            uint32_t count = VectorLength(&vc);
+            for (i = 0; i < count; ++i) {
+                bool found = false;
+                KRepository * r = (void*)VectorGet(&vc, i);
+                if (r->subcategory == krepProtectedSubCategory) {
+                    char lclName[512] = "";
+                    size_t lNumWrit = 0;
+                    rc = KRepositoryName(r, lclName, sizeof lclName, &lNumWrit);
+                    if (rc == 0) {
+                        assert(lNumWrit < sizeof lclName);
+                        if (strcase_cmp(lclName, lNumWrit,
+                            name, nameLen, sizeof name) == 0)
+                        {
+                            found = true;
+                        }
+                    }
+                }
+                if (found) {
+                    rc = KRepositoryAddRef(r);
+                    if (rc == 0) {
+                        r->fromNgc = true;
+                        *self = r;
+                        break;
+                    }
+                }
+            }
+            KRepositoryVectorWhack(&vc);
+        }
+
+        if (rc == 0 && * self == NULL)
+            rc = RC(rcKFG, rcMgr, rcAccessing, rcNode, rcNotFound);
+
+        RELEASE(KRepositoryMgr, mgr);
+        RELEASE(KConfig, kfg);
+        RELEASE(KNgcObj, ngc);
+    }
+
+    return rc;
+}
+
+/* vdb-config -i, when importing an ngc file,
+    sometimes created an unuable protected repository
+    having juts a single 'root' node.
+    This function detects such repository. */
+static
+rc_t KRepositoryIsBadRepository(const KRepository * self, bool * bad)
+{
+    rc_t rc = 0;
+
+    KNamelist * names = NULL;
+    uint32_t count = 0;
+
+    assert(self && bad);
+    *bad = false;
+
+    rc = KConfigNodeListChildren(self->node, &names);
+    if (rc == 0)
+        rc = KNamelistCount(names, &count);
+
+    if (rc == 0 && count == 1) {
+        const char * name = NULL;
+        rc = KNamelistGet(names, 0, &name);
+        if (rc == 0) {
+            const char root[] = "root";
+            if (string_cmp(root, sizeof root - 1, name,
+                string_measure(name, NULL), sizeof root) == 0)
+            {
+                *bad = true;
+            }
+        }
+    }
+
+    RELEASE(KNamelist, names);
+
+    return rc;
+}
+
 /* CurrentProtectedRepository
  *  returns the currently active user protected repository
  */
 LIB_EXPORT rc_t CC KRepositoryMgrCurrentProtectedRepository ( const KRepositoryMgr *self, const KRepository **protected )
 {
-    rc_t rc;
+    rc_t rc = 0;
 
     if ( protected == NULL )
         rc = RC ( rcKFG, rcMgr, rcAccessing, rcParam, rcNull );
@@ -1381,6 +1520,13 @@ LIB_EXPORT rc_t CC KRepositoryMgrCurrentProtectedRepository ( const KRepositoryM
                                 const KRepository *r = ( const void* ) VectorGet ( & v, i );
                                 if ( r -> subcategory == krepProtectedSubCategory )
                                 {
+                                  bool bad = false;
+                                  rc = KRepositoryIsBadRepository(r, &bad);
+                                  if (rc != 0)
+                                    break;
+                                  else if (bad)
+                                    continue;
+                                  else {
                                     rc_t rc2 = 0;
                                     size_t resolved_size;
                                     char *resolved = wd_path + path_size;
@@ -1426,6 +1572,8 @@ LIB_EXPORT rc_t CC KRepositoryMgrCurrentProtectedRepository ( const KRepositoryM
                                             break;
                                         }
                                     }
+                                
+                                  }
                                 }
                             }
                         }
@@ -1444,8 +1592,8 @@ LIB_EXPORT rc_t CC KRepositoryMgrCurrentProtectedRepository ( const KRepositoryM
                 return SILENT_RC ( rcKFG, rcMgr, rcAccessing, rcNode, rcNotFound );
             }
 
-            if ( rc == 0 && * protected == NULL )
-                return SILENT_RC ( rcKFG, rcMgr, rcAccessing, rcNode, rcNotFound );
+            if (rc == 0 && * protected == NULL)
+                rc = KRepositoryCurrentProtectedRepositoryForNgc(protected);
         }
     }
 
@@ -1483,14 +1631,19 @@ LIB_EXPORT rc_t CC KRepositoryMgrGetProtectedRepository ( const KRepositoryMgr *
                 for ( i = 0; i < count; ++ i )
                 {
                     const KRepository *r = ( const void* ) VectorGet ( & v, i );
+                    assert(r);
                     if ( r -> subcategory == krepProtectedSubCategory )
                     {
-                        char localName[512] = "";
-                        size_t localNumWrit = 0;
-                        KRepositoryName(r, localName, sizeof(localName), &localNumWrit);
-                        assert(localNumWrit < sizeof(localName));
-                        if (strcase_cmp(repNodeName, numWrit, localName, localNumWrit, sizeof(localName)) == 0)
+                        char nm[512] = "";
+                        size_t w = 0;
+                        KRepositoryName(r, nm, sizeof nm, &w);
+                        assert(w < sizeof nm);
+                        if (strcase_cmp(repNodeName, numWrit, nm, w, sizeof nm)
+                            == 0)
                         {
+                          bool bad = false;
+                          rc = KRepositoryIsBadRepository(r, &bad);
+                          if (rc == 0 && !bad) {
                             rc = KRepositoryAddRef ( r );
                             if ( rc == 0 )
                             {
@@ -1498,6 +1651,7 @@ LIB_EXPORT rc_t CC KRepositoryMgrGetProtectedRepository ( const KRepositoryMgr *
                                 KRepositoryVectorWhack(&v);
                                 return 0;
                             }
+                          }
                         }
                     }
                 }
@@ -1594,9 +1748,6 @@ static rc_t make_key_file( KRepositoryMgr * self, const struct KNgcObj * ngc, ch
 }
 
 /******************************************************************************/
-
-#define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
-    if (rc2 && !rc) { rc = rc2; } obj = NULL; } while (false)
 
 static rc_t _KRepositoryAppsNodeFix(KConfigNode *self,
     const char *path, const char *val, size_t len, uint32_t *modifications)
@@ -1979,4 +2130,11 @@ bool CC KRepositoryMgrHasRemoteAccess(const KRepositoryMgr *self)
     }
 
     return has;
+}
+
+bool KRepositoryFromNgc(const struct KRepository * self) {
+    if (self == NULL)
+        return false;
+    else
+        return self->fromNgc;
 }

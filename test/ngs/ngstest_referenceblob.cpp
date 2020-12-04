@@ -33,6 +33,8 @@
 
 #include "ngs_c_fixture.hpp"
 
+#include <kfg/config.h> /* KConfigDisableUserSettings */
+
 #include <vdb/database.h>
 
 #include <NGS_Cursor.h>
@@ -82,8 +84,7 @@ public:
 
     void GetCursor(const char* p_acc )
     {
-        const VDatabase* db;
-        THROW_ON_RC ( VDBManagerOpenDBRead ( m_ctx -> rsrc -> vdb, & db, NULL, p_acc ) );
+        const VDatabase *db = openDB( p_acc );
         NGS_String* run_name = NGS_StringMake ( m_ctx, "", 0);
 
         if ( m_curs != 0 )
@@ -765,7 +766,9 @@ const char UsageDefaultName[] = "test-ngs_referenceblob";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
+    KConfigDisableUserSettings();
     rc_t m_coll=NgsReferenceBlobTestSuite(argc, argv);
+    NGS_C_Fixture::ReleaseCache();
     return m_coll;
 }
 

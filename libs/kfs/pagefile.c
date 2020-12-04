@@ -179,7 +179,7 @@ rc_t KPageBackingSetSize ( KPageBacking *self, uint32_t pg_count )
     uint64_t new_eof;
 
     if ( pg_count > BACKING_FILE_GROWTH )
-		pg_count = ( pg_count + BACKING_FILE_MASK ) & ~ BACKING_FILE_MASK;
+        pg_count = ( pg_count + BACKING_FILE_MASK ) & ~ BACKING_FILE_MASK;
 
     new_eof =  ( uint64_t ) pg_count << PGBITS;
     if ( new_eof == self -> eof )
@@ -654,59 +654,59 @@ static
 void * KPageFile_whack_recursive( void **idx, uint8_t depth, uint32_t count,
                                   DLList * mru, uint32_t * ccount )
 {
-	if ( idx != NULL )
+    if ( idx != NULL )
     {
-		if ( depth == 0 )
+        if ( depth == 0 )
         {
-			rc_t rc;
-			KPage * page = ( KPage* )idx;
-			DLListUnlink( mru, &page->ln );
-			rc=KPageSever( page );
-			if ( ccount != NULL )
+            rc_t rc;
+            KPage * page = ( KPage* )idx;
+            DLListUnlink( mru, &page->ln );
+            rc=KPageSever( page );
+            if ( ccount != NULL )
                 ccount[ 0 ]--;
-			assert( rc == 0 );
-		}
+            assert( rc == 0 );
+        }
         else
         {
-			int i;
-			uint8_t offset;
+            int i;
+            uint8_t offset;
 
-			depth--;
-			offset = ( count >> ( 8 * depth ) ) & 0xff;
-			idx[ offset ] = KPageFile_whack_recursive( (void**)idx[ offset ], depth, count, mru, ccount );
-			for ( i = ( int )offset + 1; i < 256; i++ )
+            depth--;
+            offset = ( count >> ( 8 * depth ) ) & 0xff;
+            idx[ offset ] = KPageFile_whack_recursive( (void**)idx[ offset ], depth, count, mru, ccount );
+            for ( i = ( int )offset + 1; i < 256; i++ )
             {
-				if ( idx[ i ] != NULL )
+                if ( idx[ i ] != NULL )
                 {
-					idx[ i ] = KPageFile_whack_recursive( (void**)idx[ i ], depth, 0, mru, ccount );
-				}
-			}	
+                    idx[ i ] = KPageFile_whack_recursive( (void**)idx[ i ], depth, 0, mru, ccount );
+                }
+            }   
 
-			if ( depth == 0 )
+            if ( depth == 0 )
             {
-				if ( offset == 0 )
+                if ( offset == 0 )
                 {
-					free( idx );
-					return NULL;
-				}
+                    free( idx );
+                    return NULL;
+                }
                 else
                 {
-					return idx;
-				}
-			}
+                    return idx;
+                }
+            }
             else if ( offset == 0 || ( offset == 1 && idx[ 1 ] == NULL ) )
             {
-				void *tmp = idx[ 0 ];
-				free( idx );
-				return tmp;
-			}
+                void *tmp = idx[ 0 ];
+                free( idx );
+                return tmp;
+            }
             else
             {
-				return idx;
-			}
-		}
-	}
-	return NULL;
+                return idx;
+            }
+        }
+    }
+    return NULL;
 }
 
 #define PAGE_IDX_DEPTH(A) ((A)>(1<<24)?4:((A)>(1<<16)?3:((A)>256?2:((A)>0?1:0))))
@@ -714,44 +714,44 @@ void * KPageFile_whack_recursive( void **idx, uint8_t depth, uint32_t count,
 static
 rc_t KPageFileSetPageCount( KPageFile * self, uint32_t count )
 {
-	void **tmp;	
-	uint8_t new_depth = PAGE_IDX_DEPTH( count );
+    void **tmp; 
+    uint8_t new_depth = PAGE_IDX_DEPTH( count );
 
     /******* Adjust depth and change structure of the index if needed ****/
-	if ( new_depth > self->page_idx_depth )
+    if ( new_depth > self->page_idx_depth )
     {
-		if ( self->page_idx == NULL )
+        if ( self->page_idx == NULL )
         {
-			self->page_idx_depth = new_depth;
-		}
+            self->page_idx_depth = new_depth;
+        }
         else while ( self->page_idx_depth < new_depth )
         {
-			tmp = malloc( 256 * sizeof( *tmp ) );
-			memset( tmp, 0, 256 * sizeof( *tmp ) );
-			tmp[ 0 ] = self->page_idx;
-			self->page_idx = tmp;
-			self->page_idx_depth++;
-		}
-	}
+            tmp = malloc( 256 * sizeof( *tmp ) );
+            memset( tmp, 0, 256 * sizeof( *tmp ) );
+            tmp[ 0 ] = self->page_idx;
+            self->page_idx = tmp;
+            self->page_idx_depth++;
+        }
+    }
 
-	if ( count < self->count )
+    if ( count < self->count )
     {
-		self->page_idx = KPageFile_whack_recursive( self->page_idx, self->page_idx_depth,
+        self->page_idx = KPageFile_whack_recursive( self->page_idx, self->page_idx_depth,
                                                     count, &self->by_access, &self->ccount );
-		self->page_idx_depth = new_depth;
-	}
-	self->count=count;
-	if ( self -> read_only )
+        self->page_idx_depth = new_depth;
+    }
+    self->count=count;
+    if ( self -> read_only )
         return 0;
 
-	if ( self -> backing )
+    if ( self -> backing )
         return KPageBackingSetSize ( self -> backing, count );
-	else if ( self->count > self->climit )
+    else if ( self->count > self->climit )
     {
         return RC ( rcFS, rcFile, rcProcessing, rcBuffer, rcExhausted );
-	}
+    }
 
-	return 0;
+    return 0;
 }
 /* Whack
  */
@@ -867,7 +867,7 @@ LIB_EXPORT rc_t CC KPageFileMakeUpdate ( KPageFile **pf, KFile * backing, size_t
     {
         if ( backing != NULL )
         {
-        	if ( ! backing -> read_enabled )
+            if ( ! backing -> read_enabled )
             {
                 if ( backing -> write_enabled )
                     rc = RC ( rcFS, rcFile, rcConstructing, rcFile, rcWriteonly );
@@ -1058,9 +1058,9 @@ LIB_EXPORT rc_t CC KPageFileSetSize ( KPageFile *self, uint64_t size )
     else
     {
         uint32_t new_count = ( uint32_t ) ( ( size + PGSIZE - 1 ) >> PGBITS );
-	rc=KPageFileSetPageCount(self,new_count);
-	if(rc) return rc;
-	assert(self->count == new_count);
+    rc=KPageFileSetPageCount(self,new_count);
+    if(rc) return rc;
+    assert(self->count == new_count);
     }
     return rc;
 }
@@ -1068,84 +1068,84 @@ LIB_EXPORT rc_t CC KPageFileSetSize ( KPageFile *self, uint64_t size )
 
 static rc_t KPageFileIndexInsert( KPageFile * self, KPage * page )
 {
-	void    	**tmp;
-	uint8_t		depth;
-	uint32_t	page_id = page->page_id;
-	uint8_t		offset;
+    void        **tmp;
+    uint8_t     depth;
+    uint32_t    page_id = page->page_id;
+    uint8_t     offset;
 
-	assert( page->page_id > 0 );
+    assert( page->page_id > 0 );
 
-	if ( page->page_id > self->count ) /**** This is an autogrowth ***/
+    if ( page->page_id > self->count ) /**** This is an autogrowth ***/
     {
-		rc_t rc= KPageFileSetPageCount( self, page->page_id );
-		if ( rc != 0 )
+        rc_t rc= KPageFileSetPageCount( self, page->page_id );
+        if ( rc != 0 )
             return rc;
-	}
+    }
 
-	if ( self->page_idx == NULL )
+    if ( self->page_idx == NULL )
     {
-		self->page_idx = malloc( 256 * sizeof( *tmp ) );
-		if( self->page_idx == NULL )
-			return RC( rcFS, rcIndex, rcInserting, rcMemory, rcInsufficient );
-		memset( self->page_idx, 0, 256 * sizeof( void * ) );
-	}
+        self->page_idx = malloc( 256 * sizeof( *tmp ) );
+        if( self->page_idx == NULL )
+            return RC( rcFS, rcIndex, rcInserting, rcMemory, rcInsufficient );
+        memset( self->page_idx, 0, 256 * sizeof( void * ) );
+    }
 
-	tmp = self->page_idx;
-	depth = self->page_idx_depth;
-	assert( PAGE_IDX_DEPTH( page_id ) <= depth );
+    tmp = self->page_idx;
+    depth = self->page_idx_depth;
+    assert( PAGE_IDX_DEPTH( page_id ) <= depth );
 
-	while ( depth > 1 )
+    while ( depth > 1 )
     {
-		offset = ( ( page_id - 1 ) >> ( depth - 1 ) * 8 ) & 0xff;
-		if ( tmp[ offset ] == NULL )
+        offset = ( ( page_id - 1 ) >> ( depth - 1 ) * 8 ) & 0xff;
+        if ( tmp[ offset ] == NULL )
         {
-			tmp[ offset ] = malloc( 256 * sizeof( *tmp ) );
-			if ( tmp [ offset ] == NULL )
-				return RC( rcFS, rcIndex, rcInserting, rcMemory, rcInsufficient );
-			memset( tmp[ offset ], 0, 256 * sizeof( void * ) );
-		}
-		assert( tmp[ offset ] );
-		tmp = ( void** )tmp[ offset ];
-		depth--;
-	}
+            tmp[ offset ] = malloc( 256 * sizeof( *tmp ) );
+            if ( tmp [ offset ] == NULL )
+                return RC( rcFS, rcIndex, rcInserting, rcMemory, rcInsufficient );
+            memset( tmp[ offset ], 0, 256 * sizeof( void * ) );
+        }
+        assert( tmp[ offset ] );
+        tmp = ( void** )tmp[ offset ];
+        depth--;
+    }
 
-	assert( depth == 1 );
-	offset = ( page_id - 1 ) & 0xff;
-	if ( tmp[ offset ] && tmp[ offset ] != page )
+    assert( depth == 1 );
+    offset = ( page_id - 1 ) & 0xff;
+    if ( tmp[ offset ] && tmp[ offset ] != page )
         return RC( rcFS, rcIndex, rcInserting,rcId,rcDuplicate );
 
-	tmp[ offset ] = page;
-	return 0;
+    tmp[ offset ] = page;
+    return 0;
 }
 
 
 static rc_t KPageFileIndexDelete( KPageFile *self, uint32_t page_id )
 {
-	void ** tmp = self->page_idx;
-	uint8_t depth = self->page_idx_depth;
+    void ** tmp = self->page_idx;
+    uint8_t depth = self->page_idx_depth;
     uint8_t offset;
 
-	assert( page_id > 0 );
+    assert( page_id > 0 );
     assert( PAGE_IDX_DEPTH( page_id ) <= depth );
 
-	while( depth > 1 )
+    while( depth > 1 )
     {
         offset = ( ( page_id - 1 ) >> ( depth - 1 ) * 8 ) & 0xff;
-		if( tmp[ offset ] == 0 )
-			return RC( rcFS, rcIndex, rcRemoving,rcId,rcInconsistent );
+        if( tmp[ offset ] == 0 )
+            return RC( rcFS, rcIndex, rcRemoving,rcId,rcInconsistent );
 
-		assert( tmp[ offset ] );
-		tmp = ( void** )tmp[ offset ];
-		depth--;
-	}
+        assert( tmp[ offset ] );
+        tmp = ( void** )tmp[ offset ];
+        depth--;
+    }
 
-	offset=( page_id - 1 ) & 0xff;
+    offset=( page_id - 1 ) & 0xff;
 
-	if ( tmp[ offset ] == 0 )
-		return RC( rcFS, rcIndex, rcRemoving,rcId,rcInconsistent );
+    if ( tmp[ offset ] == 0 )
+        return RC( rcFS, rcIndex, rcRemoving,rcId,rcInconsistent );
 
-	tmp[ offset ] = 0;
-	return 0;
+    tmp[ offset ] = 0;
+    return 0;
 }
 
 
@@ -1155,14 +1155,14 @@ static KPage * KPageFileIndexFind( KPageFile *self, uint32_t page_id )
     uint8_t depth = self->page_idx_depth;
     uint8_t offset;
 
-	assert( page_id > 0 );
+    assert( page_id > 0 );
     if ( PAGE_IDX_DEPTH( page_id ) > depth )
         return NULL;
 
-	if ( tmp == NULL )
+    if ( tmp == NULL )
         return NULL;
 
-	while ( depth > 1 )
+    while ( depth > 1 )
     {
         offset = ( ( page_id - 1 ) >> ( depth - 1 ) * 8 ) & 0xff;
         if ( tmp[ offset ] == NULL )
@@ -1173,12 +1173,12 @@ static KPage * KPageFileIndexFind( KPageFile *self, uint32_t page_id )
         depth--;
     }
 
-	offset = ( page_id - 1 ) & 0xff;
-	assert( tmp[ offset ] == NULL || ( ( KPage * )tmp[ offset ] )->page_id == page_id );
-	return ( KPage * )tmp[ offset ];
+    offset = ( page_id - 1 ) & 0xff;
+    assert( tmp[ offset ] == NULL || ( ( KPage * )tmp[ offset ] )->page_id == page_id );
+    return ( KPage * )tmp[ offset ];
 }
 
-	
+    
 /* CachePage
  *  insert a page into cache
  */
@@ -1189,7 +1189,7 @@ static rc_t KPageFileCachePage ( KPageFile *self, KPage *page )
     /* perform insert */
     rc = KPageFileIndexInsert( self, page );
     if ( rc != 0 )
-        return rc;	
+        return rc;  
 
     PAGE_DEBUG( ( "PAGE: {%p}.[%s] insert #%u\n", self, KDbgGetColName(), page->page_id ) );
 

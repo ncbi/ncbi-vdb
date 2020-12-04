@@ -24,8 +24,9 @@
 *
 */
 
-#include <kfg/config.h> /* KConfig */
+#include <kfg/kfg-priv.h> /* KConfigMakeLocal  */
 #include <kfs/directory.h> /* KDirectory */
+#include <klib/debug.h> /* KDbgSetString */
 #include <ktst/unit_test.hpp> // TEST_SUITE
 #include <sra/sraschema.h> // VDBManagerMakeSRASchema
 #include <vdb/cursor.h> /* VCursor */
@@ -37,6 +38,8 @@
 #include <vfs/resolver.h> /* VResolverCacheEnable */
 #include <vdb/database.h> /* VDatabase */
 #include <vdb/schema.h> /* VSchema */
+
+#define ALL
 
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (false)
@@ -101,11 +104,15 @@ typedef enum {
 
 class SET {
 public:
-    static rc_t set ( KConfig * self, int e ) {
+    static rc_t set ( KConfig * self, int e, bool caching ) {
+        rc_t rc = KConfigWriteString(self,
+            "/repository/user/ad/public/cache-enabled",
+            caching ? "true" : "false");
+
         if ( e == 0 ){
-            return 0;
+            return rc;
         }
-        rc_t rc = 0;
+
         if ( e & eAppsRefseq ) {
             rc = KConfigWriteString ( self,
                "/repository/user/main/public/apps/refseq/volumes/refseq",
@@ -143,6 +150,9 @@ public:
             const char * v = e & eAppSraDisabledTrue ? "true" : "false";
             rc = KConfigWriteString ( self,
                 "/repository/user/main/public/apps/sra/disabled", v );
+            if (rc == 0)
+                rc = KConfigWriteString(self,
+                    "/repository/user/ad/public/apps/sra/disabled", v);
         }
         if ( rc == 0 && e & eAppRefseqCacheEnabled ) {
             const char * v = e & eAppRefseqCacheEnabledTrue ? "true" : "false";
@@ -209,12 +219,19 @@ public:
         KDirectory * native  = NULL;
         REQUIRE_RC ( KDirectoryNativeDir ( & native ) );
         const KDirectory * dir = NULL;
-        REQUIRE_RC
-            ( KDirectoryOpenDirRead ( native, &dir, false, "caching-kfg" ) );
+
+#if WINDOWS
+#define KFG_OS "win"
+#else
+#define KFG_OS "unix"
+#endif
+        REQUIRE_RC ( KDirectoryOpenDirRead ( native, &dir, false, "caching-kfg/" KFG_OS) );
+#undef  OS
+
         KConfig * cfg = NULL;
-        REQUIRE_RC ( KConfigMake ( & cfg, dir ) );
-        REQUIRE_RC ( SET :: set ( cfg, v ) );
-//KConfigPrint(cfg, 0);
+        REQUIRE_RC ( KConfigMakeLocal ( & cfg, dir ) );
+        REQUIRE_RC ( SET :: set ( cfg, v, caching) );
+
         String * test_root = NULL;
         REQUIRE_RC ( KConfigReadString ( cfg, "/TEST_ROOT", & test_root ) );
         String * user_root = NULL;
@@ -223,11 +240,14 @@ public:
 
         // KConfigReadString creates NULL-terminated strings
         REQUIRE ( user_root );
-        REQUIRE_RC ( KDirectoryRemove ( native, true, user_root -> addr ) );
+//std::cout << std::string(user_root->addr) << std::endl;
+        REQUIRE_RC ( KDirectoryRemove ( native, true, "%s", user_root -> addr ) );
 
         VFSManager * vfs = NULL;
 
-        REQUIRE_RC ( VFSManagerMakeFromKfg ( & vfs, cfg ) );
+//KConfigPrint(cfg, 0);
+
+        REQUIRE_RC ( VFSManagerMakeLocal ( & vfs, cfg ) );
         REQUIRE_RC ( SET :: resetSingleton ( vfs ) );
 
         REQUIRE_RC ( SET :: set ( vfs, v ) );
@@ -331,6 +351,7 @@ public:
     {}
 };
 
+#ifdef ALL
 TEST_CASE ( SRR_INCOMPLETE_USER_REPO ) {
     NonCaching ( this );
 }
@@ -536,8 +557,9 @@ TEST_CASE ( REFSEQ_SRR_APP_DISABLED ) {
         eAppRefseqDisabledSetFalse | eAppSraDisabledSetTrue |
         eAppRefseqCacheEnabledSetTrue | eAppSraCacheEnabledSetTrue, eRefseq );
 }
+#endif
 
-TEST_CASE ( SRR_APP_DISABLED_ALWASY_ENABLE ) {
+TEST_CASE ( SRR_APP_DISABLED_ALWAYS_ENABLE ) {
     NonCaching ( this, eAppsSra | eUserCacheDisabledSetFalse |
         eUserPublicCacheEnabledSetTrue | eUserPublicDisabledSetFalse |
         eAppRefseqDisabledSetFalse | eAppSraDisabledSetTrue |
@@ -612,6 +634,8 @@ extern "C" {
     }
     rc_t CC KMain ( int argc, char * argv [] ) {
         KConfigDisableUserSettings ();
+if (
+0 ) assert ( ! KDbgSetString ( "VFS" ) );
         return CachingSuite ( argc, argv );
     }
 }

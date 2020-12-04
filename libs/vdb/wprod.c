@@ -150,7 +150,7 @@ rc_t VProdResolveColumnRoot ( const VProdResolve *self,
     }
 
     /* install trigger */
-    rc = VectorAppend ( VCursorTriggers ( curs ), NULL, wcol -> val );
+    rc = VCursorInstallTrigger ( curs, wcol -> val );
     if ( rc == 0 )
         * out = wcol -> val;
 

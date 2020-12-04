@@ -30,16 +30,23 @@
     #include <stdio.h>
 
     #include "ParseTree.hpp"
+    #include "ErrorReport.hpp"
+
     using namespace ncbi::SchemaParser;
 
     #include "schema-tokens.h"
     #include "schema-lex.h"
     #define Schema_lex SchemaScan_yylex
 
-    void Schema_error ( YYLTYPE *llocp, void* parser, struct SchemaScanBlock* sb, const char* msg )
+    void Schema_error ( YYLTYPE *                   p_llocp,
+                        ParseTree **                p_root,
+                        ErrorReport *               p_errors,
+                        struct SchemaScanBlock *    p_sb,
+                        const char *                p_msg )
     {
-        /*TODO: send message to the C++ parser for proper display and recovery */
-        printf("Line %i pos %i: %s\n", llocp -> first_line, llocp -> first_column, msg);
+        /* send message to the C++ parser for proper display and recovery */
+        Token :: Location loc ( p_sb -> file_name, p_llocp -> first_line, p_llocp -> first_column );
+        p_errors -> ReportError ( loc, "%s", p_msg);
     }
 
     extern "C"
@@ -49,7 +56,7 @@
 
     static
     ParseTree*
-    P ( YYSTYPE & p_prod )
+    P ( SchemaToken & p_prod )
     {
         assert ( p_prod . subtree );
         return ( ParseTree * ) p_prod . subtree;
@@ -57,7 +64,7 @@
 
     static
     ParseTree*
-    T ( YYSTYPE & p_term )
+    T ( SchemaToken & p_term )
     {
         assert ( p_term . subtree == 0 );
         return new ParseTree ( p_term );
@@ -74,11 +81,11 @@
                ParseTree * p_ch5 = 0,
                ParseTree * p_ch6 = 0,
                ParseTree * p_ch7 = 0,
-               ParseTree * p_ch8 = 0
+               ParseTree * p_ch8 = 0,
+               ParseTree * p_ch9 = 0
              )
     {
-        SchemaToken v = { p_token, NULL, 0, NULL, NULL };
-        ParseTree * ret = new ParseTree ( v );
+        ParseTree * ret = new ParseTree ( Token ( p_token ) );
         if ( p_ch1 != 0 ) ret -> AddChild ( p_ch1 );
         if ( p_ch2 != 0 ) ret -> AddChild ( p_ch2 );
         if ( p_ch3 != 0 ) ret -> AddChild ( p_ch3 );
@@ -87,16 +94,16 @@
         if ( p_ch6 != 0 ) ret -> AddChild ( p_ch6 );
         if ( p_ch7 != 0 ) ret -> AddChild ( p_ch7 );
         if ( p_ch8 != 0 ) ret -> AddChild ( p_ch8 );
+        if ( p_ch9 != 0 ) ret -> AddChild ( p_ch9 );
         return ret;
     }
 
     /* Create a flat list */
     static
     ParseTree *
-    MakeList ( YYSTYPE & p_prod )
+    MakeList ( SchemaToken & p_prod )
     {
-        SchemaToken v = { PT_ASTLIST, NULL, 0, NULL, NULL };
-        ParseTree * ret = new ParseTree ( v );
+        ParseTree * ret = new ParseTree ( Token ( PT_ASTLIST ) );
         ret -> AddChild ( P ( p_prod ) );
         return ret;
     }
@@ -119,7 +126,7 @@
 %}
 
 %name-prefix "Schema_"
-%parse-param { ParseTree** root }
+%parse-param { ParseTree** root } { ErrorReport * errors }
 %param { struct SchemaScanBlock* sb }
 
 %define api.value.type {SchemaToken}
@@ -128,7 +135,9 @@
 %locations
 
 %define api.pure full
-
+%destructor {
+    delete ( ParseTree * ) ( $$ . subtree );
+} <>
 
  /* !!! Keep token declarations in synch with schema-ast.y */
 
@@ -142,7 +151,7 @@
 %token DECIMAL
 %token OCTAL
 %token HEX
-%token FLOAT
+%token FLOAT_
 %token EXP_FLOAT
 %token STRING
 %token ESCAPED_STRING
@@ -155,7 +164,9 @@
 %token UNTERM_STRING
 %token UNTERM_ESCAPED_STRING
 
-%token VERS_1_0 /* recognized under special flex state */
+/* version numbers recognized under special flex state */
+%token VERS_1_0
+%token VERS_2_0
 
 %token KW___no_header
 %token KW___row_length
@@ -201,6 +212,7 @@
 %token PT_VERSION_1_0
 %token PT_VERSION_2
 %token PT_SCHEMA_1_0
+%token PT_SCHEMA_2_0
 %token PT_INCLUDE
 %token PT_TYPEDEF
 %token PT_FQN
@@ -266,10 +278,14 @@
 %token PT_UNARYPLUS
 %token PT_VERSNAME
 %token PT_ARRAY
-%token PT_AT
-%token PT_PHYSENCEXPR
 %token PT_PHYSENCREF
 %token PT_TYPEDCOLEXPR
+%token PT_VIEW
+%token PT_VIEWPARAM
+%token PT_VIEWPARENTS
+%token PT_VIEWPARENT
+%token PT_MEMBEREXPR
+%token PT_JOINEXPR
 
  /* !!! Keep token declarations above in synch with schema-ast.y */
 
@@ -279,30 +295,22 @@
 %%
 
 parse
-    : END_SOURCE                { *root =  MakeTree ( PT_PARSE, T ( $1 ) ); }
-    | source END_SOURCE         { *root =  MakeTree ( PT_PARSE, P ( $1 ), T ( $2 ) ); }
+    : END_SOURCE                { *root = MakeTree ( PT_PARSE, T ( $1 ) );              $$ . subtree = 0; $$ . leading_ws = 0;  }
+    | source END_SOURCE         { *root = MakeTree ( PT_PARSE, P ( $1 ), T ( $2 ) );    $$ . subtree = 0; $$ . leading_ws = 0; }
     ;
 
 source
     : schema_1_0                { $$ . subtree = MakeTree ( PT_SOURCE, P ( $1 ) ); }
     | version_1_0 schema_1_0    { $$ . subtree = MakeTree ( PT_SOURCE, P ( $1 ), P ( $2 ) ); }
-    | version_2_x schema_2_x    { $$ . subtree = MakeTree ( PT_SOURCE, P ( $1 ), P ( $2 ) ); }
-    ;
-
-version_1_0
-    : KW_version VERS_1_0 ';'   { $$ . subtree = MakeTree ( PT_VERSION_1_0, T ( $1 ), T ( $2 ), T ( $3 ) ); }
-    ;
-
-version_2_x
-    : KW_version FLOAT ';'      { $$ . subtree = MakeTree ( PT_VERSION_2, T ( $1 ), T ( $2 ), T ( $3 ) ); } /* later checked for valid version number */
-    ;
-
-schema_2_x
-    : '$'                       { $$ . subtree = T ( $1 ); }   /* TBD */
+    | version_2_0 schema_2_0    { $$ . subtree = MakeTree ( PT_SOURCE, P ( $1 ), P ( $2 ) ); }
     ;
 
 /* schema-1.0
  */
+version_1_0
+    : KW_version VERS_1_0 ';'   { $$ . subtree = MakeTree ( PT_VERSION_1_0, T ( $1 ), T ( $2 ), T ( $3 ) ); }
+    ;
+
 schema_1_0
     : schema_1_0_decl              { $$ . subtree = MakeTree ( PT_SCHEMA_1_0, P ( $1 ) ); }
     | schema_1_0 schema_1_0_decl   { $$ . subtree = AddToList ( P ( $1 ) , P ( $2 ) ); }
@@ -700,12 +708,12 @@ phys_enc_ref
             { $$ . subtree = MakeTree ( PT_PHYSENCREF, T ( $1 ), P ( $2 ), T ( $3 ), P ( $4 ), P ( $5 ) ); }
     | fqn_vers opt_factory_parms_1_0
             { $$ . subtree = MakeTree ( PT_PHYSENCREF, P ( $1 ), P ( $2 ) ); }
-    | fqn_1_0 '<' factory_parms_1_0 '>'
-            { $$ . subtree = MakeTree ( PT_PHYSENCREF, P ( $1 ), T ( $2 ), P ( $3 ), T ( $4 ) ); }
+    | fqn_1_0 factory_parms_1_0
+            { $$ . subtree = MakeTree ( PT_PHYSENCREF, P ( $1 ), P ( $2 ) ); }
     ;
 
 typed_column_decl_1_0
-    : col_ident '{' column_body_1_0_opt '}'
+    : col_ident '{' opt_column_body_1_0 '}'
             { $$ . subtree = MakeTree ( PT_TYPEDCOL, P ( $1 ), T ( $2 ), P ( $3 ), T ( $4 ) ); }
     | col_ident '=' cond_expr_1_0 ';'
             { $$ . subtree = MakeTree ( PT_TYPEDCOLEXPR, P ( $1 ), T ( $2 ), P ( $3 ), T ( $4 ) ); }
@@ -722,7 +730,7 @@ phys_ident
     : PHYSICAL_IDENTIFIER_1_0       { $$ . subtree = T ( $1 ); }     /* starts with a '.' */
     ;
 
-column_body_1_0_opt
+opt_column_body_1_0
     : empty             { $$ = $1; }
     | column_body_1_0   { $$ = $1; }
     ;
@@ -803,27 +811,26 @@ primary_expr_1_0
     | string_expr_1_0           { $$ = $1; }
     | const_vect_expr_1_0       { $$ = $1; }
     | bool_expr_1_0             { $$ = $1; }
-    | negate_expr_1_0           { $$ = $1; }
+    | '-' expression_1_0        { $$ . subtree = MakeTree ( PT_NEGATE, T ( $1 ), P ( $2 ) ); }
     | '+' expression_1_0        { $$ . subtree = MakeTree ( PT_UNARYPLUS, T ( $1 ), P ( $2 ) ); }
+    | member_expr_2_0           { $$ = $1; }
+    | join_expr_2_0             { $$ = $1; }
     ;
 
 func_expr_1_0
-    :   phys_enc_expr
+    :   '<' schema_parms_1_0 '>'
+        fqn_opt_vers
+        opt_factory_parms_1_0
         '('
         opt_func_1_0_parms
         ')'
-             { $$ . subtree = MakeTree ( PT_FUNCEXPR, P ( $1 ), T ( $2 ), P ( $3 ), T ( $4 ) ); }
+             { $$ . subtree = MakeTree ( PT_FUNCEXPR, T ( $1 ), P ( $2 ), T ( $3 ), P ( $4 ), P ( $5 ), T ( $6 ), P ( $7 ), T ( $8 ) ); }
     |   fqn_opt_vers
         opt_factory_parms_1_0
         '('
         opt_func_1_0_parms
         ')'
              { $$ . subtree = MakeTree ( PT_FUNCEXPR, P ( $1 ), P ( $2 ), T ( $3 ), P ( $4 ), T ( $5 ) ); }
-    ;
-
-phys_enc_expr
-    : '<' schema_parms_1_0 '>' fqn_opt_vers opt_factory_parms_1_0
-             { $$ . subtree = MakeTree ( PT_PHYSENCEXPR, T ( $1 ), P ( $2 ), T ( $3 ), P ( $4 ), P ( $5 ) ); }
     ;
 
 schema_parms_1_0
@@ -838,13 +845,17 @@ schema_parm_1_0
     ;
 
 opt_factory_parms_1_0
-    : empty                                 { $$ = $1; }
-    | '<' factory_parms_1_0 '>'             { $$ . subtree = MakeTree ( PT_FACTPARMS, T ( $1 ), P ( $2 ), T ( $3 ) ); }
+    : empty             { $$ = $1; }
+    | factory_parms_1_0 { $$ = $1; }
     ;
 
 factory_parms_1_0
-    : expression_1_0                          { $$ . subtree = MakeList ( $1 ); }
-    | factory_parms_1_0 ',' expression_1_0    { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), P ( $3 ) ); }
+    : '<' factory_parms '>' { $$ . subtree = MakeTree ( PT_FACTPARMS, T ( $1 ), P ( $2 ), T ( $3 ) ); }
+    ;
+
+factory_parms
+    : expression_1_0                    { $$ . subtree = MakeList ( $1 ); }
+    | factory_parms ',' expression_1_0  { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), P ( $3 ) ); }
     ;
 
 opt_func_1_0_parms
@@ -864,7 +875,7 @@ uint_expr_1_0
     ;
 
 float_expr_1_0
-    : FLOAT                     { $$ . subtree = T ( $1 ); }
+    : FLOAT_                     { $$ . subtree = T ( $1 ); }
     | EXP_FLOAT                 { $$ . subtree = T ( $1 ); }
     ;
 
@@ -892,16 +903,19 @@ bool_expr_1_0
     | KW_false                  { $$ . subtree = T ( $1 ); }
     ;
 
-negate_expr_1_0
-    : '-' fqn_1_0               { $$ . subtree = MakeTree ( PT_NEGATE, T ( $1 ), P ( $2 ) ); }
-    | '-' phys_ident            { $$ . subtree = MakeTree ( PT_NEGATE, T ( $1 ), P ( $2 ) ); }
-    | '-' uint_expr_1_0         { $$ . subtree = MakeTree ( PT_NEGATE, T ( $1 ), P ( $2 ) ); }
-    | '-' float_expr_1_0        { $$ . subtree = MakeTree ( PT_NEGATE, T ( $1 ), P ( $2 ) ); }
-    ;
-
 type_expr_1_0
     : typespec_1_0              { $$ = $1; } /* datatype, typeset, schematype */
     | fqn_1_0 '/' fqn_1_0       { $$ . subtree = MakeTree ( PT_TYPEEXPR, P ( $1 ), T ( $2), P ( $3 ) ); } /* format /  type */
+    ;
+
+member_expr_2_0
+    : ident_1_0 '.' ident_1_0           { $$ . subtree = MakeTree ( PT_MEMBEREXPR, P ( $1 ), T ( $2 ), P ( $3 ) ); }
+    | ident_1_0 PHYSICAL_IDENTIFIER_1_0 { $$ . subtree = MakeTree ( PT_MEMBEREXPR, P ( $1 ), T ( $2 ) ); }
+    ;
+
+join_expr_2_0
+    : ident_1_0 '[' cond_expr_1_0 ']' '.' ident_1_0
+        { $$ . subtree = MakeTree ( PT_JOINEXPR, P ( $1 ), T ( $2 ), P ( $3 ), T ( $4 ), T ( $5 ), P ($6 ) ); }
     ;
 
  /* database */
@@ -962,17 +976,17 @@ include_directive
 /* other stuff
  */
 fqn_1_0
-    : ident_1_0                                     { $$ . subtree = MakeTree ( PT_FQN, P ( $1 ) ); }
-    | fqn_1_0 ':' ident_1_0                         { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), P ( $3 ) ); }
+    : ident_1_0                 { $$ . subtree = MakeTree ( PT_FQN, P ( $1 ) ); }
+    | fqn_1_0 ':' ident_1_0     { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), P ( $3 ) ); }
     /* a hack to handle keywords used as namespace identifiers in existing 1.0 schemas */
-    | fqn_1_0 ':' KW_database                       { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), T ( $3 ) ); }
-    | fqn_1_0 ':' KW_decode                         { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), T ( $3 ) ); }
-    | fqn_1_0 ':' KW_encode                         { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), T ( $3 ) ); }
-    | fqn_1_0 ':' KW_read                           { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), T ( $3 ) ); }
-    | fqn_1_0 ':' KW_table                          { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), T ( $3 ) ); }
-    | fqn_1_0 ':' KW_type                           { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), T ( $3 ) ); }
-    | fqn_1_0 ':' KW_view                           { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), T ( $3 ) ); }
-    | fqn_1_0 ':' KW_write                          { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), T ( $3 ) ); }
+    | fqn_1_0 ':' KW_database   { $3 . type = IDENTIFIER_1_0; $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), MakeTree ( PT_IDENT, T ( $3 ) ) ); }
+    | fqn_1_0 ':' KW_decode     { $3 . type = IDENTIFIER_1_0; $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), MakeTree ( PT_IDENT, T ( $3 ) ) ); }
+    | fqn_1_0 ':' KW_encode     { $3 . type = IDENTIFIER_1_0; $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), MakeTree ( PT_IDENT, T ( $3 ) ) ); }
+    | fqn_1_0 ':' KW_read       { $3 . type = IDENTIFIER_1_0; $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), MakeTree ( PT_IDENT, T ( $3 ) ) ); }
+    | fqn_1_0 ':' KW_table      { $3 . type = IDENTIFIER_1_0; $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), MakeTree ( PT_IDENT, T ( $3 ) ) ); }
+    | fqn_1_0 ':' KW_type       { $3 . type = IDENTIFIER_1_0; $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), MakeTree ( PT_IDENT, T ( $3 ) ) ); }
+    | fqn_1_0 ':' KW_view       { $3 . type = IDENTIFIER_1_0; $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), MakeTree ( PT_IDENT, T ( $3 ) ) ); }
+    | fqn_1_0 ':' KW_write      { $3 . type = IDENTIFIER_1_0; $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), MakeTree ( PT_IDENT, T ( $3 ) ) ); }
     ;
 
 ident_1_0
@@ -990,4 +1004,72 @@ fqn_vers
 fqn_opt_vers
     :   fqn_1_0      { $$ = $1; }
     |   fqn_vers     { $$ = $1; }
+    ;
+
+/*************************** V 2.0 ******************************/
+
+version_2_0
+    : KW_version VERS_2_0 ';'      { $$ . subtree = MakeTree ( PT_VERSION_2, T ( $1 ), T ( $2 ), T ( $3 ) ); }
+    ;
+
+schema_2_0
+    : schema_2_0_decl              { $$ . subtree = MakeTree ( PT_SCHEMA_2_0, P ( $1 ) ); }
+    | schema_2_0 schema_2_0_decl   { $$ . subtree = AddToList ( P ( $1 ) , P ( $2 ) ); }
+    ;
+
+schema_2_0_decl
+    : schema_1_0_decl   { $$ = $1; }
+    | view_2_0_decl     { $$ = $1; }
+    ;
+
+view_2_0_decl
+    : KW_view fqn_vers '<' view_parms '>' opt_view_parents '{' opt_view_body '}'
+        { $$ . subtree = MakeTree ( PT_VIEW, T ( $1 ), P ( $2 ), T ( $3 ), P ( $4 ), T ( $5 ), P ( $6 ), T ( $7 ), P ( $8 ), T ( $9 ) ); }
+    ;
+
+view_parms
+    : view_parm                 { $$ . subtree = MakeList ( $1 ); }
+    | view_parms ',' view_parm  { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), P ( $3 ) ); }
+    ;
+
+view_parm
+    :  fqn_opt_vers ident_1_0   { $$ . subtree = MakeTree ( PT_VIEWPARAM, P ( $1 ), P ( $2 ) ); }
+    ;
+
+opt_view_body
+    : empty     { $$ = $1; }
+    | view_body { $$ = $1; }
+    ;
+
+view_body
+    : view_member           { $$ . subtree = MakeList ( $1 ); }
+    | view_body view_member { $$ . subtree = AddToList ( P ( $1 ), P ( $2 ) ); }
+    ;
+
+view_member
+    : typespec_1_0 ident_1_0 '=' cond_expr_1_0 ';'
+            { $$ . subtree = MakeTree ( PT_PRODSTMT, P ( $1 ), P ( $2 ), T ( $3 ), P ( $4 ), T ( $5 ) ); }
+    | KW_column typespec_1_0 ident_1_0 '=' cond_expr_1_0 ';'
+            { $$ . subtree = MakeTree ( PT_COLUMN, T ( $1 ), P ( $2 ), P ( $3 ), T ( $4 ), P ( $5 ), T ( $6 ) ); }
+    | ';'   { $$ . subtree = T ( $1 ); }
+    ;
+
+opt_view_parents
+    : empty                     { $$ = $1; }
+    | '=' view_parents          { $$ . subtree = MakeTree ( PT_VIEWPARENTS, T ( $1 ), P ( $2 ) ); }
+    ;
+
+view_parents
+    : view_parent                  { $$ . subtree = MakeList ( $1 ); }
+    | view_parents ',' view_parent { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), P ( $3 ) ); }
+    ;
+
+view_parent
+    : fqn_opt_vers '<' view_parent_parms'>'
+        { $$ . subtree = MakeTree ( PT_VIEWPARENT, P ( $1 ), T ( $2 ), P ( $3 ), T ( $4 ) ); }
+    ;
+
+view_parent_parms
+    : ident_1_0                         { $$ . subtree = MakeList ( $1 ); }
+    | view_parent_parms ',' ident_1_0   { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), P ( $3 ) ); }
     ;

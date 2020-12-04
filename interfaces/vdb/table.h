@@ -51,11 +51,12 @@ extern "C" {
 /*--------------------------------------------------------------------------
  * forwards
  */
-struct VSchema;
 struct KMetadata;
 struct KNamelist;
 struct VDatabase;
 struct VDBManager;
+struct VSchema;
+struct VPath;
 
 
 /*--------------------------------------------------------------------------
@@ -136,6 +137,7 @@ VDB_EXTERN rc_t CC VDatabaseVCreateTable ( struct VDatabase *self, VTable **tbl,
 
 
 /* OpenTableRead
+ * OpenTableReadVPath
  *  open a table for read using manager
  * OpenTableUpdate
  *  open a table for read/write using manager
@@ -154,6 +156,9 @@ VDB_EXTERN rc_t CC VDBManagerOpenTableRead ( struct VDBManager const *self,
 VDB_EXTERN rc_t CC VDBManagerVOpenTableRead ( struct VDBManager const *self,
     const VTable **tbl, struct VSchema const *schema,
     const char *path, va_list args );
+VDB_EXTERN rc_t CC VDBManagerOpenTableReadVPath( struct VDBManager const *self,
+    const VTable **tbl, struct VSchema const *schema,
+    const struct VPath *path );
 
 VDB_EXTERN rc_t CC VDBManagerOpenTableUpdate ( struct VDBManager *self,
     VTable **tbl, struct VSchema const *schema,
@@ -416,6 +421,24 @@ VDB_EXTERN rc_t CC VTableSetUserData ( const VTable *self,
  *  check if the table is empty
  */
 VDB_EXTERN rc_t CC VTableIsEmpty( const VTable *self, bool * empty );
+
+
+/* GetQualityCapability
+ *  can the table deliver full quality? synthetic quallity?
+ */
+VDB_EXTERN rc_t CC VTableGetQualityCapability ( const VTable *self,
+    bool *fullQuality, bool *synthQuality );
+
+/* SetFullQualityType
+ *  switch table to deliver full quality
+ */
+VDB_EXTERN rc_t CC VTableSetFullQualityType ( VTable *self );
+
+/* SetSynthQualityType
+ *  switch table to deliver synthetic quality
+ */
+VDB_EXTERN rc_t CC VTableSetSynthQualityType ( VTable *self );
+
 
 #ifdef __cplusplus
 }

@@ -42,10 +42,18 @@ extern "C" {
 
 
 /*--------------------------------------------------------------------------
- * dna
+ * IUPAC
  *  represented in IUPAC characters
+ *
+ *  dna     - ACMGRSVTWYHKDBN
+ *  rna     - ACMGRSVUWYHKDBN
+ *  protein - ABCDEFGHIKLMNPQRSTVWXYZU*OJ
  */
-typedef char INSDC_dna_text;
+typedef char INSDC_iupac_text;
+typedef INSDC_iupac_text INSDC_nuc_text;
+typedef INSDC_nuc_text INSDC_dna_text;
+typedef INSDC_nuc_text INSDC_rna_text;
+typedef INSDC_iupac_text INSDC_protein_text;
 
 
 /*--------------------------------------------------------------------------
@@ -53,16 +61,18 @@ typedef char INSDC_dna_text;
  *  nucleotide data with all possible ambiguity
  *  does not represent all possible EVENTS
  *
- *  text encodings use the IUPAC character set
- *  legal values: [ACMGRSVTWYHKDBNacmgrsvtwyhkdbn.]
- *  canonical values: [ACMGRSVTWYHKDBN]
+ *  'T' and 'U' are both encoded as binary 1000
  *
- *  binary values are 0..15 = { NACMGRSVTWYHKDBN }
+ *  text encodings use the IUPAC character set
+ *  legal values: [ACMGRSVTUWYHKDBNacmgrsvtuwyhkdbn.]
+ *  canonical values: [ACMGRSVTUWYHKDBN]
+ *
+ *  binary values are 0..15 => { NACMGRSVTWYHKDBN } or { NACMGRSVUWYHKDBN }
  *
  *  4na values use bits for each letter:
  *
- *       A | C | G | T
- *    =================
+ *       A | C | G | T/U
+ *    ==================
  *    N    |   |   |
  *    A  * |   |   |
  *    C    | * |   |
@@ -72,6 +82,7 @@ typedef char INSDC_dna_text;
  *    S    | * | * |
  *    V  * | * | * |
  *    T    |   |   | *
+ *    U    |   |   | *
  *    W  * |   |   | *
  *    Y    | * |   | *
  *    H  * | * |   | *
@@ -94,29 +105,54 @@ typedef uint8_t INSDC_4na_packed;
 
 #define INSDC_4na_map_BINSET \
     { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 }
-#define INSDC_4na_map_CHARSET \
+
+/* mixed */
+#define INSDC_nuc_4na_map_BINSET \
+    { 0,1,2,3,4,5,6,7,8,8,9,10,11,12,13,14,15 }
+#define INSDC_nuc_4na_map_CHARSET \
+    ".ACMGRSVTUWYHKDBN"
+#define INSDC_nuc_4na_accept_CHARSET \
+    ".ACMGRSVTUWYHKDBNacmgrsvtuwyhkdbn"
+
+/* DNA */
+typedef INSDC_4na_bin INSDC_dna_4na_bin;
+typedef	INSDC_4na_packed INSDC_dna_4na_packed;
+
+#define INSDC_dna_4na_map_CHARSET \
     ".ACMGRSVTWYHKDBN"
-#define INSDC_4na_accept_CHARSET \
+#define INSDC_dna_4na_accept_CHARSET \
     ".ACMGRSVTWYHKDBNacmgrsvtwyhkdbn"
+
+/* RNA */
+typedef INSDC_4na_bin INSDC_rna_4na_bin;
+typedef	INSDC_4na_packed INSDC_rna_4na_packed;
+
+#define INSDC_rna_4na_map_CHARSET \
+    ".ACMGRSVUWYHKDBN"
+#define INSDC_rna_4na_accept_CHARSET \
+    ".ACMGRSVUWYHKDBNacmgrsvuwyhkdbn"
+
+/* legacy - for original DNA */
+#define INSDC_4na_map_CHARSET INSDC_dna_4na_map_CHARSET
+#define INSDC_4na_accept_CHARSET INSDC_dna_4na_accept_CHARSET
 
 
 /*--------------------------------------------------------------------------
- * 2na
- *  nucleotide data { ATGC }
- * x2na
- *  nucleotide data with single ambiguity value
+ * 2na  - nucleotide data A,C,G,T or A,C,G,U
+ * x2na - nucleotide data extended with single ambiguity value (N)
  *
  *  text encodings use the IUPAC character set
- *  legal values: [ACGTNacgtn.]
- *  canonical values: [ACGTN]
+ *  legal values: [ACGTUNacgtun.]
+ *  canonical values: [ACGTUN]
  *
- *  binary values are 0..4 = { ACGTN }
+ *  x2na values are 0..4 => { ACGTN } or { ACGUN }
  *
- *  packed values exclude N:
+ *  2na values exclude N:
  *    A = 0
  *    C = 1
  *    G = 2
  *    T = 3
+ *    U = 3
  *
  *  packed bytes have first base in uppermost 2 bits,
  *  and the following bases in similar fashion:
@@ -133,16 +169,57 @@ typedef uint8_t INSDC_2na_packed;
 
 #define INSDC_2na_map_BINSET \
     { 0,1,2,3 }
-#define INSDC_2na_map_CHARSET \
-    "ACGT"
-#define INSDC_2na_accept_CHARSET \
-    "ACGTacgt"
 #define INSDC_x2na_map_BINSET \
     { 0,1,2,3,4 }
-#define INSDC_x2na_map_CHARSET \
+
+
+#define INSDC_nuc_2na_map_BINSET \
+    { 0,1,2,3,3 }
+#define INSDC_nuc_2na_map_CHARSET \
+    "ACGTU"
+#define INSDC_nuc_2na_accept_CHARSET \
+    "ACGTUacgtu"
+
+#define INSDC_nuc_x2na_map_BINSET \
+    { 0,1,2,3,3,4 }
+#define INSDC_nuc_x2na_map_CHARSET \
+    "ACGTUN"
+#define INSDC_nuc_x2na_accept_CHARSET \
+    "ACGTUNacgtun."
+
+/* DNA */
+typedef INSDC_2na_bin INSDC_dna_2na_bin;
+typedef INSDC_x2na_bin INSDC_dna_x2na_bin;
+typedef INSDC_2na_packed INSDC_dna_2na_packed;
+
+#define INSDC_dna_2na_map_CHARSET \
+    "ACGT"
+#define INSDC_dna_2na_accept_CHARSET \
+    "ACGTacgt"
+#define INSDC_dna_x2na_map_CHARSET \
     "ACGTN"
-#define INSDC_x2na_accept_CHARSET \
+#define INSDC_dna_x2na_accept_CHARSET \
     "ACGTNacgtn."
+
+/* RNA */
+typedef INSDC_2na_bin INSDC_rna_2na_bin;
+typedef INSDC_x2na_bin INSDC_rna_x2na_bin;
+typedef INSDC_2na_packed INSDC_rna_2na_packed;
+
+#define INSDC_rna_2na_map_CHARSET \
+    "ACGU"
+#define INSDC_rna_2na_accept_CHARSET \
+    "ACGUacgu"
+#define INSDC_rna_x2na_map_CHARSET \
+    "ACGUN"
+#define INSDC_rna_x2na_accept_CHARSET \
+    "ACGUNacgun."
+
+/* legacy - for original DNA */
+#define INSDC_2na_map_CHARSET INSDC_dna_2na_map_CHARSET
+#define INSDC_2na_accept_CHARSET INSDC_dna_2na_accept_CHARSET
+#define INSDC_x2na_map_CHARSET INSDC_dna_x2na_map_CHARSET
+#define INSDC_x2na_accept_CHARSET INSDC_dna_x2na_accept_CHARSET
 
 
 /*--------------------------------------------------------------------------
@@ -192,13 +269,6 @@ typedef uint8_t INSDC_2cs_packed;
 
 
 /*--------------------------------------------------------------------------
- * protein
- *  represented in IUPAC characters
- */
-typedef char INSDC_protein_text;
-
-
-/*--------------------------------------------------------------------------
  * aa
  *  protein data
  *  text encodings use the IUPAC character set
@@ -221,6 +291,12 @@ typedef	uint8_t INSDC_aa_bin;
  */
 typedef uint8_t INSDC_quality_phred;
 typedef int8_t INSDC_quality_log_odds;
+
+/* text-encoding of quality scores
+   offsets are 33 = '!' and 64 = '@' */
+typedef char INSDC_quality_text_phred_33;
+typedef char INSDC_quality_text_phred_64;
+typedef char INSDC_quality_text_log_odds_64;
 
 
 /*--------------------------------------------------------------------------
@@ -246,17 +322,24 @@ typedef INSDC_coord_one INSDC_position_one;
  *  describes the type of read within a spot
  *  the extended version also describes its orientation
  */
-typedef uint8_t INSDC_read_type;
+typedef uint8_t INSDC_SRA_xread_type, INSDC_xread_type;
+typedef INSDC_SRA_xread_type INSDC_read_type;
 enum
 {
     /* read_type */
-    READ_TYPE_TECHNICAL  = 0,
-    READ_TYPE_BIOLOGICAL = 1,
+    SRA_READ_TYPE_TECHNICAL  = 0,
+    SRA_READ_TYPE_BIOLOGICAL = 1,
 
     /* orientation - applied as bits, e.g.:
        type = READ_TYPE_BIOLOGICAL | READ_TYPE_REVERSE */
-    READ_TYPE_FORWARD = 2,
-    READ_TYPE_REVERSE = 4
+    SRA_READ_TYPE_FORWARD = 2,
+    SRA_READ_TYPE_REVERSE = 4,
+
+    /* old names */
+    READ_TYPE_TECHNICAL  = SRA_READ_TYPE_TECHNICAL,
+    READ_TYPE_BIOLOGICAL = SRA_READ_TYPE_BIOLOGICAL,
+    READ_TYPE_FORWARD = SRA_READ_TYPE_FORWARD,
+    READ_TYPE_REVERSE = SRA_READ_TYPE_REVERSE
 };
 
 /* read filter
@@ -264,10 +347,27 @@ enum
 typedef uint8_t INSDC_read_filter;
 enum
 {
-    READ_FILTER_PASS = 0,
-    READ_FILTER_REJECT = 1,
-    READ_FILTER_CRITERIA = 2,
-    READ_FILTER_REDACTED = 3
+    SRA_READ_FILTER_PASS = 0,
+    SRA_READ_FILTER_REJECT = 1,
+    SRA_READ_FILTER_CRITERIA = 2,
+    SRA_READ_FILTER_REDACTED = 3,
+
+    /* old names */
+    READ_FILTER_PASS = SRA_READ_FILTER_PASS,
+    READ_FILTER_REJECT = SRA_READ_FILTER_REJECT,
+    READ_FILTER_CRITERIA = SRA_READ_FILTER_CRITERIA,
+    READ_FILTER_REDACTED = SRA_READ_FILTER_REDACTED
+};
+
+/* spot filter
+ */
+typedef uint8_t INSDC_SRA_spot_filter;
+enum
+{
+    SRA_SPOT_FILTER_PASS = 0,
+    SRA_SPOT_FILTER_REJECT = 1,
+    SRA_SPOT_FILTER_CRITERIA = 2,
+    SRA_SPOT_FILTER_REDACTED = 3
 };
 
 #ifdef __cplusplus

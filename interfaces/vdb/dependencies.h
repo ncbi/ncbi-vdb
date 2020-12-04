@@ -98,6 +98,17 @@ VDB_EXTERN rc_t CC VDatabaseListDependenciesWithCaching (
     const VDBDependencies **dep, bool missing,
     bool disableCaching );
 
+/* FindDependencies
+ *  create dependencies object: list dependencies
+ *
+ *  Don't resolve remote location if dependency was found locally.
+ *
+ *  "dep" [ OUT ] - return for VDBDependencies object
+ */
+VDB_EXTERN rc_t CC VDatabaseFindDependencies(struct VDatabase const *self,
+    const VDBDependencies **dep);
+
+
 /* Count
  *  retrieve the number of dependencies
  *
@@ -177,6 +188,17 @@ VDB_EXTERN rc_t CC VDBDependenciesCircular ( const VDBDependencies *self,
 VDB_EXTERN rc_t CC VDBDependenciesPath ( const VDBDependencies *self,
     const char **path, uint32_t idx );
 
+/* VPath
+ *  returns [Local] path for resolved dependency,
+ *  returns NULL for local and missing dependency.
+ *
+ *  "path" [ OUT ]
+ *
+ *  "idx" [ IN ] - zero-based index of dependency
+ */
+VDB_EXTERN rc_t CC VDBDependenciesVPath(const VDBDependencies *self,
+    const struct VPath **path, uint32_t idx);
+
 /* PathRemote
  *  returns Remote path for dependency,
  *  returns NULL for not found dependency.
@@ -200,6 +222,17 @@ VDB_EXTERN rc_t CC VDBDependenciesPathRemote ( const VDBDependencies *self,
  */
 VDB_EXTERN rc_t CC VDBDependenciesPathCache ( const VDBDependencies *self,
     const char **path, uint32_t idx );
+
+
+/* RemoteAndCache
+ *  returns Cache and remote path and rc_t for dependency.
+ *
+ *  "idx" [ IN ] - zero-based index of dependency
+ */
+VDB_EXTERN rc_t CC VDBDependenciesRemoteAndCache(const VDBDependencies *self,
+    uint32_t idx, rc_t *remoteRc, const struct VPath **remote,
+    rc_t *cacheRc, const struct VPath **cache);
+
 
 /* Error
  *  trying to analyze rc code and object

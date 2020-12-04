@@ -43,11 +43,15 @@ extern function NCBI:SRA:spot_name_token
 /*--------------------------------------------------------------------------
  * NCBI:SRA:GenericFastq:sequence
  *  Generic Fastq SRA Platform
+ *
+ * history:
+ *  1.0.1 - base explicitly upon sra #2.1.4
+ *  2.0.0 - NCBI:tbl:base_space uses metadata RNA_Flag to support RNA reads
  */
-table NCBI:SRA:GenericFastq:sequence #1
-    = NCBI:SRA:tbl:sra #2.1.3
-    , NCBI:tbl:base_space #2.0.3
-    , NCBI:tbl:phred_quality #2.0.4
+table NCBI:SRA:GenericFastq:sequence #2
+    = NCBI:SRA:tbl:sra #2.1.4
+    , NCBI:tbl:base_space #3
+    , NCBI:tbl:phred_quality #2.0
     , NCBI:SRA:tbl:clip #1.0.2
 {
     ascii platform_name
@@ -76,27 +80,31 @@ table NCBI:SRA:GenericFastq:sequence #1
         .CLIP_QUALITY_RIGHT = CLIP_QUALITY_RIGHT;
 }
 
-database NCBI:SRA:GenericFastq:db #1
+database NCBI:SRA:GenericFastq:db #2
 {
-    table NCBI:SRA:GenericFastq:sequence #1.0 SEQUENCE;
+    table NCBI:SRA:GenericFastq:sequence #2.0 SEQUENCE;
 };
 
 /*--------------------------------------------------------------------------
  * Illumina db defined based on sra/illumina.vschema
  */
-database NCBI:SRA:Illumina:db #1
+database NCBI:SRA:Illumina:db #2
 {
-    table NCBI:SRA:Illumina:tbl:phred:v2 #1.0.4 SEQUENCE;
+    table NCBI:SRA:Illumina:tbl:phred:v2 #2 SEQUENCE;
 };
 
 /*--------------------------------------------------------------------------
  * NCBI:SRA:GenericFastq:sequence_no_name
  *  Generic Fastq SRA Platform (without name)
+ *
+ * history:
+ *  1.0.1 - base explicitly upon sra #2.1.4
+ *  2.0.0 - NCBI:tbl:base_space uses metadata RNA_Flag to support RNA reads
  */
-table NCBI:SRA:GenericFastq:sequence_no_name #1
-    = NCBI:SRA:tbl:sra #2.1.3
-    , NCBI:tbl:base_space #2.0.3
-    , NCBI:tbl:phred_quality #2.0.4
+table NCBI:SRA:GenericFastq:sequence_no_name #2
+    = NCBI:SRA:tbl:sra #2.1.4
+    , NCBI:tbl:base_space #3
+    , NCBI:tbl:phred_quality #2.0
     , NCBI:SRA:tbl:clip #1.0.2
 {
     ascii platform_name
@@ -117,18 +125,22 @@ table NCBI:SRA:GenericFastq:sequence_no_name #1
         .CLIP_QUALITY_RIGHT = CLIP_QUALITY_RIGHT;
 }
 
-database NCBI:SRA:GenericFastqNoNames:db #1
+database NCBI:SRA:GenericFastqNoNames:db #2
 {
-    table NCBI:SRA:GenericFastq:sequence_no_name #1.0 SEQUENCE;
+    table NCBI:SRA:GenericFastq:sequence_no_name #2.0 SEQUENCE;
 };
 
 /*--------------------------------------------------------------------------
  * NCBI:SRA:GenericFastq:sequence_log_odds
  *  Generic Fastq SRA Platform (for log_odds)
+ *
+ * history:
+ *  1.0.1 - base explicitly upon sra #2.1.4
+ *  2.0.0 - NCBI:tbl:base_space uses metadata RNA_Flag to support RNA reads
  */
-table NCBI:SRA:GenericFastq:sequence_log_odds #1
-    = NCBI:SRA:tbl:sra #2.1.3
-    , NCBI:tbl:base_space #2.0.3
+table NCBI:SRA:GenericFastq:sequence_log_odds #2
+    = NCBI:SRA:tbl:sra #2.1.4
+    , NCBI:tbl:base_space #3
     , NCBI:tbl:log_odds_quality #2.1.0
     , NCBI:SRA:tbl:clip #1.0.2
 {
@@ -158,23 +170,27 @@ table NCBI:SRA:GenericFastq:sequence_log_odds #1
         .CLIP_QUALITY_RIGHT = CLIP_QUALITY_RIGHT;
 }
 
-database NCBI:SRA:GenericFastqLogOdds:db #1
+database NCBI:SRA:GenericFastqLogOdds:db #2
 {
-    table NCBI:SRA:GenericFastq:sequence_log_odds #1.0 SEQUENCE;
+    table NCBI:SRA:GenericFastq:sequence_log_odds #2 SEQUENCE;
 };
 
 /*--------------------------------------------------------------------------
  * NCBI:SRA:GenericFastq:sequence_nanopore
  *  Oxford Nanopore SRA Platform
+ *
+ * history:
+ *  1.0.1 - base explicitly upon sra #2.1.4
+ *  2.0.0 - NCBI:tbl:base_space uses metadata RNA_Flag to support RNA reads
  */
-table NCBI:SRA:GenericFastq:sequence_nanopore #1
-    = NCBI:SRA:tbl:sra #2.1.3
-    , NCBI:tbl:base_space #2.0.3
-    , NCBI:tbl:phred_quality #2.0.4
+table NCBI:SRA:GenericFastq:sequence_nanopore #2
+    = NCBI:SRA:tbl:sra #2.1.4
+    , NCBI:tbl:base_space #3
+    , NCBI:tbl:phred_quality #2.0
 {
     ascii platform_name
         = < ascii > echo < "OXFORD_NANOPORE" > ();
-        
+
     INSDC:SRA:platform_id out_platform
         = < INSDC:SRA:platform_id > echo < SRA_PLATFORM_OXFORD_NANOPORE > ();
 
@@ -195,15 +211,19 @@ table NCBI:SRA:GenericFastq:sequence_nanopore #1
 /*--------------------------------------------------------------------------
  * NCBI:SRA:GenericFastq:consensus_nanopore
  *  Oxford Nanopore SRA Platform
+ *
+ * history:
+ *  1.0.1 - base explicitly upon sra #2.1.4
+ *  2.0.0 - NCBI:tbl:base_space uses metadata RNA_Flag to support RNA reads
  */
-table NCBI:SRA:GenericFastq:consensus_nanopore #1
-    = NCBI:SRA:tbl:sra #2.1.3
-    , NCBI:tbl:base_space #2.0.3
-    , NCBI:tbl:phred_quality #2.0.4
+table NCBI:SRA:GenericFastq:consensus_nanopore #2
+    = NCBI:SRA:tbl:sra #2.1.4
+    , NCBI:tbl:base_space #3
+    , NCBI:tbl:phred_quality #2.0
 {
     ascii platform_name
         = < ascii > echo < "OXFORD_NANOPORE" > ();
-        
+
     INSDC:SRA:platform_id out_platform
         = < INSDC:SRA:platform_id > echo < SRA_PLATFORM_OXFORD_NANOPORE > ();
 
@@ -221,25 +241,28 @@ table NCBI:SRA:GenericFastq:consensus_nanopore #1
     extern column < U32 > izip_encoding #1 READ_NUMBER;
 }
 
-database NCBI:SRA:GenericFastqNanopore:db #1
+database NCBI:SRA:GenericFastqNanopore:db #2
 {
-    table NCBI:SRA:GenericFastq:sequence_nanopore #1.0 SEQUENCE;
-    table NCBI:SRA:GenericFastq:consensus_nanopore #1.0 CONSENSUS;
+    table NCBI:SRA:GenericFastq:sequence_nanopore #2.0 SEQUENCE;
+    table NCBI:SRA:GenericFastq:consensus_nanopore #2.0 CONSENSUS;
 };
 
-database NCBI:SRA:GenericFastqNanoporeConsensusOnly:db #1
+database NCBI:SRA:GenericFastqNanoporeConsensusOnly:db #2
 {
-    table NCBI:SRA:GenericFastq:consensus_nanopore #1.0 CONSENSUS;
+    table NCBI:SRA:GenericFastq:consensus_nanopore #2.0 CONSENSUS;
 };
 
 /*--------------------------------------------------------------------------
  * NCBI:SRA:GenericFastq:absolid
  *  Generic fastq for AB Solid platform
+ *
+ * history:
+ *  1.0.1 - base explicitly upon sra #2.1.4
  */
-table NCBI:SRA:GenericFastq:absolid #1
-    = NCBI:SRA:tbl:sra #2.1.3
+table NCBI:SRA:GenericFastq:absolid #1.0.1
+    = NCBI:SRA:tbl:sra #2.1.4
     , NCBI:tbl:color_space #2.1.0
-    , NCBI:tbl:phred_quality #2.0.4
+    , NCBI:tbl:phred_quality #2.0
     , NCBI:SRA:tbl:clip #1.0.2
 {
     ascii platform_name
@@ -268,7 +291,7 @@ table NCBI:SRA:GenericFastq:absolid #1
         .CLIP_QUALITY_RIGHT = CLIP_QUALITY_RIGHT;
 }
 
-database NCBI:SRA:GenericFastqAbsolid:db #1
+database NCBI:SRA:GenericFastqAbsolid:db #1.0.1
 {
-    table NCBI:SRA:GenericFastq:absolid #1.0 SEQUENCE;
+    table NCBI:SRA:GenericFastq:absolid #1.0.1 SEQUENCE;
 };

@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup>
+    <WorkingDirectory>kns</WorkingDirectory>
+  </PropertyGroup>
+  <Import Project=".\test-project.props" />
+  <ItemDefinitionGroup>
+    <Link>
+      <AdditionalDependencies>$(VDB_TARGET)lib\ncbi-vdb.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(VDB_ROOT)libs/kns;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <Import Project="..\test-kns_connect.files" />
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{87EF31A5-2448-4F09-AB62-BC2D77125181}</ProjectGuid>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+  </PropertyGroup>
+</Project>

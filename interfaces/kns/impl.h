@@ -103,6 +103,12 @@ KNS_EXTERN rc_t CC KStreamInit ( KStream *self, const KStream_vt *vt,
     const char *classname, const char *strname,
     bool read_enabled, bool write_enabled );
 
+/* Whack
+ *  does anything necessary to tear down KStream
+ *  but does not delete memory
+ */
+KNS_EXTERN rc_t CC KStreamWhack ( KStream * self, const char * classname );
+
 
 #ifdef __cplusplus
 }

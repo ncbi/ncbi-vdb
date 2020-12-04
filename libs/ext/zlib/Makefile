@@ -147,9 +147,9 @@ libz.vers: $(ZLIB_TAR_GET)
 	$(TAR_CMD) $^
 	cp zlib-$(ZLIB_VERS)/*.[ch] .
 	cp zlib-$(ZLIB_VERS)/win32/zlib.def libz.def
-ifeq (1.2.8,$(ZLIB_VERS))    
+ifeq (1.2.8,$(ZLIB_VERS))
 	patch < zlib-1.2.8.diff
-endif     
+endif
 	@ $(ECHO_VERS) > $@
 
 download: libz.vers
@@ -160,3 +160,9 @@ download: libz.vers
 compile: stdcompile
 
 $(TARGDIR)/compile: $(OBJFILES)
+
+#-------------------------------------------------------------------------------
+# fuzz
+#
+fuzz: std
+	cp $(addsuffix .$(LIBX),$(addprefix $(ILIBDIR)/,$(INT_LIBS))) $(FLIBDIR)/

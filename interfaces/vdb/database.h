@@ -51,9 +51,10 @@ extern "C" {
 /*--------------------------------------------------------------------------
  * forwards
  */
-struct VSchema;
 struct KMetadata;
 struct VDBManager;
+struct VPath;
+struct VSchema;
 
 
 /*--------------------------------------------------------------------------
@@ -122,6 +123,7 @@ VDB_EXTERN rc_t CC VDatabaseVDropTable ( VDatabase *self, const char *name, va_l
     
 
 /* OpenDBRead
+ * OpenDBReadVPath
  *  open a database for read using manager
  * OpenDBUpdate
  *  open a database for read/write using manager
@@ -140,6 +142,9 @@ VDB_EXTERN rc_t CC VDBManagerOpenDBRead ( struct VDBManager const *self,
 VDB_EXTERN rc_t CC VDBManagerVOpenDBRead ( struct VDBManager const *self,
     const VDatabase **db, struct VSchema const *schema,
     const char *path, va_list args );
+VDB_EXTERN rc_t CC VDBManagerOpenDBReadVPath(struct VDBManager const *self,
+    const VDatabase **db, struct VSchema const *schema,
+    const struct VPath *path);
 
 VDB_EXTERN rc_t CC VDBManagerOpenDBUpdate ( struct VDBManager *self,
     VDatabase **db, struct VSchema const *schema,
@@ -325,6 +330,23 @@ VDB_EXTERN rc_t CC VDatabaseListDB ( const VDatabase *self, KNamelist **names );
 VDB_EXTERN rc_t CC VDatabaseGetUserData ( const VDatabase *self, void **data );
 VDB_EXTERN rc_t CC VDatabaseSetUserData ( const VDatabase *self,
     void *data, void ( CC * destroy ) ( void *data ) );
+
+
+/* GetQualityCapability
+ *  can the database deliver full quality? synthetic quallity?
+ */
+VDB_EXTERN rc_t CC VDatabaseGetQualityCapability ( const VDatabase *self,
+    bool *fullQuality, bool *synthQuality );
+
+/* SetFullQualityType
+ *  switch database to deliver full quality
+ */
+VDB_EXTERN rc_t CC VDatabaseSetFullQualityType ( VDatabase *self );
+
+/* SetSynthQualityType
+ *  switch database to deliver synthetic quality
+ */
+VDB_EXTERN rc_t CC VDatabaseSetSynthQualityType ( VDatabase *self );
 
 
 #ifdef __cplusplus

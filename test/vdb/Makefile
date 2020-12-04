@@ -37,8 +37,12 @@ TEST_TOOLS = \
 	test-blob-val \
 	test-VDB-3060 \
 	test-VDB-3061 \
+	test-bytecode \
+	test-view \
 	test-tablecursor \
 	test-wtablecursor \
+	test-view-cursor \
+	test-VDB-4156   \
 
 #	test-VDB-3418
 
@@ -104,6 +108,9 @@ TEST_DEPS_OBJ = \
 
 $(TEST_BINDIR)/test-dependencies: $(TEST_DEPS_OBJ)
 	$(LP) --exe -o $@ $^ $(READ_LIBS)
+
+deps: test-dependencies
+	$(TEST_BINDIR)/test-dependencies
 
 valgrind_deps: std
 	valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-dependencies
@@ -229,6 +236,92 @@ VDB-3061: test-VDB-3061
 	$(TEST_BINDIR)/test-VDB-3061
 
 #-------------------------------------------------------------------------------
+# byte code
+#
+VDB_BYTECODE_SRC = \
+	test-bytecode
+
+VDB_BYTECODE_OBJ = \
+	$(addsuffix .$(OBJX),$(VDB_BYTECODE_SRC))
+
+VDB_BYTECODE_LIB = \
+	-skapp \
+	-sktst \
+	-sncbi-wvdb
+
+$(TEST_BINDIR)/test-bytecode: $(VDB_BYTECODE_OBJ)
+	$(LP) --exe -o $@ $^ $(VDB_BYTECODE_LIB)
+
+bytecode: test-bytecode
+	$(TEST_BINDIR)/test-bytecode
+
+#-------------------------------------------------------------------------------
+# v2 View
+#
+VDB_VIEW_SRC = \
+	test-view
+
+VDB_VIEW_OBJ = \
+	$(addsuffix .$(OBJX),$(VDB_VIEW_SRC))
+
+VDB_VIEW_LIB = \
+	-skapp \
+	-sktst \
+	-sncbi-wvdb \
+	-sschema
+
+$(TEST_BINDIR)/test-view: $(VDB_VIEW_OBJ)
+	$(LP) --exe -o $@ $^ $(VDB_VIEW_LIB)
+
+view: test-view
+	$(TEST_BINDIR)/test-view
+
+#-------------------------------------------------------------------------------
+# test-tablecursor
+#
+TEST_TABLECURSOR_SRC = \
+	test-tablecursor
+
+TEST_TABLECURSOR_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_TABLECURSOR_SRC))
+
+$(TEST_BINDIR)/test-tablecursor: $(TEST_TABLECURSOR_OBJ)
+	$(LP) --exe -o $@ $^ $(READ_LIBS)
+
+tcur: test-tablecursor
+	$(TEST_BINDIR)/$^
+
+#-------------------------------------------------------------------------------
+# test-wtablecursor
+#
+TEST_WTABLECURSOR_SRC = \
+	test-wtablecursor
+
+TEST_WTABLECURSOR_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_WTABLECURSOR_SRC))
+
+$(TEST_BINDIR)/test-wtablecursor: $(TEST_WTABLECURSOR_OBJ)
+	$(LP) --exe -o $@ $^ $(WRITE_LIBS)
+
+twcur: test-wtablecursor
+	$(TEST_BINDIR)/$^
+
+#-------------------------------------------------------------------------------
+# test-view-cursor
+#
+TEST_VIEW_CURSOR_SRC = \
+	test-view-cursor
+
+TEST_VIEW_CURSOR_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_VIEW_CURSOR_SRC))
+
+$(TEST_BINDIR)/test-view-cursor: $(TEST_VIEW_CURSOR_OBJ)
+	$(LP) --exe -o $@ $^ $(VDB_VIEW_LIB) -ssraxf
+
+vcur: test-view-cursor
+	$(TEST_BINDIR)/$^
+
+#-------------------------------------------------------------------------------
 # VDB-3305
 #
 VDB_3305_SRC = \
@@ -260,31 +353,17 @@ VDB-3418: test-VDB-3418
 	$(TEST_BINDIR)/test-VDB-3418
 
 #-------------------------------------------------------------------------------
-# test-tablecursor
+# VDB-4156
 #
-TEST_TABLECURSOR_SRC = \
-	test-tablecursor
+TEST_VDB4156_SRC = \
+	test-VDB-4156
 
-TEST_TABLECURSOR_OBJ = \
-	$(addsuffix .$(OBJX),$(TEST_TABLECURSOR_SRC))
+TEST_VDB4156_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_VDB4156_SRC))
 
-$(TEST_BINDIR)/test-tablecursor: $(TEST_TABLECURSOR_OBJ)
-	$(LP) --exe -o $@ $^ $(READ_LIBS)
-
-tcur: test-tablecursor
-	$(TEST_BINDIR)/$^
-
-#-------------------------------------------------------------------------------
-# test-wtablecursor
-#
-TEST_WTABLECURSOR_SRC = \
-	test-wtablecursor
-
-TEST_WTABLECURSOR_OBJ = \
-	$(addsuffix .$(OBJX),$(TEST_WTABLECURSOR_SRC))
-
-$(TEST_BINDIR)/test-wtablecursor: $(TEST_WTABLECURSOR_OBJ)
+$(TEST_BINDIR)/test-VDB-4156: $(TEST_VDB4156_OBJ)
 	$(LP) --exe -o $@ $^ $(WRITE_LIBS)
 
-twcur: test-wtablecursor
-	$(TEST_BINDIR)/$^
+VDB-4156: test-VDB-4156
+	$(TEST_BINDIR)/test-VDB-4156
+

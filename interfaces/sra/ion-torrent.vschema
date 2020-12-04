@@ -59,9 +59,9 @@ physical INSDC:position:one NCBI:SRA:IonTorrent:encoding:POSITION #1
         return ( INSDC:position:one ) < I32 > integral ( pos_1st_deriv );
     }
     encode
-    { 
+    {
         I32 pos_1st_deriv = < I32 > deriv ( @ );
-        return izip ( pos_1st_deriv ); 
+        return izip ( pos_1st_deriv );
     }
 }
 
@@ -71,12 +71,14 @@ physical INSDC:position:one NCBI:SRA:IonTorrent:encoding:POSITION #1
  *  1.0.1 - updated ancestry
  *  1.0.2 - updated ancestry
  *  1.0.3 - updated ancestry
+ *  1.0.4 - updated ancestry
+ *  2.0.0 - updated ancestry
  */
-table NCBI:SRA:IonTorrent:tbl:v2 #1.0.3
-    = INSDC:SRA:tbl:sra #1.0.3
-    , NCBI:SRA:tbl:sra_nopos #2.1.3
-    , NCBI:tbl:base_space #2.0.3
-    , NCBI:tbl:phred_quality #2.0.3
+table NCBI:SRA:IonTorrent:tbl:v2 #2
+    = INSDC:SRA:tbl:sra #1.0.4
+    , NCBI:SRA:tbl:sra_nopos #2.1.4
+    , NCBI:tbl:base_space #3
+    , NCBI:tbl:phred_quality #2.0
     , NCBI:SRA:tbl:clip #1.0.2
 {
     /* PLATFORM is always ION_TORRENT */

@@ -32,21 +32,26 @@ extern "C" {
 #endif
 
 #include <stddef.h>
+#include <stdint.h>
 
 typedef struct SchemaToken
 {
-    int type;
-    const char* value; /* points into the flex's buffer, valid until the next call to lex() */
-    size_t value_len;
-    char* leading_ws; /* NUL-terminated; the consumer of the token is responsible for free()ing */
-    void* subtree; /* used by the parser */
+    int             type;
+    const char *    value; /* points into the flex's buffer, valid until the next call to lex() */
+    size_t          value_len;
+    char*           leading_ws; /* NUL-terminated, owned */
+    void*           subtree; /* used by the parser */
+    const char *    file;
+    uint32_t        line;
+    uint32_t        column;
 } SchemaToken;
 
 typedef struct SchemaScanBlock
 {
-    void* scanner;
-    void* buffer;
-    char* whitespace;
+    void *          scanner;
+    void *          buffer;
+    char *          whitespace;
+    const char *    file_name;
 } SchemaScanBlock;
 
 extern void SchemaScan_yylex_init ( SchemaScanBlock* sb, const char *str, size_t size );

@@ -41,31 +41,39 @@
 typedef struct progressbar
 {
     char buffer[ BUFFER_SIZE ];
-	percent_t percent;
+    percent_t percent;
     bool initialized;
-    int out_fd;
-	uint8_t digits;
+    void * out_writer;
+    uint8_t digits;
 } progressbar;
 
 static rc_t make_progressbar_cmn( progressbar ** pb, const uint8_t digits, bool use_stderr )
 {
-	rc_t rc = 0;
+    rc_t rc = 0;
     if ( pb == NULL )
         rc = RC( rcVDB, rcNoTarg, rcConstructing, rcSelf, rcNull );
-	else
-	{
-		progressbar	* p = calloc( 1, sizeof( *p ) );
-		if ( p == NULL )
-			rc = RC( rcVDB, rcNoTarg, rcConstructing, rcMemory, rcExhausted );
-		else
-		{
-            p->digits = digits > MAX_DIGITS ? MAX_DIGITS : digits;
-            p->out_fd = use_stderr ? STDERR_FD : STDOUT_FD;
-            if ( sys_is_a_tty( p->out_fd ) != 1 )
-                p->out_fd = 0;
-			*pb = p;
-		}
-	}
+    else if ( digits > MAX_DIGITS )
+        rc = RC( rcVDB, rcNoTarg, rcConstructing, rcParam, rcExcessive);
+    else
+    {
+        void * h_stdout;
+        void * h_stderr;
+        
+        *pb = NULL;
+        rc = KWrtSysInit( &h_stdout, &h_stderr );
+        if ( rc == 0 )
+        {
+            progressbar	* p = calloc( 1, sizeof( *p ) );
+            if ( p == NULL )
+                rc = RC( rcVDB, rcNoTarg, rcConstructing, rcMemory, rcExhausted );
+            else
+            {
+                p -> digits = digits;
+                p -> out_writer = use_stderr ? h_stderr : h_stdout;
+                *pb = p;
+            }
+        }
+    }
     return rc;
 }
 
@@ -79,31 +87,31 @@ LIB_EXPORT rc_t CC make_progressbar_stderr( struct progressbar ** pb, const uint
     return make_progressbar_cmn( pb, digits, true );
 }
 
+rc_t CC KWrt_DefaultWriter( void * self, const char * buffer, size_t bufsize, size_t * num_writ );
+
 static rc_t write_buffer( progressbar * pb, size_t to_write )
 {
-    size_t printed = sys_simple_write( pb->out_fd, pb->buffer, to_write );
-    if ( to_write != printed )
-        return RC( rcVDB, rcNoTarg, rcWriting, rcRange, rcInvalid );
-    return 0;
+    size_t written;
+    rc_t rc = KWrt_DefaultWriter( pb -> out_writer, pb -> buffer, to_write, &written );
+    /* size_t printed = sys_simple_write( pb -> out_fd, pb -> buffer, to_write ); */
+    if ( rc == 0 && to_write != written )
+        rc = RC( rcVDB, rcNoTarg, rcWriting, rcRange, rcInvalid );
+    return rc;
 }
 
 static rc_t print_newline( progressbar * pb )
 {
-    rc_t rc = 0;
-    if ( pb->out_fd > 0 )
-    {
-        size_t num_writ;
-        rc_t rc = string_printf( pb->buffer, BUFFER_SIZE, &num_writ, "\n" );
-        if ( rc == 0 )
-            rc = write_buffer( pb, num_writ );
-    }
+    size_t num_writ;
+    rc_t rc = string_printf( pb->buffer, BUFFER_SIZE, &num_writ, "\n" );
+    if ( rc == 0 )
+        rc = write_buffer( pb, num_writ );
     return rc;
 }
 
 LIB_EXPORT rc_t CC destroy_progressbar( progressbar * pb )
 {
     if ( pb == NULL )
-        return RC( rcVDB, rcNoTarg, rcDestroying, rcSelf, rcNull );
+        return 0;
     print_newline( pb );
     free( pb );
     return 0;
@@ -111,27 +119,19 @@ LIB_EXPORT rc_t CC destroy_progressbar( progressbar * pb )
 
 static rc_t print_progress_1( progressbar * pb, const char * fmt, percent_t value )
 {
-    rc_t rc = 0;
-    if ( pb->out_fd > 0 )
-    {
-        size_t num_writ;
-        rc_t rc = string_printf( pb->buffer, BUFFER_SIZE, &num_writ, fmt, value );
-        if ( rc == 0 )
-            rc = write_buffer( pb, num_writ );
-    }
+    size_t num_writ;
+    rc_t rc = string_printf( pb->buffer, BUFFER_SIZE, &num_writ, fmt, value );
+    if ( rc == 0 )
+        rc = write_buffer( pb, num_writ );
     return rc;
 }
 
 static rc_t print_progress_2( progressbar * pb, const char * fmt, percent_t value1, percent_t value2 )
 {
-    rc_t rc = 0;
-    if ( pb->out_fd > 0 )
-    {
-        size_t num_writ;
-        rc_t rc = string_printf( pb->buffer, BUFFER_SIZE, &num_writ, fmt, value1, value2 );
-        if ( rc == 0 )
-            rc = write_buffer( pb, num_writ );
-    }
+    size_t num_writ;
+    rc_t rc = string_printf( pb->buffer, BUFFER_SIZE, &num_writ, fmt, value1, value2 );
+    if ( rc == 0 )
+        rc = write_buffer( pb, num_writ );
     return rc;
 }
 
@@ -163,7 +163,10 @@ static rc_t progess_1( progressbar * pb, const percent_t percent )
     percent_t p0 = percent - ( p1 * 10 );
     if ( ( p1 & 1 )&&( p0 == 0 ) )
         return print_progress_2( pb, "\b\b\b\b\b\b- %2u.%01u%%", p1, p0 );
-    return print_progress_2( pb, "\b\b\b\b\b%2u.%01u%%", p1, p0 );
+    if (p1 != 100 || p0 != 0)
+        return print_progress_2( pb, "\b\b\b\b\b%2u.%01u%%", p1, p0 );
+    else
+        return print_progress_2( pb, "\b\b\b\b\b%2u%%  \b\b",p1, p0);
 }
 
 
@@ -181,7 +184,10 @@ static rc_t progess_2( progressbar * pb, const percent_t percent )
     percent_t p0 = percent - ( p1 * 100 );
     if ( ( p1 & 1 )&&( p0 == 0 ) )
         return print_progress_2( pb, "\b\b\b\b\b\b\b- %2u.%02u%%", p1, p0 );
-    return print_progress_2( pb, "\b\b\b\b\b\b%2u.%02u%%", p1, p0 );
+    if (p1 != 100 || p0 != 0)
+        return print_progress_2( pb, "\b\b\b\b\b\b%2u.%02u%%", p1, p0 );
+    else
+        return print_progress_2( pb, "\b\b\b\b\b\b%2u%%   \b\b\b", p1, p0);
 }
 
 static rc_t progress_forward( progressbar * pb, const percent_t to )
@@ -204,11 +210,11 @@ static rc_t progress_forward( progressbar * pb, const percent_t to )
 
 LIB_EXPORT rc_t CC update_progressbar( progressbar * pb, const percent_t percent )
 {
-	rc_t rc = 0;
+    rc_t rc = 0;
     if ( pb == NULL )
         rc = RC( rcVDB, rcNoTarg, rcParsing, rcSelf, rcNull );
-	else
-	{
+    else
+    {
         percent_t to;
         switch( pb -> digits )
         {
@@ -217,26 +223,26 @@ LIB_EXPORT rc_t CC update_progressbar( progressbar * pb, const percent_t percent
             case 2 : to = percent > 10000 ? 10000 : percent; break;
         }
         
-		if ( pb->initialized )
-		{
-			if ( to > pb->percent )
+        if ( pb->initialized )
+        {
+            if ( to > pb->percent )
                 rc = progress_forward( pb, to );
-		}
-		else
-		{
-			switch( pb -> digits )
-			{
-				case 0 : rc = progess_0a( pb, 0 ); break;
-				case 1 : rc = progess_1a( pb, 0 ); break;
-				case 2 : rc = progess_2a( pb, 0 ); break;
-			}
+        }
+        else
+        {
+            switch( pb -> digits )
+            {
+                case 0 : rc = progess_0a( pb, 0 ); break;
+                case 1 : rc = progess_1a( pb, 0 ); break;
+                case 2 : rc = progess_2a( pb, 0 ); break;
+            }
             if ( rc == 0 )
             {
                 pb->initialized = true;
                 if ( to > 0 )
                     rc = progress_forward( pb, to );
             }
-		}
-	}
+        }
+    }
     return rc;
 }

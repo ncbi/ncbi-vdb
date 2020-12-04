@@ -46,6 +46,7 @@ extern "C" {
 struct VFSManager;
 struct KDirectory;
 struct KFile;
+struct KNSManager;
 struct VPath;
 struct VResolver;
 struct SRAPath;
@@ -88,7 +89,14 @@ VFS_EXTERN rc_t CC VFSManagerOpenDirectoryUpdateDirectoryRelative ( const struct
 #define VPathMakeDirectoryRelative LegacyVPathMakeDirectoryRelative
 VFS_EXTERN rc_t CC VPathMakeDirectoryRelative ( struct VPath ** new_path,
     struct KDirectory const * dir, const char * posix_path);
-
+VFS_EXTERN rc_t CC VFSManagerMakeDirectoryRelativeVPath(
+    const struct VFSManager * self,
+    struct VPath ** new_path, const struct KDirectory * dir,
+    const char * posix_path, const struct VPath * vpath);
+/* VPathMakeDirectoryRelativeVPath: obsolete.
+   use VFSManagerMakeDirectoryRelativeVPath instead */
+VFS_EXTERN rc_t CC VPathMakeDirectoryRelativeVPath ( struct VPath ** new_path,
+    struct KDirectory const * dir, const char * posix_path, const struct VPath * vpath );
 
 VFS_EXTERN rc_t CC VFSManagerOpenFileReadDecrypt (const struct VFSManager *self,
                                                   struct KFile const **f,
@@ -110,6 +118,15 @@ VFS_EXTERN const struct KConfig* CC VFSManagerGetConfig(const struct VFSManager 
 /* Make using a custom KConfig
  */
 VFS_EXTERN rc_t CC VFSManagerMakeFromKfg ( struct VFSManager ** pmanager,
+    struct KConfig * cfg );
+
+/* Make using a custom KConfig and KNSManager */
+VFS_EXTERN rc_t CC VFSManagerMakeFromKns(struct VFSManager ** pmanager,
+    struct KConfig * cfg, struct KNSManager * kns);
+
+/* Make non-singleton version
+ */
+VFS_EXTERN rc_t CC VFSManagerMakeLocal ( struct VFSManager ** pmanager,
     struct KConfig * cfg );
 
 /*
@@ -152,6 +169,12 @@ VFS_EXTERN rc_t CC VFSManagerSetCacheRoot ( const struct VFSManager * self,
  */
 VFS_EXTERN rc_t CC VFSManagerDeleteCacheOlderThan ( const struct VFSManager * self,
     uint32_t days );
+
+
+/** Unreliable object: do not report occured erros */
+VFS_EXTERN rc_t CC VFSManagerOpenDirectoryReadDecryptUnreliable (
+    const struct VFSManager *self, struct KDirectory const **d,
+    const struct VPath * object );
 
 
 #ifdef __cplusplus
