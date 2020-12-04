@@ -864,7 +864,7 @@ FIXTURE_TEST_CASE( KClientHttpResult_FormatMsg, HttpFixture)
 #endif
 
 #ifdef ALL
-FIXTURE_TEST_CASE(GET_WITHOUT_CONTENT_LENGHT, HttpFixture) {
+FIXTURE_TEST_CASE(GET_WITHOUT_CONTENT_LENGTH, HttpFixture) {
     for ( int i = 0 ; ; ++ i ) {
       rc_t rc = KNSManagerMakeHttpFile(m_mgr,
         (const KFile **)&m_file, NULL, 0x01010000,
