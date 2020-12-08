@@ -2107,6 +2107,10 @@ rc_t VPathMakeFromVText ( VPath ** ppath, const char * path_fmt, va_list args )
 
             /* parse into portions */
             rc = VPathParse ( path, buffer . base, ( size_t ) buffer . elem_count - 1 );
+
+            if ( rc == 0 )
+                rc = VPathSetQuality ( path, eQualLast );
+
             if ( rc == 0 )
             {
                 path->projectId = -1; /* public by default; 0 is valid id */
@@ -4529,3 +4533,18 @@ rc_t VPathSetAccOfParentDb(VPath * self, const String * acc) {
 
     return rc;
 }
+
+rc_t VPathSetQuality(VPath * self, VQuality quality) {
+    if (self == NULL)
+        return RC(rcVFS, rcPath, rcUpdating, rcSelf, rcNull);
+    self->quality = quality;
+    return 0;
+}
+
+LIB_EXPORT VQuality CC VPathGetQuality(const VPath * self) {
+    if (self == NULL)
+        return eQualLast;
+    else
+        return self->quality;
+}
+

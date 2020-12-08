@@ -1,4 +1,4 @@
-/*===========================================================================
+/*==============================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
 *               National Center for Biotechnology Information
@@ -19,51 +19,4 @@
 *  purpose.
 *
 *  Please cite the author in any work or product based on this material.
-*
-* ===========================================================================
-*
-*/
-
-#ifndef _h_sra_sraschema_
-#define _h_sra_sraschema_
-
-#ifndef _h_sra_extern_
-#include <sra/extern.h>
-#endif
-
-#ifndef _h_klib_callconv_
-#include <klib/callconv.h>
-#endif
-
-#ifndef _h_klib_defs_
-#include <klib/defs.h>
-#endif
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-
-/*--------------------------------------------------------------------------
- * forwards
- */
-struct SRAMgr;
-struct VSchema;
-struct VDBManager;
-
-
-/*--------------------------------------------------------------------------
- * SRASchema
- *  a schema object pre-loaded with default SRA schema
- */
-
-/* Make
- *  create an instance of the default (empty) SRA schema
- */
-#define VDBManagerMakeSRASchema VDBManagerMakeSchema
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* _h_sra_sraschema_ */
+* ============================================================================*/

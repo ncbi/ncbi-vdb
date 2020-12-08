@@ -51,7 +51,7 @@ rc_t ServicesCacheAddId(ServicesCache * self, const char * acc);
 
 /* All path-s/accessions are added. Now prepare results. */
 rc_t ServicesCacheComplete(ServicesCache * self,
-    const char * outDir, const char * outFile);
+    const char * outDir, const char * outFile, bool skipLocal);
 
 /* Return local and cache locations for remote (to be used by file iterator) */
 rc_t ServicesCacheResolve(ServicesCache * self, const struct VPath * remote,

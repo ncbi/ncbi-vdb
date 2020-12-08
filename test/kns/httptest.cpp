@@ -55,6 +55,8 @@
 
 #include <sstream>
 
+#include <unistd.h> /* sleep */
+
 static rc_t argsHandler ( int argc, char * argv [] );
 TEST_SUITE_WITH_ARGS_HANDLER ( HttpTestSuite, argsHandler );
 
@@ -863,10 +865,29 @@ FIXTURE_TEST_CASE( KClientHttpResult_FormatMsg, HttpFixture)
 
 #ifdef ALL
 FIXTURE_TEST_CASE(GET_WITHOUT_CONTENT_LENGHT, HttpFixture) {
-    REQUIRE_RC(KNSManagerMakeHttpFile(m_mgr,
+    for ( int i = 0 ; ; ++ i ) {
+      rc_t rc = KNSManagerMakeHttpFile(m_mgr,
         (const KFile **)&m_file, NULL, 0x01010000,
-        "http://ftp.ensembl.org/pub/data_files/homo_sapiens"
-        "/GRCh38/rnaseq/GRCh38.illumina.brain.1.bam.bai"));
+         "http://ftp.ensembl.org/pub/data_files/homo_sapiens"
+             "/GRCh38/rnaseq/GRCh38.illumina.brain.1.bam.bai");
+      if ( rc == 0 ) {
+        if ( i > 0 )
+          cerr << " " ;
+        break;
+      }
+      if ( i > 17 ) { // retry loop waiting for URL to revive
+        cerr << " Source is not available. Test skipped. ";
+        if ( 0 )
+          REQUIRE_RC ( rc ) ;
+        else
+          return ;
+      }
+      if ( i == 0 )
+        cerr << "Wait for ensembl" ;
+      else
+        cerr << "." ;
+      sleep ( 1 ) ;
+    }
 
     uint64_t size;
     REQUIRE_RC(KFileSize(m_file, &size));

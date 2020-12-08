@@ -43,6 +43,10 @@
 #include <klib/text.h>
 #endif
 
+#ifndef _h_vdb_quality_
+#include <vdb/quality.h> /* VQuality */
+#endif
+
 #ifndef _h_vfs_path_
 #include <vfs/path.h>
 #endif
@@ -147,6 +151,8 @@ struct VPath
 
     /* version of names service returned this VPath: 3.0 or SDL ... */
     uint32_t version; 
+
+    VQuality quality;
 };
 
 enum VPathVariant
@@ -248,6 +254,10 @@ rc_t VPathClose ( const VPath * l, const VPath * r, int * notequal,
                   KTime_t expirationRange );
 
 rc_t VPathGetAccession(const VPath * self, String * acc);
+
+rc_t VPathSetQuality(VPath * self, VQuality quality);
+rc_t VPathLoadQuality(VPath * self);
+
 
 /***** VPathSet - set of VPath's - genetated from name resolver response ******/
 
