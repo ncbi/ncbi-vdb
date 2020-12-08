@@ -29,7 +29,10 @@
 */
 
 
-#include <kfg/kart.h>      /* EObjectType */
+#include <kfg/kart.h> /* EObjectType */
+
+#include <vdb/quality.h> /* VQuality */
+
 #include <vfs/resolver.h> /* VRemoteProtocols */
 #include <vfs/services.h> /* ESrvFileFormat */
 
@@ -41,17 +44,20 @@ extern "C" {
 
 struct KSrvRespObj;
 struct KNSManager;
+struct KRepositoryMgr;
 struct KService;
+struct ServicesCache;
 struct KSrvRespFile;
 struct KSrvResponse;
 struct Locations;
 struct Response4;
+struct VPath;
 struct VPathSet;
 
 #define VERSION_3_0 0x03000000
 #define VERSION_4_0 0x04000000
 
-ver_t InitVersion(const char * src);
+ver_t InitVersion(const char * src, const String * ticket);
 
 /* make name service call : request: 1 object, response: 1 object */
 VFS_EXTERN
@@ -71,6 +77,8 @@ rc_t KSrvResponseAppend ( struct KSrvResponse * self,
                           const struct VPathSet * set );
 rc_t KSrvResponseAddLocalAndCache ( struct KSrvResponse * self, uint32_t idx,
                                     const struct VPathSet * localAndCache );
+rc_t KSrvResponseAddLocalAndCacheToTree(
+    struct KSrvResponse * self, const struct KSrvRespFile * file);
 rc_t KSrvResponseGet ( const struct KSrvResponse * self, uint32_t idx,
                        const struct VPathSet ** set );
 
@@ -79,20 +87,22 @@ rc_t KSrvResponseGetIds ( const struct KSrvResponse * self, uint32_t idx,
                           const char ** reqId, const char ** respId );
 
 rc_t KSrvResponseGetMapping(const KSrvResponse * self, uint32_t idx,
-                            const struct VPath ** mapping);
+        const struct VPath ** mapping, const struct VPath ** vdbcacheMapping);
 
 rc_t KSrvResponseGetOSize(const KSrvResponse * self, uint32_t idx,
     uint64_t * osize);
 
 rc_t KSrvResponseGetR4 ( const struct KSrvResponse * self,
                          struct Response4 ** r );
-rc_t KSrvResponseSetR4 ( struct KSrvResponse * self,
-                         const struct Response4 * r );
+rc_t KSrvResponseSetR4 ( struct KSrvResponse * self, struct Response4 * r );
 
+/* don't release cache */
+rc_t KSrvResponseGetServiceCache(const struct KSrvResponse * self,
+    struct ServicesCache ** cache);
+
+rc_t KSrvRespFileAddRef(const struct KSrvRespFile * self);
 rc_t KSrvRespFileAddLocalAndCache ( struct KSrvRespFile * file,
                                     const struct VPathSet * localAndCache );
-rc_t KSrvRespFileGetFormat ( const struct KSrvRespFile * self,
-                             ESrvFileFormat * ff );
 
 /* DON'T FREE RETURNED STRINGS !!! */
 rc_t KSrvRespFileGetAccOrName ( const struct KSrvRespFile * self,
@@ -107,6 +117,9 @@ rc_t LocationsAddCache ( struct Locations * self,
 rc_t LocationsAddLocal ( struct Locations * self,
                          const struct VPath * path, rc_t rc );
 
+const KSrvResponse * KSrvRunIteratorGetResponse(
+    const KSrvRunIterator * self);
+
 /**************************** KService ****************************************/
 /* resolve oid->file mapping inside of VFS:
   resolve (resolve oid<->name mapping in resolver):
@@ -114,6 +127,19 @@ rc_t LocationsAddLocal ( struct Locations * self,
    1: resolve
    2: don't resolve */
 rc_t KServiceResolveName ( struct KService * service, int resolve );
+
+/* Set quality type in service request */
+rc_t KServiceSetQuality(KService * self, VQuality quality);
+rc_t KServiceGetQuality(const KService * self, int32_t * quality);
+
+rc_t KServiceResolve(KService * self, bool local, bool remote);
+bool KServiceSkipLocal(const KService * self);
+
+/* call to set VResolverCacheEnable to vrAlwaysEnable
+   to simulate prefetch mode
+void KServiceSetCacheEnable(struct KService * self,
+    VResolverEnableState enable);
+VResolverEnableState KServiceGetCacheEnable(const struct KService * self);*/
 
 /**************************** KServiceNamesExecute ****************************/
 /* Execute Names Service Call using current default protocol version;
@@ -126,11 +152,34 @@ rc_t KServiceNamesExecuteExtImpl ( struct KService * self,
     const struct KSrvResponse ** response, const char * expected );
 
 /***************** Interface services.c -> remote-services.c  *****************/
+rc_t KServiceGetResponse(const KService * self, const KSrvResponse ** response);
 rc_t KServiceGetConfig ( struct KService * self, const struct KConfig ** kfg);
+rc_t KServiceGetVFSManager ( const KService * self,
+    const struct VFSManager ** mgr );
 rc_t KServiceGetResolver ( struct KService * self, const String * ticket,
                            VResolver ** resolver );
+rc_t KServiceGetResolverForProject(struct KService * self, uint32_t project,
+    VResolver ** resolver);
 int KServiceGetResolveName ( const struct KService * self );
-/******************************** TESTS ********************************/
+
+/* don't release returned mgr */
+rc_t KServiceGetRepoMgr(KService * self, const struct KRepositoryMgr ** mgr);
+
+const struct KNgcObj * KServiceGetNgcFile(const KService * self,
+    bool * isProtected);
+
+bool KServiceCallsSdl(const KService * self);
+
+/* don't release returned string */
+const char * KServiceGetId(const KService * self, uint32_t idx);
+
+rc_t KServiceAddLocalAndCacheToResponse(KService * self,
+    const char * acc, const struct VPathSet * vps);
+
+/* don't release cache */
+rc_t KServiceGetServiceCache(KService * self, struct ServicesCache ** cache);
+
+/******************************** TESTS ***************************************/
 typedef struct {
     const char * id;
     EObjectType type;

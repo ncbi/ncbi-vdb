@@ -67,10 +67,12 @@ using namespace std;
 static rc_t argsHandler(int argc, char* argv[]);
 TEST_SUITE_WITH_ARGS_HANDLER(KfgTestSuite, argsHandler);
 
+#ifdef ALL
 FIXTURE_TEST_CASE(testKConfigPrint, KfgFixture)
 {
 	REQUIRE_RC(KConfigPrint(kfg, 0));
 }
+#endif
 
 ///////////////////////////////////////////////// KFG parser test cases
 
@@ -645,6 +647,21 @@ FIXTURE_TEST_CASE(ConfigNodeAccessInt, KfgFixture)
     int64_t i = 0;
     REQUIRE_RC(KConfigNodeReadI64(GetNode("int/i1"), &i));
     REQUIRE_EQ(i, (int64_t)100);
+    REQUIRE_RC_FAIL(KConfigNodeReadI64(GetNode("int"), &i));
+}
+
+FIXTURE_TEST_CASE(ConfigNodeAccessInts, KfgFixture)
+{
+    const char* contents =
+        "int/i1=\"100\"\n"
+        "int=\"200\"\n"
+        ;
+    CreateAndLoad(GetName(), contents);
+    int64_t i = 0;
+    REQUIRE_RC(KConfigNodeReadI64(GetNode("int/i1"), &i));
+    REQUIRE_EQ(i, (int64_t)100);
+    REQUIRE_RC(KConfigNodeReadI64(GetNode("int"), &i));
+    REQUIRE_EQ(i, (int64_t)200);
 }
 
 FIXTURE_TEST_CASE(ConfigNodeAccessUnsigned, KfgFixture)
@@ -656,6 +673,21 @@ FIXTURE_TEST_CASE(ConfigNodeAccessUnsigned, KfgFixture)
     uint64_t i = 0;
     REQUIRE_RC(KConfigNodeReadU64(GetNode("uint/i1"), &i));
     REQUIRE_EQ(i, UINT64_C(100000000000));
+    REQUIRE_RC_FAIL(KConfigNodeReadU64(GetNode("uint"), &i));
+}
+
+FIXTURE_TEST_CASE(ConfigNodeAccessUnsigneds, KfgFixture)
+{
+    const char* contents =
+        "uint/i1=\"100000000000\"\n"
+        "uint=\"200000000000\"\n"
+        ;
+    CreateAndLoad(GetName(), contents);
+    uint64_t i = 0;
+    REQUIRE_RC(KConfigNodeReadU64(GetNode("uint/i1"), &i));
+    REQUIRE_EQ(i, UINT64_C(100000000000));
+    REQUIRE_RC(KConfigNodeReadU64(GetNode("uint"), &i));
+    REQUIRE_EQ(i, UINT64_C(200000000000));
 }
 
 FIXTURE_TEST_CASE(ConfigNodeAccessF64, KfgFixture)
@@ -667,6 +699,21 @@ FIXTURE_TEST_CASE(ConfigNodeAccessF64, KfgFixture)
     double f = 0.0;
     REQUIRE_RC(KConfigNodeReadF64(GetNode("f64/i1"), &f));
     REQUIRE_CLOSE(f, 3.14, 0.001);
+    REQUIRE_RC_FAIL(KConfigNodeReadF64(GetNode("f64"), &f));
+}
+
+FIXTURE_TEST_CASE(ConfigNodeAccessF64s, KfgFixture)
+{
+    const char* contents =
+        "f64/i1=\"3.14\"\n"
+        "f64=\"6.14\"\n"
+        ;
+    CreateAndLoad(GetName(), contents);
+    double f = 0.0;
+    REQUIRE_RC(KConfigNodeReadF64(GetNode("f64/i1"), &f));
+    REQUIRE_CLOSE(f, 3.14, 0.001);
+    REQUIRE_RC(KConfigNodeReadF64(GetNode("f64"), &f));
+    REQUIRE_CLOSE(f, 6.14, 0.001);
 }
 
 FIXTURE_TEST_CASE(ConfigNodeAccessVPath, KfgFixture)
@@ -828,6 +875,7 @@ FIXTURE_TEST_CASE(KConfigImportNgc_Basic, KfgFixture)
 }
 #endif
 
+#ifdef ALL
 FIXTURE_TEST_CASE(KConfigImportNgc_NullLocation, KfgFixture)
 {
     CreateAndLoad(GetName(), "\n");
@@ -843,6 +891,94 @@ FIXTURE_TEST_CASE(KConfigImportNgc_NullLocation_NullNewRepo, KfgFixture)
     Cleaner cleaner(wd);
     REQUIRE_RC(KConfigImportNgc(kfg, "./prj_2956.ngc", NULL, NULL));
 }
+#endif
+
+#ifdef ALL
+TEST_CASE(TestAdCreating) { // create AD automaticlly
+#define NAME "tmp.kfg"
+    putenv((char*)"VDB_CONFIG=" NAME);
+    KDirectory * wd = NULL;
+    REQUIRE_RC(KDirectoryNativeDir(&wd));
+    KFile * file = NULL;
+    REQUIRE_RC(KDirectoryCreateFile(wd, &file, true, 0664, kcmInit, NAME));
+    const char contents[] = "foo = \"bar\"\n";
+    REQUIRE_RC(KFileWrite(file, 0, contents, strlen(contents), NULL));
+    KfgFixture f;
+    const KConfigNode * node = NULL;
+
+    const char * name = "/repository/user/ad/public/apps/sra/volumes/sraAd";
+    REQUIRE_RC(KConfigOpenNodeRead(f.kfg, &node, name));
+    REQUIRE_RC(KConfigNodeRelease(node));
+
+    name = "/repository/user/ad/public/apps/sra/volumes/sraAd";
+    REQUIRE_RC(KConfigOpenNodeRead(f.kfg, &node, name));
+    REQUIRE_RC(KConfigNodeRelease(node));
+
+    name = "/repository/user/ad/public/apps/sraPileup/volumes/ad";
+    REQUIRE_RC(KConfigOpenNodeRead(f.kfg, &node, name));
+    REQUIRE_RC(KConfigNodeRelease(node));
+
+    name = "/repository/user/ad/public/apps/sraRealign/volumes/ad";
+    REQUIRE_RC(KConfigOpenNodeRead(f.kfg, &node, name));
+    REQUIRE_RC(KConfigNodeRelease(node));
+
+    name = "/repository/user/ad/public/apps/refseq/volumes/refseqAd";
+    REQUIRE_RC(KConfigOpenNodeRead(f.kfg, &node, name));
+    REQUIRE_RC(KConfigNodeRelease(node));
+
+    name = "/repository/user/ad/public/root";
+    REQUIRE_RC(KConfigOpenNodeRead(f.kfg, &node, name));
+    REQUIRE_RC(KConfigNodeRelease(node));
+
+    REQUIRE_RC(KFileRelease(file));
+    REQUIRE_RC(KDirectoryRemove(wd, true, NAME));
+    REQUIRE_RC(KDirectoryRelease(wd));
+}
+#endif
+
+#ifdef ALL
+TEST_CASE(TestAdRepair) { // VDB-4276: automaticlly repait incomplete AD
+#define NAME "tmp.kfg"
+    putenv((char*)"VDB_CONFIG=" NAME);
+    KDirectory * wd = NULL;
+    REQUIRE_RC(KDirectoryNativeDir(&wd));
+    KFile * file = NULL;
+    REQUIRE_RC(KDirectoryCreateFile(wd, &file, true, 0664, kcmInit, NAME));
+    const char contents[]
+        = "/repository/user/ad/public/apps/sra/volumes/sraAd = \".\"\n";
+    REQUIRE_RC(KFileWrite(file, 0, contents, strlen(contents), NULL));
+    KfgFixture f;
+    const KConfigNode * node = NULL;
+
+    const char * name = "/repository/user/ad/public/apps/sra/volumes/sraAd";
+    REQUIRE_RC(KConfigOpenNodeRead(f.kfg, &node, name));
+    REQUIRE_RC(KConfigNodeRelease(node));
+
+    name = "/repository/user/ad/public/apps/sra/volumes/sraAd";
+    REQUIRE_RC(KConfigOpenNodeRead(f.kfg, &node, name));
+    REQUIRE_RC(KConfigNodeRelease(node));
+
+    name = "/repository/user/ad/public/apps/sraPileup/volumes/ad";
+    REQUIRE_RC(KConfigOpenNodeRead(f.kfg, &node, name));
+    REQUIRE_RC(KConfigNodeRelease(node));
+
+    name = "/repository/user/ad/public/apps/sraRealign/volumes/ad";
+    REQUIRE_RC(KConfigOpenNodeRead(f.kfg, &node, name));
+    REQUIRE_RC(KConfigNodeRelease(node));
+
+    name = "/repository/user/ad/public/apps/refseq/volumes/refseqAd";
+    REQUIRE_RC(KConfigOpenNodeRead(f.kfg, &node, name));
+    REQUIRE_RC(KConfigNodeRelease(node));
+
+    name = "/repository/user/ad/public/root";
+    REQUIRE_RC(KConfigOpenNodeRead(f.kfg, &node, name));
+    REQUIRE_RC(KConfigNodeRelease(node));
+
+    REQUIRE_RC(KFileRelease(file));
+    REQUIRE_RC(KDirectoryRemove(wd, true, NAME));
+    REQUIRE_RC(KDirectoryRelease(wd));
+}
+#endif
 
 //////////////////////////////////////////// Main
 static rc_t argsHandler(int argc, char* argv[]) {

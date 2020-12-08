@@ -1,3 +1,6 @@
+#ifndef _h_libs_klib_release_vers_
+#define _h_libs_klib_release_vers_
+
 /*===========================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
@@ -24,11 +27,13 @@
 *
 */
 
+#include <klib/vdb-features.h> /* VDB_RELEASE_VERSION */
+
 /* THIS FILE IS NOT GENERATED AUTOMATICALLY! */
 
 
 /* Version of current SRA Toolkit Release */
-#define RELEASE_VERS 0x020A0000
+#define RELEASE_VERS VDB_RELEASE_VERSION
 
 
 /* Type of Version of current SRA Toolkit Release is one of:
@@ -42,3 +47,5 @@
 
 /* Revision of Version of current SRA Toolkit Release */
 #define RELEASE_REVISION 0
+
+#endif /* _h_libs_klib_release_vers_ */

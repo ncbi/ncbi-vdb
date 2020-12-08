@@ -137,7 +137,8 @@ public:
 
         THROW_ON_RC ( CloudMgrMakeWithProvider ( & mgr, cloud_provider_gcp ) );
 
-        THROW_ON_RC ( CloudMgrMakeCloud ( mgr, & cloud, cloud_provider_gcp ) );        
+        THROW_ON_RC ( CloudMgrMakeCloud ( mgr, & cloud, cloud_provider_gcp ) );
+        putenv ( (char *) "GOOGLE_APPLICATION_CREDENTIALS=" );
     }
 
     void MakeClient()
@@ -162,11 +163,11 @@ public:
     void SetupStream ()
     {
         THROW_ON_RC ( KStreamInit ( & m_stream, ( const KStream_vt* ) & TestStream::vt, "TestStream", "", true, true ) );
-        AddResponse ( 
+        AddResponse (
             "{\"access_token\" : \"bogustokenmadefortesting\","
             "  \"token_type\" : \"Bearer\","
             "   \"expires_in\" : 3600"
-            "}" 
+            "}"
         );
     }
 
@@ -183,10 +184,12 @@ FIXTURE_TEST_CASE(GCP_AddUserPays_Credentials, GCP_Fixture)
     GCP * gcp;
     REQUIRE_RC ( CloudToGCP ( cloud, & gcp ) );
     REQUIRE_NOT_NULL ( gcp );
-    string PK = "-----BEGIN PRIVATE KEY-----\nMIICdwIBADANBgkqhkiG9w0BAQEFA";
+	string PK1 = "-----BEGIN PRIVATE KEY-----"; // here comes \n or \r\n based on Git settings
+	string PK2 = "MIICdwIBADANBgkqhkiG9w0BAQEFA";
     REQUIRE_NOT_NULL ( gcp -> privateKey );
-    REQUIRE_EQ ( PK, string( gcp -> privateKey ) . substr( 0, PK . size() ) );
-    REQUIRE_NOT_NULL ( gcp -> client_email );
+    REQUIRE_EQ ( PK1, string( gcp -> privateKey ) . substr( 0, PK1 . size() ) );
+	REQUIRE_NE ( string::npos, string(gcp->privateKey).find( PK2 ) );
+	REQUIRE_NOT_NULL ( gcp -> client_email );
     REQUIRE_EQ ( string("ncbivdb-compute@developer.gserviceaccount.com"), string( gcp -> client_email ) );
     REQUIRE_NOT_NULL ( gcp -> project_id );
     REQUIRE_EQ ( string("test"), string( gcp -> project_id ) );
@@ -195,7 +198,6 @@ FIXTURE_TEST_CASE(GCP_AddUserPays_Credentials, GCP_Fixture)
     REQUIRE_NULL ( gcp -> access_token );
 
     REQUIRE_RC ( GCPRelease ( gcp ) );
-    REQUIRE_RC ( CloudRelease ( cloud ) );
 }
 
 FIXTURE_TEST_CASE(GCP_AddUserPays_NoCredentials, GCP_Fixture)
@@ -220,7 +222,7 @@ FIXTURE_TEST_CASE(GCP_AddUserPays, GCP_Fixture)
 
     KClientHttpRequest * req;
     REQUIRE_RC ( KClientHttpMakeRequest ( client, & req, "https://storage.googleapis.com/sra-pub-run-1/DRR000711/DRR000711.1" ) );
-        
+
     // to have GCP contact Google authorization server for real, comment out this line:
     // and copy a user credentials file to ./cloud-kfg/gcp_service.json (do not check in!)
     CloudSetHttpConnection( cloud, & m_stream );
@@ -278,13 +280,13 @@ FIXTURE_TEST_CASE(GCP_AddUserPays_NoAccessTokenRefresh, GCP_Fixture)
 
     KClientHttpRequest * req;
     REQUIRE_RC ( KClientHttpMakeRequest ( client, & req, "https://storage.googleapis.com/sra-pub-run-1/DRR000711/DRR000711.1" ) );
-        
+
     // this will only return access token once
     CloudSetHttpConnection( cloud, & m_stream );
 
     REQUIRE_RC ( CloudAddUserPaysCredentials ( cloud, req, "GET" ) );
     // if cloud attempts to refresh the access token, this will fail
-    REQUIRE_RC ( CloudAddUserPaysCredentials ( cloud, req, "GET" ) ); 
+    REQUIRE_RC ( CloudAddUserPaysCredentials ( cloud, req, "GET" ) );
 
     REQUIRE_RC ( KClientHttpRequestRelease ( req ) );
 }
@@ -296,32 +298,32 @@ FIXTURE_TEST_CASE(GCP_AddUserPays_AccessTokenRefreshCloseToExpiration, GCP_Fixtu
 
     // Set up the stream to respond to access token request twice, first time with immediate expiration
     REQUIRE_RC ( KStreamInit ( & m_stream, ( const KStream_vt* ) & TestStream::vt, "TestStream", "", true, true ) );
-    AddResponse ( 
+    AddResponse (
         "{\"access_token\" : \"bogustokenmadefortesting\","
         "  \"token_type\" : \"Bearer\","
         "   \"expires_in\" : 0"
-        "}" 
+        "}"
     );
-    AddResponse ( 
+    AddResponse (
         "{\"access_token\" : \"anotherbogustokenmadefortesting\","
         "  \"token_type\" : \"Bearer\","
         "   \"expires_in\" : 3600"
-        "}" 
+        "}"
     );
 
 
     KClientHttpRequest * req;
     REQUIRE_RC ( KClientHttpMakeRequest ( client, & req, "https://storage.googleapis.com/sra-pub-run-1/DRR000711/DRR000711.1" ) );
-        
+
     CloudSetHttpConnection( cloud, & m_stream );
 
-    GCP * gcp; 
-    REQUIRE_RC ( CloudToGCP ( cloud, & gcp ) ); 
+    GCP * gcp;
+    REQUIRE_RC ( CloudToGCP ( cloud, & gcp ) );
 
     REQUIRE_RC ( CloudAddUserPaysCredentials ( cloud, req, "GET" ) );
     REQUIRE_EQ ( string( "bogustokenmadefortesting" ), string ( gcp -> access_token ) );
     // since the first access token expires immediately, this will refresh it
-    REQUIRE_RC ( CloudAddUserPaysCredentials ( cloud, req, "GET" ) ); 
+    REQUIRE_RC ( CloudAddUserPaysCredentials ( cloud, req, "GET" ) );
     REQUIRE_EQ ( string( "anotherbogustokenmadefortesting" ), string ( gcp -> access_token ) );
 
     REQUIRE_RC ( GCPRelease ( gcp ) );
@@ -368,7 +370,8 @@ rc_t CC KMain ( int argc, char *argv [] )
     assert(!KDbgSetString("KNS"));
 #endif
 
-    return GcpTestSuite(argc, argv);
+    rc_t rc = GcpTestSuite(argc, argv);
+    return rc;
 }
 
 }

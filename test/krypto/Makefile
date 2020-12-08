@@ -39,6 +39,8 @@ TEST_TOOLS = \
 	test-modes \
 	test-encdec \
 	test-reenc \
+	test-rsa-aes-hmac \
+	test-hash-in-pwd \
 #	test-csprng \ --- not even being compiled in ncbi-vdb, skipping for now
 
 ifeq (linux,$(OS))
@@ -203,6 +205,23 @@ $(TEST_BINDIR)/test-reenc: $(TEST_REENC_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_REENC_LIB)
 
 #-------------------------------------------------------------------------------
+# test-rsa-aes-hmac
+#
+TEST_RSA_AES_HMAC_SRC = \
+	test-rsa-aes-hmac
+
+TEST_RSA_AES_HMAC_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_RSA_AES_HMAC_SRC))
+
+TEST_RSA_AES_HMAC_LIB = \
+	-skapp \
+	-sncbi-vdb \
+	-sktst
+
+$(TEST_BINDIR)/test-rsa-aes-hmac: $(TEST_RSA_AES_HMAC_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_RSA_AES_HMAC_LIB)
+
+#-------------------------------------------------------------------------------
 # test-krypto-slow
 #
 TEST_KRYPTO_SLOW_SRC = \
@@ -220,4 +239,18 @@ TEST_KRYPTO_SLOW_LIB = \
 
 $(TEST_BINDIR)/test-krypto-slow: $(TEST_KRYPTO_SLOW_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_KRYPTO_SLOW_LIB)
+
+
+#-------------------------------------------------------------------------------
+# test-hash-in-pwd
+#
+TEST_H_SRC = \
+	test-hash-in-pwd
+
+TEST_H_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_H_SRC))
+
+$(TEST_BINDIR)/test-hash-in-pwd: $(TEST_H_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_ENCDEC_LIB)
+#-------------------------------------------------------------------------------
 

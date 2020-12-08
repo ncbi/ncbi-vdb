@@ -38,10 +38,11 @@ TEST_TOOLS = \
 	test-kns \
 	test-http \
 	test-http-dropconn \
+	test-http-request \
 	KNSManagerSingletonTest \
-	test-VDB-3661 \
 	test-connect \
-	test-refresh-expired
+	test-refresh-expired \
+	test-timeouts \
 
 include $(TOP)/build/Makefile.env
 
@@ -182,18 +183,6 @@ $(TEST_BINDIR)/test200for-whole-file: $(K2_OBJ)
 	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
 
 #----------------------------------------------------------------
-# test-VDB-3661
-#
-VDB_3661_SRC = \
-	test-VDB-3661
-
-VDB_3661_OBJ = \
-	$(addsuffix .$(OBJX),$(VDB_3661_SRC))
-
-$(TEST_BINDIR)/test-VDB-3661: $(VDB_3661_OBJ)
-	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
-
-#----------------------------------------------------------------
 # test-proxy
 #
 PROXYTEST_SRC = \
@@ -252,6 +241,22 @@ dropconn: test-http-dropconn
 	$(TEST_BINDIR)/test-http-dropconn  # -l=all
 
 #----------------------------------------------------------------
+# test-http-request
+#
+HTTP_REQUEST_TEST_SRC = \
+	HttpFixture \
+	test-http-request
+
+HTTP_REQUEST_TEST_OBJ = \
+	$(addsuffix .$(OBJX),$(HTTP_REQUEST_TEST_SRC))
+
+$(TEST_BINDIR)/test-http-request: $(HTTP_REQUEST_TEST_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
+
+req: test-http-request
+	$(TEST_BINDIR)/test-http-request
+
+#----------------------------------------------------------------
 # test-proxy-with-env
 #
 TOOL_SRC = \
@@ -280,12 +285,11 @@ connect: test-connect
 	$(TEST_BINDIR)/test-connect
 
 #----------------------------------------------------------------
-
-#----------------------------------------------------------------
 # test-refresh-expired
 #
 REFRESH_SRC = \
 	HttpFixture \
+	KStableHttpFile \
 	test-refresh-expired-url \
 
 REFRESH_OBJ = \
@@ -296,6 +300,18 @@ $(TEST_BINDIR)/test-refresh-expired: $(REFRESH_OBJ)
 
 refresh: test-refresh-expired
 	$(TEST_BINDIR)/test-refresh-expired
+
+#----------------------------------------------------------------
+# test-timeouts
+#
+TO_SRC = \
+	test-timeouts \
+
+TO_OBJ = \
+	$(addsuffix .$(OBJX),$(TO_SRC))
+
+$(TEST_BINDIR)/test-timeouts: $(TO_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
 
 #----------------------------------------------------------------
 

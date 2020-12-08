@@ -30,7 +30,6 @@
 
 #include <ktst/unit_test.hpp>
 
-#include <unistd.h>
 #include <errno.h>
 
 #include <klib/rc.h>
@@ -58,17 +57,20 @@ public:
         socket ( nullptr )
     {
         THROW_ON_RC ( KNSManagerMake ( & mgr ) );
+    }
+
+    void InitEP(const char* p_url, uint32_t timeoutMs)
+    {
+        TimeoutInit(&tm, timeoutMs);
         String url;
-        CONST_STRING( &url, "www.google.com" );
-        THROW_ON_RC ( KNSManagerInitDNSEndpoint ( mgr, & ep, &url, 80 ) );
-
-        TimeoutInit ( & tm, 1 );
-
+        CONST_STRING(&url, p_url);
+        THROW_ON_RC(KNSManagerInitDNSEndpoint(mgr, &ep, &url, 80));
     }
 
     ~ConnectFixture()
     {
-        KNSManagerRelease(mgr);
+        KSocketRelease( socket );
+        KNSManagerRelease( mgr );
     }
 
     KNSManager* mgr;
@@ -99,6 +101,7 @@ uint32_t tries = 0;
 FIXTURE_TEST_CASE(Connect_OK, ConnectFixture)
 {   //VDB-3754: asynch connnection, success
     return_val = 1; /* epoll_wait: success */
+    InitEP("www.google.com", 500);
     rc_t rc = KNSManagerMakeRetryTimedConnection( mgr, & socket, & tm, 0, 0, NULL, & ep );
     REQUIRE_RC ( rc );
 }
@@ -108,23 +111,40 @@ FIXTURE_TEST_CASE(Connect_Timeout, ConnectFixture)
 #ifdef DEBUG
     cerr << "vvv expect to see 'connect_wait() timed out'" << endl;
 #endif
+    InitEP("www.gooooooogle.com", 1);
     return_val = 0; /* epoll_wait: timeout */
     tries = 0;
-    rc_t rc = KNSManagerMakeRetryTimedConnection( mgr, & socket, & tm, 0, 0, NULL, & ep);
-    REQUIRE_RC_FAIL ( rc );
-    REQUIRE_EQ ( ( int ) rcTimeout, ( int ) GetRCObject ( rc ) );
-    REQUIRE_EQ ( ( int ) rcExhausted, ( int ) GetRCState ( rc ) );
-    REQUIRE_EQ ( 1u, tries );
+    rc_t rc = KNSManagerMakeRetryTimedConnection(mgr, &socket, &tm, 0, 0, NULL, &ep);
+    REQUIRE_RC_FAIL(rc);
+    REQUIRE_EQ((int)rcTimeout, (int)GetRCObject(rc));
+    REQUIRE_EQ((int)rcExhausted, (int)GetRCState(rc));
+#if ! WINDOWS
+    REQUIRE_EQ(1u, tries);
+#endif
 #ifdef DEBUG
     cerr << "^^^ expect to see 'connect_wait() timed out'" << endl;
 #endif
 }
+
+FIXTURE_TEST_CASE(Connect_ZeroTimeout, ConnectFixture)
+{   
+    InitEP("www.goooooooooooooooooogle.com", 0);
+    return_val = 0; /* epoll_wait: immediate exit, same as timeout */
+    rc_t rc = KNSManagerMakeRetryTimedConnection(mgr, &socket, &tm, 0, 0, NULL, &ep);
+    REQUIRE_RC_FAIL(rc);
+    REQUIRE_EQ((int)rcTimeout, (int)GetRCObject(rc));
+    REQUIRE_EQ((int)rcExhausted, (int)GetRCState(rc));
+}
+
+#ifndef WINDOWS
+// CtrlC on Windows?
 
 FIXTURE_TEST_CASE(Connect_CtrlC, ConnectFixture)
 {   //VDB-3754: asynch connnection, test interruption by CtrlC, no retries
 #ifdef DEBUG
     cerr << "vvv expect to see 'connect_wait() interrupted'" << endl;
 #endif
+    InitEP("www.google.com", 5000);
     return_val = -1; /* epoll_wait: error */
     set_errno = EINTR;
     tries = 0;
@@ -137,6 +157,8 @@ FIXTURE_TEST_CASE(Connect_CtrlC, ConnectFixture)
     cerr << "^^^ expect to see 'connect_wait() interrupted'" << endl;
 #endif
 }
+
+#endif
 
 //////////////////////////////////////////// Main
 

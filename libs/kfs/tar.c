@@ -45,7 +45,7 @@
 #include <stdio.h> /* temporary for development */
 
 #include <limits.h>
-/* #include <sys/types.h> */
+#include <sys/types.h>
 
 #ifdef _DEBUGGING
 #define TAR_FUNC_ENTRY() DBGMSG (DBG_KFS, DBG_FLAG(DBG_KFS_TARENTRY), ("Enter: %s\n", __func__))

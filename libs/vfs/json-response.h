@@ -1,4 +1,4 @@
-/*===========================================================================
+/*==============================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
 *               National Center for Biotechnology Information
@@ -29,19 +29,25 @@
 
 #include <kfc/defs.h> /* rc_t */
 #include <klib/time.h> /* KTime */
+#include <vdb/quality.h> /* VQuality */
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 struct Data;
+struct KConfig;
 struct KJsonValue;
+struct KNSManager;
 struct KSrvRespFile;
 struct KSrvRespObj;
 struct Node;
+struct ServicesCache;
 struct Status;
 struct String;
+struct VFSManager;
 struct VPath;
+struct VPathSet;
 
 typedef struct Container Container;
 typedef struct Item Item;
@@ -59,6 +65,8 @@ typedef struct Data {
     const char * bundle;
     int64_t      code; /* status/code */
     EState       ceRequired;
+    int64_t      encryptedForProjectId;
+    const char * sEncryptedForProjectId;
     int64_t      exp;  /* expDate */
     const char * fmt;  /* format */
     EState       qual; /* hasOrigQuality */
@@ -82,17 +90,33 @@ typedef struct Data {
     int64_t      sz;   /* size */
     const char * type;
     const char * vsblt;
+    VQuality     quality;
 } Data;
 
-rc_t Response4MakeEmpty  (       Response4 ** self );
+rc_t Response4MakeEmpty  (  Response4 ** self, const struct VFSManager * vfs,
+            const struct KNSManager * kns, const struct KConfig * kfg,
+            bool logNamesServiceErrors, int64_t projectId, unsigned quality);
 rc_t Response4Make4      (       Response4 ** self, const char * input );
-rc_t Response4MakeSdl    (       Response4 ** self, const char * input );
+rc_t Response4MakeSdl(Response4 ** self, const char * input);
+rc_t Response4MakeSdlExt(Response4 ** self, const struct VFSManager * vfs,
+    const struct KNSManager * kns, const struct KConfig * kfg,
+    const char * input,
+    bool logNamesServiceErrors, int64_t projectId, unsigned quality);
 rc_t Response4AddRef     ( const Response4  * self );
 rc_t Response4Release    ( const Response4  * self );
 rc_t Response4AppendUrl  (       Response4  * self, const char * url );
+rc_t Response4AppendUrlPath(Response4 * self,
+    const char * acc, const char * url, const struct VPath * path);
+rc_t Response4AppendLocalAndCache(Response4  * self,const char * acc,
+                   const struct VPathSet * vps, const struct VFSManager * mgr );
 rc_t Response4AddAccOrId (       Response4 * self, const char * acc,
                                  int64_t id, Container ** newItem );
-rc_t Response4GetRc      ( const Response4 * self, rc_t * rc );
+rc_t Response4SetNextToken(Response4 * self, const char * nextToken);
+rc_t Response4GetNextToken(const Response4 * self, const char ** nextToken);
+rc_t Response4StatusInit(Response4 * self, int64_t code, const char * msg,
+    bool error);
+rc_t Response4GetRc(const Response4 * self, rc_t * rc);
+int64_t Response4GetProjectId(const Response4 * self);
 rc_t ContainerStatusInit(Container * self, int64_t code, const char * msg);
 bool ContainerIs200AndEmpty(const Container * self);
 void ContainerProcessStatus(Container * self, const Data * data);
@@ -107,6 +131,7 @@ void ItemLogAdd(const Item * self);
 void FileLogAddedLink(const struct File * self, const char * url);
 rc_t FileAddVPath(struct File * self, const struct VPath * path,
     const struct VPath * mapping, bool setHttp, uint64_t osize);
+rc_t ItemInitMapping(Item * self);
 rc_t Response4GetKSrvRespObjCount ( const Response4 * self, uint32_t * n );
 rc_t Response4GetKSrvRespObjByIdx ( const Response4 * self, uint32_t i,
                                     const struct KSrvRespObj ** box );
@@ -114,28 +139,31 @@ rc_t Response4GetKSrvRespObjByAcc ( const Response4 * self, const char * acc,
                                     const struct KSrvRespObj ** box );
 rc_t Response4Fini(Response4 * self);
 
-typedef struct Stack {
+rc_t Response4GetServiceCache(const Response4 * self,
+    struct ServicesCache ** cache);
+
+typedef struct {
     struct Node * nodes;
     size_t i;
     size_t n;
-} Stack;
+} JsonStack;
 
 rc_t IntSet(int64_t * self, const struct KJsonValue * node,
-    const char * name, Stack * path);
+    const char * name, JsonStack * path);
 rc_t BulSet(EState * self, const struct KJsonValue * node,
-    const char * name, Stack * path);
+    const char * name, JsonStack * path);
 rc_t StrSet(const char ** self, const struct KJsonValue * node,
-    const char * name, Stack * path);
+    const char * name, JsonStack * path);
 
 #define THRESHOLD_NO_DEBUG 0
 #define THRESHOLD_ERROR    1
 extern int THRESHOLD;
-void StackPrintInput(const char * input);
-rc_t StackRelease(Stack * self, bool failed);
-rc_t StackInit(Stack * self);
-void StackPop(Stack * self);
-rc_t StackPushArr(Stack * self, const char * name);
-rc_t StackArrNext(Stack * self);
+void JsonStackPrintInput(const char * input);
+rc_t JsonStackRelease(JsonStack * self, bool failed);
+rc_t JsonStackInit(JsonStack * self);
+void JsonStackPop(JsonStack * self);
+rc_t JsonStackPushArr(JsonStack * self, const char * name);
+rc_t JsonStackArrNext(JsonStack * self);
 
 #ifdef __cplusplus
 }

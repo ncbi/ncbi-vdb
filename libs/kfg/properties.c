@@ -891,12 +891,20 @@ LIB_EXPORT rc_t CC
 KConfig_Get_Aws_Profile( const KConfig *self,
     char * value, size_t value_size, size_t * written )
 {
-    rc_t rc = KConfig_Get_Repository_String( self, value, value_size, written, AWS_PROFILE );
+    rc_t rc = 0;
+
+    size_t dummy = 0;
+    if (written == NULL)
+        written = &dummy;
+
+    rc = KConfig_Get_Repository_String( self, value, value_size, written,
+        AWS_PROFILE );
     if ( GetRCState ( rc ) == rcNotFound || ( rc == 0 && * written == 0 ) )
     {
         * written = string_copy_measure ( value, value_size, "default" );
         rc = 0;
     }
+
     return rc;
 }
 LIB_EXPORT rc_t CC
@@ -1099,3 +1107,27 @@ LIB_EXPORT rc_t CC KConfig_Get_CacheDebug( const KConfig *self, bool * value, bo
 { return get_bool_value( self, DEBUG_CACHEING, value, dflt ); }
 LIB_EXPORT rc_t CC KConfig_Set_CacheDebug( KConfig *self, bool value )
 { return set_bool_value( self, DEBUG_CACHEING, value ); }
+
+#define GUID_KEY "LIBS/GUID"
+LIB_EXPORT rc_t CC KConfig_Get_GUID( const KConfig *self, char * value, size_t value_size, size_t * written )
+{
+    size_t local_written;
+    rc_t rc = KConfig_Get_Repository_String( self, value, value_size, &local_written, GUID_KEY );
+    if ( rc == 0 )
+    {
+        if ( written != NULL )
+            *written = local_written;
+    }
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KConfig_Set_GUID( KConfig *self, const char * value )
+{
+    return KConfig_Set_Repository_String( self, value, GUID_KEY );
+}
+
+#define FULL_QUALITY_KEY "libs/vdb/full-quality"
+LIB_EXPORT rc_t CC KConfig_Get_FullQuality( const KConfig *self, bool * value )
+{ return get_bool_value( self, FULL_QUALITY_KEY, value, false ); }
+LIB_EXPORT rc_t CC KConfig_Set_FullQuality( KConfig *self, bool value )
+{ return set_bool_value( self, FULL_QUALITY_KEY, value ); }

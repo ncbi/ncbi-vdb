@@ -38,12 +38,15 @@ struct KSysDirListing;
 #include <kfs/extern.h>
 #include "sysdir-priv.h"
 #include "sysfile-priv.h"
-#include <klib/sort.h>
+
+#include <klib/debug.h> /* DBGMSG */
 #include <klib/impl.h>
+#include <klib/klib-priv.h>
 #include <klib/log.h>
 #include <klib/out.h>
 #include <klib/rc.h>
-#include <klib/klib-priv.h>
+#include <klib/sort.h>
+
 #include <sysalloc.h>
 
 #include "os-native.h"
@@ -141,7 +144,7 @@ const char *KSysDirEnumNext ( const KSysDirEnum *self )
             case '.':
                 if ( e -> d_name [ 2 ] == 0 )
                     continue;
-                break; 
+                break;
             }
         }
 
@@ -257,7 +260,7 @@ rc_t KSysDirListingInit ( KSysDirListing *self, const char *path, const KDirecto
                         if ( ! ( * f ) ( dir, name, data ) )
                             continue;
                     }
-                    
+
                     if ( self -> cnt == len )
                     {
                         len += len;
@@ -369,14 +372,14 @@ rc_t KSysDirCanonPath_v1 ( const KSysDir_v1 * self, enum RCContext ctx, char *pa
         /* detect special sequences */
         switch ( src - last )
         {
-        case 1: 
+        case 1:
             if ( last [ 1 ] == '/' )
             {
                 /* "//" -> "/" */
                 last = src;
             }
             break;
-            
+
         case 2:
             if ( last [ 1 ] == '.' )
             {
@@ -411,7 +414,7 @@ rc_t KSysDirCanonPath_v1 ( const KSysDir_v1 * self, enum RCContext ctx, char *pa
 
         /* move destination ahead */
         dst += src - last;
-        
+
         /* if we're done, go */
         if ( src == end )
                 break;
@@ -615,7 +618,7 @@ uint32_t KSysDirFullPathType_v1 ( const char *path )
             return kptNotFound | alias;
         default:
             return kptBadPath | alias;
-        } 
+        }
     }
 
     /* not a bad assumption */
@@ -718,7 +721,7 @@ rc_t KSysDirVisitDir ( KSysDirVisitData *pb )
             }
         }
 
-        
+
         KSysDirEnumWhack ( & listing );
     }
     return rc;
@@ -852,6 +855,12 @@ rc_t KSysDirResolvePath_v1 ( const KSysDir_v1 * self, bool absolute,
     if ( rc == 0 )
     {
         uint32_t path_size = strlen ( full );
+
+        /*
+        PLOGMSG(klogDebug, (klogDebug, "KSysDirResolvePath_v1 = '$(res)'", "res=%s", full));
+        */
+        DBGMSG(DBG_KFS, DBG_FLAG(DBG_KFS_DIR),
+            ("KSysDirResolvePath_v1 = '%s'\n", full));
 
         if ( absolute )
         {
@@ -1077,7 +1086,7 @@ rc_t KSysDirRename_v1 ( KSysDir_v1 * self, bool force, const char *from, const c
                         if (tchanged)
                             KSysDirSetAccess_v1 (self, false, taccess, 0222, to, NULL);
                     }
-                        
+
                 }
 
             }
@@ -1820,6 +1829,116 @@ rc_t KSysDirCreateAlias_v1 ( KSysDir_v1 * self,
     return rc;
 }
 
+
+/* CreateLink ( v1.5 )
+ *  creates a new link (also known as a hard link).
+ *
+ *  "access" [ IN ] - standard Unix directory access mode
+ *  used when "mode" has kcmParents set and alias path does
+ *  not exist.
+ *
+ *  "mode" [ IN ] - a creation mode ( see explanation above ).
+ *
+ *  "oldpath" [ IN ] - NUL terminated string in directory-native
+ *  character set denoting existing object. THE PATH IS GIVEN RELATIVE
+ *  TO DIRECTORY ( "self" ), NOT LINK ( "newpath" )!
+ *
+ *  "newpath" [ IN ] - NUL terminated string in directory-native
+ *  character set denoting a new link.
+ */
+static
+rc_t KSysDirCreateLink_v1 ( KSysDir_v1 * self,
+    uint32_t access, KCreateMode mode,
+    const char *oldpath, const char *newpath )
+{
+    /* create full path to link */
+    char flink [ PATH_MAX ] = "";
+    rc_t rc = KSysDirMakePath_v1 ( self, rcCreating, true,
+        flink, sizeof flink, newpath, NULL );
+    if ( rc == 0 )
+    {
+        /* the full path to oldpath RELATIVE TO self */
+        char fold [ PATH_MAX ] = "";
+        rc = KSysDirMakePath_v1 ( self, rcCreating, true,
+            fold, sizeof fold, oldpath, NULL );
+        if ( rc == 0 )
+        {
+            /* if "self" is chroot'd, "fold" must be made relative */
+            if ( self -> root != 0 )
+            {
+                /* take path to newpath as root.
+                   generate a path RELATIVE TO newpath */
+                rc = KSysDirRelativePath_v1 ( self, rcCreating, flink,
+                    fold, sizeof fold /*strlen ( fold )*/ );
+                if ( rc != 0 )
+                    return rc;
+            }
+
+            if ( link ( fold, flink ) == 0 )
+                return 0;
+
+            switch ( errno )
+            {
+            case EMLINK:
+                /* The number of links to the file named by oldpath
+                   would exceed {LINK_MAX} */
+                return RC ( rcFS, rcDirectory, rcCreating,
+                    rcFile, rcExcessive );
+
+            case EXDEV:
+                /* The link named by newpath and the file named by oldpath are
+                   on different file systems and the implementation does not
+                   support links between file systems. */
+                return RC ( rcFS, rcDirectory, rcCreating,
+                    rcPath, rcIncorrect );
+
+            case EEXIST:
+                /* newpath already exists */
+                return RC ( rcFS, rcDirectory, rcCreating, rcPath, rcExists );
+
+            case ENOENT:
+                /* a part of the newpath path doesn't exist */
+                if ( ( mode & kcmParents ) != 0 )
+                {
+                    KSysDirCreateParents_v1 ( self, flink, access, true );
+                    break;
+                }
+                return RC ( rcFS, rcDirectory, rcCreating, rcPath, rcNotFound );
+
+            case EPERM:
+            case EACCES:
+            case EROFS:
+                return RC ( rcFS, rcDirectory, rcCreating,
+                    rcDirectory, rcUnauthorized );
+            case ENAMETOOLONG:
+                return RC ( rcFS, rcDirectory, rcCreating,
+                    rcPath, rcExcessive );
+            case ENOTDIR:
+            case ELOOP:
+                return RC ( rcFS, rcDirectory, rcCreating, rcPath, rcInvalid );
+            case ENOSPC:
+                return RC ( rcFS, rcDirectory, rcCreating,
+                    rcStorage, rcExhausted );
+            default:
+                return RC ( rcFS, rcDirectory, rcCreating, rcNoObj, rcUnknown );
+            }
+
+            /* try with missing directories created */
+            if ( link ( fold, flink ) != 0 ) switch ( errno )
+            {
+            case ENOENT:
+                return RC ( rcFS, rcDirectory, rcCreating, rcPath, rcNotFound );
+            default:
+                return RC ( rcFS, rcDirectory, rcCreating, rcNoObj, rcUnknown );
+            }
+
+            assert ( rc == 0 );
+        }
+    }
+    return rc;
+}
+
+
 /* KSysDirOpenFileRead
  *  opens an existing file with read-only access
  *
@@ -2023,7 +2142,7 @@ rc_t KSysDirCreateFile_v1 ( KSysDir_v1 * self, KFile_v1 **f, bool update,
                 rc = RC ( rcFS, rcDirectory, rcCreating, rcNoObj, rcUnknown );
                 break;
             }
-            
+
             /* disabled 12/12/2012 : it prints an error message, if vdb tries to open
                the same reference-object twice via http. The lock-file for the 2nd try
                does already exist. This is not an error, just a condition. */
@@ -2141,7 +2260,7 @@ rc_t KSysDirOpenDirRead_v1 ( const KSysDir_v1 * self,
      const KDirectory_v1 **subp, bool chroot, const char *path, va_list args )
 {
     char full [ PATH_MAX ];
-    rc_t rc; 
+    rc_t rc;
 
     rc = KSysDirMakePath_v1 ( self, rcOpening, true, full, sizeof full, path, args );
     if ( rc == 0 )
@@ -2152,13 +2271,13 @@ rc_t KSysDirOpenDirRead_v1 ( const KSysDir_v1 * self,
         size_t path_size = strlen ( full );
         while ( path_size > 1 && full [ path_size - 1 ] == '/' )
             full [ -- path_size ] = 0;
-            
+
         t = KSysDirFullPathType_v1 ( full ) & ( kptAlias - 1 );
         if ( t == kptNotFound )
             return RC ( rcFS, rcDirectory, rcOpening, rcPath, rcNotFound );
         if ( t != kptDir )
             return RC ( rcFS, rcDirectory, rcOpening, rcPath, rcIncorrect );
-        
+
         sub = KSysDirMake_v1 ( path_size );
         if ( sub == NULL )
             rc = RC ( rcFS, rcDirectory, rcOpening, rcMemory, rcExhausted );
@@ -2281,7 +2400,7 @@ rc_t KSysDirCreateDir_v1 ( KSysDir_v1 * self,
  *  returns a 64-bit key pertinent only to the particular file
  *  system device holding that file.
  *
- *  It can be used as a form of sort key except that it is not 
+ *  It can be used as a form of sort key except that it is not
  *  guaranteed to be unique.
  *
  *  "locator" [ OUT ] - return parameter for file locator
@@ -2321,7 +2440,7 @@ rc_t CC KSysDirFilePhysicalSize_v1 ( const KSysDir_v1 *self,
 /* FileContiguous
  *  returns true if the file is "contiguous".  Chunked or sparse files are not
  *  contiguous while most data files are.  Virtual generated files would likely
- *  not be contiguous.  
+ *  not be contiguous.
  *
  *  "contiguous" [ OUT ] - return parameter for file contiguous
  *
@@ -2352,8 +2471,8 @@ rc_t CC KSysDirFileContiguous_v1 ( const KSysDir_v1 *self,
 
 static KDirectory_vt_v1 vtKSysDir =
 {
-    /* version 1.4 */
-    1, 4,
+    /* version 1.5 */
+    1, 5,
 
     /* start minor version 0*/
     KSysDirDestroy_v1,
@@ -2403,8 +2522,12 @@ static KDirectory_vt_v1 vtKSysDir =
     /* end minor version 3 */
 
     /* start minor version 4 */
-    KSysDirOpenFileWrite_v1
+    KSysDirOpenFileWrite_v1,
     /* end minor version 4 */
+
+    /* start minor version 5 */
+    KSysDirCreateLink_v1,
+    /* end minor version 5 */
 };
 
 /* KSysDirInit

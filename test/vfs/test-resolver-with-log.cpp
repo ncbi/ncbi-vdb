@@ -35,7 +35,7 @@
 #include <vfs/path.h> /* VPathRelease */
 #include <vfs/resolver.h> /* VResolverRelease */
 
-#include "resolver-cgi.h" /* RESOLVER_CGI */
+#include "../../libs/vfs/resolver-cgi.h" /* RESOLVER_CGI */
 
 #include "../../libs/vfs/resolver-priv.h" /* VResolverSetVersion */
 

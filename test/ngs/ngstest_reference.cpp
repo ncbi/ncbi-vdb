@@ -719,13 +719,14 @@ It is known to fail on macs with old certificates file */
 
     NGS_ReferenceSequence * ref = NGS_ReferenceSequenceMake ( ctx, EBI_Accession );
 
+// does not seem to fail on tcmacXXs anymore
     if ( CALL_TO_EBI_RESOLVER_FAILS ) {
-        REQUIRE ( FAILED () );
-        REQUIRE_NULL ( ref );
-        LOG(ncbi::NK::LogLevel::e_error,
-            "CANNOT TEST EBI ACCESSION BECAUSE THEIR SITE DOES NOT RESPOND!\n");
-        LOG(ncbi::NK::LogLevel::e_error, "NOW EXPECTING AN ERROR MESSAGE ...");
-        return;
+//        REQUIRE ( FAILED () );
+//        REQUIRE_NULL ( ref );
+//        LOG(ncbi::NK::LogLevel::e_error,
+//            "CANNOT TEST EBI ACCESSION BECAUSE THEIR SITE DOES NOT RESPOND!\n");
+//        LOG(ncbi::NK::LogLevel::e_error, "NOW EXPECTING AN ERROR MESSAGE ...");
+//        return;
     }
 
     REQUIRE ( ! FAILED () );
@@ -804,7 +805,7 @@ rc_t CC KMain ( int argc, char *argv [] )
         rc = NgsReferenceTestSuite(argc, argv);
 
     KConfigRelease(kfg);
-
+    NGS_C_Fixture::ReleaseCache();
     return rc;
 }
 

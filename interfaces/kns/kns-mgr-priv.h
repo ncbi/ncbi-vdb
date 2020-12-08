@@ -66,9 +66,24 @@ rc_t CC HttpRetrySpecsInit ( HttpRetrySpecs* self, struct KConfig* kfg);
 bool HttpGetRetryCodes ( const HttpRetrySpecs* self, uint16_t code, uint8_t * max_retries, const uint16_t ** sleep_before_retry, bool * open_ended );
 
 /* MakeConfig
- *  create a manager instance using a custom configuration, for testing
+ *  Create a manager instance using a custom configuration, for testing.
+ *  Don't imitialize singleton.
+ *  Same as KNSManagerMakeLocal for backward compatibility.
  */
-KNS_EXTERN rc_t CC KNSManagerMakeConfig ( struct KNSManager **mgr, struct KConfig* kfg );
+KNS_EXTERN rc_t CC KNSManagerMakeConfig ( struct KNSManager **mgr, struct KConfig * kfg );
+
+/* MakeLocal
+ *  create a manager instance without initializing singleton, for testing
+ */
+KNS_EXTERN rc_t CC KNSManagerMakeLocal ( struct KNSManager ** mgr,
+    struct KConfig * kfg );
+
+/* MakeWithConfig
+ *  Create a manager instance using a custom configuration, for testing.
+ *  Initialize singleton.
+ */
+KNS_EXTERN rc_t CC KNSManagerMakeWithConfig ( struct KNSManager ** mgr,
+    struct KConfig * kfg );
 
 /* SetAdCaching
  *  Enable Caching to Accession as Directory in cwd
@@ -76,6 +91,12 @@ KNS_EXTERN rc_t CC KNSManagerMakeConfig ( struct KNSManager **mgr, struct KConfi
 KNS_EXTERN
 rc_t CC KNSManagerSetAdCaching(struct KNSManager* self, bool enabled);
 
+KNS_EXTERN
+rc_t CC KNSManagerGetAdCaching(const struct KNSManager* self, bool * enabled);
+
+KNS_EXTERN
+rc_t CC KNSManagerGetResolveToCache(const struct KNSManager* self,
+    bool * resolveToCache);
 
 /** MakeReliableHttpFile, KNSManagerMakeReliableClientRequest:
  * Make HTTP file/request from a reliable URL:

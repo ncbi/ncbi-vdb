@@ -43,6 +43,10 @@
 #include <klib/text.h>
 #endif
 
+#ifndef _h_vdb_quality_
+#include <vdb/quality.h> /* VQuality */
+#endif
+
 #ifndef _h_vfs_path_
 #include <vfs/path.h>
 #endif
@@ -118,12 +122,18 @@ struct VPath
     KTime_t    expiration;   /* expiration date of this VPath object.
                                 0 if infinite */
 
+    int64_t    projectId;    /* dbGaP project Id:
+                                <0 (not set): public URL
+                                >=0 (vaoid values): protected URL
+                                    N.B. 0 is a valid dbGaP project Id */
+
     uint8_t    md5 [ 16 ];  /* md5 checksum object's un-encrypted if known */
     bool       has_md5;
 
     String     service;      /* s3, gs, sra-ncbi, ftp-ncbi, sra-sos, etc. */
     String     objectType;
     String     type;
+    String     acc;
 
     String     name;
     String     nameExtension; /* file extension in name. don't free */
@@ -136,6 +146,13 @@ struct VPath
     bool       payRequired;
 
     const String * accOfParentDb; /* for refseqs */
+
+    bool magic; /* was created from magic env.var. */
+
+    /* version of names service returned this VPath: 3.0 or SDL ... */
+    uint32_t version; 
+
+    VQuality quality;
 };
 
 enum VPathVariant
@@ -199,14 +216,27 @@ VFS_EXTERN rc_t CC VPathGetScheme_t ( const VPath * self, VPUri_t * uri_type );
 #define VPathGetUri_t LegacyVPathGetUri_t
 VPUri_t VPathGetUri_t (const VPath * self);
 
+/* returns true when VPath is protected */
+bool VPathGetProjectId(const VPath * self, uint32_t * projectId);
 
+/* projectId:
+ *  <0  : pubkic URL
+ *  >=0 : protected URL
+ *      N.B. 0 is a valid protected project Id
+ *
+ * version: version of names service that returned this URL
+ */
 rc_t VPathMakeFromUrl ( VPath ** new_path, const String * url,
     const String * tick, bool ext, const String * id, uint64_t osize,
     KTime_t date, const uint8_t md5 [ 16 ], KTime_t exp_date,
     const char * service, const String * objectType, const String * type,
-    bool ceRequired, bool payRequired, const char * name );
+    bool ceRequired, bool payRequired, const char * name,
+    int64_t projectId, uint32_t version, const String * acc );
 
 rc_t VPathAttachVdbcache(VPath * self, const VPath * vdbcache);
+
+rc_t VPathSetId(VPath * self, const String * id);
+rc_t VPathSetMagic(VPath * self, bool magic);
 
 /* Equal
  *  compares two VPath-s
@@ -222,6 +252,11 @@ rc_t VPathEqual ( const VPath * l, const VPath * r, int * notequal );
  *  difference between expirations should be withing expirationRange */
 rc_t VPathClose ( const VPath * l, const VPath * r, int * notequal,
                   KTime_t expirationRange );
+
+rc_t VPathGetAccession(const VPath * self, String * acc);
+
+rc_t VPathSetQuality(VPath * self, VQuality quality);
+rc_t VPathLoadQuality(VPath * self);
 
 
 /***** VPathSet - set of VPath's - genetated from name resolver response ******/
@@ -241,7 +276,10 @@ typedef struct {          /*       vdbcache */
     struct VPath * http ; struct VPath * vcHttp;
     struct VPath * https; struct VPath * vcHttps;
     struct VPath * s3   ; struct VPath * vcS3;
-    struct VPath * mapping;
+
+    struct VPath * mapping  ; /* run/file mapping */
+    struct VPath * vcMapping; /* vdbcache mapping */
+
     const struct KSrvError * error;
     char * reqId;
     char * respId;

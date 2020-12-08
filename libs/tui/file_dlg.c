@@ -159,10 +159,10 @@ static rc_t PopulateFileDlg ( struct KTUIDlg * dlg, file_dlg_data * data )
 		rc = set_native_caption( dlg, data->vfs_mgr, ID_CURR, data->current_dir_internal );
 	
 	if ( rc == 0 )
-		rc = fill_widget_with_dirs( dlg, data->dir, ID_DIRS, data->current_dir_internal, NULL );
+		rc = fill_widget_with_dirs( dlg, data->dir, ID_DIRS, data->current_dir_internal, NULL, true );
 
 	if ( rc == 0 )
-		rc = fill_widget_with_files( dlg, data->dir, ID_FILES, data->current_dir_internal, data->extension );
+		rc = fill_widget_with_files( dlg, data->dir, ID_FILES, data->current_dir_internal, data->extension, false );
 
 	if ( rc == 0 )
 		rc = KTUIDlgSetFocus( dlg, ID_DIRS );
@@ -230,10 +230,10 @@ static rc_t FileDlgDirectoryChanged ( struct KTUIDlg * dlg, file_dlg_data * data
 		rc = set_native_caption( dlg, data->vfs_mgr, ID_CURR, data->current_dir_internal );
 
 	if ( rc == 0 )
-		rc = fill_widget_with_dirs( dlg, data->dir, ID_DIRS, data->current_dir_internal, data->parent_dir_internal );
+		rc = fill_widget_with_dirs( dlg, data->dir, ID_DIRS, data->current_dir_internal, data->parent_dir_internal, true );
 
 	if ( rc == 0 )
-		rc = fill_widget_with_files( dlg, data->dir, ID_FILES, data->current_dir_internal, data->extension );	
+		rc = fill_widget_with_files( dlg, data->dir, ID_FILES, data->current_dir_internal, data->extension, true );
 
     if ( rc == 0 )
         rc = KTUIDlgDraw( dlg, false );
@@ -245,13 +245,26 @@ static rc_t FileDlgDirectoryChanged ( struct KTUIDlg * dlg, file_dlg_data * data
 static rc_t FileDlgFileSelected ( struct KTUIDlg * dlg, file_dlg_data * data, uint32_t selection )
 {
     rc_t rc = 0;
-    const char * s = KTUIDlgGetWidgetStringByIdx ( dlg, ID_FILES, selection );
-    if ( s != NULL )
+    const char * filename = KTUIDlgGetWidgetStringByIdx ( dlg, ID_FILES, selection );
+    if ( filename != NULL )
     {
         /* add path segment from selection */
         char temp[ 4096 ];
         size_t written;
-        rc = string_printf ( temp, sizeof temp, &written, "%s/%s", data->current_dir_internal, s );
+        
+        char * src = data -> current_dir_internal;
+        size_t l = string_size( src );
+        uint32_t pt = KDirectoryPathType( data -> dir, "%s", src );
+        if ( pt == kptFile )
+        {
+            char * p = string_rchr ( src, l, '/' );
+            if ( p != NULL )
+            {
+                l = ( p - src );
+            }
+        }
+        
+        rc = string_printf ( temp, sizeof temp, &written, "%.*s/%s", l, src, filename );
         if ( rc == 0 )
             string_copy_measure ( data->current_dir_internal, sizeof data->current_dir_internal, temp );
         data->selected = true;

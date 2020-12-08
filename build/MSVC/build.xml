@@ -3,34 +3,32 @@
     <description>
         Ant script for NCBI-VDB
     </description>
-	
+
     <property environment="env"/>
     <property name="Configuration"  value="Debug" />
     <property name="Platform"       value="x64" />
     <property name="Output"         value="${basedir}\..\..\..\OUTDIR" />
-    <property name="MSVS"           value="2013" />
-	
+    <property name="MSVS"           value="2017" />
+
     <target name="help">
   		<echo message="">
 Apache Ant script for automated testing of NCBI-VDB on Windonws
 
 Usage (in the directory of this file, build.xml):
-  ant [options] target1 target2 ... 
-  
+  ant [options] target1 target2 ...
+
 Example:
-  ant -DConfiguration=Debug -Platform=Win32 help std
-  
+  ant -DConfiguration=Debug help std
+
 Supported targets:
 	help        - print this text and exit
     clean       - remove all build artefacts
     build       - regular build
     runtests    - build and run unit tests
-	
+
 Options:
-    -DConfiguration=Debug or -DConfiguration=Release (default)  
-    -DPlatform=Win32 or -DPlatform=x64 (default) 
+    -DConfiguration=Debug or -DConfiguration=Release (default)
     -DOutput=path   folder to create output in (default: ../../../OUTDIR)
-    -DMSVS=version  MSVS toolset, 2010 or 2013 (default: 2013)
   		</echo>
     </target>
 
@@ -54,7 +52,7 @@ Options:
             <arg value="/p:NGS_OUTDIR=${Output}"/>
         </exec>
     </target>
-    
+
     <target name="runtests" depends="build">
         <sequential>
             <exec executable="msbuild.exe" failonerror="true">
@@ -63,7 +61,8 @@ Options:
                 <arg value="/p:Configuration=${Configuration}"/>
                 <arg value="/p:NGS_OUTDIR=${Output}"/>
                 <arg value="/p:Autorun=true"/>
-                </exec>
+                <env key="TMPDIR" path="${Output}\tmp"/>
+            </exec>
             <!-->Java/Python tests are run directly, not through msbuild</-->
 
             <subant target="runtests">
@@ -71,17 +70,15 @@ Options:
                 <property name="Platform" value="${Platform}"/>
                 <property name="Configuration" value="${Configuration}"/>
                 <property name="Output" value="${Output}"/>
-                <property name="MSVS" value="${MSVS}"/>
             </subant>
-            
+
             <subant target="runtests">
                 <fileset dir="${basedir}\..\..\test\ngs-python" includes="build.xml"/>
                 <property name="Platform" value="${Platform}"/>
                 <property name="Configuration" value="${Configuration}"/>
                 <property name="Output" value="${Output}"/>
-                <property name="MSVS" value="${MSVS}"/>
             </subant>
         </sequential>
     </target>
-    
+
 </project>

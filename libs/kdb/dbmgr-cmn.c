@@ -35,6 +35,8 @@
 #undef KONST
 
 #include <vfs/manager.h>
+#include <vfs/path.h> /* VPathGetPath */
+
 #include <kfs/directory.h>
 #include <klib/symbol.h>
 #include <klib/checksum.h>
@@ -46,7 +48,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-
 
 
 /*--------------------------------------------------------------------------

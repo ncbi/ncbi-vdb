@@ -32,7 +32,8 @@
 #include <vfs/manager-priv.h>
 #include <vfs/path.h>
 #include <vfs/path-priv.h>
-#include <vfs/resolver.h>
+#include <vfs/resolver-priv.h> /* VResolverGetKNSManager */
+#include <vfs/services-priv.h> /* KServiceMakeWithMgr */
 
 #include <krypto/key.h>
 #include <krypto/encfile.h>
@@ -82,8 +83,12 @@
 #include <klib/time.h> 
 #include <klib/vector.h>
 
+#include <vdb/vdb-priv.h> /* VDBManagerGetQuality */
+
 #include "path-priv.h"
 #include "resolver-priv.h"
+
+#include "../kfg/ngc-priv.h" /* KNgcObjMakeFromCmdLine */
 
 #include <strtol.h>
 
@@ -93,6 +98,11 @@
 #include <ctype.h>
 #include <os-native.h>
 #include <assert.h>
+
+#include <limits.h> /* PATH_MAX */
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
 
 
 #if _DEBUGGING
@@ -474,20 +484,17 @@ static rc_t wrap_in_rr_cache( KDirectory * dir,
 
 #if WINDOWS
     static const char * fallback_cache_location = "c:\\temp";
-    const char * get_fallback_cache_location( void )
-    {
-        return fallback_cache_location;
-    }
 #else
-    static const char * fallback_cache_location = "/var/tmp";
-    const char * get_fallback_cache_location( void )
-    {
-        const char * c = getenv ( "TMPDIR" );
-        if ( c != NULL )
-            return c;
-        return fallback_cache_location;
-    }
+	static const char * fallback_cache_location = "/var/tmp";
 #endif
+
+const char * get_fallback_cache_location( void )
+{
+    const char * c = getenv ( "TMPDIR" );
+    if ( c != NULL )
+        return c;
+    return fallback_cache_location;
+}
 
 
 static const String * make_id( const VPath * path )
@@ -504,15 +511,46 @@ static const String * make_id( const VPath * path )
     /* if we have no id now, as a last resort use a timestamp */
     if ( res == NULL )
     {
+        size_t num_writ = 0;
+        char buffer [ 4096 ];
+        static atomic32_t counter;
+#ifdef _WIN32
         KTime_t t = KTimeStamp();
-        char buffer[ 32 ];
-        size_t num_writ;
-        rc = string_printf ( buffer, sizeof buffer, &num_writ, "t_%lu", t );
+        rc = string_printf ( buffer, sizeof buffer, &num_writ
+                             , "t_%lu.%u"
+                             , t
+                             , atomic32_read_and_add ( & counter, 1 )
+            );
+#else
+        uint32_t sys_GetPID ( void );
+        uint32_t pid = sys_GetPID ();
+        int sys_GetHostName ( char * buffer, size_t buffer_size );
+        int status = sys_GetHostName ( buffer, sizeof buffer );
+        if ( status != 0 )
+        {
+            KTime_t t = KTimeStamp();
+            rc = string_printf ( buffer, sizeof buffer, &num_writ
+                                 , "t%u_%lu.%u"
+                                 , pid
+                                 , t
+                                 , atomic32_read_and_add ( & counter, 1 )
+                );
+        }
+        else
+        {
+            num_writ = strlen ( buffer );
+            rc = string_printf ( & buffer [ num_writ ], sizeof buffer - num_writ, &num_writ
+                                 , "-%u.%u"
+                                 , pid
+                                 , atomic32_read_and_add ( & counter, 1 )
+                );
+        }
+#endif
         if ( rc == 0 )
         {
             String S;
             StringInitCString( &S, buffer );
-            rc = StringCopy ( &res, &path_id );    
+            rc = StringCopy ( &res, &S );
         }
     }
     return res;
@@ -666,6 +704,8 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
                              bool is_refseq,
                              bool promote )
 {
+    bool is_wgs = false;
+
     const String * uri = NULL;
     rc_t rc = VPathMakeString ( path, &uri );
 
@@ -681,43 +721,56 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
                 assert(uri);
                 is_refseq = strstr(uri->addr, refseq.addr) != NULL;
             }
+            if (!is_refseq) {
+                String wgs;
+                CONST_STRING(&wgs, "wgs");
+                is_refseq = is_wgs = StringEqual(&objectType, &wgs);
+            }
         }
     }
 
     if ( rc == 0 ) {
-        bool hasMagic = getenv(ENV_MAGIC_LOCAL);
         bool ceRequired = false;
         bool payRequired = false;
+
         {
             const char * name = path->sraClass == eSCvdbcache ?
                 ENV_MAGIC_CACHE_NEED_CE : ENV_MAGIC_REMOTE_NEED_CE;
             const char * magic = getenv(name);
+            bool hasMagic = magic != NULL;
             if (is_refseq) {
-                if (magic != NULL)
-                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
-                        "'%s' magic ignored for refseq\n", name));
-            }
-            else
                 if (magic != NULL) {
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                        "'%s' magic ignored for %s\n",
+                        name, is_wgs ? "WGS" : "refseq"));
+                    magic = NULL;
+                }
+            }
+            if (magic != NULL) {
                     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
                         "'%s' magic found\n", name));
                     ceRequired = true;
-                }
-                else {
+            }
+            else {
                     ceRequired = path->ceRequired;
-                    if (hasMagic)
+                    if (!hasMagic)
                         DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
                             "'%s' magic not set\n", name));
-                }
+            }
         }
+
         {
             const char * name = path->sraClass == eSCvdbcache ?
                 ENV_MAGIC_CACHE_NEED_PMT : ENV_MAGIC_REMOTE_NEED_PMT;
             const char * magic = getenv(name);
+            bool hasMagic = magic != NULL;
             if (is_refseq) {
-                if (magic != NULL)
+                if (magic != NULL) {
                     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
-                        "'%s' pmtReq magic ignored for refseq\n", name));
+                        "'%s' pmtReq magic ignored for %s\n",
+                        name, is_wgs ? "WGS" : "refseq"));
+                    magic = NULL;
+                }
             }
             if (magic != NULL) {
                 DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
@@ -726,11 +779,12 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
             }
             else {
                 payRequired = path->payRequired;
-                if (hasMagic)
+                if (!hasMagic)
                     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
                         "'%s' magic not set\n", name));
             }
         }
+
         rc = KNSManagerMakeReliableHttpFile ( self -> kns,
                                               cfp,
                                               NULL,
@@ -788,13 +842,17 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
     return rc;
 }
 
-static rc_t CC VFSManagerGetConfigPWFile (const VFSManager * self, char * b, size_t bz, size_t * pz)
+static rc_t CC VFSManagerGetConfigPWFile (const VFSManager * self,
+    char * b, size_t bz, size_t * pz, bool * pwdItself)
 {
     const char * env;
     const KConfigNode * node;
     size_t oopsy;
     size_t z = 0;
     rc_t rc;
+
+    assert(self && b && pwdItself);
+    *pwdItself = false;
 
     if (pz)
         *pz = 0;
@@ -825,7 +883,13 @@ static rc_t CC VFSManagerGetConfigPWFile (const VFSManager * self, char * b, siz
             rc = KRepositoryMgrCurrentProtectedRepository ( repoMgr, &prot );
             if (rc == 0)
             {
-                rc = KRepositoryEncryptionKeyFile ( prot, b, bz, pz);            
+                rc = KRepositoryEncryptionKeyFile (prot, b, bz, pz);
+                if (rc != 0 || b[0] == '\0') {
+                    rc = KRepositoryEncryptionKey (prot, b, bz, pz);
+                    if (rc == 0)
+                        *pwdItself = true;
+                }
+
                 KRepositoryRelease(prot);
             }
             KRepositoryMgrRelease(repoMgr);
@@ -1050,6 +1114,7 @@ static rc_t VFSManagerResolvePathResolver (const VFSManager * self,
 {
     rc_t rc = 0;
 
+    assert(out_path);
     *out_path = NULL;
 
     /*
@@ -1074,7 +1139,8 @@ static rc_t VFSManagerResolvePathResolver (const VFSManager * self,
          */
         if ((flags & vfsmgr_rflag_no_acc_local) == 0)
         {
-            rc = VResolverLocal (self->resolver, in_path, (const VPath **)out_path);
+            rc = VResolverQuery(self->resolver, 0, in_path,
+                (const VPath **)out_path, NULL, NULL);
             if (rc == 0)
                 not_done = false;
         }
@@ -2981,6 +3047,19 @@ void KConfigReadRemoteProtocols ( const KConfig * self, VRemoteProtocols * remot
     }
 }
 
+static void VFSManagerLoadLogNamesServiceErrors(VFSManager * self) {
+    rc_t rc = 0;
+
+    bool enabled = true;
+
+    assert(self);
+/* KConfigPrint(self->cfg,0); */
+    rc = KConfigReadBool(self->cfg, "/name-resolver/log-names-service-errors",
+        &enabled);
+    if (rc == 0)
+        LogNamesServiceErrorsInit(enabled);
+}
+
 /* Make
  */
 LIB_EXPORT rc_t CC VFSManagerMake ( VFSManager ** pmanager )
@@ -2990,16 +3069,18 @@ LIB_EXPORT rc_t CC VFSManagerMake ( VFSManager ** pmanager )
 
 /* Make
  */
-LIB_EXPORT rc_t CC VFSManagerMakeFromKfg ( struct VFSManager ** pmanager,
-    struct KConfig * cfg)
+static rc_t CC VFSManagerMakeFromKfgImpl ( struct VFSManager ** pmanager,
+    struct KConfig * cfg, KNSManager * kmgr, bool local )
 {
     rc_t rc;
 
     if (pmanager == NULL)
         return RC (rcVFS, rcMgr, rcConstructing, rcParam, rcNull);
 
-    *pmanager = singleton;
-    if ( singleton != NULL )
+    *pmanager = NULL;
+    if (!local)
+        *pmanager = singleton;
+    if ( *pmanager != NULL )
     {
         rc = VFSManagerAddRef ( singleton );
         if ( rc != 0 )
@@ -3042,7 +3123,16 @@ LIB_EXPORT rc_t CC VFSManagerMakeFromKfg ( struct VFSManager ** pmanager,
                         rc = KKeyStoreMake ( & obj -> keystore, obj -> cfg );
                         if ( rc == 0 )
                         {
-                            rc = KNSManagerMake ( & obj -> kns );
+                            if (kmgr != NULL) {
+                                rc = KNSManagerAddRef(kmgr);
+                                if (rc == 0)
+                                    obj->kns = kmgr;
+                            }
+                            else if (local)
+                                rc = KNSManagerMakeLocal ( & obj -> kns, cfg );
+                            else
+                                rc = KNSManagerMakeWithConfig
+                                                         ( & obj -> kns, cfg );
                             if ( rc != 0 )
                             {
                                 LOGERR ( klogWarn, rc, "could not build network manager" );
@@ -3056,7 +3146,11 @@ LIB_EXPORT rc_t CC VFSManagerMakeFromKfg ( struct VFSManager ** pmanager,
                                 rc = 0;
                             }
 
-                            *pmanager = singleton = obj;
+                            VFSManagerLoadLogNamesServiceErrors(obj);
+
+                            *pmanager = obj;
+                            if (!local)
+                                singleton = obj;
                             DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_MGR),  ("%s(%p)\n", __func__, cfg));
                             return 0;
                         }
@@ -3070,6 +3164,23 @@ LIB_EXPORT rc_t CC VFSManagerMakeFromKfg ( struct VFSManager ** pmanager,
     return rc;
 }
 
+LIB_EXPORT rc_t CC VFSManagerMakeFromKfg ( struct VFSManager ** pmanager,
+    struct KConfig * cfg)
+{
+    return VFSManagerMakeFromKfgImpl(pmanager, cfg, NULL, false);
+}
+
+LIB_EXPORT rc_t CC VFSManagerMakeFromKns(struct VFSManager ** pmanager,
+    struct KConfig * cfg, KNSManager * kns)
+{
+    return VFSManagerMakeFromKfgImpl(pmanager, cfg, kns, false);
+}
+
+LIB_EXPORT rc_t CC VFSManagerMakeLocal ( struct VFSManager ** pmanager,
+    struct KConfig * cfg)
+{
+    return VFSManagerMakeFromKfgImpl(pmanager, cfg, NULL, true);
+}
 
 LIB_EXPORT rc_t CC VFSManagerGetCWD (const VFSManager * self, KDirectory ** cwd)
 {
@@ -3195,10 +3306,15 @@ LIB_EXPORT rc_t CC VFSManagerGetKryptoPassword (const VFSManager * self,
     {
         size_t z;
         char obuff [4096 + 16];
+        bool pwdItself = false;
 
-        rc = VFSManagerGetConfigPWFile(self, obuff, sizeof obuff, &z);
+        rc = VFSManagerGetConfigPWFile(self, obuff, sizeof obuff, &z,
+            &pwdItself);
         if (rc == 0)
         {
+          if (pwdItself)
+              *size = string_copy(password, max_size, obuff, z);
+          else {
             VPath * vpath;
             rc_t rc2;
             rc = VPathMake (&vpath, obuff);
@@ -3207,11 +3323,14 @@ LIB_EXPORT rc_t CC VFSManagerGetKryptoPassword (const VFSManager * self,
             rc2 = VPathRelease (vpath);
             if (rc == 0)
                 rc = rc2;
+          }
         }
     }
     return rc;
 }
 
+/* N.B. This finction might fail if password is stored in configuration,
+	not file (pwdItself == true after ) VFSManagerGetConfigPWFile */
 LIB_EXPORT rc_t CC VFSManagerUpdateKryptoPassword (const VFSManager * self, 
                                                    const char * password,
                                                    size_t size,
@@ -3238,10 +3357,11 @@ LIB_EXPORT rc_t CC VFSManagerUpdateKryptoPassword (const VFSManager * self,
     {
         size_t old_password_file_size;
         char old_password_file [8193];
-        
+        bool pwdItself = false;
+
         rc = VFSManagerGetConfigPWFile (self, old_password_file,
                                         sizeof old_password_file - 1,
-                                        &old_password_file_size);
+                                        &old_password_file_size, &pwdItself);
         if (rc) {
             if (rc ==
                 SILENT_RC(rcKrypto, rcMgr, rcReading, rcBuffer, rcInsufficient))
@@ -4186,8 +4306,188 @@ LIB_EXPORT rc_t CC VFSManagerDeleteCacheOlderThan ( const VFSManager * self,
     return rc;
 }
 
-LIB_EXPORT rc_t CC VFSManagerSetAdCaching(VFSManager * self, bool enabled) {
+LIB_EXPORT
+rc_t CC VFSManagerSetAdCaching(VFSManager * self, bool enabled)
+{
     if (self != NULL)
         return KNSManagerSetAdCaching(self->kns, enabled);
     return 0;
+}
+
+#define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
+    if (rc2 && !rc) { rc = rc2; } obj = NULL; } while (false)
+
+static bool VFSManagerCheckEnvAndAdImpl(const VFSManager * self,
+    const VPath * inPath, const VPath ** outPath, bool checkEnv)
+{
+    /* *outPath can be not NULL: in this case it's just reset to a new value;
+                                 DON'T RELEASE THE OLD ONE! */
+
+    /* if path = "/S/S.sra";
+       or path = "/S/S_dbGaP-NNN.sra"
+       then inPath  is S
+            outPath is /S/S*.sra */
+    bool found = false;
+    rc_t rc = 0;
+    const KNgcObj * ngc = NULL;
+    uint32_t projectId = 0;
+    String spath;
+    const char *slash = NULL;
+    char rs[PATH_MAX] = "";
+
+    VQuality quality = VDBManagerGetQuality(NULL);
+    assert(quality >= 0);
+
+    if (outPath == NULL)
+        return RC(rcVFS, rcPath, rcResolving, rcParam, rcNull);
+
+    if (self == NULL)
+        return RC(rcVFS, rcPath, rcResolving, rcMgr, rcNull);
+
+    if (VPathGetPath(inPath, &spath) != 0)
+        return false;
+    if (checkEnv) {
+        const VPath * adPath = NULL;
+        if (LocalMagicResolve(self->cwd, &spath, &adPath) == 0
+            && adPath != NULL)
+        {
+            *outPath = adPath;
+            return true;
+        }
+    }
+    if ((KDirectoryPathType(self->cwd, spath.addr) & ~kptAlias) != kptDir)
+        return false;
+
+    rc = KDirectoryResolvePath(self->cwd, true,
+        rs, sizeof rs, "%s", spath.addr);
+    if (rc != 0)
+        return false;
+
+    slash = strrchr(rs, '/');
+    if (slash)
+        ++slash;
+    else
+        slash = rs;
+
+    rc = KNgcObjMakeFromCmdLine(&ngc);
+    if (ngc != NULL) {
+        rc = KNgcObjGetProjectId(ngc, &projectId);
+        if (rc == 0) {
+            if (quality < eQualLast
+                && (quality == eQualDefault || quality == eQualNo))
+            {
+                if ((KDirectoryPathType(self->cwd, "%s/%s_dbGaP-%d.noqual.sra",
+                    rs, slash, projectId) & ~kptAlias) == kptFile)
+                {
+                    rc_t r = VFSManagerMakePath(self, (VPath **)outPath,
+                        "%s/%s_dbGaP-%d.noqual.sra", rs, slash, projectId);
+                    if (r == 0)
+                        found = true;
+                }
+            }
+            if (!found && (quality == eQualDefault || quality == eQualFull
+                || quality >= eQualLast))
+            {
+                if ((KDirectoryPathType(self->cwd, "%s/%s_dbGaP-%d.sra",
+                    rs, slash, projectId) & ~kptAlias) == kptFile)
+                {
+                    rc_t r = VFSManagerMakePath(self, (VPath **)outPath,
+                        "%s/%s_dbGaP-%d.sra", rs, slash, projectId);
+                    if (r == 0)
+                        found = true;
+                }
+            }
+        }
+    }
+
+    if (!found) {
+        if (quality < eQualLast
+            && (quality == eQualDefault || quality == eQualNo))
+        {
+            if ((KDirectoryPathType(self->cwd, "%s/%s.noqual.sra", rs, slash) &
+                ~kptAlias) == kptFile)
+            {
+                rc_t r = VFSManagerMakePath(self, (VPath**)outPath,
+                    "%s/%s.noqual.sra", rs, slash);
+                if (r != 0)
+                    rc = 0;
+                else {
+                    rc = VPathSetQuality((VPath*)outPath, eQualNo);
+                    found = true;
+                }
+            }
+        }
+        if (!found && (quality == eQualDefault || quality == eQualFull
+            || quality >= eQualLast))
+        {
+            if ((KDirectoryPathType(self->cwd, "%s/%s.sra", rs, slash) &
+                ~kptAlias) == kptFile)
+            {
+                rc_t r = VFSManagerMakePath(self, (VPath **)outPath,
+                    "%s/%s.sra", rs, slash);
+                if (r == 0)
+                    found = true;
+                rc = 0;
+            }
+        }
+    }
+
+    /* TODO: add processing of eQualFullOnly and eQualDblOnly */
+
+    if (found) {
+        VPath * vdbcache = NULL;
+        const String * thePath = NULL;
+
+        assert(outPath && *outPath);
+        thePath = &((*outPath)->path);
+
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (
+            "VFSManagerCheckEnvAndAd: '%s' found in '%S'\n", slash, thePath));
+
+        if (KDirectoryPathType(self->cwd, "%.*s.vdbcache",
+            (int)thePath->size, thePath->addr) == kptFile)
+        {
+            rc = VPathMakeFmt(&vdbcache, "%S.vdbcache", thePath);
+            if (rc == 0) {
+                assert(vdbcache);
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (
+                    "VFSManagerCheckEnvAndAd: '%s.vdbcache' found in '%S'\n",
+                    slash, &vdbcache->path));
+            }
+        }
+        if (rc == 0)
+            rc = VPathAttachVdbcache((VPath*)(*outPath), vdbcache);
+
+        RELEASE(VPath, vdbcache);
+    }
+
+    RELEASE(KNgcObj, ngc);
+
+    return found;
+}
+
+/* CheckEnvAndAd
+ *  Verify that inPath is path/to/Accession-as-Directory (AD)
+ *  if inPath is AD - resolve run in AD as outPath and return true
+ *  otherwise - return false, don't set outPath.
+ *
+ *  Magic env. var. is respected.
+ */
+LIB_EXPORT bool CC VFSManagerCheckEnvAndAd(const VFSManager * self,
+    const VPath * inPath, const VPath ** outPath)
+{
+    return VFSManagerCheckEnvAndAdImpl(self, inPath, outPath, true);
+}
+
+/* CheckAd
+ *  Verify that inPath is path/to/Accession-as-Directory (AD)
+ *  if inPath is AD - resolve run in AD as outPath and return true
+ *  otherwise - return false, don't set outPath.
+ *
+ *  Magic env. var. is ignored.
+ */
+LIB_EXPORT bool CC VFSManagerCheckAd(const VFSManager * self,
+    const VPath * inPath, const VPath ** outPath)
+{
+    return VFSManagerCheckEnvAndAdImpl(self, inPath, outPath, false);
 }

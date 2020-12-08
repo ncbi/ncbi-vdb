@@ -634,7 +634,7 @@ class VCursor :
     def __del__( self ) :
         rc = self.__mgr.VCursorRelease( self.__ptr )
         if rc != 0 :
-            self.__mgr.raise_rc( rc, "VCursorRelease( '%s' )"%( self.__tab.name ), self )
+            self.__mgr.raise_rc( rc, "VCursorRelease( '%s' )"%( self.__tab._VTable__name ), self )
 
     def __enter__( self ) :
         return self
@@ -673,44 +673,49 @@ class VCursor :
     def Open( self ) :
         rc = self.__mgr.VCursorOpen( self.__ptr )
         if rc != 0 :
-            self.__mgr.raise_rc( rc, "VCursorOpen( '%s' )"%( self.__tab.name ), self )
+            self.__mgr.raise_rc( rc, "VCursorOpen( '%s' )"%( self.__tab._VTable__name ), self )
 
     def Commit( self ) :
         rc = self.__mgr.VCursorCommit( self.__ptr )
         if rc != 0 :
-            self.__mgr.raise_rc( rc, "VCursorCommit( %s )"%( self.__tab.name ), self )
+            self.__mgr.raise_rc( rc, "VCursorCommit( %s )"%( self.__tab._VTable__name ), self )
 
     def OpenRow( self ) :
         rc = self.__mgr.VCursorOpenRow( self.__ptr )
         if rc != 0 :
-            self.__mgr.raise_rc( rc, "VCursorOpenRow( '%s' )"%( self.__tab.name ), self )
+            self.__mgr.raise_rc( rc, "VCursorOpenRow( '%s' )"%( self.__tab._VTable__name ), self )
         
     def CommitRow( self ) :
         rc = self.__mgr.VCursorCommitRow( self.__ptr )
         if rc != 0 :
-            self.__mgr.raise_rc( rc, "VCursorCommitRow( %s )"%( self.__tab.name ), self )
+            self.__mgr.raise_rc( rc, "VCursorCommitRow( '%s' )"%( self.__tab._VTable__name ), self )
 
     def RepeatRow( self, count ) :
         rc = self.__mgr.VCursorRepeatRow( self.__ptr, count )
         if rc != 0 :
-            self.__mgr.raise_rc( rc, "VCursorRepeatRow( %s, %d )"%( self.__tab.name, count ), self )
+            self.__mgr.raise_rc( rc, "VCursorRepeatRow( '%s', %d )"%( self.__tab._VTable__name, count ), self )
 
     def CloseRow( self ) :
         rc = self.__mgr.VCursorCloseRow( self.__ptr )
         if rc != 0 :
-            self.__mgr.raise_rc( rc, "VCursorCloseRow( '%s' )"%( self.__tab.name ), self )
+            self.__mgr.raise_rc( rc, "VCursorCloseRow( '%s' )"%( self.__tab._VTable__name ), self )
 
     def FlushPage( self ) :
         rc = self.__mgr.VCursorFlushPage( self.__ptr )
         if rc != 0 :
-            self.__mgr.raise_rc( rc, "VCursorFlushPage( %s )"%( self.__tab.name ), self )
+            self.__mgr.raise_rc( rc, "VCursorFlushPage( '%s' )"%( self.__tab._VTable__name ), self )
 
     def RowId( self ) :
         row_id = c_longlong()
         rc = self.__mgr.VCursorRowId( self.__ptr, byref( row_id ) )
         if rc != 0 :
-            self.__mgr.raise_rc( rc, "VCursorRowId( '%s' )"%( self.__tab.name ), self )
+            self.__mgr.raise_rc( rc, "VCursorRowId( '%s' )"%( self.__tab._VTable__name ), self )
         return row_id.value
+
+    def SetRowId( self, value ) :
+        rc = self.__mgr.VCursorSetRowId( self.__ptr, value )
+        if rc != 0 :
+            self.__mgr.raise_rc( rc, "VCursorSetRowId( '%s', %d )"%( self.__tab._VTable__name, value ), self )
 
     def ReferenceList( self ) :
         reflist_ptr = c_void_p()
@@ -1200,14 +1205,14 @@ class VTable :
         return KIndex( self.__mgr, k_idx, name )
 
     def OpenMetadata( self, open_mode = OpenMode.Read ) :
-        if self.__kdb_ptr == None :
-            self.__OpenKTableRead__()
         k_meta = c_void_p()
         if open_mode == OpenMode.Write :
-            rc = self.__mgr.KTableOpenMetadataUpdate( self.__kdb_ptr, byref( k_meta ) )
+            rc = self.__mgr.VTableOpenMetadataUpdate(self.__ptr, byref(k_meta))
             if rc != 0 :
-                self.__mgr.raise_rc( rc, "KTableOpenMetadataUpdate( '%s' )"%( self.__name ), self )
+                self.__mgr.raise_rc( rc, "VTableOpenMetadataUpdate( '%s' )"%( self.__name ), self )
         else :
+            if self.__kdb_ptr == None :
+                self.__OpenKTableRead__()
             rc = self.__mgr.KTableOpenMetadataRead( self.__kdb_ptr, byref( k_meta ) )
             if rc != 0 :
                 self.__mgr.raise_rc( rc, "KTableOpenMetadataRead( '%s' )"%( self.__name ), self )
@@ -1876,7 +1881,9 @@ class manager :
         self.VTableCreateCachedCursorRead = self.__func__( "VTableCreateCachedCursorRead", [ c_void_p, c_void_p, c_longlong ] )
         self.VTableLocked = self.__func__( "VTableLocked", [ c_void_p ], c_bool )
         self.VTableOpenKTableRead = self.__func__( "VTableOpenKTableRead", [ c_void_p, c_void_p ] )
-        
+        self.VTableOpenMetadataRead = self.__func__("VTableOpenMetadataRead", [ c_void_p, c_void_p ] )
+        self.VTableOpenMetadataUpdate = self.__func__("VTableOpenMetadataUpdate", [ c_void_p, c_void_p ] )
+
         self.KNamelistCount = self.__func__( "KNamelistCount", [ c_void_p, c_void_p ] )
         self.KNamelistGet = self.__func__( "KNamelistGet", [ c_void_p, c_int, c_void_p ] )
         self.KNamelistRelease = self.__func__( "KNamelistRelease", [ c_void_p ] )
@@ -1894,6 +1901,7 @@ class manager :
         self.VCursorCloseRow = self.__func__( "VCursorCloseRow", [ c_void_p ] )
         self.VCursorIdRange = self.__func__( "VCursorIdRange", [ c_void_p, c_int, c_void_p, c_void_p ] )
         self.VCursorRowId = self.__func__( "VCursorRowId", [ c_void_p, c_void_p ] )
+        self.VCursorSetRowId = self.__func__( "VCursorSetRowId", [ c_void_p, c_longlong ] )
         self.VCursorOpenRow = self.__func__( "VCursorOpenRow", [ c_void_p ] )
         self.VCursorFindNextRowIdDirect = self.__func__( "VCursorFindNextRowIdDirect", [ c_void_p, c_int, c_longlong, c_void_p ] )
 

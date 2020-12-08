@@ -219,8 +219,15 @@ public:
         KDirectory * native  = NULL;
         REQUIRE_RC ( KDirectoryNativeDir ( & native ) );
         const KDirectory * dir = NULL;
-        REQUIRE_RC
-            ( KDirectoryOpenDirRead ( native, &dir, false, "caching-kfg" ) );
+
+#if WINDOWS
+#define KFG_OS "win"
+#else
+#define KFG_OS "unix"
+#endif
+        REQUIRE_RC ( KDirectoryOpenDirRead ( native, &dir, false, "caching-kfg/" KFG_OS) );
+#undef  OS
+
         KConfig * cfg = NULL;
         REQUIRE_RC ( KConfigMakeLocal ( & cfg, dir ) );
         REQUIRE_RC ( SET :: set ( cfg, v, caching) );
@@ -233,13 +240,14 @@ public:
 
         // KConfigReadString creates NULL-terminated strings
         REQUIRE ( user_root );
-        REQUIRE_RC ( KDirectoryRemove ( native, true, user_root -> addr ) );
+//std::cout << std::string(user_root->addr) << std::endl;
+        REQUIRE_RC ( KDirectoryRemove ( native, true, "%s", user_root -> addr ) );
 
         VFSManager * vfs = NULL;
 
 //KConfigPrint(cfg, 0);
 
-        REQUIRE_RC ( VFSManagerMakeFromKfg ( & vfs, cfg ) );
+        REQUIRE_RC ( VFSManagerMakeLocal ( & vfs, cfg ) );
         REQUIRE_RC ( SET :: resetSingleton ( vfs ) );
 
         REQUIRE_RC ( SET :: set ( vfs, v ) );

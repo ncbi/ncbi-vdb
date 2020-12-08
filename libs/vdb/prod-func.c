@@ -247,7 +247,7 @@ rc_t VProdResolveFuncParamExpr ( const VProdResolve *self, Vector *out,
     if ( rc == 0 )
     {
         if ( prod == NULL )
-            rc = RC ( rcVDB, rcFunction, rcResolving, rcProduction, rcIncomplete );
+            rc = SILENT_RC ( rcVDB, rcFunction, rcResolving, rcProduction, rcIncomplete );
         else
         {
             bool control;

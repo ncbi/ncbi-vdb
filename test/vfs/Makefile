@@ -29,18 +29,22 @@ TOP ?= $(abspath ../..)
 MODULE = test/vfs
 
 TEST_TOOLS = \
-	redirect-rejected-names-cgi-http-to-https \
+	test-log-names-error \
+	test-redirect-rejected-names-cgi-http-to-https \
 	test-resolver-with-log \
 	test-sdl-response \
 	test-services \
+	test-SraDesc \
 	test-caching \
 	test-names-30 \
 	test-path \
 	test-path-c \
+	test-perm \
 	test-resolver \
 	test-vfsmanager \
 	test-json-response \
 	test-resolver4 \
+	test-resolve-qual \
 
 include $(TOP)/build/Makefile.env
 
@@ -48,6 +52,8 @@ $(TEST_TOOLS): makedirs
 	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
 
 .PHONY: $(TEST_TOOLS)
+
+vg: $(addprefix vg-,$(TEST_TOOLS))
 
 clean: stdclean
 
@@ -73,7 +79,7 @@ $(TEST_BINDIR)/test-path-c: $(TEST_OBJ)
 #
 
 PATHTEST_SRC = \
-	pathtest 
+	pathtest
 
 PATHTEST_OBJ = \
 	$(addsuffix .$(OBJX),$(PATHTEST_SRC))
@@ -93,7 +99,7 @@ HTTPS_SRC = \
 HTTPS_OBJ = \
 	$(addsuffix .$(OBJX),$(HTTPS_SRC))
 
-$(TEST_BINDIR)/redirect-rejected-names-cgi-http-to-https: $(HTTPS_OBJ)
+$(TEST_BINDIR)/test-redirect-rejected-names-cgi-http-to-https: $(HTTPS_OBJ)
 	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
 
 #----------------------------------------------------------------
@@ -118,6 +124,18 @@ J_OBJ = \
 	$(addsuffix .$(OBJX),$(J_SRC))
 
 $(TEST_BINDIR)/test-json-response: $(J_OBJ)
+	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
+
+#----------------------------------------------------------------
+# log-names-error
+
+LNE_SRC = \
+	test-log-names-error
+
+LNE_OBJ = \
+	$(addsuffix .$(OBJX),$(LNE_SRC))
+
+$(TEST_BINDIR)/test-log-names-error: $(LNE_OBJ)
 	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
 
 #----------------------------------------------------------------
@@ -160,11 +178,35 @@ $(TEST_BINDIR)/test-names-30: $(N30_OBJ)
 	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
 
 #----------------------------------------------------------------
+# test-perm
+
+TP_SRC = \
+	test-perm
+
+TP_OBJ = \
+	$(addsuffix .$(OBJX),$(TP_SRC))
+
+$(TEST_BINDIR)/test-perm: $(TP_OBJ)
+	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
+
+#----------------------------------------------------------------
+# test-resolve-qual
+
+RQ_SRC = \
+	test-resolve-qual
+
+RQ_OBJ = \
+	$(addsuffix .$(OBJX),$(RQ_SRC))
+
+$(TEST_BINDIR)/test-resolve-qual: $(RQ_OBJ)
+	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
+
+#----------------------------------------------------------------
 # C++ test on VFSManager
 #
 
 MANAGERTEST_SRC = \
-	managertest 
+	managertest
 
 MANAGERTEST_OBJ = \
 	$(addsuffix .$(OBJX),$(MANAGERTEST_SRC))
@@ -183,7 +225,7 @@ $(TEST_BINDIR)/test-vfsmanager: $(MANAGERTEST_OBJ)
 #
 
 RESOLVERTEST_SRC = \
-	resolvertest 
+	resolvertest
 
 RESOLVERTEST_OBJ = \
 	$(addsuffix .$(OBJX),$(RESOLVERTEST_SRC))
@@ -222,4 +264,16 @@ SERVICES_OBJ = \
 	$(addsuffix .$(OBJX),$(SERVICES_SRC))
 
 $(TEST_BINDIR)/test-services: $(SERVICES_OBJ)
+	$(LP) --exe -o $@ $^ $(RESOLVERTEST_LIB)
+
+#----------------------------------------------------------------
+# Test SraDesc
+#
+SD_SRC = \
+	test-SraDesc
+
+SD_OBJ = \
+	$(addsuffix .$(OBJX),$(SD_SRC))
+
+$(TEST_BINDIR)/test-SraDesc: $(SD_OBJ)
 	$(LP) --exe -o $@ $^ $(RESOLVERTEST_LIB)

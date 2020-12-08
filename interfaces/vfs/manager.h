@@ -323,7 +323,36 @@ VFS_EXTERN rc_t CC VFSManagerGetObject(const struct VFSManager* self, uint32_t o
  */
 VFS_EXTERN
 rc_t CC VFSManagerSetAdCaching(struct VFSManager* self, bool enabled);
-                                                  
+   
+
+/* CheckAd
+ *  Verify that inPath is path/to/Accession-as-Directory (AD)
+ *  if inPath is AD - resolve run in AD as outPath and return true
+ *  otherwise - return false, don't set outPath
+ */
+VFS_EXTERN bool CC VFSManagerCheckAd(const struct VFSManager * self,
+    const struct VPath * inPath, const struct VPath ** outPath);
+
+/* CheckEnvAndAd
+ *  Verify that inPath is path/to/Accession-as-Directory (AD)
+ *  if inPath is AD - resolve run in AD as outPath and return true
+ *  otherwise - return false, don't set outPath
+ *
+ *  Verify magic env.vars first
+ */
+VFS_EXTERN bool CC VFSManagerCheckEnvAndAd(const struct VFSManager * self,
+    const struct VPath * inPath, const struct VPath ** outPath);
+
+
+/* LogNamesServiceErrors
+ *  Enable/disable logging of error messages coming from names service
+ */
+VFS_EXTERN rc_t CC VFSManagerLogNamesServiceErrors(struct VFSManager* self,
+    bool enabled);
+VFS_EXTERN rc_t CC VFSManagerGetLogNamesServiceErrors(VFSManager * self,
+    bool * enabled);
+
+
 #ifdef __cplusplus
 }
 #endif

@@ -28,6 +28,7 @@
 */
 
 
+#include <vdb/quality.h> /* VQuality */
 #include <vfs/services.h> /* KService */
 
 
@@ -38,6 +39,8 @@ extern "C" {
 
 struct KNSManager;
 
+rc_t KServiceMakeWithMgr(KService ** self, const struct VFSManager * vMgr,
+    const struct KNSManager * mgr, const struct KConfig * kfg);
 
 rc_t KServiceNamesQueryExt ( KService * self, VRemoteProtocols protocols, 
     const char * cgi, const char * version, const char * outDir,
@@ -71,9 +74,15 @@ rc_t KSrvRespFileGetHttp ( const KSrvRespFile * self,
 /* DON'T FREE RETURNED STRINGS !!! */
 rc_t KSrvRespFileGetName(const struct KSrvRespFile * self, const char ** name);
 
+
+rc_t SraDescConvert(struct KDirectory * dir, const char * path,
+    bool * recognized);
+
+rc_t SraDescLoadQuality(const String * sra, VQuality * quality);
+rc_t SraDescSaveQuality(const String * sra, VQuality quality);
+
 #ifdef __cplusplus
 }
 #endif
-
 
 #endif /* _h_vfs_services_priv_ */

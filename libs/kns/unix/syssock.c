@@ -1047,7 +1047,7 @@ KNS_EXTERN rc_t CC KNSManagerMakeRetryTimedConnection ( struct KNSManager const 
     {
         if ( self == NULL )
             rc = RC ( rcNS, rcStream, rcConstructing, rcSelf, rcNull );
-        else if ( retryTimeout == NULL || to == NULL )
+        else if ( to == NULL )
             rc = RC ( rcNS, rcStream, rcConstructing, rcParam, rcNull );
         else if ( from != NULL && from -> type != to -> type )
             rc = RC ( rcNS, rcStream, rcConstructing, rcParam, rcIncorrect );
@@ -1058,6 +1058,23 @@ KNS_EXTERN rc_t CC KNSManagerMakeRetryTimedConnection ( struct KNSManager const 
                 rc = RC ( rcNS, rcStream, rcConstructing, rcMemory, rcExhausted );
             else
             {
+                timeout_t tm;
+                if (retryTimeout == NULL) {
+                    /* TODO: TBD:
+                    NULL timeout (when timeout milliseconds < 0) is supposed
+                    to be used for infinite timeouts.
+                    However it's not expected here and in KSocketConnectIPv.
+                    So initialize it to some big value while waiting for correct
+                    implementation.
+                    */
+#ifndef MAX_CONN_READ_LIMIT /* default value of conn_read_timeout 
+                    ( /libs/kns/connect/timeout/read) from libs/kns/manager.c */
+#define MAX_CONN_READ_LIMIT ( 10 * 60 * 1000 )
+#endif
+                    TimeoutInit(&tm, MAX_CONN_READ_LIMIT);
+                    retryTimeout = &tm;
+                }
+
                 conn -> fd = -1;
                 conn -> read_timeout = readMillis;
                 conn -> write_timeout = writeMillis;
@@ -1111,6 +1128,8 @@ KNS_EXTERN rc_t CC KNSManagerMakeRetryTimedConnection ( struct KNSManager const 
                                 /* if was interrupted by Ctrl-C, return immediately */
                                 if ( rcConnection == GetRCObject ( rc ) && rcInterrupted == GetRCState ( rc ) )
                                 {
+                                    KSocketRelease ( conn );
+                                    * out = NULL;
                                     return rc;
                                 }
 

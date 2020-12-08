@@ -38,8 +38,12 @@
 #endif
 
 
+struct KClientHttp;
+struct KClientHttpRequest;
 struct KClientHttpResult;
 struct KDataBuffer;
+struct KFile;
+struct String;
 struct URLBlock;
 
 #ifdef __cplusplus
@@ -48,16 +52,13 @@ extern "C" {
 
 
 KNS_EXTERN rc_t CC KClientHttpRequestFormatMsg (
-    const struct KClientHttpRequest * self, char * buffer,
-    size_t bsize, const char * method, size_t * len );
+    const struct KClientHttpRequest * self, struct KDataBuffer * buffer, const char * method );
 
-KNS_EXTERN rc_t CC KClientHttpRequestFormatPostMsg(
-    const struct KClientHttpRequest * self, char * buffer,
-    size_t bsize, size_t * len);
+KNS_EXTERN rc_t CC KClientHttpRequestFormatPostMsg (
+    const struct KClientHttpRequest * self, struct KDataBuffer * buffer );
 
 KNS_EXTERN rc_t CC KClientHttpResultFormatMsg (
-    const struct KClientHttpResult * self, char * buffer,
-    size_t bsize, size_t * len, const char * bol, const char * eol );
+    const struct KClientHttpResult * self, struct KDataBuffer * buffer, const char * bol, const char * eol );
 
 rc_t KClientHttpMakeRequestInt ( struct KClientHttp const *self,
     struct KClientHttpRequest **req, const struct URLBlock *block, const struct KDataBuffer *buf );
@@ -70,6 +71,10 @@ rc_t KClientHttpRequestClear ( struct KClientHttpRequest *self );
 rc_t KClientHttpRequestInit ( struct KClientHttpRequest * req, const struct URLBlock *b, const struct KDataBuffer *buf );
 
 rc_t KClientHttpRequestGetQuery( struct KClientHttpRequest * req, const struct String ** query );
+
+/* Get read timeout and Maximum TotalWait time for Read calls */
+rc_t HttpFileGetReadTimeouts(const struct KFile * self, int32_t * millis,
+    int32_t * totalMillis);
 
 #ifdef __cplusplus
 }

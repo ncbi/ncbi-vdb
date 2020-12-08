@@ -79,6 +79,7 @@ KNS_NO_HTTP_SRC = \
 	kns_manager-ext \
 	manager \
 	proxy \
+	stable-http-file \
 	buffered-stream \
 	stream \
 	stream-from-files \
@@ -99,6 +100,7 @@ KNS_SRC = \
 	$(KNS_NO_HTTP_SRC) \
 	http-file          \
 	http-client        \
+	http-request       \
 	http-retrier       \
 	http               \
 

@@ -33,8 +33,10 @@
 extern "C" {
 #endif
 
+#ifndef va_copy
 #define va_copy( dst, src ) \
     ( dst ) = ( src )
+#endif
 
 #ifdef __cplusplus
 }

@@ -1,4 +1,4 @@
-/*===========================================================================
+/*==============================================================================
 *
 *                            Public Domain Notice
 *               National Center for Biotechnology Information
@@ -28,8 +28,12 @@
 
 #include <kfs/directory.h> /* KDirectoryNativeDir */
 #include <kfs/file.h> /* KFileRelease */
+#include <kfg/kfg-priv.h> /* KConfigMakeEmpty */
+#include <kfg/ngc.h> /* KNgcObjGetProjectId */
+#include <kfg/repository.h> /* KRepositoryMgrGetProtectedRepository */
 
 #include <klib/container.h> /* BSTree */
+#include <klib/debug.h> /* DBGMSG */
 #include <klib/printf.h> /* string_printf */
 #include <klib/rc.h> /* RC */
 
@@ -38,14 +42,17 @@
 #include <vfs/resolver-priv.h> /* VResolverQueryWithDir */
 #include <vfs/services-priv.h> /* KServiceNamesExecuteExt */
 
+#include "path-priv.h" /* EVPathInitError */
+#include "resolver-priv.h" /* VResolverResolveName */
+#include "services-cache.h" /* ServicesCacheWhack */
+#include "services-priv.h" /* KServiceGetResolver */
+
+#include <ctype.h> /* isdigit */
+
 #include <limits.h> /* PATH_MAX */
 #ifndef PATH_MAX
 #define PATH_MAX 4096
 #endif
-
-#include "path-priv.h" /* EVPathInitError */
-#include "resolver-priv.h" /* VResolverResolveName */
-#include "services-priv.h" /* KServiceGetResolver */
 
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 && !rc) { rc = rc2; } obj = NULL; } while (false)
@@ -77,7 +84,7 @@ static int64_t CC BSTItemCmp ( const void * item, const BSTNode * n ) {
     assert ( s && i );
  
     return string_cmp ( s -> addr, s -> size,
-        i -> ticket -> addr, i -> ticket -> size, s -> size );
+        i -> ticket -> addr, i -> ticket -> size, s -> len );
 }
 
 static
@@ -93,23 +100,26 @@ int64_t CC BSTreeSort ( const BSTNode * item, const BSTNode * n )
 
 typedef struct {
     KService * service; /* DO NOT RELEASE */
-    VFSManager * mgr;
+    const VFSManager * mgr;
+    ServicesCache * cache;
     const KConfig * kfg;
     VResolver * resolver;
     BSTree ticketsToResolvers;
 } H;
 
-static rc_t HInit ( H * self, KService * s ) {
+static rc_t HInit ( H * self, KService * s, ServicesCache * cache ) {
     rc_t rc = 0;
 
     assert ( self && s );
 
     memset ( self, 0, sizeof * self );
 
+    self -> cache = cache;
+
     self -> service = s;
 
     if ( rc == 0 )
-        rc = VFSManagerMake ( & self -> mgr );
+        rc = KServiceGetVFSManager ( s, & self -> mgr );
 
     if ( rc == 0 )
         rc = KServiceGetConfig ( s, & self -> kfg );
@@ -131,53 +141,116 @@ static rc_t HFini ( H * self ) {
     return rc;
 }
 
-static rc_t HResolver ( H * self, const String * ticket,
-                        VResolver ** resolver )
+static rc_t HResolver(H * self, const KService * service,
+    const String * aTicket, VResolver ** resolver, const VPath * path)
 {
     rc_t rc = 0;
+    bool found = false;
+    const String * ticket = aTicket;
+    const KNgcObj * ngc = NULL;
+    uint32_t projectId = 0;
+    bool isProtected = VPathGetProjectId(path, &projectId);
 
-    assert ( self && resolver );
+    assert(resolver && self && self->service);
 
-    if ( ticket && ticket -> addr && ticket -> size ) {
-        BSTItem * i = ( BSTItem * ) BSTreeFind
-            ( & self -> ticketsToResolvers, ticket, BSTItemCmp );
+    *resolver = NULL;
 
-        if ( i != NULL )
-            * resolver = i -> resolver;
-        else {
-            VResolver * resolver = NULL;
-            rc = KServiceGetResolver ( self -> service, ticket, & resolver );
-            if ( rc != 0 )
-                return rc;
-            else if ( resolver != NULL ) {
-                i = calloc ( 1, sizeof * i );
-                if ( i == NULL )
-                    return RC (
-                        rcVFS, rcStorage, rcAllocating, rcMemory, rcExhausted );
-
-                rc = StringCopy ( & i -> ticket, ticket );
-                if ( rc != 0 )
-                    return rc;
-
-                i -> resolver = resolver;
-                rc = BSTreeInsert ( & self -> ticketsToResolvers,
-                    ( BSTNode * ) i, BSTreeSort );
+    if (isProtected) {
+        bool isProtected = false;
+        ngc = KServiceGetNgcFile(service, &isProtected);
+        if (isProtected) {
+            if (ticket == NULL || ticket->addr == NULL || ticket->size == 0) {
+                char tic[256] = "";
+                rc = KNgcObjGetTicket(ngc, tic, sizeof tic, NULL);
+                if (rc == 0) {
+                    String s;
+                    StringInitCString(&s, tic);
+                    rc = StringCopy(&ticket, &s);
+                }
             }
         }
-
-        assert ( i );
-        
-        if ( i -> resolver != NULL )
-            * resolver = i -> resolver;
-
-        return rc;
     }
 
-    if ( self -> resolver == NULL )
-        rc = VFSManagerMakeResolver ( self -> mgr, & self -> resolver,
-                                        self -> kfg );
+    if (ticket && ticket->addr != NULL && ticket->size > 0) {
+        BSTItem * i = (BSTItem *)BSTreeFind(
+            &self->ticketsToResolvers, ticket, BSTItemCmp);
 
-    * resolver = self -> resolver;
+        if (i != NULL) {
+            found = true;
+            *resolver = i->resolver;
+        }
+        else if (!isProtected) {
+            /* here find resolver in configuration by ticket 
+               ( when ngc file was not provided) */
+            rc = KServiceGetResolver(self->service, ticket, resolver);
+            if (rc == 0 && *resolver != NULL) {
+                found = true;
+                i = calloc(1, sizeof * i);
+                if (i == NULL)
+                    return RC(rcVFS, rcStorage, rcAllocating,
+                        rcMemory, rcExhausted);
+
+                rc = StringCopy(&i->ticket, ticket);
+                if (rc != 0)
+                    return rc;
+
+                i->resolver = *resolver;
+                rc = BSTreeInsert(&self->ticketsToResolvers,
+                    (BSTNode *)i, BSTreeSort);
+            }
+        }
+    }
+
+    if (isProtected && !found) {
+        char buffer[256] = "";
+        String s;
+        rc = string_printf(buffer, sizeof buffer, NULL, "dbGaP-%d", projectId);
+        if (rc != 0)
+            return rc;
+        StringInitCString(&s, buffer);
+        BSTItem * i = (BSTItem *)BSTreeFind(
+            &self->ticketsToResolvers, &s, BSTItemCmp);
+
+        if (i != NULL)
+            * resolver = i->resolver;
+        else {
+            rc = KServiceGetResolverForProject(
+                self->service, projectId, resolver);
+            if (rc != 0)
+                /* cannot find resolver in configuration by projectId:
+                   ngc file was provided but not imported:
+                   use non-protected resolver */
+                rc = 0;
+            else if (*resolver != NULL) {
+                found = true;
+                i = calloc(1, sizeof * i);
+                if (i == NULL)
+                    return RC(rcVFS, rcStorage, rcAllocating,
+                        rcMemory, rcExhausted);
+                rc = StringCopy(&i->ticket, &s);
+                if (rc != 0)
+                    return rc;
+                i->resolver = *resolver;
+                rc = BSTreeInsert(&self->ticketsToResolvers,
+                    (BSTNode *)i, BSTreeSort);
+            }
+        }
+    }
+
+    if (rc == 0 && *resolver == NULL) {
+        if (self->resolver == NULL)
+            rc = VFSManagerMakeResolver(self->mgr, &self->resolver,
+                self->kfg);
+        *resolver = self->resolver;
+    }
+
+/*  if (rc == 0 && *resolver != NULL)
+        VResolverCacheEnable(*resolver, KServiceGetCacheEnable(service)); */
+
+    if (ticket != aTicket)
+        StringWhack(ticket);
+
+    RELEASE(KNgcObj, ngc);
 
     return rc;
 }
@@ -210,10 +283,69 @@ static rc_t _VFSManagerVPathMakeAndTest ( const VFSManager * self,
     return rc;
 }
 
-static rc_t VResolversQuery ( const VResolver * self, const VFSManager * mgr,
+static rc_t VPathCacheLocationForSource(const VPath * self,
+    const KDirectory * dir, VPath ** path, rc_t *rcOut)
+{
+    rc_t rc = 0;
+
+    String acc;
+    String name;
+
+    char sPath[PATH_MAX] = "";
+
+    /* Getting cache location for source files.
+       When acc & name (come from SDL) are unknown:
+        it should be cwd/acc/filename.
+        Using a hack: filename is the last part of path;
+        acc is the last directory name
+       Otherwise cache location is acc/name */
+
+    size_t size = 0;
+    const char * s = NULL;
+
+    assert(self && rcOut);
+
+    size = self->path.size;
+    s = string_rchr(self->path.addr, size, '/');
+    /* the part after the latest slash is the filename */
+
+    rc = VPathGetId(self, &acc);
+    if (rc == 0)
+        rc = VPathGetName(self, &name);
+
+    if (rc == 0 && acc.size > 0 && name.size > 0)
+        /* acc & name (come from SDL) are known */
+        rc = KDirectoryResolvePath(dir, true, sPath, sizeof sPath,
+            "%.*s/%.*s", acc.size, acc.addr, name.size, name.addr);
+
+    else {
+        /* acc & name (come from SDL) are unknown */
+        if (s != NULL && s > self->path.addr) {
+            /* size of path without filename */
+            size = s - self->path.addr;
+            /* rfind the second slash for accesion directory */
+            s = string_rchr(self->path.addr, size, '/');
+        }
+        if (s != NULL)
+            ++s;
+        if (s == NULL)
+            s = self->path.addr + self->path.size;
+        size = self->path.size - (s - self->path.addr);
+        rc = KDirectoryResolvePath(dir, true, sPath, sizeof sPath,
+            "%.*s", (int)size, s);
+    }
+
+    if (rc == 0)
+        *rcOut = VPathMakeFmt(path, "%s", sPath);
+
+    return rc;
+}
+
+static rc_t VResolversQuery ( const VResolver * self,
+    const VFSManager * mgr, ServicesCache * servicesCache,
     VRemoteProtocols protocols, const VPath * path, const String * acc,
-    uint64_t id, VPathSet ** result, ESrvFileFormat ff,
-    const char * outDir, const char * outFile, const VPath * mapping )
+    uint64_t id, VPathSet ** result, ESrvFileFormat ff, const char * outDir,
+    const char * outFile, const VPath * mapping, const char * origAcc )
 {
     rc_t rc = 0;
 
@@ -222,7 +354,7 @@ static rc_t VResolversQuery ( const VResolver * self, const VFSManager * mgr,
     uint32_t oid = 0;
     uint32_t i = 0;
 
-    assert ( result );
+    assert ( self && result && acc );
 
     if ( id == 0 )
         for ( i = 0; i < acc -> size; ++i ) {
@@ -236,12 +368,32 @@ static rc_t VResolversQuery ( const VResolver * self, const VFSManager * mgr,
     else
         oid = id;
 
-    if ( oid == 0 )
-        rc = VFSManagerMakePath ( mgr, & query, "%S", acc );
+    if ( oid == 0 ) {
+        bool vdbcache = false;
+        if (ff == eSFFVdbcache && servicesCache == NULL) {
+            String s;
+            CONST_STRING(&s, ".vdbcache");
+            if (acc->len <= s.len 
+                || strstr(acc->addr, s.addr) == NULL)
+            {
+                vdbcache = true;
+            }
+        }
+        if (vdbcache)
+            rc = VFSManagerMakePath ( mgr, & query, "%S.vdbcache", acc );
+        else
+            rc = VFSManagerMakePath ( mgr, & query, "%S", acc );
+    }
     else
         rc = VFSManagerMakeOidPath ( mgr, & query, oid );
+    if (rc == 0 && path != NULL && path->projectId >= 0) {
+        assert(query);
+        query->projectId = path->projectId;
+    }
 
     if ( rc == 0 ) {
+        VResolverAppID app = appUnknown;
+
         bool isSource = false;
 
         const VPath * local = NULL;
@@ -256,9 +408,14 @@ static rc_t VResolversQuery ( const VResolver * self, const VFSManager * mgr,
         CONST_STRING(&srapub_files, "srapub_files");
         CONST_STRING(&remote      , "remote"      );
 
-        isSource = StringEqual(&path->objectType, &srapub_files);
-        if ( ! isSource )
-            isSource = StringEqual(&path->objectType, &remote);
+        if (path != NULL) {
+            isSource = StringEqual(&path->objectType, &srapub_files);
+            if (!isSource)
+                isSource = StringEqual(&path->objectType, &remote);
+        }
+
+        app = get_accession_app(acc, false,
+            NULL, NULL, false, NULL, NULL, -1);
 
         if ( outFile != NULL ) {
             bool exists = false;
@@ -276,45 +433,76 @@ static rc_t VResolversQuery ( const VResolver * self, const VFSManager * mgr,
                                       rcName, rcNotFound );
         }
 
+        else if (!VResolverIsProtected(self)
+            && app == appSRA && origAcc != NULL && origAcc[0] == 'S'
+            && servicesCache != NULL)
+        {
+            rc = ServicesCacheResolve(servicesCache, path, &local, &cache);
+            if (rc == 0) {
+                if (local == NULL)
+                    localRc = RC(rcVFS, rcResolver, rcResolving,
+                        rcName, rcNotFound);
+                if (cache == NULL)
+                    cacheRc = RC(rcVFS, rcResolver, rcResolving,
+                        rcName, rcNotFound);
+            }
+        }
+
         else if ( VPathFromUri ( path ) ) {
             if (isSource) {
-                String acc;
-                String name;
-
-                /* Getting cache location for source files.
-                   When acc & name (come from SDL) are unknown:
-                    it should be cwd/acc/filename.
-                    Using a hack: filename is the last part of path;
-                    acc is the last directory name
-                   Otherwise cache location is acc/name */
-
-                size_t size = path->path.size;
-                const char * s = string_rchr(path->path.addr, size, '/');
-                /* the part after the latest slash is the filename */
-
-                rc = VPathGetId(path, &acc);
+                KDirectory * dir = NULL;
+                VPath * tmp = NULL;
+                rc_t rcOut = 0;
                 if (rc == 0)
-                    rc = VPathGetName(path, &name);
-
-                if (rc == 0 && acc.size > 0 && name.size > 0)
-                    /* acc & name (come from SDL) are known */
-                    cacheRc = VPathMakeFmt((VPath**)&cache, "%S/%S", &acc, &name);
-
-                else {
-                    /* acc & name (come from SDL) are unknown */
-                    if (s != NULL && s > path->path.addr) {
-                        /* size of path without filename */
-                        size = s - path->path.addr;
-                        /* rfind the second slash for accesion directory */
-                        s = string_rchr(path->path.addr, size, '/');
+                    rc = KDirectoryNativeDir(&dir);
+                if (rc == 0)
+                    rc = VPathCacheLocationForSource(path, dir, &tmp, &rcOut);
+                if (rc == 0) {
+                    char sPath[PATH_MAX] = "";
+                    rc = VPathReadPath(tmp, sPath, sizeof sPath, NULL);
+                    if (rc == 0) {
+                        if ((KDirectoryPathType(dir, sPath) & ~kptAlias)
+                            != kptNotFound)
+                        {
+                            rc = VPathAddRef(tmp);
+                            if (rc == 0) {
+                                local = tmp;
+                                localRc = 0;
+                            }
+                            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS),
+                                ("VResolversQuery: local location "
+                                    "of '%S' resolved to '%S' with %R\n",
+                                    acc, &(tmp->path), rc));
+                        }
+                        else {
+                            localRc = RC(rcVFS, rcResolver, rcResolving,
+                                rcName, rcNotFound);
+                            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS),
+                                ("VResolversQuery: "
+                                    "local location of '%S' not found\n", acc));
+                        }
                     }
-                    if (s != NULL)
-                        ++s;
-                    if (s == NULL)
-                        s = path->path.addr + path->path.size;
-                    size = path->path.size - (s - path->path.addr);
-                    cacheRc = VPathMakeFmt((VPath**)&cache, "%.*s", (int)size, s);
+                    if (VResolverResolveToAd(self)) {
+                        rc = VPathAddRef(tmp);
+                        if (rc == 0) {
+                            cache = tmp;
+                            cacheRc = 0;
+                        }
+                        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), ("VResolversQuery: "
+                            "cache location of '%S' resolved to '%S' with %R\n",
+                            acc, &(tmp->path), rc));
+
+                    }
+                    else {
+                        cacheRc = RC(rcVFS, rcResolver, rcResolving,
+                            rcName, rcNotFound);
+                        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS),
+                            ("VResolversQuery: "
+                                "cache location of '%S' not found\n", acc));
+                    }
                 }
+                RELEASE(VPath, tmp);
+                RELEASE(KDirectory, dir);
             }
             else {
                 cacheRc = VResolverQueryWithDir(self, protocols, query, NULL,
@@ -325,9 +513,9 @@ static rc_t VResolversQuery ( const VResolver * self, const VFSManager * mgr,
         }
 
         else {
-            cacheRc = VResolverQuery ( self, protocols, query,
+            cacheRc = VResolverQueryForCache ( self, protocols, query,
                                     NULL, NULL, & cache );
-            localRc = VResolverQuery ( self, protocols, query,
+            localRc = VResolverQueryForCache ( self, protocols, query,
                                     & local, NULL, NULL );
         }
 
@@ -340,6 +528,40 @@ static rc_t VResolversQuery ( const VResolver * self, const VFSManager * mgr,
     RELEASE ( VPath, query );
 
     return rc;
+}
+
+static void _StringFixSrrWithVersion(String * self) {
+    size_t dot = 0;
+    size_t i = 0;
+
+    const char * p = NULL;
+
+    assert(self);
+
+    p = self->addr;
+
+    if (self->size < 4)
+        return;
+
+    if (self->size != self->len)
+        return;
+
+    if (p[0] != 'S' || p[1] != 'R' || p[2] != 'R')
+        return;
+
+    for (i = 3; i < self->size; ++i)
+        if (p[i] == '.') {
+            dot = i;
+            break;
+        }
+    if (dot == 0)
+        return;
+
+    for (++i; i < self->size; ++i)
+        if (!isdigit(p[i]))
+            return;
+
+    self->size = self->len = dot;
 }
 
 static rc_t _VPathGetId ( const VPath * self, const String ** newId,
@@ -355,6 +577,8 @@ static rc_t _VPathGetId ( const VPath * self, const String ** newId,
     String http;
     String https;
 
+    bool replace = true;
+
     assert ( newId && oldId );
 
     * newId = NULL;
@@ -369,11 +593,11 @@ static rc_t _VPathGetId ( const VPath * self, const String ** newId,
     if ( oldId -> size <= https . size )
         return 0;
 
-    /* what is being attempted with this code? */
+    /* what is being attempted with this code?
     if ( string_cmp ( oldId -> addr, oldId -> size, https . addr, https. size, https. size ) != 0 &&
          string_cmp ( oldId -> addr, oldId -> size, fasp  . addr, fasp . size, fasp . size ) != 0 &&
          string_cmp ( oldId -> addr, oldId -> size, http  . addr, fasp . size, fasp . size ) != 0 )
-    {   return 0; }
+    {   return 0; } */
 
     rc = VPathGetId ( self, & id );
     if ( rc == 0 && id . size == 0 ) {
@@ -417,85 +641,289 @@ static rc_t _VPathGetId ( const VPath * self, const String ** newId,
 
             free ( ( void * ) str );
         }
+
+        if ( rc == 0 )
+            rc = VPathGetPath ( acc_or_oid, & id );
     }
 
-    if ( rc == 0 )
-        rc = VPathGetPath ( acc_or_oid, & id );
-
-    if ( rc == 0 )
-        rc = StringCopy ( newId, & id );
+    if ( rc == 0 ) {
+        /* return ID just when it's different from oldId
+        (replace file name by numeric [dbGaP] id) */
+        if (oldId != NULL &&
+            oldId->addr != NULL && oldId->size > 0 &&
+            id.addr != NULL && id.size > 0 &&
+            oldId->addr[0] == id.addr[0])
+        {
+            replace = false;
+        }
+        else {
+            _StringFixSrrWithVersion(&id);
+            rc = StringCopy(newId, &id);
+        }
+    }
 
     RELEASE ( VPath, acc_or_oid );
 
-    if ( rc == 0 )
+    if ( rc == 0 && replace )
         * oldId = * * newId;
 
     return rc;
 }
+
+typedef struct {
+    char * acc;
+    char * name;
+
+    const KSrvRespFile * file; /* don't release */
+} LocalAndCache;
+
+static rc_t LocalAndCacheRelease(LocalAndCache * self) {
+    if (self != NULL) {
+        free(self->acc);
+        free(self->name);
+
+        memset(self, 0, sizeof *self);
+
+        free(self);
+    }
+
+    return 0;
+}
+
+static rc_t KSrvResponseRegisterLocalAndCache(KSrvResponse * self,
+    rc_t rc, KSrvRespFile * file, const VPathSet * localAndCache)
+{
+    LocalAndCache * lnc = NULL;
+
+    if (rc != 0)
+        return rc;
+
+    if (localAndCache != NULL)
+        rc = KSrvRespFileAddLocalAndCache(file, localAndCache);
+
+    if (rc == 0)
+        rc = KSrvResponseAddLocalAndCacheToTree(self, file);
+
+    RELEASE(LocalAndCache, lnc);
+
+    return rc;
+}
+
+static rc_t KServiceResolvers(const KService * self, VRemoteProtocols protocols,
+    const char * outDir, const char * outFile,
+    H * h, VPathSet ** vps, const VPath * path,
+    ESrvFileFormat ff, const char * tic, uint64_t iid, const VPath * mapping,
+    String * id, const char * origAcc)
+{
+    rc_t rc = 0;
+    VResolver * resolver = NULL;
+    const String * pId = NULL;
+    String acc;
+    String ticket;
+    memset(&acc, 0, sizeof acc);
+    memset(&ticket, 0, sizeof ticket);
+    assert(h);
+    if (rc == 0 && tic != NULL)
+        StringInitCString(&ticket, tic);
+    if (rc == 0)
+        rc = HResolver(h, self, &ticket, &resolver, path);
+    if (rc == 0 && path != NULL) {
+        rc = VPathGetAccession(path, &acc);
+        if (rc == 0 && acc.size > 0) {
+            if (!(id->size > 0 && id->addr != NULL && id->addr[0] == 'S' &&
+                acc.size > 0 && acc.addr != NULL && isdigit(acc.addr[0])))
+                /* Don't replace id with acc
+                   when id starts with S but acc is number.
+                   E.g., it happens when id is SRRnnn.pileup */
+            {
+                id = &acc;
+            }
+        }
+        else
+            rc = _VPathGetId(path, &pId, id, h->mgr);
+    }
+    if (rc == 0) {
+        assert(resolver);
+        VResolverResolveName(resolver, KServiceGetResolveName(self));
+        rc = VResolversQuery(resolver, h->mgr, h->cache, protocols, path,
+            id, iid, vps, ff, outDir, outFile, mapping, origAcc);
+    }
+    free((void *)pId);
+    return rc;
+}
+
+#ifdef DBGNG
+#define STS_FIN  3
+#endif
 
 static
 rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols, 
     const char * cgi, const char * version, const KSrvResponse ** aResponse,
     const char * outDir, const char * outFile, const char * expected )
 {
-    rc_t rc = 0;
+    rc_t RC_NOT_FND
+        = SILENT_RC(rcVFS, rcQuery, rcResolving, rcName, rcNotFound);
+    rc_t rc = 0, rcc = 0;
+    ServicesCache * cache = NULL;
+    uint32_t i = 0;
+    const KSrvRespObj * obj = NULL;
+    const VPath * path = NULL;
     KSrvResponse * response = NULL;
+    rc_t rx = 0;
+    KSrvRespObjIterator * it = NULL;
+    KSrvRespFile * file = NULL;
+    KSrvRespFileIterator * fi = NULL;
+
+    int32_t q = -1;
+    bool servicesCacheDisabled = true;
+
+#ifdef DBGNG
+    STSMSG(STS_FIN, ("%s: entered", __func__));
+#endif
     if ( aResponse == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
     * aResponse = NULL;
 
-    {
+    {   /* call External Services */
         const KSrvResponse * r = NULL;
+#ifdef DBGNG
+        STSMSG(STS_FIN, ("%s: entering KServiceNamesExecuteExtImpl...",
+            __func__));
+#endif
         rc = KServiceNamesExecuteExtImpl ( self, protocols, cgi,
                                        version, & r, expected );
+#ifdef DBGNG
+        STSMSG(STS_FIN, ("%s: ...KServiceNamesExecuteExtImpl done with %R",
+            __func__, rc));
+#endif
         if ( rc == 0 )
             response = ( KSrvResponse* ) r;
     }
-    
+
+    KServiceGetQuality(self, &q);
+    servicesCacheDisabled = q >= eQualLast || q < 0;
+
+    if (!servicesCacheDisabled) {
+#ifdef DBGNG
+        STSMSG(STS_FIN, ("%s: calling KServiceGetServiceCache...", __func__));
+#endif
+        if ((rc == 0 || rc == RC_NOT_FND) && KServiceCallsSdl(self))
+            rcc = KServiceGetServiceCache(self, &cache);
+
+        if (rc == 0 && KServiceCallsSdl(self)) {
+            /* add each file from External Services result to cache */
+            uint32_t n = KSrvResponseLength(response);
+#ifdef DBGNG
+            STSMSG(STS_FIN, ("%s: calling ServicesCacheAddRemote...", __func__));
+#endif
+            for (i = 0; rc == 0 && i < n; ++i) {
+                rc = KSrvResponseGetObjByIdx(response, i, &obj);
+                if (rc == 0) {
+                    rc = KSrvRespObjGetError(obj, &rx, NULL, NULL);
+                    if (rc == 0 && rx == 0) {
+                        rc = KSrvRespObjMakeIterator(obj, &it);
+                        while (rc == 0) {
+                            rc = KSrvRespObjIteratorNextFile(it, &file);
+                            if (rc != 0 || file == NULL)
+                                break;
+                            else {
+                                const char * acc = NULL;
+                                rc = KSrvRespFileGetAccOrId(file, &acc, NULL);
+                                if (rc == 0
+                                    && acc != NULL && acc[0] != '\0'
+                                    && acc[1] == 'R' && acc[2] == 'R')
+                                {
+                                    rc = KSrvRespFileMakeIterator(file, &fi);
+                                    if (rc == 0) {
+                                        rc = KSrvRespFileIteratorNextPath(fi,
+                                            &path);
+                                        if (rc == 0)
+                                            rc = ServicesCacheAddRemote(cache,
+                                                path);
+                                        RELEASE(VPath, path);
+                                    }
+                                    RELEASE(KSrvRespFileIterator, fi);
+                                }
+                                RELEASE(KSrvRespFile, file);
+                            }
+                        }
+                        RELEASE(KSrvRespObjIterator, it);
+                    }
+                }
+                RELEASE(KSrvRespObj, obj);
+            }
+        }
+
+        if (rcc == 0 && KServiceCallsSdl(self)) {
+#ifdef DBGNG
+            STSMSG(STS_FIN, ("%s: before calling ServicesCacheComplete...",
+                __func__));
+#endif
+            if (rc == RC_NOT_FND) {
+                uint32_t i = 0;
+                for (i = 0; ; ++i) {
+                    const char * acc = KServiceGetId(self, i);
+                    if (acc == NULL)
+                        break;
+                    rcc = ServicesCacheAddId(cache, acc);
+                }
+            }
+            if (rcc == 0 && (rc == 0 || rc == RC_NOT_FND)) {
+                bool skipLocal = KServiceSkipLocal(self);
+#ifdef DBGNG
+                STSMSG(STS_FIN, ("%s: entering ServicesCacheComplete...",
+                    __func__));
+#endif
+                rcc = ServicesCacheComplete(cache, outDir, outFile, skipLocal);
+#ifdef DBGNG
+                STSMSG(STS_FIN, ("%s: ...ServicesCacheComplete done with %R",
+                    __func__, rcc));
+#endif
+                if (rcc != 0 && rc == 0)
+                    rc = rcc;
+            }
+        }
+    }
+
     if ( rc == 0 ) {
         H h;
-        VFSManager * mgr = NULL;
-        rc = HInit ( & h, self );
+        rc = HInit ( & h, self, cache );
 
-        if ( rc == 0 ) {
-            rc = VFSManagerMake ( & mgr );
-            if ( rc != 0 )
-                return rc;
-        }
+#ifdef DBGNG
+        STSMSG(STS_FIN, ("%s: iterating  KSrvResponse...", __func__));
+#endif
 
         if ( protocols == eProtocolDefault )
              protocols = DEFAULT_PROTOCOLS;
         
         {
-            uint32_t i = 0;
             uint32_t n = KSrvResponseLength  ( response );
             for ( i = 0; rc == 0 && i < n; ++ i ) {
-                const KSrvRespObj * obj = NULL;
                 VPathSet * vps = NULL;
-                const VPath * path = NULL;
                 const KSrvError * error = NULL;
                 rc = KSrvResponseGetObjByIdx ( response, i, & obj );
                 if ( rc == 0 ) {
-                    rc_t rx = 0;
                     rc = KSrvRespObjGetError(obj, &rx, NULL, NULL);
                     if (rc == 0 && rx == 0) {
-                        KSrvRespObjIterator * it = NULL;
                         rc = KSrvRespObjMakeIterator(obj, &it);
                         while (rc == 0) {
-                            KSrvRespFile * file = NULL;
                             rc = KSrvRespObjIteratorNextFile(it, &file);
                             if (rc != 0 || file == NULL)
                                 break;
                             else {
                                 ESrvFileFormat ff = eSFFInvalid;
-                                KSrvRespFileIterator * fi = NULL;
                                 const char * acc = NULL;
                                 const char * tic = NULL;
                                 uint64_t iid = 0;
                                 const VPath * mapping = NULL;
                                 String id;
+                                const char * origAcc = NULL;
                                 memset(&id, 0, sizeof id);
-                                rc = KSrvRespFileGetAccOrName(file, &acc, &tic);
+                                rc = KSrvRespFileGetAccOrId(file,
+                                    &origAcc, NULL);
+                                if (rc == 0)
+                                    rc = KSrvRespFileGetAccOrName(file,
+                                        &acc, &tic);
                                 if (rc == 0) {
                                     if (acc != NULL) {
                                         StringInitCString(&id, acc);
@@ -516,41 +944,17 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
                                     rc = KSrvRespFileIteratorNextPath(
                                         fi, &path);
                                     if (rc == 0) {
-                                        if (error == NULL) {
-                                            VResolver * resolver = NULL;
-                                            const String * pId = NULL;
-                                            String ticket;
-                                            memset(&ticket,
-                                                0, sizeof ticket);
-                                            if (rc == 0 && tic != NULL)
-                                                StringInitCString(&ticket,
-                                                    tic);
-                                            if (rc == 0)
-                                                rc = HResolver(&h,
-                                                    &ticket, &resolver);
-                                            if (rc == 0)
-                                                rc = _VPathGetId(path, &pId,
-                                                    &id, mgr);
-                                            if (rc == 0) {
-                                                assert(resolver);
-                                                VResolverResolveName(resolver,
-                                                    KServiceGetResolveName(
-                                                        self));
-                                                rc = VResolversQuery(resolver,
-                                                    h.mgr, protocols, path,
-                                                    &id, iid, &vps, ff,
-                                                    outDir, outFile, mapping);
-                                            }
-                                            free((void *)pId);
-                                        }
+                                        if (error == NULL)
+                                            rc = KServiceResolvers(self,
+                                                protocols, outDir, outFile,
+                                                &h, &vps, path, ff, tic, iid,
+                                                mapping, &id, origAcc);
                                         else
                                             RELEASE(KSrvError, error);
                                     }
-                                    if (vps != NULL) {
-                                        rc = KSrvRespFileAddLocalAndCache(
-                                            file, vps);
-                                        RELEASE(VPathSet, vps);
-                                    }
+                                    rc = KSrvResponseRegisterLocalAndCache(
+                                        response, rc, file, vps);
+                                    RELEASE(VPathSet, vps);
                                     RELEASE(VPath, path);
                                 }
                                 RELEASE(KSrvRespFileIterator, fi);
@@ -572,7 +976,7 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
                             String ticket;
                             rc = VPathGetId ( path, & id );
                             if ( rc == 0 && id . size == 0) {
-                                rc = VFSManagerExtractAccessionOrOID ( mgr,
+                                rc = VFSManagerExtractAccessionOrOID (h . mgr,
                                         & acc_or_oid, path );
                                 if ( rc == 0 )
                                     rc = VPathGetPath ( acc_or_oid, & id );
@@ -580,14 +984,15 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
                             if ( rc == 0 )
                                 rc = VPathGetTicket ( path, & ticket );
                             if ( rc == 0 )
-                                rc = HResolver ( & h, & ticket, & resolver );
+                                rc = HResolver ( &h, self, &ticket, &resolver,
+                                    NULL );
                             if ( rc == 0 ) {
                                 assert ( resolver );
                                 VResolverResolveName ( resolver,
                                             KServiceGetResolveName ( self ) );
                                 rc = VResolversQuery ( resolver, h . mgr,
-                                    protocols, path, & id, 0, & vps,
-                                    eSFFInvalid, outDir, outFile, NULL );
+                                    h . cache, protocols, path, & id, 0, & vps,
+                                    eSFFInvalid, outDir, outFile, NULL, NULL );
                             }
                             RELEASE ( VPath, acc_or_oid );
                         }
@@ -609,10 +1014,57 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
             if ( rc == 0 )
                 rc = r2;
         }
+    }
+    else if (rc == RC_NOT_FND) {
+        if (KServiceGetId(self, 0) == NULL) /* request is empty */
+            return rc;
+        else {
+            uint32_t i = 0;
+            H h;
+            rc = HInit(&h, self, cache);
 
-        RELEASE ( VFSManager, mgr );
+#ifdef DBGNG
+            STSMSG(STS_FIN, ("%s: iterating  KServiceGetId...", __func__));
+#endif
+
+            for (i = 0; ; ++i) {
+                VPathSet * vps = NULL;
+                ESrvFileFormat ff = eSFFInvalid;
+                uint64_t iid = 0;
+                String id;
+                const char * acc = KServiceGetId(self, i);
+                if (acc == NULL)
+                    break;
+                StringInitCString(&id, acc);
+                if (rc == 0)
+                    rc = KServiceResolvers(self, protocols, outDir, outFile,
+                        &h, &vps, NULL, ff, NULL, iid, NULL, &id, NULL);
+                if (rc == 0) {
+                    if (rc == 0)
+                        rc = KServiceAddLocalAndCacheToResponse(self, acc, vps);
+                    else
+                        rc = 0;
+                    RELEASE(VPathSet, vps);
+                    if (rc == 0)
+                        rc = KServiceGetResponse(self, aResponse);
+                }
+            }
+            {
+                rc_t r2 = HFini(&h);
+                if (r2 != 0 && rc == 0)
+                    rc = r2;
+            }
+        }
     }
 
+    /*rx = ServicesCacheWhack(cache);
+    if (rx != 0 && rc == 0)
+        rc = rx;
+    cache = NULL;*/
+
+#ifdef DBGNG
+    STSMSG(STS_FIN, ("%s: exiting with %R", __func__, rc));
+#endif
     return rc;
 }
 

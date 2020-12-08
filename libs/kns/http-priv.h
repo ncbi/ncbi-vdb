@@ -51,13 +51,34 @@
 #include <kns/kns-mgr-priv.h>
 #endif
 
+#ifndef _h_kns_http_
+#include <kns/http.h>
+#endif
+
+#ifndef _h_kns_endpoint_
+#include <kns/endpoint.h>
+#endif
+
+/* timeout on Http Read */
 #ifndef MAX_HTTP_READ_LIMIT
 #define MAX_HTTP_READ_LIMIT ( 5 * 60 * 1000 ) /* 5 minutes */
 #endif
 
+/* timeout on Http Write */
 #ifndef MAX_HTTP_WRITE_LIMIT
 #define MAX_HTTP_WRITE_LIMIT ( 15 * 1000 )
 #endif
+
+/* timeout on Http Read loop */
+#ifndef MAX_HTTP_TOTAL_READ_LIMIT
+#define MAX_HTTP_TOTAL_READ_LIMIT ( 10 * 60 * 1000 ) /* 10 minutes */
+#endif
+
+/* timeout on Http Connect loop */
+#ifndef MAX_HTTP_TOTAL_CONNECT_LIMIT
+#define MAX_HTTP_TOTAL_CONNECT_LIMIT ( 10 * 60 * 1000 ) /* 10 minutes */
+#endif
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -71,6 +92,19 @@ struct KEndPoint;
 struct KStream;
 struct timeout_t;
 struct URLBlock;
+
+/* Form of Request-URI in HTTP Request-Line used when connecting via proxy */
+typedef enum {
+    eUFUndefined,
+
+    /* absoluteURI: https://tools.ietf.org/html/rfc2616#section-5.1.2
+       standard form recommended to use with proxies */
+    eUFAbsolute,
+
+    /* origin-form: https://tools.ietf.org/html/rfc7230#section-5.3.1
+       use it when connect to googleapis.com: it rejects absoluteURI */
+    eUFOrigin,
+} EUriForm;
 
 /*--------------------------------------------------------------------------
  * KHttpHeader
@@ -110,9 +144,48 @@ rc_t KClientHttpGetStatusLine ( struct KClientHttp * self,
  * KClientHttp
  */
 
-/*
-rc_t KClientHttpOpen ( struct KClientHttp * self, const String * hostname, uint32_t port );
-*/
+struct KClientHttp
+{
+    const struct KNSManager *mgr;
+    struct KStream * sock;
+    struct KStream * test_sock; /* if not NULL, use to communicate with a mocked server in testing, do not reopen on redirects */
+
+    /* buffer for accumulating response data from "sock" */
+    KDataBuffer block_buffer;
+    size_t block_valid;         /* number of valid response bytes in buffer            */
+    size_t block_read;          /* number of bytes read out by line reader or stream   */
+    size_t body_start;          /* offset to first byte in body                        */
+
+    KDataBuffer line_buffer;    /* data accumulates for reading headers and chunk size */
+    size_t line_valid;
+
+    KDataBuffer hostname_buffer;
+    String hostname;
+    uint32_t port;
+
+    ver_t vers;
+
+    KRefcount refcount;
+
+    int32_t read_timeout;
+    int32_t write_timeout;
+
+    /* Remote EndPoint */
+    KEndPoint ep;
+    bool ep_valid;
+    bool proxy_ep;
+    bool proxy_default_port;
+
+    KEndPoint local_ep; /* Local EndPoint */
+
+    bool reliable;
+    bool tls;
+
+    bool close_connection;
+
+    EUriForm uf; /* Form of Request-URI in Request-Line when using proxy */
+};
+
 void KClientHttpClose ( struct KClientHttp * self );
 rc_t KClientHttpReopen ( struct KClientHttp * self );
 
@@ -121,10 +194,16 @@ rc_t KNSManagerMakeClientHttpInt ( struct KNSManager const *self, struct KClient
     ver_t vers, int32_t readMillis, int32_t writeMillis,
     const String *host, uint32_t port, bool reliable, bool tls );
 
-/* test */
-/*
-void KClientHttpForceSocketClose(const struct KClientHttp *self);
-*/
+rc_t KClientHttpVAddHeader ( BSTree *hdrs, bool add, const char *_name, const char *_val, va_list args );
+rc_t KClientHttpFindHeader ( const BSTree *hdrs, const char *_name, char *buffer, size_t bsize, size_t *num_read );
+rc_t KClientHttpAddHeader ( BSTree *hdrs, const char *name, const char *val, ... );
+rc_t KClientHttpReplaceHeader ( BSTree *hdrs, const char *name, const char *val, ... );
+
+rc_t KClientHttpClear ( KClientHttp *self );
+rc_t KClientHttpInit ( KClientHttp * http, const KDataBuffer *hostname_buffer, ver_t _vers, const String * _host, uint32_t port, bool tls );
+
+rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
+    const char *buffer, size_t len, const KDataBuffer *body, const char *url );
 
 /*--------------------------------------------------------------------------
  * KClientHttpRequest
@@ -146,6 +225,8 @@ struct KClientHttpRequest
 
     bool ceRequired; /* computing environment token required to access this URL */
     bool payRequired; /* payment info required to access this URL */
+
+    bool rangeRequested;
 };
 
 void KClientHttpGetRemoteEndpoint ( const struct KClientHttp * self,
@@ -188,7 +269,25 @@ struct KClientHttpResult
     bool len_zero;
 
     char * expiration;
+
+    bool rangeRequested;
 };
+
+/* internal encoding  function, exposed for testing */
+extern rc_t KClientHttpRequestUrlEncodeBase64(const String ** encoding);
+
+#define SUPPORT_CHUNKED_READ 1
+
+rc_t KNSManagerVMakeHttpFileIntUnstableFromBuffer(const struct KNSManager *self,
+    const struct KFile **file, struct KStream *conn, ver_t vers, bool reliable,
+    bool need_env_token, bool payRequired, const char *url,
+    const KDataBuffer *buf);
+
+rc_t KNSManagerVMakeHttpFileIntUnstable(const struct KNSManager *self,
+    const struct KFile **file, struct KStream *conn, ver_t vers, bool reliable,
+    bool need_env_token, bool payRequired, const char *url, va_list args);
+
+bool KUnstableFileIsKHttpFile(const struct KFile * self);
 
 #ifdef __cplusplus
 }

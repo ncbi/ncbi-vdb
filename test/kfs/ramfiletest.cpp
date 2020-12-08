@@ -53,7 +53,7 @@ TEST_CASE(KRamFileWrite_simple_write)
 
     for (size_t pos = 0; pos < sizeof buffer /* including the +1 */; pos += 100) // skipping a bunch since its working
     {
-        for (size_t inc = 1; inc < sizeof (input); inc += 50) // faster since its working
+        for (size_t inc = 1; inc < sizeof (input); inc += 250) // faster since its working
         {
             for (size_t bsize = 0; bsize <= sizeof input + 1; bsize += inc)
             {
@@ -103,7 +103,7 @@ TEST_CASE(KramFileWrite_append_write)
                 REQUIRE(memcmp(input,buffer,tot_writ) == 0);
             }
 
-            REQUIRE_RC(KFileRelease(wfile));            
+            REQUIRE_RC(KFileRelease(wfile));
         }
     }
 }
@@ -137,7 +137,7 @@ TEST_CASE(KRamFileWrite_oversized_writes)
             REQUIRE(0 == memcmp(buffer, input, num_writ));
             REQUIRE(0 != memcmp(buffer, input, num_writ+1));
         }
-        REQUIRE_RC(KFileRelease(wfile));            
+        REQUIRE_RC(KFileRelease(wfile));
     }
 }
 
@@ -161,10 +161,10 @@ TEST_CASE(KRamFileWrite_shift_right)
 
         REQUIRE_RC(KFileWrite(wfile, 0, input, bsize, &num_writ));
         REQUIRE(bsize = num_writ);
-        
-        REQUIRE_RC(KFileRelease(wfile));            
+
+        REQUIRE_RC(KFileRelease(wfile));
     }
-    
+
 }
 
 //////////////////////////////////////////// Main

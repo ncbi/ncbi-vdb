@@ -43,6 +43,10 @@ struct KCacheTeeChunkReader;
 #include <klib/status.h>
 #include <klib/vector.h>
 #include <klib/container.h>
+
+#include <kns/http.h> /* KFileIsKHttpFile */
+#include <kns/http-priv.h> /* HttpFileGetReadTimeouts */
+
 #include <kproc/lock.h>
 #include <kproc/cond.h>
 #include <kproc/thread.h>
@@ -62,7 +66,7 @@ struct KCacheTeeChunkReader;
 #define DEFAULT_CLUSTER_FACT 4U
 #define MAX_REQUEST_SIZE ( 256U * 1024U * 1024U )
 #define MAX_PAGE_SIZE ( 256U * 1024U * 1024U )
-#define MAX_RAM_CACHE_BYTES ( 64UL * 1024UL * 1024UL * 1024UL )
+#define MAX_RAM_CACHE_BYTES ( 64ULL * 1024ULL * 1024ULL * 1024ULL )
 #if _DEBUGGING
 #define MIN_PAGE_SIZE ( 256U )
 #else
@@ -1044,8 +1048,9 @@ rc_t KCacheTeeFileReadFromFile ( const KCacheTeeFile_v3 *self, uint64_t pos,
 }
 
 static
-rc_t CC KCacheTeeFileTimedRead ( const KCacheTeeFile_v3 *cself, uint64_t pos,
-    void *buffer, size_t bsize, size_t *num_read, struct timeout_t *tm )
+rc_t CC KCacheTeeFileTimedReadImpl ( const KCacheTeeFile_v3 *cself,
+    uint64_t pos, void *buffer, size_t bsize, size_t *num_read,
+    struct timeout_t *readTm, struct timeout_t *totalTm)
 {
     rc_t rc = 0;
     size_t count, initial_page_idx;
@@ -1091,9 +1096,9 @@ rc_t CC KCacheTeeFileTimedRead ( const KCacheTeeFile_v3 *cself, uint64_t pos,
             msg . size = bsize;
             msg . initial_page_idx = initial_page_idx;
             msg . have_tm = false;
-            if ( tm != NULL )
+            if ( readTm != NULL )
             {
-                msg . tm = * tm;
+                msg . tm = * readTm;
                 msg . have_tm = true;
             }
 
@@ -1135,7 +1140,8 @@ rc_t CC KCacheTeeFileTimedRead ( const KCacheTeeFile_v3 *cself, uint64_t pos,
             
             /* 6. wait for event */
             STATUS ( STAT_PRG, "%lu: %s - waiting on broadcast from bg thread\n", cur_thread_id, __func__ );
-            rc = KConditionTimedWait ( self -> fgcond, self -> cache_lock, tm );
+            rc = KConditionTimedWait ( self -> fgcond, self -> cache_lock,
+                totalTm );
 
             /* remove msg from queue */
             STATUS ( STAT_PRG, "%lu: %s - acquiring queue lock\n", cur_thread_id, __func__ );
@@ -1181,15 +1187,67 @@ rc_t CC KCacheTeeFileTimedRead ( const KCacheTeeFile_v3 *cself, uint64_t pos,
 
     return rc;
 }
+static
+rc_t CC KCacheTeeFileTimedRead ( const KCacheTeeFile_v3 *cself, uint64_t pos,
+    void *buffer, size_t bsize, size_t *num_read, struct timeout_t *tm )
+{
+    return KCacheTeeFileTimedReadImpl(cself, pos, buffer, bsize, num_read, tm,
+        tm);
+}
 
 static
 rc_t CC KCacheTeeFileRead ( const KCacheTeeFile_v3 *self, uint64_t pos,
     void *buffer, size_t bsize, size_t *num_read )
 {
     struct timeout_t tm;
-    /* TBD - need a default timeout on the manager object */
-    TimeoutInit ( & tm, 100 * 1000 );
-    return KCacheTeeFileTimedRead ( self, pos, buffer, bsize, num_read, & tm );
+    struct timeout_t * ptm = NULL;
+
+    struct timeout_t totalTm;
+    struct timeout_t * ptotalTm = NULL;
+
+    rc_t rc = 0;
+    const int32_t minMsec = 100 * 1000;
+    int32_t msec = minMsec;
+    int32_t totalMsec = minMsec;
+
+    assert(self);
+    if (KFileIsKHttpFile(self->source)) {
+        rc = HttpFileGetReadTimeouts(self->source, &msec, &totalMsec);
+        if (rc != 0)
+            totalMsec = msec = minMsec;
+    }
+
+#if 0
+    const char * v = getenv("NCBI_VDB_CACHE_TEE_FILE_TO");
+    if (v != NULL)
+        msec = atoi(v);
+    v = getenv("NCBI_VDB_CACHE_TEE_FILE_TOTAL_TO");
+    if (v != NULL)
+        totalMsec = atoi(v);
+#endif
+
+    if (msec < 0)
+        /* negative timeout is infinite */
+        ptm = NULL;
+    else {
+/*      if (msec < minMsec)
+            msec = minMsec; */
+        TimeoutInit(&tm, msec);
+        ptm = &tm;
+    }
+
+    if (totalMsec < 0)
+        /* negative timeout is infinite */
+        ptotalTm = NULL;
+    else {
+/*      if (totalMsec < minMsec)
+            totalMsec = minMsec; */
+        TimeoutInit(&totalTm, totalMsec);
+        ptotalTm = &totalTm;
+    }
+
+    return KCacheTeeFileTimedReadImpl(
+        self, pos, buffer, bsize, num_read, ptm, ptotalTm);
 }
 
 static
@@ -1778,7 +1836,7 @@ rc_t KCacheTeeFileInitExisting ( KCacheTeeFile_v3 * self )
     /* first of all, let's get the cache file size */
     rc = KFileSize ( self -> cache_file, & actual_eof );
     STATUS ( STAT_GEEK
-             , "%s - file size = %lu, rc = $R\n"
+             , "%s - file size = %lu, rc = %R\n"
              , __func__
              , actual_eof
              , rc
@@ -1811,7 +1869,7 @@ rc_t KCacheTeeFileInitExisting ( KCacheTeeFile_v3 * self )
                      , calculated_eof
                 );
             
-            rc = RC ( rcFS, rcFile, rcOpening, rcData, rcUnequal );
+            rc = RC ( rcFS, rcFile, rcOpening, rcData, actual_eof == 0 ? rcEmpty : rcUnequal );
         }
         else
         {
@@ -1879,11 +1937,14 @@ rc_t KCacheTeeFileInitShared ( KCacheTeeFile_v3 * self )
     if ( rc == 0 )
         return rc;
 
-    PLOGMSG ( klogWarn, ( klogWarn, "$(func) - stale cache file '$(path).cache'. Reinitializing."
-                         , "func=%s,path=%s"
-                         , __func__
-                         , self -> path
-                  ) );
+    if (GetRCState(rc) != rcEmpty)
+    {
+        PLOGMSG(klogWarn, (klogWarn, "$(func) - stale cache file '$(path).cache'. Reinitializing."
+            , "func=%s,path=%s"
+            , __func__
+            , self->path
+            ));
+    }
 
     calculated_eof = self -> source_size + self -> bmap_size + sizeof * self -> tail;
     
@@ -2009,7 +2070,7 @@ rc_t KCacheTeeFileOpen ( KCacheTeeFile_v3 * self, KDirectory * dir, const KFile 
                         ( const KFile ** ) & self -> cache_file, "%s.cache", self -> path );
 #if ! WINDOWS
                     STATUS ( STAT_GEEK
-                             , "%s - open read-only file attempt: fd = %d, rc = $R\n"
+                             , "%s - open read-only file attempt: fd = %d, rc = %R\n"
                              , __func__
                              , KFileGetSysFile ( self -> cache_file, & dummy ) -> fd
                              , rc
@@ -2187,8 +2248,10 @@ void KCacheTeeFileBindConstants ( KCacheTeeFile_v3 * self,
     /* set up ram cache page limit */
     ram_cache_size = ( size_t ) self -> page_size * ram_pages;
 
+    STATUS(STAT_GEEK, "%s - ram_cache_size=%lu MAX_RAM_CACHE_BYTES=%lu\n", __func__, ram_cache_size, MAX_RAM_CACHE_BYTES);
+
     if ( ram_cache_size > MAX_RAM_CACHE_BYTES )
-        ram_pages = MAX_RAM_CACHE_BYTES / self -> page_size;
+        ram_pages = (uint32_t) ( MAX_RAM_CACHE_BYTES / self -> page_size );
 
     self -> ram_limit = ram_pages;
     self -> try_promote_on_close = try_promote_on_close;

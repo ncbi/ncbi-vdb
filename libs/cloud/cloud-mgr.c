@@ -32,6 +32,7 @@
 #include <cloud/aws.h>
 #include <cloud/gcp.h>
 
+#include "cloud_manager-singleton.h" /* USE_SINGLETON */
 #include "cloud-priv.h"
 
 #include <atomic.h>
@@ -93,9 +94,24 @@ rc_t CloudMgrWhack ( CloudMgr * self )
     return 0;
 }
 
+LIB_EXPORT const char * CC CloudProviderAsString(CloudProviderId cloud_provider)
+{
+    switch (cloud_provider) {
+    case cloud_provider_none: return "outside of cloud";
+    case cloud_provider_aws: return "AWS";
+    case cloud_provider_gcp: return "Google";
+    case cloud_provider_azure: return "Azure";
+    default: assert(0); return "UNEXPECTED";
+    }
+}
+
 static
 CloudProviderId CloudMgrDetermineCurrentCloud ( const CloudMgr * self )
 {
+#ifdef OUTSIDE_OF_CLOUD
+    return cloud_provider_none;
+#endif
+
 #ifdef _h_cloud_gcp_
     TRACE ( "probing operation within GCP" );
     if ( CloudMgrWithinGCP ( self ) )
@@ -242,11 +258,14 @@ LIB_EXPORT rc_t CC CloudMgrMake ( CloudMgr ** mgrp,
             rc = CloudMgrInit ( & our_mgr, kfg, kns, cloud_provider_none );
             if ( rc == 0 )
             {
-                CloudMgr * new_mgr;
+                CloudMgr * new_mgr = NULL;
 
                 /* try to set single-shot ( set once, never reset ) */
                 TRACE ( "attempting to set CloudMgr singleton" );
+		
+#ifdef USE_SINGLETON		
                 new_mgr = atomic_test_and_set_ptr ( & cloud_singleton, our_mgr, NULL );
+#endif
 
                 /* if "new_mgr" is NULL, then our thread won the race */
                 if ( new_mgr == NULL )
