@@ -1346,9 +1346,6 @@
     <ClCompile Include="..\..\..\libs\sra\sramgr-cmn.c">
         <ObjectFileName >$(IntDir)wsra-%(Filename).obj</ObjectFileName>
     </ClCompile>
-    <ClCompile Include="..\..\..\libs\sra\sraschema.c">
-        <ObjectFileName >$(IntDir)wsra-%(Filename).obj</ObjectFileName>
-    </ClCompile>
     <ClCompile Include="..\..\..\libs\sra\sratbl-cmn.c">
         <ObjectFileName >$(IntDir)wsra-%(Filename).obj</ObjectFileName>
     </ClCompile>
@@ -1356,9 +1353,6 @@
         <ObjectFileName >$(IntDir)wsra-%(Filename).obj</ObjectFileName>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\sra\wsramgr.c">
-        <ObjectFileName >$(IntDir)wsra-%(Filename).obj</ObjectFileName>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\sra\wsraschema-stub.c">
         <ObjectFileName >$(IntDir)wsra-%(Filename).obj</ObjectFileName>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\sra\wsratbl.c">

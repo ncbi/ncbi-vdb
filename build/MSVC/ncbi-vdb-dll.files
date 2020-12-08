@@ -1586,12 +1586,6 @@
     <ClCompile Include="..\..\..\libs\sra\sramgr.c">
         <ObjectFileName>$(IntDir)sra-%(Filename).obj</ObjectFileName>
     </ClCompile>
-    <ClCompile Include="..\..\..\libs\sra\sraschema-stub.c">
-        <ObjectFileName>$(IntDir)sra-%(Filename).obj</ObjectFileName>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\sra\sraschema.c">
-        <ObjectFileName>$(IntDir)sra-%(Filename).obj</ObjectFileName>
-    </ClCompile>
     <ClCompile Include="..\..\..\libs\sra\sratbl-cmn.c">
         <ObjectFileName>$(IntDir)sra-%(Filename).obj</ObjectFileName>
     </ClCompile>
