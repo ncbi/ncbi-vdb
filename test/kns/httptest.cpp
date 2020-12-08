@@ -55,7 +55,9 @@
 
 #include <sstream>
 
+#ifndef WINDOWS
 #include <unistd.h> /* sleep */
+#endif
 
 static rc_t argsHandler ( int argc, char * argv [] );
 TEST_SUITE_WITH_ARGS_HANDLER ( HttpTestSuite, argsHandler );
