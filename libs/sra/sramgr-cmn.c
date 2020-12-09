@@ -570,3 +570,16 @@ LIB_EXPORT rc_t CC SRANamelistGet ( const SRANamelist *self, uint32_t idx, const
 {
     return KNamelistGet ( ( const KNamelist* ) self, idx, name );
 }
+
+/*--------------------------------------------------------------------------
+ * SRASchema - DEPRECATED
+ */
+
+LIB_EXPORT rc_t CC SRASchemaMake ( struct VSchema **schema, struct VDBManager const *mgr )
+{
+    if ( schema )
+    {
+        *schema = NULL;
+    }
+    return 0;
+}
