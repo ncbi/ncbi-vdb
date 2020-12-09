@@ -149,11 +149,6 @@ rc_t KSrvResponseGetCache(const KSrvResponse * self, uint32_t idx,
 rc_t KSrvResponseGetNextToken(const KSrvResponse * self,
     const char ** nextToken);
 
-/* obsolete - use KSrvResponseGetLocation2() instead */
-rc_t KSrvResponseGetLocation(const KSrvResponse * self,
-    const char * acc, const char * name,
-    const struct VPath ** local, rc_t * localRc,
-    const struct VPath ** cache, rc_t * cacheRc);
 rc_t KSrvResponseGetLocation2(const KSrvResponse * self,
     const char * acc, const char * name, const char * type,
     const struct VPath ** local, rc_t * localRc,

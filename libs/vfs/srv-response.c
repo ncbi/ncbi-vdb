@@ -712,15 +712,6 @@ rc_t KSrvResponseGetLocation2(const KSrvResponse * self,
     return rc;
 }
 
-rc_t KSrvResponseGetLocation(const KSrvResponse * self,
-    const char * acc, const char * name,
-    const struct VPath ** local, rc_t * localRc,
-    const struct VPath ** cache, rc_t * cacheRc)
-{
-    return KSrvResponseGetLocation2(self, acc, name, NULL,
-        local, localRc, cache, cacheRc);
-}
-
 rc_t KSrvResponseGetR4 ( const KSrvResponse * self, Response4 ** r ) {
 
     rc_t rc = 0;
