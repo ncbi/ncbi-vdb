@@ -31,7 +31,9 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <klib/time.h> /* KSleep */
 #include <klib/rc.h>
+
 #include <kfg/config.h>
 #include <kfg/kfg-priv.h>
 
@@ -54,10 +56,6 @@
 #include <kproc/thread.h>
 
 #include <sstream>
-
-#ifndef WINDOWS
-#include <unistd.h> /* sleep */
-#endif
 
 static rc_t argsHandler ( int argc, char * argv [] );
 TEST_SUITE_WITH_ARGS_HANDLER ( HttpTestSuite, argsHandler );
@@ -888,7 +886,7 @@ FIXTURE_TEST_CASE(GET_WITHOUT_CONTENT_LENGTH, HttpFixture) {
         cerr << "Wait for ensembl" ;
       else
         cerr << "." ;
-      sleep ( 1 ) ;
+      REQUIRE_RC ( KSleep ( 1 ) ) ;
     }
 
     uint64_t size;
