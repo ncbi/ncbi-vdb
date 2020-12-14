@@ -376,13 +376,13 @@ static rc_t runLoadThread(Object *self)
     }
     LOGMSG(klogDebug, "Done background loading of reference");
 
-    assert((atomic64_read(&self->rwl) & 1) == 0); /* there is only one writer */
-    atomic64_inc(&self->rwl); /* tell readers we want to update the state */
-    while (atomic64_read(&self->rwl) != 1)
+    assert((atomic_read(&self->rwl) & 1) == 0); /* there is only one writer */
+    atomic_inc(&self->rwl); /* tell readers we want to update the state */
+    while (atomic_read(&self->rwl) != 1)
         ;
     self->reader = rc == 0 ? readNormal : readZero;
     self->async = NULL;
-    atomic64_dec(&self->rwl); /* state is updated; readers can continue */
+    atomic_dec(&self->rwl); /* state is updated; readers can continue */
     if (rc == 0 && i == count) {
         double const pct = 100.0 * (async->hits - async->miss) / async->hits;
 
@@ -402,7 +402,7 @@ char const *RefSeq_Scheme(void) {
 
 unsigned RefSeq_getBases(Object const *const self, uint8_t *const dst, unsigned const start, unsigned const len)
 {
-    atomic64_t *const rwl = &((Object *)self)->rwl;
+    atomic_t *const rwl = &((Object *)self)->rwl;
 
     if (self->async == NULL) {
         /* this is the fast path and the most common for normal use */
@@ -410,15 +410,15 @@ unsigned RefSeq_getBases(Object const *const self, uint8_t *const dst, unsigned 
         return self->reader(self, dst, start, len);
     }
     /* there is a background thread running */
-    if ((atomic64_read_and_add_even(rwl, 2) & 1) == 0) {
+    if ((atomic_read_and_add_even(rwl, 2) & 1) == 0) {
         /* but it is not trying to update the state */
         unsigned const actlen = self->reader(self, dst, start, len);
-        atomic64_add(rwl, -2);
+        atomic_add(rwl, -2);
         return actlen;
     }
     /* very unlikely, but likelihood increases with the number of readers */
     /* there is a background thread trying to update the state */
-    while ((atomic64_read(rwl) & 1) != 0)
+    while ((atomic_read(rwl) & 1) != 0)
         ;
     /* the state has been updated; use the new state */
     return RefSeq_getBases(self, dst, start, len);
