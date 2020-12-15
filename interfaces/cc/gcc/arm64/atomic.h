@@ -113,14 +113,9 @@ struct atomic_ptr_t
 static __inline__
 void *atomic_test_and_set_ptr ( atomic_ptr_t *v, void *s, void *t )
 {
-    void *rtn;
-    __asm__ __volatile__
-    (
-        "lock;"
-        "cmpxchg %%rsi,(%%rdi)"
-        : "=a" ( rtn )
-        : "D" ( v ), "S" ( s ), "a" ( t )
-    );
+    void *rtn = v -> ptr;
+    if ( rtn == t )
+        v -> ptr = s;
     return rtn;
 }
 
