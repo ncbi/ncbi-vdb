@@ -2429,8 +2429,9 @@ LIB_EXPORT int CC KDirectoryVOpenTarArchiveRead ( struct KDirectory const *self,
     struct KDirectory const **tar_dir, int chroot, const char *fmt, va_list args )
 {
     char path [ 4096 ];
-    int size = (args == NULL) ?
-        snprintf  ( path, sizeof path, "%s", fmt ) :
+    /*VDB-4386: cannot treat va_list as a pointer!*/
+    int size = /*(args == NULL) ?
+        snprintf  ( path, sizeof path, "%s", fmt ) :*/
         vsnprintf ( path, sizeof path, fmt, args );
     if ( size < 0 || size >= ( int ) sizeof path )
         return RC ( rcFS, rcDirectory, rcOpening, rcPath, rcExcessive );
@@ -2444,8 +2445,9 @@ LIB_EXPORT int CC KDirectoryVOpenTarArchiveRead_silent ( struct KDirectory const
     struct KDirectory const **tar_dir, int chroot, const char *fmt, va_list args )
 {
     char path [ 4096 ];
-    int size = (args == NULL) ?
-        snprintf  ( path, sizeof path, "%s", fmt ) :
+    /*VDB-4386: cannot treat va_list as a pointer!*/
+    int size = /*(args == NULL) ?
+        snprintf  ( path, sizeof path, "%s", fmt ) :*/
         vsnprintf ( path, sizeof path, fmt, args );
     if ( size < 0 || size >= ( int ) sizeof path )
         return RC ( rcFS, rcDirectory, rcOpening, rcPath, rcExcessive );
@@ -2460,8 +2462,9 @@ LIB_EXPORT int CC KDirectoryVOpenTarArchiveRead_silent_preopened ( struct KDirec
     struct KDirectory const **tar_dir, int chroot, const struct KFile * f, const char *fmt, va_list args )
 {
     char path [ 4096 ];
-    int size = (args == NULL) ?
-        snprintf  ( path, sizeof path, "%s", fmt ) :
+    /*VDB-4386: cannot treat va_list as a pointer!*/
+    int size = /*(args == NULL) ?
+        snprintf  ( path, sizeof path, "%s", fmt ) :*/
         vsnprintf ( path, sizeof path, fmt, args );
     if ( size < 0 || size >= ( int ) sizeof path )
         return RC ( rcFS, rcDirectory, rcOpening, rcPath, rcExcessive );

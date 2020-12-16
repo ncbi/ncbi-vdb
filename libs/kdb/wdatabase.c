@@ -435,6 +435,21 @@ rc_t KDBManagerVCreateDBInt ( KDBManager *self,
     return rc;
 }
 
+static
+rc_t KDBManagerVCreateDBInt_noargs ( KDBManager *self,
+    KDatabase **db, KDirectory *wd, KCreateMode cmode,
+    const char *path, ... )
+{
+    rc_t rc;
+    va_list args;
+
+    va_start ( args, path );
+    rc = KDBManagerVCreateDBInt ( self, db, wd, cmode, path, args );
+    va_end ( args );
+
+    return rc;
+}
+
 LIB_EXPORT rc_t CC KDBManagerVCreateDB ( KDBManager *self,
     KDatabase **db, KCreateMode cmode, const char *path, va_list args )
 {
@@ -506,8 +521,8 @@ LIB_EXPORT rc_t CC KDatabaseVCreateDB ( KDatabase *self,
             0775, kcmOpen, "db" );
         if ( rc == 0 )
         {
-            rc = KDBManagerVCreateDBInt ( self -> mgr, dbp,
-                                          self -> dir, cmode, path, NULL );
+            rc = KDBManagerVCreateDBInt_noargs ( self -> mgr, dbp,
+                                          self -> dir, cmode, path );
             if ( rc == 0 )
             {
                 KDatabase *db = ( KDatabase* ) * dbp;
@@ -623,6 +638,20 @@ rc_t KDBManagerVOpenDBReadInt ( const KDBManager *cself,
     return rc;
 }
 
+static
+rc_t KDBManagerVOpenDBReadInt_noargs ( const KDBManager *cself,
+    const KDatabase **dbp, KDirectory *wd,
+    const char *path, bool *cached, bool try_srapath, ... )
+{
+    rc_t rc;
+    va_list args;
+
+    va_start ( args, path );
+    rc = KDBManagerVOpenDBReadInt ( cself, dbp, wd, path, args, cached, try_srapath );
+    va_end ( args );
+
+    return rc;
+}
 
 LIB_EXPORT rc_t CC KDBManagerOpenDBRead ( const KDBManager *self,
     const KDatabase **db, const char *path, ... )
@@ -683,8 +712,8 @@ LIB_EXPORT rc_t CC KDatabaseVOpenDBRead ( const KDatabase *self,
     if ( rc == 0 )
     {
         bool is_cached;
-        rc = KDBManagerVOpenDBReadInt ( self -> mgr, dbp,
-                                        self -> dir, path, NULL, & is_cached, false );
+        rc = KDBManagerVOpenDBReadInt_noargs ( self -> mgr, dbp,
+                                        self -> dir, path, & is_cached, false );
         if ( rc == 0 && ! is_cached )
         {
             KDatabase *db = ( KDatabase* ) * dbp;
@@ -808,6 +837,20 @@ rc_t KDBManagerVOpenDBUpdateInt ( KDBManager *self,
     return rc;
 }
 
+static
+rc_t KDBManagerVOpenDBUpdateInt_noargs ( KDBManager *self,
+    KDatabase **db, KDirectory *wd, const char *path, ... )
+{
+    rc_t rc;
+    va_list args;
+
+    va_start ( args, path );
+    rc = KDBManagerVOpenDBUpdateInt ( self, db, wd, path, args );
+    va_end ( args );
+
+    return rc;
+}
+
 LIB_EXPORT rc_t CC KDBManagerOpenDBUpdate ( KDBManager *self,
     KDatabase **db, const char *path, ... )
 {
@@ -869,8 +912,8 @@ LIB_EXPORT rc_t CC KDatabaseVOpenDBUpdate ( KDatabase *self,
         path, sizeof path, "db", 2, name, args );
     if ( rc == 0 )
     {
-        rc = KDBManagerVOpenDBUpdateInt ( self -> mgr, dbp,
-                                         self -> dir, path, NULL );
+        rc = KDBManagerVOpenDBUpdateInt_noargs ( self -> mgr, dbp,
+                                         self -> dir, path );
         if ( rc == 0 )
         {
             KDatabase *db = ( KDatabase* ) * dbp;

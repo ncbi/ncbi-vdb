@@ -679,6 +679,20 @@ rc_t KDBManagerVCreateColumnInt ( KDBManager *self,
     return rc;
 }
 
+static
+rc_t KDBManagerVCreateColumnInt_noargs ( KDBManager *self,
+    KColumn **colp, KDirectory *wd, KCreateMode cmode,
+    KChecksum checksum, size_t pgsize, const char *path, ... )
+{
+    rc_t rc;
+    va_list args;
+
+    va_start ( args, path );
+    rc = KDBManagerVCreateColumnInt ( self, colp, wd, cmode, checksum, pgsize, path, args );
+    va_end ( args );
+
+    return rc;
+}
 
 LIB_EXPORT rc_t CC KDBManagerVCreateColumn ( KDBManager *self, KColumn **col,
     KCreateMode cmode, KChecksum checksum, size_t pgsize,
@@ -751,8 +765,8 @@ LIB_EXPORT rc_t CC KTableVCreateColumn ( KTable *self, KColumn **colp,
         else
             cmode &= ~ kcmMD5;
 
-        rc = KDBManagerVCreateColumnInt ( self -> mgr, colp,
-                                          self -> dir, cmode | kcmParents, checksum, pgsize, path, NULL );
+        rc = KDBManagerVCreateColumnInt_noargs ( self -> mgr, colp,
+                                          self -> dir, cmode | kcmParents, checksum, pgsize, path );
         if ( rc == 0 )
         {
             KColumn *col = * colp;
@@ -839,8 +853,9 @@ rc_t KDBManagerVOpenColumnReadInt2 ( const KDBManager *cself,
             /* TODO: check if colpath is what we want to pass to KDBOpenPathTypeRead
              * in this case we don't need to vprintf to 'path'
             */
-            size = ( args == NULL ) ?
-                snprintf  ( path, sizeof path, "%s", path_fmt ) :
+            /* VDB-4386: cannot treat va_list as a pointer! */
+            size = /*( args == NULL ) ?
+                snprintf  ( path, sizeof path, "%s", path_fmt ) :*/
                 vsnprintf ( path, sizeof path, path_fmt, args2 );
             if ( size < 0 || ( size_t ) size >=  sizeof path )
                 rc = RC ( rcDB, rcMgr, rcOpening, rcPath, rcExcessive );
@@ -882,12 +897,28 @@ rc_t KDBManagerVOpenColumnReadInt ( const KDBManager *cself,
     rc_t rc;
     va_list args2;
 
-    if ( args == NULL )
-        return KDBManagerVOpenColumnReadInt2 ( cself, colp, wd, path_fmt, args, cached, try_srapath, NULL );
+    /* VDB-4386: cannot treat va_list as a pointer! */
+/*    if ( args == NULL )
+        return KDBManagerVOpenColumnReadInt2 ( cself, colp, wd, path_fmt, args, cached, try_srapath, NULL );*/
 
     va_copy ( args2, args );
     rc = KDBManagerVOpenColumnReadInt2 ( cself, colp, wd, path_fmt, args, cached, try_srapath, args2 );
     va_end ( args2 );
+
+    return rc;
+}
+
+static
+rc_t KDBManagerVOpenColumnReadInt_noargs ( const KDBManager *cself,
+    const KColumn **colp, const KDirectory *wd,
+    const char *path_fmt, bool *cached, bool try_srapath, ... )
+{
+    rc_t rc;
+    va_list args;
+
+    va_start ( args, try_srapath );
+    rc = KDBManagerVOpenColumnReadInt ( cself, colp, wd, path_fmt, args, cached, try_srapath );
+    va_end ( args );
 
     return rc;
 }
@@ -951,8 +982,8 @@ LIB_EXPORT rc_t CC KTableVOpenColumnRead ( const KTable *self,
     if ( rc == 0 )
     {
 	bool col_is_cached;
-        rc = KDBManagerVOpenColumnReadInt ( self -> mgr,
-                                            colp, self -> dir, path, NULL, &col_is_cached, false );
+        rc = KDBManagerVOpenColumnReadInt_noargs ( self -> mgr,
+                                            colp, self -> dir, path, &col_is_cached, false );
         if ( rc == 0 )
         {
             KColumn *col = ( KColumn* ) * colp;
@@ -983,8 +1014,9 @@ rc_t KDBManagerVOpenColumnUpdateInt ( KDBManager *self,
 
 /*    rc = KDirectoryVResolvePath ( wd, 1,
         colpath, sizeof colpath, path_fmt, args ); */
-    z = (args == NULL) ?
-        snprintf  ( colpath, sizeof colpath, "%s", path_fmt) :
+/* VDB-4386: cannot treat va_list as a pointer! */
+    z = /*(args == NULL) ?
+        snprintf  ( colpath, sizeof colpath, "%s", path_fmt) :*/
         vsnprintf ( colpath, sizeof colpath, path_fmt, args );
     if (z < 0 || z >= (int) sizeof colpath)
         rc = RC ( rcDB, rcMgr, rcOpening, rcPath, rcExcessive );
@@ -1071,7 +1103,7 @@ rc_t KDBManagerVOpenColumnUpdateInt ( KDBManager *self,
             KMD5SumFmt *md5 = NULL;
             /* open existing md5 digest file */
             KFile * f;
-            rc = KDirectoryVOpenFileWrite ( dir, & f, true, "md5", NULL );
+            rc = KDirectoryOpenFileWrite_v1 ( dir, & f, true, "md5" );
             if ( rc == 0 )
             {
                 rc = KMD5SumFmtMakeUpdate ( &md5, f );
@@ -1102,6 +1134,21 @@ rc_t KDBManagerVOpenColumnUpdateInt ( KDBManager *self,
             KDirectoryRelease ( dir );
         }
     }
+    return rc;
+}
+
+static
+rc_t KDBManagerVOpenColumnUpdateInt_noargs ( KDBManager *self,
+    KColumn **colp, KDirectory *wd, bool try_srapath,
+    const char *path_fmt, ... )
+{
+    rc_t rc;
+    va_list args;
+
+    va_start ( args, path_fmt );
+    rc = KDBManagerVOpenColumnUpdateInt ( self, colp, wd, try_srapath, path_fmt, args );
+    va_end ( args );
+
     return rc;
 }
 
@@ -1167,8 +1214,8 @@ LIB_EXPORT rc_t CC KTableVOpenColumnUpdate ( KTable *self,
         path, sizeof path, "col", 3, name, args );
     if ( rc == 0 )
     {
-        rc = KDBManagerVOpenColumnUpdateInt ( self -> mgr,
-                                              colp, self -> dir, false, path, NULL );
+        rc = KDBManagerVOpenColumnUpdateInt_noargs ( self -> mgr,
+                                              colp, self -> dir, false, path );
         if ( rc == 0 )
         {
             KColumn *col = * colp;

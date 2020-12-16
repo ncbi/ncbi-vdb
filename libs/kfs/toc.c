@@ -956,13 +956,14 @@ rc_t createPath (char ** newpath, const char * path, va_list args)
             rc = RC (rcFS, rcToc, rcConstructing, rcMemory, rcExhausted);
             return rc;
         }
-        if (args == NULL)
+	/*VDB-4386: cannot treat va_list as a pointer!*/
+/*        if (args == NULL)
         {
             i = (int)strlen ( path );
             if ( i < (int)l )
             strcpy ( pp, path );
         }
-        else
+        else*/
             i = vsnprintf (pp, l, path, args);
         if (i < 0)
         {
@@ -1258,8 +1259,9 @@ rc_t KTocVCreateHardLink ( KToc *self,KTime_t mtime, uint32_t access,
 
         case ktocentrytype_file:
         case ktocentrytype_zombiefile:
-            size = (args == NULL) ?
-                snprintf  ( link, sizeof link, "%s", link_fmt ) :
+            /* VDB-4386: cannot treat va_list as a pointer! */
+            size = /*(args == NULL) ?
+                snprintf  ( link, sizeof link, "%s", link_fmt ) :*/
                 vsnprintf ( link, sizeof link, link_fmt, args );
             if (size < 0 || size >= ( int ) sizeof link)
                 rc = RC (rcFS, rcToc, rcConstructing, rcLink, rcExcessive);
@@ -1268,16 +1270,16 @@ rc_t KTocVCreateHardLink ( KToc *self,KTime_t mtime, uint32_t access,
                                    mtime, access, mode, link);
 
         case ktocentrytype_emptyfile:
-            size = (args == NULL) ?
-                snprintf  ( link, sizeof link, "%s", link_fmt ) :
+            size = /*(args == NULL) ?
+                snprintf  ( link, sizeof link, "%s", link_fmt ) :*/
                 vsnprintf ( link, sizeof link, link_fmt, args );
             if (size < 0 || size >= ( int ) sizeof link)
                 rc = RC (rcFS, rcToc, rcConstructing, rcLink, rcExcessive);
             return rc ? rc : KTocCreateFile (self, 0, 0, mtime, access, mode, link);
 
         case ktocentrytype_chunked:
-            size = (args == NULL) ?
-                snprintf  ( link, sizeof link, "%s", link_fmt ) :
+            size = /*(args == NULL) ?
+                snprintf  ( link, sizeof link, "%s", link_fmt ) :*/
                 vsnprintf ( link, sizeof link, link_fmt, args );
             if (size < 0 || size >= ( int ) sizeof link)
                 rc = RC (rcFS, rcToc, rcConstructing, rcLink, rcExcessive);
@@ -1286,8 +1288,8 @@ rc_t KTocVCreateHardLink ( KToc *self,KTime_t mtime, uint32_t access,
                                           targ_entry->u.chunked_file.chunks, mode, link);
 
         case ktocentrytype_softlink:
-            size = (args == NULL) ?
-                snprintf  ( link, sizeof link, "%s", link_fmt ) :
+            size = /*(args == NULL) ?
+                snprintf  ( link, sizeof link, "%s", link_fmt ) :*/
                 vsnprintf ( link, sizeof link, link_fmt, args );
             if (size < 0 || size >= ( int ) sizeof link)
                 rc = RC (rcFS, rcToc, rcConstructing, rcLink, rcExcessive);

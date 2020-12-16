@@ -237,11 +237,12 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *self,
     char aTblpath[4096] = "";
     char * tblpath = aTblpath;
     int z = 0;
-    if (args == NULL) {
+    /*VDB-4386: cannot treat va_list as a pointer!*/
+/*    if (args == NULL) {
         if (path != NULL)
             z = snprintf(aTblpath, sizeof aTblpath, "%s", path);
     }
-    else
+    else*/
         vsnprintf ( aTblpath, sizeof aTblpath, path, args );
     if ( z < 0 || ( size_t ) z >= sizeof aTblpath )
         rc = RC ( rcDB, rcMgr, rcOpening, rcPath, rcExcessive );
@@ -340,6 +341,21 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *self,
     return rc;
 }
 
+static
+rc_t KDBManagerVOpenTableReadInt_noargs ( const KDBManager *self,
+    const KTable **tblp, const KDirectory *wd, bool try_srapath,
+    const char *path, const struct VPath *vpath,
+    bool tryEnvAndAd, ... )
+{
+    rc_t rc;
+    va_list args;
+
+    va_start ( args, tryEnvAndAd );
+    rc = KDBManagerVOpenTableReadInt ( self, tblp, wd, try_srapath, path, args, vpath, tryEnvAndAd );
+    va_end ( args );
+
+    return rc;
+}
 
 LIB_EXPORT rc_t CC KDBManagerOpenTableRead ( const KDBManager *self,
     const KTable **tbl, const char *path, ... )
@@ -380,8 +396,8 @@ LIB_EXPORT rc_t CC KDBManagerOpenTableReadVPath ( const KDBManager *self,
     if ( self == NULL )
         return RC ( rcDB, rcMgr, rcOpening, rcSelf, rcNull );
 
-    return KDBManagerVOpenTableReadInt ( self, tbl, self->wd, true, NULL,
-        NULL, path, true );
+    return KDBManagerVOpenTableReadInt_noargs ( self, tbl, self->wd, true, NULL,
+        path, true );
 }
 
 
@@ -419,8 +435,8 @@ LIB_EXPORT rc_t CC KDatabaseVOpenTableRead ( const KDatabase *self,
         path, sizeof path, "tbl", 3, name, args );
     if ( rc == 0 )
     {
-        rc = KDBManagerVOpenTableReadInt ( self -> mgr, tblp,
-                                self -> dir, false, path, NULL, NULL, false );
+        rc = KDBManagerVOpenTableReadInt_noargs ( self -> mgr, tblp,
+                                self -> dir, false, path, NULL, false );
         if ( rc == 0 )
         {
             KTable *tbl = ( KTable* ) * tblp;

@@ -244,8 +244,9 @@ rc_t KDBManagerVOpenDBReadInt ( const KDBManager *self, const KDatabase **dbp,
     /* MUST use vsnprintf because the documented behavior of "path"
        is that of stdc library's printf, not vdb printf */
     char dbpath [ 4096 ];
-    int z = ( args == NULL ) ?
-        snprintf ( dbpath, sizeof dbpath, "%s", path ):
+    /* VDB-4386: cannot treat va_list as a pointer! */
+    int z = /*( args == NULL ) ?
+        snprintf ( dbpath, sizeof dbpath, "%s", path ):*/
         vsnprintf ( dbpath, sizeof dbpath, path, args );
     if ( z < 0 || ( size_t ) z >= sizeof dbpath )
         rc = RC ( rcDB, rcMgr, rcOpening, rcPath, rcExcessive );
@@ -272,6 +273,21 @@ rc_t KDBManagerVOpenDBReadInt ( const KDBManager *self, const KDatabase **dbp,
             KDirectoryRelease ( dir );
         }
     }
+    return rc;
+}
+
+static
+rc_t KDBManagerVOpenDBReadInt_noargs ( const KDBManager *self, const KDatabase **dbp,
+                                const KDirectory *wd, bool try_srapath,
+                                const char *path, ... )
+{
+    rc_t rc;
+    va_list args;
+
+    va_start ( args, path );
+    rc = KDBManagerVOpenDBReadInt ( self, dbp, wd, try_srapath, path, args );
+    va_end ( args );
+
     return rc;
 }
 
@@ -333,8 +349,8 @@ LIB_EXPORT rc_t CC KDatabaseVOpenDBRead ( const KDatabase *self,
         path, sizeof path, "db", 2, name, args );
     if ( rc == 0 )
     {
-        rc = KDBManagerVOpenDBReadInt ( self -> mgr, dbp,
-                                        self -> dir, false, path, NULL );
+        rc = KDBManagerVOpenDBReadInt_noargs ( self -> mgr, dbp,
+                                        self -> dir, false, path );
         if ( rc == 0 )
         {
             KDatabase *db = ( KDatabase* ) * dbp;

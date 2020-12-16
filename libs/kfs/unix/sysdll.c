@@ -657,8 +657,9 @@ LIB_EXPORT rc_t CC KDyldVLoadLib ( KDyld *self,
             if ( i == end )
             {
                 char name [ 4096 ];
-                int len = ( args == NULL ) ?
-                    snprintf  ( name, sizeof name, "%s", path ) :
+         	/* VDB-4386: cannot treat va_list as a pointer!*/
+                int len = /*( args == NULL ) ?
+                    snprintf  ( name, sizeof name, "%s", path ) :*/
                     vsnprintf ( name, sizeof name, path, args );
                 if ( len < 0 || len >= sizeof name )
                     rc = RC ( rcFS, rcDylib, rcLoading, rcPath, rcExcessive );
