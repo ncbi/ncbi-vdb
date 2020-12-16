@@ -1,6 +1,26 @@
 # NCBI External Developer Release:
 
 
+## NCBI VDB 2.10.9
+**December 16, 2020**
+
+  **align**: alignment enumerator structure is now fully initialized  
+  **align, vdb**: fixed situation where network access could drastically slow down reading references  
+  **build**: added configure option to produce build in output directory relative to sources  
+  **cloud**: implemented using OAuth 2.0 to access GCP buckets  
+  **kfs**: added support of hard links  
+  **kfs, kns**: improved timeout management in CacheTeeFile  
+  **kns**: env_token and pay_required flags are now treated independently  
+  **kns**: memory leak was fixed  
+  **kns**: removed memory leaks in KNS, VDB, VFS  
+  **kns, sra-tools, vdb**: added a loop to retry failed connections when fetching SRA files  
+  **test**: updated test not to fail when the source is not available  
+  **vdb**: writing a big (>3MB) cell now triggers a page commit  
+  **vfs**: allow to find local files when remote repository is disabled  
+  **vfs**: not to call names.cgi but SDL when resolving runs and reference sequences  
+  **vfs**: support of ETL - BQS runs  
+
+
 ## NCBI VDB 2.10.8
 **June 29, 2020**
 
