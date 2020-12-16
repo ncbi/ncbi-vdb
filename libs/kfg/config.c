@@ -3227,7 +3227,7 @@ static rc_t _KConfigUseRealignAppWithExtFlatAlg(KConfig * self,
 }
 
 static rc_t _KConfigUpdateDefault( KConfig * self, bool * updated,
-    const char * node_name, 
+    const char * node_name,
     const char * node2_name,
     const char * old_value,
     const char * new_value,
@@ -3542,7 +3542,7 @@ rc_t KConfigMakeImpl ( KConfig ** cfg, const KDirectory * cfgdir, bool local,
                     {
                         * cfg = mgr;
                     }
-                        
+
                 }
                 return rc;
             }
@@ -4172,7 +4172,7 @@ static rc_t KConfigPrintPartial_noargs
     va_list args;
 
     va_start ( args, skipCount );
-    rc = KConfigPrintPartial_noargs ( self, indent, skipCount, args );
+    rc = KConfigPrintPartial ( self, indent, skipCount, args );
     va_end ( args );
 
     return rc;

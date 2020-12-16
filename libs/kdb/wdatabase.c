@@ -277,7 +277,7 @@ rc_t KDBManagerMakeDBUpdate ( KDBManager *self,
     if ( rc == 0 )
     {
         KDatabase *db;
-	    
+
         /* Make the base object */
         rc = KDatabaseMake ( & db, dir, path, md5, false );
         if ( rc == 0 )
@@ -291,7 +291,7 @@ rc_t KDBManagerMakeDBUpdate ( KDBManager *self,
             }
 
             rc = RC ( rcDB, rcMgr, rcOpening, rcDatabase, rcBusy );
-                
+
             free ( db );
         }
         KDirectoryRelease ( dir );
@@ -646,7 +646,7 @@ rc_t KDBManagerVOpenDBReadInt_noargs ( const KDBManager *cself,
     rc_t rc;
     va_list args;
 
-    va_start ( args, path );
+    va_start ( args, try_srapath );
     rc = KDBManagerVOpenDBReadInt ( cself, dbp, wd, path, args, cached, try_srapath );
     va_end ( args );
 
@@ -1017,7 +1017,7 @@ LIB_EXPORT bool CC KDatabaseExists ( const KDatabase *self, uint32_t type, const
  *  valid values are kptDatabase, kptTable and kptIndex
  *
  *  "resolved" [ OUT ] and "rsize" [ IN ] - optional output buffer
- *  for fundamenta object name if "alias" is not a fundamental name, 
+ *  for fundamenta object name if "alias" is not a fundamental name,
  *
  *  "name" [ IN ] - NUL terminated object name
  */
@@ -1585,9 +1585,9 @@ LIB_EXPORT rc_t CC KDBManagerVPathOpenLocalDBRead ( struct KDBManager const * se
         return RC ( rcDB, rcDatabase, rcAccessing, rcParam, rcNull );
     if ( vpath == NULL )
         return RC ( rcDB, rcDatabase, rcAccessing, rcParam, rcNull );
-        
-    {   
-        /* vpath has already been resolved and is known to be a local path. 
+
+    {
+        /* vpath has already been resolved and is known to be a local path.
            open it if it is a database; avoid an additional round of resolution */
         const KDirectory *dir;
         rc_t rc = VFSManagerOpenDirectoryReadDirectoryRelativeDecrypt ( self -> vfsmgr, self -> wd, &dir, vpath );
@@ -1618,7 +1618,7 @@ LIB_EXPORT rc_t CC KDBManagerVPathOpenLocalDBRead ( struct KDBManager const * se
         }
         return rc;
     }
-} 
+}
 
 LIB_EXPORT rc_t CC KDBManagerVPathOpenRemoteDBRead ( struct KDBManager const * self,
     struct KDatabase const ** p_db, struct VPath const * remote, struct VPath const * cache )
@@ -1629,10 +1629,10 @@ LIB_EXPORT rc_t CC KDBManagerVPathOpenRemoteDBRead ( struct KDBManager const * s
         return RC ( rcDB, rcDatabase, rcAccessing, rcParam, rcNull );
     if ( remote == NULL )
         return RC ( rcDB, rcDatabase, rcAccessing, rcParam, rcNull );
-    /* cache == NULL is OK */    
-    
-    {   
-        /*  vpath has already been resolved and is known to be a remote URL. 
+    /* cache == NULL is OK */
+
+    {
+        /*  vpath has already been resolved and is known to be a remote URL.
             Open it if it is a database; use the provided cache; avoid an additional round of resolution */
         const KDirectory *dir;
         rc_t rc = VFSManagerOpenDirectoryReadDecryptRemote( self -> vfsmgr, &dir, remote, cache );
