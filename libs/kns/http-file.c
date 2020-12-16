@@ -848,9 +848,16 @@ rc_t CC KHttpFileRead ( const KHttpFile *self, uint64_t pos,
      void *buffer, size_t bsize, size_t *num_read )
 {
     struct timeout_t tm;
-    TimeoutInit ( & tm, self -> kns -> http_read_timeout );
+    timeout_t * ptm = NULL;
 
-    return KHttpFileTimedRead ( self, pos, buffer, bsize, num_read, & tm );
+    assert(self && self->kns);
+
+    if (self -> kns -> http_read_timeout >= 0) {
+        TimeoutInit ( & tm, self -> kns -> http_read_timeout );
+        ptm = &tm;
+    }
+
+    return KHttpFileTimedRead ( self, pos, buffer, bsize, num_read, ptm );
 }
 
 static
@@ -1215,9 +1222,17 @@ rc_t CC KHttpFileReadChunked ( const KHttpFile * self, uint64_t pos,
     KChunkReader * chunks, size_t bytes, size_t * num_read )
 {
     struct timeout_t tm;
-    TimeoutInit ( & tm, self -> kns -> http_read_timeout );
+    timeout_t * ptm = NULL;
 
-    return KHttpFileTimedReadChunked ( self, pos, chunks, bytes, num_read, & tm );
+    assert(self && self->kns);
+
+    if (self -> kns -> http_read_timeout >= 0) {
+        TimeoutInit ( & tm, self -> kns -> http_read_timeout );
+        ptm = &tm;
+    }
+
+    return KHttpFileTimedReadChunked ( self, pos, chunks, bytes, num_read,
+        ptm );
 }
 #endif /* SUPPORT_CHUNKED_READ */
 
@@ -1419,6 +1434,14 @@ static rc_t KNSManagerVMakeHttpFileIntUnstableImpl( const KNSManager *self,
                                         f -> need_env_token = need_env_token;
                                         f -> payRequired = payRequired;
 
+                               /* readWaitMillis and totalReadWaitMillis
+                                  ARE NEEDED BY
+                                  stable-http-file.c : HttpFileGetReadTimeouts()
+                                */
+                                        f -> totalReadWaitMillis =
+                                            f -> readWaitMillis
+                                            = self -> http_read_timeout;
+
                                         * file = & f -> dad;
                                         return 0;
                                     }
@@ -1437,7 +1460,7 @@ static rc_t KNSManagerVMakeHttpFileIntUnstableImpl( const KNSManager *self,
                                             String ext;
                                             StringInit ( & ext,
                                                     base + buf -> elem_count - vdbcache . size - 1,
-                                                    vdbcache . size, vdbcache . size );
+                                                    vdbcache . size, vdbcache . len );
                                             if ( ext . addr [ ext . size ] == '\0' &&
                                                 StringEqual ( & vdbcache, & ext ) )
                                             {
@@ -1447,7 +1470,7 @@ static rc_t KNSManagerVMakeHttpFileIntUnstableImpl( const KNSManager *self,
                                                 size_t size = query - base;
                                                 StringInit ( & ext,
                                                     base + size - vdbcache . size,
-                                                    vdbcache . size, vdbcache . size );
+                                                    vdbcache . size, vdbcache . len );
                                                 if ( ext . addr [ ext . size ] == '?' &&
                                                     StringEqual ( & vdbcache, & ext ) )
                                                 {
@@ -1507,4 +1530,8 @@ rc_t KNSManagerVMakeHttpFileIntUnstable(const KNSManager *self,
 {
     return KNSManagerVMakeHttpFileIntUnstableImpl(self, file, conn, vers,
         reliable, need_env_token, payRequired, NULL, url, args);
+}
+
+bool KUnstableFileIsKHttpFile(const KFile * self) {
+    return self != NULL && &self->vt->v1 == &vtKHttpFile;
 }

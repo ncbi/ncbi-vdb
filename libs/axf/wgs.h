@@ -20,8 +20,41 @@
  *
  *  Please cite the author in any work or product based on this material.
  *
- *============================================================================
+ * ===========================================================================
  *
  */
 
-#define LIBVDB_VERS 0x02060004
+typedef struct WGS WGS;
+typedef struct WGS_ListEntry WGS_ListEntry;
+typedef struct WGS_List WGS_List;
+
+struct WGS {
+    struct VPath const *url;
+    struct VCursor const *curs;
+    uint32_t colID;
+    uint64_t lastAccessStamp;
+};
+
+#define LIST_OBJECT WGS
+#define LIST_ENTRY WGS_ListEntry
+#include "list.h"
+
+struct WGS_List {
+    LIST;
+    unsigned openCount;
+    unsigned const openCountLimit;
+};
+#undef LIST
+#undef LIST_ENTRY
+#undef LIST_OBJECT
+
+WGS_ListEntry *WGS_Find(WGS_List *list, unsigned const qlen, char const *qry);
+WGS_ListEntry *WGS_Insert(WGS_List *list, unsigned const qlen, char const *qry, VPath const *url, VDatabase const *db, rc_t *prc);
+void WGS_ListInit(WGS_List *list, unsigned openLimit);
+void WGS_ListFree(WGS_List *list);
+char const *WGS_Scheme(void);
+unsigned WGS_splitName(int64_t *prow, unsigned const namelen, char const *name);
+unsigned WGS_getBases(WGS *self, uint8_t *dst, unsigned start, unsigned len, int64_t row);
+void WGS_close(WGS *self);
+rc_t WGS_reopen(WGS *self, VDBManager const *mgr, unsigned seq_id_len, char const *seq_id);
+void WGS_limitOpen(WGS_List *list);

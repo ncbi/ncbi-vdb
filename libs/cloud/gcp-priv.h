@@ -40,6 +40,27 @@ Sign_RSA_SHA256(
     const char * input,
     const struct String ** output);
 
+rc_t CC GCPAddAuthentication(const struct GCP * cself,
+    KClientHttpRequest * req, const char * http_method);
+
+rc_t GetJsonNumMember(const struct KJsonObject *obj, const char * name,
+    int64_t * value);
+rc_t GetJsonStringMember(const struct KJsonObject *obj, const char * name,
+    const char ** value);
+
+/*TODO: use log.h instead, or promote to cloud-priv.h
+    (there is a copy in cloud-mgr.c) */
+#if 0
+#include <stdio.h>
+#define TRACE( ... )                                              \
+    do { fprintf ( stderr, "%s:%d - ", __func__, __LINE__ );      \
+         fprintf ( stderr, __VA_ARGS__ );                         \
+         fputc ( '\n', stderr ); } while ( 0 )
+#else
+#define TRACE( ... ) \
+    ( ( void ) 0 )
+#endif
+
 #ifdef __cplusplus
 }
 #endif

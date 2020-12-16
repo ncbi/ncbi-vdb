@@ -93,22 +93,22 @@ TEST_CASE(TestKSrvResponseGetLocation) {
     REQUIRE_RC(KServiceSetFormat(s, "all"));
     const KSrvResponse * r = NULL;
     REQUIRE_RC(KServiceNamesQuery(s, 0, &r));
-    REQUIRE_RC_FAIL(KSrvResponseGetLocation(0, 0, 0, 0, 0, 0, 0));
-    REQUIRE_RC_FAIL(KSrvResponseGetLocation(r, 0, 0, 0, 0, 0, 0));
-    REQUIRE_RC_FAIL(KSrvResponseGetLocation(r, "SRR850901", 0, 0, 0, 0, 0));
-    REQUIRE_RC_FAIL(KSrvResponseGetLocation(r, 0, "SRR850901", 0, 0, 0, 0));
-    REQUIRE_RC(KSrvResponseGetLocation(r, "SRR850901", "SRR850901",
+    REQUIRE_RC_FAIL(KSrvResponseGetLocation2(0, 0, 0, 0, 0, 0, 0, 0));
+    REQUIRE_RC_FAIL(KSrvResponseGetLocation2(r, 0, 0, 0, 0, 0, 0, 0));
+    REQUIRE_RC_FAIL(KSrvResponseGetLocation2(r, "SRR850901", 0, 0, 0, 0, 0, 0));
+    REQUIRE_RC_FAIL(KSrvResponseGetLocation2(r, 0, "SRR850901", 0, 0, 0, 0, 0));
+    REQUIRE_RC(KSrvResponseGetLocation2(r, "SRR850901", "SRR850901", "sra",
         0, 0, 0, 0));
 
     const VPath * local = NULL;
-    REQUIRE_RC(KSrvResponseGetLocation(r, "SRR850901", "SRR850901",
+    REQUIRE_RC(KSrvResponseGetLocation2(r, "SRR850901", "SRR850901", "sra",
         &local, 0, 0, 0));
     REQUIRE_NULL(local);
 
     rc_t rcLocal = 0;
-    REQUIRE_RC_FAIL(KSrvResponseGetLocation(r, "SRR850901", "SRR850901",
+    REQUIRE_RC_FAIL(KSrvResponseGetLocation2(r, "SRR850901", "SRR850901", "sra",
         0, &rcLocal, 0, 0));
-    REQUIRE_RC(KSrvResponseGetLocation(r, "SRR850901", "SRR850901",
+    REQUIRE_RC(KSrvResponseGetLocation2(r, "SRR850901", "SRR850901", "sra",
         &local, &rcLocal, 0, 0));
     REQUIRE_NULL(local);
     REQUIRE_RC_FAIL(rcLocal);
@@ -134,14 +134,14 @@ TEST_CASE(TestKSrvResponseGetLocation) {
     const VPath * cache = NULL;
     rc_t rcCache = 0;
 
-    REQUIRE_RC_FAIL(KSrvResponseGetLocation(r, "SRR850901", "SRR850901.qq",
-        &local, &rcLocal, &cache, &rcCache));
+    REQUIRE_RC_FAIL(KSrvResponseGetLocation2(r, "SRR850901", "SRR850901.qq",
+        "sra", &local, &rcLocal, &cache, &rcCache));
     REQUIRE_NULL(local);
     REQUIRE_NULL(cache);
     REQUIRE_RC(rcLocal);
     REQUIRE_RC(rcCache);
 
-    REQUIRE_RC_FAIL(KSrvResponseGetLocation(r, "SRR000001", "SRR000001",
+    REQUIRE_RC_FAIL(KSrvResponseGetLocation2(r, "SRR000001", "SRR000001", "sra",
         &local, &rcLocal, &cache, &rcCache));
     REQUIRE_NULL(local);
     REQUIRE_NULL(cache);
@@ -167,8 +167,8 @@ TEST_CASE(TestKSrvResponseGetLocationCache) {
     const VPath * cache = NULL;
     rc_t rcCache = 0;
 
-    REQUIRE_RC(KSrvResponseGetLocation(r, "SRR850901", "SRR850901.vdbcache",
-        &local, &rcLocal, &cache, &rcCache));
+    REQUIRE_RC(KSrvResponseGetLocation2(r, "SRR850901", "SRR850901.vdbcache",
+        "vdbcache", &local, &rcLocal, &cache, &rcCache));
 
 	// this is NCBI-specific, move to a private repo
     //if (false && hasLocal) // SRR850901.vdbcache was moved out
@@ -222,7 +222,7 @@ TEST_CASE(TestKSrvResponseGetLocationLocalInAD) {
     const VPath * cache = NULL;
     rc_t rcCache = 0;
 
-    REQUIRE_RC(KSrvResponseGetLocation(r, acc, acc,
+    REQUIRE_RC(KSrvResponseGetLocation2(r, acc, acc, "sra",
         &local, &rcLocal, &cache, &rcCache));
 
     REQUIRE_RC(rcLocal);
@@ -276,7 +276,7 @@ TEST_CASE(TestKSrvResponseGetLocationLocalInUserRepo) {
     rc_t rcLocal = 0;
     const VPath * cache = NULL;
     rc_t rcCache = 0;
-    REQUIRE_RC(KSrvResponseGetLocation(r, acc, acc,
+    REQUIRE_RC(KSrvResponseGetLocation2(r, acc, acc, "sra",
         &local, &rcLocal, &cache, &rcCache));
     REQUIRE_RC(rcLocal);
     REQUIRE_NOT_NULL(local);
@@ -332,7 +332,7 @@ TEST_CASE(TestKSrvResponseGetLocationCacheInAD) {
     const VPath * cache = NULL;
     rc_t rcCache = 0;
 
-    REQUIRE_RC(KSrvResponseGetLocation(r, acc, acc,
+    REQUIRE_RC(KSrvResponseGetLocation2(r, acc, acc, "sra",
         &local, &rcLocal, &cache, &rcCache));
 
     REQUIRE_RC(rcLocal);

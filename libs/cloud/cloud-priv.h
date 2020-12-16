@@ -120,6 +120,7 @@ struct GCP
     Cloud dad;
 
     char * privateKey;
+    char * private_key_id;
     char * client_email;
     char * project_id;
 

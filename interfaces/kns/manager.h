@@ -126,6 +126,23 @@ KNS_EXTERN rc_t CC KNSManagerGetMaxReadRetryTime ( const KNSManager *self,
     int32_t *millis );
 
 
+/* SetMaxConnectRetryTime
+ *  sets maximum time when opening HttpFile
+ *
+ *  "millis" [ IN ] - when negative, infinite timeout
+ */
+KNS_EXTERN rc_t CC KNSManagerSetMaxConnectRetryTime(KNSManager *self,
+    int32_t millis);
+
+/* GetMaxConnectRetryTime
+ *  returns maximum time when opening HttpFile
+ *
+ *  "millis" [ OUT ] - when negative, infinite timeout
+ */
+KNS_EXTERN rc_t CC KNSManagerGetMaxConnectRetryTime(const KNSManager *self,
+    int32_t *millis);
+
+
 /* SetRetryFirstReads
  *  manages retry on the first HttpFileRead
  */

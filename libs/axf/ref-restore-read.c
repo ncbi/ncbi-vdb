@@ -40,7 +40,6 @@
 #include <kdb/meta.h>
 #include <klib/data-buffer.h>
 #include <insdc/insdc.h>
-#include <align/refseq-mgr.h>
 #include <bitstr.h>
 #include <sysalloc.h>
 #include <stdint.h>
@@ -49,71 +48,20 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "restore-read.h"
+
 #ifdef _DEBUGGING
 #define SUB_DEBUG(msg) DBGMSG(DBG_SRA,DBG_FLAG(DBG_SRA_SUB),msg)
 #else
 #define SUB_DEBUG(msg)
 #endif
 
-typedef struct RestoreRead RestoreRead;
-struct RestoreRead
-{
-    const RefSeqMgr* rmgr;
-};
-
-
-static
-void CC RestoreReadWhack ( void *obj )
-{
-    RestoreRead * self = obj;
-    if ( self != NULL )
-    {
-        rc_t rc;
-        rc = RefSeqMgr_Release( self->rmgr );
-        assert( rc == 0 );
-        free( self );
-    }
-}
-
-
-static
-rc_t RestoreReadMake ( RestoreRead **objp, const VDBManager *mgr )
-{
-	rc_t rc = 0;
-	RestoreRead *obj;
-
-	assert( objp != NULL );
-    assert( mgr != NULL );
-
-    obj = calloc( 1, sizeof( *obj ) );
-    if ( obj == NULL )
-    {
-		rc = RC( rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted );
-    }
-    else
-    {
-        SUB_DEBUG( ( "SUB.Make in 'ref_restore_read.c'\n" ) );
-
-        rc = RefSeqMgr_Make( &obj->rmgr, mgr, errefseq_4NA, 8 * 1024 * 1024, 5 );
-        if ( rc == 0 )
-        {
-		    *objp = obj;
-        }
-        else
-        {
-            *objp = NULL;
-            RestoreReadWhack( obj );
-        }
-	}
-	return rc;
-}
-
 static
 rc_t CC ref_restore_read_impl ( void *data, const VXformInfo *info, int64_t row_id,
                                 VRowResult *rslt, uint32_t argc, const VRowData argv [] )
 {
     rc_t rc;
-    RestoreRead* self = data;
+    RestoreRead *const self = data;
     uint8_t* dst;
     uint32_t read_len     = (uint32_t)argv[ 0 ].u.data.elem_count;
     const uint8_t *read   = argv[ 0 ].u.data.base;
@@ -140,7 +88,7 @@ rc_t CC ref_restore_read_impl ( void *data, const VXformInfo *info, int64_t row_
     }
     else
     {
-        /* resize output row for the total number of reads */    
+        /* resize output row for the total number of bases */    
         rslt->data->elem_bits = 8;
         rc = KDataBufferResize( rslt->data, seq_len );
         if ( rc == 0 )
@@ -164,21 +112,10 @@ rc_t CC ref_restore_read_impl ( void *data, const VXformInfo *info, int64_t row_
                 }
                 else
                 {
-                    INSDC_coord_len read = 0;
-
-                    /* path to parent DB */
-                    const String * accOfParentDb = NULL;
-                    if (info != NULL && info->tbl != NULL) {
-                        const VDatabase * db = NULL;
-                        rc_t r2 = VTableOpenParentRead(info->tbl, &db);
-                        if (r2 == 0)
-                            r2 = VDatabaseGetAccession(db, &accOfParentDb);
-                        VDatabaseRelease(db);
-                    }
+                    unsigned read = 0;
 
                     SUB_DEBUG( ( "SUB.Rd in 'ref_restore_read.c' at: %.*s at %u.%u\n", seqid_len, seqid, seq_start, seq_len ) );
-
-                    rc = RefSeqMgr_ReadForDb( self->rmgr, seqid, seqid_len, seq_start - 1, seq_len, dst, &read, accOfParentDb);
+                    rc = RestoreReadGetSequence(self, seq_start - 1, seq_len, dst, seqid_len, seqid, &read, info->tbl);
                     if ( rc == 0 )
                     {
                         if ( read != seq_len )
@@ -186,8 +123,6 @@ rc_t CC ref_restore_read_impl ( void *data, const VXformInfo *info, int64_t row_
                             rc = RC( rcXF, rcFunction, rcExecuting, rcData, read < seq_len ? rcTooShort : rcTooLong );
                         }
                     }
-
-                    StringWhack(accOfParentDb);
                 }
             }
         }
@@ -202,14 +137,14 @@ rc_t CC ref_restore_read_impl ( void *data, const VXformInfo *info, int64_t row_
 VTRANSFACT_IMPL ( ALIGN_ref_restore_read, 1, 0, 0 ) ( const void *Self, const VXfactInfo *info,
                                                      VFuncDesc *rslt, const VFactoryParams *cp, const VFunctionParams *dp )
 {
-    RestoreRead *fself;
-    rc_t rc = RestoreReadMake ( & fself, info -> mgr);
+    rc_t rc = 0;
+    RestoreRead *fself = RestoreReadMake(info->mgr, &rc);
     if ( rc == 0 )
     {
         rslt->self = fself;
         rslt->u.ndf = ref_restore_read_impl;
         rslt->variant = vftRow;
-        rslt -> whack = RestoreReadWhack;
+        rslt -> whack = RestoreReadFree;
     }
     return rc;
 }

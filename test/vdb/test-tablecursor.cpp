@@ -41,6 +41,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include "WVDB_Fixture.hpp"
+
 using namespace std;
 
 TEST_SUITE( VdbTableCursorTestSuite_Read );

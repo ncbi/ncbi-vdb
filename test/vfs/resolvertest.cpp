@@ -55,6 +55,8 @@
 
 #include <sysalloc.h>
 
+#define ALL
+
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (false)
 
@@ -65,26 +67,6 @@ static rc_t argsHandler(int argc, char* argv[]) {
 TEST_SUITE_WITH_ARGS_HANDLER(VResolverTestSuite, argsHandler);
 
 using namespace std;
-
-// this is NCBI-specific, move to a private repo
-//#ifdef MAC
-//#define NETMNT "/net"
-//#else
-//#define NETMNT "/netmnt"
-//#endif
-//const string Netmnt(NETMNT);
-//
-//static bool hasLocal = true;
-
-static string ToString(const VPath* path)
-{
-    const String * s;
-    if ( VPathMakeString (path, &s) != 0 )
-        throw logic_error ( "ToString(VPath) failed" );
-    string ret = string(s->addr, s->size);
-    free((void*)s);
-    return ret;
-}
 
 class ResolverFixture
 {
@@ -118,6 +100,17 @@ public:
     const VPath * remote;
     const VPath * cache;
 };
+
+#ifdef ALL
+static string ToString(const VPath* path)
+{
+    const String * s;
+    if ( VPathMakeString (path, &s) != 0 )
+        throw logic_error ( "ToString(VPath) failed" );
+    string ret = string(s->addr, s->size);
+    free((void*)s);
+    return ret;
+}
 
 FIXTURE_TEST_CASE ( VDB_2936_resolve_local_WGS_without_version, ResolverFixture )
 {
@@ -368,6 +361,51 @@ FIXTURE_TEST_CASE(VDB_2963_resolve_local_no_new_wgs, ResolverFixtureCustomConfig
         REQUIRE ( false ); // should throw earlier
     } catch (...) { }
 }
+#endif
+
+#ifdef ALL
+TEST_CASE(Remote_vrAlwaysEnable_vs_not) {
+    KConfig * kfg = NULL;
+    REQUIRE_RC(KConfigMakeLocal(&kfg, NULL));
+    REQUIRE_RC(KConfigWriteString(kfg,
+        "/repository/remote/main/SDL.2/resolver-cgi",
+        "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve"));
+
+    VFSManager * vfs = NULL;
+    REQUIRE_RC(VFSManagerMakeLocal(&vfs, kfg));
+    VResolver * resolver = NULL;
+    REQUIRE_RC(VFSManagerGetResolver(vfs, &resolver));
+
+    VPath * run = NULL;
+    REQUIRE_RC(VFSManagerMakePath(vfs, &run, "SRR619505"));
+    VPath * refseq = NULL;
+    REQUIRE_RC(VFSManagerMakePath(vfs, &refseq, "NC_000005.8"));
+
+    const VPath * remote = NULL;
+
+    REQUIRE_RC(VResolverQuery(resolver, 0, run, NULL, &remote, NULL));
+    REQUIRE_RC(VPathRelease(remote)); remote = NULL;
+
+    REQUIRE_RC(VResolverQuery(resolver, 0, refseq, NULL, &remote, NULL));
+    REQUIRE_RC(VPathRelease(remote)); remote = NULL;
+
+    VResolverRemoteEnable(resolver, vrAlwaysEnable);
+
+    REQUIRE_RC(VResolverQuery(resolver, 0, run, NULL, &remote, NULL));
+    REQUIRE_RC(VPathRelease(remote)); remote = NULL;
+
+    REQUIRE_RC(VResolverQuery(resolver, 0, refseq, NULL, &remote, NULL));
+    REQUIRE_RC(VPathRelease(remote)); remote = NULL;
+
+    REQUIRE_RC(VPathRelease(refseq));
+    REQUIRE_RC(VPathRelease(run));
+
+    REQUIRE_RC(VResolverRelease(resolver));
+    REQUIRE_RC(VFSManagerRelease(vfs));
+
+    REQUIRE_RC(KConfigRelease(kfg));
+}
+#endif
 
 //////////////////////////////////////////// Main
 
@@ -408,7 +446,7 @@ extern "C"
     rc_t CC KMain ( int argc, char *argv [] )
     {
         if (
-1) assert(!KDbgSetString("VFS"));
+0) assert(!KDbgSetString("VFS"));
 
         KConfigDisableUserSettings ();
 		rc_t rc;

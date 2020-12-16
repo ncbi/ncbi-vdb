@@ -959,4 +959,3 @@ VCursorGetRow ( struct VCursor * self )
     assert ( self != NULL );
     return & self -> row;
 }
-

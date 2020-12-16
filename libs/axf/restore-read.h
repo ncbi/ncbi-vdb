@@ -24,28 +24,15 @@
  *
  */
 
-#include <sra/sraschema.h>
-#include <sra/sradb-priv.h>
-#include <klib/rc.h>
+typedef struct RestoreRead RestoreRead;
 
-#include "sra-priv.h"
+void RestoreReadFree(void *self);
 
-/*--------------------------------------------------------------------------
- * SRASchema
- *  a schema object pre-loaded with default SRA schema
- */
+RestoreRead *RestoreReadMake(VDBManager const *vmgr, rc_t *rcp);
 
-/* Make
- *  create an instance of the default SRA schema
- */
-rc_t CC VDBManagerMakeSRASchema ( struct VDBManager const *self, struct VSchema **schema )
-{
-    return SRASchemaMake ( schema, self );
-}
-
-rc_t CC SRAMgrMakeSRASchema ( const SRAMgr *self, struct VSchema **schema )
-{
-    if ( self != NULL )
-        return VDBManagerMakeSRASchema ( self -> vmgr, schema );
-    return RC ( rcSRA, rcMgr, rcAccessing, rcSelf, rcNull );
-}
+rc_t RestoreReadGetSequence(  RestoreRead *self
+                            , unsigned start
+                            , size_t length, uint8_t *dst
+                            , size_t id_len, char const *seq_id
+                            , unsigned *actual
+                            , VTable const *forTable);

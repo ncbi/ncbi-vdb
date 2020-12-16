@@ -87,6 +87,12 @@ void *KThreadRun ( void *td )
     return NULL;
 }
 
+#ifndef GUARD_SIZE
+#define GUARD_SIZE (1 * 1024 * 1014)
+#endif
+#ifndef GUARD_SIZE_RETRY_DEFAULT
+#define GUARD_SIZE_RETRY_DEFAULT 0
+#endif
 
 /* Make
  *  create and run a thread
@@ -113,28 +119,7 @@ LIB_EXPORT rc_t CC KThreadMakeStackSize ( KThread **tp,
                 rc = RC ( rcPS, rcThread, rcCreating, rcMemory, rcExhausted );
             else
             {
-                int status;
-                pthread_attr_t attr;
-
-                pthread_attr_init(&attr); // initializes to default values
-                if (stacksize != 0)
-                {
-                    size_t default_stacksize = 0;
-
-                    pthread_attr_getstacksize(&attr, &default_stacksize);
-                    pthread_attr_setstacksize(&attr, stacksize);
-                    pLogMsg(klogDebug, "requesting stack size $(sz), default was $(ds)", "sz=%zu,ds=%zu", stacksize, default_stacksize);
-                }
-                {
-#ifndef GUARD_SIZE
-#define GUARD_SIZE (1 * 1024 * 1014)
-#endif
-                    size_t default_guardsize = 0, guardsize = GUARD_SIZE;
-
-                    pthread_attr_getguardsize(&attr, &default_guardsize);
-                    pthread_attr_setguardsize(&attr, guardsize);
-                    pLogMsg(klogDebug, "requesting guard size $(sz), default was $(ds)", "sz=%zu,ds=%zu", guardsize, default_guardsize);
-                }
+                size_t guardsize = GUARD_SIZE;
 
                 /* finish constructing thread */
                 t -> run = run_thread;
@@ -144,25 +129,63 @@ LIB_EXPORT rc_t CC KThreadMakeStackSize ( KThread **tp,
                 t -> rc = 0;
                 t -> join = true;
 
-                /* attempt to create thread */
-                status = pthread_create ( & t -> thread, &attr, KThreadRun, t );
-                pthread_attr_destroy(&attr);
-                if ( status == 0 )
-                {
-                    * tp = t;
-                    return 0;
-                }
+                for ( ; ; ) {
+                    int status;
+                    pthread_attr_t attr;
+                    
+                    pthread_attr_init(&attr); // initializes to default values
+                    if (stacksize != 0)
+                    {
+                        size_t default_stacksize = 0;
 
-                /* see why we failed */
-                switch ( status )
-                {
-                case EAGAIN:
-                    rc = RC ( rcPS, rcThread, rcCreating, rcThread, rcExhausted );
+                        pthread_attr_getstacksize(&attr, &default_stacksize);
+                        pthread_attr_setstacksize(&attr, stacksize);
+                        pLogMsg(klogDebug, "requesting stack size $(sz), default was $(ds)", "sz=%zu,ds=%zu", stacksize, default_stacksize);
+                    }
+                    if (guardsize != 0) {
+                        size_t default_guardsize = 0;
+
+                        pthread_attr_getguardsize(&attr, &default_guardsize);
+                        pthread_attr_setguardsize(&attr, guardsize);
+                        pLogMsg(klogDebug, "requesting guard size $(sz), default was $(ds)", "sz=%zu,ds=%zu", guardsize, default_guardsize);
+                    }
+
+                    /* attempt to create thread */
+                    status = pthread_create ( & t -> thread, &attr, KThreadRun, t );
+                    pthread_attr_destroy(&attr);
+                    if ( status == 0 )
+                    {
+                        * tp = t;
+                        return 0;
+                    }
+
+                    /* see why we failed */
+                    switch ( status )
+                    {
+                    case EAGAIN:
+                        rc = RC ( rcPS, rcThread, rcCreating, rcThread, rcExhausted );
+                        break;
+#if GUARD_SIZE_RETRY_DEFAULT
+                    case EINVAL:
+                        if (guardsize != 0) {
+                            guardsize = 0;
+#if GUARD_SIZE
+                            pLogMsg(klogWarn, "Requesting a guard size $(sz) failed, retrying with default size...", "sz=%zu", GUARD_SIZE);
+                            continue; /* try again with default guard page size */
+#endif
+                        }
+#if GUARD_SIZE
+                        else {
+                            LogMsg(klogErr, "Requesting the default guard size failed, thread creation failed.");
+                        }
+#endif
+                        /* fallthrough */
+#endif /* GUARD_SIZE_RETRY_DEFAULT */
+                    default:
+                        rc = RC ( rcPS, rcThread, rcCreating, rcNoObj, rcUnknown );
+                    }
                     break;
-                default:
-                    rc = RC ( rcPS, rcThread, rcCreating, rcNoObj, rcUnknown );
                 }
-
                 free ( t );
             }
         }

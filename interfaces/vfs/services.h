@@ -29,6 +29,7 @@
 
 
 #include <kfg/kart.h>     /* EObjectType */
+#include <vdb/quality.h> /* VQuality */
 #include <vfs/resolver.h> /* VRemoteProtocols */
 
 
@@ -40,9 +41,11 @@ extern "C" {
 struct Kart;
 struct KNSManager;
 
+typedef struct KSrvRunIterator KSrvRunIterator;
 typedef struct KService KService;
 typedef struct KSrvError KSrvError;
 typedef struct KSrvResponse KSrvResponse;
+typedef struct KSrvRun KSrvRun;
 
 typedef struct KSrvRespObj KSrvRespObj;
 typedef struct KSrvRespObjIterator KSrvRespObjIterator;
@@ -146,10 +149,20 @@ rc_t KSrvResponseGetCache(const KSrvResponse * self, uint32_t idx,
 rc_t KSrvResponseGetNextToken(const KSrvResponse * self,
     const char ** nextToken);
 
-rc_t KSrvResponseGetLocation(const KSrvResponse * self,
-    const char * acc, const char * name,
+rc_t KSrvResponseGetLocation2(const KSrvResponse * self,
+    const char * acc, const char * name, const char * type,
     const struct VPath ** local, rc_t * localRc,
     const struct VPath ** cache, rc_t * cacheRc);
+
+/************************** KSrvRun ******************************/
+
+rc_t KSrvResponseMakeRunIterator(const KSrvResponse * self,
+    KSrvRunIterator ** it);
+rc_t KSrvRunIteratorRelease(const KSrvRunIterator * self);
+rc_t KSrvRunIteratorNextRun(KSrvRunIterator * self, const KSrvRun ** run);
+rc_t KSrvRunRelease(const KSrvRun * self);
+rc_t KSrvRunQuery(const KSrvRun * self, struct VPath const ** local,
+    struct VPath const ** remote, struct VPath const ** cache, bool * vdbcache);
 
 /************************** KSrvError ******************************
  * KSrvError is generated for Id-s from request that produced an error response
@@ -202,11 +215,14 @@ rc_t KSrvRespObjIteratorNextFile ( KSrvRespObjIterator * self,
 rc_t KSrvRespFileGetAccOrId(const KSrvRespFile * self,
     const char ** acc, uint32_t * id);
 rc_t KSrvRespFileGetClass(const KSrvRespFile * self, const char ** itemClass);
+rc_t KSrvRespFileGetAccession(const KSrvRespFile * self, const char ** acc);
 
 /* type: sra, vdbcache, etc. */
 rc_t KSrvRespFileGetType(const KSrvRespFile * self, const char ** type);
 rc_t KSrvRespFileGetFormat(const struct KSrvRespFile * self,
     ESrvFileFormat * ff);
+
+rc_t KSrvRespFileGetQuality(const KSrvRespFile * self, VQuality * quality);
 
 rc_t KSrvRespFileGetSize(const KSrvRespFile * self, uint64_t *size);
 rc_t KSrvRespFileGetCache ( const KSrvRespFile * self,

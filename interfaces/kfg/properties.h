@@ -209,6 +209,9 @@ KFG_EXTERN rc_t CC KConfig_Set_CacheDebug( KConfig *self, bool value );
 KFG_EXTERN rc_t CC KConfig_Get_GUID( const KConfig *self, char * value, size_t value_size, size_t * written );
 KFG_EXTERN rc_t CC KConfig_Set_GUID( KConfig *self, const char * value );
 
+KFG_EXTERN rc_t CC KConfig_Get_FullQuality( const KConfig *self, bool * value );
+KFG_EXTERN rc_t CC KConfig_Set_FullQuality( KConfig *self, bool value );
+
 #ifdef __cplusplus
 }
 #endif
