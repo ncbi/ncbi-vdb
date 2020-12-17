@@ -1460,7 +1460,7 @@ static rc_t KNSManagerVMakeHttpFileIntUnstableImpl( const KNSManager *self,
                                             String ext;
                                             StringInit ( & ext,
                                                     base + buf -> elem_count - vdbcache . size - 1,
-                                                    vdbcache . size, vdbcache . size );
+                                                    vdbcache . size, vdbcache . len );
                                             if ( ext . addr [ ext . size ] == '\0' &&
                                                 StringEqual ( & vdbcache, & ext ) )
                                             {
@@ -1470,7 +1470,7 @@ static rc_t KNSManagerVMakeHttpFileIntUnstableImpl( const KNSManager *self,
                                                 size_t size = query - base;
                                                 StringInit ( & ext,
                                                     base + size - vdbcache . size,
-                                                    vdbcache . size, vdbcache . size );
+                                                    vdbcache . size, vdbcache . len );
                                                 if ( ext . addr [ ext . size ] == '?' &&
                                                     StringEqual ( & vdbcache, & ext ) )
                                                 {

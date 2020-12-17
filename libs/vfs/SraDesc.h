@@ -1,4 +1,4 @@
-/*===========================================================================
+/*==============================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
 *               National Center for Biotechnology Information
@@ -19,41 +19,4 @@
 *  purpose.
 *
 *  Please cite the author in any work or product based on this material.
-*
-* ==============================================================================
-*
-*/
-
-#ifndef _h_klib_strings_
-#define _h_klib_strings_
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#define ENV_MAGIC_CACHE  "VDB_CACHE_URL"
-#define ENV_MAGIC_CACHE_VDBCACHE  "VDB_CACHE_VDBCACHE"
-#define ENV_MAGIC_LOCAL  "VDB_LOCAL_URL"
-#define ENV_MAGIC_LOCAL_VDBCACHE  "VDB_LOCAL_VDBCACHE"
-#define ENV_MAGIC_REMOTE "VDB_REMOTE_URL"
-#define ENV_MAGIC_REMOTE_VDBCACHE "VDB_REMOTE_VDBCACHE"
-
-#define ENV_MAGIC_REMOTE_NEED_CE  "VDB_REMOTE_NEED_CE"
-#define ENV_MAGIC_REMOTE_NEED_PMT "VDB_REMOTE_NEED_PMT"
-
-#define ENV_MAGIC_CACHE_NEED_CE  "VDB_CACHE_NEED_CE"
-#define ENV_MAGIC_CACHE_NEED_PMT "VDB_CACHE_NEED_PMT"
-
-#define ENV_MAGIC_CE_TOKEN "VDB_CE_TOKEN"
-
-#define ENV_VAR_LOG_HTTP_RETRY "NCBI_VDB_LOG_HTTP_RETRY"
-#define ENV_VAR_SESSION_ID "VDB_SESSION_ID"
-
-
-#define SDL_CGI "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve"
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /*  _h_klib_strings_ */
+* ============================================================================*/

@@ -32,7 +32,8 @@
 #include <vfs/manager-priv.h>
 #include <vfs/path.h>
 #include <vfs/path-priv.h>
-#include <vfs/resolver.h>
+#include <vfs/resolver-priv.h> /* VResolverGetKNSManager */
+#include <vfs/services-priv.h> /* KServiceMakeWithMgr */
 
 #include <krypto/key.h>
 #include <krypto/encfile.h>
@@ -81,6 +82,8 @@
 #include <klib/strings.h> /* ENV_VDB_REMOTE_NEED_CE */
 #include <klib/time.h> 
 #include <klib/vector.h>
+
+#include <vdb/vdb-priv.h> /* VDBManagerGetQuality */
 
 #include "path-priv.h"
 #include "resolver-priv.h"
@@ -1111,6 +1114,7 @@ static rc_t VFSManagerResolvePathResolver (const VFSManager * self,
 {
     rc_t rc = 0;
 
+    assert(out_path);
     *out_path = NULL;
 
     /*
@@ -3049,11 +3053,11 @@ static void VFSManagerLoadLogNamesServiceErrors(VFSManager * self) {
     bool enabled = true;
 
     assert(self);
-
+/* KConfigPrint(self->cfg,0); */
     rc = KConfigReadBool(self->cfg, "/name-resolver/log-names-service-errors",
         &enabled);
     if (rc == 0)
-        VFSManagerLogNamesServiceErrors(self, enabled);
+        LogNamesServiceErrorsInit(enabled);
 }
 
 /* Make
@@ -3066,7 +3070,7 @@ LIB_EXPORT rc_t CC VFSManagerMake ( VFSManager ** pmanager )
 /* Make
  */
 static rc_t CC VFSManagerMakeFromKfgImpl ( struct VFSManager ** pmanager,
-    struct KConfig * cfg, bool local )
+    struct KConfig * cfg, KNSManager * kmgr, bool local )
 {
     rc_t rc;
 
@@ -3119,7 +3123,12 @@ static rc_t CC VFSManagerMakeFromKfgImpl ( struct VFSManager ** pmanager,
                         rc = KKeyStoreMake ( & obj -> keystore, obj -> cfg );
                         if ( rc == 0 )
                         {
-                            if (local)
+                            if (kmgr != NULL) {
+                                rc = KNSManagerAddRef(kmgr);
+                                if (rc == 0)
+                                    obj->kns = kmgr;
+                            }
+                            else if (local)
                                 rc = KNSManagerMakeLocal ( & obj -> kns, cfg );
                             else
                                 rc = KNSManagerMakeWithConfig
@@ -3158,13 +3167,19 @@ static rc_t CC VFSManagerMakeFromKfgImpl ( struct VFSManager ** pmanager,
 LIB_EXPORT rc_t CC VFSManagerMakeFromKfg ( struct VFSManager ** pmanager,
     struct KConfig * cfg)
 {
-    return VFSManagerMakeFromKfgImpl(pmanager, cfg, false);
+    return VFSManagerMakeFromKfgImpl(pmanager, cfg, NULL, false);
+}
+
+LIB_EXPORT rc_t CC VFSManagerMakeFromKns(struct VFSManager ** pmanager,
+    struct KConfig * cfg, KNSManager * kns)
+{
+    return VFSManagerMakeFromKfgImpl(pmanager, cfg, kns, false);
 }
 
 LIB_EXPORT rc_t CC VFSManagerMakeLocal ( struct VFSManager ** pmanager,
     struct KConfig * cfg)
 {
-    return VFSManagerMakeFromKfgImpl(pmanager, cfg, true);
+    return VFSManagerMakeFromKfgImpl(pmanager, cfg, NULL, true);
 }
 
 LIB_EXPORT rc_t CC VFSManagerGetCWD (const VFSManager * self, KDirectory ** cwd)
@@ -4320,6 +4335,9 @@ static bool VFSManagerCheckEnvAndAdImpl(const VFSManager * self,
     const char *slash = NULL;
     char rs[PATH_MAX] = "";
 
+    VQuality quality = VDBManagerGetQuality(NULL);
+    assert(quality >= 0);
+
     if (outPath == NULL)
         return RC(rcVFS, rcPath, rcResolving, rcParam, rcNull);
 
@@ -4354,27 +4372,67 @@ static bool VFSManagerCheckEnvAndAdImpl(const VFSManager * self,
     rc = KNgcObjMakeFromCmdLine(&ngc);
     if (ngc != NULL) {
         rc = KNgcObjGetProjectId(ngc, &projectId);
-        if (rc == 0)
-            if ((KDirectoryPathType(self->cwd, "%s/%s_dbGaP-%d.sra",
-                rs, slash, projectId) & ~kptAlias) == kptFile)
+        if (rc == 0) {
+            if (quality < eQualLast
+                && (quality == eQualDefault || quality == eQualNo))
             {
-                rc_t r = VFSManagerMakePath(self, (VPath **)outPath,
-                    "%s/%s_dbGaP-%d.sra", rs, slash, projectId);
-                if (r == 0)
-                    found = true;
+                if ((KDirectoryPathType(self->cwd, "%s/%s_dbGaP-%d.noqual.sra",
+                    rs, slash, projectId) & ~kptAlias) == kptFile)
+                {
+                    rc_t r = VFSManagerMakePath(self, (VPath **)outPath,
+                        "%s/%s_dbGaP-%d.noqual.sra", rs, slash, projectId);
+                    if (r == 0)
+                        found = true;
+                }
             }
+            if (!found && (quality == eQualDefault || quality == eQualFull
+                || quality >= eQualLast))
+            {
+                if ((KDirectoryPathType(self->cwd, "%s/%s_dbGaP-%d.sra",
+                    rs, slash, projectId) & ~kptAlias) == kptFile)
+                {
+                    rc_t r = VFSManagerMakePath(self, (VPath **)outPath,
+                        "%s/%s_dbGaP-%d.sra", rs, slash, projectId);
+                    if (r == 0)
+                        found = true;
+                }
+            }
+        }
     }
 
-    if (!found)
-        if ((KDirectoryPathType(self->cwd, "%s/%s.sra", rs, slash)
-            & ~kptAlias) == kptFile)
+    if (!found) {
+        if (quality < eQualLast
+            && (quality == eQualDefault || quality == eQualNo))
         {
-            rc_t r = VFSManagerMakePath(self, (VPath **)outPath,
-                "%s/%s.sra", rs, slash);
-            if (r == 0)
-                found = true;
-            rc = 0;
+            if ((KDirectoryPathType(self->cwd, "%s/%s.noqual.sra", rs, slash) &
+                ~kptAlias) == kptFile)
+            {
+                rc_t r = VFSManagerMakePath(self, (VPath**)outPath,
+                    "%s/%s.noqual.sra", rs, slash);
+                if (r != 0)
+                    rc = 0;
+                else {
+                    rc = VPathSetQuality((VPath*)outPath, eQualNo);
+                    found = true;
+                }
+            }
         }
+        if (!found && (quality == eQualDefault || quality == eQualFull
+            || quality >= eQualLast))
+        {
+            if ((KDirectoryPathType(self->cwd, "%s/%s.sra", rs, slash) &
+                ~kptAlias) == kptFile)
+            {
+                rc_t r = VFSManagerMakePath(self, (VPath **)outPath,
+                    "%s/%s.sra", rs, slash);
+                if (r == 0)
+                    found = true;
+                rc = 0;
+            }
+        }
+    }
+
+    /* TODO: add processing of eQualFullOnly and eQualDblOnly */
 
     if (found) {
         VPath * vdbcache = NULL;

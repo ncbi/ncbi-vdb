@@ -1154,9 +1154,27 @@ bool KNSManagerLogNcbiVdbNetError ( const KNSManager *self )
 LIB_EXPORT rc_t CC KNSManagerSetAdCaching (
     struct KNSManager *self, bool enabled )
 {
-    if ( self != NULL ) { self->enabledResolveToAd = enabled; }
+    if ( self != NULL ) 
+        self->enabledResolveToAd = enabled;
     return 0;
 }
+
+LIB_EXPORT rc_t CC KNSManagerGetAdCaching(
+    const KNSManager* self, bool * enabled)
+{
+    assert(self && enabled);
+    *enabled = self->enabledResolveToAd;
+    return 0;
+}
+
+LIB_EXPORT rc_t CC KNSManagerGetResolveToCache(
+    const KNSManager* self, bool * resolveToCache)
+{
+    assert(self && resolveToCache);
+    *resolveToCache = self->resolveToCache;
+    return 0;
+}
+
 /*
 LIB_EXPORT rc_t CC KNSManagerSetClientIPv4 (
     KNSManager *self, uint32_t client_ipv4_addr)

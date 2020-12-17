@@ -332,6 +332,23 @@ VDB_EXTERN rc_t CC VDatabaseSetUserData ( const VDatabase *self,
     void *data, void ( CC * destroy ) ( void *data ) );
 
 
+/* GetQualityCapability
+ *  can the database deliver full quality? synthetic quallity?
+ */
+VDB_EXTERN rc_t CC VDatabaseGetQualityCapability ( const VDatabase *self,
+    bool *fullQuality, bool *synthQuality );
+
+/* SetFullQualityType
+ *  switch database to deliver full quality
+ */
+VDB_EXTERN rc_t CC VDatabaseSetFullQualityType ( VDatabase *self );
+
+/* SetSynthQualityType
+ *  switch database to deliver synthetic quality
+ */
+VDB_EXTERN rc_t CC VDatabaseSetSynthQualityType ( VDatabase *self );
+
+
 #ifdef __cplusplus
 }
 #endif
