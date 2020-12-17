@@ -739,6 +739,8 @@ TEST_CASE ( RefVariation_bounds_N )
     REQUIRE_EQ ( string ( "CCCCTTAGGC" ), vrefvar_bounds_N0 ( ::refvarAlgRA ) );
 }
 
+#if __INTEL_COMPILER || defined __SSE2__
+
 // Nucstrstr
 static 
 void 
@@ -894,6 +896,8 @@ TEST_CASE ( Nucstrstr_Positional_Error )
 {   
     REQUIRE_THROW ( RunNucStrtr ( "ACGTACGT", "(TACC", true ) );
 }
+
+#endif
 
 //////////////////////////////////////////// Main
 extern "C"

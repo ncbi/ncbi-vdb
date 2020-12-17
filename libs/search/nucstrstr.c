@@ -51,8 +51,6 @@
 #define RETURN_LOCATION 1
 #define USE_MEMALIGN 0
 
-#endif
-
 #if USE_MEMALIGN
 #include <malloc.h>
 #endif
@@ -4619,3 +4617,27 @@ LIB_EXPORT int CC NucStrstrSearch ( const NucStrstr *self,
     }
     return 0;
 }
+
+
+#else
+
+#include <klib/rc.h>
+
+LIB_EXPORT int CC NucStrstrMake ( NucStrstr **nss, int positional,
+    const char *query, unsigned int len )
+{
+    return RC(rcText, rcString, rcSearching, rcMessage, rcUnsupported);
+}
+
+LIB_EXPORT void CC NucStrstrWhack ( NucStrstr *self )
+{
+}
+
+LIB_EXPORT int CC NucStrstrSearch ( const NucStrstr *self,
+    const void *ncbi2na, unsigned int pos, unsigned int len , unsigned int * selflen )
+{
+    return RC(rcText, rcString, rcSearching, rcParam, rcUnsupported);
+}
+
+#endif
+

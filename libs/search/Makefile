@@ -81,8 +81,7 @@ SEARCH_SRC = \
 	agrep-myersunltd \
 	agrep-dp \
 	sw-search \
-
-#temporary out	nucstrstr
+	nucstrstr
 
 SEARCH_OBJ = \
 	$(addsuffix .$(LOBX),$(SEARCH_SRC))
