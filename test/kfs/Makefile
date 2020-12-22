@@ -34,6 +34,7 @@ TEST_TOOLS = \
 	test-kfs \
 	test-ramfile \
 	test-resolve \
+	test-link \
 	test-cachetee \
 	test-cachetee2 \
 	test-cachetee3 \
@@ -139,6 +140,18 @@ TEST_RESOLVE_LIB = \
 	-lktst
 
 $(TEST_BINDIR)/test-resolve: $(TEST_RESOLVE_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_RESOLVE_LIB)
+
+#-------------------------------------------------------------------------------
+# test-link
+#
+TEST_L_SRC = \
+	test-link
+
+TEST_L_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_L_SRC))
+
+$(TEST_BINDIR)/test-link: $(TEST_L_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_RESOLVE_LIB)
 
 #-------------------------------------------------------------------------------

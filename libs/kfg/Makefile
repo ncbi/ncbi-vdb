@@ -100,7 +100,8 @@ KFG_SRC = \
 	properties \
 	ngc \
 	report-kfg \
-    keystore
+	keystore \
+	docker
 
 # flex/bison should only be invoked manually in an environment ensures the correct versions:
 # bison 2.5, flex 2.5.35

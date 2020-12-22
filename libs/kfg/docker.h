@@ -20,8 +20,20 @@
  *
  *  Please cite the author in any work or product based on this material.
  *
- *============================================================================
+ * ===========================================================================
  *
  */
 
-#define LIBVDB_VERS 0x02060004
+#ifndef _h_docker_
+#define _h_docker_
+
+#if LINUX
+#define CAN_HAVE_CONTAINER_ID 1
+#endif
+
+#define IMAGE_GUID_KEY "/LIBS/IMAGE_GUID"
+
+int KConfig_Get_GUID_Add_Container(  char *const value
+                                   , size_t const value_size);
+
+#endif /* _h_docker_ */

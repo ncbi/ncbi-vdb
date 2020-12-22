@@ -45,6 +45,14 @@ struct KHttpFile
 {
     KFile dad;
 
+    /************************************************************************/
+    /* readWaitMillis and totalReadWaitMillis HAVE TO BE FIRST RIGHT AFTER dad
+    TO BE ABLE TO GET IT FROM BOTH KHttpFile AND KStableHttpFile:
+    SEE stable-http-file.c : HttpFileGetReadTimeouts() */
+    int32_t readWaitMillis;
+    int32_t totalReadWaitMillis;
+    /************************************************************************/
+
     uint64_t file_size;
 
     const KNSManager * kns;

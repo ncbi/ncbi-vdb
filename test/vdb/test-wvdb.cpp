@@ -471,6 +471,79 @@ FIXTURE_TEST_CASE ( VCursorCommit_without_VCursorCloseRow, WVDB_Fixture )
     }
 }
 
+FIXTURE_TEST_CASE ( VCursorCommit_BufferOverflow, WVDB_Fixture )
+{   // VDB-4341
+    m_databaseName = ScratchDir + GetName();
+    RemoveDatabase();
+
+    string schemaText =
+        "table table1 #1.0.0 { column ascii column1; };"
+        "database root_database #1 { table table1 #1 TABLE1; } ;";
+
+    const char* TableName = "TABLE1";
+    const char* ColumnName1 = "column1";
+
+    MakeDatabase ( schemaText, "root_database" );
+    {
+        VCursor* cursor = CreateTable ( TableName );
+
+        // make sure we have enough memory
+        try
+        {
+           char * mem = (char*)new char[20][1000][1000][1000];
+           delete [] mem;
+        }
+        catch (...)
+        {
+           cout << "not enough memory, skipping VCursorCommit_BufferOverflow" << endl;
+           return;
+        }
+
+        uint32_t column_idx1;
+        REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx1, ColumnName1 ) );
+        REQUIRE_RC ( VCursorOpen ( cursor ) );
+
+        REQUIRE_RC ( VCursorOpenRow ( cursor ) );
+        string s = string ( 1858195865, ' ' );
+        REQUIRE_RC ( VCursorWrite ( cursor, column_idx1, 8, s.c_str(), 0, s.size() ) );
+        REQUIRE_RC ( VCursorCommitRow ( cursor ) );
+        REQUIRE_RC ( VCursorCloseRow ( cursor ) );
+        // REQUIRE_RC ( VCursorFlushPage ( cursor ) );
+
+        REQUIRE_RC ( VCursorOpenRow ( cursor ) );
+        s = string ( 1355058268, ' ' );
+        REQUIRE_RC ( VCursorWrite ( cursor, column_idx1, 8, s.c_str(), 0, s.size() ) );
+        REQUIRE_RC ( VCursorCommitRow ( cursor ) );
+        REQUIRE_RC ( VCursorCloseRow ( cursor ) );
+        // REQUIRE_RC ( VCursorFlushPage ( cursor ) );
+
+        REQUIRE_RC ( VCursorOpenRow ( cursor ) );
+        s = string ( 2093616421, ' ' );
+        REQUIRE_RC ( VCursorWrite ( cursor, column_idx1, 8, s.c_str(), 0, s.size() ) );
+        REQUIRE_RC ( VCursorCommitRow ( cursor ) );
+        REQUIRE_RC ( VCursorCloseRow ( cursor ) );
+        // REQUIRE_RC ( VCursorFlushPage ( cursor ) );
+
+        REQUIRE_RC ( VCursorOpenRow ( cursor ) );
+        s = string ( 1651157214, ' ' );
+        REQUIRE_RC ( VCursorWrite ( cursor, column_idx1, 8, s.c_str(), 0, s.size() ) );
+        REQUIRE_RC ( VCursorCommitRow ( cursor ) );
+        REQUIRE_RC ( VCursorCloseRow ( cursor ) );
+        // REQUIRE_RC ( VCursorFlushPage ( cursor ) );
+
+        REQUIRE_RC ( VCursorOpenRow ( cursor ) );
+        s = string ( 2089204295, ' ' );
+        REQUIRE_RC ( VCursorWrite ( cursor, column_idx1, 8, s.c_str(), 0, s.size() ) );
+        REQUIRE_RC ( VCursorCommitRow ( cursor ) );
+        REQUIRE_RC ( VCursorCloseRow ( cursor ) );
+        // REQUIRE_RC ( VCursorFlushPage ( cursor ) );
+
+        REQUIRE_RC ( VCursorCommit ( cursor ) );
+
+        REQUIRE_RC ( VCursorRelease ( cursor ) );
+    }
+}
+
 //////////////////////////////////////////// Main
 extern "C"
 {

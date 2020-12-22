@@ -19,6 +19,9 @@
     <ClCompile Include="..\..\..\libs\cloud\gcp.c">
       <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\cloud\gcp-authentication.c">
+      <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
+    </ClCompile>
     <ClCompile Include="..\..\..\libs\ext\mbedtls\aes.c">
       <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
     </ClCompile>
@@ -369,8 +372,20 @@
     <ClCompile Include="..\..\..\libs\axf\template-len.c">
         <ObjectFileName>$(IntDir)axf-%(Filename).obj</ObjectFileName>
     </ClCompile>
+      <ClCompile Include="..\..\..\libs\axf\range-list.c">
+        <ObjectFileName>$(IntDir)axf-%(Filename).obj</ObjectFileName>
+      </ClCompile>
+      <ClCompile Include="..\..\..\libs\axf\refseq.c">
+        <ObjectFileName>$(IntDir)axf-%(Filename).obj</ObjectFileName>
+      </ClCompile>
+      <ClCompile Include="..\..\..\libs\axf\wgs.c">
+        <ObjectFileName>$(IntDir)axf-%(Filename).obj</ObjectFileName>
+      </ClCompile>
+      <ClCompile Include="..\..\..\libs\axf\restore-read.c">
+        <ObjectFileName>$(IntDir)axf-%(Filename).obj</ObjectFileName>
+      </ClCompile>
 
-    <ClCompile Include="..\..\..\libs\kdb\btree.c">
+      <ClCompile Include="..\..\..\libs\kdb\btree.c">
         <ObjectFileName>$(IntDir)wkdb-%(Filename).obj</ObjectFileName>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\kdb\dbmgr-cmn.c">
@@ -1331,9 +1346,6 @@
     <ClCompile Include="..\..\..\libs\sra\sramgr-cmn.c">
         <ObjectFileName >$(IntDir)wsra-%(Filename).obj</ObjectFileName>
     </ClCompile>
-    <ClCompile Include="..\..\..\libs\sra\sraschema.c">
-        <ObjectFileName >$(IntDir)wsra-%(Filename).obj</ObjectFileName>
-    </ClCompile>
     <ClCompile Include="..\..\..\libs\sra\sratbl-cmn.c">
         <ObjectFileName >$(IntDir)wsra-%(Filename).obj</ObjectFileName>
     </ClCompile>
@@ -1341,9 +1353,6 @@
         <ObjectFileName >$(IntDir)wsra-%(Filename).obj</ObjectFileName>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\sra\wsramgr.c">
-        <ObjectFileName >$(IntDir)wsra-%(Filename).obj</ObjectFileName>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\sra\wsraschema-stub.c">
         <ObjectFileName >$(IntDir)wsra-%(Filename).obj</ObjectFileName>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\sra\wsratbl.c">
@@ -1568,6 +1577,12 @@
         <ObjectFileName >$(IntDir)vfs-%(Filename).obj</ObjectFileName>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\vfs\services.c">
+        <ObjectFileName >$(IntDir)vfs-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vfs\services-cache.c">
+        <ObjectFileName >$(IntDir)vfs-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vfs\SraDesc.c">
         <ObjectFileName >$(IntDir)vfs-%(Filename).obj</ObjectFileName>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\vfs\remote-services.c">

@@ -336,6 +336,7 @@ LIB_EXPORT rc_t CC KNSManagerMakeConnection ( const KNSManager *self,
     struct KEndPoint const *to )
 {
     timeout_t tm;
+    timeout_t * ptm = NULL;
 
     if ( self == NULL ) {
         if ( conn == NULL ) {
@@ -347,9 +348,12 @@ LIB_EXPORT rc_t CC KNSManagerMakeConnection ( const KNSManager *self,
         return RC ( rcNS, rcStream, rcConstructing, rcSelf, rcNull );
     }
 
-    TimeoutInit ( &tm, self->conn_timeout );
+    if (self->conn_timeout >= 0) {
+        TimeoutInit ( &tm, self->conn_timeout );
+        ptm = &tm;
+    }
 
-    return KNSManagerMakeRetryTimedConnection ( self, conn, &tm,
+    return KNSManagerMakeRetryTimedConnection ( self, conn, ptm,
         self->conn_read_timeout, self->conn_write_timeout, from, to );
 }
 /* MakeTimedConnection
@@ -377,6 +381,7 @@ LIB_EXPORT rc_t CC KNSManagerMakeTimedConnection (
     struct KEndPoint const *to )
 {
     timeout_t tm;
+    timeout_t * ptm = NULL;
 
     if ( self == NULL ) {
         if ( conn == NULL ) {
@@ -388,10 +393,13 @@ LIB_EXPORT rc_t CC KNSManagerMakeTimedConnection (
         return RC ( rcNS, rcStream, rcConstructing, rcSelf, rcNull );
     }
 
-    TimeoutInit ( &tm, self->conn_timeout );
+    if (self->conn_timeout >=0 ) {
+        TimeoutInit ( &tm, self->conn_timeout );
+        ptm = &tm;
+    }
 
     return KNSManagerMakeRetryTimedConnection (
-        self, conn, &tm, readMillis, writeMillis, from, to );
+        self, conn, ptm, readMillis, writeMillis, from, to );
 }
 
 /* MakeRetryConnection
@@ -443,15 +451,15 @@ LIB_EXPORT rc_t CC KNSManagerSetConnectionTimeouts ( KNSManager *self,
     }
 
     /* limit values */
-    if ( connectMillis < 0 || connectMillis > MAX_CONN_LIMIT ) {
+    if ( connectMillis > MAX_CONN_LIMIT ) {
         connectMillis = MAX_CONN_LIMIT;
     }
 
-    if ( readMillis < 0 || readMillis > MAX_CONN_READ_LIMIT ) {
+    if ( readMillis > MAX_CONN_READ_LIMIT ) {
         readMillis = MAX_CONN_READ_LIMIT;
     }
 
-    if ( writeMillis < 0 || writeMillis > MAX_CONN_WRITE_LIMIT ) {
+    if ( writeMillis > MAX_CONN_WRITE_LIMIT ) {
         writeMillis = MAX_CONN_WRITE_LIMIT;
     }
 
@@ -617,47 +625,58 @@ static void KNSManagerSetNCBI_VDB_NET ( KNSManager *self, const KConfig *kfg )
 static int32_t KNSManagerLoadConnTimeout ( KConfig *kfg )
 {
     int64_t result = 0;
+
     rc_t rc = KConfigReadI64 ( kfg, "/libs/kns/connect/timeout", &result );
-    if ( rc != 0 || result < 0 ) { return MAX_CONN_LIMIT; }
+    if ( rc != 0 ) 
+        result = MAX_CONN_LIMIT;
 
     return result;
 }
 static int32_t KNSManagerLoadConnReadTimeout ( KConfig *kfg )
 {
     int64_t result = 0;
+
     rc_t rc = KConfigReadI64 ( kfg, "/libs/kns/connect/timeout/read", &result );
-    if ( rc != 0 || result < 0 ) { return MAX_CONN_READ_LIMIT; }
+    if ( rc != 0 )
+        result = MAX_CONN_READ_LIMIT;
 
     return result;
 }
 static int32_t KNSManagerLoadConnWriteTimeout ( KConfig *kfg )
 {
     int64_t result = 0;
+
     rc_t rc
         = KConfigReadI64 ( kfg, "/libs/kns/connect/timeout/write", &result );
-    if ( rc != 0 || result < 0 ) { return MAX_CONN_WRITE_LIMIT; }
+    if ( rc != 0 )
+        result = MAX_CONN_WRITE_LIMIT;
 
     return result;
 }
 
 static int32_t KNSManagerLoadHttpReadTimeout ( KConfig *kfg )
 {
-    int64_t result = 0;
+    int64_t result = 0; /* when negative - infinite timeout */
+
     rc_t rc = KConfigReadI64 ( kfg, "/http/timeout/read", &result );
-    if ( rc != 0 || result < 0 ) { return MAX_HTTP_READ_LIMIT; }
+    if ( rc != 0 )
+        result = MAX_HTTP_READ_LIMIT;
 
     return result;
 }
 static int32_t KNSManagerLoadHttpWriteTimeout ( KConfig *kfg )
 {
-    int64_t result = 0;
+    int64_t result = 0; /* when negative - infinite timeout */
+
     rc_t rc = KConfigReadI64 ( kfg, "/http/timeout/write", &result );
-    if ( rc != 0 || result < 0 ) { return MAX_HTTP_WRITE_LIMIT; }
+    if ( rc != 0 )
+        result = MAX_HTTP_WRITE_LIMIT;
 
     return result;
 }
 
-static uint32_t KNSManagerLoadTotalWaitForReliableURLs(const KConfig *kfg)
+static
+int32_t KNSManagerLoadTotalWaitForReliableURLs(const KConfig *kfg)
 {
     rc_t rc = 0;
 
@@ -672,8 +691,33 @@ static uint32_t KNSManagerLoadTotalWaitForReliableURLs(const KConfig *kfg)
     }
 
     rc = KConfigReadI64(kfg, "/http/reliable/wait", &result);
-    if (rc != 0 || result < 0)
-        result = 10 * 60 * 1000; /* 10 min */
+    if (rc != 0
+        || result < 0)  /* no support for infinite wait in HTTP retry loop in */
+    {     /* StableHttpFile: it might lead to infinite loop of reading errors */
+        result = MAX_HTTP_TOTAL_READ_LIMIT;
+    }
+
+    return result;
+}
+
+static int32_t KNSManagerLoadTotalConnectWaitForReliableURLs(
+    const KConfig *kfg)
+{
+    rc_t rc = 0;
+
+    int64_t result = 0;
+
+    const char * str = getenv("NCBI_VDB_RELIABLE_CONNECT_WAIT");
+    if (str != NULL) {
+        char *end = NULL;
+        result = strtou64(str, &end, 0);
+        if (end[0] == 0)
+            return result;
+    }
+
+    rc = KConfigReadI64(kfg, "/http/reliable/connect/wait", &result);
+    if (rc != 0)
+        result = MAX_HTTP_TOTAL_CONNECT_LIMIT;
 
     return result;
 }
@@ -830,11 +874,16 @@ static rc_t CC KNSManagerMakeConfigImpl ( KNSManager **mgrp, KConfig *kfg )
             mgr->conn_write_timeout = KNSManagerLoadConnWriteTimeout ( kfg );
             mgr->http_read_timeout = KNSManagerLoadHttpReadTimeout ( kfg );
             mgr->http_write_timeout = KNSManagerLoadHttpWriteTimeout ( kfg );
-            mgr->maxTotalWaitForReliableURLs_ms
-                = KNSManagerLoadTotalWaitForReliableURLs ( kfg );
-            mgr->maxNumberOfRetriesOnFailureForReliableURLs
-                = KNSManagerLoadMaxNumberOfRetriesOnFailureForReliableURLs (
-                    kfg );
+
+            mgr->maxTotalWaitForReliableURLs_ms =
+                KNSManagerLoadTotalWaitForReliableURLs ( kfg );
+
+            mgr->maxTotalConnectWaitForReliableURLs_ms =
+                KNSManagerLoadTotalConnectWaitForReliableURLs ( kfg );
+
+            mgr->maxNumberOfRetriesOnFailureForReliableURLs =
+                KNSManagerLoadMaxNumberOfRetriesOnFailureForReliableURLs( kfg );
+
             mgr->retryFirstRead = KNSManagerLoadRetryFirstRead(kfg);
             mgr->retryFile = KNSManagerLoadRetryFile ( kfg );
             mgr->max_http_read_timeout = 60 * 1000; /* 1 minute */
@@ -1105,9 +1154,27 @@ bool KNSManagerLogNcbiVdbNetError ( const KNSManager *self )
 LIB_EXPORT rc_t CC KNSManagerSetAdCaching (
     struct KNSManager *self, bool enabled )
 {
-    if ( self != NULL ) { self->enabledResolveToAd = enabled; }
+    if ( self != NULL ) 
+        self->enabledResolveToAd = enabled;
     return 0;
 }
+
+LIB_EXPORT rc_t CC KNSManagerGetAdCaching(
+    const KNSManager* self, bool * enabled)
+{
+    assert(self && enabled);
+    *enabled = self->enabledResolveToAd;
+    return 0;
+}
+
+LIB_EXPORT rc_t CC KNSManagerGetResolveToCache(
+    const KNSManager* self, bool * resolveToCache)
+{
+    assert(self && resolveToCache);
+    *resolveToCache = self->resolveToCache;
+    return 0;
+}
+
 /*
 LIB_EXPORT rc_t CC KNSManagerSetClientIPv4 (
     KNSManager *self, uint32_t client_ipv4_addr)
@@ -1287,6 +1354,26 @@ LIB_EXPORT rc_t CC KNSManagerGetRetryFailedReads(const KNSManager *self,
     }
 }
 
+/* SetMaxConnectRetryTime
+ *  sets maximum time when opening HttpFile
+ *
+ *  "millis" - when negative, infinite timeout
+ */
+LIB_EXPORT rc_t CC KNSManagerSetMaxConnectRetryTime(KNSManager *self,
+    int32_t millis)
+{
+    if (self == NULL)
+        return RC(rcNS, rcMgr, rcUpdating, rcSelf, rcNull);
+    else {
+        if (millis < 0)
+            self->maxTotalConnectWaitForReliableURLs_ms = ~0;
+        else
+            self->maxTotalConnectWaitForReliableURLs_ms = millis;
+
+        return 0;
+    }
+}
+
 /* SetMaxReadRetryTime
  *  sets maximum time in HttpFileRead retry loop
  *
@@ -1322,6 +1409,27 @@ LIB_EXPORT rc_t CC KNSManagerGetMaxReadRetryTime(const KNSManager *self,
             *millis = -1;
         else
             *millis = self->maxTotalWaitForReliableURLs_ms;
+
+        return 0;
+    }
+}
+
+
+/* GetMaxConnectRetryTime
+ *  returns maximum time when opening HttpFile
+ */
+LIB_EXPORT rc_t CC KNSManagerGetMaxConnectRetryTime(const KNSManager *self,
+    int32_t *millis)
+{
+    if (self == NULL)
+        return RC(rcNS, rcMgr, rcAccessing, rcSelf, rcNull);
+    else if (millis == NULL)
+        return RC(rcNS, rcMgr, rcAccessing, rcParam, rcNull);
+    else {
+        if (self->maxTotalConnectWaitForReliableURLs_ms == ~0)
+            *millis = -1;
+        else
+            *millis = self->maxTotalConnectWaitForReliableURLs_ms;
 
         return 0;
     }

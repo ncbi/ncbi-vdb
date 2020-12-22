@@ -46,9 +46,10 @@ struct KThread
      *  "data" [ IN, OPAQUE ] - user-supplied thread data
      */
     static inline rc_t Make ( KThread **t,
-             rc_t ( CC * run_thread ) ( const KThread *, void * ), void * data )
+             rc_t ( CC * run_thread ) ( const KThread *, void * ), void * data,
+             size_t stacksize = 0)
         throw ()
-    { return KThreadMake ( t, run_thread, data ); }
+    { return KThreadMakeStackSize ( t, run_thread, data, stacksize ); }
 
 
     /* AddRef

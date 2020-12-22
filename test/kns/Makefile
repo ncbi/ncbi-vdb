@@ -41,7 +41,8 @@ TEST_TOOLS = \
 	test-http-request \
 	KNSManagerSingletonTest \
 	test-connect \
-	test-refresh-expired
+	test-refresh-expired \
+	test-timeouts \
 
 include $(TOP)/build/Makefile.env
 
@@ -284,8 +285,6 @@ connect: test-connect
 	$(TEST_BINDIR)/test-connect
 
 #----------------------------------------------------------------
-
-#----------------------------------------------------------------
 # test-refresh-expired
 #
 REFRESH_SRC = \
@@ -301,6 +300,18 @@ $(TEST_BINDIR)/test-refresh-expired: $(REFRESH_OBJ)
 
 refresh: test-refresh-expired
 	$(TEST_BINDIR)/test-refresh-expired
+
+#----------------------------------------------------------------
+# test-timeouts
+#
+TO_SRC = \
+	test-timeouts \
+
+TO_OBJ = \
+	$(addsuffix .$(OBJX),$(TO_SRC))
+
+$(TEST_BINDIR)/test-timeouts: $(TO_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
 
 #----------------------------------------------------------------
 

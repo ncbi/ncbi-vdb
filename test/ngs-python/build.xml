@@ -21,7 +21,9 @@
     <property name="python.exe"     value="python" />
 
     <target name="install">
+        <property name="PYTHONUSERBASE" value="\tmp\ngs"/>
         <exec executable="${python.exe}" dir="${ngs-source.dir}\ngs-python" failonerror="true" >
+	    <env key="PYTHONUSERBASE" value="${PYTHONUSERBASE}"/>
             <arg value="setup.py" />
             <arg value="install" />
             <arg value="--user" />
@@ -29,7 +31,9 @@
     </target>
 
     <target name="runtests" depends="install">
+        <property name="PYTHONUSERBASE" value="\tmp\ngs"/>
         <exec executable="${python.exe}" failonerror="true">
+	    <env key="PYTHONUSERBASE" value="${PYTHONUSERBASE}"/>
             <env key="Path" path="${vdb.dir};${ngs.dir};${env.Path}"/>
             <env key="NGS_PY_DOWNLOAD_LIBRARY" value="0"/>
             <env key="NGS_PY_LIBRARY_PATH" path="${vdb.dir};${ngs.dir}"/>

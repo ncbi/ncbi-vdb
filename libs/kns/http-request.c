@@ -1153,7 +1153,7 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
     skip = hostname->size - stor31.size;
     if (hostname->size >= stor31.size &&
         string_cmp(stor31.addr, stor31.size, hostname->addr + skip,
-            hostname->size - skip, stor31.size) == 0)
+            hostname->size - skip, stor31.len) == 0)
     {
         cpId = cloud_provider_aws;
     }
@@ -1165,20 +1165,30 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
         if (hostname->size >= amazonaws.size &&
             string_cmp(amazonaws.addr, amazonaws.size,
                 hostname->addr + skip, hostname->size - skip,
-                amazonaws.size) == 0)
+                amazonaws.len) == 0)
         {
             cpId = cloud_provider_aws;
         }
         else {
             String google;
-            CONST_STRING(&google, "storage.googleapis.com");
+            CONST_STRING(&google, "storage.cloud.google.com");
             skip = 0;
             if (hostname->size >= google.size &&
                 string_cmp(google.addr, google.size,
                     hostname->addr + skip, hostname->size - skip,
-                    google.size) == 0)
+                    google.len) == 0)
             {
                 cpId = cloud_provider_gcp;
+            }
+            else {
+                CONST_STRING(&google, "storage.googleapis.com");
+                if (hostname->size >= google.size &&
+                    string_cmp(google.addr, google.size,
+                        hostname->addr + skip, hostname->size - skip,
+                        google.len) == 0)
+                {
+                    cpId = cloud_provider_gcp;
+                }
             }
         }
     }
@@ -1481,8 +1491,10 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
 
         /* create message */
         rc = KClientHttpRequestFormatMsgInt ( self, & buffer, method, uriForm );
-        if ( rc != 0 )
+        if ( rc != 0 ) {
+            KDataBufferWhack( & buffer );
             break;
+        }
 
         /* send the message and create a response */
         rc = KClientHttpSendReceiveMsg ( self -> http, _rslt,
@@ -1494,13 +1506,22 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
             rc = KClientHttpSendReceiveMsg ( self -> http, _rslt,
                 (char *) buffer.base, buffer.elem_count - 1, NULL,
                 (char *) self -> url_buffer . base );
-            if ( rc != 0 )
+            if ( rc != 0 ) {
+                KDataBufferWhack( & buffer );
                 break;
+            }
         }
+
+        KDataBufferWhack( & buffer );
 
         rslt = * _rslt;
         rslt -> expiration = expiration; /* expiration has to reach the caller */
         expiration = NULL;
+
+        assert(!rc);
+        rc = KDataBufferWhack(&buffer);
+        if (rc != 0)
+            return rc;
 
         /* look at status code */
         switch ( rslt -> status )
@@ -1858,7 +1879,7 @@ static bool GovSiteByHttp ( const char * path ) {
 
         /* resolver-cgi is called over http */
         if ( path_size > size &&
-             strcase_cmp ( path, size, http . addr, size, size ) == 0 )
+             strcase_cmp ( path, size, http . addr, size, http.len ) == 0 )
         {
             EUrlParseState state = eUPSBegin;
             unsigned i = 0;
@@ -1888,7 +1909,7 @@ static bool GovSiteByHttp ( const char * path ) {
                 CONST_STRING ( & gov, ".gov" );
                 size = gov . size;
                 if ( strcase_cmp
-                    ( path + i - 5, size, gov . addr, size, size ) == 0 )
+                    ( path + i - 5, size, gov . addr, size, gov.len ) == 0 )
                 {
                     return true;
                 }

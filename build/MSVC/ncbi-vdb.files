@@ -130,6 +130,18 @@
     <ClCompile Include="..\..\..\libs\axf\template-len.c">
       <ObjectFileName>$(IntDir)axf-%(Filename).obj</ObjectFileName>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\axf\range-list.c">
+      <ObjectFileName>$(IntDir)axf-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\axf\refseq.c">
+      <ObjectFileName>$(IntDir)axf-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\axf\wgs.c">
+      <ObjectFileName>$(IntDir)axf-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\axf\restore-read.c">
+      <ObjectFileName>$(IntDir)axf-%(Filename).obj</ObjectFileName>
+    </ClCompile>
 
     <ClCompile Include="..\..\..\libs\blast\blast-mgr.c">
       <ObjectFileName>$(IntDir)blast-%(Filename).obj</ObjectFileName>
@@ -160,6 +172,9 @@
       <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\cloud\gcp.c">
+      <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\cloud\gcp-authentication.c">
       <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
     </ClCompile>
 
@@ -1548,12 +1563,6 @@
     <ClCompile Include="..\..\..\libs\sra\sramgr.c">
         <ObjectFileName >$(IntDir)sra-%(Filename).obj</ObjectFileName>
     </ClCompile>
-    <ClCompile Include="..\..\..\libs\sra\sraschema-stub.c">
-        <ObjectFileName >$(IntDir)sra-%(Filename).obj</ObjectFileName>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\sra\sraschema.c">
-        <ObjectFileName >$(IntDir)sra-%(Filename).obj</ObjectFileName>
-    </ClCompile>
     <ClCompile Include="..\..\..\libs\sra\sratbl-cmn.c">
         <ObjectFileName >$(IntDir)sra-%(Filename).obj</ObjectFileName>
     </ClCompile>
@@ -1769,6 +1778,12 @@
         <ObjectFileName >$(IntDir)vfs-%(Filename).obj</ObjectFileName>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\vfs\services.c">
+        <ObjectFileName >$(IntDir)vfs-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vfs\services-cache.c">
+        <ObjectFileName >$(IntDir)vfs-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vfs\SraDesc.c">
         <ObjectFileName >$(IntDir)vfs-%(Filename).obj</ObjectFileName>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\vfs\remote-services.c">

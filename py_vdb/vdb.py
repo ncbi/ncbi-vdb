@@ -688,12 +688,12 @@ class VCursor :
     def CommitRow( self ) :
         rc = self.__mgr.VCursorCommitRow( self.__ptr )
         if rc != 0 :
-            self.__mgr.raise_rc( rc, "VCursorCommitRow( %s )"%( self.__tab._VTable__name ), self )
+            self.__mgr.raise_rc( rc, "VCursorCommitRow( '%s' )"%( self.__tab._VTable__name ), self )
 
     def RepeatRow( self, count ) :
         rc = self.__mgr.VCursorRepeatRow( self.__ptr, count )
         if rc != 0 :
-            self.__mgr.raise_rc( rc, "VCursorRepeatRow( %s, %d )"%( self.__tab._VTable__name, count ), self )
+            self.__mgr.raise_rc( rc, "VCursorRepeatRow( '%s', %d )"%( self.__tab._VTable__name, count ), self )
 
     def CloseRow( self ) :
         rc = self.__mgr.VCursorCloseRow( self.__ptr )
@@ -703,7 +703,7 @@ class VCursor :
     def FlushPage( self ) :
         rc = self.__mgr.VCursorFlushPage( self.__ptr )
         if rc != 0 :
-            self.__mgr.raise_rc( rc, "VCursorFlushPage( %s )"%( self.__tab._VTable__name ), self )
+            self.__mgr.raise_rc( rc, "VCursorFlushPage( '%s' )"%( self.__tab._VTable__name ), self )
 
     def RowId( self ) :
         row_id = c_longlong()
@@ -711,6 +711,11 @@ class VCursor :
         if rc != 0 :
             self.__mgr.raise_rc( rc, "VCursorRowId( '%s' )"%( self.__tab._VTable__name ), self )
         return row_id.value
+
+    def SetRowId( self, value ) :
+        rc = self.__mgr.VCursorSetRowId( self.__ptr, value )
+        if rc != 0 :
+            self.__mgr.raise_rc( rc, "VCursorSetRowId( '%s', %d )"%( self.__tab._VTable__name, value ), self )
 
     def ReferenceList( self ) :
         reflist_ptr = c_void_p()
@@ -1896,6 +1901,7 @@ class manager :
         self.VCursorCloseRow = self.__func__( "VCursorCloseRow", [ c_void_p ] )
         self.VCursorIdRange = self.__func__( "VCursorIdRange", [ c_void_p, c_int, c_void_p, c_void_p ] )
         self.VCursorRowId = self.__func__( "VCursorRowId", [ c_void_p, c_void_p ] )
+        self.VCursorSetRowId = self.__func__( "VCursorSetRowId", [ c_void_p, c_longlong ] )
         self.VCursorOpenRow = self.__func__( "VCursorOpenRow", [ c_void_p ] )
         self.VCursorFindNextRowIdDirect = self.__func__( "VCursorFindNextRowIdDirect", [ c_void_p, c_int, c_longlong, c_void_p ] )
 
