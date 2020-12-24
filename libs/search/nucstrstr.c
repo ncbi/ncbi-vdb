@@ -1609,7 +1609,9 @@ LIB_EXPORT void CC NucStrstrWhack ( NucStrstr *self )
     }
 }
 
- 
+/*--------------------------------------------------------------------------
+ * expression evaluation
+ */
 #if __BYTE_ORDER == __LITTLE_ENDIAN 
     #define LOAD64( ptr ) bswap_64 ( * ( const uint64_t* ) ptr )
 #else
@@ -1620,10 +1622,6 @@ LIB_EXPORT void CC NucStrstrWhack ( NucStrstr *self )
     #endif
 #endif
 
-
-/*--------------------------------------------------------------------------
- * expression evaluation
- */
 #if ! INTEL_INTRINSICS
 static
 int eval_2na_64 ( const NucStrFastaExpr *self,
