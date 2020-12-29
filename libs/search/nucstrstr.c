@@ -45,8 +45,7 @@
 #define TRACE_RESULT 1
 #define TRACE_PATMASK 1
 
-//#if __INTEL_COMPILER || defined __SSE2__
-#if 0
+#if __INTEL_COMPILER || defined __SSE2__
 
 #include <emmintrin.h>
 #define INTEL_INTRINSICS 1
