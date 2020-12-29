@@ -3214,6 +3214,7 @@ static rc_t _KConfigUseRealignAppWithExtFlatAlg(KConfig * self,
         "/repository/user/main/public/apps/sraRealign/withExtFlat");
 }
 
+#if 0
 static rc_t _KConfigUpdateDefault( KConfig * self, bool * updated,
     const char * node_name, 
     const char * node2_name,
@@ -3276,20 +3277,27 @@ static rc_t _KConfigUpdateDefault( KConfig * self, bool * updated,
 
     return rc;
 }
+#endif
 
 static rc_t _KConfigLowerAscpRate ( KConfig * self, bool * updated ) {
+    return 0;
+/*
     return _KConfigUpdateDefault(self, updated,
         "/tools/ascp/max_rate", NULL, "1000m", "450m",
         "/tools/ascp/max_rate/450m");
+*/
 }
 
 static rc_t _KConfigUseTraceCgi(KConfig * self, bool * updated) {
+    return 0;
+/*
     return _KConfigUpdateDefault(self, updated,
         "/repository/remote/main/CGI/resolver-cgi",
         "/repository/remote/protected/CGI/resolver-cgi",
         "https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi",
         RESOLVER_CGI,
         "/repository_remote/CGI/resolver-cgi/trace");
+*/
 }
 
 /* create Accession as Directory repository when it does not exist */
