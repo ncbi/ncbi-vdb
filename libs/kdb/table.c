@@ -179,7 +179,7 @@ rc_t KTableSever ( const KTable *self )
 void KTableGetName(KTable const *self, char const **rslt)
 {
     char *sep;
-    
+
     *rslt = self->path;
     sep = strrchr(self->path, '/');
     if (sep != NULL)
@@ -213,7 +213,7 @@ rc_t KTableMake ( KTable **tblp, const KDirectory *dir, const char *path )
     /* YES,
       DBG_VFS should be used here to be printed along with other VFS messages */
     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE), ("Making KTable '%s'\n", path));
-     
+
     * tblp = tbl;
     return 0;
 }
@@ -243,7 +243,8 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *self,
             z = snprintf(aTblpath, sizeof aTblpath, "%s", path);
     }
     else*/
-        vsnprintf ( aTblpath, sizeof aTblpath, path, args );
+    if (path != NULL)
+        z = vsnprintf ( aTblpath, sizeof aTblpath, path, args );
     if ( z < 0 || ( size_t ) z >= sizeof aTblpath )
         rc = RC ( rcDB, rcMgr, rcOpening, rcPath, rcExcessive );
     else
@@ -531,7 +532,7 @@ LIB_EXPORT bool CC KTableExists ( const KTable *self, uint32_t type, const char 
  *  valid values are kptIndex and kptColumn
  *
  *  "resolved" [ OUT ] and "rsize" [ IN ] - optional output buffer
- *  for fundamenta object name if "alias" is not a fundamental name, 
+ *  for fundamenta object name if "alias" is not a fundamental name,
  *
  *  "name" [ IN ] - NUL terminated object name
  */
@@ -798,7 +799,7 @@ static
 bool CC KTableListIdxFilter ( const KDirectory *dir, const char *name, void *data )
 {
     const size_t sz = strlen(name);
-    
+
     if (sz > 4 && strcmp(&name[sz - 4], ".md5") == 0)
         return false;
     return true;

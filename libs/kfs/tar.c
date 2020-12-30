@@ -56,7 +56,7 @@
 #endif
 
 /* -----
- * offset of is the count of bytes between the base of a structure and 
+ * offset of is the count of bytes between the base of a structure and
  * a particular member of that structure
  */
 #ifndef OFFSET_OF
@@ -105,8 +105,8 @@ static const char * get_bool_string (bool b)
  *
  * Tar (tape archiver) started possibly as a unix utility in BSD rivalling
  * the cpio from the AT&T System III.  The exact derivation is unimportant
- * and some names might be slightly misleading based on historical 
- * inaccuracies but successful implmentation is not dependant on such 
+ * and some names might be slightly misleading based on historical
+ * inaccuracies but successful implmentation is not dependant on such
  * accuracy in historical trivia but rather on accuracy in technical details.
  *
  * Posix attempted to standardize the growingly divergent variants of tar
@@ -114,7 +114,7 @@ static const char * get_bool_string (bool b)
  * compatible extensions.
  *
  * For the purposes of this implmentation we will refer to the known to the
- * author versions of tar and include the tar like aspects of the posix pax 
+ * author versions of tar and include the tar like aspects of the posix pax
  * replacement for tar.
  *
  * Cpio support could be added if desired with only some difficulty.
@@ -138,7 +138,7 @@ static const char * get_bool_string (bool b)
  *        broken than most implmentation of a POSIX/ustar tar header
  *        based tar. Schilling says its the only real implmentation of
  *        a ustar based tar but it isn't fully compliant by design.
- *  GNU 89  - a selected variant of tar from FSF/GNU that is a broken 
+ *  GNU 89  - a selected variant of tar from FSF/GNU that is a broken
  *        implementation of a POSIX/ustar header based tar.
  *  GNU 01  - A slight redo of the FSF/GNU tar format.  There are actually
  *        evolving variants all of which are still somewhat broken
@@ -151,7 +151,7 @@ static const char * get_bool_string (bool b)
  *        the end of a tar file to meet some super blocksize.  Based on
  *        where it fits in it would be found when looking for a header
  *        for the next file included in a tar archive.
- *  RAW - a convention to mean a header block of a type that has not been 
+ *  RAW - a convention to mean a header block of a type that has not been
  *        determined.
  */
 #define TYPES() \
@@ -172,7 +172,7 @@ typedef enum tar_header_type
 static const char * get_type_string(tar_header_type t)
 {
     static const char * type_error = "Error";
-    static const char * type_strings[] = 
+    static const char * type_strings[] =
         {
             TYPES()
         };
@@ -188,18 +188,18 @@ static const char * get_type_string(tar_header_type t)
  * Tar headers are almost ASCII based but definitely byte/octet based so all
  * elements are best defined as arrays of char and use casts to signed and unsigned
  * where appropriate in interpretation..
- * 
+ *
  * All Tar files or streams are divided into blocks of 512 bytes
- * This is significant in the file data in that the last block 
+ * This is significant in the file data in that the last block
  * of a file is supposed to be padded with NUL to fill out a block
  * and then be followed by two blocks of all NUL bytes.
- * headers are also 512 bytes with various but fairly consistent 
+ * headers are also 512 bytes with various but fairly consistent
  * interpretations of what is where with in that block
  *
  * Most tar utilities further define super blocks consisting of a number of blocks
  * typically 10 of them for a length of 5120 bytes.  This is irrelevant for this
  * implmentation.  By definition a tar file ends with two "zero blocks" and enough
- * more after that to fill one of these super blocks.  We ignore all aspects of 
+ * more after that to fill one of these super blocks.  We ignore all aspects of
  * this.
  */
 #define TAR_BLOCK_SIZE      (512)
@@ -211,11 +211,11 @@ typedef char tar_raw_block [TAR_BLOCK_SIZE];
  */
 
 /* --------------------
- * Tar file names are always 100 bytes long and include preceding 
- * path names.  The utilities do not precluded paths that put the 
+ * Tar file names are always 100 bytes long and include preceding
+ * path names.  The utilities do not precluded paths that put the
  * files outside of the "base" where the tar file was created.
  *
- * To handle tar files made by older tar utilities if the last 
+ * To handle tar files made by older tar utilities if the last
  * character is '/' then the file should be assumed to be a directory.
  *
  * This 'type' is used for both the name of the object being archived
@@ -232,8 +232,8 @@ typedef char    tar_file_name   [TAR_NAME_LEN];
  * Zero '0' not NUL pre-fill unused bytes.  a user permision of 0644 would be stored as
  * "0000644" with a NUL terminator.
  *
- * The format is 7 octal ASCII bytes with only the last 4 being 
- * significant.  That is the first three are always '0'.  The 8th 
+ * The format is 7 octal ASCII bytes with only the last 4 being
+ * significant.  That is the first three are always '0'.  The 8th
  * byte is NUL.
  *
  * Older utilities might put preceding ' ' characters or
@@ -301,7 +301,7 @@ typedef char    tar_id      [TAR_ID_LEN];
 /* --------------------
  * Tar file size elements are 12 bytes long with 11 used
  * for octal characters making the maximum size of a file
- * for pure classic or Posix tar limited to 8 GBytes.  
+ * for pure classic or Posix tar limited to 8 GBytes.
  * Various tar utilities handle longer files in different
  * ways if at all.
  *
@@ -398,7 +398,7 @@ struct nv_pair
 };
 static const char * get_link_string(tar_link l)
 {
-    static const struct nv_pair pairs[] = 
+    static const struct nv_pair pairs[] =
         {
             LINKS()
             {NULL, 0}
@@ -745,7 +745,7 @@ typedef union tar_header
  * local module-wide function like macros
  */
 /* -----
- * offset of is the count of bytes between the base of a structure and 
+ * offset of is the count of bytes between the base of a structure and
  * a particular member of that structure
  */
 #define OFFSET_OF(structure,member) ((size_t)((&(((structure*)0)->member))-(0)))
@@ -756,18 +756,18 @@ typedef union tar_header
  */
 
 /* ======================================================================
- * return the RFC 2045 base 64 value for a byte character 
+ * return the RFC 2045 base 64 value for a byte character
  * -1 for any out of range
  *
  * base 64 uses A-Z as 0-25, a-z as 26-51, 0-9 as 52-61, + as 62 and / as 63
  */
 static int64_t decode_base64char (uint8_t byte)
 {
-    /* 
+    /*
      * trade off of space for table versus time to upsize the return
      * and reupsize where it is used
      */
-    static const int8_t table[] = 
+    static const int8_t table[] =
     {
         /*
          * 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F
@@ -840,7 +840,7 @@ static int64_t decode_base64string (const uint8_t* str, size_t len)
  *  gid 8   0-2097151
  *  size    12  0-8589934591    up to 8 Giga-Byte files
  *  mtime   12  0-8589934591    1970/01/01 00:00:00 GMT-2242/03/16 12:56:31 GMT
- *  
+ *
  *  atime   12  0-8589934591    1970/01/01 00:00:00 GMT-2242/03/16 12:56:31 GMT
  *  ctime   12  0-8589934591    1970/01/01 00:00:00 GMT-2242/03/16 12:56:31 GMT
  *
@@ -869,7 +869,7 @@ static int64_t tar_strtoll ( const uint8_t * str, size_t len, bool silent )
 
     /* -----
      * Most are going to be simple ASCII octal using '0'-'7' with NUL terminator
-     * leading 0 is not required but of course is accepted to match tar 
+     * leading 0 is not required but of course is accepted to match tar
      * header specifications
      */
     if (((temp_buff[0] >= '0')&&(temp_buff[0] <= '7'))||(temp_buff[0] == ' '))
@@ -880,7 +880,7 @@ static int64_t tar_strtoll ( const uint8_t * str, size_t len, bool silent )
     /* -----
      * "base-256" well that is "binary" big endian of some length
      *
-     * For fields longer than eight bytes upper bytes will shift out of 
+     * For fields longer than eight bytes upper bytes will shift out of
      * significance into the bit bucket.
      */
     else if ((temp_buff[0] == 0x80)||(temp_buff[0] == 0xFF)) /* from GNU tar */
@@ -1222,7 +1222,7 @@ static void whack_chunk_list(KTarState * self)
 
 #if HANDLING_EXTENDED_HEADERS
 /* ======================================================================
- * mini class for handling pax/posix/ustar 
+ * mini class for handling pax/posix/ustar
  * extended headers and global extended headers
  *
  * Many of the values are included to get past range limits imposed by the ustar format
@@ -1232,7 +1232,7 @@ static void whack_chunk_list(KTarState * self)
  * values in the header are string values written as with a 'printf' using the form
  *  printf("%d %s=%s\n",<length>,<keyword>,<value>)
  *
- * <length> is described ambiguously as 
+ * <length> is described ambiguously as
  *  "The <length> field shall be the decimal length of the extended header record in octets,
  *   including the trailing <newline>."
  * So does that include the length of <length>? or not?
@@ -1255,7 +1255,7 @@ static void whack_chunk_list(KTarState * self)
  * Keyword can have pretty much any character in it except '='.
  *
  * <value> is a UTF-8 string that ends with the '\n'.
- * 
+ *
  *
  * charset is limited to (omit the quotation marks)
  *      <value>           Formal Standard
@@ -1299,7 +1299,7 @@ typedef enum pax_charset
     PAX_CS_BINARY
 } pax_charset;
 
-static const char * pax_charset_strings[] = 
+static const char * pax_charset_strings[] =
 {
     "Not Specified",
     "ISO-IR 646 1990",
@@ -1510,7 +1510,7 @@ static struct   tar_entry_data
      * "make it fit".
      */
 
-    
+
     entry_type  type;
 
     char *  path;
@@ -1620,14 +1620,14 @@ static
 uint64_t process_one_entry (KTarState * self, uint64_t offset, uint64_t hard_limit, bool silent)
 {
     /* -----
-     * full_path will store the full path of an element which can be longer than 
+     * full_path will store the full path of an element which can be longer than
      * will fit in the standard tar header.  This will also usually be an output
      * to the consumer.
      */
     char full_path [ 4096 ];
 
     /* -----
-     * full_path will store the full link (if any) of an element which can be longer than 
+     * full_path will store the full link (if any) of an element which can be longer than
      * will fit in the standard tar header.  This will also usually be an output
      * to the consumer.
      */
@@ -1663,7 +1663,7 @@ uint64_t process_one_entry (KTarState * self, uint64_t offset, uint64_t hard_lim
     tar_link link = LINK_OLDNORMAL_FILE;
 
 #if _DEBUGGING && 0
-/* We are not using these components of the tar header block at this point 
+/* We are not using these components of the tar header block at this point
  * but with a debug build it doesn't hurt to verify we fully understand the
  * header.
  */
@@ -1674,7 +1674,7 @@ uint64_t process_one_entry (KTarState * self, uint64_t offset, uint64_t hard_lim
     mode_t mode = 0;
 
     /* -----
-     * current_offset is the offset of the current header which might be a different header 
+     * current_offset is the offset of the current header which might be a different header
      * than the one we started with.
      */
     uint64_t current_offset = offset;
@@ -1723,7 +1723,7 @@ uint64_t process_one_entry (KTarState * self, uint64_t offset, uint64_t hard_lim
 
     /* -----
      * set the header at the current TAR block.
-     * That is the map starts at offset buffer_start and we are at 
+     * That is the map starts at offset buffer_start and we are at
      * current_offset into the file so we take the map as a pointer
      * and add to it the difference between our current offset and the map's
      * initial offset (first header is at map + 0 - 0)
@@ -1804,7 +1804,7 @@ uint64_t process_one_entry (KTarState * self, uint64_t offset, uint64_t hard_lim
                         break;
                     }
 #if 0
-                    PLOGMSG ((klogDebug4, 
+                    PLOGMSG ((klogDebug4,
                               "SPARSE ext: $(count): $(offset) $(size)",
                               PLOG_3(PLOG_I64(count),PLOG_X64(offset),PLOG_X64(size)),
                               ix,
@@ -1887,7 +1887,7 @@ uint64_t process_one_entry (KTarState * self, uint64_t offset, uint64_t hard_lim
 
         /* -----
          * several extensions to USTAR/TAR format headers involve
-         * prepending another header type to give a name longer 
+         * prepending another header type to give a name longer
          * than will fit in tthe header itself.  If we had one of
          * those use that name.  But if the full path has not been
          * set use the path from this header.
@@ -1908,7 +1908,7 @@ uint64_t process_one_entry (KTarState * self, uint64_t offset, uint64_t hard_lim
                           current_header.h->posix.prefix));
 #endif
                 /* -----
-                 * copy in the prefix, force a NUL just in case. then add a directory divider 
+                 * copy in the prefix, force a NUL just in case. then add a directory divider
                  */
                 string_copy(full_path, sizeof(full_path), current_header.h->posix.prefix, TAR_PREFIX_LEN);
                 full_path[TAR_PREFIX_LEN] = 0x00;
@@ -1975,7 +1975,7 @@ uint64_t process_one_entry (KTarState * self, uint64_t offset, uint64_t hard_lim
                     }
 
                     ret = sparse_data_push (&self->sparse_q, soffset, ssize);
-                    if (ret) 
+                    if (ret)
                     {
                         sparse_data_kill(&self->sparse_q);
                         return -1;
@@ -2018,7 +2018,7 @@ uint64_t process_one_entry (KTarState * self, uint64_t offset, uint64_t hard_lim
             }
             done = true;
             break;
-            
+
             /* ----------
              * These types we ignore and they are defined to not have a data size
              */
@@ -2033,11 +2033,11 @@ uint64_t process_one_entry (KTarState * self, uint64_t offset, uint64_t hard_lim
                         __func__,
                         get_link_string(current_header.h->tar.link),
                         get_link_string(current_header.h->tar.link),
-                        (uint64_t)(current_offset)+(uint64_t)(OFFSET_OF(tar_v7_header,link)))); 
+                        (uint64_t)(current_offset)+(uint64_t)(OFFSET_OF(tar_v7_header,link))));
             data_size = 0; /* data size is specifically to be ignored */
             done = true;
             break;
-            
+
             /* ----------
              * These types we ignore as a final block or a block unto themselves and are
              * not part of a series of blocks and they are defined to have a data size
@@ -2052,10 +2052,10 @@ uint64_t process_one_entry (KTarState * self, uint64_t offset, uint64_t hard_lim
                         get_link_string(current_header.h->tar.link),
                         get_link_string(current_header.h->tar.link),
                         data_size,
-                        (uint64_t)(current_offset)+(uint64_t)(OFFSET_OF(tar_v7_header,link)))); 
+                        (uint64_t)(current_offset)+(uint64_t)(OFFSET_OF(tar_v7_header,link))));
             done = true;
             break;
-            
+
             /* ----------
              * These types we ignore as a block with in a series of blocks
              * and they are defined to have a data size
@@ -2070,43 +2070,43 @@ uint64_t process_one_entry (KTarState * self, uint64_t offset, uint64_t hard_lim
                         __func__,
                         get_link_string(current_header.h->tar.link),
                         get_link_string(current_header.h->tar.link),
-                        (uint64_t)(current_offset)+(uint64_t)(OFFSET_OF(tar_v7_header,link)))); 
+                        (uint64_t)(current_offset)+(uint64_t)(OFFSET_OF(tar_v7_header,link))));
             break;
-            
+
             /* some link types we ignore this block */
         default:
             TAR_DEBUG (("%s: Ignoring block with link %s(%c/%02.2x) @ %lu\n",
-                        __func__, 
+                        __func__,
                         get_link_string(current_header.h->tar.link),
                         current_header.h->tar.link,
                         (unsigned)(current_header.h->tar.link),
                         (uint64_t)(current_offset)+(uint64_t)(OFFSET_OF(tar_v7_header,link))));
             break;
-            
+
         case LINK_NEXT_LONG_LINK:   /* long link name */
             /* -----
-             * Long link name needs access now to its full set of data blocks, request a window shift 
+             * Long link name needs access now to its full set of data blocks, request a window shift
              * if it is not currently accessible
              */
             if ( (uint64_t)( offset + sizeof( tar_header ) + data_size ) > hard_limit )
                 return 0;
-            
+
             string_copy(full_link, sizeof(full_link), (char*)(current_header.b + sizeof(tar_header)), data_size);
             break;
         case LINK_NEXT_LONG_NAME:   /* long path name */
             /* -----
-             * Long path name needs access now to its full set of data blocks, request a window shift 
+             * Long path name needs access now to its full set of data blocks, request a window shift
              * if it is not currently accessible
              */
             if ( (uint64_t)( offset + sizeof( tar_header ) + data_size ) > hard_limit )
             {
                 return 0;
             }
-            
+
             string_copy(full_path, sizeof(full_path), (char*)(current_header.b + sizeof(tar_header)), data_size);
             break;
         }
-        
+
         /* -----
          * move the current header offset to past the data blocks
          */
@@ -2129,9 +2129,9 @@ uint64_t process_one_entry (KTarState * self, uint64_t offset, uint64_t hard_lim
         {
             return 0;
         }
-        
+
     } while (! done);
-    
+
     /* -----
      * generate output for this entry
      */
@@ -2230,7 +2230,7 @@ uint64_t process_one_entry (KTarState * self, uint64_t offset, uint64_t hard_lim
                                    mtime, mode,
                                    self->num_chunks,
                                    self->chunks,
-                                   (KCreateMode)(kcmInit|kcmParents), 
+                                   (KCreateMode)(kcmInit|kcmParents),
                                    full_path);
             whack_chunk_list (self);
             break;
@@ -2275,7 +2275,7 @@ uint64_t process_one_entry (KTarState * self, uint64_t offset, uint64_t hard_lim
 
 
 static
-rc_t KArcParseTAR_intern ( KToc * self, 
+rc_t KArcParseTAR_intern ( KToc * self,
                            const void * kvoid,
                            bool silent )
 {
@@ -2331,7 +2331,7 @@ rc_t KArcParseTAR_intern ( KToc * self,
     else if ( ( rc = map_tar_file ( &state, 0 ) ) != 0 )
     {
         if ( !silent )
-            PLOGMSG( klogFatal, 
+            PLOGMSG( klogFatal,
                     ( klogFatal, "Failed to $(operation) of size $(size)",
                       "operation=%s,size=%lu", "mmap", filesize ) );
         return rc;
@@ -2407,7 +2407,7 @@ rc_t KArcParseTAR_intern ( KToc * self,
  *
  * returns 0 for good archive and -1 for bad archive
  */
-LIB_EXPORT rc_t CC KArcParseTAR ( KToc * self, 
+LIB_EXPORT rc_t CC KArcParseTAR ( KToc * self,
               const void * kvoid,
               bool ( CC * ignored )( const KDirectory *, const char *, void * ),
               void *also_ignored )
@@ -2416,7 +2416,7 @@ LIB_EXPORT rc_t CC KArcParseTAR ( KToc * self,
 }
 
 
-LIB_EXPORT rc_t CC KArcParseTAR_silent ( KToc * self, 
+LIB_EXPORT rc_t CC KArcParseTAR_silent ( KToc * self,
               const void * kvoid,
               bool ( CC * ignored )( const KDirectory *, const char *, void * ),
               void *also_ignored )
@@ -2430,9 +2430,9 @@ LIB_EXPORT int CC KDirectoryVOpenTarArchiveRead ( struct KDirectory const *self,
 {
     char path [ 4096 ];
     /*VDB-4386: cannot treat va_list as a pointer!*/
-    int size = /*(args == NULL) ?
-        snprintf  ( path, sizeof path, "%s", fmt ) :*/
-        vsnprintf ( path, sizeof path, fmt, args );
+    int size = 0;
+    if ( fmt != NULL ) /*(args == NULL) ? snprintf  ( path, sizeof path, "%s", fmt ) :*/
+        size = vsnprintf ( path, sizeof path, fmt, args );
     if ( size < 0 || size >= ( int ) sizeof path )
         return RC ( rcFS, rcDirectory, rcOpening, rcPath, rcExcessive );
 
@@ -2446,9 +2446,9 @@ LIB_EXPORT int CC KDirectoryVOpenTarArchiveRead_silent ( struct KDirectory const
 {
     char path [ 4096 ];
     /*VDB-4386: cannot treat va_list as a pointer!*/
-    int size = /*(args == NULL) ?
-        snprintf  ( path, sizeof path, "%s", fmt ) :*/
-        vsnprintf ( path, sizeof path, fmt, args );
+    int size = 0;
+    if ( fmt != NULL ) /*(args == NULL) ? snprintf  ( path, sizeof path, "%s", fmt ) :*/
+        size = vsnprintf ( path, sizeof path, fmt, args );
     if ( size < 0 || size >= ( int ) sizeof path )
         return RC ( rcFS, rcDirectory, rcOpening, rcPath, rcExcessive );
 
@@ -2463,14 +2463,14 @@ LIB_EXPORT int CC KDirectoryVOpenTarArchiveRead_silent_preopened ( struct KDirec
 {
     char path [ 4096 ];
     /*VDB-4386: cannot treat va_list as a pointer!*/
-    int size = /*(args == NULL) ?
-        snprintf  ( path, sizeof path, "%s", fmt ) :*/
-        vsnprintf ( path, sizeof path, fmt, args );
+    int size = 0;
+    if ( fmt != NULL ) /*(args == NULL) ? snprintf  ( path, sizeof path, "%s", fmt ) :*/
+        size = vsnprintf ( path, sizeof path, fmt, args );
     if ( size < 0 || size >= ( int ) sizeof path )
         return RC ( rcFS, rcDirectory, rcOpening, rcPath, rcExcessive );
 
     /* putting off parameter validation into this call */
-    return KDirectoryOpenArcDirRead_silent_preopened ( self, tar_dir, false, path, tocKFile, 
+    return KDirectoryOpenArcDirRead_silent_preopened ( self, tar_dir, false, path, tocKFile,
                                       (void*)f, KArcParseTAR_silent, NULL, NULL );
 }
 
@@ -2551,7 +2551,7 @@ LIB_EXPORT bool CC validate_header_offsets( void )
     check_size(tar_gnu_89_header,495);
     /*check_size(tar_new_gnu_header,512); */
     check_size(tar_sparse_header,505);
-  
+
 
     /* tar_header union */
     check_offset(tar_header,raw,0);

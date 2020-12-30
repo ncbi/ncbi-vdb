@@ -517,6 +517,7 @@ rc_t init_token_source ( KTokenText *tt, KTokenSource *src,
 /*-    if (args == NULL)
         num_writ = string_copy ( full, fsize, path, string_size ( path ));
     else*/
+    if ( path != NULL )
         rc = string_vprintf ( full, fsize, & num_writ, path, args );
     if ( rc == 0 )
     {

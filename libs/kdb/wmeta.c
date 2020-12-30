@@ -368,7 +368,7 @@ bool CC KMDataNodeInflate_v1 ( PBSTNode *n, void *data )
         pb -> rc = RC ( rcDB, rcMetadata, rcConstructing, rcMemory, rcExhausted );
         return true;
     }
-     
+
     b -> par = pb -> par;
     b -> meta = pb -> meta;
     b -> value = ( void* ) ( name + size + 1 );
@@ -378,7 +378,7 @@ bool CC KMDataNodeInflate_v1 ( PBSTNode *n, void *data )
     KRefcountInit ( & b -> refcount, 0, "KMDataNode", "inflate", name );
     b -> read_only = 0;
     strcpy ( b -> name, name );
-     
+
     /* a name with no associated value */
     if ( b -> vsize == 0 )
     {
@@ -413,7 +413,7 @@ rc_t KMDataNodeInflateAttr ( KMDataNode *n, bool byteswap )
     {
         KMDataNodeInflateData pb;
         size_t bst_size = PBSTreeSize ( bst );
-        
+
         pb . meta = n -> meta;
         pb . par = n;
         pb . bst = & n -> attr;
@@ -423,9 +423,9 @@ rc_t KMDataNodeInflateAttr ( KMDataNode *n, bool byteswap )
         pb . byteswap = byteswap;
         PBSTreeDoUntil ( bst, 0, KMAttrNodeInflate, & pb );
         rc = pb . rc;
-        
+
         PBSTreeWhack ( bst );
-        
+
         n -> value = ( char* ) n -> value + bst_size;
         n -> vsize -= bst_size;
     }
@@ -485,7 +485,7 @@ rc_t KMDataNodeInflateChild ( KMDataNode *n,
             KMDataNodeInflateData pb;
 
             pb . meta = n -> meta;
-            pb . par = n;        
+            pb . par = n;
             pb . bst = & n -> child;
             pb . node_size_limit = node_size_limit;
             pb . node_child_limit = node_child_limit;
@@ -494,9 +494,9 @@ rc_t KMDataNodeInflateChild ( KMDataNode *n,
             PBSTreeDoUntil ( bst, 0, KMDataNodeInflate, & pb );
             rc = pb . rc;
         }
-        
+
         PBSTreeWhack ( bst );
-        
+
         n -> value = ( char* ) n -> value + bst_size;
         n -> vsize -= bst_size;
     }
@@ -820,7 +820,7 @@ LIB_EXPORT rc_t CC KMDataNodeVOpenNodeRead ( const KMDataNode *self,
         if ( len < 0 || len >= sizeof full )
             return RC ( rcDB, rcNode, rcOpening, rcPath, rcExcessive );
     }
-    
+
     rc = KMDataNodeFind ( self, & found, & p );
     if ( rc == 0 )
     {
@@ -1138,14 +1138,14 @@ LIB_EXPORT rc_t CC KMDataNodeWrite ( KMDataNode *self, const void *buffer, size_
                 return RC ( rcDB, rcNode, rcWriting, rcMemory, rcExhausted );
             memmove ( value, buffer, size );
         }
-            
+
         if ( self -> value != NULL )
             free ( self -> value );
 
         self -> value = value;
         self -> vsize = size;
     }
-    
+
     self -> meta -> dirty = true;
 
     return 0;
@@ -1988,7 +1988,7 @@ LIB_EXPORT rc_t CC KMDataNodeDropChild ( KMDataNode *self, const char *path, ...
 
 LIB_EXPORT rc_t CC KMDataNodeVDropChild ( KMDataNode *self, const char *path, va_list args )
 {
-    int len;
+    int len = 0;
     rc_t rc;
     KMDataNode *found;
     char full [ 4096 ], *p = full;
@@ -2007,6 +2007,7 @@ LIB_EXPORT rc_t CC KMDataNodeVDropChild ( KMDataNode *self, const char *path, va
     /*if ( args == NULL )
         len = snprintf ( full, sizeof full, "%s", path );
     else*/
+    if ( path != NULL )
         len = vsnprintf ( full, sizeof full, path, args );
     if ( len < 0 || len >= sizeof full )
         return RC ( rcDB, rcNode, rcUpdating, rcPath, rcExcessive );
@@ -2653,7 +2654,7 @@ rc_t KMetadataMake ( KMetadata **metap,
                 * metap = meta;
                 return 0;
             }
-            
+
             rc = KMetadataPopulate ( meta, dir, path, read_only );
             if ( rc == 0 )
             {
@@ -2769,7 +2770,7 @@ rc_t KDBManagerOpenMetadataReadInt ( KDBManager *self,
         if ( rc == 0 )
         {
             rc = KMetadataMake ( & meta, ( KDirectory* ) wd, metapath, rev, true, true );
-            
+
             if ( rc == 0 )
             {
                 rc = KDBManagerInsertMetadata (self, meta );
@@ -2785,7 +2786,7 @@ rc_t KDBManagerOpenMetadataReadInt ( KDBManager *self,
 /*             rc = RC ( rcDB, rcMgr, rcOpening, rcMetadata, rcExists ); */
         }
     }
-    
+
     return rc;
 }
 
@@ -2947,7 +2948,7 @@ rc_t KDBManagerOpenMetadataUpdateInt ( KDBManager *self,
             KMetadataRelease ( meta );
         }
     }
-    
+
     return rc;
 }
 
@@ -3123,11 +3124,11 @@ LIB_EXPORT rc_t CC KMetadataMaxRevision ( const KMetadata *self, uint32_t *revis
             for ( rev_max = idx = 0; idx < count; ++ idx )
             {
                 const char *name;
-                    
+
                 rc = KNamelistGet ( listing, idx, & name );
                 if ( rc != 0 )
                     break;
-                    
+
                 if ( name [ 0 ] == 'r' )
                 {
                     char *end;
@@ -3139,7 +3140,7 @@ LIB_EXPORT rc_t CC KMetadataMaxRevision ( const KMetadata *self, uint32_t *revis
 
             * revision = rev_max;
         }
-                
+
         KNamelistRelease ( listing );
     }
     else if ( GetRCState ( rc ) == rcNotFound )
@@ -3240,7 +3241,7 @@ LIB_EXPORT rc_t CC KMetadataFreeze ( KMetadata *self )
                 KDirectoryRename ( self -> dir, false, revision, "md/cur" );
         }
     }
-        
+
     return rc;
 }
 
@@ -3317,7 +3318,7 @@ LIB_EXPORT rc_t CC KMetadataGetSequence ( const KMetadata *self,
         rc = KMDataNodeReadB64 ( found, val );
         KMDataNodeRelease ( found );
     }
-    
+
     return rc;
 }
 
@@ -3340,7 +3341,7 @@ LIB_EXPORT rc_t CC KMetadataSetSequence ( KMetadata *self,
         rc = KMDataNodeWriteB64 ( found, & val );
         KMDataNodeRelease ( found );
     }
-        
+
     return rc;
 }
 
@@ -3454,7 +3455,7 @@ rc_t KMDataNodeNamelistMake ( KNamelist **names, unsigned int count )
             * names = & self -> dad;
             return 0;
         }
-        
+
         free ( self );
     }
 

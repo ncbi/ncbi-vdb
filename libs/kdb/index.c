@@ -414,7 +414,7 @@ rc_t KDBManagerOpenIndexReadInt ( const KDBManager *self,
             return 0;
         }
     }
-    
+
     return rc;
 }
 
@@ -495,6 +495,7 @@ LIB_EXPORT rc_t CC KTableVOpenIndexRead ( const KTable *self,
         /*if ( args == 0 )
             len = snprintf ( path, sizeof path, "%s", name );
         else*/
+        if ( name != NULL )
             len = vsnprintf ( path, sizeof path, name, args );
         if ( len < 0 || ( size_t ) len >= sizeof path )
             return RC ( rcDB, rcTable, rcOpening, rcPath, rcExcessive );
@@ -554,7 +555,7 @@ LIB_EXPORT rc_t CC KIndexVersion ( const KIndex *self, uint32_t *version )
         * version = 0;
         return RC ( rcDB, rcIndex, rcAccessing, rcSelf, rcNull );
     }
-    
+
     * version = self -> vers;
     return 0;
 }
@@ -717,7 +718,7 @@ LIB_EXPORT rc_t CC KIndexFindText ( const KIndex *self, const char *key, int64_t
 
     if ( id_count != NULL )
         * id_count = span;
-    
+
     return rc;
 }
 
@@ -774,7 +775,7 @@ LIB_EXPORT rc_t CC KIndexFindAllText ( const KIndex *self, const char *key,
     default:
         return RC ( rcDB, rcIndex, rcSelecting, rcNoObj, rcUnknown );
     }
-    
+
     return rc;
 }
 
@@ -851,7 +852,7 @@ LIB_EXPORT rc_t CC KIndexProjectText ( const KIndex *self,
 
     if ( id_count != NULL )
         * id_count = span;
-    
+
     return rc;
 }
 
@@ -907,7 +908,7 @@ LIB_EXPORT rc_t CC KIndexProjectAllText ( const KIndex *self, int64_t id,
             if ( rc == 0 )
                 rc = ( * f ) ( start_id, span, key, data );
             break;
-            
+
         default:
             return RC ( rcDB, rcIndex, rcProjecting, rcIndex, rcBadVersion );
         }
@@ -915,7 +916,7 @@ LIB_EXPORT rc_t CC KIndexProjectAllText ( const KIndex *self, int64_t id,
     default:
         return RC ( rcDB, rcIndex, rcProjecting, rcNoObj, rcUnknown );
     }
-    
+
     return rc;
 }
 
