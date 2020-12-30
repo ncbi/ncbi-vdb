@@ -214,7 +214,8 @@ rc_t KQuickMountDirVMakePath (const KQuickMountDir * self, enum RCContext ctx,
     if ( path [ 0 ] == 0 )
         return RC ( rcFS, rcDirectory, ctx, rcPath, rcInvalid );
 
-    if ( args != NULL && path [ 0 ] == '%' )
+    /*VDB-4386: cannot treat va_list as a pointer!*/
+    if ( /*args != NULL &&*/ path [ 0 ] == '%' )
     {
         rc = string_vprintf (buffer, path_max, &psize, path, args);
 

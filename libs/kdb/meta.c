@@ -613,9 +613,10 @@ LIB_EXPORT rc_t CC KMDataNodeVOpenNodeRead ( const KMDataNode *self,
         int len;
 
         /* generate full path */
-        if ( args == NULL )
+        /*VDB-4386: cannot treat va_list as a pointer!*/
+        /*if ( args == NULL )
             len = snprintf ( full, sizeof full, "%s", path );
-        else
+        else*/
             len = vsnprintf ( full, sizeof full, path, args );
         if ( len < 0 || len >= sizeof full )
             return RC ( rcDB, rcNode, rcOpening, rcPath, rcExcessive );
@@ -1686,9 +1687,9 @@ rc_t KDBManagerOpenMetadataReadInt ( const KDBManager *self,
 {
     char metapath [ 4096 ];
     rc_t rc = ( prerelease == 1 ) ?
-        KDirectoryVResolvePath ( wd, true, metapath, sizeof metapath, "meta", NULL ):
+        KDirectoryResolvePath_v1 ( wd, true, metapath, sizeof metapath, "meta" ):
         ( ( rev == 0 ) ?
-          KDirectoryVResolvePath ( wd, true, metapath, sizeof metapath, "md/cur", NULL ):
+          KDirectoryResolvePath_v1 ( wd, true, metapath, sizeof metapath, "md/cur" ):
           KDirectoryResolvePath ( wd, true, metapath, sizeof metapath, "md/r%.3u", rev ) );
     if ( rc == 0 )
     {

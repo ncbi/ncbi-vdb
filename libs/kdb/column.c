@@ -277,6 +277,20 @@ rc_t KDBManagerVOpenColumnReadInt ( const KDBManager *self,
     return rc;
 }
 
+static
+rc_t KDBManagerVOpenColumnReadInt_noargs ( const KDBManager *self,
+    const KColumn **colp, const KDirectory *wd, bool try_srapath,
+    const char *path, ... )
+{
+    rc_t rc;
+    va_list args;
+
+    va_start ( args, path );
+    rc = KDBManagerVOpenColumnReadInt ( self, colp, wd, try_srapath, path, args );
+    va_end ( args );
+
+    return rc;
+}
 
 LIB_EXPORT rc_t CC KDBManagerOpenColumnRead ( const KDBManager *self,
     const KColumn **col, const char *path, ... )
@@ -339,8 +353,8 @@ LIB_EXPORT rc_t CC KTableVOpenColumnRead ( const KTable *self,
         path, sizeof path, "col", 3, name, args );
     if ( rc == 0 )
     {
-        rc = KDBManagerVOpenColumnReadInt ( self -> mgr,
-                                           colp, self -> dir, false, path, NULL );
+        rc = KDBManagerVOpenColumnReadInt_noargs ( self -> mgr,
+                                           colp, self -> dir, false, path );
         if ( rc == 0 )
         {
             KColumn *col = ( KColumn* ) * colp;

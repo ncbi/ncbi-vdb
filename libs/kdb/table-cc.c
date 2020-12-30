@@ -171,7 +171,7 @@ rc_t KTableCheckColumns ( const KTable *self, uint32_t depth, int level,
     pb.level = level;
     pb.depth = depth;
     pb.platform = platform;
-    return KDirectoryVVisit(self->dir, false, KTableCheckColumn, &pb, "col", NULL);
+    return KDirectoryVisit_v1(self->dir, false, KTableCheckColumn, &pb, "col");
 }
 
 static
