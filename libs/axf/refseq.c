@@ -57,16 +57,35 @@ struct RefSeqAsyncLoadInfo {
     unsigned volatile miss;     /**< ... how effective the bg thread was */
 };
 
+static rc_t RefSeqAsyncLoadInfo_AsyncFree(RefSeqAsyncLoadInfo *const self)
+{
+    KLockRelease(self->mutex);
+    KThreadRelease(self->th);
+    free(self);
+    return 0;
+}
+
+/* Synchronize with background thread in preparation for clean up */
+static rc_t RefSeqAsyncLoadInfo_SyncFree(RefSeqAsyncLoadInfo *const self)
+{
+    rc_t rc = 0;
+
+    KLockAcquire(self->mutex);
+    self->count = 0;
+    KLockUnlock(self->mutex);
+    KThreadWait(self->th, &rc);
+    if (rc)
+        LOGERR(klogErr, rc, "async loader thread failed");
+
+    return rc;
+}
+
 static rc_t RefSeqAsyncLoadInfoFree(RefSeqAsyncLoadInfo *const self)
 {
     rc_t rc = 0;
     if (self) {
-        KLockAcquire(self->mutex);
-        self->count = 0;
-        KLockUnlock(self->mutex);
-        KThreadWait(self->th, &rc);
-        if (rc)
-            LOGERR(klogErr, rc, "async loader thread failed");
+        rc = RefSeqAsyncLoadInfo_SyncFree(self);
+        RefSeqAsyncLoadInfo_AsyncFree(self);
     }
     return rc;
 }
@@ -361,6 +380,7 @@ static rc_t runLoadThread(Object *self)
         else if (!done && rc == 0)
             rc = RC(rcXF, rcFunction, rcReading, rcData, rcInvalid);
     }
+    free(buffer);
     if (rc == 0 && i == count) {
         if (n != 0) {
             while (n < 4) {
@@ -380,18 +400,22 @@ static rc_t runLoadThread(Object *self)
     atomic_inc(&self->rwl); /* tell readers we want to update the state */
     while (atomic_read(&self->rwl) != 1)
         ;
+    /* readers are all waiting in the loop at line 445 */
     self->reader = rc == 0 ? readNormal : readZero;
     self->async = NULL;
-    atomic_dec(&self->rwl); /* state is updated; readers can continue */
+    atomic_dec(&self->rwl); /* state is updated; readers continue to line 448 */
+
+    VCursorRelease(async->curs);
+    if (done)
+        ; /* other thread is going to clean up */
+    else
+        RefSeqAsyncLoadInfo_AsyncFree(async);
+
     if (rc == 0 && i == count) {
         double const pct = 100.0 * (async->hits - async->miss) / async->hits;
 
         PLOGMSG(klogDebug, (klogDebug, "Done with background loading of reference; preload was $(pct)%", "pct=%5.1f", (float)pct));
     }
-    KLockRelease(async->mutex);
-    free(buffer);
-    VCursorRelease(async->curs);
-    free(async);
 
     return rc;
 }
