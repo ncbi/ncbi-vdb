@@ -4,7 +4,7 @@
  * \brief Platform-specific and custom entropy polling functions
  */
 /*
- *  Copyright (C) 2006-2016, ARM Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -18,14 +18,12 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 #ifndef MBEDTLS_ENTROPY_POLL_H
 #define MBEDTLS_ENTROPY_POLL_H
 
 #if !defined(MBEDTLS_CONFIG_FILE)
-#include "config.h"
+#include "mbedtls/config.h"
 #else
 #include MBEDTLS_CONFIG_FILE
 #endif
@@ -41,7 +39,7 @@ extern "C" {
  */
 #define MBEDTLS_ENTROPY_MIN_PLATFORM     32     /**< Minimum for platform source    */
 #define MBEDTLS_ENTROPY_MIN_HAVEGE       32     /**< Minimum for HAVEGE             */
-#define MBEDTLS_ENTROPY_MIN_HARDCLOCK     4     /**< Minimum for vdb_mbedtls_timing_hardclock()        */
+#define MBEDTLS_ENTROPY_MIN_HARDCLOCK     4     /**< Minimum for mbedtls_timing_hardclock()        */
 #if !defined(MBEDTLS_ENTROPY_MIN_HARDWARE)
 #define MBEDTLS_ENTROPY_MIN_HARDWARE     32     /**< Minimum for the hardware source */
 #endif
@@ -50,7 +48,7 @@ extern "C" {
  * \brief           Entropy poll callback that provides 0 entropy.
  */
 #if defined(MBEDTLS_TEST_NULL_ENTROPY)
-    int vdb_mbedtls_null_entropy_poll( void *data,
+    int mbedtls_null_entropy_poll( void *data,
                                 unsigned char *output, size_t len, size_t *olen );
 #endif
 
@@ -58,7 +56,7 @@ extern "C" {
 /**
  * \brief           Platform-specific entropy poll callback
  */
-int vdb_mbedtls_platform_entropy_poll( void *data,
+int mbedtls_platform_entropy_poll( void *data,
                            unsigned char *output, size_t len, size_t *olen );
 #endif
 
@@ -68,7 +66,7 @@ int vdb_mbedtls_platform_entropy_poll( void *data,
  *
  * Requires an HAVEGE state as its data pointer.
  */
-int vdb_mbedtls_havege_poll( void *data,
+int mbedtls_havege_poll( void *data,
                  unsigned char *output, size_t len, size_t *olen );
 #endif
 
@@ -76,7 +74,7 @@ int vdb_mbedtls_havege_poll( void *data,
 /**
  * \brief           mbedtls_timing_hardclock-based entropy poll callback
  */
-int vdb_mbedtls_hardclock_poll( void *data,
+int mbedtls_hardclock_poll( void *data,
                     unsigned char *output, size_t len, size_t *olen );
 #endif
 
@@ -89,7 +87,7 @@ int vdb_mbedtls_hardclock_poll( void *data,
  *
  * \note            This must accept NULL as its first argument.
  */
-int vdb_mbedtls_hardware_poll( void *data,
+int mbedtls_hardware_poll( void *data,
                            unsigned char *output, size_t len, size_t *olen );
 #endif
 
@@ -99,7 +97,7 @@ int vdb_mbedtls_hardware_poll( void *data,
  *
  * \note            This must accept NULL as its first argument.
  */
-int vdb_mbedtls_nv_seed_poll( void *data,
+int mbedtls_nv_seed_poll( void *data,
                           unsigned char *output, size_t len, size_t *olen );
 #endif
 

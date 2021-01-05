@@ -1,7 +1,7 @@
 /*
  *  X.509 base functions for creating certificates / CSRs
  *
- *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,20 +15,15 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
-#if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
-#else
-#include MBEDTLS_CONFIG_FILE
-#endif
+#include "common.h"
 
 #if defined(MBEDTLS_X509_CREATE_C)
 
 #include "mbedtls/x509.h"
 #include "mbedtls/asn1write.h"
+#include "mbedtls/error.h"
 #include "mbedtls/oid.h"
 
 #include <string.h>
@@ -125,7 +120,7 @@ static const x509_attr_descriptor_t *x509_attr_descr_from_name( const char *name
     return( cur );
 }
 
-int vdb_mbedtls_x509_string_to_names( mbedtls_asn1_named_data **head, const char *name )
+int mbedtls_x509_string_to_names( mbedtls_asn1_named_data **head, const char *name )
 {
     int ret = 0;
     const char *s = name, *c = s;
@@ -137,7 +132,7 @@ int vdb_mbedtls_x509_string_to_names( mbedtls_asn1_named_data **head, const char
     char *d = data;
 
     /* Clear existing chain if present */
-    vdb_mbedtls_asn1_free_named_data_list( head );
+    mbedtls_asn1_free_named_data_list( head );
 
     while( c <= end )
     {
@@ -169,7 +164,7 @@ int vdb_mbedtls_x509_string_to_names( mbedtls_asn1_named_data **head, const char
         else if( !in_tag && ( *c == ',' || c == end ) )
         {
             mbedtls_asn1_named_data* cur =
-                vdb_mbedtls_asn1_store_named_data( head, oid, strlen( oid ),
+                mbedtls_asn1_store_named_data( head, oid, strlen( oid ),
                                                (unsigned char *) data,
                                                d - data );
 
@@ -210,12 +205,12 @@ exit:
 /* The first byte of the value in the mbedtls_asn1_named_data structure is reserved
  * to store the critical boolean for us
  */
-int vdb_mbedtls_x509_set_extension( mbedtls_asn1_named_data **head, const char *oid, size_t oid_len,
+int mbedtls_x509_set_extension( mbedtls_asn1_named_data **head, const char *oid, size_t oid_len,
                         int critical, const unsigned char *val, size_t val_len )
 {
     mbedtls_asn1_named_data *cur;
 
-    if( ( cur = vdb_mbedtls_asn1_store_named_data( head, oid, oid_len,
+    if( ( cur = mbedtls_asn1_store_named_data( head, oid, oid_len,
                                        NULL, val_len + 1 ) ) == NULL )
     {
         return( MBEDTLS_ERR_X509_ALLOC_FAILED );
@@ -241,7 +236,7 @@ int vdb_mbedtls_x509_set_extension( mbedtls_asn1_named_data **head, const char *
  */
 static int x509_write_name( unsigned char **p, unsigned char *start, mbedtls_asn1_named_data* cur_name)
 {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t len = 0;
     const char *oid             = (const char*)cur_name->oid.p;
     size_t oid_len              = cur_name->oid.len;
@@ -249,32 +244,32 @@ static int x509_write_name( unsigned char **p, unsigned char *start, mbedtls_asn
     size_t name_len             = cur_name->val.len;
 
     // Write correct string tag and value
-    MBEDTLS_ASN1_CHK_ADD( len, vdb_mbedtls_asn1_write_tagged_string( p, start,
+    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_tagged_string( p, start,
                                                        cur_name->val.tag,
                                                        (const char *) name,
                                                        name_len ) );
     // Write OID
     //
-    MBEDTLS_ASN1_CHK_ADD( len, vdb_mbedtls_asn1_write_oid( p, start, oid,
+    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_oid( p, start, oid,
                                                        oid_len ) );
 
-    MBEDTLS_ASN1_CHK_ADD( len, vdb_mbedtls_asn1_write_len( p, start, len ) );
-    MBEDTLS_ASN1_CHK_ADD( len, vdb_mbedtls_asn1_write_tag( p, start,
+    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_len( p, start, len ) );
+    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_tag( p, start,
                                                     MBEDTLS_ASN1_CONSTRUCTED |
                                                     MBEDTLS_ASN1_SEQUENCE ) );
 
-    MBEDTLS_ASN1_CHK_ADD( len, vdb_mbedtls_asn1_write_len( p, start, len ) );
-    MBEDTLS_ASN1_CHK_ADD( len, vdb_mbedtls_asn1_write_tag( p, start,
+    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_len( p, start, len ) );
+    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_tag( p, start,
                                                  MBEDTLS_ASN1_CONSTRUCTED |
                                                  MBEDTLS_ASN1_SET ) );
 
     return( (int) len );
 }
 
-int vdb_mbedtls_x509_write_names( unsigned char **p, unsigned char *start,
+int mbedtls_x509_write_names( unsigned char **p, unsigned char *start,
                               mbedtls_asn1_named_data *first )
 {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t len = 0;
     mbedtls_asn1_named_data *cur = first;
 
@@ -284,18 +279,18 @@ int vdb_mbedtls_x509_write_names( unsigned char **p, unsigned char *start,
         cur = cur->next;
     }
 
-    MBEDTLS_ASN1_CHK_ADD( len, vdb_mbedtls_asn1_write_len( p, start, len ) );
-    MBEDTLS_ASN1_CHK_ADD( len, vdb_mbedtls_asn1_write_tag( p, start, MBEDTLS_ASN1_CONSTRUCTED |
+    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_len( p, start, len ) );
+    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_tag( p, start, MBEDTLS_ASN1_CONSTRUCTED |
                                                  MBEDTLS_ASN1_SEQUENCE ) );
 
     return( (int) len );
 }
 
-int vdb_mbedtls_x509_write_sig( unsigned char **p, unsigned char *start,
+int mbedtls_x509_write_sig( unsigned char **p, unsigned char *start,
                     const char *oid, size_t oid_len,
                     unsigned char *sig, size_t size )
 {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t len = 0;
 
     if( *p < start || (size_t)( *p - start ) < size )
@@ -311,12 +306,12 @@ int vdb_mbedtls_x509_write_sig( unsigned char **p, unsigned char *start,
     *--(*p) = 0;
     len += 1;
 
-    MBEDTLS_ASN1_CHK_ADD( len, vdb_mbedtls_asn1_write_len( p, start, len ) );
-    MBEDTLS_ASN1_CHK_ADD( len, vdb_mbedtls_asn1_write_tag( p, start, MBEDTLS_ASN1_BIT_STRING ) );
+    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_len( p, start, len ) );
+    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_tag( p, start, MBEDTLS_ASN1_BIT_STRING ) );
 
     // Write OID
     //
-    MBEDTLS_ASN1_CHK_ADD( len, vdb_mbedtls_asn1_write_algorithm_identifier( p, start, oid,
+    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_algorithm_identifier( p, start, oid,
                                                         oid_len, 0 ) );
 
     return( (int) len );
@@ -325,26 +320,26 @@ int vdb_mbedtls_x509_write_sig( unsigned char **p, unsigned char *start,
 static int x509_write_extension( unsigned char **p, unsigned char *start,
                                  mbedtls_asn1_named_data *ext )
 {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t len = 0;
 
-    MBEDTLS_ASN1_CHK_ADD( len, vdb_mbedtls_asn1_write_raw_buffer( p, start, ext->val.p + 1,
+    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_raw_buffer( p, start, ext->val.p + 1,
                                               ext->val.len - 1 ) );
-    MBEDTLS_ASN1_CHK_ADD( len, vdb_mbedtls_asn1_write_len( p, start, ext->val.len - 1 ) );
-    MBEDTLS_ASN1_CHK_ADD( len, vdb_mbedtls_asn1_write_tag( p, start, MBEDTLS_ASN1_OCTET_STRING ) );
+    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_len( p, start, ext->val.len - 1 ) );
+    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_tag( p, start, MBEDTLS_ASN1_OCTET_STRING ) );
 
     if( ext->val.p[0] != 0 )
     {
-        MBEDTLS_ASN1_CHK_ADD( len, vdb_mbedtls_asn1_write_bool( p, start, 1 ) );
+        MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_bool( p, start, 1 ) );
     }
 
-    MBEDTLS_ASN1_CHK_ADD( len, vdb_mbedtls_asn1_write_raw_buffer( p, start, ext->oid.p,
+    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_raw_buffer( p, start, ext->oid.p,
                                               ext->oid.len ) );
-    MBEDTLS_ASN1_CHK_ADD( len, vdb_mbedtls_asn1_write_len( p, start, ext->oid.len ) );
-    MBEDTLS_ASN1_CHK_ADD( len, vdb_mbedtls_asn1_write_tag( p, start, MBEDTLS_ASN1_OID ) );
+    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_len( p, start, ext->oid.len ) );
+    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_tag( p, start, MBEDTLS_ASN1_OID ) );
 
-    MBEDTLS_ASN1_CHK_ADD( len, vdb_mbedtls_asn1_write_len( p, start, len ) );
-    MBEDTLS_ASN1_CHK_ADD( len, vdb_mbedtls_asn1_write_tag( p, start, MBEDTLS_ASN1_CONSTRUCTED |
+    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_len( p, start, len ) );
+    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_tag( p, start, MBEDTLS_ASN1_CONSTRUCTED |
                                                  MBEDTLS_ASN1_SEQUENCE ) );
 
     return( (int) len );
@@ -360,10 +355,10 @@ static int x509_write_extension( unsigned char **p, unsigned char *start,
  *                 -- by extnID
  *     }
  */
-int vdb_mbedtls_x509_write_extensions( unsigned char **p, unsigned char *start,
+int mbedtls_x509_write_extensions( unsigned char **p, unsigned char *start,
                            mbedtls_asn1_named_data *first )
 {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t len = 0;
     mbedtls_asn1_named_data *cur_ext = first;
 

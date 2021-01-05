@@ -5,7 +5,7 @@
  *        library.
  */
 /*
- *  Copyright (C) 2018, Arm Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -19,8 +19,6 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of Mbed TLS (https://tls.mbed.org)
  */
 #ifndef MBEDTLS_PLATFORM_UTIL_H
 #define MBEDTLS_PLATFORM_UTIL_H
@@ -43,16 +41,27 @@ extern "C" {
 
 #if defined(MBEDTLS_CHECK_PARAMS)
 
+#if defined(MBEDTLS_CHECK_PARAMS_ASSERT)
+/* Allow the user to define MBEDTLS_PARAM_FAILED to something like assert
+ * (which is what our config.h suggests). */
+#include <assert.h>
+#endif /* MBEDTLS_CHECK_PARAMS_ASSERT */
+
 #if defined(MBEDTLS_PARAM_FAILED)
 /** An alternative definition of MBEDTLS_PARAM_FAILED has been set in config.h.
  *
  * This flag can be used to check whether it is safe to assume that
- * MBEDTLS_PARAM_FAILED() will expand to a call to vdb_mbedtls_param_failed().
+ * MBEDTLS_PARAM_FAILED() will expand to a call to mbedtls_param_failed().
  */
 #define MBEDTLS_PARAM_FAILED_ALT
+
+#elif defined(MBEDTLS_CHECK_PARAMS_ASSERT)
+#define MBEDTLS_PARAM_FAILED( cond ) assert( cond )
+#define MBEDTLS_PARAM_FAILED_ALT
+
 #else /* MBEDTLS_PARAM_FAILED */
 #define MBEDTLS_PARAM_FAILED( cond ) \
-    vdb_mbedtls_param_failed( #cond, __FILE__, __LINE__ )
+    mbedtls_param_failed( #cond, __FILE__, __LINE__ )
 
 /**
  * \brief       User supplied callback function for parameter validation failure.
@@ -69,7 +78,7 @@ extern "C" {
  * \param file  The file where the assertion failed.
  * \param line  The line in the file where the assertion failed.
  */
-void vdb_mbedtls_param_failed( const char *failure_condition,
+void mbedtls_param_failed( const char *failure_condition,
                            const char *file,
                            int line );
 #endif /* MBEDTLS_PARAM_FAILED */
@@ -134,18 +143,18 @@ MBEDTLS_DEPRECATED typedef int mbedtls_deprecated_numeric_constant_t;
  *              object.
  *
  *              It is extremely difficult to guarantee that calls to
- *              vdb_mbedtls_platform_zeroize() are not removed by aggressive
+ *              mbedtls_platform_zeroize() are not removed by aggressive
  *              compiler optimizations in a portable way. For this reason, Mbed
  *              TLS provides the configuration option
  *              MBEDTLS_PLATFORM_ZEROIZE_ALT, which allows users to configure
- *              vdb_mbedtls_platform_zeroize() to use a suitable implementation for
+ *              mbedtls_platform_zeroize() to use a suitable implementation for
  *              their platform and needs
  *
  * \param buf   Buffer to be zeroized
  * \param len   Length of the buffer in bytes
  *
  */
-void vdb_mbedtls_platform_zeroize( void *buf, size_t len );
+void mbedtls_platform_zeroize( void *buf, size_t len );
 
 #if defined(MBEDTLS_HAVE_TIME_DATE)
 /**
@@ -165,7 +174,7 @@ void vdb_mbedtls_platform_zeroize( void *buf, size_t len );
  *
  *             If MBEDTLS_PLATFORM_GMTIME_R_ALT is defined, then Mbed TLS will
  *             unconditionally use the alternative implementation for
- *             vdb_mbedtls_platform_gmtime_r() supplied by the user at compile time.
+ *             mbedtls_platform_gmtime_r() supplied by the user at compile time.
  *
  * \param tt     Pointer to an object containing time (in seconds) since the
  *               epoch to be converted
@@ -174,7 +183,7 @@ void vdb_mbedtls_platform_zeroize( void *buf, size_t len );
  * \return      Pointer to an object of type struct tm on success, otherwise
  *              NULL
  */
-struct tm *vdb_mbedtls_platform_gmtime_r( const mbedtls_time_t *tt,
+struct tm *mbedtls_platform_gmtime_r( const mbedtls_time_t *tt,
                                       struct tm *tm_buf );
 #endif /* MBEDTLS_HAVE_TIME_DATE */
 

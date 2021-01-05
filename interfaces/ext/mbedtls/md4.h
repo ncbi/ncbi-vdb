@@ -8,7 +8,7 @@
  *          instead.
  */
 /*
- *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -23,14 +23,12 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- *  This file is part of mbed TLS (https://tls.mbed.org)
- *
  */
 #ifndef MBEDTLS_MD4_H
 #define MBEDTLS_MD4_H
 
 #if !defined(MBEDTLS_CONFIG_FILE)
-#include "config.h"
+#include "mbedtls/config.h"
 #else
 #include MBEDTLS_CONFIG_FILE
 #endif
@@ -79,7 +77,7 @@ mbedtls_md4_context;
  *                 stronger message digests instead.
  *
  */
-void vdb_mbedtls_md4_init( mbedtls_md4_context *ctx );
+void mbedtls_md4_init( mbedtls_md4_context *ctx );
 
 /**
  * \brief          Clear MD4 context
@@ -91,7 +89,7 @@ void vdb_mbedtls_md4_init( mbedtls_md4_context *ctx );
  *                 stronger message digests instead.
  *
  */
-void vdb_mbedtls_md4_free( mbedtls_md4_context *ctx );
+void mbedtls_md4_free( mbedtls_md4_context *ctx );
 
 /**
  * \brief          Clone (the state of) an MD4 context
@@ -104,7 +102,7 @@ void vdb_mbedtls_md4_free( mbedtls_md4_context *ctx );
  *                 stronger message digests instead.
  *
  */
-void vdb_mbedtls_md4_clone( mbedtls_md4_context *dst,
+void mbedtls_md4_clone( mbedtls_md4_context *dst,
                         const mbedtls_md4_context *src );
 
 /**
@@ -118,7 +116,7 @@ void vdb_mbedtls_md4_clone( mbedtls_md4_context *dst,
  *                 constitutes a security risk. We recommend considering
  *                 stronger message digests instead.
  */
-int vdb_mbedtls_md4_starts_ret( mbedtls_md4_context *ctx );
+int mbedtls_md4_starts_ret( mbedtls_md4_context *ctx );
 
 /**
  * \brief          MD4 process buffer
@@ -134,7 +132,7 @@ int vdb_mbedtls_md4_starts_ret( mbedtls_md4_context *ctx );
  *                 stronger message digests instead.
  *
  */
-int vdb_mbedtls_md4_update_ret( mbedtls_md4_context *ctx,
+int mbedtls_md4_update_ret( mbedtls_md4_context *ctx,
                             const unsigned char *input,
                             size_t ilen );
 
@@ -151,7 +149,7 @@ int vdb_mbedtls_md4_update_ret( mbedtls_md4_context *ctx,
  *                 stronger message digests instead.
  *
  */
-int vdb_mbedtls_md4_finish_ret( mbedtls_md4_context *ctx,
+int mbedtls_md4_finish_ret( mbedtls_md4_context *ctx,
                             unsigned char output[16] );
 
 /**
@@ -167,7 +165,7 @@ int vdb_mbedtls_md4_finish_ret( mbedtls_md4_context *ctx,
  *                 stronger message digests instead.
  *
  */
-int vdb_mbedtls_internal_md4_process( mbedtls_md4_context *ctx,
+int mbedtls_internal_md4_process( mbedtls_md4_context *ctx,
                                   const unsigned char data[64] );
 
 #if !defined(MBEDTLS_DEPRECATED_REMOVED)
@@ -179,7 +177,7 @@ int vdb_mbedtls_internal_md4_process( mbedtls_md4_context *ctx,
 /**
  * \brief          MD4 context setup
  *
- * \deprecated     Superseded by vdb_mbedtls_md4_starts_ret() in 2.7.0
+ * \deprecated     Superseded by mbedtls_md4_starts_ret() in 2.7.0
  *
  * \param ctx      context to be initialized
  *
@@ -188,12 +186,12 @@ int vdb_mbedtls_internal_md4_process( mbedtls_md4_context *ctx,
  *                 stronger message digests instead.
  *
  */
-MBEDTLS_DEPRECATED void vdb_mbedtls_md4_starts( mbedtls_md4_context *ctx );
+MBEDTLS_DEPRECATED void mbedtls_md4_starts( mbedtls_md4_context *ctx );
 
 /**
  * \brief          MD4 process buffer
  *
- * \deprecated     Superseded by vdb_mbedtls_md4_update_ret() in 2.7.0
+ * \deprecated     Superseded by mbedtls_md4_update_ret() in 2.7.0
  *
  * \param ctx      MD4 context
  * \param input    buffer holding the data
@@ -204,14 +202,14 @@ MBEDTLS_DEPRECATED void vdb_mbedtls_md4_starts( mbedtls_md4_context *ctx );
  *                 stronger message digests instead.
  *
  */
-MBEDTLS_DEPRECATED void vdb_mbedtls_md4_update( mbedtls_md4_context *ctx,
+MBEDTLS_DEPRECATED void mbedtls_md4_update( mbedtls_md4_context *ctx,
                                             const unsigned char *input,
                                             size_t ilen );
 
 /**
  * \brief          MD4 final digest
  *
- * \deprecated     Superseded by vdb_mbedtls_md4_finish_ret() in 2.7.0
+ * \deprecated     Superseded by mbedtls_md4_finish_ret() in 2.7.0
  *
  * \param ctx      MD4 context
  * \param output   MD4 checksum result
@@ -221,13 +219,13 @@ MBEDTLS_DEPRECATED void vdb_mbedtls_md4_update( mbedtls_md4_context *ctx,
  *                 stronger message digests instead.
  *
  */
-MBEDTLS_DEPRECATED void vdb_mbedtls_md4_finish( mbedtls_md4_context *ctx,
+MBEDTLS_DEPRECATED void mbedtls_md4_finish( mbedtls_md4_context *ctx,
                                             unsigned char output[16] );
 
 /**
  * \brief          MD4 process data block (internal use only)
  *
- * \deprecated     Superseded by vdb_mbedtls_internal_md4_process() in 2.7.0
+ * \deprecated     Superseded by mbedtls_internal_md4_process() in 2.7.0
  *
  * \param ctx      MD4 context
  * \param data     buffer holding one block of data
@@ -237,7 +235,7 @@ MBEDTLS_DEPRECATED void vdb_mbedtls_md4_finish( mbedtls_md4_context *ctx,
  *                 stronger message digests instead.
  *
  */
-MBEDTLS_DEPRECATED void vdb_mbedtls_md4_process( mbedtls_md4_context *ctx,
+MBEDTLS_DEPRECATED void mbedtls_md4_process( mbedtls_md4_context *ctx,
                                              const unsigned char data[64] );
 
 #undef MBEDTLS_DEPRECATED
@@ -257,7 +255,7 @@ MBEDTLS_DEPRECATED void vdb_mbedtls_md4_process( mbedtls_md4_context *ctx,
  *                 stronger message digests instead.
  *
  */
-int vdb_mbedtls_md4_ret( const unsigned char *input,
+int mbedtls_md4_ret( const unsigned char *input,
                      size_t ilen,
                      unsigned char output[16] );
 
@@ -270,7 +268,7 @@ int vdb_mbedtls_md4_ret( const unsigned char *input,
 /**
  * \brief          Output = MD4( input buffer )
  *
- * \deprecated     Superseded by vdb_mbedtls_md4_ret() in 2.7.0
+ * \deprecated     Superseded by mbedtls_md4_ret() in 2.7.0
  *
  * \param input    buffer holding the data
  * \param ilen     length of the input data
@@ -281,12 +279,14 @@ int vdb_mbedtls_md4_ret( const unsigned char *input,
  *                 stronger message digests instead.
  *
  */
-MBEDTLS_DEPRECATED void vdb_mbedtls_md4( const unsigned char *input,
+MBEDTLS_DEPRECATED void mbedtls_md4( const unsigned char *input,
                                      size_t ilen,
                                      unsigned char output[16] );
 
 #undef MBEDTLS_DEPRECATED
 #endif /* !MBEDTLS_DEPRECATED_REMOVED */
+
+#if defined(MBEDTLS_SELF_TEST)
 
 /**
  * \brief          Checkup routine
@@ -298,7 +298,9 @@ MBEDTLS_DEPRECATED void vdb_mbedtls_md4( const unsigned char *input,
  *                 stronger message digests instead.
  *
  */
-int vdb_mbedtls_md4_self_test( int verbose );
+int mbedtls_md4_self_test( int verbose );
+
+#endif /* MBEDTLS_SELF_TEST */
 
 #ifdef __cplusplus
 }

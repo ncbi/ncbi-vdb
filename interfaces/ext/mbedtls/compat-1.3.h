@@ -7,7 +7,7 @@
  * \deprecated Use the new names directly instead
  */
 /*
- *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -21,9 +21,13 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
  */
+
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if ! defined(MBEDTLS_DEPRECATED_REMOVED)
 
@@ -1244,9 +1248,9 @@
 #define POLARSSL_KEY_EXCHANGE_PSK MBEDTLS_KEY_EXCHANGE_PSK
 #define POLARSSL_KEY_EXCHANGE_RSA MBEDTLS_KEY_EXCHANGE_RSA
 #define POLARSSL_KEY_EXCHANGE_RSA_PSK MBEDTLS_KEY_EXCHANGE_RSA_PSK
-#define POLARSSL_KEY_EXCHANGE__SOME__ECDHE_ENABLED MBEDTLS_KEY_EXCHANGE__SOME__ECDHE_ENABLED
-#define POLARSSL_KEY_EXCHANGE__SOME__PSK_ENABLED MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED
-#define POLARSSL_KEY_EXCHANGE__WITH_CERT__ENABLED MBEDTLS_KEY_EXCHANGE__WITH_CERT__ENABLED
+#define POLARSSL_KEY_EXCHANGE__SOME__ECDHE_ENABLED MBEDTLS_KEY_EXCHANGE_SOME_ECDHE_ENABLED
+#define POLARSSL_KEY_EXCHANGE__SOME__PSK_ENABLED MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED
+#define POLARSSL_KEY_EXCHANGE__WITH_CERT__ENABLED MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED
 #define POLARSSL_KEY_LENGTH_DES MBEDTLS_KEY_LENGTH_DES
 #define POLARSSL_KEY_LENGTH_DES_EDE MBEDTLS_KEY_LENGTH_DES_EDE
 #define POLARSSL_KEY_LENGTH_DES_EDE3 MBEDTLS_KEY_LENGTH_DES_EDE3
@@ -2177,15 +2181,15 @@
 #define platform_set_fprintf mbedtls_platform_set_fprintf
 #define platform_set_printf mbedtls_platform_set_printf
 #define platform_set_snprintf mbedtls_platform_set_snprintf
-#define polarssl_exit vdb_mbedtls_exit
-#define polarssl_fprintf vdb_mbedtls_fprintf
-#define polarssl_free vdb_mbedtls_free
+#define polarssl_exit mbedtls_exit
+#define polarssl_fprintf mbedtls_fprintf
+#define polarssl_free mbedtls_free
 #define polarssl_mutex_free mbedtls_mutex_free
 #define polarssl_mutex_init mbedtls_mutex_init
 #define polarssl_mutex_lock mbedtls_mutex_lock
 #define polarssl_mutex_unlock mbedtls_mutex_unlock
-#define polarssl_printf vdb_mbedtls_printf
-#define polarssl_snprintf vdb_mbedtls_snprintf
+#define polarssl_printf mbedtls_printf
+#define polarssl_snprintf mbedtls_snprintf
 #define polarssl_strerror mbedtls_strerror
 #define ripemd160 mbedtls_ripemd160
 #define ripemd160_context mbedtls_ripemd160_context

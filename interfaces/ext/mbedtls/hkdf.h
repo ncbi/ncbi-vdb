@@ -7,27 +7,31 @@
  *          specified by RFC 5869.
  */
 /*
- * Copyright (C) 2016-2018, ARM Limited, All Rights Reserved
- * SPDX-License-Identifier: Apache-2.0
+ *  Copyright The Mbed TLS Contributors
+ *  SPDX-License-Identifier: Apache-2.0
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may
- * not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ *  Licensed under the Apache License, Version 2.0 (the "License"); you may
+ *  not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *  http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * This file is part of mbed TLS (https://tls.mbed.org)
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
  */
 #ifndef MBEDTLS_HKDF_H
 #define MBEDTLS_HKDF_H
 
-#include "md.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
+
+#include "mbedtls/md.h"
 
 /**
  *  \name HKDF Error codes
@@ -64,7 +68,7 @@ extern "C" {
  *  \return An MBEDTLS_ERR_MD_* error for errors returned from the underlying
  *          MD layer.
  */
-int vdb_mbedtls_hkdf( const mbedtls_md_info_t *md, const unsigned char *salt,
+int mbedtls_hkdf( const mbedtls_md_info_t *md, const unsigned char *salt,
                   size_t salt_len, const unsigned char *ikm, size_t ikm_len,
                   const unsigned char *info, size_t info_len,
                   unsigned char *okm, size_t okm_len );
@@ -93,7 +97,7 @@ int vdb_mbedtls_hkdf( const mbedtls_md_info_t *md, const unsigned char *salt,
  *  \return An MBEDTLS_ERR_MD_* error for errors returned from the underlying
  *          MD layer.
  */
-int vdb_mbedtls_hkdf_extract( const mbedtls_md_info_t *md,
+int mbedtls_hkdf_extract( const mbedtls_md_info_t *md,
                           const unsigned char *salt, size_t salt_len,
                           const unsigned char *ikm, size_t ikm_len,
                           unsigned char *prk );
@@ -124,7 +128,7 @@ int vdb_mbedtls_hkdf_extract( const mbedtls_md_info_t *md,
  *  \return An MBEDTLS_ERR_MD_* error for errors returned from the underlying
  *          MD layer.
  */
-int vdb_mbedtls_hkdf_expand( const mbedtls_md_info_t *md, const unsigned char *prk,
+int mbedtls_hkdf_expand( const mbedtls_md_info_t *md, const unsigned char *prk,
                          size_t prk_len, const unsigned char *info,
                          size_t info_len, unsigned char *okm, size_t okm_len );
 

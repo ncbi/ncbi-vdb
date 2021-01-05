@@ -9,7 +9,8 @@
  *        Korean, but see http://210.104.33.10/ARIA/index-e.html in English)
  *        and also described by the IETF in <em>RFC 5794</em>.
  */
-/*  Copyright (C) 2006-2018, ARM Limited, All Rights Reserved
+/*
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -23,15 +24,13 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
 #ifndef MBEDTLS_ARIA_H
 #define MBEDTLS_ARIA_H
 
 #if !defined(MBEDTLS_CONFIG_FILE)
-#include "config.h"
+#include "mbedtls/config.h"
 #else
 #include MBEDTLS_CONFIG_FILE
 #endif
@@ -39,7 +38,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "platform_util.h"
+#include "mbedtls/platform_util.h"
 
 #define MBEDTLS_ARIA_ENCRYPT     1 /**< ARIA encryption. */
 #define MBEDTLS_ARIA_DECRYPT     0 /**< ARIA decryption. */
@@ -93,7 +92,7 @@ mbedtls_aria_context;
  *
  * \param ctx      The ARIA context to initialize. This must not be \c NULL.
  */
-void vdb_mbedtls_aria_init( mbedtls_aria_context *ctx );
+void mbedtls_aria_init( mbedtls_aria_context *ctx );
 
 /**
  * \brief          This function releases and clears the specified ARIA context.
@@ -102,7 +101,7 @@ void vdb_mbedtls_aria_init( mbedtls_aria_context *ctx );
  *                 case this function returns immediately. If it is not \c NULL,
  *                 it must point to an initialized ARIA context.
  */
-void vdb_mbedtls_aria_free( mbedtls_aria_context *ctx );
+void mbedtls_aria_free( mbedtls_aria_context *ctx );
 
 /**
  * \brief          This function sets the encryption key.
@@ -119,7 +118,7 @@ void vdb_mbedtls_aria_free( mbedtls_aria_context *ctx );
  * \return         \c 0 on success.
  * \return         A negative error code on failure.
  */
-int vdb_mbedtls_aria_setkey_enc( mbedtls_aria_context *ctx,
+int mbedtls_aria_setkey_enc( mbedtls_aria_context *ctx,
                              const unsigned char *key,
                              unsigned int keybits );
 
@@ -138,7 +137,7 @@ int vdb_mbedtls_aria_setkey_enc( mbedtls_aria_context *ctx,
  * \return         \c 0 on success.
  * \return         A negative error code on failure.
  */
-int vdb_mbedtls_aria_setkey_dec( mbedtls_aria_context *ctx,
+int mbedtls_aria_setkey_dec( mbedtls_aria_context *ctx,
                              const unsigned char *key,
                              unsigned int keybits );
 
@@ -150,8 +149,8 @@ int vdb_mbedtls_aria_setkey_dec( mbedtls_aria_context *ctx,
  *                 the key was set for encryption on decryption) on the input
  *                 data buffer defined in the \p input parameter.
  *
- *                 vdb_mbedtls_aria_init(), and either vdb_mbedtls_aria_setkey_enc() or
- *                 vdb_mbedtls_aria_setkey_dec() must be called before the first
+ *                 mbedtls_aria_init(), and either mbedtls_aria_setkey_enc() or
+ *                 mbedtls_aria_setkey_dec() must be called before the first
  *                 call to this API with the same context.
  *
  * \param ctx      The ARIA context to use for encryption or decryption.
@@ -162,7 +161,7 @@ int vdb_mbedtls_aria_setkey_dec( mbedtls_aria_context *ctx,
  * \return         \c 0 on success.
  * \return         A negative error code on failure.
  */
-int vdb_mbedtls_aria_crypt_ecb( mbedtls_aria_context *ctx,
+int mbedtls_aria_crypt_ecb( mbedtls_aria_context *ctx,
                             const unsigned char input[MBEDTLS_ARIA_BLOCKSIZE],
                             unsigned char output[MBEDTLS_ARIA_BLOCKSIZE] );
 
@@ -176,8 +175,8 @@ int vdb_mbedtls_aria_crypt_ecb( mbedtls_aria_context *ctx,
  *         the \p input parameter.
  *
  *         It can be called as many times as needed, until all the input
- *         data is processed. vdb_mbedtls_aria_init(), and either
- *         vdb_mbedtls_aria_setkey_enc() or vdb_mbedtls_aria_setkey_dec() must be called
+ *         data is processed. mbedtls_aria_init(), and either
+ *         mbedtls_aria_setkey_enc() or mbedtls_aria_setkey_dec() must be called
  *         before the first call to this API with the same context.
  *
  * \note   This function operates on aligned blocks, that is, the input size
@@ -208,7 +207,7 @@ int vdb_mbedtls_aria_crypt_ecb( mbedtls_aria_context *ctx,
  * \return         \c 0 on success.
  * \return         A negative error code on failure.
  */
-int vdb_mbedtls_aria_crypt_cbc( mbedtls_aria_context *ctx,
+int mbedtls_aria_crypt_cbc( mbedtls_aria_context *ctx,
                             int mode,
                             size_t length,
                             unsigned char iv[MBEDTLS_ARIA_BLOCKSIZE],
@@ -225,7 +224,7 @@ int vdb_mbedtls_aria_crypt_cbc( mbedtls_aria_context *ctx,
  *        parameter (encrypt or decrypt), on the input data buffer
  *        defined in the \p input parameter.
  *
- *        For CFB, you must set up the context with vdb_mbedtls_aria_setkey_enc(),
+ *        For CFB, you must set up the context with mbedtls_aria_setkey_enc(),
  *        regardless of whether you are performing an encryption or decryption
  *        operation, that is, regardless of the \p mode parameter. This is
  *        because CFB mode uses the same key schedule for encryption and
@@ -258,7 +257,7 @@ int vdb_mbedtls_aria_crypt_cbc( mbedtls_aria_context *ctx,
  * \return         \c 0 on success.
  * \return         A negative error code on failure.
  */
-int vdb_mbedtls_aria_crypt_cfb128( mbedtls_aria_context *ctx,
+int mbedtls_aria_crypt_cfb128( mbedtls_aria_context *ctx,
                                int mode,
                                size_t length,
                                size_t *iv_off,
@@ -278,7 +277,7 @@ int vdb_mbedtls_aria_crypt_cfb128( mbedtls_aria_context *ctx,
  *
  *             Due to the nature of CTR, you must use the same key schedule
  *             for both encryption and decryption operations. Therefore, you
- *             must use the context initialized with vdb_mbedtls_aria_setkey_enc()
+ *             must use the context initialized with mbedtls_aria_setkey_enc()
  *             for both #MBEDTLS_ARIA_ENCRYPT and #MBEDTLS_ARIA_DECRYPT.
  *
  * \warning    You must never reuse a nonce value with the same key. Doing so
@@ -345,7 +344,7 @@ int vdb_mbedtls_aria_crypt_cfb128( mbedtls_aria_context *ctx,
  * \return                 \c 0 on success.
  * \return                 A negative error code on failure.
  */
-int vdb_mbedtls_aria_crypt_ctr( mbedtls_aria_context *ctx,
+int mbedtls_aria_crypt_ctr( mbedtls_aria_context *ctx,
                             size_t length,
                             size_t *nc_off,
                             unsigned char nonce_counter[MBEDTLS_ARIA_BLOCKSIZE],
@@ -360,7 +359,7 @@ int vdb_mbedtls_aria_crypt_ctr( mbedtls_aria_context *ctx,
  *
  * \return         \c 0 on success, or \c 1 on failure.
  */
-int vdb_mbedtls_aria_self_test( int verbose );
+int mbedtls_aria_self_test( int verbose );
 #endif /* MBEDTLS_SELF_TEST */
 
 #ifdef __cplusplus

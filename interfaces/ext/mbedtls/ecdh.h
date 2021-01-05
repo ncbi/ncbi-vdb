@@ -13,7 +13,7 @@
  * Cryptography</em>.
  */
 /*
- *  Copyright (C) 2006-2018, Arm Limited (or its affiliates), All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -27,26 +27,23 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of Mbed TLS (https://tls.mbed.org)
  */
 
 #ifndef MBEDTLS_ECDH_H
 #define MBEDTLS_ECDH_H
 
-#include "ecp.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
-/*
- * Use a backward compatible ECDH context.
- *
- * This flag is always enabled for now and future versions might add a
- * configuration option that conditionally undefines this flag.
- * The configuration option in question may have a different name.
- *
- * Features undefining this flag, must have a warning in their description in
- * config.h stating that the feature breaks backward compatibility.
- */
-#define MBEDTLS_ECDH_LEGACY_CONTEXT
+#include "mbedtls/ecp.h"
+
+#if defined(MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED)
+#undef MBEDTLS_ECDH_LEGACY_CONTEXT
+#include "everest/everest.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -72,6 +69,9 @@ typedef enum
 {
     MBEDTLS_ECDH_VARIANT_NONE = 0,   /*!< Implementation not defined. */
     MBEDTLS_ECDH_VARIANT_MBEDTLS_2_0,/*!< The default Mbed TLS implementation */
+#if defined(MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED)
+    MBEDTLS_ECDH_VARIANT_EVEREST     /*!< Everest implementation */
+#endif
 } mbedtls_ecdh_variant;
 
 /**
@@ -125,6 +125,9 @@ typedef struct mbedtls_ecdh_context
     union
     {
         mbedtls_ecdh_context_mbed   mbed_ecdh;
+#if defined(MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED)
+        mbedtls_ecdh_context_everest everest_ecdh;
+#endif
     } ctx;                      /*!< Implementation-specific context. The
                                   context in use is specified by the \c var
                                   field. */
@@ -140,18 +143,27 @@ typedef struct mbedtls_ecdh_context
 mbedtls_ecdh_context;
 
 /**
+ * \brief          Check whether a given group can be used for ECDH.
+ *
+ * \param gid      The ECP group ID to check.
+ *
+ * \return         \c 1 if the group can be used, \c 0 otherwise
+ */
+int mbedtls_ecdh_can_do( mbedtls_ecp_group_id gid );
+
+/**
  * \brief           This function generates an ECDH keypair on an elliptic
  *                  curve.
  *
  *                  This function performs the first of two core computations
  *                  implemented during the ECDH key exchange. The second core
- *                  computation is performed by vdb_mbedtls_ecdh_compute_shared().
+ *                  computation is performed by mbedtls_ecdh_compute_shared().
  *
  * \see             ecp.h
  *
  * \param grp       The ECP group to use. This must be initialized and have
  *                  domain parameters loaded, for example through
- *                  vdb_mbedtls_ecp_load() or vdb_mbedtls_ecp_tls_read_group().
+ *                  mbedtls_ecp_load() or mbedtls_ecp_tls_read_group().
  * \param d         The destination MPI (private key).
  *                  This must be initialized.
  * \param Q         The destination point (public key).
@@ -164,7 +176,7 @@ mbedtls_ecdh_context;
  * \return          Another \c MBEDTLS_ERR_ECP_XXX or
  *                  \c MBEDTLS_MPI_XXX error code on failure.
  */
-int vdb_mbedtls_ecdh_gen_public( mbedtls_ecp_group *grp, mbedtls_mpi *d, mbedtls_ecp_point *Q,
+int mbedtls_ecdh_gen_public( mbedtls_ecp_group *grp, mbedtls_mpi *d, mbedtls_ecp_point *Q,
                      int (*f_rng)(void *, unsigned char *, size_t),
                      void *p_rng );
 
@@ -173,17 +185,17 @@ int vdb_mbedtls_ecdh_gen_public( mbedtls_ecp_group *grp, mbedtls_mpi *d, mbedtls
  *
  *                  This function performs the second of two core computations
  *                  implemented during the ECDH key exchange. The first core
- *                  computation is performed by vdb_mbedtls_ecdh_gen_public().
+ *                  computation is performed by mbedtls_ecdh_gen_public().
  *
  * \see             ecp.h
  *
  * \note            If \p f_rng is not NULL, it is used to implement
  *                  countermeasures against side-channel attacks.
- *                  For more information, see vdb_mbedtls_ecp_mul().
+ *                  For more information, see mbedtls_ecp_mul().
  *
  * \param grp       The ECP group to use. This must be initialized and have
  *                  domain parameters loaded, for example through
- *                  vdb_mbedtls_ecp_load() or vdb_mbedtls_ecp_tls_read_group().
+ *                  mbedtls_ecp_load() or mbedtls_ecp_tls_read_group().
  * \param z         The destination MPI (shared secret).
  *                  This must be initialized.
  * \param Q         The public key from another party.
@@ -193,7 +205,7 @@ int vdb_mbedtls_ecdh_gen_public( mbedtls_ecp_group *grp, mbedtls_mpi *d, mbedtls
  * \param f_rng     The RNG function. This may be \c NULL if randomization
  *                  of intermediate results during the ECP computations is
  *                  not needed (discouraged). See the documentation of
- *                  vdb_mbedtls_ecp_mul() for more.
+ *                  mbedtls_ecp_mul() for more.
  * \param p_rng     The RNG context to be passed to \p f_rng. This may be
  *                  \c NULL if \p f_rng is \c NULL or doesn't need a
  *                  context argument.
@@ -202,7 +214,7 @@ int vdb_mbedtls_ecdh_gen_public( mbedtls_ecp_group *grp, mbedtls_mpi *d, mbedtls
  * \return          Another \c MBEDTLS_ERR_ECP_XXX or
  *                  \c MBEDTLS_MPI_XXX error code on failure.
  */
-int vdb_mbedtls_ecdh_compute_shared( mbedtls_ecp_group *grp, mbedtls_mpi *z,
+int mbedtls_ecdh_compute_shared( mbedtls_ecp_group *grp, mbedtls_mpi *z,
                          const mbedtls_ecp_point *Q, const mbedtls_mpi *d,
                          int (*f_rng)(void *, unsigned char *, size_t),
                          void *p_rng );
@@ -212,15 +224,15 @@ int vdb_mbedtls_ecdh_compute_shared( mbedtls_ecp_group *grp, mbedtls_mpi *z,
  *
  * \param ctx       The ECDH context to initialize. This must not be \c NULL.
  */
-void vdb_mbedtls_ecdh_init( mbedtls_ecdh_context *ctx );
+void mbedtls_ecdh_init( mbedtls_ecdh_context *ctx );
 
 /**
  * \brief           This function sets up the ECDH context with the information
  *                  given.
  *
- *                  This function should be called after vdb_mbedtls_ecdh_init() but
- *                  before vdb_mbedtls_ecdh_make_params(). There is no need to call
- *                  this function before vdb_mbedtls_ecdh_read_params().
+ *                  This function should be called after mbedtls_ecdh_init() but
+ *                  before mbedtls_ecdh_make_params(). There is no need to call
+ *                  this function before mbedtls_ecdh_read_params().
  *
  *                  This is the first function used by a TLS server for ECDHE
  *                  ciphersuites.
@@ -230,7 +242,7 @@ void vdb_mbedtls_ecdh_init( mbedtls_ecdh_context *ctx );
  *
  * \return          \c 0 on success.
  */
-int vdb_mbedtls_ecdh_setup( mbedtls_ecdh_context *ctx,
+int mbedtls_ecdh_setup( mbedtls_ecdh_context *ctx,
                         mbedtls_ecp_group_id grp_id );
 
 /**
@@ -240,7 +252,7 @@ int vdb_mbedtls_ecdh_setup( mbedtls_ecdh_context *ctx,
  *                  case this function does nothing. If it is not \c NULL,
  *                  it must point to an initialized ECDH context.
  */
-void vdb_mbedtls_ecdh_free( mbedtls_ecdh_context *ctx );
+void mbedtls_ecdh_free( mbedtls_ecdh_context *ctx );
 
 /**
  * \brief           This function generates an EC key pair and exports its
@@ -248,12 +260,12 @@ void vdb_mbedtls_ecdh_free( mbedtls_ecdh_context *ctx );
  *                  message.
  *
  *                  This is the second function used by a TLS server for ECDHE
- *                  ciphersuites. (It is called after vdb_mbedtls_ecdh_setup().)
+ *                  ciphersuites. (It is called after mbedtls_ecdh_setup().)
  *
  * \see             ecp.h
  *
  * \param ctx       The ECDH context to use. This must be initialized
- *                  and bound to a group, for example via vdb_mbedtls_ecdh_setup().
+ *                  and bound to a group, for example via mbedtls_ecdh_setup().
  * \param olen      The address at which to store the number of Bytes written.
  * \param buf       The destination buffer. This must be a writable buffer of
  *                  length \p blen Bytes.
@@ -264,10 +276,10 @@ void vdb_mbedtls_ecdh_free( mbedtls_ecdh_context *ctx );
  *
  * \return          \c 0 on success.
  * \return          #MBEDTLS_ERR_ECP_IN_PROGRESS if maximum number of
- *                  operations was reached: see \c vdb_mbedtls_ecp_set_max_ops().
+ *                  operations was reached: see \c mbedtls_ecp_set_max_ops().
  * \return          Another \c MBEDTLS_ERR_ECP_XXX error code on failure.
  */
-int vdb_mbedtls_ecdh_make_params( mbedtls_ecdh_context *ctx, size_t *olen,
+int mbedtls_ecdh_make_params( mbedtls_ecdh_context *ctx, size_t *olen,
                       unsigned char *buf, size_t blen,
                       int (*f_rng)(void *, unsigned char *, size_t),
                       void *p_rng );
@@ -296,7 +308,7 @@ int vdb_mbedtls_ecdh_make_params( mbedtls_ecdh_context *ctx, size_t *olen,
  * \return          An \c MBEDTLS_ERR_ECP_XXX error code on failure.
  *
  */
-int vdb_mbedtls_ecdh_read_params( mbedtls_ecdh_context *ctx,
+int mbedtls_ecdh_read_params( mbedtls_ecdh_context *ctx,
                               const unsigned char **buf,
                               const unsigned char *end );
 
@@ -319,7 +331,7 @@ int vdb_mbedtls_ecdh_read_params( mbedtls_ecdh_context *ctx,
  * \return          Another \c MBEDTLS_ERR_ECP_XXX error code on failure.
  *
  */
-int vdb_mbedtls_ecdh_get_params( mbedtls_ecdh_context *ctx,
+int mbedtls_ecdh_get_params( mbedtls_ecdh_context *ctx,
                              const mbedtls_ecp_keypair *key,
                              mbedtls_ecdh_side side );
 
@@ -334,7 +346,7 @@ int vdb_mbedtls_ecdh_get_params( mbedtls_ecdh_context *ctx,
  *
  * \param ctx       The ECDH context to use. This must be initialized
  *                  and bound to a group, the latter usually by
- *                  vdb_mbedtls_ecdh_read_params().
+ *                  mbedtls_ecdh_read_params().
  * \param olen      The address at which to store the number of Bytes written.
  *                  This must not be \c NULL.
  * \param buf       The destination buffer. This must be a writable buffer
@@ -346,10 +358,10 @@ int vdb_mbedtls_ecdh_get_params( mbedtls_ecdh_context *ctx,
  *
  * \return          \c 0 on success.
  * \return          #MBEDTLS_ERR_ECP_IN_PROGRESS if maximum number of
- *                  operations was reached: see \c vdb_mbedtls_ecp_set_max_ops().
+ *                  operations was reached: see \c mbedtls_ecp_set_max_ops().
  * \return          Another \c MBEDTLS_ERR_ECP_XXX error code on failure.
  */
-int vdb_mbedtls_ecdh_make_public( mbedtls_ecdh_context *ctx, size_t *olen,
+int mbedtls_ecdh_make_public( mbedtls_ecdh_context *ctx, size_t *olen,
                       unsigned char *buf, size_t blen,
                       int (*f_rng)(void *, unsigned char *, size_t),
                       void *p_rng );
@@ -359,13 +371,13 @@ int vdb_mbedtls_ecdh_make_public( mbedtls_ecdh_context *ctx, size_t *olen,
  *              TLS ClientKeyExchange message.
  *
  *              This is the third function used by a TLS server for ECDH(E)
- *              ciphersuites. (It is called after vdb_mbedtls_ecdh_setup() and
- *              vdb_mbedtls_ecdh_make_params().)
+ *              ciphersuites. (It is called after mbedtls_ecdh_setup() and
+ *              mbedtls_ecdh_make_params().)
  *
  * \see         ecp.h
  *
  * \param ctx   The ECDH context to use. This must be initialized
- *              and bound to a group, for example via vdb_mbedtls_ecdh_setup().
+ *              and bound to a group, for example via mbedtls_ecdh_setup().
  * \param buf   The pointer to the ClientKeyExchange payload. This must
  *              be a readable buffer of length \p blen Bytes.
  * \param blen  The length of the input buffer \p buf in Bytes.
@@ -373,7 +385,7 @@ int vdb_mbedtls_ecdh_make_public( mbedtls_ecdh_context *ctx, size_t *olen,
  * \return      \c 0 on success.
  * \return      An \c MBEDTLS_ERR_ECP_XXX error code on failure.
  */
-int vdb_mbedtls_ecdh_read_public( mbedtls_ecdh_context *ctx,
+int mbedtls_ecdh_read_public( mbedtls_ecdh_context *ctx,
                               const unsigned char *buf, size_t blen );
 
 /**
@@ -384,7 +396,7 @@ int vdb_mbedtls_ecdh_read_public( mbedtls_ecdh_context *ctx,
  *
  * \note            If \p f_rng is not NULL, it is used to implement
  *                  countermeasures against side-channel attacks.
- *                  For more information, see vdb_mbedtls_ecp_mul().
+ *                  For more information, see mbedtls_ecp_mul().
  *
  * \see             ecp.h
 
@@ -403,10 +415,10 @@ int vdb_mbedtls_ecdh_read_public( mbedtls_ecdh_context *ctx,
  *
  * \return          \c 0 on success.
  * \return          #MBEDTLS_ERR_ECP_IN_PROGRESS if maximum number of
- *                  operations was reached: see \c vdb_mbedtls_ecp_set_max_ops().
+ *                  operations was reached: see \c mbedtls_ecp_set_max_ops().
  * \return          Another \c MBEDTLS_ERR_ECP_XXX error code on failure.
  */
-int vdb_mbedtls_ecdh_calc_secret( mbedtls_ecdh_context *ctx, size_t *olen,
+int mbedtls_ecdh_calc_secret( mbedtls_ecdh_context *ctx, size_t *olen,
                       unsigned char *buf, size_t blen,
                       int (*f_rng)(void *, unsigned char *, size_t),
                       void *p_rng );
@@ -416,7 +428,7 @@ int vdb_mbedtls_ecdh_calc_secret( mbedtls_ecdh_context *ctx, size_t *olen,
  * \brief           This function enables restartable EC computations for this
  *                  context.  (Default: disabled.)
  *
- * \see             \c vdb_mbedtls_ecp_set_max_ops()
+ * \see             \c mbedtls_ecp_set_max_ops()
  *
  * \note            It is not possible to safely disable restartable
  *                  computations once enabled, except by free-ing the context,
@@ -424,7 +436,7 @@ int vdb_mbedtls_ecdh_calc_secret( mbedtls_ecdh_context *ctx, size_t *olen,
  *
  * \param ctx       The ECDH context to use. This must be initialized.
  */
-void vdb_mbedtls_ecdh_enable_restart( mbedtls_ecdh_context *ctx );
+void mbedtls_ecdh_enable_restart( mbedtls_ecdh_context *ctx );
 #endif /* MBEDTLS_ECP_RESTARTABLE */
 
 #ifdef __cplusplus

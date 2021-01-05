@@ -4,7 +4,7 @@
  * \brief Camellia block cipher
  */
 /*
- *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -18,14 +18,12 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 #ifndef MBEDTLS_CAMELLIA_H
 #define MBEDTLS_CAMELLIA_H
 
 #if !defined(MBEDTLS_CONFIG_FILE)
-#include "config.h"
+#include "mbedtls/config.h"
 #else
 #include MBEDTLS_CONFIG_FILE
 #endif
@@ -33,7 +31,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "platform_util.h"
+#include "mbedtls/platform_util.h"
 
 #define MBEDTLS_CAMELLIA_ENCRYPT     1
 #define MBEDTLS_CAMELLIA_DECRYPT     0
@@ -77,7 +75,7 @@ mbedtls_camellia_context;
  * \param ctx      The CAMELLIA context to be initialized.
  *                 This must not be \c NULL.
  */
-void vdb_mbedtls_camellia_init( mbedtls_camellia_context *ctx );
+void mbedtls_camellia_init( mbedtls_camellia_context *ctx );
 
 /**
  * \brief          Clear a CAMELLIA context.
@@ -86,7 +84,7 @@ void vdb_mbedtls_camellia_init( mbedtls_camellia_context *ctx );
  *                 in which case this function returns immediately. If it is not
  *                 \c NULL, it must be initialized.
  */
-void vdb_mbedtls_camellia_free( mbedtls_camellia_context *ctx );
+void mbedtls_camellia_free( mbedtls_camellia_context *ctx );
 
 /**
  * \brief          Perform a CAMELLIA key schedule operation for encryption.
@@ -100,7 +98,7 @@ void vdb_mbedtls_camellia_free( mbedtls_camellia_context *ctx );
  * \return         \c 0 if successful.
  * \return         A negative error code on failure.
  */
-int vdb_mbedtls_camellia_setkey_enc( mbedtls_camellia_context *ctx,
+int mbedtls_camellia_setkey_enc( mbedtls_camellia_context *ctx,
                                  const unsigned char *key,
                                  unsigned int keybits );
 
@@ -116,7 +114,7 @@ int vdb_mbedtls_camellia_setkey_enc( mbedtls_camellia_context *ctx,
  * \return         \c 0 if successful.
  * \return         A negative error code on failure.
  */
-int vdb_mbedtls_camellia_setkey_dec( mbedtls_camellia_context *ctx,
+int mbedtls_camellia_setkey_dec( mbedtls_camellia_context *ctx,
                                  const unsigned char *key,
                                  unsigned int keybits );
 
@@ -135,7 +133,7 @@ int vdb_mbedtls_camellia_setkey_dec( mbedtls_camellia_context *ctx,
  * \return         \c 0 if successful.
  * \return         A negative error code on failure.
  */
-int vdb_mbedtls_camellia_crypt_ecb( mbedtls_camellia_context *ctx,
+int mbedtls_camellia_crypt_ecb( mbedtls_camellia_context *ctx,
                     int mode,
                     const unsigned char input[16],
                     unsigned char output[16] );
@@ -169,7 +167,7 @@ int vdb_mbedtls_camellia_crypt_ecb( mbedtls_camellia_context *ctx,
  * \return         \c 0 if successful.
  * \return         A negative error code on failure.
  */
-int vdb_mbedtls_camellia_crypt_cbc( mbedtls_camellia_context *ctx,
+int mbedtls_camellia_crypt_cbc( mbedtls_camellia_context *ctx,
                     int mode,
                     size_t length,
                     unsigned char iv[16],
@@ -185,7 +183,7 @@ int vdb_mbedtls_camellia_crypt_cbc( mbedtls_camellia_context *ctx,
  * \note           Due to the nature of CFB mode, you should use the same
  *                 key for both encryption and decryption. In particular, calls
  *                 to this function should be preceded by a key-schedule via
- *                 vdb_mbedtls_camellia_setkey_enc() regardless of whether \p mode
+ *                 mbedtls_camellia_setkey_enc() regardless of whether \p mode
  *                 is #MBEDTLS_CAMELLIA_ENCRYPT or #MBEDTLS_CAMELLIA_DECRYPT.
  *
  * \note           Upon exit, the content of the IV is updated so that you can
@@ -215,7 +213,7 @@ int vdb_mbedtls_camellia_crypt_cbc( mbedtls_camellia_context *ctx,
  * \return         \c 0 if successful.
  * \return         A negative error code on failure.
  */
-int vdb_mbedtls_camellia_crypt_cfb128( mbedtls_camellia_context *ctx,
+int mbedtls_camellia_crypt_cfb128( mbedtls_camellia_context *ctx,
                        int mode,
                        size_t length,
                        size_t *iv_off,
@@ -231,7 +229,7 @@ int vdb_mbedtls_camellia_crypt_cfb128( mbedtls_camellia_context *ctx,
  * *note       Due to the nature of CTR mode, you should use the same
  *             key for both encryption and decryption. In particular, calls
  *             to this function should be preceded by a key-schedule via
- *             vdb_mbedtls_camellia_setkey_enc() regardless of whether \p mode
+ *             mbedtls_camellia_setkey_enc() regardless of whether \p mode
  *             is #MBEDTLS_CAMELLIA_ENCRYPT or #MBEDTLS_CAMELLIA_DECRYPT.
  *
  * \warning    You must never reuse a nonce value with the same key. Doing so
@@ -299,7 +297,7 @@ int vdb_mbedtls_camellia_crypt_cfb128( mbedtls_camellia_context *ctx,
  * \return              \c 0 if successful.
  * \return              A negative error code on failure.
  */
-int vdb_mbedtls_camellia_crypt_ctr( mbedtls_camellia_context *ctx,
+int mbedtls_camellia_crypt_ctr( mbedtls_camellia_context *ctx,
                        size_t length,
                        size_t *nc_off,
                        unsigned char nonce_counter[16],
@@ -308,12 +306,16 @@ int vdb_mbedtls_camellia_crypt_ctr( mbedtls_camellia_context *ctx,
                        unsigned char *output );
 #endif /* MBEDTLS_CIPHER_MODE_CTR */
 
+#if defined(MBEDTLS_SELF_TEST)
+
 /**
  * \brief          Checkup routine
  *
  * \return         0 if successful, or 1 if the test failed
  */
-int vdb_mbedtls_camellia_self_test( int verbose );
+int mbedtls_camellia_self_test( int verbose );
+
+#endif /* MBEDTLS_SELF_TEST */
 
 #ifdef __cplusplus
 }

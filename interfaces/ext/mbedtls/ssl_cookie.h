@@ -4,7 +4,7 @@
  * \brief DTLS cookie callbacks implementation
  */
 /*
- *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -18,16 +18,20 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 #ifndef MBEDTLS_SSL_COOKIE_H
 #define MBEDTLS_SSL_COOKIE_H
 
-#include "ssl.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
+
+#include "mbedtls/ssl.h"
 
 #if defined(MBEDTLS_THREADING_C)
-#include "threading.h"
+#include "mbedtls/threading.h"
 #endif
 
 /**
@@ -67,12 +71,12 @@ typedef struct mbedtls_ssl_cookie_ctx
 /**
  * \brief          Initialize cookie context
  */
-void vdb_mbedtls_ssl_cookie_init( mbedtls_ssl_cookie_ctx *ctx );
+void mbedtls_ssl_cookie_init( mbedtls_ssl_cookie_ctx *ctx );
 
 /**
  * \brief          Setup cookie context (generate keys)
  */
-int vdb_mbedtls_ssl_cookie_setup( mbedtls_ssl_cookie_ctx *ctx,
+int mbedtls_ssl_cookie_setup( mbedtls_ssl_cookie_ctx *ctx,
                       int (*f_rng)(void *, unsigned char *, size_t),
                       void *p_rng );
 
@@ -85,22 +89,22 @@ int vdb_mbedtls_ssl_cookie_setup( mbedtls_ssl_cookie_ctx *ctx,
  *                 issued in the meantime.
  *                 0 to disable expiration (NOT recommended)
  */
-void vdb_mbedtls_ssl_cookie_set_timeout( mbedtls_ssl_cookie_ctx *ctx, unsigned long delay );
+void mbedtls_ssl_cookie_set_timeout( mbedtls_ssl_cookie_ctx *ctx, unsigned long delay );
 
 /**
  * \brief          Free cookie context
  */
-void vdb_mbedtls_ssl_cookie_free( mbedtls_ssl_cookie_ctx *ctx );
+void mbedtls_ssl_cookie_free( mbedtls_ssl_cookie_ctx *ctx );
 
 /**
  * \brief          Generate cookie, see \c mbedtls_ssl_cookie_write_t
  */
-mbedtls_ssl_cookie_write_t vdb_mbedtls_ssl_cookie_write;
+mbedtls_ssl_cookie_write_t mbedtls_ssl_cookie_write;
 
 /**
  * \brief          Verify cookie, see \c mbedtls_ssl_cookie_write_t
  */
-mbedtls_ssl_cookie_check_t vdb_mbedtls_ssl_cookie_check;
+mbedtls_ssl_cookie_check_t mbedtls_ssl_cookie_check;
 
 #ifdef __cplusplus
 }

@@ -1,7 +1,7 @@
 /*
  *  Buffer-based memory allocator
  *
- *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,15 +15,9 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
-#if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
-#else
-#include MBEDTLS_CONFIG_FILE
-#endif
+#include "common.h"
 
 #if defined(MBEDTLS_MEMORY_BUFFER_ALLOC_C)
 #include "mbedtls/memory_buffer_alloc.h"
@@ -94,18 +88,18 @@ static void debug_header( memory_header *hdr )
     size_t i;
 #endif
 
-    vdb_mbedtls_fprintf( stderr, "HDR:  PTR(%10zu), PREV(%10zu), NEXT(%10zu), "
+    mbedtls_fprintf( stderr, "HDR:  PTR(%10zu), PREV(%10zu), NEXT(%10zu), "
                               "ALLOC(%zu), SIZE(%10zu)\n",
                       (size_t) hdr, (size_t) hdr->prev, (size_t) hdr->next,
                       hdr->alloc, hdr->size );
-    vdb_mbedtls_fprintf( stderr, "      FPREV(%10zu), FNEXT(%10zu)\n",
+    mbedtls_fprintf( stderr, "      FPREV(%10zu), FNEXT(%10zu)\n",
                       (size_t) hdr->prev_free, (size_t) hdr->next_free );
 
 #if defined(MBEDTLS_MEMORY_BACKTRACE)
-    vdb_mbedtls_fprintf( stderr, "TRACE: \n" );
+    mbedtls_fprintf( stderr, "TRACE: \n" );
     for( i = 0; i < hdr->trace_count; i++ )
-        vdb_mbedtls_fprintf( stderr, "%s\n", hdr->trace[i] );
-    vdb_mbedtls_fprintf( stderr, "\n" );
+        mbedtls_fprintf( stderr, "%s\n", hdr->trace[i] );
+    mbedtls_fprintf( stderr, "\n" );
 #endif
 }
 
@@ -113,14 +107,14 @@ static void debug_chain( void )
 {
     memory_header *cur = heap.first;
 
-    vdb_mbedtls_fprintf( stderr, "\nBlock list\n" );
+    mbedtls_fprintf( stderr, "\nBlock list\n" );
     while( cur != NULL )
     {
         debug_header( cur );
         cur = cur->next;
     }
 
-    vdb_mbedtls_fprintf( stderr, "Free list\n" );
+    mbedtls_fprintf( stderr, "Free list\n" );
     cur = heap.first_free;
 
     while( cur != NULL )
@@ -136,7 +130,7 @@ static int verify_header( memory_header *hdr )
     if( hdr->magic1 != MAGIC1 )
     {
 #if defined(MBEDTLS_MEMORY_DEBUG)
-        vdb_mbedtls_fprintf( stderr, "FATAL: MAGIC1 mismatch\n" );
+        mbedtls_fprintf( stderr, "FATAL: MAGIC1 mismatch\n" );
 #endif
         return( 1 );
     }
@@ -144,7 +138,7 @@ static int verify_header( memory_header *hdr )
     if( hdr->magic2 != MAGIC2 )
     {
 #if defined(MBEDTLS_MEMORY_DEBUG)
-        vdb_mbedtls_fprintf( stderr, "FATAL: MAGIC2 mismatch\n" );
+        mbedtls_fprintf( stderr, "FATAL: MAGIC2 mismatch\n" );
 #endif
         return( 1 );
     }
@@ -152,7 +146,7 @@ static int verify_header( memory_header *hdr )
     if( hdr->alloc > 1 )
     {
 #if defined(MBEDTLS_MEMORY_DEBUG)
-        vdb_mbedtls_fprintf( stderr, "FATAL: alloc has illegal value\n" );
+        mbedtls_fprintf( stderr, "FATAL: alloc has illegal value\n" );
 #endif
         return( 1 );
     }
@@ -160,7 +154,7 @@ static int verify_header( memory_header *hdr )
     if( hdr->prev != NULL && hdr->prev == hdr->next )
     {
 #if defined(MBEDTLS_MEMORY_DEBUG)
-        vdb_mbedtls_fprintf( stderr, "FATAL: prev == next\n" );
+        mbedtls_fprintf( stderr, "FATAL: prev == next\n" );
 #endif
         return( 1 );
     }
@@ -168,7 +162,7 @@ static int verify_header( memory_header *hdr )
     if( hdr->prev_free != NULL && hdr->prev_free == hdr->next_free )
     {
 #if defined(MBEDTLS_MEMORY_DEBUG)
-        vdb_mbedtls_fprintf( stderr, "FATAL: prev_free == next_free\n" );
+        mbedtls_fprintf( stderr, "FATAL: prev_free == next_free\n" );
 #endif
         return( 1 );
     }
@@ -183,7 +177,7 @@ static int verify_chain( void )
     if( prv == NULL || verify_header( prv ) != 0 )
     {
 #if defined(MBEDTLS_MEMORY_DEBUG)
-        vdb_mbedtls_fprintf( stderr, "FATAL: verification of first header "
+        mbedtls_fprintf( stderr, "FATAL: verification of first header "
                                   "failed\n" );
 #endif
         return( 1 );
@@ -192,7 +186,7 @@ static int verify_chain( void )
     if( heap.first->prev != NULL )
     {
 #if defined(MBEDTLS_MEMORY_DEBUG)
-        vdb_mbedtls_fprintf( stderr, "FATAL: verification failed: "
+        mbedtls_fprintf( stderr, "FATAL: verification failed: "
                                   "first->prev != NULL\n" );
 #endif
         return( 1 );
@@ -205,7 +199,7 @@ static int verify_chain( void )
         if( verify_header( cur ) != 0 )
         {
 #if defined(MBEDTLS_MEMORY_DEBUG)
-            vdb_mbedtls_fprintf( stderr, "FATAL: verification of header "
+            mbedtls_fprintf( stderr, "FATAL: verification of header "
                                       "failed\n" );
 #endif
             return( 1 );
@@ -214,7 +208,7 @@ static int verify_chain( void )
         if( cur->prev != prv )
         {
 #if defined(MBEDTLS_MEMORY_DEBUG)
-            vdb_mbedtls_fprintf( stderr, "FATAL: verification failed: "
+            mbedtls_fprintf( stderr, "FATAL: verification failed: "
                                       "cur->prev != prv\n" );
 #endif
             return( 1 );
@@ -270,10 +264,10 @@ static void *buffer_alloc_calloc( size_t n, size_t size )
     if( cur->alloc != 0 )
     {
 #if defined(MBEDTLS_MEMORY_DEBUG)
-        vdb_mbedtls_fprintf( stderr, "FATAL: block in free_list but allocated "
+        mbedtls_fprintf( stderr, "FATAL: block in free_list but allocated "
                                   "data\n" );
 #endif
-        vdb_mbedtls_exit( 1 );
+        mbedtls_exit( 1 );
     }
 
 #if defined(MBEDTLS_MEMORY_DEBUG)
@@ -312,7 +306,7 @@ static void *buffer_alloc_calloc( size_t n, size_t size )
 #endif
 
         if( ( heap.verify & MBEDTLS_MEMORY_VERIFY_ALLOC ) && verify_chain() != 0 )
-            vdb_mbedtls_exit( 1 );
+            mbedtls_exit( 1 );
 
         ret = (unsigned char *) cur + sizeof( memory_header );
         memset( ret, 0, original_len );
@@ -370,7 +364,7 @@ static void *buffer_alloc_calloc( size_t n, size_t size )
 #endif
 
     if( ( heap.verify & MBEDTLS_MEMORY_VERIFY_ALLOC ) && verify_chain() != 0 )
-        vdb_mbedtls_exit( 1 );
+        mbedtls_exit( 1 );
 
     ret = (unsigned char *) cur + sizeof( memory_header );
     memset( ret, 0, original_len );
@@ -389,25 +383,25 @@ static void buffer_alloc_free( void *ptr )
     if( p < heap.buf || p >= heap.buf + heap.len )
     {
 #if defined(MBEDTLS_MEMORY_DEBUG)
-        vdb_mbedtls_fprintf( stderr, "FATAL: vdb_mbedtls_free() outside of managed "
+        mbedtls_fprintf( stderr, "FATAL: mbedtls_free() outside of managed "
                                   "space\n" );
 #endif
-        vdb_mbedtls_exit( 1 );
+        mbedtls_exit( 1 );
     }
 
     p -= sizeof(memory_header);
     hdr = (memory_header *) p;
 
     if( verify_header( hdr ) != 0 )
-        vdb_mbedtls_exit( 1 );
+        mbedtls_exit( 1 );
 
     if( hdr->alloc != 1 )
     {
 #if defined(MBEDTLS_MEMORY_DEBUG)
-        vdb_mbedtls_fprintf( stderr, "FATAL: vdb_mbedtls_free() on unallocated "
+        mbedtls_fprintf( stderr, "FATAL: mbedtls_free() on unallocated "
                                   "data\n" );
 #endif
-        vdb_mbedtls_exit( 1 );
+        mbedtls_exit( 1 );
     }
 
     hdr->alloc = 0;
@@ -492,23 +486,23 @@ static void buffer_alloc_free( void *ptr )
     }
 
     if( ( heap.verify & MBEDTLS_MEMORY_VERIFY_FREE ) && verify_chain() != 0 )
-        vdb_mbedtls_exit( 1 );
+        mbedtls_exit( 1 );
 }
 
-void vdb_mbedtls_memory_buffer_set_verify( int verify )
+void mbedtls_memory_buffer_set_verify( int verify )
 {
     heap.verify = verify;
 }
 
-int vdb_mbedtls_memory_buffer_alloc_verify( void )
+int mbedtls_memory_buffer_alloc_verify( void )
 {
     return verify_chain();
 }
 
 #if defined(MBEDTLS_MEMORY_DEBUG)
-void vdb_mbedtls_memory_buffer_alloc_status( void )
+void mbedtls_memory_buffer_alloc_status( void )
 {
-    vdb_mbedtls_fprintf( stderr,
+    mbedtls_fprintf( stderr,
                       "Current use: %zu blocks / %zu bytes, max: %zu blocks / "
                       "%zu bytes (total %zu bytes), alloc / free: %zu / %zu\n",
                       heap.header_count, heap.total_used,
@@ -519,28 +513,28 @@ void vdb_mbedtls_memory_buffer_alloc_status( void )
 
     if( heap.first->next == NULL )
     {
-        vdb_mbedtls_fprintf( stderr, "All memory de-allocated in stack buffer\n" );
+        mbedtls_fprintf( stderr, "All memory de-allocated in stack buffer\n" );
     }
     else
     {
-        vdb_mbedtls_fprintf( stderr, "Memory currently allocated:\n" );
+        mbedtls_fprintf( stderr, "Memory currently allocated:\n" );
         debug_chain();
     }
 }
 
-void vdb_mbedtls_memory_buffer_alloc_max_get( size_t *max_used, size_t *max_blocks )
+void mbedtls_memory_buffer_alloc_max_get( size_t *max_used, size_t *max_blocks )
 {
     *max_used   = heap.maximum_used;
     *max_blocks = heap.maximum_header_count;
 }
 
-void vdb_mbedtls_memory_buffer_alloc_max_reset( void )
+void mbedtls_memory_buffer_alloc_max_reset( void )
 {
     heap.maximum_used = 0;
     heap.maximum_header_count = 0;
 }
 
-void vdb_mbedtls_memory_buffer_alloc_cur_get( size_t *cur_used, size_t *cur_blocks )
+void mbedtls_memory_buffer_alloc_cur_get( size_t *cur_used, size_t *cur_blocks )
 {
     *cur_used   = heap.total_used;
     *cur_blocks = heap.header_count;
@@ -570,16 +564,16 @@ static void buffer_alloc_free_mutexed( void *ptr )
 }
 #endif /* MBEDTLS_THREADING_C */
 
-void vdb_mbedtls_memory_buffer_alloc_init( unsigned char *buf, size_t len )
+void mbedtls_memory_buffer_alloc_init( unsigned char *buf, size_t len )
 {
     memset( &heap, 0, sizeof( buffer_alloc_ctx ) );
 
 #if defined(MBEDTLS_THREADING_C)
     mbedtls_mutex_init( &heap.mutex );
-    vdb_mbedtls_platform_set_calloc_free( buffer_alloc_calloc_mutexed,
+    mbedtls_platform_set_calloc_free( buffer_alloc_calloc_mutexed,
                               buffer_alloc_free_mutexed );
 #else
-    vdb_mbedtls_platform_set_calloc_free( buffer_alloc_calloc, buffer_alloc_free );
+    mbedtls_platform_set_calloc_free( buffer_alloc_calloc, buffer_alloc_free );
 #endif
 
     if( len < sizeof( memory_header ) + MBEDTLS_MEMORY_ALIGN_MULTIPLE )
@@ -605,12 +599,12 @@ void vdb_mbedtls_memory_buffer_alloc_init( unsigned char *buf, size_t len )
     heap.first_free = heap.first;
 }
 
-void vdb_mbedtls_memory_buffer_alloc_free( void )
+void mbedtls_memory_buffer_alloc_free( void )
 {
 #if defined(MBEDTLS_THREADING_C)
     mbedtls_mutex_free( &heap.mutex );
 #endif
-    vdb_mbedtls_platform_zeroize( &heap, sizeof(buffer_alloc_ctx) );
+    mbedtls_platform_zeroize( &heap, sizeof(buffer_alloc_ctx) );
 }
 
 #if defined(MBEDTLS_SELF_TEST)
@@ -644,104 +638,104 @@ static int check_all_free( void )
     if( ! (condition) )                     \
     {                                       \
         if( verbose != 0 )                  \
-            vdb_mbedtls_printf( "failed\n" );  \
+            mbedtls_printf( "failed\n" );  \
                                             \
         ret = 1;                            \
         goto cleanup;                       \
     }
 
-int vdb_mbedtls_memory_buffer_alloc_self_test( int verbose )
+int mbedtls_memory_buffer_alloc_self_test( int verbose )
 {
     unsigned char buf[1024];
     unsigned char *p, *q, *r, *end;
     int ret = 0;
 
     if( verbose != 0 )
-        vdb_mbedtls_printf( "  MBA test #1 (basic alloc-free cycle): " );
+        mbedtls_printf( "  MBA test #1 (basic alloc-free cycle): " );
 
-    vdb_mbedtls_memory_buffer_alloc_init( buf, sizeof( buf ) );
+    mbedtls_memory_buffer_alloc_init( buf, sizeof( buf ) );
 
-    p = vdb_mbedtls_calloc( 1, 1 );
-    q = vdb_mbedtls_calloc( 1, 128 );
-    r = vdb_mbedtls_calloc( 1, 16 );
+    p = mbedtls_calloc( 1, 1 );
+    q = mbedtls_calloc( 1, 128 );
+    r = mbedtls_calloc( 1, 16 );
 
     TEST_ASSERT( check_pointer( p ) == 0 &&
                  check_pointer( q ) == 0 &&
                  check_pointer( r ) == 0 );
 
-    vdb_mbedtls_free( r );
-    vdb_mbedtls_free( q );
-    vdb_mbedtls_free( p );
+    mbedtls_free( r );
+    mbedtls_free( q );
+    mbedtls_free( p );
 
     TEST_ASSERT( check_all_free( ) == 0 );
 
     /* Memorize end to compare with the next test */
     end = heap.buf + heap.len;
 
-    vdb_mbedtls_memory_buffer_alloc_free( );
+    mbedtls_memory_buffer_alloc_free( );
 
     if( verbose != 0 )
-        vdb_mbedtls_printf( "passed\n" );
+        mbedtls_printf( "passed\n" );
 
     if( verbose != 0 )
-        vdb_mbedtls_printf( "  MBA test #2 (buf not aligned): " );
+        mbedtls_printf( "  MBA test #2 (buf not aligned): " );
 
-    vdb_mbedtls_memory_buffer_alloc_init( buf + 1, sizeof( buf ) - 1 );
+    mbedtls_memory_buffer_alloc_init( buf + 1, sizeof( buf ) - 1 );
 
     TEST_ASSERT( heap.buf + heap.len == end );
 
-    p = vdb_mbedtls_calloc( 1, 1 );
-    q = vdb_mbedtls_calloc( 1, 128 );
-    r = vdb_mbedtls_calloc( 1, 16 );
+    p = mbedtls_calloc( 1, 1 );
+    q = mbedtls_calloc( 1, 128 );
+    r = mbedtls_calloc( 1, 16 );
 
     TEST_ASSERT( check_pointer( p ) == 0 &&
                  check_pointer( q ) == 0 &&
                  check_pointer( r ) == 0 );
 
-    vdb_mbedtls_free( r );
-    vdb_mbedtls_free( q );
-    vdb_mbedtls_free( p );
+    mbedtls_free( r );
+    mbedtls_free( q );
+    mbedtls_free( p );
 
     TEST_ASSERT( check_all_free( ) == 0 );
 
-    vdb_mbedtls_memory_buffer_alloc_free( );
+    mbedtls_memory_buffer_alloc_free( );
 
     if( verbose != 0 )
-        vdb_mbedtls_printf( "passed\n" );
+        mbedtls_printf( "passed\n" );
 
     if( verbose != 0 )
-        vdb_mbedtls_printf( "  MBA test #3 (full): " );
+        mbedtls_printf( "  MBA test #3 (full): " );
 
-    vdb_mbedtls_memory_buffer_alloc_init( buf, sizeof( buf ) );
+    mbedtls_memory_buffer_alloc_init( buf, sizeof( buf ) );
 
-    p = vdb_mbedtls_calloc( 1, sizeof( buf ) - sizeof( memory_header ) );
+    p = mbedtls_calloc( 1, sizeof( buf ) - sizeof( memory_header ) );
 
     TEST_ASSERT( check_pointer( p ) == 0 );
-    TEST_ASSERT( vdb_mbedtls_calloc( 1, 1 ) == NULL );
+    TEST_ASSERT( mbedtls_calloc( 1, 1 ) == NULL );
 
-    vdb_mbedtls_free( p );
+    mbedtls_free( p );
 
-    p = vdb_mbedtls_calloc( 1, sizeof( buf ) - 2 * sizeof( memory_header ) - 16 );
-    q = vdb_mbedtls_calloc( 1, 16 );
+    p = mbedtls_calloc( 1, sizeof( buf ) - 2 * sizeof( memory_header ) - 16 );
+    q = mbedtls_calloc( 1, 16 );
 
     TEST_ASSERT( check_pointer( p ) == 0 && check_pointer( q ) == 0 );
-    TEST_ASSERT( vdb_mbedtls_calloc( 1, 1 ) == NULL );
+    TEST_ASSERT( mbedtls_calloc( 1, 1 ) == NULL );
 
-    vdb_mbedtls_free( q );
+    mbedtls_free( q );
 
-    TEST_ASSERT( vdb_mbedtls_calloc( 1, 17 ) == NULL );
+    TEST_ASSERT( mbedtls_calloc( 1, 17 ) == NULL );
 
-    vdb_mbedtls_free( p );
+    mbedtls_free( p );
 
     TEST_ASSERT( check_all_free( ) == 0 );
 
-    vdb_mbedtls_memory_buffer_alloc_free( );
+    mbedtls_memory_buffer_alloc_free( );
 
     if( verbose != 0 )
-        vdb_mbedtls_printf( "passed\n" );
+        mbedtls_printf( "passed\n" );
 
 cleanup:
-    vdb_mbedtls_memory_buffer_alloc_free( );
+    mbedtls_memory_buffer_alloc_free( );
 
     return( ret );
 }

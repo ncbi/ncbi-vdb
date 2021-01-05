@@ -7,7 +7,7 @@
  *          functions; you must not call them directly.
  */
 /*
- *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -21,13 +21,17 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 #ifndef MBEDTLS_AESNI_H
 #define MBEDTLS_AESNI_H
 
-#include "aes.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
+
+#include "mbedtls/aes.h"
 
 #define MBEDTLS_AESNI_AES      0x02000000u
 #define MBEDTLS_AESNI_CLMUL    0x00000002u
@@ -55,7 +59,7 @@ extern "C" {
  *
  * \return         1 if CPU has support for the feature, 0 otherwise
  */
-int vdb_mbedtls_aesni_has_support( unsigned int what );
+int mbedtls_aesni_has_support( unsigned int what );
 
 /**
  * \brief          Internal AES-NI AES-ECB block encryption and decryption
@@ -70,7 +74,7 @@ int vdb_mbedtls_aesni_has_support( unsigned int what );
  *
  * \return         0 on success (cannot fail)
  */
-int vdb_mbedtls_aesni_crypt_ecb( mbedtls_aes_context *ctx,
+int mbedtls_aesni_crypt_ecb( mbedtls_aes_context *ctx,
                              int mode,
                              const unsigned char input[16],
                              unsigned char output[16] );
@@ -88,7 +92,7 @@ int vdb_mbedtls_aesni_crypt_ecb( mbedtls_aes_context *ctx,
  * \note           Both operands and result are bit strings interpreted as
  *                 elements of GF(2^128) as per the GCM spec.
  */
-void vdb_mbedtls_aesni_gcm_mult( unsigned char c[16],
+void mbedtls_aesni_gcm_mult( unsigned char c[16],
                              const unsigned char a[16],
                              const unsigned char b[16] );
 
@@ -103,7 +107,7 @@ void vdb_mbedtls_aesni_gcm_mult( unsigned char c[16],
  * \param fwdkey    Original round keys (for encryption)
  * \param nr        Number of rounds (that is, number of round keys minus one)
  */
-void vdb_mbedtls_aesni_inverse_key( unsigned char *invkey,
+void mbedtls_aesni_inverse_key( unsigned char *invkey,
                                 const unsigned char *fwdkey,
                                 int nr );
 
@@ -119,7 +123,7 @@ void vdb_mbedtls_aesni_inverse_key( unsigned char *invkey,
  *
  * \return          0 if successful, or MBEDTLS_ERR_AES_INVALID_KEY_LENGTH
  */
-int vdb_mbedtls_aesni_setkey_enc( unsigned char *rk,
+int mbedtls_aesni_setkey_enc( unsigned char *rk,
                               const unsigned char *key,
                               size_t bits );
 

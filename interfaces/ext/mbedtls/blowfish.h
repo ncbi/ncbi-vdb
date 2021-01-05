@@ -4,7 +4,7 @@
  * \brief Blowfish block cipher
  */
 /*
- *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -18,14 +18,12 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 #ifndef MBEDTLS_BLOWFISH_H
 #define MBEDTLS_BLOWFISH_H
 
 #if !defined(MBEDTLS_CONFIG_FILE)
-#include "config.h"
+#include "mbedtls/config.h"
 #else
 #include MBEDTLS_CONFIG_FILE
 #endif
@@ -33,7 +31,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "platform_util.h"
+#include "mbedtls/platform_util.h"
 
 #define MBEDTLS_BLOWFISH_ENCRYPT     1
 #define MBEDTLS_BLOWFISH_DECRYPT     0
@@ -81,7 +79,7 @@ mbedtls_blowfish_context;
  * \param ctx      The Blowfish context to be initialized.
  *                 This must not be \c NULL.
  */
-void vdb_mbedtls_blowfish_init( mbedtls_blowfish_context *ctx );
+void mbedtls_blowfish_init( mbedtls_blowfish_context *ctx );
 
 /**
  * \brief          Clear a Blowfish context.
@@ -91,7 +89,7 @@ void vdb_mbedtls_blowfish_init( mbedtls_blowfish_context *ctx );
  *                 returns immediately. If it is not \c NULL, it must
  *                 point to an initialized Blowfish context.
  */
-void vdb_mbedtls_blowfish_free( mbedtls_blowfish_context *ctx );
+void mbedtls_blowfish_free( mbedtls_blowfish_context *ctx );
 
 /**
  * \brief          Perform a Blowfish key schedule operation.
@@ -105,7 +103,7 @@ void vdb_mbedtls_blowfish_free( mbedtls_blowfish_context *ctx );
  * \return         \c 0 if successful.
  * \return         A negative error code on failure.
  */
-int vdb_mbedtls_blowfish_setkey( mbedtls_blowfish_context *ctx, const unsigned char *key,
+int mbedtls_blowfish_setkey( mbedtls_blowfish_context *ctx, const unsigned char *key,
                      unsigned int keybits );
 
 /**
@@ -124,7 +122,7 @@ int vdb_mbedtls_blowfish_setkey( mbedtls_blowfish_context *ctx, const unsigned c
  * \return         \c 0 if successful.
  * \return         A negative error code on failure.
  */
-int vdb_mbedtls_blowfish_crypt_ecb( mbedtls_blowfish_context *ctx,
+int mbedtls_blowfish_crypt_ecb( mbedtls_blowfish_context *ctx,
                         int mode,
                         const unsigned char input[MBEDTLS_BLOWFISH_BLOCKSIZE],
                         unsigned char output[MBEDTLS_BLOWFISH_BLOCKSIZE] );
@@ -158,7 +156,7 @@ int vdb_mbedtls_blowfish_crypt_ecb( mbedtls_blowfish_context *ctx,
  * \return         \c 0 if successful.
  * \return         A negative error code on failure.
  */
-int vdb_mbedtls_blowfish_crypt_cbc( mbedtls_blowfish_context *ctx,
+int mbedtls_blowfish_crypt_cbc( mbedtls_blowfish_context *ctx,
                         int mode,
                         size_t length,
                         unsigned char iv[MBEDTLS_BLOWFISH_BLOCKSIZE],
@@ -198,7 +196,7 @@ int vdb_mbedtls_blowfish_crypt_cbc( mbedtls_blowfish_context *ctx,
  * \return         \c 0 if successful.
  * \return         A negative error code on failure.
  */
-int vdb_mbedtls_blowfish_crypt_cfb64( mbedtls_blowfish_context *ctx,
+int mbedtls_blowfish_crypt_cfb64( mbedtls_blowfish_context *ctx,
                           int mode,
                           size_t length,
                           size_t *iv_off,
@@ -271,7 +269,7 @@ int vdb_mbedtls_blowfish_crypt_cfb64( mbedtls_blowfish_context *ctx,
  * \return              \c 0 if successful.
  * \return              A negative error code on failure.
  */
-int vdb_mbedtls_blowfish_crypt_ctr( mbedtls_blowfish_context *ctx,
+int mbedtls_blowfish_crypt_ctr( mbedtls_blowfish_context *ctx,
                         size_t length,
                         size_t *nc_off,
                         unsigned char nonce_counter[MBEDTLS_BLOWFISH_BLOCKSIZE],

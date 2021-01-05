@@ -1,7 +1,7 @@
 /*
  *  TCP/IP or UDP/IP networking functions
  *
- *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,26 +15,21 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
 /* Enable definition of getaddrinfo() even when compiling with -std=c99. Must
  * be set before config.h, which pulls in glibc's features.h indirectly.
  * Harmless on other platforms. */
 #define _POSIX_C_SOURCE 200112L
+#define _XOPEN_SOURCE 600 /* sockaddr_storage */
 
-#if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
-#else
-#include MBEDTLS_CONFIG_FILE
-#endif
+#include "common.h"
 
 #if defined(MBEDTLS_NET_C)
 
 #if !defined(unix) && !defined(__unix__) && !defined(__unix) && \
     !defined(__APPLE__) && !defined(_WIN32) && !defined(__QNXNTO__) && \
-    !defined(__HAIKU__)
+    !defined(__HAIKU__) && !defined(__midipix__)
 #error "This module only works on Unix and Windows, see MBEDTLS_NET_C in config.h"
 #endif
 
@@ -45,6 +40,7 @@
 #endif
 
 #include "mbedtls/net_sockets.h"
+#include "mbedtls/error.h"
 
 #include <string.h>
 
@@ -53,8 +49,7 @@
 
 #define IS_EINTR( ret ) ( ( ret ) == WSAEINTR )
 
-#if !defined(_WIN32_WINNT) || (_WIN32_WINNT < 0x0501)
-#undef _WIN32_WINNT
+#if !defined(_WIN32_WINNT)
 /* Enables getaddrinfo() & Co */
 #define _WIN32_WINNT 0x0501
 #endif
@@ -63,6 +58,9 @@
 
 #include <winsock2.h>
 #include <windows.h>
+#if (_WIN32_WINNT < 0x0501)
+#include <wspiapi.h>
+#endif
 
 #if defined(_MSC_VER)
 #if defined(_WIN32_WCE)
@@ -136,7 +134,7 @@ static int net_prepare( void )
 /*
  * Initialize a context
  */
-void vdb_mbedtls_net_init( mbedtls_net_context *ctx )
+void mbedtls_net_init( mbedtls_net_context *ctx )
 {
     ctx->fd = -1;
 }
@@ -144,10 +142,10 @@ void vdb_mbedtls_net_init( mbedtls_net_context *ctx )
 /*
  * Initiate a TCP connection with host:port and the given protocol
  */
-int vdb_mbedtls_net_connect( mbedtls_net_context *ctx, const char *host,
+int mbedtls_net_connect( mbedtls_net_context *ctx, const char *host,
                          const char *port, int proto )
 {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     struct addrinfo hints, *addr_list, *cur;
 
     if( ( ret = net_prepare() ) != 0 )
@@ -192,7 +190,7 @@ int vdb_mbedtls_net_connect( mbedtls_net_context *ctx, const char *host,
 /*
  * Create a listening socket on bind_ip:port
  */
-int vdb_mbedtls_net_bind( mbedtls_net_context *ctx, const char *bind_ip, const char *port, int proto )
+int mbedtls_net_bind( mbedtls_net_context *ctx, const char *bind_ip, const char *port, int proto )
 {
     int n, ret;
     struct addrinfo hints, *addr_list, *cur;
@@ -284,7 +282,7 @@ static int net_would_block( const mbedtls_net_context *ctx )
     int err = errno;
 
     /*
-     * Never return 'WOULD BLOCK' on a non-blocking socket
+     * Never return 'WOULD BLOCK' on a blocking socket
      */
     if( ( fcntl( ctx->fd, F_GETFL ) & O_NONBLOCK ) != O_NONBLOCK )
     {
@@ -309,17 +307,18 @@ static int net_would_block( const mbedtls_net_context *ctx )
 /*
  * Accept a connection from a remote client
  */
-int vdb_mbedtls_net_accept( mbedtls_net_context *bind_ctx,
+int mbedtls_net_accept( mbedtls_net_context *bind_ctx,
                         mbedtls_net_context *client_ctx,
                         void *client_ip, size_t buf_size, size_t *ip_len )
 {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     int type;
 
     struct sockaddr_storage client_addr;
 
 #if defined(__socklen_t_defined) || defined(_SOCKLEN_T) ||  \
-    defined(_SOCKLEN_T_DECLARED) || defined(__DEFINED_socklen_t)
+    defined(_SOCKLEN_T_DECLARED) || defined(__DEFINED_socklen_t) || \
+    defined(socklen_t) || (defined(_POSIX_VERSION) && _POSIX_VERSION >= 200112L)
     socklen_t n = (socklen_t) sizeof( client_addr );
     socklen_t type_len = (socklen_t) sizeof( type );
 #else
@@ -427,7 +426,7 @@ int vdb_mbedtls_net_accept( mbedtls_net_context *bind_ctx,
 /*
  * Set the socket blocking or non-blocking
  */
-int vdb_mbedtls_net_set_block( mbedtls_net_context *ctx )
+int mbedtls_net_set_block( mbedtls_net_context *ctx )
 {
 #if ( defined(_WIN32) || defined(_WIN32_WCE) ) && !defined(EFIX64) && \
     !defined(EFI32)
@@ -438,7 +437,7 @@ int vdb_mbedtls_net_set_block( mbedtls_net_context *ctx )
 #endif
 }
 
-int vdb_mbedtls_net_set_nonblock( mbedtls_net_context *ctx )
+int mbedtls_net_set_nonblock( mbedtls_net_context *ctx )
 {
 #if ( defined(_WIN32) || defined(_WIN32_WCE) ) && !defined(EFIX64) && \
     !defined(EFI32)
@@ -453,9 +452,9 @@ int vdb_mbedtls_net_set_nonblock( mbedtls_net_context *ctx )
  * Check if data is available on the socket
  */
 
-int vdb_mbedtls_net_poll( mbedtls_net_context *ctx, uint32_t rw, uint32_t timeout )
+int mbedtls_net_poll( mbedtls_net_context *ctx, uint32_t rw, uint32_t timeout )
 {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     struct timeval tv;
 
     fd_set read_fds;
@@ -518,7 +517,7 @@ int vdb_mbedtls_net_poll( mbedtls_net_context *ctx, uint32_t rw, uint32_t timeou
 /*
  * Portable usleep helper
  */
-void vdb_mbedtls_net_usleep( unsigned long usec )
+void mbedtls_net_usleep( unsigned long usec )
 {
 #if defined(_WIN32)
     Sleep( ( usec + 999 ) / 1000 );
@@ -538,9 +537,9 @@ void vdb_mbedtls_net_usleep( unsigned long usec )
 /*
  * Read at most 'len' characters
  */
-int vdb_mbedtls_net_recv( void *ctx, unsigned char *buf, size_t len )
+int mbedtls_net_recv( void *ctx, unsigned char *buf, size_t len )
 {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     int fd = ((mbedtls_net_context *) ctx)->fd;
 
     if( fd < 0 )
@@ -574,10 +573,10 @@ int vdb_mbedtls_net_recv( void *ctx, unsigned char *buf, size_t len )
 /*
  * Read at most 'len' characters, blocking for at most 'timeout' ms
  */
-int vdb_mbedtls_net_recv_timeout( void *ctx, unsigned char *buf,
+int mbedtls_net_recv_timeout( void *ctx, unsigned char *buf,
                               size_t len, uint32_t timeout )
 {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     struct timeval tv;
     fd_set read_fds;
     int fd = ((mbedtls_net_context *) ctx)->fd;
@@ -612,15 +611,15 @@ int vdb_mbedtls_net_recv_timeout( void *ctx, unsigned char *buf,
     }
 
     /* This call will not block */
-    return( vdb_mbedtls_net_recv( ctx, buf, len ) );
+    return( mbedtls_net_recv( ctx, buf, len ) );
 }
 
 /*
  * Write at most 'len' characters
  */
-int vdb_mbedtls_net_send( void *ctx, const unsigned char *buf, size_t len )
+int mbedtls_net_send( void *ctx, const unsigned char *buf, size_t len )
 {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     int fd = ((mbedtls_net_context *) ctx)->fd;
 
     if( fd < 0 )
@@ -652,9 +651,22 @@ int vdb_mbedtls_net_send( void *ctx, const unsigned char *buf, size_t len )
 }
 
 /*
+ * Close the connection
+ */
+void mbedtls_net_close( mbedtls_net_context *ctx )
+{
+    if( ctx->fd == -1 )
+        return;
+
+    close( ctx->fd );
+
+    ctx->fd = -1;
+}
+
+/*
  * Gracefully close the connection
  */
-void vdb_mbedtls_net_free( mbedtls_net_context *ctx )
+void mbedtls_net_free( mbedtls_net_context *ctx )
 {
     if( ctx->fd == -1 )
         return;

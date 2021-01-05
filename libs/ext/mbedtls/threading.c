@@ -1,7 +1,7 @@
 /*
  *  Threading abstraction layer
  *
- *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,8 +15,6 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
 /*
@@ -27,11 +25,7 @@
 #define _POSIX_C_SOURCE 200112L
 #endif
 
-#if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
-#else
-#include MBEDTLS_CONFIG_FILE
-#endif
+#include "common.h"
 
 #if defined(MBEDTLS_THREADING_C)
 
@@ -48,7 +42,7 @@
 
 #if !( ( defined(_POSIX_VERSION) && _POSIX_VERSION >= 200809L ) ||     \
        ( defined(_POSIX_THREAD_SAFE_FUNCTIONS ) &&                     \
-         _POSIX_THREAD_SAFE_FUNCTIONS >= 20112L ) )
+         _POSIX_THREAD_SAFE_FUNCTIONS >= 200112L ) )
 /*
  * This is a convenience shorthand macro to avoid checking the long
  * preprocessor conditions above. Ideally, we could expose this macro in
@@ -63,7 +57,7 @@
 
 #endif /* !( ( defined(_POSIX_VERSION) && _POSIX_VERSION >= 200809L ) ||     \
              ( defined(_POSIX_THREAD_SAFE_FUNCTIONS ) &&                     \
-                _POSIX_THREAD_SAFE_FUNCTIONS >= 20112L ) ) */
+                _POSIX_THREAD_SAFE_FUNCTIONS >= 200112L ) ) */
 
 #endif /* MBEDTLS_HAVE_TIME_DATE && !MBEDTLS_PLATFORM_GMTIME_R_ALT */
 
@@ -139,7 +133,7 @@ int (*mbedtls_mutex_unlock)( mbedtls_threading_mutex_t * ) = threading_mutex_fai
 /*
  * Set functions pointers and initialize global mutexes
  */
-void vdb_mbedtls_threading_set_alt( void (*mutex_init)( mbedtls_threading_mutex_t * ),
+void mbedtls_threading_set_alt( void (*mutex_init)( mbedtls_threading_mutex_t * ),
                        void (*mutex_free)( mbedtls_threading_mutex_t * ),
                        int (*mutex_lock)( mbedtls_threading_mutex_t * ),
                        int (*mutex_unlock)( mbedtls_threading_mutex_t * ) )
@@ -150,23 +144,23 @@ void vdb_mbedtls_threading_set_alt( void (*mutex_init)( mbedtls_threading_mutex_
     mbedtls_mutex_unlock = mutex_unlock;
 
 #if defined(MBEDTLS_FS_IO)
-    mbedtls_mutex_init( &vdb_mbedtls_threading_readdir_mutex );
+    mbedtls_mutex_init( &mbedtls_threading_readdir_mutex );
 #endif
 #if defined(THREADING_USE_GMTIME)
-    mbedtls_mutex_init( &vdb_mbedtls_threading_gmtime_mutex );
+    mbedtls_mutex_init( &mbedtls_threading_gmtime_mutex );
 #endif
 }
 
 /*
  * Free global mutexes
  */
-void vdb_mbedtls_threading_free_alt( void )
+void mbedtls_threading_free_alt( void )
 {
 #if defined(MBEDTLS_FS_IO)
-    mbedtls_mutex_free( &vdb_mbedtls_threading_readdir_mutex );
+    mbedtls_mutex_free( &mbedtls_threading_readdir_mutex );
 #endif
 #if defined(THREADING_USE_GMTIME)
-    mbedtls_mutex_free( &vdb_mbedtls_threading_gmtime_mutex );
+    mbedtls_mutex_free( &mbedtls_threading_gmtime_mutex );
 #endif
 }
 #endif /* MBEDTLS_THREADING_ALT */
@@ -178,10 +172,10 @@ void vdb_mbedtls_threading_free_alt( void )
 #define MUTEX_INIT
 #endif
 #if defined(MBEDTLS_FS_IO)
-mbedtls_threading_mutex_t vdb_mbedtls_threading_readdir_mutex MUTEX_INIT;
+mbedtls_threading_mutex_t mbedtls_threading_readdir_mutex MUTEX_INIT;
 #endif
 #if defined(THREADING_USE_GMTIME)
-mbedtls_threading_mutex_t vdb_mbedtls_threading_gmtime_mutex MUTEX_INIT;
+mbedtls_threading_mutex_t mbedtls_threading_gmtime_mutex MUTEX_INIT;
 #endif
 
 #endif /* MBEDTLS_THREADING_C */

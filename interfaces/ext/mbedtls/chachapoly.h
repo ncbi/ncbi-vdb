@@ -12,7 +12,8 @@
  * \author Daniel King <damaki.gh@gmail.com>
  */
 
-/*  Copyright (C) 2006-2018, Arm Limited (or its affiliates), All Rights Reserved.
+/*
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -26,21 +27,19 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of Mbed TLS (https://tls.mbed.org)
  */
 
 #ifndef MBEDTLS_CHACHAPOLY_H
 #define MBEDTLS_CHACHAPOLY_H
 
 #if !defined(MBEDTLS_CONFIG_FILE)
-#include "config.h"
+#include "mbedtls/config.h"
 #else
 #include MBEDTLS_CONFIG_FILE
 #endif
 
 /* for shared error codes */
-#include "poly1305.h"
+#include "mbedtls/poly1305.h"
 
 #define MBEDTLS_ERR_CHACHAPOLY_BAD_STATE            -0x0054 /**< The requested operation is not permitted in the current state. */
 #define MBEDTLS_ERR_CHACHAPOLY_AUTH_FAILED          -0x0056 /**< Authenticated decryption failed: data was not authentic. */
@@ -58,7 +57,7 @@ mbedtls_chachapoly_mode_t;
 
 #if !defined(MBEDTLS_CHACHAPOLY_ALT)
 
-#include "chacha20.h"
+#include "mbedtls/chacha20.h"
 
 typedef struct mbedtls_chachapoly_context
 {
@@ -80,44 +79,44 @@ mbedtls_chachapoly_context;
  *
  *                  It must be the first API called before using
  *                  the context. It must be followed by a call to
- *                  \c vdb_mbedtls_chachapoly_setkey() before any operation can be
- *                  done, and to \c vdb_mbedtls_chachapoly_free() once all
+ *                  \c mbedtls_chachapoly_setkey() before any operation can be
+ *                  done, and to \c mbedtls_chachapoly_free() once all
  *                  operations with that context have been finished.
  *
  *                  In order to encrypt or decrypt full messages at once, for
  *                  each message you should make a single call to
- *                  \c vdb_mbedtls_chachapoly_crypt_and_tag() or
- *                  \c vdb_mbedtls_chachapoly_auth_decrypt().
+ *                  \c mbedtls_chachapoly_crypt_and_tag() or
+ *                  \c mbedtls_chachapoly_auth_decrypt().
  *
  *                  In order to encrypt messages piecewise, for each
  *                  message you should make a call to
- *                  \c vdb_mbedtls_chachapoly_starts(), then 0 or more calls to
- *                  \c vdb_mbedtls_chachapoly_update_aad(), then 0 or more calls to
- *                  \c vdb_mbedtls_chachapoly_update(), then one call to
- *                  \c vdb_mbedtls_chachapoly_finish().
+ *                  \c mbedtls_chachapoly_starts(), then 0 or more calls to
+ *                  \c mbedtls_chachapoly_update_aad(), then 0 or more calls to
+ *                  \c mbedtls_chachapoly_update(), then one call to
+ *                  \c mbedtls_chachapoly_finish().
  *
  * \warning         Decryption with the piecewise API is discouraged! Always
- *                  use \c vdb_mbedtls_chachapoly_auth_decrypt() when possible!
+ *                  use \c mbedtls_chachapoly_auth_decrypt() when possible!
  *
  *                  If however this is not possible because the data is too
  *                  large to fit in memory, you need to:
  *
- *                  - call \c vdb_mbedtls_chachapoly_starts() and (if needed)
- *                  \c vdb_mbedtls_chachapoly_update_aad() as above,
- *                  - call \c vdb_mbedtls_chachapoly_update() multiple times and
+ *                  - call \c mbedtls_chachapoly_starts() and (if needed)
+ *                  \c mbedtls_chachapoly_update_aad() as above,
+ *                  - call \c mbedtls_chachapoly_update() multiple times and
  *                  ensure its output (the plaintext) is NOT used in any other
  *                  way than placing it in temporary storage at this point,
- *                  - call \c vdb_mbedtls_chachapoly_finish() to compute the
+ *                  - call \c mbedtls_chachapoly_finish() to compute the
  *                  authentication tag and compared it in constant time to the
  *                  tag received with the ciphertext.
  *
  *                  If the tags are not equal, you must immediately discard
- *                  all previous outputs of \c vdb_mbedtls_chachapoly_update(),
+ *                  all previous outputs of \c mbedtls_chachapoly_update(),
  *                  otherwise you can now safely use the plaintext.
  *
  * \param ctx       The ChachaPoly context to initialize. Must not be \c NULL.
  */
-void vdb_mbedtls_chachapoly_init( mbedtls_chachapoly_context *ctx );
+void mbedtls_chachapoly_init( mbedtls_chachapoly_context *ctx );
 
 /**
  * \brief           This function releases and clears the specified
@@ -126,7 +125,7 @@ void vdb_mbedtls_chachapoly_init( mbedtls_chachapoly_context *ctx );
  * \param ctx       The ChachaPoly context to clear. This may be \c NULL, in which
  *                  case this function is a no-op.
  */
-void vdb_mbedtls_chachapoly_free( mbedtls_chachapoly_context *ctx );
+void mbedtls_chachapoly_free( mbedtls_chachapoly_context *ctx );
 
 /**
  * \brief           This function sets the ChaCha20-Poly1305
@@ -139,7 +138,7 @@ void vdb_mbedtls_chachapoly_free( mbedtls_chachapoly_context *ctx );
  * \return          \c 0 on success.
  * \return          A negative error code on failure.
  */
-int vdb_mbedtls_chachapoly_setkey( mbedtls_chachapoly_context *ctx,
+int mbedtls_chachapoly_setkey( mbedtls_chachapoly_context *ctx,
                                const unsigned char key[32] );
 
 /**
@@ -155,7 +154,7 @@ int vdb_mbedtls_chachapoly_setkey( mbedtls_chachapoly_context *ctx,
  *                  encrypt or decrypt) then \p mode can be set to any value.
  *
  * \warning         Decryption with the piecewise API is discouraged, see the
- *                  warning on \c vdb_mbedtls_chachapoly_init().
+ *                  warning on \c mbedtls_chachapoly_init().
  *
  * \param ctx       The ChaCha20-Poly1305 context. This must be initialized
  *                  and bound to a key.
@@ -167,7 +166,7 @@ int vdb_mbedtls_chachapoly_setkey( mbedtls_chachapoly_context *ctx,
  * \return          \c 0 on success.
  * \return          A negative error code on failure.
  */
-int vdb_mbedtls_chachapoly_starts( mbedtls_chachapoly_context *ctx,
+int mbedtls_chachapoly_starts( mbedtls_chachapoly_context *ctx,
                                const unsigned char nonce[12],
                                mbedtls_chachapoly_mode_t mode );
 
@@ -183,18 +182,18 @@ int vdb_mbedtls_chachapoly_starts( mbedtls_chachapoly_context *ctx,
  *
  * \note            This function is called before data is encrypted/decrypted.
  *                  I.e. call this function to process the AAD before calling
- *                  \c vdb_mbedtls_chachapoly_update().
+ *                  \c mbedtls_chachapoly_update().
  *
  *                  You may call this function multiple times to process
  *                  an arbitrary amount of AAD. It is permitted to call
  *                  this function 0 times, if no AAD is used.
  *
  *                  This function cannot be called any more if data has
- *                  been processed by \c vdb_mbedtls_chachapoly_update(),
+ *                  been processed by \c mbedtls_chachapoly_update(),
  *                  or if the context has been finished.
  *
  * \warning         Decryption with the piecewise API is discouraged, see the
- *                  warning on \c vdb_mbedtls_chachapoly_init().
+ *                  warning on \c mbedtls_chachapoly_init().
  *
  * \param ctx       The ChaCha20-Poly1305 context. This must be initialized
  *                  and bound to a key.
@@ -210,7 +209,7 @@ int vdb_mbedtls_chachapoly_starts( mbedtls_chachapoly_context *ctx,
  *                  if the operations has not been started or has been
  *                  finished, or if the AAD has been finished.
  */
-int vdb_mbedtls_chachapoly_update_aad( mbedtls_chachapoly_context *ctx,
+int mbedtls_chachapoly_update_aad( mbedtls_chachapoly_context *ctx,
                                    const unsigned char *aad,
                                    size_t aad_len );
 
@@ -221,7 +220,7 @@ int vdb_mbedtls_chachapoly_update_aad( mbedtls_chachapoly_context *ctx,
  *
  *                  The direction (encryption or decryption) depends on the
  *                  mode that was given when calling
- *                  \c vdb_mbedtls_chachapoly_starts().
+ *                  \c mbedtls_chachapoly_starts().
  *
  *                  You may call this function multiple times to process
  *                  an arbitrary amount of data. It is permitted to call
@@ -229,7 +228,7 @@ int vdb_mbedtls_chachapoly_update_aad( mbedtls_chachapoly_context *ctx,
  *                  or decrypted.
  *
  * \warning         Decryption with the piecewise API is discouraged, see the
- *                  warning on \c vdb_mbedtls_chachapoly_init().
+ *                  warning on \c mbedtls_chachapoly_init().
  *
  * \param ctx       The ChaCha20-Poly1305 context to use. This must be initialized.
  * \param len       The length (in bytes) of the data to encrypt or decrypt.
@@ -245,7 +244,7 @@ int vdb_mbedtls_chachapoly_update_aad( mbedtls_chachapoly_context *ctx,
  *                  finished.
  * \return          Another negative error code on other kinds of failure.
  */
-int vdb_mbedtls_chachapoly_update( mbedtls_chachapoly_context *ctx,
+int mbedtls_chachapoly_update( mbedtls_chachapoly_context *ctx,
                                size_t len,
                                const unsigned char *input,
                                unsigned char *output );
@@ -258,7 +257,7 @@ int vdb_mbedtls_chachapoly_update( mbedtls_chachapoly_context *ctx,
  * \param mac       The buffer to where the 128-bit (16 bytes) MAC is written.
  *
  * \warning         Decryption with the piecewise API is discouraged, see the
- *                  warning on \c vdb_mbedtls_chachapoly_init().
+ *                  warning on \c mbedtls_chachapoly_init().
  *
  * \return          \c 0 on success.
  * \return          #MBEDTLS_ERR_CHACHAPOLY_BAD_STATE
@@ -266,7 +265,7 @@ int vdb_mbedtls_chachapoly_update( mbedtls_chachapoly_context *ctx,
  *                  finished.
  * \return          Another negative error code on other kinds of failure.
  */
-int vdb_mbedtls_chachapoly_finish( mbedtls_chachapoly_context *ctx,
+int mbedtls_chachapoly_finish( mbedtls_chachapoly_context *ctx,
                                unsigned char mac[16] );
 
 /**
@@ -274,7 +273,7 @@ int vdb_mbedtls_chachapoly_finish( mbedtls_chachapoly_context *ctx,
  *                  authenticated encryption with the previously-set key.
  *
  * \note            Before using this function, you must set the key with
- *                  \c vdb_mbedtls_chachapoly_setkey().
+ *                  \c mbedtls_chachapoly_setkey().
  *
  * \warning         You must never use the same nonce twice with the same key.
  *                  This would void any confidentiality and authenticity
@@ -298,7 +297,7 @@ int vdb_mbedtls_chachapoly_finish( mbedtls_chachapoly_context *ctx,
  * \return          \c 0 on success.
  * \return          A negative error code on failure.
  */
-int vdb_mbedtls_chachapoly_encrypt_and_tag( mbedtls_chachapoly_context *ctx,
+int mbedtls_chachapoly_encrypt_and_tag( mbedtls_chachapoly_context *ctx,
                                         size_t length,
                                         const unsigned char nonce[12],
                                         const unsigned char *aad,
@@ -312,7 +311,7 @@ int vdb_mbedtls_chachapoly_encrypt_and_tag( mbedtls_chachapoly_context *ctx,
  *                  authenticated decryption with the previously-set key.
  *
  * \note            Before using this function, you must set the key with
- *                  \c vdb_mbedtls_chachapoly_setkey().
+ *                  \c mbedtls_chachapoly_setkey().
  *
  * \param ctx       The ChaCha20-Poly1305 context to use (holds the key).
  * \param length    The length (in Bytes) of the data to decrypt.
@@ -332,7 +331,7 @@ int vdb_mbedtls_chachapoly_encrypt_and_tag( mbedtls_chachapoly_context *ctx,
  *                  if the data was not authentic.
  * \return          Another negative error code on other kinds of failure.
  */
-int vdb_mbedtls_chachapoly_auth_decrypt( mbedtls_chachapoly_context *ctx,
+int mbedtls_chachapoly_auth_decrypt( mbedtls_chachapoly_context *ctx,
                                      size_t length,
                                      const unsigned char nonce[12],
                                      const unsigned char *aad,
@@ -348,7 +347,7 @@ int vdb_mbedtls_chachapoly_auth_decrypt( mbedtls_chachapoly_context *ctx,
  * \return          \c 0 on success.
  * \return          \c 1 on failure.
  */
-int vdb_mbedtls_chachapoly_self_test( int verbose );
+int mbedtls_chachapoly_self_test( int verbose );
 #endif /* MBEDTLS_SELF_TEST */
 
 #ifdef __cplusplus

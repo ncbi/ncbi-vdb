@@ -1,7 +1,7 @@
 /*
  *  RFC 1521 base64 encoding/decoding
  *
- *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,15 +15,9 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
-#if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
-#else
-#include MBEDTLS_CONFIG_FILE
-#endif
+#include "common.h"
 
 #if defined(MBEDTLS_BASE64_C)
 
@@ -37,7 +31,7 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#define vdb_mbedtls_printf printf
+#define mbedtls_printf printf
 #endif /* MBEDTLS_PLATFORM_C */
 #endif /* MBEDTLS_SELF_TEST */
 
@@ -74,7 +68,7 @@ static const unsigned char base64_dec_map[128] =
 /*
  * Encode a buffer into base64 format
  */
-int vdb_mbedtls_base64_encode( unsigned char *dst, size_t dlen, size_t *olen,
+int mbedtls_base64_encode( unsigned char *dst, size_t dlen, size_t *olen,
                    const unsigned char *src, size_t slen )
 {
     size_t i, n;
@@ -141,7 +135,7 @@ int vdb_mbedtls_base64_encode( unsigned char *dst, size_t dlen, size_t *olen,
 /*
  * Decode a base64-formatted buffer
  */
-int vdb_mbedtls_base64_decode( unsigned char *dst, size_t dlen, size_t *olen,
+int mbedtls_base64_decode( unsigned char *dst, size_t dlen, size_t *olen,
                    const unsigned char *src, size_t slen )
 {
     size_t i, n;
@@ -248,42 +242,42 @@ static const unsigned char base64_test_enc[] =
 /*
  * Checkup routine
  */
-int vdb_mbedtls_base64_self_test( int verbose )
+int mbedtls_base64_self_test( int verbose )
 {
     size_t len;
     const unsigned char *src;
     unsigned char buffer[128];
 
     if( verbose != 0 )
-        vdb_mbedtls_printf( "  Base64 encoding test: " );
+        mbedtls_printf( "  Base64 encoding test: " );
 
     src = base64_test_dec;
 
-    if( vdb_mbedtls_base64_encode( buffer, sizeof( buffer ), &len, src, 64 ) != 0 ||
+    if( mbedtls_base64_encode( buffer, sizeof( buffer ), &len, src, 64 ) != 0 ||
          memcmp( base64_test_enc, buffer, 88 ) != 0 )
     {
         if( verbose != 0 )
-            vdb_mbedtls_printf( "failed\n" );
+            mbedtls_printf( "failed\n" );
 
         return( 1 );
     }
 
     if( verbose != 0 )
-        vdb_mbedtls_printf( "passed\n  Base64 decoding test: " );
+        mbedtls_printf( "passed\n  Base64 decoding test: " );
 
     src = base64_test_enc;
 
-    if( vdb_mbedtls_base64_decode( buffer, sizeof( buffer ), &len, src, 88 ) != 0 ||
+    if( mbedtls_base64_decode( buffer, sizeof( buffer ), &len, src, 88 ) != 0 ||
          memcmp( base64_test_dec, buffer, 64 ) != 0 )
     {
         if( verbose != 0 )
-            vdb_mbedtls_printf( "failed\n" );
+            mbedtls_printf( "failed\n" );
 
         return( 1 );
     }
 
     if( verbose != 0 )
-        vdb_mbedtls_printf( "passed\n\n" );
+        mbedtls_printf( "passed\n\n" );
 
     return( 0 );
 }

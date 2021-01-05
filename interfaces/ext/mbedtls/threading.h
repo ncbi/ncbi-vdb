@@ -4,7 +4,7 @@
  * \brief Threading abstraction layer
  */
 /*
- *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -18,14 +18,12 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 #ifndef MBEDTLS_THREADING_H
 #define MBEDTLS_THREADING_H
 
 #if !defined(MBEDTLS_CONFIG_FILE)
-#include "config.h"
+#include "mbedtls/config.h"
 #else
 #include MBEDTLS_CONFIG_FILE
 #endif
@@ -61,7 +59,7 @@ typedef struct mbedtls_threading_mutex_t
  *                  pointers and initialize global mutexes. If used, this
  *                  function must be called once in the main thread before any
  *                  other mbed TLS function is called, and
- *                  vdb_mbedtls_threading_free_alt() must be called once in the main
+ *                  mbedtls_threading_free_alt() must be called once in the main
  *                  thread after all other mbed TLS functions.
  *
  * \note            mutex_init() and mutex_free() don't return a status code.
@@ -74,7 +72,7 @@ typedef struct mbedtls_threading_mutex_t
  * \param mutex_lock    the lock function implementation
  * \param mutex_unlock  the unlock function implementation
  */
-void vdb_mbedtls_threading_set_alt( void (*mutex_init)( mbedtls_threading_mutex_t * ),
+void mbedtls_threading_set_alt( void (*mutex_init)( mbedtls_threading_mutex_t * ),
                        void (*mutex_free)( mbedtls_threading_mutex_t * ),
                        int (*mutex_lock)( mbedtls_threading_mutex_t * ),
                        int (*mutex_unlock)( mbedtls_threading_mutex_t * ) );
@@ -82,7 +80,7 @@ void vdb_mbedtls_threading_set_alt( void (*mutex_init)( mbedtls_threading_mutex_
 /**
  * \brief               Free global mutexes.
  */
-void vdb_mbedtls_threading_free_alt( void );
+void mbedtls_threading_free_alt( void );
 #endif /* MBEDTLS_THREADING_ALT */
 
 #if defined(MBEDTLS_THREADING_C)
@@ -100,17 +98,17 @@ extern int (*mbedtls_mutex_unlock)( mbedtls_threading_mutex_t *mutex );
  * Global mutexes
  */
 #if defined(MBEDTLS_FS_IO)
-extern mbedtls_threading_mutex_t vdb_mbedtls_threading_readdir_mutex;
+extern mbedtls_threading_mutex_t mbedtls_threading_readdir_mutex;
 #endif
 
 #if defined(MBEDTLS_HAVE_TIME_DATE) && !defined(MBEDTLS_PLATFORM_GMTIME_R_ALT)
 /* This mutex may or may not be used in the default definition of
- * vdb_mbedtls_platform_gmtime_r(), but in order to determine that,
+ * mbedtls_platform_gmtime_r(), but in order to determine that,
  * we need to check POSIX features, hence modify _POSIX_C_SOURCE.
  * With the current approach, this declaration is orphaned, lacking
- * an accompanying definition, in case vdb_mbedtls_platform_gmtime_r()
+ * an accompanying definition, in case mbedtls_platform_gmtime_r()
  * doesn't need it, but that's not a problem. */
-extern mbedtls_threading_mutex_t vdb_mbedtls_threading_gmtime_mutex;
+extern mbedtls_threading_mutex_t mbedtls_threading_gmtime_mutex;
 #endif /* MBEDTLS_HAVE_TIME_DATE && !MBEDTLS_PLATFORM_GMTIME_R_ALT */
 
 #endif /* MBEDTLS_THREADING_C */

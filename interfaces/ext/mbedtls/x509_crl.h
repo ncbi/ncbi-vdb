@@ -4,7 +4,7 @@
  * \brief X.509 certificate revocation list parsing
  */
 /*
- *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -18,19 +18,17 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 #ifndef MBEDTLS_X509_CRL_H
 #define MBEDTLS_X509_CRL_H
 
 #if !defined(MBEDTLS_CONFIG_FILE)
-#include "config.h"
+#include "mbedtls/config.h"
 #else
 #include MBEDTLS_CONFIG_FILE
 #endif
 
-#include "x509.h"
+#include "mbedtls/x509.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -90,7 +88,7 @@ typedef struct mbedtls_x509_crl
     mbedtls_x509_buf sig;
     mbedtls_md_type_t sig_md;           /**< Internal representation of the MD algorithm of the signature algorithm, e.g. MBEDTLS_MD_SHA256 */
     mbedtls_pk_type_t sig_pk;           /**< Internal representation of the Public Key algorithm of the signature algorithm, e.g. MBEDTLS_PK_RSA */
-    void *sig_opts;             /**< Signature options to be passed to vdb_mbedtls_pk_verify_ext(), e.g. for RSASSA-PSS */
+    void *sig_opts;             /**< Signature options to be passed to mbedtls_pk_verify_ext(), e.g. for RSASSA-PSS */
 
     struct mbedtls_x509_crl *next;
 }
@@ -106,12 +104,12 @@ mbedtls_x509_crl;
  *
  * \return         0 if successful, or a specific X509 or PEM error code
  */
-int vdb_mbedtls_x509_crl_parse_der( mbedtls_x509_crl *chain,
+int mbedtls_x509_crl_parse_der( mbedtls_x509_crl *chain,
                         const unsigned char *buf, size_t buflen );
 /**
  * \brief          Parse one or more CRLs and append them to the chained list
  *
- * \note           Mutliple CRLs are accepted only if using PEM format
+ * \note           Multiple CRLs are accepted only if using PEM format
  *
  * \param chain    points to the start of the chain
  * \param buf      buffer holding the CRL data in PEM or DER format
@@ -120,20 +118,20 @@ int vdb_mbedtls_x509_crl_parse_der( mbedtls_x509_crl *chain,
  *
  * \return         0 if successful, or a specific X509 or PEM error code
  */
-int vdb_mbedtls_x509_crl_parse( mbedtls_x509_crl *chain, const unsigned char *buf, size_t buflen );
+int mbedtls_x509_crl_parse( mbedtls_x509_crl *chain, const unsigned char *buf, size_t buflen );
 
 #if defined(MBEDTLS_FS_IO)
 /**
  * \brief          Load one or more CRLs and append them to the chained list
  *
- * \note           Mutliple CRLs are accepted only if using PEM format
+ * \note           Multiple CRLs are accepted only if using PEM format
  *
  * \param chain    points to the start of the chain
  * \param path     filename to read the CRLs from (in PEM or DER encoding)
  *
  * \return         0 if successful, or a specific X509 or PEM error code
  */
-int vdb_mbedtls_x509_crl_parse_file( mbedtls_x509_crl *chain, const char *path );
+int mbedtls_x509_crl_parse_file( mbedtls_x509_crl *chain, const char *path );
 #endif /* MBEDTLS_FS_IO */
 
 /**
@@ -147,7 +145,7 @@ int vdb_mbedtls_x509_crl_parse_file( mbedtls_x509_crl *chain, const char *path )
  * \return         The length of the string written (not including the
  *                 terminated nul byte), or a negative error code.
  */
-int vdb_mbedtls_x509_crl_info( char *buf, size_t size, const char *prefix,
+int mbedtls_x509_crl_info( char *buf, size_t size, const char *prefix,
                    const mbedtls_x509_crl *crl );
 
 /**
@@ -155,14 +153,14 @@ int vdb_mbedtls_x509_crl_info( char *buf, size_t size, const char *prefix,
  *
  * \param crl      CRL chain to initialize
  */
-void vdb_mbedtls_x509_crl_init( mbedtls_x509_crl *crl );
+void mbedtls_x509_crl_init( mbedtls_x509_crl *crl );
 
 /**
  * \brief          Unallocate all CRL data
  *
  * \param crl      CRL chain to free
  */
-void vdb_mbedtls_x509_crl_free( mbedtls_x509_crl *crl );
+void mbedtls_x509_crl_free( mbedtls_x509_crl *crl );
 
 /* \} name */
 /* \} addtogroup x509_module */

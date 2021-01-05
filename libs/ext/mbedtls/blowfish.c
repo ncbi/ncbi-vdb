@@ -1,7 +1,7 @@
 /*
  *  Blowfish implementation
  *
- *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,8 +15,6 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 /*
  *  The Blowfish block cipher was designed by Bruce Schneier in 1993.
@@ -25,11 +23,7 @@
  *
  */
 
-#if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
-#else
-#include MBEDTLS_CONFIG_FILE
-#endif
+#include "common.h"
 
 #if defined(MBEDTLS_BLOWFISH_C)
 
@@ -157,24 +151,24 @@ static void blowfish_dec( mbedtls_blowfish_context *ctx, uint32_t *xl, uint32_t 
     *xr = Xr;
 }
 
-void vdb_mbedtls_blowfish_init( mbedtls_blowfish_context *ctx )
+void mbedtls_blowfish_init( mbedtls_blowfish_context *ctx )
 {
     BLOWFISH_VALIDATE( ctx != NULL );
     memset( ctx, 0, sizeof( mbedtls_blowfish_context ) );
 }
 
-void vdb_mbedtls_blowfish_free( mbedtls_blowfish_context *ctx )
+void mbedtls_blowfish_free( mbedtls_blowfish_context *ctx )
 {
     if( ctx == NULL )
         return;
 
-    vdb_mbedtls_platform_zeroize( ctx, sizeof( mbedtls_blowfish_context ) );
+    mbedtls_platform_zeroize( ctx, sizeof( mbedtls_blowfish_context ) );
 }
 
 /*
  * Blowfish key schedule
  */
-int vdb_mbedtls_blowfish_setkey( mbedtls_blowfish_context *ctx,
+int mbedtls_blowfish_setkey( mbedtls_blowfish_context *ctx,
                              const unsigned char *key,
                              unsigned int keybits )
 {
@@ -236,7 +230,7 @@ int vdb_mbedtls_blowfish_setkey( mbedtls_blowfish_context *ctx,
 /*
  * Blowfish-ECB block encryption/decryption
  */
-int vdb_mbedtls_blowfish_crypt_ecb( mbedtls_blowfish_context *ctx,
+int mbedtls_blowfish_crypt_ecb( mbedtls_blowfish_context *ctx,
                     int mode,
                     const unsigned char input[MBEDTLS_BLOWFISH_BLOCKSIZE],
                     unsigned char output[MBEDTLS_BLOWFISH_BLOCKSIZE] )
@@ -270,7 +264,7 @@ int vdb_mbedtls_blowfish_crypt_ecb( mbedtls_blowfish_context *ctx,
 /*
  * Blowfish-CBC buffer encryption/decryption
  */
-int vdb_mbedtls_blowfish_crypt_cbc( mbedtls_blowfish_context *ctx,
+int mbedtls_blowfish_crypt_cbc( mbedtls_blowfish_context *ctx,
                     int mode,
                     size_t length,
                     unsigned char iv[MBEDTLS_BLOWFISH_BLOCKSIZE],
@@ -294,7 +288,7 @@ int vdb_mbedtls_blowfish_crypt_cbc( mbedtls_blowfish_context *ctx,
         while( length > 0 )
         {
             memcpy( temp, input, MBEDTLS_BLOWFISH_BLOCKSIZE );
-            vdb_mbedtls_blowfish_crypt_ecb( ctx, mode, input, output );
+            mbedtls_blowfish_crypt_ecb( ctx, mode, input, output );
 
             for( i = 0; i < MBEDTLS_BLOWFISH_BLOCKSIZE;i++ )
                 output[i] = (unsigned char)( output[i] ^ iv[i] );
@@ -313,7 +307,7 @@ int vdb_mbedtls_blowfish_crypt_cbc( mbedtls_blowfish_context *ctx,
             for( i = 0; i < MBEDTLS_BLOWFISH_BLOCKSIZE; i++ )
                 output[i] = (unsigned char)( input[i] ^ iv[i] );
 
-            vdb_mbedtls_blowfish_crypt_ecb( ctx, mode, output, output );
+            mbedtls_blowfish_crypt_ecb( ctx, mode, output, output );
             memcpy( iv, output, MBEDTLS_BLOWFISH_BLOCKSIZE );
 
             input  += MBEDTLS_BLOWFISH_BLOCKSIZE;
@@ -330,7 +324,7 @@ int vdb_mbedtls_blowfish_crypt_cbc( mbedtls_blowfish_context *ctx,
 /*
  * Blowfish CFB buffer encryption/decryption
  */
-int vdb_mbedtls_blowfish_crypt_cfb64( mbedtls_blowfish_context *ctx,
+int mbedtls_blowfish_crypt_cfb64( mbedtls_blowfish_context *ctx,
                        int mode,
                        size_t length,
                        size_t *iv_off,
@@ -358,7 +352,7 @@ int vdb_mbedtls_blowfish_crypt_cfb64( mbedtls_blowfish_context *ctx,
         while( length-- )
         {
             if( n == 0 )
-                vdb_mbedtls_blowfish_crypt_ecb( ctx, MBEDTLS_BLOWFISH_ENCRYPT, iv, iv );
+                mbedtls_blowfish_crypt_ecb( ctx, MBEDTLS_BLOWFISH_ENCRYPT, iv, iv );
 
             c = *input++;
             *output++ = (unsigned char)( c ^ iv[n] );
@@ -372,7 +366,7 @@ int vdb_mbedtls_blowfish_crypt_cfb64( mbedtls_blowfish_context *ctx,
         while( length-- )
         {
             if( n == 0 )
-                vdb_mbedtls_blowfish_crypt_ecb( ctx, MBEDTLS_BLOWFISH_ENCRYPT, iv, iv );
+                mbedtls_blowfish_crypt_ecb( ctx, MBEDTLS_BLOWFISH_ENCRYPT, iv, iv );
 
             iv[n] = *output++ = (unsigned char)( iv[n] ^ *input++ );
 
@@ -390,7 +384,7 @@ int vdb_mbedtls_blowfish_crypt_cfb64( mbedtls_blowfish_context *ctx,
 /*
  * Blowfish CTR buffer encryption/decryption
  */
-int vdb_mbedtls_blowfish_crypt_ctr( mbedtls_blowfish_context *ctx,
+int mbedtls_blowfish_crypt_ctr( mbedtls_blowfish_context *ctx,
                        size_t length,
                        size_t *nc_off,
                        unsigned char nonce_counter[MBEDTLS_BLOWFISH_BLOCKSIZE],
@@ -414,7 +408,7 @@ int vdb_mbedtls_blowfish_crypt_ctr( mbedtls_blowfish_context *ctx,
     while( length-- )
     {
         if( n == 0 ) {
-            vdb_mbedtls_blowfish_crypt_ecb( ctx, MBEDTLS_BLOWFISH_ENCRYPT, nonce_counter,
+            mbedtls_blowfish_crypt_ecb( ctx, MBEDTLS_BLOWFISH_ENCRYPT, nonce_counter,
                                 stream_block );
 
             for( i = MBEDTLS_BLOWFISH_BLOCKSIZE; i > 0; i-- )

@@ -20,7 +20,8 @@
  *          <https://ieeexplore.ieee.org/servlet/opac?punumber=4375278>.
  */
 
-/*  Copyright (C) 2006-2018, Arm Limited (or its affiliates), All Rights Reserved.
+/*
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -34,15 +35,13 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of Mbed TLS (https://tls.mbed.org)
  */
 
 #ifndef MBEDTLS_AES_H
 #define MBEDTLS_AES_H
 
 #if !defined(MBEDTLS_CONFIG_FILE)
-#include "config.h"
+#include "mbedtls/config.h"
 #else
 #include MBEDTLS_CONFIG_FILE
 #endif
@@ -123,7 +122,7 @@ typedef struct mbedtls_aes_xts_context
  *
  * \param ctx      The AES context to initialize. This must not be \c NULL.
  */
-void vdb_mbedtls_aes_init( mbedtls_aes_context *ctx );
+void mbedtls_aes_init( mbedtls_aes_context *ctx );
 
 /**
  * \brief          This function releases and clears the specified AES context.
@@ -132,7 +131,7 @@ void vdb_mbedtls_aes_init( mbedtls_aes_context *ctx );
  *                 If this is \c NULL, this function does nothing.
  *                 Otherwise, the context must have been at least initialized.
  */
-void vdb_mbedtls_aes_free( mbedtls_aes_context *ctx );
+void mbedtls_aes_free( mbedtls_aes_context *ctx );
 
 #if defined(MBEDTLS_CIPHER_MODE_XTS)
 /**
@@ -143,7 +142,7 @@ void vdb_mbedtls_aes_free( mbedtls_aes_context *ctx );
  *
  * \param ctx      The AES XTS context to initialize. This must not be \c NULL.
  */
-void vdb_mbedtls_aes_xts_init( mbedtls_aes_xts_context *ctx );
+void mbedtls_aes_xts_init( mbedtls_aes_xts_context *ctx );
 
 /**
  * \brief          This function releases and clears the specified AES XTS context.
@@ -152,7 +151,7 @@ void vdb_mbedtls_aes_xts_init( mbedtls_aes_xts_context *ctx );
  *                 If this is \c NULL, this function does nothing.
  *                 Otherwise, the context must have been at least initialized.
  */
-void vdb_mbedtls_aes_xts_free( mbedtls_aes_xts_context *ctx );
+void mbedtls_aes_xts_free( mbedtls_aes_xts_context *ctx );
 #endif /* MBEDTLS_CIPHER_MODE_XTS */
 
 /**
@@ -170,7 +169,7 @@ void vdb_mbedtls_aes_xts_free( mbedtls_aes_xts_context *ctx );
  * \return         \c 0 on success.
  * \return         #MBEDTLS_ERR_AES_INVALID_KEY_LENGTH on failure.
  */
-int vdb_mbedtls_aes_setkey_enc( mbedtls_aes_context *ctx, const unsigned char *key,
+int mbedtls_aes_setkey_enc( mbedtls_aes_context *ctx, const unsigned char *key,
                     unsigned int keybits );
 
 /**
@@ -188,7 +187,7 @@ int vdb_mbedtls_aes_setkey_enc( mbedtls_aes_context *ctx, const unsigned char *k
  * \return         \c 0 on success.
  * \return         #MBEDTLS_ERR_AES_INVALID_KEY_LENGTH on failure.
  */
-int vdb_mbedtls_aes_setkey_dec( mbedtls_aes_context *ctx, const unsigned char *key,
+int mbedtls_aes_setkey_dec( mbedtls_aes_context *ctx, const unsigned char *key,
                     unsigned int keybits );
 
 #if defined(MBEDTLS_CIPHER_MODE_XTS)
@@ -208,7 +207,7 @@ int vdb_mbedtls_aes_setkey_dec( mbedtls_aes_context *ctx, const unsigned char *k
  * \return         \c 0 on success.
  * \return         #MBEDTLS_ERR_AES_INVALID_KEY_LENGTH on failure.
  */
-int vdb_mbedtls_aes_xts_setkey_enc( mbedtls_aes_xts_context *ctx,
+int mbedtls_aes_xts_setkey_enc( mbedtls_aes_xts_context *ctx,
                                 const unsigned char *key,
                                 unsigned int keybits );
 
@@ -228,7 +227,7 @@ int vdb_mbedtls_aes_xts_setkey_enc( mbedtls_aes_xts_context *ctx,
  * \return         \c 0 on success.
  * \return         #MBEDTLS_ERR_AES_INVALID_KEY_LENGTH on failure.
  */
-int vdb_mbedtls_aes_xts_setkey_dec( mbedtls_aes_xts_context *ctx,
+int mbedtls_aes_xts_setkey_dec( mbedtls_aes_xts_context *ctx,
                                 const unsigned char *key,
                                 unsigned int keybits );
 #endif /* MBEDTLS_CIPHER_MODE_XTS */
@@ -241,8 +240,8 @@ int vdb_mbedtls_aes_xts_setkey_dec( mbedtls_aes_xts_context *ctx,
  *                 (encrypt or decrypt), on the input data buffer defined in
  *                 the \p input parameter.
  *
- *                 vdb_mbedtls_aes_init(), and either vdb_mbedtls_aes_setkey_enc() or
- *                 vdb_mbedtls_aes_setkey_dec() must be called before the first
+ *                 mbedtls_aes_init(), and either mbedtls_aes_setkey_enc() or
+ *                 mbedtls_aes_setkey_dec() must be called before the first
  *                 call to this API with the same context.
  *
  * \param ctx      The AES context to use for encryption or decryption.
@@ -256,7 +255,7 @@ int vdb_mbedtls_aes_xts_setkey_dec( mbedtls_aes_xts_context *ctx,
 
  * \return         \c 0 on success.
  */
-int vdb_mbedtls_aes_crypt_ecb( mbedtls_aes_context *ctx,
+int mbedtls_aes_crypt_ecb( mbedtls_aes_context *ctx,
                     int mode,
                     const unsigned char input[16],
                     unsigned char output[16] );
@@ -271,8 +270,8 @@ int vdb_mbedtls_aes_crypt_ecb( mbedtls_aes_context *ctx,
  *         the \p input parameter.
  *
  *         It can be called as many times as needed, until all the input
- *         data is processed. vdb_mbedtls_aes_init(), and either
- *         vdb_mbedtls_aes_setkey_enc() or vdb_mbedtls_aes_setkey_dec() must be called
+ *         data is processed. mbedtls_aes_init(), and either
+ *         mbedtls_aes_setkey_enc() or mbedtls_aes_setkey_dec() must be called
  *         before the first call to this API with the same context.
  *
  * \note   This function operates on full blocks, that is, the input size
@@ -303,7 +302,7 @@ int vdb_mbedtls_aes_crypt_ecb( mbedtls_aes_context *ctx,
  * \return         #MBEDTLS_ERR_AES_INVALID_INPUT_LENGTH
  *                 on failure.
  */
-int vdb_mbedtls_aes_crypt_cbc( mbedtls_aes_context *ctx,
+int mbedtls_aes_crypt_cbc( mbedtls_aes_context *ctx,
                     int mode,
                     size_t length,
                     unsigned char iv[16],
@@ -347,7 +346,7 @@ int vdb_mbedtls_aes_crypt_cbc( mbedtls_aes_context *ctx,
  *                     smaller than an AES block in size (16 Bytes) or if \p
  *                     length is larger than 2^20 blocks (16 MiB).
  */
-int vdb_mbedtls_aes_crypt_xts( mbedtls_aes_xts_context *ctx,
+int mbedtls_aes_crypt_xts( mbedtls_aes_xts_context *ctx,
                            int mode,
                            size_t length,
                            const unsigned char data_unit[16],
@@ -364,7 +363,7 @@ int vdb_mbedtls_aes_crypt_xts( mbedtls_aes_xts_context *ctx,
  *        parameter (encrypt or decrypt), on the input data buffer
  *        defined in the \p input parameter.
  *
- *        For CFB, you must set up the context with vdb_mbedtls_aes_setkey_enc(),
+ *        For CFB, you must set up the context with mbedtls_aes_setkey_enc(),
  *        regardless of whether you are performing an encryption or decryption
  *        operation, that is, regardless of the \p mode parameter. This is
  *        because CFB mode uses the same key schedule for encryption and
@@ -395,7 +394,7 @@ int vdb_mbedtls_aes_crypt_xts( mbedtls_aes_xts_context *ctx,
  *
  * \return         \c 0 on success.
  */
-int vdb_mbedtls_aes_crypt_cfb128( mbedtls_aes_context *ctx,
+int mbedtls_aes_crypt_cfb128( mbedtls_aes_context *ctx,
                        int mode,
                        size_t length,
                        size_t *iv_off,
@@ -413,7 +412,7 @@ int vdb_mbedtls_aes_crypt_cfb128( mbedtls_aes_context *ctx,
  *
  *        Due to the nature of CFB, you must use the same key schedule for
  *        both encryption and decryption operations. Therefore, you must
- *        use the context initialized with vdb_mbedtls_aes_setkey_enc() for
+ *        use the context initialized with mbedtls_aes_setkey_enc() for
  *        both #MBEDTLS_AES_ENCRYPT and #MBEDTLS_AES_DECRYPT.
  *
  * \note  Upon exit, the content of the IV is updated so that you can
@@ -439,7 +438,7 @@ int vdb_mbedtls_aes_crypt_cfb128( mbedtls_aes_context *ctx,
  *
  * \return         \c 0 on success.
  */
-int vdb_mbedtls_aes_crypt_cfb8( mbedtls_aes_context *ctx,
+int mbedtls_aes_crypt_cfb8( mbedtls_aes_context *ctx,
                     int mode,
                     size_t length,
                     unsigned char iv[16],
@@ -453,7 +452,7 @@ int vdb_mbedtls_aes_crypt_cfb8( mbedtls_aes_context *ctx,
  *              encryption or decryption operation.
  *
  *              For OFB, you must set up the context with
- *              vdb_mbedtls_aes_setkey_enc(), regardless of whether you are
+ *              mbedtls_aes_setkey_enc(), regardless of whether you are
  *              performing an encryption or decryption operation. This is
  *              because OFB mode uses the same key schedule for encryption and
  *              decryption.
@@ -493,7 +492,7 @@ int vdb_mbedtls_aes_crypt_cfb8( mbedtls_aes_context *ctx,
  *
  * \return         \c 0 on success.
  */
-int vdb_mbedtls_aes_crypt_ofb( mbedtls_aes_context *ctx,
+int mbedtls_aes_crypt_ofb( mbedtls_aes_context *ctx,
                        size_t length,
                        size_t *iv_off,
                        unsigned char iv[16],
@@ -513,7 +512,7 @@ int vdb_mbedtls_aes_crypt_ofb( mbedtls_aes_context *ctx,
  *
  *             Due to the nature of CTR, you must use the same key schedule
  *             for both encryption and decryption operations. Therefore, you
- *             must use the context initialized with vdb_mbedtls_aes_setkey_enc()
+ *             must use the context initialized with mbedtls_aes_setkey_enc()
  *             for both #MBEDTLS_AES_ENCRYPT and #MBEDTLS_AES_DECRYPT.
  *
  * \warning    You must never reuse a nonce value with the same key. Doing so
@@ -579,7 +578,7 @@ int vdb_mbedtls_aes_crypt_ofb( mbedtls_aes_context *ctx,
  *
  * \return                 \c 0 on success.
  */
-int vdb_mbedtls_aes_crypt_ctr( mbedtls_aes_context *ctx,
+int mbedtls_aes_crypt_ctr( mbedtls_aes_context *ctx,
                        size_t length,
                        size_t *nc_off,
                        unsigned char nonce_counter[16],
@@ -599,7 +598,7 @@ int vdb_mbedtls_aes_crypt_ctr( mbedtls_aes_context *ctx,
  *
  * \return          \c 0 on success.
  */
-int vdb_mbedtls_internal_aes_encrypt( mbedtls_aes_context *ctx,
+int mbedtls_internal_aes_encrypt( mbedtls_aes_context *ctx,
                                   const unsigned char input[16],
                                   unsigned char output[16] );
 
@@ -614,7 +613,7 @@ int vdb_mbedtls_internal_aes_encrypt( mbedtls_aes_context *ctx,
  *
  * \return          \c 0 on success.
  */
-int vdb_mbedtls_internal_aes_decrypt( mbedtls_aes_context *ctx,
+int mbedtls_internal_aes_decrypt( mbedtls_aes_context *ctx,
                                   const unsigned char input[16],
                                   unsigned char output[16] );
 
@@ -628,13 +627,13 @@ int vdb_mbedtls_internal_aes_decrypt( mbedtls_aes_context *ctx,
  * \brief           Deprecated internal AES block encryption function
  *                  without return value.
  *
- * \deprecated      Superseded by vdb_mbedtls_internal_aes_encrypt()
+ * \deprecated      Superseded by mbedtls_internal_aes_encrypt()
  *
  * \param ctx       The AES context to use for encryption.
  * \param input     Plaintext block.
  * \param output    Output (ciphertext) block.
  */
-MBEDTLS_DEPRECATED void vdb_mbedtls_aes_encrypt( mbedtls_aes_context *ctx,
+MBEDTLS_DEPRECATED void mbedtls_aes_encrypt( mbedtls_aes_context *ctx,
                                              const unsigned char input[16],
                                              unsigned char output[16] );
 
@@ -642,26 +641,30 @@ MBEDTLS_DEPRECATED void vdb_mbedtls_aes_encrypt( mbedtls_aes_context *ctx,
  * \brief           Deprecated internal AES block decryption function
  *                  without return value.
  *
- * \deprecated      Superseded by vdb_mbedtls_internal_aes_decrypt()
+ * \deprecated      Superseded by mbedtls_internal_aes_decrypt()
  *
  * \param ctx       The AES context to use for decryption.
  * \param input     Ciphertext block.
  * \param output    Output (plaintext) block.
  */
-MBEDTLS_DEPRECATED void vdb_mbedtls_aes_decrypt( mbedtls_aes_context *ctx,
+MBEDTLS_DEPRECATED void mbedtls_aes_decrypt( mbedtls_aes_context *ctx,
                                              const unsigned char input[16],
                                              unsigned char output[16] );
 
 #undef MBEDTLS_DEPRECATED
 #endif /* !MBEDTLS_DEPRECATED_REMOVED */
 
+
+#if defined(MBEDTLS_SELF_TEST)
 /**
  * \brief          Checkup routine.
  *
  * \return         \c 0 on success.
  * \return         \c 1 on failure.
  */
-int vdb_mbedtls_aes_self_test( int verbose );
+int mbedtls_aes_self_test( int verbose );
+
+#endif /* MBEDTLS_SELF_TEST */
 
 #ifdef __cplusplus
 }
