@@ -28,7 +28,7 @@
 #if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
 #else
-#define mbedtls_snprintf snprintf
+#define vdb_mbedtls_snprintf snprintf
 #endif
 
 #include <stdio.h>
@@ -893,7 +893,7 @@ const char * mbedtls_low_level_strerr( int error_code )
     return( NULL );
 }
 
-void mbedtls_strerror( int ret, char *buf, size_t buflen )
+void vdb_mbedtls_strerror( int ret, char *buf, size_t buflen )
 {
     size_t len;
     int use_ret;
@@ -916,9 +916,9 @@ void mbedtls_strerror( int ret, char *buf, size_t buflen )
         high_level_error_description = mbedtls_high_level_strerr( ret );
 
         if( high_level_error_description == NULL )
-            mbedtls_snprintf( buf, buflen, "UNKNOWN ERROR CODE (%04X)", (unsigned int) use_ret );
+            vdb_mbedtls_snprintf( buf, buflen, "UNKNOWN ERROR CODE (%04X)", (unsigned int) use_ret );
         else
-            mbedtls_snprintf( buf, buflen, "%s", high_level_error_description );
+            vdb_mbedtls_snprintf( buf, buflen, "%s", high_level_error_description );
 
 #if defined(MBEDTLS_SSL_TLS_C)
         // Early return in case of a fatal error - do not try to translate low
@@ -943,7 +943,7 @@ void mbedtls_strerror( int ret, char *buf, size_t buflen )
         if( buflen - len < 5 )
             return;
 
-        mbedtls_snprintf( buf + len, buflen - len, " : " );
+        vdb_mbedtls_snprintf( buf + len, buflen - len, " : " );
 
         buf += len + 3;
         buflen -= len + 3;
@@ -953,9 +953,9 @@ void mbedtls_strerror( int ret, char *buf, size_t buflen )
     low_level_error_description = mbedtls_low_level_strerr( ret );
 
     if( low_level_error_description == NULL )
-        mbedtls_snprintf( buf, buflen, "UNKNOWN ERROR CODE (%04X)", (unsigned int) use_ret );
+        vdb_mbedtls_snprintf( buf, buflen, "UNKNOWN ERROR CODE (%04X)", (unsigned int) use_ret );
     else
-        mbedtls_snprintf( buf, buflen, "%s", low_level_error_description );
+        vdb_mbedtls_snprintf( buf, buflen, "%s", low_level_error_description );
 }
 
 #else /* MBEDTLS_ERROR_C */
@@ -963,7 +963,7 @@ void mbedtls_strerror( int ret, char *buf, size_t buflen )
 /*
  * Provide an non-function in case MBEDTLS_ERROR_C is not defined
  */
-void mbedtls_strerror( int ret, char *buf, size_t buflen )
+void vdb_mbedtls_strerror( int ret, char *buf, size_t buflen )
 {
     ((void) ret);
 

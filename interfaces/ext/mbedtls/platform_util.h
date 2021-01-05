@@ -51,7 +51,7 @@ extern "C" {
 /** An alternative definition of MBEDTLS_PARAM_FAILED has been set in config.h.
  *
  * This flag can be used to check whether it is safe to assume that
- * MBEDTLS_PARAM_FAILED() will expand to a call to mbedtls_param_failed().
+ * MBEDTLS_PARAM_FAILED() will expand to a call to vdb_mbedtls_param_failed().
  */
 #define MBEDTLS_PARAM_FAILED_ALT
 
@@ -61,7 +61,7 @@ extern "C" {
 
 #else /* MBEDTLS_PARAM_FAILED */
 #define MBEDTLS_PARAM_FAILED( cond ) \
-    mbedtls_param_failed( #cond, __FILE__, __LINE__ )
+    vdb_mbedtls_param_failed( #cond, __FILE__, __LINE__ )
 
 /**
  * \brief       User supplied callback function for parameter validation failure.
@@ -78,7 +78,7 @@ extern "C" {
  * \param file  The file where the assertion failed.
  * \param line  The line in the file where the assertion failed.
  */
-void mbedtls_param_failed( const char *failure_condition,
+void vdb_mbedtls_param_failed( const char *failure_condition,
                            const char *file,
                            int line );
 #endif /* MBEDTLS_PARAM_FAILED */
@@ -143,18 +143,18 @@ MBEDTLS_DEPRECATED typedef int mbedtls_deprecated_numeric_constant_t;
  *              object.
  *
  *              It is extremely difficult to guarantee that calls to
- *              mbedtls_platform_zeroize() are not removed by aggressive
+ *              vdb_mbedtls_platform_zeroize() are not removed by aggressive
  *              compiler optimizations in a portable way. For this reason, Mbed
  *              TLS provides the configuration option
  *              MBEDTLS_PLATFORM_ZEROIZE_ALT, which allows users to configure
- *              mbedtls_platform_zeroize() to use a suitable implementation for
+ *              vdb_mbedtls_platform_zeroize() to use a suitable implementation for
  *              their platform and needs
  *
  * \param buf   Buffer to be zeroized
  * \param len   Length of the buffer in bytes
  *
  */
-void mbedtls_platform_zeroize( void *buf, size_t len );
+void vdb_mbedtls_platform_zeroize( void *buf, size_t len );
 
 #if defined(MBEDTLS_HAVE_TIME_DATE)
 /**
@@ -174,7 +174,7 @@ void mbedtls_platform_zeroize( void *buf, size_t len );
  *
  *             If MBEDTLS_PLATFORM_GMTIME_R_ALT is defined, then Mbed TLS will
  *             unconditionally use the alternative implementation for
- *             mbedtls_platform_gmtime_r() supplied by the user at compile time.
+ *             vdb_mbedtls_platform_gmtime_r() supplied by the user at compile time.
  *
  * \param tt     Pointer to an object containing time (in seconds) since the
  *               epoch to be converted
@@ -183,7 +183,7 @@ void mbedtls_platform_zeroize( void *buf, size_t len );
  * \return      Pointer to an object of type struct tm on success, otherwise
  *              NULL
  */
-struct tm *mbedtls_platform_gmtime_r( const mbedtls_time_t *tt,
+struct tm *vdb_mbedtls_platform_gmtime_r( const mbedtls_time_t *tt,
                                       struct tm *tm_buf );
 #endif /* MBEDTLS_HAVE_TIME_DATE */
 

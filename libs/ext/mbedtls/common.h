@@ -35,12 +35,12 @@
  * declared `static` to allow the compiler to optimize for code size,
  * but that function has unit tests, define it with
  * ```
- * MBEDTLS_STATIC_TESTABLE int mbedtls_foo(...) { ... }
+ * MBEDTLS_STATIC_TESTABLE int vdb_mbedtls_foo(...) { ... }
  * ```
  * and declare it in a header in the `library/` directory with
  * ```
  * #if defined(MBEDTLS_TEST_HOOKS)
- * int mbedtls_foo(...);
+ * int vdb_mbedtls_foo(...);
  * #endif
  * ```
  */

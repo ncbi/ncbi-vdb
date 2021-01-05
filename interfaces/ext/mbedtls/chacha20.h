@@ -76,15 +76,15 @@ mbedtls_chacha20_context;
  *                  the context.
  *
  *                  It is usually followed by calls to
- *                  \c mbedtls_chacha20_setkey() and
- *                  \c mbedtls_chacha20_starts(), then one or more calls to
- *                  to \c mbedtls_chacha20_update(), and finally to
- *                  \c mbedtls_chacha20_free().
+ *                  \c vdb_mbedtls_chacha20_setkey() and
+ *                  \c vdb_mbedtls_chacha20_starts(), then one or more calls to
+ *                  to \c vdb_mbedtls_chacha20_update(), and finally to
+ *                  \c vdb_mbedtls_chacha20_free().
  *
  * \param ctx       The ChaCha20 context to initialize.
  *                  This must not be \c NULL.
  */
-void mbedtls_chacha20_init( mbedtls_chacha20_context *ctx );
+void vdb_mbedtls_chacha20_init( mbedtls_chacha20_context *ctx );
 
 /**
  * \brief           This function releases and clears the specified
@@ -95,15 +95,15 @@ void mbedtls_chacha20_init( mbedtls_chacha20_context *ctx );
  *                  \c NULL, it must point to an initialized context.
  *
  */
-void mbedtls_chacha20_free( mbedtls_chacha20_context *ctx );
+void vdb_mbedtls_chacha20_free( mbedtls_chacha20_context *ctx );
 
 /**
  * \brief           This function sets the encryption/decryption key.
  *
  * \note            After using this function, you must also call
- *                  \c mbedtls_chacha20_starts() to set a nonce before you
+ *                  \c vdb_mbedtls_chacha20_starts() to set a nonce before you
  *                  start encrypting/decrypting data with
- *                  \c mbedtls_chacha_update().
+ *                  \c vdb_mbedtls_chacha_update().
  *
  * \param ctx       The ChaCha20 context to which the key should be bound.
  *                  It must be initialized.
@@ -113,7 +113,7 @@ void mbedtls_chacha20_free( mbedtls_chacha20_context *ctx );
  * \return          \c 0 on success.
  * \return          #MBEDTLS_ERR_CHACHA20_BAD_INPUT_DATA if ctx or key is NULL.
  */
-int mbedtls_chacha20_setkey( mbedtls_chacha20_context *ctx,
+int vdb_mbedtls_chacha20_setkey( mbedtls_chacha20_context *ctx,
                              const unsigned char key[32] );
 
 /**
@@ -135,7 +135,7 @@ int mbedtls_chacha20_setkey( mbedtls_chacha20_context *ctx,
  * \return          #MBEDTLS_ERR_CHACHA20_BAD_INPUT_DATA if ctx or nonce is
  *                  NULL.
  */
-int mbedtls_chacha20_starts( mbedtls_chacha20_context* ctx,
+int vdb_mbedtls_chacha20_starts( mbedtls_chacha20_context* ctx,
                              const unsigned char nonce[12],
                              uint32_t counter );
 
@@ -148,8 +148,8 @@ int mbedtls_chacha20_starts( mbedtls_chacha20_context* ctx,
  * \note            The \p input and \p output pointers must either be equal or
  *                  point to non-overlapping buffers.
  *
- * \note            \c mbedtls_chacha20_setkey() and
- *                  \c mbedtls_chacha20_starts() must be called at least once
+ * \note            \c vdb_mbedtls_chacha20_setkey() and
+ *                  \c vdb_mbedtls_chacha20_starts() must be called at least once
  *                  to setup the context before this function can be called.
  *
  * \note            This function can be called multiple times in a row in
@@ -168,7 +168,7 @@ int mbedtls_chacha20_starts( mbedtls_chacha20_context* ctx,
  * \return          \c 0 on success.
  * \return          A negative error code on failure.
  */
-int mbedtls_chacha20_update( mbedtls_chacha20_context *ctx,
+int vdb_mbedtls_chacha20_update( mbedtls_chacha20_context *ctx,
                              size_t size,
                              const unsigned char *input,
                              unsigned char *output );
@@ -201,7 +201,7 @@ int mbedtls_chacha20_update( mbedtls_chacha20_context *ctx,
  * \return          \c 0 on success.
  * \return          A negative error code on failure.
  */
-int mbedtls_chacha20_crypt( const unsigned char key[32],
+int vdb_mbedtls_chacha20_crypt( const unsigned char key[32],
                             const unsigned char nonce[12],
                             uint32_t counter,
                             size_t size,
@@ -215,7 +215,7 @@ int mbedtls_chacha20_crypt( const unsigned char key[32],
  * \return          \c 0 on success.
  * \return          \c 1 on failure.
  */
-int mbedtls_chacha20_self_test( int verbose );
+int vdb_mbedtls_chacha20_self_test( int verbose );
 #endif /* MBEDTLS_SELF_TEST */
 
 #ifdef __cplusplus

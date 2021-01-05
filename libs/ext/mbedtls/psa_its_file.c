@@ -29,7 +29,7 @@
 #if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
 #else
-#define mbedtls_snprintf   snprintf
+#define vdb_mbedtls_snprintf   snprintf
 #endif
 
 #if defined(_WIN32)
@@ -84,7 +84,7 @@ static void psa_its_fill_filename( psa_storage_uid_t uid, char *filename )
 {
     /* Break up the UID into two 32-bit pieces so as not to rely on
      * long long support in snprintf. */
-    mbedtls_snprintf( filename, PSA_ITS_STORAGE_FILENAME_LENGTH,
+    vdb_mbedtls_snprintf( filename, PSA_ITS_STORAGE_FILENAME_LENGTH,
                       "%s" PSA_ITS_STORAGE_FILENAME_PATTERN "%s",
                       PSA_ITS_STORAGE_PREFIX,
                       (unsigned long) ( uid >> 32 ),

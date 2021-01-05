@@ -90,7 +90,7 @@ extern "C" {
  *
  * \warning This library does not support validation of arbitrary domain
  * parameters. Therefore, only standardized domain parameters from trusted
- * sources should be used. See mbedtls_ecp_group_load().
+ * sources should be used. See vdb_mbedtls_ecp_group_load().
  */
 /* Note: when adding a new curve:
  * - Add it at the end of this enum, otherwise you'll break the ABI by
@@ -192,8 +192,8 @@ mbedtls_ecp_point;
  *
  * For Short Weierstrass, this subgroup is the whole curve, and its
  * cardinality is denoted by \p N. Our code requires that \p N is an
- * odd prime as mbedtls_ecp_mul() requires an odd number, and
- * mbedtls_ecdsa_sign() requires that it is prime for blinding purposes.
+ * odd prime as vdb_mbedtls_ecp_mul() requires an odd number, and
+ * vdb_mbedtls_ecdsa_sign() requires that it is prime for blinding purposes.
  *
  * For Montgomery curves, we do not store \p A, but <code>(A + 2) / 4</code>,
  * which is the quantity used in the formulas. Additionally, \p nbits is
@@ -345,13 +345,13 @@ typedef struct
  * \return          \c 0 if doing \p ops basic ops is still allowed,
  * \return          #MBEDTLS_ERR_ECP_IN_PROGRESS otherwise.
  */
-int mbedtls_ecp_check_budget( const mbedtls_ecp_group *grp,
+int vdb_mbedtls_ecp_check_budget( const mbedtls_ecp_group *grp,
                               mbedtls_ecp_restart_ctx *rs_ctx,
                               unsigned ops );
 
 /* Utility macro for checking and updating ops budget */
 #define MBEDTLS_ECP_BUDGET( ops )   \
-    MBEDTLS_MPI_CHK( mbedtls_ecp_check_budget( grp, rs_ctx, \
+    MBEDTLS_MPI_CHK( vdb_mbedtls_ecp_check_budget( grp, rs_ctx, \
                                                (unsigned) (ops) ) );
 
 #else /* MBEDTLS_ECP_RESTARTABLE */
@@ -416,7 +416,7 @@ mbedtls_ecp_keypair;
  *                  with \c _restartable removed. For functions in the ECDH
  *                  module, restart is disabled unless the function accepts
  *                  an "ECDH context" argument and
- *                  mbedtls_ecdh_enable_restart() was previously called on
+ *                  vdb_mbedtls_ecdh_enable_restart() was previously called on
  *                  that context. For function in the SSL module, restart is
  *                  only enabled for specific sides and key exchanges
  *                  (currently only for clients and ECDHE-ECDSA).
@@ -429,7 +429,7 @@ mbedtls_ecp_keypair;
  * \note            A "basic operation" is defined as a rough equivalent of a
  *                  multiplication in GF(p) for the NIST P-256 curve.
  *                  As an indication, with default settings, a scalar
- *                  multiplication (full run of \c mbedtls_ecp_mul()) is:
+ *                  multiplication (full run of \c vdb_mbedtls_ecp_mul()) is:
  *                  - about 3300 basic operations for P-256
  *                  - about 9400 basic operations for P-384
  *
@@ -448,7 +448,7 @@ mbedtls_ecp_keypair;
  *
  * \note            This setting is currently ignored by Curve25519.
  */
-void mbedtls_ecp_set_max_ops( unsigned max_ops );
+void vdb_mbedtls_ecp_set_max_ops( unsigned max_ops );
 
 /**
  * \brief           Check if restart is enabled (max_ops != 0)
@@ -456,13 +456,13 @@ void mbedtls_ecp_set_max_ops( unsigned max_ops );
  * \return          \c 0 if \c max_ops == 0 (restart disabled)
  * \return          \c 1 otherwise (restart enabled)
  */
-int mbedtls_ecp_restart_is_enabled( void );
+int vdb_mbedtls_ecp_restart_is_enabled( void );
 #endif /* MBEDTLS_ECP_RESTARTABLE */
 
 /*
  * Get the type of a curve
  */
-mbedtls_ecp_curve_type mbedtls_ecp_get_type( const mbedtls_ecp_group *grp );
+mbedtls_ecp_curve_type vdb_mbedtls_ecp_get_type( const mbedtls_ecp_group *grp );
 
 /**
  * \brief           This function retrieves the information defined in
@@ -471,13 +471,13 @@ mbedtls_ecp_curve_type mbedtls_ecp_get_type( const mbedtls_ecp_group *grp );
  *
  * \note            This function returns information about all curves
  *                  supported by the library. Some curves may not be
- *                  supported for all algorithms. Call mbedtls_ecdh_can_do()
- *                  or mbedtls_ecdsa_can_do() to check if a curve is
+ *                  supported for all algorithms. Call vdb_mbedtls_ecdh_can_do()
+ *                  or vdb_mbedtls_ecdsa_can_do() to check if a curve is
  *                  supported for ECDH or ECDSA.
  *
  * \return          A statically allocated array. The last entry is 0.
  */
-const mbedtls_ecp_curve_info *mbedtls_ecp_curve_list( void );
+const mbedtls_ecp_curve_info *vdb_mbedtls_ecp_curve_list( void );
 
 /**
  * \brief           This function retrieves the list of internal group
@@ -486,14 +486,14 @@ const mbedtls_ecp_curve_info *mbedtls_ecp_curve_list( void );
  *
  * \note            This function returns information about all curves
  *                  supported by the library. Some curves may not be
- *                  supported for all algorithms. Call mbedtls_ecdh_can_do()
- *                  or mbedtls_ecdsa_can_do() to check if a curve is
+ *                  supported for all algorithms. Call vdb_mbedtls_ecdh_can_do()
+ *                  or vdb_mbedtls_ecdsa_can_do() to check if a curve is
  *                  supported for ECDH or ECDSA.
  *
  * \return          A statically allocated array,
  *                  terminated with MBEDTLS_ECP_DP_NONE.
  */
-const mbedtls_ecp_group_id *mbedtls_ecp_grp_id_list( void );
+const mbedtls_ecp_group_id *vdb_mbedtls_ecp_grp_id_list( void );
 
 /**
  * \brief           This function retrieves curve information from an internal
@@ -504,7 +504,7 @@ const mbedtls_ecp_group_id *mbedtls_ecp_grp_id_list( void );
  * \return          The associated curve information on success.
  * \return          NULL on failure.
  */
-const mbedtls_ecp_curve_info *mbedtls_ecp_curve_info_from_grp_id( mbedtls_ecp_group_id grp_id );
+const mbedtls_ecp_curve_info *vdb_mbedtls_ecp_curve_info_from_grp_id( mbedtls_ecp_group_id grp_id );
 
 /**
  * \brief           This function retrieves curve information from a TLS
@@ -515,7 +515,7 @@ const mbedtls_ecp_curve_info *mbedtls_ecp_curve_info_from_grp_id( mbedtls_ecp_gr
  * \return          The associated curve information on success.
  * \return          NULL on failure.
  */
-const mbedtls_ecp_curve_info *mbedtls_ecp_curve_info_from_tls_id( uint16_t tls_id );
+const mbedtls_ecp_curve_info *vdb_mbedtls_ecp_curve_info_from_tls_id( uint16_t tls_id );
 
 /**
  * \brief           This function retrieves curve information from a
@@ -526,14 +526,14 @@ const mbedtls_ecp_curve_info *mbedtls_ecp_curve_info_from_tls_id( uint16_t tls_i
  * \return          The associated curve information on success.
  * \return          NULL on failure.
  */
-const mbedtls_ecp_curve_info *mbedtls_ecp_curve_info_from_name( const char *name );
+const mbedtls_ecp_curve_info *vdb_mbedtls_ecp_curve_info_from_name( const char *name );
 
 /**
  * \brief           This function initializes a point as zero.
  *
  * \param pt        The point to initialize.
  */
-void mbedtls_ecp_point_init( mbedtls_ecp_point *pt );
+void vdb_mbedtls_ecp_point_init( mbedtls_ecp_point *pt );
 
 /**
  * \brief           This function initializes an ECP group context
@@ -541,24 +541,24 @@ void mbedtls_ecp_point_init( mbedtls_ecp_point *pt );
  *
  * \note            After this function is called, domain parameters
  *                  for various ECP groups can be loaded through the
- *                  mbedtls_ecp_group_load() or mbedtls_ecp_tls_read_group()
+ *                  vdb_mbedtls_ecp_group_load() or vdb_mbedtls_ecp_tls_read_group()
  *                  functions.
  */
-void mbedtls_ecp_group_init( mbedtls_ecp_group *grp );
+void vdb_mbedtls_ecp_group_init( mbedtls_ecp_group *grp );
 
 /**
  * \brief           This function initializes a key pair as an invalid one.
  *
  * \param key       The key pair to initialize.
  */
-void mbedtls_ecp_keypair_init( mbedtls_ecp_keypair *key );
+void vdb_mbedtls_ecp_keypair_init( mbedtls_ecp_keypair *key );
 
 /**
  * \brief           This function frees the components of a point.
  *
  * \param pt        The point to free.
  */
-void mbedtls_ecp_point_free( mbedtls_ecp_point *pt );
+void vdb_mbedtls_ecp_point_free( mbedtls_ecp_point *pt );
 
 /**
  * \brief           This function frees the components of an ECP group.
@@ -567,7 +567,7 @@ void mbedtls_ecp_point_free( mbedtls_ecp_point *pt );
  *                  case this function returns immediately. If it is not
  *                  \c NULL, it must point to an initialized ECP group.
  */
-void mbedtls_ecp_group_free( mbedtls_ecp_group *grp );
+void vdb_mbedtls_ecp_group_free( mbedtls_ecp_group *grp );
 
 /**
  * \brief           This function frees the components of a key pair.
@@ -576,7 +576,7 @@ void mbedtls_ecp_group_free( mbedtls_ecp_group *grp );
  *                  case this function returns immediately. If it is not
  *                  \c NULL, it must point to an initialized ECP key pair.
  */
-void mbedtls_ecp_keypair_free( mbedtls_ecp_keypair *key );
+void vdb_mbedtls_ecp_keypair_free( mbedtls_ecp_keypair *key );
 
 #if defined(MBEDTLS_ECP_RESTARTABLE)
 /**
@@ -585,7 +585,7 @@ void mbedtls_ecp_keypair_free( mbedtls_ecp_keypair *key );
  * \param ctx       The restart context to initialize. This must
  *                  not be \c NULL.
  */
-void mbedtls_ecp_restart_init( mbedtls_ecp_restart_ctx *ctx );
+void vdb_mbedtls_ecp_restart_init( mbedtls_ecp_restart_ctx *ctx );
 
 /**
  * \brief           Free the components of a restart context.
@@ -594,7 +594,7 @@ void mbedtls_ecp_restart_init( mbedtls_ecp_restart_ctx *ctx );
  *                  case this function returns immediately. If it is not
  *                  \c NULL, it must point to an initialized restart context.
  */
-void mbedtls_ecp_restart_free( mbedtls_ecp_restart_ctx *ctx );
+void vdb_mbedtls_ecp_restart_free( mbedtls_ecp_restart_ctx *ctx );
 #endif /* MBEDTLS_ECP_RESTARTABLE */
 
 /**
@@ -608,7 +608,7 @@ void mbedtls_ecp_restart_free( mbedtls_ecp_restart_ctx *ctx );
  * \return          #MBEDTLS_ERR_MPI_ALLOC_FAILED on memory-allocation failure.
  * \return          Another negative error code for other kinds of failure.
  */
-int mbedtls_ecp_copy( mbedtls_ecp_point *P, const mbedtls_ecp_point *Q );
+int vdb_mbedtls_ecp_copy( mbedtls_ecp_point *P, const mbedtls_ecp_point *Q );
 
 /**
  * \brief           This function copies the contents of group \p src into
@@ -621,7 +621,7 @@ int mbedtls_ecp_copy( mbedtls_ecp_point *P, const mbedtls_ecp_point *Q );
  * \return          #MBEDTLS_ERR_MPI_ALLOC_FAILED on memory-allocation failure.
  * \return          Another negative error code on other kinds of failure.
  */
-int mbedtls_ecp_group_copy( mbedtls_ecp_group *dst,
+int vdb_mbedtls_ecp_group_copy( mbedtls_ecp_group *dst,
                             const mbedtls_ecp_group *src );
 
 /**
@@ -633,7 +633,7 @@ int mbedtls_ecp_group_copy( mbedtls_ecp_group *dst,
  * \return          #MBEDTLS_ERR_MPI_ALLOC_FAILED on memory-allocation failure.
  * \return          Another negative error code on other kinds of failure.
  */
-int mbedtls_ecp_set_zero( mbedtls_ecp_point *pt );
+int vdb_mbedtls_ecp_set_zero( mbedtls_ecp_point *pt );
 
 /**
  * \brief           This function checks if a point is the point at infinity.
@@ -644,7 +644,7 @@ int mbedtls_ecp_set_zero( mbedtls_ecp_point *pt );
  * \return          \c 0 if the point is non-zero.
  * \return          A negative error code on failure.
  */
-int mbedtls_ecp_is_zero( mbedtls_ecp_point *pt );
+int vdb_mbedtls_ecp_is_zero( mbedtls_ecp_point *pt );
 
 /**
  * \brief           This function compares two points.
@@ -658,7 +658,7 @@ int mbedtls_ecp_is_zero( mbedtls_ecp_point *pt );
  * \return          \c 0 if the points are equal.
  * \return          #MBEDTLS_ERR_ECP_BAD_INPUT_DATA if the points are not equal.
  */
-int mbedtls_ecp_point_cmp( const mbedtls_ecp_point *P,
+int vdb_mbedtls_ecp_point_cmp( const mbedtls_ecp_point *P,
                            const mbedtls_ecp_point *Q );
 
 /**
@@ -673,7 +673,7 @@ int mbedtls_ecp_point_cmp( const mbedtls_ecp_point *P,
  * \return          \c 0 on success.
  * \return          An \c MBEDTLS_ERR_MPI_XXX error code on failure.
  */
-int mbedtls_ecp_point_read_string( mbedtls_ecp_point *P, int radix,
+int vdb_mbedtls_ecp_point_read_string( mbedtls_ecp_point *P, int radix,
                            const char *x, const char *y );
 
 /**
@@ -681,7 +681,7 @@ int mbedtls_ecp_point_read_string( mbedtls_ecp_point *P, int radix,
  *
  * \param grp       The group to which the point should belong.
  *                  This must be initialized and have group parameters
- *                  set, for example through mbedtls_ecp_group_load().
+ *                  set, for example through vdb_mbedtls_ecp_group_load().
  * \param P         The point to export. This must be initialized.
  * \param format    The point format. This must be either
  *                  #MBEDTLS_ECP_PF_COMPRESSED or #MBEDTLS_ECP_PF_UNCOMPRESSED.
@@ -701,7 +701,7 @@ int mbedtls_ecp_point_read_string( mbedtls_ecp_point *P, int radix,
  *                  or the export for the given group is not implemented.
  * \return          Another negative error code on other kinds of failure.
  */
-int mbedtls_ecp_point_write_binary( const mbedtls_ecp_group *grp,
+int vdb_mbedtls_ecp_point_write_binary( const mbedtls_ecp_group *grp,
                                     const mbedtls_ecp_point *P,
                                     int format, size_t *olen,
                                     unsigned char *buf, size_t buflen );
@@ -710,12 +710,12 @@ int mbedtls_ecp_point_write_binary( const mbedtls_ecp_group *grp,
  * \brief           This function imports a point from unsigned binary data.
  *
  * \note            This function does not check that the point actually
- *                  belongs to the given group, see mbedtls_ecp_check_pubkey()
+ *                  belongs to the given group, see vdb_mbedtls_ecp_check_pubkey()
  *                  for that.
  *
  * \param grp       The group to which the point should belong.
  *                  This must be initialized and have group parameters
- *                  set, for example through mbedtls_ecp_group_load().
+ *                  set, for example through vdb_mbedtls_ecp_group_load().
  * \param P         The destination context to import the point to.
  *                  This must be initialized.
  * \param buf       The input buffer. This must be a readable buffer
@@ -728,7 +728,7 @@ int mbedtls_ecp_point_write_binary( const mbedtls_ecp_group *grp,
  * \return          #MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE if the import for the
  *                  given group is not implemented.
  */
-int mbedtls_ecp_point_read_binary( const mbedtls_ecp_group *grp,
+int vdb_mbedtls_ecp_point_read_binary( const mbedtls_ecp_group *grp,
                                    mbedtls_ecp_point *P,
                                    const unsigned char *buf, size_t ilen );
 
@@ -740,7 +740,7 @@ int mbedtls_ecp_point_read_binary( const mbedtls_ecp_group *grp,
  *
  * \param grp       The ECP group to use.
  *                  This must be initialized and have group parameters
- *                  set, for example through mbedtls_ecp_group_load().
+ *                  set, for example through vdb_mbedtls_ecp_group_load().
  * \param pt        The destination point.
  * \param buf       The address of the pointer to the start of the input buffer.
  * \param len       The length of the buffer.
@@ -750,7 +750,7 @@ int mbedtls_ecp_point_read_binary( const mbedtls_ecp_group *grp,
  *                  failure.
  * \return          #MBEDTLS_ERR_ECP_BAD_INPUT_DATA if input is invalid.
  */
-int mbedtls_ecp_tls_read_point( const mbedtls_ecp_group *grp,
+int vdb_mbedtls_ecp_tls_read_point( const mbedtls_ecp_group *grp,
                                 mbedtls_ecp_point *pt,
                                 const unsigned char **buf, size_t len );
 
@@ -760,7 +760,7 @@ int mbedtls_ecp_tls_read_point( const mbedtls_ecp_group *grp,
  *
  * \param grp       The ECP group to use.
  *                  This must be initialized and have group parameters
- *                  set, for example through mbedtls_ecp_group_load().
+ *                  set, for example through vdb_mbedtls_ecp_group_load().
  * \param pt        The point to be exported. This must be initialized.
  * \param format    The point format to use. This must be either
  *                  #MBEDTLS_ECP_PF_COMPRESSED or #MBEDTLS_ECP_PF_UNCOMPRESSED.
@@ -776,7 +776,7 @@ int mbedtls_ecp_tls_read_point( const mbedtls_ecp_group *grp,
  *                  is too small to hold the exported point.
  * \return          Another negative error code on other kinds of failure.
  */
-int mbedtls_ecp_tls_write_point( const mbedtls_ecp_group *grp,
+int vdb_mbedtls_ecp_tls_write_point( const mbedtls_ecp_group *grp,
                                  const mbedtls_ecp_point *pt,
                                  int format, size_t *olen,
                                  unsigned char *buf, size_t blen );
@@ -798,7 +798,7 @@ int mbedtls_ecp_tls_write_point( const mbedtls_ecp_group *grp,
  *                  correspond to a known group.
  * \return          Another negative error code on other kinds of failure.
  */
-int mbedtls_ecp_group_load( mbedtls_ecp_group *grp, mbedtls_ecp_group_id id );
+int vdb_mbedtls_ecp_group_load( mbedtls_ecp_group *grp, mbedtls_ecp_group_id id );
 
 /**
  * \brief           This function sets up an ECP group context from a TLS
@@ -817,7 +817,7 @@ int mbedtls_ecp_group_load( mbedtls_ecp_group *grp, mbedtls_ecp_group_id id );
  *                  recognized.
  * \return          Another negative error code on other kinds of failure.
  */
-int mbedtls_ecp_tls_read_group( mbedtls_ecp_group *grp,
+int vdb_mbedtls_ecp_tls_read_group( mbedtls_ecp_group *grp,
                                 const unsigned char **buf, size_t len );
 
 /**
@@ -838,7 +838,7 @@ int mbedtls_ecp_tls_read_group( mbedtls_ecp_group *grp,
  *                  recognized.
  * \return          Another negative error code on other kinds of failure.
  */
-int mbedtls_ecp_tls_read_group_id( mbedtls_ecp_group_id *grp,
+int vdb_mbedtls_ecp_tls_read_group_id( mbedtls_ecp_group_id *grp,
                                    const unsigned char **buf,
                                    size_t len );
 /**
@@ -847,7 +847,7 @@ int mbedtls_ecp_tls_read_group_id( mbedtls_ecp_group_id *grp,
  *
  * \param grp       The ECP group to be exported.
  *                  This must be initialized and have group parameters
- *                  set, for example through mbedtls_ecp_group_load().
+ *                  set, for example through vdb_mbedtls_ecp_group_load().
  * \param olen      The address at which to store the number of Bytes written.
  *                  This must not be \c NULL.
  * \param buf       The buffer to write to. This must be a writable buffer
@@ -859,7 +859,7 @@ int mbedtls_ecp_tls_read_group_id( mbedtls_ecp_group_id *grp,
  *                  buffer is too small to hold the exported group.
  * \return          Another negative error code on other kinds of failure.
  */
-int mbedtls_ecp_tls_write_group( const mbedtls_ecp_group *grp,
+int vdb_mbedtls_ecp_tls_write_group( const mbedtls_ecp_group *grp,
                                  size_t *olen,
                                  unsigned char *buf, size_t blen );
 
@@ -884,7 +884,7 @@ int mbedtls_ecp_tls_write_group( const mbedtls_ecp_group *grp,
  *
  * \param grp       The ECP group to use.
  *                  This must be initialized and have group parameters
- *                  set, for example through mbedtls_ecp_group_load().
+ *                  set, for example through vdb_mbedtls_ecp_group_load().
  * \param R         The point in which to store the result of the calculation.
  *                  This must be initialized.
  * \param m         The integer by which to multiply. This must be initialized.
@@ -899,7 +899,7 @@ int mbedtls_ecp_tls_write_group( const mbedtls_ecp_group *grp,
  * \return          #MBEDTLS_ERR_MPI_ALLOC_FAILED on memory-allocation failure.
  * \return          Another negative error code on other kinds of failure.
  */
-int mbedtls_ecp_mul( mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
+int vdb_mbedtls_ecp_mul( mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
              const mbedtls_mpi *m, const mbedtls_ecp_point *P,
              int (*f_rng)(void *, unsigned char *, size_t), void *p_rng );
 
@@ -907,15 +907,15 @@ int mbedtls_ecp_mul( mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
  * \brief           This function performs multiplication of a point by
  *                  an integer: \p R = \p m * \p P in a restartable way.
  *
- * \see             mbedtls_ecp_mul()
+ * \see             vdb_mbedtls_ecp_mul()
  *
- * \note            This function does the same as \c mbedtls_ecp_mul(), but
+ * \note            This function does the same as \c vdb_mbedtls_ecp_mul(), but
  *                  it can return early and restart according to the limit set
- *                  with \c mbedtls_ecp_set_max_ops() to reduce blocking.
+ *                  with \c vdb_mbedtls_ecp_set_max_ops() to reduce blocking.
  *
  * \param grp       The ECP group to use.
  *                  This must be initialized and have group parameters
- *                  set, for example through mbedtls_ecp_group_load().
+ *                  set, for example through vdb_mbedtls_ecp_group_load().
  * \param R         The point in which to store the result of the calculation.
  *                  This must be initialized.
  * \param m         The integer by which to multiply. This must be initialized.
@@ -930,10 +930,10 @@ int mbedtls_ecp_mul( mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
  *                  key, or \p P is not a valid public key.
  * \return          #MBEDTLS_ERR_MPI_ALLOC_FAILED on memory-allocation failure.
  * \return          #MBEDTLS_ERR_ECP_IN_PROGRESS if maximum number of
- *                  operations was reached: see \c mbedtls_ecp_set_max_ops().
+ *                  operations was reached: see \c vdb_mbedtls_ecp_set_max_ops().
  * \return          Another negative error code on other kinds of failure.
  */
-int mbedtls_ecp_mul_restartable( mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
+int vdb_mbedtls_ecp_mul_restartable( mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
              const mbedtls_mpi *m, const mbedtls_ecp_point *P,
              int (*f_rng)(void *, unsigned char *, size_t), void *p_rng,
              mbedtls_ecp_restart_ctx *rs_ctx );
@@ -945,7 +945,7 @@ int mbedtls_ecp_mul_restartable( mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
  *
  *                  It is not thread-safe to use same group in multiple threads.
  *
- * \note            In contrast to mbedtls_ecp_mul(), this function does not
+ * \note            In contrast to vdb_mbedtls_ecp_mul(), this function does not
  *                  guarantee a constant execution flow and timing.
  *
  * \note            This function is only defined for short Weierstrass curves.
@@ -954,7 +954,7 @@ int mbedtls_ecp_mul_restartable( mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
  *
  * \param grp       The ECP group to use.
  *                  This must be initialized and have group parameters
- *                  set, for example through mbedtls_ecp_group_load().
+ *                  set, for example through vdb_mbedtls_ecp_group_load().
  * \param R         The point in which to store the result of the calculation.
  *                  This must be initialized.
  * \param m         The integer by which to multiply \p P.
@@ -974,7 +974,7 @@ int mbedtls_ecp_mul_restartable( mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
  *                  designate a short Weierstrass curve.
  * \return          Another negative error code on other kinds of failure.
  */
-int mbedtls_ecp_muladd( mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
+int vdb_mbedtls_ecp_muladd( mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
              const mbedtls_mpi *m, const mbedtls_ecp_point *P,
              const mbedtls_mpi *n, const mbedtls_ecp_point *Q );
 
@@ -983,11 +983,11 @@ int mbedtls_ecp_muladd( mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
  *                  points by integers: \p R = \p m * \p P + \p n * \p Q in a
  *                  restartable way.
  *
- * \see             \c mbedtls_ecp_muladd()
+ * \see             \c vdb_mbedtls_ecp_muladd()
  *
- * \note            This function works the same as \c mbedtls_ecp_muladd(),
+ * \note            This function works the same as \c vdb_mbedtls_ecp_muladd(),
  *                  but it can return early and restart according to the limit
- *                  set with \c mbedtls_ecp_set_max_ops() to reduce blocking.
+ *                  set with \c vdb_mbedtls_ecp_set_max_ops() to reduce blocking.
  *
  * \note            This function is only defined for short Weierstrass curves.
  *                  It may not be included in builds without any short
@@ -995,7 +995,7 @@ int mbedtls_ecp_muladd( mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
  *
  * \param grp       The ECP group to use.
  *                  This must be initialized and have group parameters
- *                  set, for example through mbedtls_ecp_group_load().
+ *                  set, for example through vdb_mbedtls_ecp_group_load().
  * \param R         The point in which to store the result of the calculation.
  *                  This must be initialized.
  * \param m         The integer by which to multiply \p P.
@@ -1015,10 +1015,10 @@ int mbedtls_ecp_muladd( mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
  * \return          #MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE if \p grp does not
  *                  designate a short Weierstrass curve.
  * \return          #MBEDTLS_ERR_ECP_IN_PROGRESS if maximum number of
- *                  operations was reached: see \c mbedtls_ecp_set_max_ops().
+ *                  operations was reached: see \c vdb_mbedtls_ecp_set_max_ops().
  * \return          Another negative error code on other kinds of failure.
  */
-int mbedtls_ecp_muladd_restartable(
+int vdb_mbedtls_ecp_muladd_restartable(
              mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
              const mbedtls_mpi *m, const mbedtls_ecp_point *P,
              const mbedtls_mpi *n, const mbedtls_ecp_point *Q,
@@ -1044,7 +1044,7 @@ int mbedtls_ecp_muladd_restartable(
  *
  * \param grp       The ECP group the point should belong to.
  *                  This must be initialized and have group parameters
- *                  set, for example through mbedtls_ecp_group_load().
+ *                  set, for example through vdb_mbedtls_ecp_group_load().
  * \param pt        The point to check. This must be initialized.
  *
  * \return          \c 0 if the point is a valid public key.
@@ -1052,7 +1052,7 @@ int mbedtls_ecp_muladd_restartable(
  *                  a valid public key for the given curve.
  * \return          Another negative error code on other kinds of failure.
  */
-int mbedtls_ecp_check_pubkey( const mbedtls_ecp_group *grp,
+int vdb_mbedtls_ecp_check_pubkey( const mbedtls_ecp_group *grp,
                               const mbedtls_ecp_point *pt );
 
 /**
@@ -1066,7 +1066,7 @@ int mbedtls_ecp_check_pubkey( const mbedtls_ecp_group *grp,
  *
  * \param grp       The ECP group the private key should belong to.
  *                  This must be initialized and have group parameters
- *                  set, for example through mbedtls_ecp_group_load().
+ *                  set, for example through vdb_mbedtls_ecp_group_load().
  * \param d         The integer to check. This must be initialized.
  *
  * \return          \c 0 if the point is a valid private key.
@@ -1074,7 +1074,7 @@ int mbedtls_ecp_check_pubkey( const mbedtls_ecp_group *grp,
  *                  private key for the given curve.
  * \return          Another negative error code on other kinds of failure.
  */
-int mbedtls_ecp_check_privkey( const mbedtls_ecp_group *grp,
+int vdb_mbedtls_ecp_check_privkey( const mbedtls_ecp_group *grp,
                                const mbedtls_mpi *d );
 
 /**
@@ -1082,7 +1082,7 @@ int mbedtls_ecp_check_privkey( const mbedtls_ecp_group *grp,
  *
  * \param grp       The ECP group to generate a private key for.
  *                  This must be initialized and have group parameters
- *                  set, for example through mbedtls_ecp_group_load().
+ *                  set, for example through vdb_mbedtls_ecp_group_load().
  * \param d         The destination MPI (secret part). This must be initialized.
  * \param f_rng     The RNG function. This must not be \c NULL.
  * \param p_rng     The RNG parameter to be passed to \p f_rng. This may be
@@ -1092,7 +1092,7 @@ int mbedtls_ecp_check_privkey( const mbedtls_ecp_group *grp,
  * \return          An \c MBEDTLS_ERR_ECP_XXX or \c MBEDTLS_MPI_XXX error code
  *                  on failure.
  */
-int mbedtls_ecp_gen_privkey( const mbedtls_ecp_group *grp,
+int vdb_mbedtls_ecp_gen_privkey( const mbedtls_ecp_group *grp,
                      mbedtls_mpi *d,
                      int (*f_rng)(void *, unsigned char *, size_t),
                      void *p_rng );
@@ -1108,10 +1108,10 @@ int mbedtls_ecp_gen_privkey( const mbedtls_ecp_group *grp,
  *
  * \param grp       The ECP group to generate a key pair for.
  *                  This must be initialized and have group parameters
- *                  set, for example through mbedtls_ecp_group_load().
+ *                  set, for example through vdb_mbedtls_ecp_group_load().
  * \param G         The base point to use. This must be initialized
  *                  and belong to \p grp. It replaces the default base
- *                  point \c grp->G used by mbedtls_ecp_gen_keypair().
+ *                  point \c grp->G used by vdb_mbedtls_ecp_gen_keypair().
  * \param d         The destination MPI (secret part).
  *                  This must be initialized.
  * \param Q         The destination point (public part).
@@ -1124,7 +1124,7 @@ int mbedtls_ecp_gen_privkey( const mbedtls_ecp_group *grp,
  * \return          An \c MBEDTLS_ERR_ECP_XXX or \c MBEDTLS_MPI_XXX error code
  *                  on failure.
  */
-int mbedtls_ecp_gen_keypair_base( mbedtls_ecp_group *grp,
+int vdb_mbedtls_ecp_gen_keypair_base( mbedtls_ecp_group *grp,
                                   const mbedtls_ecp_point *G,
                                   mbedtls_mpi *d, mbedtls_ecp_point *Q,
                                   int (*f_rng)(void *, unsigned char *, size_t),
@@ -1140,7 +1140,7 @@ int mbedtls_ecp_gen_keypair_base( mbedtls_ecp_group *grp,
  *
  * \param grp       The ECP group to generate a key pair for.
  *                  This must be initialized and have group parameters
- *                  set, for example through mbedtls_ecp_group_load().
+ *                  set, for example through vdb_mbedtls_ecp_group_load().
  * \param d         The destination MPI (secret part).
  *                  This must be initialized.
  * \param Q         The destination point (public part).
@@ -1153,7 +1153,7 @@ int mbedtls_ecp_gen_keypair_base( mbedtls_ecp_group *grp,
  * \return          An \c MBEDTLS_ERR_ECP_XXX or \c MBEDTLS_MPI_XXX error code
  *                  on failure.
  */
-int mbedtls_ecp_gen_keypair( mbedtls_ecp_group *grp, mbedtls_mpi *d,
+int vdb_mbedtls_ecp_gen_keypair( mbedtls_ecp_group *grp, mbedtls_mpi *d,
                              mbedtls_ecp_point *Q,
                              int (*f_rng)(void *, unsigned char *, size_t),
                              void *p_rng );
@@ -1171,7 +1171,7 @@ int mbedtls_ecp_gen_keypair( mbedtls_ecp_group *grp, mbedtls_mpi *d,
  * \return          An \c MBEDTLS_ERR_ECP_XXX or \c MBEDTLS_MPI_XXX error code
  *                  on failure.
  */
-int mbedtls_ecp_gen_key( mbedtls_ecp_group_id grp_id, mbedtls_ecp_keypair *key,
+int vdb_mbedtls_ecp_gen_key( mbedtls_ecp_group_id grp_id, mbedtls_ecp_keypair *key,
                          int (*f_rng)(void *, unsigned char *, size_t),
                          void *p_rng );
 
@@ -1193,7 +1193,7 @@ int mbedtls_ecp_gen_key( mbedtls_ecp_group_id grp_id, mbedtls_ecp_keypair *key,
  *                  the group is not implemented.
  * \return          Another negative error code on different kinds of failure.
  */
-int mbedtls_ecp_read_key( mbedtls_ecp_group_id grp_id, mbedtls_ecp_keypair *key,
+int vdb_mbedtls_ecp_read_key( mbedtls_ecp_group_id grp_id, mbedtls_ecp_keypair *key,
                           const unsigned char *buf, size_t buflen );
 
 /**
@@ -1212,7 +1212,7 @@ int mbedtls_ecp_read_key( mbedtls_ecp_group_id grp_id, mbedtls_ecp_keypair *key,
  *                  the group is not implemented.
  * \return          Another negative error code on different kinds of failure.
  */
-int mbedtls_ecp_write_key( mbedtls_ecp_keypair *key,
+int vdb_mbedtls_ecp_write_key( mbedtls_ecp_keypair *key,
                            unsigned char *buf, size_t buflen );
 
 /**
@@ -1232,7 +1232,7 @@ int mbedtls_ecp_write_key( mbedtls_ecp_keypair *key,
  * \return          An \c MBEDTLS_ERR_ECP_XXX or an \c MBEDTLS_ERR_MPI_XXX
  *                  error code on calculation failure.
  */
-int mbedtls_ecp_check_pub_priv( const mbedtls_ecp_keypair *pub,
+int vdb_mbedtls_ecp_check_pub_priv( const mbedtls_ecp_keypair *pub,
                                 const mbedtls_ecp_keypair *prv );
 
 #if defined(MBEDTLS_SELF_TEST)
@@ -1243,7 +1243,7 @@ int mbedtls_ecp_check_pub_priv( const mbedtls_ecp_keypair *pub,
  * \return         \c 0 on success.
  * \return         \c 1 on failure.
  */
-int mbedtls_ecp_self_test( int verbose );
+int vdb_mbedtls_ecp_self_test( int verbose );
 
 #endif /* MBEDTLS_SELF_TEST */
 

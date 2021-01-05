@@ -39,8 +39,8 @@
 
 #include "mbedtls/platform.h"
 #if !defined(MBEDTLS_PLATFORM_C)
-#define mbedtls_calloc calloc
-#define mbedtls_free   free
+#define vdb_mbedtls_calloc calloc
+#define vdb_mbedtls_free   free
 #endif
 
 
@@ -342,7 +342,7 @@ psa_status_t psa_register_se_driver(
     if( methods->persistent_data_size != 0 )
     {
         driver_table[i].u.internal.persistent_data =
-            mbedtls_calloc( 1, methods->persistent_data_size );
+            vdb_mbedtls_calloc( 1, methods->persistent_data_size );
         if( driver_table[i].u.internal.persistent_data == NULL )
         {
             status = PSA_ERROR_INSUFFICIENT_MEMORY;
@@ -369,7 +369,7 @@ void psa_unregister_all_se_drivers( void )
     for( i = 0; i < PSA_MAX_SE_DRIVERS; i++ )
     {
         if( driver_table[i].u.internal.persistent_data != NULL )
-            mbedtls_free( driver_table[i].u.internal.persistent_data );
+            vdb_mbedtls_free( driver_table[i].u.internal.persistent_data );
     }
     memset( driver_table, 0, sizeof( driver_table ) );
 }

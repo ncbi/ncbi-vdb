@@ -73,7 +73,7 @@ typedef int32_t mbedtls_key_owner_id_t;
  *
  * \return Non-zero if the two key owner identifiers are equal, zero otherwise.
  */
-static inline int mbedtls_key_owner_id_equal( mbedtls_key_owner_id_t id1,
+static inline int vdb_mbedtls_key_owner_id_equal( mbedtls_key_owner_id_t id1,
                                               mbedtls_key_owner_id_t id2 )
 {
     return( id1 == id2 );

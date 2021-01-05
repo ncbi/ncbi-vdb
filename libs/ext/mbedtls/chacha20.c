@@ -37,7 +37,7 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#define mbedtls_printf printf
+#define vdb_mbedtls_printf printf
 #endif /* MBEDTLS_PLATFORM_C */
 #endif /* MBEDTLS_SELF_TEST */
 
@@ -177,29 +177,29 @@ static void chacha20_block( const uint32_t initial_state[16],
         keystream[offset + 3U] = (unsigned char)( working_state[i] >> 24 );
     }
 
-    mbedtls_platform_zeroize( working_state, sizeof( working_state ) );
+    vdb_mbedtls_platform_zeroize( working_state, sizeof( working_state ) );
 }
 
-void mbedtls_chacha20_init( mbedtls_chacha20_context *ctx )
+void vdb_mbedtls_chacha20_init( mbedtls_chacha20_context *ctx )
 {
     CHACHA20_VALIDATE( ctx != NULL );
 
-    mbedtls_platform_zeroize( ctx->state, sizeof( ctx->state ) );
-    mbedtls_platform_zeroize( ctx->keystream8, sizeof( ctx->keystream8 ) );
+    vdb_mbedtls_platform_zeroize( ctx->state, sizeof( ctx->state ) );
+    vdb_mbedtls_platform_zeroize( ctx->keystream8, sizeof( ctx->keystream8 ) );
 
     /* Initially, there's no keystream bytes available */
     ctx->keystream_bytes_used = CHACHA20_BLOCK_SIZE_BYTES;
 }
 
-void mbedtls_chacha20_free( mbedtls_chacha20_context *ctx )
+void vdb_mbedtls_chacha20_free( mbedtls_chacha20_context *ctx )
 {
     if( ctx != NULL )
     {
-        mbedtls_platform_zeroize( ctx, sizeof( mbedtls_chacha20_context ) );
+        vdb_mbedtls_platform_zeroize( ctx, sizeof( mbedtls_chacha20_context ) );
     }
 }
 
-int mbedtls_chacha20_setkey( mbedtls_chacha20_context *ctx,
+int vdb_mbedtls_chacha20_setkey( mbedtls_chacha20_context *ctx,
                             const unsigned char key[32] )
 {
     CHACHA20_VALIDATE_RET( ctx != NULL );
@@ -224,7 +224,7 @@ int mbedtls_chacha20_setkey( mbedtls_chacha20_context *ctx,
     return( 0 );
 }
 
-int mbedtls_chacha20_starts( mbedtls_chacha20_context* ctx,
+int vdb_mbedtls_chacha20_starts( mbedtls_chacha20_context* ctx,
                              const unsigned char nonce[12],
                              uint32_t counter )
 {
@@ -239,7 +239,7 @@ int mbedtls_chacha20_starts( mbedtls_chacha20_context* ctx,
     ctx->state[14] = BYTES_TO_U32_LE( nonce, 4 );
     ctx->state[15] = BYTES_TO_U32_LE( nonce, 8 );
 
-    mbedtls_platform_zeroize( ctx->keystream8, sizeof( ctx->keystream8 ) );
+    vdb_mbedtls_platform_zeroize( ctx->keystream8, sizeof( ctx->keystream8 ) );
 
     /* Initially, there's no keystream bytes available */
     ctx->keystream_bytes_used = CHACHA20_BLOCK_SIZE_BYTES;
@@ -247,7 +247,7 @@ int mbedtls_chacha20_starts( mbedtls_chacha20_context* ctx,
     return( 0 );
 }
 
-int mbedtls_chacha20_update( mbedtls_chacha20_context *ctx,
+int vdb_mbedtls_chacha20_update( mbedtls_chacha20_context *ctx,
                               size_t size,
                               const unsigned char *input,
                               unsigned char *output )
@@ -312,7 +312,7 @@ int mbedtls_chacha20_update( mbedtls_chacha20_context *ctx,
     return( 0 );
 }
 
-int mbedtls_chacha20_crypt( const unsigned char key[32],
+int vdb_mbedtls_chacha20_crypt( const unsigned char key[32],
                             const unsigned char nonce[12],
                             uint32_t counter,
                             size_t data_len,
@@ -327,20 +327,20 @@ int mbedtls_chacha20_crypt( const unsigned char key[32],
     CHACHA20_VALIDATE_RET( data_len == 0 || input  != NULL );
     CHACHA20_VALIDATE_RET( data_len == 0 || output != NULL );
 
-    mbedtls_chacha20_init( &ctx );
+    vdb_mbedtls_chacha20_init( &ctx );
 
-    ret = mbedtls_chacha20_setkey( &ctx, key );
+    ret = vdb_mbedtls_chacha20_setkey( &ctx, key );
     if( ret != 0 )
         goto cleanup;
 
-    ret = mbedtls_chacha20_starts( &ctx, nonce, counter );
+    ret = vdb_mbedtls_chacha20_starts( &ctx, nonce, counter );
     if( ret != 0 )
         goto cleanup;
 
-    ret = mbedtls_chacha20_update( &ctx, data_len, input, output );
+    ret = vdb_mbedtls_chacha20_update( &ctx, data_len, input, output );
 
 cleanup:
-    mbedtls_chacha20_free( &ctx );
+    vdb_mbedtls_chacha20_free( &ctx );
     return( ret );
 }
 
@@ -523,14 +523,14 @@ static const size_t test_lengths[2] =
         if( ! ( cond ) )                \
         {                               \
             if( verbose != 0 )          \
-                mbedtls_printf args;    \
+                vdb_mbedtls_printf args;    \
                                         \
             return( -1 );               \
         }                               \
     }                                   \
     while( 0 )
 
-int mbedtls_chacha20_self_test( int verbose )
+int vdb_mbedtls_chacha20_self_test( int verbose )
 {
     unsigned char output[381];
     unsigned i;
@@ -539,9 +539,9 @@ int mbedtls_chacha20_self_test( int verbose )
     for( i = 0U; i < 2U; i++ )
     {
         if( verbose != 0 )
-            mbedtls_printf( "  ChaCha20 test %u ", i );
+            vdb_mbedtls_printf( "  ChaCha20 test %u ", i );
 
-        ret = mbedtls_chacha20_crypt( test_keys[i],
+        ret = vdb_mbedtls_chacha20_crypt( test_keys[i],
                                       test_nonces[i],
                                       test_counters[i],
                                       test_lengths[i],
@@ -554,11 +554,11 @@ int mbedtls_chacha20_self_test( int verbose )
                 ( "failed (output)\n" ) );
 
         if( verbose != 0 )
-            mbedtls_printf( "passed\n" );
+            vdb_mbedtls_printf( "passed\n" );
     }
 
     if( verbose != 0 )
-        mbedtls_printf( "\n" );
+        vdb_mbedtls_printf( "\n" );
 
     return( 0 );
 }

@@ -38,9 +38,9 @@
 #else
 #include <stdio.h>
 #include <stdlib.h>
-#define mbedtls_printf printf
-#define mbedtls_calloc    calloc
-#define mbedtls_free       free
+#define vdb_mbedtls_printf printf
+#define vdb_mbedtls_calloc    calloc
+#define vdb_mbedtls_free       free
 #endif /* MBEDTLS_PLATFORM_C */
 #endif /* MBEDTLS_SELF_TEST */
 
@@ -73,22 +73,22 @@ do {                                                    \
 } while( 0 )
 #endif
 
-void mbedtls_sha256_init( mbedtls_sha256_context *ctx )
+void vdb_mbedtls_sha256_init( mbedtls_sha256_context *ctx )
 {
     SHA256_VALIDATE( ctx != NULL );
 
     memset( ctx, 0, sizeof( mbedtls_sha256_context ) );
 }
 
-void mbedtls_sha256_free( mbedtls_sha256_context *ctx )
+void vdb_mbedtls_sha256_free( mbedtls_sha256_context *ctx )
 {
     if( ctx == NULL )
         return;
 
-    mbedtls_platform_zeroize( ctx, sizeof( mbedtls_sha256_context ) );
+    vdb_mbedtls_platform_zeroize( ctx, sizeof( mbedtls_sha256_context ) );
 }
 
-void mbedtls_sha256_clone( mbedtls_sha256_context *dst,
+void vdb_mbedtls_sha256_clone( mbedtls_sha256_context *dst,
                            const mbedtls_sha256_context *src )
 {
     SHA256_VALIDATE( dst != NULL );
@@ -100,7 +100,7 @@ void mbedtls_sha256_clone( mbedtls_sha256_context *dst,
 /*
  * SHA-256 context setup
  */
-int mbedtls_sha256_starts_ret( mbedtls_sha256_context *ctx, int is224 )
+int vdb_mbedtls_sha256_starts_ret( mbedtls_sha256_context *ctx, int is224 )
 {
     SHA256_VALIDATE_RET( ctx != NULL );
     SHA256_VALIDATE_RET( is224 == 0 || is224 == 1 );
@@ -139,10 +139,10 @@ int mbedtls_sha256_starts_ret( mbedtls_sha256_context *ctx, int is224 )
 }
 
 #if !defined(MBEDTLS_DEPRECATED_REMOVED)
-void mbedtls_sha256_starts( mbedtls_sha256_context *ctx,
+void vdb_mbedtls_sha256_starts( mbedtls_sha256_context *ctx,
                             int is224 )
 {
-    mbedtls_sha256_starts_ret( ctx, is224 );
+    vdb_mbedtls_sha256_starts_ret( ctx, is224 );
 }
 #endif
 
@@ -193,7 +193,7 @@ static const uint32_t K[] =
         (d) += local.temp1; (h) = local.temp1 + local.temp2;        \
     } while( 0 )
 
-int mbedtls_internal_sha256_process( mbedtls_sha256_context *ctx,
+int vdb_mbedtls_internal_sha256_process( mbedtls_sha256_context *ctx,
                                 const unsigned char data[64] )
 {
     struct
@@ -276,16 +276,16 @@ int mbedtls_internal_sha256_process( mbedtls_sha256_context *ctx,
         ctx->state[i] += local.A[i];
 
     /* Zeroise buffers and variables to clear sensitive data from memory. */
-    mbedtls_platform_zeroize( &local, sizeof( local ) );
+    vdb_mbedtls_platform_zeroize( &local, sizeof( local ) );
 
     return( 0 );
 }
 
 #if !defined(MBEDTLS_DEPRECATED_REMOVED)
-void mbedtls_sha256_process( mbedtls_sha256_context *ctx,
+void vdb_mbedtls_sha256_process( mbedtls_sha256_context *ctx,
                              const unsigned char data[64] )
 {
-    mbedtls_internal_sha256_process( ctx, data );
+    vdb_mbedtls_internal_sha256_process( ctx, data );
 }
 #endif
 #endif /* !MBEDTLS_SHA256_PROCESS_ALT */
@@ -293,7 +293,7 @@ void mbedtls_sha256_process( mbedtls_sha256_context *ctx,
 /*
  * SHA-256 process buffer
  */
-int mbedtls_sha256_update_ret( mbedtls_sha256_context *ctx,
+int vdb_mbedtls_sha256_update_ret( mbedtls_sha256_context *ctx,
                                const unsigned char *input,
                                size_t ilen )
 {
@@ -320,7 +320,7 @@ int mbedtls_sha256_update_ret( mbedtls_sha256_context *ctx,
     {
         memcpy( (void *) (ctx->buffer + left), input, fill );
 
-        if( ( ret = mbedtls_internal_sha256_process( ctx, ctx->buffer ) ) != 0 )
+        if( ( ret = vdb_mbedtls_internal_sha256_process( ctx, ctx->buffer ) ) != 0 )
             return( ret );
 
         input += fill;
@@ -330,7 +330,7 @@ int mbedtls_sha256_update_ret( mbedtls_sha256_context *ctx,
 
     while( ilen >= 64 )
     {
-        if( ( ret = mbedtls_internal_sha256_process( ctx, input ) ) != 0 )
+        if( ( ret = vdb_mbedtls_internal_sha256_process( ctx, input ) ) != 0 )
             return( ret );
 
         input += 64;
@@ -344,18 +344,18 @@ int mbedtls_sha256_update_ret( mbedtls_sha256_context *ctx,
 }
 
 #if !defined(MBEDTLS_DEPRECATED_REMOVED)
-void mbedtls_sha256_update( mbedtls_sha256_context *ctx,
+void vdb_mbedtls_sha256_update( mbedtls_sha256_context *ctx,
                             const unsigned char *input,
                             size_t ilen )
 {
-    mbedtls_sha256_update_ret( ctx, input, ilen );
+    vdb_mbedtls_sha256_update_ret( ctx, input, ilen );
 }
 #endif
 
 /*
  * SHA-256 final digest
  */
-int mbedtls_sha256_finish_ret( mbedtls_sha256_context *ctx,
+int vdb_mbedtls_sha256_finish_ret( mbedtls_sha256_context *ctx,
                                unsigned char output[32] )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
@@ -382,7 +382,7 @@ int mbedtls_sha256_finish_ret( mbedtls_sha256_context *ctx,
         /* We'll need an extra block */
         memset( ctx->buffer + used, 0, 64 - used );
 
-        if( ( ret = mbedtls_internal_sha256_process( ctx, ctx->buffer ) ) != 0 )
+        if( ( ret = vdb_mbedtls_internal_sha256_process( ctx, ctx->buffer ) ) != 0 )
             return( ret );
 
         memset( ctx->buffer, 0, 56 );
@@ -398,7 +398,7 @@ int mbedtls_sha256_finish_ret( mbedtls_sha256_context *ctx,
     PUT_UINT32_BE( high, ctx->buffer, 56 );
     PUT_UINT32_BE( low,  ctx->buffer, 60 );
 
-    if( ( ret = mbedtls_internal_sha256_process( ctx, ctx->buffer ) ) != 0 )
+    if( ( ret = vdb_mbedtls_internal_sha256_process( ctx, ctx->buffer ) ) != 0 )
         return( ret );
 
     /*
@@ -419,10 +419,10 @@ int mbedtls_sha256_finish_ret( mbedtls_sha256_context *ctx,
 }
 
 #if !defined(MBEDTLS_DEPRECATED_REMOVED)
-void mbedtls_sha256_finish( mbedtls_sha256_context *ctx,
+void vdb_mbedtls_sha256_finish( mbedtls_sha256_context *ctx,
                             unsigned char output[32] )
 {
-    mbedtls_sha256_finish_ret( ctx, output );
+    vdb_mbedtls_sha256_finish_ret( ctx, output );
 }
 #endif
 
@@ -431,7 +431,7 @@ void mbedtls_sha256_finish( mbedtls_sha256_context *ctx,
 /*
  * output = SHA-256( input buffer )
  */
-int mbedtls_sha256_ret( const unsigned char *input,
+int vdb_mbedtls_sha256_ret( const unsigned char *input,
                         size_t ilen,
                         unsigned char output[32],
                         int is224 )
@@ -443,30 +443,30 @@ int mbedtls_sha256_ret( const unsigned char *input,
     SHA256_VALIDATE_RET( ilen == 0 || input != NULL );
     SHA256_VALIDATE_RET( (unsigned char *)output != NULL );
 
-    mbedtls_sha256_init( &ctx );
+    vdb_mbedtls_sha256_init( &ctx );
 
-    if( ( ret = mbedtls_sha256_starts_ret( &ctx, is224 ) ) != 0 )
+    if( ( ret = vdb_mbedtls_sha256_starts_ret( &ctx, is224 ) ) != 0 )
         goto exit;
 
-    if( ( ret = mbedtls_sha256_update_ret( &ctx, input, ilen ) ) != 0 )
+    if( ( ret = vdb_mbedtls_sha256_update_ret( &ctx, input, ilen ) ) != 0 )
         goto exit;
 
-    if( ( ret = mbedtls_sha256_finish_ret( &ctx, output ) ) != 0 )
+    if( ( ret = vdb_mbedtls_sha256_finish_ret( &ctx, output ) ) != 0 )
         goto exit;
 
 exit:
-    mbedtls_sha256_free( &ctx );
+    vdb_mbedtls_sha256_free( &ctx );
 
     return( ret );
 }
 
 #if !defined(MBEDTLS_DEPRECATED_REMOVED)
-void mbedtls_sha256( const unsigned char *input,
+void vdb_mbedtls_sha256( const unsigned char *input,
                      size_t ilen,
                      unsigned char output[32],
                      int is224 )
 {
-    mbedtls_sha256_ret( input, ilen, output, is224 );
+    vdb_mbedtls_sha256_ret( input, ilen, output, is224 );
 }
 #endif
 
@@ -524,23 +524,23 @@ static const unsigned char sha256_test_sum[6][32] =
 /*
  * Checkup routine
  */
-int mbedtls_sha256_self_test( int verbose )
+int vdb_mbedtls_sha256_self_test( int verbose )
 {
     int i, j, k, buflen, ret = 0;
     unsigned char *buf;
     unsigned char sha256sum[32];
     mbedtls_sha256_context ctx;
 
-    buf = mbedtls_calloc( 1024, sizeof(unsigned char) );
+    buf = vdb_mbedtls_calloc( 1024, sizeof(unsigned char) );
     if( NULL == buf )
     {
         if( verbose != 0 )
-            mbedtls_printf( "Buffer allocation failed\n" );
+            vdb_mbedtls_printf( "Buffer allocation failed\n" );
 
         return( 1 );
     }
 
-    mbedtls_sha256_init( &ctx );
+    vdb_mbedtls_sha256_init( &ctx );
 
     for( i = 0; i < 6; i++ )
     {
@@ -548,9 +548,9 @@ int mbedtls_sha256_self_test( int verbose )
         k = i < 3;
 
         if( verbose != 0 )
-            mbedtls_printf( "  SHA-%d test #%d: ", 256 - k * 32, j + 1 );
+            vdb_mbedtls_printf( "  SHA-%d test #%d: ", 256 - k * 32, j + 1 );
 
-        if( ( ret = mbedtls_sha256_starts_ret( &ctx, k ) ) != 0 )
+        if( ( ret = vdb_mbedtls_sha256_starts_ret( &ctx, k ) ) != 0 )
             goto fail;
 
         if( j == 2 )
@@ -559,7 +559,7 @@ int mbedtls_sha256_self_test( int verbose )
 
             for( j = 0; j < 1000; j++ )
             {
-                ret = mbedtls_sha256_update_ret( &ctx, buf, buflen );
+                ret = vdb_mbedtls_sha256_update_ret( &ctx, buf, buflen );
                 if( ret != 0 )
                     goto fail;
             }
@@ -567,13 +567,13 @@ int mbedtls_sha256_self_test( int verbose )
         }
         else
         {
-            ret = mbedtls_sha256_update_ret( &ctx, sha256_test_buf[j],
+            ret = vdb_mbedtls_sha256_update_ret( &ctx, sha256_test_buf[j],
                                              sha256_test_buflen[j] );
             if( ret != 0 )
                  goto fail;
         }
 
-        if( ( ret = mbedtls_sha256_finish_ret( &ctx, sha256sum ) ) != 0 )
+        if( ( ret = vdb_mbedtls_sha256_finish_ret( &ctx, sha256sum ) ) != 0 )
             goto fail;
 
 
@@ -584,21 +584,21 @@ int mbedtls_sha256_self_test( int verbose )
         }
 
         if( verbose != 0 )
-            mbedtls_printf( "passed\n" );
+            vdb_mbedtls_printf( "passed\n" );
     }
 
     if( verbose != 0 )
-        mbedtls_printf( "\n" );
+        vdb_mbedtls_printf( "\n" );
 
     goto exit;
 
 fail:
     if( verbose != 0 )
-        mbedtls_printf( "failed\n" );
+        vdb_mbedtls_printf( "failed\n" );
 
 exit:
-    mbedtls_sha256_free( &ctx );
-    mbedtls_free( buf );
+    vdb_mbedtls_sha256_free( &ctx );
+    vdb_mbedtls_free( buf );
 
     return( ret );
 }

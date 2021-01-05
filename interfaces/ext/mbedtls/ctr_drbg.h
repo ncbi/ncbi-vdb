@@ -18,7 +18,7 @@
  * and 256 bits otherwise, provided that #MBEDTLS_CTR_DRBG_ENTROPY_LEN is
  * kept at its default value (and not overridden in config.h) and that the
  * DRBG instance is set up with default parameters.
- * See the documentation of mbedtls_ctr_drbg_seed() for more
+ * See the documentation of vdb_mbedtls_ctr_drbg_seed() for more
  * information.
  */
 /*
@@ -107,7 +107,7 @@
  */
 #if !defined(MBEDTLS_CTR_DRBG_USE_128_BIT_KEY)
 /** \warning To achieve a 256-bit security strength, you must pass a nonce
- *           to mbedtls_ctr_drbg_seed().
+ *           to vdb_mbedtls_ctr_drbg_seed().
  */
 #endif /* !defined(MBEDTLS_CTR_DRBG_USE_128_BIT_KEY) */
 #define MBEDTLS_CTR_DRBG_ENTROPY_LEN        32
@@ -150,7 +150,7 @@ extern "C" {
  *
  * This is \c 0 because a single read from the entropy source is sufficient
  * to include a nonce.
- * See the documentation of mbedtls_ctr_drbg_seed() for more information.
+ * See the documentation of vdb_mbedtls_ctr_drbg_seed() for more information.
  */
 #define MBEDTLS_CTR_DRBG_ENTROPY_NONCE_LEN 0
 #else
@@ -158,7 +158,7 @@ extern "C" {
  *
  * This is half of the default entropy length because a single read from
  * the entropy source does not provide enough material to form a nonce.
- * See the documentation of mbedtls_ctr_drbg_seed() for more information.
+ * See the documentation of vdb_mbedtls_ctr_drbg_seed() for more information.
  */
 #define MBEDTLS_CTR_DRBG_ENTROPY_NONCE_LEN ( MBEDTLS_CTR_DRBG_ENTROPY_LEN + 1 ) / 2
 #endif
@@ -177,7 +177,7 @@ typedef struct mbedtls_ctr_drbg_context
                                  * contains the amount of entropy in bytes
                                  * to use as a nonce for the initial seeding,
                                  * or -1 if no nonce length has been explicitly
-                                 * set (see mbedtls_ctr_drbg_set_nonce_len()).
+                                 * set (see vdb_mbedtls_ctr_drbg_set_nonce_len()).
                                  */
     int prediction_resistance;  /*!< This determines whether prediction
                                      resistance is enabled, that is
@@ -207,17 +207,17 @@ mbedtls_ctr_drbg_context;
 
 /**
  * \brief               This function initializes the CTR_DRBG context,
- *                      and prepares it for mbedtls_ctr_drbg_seed()
- *                      or mbedtls_ctr_drbg_free().
+ *                      and prepares it for vdb_mbedtls_ctr_drbg_seed()
+ *                      or vdb_mbedtls_ctr_drbg_free().
  *
  * \note                The reseed interval is
  *                      #MBEDTLS_CTR_DRBG_RESEED_INTERVAL by default.
  *                      You can override it by calling
- *                      mbedtls_ctr_drbg_set_reseed_interval().
+ *                      vdb_mbedtls_ctr_drbg_set_reseed_interval().
  *
  * \param ctx           The CTR_DRBG context to initialize.
  */
-void mbedtls_ctr_drbg_init( mbedtls_ctr_drbg_context *ctx );
+void vdb_mbedtls_ctr_drbg_init( mbedtls_ctr_drbg_context *ctx );
 
 /**
  * \brief               This function seeds and sets up the CTR_DRBG
@@ -225,20 +225,20 @@ void mbedtls_ctr_drbg_init( mbedtls_ctr_drbg_context *ctx );
  *
  * A typical choice for the \p f_entropy and \p p_entropy parameters is
  * to use the entropy module:
- * - \p f_entropy is mbedtls_entropy_func();
+ * - \p f_entropy is vdb_mbedtls_entropy_func();
  * - \p p_entropy is an instance of ::mbedtls_entropy_context initialized
- *   with mbedtls_entropy_init() (which registers the platform's default
+ *   with vdb_mbedtls_entropy_init() (which registers the platform's default
  *   entropy sources).
  *
  * The entropy length is #MBEDTLS_CTR_DRBG_ENTROPY_LEN by default.
- * You can override it by calling mbedtls_ctr_drbg_set_entropy_len().
+ * You can override it by calling vdb_mbedtls_ctr_drbg_set_entropy_len().
  *
  * The entropy nonce length is:
  * - \c 0 if the entropy length is at least 3/2 times the entropy length,
  *   which guarantees that the security strength is the maximum permitted
  *   by the key size and entropy length according to NIST SP 800-90A §10.2.1;
  * - Half the entropy length otherwise.
- * You can override it by calling mbedtls_ctr_drbg_set_nonce_len().
+ * You can override it by calling vdb_mbedtls_ctr_drbg_set_nonce_len().
  * With the default entropy length, the entropy nonce length is
  * #MBEDTLS_CTR_DRBG_ENTROPY_NONCE_LEN.
  *
@@ -254,7 +254,7 @@ void mbedtls_ctr_drbg_init( mbedtls_ctr_drbg_context *ctx );
  */
 #if MBEDTLS_CTR_DRBG_ENTROPY_NONCE_LEN == 0
 /**
- * - If mbedtls_ctr_drbg_set_nonce_len() has been called, a string
+ * - If vdb_mbedtls_ctr_drbg_set_nonce_len() has been called, a string
  *   obtained by calling \p f_entropy function for the specified length.
  */
 #else
@@ -284,11 +284,11 @@ void mbedtls_ctr_drbg_init( mbedtls_ctr_drbg_context *ctx );
  *
  * \param ctx           The CTR_DRBG context to seed.
  *                      It must have been initialized with
- *                      mbedtls_ctr_drbg_init().
- *                      After a successful call to mbedtls_ctr_drbg_seed(),
- *                      you may not call mbedtls_ctr_drbg_seed() again on
+ *                      vdb_mbedtls_ctr_drbg_init().
+ *                      After a successful call to vdb_mbedtls_ctr_drbg_seed(),
+ *                      you may not call vdb_mbedtls_ctr_drbg_seed() again on
  *                      the same context unless you call
- *                      mbedtls_ctr_drbg_free() and mbedtls_ctr_drbg_init()
+ *                      vdb_mbedtls_ctr_drbg_free() and vdb_mbedtls_ctr_drbg_init()
  *                      again first.
  * \param f_entropy     The entropy callback, taking as arguments the
  *                      \p p_entropy context, the buffer to fill, and the
@@ -307,7 +307,7 @@ void mbedtls_ctr_drbg_init( mbedtls_ctr_drbg_context *ctx );
  * \return              \c 0 on success.
  * \return              #MBEDTLS_ERR_CTR_DRBG_ENTROPY_SOURCE_FAILED on failure.
  */
-int mbedtls_ctr_drbg_seed( mbedtls_ctr_drbg_context *ctx,
+int vdb_mbedtls_ctr_drbg_seed( mbedtls_ctr_drbg_context *ctx,
                    int (*f_entropy)(void *, unsigned char *, size_t),
                    void *p_entropy,
                    const unsigned char *custom,
@@ -315,26 +315,26 @@ int mbedtls_ctr_drbg_seed( mbedtls_ctr_drbg_context *ctx,
 
 /**
  * \brief               This function resets CTR_DRBG context to the state immediately
- *                      after initial call of mbedtls_ctr_drbg_init().
+ *                      after initial call of vdb_mbedtls_ctr_drbg_init().
  *
  * \param ctx           The CTR_DRBG context to clear.
  */
-void mbedtls_ctr_drbg_free( mbedtls_ctr_drbg_context *ctx );
+void vdb_mbedtls_ctr_drbg_free( mbedtls_ctr_drbg_context *ctx );
 
 /**
  * \brief               This function turns prediction resistance on or off.
  *                      The default value is off.
  *
  * \note                If enabled, entropy is gathered at the beginning of
- *                      every call to mbedtls_ctr_drbg_random_with_add()
- *                      or mbedtls_ctr_drbg_random().
+ *                      every call to vdb_mbedtls_ctr_drbg_random_with_add()
+ *                      or vdb_mbedtls_ctr_drbg_random().
  *                      Only use this if your entropy source has sufficient
  *                      throughput.
  *
  * \param ctx           The CTR_DRBG context.
  * \param resistance    #MBEDTLS_CTR_DRBG_PR_ON or #MBEDTLS_CTR_DRBG_PR_OFF.
  */
-void mbedtls_ctr_drbg_set_prediction_resistance( mbedtls_ctr_drbg_context *ctx,
+void vdb_mbedtls_ctr_drbg_set_prediction_resistance( mbedtls_ctr_drbg_context *ctx,
                                          int resistance );
 
 /**
@@ -361,14 +361,14 @@ void mbedtls_ctr_drbg_set_prediction_resistance( mbedtls_ctr_drbg_context *ctx,
  *                      and at most the maximum length accepted by the
  *                      entropy function that is set in the context.
  */
-void mbedtls_ctr_drbg_set_entropy_len( mbedtls_ctr_drbg_context *ctx,
+void vdb_mbedtls_ctr_drbg_set_entropy_len( mbedtls_ctr_drbg_context *ctx,
                                size_t len );
 
 /**
  * \brief               This function sets the amount of entropy grabbed
  *                      as a nonce for the initial seeding.
  *
- * Call this function before calling mbedtls_ctr_drbg_seed() to read
+ * Call this function before calling vdb_mbedtls_ctr_drbg_seed() to read
  * a nonce from the entropy source during the initial seeding.
  *
  * \param ctx           The CTR_DRBG context.
@@ -383,14 +383,14 @@ void mbedtls_ctr_drbg_set_entropy_len( mbedtls_ctr_drbg_context *ctx,
  * \return              #MBEDTLS_ERR_CTR_DRBG_ENTROPY_SOURCE_FAILED
  *                      if the initial seeding has already taken place.
  */
-int mbedtls_ctr_drbg_set_nonce_len( mbedtls_ctr_drbg_context *ctx,
+int vdb_mbedtls_ctr_drbg_set_nonce_len( mbedtls_ctr_drbg_context *ctx,
                                     size_t len );
 
 /**
  * \brief               This function sets the reseed interval.
  *
- * The reseed interval is the number of calls to mbedtls_ctr_drbg_random()
- * or mbedtls_ctr_drbg_random_with_add() after which the entropy function
+ * The reseed interval is the number of calls to vdb_mbedtls_ctr_drbg_random()
+ * or vdb_mbedtls_ctr_drbg_random_with_add() after which the entropy function
  * is called again.
  *
  * The default value is #MBEDTLS_CTR_DRBG_RESEED_INTERVAL.
@@ -398,7 +398,7 @@ int mbedtls_ctr_drbg_set_nonce_len( mbedtls_ctr_drbg_context *ctx,
  * \param ctx           The CTR_DRBG context.
  * \param interval      The reseed interval.
  */
-void mbedtls_ctr_drbg_set_reseed_interval( mbedtls_ctr_drbg_context *ctx,
+void vdb_mbedtls_ctr_drbg_set_reseed_interval( mbedtls_ctr_drbg_context *ctx,
                                    int interval );
 
 /**
@@ -416,7 +416,7 @@ void mbedtls_ctr_drbg_set_reseed_interval( mbedtls_ctr_drbg_context *ctx,
  * \return              \c 0 on success.
  * \return              #MBEDTLS_ERR_CTR_DRBG_ENTROPY_SOURCE_FAILED on failure.
  */
-int mbedtls_ctr_drbg_reseed( mbedtls_ctr_drbg_context *ctx,
+int vdb_mbedtls_ctr_drbg_reseed( mbedtls_ctr_drbg_context *ctx,
                      const unsigned char *additional, size_t len );
 
 /**
@@ -434,7 +434,7 @@ int mbedtls_ctr_drbg_reseed( mbedtls_ctr_drbg_context *ctx,
  *                     #MBEDTLS_CTR_DRBG_MAX_SEED_INPUT.
  * \return             An error from the underlying AES cipher on failure.
  */
-int mbedtls_ctr_drbg_update_ret( mbedtls_ctr_drbg_context *ctx,
+int vdb_mbedtls_ctr_drbg_update_ret( mbedtls_ctr_drbg_context *ctx,
                                  const unsigned char *additional,
                                  size_t add_len );
 
@@ -464,7 +464,7 @@ int mbedtls_ctr_drbg_update_ret( mbedtls_ctr_drbg_context *ctx,
  * \return    #MBEDTLS_ERR_CTR_DRBG_ENTROPY_SOURCE_FAILED or
  *            #MBEDTLS_ERR_CTR_DRBG_REQUEST_TOO_BIG on failure.
  */
-int mbedtls_ctr_drbg_random_with_add( void *p_rng,
+int vdb_mbedtls_ctr_drbg_random_with_add( void *p_rng,
                               unsigned char *output, size_t output_len,
                               const unsigned char *additional, size_t add_len );
 
@@ -484,7 +484,7 @@ int mbedtls_ctr_drbg_random_with_add( void *p_rng,
  * \return              #MBEDTLS_ERR_CTR_DRBG_ENTROPY_SOURCE_FAILED or
  *                      #MBEDTLS_ERR_CTR_DRBG_REQUEST_TOO_BIG on failure.
  */
-int mbedtls_ctr_drbg_random( void *p_rng,
+int vdb_mbedtls_ctr_drbg_random( void *p_rng,
                      unsigned char *output, size_t output_len );
 
 
@@ -497,7 +497,7 @@ int mbedtls_ctr_drbg_random( void *p_rng,
 /**
  * \brief              This function updates the state of the CTR_DRBG context.
  *
- * \deprecated         Superseded by mbedtls_ctr_drbg_update_ret()
+ * \deprecated         Superseded by vdb_mbedtls_ctr_drbg_update_ret()
  *                     in 2.16.0.
  *
  * \note               If \p add_len is greater than
@@ -509,7 +509,7 @@ int mbedtls_ctr_drbg_random( void *p_rng,
  * \param additional   The data to update the state with.
  * \param add_len      Length of \p additional data.
  */
-MBEDTLS_DEPRECATED void mbedtls_ctr_drbg_update(
+MBEDTLS_DEPRECATED void vdb_mbedtls_ctr_drbg_update(
     mbedtls_ctr_drbg_context *ctx,
     const unsigned char *additional,
     size_t add_len );
@@ -528,7 +528,7 @@ MBEDTLS_DEPRECATED void mbedtls_ctr_drbg_update(
  * \return              #MBEDTLS_ERR_CTR_DRBG_ENTROPY_SOURCE_FAILED on reseed
  *                      failure.
  */
-int mbedtls_ctr_drbg_write_seed_file( mbedtls_ctr_drbg_context *ctx, const char *path );
+int vdb_mbedtls_ctr_drbg_write_seed_file( mbedtls_ctr_drbg_context *ctx, const char *path );
 
 /**
  * \brief               This function reads and updates a seed file. The seed
@@ -544,7 +544,7 @@ int mbedtls_ctr_drbg_write_seed_file( mbedtls_ctr_drbg_context *ctx, const char 
  * \return              #MBEDTLS_ERR_CTR_DRBG_INPUT_TOO_BIG if the existing
  *                      seed file is too large.
  */
-int mbedtls_ctr_drbg_update_seed_file( mbedtls_ctr_drbg_context *ctx, const char *path );
+int vdb_mbedtls_ctr_drbg_update_seed_file( mbedtls_ctr_drbg_context *ctx, const char *path );
 #endif /* MBEDTLS_FS_IO */
 
 #if defined(MBEDTLS_SELF_TEST)
@@ -555,7 +555,7 @@ int mbedtls_ctr_drbg_update_seed_file( mbedtls_ctr_drbg_context *ctx, const char
  * \return              \c 0 on success.
  * \return              \c 1 on failure.
  */
-int mbedtls_ctr_drbg_self_test( int verbose );
+int vdb_mbedtls_ctr_drbg_self_test( int verbose );
 
 #endif /* MBEDTLS_SELF_TEST */
 

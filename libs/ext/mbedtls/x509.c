@@ -48,10 +48,10 @@
 #else
 #include <stdio.h>
 #include <stdlib.h>
-#define mbedtls_free      free
-#define mbedtls_calloc    calloc
-#define mbedtls_printf    printf
-#define mbedtls_snprintf  snprintf
+#define vdb_mbedtls_free      free
+#define vdb_mbedtls_calloc    calloc
+#define vdb_mbedtls_printf    printf
+#define vdb_mbedtls_snprintf  snprintf
 #endif
 
 #if defined(MBEDTLS_HAVE_TIME)
@@ -75,7 +75,7 @@
 /*
  *  CertificateSerialNumber  ::=  INTEGER
  */
-int mbedtls_x509_get_serial( unsigned char **p, const unsigned char *end,
+int vdb_mbedtls_x509_get_serial( unsigned char **p, const unsigned char *end,
                      mbedtls_x509_buf *serial )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
@@ -91,7 +91,7 @@ int mbedtls_x509_get_serial( unsigned char **p, const unsigned char *end,
 
     serial->tag = *(*p)++;
 
-    if( ( ret = mbedtls_asn1_get_len( p, end, &serial->len ) ) != 0 )
+    if( ( ret = vdb_mbedtls_asn1_get_len( p, end, &serial->len ) ) != 0 )
         return( MBEDTLS_ERR_X509_INVALID_SERIAL + ret );
 
     serial->p = *p;
@@ -106,12 +106,12 @@ int mbedtls_x509_get_serial( unsigned char **p, const unsigned char *end,
  *       algorithm               OBJECT IDENTIFIER,
  *       parameters              ANY DEFINED BY algorithm OPTIONAL  }
  */
-int mbedtls_x509_get_alg_null( unsigned char **p, const unsigned char *end,
+int vdb_mbedtls_x509_get_alg_null( unsigned char **p, const unsigned char *end,
                        mbedtls_x509_buf *alg )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
-    if( ( ret = mbedtls_asn1_get_alg_null( p, end, alg ) ) != 0 )
+    if( ( ret = vdb_mbedtls_asn1_get_alg_null( p, end, alg ) ) != 0 )
         return( MBEDTLS_ERR_X509_INVALID_ALG + ret );
 
     return( 0 );
@@ -120,12 +120,12 @@ int mbedtls_x509_get_alg_null( unsigned char **p, const unsigned char *end,
 /*
  * Parse an algorithm identifier with (optional) parameters
  */
-int mbedtls_x509_get_alg( unsigned char **p, const unsigned char *end,
+int vdb_mbedtls_x509_get_alg( unsigned char **p, const unsigned char *end,
                   mbedtls_x509_buf *alg, mbedtls_x509_buf *params )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
-    if( ( ret = mbedtls_asn1_get_alg( p, end, alg, params ) ) != 0 )
+    if( ( ret = vdb_mbedtls_asn1_get_alg( p, end, alg, params ) ) != 0 )
         return( MBEDTLS_ERR_X509_INVALID_ALG + ret );
 
     return( 0 );
@@ -164,21 +164,21 @@ static int x509_get_hash_alg( const mbedtls_x509_buf *alg, mbedtls_md_type_t *md
     /* Parse md_oid */
     md_oid.tag = *p;
 
-    if( ( ret = mbedtls_asn1_get_tag( &p, end, &md_oid.len, MBEDTLS_ASN1_OID ) ) != 0 )
+    if( ( ret = vdb_mbedtls_asn1_get_tag( &p, end, &md_oid.len, MBEDTLS_ASN1_OID ) ) != 0 )
         return( MBEDTLS_ERR_X509_INVALID_ALG + ret );
 
     md_oid.p = p;
     p += md_oid.len;
 
     /* Get md_alg from md_oid */
-    if( ( ret = mbedtls_oid_get_md_alg( &md_oid, md_alg ) ) != 0 )
+    if( ( ret = vdb_mbedtls_oid_get_md_alg( &md_oid, md_alg ) ) != 0 )
         return( MBEDTLS_ERR_X509_INVALID_ALG + ret );
 
     /* Make sure params is absent of NULL */
     if( p == end )
         return( 0 );
 
-    if( ( ret = mbedtls_asn1_get_tag( &p, end, &len, MBEDTLS_ASN1_NULL ) ) != 0 || len != 0 )
+    if( ( ret = vdb_mbedtls_asn1_get_tag( &p, end, &len, MBEDTLS_ASN1_NULL ) ) != 0 || len != 0 )
         return( MBEDTLS_ERR_X509_INVALID_ALG + ret );
 
     if( p != end )
@@ -200,7 +200,7 @@ static int x509_get_hash_alg( const mbedtls_x509_buf *alg, mbedtls_md_type_t *md
  * of trailerField MUST be 1, and PKCS#1 v2.2 doesn't even define any other
  * option. Enfore this at parsing time.
  */
-int mbedtls_x509_get_rsassa_pss_params( const mbedtls_x509_buf *params,
+int vdb_mbedtls_x509_get_rsassa_pss_params( const mbedtls_x509_buf *params,
                                 mbedtls_md_type_t *md_alg, mbedtls_md_type_t *mgf_md,
                                 int *salt_len )
 {
@@ -229,16 +229,16 @@ int mbedtls_x509_get_rsassa_pss_params( const mbedtls_x509_buf *params,
     /*
      * HashAlgorithm
      */
-    if( ( ret = mbedtls_asn1_get_tag( &p, end, &len,
+    if( ( ret = vdb_mbedtls_asn1_get_tag( &p, end, &len,
                     MBEDTLS_ASN1_CONTEXT_SPECIFIC | MBEDTLS_ASN1_CONSTRUCTED | 0 ) ) == 0 )
     {
         end2 = p + len;
 
         /* HashAlgorithm ::= AlgorithmIdentifier (without parameters) */
-        if( ( ret = mbedtls_x509_get_alg_null( &p, end2, &alg_id ) ) != 0 )
+        if( ( ret = vdb_mbedtls_x509_get_alg_null( &p, end2, &alg_id ) ) != 0 )
             return( ret );
 
-        if( ( ret = mbedtls_oid_get_md_alg( &alg_id, md_alg ) ) != 0 )
+        if( ( ret = vdb_mbedtls_oid_get_md_alg( &alg_id, md_alg ) ) != 0 )
             return( MBEDTLS_ERR_X509_INVALID_ALG + ret );
 
         if( p != end2 )
@@ -254,13 +254,13 @@ int mbedtls_x509_get_rsassa_pss_params( const mbedtls_x509_buf *params,
     /*
      * MaskGenAlgorithm
      */
-    if( ( ret = mbedtls_asn1_get_tag( &p, end, &len,
+    if( ( ret = vdb_mbedtls_asn1_get_tag( &p, end, &len,
                     MBEDTLS_ASN1_CONTEXT_SPECIFIC | MBEDTLS_ASN1_CONSTRUCTED | 1 ) ) == 0 )
     {
         end2 = p + len;
 
         /* MaskGenAlgorithm ::= AlgorithmIdentifier (params = HashAlgorithm) */
-        if( ( ret = mbedtls_x509_get_alg( &p, end2, &alg_id, &alg_params ) ) != 0 )
+        if( ( ret = vdb_mbedtls_x509_get_alg( &p, end2, &alg_id, &alg_params ) ) != 0 )
             return( ret );
 
         /* Only MFG1 is recognised for now */
@@ -285,12 +285,12 @@ int mbedtls_x509_get_rsassa_pss_params( const mbedtls_x509_buf *params,
     /*
      * salt_len
      */
-    if( ( ret = mbedtls_asn1_get_tag( &p, end, &len,
+    if( ( ret = vdb_mbedtls_asn1_get_tag( &p, end, &len,
                     MBEDTLS_ASN1_CONTEXT_SPECIFIC | MBEDTLS_ASN1_CONSTRUCTED | 2 ) ) == 0 )
     {
         end2 = p + len;
 
-        if( ( ret = mbedtls_asn1_get_int( &p, end2, salt_len ) ) != 0 )
+        if( ( ret = vdb_mbedtls_asn1_get_int( &p, end2, salt_len ) ) != 0 )
             return( MBEDTLS_ERR_X509_INVALID_ALG + ret );
 
         if( p != end2 )
@@ -306,14 +306,14 @@ int mbedtls_x509_get_rsassa_pss_params( const mbedtls_x509_buf *params,
     /*
      * trailer_field (if present, must be 1)
      */
-    if( ( ret = mbedtls_asn1_get_tag( &p, end, &len,
+    if( ( ret = vdb_mbedtls_asn1_get_tag( &p, end, &len,
                     MBEDTLS_ASN1_CONTEXT_SPECIFIC | MBEDTLS_ASN1_CONSTRUCTED | 3 ) ) == 0 )
     {
         int trailer_field;
 
         end2 = p + len;
 
-        if( ( ret = mbedtls_asn1_get_int( &p, end2, &trailer_field ) ) != 0 )
+        if( ( ret = vdb_mbedtls_asn1_get_int( &p, end2, &trailer_field ) ) != 0 )
             return( MBEDTLS_ERR_X509_INVALID_ALG + ret );
 
         if( p != end2 )
@@ -352,7 +352,7 @@ static int x509_get_attr_type_value( unsigned char **p,
     mbedtls_x509_buf *oid;
     mbedtls_x509_buf *val;
 
-    if( ( ret = mbedtls_asn1_get_tag( p, end, &len,
+    if( ( ret = vdb_mbedtls_asn1_get_tag( p, end, &len,
             MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE ) ) != 0 )
         return( MBEDTLS_ERR_X509_INVALID_NAME + ret );
 
@@ -365,7 +365,7 @@ static int x509_get_attr_type_value( unsigned char **p,
     oid = &cur->oid;
     oid->tag = **p;
 
-    if( ( ret = mbedtls_asn1_get_tag( p, end, &oid->len, MBEDTLS_ASN1_OID ) ) != 0 )
+    if( ( ret = vdb_mbedtls_asn1_get_tag( p, end, &oid->len, MBEDTLS_ASN1_OID ) ) != 0 )
         return( MBEDTLS_ERR_X509_INVALID_NAME + ret );
 
     oid->p = *p;
@@ -385,7 +385,7 @@ static int x509_get_attr_type_value( unsigned char **p,
     val = &cur->val;
     val->tag = *(*p)++;
 
-    if( ( ret = mbedtls_asn1_get_len( p, end, &val->len ) ) != 0 )
+    if( ( ret = vdb_mbedtls_asn1_get_len( p, end, &val->len ) ) != 0 )
         return( MBEDTLS_ERR_X509_INVALID_NAME + ret );
 
     val->p = *p;
@@ -423,9 +423,9 @@ static int x509_get_attr_type_value( unsigned char **p,
  * one element, which is represented as a list of AttributeTypeAndValue.
  * For the general case we still use a flat list, but we mark elements of the
  * same set so that they are "merged" together in the functions that consume
- * this list, eg mbedtls_x509_dn_gets().
+ * this list, eg vdb_mbedtls_x509_dn_gets().
  */
-int mbedtls_x509_get_name( unsigned char **p, const unsigned char *end,
+int vdb_mbedtls_x509_get_name( unsigned char **p, const unsigned char *end,
                    mbedtls_x509_name *cur )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
@@ -438,7 +438,7 @@ int mbedtls_x509_get_name( unsigned char **p, const unsigned char *end,
         /*
          * parse SET
          */
-        if( ( ret = mbedtls_asn1_get_tag( p, end, &set_len,
+        if( ( ret = vdb_mbedtls_asn1_get_tag( p, end, &set_len,
                 MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SET ) ) != 0 )
             return( MBEDTLS_ERR_X509_INVALID_NAME + ret );
 
@@ -455,7 +455,7 @@ int mbedtls_x509_get_name( unsigned char **p, const unsigned char *end,
             /* Mark this item as being no the only one in a set */
             cur->next_merged = 1;
 
-            cur->next = mbedtls_calloc( 1, sizeof( mbedtls_x509_name ) );
+            cur->next = vdb_mbedtls_calloc( 1, sizeof( mbedtls_x509_name ) );
 
             if( cur->next == NULL )
                 return( MBEDTLS_ERR_X509_ALLOC_FAILED );
@@ -469,7 +469,7 @@ int mbedtls_x509_get_name( unsigned char **p, const unsigned char *end,
         if( *p == end )
             return( 0 );
 
-        cur->next = mbedtls_calloc( 1, sizeof( mbedtls_x509_name ) );
+        cur->next = vdb_mbedtls_calloc( 1, sizeof( mbedtls_x509_name ) );
 
         if( cur->next == NULL )
             return( MBEDTLS_ERR_X509_ALLOC_FAILED );
@@ -596,7 +596,7 @@ static int x509_parse_time( unsigned char **p, size_t len, size_t yearlen,
  *       utcTime        UTCTime,
  *       generalTime    GeneralizedTime }
  */
-int mbedtls_x509_get_time( unsigned char **p, const unsigned char *end,
+int vdb_mbedtls_x509_get_time( unsigned char **p, const unsigned char *end,
                            mbedtls_x509_time *tm )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
@@ -618,7 +618,7 @@ int mbedtls_x509_get_time( unsigned char **p, const unsigned char *end,
                 MBEDTLS_ERR_ASN1_UNEXPECTED_TAG );
 
     (*p)++;
-    ret = mbedtls_asn1_get_len( p, end, &len );
+    ret = vdb_mbedtls_asn1_get_len( p, end, &len );
 
     if( ret != 0 )
         return( MBEDTLS_ERR_X509_INVALID_DATE + ret );
@@ -626,7 +626,7 @@ int mbedtls_x509_get_time( unsigned char **p, const unsigned char *end,
     return x509_parse_time( p, len, year_len, tm );
 }
 
-int mbedtls_x509_get_sig( unsigned char **p, const unsigned char *end, mbedtls_x509_buf *sig )
+int vdb_mbedtls_x509_get_sig( unsigned char **p, const unsigned char *end, mbedtls_x509_buf *sig )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t len;
@@ -638,7 +638,7 @@ int mbedtls_x509_get_sig( unsigned char **p, const unsigned char *end, mbedtls_x
 
     tag_type = **p;
 
-    if( ( ret = mbedtls_asn1_get_bitstring_null( p, end, &len ) ) != 0 )
+    if( ( ret = vdb_mbedtls_asn1_get_bitstring_null( p, end, &len ) ) != 0 )
         return( MBEDTLS_ERR_X509_INVALID_SIGNATURE + ret );
 
     sig->tag = tag_type;
@@ -653,7 +653,7 @@ int mbedtls_x509_get_sig( unsigned char **p, const unsigned char *end, mbedtls_x
 /*
  * Get signature algorithm from alg OID and optional parameters
  */
-int mbedtls_x509_get_sig_alg( const mbedtls_x509_buf *sig_oid, const mbedtls_x509_buf *sig_params,
+int vdb_mbedtls_x509_get_sig_alg( const mbedtls_x509_buf *sig_oid, const mbedtls_x509_buf *sig_params,
                       mbedtls_md_type_t *md_alg, mbedtls_pk_type_t *pk_alg,
                       void **sig_opts )
 {
@@ -662,7 +662,7 @@ int mbedtls_x509_get_sig_alg( const mbedtls_x509_buf *sig_oid, const mbedtls_x50
     if( *sig_opts != NULL )
         return( MBEDTLS_ERR_X509_BAD_INPUT_DATA );
 
-    if( ( ret = mbedtls_oid_get_sig_alg( sig_oid, md_alg, pk_alg ) ) != 0 )
+    if( ( ret = vdb_mbedtls_oid_get_sig_alg( sig_oid, md_alg, pk_alg ) ) != 0 )
         return( MBEDTLS_ERR_X509_UNKNOWN_SIG_ALG + ret );
 
 #if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
@@ -670,17 +670,17 @@ int mbedtls_x509_get_sig_alg( const mbedtls_x509_buf *sig_oid, const mbedtls_x50
     {
         mbedtls_pk_rsassa_pss_options *pss_opts;
 
-        pss_opts = mbedtls_calloc( 1, sizeof( mbedtls_pk_rsassa_pss_options ) );
+        pss_opts = vdb_mbedtls_calloc( 1, sizeof( mbedtls_pk_rsassa_pss_options ) );
         if( pss_opts == NULL )
             return( MBEDTLS_ERR_X509_ALLOC_FAILED );
 
-        ret = mbedtls_x509_get_rsassa_pss_params( sig_params,
+        ret = vdb_mbedtls_x509_get_rsassa_pss_params( sig_params,
                                           md_alg,
                                           &pss_opts->mgf1_hash_id,
                                           &pss_opts->expected_salt_len );
         if( ret != 0 )
         {
-            mbedtls_free( pss_opts );
+            vdb_mbedtls_free( pss_opts );
             return( ret );
         }
 
@@ -702,7 +702,7 @@ int mbedtls_x509_get_sig_alg( const mbedtls_x509_buf *sig_oid, const mbedtls_x50
  * X.509 Extensions (No parsing of extensions, pointer should
  * be either manually updated or extensions should be parsed!)
  */
-int mbedtls_x509_get_ext( unsigned char **p, const unsigned char *end,
+int vdb_mbedtls_x509_get_ext( unsigned char **p, const unsigned char *end,
                           mbedtls_x509_buf *ext, int tag )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
@@ -711,7 +711,7 @@ int mbedtls_x509_get_ext( unsigned char **p, const unsigned char *end,
     /* Extension structure use EXPLICIT tagging. That is, the actual
      * `Extensions` structure is wrapped by a tag-length pair using
      * the respective context-specific tag. */
-    ret = mbedtls_asn1_get_tag( p, end, &ext->len,
+    ret = vdb_mbedtls_asn1_get_tag( p, end, &ext->len,
               MBEDTLS_ASN1_CONTEXT_SPECIFIC | MBEDTLS_ASN1_CONSTRUCTED | tag );
     if( ret != 0 )
         return( MBEDTLS_ERR_X509_INVALID_EXTENSIONS + ret );
@@ -723,7 +723,7 @@ int mbedtls_x509_get_ext( unsigned char **p, const unsigned char *end,
     /*
      * Extensions  ::=  SEQUENCE SIZE (1..MAX) OF Extension
      */
-    if( ( ret = mbedtls_asn1_get_tag( p, end, &len,
+    if( ( ret = vdb_mbedtls_asn1_get_tag( p, end, &len,
             MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE ) ) != 0 )
         return( MBEDTLS_ERR_X509_INVALID_EXTENSIONS + ret );
 
@@ -738,7 +738,7 @@ int mbedtls_x509_get_ext( unsigned char **p, const unsigned char *end,
  * Store the name in printable form into buf; no more
  * than size characters will be written
  */
-int mbedtls_x509_dn_gets( char *buf, size_t size, const mbedtls_x509_name *dn )
+int vdb_mbedtls_x509_dn_gets( char *buf, size_t size, const mbedtls_x509_name *dn )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t i, n;
@@ -763,16 +763,16 @@ int mbedtls_x509_dn_gets( char *buf, size_t size, const mbedtls_x509_name *dn )
 
         if( name != dn )
         {
-            ret = mbedtls_snprintf( p, n, merge ? " + " : ", " );
+            ret = vdb_mbedtls_snprintf( p, n, merge ? " + " : ", " );
             MBEDTLS_X509_SAFE_SNPRINTF;
         }
 
-        ret = mbedtls_oid_get_attr_short_name( &name->oid, &short_name );
+        ret = vdb_mbedtls_oid_get_attr_short_name( &name->oid, &short_name );
 
         if( ret == 0 )
-            ret = mbedtls_snprintf( p, n, "%s=", short_name );
+            ret = vdb_mbedtls_snprintf( p, n, "%s=", short_name );
         else
-            ret = mbedtls_snprintf( p, n, "\?\?=" );
+            ret = vdb_mbedtls_snprintf( p, n, "\?\?=" );
         MBEDTLS_X509_SAFE_SNPRINTF;
 
         for( i = 0; i < name->val.len; i++ )
@@ -786,7 +786,7 @@ int mbedtls_x509_dn_gets( char *buf, size_t size, const mbedtls_x509_name *dn )
             else s[i] = c;
         }
         s[i] = '\0';
-        ret = mbedtls_snprintf( p, n, "%s", s );
+        ret = vdb_mbedtls_snprintf( p, n, "%s", s );
         MBEDTLS_X509_SAFE_SNPRINTF;
 
         merge = name->next_merged;
@@ -800,7 +800,7 @@ int mbedtls_x509_dn_gets( char *buf, size_t size, const mbedtls_x509_name *dn )
  * Store the serial in printable form into buf; no more
  * than size characters will be written
  */
-int mbedtls_x509_serial_gets( char *buf, size_t size, const mbedtls_x509_buf *serial )
+int vdb_mbedtls_x509_serial_gets( char *buf, size_t size, const mbedtls_x509_buf *serial )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t i, n, nr;
@@ -817,14 +817,14 @@ int mbedtls_x509_serial_gets( char *buf, size_t size, const mbedtls_x509_buf *se
         if( i == 0 && nr > 1 && serial->p[i] == 0x0 )
             continue;
 
-        ret = mbedtls_snprintf( p, n, "%02X%s",
+        ret = vdb_mbedtls_snprintf( p, n, "%02X%s",
                 serial->p[i], ( i < nr - 1 ) ? ":" : "" );
         MBEDTLS_X509_SAFE_SNPRINTF;
     }
 
     if( nr != serial->len )
     {
-        ret = mbedtls_snprintf( p, n, "...." );
+        ret = vdb_mbedtls_snprintf( p, n, "...." );
         MBEDTLS_X509_SAFE_SNPRINTF;
     }
 
@@ -834,7 +834,7 @@ int mbedtls_x509_serial_gets( char *buf, size_t size, const mbedtls_x509_buf *se
 /*
  * Helper for writing signature algorithms
  */
-int mbedtls_x509_sig_alg_gets( char *buf, size_t size, const mbedtls_x509_buf *sig_oid,
+int vdb_mbedtls_x509_sig_alg_gets( char *buf, size_t size, const mbedtls_x509_buf *sig_oid,
                        mbedtls_pk_type_t pk_alg, mbedtls_md_type_t md_alg,
                        const void *sig_opts )
 {
@@ -843,11 +843,11 @@ int mbedtls_x509_sig_alg_gets( char *buf, size_t size, const mbedtls_x509_buf *s
     size_t n = size;
     const char *desc = NULL;
 
-    ret = mbedtls_oid_get_sig_alg_desc( sig_oid, &desc );
+    ret = vdb_mbedtls_oid_get_sig_alg_desc( sig_oid, &desc );
     if( ret != 0 )
-        ret = mbedtls_snprintf( p, n, "???"  );
+        ret = vdb_mbedtls_snprintf( p, n, "???"  );
     else
-        ret = mbedtls_snprintf( p, n, "%s", desc );
+        ret = vdb_mbedtls_snprintf( p, n, "%s", desc );
     MBEDTLS_X509_SAFE_SNPRINTF;
 
 #if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
@@ -858,12 +858,12 @@ int mbedtls_x509_sig_alg_gets( char *buf, size_t size, const mbedtls_x509_buf *s
 
         pss_opts = (const mbedtls_pk_rsassa_pss_options *) sig_opts;
 
-        md_info = mbedtls_md_info_from_type( md_alg );
-        mgf_md_info = mbedtls_md_info_from_type( pss_opts->mgf1_hash_id );
+        md_info = vdb_mbedtls_md_info_from_type( md_alg );
+        mgf_md_info = vdb_mbedtls_md_info_from_type( pss_opts->mgf1_hash_id );
 
-        ret = mbedtls_snprintf( p, n, " (%s, MGF1-%s, 0x%02X)",
-                              md_info ? mbedtls_md_get_name( md_info ) : "???",
-                              mgf_md_info ? mbedtls_md_get_name( mgf_md_info ) : "???",
+        ret = vdb_mbedtls_snprintf( p, n, " (%s, MGF1-%s, 0x%02X)",
+                              md_info ? vdb_mbedtls_md_get_name( md_info ) : "???",
+                              mgf_md_info ? vdb_mbedtls_md_get_name( mgf_md_info ) : "???",
                               (unsigned int) pss_opts->expected_salt_len );
         MBEDTLS_X509_SAFE_SNPRINTF;
     }
@@ -879,13 +879,13 @@ int mbedtls_x509_sig_alg_gets( char *buf, size_t size, const mbedtls_x509_buf *s
 /*
  * Helper for writing "RSA key size", "EC key size", etc
  */
-int mbedtls_x509_key_size_helper( char *buf, size_t buf_size, const char *name )
+int vdb_mbedtls_x509_key_size_helper( char *buf, size_t buf_size, const char *name )
 {
     char *p = buf;
     size_t n = buf_size;
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
-    ret = mbedtls_snprintf( p, n, "%s key size", name );
+    ret = vdb_mbedtls_snprintf( p, n, "%s key size", name );
     MBEDTLS_X509_SAFE_SNPRINTF;
 
     return( 0 );
@@ -903,7 +903,7 @@ static int x509_get_current_time( mbedtls_x509_time *now )
     int ret = 0;
 
     tt = mbedtls_time( NULL );
-    lt = mbedtls_platform_gmtime_r( &tt, &tm_buf );
+    lt = vdb_mbedtls_platform_gmtime_r( &tt, &tm_buf );
 
     if( lt == NULL )
         ret = -1;
@@ -961,7 +961,7 @@ static int x509_check_time( const mbedtls_x509_time *before, const mbedtls_x509_
     return( 0 );
 }
 
-int mbedtls_x509_time_is_past( const mbedtls_x509_time *to )
+int vdb_mbedtls_x509_time_is_past( const mbedtls_x509_time *to )
 {
     mbedtls_x509_time now;
 
@@ -971,7 +971,7 @@ int mbedtls_x509_time_is_past( const mbedtls_x509_time *to )
     return( x509_check_time( &now, to ) );
 }
 
-int mbedtls_x509_time_is_future( const mbedtls_x509_time *from )
+int vdb_mbedtls_x509_time_is_future( const mbedtls_x509_time *from )
 {
     mbedtls_x509_time now;
 
@@ -983,13 +983,13 @@ int mbedtls_x509_time_is_future( const mbedtls_x509_time *from )
 
 #else  /* MBEDTLS_HAVE_TIME_DATE */
 
-int mbedtls_x509_time_is_past( const mbedtls_x509_time *to )
+int vdb_mbedtls_x509_time_is_past( const mbedtls_x509_time *to )
 {
     ((void) to);
     return( 0 );
 }
 
-int mbedtls_x509_time_is_future( const mbedtls_x509_time *from )
+int vdb_mbedtls_x509_time_is_future( const mbedtls_x509_time *from )
 {
     ((void) from);
     return( 0 );
@@ -1004,7 +1004,7 @@ int mbedtls_x509_time_is_future( const mbedtls_x509_time *from )
 /*
  * Checkup routine
  */
-int mbedtls_x509_self_test( int verbose )
+int vdb_mbedtls_x509_self_test( int verbose )
 {
     int ret = 0;
 #if defined(MBEDTLS_CERTS_C) && defined(MBEDTLS_SHA256_C)
@@ -1013,49 +1013,49 @@ int mbedtls_x509_self_test( int verbose )
     mbedtls_x509_crt clicert;
 
     if( verbose != 0 )
-        mbedtls_printf( "  X.509 certificate load: " );
+        vdb_mbedtls_printf( "  X.509 certificate load: " );
 
-    mbedtls_x509_crt_init( &cacert );
-    mbedtls_x509_crt_init( &clicert );
+    vdb_mbedtls_x509_crt_init( &cacert );
+    vdb_mbedtls_x509_crt_init( &clicert );
 
-    ret = mbedtls_x509_crt_parse( &clicert, (const unsigned char *) mbedtls_test_cli_crt,
-                           mbedtls_test_cli_crt_len );
+    ret = vdb_mbedtls_x509_crt_parse( &clicert, (const unsigned char *) vdb_mbedtls_test_cli_crt,
+                           vdb_mbedtls_test_cli_crt_len );
     if( ret != 0 )
     {
         if( verbose != 0 )
-            mbedtls_printf( "failed\n" );
+            vdb_mbedtls_printf( "failed\n" );
 
         goto cleanup;
     }
 
-    ret = mbedtls_x509_crt_parse( &cacert, (const unsigned char *) mbedtls_test_ca_crt,
-                          mbedtls_test_ca_crt_len );
+    ret = vdb_mbedtls_x509_crt_parse( &cacert, (const unsigned char *) vdb_mbedtls_test_ca_crt,
+                          vdb_mbedtls_test_ca_crt_len );
     if( ret != 0 )
     {
         if( verbose != 0 )
-            mbedtls_printf( "failed\n" );
-
-        goto cleanup;
-    }
-
-    if( verbose != 0 )
-        mbedtls_printf( "passed\n  X.509 signature verify: ");
-
-    ret = mbedtls_x509_crt_verify( &clicert, &cacert, NULL, NULL, &flags, NULL, NULL );
-    if( ret != 0 )
-    {
-        if( verbose != 0 )
-            mbedtls_printf( "failed\n" );
+            vdb_mbedtls_printf( "failed\n" );
 
         goto cleanup;
     }
 
     if( verbose != 0 )
-        mbedtls_printf( "passed\n\n");
+        vdb_mbedtls_printf( "passed\n  X.509 signature verify: ");
+
+    ret = vdb_mbedtls_x509_crt_verify( &clicert, &cacert, NULL, NULL, &flags, NULL, NULL );
+    if( ret != 0 )
+    {
+        if( verbose != 0 )
+            vdb_mbedtls_printf( "failed\n" );
+
+        goto cleanup;
+    }
+
+    if( verbose != 0 )
+        vdb_mbedtls_printf( "passed\n\n");
 
 cleanup:
-    mbedtls_x509_crt_free( &cacert  );
-    mbedtls_x509_crt_free( &clicert );
+    vdb_mbedtls_x509_crt_free( &cacert  );
+    vdb_mbedtls_x509_crt_free( &clicert );
 #else
     ((void) verbose);
 #endif /* MBEDTLS_CERTS_C && MBEDTLS_SHA256_C */

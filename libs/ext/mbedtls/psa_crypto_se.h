@@ -60,7 +60,7 @@
  *
  * \warning Do not call this function while the library is in the initialized
  *          state. This function is only intended to be called at the end
- *          of mbedtls_psa_crypto_free().
+ *          of vdb_mbedtls_psa_crypto_free().
  */
 void psa_unregister_all_se_drivers( void );
 

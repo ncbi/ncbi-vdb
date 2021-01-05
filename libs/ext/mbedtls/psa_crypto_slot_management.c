@@ -37,8 +37,8 @@
 #if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
 #else
-#define mbedtls_calloc calloc
-#define mbedtls_free   free
+#define vdb_mbedtls_calloc calloc
+#define vdb_mbedtls_free   free
 #endif
 
 #define ARRAY_LENGTH( array ) ( sizeof( array ) / sizeof( *( array ) ) )
@@ -119,7 +119,7 @@ static psa_status_t psa_get_and_lock_key_slot_in_memory(
          * is equal to zero. This is an invalid value for a PSA key identifier
          * and thus cannot be equal to the valid PSA key identifier key_id.
          */
-        status = mbedtls_svc_key_id_equal( key, slot->attr.id ) ?
+        status = vdb_mbedtls_svc_key_id_equal( key, slot->attr.id ) ?
                  PSA_SUCCESS : PSA_ERROR_DOES_NOT_EXIST;
     }
     else
@@ -131,7 +131,7 @@ static psa_status_t psa_get_and_lock_key_slot_in_memory(
         for( slot_idx = 0; slot_idx < PSA_KEY_SLOT_COUNT; slot_idx++ )
         {
             slot = &global_data.key_slots[ slot_idx ];
-            if( mbedtls_svc_key_id_equal( key, slot->attr.id ) )
+            if( vdb_mbedtls_svc_key_id_equal( key, slot->attr.id ) )
                 break;
         }
         status = ( slot_idx < PSA_KEY_SLOT_COUNT ) ?

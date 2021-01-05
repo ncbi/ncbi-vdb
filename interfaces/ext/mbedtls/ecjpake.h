@@ -100,7 +100,7 @@ typedef struct mbedtls_ecjpake_context
  * \param ctx       The ECJPAKE context to initialize.
  *                  This must not be \c NULL.
  */
-void mbedtls_ecjpake_init( mbedtls_ecjpake_context *ctx );
+void vdb_mbedtls_ecjpake_init( mbedtls_ecjpake_context *ctx );
 
 /**
  * \brief           Set up an ECJPAKE context for use.
@@ -123,7 +123,7 @@ void mbedtls_ecjpake_init( mbedtls_ecjpake_context *ctx );
  * \return          \c 0 if successful.
  * \return          A negative error code on failure.
  */
-int mbedtls_ecjpake_setup( mbedtls_ecjpake_context *ctx,
+int vdb_mbedtls_ecjpake_setup( mbedtls_ecjpake_context *ctx,
                            mbedtls_ecjpake_role role,
                            mbedtls_md_type_t hash,
                            mbedtls_ecp_group_id curve,
@@ -139,7 +139,7 @@ int mbedtls_ecjpake_setup( mbedtls_ecjpake_context *ctx,
  * \return          \c 0 if the context is ready for use.
  * \return          #MBEDTLS_ERR_ECP_BAD_INPUT_DATA otherwise.
  */
-int mbedtls_ecjpake_check( const mbedtls_ecjpake_context *ctx );
+int vdb_mbedtls_ecjpake_check( const mbedtls_ecjpake_context *ctx );
 
 /**
  * \brief           Generate and write the first round message
@@ -160,7 +160,7 @@ int mbedtls_ecjpake_check( const mbedtls_ecjpake_context *ctx );
  * \return          \c 0 if successful.
  * \return          A negative error code on failure.
  */
-int mbedtls_ecjpake_write_round_one( mbedtls_ecjpake_context *ctx,
+int vdb_mbedtls_ecjpake_write_round_one( mbedtls_ecjpake_context *ctx,
                             unsigned char *buf, size_t len, size_t *olen,
                             int (*f_rng)(void *, unsigned char *, size_t),
                             void *p_rng );
@@ -179,7 +179,7 @@ int mbedtls_ecjpake_write_round_one( mbedtls_ecjpake_context *ctx,
  * \return          \c 0 if successful.
  * \return          A negative error code on failure.
  */
-int mbedtls_ecjpake_read_round_one( mbedtls_ecjpake_context *ctx,
+int vdb_mbedtls_ecjpake_read_round_one( mbedtls_ecjpake_context *ctx,
                                     const unsigned char *buf,
                                     size_t len );
 
@@ -201,7 +201,7 @@ int mbedtls_ecjpake_read_round_one( mbedtls_ecjpake_context *ctx,
  * \return          \c 0 if successful.
  * \return          A negative error code on failure.
  */
-int mbedtls_ecjpake_write_round_two( mbedtls_ecjpake_context *ctx,
+int vdb_mbedtls_ecjpake_write_round_two( mbedtls_ecjpake_context *ctx,
                             unsigned char *buf, size_t len, size_t *olen,
                             int (*f_rng)(void *, unsigned char *, size_t),
                             void *p_rng );
@@ -219,7 +219,7 @@ int mbedtls_ecjpake_write_round_two( mbedtls_ecjpake_context *ctx,
  * \return          \c 0 if successful.
  * \return          A negative error code on failure.
  */
-int mbedtls_ecjpake_read_round_two( mbedtls_ecjpake_context *ctx,
+int vdb_mbedtls_ecjpake_read_round_two( mbedtls_ecjpake_context *ctx,
                                     const unsigned char *buf,
                                     size_t len );
 
@@ -241,7 +241,7 @@ int mbedtls_ecjpake_read_round_two( mbedtls_ecjpake_context *ctx,
  * \return          \c 0 if successful.
  * \return          A negative error code on failure.
  */
-int mbedtls_ecjpake_derive_secret( mbedtls_ecjpake_context *ctx,
+int vdb_mbedtls_ecjpake_derive_secret( mbedtls_ecjpake_context *ctx,
                             unsigned char *buf, size_t len, size_t *olen,
                             int (*f_rng)(void *, unsigned char *, size_t),
                             void *p_rng );
@@ -254,7 +254,7 @@ int mbedtls_ecjpake_derive_secret( mbedtls_ecjpake_context *ctx,
  *                  in which case this function does nothing. If it is not
  *                  \c NULL, it must point to an initialized ECJPAKE context.
  */
-void mbedtls_ecjpake_free( mbedtls_ecjpake_context *ctx );
+void vdb_mbedtls_ecjpake_free( mbedtls_ecjpake_context *ctx );
 
 #if defined(MBEDTLS_SELF_TEST)
 
@@ -263,7 +263,7 @@ void mbedtls_ecjpake_free( mbedtls_ecjpake_context *ctx );
  *
  * \return         0 if successful, or 1 if a test failed
  */
-int mbedtls_ecjpake_self_test( int verbose );
+int vdb_mbedtls_ecjpake_self_test( int verbose );
 
 #endif /* MBEDTLS_SELF_TEST */
 

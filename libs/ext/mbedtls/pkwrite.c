@@ -52,8 +52,8 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdlib.h>
-#define mbedtls_calloc    calloc
-#define mbedtls_free       free
+#define vdb_mbedtls_calloc    calloc
+#define vdb_mbedtls_free       free
 #endif
 
 /* Parameter validation macros based on platform_util.h */
@@ -76,28 +76,28 @@ static int pk_write_rsa_pubkey( unsigned char **p, unsigned char *start,
     size_t len = 0;
     mbedtls_mpi T;
 
-    mbedtls_mpi_init( &T );
+    vdb_mbedtls_mpi_init( &T );
 
     /* Export E */
-    if ( ( ret = mbedtls_rsa_export( rsa, NULL, NULL, NULL, NULL, &T ) ) != 0 ||
-         ( ret = mbedtls_asn1_write_mpi( p, start, &T ) ) < 0 )
+    if ( ( ret = vdb_mbedtls_rsa_export( rsa, NULL, NULL, NULL, NULL, &T ) ) != 0 ||
+         ( ret = vdb_mbedtls_asn1_write_mpi( p, start, &T ) ) < 0 )
         goto end_of_export;
     len += ret;
 
     /* Export N */
-    if ( ( ret = mbedtls_rsa_export( rsa, &T, NULL, NULL, NULL, NULL ) ) != 0 ||
-         ( ret = mbedtls_asn1_write_mpi( p, start, &T ) ) < 0 )
+    if ( ( ret = vdb_mbedtls_rsa_export( rsa, &T, NULL, NULL, NULL, NULL ) ) != 0 ||
+         ( ret = vdb_mbedtls_asn1_write_mpi( p, start, &T ) ) < 0 )
         goto end_of_export;
     len += ret;
 
 end_of_export:
 
-    mbedtls_mpi_free( &T );
+    vdb_mbedtls_mpi_free( &T );
     if( ret < 0 )
         return( ret );
 
-    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_len( p, start, len ) );
-    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_tag( p, start, MBEDTLS_ASN1_CONSTRUCTED |
+    MBEDTLS_ASN1_CHK_ADD( len, vdb_mbedtls_asn1_write_len( p, start, len ) );
+    MBEDTLS_ASN1_CHK_ADD( len, vdb_mbedtls_asn1_write_tag( p, start, MBEDTLS_ASN1_CONSTRUCTED |
                                                  MBEDTLS_ASN1_SEQUENCE ) );
 
     return( (int) len );
@@ -115,7 +115,7 @@ static int pk_write_ec_pubkey( unsigned char **p, unsigned char *start,
     size_t len = 0;
     unsigned char buf[MBEDTLS_ECP_MAX_PT_LEN];
 
-    if( ( ret = mbedtls_ecp_point_write_binary( &ec->grp, &ec->Q,
+    if( ( ret = vdb_mbedtls_ecp_point_write_binary( &ec->grp, &ec->Q,
                                         MBEDTLS_ECP_PF_UNCOMPRESSED,
                                         &len, buf, sizeof( buf ) ) ) != 0 )
     {
@@ -144,10 +144,10 @@ static int pk_write_ec_param( unsigned char **p, unsigned char *start,
     const char *oid;
     size_t oid_len;
 
-    if( ( ret = mbedtls_oid_get_oid_by_ec_grp( ec->grp.id, &oid, &oid_len ) ) != 0 )
+    if( ( ret = vdb_mbedtls_oid_get_oid_by_ec_grp( ec->grp.id, &oid, &oid_len ) ) != 0 )
         return( ret );
 
-    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_oid( p, start, oid, oid_len ) );
+    MBEDTLS_ASN1_CHK_ADD( len, vdb_mbedtls_asn1_write_oid( p, start, oid, oid_len ) );
 
     return( (int) len );
 }
@@ -162,18 +162,18 @@ static int pk_write_ec_private( unsigned char **p, unsigned char *start,
     size_t byte_length = ( ec->grp.pbits + 7 ) / 8;
     unsigned char tmp[MBEDTLS_ECP_MAX_BYTES];
 
-    ret = mbedtls_ecp_write_key( ec, tmp, byte_length );
+    ret = vdb_mbedtls_ecp_write_key( ec, tmp, byte_length );
     if( ret != 0 )
         goto exit;
-    ret = mbedtls_asn1_write_octet_string( p, start, tmp, byte_length );
+    ret = vdb_mbedtls_asn1_write_octet_string( p, start, tmp, byte_length );
 
 exit:
-    mbedtls_platform_zeroize( tmp, byte_length );
+    vdb_mbedtls_platform_zeroize( tmp, byte_length );
     return( ret );
 }
 #endif /* MBEDTLS_ECP_C */
 
-int mbedtls_pk_write_pubkey( unsigned char **p, unsigned char *start,
+int vdb_mbedtls_pk_write_pubkey( unsigned char **p, unsigned char *start,
                              const mbedtls_pk_context *key )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
@@ -185,17 +185,17 @@ int mbedtls_pk_write_pubkey( unsigned char **p, unsigned char *start,
     PK_VALIDATE_RET( key != NULL );
 
 #if defined(MBEDTLS_RSA_C)
-    if( mbedtls_pk_get_type( key ) == MBEDTLS_PK_RSA )
-        MBEDTLS_ASN1_CHK_ADD( len, pk_write_rsa_pubkey( p, start, mbedtls_pk_rsa( *key ) ) );
+    if( vdb_mbedtls_pk_get_type( key ) == MBEDTLS_PK_RSA )
+        MBEDTLS_ASN1_CHK_ADD( len, pk_write_rsa_pubkey( p, start, vdb_mbedtls_pk_rsa( *key ) ) );
     else
 #endif
 #if defined(MBEDTLS_ECP_C)
-    if( mbedtls_pk_get_type( key ) == MBEDTLS_PK_ECKEY )
-        MBEDTLS_ASN1_CHK_ADD( len, pk_write_ec_pubkey( p, start, mbedtls_pk_ec( *key ) ) );
+    if( vdb_mbedtls_pk_get_type( key ) == MBEDTLS_PK_ECKEY )
+        MBEDTLS_ASN1_CHK_ADD( len, pk_write_ec_pubkey( p, start, vdb_mbedtls_pk_ec( *key ) ) );
     else
 #endif
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
-    if( mbedtls_pk_get_type( key ) == MBEDTLS_PK_OPAQUE )
+    if( vdb_mbedtls_pk_get_type( key ) == MBEDTLS_PK_OPAQUE )
     {
         size_t buffer_size;
         psa_key_id_t* key_id = (psa_key_id_t*) key->pk_ctx;
@@ -222,7 +222,7 @@ int mbedtls_pk_write_pubkey( unsigned char **p, unsigned char *start,
     return( (int) len );
 }
 
-int mbedtls_pk_write_pubkey_der( mbedtls_pk_context *key, unsigned char *buf, size_t size )
+int vdb_mbedtls_pk_write_pubkey_der( mbedtls_pk_context *key, unsigned char *buf, size_t size )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     unsigned char *c;
@@ -237,7 +237,7 @@ int mbedtls_pk_write_pubkey_der( mbedtls_pk_context *key, unsigned char *buf, si
 
     c = buf + size;
 
-    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_pk_write_pubkey( &c, buf, key ) );
+    MBEDTLS_ASN1_CHK_ADD( len, vdb_mbedtls_pk_write_pubkey( &c, buf, key ) );
 
     if( c - buf < 1 )
         return( MBEDTLS_ERR_ASN1_BUF_TOO_SMALL );
@@ -250,14 +250,14 @@ int mbedtls_pk_write_pubkey_der( mbedtls_pk_context *key, unsigned char *buf, si
     *--c = 0;
     len += 1;
 
-    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_len( &c, buf, len ) );
-    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_tag( &c, buf, MBEDTLS_ASN1_BIT_STRING ) );
+    MBEDTLS_ASN1_CHK_ADD( len, vdb_mbedtls_asn1_write_len( &c, buf, len ) );
+    MBEDTLS_ASN1_CHK_ADD( len, vdb_mbedtls_asn1_write_tag( &c, buf, MBEDTLS_ASN1_BIT_STRING ) );
 
-    pk_type = mbedtls_pk_get_type( key );
+    pk_type = vdb_mbedtls_pk_get_type( key );
 #if defined(MBEDTLS_ECP_C)
     if( pk_type == MBEDTLS_PK_ECKEY )
     {
-        MBEDTLS_ASN1_CHK_ADD( par_len, pk_write_ec_param( &c, buf, mbedtls_pk_ec( *key ) ) );
+        MBEDTLS_ASN1_CHK_ADD( par_len, pk_write_ec_param( &c, buf, vdb_mbedtls_pk_ec( *key ) ) );
     }
 #endif
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
@@ -286,7 +286,7 @@ int mbedtls_pk_write_pubkey_der( mbedtls_pk_context *key, unsigned char *buf, si
 
         /* Write EC algorithm parameters; that's akin
          * to pk_write_ec_param() above. */
-        MBEDTLS_ASN1_CHK_ADD( par_len, mbedtls_asn1_write_oid( &c, buf,
+        MBEDTLS_ASN1_CHK_ADD( par_len, vdb_mbedtls_asn1_write_oid( &c, buf,
                                                                oid, oid_len ) );
 
         /* The rest of the function works as for legacy EC contexts. */
@@ -294,23 +294,23 @@ int mbedtls_pk_write_pubkey_der( mbedtls_pk_context *key, unsigned char *buf, si
     }
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
-    if( ( ret = mbedtls_oid_get_oid_by_pk_alg( pk_type, &oid,
+    if( ( ret = vdb_mbedtls_oid_get_oid_by_pk_alg( pk_type, &oid,
                                                &oid_len ) ) != 0 )
     {
         return( ret );
     }
 
-    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_algorithm_identifier( &c, buf, oid, oid_len,
+    MBEDTLS_ASN1_CHK_ADD( len, vdb_mbedtls_asn1_write_algorithm_identifier( &c, buf, oid, oid_len,
                                                         par_len ) );
 
-    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_len( &c, buf, len ) );
-    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_tag( &c, buf, MBEDTLS_ASN1_CONSTRUCTED |
+    MBEDTLS_ASN1_CHK_ADD( len, vdb_mbedtls_asn1_write_len( &c, buf, len ) );
+    MBEDTLS_ASN1_CHK_ADD( len, vdb_mbedtls_asn1_write_tag( &c, buf, MBEDTLS_ASN1_CONSTRUCTED |
                                                 MBEDTLS_ASN1_SEQUENCE ) );
 
     return( (int) len );
 }
 
-int mbedtls_pk_write_key_der( mbedtls_pk_context *key, unsigned char *buf, size_t size )
+int vdb_mbedtls_pk_write_key_der( mbedtls_pk_context *key, unsigned char *buf, size_t size )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     unsigned char *c;
@@ -324,88 +324,88 @@ int mbedtls_pk_write_key_der( mbedtls_pk_context *key, unsigned char *buf, size_
     c = buf + size;
 
 #if defined(MBEDTLS_RSA_C)
-    if( mbedtls_pk_get_type( key ) == MBEDTLS_PK_RSA )
+    if( vdb_mbedtls_pk_get_type( key ) == MBEDTLS_PK_RSA )
     {
         mbedtls_mpi T; /* Temporary holding the exported parameters */
-        mbedtls_rsa_context *rsa = mbedtls_pk_rsa( *key );
+        mbedtls_rsa_context *rsa = vdb_mbedtls_pk_rsa( *key );
 
         /*
          * Export the parameters one after another to avoid simultaneous copies.
          */
 
-        mbedtls_mpi_init( &T );
+        vdb_mbedtls_mpi_init( &T );
 
         /* Export QP */
-        if( ( ret = mbedtls_rsa_export_crt( rsa, NULL, NULL, &T ) ) != 0 ||
-            ( ret = mbedtls_asn1_write_mpi( &c, buf, &T ) ) < 0 )
+        if( ( ret = vdb_mbedtls_rsa_export_crt( rsa, NULL, NULL, &T ) ) != 0 ||
+            ( ret = vdb_mbedtls_asn1_write_mpi( &c, buf, &T ) ) < 0 )
             goto end_of_export;
         len += ret;
 
         /* Export DQ */
-        if( ( ret = mbedtls_rsa_export_crt( rsa, NULL, &T, NULL ) ) != 0 ||
-            ( ret = mbedtls_asn1_write_mpi( &c, buf, &T ) ) < 0 )
+        if( ( ret = vdb_mbedtls_rsa_export_crt( rsa, NULL, &T, NULL ) ) != 0 ||
+            ( ret = vdb_mbedtls_asn1_write_mpi( &c, buf, &T ) ) < 0 )
             goto end_of_export;
         len += ret;
 
         /* Export DP */
-        if( ( ret = mbedtls_rsa_export_crt( rsa, &T, NULL, NULL ) ) != 0 ||
-            ( ret = mbedtls_asn1_write_mpi( &c, buf, &T ) ) < 0 )
+        if( ( ret = vdb_mbedtls_rsa_export_crt( rsa, &T, NULL, NULL ) ) != 0 ||
+            ( ret = vdb_mbedtls_asn1_write_mpi( &c, buf, &T ) ) < 0 )
             goto end_of_export;
         len += ret;
 
         /* Export Q */
-        if ( ( ret = mbedtls_rsa_export( rsa, NULL, NULL,
+        if ( ( ret = vdb_mbedtls_rsa_export( rsa, NULL, NULL,
                                          &T, NULL, NULL ) ) != 0 ||
-             ( ret = mbedtls_asn1_write_mpi( &c, buf, &T ) ) < 0 )
+             ( ret = vdb_mbedtls_asn1_write_mpi( &c, buf, &T ) ) < 0 )
             goto end_of_export;
         len += ret;
 
         /* Export P */
-        if ( ( ret = mbedtls_rsa_export( rsa, NULL, &T,
+        if ( ( ret = vdb_mbedtls_rsa_export( rsa, NULL, &T,
                                          NULL, NULL, NULL ) ) != 0 ||
-             ( ret = mbedtls_asn1_write_mpi( &c, buf, &T ) ) < 0 )
+             ( ret = vdb_mbedtls_asn1_write_mpi( &c, buf, &T ) ) < 0 )
             goto end_of_export;
         len += ret;
 
         /* Export D */
-        if ( ( ret = mbedtls_rsa_export( rsa, NULL, NULL,
+        if ( ( ret = vdb_mbedtls_rsa_export( rsa, NULL, NULL,
                                          NULL, &T, NULL ) ) != 0 ||
-             ( ret = mbedtls_asn1_write_mpi( &c, buf, &T ) ) < 0 )
+             ( ret = vdb_mbedtls_asn1_write_mpi( &c, buf, &T ) ) < 0 )
             goto end_of_export;
         len += ret;
 
         /* Export E */
-        if ( ( ret = mbedtls_rsa_export( rsa, NULL, NULL,
+        if ( ( ret = vdb_mbedtls_rsa_export( rsa, NULL, NULL,
                                          NULL, NULL, &T ) ) != 0 ||
-             ( ret = mbedtls_asn1_write_mpi( &c, buf, &T ) ) < 0 )
+             ( ret = vdb_mbedtls_asn1_write_mpi( &c, buf, &T ) ) < 0 )
             goto end_of_export;
         len += ret;
 
         /* Export N */
-        if ( ( ret = mbedtls_rsa_export( rsa, &T, NULL,
+        if ( ( ret = vdb_mbedtls_rsa_export( rsa, &T, NULL,
                                          NULL, NULL, NULL ) ) != 0 ||
-             ( ret = mbedtls_asn1_write_mpi( &c, buf, &T ) ) < 0 )
+             ( ret = vdb_mbedtls_asn1_write_mpi( &c, buf, &T ) ) < 0 )
             goto end_of_export;
         len += ret;
 
     end_of_export:
 
-        mbedtls_mpi_free( &T );
+        vdb_mbedtls_mpi_free( &T );
         if( ret < 0 )
             return( ret );
 
-        MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_int( &c, buf, 0 ) );
-        MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_len( &c, buf, len ) );
-        MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_tag( &c,
+        MBEDTLS_ASN1_CHK_ADD( len, vdb_mbedtls_asn1_write_int( &c, buf, 0 ) );
+        MBEDTLS_ASN1_CHK_ADD( len, vdb_mbedtls_asn1_write_len( &c, buf, len ) );
+        MBEDTLS_ASN1_CHK_ADD( len, vdb_mbedtls_asn1_write_tag( &c,
                                                buf, MBEDTLS_ASN1_CONSTRUCTED |
                                                MBEDTLS_ASN1_SEQUENCE ) );
     }
     else
 #endif /* MBEDTLS_RSA_C */
 #if defined(MBEDTLS_ECP_C)
-    if( mbedtls_pk_get_type( key ) == MBEDTLS_PK_ECKEY )
+    if( vdb_mbedtls_pk_get_type( key ) == MBEDTLS_PK_ECKEY )
     {
-        mbedtls_ecp_keypair *ec = mbedtls_pk_ec( *key );
+        mbedtls_ecp_keypair *ec = vdb_mbedtls_pk_ec( *key );
         size_t pub_len = 0, par_len = 0;
 
         /*
@@ -427,19 +427,19 @@ int mbedtls_pk_write_key_der( mbedtls_pk_context *key, unsigned char *buf, size_
         *--c = 0;
         pub_len += 1;
 
-        MBEDTLS_ASN1_CHK_ADD( pub_len, mbedtls_asn1_write_len( &c, buf, pub_len ) );
-        MBEDTLS_ASN1_CHK_ADD( pub_len, mbedtls_asn1_write_tag( &c, buf, MBEDTLS_ASN1_BIT_STRING ) );
+        MBEDTLS_ASN1_CHK_ADD( pub_len, vdb_mbedtls_asn1_write_len( &c, buf, pub_len ) );
+        MBEDTLS_ASN1_CHK_ADD( pub_len, vdb_mbedtls_asn1_write_tag( &c, buf, MBEDTLS_ASN1_BIT_STRING ) );
 
-        MBEDTLS_ASN1_CHK_ADD( pub_len, mbedtls_asn1_write_len( &c, buf, pub_len ) );
-        MBEDTLS_ASN1_CHK_ADD( pub_len, mbedtls_asn1_write_tag( &c, buf,
+        MBEDTLS_ASN1_CHK_ADD( pub_len, vdb_mbedtls_asn1_write_len( &c, buf, pub_len ) );
+        MBEDTLS_ASN1_CHK_ADD( pub_len, vdb_mbedtls_asn1_write_tag( &c, buf,
                             MBEDTLS_ASN1_CONTEXT_SPECIFIC | MBEDTLS_ASN1_CONSTRUCTED | 1 ) );
         len += pub_len;
 
         /* parameters */
         MBEDTLS_ASN1_CHK_ADD( par_len, pk_write_ec_param( &c, buf, ec ) );
 
-        MBEDTLS_ASN1_CHK_ADD( par_len, mbedtls_asn1_write_len( &c, buf, par_len ) );
-        MBEDTLS_ASN1_CHK_ADD( par_len, mbedtls_asn1_write_tag( &c, buf,
+        MBEDTLS_ASN1_CHK_ADD( par_len, vdb_mbedtls_asn1_write_len( &c, buf, par_len ) );
+        MBEDTLS_ASN1_CHK_ADD( par_len, vdb_mbedtls_asn1_write_tag( &c, buf,
                             MBEDTLS_ASN1_CONTEXT_SPECIFIC | MBEDTLS_ASN1_CONSTRUCTED | 0 ) );
         len += par_len;
 
@@ -447,10 +447,10 @@ int mbedtls_pk_write_key_der( mbedtls_pk_context *key, unsigned char *buf, size_
         MBEDTLS_ASN1_CHK_ADD( len, pk_write_ec_private( &c, buf, ec ) );
 
         /* version */
-        MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_int( &c, buf, 1 ) );
+        MBEDTLS_ASN1_CHK_ADD( len, vdb_mbedtls_asn1_write_int( &c, buf, 1 ) );
 
-        MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_len( &c, buf, len ) );
-        MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_tag( &c, buf, MBEDTLS_ASN1_CONSTRUCTED |
+        MBEDTLS_ASN1_CHK_ADD( len, vdb_mbedtls_asn1_write_len( &c, buf, len ) );
+        MBEDTLS_ASN1_CHK_ADD( len, vdb_mbedtls_asn1_write_tag( &c, buf, MBEDTLS_ASN1_CONSTRUCTED |
                                                     MBEDTLS_ASN1_SEQUENCE ) );
     }
     else
@@ -553,7 +553,7 @@ int mbedtls_pk_write_key_der( mbedtls_pk_context *key, unsigned char *buf, size_
 #define PRV_DER_MAX_BYTES   RSA_PRV_DER_MAX_BYTES > ECP_PRV_DER_MAX_BYTES ? \
                             RSA_PRV_DER_MAX_BYTES : ECP_PRV_DER_MAX_BYTES
 
-int mbedtls_pk_write_pubkey_pem( mbedtls_pk_context *key, unsigned char *buf, size_t size )
+int vdb_mbedtls_pk_write_pubkey_pem( mbedtls_pk_context *key, unsigned char *buf, size_t size )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     unsigned char output_buf[PUB_DER_MAX_BYTES];
@@ -562,13 +562,13 @@ int mbedtls_pk_write_pubkey_pem( mbedtls_pk_context *key, unsigned char *buf, si
     PK_VALIDATE_RET( key != NULL );
     PK_VALIDATE_RET( buf != NULL || size == 0 );
 
-    if( ( ret = mbedtls_pk_write_pubkey_der( key, output_buf,
+    if( ( ret = vdb_mbedtls_pk_write_pubkey_der( key, output_buf,
                                      sizeof(output_buf) ) ) < 0 )
     {
         return( ret );
     }
 
-    if( ( ret = mbedtls_pem_write_buffer( PEM_BEGIN_PUBLIC_KEY, PEM_END_PUBLIC_KEY,
+    if( ( ret = vdb_mbedtls_pem_write_buffer( PEM_BEGIN_PUBLIC_KEY, PEM_END_PUBLIC_KEY,
                                   output_buf + sizeof(output_buf) - ret,
                                   ret, buf, size, &olen ) ) != 0 )
     {
@@ -578,7 +578,7 @@ int mbedtls_pk_write_pubkey_pem( mbedtls_pk_context *key, unsigned char *buf, si
     return( 0 );
 }
 
-int mbedtls_pk_write_key_pem( mbedtls_pk_context *key, unsigned char *buf, size_t size )
+int vdb_mbedtls_pk_write_key_pem( mbedtls_pk_context *key, unsigned char *buf, size_t size )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     unsigned char output_buf[PRV_DER_MAX_BYTES];
@@ -588,11 +588,11 @@ int mbedtls_pk_write_key_pem( mbedtls_pk_context *key, unsigned char *buf, size_
     PK_VALIDATE_RET( key != NULL );
     PK_VALIDATE_RET( buf != NULL || size == 0 );
 
-    if( ( ret = mbedtls_pk_write_key_der( key, output_buf, sizeof(output_buf) ) ) < 0 )
+    if( ( ret = vdb_mbedtls_pk_write_key_der( key, output_buf, sizeof(output_buf) ) ) < 0 )
         return( ret );
 
 #if defined(MBEDTLS_RSA_C)
-    if( mbedtls_pk_get_type( key ) == MBEDTLS_PK_RSA )
+    if( vdb_mbedtls_pk_get_type( key ) == MBEDTLS_PK_RSA )
     {
         begin = PEM_BEGIN_PRIVATE_KEY_RSA;
         end = PEM_END_PRIVATE_KEY_RSA;
@@ -600,7 +600,7 @@ int mbedtls_pk_write_key_pem( mbedtls_pk_context *key, unsigned char *buf, size_
     else
 #endif
 #if defined(MBEDTLS_ECP_C)
-    if( mbedtls_pk_get_type( key ) == MBEDTLS_PK_ECKEY )
+    if( vdb_mbedtls_pk_get_type( key ) == MBEDTLS_PK_ECKEY )
     {
         begin = PEM_BEGIN_PRIVATE_KEY_EC;
         end = PEM_END_PRIVATE_KEY_EC;
@@ -609,7 +609,7 @@ int mbedtls_pk_write_key_pem( mbedtls_pk_context *key, unsigned char *buf, size_
 #endif
         return( MBEDTLS_ERR_PK_FEATURE_UNAVAILABLE );
 
-    if( ( ret = mbedtls_pem_write_buffer( begin, end,
+    if( ( ret = vdb_mbedtls_pem_write_buffer( begin, end,
                                   output_buf + sizeof(output_buf) - ret,
                                   ret, buf, size, &olen ) ) != 0 )
     {

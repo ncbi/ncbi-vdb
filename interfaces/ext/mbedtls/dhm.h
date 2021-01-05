@@ -122,7 +122,7 @@ mbedtls_dhm_context;
  *
  * \param ctx      The DHM context to initialize.
  */
-void mbedtls_dhm_init( mbedtls_dhm_context *ctx );
+void vdb_mbedtls_dhm_init( mbedtls_dhm_context *ctx );
 
 /**
  * \brief          This function parses the DHM parameters in a
@@ -146,7 +146,7 @@ void mbedtls_dhm_init( mbedtls_dhm_context *ctx );
  * \return         \c 0 on success.
  * \return         An \c MBEDTLS_ERR_DHM_XXX error code on failure.
  */
-int mbedtls_dhm_read_params( mbedtls_dhm_context *ctx,
+int vdb_mbedtls_dhm_read_params( mbedtls_dhm_context *ctx,
                              unsigned char **p,
                              const unsigned char *end );
 
@@ -157,8 +157,8 @@ int mbedtls_dhm_read_params( mbedtls_dhm_context *ctx,
  *
  * \note           This function assumes that the DHM parameters \c ctx->P
  *                 and \c ctx->G have already been properly set. For that, use
- *                 mbedtls_dhm_set_group() below in conjunction with
- *                 mbedtls_mpi_read_binary() and mbedtls_mpi_read_string().
+ *                 vdb_mbedtls_dhm_set_group() below in conjunction with
+ *                 vdb_mbedtls_mpi_read_binary() and vdb_mbedtls_mpi_read_string().
  *
  * \note           In a TLS handshake, this is the how the server generates
  *                 and exports its DHM key material.
@@ -174,7 +174,7 @@ int mbedtls_dhm_read_params( mbedtls_dhm_context *ctx,
  *                 the modulus, the generator and the public key, each wrapped
  *                 with a 2-byte length field. It is the responsibility of the
  *                 caller to ensure that enough space is available. Refer to
- *                 mbedtls_mpi_size() to computing the byte-size of an MPI.
+ *                 vdb_mbedtls_mpi_size() to computing the byte-size of an MPI.
  * \param f_rng    The RNG function. Must not be \c NULL.
  * \param p_rng    The RNG context to be passed to \p f_rng. This may be
  *                 \c NULL if \p f_rng doesn't need a context parameter.
@@ -182,7 +182,7 @@ int mbedtls_dhm_read_params( mbedtls_dhm_context *ctx,
  * \return         \c 0 on success.
  * \return         An \c MBEDTLS_ERR_DHM_XXX error code on failure.
  */
-int mbedtls_dhm_make_params( mbedtls_dhm_context *ctx, int x_size,
+int vdb_mbedtls_dhm_make_params( mbedtls_dhm_context *ctx, int x_size,
                      unsigned char *output, size_t *olen,
                      int (*f_rng)(void *, unsigned char *, size_t),
                      void *p_rng );
@@ -191,7 +191,7 @@ int mbedtls_dhm_make_params( mbedtls_dhm_context *ctx, int x_size,
  * \brief          This function sets the prime modulus and generator.
  *
  * \note           This function can be used to set \c ctx->P, \c ctx->G
- *                 in preparation for mbedtls_dhm_make_params().
+ *                 in preparation for vdb_mbedtls_dhm_make_params().
  *
  * \param ctx      The DHM context to configure. This must be initialized.
  * \param P        The MPI holding the DHM prime modulus. This must be
@@ -202,7 +202,7 @@ int mbedtls_dhm_make_params( mbedtls_dhm_context *ctx, int x_size,
  * \return         \c 0 if successful.
  * \return         An \c MBEDTLS_ERR_DHM_XXX error code on failure.
  */
-int mbedtls_dhm_set_group( mbedtls_dhm_context *ctx,
+int vdb_mbedtls_dhm_set_group( mbedtls_dhm_context *ctx,
                            const mbedtls_mpi *P,
                            const mbedtls_mpi *G );
 
@@ -213,7 +213,7 @@ int mbedtls_dhm_set_group( mbedtls_dhm_context *ctx,
  *                 the Client's public DHM key.
  *
  * \param ctx      The DHM context to use. This must be initialized and have
- *                 its DHM parameters set, e.g. via mbedtls_dhm_set_group().
+ *                 its DHM parameters set, e.g. via vdb_mbedtls_dhm_set_group().
  *                 It may or may not already have generated its own private key.
  * \param input    The input buffer containing the \c G^Y value of the peer.
  *                 This must be a readable buffer of size \p ilen Bytes.
@@ -222,7 +222,7 @@ int mbedtls_dhm_set_group( mbedtls_dhm_context *ctx,
  * \return         \c 0 on success.
  * \return         An \c MBEDTLS_ERR_DHM_XXX error code on failure.
  */
-int mbedtls_dhm_read_public( mbedtls_dhm_context *ctx,
+int vdb_mbedtls_dhm_read_public( mbedtls_dhm_context *ctx,
                      const unsigned char *input, size_t ilen );
 
 /**
@@ -249,7 +249,7 @@ int mbedtls_dhm_read_public( mbedtls_dhm_context *ctx,
  * \return         \c 0 on success.
  * \return         An \c MBEDTLS_ERR_DHM_XXX error code on failure.
  */
-int mbedtls_dhm_make_public( mbedtls_dhm_context *ctx, int x_size,
+int vdb_mbedtls_dhm_make_public( mbedtls_dhm_context *ctx, int x_size,
                      unsigned char *output, size_t olen,
                      int (*f_rng)(void *, unsigned char *, size_t),
                      void *p_rng );
@@ -280,7 +280,7 @@ int mbedtls_dhm_make_public( mbedtls_dhm_context *ctx, int x_size,
  * \return              \c 0 on success.
  * \return              An \c MBEDTLS_ERR_DHM_XXX error code on failure.
  */
-int mbedtls_dhm_calc_secret( mbedtls_dhm_context *ctx,
+int vdb_mbedtls_dhm_calc_secret( mbedtls_dhm_context *ctx,
                      unsigned char *output, size_t output_size, size_t *olen,
                      int (*f_rng)(void *, unsigned char *, size_t),
                      void *p_rng );
@@ -293,7 +293,7 @@ int mbedtls_dhm_calc_secret( mbedtls_dhm_context *ctx,
  *                 in which case this function is a no-op. If it is not \c NULL,
  *                 it must point to an initialized DHM context.
  */
-void mbedtls_dhm_free( mbedtls_dhm_context *ctx );
+void vdb_mbedtls_dhm_free( mbedtls_dhm_context *ctx );
 
 #if defined(MBEDTLS_ASN1_PARSE_C)
 /**
@@ -310,7 +310,7 @@ void mbedtls_dhm_free( mbedtls_dhm_context *ctx );
  * \return            An \c MBEDTLS_ERR_DHM_XXX or \c MBEDTLS_ERR_PEM_XXX error
  *                    code on failure.
  */
-int mbedtls_dhm_parse_dhm( mbedtls_dhm_context *dhm, const unsigned char *dhmin,
+int vdb_mbedtls_dhm_parse_dhm( mbedtls_dhm_context *dhm, const unsigned char *dhmin,
                            size_t dhminlen );
 
 #if defined(MBEDTLS_FS_IO)
@@ -326,7 +326,7 @@ int mbedtls_dhm_parse_dhm( mbedtls_dhm_context *dhm, const unsigned char *dhmin,
  * \return         An \c MBEDTLS_ERR_DHM_XXX or \c MBEDTLS_ERR_PEM_XXX
  *                 error code on failure.
  */
-int mbedtls_dhm_parse_dhmfile( mbedtls_dhm_context *dhm, const char *path );
+int vdb_mbedtls_dhm_parse_dhmfile( mbedtls_dhm_context *dhm, const char *path );
 #endif /* MBEDTLS_FS_IO */
 #endif /* MBEDTLS_ASN1_PARSE_C */
 
@@ -338,7 +338,7 @@ int mbedtls_dhm_parse_dhmfile( mbedtls_dhm_context *dhm, const char *path );
  * \return         \c 0 on success.
  * \return         \c 1 on failure.
  */
-int mbedtls_dhm_self_test( int verbose );
+int vdb_mbedtls_dhm_self_test( int verbose );
 
 #endif /* MBEDTLS_SELF_TEST */
 #ifdef __cplusplus

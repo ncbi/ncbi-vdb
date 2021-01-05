@@ -109,7 +109,7 @@ typedef struct mbedtls_md_context_t
  *                  message-digest enumeration #mbedtls_md_type_t.
  *                  The last entry is 0.
  */
-const int *mbedtls_md_list( void );
+const int *vdb_mbedtls_md_list( void );
 
 /**
  * \brief           This function returns the message-digest information
@@ -120,7 +120,7 @@ const int *mbedtls_md_list( void );
  * \return          The message-digest information associated with \p md_name.
  * \return          NULL if the associated message-digest information is not found.
  */
-const mbedtls_md_info_t *mbedtls_md_info_from_string( const char *md_name );
+const mbedtls_md_info_t *vdb_mbedtls_md_info_from_string( const char *md_name );
 
 /**
  * \brief           This function returns the message-digest information
@@ -131,32 +131,32 @@ const mbedtls_md_info_t *mbedtls_md_info_from_string( const char *md_name );
  * \return          The message-digest information associated with \p md_type.
  * \return          NULL if the associated message-digest information is not found.
  */
-const mbedtls_md_info_t *mbedtls_md_info_from_type( mbedtls_md_type_t md_type );
+const mbedtls_md_info_t *vdb_mbedtls_md_info_from_type( mbedtls_md_type_t md_type );
 
 /**
  * \brief           This function initializes a message-digest context without
  *                  binding it to a particular message-digest algorithm.
  *
  *                  This function should always be called first. It prepares the
- *                  context for mbedtls_md_setup() for binding it to a
+ *                  context for vdb_mbedtls_md_setup() for binding it to a
  *                  message-digest algorithm.
  */
-void mbedtls_md_init( mbedtls_md_context_t *ctx );
+void vdb_mbedtls_md_init( mbedtls_md_context_t *ctx );
 
 /**
  * \brief           This function clears the internal structure of \p ctx and
  *                  frees any embedded internal structure, but does not free
  *                  \p ctx itself.
  *
- *                  If you have called mbedtls_md_setup() on \p ctx, you must
- *                  call mbedtls_md_free() when you are no longer using the
+ *                  If you have called vdb_mbedtls_md_setup() on \p ctx, you must
+ *                  call vdb_mbedtls_md_free() when you are no longer using the
  *                  context.
  *                  Calling this function if you have previously
- *                  called mbedtls_md_init() and nothing else is optional.
+ *                  called vdb_mbedtls_md_init() and nothing else is optional.
  *                  You must not call this function if you have not called
- *                  mbedtls_md_init().
+ *                  vdb_mbedtls_md_init().
  */
-void mbedtls_md_free( mbedtls_md_context_t *ctx );
+void vdb_mbedtls_md_free( mbedtls_md_context_t *ctx );
 
 #if ! defined(MBEDTLS_DEPRECATED_REMOVED)
 #if defined(MBEDTLS_DEPRECATED_WARNING)
@@ -168,10 +168,10 @@ void mbedtls_md_free( mbedtls_md_context_t *ctx );
  * \brief           This function selects the message digest algorithm to use,
  *                  and allocates internal structures.
  *
- *                  It should be called after mbedtls_md_init() or mbedtls_md_free().
- *                  Makes it necessary to call mbedtls_md_free() later.
+ *                  It should be called after vdb_mbedtls_md_init() or vdb_mbedtls_md_free().
+ *                  Makes it necessary to call vdb_mbedtls_md_free() later.
  *
- * \deprecated      Superseded by mbedtls_md_setup() in 2.0.0
+ * \deprecated      Superseded by vdb_mbedtls_md_setup() in 2.0.0
  *
  * \param ctx       The context to set up.
  * \param md_info   The information structure of the message-digest algorithm
@@ -182,7 +182,7 @@ void mbedtls_md_free( mbedtls_md_context_t *ctx );
  *                  failure.
  * \return          #MBEDTLS_ERR_MD_ALLOC_FAILED on memory-allocation failure.
  */
-int mbedtls_md_init_ctx( mbedtls_md_context_t *ctx, const mbedtls_md_info_t *md_info ) MBEDTLS_DEPRECATED;
+int vdb_mbedtls_md_init_ctx( mbedtls_md_context_t *ctx, const mbedtls_md_info_t *md_info ) MBEDTLS_DEPRECATED;
 #undef MBEDTLS_DEPRECATED
 #endif /* MBEDTLS_DEPRECATED_REMOVED */
 
@@ -190,9 +190,9 @@ int mbedtls_md_init_ctx( mbedtls_md_context_t *ctx, const mbedtls_md_info_t *md_
  * \brief           This function selects the message digest algorithm to use,
  *                  and allocates internal structures.
  *
- *                  It should be called after mbedtls_md_init() or
- *                  mbedtls_md_free(). Makes it necessary to call
- *                  mbedtls_md_free() later.
+ *                  It should be called after vdb_mbedtls_md_init() or
+ *                  vdb_mbedtls_md_free(). Makes it necessary to call
+ *                  vdb_mbedtls_md_free() later.
  *
  * \param ctx       The context to set up.
  * \param md_info   The information structure of the message-digest algorithm
@@ -205,13 +205,13 @@ int mbedtls_md_init_ctx( mbedtls_md_context_t *ctx, const mbedtls_md_info_t *md_
  *                  failure.
  * \return          #MBEDTLS_ERR_MD_ALLOC_FAILED on memory-allocation failure.
  */
-int mbedtls_md_setup( mbedtls_md_context_t *ctx, const mbedtls_md_info_t *md_info, int hmac );
+int vdb_mbedtls_md_setup( mbedtls_md_context_t *ctx, const mbedtls_md_info_t *md_info, int hmac );
 
 /**
  * \brief           This function clones the state of an message-digest
  *                  context.
  *
- * \note            You must call mbedtls_md_setup() on \c dst before calling
+ * \note            You must call vdb_mbedtls_md_setup() on \c dst before calling
  *                  this function.
  *
  * \note            The two contexts must have the same type,
@@ -226,7 +226,7 @@ int mbedtls_md_setup( mbedtls_md_context_t *ctx, const mbedtls_md_info_t *md_inf
  * \return          \c 0 on success.
  * \return          #MBEDTLS_ERR_MD_BAD_INPUT_DATA on parameter-verification failure.
  */
-int mbedtls_md_clone( mbedtls_md_context_t *dst,
+int vdb_mbedtls_md_clone( mbedtls_md_context_t *dst,
                       const mbedtls_md_context_t *src );
 
 /**
@@ -238,7 +238,7 @@ int mbedtls_md_clone( mbedtls_md_context_t *dst,
  *
  * \return          The size of the message-digest output in Bytes.
  */
-unsigned char mbedtls_md_get_size( const mbedtls_md_info_t *md_info );
+unsigned char vdb_mbedtls_md_get_size( const mbedtls_md_info_t *md_info );
 
 /**
  * \brief           This function extracts the message-digest type from the
@@ -249,7 +249,7 @@ unsigned char mbedtls_md_get_size( const mbedtls_md_info_t *md_info );
  *
  * \return          The type of the message digest.
  */
-mbedtls_md_type_t mbedtls_md_get_type( const mbedtls_md_info_t *md_info );
+mbedtls_md_type_t vdb_mbedtls_md_get_type( const mbedtls_md_info_t *md_info );
 
 /**
  * \brief           This function extracts the message-digest name from the
@@ -260,14 +260,14 @@ mbedtls_md_type_t mbedtls_md_get_type( const mbedtls_md_info_t *md_info );
  *
  * \return          The name of the message digest.
  */
-const char *mbedtls_md_get_name( const mbedtls_md_info_t *md_info );
+const char *vdb_mbedtls_md_get_name( const mbedtls_md_info_t *md_info );
 
 /**
  * \brief           This function starts a message-digest computation.
  *
  *                  You must call this function after setting up the context
- *                  with mbedtls_md_setup(), and before passing data with
- *                  mbedtls_md_update().
+ *                  with vdb_mbedtls_md_setup(), and before passing data with
+ *                  vdb_mbedtls_md_update().
  *
  * \param ctx       The generic message-digest context.
  *
@@ -275,15 +275,15 @@ const char *mbedtls_md_get_name( const mbedtls_md_info_t *md_info );
  * \return          #MBEDTLS_ERR_MD_BAD_INPUT_DATA on parameter-verification
  *                  failure.
  */
-int mbedtls_md_starts( mbedtls_md_context_t *ctx );
+int vdb_mbedtls_md_starts( mbedtls_md_context_t *ctx );
 
 /**
  * \brief           This function feeds an input buffer into an ongoing
  *                  message-digest computation.
  *
- *                  You must call mbedtls_md_starts() before calling this
+ *                  You must call vdb_mbedtls_md_starts() before calling this
  *                  function. You may call this function multiple times.
- *                  Afterwards, call mbedtls_md_finish().
+ *                  Afterwards, call vdb_mbedtls_md_finish().
  *
  * \param ctx       The generic message-digest context.
  * \param input     The buffer holding the input data.
@@ -293,16 +293,16 @@ int mbedtls_md_starts( mbedtls_md_context_t *ctx );
  * \return          #MBEDTLS_ERR_MD_BAD_INPUT_DATA on parameter-verification
  *                  failure.
  */
-int mbedtls_md_update( mbedtls_md_context_t *ctx, const unsigned char *input, size_t ilen );
+int vdb_mbedtls_md_update( mbedtls_md_context_t *ctx, const unsigned char *input, size_t ilen );
 
 /**
  * \brief           This function finishes the digest operation,
  *                  and writes the result to the output buffer.
  *
- *                  Call this function after a call to mbedtls_md_starts(),
- *                  followed by any number of calls to mbedtls_md_update().
+ *                  Call this function after a call to vdb_mbedtls_md_starts(),
+ *                  followed by any number of calls to vdb_mbedtls_md_update().
  *                  Afterwards, you may either clear the context with
- *                  mbedtls_md_free(), or call mbedtls_md_starts() to reuse
+ *                  vdb_mbedtls_md_free(), or call vdb_mbedtls_md_starts() to reuse
  *                  the context for another digest operation with the same
  *                  algorithm.
  *
@@ -313,7 +313,7 @@ int mbedtls_md_update( mbedtls_md_context_t *ctx, const unsigned char *input, si
  * \return          #MBEDTLS_ERR_MD_BAD_INPUT_DATA on parameter-verification
  *                  failure.
  */
-int mbedtls_md_finish( mbedtls_md_context_t *ctx, unsigned char *output );
+int vdb_mbedtls_md_finish( mbedtls_md_context_t *ctx, unsigned char *output );
 
 /**
  * \brief          This function calculates the message-digest of a buffer,
@@ -333,7 +333,7 @@ int mbedtls_md_finish( mbedtls_md_context_t *ctx, unsigned char *output );
  * \return         #MBEDTLS_ERR_MD_BAD_INPUT_DATA on parameter-verification
  *                 failure.
  */
-int mbedtls_md( const mbedtls_md_info_t *md_info, const unsigned char *input, size_t ilen,
+int vdb_mbedtls_md( const mbedtls_md_info_t *md_info, const unsigned char *input, size_t ilen,
         unsigned char *output );
 
 #if defined(MBEDTLS_FS_IO)
@@ -354,7 +354,7 @@ int mbedtls_md( const mbedtls_md_info_t *md_info, const unsigned char *input, si
  *                 the file pointed by \p path.
  * \return         #MBEDTLS_ERR_MD_BAD_INPUT_DATA if \p md_info was NULL.
  */
-int mbedtls_md_file( const mbedtls_md_info_t *md_info, const char *path,
+int vdb_mbedtls_md_file( const mbedtls_md_info_t *md_info, const char *path,
                      unsigned char *output );
 #endif /* MBEDTLS_FS_IO */
 
@@ -362,10 +362,10 @@ int mbedtls_md_file( const mbedtls_md_info_t *md_info, const char *path,
  * \brief           This function sets the HMAC key and prepares to
  *                  authenticate a new message.
  *
- *                  Call this function after mbedtls_md_setup(), to use
+ *                  Call this function after vdb_mbedtls_md_setup(), to use
  *                  the MD context for an HMAC calculation, then call
- *                  mbedtls_md_hmac_update() to provide the input data, and
- *                  mbedtls_md_hmac_finish() to get the HMAC value.
+ *                  vdb_mbedtls_md_hmac_update() to provide the input data, and
+ *                  vdb_mbedtls_md_hmac_finish() to get the HMAC value.
  *
  * \param ctx       The message digest context containing an embedded HMAC
  *                  context.
@@ -376,18 +376,18 @@ int mbedtls_md_file( const mbedtls_md_info_t *md_info, const char *path,
  * \return          #MBEDTLS_ERR_MD_BAD_INPUT_DATA on parameter-verification
  *                  failure.
  */
-int mbedtls_md_hmac_starts( mbedtls_md_context_t *ctx, const unsigned char *key,
+int vdb_mbedtls_md_hmac_starts( mbedtls_md_context_t *ctx, const unsigned char *key,
                     size_t keylen );
 
 /**
  * \brief           This function feeds an input buffer into an ongoing HMAC
  *                  computation.
  *
- *                  Call mbedtls_md_hmac_starts() or mbedtls_md_hmac_reset()
+ *                  Call vdb_mbedtls_md_hmac_starts() or vdb_mbedtls_md_hmac_reset()
  *                  before calling this function.
  *                  You may call this function multiple times to pass the
  *                  input piecewise.
- *                  Afterwards, call mbedtls_md_hmac_finish().
+ *                  Afterwards, call vdb_mbedtls_md_hmac_finish().
  *
  * \param ctx       The message digest context containing an embedded HMAC
  *                  context.
@@ -398,17 +398,17 @@ int mbedtls_md_hmac_starts( mbedtls_md_context_t *ctx, const unsigned char *key,
  * \return          #MBEDTLS_ERR_MD_BAD_INPUT_DATA on parameter-verification
  *                  failure.
  */
-int mbedtls_md_hmac_update( mbedtls_md_context_t *ctx, const unsigned char *input,
+int vdb_mbedtls_md_hmac_update( mbedtls_md_context_t *ctx, const unsigned char *input,
                     size_t ilen );
 
 /**
  * \brief           This function finishes the HMAC operation, and writes
  *                  the result to the output buffer.
  *
- *                  Call this function after mbedtls_md_hmac_starts() and
- *                  mbedtls_md_hmac_update() to get the HMAC value. Afterwards
- *                  you may either call mbedtls_md_free() to clear the context,
- *                  or call mbedtls_md_hmac_reset() to reuse the context with
+ *                  Call this function after vdb_mbedtls_md_hmac_starts() and
+ *                  vdb_mbedtls_md_hmac_update() to get the HMAC value. Afterwards
+ *                  you may either call vdb_mbedtls_md_free() to clear the context,
+ *                  or call vdb_mbedtls_md_hmac_reset() to reuse the context with
  *                  the same HMAC key.
  *
  * \param ctx       The message digest context containing an embedded HMAC
@@ -419,14 +419,14 @@ int mbedtls_md_hmac_update( mbedtls_md_context_t *ctx, const unsigned char *inpu
  * \return          #MBEDTLS_ERR_MD_BAD_INPUT_DATA on parameter-verification
  *                  failure.
  */
-int mbedtls_md_hmac_finish( mbedtls_md_context_t *ctx, unsigned char *output);
+int vdb_mbedtls_md_hmac_finish( mbedtls_md_context_t *ctx, unsigned char *output);
 
 /**
  * \brief           This function prepares to authenticate a new message with
  *                  the same key as the previous HMAC operation.
  *
- *                  You may call this function after mbedtls_md_hmac_finish().
- *                  Afterwards call mbedtls_md_hmac_update() to pass the new
+ *                  You may call this function after vdb_mbedtls_md_hmac_finish().
+ *                  Afterwards call vdb_mbedtls_md_hmac_update() to pass the new
  *                  input.
  *
  * \param ctx       The message digest context containing an embedded HMAC
@@ -436,7 +436,7 @@ int mbedtls_md_hmac_finish( mbedtls_md_context_t *ctx, unsigned char *output);
  * \return          #MBEDTLS_ERR_MD_BAD_INPUT_DATA on parameter-verification
  *                  failure.
  */
-int mbedtls_md_hmac_reset( mbedtls_md_context_t *ctx );
+int vdb_mbedtls_md_hmac_reset( mbedtls_md_context_t *ctx );
 
 /**
  * \brief          This function calculates the full generic HMAC
@@ -460,12 +460,12 @@ int mbedtls_md_hmac_reset( mbedtls_md_context_t *ctx );
  * \return         #MBEDTLS_ERR_MD_BAD_INPUT_DATA on parameter-verification
  *                 failure.
  */
-int mbedtls_md_hmac( const mbedtls_md_info_t *md_info, const unsigned char *key, size_t keylen,
+int vdb_mbedtls_md_hmac( const mbedtls_md_info_t *md_info, const unsigned char *key, size_t keylen,
                 const unsigned char *input, size_t ilen,
                 unsigned char *output );
 
 /* Internal use */
-int mbedtls_md_process( mbedtls_md_context_t *ctx, const unsigned char *data );
+int vdb_mbedtls_md_process( mbedtls_md_context_t *ctx, const unsigned char *data );
 
 #ifdef __cplusplus
 }

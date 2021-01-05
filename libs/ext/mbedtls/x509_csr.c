@@ -47,9 +47,9 @@
 #else
 #include <stdlib.h>
 #include <stdio.h>
-#define mbedtls_free       free
-#define mbedtls_calloc    calloc
-#define mbedtls_snprintf   snprintf
+#define vdb_mbedtls_free       free
+#define vdb_mbedtls_calloc    calloc
+#define vdb_mbedtls_snprintf   snprintf
 #endif
 
 #if defined(MBEDTLS_FS_IO) || defined(EFIX64) || defined(EFI32)
@@ -65,7 +65,7 @@ static int x509_csr_get_version( unsigned char **p,
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
-    if( ( ret = mbedtls_asn1_get_int( p, end, ver ) ) != 0 )
+    if( ( ret = vdb_mbedtls_asn1_get_int( p, end, ver ) ) != 0 )
     {
         if( ret == MBEDTLS_ERR_ASN1_UNEXPECTED_TAG )
         {
@@ -82,7 +82,7 @@ static int x509_csr_get_version( unsigned char **p,
 /*
  * Parse a CSR in DER format
  */
-int mbedtls_x509_csr_parse_der( mbedtls_x509_csr *csr,
+int vdb_mbedtls_x509_csr_parse_der( mbedtls_x509_csr *csr,
                         const unsigned char *buf, size_t buflen )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
@@ -98,12 +98,12 @@ int mbedtls_x509_csr_parse_der( mbedtls_x509_csr *csr,
     if( csr == NULL || buf == NULL || buflen == 0 )
         return( MBEDTLS_ERR_X509_BAD_INPUT_DATA );
 
-    mbedtls_x509_csr_init( csr );
+    vdb_mbedtls_x509_csr_init( csr );
 
     /*
      * first copy the raw DER data
      */
-    p = mbedtls_calloc( 1, len = buflen );
+    p = vdb_mbedtls_calloc( 1, len = buflen );
 
     if( p == NULL )
         return( MBEDTLS_ERR_X509_ALLOC_FAILED );
@@ -121,16 +121,16 @@ int mbedtls_x509_csr_parse_der( mbedtls_x509_csr *csr,
      *       signature          BIT STRING
      *  }
      */
-    if( ( ret = mbedtls_asn1_get_tag( &p, end, &len,
+    if( ( ret = vdb_mbedtls_asn1_get_tag( &p, end, &len,
             MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE ) ) != 0 )
     {
-        mbedtls_x509_csr_free( csr );
+        vdb_mbedtls_x509_csr_free( csr );
         return( MBEDTLS_ERR_X509_INVALID_FORMAT );
     }
 
     if( len != (size_t) ( end - p ) )
     {
-        mbedtls_x509_csr_free( csr );
+        vdb_mbedtls_x509_csr_free( csr );
         return( MBEDTLS_ERR_X509_INVALID_FORMAT +
                 MBEDTLS_ERR_ASN1_LENGTH_MISMATCH );
     }
@@ -140,10 +140,10 @@ int mbedtls_x509_csr_parse_der( mbedtls_x509_csr *csr,
      */
     csr->cri.p = p;
 
-    if( ( ret = mbedtls_asn1_get_tag( &p, end, &len,
+    if( ( ret = vdb_mbedtls_asn1_get_tag( &p, end, &len,
             MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE ) ) != 0 )
     {
-        mbedtls_x509_csr_free( csr );
+        vdb_mbedtls_x509_csr_free( csr );
         return( MBEDTLS_ERR_X509_INVALID_FORMAT + ret );
     }
 
@@ -155,13 +155,13 @@ int mbedtls_x509_csr_parse_der( mbedtls_x509_csr *csr,
      */
     if( ( ret = x509_csr_get_version( &p, end, &csr->version ) ) != 0 )
     {
-        mbedtls_x509_csr_free( csr );
+        vdb_mbedtls_x509_csr_free( csr );
         return( ret );
     }
 
     if( csr->version != 0 )
     {
-        mbedtls_x509_csr_free( csr );
+        vdb_mbedtls_x509_csr_free( csr );
         return( MBEDTLS_ERR_X509_UNKNOWN_VERSION );
     }
 
@@ -172,16 +172,16 @@ int mbedtls_x509_csr_parse_der( mbedtls_x509_csr *csr,
      */
     csr->subject_raw.p = p;
 
-    if( ( ret = mbedtls_asn1_get_tag( &p, end, &len,
+    if( ( ret = vdb_mbedtls_asn1_get_tag( &p, end, &len,
             MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE ) ) != 0 )
     {
-        mbedtls_x509_csr_free( csr );
+        vdb_mbedtls_x509_csr_free( csr );
         return( MBEDTLS_ERR_X509_INVALID_FORMAT + ret );
     }
 
-    if( ( ret = mbedtls_x509_get_name( &p, p + len, &csr->subject ) ) != 0 )
+    if( ( ret = vdb_mbedtls_x509_get_name( &p, p + len, &csr->subject ) ) != 0 )
     {
-        mbedtls_x509_csr_free( csr );
+        vdb_mbedtls_x509_csr_free( csr );
         return( ret );
     }
 
@@ -190,9 +190,9 @@ int mbedtls_x509_csr_parse_der( mbedtls_x509_csr *csr,
     /*
      *  subjectPKInfo SubjectPublicKeyInfo
      */
-    if( ( ret = mbedtls_pk_parse_subpubkey( &p, end, &csr->pk ) ) != 0 )
+    if( ( ret = vdb_mbedtls_pk_parse_subpubkey( &p, end, &csr->pk ) ) != 0 )
     {
-        mbedtls_x509_csr_free( csr );
+        vdb_mbedtls_x509_csr_free( csr );
         return( ret );
     }
 
@@ -206,10 +206,10 @@ int mbedtls_x509_csr_parse_der( mbedtls_x509_csr *csr,
      *  the requester's expectations - this cannot cause a violation of our
      *  signature policies.
      */
-    if( ( ret = mbedtls_asn1_get_tag( &p, end, &len,
+    if( ( ret = vdb_mbedtls_asn1_get_tag( &p, end, &len,
             MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_CONTEXT_SPECIFIC ) ) != 0 )
     {
-        mbedtls_x509_csr_free( csr );
+        vdb_mbedtls_x509_csr_free( csr );
         return( MBEDTLS_ERR_X509_INVALID_FORMAT + ret );
     }
 
@@ -221,29 +221,29 @@ int mbedtls_x509_csr_parse_der( mbedtls_x509_csr *csr,
      *  signatureAlgorithm   AlgorithmIdentifier,
      *  signature            BIT STRING
      */
-    if( ( ret = mbedtls_x509_get_alg( &p, end, &csr->sig_oid, &sig_params ) ) != 0 )
+    if( ( ret = vdb_mbedtls_x509_get_alg( &p, end, &csr->sig_oid, &sig_params ) ) != 0 )
     {
-        mbedtls_x509_csr_free( csr );
+        vdb_mbedtls_x509_csr_free( csr );
         return( ret );
     }
 
-    if( ( ret = mbedtls_x509_get_sig_alg( &csr->sig_oid, &sig_params,
+    if( ( ret = vdb_mbedtls_x509_get_sig_alg( &csr->sig_oid, &sig_params,
                                   &csr->sig_md, &csr->sig_pk,
                                   &csr->sig_opts ) ) != 0 )
     {
-        mbedtls_x509_csr_free( csr );
+        vdb_mbedtls_x509_csr_free( csr );
         return( MBEDTLS_ERR_X509_UNKNOWN_SIG_ALG );
     }
 
-    if( ( ret = mbedtls_x509_get_sig( &p, end, &csr->sig ) ) != 0 )
+    if( ( ret = vdb_mbedtls_x509_get_sig( &p, end, &csr->sig ) ) != 0 )
     {
-        mbedtls_x509_csr_free( csr );
+        vdb_mbedtls_x509_csr_free( csr );
         return( ret );
     }
 
     if( p != end )
     {
-        mbedtls_x509_csr_free( csr );
+        vdb_mbedtls_x509_csr_free( csr );
         return( MBEDTLS_ERR_X509_INVALID_FORMAT +
                 MBEDTLS_ERR_ASN1_LENGTH_MISMATCH );
     }
@@ -254,7 +254,7 @@ int mbedtls_x509_csr_parse_der( mbedtls_x509_csr *csr,
 /*
  * Parse a CSR, allowing for PEM or raw DER encoding
  */
-int mbedtls_x509_csr_parse( mbedtls_x509_csr *csr, const unsigned char *buf, size_t buflen )
+int vdb_mbedtls_x509_csr_parse( mbedtls_x509_csr *csr, const unsigned char *buf, size_t buflen )
 {
 #if defined(MBEDTLS_PEM_PARSE_C)
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
@@ -269,17 +269,17 @@ int mbedtls_x509_csr_parse( mbedtls_x509_csr *csr, const unsigned char *buf, siz
         return( MBEDTLS_ERR_X509_BAD_INPUT_DATA );
 
 #if defined(MBEDTLS_PEM_PARSE_C)
-    /* Avoid calling mbedtls_pem_read_buffer() on non-null-terminated string */
+    /* Avoid calling vdb_mbedtls_pem_read_buffer() on non-null-terminated string */
     if( buf[buflen - 1] == '\0' )
     {
-        mbedtls_pem_init( &pem );
-        ret = mbedtls_pem_read_buffer( &pem,
+        vdb_mbedtls_pem_init( &pem );
+        ret = vdb_mbedtls_pem_read_buffer( &pem,
                                        "-----BEGIN CERTIFICATE REQUEST-----",
                                        "-----END CERTIFICATE REQUEST-----",
                                        buf, NULL, 0, &use_len );
         if( ret == MBEDTLS_ERR_PEM_NO_HEADER_FOOTER_PRESENT )
         {
-            ret = mbedtls_pem_read_buffer( &pem,
+            ret = vdb_mbedtls_pem_read_buffer( &pem,
                                            "-----BEGIN NEW CERTIFICATE REQUEST-----",
                                            "-----END NEW CERTIFICATE REQUEST-----",
                                            buf, NULL, 0, &use_len );
@@ -290,34 +290,34 @@ int mbedtls_x509_csr_parse( mbedtls_x509_csr *csr, const unsigned char *buf, siz
             /*
              * Was PEM encoded, parse the result
              */
-            ret = mbedtls_x509_csr_parse_der( csr, pem.buf, pem.buflen );
+            ret = vdb_mbedtls_x509_csr_parse_der( csr, pem.buf, pem.buflen );
         }
 
-        mbedtls_pem_free( &pem );
+        vdb_mbedtls_pem_free( &pem );
         if( ret != MBEDTLS_ERR_PEM_NO_HEADER_FOOTER_PRESENT )
             return( ret );
     }
 #endif /* MBEDTLS_PEM_PARSE_C */
-    return( mbedtls_x509_csr_parse_der( csr, buf, buflen ) );
+    return( vdb_mbedtls_x509_csr_parse_der( csr, buf, buflen ) );
 }
 
 #if defined(MBEDTLS_FS_IO)
 /*
  * Load a CSR into the structure
  */
-int mbedtls_x509_csr_parse_file( mbedtls_x509_csr *csr, const char *path )
+int vdb_mbedtls_x509_csr_parse_file( mbedtls_x509_csr *csr, const char *path )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t n;
     unsigned char *buf;
 
-    if( ( ret = mbedtls_pk_load_file( path, &buf, &n ) ) != 0 )
+    if( ( ret = vdb_mbedtls_pk_load_file( path, &buf, &n ) ) != 0 )
         return( ret );
 
-    ret = mbedtls_x509_csr_parse( csr, buf, n );
+    ret = vdb_mbedtls_x509_csr_parse( csr, buf, n );
 
-    mbedtls_platform_zeroize( buf, n );
-    mbedtls_free( buf );
+    vdb_mbedtls_platform_zeroize( buf, n );
+    vdb_mbedtls_free( buf );
 
     return( ret );
 }
@@ -328,7 +328,7 @@ int mbedtls_x509_csr_parse_file( mbedtls_x509_csr *csr, const char *path )
 /*
  * Return an informational string about the CSR.
  */
-int mbedtls_x509_csr_info( char *buf, size_t size, const char *prefix,
+int vdb_mbedtls_x509_csr_info( char *buf, size_t size, const char *prefix,
                    const mbedtls_x509_csr *csr )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
@@ -339,30 +339,30 @@ int mbedtls_x509_csr_info( char *buf, size_t size, const char *prefix,
     p = buf;
     n = size;
 
-    ret = mbedtls_snprintf( p, n, "%sCSR version   : %d",
+    ret = vdb_mbedtls_snprintf( p, n, "%sCSR version   : %d",
                                prefix, csr->version );
     MBEDTLS_X509_SAFE_SNPRINTF;
 
-    ret = mbedtls_snprintf( p, n, "\n%ssubject name  : ", prefix );
+    ret = vdb_mbedtls_snprintf( p, n, "\n%ssubject name  : ", prefix );
     MBEDTLS_X509_SAFE_SNPRINTF;
-    ret = mbedtls_x509_dn_gets( p, n, &csr->subject );
-    MBEDTLS_X509_SAFE_SNPRINTF;
-
-    ret = mbedtls_snprintf( p, n, "\n%ssigned using  : ", prefix );
+    ret = vdb_mbedtls_x509_dn_gets( p, n, &csr->subject );
     MBEDTLS_X509_SAFE_SNPRINTF;
 
-    ret = mbedtls_x509_sig_alg_gets( p, n, &csr->sig_oid, csr->sig_pk, csr->sig_md,
+    ret = vdb_mbedtls_snprintf( p, n, "\n%ssigned using  : ", prefix );
+    MBEDTLS_X509_SAFE_SNPRINTF;
+
+    ret = vdb_mbedtls_x509_sig_alg_gets( p, n, &csr->sig_oid, csr->sig_pk, csr->sig_md,
                              csr->sig_opts );
     MBEDTLS_X509_SAFE_SNPRINTF;
 
-    if( ( ret = mbedtls_x509_key_size_helper( key_size_str, BEFORE_COLON,
-                                      mbedtls_pk_get_name( &csr->pk ) ) ) != 0 )
+    if( ( ret = vdb_mbedtls_x509_key_size_helper( key_size_str, BEFORE_COLON,
+                                      vdb_mbedtls_pk_get_name( &csr->pk ) ) ) != 0 )
     {
         return( ret );
     }
 
-    ret = mbedtls_snprintf( p, n, "\n%s%-" BC "s: %d bits\n", prefix, key_size_str,
-                          (int) mbedtls_pk_get_bitlen( &csr->pk ) );
+    ret = vdb_mbedtls_snprintf( p, n, "\n%s%-" BC "s: %d bits\n", prefix, key_size_str,
+                          (int) vdb_mbedtls_pk_get_bitlen( &csr->pk ) );
     MBEDTLS_X509_SAFE_SNPRINTF;
 
     return( (int) ( size - n ) );
@@ -371,7 +371,7 @@ int mbedtls_x509_csr_info( char *buf, size_t size, const char *prefix,
 /*
  * Initialize a CSR
  */
-void mbedtls_x509_csr_init( mbedtls_x509_csr *csr )
+void vdb_mbedtls_x509_csr_init( mbedtls_x509_csr *csr )
 {
     memset( csr, 0, sizeof(mbedtls_x509_csr) );
 }
@@ -379,7 +379,7 @@ void mbedtls_x509_csr_init( mbedtls_x509_csr *csr )
 /*
  * Unallocate all CSR data
  */
-void mbedtls_x509_csr_free( mbedtls_x509_csr *csr )
+void vdb_mbedtls_x509_csr_free( mbedtls_x509_csr *csr )
 {
     mbedtls_x509_name *name_cur;
     mbedtls_x509_name *name_prv;
@@ -387,10 +387,10 @@ void mbedtls_x509_csr_free( mbedtls_x509_csr *csr )
     if( csr == NULL )
         return;
 
-    mbedtls_pk_free( &csr->pk );
+    vdb_mbedtls_pk_free( &csr->pk );
 
 #if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
-    mbedtls_free( csr->sig_opts );
+    vdb_mbedtls_free( csr->sig_opts );
 #endif
 
     name_cur = csr->subject.next;
@@ -398,17 +398,17 @@ void mbedtls_x509_csr_free( mbedtls_x509_csr *csr )
     {
         name_prv = name_cur;
         name_cur = name_cur->next;
-        mbedtls_platform_zeroize( name_prv, sizeof( mbedtls_x509_name ) );
-        mbedtls_free( name_prv );
+        vdb_mbedtls_platform_zeroize( name_prv, sizeof( mbedtls_x509_name ) );
+        vdb_mbedtls_free( name_prv );
     }
 
     if( csr->raw.p != NULL )
     {
-        mbedtls_platform_zeroize( csr->raw.p, csr->raw.len );
-        mbedtls_free( csr->raw.p );
+        vdb_mbedtls_platform_zeroize( csr->raw.p, csr->raw.len );
+        vdb_mbedtls_free( csr->raw.p );
     }
 
-    mbedtls_platform_zeroize( csr, sizeof( mbedtls_x509_csr ) );
+    vdb_mbedtls_platform_zeroize( csr, sizeof( mbedtls_x509_csr ) );
 }
 
 #endif /* MBEDTLS_X509_CSR_PARSE_C */

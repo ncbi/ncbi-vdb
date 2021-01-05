@@ -136,19 +136,19 @@
  * \def MBEDTLS_HAVE_TIME_DATE
  *
  * System has time.h, time(), and an implementation for
- * mbedtls_platform_gmtime_r() (see below).
+ * vdb_mbedtls_platform_gmtime_r() (see below).
  * The time needs to be correct (not necessarily very accurate, but at least
  * the date should be correct). This is used to verify the validity period of
  * X.509 certificates.
  *
  * Comment if your system does not have a correct clock.
  *
- * \note mbedtls_platform_gmtime_r() is an abstraction in platform_util.h that
+ * \note vdb_mbedtls_platform_gmtime_r() is an abstraction in platform_util.h that
  * behaves similarly to the gmtime_r() function from the C standard. Refer to
- * the documentation for mbedtls_platform_gmtime_r() for more information.
+ * the documentation for vdb_mbedtls_platform_gmtime_r() for more information.
  *
  * \note It is possible to configure an implementation for
- * mbedtls_platform_gmtime_r() at compile-time by using the macro
+ * vdb_mbedtls_platform_gmtime_r() at compile-time by using the macro
  * MBEDTLS_PLATFORM_GMTIME_R_ALT.
  */
 #define MBEDTLS_HAVE_TIME_DATE
@@ -288,9 +288,9 @@
  * When defining this flag, you also need to arrange a definition for
  * MBEDTLS_PARAM_FAILED(). You can do this by any of the following methods:
  * - By default, the library defines MBEDTLS_PARAM_FAILED() to call a
- *   function mbedtls_param_failed(), but the library does not define this
+ *   function vdb_mbedtls_param_failed(), but the library does not define this
  *   function. If you do not make any other arrangements, you must provide
- *   the function mbedtls_param_failed() in your application.
+ *   the function vdb_mbedtls_param_failed() in your application.
  *   See `platform_util.h` for its prototype.
  * - If you enable the macro #MBEDTLS_CHECK_PARAMS_ASSERT, then the
  *   library defines MBEDTLS_PARAM_FAILED(\c cond) to be `assert(cond)`.
@@ -314,7 +314,7 @@
  * `assert`. This macro is only used if #MBEDTLS_CHECK_PARAMS is defined.
  *
  * If this macro is not defined, then MBEDTLS_PARAM_FAILED() defaults to
- * calling a function mbedtls_param_failed(). See the documentation of
+ * calling a function vdb_mbedtls_param_failed(). See the documentation of
  * #MBEDTLS_CHECK_PARAMS for details.
  *
  * Uncomment to allow MBEDTLS_PARAM_FAILED() to call `assert`.
@@ -334,8 +334,8 @@
 /**
  * \def MBEDTLS_TIMING_ALT
  *
- * Uncomment to provide your own alternate implementation for mbedtls_timing_hardclock(),
- * mbedtls_timing_get_timer(), mbedtls_set_alarm(), mbedtls_set/get_delay()
+ * Uncomment to provide your own alternate implementation for vdb_mbedtls_timing_hardclock(),
+ * vdb_mbedtls_timing_get_timer(), vdb_mbedtls_set_alarm(), mbedtls_set/get_delay()
  *
  * Only works if you have MBEDTLS_TIMING_C enabled.
  *
@@ -416,8 +416,8 @@
  * used, in contrast to the MBEDTLS__MODULE_NAME__ALT flags.
  *
  * Example: In case you uncomment MBEDTLS_SHA256_PROCESS_ALT, mbed TLS will
- * no longer provide the mbedtls_sha1_process() function, but it will still provide
- * the other function (using your mbedtls_sha1_process() function) and the definition
+ * no longer provide the vdb_mbedtls_sha1_process() function, but it will still provide
+ * the other function (using your vdb_mbedtls_sha1_process() function) and the definition
  * of mbedtls_sha1_context, so your implementation of mbedtls_sha1_process must be compatible
  * with this definition.
  *
@@ -441,12 +441,12 @@
  *
  * \warning   If both MBEDTLS_ECDSA_SIGN_ALT and MBEDTLS_ECDSA_DETERMINISTIC are
  *            enabled, then the deterministic ECDH signature functions pass the
- *            the static HMAC-DRBG as RNG to mbedtls_ecdsa_sign(). Therefore
+ *            the static HMAC-DRBG as RNG to vdb_mbedtls_ecdsa_sign(). Therefore
  *            alternative implementations should use the RNG only for generating
  *            the ephemeral key and nothing else. If this is not possible, then
  *            MBEDTLS_ECDSA_DETERMINISTIC should be disabled and an alternative
- *            implementation should be provided for mbedtls_ecdsa_sign_det_ext()
- *            (and for mbedtls_ecdsa_sign_det() too if backward compatibility is
+ *            implementation should be provided for vdb_mbedtls_ecdsa_sign_det_ext()
+ *            (and for vdb_mbedtls_ecdsa_sign_det() too if backward compatibility is
  *            desirable).
  *
  */
@@ -486,10 +486,10 @@
  *
  * Any of these options become available by defining MBEDTLS_ECP_INTERNAL_ALT
  * and implementing the following functions:
- *      unsigned char mbedtls_internal_ecp_grp_capable(
+ *      unsigned char vdb_mbedtls_internal_ecp_grp_capable(
  *          const mbedtls_ecp_group *grp )
- *      int  mbedtls_internal_ecp_init( const mbedtls_ecp_group *grp )
- *      void mbedtls_internal_ecp_free( const mbedtls_ecp_group *grp )
+ *      int  vdb_mbedtls_internal_ecp_init( const mbedtls_ecp_group *grp )
+ *      void vdb_mbedtls_internal_ecp_free( const mbedtls_ecp_group *grp )
  * The mbedtls_internal_ecp_grp_capable function should return 1 if the
  * replacement functions implement arithmetic for the given group and 0
  * otherwise.
@@ -546,7 +546,7 @@
  * Uncomment this macro to let mbed TLS use your own implementation of a
  * hardware entropy collector.
  *
- * Your function must be called \c mbedtls_hardware_poll(), have the same
+ * Your function must be called \c vdb_mbedtls_hardware_poll(), have the same
  * prototype as declared in entropy_poll.h, and accept NULL as first argument.
  *
  * Uncomment to use your own hardware entropy collector.
@@ -718,8 +718,8 @@
  *
  * Remove RC4 ciphersuites by default in SSL / TLS.
  * This flag removes the ciphersuites based on RC4 from the default list as
- * returned by mbedtls_ssl_list_ciphersuites(). However, it is still possible to
- * enable (some of) them with mbedtls_ssl_conf_ciphersuites() by including them
+ * returned by vdb_mbedtls_ssl_list_ciphersuites(). However, it is still possible to
+ * enable (some of) them with vdb_mbedtls_ssl_conf_ciphersuites() by including them
  * explicitly.
  *
  * Uncomment this macro to remove RC4 ciphersuites by default.
@@ -731,8 +731,8 @@
  *
  * Remove 3DES ciphersuites by default in SSL / TLS.
  * This flag removes the ciphersuites based on 3DES from the default list as
- * returned by mbedtls_ssl_list_ciphersuites(). However, it is still possible
- * to enable (some of) them with mbedtls_ssl_conf_ciphersuites() by including
+ * returned by vdb_mbedtls_ssl_list_ciphersuites(). However, it is still possible
+ * to enable (some of) them with vdb_mbedtls_ssl_conf_ciphersuites() by including
  * them explicitly.
  *
  * A man-in-the-browser attacker can recover authentication tokens sent through
@@ -784,7 +784,7 @@
 /**
  * \def MBEDTLS_ECP_NO_INTERNAL_RNG
  *
- * When this option is disabled, mbedtls_ecp_mul() will make use of an
+ * When this option is disabled, vdb_mbedtls_ecp_mul() will make use of an
  * internal RNG when called with a NULL \c f_rng argument, in order to protect
  * against some side-channel attacks.
  *
@@ -812,9 +812,9 @@
  * #MBEDTLS_ERR_ECP_IN_PROGRESS (or, for functions in the SSL module,
  * #MBEDTLS_ERR_SSL_CRYPTO_IN_PROGRESS) and then be called later again in
  * order to further progress and eventually complete their operation. This is
- * controlled through mbedtls_ecp_set_max_ops() which limits the maximum
+ * controlled through vdb_mbedtls_ecp_set_max_ops() which limits the maximum
  * number of ECC operations a function may perform before pausing; see
- * mbedtls_ecp_set_max_ops() for more information.
+ * vdb_mbedtls_ecp_set_max_ops() for more information.
  *
  * This is useful in non-threaded environments if you want to avoid blocking
  * for too long on ECC (and, hence, X.509 or SSL/TLS) operations.
@@ -1162,15 +1162,15 @@
 /**
  * \def MBEDTLS_ERROR_STRERROR_DUMMY
  *
- * Enable a dummy error function to make use of mbedtls_strerror() in
+ * Enable a dummy error function to make use of vdb_mbedtls_strerror() in
  * third party libraries easier when MBEDTLS_ERROR_C is disabled
  * (no effect when MBEDTLS_ERROR_C is enabled).
  *
  * You can safely disable this if MBEDTLS_ERROR_C is enabled, or if you're
- * not using mbedtls_strerror() or error_strerror() in your application.
+ * not using vdb_mbedtls_strerror() or error_strerror() in your application.
  *
  * Disable if you run into name conflicts and want to really remove the
- * mbedtls_strerror()
+ * vdb_mbedtls_strerror()
  */
 #define MBEDTLS_ERROR_STRERROR_DUMMY
 
@@ -1391,7 +1391,7 @@
  * The default implementation is meant to be a reasonnable compromise between
  * performance and size. This version optimizes more aggressively for size at
  * the expense of performance. Eg on Cortex-M4 it reduces the size of
- * mbedtls_sha256_process() from ~2KB to ~0.5KB for a performance hit of about
+ * vdb_mbedtls_sha256_process() from ~2KB to ~0.5KB for a performance hit of about
  * 30%.
  *
  * Uncomment to enable the smaller implementation of SHA256.
@@ -1437,12 +1437,12 @@
 /**
  * \def MBEDTLS_SSL_RECORD_CHECKING
  *
- * Enable the function mbedtls_ssl_check_record() which can be used to check
+ * Enable the function vdb_mbedtls_ssl_check_record() which can be used to check
  * the validity and authenticity of an incoming record, to verify that it has
  * not been seen before. These checks are performed without modifying the
  * externally visible state of the SSL context.
  *
- * See mbedtls_ssl_check_record() for more information.
+ * See vdb_mbedtls_ssl_check_record() for more information.
  *
  * Uncomment to enable support for record checking.
  */
@@ -1491,7 +1491,7 @@
  * \def MBEDTLS_SSL_CONTEXT_SERIALIZATION
  *
  * Enable serialization of the TLS context structures, through use of the
- * functions mbedtls_ssl_context_save() and mbedtls_ssl_context_load().
+ * functions vdb_mbedtls_ssl_context_save() and vdb_mbedtls_ssl_context_load().
  *
  * This pair of functions allows one side of a connection to serialize the
  * context associated with the connection, then free or re-use that context
@@ -1587,13 +1587,13 @@
 /**
  * \def MBEDTLS_SSL_KEEP_PEER_CERTIFICATE
  *
- * This option controls the availability of the API mbedtls_ssl_get_peer_cert()
+ * This option controls the availability of the API vdb_mbedtls_ssl_get_peer_cert()
  * giving access to the peer's certificate after completion of the handshake.
  *
- * Unless you need mbedtls_ssl_peer_cert() in your application, it is
+ * Unless you need vdb_mbedtls_ssl_peer_cert() in your application, it is
  * recommended to disable this option for reduced RAM usage.
  *
- * \note If this option is disabled, mbedtls_ssl_get_peer_cert() is still
+ * \note If this option is disabled, vdb_mbedtls_ssl_get_peer_cert() is still
  *       defined, but always returns \c NULL.
  *
  * \note This option has no influence on the protection against the
@@ -1788,7 +1788,7 @@
  *           MBEDTLS_SSL_PROTO_DTLS
  *
  * \warning Disabling this is often a security risk!
- * See mbedtls_ssl_conf_dtls_anti_replay() for details.
+ * See vdb_mbedtls_ssl_conf_dtls_anti_replay() for details.
  *
  * Comment this to disable anti-replay in DTLS.
  */
@@ -1826,13 +1826,13 @@
  * (see Section 5 of RFC 5764), are not handled by this feature.
  * Instead, after successful completion of a handshake negotiating
  * the use of DTLS-SRTP, the extended key exporter API
- * mbedtls_ssl_conf_export_keys_ext_cb() should be used to implement
+ * vdb_mbedtls_ssl_conf_export_keys_ext_cb() should be used to implement
  * the key exporter described in Section 4.2 of RFC 5764 and RFC 5705
  * (this is implemented in the SSL example programs).
  * The resulting key should then be passed to an SRTP stack.
  *
  * Setting this option enables the runtime API
- * mbedtls_ssl_conf_dtls_srtp_protection_profiles()
+ * vdb_mbedtls_ssl_conf_dtls_srtp_protection_profiles()
  * through which the supported DTLS-SRTP protection
  * profiles can be configured. You must call this API at
  * runtime if you wish to negotiate the use of DTLS-SRTP.
@@ -1864,7 +1864,7 @@
  *
  * Enable support for a limit of records with bad MAC.
  *
- * See mbedtls_ssl_conf_dtls_badmac_limit().
+ * See vdb_mbedtls_ssl_conf_dtls_badmac_limit().
  *
  * Requires: MBEDTLS_SSL_PROTO_DTLS
  */
@@ -2073,7 +2073,7 @@
  *
  * Allow run-time checking of compile-time enabled features. Thus allowing users
  * to check at run-time if the library is for instance compiled with threading
- * support via mbedtls_version_check_feature().
+ * support via vdb_mbedtls_version_check_feature().
  *
  * Requires: MBEDTLS_VERSION_C
  *
@@ -2725,7 +2725,7 @@
  * Module:  library/error.c
  * Caller:
  *
- * This module enables mbedtls_strerror().
+ * This module enables vdb_mbedtls_strerror().
  */
 #define MBEDTLS_ERROR_C
 
@@ -2899,7 +2899,7 @@
  *
  * \note This module only works on POSIX/Unix (including Linux, BSD and OS X)
  * and Windows. For other platforms, you'll want to disable it, and write your
- * own networking callbacks to be passed to \c mbedtls_ssl_set_bio().
+ * own networking callbacks to be passed to \c vdb_mbedtls_ssl_set_bio().
  *
  * \note See also our Knowledge Base article about porting to a new
  * environment:
@@ -3353,7 +3353,7 @@
  * \note The provided implementation only works on POSIX/Unix (including Linux,
  * BSD and OS X) and Windows. On other platforms, you can either disable that
  * module and provide your own implementations of the callbacks needed by
- * \c mbedtls_ssl_set_timer_cb() for DTLS, or leave it enabled and provide
+ * \c vdb_mbedtls_ssl_set_timer_cb() for DTLS, or leave it enabled and provide
  * your own implementation of the whole module by setting
  * \c MBEDTLS_TIMING_ALT in the current file.
  *
@@ -3531,7 +3531,7 @@
 /* Entropy options */
 //#define MBEDTLS_ENTROPY_MAX_SOURCES                20 /**< Maximum number of sources supported */
 //#define MBEDTLS_ENTROPY_MAX_GATHER                128 /**< Maximum amount requested from entropy sources */
-//#define MBEDTLS_ENTROPY_MIN_HARDWARE               32 /**< Default minimum number of bytes required for the hardware entropy source mbedtls_hardware_poll() before entropy is released */
+//#define MBEDTLS_ENTROPY_MIN_HARDWARE               32 /**< Default minimum number of bytes required for the hardware entropy source vdb_mbedtls_hardware_poll() before entropy is released */
 
 /* Memory buffer allocator options */
 //#define MBEDTLS_MEMORY_ALIGN_MULTIPLE      4 /**< Align on multiples of this value */
@@ -3548,8 +3548,8 @@
 //#define MBEDTLS_PLATFORM_STD_SNPRINTF    snprintf /**< Default snprintf to use, can be undefined */
 //#define MBEDTLS_PLATFORM_STD_EXIT_SUCCESS       0 /**< Default exit value to use, can be undefined */
 //#define MBEDTLS_PLATFORM_STD_EXIT_FAILURE       1 /**< Default exit value to use, can be undefined */
-//#define MBEDTLS_PLATFORM_STD_NV_SEED_READ   mbedtls_platform_std_nv_seed_read /**< Default nv_seed_read function to use, can be undefined */
-//#define MBEDTLS_PLATFORM_STD_NV_SEED_WRITE  mbedtls_platform_std_nv_seed_write /**< Default nv_seed_write function to use, can be undefined */
+//#define MBEDTLS_PLATFORM_STD_NV_SEED_READ   vdb_mbedtls_platform_std_nv_seed_read /**< Default nv_seed_read function to use, can be undefined */
+//#define MBEDTLS_PLATFORM_STD_NV_SEED_WRITE  vdb_mbedtls_platform_std_nv_seed_write /**< Default nv_seed_write function to use, can be undefined */
 //#define MBEDTLS_PLATFORM_STD_NV_SEED_FILE  "seedfile" /**< Seed file to read/write with default implementation */
 
 /* To Use Function Macros MBEDTLS_PLATFORM_C must be enabled */
@@ -3564,8 +3564,8 @@
 /* Note: your snprintf must correctly zero-terminate the buffer! */
 //#define MBEDTLS_PLATFORM_SNPRINTF_MACRO    snprintf /**< Default snprintf macro to use, can be undefined */
 //#define MBEDTLS_PLATFORM_VSNPRINTF_MACRO    vsnprintf /**< Default vsnprintf macro to use, can be undefined */
-//#define MBEDTLS_PLATFORM_NV_SEED_READ_MACRO   mbedtls_platform_std_nv_seed_read /**< Default nv_seed_read function to use, can be undefined */
-//#define MBEDTLS_PLATFORM_NV_SEED_WRITE_MACRO  mbedtls_platform_std_nv_seed_write /**< Default nv_seed_write function to use, can be undefined */
+//#define MBEDTLS_PLATFORM_NV_SEED_READ_MACRO   vdb_mbedtls_platform_std_nv_seed_read /**< Default nv_seed_read function to use, can be undefined */
+//#define MBEDTLS_PLATFORM_NV_SEED_WRITE_MACRO  vdb_mbedtls_platform_std_nv_seed_write /**< Default nv_seed_write function to use, can be undefined */
 
 /**
  * \brief       This macro is invoked by the library when an invalid parameter
@@ -3576,13 +3576,13 @@
  *              a default definition. If the macro #MBEDTLS_CHECK_PARAMS_ASSERT
  *              is defined, the default definition is `assert(cond)`,
  *              otherwise the default definition calls a function
- *              mbedtls_param_failed(). This function is declared in
+ *              vdb_mbedtls_param_failed(). This function is declared in
  *              `platform_util.h` for the benefit of the library, but
  *              you need to define in your application.
  *
  *              When you define this here, this replaces the default
  *              definition in platform_util.h (which no longer declares the
- *              function mbedtls_param_failed()) and it is your responsibility
+ *              function vdb_mbedtls_param_failed()) and it is your responsibility
  *              to make sure this macro expands to something suitable (in
  *              particular, that all the necessary declarations are visible
  *              from within the library - you can ensure that by providing
@@ -3803,18 +3803,18 @@
 
 /**
  * Uncomment the macro to let mbed TLS use your alternate implementation of
- * mbedtls_platform_zeroize(). This replaces the default implementation in
+ * vdb_mbedtls_platform_zeroize(). This replaces the default implementation in
  * platform_util.c.
  *
- * mbedtls_platform_zeroize() is a widely used function across the library to
+ * vdb_mbedtls_platform_zeroize() is a widely used function across the library to
  * zero a block of memory. The implementation is expected to be secure in the
  * sense that it has been written to prevent the compiler from removing calls
- * to mbedtls_platform_zeroize() as part of redundant code elimination
+ * to vdb_mbedtls_platform_zeroize() as part of redundant code elimination
  * optimizations. However, it is difficult to guarantee that calls to
- * mbedtls_platform_zeroize() will not be optimized by the compiler as older
+ * vdb_mbedtls_platform_zeroize() will not be optimized by the compiler as older
  * versions of the C language standards do not provide a secure implementation
  * of memset(). Therefore, MBEDTLS_PLATFORM_ZEROIZE_ALT enables users to
- * configure their own implementation of mbedtls_platform_zeroize(), for
+ * configure their own implementation of vdb_mbedtls_platform_zeroize(), for
  * example by using directives specific to their compiler, features from newer
  * C standards (e.g using memset_s() in C11) or calling a secure memset() from
  * their system (e.g explicit_bzero() in BSD).
@@ -3823,19 +3823,19 @@
 
 /**
  * Uncomment the macro to let Mbed TLS use your alternate implementation of
- * mbedtls_platform_gmtime_r(). This replaces the default implementation in
+ * vdb_mbedtls_platform_gmtime_r(). This replaces the default implementation in
  * platform_util.c.
  *
  * gmtime() is not a thread-safe function as defined in the C standard. The
  * library will try to use safer implementations of this function, such as
  * gmtime_r() when available. However, if Mbed TLS cannot identify the target
- * system, the implementation of mbedtls_platform_gmtime_r() will default to
+ * system, the implementation of vdb_mbedtls_platform_gmtime_r() will default to
  * using the standard gmtime(). In this case, calls from the library to
  * gmtime() will be guarded by the global mutex mbedtls_threading_gmtime_mutex
  * if MBEDTLS_THREADING_C is enabled. We recommend that calls from outside the
  * library are also guarded with this mutex to avoid race conditions. However,
  * if the macro MBEDTLS_PLATFORM_GMTIME_R_ALT is defined, Mbed TLS will
- * unconditionally use the implementation for mbedtls_platform_gmtime_r()
+ * unconditionally use the implementation for vdb_mbedtls_platform_gmtime_r()
  * supplied at compile time.
  */
 //#define MBEDTLS_PLATFORM_GMTIME_R_ALT

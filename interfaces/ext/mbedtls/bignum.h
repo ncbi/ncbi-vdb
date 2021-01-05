@@ -83,8 +83,8 @@
 #define MBEDTLS_MPI_MAX_BITS                              ( 8 * MBEDTLS_MPI_MAX_SIZE )    /**< Maximum number of bits for usable MPIs. */
 
 /*
- * When reading from files with mbedtls_mpi_read_file() and writing to files with
- * mbedtls_mpi_write_file() the buffer should have space
+ * When reading from files with vdb_mbedtls_mpi_read_file() and writing to files with
+ * vdb_mbedtls_mpi_write_file() the buffer should have space
  * for a (short) label, the MPI (in the provided radix), the newline
  * characters and the '\0'.
  *
@@ -197,7 +197,7 @@ mbedtls_mpi;
  *
  * \param X         The MPI context to initialize. This must not be \c NULL.
  */
-void mbedtls_mpi_init( mbedtls_mpi *X );
+void vdb_mbedtls_mpi_init( mbedtls_mpi *X );
 
 /**
  * \brief          This function frees the components of an MPI context.
@@ -206,7 +206,7 @@ void mbedtls_mpi_init( mbedtls_mpi *X );
  *                 in which case this function is a no-op. If it is
  *                 not \c NULL, it must point to an initialized MPI.
  */
-void mbedtls_mpi_free( mbedtls_mpi *X );
+void vdb_mbedtls_mpi_free( mbedtls_mpi *X );
 
 /**
  * \brief          Enlarge an MPI to the specified number of limbs.
@@ -221,7 +221,7 @@ void mbedtls_mpi_free( mbedtls_mpi *X );
  * \return         #MBEDTLS_ERR_MPI_ALLOC_FAILED if memory allocation failed.
  * \return         Another negative error code on other kinds of failure.
  */
-int mbedtls_mpi_grow( mbedtls_mpi *X, size_t nblimbs );
+int vdb_mbedtls_mpi_grow( mbedtls_mpi *X, size_t nblimbs );
 
 /**
  * \brief          This function resizes an MPI downwards, keeping at least the
@@ -238,7 +238,7 @@ int mbedtls_mpi_grow( mbedtls_mpi *X, size_t nblimbs );
  *                 (this can only happen when resizing up).
  * \return         Another negative error code on other kinds of failure.
  */
-int mbedtls_mpi_shrink( mbedtls_mpi *X, size_t nblimbs );
+int vdb_mbedtls_mpi_shrink( mbedtls_mpi *X, size_t nblimbs );
 
 /**
  * \brief          Make a copy of an MPI.
@@ -253,7 +253,7 @@ int mbedtls_mpi_shrink( mbedtls_mpi *X, size_t nblimbs );
  * \return         #MBEDTLS_ERR_MPI_ALLOC_FAILED if memory allocation failed.
  * \return         Another negative error code on other kinds of failure.
  */
-int mbedtls_mpi_copy( mbedtls_mpi *X, const mbedtls_mpi *Y );
+int vdb_mbedtls_mpi_copy( mbedtls_mpi *X, const mbedtls_mpi *Y );
 
 /**
  * \brief          Swap the contents of two MPIs.
@@ -261,7 +261,7 @@ int mbedtls_mpi_copy( mbedtls_mpi *X, const mbedtls_mpi *Y );
  * \param X        The first MPI. It must be initialized.
  * \param Y        The second MPI. It must be initialized.
  */
-void mbedtls_mpi_swap( mbedtls_mpi *X, mbedtls_mpi *Y );
+void vdb_mbedtls_mpi_swap( mbedtls_mpi *X, mbedtls_mpi *Y );
 
 /**
  * \brief          Perform a safe conditional copy of MPI which doesn't
@@ -277,7 +277,7 @@ void mbedtls_mpi_swap( mbedtls_mpi *X, mbedtls_mpi *Y );
  *                 * \c 0: Keep the original value of \p X.
  *
  * \note           This function is equivalent to
- *                      `if( assign ) mbedtls_mpi_copy( X, Y );`
+ *                      `if( assign ) vdb_mbedtls_mpi_copy( X, Y );`
  *                 except that it avoids leaking any information about whether
  *                 the assignment was done or not (the above code may leak
  *                 information through branch prediction and/or memory access
@@ -287,7 +287,7 @@ void mbedtls_mpi_swap( mbedtls_mpi *X, mbedtls_mpi *Y );
  * \return         #MBEDTLS_ERR_MPI_ALLOC_FAILED if memory allocation failed.
  * \return         Another negative error code on other kinds of failure.
  */
-int mbedtls_mpi_safe_cond_assign( mbedtls_mpi *X, const mbedtls_mpi *Y, unsigned char assign );
+int vdb_mbedtls_mpi_safe_cond_assign( mbedtls_mpi *X, const mbedtls_mpi *Y, unsigned char assign );
 
 /**
  * \brief          Perform a safe conditional swap which doesn't
@@ -301,7 +301,7 @@ int mbedtls_mpi_safe_cond_assign( mbedtls_mpi *X, const mbedtls_mpi *Y, unsigned
  *                 * \c 0: Keep the original values of \p X and \p Y.
  *
  * \note           This function is equivalent to
- *                      if( assign ) mbedtls_mpi_swap( X, Y );
+ *                      if( assign ) vdb_mbedtls_mpi_swap( X, Y );
  *                 except that it avoids leaking any information about whether
  *                 the assignment was done or not (the above code may leak
  *                 information through branch prediction and/or memory access
@@ -312,7 +312,7 @@ int mbedtls_mpi_safe_cond_assign( mbedtls_mpi *X, const mbedtls_mpi *Y, unsigned
  * \return         Another negative error code on other kinds of failure.
  *
  */
-int mbedtls_mpi_safe_cond_swap( mbedtls_mpi *X, mbedtls_mpi *Y, unsigned char assign );
+int vdb_mbedtls_mpi_safe_cond_swap( mbedtls_mpi *X, mbedtls_mpi *Y, unsigned char assign );
 
 /**
  * \brief          Store integer value in MPI.
@@ -324,7 +324,7 @@ int mbedtls_mpi_safe_cond_swap( mbedtls_mpi *X, mbedtls_mpi *Y, unsigned char as
  * \return         #MBEDTLS_ERR_MPI_ALLOC_FAILED if memory allocation failed.
  * \return         Another negative error code on other kinds of failure.
  */
-int mbedtls_mpi_lset( mbedtls_mpi *X, mbedtls_mpi_sint z );
+int vdb_mbedtls_mpi_lset( mbedtls_mpi *X, mbedtls_mpi_sint z );
 
 /**
  * \brief          Get a specific bit from an MPI.
@@ -336,7 +336,7 @@ int mbedtls_mpi_lset( mbedtls_mpi *X, mbedtls_mpi_sint z );
  *                 of \c X is unset or set.
  * \return         A negative error code on failure.
  */
-int mbedtls_mpi_get_bit( const mbedtls_mpi *X, size_t pos );
+int vdb_mbedtls_mpi_get_bit( const mbedtls_mpi *X, size_t pos );
 
 /**
  * \brief          Modify a specific bit in an MPI.
@@ -353,7 +353,7 @@ int mbedtls_mpi_get_bit( const mbedtls_mpi *X, size_t pos );
  * \return         #MBEDTLS_ERR_MPI_ALLOC_FAILED if memory allocation failed.
  * \return         Another negative error code on other kinds of failure.
  */
-int mbedtls_mpi_set_bit( mbedtls_mpi *X, size_t pos, unsigned char val );
+int vdb_mbedtls_mpi_set_bit( mbedtls_mpi *X, size_t pos, unsigned char val );
 
 /**
  * \brief          Return the number of bits of value \c 0 before the
@@ -367,7 +367,7 @@ int mbedtls_mpi_set_bit( mbedtls_mpi *X, size_t pos, unsigned char val );
  * \return         The number of bits of value \c 0 before the least significant
  *                 bit of value \c 1 in \p X.
  */
-size_t mbedtls_mpi_lsb( const mbedtls_mpi *X );
+size_t vdb_mbedtls_mpi_lsb( const mbedtls_mpi *X );
 
 /**
  * \brief          Return the number of bits up to and including the most
@@ -381,7 +381,7 @@ size_t mbedtls_mpi_lsb( const mbedtls_mpi *X );
  * \return         The number of bits up to and including the most
  *                 significant bit of value \c 1.
  */
-size_t mbedtls_mpi_bitlen( const mbedtls_mpi *X );
+size_t vdb_mbedtls_mpi_bitlen( const mbedtls_mpi *X );
 
 /**
  * \brief          Return the total size of an MPI value in bytes.
@@ -396,7 +396,7 @@ size_t mbedtls_mpi_bitlen( const mbedtls_mpi *X );
  * \return         The least number of bytes capable of storing
  *                 the absolute value of \p X.
  */
-size_t mbedtls_mpi_size( const mbedtls_mpi *X );
+size_t vdb_mbedtls_mpi_size( const mbedtls_mpi *X );
 
 /**
  * \brief          Import an MPI from an ASCII string.
@@ -408,7 +408,7 @@ size_t mbedtls_mpi_size( const mbedtls_mpi *X );
  * \return         \c 0 if successful.
  * \return         A negative error code on failure.
  */
-int mbedtls_mpi_read_string( mbedtls_mpi *X, int radix, const char *s );
+int vdb_mbedtls_mpi_read_string( mbedtls_mpi *X, int radix, const char *s );
 
 /**
  * \brief          Export an MPI to an ASCII string.
@@ -432,7 +432,7 @@ int mbedtls_mpi_read_string( mbedtls_mpi *X, int radix, const char *s );
  *                 size of \p buf required for a successful call.
  * \return         Another negative error code on different kinds of failure.
  */
-int mbedtls_mpi_write_string( const mbedtls_mpi *X, int radix,
+int vdb_mbedtls_mpi_write_string( const mbedtls_mpi *X, int radix,
                               char *buf, size_t buflen, size_t *olen );
 
 #if defined(MBEDTLS_FS_IO)
@@ -457,7 +457,7 @@ int mbedtls_mpi_write_string( const mbedtls_mpi *X, int radix,
  *                 is too small.
  * \return         Another negative error code on failure.
  */
-int mbedtls_mpi_read_file( mbedtls_mpi *X, int radix, FILE *fin );
+int vdb_mbedtls_mpi_read_file( mbedtls_mpi *X, int radix, FILE *fin );
 
 /**
  * \brief          Export an MPI into an opened file.
@@ -474,7 +474,7 @@ int mbedtls_mpi_read_file( mbedtls_mpi *X, int radix, FILE *fin );
  * \return         \c 0 if successful.
  * \return         A negative error code on failure.
  */
-int mbedtls_mpi_write_file( const char *p, const mbedtls_mpi *X,
+int vdb_mbedtls_mpi_write_file( const char *p, const mbedtls_mpi *X,
                             int radix, FILE *fout );
 #endif /* MBEDTLS_FS_IO */
 
@@ -490,7 +490,7 @@ int mbedtls_mpi_write_file( const char *p, const mbedtls_mpi *X,
  * \return         #MBEDTLS_ERR_MPI_ALLOC_FAILED if memory allocation failed.
  * \return         Another negative error code on different kinds of failure.
  */
-int mbedtls_mpi_read_binary( mbedtls_mpi *X, const unsigned char *buf,
+int vdb_mbedtls_mpi_read_binary( mbedtls_mpi *X, const unsigned char *buf,
                              size_t buflen );
 
 /**
@@ -505,7 +505,7 @@ int mbedtls_mpi_read_binary( mbedtls_mpi *X, const unsigned char *buf,
  * \return         #MBEDTLS_ERR_MPI_ALLOC_FAILED if memory allocation failed.
  * \return         Another negative error code on different kinds of failure.
  */
-int mbedtls_mpi_read_binary_le( mbedtls_mpi *X,
+int vdb_mbedtls_mpi_read_binary_le( mbedtls_mpi *X,
                                 const unsigned char *buf, size_t buflen );
 
 /**
@@ -523,7 +523,7 @@ int mbedtls_mpi_read_binary_le( mbedtls_mpi *X,
  *                 large enough to hold the value of \p X.
  * \return         Another negative error code on different kinds of failure.
  */
-int mbedtls_mpi_write_binary( const mbedtls_mpi *X, unsigned char *buf,
+int vdb_mbedtls_mpi_write_binary( const mbedtls_mpi *X, unsigned char *buf,
                               size_t buflen );
 
 /**
@@ -541,7 +541,7 @@ int mbedtls_mpi_write_binary( const mbedtls_mpi *X, unsigned char *buf,
  *                 large enough to hold the value of \p X.
  * \return         Another negative error code on different kinds of failure.
  */
-int mbedtls_mpi_write_binary_le( const mbedtls_mpi *X,
+int vdb_mbedtls_mpi_write_binary_le( const mbedtls_mpi *X,
                                  unsigned char *buf, size_t buflen );
 
 /**
@@ -554,7 +554,7 @@ int mbedtls_mpi_write_binary_le( const mbedtls_mpi *X,
  * \return         #MBEDTLS_ERR_MPI_ALLOC_FAILED if a memory allocation failed.
  * \return         Another negative error code on different kinds of failure.
  */
-int mbedtls_mpi_shift_l( mbedtls_mpi *X, size_t count );
+int vdb_mbedtls_mpi_shift_l( mbedtls_mpi *X, size_t count );
 
 /**
  * \brief          Perform a right-shift on an MPI: X >>= count
@@ -566,7 +566,7 @@ int mbedtls_mpi_shift_l( mbedtls_mpi *X, size_t count );
  * \return         #MBEDTLS_ERR_MPI_ALLOC_FAILED if a memory allocation failed.
  * \return         Another negative error code on different kinds of failure.
  */
-int mbedtls_mpi_shift_r( mbedtls_mpi *X, size_t count );
+int vdb_mbedtls_mpi_shift_r( mbedtls_mpi *X, size_t count );
 
 /**
  * \brief          Compare the absolute values of two MPIs.
@@ -578,7 +578,7 @@ int mbedtls_mpi_shift_r( mbedtls_mpi *X, size_t count );
  * \return         \c -1 if `|X|` is lesser than `|Y|`.
  * \return         \c 0 if `|X|` is equal to `|Y|`.
  */
-int mbedtls_mpi_cmp_abs( const mbedtls_mpi *X, const mbedtls_mpi *Y );
+int vdb_mbedtls_mpi_cmp_abs( const mbedtls_mpi *X, const mbedtls_mpi *Y );
 
 /**
  * \brief          Compare two MPIs.
@@ -590,7 +590,7 @@ int mbedtls_mpi_cmp_abs( const mbedtls_mpi *X, const mbedtls_mpi *Y );
  * \return         \c -1 if \p X is lesser than \p Y.
  * \return         \c 0 if \p X is equal to \p Y.
  */
-int mbedtls_mpi_cmp_mpi( const mbedtls_mpi *X, const mbedtls_mpi *Y );
+int vdb_mbedtls_mpi_cmp_mpi( const mbedtls_mpi *X, const mbedtls_mpi *Y );
 
 /**
  * \brief          Check if an MPI is less than the other in constant time.
@@ -607,7 +607,7 @@ int mbedtls_mpi_cmp_mpi( const mbedtls_mpi *X, const mbedtls_mpi *Y );
  * \return         MBEDTLS_ERR_MPI_BAD_INPUT_DATA if the allocated length of
  *                 the two input MPIs is not the same.
  */
-int mbedtls_mpi_lt_mpi_ct( const mbedtls_mpi *X, const mbedtls_mpi *Y,
+int vdb_mbedtls_mpi_lt_mpi_ct( const mbedtls_mpi *X, const mbedtls_mpi *Y,
         unsigned *ret );
 
 /**
@@ -620,7 +620,7 @@ int mbedtls_mpi_lt_mpi_ct( const mbedtls_mpi *X, const mbedtls_mpi *Y,
  * \return         \c -1 if \p X is lesser than \p z.
  * \return         \c 0 if \p X is equal to \p z.
  */
-int mbedtls_mpi_cmp_int( const mbedtls_mpi *X, mbedtls_mpi_sint z );
+int vdb_mbedtls_mpi_cmp_int( const mbedtls_mpi *X, mbedtls_mpi_sint z );
 
 /**
  * \brief          Perform an unsigned addition of MPIs: X = |A| + |B|
@@ -633,7 +633,7 @@ int mbedtls_mpi_cmp_int( const mbedtls_mpi *X, mbedtls_mpi_sint z );
  * \return         #MBEDTLS_ERR_MPI_ALLOC_FAILED if a memory allocation failed.
  * \return         Another negative error code on different kinds of failure.
  */
-int mbedtls_mpi_add_abs( mbedtls_mpi *X, const mbedtls_mpi *A,
+int vdb_mbedtls_mpi_add_abs( mbedtls_mpi *X, const mbedtls_mpi *A,
                          const mbedtls_mpi *B );
 
 /**
@@ -648,7 +648,7 @@ int mbedtls_mpi_add_abs( mbedtls_mpi *X, const mbedtls_mpi *A,
  * \return         Another negative error code on different kinds of failure.
  *
  */
-int mbedtls_mpi_sub_abs( mbedtls_mpi *X, const mbedtls_mpi *A,
+int vdb_mbedtls_mpi_sub_abs( mbedtls_mpi *X, const mbedtls_mpi *A,
                          const mbedtls_mpi *B );
 
 /**
@@ -662,7 +662,7 @@ int mbedtls_mpi_sub_abs( mbedtls_mpi *X, const mbedtls_mpi *A,
  * \return         #MBEDTLS_ERR_MPI_ALLOC_FAILED if a memory allocation failed.
  * \return         Another negative error code on different kinds of failure.
  */
-int mbedtls_mpi_add_mpi( mbedtls_mpi *X, const mbedtls_mpi *A,
+int vdb_mbedtls_mpi_add_mpi( mbedtls_mpi *X, const mbedtls_mpi *A,
                          const mbedtls_mpi *B );
 
 /**
@@ -676,7 +676,7 @@ int mbedtls_mpi_add_mpi( mbedtls_mpi *X, const mbedtls_mpi *A,
  * \return         #MBEDTLS_ERR_MPI_ALLOC_FAILED if a memory allocation failed.
  * \return         Another negative error code on different kinds of failure.
  */
-int mbedtls_mpi_sub_mpi( mbedtls_mpi *X, const mbedtls_mpi *A,
+int vdb_mbedtls_mpi_sub_mpi( mbedtls_mpi *X, const mbedtls_mpi *A,
                          const mbedtls_mpi *B );
 
 /**
@@ -690,7 +690,7 @@ int mbedtls_mpi_sub_mpi( mbedtls_mpi *X, const mbedtls_mpi *A,
  * \return         #MBEDTLS_ERR_MPI_ALLOC_FAILED if a memory allocation failed.
  * \return         Another negative error code on different kinds of failure.
  */
-int mbedtls_mpi_add_int( mbedtls_mpi *X, const mbedtls_mpi *A,
+int vdb_mbedtls_mpi_add_int( mbedtls_mpi *X, const mbedtls_mpi *A,
                          mbedtls_mpi_sint b );
 
 /**
@@ -705,7 +705,7 @@ int mbedtls_mpi_add_int( mbedtls_mpi *X, const mbedtls_mpi *A,
  * \return         #MBEDTLS_ERR_MPI_ALLOC_FAILED if a memory allocation failed.
  * \return         Another negative error code on different kinds of failure.
  */
-int mbedtls_mpi_sub_int( mbedtls_mpi *X, const mbedtls_mpi *A,
+int vdb_mbedtls_mpi_sub_int( mbedtls_mpi *X, const mbedtls_mpi *A,
                          mbedtls_mpi_sint b );
 
 /**
@@ -720,7 +720,7 @@ int mbedtls_mpi_sub_int( mbedtls_mpi *X, const mbedtls_mpi *A,
  * \return         Another negative error code on different kinds of failure.
  *
  */
-int mbedtls_mpi_mul_mpi( mbedtls_mpi *X, const mbedtls_mpi *A,
+int vdb_mbedtls_mpi_mul_mpi( mbedtls_mpi *X, const mbedtls_mpi *A,
                          const mbedtls_mpi *B );
 
 /**
@@ -736,7 +736,7 @@ int mbedtls_mpi_mul_mpi( mbedtls_mpi *X, const mbedtls_mpi *A,
  * \return         Another negative error code on different kinds of failure.
  *
  */
-int mbedtls_mpi_mul_int( mbedtls_mpi *X, const mbedtls_mpi *A,
+int vdb_mbedtls_mpi_mul_int( mbedtls_mpi *X, const mbedtls_mpi *A,
                          mbedtls_mpi_uint b );
 
 /**
@@ -757,7 +757,7 @@ int mbedtls_mpi_mul_int( mbedtls_mpi *X, const mbedtls_mpi *A,
  * \return         #MBEDTLS_ERR_MPI_DIVISION_BY_ZERO if \p B equals zero.
  * \return         Another negative error code on different kinds of failure.
  */
-int mbedtls_mpi_div_mpi( mbedtls_mpi *Q, mbedtls_mpi *R, const mbedtls_mpi *A,
+int vdb_mbedtls_mpi_div_mpi( mbedtls_mpi *Q, mbedtls_mpi *R, const mbedtls_mpi *A,
                          const mbedtls_mpi *B );
 
 /**
@@ -778,7 +778,7 @@ int mbedtls_mpi_div_mpi( mbedtls_mpi *Q, mbedtls_mpi *R, const mbedtls_mpi *A,
  * \return         #MBEDTLS_ERR_MPI_DIVISION_BY_ZERO if \p b equals zero.
  * \return         Another negative error code on different kinds of failure.
  */
-int mbedtls_mpi_div_int( mbedtls_mpi *Q, mbedtls_mpi *R, const mbedtls_mpi *A,
+int vdb_mbedtls_mpi_div_int( mbedtls_mpi *Q, mbedtls_mpi *R, const mbedtls_mpi *A,
                          mbedtls_mpi_sint b );
 
 /**
@@ -798,7 +798,7 @@ int mbedtls_mpi_div_int( mbedtls_mpi *Q, mbedtls_mpi *R, const mbedtls_mpi *A,
  * \return         Another negative error code on different kinds of failure.
  *
  */
-int mbedtls_mpi_mod_mpi( mbedtls_mpi *R, const mbedtls_mpi *A,
+int vdb_mbedtls_mpi_mod_mpi( mbedtls_mpi *R, const mbedtls_mpi *A,
                          const mbedtls_mpi *B );
 
 /**
@@ -817,7 +817,7 @@ int mbedtls_mpi_mod_mpi( mbedtls_mpi *R, const mbedtls_mpi *A,
  * \return         #MBEDTLS_ERR_MPI_NEGATIVE_VALUE if \p b is negative.
  * \return         Another negative error code on different kinds of failure.
  */
-int mbedtls_mpi_mod_int( mbedtls_mpi_uint *r, const mbedtls_mpi *A,
+int vdb_mbedtls_mpi_mod_int( mbedtls_mpi_uint *r, const mbedtls_mpi *A,
                          mbedtls_mpi_sint b );
 
 /**
@@ -833,11 +833,11 @@ int mbedtls_mpi_mod_int( mbedtls_mpi_uint *r, const mbedtls_mpi *A,
  *                 speed-up multiple modular exponentiations for the same value
  *                 of \p N. This may be \c NULL. If it is not \c NULL, it must
  *                 point to an initialized MPI. If it hasn't been used after
- *                 the call to mbedtls_mpi_init(), this function will compute
+ *                 the call to vdb_mbedtls_mpi_init(), this function will compute
  *                 the helper value and store it in \p _RR for reuse on
  *                 subsequent calls to this function. Otherwise, the function
  *                 will assume that \p _RR holds the helper value set by a
- *                 previous call to mbedtls_mpi_exp_mod(), and reuse it.
+ *                 previous call to vdb_mbedtls_mpi_exp_mod(), and reuse it.
  *
  * \return         \c 0 if successful.
  * \return         #MBEDTLS_ERR_MPI_ALLOC_FAILED if a memory allocation failed.
@@ -846,7 +846,7 @@ int mbedtls_mpi_mod_int( mbedtls_mpi_uint *r, const mbedtls_mpi *A,
  * \return         Another negative error code on different kinds of failures.
  *
  */
-int mbedtls_mpi_exp_mod( mbedtls_mpi *X, const mbedtls_mpi *A,
+int vdb_mbedtls_mpi_exp_mod( mbedtls_mpi *X, const mbedtls_mpi *A,
                          const mbedtls_mpi *E, const mbedtls_mpi *N,
                          mbedtls_mpi *_RR );
 
@@ -867,7 +867,7 @@ int mbedtls_mpi_exp_mod( mbedtls_mpi *X, const mbedtls_mpi *A,
  *                 as a big-endian representation of an MPI; this can
  *                 be relevant in applications like deterministic ECDSA.
  */
-int mbedtls_mpi_fill_random( mbedtls_mpi *X, size_t size,
+int vdb_mbedtls_mpi_fill_random( mbedtls_mpi *X, size_t size,
                      int (*f_rng)(void *, unsigned char *, size_t),
                      void *p_rng );
 
@@ -882,7 +882,7 @@ int mbedtls_mpi_fill_random( mbedtls_mpi *X, size_t size,
  * \return         #MBEDTLS_ERR_MPI_ALLOC_FAILED if a memory allocation failed.
  * \return         Another negative error code on different kinds of failure.
  */
-int mbedtls_mpi_gcd( mbedtls_mpi *G, const mbedtls_mpi *A,
+int vdb_mbedtls_mpi_gcd( mbedtls_mpi *G, const mbedtls_mpi *A,
                      const mbedtls_mpi *B );
 
 /**
@@ -901,7 +901,7 @@ int mbedtls_mpi_gcd( mbedtls_mpi *G, const mbedtls_mpi *A,
  * \return         #MBEDTLS_ERR_MPI_NOT_ACCEPTABLE if \p has no modular inverse
  *                 with respect to \p N.
  */
-int mbedtls_mpi_inv_mod( mbedtls_mpi *X, const mbedtls_mpi *A,
+int vdb_mbedtls_mpi_inv_mod( mbedtls_mpi *X, const mbedtls_mpi *A,
                          const mbedtls_mpi *N );
 
 #if !defined(MBEDTLS_DEPRECATED_REMOVED)
@@ -914,7 +914,7 @@ int mbedtls_mpi_inv_mod( mbedtls_mpi *X, const mbedtls_mpi *A,
  * \brief          Perform a Miller-Rabin primality test with error
  *                 probability of 2<sup>-80</sup>.
  *
- * \deprecated     Superseded by mbedtls_mpi_is_prime_ext() which allows
+ * \deprecated     Superseded by vdb_mbedtls_mpi_is_prime_ext() which allows
  *                 specifying the number of Miller-Rabin rounds.
  *
  * \param X        The MPI to check for primality.
@@ -929,7 +929,7 @@ int mbedtls_mpi_inv_mod( mbedtls_mpi *X, const mbedtls_mpi *A,
  * \return         #MBEDTLS_ERR_MPI_NOT_ACCEPTABLE if \p X is not prime.
  * \return         Another negative error code on other kinds of failure.
  */
-MBEDTLS_DEPRECATED int mbedtls_mpi_is_prime( const mbedtls_mpi *X,
+MBEDTLS_DEPRECATED int vdb_mbedtls_mpi_is_prime( const mbedtls_mpi *X,
                           int (*f_rng)(void *, unsigned char *, size_t),
                           void *p_rng );
 #undef MBEDTLS_DEPRECATED
@@ -962,14 +962,14 @@ MBEDTLS_DEPRECATED int mbedtls_mpi_is_prime( const mbedtls_mpi *X,
  * \return         #MBEDTLS_ERR_MPI_NOT_ACCEPTABLE if \p X is not prime.
  * \return         Another negative error code on other kinds of failure.
  */
-int mbedtls_mpi_is_prime_ext( const mbedtls_mpi *X, int rounds,
+int vdb_mbedtls_mpi_is_prime_ext( const mbedtls_mpi *X, int rounds,
                               int (*f_rng)(void *, unsigned char *, size_t),
                               void *p_rng );
 /**
- * \brief Flags for mbedtls_mpi_gen_prime()
+ * \brief Flags for vdb_mbedtls_mpi_gen_prime()
  *
  * Each of these flags is a constraint on the result X returned by
- * mbedtls_mpi_gen_prime().
+ * vdb_mbedtls_mpi_gen_prime().
  */
 typedef enum {
     MBEDTLS_MPI_GEN_PRIME_FLAG_DH =      0x0001, /**< (X-1)/2 is prime too */
@@ -995,7 +995,7 @@ typedef enum {
  * \return         #MBEDTLS_ERR_MPI_BAD_INPUT_DATA if `nbits` is not between
  *                 \c 3 and #MBEDTLS_MPI_MAX_BITS.
  */
-int mbedtls_mpi_gen_prime( mbedtls_mpi *X, size_t nbits, int flags,
+int vdb_mbedtls_mpi_gen_prime( mbedtls_mpi *X, size_t nbits, int flags,
                    int (*f_rng)(void *, unsigned char *, size_t),
                    void *p_rng );
 
@@ -1006,7 +1006,7 @@ int mbedtls_mpi_gen_prime( mbedtls_mpi *X, size_t nbits, int flags,
  *
  * \return         0 if successful, or 1 if the test failed
  */
-int mbedtls_mpi_self_test( int verbose );
+int vdb_mbedtls_mpi_self_test( int verbose );
 
 #endif /* MBEDTLS_SELF_TEST */
 
