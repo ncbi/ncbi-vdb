@@ -361,9 +361,6 @@
     <ClCompile Include="..\..\..\libs\ext\mbedtls\debug.c">
       <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
     </ClCompile>
-    <ClCompile Include="..\..\..\libs\ext\mbedtls\net.c">
-      <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
-    </ClCompile>
     <ClCompile Include="..\..\..\libs\ext\mbedtls\ssl_cache.c">
       <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
     </ClCompile>
