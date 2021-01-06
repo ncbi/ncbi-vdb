@@ -433,9 +433,6 @@
     <ClCompile Include="..\..\..\libs\ext\mbedtls\psa_crypto.c">
         <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
     </ClCompile>
-    <ClCompile Include="..\..\..\libs\ext\mbedtls\psa_crypto_core.c">
-        <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
-    </ClCompile>
     <ClCompile Include="..\..\..\libs\ext\mbedtls\psa_crypto_driver_wrappers.c">
         <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
     </ClCompile>
