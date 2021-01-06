@@ -81,14 +81,16 @@ static rc_t RefSeqAsyncLoadInfoFree(RefSeqAsyncLoadInfo *const self)
     rc_t rc = 0;
     if (self) {
         /* Synchronize with background thread in preparation for clean up */
-        KRefcountAdd(&self->refcount, "RefSeqAsyncLoadInfo"); // keep alive; let die at line 88
+        KRefcountAdd(&self->refcount, "RefSeqAsyncLoadInfo"); // keep alive; let die at line 89
+        LOGMSG(klogDebug, "Foreground thread ending background thread");
         KLockAcquire(self->mutex);
         self->count = 0;
         KLockUnlock(self->mutex);
         KThreadWait(self->th, &rc);
+        LOGERR(klogDebug, rc, "Background thread ended");
         RefSeqAsyncLoadInfo_Release(self);
         if (rc)
-            LOGERR(klogErr, rc, "async loader thread failed");
+            LOGERR(klogErr, rc, "asynchronous loader thread failed");
     }
     return rc;
 }
@@ -383,21 +385,21 @@ static rc_t runLoadThread(Object *self)
         else if (!done && rc == 0)
             rc = RC(rcXF, rcFunction, rcReading, rcData, rcInvalid);
     }
-    free(buffer);
-    if (rc == 0 && i == count) {
-        if (n != 0) {
-            while (n < 4) {
-                accum <<= 2;
-                ++n;
-            }
-            self->bases[j++] = accum;
+    if (n != 0) {
+        while (n < 4) {
+            accum <<= 2;
+            ++n;
         }
+        self->bases[j++] = accum;
+    }
+    free(buffer);
+    LOGMSG(klogDebug, "Done background loading of reference");
+    if (rc == 0 && i == count) {
         KLockAcquire(async->mutex);
         async->loaded = i + first; /* last row was loaded */
         async->count = 0;
         KLockUnlock(async->mutex);
     }
-    LOGMSG(klogDebug, "Done background loading of reference");
 
     assert((atomic_read(&self->rwl) & 1) == 0); /* there is only one writer */
     atomic_inc(&self->rwl); /* tell readers we want to update the state */
@@ -413,6 +415,7 @@ static rc_t runLoadThread(Object *self)
         PLOGMSG(klogDebug, (klogDebug, "Done with background loading of reference; preload was $(pct)%", "pct=%5.1f", (float)pct));
     }
     RefSeqAsyncLoadInfo_Release(async);
+    LOGERR(klogDebug, rc, "Background thread exiting");
 
     return rc;
 }
