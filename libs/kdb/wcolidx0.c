@@ -314,7 +314,7 @@ rc_t KColumnIdx0OpenRead_v1 ( KColumnIdx0 *self, const KDirectory *dir, bool bsw
     BSTreeInit ( & self -> bst );
     self -> count = 0;
 
-    rc = KDirectoryVFileSize ( dir, & eof, "idx0", NULL );
+    rc = KDirectoryFileSize_v1 ( dir, & eof, "idx0" );
     if ( rc == 0 )
     {
         if ( eof != 0 )

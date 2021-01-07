@@ -348,6 +348,18 @@ static rc_t reportImpl(int indent, bool open, bool close, bool eol,
     return rc;
 }
 
+static
+rc_t reportImpl_noargs( int indent, bool open, bool close, bool eol,
+    const char* name, const char* data, ... )
+{
+    va_list vl;
+    va_start( vl, data );
+    rc_t ret = reportImpl(indent, open, close, eol, name, data, 0, vl );
+    va_end(vl);
+    return ret;
+}
+
+
 static void CC report(uint32_t indent, const char* name, uint32_t count, ...) {
      va_list args;
      va_start(args, count);
@@ -372,7 +384,9 @@ static void CC reportOpen(uint32_t indent, const char* name, uint32_t count, ...
 }
 
 static void CC reportClose(uint32_t indent, const char* name)
-{   reportImpl(indent, false, true, true, name, NULL, 0, NULL); }
+{
+    reportImpl_noargs(indent, false, true, true, name, NULL);
+}
 
 static void CC reportError(uint32_t indent, rc_t rc, const char* function) {
     report(indent, "Error", 2,
@@ -637,7 +651,7 @@ static rc_t _ReportFinalize
     }
 
     if (!self -> silence) {
-        if (force) { 
+        if (force) {
             if (report_arg && strcmp("never", report_arg) == 0) {
                 force = false;
             }

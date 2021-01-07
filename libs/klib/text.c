@@ -812,11 +812,13 @@ LIB_EXPORT uint64_t string_to_U64 ( const char * text, size_t bytes, rc_t * opti
  *    return == 0 means insufficient input
  *    return < 0 means bad input or bad argument
  */
-LIB_EXPORT int CC utf8_utf32 ( uint32_t *dst, const char *begin, const char *end )
+LIB_EXPORT int CC utf8_utf32 ( uint32_t *dst, const char *_begin, const char *_end )
 {
+    const signed char * begin = (const signed char *)_begin;
+    const signed char * end = (const signed char *)_end;
     int c;
     uint32_t ch;
-    const char *src, *stop;
+    const signed char *src, *stop;
 
     if ( dst == NULL || begin == NULL || end == NULL )
         return -1;
@@ -831,7 +833,7 @@ LIB_EXPORT int CC utf8_utf32 ( uint32_t *dst, const char *begin, const char *end
         dst [ 0 ] = c;
         return 1;
     }
-	
+
     /* the leftmost 24 bits are set
        the rightmost 8 can look like:
        110xxxxx == 2 byte character
@@ -840,60 +842,60 @@ LIB_EXPORT int CC utf8_utf32 ( uint32_t *dst, const char *begin, const char *end
        111110xx == 5 byte character
        1111110x == 6 byte character
     */
-	
+
     src = begin;
-	
+
     /* invert bits to look at range */
     ch = c;
     c = ~ c;
-	
+
     /* illegal range */
     if ( c >= 0x40 )
         return -1;
-	
+
     /* 2 byte */
     else if ( c >= 0x20 )
     {
         ch &= 0x1F;
         stop = src + 2;
     }
-	
+
     /* 3 byte */
     else if ( c >= 0x10 )
     {
         ch &= 0xF;
         stop = src + 3;
     }
-	
+
     /* 4 byte */
     else if ( c >= 8 )
     {
         ch &= 7;
         stop = src + 4;
     }
-	
+
     /* 5 byte */
     else if ( c >= 4 )
     {
         ch &= 3;
         stop = src + 5;
     }
-	
+
     /* illegal */
     else if ( c < 2 )
         return -1;
-    
+
     /* 6 byte */
     else
     {
         ch &= 1;
         stop = src + 6;
     }
-    
+
     /* must have sufficient input */
     if ( stop > end )
         return 0;
-	
+
     /* complete the character */
     while ( ++ src != stop )
     {
@@ -902,10 +904,10 @@ LIB_EXPORT int CC utf8_utf32 ( uint32_t *dst, const char *begin, const char *end
             return -1;
         ch = ( ch << 6 ) | c;
     }
-	
+
     /* record the character */
     dst [ 0 ] = ch;
-	
+
     /* return the bytes consumed */
     return ( int ) ( src - begin );
 }
@@ -917,10 +919,12 @@ LIB_EXPORT int CC utf8_utf32 ( uint32_t *dst, const char *begin, const char *end
  *    return == 0 means insufficient output
  *    return < 0 means bad character or bad argument
  */
-LIB_EXPORT int CC utf32_utf8 ( char *begin, char *end, uint32_t ch )
+LIB_EXPORT int CC utf32_utf8 ( char *_begin, char *_end, uint32_t ch )
 {
+    signed char * begin = (signed char*) _begin;
+    signed char * end = (signed char*) _end;
     int len;
-    char *dst;
+    signed char *dst;
     uint32_t mask;
 
     if ( begin == NULL || end == NULL )
@@ -941,7 +945,7 @@ LIB_EXPORT int CC utf32_utf8 ( char *begin, char *end, uint32_t ch )
         mask = 0xC0U;
         len = 2;
     }
-	
+
     /* 3 byte */
     else if ( ch < 0x00010000 )
     {
@@ -957,7 +961,7 @@ LIB_EXPORT int CC utf32_utf8 ( char *begin, char *end, uint32_t ch )
         mask = 0xF0U;
         len = 4;
     }
-	
+
     /* 5 byte */
     else if ( ch < 0x04000000 )
     {
@@ -965,7 +969,7 @@ LIB_EXPORT int CC utf32_utf8 ( char *begin, char *end, uint32_t ch )
         mask = 0xF8U;
         len = 5;
     }
-	
+
     /* 6 byte */
     else
     {
@@ -973,18 +977,18 @@ LIB_EXPORT int CC utf32_utf8 ( char *begin, char *end, uint32_t ch )
         mask = 0xFCU;
         len = 6;
     }
-	
+
     dst = begin + len;
     if ( dst > end )
         return 0;
-    
+
     while ( -- dst > begin )
     {
         /* 10xxxxxx */ /* too many casts to suit different compilers */
         dst [ 0 ] = ( char ) (( char ) 0x80 | ( ( char ) ch & ( char ) 0x3F ));
         ch >>= 6;
     }
-    
+
     dst [ 0 ] = ( char ) ( mask | ch );
 
     return len;

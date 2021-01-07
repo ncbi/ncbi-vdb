@@ -47,11 +47,14 @@
 #if __INTEL_COMPILER || defined __SSE2__
 
 #include <emmintrin.h>
+#define INTEL_INTRINSICS 1
 #define NEVER_MATCH 0
 #define RETURN_LOCATION 1
 #define USE_MEMALIGN 0
 
 #endif
+
+#if INTEL_INTRINSICS
 
 #if USE_MEMALIGN
 #include <malloc.h>
@@ -70,6 +73,20 @@ typedef union
     uint128_t s;
 } nucpat_t;
 
+#else
+
+#define NA2_LIMIT 29
+#define NA4_LIMIT 13
+typedef uint64_t nucreg_t;
+typedef union
+{
+    uint8_t b [ 8 ];
+    uint16_t w [ 4 ];
+    uint32_t i [ 2 ];
+    uint64_t l;
+} nucpat_t;
+
+#endif
 
 
 static int8_t fasta_2na_map [ 128 ];
@@ -147,8 +164,24 @@ static uint16_t expand_2na [ 256 ] =
  */
 #if TRACE_OPERATIONS
 
+#if INTEL_INTRINSICS
+
 #define COPY_NUCREG( to, from ) \
     _mm_storeu_si128 ( ( __m128i* ) ( to ) . b, ( from ) )
+
+#else
+
+#define COPY_NUCREG( to, from ) \
+    ( ( to ) . b [ 0 ] = ( uint8_t ) ( ( from ) >> 56 ), \
+      ( to ) . b [ 1 ] = ( uint8_t ) ( ( from ) >> 48 ), \
+      ( to ) . b [ 2 ] = ( uint8_t ) ( ( from ) >> 40 ), \
+      ( to ) . b [ 3 ] = ( uint8_t ) ( ( from ) >> 32 ), \
+      ( to ) . b [ 4 ] = ( uint8_t ) ( ( from ) >> 24 ), \
+      ( to ) . b [ 5 ] = ( uint8_t ) ( ( from ) >> 16 ), \
+      ( to ) . b [ 6 ] = ( uint8_t ) ( ( from ) >>  8 ), \
+      ( to ) . b [ 7 ] = ( uint8_t ) ( ( from ) >>  0 ) )
+
+#endif
 
 /* sprintf_2na
  *  print 2na sequence
@@ -334,7 +367,11 @@ const char *sprintf_a4na ( char *str, size_t ssize,
 
         for ( k = 0, l = 4; k < 2; l -= 4, ++ k )
         {
+#if INTEL_INTRINSICS
             s_ch = ncbi4na [ ( ( m >> l ) & 0xF0 ) | ( ( s >> l ) & 15 ) ];
+#else
+            s_ch = ncbi4na [ 0xF0 | ( ( s >> l ) & 15 ) ];
+#endif
             b_ch = ncbi4na [ ( ( m >> l ) & 0xF0 ) | ( ( b >> l ) & 15 ) ];
             str [ j + k ] =
                 ( ( fasta_4na_map [ s_ch ] & fasta_4na_map [ b_ch ] ) != 0 ) ?
@@ -407,9 +444,15 @@ static
 void PARSE_2NA_PATTERN ( const char *fasta, size_t size,
     nucpat_t pattern, nucpat_t mask )
 {
+#if INTEL_INTRINSICS
     char str [ 65 ];
     nucreg_t nr = _mm_loadu_si128 ( ( const __m128i* ) pattern . b );
     nucreg_t nm = _mm_loadu_si128 ( ( const __m128i* ) mask . b );
+#else
+    char str [ 33 ];
+    nucreg_t nr = pattern;
+    nucreg_t nm = mask;
+#endif
 
     assert ( size < sizeof str );
     memmove ( str, fasta, size );
@@ -424,9 +467,15 @@ static
 void PARSE_4NA_PATTERN ( const char *fasta, size_t size,
     nucpat_t pattern, nucpat_t mask )
 {
+#if INTEL_INTRINSICS
     char str [ 33 ];
     nucreg_t nr = _mm_loadu_si128 ( ( const __m128i* ) pattern . b );
     nucreg_t nm = _mm_loadu_si128 ( ( const __m128i* ) mask . b );
+#else
+    char str [ 17 ];
+    nucreg_t nr = pattern;
+    nucreg_t nm = mask;
+#endif
 
     assert ( size < sizeof str );
     memmove ( str, fasta, size );
@@ -440,9 +489,15 @@ void PARSE_4NA_PATTERN ( const char *fasta, size_t size,
 static
 void PARSE_2NA_SHIFT ( unsigned int idx, nucpat_t pattern, nucpat_t mask )
 {
+#if INTEL_INTRINSICS
     char str [ 65 ];
     nucreg_t nr = _mm_loadu_si128 ( ( const __m128i* ) pattern . b );
     nucreg_t nm = _mm_loadu_si128 ( ( const __m128i* ) mask . b );
+#else
+    char str [ 33 ];
+    nucreg_t nr = pattern;
+    nucreg_t nm = mask;
+#endif
 
     printf ( "  %s - pattern [ %u ]\n", sprintf_2na ( str, sizeof str, nr ), idx );
     printf ( "  %s - mask [ %u ]\n", sprintf_m2na ( str, sizeof str, nm ), idx );
@@ -451,9 +506,15 @@ void PARSE_2NA_SHIFT ( unsigned int idx, nucpat_t pattern, nucpat_t mask )
 static
 void PARSE_4NA_SHIFT ( unsigned int idx, nucpat_t pattern, nucpat_t mask )
 {
+#if INTEL_INTRINSICS
     char str [ 33 ];
     nucreg_t nr = _mm_loadu_si128 ( ( const __m128i* ) pattern . b );
     nucreg_t nm = _mm_loadu_si128 ( ( const __m128i* ) mask . b );
+#else
+    char str [ 17 ];
+    nucreg_t nr = pattern;
+    nucreg_t nm = mask;
+#endif
 
     printf ( "  %s - pattern [ %u ]\n", sprintf_4na ( str, sizeof str, nr ), idx );
     printf ( "  %s - mask [ %u ]\n", sprintf_m4na ( str, sizeof str, nm ), idx );
@@ -480,9 +541,15 @@ static
 void ALIGN_2NA_HEADER ( nucreg_t buffer, unsigned int pos, unsigned int len )
 {
     unsigned int i, j;
+#if INTEL_INTRINSICS
     char str [ 65 ];
     unsigned int end = pos + 63;
     str [ 64 ] = 0;
+#else
+    char str [ 33 ];
+    unsigned int end = pos + 31;
+    str [ 32 ] = 0;
+#endif
 
     /* line separator */
     putchar ( '\n' );
@@ -519,9 +586,15 @@ static
 void ALIGN_4NA_HEADER ( nucreg_t buffer, unsigned int pos, unsigned int len )
 {
     unsigned int i, j;
+#if INTEL_INTRINSICS
     char str [ 33 ];
     unsigned int end = pos + 31;
     str [ 32 ] = 0;
+#else
+    char str [ 17 ];
+    unsigned int end = pos + 15;
+    str [ 16 ] = 0;
+#endif
 
     /* line separator */
     putchar ( '\n' );
@@ -566,6 +639,7 @@ void ALIGN_4NA_HEADER ( nucreg_t buffer, unsigned int pos, unsigned int len )
 
 #if TRACE_OPERATIONS && TRACE_RESULT
 
+#if INTEL_INTRINSICS
 static
 void ALIGN_2NA_RESULT ( nucreg_t buffer, nucreg_t pat, nucreg_t mask,
     nucreg_t cmp, int bits )
@@ -609,13 +683,50 @@ void ALIGN_4NA_RESULT ( nucreg_t buffer, nucreg_t pat, nucreg_t mask,
     printf ( "  %s - alignment\n", sprintf_a4na ( str, sizeof str, buffer, pat, mask ) );
     printf ( "  %s ( 0b%s )\n", sprintf_r4na ( str, sizeof str, cmp, mask ), bstr );
 }
+#else
+static
+void ALIGN_2NA_RESULT ( nucreg_t buffer, nucreg_t pat, nucreg_t mask, nucreg_t bits )
+{
+    char str [ 33 ];
+
+#if TRACE_PATMASK
+    printf ( "  %s - pattern\n", sprintf_2na ( str, sizeof str, pat ) );
+    printf ( "  %s - mask\n", sprintf_m2na ( str, sizeof str, mask ) );
+#endif
+
+    printf ( "  %s\n", sprintf_a2na ( str, sizeof str, buffer, pat, mask ) );
+    printf ( "  %s\n", sprintf_r2na ( str, sizeof str, bits, mask ) );
+}
+
+static
+void ALIGN_4NA_RESULT ( nucreg_t buffer, nucreg_t pat, nucreg_t mask, nucreg_t bits )
+{
+    char str [ 17 ];
+
+#if TRACE_PATMASK
+    printf ( "  %s - pattern\n", sprintf_4na ( str, sizeof str, pat ) );
+    printf ( "  %s - mask\n", sprintf_m4na ( str, sizeof str, mask ) );
+#endif
+
+    printf ( "  %s\n", sprintf_a4na ( str, sizeof str, buffer, pat, mask ) );
+    printf ( "  %s\n", sprintf_r4na ( str, sizeof str, bits, mask ) );
+}
+#endif
 
 #else
 
+#if INTEL_INTRINSICS
 #define ALIGN_2NA_RESULT( buffer, pat, mask, cmp, bits ) \
     ( void ) 0
 #define ALIGN_4NA_RESULT( buffer, pat, mask, cmp, bits ) \
     ( void ) 0
+#else
+#define ALIGN_2NA_RESULT( buffer, pat, mask, bits ) \
+    ( void ) 0
+#define ALIGN_4NA_RESULT( buffer, pat, mask, bits ) \
+    ( void ) 0
+#endif
+
 #endif
 
 
@@ -629,6 +740,7 @@ enum
 {
     type_2na_64,
     type_4na_64,
+#if INTEL_INTRINSICS
     type_2na_8,
     type_2na_16,
     type_2na_32,
@@ -636,6 +748,7 @@ enum
     type_4na_16,
     type_4na_32,
     type_4na_128,
+#endif
     type_2na_pos,
     type_4na_pos,
     type_OP,
@@ -653,7 +766,7 @@ struct NucStrFastaExpr
 {
     int32_t type;
     uint32_t size;
-#if ! USE_MEMALIGN
+#if INTEL_INTRINSICS && ! USE_MEMALIGN
     union
     {
         /* actual allocation for freeing
@@ -673,7 +786,7 @@ struct NucStrFastaExpr
 #if USE_MEMALIGN
 #define NucStrFastaExprAlloc( sz ) \
     memalign ( 16, sz )
-#else
+#elif INTEL_INTRINSICS
 static
 void *NucStrFastaExprAlloc ( size_t sz )
 {
@@ -689,6 +802,9 @@ void *NucStrFastaExprAlloc ( size_t sz )
     }
     return NULL;
 }
+#else
+#define NucStrFastaExprAlloc( sz ) \
+    malloc ( sz )
 #endif
 
 typedef struct NucStrOpExpr NucStrOpExpr;
@@ -737,6 +853,7 @@ int NucStrFastaExprMake2 ( NucStrExpr **expr, int positional,
     * expr = e;
     e -> fasta . size = ( uint32_t ) size;
 
+#if INTEL_INTRINSICS
     /* translate FASTA to 2na */
     for ( i = 0; i < size; ++ i )
     {
@@ -784,12 +901,12 @@ int NucStrFastaExprMake2 ( NucStrExpr **expr, int positional,
         pattern . w [ 1 ] = pattern . w [ 0 ];
         pattern . i [ 1 ] = pattern . i [ 0 ];
         pattern . l [ 1 ] = pattern . l [ 0 ];
-            
+
         mask . b [ 1 ] = mask . b [ 0 ];
         mask . w [ 1 ] = mask . w [ 0 ];
         mask . i [ 1 ] = mask . i [ 0 ];
         mask . l [ 1 ] = mask . l [ 0 ];
-            
+
         e -> fasta . type = type_2na_8;
     }
     else if ( size < 6 )
@@ -797,28 +914,28 @@ int NucStrFastaExprMake2 ( NucStrExpr **expr, int positional,
         pattern . w [ 1 ] = pattern . w [ 0 ];
         pattern . i [ 1 ] = pattern . i [ 0 ];
         pattern . l [ 1 ] = pattern . l [ 0 ];
-            
+
         mask . w [ 1 ] = mask . w [ 0 ];
         mask . i [ 1 ] = mask . i [ 0 ];
         mask . l [ 1 ] = mask . l [ 0 ];
-            
+
         e -> fasta . type = type_2na_16;
     }
     else if ( size < 14 )
     {
         pattern . i [ 1 ] = pattern . i [ 0 ];
         pattern . l [ 1 ] = pattern . l [ 0 ];
-            
+
         mask . i [ 1 ] = mask . i [ 0 ];
         mask . l [ 1 ] = mask . l [ 0 ];
-            
+
         e -> fasta . type = type_2na_32;
     }
     else if ( size < 30 )
     {
         pattern . l [ 1 ] = pattern . l [ 0 ];
         mask . l [ 1 ] = mask . l [ 0 ];
-            
+
         e -> fasta . type = type_2na_64;
     }
     else
@@ -836,23 +953,53 @@ int NucStrFastaExprMake2 ( NucStrExpr **expr, int positional,
     /* now shifts should work as imagined */
     uint128_shr ( & pattern . s, 2 );
     uint128_shr ( & mask . s, 2 );
-        
+
     /* restore the byte order for sse */
     uint128_bswap_copy ( & e -> fasta . query [ 1 ] . pattern . s, & pattern . s );
     uint128_bswap_copy ( & e -> fasta . query [ 1 ] . mask . s, & mask . s );
 
     uint128_shr ( & pattern . s, 2 );
     uint128_shr ( & mask . s, 2 );
-        
+
     uint128_bswap_copy ( & e -> fasta . query [ 2 ] . pattern . s, & pattern . s );
     uint128_bswap_copy ( & e -> fasta . query [ 2 ] . mask . s, & mask . s );
 
     uint128_shr ( & pattern . s, 2 );
     uint128_shr ( & mask . s, 2 );
-        
+
     uint128_bswap_copy ( & e -> fasta . query [ 3 ] . pattern . s, & pattern . s );
     uint128_bswap_copy ( & e -> fasta . query [ 3 ] . mask . s, & mask . s );
-        
+
+#else
+    e -> fasta . type = positional ? type_2na_pos : type_2na_64;
+
+    for ( pattern . l = 0, i = 0; i < size; ++ i )
+    {
+        pattern . l <<= 2;
+
+        assert ( fasta [ i ] >= 0 );
+        assert ( fasta_2na_map [ ( int ) fasta [ i ] ] >= 0 );
+
+        pattern . l |= fasta_2na_map [ ( int ) fasta [ i ] ];
+    }
+
+    mask . l = ~ 0;
+    pattern . l <<= 64 - size - size;
+    mask . l <<= 64 - size - size;
+
+    PARSE_2NA_PATTERN ( fasta, size, pattern, mask );
+
+    e -> fasta . query [ 0 ] . pattern = pattern;
+    e -> fasta . query [ 1 ] . pattern . l = pattern . l >> 2;
+    e -> fasta . query [ 2 ] . pattern . l = pattern . l >> 4;
+    e -> fasta . query [ 3 ] . pattern . l = pattern . l >> 6;
+
+    e -> fasta . query [ 0 ] . mask = mask;
+    e -> fasta . query [ 1 ] . mask . l = mask . l >> 2;
+    e -> fasta . query [ 2 ] . mask . l = mask . l >> 4;
+    e -> fasta . query [ 3 ] . mask . l = mask . l >> 6;
+
+#endif
 
     PARSE_2NA_SHIFT ( 0, e -> fasta . query [ 0 ] . pattern,
         e -> fasta . query [ 0 ] . mask );
@@ -885,6 +1032,7 @@ int NucStrFastaExprMake4 ( NucStrExpr **expr, int positional,
     * expr = e;
     e -> fasta . size = ( uint32_t ) size;
 
+#if INTEL_INTRINSICS
     /* translate FASTA to 4na */
     for ( i = 0; i < size; ++ i )
     {
@@ -928,7 +1076,7 @@ int NucStrFastaExprMake4 ( NucStrExpr **expr, int positional,
         pattern . w [ 1 ] = pattern . w [ 0 ];
         pattern . i [ 1 ] = pattern . i [ 0 ];
         pattern . l [ 1 ] = pattern . l [ 0 ];
-            
+
         mask . w [ 1 ] = mask . w [ 0 ];
         mask . i [ 1 ] = mask . i [ 0 ];
         mask . l [ 1 ] = mask . l [ 0 ];
@@ -939,7 +1087,7 @@ int NucStrFastaExprMake4 ( NucStrExpr **expr, int positional,
     {
         pattern . i [ 1 ] = pattern . i [ 0 ];
         pattern . l [ 1 ] = pattern . l [ 0 ];
-            
+
         mask . i [ 1 ] = mask . i [ 0 ];
         mask . l [ 1 ] = mask . l [ 0 ];
 
@@ -967,23 +1115,53 @@ int NucStrFastaExprMake4 ( NucStrExpr **expr, int positional,
     /* now shifts should work as imagined */
     uint128_shr ( & pattern . s, 4 );
     uint128_shr ( & mask . s, 4 );
-        
+
     /* restore the byte order for sse */
     uint128_bswap_copy ( & e -> fasta . query [ 1 ] . pattern . s, & pattern . s );
     uint128_bswap_copy ( & e -> fasta . query [ 1 ] . mask . s, & mask . s );
 
     uint128_shr ( & pattern . s, 4 );
     uint128_shr ( & mask . s, 4 );
-        
+
     uint128_bswap_copy ( & e -> fasta . query [ 2 ] . pattern . s, & pattern . s );
     uint128_bswap_copy ( & e -> fasta . query [ 2 ] . mask . s, & mask . s );
 
     uint128_shr ( & pattern . s, 4 );
     uint128_shr ( & mask . s, 4 );
-        
+
     uint128_bswap_copy ( & e -> fasta . query [ 3 ] . pattern . s, & pattern . s );
     uint128_bswap_copy ( & e -> fasta . query [ 3 ] . mask . s, & mask . s );
 
+#else
+    e -> fasta . type = positional ? type_4na_pos : type_4na_64;
+
+    for ( pattern . l = 0, i = 0; i < size; ++ i )
+    {
+        pattern . l <<= 4;
+
+        assert ( fasta [ i ] >= 0 );
+        assert ( fasta_4na_map [ ( int ) fasta [ i ] ] >= 0 );
+
+        pattern . l |= fasta_4na_map [ ( int ) fasta [ i ] ];
+    }
+
+    mask . l = ~ 0;
+    pattern . l <<= 64 - ( size << 2 );
+    mask . l <<= 64 - ( size << 2 );
+
+    PARSE_4NA_PATTERN ( fasta, size, pattern, mask );
+
+    e -> fasta . query [ 0 ] . pattern = pattern;
+    e -> fasta . query [ 1 ] . pattern . l = pattern . l >> 4;
+    e -> fasta . query [ 2 ] . pattern . l = pattern . l >> 8;
+    e -> fasta . query [ 3 ] . pattern . l = pattern . l >> 12;
+
+    e -> fasta . query [ 0 ] . mask = mask;
+    e -> fasta . query [ 1 ] . mask . l = mask . l >> 4;
+    e -> fasta . query [ 2 ] . mask . l = mask . l >> 8;
+    e -> fasta . query [ 3 ] . mask . l = mask . l >> 12;
+
+#endif
 
     PARSE_4NA_SHIFT ( 0, e -> fasta . query [ 0 ] . pattern,
         e -> fasta . query [ 0 ] . mask );
@@ -1209,7 +1387,7 @@ const char *nss_unary_expr ( const char *p, const char *end,
             e -> sub . op = op_NOT;
             e -> sub . expr = NULL;
             * expr = e;
-            
+
             p = nss_unary_expr ( p, end, & e -> sub . expr, status, positional );
             assert ( * status != 0 || e -> sub . expr != NULL );
         }
@@ -1314,14 +1492,14 @@ void NucStrstrInit ( void )
     /* illegal under most conditions */
     memset ( fasta_2na_map, -1, sizeof fasta_2na_map );
     memset ( fasta_4na_map, -1, sizeof fasta_4na_map );
-        
+
     /* legal ncbi2na alphabet */
     for ( i = 0, p = ncbi2na; p [ 0 ] != 0; ++ i, ++ p )
     {
         ch = p [ 0 ];
         fasta_2na_map [ ch ] = fasta_2na_map [ tolower ( ch ) ] = ( int8_t ) i;
     }
-        
+
     /* legal ncbi4na alphabet */
     for ( i = 0, p = ncbi4na; p [ 0 ] != 0; ++ i, ++ p )
     {
@@ -1329,9 +1507,11 @@ void NucStrstrInit ( void )
         fasta_4na_map [ ch ] = fasta_4na_map [ tolower ( ch ) ] = ( int8_t ) i;
     }
 
+#if INTEL_INTRINSICS
     /* byte swap the 2na expand map */
     for ( i = 0; i < 256; ++ i )
         expand_2na [ i ] = bswap_16 ( expand_2na [ i ] );
+#endif
 }
 
 /* NucStrstrMake
@@ -1400,6 +1580,7 @@ LIB_EXPORT void CC NucStrstrWhack ( NucStrstr *self )
         {
         case type_2na_64:
         case type_4na_64:
+#if INTEL_INTRINSICS
         case type_2na_8:
         case type_2na_16:
         case type_2na_32:
@@ -1407,9 +1588,10 @@ LIB_EXPORT void CC NucStrstrWhack ( NucStrstr *self )
         case type_4na_16:
         case type_4na_32:
         case type_4na_128:
+#endif
         case type_2na_pos:
         case type_4na_pos:
-#if ! USE_MEMALIGN
+#if INTEL_INTRINSICS && ! USE_MEMALIGN
             self = self -> fasta . u . outer;
 #endif
             break;
@@ -1426,11 +1608,522 @@ LIB_EXPORT void CC NucStrstrWhack ( NucStrstr *self )
 }
 
 
-                        
+
 /*--------------------------------------------------------------------------
  * expression evaluation
  */
+#if ! INTEL_INTRINSICS
+static
+int eval_2na_64 ( const NucStrFastaExpr *self,
+    const void *ncbi2na, unsigned int pos, unsigned int len )
+{
+    int count;
+    uint64_t ra, rb, rc, rd;
 
+#if ENDLESS_BUFFER
+    uint64_t buffer;
+#else
+    nucpat_t bp;
+#define buffer bp.l
+    const uint8_t *end;
+#endif
+    const uint8_t *src = ( const uint8_t* ) ncbi2na + ( pos >> 2 );
+
+#if TRACE_OPERATIONS
+    unsigned int tpos = pos & ~ 3;
+    unsigned int align_len = len + ( pos & 3 );
+#endif
+
+    if ( len < self -> size )
+        return 0;
+
+#if ENDLESS_BUFFER
+    /* prime source buffer */
+    buffer = bswap_64 ( * ( const uint64_t* ) src );
+#else
+    /* accumulate entry position into length */
+    end = src + ( ( len + ( pos & 3 ) + 3 ) >> 2 );
+
+    /* prime source buffer */
+    bp . l = 0; /* defined above as "buffer" */
+    switch ( end - src )
+    {
+    default:
+        bp . b [ 0 ] = src [ 7 ];
+    case 7:
+        bp . b [ 1 ] = src [ 6 ];
+    case 6:
+        bp . b [ 2 ] = src [ 5 ];
+    case 5:
+        bp . b [ 3 ] = src [ 4 ];
+    case 4:
+        bp . b [ 4 ] = src [ 3 ];
+    case 3:
+        bp . b [ 5 ] = src [ 2 ];
+    case 2:
+        bp . b [ 6 ] = src [ 1 ];
+    case 1:
+        bp . b [ 7 ] = src [ 0 ];
+    }
+#endif
+
+    /* prime compare results */
+    ra = rb = rc = ~ 0;
+
+    /* position src at buffer end for loop */
+    src += 8;
+
+    /* evaluate at initial position */
+    ALIGN_2NA_HEADER ( buffer, tpos, align_len );
+    switch ( pos & 3 )
+    {
+    case 0:
+        ra = ( buffer ^ self -> query [ 0 ] . pattern . l ) & self -> query [ 0 ] . mask . l;
+        ALIGN_2NA_RESULT ( buffer, self -> query [ 0 ] . pattern . l, self -> query [ 0 ] . mask . l, ra );
+    case 1:
+        rb = ( buffer ^ self -> query [ 1 ] . pattern . l ) & self -> query [ 1 ] . mask . l;
+        ALIGN_2NA_RESULT ( buffer, self -> query [ 1 ] . pattern . l, self -> query [ 1 ] . mask . l, rb );
+    case 2:
+        rc = ( buffer ^ self -> query [ 2 ] . pattern . l ) & self -> query [ 2 ] . mask . l;
+        ALIGN_2NA_RESULT ( buffer, self -> query [ 2 ] . pattern . l, self -> query [ 2 ] . mask . l, rc );
+    case 3:
+        rd = ( buffer ^ self -> query [ 3 ] . pattern . l ) & self -> query [ 3 ] . mask . l;
+        ALIGN_2NA_RESULT ( buffer, self -> query [ 3 ] . pattern . l, self -> query [ 3 ] . mask . l, rd );
+    }
+
+    /* loop on the number of shifts */
+    for ( count = ( int ) ( len - self -> size ); count >= 3; count -= 4 )
+    {
+        /* exit condition within sequence */
+        if ( ( ra & rb & rc & rd ) == 0 )
+            return 1;
+
+        /* get next 2na byte */
+        buffer <<= 8;
+#if ENDLESS_BUFFER
+        buffer |= * src ++;
+#else
+        if ( src < end )
+            bp . b [ 0 ] = * src ++;
+#endif
+
+#if TRACE_OPERATIONS
+        tpos = ( tpos + 4 ) & ~ 3;
+        ALIGN_2NA_HEADER ( buffer, tpos, align_len );
+#endif
+
+        /* test at this position */
+        ra = ( buffer ^ self -> query [ 0 ] . pattern . l ) & self -> query [ 0 ] . mask . l;
+        ALIGN_2NA_RESULT ( buffer, self -> query [ 0 ] . pattern . l, self -> query [ 0 ] . mask . l, ra );
+        rb = ( buffer ^ self -> query [ 1 ] . pattern . l ) & self -> query [ 1 ] . mask . l;
+        ALIGN_2NA_RESULT ( buffer, self -> query [ 1 ] . pattern . l, self -> query [ 1 ] . mask . l, rb );
+        rc = ( buffer ^ self -> query [ 2 ] . pattern . l ) & self -> query [ 2 ] . mask . l;
+        ALIGN_2NA_RESULT ( buffer, self -> query [ 2 ] . pattern . l, self -> query [ 2 ] . mask . l, rc );
+        rd = ( buffer ^ self -> query [ 3 ] . pattern . l ) & self -> query [ 3 ] . mask . l;
+        ALIGN_2NA_RESULT ( buffer, self -> query [ 3 ] . pattern . l, self -> query [ 3 ] . mask . l, rd );
+    }
+
+    switch ( ( pos + count ) & 3 )
+    {
+    case 2:
+        if ( ! rc ) return 1;
+    case 1:
+        if ( ! rb ) return 1;
+    case 0:
+        if ( ! ra ) return 1;
+    }
+
+    return 0;
+
+#undef buffer
+}
+
+static
+int eval_2na_pos ( const NucStrFastaExpr *self,
+    const void *ncbi2na, unsigned int pos, unsigned int len )
+{
+    int i, count;
+    uint64_t ra, rb, rc, rd;
+
+#if ENDLESS_BUFFER
+    uint64_t buffer;
+#else
+    nucpat_t bp;
+#define buffer bp.l
+    const uint8_t *end;
+#endif
+    const uint8_t *src = ( const uint8_t* ) ncbi2na + ( pos >> 2 );
+
+#if TRACE_OPERATIONS
+    unsigned int tpos = pos & ~ 3;
+    unsigned int align_len = len + ( pos & 3 );
+#endif
+
+    if ( len < self -> size )
+        return 0;
+
+#if ENDLESS_BUFFER
+    /* prime source buffer */
+    buffer = bswap_64 ( * ( const uint64_t* ) src );
+#else
+    /* accumulate entry position into length */
+    end = src + ( ( len + ( pos & 3 ) + 3 ) >> 2 );
+
+    /* prime source buffer */
+    bp . l = 0; /* defined above as "buffer" */
+    switch ( end - src )
+    {
+    default:
+        bp . b [ 0 ] = src [ 7 ];
+    case 7:
+        bp . b [ 1 ] = src [ 6 ];
+    case 6:
+        bp . b [ 2 ] = src [ 5 ];
+    case 5:
+        bp . b [ 3 ] = src [ 4 ];
+    case 4:
+        bp . b [ 4 ] = src [ 3 ];
+    case 3:
+        bp . b [ 5 ] = src [ 2 ];
+    case 2:
+        bp . b [ 6 ] = src [ 1 ];
+    case 1:
+        bp . b [ 7 ] = src [ 0 ];
+    }
+#endif
+
+    /* prime compare results */
+    ra = rb = rc = ~ 0;
+
+    /* position src at buffer end for loop */
+    src += 8;
+
+    /* evaluate at initial position */
+    ALIGN_2NA_HEADER ( buffer, tpos, align_len );
+    i = 0 - ( int ) ( pos & 3 );
+    switch ( pos & 3 )
+    {
+    case 0:
+        ra = ( buffer ^ self -> query [ 0 ] . pattern . l ) & self -> query [ 0 ] . mask . l;
+        ALIGN_2NA_RESULT ( buffer, self -> query [ 0 ] . pattern . l, self -> query [ 0 ] . mask . l, ra );
+    case 1:
+        rb = ( buffer ^ self -> query [ 1 ] . pattern . l ) & self -> query [ 1 ] . mask . l;
+        ALIGN_2NA_RESULT ( buffer, self -> query [ 1 ] . pattern . l, self -> query [ 1 ] . mask . l, rb );
+    case 2:
+        rc = ( buffer ^ self -> query [ 2 ] . pattern . l ) & self -> query [ 2 ] . mask . l;
+        ALIGN_2NA_RESULT ( buffer, self -> query [ 2 ] . pattern . l, self -> query [ 2 ] . mask . l, rc );
+    case 3:
+        rd = ( buffer ^ self -> query [ 3 ] . pattern . l ) & self -> query [ 3 ] . mask . l;
+        ALIGN_2NA_RESULT ( buffer, self -> query [ 3 ] . pattern . l, self -> query [ 3 ] . mask . l, rd );
+    }
+
+    /* loop on the number of shifts */
+    for ( count = ( int ) ( len - self -> size ); count >= 3; i += 4, count -= 4 )
+    {
+        /* exit condition within sequence */
+        if ( ! ra )
+            return i + 1;
+        if ( ! rb )
+            return i + 2;
+        if ( ! rc )
+            return i + 3;
+        if ( ! rd )
+            return i + 4;
+
+        /* get next 2na byte */
+        buffer <<= 8;
+#if ENDLESS_BUFFER
+        buffer |= * src ++;
+#else
+        if ( src < end )
+            bp . b [ 0 ] = * src ++;
+#endif
+
+#if TRACE_OPERATIONS
+        tpos = ( tpos + 4 ) & ~ 3;
+        ALIGN_2NA_HEADER ( buffer, tpos, align_len );
+#endif
+
+        /* test at this position */
+        ra = ( buffer ^ self -> query [ 0 ] . pattern . l ) & self -> query [ 0 ] . mask . l;
+        ALIGN_2NA_RESULT ( buffer, self -> query [ 0 ] . pattern . l, self -> query [ 0 ] . mask . l, ra );
+        rb = ( buffer ^ self -> query [ 1 ] . pattern . l ) & self -> query [ 1 ] . mask . l;
+        ALIGN_2NA_RESULT ( buffer, self -> query [ 1 ] . pattern . l, self -> query [ 1 ] . mask . l, rb );
+        rc = ( buffer ^ self -> query [ 2 ] . pattern . l ) & self -> query [ 2 ] . mask . l;
+        ALIGN_2NA_RESULT ( buffer, self -> query [ 2 ] . pattern . l, self -> query [ 2 ] . mask . l, rc );
+        rd = ( buffer ^ self -> query [ 3 ] . pattern . l ) & self -> query [ 3 ] . mask . l;
+        ALIGN_2NA_RESULT ( buffer, self -> query [ 3 ] . pattern . l, self -> query [ 3 ] . mask . l, rd );
+    }
+
+    switch ( ( pos + count ) & 3 )
+    {
+    case 0:
+        if ( ! ra ) return i + 1;
+        break;
+    case 1:
+        if ( ! ra ) return i + 1;
+        if ( ! rb ) return i + 2;
+        break;
+    case 2:
+        if ( ! ra ) return i + 1;
+        if ( ! rb ) return i + 2;
+        if ( ! rc ) return i + 3;
+    }
+
+    return 0;
+
+#undef buffer
+}
+
+static
+int eval_4na_64 ( const NucStrFastaExpr *self,
+    const void *ncbi2na, unsigned int pos, unsigned int len )
+{
+    int count;
+    uint64_t buffer;
+    uint64_t ra, rb, rc, rd;
+#if ! ENDLESS_BUFFER
+    const uint8_t *end;
+#endif
+    const uint8_t *src = ( const uint8_t* ) ncbi2na + ( pos >> 2 );
+
+#if TRACE_OPERATIONS
+    unsigned int tpos = pos & ~ 3;
+    unsigned int align_len = len + ( pos & 3 );
+#endif
+
+    if ( len < self -> size )
+        return 0;
+
+#if ENDLESS_BUFFER
+    buffer = expand_2na [ src [ 3 ] ];
+    buffer |= ( uint32_t ) expand_2na [ src [ 2 ] ] << 16;
+    buffer |= ( uint64_t ) expand_2na [ src [ 1 ] ] << 32;
+    buffer |= ( uint64_t ) expand_2na [ src [ 0 ] ] << 48;
+#else
+    /* accumulate entry position into length */
+    end = src + ( ( len + ( pos & 3 ) + 3 ) >> 2 );
+
+    /* prime source buffer */
+    buffer = 0;
+    switch ( end - src )
+    {
+    default:
+        buffer |= expand_2na [ src [ 3 ] ];
+    case 3:
+        buffer |= ( uint32_t ) expand_2na [ src [ 2 ] ] << 16;
+    case 2:
+        buffer |= ( uint64_t ) expand_2na [ src [ 1 ] ] << 32;
+    case 1:
+        buffer |= ( uint64_t ) expand_2na [ src [ 0 ] ] << 48;
+    }
+#endif
+
+    /* prime compare results */
+    ra = rb = rc = rd = ~ 0;
+
+    /* position src at buffer end for loop */
+    src += 4;
+
+    /* evaluate at initial position */
+    ALIGN_4NA_HEADER ( buffer, tpos, align_len );
+    switch ( pos & 3 )
+    {
+    case 0:
+        ra = ( buffer & self -> query [ 0 ] . pattern . l )
+            ^ ( buffer & self -> query [ 0 ] . mask . l );
+        ALIGN_4NA_RESULT ( buffer, self -> query [ 0 ] . pattern . l, self -> query [ 0 ] . mask . l, ra );
+    case 1:
+        rb = ( buffer & self -> query [ 1 ] . pattern . l )
+            ^ ( buffer & self -> query [ 1 ] . mask . l );
+        ALIGN_4NA_RESULT ( buffer, self -> query [ 1 ] . pattern . l, self -> query [ 1 ] . mask . l, rb );
+    case 2:
+        rc = ( buffer & self -> query [ 2 ] . pattern . l )
+            ^ ( buffer & self -> query [ 2 ] . mask . l ) ;
+        ALIGN_4NA_RESULT ( buffer, self -> query [ 2 ] . pattern . l, self -> query [ 2 ] . mask . l, rc );
+    case 3:
+        rd = ( buffer & self -> query [ 3 ] . pattern . l )
+            ^ ( buffer & self -> query [ 3 ] . mask . l );
+        ALIGN_4NA_RESULT ( buffer, self -> query [ 3 ] . pattern . l, self -> query [ 3 ] . mask . l, rd );
+    }
+
+    for ( count = ( int ) ( len - self -> size ); count >= 3; count -= 4 )
+    {
+        /* exit condition within sequence */
+        if ( ( ra & rb & rc & rd ) == 0 )
+            return 1;
+
+        /* shuffle in next byte in 4na */
+        buffer <<= 16;
+#if ! ENDLESS_BUFFER
+        if ( src < end )
+#endif
+            buffer |= expand_2na [ * src ++ ];
+
+#if TRACE_OPERATIONS
+        tpos = ( tpos + 4 ) & ~ 3;
+        ALIGN_4NA_HEADER ( buffer, tpos, align_len );
+#endif
+
+        /* test at this position */
+        ra = ( buffer & self -> query [ 0 ] . pattern . l )
+            ^ ( buffer & self -> query [ 0 ] . mask . l );
+        ALIGN_4NA_RESULT ( buffer, self -> query [ 0 ] . pattern . l, self -> query [ 0 ] . mask . l, ra );
+        rb = ( buffer & self -> query [ 1 ] . pattern . l )
+            ^ ( buffer & self -> query [ 1 ] . mask . l );
+        ALIGN_4NA_RESULT ( buffer, self -> query [ 1 ] . pattern . l, self -> query [ 1 ] . mask . l, rb );
+        rc = ( buffer & self -> query [ 2 ] . pattern . l )
+            ^ ( buffer & self -> query [ 2 ] . mask . l );
+        ALIGN_4NA_RESULT ( buffer, self -> query [ 2 ] . pattern . l, self -> query [ 2 ] . mask . l, rc );
+        rd = ( buffer & self -> query [ 3 ] . pattern . l )
+            ^ ( buffer & self -> query [ 3 ] . mask . l );
+        ALIGN_4NA_RESULT ( buffer, self -> query [ 3 ] . pattern . l, self -> query [ 3 ] . mask . l, rd );
+    }
+
+    switch ( ( pos + count ) & 3 )
+    {
+    case 2:
+        if ( ! rc ) return 1;
+    case 1:
+        if ( ! rb ) return 1;
+    case 0:
+        if ( ! ra ) return 1;
+    }
+
+    return 0;
+}
+
+static
+int eval_4na_pos ( const NucStrFastaExpr *self,
+    const void *ncbi2na, unsigned int pos, unsigned int len )
+{
+    int i, count;
+    uint64_t buffer;
+    uint64_t ra, rb, rc, rd;
+#if ! ENDLESS_BUFFER
+    const uint8_t *end;
+#endif
+    const uint8_t *src = ( const uint8_t* ) ncbi2na + ( pos >> 2 );
+
+#if TRACE_OPERATIONS
+    unsigned int tpos = pos & ~ 3;
+    unsigned int align_len = len + ( pos & 3 );
+#endif
+
+    if ( len < self -> size )
+        return 0;
+
+#if ENDLESS_BUFFER
+    buffer = expand_2na [ src [ 3 ] ];
+    buffer |= ( uint32_t ) expand_2na [ src [ 2 ] ] << 16;
+    buffer |= ( uint64_t ) expand_2na [ src [ 1 ] ] << 32;
+    buffer |= ( uint64_t ) expand_2na [ src [ 0 ] ] << 48;
+#else
+    /* accumulate entry position into length */
+    end = src + ( ( len + ( pos & 3 ) + 3 ) >> 2 );
+
+    /* prime source buffer */
+    buffer = 0;
+    switch ( end - src )
+    {
+    default:
+        buffer |= expand_2na [ src [ 3 ] ];
+    case 3:
+        buffer |= ( uint32_t ) expand_2na [ src [ 2 ] ] << 16;
+    case 2:
+        buffer |= ( uint64_t ) expand_2na [ src [ 1 ] ] << 32;
+    case 1:
+        buffer |= ( uint64_t ) expand_2na [ src [ 0 ] ] << 48;
+    }
+#endif
+
+    /* prime compare results */
+    ra = rb = rc = rd = ~ 0;
+
+    /* position src at buffer end for loop */
+    src += 4;
+
+    /* evaluate at initial position */
+    ALIGN_4NA_HEADER ( buffer, tpos, align_len );
+    i = 0 - ( int ) ( pos & 3 );
+    switch ( pos & 3 )
+    {
+    case 0:
+        ra = ( buffer & self -> query [ 0 ] . pattern . l )
+            ^ ( buffer & self -> query [ 0 ] . mask . l );
+        ALIGN_4NA_RESULT ( buffer, self -> query [ 0 ] . pattern . l, self -> query [ 0 ] . mask . l, ra );
+    case 1:
+        rb = ( buffer & self -> query [ 1 ] . pattern . l )
+            ^ ( buffer & self -> query [ 1 ] . mask . l );
+        ALIGN_4NA_RESULT ( buffer, self -> query [ 1 ] . pattern . l, self -> query [ 1 ] . mask . l, rb );
+    case 2:
+        rc = ( buffer & self -> query [ 2 ] . pattern . l )
+            ^ ( buffer & self -> query [ 2 ] . mask . l ) ;
+        ALIGN_4NA_RESULT ( buffer, self -> query [ 2 ] . pattern . l, self -> query [ 2 ] . mask . l, rc );
+    case 3:
+        rd = ( buffer & self -> query [ 3 ] . pattern . l )
+            ^ ( buffer & self -> query [ 3 ] . mask . l );
+        ALIGN_4NA_RESULT ( buffer, self -> query [ 3 ] . pattern . l, self -> query [ 3 ] . mask . l, rd );
+    }
+
+    for ( count = ( int ) ( len - self -> size ); count >= 3; i += 4, count -= 4 )
+    {
+        /* exit condition within sequence */
+        if ( ! ra )
+            return i + 1;
+        if ( ! rb )
+            return i + 2;
+        if ( ! rc )
+            return i + 3;
+        if ( ! rd )
+            return i + 4;
+
+        /* shuffle in next byte in 4na */
+        buffer <<= 16;
+#if ! ENDLESS_BUFFER
+        if ( src < end )
+#endif
+            buffer |= expand_2na [ * src ++ ];
+
+#if TRACE_OPERATIONS
+        tpos = ( tpos + 4 ) & ~ 3;
+        ALIGN_4NA_HEADER ( buffer, tpos, align_len );
+#endif
+
+        /* test at this position */
+        ra = ( buffer & self -> query [ 0 ] . pattern . l )
+            ^ ( buffer & self -> query [ 0 ] . mask . l );
+        ALIGN_4NA_RESULT ( buffer, self -> query [ 0 ] . pattern . l, self -> query [ 0 ] . mask . l, ra );
+        rb = ( buffer & self -> query [ 1 ] . pattern . l )
+            ^ ( buffer & self -> query [ 1 ] . mask . l );
+        ALIGN_4NA_RESULT ( buffer, self -> query [ 1 ] . pattern . l, self -> query [ 1 ] . mask . l, rb );
+        rc = ( buffer & self -> query [ 2 ] . pattern . l )
+            ^ ( buffer & self -> query [ 2 ] . mask . l );
+        ALIGN_4NA_RESULT ( buffer, self -> query [ 2 ] . pattern . l, self -> query [ 2 ] . mask . l, rc );
+        rd = ( buffer & self -> query [ 3 ] . pattern . l )
+            ^ ( buffer & self -> query [ 3 ] . mask . l );
+        ALIGN_4NA_RESULT ( buffer, self -> query [ 3 ] . pattern . l, self -> query [ 3 ] . mask . l, rd );
+    }
+
+    switch ( ( pos + count ) & 3 )
+    {
+    case 0:
+        if ( ! ra ) return i + 1;
+        break;
+    case 1:
+        if ( ! ra ) return i + 1;
+        if ( ! rb ) return i + 2;
+        break;
+    case 2:
+        if ( ! ra ) return i + 1;
+        if ( ! rb ) return i + 2;
+        if ( ! rc ) return i + 3;
+    }
+
+    return 0;
+}
+
+#else /* INTEL_INTRINSICS */
 
 #if ENDLESS_BUFFER
 static __inline__
@@ -1681,7 +2374,7 @@ int eval_2na_8 ( const NucStrFastaExpr *self,
                     slam |= ( int ) p [ 0 ] << 8;
                     buffer = _mm_insert_epi16 ( buffer, slam, 7 );
                 }
-                
+
                 /* always increment source */
                 ++ p;
 #endif
@@ -1974,7 +2667,7 @@ int eval_2na_16 ( const NucStrFastaExpr *self,
                     slam |= ( int ) p [ 0 ] << 8;
                     buffer = _mm_insert_epi16 ( buffer, slam, 7 );
                 }
-                
+
                 /* always increment source */
                 ++ p;
 #endif
@@ -2267,7 +2960,7 @@ int eval_2na_32 ( const NucStrFastaExpr *self,
                     slam |= ( int ) p [ 0 ] << 8;
                     buffer = _mm_insert_epi16 ( buffer, slam, 7 );
                 }
-                
+
                 /* always increment source */
                 ++ p;
 #endif
@@ -2561,7 +3254,7 @@ int eval_2na_64 ( const NucStrFastaExpr *self,
                     slam |= ( int ) p [ 0 ] << 8;
                     buffer = _mm_insert_epi16 ( buffer, slam, 7 );
                 }
-                
+
                 /* always increment source */
                 ++ p;
 #endif
@@ -2854,7 +3547,7 @@ int eval_2na_128 ( const NucStrFastaExpr *self,
                     slam |= ( int ) p [ 0 ] << 8;
                     buffer = _mm_insert_epi16 ( buffer, slam, 7 );
                 }
-                
+
                 /* always increment source */
                 ++ p;
 #endif
@@ -3180,7 +3873,7 @@ int eval_2na_pos ( const NucStrFastaExpr *self,
                     slam |= ( int ) p [ 0 ] << 8;
                     buffer = _mm_insert_epi16 ( buffer, slam, 7 );
                 }
-                
+
                 /* always increment source */
                 ++ p;
 #endif
@@ -3536,7 +4229,7 @@ int eval_4na_16 ( const NucStrFastaExpr *self,
                 /* bring in new byte */
                 if ( p < end )
                     buffer = _mm_insert_epi16 ( buffer, expand_2na [ * p ], 7 );
-                
+
                 /* always increment source */
                 ++ p;
 #endif
@@ -3758,7 +4451,7 @@ int eval_4na_32 ( const NucStrFastaExpr *self,
                 /* bring in new byte */
                 if ( p < end )
                     buffer = _mm_insert_epi16 ( buffer, expand_2na [ * p ], 7 );
-                
+
                 /* always increment source */
                 ++ p;
 #endif
@@ -3981,7 +4674,7 @@ int eval_4na_64 ( const NucStrFastaExpr *self,
                 /* bring in new byte */
                 if ( p < end )
                     buffer = _mm_insert_epi16 ( buffer, expand_2na [ * p ], 7 );
-                
+
                 /* always increment source */
                 ++ p;
 #endif
@@ -4203,7 +4896,7 @@ int eval_4na_128 ( const NucStrFastaExpr *self,
                 /* bring in new byte */
                 if ( p < end )
                     buffer = _mm_insert_epi16 ( buffer, expand_2na [ * p ], 7 );
-                
+
                 /* always increment source */
                 ++ p;
 #endif
@@ -4458,7 +5151,7 @@ int eval_4na_pos ( const NucStrFastaExpr *self,
                 /* bring in new byte */
                 if ( p < end )
                     buffer = _mm_insert_epi16 ( buffer, expand_2na [ * p ], 7 );
-                
+
                 /* always increment source */
                 ++ p;
 #endif
@@ -4504,6 +5197,7 @@ int eval_4na_pos ( const NucStrFastaExpr *self,
 
     return 0;
 }
+#endif /* INTEL_INTRINSICS */
 
 
 /* NucStrstrSearch
@@ -4538,6 +5232,7 @@ LIB_EXPORT int CC NucStrstrSearch ( const NucStrstr *self,
             if ( len < self -> fasta . size ) return 0;
 	    if(selflen) *selflen=self -> fasta . size;
             return eval_4na_64 ( & self -> fasta, ncbi2na, pos, len );
+#if INTEL_INTRINSICS
         case type_2na_8:
             if ( len < self -> fasta . size ) return 0;
 	    if(selflen) *selflen=self -> fasta . size;
@@ -4566,6 +5261,7 @@ LIB_EXPORT int CC NucStrstrSearch ( const NucStrstr *self,
             if ( len < self -> fasta . size ) return 0;
 	    if(selflen) *selflen=self -> fasta . size;
             return eval_4na_128 ( & self -> fasta, ncbi2na, pos, len );
+#endif
         case type_2na_pos:
             if ( len < self -> fasta . size ) return 0;
 	    if(selflen) *selflen=self -> fasta . size;
@@ -4619,3 +5315,4 @@ LIB_EXPORT int CC NucStrstrSearch ( const NucStrstr *self,
     }
     return 0;
 }
+

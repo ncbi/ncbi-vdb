@@ -253,7 +253,7 @@ rc_t KColumnIdx1OpenRead ( KColumnIdx1 *self, const KDirectory *dir,
     self -> bswap = false;
     self -> loaded = false;
             
-    rc = KDirectoryVOpenFileRead ( dir, & self -> f, "idx1", NULL );
+    rc = KDirectoryOpenFileRead_v1 ( dir, & self -> f, "idx1" );
     if ( rc == 0 )
     {
         KColumnHdr hdr;
@@ -307,7 +307,7 @@ rc_t KColumnIdx1OpenRead ( KColumnIdx1 *self, const KDirectory *dir,
                         break;
 
                     default:
-                        rc = KDirectoryVOpenFileRead ( dir, ( const KFile** ) & self -> fidx, "idx", NULL );
+                        rc = KDirectoryOpenFileRead_v1 ( dir, ( const KFile** ) & self -> fidx, "idx" );
                         if ( rc == 0 )
                         {
                             off = sizeof hdr . dad;

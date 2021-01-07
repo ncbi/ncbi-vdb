@@ -80,64 +80,73 @@ clean: stdclean
 #
 $(ILIBDIR)/libmbedcrypto: $(addprefix $(ILIBDIR)/libmbedcrypto.,$(LIBX))
 
-CRYPTO_SRC =            \
-    aes                 \
-    aesni               \
-    arc4                \
-    asn1parse           \
-    asn1write           \
-    base64              \
-    bignum              \
-    blowfish            \
-    camellia            \
-    ccm                 \
-    chacha20            \
-    chachapoly          \
-    cipher              \
-    cipher_wrap         \
-    ctr_drbg            \
-    des                 \
-    dhm                 \
-    ecdh                \
-    ecdsa               \
-    ecjpake             \
-    ecp                 \
-    ecp_curves          \
-    entropy             \
-    entropy_poll        \
-    error               \
-    gcm                 \
-    havege              \
-    hmac_drbg           \
-    md                  \
-    md2                 \
-    md4                 \
-    md5                 \
-    md_wrap             \
-    memory_buffer_alloc \
-    oid                 \
-    padlock             \
-    pem                 \
-    pk                  \
-    pk_wrap             \
-    pkcs12              \
-    pkcs5               \
-    pkparse             \
-    pkwrite             \
-    platform            \
-    platform_util       \
-    poly1305            \
-    ripemd160           \
-    rsa                 \
-    rsa_internal        \
-    sha1                \
-    sha256              \
-    sha512              \
-    threading           \
-    timing              \
-    version             \
-    version_features    \
-    xtea
+CRYPTO_SRC =                   \
+	aes                        \
+	aesni                      \
+	arc4                       \
+	aria                       \
+	asn1parse                  \
+	asn1write                  \
+	base64                     \
+	bignum                     \
+	blowfish                   \
+	camellia                   \
+	ccm                        \
+	chacha20                   \
+	chachapoly                 \
+	cipher                     \
+	cipher_wrap                \
+	cmac                       \
+	ctr_drbg                   \
+	des                        \
+	dhm                        \
+	ecdh                       \
+	ecdsa                      \
+	ecjpake                    \
+	ecp                        \
+	ecp_curves                 \
+	entropy                    \
+	entropy_poll               \
+	error                      \
+	gcm                        \
+	havege                     \
+	hkdf                       \
+	hmac_drbg                  \
+	md                         \
+	md2                        \
+	md4                        \
+	md5                        \
+	memory_buffer_alloc        \
+	nist_kw                    \
+	oid                        \
+	padlock                    \
+	pem                        \
+	pk                         \
+	pk_wrap                    \
+	pkcs12                     \
+	pkcs5                      \
+	pkparse                    \
+	pkwrite                    \
+	platform                   \
+	platform_util              \
+	poly1305                   \
+	psa_crypto                 \
+	psa_crypto_driver_wrappers \
+	psa_crypto_se              \
+	psa_crypto_slot_management \
+	psa_crypto_storage         \
+	psa_its_file               \
+	ripemd160                  \
+	rsa                        \
+	rsa_internal               \
+	sha1                       \
+	sha256                     \
+	sha512                     \
+	threading                  \
+	timing                     \
+	version                    \
+	version_features           \
+	xtea
 
 CRYPTO_OBJ = \
 	$(addsuffix .$(LOBX),$(CRYPTO_SRC))
@@ -176,15 +185,16 @@ $(ILIBDIR)/libmbedtls: $(addprefix $(ILIBDIR)/libmbedtls.,$(LIBX))
 
 TLS_SRC =            \
 	debug            \
+	net_sockets      \
 	ssl_cache        \
 	ssl_ciphersuites \
 	ssl_cli          \
 	ssl_cookie       \
+	ssl_msg          \
 	ssl_srv          \
 	ssl_ticket       \
-	ssl_tls
-
-#	net              \
+	ssl_tls          \
+	ssl_tls13_keys
 
 TLS_OBJ = \
 	$(addsuffix .$(LOBX),$(TLS_SRC))
