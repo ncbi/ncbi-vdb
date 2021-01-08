@@ -444,7 +444,7 @@ rc_t KSysDirMakePath_v1 ( const KSysDir_v1 * self, enum RCContext ctx, bool cano
     if ( path [ 0 ] == 0 )
         return RC ( rcFS, rcDirectory, ctx, rcPath, rcInvalid );
 
-    if ( args != NULL && path [ 0 ] == '%' )
+    if ( /*args != NULL &&*/ path [ 0 ] == '%' )
     {
         psize = vsnprintf ( buffer, path_max, path, args );
         if ( psize < 0 || psize >= path_max )
@@ -480,9 +480,9 @@ rc_t KSysDirMakePath_v1 ( const KSysDir_v1 * self, enum RCContext ctx, bool cano
             memmove ( buffer, self -> path, bsize );
         }
 
-        if ( args == NULL )
+/*        if ( args == NULL )
             psize = snprintf ( buffer + bsize, path_max - bsize, "%s", path );
-        else
+        else*/
             psize = vsnprintf ( buffer + bsize, path_max - bsize, path, args );
 
         if ( psize < 0 || bsize + psize >= path_max )
@@ -499,6 +499,16 @@ rc_t KSysDirMakePath_v1 ( const KSysDir_v1 * self, enum RCContext ctx, bool cano
     return 0;
 }
 
+
+static rc_t KSysDirMakePath_v1_noargs(const KSysDir_v1 * self, enum RCContext ctx, bool canon,
+    char *buffer, size_t path_max, const char *path, ...)
+{
+    va_list vl;
+    va_start( vl, path );
+    rc_t ret = KSysDirMakePath_v1( self, ctx, canon, buffer, path_max, path, vl );
+    va_end(vl);
+    return ret;
+}
 
 /* RealPath
  *  returns a real OS path
@@ -991,18 +1001,36 @@ rc_t KSysDirResolveAlias_v1 ( const KSysDir_v1 * self, bool absolute,
  */
 static rc_t KSysDirVAccess ( const KSysDir_v1 * self, uint32_t *access, const char *path,
                              va_list args );
+static rc_t KSysDirVAccess_noargs ( const KSysDir_v1 * self, uint32_t *access, const char *path, ... )
+{
+    va_list vl;
+    va_start( vl, path );
+    rc_t ret = KSysDirVAccess( self, access, path, vl );
+    va_end(vl);
+    return ret;
+}
+
 static rc_t KSysDirSetAccess_v1 ( KSysDir_v1 * self, bool recur, uint32_t access, uint32_t mask,
                                const char *path, va_list args );
+static rc_t KSysDirSetAccess_v1_noargs ( KSysDir_v1 * self, bool recur, uint32_t access, uint32_t mask,
+                               const char *path, ... )
+{
+    va_list vl;
+    va_start( vl, path );
+    rc_t ret = KSysDirSetAccess_v1( self, recur, access, mask, path, vl );
+    va_end(vl);
+    return ret;
+}
 
 static
 rc_t KSysDirRename_v1 ( KSysDir_v1 * self, bool force, const char *from, const char *to )
 {
     char ffrom [ PATH_MAX ];
-    rc_t rc = KSysDirMakePath_v1 ( self, rcRenaming, false, ffrom, sizeof ffrom, from, NULL );
+    rc_t rc = KSysDirMakePath_v1_noargs ( self, rcRenaming, false, ffrom, sizeof ffrom, from );
     if ( rc == 0 )
     {
         char fto [ PATH_MAX ];
-        rc = KSysDirMakePath_v1 ( self, rcRenaming, false, fto, sizeof fto, to, NULL );
+        rc = KSysDirMakePath_v1_noargs ( self, rcRenaming, false, fto, sizeof fto, to );
         if ( rc == 0 )
         {
             if ( rename ( ffrom, fto ) != 0 ) switch ( errno )
@@ -1050,10 +1078,10 @@ rc_t KSysDirRename_v1 ( KSysDir_v1 * self, bool force, const char *from, const c
                 bool fchanged = false;
                 bool tchanged = false;
 
-                rc = KSysDirVAccess (self, &taccess, to, NULL);
+                rc = KSysDirVAccess_noargs (self, &taccess, to);
                 if (rc == 0)
                 {
-                    rc = KSysDirSetAccess_v1 (self, false, 0222, 0222, to, NULL);
+                    rc = KSysDirSetAccess_v1_noargs (self, false, 0222, 0222, to);
                     tchanged = true;
                 }
                 else if(GetRCState(rc) ==  rcNotFound)
@@ -1063,10 +1091,10 @@ rc_t KSysDirRename_v1 ( KSysDir_v1 * self, bool force, const char *from, const c
 
                 if (rc == 0)
                 {
-                    rc = KSysDirVAccess (self, &faccess, from, NULL);
+                    rc = KSysDirVAccess_noargs (self, &faccess, from);
                     if (rc == 0)
                     {
-                        rc = KSysDirSetAccess_v1 (self, false, 0222, 0222, from, NULL);
+                        rc = KSysDirSetAccess_v1_noargs (self, false, 0222, 0222, from);
                         if (rc == 0)
                         {
                             fchanged = true;
@@ -1076,15 +1104,15 @@ rc_t KSysDirRename_v1 ( KSysDir_v1 * self, bool force, const char *from, const c
                     if (rc == 0)
                     {
                         /* set access on the new name to the access from the old name */
-                        KSysDirSetAccess_v1 (self, false, faccess, 0222, to, NULL);
+                        KSysDirSetAccess_v1_noargs (self, false, faccess, 0222, to);
                     }
                     else
                     {
                         /* since something falied, try to restore changed access bits */
                         if (fchanged)
-                            KSysDirSetAccess_v1 (self, false, faccess, 0222, from, NULL);
+                            KSysDirSetAccess_v1_noargs (self, false, faccess, 0222, from);
                         if (tchanged)
-                            KSysDirSetAccess_v1 (self, false, taccess, 0222, to, NULL);
+                            KSysDirSetAccess_v1_noargs (self, false, taccess, 0222, to);
                     }
 
                 }
@@ -1742,12 +1770,12 @@ rc_t KSysDirCreateAlias_v1 ( KSysDir_v1 * self,
 {
     /* create full path to symlink */
     char falias [ PATH_MAX ];
-    rc_t rc = KSysDirMakePath_v1 ( self, rcCreating, true, falias, sizeof falias, alias, NULL );
+    rc_t rc = KSysDirMakePath_v1_noargs ( self, rcCreating, true, falias, sizeof falias, alias );
     if ( rc == 0 )
     {
         /* the full path to target RELATIVE TO self */
         char ftarg [ PATH_MAX ];
-        rc = KSysDirMakePath_v1 ( self, rcCreating, true, ftarg, sizeof ftarg, targ, NULL );
+        rc = KSysDirMakePath_v1_noargs ( self, rcCreating, true, ftarg, sizeof ftarg, targ );
         if ( rc == 0 )
         {
             /* if "targ" is relative or "self" is chroot'd,
@@ -1853,14 +1881,14 @@ rc_t KSysDirCreateLink_v1 ( KSysDir_v1 * self,
 {
     /* create full path to link */
     char flink [ PATH_MAX ] = "";
-    rc_t rc = KSysDirMakePath_v1 ( self, rcCreating, true,
-        flink, sizeof flink, newpath, NULL );
+    rc_t rc = KSysDirMakePath_v1_noargs ( self, rcCreating, true,
+        flink, sizeof flink, newpath );
     if ( rc == 0 )
     {
         /* the full path to oldpath RELATIVE TO self */
         char fold [ PATH_MAX ] = "";
-        rc = KSysDirMakePath_v1 ( self, rcCreating, true,
-            fold, sizeof fold, oldpath, NULL );
+        rc = KSysDirMakePath_v1_noargs ( self, rcCreating, true,
+            fold, sizeof fold, oldpath );
         if ( rc == 0 )
         {
             /* if "self" is chroot'd, "fold" must be made relative */

@@ -513,9 +513,11 @@ rc_t init_token_source ( KTokenText *tt, KTokenSource *src,
     size_t num_writ;
     rc_t rc = 0;
 
-    if (args == NULL)
+    /* VDB-4386: cannot treat va_list as a pointer! */
+/*-    if (args == NULL)
         num_writ = string_copy ( full, fsize, path, string_size ( path ));
-    else
+    else*/
+    if ( path != NULL )
         rc = string_vprintf ( full, fsize, & num_writ, path, args );
     if ( rc == 0 )
     {
@@ -1788,6 +1790,17 @@ static rc_t CC KConfigPrintImpl(const KConfig* self,
     return rc;
 }
 
+static rc_t CC KConfigPrintImpl_noargs(const KConfig* self,
+    int indent, const char *root, bool debug, bool native,
+    PrintBuff *pb, uint32_t skipCount, ...)
+{
+    va_list vl;
+    va_start( vl, skipCount );
+    rc_t ret = KConfigPrintImpl( self, indent, root, debug, native, pb, skipCount, vl );
+    va_end(vl);
+    return ret;
+}
+
 LIB_EXPORT rc_t CC KConfigPrintDebug(const KConfig* self, const char *path) {
     rc_t rc = 0;
 
@@ -1798,7 +1811,7 @@ LIB_EXPORT rc_t CC KConfigPrintDebug(const KConfig* self, const char *path) {
     }
 
     if (rc == 0) {
-        rc = KConfigPrintImpl(self, 0, path, true, false, &pb, 0, NULL);
+        rc = KConfigPrintImpl_noargs(self, 0, path, true, false, &pb, 0);
     }
 
     if (rc == 0) {
@@ -2434,7 +2447,7 @@ bool scan_config_dir ( KConfig *self, const KDirectory *dir )
     pb . self = self;
     pb . loaded = false;
 
-    KDirectoryVVisit ( dir, false, scan_config_path, & pb, ".", NULL );
+    KDirectoryVisit_v1 ( dir, false, scan_config_path, & pb, "." );
 
     return pb . loaded;
 }
@@ -3216,7 +3229,7 @@ static rc_t _KConfigUseRealignAppWithExtFlatAlg(KConfig * self,
 
 #if 0
 static rc_t _KConfigUpdateDefault( KConfig * self, bool * updated,
-    const char * node_name, 
+    const char * node_name,
     const char * node2_name,
     const char * old_value,
     const char * new_value,
@@ -3538,7 +3551,7 @@ rc_t KConfigMakeImpl ( KConfig ** cfg, const KDirectory * cfgdir, bool local,
                     {
                         * cfg = mgr;
                     }
-                        
+
                 }
                 return rc;
             }
@@ -4161,8 +4174,21 @@ LIB_EXPORT rc_t CC KConfigPrintPartial
     return rc;
 }
 
+static rc_t KConfigPrintPartial_noargs
+    (const KConfig *self, int indent, uint32_t skipCount, ...)
+{
+    rc_t rc;
+    va_list args;
+
+    va_start ( args, skipCount );
+    rc = KConfigPrintPartial ( self, indent, skipCount, args );
+    va_end ( args );
+
+    return rc;
+}
+
 LIB_EXPORT rc_t CC KConfigPrint(const KConfig* self, int indent) {
-    return KConfigPrintPartial(self, indent, 0, NULL);
+    return KConfigPrintPartial_noargs(self, indent, 0);
 }
 
 LIB_EXPORT rc_t CC KConfigToFile(const KConfig* self, KFile *file) {
@@ -4170,7 +4196,7 @@ LIB_EXPORT rc_t CC KConfigToFile(const KConfig* self, KFile *file) {
     PrintBuff pb;
     PrintBuffInit(&pb, file);
     if (rc == 0) {
-        rc = KConfigPrintImpl(self, 0, NULL, false, true, &pb, 0, NULL);
+        rc = KConfigPrintImpl_noargs(self, 0, NULL, false, true, &pb, 0);
     }
     if (rc == 0) {
         rc = PrintBuffFlush(&pb);

@@ -262,13 +262,13 @@ rc_t KColumnIdx0OpenRead_v1 ( KColumnIdx0 *self, const KDirectory *dir, bool bsw
     BSTreeInit ( & self -> bst );
     self -> count = 0;
 
-    rc = KDirectoryVFileSize ( dir, & eof, "idx0", NULL );
+    rc = KDirectoryFileSize_v1 ( dir, & eof, "idx0" );
     if ( rc == 0 )
     {
         if ( eof != 0 )
         {
             const KFile *f;
-            rc = KDirectoryVOpenFileRead ( dir, & f, "idx0", NULL );
+            rc = KDirectoryOpenFileRead_v1 ( dir, & f, "idx0" );
             if ( rc == 0 )
             {
                 rc = KColumnIdx0Init_v1 ( self, f, bswap );
@@ -292,7 +292,7 @@ rc_t KColumnIdx0OpenRead ( KColumnIdx0 *self, const KDirectory *dir, uint32_t co
     if ( count != 0 )
     {
         const KFile *f;
-        rc_t rc = KDirectoryVOpenFileRead ( dir, & f, "idx0", NULL );
+        rc_t rc = KDirectoryOpenFileRead_v1 ( dir, & f, "idx0" );
         if ( rc == 0 )
         {
             rc = KColumnIdx0Init ( self, f, count, bswap );
