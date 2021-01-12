@@ -186,7 +186,7 @@ WVDB_LIB = \
 	$(addprefix -s,$(VDB_LIB_RDWR))
 
 $(LIBDIR)/libncbi-wvdb.$(LIBX): $(WVDB_OBJ)
-	$(LD) --slib --vers $(SRCDIR)/libncbi-vdb.vers -o $@ $(WVDB_LIB)
+	$(LD) --slib --vers $(SRCDIR)/libncbi-vdb.vers -o $@ $(WVDB_LIB)  $(VDB_NGS_LIB)
 
 $(LIBDIR)/libncbi-wvdb.$(SHLX): $(WVDB_OBJ)
 	$(LD) --dlib --vers $(SRCDIR)/libncbi-vdb.vers -o $@ $(WVDB_LIB) $(VDB_NGS_LIB)
