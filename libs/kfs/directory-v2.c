@@ -172,6 +172,7 @@ LIB_EXPORT void CC KDirectoryVisit_v2 ( const KDirectory_v2 *self, ctx_t ctx, bo
     {
     case 2:
         ( * self -> vt -> v2 . visit ) ( self, ctx, recurse, f, data, path );
+        break;
     default:
         INTERNAL_ERROR ( xcDirectoryInvalidVersion, "directory has an invalid version" );
     }
@@ -201,6 +202,7 @@ LIB_EXPORT void CC KDirectoryVisitUpdate_v2 ( KDirectory_v2 *self, ctx_t ctx, bo
     {
     case 2:
         ( * self -> vt -> v2 . visit_update )( self, ctx, recurse, f, data, path );
+        break;
     default:
         INTERNAL_ERROR ( xcDirectoryInvalidVersion, "directory has an invalid version" );
     }
@@ -333,6 +335,7 @@ LIB_EXPORT void CC KDirectoryRename_v2 ( KDirectory_v2 *self, ctx_t ctx, bool fo
     {
     case 2:
         ( * self -> vt -> v2 . rename ) ( self, ctx, force, from, to );
+        break;
     default:
         INTERNAL_ERROR ( xcDirectoryInvalidVersion, "directory has invalid version" );
     }
@@ -365,6 +368,7 @@ LIB_EXPORT void CC KDirectoryRemove_v2 ( KDirectory_v2 *self, ctx_t ctx, bool fo
     {
     case 2:
         ( * self -> vt -> v2 . remove ) ( self, ctx, force, path );
+        break;
     default:
         INTERNAL_ERROR ( xcDirectoryInvalidVersion, "directory has invalid version" );
     }
@@ -396,6 +400,7 @@ LIB_EXPORT void CC KDirectoryClearDir_v2 ( KDirectory_v2 *self, ctx_t ctx, bool 
     {
     case 2:
         ( * self -> vt -> v2 . clear_dir ) ( self, ctx, force, path );
+        break;
     default:
         INTERNAL_ERROR ( xcDirectoryInvalidVersion, "directory has invalid version" );
     }
@@ -463,6 +468,7 @@ LIB_EXPORT void CC KDirectorySetAccess_v2 ( KDirectory_v2 *self, ctx_t ctx, bool
         /* TBD - perhaps limit bits to lower 9 */
         ( * self -> vt -> v2 . set_access )
             ( self, ctx, recurse, access, mask, path );
+        break;
     default:
         INTERNAL_ERROR ( xcDirectoryInvalidVersion, "directory has invalid version" );
     }
@@ -481,7 +487,7 @@ LIB_EXPORT KTime_t CC KDirectoryDate_v2 ( const KDirectory_v2 *self, ctx_t ctx, 
     FUNC_ENTRY ( ctx, rcFS, rcDirectory, rcAccessing );
 
     if ( self == NULL )
-        INTERNAL_ERROR ( xcSelfNull, "failed to get directory date" );
+        INTERNAL_ERROR ( xcSelfNull, "failed to get directory data" );
 
     else if ( path == NULL )
         INTERNAL_ERROR ( xcPathNull, "path is null" );
@@ -515,7 +521,7 @@ LIB_EXPORT void CC KDirectorySetDate_v2 ( KDirectory_v2 *self, ctx_t ctx, bool r
     FUNC_ENTRY ( ctx, rcFS, rcDirectory, rcUpdating );
 
     if ( self == NULL )
-        INTERNAL_ERROR ( xcSelfNull, "failed to get directory date" );
+        INTERNAL_ERROR ( xcSelfNull, "failed to get directory data" );
 
     else if ( path == NULL )
         INTERNAL_ERROR ( xcPathNull, "path is null" );
@@ -524,6 +530,7 @@ LIB_EXPORT void CC KDirectorySetDate_v2 ( KDirectory_v2 *self, ctx_t ctx, bool r
     {
     case 2:
         ( * self -> vt -> v2 . setdate ) ( self, ctx, recurse, date, path );
+        break;
     default:
         INTERNAL_ERROR ( xcDirectoryInvalidVersion, "directory has invalid version" );
     }
@@ -551,7 +558,7 @@ LIB_EXPORT void CC KDirectoryCreateAlias_v2 ( KDirectory_v2 *self, ctx_t ctx,
     FUNC_ENTRY ( ctx, rcFS, rcDirectory, rcUpdating );
 
     if ( self == NULL )
-        INTERNAL_ERROR ( xcSelfNull, "failed to get directory date" );
+        INTERNAL_ERROR ( xcSelfNull, "failed to get directory data" );
 
     if ( targ == NULL || alias == NULL )
         INTERNAL_ERROR ( xcPathNull, "path is null" );
@@ -563,10 +570,57 @@ LIB_EXPORT void CC KDirectoryCreateAlias_v2 ( KDirectory_v2 *self, ctx_t ctx,
     {
     case 2:
         ( * self -> vt -> v2 . create_alias )( self, ctx, access, mode, targ, alias );
+        break;
     default:
         INTERNAL_ERROR ( xcDirectoryInvalidVersion, "directory has invalid version" );
     }
 }
+
+/* CreateLink ( v1.5 )
+ *  creates a new link (also known as a hard link).
+ *
+ *  "access" [ IN ] - standard Unix directory access mode
+ *  used when "mode" has kcmParents set and new link path does
+ *  not exist.
+ *
+ *  "mode" [ IN ] - a creation mode ( see explanation in kfs/defs.h ).
+ *
+ *  "oldpath" [ IN ] - NUL terminated string in directory-native
+ *  character set denoting existing object. THE PATH IS GIVEN RELATIVE
+ *  TO DIRECTORY ( "self" ), NOT LINK ( "newpath" )!
+ *
+ *  "newpath" [ IN ] - NUL terminated string in directory-native
+ *  character set denoting a new link.
+ */
+LIB_EXPORT void CC KDirectoryCreateLink_v2 ( KDirectory_v2 *self, ctx_t ctx,
+    uint32_t access, KCreateMode mode,
+    const KPath *oldpath, const KPath *newpath )
+{
+    FUNC_ENTRY ( ctx, rcFS, rcDirectory, rcUpdating );
+
+    if ( self == NULL )
+        INTERNAL_ERROR ( xcSelfNull, "failed to get directory data" );
+
+    if ( oldpath == NULL || newpath == NULL )
+        INTERNAL_ERROR ( xcPathNull, "path is null" );
+
+    if ( self -> read_only )
+        INTERNAL_ERROR ( xcDirectoryWriteOnly, "directory does not have read permissions" );
+
+    switch ( self -> vt -> v2 . maj )
+    {
+    case 2:
+        if ( self -> vt -> v1 . min >= 1 )
+        {
+            ( * self -> vt -> v2 . create_link )
+                ( self, ctx, access, mode, oldpath, newpath);
+            break;
+        }
+    default:
+        INTERNAL_ERROR ( xcDirectoryInvalidVersion, "directory has invalid version" );
+    }
+}
+
 
 /* OpenFileRead
  *  opens an existing file with read-only access
@@ -582,7 +636,7 @@ LIB_EXPORT const KFile_v2 * CC KDirectoryOpenFileRead_v2 ( const KDirectory_v2 *
     FUNC_ENTRY ( ctx, rcFS, rcDirectory, rcOpening );
 
     if ( self == NULL )
-        INTERNAL_ERROR ( xcSelfNull, "failed to get directory date" );
+        INTERNAL_ERROR ( xcSelfNull, "failed to get directory data" );
 
     else if ( path == NULL )
         INTERNAL_ERROR ( xcPathNull, "path is null" );
@@ -615,7 +669,7 @@ LIB_EXPORT KFile_v2 * CC KDirectoryOpenFileWrite_v2 ( KDirectory_v2 *self, ctx_t
     FUNC_ENTRY ( ctx, rcFS, rcDirectory, rcOpening );
 
     if ( self == NULL )
-        INTERNAL_ERROR ( xcSelfNull, "failed to get directory date" );
+        INTERNAL_ERROR ( xcSelfNull, "failed to get directory data" );
 
     else if ( path == NULL )
         INTERNAL_ERROR ( xcPathNull, "path is null" );
@@ -656,7 +710,7 @@ LIB_EXPORT KFile_v2 * CC KDirectoryCreateFile_v2 ( KDirectory_v2 *self, ctx_t ct
     FUNC_ENTRY ( ctx, rcFS, rcDirectory, rcCreating );
 
     if ( self == NULL )
-        INTERNAL_ERROR ( xcSelfNull, "failed to get directory date" );
+        INTERNAL_ERROR ( xcSelfNull, "failed to get directory data" );
 
     else if ( path == NULL )
         INTERNAL_ERROR ( xcPathNull, "path is null" );
@@ -690,7 +744,7 @@ LIB_EXPORT uint64_t CC KDirectoryFileLocator_v2 ( const KDirectory_v2 *self, ctx
     FUNC_ENTRY ( ctx, rcFS, rcDirectory, rcAccessing );
 
     if ( self == NULL )
-        INTERNAL_ERROR ( xcSelfNull, "failed to get directory date" );
+        INTERNAL_ERROR ( xcSelfNull, "failed to get directory data" );
 
     else if ( path == NULL )
         INTERNAL_ERROR ( xcPathNull, "path is null" );
@@ -719,7 +773,7 @@ LIB_EXPORT uint64_t CC KDirectoryFileSize_v2 ( const KDirectory_v2 *self, ctx_t 
     FUNC_ENTRY ( ctx, rcFS, rcDirectory, rcAccessing );
 
     if ( self == NULL )
-        INTERNAL_ERROR ( xcSelfNull, "failed to get directory date" );
+        INTERNAL_ERROR ( xcSelfNull, "failed to get directory data" );
 
     else if ( path == NULL )
         INTERNAL_ERROR ( xcPathNull, "path is null" );
@@ -748,7 +802,7 @@ LIB_EXPORT uint64_t CC KDirectoryFilePhysicalSize_v2 ( const KDirectory_v2 *self
     FUNC_ENTRY ( ctx, rcFS, rcDirectory, rcAccessing );
 
     if ( self == NULL )
-        INTERNAL_ERROR ( xcSelfNull, "failed to get directory date" );
+        INTERNAL_ERROR ( xcSelfNull, "failed to get directory data" );
 
     else if ( path == NULL )
         INTERNAL_ERROR ( xcPathNull, "path is null" );
@@ -778,7 +832,7 @@ LIB_EXPORT void CC KDirectorySetFileSize_v2 ( KDirectory_v2 *self, ctx_t ctx,
     FUNC_ENTRY ( ctx, rcFS, rcDirectory, rcUpdating );
 
     if ( self == NULL )
-        INTERNAL_ERROR ( xcSelfNull, "failed to get directory date" );
+        INTERNAL_ERROR ( xcSelfNull, "failed to get directory data" );
 
     else if ( path == NULL )
         INTERNAL_ERROR ( xcPathNull, "path is null" );
@@ -790,6 +844,7 @@ LIB_EXPORT void CC KDirectorySetFileSize_v2 ( KDirectory_v2 *self, ctx_t ctx,
     {
     case 2:
         ( * self -> vt -> v2 . set_size ) ( self, ctx, size, path );
+        break;
     default:
         INTERNAL_ERROR ( xcDirectoryInvalidVersion, "directory has invalid version" );
     }
@@ -810,7 +865,7 @@ LIB_EXPORT bool CC KDirectoryFileContiguous_v2 ( const KDirectory_v2 *self, ctx_
     FUNC_ENTRY ( ctx, rcFS, rcDirectory, rcAccessing );
 
     if ( self == NULL )
-        INTERNAL_ERROR ( xcSelfNull, "failed to get directory date" );
+        INTERNAL_ERROR ( xcSelfNull, "failed to get directory data" );
 
     else if ( path == NULL )
         INTERNAL_ERROR ( xcPathNull, "path is null" );
@@ -843,7 +898,7 @@ LIB_EXPORT const KDirectory_v2 * CC KDirectoryOpenDirRead_v2 ( const KDirectory_
     FUNC_ENTRY ( ctx, rcFS, rcDirectory, rcOpening );
 
     if ( self == NULL )
-        INTERNAL_ERROR ( xcSelfNull, "failed to get directory date" );
+        INTERNAL_ERROR ( xcSelfNull, "failed to get directory data" );
 
     if ( path == NULL )
         /* FIX ME path = "." */;
@@ -866,7 +921,7 @@ LIB_EXPORT KDirectory_v2 * CC KDirectoryOpenDirUpdate_v2 ( KDirectory_v2 *self, 
     FUNC_ENTRY ( ctx, rcFS, rcDirectory, rcOpening );
 
     if ( self == NULL )
-        INTERNAL_ERROR ( xcSelfNull, "failed to get directory date" );
+        INTERNAL_ERROR ( xcSelfNull, "failed to get directory data" );
 
     if ( self -> read_only )
         INTERNAL_ERROR ( xcDirectoryWriteOnly, "directory does not have read permissions" );
@@ -902,7 +957,7 @@ LIB_EXPORT void CC KDirectoryCreateDir_v2 ( KDirectory_v2 *self, ctx_t ctx,
     FUNC_ENTRY ( ctx, rcFS, rcDirectory, rcAccessing );
 
     if ( self == NULL )
-        INTERNAL_ERROR ( xcSelfNull, "failed to get directory date" );
+        INTERNAL_ERROR ( xcSelfNull, "failed to get directory data" );
 
     else if ( path == NULL )
         INTERNAL_ERROR ( xcPathNull, "path is null" );
@@ -914,6 +969,7 @@ LIB_EXPORT void CC KDirectoryCreateDir_v2 ( KDirectory_v2 *self, ctx_t ctx,
     {
     case 2:
         ( * self -> vt -> v2 . create_dir ) ( self, ctx, access, mode, path );
+        break;
     default:
         INTERNAL_ERROR ( xcDirectoryInvalidVersion, "directory has invalid version" );
     }
@@ -991,6 +1047,7 @@ LIB_EXPORT void CC KDirectoryDestroyFile_v2 ( const KDirectory_v2 *self, ctx_t c
             ( * vt -> v2 . destroy_file ) ( ( KDirectory_v2 * ) self, ctx, f );
         else
             KFileDestroy_v2 ( f, ctx );
+        break;
     default:
         INTERNAL_ERROR ( xcDirectoryInvalidVersion, "directory has invalid version" );
     }

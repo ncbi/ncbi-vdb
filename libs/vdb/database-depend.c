@@ -450,7 +450,7 @@ static rc_t FindRef(Ctx* ctx, const char* seqId, Resolved* resolved,
                     if (last != NULL && crnt != NULL &&
                         last->addr != NULL && crnt->addr != NULL)
                     {
-                        int min
+                        size_t min
                             = crnt->size < last->size ? crnt->size : last->size;
                         if (strncmp(last->addr, crnt->addr, min) == 0)
                             ctx->hasDuplicates = true;
@@ -1241,7 +1241,7 @@ static void CC bstCopy(BSTNode* n, void* data) {
         }
         else if (StringCompare(sn->resolved.remote, elm->resolved.remote) != 0)
         {
-            int min = sn->resolved.remote->size < elm->resolved.remote->size
+            size_t min = sn->resolved.remote->size < elm->resolved.remote->size
                 ? sn->resolved.remote->size : elm->resolved.remote->size;
             if (!archived || strncmp(sn->resolved.remote->addr,
                                 elm->resolved.remote->addr, min) != 0)

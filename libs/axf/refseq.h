@@ -24,28 +24,45 @@
  *
  */
 
-#include <sra/sraschema.h>
-#include <sra/sradb-priv.h>
-#include <klib/rc.h>
+#include <atomic.h>
+#include "range-list.h"
 
-#include "sra-priv.h"
+typedef struct RefSeq RefSeq;
+typedef struct RefSeqListEntry RefSeqListEntry;
+typedef struct RefSeqList RefSeqList;
+typedef struct RefSeqAsyncLoadInfo RefSeqAsyncLoadInfo;
+typedef unsigned (*RefSeqReaderFunc)(RefSeq const *, uint8_t *, unsigned, unsigned);
 
-/*--------------------------------------------------------------------------
- * SRASchema
- *  a schema object pre-loaded with default SRA schema
- */
+struct RefSeq {
+    RangeList Ns; ///< exclusion list
+    uint8_t *bases;
+    RefSeqReaderFunc volatile reader;
+    RefSeqAsyncLoadInfo *volatile async;
+    atomic_t rwl;
+    unsigned length; ///< logical length, is base count of the reference
+};
 
-/* Make
- *  create an instance of the default SRA schema
- */
-rc_t CC VDBManagerMakeSRASchema ( struct VDBManager const *self, struct VSchema **schema )
-{
-    return SRASchemaMake ( schema, self );
-}
+#define LIST_OBJECT RefSeq
+#define LIST_ENTRY RefSeqListEntry
+#include "list.h"
 
-rc_t CC SRAMgrMakeSRASchema ( const SRAMgr *self, struct VSchema **schema )
-{
-    if ( self != NULL )
-        return VDBManagerMakeSRASchema ( self -> vmgr, schema );
-    return RC ( rcSRA, rcMgr, rcAccessing, rcSelf, rcNull );
-}
+struct RefSeqList {
+    LIST;
+};
+#undef LIST
+#undef LIST_ENTRY
+#undef LIST_OBJECT
+
+char const *RefSeq_Scheme(void);
+
+unsigned RefSeq_getBases(RefSeq const *self, uint8_t *const dst, unsigned const start, unsigned const len);
+
+void RefSeqFree(RefSeq *self);
+
+RefSeqListEntry *RefSeqFind(RefSeqList *list, unsigned const qlen, char const *qry);
+
+RefSeqListEntry *RefSeqInsert(RefSeqList *list, unsigned const qlen, char const *qry, VTable const *tbl, rc_t *prc);
+
+void RefSeqListFree(RefSeqList *list);
+
+rc_t RefSeqListInit(RefSeqList *list);

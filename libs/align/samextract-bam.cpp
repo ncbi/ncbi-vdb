@@ -42,7 +42,6 @@
 #include <kproc/timeout.h>
 #ifdef _MSC_VER
 #else
-#include <mmintrin.h>
 #include <pthread.h>
 #endif
 #include <stdint.h>

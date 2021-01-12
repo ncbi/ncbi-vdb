@@ -56,6 +56,11 @@
  *  opaque handle to library
  */
 
+LIB_EXPORT rc_t CC VDBManagerMakeWithVFSManager(const VDBManager ** mgrp,
+    const KDirectory *wd, struct VFSManager *vmgr)
+{
+    return VDBManagerMakeReadWithVFSManager(mgrp, wd, NULL);
+}
 
 /* MakeRead
  * MakeReadWithVFSManager
@@ -79,7 +84,7 @@ LIB_EXPORT rc_t CC VDBManagerMakeReadWithVFSManager ( const VDBManager ** mgrp,
         rc = RC ( rcVDB, rcMgr, rcConstructing, rcParam, rcNull );
     else
     {
-        VDBManager *mgr = malloc ( sizeof * mgr );
+        VDBManager *mgr = calloc ( 1, sizeof * mgr );
         if ( mgr == NULL )
             rc = RC ( rcVDB, rcMgr, rcConstructing, rcMemory, rcExhausted );
         else

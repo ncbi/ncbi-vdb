@@ -1443,6 +1443,8 @@
     <ClCompile Include="..\..\..\libs\vdb\schema-view.c" />
     <ClCompile Include="..\..\..\libs\vdb\view.c" />
     <ClCompile Include="..\..\..\libs\vfs\services.c" />
+    <ClCompile Include="..\..\..\libs\vfs\services-cache.c" />
+    <ClCompile Include="..\..\..\libs\vfs\SraDesc.c" />
     <ClCompile Include="..\..\..\libs\vfs\remote-services.c" />
     <ClCompile Include="..\..\..\libs\vfs\srv-response.c" />
     <ClCompile Include="..\..\..\libs\diagnose\diagnose.c" />
@@ -1453,6 +1455,7 @@
     <ClCompile Include="..\..\..\libs\cloud\cloud-mgr.c" />
     <ClCompile Include="..\..\..\libs\cloud\cloud.c" />
     <ClCompile Include="..\..\..\libs\cloud\gcp.c" />
+    <ClCompile Include="..\..\..\libs\cloud\gcp-authentication.c" />
     <ClCompile Include="..\..\..\libs\ext\mbedtls\aria.c" />
     <ClCompile Include="..\..\..\libs\ext\mbedtls\chacha20.c" />
     <ClCompile Include="..\..\..\libs\ext\mbedtls\chachapoly.c" />

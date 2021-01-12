@@ -670,7 +670,7 @@ LIB_EXPORT rc_t CC VBlobHeaderOpPopTail ( const VBlobHeader *self, uint8_t *op )
 LIB_EXPORT rc_t CC VBlobHeaderArgPopHead ( const VBlobHeader *self, int64_t *arg )
 {
     if (self->arg_head >= self->arg_tail || self->arg_head >= (int32_t)self->parent->data->arg_count || self->parent->data->args == NULL)
-        return RC(rcVDB, rcHeader, rcReading, rcData, rcExhausted);
+        return SILENT_RC(rcVDB, rcHeader, rcReading, rcData, rcExhausted);
     *arg = self->parent->data->args[self->arg_head];
     ++((VBlobHeader *)self)->arg_head;
     return 0;

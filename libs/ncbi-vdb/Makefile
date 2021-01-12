@@ -32,6 +32,7 @@ EXT_LIBS = \
 	libncbi-vdb \
 	libncbi-wvdb \
 	libncbi-ngs \
+	libncbi-ngs-c++ \
 
 ALL_LIBS = \
 	$(EXT_LIBS)
@@ -65,13 +66,13 @@ clean: stdclean cleanfuzz
 .PHONY: clean
 
 #-------------------------------------------------------------------------------
-# NGS support library, static
-$(LIBDIR)/libncbi-ngs: $(addprefix $(LIBDIR)/libncbi-ngs.,$(LIBX))
+# NGS support libraries, static
+$(LIBDIR)/libncbi-ngs:     $(addprefix $(LIBDIR)/libncbi-ngs.,$(LIBX))
+$(LIBDIR)/libncbi-ngs-c++: $(addprefix $(LIBDIR)/libncbi-ngs-c++.,$(LIBX))
 
 VDB_NGS = \
 	ngs-py                \
 	ngs                   \
-	ncbi-ngs-c++               \
 
 VDB_NGS_OBJ = \
 	$(addprefix $(ILIBDIR)/lib,$(addsuffix .a,$(VDB_NGS)))
@@ -81,6 +82,18 @@ VDB_NGS_LIB = \
 
 $(LIBDIR)/libncbi-ngs.$(LIBX): $(VDB_NGS_OBJ)
 	$(LD) --slib --vers $(SRCDIR)/libncbi-vdb.vers -o $@ $(VDB_NGS_LIB)
+
+VDB_NGS_CPP = \
+	ncbi-ngs-c++
+
+VDB_NGS_CPP_OBJ = \
+	$(addprefix $(ILIBDIR)/lib,$(addsuffix .a,$(VDB_NGS_CPP)))
+
+VDB_NGS_CPP_LIB = \
+	$(addprefix -s,$(VDB_NGS_CPP))
+
+$(LIBDIR)/libncbi-ngs-c++.$(LIBX): $(VDB_NGS_CPP_OBJ)
+	$(LD) --slib --vers $(SRCDIR)/libncbi-vdb.vers -o $@ $(VDB_NGS_CPP_LIB)
 
 #-------------------------------------------------------------------------------
 # virtual db library

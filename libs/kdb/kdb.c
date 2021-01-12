@@ -629,7 +629,8 @@ static rc_t KDBOpenPathTypeReadInt ( const KDBManager * mgr, const KDirectory * 
          * accession
          *
          */
-        rc = VPathMakeDirectoryRelativeVPath ( &vpath, dir, path, vpath );
+        rc = VFSManagerMakeDirectoryRelativeVPath (vmgr,
+            &vpath, dir, path, vpath );
         if ( rc == 0 )
         {
             rc = VFSManagerOpenDirectoryReadDirectoryRelativeDecrypt ( vmgr, dir, &ldir, vpath );

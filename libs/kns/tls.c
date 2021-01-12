@@ -755,9 +755,20 @@ static
 rc_t CC KTLSStreamRead ( const KTLSStream * cself,
     void * buffer, size_t bsize, size_t * num_read )
 {
+    static int SILENCE_READING_MSG = -1;
+
     int ret;
     rc_t rc = 0;
     KTLSStream * self = ( KTLSStream * ) cself;
+
+    if (SILENCE_READING_MSG < 0) {
+        if (getenv("NCBI_VDB_SILENCE_MBEDTLS_READ") != NULL)
+            SILENCE_READING_MSG = 1;
+        else
+            SILENCE_READING_MSG = 0;
+    }
+
+    assert(self);
 
     if ( self -> ciphertext == NULL )
     {
@@ -765,7 +776,8 @@ rc_t CC KTLSStreamRead ( const KTLSStream * cself,
         return RC ( rcNS, rcSocket, rcReading, rcSocket, rcInvalid );
     }
 
-    STATUS ( STAT_QA, "Reading from server..." );
+    if (!SILENCE_READING_MSG)
+        STATUS ( STAT_QA, "Reading from server..." );
 
     self -> rd_rc = 0;
 

@@ -36,12 +36,16 @@
 #include <vfs/manager.h> /* VFSManagerRelease */
 #include <vfs/manager-priv.h> /* VFSManagerMakeLocal */
 
+#include "../libs/vfs/resolver-priv.h" /* LogNamesServiceErrorsReset */
+
 TEST_SUITE ( TestLogNames );
 
 #define ALL
 
+struct Fixture { Fixture() { LogNamesServiceErrorsReset(); } };
+
 #ifdef ALL
-TEST_CASE(TestAPI) {
+FIXTURE_TEST_CASE(TestAPI, Fixture) {
     putenv((char*)"NCBI_VDB_NO_ETC_NCBI_KFG=1");
 
     KConfig * kfg = NULL;
@@ -83,7 +87,7 @@ TEST_CASE(TestAPI) {
 #endif
 
 #ifdef ALL
-TEST_CASE(TestDisableInConfig) {
+FIXTURE_TEST_CASE(TestDisableInConfig, Fixture) {
     putenv((char*)"NCBI_VDB_NO_ETC_NCBI_KFG=1");
 
     KConfig * kfg = NULL;
@@ -134,7 +138,7 @@ TEST_CASE(TestDisableInConfig) {
 #endif
 
 #ifdef ALL
-TEST_CASE(TestEnableInConfig) {
+FIXTURE_TEST_CASE(TestEnableInConfig, Fixture) {
     putenv((char*)"NCBI_VDB_NO_ETC_NCBI_KFG=1");
 
     KConfig * kfg = NULL;

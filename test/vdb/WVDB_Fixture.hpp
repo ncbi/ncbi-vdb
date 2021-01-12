@@ -26,6 +26,7 @@
 #define _hpp_wvdb_fixture_
 
 #include <string>
+#include <cmath>
 
 #include <vdb/database.h>
 #include <vdb/manager.h>
