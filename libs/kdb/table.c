@@ -179,7 +179,7 @@ rc_t KTableSever ( const KTable *self )
 void KTableGetName(KTable const *self, char const **rslt)
 {
     char *sep;
-    
+
     *rslt = self->path;
     sep = strrchr(self->path, '/');
     if (sep != NULL)
@@ -213,7 +213,7 @@ rc_t KTableMake ( KTable **tblp, const KDirectory *dir, const char *path )
     /* YES,
       DBG_VFS should be used here to be printed along with other VFS messages */
     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE), ("Making KTable '%s'\n", path));
-     
+
     * tblp = tbl;
     return 0;
 }
@@ -344,13 +344,13 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *self,
 static
 rc_t KDBManagerVOpenTableReadInt_noargs ( const KDBManager *self,
     const KTable **tblp, const KDirectory *wd, bool try_srapath,
-    const char *path, const struct VPath *vpath,
-    bool tryEnvAndAd, ... )
+    const char *path, bool tryEnvAndAd, const struct VPath *vpath,
+    ... )
 {
     rc_t rc;
     va_list args;
 
-    va_start ( args, tryEnvAndAd );
+    va_start ( args, vpath );
     rc = KDBManagerVOpenTableReadInt ( self, tblp, wd, try_srapath, path, args, vpath, tryEnvAndAd );
     va_end ( args );
 
@@ -396,8 +396,8 @@ LIB_EXPORT rc_t CC KDBManagerOpenTableReadVPath ( const KDBManager *self,
     if ( self == NULL )
         return RC ( rcDB, rcMgr, rcOpening, rcSelf, rcNull );
 
-    return KDBManagerVOpenTableReadInt_noargs ( self, tbl, self->wd, true, NULL,
-        path, true );
+    return KDBManagerVOpenTableReadInt_noargs ( self, tbl, self->wd, true, "",
+        true, path );
 }
 
 
@@ -436,7 +436,7 @@ LIB_EXPORT rc_t CC KDatabaseVOpenTableRead ( const KDatabase *self,
     if ( rc == 0 )
     {
         rc = KDBManagerVOpenTableReadInt_noargs ( self -> mgr, tblp,
-                                self -> dir, false, path, NULL, false );
+                                self -> dir, false, path, false, NULL );
         if ( rc == 0 )
         {
             KTable *tbl = ( KTable* ) * tblp;
@@ -531,7 +531,7 @@ LIB_EXPORT bool CC KTableExists ( const KTable *self, uint32_t type, const char 
  *  valid values are kptIndex and kptColumn
  *
  *  "resolved" [ OUT ] and "rsize" [ IN ] - optional output buffer
- *  for fundamenta object name if "alias" is not a fundamental name, 
+ *  for fundamenta object name if "alias" is not a fundamental name,
  *
  *  "name" [ IN ] - NUL terminated object name
  */
@@ -798,7 +798,7 @@ static
 bool CC KTableListIdxFilter ( const KDirectory *dir, const char *name, void *data )
 {
     const size_t sz = strlen(name);
-    
+
     if (sz > 4 && strcmp(&name[sz - 4], ".md5") == 0)
         return false;
     return true;
