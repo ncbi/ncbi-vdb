@@ -1629,9 +1629,26 @@ rc_t KClientHttpRequestSendReceiveNoBody ( KClientHttpRequest *self, KClientHttp
  */
 LIB_EXPORT rc_t CC KClientHttpRequestHEAD ( KClientHttpRequest *self, KClientHttpResult **rslt )
 {
-    rc_t rc=0;
+    rc_t rc = 0;
+    bool headless = false;
 
-    if ( self -> ceRequired || self -> payRequired )
+    static int HEADLESS = -1;
+    if ( HEADLESS < 0 ) {
+        char * s = getenv ( "NCBI_VDB_GET_AS_HEAD" );
+        if ( s == NULL )
+            HEADLESS = 0;
+        else if ( s [ 0 ] != '\0' )
+            HEADLESS = 1;
+        else
+            HEADLESS = 0; 
+    }
+
+    assert ( HEADLESS >= 0 );
+
+    if ( self -> ceRequired || self -> payRequired || HEADLESS )
+        headless = true;
+
+    if ( headless )
     {   /* use POST or GET for 256 bytes */
         /* update UserAgent with -head */
         KNSManagerSetUserAgentSuffix("-head");
