@@ -2383,8 +2383,16 @@ LIB_EXPORT rc_t CC VFSManagerExtractAccessionOrOID ( const VFSManager * self,
                 if ( sep == NULL )
                     break;
 
+                assert ( *sep == '.' );
+
                 switch ( end - sep )
                 {
+                case 2:
+                    if ( isdigit ( *( sep + 1) ) )
+                    {
+                        end = sep;
+                        continue;
+                    }
                 case 4:
                     if ( strcase_cmp ( ".sra", 4, sep, 4, 4 ) == 0 ||
                          strcase_cmp ( ".wgs", 4, sep, 4, 4 ) == 0 )
