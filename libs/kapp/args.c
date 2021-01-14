@@ -2332,24 +2332,24 @@ void CC HelpOptionLine(const char * alias, const char * option, const char * par
 
 void CC HelpParamLine (const char * param, const char * const * msgs)
 {
-    int msgc;
+    int msgc = 0;
     const char * msg;
 
     msg = *msgs++;
-
+    
     if (param)
     {
         OUTMSG (("%*s%s%n", INDENT, " ", param, &msgc));
-	if (msg == NULL)
-	    OUTMSG (("\n"));
-	else
-	{
-	    OUTMSG (("%*s%s\n", MSG_INDENT-msgc, " ", msg));
-	}
+        if (msg == NULL)
+            OUTMSG (("\n"));
+        else
+        {
+            OUTMSG (("%*s%s\n", MSG_INDENT-msgc, " ", msg));
+        }
     }
     if (msg != NULL)
-	while ((msg = *msgs++) != NULL)
-	    OUTMSG (("%*s%s\n", MSG_INDENT, " ", msg));
+        while ((msg = *msgs++) != NULL)
+            OUTMSG (("%*s%s\n", MSG_INDENT, " ", msg));
 }
 
     /*  Actually it is better to use

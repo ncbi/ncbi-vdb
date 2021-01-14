@@ -73,6 +73,7 @@ CLOUD_SRC = \
 	cloud-mgr \
 	aws \
 	aws-auth \
+	gcp-authentication \
 	gcp \
 	cloud \
 	cloud-cmn \

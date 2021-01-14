@@ -93,7 +93,7 @@ VARS += -Dvdb.System.loadLibrary=1
 # custom load library search
 #VARS += -Dvdb.loadLibraryLocations=W
 
-#VARS += -Dvdb.log=FINEST
+VARS += -Dvdb.log=FINEST
 
 #J=/net/pan1/sra-test/local/jdk1.7.0_51/bin/
 

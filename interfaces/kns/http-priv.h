@@ -42,6 +42,7 @@ struct KClientHttp;
 struct KClientHttpRequest;
 struct KClientHttpResult;
 struct KDataBuffer;
+struct KFile;
 struct String;
 struct URLBlock;
 
@@ -70,6 +71,10 @@ rc_t KClientHttpRequestClear ( struct KClientHttpRequest *self );
 rc_t KClientHttpRequestInit ( struct KClientHttpRequest * req, const struct URLBlock *b, const struct KDataBuffer *buf );
 
 rc_t KClientHttpRequestGetQuery( struct KClientHttpRequest * req, const struct String ** query );
+
+/* Get read timeout and Maximum TotalWait time for Read calls */
+rc_t HttpFileGetReadTimeouts(const struct KFile * self, int32_t * millis,
+    int32_t * totalMillis);
 
 #ifdef __cplusplus
 }

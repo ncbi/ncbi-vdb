@@ -130,6 +130,18 @@
     <ClCompile Include="..\..\..\libs\axf\template-len.c">
       <ObjectFileName>$(IntDir)axf-%(Filename).obj</ObjectFileName>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\axf\range-list.c">
+      <ObjectFileName>$(IntDir)axf-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\axf\refseq.c">
+      <ObjectFileName>$(IntDir)axf-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\axf\wgs.c">
+      <ObjectFileName>$(IntDir)axf-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\axf\restore-read.c">
+      <ObjectFileName>$(IntDir)axf-%(Filename).obj</ObjectFileName>
+    </ClCompile>
 
     <ClCompile Include="..\..\..\libs\blast\blast-mgr.c">
       <ObjectFileName>$(IntDir)blast-%(Filename).obj</ObjectFileName>
@@ -160,6 +172,9 @@
       <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\cloud\gcp.c">
+      <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\cloud\gcp-authentication.c">
       <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
     </ClCompile>
 
@@ -251,9 +266,6 @@
       <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\ext\mbedtls\md5.c">
-      <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ext\mbedtls\md_wrap.c">
       <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\ext\mbedtls\memory_buffer_alloc.c">
@@ -349,9 +361,6 @@
     <ClCompile Include="..\..\..\libs\ext\mbedtls\debug.c">
       <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
     </ClCompile>
-    <ClCompile Include="..\..\..\libs\ext\mbedtls\net.c">
-      <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
-    </ClCompile>
     <ClCompile Include="..\..\..\libs\ext\mbedtls\ssl_cache.c">
       <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
     </ClCompile>
@@ -395,6 +404,31 @@
         <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\ext\mbedtls\rsa_internal.c">
+        <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\psa_crypto.c">
+        <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\psa_crypto_driver_wrappers.c">
+        <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\psa_crypto_se.c">
+        <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\psa_crypto_slot_management.c">
+        <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\psa_crypto_storage.c">
+        <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\psa_its_file.c">
+        <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\ssl_msg.c">
+        <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\ssl_tls13_keys.c">
         <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
     </ClCompile>
 
@@ -1385,12 +1419,6 @@
     <ClCompile Include="..\..\..\libs\sra\sramgr.c">
         <ObjectFileName >$(IntDir)sra-%(Filename).obj</ObjectFileName>
     </ClCompile>
-    <ClCompile Include="..\..\..\libs\sra\sraschema-stub.c">
-        <ObjectFileName >$(IntDir)sra-%(Filename).obj</ObjectFileName>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\sra\sraschema.c">
-        <ObjectFileName >$(IntDir)sra-%(Filename).obj</ObjectFileName>
-    </ClCompile>
     <ClCompile Include="..\..\..\libs\sra\sratbl-cmn.c">
         <ObjectFileName >$(IntDir)sra-%(Filename).obj</ObjectFileName>
     </ClCompile>
@@ -1606,6 +1634,12 @@
         <ObjectFileName >$(IntDir)vfs-%(Filename).obj</ObjectFileName>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\vfs\services.c">
+        <ObjectFileName >$(IntDir)vfs-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vfs\services-cache.c">
+        <ObjectFileName >$(IntDir)vfs-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vfs\SraDesc.c">
         <ObjectFileName >$(IntDir)vfs-%(Filename).obj</ObjectFileName>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\vfs\remote-services.c">

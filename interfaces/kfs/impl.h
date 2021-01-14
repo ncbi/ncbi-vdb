@@ -232,6 +232,11 @@ struct KDirectory_vt_v1
         KFile **f, bool update, const char *path, va_list args );
     /* end minor version == 4 */
 
+    /* start minor version == 5 */
+    rc_t ( CC * create_link ) ( KDIR_IMPL *self, uint32_t access,
+        KCreateMode mode, const char *oldpath, const char *newpath );
+    /* end minor version == 5 */
+
     /* ANY NEW ENTRIES MUST BE REFLECTED IN libs/kfs/directory.c
        BY BOTH THE CORRESPONDING MESSAGE DISPATCH FUNCTION(s) AND
        VTABLE VALIDITY CHECKS IN KDirectoryInit */

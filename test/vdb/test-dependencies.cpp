@@ -318,7 +318,7 @@ FIXTURE_TEST_CASE(TestDoubleYesDep, RefseqFixture) {
     REQUIRE_RC(VPathMakeString(local, &s));
     REQUIRE(s && s->addr);
 
-    REQUIRE_RC(VDBManagerOpenDBRead(mgr, &db, NULL, s->addr));
+    REQUIRE_RC(VDBManagerOpenDBReadVPath(mgr, &db, NULL, local));
 
     const VDBDependencies *dep = NULL;
 
@@ -408,7 +408,7 @@ FIXTURE_TEST_CASE(Test1YesDep, RefseqFixture) {
     REQUIRE_RC(VPathMakeString(local, &s));
     REQUIRE(s && s->addr);
 
-    REQUIRE_RC(VDBManagerOpenDBRead(mgr, &db, NULL, s->addr));
+    REQUIRE_RC(VDBManagerOpenDBReadVPath(mgr, &db, NULL, local));
 
     const VDBDependencies *dep = NULL;
 

@@ -24,52 +24,14 @@
  *
  */
 
-#include <sra/sch-extern.h>
-#include <sra/sradb-priv.h>
-#include <sra/sraschema.h>
-#include <vdb/manager.h>
-#include <vdb/schema.h>
-#include <klib/rc.h>
-#include <sysalloc.h>
 
-#include "sraschema-priv.h"
-#include "sra-priv.h"
+typedef struct LIST_ENTRY LIST_ENTRY;
+struct LIST_ENTRY {
+    char *name;
+    LIST_OBJECT *object;
+};
 
-
-/*--------------------------------------------------------------------------
- * SRASchema
- *  a schema object pre-loaded with default SRA schema
- */
-
-/* Make - DEPRECATED
- *  create an instance of the default SRA schema
- */
-LIB_EXPORT rc_t CC SRASchemaMake ( VSchema **schema, const VDBManager *mgr )
-{
-    rc_t rc;
-
-    if ( schema == NULL )
-        rc = RC ( rcVDB, rcMgr, rcCreating, rcParam, rcNull );
-    else
-    {
-        if ( mgr == NULL )
-            rc = RC ( rcVDB, rcMgr, rcCreating, rcSelf, rcNull );
-        else
-        {
-            rc = VDBManagerMakeSchema ( mgr, schema );
-            if ( rc == 0 )
-            {
-/* SRASchemaMake is deprecated: when it is called - return an empty schema 
-                rc = VSchemaParseText ( * schema, "sra-schema",
-                                        sra_schema_text, sra_schema_size ); */
-                if ( rc == 0 )
-                    return 0;
-
-                VSchemaRelease ( * schema );
-            }
-        }
-
-        * schema = NULL;
-    }
-    return rc;
-}
+#define LIST           \
+    LIST_ENTRY *entry; \
+    unsigned entries;  \
+    unsigned allocated

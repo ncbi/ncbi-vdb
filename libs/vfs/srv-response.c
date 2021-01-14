@@ -34,6 +34,7 @@
 #include "json-response.h" /* struct Response4 */
 #include "path-priv.h" /* VPathGetScheme_t */
 #include "resolver-priv.h" /* DEFAULT_PROTOCOLS */
+#include "services-cache.h" /* ServicesCacheGetRun */
 #include "services-priv.h" /* KSrvResponseGetMapping */
 
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
@@ -82,6 +83,18 @@ struct KSrvResponse {
     BSTree locations;
 };
 
+struct KSrvRunIterator {
+    const KSrvResponse * response;
+    int idx;
+    const BSTNode * crnt;
+};
+
+const KSrvResponse * KSrvRunIteratorGetResponse(
+    const KSrvRunIterator * self)
+{
+    assert(self);
+    return self->response;
+}
 
 /* VPathSet */
 rc_t VPathSetAddRef ( const VPathSet * self ) {
@@ -460,6 +473,7 @@ rc_t VPathSetMakeQuery ( VPathSet ** self, const VPath * local, rc_t localRc,
 typedef struct {
     const String * acc;
     const String * name;
+    const String * type;
 
     const KSrvRespFile * file;
 } LocalAndCache;
@@ -476,6 +490,9 @@ static int LocalAndCacheCmp(const LocalAndCache * lhs,
     if (c == 0)
         c = StringCompare(lhs->name, rhs->name);
 
+    if (c == 0)
+        c = StringCompare(lhs->type, rhs->type);
+
     return c;
 }
 
@@ -486,6 +503,7 @@ static rc_t LocalAndCacheFini(LocalAndCache * self) {
 
     StringWhack(self->acc);
     StringWhack(self->name);
+    StringWhack(self->type);
 
     rc = KSrvRespFileRelease(self->file);
 
@@ -539,7 +557,7 @@ static int64_t CC BSTreeSort(const BSTNode * item, const BSTNode * n) {
 }
 
 static rc_t LocalAndCacheInit(LocalAndCache * self,
-    const char * acc, const char * name)
+    const char * acc, const char * name, const char * type)
 {
     rc_t rc = 0;
 
@@ -559,6 +577,11 @@ static rc_t LocalAndCacheInit(LocalAndCache * self,
         rc = StringCopy(&self->name, &tmp);
     }
 
+    if (rc == 0 && type != NULL) {
+        StringInitCString(&tmp, type);
+        rc = StringCopy(&self->type, &tmp);
+    }
+
     if (rc != 0)
         LocalAndCacheFini(self);
 
@@ -572,6 +595,7 @@ rc_t KSrvResponseAddLocalAndCacheToTree(
 
     const char * acc = NULL;
     const char * name = NULL;
+    const char * type = NULL;
     LocalAndCache * lnc = NULL;
     String tmp;
 
@@ -585,7 +609,8 @@ rc_t KSrvResponseAddLocalAndCacheToTree(
         rc = KSrvRespFileGetAccOrId(file, &acc, NULL);
     if (rc == 0)
         KSrvRespFileGetAccOrName(file, &name, NULL);
-
+    if (rc == 0)
+        KSrvRespFileGetType(file, &type);
     if (rc == 0 && acc != NULL) {
         StringInitCString(&tmp, acc);
         rc = StringCopy(&lnc->acc, &tmp);
@@ -593,6 +618,10 @@ rc_t KSrvResponseAddLocalAndCacheToTree(
     if (rc == 0 && name != NULL) {
         StringInitCString(&tmp, name);
         rc = StringCopy(&lnc->name, &tmp);
+    }
+    if (rc == 0 && type != NULL) {
+        StringInitCString(&tmp, type);
+        rc = StringCopy(&lnc->type, &tmp);
     }
 
     if (rc == 0) {
@@ -608,7 +637,8 @@ rc_t KSrvResponseAddLocalAndCacheToTree(
             PLOGERR(klogFatal, (klogFatal,
                 RC(rcVFS, rcQuery, rcExecuting, rcString, rcUnexpected),
                 "duplicate names in the same bundle: "
-                "'$acc'/'$(name)'", "acc=%c,name=%c", acc, name));
+                "'$acc'/'$(name)'/$(type)",
+                "acc=%s,name=%s,name=%s", acc, name, type));
             RELEASE(LocalAndCache, lnc);
         }
         else {
@@ -630,8 +660,8 @@ rc_t KSrvResponseAddLocalAndCacheToTree(
 
 /* KSrvResponse */
 
-rc_t KSrvResponseGetLocation(const KSrvResponse * self,
-    const char * acc, const char * name,
+rc_t KSrvResponseGetLocation2(const KSrvResponse * self,
+    const char * acc, const char * name, const char * type,
     const struct VPath ** local, rc_t * localRc,
     const struct VPath ** cache, rc_t * cacheRc)
 {
@@ -656,7 +686,7 @@ rc_t KSrvResponseGetLocation(const KSrvResponse * self,
     if (self == NULL)
         return RC(rcVFS, rcQuery, rcExecuting, rcSelf, rcNull);
 
-    rc = LocalAndCacheInit(&lnc, acc, name);
+    rc = LocalAndCacheInit(&lnc, acc, name, type);
     if (rc == 0) {
         BSTItem * i = (BSTItem *)BSTreeFind(&self->locations, &lnc, BSTItemCmp);
         if (i == NULL)
@@ -1187,6 +1217,66 @@ rc_t KSrvResponseGetCache ( const KSrvResponse * self, uint32_t idx,
             return rc == 0 ? erc : rc;
         }
     }
+}
+
+/******************************************************************************/
+
+rc_t KSrvResponseGetServiceCache(const KSrvResponse * self,
+    struct ServicesCache ** cache)
+{
+    assert(self);
+
+    return Response4GetServiceCache(self->r4, cache);
+}
+
+rc_t KSrvResponseMakeRunIterator(const KSrvResponse * self,
+    KSrvRunIterator ** it)
+{
+    KSrvRunIterator * p = NULL;
+
+    assert(self && it);
+    *it = NULL;
+
+    p = calloc(1, sizeof *p);
+    if (p == NULL)
+        return RC(rcVFS, rcStorage, rcAllocating, rcMemory, rcExhausted);
+
+    p->response = self;
+
+    *it = p;
+
+    return 0;
+}
+
+rc_t KSrvRunIteratorRelease(const KSrvRunIterator * cself) {
+    if (cself != NULL) {
+        KSrvRunIterator * self = (KSrvRunIterator*)cself;
+        memset(self, 0, sizeof *self);
+        free((void*)self);
+    }
+
+    return 0;
+}
+rc_t KSrvRunIteratorNextRun(KSrvRunIterator * self,
+    const KSrvRun ** run)
+{
+    rc_t rc = 0;
+
+    struct ServicesCache * cache = NULL;
+
+    assert(self && self->response && run);
+
+    *run = NULL;
+
+    rc = KSrvResponseGetServiceCache(self->response, &cache);
+
+    if (rc == 0) {
+        if (self->idx < 2)
+            rc = ServicesCacheGetRun(cache, self->idx++ > 0, run, self);
+        else; /* TODO */
+    }
+
+    return rc;
 }
 
 /******************************************************************************/

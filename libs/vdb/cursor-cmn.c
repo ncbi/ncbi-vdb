@@ -758,7 +758,7 @@ rc_t VCursorRowFindNextRowId ( const Vector * self, uint32_t idx, int64_t start_
                 rc = VColumnIdRange ( vcol, & sfirst, & slast );
                 if ( rc != 0 )
                     break;
-                if ( sfirst >= slast || start_id > slast )
+                if ( sfirst > slast || start_id > slast )
                 {
                     rc = RC ( rcVDB, rcCursor, rcSelecting, rcRow, rcNotFound );
                     break;
@@ -959,4 +959,3 @@ VCursorGetRow ( struct VCursor * self )
     assert ( self != NULL );
     return & self -> row;
 }
-

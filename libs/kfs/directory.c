@@ -728,6 +728,52 @@ LIB_EXPORT rc_t CC KDirectoryCreateAlias_v1 ( KDirectory_v1 *self,
     return RC ( rcFS, rcDirectory, rcUpdating, rcInterface, rcBadVersion );
 }
 
+
+/* CreateLink ( v1.5 )
+ *  creates a new link (also known as a hard link).
+ *
+ *  "access" [ IN ] - standard Unix directory access mode
+ *  used when "mode" has kcmParents set and new link path does
+ *  not exist.
+ *
+ *  "mode" [ IN ] - a creation mode ( see explanation in kfs/defs.h ).
+ *
+ *  "oldpath" [ IN ] - NUL terminated string in directory-native
+ *  character set denoting existing object. THE PATH IS GIVEN RELATIVE
+ *  TO DIRECTORY ( "self" ), NOT LINK ( "newpath" )!
+ *
+ *  "newpath" [ IN ] - NUL terminated string in directory-native
+ *  character set denoting a new link.
+ */
+LIB_EXPORT rc_t CC KDirectoryCreateLink_v1 ( KDirectory_v1 *self,
+    uint32_t access, KCreateMode mode,
+    const char *oldpath, const char *newpath )
+{
+    if ( self == NULL )
+        return RC ( rcFS, rcDirectory, rcUpdating, rcSelf, rcNull );
+
+    if ( oldpath == NULL || newpath == NULL )
+        return RC ( rcFS, rcDirectory, rcCreating, rcPath, rcNull );
+    if ( oldpath [ 0 ] == 0 || newpath [ 0 ] == 0 )
+        return RC ( rcFS, rcDirectory, rcCreating, rcPath, rcInvalid );
+
+    if ( self -> read_only )
+        return RC ( rcFS, rcDirectory, rcUpdating, rcDirectory, rcReadonly );
+
+    switch ( self -> vt -> v1 . maj )
+    {
+    case 1:
+        if ( self -> vt -> v1 . min >= 5 )
+        {
+            return ( * self -> vt -> v1 . create_link )
+                ( self, access, mode, oldpath, newpath );
+        }
+        break;
+    }
+
+    return RC ( rcFS, rcDirectory, rcUpdating, rcInterface, rcBadVersion );
+}
+
 /* OpenFileRead
  *  opens an existing file with read-only access
  *
@@ -1330,6 +1376,13 @@ LIB_EXPORT rc_t CC KDirectoryInit_v1 ( KDirectory_v1 *self, const KDirectory_vt 
         switch ( vt -> v1 . min )
         {
             /* ADD NEW MINOR VERSION CASES HERE */
+        case 5:
+#if _DEBUGGING
+            if ( vt -> v1 . create_link == NULL )
+                return RC ( rcFS, rcFile, rcConstructing,
+                    rcInterface, rcNull );
+#endif
+            /* no break */
         case 4:
 #if _DEBUGGING
             if ( vt -> v1 . open_file_shared_write == NULL )

@@ -61,6 +61,13 @@
  *  opaque handle to library
  */
 
+LIB_EXPORT rc_t CC VDBManagerMakeWithVFSManager(const VDBManager ** cmgrp,
+    const KDirectory * cwd, struct VFSManager * vmgr)
+{
+    VDBManager ** mgrp = (VDBManager**)cmgrp;
+    KDirectory * wd = (KDirectory*)wd;
+    return VDBManagerMakeUpdateWithVFSManager(mgrp, wd, NULL);
+}
 
 /* MakeUpdate
  *  create library handle for specific use
@@ -81,7 +88,7 @@ LIB_EXPORT rc_t CC VDBManagerMakeUpdateWithVFSManager ( VDBManager ** mgrp,
         rc = RC ( rcVDB, rcMgr, rcConstructing, rcParam, rcNull );
     else
     {
-        VDBManager *mgr = malloc ( sizeof * mgr );
+        VDBManager *mgr = calloc ( 1, sizeof * mgr );
         if ( mgr == NULL )
             rc = RC ( rcVDB, rcMgr, rcConstructing, rcMemory, rcExhausted );
         else

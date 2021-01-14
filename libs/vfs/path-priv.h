@@ -43,6 +43,10 @@
 #include <klib/text.h>
 #endif
 
+#ifndef _h_vdb_quality_
+#include <vdb/quality.h> /* VQuality */
+#endif
+
 #ifndef _h_vfs_path_
 #include <vfs/path.h>
 #endif
@@ -129,6 +133,7 @@ struct VPath
     String     service;      /* s3, gs, sra-ncbi, ftp-ncbi, sra-sos, etc. */
     String     objectType;
     String     type;
+    String     acc;
 
     String     name;
     String     nameExtension; /* file extension in name. don't free */
@@ -146,6 +151,8 @@ struct VPath
 
     /* version of names service returned this VPath: 3.0 or SDL ... */
     uint32_t version; 
+
+    VQuality quality;
 };
 
 enum VPathVariant
@@ -224,7 +231,7 @@ rc_t VPathMakeFromUrl ( VPath ** new_path, const String * url,
     KTime_t date, const uint8_t md5 [ 16 ], KTime_t exp_date,
     const char * service, const String * objectType, const String * type,
     bool ceRequired, bool payRequired, const char * name,
-    int64_t projectId, uint32_t version );
+    int64_t projectId, uint32_t version, const String * acc );
 
 rc_t VPathAttachVdbcache(VPath * self, const VPath * vdbcache);
 
@@ -245,6 +252,11 @@ rc_t VPathEqual ( const VPath * l, const VPath * r, int * notequal );
  *  difference between expirations should be withing expirationRange */
 rc_t VPathClose ( const VPath * l, const VPath * r, int * notequal,
                   KTime_t expirationRange );
+
+rc_t VPathGetAccession(const VPath * self, String * acc);
+
+rc_t VPathSetQuality(VPath * self, VQuality quality);
+rc_t VPathLoadQuality(VPath * self);
 
 
 /***** VPathSet - set of VPath's - genetated from name resolver response ******/
