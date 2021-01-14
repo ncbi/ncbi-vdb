@@ -345,13 +345,13 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *self,
 static
 rc_t KDBManagerVOpenTableReadInt_noargs ( const KDBManager *self,
     const KTable **tblp, const KDirectory *wd, bool try_srapath,
-    const char *path, const struct VPath *vpath,
-    bool tryEnvAndAd, ... )
+    const char *path, bool tryEnvAndAd, const struct VPath *vpath,
+    ... )
 {
     rc_t rc;
     va_list args;
 
-    va_start ( args, tryEnvAndAd );
+    va_start ( args, vpath );
     rc = KDBManagerVOpenTableReadInt ( self, tblp, wd, try_srapath, path, args, vpath, tryEnvAndAd );
     va_end ( args );
 
@@ -397,8 +397,8 @@ LIB_EXPORT rc_t CC KDBManagerOpenTableReadVPath ( const KDBManager *self,
     if ( self == NULL )
         return RC ( rcDB, rcMgr, rcOpening, rcSelf, rcNull );
 
-    return KDBManagerVOpenTableReadInt_noargs ( self, tbl, self->wd, true, NULL,
-        path, true );
+    return KDBManagerVOpenTableReadInt_noargs ( self, tbl, self->wd, true, "",
+        true, path );
 }
 
 
@@ -437,7 +437,7 @@ LIB_EXPORT rc_t CC KDatabaseVOpenTableRead ( const KDatabase *self,
     if ( rc == 0 )
     {
         rc = KDBManagerVOpenTableReadInt_noargs ( self -> mgr, tblp,
-                                self -> dir, false, path, NULL, false );
+                                self -> dir, false, path, false, NULL );
         if ( rc == 0 )
         {
             KTable *tbl = ( KTable* ) * tblp;
