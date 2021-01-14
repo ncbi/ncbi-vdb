@@ -499,6 +499,13 @@ rc_t expand_algorithm ( const VResolverAlg *self, const VResolverAccToken *tok,
             rc = string_printf(expanded, bsize, size,
                 "%S/%S%.2S", &tok->accOfParentDb, &tok->alpha, &tok->digits);
         break;
+    case algWGSAD:
+        num = ( uint32_t ) ( tok -> alpha . size + 2 );
+        if ( tok -> prefix . size != 0 )
+            num += (uint32_t) ( tok -> prefix . size + 1 );
+        rc = string_printf(expanded, bsize, size,
+                "%S/%.*S", &tok->accOfParentDb, num, &tok->acc);
+        break;
     case algWGSFlat:
         num = ( uint32_t ) ( tok -> alpha . size + 2 );
         if ( tok -> prefix . size != 0 )
@@ -2852,9 +2859,9 @@ VResolverAppID get_accession_app ( const String * accession, bool refseq_ctx,
         }
     }
 
-    if (app == appREFSEQ && parentAcc != NULL)
-        StringInit(
-            &tok->accOfParentDb, parentAcc->addr, parentAcc->size, parentAcc->len);
+    if ((app == appREFSEQ || app == appWGS ) && parentAcc != NULL)
+        StringInit(&tok->accOfParentDb,
+            parentAcc->addr, parentAcc->size, parentAcc->len);
 
     return app;
 }
@@ -5501,6 +5508,8 @@ rc_t VResolverLoadVolumes ( Vector *algs, const String *root,
                         alg_id = algWGS2;
                     else if ( strcmp ( algname, "fuseWGS" ) == 0 )
                         alg_id = algFuseWGS;
+                    else if (strcmp(algname, "wgsAd") == 0)
+                        alg_id = algWGSAD;
                     /* stored in a three-level directory with 1K banks and no extension */
                     else if ( strcmp ( algname, "ncbi" ) == 0 ||
                               strcmp ( algname, "ddbj" ) == 0 )

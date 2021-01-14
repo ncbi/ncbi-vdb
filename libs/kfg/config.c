@@ -3372,6 +3372,15 @@ static rc_t _KConfigCheckAd(KConfig * self) {
     }
 
     if (rc == 0) {
+        name = "/repository/user/ad/public/apps/wgs/volumes/wgsAd";
+        rc = KConfigOpenNodeRead(self, &kfg, name);
+        if (rc != 0)
+            rc = KConfigWriteString(self, name, ".");
+        else
+            rc = KConfigNodeRelease(kfg);
+    }
+
+    if (rc == 0) {
         name = "/repository/user/ad/public/root";
         rc = KConfigOpenNodeRead(self, &kfg, name);
         if (rc != 0)
