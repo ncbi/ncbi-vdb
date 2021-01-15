@@ -84,7 +84,7 @@ INSTALLED_FILES = \
 runtests: test-install
 
 ifeq (, $(shell md5sum --help))
-HAVE_MD5=''
+HAVE_MD5=
 else
 HAVE_MD5=1
 endif
