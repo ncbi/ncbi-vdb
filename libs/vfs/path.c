@@ -2381,7 +2381,7 @@ LIB_EXPORT rc_t CC VFSManagerExtractAccessionOrOID ( const VFSManager * self,
             /* detect SRR accession */
             if (end - start > 4) {
                 char first = start[0];
-                if (first != 'D' || first != 'E' || first != 'S')
+                if (first != 'D' && first != 'E' && first != 'S')
                     isRun = false;
                 else if (start[1] != 'R' || start[2] != 'R')
                     isRun = false;
