@@ -33,14 +33,20 @@ include $(TOP)/build/Makefile.env
 clean: stdclean
 
 #-------------------------------------------------------------------------------
-# make sure shared library have no undefined references (other than to CLIB)
+# make sure shared library have no undefined references (other than to system libraries)
 #
 runtests: test_so
 
+define SO_CHECK
+    K=$$(nm $(LIBDIR)/$1.so | grep " U " | grep -v GLIBC | grep -v " U xml"); \
+	if [ "$$K" != "" ]; \
+		then ( echo "Error: $(LIBDIR)/$1.so contains unresolved external references:\n $$K" && exit 1 ); \
+	fi
+endef
+
 test_so:
-	@ # K=$$(nm $(LIBDIR)/libdiagnose.so | grep " U " | grep -v GLIBC); if [ "$$K" != "" ]; then ( echo "Error: $(LIBDIR)/libdiagnose.so contains unresolved external references:\n $$K" && exit 1 ); fi
-	@ K=$$(nm $(LIBDIR)/libncbi-vdb.so | grep " U " | grep -v GLIBC); if [ "$$K" != "" ]; then ( echo "Error: $(LIBDIR)/libncbi-vdb.so contains unresolved external references:\n $$K" && exit 1 ); fi
-	@ K=$$(nm $(LIBDIR)/libncbi-wvdb.so | grep " U " | grep -v GLIBC); if [ "$$K" != "" ]; then ( echo "Error: $(LIBDIR)/libncbi-wvdb.so contains unresolved external references:\n $$K" && exit 1 ); fi
+	@ $(call SO_CHECK,libncbi-vdb)
+	@ $(call SO_CHECK,libncbi-wvdb)
 
 .phony: test_so
 
