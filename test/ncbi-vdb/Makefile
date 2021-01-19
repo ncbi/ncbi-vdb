@@ -22,51 +22,25 @@
 #
 # ===========================================================================
 
-by_default: runtests
+default: runtests
 
-TOP ?= $(abspath ..)
-MODULE = test
+TOP ?= $(abspath ../..)
 
-include $(TOP)/build/Makefile.shell
+MODULE = test/ncbi-vdb
 
-include $(TOP)/build/Makefile.config
+include $(TOP)/build/Makefile.env
+
+clean: stdclean
 
 #-------------------------------------------------------------------------------
-# default
+# make sure shared library have no undefined references (other than to CLIB)
 #
-SUBDIRS =       \
-    ktst        \
-    cc          \
-    ext         \
-    judy_test   \
-    kfc         \
-    kfs         \
-    klib        \
-    kfg         \
-    kapp        \
-    cloud       \
-    kdb         \
-    kproc       \
-    vdb         \
-    search      \
-    sraxf       \
-    vxf         \
-    loader      \
-    krypto      \
-    cipher      \
-	ncbi-vdb    \
-    ngs-python  \
-    kns         \
-    schema      \
-    vfs         \
-    ngs-java    \
-    install     \
+runtests: test_so
 
-# common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
-include $(TOP)/build/Makefile.targets
+test_so:
+	@ # K=$$(nm $(LIBDIR)/libdiagnose.so | grep " U " | grep -v GLIBC); if [ "$$K" != "" ]; then ( echo "Error: $(LIBDIR)/libdiagnose.so contains unresolved external references:\n $$K" && exit 1 ); fi
+	@ K=$$(nm $(LIBDIR)/libncbi-vdb.so | grep " U " | grep -v GLIBC); if [ "$$K" != "" ]; then ( echo "Error: $(LIBDIR)/libncbi-vdb.so contains unresolved external references:\n $$K" && exit 1 ); fi
+	@ K=$$(nm $(LIBDIR)/libncbi-wvdb.so | grep " U " | grep -v GLIBC); if [ "$$K" != "" ]; then ( echo "Error: $(LIBDIR)/libncbi-wvdb.so contains unresolved external references:\n $$K" && exit 1 ); fi
 
-$(SUBDIRS):
-	@ $(MAKE) -C $@
-
-.PHONY: default $(SUBDIRS)
+.phony: test_so
 
