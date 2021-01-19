@@ -71,8 +71,9 @@ $(LIBDIR)/libncbi-ngs:     $(addprefix $(LIBDIR)/libncbi-ngs.,$(LIBX))
 $(LIBDIR)/libncbi-ngs-c++: $(addprefix $(LIBDIR)/libncbi-ngs-c++.,$(LIBX))
 
 VDB_NGS = \
-	ngs-py                \
-	ngs                   \
+	ngs-jni	\
+	ngs     \
+	ngs-py  \
 
 VDB_NGS_OBJ = \
 	$(addprefix $(ILIBDIR)/lib,$(addsuffix .a,$(VDB_NGS)))
@@ -140,7 +141,6 @@ VDB_LIB_CMN =    \
 	kfc          \
 	bz2          \
 	z            \
-	ngs-jni      \
 
 VDB_LIB_RD =              \
 	align-reader          \
