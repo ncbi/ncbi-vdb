@@ -503,7 +503,8 @@ rc_t expand_algorithm ( const VResolverAlg *self, const VResolverAccToken *tok,
         num = ( uint32_t ) ( tok -> alpha . size + 2 );
         if ( tok -> prefix . size != 0 )
             num += (uint32_t) ( tok -> prefix . size + 1 );
-        if ( tok -> ext1 . size != 0 )
+        /* add version just when it follows alpha (no digits) */
+        if ( tok -> digits . size == 0 && tok -> ext1 . size != 0 )
             num += (uint32_t) ( tok -> ext1 . size + 1 );
         if ( tok->accOfParentDb.size > 0 )
             rc = string_printf(expanded, bsize, size,
@@ -516,7 +517,8 @@ rc_t expand_algorithm ( const VResolverAlg *self, const VResolverAccToken *tok,
         num = ( uint32_t ) ( tok -> alpha . size + 2 );
         if ( tok -> prefix . size != 0 )
             num += (uint32_t) ( tok -> prefix . size + 1 );
-        if ( tok -> ext1 . size != 0 )
+        /* add version just when it follows alpha (no digits) */
+        if ( tok -> digits . size == 0 && tok -> ext1 . size != 0 )
             num += (uint32_t) ( tok -> ext1 . size + 1 );
         rc = string_printf ( expanded, bsize, size,
             "%.*S", num, & tok -> acc );
