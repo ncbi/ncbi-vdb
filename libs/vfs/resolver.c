@@ -503,7 +503,7 @@ rc_t expand_algorithm ( const VResolverAlg *self, const VResolverAccToken *tok,
         num = ( uint32_t ) ( tok -> alpha . size + 2 );
         if ( tok -> prefix . size != 0 )
             num += (uint32_t) ( tok -> prefix . size + 1 );
-        /* add version just when it follows alpha (no digits) */
+        /* add version just when it's a short ID (2 digits) */
         if ( tok -> digits . size == 2 && tok -> ext1 . size != 0 )
             num += (uint32_t) ( tok -> ext1 . size + 1 );
         if ( tok->accOfParentDb.size > 0 )
