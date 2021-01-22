@@ -1023,7 +1023,7 @@ static EUriForm EUriFormGuess ( const String * hostname,
         case 1:
             if ( uf != eUFUndefined )
                 return uf; /* reuse cached uriForm */
-            else { /* first call; guess uriForm by hostnae */
+            else { /* first call; guess uriForm by hostname */
                 String googleapis;
                 CONST_STRING ( & googleapis, "storage.googleapis.com" );
                 if ( StringEqual ( & googleapis, hostname ) )
