@@ -1473,6 +1473,8 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
     const uint32_t max_redirect = 5;
     char * expiration = NULL;
 
+    uint32_t uriForm = 1;
+
     /* TBD - may want to prevent a Content-Type or other headers here */
 
     if ( self -> body . elem_count != 0 )
@@ -1480,8 +1482,6 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
 
     for ( i = 0; i < max_redirect; ++ i )
     {
-        uint32_t uriForm = 1;
-
         KClientHttpResult *rslt;
 
         KDataBuffer buffer;
