@@ -5946,17 +5946,26 @@ rc_t VResolverLoadSubCategory ( VResolver *self, Vector *algs,
  */
 static
 rc_t VResolverLoadProtected ( VResolver *self, const KConfigNode *kfg,
-    const char *rep_name,
-    bool cache_capable, EDisabled disabled, bool cacheEnabled )
+    const char *rep_name, bool cache_capable,
+    EDisabled disabled, bool cacheEnabled, bool ignore_protected )
 {
     const KConfigNode *repo;
-    rc_t rc = KConfigNodeOpenNodeRead ( kfg, & repo, "user/protected/%s", rep_name );
+    rc_t rc = 0;
+    if (ignore_protected)
+        return 0;
+    rc = KConfigNodeOpenNodeRead(kfg, &repo, "user/protected/%s", rep_name);
     if ( GetRCState ( rc ) == rcNotFound )
         rc = 0;
     else if ( rc == 0 )
     {
-        rc = VResolverLoadRepo ( self, & self -> local, repo,
-            NULL, NULL, cache_capable, true, disabled, cacheEnabled, false );
+        rc_t r2 = PLOGERR(klogWarn, (klogWarn, 0,
+            "Protected repository '$(name)' is found and ignored.",
+            "name=%s", rep_name));
+        rc = r2;
+        r2 = LOGERR(klogWarn, 0, "Run 'vdb-config "
+            "--ignore-protected-repositories' to disable this message.");
+        if (r2 != 0 && rc == 0)
+            rc = r2;
         KConfigNodeRelease ( repo );
     }
     return rc;
@@ -6381,8 +6390,11 @@ static rc_t VResolverLoad(VResolver *self, const KRepository *protectedRepo,
         /* if the user is inside of a protected workspace, load it now */
         if ( rc == 0 && self -> ticket != NULL )
         {
-            rc = VResolverLoadProtected
-                ( self, kfg, buffer, true, userDisabled, userCacheEnabled );
+            bool ignore_protected = false;
+            KConfigReadBool(cfg, "/repository/user/ignore-protected",
+                &ignore_protected);
+            rc = VResolverLoadProtected ( self, kfg, buffer, true,
+                  userDisabled, userCacheEnabled, ignore_protected );
             if ( rc == 0 && self -> num_app_vols [ appFILE ] == 0 )
                 rc = VResolverForceUserFiles ( self );
         }

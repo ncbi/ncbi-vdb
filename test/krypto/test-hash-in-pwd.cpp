@@ -58,10 +58,12 @@ TEST_CASE(TestKey) {
 
     char pwdRead[9] = "";
     size_t size = 0;
-    REQUIRE_RC(
+
+    // VDB-4394: protected configuration is ignored
+    REQUIRE_RC_FAIL(
         VFSManagerGetKryptoPassword(mgr, pwdRead, sizeof pwdRead, &size));
-    REQUIRE_EQ(string_cmp(
-        pwdKfg, sizeof pwdKfg, pwdRead, size + 1, sizeof pwdRead), 0);
+/*  REQUIRE_EQ(string_cmp(
+        pwdKfg, sizeof pwdKfg, pwdRead, size + 1, sizeof pwdRead), 0); */
 
     REQUIRE_RC(VFSManagerRelease(mgr));
 
@@ -83,10 +85,13 @@ TEST_CASE(TestFile) {
 
     char pwdRead[9] = "";
     size_t size = 0;
-    REQUIRE_RC(
+
+    /* VDB-4394: protected configuration is ignored.
+    We might want to use ngc file to perform this test. */
+    REQUIRE_RC_FAIL(
         VFSManagerGetKryptoPassword(mgr, pwdRead, sizeof pwdRead, &size));
-    REQUIRE_EQ(string_cmp(
-        pwdKfg, sizeof pwdKfg, pwdRead, size + 1, sizeof pwdRead), 0);
+/*  REQUIRE_EQ(string_cmp(
+        pwdKfg, sizeof pwdKfg, pwdRead, size + 1, sizeof pwdRead), 0); */
 
     REQUIRE_RC(VFSManagerRelease(mgr));
 
