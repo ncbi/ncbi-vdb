@@ -285,7 +285,7 @@ public:
                 break;
             case eWgs:
                 REQUIRE_EQ ( KDirectoryPathType ( native, "%s/wgs/%s.cache",
-                             user_root -> addr, WGS ), ( KPathType ) kptFile );
+                             user_root -> addr, acc ), ( KPathType ) kptFile );
                 break;
             default:
                 assert ( 0 ) ;
