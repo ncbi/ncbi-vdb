@@ -54,8 +54,7 @@ SUBDIRS =       \
     loader      \
     krypto      \
     cipher      \
-    ngs         \
-    ngs-c++     \
+	ncbi-vdb    \
     ngs-python  \
     kns         \
     schema      \
