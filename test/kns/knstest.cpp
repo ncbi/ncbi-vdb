@@ -95,7 +95,7 @@ FIXTURE_TEST_CASE(KNSManagerGetUserAgent_Default, SessionIdFixture)
 {
     const char * ua = nullptr;
     KNSManagerGetUserAgent(&ua);
-    const string ua_contains = "sra-toolkit test-kns.1 (phid=nocnognos,libc=";
+    const string ua_contains = "sra-toolkit test-kns.1 (phid=noc";
     REQUIRE_NE( string::npos, string(ua).find(ua_contains) );
 }
 
@@ -111,7 +111,7 @@ FIXTURE_TEST_CASE(KNSManagerSetUserAgent_, SessionIdFixture)
     const string new_ua = "new UserAgent";
     REQUIRE_RC(KNSManagerSetUserAgent(nullptr, "%s", new_ua.c_str()));
 
-    REQUIRE( UserAgent_Contains( new_ua + " (phid=nocnognos,libc=" ) );
+    REQUIRE( UserAgent_Contains( new_ua + " (phid=noc" ) );
 }
 
 // KNSManagerSetUserAgentSuffix, KNSManagerGetUserAgentSuffix
@@ -136,13 +136,13 @@ FIXTURE_TEST_CASE(KNSManagerSetUserAgentSuffix_Get, SessionIdFixture)
     const char * s;
     REQUIRE_RC(KNSManagerGetUserAgentSuffix( & s ));
     REQUIRE_EQ( suffix, string( s ) );
-    REQUIRE( UserAgent_Contains( "sra-toolkit test-kns.1suffix (phid=nocnognos,libc=" ) );
+    REQUIRE( UserAgent_Contains( "sra-toolkit test-kns.1suffix (phid=noc" ) );
 }
 
 FIXTURE_TEST_CASE(KNSManagerSetUserAgentSuffix_Restore, SessionIdFixture)
 {
     REQUIRE_RC(KNSManagerSetUserAgentSuffix("suffix1"));
-    REQUIRE( UserAgent_Contains( "sra-toolkit test-kns.1suffix1 (phid=nocnognos,libc=" ) );
+    REQUIRE( UserAgent_Contains( "sra-toolkit test-kns.1suffix1 (phid=noc" ) );
 
     REQUIRE_RC(KNSManagerSetUserAgentSuffix(""));
     const char * ua = nullptr;
