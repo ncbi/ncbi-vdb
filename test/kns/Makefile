@@ -36,6 +36,7 @@ TEST_TOOLS = \
 	test-google-proxy \
 	test200for-whole-file \
 	test-kns \
+	test-ipc \
 	test-http \
 	test-http-dropconn \
 	test-http-request \
@@ -133,6 +134,21 @@ $(TEST_BINDIR)/test-kns: $(KNSTEST_OBJ)
 
 kns: test-kns
 	$(TEST_BINDIR)/test-kns  #-l=all
+
+#----------------------------------------------------------------
+# test-ipc
+#
+IPCTEST_SRC = \
+	test-ipc
+
+IPCTEST_OBJ = \
+	$(addsuffix .$(OBJX),$(IPCTEST_SRC))
+
+$(TEST_BINDIR)/test-ipc: $(IPCTEST_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
+
+ipc: test-ipc
+	$(TEST_BINDIR)/test-ipc  #-l=all
 
 #----------------------------------------------------------------
 # test_allow_all_certificates
