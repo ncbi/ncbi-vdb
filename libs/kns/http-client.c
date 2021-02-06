@@ -1571,7 +1571,11 @@ static
 rc_t CC KClientHttpStreamRead ( const KClientHttpStream *self,
     void *buffer, size_t bsize, size_t *num_read )
 {
-    return KClientHttpStreamTimedRead ( self, buffer, bsize, num_read, NULL );
+    timeout_t tm;
+    rc_t rc = TimeoutInit(&tm, 60 * 1000); /* 60 seconds */
+    if (rc == 0)
+        rc = KClientHttpStreamTimedRead ( self, buffer, bsize, num_read, &tm );
+    return rc;
 }
 
 /* Uses a state machine*/
