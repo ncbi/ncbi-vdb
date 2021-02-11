@@ -6,19 +6,21 @@ if [ "${PYTHON}" = "" ]; then
     echo "skipping python cipher test: PYTHON not defined"
     exit 0
 fi
-if [ "${VIRTUALENV}" = "" ]; then
-    echo "skipping python cipher test: no virtualenv"
-    exit 0
-fi
 
 #installing cipher module into newly created virtual env
-tmp_py_env=$(pwd)/temp_env
+hostname=`hostname`
+tmp_py_env=$(pwd)/temp_env_${hostname}
+echo $tmp_py_env
+
+rm -fr $tmp_py_env
 
 ${PYTHON} -V
-${VIRTUALENV} -p ${PYTHON} $tmp_py_env
+${PYTHON} -m venv $tmp_py_env
 . $tmp_py_env/bin/activate
 
 #now inside the virtual env, python is ${PYTHON}
+
+pip install wheel
 
 # the following creates "build dist .eggs" in $CIPHER_DIR
 tmp_cur_dir=$(pwd)
@@ -29,20 +31,24 @@ unset tmp_cur_dir
 
 echo "Running python cipher test..."
 
+IN=test.in${hostname}
+ENC=test.enc${hostname}
+OUT=test.out${hostname}
+
 #running cipher test in py virtual env
-rm -f test.in test.enc test.out
+rm -f $IN $ENC $OUT
 
 for i in {0..10000}
 do
-    echo "Hello world $i" >> test.in
+    echo "Hello world $i" >> $IN
 done
 
-python ${CIPHER_DIR}/encrypt.py --password=password123 test.in test.enc
-python ${CIPHER_DIR}/decrypt.py --password=password123 test.enc test.out
+python ${CIPHER_DIR}/encrypt.py --password=password123 $IN $ENC
+python ${CIPHER_DIR}/decrypt.py --password=password123 $ENC $OUT
 
-diff test.in test.out
+diff $IN $OUT
 exit_code=$?
-rm test.in test.enc test.out
+rm $IN $ENC $OUT
 
 echo "python cipher test is complete."
 
