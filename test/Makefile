@@ -35,6 +35,7 @@ include $(TOP)/build/Makefile.config
 # default
 #
 SUBDIRS =       \
+    cipher      \
     ktst        \
     cc          \
     ext         \
@@ -53,8 +54,7 @@ SUBDIRS =       \
     vxf         \
     loader      \
     krypto      \
-    cipher      \
-	ncbi-vdb    \
+    ncbi-vdb    \
     ngs-python  \
     kns         \
     schema      \
