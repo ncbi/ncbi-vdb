@@ -10,19 +10,20 @@ fi
 #installing cipher module into newly created virtual env
 hostname=`hostname`
 tmp_py_env=$(pwd)/temp_env_${hostname}
-echo $tmp_py_env
 
 rm -fr $tmp_py_env
 
 ${PYTHON} -V
 ${PYTHON} -m venv $tmp_py_env
+ls -ld $tmp_py_env
 . $tmp_py_env/bin/activate
 
 #now inside the virtual env, python is ${PYTHON}
 
 pip install wheel
 
-# the following creates "build dist .eggs" in $CIPHER_DIR
+# The following creates "build dist .eggs" in ${CIPHER_DIR}.
+# Correction: .egg is kept to speed up tests.
 tmp_cur_dir=$(pwd)
 cd $CIPHER_DIR
 python setup.py install
@@ -60,9 +61,7 @@ rm -rf $tmp_py_env
 unset tmp_py_env
 
 cd $CIPHER_DIR
-rm -r  build dist .eggs
-rm -rf packit-0.18-py2.7.egg pbr-3.1.1-py2.7.egg wheel-0.30.0-py2.7.egg
-rm -v  cipher.egg-info/SOURCES.txt
-rm -vf glob2-0.4.1-py2.7.egg
+rm -r build cipher.egg-info/SOURCES.txt dist
+# keep .eggs to speed up running on tcmac*
 
 exit $exit_code
