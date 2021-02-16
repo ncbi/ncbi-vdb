@@ -1,6 +1,5 @@
 TOP=$1
 CIPHER_DIR=${TOP}/libs/cipher/cipher-1.7
-VIRTUALENV=$(which virtualenv)
 
 if [ "${PYTHON}" = "" ]; then
     echo "skipping python cipher test: PYTHON not defined"
@@ -13,6 +12,7 @@ tmp_py_env=$(pwd)/temp_env_${hostname}
 
 rm -fr $tmp_py_env
 
+echo ${PYTHON}
 ${PYTHON} -V
 ${PYTHON} -m venv $tmp_py_env
 ls -ld $tmp_py_env
@@ -23,7 +23,6 @@ ls -ld $tmp_py_env
 pip install wheel
 
 # The following creates "build dist .eggs" in ${CIPHER_DIR}.
-# Correction: .egg is kept to speed up tests.
 tmp_cur_dir=$(pwd)
 cd $CIPHER_DIR
 python setup.py install
@@ -62,6 +61,6 @@ unset tmp_py_env
 
 cd $CIPHER_DIR
 rm -r build cipher.egg-info/SOURCES.txt dist
-# keep .eggs to speed up running on tcmac*
+rm -r .eggs
 
 exit $exit_code
