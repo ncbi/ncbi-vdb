@@ -92,6 +92,84 @@ FIXTURE_TEST_CASE(HttpRequest_POST_NoParams, HttpRequestFixture)
 }
 #endif
 
+FIXTURE_TEST_CASE(HttpRequest_HEAD_as_GET, HttpRequestFixture)
+{
+    MakeRequest( GetName() );
+    m_req->payRequired = true; // triggers GET for HEAD
+
+    TestStream::AddResponse(
+        "HTTP/1.1 206 Partial Content\r\n"
+        "Content-Range: bytes 0-6/7\r\n"
+        "Content-Length: 7\r\n"
+        "\r\n"
+        "1234567"
+        "\r\n");
+    KClientHttpResult *rslt;
+    REQUIRE_RC ( KClientHttpRequestHEAD ( m_req, & rslt ) );
+    REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
+
+    string req = TestStream::m_requests.front();
+    // the request is a GET
+    REQUIRE_NE( string::npos, req.find("GET ") );
+    // -head is temporarily appended to the (thread-local) UserAgent string
+    REQUIRE_NE( string::npos, req.find("-head") );
+    // and then removed
+    const char * agent;
+    REQUIRE_RC( KNSManagerGetUserAgent( & agent ) );
+    REQUIRE_EQ( string::npos, string(agent).find("-head") );
+}
+
+FIXTURE_TEST_CASE(HttpRequest_HEAD_as_POST, HttpRequestFixture)
+{
+    MakeRequest( GetName() );
+    m_req->ceRequired = true; // triggers POST for HEAD
+
+    TestStream::AddResponse(
+        "HTTP/1.1 206 Partial Content\r\n"
+        "Content-Range: bytes 0-6/7\r\n"
+        "Content-Length: 7\r\n"
+        "\r\n"
+        "1234567"
+        "\r\n");
+    KClientHttpResult *rslt;
+    REQUIRE_RC ( KClientHttpRequestHEAD ( m_req, & rslt ) );
+    REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
+
+    string req = TestStream::m_requests.front();
+    // the request is a GET
+    REQUIRE_NE( string::npos, req.find("POST ") );
+    // -head is temporarily appended to the (thread-local) UserAgent string
+    REQUIRE_NE( string::npos, req.find("-head") );
+    // and then removed
+    const char * agent;
+    REQUIRE_RC( KNSManagerGetUserAgent( & agent ) );
+    REQUIRE_EQ( string::npos, string(agent).find("-head") );
+}
+
+FIXTURE_TEST_CASE(HttpRequest_HEAD_as_POST_preserveUAsuffix, HttpRequestFixture)
+{
+    MakeRequest( GetName() );
+    m_req->ceRequired = true; // triggers POST for HEAD
+
+    KNSManagerSetUserAgentSuffix("suffix"); // has to survive KClientHttpRequestHEAD
+
+    TestStream::AddResponse(
+        "HTTP/1.1 206 Partial Content\r\n"
+        "Content-Range: bytes 0-6/7\r\n"
+        "Content-Length: 7\r\n"
+        "\r\n"
+        "1234567"
+        "\r\n");
+    KClientHttpResult *rslt;
+    REQUIRE_RC ( KClientHttpRequestHEAD ( m_req, & rslt ) );
+    REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
+
+    const char * agent;
+    REQUIRE_RC( KNSManagerGetUserAgent( & agent ) );
+    // the original suffix is still there
+    REQUIRE_NE( string::npos, string(agent).find("suffix") );
+}
+
 // KClientHttpRequestAddQueryParam
 
 class HttpRequestVerifyURL : public SharedTest

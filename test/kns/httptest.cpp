@@ -301,6 +301,11 @@ FIXTURE_TEST_CASE(Http_Read_Multi_User, HttpFixture)
 
 }
 
+FIXTURE_TEST_CASE(HEAD_as_GET, HttpFixture)
+{
+
+}
+
 //////////////////////////
 // HttpRetrySpecs
 

@@ -19,7 +19,6 @@
         as needed for the platform
     -->
     <property name="python.exe"     value="python" />
-
     <target name="install">
         <property name="PYTHONUSERBASE" value="${Output}\tmp\ngs"/>
         <exec executable="${python.exe}" dir="${ngs-source.dir}\ngs-python" failonerror="true" >

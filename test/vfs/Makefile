@@ -40,6 +40,7 @@ TEST_TOOLS = \
 	test-path \
 	test-path-c \
 	test-perm \
+	test-resolve \
 	test-resolver \
 	test-vfsmanager \
 	test-json-response \
@@ -219,6 +220,17 @@ MANAGERTEST_LIB = \
 $(TEST_BINDIR)/test-vfsmanager: $(MANAGERTEST_OBJ)
 	$(LP) --exe -o $@ $^ $(MANAGERTEST_LIB)
 
+
+#----------------------------------------------------------------
+
+RESOLVETEST_SRC = \
+	test-resolve
+
+RESOLVETEST_OBJ = \
+	$(addsuffix .$(OBJX),$(RESOLVETEST_SRC))
+
+$(TEST_BINDIR)/test-resolve: $(RESOLVETEST_OBJ)
+	$(LP) --exe -o $@ $^ $(MANAGERTEST_LIB)
 
 #----------------------------------------------------------------
 # C++ test on VResolver

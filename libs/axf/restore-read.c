@@ -325,6 +325,7 @@ static void RestoreReadSharedFree(RestoreReadShared *const self)
     KRWLockRelease(self->rwl);
     KRefcountWhack(&self->refcount, "RestoreReadShared");
     free(self);
+    LOGMSG(klogDebug, "Released shared global RestoreRead data object");
 }
 
 static void RestoreReadSharedRelease(RestoreReadShared *const self)
@@ -359,6 +360,31 @@ static RestoreReadShared *getRestoreReadShared(rc_t *const prc)
         KRefcountAdd(&((RestoreReadShared *)g_shared.ptr)->refcount, "RestoreReadShared");
 
     return g_shared.ptr;
+}
+
+unsigned RestoreReadShared_getState(unsigned *refSeqs, unsigned *wgs, unsigned *errors, unsigned *activeRefSeqs)
+{
+    if (g_shared.ptr) {
+        rc_t rc = 0;
+        RestoreReadShared *const ptr = getRestoreReadShared(&rc);
+
+        RestoreReadSharedReader(ptr);
+        *refSeqs = ptr->refSeqs.entries;
+        *wgs = ptr->wgs.entries;
+        *errors = ptr->errors.entries;
+        *activeRefSeqs = 0;
+        {
+            unsigned i;
+            for (i = 0; i < *refSeqs; ++i) {
+                if (ptr->refSeqs.entry[i].object->async != NULL)
+                    ++*activeRefSeqs;
+            }
+        }
+        RestoreReadSharedReaderDone(ptr);
+        RestoreReadSharedRelease(ptr);
+        return 1;
+    }
+    else return 0;
 }
 
 struct RestoreRead {

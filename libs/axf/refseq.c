@@ -31,6 +31,7 @@
 #include <vdb/cursor.h>
 #include <kproc/lock.h>
 #include <kproc/thread.h>
+#include <klib/refcount.h>
 #include "refseq.h"
 
 #include <stdlib.h>
@@ -45,6 +46,7 @@ typedef RefSeq Object;
 #include "util.h"
 
 struct RefSeqAsyncLoadInfo {
+    KRefcount refcount;
     KThread *th;
     KLock *mutex;               /**< mostly guards the cursor against concurrent use */
     VCursor const *curs;        /**< can be used by either thread after acquiring the mutex */
@@ -57,16 +59,38 @@ struct RefSeqAsyncLoadInfo {
     unsigned volatile miss;     /**< ... how effective the bg thread was */
 };
 
+static void RefSeqAsyncLoadInfo_Release(RefSeqAsyncLoadInfo *const self)
+{
+    switch (KRefcountDrop(&self->refcount, "RefSeqAsyncLoadInfo")) {
+    case krefWhack:
+        break;
+    case krefOkay:
+        return;
+    default:
+        assert(!"valid refcount");
+        abort();
+    }
+    VCursorRelease(self->curs);
+    KLockRelease(self->mutex);
+    KThreadRelease(self->th);
+    free(self);
+}
+
 static rc_t RefSeqAsyncLoadInfoFree(RefSeqAsyncLoadInfo *const self)
 {
     rc_t rc = 0;
     if (self) {
+        /* Synchronize with background thread in preparation for clean up */
+        KRefcountAdd(&self->refcount, "RefSeqAsyncLoadInfo"); // keep alive; let die at line 89
+        LOGMSG(klogDebug, "Foreground thread ending background thread");
         KLockAcquire(self->mutex);
         self->count = 0;
         KLockUnlock(self->mutex);
         KThreadWait(self->th, &rc);
+        LOGERR(klogDebug, rc, "Background thread ended");
+        RefSeqAsyncLoadInfo_Release(self);
         if (rc)
-            LOGERR(klogErr, rc, "async loader thread failed");
+            LOGERR(klogErr, rc, "asynchronous loader thread failed");
     }
     return rc;
 }
@@ -361,37 +385,37 @@ static rc_t runLoadThread(Object *self)
         else if (!done && rc == 0)
             rc = RC(rcXF, rcFunction, rcReading, rcData, rcInvalid);
     }
-    if (rc == 0 && i == count) {
-        if (n != 0) {
-            while (n < 4) {
-                accum <<= 2;
-                ++n;
-            }
-            self->bases[j++] = accum;
+    if (n != 0) {
+        while (n < 4) {
+            accum <<= 2;
+            ++n;
         }
+        self->bases[j++] = accum;
+    }
+    free(buffer);
+    LOGMSG(klogDebug, "Done background loading of reference");
+    if (rc == 0 && i == count) {
         KLockAcquire(async->mutex);
         async->loaded = i + first; /* last row was loaded */
         async->count = 0;
         KLockUnlock(async->mutex);
     }
-    LOGMSG(klogDebug, "Done background loading of reference");
 
     assert((atomic_read(&self->rwl) & 1) == 0); /* there is only one writer */
     atomic_inc(&self->rwl); /* tell readers we want to update the state */
     while (atomic_read(&self->rwl) != 1)
         ;
+    /* readers are all waiting in the loop at line 445 */
     self->reader = rc == 0 ? readNormal : readZero;
     self->async = NULL;
-    atomic_dec(&self->rwl); /* state is updated; readers can continue */
+    atomic_dec(&self->rwl); /* state is updated; readers continue to line 448 */
     if (rc == 0 && i == count) {
         double const pct = 100.0 * (async->hits - async->miss) / async->hits;
 
         PLOGMSG(klogDebug, (klogDebug, "Done with background loading of reference; preload was $(pct)%", "pct=%5.1f", (float)pct));
     }
-    KLockRelease(async->mutex);
-    free(buffer);
-    VCursorRelease(async->curs);
-    free(async);
+    RefSeqAsyncLoadInfo_Release(async);
+    LOGERR(klogDebug, rc, "Background thread exiting");
 
     return rc;
 }
@@ -510,6 +534,7 @@ static RefSeqAsyncLoadInfo *RefSeqAsyncLoadInfoMake(  VCursor const *curs
         result->max_seq_len = readU32(&car[2], rr->first, curs, prc);
         assert(result->max_seq_len % 4 == 0);
         if (*prc == 0) {
+            KRefcountInit(&result->refcount, 1, "RefSeqAsyncLoadInfo", "init", "");
             result->curs = curs;
             VCursorAddRef(curs);
             result->rr = *rr;

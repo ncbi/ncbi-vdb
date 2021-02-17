@@ -145,7 +145,7 @@ char *strchrnul ( const char *s, int c_in )
     uint32_t i;
     for ( i=0; s[i] != 0; ++i )
     {
-        if ( s[i] == c_in ) 
+        if ( s[i] == c_in )
             break;
     }
   return ( char * )&s[ i ];
@@ -188,12 +188,12 @@ int strncasecmp( const char *s1, const char *s2, size_t n )
     return _strnicmp( s1, s2, n );
 }
 
-static __inline 
+static __inline
 const char *strcasestr (const char *s1, const char *s2)
 {
     unsigned char c2 = tolower((unsigned char) *s2);
     size_t l1 = strlen(s1), l2 = strlen(s2);
-    
+
     if (l2 == 0) {
         return s1;
     }
@@ -235,6 +235,8 @@ long int lround ( double x )
 #define isxdigit( ch ) isxdigit ( ( unsigned char ) ( ch ) )
 #define tolower( ch ) tolower ( ( unsigned char ) ( ch ) )
 #define toupper( ch ) toupper ( ( unsigned char ) ( ch ) )
+
+#define _Thread_local __declspec( thread )
 
 #ifdef __cplusplus
 }

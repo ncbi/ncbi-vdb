@@ -1640,7 +1640,7 @@ LIB_EXPORT rc_t CC KClientHttpRequestHEAD ( KClientHttpRequest *self, KClientHtt
         else if ( s [ 0 ] != '\0' )
             HEADLESS = 1;
         else
-            HEADLESS = 0; 
+            HEADLESS = 0;
     }
 
     assert ( HEADLESS >= 0 );
@@ -1651,44 +1651,67 @@ LIB_EXPORT rc_t CC KClientHttpRequestHEAD ( KClientHttpRequest *self, KClientHtt
     if ( headless )
     {   /* use POST or GET for 256 bytes */
         /* update UserAgent with -head */
-        KNSManagerSetUserAgentSuffix("-head");
-
-        char buf [ 256 ];
-
-        /* add header "Range bytes = 0,HeadSize" */
-        rc = KClientHttpRequestByteRange ( self, 0, sizeof buf );
+        const char * s;
+        rc = KNSManagerGetUserAgentSuffix( & s );
         if ( rc == 0 )
         {
-            rc = self -> ceRequired ? KClientHttpRequestPOST ( self, rslt ) : KClientHttpRequestGET ( self, rslt );
+            char orig_suffix[ KNSMANAGER_STRING_MAX ];
+            char new_suffix[ KNSMANAGER_STRING_MAX ];
+
+            string_copy( orig_suffix, sizeof (orig_suffix), s, KNSMANAGER_STRING_MAX );
+
+            rc = string_printf( new_suffix, sizeof( new_suffix ), NULL, "%s-head", s );
             if ( rc == 0 )
             {
-                uint64_t result_size64 = sizeof buf;
-                KStream * response;
-
-                /* extractSize */
-                KClientHttpResultSize ( *rslt, & result_size64 );
-
-                if ( result_size64 > sizeof buf ) /* unlikely but would be very unpleasant */
+                rc = KNSManagerSetUserAgentSuffix( new_suffix );
+                if (rc == 0 )
                 {
-                    result_size64 = sizeof buf;
+                    char buf [ 256 ];
+
+                    /* add header "Range bytes = 0,HeadSize" */
+                    rc = KClientHttpRequestByteRange ( self, 0, sizeof buf );
+                    if ( rc == 0 )
+                    {
+                        rc = self -> ceRequired ? KClientHttpRequestPOST ( self, rslt ) : KClientHttpRequestGET ( self, rslt );
+                        if ( rc == 0 )
+                        {
+                            uint64_t result_size64 = sizeof buf;
+                            KStream * response;
+
+                            /* extractSize */
+                            KClientHttpResultSize ( *rslt, & result_size64 );
+
+                            if ( result_size64 > sizeof buf ) /* unlikely but would be very unpleasant */
+                            {
+                                result_size64 = sizeof buf;
+                            }
+
+                            /* consume and discard result_size64 bytes */
+                            rc = KClientHttpResultGetInputStream ( *rslt, & response );
+                            if ( rc == 0 )
+                            {
+                                rc = KStreamTimedReadExactly ( response, buf, result_size64, NULL );
+                                KStreamRelease ( response );
+                            }
+                        }
+                    }
+                    else
+                    {
+                        rc = RC ( rcNS, rcString, rcAllocating, rcMemory, rcExhausted );
+                    }
+
+                    {   /* Restore UserAgent */
+                        rc_t rc2 = KNSManagerSetUserAgentSuffix( orig_suffix );
+                        if ( rc == 0 )
+                        {
+                            rc = rc2;
+                        }
+                    }
                 }
 
-                /* consume and discard result_size64 bytes */
-                rc = KClientHttpResultGetInputStream ( *rslt, & response );
-                if ( rc == 0 )
-                {
-                    rc = KStreamTimedReadExactly ( response, buf, result_size64, NULL );
-                    KStreamRelease ( response );
-                }
             }
         }
-        else
-        {
-            rc = RC ( rcNS, rcString, rcAllocating, rcMemory, rcExhausted );
-        }
 
-        /* Restore UserAgent */
-        KNSManagerSetUserAgentSuffix("");
         return rc;
     }
     else

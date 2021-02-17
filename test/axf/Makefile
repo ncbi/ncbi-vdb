@@ -1,5 +1,3 @@
-#!/bin/sh
-
 # ===========================================================================
 #
 #                            PUBLIC DOMAIN NOTICE
@@ -24,22 +22,38 @@
 #
 # ===========================================================================
 
-FILENAME="`basename $0`"
-CURDIR="`dirname $0`"
+default: runtests
 
-if [ -z "$CURDIR" ]
-    then
-    echo configure: error: configure should be run as ./configure
-    exit 1
-fi
+TOP ?= $(abspath ../..)
 
-if [ "$FILENAME" != configure -a ! -s setup/konfigure.perl ]
-    then
-    echo configure: error: configure should be run as ./configure
-else
-    perl -v > /dev/null 2>&1 || { echo "checking for perl... no"; \
-        echo >&2 "configure: error: perl not found."; exit 1; }
+MODULE = test/axf
 
-    cd $CURDIR/setup
-    perl  konfigure.perl "$@"
-fi
+TEST_TOOLS = \
+	test-RestoreRead
+    
+include $(TOP)/build/Makefile.env
+
+$(TEST_TOOLS): makedirs
+	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
+
+.PHONY: $(TEST_TOOLS)
+
+clean: stdclean
+
+#-------------------------------------------------------------------------------
+# white-box test
+#
+TEST_SRC = \
+	test-RestoreRead
+
+TEST_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_SRC))
+
+TEST_LIBS = \
+    -skapp \
+    -sktst \
+	-sncbi-vdb \
+	-sm
+
+$(TEST_BINDIR)/test-RestoreRead: $(TEST_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_LIBS)
