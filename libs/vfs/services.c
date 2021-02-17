@@ -933,7 +933,13 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
                                         &acc, &tic);
                                 if (rc == 0) {
                                     if (acc != NULL) {
-                                        StringInitCString(&id, acc);
+                                        if (origAcc != NULL &&
+                                            isdigit(origAcc[0]))
+                                        {
+                                            StringInitCString(&id, origAcc);
+                                        }
+                                        else
+                                            StringInitCString(&id, acc);
                                         rc = KSrvRespFileGetFormat(file,
                                             &ff);
                                     }
