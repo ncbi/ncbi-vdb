@@ -222,6 +222,7 @@ FIXTURE_TEST_CASE(KNSManagerSet_SessionAll, SessionIdFixture)
 // thread locality of session Ids
 FIXTURE_TEST_CASE(KNSManagerSet_ThreadLocal, SessionIdFixture)
 {
+    string s1, s2;
     std::thread t1 ([&]
                     {
                         REQUIRE_RC(KNSManagerSetClientIP(m_mgr, "1.2.3.4"));
@@ -229,8 +230,10 @@ FIXTURE_TEST_CASE(KNSManagerSet_ThreadLocal, SessionIdFixture)
                         REQUIRE_RC(KNSManagerSetPageHitID(m_mgr, "pageHitId2"));
                         REQUIRE_RC(KNSManagerSetUserAgentSuffix("suffix1"));
                         std::this_thread::sleep_for (std::chrono::milliseconds(100));
-                        REQUIRE( UserAgent_Contains( string(",") + enc64("cip=1.2.3.4,sid=sessId1,pagehit=pageHitId2") ) );
-                        REQUIRE( UserAgent_Contains( "suffix1" ) );
+
+                        const char * ua = nullptr;
+                        KNSManagerGetUserAgent(&ua);
+                        s1 = ua;
                     });
     std::thread t2 ([&]
                     {
@@ -239,11 +242,21 @@ FIXTURE_TEST_CASE(KNSManagerSet_ThreadLocal, SessionIdFixture)
                         REQUIRE_RC(KNSManagerSetPageHitID(m_mgr, "pageHitId2"));
                         REQUIRE_RC(KNSManagerSetUserAgentSuffix("suffix2"));
                         std::this_thread::sleep_for (std::chrono::milliseconds(100));
-                        REQUIRE( UserAgent_Contains( string(",") + enc64("cip=11.22.33.44,sid=sessId2,pagehit=pageHitId2") ) );
-                        REQUIRE( UserAgent_Contains( "suffix2" ) );
+
+                        const char * ua = nullptr;
+                        KNSManagerGetUserAgent(&ua);
+                        s2 = ua;
                     });
     t1.join();
     t2.join();
+
+    REQUIRE(string::npos != s1.find(string(",")
+        + enc64("cip=1.2.3.4,sid=sessId1,pagehit=pageHitId2")));
+    REQUIRE(string::npos != s1.find("suffix1"));
+
+    REQUIRE(string::npos != s2.find(string(",")
+        + enc64("cip=11.22.33.44,sid=sessId2,pagehit=pageHitId2")));
+    REQUIRE(string::npos != s2.find("suffix2"));
 
     // the above threads did not change the main thread's session Ids
     const char * ua = nullptr;
