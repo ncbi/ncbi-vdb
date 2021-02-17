@@ -895,6 +895,23 @@ TEST_CASE ( Nucstrstr_Positional_Error )
     REQUIRE_THROW ( RunNucStrtr ( "ACGTACGT", "(TACC", true ) );
 }
 
+TEST_CASE ( Nucstrstr_NonPositional_4NA_NotFound )
+{
+    REQUIRE_EQ ( 0, RunNucStrtr ( "ACGTACGTACGTACGTACGTACGTACGTACGT", "ACTN", false ) );
+}
+
+TEST_CASE ( Nucstrstr_NonPositional_4NA_Found_AtStart )
+{
+    REQUIRE_NE ( 0, RunNucStrtr ( "ACGTACGTACGTACGTACGTACGTACGTACGT", "ACGTACGTACN", false ) );
+}
+
+TEST_CASE ( Nucstrstr_NonPositional_4NA_Found_InMiddle )
+{
+    REQUIRE_NE ( 0, RunNucStrtr ( "ACGTACGTACGTACGTACGTACGTACGTACGT", "GTACGTACN", false ) );
+}
+
+
+
 //////////////////////////////////////////// Main
 extern "C"
 {

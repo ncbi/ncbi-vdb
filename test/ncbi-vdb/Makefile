@@ -22,82 +22,31 @@
 #
 # ===========================================================================
 
-default: std
+default: runtests
 
 TOP ?= $(abspath ../..)
-MODULE = libs/ngs-c++
 
-INT_LIBS = \
-	libncbi-ngs-c++
-
-EXT_LIBS = \
-
-ALL_LIBS = \
-	$(INT_LIBS) \
-	$(EXT_LIBS)
-
-OBJFILES = \
-	$(NGS_OBJ)
+MODULE = test/ncbi-vdb
 
 include $(TOP)/build/Makefile.env
 
-INCDIRS += \
-	-I$(SRCDIR)/../ngs \
-	-I$(TOP)/../ngs/ngs-sdk
-
-
-#-------------------------------------------------------------------------------
-# outer targets
-#
-all std: makedirs # compile
-	@ $(MAKE_CMD) $(TARGDIR)/std
-
-$(INT_LIBS): makedirs
-	@ $(MAKE_CMD) $(ILIBDIR)/$@
-
-$(EXT_LIBS): makedirs
-	@ $(MAKE_CMD) $(LIBDIR)/$@
-
-.PHONY: all std $(ALL_LIBS)
-
-#-------------------------------------------------------------------------------
-# std
-#
-$(TARGDIR)/std: \
-	$(addprefix $(ILIBDIR)/,$(INT_LIBS)) \
-	$(addprefix $(LIBDIR)/,$(EXT_LIBS))
-
-.PHONY: $(TARGDIR)/std
-
-#-------------------------------------------------------------------------------
-# clean
-#
 clean: stdclean
 
-.PHONY: clean
-
 #-------------------------------------------------------------------------------
-# ncbi-ngs-c++
+# make sure shared library have no undefined references (other than to system libraries)
 #
-$(ILIBDIR)/libncbi-ngs-c++: $(addprefix $(ILIBDIR)/libncbi-ngs-c++.,$(LIBX))
+runtests: test_so
 
-NGS_SRC = \
-	NCBI-NGS
+define SO_CHECK
+    K=$$(nm $(LIBDIR)/$1.so | grep " U " | grep -v GLIBC | grep -v " U xml"); \
+	if [ "$$K" != "" ]; \
+		then ( echo "Error: $(LIBDIR)/$1.so contains unresolved external references:\n $$K" && exit 1 ); \
+	fi
+endef
 
-NGS_OBJ = \
-	$(addsuffix .$(LOBX),$(NGS_SRC))
+test_so:
+	@ $(call SO_CHECK,libncbi-vdb)
+	@ $(call SO_CHECK,libncbi-wvdb)
 
-NGS_LIB = \
+.phony: test_so
 
-$(ILIBDIR)/libncbi-ngs-c++.$(LIBX): $(NGS_OBJ)
-	$(LP) --slib --vers $(SRCDIR)/../ncbi-vdb/libncbi-vdb.vers -o $@ $^ $(NGS_LIB)
-
-
-testy-the-bear: $(TEST_BINDIR)/testy-the-ngs-bear
-
-$(TEST_BINDIR)/testy-the-ngs-bear: testy-the-bear.o
-	$(LP) --exe -o $@ $^ -lkapp -lncbi-ngs-c++ -lncbi-vdb
-
-compile: stdcompile
-
-$(TARGDIR)/compile: $(OBJFILES)

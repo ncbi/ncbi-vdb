@@ -114,10 +114,12 @@ FIXTURE_TEST_CASE(Http_Read, HttpFixture)
     REQUIRE_RC( KFileTimedRead ( m_file, 0, buf, sizeof buf, &num_read, NULL ) );
     REQUIRE_EQ( string ( "content" ), string ( buf, num_read ) );
 }
+#endif
 
+#ifdef ALL
 #ifndef WINDOWS
 //TODO: figure out certificate validation on Windows
-FIXTURE_TEST_CASE(VDB_3661, HttpFixture)
+FIXTURE_TEST_CASE(RedirectToAnotherSite, HttpFixture)
 {
     KEndPoint ep;
 #define PUBLIC_DOCS "public_docs.crg.es"
@@ -128,15 +130,25 @@ FIXTURE_TEST_CASE(VDB_3661, HttpFixture)
         SILENT_RC(rcNS, rcNoTarg, rcValidating, rcConnection, rcNotFound))
     {
         cerr << "unable to resolve host address " << PUBLIC_DOCS <<
-            ". Skipping VDB_3661 test..." << endl;
+            ". Skipping RedirectToAnotherSite test..." << endl;
         return;
     }
     REQUIRE_RC(rc);
 
     const KFile * file = NULL;
+    if (KNSManagerMakeHttpFile(m_mgr, &file, NULL, 0x01010000,
+        "http://" PUBLIC_DOCS "/rguigo/Papers/2017_lagarde-uszczynska_CLS"
+        "/data/trackHub/dataFiles/hsAll_Cap1_Brain_hiSeq.bam") != 0)
+    {
+        cerr << "unable to MakeHttpFile ( " << PUBLIC_DOCS <<
+            " ). Skipping RedirectToAnotherSite test..." << endl;
+        return;
+    }
+    REQUIRE_RC(KFileRelease(file));
+
     REQUIRE_RC ( KNSManagerMakeHttpFile ( m_mgr, & file, NULL, 0x01010000,
        "http://" PUBLIC_DOCS "/rguigo/Papers/2017_lagarde-uszczynska_CLS"
-        "/data/trackHub//dataFiles/hsAll_Cap1_Brain_hiSeq.bam"
+        "/data/trackHub/dataFiles/hsAll_Cap1_Brain_hiSeq.bam"
       ) );
 
     uint64_t size = 0;
@@ -286,6 +298,11 @@ FIXTURE_TEST_CASE(Http_Read_Multi_User, HttpFixture)
         REQUIRE_RC( thread_rcs[i] );
     }
 
+
+}
+
+FIXTURE_TEST_CASE(HEAD_as_GET, HttpFixture)
+{
 
 }
 

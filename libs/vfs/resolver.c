@@ -499,10 +499,27 @@ rc_t expand_algorithm ( const VResolverAlg *self, const VResolverAccToken *tok,
             rc = string_printf(expanded, bsize, size,
                 "%S/%S%.2S", &tok->accOfParentDb, &tok->alpha, &tok->digits);
         break;
+    case algWGSAD:
+        num = ( uint32_t ) ( tok -> alpha . size + 2 );
+        if ( tok -> prefix . size != 0 )
+            num += (uint32_t) ( tok -> prefix . size + 1 );
+        /* add version just when it's a short ID (2 digits) */
+        if ( tok -> digits . size == 2 && tok -> ext1 . size != 0 )
+            num += (uint32_t) ( tok -> ext1 . size + 1 );
+        if ( tok->accOfParentDb.size > 0 )
+            rc = string_printf(expanded, bsize, size,
+                    "%S/%.*S", &tok->accOfParentDb, num, &tok->acc);
+        else
+            rc = string_printf(expanded, bsize, size,
+                "%.*S", num, &tok->acc);
+        break;
     case algWGSFlat:
         num = ( uint32_t ) ( tok -> alpha . size + 2 );
         if ( tok -> prefix . size != 0 )
             num += (uint32_t) ( tok -> prefix . size + 1 );
+        /* add version just when it's a short ID (2 digits) */
+        if ( tok -> digits . size == 2 && tok -> ext1 . size != 0 )
+            num += (uint32_t) ( tok -> ext1 . size + 1 );
         rc = string_printf ( expanded, bsize, size,
             "%.*S", num, & tok -> acc );
         break;
@@ -2852,9 +2869,9 @@ VResolverAppID get_accession_app ( const String * accession, bool refseq_ctx,
         }
     }
 
-    if (app == appREFSEQ && parentAcc != NULL)
-        StringInit(
-            &tok->accOfParentDb, parentAcc->addr, parentAcc->size, parentAcc->len);
+    if ((app == appREFSEQ || app == appWGS ) && parentAcc != NULL)
+        StringInit(&tok->accOfParentDb,
+            parentAcc->addr, parentAcc->size, parentAcc->len);
 
     return app;
 }
@@ -5501,6 +5518,8 @@ rc_t VResolverLoadVolumes ( Vector *algs, const String *root,
                         alg_id = algWGS2;
                     else if ( strcmp ( algname, "fuseWGS" ) == 0 )
                         alg_id = algFuseWGS;
+                    else if (strcmp(algname, "wgsAd") == 0)
+                        alg_id = algWGSAD;
                     /* stored in a three-level directory with 1K banks and no extension */
                     else if ( strcmp ( algname, "ncbi" ) == 0 ||
                               strcmp ( algname, "ddbj" ) == 0 )
@@ -5946,17 +5965,26 @@ rc_t VResolverLoadSubCategory ( VResolver *self, Vector *algs,
  */
 static
 rc_t VResolverLoadProtected ( VResolver *self, const KConfigNode *kfg,
-    const char *rep_name,
-    bool cache_capable, EDisabled disabled, bool cacheEnabled )
+    const char *rep_name, bool cache_capable,
+    EDisabled disabled, bool cacheEnabled, bool ignore_protected )
 {
     const KConfigNode *repo;
-    rc_t rc = KConfigNodeOpenNodeRead ( kfg, & repo, "user/protected/%s", rep_name );
+    rc_t rc = 0;
+    if (ignore_protected)
+        return 0;
+    rc = KConfigNodeOpenNodeRead(kfg, &repo, "user/protected/%s", rep_name);
     if ( GetRCState ( rc ) == rcNotFound )
         rc = 0;
     else if ( rc == 0 )
     {
-        rc = VResolverLoadRepo ( self, & self -> local, repo,
-            NULL, NULL, cache_capable, true, disabled, cacheEnabled, false );
+        rc_t r2 = PLOGERR(klogWarn, (klogWarn, 0,
+            "Protected repository '$(name)' is found and ignored.",
+            "name=%s", rep_name));
+        rc = r2;
+        r2 = LOGERR(klogWarn, 0, "Run 'vdb-config "
+            "--ignore-protected-repositories' to disable this message.");
+        if (r2 != 0 && rc == 0)
+            rc = r2;
         KConfigNodeRelease ( repo );
     }
     return rc;
@@ -6381,8 +6409,11 @@ static rc_t VResolverLoad(VResolver *self, const KRepository *protectedRepo,
         /* if the user is inside of a protected workspace, load it now */
         if ( rc == 0 && self -> ticket != NULL )
         {
-            rc = VResolverLoadProtected
-                ( self, kfg, buffer, true, userDisabled, userCacheEnabled );
+            bool ignore_protected = false;
+            KConfigReadBool(cfg, "/repository/user/ignore-protected",
+                &ignore_protected);
+            rc = VResolverLoadProtected ( self, kfg, buffer, true,
+                  userDisabled, userCacheEnabled, ignore_protected );
             if ( rc == 0 && self -> num_app_vols [ appFILE ] == 0 )
                 rc = VResolverForceUserFiles ( self );
         }
@@ -6839,10 +6870,19 @@ LIB_EXPORT rc_t CC VResolverGetKNSManager(const VResolver * self,
     const KNSManager ** mgr)
 {
     rc_t rc = 0;
-    assert(self && mgr);
+
+    if (mgr == NULL)
+        return RC(rcVFS, rcResolver, rcAccessing, rcParam, rcNull);
+
     *mgr = NULL;
+
+    if (self == NULL)
+        return RC(rcVFS, rcResolver, rcAccessing, rcSelf, rcNull);
+
     rc = KNSManagerAddRef(self->kns);
+
     if (rc == 0)
         *mgr = self->kns;
+
     return rc;
 }

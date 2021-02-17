@@ -132,13 +132,9 @@ KStream_vt_v1 TestStream::vt =
 };
 
 HttpFixture :: HttpFixture()
-:   m_mgr ( nullptr ),
-    m_file ( nullptr ),
+:   m_file ( nullptr ),
     m_req ( nullptr )
 {
-    if ( KNSManagerMake ( & m_mgr ) != 0 )
-        throw logic_error ( "HttpFixture: KNSManagerMake failed" );
-
     if ( KStreamInit ( & m_stream, ( const KStream_vt* ) & TestStream::vt, "TestStream", "", true, true ) != 0 )
         throw logic_error ( "HttpFixture: KStreamInit failed" );
 
@@ -148,9 +144,6 @@ HttpFixture :: HttpFixture()
 
 HttpFixture :: ~HttpFixture()
 {
-    if ( KNSManagerRelease ( m_mgr ) != 0 )
-        cerr << "HttpFixture::~HttpFixture KNSManagerRelease failed" << endl;
-
     if ( KFileRelease ( m_file ) != 0 )
         cerr << "HttpFixture::~HttpFixture KFileRelease failed" << endl;
 

@@ -1481,10 +1481,13 @@ LIB_EXPORT rc_t CC KRepositoryMgrCurrentProtectedRepository ( const KRepositoryM
 
     if ( protected == NULL )
         rc = RC ( rcKFG, rcMgr, rcAccessing, rcParam, rcNull );
+
     else
     {
         * protected = NULL;
+        rc = KRepositoryCurrentProtectedRepositoryForNgc ( protected );
 
+#if 0 /* VDB-4394: stop supporting old configuration for protected repos */
         if ( self == NULL )
             rc = RC ( rcKFG, rcMgr, rcAccessing, rcSelf, rcNull );
         else
@@ -1595,6 +1598,8 @@ LIB_EXPORT rc_t CC KRepositoryMgrCurrentProtectedRepository ( const KRepositoryM
             if (rc == 0 && * protected == NULL)
                 rc = KRepositoryCurrentProtectedRepositoryForNgc(protected);
         }
+#endif
+
     }
 
     return rc;

@@ -46,6 +46,9 @@ TEST_TOOLS = \
 
 #	test-VDB-3418
 
+SLOW_TEST_TOOLS =  \
+	test-vdb-slow \
+
 include $(TOP)/build/Makefile.env
 
 
@@ -57,7 +60,7 @@ ifeq ($(wildcard ../../../asm-trace),)
 endif
 
 
-$(TEST_TOOLS): makedirs
+$(TEST_TOOLS) $(SLOW_TEST_TOOLS): makedirs
 	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
 
 runtests: setup
@@ -65,7 +68,7 @@ runtests: setup
 setup:
 	@ mkdir -p db
 
-.PHONY: $(TEST_TOOLS) setup
+.PHONY: $(TEST_TOOLS) $(SLOW_TEST_TOOLS) setup
 
 clean: stdclean
 
@@ -366,4 +369,20 @@ $(TEST_BINDIR)/test-VDB-4156: $(TEST_VDB4156_OBJ)
 
 VDB-4156: test-VDB-4156
 	$(TEST_BINDIR)/test-VDB-4156
+
+#-------------------------------------------------------------------------------
+# test-vdb-slow
+#
+TEST_VDB_SLOW_SRC = \
+	test-vdb-slow
+
+TEST_VDB_SLOW_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_VDB_SLOW_SRC))
+
+$(TEST_BINDIR)/test-vdb-slow: $(TEST_VDB_SLOW_OBJ)
+	$(LP) --exe -o $@ $^ $(READ_LIBS)
+
+vdb-slow: test-vdb-slow
+	$(TEST_BINDIR)/test-vdb-slow
+
 

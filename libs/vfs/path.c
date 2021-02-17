@@ -2355,6 +2355,8 @@ LIB_EXPORT rc_t CC VFSManagerExtractAccessionOrOID ( const VFSManager * self,
             const char * sep, * start = path . addr;
             const char * end = path . addr + path . size;
 
+            bool isRun = false;
+
             switch ( orig -> path_type )
             {
             case vpInvalid:
@@ -2376,6 +2378,19 @@ LIB_EXPORT rc_t CC VFSManagerExtractAccessionOrOID ( const VFSManager * self,
                 rc = RC ( rcVFS, rcPath, rcConstructing, rcParam, rcIncorrect );
             }
 
+            /* detect SRR accession */
+            if (end - start > 4) {
+                char first = start[0];
+                if (first != 'D' && first != 'E' && first != 'S')
+                    isRun = false;
+                else if (start[1] != 'R' || start[2] != 'R')
+                    isRun = false;
+                else if (!isdigit(start[3]))
+                    isRun = false;
+                else
+                    isRun = true;
+            }
+
             /* strip off known extensions */
             while ( 1 )
             {
@@ -2383,8 +2398,17 @@ LIB_EXPORT rc_t CC VFSManagerExtractAccessionOrOID ( const VFSManager * self,
                 if ( sep == NULL )
                     break;
 
+                assert ( *sep == '.' );
+
                 switch ( end - sep )
                 {
+                case 2:
+                    /* remove digits just for run accessions */
+                    if ( isRun && isdigit ( *( sep + 1) ) )
+                    {
+                        end = sep;
+                        continue;
+                    }
                 case 4:
                     if ( strcase_cmp ( ".sra", 4, sep, 4, 4 ) == 0 ||
                          strcase_cmp ( ".wgs", 4, sep, 4, 4 ) == 0 )

@@ -313,11 +313,14 @@ static rc_t VPathCacheLocationForSource(const VPath * self,
     if (rc == 0)
         rc = VPathGetName(self, &name);
 
-    if (rc == 0 && acc.size > 0 && name.size > 0)
+    if (rc == 0 && acc.size > 0 && name.size > 0) {
         /* acc & name (come from SDL) are known */
+        const char * ext = "";
+        if (VPathGetProjectId(self, NULL))
+            ext = ".ncbi_enc";
         rc = KDirectoryResolvePath(dir, true, sPath, sizeof sPath,
-            "%.*s/%.*s", acc.size, acc.addr, name.size, name.addr);
-
+            "%.*s/%.*s%s", acc.size, acc.addr, name.size, name.addr, ext);
+    }
     else {
         /* acc & name (come from SDL) are unknown */
         if (s != NULL && s > self->path.addr) {
@@ -402,14 +405,18 @@ static rc_t VResolversQuery ( const VResolver * self,
         rc_t localRc = 0;
         rc_t cacheRc = 0;
 
+        String sragap_files;
         String srapub_files;
         String remote;
 
+        CONST_STRING(&sragap_files, "sragap_files");
         CONST_STRING(&srapub_files, "srapub_files");
         CONST_STRING(&remote      , "remote"      );
 
         if (path != NULL) {
             isSource = StringEqual(&path->objectType, &srapub_files);
+            if (!isSource)
+                isSource = StringEqual(&path->objectType, &sragap_files);
             if (!isSource)
                 isSource = StringEqual(&path->objectType, &remote);
         }
@@ -926,7 +933,13 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
                                         &acc, &tic);
                                 if (rc == 0) {
                                     if (acc != NULL) {
-                                        StringInitCString(&id, acc);
+                                        if (origAcc != NULL &&
+                                            isdigit(origAcc[0]))
+                                        {
+                                            StringInitCString(&id, origAcc);
+                                        }
+                                        else
+                                            StringInitCString(&id, acc);
                                         rc = KSrvRespFileGetFormat(file,
                                             &ff);
                                     }

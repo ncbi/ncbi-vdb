@@ -37,6 +37,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <byteswap.h>
+#include <endian.h>
 
 #define TRACE_OPERATIONS 0
 #define TRACE_PARSE 1
@@ -1607,11 +1608,19 @@ LIB_EXPORT void CC NucStrstrWhack ( NucStrstr *self )
     }
 }
 
-
-
 /*--------------------------------------------------------------------------
  * expression evaluation
  */
+#if __BYTE_ORDER == __LITTLE_ENDIAN 
+    #define LOAD64( ptr ) bswap_64 ( * ( const uint64_t* ) ptr )
+#else
+    #if __BYTE_ORDER == __BIG_ENDIAN 
+        #define LOAD64( ptr ) ( * ( const uint64_t* ) ptr )
+    #else
+        #error "Endian-ness is not defined"
+    #endif
+#endif
+
 #if ! INTEL_INTRINSICS
 static
 int eval_2na_64 ( const NucStrFastaExpr *self,
@@ -1639,7 +1648,7 @@ int eval_2na_64 ( const NucStrFastaExpr *self,
 
 #if ENDLESS_BUFFER
     /* prime source buffer */
-    buffer = bswap_64 ( * ( const uint64_t* ) src );
+    buffer = LOAD64( src );
 #else
     /* accumulate entry position into length */
     end = src + ( ( len + ( pos & 3 ) + 3 ) >> 2 );
@@ -1695,7 +1704,7 @@ int eval_2na_64 ( const NucStrFastaExpr *self,
     for ( count = ( int ) ( len - self -> size ); count >= 3; count -= 4 )
     {
         /* exit condition within sequence */
-        if ( ( ra & rb & rc & rd ) == 0 )
+        if ( ra == 0 || rb == 0 || rc == 0 || rd == 0 )
             return 1;
 
         /* get next 2na byte */
@@ -1764,7 +1773,7 @@ int eval_2na_pos ( const NucStrFastaExpr *self,
 
 #if ENDLESS_BUFFER
     /* prime source buffer */
-    buffer = bswap_64 ( * ( const uint64_t* ) src );
+    buffer = LOAD64( src );
 #else
     /* accumulate entry position into length */
     end = src + ( ( len + ( pos & 3 ) + 3 ) >> 2 );
@@ -1950,7 +1959,7 @@ int eval_4na_64 ( const NucStrFastaExpr *self,
     for ( count = ( int ) ( len - self -> size ); count >= 3; count -= 4 )
     {
         /* exit condition within sequence */
-        if ( ( ra & rb & rc & rd ) == 0 )
+        if ( ra == 0 || rb == 0 || rc == 0 || rd == 0 )
             return 1;
 
         /* shuffle in next byte in 4na */
