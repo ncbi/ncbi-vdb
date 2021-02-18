@@ -32,6 +32,7 @@
 #include <vdb/schema.h> /* VSchemaRelease */
 
 #include <map>
+#include <string>
 
 class VDB_Fixture
 {
