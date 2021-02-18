@@ -104,16 +104,12 @@ void CC vxf_zstd_wrapper(void *ptr)
     ZSTD_freeCCtx(ptr);
 }
 
-/* zip
- * function zlib_fmt zip #1.0 < * I32 strategy, I32 level > (any in);
+/* zstd
+ * function zstd_fmt zstd #1.0 (any in);
  */
 VTRANSFACT_IMPL(vdb_zstd, 1, 0, 0) (const void *self, const VXfactInfo *info, VFuncDesc *rslt, const VFactoryParams *cp, const VFunctionParams *dp)
 {
     self_t *cctx = ZSTD_createCCtx();
-
-    if (cp->argc > 0)
-    {
-    }
 
     if (ctx) {
         rslt->self = ctx;

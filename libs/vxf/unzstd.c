@@ -124,8 +124,8 @@ void CC vxf_zstd_wrapper(void *ptr)
     ZSTD_freeDCtx(ptr);
 }
 
-/* unzip
- *  function any unzip #1.0 ( zlib_fmt in );
+/* unzstd
+ *  function any unzstd #1.0 ( zstd_fmt in );
  */
 VTRANSFACT_IMPL ( vdb_unzstd, 1, 0, 0 ) ( const void *self, const VXfactInfo *info,
     VFuncDesc *rslt, const VFactoryParams *cp, const VFunctionParams *dp )

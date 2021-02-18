@@ -639,6 +639,28 @@ T zip_encoding #1.0 < * I32 strategy, I32 level >
     encode { return zip < strategy, level > ( @ ); }
 };
 
+
+/* zstd
+ * unzstd
+ *  run things through zstd
+ *
+ */
+
+function
+zstd_fmt zstd #1.0 ( any in )
+    = vdb:zstd;
+
+function
+any unzzstd #1.0 ( zstd_fmt in )
+    = vdb:unzstd;
+
+physical < type T >
+T zstd_encoding #1.0 
+{
+    decode { return unzstd ( @ ); }
+    encode { return zstd ( @ ); }
+};
+
 physical
 bool bool_encoding #1.0
 {
