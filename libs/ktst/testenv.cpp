@@ -35,10 +35,11 @@
 #endif
 
 #include <klib/rc.h>
-#include <sstream> 
+#include <sstream>
 #include <csignal>
 #include <cstdlib>
 #include <cstring>
+#include <mutex>
 
 using namespace ::ncbi::NK;
 using std::string;
@@ -52,7 +53,7 @@ bool TestEnv::in_child_process = false;
 struct Args* TestEnv::args = 0;
 #endif
 
-TestEnv::TestEnv(int argc, char* argv[], ArgsHandler* argsHandler) 
+TestEnv::TestEnv(int argc, char* argv[], ArgsHandler* argsHandler)
     : catch_system_errors(true)
     , argc2(0)
     , argv2(NULL)
@@ -83,12 +84,12 @@ string TestEnv::lastLocation;
 LogLevel::E TestEnv::verbosity = LogLevel::e_error;
 bool TestEnv::verbositySet = false;
 
-void CC TestEnv::TermHandler() 
+void CC TestEnv::TermHandler()
 {
     SigHandler(SIGTERM);
 }
 
-void CC TestEnv::SigHandler(int sig) 
+void CC TestEnv::SigHandler(int sig)
 {
     switch (sig)
     {
@@ -154,7 +155,7 @@ OptDef Options[] = {
 
 #endif
 
-rc_t TestEnv::process_args(int argc, char* argv[], ArgsHandler* argsHandler) 
+rc_t TestEnv::process_args(int argc, char* argv[], ArgsHandler* argsHandler)
 {
     int arg2 = 9;
     argv2 = static_cast<char**>(calloc(arg2, sizeof *argv2));
@@ -430,11 +431,14 @@ rc_t TestEnv::process_args(int argc, char* argv[], ArgsHandler* argsHandler)
     return rc;
 }
 
-void ::ncbi::NK::saveLocation(const char* file, int line) 
+std::mutex saveLocation_mtx;
+void ::ncbi::NK::saveLocation(const char* file, int line)
 {
     std::ostringstream s;
     s << file << "(" << line << ")";
+    saveLocation_mtx.lock();
     TestEnv::lastLocation = s.str();
+    saveLocation_mtx.unlock();
 }
 
 void ::ncbi::NK::_REPORT_CRITICAL_ERROR_(const string& msg, const char* file, int line, bool is_msg)
@@ -453,11 +457,11 @@ void ::ncbi::NK::_REPORT_CRITICAL_ERROR_(const string& msg, const char* file, in
     throw ncbi::NK::execution_aborted();
  }
 
-ncbi::NK::TestRunner* 
+ncbi::NK::TestRunner*
 ncbi::NK::GetTestSuite(void)
-{ 
-    static ncbi::NK::TestRunner t; 
-    return &t; 
+{
+    static ncbi::NK::TestRunner t;
+    return &t;
 }
 
 rc_t CC TestEnv::UsageSummary(const char* progname) {
@@ -492,14 +496,14 @@ rc_t CC TestEnv::Usage(const Args* args)
     UsageSummary(progname);
 
     KOutMsg("\nOptions:\n");
-    
+
     HelpOptionLine(ALIAS_DBG, OPTION_DBG, NULL, dbg_usage);
     HelpOptionLine(ALIAS_CSE, OPTION_CSE, NULL, cse_usage);
     HelpOptionLine(ALIAS_LOG, OPTION_LOG, NULL, log_usage);
     KOutMsg("\n");
     HelpOptionsStandard();
     HelpVersion(fullpath, KAppVersion());
-    
+
     return rc;
 }
 #else
