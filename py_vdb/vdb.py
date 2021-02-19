@@ -1837,7 +1837,7 @@ def check_lib_path( mode, path ) :
                 home_ncbi_lib64 = os.path.join( os.path.sep, os.path.expanduser( "~" ), ".ncbi", "lib64" )
                 res = make_lib_name( mode, home_ncbi_lib64 )
         if not os.path.isfile( res ) :
-            raise vdb_error( 0, "cannot find lib: '%s'"%p, None )
+            raise vdb_error( 0, "cannot find lib: '%s'"%path, None )
     return res
 
 

@@ -2,6 +2,9 @@
 
 import sys, argparse, vdb
 
+#for this to work you need:
+#at $HOME/.ncbi/lib64 : libncbi-vdb.so
+
 PY3 = sys.version_info[ 0 ] == 3
 
 if PY3 :

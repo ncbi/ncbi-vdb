@@ -2,6 +2,9 @@
 
 import vdb, csv, os
 
+#for this to work you need:
+#at $HOME/.ncbi/lib64 : libncbi-wvdb.so
+
 schematxt = '''
 version 1;
 table CSVTAB #1.0
@@ -35,7 +38,7 @@ if __name__ == '__main__':
     csv_file = 'data.txt'
     write_csv( csv_file, 10 )
     try :
-        mgr = vdb.manager( vdb.OpenMode.Write, "./2.8.0/libncbi-wvdb.so.2.8.0" )
+        mgr = vdb.manager( vdb.OpenMode.Write )
         spec = 'CSVTAB'
         csv_to_vdb( mgr, csv_file, spec, 'L8' )
         mgr.OpenTable( spec ).print_rows()

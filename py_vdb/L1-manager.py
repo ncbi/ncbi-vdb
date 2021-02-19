@@ -2,6 +2,9 @@
 
 from vdb import *
 
+#these libs are not in the repository, they have to be downloaded an put in place
+#by the user...
+
 lib_262_rd = "./2.6.2/libncbi-vdb.so.2.6.2"
 lib_262_wr = "./2.6.2/libncbi-wvdb.so.2.6.2"
 
@@ -49,9 +52,12 @@ if __name__ == '__main__' :
 
         repo_mgr = mgr.MakeKConfig().MakeRepositoryMgr()
         print( "repo_mgr.HasRemoteAccess ... %r"%( repo_mgr.HasRemoteAccess() ) )
-        for repo_list in repo_mgr.AllRepos() :
-            for repo in repo_list :
-                print( repo )
-        
+        try :
+            for repo_list in repo_mgr.AllRepos() :
+                for repo in repo_list :
+                    print( repo )
+        except :
+            pass
+
     except vdb_error as e :
         print( e )
