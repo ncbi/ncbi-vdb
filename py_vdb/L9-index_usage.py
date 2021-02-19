@@ -15,6 +15,8 @@ table A_TABLE #1.0
 
 ''' 
 
+#the index-functionality does not work!
+
 def fill_table_random( cur, cols, kidx, row_count, value_count ) :
     for idx in xrange( 0, row_count ) :
         cur.OpenRow()
@@ -25,18 +27,18 @@ def fill_table_random( cur, cols, kidx, row_count, value_count ) :
         cur.CommitRow()
         cur.CloseRow()
         #print( "Row = %d"%row_id )
-        if ( idx % 1000 ) == 0 :
-            kidx.InsertText( True, rand_str, row_id )
+        #f ( idx % 1000 ) == 0 :
+        #   kidx.InsertText( True, rand_str, row_id )
 
 def make_table( mgr, schema_txt, table_spec, table_name ) :
     try :
         schema = mgr.MakeSchema( schema_txt )
         tbl = mgr.CreateTable( schema, table_spec, table_name )
-        kidx = tbl.CreateIndex( "C2_IDX", IndexType.Text )
+        #idx = tbl.CreateIndex( "C2_IDX", IndexType.Text )
         cur = tbl.CreateCursor( OpenMode.Write )
         cols = cur.OpenColumns( [ "C1", "C2" ] )
-        fill_table_random( cur, cols, kidx, 200000, 25 )
-        kidx.Commit()
+        fill_table_random( cur, cols, None, 2000, 25 )
+        #idx.Commit()
         cur.Commit()
     except vdb_error as e :
         print( e )
