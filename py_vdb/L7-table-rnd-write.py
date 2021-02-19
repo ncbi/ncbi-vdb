@@ -4,7 +4,11 @@ from vdb import *
 
 #for this to work you need:
 #at $HOME/.ncbi/lib64 : libncbi-wvdb.so
-#at ??? : vdb/vdb.vschema
+# --- and ---
+#for included schema to be found:
+#assuming we have vdb.vschema at $HOME/devel/ncbi-vdb/interfaces/vdb_error
+#we need this line in $HOME/.ncbi/user-settings.mkfg:
+#/vdb/schema/paths = "$HOME/devel/ncbi-vdb/interfaces"
 
 schematxt = '''
 version 1;

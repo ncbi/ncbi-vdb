@@ -41,7 +41,7 @@ if __name__ == '__main__':
         mgr = vdb.manager( vdb.OpenMode.Write )
         spec = 'CSVTAB'
         csv_to_vdb( mgr, csv_file, spec, 'L8' )
-        mgr.OpenTable( spec ).print_rows()
+        mgr.OpenTable( 'L8' ).print_rows()
     except vdb.vdb_error as e :
         print( e )
     os.remove( csv_file )
