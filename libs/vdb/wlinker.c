@@ -62,6 +62,7 @@ extern VTRANSFACT_DECL ( vdb_checksum );
 extern VTRANSFACT_DECL ( vdb_fzip );
 extern VTRANSFACT_DECL ( vdb_rlencode );
 extern VTRANSFACT_DECL ( vdb_zip );
+extern VTRANSFACT_DECL ( vdb_zstd );
 
 /* InitFactories
  */
@@ -92,7 +93,8 @@ rc_t VLinkerInitFactories ( VLinker *self, struct KSymTable *tbl, struct SchemaE
         { vdb_checksum, "vdb:checksum" },
         { vdb_fzip, "vdb:fzip" },
         { vdb_rlencode, "vdb:rlencode" },
-        { vdb_zip, "vdb:zip" }
+        { vdb_zip, "vdb:zip" },
+        { vdb_zstd, "vdb:zstd" }
     };
 
     rc_t rc = VLinkerInitFactoriesRead ( self, tbl, env );
