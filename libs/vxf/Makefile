@@ -111,6 +111,7 @@ VXF_SRC = \
 	outlier-encoder \
 	outlier-decoder \
 	bunzip \
+	unzstd \
 	simple-sub-select \
 	extract_token \
 	strtonum \
@@ -142,6 +143,7 @@ WVXF_SRC = \
 	zip \
 	bzip \
 	fzip \
+	zstd \
 	rlencode \
 	checksum
 

@@ -30,6 +30,7 @@
 #include <vdb/schema.h>
 #include <vdb/vdb-priv.h>
 #include <klib/data-buffer.h>
+#include <klib/log.h>
 #include <sysalloc.h>
 
 #include <stdint.h>
@@ -130,7 +131,7 @@ void CC vxf_zstd_wrapper(void *ptr)
 VTRANSFACT_IMPL ( vdb_unzstd, 1, 0, 0 ) ( const void *self, const VXfactInfo *info,
     VFuncDesc *rslt, const VFactoryParams *cp, const VFunctionParams *dp )
 {
-    self_t *cctx = ZSTD_createDCtx();
+    self_t *ctx = ZSTD_createDCtx();
     if (ctx) {
         rslt->self = ctx;
         rslt->whack = vxf_zstd_wrapper;

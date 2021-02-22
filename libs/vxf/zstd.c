@@ -31,6 +31,7 @@
 #include <vdb/xform.h>
 #include <vdb/schema.h>
 #include <klib/data-buffer.h>
+#include <klib/log.h>
 #include <sysalloc.h>
 
 #include <string.h>
@@ -45,10 +46,10 @@ typedef ZSTD_CCtx self_t;
 
 static rc_t invoke_zstd(void *dst, size_t *dsize, const void *src, uint32_t ssize, ZSTD_CCtx* cctx)
 {
-    size_t const zr = ZSTD_compress2(cctx, dst, *dsize, src, ssize);
+    size_t const zr = ZSTD_compressCCtx(cctx, dst, *dsize, src, ssize, ZSTD_CLEVEL_DEFAULT);
     if (ZSTD_isError(zr)) {
         rc_t rc = RC(rcXF, rcFunction, rcExecuting, rcSelf, rcUnexpected);
-        PLOGERR(klogErr, (klogErr, rc, "ZSTD_compress2: error: $(err)", "err=%s", ZSTD_getErrorName(zr)));
+        PLOGERR(klogErr, (klogErr, rc, "ZSTD_compressCCtx: error: $(err)", "err=%s", ZSTD_getErrorName(zr)));
         return rc;
     }
     else {
@@ -109,7 +110,7 @@ void CC vxf_zstd_wrapper(void *ptr)
  */
 VTRANSFACT_IMPL(vdb_zstd, 1, 0, 0) (const void *self, const VXfactInfo *info, VFuncDesc *rslt, const VFactoryParams *cp, const VFunctionParams *dp)
 {
-    self_t *cctx = ZSTD_createCCtx();
+    self_t *ctx = ZSTD_createCCtx();
 
     if (ctx) {
         rslt->self = ctx;
