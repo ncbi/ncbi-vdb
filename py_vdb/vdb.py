@@ -227,8 +227,8 @@ class typedesc( Structure ) :
 
 
 #------------------------------------------------------------------------------------------------------------
-uint_xf  = { 8  : c_ubyte, 16 : c_ushort, 32 : c_uint, 64 : c_ulonglong }
-int_xf   = { 8  : c_byte,  16 : c_short,  32 : c_int,  64 : c_longlong }
+uint_xf  = { 1 : c_ubyte, 8  : c_ubyte, 16 : c_ushort, 32 : c_uint, 64 : c_ulonglong }
+int_xf   = { 1 : c_byte,  8  : c_byte,  16 : c_short,  32 : c_int,  64 : c_longlong }
 float_xf = { 32 : c_float, 64 : c_double }
 txt_xf   = { 8  : c_char }
 
@@ -309,17 +309,28 @@ class VColumn :
         if self.column_type == None :
             raise vdb_error( 0, "read: undefined column-type", self )
         row_id = c_longlong( row )
+        elem_bits = c_int()
         data = c_void_p()
         row_len = c_int()
-        rc = self.__mgr.VCursorCellDataDirect( self.__cur._VCursor__ptr, row_id, self.__id, None, byref( data ), None, byref( row_len ) )
+        rc = self.__mgr.VCursorCellDataDirect( self.__cur._VCursor__ptr, row_id, self.__id, byref( elem_bits ), byref( data ), None, byref( row_len ) )
         if rc != 0 :
             self.__mgr.raise_rc( rc, "VCursorCellDataDirect( '%s.%s', #%d )"%( self.tabname, self.name, row ), self )
         if self.column_type == c_char :
-            return string_at( data, row_len.value )
+            tmp = string_at( data, row_len.value )
+            if PY3 and isinstance( tmp, bytes ) :
+                return tmp.decode( "utf-8" )
+            return tmp
         else :
             typed_ptr = cast( data, POINTER( self.column_type ) )
+            e_count = row_len.value
+            if elem_bits.value < 8 :
+                e_count *= elem_bits.value
+                if PY3 :
+                    e_count //= 8
+                else :
+                    e_count /= 8
             l = list()
-            for idx in xrange( 0, row_len.value ) :
+            for idx in xrange( 0, e_count ) :
                 l.append( typed_ptr[ idx ] )        
             return l
 
@@ -941,7 +952,10 @@ class KMDataNode :
             return []
         n_values = n_bytes
         if align > 1 :
-            n_values = n_bytes / align
+            if PY3 :
+                n_values = n_bytes / align
+            else :
+                n_values = n_bytes // align
             if n_bytes > ( n_values * align ) :
                 n_values += 1
         buffer = self.Read( n_values * align, n_bytes, offset )
