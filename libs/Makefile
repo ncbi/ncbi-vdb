@@ -67,6 +67,7 @@ MAIN_SUBDIRS = \
 	kxml     \
 	hdf5     \
 	diagnose \
+	zstd-dev \
 	tui		 \
 
 NCBI_VDB_SUBDIRS =   \
