@@ -9,11 +9,12 @@ include 'vdb/vdb.vschema';
 
 table SEQUENCE #1.0
 {
+    column default limit = 8000000;
+
     column <ascii> zip_encoding READ;
     column <U8> zip_encoding QUALITY;
     column <U32> zip_encoding READ_LEN;
     column <U32> zip_encoding READ_START;
-    column <ascii> zip_encoding NAME;
 };
 
 ''' 
@@ -22,8 +23,7 @@ table SEQUENCE #1.0
 column_names = [ ( "(INSDC:dna:text)READ", "READ" ),
                  ( "(INSDC:quality:phred)QUALITY", "QUALITY" ),
                  ( "READ_LEN", "READ_LEN" ),
-                 ( "READ_START", "READ_START" ),
-                 ( "NAME", "NAME" ) ]
+                 ( "READ_START", "READ_START" ) ]
 
 class progressbar :
     def __init__( self, width : int, max_value : int ) :
