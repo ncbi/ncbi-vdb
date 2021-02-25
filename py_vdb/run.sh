@@ -12,7 +12,12 @@ rm -rf $TMP $OUT $OUT.md5
 kar --md5 -c $OUT -d $TMP
 rm -rf $TMP $OUT.md5
 
-vdb-diff $SRC $OUT -C READ,QUALITY,READ_LEN,READ_START,NAME -p
+vdb-diff $SRC $OUT -C READ,QUALITY,READ_LEN,READ_START -p
 
 ls -l $SRC
 ls -l $OUT
+
+zstd $OUT -f9
+bzip2 $OUT -zfk9
+gzip $OUT -kf9
+vdb-dump $OUT --vdb-blobs
