@@ -34,8 +34,9 @@ include $(TOP)/build/Makefile.shell
 SUBDIRS = \
 	zlib \
 	bzip2 \
-    magic \
-	mbedtls
+	magic \
+	mbedtls \
+	zstd-dev
 
 include $(TOP)/build/Makefile.targets
 
