@@ -113,7 +113,7 @@ else
 LIBKQ = kq
 endif
 
-$(warning HAVE_XML2=$(HAVE_XML2))
+#$(warning HAVE_XML2=$(HAVE_XML2))
 ifeq (1,$(HAVE_XML2))
 LIBKXML = kxml kxfs
 ifneq (,$(XML2_LIBDIR))
