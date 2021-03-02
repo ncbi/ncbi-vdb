@@ -7,21 +7,33 @@ exec()
     echo .
 }
 
-ACC="SRR13340286"
 
-SRC="../../plain_tables/$ACC"
+ACC=$1
+
+SRC="./$ACC/$ACC.sra"
 TMP="tmp"
-OUT="$ACC.copy.sra"
+OUT1="$ACC.copy_1.sra"
+OUT2="$ACC.copy_2.sra"
+SCHEMA1="tbl_copy_1.vschema"
+SCHEMA2="tbl_copy_2.vschema"
 
-rm -rf $TMP $OUT $OUT.md5 $OUT.*
+rm -rf $TMP $OUT1 $OUT1.md5 $OUT1.* $OUT2 $OUT2.md5 $OUT2.*
 
-exec "vdb-dump $SRC --info"
+exec "prefetch -p $ACC"
 
-exec "./L11-table_copy.py $SRC -O $TMP"
+exec "./L11-table_copy.py $SRC -O $TMP -S $SCHEMA1"
+exec "kar --md5 -f -c $OUT1 -d $TMP"
+rm -rf $TMP $OUT1.md5
 
-exec "kar --md5 -f -c $OUT -d $TMP"
+exec "./L11-table_copy.py $SRC -O $TMP -S $SCHEMA2"
+exec "kar --md5 -f -c $OUT2 -d $TMP"
+rm -rf $TMP $OUT2.md5
 
-rm -rf $TMP $OUT.md5
+./record_sizes.py $ACC -O $SRC -1 $OUT1 -2 $OUT2 -D data.db
+
+rm -rf $OUT1 $OUT2 $ACC
+
+exit 0
 
 exec "vdb-diff $SRC $OUT -C READ,QUALITY,READ_LEN,READ_START -p"
 

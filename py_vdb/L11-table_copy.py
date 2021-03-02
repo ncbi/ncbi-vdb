@@ -96,6 +96,7 @@ if __name__ == '__main__' :
     parser.add_argument( '-R', '--readlib', metavar='path', help='read library', type=str, dest='readlib' )    
     parser.add_argument( '-W', '--writelib', metavar='path', help='write library', type=str, dest='writelib' )
     parser.add_argument( '-O', '--output', metavar='path', help='output', type=str, dest='output', default="tmp" )
+    parser.add_argument( '-S', '--schema', metavar='path', help='schema', type=str, dest='schema' )
     parser.add_argument( '-F', '--freq', metavar='number', help='progress freq', type=int, dest='freq', default=2000 )
     args = parser.parse_args()
 
@@ -115,7 +116,8 @@ if __name__ == '__main__' :
             print( "%s is not an SRA-object"%( args.accession ) )
 
         if rd_tbl != None :
-            schema = wr_mgr.MakeSchema( schema_txt )
+            txt = open( args.schema, 'r' ).read() if args.schema != None else schema_txt
+            schema = wr_mgr.MakeSchema( txt )
             wr_tbl = wr_mgr.CreateTable( schema, "SEQUENCE", args.output )
             if wr_tbl != None :
                 copy_table( rd_tbl, wr_tbl, args.first, args.count, args.freq )
