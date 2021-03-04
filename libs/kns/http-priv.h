@@ -184,6 +184,8 @@ struct KClientHttp
     bool close_connection;
 
     EUriForm uf; /* Form of Request-URI in Request-Line when using proxy */
+
+    char * ua; /* user agent */
 };
 
 void KClientHttpClose ( struct KClientHttp * self );

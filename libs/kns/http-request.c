@@ -1345,8 +1345,12 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
     /* add an User-Agent header from the kns-manager if we did not find one already in the header tree */
     if ( !have_user_agent )
     {
+        rc_t r3 = 0;
         const char * ua = NULL;
-        rc_t r3 = KNSManagerGetUserAgent ( &ua );
+        if ( self -> http != NULL )
+            ua = self -> http -> ua;
+        if ( ua == NULL /* || true */ )
+            r3 = KNSManagerGetUserAgent ( &ua );
         if ( r3 == 0 )
         {
             r2 = KDataBufferPrintf ( buffer, "User-Agent: %s\r\n", ua );

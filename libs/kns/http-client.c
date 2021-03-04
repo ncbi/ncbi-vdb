@@ -142,6 +142,7 @@ rc_t KClientHttpWhack ( KClientHttp * self )
     KDataBufferWhack ( & self -> line_buffer );
     KNSManagerRelease ( self -> mgr );
     KRefcountWhack ( & self -> refcount, "KClientHttp" );
+    free ( self -> ua );
     free ( self );
 
     return 0;
@@ -654,6 +655,14 @@ rc_t KClientHttpInit ( KClientHttp * http, const KDataBuffer *hostname_buffer, v
                that the pointer is within the buffer */
             http -> hostname = * _host;
         }
+    }
+
+    if ( rc == 0 )
+    {
+        const char * ua = NULL;
+        rc = KNSManagerGetUserAgent ( & ua );
+        if ( rc == 0 )
+            http -> ua = string_dup_measure ( ua, NULL );
     }
 
     return rc;
