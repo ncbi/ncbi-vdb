@@ -92,6 +92,8 @@ const size_t kReadSize = 1000000;
 
 void x_Init()
 {
+    CALL(KOutMsg("%c", 'c')); /* should not crash when KWrtInit was not called */
+
     CALL(KWrtInit("test", 0));
     CALL(KOutHandlerSetStdOut());
     CALL(KDbgHandlerSetStdOut());
