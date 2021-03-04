@@ -1347,9 +1347,10 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
     {
         rc_t r3 = 0;
         const char * ua = NULL;
-        if ( self -> http != NULL )
-            ua = self -> http -> ua;
-        if ( ua == NULL /* || true */ )
+        if ( self -> http != NULL ) {
+            ua = self -> head ? self -> http -> ua_head : self -> http -> ua;
+        }
+        if ( ua == NULL )
             r3 = KNSManagerGetUserAgent ( &ua );
         if ( r3 == 0 )
         {
@@ -1647,6 +1648,8 @@ LIB_EXPORT rc_t CC KClientHttpRequestHEAD ( KClientHttpRequest *self, KClientHtt
             HEADLESS = 0;
     }
 
+    self->head = true; /* inside of HEAD request */
+
     assert ( HEADLESS >= 0 );
 
     if ( self -> ceRequired || self -> payRequired || HEADLESS )
@@ -1716,10 +1719,12 @@ LIB_EXPORT rc_t CC KClientHttpRequestHEAD ( KClientHttpRequest *self, KClientHtt
             }
         }
 
+        self->head = false; /* reset head value: just in case*/
         return rc;
     }
     else
     {
+        self->head = false; /* reset head value: just in case*/
         return KClientHttpRequestSendReceiveNoBody ( self, rslt, "HEAD" );
     }
 }
