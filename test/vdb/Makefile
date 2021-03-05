@@ -28,6 +28,9 @@ TOP ?= $(abspath ../..)
 
 MODULE = test/vdb
 
+INT_TOOLS = \
+	check-user-agent-header-in-thread \
+
 TEST_TOOLS = \
 	test-vdb \
 	test-wvdb \
@@ -48,6 +51,8 @@ TEST_TOOLS = \
 
 SLOW_TEST_TOOLS =  \
 	test-vdb-slow \
+
+ALL_TOOLS = $(TEST_TOOLS) $(INT_TOOLS)
 
 include $(TOP)/build/Makefile.env
 
@@ -188,6 +193,22 @@ $(TEST_BINDIR)/test-blob-val: $(TEST_BLOB_VAL_OBJ)
 
 blob-val: test-blob-val
 	$(TEST_BINDIR)/test-blob-val
+
+#-------------------------------------------------------------------------------
+CHTS_SRC = \
+	check-user-agent-header-in-thread
+
+CHTS_OBJ = \
+	$(addsuffix .$(OBJX),$(CHTS_SRC))
+
+CHTS_LIB = \
+	-sncbi-vdb
+
+$(TEST_BINDIR)/check-user-agent-header-in-thread: $(CHTS_OBJ)
+	$(LP) --exe -o $@ $^ $(CHTS_LIB)
+
+user-agent-check: $(TEST_BINDIR)/check-user-agent-header-in-thread
+	$(TEST_BINDIR)/check-user-agent-header-in-thread
 
 #-------------------------------------------------------------------------------
 # SYS-224064

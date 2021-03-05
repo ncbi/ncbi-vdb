@@ -1345,8 +1345,13 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
     /* add an User-Agent header from the kns-manager if we did not find one already in the header tree */
     if ( !have_user_agent )
     {
+        rc_t r3 = 0;
         const char * ua = NULL;
-        rc_t r3 = KNSManagerGetUserAgent ( &ua );
+        if ( self -> http != NULL ) {
+            ua = self -> head ? self -> http -> ua_head : self -> http -> ua;
+        }
+        if ( ua == NULL )
+            r3 = KNSManagerGetUserAgent ( &ua );
         if ( r3 == 0 )
         {
             r2 = KDataBufferPrintf ( buffer, "User-Agent: %s\r\n", ua );
@@ -1643,6 +1648,8 @@ LIB_EXPORT rc_t CC KClientHttpRequestHEAD ( KClientHttpRequest *self, KClientHtt
             HEADLESS = 0;
     }
 
+    self->head = true; /* inside of HEAD request */
+
     assert ( HEADLESS >= 0 );
 
     if ( self -> ceRequired || self -> payRequired || HEADLESS )
@@ -1711,13 +1718,14 @@ LIB_EXPORT rc_t CC KClientHttpRequestHEAD ( KClientHttpRequest *self, KClientHtt
 
             }
         }
-
-        return rc;
     }
     else
     {
-        return KClientHttpRequestSendReceiveNoBody ( self, rslt, "HEAD" );
+        rc = KClientHttpRequestSendReceiveNoBody ( self, rslt, "HEAD" );
     }
+
+    self->head = false; /* reset head value: just in case*/
+    return rc;
 }
 
 /* GET

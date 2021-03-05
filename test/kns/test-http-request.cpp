@@ -92,7 +92,7 @@ FIXTURE_TEST_CASE(HttpRequest_POST_NoParams, HttpRequestFixture)
 }
 #endif
 
-FIXTURE_TEST_CASE(HttpRequest_HEAD_as_GET, HttpRequestFixture)
+FIXTURE_TEST_CASE(HttpRequest_head_as_get, HttpRequestFixture)
 {
     MakeRequest( GetName() );
     m_req->payRequired = true; // triggers GET for HEAD
@@ -119,7 +119,7 @@ FIXTURE_TEST_CASE(HttpRequest_HEAD_as_GET, HttpRequestFixture)
     REQUIRE_EQ( string::npos, string(agent).find("-head") );
 }
 
-FIXTURE_TEST_CASE(HttpRequest_HEAD_as_POST, HttpRequestFixture)
+FIXTURE_TEST_CASE(HttpRequest_head_as_post, HttpRequestFixture)
 {
     MakeRequest( GetName() );
     m_req->ceRequired = true; // triggers POST for HEAD
@@ -136,7 +136,7 @@ FIXTURE_TEST_CASE(HttpRequest_HEAD_as_POST, HttpRequestFixture)
     REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
 
     string req = TestStream::m_requests.front();
-    // the request is a GET
+    // the request is a POST
     REQUIRE_NE( string::npos, req.find("POST ") );
     // -head is temporarily appended to the (thread-local) UserAgent string
     REQUIRE_NE( string::npos, req.find("-head") );
@@ -148,10 +148,10 @@ FIXTURE_TEST_CASE(HttpRequest_HEAD_as_POST, HttpRequestFixture)
 
 FIXTURE_TEST_CASE(HttpRequest_HEAD_as_POST_preserveUAsuffix, HttpRequestFixture)
 {
+    KNSManagerSetUserAgentSuffix("suffix"); // has to survive KClientHttpRequestHEAD
+
     MakeRequest( GetName() );
     m_req->ceRequired = true; // triggers POST for HEAD
-
-    KNSManagerSetUserAgentSuffix("suffix"); // has to survive KClientHttpRequestHEAD
 
     TestStream::AddResponse(
         "HTTP/1.1 206 Partial Content\r\n"
@@ -168,6 +168,12 @@ FIXTURE_TEST_CASE(HttpRequest_HEAD_as_POST_preserveUAsuffix, HttpRequestFixture)
     REQUIRE_RC( KNSManagerGetUserAgent( & agent ) );
     // the original suffix is still there
     REQUIRE_NE( string::npos, string(agent).find("suffix") );
+
+    string req = TestStream::m_requests.front();
+    // the request is a POST
+    REQUIRE_NE(string::npos, req.find("POST "));
+    // -head is appended to the UserAgent string with original suffix
+    REQUIRE_NE(string::npos, req.find("suffix-head"));
 }
 
 // KClientHttpRequestAddQueryParam
