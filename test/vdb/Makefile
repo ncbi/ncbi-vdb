@@ -65,7 +65,7 @@ ifeq ($(wildcard ../../../asm-trace),)
 endif
 
 
-$(TEST_TOOLS) $(SLOW_TEST_TOOLS): makedirs
+$(ALL_TOOLS) $(SLOW_TEST_TOOLS): makedirs
 	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
 
 runtests: setup
@@ -207,7 +207,7 @@ CHTS_LIB = \
 $(TEST_BINDIR)/check-user-agent-header-in-thread: $(CHTS_OBJ)
 	$(LP) --exe -o $@ $^ $(CHTS_LIB)
 
-user-agent-check: $(TEST_BINDIR)/check-user-agent-header-in-thread
+user-agent-check: check-user-agent-header-in-thread
 	$(TEST_BINDIR)/check-user-agent-header-in-thread
 
 #-------------------------------------------------------------------------------
