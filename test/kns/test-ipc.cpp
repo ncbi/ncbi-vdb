@@ -1064,11 +1064,13 @@ rc_t CC KMain ( int argc, char *argv [] )
 	// (same as running the executable with "-l=message")
 	//TestEnv::verbosity = LogLevel::e_message;
 
-    KnsStreamFixture f;
-    KPathType t = KDirectoryPathType ( f.dir, "%s/.ncbi", getenv ( "HOME" ) );
+    KDirectory * dir = NULL;
+    KDirectoryNativeDir(&dir);
+    KPathType t = KDirectoryPathType ( dir, "%s/.ncbi", getenv ( "HOME" ) );
 // KNSManagerMakeListener->KNSManagerMakeIPCListener->KSocketMakePath requires ~/.ncbi ???
     if (t == kptNotFound)
-        KDirectoryCreateDir(f.dir, 0700, 0, "%s/.ncbi", getenv ( "HOME" ));
+        KDirectoryCreateDir(dir, 0700, 0, "%s/.ncbi", getenv ( "HOME" ));
+    KDirectoryRelease(dir);
 
     rc_t rc=KnsIpcTestSuite(argc, argv);
     return rc;
