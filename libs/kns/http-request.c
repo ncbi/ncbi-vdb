@@ -1718,15 +1718,14 @@ LIB_EXPORT rc_t CC KClientHttpRequestHEAD ( KClientHttpRequest *self, KClientHtt
 
             }
         }
-
-        self->head = false; /* reset head value: just in case*/
-        return rc;
     }
     else
     {
-        self->head = false; /* reset head value: just in case*/
-        return KClientHttpRequestSendReceiveNoBody ( self, rslt, "HEAD" );
+        rc = KClientHttpRequestSendReceiveNoBody ( self, rslt, "HEAD" );
     }
+
+    self->head = false; /* reset head value: just in case*/
+    return rc;
 }
 
 /* GET
