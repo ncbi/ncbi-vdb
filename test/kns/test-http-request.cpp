@@ -27,6 +27,8 @@
 
 #include "HttpFixture.hpp"
 
+#include <kfg/properties.h> // KConfig_Set_Report_Cloud_Instance_Identity
+
 #include <klib/data-buffer.h>
 
 #include <kns/http.h>
@@ -495,6 +497,12 @@ const char UsageDefaultName[] = "test-http";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
+    KConfig * kfg = NULL;
+    rc_t rc = KConfigMake(&kfg, NULL);
+
+    if (rc == 0) // needed to use ceRequired on cloud
+        rc = KConfig_Set_Report_Cloud_Instance_Identity(kfg, true);
+
     if ( 0 ) assert ( ! KDbgSetString ( "KNS" ) );
     if ( 0 ) assert ( ! KDbgSetString ( "VFS" ) );
 
@@ -504,7 +512,13 @@ rc_t CC KMain ( int argc, char *argv [] )
 	// (same as running the executable with "-l=message")
 	// TestEnv::verbosity = LogLevel::e_message;
 
-    rc_t rc=HttpRequestVerifyURLSuite(argc, argv);
+    if (rc == 0)
+        rc = HttpRequestVerifyURLSuite(argc, argv);
+
+    rc_t r2 = KConfigRelease(kfg);
+    if (rc == 0 && r2 != 0)
+        rc = r2;
+
     return rc;
 }
 
