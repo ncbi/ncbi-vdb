@@ -2,7 +2,7 @@
 
 
 ## NCBI VDB 2.11.0
-**March 10, 2021**
+**March 15, 2021**
 
   **build, ncbi-vdb, ngs, ngs-tools**: introduced an additional external library, libncbi-ngs  
   **kfg, prefetch, vfs**: resolve WGS reference sequences into "Accession Directory"  
