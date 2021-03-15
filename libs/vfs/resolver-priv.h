@@ -189,6 +189,7 @@ typedef enum
     algWGS2,                /* ordered to be of higher precedence than algWGS */
     algWGS,
     algWGSFlat,
+    algWGSAD,
     algFuseWGS,
     algSRA_NCBI,
     algSRA_EBI,

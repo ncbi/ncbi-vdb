@@ -757,7 +757,6 @@ char CSRA1_AlignmentGetRNAOrientation( CSRA1_Alignment* self, ctx_t ctx )
 
 bool CSRA1_AlignmentHasMate( CSRA1_Alignment* self, ctx_t ctx )
 {
-    int64_t mate_id;
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     if ( ! self -> seen_first )
     {
@@ -765,7 +764,7 @@ bool CSRA1_AlignmentHasMate( CSRA1_Alignment* self, ctx_t ctx )
         return false;
     }
 
-    TRY ( mate_id = NGS_CursorGetInt64 ( GetCursor ( self ), ctx, self -> cur_row, align_MATE_ALIGN_ID ) )
+    TRY ( NGS_CursorGetInt64 ( GetCursor ( self ), ctx, self -> cur_row, align_MATE_ALIGN_ID ) )
     {
         int64_t mate_seq_spot_id;
 
@@ -1232,8 +1231,10 @@ void SetRowId ( CSRA1_Alignment* self, ctx_t ctx, int64_t rowId, bool primary )
         if ( primary )
         {
             if ( self -> primary_curs != NULL )
+            {
                 ON_FAIL ( NGS_CursorGetRowRange ( self -> primary_curs, ctx, & start, & count ) )
                     return;
+            }
         }
         else if ( self -> secondary_curs != NULL )
         {

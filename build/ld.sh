@@ -144,7 +144,7 @@ do
         BINDIR="$2"
         shift
         ;;
-        
+
     --rhome)
         RHOME="$2"
         shift
@@ -193,7 +193,7 @@ do
         fi
         LDIRS="$LDIRS:$ARG"
         ;;
-        
+
     -X*)
         ARG="${1#-X}"
         if [ "$ARG" = "" ]
@@ -305,13 +305,6 @@ do
         LIBS="$LIBS $1"
         ;;
     -[lds]ncbi-ngs-c++)
-        HAVE_NCBI_VDB=1
-        KPROC=4
-        HAVE_GZIP=1
-        HAVE_BZIP=1
-        HAVE_KFC=1
-        NEED_M=1
-        NEED_XML=1
         LIBS="$LIBS $1"
         ;;
     -[lds]ncbi-wvdb)
@@ -397,7 +390,7 @@ do
     *.$OBJX)
         OBJS="$OBJS $1"
         ;;
-        
+
     esac
 
     shift

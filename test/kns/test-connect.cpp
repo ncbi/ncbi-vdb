@@ -41,6 +41,8 @@
 
 #include <../libs/kns/stream-priv.h>
 
+#include "KNSManagerFixture.hpp"
+
 static rc_t argsHandler(int argc, char* argv[]);
 TEST_SUITE_WITH_ARGS_HANDLER(KnsTestSuite, argsHandler);
 
@@ -49,14 +51,12 @@ using namespace ncbi::NK;
 
 //////////////////////////////////////////// connecting to Internet sockets
 
-class ConnectFixture
+class ConnectFixture : public KNSManagerFixture
 {
 public:
     ConnectFixture()
-    :   mgr ( nullptr ),
-        socket ( nullptr )
+    :   socket ( nullptr )
     {
-        THROW_ON_RC ( KNSManagerMake ( & mgr ) );
     }
 
     void InitEP(const char* p_url, uint32_t timeoutMs)
@@ -64,16 +64,14 @@ public:
         TimeoutInit(&tm, timeoutMs);
         String url;
         CONST_STRING(&url, p_url);
-        THROW_ON_RC(KNSManagerInitDNSEndpoint(mgr, &ep, &url, 80));
+        THROW_ON_RC(KNSManagerInitDNSEndpoint(m_mgr, &ep, &url, 80));
     }
 
     ~ConnectFixture()
     {
         KSocketRelease( socket );
-        KNSManagerRelease( mgr );
     }
 
-    KNSManager* mgr;
     KEndPoint ep;
     timeout_t tm;
     KSocket* socket;
@@ -102,7 +100,7 @@ FIXTURE_TEST_CASE(Connect_OK, ConnectFixture)
 {   //VDB-3754: asynch connnection, success
     return_val = 1; /* epoll_wait: success */
     InitEP("www.google.com", 500);
-    rc_t rc = KNSManagerMakeRetryTimedConnection( mgr, & socket, & tm, 0, 0, NULL, & ep );
+    rc_t rc = KNSManagerMakeRetryTimedConnection( m_mgr, & socket, & tm, 0, 0, NULL, & ep );
     REQUIRE_RC ( rc );
 }
 
@@ -114,7 +112,7 @@ FIXTURE_TEST_CASE(Connect_Timeout, ConnectFixture)
     InitEP("www.gooooooogle.com", 1);
     return_val = 0; /* epoll_wait: timeout */
     tries = 0;
-    rc_t rc = KNSManagerMakeRetryTimedConnection(mgr, &socket, &tm, 0, 0, NULL, &ep);
+    rc_t rc = KNSManagerMakeRetryTimedConnection(m_mgr, &socket, &tm, 0, 0, NULL, &ep);
     REQUIRE_RC_FAIL(rc);
     REQUIRE_EQ((int)rcTimeout, (int)GetRCObject(rc));
     REQUIRE_EQ((int)rcExhausted, (int)GetRCState(rc));
@@ -127,10 +125,10 @@ FIXTURE_TEST_CASE(Connect_Timeout, ConnectFixture)
 }
 
 FIXTURE_TEST_CASE(Connect_ZeroTimeout, ConnectFixture)
-{   
+{
     InitEP("www.goooooooooooooooooogle.com", 0);
     return_val = 0; /* epoll_wait: immediate exit, same as timeout */
-    rc_t rc = KNSManagerMakeRetryTimedConnection(mgr, &socket, &tm, 0, 0, NULL, &ep);
+    rc_t rc = KNSManagerMakeRetryTimedConnection(m_mgr, &socket, &tm, 0, 0, NULL, &ep);
     REQUIRE_RC_FAIL(rc);
     REQUIRE_EQ((int)rcTimeout, (int)GetRCObject(rc));
     REQUIRE_EQ((int)rcExhausted, (int)GetRCState(rc));
@@ -148,7 +146,7 @@ FIXTURE_TEST_CASE(Connect_CtrlC, ConnectFixture)
     return_val = -1; /* epoll_wait: error */
     set_errno = EINTR;
     tries = 0;
-    rc_t rc = KNSManagerMakeRetryTimedConnection( mgr, & socket, & tm, 0, 0, NULL, & ep);
+    rc_t rc = KNSManagerMakeRetryTimedConnection( m_mgr, & socket, & tm, 0, 0, NULL, & ep);
     REQUIRE_RC_FAIL ( rc );
     REQUIRE_EQ ( ( int ) rcConnection, ( int ) GetRCObject ( rc ) );
     REQUIRE_EQ ( ( int ) rcInterrupted, ( int ) GetRCState ( rc ) );

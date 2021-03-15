@@ -2,6 +2,9 @@
 
 import sys, argparse, vdb
 
+#for this to work you need:
+#at $HOME/.ncbi/lib64 : libncbi-vdb.so
+
 PY3 = sys.version_info[ 0 ] == 3
 
 if PY3 :
@@ -34,9 +37,15 @@ def fastq_from_tbl( args, tbl ) :
     if args.split :
         fastq = '@{0}.{1}.{2} length={3}\n{4}\n+{0}.{1}.{2} length={3}\n{5}'
         for row in xrange( first, first + count ) :
-            name     = c_name.Read( row )
-            read     = c_read.Read( row )
-            qual     = c_qual.Read( row )
+            if PY3 :
+                name = c_name.Read( row ).decode( "utf-8" )
+                read = c_read.Read( row ).decode( "utf-8" )
+                qual = c_qual.Read( row ).decode( "utf-8" )
+            else :
+                name = c_name.Read( row )
+                read = c_read.Read( row )
+                qual = c_qual.Read( row )
+
             rd_start = c_read_start.Read( row )
             rd_len   = c_read_len.Read( row )
             for x in xrange( 0, len( rd_start ) ) :
@@ -48,8 +57,16 @@ def fastq_from_tbl( args, tbl ) :
     else :
         fastq = '@{0}.{1} length={2}\n{3}\n+{0}.{1} length={2}\n{4}'
         for row in xrange( first, first + count ) :
-            read = c_read.Read( row )
-            print( fastq.format( acc, c_name.Read( row ), len( read ), read, c_qual.Read( row ) ) )
+            if PY3 :
+                name = c_name.Read( row ).decode( "utf-8" )
+                read = c_read.Read( row ).decode( "utf-8" )
+                qual = c_qual.Read( row ).decode( "utf-8" )
+            else :
+                name = c_name.Read( row )
+                read = c_read.Read( row )
+                qual = c_qual.Read( row )
+
+            print( fastq.format( acc, name, len( read ), read, qual ) )
 
     
 if __name__ == '__main__' :

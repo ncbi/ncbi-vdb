@@ -111,25 +111,25 @@ public:
 	{
 		::AgrepWhack ( agrep_params );
 	}
-	
+
 	rc_t Setup ( const char* pattern, AgrepFlags flags )
 	{
 		pattern_len = strlen ( pattern );
 		return ::AgrepMake ( & agrep_params, AGREP_MODE_ASCII | flags, pattern );
 	}
-	
+
 	bool FindFirst ( const string& text, int32_t threshold )
 	{
-		return ::AgrepFindFirst ( agrep_params, threshold, text . c_str (), text . size (), & match_info ) != 0;	
+		return ::AgrepFindFirst ( agrep_params, threshold, text . c_str (), text . size (), & match_info ) != 0;
 	}
 
 	bool FindBest ( const string& text, int32_t threshold )
 	{
-		return ::AgrepFindBest ( agrep_params, threshold, text . c_str (), text . size (), & match_info ) != 0;	
+		return ::AgrepFindBest ( agrep_params, threshold, text . c_str (), text . size (), & match_info ) != 0;
 	}
 
 
-public:	
+public:
 	size_t pattern_len;
 	::AgrepParams* agrep_params;
     ::AgrepMatch match_info;
@@ -177,7 +177,7 @@ FIXTURE_TEST_CASE ( AgrepDPTest, AgrepFixture )
         REQUIRE_EQ ( 0, match_info.position );                       // 1
         REQUIRE_EQ ( 3, match_info.score );                          // 2
     }
-    
+
     // Best match
     {
         REQUIRE ( FindBest ( "MTCH__MITCH_MTACH_MATCH_MATCH", 1 ) );
@@ -214,7 +214,7 @@ FIXTURE_TEST_CASE ( AgrepDPTest, AgrepFixture )
 FIXTURE_TEST_CASE ( AgrepWumanberTest, AgrepFixture )
 {
     REQUIRE_RC ( Setup ( "MATCH", AGREP_ALG_WUMANBER ) );
-	
+
     // Complete match
     {
         REQUIRE ( FindFirst ( "MATCH", 0 ) );
@@ -250,10 +250,10 @@ FIXTURE_TEST_CASE ( AgrepWumanberTest, AgrepFixture )
     {
         REQUIRE ( FindFirst ( "xATxx", 5 ) );
         REQUIRE_EQ ( pattern_len /*2*/, (size_t)match_info.length ); // FIXME: 2 looks correct here
-        REQUIRE_EQ ( 0, match_info.position );                       // 1   
+        REQUIRE_EQ ( 0, match_info.position );                       // 1
         REQUIRE_EQ ( 3, match_info.score );                          // 2
     }
-    
+
     // Best match
     {
         REQUIRE ( FindBest ( "MTCH__MITCH_MTACH_MATCH_MATCH", 1 ) );
@@ -273,7 +273,7 @@ FIXTURE_TEST_CASE ( AgrepWumanberTest, AgrepFixture )
     {   // threshold >= pattern_len seems to specify that a complete mismatch is acceptable
         const string text = "xyzvuwpiuuuu";
         REQUIRE ( FindFirst ( text, pattern_len ) );
-        REQUIRE_EQ ( text . size (), (size_t)match_info.length ); 
+        REQUIRE_EQ ( text . size (), (size_t)match_info.length );
         REQUIRE_EQ ( 0, match_info.position );
         REQUIRE_EQ ( pattern_len, (size_t)match_info.score );
     }
@@ -287,7 +287,7 @@ FIXTURE_TEST_CASE ( AgrepWumanberTest, AgrepFixture )
 FIXTURE_TEST_CASE ( AgrepMyersTest, AgrepFixture )
 {
     REQUIRE_RC ( Setup ( "MATCH", AGREP_ALG_MYERS ) );
-	
+
     // Complete match
     {
         REQUIRE ( FindFirst ( "MATCH", 0 ) );
@@ -323,11 +323,11 @@ FIXTURE_TEST_CASE ( AgrepMyersTest, AgrepFixture )
     // 3 Mismatches
     {
         REQUIRE ( FindFirst ( "xATxx", 5 ) );
-        REQUIRE_EQ ( 2, match_info.length  ); 
-        REQUIRE_EQ ( 1, match_info.position ); 
+        REQUIRE_EQ ( 2, match_info.length  );
+        REQUIRE_EQ ( 1, match_info.position );
         REQUIRE_EQ ( 3, match_info.score );
     }
-    
+
     // Best match
     {
         REQUIRE ( FindBest ( "MTCH__MITCH_MTACH_MATCH_MATCH", 1 ) );
@@ -347,7 +347,7 @@ FIXTURE_TEST_CASE ( AgrepMyersTest, AgrepFixture )
     {   // threshold >= pattern_len seems to specify that a complete mismatch is acceptable
         const string text = "xyzvuwpiuuuu";
         REQUIRE ( FindFirst ( text, pattern_len ) );
-//        REQUIRE_EQ ( text . size (), (size_t)match_info.length ); 
+//        REQUIRE_EQ ( text . size (), (size_t)match_info.length );
         REQUIRE_EQ ( 1, match_info.length ); //FIXME: different from other algorithms
         REQUIRE_EQ ( 0, match_info.position );
         REQUIRE_EQ ( pattern_len, (size_t)match_info.score );
@@ -362,7 +362,7 @@ FIXTURE_TEST_CASE ( AgrepMyersTest, AgrepFixture )
 FIXTURE_TEST_CASE ( AgrepMyersUnltdTest, AgrepFixture )
 {
     REQUIRE_RC ( Setup ( "MATCH", AGREP_ALG_MYERS_UNLTD ) );
-	
+
     // Complete match
     {
         REQUIRE ( FindFirst ( "MATCH", 0 ) );
@@ -398,11 +398,11 @@ FIXTURE_TEST_CASE ( AgrepMyersUnltdTest, AgrepFixture )
     // 3 Mismatches
     {
         REQUIRE ( FindFirst ( "xATxx", 5 ) );
-        REQUIRE_EQ ( 2, match_info.length ); 
-        REQUIRE_EQ ( 1, match_info.position ); 
+        REQUIRE_EQ ( 2, match_info.length );
+        REQUIRE_EQ ( 1, match_info.position );
         REQUIRE_EQ ( 3, match_info.score );
     }
-    
+
     // Best match
     {
         REQUIRE ( FindBest ( "MTCH__MITCH_MTACH_MATCH_MATCH", 1 ) );
@@ -422,7 +422,7 @@ FIXTURE_TEST_CASE ( AgrepMyersUnltdTest, AgrepFixture )
     {   // threshold >= pattern_len seems to specify that a complete mismatch is acceptable
         const string text = "xyzvuwpiuuuu";
         REQUIRE ( FindFirst ( text, pattern_len ) );
-//        REQUIRE_EQ ( text . size (), (size_t)match_info.length ); 
+//        REQUIRE_EQ ( text . size (), (size_t)match_info.length );
         REQUIRE_EQ ( 1, match_info.length ); //FIXME: different from other algorithms
         REQUIRE_EQ ( 0, match_info.position );
         REQUIRE_EQ ( pattern_len, (size_t)match_info.score );
@@ -489,12 +489,12 @@ static void RunFgrep ( FgrepFlags p_alg )
     const char* queries[] = { "RRRRRAH" };
     if ( FgrepMake ( & fg, FGREP_MODE_ASCII | p_alg, queries, 1 ) ) // this used to leave uninitialized memory ...
         throw logic_error ( "RunFgrep: FgrepMake() failed" );
-    
+
     const std::string str ( 1000, 'A' );
     FgrepMatch matchinfo;
     if ( 0 != FgrepFindFirst ( fg, str . data (), str . size (), & matchinfo ) ) // ... the use of which showed up in valgrind here, and sometimes caused a crash
         throw logic_error ( "RunFgrep: FgrepFindFirst() found a false match" );
-    
+
     FgrepFree ( fg );
 }
 
@@ -527,19 +527,19 @@ public:
 	{
 		::SmithWatermanWhack ( m_self );
 	}
-	
+
 	rc_t Setup ( const string& p_query )
 	{
-        m_pattern_len = p_query . size (); 
+        m_pattern_len = p_query . size ();
 		return ::SmithWatermanMake ( & m_self, p_query . data() );
 	}
-	
+
 	bool FindFirst ( const string& p_text, uint32_t p_threshold = numeric_limits<uint32_t>::max() )
 	{
-		return ::SmithWatermanFindFirst ( m_self,  p_threshold, p_text . c_str (), p_text . size (), & m_match_info ) == 0;	
+		return ::SmithWatermanFindFirst ( m_self,  p_threshold, p_text . c_str (), p_text . size (), & m_match_info ) == 0;
 	}
 
-public:	
+public:
 	::SmithWaterman*       m_self;
 	size_t                 m_pattern_len;
     ::SmithWatermanMatch   m_match_info;
@@ -555,7 +555,7 @@ FIXTURE_TEST_CASE ( SmithWatermanTest, SmithWatermanFixture )
     }
 
 	// threshold in FirstMatch varies from 0 (a complete mismatch is acceptable) to 2*m_pattern_len (perfect match)
-    
+
     // Complete match
     {
         REQUIRE ( FindFirst ( "MATCH" ) );
@@ -593,7 +593,7 @@ FIXTURE_TEST_CASE ( SmithWatermanTest, SmithWatermanFixture )
         REQUIRE_EQ ( 1, m_match_info.position );
         REQUIRE_EQ ( 4, m_match_info.score );
     }
-    
+
     // First match
     {
         REQUIRE ( FindFirst ( "MTCH__MITCH_MTACH_MATCH_MATCH" ) );
@@ -606,7 +606,7 @@ FIXTURE_TEST_CASE ( SmithWatermanTest, SmithWatermanFixture )
     {   // threshold is from 0 (a complete mismatch is acceptable) to 2*m_pattern_len (perfect match)
         const string text = "xyzvuwpiuuuu";
         REQUIRE ( FindFirst ( text, 0 ) );
-        REQUIRE_EQ ( 0, m_match_info.length ); 
+        REQUIRE_EQ ( 0, m_match_info.length );
         REQUIRE_EQ ( 0, m_match_info.position );
         REQUIRE_EQ ( 0, m_match_info.score );
     }
@@ -620,8 +620,8 @@ FIXTURE_TEST_CASE ( SmithWatermanTest, SmithWatermanFixture )
 
 // Ref-Variation
 #if 0
-static 
-void 
+static
+void
 PrintMatrix ( const INSDC_dna_text* p_ref, const INSDC_dna_text* p_query, const int p_matrix[], size_t p_rows, size_t p_cols )
 {
     cout << "    ";
@@ -664,7 +664,7 @@ string print_refvar_obj (::RefVariation const* obj)
     ::RefVariationGetAlleleLenOnRef ( obj, & allele_len_on_ref );
 
     //printf ("<no ref name>:%"PRSIZET"u:%"PRSIZET"u:%.*s\n", allele_start, allele_len_on_ref, (int)allele_len, allele);
-        
+
     return string ( allele, allele_len );
 }
 
@@ -684,7 +684,7 @@ string vrefvar_bounds (::RefVarAlg alg, char const* ref,
 
     if ( rc == 0 )
         ::RefVariationRelease( obj );
-        
+
     return ret;
 }
 
@@ -728,7 +728,7 @@ TEST_CASE ( RefVariation_bounds_N )
 {
     //printf ("TODO: this test is derived from the real example which hangs up now (2015-12-14):\n");
     //printf ("echo \"67068302 NC_000001.10:9995:10:CCCCTTAGG\" | var-expand --algorithm=sw\n");
-    
+
     REQUIRE_EQ ( string ( "NNNNNCCCCTTAGGCTAA" ), vrefvar_bounds_n ( ::refvarAlgSW ) );
     REQUIRE_EQ ( string ( "CCCCTTAGGC" ), vrefvar_bounds_n ( ::refvarAlgRA ) );
 
@@ -740,8 +740,8 @@ TEST_CASE ( RefVariation_bounds_N )
 }
 
 // Nucstrstr
-static 
-void 
+static
+void
 ConvertAsciiTo2NAPacked ( const string& p_read, unsigned char* pBuf2NA, size_t nBuf2NASize )
 {
     static unsigned char map [ 1 << ( sizeof ( char ) * 8 ) ];
@@ -749,11 +749,11 @@ ConvertAsciiTo2NAPacked ( const string& p_read, unsigned char* pBuf2NA, size_t n
     map['C'] = map['c'] = 1;
     map['G'] = map['g'] = 2;
     map['T'] = map['t'] = 3;
-    
+
     static size_t shiftLeft [ 4 ] = { 6, 4, 2, 0 };
 
     fill ( pBuf2NA, pBuf2NA + nBuf2NASize, 0 );
-    
+
     for ( size_t iChar = 0; iChar < p_read . size (); ++iChar )
     {
         size_t iByte = iChar / 4;
@@ -773,7 +773,7 @@ RunNucStrtr ( const string& p_ref, const string& p_query, bool p_positional )
 {
     unsigned char buf2na [ 1024 ];
     ConvertAsciiTo2NAPacked ( p_ref, buf2na, sizeof ( buf2na ) );
-    
+
     NucStrstr *nss;
     if ( NucStrstrMake ( & nss, p_positional ? 1 : 0, p_query . c_str (), p_query . size () ) != 0 )
         throw logic_error ( "RunNucStrtr: NucStrstrMake() failed" );
@@ -825,75 +825,92 @@ TEST_CASE ( Nucstrstr_Positional_Not_True )
 }
 
 TEST_CASE ( Nucstrstr_Positional_Caret_Found )
-{   
+{
     REQUIRE_EQ ( 1, RunNucStrtr ( "ACGTACGTACGTACGTACGTACGTACGTACGT", "^AC", true ) );
 }
 TEST_CASE ( Nucstrstr_Positional_Caret_NotFound )
-{   
+{
     REQUIRE_EQ ( 0, RunNucStrtr ( "ACGTACGTACGTACGTACGTACGTACGTACGT", "^C", true ) );
 }
 
 TEST_CASE ( Nucstrstr_Positional_Dollar_Found )
-{   
+{
     REQUIRE_EQ ( 33, RunNucStrtr ( "ACGTACGTACGTACGTACGTACGTACGTACGTTGCA", "TGCA$", true ) );
 }
 TEST_CASE ( Nucstrstr_Positional_Dollar_NotFound )
-{   
+{
     REQUIRE_EQ ( 0, RunNucStrtr ( "ACGTACGTACGTACGTACGTACGTACGTACGTTGCAA", "TGCA$", true ) );
 }
 
 TEST_CASE ( Nucstrstr_Positional_OR_Found_1 )
-{   
+{
     REQUIRE_EQ ( 4, RunNucStrtr ( "ACGTACGTACGTACGTACGTACGTACGTACGTTGCA", "TGAA|TACG", true ) );
 }
 TEST_CASE ( Nucstrstr_Positional_OR_Found_2 )
-{   
+{
     REQUIRE_EQ ( 4, RunNucStrtr ( "ACGTACGTACGTACGTACGTACGTACGTACGTTGCA", "TGAA||TACG", true ) );
 }
 TEST_CASE ( Nucstrstr_Positional_OR_Found_FirstMatchPositionReported )
-{   
+{
     REQUIRE_EQ ( 2, RunNucStrtr ( "ACGTACGTACGTACGTACGTACGTACGTACGTTGCA", "TGAA|CGT|TACG", true ) );
 }
 TEST_CASE ( Nucstrstr_Positional_OR_NotFound )
-{   
+{
     REQUIRE_EQ ( 0, RunNucStrtr ( "ACGTACGTACGTACGTACGTACGTACGTACGTTGCA", "TGAA|TACA", true ) );
 }
 
 TEST_CASE ( Nucstrstr_Positional_AND_Found_LastMatchPositionReported )
-{   
+{
     REQUIRE_EQ ( 4, RunNucStrtr ( "ACGTACGT", "CGTA&TACG", true ) );
 }
 TEST_CASE ( Nucstrstr_Positional_AND_NotFound )
-{   
+{
     REQUIRE_EQ ( 0, RunNucStrtr ( "ACGTACGT", "TACG&TACA", true ) );
 }
 
 TEST_CASE ( Nucstrstr_Positional_AND_OR_Found_1 )
-{   
+{
     REQUIRE_EQ ( 3, RunNucStrtr ( "ACGTACGT", "CGTA&TACC|GTAC", true ) );
 }
 TEST_CASE ( Nucstrstr_Positional_AND_OR_Found_2 )
-{   
+{
     REQUIRE_EQ ( 3, RunNucStrtr ( "ACGTACGT", "CGTA&(TACC|GTAC)", true ) );
 }
 TEST_CASE ( Nucstrstr_Positional_AND_OR_Found_3 )
-{   
+{
     REQUIRE_EQ ( 2, RunNucStrtr ( "ACGTACGT", "(TACC|GTAC)&&CGTA", true ) );
 }
 
 TEST_CASE ( Nucstrstr_Positional_AND_OR_NOT_NotFound )
-{   
+{
     REQUIRE_EQ ( 0, RunNucStrtr ( "ACGTACGT", "(TACC|GTAC)&&!CGTA", true ) );
 }
 TEST_CASE ( Nucstrstr_Positional_AND_OR_NOT_Found )
-{   
+{
     REQUIRE_EQ ( 1, RunNucStrtr ( "ACGTACGT", "(TACC|GTAC)&&!CATA", true ) );
 }
 
 TEST_CASE ( Nucstrstr_Positional_Error )
-{   
+{
     REQUIRE_THROW ( RunNucStrtr ( "ACGTACGT", "(TACC", true ) );
 }
+
+TEST_CASE ( Nucstrstr_NonPositional_4NA_NotFound )
+{
+    REQUIRE_EQ ( 0, RunNucStrtr ( "ACGTACGTACGTACGTACGTACGTACGTACGT", "ACTN", false ) );
+}
+
+TEST_CASE ( Nucstrstr_NonPositional_4NA_Found_AtStart )
+{
+    REQUIRE_NE ( 0, RunNucStrtr ( "ACGTACGTACGTACGTACGTACGTACGTACGT", "ACGTACGTACN", false ) );
+}
+
+TEST_CASE ( Nucstrstr_NonPositional_4NA_Found_InMiddle )
+{
+    REQUIRE_NE ( 0, RunNucStrtr ( "ACGTACGTACGTACGTACGTACGTACGTACGT", "GTACGTACN", false ) );
+}
+
+
 
 //////////////////////////////////////////// Main
 extern "C"

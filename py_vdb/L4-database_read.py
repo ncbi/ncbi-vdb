@@ -2,6 +2,9 @@
 
 from vdb import *
 
+#for this to work you need:
+#at $HOME/.ncbi/lib64 : libncbi-vdb.so
+
 # ------------------------------------------------------------------------
 
 #exam the database what sub-databases, sub-tables

@@ -27,6 +27,8 @@
 
 #include "HttpFixture.hpp"
 
+#include <kfg/properties.h> // KConfig_Set_Report_Cloud_Instance_Identity
+
 #include <klib/data-buffer.h>
 
 #include <kns/http.h>
@@ -91,6 +93,90 @@ FIXTURE_TEST_CASE(HttpRequest_POST_NoParams, HttpRequestFixture)
     REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
 }
 #endif
+
+FIXTURE_TEST_CASE(HttpRequest_head_as_get, HttpRequestFixture)
+{
+    MakeRequest( GetName() );
+    m_req->payRequired = true; // triggers GET for HEAD
+
+    TestStream::AddResponse(
+        "HTTP/1.1 206 Partial Content\r\n"
+        "Content-Range: bytes 0-6/7\r\n"
+        "Content-Length: 7\r\n"
+        "\r\n"
+        "1234567"
+        "\r\n");
+    KClientHttpResult *rslt;
+    REQUIRE_RC ( KClientHttpRequestHEAD ( m_req, & rslt ) );
+    REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
+
+    string req = TestStream::m_requests.front();
+    // the request is a GET
+    REQUIRE_NE( string::npos, req.find("GET ") );
+    // -head is temporarily appended to the (thread-local) UserAgent string
+    REQUIRE_NE( string::npos, req.find("-head") );
+    // and then removed
+    const char * agent;
+    REQUIRE_RC( KNSManagerGetUserAgent( & agent ) );
+    REQUIRE_EQ( string::npos, string(agent).find("-head") );
+}
+
+FIXTURE_TEST_CASE(HttpRequest_head_as_post, HttpRequestFixture)
+{
+    MakeRequest( GetName() );
+    m_req->ceRequired = true; // triggers POST for HEAD
+
+    TestStream::AddResponse(
+        "HTTP/1.1 206 Partial Content\r\n"
+        "Content-Range: bytes 0-6/7\r\n"
+        "Content-Length: 7\r\n"
+        "\r\n"
+        "1234567"
+        "\r\n");
+    KClientHttpResult *rslt;
+    REQUIRE_RC ( KClientHttpRequestHEAD ( m_req, & rslt ) );
+    REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
+
+    string req = TestStream::m_requests.front();
+    // the request is a POST
+    REQUIRE_NE( string::npos, req.find("POST ") );
+    // -head is temporarily appended to the (thread-local) UserAgent string
+    REQUIRE_NE( string::npos, req.find("-head") );
+    // and then removed
+    const char * agent;
+    REQUIRE_RC( KNSManagerGetUserAgent( & agent ) );
+    REQUIRE_EQ( string::npos, string(agent).find("-head") );
+}
+
+FIXTURE_TEST_CASE(HttpRequest_HEAD_as_POST_preserveUAsuffix, HttpRequestFixture)
+{
+    KNSManagerSetUserAgentSuffix("suffix"); // has to survive KClientHttpRequestHEAD
+
+    MakeRequest( GetName() );
+    m_req->ceRequired = true; // triggers POST for HEAD
+
+    TestStream::AddResponse(
+        "HTTP/1.1 206 Partial Content\r\n"
+        "Content-Range: bytes 0-6/7\r\n"
+        "Content-Length: 7\r\n"
+        "\r\n"
+        "1234567"
+        "\r\n");
+    KClientHttpResult *rslt;
+    REQUIRE_RC ( KClientHttpRequestHEAD ( m_req, & rslt ) );
+    REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
+
+    const char * agent;
+    REQUIRE_RC( KNSManagerGetUserAgent( & agent ) );
+    // the original suffix is still there
+    REQUIRE_NE( string::npos, string(agent).find("suffix") );
+
+    string req = TestStream::m_requests.front();
+    // the request is a POST
+    REQUIRE_NE(string::npos, req.find("POST "));
+    // -head is appended to the UserAgent string with original suffix
+    REQUIRE_NE(string::npos, req.find("suffix-head"));
+}
 
 // KClientHttpRequestAddQueryParam
 
@@ -411,6 +497,12 @@ const char UsageDefaultName[] = "test-http";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
+    KConfig * kfg = NULL;
+    rc_t rc = KConfigMake(&kfg, NULL);
+
+    if (rc == 0) // needed to use ceRequired on cloud
+        rc = KConfig_Set_Report_Cloud_Instance_Identity(kfg, true);
+
     if ( 0 ) assert ( ! KDbgSetString ( "KNS" ) );
     if ( 0 ) assert ( ! KDbgSetString ( "VFS" ) );
 
@@ -420,7 +512,13 @@ rc_t CC KMain ( int argc, char *argv [] )
 	// (same as running the executable with "-l=message")
 	// TestEnv::verbosity = LogLevel::e_message;
 
-    rc_t rc=HttpRequestVerifyURLSuite(argc, argv);
+    if (rc == 0)
+        rc = HttpRequestVerifyURLSuite(argc, argv);
+
+    rc_t r2 = KConfigRelease(kfg);
+    if (rc == 0 && r2 != 0)
+        rc = r2;
+
     return rc;
 }
 

@@ -291,9 +291,6 @@
     <ClCompile Include="..\..\..\libs\ext\mbedtls\md5.c">
       <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
     </ClCompile>
-    <ClCompile Include="..\..\..\libs\ext\mbedtls\md_wrap.c">
-      <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
-    </ClCompile>
     <ClCompile Include="..\..\..\libs\ext\mbedtls\memory_buffer_alloc.c">
       <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
     </ClCompile>
@@ -387,9 +384,6 @@
     <ClCompile Include="..\..\..\libs\ext\mbedtls\debug.c">
       <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
     </ClCompile>
-    <ClCompile Include="..\..\..\libs\ext\mbedtls\net.c">
-      <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
-    </ClCompile>
     <ClCompile Include="..\..\..\libs\ext\mbedtls\ssl_cache.c">
       <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
     </ClCompile>
@@ -433,6 +427,31 @@
         <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\ext\mbedtls\rsa_internal.c">
+        <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\psa_crypto.c">
+        <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\psa_crypto_driver_wrappers.c">
+        <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\psa_crypto_se.c">
+        <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\psa_crypto_slot_management.c">
+        <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\psa_crypto_storage.c">
+        <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\psa_its_file.c">
+        <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\ssl_msg.c">
+        <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\ssl_tls13_keys.c">
         <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
     </ClCompile>
 
@@ -1256,169 +1275,6 @@
       <ObjectFileName>$(IntDir)krypto-%(Filename).obj</ObjectFileName>
     </ClCompile>
 
-    <ClCompile Include="..\..\..\libs\ngs-jni\jni_ErrorMsg.c">
-      <ObjectFileName>$(IntDir)ngs-jni-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(ProjectDir)../../../libs/ngs-jni;$(ProjectDir)../../../libs/ngs;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs-jni\jni_Manager.c">
-      <ObjectFileName>$(IntDir)ngs-jni-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(ProjectDir)../../../libs/ngs-jni;$(ProjectDir)../../../libs/ngs;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs-jni\jni_String.c">
-      <ObjectFileName>$(IntDir)ngs-jni-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(ProjectDir)../../../libs/ngs-jni;$(ProjectDir)../../../libs/ngs;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-
-    <ClCompile Include="..\..\..\libs\ngs-py\py_Manager.c">
-      <ObjectFileName>$(IntDir)ngs-py-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(ProjectDir)../../../libs/ngs;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-
-    <ClCompile Include="..\..\..\libs\ngs\CSRA1_Alignment.c">
-      <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\CSRA1_Pileup.c">
-      <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\CSRA1_PileupEvent.c">
-      <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\CSRA1_ReadCollection.c">
-      <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\CSRA1_Reference.c">
-      <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\CSRA1_ReferenceWindow.c">
-      <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\CSRA1_Read.c">
-      <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\NCBI-NGS.c">
-      <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\NGS_Alignment.c">
-      <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\NGS_Cursor.c">
-      <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\NGS_ErrBlock.c">
-      <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\NGS_Fragment.c">
-      <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\NGS_FragmentBlob.c">
-      <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\NGS_FragmentBlobIterator.c">
-      <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\VByteBlob.c">
-      <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\NGS_Id.c">
-      <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\NGS_Pileup.c">
-      <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\NGS_PileupEvent.c">
-      <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\NGS_Read.c">
-      <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\NGS_ReadCollection.c">
-      <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\NGS_ReadGroup.c">
-      <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\NGS_Refcount.c">
-      <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\NGS_Reference.c">
-      <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\NGS_ReferenceSequence.c">
-      <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\NGS_Statistics.c">
-      <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\NGS_String.c">
-      <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\NGS_ReferenceBlob.c">
-      <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\NGS_ReferenceBlobIterator.c">
-      <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\SRA_DB_ReadCollection.c">
-      <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\SRA_Read.c">
-      <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\SRA_ReadCollection.c">
-      <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\SRA_ReferenceSequence.c">
-      <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\SRA_ReadGroup.c">
-      <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\SRA_ReadGroupInfo.c">
-      <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\SRA_Statistics.c">
-      <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\EBI_ReferenceSequence.c">
-      <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-
     <ClCompile Include="..\..\..\libs\search\agrep-dp.c">
       <ObjectFileName>$(IntDir)ksrch-%(Filename).obj</ObjectFileName>
     </ClCompile>
@@ -1962,6 +1818,169 @@
     </ClCompile>
     <ClCompile Include="..\..\..\libs\diagnose\endpoint.c">
         <ObjectFileName>$(IntDir)diagnose-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+
+    <ClCompile Include="..\..\..\libs\ngs-jni\jni_ErrorMsg.c">
+        <ObjectFileName>$(IntDir)ngs-jni-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(ProjectDir)../../../libs/ngs-jni;$(ProjectDir)../../../libs/ngs;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs-jni\jni_Manager.c">
+        <ObjectFileName>$(IntDir)ngs-jni-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(ProjectDir)../../../libs/ngs-jni;$(ProjectDir)../../../libs/ngs;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs-jni\jni_String.c">
+        <ObjectFileName>$(IntDir)ngs-jni-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(ProjectDir)../../../libs/ngs-jni;$(ProjectDir)../../../libs/ngs;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+
+    <ClCompile Include="..\..\..\libs\ngs-py\py_Manager.c">
+        <ObjectFileName>$(IntDir)ngs-py-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(ProjectDir)../../../libs/ngs-jni;$(ProjectDir)../../../libs/ngs;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+
+    <ClCompile Include="..\..\..\libs\ngs\CSRA1_Alignment.c">
+        <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\CSRA1_Pileup.c">
+        <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\CSRA1_PileupEvent.c">
+        <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\CSRA1_ReadCollection.c">
+        <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\CSRA1_Reference.c">
+        <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\CSRA1_ReferenceWindow.c">
+        <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\CSRA1_Read.c">
+        <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NCBI-NGS.c">
+        <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NGS_Alignment.c">
+        <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NGS_Cursor.c">
+        <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NGS_ErrBlock.c">
+        <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NGS_Fragment.c">
+        <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NGS_FragmentBlob.c">
+        <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NGS_FragmentBlobIterator.c">
+        <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\VByteBlob.c">
+        <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NGS_Id.c">
+        <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NGS_Pileup.c">
+        <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NGS_PileupEvent.c">
+        <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NGS_Read.c">
+        <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NGS_ReadCollection.c">
+        <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NGS_ReadGroup.c">
+        <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NGS_Refcount.c">
+        <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NGS_Reference.c">
+        <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NGS_ReferenceSequence.c">
+        <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NGS_Statistics.c">
+        <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NGS_String.c">
+        <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NGS_ReferenceBlob.c">
+        <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NGS_ReferenceBlobIterator.c">
+        <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\SRA_DB_ReadCollection.c">
+        <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\SRA_Read.c">
+        <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\SRA_ReadCollection.c">
+        <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\SRA_ReferenceSequence.c">
+        <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\SRA_ReadGroup.c">
+        <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\SRA_ReadGroupInfo.c">
+        <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\SRA_Statistics.c">
+        <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\EBI_ReferenceSequence.c">
+        <ObjectFileName>$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories>$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemGroup>
 </Project>

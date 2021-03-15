@@ -45,7 +45,9 @@
 
 using namespace std;
 
-TEST_SUITE( VdbTableCursorTestSuite_Read );
+static rc_t argsHandler ( int argc, char * argv [] );
+TEST_SUITE_WITH_ARGS_HANDLER ( VdbTableCursorTestSuite_Read, argsHandler );
+
 const string ScratchDir = "./db/";
 
 class TableCursorFixture
@@ -87,6 +89,20 @@ public:
     void MakeReadCursorAddColumnOpen( const char * p_dbName, const char * p_colName )
     {
         MakeReadCursor ( p_dbName );
+        THROW_ON_RC ( VCursorAddColumn ( m_cur, & m_columnIdx, "%s", p_colName ) );
+        THROW_ON_RC ( VCursorOpen ( m_cur ) );
+    }
+
+    void MakeTableReadCursorAddColumnOpen( const char * p_tblName, const char * p_colName )
+    {
+        const VDBManager * mgr;
+        THROW_ON_RC ( VDBManagerMakeRead ( & mgr, NULL ) );
+        const VTable * tbl;
+        THROW_ON_RC ( VDBManagerOpenTableRead ( mgr, & tbl, NULL, "%s", p_tblName ) );
+        THROW_ON_RC ( VTableCreateCursorRead ( tbl, & m_cur ) );
+        THROW_ON_RC ( VTableRelease ( tbl ) );
+        THROW_ON_RC ( VDBManagerRelease ( mgr ) );
+
         THROW_ON_RC ( VCursorAddColumn ( m_cur, & m_columnIdx, "%s", p_colName ) );
         THROW_ON_RC ( VCursorOpen ( m_cur ) );
     }
@@ -205,6 +221,15 @@ FIXTURE_TEST_CASE( VTableCursor_FindNextRowIdDirect_Empty, TableCursorFixture )
     int64_t rowId;
     REQUIRE_RC ( VCursorFindNextRowIdDirect ( m_cur, m_columnIdx, 10, & rowId ) );
     REQUIRE_EQ((int64_t)10, rowId);
+}
+
+FIXTURE_TEST_CASE( VTableCursor_FindNextRowIdDirect_SingleRow, TableCursorFixture )
+{
+    MakeTableReadCursorAddColumnOpen ( "SRR053325", "READ" );
+
+    int64_t rowId;
+    REQUIRE_RC ( VCursorFindNextRowIdDirect ( m_cur, m_columnIdx, 1, & rowId ) );
+    REQUIRE_EQ((int64_t)1, rowId);
 }
 
 FIXTURE_TEST_CASE( VTableCursor_OpenRow, TableCursorFixture )
@@ -575,10 +600,17 @@ FIXTURE_TEST_CASE( VTableCursor_InstallTrigger, TableCursorFixture )
 //////////////////////////////////////////// Main
 #include <kfg/config.h>
 
+#include <kapp/args.h>
+
+static rc_t argsHandler ( int argc, char * argv [] ) {
+    Args * args = NULL;
+    rc_t rc = ArgsMakeAndHandle ( & args, argc, argv, 0, NULL, 0 );
+    ArgsWhack ( args );
+    return rc;
+}
+
 extern "C"
 {
-
-#include <kapp/args.h>
 
 ver_t CC KAppVersion ( void )
 {

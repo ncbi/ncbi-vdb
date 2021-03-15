@@ -792,7 +792,7 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
                                               high_reliability, 
                                               ceRequired,
                                               payRequired,
-                                              uri -> addr );
+                                              "%s", uri -> addr );
 
         /* in case we are not able to open the remote-file : return with error-code */
         if ( rc == 0 )

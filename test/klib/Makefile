@@ -47,6 +47,7 @@ TEST_TOOLS = \
 	test-json \
 	test-base64 \
 	test-guid \
+	test-report \
 
 ifeq (linux,$(OS))
 TEST_TOOLS += test-hashfile
@@ -385,3 +386,20 @@ guid: test-guid
 	$(TEST_BINDIR)/test-guid
 
 .phony: guid
+
+#-------------------------------------------------------------------------------
+# test-report
+#
+TEST_REPORT_SRC = \
+	test-report
+
+TEST_REPORT_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_REPORT_SRC))
+
+$(TEST_BINDIR)/test-report: $(TEST_REPORT_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_KLIB_LIB)
+
+report: test-report
+	$(TEST_BINDIR)/test-report
+
+.phony: report

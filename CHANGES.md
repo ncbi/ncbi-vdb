@@ -1,6 +1,21 @@
 # NCBI External Developer Release:
 
 
+## NCBI VDB 2.11.0
+**March 15, 2021**
+
+  **build, ncbi-vdb, ngs, ngs-tools**: introduced an additional external library, libncbi-ngs  
+  **kfg, prefetch, vfs**: resolve WGS reference sequences into "Accession Directory"  
+  **kfg, sra-tools, vfs**: dropped support of protected repositories  
+  **kns, sra-tools**: fixed formatting of HTTP requests for proxy  
+  **ktst**: improved thread safety  
+  **ncbi-vdb, ngs, ngs-tools, sra-tools, vdb**: added support for 64-bit ARM (AArch64, Apple Silicon)  
+  **prefetch, vfs**: fixed download of protected non-run files  
+  **prefetch, vfs**: fixed segfault during download of JWT cart  
+  **prefetch, vfs**: respect requested version when downloading WGS files  
+  **sra-tools, vfs**: recognize sra file names with version  
+
+
 ## NCBI VDB 2.10.9
 **December 16, 2020**
 

@@ -157,14 +157,28 @@ KNS_EXTERN rc_t CC KNSManagerGetRetryFirstReads ( const KNSManager *self,
 
 /******************************************************************************/
 
-/* Set/Get UserAgent
- *  for http connections
+/* Setters for https connections */
+
+/* Note that the passed in strings must be NUL terminated, and
+ * shorter than KNSMANAGER_STRING_MAX.
+ * */
+#define KNSMANAGER_STRING_MAX 128
+
+/* Set/Get global UserAgent string for http connections
  */
 KNS_EXTERN rc_t CC KNSManagerSetUserAgent ( KNSManager *self, const char * fmt, ... );
 KNS_EXTERN rc_t CC KNSManagerGetUserAgent ( const char ** user_agent );
 
+/* Set/Get thread-local UserAgent suffix string
+ */
 KNS_EXTERN rc_t CC KNSManagerSetUserAgentSuffix ( const char * suffix );
-/* Setters for https connections */
+KNS_EXTERN rc_t CC KNSManagerGetUserAgentSuffix ( const char ** suffix );
+
+/* Set thread-local logging attributes
+ */
+KNS_EXTERN rc_t CC KNSManagerSetClientIP  ( KNSManager *self, const char * clientip );
+KNS_EXTERN rc_t CC KNSManagerSetSessionID ( KNSManager *self, const char * sessionid );
+KNS_EXTERN rc_t CC KNSManagerSetPageHitID ( KNSManager *self, const char * pagehitid );
 
 /* IP addresses are in network byte order */
 /*
@@ -172,12 +186,7 @@ KNS_EXTERN rc_t CC KNSManagerSetClientIPv4  ( KNSManager *self, uint32_t client_
 KNS_EXTERN rc_t CC KNSManagerSetClientIPv6  ( KNSManager *self, const uint16_t client_ipv6_addr[]);
 */
 
-/* Note that the passed in strings must be NUL terminated, and
- * should be reasonably short (< 100 characters).
- * */
-KNS_EXTERN rc_t CC KNSManagerSetClientIP  ( KNSManager *self, const char * clientip );
-KNS_EXTERN rc_t CC KNSManagerSetSessionID ( KNSManager *self, const char * sessionid );
-KNS_EXTERN rc_t CC KNSManagerSetPageHitID ( KNSManager *self, const char * pagehitid );
+/******************************************************************************/
 
 typedef rc_t(CC *quitting_t)(void);
 KNS_EXTERN rc_t CC KNSManagerSetQuitting ( KNSManager *self,
