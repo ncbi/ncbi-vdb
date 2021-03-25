@@ -36,6 +36,8 @@
 
 #include <kns/http.h> /* KNSManagerSetHTTPProxyPath */
 
+#include <kproc/lock.h> /* KLockRelease */
+
 #include "mgr-priv.h" /* KNSProxiesVSetHTTPProxyPath */
 
 #include <sysalloc.h>
@@ -85,7 +87,7 @@ static void HttpProxyClear ( HttpProxy * self ) {
 
 static rc_t HttpProxyWhack ( HttpProxy * self ) {
     HttpProxyClear ( self );
-    memset ( self, 0, sizeof *self );
+    memset ( self, 0, sizeof * self );
     free ( self );
     return 0;
 }
@@ -113,6 +115,8 @@ static rc_t HttpProxyGetPath ( const HttpProxy * self,
 /****************************************************************** HttpProxy */
 
 typedef struct KNSProxies {
+    KLock * lock;
+
     bool http_proxy_enabled;
     bool http_proxy_only; /* don't try direct connection - proxy only */
     BSTree proxie_tree;
@@ -212,16 +216,32 @@ bool KNSProxiesGet ( KNSProxies * self, const String ** proxy_host,
     assert ( proxy_host && proxy_port && cnt );
 
     if ( self != NULL && self -> http_proxies != NULL ) {
-        if ( ( * cnt ) ++ < self -> http_proxies_cnt ) {
-            const HttpProxy * proxy = NULL;
-            if ( self -> http_proxies_idx >= self ->http_proxies_cnt )
-                self -> http_proxies_idx = 0;
-            proxy = self -> http_proxies [ self -> http_proxies_idx ++ ];
-            * last = self -> http_proxies_idx == self -> http_proxies_cnt;
-            * proxy_host = proxy -> proxy_host;
-            * proxy_port = proxy -> proxy_port;
-            return true;
-        }
+        do {
+            bool found = false;
+            if ( KLockAcquire ( self -> lock ) != 0 )
+                break;
+
+            if ( ( * cnt ) ++ < self -> http_proxies_cnt ) {
+                const HttpProxy * proxy = NULL;
+                if ( self -> http_proxies_idx >= self -> http_proxies_cnt )
+                    self -> http_proxies_idx = 0;
+                proxy = self -> http_proxies [ self -> http_proxies_idx ++ ];
+                assert ( proxy );
+                assert ( self -> http_proxies_idx > 0 );
+                assert ( self -> http_proxies_idx
+                    <= self -> http_proxies_cnt );
+                * last = self -> http_proxies_idx == self -> http_proxies_cnt;
+                * proxy_host = proxy -> proxy_host;
+                * proxy_port = proxy -> proxy_port;
+                found = true;
+            }
+
+            KLockUnlock ( self -> lock );
+
+            if ( found )
+                return true;
+
+        } while ( false );
     }
 
     * proxy_host = NULL;
@@ -272,6 +292,8 @@ static rc_t KNSProxiesHttpProxyClear ( KNSProxies * self ) {
 }
 
 rc_t KNSProxiesWhack ( KNSProxies * self ) {
+    rc_t rc = 0;
+
     size_t i = 0;
 
     assert ( self );
@@ -286,9 +308,11 @@ rc_t KNSProxiesWhack ( KNSProxies * self ) {
     free ( self -> http_proxies );
     self -> http_proxies = NULL;
 
+    rc = KLockRelease ( self -> lock );
+
     free ( self );
 
-    return 0;
+    return rc;
 }
 
 static rc_t KNSProxiesAddHttpProxyPath ( KNSProxies * self,
@@ -453,6 +477,9 @@ rc_t KNSProxiesVSetHTTPProxyPath ( KNSProxies * self,
 {
     rc_t rc = 0;
 
+    if ( self == NULL )
+        return 0;
+
     if ( clear )
         rc = KNSProxiesHttpProxyClear ( self );
 
@@ -581,6 +608,9 @@ KNSProxies * KNSManagerKNSProxiesMake ( struct KNSManager * mgr,
         return NULL;
 
     assert ( self );
+
+    if ( KLockMake ( & self -> lock ) != 0 )
+        return NULL;
 
     BSTreeInit ( & self -> proxie_tree );
 
