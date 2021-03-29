@@ -323,15 +323,19 @@ public:
 extern "C" {
     ver_t CC KAppVersion ( void ) { return 0; }
     rc_t CC KMain ( int argc, char * argv [] ) {
+        rc_t rc = 0;
         if (
 1)          VFSManagerLogNamesServiceErrors(0, false);
         if (
-0)          KDbgSetString("VFS");
+0)
+            rc = KDbgSetString("VFS");
         KConfigDisableUserSettings();
 #ifndef USE_SERVICES_CACHE
-        return 0;
+        return rc;
 #else
-        return TestResolveQualSuite(argc, argv);
+        if ( rc == 0 )
+            rc = TestResolveQualSuite(argc, argv);
+        return rc;
 #endif
     }
 }
