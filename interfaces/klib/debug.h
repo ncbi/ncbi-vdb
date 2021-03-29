@@ -28,14 +28,21 @@
 #ifndef _h_klib_debug_
 #define _h_klib_debug_
 
+
+#ifndef _h_klib_defs_
+#include <klib/defs.h> /* uint64_t */
+#endif
+
+typedef uint32_t KDbgCond;
+typedef uint64_t KDbgFlag;
+typedef uint64_t KDbgMask;
+typedef int32_t KDbgMod;
+
+
 #if _DEBUGGING
 
 #ifndef _h_klib_extern_
 #include <klib/extern.h>
-#endif
-
-#ifndef _h_klib_defs_
-#include <klib/defs.h>
 #endif
 
 #ifndef _h_klib_status_
@@ -222,7 +229,6 @@ extern "C" {
  */
 #define _module(mod)   DBG_PASTE_2(DBG_,mod),
 
-typedef int32_t KDbgMod;
 enum
 {
     DBG_MOD_NOT_FOUND = -1,
@@ -242,7 +248,6 @@ enum
  */
 
 /* dbg_id is approprite as a array index */
-    typedef uint32_t KDbgCond;
 enum
 {
     DBG_COND_MIN = 0,
@@ -264,9 +269,6 @@ enum
     DBG_COND_59,    DBG_COND_60,    DBG_COND_61,    DBG_COND_62,
     DBG_COND_63,    DBG_COND_MAX = DBG_COND_63
 };
-
-typedef uint64_t KDbgFlag;
-typedef uint64_t KDbgMask;
 
 
 /* to make a KDbgFlag out of a KDbgCond, shift 1 one by the condition id */
