@@ -797,6 +797,7 @@ rc_t CC KHttpFileTimedRead ( const KHttpFile *self,
                 DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ), ( "KHttpFileTimedRead: KHttpFileTimedReadLocked failed, reopening\n" ) );
                 if ( rc2 == 0 )
                 {
+                    ( ( KHttpFile * )self ) -> has_reopened = true;
                     rc2 = KHttpFileTimedReadLocked ( self, pos, buffer, bsize, num_read, tm, & http_status );
                     if ( rc2 == 0 )
                     {
@@ -819,6 +820,7 @@ rc_t CC KHttpFileTimedRead ( const KHttpFile *self,
                 break;
             }
             rc = KClientHttpReopen ( self -> http );
+            ( ( KHttpFile * )self ) -> has_reopened = true;
         }
 
         rc2 = KHttpRetrierDestroy ( & retrier );
@@ -1155,6 +1157,7 @@ rc_t CC KHttpFileTimedReadChunked ( const KHttpFile * self, uint64_t pos,
             if ( rc != 0 )
             {
                 rc2 = KClientHttpReopen ( self -> http );
+                ( ( KHttpFile * )self ) -> has_reopened = true;
                 DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ), ( "KHttpFileTimedReadChunked: "
                     "KHttpFileTimedReadChunkedLocked failed, reopening\n" ) );
                 if ( rc2 == 0 )
@@ -1193,6 +1196,7 @@ rc_t CC KHttpFileTimedReadChunked ( const KHttpFile * self, uint64_t pos,
                 break;
             }
             rc = KClientHttpReopen ( self -> http );
+            ( ( KHttpFile * )self ) -> has_reopened = true;
         }
 
         rc2 = KHttpRetrierDestroy ( & retrier );
@@ -1547,4 +1551,18 @@ rc_t KNSManagerVMakeHttpFileIntUnstable(const KNSManager *self,
 
 bool KUnstableFileIsKHttpFile(const KFile * self) {
     return self != NULL && &self->vt->v1 == &vtKHttpFile;
+}
+
+bool KUnstableFileIsKHttpIsReopened( const KFile * self )
+{
+    if ( KUnstableFileIsKHttpFile( self ) )
+    {
+        /* how do we get the information that the file has been reopened? */
+        const KHttpFile * http_self = ( const KHttpFile * )self;
+        return http_self -> has_reopened;
+    }
+    else
+    {
+        return false;
+    }
 }

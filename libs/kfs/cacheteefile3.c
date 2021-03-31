@@ -46,6 +46,7 @@ struct KCacheTeeChunkReader;
 
 #include <kns/http.h> /* KFileIsKHttpFile */
 #include <kns/http-priv.h> /* HttpFileGetReadTimeouts */
+#include "../kns/http-priv.h" /* KUnstableFileIsKHttpIsReopened */
 
 #include <kproc/lock.h>
 #include <kproc/cond.h>
@@ -250,10 +251,22 @@ rc_t CC KCacheTeeChunkReaderNext ( KCacheTeeChunkReader * self, void ** buf, siz
 {
     if ( self -> ctf -> quitting )
     {
+        /* PROBLEM: quitting might be still set from an earlier conncetion, burried deep in the source-file
+        let us ask the http-file we are reading from, if it has reopened itself, if yes - clear the quitting-flag
+        self -> source is used by the background-thread, but we are not changing it...
+        */
+       if ( KUnstableFileIsKHttpIsReopened( self -> ctf -> source ) )
+       {
+           STATUS ( STAT_PRG, "BG: %s - resetting quitting flag because HTTP-file has been reopened\n", __func__ );
+           self -> ctf -> quitting = false;
+       }
+       else
+       {
         STATUS ( STAT_PRG, "BG: %s - refusing request due to quitting\n", __func__ );
         * buf = NULL;
         * size = 0;
         return RC ( rcFS, rcBuffer, rcAllocating, rcTransfer, rcCanceled );
+       }
     }
 
     STATUS ( STAT_PRG, "BG: %s - allocating page buffer of %zu bytes\n", __func__, self -> ctf -> page_size );

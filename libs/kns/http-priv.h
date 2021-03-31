@@ -293,6 +293,7 @@ rc_t KNSManagerVMakeHttpFileIntUnstable(const struct KNSManager *self,
     bool need_env_token, bool payRequired, const char *url, va_list args);
 
 bool KUnstableFileIsKHttpFile(const struct KFile * self);
+bool KUnstableFileIsKHttpIsReopened(const struct KFile * self);
 
 #ifdef __cplusplus
 }
