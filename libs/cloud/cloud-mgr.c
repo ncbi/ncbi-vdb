@@ -29,6 +29,8 @@
 
 #include <klib/rc.h>
 #include <klib/status.h>
+#include <klib/text.h> /* StringWhack */
+
 #include <cloud/aws.h>
 #include <cloud/gcp.h>
 
@@ -108,6 +110,38 @@ LIB_EXPORT const char * CC CloudProviderAsString(CloudProviderId cloud_provider)
 static
 CloudProviderId CloudMgrDetermineCurrentCloud ( const CloudMgr * self )
 {
+    rc_t rc = 0;
+    String * forced = NULL;
+
+    assert ( self );
+
+    rc = KConfigReadString ( self -> kfg, "/libs/cloud/provider", & forced );
+    if ( rc == 0 ) {
+        const char * a = NULL;
+        bool set = true;
+        CloudProviderId provider = cloud_provider_none;
+        assert ( forced && forced ->addr && forced -> addr [ 0 ] );
+        a = forced -> addr;
+        switch ( a [ 0 ] ) {
+        case 'a':
+            switch ( a [ 1 ] ) {
+            case 'w': provider = cloud_provider_aws  ; break;
+            case 'z': provider = cloud_provider_azure; break;
+            default : set = false;                     break;
+            }
+            break;
+        case 'g': provider = cloud_provider_gcp ; break;
+        case 'n': provider = cloud_provider_none; break;
+        default : set = false; break;
+        }
+
+        StringWhack ( forced );
+        forced = NULL;
+
+        if ( set )
+            return provider;
+    }
+
 #ifdef OUTSIDE_OF_CLOUD
     return cloud_provider_none;
 #endif
