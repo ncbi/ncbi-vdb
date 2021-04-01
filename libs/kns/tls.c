@@ -53,6 +53,7 @@ struct KTLSStream;
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #if ! defined ( MBEDTLS_CONFIG_FILE )
 #include <mbedtls/config.h>
@@ -804,9 +805,13 @@ rc_t CC KTLSStreamRead ( const KTLSStream * cself,
             if (!e) {
                 e = m;
                 if (ret >= 0) {
+                    /*
                     ret = -76;
                     self->rd_rc
                         = RC(rcNS, rcStream, rcReading, rcTimeout, rcExhausted);
+                    */
+                    fprintf( stderr, "NCBI_VDB_ERR_MBEDTLS_READ ... timeout inserted" );
+                    sleep( 5 * 60 );
                 }
             }
             --e;

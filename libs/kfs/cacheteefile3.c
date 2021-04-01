@@ -258,7 +258,7 @@ rc_t CC KCacheTeeChunkReaderNext ( KCacheTeeChunkReader * self, void ** buf, siz
        if ( KUnstableFileIsKHttpIsReopened( self -> ctf -> source ) )
        {
            STATUS ( STAT_PRG, "BG: %s - resetting quitting flag because HTTP-file has been reopened\n", __func__ );
-           self -> ctf -> quitting = false;
+           /* self -> ctf -> quitting = false; */
        }
        else
        {
@@ -1204,6 +1204,11 @@ static
 rc_t CC KCacheTeeFileTimedRead ( const KCacheTeeFile_v3 *cself, uint64_t pos,
     void *buffer, size_t bsize, size_t *num_read, struct timeout_t *tm )
 {
+    bool have_tm = tm != NULL;
+    int32_t tm_ms = 0;
+    if ( have_tm ) tm_ms = tm -> mS;
+    STATUS ( STAT_PRG, "KCacheTeeFileTimedRead( pos:%lu, size:%lu: timeout:( %s, %d)\n",
+        pos, bsize, have_tm ? "Y" : "N", tm_ms );
     return KCacheTeeFileTimedReadImpl(cself, pos, buffer, bsize, num_read, tm,
         tm);
 }
@@ -1223,12 +1228,19 @@ rc_t CC KCacheTeeFileRead ( const KCacheTeeFile_v3 *self, uint64_t pos,
     int32_t msec = minMsec;
     int32_t totalMsec = minMsec;
 
-    assert(self);
-    if (KFileIsKHttpFile(self->source)) {
-        rc = HttpFileGetReadTimeouts(self->source, &msec, &totalMsec);
-        if (rc != 0)
+    assert( self );
+    bool from_http_file = false;
+    if ( KFileIsKHttpFile( self -> source ) )
+    {
+        rc = HttpFileGetReadTimeouts( self -> source, &msec, &totalMsec );
+        if ( rc != 0 )
             totalMsec = msec = minMsec;
+        else
+            from_http_file = true;
     }
+
+    STATUS ( STAT_PRG, "KCacheTeeFileRead( pos:%lu, size:%lu: msec:%d, totalMsec:%d from_http_file:%s\n",
+        pos, bsize, msec, totalMsec, from_http_file ? "Y" : "N" );
 
 #if 0
     const char * v = getenv("NCBI_VDB_CACHE_TEE_FILE_TO");
