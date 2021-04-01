@@ -26,6 +26,6 @@
 * ==============================================================================
 */
 
-#define VDB_RELEASE_VERSION 0x020B0000
+#define VDB_RELEASE_VERSION 0x020B0001
 
 #endif /* _h_klib_vdb_release_version_ */
