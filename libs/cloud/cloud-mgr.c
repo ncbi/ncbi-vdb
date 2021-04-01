@@ -243,16 +243,17 @@ rc_t CloudMgrInit ( CloudMgr ** mgrp, const KConfig * kfg,
                     provider = CloudMgrDetermineCurrentCloud ( our_mgr );
                 }
 
-        if ( provider != cloud_provider_none )
+                if ( provider != cloud_provider_none )
                 {
-            TRACE ( "making current environment" );
-            rc = CloudMgrMakeCloud ( our_mgr, & our_mgr -> cur, provider );
-            if ( rc == 0 )
+                    TRACE ( "making current environment" );
+                    rc = CloudMgrMakeCloud (
+                        our_mgr, & our_mgr -> cur, provider );
+                    if ( rc == 0 )
                     {
-                TRACE ( "storing current environment" );
-                our_mgr -> cur_id = provider;
-            }
-        }
+                        TRACE ( "storing current environment" );
+                        our_mgr -> cur_id = provider;
+                    }
+                }
 
                 if ( rc == 0 )
                 {
@@ -296,7 +297,7 @@ LIB_EXPORT rc_t CC CloudMgrMake ( CloudMgr ** mgrp,
 
                 /* try to set single-shot ( set once, never reset ) */
                 TRACE ( "attempting to set CloudMgr singleton" );
-		
+
 #ifdef USE_SINGLETON		
                 new_mgr = atomic_test_and_set_ptr ( & cloud_singleton, our_mgr, NULL );
 #endif
