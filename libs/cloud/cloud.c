@@ -29,8 +29,12 @@
 
 #include <klib/rc.h>
 #include <klib/status.h>
+#include <klib/text.h> /* StringCopy */
+
 #include <kns/manager.h>
 #include <kns/stream.h>
+
+#include "cloud-priv.h" /* CloudMgr */
 
 #include <assert.h>
 
@@ -92,12 +96,58 @@ LIB_EXPORT rc_t CC CloudRelease ( const Cloud * self )
     return 0;
 }
 
+bool CloudGetCachedComputeEnvironmentToken (
+    const Cloud * self, const String ** ce_token )
+{
+    rc_t rc = 0;
+    KTime_t age = 0;
+
+    assert ( self );
+
+    if ( self -> max_ce_cache_age == 0 ) /* never cache */
+        return false;
+
+    if ( self -> cached_ce_date == 0 || self -> cached_ce == 0 )
+        return false; /* never cached before */
+
+    age = KTimeStamp () - self -> cached_ce_date;
+    if ( age < self -> max_ce_cache_age )
+        return false; /* not expired yet */
+
+    rc = StringCopy ( ce_token, self -> cached_ce );
+    if (rc == 0) {
+        printf("CEFromCache: %d/%d\n", age, self->max_ce_cache_age);
+        return true;
+    }
+    else
+        return false;
+}
+
+rc_t CloudSetCachedComputeEnvironmentToken (
+    const Cloud * cself, const String * ce_token )
+{
+    rc_t rc = 0;
+
+    Cloud * self = ( Cloud * ) cself;
+    assert ( self );
+
+    StringWhack ( self -> cached_ce );
+    self -> cached_ce = NULL;
+
+    rc = StringCopy ( & self -> cached_ce, ce_token );
+
+    if ( rc == 0 )
+        self -> cached_ce_date = KTimeStamp ();
+
+    return rc;
+}
+
 /* MakeComputeEnvironmentToken
  *  contact cloud provider to get proof of execution environment in form of a token
  */
 LIB_EXPORT rc_t CC CloudMakeComputeEnvironmentToken ( const Cloud * self, struct String const ** ce_token )
 {
-    rc_t rc;
+    rc_t rc = 0;
 
     if ( ce_token == NULL )
         rc = RC ( rcCloud, rcProvider, rcAccessing, rcParam, rcNull );
@@ -110,6 +160,9 @@ LIB_EXPORT rc_t CC CloudMakeComputeEnvironmentToken ( const Cloud * self, struct
             rc = RC ( rcCloud, rcProvider, rcAccessing, rcSelf, rcNull );
         else
         {
+            if ( CloudGetCachedComputeEnvironmentToken ( self, ce_token ) )
+                return 0;
+
             switch ( self -> vt -> v1 . maj )
             {
             case 1:
@@ -233,11 +286,26 @@ LIB_EXPORT rc_t CC CloudAddUserPaysCredentials ( const Cloud * self,
     return rc;
 }
 
+static rc_t CloudInitCE ( Cloud * self, const CloudMgr * mgr ) {
+    rc_t rc = 0;
+    int64_t ceAge = 0;
+
+    assert ( self && mgr );
+
+    rc = KConfigReadI64 ( mgr -> kfg, "/libs/cloud/max_ce_cache_age", & ceAge );
+    if ( rc != 0 )
+        ceAge = 1;/*sec - default*/
+
+    self -> max_ce_cache_age = ceAge;
+
+    return rc;
+}
+
 /* Init
  *  initialize a newly allocated cloud object
  */
 LIB_EXPORT rc_t CC CloudInit ( Cloud * self, const Cloud_vt * vt,
-    const char * classname, const KNSManager * kns, bool user_agrees_to_pay,
+    const char * classname, const CloudMgr * mgr, bool user_agrees_to_pay,
     bool user_agrees_to_reveal_instance_identity )
 {
     rc_t rc = 0;
@@ -248,7 +316,7 @@ LIB_EXPORT rc_t CC CloudInit ( Cloud * self, const Cloud_vt * vt,
     if ( vt == NULL )
         return RC ( rcCloud, rcProvider, rcConstructing, rcInterface, rcNull );
 
-    if ( kns == NULL )
+    if ( mgr == NULL || mgr -> kns == NULL || mgr -> kfg == NULL )
         return RC ( rcCloud, rcProvider, rcConstructing, rcParam, rcNull );
 
     switch ( vt -> v1 . maj )
@@ -279,14 +347,16 @@ LIB_EXPORT rc_t CC CloudInit ( Cloud * self, const Cloud_vt * vt,
         return RC ( rcCloud, rcProvider, rcConstructing, rcInterface, rcBadVersion );
     }
 
-    rc = KNSManagerAddRef ( kns );
+    rc = KNSManagerAddRef ( mgr -> kns );
     if ( rc == 0 )
     {
+        memset ( self, 0, sizeof * self );
         self -> vt = vt;
-        self -> kns = kns;
+        self -> kns = mgr -> kns;
         self -> user_agrees_to_pay = user_agrees_to_pay;
         self -> user_agrees_to_reveal_instance_identity
             = user_agrees_to_reveal_instance_identity;
+        /* ignore rc = */ CloudInitCE ( self, mgr );
         KRefcountInit ( & self -> refcount, 1, classname, "init", "" );
     }
 
