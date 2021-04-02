@@ -1460,26 +1460,79 @@ LIB_EXPORT rc_t CC VTableIsEmpty ( const struct VTable *self, bool * empty )
     return rc;
 }
 
+static rc_t scanNameList(KNamelist const *const list, bool *const haveQual, bool *const haveOrigQual)
+{
+    rc_t rc = 0;
+    uint32_t count = 0;
+    uint32_t i;
+
+    rc = KNamelistCount(list, &count);
+    assert(rc == 0);
+    if (rc) return rc;
+
+    for (i = 0; i < count; ++i) {
+        char const *name = NULL;
+
+        rc = KNamelistGet(list, i, &name);
+        assert(rc == 0);
+        if (rc) return rc;
+
+        if (strcmp(name, "ORIGINAL_QUALITY") == 0) {
+            *haveOrigQual = true;
+            continue;
+        }
+        if (strcmp(name, "QUALITY") == 0) {
+            *haveQual = true;
+            continue;
+        }
+    }
+    return 0;
+}
 
 /* GetQualityCapability
  *  can the table deliver full quality? synthetic quallity?
  */
 LIB_EXPORT rc_t CC VTableGetQualityCapability ( const VTable *self,
     bool *fullQuality, bool *synthQuality )
-{   /* function stub */
+{
+    rc_t rc = 0;
+    KNamelist *cols = NULL;
+    bool haveQual = false;
+    bool haveOrigQual = false;
+
     if ( self == NULL )
         return RC ( rcVDB, rcTable, rcListing, rcSelf, rcNull );
+
+    rc = KTableListCol(self->ktbl, &cols);
+    assert(rc == 0);
+    if (rc) return rc;
+
+    rc = scanNameList(cols, &haveQual, &haveOrigQual);
+    KNamelistRelease(cols);
+    assert(rc == 0);
+    if (rc) return rc;
+
+    if (self->col_node != NULL) {
+        rc = KMDataNodeListChildren(self->col_node, &cols);
+        if (rc == 0) {
+            rc = scanNameList(cols, &haveQual, &haveOrigQual);
+            KNamelistRelease(cols);
+            assert(rc == 0);
+            if (rc) return rc;
+        }
+    }
+
     if ( fullQuality != NULL )
-        *fullQuality = true;
+        *fullQuality = haveOrigQual || haveQual;
     if ( synthQuality != NULL )
-        *synthQuality = false;
+        *synthQuality = !haveQual;
     return 0;
 }
 
 /* SetFullQualityType
  *  switch table to deliver full quality
  */
-LIB_EXPORT rc_t CC VTableSetFullQualityType ( VTable *self )
+LIB_EXPORT rc_t CC VTableSetFullQualityType ( VTable const *self )
 {   /* function stub */
     if ( self == NULL )
         return RC ( rcVDB, rcTable, rcResetting, rcSelf, rcNull );
@@ -1489,9 +1542,80 @@ LIB_EXPORT rc_t CC VTableSetFullQualityType ( VTable *self )
 /* SetSynthQualityType
  *  switch table to deliver synthetic quality
  */
-LIB_EXPORT rc_t CC VTableSetSynthQualityType ( VTable *self )
+LIB_EXPORT rc_t CC VTableSetSynthQualityType ( VTable const *self )
 {   /* function stub */
     if (self == NULL)
         return RC ( rcVDB, rcTable, rcResetting, rcSelf, rcNull );
     return RC ( rcVDB, rcTable, rcResetting, rcMode, rcNotAvailable );
+}
+
+/* GetQualityCapability
+ *  can the database deliver full quality? synthetic quallity?
+ */
+LIB_EXPORT rc_t CC VDatabaseGetQualityCapability ( const VDatabase *self,
+                                                  bool *fullQuality, bool *synthQuality )
+{
+    rc_t rc = 0;
+    VTable const *tbl = NULL;
+
+    if ( self == NULL )
+        return RC ( rcVDB, rcDatabase, rcListing, rcSelf, rcNull );
+
+    rc = VDatabaseOpenTableRead(self, &tbl, "SEQUENCE");
+    if (rc == 0) {
+        rc = VTableGetQualityCapability(tbl, fullQuality, synthQuality);
+        VTableRelease(tbl);
+    }
+    else {
+        rc = 0;
+        if ( fullQuality != NULL )
+            *fullQuality = false;
+        if ( synthQuality != NULL )
+            *synthQuality = false;
+    }
+    return rc;
+}
+
+/* SetFullQualityType
+ *  switch database to deliver full quality
+ */
+LIB_EXPORT rc_t CC VDatabaseSetFullQualityType ( VDatabase const *self )
+{
+    rc_t rc = 0;
+    VTable const *tbl = NULL;
+
+    if ( self == NULL )
+        return RC ( rcVDB, rcDatabase, rcResetting, rcSelf, rcNull );
+
+    rc = VDatabaseOpenTableRead(self, &tbl, "SEQUENCE");
+    if (rc == 0) {
+        rc = VTableSetFullQualityType(tbl);
+        VTableRelease(tbl);
+    }
+    else {
+        rc = 0;
+    }
+    return rc;
+}
+
+/* SetSynthQualityType
+ *  switch database to deliver synthetic quality
+ */
+LIB_EXPORT rc_t CC VDatabaseSetSynthQualityType ( VDatabase const *self )
+{
+    rc_t rc = 0;
+    VTable const *tbl = NULL;
+
+    if ( self == NULL )
+        return RC ( rcVDB, rcDatabase, rcResetting, rcSelf, rcNull );
+
+    rc = VDatabaseOpenTableRead(self, &tbl, "SEQUENCE");
+    if (rc == 0) {
+        rc = VTableSetSynthQualityType(tbl);
+        VTableRelease(tbl);
+    }
+    else {
+        rc = RC ( rcVDB, rcDatabase, rcResetting, rcMode, rcNotAvailable );
+    }
+    return rc;
 }
