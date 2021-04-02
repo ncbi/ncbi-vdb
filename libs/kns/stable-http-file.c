@@ -99,7 +99,7 @@ rc_t RetrierReopenRemote(KStableHttpFile * self, bool neverBefore)
     KFileRelease(self->file);
     self->file = NULL;
 
-    while ( first 
+    while ( first
         || ( self->totalConnectWaitMillis < 0 )
         || ( KTimeStamp() - started
             < self->totalConnectWaitMillis / 1000 ) )
@@ -640,8 +640,10 @@ rc_t KNSManagerVMakeHttpFileInt(const KNSManager *self,
                        ARE NEEDED BY HttpFileGetReadTimeouts() */
                     f->totalReadWaitMillis
                         = CalculateTotalReadWait(f, &f->readWaitMillis);
+                    STATUS ( STAT_PRG, "CalculateTotalReadWait: readWaitMillis:%d, totalReadWaitMillis:%d \n",
+                            f->readWaitMillis, f->totalReadWaitMillis );
 
-                    f->totalConnectWaitMillis 
+                    f->totalConnectWaitMillis
                         = self->maxTotalConnectWaitForReliableURLs_ms;
                 }
             }

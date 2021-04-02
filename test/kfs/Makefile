@@ -40,7 +40,10 @@ TEST_TOOLS = \
 	test-cachetee3 \
 	test-lru-cache \
 	test-kfs-md5    \
-	test-appendfile
+	test-appendfile \
+
+# this is an ongoing investigation
+#	test-cachetee3-timeout \
 
 include $(TOP)/build/Makefile.env
 
@@ -218,6 +221,22 @@ cachetee3: test-cachetee3
 	rm -f cache.dat.cache org.dat
 	$(TEST_BINDIR)/test-cachetee3
 # $(TEST_BINDIR)/test-cachetee3 -vvv
+
+#-------------------------------------------------------------------------------
+# test-cachetee3-timeout
+#
+TEST_CACHETEE3_TO_SRC = \
+	cachetee3-timeout
+
+TEST_CACHETEE3_TO_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_CACHETEE3_TO_SRC))
+
+$(TEST_BINDIR)/test-cachetee3-timeout: $(TEST_CACHETEE3_TO_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_CACHETEE3_LIB)
+#	rm *.o *.d
+
+ct3to: test-cachetee3-timeout
+	$(TEST_BINDIR)/test-cachetee3-timeout
 
 #-------------------------------------------------------------------------------
 # test-lru-cache
