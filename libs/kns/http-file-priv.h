@@ -75,9 +75,6 @@ struct KHttpFile
     bool payRequired;
 
     bool no_cache;
-
-    /* true if has been reopend */
-    bool has_reopened;
 };
 
 #endif
