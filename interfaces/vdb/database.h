@@ -341,12 +341,12 @@ VDB_EXTERN rc_t CC VDatabaseGetQualityCapability ( const VDatabase *self,
 /* SetFullQualityType
  *  switch database to deliver full quality
  */
-VDB_EXTERN rc_t CC VDatabaseSetFullQualityType ( VDatabase *self );
+VDB_EXTERN rc_t CC VDatabaseSetFullQualityType ( VDatabase const *self );
 
 /* SetSynthQualityType
  *  switch database to deliver synthetic quality
  */
-VDB_EXTERN rc_t CC VDatabaseSetSynthQualityType ( VDatabase *self );
+VDB_EXTERN rc_t CC VDatabaseSetSynthQualityType ( VDatabase const *self );
 
 
 #ifdef __cplusplus

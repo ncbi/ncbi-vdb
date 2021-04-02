@@ -432,12 +432,12 @@ VDB_EXTERN rc_t CC VTableGetQualityCapability ( const VTable *self,
 /* SetFullQualityType
  *  switch table to deliver full quality
  */
-VDB_EXTERN rc_t CC VTableSetFullQualityType ( VTable *self );
+VDB_EXTERN rc_t CC VTableSetFullQualityType ( VTable const *self );
 
 /* SetSynthQualityType
  *  switch table to deliver synthetic quality
  */
-VDB_EXTERN rc_t CC VTableSetSynthQualityType ( VTable *self );
+VDB_EXTERN rc_t CC VTableSetSynthQualityType ( VTable const *self );
 
 
 #ifdef __cplusplus
