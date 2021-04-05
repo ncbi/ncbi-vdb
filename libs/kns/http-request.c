@@ -1217,6 +1217,7 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
             if (rc == 0) {
                 if (cself->payRequired)
                     rc = CloudAddUserPaysCredentials(cloud, self, method);
+                assert(method);
                 if (cself->ceRequired
                     && method[0] != 'G') /* use CE just in POST requests  */
                 {
