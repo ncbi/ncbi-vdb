@@ -99,7 +99,7 @@ static char const *envCE()
     firstTime = false;
     if (env != NULL)
         DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
-            "Got location from environment\n"));
+            "Got GCP location from environment\n"));
     return env;
 }
 
@@ -113,7 +113,7 @@ static rc_t readCE(GCP const *const self, size_t size, char location[])
         "default/identity?audience=https://www.ncbi.nlm.nih.gov&format=full";
 
     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
-        ("Reading location from provider\n"));
+        ("Reading GCP location from provider\n"));
     return KNSManager_Read(self->dad.kns, location, size,
                          identityUrl, "Metadata-Flavor", "Google");
 }
