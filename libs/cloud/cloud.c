@@ -27,6 +27,7 @@
 #include <cloud/extern.h>
 #include <cloud/impl.h>
 
+#include <klib/debug.h> /* DBGMSG */
 #include <klib/rc.h>
 #include <klib/status.h>
 #include <klib/text.h> /* StringCopy */
@@ -111,12 +112,12 @@ bool CloudGetCachedComputeEnvironmentToken (
         return false; /* never cached before */
 
     age = KTimeStamp () - self -> cached_ce_date;
-    if ( age < self -> max_ce_cache_age )
+    if ( age > self -> max_ce_cache_age )
         return false; /* not expired yet */
 
     rc = StringCopy ( ce_token, self -> cached_ce );
     if (rc == 0) {
-        printf("CEFromCache: %d/%d\n", age, self->max_ce_cache_age);
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), ("Using cached location\n"));
         return true;
     }
     else
@@ -136,8 +137,10 @@ rc_t CloudSetCachedComputeEnvironmentToken (
 
     rc = StringCopy ( & self -> cached_ce, ce_token );
 
-    if ( rc == 0 )
+    if ( rc == 0 ) {
         self -> cached_ce_date = KTimeStamp ();
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), ("Cached location\n"));
+    }
 
     return rc;
 }
@@ -294,7 +297,7 @@ static rc_t CloudInitCE ( Cloud * self, const CloudMgr * mgr ) {
 
     rc = KConfigReadI64 ( mgr -> kfg, "/libs/cloud/max_ce_cache_age", & ceAge );
     if ( rc != 0 )
-        ceAge = 1;/*sec - default*/
+        ceAge = 0;/*sec - default; 0 - don't cache */
 
     self -> max_ce_cache_age = ceAge;
 
