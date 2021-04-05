@@ -1217,8 +1217,12 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
             if (rc == 0) {
                 if (cself->payRequired)
                     rc = CloudAddUserPaysCredentials(cloud, self, method);
-                if (cself->ceRequired)
-                    rc = CloudAddComputeEnvironmentTokenForSigner(cloud, self);
+                if (cself->ceRequired
+                    && method[0] != 'G') /* use CE just in POST requests  */
+                {
+                    rc = CloudAddComputeEnvironmentTokenForSigner(
+                        cloud, self);
+                }
                 CloudRelease ( cloud );
             }
         }
@@ -1428,6 +1432,8 @@ rc_t KClientHttpRequestHandleRedirection ( KClientHttpRequest *self, const char 
         if ( exp != NULL )
         {
             DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_HTTP), ("'To' URL expires at '%S'\n", & exp -> value ) );
+            assert(expiration);
+            free(*expiration);
             * expiration = string_dup( exp -> value . addr, exp -> value . size );
         }
 
@@ -1464,7 +1470,6 @@ rc_t KClientHttpRequestHandleRedirection ( KClientHttpRequest *self, const char 
 
             KDataBufferWhack ( & uri );
         }
-
     }
 
     return rc;
@@ -1749,6 +1754,8 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
     char * expiration = NULL;
     const char * method = "POST";
 
+    uint32_t uriForm = 1;
+
     rc = FormatForCloud(self, method);
     if (rc != 0)
         return rc;
@@ -1791,7 +1798,7 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
             break;
 
         /* create message */
-        rc = KClientHttpRequestFormatMsgInt ( self, & buffer, method, 0 );
+        rc = KClientHttpRequestFormatMsgInt ( self, & buffer, method, uriForm );
         if ( rc != 0 )
         {
             KDataBufferWhack( & buffer );
@@ -1827,14 +1834,15 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
         }
 
         rslt = * _rslt;
-        rslt -> expiration = expiration; /* expiration has to reach the caller */
-        expiration = NULL;
 
         /* look at status code */
         switch ( rslt -> status )
         {
         case 200:
         case 206:
+            /* expiration has to reach the caller */
+            rslt -> expiration = expiration; 
+            expiration = NULL;
             return 0;
         case 304:
             /* check for "If-Modified-Since" or "If-None-Match" header in request and allow if present */
@@ -1884,6 +1892,13 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
             }
 
             /* NO BREAK */
+
+        case 400:
+             if ( uriForm == 1 ) {
+                 ++ uriForm; /* got 400; try to use different Request-URI form */
+                 continue;
+             }
+/*           else no break here: tried both Request-URI forms */
 
         default:
 
