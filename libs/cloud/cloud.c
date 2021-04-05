@@ -132,6 +132,9 @@ rc_t CloudSetCachedComputeEnvironmentToken (
     Cloud * self = ( Cloud * ) cself;
     assert ( self );
 
+    if ( self -> max_ce_cache_age == 0 ) /* never cache */
+        return 0;
+
     StringWhack ( self -> cached_ce );
     self -> cached_ce = NULL;
 
