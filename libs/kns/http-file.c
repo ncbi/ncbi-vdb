@@ -1143,6 +1143,11 @@ rc_t CC KHttpFileTimedReadChunked ( const KHttpFile * self, uint64_t pos,
         {
             uint32_t http_status;
             rc = KHttpFileTimedReadChunkedLocked ( self, pos, chunks, bytes, num_read, tm, & http_status );
+            if ( GetRCObject( rc ) == rcTransfer &&
+                 GetRCState( rc ) == rcCanceled )
+            {
+                return rc;
+            }
 
             /* ALWAYS account for chunks already read */
             pos += * num_read;

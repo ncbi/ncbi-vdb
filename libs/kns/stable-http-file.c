@@ -213,6 +213,12 @@ rc_t RetrierAgain(const KStableHttpFile * cself,
 {
     KStableHttpFile * self = (KStableHttpFile *)cself;
 
+    if ( GetRCObject( rc ) == rcTransfer &&
+         GetRCState( rc ) == rcCanceled )
+    {
+        return rc;
+    }
+
     bool retry = true;
 
     KTime_t total = ~0;
