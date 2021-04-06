@@ -117,7 +117,7 @@ bool CloudGetCachedComputeEnvironmentToken (
 
     rc = StringCopy ( ce_token, self -> cached_ce );
     if (rc == 0) {
-        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), ("Using cached location\n"));
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_CE), ("Using cached location\n"));
         return true;
     }
     else
@@ -142,7 +142,7 @@ rc_t CloudSetCachedComputeEnvironmentToken (
 
     if ( rc == 0 ) {
         self -> cached_ce_date = KTimeStamp ();
-        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), ("Cached location\n"));
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_CE), ("Saved location to cache\n"));
     }
 
     return rc;
