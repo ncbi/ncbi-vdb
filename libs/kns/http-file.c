@@ -1146,7 +1146,9 @@ rc_t CC KHttpFileTimedReadChunked ( const KHttpFile * self, uint64_t pos,
             if ( GetRCObject( rc ) == rcTransfer &&
                  GetRCState( rc ) == rcCanceled )
             {
-                return rc;
+                DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ), ( "KHttpFileTimedReadChunked: "
+                    "KHttpFileTimedReadChunkedLocked() has been canceled \n" ) );
+                break;
             }
 
             /* ALWAYS account for chunks already read */
@@ -1165,6 +1167,15 @@ rc_t CC KHttpFileTimedReadChunked ( const KHttpFile * self, uint64_t pos,
                 if ( rc2 == 0 )
                 {
                     rc2 = KHttpFileTimedReadChunkedLocked ( self, pos, chunks, bytes, num_read, tm, & http_status );
+
+                    if ( GetRCObject( rc2 ) == rcTransfer &&
+                        GetRCState( rc2 ) == rcCanceled )
+                    {
+                        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ), ( "KHttpFileTimedReadChunked: "
+                            "KHttpFileTimedReadChunkedLocked() #2 has been canceled \n" ) );
+                        rc = rc2;
+                        break;
+                    }
 
                     /* ALWAYS account for chunks already read */
                     pos += * num_read;
