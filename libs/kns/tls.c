@@ -216,7 +216,8 @@ rc_t tlsg_init_ca ( KTLSGlobals *self, const KConfig * kfg )
     }
 #endif
     /* if the node does not exist, it means false */
-    self -> allow_all_certs = false;
+    /* self -> allow_all_certs = false; */
+    self -> allow_all_certs = true;
     return 0;
 }
 
@@ -805,13 +806,13 @@ rc_t CC KTLSStreamRead ( const KTLSStream * cself,
             if (!e) {
                 e = m;
                 if (ret >= 0) {
-                    /*
+
                     ret = -76;
                     self->rd_rc
                         = RC(rcNS, rcStream, rcReading, rcTimeout, rcExhausted);
-                    */
                     fprintf( stderr, "NCBI_VDB_ERR_MBEDTLS_READ ... timeout inserted" );
-                    sleep( 5 * 60 );
+                    sleep( 60 );
+                    m = 0;
                 }
             }
             --e;
