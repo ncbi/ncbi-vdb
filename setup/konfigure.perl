@@ -225,8 +225,8 @@ if ($OS eq 'linux') {
 
 print "checking machine architecture... " unless ($AUTORUN);
 println $MARCH unless ($AUTORUN);
-unless ($MARCH =~ /x86_64/i || $MARCH =~ /i?86/i) {
-    println "configure: error: unsupported architecture '$OSTYPE'";
+unless ($MARCH =~ /x86_64/i || $MARCH =~ /i?86/i || $MARCH =~ /aarch64/) {
+    println "configure: error: unsupported architecture '$OSTYPE':'$MARCH'";
     exit 1;
 }
 
@@ -316,6 +316,8 @@ if ($MARCH =~ /x86_64/i) {
     $BITS = '32_64';
 } elsif ($MARCH =~ /i?86/i) {
     $BITS = 32;
+} elsif ($MARCH =~ /aarch64/) {
+    $BITS = 64;
 } else {
     die "unrecognized Architecture '$ARCH'";
 }
@@ -424,6 +426,18 @@ if ($OS ne 'win' && $PKG{LNG} ne 'JAVA') {
 }
 
 if ($CPP) {
+    print "checking for $TOOLS... ";
+    my $cmd = "$TOOLS --version | head -1";
+    print "\n\t\trunning $cmd\n\t" if ($OPT{'debug'});
+    my $out = `$cmd 2>&1`;
+    if ($? == 0) {
+        print "$out";
+    } else {
+        println "no";
+        println "configure: error: '$TOOLS' cannot be found";
+        exit 1;
+    }
+    
     unless (check_tool__h($CPP)) {
         println "configure: error: '$CPP' cannot be found";
         exit 1;

@@ -35,6 +35,10 @@
 #include <klib/defs.h>
 #endif
 
+#ifndef _h_vdb_quality_
+#include <vdb/quality.h> /* VQuality */
+#endif
+
 #include <stdarg.h>
 
 #ifdef __cplusplus
@@ -298,6 +302,7 @@ VFS_EXTERN uint32_t CC VPathGetOid ( const VPath * self );
 /* GetId: retrieve object-id returned by name resolver */
 VFS_EXTERN rc_t CC VPathGetId ( const VPath * self, struct String * str );
 VFS_EXTERN rc_t CC VPathGetTicket ( const VPath * self, struct String * str );
+VFS_EXTERN rc_t CC VPathGetAcc ( const VPath * self, struct String * str );
 
 /* s3, gs, sra-ncbi, ftp-ncbi, sra-sos, etc. */
 VFS_EXTERN rc_t CC VPathGetService(const VPath * self, struct String * str);
@@ -319,6 +324,8 @@ VFS_EXTERN uint64_t CC VPathGetSize ( const VPath * self );
 VFS_EXTERN const uint8_t * CC VPathGetMd5 ( const VPath * self );
 
 VFS_EXTERN bool CC VPathGetProjectId(const VPath * self, uint32_t * projectId);
+
+VFS_EXTERN VQuality CC VPathGetQuality(const VPath * self);
 
 #ifdef __cplusplus
 }

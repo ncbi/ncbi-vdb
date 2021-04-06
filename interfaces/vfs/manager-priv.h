@@ -46,6 +46,7 @@ extern "C" {
 struct VFSManager;
 struct KDirectory;
 struct KFile;
+struct KNSManager;
 struct VPath;
 struct VResolver;
 struct SRAPath;
@@ -88,9 +89,14 @@ VFS_EXTERN rc_t CC VFSManagerOpenDirectoryUpdateDirectoryRelative ( const struct
 #define VPathMakeDirectoryRelative LegacyVPathMakeDirectoryRelative
 VFS_EXTERN rc_t CC VPathMakeDirectoryRelative ( struct VPath ** new_path,
     struct KDirectory const * dir, const char * posix_path);
+VFS_EXTERN rc_t CC VFSManagerMakeDirectoryRelativeVPath(
+    const struct VFSManager * self,
+    struct VPath ** new_path, const struct KDirectory * dir,
+    const char * posix_path, const struct VPath * vpath);
+/* VPathMakeDirectoryRelativeVPath: obsolete.
+   use VFSManagerMakeDirectoryRelativeVPath instead */
 VFS_EXTERN rc_t CC VPathMakeDirectoryRelativeVPath ( struct VPath ** new_path,
     struct KDirectory const * dir, const char * posix_path, const struct VPath * vpath );
-
 
 VFS_EXTERN rc_t CC VFSManagerOpenFileReadDecrypt (const struct VFSManager *self,
                                                   struct KFile const **f,
@@ -113,6 +119,10 @@ VFS_EXTERN const struct KConfig* CC VFSManagerGetConfig(const struct VFSManager 
  */
 VFS_EXTERN rc_t CC VFSManagerMakeFromKfg ( struct VFSManager ** pmanager,
     struct KConfig * cfg );
+
+/* Make using a custom KConfig and KNSManager */
+VFS_EXTERN rc_t CC VFSManagerMakeFromKns(struct VFSManager ** pmanager,
+    struct KConfig * cfg, struct KNSManager * kns);
 
 /* Make non-singleton version
  */

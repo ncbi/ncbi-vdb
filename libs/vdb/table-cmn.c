@@ -1152,9 +1152,10 @@ LIB_EXPORT bool CC VTableVHasStaticColumn ( const VTable *self, const char *name
         int len;
 
         /* generate full name */
-        if ( args == NULL )
+        /* VDB-4386: cannot treat va_list as a pointer! */
+        /*if ( args == NULL )
             len = snprintf ( full, sizeof full, "%s", name );
-        else
+        else*/
             len = vsnprintf ( full, sizeof full, name, args );
         if ( len < 0 || len >= sizeof full )
         {

@@ -91,6 +91,12 @@ KNS_EXTERN rc_t CC KNSManagerMakeWithConfig ( struct KNSManager ** mgr,
 KNS_EXTERN
 rc_t CC KNSManagerSetAdCaching(struct KNSManager* self, bool enabled);
 
+KNS_EXTERN
+rc_t CC KNSManagerGetAdCaching(const struct KNSManager* self, bool * enabled);
+
+KNS_EXTERN
+rc_t CC KNSManagerGetResolveToCache(const struct KNSManager* self,
+    bool * resolveToCache);
 
 /** MakeReliableHttpFile, KNSManagerMakeReliableClientRequest:
  * Make HTTP file/request from a reliable URL:

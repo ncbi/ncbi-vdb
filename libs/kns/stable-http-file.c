@@ -331,6 +331,9 @@ rc_t CC KStblHttpFileDestroy(KStableHttpFile *self)
 {
     rc_t rc = 0, r2 = 0;
 
+    if (self == NULL)
+        return 0;
+
     rc = KNSManagerRelease(self->mgr);
 
     r2 = KStreamRelease(self->conn);

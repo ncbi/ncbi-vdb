@@ -877,8 +877,9 @@ rc_t KArcDirMakePath (const KArcDir *self,
 	 *	pointer instead of a list of arguments:
 	 * build path to buffer using a path that is a printf format string
 	 * with a requirement that the first thing in the format be a format inducing %
+         * VDB-4386: cannot treat va_list as a pointer!
 	 */
-	if ((args != NULL) && (path[0] == '%'))
+	if (/*(args != NULL) &&*/ (path[0] == '%'))
 	{
 	    psize = vsnprintf (buffer, asize, path, args);
 
@@ -971,10 +972,11 @@ rc_t KArcDirMakePath (const KArcDir *self,
 	     * self's base or root either using a simple string format or again assuming
 	     * that the path has printf format symbols if there are arguments in the
 	     * va_list
+             * VDB-4386: cannot treat va_list as a pointer!
 	     */
-	    if (args == NULL)
+/*	    if (args == NULL)
             psize = snprintf (buffer+bsize, asize-bsize, "%s", path);
-	    else
+	    else*/
             psize = vsnprintf (buffer+bsize, asize-bsize, path, args);
 
 	    /* -----
@@ -1014,6 +1016,20 @@ rc_t KArcDirMakePath (const KArcDir *self,
     return 0;
 }
 
+static
+rc_t KArcDirMakePath_noargs (const KArcDir *self,
+		      enum RCContext ctx,
+		      bool canon,
+		      char ** pbuffer,
+		      const char *path,
+              ...)
+{
+    va_list vl;
+    va_start( vl, path );
+    rc_t ret = KArcDirMakePath( self, ctx, canon, pbuffer, path, vl );
+    va_end(vl);
+    return ret;
+}
 
 /* ----------------------------------------------------------------------
  * KArcDirList
@@ -1450,8 +1466,8 @@ rc_t	KArcDirResolvePathNode	(const KArcDir *	self,
 	     */
 	    if (abpath != NULL)
             free (abpath);
-	    rc = KArcDirMakePath (self, ctx, /* canon*/true, &abpath,
-                              temp_path, NULL);
+	    rc = KArcDirMakePath_noargs (self, ctx, /* canon*/true, &abpath,
+                              temp_path);
 	    if (rc != 0)
 	    {
             /* -----
@@ -2340,6 +2356,21 @@ rc_t CC KArcDirVisit (const KArcDir *self,
     return rc;
 }
 
+static
+rc_t CC KArcDirVisit_noargs (const KArcDir *self,
+                      bool recurse,
+                      rc_t (CC* f) (const KDirectory *, uint32_t, const char *, void *),
+                      void *data,
+                      const char *path,
+                      ...)
+{
+    va_list vl;
+    va_start( vl, path );
+    rc_t ret = KArcDirMakePath( self, recurse, f, data, path, vl );
+    va_end(vl);
+    return ret;
+}
+
 /* ----------------------------------------------------------------------
  * KArcDirVisitUpdate
  */
@@ -2473,8 +2504,9 @@ static rc_t CC KArcDirResolveAlias (const KArcDir * self,
     {
     	/* first find the node and it has to be an alias */ 
         char alias[4096];
-        int size = ( args == NULL ) ?
-            snprintf  ( alias, sizeof alias, "%s", alias_fmt ) : 
+        /* VDB-4386: cannot treat va_list as a pointer! */
+        int size = /*( args == NULL ) ?
+            snprintf  ( alias, sizeof alias, "%s", alias_fmt ) : */
             vsnprintf ( alias, sizeof alias, alias_fmt, args );
 
         if ( size < 0 || size >= ( int ) sizeof alias )
@@ -2602,7 +2634,8 @@ static rc_t CC KArcDirVAccess (const KArcDir *self,
     assert (path_fmt != NULL);
 
     /* MUST copy "args" if the intention is to use it twice */
-    if ( args != NULL )
+    /* VDB-4386: cannot treat va_list as a pointer!*/
+/*    if ( args != NULL )*/
         va_copy ( args_copy, args );
 
     /* -----
@@ -2611,8 +2644,9 @@ static rc_t CC KArcDirVAccess (const KArcDir *self,
     if ((rc = KArcDirMakePath (self, rcAccessing, false, &full, path_fmt, args)) == 0)
     {
         char path [ 4096 ];
-        int size = ( args == NULL ) ?
-            snprintf  ( path, sizeof path, "%s", path_fmt ) :
+        /* VDB-4386: cannot treat va_list as a pointer!*/
+        int size = /*( args == NULL ) ?
+            snprintf  ( path, sizeof path, "%s", path_fmt ) :*/
             vsnprintf ( path, sizeof path, path_fmt, args_copy );
 
         if ( size < 0 || size >= ( int ) sizeof path )
@@ -2634,7 +2668,7 @@ static rc_t CC KArcDirVAccess (const KArcDir *self,
         }
     }
 
-    if ( args != NULL )
+/*    if ( args != NULL )*/
         va_end ( args_copy );
 
     if (full != NULL)
@@ -2689,7 +2723,8 @@ static	rc_t CC KArcDirVDate		(const KArcDir *self,
     assert (path_fmt != NULL);
 
     /* MUST copy "args" if the intention is to use it twice */
-    if ( args != NULL )
+    /* VDB-4386: cannot treat va_list as a pointer! */
+/*    if ( args != NULL )*/
         va_copy ( args_copy, args );
 
     /* -----
@@ -2721,7 +2756,7 @@ static	rc_t CC KArcDirVDate		(const KArcDir *self,
         }
     }
 
-    if ( args != NULL )
+/*    if ( args != NULL )*/
         va_end ( args_copy );
 
     if (full != NULL)
@@ -3922,7 +3957,7 @@ rc_t CC KArcDirPersistVisitFunc (const KDirectory * dir, uint32_t unused_type, c
 
 /* this needs cleaning up - dir moved along but path did not.  path handling is weak through out */
 /* 	rc = KArcDirVisit ((const KArcDir*)dir, false, KArcDirPersistVisitFunc, data, vdata->path, NULL); */
-	rc = KArcDirVisit ((const KArcDir*)dir, false, KArcDirPersistVisitFunc, data, name, NULL);
+	rc = KArcDirVisit_noargs ((const KArcDir*)dir, false, KArcDirPersistVisitFunc, data, name);
 	if (rc != 0)
 	{
 	    LOGERR (klogInt, rc, "KArcDirPersist Visit failed");
@@ -4021,7 +4056,7 @@ rc_t KArcDirPersistHeader (const KArcDir * self,
             data.vector = &filevector;
 
 
-            rc = KArcDirVisit (self, false, KArcDirPersistVisitFunc, &data, ".", NULL);
+            rc = KArcDirVisit_noargs (self, false, KArcDirPersistVisitFunc, &data, ".");
             if (rc != 0)
             {
                 LOGERR (klogInt, rc, "KArcDirPersist Visit failed");

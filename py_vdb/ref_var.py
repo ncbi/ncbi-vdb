@@ -364,12 +364,11 @@ def process_accession( mgr, acc, row_range = None ) :
 
 #------------------------------------------------------------------------------------------------------------
 if __name__ == '__main__':
-    lib_r = "./2.8.0/libncbi-vdb.so.2.8.0"
     ACC = "SRR1531793"
     
     if len( sys.argv ) > 1 :
         ACC = sys.argv[ 1 ]
 
-    mgr = manager( OpenMode.Read, lib_r )
+    mgr = manager( OpenMode.Read )
     process_accession( mgr, ACC )
     #f1( mgr )

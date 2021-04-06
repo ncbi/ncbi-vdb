@@ -48,6 +48,8 @@
 #include <cstring>
 #include <list>
 
+#include "KNSManagerFixture.hpp"
+
 static rc_t argsHandler(int argc, char* argv[]) {
     Args* args = NULL;
     rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
@@ -208,15 +210,12 @@ KStream_vt_v1 TestStream::vt =
 list<string> TestStream::m_readResponses;
 list<rc_t> TestStream::m_writeResponses;
 
-class HttpFixture
+class HttpFixture : public KNSManagerFixture
 {
 public:
     HttpFixture()
-    : m_mgr(0), m_file(0), m_numRead(0)
+    : m_file(0), m_numRead(0)
     {
-        if ( KNSManagerMake ( & m_mgr ) != 0 )
-            throw logic_error ( "HttpFixture: KNSManagerMake failed" );
-
         if ( KStreamInit ( & m_stream, ( const KStream_vt* ) & TestStream::vt, "TestStream", "", true, true ) != 0 )
             throw logic_error ( "HttpFixture: KStreamInit failed" );
 
@@ -241,10 +240,6 @@ public:
 
         DBG_KNS_OFF();
         KNSManagerSetVerbose ( m_mgr, false );
-        if ( m_mgr && KNSManagerRelease ( m_mgr ) != 0 )
-        {
-            cout << "HttpFixture::~HttpFixture KNSManagerRelease failed" << endl;
-        }
     }
 
     static string MakeURL(const char* base)
@@ -275,7 +270,6 @@ public:
     static KStream m_stream;
     static bool m_reconnected;
 
-    KNSManager* m_mgr;
     KFile* m_file;
     char m_buf[1024];
     size_t m_numRead;

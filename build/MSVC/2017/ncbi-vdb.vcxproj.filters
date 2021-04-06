@@ -49,9 +49,6 @@
     <Filter Include="sraxf">
       <UniqueIdentifier>{b36fb9d7-5665-4263-be64-f12a134ec766}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ngs">
-      <UniqueIdentifier>{2f56cc71-17ad-4853-ad2c-20a7b3a2c336}</UniqueIdentifier>
-    </Filter>
     <Filter Include="align">
       <UniqueIdentifier>{d25a3901-b597-4d5b-b020-c69b492c1cfa}</UniqueIdentifier>
     </Filter>
@@ -60,15 +57,6 @@
     </Filter>
     <Filter Include="sra">
       <UniqueIdentifier>{80e21243-2048-4e7b-b109-2056d6636449}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ngs-jni">
-      <UniqueIdentifier>{a51982e3-befb-44af-91d1-60cedc402ac3}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ngs-py">
-      <UniqueIdentifier>{201ed31f-e652-41d7-887d-46f7c1835e81}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ngs-c++">
-      <UniqueIdentifier>{1cca6da3-28fe-4790-9882-9041a5a9ea51}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -747,105 +735,6 @@
     <ClCompile Include="..\..\..\libs\krypto\wgaencrypt.c">
       <Filter>krypto</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs-jni\jni_ErrorMsg.c">
-      <Filter>ngs-jni</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs-jni\jni_Manager.c">
-      <Filter>ngs-jni</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs-jni\jni_String.c">
-      <Filter>ngs-jni</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs-py\py_Manager.c">
-      <Filter>ngs-py</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\CSRA1_Alignment.c">
-      <Filter>ngs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\CSRA1_Pileup.c">
-      <Filter>ngs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\CSRA1_PileupEvent.c">
-      <Filter>ngs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\CSRA1_ReadCollection.c">
-      <Filter>ngs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\CSRA1_Reference.c">
-      <Filter>ngs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\CSRA1_ReferenceWindow.c">
-      <Filter>ngs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\NCBI-NGS.c">
-      <Filter>ngs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\NGS_Alignment.c">
-      <Filter>ngs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\NGS_Cursor.c">
-      <Filter>ngs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\NGS_ErrBlock.c">
-      <Filter>ngs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\NGS_Fragment.c">
-      <Filter>ngs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\NGS_Id.c">
-      <Filter>ngs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\NGS_Pileup.c">
-      <Filter>ngs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\NGS_PileupEvent.c">
-      <Filter>ngs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\NGS_Read.c">
-      <Filter>ngs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\NGS_ReadCollection.c">
-      <Filter>ngs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\NGS_ReadGroup.c">
-      <Filter>ngs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\NGS_Refcount.c">
-      <Filter>ngs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\NGS_Reference.c">
-      <Filter>ngs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\NGS_ReferenceSequence.c">
-      <Filter>ngs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\NGS_Statistics.c">
-      <Filter>ngs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\NGS_String.c">
-      <Filter>ngs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\SRA_DB_ReadCollection.c">
-      <Filter>ngs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\SRA_Read.c">
-      <Filter>ngs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\SRA_ReadCollection.c">
-      <Filter>ngs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\SRA_ReferenceSequence.c">
-      <Filter>ngs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\SRA_ReadGroup.c">
-      <Filter>ngs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\SRA_ReadGroupInfo.c">
-      <Filter>ngs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs\SRA_Statistics.c">
-      <Filter>ngs</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\libs\search\agrep-dp.c">
       <Filter>ksrch</Filter>
     </ClCompile>
@@ -1344,7 +1233,6 @@
     <ClCompile Include="..\..\..\libs\kfg\config-aws.c" />
     <ClCompile Include="..\..\..\libs\klib\btree.c" />
     <ClCompile Include="..\..\..\libs\kns\buffered-stream.c" />
-    <ClCompile Include="..\..\..\libs\ngs\CSRA1_Read.c" />
     <ClCompile Include="..\..\..\libs\align\unsupported_pileup_estimator.c" />
     <ClCompile Include="..\..\..\libs\axf\seq-restore-linkage-group.c" />
     <ClCompile Include="..\..\..\libs\ext\mbedtls\aes.c" />
@@ -1430,12 +1318,6 @@
     <ClCompile Include="..\..\..\libs\kns\proxy.c" />
     <ClCompile Include="..\..\..\libs\kns\stream-from-buffer.c" />
     <ClCompile Include="..\..\..\libs\kns\tls.c" />
-    <ClCompile Include="..\..\..\libs\ngs\NGS_FragmentBlob.c" />
-    <ClCompile Include="..\..\..\libs\ngs\NGS_FragmentBlobIterator.c" />
-    <ClCompile Include="..\..\..\libs\ngs\VByteBlob.c" />
-    <ClCompile Include="..\..\..\libs\ngs\NGS_ReferenceBlob.c" />
-    <ClCompile Include="..\..\..\libs\ngs\NGS_ReferenceBlobIterator.c" />
-    <ClCompile Include="..\..\..\libs\ngs\EBI_ReferenceSequence.c" />
     <ClCompile Include="..\..\..\libs\sraxf\tokenize-spot_name-generic-fastq.c" />
     <ClCompile Include="..\..\..\libs\vdb\cursor-table.c" />
     <ClCompile Include="..\..\..\libs\vdb\cursor-view.c" />
@@ -1443,6 +1325,8 @@
     <ClCompile Include="..\..\..\libs\vdb\schema-view.c" />
     <ClCompile Include="..\..\..\libs\vdb\view.c" />
     <ClCompile Include="..\..\..\libs\vfs\services.c" />
+    <ClCompile Include="..\..\..\libs\vfs\services-cache.c" />
+    <ClCompile Include="..\..\..\libs\vfs\SraDesc.c" />
     <ClCompile Include="..\..\..\libs\vfs\remote-services.c" />
     <ClCompile Include="..\..\..\libs\vfs\srv-response.c" />
     <ClCompile Include="..\..\..\libs\diagnose\diagnose.c" />

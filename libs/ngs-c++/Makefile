@@ -28,9 +28,9 @@ TOP ?= $(abspath ../..)
 MODULE = libs/ngs-c++
 
 INT_LIBS = \
+	libncbi-ngs-c++
 
 EXT_LIBS = \
-	libncbi-ngs-c++
 
 ALL_LIBS = \
 	$(INT_LIBS) \
@@ -79,7 +79,7 @@ clean: stdclean
 #-------------------------------------------------------------------------------
 # ncbi-ngs-c++
 #
-$(LIBDIR)/libncbi-ngs-c++: $(addprefix $(LIBDIR)/libncbi-ngs-c++.,$(LIBX))
+$(ILIBDIR)/libncbi-ngs-c++: $(addprefix $(ILIBDIR)/libncbi-ngs-c++.,$(LIBX))
 
 NGS_SRC = \
 	NCBI-NGS
@@ -89,7 +89,7 @@ NGS_OBJ = \
 
 NGS_LIB = \
 
-$(LIBDIR)/libncbi-ngs-c++.$(LIBX): $(NGS_OBJ)
+$(ILIBDIR)/libncbi-ngs-c++.$(LIBX): $(NGS_OBJ)
 	$(LP) --slib --vers $(SRCDIR)/../ncbi-vdb/libncbi-vdb.vers -o $@ $^ $(NGS_LIB)
 
 

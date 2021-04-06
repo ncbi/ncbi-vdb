@@ -1,0 +1,13 @@
+version 1;
+
+include 'vdb/vdb.vschema';
+
+table SEQUENCE #1.0
+{
+    column default limit = 8000000;
+
+    column <ascii> bzip_encoding READ;
+    column <U8> bzip_encoding QUALITY;
+    column <U32> bzip_encoding READ_LEN;
+    column <U32> bzip_encoding READ_START;
+};

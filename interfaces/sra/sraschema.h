@@ -57,13 +57,10 @@ struct VDBManager;
  *  a schema object pre-loaded with default SRA schema
  */
 
-
 /* Make
- *  create an instance of the default SRA schema
+ *  create an instance of the default (empty) SRA schema
  */
-SRA_EXTERN rc_t CC SRAMgrMakeSRASchema ( struct SRAMgr const *self, struct VSchema **schema );
-SRA_EXTERN rc_t CC VDBManagerMakeSRASchema ( struct VDBManager const *self, struct VSchema **schema );
-
+#define VDBManagerMakeSRASchema VDBManagerMakeSchema
 
 #ifdef __cplusplus
 }

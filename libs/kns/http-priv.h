@@ -184,6 +184,9 @@ struct KClientHttp
     bool close_connection;
 
     EUriForm uf; /* Form of Request-URI in Request-Line when using proxy */
+
+    char * ua; /* user agent */
+    char * ua_head; /* user agent for HEAD */
 };
 
 void KClientHttpClose ( struct KClientHttp * self );
@@ -227,6 +230,8 @@ struct KClientHttpRequest
     bool payRequired; /* payment info required to access this URL */
 
     bool rangeRequested;
+
+    bool head; /* is HEAD request */
 };
 
 void KClientHttpGetRemoteEndpoint ( const struct KClientHttp * self,

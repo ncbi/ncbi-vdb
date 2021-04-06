@@ -142,6 +142,8 @@ rc_t KClientHttpWhack ( KClientHttp * self )
     KDataBufferWhack ( & self -> line_buffer );
     KNSManagerRelease ( self -> mgr );
     KRefcountWhack ( & self -> refcount, "KClientHttp" );
+    free ( self -> ua );
+    free ( self -> ua_head );
     free ( self );
 
     return 0;
@@ -653,6 +655,37 @@ rc_t KClientHttpInit ( KClientHttp * http, const KDataBuffer *hostname_buffer, v
             /* Its safe to assign pointer because we know
                that the pointer is within the buffer */
             http -> hostname = * _host;
+        }
+    }
+
+    if ( rc == 0 )
+    {
+        const char * s;
+        const char * ua = NULL;
+        rc = KNSManagerGetUserAgent(&ua);
+        if (rc == 0)
+            http->ua = string_dup_measure(ua, NULL);
+        /* update UserAgent with -head */
+        if (rc == 0)
+            rc = KNSManagerGetUserAgentSuffix(&s);
+        if (rc == 0) {
+            char orig_suffix[KNSMANAGER_STRING_MAX];
+            char new_suffix[KNSMANAGER_STRING_MAX];
+            string_copy(orig_suffix, sizeof orig_suffix,
+                s, KNSMANAGER_STRING_MAX);
+            rc = string_printf(new_suffix, sizeof new_suffix, NULL,
+                "%s-head", s);
+            if (rc == 0)
+                rc = KNSManagerSetUserAgentSuffix(new_suffix);
+            if (rc == 0)
+                rc = KNSManagerGetUserAgent(&ua);
+            if (rc == 0)
+                http->ua_head = string_dup_measure(ua, NULL);
+            {   /* Restore UserAgent */
+                rc_t rc2 = KNSManagerSetUserAgentSuffix(orig_suffix);
+                if (rc == 0 && rc2 != 0)
+                    rc = rc2;
+            }
         }
     }
 

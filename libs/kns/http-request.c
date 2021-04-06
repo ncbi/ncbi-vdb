@@ -1023,7 +1023,7 @@ static EUriForm EUriFormGuess ( const String * hostname,
         case 1:
             if ( uf != eUFUndefined )
                 return uf; /* reuse cached uriForm */
-            else { /* first call; guess uriForm by hostnae */
+            else { /* first call; guess uriForm by hostname */
                 String googleapis;
                 CONST_STRING ( & googleapis, "storage.googleapis.com" );
                 if ( StringEqual ( & googleapis, hostname ) )
@@ -1153,7 +1153,7 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
     skip = hostname->size - stor31.size;
     if (hostname->size >= stor31.size &&
         string_cmp(stor31.addr, stor31.size, hostname->addr + skip,
-            hostname->size - skip, stor31.size) == 0)
+            hostname->size - skip, stor31.len) == 0)
     {
         cpId = cloud_provider_aws;
     }
@@ -1165,7 +1165,7 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
         if (hostname->size >= amazonaws.size &&
             string_cmp(amazonaws.addr, amazonaws.size,
                 hostname->addr + skip, hostname->size - skip,
-                amazonaws.size) == 0)
+                amazonaws.len) == 0)
         {
             cpId = cloud_provider_aws;
         }
@@ -1176,7 +1176,7 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
             if (hostname->size >= google.size &&
                 string_cmp(google.addr, google.size,
                     hostname->addr + skip, hostname->size - skip,
-                    google.size) == 0)
+                    google.len) == 0)
             {
                 cpId = cloud_provider_gcp;
             }
@@ -1185,7 +1185,7 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
                 if (hostname->size >= google.size &&
                     string_cmp(google.addr, google.size,
                         hostname->addr + skip, hostname->size - skip,
-                        google.size) == 0)
+                        google.len) == 0)
                 {
                     cpId = cloud_provider_gcp;
                 }
@@ -1345,8 +1345,13 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
     /* add an User-Agent header from the kns-manager if we did not find one already in the header tree */
     if ( !have_user_agent )
     {
+        rc_t r3 = 0;
         const char * ua = NULL;
-        rc_t r3 = KNSManagerGetUserAgent ( &ua );
+        if ( self -> http != NULL ) {
+            ua = self -> head ? self -> http -> ua_head : self -> http -> ua;
+        }
+        if ( ua == NULL )
+            r3 = KNSManagerGetUserAgent ( &ua );
         if ( r3 == 0 )
         {
             r2 = KDataBufferPrintf ( buffer, "User-Agent: %s\r\n", ua );
@@ -1473,6 +1478,8 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
     const uint32_t max_redirect = 5;
     char * expiration = NULL;
 
+    uint32_t uriForm = 1;
+
     /* TBD - may want to prevent a Content-Type or other headers here */
 
     if ( self -> body . elem_count != 0 )
@@ -1480,8 +1487,6 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
 
     for ( i = 0; i < max_redirect; ++ i )
     {
-        uint32_t uriForm = 1;
-
         KClientHttpResult *rslt;
 
         KDataBuffer buffer;
@@ -1629,55 +1634,98 @@ rc_t KClientHttpRequestSendReceiveNoBody ( KClientHttpRequest *self, KClientHttp
  */
 LIB_EXPORT rc_t CC KClientHttpRequestHEAD ( KClientHttpRequest *self, KClientHttpResult **rslt )
 {
-    rc_t rc=0;
+    rc_t rc = 0;
+    bool headless = false;
 
-    if ( self -> ceRequired || self -> payRequired )
+    static int HEADLESS = -1;
+    if ( HEADLESS < 0 ) {
+        char * s = getenv ( "NCBI_VDB_GET_AS_HEAD" );
+        if ( s == NULL )
+            HEADLESS = 0;
+        else if ( s [ 0 ] != '\0' )
+            HEADLESS = 1;
+        else
+            HEADLESS = 0;
+    }
+
+    self->head = true; /* inside of HEAD request */
+
+    assert ( HEADLESS >= 0 );
+
+    if ( self -> ceRequired || self -> payRequired || HEADLESS )
+        headless = true;
+
+    if ( headless )
     {   /* use POST or GET for 256 bytes */
         /* update UserAgent with -head */
-        KNSManagerSetUserAgentSuffix("-head");
-
-        char buf [ 256 ];
-
-        /* add header "Range bytes = 0,HeadSize" */
-        rc = KClientHttpRequestByteRange ( self, 0, sizeof buf );
+        const char * s;
+        rc = KNSManagerGetUserAgentSuffix( & s );
         if ( rc == 0 )
         {
-            rc = self -> ceRequired ? KClientHttpRequestPOST ( self, rslt ) : KClientHttpRequestGET ( self, rslt );
+            char orig_suffix[ KNSMANAGER_STRING_MAX ];
+            char new_suffix[ KNSMANAGER_STRING_MAX ];
+
+            string_copy( orig_suffix, sizeof (orig_suffix), s, KNSMANAGER_STRING_MAX );
+
+            rc = string_printf( new_suffix, sizeof( new_suffix ), NULL, "%s-head", s );
             if ( rc == 0 )
             {
-                uint64_t result_size64 = sizeof buf;
-                KStream * response;
-
-                /* extractSize */
-                KClientHttpResultSize ( *rslt, & result_size64 );
-
-                if ( result_size64 > sizeof buf ) /* unlikely but would be very unpleasant */
+                rc = KNSManagerSetUserAgentSuffix( new_suffix );
+                if (rc == 0 )
                 {
-                    result_size64 = sizeof buf;
+                    char buf [ 256 ];
+
+                    /* add header "Range bytes = 0,HeadSize" */
+                    rc = KClientHttpRequestByteRange ( self, 0, sizeof buf );
+                    if ( rc == 0 )
+                    {
+                        rc = self -> ceRequired ? KClientHttpRequestPOST ( self, rslt ) : KClientHttpRequestGET ( self, rslt );
+                        if ( rc == 0 )
+                        {
+                            uint64_t result_size64 = sizeof buf;
+                            KStream * response;
+
+                            /* extractSize */
+                            KClientHttpResultSize ( *rslt, & result_size64 );
+
+                            if ( result_size64 > sizeof buf ) /* unlikely but would be very unpleasant */
+                            {
+                                result_size64 = sizeof buf;
+                            }
+
+                            /* consume and discard result_size64 bytes */
+                            rc = KClientHttpResultGetInputStream ( *rslt, & response );
+                            if ( rc == 0 )
+                            {
+                                rc = KStreamTimedReadExactly ( response, buf, result_size64, NULL );
+                                KStreamRelease ( response );
+                            }
+                        }
+                    }
+                    else
+                    {
+                        rc = RC ( rcNS, rcString, rcAllocating, rcMemory, rcExhausted );
+                    }
+
+                    {   /* Restore UserAgent */
+                        rc_t rc2 = KNSManagerSetUserAgentSuffix( orig_suffix );
+                        if ( rc == 0 )
+                        {
+                            rc = rc2;
+                        }
+                    }
                 }
 
-                /* consume and discard result_size64 bytes */
-                rc = KClientHttpResultGetInputStream ( *rslt, & response );
-                if ( rc == 0 )
-                {
-                    rc = KStreamTimedReadExactly ( response, buf, result_size64, NULL );
-                    KStreamRelease ( response );
-                }
             }
         }
-        else
-        {
-            rc = RC ( rcNS, rcString, rcAllocating, rcMemory, rcExhausted );
-        }
-
-        /* Restore UserAgent */
-        KNSManagerSetUserAgentSuffix("");
-        return rc;
     }
     else
     {
-        return KClientHttpRequestSendReceiveNoBody ( self, rslt, "HEAD" );
+        rc = KClientHttpRequestSendReceiveNoBody ( self, rslt, "HEAD" );
     }
+
+    self->head = false; /* reset head value: just in case*/
+    return rc;
 }
 
 /* GET
@@ -1879,7 +1927,7 @@ static bool GovSiteByHttp ( const char * path ) {
 
         /* resolver-cgi is called over http */
         if ( path_size > size &&
-             strcase_cmp ( path, size, http . addr, size, size ) == 0 )
+             strcase_cmp ( path, size, http . addr, size, http.len ) == 0 )
         {
             EUrlParseState state = eUPSBegin;
             unsigned i = 0;
@@ -1909,7 +1957,7 @@ static bool GovSiteByHttp ( const char * path ) {
                 CONST_STRING ( & gov, ".gov" );
                 size = gov . size;
                 if ( strcase_cmp
-                    ( path + i - 5, size, gov . addr, size, size ) == 0 )
+                    ( path + i - 5, size, gov . addr, size, gov.len ) == 0 )
                 {
                     return true;
                 }

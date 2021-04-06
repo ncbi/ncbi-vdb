@@ -44,19 +44,44 @@ struct Sync {
     /* low order bit indicates that a writer is waiting (or active)
      * remainder of bits is the count of active readers
      */
-    atomic64_t counter;
     KLock *mutex;
+    atomic_t counter;
 };
+
+static void syncReadLock(Sync *const sync)
+{
+    if ((atomic_read_and_add_even(&sync->counter, 2) & 1) != 0) {
+        /* a writer is waiting or active */
+        KLockAcquire(sync->mutex);
+        atomic_add(&sync->counter, 2);
+        KLockUnlock(sync->mutex);
+    }
+}
+
+static void syncReadUnlock(Sync *const sync)
+{
+    atomic_add(&sync->counter, -2);
+}
+
+static void syncWriteLock(Sync *const sync)
+{
+    assert((atomic_read(&sync->counter) & 1) == 0); /* there is only one writer */
+
+    atomic_inc(&sync->counter); /* tell readers to wait */
+    KLockAcquire(sync->mutex);
+    while (atomic_read(&sync->counter) != 1) /* wait for readers to finish */
+        ;
+}
+
+static void syncWriteUnlock(Sync *const sync)
+{
+    atomic_dec(&sync->counter);
+    KLockUnlock(sync->mutex);
+}
 
 static RangeList const *readerStart(RangeList const volatile *const list)
 {
-    Sync *const sync = list->sync;
-    if ((atomic64_read_and_add_even(&sync->counter, 2) & 1) != 0) {
-        /* a writer is waiting or active */
-        KLockAcquire(sync->mutex);
-        atomic64_add(&sync->counter, 2);
-        KLockUnlock(sync->mutex);
-    }
+    syncReadLock(list->sync);
 
     // list is not volatile now
     return (RangeList const *)list;
@@ -64,8 +89,7 @@ static RangeList const *readerStart(RangeList const volatile *const list)
 
 static RangeList const volatile *readerDone(RangeList const *const list)
 {
-    Sync *const sync = list->sync;
-    atomic64_add(&sync->counter, -2);
+    syncReadUnlock(list->sync);
 
     // list is volatile again
     return (RangeList const volatile *)list;
@@ -75,20 +99,12 @@ static RangeList const volatile *readerDone(RangeList const *const list)
 
 static void writerStart(RangeList *const list)
 {
-    Sync *const sync = list->sync;
-    assert((atomic64_read(&sync->counter) & 1) == 0); /* there is only one writer */
-
-    atomic64_inc(&sync->counter); /* tell readers to wait */
-    KLockAcquire(sync->mutex);
-    while (atomic_read(&sync->counter) != 1) /* wait for readers to finish */
-        ;
+    syncWriteLock(list->sync);
 }
 
 static void writerDone(RangeList *const list)
 {
-    Sync *const sync = list->sync;
-    atomic64_dec(&sync->counter);
-    KLockUnlock(sync->mutex);
+    syncWriteUnlock(list->sync);
 }
 
 static void updateRanges(  RangeList *const list

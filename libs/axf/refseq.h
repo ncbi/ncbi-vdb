@@ -38,7 +38,7 @@ struct RefSeq {
     uint8_t *bases;
     RefSeqReaderFunc volatile reader;
     RefSeqAsyncLoadInfo *volatile async;
-    atomic64_t rwl;
+    atomic_t rwl;
     unsigned length; ///< logical length, is base count of the reference
 };
 

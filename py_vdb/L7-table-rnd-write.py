@@ -2,7 +2,13 @@
 
 from vdb import *
 
-lib_wr = "./2.8.0/libncbi-wvdb.so.2.8.0"
+#for this to work you need:
+#at $HOME/.ncbi/lib64 : libncbi-wvdb.so
+# --- and ---
+#for included schema to be found:
+#assuming we have vdb.vschema at $HOME/devel/ncbi-vdb/interfaces/vdb_error
+#we need this line in $HOME/.ncbi/user-settings.mkfg:
+#/vdb/schema/paths = "$HOME/devel/ncbi-vdb/interfaces"
 
 schematxt = '''
 version 1;
@@ -40,7 +46,7 @@ if __name__ == '__main__' :
     table_name = "L7"
         
     try :
-        mgr = manager( OpenMode.Write, lib_wr )
+        mgr = manager( OpenMode.Write )
     
         make_table( mgr, schematxt, table_name )
         #mgr.OpenTable( table_name ).print_rows()

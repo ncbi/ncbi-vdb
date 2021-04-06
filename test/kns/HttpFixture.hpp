@@ -24,6 +24,7 @@
 *
 * Test fixture for HTTP unit tests
 */
+#pragma once
 
 #include <string>
 #include <list>
@@ -35,6 +36,8 @@ struct KFile;
 class TestStream;
 #define KSTREAM_IMPL TestStream
 #include <kns/impl.h>
+
+#include "KNSManagerFixture.hpp"
 
 class TestStream
 {
@@ -52,7 +55,7 @@ public:
     static std :: list < std :: string > m_responses;
 };
 
-class HttpFixture
+class HttpFixture : public KNSManagerFixture
 {
 public:
     HttpFixture();
@@ -64,7 +67,6 @@ public:
 
     static std :: string MakeURL(const std :: string & base);
 
-    struct KNSManager* m_mgr;
     static KStream m_stream;
     struct KFile* m_file;
     struct KClientHttpRequest * m_req;

@@ -29,20 +29,23 @@ TOP ?= $(abspath ../..)
 MODULE = test/vfs
 
 TEST_TOOLS = \
+	test-log-names-error \
 	test-redirect-rejected-names-cgi-http-to-https \
 	test-resolver-with-log \
 	test-sdl-response \
 	test-services \
+	test-SraDesc \
 	test-caching \
 	test-names-30 \
 	test-path \
 	test-path-c \
 	test-perm \
+	test-resolve \
 	test-resolver \
 	test-vfsmanager \
 	test-json-response \
-	test-log-names-error \
 	test-resolver4 \
+	test-resolve-qual \
 
 include $(TOP)/build/Makefile.env
 
@@ -188,6 +191,18 @@ $(TEST_BINDIR)/test-perm: $(TP_OBJ)
 	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
 
 #----------------------------------------------------------------
+# test-resolve-qual
+
+RQ_SRC = \
+	test-resolve-qual
+
+RQ_OBJ = \
+	$(addsuffix .$(OBJX),$(RQ_SRC))
+
+$(TEST_BINDIR)/test-resolve-qual: $(RQ_OBJ)
+	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
+
+#----------------------------------------------------------------
 # C++ test on VFSManager
 #
 
@@ -205,6 +220,17 @@ MANAGERTEST_LIB = \
 $(TEST_BINDIR)/test-vfsmanager: $(MANAGERTEST_OBJ)
 	$(LP) --exe -o $@ $^ $(MANAGERTEST_LIB)
 
+
+#----------------------------------------------------------------
+
+RESOLVETEST_SRC = \
+	test-resolve
+
+RESOLVETEST_OBJ = \
+	$(addsuffix .$(OBJX),$(RESOLVETEST_SRC))
+
+$(TEST_BINDIR)/test-resolve: $(RESOLVETEST_OBJ)
+	$(LP) --exe -o $@ $^ $(MANAGERTEST_LIB)
 
 #----------------------------------------------------------------
 # C++ test on VResolver
@@ -250,4 +276,16 @@ SERVICES_OBJ = \
 	$(addsuffix .$(OBJX),$(SERVICES_SRC))
 
 $(TEST_BINDIR)/test-services: $(SERVICES_OBJ)
+	$(LP) --exe -o $@ $^ $(RESOLVERTEST_LIB)
+
+#----------------------------------------------------------------
+# Test SraDesc
+#
+SD_SRC = \
+	test-SraDesc
+
+SD_OBJ = \
+	$(addsuffix .$(OBJX),$(SD_SRC))
+
+$(TEST_BINDIR)/test-SraDesc: $(SD_OBJ)
 	$(LP) --exe -o $@ $^ $(RESOLVERTEST_LIB)
