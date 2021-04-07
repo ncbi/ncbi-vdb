@@ -79,7 +79,13 @@ rc_t
 KClientHttpRequestAttachEnvironmentToken( KClientHttpRequest * self )
 {
     CloudMgr * cloudMgr;
-    rc_t rc = CloudMgrMake ( & cloudMgr, NULL, NULL );
+    rc_t rc = 0;
+
+    assert ( self );
+    if ( self -> ceAdded ) /* avoid adding CE multiple times */
+        return 0;
+
+    rc = CloudMgrMake(&cloudMgr, NULL, NULL);
     if ( rc == 0 )
     {
         Cloud * cloud;
@@ -87,10 +93,14 @@ KClientHttpRequestAttachEnvironmentToken( KClientHttpRequest * self )
         if ( rc == 0 )
         {
             rc = CloudAddComputeEnvironmentTokenForSigner ( cloud, self );
+            assert ( ! self -> ceAdded );
+            if ( rc == 0 )
+                self -> ceAdded = true;
             CloudRelease ( cloud );
         }
         CloudMgrRelease ( cloudMgr );
     }
+
     return rc;
 }
 

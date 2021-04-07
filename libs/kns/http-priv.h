@@ -230,6 +230,7 @@ struct KClientHttpRequest
     bool payRequired; /* payment info required to access this URL */
 
     bool rangeRequested;
+    bool ceAdded;
 
     bool head; /* is HEAD request */
 };
