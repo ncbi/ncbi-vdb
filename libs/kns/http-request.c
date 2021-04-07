@@ -76,30 +76,33 @@ LIB_EXPORT rc_t CC KClientHttpRequestSetCloudParams(
 }
 
 rc_t
-KClientHttpRequestAttachEnvironmentToken( KClientHttpRequest * self )
+KClientHttpRequestAttachEnvironmentToken( KClientHttpRequest * self,
+    Cloud * aCloud )
 {
-    CloudMgr * cloudMgr;
     rc_t rc = 0;
+    CloudMgr * cloudMgr = NULL;
+    Cloud * cloud = aCloud;
 
     assert ( self );
     if ( self -> ceAdded ) /* avoid adding CE multiple times */
         return 0;
 
-    rc = CloudMgrMake(&cloudMgr, NULL, NULL);
-    if ( rc == 0 )
-    {
-        Cloud * cloud;
-        rc = CloudMgrGetCurrentCloud ( cloudMgr, & cloud );
-        if ( rc == 0 )
-        {
-            rc = CloudAddComputeEnvironmentTokenForSigner ( cloud, self );
-            assert ( ! self -> ceAdded );
-            if ( rc == 0 )
-                self -> ceAdded = true;
-            CloudRelease ( cloud );
-        }
-        CloudMgrRelease ( cloudMgr );
+    if ( cloud == NULL ) {
+        rc = CloudMgrMake(&cloudMgr, NULL, NULL);
+        if (rc == 0)
+            rc = CloudMgrGetCurrentCloud(cloudMgr, &cloud);
     }
+
+    if ( rc == 0 ) {
+        rc = CloudAddComputeEnvironmentTokenForSigner ( cloud, self );
+        assert ( ! self -> ceAdded );
+        if ( rc == 0 )
+            self -> ceAdded = true;
+        if ( aCloud == NULL )
+            CloudRelease ( cloud );
+    }
+
+    CloudMgrRelease ( cloudMgr );
 
     return rc;
 }
@@ -1221,7 +1224,7 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
         if ( rc == 0 )
         {
             /* create a cloud object based on the target URL */
-            Cloud * cloud ;
+            Cloud * cloud = NULL;
             KClientHttpRequest * self = (KClientHttpRequest *)cself;
             rc = CloudMgrMakeCloud ( cloudMgr, & cloud, cpId );
             if (rc == 0) {
@@ -1231,8 +1234,8 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
                 if (cself->ceRequired
                     && method[0] != 'G') /* use CE just in POST requests  */
                 {
-                    rc = CloudAddComputeEnvironmentTokenForSigner(
-                        cloud, self);
+                    rc = KClientHttpRequestAttachEnvironmentToken(self,
+                        cloud);
                 }
                 CloudRelease ( cloud );
             }
