@@ -216,6 +216,8 @@ rc_t RetrierAgain(const KStableHttpFile * cself,
     if ( GetRCObject( rc ) == rcTransfer &&
          GetRCState( rc ) == rcCanceled )
     {
+        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ), ( "RetrierAgain: "
+            "RetrierAgain() called in canceled state\n" ) );
         return rc;
     }
 
