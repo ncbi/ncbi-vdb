@@ -75,6 +75,9 @@ struct KHttpFile
     bool payRequired;
 
     bool no_cache;
+
+    /* if true, do not attempt to reopen or reread on failure */
+    volatile bool cancelTransfer;
 };
 
 #endif

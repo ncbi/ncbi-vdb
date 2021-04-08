@@ -590,6 +590,7 @@ rc_t CC KCacheTeeFileDestroy ( KCacheTeeFile_v3 *self )
        this must be done before sealing the queue */
     STATUS ( STAT_PRG, "%s - setting 'quitting' flag\n", __func__ );
     self -> quitting = true;
+    KStableHttpFileCancelTransfer( self -> source );
 
     /* wake the background thread */
     STATUS ( STAT_PRG, "%s - signaling background thread to exit\n", __func__ );

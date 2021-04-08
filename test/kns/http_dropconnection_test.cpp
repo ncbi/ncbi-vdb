@@ -40,6 +40,7 @@
 
 #include <../libs/kns/stream-priv.h>
 #include <../libs/kns/http-priv.h>
+#include <kns/http-priv.h>
 
 #include <kfs/file.h>
 
@@ -428,6 +429,32 @@ FIXTURE_TEST_CASE(GET_Read_Failed_Reconnect_Failed, HttpFixture)
     REQUIRE ( m_reconnected );
 }
 #endif
+
+FIXTURE_TEST_CASE(Read_Timeout_CancelTransfer, HttpFixture)
+{
+    // While waiting for a read that evebtually times out, HttpFile can receive a
+    // message that the overall transfer has been cancelled (e.g. the enclosing CacheTeeFile timed out). In this case, HttpFile should stop attempts to recover.
+
+    TestStream::AddWriteRC ( 0 ); // send HEAD succeeds
+    TestStream::AddReadResponse ( Response_HEAD_OK );
+    REQUIRE_RC ( KNSManagerMakeHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str() ) );
+
+    TestStream::AddWriteRC ( 0 ); // send GET succeeds
+    TestStream::AddReadResponse( "TIMEOUT" ); // this is the first timeout
+
+    // HttpClient retries timed-out reads before returning rc to HttpFile which can then check the cancel-transfer flag.
+    // That is why we need the second timeout here.
+    TestStream::AddWriteRC ( 0 );
+    TestStream::AddReadResponse( "TIMEOUT" );
+
+    KStableHttpFileCancelTransfer( m_file );
+
+    rc_t rc_exp = SILENT_RC( rcNS, rcFile, rcReading, rcTransfer, rcCanceled );
+    // returning rc_exp means thet HttpFile stopped trying to re-read
+
+    rc_t rc = KFileTimedRead ( m_file, 0, m_buf, sizeof m_buf, &m_numRead, NULL );
+    REQUIRE_EQ( rc_exp, rc );
+}
 
 //////////////////////////////////////////// Main
 extern "C"

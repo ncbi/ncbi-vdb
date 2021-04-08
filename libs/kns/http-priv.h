@@ -294,6 +294,8 @@ rc_t KNSManagerVMakeHttpFileIntUnstable(const struct KNSManager *self,
 
 bool KUnstableFileIsKHttpFile(const struct KFile * self);
 
+void KHttpFileCancelTransfer(const struct KHttpFile * self);
+
 #ifdef __cplusplus
 }
 #endif

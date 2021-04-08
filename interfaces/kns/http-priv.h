@@ -76,6 +76,8 @@ rc_t KClientHttpRequestGetQuery( struct KClientHttpRequest * req, const struct S
 rc_t HttpFileGetReadTimeouts(const struct KFile * self, int32_t * millis,
     int32_t * totalMillis);
 
+void KStableHttpFileCancelTransfer(const struct KFile * self);
+
 #ifdef __cplusplus
 }
 #endif

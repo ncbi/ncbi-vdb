@@ -1226,7 +1226,7 @@ rc_t KClientHttpVAddHeader ( BSTree *hdrs, bool add,
     if ( rc == 0 && buf . elem_count != 0 )
     {
         size_t bsize = ( size_t ) buf . elem_count - 1;
-      
+
         /* get length of buf */
         size_t blen = string_len ( buf . base, bsize );
 
@@ -1402,7 +1402,7 @@ rc_t KClientHttpGetStatusLine ( KClientHttp *self, timeout_t *tm, String *msg, u
         DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_ERR), (
 "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@2 %s empty HttpStatusLine @@@@@@@@@@@@@@@@"
             "\n", __FILE__));
-        rc = RC(rcNS, rcNoTarg, rcReading, rcNoObj, rcIncomplete);
+        rc = SILENT_RC(rcNS, rcNoTarg, rcReading, rcNoObj, rcIncomplete);
     }
 
     if ( rc == 0 )
@@ -1663,7 +1663,7 @@ rc_t CC KClientHttpStreamTimedReadChunked ( const KClientHttpStream *cself,
         if ( sep == http -> line_buffer . base || ( * sep != 0 && * sep != ';' ) )
         {
             KClientHttpClose ( http );
-            rc = RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcIncorrect);
+            rc = SILENT_RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcIncorrect);
             self -> state = error_state;
             break;
         }

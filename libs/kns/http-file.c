@@ -791,13 +791,31 @@ rc_t CC KHttpFileTimedRead ( const KHttpFile *self,
         {
             uint32_t http_status;
             rc = KHttpFileTimedReadLocked ( self, pos, buffer, bsize, num_read, tm, & http_status );
+            if ( self -> cancelTransfer )
+            {
+                rc = SILENT_RC( rcNS, rcFile, rcReading, rcTransfer, rcCanceled );
+                break;
+            }
+
             if ( rc != 0 )
             {
                 rc_t rc2=KClientHttpReopen ( self -> http );
                 DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ), ( "KHttpFileTimedRead: KHttpFileTimedReadLocked failed, reopening\n" ) );
+                if ( self -> cancelTransfer )
+                {
+                    rc = SILENT_RC( rcNS, rcFile, rcReading, rcTransfer, rcCanceled );
+                    break;
+                }
+
                 if ( rc2 == 0 )
                 {
                     rc2 = KHttpFileTimedReadLocked ( self, pos, buffer, bsize, num_read, tm, & http_status );
+                    if ( self -> cancelTransfer )
+                    {
+                        rc = SILENT_RC( rcNS, rcFile, rcReading, rcTransfer, rcCanceled );
+                        break;
+                    }
+
                     if ( rc2 == 0 )
                     {
                         DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ), ( "KHttpFileTimedRead: reopened successfully\n" ) );
@@ -806,6 +824,7 @@ rc_t CC KHttpFileTimedRead ( const KHttpFile *self,
                     else
                     {
                         DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ), ( "KHttpFileTimedRead: reopen failed\n" ) );
+                        rc = rc2;
                         break;
                     }
                 }
@@ -819,6 +838,11 @@ rc_t CC KHttpFileTimedRead ( const KHttpFile *self,
                 break;
             }
             rc = KClientHttpReopen ( self -> http );
+            if ( self -> cancelTransfer )
+            {
+                rc = SILENT_RC( rcNS, rcFile, rcReading, rcTransfer, rcCanceled );
+                break;
+            }
         }
 
         rc2 = KHttpRetrierDestroy ( & retrier );
@@ -1130,7 +1154,13 @@ rc_t CC KHttpFileTimedReadChunked ( const KHttpFile * self, uint64_t pos,
        over HTTP with the Apache short-read bug. */
     assert ( KChunkReaderBufferSize ( chunks ) == 0 || KChunkReaderBufferSize ( chunks ) >= 256 );
 
+    if ( self -> cancelTransfer )
+    {
+        return SILENT_RC( rcNS, rcFile, rcReading, rcTransfer, rcCanceled );
+    }
+
     rc = KHttpRetrierInit ( & retrier, self -> url_buffer . base, self -> kns );
+
     if ( rc == 0 )
     {
         rc_t rc2;
@@ -1143,10 +1173,10 @@ rc_t CC KHttpFileTimedReadChunked ( const KHttpFile * self, uint64_t pos,
         {
             uint32_t http_status;
             rc = KHttpFileTimedReadChunkedLocked ( self, pos, chunks, bytes, num_read, tm, & http_status );
-            if ( GetRCObject( rc ) == rcTransfer &&
-                 GetRCState( rc ) == rcCanceled )
+            if ( self -> cancelTransfer )
             {
-                return rc;
+                rc = SILENT_RC( rcNS, rcFile, rcReading, rcTransfer, rcCanceled );
+                break;
             }
 
             /* ALWAYS account for chunks already read */
@@ -1162,9 +1192,19 @@ rc_t CC KHttpFileTimedReadChunked ( const KHttpFile * self, uint64_t pos,
                 rc2 = KClientHttpReopen ( self -> http );
                 DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ), ( "KHttpFileTimedReadChunked: "
                     "KHttpFileTimedReadChunkedLocked failed, reopening\n" ) );
+                if ( self -> cancelTransfer )
+                {
+                    rc = SILENT_RC( rcNS, rcFile, rcReading, rcTransfer, rcCanceled );
+                    break;
+                }
                 if ( rc2 == 0 )
                 {
                     rc2 = KHttpFileTimedReadChunkedLocked ( self, pos, chunks, bytes, num_read, tm, & http_status );
+                    if ( self -> cancelTransfer )
+                    {
+                        rc = SILENT_RC( rcNS, rcFile, rcReading, rcTransfer, rcCanceled );
+                        break;
+                    }
 
                     /* ALWAYS account for chunks already read */
                     pos += * num_read;
@@ -1198,6 +1238,11 @@ rc_t CC KHttpFileTimedReadChunked ( const KHttpFile * self, uint64_t pos,
                 break;
             }
             rc = KClientHttpReopen ( self -> http );
+            if ( self -> cancelTransfer )
+            {
+                rc = SILENT_RC( rcNS, rcFile, rcReading, rcTransfer, rcCanceled );
+                break;
+            }
         }
 
         rc2 = KHttpRetrierDestroy ( & retrier );
@@ -1552,4 +1597,11 @@ rc_t KNSManagerVMakeHttpFileIntUnstable(const KNSManager *self,
 
 bool KUnstableFileIsKHttpFile(const KFile * self) {
     return self != NULL && &self->vt->v1 == &vtKHttpFile;
+}
+
+void KHttpFileCancelTransfer(const KHttpFile * cself)
+{
+    KHttpFile * self = (KHttpFile *) cself;
+    assert( self );
+    self -> cancelTransfer = true;
 }

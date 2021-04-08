@@ -705,3 +705,13 @@ LIB_EXPORT bool CC KFileIsKHttpFile(const KFile * self)
     else
         return KUnstableFileIsKHttpFile(self);
 }
+
+void KStableHttpFileCancelTransfer(const KFile * self)
+{
+    STATUS ( STAT_PRG, "KStableFileCancelTransfer\n" );
+    if (self != NULL && &self->vt->v1 == &vtKHttpFile)
+    {
+        const KStableHttpFile * s = ( const KStableHttpFile * ) self;
+        KHttpFileCancelTransfer( ( const struct KHttpFile *) ( s -> file ) );
+    }
+}
