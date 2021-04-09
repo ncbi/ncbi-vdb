@@ -28,7 +28,8 @@
 #define DEFAUTL_KFG \
 "/config/default = \"true\"\n"                                                 \
                                                                                \
-			                                                       \
+"/libs/cloud/report_instance_identity = \"false\"\n"                           \
+                                                                               \
 "/repository/user/main/public/apps/file/volumes/flat = \"files\"\n"            \
 "/repository/user/main/public/apps/nakmer/volumes/nakmerFlat = \"nannot\"\n"   \
 "/repository/user/main/public/apps/nannot/volumes/nannotFlat = \"nannot\"\n"   \
