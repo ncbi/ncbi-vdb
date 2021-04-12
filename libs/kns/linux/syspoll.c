@@ -43,7 +43,9 @@
 #include <unistd.h>
 #include <errno.h>
 
-#include <sys/epoll.h>
+#if defined(__FreeBSD__)
+#include <libepoll-shim/sys/epoll.h> // implementation of Linux-only epoll syscall
+#endif
 #include <sys/types.h>
 #include <sys/socket.h>
 

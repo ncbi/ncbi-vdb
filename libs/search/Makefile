@@ -39,6 +39,9 @@ OBJFILES = \
 
 include $(TOP)/build/Makefile.env
 
+CARCH += -msse2
+# nucstrstr.c requires SSE2
+
 #-------------------------------------------------------------------------------
 # outer targets
 #

@@ -139,7 +139,7 @@ public:
 
 class RefseqFixture : public DepFixture {
 
-  #if LINUX
+  #if LINUX || BSD
     #define PATH "kfg/linux"
   #elif MAC
     #define PATH "kfg/mac"

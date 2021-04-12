@@ -25,7 +25,7 @@
 
 default: runtests
 
-runtests: run-tests run-test-proxy-with-scheme
+runtests:
 
 TOP ?= $(abspath ../..)
 MODULE = test/kns
@@ -46,6 +46,10 @@ TEST_TOOLS = \
 	test-timeouts \
 
 include $(TOP)/build/Makefile.env
+
+ifdef MBEDTLS_INCDIR
+	INCDIRS += $(addprefix -I,$(MBEDTLS_INCDIR))
+endif
 
 EXT_TOOLS = \
 	test-proxy \
@@ -133,6 +137,7 @@ $(TEST_BINDIR)/test-kns: $(KNSTEST_OBJ)
 	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
 
 kns: test-kns
+	if [ ! -d $(HOME)/.ncbi ]; then mkdir $(HOME)/.ncbi; fi
 	$(TEST_BINDIR)/test-kns  #-l=all
 
 #----------------------------------------------------------------

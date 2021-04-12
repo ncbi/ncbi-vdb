@@ -2850,6 +2850,8 @@ void add_predefined_nodes ( KConfig * self, const char * appname )
     #define OS "win"
 #elif SUN
     #define OS "sun"
+#elif BSD
+    #define OS "bsd"
 #else
     #error unrecognized OS
 #endif

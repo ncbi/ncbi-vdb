@@ -35,7 +35,6 @@ include $(TOP)/build/Makefile.config
 # default
 #
 MAIN_SUBDIRS = \
-	ext      \
 	kfc      \
 	klib     \
 	kproc    \
