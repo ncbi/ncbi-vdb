@@ -142,7 +142,11 @@ LIB_EXPORT KTime_t CC KTimeMakeTime ( const KTime *self )
         t . tm_isdst = self -> dst;
 
         ts = mktime ( &t );
+#if defined(__FreeBSD__)
+        ts += localtime(&ts)->tm_gmtoff;
+#else
         ts -= timezone;
+#endif
     }
 
     return ts;
