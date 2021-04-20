@@ -84,6 +84,7 @@
 extern "C" {
 #endif
 
+struct Cloud;
 struct KFile;
 struct KNSManager;
 struct KClientHttp;
@@ -230,6 +231,7 @@ struct KClientHttpRequest
     bool payRequired; /* payment info required to access this URL */
 
     bool rangeRequested;
+    bool ceAdded;
 
     bool head; /* is HEAD request */
 };
@@ -239,7 +241,8 @@ void KClientHttpGetRemoteEndpoint ( const struct KClientHttp * self,
 void KClientHttpGetLocalEndpoint ( const struct KClientHttp * self,
                                    struct KEndPoint * ep );
 
-rc_t KClientHttpRequestAttachEnvironmentToken( struct KClientHttpRequest * self );
+rc_t KClientHttpRequestAttachEnvironmentToken(
+    struct KClientHttpRequest * self, struct Cloud * cloud );
 
 /* exported private functions
 */
