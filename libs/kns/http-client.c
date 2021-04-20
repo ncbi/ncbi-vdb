@@ -1887,23 +1887,24 @@ rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
         else
             ptm = NULL;
         rc = KStreamTimedWriteAll ( self -> sock, buffer, len, & sent, ptm );
-        if ( rc != 0 )
-        {
-            rc_t rc2 = KClientHttpReopen ( self );
-            if ( rc2 == 0 )
-            {
-                if (self->write_timeout >= 0) {
-                    TimeoutInit ( & tm, self -> write_timeout );
-                    ptm = &tm;
-                }
-                else
-                    ptm = NULL;
-                rc2 = KStreamTimedWriteAll ( self -> sock, buffer, len, & sent,
-                    ptm );
-                if ( rc2 == 0 )
-                    rc = 0;
-            }
-        }
+        /* to temp. disable retrying... */
+        // if ( rc != 0 )
+        // {
+        //     rc_t rc2 = KClientHttpReopen ( self );
+        //     if ( rc2 == 0 )
+        //     {
+        //         if (self->write_timeout >= 0) {
+        //             TimeoutInit ( & tm, self -> write_timeout );
+        //             ptm = &tm;
+        //         }
+        //         else
+        //             ptm = NULL;
+        //         rc2 = KStreamTimedWriteAll ( self -> sock, buffer, len, & sent,
+        //             ptm );
+        //         if ( rc2 == 0 )
+        //             rc = 0;
+        //     }
+        // }
     }
 
     /* check the data was completely sent */

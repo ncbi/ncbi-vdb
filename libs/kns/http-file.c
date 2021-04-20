@@ -797,6 +797,9 @@ rc_t CC KHttpFileTimedRead ( const KHttpFile *self,
                 break;
             }
 
+            /* temp. disabled retry*/
+            break;
+
             if ( rc != 0 )
             {
                 rc_t rc2=KClientHttpReopen ( self -> http );

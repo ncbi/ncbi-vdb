@@ -211,6 +211,10 @@ static
 rc_t RetrierAgain(const KStableHttpFile * cself,
     rc_t rc, const char * func)
 {
+    /* to disable retry-mechanism: we just bounce back the given rc-code... */
+    return rc;
+    /* to disable retry-mechanism */
+
     KStableHttpFile * self = (KStableHttpFile *)cself;
 
     if ( GetRCObject( rc ) == rcTransfer &&
