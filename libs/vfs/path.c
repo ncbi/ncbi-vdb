@@ -4286,6 +4286,7 @@ rc_t VPathAttachVdbcache(VPath * self, const VPath * vdbcache) {
             if (rc == 0) {
                 rc = VPathRelease(self->vdbcache);
                 self->vdbcache = vdbcache;
+                ((VPath*)vdbcache)->vdbcacheChecked = true;
             }
         }
 
