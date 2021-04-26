@@ -22,8 +22,8 @@
 *
 * =========================================================================== */
 
-#include "../klib/singletons.h" /* VDB_USES_SINGLETONS */
-
-#ifdef VDB_USES_SINGLETONS
-    #define USE_SINGLETON 1
+#if 1
+    /* Turn on use of singletons.
+       Turn it of to debug memory leaks. */
+    #define VDB_USES_SINGLETONS
 #endif
