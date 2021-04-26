@@ -4533,7 +4533,8 @@ static rc_t VPathAttachVdbcacheIfEmpty(VPath * self, const VPath * vdbcache) {
     }
 }
 
-typedef enum { eNcbi, eS3, eGs, eMaxCloud } EService;
+typedef enum { eFasp, eNcbi, eS3, eGs, eMaxCloud } EService;
+/* We expect maximum 3 alternative HTTP locations and 1 FASP */
 
 static rc_t VPathGetServiceId(const VPath * self,
     EService * rService, String * service)
@@ -4570,6 +4571,12 @@ static rc_t VPathGetServiceId(const VPath * self,
     return rc;
 }
 
+/* Go through Service Response,
+   find all SRR-s and try to attach corresponding vdbcaches, if any.
+   Not the best implementation.
+
+   Currently I expect to get for a run: at most 3 locations (gs, s3, ncbi)
+   and, possibly fasp@ncbi and https URL for SRR */
 static rc_t KSrvRespObj_AttachVdbcaches(const KSrvRespObj * self) {
     rc_t rc = 0, rx = 0;
 
@@ -4580,15 +4587,14 @@ static rc_t KSrvRespObj_AttachVdbcaches(const KSrvRespObj * self) {
     const VPath * aVdbc = NULL;
     EService aService = eNcbi;
 
-    String sra, vdbcache;
+    String fasp, sra, vdbcache;
 
     VPath * srr[eMaxCloud];
     const VPath * vdbc[eMaxCloud];
-    for (i = 0; i < sizeof srr / sizeof srr[0]; ++i)
-        srr[i] = NULL;
-    for (i = 0; i < sizeof vdbc / sizeof vdbc[0]; ++i)
-        vdbc[i] = NULL;
+    memset(srr, 0, sizeof srr);
+    memset(vdbc, 0, sizeof vdbc);
 
+    CONST_STRING(&fasp, "fasp");
     CONST_STRING(&sra, "sra");
     CONST_STRING(&vdbcache, "vdbcache");
 
@@ -4611,7 +4617,7 @@ static rc_t KSrvRespObj_AttachVdbcaches(const KSrvRespObj * self) {
         while (rc == 0) {
             enum { eOther, eSra, eVdbcache } aType = eOther;
 
-            String id, nameExt, service, type;
+            String id, nameExt, scheme, service, type;
 
             VPath * next = NULL;
             rc = KSrvRespFileIteratorNextPath(fi, (const VPath **)& next);
@@ -4620,9 +4626,11 @@ static rc_t KSrvRespObj_AttachVdbcaches(const KSrvRespObj * self) {
 
             rc = VPathGetId(next, &id);
             if (rc == 0)
-                rc = VPathGetType(next, &type);
+                rc = VPathGetScheme(next, &scheme);
             if (rc == 0)
                 rc = VPathGetServiceId(next, &aService, &service);
+            if (rc == 0)
+                rc = VPathGetType(next, &type);
 
             if (rc == 0) {
                 if (acc == NULL)
@@ -4635,6 +4643,15 @@ static rc_t KSrvRespObj_AttachVdbcaches(const KSrvRespObj * self) {
             }
 
             if (rc == 0) {
+                if (StringCompare(&scheme, &fasp) == 0) {
+                    if (aService != eNcbi)
+                        PLOGERR(klogFatal, (klogFatal, RC(rcVFS,
+                            rcQuery, rcExecuting, rcString, rcUnexpected),
+                            "unexpected fasp service: "
+                            "'$(srv)", "srv=%S", &service));
+                    else
+                        aService = eFasp;
+                }
                 if (StringCompare(&type, &sra) == 0) {
                     rc = VPathGetNameExt(next, &nameExt);
                     if (rc == 0 && nameExt.size == 0)
@@ -4653,7 +4670,7 @@ static rc_t KSrvRespObj_AttachVdbcaches(const KSrvRespObj * self) {
                     srr[aService] = next;
                 else
                 {
-                    PLOGERR(klogFatal, (klogFatal,
+                    PLOGERR(klogInt, (klogInt,
                         RC(rcVFS, rcQuery, rcExecuting, rcString, rcUnexpected),
                         "multiple response SRR URLs for the same service "
                         "'$(service)'", "service=%S", &service));
@@ -4706,9 +4723,21 @@ static rc_t KSrvRespObj_AttachVdbcaches(const KSrvRespObj * self) {
                 if (srr[i] != NULL) {
                     const VPath * v = NULL;
                     switch (i) {
+                    case eFasp:
+                        if (vdbc[eFasp] != NULL)
+                            v = vdbc[eFasp];
+                        else if (vdbc[eNcbi] != NULL)
+                            v = vdbc[eNcbi];
+                        else if (vdbc[eS3] != NULL)
+                            v = vdbc[eS3];
+                        else
+                            v = vdbc[eGs];
+                        break;
                     case eNcbi:
                         if (vdbc[eNcbi] != NULL)
                             v = vdbc[eNcbi];
+                        else if (vdbc[eFasp] != NULL)
+                            v = vdbc[eFasp];
                         else if (vdbc[eS3] != NULL)
                             v = vdbc[eS3];
                         else
