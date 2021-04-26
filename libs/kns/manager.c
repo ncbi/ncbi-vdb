@@ -145,6 +145,7 @@ static rc_t KNSManagerWhack ( KNSManager *self )
         KLockRelease ( kns_manager_lock );
         kns_manager_lock = NULL;
     }
+    if ( !rc ) rc = KDataBufferWhack ( &kns_manager_guid );
     if ( !rc ) rc = KDataBufferWhack ( &kns_manager_user_agent );
 
     return rc;
