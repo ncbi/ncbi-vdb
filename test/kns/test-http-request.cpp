@@ -110,7 +110,7 @@ FIXTURE_TEST_CASE(HttpRequest_head_as_get, HttpRequestFixture)
         "\r\n");
     KClientHttpResult *rslt;
     REQUIRE_RC ( KClientHttpRequestHEAD ( m_req, & rslt ) );
-    unsetenv(NAME);
+    putenv(const_cast<char*>(NAME "="));
     REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
 
     string req = TestStream::m_requests.front();
