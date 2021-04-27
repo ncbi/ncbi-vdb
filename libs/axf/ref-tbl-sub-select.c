@@ -70,7 +70,7 @@ struct RefTableSubSelect
             uint32_t cmp_read_idx;
             /* set once upon 1st call */
             /* set once per each call, if changed from previous */
-            char* name;
+            char *name;
             int64_t start_id;
             int64_t stop_id;
             uint32_t name_len;
@@ -90,6 +90,110 @@ struct RefTableSubSelect
     } u;
 };
 
+static rc_t GetName(RefTableSubSelect* self, int64_t ref_row_id)
+{
+    void const *vp = NULL;
+    uint32_t len;
+    rc_t const rc = VCursorCellDataDirect(self->curs, ref_row_id, self->u.ref.name_idx, NULL, &vp, NULL, &len);
+
+    if (rc == 0) {
+        void *const p = realloc(self->u.ref.name, len);
+        if (p)
+            self->u.ref.name = p;
+        else
+            return RC(rcXF, rcFunction, rcSelecting, rcMemory, rcExhausted);
+        self->u.ref.name_len = len;
+        memmove(self->u.ref.name, vp, len);
+    }
+    return rc;
+}
+
+static rc_t GetRefRowRange(RefTableSubSelect* self, int64_t ref_row_id)
+{
+    struct {
+        int64_t start_id;
+        int64_t stop_id;
+    } * out = 0;
+    rc_t rc = VCursorParamsSet((void *)self->curs, "QUERY_SEQ_NAME", "%.*s", self->u.ref.name_len, self->u.ref.name);
+    if (rc) return rc;
+
+    rc = VCursorCellDataDirect(self->curs, ref_row_id, self->u.ref.name_range_idx, NULL, &out, NULL, NULL);
+    if (rc) return rc;
+
+    self->u.ref.start_id = out->start_id;
+    self->u.ref.stop_id = out->stop_id;
+    return 0;
+}
+
+static rc_t GetIsLocalReference(RefTableSubSelect* self)
+{
+    int64_t row;
+
+    self->u.ref.local = false;
+    for (row = self->u.ref.start_id; row <= self->u.ref.stop_id; ++row) {
+        uint32_t len = 0;
+        void const *dummy = NULL;
+        rc_t const rc = VCursorCellDataDirect(self->curs, row, self->u.ref.cmp_read_idx, NULL, &dummy, NULL, &len);
+        if (rc) return rc;
+        if (len > 0) {
+            self->u.ref.local = true;
+            return 0;
+        }
+    }
+    return 0;
+}
+
+static rc_t GetIsCircularReference(RefTableSubSelect* self)
+{
+    void const *vp = 0;
+    rc_t const rc = VCursorCellDataDirect(self->curs, self->u.ref.stop_id, self->u.ref.circular_idx, NULL, &vp, NULL, NULL);
+    if (rc) return rc;
+    self->u.ref.circular = *(bool const *)vp || self->u.ref.local;
+    return 0;
+}
+
+static rc_t GetMaxSeqLen(RefTableSubSelect* self)
+{
+    void const *vp = 0;
+    rc_t const rc = VCursorCellDataDirect(self->curs, self->u.ref.stop_id, self->u.ref.max_seq_len_idx, NULL, &vp, NULL, NULL);
+    if (rc) return rc;
+    self->u.ref.max_seq_len = *(uint32_t const *)vp;
+    return 0;
+}
+
+static rc_t GetSeqLen(RefTableSubSelect* self)
+{
+    void const *vp = 0;
+    rc_t const rc = VCursorCellDataDirect(self->curs, self->u.ref.stop_id, self->u.ref.seq_len_idx, NULL, &vp, NULL, NULL);
+    if (rc) return rc;
+
+    /* len(last row) + (rows - 1) * max_seq_len */
+    self->u.ref.seq_len = (uint32_t)(((uint64_t)*(uint32_t const *)vp) + (self->u.ref.stop_id - self->u.ref.start_id) * self->u.ref.max_seq_len);
+    return 0;
+}
+
+static rc_t UpdateCachedRefData(RefTableSubSelect* self, int64_t ref_row_id)
+{
+    rc_t rc = 0;
+
+    rc = GetName(self, ref_row_id);
+    if (rc) return rc;
+
+    rc = GetRefRowRange(self, ref_row_id);
+    if (rc) return rc;
+
+    rc = GetIsLocalReference(self);
+    if (rc) return rc;
+
+    rc = GetIsCircularReference(self);
+    if (rc) return rc;
+
+    rc = GetMaxSeqLen(self);
+    if (rc) return rc;
+
+    return GetSeqLen(self);
+}
+
 /*
   ref_ploidy != 0 means that offset here is relative to ref_row_id, so it can be
     negative or positive and can extend between rows within same refseq
@@ -105,80 +209,7 @@ rc_t CC REFERENCE_TABLE_sub_select( RefTableSubSelect* self, int64_t ref_row_id,
     INSDC_coord_len num_read;
 
     if ( ref_row_id < self->u.ref.start_id || ref_row_id > self->u.ref.stop_id )
-    {
-        /* update cached ref data if ref has changed */
-        const char* n;
-        uint32_t n_len;
-        struct {
-            int64_t start_id;
-            int64_t stop_id;
-        } *out;
-    
-        SUB_DEBUG( ( "SUB.Rd in 'ref-tbl-sub-select.c' (REF) at #%lu offset %lu\n", ref_row_id, offset ) );
-
-        rc = VCursorCellDataDirect( self->curs, ref_row_id, self->u.ref.name_idx, NULL, ( const void** )&n, NULL, &n_len );
-        if ( rc == 0 )
-        {
-            rc = VCursorParamsSet( ( const struct VCursorParams * )(self->curs), "QUERY_SEQ_NAME", "%.*s", n_len, n );
-            if ( rc == 0 )
-            {
-                rc = VCursorCellDataDirect( self->curs, ref_row_id, self->u.ref.name_range_idx, NULL, (const void**)&out, NULL, NULL );
-                if ( rc == 0 )
-                {
-                    if ( self->u.ref.name_len < n_len )
-                    {
-                        void* p = realloc( self->u.ref.name, n_len );
-                        if ( p == NULL )
-                            rc = RC( rcXF, rcFunction, rcSelecting, rcMemory, rcExhausted );
-                        else
-                            self->u.ref.name = ( char* )p;
-                    }
-
-                    if ( rc == 0 )
-                    {
-                        const bool* c;
-                        INSDC_coord_len* sl;
-                        uint32_t* m;
-                        uint32_t cmp_read_len = 0;
-                        int64_t row;
-                        
-                        memmove( self->u.ref.name, n, n_len );
-                        self->u.ref.name_len = n_len;
-                        self->u.ref.start_id = out->start_id;
-                        self->u.ref.stop_id = out->stop_id;
-                        for ( row = out->start_id; row <= out->stop_id && cmp_read_len == 0; ++row )
-                        {
-                            uint32_t tmp_len = 0;
-                            void const *dummy = NULL;
-                            
-                            rc = VCursorCellDataDirect( self->curs, row, self->u.ref.cmp_read_idx, NULL, &dummy, NULL, &tmp_len );
-                            if ( rc != 0 ) break;
-                            cmp_read_len += tmp_len;
-                        }
-
-                        if ( rc == 0 )
-                        {
-                            rc = VCursorCellDataDirect( self->curs, self->u.ref.stop_id, self->u.ref.circular_idx, NULL, (const void**)&c, NULL, NULL );
-                            if ( rc == 0 )
-                            {
-                                rc = VCursorCellDataDirect( self->curs, self->u.ref.stop_id, self->u.ref.seq_len_idx, NULL, (const void**)&sl, NULL, NULL );
-                                if ( rc == 0 )
-                                {
-                                    rc = VCursorCellDataDirect( self->curs, self->u.ref.stop_id, self->u.ref.max_seq_len_idx, NULL, (const void**)&m, NULL, NULL);
-                                    if ( rc == 0 )
-                                    {
-                                        self->u.ref.circular = c[ 0 ] || cmp_read_len != 0;
-                                        self->u.ref.seq_len = m[ 0 ] * (INSDC_coord_len)( self->u.ref.stop_id - self->u.ref.start_id ) + sl[0];
-                                        self->u.ref.max_seq_len = m[ 0 ];
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
+        rc = UpdateCachedRefData(self, ref_row_id);
 
     if ( rc == 0 && ref_ploidy != 0 )
     {
