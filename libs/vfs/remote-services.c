@@ -3700,6 +3700,17 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
         request->hasQuery = true;
     }
 
+    if (rc == 0 && request->sdl) {
+        const char n[] = "capability";
+        const char v[] = "allow-cloud-refseq";
+        rc = SKVMake(&kv, n, v);
+        if (rc == 0) {
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
+                ("  %s=%s\n", n, v));
+            rc = VectorAppend(&self->params, NULL, kv);
+        }
+    }
+
     return rc;
 }
 
