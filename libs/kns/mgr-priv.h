@@ -98,6 +98,10 @@ struct KNSManager
     bool NCBI_VDB_NETkfgValueSet;
     bool NCBI_VDB_NETkfgValue;
 
+    /* TLS client Certificate & Key for mutual authentication */
+    char * own_cert;
+    char * pk_key;
+
     bool notSingleton;
 };
 

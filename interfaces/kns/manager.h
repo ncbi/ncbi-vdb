@@ -155,6 +155,28 @@ KNS_EXTERN rc_t CC KNSManagerSetRetryFirstReads ( KNSManager *self,
 KNS_EXTERN rc_t CC KNSManagerGetRetryFirstReads ( const KNSManager *self,
     bool *retry );
 
+
+/* SetOwnCert
+ *  sets own certificate and key for SSL handshake
+ *
+ * "own_cert" - buffer holding the own public certificate chain data
+ *              in PEM or DER format
+ * "pk_key"   - buffer holding the own private key in PEM or DER format
+ */
+KNS_EXTERN rc_t CC KNSManagerSetOwnCert(struct KNSManager * self,
+    const char * own_cert, const char * pk_key);
+
+/* GetOwnCert
+ *  gets own certificate and key for SSL handshake
+ *
+ * "own_cert" - buffer holding the own public certificate chain data
+ *              in PEM or DER format
+ * "pk_key"   - buffer holding the own private key in PEM or DER format
+ */
+KNS_EXTERN rc_t CC KNSManagerGetOwnCert(const struct KNSManager * self,
+    const char ** own_cert, const char ** pk_key);
+
+
 /******************************************************************************/
 
 /* Setters for https connections */

@@ -29,6 +29,9 @@
 #include <kfg/config.h>
 #include <kfg/properties.h>
 
+#include <kfs/directory.h> /* KDirectoryRelease */
+#include <kfs/file.h> /* KFileRelease */
+
 #include <klib/base64.h>
 #include <klib/data-buffer.h>
 #include <klib/printf.h>
@@ -120,7 +123,7 @@ struct KNSProxies *KNSManagerGetProxies ( const KNSManager *self, size_t *cnt )
 
 static rc_t KNSManagerWhack ( KNSManager *self )
 {
-    rc_t rc;
+    rc_t rc = 0;
 
 #if USE_SINGLETON
     KNSManager *our_mgr
@@ -138,15 +141,24 @@ static rc_t KNSManagerWhack ( KNSManager *self )
 
     KTLSGlobalsWhack ( &self->tlsg );
 
+    free ( self->own_cert );
+    free ( self->pk_key );
+
+    memset ( self, 0, sizeof * self );
+
     free ( self );
 
     KNSManagerCleanup ();
-    if ( kns_manager_lock ) {
+
+    if ( kns_manager_lock != NULL ) {
         KLockRelease ( kns_manager_lock );
         kns_manager_lock = NULL;
     }
-    if ( !rc ) rc = KDataBufferWhack ( &kns_manager_guid );
-    if ( !rc ) rc = KDataBufferWhack ( &kns_manager_user_agent );
+
+    if ( rc == 0 )
+        rc = KDataBufferWhack ( &kns_manager_guid );
+    if ( rc == 0 )
+        rc = KDataBufferWhack ( &kns_manager_user_agent );
 
     return rc;
 }
@@ -456,6 +468,119 @@ LIB_EXPORT rc_t CC KNSManagerSetHTTPTimeouts (
 
     self->http_read_timeout = readMillis;
     self->http_write_timeout = writeMillis;
+
+    return 0;
+}
+
+LIB_EXPORT rc_t CC KNSManagerSetOwnCert(KNSManager * self,
+    const char * own_cert, const char * pk_key)
+{
+    if (self == NULL)
+        return RC(rcNS, rcMgr, rcUpdating, rcSelf, rcNull);
+
+    if (own_cert != NULL && pk_key == NULL)
+        return RC(rcNS, rcMgr, rcUpdating, rcParam, rcNull);
+
+    free(self->own_cert);
+    free(self->pk_key);
+
+    self->own_cert = self->pk_key = NULL;
+
+    if (own_cert != NULL) {
+        self->own_cert = string_dup_measure(own_cert, NULL);
+        if (self->own_cert == NULL)
+            return RC(rcNS, rcMgr, rcUpdating, rcMemory, rcExhausted);
+    }
+
+    if (pk_key != NULL) {
+        self->pk_key = string_dup_measure(pk_key, NULL);
+        if (self->pk_key == NULL) {
+            free(self->own_cert);
+            self->own_cert = NULL;
+            return RC(rcNS, rcMgr, rcUpdating, rcMemory, rcExhausted);
+        }
+    }
+
+    return 0;
+}
+
+static
+bool OwnCertfromEnv(const char ** own_cert, const char ** pk_key) {
+    char ** cert = (char**)own_cert;
+    char ** key = (char**)pk_key;
+    assert(cert && key);
+
+    char * e = getenv("VCBI_VDB_OWN_CERT");
+    if (e == NULL)
+        return false;
+
+    KDirectory * dir = NULL;
+    rc_t rc = KDirectoryNativeDir(&dir);
+
+    const KFile * file = NULL;
+    uint64_t s = 0;
+
+    if (rc == 0) {
+        rc = KDirectoryOpenFileRead(dir, &file, "%s/own_cert", e);
+        if (rc == 0)
+            rc = KFileSize(file, &s);
+        if (rc == 0)
+            *cert = calloc(1, s + 1);
+        if (rc == 0 && *cert == NULL)
+            return false;
+        if (rc == 0)
+            rc = KFileRead(file, 0, *cert, s + 1, &s);
+        if (rc == 0)
+            KFileRelease(file);
+    }
+
+    if (rc == 0) {
+        rc = KDirectoryOpenFileRead(dir, &file, "%s/pk_key", e);
+        if (rc == 0)
+            rc = KFileSize(file, &s);
+        if (rc == 0)
+            *key = calloc(1, s + 1);
+        if (rc == 0 && *key == NULL)
+            return false;
+        if (rc == 0)
+            rc = KFileRead(file, 0, *key, s + 1, &s);
+        if (rc == 0)
+            KFileRelease(file);
+    }
+
+    KDirectoryRelease(dir);
+
+    return rc == 0;
+}
+
+LIB_EXPORT rc_t CC KNSManagerGetOwnCert(const KNSManager * self,
+    const char ** own_cert, const char ** pk_key)
+{
+    if (own_cert == NULL || pk_key == NULL)
+        return RC(rcNS, rcMgr, rcAccessing, rcParam, rcNull);
+
+    *own_cert = *pk_key = NULL;
+
+    if (OwnCertfromEnv(own_cert, pk_key))
+        return 0;
+
+    if (self == NULL)
+        return RC(rcNS, rcMgr, rcAccessing, rcSelf, rcNull);
+
+    if (self->own_cert != NULL) {
+        *own_cert = string_dup_measure(self->own_cert, NULL);
+        if (*own_cert == NULL)
+            return RC(rcNS, rcMgr, rcAccessing, rcMemory, rcExhausted);
+    }
+
+    if (self->pk_key != NULL) {
+        *pk_key = string_dup_measure(self->pk_key, NULL);
+        if (*pk_key == NULL) {
+            free((char*)*own_cert);
+            *own_cert = NULL;
+            return RC(rcNS, rcMgr, rcAccessing, rcMemory, rcExhausted);
+        }
+    }
 
     return 0;
 }

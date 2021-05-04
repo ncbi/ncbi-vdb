@@ -719,6 +719,9 @@ struct KTLSStream
     /* mbed library specific data */
     mbedtls_ssl_context ssl;
 
+    mbedtls_x509_crt clicert;
+    mbedtls_pk_context pkey;
+
     /* error returned from ciphertext stream */
     rc_t rd_rc;
     rc_t wr_rc;
@@ -727,13 +730,17 @@ struct KTLSStream
 static
 void KTLSStreamDestroy ( KTLSStream *self )
 {
+    vdb_mbedtls_x509_crt_free ( &self -> clicert );
+    vdb_mbedtls_pk_free ( &self -> pkey );
+
     /* tear down all of the stuff created during Make */
     vdb_mbedtls_ssl_close_notify( &self -> ssl ); /* close connection - this might need to be elsewhere */
     vdb_mbedtls_ssl_free ( &self -> ssl );
 
     /* release the ciphertext object */
     KStreamRelease ( self -> ciphertext );
-    self -> ciphertext = NULL;
+
+    memset ( self, 0, sizeof * self );
 }
 
 static
@@ -1066,11 +1073,71 @@ int CC ktls_net_recv ( void *ctx, unsigned char *buf, size_t len )
 }
 
 static
+rc_t ktls_ssl_setup_own_cert(KTLSStream *self)
+{
+    rc_t rc = 0;
+    int ret = 0;
+    const char *own_cert = NULL, *pk_key = NULL;
+    assert(self);
+    rc = KNSManagerGetOwnCert(self->mgr, &own_cert, &pk_key);
+    if (own_cert == NULL || pk_key == NULL) {
+        return 0;
+    }
+
+    ret = vdb_mbedtls_x509_crt_parse(&self->clicert,
+        (const unsigned char *)own_cert,
+        string_measure(own_cert, NULL) + 1);
+    if (ret < 0) {
+        rc = RC(rcKrypto, rcToken, rcInitializing, rcEncryption, rcFailed);
+        PLOGERR(klogSys, (klogSys, rc
+            , "mbedtls_x509_crt_parse returned $(ret) ( $(expl) )"
+            , "ret=%d,expl=%s"
+            , ret
+            , mbedtls_strerror2(ret)
+            ));
+    }
+
+    if (rc == 0) {
+        ret = vdb_mbedtls_pk_parse_key(&self->pkey,
+            (const unsigned char *)pk_key,
+            string_measure(pk_key, NULL) + 1,
+            NULL, 0);
+        if (ret < 0) {
+            rc = RC(rcKrypto, rcToken, rcInitializing, rcEncryption, rcFailed);
+            PLOGERR(klogSys, (klogSys, rc
+                , "vdb_mbedtls_pk_parse_key returned $(ret) ( $(expl) )"
+                , "ret=%d,expl=%s"
+                , ret
+                , mbedtls_strerror2(ret)
+                ));
+        }
+    }
+
+    if (rc == 0) {
+        ret = vdb_mbedtls_ssl_set_hs_own_cert(
+            &self->ssl, &self->clicert, &self->pkey);
+        if (ret < 0) {
+            rc = RC(rcKrypto, rcToken, rcInitializing, rcEncryption, rcFailed);
+            PLOGERR(klogSys, (klogSys, rc
+                , "vdb_mbedtls_ssl_set_hs_own_cert returned $(ret) ( $(expl) )"
+                , "ret=%d,expl=%s"
+                , ret
+                , mbedtls_strerror2(ret)
+                ));
+        }
+    }
+
+    free((char*)own_cert);
+    free((char*)pk_key);
+    return rc;
+}
+
+static
 rc_t ktls_ssl_setup ( KTLSStream *self, const String *host )
 {
-    int ret;
-    const String * hostz;
-    const KTLSGlobals * tlsg;
+    int ret = 0;
+    const String * hostz = NULL;
+    const KTLSGlobals * tlsg = NULL;
 
     STATUS ( STAT_QA, "Setting up SSL/TLS structure" );
 
@@ -1137,6 +1204,12 @@ rc_t ktls_ssl_setup ( KTLSStream *self, const String *host )
 
 
     vdb_mbedtls_ssl_set_bio( &self -> ssl, ( void * ) self, ktls_net_send, ktls_net_recv, NULL );
+
+    {
+        rc_t rc = ktls_ssl_setup_own_cert(self);
+        if (rc != 0)
+            return rc;
+    }
 
     return 0;
 }
@@ -1263,8 +1336,11 @@ rc_t KTLSStreamMake ( KTLSStream ** objp, const KNSManager * mgr, const KSocket 
                 {
                     obj -> mgr = mgr;
 
+                    vdb_mbedtls_x509_crt_init ( & obj -> clicert );
+                    vdb_mbedtls_pk_init ( & obj -> pkey );
+
                     STATUS ( STAT_PRG, "%s - initializing tls wrapper\n", __func__ );
-                    vdb_mbedtls_ssl_init ( &obj -> ssl );
+                    vdb_mbedtls_ssl_init ( & obj -> ssl );
 
                     * objp = obj;
                     return 0;
