@@ -908,7 +908,6 @@ static rc_t KartProcessHeader(Kart *self) {
     return 0;
 }
 
-#ifdef _DEBUGGING
 static rc_t read_textkart(KDataBuffer *mem, const KFile *orig) {
     rc_t rc = 0;
     size_t num_read;
@@ -975,7 +974,6 @@ KFG_EXTERN rc_t CC KartMakeText(const struct KDirectory *dir, const char *path,
     RELEASE(KFile, f);
     return rc;
 }
-#endif
 
 LIB_EXPORT rc_t CC KartMake2 ( Kart ** kart ) {
     Kart * obj = NULL;

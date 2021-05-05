@@ -20,7 +20,7 @@
 #
 #  Please cite the author in any work or product based on this material.
 #
-# ===========================================================================
+# ============================================================================
 
 default: runtests
 
@@ -29,19 +29,24 @@ TOP ?= $(abspath ../..)
 MODULE = test/vfs
 
 TEST_TOOLS = \
+	test-attached-vdbcache \
+	test-log-names-error \
 	test-redirect-rejected-names-cgi-http-to-https \
 	test-resolver-with-log \
 	test-sdl-response \
 	test-services \
+	test-SraDesc \
 	test-caching \
 	test-names-30 \
 	test-path \
 	test-path-c \
 	test-perm \
+	test-resolve \
 	test-resolver \
 	test-vfsmanager \
 	test-json-response \
 	test-resolver4 \
+	test-resolve-qual \
 
 include $(TOP)/build/Makefile.env
 
@@ -124,6 +129,18 @@ $(TEST_BINDIR)/test-json-response: $(J_OBJ)
 	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
 
 #----------------------------------------------------------------
+# log-names-error
+
+LNE_SRC = \
+	test-log-names-error
+
+LNE_OBJ = \
+	$(addsuffix .$(OBJX),$(LNE_SRC))
+
+$(TEST_BINDIR)/test-log-names-error: $(LNE_OBJ)
+	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
+
+#----------------------------------------------------------------
 # sdl-response
 
 S_SRC = \
@@ -175,6 +192,18 @@ $(TEST_BINDIR)/test-perm: $(TP_OBJ)
 	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
 
 #----------------------------------------------------------------
+# test-resolve-qual
+
+RQ_SRC = \
+	test-resolve-qual
+
+RQ_OBJ = \
+	$(addsuffix .$(OBJX),$(RQ_SRC))
+
+$(TEST_BINDIR)/test-resolve-qual: $(RQ_OBJ)
+	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
+
+#----------------------------------------------------------------
 # C++ test on VFSManager
 #
 
@@ -192,6 +221,17 @@ MANAGERTEST_LIB = \
 $(TEST_BINDIR)/test-vfsmanager: $(MANAGERTEST_OBJ)
 	$(LP) --exe -o $@ $^ $(MANAGERTEST_LIB)
 
+
+#----------------------------------------------------------------
+
+RESOLVETEST_SRC = \
+	test-resolve
+
+RESOLVETEST_OBJ = \
+	$(addsuffix .$(OBJX),$(RESOLVETEST_SRC))
+
+$(TEST_BINDIR)/test-resolve: $(RESOLVETEST_OBJ)
+	$(LP) --exe -o $@ $^ $(MANAGERTEST_LIB)
 
 #----------------------------------------------------------------
 # C++ test on VResolver
@@ -228,6 +268,18 @@ $(TEST_BINDIR)/test-resolver-with-log: $(RESOLVERTESTLOG_OBJ)
 	$(LP) --exe -o $@ $^ $(RESOLVERTEST_LIB)
 
 #----------------------------------------------------------------
+# Test of names service attaching vdbcache-s
+#
+AV_SRC = \
+	test-attached-vdbcache
+
+AV_OBJ = \
+	$(addsuffix .$(OBJX),$(AV_SRC))
+
+$(TEST_BINDIR)/test-attached-vdbcache: $(AV_OBJ)
+	$(LP) --exe -o $@ $^ $(RESOLVERTEST_LIB)
+
+#----------------------------------------------------------------
 # Test of names service
 #
 SERVICES_SRC = \
@@ -237,4 +289,16 @@ SERVICES_OBJ = \
 	$(addsuffix .$(OBJX),$(SERVICES_SRC))
 
 $(TEST_BINDIR)/test-services: $(SERVICES_OBJ)
+	$(LP) --exe -o $@ $^ $(RESOLVERTEST_LIB)
+
+#----------------------------------------------------------------
+# Test SraDesc
+#
+SD_SRC = \
+	test-SraDesc
+
+SD_OBJ = \
+	$(addsuffix .$(OBJX),$(SD_SRC))
+
+$(TEST_BINDIR)/test-SraDesc: $(SD_OBJ)
 	$(LP) --exe -o $@ $^ $(RESOLVERTEST_LIB)

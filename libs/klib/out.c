@@ -125,6 +125,10 @@ LIB_EXPORT rc_t CC KOutVMsg ( const char * fmt, va_list args )
 {
     rc_t rc = 0;
 
+    KWrtHandler * kout_msg_handler = KOutHandlerGet();
+    if (kout_msg_handler->writer == NULL)
+        return 0; /* writer was not set */
+
 #define MATCH_FORMAT(format, literal) \
     ( ( const void* ) ( format ) == ( const void* ) ( literal ) )
 

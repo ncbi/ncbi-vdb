@@ -86,6 +86,7 @@ my @options = ( 'build-prefix=s',
                 'help',
                 'prefix=s',
                 'reconfigure',
+                'relative-build-out-dir',
                 'status',
                 'with-debug',
                 'without-debug', );
@@ -136,11 +137,12 @@ EndText
 }
 
 $OPT{'local-build-out'} = $LOCAL_BUILD_OUT;
+unless ($OPT{'local-build-out'})
+{   $OPT{'local-build-out'} = $OPT{'relative-build-out-dir'} }
 my $OUTDIR = File::Spec->catdir($HOME, $PKG{OUT});
-if ($OPT{'local-build-out'}) {
-    my $o = expand_path(File::Spec->catdir($Bin, $PKG{LOCOUT}));
-    $OUTDIR = $o if ($o);
-}
+my $REL_OUTDIR = expand_path(File::Spec->catdir($Bin, $PKG{LOCOUT}));
+if ($OPT{'local-build-out'})
+{   $OUTDIR = $REL_OUTDIR if ($REL_OUTDIR) }
 
 if ($OPT{'help'}) {
     help();
@@ -223,8 +225,8 @@ if ($OS eq 'linux') {
 
 print "checking machine architecture... " unless ($AUTORUN);
 println $MARCH unless ($AUTORUN);
-unless ($MARCH =~ /x86_64/i || $MARCH =~ /i?86/i) {
-    println "configure: error: unsupported architecture '$OSTYPE'";
+unless ($MARCH =~ /x86_64/i || $MARCH =~ /i?86/i || $MARCH =~ /aarch64/) {
+    println "configure: error: unsupported architecture '$OSTYPE':'$MARCH'";
     exit 1;
 }
 
@@ -314,6 +316,8 @@ if ($MARCH =~ /x86_64/i) {
     $BITS = '32_64';
 } elsif ($MARCH =~ /i?86/i) {
     $BITS = 32;
+} elsif ($MARCH =~ /aarch64/) {
+    $BITS = 64;
 } else {
     die "unrecognized Architecture '$ARCH'";
 }
@@ -422,6 +426,18 @@ if ($OS ne 'win' && $PKG{LNG} ne 'JAVA') {
 }
 
 if ($CPP) {
+    print "checking for $TOOLS... ";
+    my $cmd = "$TOOLS --version | head -1";
+    print "\n\t\trunning $cmd\n\t" if ($OPT{'debug'});
+    my $out = `$cmd 2>&1`;
+    if ($? == 0) {
+        print "$out";
+    } else {
+        println "no";
+        println "configure: error: '$TOOLS' cannot be found";
+        exit 1;
+    }
+    
     unless (check_tool__h($CPP)) {
         println "configure: error: '$CPP' cannot be found";
         exit 1;
@@ -1022,9 +1038,9 @@ EndText
         T($F, '$(CC) -o $@ $< $(PIC) $(CFLAGS)');
     }
     L($F, '$(OBJDIR)/%.$(OBJX): %.cpp');
-    T($F, '$(CP) -o $@ $< $(CFLAGS)');
+    T($F, '$(CP) -std=c++11 -o $@ $< $(CFLAGS)');
     L($F, '$(OBJDIR)/%.$(LOBX): %.cpp');
-    T($F, '$(CP) -o $@ $< $(PIC) $(CFLAGS)');
+    T($F, '$(CP) -std=c++11 -o $@ $< $(PIC) $(CFLAGS)');
     L($F);
 
     # this is part of Makefile
@@ -1925,22 +1941,24 @@ EndText
         }
 
         print <<EndText;
-  --build-prefix=DIR      generate build output into DIR directory
-                          [$OUTDIR]
+  --relative-build-out-dir generate build output into directory
+                           relative to sources [$OUTDIR]
+  --build-prefix=DIR       generate build output into DIR directory
+                           [$OUTDIR]
 
 EndText
     }
 
     println 'Miscellaneous:';
-    println '  --reconfigure           rerun `configure\'';
-    println '                          using the same command-line arguments';
+    println '  --reconfigure            rerun `configure\'';
+    println '                           using the same command-line arguments';
     if ($^O ne 'MSWin32') {
         println
-            '  --status                print current configuration information'
+            '  --status                 print current configuration information'
     }
     print <<EndText;
-  --clean                 remove all configuration results
-  --debug                 print lots of debugging information
+  --clean                  remove all configuration results
+  --debug                  print lots of debugging information
 
 If `configure' was already run running `configure' without options
 will rerun `configure' using the same command-line arguments.

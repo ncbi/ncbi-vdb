@@ -139,6 +139,7 @@ extern "C" {
 #define rcResolver   rcTree
 
 struct KDataBuffer;
+struct KDirectory;
 struct KNgcObj;
 struct KNSManager;
 struct String;
@@ -188,6 +189,7 @@ typedef enum
     algWGS2,                /* ordered to be of higher precedence than algWGS */
     algWGS,
     algWGSFlat,
+    algWGSAD,
     algFuseWGS,
     algSRA_NCBI,
     algSRA_EBI,
@@ -234,6 +236,8 @@ rc_t VResolverAlgRemoteProtectedResolve( const struct VResolverAlg *self,
 /** get projectId ( valid for protected user repository ) */
 rc_t VResolverGetProjectId ( const VResolver * self, uint32_t * projectId );
 
+bool VResolverIsProtected ( const VResolver * self );
+
 /* RemoteResolve
  *  resolve an accession into a remote VPath or not found
  *  may optionally open a KFile to the object in the process
@@ -248,6 +252,12 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
     const struct VPath ** path, const struct VPath **mapping,
     const struct KFile ** opt_file_rtn, bool refseq_ctx, bool is_oid, const char * version );
 
+rc_t VResolverLocalForCache(const VResolver * self,
+    const VPath * accession, const VPath ** path);
+rc_t VResolverQueryForCache(const VResolver * self, VRemoteProtocols protocols,
+    const VPath * query, const VPath ** local, const VPath ** remote,
+    const VPath ** cache);
+
 /* version of name service protocol */
 rc_t VResolverSetVersion ( VResolver *self, const char * version );
 
@@ -260,9 +270,14 @@ rc_t VResolverResolveName ( VResolver *self, int resolve );
 
 bool VResolverResolveToAd(const VResolver *self);
 
+VResolverEnableState VResolverGetRemoteEnable();
+
 /*rc_t VFSManagerMakeDbgapResolver(const struct VFSManager * self,
     VResolver ** new_resolver, const struct KConfig * cfg,
     const struct KNgcObj * ngc);*/
+
+rc_t LocalMagicResolve(const struct KDirectory * dir, const String * accession,
+    const VPath ** path);
 
 /* default behavior to resolve oid->file mapping inside of VFS */
 #define DEFAULT_RESOVE_OID_NAME true
@@ -273,6 +288,10 @@ VResolverAppID get_accession_app(const String * accession, bool refseq_ctx,
     struct VResolverAccToken *tok, bool *legacy_wgs_refseq,
     bool resolveAllAccToCache, bool * forDirAdjusted,
     const String * parentAcc, int64_t projectId);
+
+void LogNamesServiceErrorsInit(bool enabled);
+void LogNamesServiceErrorsReset();
+
 
 #ifdef __cplusplus
 }

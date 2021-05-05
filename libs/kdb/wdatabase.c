@@ -277,7 +277,7 @@ rc_t KDBManagerMakeDBUpdate ( KDBManager *self,
     if ( rc == 0 )
     {
         KDatabase *db;
-	    
+
         /* Make the base object */
         rc = KDatabaseMake ( & db, dir, path, md5, false );
         if ( rc == 0 )
@@ -291,7 +291,7 @@ rc_t KDBManagerMakeDBUpdate ( KDBManager *self,
             }
 
             rc = RC ( rcDB, rcMgr, rcOpening, rcDatabase, rcBusy );
-                
+
             free ( db );
         }
         KDirectoryRelease ( dir );
@@ -435,6 +435,21 @@ rc_t KDBManagerVCreateDBInt ( KDBManager *self,
     return rc;
 }
 
+static
+rc_t KDBManagerVCreateDBInt_noargs ( KDBManager *self,
+    KDatabase **db, KDirectory *wd, KCreateMode cmode,
+    const char *path, ... )
+{
+    rc_t rc;
+    va_list args;
+
+    va_start ( args, path );
+    rc = KDBManagerVCreateDBInt ( self, db, wd, cmode, path, args );
+    va_end ( args );
+
+    return rc;
+}
+
 LIB_EXPORT rc_t CC KDBManagerVCreateDB ( KDBManager *self,
     KDatabase **db, KCreateMode cmode, const char *path, va_list args )
 {
@@ -506,8 +521,8 @@ LIB_EXPORT rc_t CC KDatabaseVCreateDB ( KDatabase *self,
             0775, kcmOpen, "db" );
         if ( rc == 0 )
         {
-            rc = KDBManagerVCreateDBInt ( self -> mgr, dbp,
-                                          self -> dir, cmode, path, NULL );
+            rc = KDBManagerVCreateDBInt_noargs ( self -> mgr, dbp,
+                                          self -> dir, cmode, path );
             if ( rc == 0 )
             {
                 KDatabase *db = ( KDatabase* ) * dbp;
@@ -623,6 +638,20 @@ rc_t KDBManagerVOpenDBReadInt ( const KDBManager *cself,
     return rc;
 }
 
+static
+rc_t KDBManagerVOpenDBReadInt_noargs ( const KDBManager *cself,
+    const KDatabase **dbp, KDirectory *wd,
+    const char *path, bool *cached, bool try_srapath, ... )
+{
+    rc_t rc;
+    va_list args;
+
+    va_start ( args, try_srapath );
+    rc = KDBManagerVOpenDBReadInt ( cself, dbp, wd, path, args, cached, try_srapath );
+    va_end ( args );
+
+    return rc;
+}
 
 LIB_EXPORT rc_t CC KDBManagerOpenDBRead ( const KDBManager *self,
     const KDatabase **db, const char *path, ... )
@@ -683,8 +712,8 @@ LIB_EXPORT rc_t CC KDatabaseVOpenDBRead ( const KDatabase *self,
     if ( rc == 0 )
     {
         bool is_cached;
-        rc = KDBManagerVOpenDBReadInt ( self -> mgr, dbp,
-                                        self -> dir, path, NULL, & is_cached, false );
+        rc = KDBManagerVOpenDBReadInt_noargs ( self -> mgr, dbp,
+                                        self -> dir, path, & is_cached, false );
         if ( rc == 0 && ! is_cached )
         {
             KDatabase *db = ( KDatabase* ) * dbp;
@@ -808,6 +837,20 @@ rc_t KDBManagerVOpenDBUpdateInt ( KDBManager *self,
     return rc;
 }
 
+static
+rc_t KDBManagerVOpenDBUpdateInt_noargs ( KDBManager *self,
+    KDatabase **db, KDirectory *wd, const char *path, ... )
+{
+    rc_t rc;
+    va_list args;
+
+    va_start ( args, path );
+    rc = KDBManagerVOpenDBUpdateInt ( self, db, wd, path, args );
+    va_end ( args );
+
+    return rc;
+}
+
 LIB_EXPORT rc_t CC KDBManagerOpenDBUpdate ( KDBManager *self,
     KDatabase **db, const char *path, ... )
 {
@@ -869,8 +912,8 @@ LIB_EXPORT rc_t CC KDatabaseVOpenDBUpdate ( KDatabase *self,
         path, sizeof path, "db", 2, name, args );
     if ( rc == 0 )
     {
-        rc = KDBManagerVOpenDBUpdateInt ( self -> mgr, dbp,
-                                         self -> dir, path, NULL );
+        rc = KDBManagerVOpenDBUpdateInt_noargs ( self -> mgr, dbp,
+                                         self -> dir, path );
         if ( rc == 0 )
         {
             KDatabase *db = ( KDatabase* ) * dbp;
@@ -974,7 +1017,7 @@ LIB_EXPORT bool CC KDatabaseExists ( const KDatabase *self, uint32_t type, const
  *  valid values are kptDatabase, kptTable and kptIndex
  *
  *  "resolved" [ OUT ] and "rsize" [ IN ] - optional output buffer
- *  for fundamenta object name if "alias" is not a fundamental name, 
+ *  for fundamenta object name if "alias" is not a fundamental name,
  *
  *  "name" [ IN ] - NUL terminated object name
  */
@@ -1542,9 +1585,9 @@ LIB_EXPORT rc_t CC KDBManagerVPathOpenLocalDBRead ( struct KDBManager const * se
         return RC ( rcDB, rcDatabase, rcAccessing, rcParam, rcNull );
     if ( vpath == NULL )
         return RC ( rcDB, rcDatabase, rcAccessing, rcParam, rcNull );
-        
-    {   
-        /* vpath has already been resolved and is known to be a local path. 
+
+    {
+        /* vpath has already been resolved and is known to be a local path.
            open it if it is a database; avoid an additional round of resolution */
         const KDirectory *dir;
         rc_t rc = VFSManagerOpenDirectoryReadDirectoryRelativeDecrypt ( self -> vfsmgr, self -> wd, &dir, vpath );
@@ -1575,7 +1618,7 @@ LIB_EXPORT rc_t CC KDBManagerVPathOpenLocalDBRead ( struct KDBManager const * se
         }
         return rc;
     }
-} 
+}
 
 LIB_EXPORT rc_t CC KDBManagerVPathOpenRemoteDBRead ( struct KDBManager const * self,
     struct KDatabase const ** p_db, struct VPath const * remote, struct VPath const * cache )
@@ -1586,10 +1629,10 @@ LIB_EXPORT rc_t CC KDBManagerVPathOpenRemoteDBRead ( struct KDBManager const * s
         return RC ( rcDB, rcDatabase, rcAccessing, rcParam, rcNull );
     if ( remote == NULL )
         return RC ( rcDB, rcDatabase, rcAccessing, rcParam, rcNull );
-    /* cache == NULL is OK */    
-    
-    {   
-        /*  vpath has already been resolved and is known to be a remote URL. 
+    /* cache == NULL is OK */
+
+    {
+        /*  vpath has already been resolved and is known to be a remote URL.
             Open it if it is a database; use the provided cache; avoid an additional round of resolution */
         const KDirectory *dir;
         rc_t rc = VFSManagerOpenDirectoryReadDecryptRemote( self -> vfsmgr, &dir, remote, cache );

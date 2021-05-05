@@ -314,20 +314,16 @@ struct AlignAccessAlignmentEnumerator {
 };
 
 static rc_t CC AlignAccessDBMakeEnumerator(const AlignAccessDB *self, AlignAccessAlignmentEnumerator **align_enum) {
-    AlignAccessAlignmentEnumerator *lhs = malloc(sizeof(*lhs));
+    AlignAccessAlignmentEnumerator *const lhs = calloc(1, sizeof(*lhs));
     
     *align_enum = lhs;
     if (lhs == NULL)
         return RC(rcAlign, rcTable, rcConstructing, rcMemory, rcExhausted);
     
-    lhs->innerSelf = NULL;
     lhs->parent = self;
     AlignAccessDBAddRef(lhs->parent);
     atomic32_set(&lhs->refcount, 1);
-    lhs->atend = 0;
     lhs->refSeqID = -1;
-    lhs->endpos = 0;
-    lhs->startpos = 0;
     
     return 0;
 }

@@ -105,8 +105,8 @@ TEST_CASE ( GoogleProxyTest ) {
     if (http_proxy != NULL)
     {
         REQUIRE_RC ( KNSManagerMakeHttpFile ( mgr, & file, NULL, 0x01010000,
-            "http://sra-download-nfs.be-md.ncbi.nlm.nih.gov"
-                "/traces/sra57/SRR/000052/SRR053325" ) );
+            "https://sra-download.ncbi.nlm.nih.gov"
+                "/sos2/sra-pub-run-15/SRR053325/SRR053325.4" ) );
 
         char buffer [ 256 ] = "";
         size_t num_read = 0;

@@ -65,22 +65,11 @@ struct GCP;
 #include <sys/types.h>
 
 #include "cloud-cmn.h" /* KNSManager_Read */
-#include "cloud-priv.h"
+#include "cloud-priv.h" /* CloudGetCachedComputeEnvironmentToken */
+#include "gcp-priv.h" /* GCPAddAuthentication */
 
 #ifndef PATH_MAX
 #define PATH_MAX 4096
-#endif
-
-/*TODO: use log.h instead, or promote to cloud-priv.h (there is a copy in cloud-mgr.c) */
-#if 0
-#include <stdio.h>
-#define TRACE( ... )                                              \
-    do { fprintf ( stderr, "%s:%d - ", __func__, __LINE__ );      \
-         fprintf ( stderr, __VA_ARGS__ );                         \
-         fputc ( '\n', stderr ); } while ( 0 )
-#else
-#define TRACE( ... ) \
-    ( ( void ) 0 )
 #endif
 
 static rc_t PopulateCredentials(GCP * self);
@@ -109,8 +98,8 @@ static char const *envCE()
     char const *const env = firstTime ? getenv(ENV_MAGIC_CE_TOKEN) : NULL;
     firstTime = false;
     if (env != NULL)
-        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
-            "Got location from environment\n"));
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_CE), (
+            "Got GCP location from environment\n"));
     return env;
 }
 
@@ -123,8 +112,8 @@ static rc_t readCE(GCP const *const self, size_t size, char location[])
         "http://metadata/computeMetadata/v1/instance/service-accounts/"
         "default/identity?audience=https://www.ncbi.nlm.nih.gov&format=full";
 
-    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
-        ("Reading location from provider\n"));
+    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_CE),
+        ("Reading GCP location from provider\n"));
     return KNSManager_Read(self->dad.kns, location, size,
                          identityUrl, "Metadata-Flavor", "Google");
 }
@@ -143,11 +132,19 @@ rc_t CC GCPMakeComputeEnvironmentToken ( const GCP * self, const String ** ce_to
     else {
         char const *const env = envCE();
         char location[4096] = "";
-        rc_t const rc = env == NULL ? readCE(self, sizeof(location), location) : 0;
+        rc_t rc = 0;
+        if (CloudGetCachedComputeEnvironmentToken(&self->dad, ce_token))
+            return 0;
+        rc = env == NULL ? readCE(self, sizeof(location), location) : 0;
         if (rc == 0) {
             String s;
             StringInitCString(&s, env != NULL ? env : location);
-            return StringCopy(ce_token, &s);
+            rc = StringCopy(ce_token, &s);
+            if (rc == 0) { /* ignore rc below */
+                assert(ce_token);
+                CloudSetCachedComputeEnvironmentToken(&self->dad, *ce_token);
+            }
+            return rc;
         }
         return rc;
     }
@@ -205,15 +202,6 @@ rc_t CC GCPAddComputeEnvironmentTokenForSigner ( const GCP * self, KClientHttpRe
     }
 
     return rc;
-}
-
-/* AddAuthentication
-*  prepare a request object with credentials for authentication
-*/
-static
-rc_t CC GCPAddAuthentication(const GCP * self, KClientHttpRequest * req, const char * http_method)
-{
-    return 0; /* TODO, if needed */
 }
 
 static
@@ -487,12 +475,11 @@ MakeJWT(const GCP * self, char ** jwt)
     {
         return rc;
     }
-    TRACE("jwt='%s'\n\n", jwt);
+    TRACE("jwt='%s'\n\n", *jwt);
 
     return 0;
 }
 
-static
 rc_t
 GetJsonStringMember(const KJsonObject *obj, const char * name, const char ** value)
 {
@@ -514,7 +501,6 @@ GetJsonStringMember(const KJsonObject *obj, const char * name, const char ** val
     return KJsonGetString(member, value);
 }
 
-static
 rc_t
 GetJsonNumMember(const KJsonObject *obj, const char * name, int64_t * value)
 {
@@ -801,8 +787,8 @@ LIB_EXPORT rc_t CC CloudMgrMakeGCP(const CloudMgr * self, GCP ** p_gcp)
                 &user_agrees_to_reveal_instance_identity);
         }
 
-        rc = CloudInit ( & gcp -> dad, ( const Cloud_vt * ) & GCP_vt_v1, "GCP", self -> kns, user_agrees_to_pay,
-            user_agrees_to_reveal_instance_identity );
+        rc = CloudInit ( & gcp -> dad, ( const Cloud_vt * ) & GCP_vt_v1, "GCP",
+            self, user_agrees_to_pay, user_agrees_to_reveal_instance_identity );
         if ( rc == 0 )
         {
             rc = PopulateCredentials(gcp);
@@ -1047,6 +1033,16 @@ rc_t PopulateCredentials(GCP * self)
                             if (self->privateKey == NULL)
                             {
                                 rc = RC(rcNS, rcMgr, rcAllocating, rcMemory, rcExhausted);
+                            }
+                        }
+                        if (strcmp("private_key_id", required[i]) == 0)
+                        {
+                            self->private_key_id
+                                = string_dup(value, string_size(value));
+                            if (self->private_key_id == NULL)
+                            {
+                                rc = RC(rcNS, rcMgr, rcAllocating,
+                                    rcMemory, rcExhausted);
                             }
                         }
                         else if (strcmp("client_email", required[i]) == 0)

@@ -29,14 +29,24 @@
 
 #include <unistd.h>
 
-#if !defined(_GNU_SOURCE) || !defined(__GLIBC__) || __GLIBC__ < 2|| (__GLIBC__ == 2 && __GLIBC_MINOR__ < 30)
+#if !defined(_GNU_SOURCE)
+
+#define NEED_GET_TID 1
+
+#elif defined(__GLIBC__) && (__GLIBC__ < 2|| (__GLIBC__ == 2 && __GLIBC_MINOR__ < 30))
+
+#define NEED_GET_TID 1
+
+#endif
+
+#if NEED_GET_TID
 #include <sys/syscall.h>
 
-static
-pid_t gettid ( void )
-{
-    return syscall ( SYS_gettid );
-}
+#define GET_TID ( syscall ( SYS_gettid ) )
+
+#else
+
+#define GET_TID ( gettid() )
 
 #endif
 
@@ -49,7 +59,7 @@ LIB_EXPORT bool CC KProcMgrOnMainThread ( void )
 {
     if ( ! have_tid )
     {
-        on_main_thread = gettid () == getpid ();
+        on_main_thread = GET_TID == getpid ();
         have_tid = true;
     }
     return on_main_thread;

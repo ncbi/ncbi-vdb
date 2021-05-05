@@ -44,7 +44,6 @@ SUBDIRS =       \
     klib        \
     kfg         \
     kapp        \
-    vfs         \
     cloud       \
     kdb         \
     kproc       \
@@ -55,13 +54,13 @@ SUBDIRS =       \
     loader      \
     krypto      \
     cipher      \
-    ngs         \
-    ngs-c++     \
+	ncbi-vdb    \
     ngs-python  \
-    ngs-java    \
-    schema      \
-    install     \
     kns         \
+    schema      \
+    vfs         \
+    ngs-java    \
+    install     \
 
 # common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
 include $(TOP)/build/Makefile.targets

@@ -72,7 +72,7 @@ rc_t KColumnWhack ( KColumn *self )
     KRefcountWhack ( & self -> refcount, "KColumn" );
 
     /* shut down and checkpoint index */
-    rc = KColumnIdxWhack ( & self -> idx, 
+    rc = KColumnIdxWhack ( & self -> idx,
         self -> df . eof, self -> df . pgsize, self -> checksum );
     if ( rc )
         return rc;
@@ -638,7 +638,7 @@ rc_t KDBManagerVCreateColumnInt ( KDBManager *self,
             if ( KCOL_CURRENT_VERSION >= 3 && ( cmode & kcmMD5 ) != 0 )
             {
                 KFile * f;
-                
+
                 /* create or open the md5 digest file */
                 rc = KDirectoryCreateFile ( wd, &f, true, 0664, kcmOpen, "%s/md5", colpath );
                 if ( rc == 0 )
@@ -653,7 +653,7 @@ rc_t KDBManagerVCreateColumnInt ( KDBManager *self,
                 }
 
             }
-            
+
             /* create column - will attach several references to "md5" */
             if ( rc == 0 )
                 rc = KColumnCreate ( & col, dir, cmode, checksum, pgsize, colpath, md5 );
@@ -670,8 +670,8 @@ rc_t KDBManagerVCreateColumnInt ( KDBManager *self,
                     * colp = col;
                     return 0;
                 }
-                
-                KColumnRelease ( col );                
+
+                KColumnRelease ( col );
             }
             KDirectoryRelease ( dir );
         }
@@ -679,6 +679,20 @@ rc_t KDBManagerVCreateColumnInt ( KDBManager *self,
     return rc;
 }
 
+static
+rc_t KDBManagerVCreateColumnInt_noargs ( KDBManager *self,
+    KColumn **colp, KDirectory *wd, KCreateMode cmode,
+    KChecksum checksum, size_t pgsize, const char *path, ... )
+{
+    rc_t rc;
+    va_list args;
+
+    va_start ( args, path );
+    rc = KDBManagerVCreateColumnInt ( self, colp, wd, cmode, checksum, pgsize, path, args );
+    va_end ( args );
+
+    return rc;
+}
 
 LIB_EXPORT rc_t CC KDBManagerVCreateColumn ( KDBManager *self, KColumn **col,
     KCreateMode cmode, KChecksum checksum, size_t pgsize,
@@ -751,8 +765,8 @@ LIB_EXPORT rc_t CC KTableVCreateColumn ( KTable *self, KColumn **colp,
         else
             cmode &= ~ kcmMD5;
 
-        rc = KDBManagerVCreateColumnInt ( self -> mgr, colp,
-                                          self -> dir, cmode | kcmParents, checksum, pgsize, path, NULL );
+        rc = KDBManagerVCreateColumnInt_noargs ( self -> mgr, colp,
+                                          self -> dir, cmode | kcmParents, checksum, pgsize, path );
         if ( rc == 0 )
         {
             KColumn *col = * colp;
@@ -831,7 +845,7 @@ rc_t KDBManagerVOpenColumnReadInt2 ( const KDBManager *cself,
         {
             const KDirectory *dir;
             char path[4096];
-            int size;
+            int size = 0;
 
             if ( cached != NULL )
                 *cached = false;
@@ -839,9 +853,10 @@ rc_t KDBManagerVOpenColumnReadInt2 ( const KDBManager *cself,
             /* TODO: check if colpath is what we want to pass to KDBOpenPathTypeRead
              * in this case we don't need to vprintf to 'path'
             */
-            size = ( args == NULL ) ?
-                snprintf  ( path, sizeof path, "%s", path_fmt ) :
-                vsnprintf ( path, sizeof path, path_fmt, args2 );
+            /* VDB-4386: cannot treat va_list as a pointer! */
+            if ( path_fmt != NULL )
+                size = /*( args == NULL ) ? snprintf  ( path, sizeof path, "%s", path_fmt ) :*/
+                    vsnprintf ( path, sizeof path, path_fmt, args2 );
             if ( size < 0 || ( size_t ) size >=  sizeof path )
                 rc = RC ( rcDB, rcMgr, rcOpening, rcPath, rcExcessive );
 
@@ -850,7 +865,7 @@ rc_t KDBManagerVOpenColumnReadInt2 ( const KDBManager *cself,
                     try_srapath, NULL );
 
             if ( rc == 0 )
-            { 
+            {
                 KColumn *col;
 
                 rc = KColumnMakeRead ( & col, dir, colpath, NULL );
@@ -882,12 +897,28 @@ rc_t KDBManagerVOpenColumnReadInt ( const KDBManager *cself,
     rc_t rc;
     va_list args2;
 
-    if ( args == NULL )
-        return KDBManagerVOpenColumnReadInt2 ( cself, colp, wd, path_fmt, args, cached, try_srapath, NULL );
+    /* VDB-4386: cannot treat va_list as a pointer! */
+/*    if ( args == NULL )
+        return KDBManagerVOpenColumnReadInt2 ( cself, colp, wd, path_fmt, args, cached, try_srapath, NULL );*/
 
     va_copy ( args2, args );
     rc = KDBManagerVOpenColumnReadInt2 ( cself, colp, wd, path_fmt, args, cached, try_srapath, args2 );
     va_end ( args2 );
+
+    return rc;
+}
+
+static
+rc_t KDBManagerVOpenColumnReadInt_noargs ( const KDBManager *cself,
+    const KColumn **colp, const KDirectory *wd,
+    const char *path_fmt, bool *cached, bool try_srapath, ... )
+{
+    rc_t rc;
+    va_list args;
+
+    va_start ( args, try_srapath );
+    rc = KDBManagerVOpenColumnReadInt ( cself, colp, wd, path_fmt, args, cached, try_srapath );
+    va_end ( args );
 
     return rc;
 }
@@ -951,8 +982,8 @@ LIB_EXPORT rc_t CC KTableVOpenColumnRead ( const KTable *self,
     if ( rc == 0 )
     {
 	bool col_is_cached;
-        rc = KDBManagerVOpenColumnReadInt ( self -> mgr,
-                                            colp, self -> dir, path, NULL, &col_is_cached, false );
+        rc = KDBManagerVOpenColumnReadInt_noargs ( self -> mgr,
+                                            colp, self -> dir, path, &col_is_cached, false );
         if ( rc == 0 )
         {
             KColumn *col = ( KColumn* ) * colp;
@@ -979,13 +1010,14 @@ rc_t KDBManagerVOpenColumnUpdateInt ( KDBManager *self,
 {
     char colpath [ 4096 ];
     rc_t rc = 0;
-    int z;
+    int z = 0;
 
 /*    rc = KDirectoryVResolvePath ( wd, 1,
         colpath, sizeof colpath, path_fmt, args ); */
-    z = (args == NULL) ?
-        snprintf  ( colpath, sizeof colpath, "%s", path_fmt) :
-        vsnprintf ( colpath, sizeof colpath, path_fmt, args );
+/* VDB-4386: cannot treat va_list as a pointer! */
+    if ( path_fmt != NULL )
+        z = /*(args == NULL) ? snprintf  ( colpath, sizeof colpath, "%s", path_fmt) :*/
+            vsnprintf ( colpath, sizeof colpath, path_fmt, args );
     if (z < 0 || z >= (int) sizeof colpath)
         rc = RC ( rcDB, rcMgr, rcOpening, rcPath, rcExcessive );
     if ( rc == 0 )
@@ -1034,7 +1066,7 @@ rc_t KDBManagerVOpenColumnUpdateInt ( KDBManager *self,
 	case kptFile | kptAlias:
 	    /* if we find a file, vary the failure if it is an archive that is a table
 	     * or a non related file
-	     * this should be changed to a readonly as it is not possible not 
+	     * this should be changed to a readonly as it is not possible not
 	     * disallowed.  rcReadonly not rcUnauthorized
 	     */
 	    if ( KDBOpenPathTypeRead ( self, wd, colpath, NULL, kptColumn, NULL,
@@ -1071,7 +1103,7 @@ rc_t KDBManagerVOpenColumnUpdateInt ( KDBManager *self,
             KMD5SumFmt *md5 = NULL;
             /* open existing md5 digest file */
             KFile * f;
-            rc = KDirectoryVOpenFileWrite ( dir, & f, true, "md5", NULL );
+            rc = KDirectoryOpenFileWrite_v1 ( dir, & f, true, "md5" );
             if ( rc == 0 )
             {
                 rc = KMD5SumFmtMakeUpdate ( &md5, f );
@@ -1096,12 +1128,27 @@ rc_t KDBManagerVOpenColumnUpdateInt ( KDBManager *self,
                     * colp = col;
                     return 0;
                 }
-                
-                KColumnRelease ( col );                
+
+                KColumnRelease ( col );
             }
             KDirectoryRelease ( dir );
         }
     }
+    return rc;
+}
+
+static
+rc_t KDBManagerVOpenColumnUpdateInt_noargs ( KDBManager *self,
+    KColumn **colp, KDirectory *wd, bool try_srapath,
+    const char *path_fmt, ... )
+{
+    rc_t rc;
+    va_list args;
+
+    va_start ( args, path_fmt );
+    rc = KDBManagerVOpenColumnUpdateInt ( self, colp, wd, try_srapath, path_fmt, args );
+    va_end ( args );
+
     return rc;
 }
 
@@ -1167,8 +1214,8 @@ LIB_EXPORT rc_t CC KTableVOpenColumnUpdate ( KTable *self,
         path, sizeof path, "col", 3, name, args );
     if ( rc == 0 )
     {
-        rc = KDBManagerVOpenColumnUpdateInt ( self -> mgr,
-                                              colp, self -> dir, false, path, NULL );
+        rc = KDBManagerVOpenColumnUpdateInt_noargs ( self -> mgr,
+                                              colp, self -> dir, false, path );
         if ( rc == 0 )
         {
             KColumn *col = * colp;
@@ -1380,7 +1427,7 @@ LIB_EXPORT rc_t CC KColumnByteOrder ( const KColumn *self, bool *reversed )
         * reversed = false;
         return RC ( rcDB, rcColumn, rcAccessing, rcSelf, rcNull );
     }
-     
+
     return KColumnIdxByteOrder ( & self -> idx, reversed );
 }
 
@@ -1930,7 +1977,7 @@ LIB_EXPORT rc_t CC KColumnOpenBlobRead ( const KColumn *self, const KColumnBlob 
             * blobp = blob;
             return 0;
         }
-        
+
         free ( blob );
     }
 
@@ -1961,7 +2008,7 @@ LIB_EXPORT rc_t CC KColumnOpenBlobUpdate ( KColumn *self, KColumnBlob **blobp, i
             * blobp = blob;
             return 0;
         }
-                    
+
         free ( blob );
     }
 
@@ -1995,7 +2042,7 @@ LIB_EXPORT rc_t CC KColumnCreateBlob ( KColumn *self, KColumnBlob **blobp )
             * blobp = blob;
             return 0;
         }
-                    
+
         free ( blob );
     }
 
@@ -2451,7 +2498,7 @@ LIB_EXPORT rc_t CC KColumnBlobAppend ( KColumnBlob *self, const void *buffer, si
         MD5StateAppend ( & self -> md5, buffer, size );
         break;
     }
-    
+
     return 0;
 }
 
@@ -2492,7 +2539,7 @@ LIB_EXPORT rc_t CC KColumnBlobAssignRange ( KColumnBlob *self, int64_t first, ui
     if ( rc == 0 )
     {
         /* blob already exists
-           again, allow benign reassignment */                    
+           again, allow benign reassignment */
         if ( self -> loc . start_id == first &&
              self -> loc . id_range == count )
             return 0;
@@ -2650,11 +2697,11 @@ rc_t KColumnBlobDoCommit ( KColumnBlob *self )
                            but since the code does not yet support it,
                            disallow further writes */
                         self -> read_only = true;
-                        
+
                         /* mark blob as clean */
                         self -> num_writ = 0;
 
-			/* these must not be a point of failure 
+			/* these must not be a point of failure
 			   The only failure from the KMD5FileCommit
 			   behind these is on NULL parameter */
 			rc = KColumnDataCommitDone ( & col -> df );

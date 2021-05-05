@@ -36,12 +36,14 @@ TEST_TOOLS = \
 	test-google-proxy \
 	test200for-whole-file \
 	test-kns \
+	test-ipc \
 	test-http \
 	test-http-dropconn \
 	test-http-request \
 	KNSManagerSingletonTest \
 	test-connect \
-	test-refresh-expired
+	test-refresh-expired \
+	test-timeouts \
 
 include $(TOP)/build/Makefile.env
 
@@ -132,6 +134,21 @@ $(TEST_BINDIR)/test-kns: $(KNSTEST_OBJ)
 
 kns: test-kns
 	$(TEST_BINDIR)/test-kns  #-l=all
+
+#----------------------------------------------------------------
+# test-ipc
+#
+IPCTEST_SRC = \
+	test-ipc
+
+IPCTEST_OBJ = \
+	$(addsuffix .$(OBJX),$(IPCTEST_SRC))
+
+$(TEST_BINDIR)/test-ipc: $(IPCTEST_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
+
+ipc: test-ipc
+	$(TEST_BINDIR)/test-ipc  #-l=all
 
 #----------------------------------------------------------------
 # test_allow_all_certificates
@@ -284,12 +301,11 @@ connect: test-connect
 	$(TEST_BINDIR)/test-connect
 
 #----------------------------------------------------------------
-
-#----------------------------------------------------------------
 # test-refresh-expired
 #
 REFRESH_SRC = \
 	HttpFixture \
+	KStableHttpFile \
 	test-refresh-expired-url \
 
 REFRESH_OBJ = \
@@ -300,6 +316,18 @@ $(TEST_BINDIR)/test-refresh-expired: $(REFRESH_OBJ)
 
 refresh: test-refresh-expired
 	$(TEST_BINDIR)/test-refresh-expired
+
+#----------------------------------------------------------------
+# test-timeouts
+#
+TO_SRC = \
+	test-timeouts \
+
+TO_OBJ = \
+	$(addsuffix .$(OBJX),$(TO_SRC))
+
+$(TEST_BINDIR)/test-timeouts: $(TO_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
 
 #----------------------------------------------------------------
 

@@ -59,18 +59,32 @@
 #include <kns/endpoint.h>
 #endif
 
+/* timeout on Http Read */
 #ifndef MAX_HTTP_READ_LIMIT
 #define MAX_HTTP_READ_LIMIT ( 5 * 60 * 1000 ) /* 5 minutes */
 #endif
 
+/* timeout on Http Write */
 #ifndef MAX_HTTP_WRITE_LIMIT
 #define MAX_HTTP_WRITE_LIMIT ( 15 * 1000 )
 #endif
+
+/* timeout on Http Read loop */
+#ifndef MAX_HTTP_TOTAL_READ_LIMIT
+#define MAX_HTTP_TOTAL_READ_LIMIT ( 10 * 60 * 1000 ) /* 10 minutes */
+#endif
+
+/* timeout on Http Connect loop */
+#ifndef MAX_HTTP_TOTAL_CONNECT_LIMIT
+#define MAX_HTTP_TOTAL_CONNECT_LIMIT ( 10 * 60 * 1000 ) /* 10 minutes */
+#endif
+
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+struct Cloud;
 struct KFile;
 struct KNSManager;
 struct KClientHttp;
@@ -133,7 +147,7 @@ rc_t KClientHttpGetStatusLine ( struct KClientHttp * self,
 
 struct KClientHttp
 {
-    const KNSManager *mgr;
+    const struct KNSManager *mgr;
     struct KStream * sock;
     struct KStream * test_sock; /* if not NULL, use to communicate with a mocked server in testing, do not reopen on redirects */
 
@@ -171,6 +185,9 @@ struct KClientHttp
     bool close_connection;
 
     EUriForm uf; /* Form of Request-URI in Request-Line when using proxy */
+
+    char * ua; /* user agent */
+    char * ua_head; /* user agent for HEAD */
 };
 
 void KClientHttpClose ( struct KClientHttp * self );
@@ -214,6 +231,9 @@ struct KClientHttpRequest
     bool payRequired; /* payment info required to access this URL */
 
     bool rangeRequested;
+    bool ceAdded;
+
+    bool head; /* is HEAD request */
 };
 
 void KClientHttpGetRemoteEndpoint ( const struct KClientHttp * self,
@@ -221,7 +241,8 @@ void KClientHttpGetRemoteEndpoint ( const struct KClientHttp * self,
 void KClientHttpGetLocalEndpoint ( const struct KClientHttp * self,
                                    struct KEndPoint * ep );
 
-rc_t KClientHttpRequestAttachEnvironmentToken( struct KClientHttpRequest * self );
+rc_t KClientHttpRequestAttachEnvironmentToken(
+    struct KClientHttpRequest * self, struct Cloud * cloud );
 
 /* exported private functions
 */
@@ -260,8 +281,21 @@ struct KClientHttpResult
     bool rangeRequested;
 };
 
-/* internal encodiung  function, exposed for testing */
+/* internal encoding  function, exposed for testing */
 extern rc_t KClientHttpRequestUrlEncodeBase64(const String ** encoding);
+
+#define SUPPORT_CHUNKED_READ 1
+
+rc_t KNSManagerVMakeHttpFileIntUnstableFromBuffer(const struct KNSManager *self,
+    const struct KFile **file, struct KStream *conn, ver_t vers, bool reliable,
+    bool need_env_token, bool payRequired, const char *url,
+    const KDataBuffer *buf);
+
+rc_t KNSManagerVMakeHttpFileIntUnstable(const struct KNSManager *self,
+    const struct KFile **file, struct KStream *conn, ver_t vers, bool reliable,
+    bool need_env_token, bool payRequired, const char *url, va_list args);
+
+bool KUnstableFileIsKHttpFile(const struct KFile * self);
 
 #ifdef __cplusplus
 }

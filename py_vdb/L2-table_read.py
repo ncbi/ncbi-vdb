@@ -2,6 +2,9 @@
 
 from vdb import *
 
+#for this to work you need:
+#at $HOME/.ncbi/lib64 : libncbi-vdb.so
+
 def get_one_value_v1( mgr, acc, column_name, row_id ) :
     try :
         tbl = mgr.OpenTable( acc )

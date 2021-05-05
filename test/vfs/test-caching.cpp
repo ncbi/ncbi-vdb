@@ -240,14 +240,14 @@ public:
 
         // KConfigReadString creates NULL-terminated strings
         REQUIRE ( user_root );
-		std::cout << std::string(user_root->addr) << std::endl;
+//std::cout << std::string(user_root->addr) << std::endl;
         REQUIRE_RC ( KDirectoryRemove ( native, true, "%s", user_root -> addr ) );
 
         VFSManager * vfs = NULL;
 
 //KConfigPrint(cfg, 0);
 
-        REQUIRE_RC ( VFSManagerMakeFromKfg ( & vfs, cfg ) );
+        REQUIRE_RC ( VFSManagerMakeLocal ( & vfs, cfg ) );
         REQUIRE_RC ( SET :: resetSingleton ( vfs ) );
 
         REQUIRE_RC ( SET :: set ( vfs, v ) );
@@ -285,7 +285,7 @@ public:
                 break;
             case eWgs:
                 REQUIRE_EQ ( KDirectoryPathType ( native, "%s/wgs/%s.cache",
-                             user_root -> addr, WGS ), ( KPathType ) kptFile );
+                             user_root -> addr, acc ), ( KPathType ) kptFile );
                 break;
             default:
                 assert ( 0 ) ;

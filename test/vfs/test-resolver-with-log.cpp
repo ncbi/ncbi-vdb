@@ -107,7 +107,8 @@ FIXTURE_TEST_CASE ( AAAB01008846, Fixture ) {
 FIXTURE_TEST_CASE ( SRR1008846, Fixture ) {
     REQUIRE_RC ( VFSManagerMakePath ( _mgr, & _query, "SRR1008846" ) );
     REQUIRE_RC ( VResolverQuery
-        ( _resolver, eProtocolFaspHttps, _query, NULL, & _remote, NULL ) );
+        ( _resolver, eProtocolHttps    , _query, NULL, & _remote, NULL ) );
+//      ( _resolver, eProtocolFaspHttps, _query, NULL, & _remote, NULL ) );
 
     char buffer [ 9 ];
     REQUIRE_RC ( VPathReadScheme ( _remote, buffer, sizeof buffer, NULL ) );

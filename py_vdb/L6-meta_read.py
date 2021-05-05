@@ -2,9 +2,8 @@
 
 from vdb import *
 
-lib_rd = './2.8.0/libncbi-vdb.so.2.8.0'
-
-# ------------------------------------------------------------------------
+#for this to work you need:
+#at $HOME/.ncbi/lib64 : libncbi-vdb.so
 
 # ------------------------------------------------------------------------
         
@@ -12,7 +11,7 @@ if __name__ == '__main__' :
     
     try :
         #open a manager in read-mode
-        mgr = manager( OpenMode.Read, lib_rd )
+        mgr = manager( OpenMode.Read )
         
         #open accession ( a table-accession )
         tbl = mgr.OpenTable( 'SRR942391' )

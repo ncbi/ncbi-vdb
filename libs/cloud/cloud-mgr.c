@@ -29,9 +29,12 @@
 
 #include <klib/rc.h>
 #include <klib/status.h>
+#include <klib/text.h> /* StringWhack */
+
 #include <cloud/aws.h>
 #include <cloud/gcp.h>
 
+#include "cloud_manager-singleton.h" /* USE_SINGLETON */
 #include "cloud-priv.h"
 
 #include <atomic.h>
@@ -107,6 +110,42 @@ LIB_EXPORT const char * CC CloudProviderAsString(CloudProviderId cloud_provider)
 static
 CloudProviderId CloudMgrDetermineCurrentCloud ( const CloudMgr * self )
 {
+    rc_t rc = 0;
+    String * forced = NULL;
+
+    assert ( self );
+
+    rc = KConfigReadString ( self -> kfg, "/libs/cloud/provider", & forced );
+    if ( rc == 0 ) {
+        const char * a = NULL;
+        bool set = true;
+        CloudProviderId provider = cloud_provider_none;
+        assert ( forced && forced ->addr && forced -> addr [ 0 ] );
+        a = forced -> addr;
+        switch ( a [ 0 ] ) {
+        case 'a':
+            switch ( a [ 1 ] ) {
+            case 'w': provider = cloud_provider_aws  ; break;
+            case 'z': provider = cloud_provider_azure; break;
+            default : set = false;                     break;
+            }
+            break;
+        case 'g': provider = cloud_provider_gcp ; break;
+        case 'n': provider = cloud_provider_none; break;
+        default : set = false; break;
+        }
+
+        StringWhack ( forced );
+        forced = NULL;
+
+        if ( set )
+            return provider;
+    }
+
+#ifdef OUTSIDE_OF_CLOUD
+    return cloud_provider_none;
+#endif
+
 #ifdef _h_cloud_gcp_
     TRACE ( "probing operation within GCP" );
     if ( CloudMgrWithinGCP ( self ) )
@@ -204,16 +243,17 @@ rc_t CloudMgrInit ( CloudMgr ** mgrp, const KConfig * kfg,
                     provider = CloudMgrDetermineCurrentCloud ( our_mgr );
                 }
 
-        if ( provider != cloud_provider_none )
+                if ( provider != cloud_provider_none )
                 {
-            TRACE ( "making current environment" );
-            rc = CloudMgrMakeCloud ( our_mgr, & our_mgr -> cur, provider );
-            if ( rc == 0 )
+                    TRACE ( "making current environment" );
+                    rc = CloudMgrMakeCloud (
+                        our_mgr, & our_mgr -> cur, provider );
+                    if ( rc == 0 )
                     {
-                TRACE ( "storing current environment" );
-                our_mgr -> cur_id = provider;
-            }
-        }
+                        TRACE ( "storing current environment" );
+                        our_mgr -> cur_id = provider;
+                    }
+                }
 
                 if ( rc == 0 )
                 {
@@ -253,11 +293,14 @@ LIB_EXPORT rc_t CC CloudMgrMake ( CloudMgr ** mgrp,
             rc = CloudMgrInit ( & our_mgr, kfg, kns, cloud_provider_none );
             if ( rc == 0 )
             {
-                CloudMgr * new_mgr;
+                CloudMgr * new_mgr = NULL;
 
                 /* try to set single-shot ( set once, never reset ) */
                 TRACE ( "attempting to set CloudMgr singleton" );
+
+#ifdef USE_SINGLETON		
                 new_mgr = atomic_test_and_set_ptr ( & cloud_singleton, our_mgr, NULL );
+#endif
 
                 /* if "new_mgr" is NULL, then our thread won the race */
                 if ( new_mgr == NULL )

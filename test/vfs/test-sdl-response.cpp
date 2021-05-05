@@ -24,6 +24,7 @@
 *
 */
 
+#include <kfg/config.h> /* KConfigDisableUserSettings */
 #include <klib/debug.h> /* KDbgSetString */
 #include <ktst/unit_test.hpp> // TEST_SUITE
 #include <vfs/path.h> /* VPathRelease */
@@ -75,8 +76,7 @@ TEST_CASE(testArrayExample) {
             "]"
         "}"
     "]"
-"}"
-) );
+"}"));
     REQUIRE_RC      ( Response4Release ( response ) );
 }
 #endif
@@ -119,8 +119,7 @@ TEST_CASE(testExample) {
             "]"
         "}"
     "]"
-"}"
-) );
+"}") );
     REQUIRE_RC      ( Response4Release ( response ) );
 }
 #endif
@@ -439,6 +438,7 @@ if (
 0 ) assert ( ! KDbgSetString ( "VFS" ) );
 if (
 0 ) assert ( ! KDbgSetString ( "VFS-JSON" ) );
+    KConfigDisableUserSettings();
     return TestSdlResolver( argc, argv );
     }
 }

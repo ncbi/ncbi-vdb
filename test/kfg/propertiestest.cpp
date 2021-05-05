@@ -234,6 +234,27 @@ FIXTURE_TEST_CASE( Set_Aws_Profile, KfgFixture )
     REQUIRE_EQ ( string ( "path" ), string ( buf, num_writ ) );
 }
 
+// KConfig_Get_FullQuality, KConfig_Set_FullQuality
+FIXTURE_TEST_CASE( Get_FullQuality_Dflt, KfgFixture )
+{
+    CreateAndLoad(GetName(), "#" );
+    bool value = false;
+    REQUIRE_RC ( KConfig_Get_FullQuality( kfg, &value ) );
+    REQUIRE_EQ ( value, false );
+}
+
+FIXTURE_TEST_CASE( GetSet_FullQuality, KfgFixture )
+{
+    CreateAndLoad(GetName(), "#" );
+    bool value = false;
+    REQUIRE_RC ( KConfig_Set_FullQuality( kfg, true ) );
+    REQUIRE_RC ( KConfig_Get_FullQuality( kfg, &value ) );
+    REQUIRE_EQ ( value, true );
+    REQUIRE_RC ( KConfig_Set_FullQuality( kfg, false ) );
+    REQUIRE_RC ( KConfig_Get_FullQuality( kfg, &value ) );
+    REQUIRE_EQ ( value, false );
+}
+
 //////////////////////////////////////////// Main
 
 extern "C"

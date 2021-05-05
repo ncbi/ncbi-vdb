@@ -1,6 +1,78 @@
 # NCBI External Developer Release:
 
 
+## NCBI VDB 2.11.0
+**March 15, 2021**
+
+  **build, ncbi-vdb, ngs, ngs-tools**: introduced an additional external library, libncbi-ngs  
+  **kfg, prefetch, vfs**: resolve WGS reference sequences into "Accession Directory"  
+  **kfg, sra-tools, vfs**: dropped support of protected repositories  
+  **kns, sra-tools**: fixed formatting of HTTP requests for proxy  
+  **ktst**: improved thread safety  
+  **ncbi-vdb, ngs, ngs-tools, sra-tools, vdb**: added support for 64-bit ARM (AArch64, Apple Silicon)  
+  **prefetch, vfs**: fixed download of protected non-run files  
+  **prefetch, vfs**: fixed segfault during download of JWT cart  
+  **prefetch, vfs**: respect requested version when downloading WGS files  
+  **sra-tools, vfs**: recognize sra file names with version  
+
+
+## NCBI VDB 2.10.9
+**December 16, 2020**
+
+  **align**: alignment enumerator structure is now fully initialized  
+  **align, vdb**: fixed situation where network access could drastically slow down reading references  
+  **build**: added configure option to produce build in output directory relative to sources  
+  **cloud**: implemented using OAuth 2.0 to access GCP buckets  
+  **kfs**: added support of hard links  
+  **kfs, kns**: improved timeout management in CacheTeeFile  
+  **kns**: env_token and pay_required flags are now treated independently  
+  **kns**: memory leak was fixed  
+  **kns**: removed memory leaks in KNS, VDB, VFS  
+  **kns, sra-tools, vdb**: added a loop to retry failed connections when fetching SRA files  
+  **test**: updated test not to fail when the source is not available  
+  **vdb**: writing a big (>3MB) cell now triggers a page commit  
+  **vfs**: allow to find local files when remote repository is disabled  
+  **vfs**: not to call names.cgi but SDL when resolving runs and reference sequences  
+  **vfs**: support of ETL - BQS runs  
+
+
+## NCBI VDB 2.10.8
+**June 29, 2020**
+
+  **kproc, fasterq-dump**: fixed problem with seg-faults caused by too small stack used by threads  
+  **kdb, vdb, vfs, sra-tools**: fixed bug preventing use of path to directory created by prefetch if it ends with '/'  
+  **vfs, sra-tools, ngs-tools**: report an error when file was encrypted for a different ngc file  
+  **vfs, prefetch**: download encrypted phenotype files with encrypted extension  
+  **vdb, sra-docker**: config can auto-generate LIBS/GUID when in a docker container  
+
+
+## NCBI VDB 2.10.7
+**May 21, 2020**
+
+  **kns, ngs-tools, sra-tools**: added new header to HTTP requests to communicate VDB version 
+
+
+## NCBI VDB 2.10.6
+**May 15, 2020**
+
+  **align, sra-tools**: fixed fetching of reference sequences from cloud  
+  **align, sra-tools, vfs**: fixed resolving of hs37d5 reference sequence  
+  **axf**: fixed invalid soft clips with hard clipped secondary alignments  
+  **kfg, sra-tools**: ignore configuration with invalid protected user repository having a single 'root' node  
+  **kns, sra-tools**: added new header to HTTP requests to communicate SRA version  
+  **kns, sra-tools**: close socket when accessing GCP files  
+  **kns, sra-tools**: introduced a additional configurable network retry loop  
+  **kns**: Windows connect() is now asynchronous and supporting timeouts  
+  **krypto, sra-tools, vfs**: fixed decryption when password contains # symbol  
+  **sratools, vdb-dump, vfs**: fixed vdb-dump <accession of prefetched run>  
+  **sra-tools, vdb**: restored possibility to cache WGS references to user repository  
+  **sra-tools, vfs**: fixed working with runs having WGS reference sequences  
+  **sraxf**: synthetic qualities are now generated per read  
+  **sraxf**: synthetic qualities are now generated per read  
+  **vdb**: fixed segfault in VSchemaDumpToKMDataNode  
+  **vfs**: added possibility to control the verbosity of negative response of names service  
+
+
 ## NCBI VDB 2.10.5
 **April 1, 2020**
 

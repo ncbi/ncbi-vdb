@@ -46,6 +46,7 @@ static void DataInit(Data * self) {
     self->id = -1;
     self->exp = -1;
     self->encryptedForProjectId = -1;
+    self->quality = eQualLast;
 }
 
 static void DataClone(const Data * self, Data * clone) {
@@ -78,12 +79,14 @@ static void DataClone(const Data * self, Data * clone) {
     clone->tic = self->tic;
     clone->type = self->type;
     clone->vsblt = self->vsblt;
+    clone->quality = self->quality;
 }
 
 static rc_t DataUpdate(const Data * self,
     Data * next, const KJsonObject * node, JsonStack * path)
 {
     const char * name = NULL;
+    const char * str = NULL;
 
     assert(next);
 
@@ -147,13 +150,45 @@ static rc_t DataUpdate(const Data * self,
     name = "type";
     StrSet(&next->type, KJsonObjectGetMember(node, name), name, path);
 
+    name = "quality";
+    StrSet(&str, KJsonObjectGetMember(node, name), name, path);
+    if (str != NULL) {
+        String no, full, dbl;
+        CONST_STRING(&no, "no");
+        CONST_STRING(&full, "full");
+        CONST_STRING(&dbl, "dbl");
+        if (string_cmp(str, string_measure(str, NULL),
+            no.addr, no.size, full.size) == 0)
+        {
+            next->quality = eQualNo;
+        }
+        else if (string_cmp(str, string_measure(str, NULL),
+            full.addr, full.size, full.size) == 0)
+        {
+            next->quality = eQualFull;
+        }
+        else if (string_cmp(str, string_measure(str, NULL),
+            dbl.addr, dbl.size, dbl.size) == 0)
+        {
+            next->quality = eQualDefault;
+        }
+    }
+
     return 0;
+}
+
+static rc_t VPath_SetQuality(VPath * self, const Data * data) {
+    rc_t rc = 0;
+    assert(data);
+    if (data->quality < eQualLast)
+        rc = VPathSetQuality(self, data->quality);
+    return rc;
 }
 
 /* We are adding a location to file */
 static
 rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
-    const Data * dad, JsonStack * path)
+    const Data * dad, JsonStack * path, int64_t aProjectId)
 {
     rc_t rc = 0;
 
@@ -165,33 +200,7 @@ rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
     DataUpdate(dad, &data, node, path);
 
     value = KJsonObjectGetMember(node, name);
-
     assert(!value);
-    /*if (value != NULL) {
-          uint32_t i = 0;
-
-          const KJsonArray * array = KJsonValueToArray(value);
-          uint32_t n = KJsonArrayGetLength(array);
-          rc = JsonStackPushArr(path, name);
-          if (rc != 0)
-              return rc;
-          for (i = 0; i < n; ++i) {
-              rc_t r2 = 0;
-
-              const KJsonObject * object = NULL;
-
-              value = KJsonArrayGetElement(array, i);
-              object = KJsonValueToObject(value);
-              r2 = ItemAddElmsSdl(self, object, &data, path);
-              if (r2 != 0 && rc == 0)
-                  rc = r2;
-
-              if (i + 1 < n)
-                  JsonStackArrNext(path);
-          }
-
-          JsonStackPop(path);
-      }*/
 
     value = KJsonObjectGetMember(node, "link");
     if (value != NULL) {
@@ -211,6 +220,7 @@ rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
 
             VPath * path = NULL;
 
+            String acc;
             String id;
             String objectType;
             String type;
@@ -220,6 +230,7 @@ rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
 
             StringInitCString(&id, ldata.acc);
 
+            memset(&acc, 0, sizeof acc);
             memset(&objectType, 0, sizeof objectType);
             memset(&type, 0, sizeof type);
 
@@ -242,6 +253,12 @@ rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
                 else
                     len = string_measure(data.object, &size);;
                 StringInit(&objectType, ldata.object, size, len);
+
+                if (c != NULL) {
+                    size = len = string_measure(data.object, NULL) - len;
+                    if (len > 0)
+                        StringInit(&acc, c + 1, size - 1, len - 1);
+                }
             }
 
             if (ldata.type != NULL) {
@@ -254,7 +271,18 @@ rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
                 ceRequired = true;
             if (ldata.payRequired == eTrue)
                 payRequired = true;
+
             projectId = ldata.encryptedForProjectId;
+            if (aProjectId >= 0 && projectId >= 0 &&
+                aProjectId != projectId)
+            {
+                rc = RC(rcVFS, rcQuery, rcExecuting, rcItem, rcIncorrect);
+                PLOGERR(klogInt, (klogInt, rc,
+                    "'$(name)' was encrypted for project 'dbGaP-$(id)'. "
+                    "Please contact sra-tools@ncbi.nlm.nih.gov for details.",
+                    "name=%s,id=%lu", data.name, projectId));
+                return rc;
+            }
 
             if (ldata.md5 != NULL) {
                 int i = 0;
@@ -278,7 +306,10 @@ rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
 
             rc = VPathMakeFromUrl(&path, &url, NULL, true, &id, ldata.sz,
                 mod, hasMd5 ? md5 : NULL, 0, ldata.srv, &objectType, &type,
-                ceRequired, payRequired, ldata.name, projectId, 128);
+                ceRequired, payRequired, ldata.name, projectId, 128, &acc);
+
+            if (rc == 0)
+                rc = VPath_SetQuality(path, &data);
 
             if (rc == 0)
                 VPathMarkHighReliability(path, true);
@@ -301,7 +332,7 @@ rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
 /* We are scanning files(Item(Run)) to find all its locations */
 static
 rc_t ItemAddSdlFile(Item * self, const KJsonObject * node,
-    const Data * dad, JsonStack * path)
+    const Data * dad, JsonStack * path, int64_t projectId)
 {
     rc_t rc = 0;
 
@@ -339,7 +370,7 @@ rc_t ItemAddSdlFile(Item * self, const KJsonObject * node,
 
             value = KJsonArrayGetElement ( array, i );
             object = KJsonValueToObject ( value );
-            r2 = FileAddSdlLocation( file, object, & data, path );
+            r2 = FileAddSdlLocation ( file, object, & data, path, projectId );
             if ( r2 != 0 && rc == 0 )
                 rc = r2;
 
@@ -352,7 +383,7 @@ rc_t ItemAddSdlFile(Item * self, const KJsonObject * node,
 
     value = KJsonObjectGetMember(node, "link");
     if (value != NULL) {
-        rc = FileAddSdlLocation(file, node, &data, path);
+        rc = FileAddSdlLocation(file, node, &data, path, projectId);
         /*rc = ItemAddFormat(self, data.type, &data, &file, false);
         if (file == NULL || rc != 0)
             return rc;
@@ -517,6 +548,8 @@ static rc_t Response4AddItemsSdl(Response4 * self,
         if (value != NULL) {
             uint32_t i = 0;
 
+            int64_t projectId = Response4GetProjectId(self);
+
             const KJsonArray * array = KJsonValueToArray(value);
             uint32_t n = KJsonArrayGetLength(array);
             rc = JsonStackPushArr(path, name);
@@ -529,7 +562,7 @@ static rc_t Response4AddItemsSdl(Response4 * self,
 
                 value = KJsonArrayGetElement(array, i);
                 object = KJsonValueToObject(value);
-                r2 = ItemAddSdlFile(item, object, &data, path);
+                r2 = ItemAddSdlFile(item, object, &data, path, projectId);
                 if (r2 != 0 && rc == 0)
                     rc = r2;
 
@@ -710,14 +743,19 @@ static rc_t Response4InitSdl(Response4 * self, const char * input) {
     return rc;
 }
 
-rc_t Response4MakeSdl(Response4 ** self, const char * input) {
+rc_t Response4MakeSdlExt(Response4 ** self, const struct VFSManager * vfs,
+    const struct KNSManager * kns, const struct KConfig * kfg,
+    const char * input,
+    bool logNamesServiceErrors, int64_t projectId, unsigned quality)
+{
     rc_t rc = 0;
 
     Response4 * r = NULL;
 
     assert(self);
 
-    rc = Response4MakeEmpty(&r);
+    rc = Response4MakeEmpty(&r, vfs, kns, kfg,
+        logNamesServiceErrors, projectId, quality);
     if (rc != 0)
         return rc;
 
@@ -728,4 +766,9 @@ rc_t Response4MakeSdl(Response4 ** self, const char * input) {
         * self = r;
 
     return rc;
+}
+
+rc_t Response4MakeSdl(Response4 ** self, const char * input) {
+    return Response4MakeSdlExt(self, NULL, NULL, NULL,
+        input, false, -1, 0);
 }

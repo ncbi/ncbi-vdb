@@ -41,6 +41,9 @@
 #include <klib/printf.h>
 #include <klib/rc.h>
 
+#include <vfs/manager.h> /* VFSManagerCheckEnvAndAd */
+#include <vfs/path.h> /* VFSManagerMakePath */
+
 #include <kfs/arc.h>
 #include <os-native.h>
 #include <sysalloc.h>
@@ -176,7 +179,7 @@ rc_t KTableSever ( const KTable *self )
 void KTableGetName(KTable const *self, char const **rslt)
 {
     char *sep;
-    
+
     *rslt = self->path;
     sep = strrchr(self->path, '/');
     if (sep != NULL)
@@ -207,38 +210,12 @@ rc_t KTableMake ( KTable **tblp, const KDirectory *dir, const char *path )
     KRefcountInit ( & tbl -> refcount, 1, "KTable", "make", path );
     strcpy ( tbl -> path, path );
 
+    /* YES,
+      DBG_VFS should be used here to be printed along with other VFS messages */
+    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE), ("Making KTable '%s'\n", path));
+
     * tblp = tbl;
     return 0;
-}
-
-static void ad(const KDBManager * self, const char * aPath, char ** path)
-{
-    const char *slash = strrchr(aPath, '/');
-
-    assert(self && aPath && path);
-
-    if (slash != NULL)
-        ++slash;
-    else
-        slash = aPath;
-
-    if ((KDirectoryPathType(self->wd, aPath) & ~kptAlias) != kptDir)
-        return;
-
-    if ((KDirectoryPathType(self->wd, "%s/%s.sra", aPath, slash)
-        & ~kptAlias) != kptFile)
-    {
-        return;
-    }
-
-    *path = calloc(1, strlen(aPath) + 6 + strlen(slash));
-
-    if (*path != NULL)
-        sprintf(*path, "%s/%s.sra", aPath, slash);
-
-    /* YES, DBG_VFS should be used here to be printed along with other VFS messages */
-    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
-        ("'%s' was sesolved to '%s'\n", aPath, *path ));
 }
 
 /* OpenTableRead
@@ -253,14 +230,21 @@ static void ad(const KDBManager * self, const char * aPath, char ** path)
 static
 rc_t KDBManagerVOpenTableReadInt ( const KDBManager *self,
     const KTable **tblp, const KDirectory *wd, bool try_srapath,
-    const char *path, va_list args, const struct VPath *vpath )
+    const char *path, va_list args, const struct VPath *vpath,
+    bool tryEnvAndAd )
 {
     rc_t rc;
-    char aTblpath[4096];
+    char aTblpath[4096] = "";
     char * tblpath = aTblpath;
-    int z = ( args == NULL ) ?
-        snprintf ( aTblpath, sizeof aTblpath, "%s", path ):
-        vsnprintf ( aTblpath, sizeof aTblpath, path, args );
+    int z = 0;
+    /*VDB-4386: cannot treat va_list as a pointer!*/
+/*    if (args == NULL) {
+        if (path != NULL)
+            z = snprintf(aTblpath, sizeof aTblpath, "%s", path);
+    }
+    else*/
+    if (path != NULL)
+        z = vsnprintf ( aTblpath, sizeof aTblpath, path, args );
     if ( z < 0 || ( size_t ) z >= sizeof aTblpath )
         rc = RC ( rcDB, rcMgr, rcOpening, rcPath, rcExcessive );
     else
@@ -268,37 +252,111 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *self,
         KTable *tbl;
         const KDirectory *dir;
         bool prerelease = false;
+        const VPath *path2 = NULL;
 
-        ad(self, aTblpath, &tblpath);
+        {
+            rc_t rc = 0;
+            VPath *path = NULL;
+            if (vpath == NULL)
+                rc = VFSManagerMakePath(self->vfsmgr, &path, "%s", aTblpath);
+            if (rc == 0) {
+                const String * str = NULL;
+                if (tryEnvAndAd)
+                    VFSManagerCheckEnvAndAd(self->vfsmgr,
+                        path != NULL ? path : vpath, &path2);
+                if (path2 != NULL) {
+                    rc = VPathMakeString(path2, &str);
+                    if (rc == 0) {
+                        assert(str);
+                        tblpath = calloc(1, str->size + 1);
+                        if (tblpath != NULL)
+                            string_printf(tblpath, str->size + 1, NULL,
+                                "%S", str);
+                        StringWhack(str);
+                    }
+                }
+                else {
+                    rc = VPathMakeString(path != NULL ? path : vpath, &str);
+                    if (rc == 0) {
+                        assert(str);
+                        tblpath = calloc(1, str->size + 1);
+                        if (tblpath != NULL)
+                            string_printf(tblpath, str->size + 1, NULL,
+                                "%S", str);
+                        StringWhack(str);
+                    }
+                }
+                VPathRelease(path);
+            }
+        }
 
         rc = KDBOpenPathTypeRead ( self, wd, tblpath, &dir, kptTable, NULL,
-            try_srapath, vpath );
+            try_srapath, path2 != NULL ? path2 : vpath );
         if ( rc != 0 )
         {
             prerelease = true;
-            rc = KDBOpenPathTypeRead ( self, wd, tblpath, &dir, kptPrereleaseTbl, NULL,
-                try_srapath, vpath );
+            rc = KDBOpenPathTypeRead ( self, wd, tblpath, &dir,
+                kptPrereleaseTbl, NULL,
+                try_srapath, path2 != NULL ? path2 : vpath);
         }
 
-        if (aTblpath != tblpath)
-            free(tblpath);
-
-        if ( rc == 0 )
+        if (rc == 0)
         {
-            rc = KTableMake ( & tbl, dir, tblpath );
+            String str;
+            const char * p = tblpath;
+            if (p == NULL) {
+                if (path2 != NULL) {
+                    rc_t rc = VPathGetPath(vpath, &str);
+                    if (rc == 0)
+                        p = str.addr;
+                }
+                else if (vpath != NULL) {
+                    rc_t rc = VPathGetPath(vpath, &str);
+                    if (rc == 0)
+                        p = str.addr;
+                }
+            }
+
+            VPathRelease(path2);
+            path2 = NULL;
+
+            rc = KTableMake ( & tbl, dir, p );
             if ( rc == 0 )
             {
                 tbl -> mgr = KDBManagerAttach ( self );
                 tbl -> prerelease = prerelease;
                 * tblp = tbl;
+
+                if (aTblpath != tblpath)
+                    free(tblpath);
+
                 return 0;
             }
             KDirectoryRelease ( dir );
         }
     }
+
+    if (aTblpath != tblpath)
+        free(tblpath);
+
     return rc;
 }
 
+static
+rc_t KDBManagerVOpenTableReadInt_noargs ( const KDBManager *self,
+    const KTable **tblp, const KDirectory *wd, bool try_srapath,
+    const char *path, bool tryEnvAndAd, const struct VPath *vpath,
+    ... )
+{
+    rc_t rc;
+    va_list args;
+
+    va_start ( args, vpath );
+    rc = KDBManagerVOpenTableReadInt ( self, tblp, wd, try_srapath, path, args, vpath, tryEnvAndAd );
+    va_end ( args );
+
+    return rc;
+}
 
 LIB_EXPORT rc_t CC KDBManagerOpenTableRead ( const KDBManager *self,
     const KTable **tbl, const char *path, ... )
@@ -324,8 +382,8 @@ LIB_EXPORT rc_t CC KDBManagerVOpenTableRead ( const KDBManager *self,
     if ( self == NULL )
         return RC ( rcDB, rcMgr, rcOpening, rcSelf, rcNull );
 
-    return KDBManagerVOpenTableReadInt ( self, tbl, self -> wd, true, path, args,
-        NULL );
+    return KDBManagerVOpenTableReadInt ( self, tbl, self -> wd, true, path,
+        args, NULL, true );
 }
 
 LIB_EXPORT rc_t CC KDBManagerOpenTableReadVPath ( const KDBManager *self,
@@ -339,7 +397,8 @@ LIB_EXPORT rc_t CC KDBManagerOpenTableReadVPath ( const KDBManager *self,
     if ( self == NULL )
         return RC ( rcDB, rcMgr, rcOpening, rcSelf, rcNull );
 
-    return KDBManagerVOpenTableReadInt ( self, tbl, self->wd, true, NULL, NULL, path );
+    return KDBManagerVOpenTableReadInt_noargs ( self, tbl, self->wd, true, "",
+        true, path );
 }
 
 
@@ -377,8 +436,8 @@ LIB_EXPORT rc_t CC KDatabaseVOpenTableRead ( const KDatabase *self,
         path, sizeof path, "tbl", 3, name, args );
     if ( rc == 0 )
     {
-        rc = KDBManagerVOpenTableReadInt ( self -> mgr, tblp,
-                                          self -> dir, false, path, NULL, NULL );
+        rc = KDBManagerVOpenTableReadInt_noargs ( self -> mgr, tblp,
+                                self -> dir, false, path, false, NULL );
         if ( rc == 0 )
         {
             KTable *tbl = ( KTable* ) * tblp;
@@ -473,7 +532,7 @@ LIB_EXPORT bool CC KTableExists ( const KTable *self, uint32_t type, const char 
  *  valid values are kptIndex and kptColumn
  *
  *  "resolved" [ OUT ] and "rsize" [ IN ] - optional output buffer
- *  for fundamenta object name if "alias" is not a fundamental name, 
+ *  for fundamenta object name if "alias" is not a fundamental name,
  *
  *  "name" [ IN ] - NUL terminated object name
  */
@@ -740,7 +799,7 @@ static
 bool CC KTableListIdxFilter ( const KDirectory *dir, const char *name, void *data )
 {
     const size_t sz = strlen(name);
-    
+
     if (sz > 4 && strcmp(&name[sz - 4], ".md5") == 0)
         return false;
     return true;

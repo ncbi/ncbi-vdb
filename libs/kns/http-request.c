@@ -26,12 +26,13 @@
 
 #include <kns/extern.h>
 
-#include <klib/rc.h>
-#include <klib/data-buffer.h>
-#include <klib/printf.h>
-#include <klib/log.h>
 #include <klib/base64.h>
+#include <klib/data-buffer.h>
 #include <klib/debug.h>
+#include <klib/log.h>
+#include <klib/printf.h>
+#include <klib/rc.h>
+#include <klib/sra-release-version.h> /* SraReleaseVersion */
 
 #include <cloud/manager.h>
 
@@ -75,21 +76,34 @@ LIB_EXPORT rc_t CC KClientHttpRequestSetCloudParams(
 }
 
 rc_t
-KClientHttpRequestAttachEnvironmentToken( KClientHttpRequest * self )
+KClientHttpRequestAttachEnvironmentToken( KClientHttpRequest * self,
+    Cloud * aCloud )
 {
-    CloudMgr * cloudMgr;
-    rc_t rc = CloudMgrMake ( & cloudMgr, NULL, NULL );
-    if ( rc == 0 )
-    {
-        Cloud * cloud;
-        rc = CloudMgrGetCurrentCloud ( cloudMgr, & cloud );
-        if ( rc == 0 )
-        {
-            rc = CloudAddComputeEnvironmentTokenForSigner ( cloud, self );
-            CloudRelease ( cloud );
-        }
-        CloudMgrRelease ( cloudMgr );
+    rc_t rc = 0;
+    CloudMgr * cloudMgr = NULL;
+    Cloud * cloud = aCloud;
+
+    assert ( self );
+    if ( self -> ceAdded ) /* avoid adding CE multiple times */
+        return 0;
+
+    if ( cloud == NULL ) {
+        rc = CloudMgrMake(&cloudMgr, NULL, NULL);
+        if (rc == 0)
+            rc = CloudMgrGetCurrentCloud(cloudMgr, &cloud);
     }
+
+    if ( rc == 0 ) {
+        rc = CloudAddComputeEnvironmentTokenForSigner ( cloud, self );
+        assert ( ! self -> ceAdded );
+        if ( rc == 0 )
+            self -> ceAdded = true;
+        if ( aCloud == NULL )
+            CloudRelease ( cloud );
+    }
+
+    CloudMgrRelease ( cloudMgr );
+
     return rc;
 }
 
@@ -1022,7 +1036,7 @@ static EUriForm EUriFormGuess ( const String * hostname,
         case 1:
             if ( uf != eUFUndefined )
                 return uf; /* reuse cached uriForm */
-            else { /* first call; guess uriForm by hostnae */
+            else { /* first call; guess uriForm by hostname */
                 String googleapis;
                 CONST_STRING ( & googleapis, "storage.googleapis.com" );
                 if ( StringEqual ( & googleapis, hostname ) )
@@ -1152,7 +1166,7 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
     skip = hostname->size - stor31.size;
     if (hostname->size >= stor31.size &&
         string_cmp(stor31.addr, stor31.size, hostname->addr + skip,
-            hostname->size - skip, stor31.size) == 0)
+            hostname->size - skip, stor31.len) == 0)
     {
         cpId = cloud_provider_aws;
     }
@@ -1164,20 +1178,30 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
         if (hostname->size >= amazonaws.size &&
             string_cmp(amazonaws.addr, amazonaws.size,
                 hostname->addr + skip, hostname->size - skip,
-                amazonaws.size) == 0)
+                amazonaws.len) == 0)
         {
             cpId = cloud_provider_aws;
         }
         else {
             String google;
-            CONST_STRING(&google, "storage.googleapis.com");
+            CONST_STRING(&google, "storage.cloud.google.com");
             skip = 0;
             if (hostname->size >= google.size &&
                 string_cmp(google.addr, google.size,
                     hostname->addr + skip, hostname->size - skip,
-                    google.size) == 0)
+                    google.len) == 0)
             {
                 cpId = cloud_provider_gcp;
+            }
+            else {
+                CONST_STRING(&google, "storage.googleapis.com");
+                if (hostname->size >= google.size &&
+                    string_cmp(google.addr, google.size,
+                        hostname->addr + skip, hostname->size - skip,
+                        google.len) == 0)
+                {
+                    cpId = cloud_provider_gcp;
+                }
             }
         }
     }
@@ -1200,15 +1224,19 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
         if ( rc == 0 )
         {
             /* create a cloud object based on the target URL */
-            Cloud * cloud ;
+            Cloud * cloud = NULL;
             KClientHttpRequest * self = (KClientHttpRequest *)cself;
             rc = CloudMgrMakeCloud ( cloudMgr, & cloud, cpId );
             if (rc == 0) {
                 if (cself->payRequired)
                     rc = CloudAddUserPaysCredentials(cloud, self, method);
-                else if (cself->ceRequired)
-                    rc = CloudAddComputeEnvironmentTokenForSigner(
-                        cloud, self);
+                assert(method);
+                if (cself->ceRequired
+                    && method[0] != 'G') /* use CE just in POST requests  */
+                {
+                    rc = KClientHttpRequestAttachEnvironmentToken(self,
+                        cloud);
+                }
                 CloudRelease ( cloud );
             }
         }
@@ -1227,10 +1255,17 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
 {
     rc_t rc;
     rc_t r2 = 0;
-    bool have_user_agent = false;
+
     bool have_accept = false;
-    String user_agent_string;
+    bool have_user_agent = false;
+    bool have_sra_release = false;
+    bool have_vdb_release = false;
+
     String accept_string;
+    String sra_release_string;
+    String vdb_release_string;
+    String user_agent_string;
+
     const KHttpHeader *node;
 
     if ( self == NULL ) {
@@ -1240,8 +1275,10 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
          return RC ( rcNS, rcNoTarg, rcReading, rcParam, rcNull );
     }
 
-    CONST_STRING ( &user_agent_string, "User-Agent" );
-    CONST_STRING ( &accept_string, "Accept" );
+    CONST_STRING ( &accept_string     , "Accept" );        /*  6 */
+    CONST_STRING ( &sra_release_string, "X-SRA-Release" ); /* 13 */
+    CONST_STRING ( &vdb_release_string, "X-VDB-Release" ); /* 13 */
+    CONST_STRING ( &user_agent_string , "User-Agent" );    /* 10 */
 
     assert(method);
     if (method[0] != 'P') {
@@ -1273,6 +1310,16 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
             if (StringCaseCompare(&node->name, &accept_string) == 0)
                 have_accept = true;
         }
+        /* look for "X-SRA-Release" */
+        else if (!have_sra_release && node->name.len == 13) {
+            if (StringCaseCompare(&node->name, &sra_release_string) == 0)
+                have_sra_release = true;
+        }
+        /* look for "X-VDB-Release" */
+        else if (!have_vdb_release && node->name.len == 13) {
+            if (StringCaseCompare(&node->name, &vdb_release_string) == 0)
+                have_vdb_release = true;
+        }
 
         /* add header line */
         rc = KDataBufferPrintf ( buffer, "%S: %S\r\n"
@@ -1280,11 +1327,49 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
                                 , & node -> value );
     }
 
+  /* add an Accept header if we did not find one already in the header tree */
+    if (!have_accept) {
+        r2 = KDataBufferPrintf(buffer, "Accept: */*\r\n");
+        if (rc == 0 && r2 != 0)
+            rc = r2;
+    }
+
+    /* add a X-SRA-Release header if we did not find one
+       already in the header tree */
+    if (!have_sra_release) {
+        SraReleaseVersion version;
+        r2 = SraReleaseVersionGet(&version);
+        if (r2 == 0) {
+            r2 = KDataBufferPrintf(buffer, "X-SRA-Release: %V\r\n",
+                version.version);
+        }
+        if (rc == 0 && r2 != 0)
+            rc = r2;
+    }
+
+    /* add a X-VDB-Release header if we did not find one
+       already in the header tree */
+    if (!have_vdb_release) {
+        SraReleaseVersion version;
+        r2 = SraReleaseVersionGet(&version);
+        if (r2 == 0) {
+            r2 = KDataBufferPrintf(buffer, "X-VDB-Release: %V\r\n",
+                version.version);
+        }
+        if (rc == 0 && r2 != 0)
+            rc = r2;
+    }
+
     /* add an User-Agent header from the kns-manager if we did not find one already in the header tree */
     if ( !have_user_agent )
     {
+        rc_t r3 = 0;
         const char * ua = NULL;
-        rc_t r3 = KNSManagerGetUserAgent ( &ua );
+        if ( self -> http != NULL ) {
+            ua = self -> head ? self -> http -> ua_head : self -> http -> ua;
+        }
+        if ( ua == NULL )
+            r3 = KNSManagerGetUserAgent ( &ua );
         if ( r3 == 0 )
         {
             r2 = KDataBufferPrintf ( buffer, "User-Agent: %s\r\n", ua );
@@ -1293,12 +1378,6 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
                 rc = r2;
             }
         }
-    }
-
-    if (!have_accept) {
-        r2 = KDataBufferPrintf(buffer, "Accept: */*\r\n");
-        if (rc == 0 && r2 != 0)
-            rc = r2;
     }
 
     /* add terminating empty header line */
@@ -1367,6 +1446,8 @@ rc_t KClientHttpRequestHandleRedirection ( KClientHttpRequest *self, const char 
         if ( exp != NULL )
         {
             DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_HTTP), ("'To' URL expires at '%S'\n", & exp -> value ) );
+            assert(expiration);
+            free(*expiration);
             * expiration = string_dup( exp -> value . addr, exp -> value . size );
         }
 
@@ -1403,7 +1484,6 @@ rc_t KClientHttpRequestHandleRedirection ( KClientHttpRequest *self, const char 
 
             KDataBufferWhack ( & uri );
         }
-
     }
 
     return rc;
@@ -1417,6 +1497,8 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
     const uint32_t max_redirect = 5;
     char * expiration = NULL;
 
+    uint32_t uriForm = 1;
+
     /* TBD - may want to prevent a Content-Type or other headers here */
 
     if ( self -> body . elem_count != 0 )
@@ -1424,8 +1506,6 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
 
     for ( i = 0; i < max_redirect; ++ i )
     {
-        uint32_t uriForm = 1;
-
         KClientHttpResult *rslt;
 
         KDataBuffer buffer;
@@ -1435,8 +1515,10 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
 
         /* create message */
         rc = KClientHttpRequestFormatMsgInt ( self, & buffer, method, uriForm );
-        if ( rc != 0 )
+        if ( rc != 0 ) {
+            KDataBufferWhack( & buffer );
             break;
+        }
 
         /* send the message and create a response */
         rc = KClientHttpSendReceiveMsg ( self -> http, _rslt,
@@ -1448,13 +1530,22 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
             rc = KClientHttpSendReceiveMsg ( self -> http, _rslt,
                 (char *) buffer.base, buffer.elem_count - 1, NULL,
                 (char *) self -> url_buffer . base );
-            if ( rc != 0 )
+            if ( rc != 0 ) {
+                KDataBufferWhack( & buffer );
                 break;
+            }
         }
+
+        KDataBufferWhack( & buffer );
 
         rslt = * _rslt;
         rslt -> expiration = expiration; /* expiration has to reach the caller */
         expiration = NULL;
+
+        assert(!rc);
+        rc = KDataBufferWhack(&buffer);
+        if (rc != 0)
+            return rc;
 
         /* look at status code */
         switch ( rslt -> status )
@@ -1562,55 +1653,98 @@ rc_t KClientHttpRequestSendReceiveNoBody ( KClientHttpRequest *self, KClientHttp
  */
 LIB_EXPORT rc_t CC KClientHttpRequestHEAD ( KClientHttpRequest *self, KClientHttpResult **rslt )
 {
-    rc_t rc=0;
+    rc_t rc = 0;
+    bool headless = false;
 
-    if ( self -> ceRequired || self -> payRequired )
+    static int HEADLESS = -1;
+    if ( HEADLESS < 0 ) {
+        char * s = getenv ( "NCBI_VDB_GET_AS_HEAD" );
+        if ( s == NULL )
+            HEADLESS = 0;
+        else if ( s [ 0 ] != '\0' )
+            HEADLESS = 1;
+        else
+            HEADLESS = 0;
+    }
+
+    self->head = true; /* inside of HEAD request */
+
+    assert ( HEADLESS >= 0 );
+
+    if ( self -> ceRequired || self -> payRequired || HEADLESS )
+        headless = true;
+
+    if ( headless )
     {   /* use POST or GET for 256 bytes */
         /* update UserAgent with -head */
-        KNSManagerSetUserAgentSuffix("-head");
-
-        char buf [ 256 ];
-
-        /* add header "Range bytes = 0,HeadSize" */
-        rc = KClientHttpRequestByteRange ( self, 0, sizeof buf );
+        const char * s;
+        rc = KNSManagerGetUserAgentSuffix( & s );
         if ( rc == 0 )
         {
-            rc = self -> ceRequired ? KClientHttpRequestPOST ( self, rslt ) : KClientHttpRequestGET ( self, rslt );
+            char orig_suffix[ KNSMANAGER_STRING_MAX ];
+            char new_suffix[ KNSMANAGER_STRING_MAX ];
+
+            string_copy( orig_suffix, sizeof (orig_suffix), s, KNSMANAGER_STRING_MAX );
+
+            rc = string_printf( new_suffix, sizeof( new_suffix ), NULL, "%s-head", s );
             if ( rc == 0 )
             {
-                uint64_t result_size64 = sizeof buf;
-                KStream * response;
-
-                /* extractSize */
-                KClientHttpResultSize ( *rslt, & result_size64 );
-
-                if ( result_size64 > sizeof buf ) /* unlikely but would be very unpleasant */
+                rc = KNSManagerSetUserAgentSuffix( new_suffix );
+                if (rc == 0 )
                 {
-                    result_size64 = sizeof buf;
+                    char buf [ 256 ];
+
+                    /* add header "Range bytes = 0,HeadSize" */
+                    rc = KClientHttpRequestByteRange ( self, 0, sizeof buf );
+                    if ( rc == 0 )
+                    {
+                        rc = self -> ceRequired ? KClientHttpRequestPOST ( self, rslt ) : KClientHttpRequestGET ( self, rslt );
+                        if ( rc == 0 )
+                        {
+                            uint64_t result_size64 = sizeof buf;
+                            KStream * response;
+
+                            /* extractSize */
+                            KClientHttpResultSize ( *rslt, & result_size64 );
+
+                            if ( result_size64 > sizeof buf ) /* unlikely but would be very unpleasant */
+                            {
+                                result_size64 = sizeof buf;
+                            }
+
+                            /* consume and discard result_size64 bytes */
+                            rc = KClientHttpResultGetInputStream ( *rslt, & response );
+                            if ( rc == 0 )
+                            {
+                                rc = KStreamTimedReadExactly ( response, buf, result_size64, NULL );
+                                KStreamRelease ( response );
+                            }
+                        }
+                    }
+                    else
+                    {
+                        rc = RC ( rcNS, rcString, rcAllocating, rcMemory, rcExhausted );
+                    }
+
+                    {   /* Restore UserAgent */
+                        rc_t rc2 = KNSManagerSetUserAgentSuffix( orig_suffix );
+                        if ( rc == 0 )
+                        {
+                            rc = rc2;
+                        }
+                    }
                 }
 
-                /* consume and discard result_size64 bytes */
-                rc = KClientHttpResultGetInputStream ( *rslt, & response );
-                if ( rc == 0 )
-                {
-                    rc = KStreamTimedReadExactly ( response, buf, result_size64, NULL );
-                    KStreamRelease ( response );
-                }
             }
         }
-        else
-        {
-            rc = RC ( rcNS, rcString, rcAllocating, rcMemory, rcExhausted );
-        }
-
-        /* Restore UserAgent */
-        KNSManagerSetUserAgentSuffix("");
-        return rc;
     }
     else
     {
-        return KClientHttpRequestSendReceiveNoBody ( self, rslt, "HEAD" );
+        rc = KClientHttpRequestSendReceiveNoBody ( self, rslt, "HEAD" );
     }
+
+    self->head = false; /* reset head value: just in case*/
+    return rc;
 }
 
 /* GET
@@ -1633,6 +1767,8 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
 
     char * expiration = NULL;
     const char * method = "POST";
+
+    uint32_t uriForm = 1;
 
     rc = FormatForCloud(self, method);
     if (rc != 0)
@@ -1676,7 +1812,7 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
             break;
 
         /* create message */
-        rc = KClientHttpRequestFormatMsgInt ( self, & buffer, method, 0 );
+        rc = KClientHttpRequestFormatMsgInt ( self, & buffer, method, uriForm );
         if ( rc != 0 )
         {
             KDataBufferWhack( & buffer );
@@ -1712,14 +1848,15 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
         }
 
         rslt = * _rslt;
-        rslt -> expiration = expiration; /* expiration has to reach the caller */
-        expiration = NULL;
 
         /* look at status code */
         switch ( rslt -> status )
         {
         case 200:
         case 206:
+            /* expiration has to reach the caller */
+            rslt -> expiration = expiration; 
+            expiration = NULL;
             return 0;
         case 304:
             /* check for "If-Modified-Since" or "If-None-Match" header in request and allow if present */
@@ -1770,6 +1907,13 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
 
             /* NO BREAK */
 
+        case 400:
+             if ( uriForm == 1 ) {
+                 ++ uriForm; /* got 400; try to use different Request-URI form */
+                 continue;
+             }
+/*           else no break here: tried both Request-URI forms */
+
         default:
 
       /*    if ( ! rslt -> len_zero || self -> http -> close_connection ) */
@@ -1812,7 +1956,7 @@ static bool GovSiteByHttp ( const char * path ) {
 
         /* resolver-cgi is called over http */
         if ( path_size > size &&
-             strcase_cmp ( path, size, http . addr, size, size ) == 0 )
+             strcase_cmp ( path, size, http . addr, size, http.len ) == 0 )
         {
             EUrlParseState state = eUPSBegin;
             unsigned i = 0;
@@ -1842,7 +1986,7 @@ static bool GovSiteByHttp ( const char * path ) {
                 CONST_STRING ( & gov, ".gov" );
                 size = gov . size;
                 if ( strcase_cmp
-                    ( path + i - 5, size, gov . addr, size, size ) == 0 )
+                    ( path + i - 5, size, gov . addr, size, gov.len ) == 0 )
                 {
                     return true;
                 }

@@ -53,7 +53,7 @@ TEST_CASE(TryPost) {
     REQUIRE_RC(KNSManagerMake(&kns));
     KClientHttpRequest *req = NULL;
     REQUIRE_RC(KNSManagerMakeRequest(kns, &req, 0x01010000, NULL,
-        "https://www.nlm.nih.gov"));
+        "https://www.nih.gov"));
     KClientHttpResult * rslt = NULL;
     REQUIRE_RC(KClientHttpRequestPOST(req, &rslt));
     REQUIRE_RC(KClientHttpResultRelease(rslt));
@@ -293,7 +293,7 @@ TEST_CASE(CallCloudAddComputeEnvironmentTokenForSigner) {
         REQUIRE_RC(KNSManagerMake(&kns));
         KClientHttpRequest *req = NULL;
         REQUIRE_RC(KNSManagerMakeRequest(kns, &req, 0x01010000, NULL,
-            "https://www.nlm.nih.gov"));
+            "https://www.nih.gov"));
         REQUIRE_RC(KHttpRequestAddPostParam(req, "foo=bar"));
         REQUIRE_RC(CloudAddComputeEnvironmentTokenForSigner(cloud, req));
         KClientHttpResult * rslt = NULL;

@@ -557,7 +557,7 @@ rc_t VTableCursorAddSColumn ( VCURSOR_IMPL *self, uint32_t *idx,
     if ( col != NULL )
     {
         * idx = col -> ord;
-        return RC ( rcVDB, rcCursor, rcUpdating, rcColumn, rcExists );
+        return SILENT_RC ( rcVDB, rcCursor, rcUpdating, rcColumn, rcExists );
     }
 
     /* make object */
@@ -1515,8 +1515,8 @@ rc_t VTableCursorReadBitsDirect ( const VCURSOR_IMPL *self, int64_t row_id, uint
                     rc = RC ( rcVDB, rcCursor, rcReading, rcType, rcInconsistent );
                 else if ( * num_read != 0 )
                 {
-                    uint64_t to_read = * num_read * elem_size;
-                    uint64_t doff = start * elem_bits;
+                    uint64_t to_read = (uint64_t)(* num_read) * elem_size;
+                    uint64_t doff = (uint64_t)start * elem_bits;
                     to_read = to_read > doff ? to_read - doff : 0;
                     if ( blen == 0 )
                     {
@@ -1529,7 +1529,7 @@ rc_t VTableCursorReadBitsDirect ( const VCURSOR_IMPL *self, int64_t row_id, uint
                         rc = RC ( rcVDB, rcCursor, rcReading, rcParam, rcNull );
                     else
                     {
-                        uint64_t bsize = blen * elem_size;
+                        uint64_t bsize = (uint64_t)blen * elem_size;
                         if ( to_read <= bsize )
                             * remaining = 0;
                         else

@@ -28,7 +28,7 @@
 
 #include "http-file-priv.h"
 
-#include "http-priv.h"
+#include "http-priv.h" /* SUPPORT_CHUNKED_READ */
 #include "mgr-priv.h"
 #include "stream-priv.h"
 
@@ -68,8 +68,6 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
-
-#define SUPPORT_CHUNKED_READ 1
 
 #if SUPPORT_CHUNKED_READ
 #include <kfs/chunk-reader.h>
@@ -201,8 +199,7 @@ rc_t KHttpFileMakeRequest ( const KHttpFile *cself, uint64_t pos, size_t req_siz
                 KClientHttpRequestSetCloudParams(req, cself -> need_env_token, cself -> payRequired);
                 if ( cself -> need_env_token && ! cself -> url_is_temporary)
                 {
-                    KClientHttpRequestSetCloudParams(req, true, cself -> payRequired);
-                    KClientHttpRequestAttachEnvironmentToken ( req );
+                    KClientHttpRequestAttachEnvironmentToken ( req, NULL );
                     /* TBD - there should be a version of POST that takes a timeout */
                     rc = KClientHttpRequestPOST ( req, rslt );
                 }
@@ -851,9 +848,16 @@ rc_t CC KHttpFileRead ( const KHttpFile *self, uint64_t pos,
      void *buffer, size_t bsize, size_t *num_read )
 {
     struct timeout_t tm;
-    TimeoutInit ( & tm, self -> kns -> http_read_timeout );
+    timeout_t * ptm = NULL;
 
-    return KHttpFileTimedRead ( self, pos, buffer, bsize, num_read, & tm );
+    assert(self && self->kns);
+
+    if (self -> kns -> http_read_timeout >= 0) {
+        TimeoutInit ( & tm, self -> kns -> http_read_timeout );
+        ptm = &tm;
+    }
+
+    return KHttpFileTimedRead ( self, pos, buffer, bsize, num_read, ptm );
 }
 
 static
@@ -1218,9 +1222,17 @@ rc_t CC KHttpFileReadChunked ( const KHttpFile * self, uint64_t pos,
     KChunkReader * chunks, size_t bytes, size_t * num_read )
 {
     struct timeout_t tm;
-    TimeoutInit ( & tm, self -> kns -> http_read_timeout );
+    timeout_t * ptm = NULL;
 
-    return KHttpFileTimedReadChunked ( self, pos, chunks, bytes, num_read, & tm );
+    assert(self && self->kns);
+
+    if (self -> kns -> http_read_timeout >= 0) {
+        TimeoutInit ( & tm, self -> kns -> http_read_timeout );
+        ptm = &tm;
+    }
+
+    return KHttpFileTimedReadChunked ( self, pos, chunks, bytes, num_read,
+        ptm );
 }
 #endif /* SUPPORT_CHUNKED_READ */
 
@@ -1250,7 +1262,8 @@ static KFile_vt_v1 vtKHttpFile =
 };
 
 static
-rc_t KHttpFileMake( KHttpFile ** self, const char *url, va_list args )
+rc_t KHttpFileMake( KHttpFile ** self,
+             const KDataBuffer * aBuf, const char *url, va_list args )
 {
     rc_t rc;
     KHttpFile * f = calloc ( 1, sizeof *f );
@@ -1270,7 +1283,12 @@ rc_t KHttpFileMake( KHttpFile ** self, const char *url, va_list args )
                 rc = KDataBufferMake( buf, 8, 0 );
                 if ( rc == 0 )
                 {
-                    rc = KDataBufferVPrintf ( buf, url, args );
+                    if (aBuf != NULL)
+                        rc = KDataBufferPrintf(buf,
+                          "%.*s", aBuf->elem_count, aBuf->base);
+                    else
+                        rc = KDataBufferVPrintf ( buf, url, args );
+
                     if ( rc == 0 )
                     {
                         rc = ParseUrl ( & f -> block, buf -> base, buf -> elem_count - 1 );
@@ -1287,11 +1305,12 @@ rc_t KHttpFileMake( KHttpFile ** self, const char *url, va_list args )
         }
         free ( f );
     }
+
     return rc;
 }
 
-static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
-    const KFile **file, KStream *conn, ver_t vers, bool reliable, bool need_env_token, bool payRequired,
+static rc_t KNSManagerVMakeHttpFileIntUnstableImpl( const KNSManager *self,
+    const KFile **file, KStream *conn, ver_t vers, bool reliable, bool need_env_token, bool payRequired, const KDataBuffer *buf,
     const char *url, va_list args )
 {
     rc_t rc;
@@ -1309,7 +1328,8 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
         else
         {
             KHttpFile * f;
-            rc = KHttpFileMake ( &f, url, args );
+            rc = KHttpFileMake ( &f, buf, url, args );
+
             if ( rc == 0 )
             {
                 KDataBuffer * buf = & f -> orig_url_buffer;
@@ -1325,11 +1345,12 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                     {
                         KClientHttpResult *rslt;
 
+                        KClientHttpRequestSetCloudParams ( req, need_env_token, payRequired );
                         if ( need_env_token )
                         {
-                            KClientHttpRequestAttachEnvironmentToken ( req );
+                            KClientHttpRequestAttachEnvironmentToken ( req,
+                                NULL );
                         }
-                        KClientHttpRequestSetCloudParams ( req, need_env_token, payRequired );
 
                         rc = KClientHttpRequestHEAD ( req, & rslt );
                         if ( rc == 0 && rslt -> expiration != NULL )
@@ -1414,6 +1435,14 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                         f -> need_env_token = need_env_token;
                                         f -> payRequired = payRequired;
 
+                               /* readWaitMillis and totalReadWaitMillis
+                                  ARE NEEDED BY
+                                  stable-http-file.c : HttpFileGetReadTimeouts()
+                                */
+                                        f -> totalReadWaitMillis =
+                                            f -> readWaitMillis
+                                            = self -> http_read_timeout;
+
                                         * file = & f -> dad;
                                         return 0;
                                     }
@@ -1432,7 +1461,7 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                             String ext;
                                             StringInit ( & ext,
                                                     base + buf -> elem_count - vdbcache . size - 1,
-                                                    vdbcache . size, vdbcache . size );
+                                                    vdbcache . size, vdbcache . len );
                                             if ( ext . addr [ ext . size ] == '\0' &&
                                                 StringEqual ( & vdbcache, & ext ) )
                                             {
@@ -1442,7 +1471,7 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                                 size_t size = query - base;
                                                 StringInit ( & ext,
                                                     base + size - vdbcache . size,
-                                                    vdbcache . size, vdbcache . size );
+                                                    vdbcache . size, vdbcache . len );
                                                 if ( ext . addr [ ext . size ] == '?' &&
                                                     StringEqual ( & vdbcache, & ext ) )
                                                 {
@@ -1453,8 +1482,8 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                         if ( ! reliable )
                                             print = false;
                                         if ( print ) {
-                                        assert ( buf );
-                                        PLOGERR ( klogErr,
+                                           assert ( buf );
+                                           PLOGERR ( klogErr,
                                             ( klogErr, rc,
                                             "Failed to KNSManagerVMakeHttpFileInt('$(path)' ($(ip)))"
                                             " from '$(local)'", "path=%.*s,ip=%s,local=%s",
@@ -1484,31 +1513,39 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
     return rc;
 }
 
+
+static rc_t KNSManagerVMakeHttpFileIntUnstableImpl_noargs( const KNSManager *self,
+    const KFile **file, KStream *conn, ver_t vers, bool reliable, bool need_env_token, bool payRequired, const KDataBuffer *buf,
+    const char *url, ... )
+{
+    va_list vl;
+    va_start( vl, url );
+    rc_t ret = KNSManagerVMakeHttpFileIntUnstableImpl(self, file, conn, vers,
+        reliable, need_env_token, payRequired, buf, url, vl);
+    va_end(vl);
+    return ret;
+}
+
 /******************************************************************************/
 
-LIB_EXPORT rc_t CC KNSManagerMakeHttpFile(const KNSManager *self,
-    const KFile **file, struct KStream *conn, ver_t vers, const char *url, ...)
+rc_t KNSManagerVMakeHttpFileIntUnstableFromBuffer(const KNSManager *self,
+    const KFile **file, KStream *conn, ver_t vers, bool reliable,
+    bool need_env_token, bool payRequired, const char *url,
+    const KDataBuffer *buf)
 {
-    rc_t rc = 0;
-    va_list args;
-    va_start(args, url);
-    rc = KNSManagerVMakeHttpFileInt ( self, file, conn, vers, false, false, false, url, args);
-    va_end(args);
-    return rc;
+    return KNSManagerVMakeHttpFileIntUnstableImpl_noargs(self, file, conn, vers,
+        reliable, need_env_token, payRequired, buf, url);
 }
 
-LIB_EXPORT rc_t CC KNSManagerMakeReliableHttpFile(const KNSManager *self,
-    const KFile **file, struct KStream *conn, ver_t vers, bool reliable, bool need_env_token, bool payRequired, const char *url, ...)
+rc_t KNSManagerVMakeHttpFileIntUnstable(const KNSManager *self,
+    const KFile **file, KStream *conn, ver_t vers, bool reliable,
+    bool need_env_token, bool payRequired,
+    const char *url, va_list args)
 {
-    rc_t rc = 0;
-    va_list args;
-    va_start(args, url);
-    rc = KNSManagerVMakeHttpFileInt ( self, file, conn, vers, true, need_env_token, payRequired, url, args);
-    va_end(args);
-    return rc;
+    return KNSManagerVMakeHttpFileIntUnstableImpl(self, file, conn, vers,
+        reliable, need_env_token, payRequired, NULL, url, args);
 }
 
-LIB_EXPORT bool CC KFileIsKHttpFile ( const struct KFile * self )
-{
+bool KUnstableFileIsKHttpFile(const KFile * self) {
     return self != NULL && &self->vt->v1 == &vtKHttpFile;
 }

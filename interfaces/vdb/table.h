@@ -422,6 +422,24 @@ VDB_EXTERN rc_t CC VTableSetUserData ( const VTable *self,
  */
 VDB_EXTERN rc_t CC VTableIsEmpty( const VTable *self, bool * empty );
 
+
+/* GetQualityCapability
+ *  can the table deliver full quality? synthetic quallity?
+ */
+VDB_EXTERN rc_t CC VTableGetQualityCapability ( const VTable *self,
+    bool *fullQuality, bool *synthQuality );
+
+/* SetFullQualityType
+ *  switch table to deliver full quality
+ */
+VDB_EXTERN rc_t CC VTableSetFullQualityType ( VTable *self );
+
+/* SetSynthQualityType
+ *  switch table to deliver synthetic quality
+ */
+VDB_EXTERN rc_t CC VTableSetSynthQualityType ( VTable *self );
+
+
 #ifdef __cplusplus
 }
 #endif

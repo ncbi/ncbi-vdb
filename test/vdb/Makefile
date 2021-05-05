@@ -28,6 +28,9 @@ TOP ?= $(abspath ../..)
 
 MODULE = test/vdb
 
+INT_TOOLS = \
+	check-user-agent-header-in-thread \
+
 TEST_TOOLS = \
 	test-vdb \
 	test-wvdb \
@@ -46,6 +49,11 @@ TEST_TOOLS = \
 
 #	test-VDB-3418
 
+SLOW_TEST_TOOLS =  \
+	test-vdb-slow \
+
+ALL_TOOLS = $(TEST_TOOLS) $(INT_TOOLS)
+
 include $(TOP)/build/Makefile.env
 
 
@@ -57,7 +65,7 @@ ifeq ($(wildcard ../../../asm-trace),)
 endif
 
 
-$(TEST_TOOLS): makedirs
+$(ALL_TOOLS) $(SLOW_TEST_TOOLS): makedirs
 	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
 
 runtests: setup
@@ -65,7 +73,7 @@ runtests: setup
 setup:
 	@ mkdir -p db
 
-.PHONY: $(TEST_TOOLS) setup
+.PHONY: $(TEST_TOOLS) $(SLOW_TEST_TOOLS) setup
 
 clean: stdclean
 
@@ -185,6 +193,22 @@ $(TEST_BINDIR)/test-blob-val: $(TEST_BLOB_VAL_OBJ)
 
 blob-val: test-blob-val
 	$(TEST_BINDIR)/test-blob-val
+
+#-------------------------------------------------------------------------------
+CHTS_SRC = \
+	check-user-agent-header-in-thread
+
+CHTS_OBJ = \
+	$(addsuffix .$(OBJX),$(CHTS_SRC))
+
+CHTS_LIB = \
+	-sncbi-vdb
+
+$(TEST_BINDIR)/check-user-agent-header-in-thread: $(CHTS_OBJ)
+	$(LP) --exe -o $@ $^ $(CHTS_LIB)
+
+user-agent-check: check-user-agent-header-in-thread
+	$(TEST_BINDIR)/check-user-agent-header-in-thread
 
 #-------------------------------------------------------------------------------
 # SYS-224064
@@ -330,13 +354,8 @@ VDB_3305_SRC = \
 VDB_3305_OBJ = \
 	$(addsuffix .$(OBJX),$(VDB_3305_SRC))
 
-VDB_3305_LIB = \
-	-skapp \
-	-sktst \
-	-sncbi-vdb
-
 $(TEST_BINDIR)/test-VDB-3305: $(VDB_3305_OBJ)
-	$(LP) --exe -o $@ $^ $(VDB_3305_LIB)
+	$(LP) --exe -o $@ $^ $(READ_LIBS)
 
 VDB-3305: test-VDB-3305
 	$(TEST_BINDIR)/test-VDB-3305
@@ -351,13 +370,8 @@ VDB_3418_SRC = \
 VDB_3418_OBJ = \
 	$(addsuffix .$(OBJX),$(VDB_3418_SRC))
 
-VDB_3418_LIB = \
-	-skapp \
-	-sktst \
-	-sncbi-vdb
-
 $(TEST_BINDIR)/test-VDB-3418: $(VDB_3418_OBJ)
-	$(LP) --exe -o $@ $^ $(VDB_3418_LIB)
+	$(LP) --exe -o $@ $^ $(READ_LIBS)
 
 VDB-3418: test-VDB-3418
 	$(TEST_BINDIR)/test-VDB-3418
@@ -376,4 +390,20 @@ $(TEST_BINDIR)/test-VDB-4156: $(TEST_VDB4156_OBJ)
 
 VDB-4156: test-VDB-4156
 	$(TEST_BINDIR)/test-VDB-4156
+
+#-------------------------------------------------------------------------------
+# test-vdb-slow
+#
+TEST_VDB_SLOW_SRC = \
+	test-vdb-slow
+
+TEST_VDB_SLOW_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_VDB_SLOW_SRC))
+
+$(TEST_BINDIR)/test-vdb-slow: $(TEST_VDB_SLOW_OBJ)
+	$(LP) --exe -o $@ $^ $(READ_LIBS)
+
+vdb-slow: test-vdb-slow
+	$(TEST_BINDIR)/test-vdb-slow
+
 
