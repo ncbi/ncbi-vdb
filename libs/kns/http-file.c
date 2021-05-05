@@ -89,6 +89,8 @@
    when GET doesn't return Content-Length and Range was not requested. */
 #define USE_SIZE_FROM_HEAD
 
+double download_time = 0.0;
+
 static
 rc_t CC KHttpFileDestroy ( KHttpFile *self )
 {
@@ -777,6 +779,8 @@ rc_t CC KHttpFileTimedRead ( const KHttpFile *self,
     uint64_t pos, void *buffer, size_t bsize,
     size_t *num_read, struct timeout_t *tm )
 {
+    clock_t start = clock();
+
     KHttpRetrier retrier;
     rc_t rc = KHttpRetrierInit ( & retrier, self -> url_buffer . base, self -> kns );
     if ( rc == 0 )
@@ -840,6 +844,7 @@ rc_t CC KHttpFileTimedRead ( const KHttpFile *self,
             ep . ip_address, bsize, local_ep . ip_address ) );
     }
 
+download_time += ( (double) ( clock() - start ) ) / CLOCKS_PER_SEC;
     return rc;
 }
 
@@ -1122,6 +1127,8 @@ static
 rc_t CC KHttpFileTimedReadChunked ( const KHttpFile * self, uint64_t pos,
      KChunkReader * chunks, size_t bytes, size_t * num_read, struct timeout_t * tm )
 {
+    clock_t start = clock();
+
     rc_t rc;
     KHttpRetrier retrier;
 
@@ -1213,6 +1220,7 @@ rc_t CC KHttpFileTimedReadChunked ( const KHttpFile * self, uint64_t pos,
             self -> url_buffer . base,
             ep . ip_address, bytes, local_ep . ip_address ) );
     }
+download_time += ( (double) ( clock() - start ) ) / CLOCKS_PER_SEC;
 
     return rc;
 }

@@ -48,6 +48,7 @@
 #include <strtol.h>
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <assert.h>
 #include <string.h>
 
@@ -128,7 +129,7 @@ rc_t CC KAppCheckEnvironment ( bool require64Bits, uint64_t requireRamSize )
     if ( requireRamSize && totalRam < requireRamSize )
     {
         rc = RC ( rcApp, rcNoTarg, rcInitializing, rcResources, rcUnsupported );
-        PLOGERR ( klogFatal, ( klogFatal, rc,  "there is not enough RAM in the system." 
+        PLOGERR ( klogFatal, ( klogFatal, rc,  "there is not enough RAM in the system."
                                            " required size: $(REQUIRED) B, present: $(PRESENT) B"
                               , "REQUIRED=%lu,PRESENT=%lu"
                               , requireRamSize
@@ -310,11 +311,11 @@ rc_t LogLevelRelative ( const char * string )
         case '+':
             ++ adjust;
             break;
-            
+
         case '-':
             -- adjust;
             break;
-            
+
         default:
             return RC ( rcApp, rcArgv, rcParsing, rcToken, rcUnrecognized );
         }
@@ -345,7 +346,7 @@ void CC HandleLogLevelError ( rc_t rc )
 /* NextLogLevel
  *  handle a numeric or textual argument to --log-level <level>  The --log-level is not
  *  specified here and could be any string of the programmers choice
- */ 
+ */
 void CC NextLogLevel ( const char ** argp,
 		    int *ip,
 		    int argc,
@@ -365,7 +366,7 @@ void CC NextLogLevel ( const char ** argp,
 /* NextLogLevelh
  *  handle a numeric or textual argument to --log-level <level>  The --log-level is not
  *  specified here and could be any string of the programmers choice
- */ 
+ */
 void CC NextLogLevelh (int *ip,
 		    int argc,
 		    char *argv [],
@@ -519,6 +520,9 @@ rc_t KMane ( int argc, char *argv [] )
 #if ! NO_KRSRC
     KRsrcGlobalWhack ( ctx );
 #endif
+
+    extern double download_time;
+    fprintf( stderr, "download %f\n", download_time );
 
     return rc;
 }
