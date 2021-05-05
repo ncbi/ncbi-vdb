@@ -481,10 +481,16 @@ LIB_EXPORT rc_t CC KNSManagerSetOwnCert(KNSManager * self,
     if (own_cert != NULL && pk_key == NULL)
         return RC(rcNS, rcMgr, rcUpdating, rcParam, rcNull);
 
-    free(self->own_cert);
-    free(self->pk_key);
+    if (self->own_cert != NULL) {
+        /* cannot clear certificate once set */
+        if (own_cert == NULL)
+            return RC(rcNS, rcMgr, rcClearing, rcDoc, rcExists);
+        /* cannot update certificate once set */
+        else
+            return RC(rcNS, rcMgr, rcUpdating, rcDoc, rcExists);
+    }
 
-    self->own_cert = self->pk_key = NULL;
+    assert(self->pk_key == NULL);
 
     if (own_cert != NULL) {
         self->own_cert = string_dup_measure(own_cert, NULL);
@@ -501,7 +507,13 @@ LIB_EXPORT rc_t CC KNSManagerSetOwnCert(KNSManager * self,
         }
     }
 
-    return 0;
+    if (self->own_cert != NULL) {
+        assert(self->pk_key);
+        return
+            KTLSGlobalsSetupOwnCert(&self->tlsg, self->own_cert, self->pk_key);
+    }
+    else
+        return 0;
 }
 
 static

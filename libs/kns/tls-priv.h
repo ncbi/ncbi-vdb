@@ -66,11 +66,20 @@ struct KTLSGlobals
     bool allow_all_certs;
 
     bool safe_to_modify_ssl_config; /* needed for SetAllowAllCerts () */
+
+    mbedtls_x509_crt clicert;
+    mbedtls_pk_context pkey;
+    bool clicert_was_set;
 };
 
 /* Init
  */
 rc_t KTLSGlobalsInit ( KTLSGlobals * tlsg, struct KConfig const * kfg );
+
+/* SetupOwnCert
+ */
+rc_t KTLSGlobalsSetupOwnCert ( KTLSGlobals * tlsg,
+    const char * own_cert, const char * pk_key );
 
 /* Whack
  */

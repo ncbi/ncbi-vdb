@@ -616,6 +616,9 @@ rc_t KTLSGlobalsInit ( KTLSGlobals * tlsg, const KConfig * kfg )
     vdb_mbedtls_entropy_init ( &tlsg -> entropy );
     vdb_mbedtls_ssl_config_init ( &tlsg -> config );
 
+    vdb_mbedtls_x509_crt_init ( &tlsg -> clicert );
+    vdb_mbedtls_pk_init ( &tlsg -> pkey );
+
     if ( set_threshold ( kfg ) > 0 )
         vdb_mbedtls_ssl_conf_dbg ( &tlsg -> config, ktls_ssl_dbg_print, tlsg );
 
@@ -640,6 +643,8 @@ void KTLSGlobalsWhack ( KTLSGlobals * self )
     vdb_mbedtls_entropy_free ( &self -> entropy );
     vdb_mbedtls_ctr_drbg_free ( &self -> ctr_drbg );
     vdb_mbedtls_x509_crt_free ( &self -> cacert );
+    vdb_mbedtls_x509_crt_free ( &self -> clicert );
+    vdb_mbedtls_pk_free ( &self -> pkey );
 
     memset ( self, 0, sizeof * self );
 }
@@ -719,9 +724,6 @@ struct KTLSStream
     /* mbed library specific data */
     mbedtls_ssl_context ssl;
 
-    mbedtls_x509_crt clicert;
-    mbedtls_pk_context pkey;
-
     /* error returned from ciphertext stream */
     rc_t rd_rc;
     rc_t wr_rc;
@@ -730,9 +732,6 @@ struct KTLSStream
 static
 void KTLSStreamDestroy ( KTLSStream *self )
 {
-    vdb_mbedtls_x509_crt_free ( &self -> clicert );
-    vdb_mbedtls_pk_free ( &self -> pkey );
-
     /* tear down all of the stuff created during Make */
     vdb_mbedtls_ssl_close_notify( &self -> ssl ); /* close connection - this might need to be elsewhere */
     vdb_mbedtls_ssl_free ( &self -> ssl );
@@ -1072,19 +1071,19 @@ int CC ktls_net_recv ( void *ctx, unsigned char *buf, size_t len )
     return ( int ) num_read;
 }
 
-static
-rc_t ktls_ssl_setup_own_cert(KTLSStream *self)
+rc_t KTLSGlobalsSetupOwnCert(KTLSGlobals * tlsg,
+    const char * own_cert, const char * pk_key)
 {
     rc_t rc = 0;
     int ret = 0;
-    const char *own_cert = NULL, *pk_key = NULL;
-    assert(self);
-    rc = KNSManagerGetOwnCert(self->mgr, &own_cert, &pk_key);
-    if (own_cert == NULL || pk_key == NULL) {
-        return 0;
-    }
 
-    ret = vdb_mbedtls_x509_crt_parse(&self->clicert,
+    assert(tlsg);
+
+    /* only the first call to mbedtls_ssl_conf_own_cert has any effect */
+    if (tlsg->clicert_was_set || own_cert == NULL || pk_key == NULL)
+        return 0;
+
+    ret = vdb_mbedtls_x509_crt_parse(&tlsg->clicert,
         (const unsigned char *)own_cert,
         string_measure(own_cert, NULL) + 1);
     if (ret < 0) {
@@ -1098,7 +1097,7 @@ rc_t ktls_ssl_setup_own_cert(KTLSStream *self)
     }
 
     if (rc == 0) {
-        ret = vdb_mbedtls_pk_parse_key(&self->pkey,
+        ret = vdb_mbedtls_pk_parse_key(&tlsg->pkey,
             (const unsigned char *)pk_key,
             string_measure(pk_key, NULL) + 1,
             NULL, 0);
@@ -1114,21 +1113,26 @@ rc_t ktls_ssl_setup_own_cert(KTLSStream *self)
     }
 
     if (rc == 0) {
-        ret = vdb_mbedtls_ssl_set_hs_own_cert(
-            &self->ssl, &self->clicert, &self->pkey);
+        ret = vdb_mbedtls_ssl_conf_own_cert(&tlsg->config,
+            &tlsg->clicert, &tlsg->pkey);
         if (ret < 0) {
             rc = RC(rcKrypto, rcToken, rcInitializing, rcEncryption, rcFailed);
             PLOGERR(klogSys, (klogSys, rc
-                , "vdb_mbedtls_ssl_set_hs_own_cert returned $(ret) ( $(expl) )"
+                , "vdb_mbedtls_ssl_conf_own_cert returned $(ret) ( $(expl) )"
                 , "ret=%d,expl=%s"
                 , ret
                 , mbedtls_strerror2(ret)
                 ));
         }
+        else {
+            size_t len = tlsg->clicert.subject.val.len;
+            String subject;
+            StringInit(&subject, (char*)tlsg->clicert.subject.val.p, len, len);
+            STATUS(STAT_QA, "Setting '%S' client certificate", &subject);
+            tlsg->clicert_was_set = true;
+        }
     }
 
-    free((char*)own_cert);
-    free((char*)pk_key);
     return rc;
 }
 
@@ -1204,12 +1208,6 @@ rc_t ktls_ssl_setup ( KTLSStream *self, const String *host )
 
 
     vdb_mbedtls_ssl_set_bio( &self -> ssl, ( void * ) self, ktls_net_send, ktls_net_recv, NULL );
-
-    {
-        rc_t rc = ktls_ssl_setup_own_cert(self);
-        if (rc != 0)
-            return rc;
-    }
 
     return 0;
 }
@@ -1335,9 +1333,6 @@ rc_t KTLSStreamMake ( KTLSStream ** objp, const KNSManager * mgr, const KSocket 
                 if ( rc == 0 )
                 {
                     obj -> mgr = mgr;
-
-                    vdb_mbedtls_x509_crt_init ( & obj -> clicert );
-                    vdb_mbedtls_pk_init ( & obj -> pkey );
 
                     STATUS ( STAT_PRG, "%s - initializing tls wrapper\n", __func__ );
                     vdb_mbedtls_ssl_init ( & obj -> ssl );
