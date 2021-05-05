@@ -26,7 +26,9 @@
 #include <kfs/directory.h> /* KDirectoryRelease */
 #include <kfs/file.h> /* KFileRelease */
 #include <kns/http.h> // KNSManagerMakeHttpFile
+#include <kns/kns-mgr-priv.h> // KNSManagerMakeLocal
 #include <kns/manager.h> // KNSManagerRelease
+#include <kns/tls.h> // :KNS_EXTERN rc_t CC KNSManagerSetAllowAllCerts
 #include <iostream> // cerr
 
 using std::cerr;
@@ -94,15 +96,45 @@ rc_t CC KMain(int argc, char *argv[]) {
     Args * args = NULL;
     rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0);
 
+    bool singleton = true;
+    int first = 1;
+    if (strcmp(argv[first], "no-singleton") == 0) {
+        singleton = false;
+        ++first;
+    }
+
     KNSManager * mgr = NULL;
     if (rc == 0)
-        rc = KNSManagerMake(&mgr);
+        rc = singleton ? KNSManagerMake(&mgr) : KNSManagerMakeLocal(&mgr, 0);
 
-    for (int i = 1; rc == 0 && i < argc; ++i) {
+    for (int i = first; rc == 0 && i < argc; ++i) {
+        if (i > first && !singleton) {
+            rc_t r2 = KNSManagerRelease(mgr);
+            mgr = NULL;
+            if (r2 != 0 && rc == 0)
+                rc = r2;
+            if (rc == 0)
+                rc = KNSManagerMakeLocal(&mgr, 0);
+        }
         if (argv[i][0] != '-' || argv[i][0] != '0') {
             const char *own_cert = NULL, *pk_key = NULL;
-            if (OwnCertfromEnv(argv[i], &own_cert, &pk_key))
+            if (OwnCertfromEnv(argv[i], &own_cert, &pk_key)) {
                 rc = KNSManagerSetOwnCert(mgr, own_cert, pk_key);
+                // second call to KNSManagerSetOwnCert should fail
+                if (i > 2 && singleton) {
+                    if (rc == 0)
+                        rc = 1;
+                    else
+                        rc = 0;
+                }
+                if (rc == 0) {
+                    rc = KNSManagerSetOwnCert(mgr, own_cert, pk_key);
+                    if (rc == 0)
+                        rc = 1;
+                    else
+                        rc = 0;
+                }
+            }
             free(const_cast<void*>(static_cast<const void*>(own_cert)));
             free(const_cast<void*>(static_cast<const void*>(pk_key)));
 
