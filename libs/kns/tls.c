@@ -738,8 +738,7 @@ void KTLSStreamDestroy ( KTLSStream *self )
 
     /* release the ciphertext object */
     KStreamRelease ( self -> ciphertext );
-
-    memset ( self, 0, sizeof * self );
+    self -> ciphertext = NULL;
 }
 
 static
@@ -749,10 +748,11 @@ rc_t CC KTLSStreamWhack ( KTLSStream *self )
 
     /* release the manager */
     KNSManagerRelease ( self -> mgr );
-    self -> mgr = NULL;
 
     /* done */
     KStreamWhack ( & self -> dad, "KTLSStream" );
+
+    memset ( self, 0, sizeof * self );
     free ( self );
     return 0;
 }
