@@ -56,6 +56,15 @@ typedef struct KNSManager KNSManager;
  */
 KNS_EXTERN rc_t CC KNSManagerMake ( KNSManager **mgr );
 
+/* MakeLocal
+ *  create a manager instance without initializing singleton,
+ *  for testing;
+ *  or using multiple client mTLS certificated
+ */
+KNS_EXTERN rc_t CC KNSManagerMakeLocal ( struct KNSManager ** mgr,
+    struct KConfig * kfg );
+
+
 
 /* AddRef
  * Release
