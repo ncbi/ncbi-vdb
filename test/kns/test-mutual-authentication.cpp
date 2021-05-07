@@ -53,6 +53,7 @@ static bool LoadOwnCert(const char * location,
 
     const KFile * file = NULL;
     uint64_t s = 0;
+    size_t num_read = 0;
 
     if (rc == 0) {
         rc = KDirectoryOpenFileRead(dir, &file, "%s/own_cert", location);
@@ -63,7 +64,7 @@ static bool LoadOwnCert(const char * location,
         if (rc == 0 && *cert == NULL)
             return false;
         if (rc == 0)
-            rc = KFileRead(file, 0, *cert, s + 1, &s);
+            rc = KFileRead(file, 0, *cert, s + 1, &num_read);
         if (rc == 0)
             KFileRelease(file);
     }
@@ -77,7 +78,7 @@ static bool LoadOwnCert(const char * location,
         if (rc == 0 && *key == NULL)
             return false;
         if (rc == 0)
-            rc = KFileRead(file, 0, *key, s + 1, &s);
+            rc = KFileRead(file, 0, *key, s + 1, &num_read);
         if (rc == 0)
             KFileRelease(file);
     }
@@ -166,7 +167,8 @@ rc_t CC KMain(int argc, char *argv[]) {
             rc = ArgsParamValue(args, i, (const void **)&v);
             if (rc == 0) {
                 const KFile * file = NULL;
-                rc = KNSManagerMakeHttpFile(mgr, &file, NULL, 0x01010000, v);
+                rc = KNSManagerMakeHttpFile(
+                    mgr, &file, NULL, 0x01010000, "%s", v);
                 rc_t r2 = KFileRelease(file);
                 if (r2 != 0 && rc == 0)
                     rc = r2;
