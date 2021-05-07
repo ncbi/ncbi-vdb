@@ -23,20 +23,20 @@
 * =========================================================================== */
 
 #include <kapp/main.h> // KMain
+
 #include <kfs/directory.h> /* KDirectoryRelease */
 #include <kfs/file.h> /* KFileRelease */
+
+#include <klib/out.h> // KOutMsg
+#include <klib/rc.h> // RC
+
 #include <kns/http.h> // KNSManagerMakeHttpFile
-#include <kns/kns-mgr-priv.h> // KNSManagerMakeLocal
 #include <kns/manager.h> // KNSManagerRelease
-#include <kns/tls.h> // :KNS_EXTERN rc_t CC KNSManagerSetAllowAllCerts
+#include <kns/tls.h> // KNSManagerSetAllowAllCerts
+
 #include <iostream> // cerr
 
 using std::cerr;
-
-ver_t CC KAppVersion(void) { return 0; }
-const char UsageDefaultName[] = "test-mutual-authentication";
-rc_t CC UsageSummary(const char * progname) { return 0; }
-rc_t CC Usage(const struct Args * args) { return 0; }
 
 static bool LoadOwnCert(const char * location,
     const char ** own_cert, const char ** pk_key)
@@ -91,13 +91,61 @@ static bool LoadOwnCert(const char * location,
 #define S_ALIAS  "n"
 #define S_OPTION "no-singleton"
 static
-const char * S_USAGE [] = { "not to use KNSManager singleton", NULL };
+const char * S_USAGE[] = { "not to use KNSManager singleton", NULL };
 
 static
 OptDef Options[] = {
-   /* name      alias    help_gen help max_count needs_value required*/
-    { S_OPTION, S_ALIAS, NULL, S_USAGE,    1,       false,   false  },
+    /* name      alias    help_gen help max_count needs_value required*/
+     { S_OPTION, S_ALIAS, NULL, S_USAGE,    1,       false,   false  },
 };
+
+ver_t CC KAppVersion(void) { return 0; }
+
+const char UsageDefaultName[] = "test-mutual-authentication";
+
+rc_t CC UsageSummary(const char * progname) {
+    return KOutMsg(
+     "Usage:\n"
+     "  %s [options] <DIR> <URL> [<DIR> <URL> ...]\n"
+     "  where\n"
+     "    <DIR> is path to directory with files named 'own_cert' and 'pk_key'\n"
+     "    use X to skip sending client certificate\n"
+     "\n"
+     "Summary:\n"
+     "  Program to test mutual TLS Authentication\n",
+        progname);
+}
+
+rc_t CC Usage(const struct Args * args) {
+    rc_t rc = 0;
+    unsigned i = 0;
+
+    const char * progname = UsageDefaultName;
+    const char * fullpath = UsageDefaultName;
+
+    if (args == NULL)
+        rc = RC(rcApp, rcArgv, rcAccessing, rcSelf, rcNull);
+    else
+        rc = ArgsProgram(args, &fullpath, &progname);
+    if (rc)
+        progname = fullpath = UsageDefaultName;
+
+    UsageSummary(progname);
+
+    OUTMSG(("\nOptions:\n"));
+    for (i = 0; i < sizeof Options / sizeof Options[0]; i++) {
+        const OptDef * o = &Options[i];
+        assert(o);
+        HelpOptionLine(o->aliases, o->name, NULL, o->help);
+    }
+    OUTMSG(("\n"));
+
+    HelpOptionsStandard();
+
+    HelpVersion(fullpath, KAppVersion());
+
+    return rc;
+}
 
 rc_t CC KMain(int argc, char *argv[]) {
     bool singleton = true;
@@ -107,6 +155,7 @@ rc_t CC KMain(int argc, char *argv[]) {
         &args, argc, argv, 1, Options, sizeof Options / sizeof Options[0]);
     if (rc != 0)
         return rc;
+
     uint32_t pcount = 0;
     do {
         rc = ArgsOptionCount(args, S_OPTION, &pcount);
@@ -122,10 +171,10 @@ rc_t CC KMain(int argc, char *argv[]) {
 
     rc = ArgsParamCount(args, &pcount);
     if (rc == 0 && pcount == 0) {
-        cerr << "Usage:\n"
-            << argv[0] << " <DIR> <URL>, [<DIR> <URL> ...]\n";
+        UsageSummary(argv[0]);
         rc = 1;
     }
+
     for (uint32_t i = 0; rc == 0 && i < pcount; ++i) {
         if (i > 1 && !singleton) {
             rc_t r2 = KNSManagerRelease(mgr);
@@ -133,7 +182,7 @@ rc_t CC KMain(int argc, char *argv[]) {
             if (r2 != 0 && rc == 0)
                 rc = r2;
             if (rc == 0)
-                rc = KNSManagerMakeLocal(&mgr, 0);
+                rc = KNSManagerMakeLocal(&mgr, NULL);
         }
         const char * v = NULL;
         rc = ArgsParamValue(args, i, (const void **)&v);
