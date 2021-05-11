@@ -544,6 +544,78 @@ FIXTURE_TEST_CASE ( VCursorCommit_BufferOverflow, WVDB_Fixture )
     }
 }
 
+////////////////////////////////////////
+// zstd encoding called from the schema
+
+class EncodingFixture : public WVDB_Fixture
+{
+public:
+    void MakeDatabaseWithEncoding( const string & name, const string & encoding, bool p_debug = false )
+    {
+        if ( p_debug )
+        {
+            KDbgSetString("VDB");
+        }
+
+        m_databaseName = name;
+
+        const char* TableName = "TABLE1";
+        const char* ColumnName = "c";
+        string schemaText =
+            string ( "version 1; "
+            "include 'vdb/vdb.vschema'; "
+            "table table1 #1.0.0 { column <ascii> " ) + encoding + " " + ColumnName +"; }; "
+            "database root_database #1 { table table1 #1 " + TableName +"; } ;";
+
+        WVDB_Fixture::MakeDatabase ( schemaText, "root_database", "../../interfaces" );
+
+        VCursor* cursor = CreateTable ( TableName );
+        try
+        {
+            uint32_t column_idx;
+            THROW_ON_RC ( VCursorAddColumn ( cursor, & column_idx, ColumnName ) );
+            THROW_ON_RC ( VCursorOpen ( cursor ) );
+            WriteRow( cursor, column_idx, "abcd" );
+            WriteRow( cursor, column_idx, "efgh" );
+            THROW_ON_RC ( VCursorCommit ( cursor ) ); // the round-trip test here will exercise both zstd and unzstd
+            THROW_ON_RC ( VCursorRelease ( cursor ) );
+        }
+        catch (...)
+        {
+            THROW_ON_RC ( VCursorRelease ( cursor ) );
+            throw;
+        }
+    }
+};
+
+FIXTURE_TEST_CASE ( Zstd_defaultCompression, EncodingFixture )
+{
+    MakeDatabaseWithEncoding( ScratchDir + GetName(), "zstd_encoding" );
+}
+
+FIXTURE_TEST_CASE ( Zstd_FastestCompression, EncodingFixture )
+{
+    MakeDatabaseWithEncoding( ScratchDir + GetName(), "zstd_encoding <-131072>" );
+}
+FIXTURE_TEST_CASE ( Zstd_BestestCompression, EncodingFixture )
+{
+    MakeDatabaseWithEncoding( ScratchDir + GetName(), "zstd_encoding <22>" );
+}
+FIXTURE_TEST_CASE ( Zstd_BadCompression, EncodingFixture )
+{
+    REQUIRE_THROW( MakeDatabaseWithEncoding( ScratchDir + GetName(), "zstd_encoding <23>" ) );
+}
+
+FIXTURE_TEST_CASE ( Zlib_default, EncodingFixture )
+{
+    MakeDatabaseWithEncoding( ScratchDir + GetName(), "zip_encoding" );
+}
+
+FIXTURE_TEST_CASE ( Bzip_default, EncodingFixture )
+{
+    MakeDatabaseWithEncoding( ScratchDir + GetName(), "bzip_encoding", true );
+}
+
 //////////////////////////////////////////// Main
 extern "C"
 {

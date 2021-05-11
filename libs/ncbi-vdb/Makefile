@@ -141,6 +141,7 @@ VDB_LIB_CMN =    \
 	kfc          \
 	bz2          \
 	z            \
+	zstd         \
 
 VDB_LIB_RD =              \
 	align-reader          \
