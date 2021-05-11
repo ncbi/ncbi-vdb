@@ -218,6 +218,7 @@ extern VTRANSFACT_DECL ( vdb_trunc );
 extern VTRANSFACT_DECL ( vdb_undelta );
 extern VTRANSFACT_DECL ( vdb_unpack );
 extern VTRANSFACT_DECL ( vdb_unzip );
+extern VTRANSFACT_DECL ( vdb_unzstd );
 extern VTRANSFACT_DECL ( vdb_vec_sum );
 
 static VTRANSFACT_DECL ( vdb_select );
@@ -411,6 +412,7 @@ static VLinkerIntFactory fact [] =
     { vdb_undelta, "vdb:undelta" },
     { vdb_unpack, "vdb:unpack" },
     { vdb_unzip, "vdb:unzip" },
+    { vdb_unzstd, "vdb:unzstd" },
     { vdb_vec_sum, "vdb:vec_sum" },
 
     { vdb_hello, "vdb:hello" }

@@ -22,33 +22,41 @@
 #
 # ===========================================================================
 
-by_default: runtests
+default: runtests
 
-TOP ?= $(abspath ../..)
-MODULE = test/ext
+TOP ?= $(abspath ../../..)
 
-include $(TOP)/build/Makefile.shell
+MODULE = test/ext/zstd
 
-include $(TOP)/build/Makefile.config
+TEST_TOOLS = \
+	test-zstd \
+
+include $(TOP)/build/Makefile.env
+
+$(TEST_TOOLS): makedirs
+	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
+
+.PHONY: $(TEST_TOOLS)
+
+clean: stdclean
 
 #-------------------------------------------------------------------------------
-# default
+# zstd
 #
-SUBDIRS = \
-	mbedtls \
-	zstd \
-	bzip2 \
+ZSTD_SRC = \
+	test-zstd
 
-# The libmagic tests (and copycat which is the only user of libmagic for now) rely on
-# the correct version of libmagic database installed on the system.
-# Disabling for now.
-#    magic \
+ZSTD_OBJ = \
+	$(addsuffix .$(OBJX),$(ZSTD_SRC))
 
-# common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
-include $(TOP)/build/Makefile.targets
+ZSTD_LIBS = \
+    -skapp \
+    -sktst \
+	-sncbi-wvdb \
+	-sm
 
-$(SUBDIRS):
-	@ $(MAKE) -C $@
+$(TEST_BINDIR)/test-zstd: $(ZSTD_OBJ)
+	$(LP) --exe -o $@ $^ $(ZSTD_LIBS)
 
-.PHONY: default $(SUBDIRS)
-
+zstd: test-zstd
+	$(TEST_BINDIR)/test-zstd
