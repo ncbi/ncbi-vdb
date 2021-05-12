@@ -24,47 +24,45 @@
 *
 */
 #include <vdb/extern.h>
-#include <klib/defs.h>
-#include <klib/rc.h>
-#include <vdb/xform.h>
 
 #include <ext/zstd.h>
 
-#include <stdio.h>
+#include <klib/rc.h>
+#include <vdb/xform.h>
+#include <klib/log.h>
 
-static rc_t invoke_zstd(void *dst, size_t dsize, const void *src, size_t ssize)
+typedef ZSTD_DCtx self_t;
+
+static rc_t invoke_zstd(void *dst, size_t dsize, const void *src, size_t ssize, ZSTD_DCtx *dctx)
 {
-    size_t size = ZSTD_decompress( dst, dsize, src, ssize );
-    if ( ZSTD_isError( size ) )
-    {
-#if _DEBUGGING
-        fprintf(stderr, "ZSTD_decompress: unexpected zstd error %lu: %s\n", size, ZSTD_getErrorName( size ) );
-#endif
-        return RC(rcXF, rcFunction, rcExecuting, rcSelf, rcUnexpected);
+    size_t zr = ZSTD_decompressDCtx(dctx, dst, dsize, src, ssize);
+    if (ZSTD_isError(zr)) {
+        rc_t rc = RC(rcXF, rcFunction, rcExecuting, rcSelf, rcUnexpected);
+        PLOGERR(klogErr, (klogErr, rc, "ZSTD_decompressDCtx: error: $(err)", "err=%s", ZSTD_getErrorName(zr)));
+        return rc;
     }
-
     return 0;
 }
 
 static
-rc_t unzstd_func_v1(
+rc_t unzstd_func_v1(self_t *self,
                    const VXformInfo *info,
                    VBlobResult *dst,
                    const VBlobData *src
 ) {
     dst->byte_order = src->byte_order;
     return invoke_zstd(dst->data, (((size_t)dst->elem_count * dst->elem_bits + 7) >> 3),
-                       src->data, (((size_t)src->elem_count * src->elem_bits + 7) >> 3));
+                       src->data, (((size_t)src->elem_count * src->elem_bits + 7) >> 3),
+                       self);
 }
 
 static
-rc_t unzstd_func_v2(
+rc_t unzstd_func_v2(self_t *self,
                    const VXformInfo *info,
                    VBlobResult *dst,
                    const VBlobData *src,
                    VBlobHeader *hdr
-)
-{
+) {
     int64_t trailing;
     rc_t rc = VBlobHeaderArgPopHead ( hdr, & trailing );
     if ( rc == 0 )
@@ -77,7 +75,8 @@ rc_t unzstd_func_v2(
            so the output must be as well */
         assert ( ( dst -> elem_count & 7 ) == 0 );
         rc = invoke_zstd(dst->data, (((size_t)dst->elem_count) >> 3),
-                         src->data, (((size_t)src->elem_count * src->elem_bits + 7) >> 3));
+                         src->data, (((size_t)src->elem_count * src->elem_bits + 7) >> 3),
+                         self);
 
         /* if the original, uncompressed source was NOT byte aligned,
            back off the rounded up byte and add in the original bit count */
@@ -89,7 +88,7 @@ rc_t unzstd_func_v2(
 }
 
 static
-rc_t CC unzip_func(
+rc_t CC unzstd_func(
                 void *Self,
                 const VXformInfo *info,
                 VBlobResult *dst,
@@ -100,25 +99,36 @@ rc_t CC unzip_func(
 
     switch (version) {
     case 1:
-        return unzstd_func_v1(info, dst, src);
+        return unzstd_func_v1(Self, info, dst, src);
         break;
     case 2:
-        return unzstd_func_v2(info, dst, src, hdr);
+        return unzstd_func_v2(Self, info, dst, src, hdr);
         break;
     default:
         return RC(rcXF, rcFunction, rcExecuting, rcParam, rcBadVersion);
     }
 }
 
-/* unzip
- *  function any unzstd #1.0 ( zlib_fmt in );
+static
+void CC vxf_zstd_wrapper(void *ptr)
+{
+    ZSTD_freeDCtx(ptr);
+}
+
+/* unzstd
+ *  function any unzstd #1.0 ( zstd_fmt in );
  */
 VTRANSFACT_IMPL ( vdb_unzstd, 1, 0, 0 ) ( const void *self, const VXfactInfo *info,
     VFuncDesc *rslt, const VFactoryParams *cp, const VFunctionParams *dp )
 {
-    rslt->variant = vftBlob;
-    rslt->u.bf = unzip_func;
+    self_t *ctx = ZSTD_createDCtx();
+    if (ctx) {
+        rslt->self = ctx;
+        rslt->whack = vxf_zstd_wrapper;
+        rslt->variant = vftBlob;
+        rslt->u.bf = unzstd_func;
 
-    return 0;
+        return 0;
+    }
+    return RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted);
 }
-
