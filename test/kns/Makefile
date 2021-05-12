@@ -201,6 +201,7 @@ $(TEST_BINDIR)/test200for-whole-file: $(K2_OBJ)
 
 #----------------------------------------------------------------
 MATEST_SRC = \
+    gosha \
     test-mutual-authentication \
 
 MATEST_OBJ = \

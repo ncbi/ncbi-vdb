@@ -32,17 +32,43 @@
 
 #include <kns/http.h> // KNSManagerMakeHttpFile
 #include <kns/manager.h> // KNSManagerRelease
-#include <kns/tls.h> // KNSManagerSetAllowAllCerts
 
 #include <iostream> // cerr
 
 using std::cerr;
 
+static rc_t KDirectory_Load(const KDirectory * self,
+    const char * path1, const char * path2, char ** buffer)
+{
+    const KFile * file = NULL;
+    rc_t rc = KDirectoryOpenFileRead(self, &file, path1, path2);
+
+    uint64_t s = 0;
+    if (rc == 0)
+        rc = KFileSize(file, &s);
+
+    assert(buffer);
+    if (rc == 0)
+        *buffer = (char*)calloc(1, s + 1);
+    if (rc == 0 && *buffer == NULL)
+        rc = 1;
+
+    size_t num_read = 0;
+    if (rc == 0)
+        rc = KFileRead(file, 0, *buffer, s + 1, &num_read);
+
+    rc_t r2 = KFileRelease(file);
+    if (rc == 0 && r2 != 0)
+        rc = r2;
+
+    return rc;
+}
+
 static bool LoadOwnCert(const char * location,
     const char ** own_cert, const char ** pk_key)
 {
-    void ** cert = (void**)own_cert;
-    void ** key = (void**)pk_key;
+    char ** cert = (char**)own_cert;
+    char ** key = (char**)pk_key;
     assert(cert && key);
 
     if (location == NULL)
@@ -51,37 +77,11 @@ static bool LoadOwnCert(const char * location,
     KDirectory * dir = NULL;
     rc_t rc = KDirectoryNativeDir(&dir);
 
-    const KFile * file = NULL;
-    uint64_t s = 0;
-    size_t num_read = 0;
+    if (rc == 0)
+        rc = KDirectory_Load(dir, "%s/own_cert", location, cert);
 
-    if (rc == 0) {
-        rc = KDirectoryOpenFileRead(dir, &file, "%s/own_cert", location);
-        if (rc == 0)
-            rc = KFileSize(file, &s);
-        if (rc == 0)
-            *cert = calloc(1, s + 1);
-        if (rc == 0 && *cert == NULL)
-            return false;
-        if (rc == 0)
-            rc = KFileRead(file, 0, *cert, s + 1, &num_read);
-        if (rc == 0)
-            KFileRelease(file);
-    }
-
-    if (rc == 0) {
-        rc = KDirectoryOpenFileRead(dir, &file, "%s/pk_key", location);
-        if (rc == 0)
-            rc = KFileSize(file, &s);
-        if (rc == 0)
-            *key = calloc(1, s + 1);
-        if (rc == 0 && *key == NULL)
-            return false;
-        if (rc == 0)
-            rc = KFileRead(file, 0, *key, s + 1, &num_read);
-        if (rc == 0)
-            KFileRelease(file);
-    }
+    if (rc == 0)
+        rc = KDirectory_Load(dir, "%s/pk_key", location, key);
 
     KDirectoryRelease(dir);
 
@@ -147,7 +147,31 @@ rc_t CC Usage(const struct Args * args) {
     return rc;
 }
 
+rc_t MutualConnection(const char * own_cert, const char * pk_key,
+    const char * url, const char * host, uint32_t port);
+
 rc_t CC KMain(int argc, char *argv[]) {
+    if (argc == 7 && argv[6][0] == '-') {
+        char * own_cert = NULL;
+        char * pk_key = NULL;
+
+        rc_t rc = 0;
+        if (argv[1][0] != 'X' || argv[1][1] != '\0')
+            rc = KDirectory_Load(NULL, "%s", argv[1], &own_cert);
+
+        if (rc == 0)
+            rc = KDirectory_Load(NULL, "%s", argv[2], &pk_key);
+
+        if (rc == 0)
+            rc = MutualConnection(
+                own_cert, pk_key, argv[3], argv[4], atoi(argv[5]));
+
+        free(own_cert);
+        free(pk_key);
+
+        return rc;
+    }
+
     bool singleton = true;
 
     Args * args = NULL;
@@ -189,7 +213,7 @@ rc_t CC KMain(int argc, char *argv[]) {
         if (rc != 0)
             break;
         assert(v);
-        if (v[0] != 'X' || v[0] != '0') {
+        if (v[0] != 'X' || v[1] != '\0') {
             const char *own_cert = NULL, *pk_key = NULL;
             if (LoadOwnCert(v, &own_cert, &pk_key)) {
                 rc = KNSManagerSetOwnCert(mgr, own_cert, pk_key);
