@@ -28,6 +28,7 @@
 
 #include <klib/defs.h>
 #include <klib/rc.h>
+#include <klib/log.h>
 #include <vdb/xform.h>
 
 #include <ext/zstd.h>
@@ -44,20 +45,18 @@
 
 struct self_t {
     int32_t level;
+    ZSTD_CCtx * ctx;
 };
 
-static rc_t invoke_zstd(void *dst, uint32_t *dsize, const void *src, uint32_t ssize, int32_t level)
+static rc_t invoke_zstd(void *dst, uint32_t *dsize, const void *src, uint32_t ssize, struct self_t * self)
 {
-    size_t size = ZSTD_compress( dst, (size_t)dsize, src, (size_t)ssize, level);
+    size_t size = ZSTD_compressCCtx( self -> ctx, dst, (size_t)dsize, src, (size_t)ssize, self -> level);
     if ( ZSTD_isError( size ) )
     {
-#if _DEBUGGING
-        fprintf(stderr, "ZSTD_compress: unexpected zstd error %lu: %s (level: %i)\n", size, ZSTD_getErrorName( size ), level);
-#endif
-        return RC(rcXF, rcFunction, rcExecuting, rcSelf, rcUnexpected);
+        rc_t rc = RC(rcXF, rcFunction, rcExecuting, rcSelf, rcUnexpected);
+        PLOGERR(klogErr, (klogErr, rc, "ZSTD_decompressDCtx: error: $(err)", "err=%s", ZSTD_getErrorName( size )));
+        return rc;
     }
-
-/* fprintf("ZSTD_compress (level=%i) from %u to %lu\n", level, ssize, size ); */
 
     *dsize = (uint32_t)size;
     return 0;
@@ -92,7 +91,7 @@ rc_t CC zstd_func(
         VBlobHeaderArgPushTail ( hdr, ( int64_t ) ( sbits & 7 ) );
     }
 
-    rc = invoke_zstd( dst -> data, & dsize, src -> data, ssize, self->level);
+    rc = invoke_zstd( dst -> data, & dsize, src -> data, ssize, self);
     if (rc == 0)
     {
         dst->elem_bits = 1;
@@ -108,6 +107,8 @@ rc_t CC zstd_func(
 static
 void CC vxf_zstd_wrapper( void *ptr )
 {
+    struct self_t * self = (struct self_t*) ptr;
+    ZSTD_freeCCtx( self -> ctx );
 	free( ptr );
 }
 
@@ -123,13 +124,18 @@ VTRANSFACT_IMPL(vdb_zstd, 1, 0, 0) (const void *self, const VXfactInfo *info, VF
     if ( cp -> argc > 0 )
     {
         level = cp -> argv [ 0 ] . data . i32 [ 0 ];
-        if ( level < ZSTD_MIN_LEVEL || level > ZSTD_MAX_LEVEL )
-            return RC(rcXF, rcFunction, rcConstructing, rcRange, rcInvalid);
+        //
+        // failing construction leads to problems in VDB;
+        // simply accepting the bad level does not seem to worry zstd.
+        //
+        // if ( level < ZSTD_MIN_LEVEL || level > ZSTD_MAX_LEVEL )
+        //     return RC(rcXF, rcFunction, rcConstructing, rcRange, rcInvalid);
     }
 
     ctx = malloc(sizeof(*ctx));
     if (ctx) {
-        ctx->level = level;
+        ctx -> level = level;
+        ctx -> ctx = ZSTD_createCCtx();
 
         rslt->self = ctx;
         rslt->whack = vxf_zstd_wrapper;

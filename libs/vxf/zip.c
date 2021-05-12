@@ -80,13 +80,13 @@ static rc_t invoke_zlib(void *dst, uint32_t *dsize, const void *src, uint32_t ss
     z_stream s;
     int zr;
     rc_t rc = 0;
-    
+
     memset(&s, 0, sizeof(s));
     s.next_in = (void *)src;
     s.avail_in = ssize;
     s.next_out = dst;
     s.avail_out = *dsize;
-    
+
     *dsize = 0;
     zr = deflateInit2(&s, level, Z_DEFLATED, -15, 9, strategy);
     switch (zr) {
@@ -204,12 +204,12 @@ VTRANSFACT_IMPL(vdb_zip, 1, 0, 0) (const void *self, const VXfactInfo *info, VFu
     if (ctx) {
         ctx->strategy = strategy;
         ctx->level = level;
-       
+
         rslt->self = ctx;
         rslt->whack = vxf_zip_wrapper;
         rslt->variant = vftBlob;
         rslt->u.bf = zip_func;
-        
+
         return 0;
     }
     return RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted);

@@ -28,6 +28,8 @@
 
 #include <ext/bzlib.h>
 
+#include <memory>
+
 TEST_SUITE(Bzip2TestSuite);
 
 using namespace std;
@@ -38,62 +40,80 @@ TEST_CASE(Version)
     REQUIRE_EQ( string("1.0.6, 6-Sept-2010"), string( BZ2_bzlibVersion() ));
 }
 
-TEST_CASE(RoundTrip)
+class BZip2Fixture
 {
-    srand (time(NULL));
-    const size_t SrcSize = 2048;
-    string src( SrcSize, 0 );
-    for (size_t i = 0; i < SrcSize; ++i)
-        src[ i ] = 'A'+(rand() % 26);
+public:
+    typedef vector<char> Buffer;
 
-    uint32_t dsize = 0;
-    size_t destSize = SrcSize * 2;
-    auto dst = new char[ destSize ];
-
+public:
+    Buffer Compress( const Buffer & src )
     {
+        size_t destSize = src.size() * 2;
+        Buffer dst;
+        dst.resize(destSize);
         bz_stream s;
         memset ( & s, 0, sizeof s );
 
         const int blockSize100k = 5;
         const int workFactor = 0;
-        REQUIRE_EQ( BZ_OK, BZ2_bzCompressInit ( & s, blockSize100k, 0, workFactor ) );
+        THROW_ON_FALSE( BZ_OK == BZ2_bzCompressInit ( & s, blockSize100k, 0, workFactor ) );
 
         s.next_in = const_cast<char*>( src.data() );
-        s.avail_in = SrcSize;
-        s.next_out = dst;
-        s.avail_out = destSize;
+        s.avail_in = src.size();
+        s.next_out = dst.data();
+        s.avail_out = dst.size();
 
-        REQUIRE_GE( BZ_STREAM_END, BZ2_bzCompress(&s, BZ_FINISH) );
+        THROW_ON_FALSE( BZ_STREAM_END >= BZ2_bzCompress(&s, BZ_FINISH) );
         assert ( s.total_out_hi32 == 0 );
-        dsize = s.total_out_lo32;
-        REQUIRE_EQ( BZ_OK, BZ2_bzCompressEnd ( & s ) );
+        THROW_ON_FALSE( BZ_OK == BZ2_bzCompressEnd ( & s ) );
+
+        return dst;
     }
 
-    char * decomp = new char[ SrcSize ];
+    Buffer Decompress( const Buffer & input, size_t destSize )
     {
+        Buffer decomp;
+        decomp.resize( destSize );
         bz_stream s;
         memset ( & s, 0, sizeof s );
-        REQUIRE_EQ( BZ_OK, BZ2_bzDecompressInit ( & s, 0, 0 ) );
+        THROW_ON_FALSE( BZ_OK == BZ2_bzDecompressInit ( & s, 0, 0 ) );
 
-        s.next_in = dst;
-        s.avail_in = dsize;
-        s.next_out = decomp;
-        s.avail_out = SrcSize;
+        s.next_in = const_cast<char*>( input.data() );
+        s.avail_in = input.size();
+        s.next_out = decomp.data();
+        s.avail_out = decomp.size();
 
-        REQUIRE_GE( BZ_STREAM_END, BZ2_bzDecompress(&s) );
-        REQUIRE_EQ( BZ_OK, BZ2_bzDecompressEnd ( & s ) );
+        THROW_ON_FALSE( BZ_STREAM_END >= BZ2_bzDecompress(&s) );
         assert ( s.total_out_hi32 == 0 );
-        dsize = s.total_out_lo32;
+        THROW_ON_FALSE( BZ_OK == BZ2_bzDecompressEnd ( & s ) );
+
+        // this would break if the original data was too short
+        THROW_ON_FALSE( 0 < s.total_out_lo32 );
+
+        return decomp;
     }
+};
 
-    REQUIRE_EQ( SrcSize, (size_t)dsize );
-    REQUIRE_EQ( 0, memcmp( src.data(), decomp, SrcSize ));
+FIXTURE_TEST_CASE(RoundTrip, BZip2Fixture)
+{
+    const size_t SrcSize = 2048;
+    Buffer src;
+    srand (time(NULL));
+    for (size_t i = 0; i < SrcSize; ++i)
+        src.push_back('A'+(rand() % 26));
+    Buffer comp = Compress( src );
+    Buffer decomp = Decompress( comp, SrcSize );
+    REQUIRE( src == decomp );
+}
 
-
-    REQUIRE_EQ( src, string(decomp) );
-
-    delete [] decomp;
-    delete [] dst;
+FIXTURE_TEST_CASE(Buffer_TooShort, BZip2Fixture)
+{   // shorter buffers may not work
+    const size_t SrcSize = 26;
+    Buffer src;
+    for (size_t i = 0; i < SrcSize; ++i)
+        src.push_back('a'+i);
+    Buffer comp = Compress( src );
+    REQUIRE_THROW( Decompress( comp, SrcSize ) );
 }
 
 //////////////////////////////////////////// Main
