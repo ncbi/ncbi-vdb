@@ -37,11 +37,17 @@
 
 using std::cerr;
 
-static rc_t KDirectory_Load(const KDirectory * self,
+static rc_t KDirectory_Load(const KDirectory * cSelf,
     const char * path1, const char * path2, char ** buffer)
 {
+    rc_t rc = 0;
+    KDirectory * self = (KDirectory*)cSelf;
     const KFile * file = NULL;
-    rc_t rc = KDirectoryOpenFileRead(self, &file, path1, path2);
+
+    if (self == NULL)
+        rc = KDirectoryNativeDir(&self);
+
+    rc = KDirectoryOpenFileRead(self, &file, path1, path2);
 
     uint64_t s = 0;
     if (rc == 0)
@@ -60,6 +66,12 @@ static rc_t KDirectory_Load(const KDirectory * self,
     rc_t r2 = KFileRelease(file);
     if (rc == 0 && r2 != 0)
         rc = r2;
+
+    if (cSelf == NULL) {
+        rc_t r2 = KDirectoryRelease(self);
+        if (rc == 0 && r2 != 0)
+            rc = r2;
+    }
 
     return rc;
 }
