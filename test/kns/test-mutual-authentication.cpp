@@ -88,6 +88,11 @@ static bool LoadOwnCert(const char * location,
     return rc == 0;
 }
 
+static bool hasCert(const char * arg) {
+    assert(arg);
+    return arg[0] != 'X' || arg[1] != '\0';
+}
+
 #define S_ALIAS  "n"
 #define S_OPTION "no-singleton"
 static
@@ -111,9 +116,13 @@ rc_t CC UsageSummary(const char * progname) {
      "    <DIR> is path to directory with files named 'own_cert' and 'pk_key'\n"
      "    use X to skip sending client certificate\n"
      "\n"
+     "  %s <path-to-certificate> <path-to-key>\n"
+     "             <HTTPS-URL> <HOST> <PORT> -\n"
+     "    use X as <path-to-certificate> to skip sending client certificate\n"
+     "\n"
      "Summary:\n"
      "  Program to test mutual TLS Authentication\n",
-        progname);
+        progname, progname);
 }
 
 rc_t CC Usage(const struct Args * args) {
@@ -156,7 +165,7 @@ rc_t CC KMain(int argc, char *argv[]) {
         char * pk_key = NULL;
 
         rc_t rc = 0;
-        if (argv[1][0] != 'X' || argv[1][1] != '\0')
+        if (hasCert(argv[1]))
             rc = KDirectory_Load(NULL, "%s", argv[1], &own_cert);
 
         if (rc == 0)
@@ -213,7 +222,7 @@ rc_t CC KMain(int argc, char *argv[]) {
         if (rc != 0)
             break;
         assert(v);
-        if (v[0] != 'X' || v[1] != '\0') {
+        if (hasCert(v)) {
             const char *own_cert = NULL, *pk_key = NULL;
             if (LoadOwnCert(v, &own_cert, &pk_key)) {
                 rc = KNSManagerSetOwnCert(mgr, own_cert, pk_key);
