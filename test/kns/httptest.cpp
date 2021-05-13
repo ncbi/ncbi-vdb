@@ -55,6 +55,8 @@
 
 #include <kproc/thread.h>
 
+#include "../../libs/cloud/cloud_manager-singleton.h" // CloudMgrUseSingleton
+
 #include <sstream>
 
 static rc_t argsHandler ( int argc, char * argv [] );
@@ -1059,6 +1061,9 @@ const char UsageDefaultName[] = "test-http";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
+    // make sure to use singleton, otherwise tests take forever and finally fail
+    CloudMgrUseSingleton(true);
+
     if ( 0 ) assert ( ! KDbgSetString ( "KNS" ) );
     if ( 0 ) assert ( ! KDbgSetString ( "VFS" ) );
 
