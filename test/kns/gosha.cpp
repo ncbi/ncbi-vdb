@@ -24,6 +24,7 @@
 *  to establishing an HTTP connection using mutual authentication.
 * =========================================================================== */
 
+#include <klib/out.h> // OUTMSG
 #include <klib/text.h> // String
 #include <kns/manager.h> // KNSManager
 #include <kns/http.h> // KClientHttp
@@ -65,23 +66,22 @@ rc_t MutualConnection(const char * own_cert, const char * pk_key,
 
                     if (rc == 0) {
                         uint32_t code = 0;
-                        char msg_buff[1024] = "";
-                        size_t msg_size = 0;
-                        rc = KHttpResultStatus(rslt, &code,
-                            msg_buff, sizeof msg_buff, &msg_size);
+                        rc = KHttpResultStatus(rslt, &code, NULL, 0, NULL);
 
                         if (rc == 0) {
                             KStream * s = NULL;
                             rc = KClientHttpResultGetInputStream(rslt, &s);
                             if (rc == 0) {
-                                char * buffer = new char[msg_size + 1];
+                                char buf[4096];
                                 size_t num_read = 0;
 
-                                rc = KStreamRead(s,
-                                    buffer, msg_size, &num_read);
-                                // not sure it's zero-terminated
+                                rc = KStreamRead(s, buf, sizeof buf, &num_read);
+                                if (rc == 0 && num_read < sizeof buf)
+                                    buf[num_read] = '\0';
 
-                                delete[] buffer;
+                                if (rc == 0)
+                                    OUTMSG(("%.*s\n", num_read, buf));
+
                                 KStreamRelease(s);
                             }
                         }
