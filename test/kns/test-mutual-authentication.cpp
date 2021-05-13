@@ -105,15 +105,22 @@ static bool hasCert(const char * arg) {
     return arg[0] != 'X' || arg[1] != '\0';
 }
 
+#define P_ALIAS  "p"
+#define P_OPTION "post"
+static
+const char * P_USAGE[] =
+{ "Run POST request, requires exactly", "3", "or", "5", "arguments.", NULL };
+
 #define S_ALIAS  "n"
 #define S_OPTION "no-singleton"
 static
-const char * S_USAGE[] = { "not to use KNSManager singleton", NULL };
+const char * S_USAGE[] = { "Not to use KNSManager singleton.", NULL };
 
 static
 OptDef Options[] = {
     /* name      alias    help_gen help max_count needs_value required*/
      { S_OPTION, S_ALIAS, NULL, S_USAGE,    1,       false,   false  },
+     { P_OPTION, P_ALIAS, NULL, P_USAGE,    1,       false,   false  },
 };
 
 ver_t CC KAppVersion(void) { return 0; }
@@ -123,14 +130,15 @@ const char UsageDefaultName[] = "test-mutual-authentication";
 rc_t CC UsageSummary(const char * progname) {
     return KOutMsg(
      "Usage:\n"
-     "  %s [options] <DIR> <URL> [<DIR> <URL> ...]\n"
+     "  %s [options] <DIR> <URL> [ <DIR> <URL> ... ]\n"
      "  where\n"
      "    <DIR> is path to directory with files named 'own_cert' and 'pk_key'\n"
      "    use X to skip sending client certificate\n"
      "\n"
-     "  %s <path-to-certificate> <path-to-key>\n"
-     "             <HTTPS-URL> <HOST> <PORT> -\n"
-     "    use X as <path-to-certificate> to skip sending client certificate\n"
+     "  Test POST request:\n"
+     "  %s --post <HTTPS-URL> <HOST> <PORT>\n"
+     "          [ <path-to-certificate> <path-to-key> ]\n"
+     "    don't provide <path-to-certificate> to skip sending certificate\n"
      "\n"
      "Summary:\n"
      "  Program to test mutual TLS Authentication\n",
@@ -172,28 +180,8 @@ rc_t MutualConnection(const char * own_cert, const char * pk_key,
     const char * url, const char * host, uint32_t port);
 
 rc_t CC KMain(int argc, char *argv[]) {
-    if (argc == 7 && argv[6][0] == '-') {
-        char * own_cert = NULL;
-        char * pk_key = NULL;
-
-        rc_t rc = 0;
-        if (hasCert(argv[1]))
-            rc = KDirectory_Load(NULL, "%s", argv[1], &own_cert);
-
-        if (rc == 0)
-            rc = KDirectory_Load(NULL, "%s", argv[2], &pk_key);
-
-        if (rc == 0)
-            rc = MutualConnection(
-                own_cert, pk_key, argv[3], argv[4], atoi(argv[5]));
-
-        free(own_cert);
-        free(pk_key);
-
-        return rc;
-    }
-
     bool singleton = true;
+    bool post = false;
 
     Args * args = NULL;
     rc_t rc = ArgsMakeAndHandle(
@@ -202,70 +190,94 @@ rc_t CC KMain(int argc, char *argv[]) {
         return rc;
 
     uint32_t pcount = 0;
-    do {
-        rc = ArgsOptionCount(args, S_OPTION, &pcount);
-        if (rc != 0)
-            break;
-        if (pcount > 0)
-            singleton = false;
-    } while (false);
+    uint32_t count = 0;
+    rc = ArgsOptionCount(args, S_OPTION, &count);
+    if (rc == 0 && count > 0)
+        singleton = false;
 
     KNSManager * mgr = NULL;
     if (rc == 0)
         rc = singleton ? KNSManagerMake(&mgr) : KNSManagerMakeLocal(&mgr, 0);
 
     rc = ArgsParamCount(args, &pcount);
-    if (rc == 0 && pcount == 0) {
-        UsageSummary(argv[0]);
-        rc = 1;
+    if (rc == 0) {
+        if (pcount == 0) {
+            UsageSummary(argv[0]);
+            rc = 1;
+        }
+        else if (pcount == 3 || pcount == 5) {
+            rc = ArgsOptionCount(args, P_OPTION, &count);
+            if (rc == 0 && count > 0)
+                post = true;
+        }
     }
 
-    for (uint32_t i = 0; rc == 0 && i < pcount; ++i) {
-        if (i > 1 && !singleton) {
-            rc_t r2 = KNSManagerRelease(mgr);
-            mgr = NULL;
-            if (r2 != 0 && rc == 0)
-                rc = r2;
-            if (rc == 0)
-                rc = KNSManagerMakeLocal(&mgr, NULL);
-        }
-        const char * v = NULL;
-        rc = ArgsParamValue(args, i, (const void **)&v);
-        if (rc != 0)
-            break;
-        assert(v);
-        if (hasCert(v)) {
-            const char *own_cert = NULL, *pk_key = NULL;
-            if (LoadOwnCert(v, &own_cert, &pk_key)) {
-                rc = KNSManagerSetOwnCert(mgr, own_cert, pk_key);
-                // second call to KNSManagerSetOwnCert should fail
-                if (i > 0 && singleton) {
-                    if (rc == 0)
-                        rc = 2;
-                    else
-                        rc = 0;
-                }
-                if (rc == 0) {
-                    rc = KNSManagerSetOwnCert(mgr, own_cert, pk_key);
-                    if (rc == 0)
-                        rc = 3;
-                    else
-                        rc = 0;
-                }
-            }
-            free(const_cast<void*>(static_cast<const void*>(own_cert)));
-            free(const_cast<void*>(static_cast<const void*>(pk_key)));
-        }
+    if (post) {
+        char * own_cert = NULL;
+        char * pk_key = NULL;
 
-        if (rc == 0 && ++i < pcount) {
-            rc = ArgsParamValue(args, i, (const void **)&v);
-            if (rc == 0) {
-                const KFile * file = NULL;
-                rc = KNSManagerMakeHttpFile(
-                    mgr, &file, NULL, 0x01010000, "%s", v);
-                rc_t r2 = KFileRelease(file);
+        rc_t rc = 0;
+        if (argc > 5)
+            rc = KDirectory_Load(NULL, "%s", argv[5], &own_cert);
+
+        if (rc == 0 && argc > 6)
+            rc = KDirectory_Load(NULL, "%s", argv[6], &pk_key);
+
+        if (rc == 0)
+            rc = MutualConnection(
+                own_cert, pk_key, argv[1], argv[2], atoi(argv[3]));
+
+        free(own_cert);
+        free(pk_key);
+    }
+    else {
+        for (uint32_t i = 0; rc == 0 && i < pcount; ++i) {
+            if (i > 1 && !singleton) {
+                rc_t r2 = KNSManagerRelease(mgr);
+                mgr = NULL;
                 if (r2 != 0 && rc == 0)
                     rc = r2;
+                if (rc == 0)
+                    rc = KNSManagerMakeLocal(&mgr, NULL);
+            }
+            const char * v = NULL;
+            rc = ArgsParamValue(args, i, (const void **)&v);
+            if (rc != 0)
+                break;
+            assert(v);
+            if (hasCert(v)) {
+                const char *own_cert = NULL, *pk_key = NULL;
+                if (LoadOwnCert(v, &own_cert, &pk_key)) {
+                    rc = KNSManagerSetOwnCert(mgr, own_cert, pk_key);
+                    // second call to KNSManagerSetOwnCert should fail
+                    if (i > 0 && singleton) {
+                        if (rc == 0)
+                            rc = 2;
+                        else
+                            rc = 0;
+                    }
+                    if (rc == 0) {
+                        rc = KNSManagerSetOwnCert(mgr, own_cert, pk_key);
+                        if (rc == 0)
+                            rc = 3;
+                        else
+                            rc = 0;
+                    }
+                }
+                free(const_cast<void*>(static_cast<const void*>(own_cert)));
+                free(const_cast<void*>(static_cast<const void*>(pk_key)));
+            }
+
+            if (rc == 0 && ++i < pcount) {
+                rc = ArgsParamValue(args, i, (const void **)&v);
+                if (rc == 0) {
+                    const KFile * file = NULL;
+                    rc = KNSManagerMakeHttpFile(
+                        mgr, &file, NULL, 0x01010000, "%s", v);
+                    rc_t r2 = KFileRelease(file);
+                    if (r2 != 0 && rc == 0)
+                        rc = r2;
+                }
             }
         }
     }
