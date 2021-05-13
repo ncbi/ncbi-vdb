@@ -212,20 +212,35 @@ rc_t CC KMain(int argc, char *argv[]) {
         }
     }
 
-    if (post) {
+    if (rc == 0 && post) {
+        const char * v = NULL;
+
         char * own_cert = NULL;
         char * pk_key = NULL;
 
-        rc_t rc = 0;
-        if (argc > 5)
-            rc = KDirectory_Load(NULL, "%s", argv[5], &own_cert);
+        if (pcount > 3) {
+            rc = ArgsParamValue(args, 3, (const void **)&v);
+            if (rc == 0)
+                rc = KDirectory_Load(NULL, "%s", v, &own_cert);
+        }
 
-        if (rc == 0 && argc > 6)
-            rc = KDirectory_Load(NULL, "%s", argv[6], &pk_key);
+        if (rc == 0 && pcount > 4) {
+            rc = ArgsParamValue(args, 4, (const void **)&v);
+            if (rc == 0)
+                rc = KDirectory_Load(NULL, "%s", v, &pk_key);
+        }
 
-        if (rc == 0)
-            rc = MutualConnection(
-                own_cert, pk_key, argv[1], argv[2], atoi(argv[3]));
+        if (rc == 0) {
+            rc = ArgsParamValue(args, 0, (const void **)&v);
+            const char * v2 = NULL;
+            const char * v3 = NULL;
+            if (rc == 0)
+                rc = ArgsParamValue(args, 1, (const void **)&v2);
+            if (rc == 0)
+                rc = ArgsParamValue(args, 2, (const void **)&v3);
+            if (rc == 0)
+                rc = MutualConnection(own_cert, pk_key, v, v2, atoi(v3));
+        }
 
         free(own_cert);
         free(pk_key);
