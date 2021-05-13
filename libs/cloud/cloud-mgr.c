@@ -268,6 +268,18 @@ rc_t CloudMgrInit ( CloudMgr ** mgrp, const KConfig * kfg,
     return rc;
 }
 
+#ifdef USE_SINGLETON		
+static bool SINGLETON = true;
+#else
+static bool SINGLETON = false;
+#endif
+
+bool CloudMgrUseSingleton(bool use) {
+    bool b = SINGLETON;
+    SINGLETON = use;
+    return b;
+}
+
 /* Make
  *  this is a singleton
  */
@@ -298,9 +310,9 @@ LIB_EXPORT rc_t CC CloudMgrMake ( CloudMgr ** mgrp,
                 /* try to set single-shot ( set once, never reset ) */
                 TRACE ( "attempting to set CloudMgr singleton" );
 
-#ifdef USE_SINGLETON		
-                new_mgr = atomic_test_and_set_ptr ( & cloud_singleton, our_mgr, NULL );
-#endif
+                if (SINGLETON)
+                    new_mgr = atomic_test_and_set_ptr (
+                        & cloud_singleton, our_mgr, NULL );
 
                 /* if "new_mgr" is NULL, then our thread won the race */
                 if ( new_mgr == NULL )
