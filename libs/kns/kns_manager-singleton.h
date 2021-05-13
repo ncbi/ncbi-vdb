@@ -27,3 +27,16 @@
 #ifdef VDB_USES_SINGLETONS
     #define USE_SINGLETON 1
 #endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* Enforce use of singleton.
+ *  Returns the previous value.
+ */
+bool KNSManagerUseSingleton(bool use);
+
+#ifdef __cplusplus
+}
+#endif

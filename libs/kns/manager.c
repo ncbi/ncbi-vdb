@@ -96,9 +96,7 @@ _Thread_local char kns_manager_ua_suffix [ KNSMANAGER_STRING_MAX ] = { 0 };
 
 quitting_t quitting;
 
-#if USE_SINGLETON
 static atomic_ptr_t kns_singleton;
-#endif
 
 /*
 #define RELEASE( type, obj ) do { rc_t rc2 = type##Release ( obj ); \
@@ -120,19 +118,30 @@ struct KNSProxies *KNSManagerGetProxies ( const KNSManager *self, size_t *cnt )
     return KNSProxiesGetHttpProxy ( self->proxies, cnt );
 }
 
+#ifdef USE_SINGLETON		
+static bool SINGLETON = true;
+#else
+static bool SINGLETON = false;
+#endif
+
+bool KNSManagerUseSingleton(bool use) {
+    bool b = SINGLETON;
+    SINGLETON = use;
+    return b;
+}
 
 static rc_t KNSManagerWhack ( KNSManager *self )
 {
     rc_t rc = 0;
 
-#if USE_SINGLETON
-    KNSManager *our_mgr
-        = atomic_test_and_set_ptr ( &kns_singleton, NULL, NULL );
-    if ( self == our_mgr ) {
-        if ( !self->notSingleton ) { return 0; }
-        atomic_test_and_set_ptr ( &kns_singleton, NULL, self );
+    if ( SINGLETON ) {
+        KNSManager *our_mgr
+            = atomic_test_and_set_ptr ( &kns_singleton, NULL, NULL );
+        if ( self == our_mgr ) {
+            if ( !self->notSingleton ) { return 0; }
+            atomic_test_and_set_ptr ( &kns_singleton, NULL, self );
+        }
     }
-#endif
 
     KNSProxiesWhack ( self->proxies );
     CloudMgrRelease ( self->cloud );
@@ -207,8 +216,7 @@ static rc_t CC KNSManagerMakeSingleton (
 
         *mgrp = NULL;
 
-#if USE_SINGLETON
-        if ( !local ) {
+        if ( SINGLETON && !local ) {
             /* grab single-shot singleton */
             our_mgr = atomic_test_and_set_ptr ( &kns_singleton, NULL, NULL );
             if ( our_mgr != NULL ) {
@@ -218,7 +226,6 @@ static rc_t CC KNSManagerMakeSingleton (
                 return rc;
             }
         }
-#endif
 
         /* singleton was NULL. Make from scratch. */
         if ( kfg == NULL ) { rc = KConfigMake ( &kfg, NULL ); }
@@ -248,8 +255,7 @@ static rc_t CC KNSManagerMakeSingleton (
             if ( aKfg == NULL ) { KConfigRelease ( kfg ); }
 
             if ( rc == 0 ) {
-#if USE_SINGLETON
-                if ( !local ) {
+                if ( SINGLETON && !local ) {
                     /* try to set single-shot ( set once, never reset ) */
                     KNSManager *new_mgr = atomic_test_and_set_ptr (
                         &kns_singleton, our_mgr, NULL );
@@ -265,7 +271,7 @@ static rc_t CC KNSManagerMakeSingleton (
                         return rc;
                     }
                 }
-#endif
+
                 /* return parameter */
                 *mgrp = our_mgr;
             }
