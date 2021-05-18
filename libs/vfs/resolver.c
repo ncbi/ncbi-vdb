@@ -6886,3 +6886,19 @@ LIB_EXPORT rc_t CC VResolverGetKNSManager(const VResolver * self,
 
     return rc;
 }
+
+rc_t VResolverResetKNSManager(VResolver * self,
+    const KNSManager * mgr)
+{
+    rc_t rc = 0;
+    assert(mgr);
+    if (self == NULL || self->kns == mgr)
+        return 0;
+    if (self->kns != NULL)
+        RELEASE(KNSManager, self->kns);
+    if (rc == 0)
+        rc = KNSManagerAddRef(mgr);
+    if (rc == 0)
+        self->kns = mgr;
+    return rc;
+}
