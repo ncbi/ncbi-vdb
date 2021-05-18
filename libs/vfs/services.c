@@ -37,6 +37,8 @@
 #include <klib/printf.h> /* string_printf */
 #include <klib/rc.h> /* RC */
 
+#include <kns/manager.h> /* KNSManagerRelease */
+
 #include <vfs/manager.h> /* VFSManagerRelease */
 #include <vfs/path.h> /* VFSManagerMakePath */
 #include <vfs/resolver-priv.h> /* VResolverQueryWithDir */
@@ -242,6 +244,14 @@ static rc_t HResolver(H * self, const KService * service,
             rc = VFSManagerMakeResolver(self->mgr, &self->resolver,
                 self->kfg);
         *resolver = self->resolver;
+    }
+
+    if (rc == 0) { /* use original manager in case it's not a singleton */
+        KNSManager * kns = NULL;
+        rc = VFSManagerGetKNSMgr(self->mgr, &kns);
+        if (rc == 0)
+            rc = VResolverResetKNSManager(*resolver, kns);
+        RELEASE(KNSManager, kns);
     }
 
 /*  if (rc == 0 && *resolver != NULL)
