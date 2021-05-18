@@ -6891,8 +6891,7 @@ rc_t VResolverResetKNSManager(VResolver * self,
     const KNSManager * mgr)
 {
     rc_t rc = 0;
-    assert(mgr);
-    if (self == NULL || self->kns == mgr)
+    if (self == NULL || mgr == NULL || self->kns == mgr)
         return 0;
     if (self->kns != NULL)
         RELEASE(KNSManager, self->kns);
