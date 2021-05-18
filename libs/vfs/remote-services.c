@@ -5136,6 +5136,9 @@ rc_t KServiceGetResolver ( KService * self, const String * ticket,
 
         rc = KRepositoryMakeResolver ( r, resolver, self -> helper . kfg );
 
+        if ( rc == 0 ) /* use original manager in case it's not a singleton */
+            rc = VResolverResetKNSManager ( * resolver, self -> helper . kMgr );
+
         RELEASE ( KRepository, r );
 
         return rc;
