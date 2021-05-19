@@ -74,6 +74,18 @@ clean: stdclean
 #-------------------------------------------------------------------------------
 # libzstd
 #
+# The single-file library is available from https://github.com/facebook/zstd/
+#
+# Current release 1.5.0
+#
+# to update to the latest release:
+#
+# clone https://github.com/facebook/zstd/ -b release
+# cd zstd/build/single_file_libs/
+# ./combine.sh -r ../../lib -o zstd.c zstd-in.c
+# cp zstd.c <NCBI-VDB>/libs/ext/zstd
+# cp ../../lib/zstd.h <NCBI-VDB>/interfaces/ext/zstd
+#
 $(ILIBDIR)/libzstd: $(addprefix $(ILIBDIR)/libzstd.,$(LIBX))
 
 VPATH += $(SRCDIR)/common  $(SRCDIR)/compress  $(SRCDIR)/decompress
@@ -82,32 +94,7 @@ VPATH += $(SRCDIR)/common  $(SRCDIR)/compress  $(SRCDIR)/decompress
 INCDIRS += $(addprefix -I,$(TOP)/interfaces/ext)
 
 LIBZSTD_SRC = \
-	debug \
-	error_private \
-	pool \
-	xxhash \
-	entropy_common \
-	fse_decompress \
-	threading \
-	zstd_common \
-	fse_compress   \
-	zstd_compress   \
-	zstd_compress_superblock   \
-	zstd_lazy   \
-	zstdmt_compress   \
-	hist   \
-	zstd_compress_literals   \
-	zstd_double_fast   \
-	zstd_ldm   \
-	huf_compress   \
-	zstd_compress_sequences   \
-	zstd_fast   \
-	zstd_opt   \
-	huf_decompress   \
-	zstd_ddict   \
-	zstd_decompress   \
-	zstd_decompress_block   \
-
+	zstd   \
 
 LIBZSTD_OBJ = \
 	$(addsuffix .$(LOBX),$(LIBZSTD_SRC))

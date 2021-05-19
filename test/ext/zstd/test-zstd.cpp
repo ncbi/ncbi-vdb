@@ -49,7 +49,7 @@ TEST_CASE(VersionString)
 
 TEST_CASE(CompressionLevel)
 {
-    // limits are for 1.4.10, may change in other versions;
+    // limits are for 1.5.0, may change in other versions;
     // also hard-coded in vxf/zstd.c
     REQUIRE_EQ( -131072, ZSTD_minCLevel() ); // the lower the faster, at the expense of compression
     REQUIRE_EQ( 22, ZSTD_maxCLevel() );
