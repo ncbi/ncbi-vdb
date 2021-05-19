@@ -57,7 +57,7 @@ TEST_CASE(CompressionLevel)
 
 TEST_CASE(RoundTrip)
 {
-    srand (time(NULL));
+    srand ((unsigned int)time(NULL));
     const size_t SrcSize = 2048;
     string src( SrcSize, 0 );
     for (size_t i = 0; i < SrcSize; ++i)
@@ -81,7 +81,7 @@ TEST_CASE(RoundTrip)
 
 TEST_CASE(getFrameContentSize)
 {
-    srand (time(NULL));
+    srand ((unsigned int)time(NULL));
     const size_t SrcSize = 2048;
     string src( SrcSize, 0 );
     for (size_t i = 0; i < SrcSize; ++i)
