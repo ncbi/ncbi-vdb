@@ -31,6 +31,7 @@
 #include <klib/log.h>
 #include <vdb/xform.h>
 
+#define ZSTD_STATIC_LINKING_ONLY
 #include <ext/zstd.h>
 
 #ifndef ZSTD_MIN_LEVEL
@@ -43,20 +44,16 @@
 
 #include <stdio.h>
 
-struct self_t {
-    int32_t level;
-    ZSTD_CCtx * ctx;
-};
-
-static rc_t invoke_zstd(void *dst, uint32_t *dsize, const void *src, uint32_t ssize, struct self_t * self)
+static rc_t invoke_zstd(void *dst, uint32_t *dsize, const void *src, uint32_t ssize, ZSTD_CCtx * self)
 {
-    size_t size = ZSTD_compressCCtx( self -> ctx, dst, (size_t)dsize, src, (size_t)ssize, self -> level);
+    size_t size = ZSTD_compress2( self, dst, (size_t)dsize, src, (size_t)ssize);
     if ( ZSTD_isError( size ) )
     {
         rc_t rc = RC(rcXF, rcFunction, rcExecuting, rcSelf, rcUnexpected);
-        PLOGERR(klogErr, (klogErr, rc, "ZSTD_decompressDCtx: error: $(err)", "err=%s", ZSTD_getErrorName( size )));
+        PLOGERR(klogErr, (klogErr, rc, "ZSTD_compress2: error: $(err)", "err=%s", ZSTD_getErrorName( size )));
         return rc;
     }
+    PLOGMSG(klogInfo, (klogInfo, "ZSTD_compress2: from $(in) to $(out)", "in=%u,out=%u", ssize, size));
 
     *dsize = (uint32_t)size;
     return 0;
@@ -91,7 +88,7 @@ rc_t CC zstd_func(
         VBlobHeaderArgPushTail ( hdr, ( int64_t ) ( sbits & 7 ) );
     }
 
-    rc = invoke_zstd( dst -> data, & dsize, src -> data, ssize, self);
+    rc = invoke_zstd( dst -> data, & dsize, src -> data, ssize, (ZSTD_CCtx *)self);
     if (rc == 0)
     {
         dst->elem_bits = 1;
@@ -107,9 +104,7 @@ rc_t CC zstd_func(
 static
 void CC vxf_zstd_wrapper( void *ptr )
 {
-    struct self_t * self = (struct self_t*) ptr;
-    ZSTD_freeCCtx( self -> ctx );
-	free( ptr );
+    ZSTD_freeCCtx( ptr );
 }
 
 /* zstd
@@ -117,25 +112,36 @@ void CC vxf_zstd_wrapper( void *ptr )
  */
 VTRANSFACT_IMPL(vdb_zstd, 1, 0, 0) (const void *self, const VXfactInfo *info, VFuncDesc *rslt, const VFactoryParams *cp, const VFunctionParams *dp )
 {
-    struct self_t *ctx;
-
-    int level = ZSTD_CLEVEL_DEFAULT;
-
-    if ( cp -> argc > 0 )
+    ZSTD_CCtx * ctx = ZSTD_createCCtx();
+    if ( ctx )
     {
-        level = cp -> argv [ 0 ] . data . i32 [ 0 ];
-        //
-        // failing construction leads to problems in VDB;
-        // simply accepting the bad level does not seem to worry zstd.
-        //
-        // if ( level < ZSTD_MIN_LEVEL || level > ZSTD_MAX_LEVEL )
-        //     return RC(rcXF, rcFunction, rcConstructing, rcRange, rcInvalid);
-    }
+        // ZSTD_bounds bounds = ZSTD_cParam_getBounds(ZSTD_c_strategy);
+        // PLOGMSG(klogWarn, (klogWarn, "ZSTD_cParam_getBounds(ZSTD_c_strategy): $(v1)..$(v2)", "v1=%i,v2=%i", bounds.lowerBound, bounds.upperBound));
+        // bounds = ZSTD_cParam_getBounds(ZSTD_c_compressionLevel);
+        // PLOGMSG(klogWarn, (klogWarn, "ZSTD_c_compressionLevel(ZSTD_c_strategy): $(v1)..$(v2)", "v1=%i,v2=%i", bounds.lowerBound, bounds.upperBound));
 
-    ctx = malloc(sizeof(*ctx));
-    if (ctx) {
-        ctx -> level = level;
-        ctx -> ctx = ZSTD_createCCtx();
+        if ( cp -> argc > 0 )
+        {
+            // NB failing construction leads to problems in VDB (VDB-4468).
+            // simply trying to set bad parameters does not seem to worry zstd. Report and continue.
+
+            // strategy
+            int32_t v = cp -> argv [ 0 ] . data . i32 [ 0 ];
+            size_t zr = ZSTD_CCtx_setParameter( ctx, ZSTD_c_strategy, v );
+            if ( ZSTD_isError( zr ) )
+            {
+                PLOGMSG(klogWarn, (klogWarn, "ZSTD_CCtx_setParameter(ZSTD_c_strategy=$(v)): $(err)", "v=%i,err=%s", v, ZSTD_getErrorName( zr )));
+            }
+            if ( cp -> argc > 1 )
+            {   // compression level
+                v = cp -> argv [ 1 ] . data . i32 [ 0 ];
+                zr = ZSTD_CCtx_setParameter( ctx, ZSTD_c_compressionLevel, v );
+                if ( ZSTD_isError( zr ) )
+                {
+                    PLOGMSG(klogWarn, (klogWarn, "ZSTD_CCtx_setParameter(ZSTD_c_compressionLevel=$(v)): $(err)", "v=%i,err=%s", v, ZSTD_getErrorName( zr )));
+                }
+            }
+        }
 
         rslt->self = ctx;
         rslt->whack = vxf_zstd_wrapper;

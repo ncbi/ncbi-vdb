@@ -51,6 +51,7 @@ TEST_TOOLS = \
 
 SLOW_TEST_TOOLS =  \
 	test-vdb-slow \
+	test-wvdb-slow \
 
 ALL_TOOLS = $(TEST_TOOLS) $(INT_TOOLS)
 
@@ -405,5 +406,20 @@ $(TEST_BINDIR)/test-vdb-slow: $(TEST_VDB_SLOW_OBJ)
 
 vdb-slow: test-vdb-slow
 	$(TEST_BINDIR)/test-vdb-slow
+
+#-------------------------------------------------------------------------------
+# test-wvdb-slow
+#
+TEST_WVDB_SLOW_SRC = \
+	test-wvdb-slow
+
+TEST_WVDB_SLOW_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_WVDB_SLOW_SRC))
+
+$(TEST_BINDIR)/test-wvdb-slow: $(TEST_WVDB_SLOW_OBJ)
+	$(LP) --exe -o $@ $^ $(WRITE_LIBS)
+
+wvdb-slow: test-wvdb-slow
+	$(TEST_BINDIR)/test-wvdb-slow
 
 

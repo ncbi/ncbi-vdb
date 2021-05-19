@@ -518,7 +518,10 @@ rc_t VFunctionProdMakeFactParms ( VFunctionProd *self, const VProdResolve *pr,
                 if ( cxp [ i ] -> dad . var == eIndirectExpr )
                 {
                     if ( fp -> argc > i )
+                    {
                         fp -> argc = i;
+                        break;
+                    }
                 }
                 else if ( cxp [ i ] -> dad . var != eConstExpr )
                 {
