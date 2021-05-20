@@ -1894,7 +1894,9 @@ rc_t VTableCursorLinkedCursorSet(const VCURSOR_IMPL *cself,const char *tbl,VCurs
                 rc = RC(rcVDB, rcCursor, rcAccessing, rcMemory, rcExhausted);
             else
             {
-                strncpy ( node->tbl, tbl, sizeof node->tbl );
+/*              strncpy ( node->tbl, tbl, sizeof node->tbl ); */
+                string_copy_measure ( node->tbl, sizeof node->tbl, tbl );
+                node->tbl [ sizeof node->tbl - 1 ] = '\0';
                 node->curs = (VCursor*) curs;
                 rc = BSTreeInsertUnique( & self -> linked_cursors, (BSTNode *)node, NULL, LinkedCursorNodeComp);
                 if ( rc == 0 )
