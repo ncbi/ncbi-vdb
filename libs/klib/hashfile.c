@@ -39,8 +39,6 @@
 #include <sys/mman.h>
 #endif
 
-#undef memcpy
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -143,7 +141,7 @@ static size_t hkv_space( const HKV * in )
 static void hkv_decode( const u8 * in, HKV * out )
 {
     const u8 * p = in;
-    memcpy( &out->hash, p, sizeof( out->hash ) );
+    memmove( &out->hash, p, sizeof( out->hash ) );
     p += sizeof( out->hash );
     out->key_size = *p;
     p += 1;
@@ -151,12 +149,12 @@ static void hkv_decode( const u8 * in, HKV * out )
     p += 1;
     if ( out->key_size == 255 )
     {
-        memcpy( &out->key_size, p, sizeof( out->key_size ) );
+        memmove( &out->key_size, p, sizeof( out->key_size ) );
         p += sizeof( out->key_size );
     }
     if ( out->value_size == 255 )
     {
-        memcpy( &out->value_size, p, sizeof( out->value_size ) );
+        memmove( &out->value_size, p, sizeof( out->value_size ) );
         p += sizeof( out->value_size );
     }
     out->key = (const void *)p;
@@ -168,7 +166,7 @@ static void hkv_decode( const u8 * in, HKV * out )
 static void hkv_encode( const HKV * in, u8 * out )
 {
     u8 * p = out;
-    memcpy( p, &in->hash, sizeof( in->hash ) );
+    memmove( p, &in->hash, sizeof( in->hash ) );
     p += sizeof( in->hash );
 
     if ( in->key_size <= 254 )
@@ -185,26 +183,26 @@ static void hkv_encode( const HKV * in, u8 * out )
 
     if ( in->key_size >= 255 )
     {
-        memcpy( p, &in->key_size, sizeof( in->key_size ) );
+        memmove( p, &in->key_size, sizeof( in->key_size ) );
         p += sizeof( in->key_size );
     }
 
     if ( in->value_size >= 255 )
     {
-        memcpy( p, &in->value_size, sizeof( in->value_size ) );
+        memmove( p, &in->value_size, sizeof( in->value_size ) );
         p += sizeof( in->value_size );
     }
 
     switch ( in->key_size ) /* Optimize common sizes */
     {
         case 4:
-            memcpy( p, in->key, 4 );
+            memmove( p, in->key, 4 );
             break;
         case 8:
-            memcpy( p, in->key, 8 );
+            memmove( p, in->key, 8 );
             break;
         default:
-            memcpy( p, in->key, in->key_size );
+            memmove( p, in->key, in->key_size );
     }
 
     p += in->key_size;
@@ -212,13 +210,13 @@ static void hkv_encode( const HKV * in, u8 * out )
     switch ( in->value_size )
     {
         case 4:
-            memcpy( p, in->value, 4 );
+            memmove( p, in->value, 4 );
             break;
         case 8:
-            memcpy( p, in->value, 8 );
+            memmove( p, in->value, 8 );
             break;
         default:
-            memcpy( p, in->value, in->value_size );
+            memmove( p, in->value, in->value_size );
     }
 
     p += in->value_size;
@@ -629,7 +627,7 @@ LIB_EXPORT bool KHashFileFind( const KHashFile * self, const void * key,
             if ( found )
             {
                 if ( value )
-                    memcpy( value, bkv.value, bkv.value_size );
+                    memmove( value, bkv.value, bkv.value_size );
                 if ( value_size )
                     *value_size = bkv.value_size;
                 return true;
@@ -883,11 +881,11 @@ LIB_EXPORT bool KHashFileIteratorNext( KHashFile * self, void * key,
             HKV bkv;
             hkv_decode( kv, &bkv );
             if ( key )
-                memcpy( key, bkv.key, bkv.key_size );
+                memmove( key, bkv.key, bkv.key_size );
             if ( key_size )
                 *key_size = bkv.key_size;
             if ( value )
-                memcpy( value, bkv.value, bkv.value_size );
+                memmove( value, bkv.value, bkv.value_size );
             if ( value_size )
                 *value_size = bkv.value_size;
             return true;
