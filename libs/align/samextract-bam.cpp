@@ -50,6 +50,7 @@
 #include <string.h>
 #include <unistd.h>
 
+// Checkmarx:
 // All memmoves in this file are not overlapping and performance
 // is measurably improved by memcpy.
 #undef memcpy
