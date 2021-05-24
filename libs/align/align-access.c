@@ -25,8 +25,11 @@
  */
 
 #include <align/extern.h>
-#include <klib/rc.h>
+
+#include <klib/printf.h> /* string_printf */
 #include <klib/text.h>
+#include <klib/rc.h>
+
 #include <align/align-access.h>
 #include <atomic32.h>
 
@@ -660,7 +663,7 @@ LIB_EXPORT rc_t CC AlignAccessAlignmentEnumeratorGetCIGAR(
         char cig1[20];
         BAMCigarType op;
         uint32_t len;
-        int cig1len;
+        size_t cig1len = 0;
         
         BAMAlignmentGetCigar(self->innerSelf, i, &op, &len);
         if (i == 0 && op == ct_SoftClip) {
@@ -672,8 +675,11 @@ LIB_EXPORT rc_t CC AlignAccessAlignmentEnumeratorGetCIGAR(
         if (i == n - 1 && (op == ct_SoftClip || op == ct_HardClip))
             continue;
         
-        cig1len = sprintf(cig1, "%c%u", op, len);
-        if (cigbuf + cig1len < endp) {
+/*      cig1len = sprintf(cig1, "%c%u", op, len); */
+        rc = string_printf(cig1, sizeof cig1, &cig1len, "%c%u", op, len);
+        if (rc != 0)
+            rc = RC(rcAlign, rcTable, rcAccessing, rcBuffer, rcInsufficient);
+        else if (cigbuf + cig1len < endp) {
             if (cigar_buffer != NULL) {
                 memmove(cigbuf, cig1, cig1len);
                 cigbuf[cig1len] = 0;

@@ -31,11 +31,14 @@
 #include <vdb/table.h>
 #include <vdb/vdb-priv.h>
 #include <kdb/index.h>
+
 #include <klib/data-buffer.h>
+#include <klib/log.h>
+#include <klib/pbstree.h>
+#include <klib/printf.h> /* string_printf */
 #include <klib/rc.h>
 #include <klib/text.h>
-#include <klib/pbstree.h>
-#include <klib/log.h>
+
 #include <sysalloc.h>
 #include <atomic32.h>
 
@@ -192,7 +195,9 @@ rc_t CC index_lookup_impl(
                 if(lane < 0 || lane > 0xF || tile < 0 || tile > 0xFFF || x < 0 || x > 0xFFF || y < 0 || y > 0xFFF){
                     rc = RC ( rcVDB,rcIndex,rcSearching,rcData,rcNotFound);
                 } else {
-                    sprintf(query,"%1X%03X%03X%03X",lane,tile,x,y);
+/*                  sprintf(query,"%1X%03X%03X%03X",lane,tile,x,y); */
+                    rc = string_printf(query, sizeof query, NULL,
+                                  "%1X%03X%03X%03X", lane, tile, x, y);
                 }
             }
             if(rc == 0 ) {

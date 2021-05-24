@@ -48,9 +48,12 @@
 #include <kdb/table.h>
 #include <kdb/column.h>
 #include <kdb/meta.h>
-#include <klib/symbol.h>
+
 #include <klib/log.h>
+#include <klib/printf.h> /* string_printf */
 #include <klib/rc.h>
+#include <klib/symbol.h>
+
 #include <bitstr.h>
 #include <sysalloc.h>
 
@@ -104,11 +107,13 @@ void CC VPhysicalWhack ( void *item, void *ignore )
             /* create rename strings */
             char buff [ 300 ];
             char *oldname, *colname, *tmpname = buff;
+            size_t size = sizeof buff;
             int sz = snprintf ( buff, sizeof buff / 3, "%.*s.tmp",
                 ( int ) name -> size - 1, name -> addr + 1 );
             if ( sz < 0 || sz > sizeof buff / 3 )
             {
-                tmpname = malloc ( 3 * 4 * 1024 );
+                size = 3 * 4 * 1024;
+                tmpname = malloc ( size );
                 if ( tmpname == NULL )
                 {
                     rc = RC ( rcVDB, rcColumn, rcClosing, rcMemory, rcInsufficient );
@@ -123,8 +128,14 @@ void CC VPhysicalWhack ( void *item, void *ignore )
             }
             oldname = & tmpname [ ++ sz ];
             colname = & oldname [ sz ];
-            sprintf ( oldname, "%.*s.old", ( int ) name -> size - 1, name -> addr + 1 );
-            sprintf ( colname, "%.*s", ( int ) name -> size - 1, name -> addr + 1 );
+/*          sprintf ( oldname, "%.*s.old", ( int ) name -> size - 1, name -> addr + 1 ); */
+            string_printf ( oldname, size - sz, NULL,
+                               "%.*s.old", ( int ) name -> size - 1,
+                                                   name -> addr + 1 );
+/*          sprintf ( colname, "%.*s", ( int ) name -> size - 1, name -> addr + 1 ); */
+            string_printf ( colname, sizeof buff - sz, NULL,
+                               "%.*s", ( int ) name -> size - 1,
+                                               name -> addr + 1 );
 
             /* close and rename static column */
             if ( self -> knode != NULL )

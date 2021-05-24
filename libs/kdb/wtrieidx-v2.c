@@ -34,10 +34,13 @@
 #include <kfs/file.h>
 #include <kfs/md5.h>
 #include <kfs/mmap.h>
-#include <klib/ptrie.h>
-#include <klib/text.h>
+
 #include <klib/pack.h>
+#include <klib/printf.h> /* string_printf */
+#include <klib/ptrie.h>
 #include <klib/rc.h>
+#include <klib/text.h>
+
 #include <os-native.h>
 #include <sysalloc.h>
 
@@ -1794,7 +1797,9 @@ rc_t KTrieIndexPersist_v2 ( const KTrieIndex_v2 *self,
         {
             /* create the name of temporary md5 file */
             char tmpmd5name [ 260 ];
-            sprintf ( tmpmd5name, "%s.md5", tmpname );
+/*          sprintf ( tmpmd5name, "%s.md5", tmpname ); */
+            string_printf(tmpmd5name, sizeof tmpmd5name, NULL, "%s.md5", tmpname);
+            tmpmd5name [ sizeof tmpmd5name - 1 ] = '\0';
 
             /* create the output file under temporary name
                ? why does it need read/write capabilities? */

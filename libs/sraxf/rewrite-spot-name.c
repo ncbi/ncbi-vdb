@@ -29,9 +29,12 @@
 #include <vdb/xform.h>
 #include <vdb/table.h>
 #include <kdb/meta.h>
+
 #include <klib/data-buffer.h>
-#include <klib/text.h>
+#include <klib/printf.h> /* string_printf */
 #include <klib/rc.h>
+#include <klib/text.h>
+
 #include <sysalloc.h>
 
 #include <stdlib.h>
@@ -79,10 +82,11 @@ rc_t CC illumina_rewrite_spot_name ( void *data, const VXformInfo *info, int64_t
 {
     rc_t rc;
     char buffer [ 64];
-    uint32_t coord_len;
+    size_t coord_len = 0;
     uint32_t prefix_len;
     unsigned int a, b, c, d;
     KDataBuffer *dst = rslt -> data;
+    uint64_t new_count = 0;
 
     const char *prefix;
     const char *skey = argv [ 0 ] . u . data . base;
@@ -159,7 +163,11 @@ rc_t CC illumina_rewrite_spot_name ( void *data, const VXformInfo *info, int64_t
     }
 
     /* generate coordinates */
-    coord_len = sprintf ( buffer, ":%d:%d:%d:%d", a, b, c, d );
+/*  coord_len = sprintf ( buffer, ":%d:%d:%d:%d", a, b, c, d ); */
+    rc = string_printf ( buffer, sizeof buffer, & coord_len,
+                                  ":%d:%d:%d:%d", a, b, c, d );
+    if ( rc != 0 )
+        return 0;
 
     /* get size of prefix */
     if ( argc == 1 )
@@ -182,17 +190,23 @@ rc_t CC illumina_rewrite_spot_name ( void *data, const VXformInfo *info, int64_t
         if ( rc != 0 )
             return rc;
     }
-    rc = KDataBufferResize ( dst, prefix_len + i + coord_len + 1 );
+    new_count = prefix_len + i + coord_len + 1;
+    rc = KDataBufferResize ( dst, new_count );
     if ( rc != 0 )
         return rc;
 
     /* copy in prefix, name prefix, coordinates */
-    rslt -> elem_count = sprintf ( dst -> base, "%.*s%.*s%s"
+/*  rslt -> elem_count = sprintf ( dst -> base, "%.*s%.*s%s"
+        , ( int ) prefix_len, prefix
+        , ( int ) i, skey
+        , buffer );*/
+    rc = string_printf ( dst -> base, new_count, & rslt -> elem_count,
+                                                "%.*s%.*s%s"
         , ( int ) prefix_len, prefix
         , ( int ) i, skey
         , buffer );
 
-    return 0;
+    return rc;
 }
 
 /* rewrite_spot_name

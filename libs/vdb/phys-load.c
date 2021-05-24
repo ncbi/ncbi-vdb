@@ -37,10 +37,13 @@
 #include <vdb/cursor.h>
 #include <kdb/column.h>
 #include <kdb/meta.h>
-#include <klib/symbol.h>
+
 #include <klib/debug.h>
 #include <klib/log.h>
+#include <klib/printf.h> /* string_printf */
 #include <klib/rc.h>
+#include <klib/symbol.h>
+
 #include <sysalloc.h>
 
 #include <stdlib.h>
@@ -130,17 +133,31 @@ rc_t CC VPhysicalLoadV1Schema ( VPhysical *self,
                             {
 #endif
                                 /* build sphysical name */
-                                sprintf ( sphysical_name, "%s_only", decoding_expr );
+/*                              sprintf ( sphysical_name, "%s_only", decoding_expr ); */
+                                string_printf ( sphysical_name,
+                                    sizeof sphysical_name, NULL,
+                                    "%s_only", decoding_expr );
+                                sphysical_name[ sizeof sphysical_name - 1 ] = 0;
 
                                 /* build physical decl */
-                                pb . pos = sprintf ( pb . buff, "version 1;"
+/*                              pb . pos = sprintf ( pb . buff, "version 1;"
                                                      "physical %s %s:phys#1"
                                                      "{decode{%s k=@;return %s(k);}}"
                                                      , type_expr
                                                      , sphysical_name
                                                      , enc_type
                                                      , decoding_expr
+                                    );*/
+                                rc = string_printf ( pb . buff,
+                                    sizeof pb . buff, & pb . pos, "version 1;"
+                                                     "physical %s %s:phys#1"
+                                                "{decode{%s k=@;return %s(k);}}"
+                                                     , type_expr
+                                                     , sphysical_name
+                                                     , enc_type
+                                                     , decoding_expr
                                     );
+
 #if ALLOW_V1_UPDATE
                             }
                             else
@@ -184,10 +201,20 @@ rc_t CC VPhysicalLoadV1Schema ( VPhysical *self,
                 else if ( GetRCState ( rc ) == rcNotFound )
                 {
                     /* build sphysical name */
-                    sprintf ( sphysical_name, "%s_only", decoding_expr );
+/*                  sprintf ( sphysical_name, "%s_only", decoding_expr ); */
+                    string_printf ( sphysical_name, sizeof sphysical_name, NULL,
+                                              "%s_only", decoding_expr );
+                    sphysical_name [ sizeof sphysical_name - 1 ] = '\0';
 
                     /* build decode-only physical decl */
-                    pb . pos = sprintf ( pb . buff, "version 1;"
+/*                  pb . pos = sprintf ( pb . buff, "version 1;"
+                                         "physical %s %s:phys#1"
+                                         "{decode{opaque k=@;return %s(k);}}"
+                                         , type_expr
+                                         , sphysical_name
+                                         , decoding_expr
+                        ); */
+                    string_printf ( pb . buff, sizeof pb . buff, & pb . pos,
                                          "physical %s %s:phys#1"
                                          "{decode{opaque k=@;return %s(k);}}"
                                          , type_expr
@@ -206,7 +233,9 @@ rc_t CC VPhysicalLoadV1Schema ( VPhysical *self,
                         VTypedecl etd;
 
                         /* create a new expression object */
-                        sprintf ( pb . buff, "%s:phys#1", sphysical_name );
+/*                      sprintf ( pb . buff, "%s:phys#1", sphysical_name ); */
+                        string_printf ( pb . buff, sizeof pb . buff, NULL,
+                                             "%s:phys#1", sphysical_name );
                         rc = VSchemaImplicitPhysEncExpr ( schema, & etd,
                             & self -> enc, pb . buff, "VPhysicalLoadV1Schema" );
                         if ( rc != 0 )

@@ -31,9 +31,11 @@
 #include "schema-expr.h"
 #include "schema-dump.h"
 
+#include <klib/printf.h> /* string_printf */
+#include <klib/rc.h>
 #include <klib/symbol.h>
 #include <klib/symtab.h>
-#include <klib/rc.h>
+
 #include <sysalloc.h>
 
 #include <stdlib.h>
@@ -431,22 +433,32 @@ rc_t SConstExprDump ( const SConstExpr *self, SDumper *b )
                 self -> u . utf32 [ i ];
 
             if ( ch >= 128 )
-                sprintf ( buff, "\\u%04x", ch );
+/*              sprintf ( buff, "\\u%04x", ch ); */
+                string_printf ( buff, sizeof buff, NULL,
+                                "\\u%04x", ch );
             else if ( isprint ( ( int ) ch ) )
                 buff [ 0 ] = ( char ) ch, buff [ 1 ] = 0;
             else switch ( ch )
             {
             case '\n':
-                sprintf ( buff, "\\n" );
+/*              sprintf ( buff, "\\n" ); */
+                string_printf ( buff, sizeof buff, NULL,
+                                "\\n" );
                 break;
             case '\r':
-                sprintf ( buff, "\\r" );
+/*              sprintf ( buff, "\\r" ); */
+                string_printf ( buff, sizeof buff, NULL,
+                                "\\r" );
                 break;
             case '\t':
-                sprintf ( buff, "\\t" );
+/*              sprintf ( buff, "\\t" ); */
+                string_printf ( buff, sizeof buff, NULL,
+                                "\\t" );
                 break;
             default:
-                sprintf ( buff, "\\x%02x", ch );
+/*              sprintf ( buff, "\\x%02x", ch ); */
+                string_printf ( buff, sizeof buff, NULL,
+                                "\\x%02x", ch );
             }
 
             rc = SDumperPrint ( b, buff );

@@ -348,11 +348,14 @@ helper function needed by schema-dump
 ********************************************************************/
 static rc_t CC my_flush ( void *dst, const void *buffer, size_t bsize )
 {
+    rc_t rc = 0;
     struct schema_dumper_state_t *st = (struct schema_dumper_state_t *)dst;
     size_t i;
     
     st->out_size += bsize;
-    for (i = 0; i != bsize; ++i) {
+
+    for (i = 0; rc == 0 && i < bsize; ++i) {
+        size_t num_writ = 0;
         int n;
         int c = ((const char *)buffer)[i];
         
@@ -360,12 +363,17 @@ static rc_t CC my_flush ( void *dst, const void *buffer, size_t bsize )
             schema_dumper_state_write_line(st);
 
         if (c == '\'' || c == '\\')
-            n = sprintf(st->line_buf + st->line_pos, " '\\%c',", c);
+/*          n = sprintf(st->line_buf + st->line_pos, " '\\%c',", c); */
+            rc = string_printf(st->line_buf + st->line_pos, bsize - i, &num_writ,
+                                                     " '\\%c',", c);
         else
-            n = sprintf(st->line_buf + st->line_pos, " '%c',", c);
-        st->line_pos += n;
+            rc = string_printf(st->line_buf + st->line_pos, bsize - i, &num_writ,
+                                                     " '%c',", c);
+/*          n = sprintf(st->line_buf + st->line_pos, " '%c',", c); */
+        st->line_pos += num_writ;
     }
-    return 0;
+
+    return rc;
 }
 
 static rc_t Write1Dependency( void* data, const char* name )

@@ -44,13 +44,12 @@
 
 #include <atomic.h> /* atomic_test_and_set_ptr */
 
+#include <assert.h>
 #include <stdarg.h> /* va_start */
-#include <stdio.h> /* sprintf */
 #include <stdlib.h> /* malloc */
 #include <string.h> /* memset */
-#include <limits.h> /* PATH_MAX */
-#include <assert.h>
 
+#include <limits.h> /* PATH_MAX */
 #ifndef PATH_MAX
 #define PATH_MAX 4096
 #endif
@@ -435,9 +434,11 @@ static void CC reportError3Str(uint32_t indent, rc_t rc, const char* function,
     const char* name, const char* v1, const char* v2, const char* v3,
     bool eol)
 {
-    char* buffer = malloc(strlen(v1) + strlen(v2) + strlen(v3) + 1);
-    if (buffer) {
-        sprintf(buffer, "%s%s%s", v1, v2, v3);
+    size_t size = strlen(v1) + strlen(v2) + strlen(v3) + 1;
+    char* buffer = malloc(size);
+    if (buffer != NULL) {
+/*      sprintf(buffer, "%s%s%s", v1, v2, v3); */
+        string_printf(buffer, size, NULL, "%s%s%s", v1, v2, v3);
         reportErrorStrImpl(indent, rc, function, name, buffer, eol);
         free(buffer);
     }
