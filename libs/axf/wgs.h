@@ -55,6 +55,4 @@ void WGS_ListFree(WGS_List *list);
 char const *WGS_Scheme(void);
 unsigned WGS_splitName(int64_t *prow, unsigned const namelen, char const *name);
 unsigned WGS_getBases(WGS *self, uint8_t *dst, unsigned start, unsigned len, int64_t row);
-void WGS_close(WGS *self);
-rc_t WGS_reopen(WGS *self, VDBManager const *mgr, unsigned seq_id_len, char const *seq_id);
-void WGS_limitOpen(WGS_List *list);
+rc_t WGS_reopen(WGS_List *list, WGS *self, VDBManager const *mgr, unsigned seq_id_len, char const *seq_id);

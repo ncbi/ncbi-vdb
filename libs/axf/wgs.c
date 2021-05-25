@@ -47,7 +47,35 @@ static void WGS_stamp(Object *self) {
     self->lastAccessStamp = generation++;
 }
 
-static rc_t openCursor(Object* self, VDatabase const *db)
+static void WGS_close(Object *self)
+{
+    VCursorRelease(self->curs);
+    self->curs = NULL;
+}
+
+static void WGS_limitOpen(List *self)
+{
+    if (self->openCount >= self->openCountLimit) {
+        Entry *const entry = self->entry;
+        unsigned const entries = self->entries;
+        unsigned oldest = entries;
+        unsigned i;
+
+        assert(entries >= self->openCount);
+        for (i = 0; i < entries; ++i) {
+            Object const *const object = entry[i].object;
+            if (object->curs == NULL) continue;
+            if (oldest == entries || entry[oldest].object->lastAccessStamp > object->lastAccessStamp)
+                oldest = i;
+        }
+        assert(oldest != entries);
+        WGS_close(entry[oldest].object);
+        --self->openCount;
+    }
+    assert(self->openCount < self->openCountLimit);
+}
+
+static rc_t openCursor(WGS_List *list, Object* self, VDatabase const *db)
 {
     VTable const *tbl = NULL;
     rc_t rc = VDatabaseOpenTableRead(db, &tbl, "SEQUENCE");
@@ -63,6 +91,8 @@ static rc_t openCursor(Object* self, VDatabase const *db)
         rc = VCursorOpen(self->curs);
         if (rc == 0) {
             WGS_stamp(self);
+            ++list->openCount;
+            WGS_limitOpen(list);
             return 0;
         }
     }
@@ -70,7 +100,7 @@ static rc_t openCursor(Object* self, VDatabase const *db)
     return rc;
 }
 
-rc_t WGS_reopen(Object *self, VDBManager const *mgr, unsigned seq_id_len, char const *seq_id)
+rc_t WGS_reopen(WGS_List *list, Object *self, VDBManager const *mgr, unsigned seq_id_len, char const *seq_id)
 {
     VDatabase const *db = NULL;
     rc_t rc = 0;
@@ -82,13 +112,9 @@ rc_t WGS_reopen(Object *self, VDBManager const *mgr, unsigned seq_id_len, char c
 
     if (rc) return rc;
 
-    return openCursor(self, db);
-}
-
-void WGS_close(Object *self)
-{
-    VCursorRelease(self->curs);
-    self->curs = NULL;
+    rc = openCursor(list, self, db);
+    if (rc) return rc;
+    return 0;
 }
 
 static void whack(Object *self)
@@ -98,13 +124,13 @@ static void whack(Object *self)
     free(self);
 }
 
-static rc_t init(Object *self, VPath const *url, VDatabase const *db)
+static rc_t init(WGS_List *list, Object *self, VPath const *url, VDatabase const *db)
 {
     rc_t rc = 0;
 
     memset(self, 0, sizeof(*self));
     VDatabaseAddRef(db);
-    rc = openCursor(self, db);
+    rc = openCursor(list, self, db);
     if (rc == 0) {
         self->url = url;
         VPathAddRef(url);
@@ -189,7 +215,7 @@ Entry *WGS_Insert(List *list, unsigned const qlen, char const *qry, VPath const 
         LOGERR(klogFatal, (*prc = RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted)), "");
         return NULL;
     }
-    *prc = init(result->object, url, db);
+    *prc = init(list, result->object, url, db);
     if (*prc == 0)
         return result;
 
@@ -210,26 +236,4 @@ void WGS_ListFree(List *list)
 void WGS_ListInit(List *list, unsigned openLimit)
 {
     *((unsigned *)(&list->openCountLimit)) = openLimit;
-}
-
-void WGS_limitOpen(List *self)
-{
-    if (self->openCount >= self->openCountLimit) {
-        Entry *const entry = self->entry;
-        unsigned const entries = self->entries;
-        unsigned oldest = entries;
-        unsigned i;
-
-        assert(entries >= self->openCount);
-        for (i = 0; i < entries; ++i) {
-            Object const *const object = entry[i].object;
-            if (object->curs == NULL) continue;
-            if (oldest == entries || entry[oldest].object->lastAccessStamp > object->lastAccessStamp)
-                oldest = i;
-        }
-        assert(oldest != entries);
-        WGS_close(entry[oldest].object);
-        --self->openCount;
-    }
-    assert(self->openCount < self->openCountLimit);
 }
