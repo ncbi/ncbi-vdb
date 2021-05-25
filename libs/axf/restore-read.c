@@ -535,10 +535,13 @@ WGS_FROM_LAST:
             if (self->last.u.w->object->curs == NULL) {
                 rc_t rc = 0;
 
+                RestoreReadSharedWriter(self->shared);
                 WGS_limitOpen(&self->shared->wgs);
                 rc = WGS_reopen(self->last.u.w->object, self->mgr, wgs_namelen, seq_id);
+                if (rc == 0)
+                    ++self->shared->wgs.openCount;
+                RestoreReadSharedWriterDone(self->shared);
                 if (rc) return rc;
-                ++self->shared->wgs.openCount;
             }
             self->last.count = self->shared->wgs.entries;
             self->last.type = wgs_type;
