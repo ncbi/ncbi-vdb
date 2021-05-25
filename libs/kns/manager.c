@@ -536,18 +536,19 @@ bool OwnCertfromEnv(const char ** own_cert, const char ** pk_key) {
     rc_t rc = KDirectoryNativeDir(&dir);
 
     const KFile * file = NULL;
-    uint64_t s = 0;
+    size_t num_read = 0;
+    uint64_t size = 0;
 
     if (rc == 0) {
         rc = KDirectoryOpenFileRead(dir, &file, "%s/own_cert", e);
         if (rc == 0)
-            rc = KFileSize(file, &s);
+            rc = KFileSize(file, &size);
         if (rc == 0)
-            *cert = calloc(1, s + 1);
+            *cert = calloc(1, size + 1);
         if (rc == 0 && *cert == NULL)
             return false;
         if (rc == 0)
-            rc = KFileRead(file, 0, *cert, s + 1, &s);
+            rc = KFileRead(file, 0, *cert, size + 1, &num_read);
         if (rc == 0)
             KFileRelease(file);
     }
@@ -555,13 +556,13 @@ bool OwnCertfromEnv(const char ** own_cert, const char ** pk_key) {
     if (rc == 0) {
         rc = KDirectoryOpenFileRead(dir, &file, "%s/pk_key", e);
         if (rc == 0)
-            rc = KFileSize(file, &s);
+            rc = KFileSize(file, &size);
         if (rc == 0)
-            *key = calloc(1, s + 1);
+            *key = calloc(1, size + 1);
         if (rc == 0 && *key == NULL)
             return false;
         if (rc == 0)
-            rc = KFileRead(file, 0, *key, s + 1, &s);
+            rc = KFileRead(file, 0, *key, size + 1, &num_read);
         if (rc == 0)
             KFileRelease(file);
     }
