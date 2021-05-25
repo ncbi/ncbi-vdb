@@ -539,15 +539,18 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
                 if ( ! proxy_ep ) {
                     if ( KNSManagerLogNcbiVdbNetError ( mgr ) )
                         PLOGERR ( klogSys, ( klogSys, rc,
-                            "Failed to create TLS stream for '$(host)' ($(ip)) "
-                            "from '$(local)'", "host=%S,ip=%s,local=%s",
-                            aHostname, self -> ep . ip_address,
+                            "Failed to create TLS stream for "
+                            "'$(host):$(port)' ($(ip)) "
+                            "from '$(local)'",
+                            "host=%S,port=%hd,ip=%s,local=%s",
+                            aHostname, aPort, self -> ep . ip_address,
                             self -> local_ep . ip_address
                         ) );
                     else
                         DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_TLS ),
-                            ( "Failed to create TLS stream for '%S' (%s) from '%s'\n",
-                              aHostname, self -> ep . ip_address,
+                            ( "Failed to create TLS stream for "
+                                "'%S:%hd' (%s) from '%s'\n",
+                              aHostname, aPort, self -> ep . ip_address,
                               self -> local_ep . ip_address ) );
                 }
                 else
@@ -555,7 +558,9 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
                     STATUS ( STAT_PRG, "%s - retrying TLS wrapper on socket with proxy hostname\n", __func__ );
                     rc = KNSManagerMakeTLSStream ( mgr, & tls_stream, sock, hostname );
                     if ( rc != 0 )
-                        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_TLS ), ( "Failed to create TLS stream for '%S'\n", hostname ) );
+                        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_TLS ), (
+                            "Failed to create TLS stream for '%S:%hd'\n",
+                            hostname, port ) );
                 }
             }
 
