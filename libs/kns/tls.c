@@ -514,8 +514,40 @@ rc_t tlsg_init_certs ( KTLSGlobals *self, const KConfig * kfg )
     return num_certs == 0 ? rc : 0;
 }
 
+static int
+my_verify(void *data, mbedtls_x509_crt *crt, int depth, uint32_t *flags)
+{
+    char buf[1024] = "";
+
+    bool log = false;
+    assert(flags);
+    log = *flags > 0 || data != NULL;
+    if (!log)
+        return 0;
+
+    vdb_mbedtls_x509_crt_info(buf, sizeof buf - 1, " ", crt);
+
+    if (*flags == 0)
+        PLOGMSG(klogSys, (klogSys
+            , "No verification issue for this certificate: ( $(info) )"
+            , "info=%s"
+            , buf
+            ));
+    else {
+        rc_t rc = RC(rcKrypto, rcToken, rcValidating, rcEncryption, rcFailed);
+        PLOGERR(klogSys, (klogSys, rc
+            , "Verification issue $(flags) for this certificate: ( $(info) )"
+            , "flags=0x%X,info=%s"
+            , *flags
+            , buf
+            ));
+    }
+
+    return 0;
+}
+
 static
-rc_t tlsg_setup ( KTLSGlobals * self )
+rc_t tlsg_setup ( KTLSGlobals * self, uint32_t log )
 {
     int ret;
 
@@ -554,6 +586,10 @@ rc_t tlsg_setup ( KTLSGlobals * self )
          *  special code to deinitialize that variable.
          */
     self -> safe_to_modify_ssl_config = true;
+
+    if (log)
+        vdb_mbedtls_ssl_conf_verify(&self->config, my_verify,
+            log > 1 ? (void*)1 : 0);
 
     return 0;
 }
@@ -604,7 +640,8 @@ static int set_threshold ( const KConfig * kfg ) {
 
 /* Init
  */
-rc_t KTLSGlobalsInit ( KTLSGlobals * tlsg, const KConfig * kfg )
+rc_t KTLSGlobalsInit ( KTLSGlobals * tlsg,
+    const KConfig * kfg, uint64_t log )
 {
     rc_t rc;
 
@@ -627,7 +664,7 @@ rc_t KTLSGlobalsInit ( KTLSGlobals * tlsg, const KConfig * kfg )
     {
         rc = tlsg_init_certs ( tlsg, kfg );
         if ( rc == 0 )
-            rc = tlsg_setup ( tlsg );
+            rc = tlsg_setup ( tlsg, log );
     }
 
     return rc;

@@ -74,7 +74,8 @@ struct KTLSGlobals
 
 /* Init
  */
-rc_t KTLSGlobalsInit ( KTLSGlobals * tlsg, struct KConfig const * kfg );
+rc_t KTLSGlobalsInit ( KTLSGlobals * tlsg,
+    struct KConfig const * kfg, uint64_t log );
 
 /* SetupOwnCert
  */

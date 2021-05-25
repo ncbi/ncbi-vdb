@@ -885,31 +885,32 @@ static uint8_t KNSManagerLoadMaxNumberOfRetriesOnFailureForReliableURLs
     return result;
 }
 
-#if 0
-static bool KNSManagerLoadLogTlsErrors(KConfig* kfg) {
+#if 1
+static uint64_t KNSManagerLoadLogTlsErrors(KConfig* kfg) {
     const char * e = getenv("NCBI_VDB_TLS_LOG_ERR");
     if (e != NULL)
         if (e[0] == '\0')
-            return true;
+            return 0;
         else {
             if (e[0] == '0' ||
                 e[0] == 'f') /* false */
             {
-                return false;
+                return 0;
             }
             else
-                return true;
+                return atoi(e);
         }
     else {
-        bool log = false;
-        rc_t rc = KConfigReadBool(kfg, "/tls/NCBI_VDB_TLS_LOG_ERR", &log);
+        uint64_t log = 0;
+        rc_t rc = KConfigReadU64(kfg, "/tls/NCBI_VDB_TLS_LOG_ERR", &log);
         if (rc != 0)
-            return false;
+            return 0;
         else
             return log;
     }
 }
-
+#endif
+#if 0
 static int KNSManagerLoadEmulateTldReadErrors(KConfig* kfg) {
     const char * e = getenv("NCBI_VDB_ERR_MBEDTLS_READ");
     if (e != NULL)
@@ -991,7 +992,7 @@ static rc_t CC KNSManagerMakeConfigImpl ( KNSManager **mgrp, KConfig *kfg )
             mgr->retryFirstRead = KNSManagerLoadRetryFirstRead(kfg);
             mgr->retryFile = KNSManagerLoadRetryFile ( kfg );
             mgr->max_http_read_timeout = 60 * 1000; /* 1 minute */
-            /*          mgr->logTlsErrors = KNSManagerLoadLogTlsErrors(kfg);
+            mgr->logTlsErrors = KNSManagerLoadLogTlsErrors(kfg); /*
                         mgr->emulateTlsReadErrors
                             = KNSManagerLoadEmulateTldReadErrors(kfg); */
 
@@ -1020,7 +1021,8 @@ static rc_t CC KNSManagerMakeConfigImpl ( KNSManager **mgrp, KConfig *kfg )
 
                 rc = HttpRetrySpecsInit ( &mgr->retry_specs, kfg );
                 if ( rc == 0 ) {
-                    rc = KTLSGlobalsInit ( &mgr->tlsg, kfg );
+                    uint64_t logTlsErrors = KNSManagerLogNcbiVdbNetError(mgr);
+                    rc = KTLSGlobalsInit ( &mgr->tlsg, kfg, logTlsErrors );
 
                     if ( rc == 0 ) {
                         rc = KNSManagerHttpProxyInit ( mgr, kfg );
@@ -1212,34 +1214,38 @@ void KNSManagerSetLogNcbiVdbNetError ( KNSManager *self, bool set )
     if ( self ) { self->NCBI_VDB_NETnoLogError = !set; }
 }
 
-bool KNSManagerLogNcbiVdbNetError ( const KNSManager *self )
+uint64_t KNSManagerLogNcbiVdbNetError ( const KNSManager *self )
 {
     if ( self == NULL ) {
 #ifdef NCBI_VDB_NET
-        return true;
+        return 1;
 #else
-        return false;
+        return 0;
 #endif
     }
-    if ( !self->logTlsErrors ) { return false; }
+    if ( self->logTlsErrors == 0 )
+        return 0;
 
-    if ( self->NCBI_VDB_NETnoLogError ) { return false; }
+    if ( self->NCBI_VDB_NETnoLogError ) { return 0; }
     const char *e = getenv ( "NCBI_VDB_NET" );
     if ( e != NULL ) {
-        if ( e[0] == '0' || e[0] == 'f' ) /* false */
+        if ( e[0] == '\0' || e[0] == '0' || e[0] == 'f' ) /* false */
         {
-            return false;
+            return 0;
         }
 
-        return true;
+        return 1;
     }
     if ( self->NCBI_VDB_NETkfgValueSet ) { return self->NCBI_VDB_NETkfgValue; }
 
+    return self->logTlsErrors;
 
+#if 0
 #ifdef NCBI_VDB_NET
     return true;
 #else
     return false;
+#endif
 #endif
 }
 
