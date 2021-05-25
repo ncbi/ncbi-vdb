@@ -264,12 +264,14 @@ static void RestoreReadSharedReader(RestoreReadShared *self)
 {
     rc_t const rc = KRWLockAcquireShared(self->rwl);
     assert(rc == 0);
+    ((void)rc);
 }
 
 static void RestoreReadSharedReaderDone(RestoreReadShared *self)
 {
     rc_t const rc = KRWLockUnlock(self->rwl);
     assert(rc == 0);
+    ((void)rc);
 }
 
 static void RestoreReadSharedWriter(RestoreReadShared *self)
@@ -278,6 +280,7 @@ static void RestoreReadSharedWriter(RestoreReadShared *self)
     {
         rc_t const rc = KRWLockAcquireExcl(self->rwl);
         assert(rc == 0);
+        ((void)rc);
     }
 }
 
@@ -286,6 +289,7 @@ static void RestoreReadSharedWriterDone(RestoreReadShared *self)
     {
         rc_t const rc = KRWLockUnlock(self->rwl);
         assert(rc == 0);
+        ((void)rc);
     }
     RestoreReadSharedReader(self);
 }
@@ -427,60 +431,65 @@ static rc_t openSeqID(  RestoreRead *const self
                       , char const *const seq_id
                       , VTable const *const forTable)
 {
-    VDatabase const *db = NULL;
-    VTable const *tbl = NULL;
-    VPath const *url = getURL(self->mgr, id_len, seq_id, forTable);
-    rc_t rc = 0;
+    if (wgs_id_len == 0) {
+        rc_t rc = 0;
+        VTable const *tbl = NULL;
 
-    if (url) {
-        // open the new way with the URL
-        VDBManagerOpenTableReadVPath(self->mgr, &tbl, NULL, url);
-        if (tbl == NULL && wgs_id_len > 0)
-            rc = VDBManagerOpenDBReadVPath(self->mgr, &db, NULL, url);
-    }
-    else {
-        // open the old way
-        VDBManagerOpenTableRead(self->mgr, &tbl, NULL, "ncbi-acc:%.*s?vdb-ctx=refseq", (int)id_len, seq_id);
-        if (tbl == NULL && wgs_id_len > 0)
-            rc = VDBManagerOpenDBRead(self->mgr, &db, NULL, "%.*s", (int)id_len, seq_id);
-    }
-    if (tbl != NULL) {
-        if (tableSchemaNameIsEqual(tbl, RefSeq_Scheme())) {
+        VPath const *const url = getURL(self->mgr, id_len, seq_id, forTable);
+        if (url) {
+            rc = VDBManagerOpenTableReadVPath(self->mgr, &tbl, NULL, url);
+            VPathRelease(url);
+        }
+        else
+            rc = VDBManagerOpenTableRead(self->mgr, &tbl, NULL, "ncbi-acc:%.*s?vdb-ctx=refseq", (int)id_len, seq_id);
+
+        if (tbl != NULL && tableSchemaNameIsEqual(tbl, RefSeq_Scheme())) {
             RestoreReadSharedWriter(self->shared);
             self->last.u.r = RefSeqInsert(&self->shared->refSeqs, id_len, seq_id, tbl, &rc);
             self->last.count = self->shared->refSeqs.entries;
             RestoreReadSharedWriterDone(self->shared);
             if (self->last.u.r)
                 self->last.type = refSeq_type;
+            rc = 0;
         }
         else {
-            rc = RC(rcAlign, rcTable, rcAccessing, rcType, rcUnexpected);
+            if (rc == 0)
+                rc = RC(rcAlign, rcTable, rcAccessing, rcType, rcUnexpected);
             PLOGERR(klogWarn, (klogWarn, rc, "can't open $(name) as a RefSeq", "name=%.*s", (int)id_len, seq_id));
         }
-    }
-    else if (db != NULL) {
-        if (dbSchemaNameIsEqual(db, WGS_Scheme())) {
-            RestoreReadSharedWriter(self->shared);
-            self->last.u.w = WGS_Insert(&self->shared->wgs, wgs_id_len, seq_id, url, db, &rc);
-            self->last.count = self->shared->wgs.entries;
-            RestoreReadSharedWriterDone(self->shared);
-            if (self->last.u.w)
-                self->last.type = wgs_type;
-        }
-        else {
-            rc = RC(rcAlign, rcTable, rcAccessing, rcType, rcUnexpected);
-            PLOGERR(klogWarn, (klogWarn, rc, "can't open $(name) as a WGS", "name=%.*s", (int)id_len, seq_id));
-        }
+        VTableRelease(tbl);
+        return rc;
     }
     else {
-        if (rc == 0)
-            rc = RC(rcAlign, rcTable, rcAccessing, rcType, rcUnexpected);
-        PLOGERR(klogWarn, (klogWarn, rc, "can't open $(name) as a RefSeq or as a WGS", "name=%.*s", (int)id_len, seq_id));
+        rc_t rc = 0;
+        VDatabase const *db = NULL;
+        VPath const *const url = getURL(self->mgr, wgs_id_len, seq_id, forTable);
+        if (url)
+            rc = VDBManagerOpenDBReadVPath(self->mgr, &db, NULL, url);
+        else
+            rc = VDBManagerOpenDBRead(self->mgr, &db, NULL, "%.*s", (int)wgs_id_len, seq_id);
+
+        if (db) {
+            if (dbSchemaNameIsEqual(db, WGS_Scheme())) {
+                RestoreReadSharedWriter(self->shared);
+                self->last.u.w = WGS_Insert(&self->shared->wgs, wgs_id_len, seq_id, url, db, &rc);
+                self->last.count = self->shared->wgs.entries;
+                RestoreReadSharedWriterDone(self->shared);
+                if (self->last.u.w)
+                    self->last.type = wgs_type;
+            }
+            else {
+                rc = RC(rcAlign, rcTable, rcAccessing, rcType, rcUnexpected);
+                PLOGERR(klogWarn, (klogWarn, rc, "can't open $(name) as a WGS", "name=%.*s", (int)id_len, seq_id));
+            }
+            VDatabaseRelease(db);
+            VPathRelease(url);
+            return rc;
+        }
+        // not a database, so not WGS
+        VPathRelease(url);
+        return openSeqID(self, id_len, 0, seq_id, forTable);
     }
-    VPathRelease(url);
-    VTableRelease(tbl);
-    VDatabaseRelease(db);
-    return rc;
 }
 
 static rc_t getSequence(  RestoreRead *const self
@@ -536,10 +545,7 @@ WGS_FROM_LAST:
                 rc_t rc = 0;
 
                 RestoreReadSharedWriter(self->shared);
-                WGS_limitOpen(&self->shared->wgs);
-                rc = WGS_reopen(self->last.u.w->object, self->mgr, wgs_namelen, seq_id);
-                if (rc == 0)
-                    ++self->shared->wgs.openCount;
+                rc = WGS_reopen(&self->shared->wgs, self->last.u.w->object, self->mgr, wgs_namelen, seq_id);
                 RestoreReadSharedWriterDone(self->shared);
                 if (rc) return rc;
             }
