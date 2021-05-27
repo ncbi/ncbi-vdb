@@ -547,7 +547,7 @@ my_verify(void *data, mbedtls_x509_crt *crt, int depth, uint32_t *flags)
 }
 
 static
-rc_t tlsg_setup ( KTLSGlobals * self, uint32_t log )
+rc_t tlsg_setup ( KTLSGlobals * self, uint64_t log )
 {
     int ret;
 
@@ -587,9 +587,8 @@ rc_t tlsg_setup ( KTLSGlobals * self, uint32_t log )
          */
     self -> safe_to_modify_ssl_config = true;
 
-    if (log)
-        vdb_mbedtls_ssl_conf_verify(&self->config, my_verify,
-            log > 1 ? (void*)1 : 0);
+    vdb_mbedtls_ssl_conf_verify(&self->config, my_verify,
+        log > 1 ? (void*)1 : 0);
 
     return 0;
 }
@@ -1325,11 +1324,13 @@ rc_t ktls_handshake ( KTLSStream *self )
                         vdb_mbedtls_x509_crt_verify_info ( buf, sizeof( buf ), " !! ", flags );
 
                         PLOGMSG ( klogSys, ( klogSys
-                                             , "mbedtls_ssl_get_verify_result returned $(flags) ( $(info) )"
-                                             , "flags=0x%X,info=%s"
-                                             , flags
-                                             , buf
-                                      ) );
+                            , "mbedtls_ssl_get_verify_result for '$(host)'"
+                              " returned $(flags) ($(info))"
+                            , "host=%s,flags=0x%X,info=%s"
+                            , self->ssl.hostname
+                            , flags
+                            , buf
+                        ) );
                     }
                 }
             }
