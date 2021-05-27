@@ -531,7 +531,9 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
         {
             KTLSStream * tls_stream;
 
-            STATUS ( STAT_PRG, "%s - creating TLS wrapper on socket\n", __func__ );
+            STATUS ( STAT_PRG,
+                ">>>>>>>>>>> %s - creating TLS wrapper on socket for '%S:%d'\n",
+                __func__, hostname, port );
             rc = KNSManagerMakeTLSStream ( mgr, & tls_stream, sock, aHostname );
 
             if ( rc != 0 )
@@ -563,6 +565,10 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
                             hostname, port ) );
                 }
             }
+
+            STATUS ( STAT_PRG,
+                "<<<<<<<<<<< %s - created TLS wrapper on socket for '%S:%d'\n",
+                __func__, hostname, port );
 
             KSocketRelease ( sock );
 
