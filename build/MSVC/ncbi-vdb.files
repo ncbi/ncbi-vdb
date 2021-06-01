@@ -1781,6 +1781,12 @@
     <ClCompile Include="..\..\..\libs\vxf\wgs-tokenize-accession.c">
         <ObjectFileName >$(IntDir)vxf-%(Filename).obj</ObjectFileName>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\zstd.c">
+        <ObjectFileName >$(IntDir)vxf-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\unzstd.c">
+        <ObjectFileName >$(IntDir)vxf-%(Filename).obj</ObjectFileName>
+    </ClCompile>
     <ClCompile Include="..\..\..\libs\wgsxf\build_read_type.c">
         <ObjectFileName >$(IntDir)vxf-%(Filename).obj</ObjectFileName>
     </ClCompile>
@@ -1794,5 +1800,10 @@
     <ClCompile Include="..\..\..\libs\diagnose\endpoint.c" >
         <ObjectFileName >$(IntDir)diagnose-%(Filename).obj</ObjectFileName>
     </ClCompile>
+
+    <ClCompile Include="..\..\..\libs\ext\zstd\zstd.c">
+        <ObjectFileName >$(IntDir)zstd-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+
   </ItemGroup>
 </Project>

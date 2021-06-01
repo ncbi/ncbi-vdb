@@ -22,33 +22,41 @@
 #
 # ===========================================================================
 
-by_default: runtests
+default: runtests
 
-TOP ?= $(abspath ../..)
-MODULE = test/ext
+TOP ?= $(abspath ../../..)
 
-include $(TOP)/build/Makefile.shell
+MODULE = test/ext/bzip2
 
-include $(TOP)/build/Makefile.config
+TEST_TOOLS = \
+	test-bzip2 \
+
+include $(TOP)/build/Makefile.env
+
+$(TEST_TOOLS): makedirs
+	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
+
+.PHONY: $(TEST_TOOLS)
+
+clean: stdclean
 
 #-------------------------------------------------------------------------------
-# default
+# bzip2
 #
-SUBDIRS = \
-	mbedtls \
-	zstd \
-	bzip2 \
+BZIP2_SRC = \
+	test-bzip2
 
-# The libmagic tests (and copycat which is the only user of libmagic for now) rely on
-# the correct version of libmagic database installed on the system.
-# Disabling for now.
-#    magic \
+BZIP2_OBJ = \
+	$(addsuffix .$(OBJX),$(BZIP2_SRC))
 
-# common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
-include $(TOP)/build/Makefile.targets
+BZIP2_LIBS = \
+    -skapp \
+    -sktst \
+	-sncbi-wvdb \
+	-sm
 
-$(SUBDIRS):
-	@ $(MAKE) -C $@
+$(TEST_BINDIR)/test-bzip2: $(BZIP2_OBJ)
+	$(LP) --exe -o $@ $^ $(BZIP2_LIBS)
 
-.PHONY: default $(SUBDIRS)
-
+bzip: test-bzip2
+	$(TEST_BINDIR)/test-bzip2

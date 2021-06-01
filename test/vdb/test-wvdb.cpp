@@ -471,13 +471,111 @@ FIXTURE_TEST_CASE ( VCursorCommit_without_VCursorCloseRow, WVDB_Fixture )
     }
 }
 
-FIXTURE_TEST_CASE ( VCursorCommit_BufferOverflow, WVDB_Fixture )
-{   // VDB-4341
+//FIXTURE_TEST_CASE ( VCursorCommit_BufferOverflow, WVDB_Fixture )
+// moved to test-wvdvb-slow.cpp
+
+////////////////////////////////////////
+// zstd encoding called from the schema
+
+class EncodingFixture : public WVDB_Fixture
+{
+public:
+    void MakeDatabaseWithEncoding( const string & name, const string & encoding, bool p_debug = false )
+    {
+        if ( p_debug )
+        {
+            KDbgSetString("VDB");
+        }
+
+        m_databaseName = name;
+
+        const char* TableName = "TABLE1";
+        const char* ColumnName = "c";
+        string schemaText =
+            string ( "version 1; "
+            "include 'vdb/vdb.vschema'; "
+            "table table1 #1.0.0 { column <ascii> " ) + encoding + " " + ColumnName +"; }; "
+            "database root_database #1 { table table1 #1 " + TableName +"; } ;";
+
+        WVDB_Fixture::MakeDatabase ( schemaText, "root_database", "../../interfaces" );
+
+        VCursor* cursor = CreateTable ( TableName );
+        try
+        {
+            uint32_t column_idx;
+            THROW_ON_RC ( VCursorAddColumn ( cursor, & column_idx, ColumnName ) );
+            THROW_ON_RC ( VCursorOpen ( cursor ) );
+            WriteRow( cursor, column_idx, string('a', 20 ));
+            WriteRow( cursor, column_idx, string('b', 20 ));
+            THROW_ON_RC ( VCursorCommit ( cursor ) ); // the round-trip test here will exercise both zstd and unzstd
+            THROW_ON_RC ( VCursorRelease ( cursor ) );
+        }
+        catch (...)
+        {
+            THROW_ON_RC ( VCursorRelease ( cursor ) );
+            throw;
+        }
+    }
+};
+
+FIXTURE_TEST_CASE ( Zstd_defaultCompression, EncodingFixture )
+{
+    MakeDatabaseWithEncoding( ScratchDir + GetName(), "zstd_encoding" );
+}
+
+FIXTURE_TEST_CASE ( Zstd_FastestCompression, EncodingFixture )
+{
+    MakeDatabaseWithEncoding( ScratchDir + GetName(), "zstd_encoding <ZSTD_DEFAULT_STRATEGY, ZSTD_DEFAULT_COMPRESSION>" );
+}
+FIXTURE_TEST_CASE ( Zstd_BestestCompression, EncodingFixture )
+{
+    MakeDatabaseWithEncoding( ScratchDir + GetName(), "zstd_encoding <ZSTD_DEFAULT_STRATEGY, 22>" );
+}
+FIXTURE_TEST_CASE ( Zstd_WeakSrategyLowCompression, EncodingFixture )
+{
+    MakeDatabaseWithEncoding( ScratchDir + GetName(), "zstd_encoding <ZSTD_BTULTRA2, -131073>" );
+}
+FIXTURE_TEST_CASE ( Zstd_StrongSrategyHighCompression, EncodingFixture )
+{
+    MakeDatabaseWithEncoding( ScratchDir + GetName(), "zstd_encoding <ZSTD_BTULTRA2, 9999999>" );
+}
+
+FIXTURE_TEST_CASE ( Zlib_default, EncodingFixture )
+{
+    MakeDatabaseWithEncoding( ScratchDir + GetName(), "zip_encoding" );
+}
+
+// triggers an assert in vdb/blob.c:387
+// FIXTURE_TEST_CASE ( Zlib_badLevel, EncodingFixture )
+// {
+//     MakeDatabaseWithEncoding( ScratchDir + GetName(), "zip_encoding<Z_DEFAULT_STRATEGY, 10>" );
+// }
+
+FIXTURE_TEST_CASE ( Bzip_default, EncodingFixture )
+{   //NB: will not do well if the blob size is less than 27 bytes
+    MakeDatabaseWithEncoding( ScratchDir + GetName(), "bzip_encoding" );
+}
+
+FIXTURE_TEST_CASE ( FactoryArgcBug, WVDB_Fixture )
+{   // there was a bug in vdb/prod-func.c that threw an assert if a literal constant was used as
+    // a parameter to a function factory
     m_databaseName = ScratchDir + GetName();
     RemoveDatabase();
 
+//KDbgSetString("VDB");
+
     string schemaText =
-        "table table1 #1.0.0 { column ascii column1; };"
+        "fmtdef zlib_fmt; "
+        "function zlib_fmt zip #1.0 < * I32 strategy, I32 level > ( any in ) = vdb:zip; "
+
+        "physical < type T > "
+        "T zip_encoding #1.0 < * I32 strategy, I32 level > "
+        "{ "
+        "    encode { return zip < strategy, 0 >  ( @ ); } " // this 0 used to cause an assert failure
+        "    decode { return @; } "
+        "}; "
+
+        "table table1 #1.0.0 { column <ascii> zip_encoding column1; };"
         "database root_database #1 { table table1 #1 TABLE1; } ;";
 
     const char* TableName = "TABLE1";
@@ -487,62 +585,16 @@ FIXTURE_TEST_CASE ( VCursorCommit_BufferOverflow, WVDB_Fixture )
     {
         VCursor* cursor = CreateTable ( TableName );
 
-        // make sure we have enough memory
-        try
-        {
-           char * mem = (char*)new char[20][1000][1000][1000];
-           delete [] mem;
-        }
-        catch (...)
-        {
-           cout << "not enough memory, skipping VCursorCommit_BufferOverflow" << endl;
-           return;
-        }
-
-        uint32_t column_idx1;
-        REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx1, ColumnName1 ) );
+        uint32_t column_idx;
+        REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx, ColumnName1 ) );
         REQUIRE_RC ( VCursorOpen ( cursor ) );
-
-        REQUIRE_RC ( VCursorOpenRow ( cursor ) );
-        string s = string ( 1858195865, ' ' );
-        REQUIRE_RC ( VCursorWrite ( cursor, column_idx1, 8, s.c_str(), 0, s.size() ) );
-        REQUIRE_RC ( VCursorCommitRow ( cursor ) );
-        REQUIRE_RC ( VCursorCloseRow ( cursor ) );
-        // REQUIRE_RC ( VCursorFlushPage ( cursor ) );
-
-        REQUIRE_RC ( VCursorOpenRow ( cursor ) );
-        s = string ( 1355058268, ' ' );
-        REQUIRE_RC ( VCursorWrite ( cursor, column_idx1, 8, s.c_str(), 0, s.size() ) );
-        REQUIRE_RC ( VCursorCommitRow ( cursor ) );
-        REQUIRE_RC ( VCursorCloseRow ( cursor ) );
-        // REQUIRE_RC ( VCursorFlushPage ( cursor ) );
-
-        REQUIRE_RC ( VCursorOpenRow ( cursor ) );
-        s = string ( 2093616421, ' ' );
-        REQUIRE_RC ( VCursorWrite ( cursor, column_idx1, 8, s.c_str(), 0, s.size() ) );
-        REQUIRE_RC ( VCursorCommitRow ( cursor ) );
-        REQUIRE_RC ( VCursorCloseRow ( cursor ) );
-        // REQUIRE_RC ( VCursorFlushPage ( cursor ) );
-
-        REQUIRE_RC ( VCursorOpenRow ( cursor ) );
-        s = string ( 1651157214, ' ' );
-        REQUIRE_RC ( VCursorWrite ( cursor, column_idx1, 8, s.c_str(), 0, s.size() ) );
-        REQUIRE_RC ( VCursorCommitRow ( cursor ) );
-        REQUIRE_RC ( VCursorCloseRow ( cursor ) );
-        // REQUIRE_RC ( VCursorFlushPage ( cursor ) );
-
-        REQUIRE_RC ( VCursorOpenRow ( cursor ) );
-        s = string ( 2089204295, ' ' );
-        REQUIRE_RC ( VCursorWrite ( cursor, column_idx1, 8, s.c_str(), 0, s.size() ) );
-        REQUIRE_RC ( VCursorCommitRow ( cursor ) );
-        REQUIRE_RC ( VCursorCloseRow ( cursor ) );
-        // REQUIRE_RC ( VCursorFlushPage ( cursor ) );
-
+        WriteRow( cursor, column_idx, string('a', 20 ));
         REQUIRE_RC ( VCursorCommit ( cursor ) );
 
         REQUIRE_RC ( VCursorRelease ( cursor ) );
     }
 }
+
 
 //////////////////////////////////////////// Main
 extern "C"

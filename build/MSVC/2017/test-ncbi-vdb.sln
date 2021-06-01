@@ -154,6 +154,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-vfs_json-response", "t
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-ext_mbedtls", "test-ext_mbedtls.vcxproj", "{45F03B03-17F9-4127-9845-A3272A003CF6}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-zstd", "test-zstd.vcxproj", "{F5B8D0C3-7C0C-4800-97EB-0ADB69FFFA2F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -464,6 +466,10 @@ Global
 		{45F03B03-17F9-4127-9845-A3272A003CF6}.Debug|x64.Build.0 = Debug|x64
 		{45F03B03-17F9-4127-9845-A3272A003CF6}.Release|x64.ActiveCfg = Release|x64
 		{45F03B03-17F9-4127-9845-A3272A003CF6}.Release|x64.Build.0 = Release|x64
+		{F5B8D0C3-7C0C-4800-97EB-0ADB69FFFA2F}.Debug|x64.ActiveCfg = Debug|x64
+		{F5B8D0C3-7C0C-4800-97EB-0ADB69FFFA2F}.Debug|x64.Build.0 = Debug|x64
+		{F5B8D0C3-7C0C-4800-97EB-0ADB69FFFA2F}.Release|x64.ActiveCfg = Release|x64
+		{F5B8D0C3-7C0C-4800-97EB-0ADB69FFFA2F}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
