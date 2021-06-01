@@ -137,10 +137,10 @@ $(TEST_BINDIR)/test-wvdb: $(TEST_WVDB_OBJ)
 	$(LP) --exe -o $@ $^ $(WRITE_LIBS)
 
 wvdb: test-wvdb
-	$(TEST_BINDIR)/test-wvdb
+	VDB_CONFIG=$(shell pwd)/kfg/empty $(TEST_BINDIR)/test-wvdb
 
 valgrind_wvdb: std
-	valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-wvdb
+	VDB_CONFIG=$(shell pwd)/kfg/empty valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-wvdb
 
 #-------------------------------------------------------------------------------
 # test-sparse-col
