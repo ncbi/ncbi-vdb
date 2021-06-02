@@ -55,16 +55,10 @@ SLOW_TEST_TOOLS =  \
 
 ALL_TOOLS = $(TEST_TOOLS) $(INT_TOOLS)
 
+# override global configuration
+VDB_CONFIG = $(SRCDIR)/..
+
 include $(TOP)/build/Makefile.env
-
-
-# make sure runs are not cached in the user repository when running tests
-ifeq ($(wildcard ../../../asm-trace),)
-	ifeq (,$(VDB_CONFIG))
-		VDB_CONFIG = $(shell pwd)/../only-remote-repository.kfg
-	endif
-endif
-
 
 $(ALL_TOOLS) $(SLOW_TEST_TOOLS): makedirs
 	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
@@ -136,11 +130,12 @@ TEST_WVDB_OBJ = \
 $(TEST_BINDIR)/test-wvdb: $(TEST_WVDB_OBJ)
 	$(LP) --exe -o $@ $^ $(WRITE_LIBS)
 
+# make sure these targets do not pick up the global schema
 wvdb: test-wvdb
-	VDB_CONFIG=$(shell pwd)/kfg/empty $(TEST_BINDIR)/test-wvdb
+	VDB_CONFIG=$(VDB_CONFIG) $(TEST_BINDIR)/test-wvdb
 
 valgrind_wvdb: std
-	VDB_CONFIG=$(shell pwd)/kfg/empty valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-wvdb
+	VDB_CONFIG=$(VDB_CONFIG) valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-wvdb
 
 #-------------------------------------------------------------------------------
 # test-sparse-col
