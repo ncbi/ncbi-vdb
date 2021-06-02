@@ -474,6 +474,30 @@ FIXTURE_TEST_CASE ( VCursorCommit_without_VCursorCloseRow, WVDB_Fixture )
 //FIXTURE_TEST_CASE ( VCursorCommit_BufferOverflow, WVDB_Fixture )
 // moved to test-wvdvb-slow.cpp
 
+FIXTURE_TEST_CASE ( MemoryLeak_DefaultFactoryParam, WVDB_Fixture )
+{   // memory leak when an oprional factory parameter is omitted
+    m_databaseName = ScratchDir + GetName();
+    RemoveDatabase();
+
+    string schemaText =
+        string ( "version 1; "
+                 "fmtdef zstd_fmt; "
+                 "function zstd_fmt zstd #1.0 < * I32 strategy > ( any in ) = vdb:zstd; "
+                 "function any unzstd #1.0 ( zstd_fmt in ) = vdb:unzstd; "
+                 "physical < type T > T zstd_encoding #1.0 < * I32 strategy > "
+                 "{ decode { return @; } encode { return zstd < strategy > ( @ ); }}; "
+                 "table table1 #1.0.0 { column <ascii> zstd_encoding C; }; " /* no <strategy> specified */
+                 "database root_database #1 { table table1 #1 T; } ;" );
+    WVDB_Fixture::MakeDatabase ( schemaText, "root_database", "../../interfaces" );
+    VCursor* cursor = CreateTable ( "T" );
+    uint32_t column_idx;
+    REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx, "C" ) );
+    REQUIRE_RC ( VCursorOpen ( cursor ) );
+    WriteRow( cursor, column_idx, string('a', 20 ));
+    REQUIRE_RC ( VCursorCommit ( cursor ) ); // the round-trip test here will exercise both zstd and unzstd
+    REQUIRE_RC ( VCursorRelease ( cursor ) );
+}
+
 ////////////////////////////////////////
 // zstd encoding called from the schema
 
@@ -522,7 +546,6 @@ FIXTURE_TEST_CASE ( Zstd_defaultCompression, EncodingFixture )
 {
     MakeDatabaseWithEncoding( ScratchDir + GetName(), "zstd_encoding" );
 }
-
 FIXTURE_TEST_CASE ( Zstd_FastestCompression, EncodingFixture )
 {
     MakeDatabaseWithEncoding( ScratchDir + GetName(), "zstd_encoding <ZSTD_DEFAULT_STRATEGY, ZSTD_DEFAULT_COMPRESSION>" );
