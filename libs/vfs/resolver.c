@@ -4680,7 +4680,7 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
         rc = RC ( rcVFS, rcResolver, rcResolving, rcParam, rcNull );
     else
     {
-        if ( protocols == eProtocolDefault )
+        if ( protocols == eProtocolDefault && self != NULL )
             protocols = self -> protocols;
 
         if ( local != NULL )
