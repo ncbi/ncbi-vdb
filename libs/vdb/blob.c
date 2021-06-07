@@ -1353,7 +1353,8 @@ LIB_EXPORT rc_t CC VBlobRelease ( const VBlob *self )
         case krefNegative:
             rc = RC (rcVDB, rcBlob, rcDestroying, rcBlob, rcExcessive);
             PLOGERR ( klogInt, (klogInt, rc, "Released a blob $(B) with no more references",
-                      PLOG_P(self)));
+                      PLOG_P(B), self));
+            abort();
             break;
         }
     }
