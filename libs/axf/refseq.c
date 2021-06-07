@@ -32,18 +32,12 @@
 #include <kproc/lock.h>
 #include <kproc/thread.h>
 #include <klib/refcount.h>
+#include "util.h"
 #include "refseq.h"
 
 #include <stdlib.h>
 #include <assert.h>
 #include <limits.h>
-
-typedef RefSeqList List;
-typedef RefSeqListEntry Entry;
-typedef RefSeq Object;
-
-#include "list.c"
-#include "util.h"
 
 struct RefSeqAsyncLoadInfo {
     KRefcount refcount;
@@ -165,7 +159,7 @@ static void getBases_2na(uint8_t *const dst, unsigned const start, unsigned cons
     }
 }
 
-static unsigned getBases_4na(Object const *self, uint8_t *const dst, unsigned const start, unsigned const len)
+static unsigned getBases_4na(RefSeq const *self, uint8_t *const dst, unsigned const start, unsigned const len)
 {
     unsigned const length = self->length;
     uint8_t const *const bases = self->bases;
@@ -196,12 +190,12 @@ static unsigned getBases_4na(Object const *self, uint8_t *const dst, unsigned co
     return i;
 }
 
-static unsigned readCircular(Object const *self, uint8_t *const dst, unsigned const start, unsigned const len)
+static unsigned readCircular(RefSeq const *self, uint8_t *const dst, unsigned const start, unsigned const len)
 {
     return getBases_4na(self, dst, start, len);
 }
 
-static unsigned readNormal(Object const *self, uint8_t *const dst, unsigned const start, unsigned const len)
+static unsigned readNormal(RefSeq const *self, uint8_t *const dst, unsigned const start, unsigned const len)
 {
     unsigned const length = self->length;
     unsigned const actlen = (start + len) < length ? len : start < length ? length - start : 0;
@@ -210,7 +204,7 @@ static unsigned readNormal(Object const *self, uint8_t *const dst, unsigned cons
     return actlen;
 }
 
-static unsigned readZero(Object const *self, uint8_t *const dst, unsigned const start, unsigned const len)
+static unsigned readZero(RefSeq const *self, uint8_t *const dst, unsigned const start, unsigned const len)
 {
     /* this should not be reachable; an rc != 0 should have propagated up the
      * call stack and ended the program before we could get here */
@@ -237,7 +231,7 @@ static unsigned rowToPosition(RefSeqAsyncLoadInfo const *async, int64_t const ro
 }
 
 /* this is called on the main thread */
-static unsigned readNormalIncomplete(Object const *self, uint8_t *const dst, unsigned const start, unsigned const len)
+static unsigned readNormalIncomplete(RefSeq const *self, uint8_t *const dst, unsigned const start, unsigned const len)
 {
     unsigned const length = self->length;
     unsigned const actlen = (start + len) < length ? len : start < length ? length - start : 0;
@@ -301,7 +295,7 @@ static unsigned readNormalIncomplete(Object const *self, uint8_t *const dst, uns
 }
 
 /* this is called on the background thread */
-static rc_t runLoadThread(Object *self)
+static rc_t runLoadThread(RefSeq *self)
 {
     RefSeqAsyncLoadInfo *const async = self->async;
     uint8_t *const buffer = malloc(async->max_seq_len);
@@ -424,9 +418,9 @@ char const *RefSeq_Scheme(void) {
     return "NCBI:refseq:tbl:reference";
 }
 
-unsigned RefSeq_getBases(Object const *const self, uint8_t *const dst, unsigned const start, unsigned const len)
+unsigned RefSeq_getBases(RefSeq const *const self, uint8_t *const dst, unsigned const start, unsigned const len)
 {
-    atomic_t *const rwl = &((Object *)self)->rwl;
+    atomic_t *const rwl = &((RefSeq *)self)->rwl;
 
     if (self->async == NULL) {
         /* this is the fast path and the most common for normal use */
@@ -490,7 +484,7 @@ static rc_t loadCircular_1(  uint8_t *result
     return 0;
 }
 
-static rc_t loadCircular(  Object *result
+static rc_t loadCircular(  RefSeq *result
                          , VCursor const *const curs
                          , RowRange const *const rowRange
                          , CursorAddResult const *const info
@@ -554,7 +548,7 @@ static rc_t run_load_thread(const KThread *self, void *data)
     return runLoadThread(data);
 }
 
-static rc_t load(  Object *result
+static rc_t load(  RefSeq *result
                  , VCursor const *const curs
                  , RowRange const *const rowRange
                  , CursorAddResult const *const info
@@ -585,7 +579,7 @@ static rc_t load(  Object *result
     return rc;
 }
 
-static rc_t init(Object *result, VTable const *const tbl)
+static rc_t init(RefSeq *result, VTable const *const tbl)
 {
     CursorAddResult cols[5];
     RowRange rowRange;
@@ -615,7 +609,7 @@ static rc_t init(Object *result, VTable const *const tbl)
     return rc;
 }
 
-void RefSeqFree(Object *self)
+void RefSeqFree(RefSeq *self)
 {
     RefSeqAsyncLoadInfoFree(self->async);
     RangeListFree(&self->Ns);
@@ -623,53 +617,16 @@ void RefSeqFree(Object *self)
     free(self);
 }
 
-Entry *RefSeqFind(List *list, unsigned const qlen, char const *qry)
+RefSeq *RefSeqNew(VTable const *const tbl, rc_t *prc)
 {
-    unsigned at = 0;
-    return find(list, &at, qlen, qry) ? &list->entry[at] : NULL;
-}
-
-Entry *RefSeqInsert(List *list, unsigned const qlen, char const *qry, VTable const *tbl, rc_t *prc)
-{
-    Entry *result = NULL;
-    unsigned at = 0;
-    if (find(list, &at, qlen, qry)) {
-        *prc = 0;
-        return &list->entry[at];
-    }
-
-    result = insert(list, at, qlen, qry);
+    RefSeq *result = calloc(1, sizeof(*result));
     if (result == NULL) {
         LOGERR(klogFatal, (*prc = RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted)), "");
         return NULL;
     }
-
-    result->object = calloc(1, sizeof(*result->object));
-    if (result == NULL) {
-        LOGERR(klogFatal, (*prc = RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted)), "");
-        return NULL;
-    }
-
-    *prc = init(result->object, tbl);
+    *prc = init(result, tbl);
     if (*prc == 0)
         return result;
-
-    undo_insert(list, at);
+    free(result);
     return NULL;
-}
-
-void RefSeqListFree(List *list)
-{
-    unsigned i;
-    for (i = 0; i != list->entries; ++i) {
-        RefSeqFree(list->entry[i].object);
-        free(list->entry[i].name);
-    }
-    free(list->entry);
-}
-
-rc_t RefSeqListInit(List *list)
-{
-    rc_t rc = 0;
-    return rc;
 }
