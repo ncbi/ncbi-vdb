@@ -163,41 +163,51 @@ static bool dbSchemaNameIsEqual(VDatabase const *db, char const *name)
     return getSchemaName_DB(buffer, &size, db) == NULL ? false : schemaNameIsEqual(buffer, (unsigned)size, name);
 }
 
-static int name_cmp(char const *name, unsigned const qlen, char const *qry)
+typedef struct Cache Cache;
+typedef struct CacheEntry CacheEntry;
+
+struct CacheEntry {
+    char const *name;
+    enum { CE_unset, CE_error, CE_refseq, CE_WGS } type;
+    union {
+        struct RefSeq *refseq;
+        struct VPath const *WGS_url;
+        rc_t error;
+    } value;
+};
+
+struct Cache {
+    CacheEntry *entry;
+    unsigned entries;
+    unsigned allocated;
+};
+
+static int name_cmp(char const *const name, char const *const qry, unsigned const qlen, unsigned const altlen)
 {
     unsigned i;
+    unsigned const alen = altlen == 0 ? qlen : altlen;
     for (i = 0; i < qlen; ++i) {
         int const a = name[i];
         int const b = qry[i];
         int const d = a - b;
-        if (a == 0) return d;
+        if (a == 0) return (i == alen) ? 0 : d;
         if (d == 0) continue;
         return d;
     }
     return name[qlen] - '\0';
 }
 
-typedef struct ErrorListEntry ErrorListEntry;
-struct ErrorListEntry {
-    char *name;
-    rc_t error;
-};
-
-typedef struct ErrorList ErrorList;
-struct ErrorList {
-    ErrorListEntry *entry;
-    unsigned entries;
-    unsigned allocated;
-};
-
-static bool Error_Find(ErrorList *list, unsigned *at, unsigned const qlen, char const *qry)
+static bool find(Cache const *self, unsigned *const at, char const *const qry, unsigned const qlen, unsigned const altlen)
 {
     unsigned f = 0;
-    unsigned e = list->entries;
+    unsigned e = self->entries;
 
     while (f < e) {
         unsigned const m = f + (e - f) / 2;
-        int const d = name_cmp(list->entry[m].name, qlen, qry);
+        CacheEntry const *const M = &self->entry[m];
+        int const d = name_cmp(M->name, qry, qlen, altlen);
+
+        assert(M->type != CE_unset);
         if (d == 0) {
             *at = m;
             return true;
@@ -207,44 +217,66 @@ static bool Error_Find(ErrorList *list, unsigned *at, unsigned const qlen, char 
         else
             e = m;
     }
-    *at = f; // not found but it could be inserted here
+    *at = f; // it could be inserted here
     return false;
 }
 
-static rc_t Error_Insert(ErrorList *list, unsigned at, unsigned const qlen, char const *qry, rc_t error)
+static CacheEntry *insert(Cache *list, unsigned const at, unsigned const namelen, char const *name)
 {
-    ErrorListEntry temp;
-
-    temp.name = malloc(qlen + 1);
-    if (temp.name == NULL) {
-        return RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted);
-    }
-    memmove(temp.name, qry, qlen);
-    temp.name[qlen] = '\0';
-    temp.error = error;
+    char *const copy = malloc(namelen + 1);
+    if (copy == NULL)
+        return NULL;
+    memmove(copy, name, namelen);
+    copy[namelen] = '\0';
 
     if (list->entries >= list->allocated) {
         unsigned const new_alloc = list->allocated == 0 ? 16 : (list->allocated * 2);
         void *tmp = realloc(list->entry, new_alloc * sizeof(*list->entry));
-        if (tmp == NULL) {
-            free(temp.name);
-            return RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted);
-        }
+        if (tmp == NULL)
+            return NULL;
         list->entry = tmp;
         list->allocated = new_alloc;
     }
     memmove(&list->entry[at + 1], &list->entry[at], sizeof(*list->entry) * (list->entries - at));
     ++list->entries;
-    list->entry[at] = temp;
 
-    return 0;
+    memset(&list->entry[at], 0, sizeof(list->entry[at]));
+    list->entry[at].name = copy;
+
+    return &list->entry[at];
 }
 
-static void ErrorListFree(ErrorList *list)
+static
+CacheEntry *CacheFind(Cache const *self, char const *const qry, unsigned const qlen, unsigned const altlen)
+{
+    unsigned at = self->entries;
+    return find(self, &at, qry, qlen, altlen) ? &self->entry[at] : NULL;
+}
+
+static
+CacheEntry *CacheInsert(Cache *self, char const *const qry, unsigned const qlen)
+{
+    unsigned at = self->entries;
+    return find(self, &at, qry, qlen, qlen)
+           ? &self->entry[at]
+           : insert(self, at, qlen, qry);
+}
+
+static void CacheFree(Cache *list)
 {
     unsigned i;
     for (i = 0; i != list->entries; ++i) {
-        free(list->entry[i].name);
+        switch (list->entry[i].type) {
+        case CE_refseq:
+            RefSeqFree(list->entry[i].value.refseq);
+            break;
+        case CE_WGS:
+            VPathRelease(list->entry[i].value.WGS_url);
+            break;
+        default:
+            break;
+        }
+        free((void *)list->entry[i].name);
     }
     free(list->entry);
 }
@@ -253,9 +285,8 @@ typedef struct RestoreReadShared RestoreReadShared;
 struct RestoreReadShared {
     KRefcount refcount;
     KRWLock *rwl;
-    RefSeqList refSeqs;
-    WGS_List wgs;
-    ErrorList errors;
+    Cache cache;
+    WGS wgs;
 };
 
 static atomic_ptr_t g_shared;
@@ -294,16 +325,6 @@ static void RestoreReadSharedWriterDone(RestoreReadShared *self)
     RestoreReadSharedReader(self);
 }
 
-static bool isSameCountRefSeqs(RestoreReadShared *const self, unsigned const count)
-{
-    return count == self->refSeqs.entries;
-}
-
-static bool isSameCountWGS(RestoreReadShared *const self, unsigned const count)
-{
-    return count == self->wgs.entries;
-}
-
 static rc_t RestoreReadSharedMake(RestoreReadShared **const pnew)
 {
     rc_t rc = 0;
@@ -323,9 +344,7 @@ static rc_t RestoreReadSharedMake(RestoreReadShared **const pnew)
 
 static void RestoreReadSharedFree(RestoreReadShared *const self)
 {
-    RefSeqListFree(&self->refSeqs);
-    WGS_ListFree(&self->wgs);
-    ErrorListFree(&self->errors);
+    CacheFree(&self->cache);
     KRWLockRelease(self->rwl);
     KRefcountWhack(&self->refcount, "RestoreReadShared");
     free(self);
@@ -353,9 +372,6 @@ static RestoreReadShared *getRestoreReadShared(rc_t *const prc)
         RestoreReadShared *temp = NULL;
         *prc = RestoreReadSharedMake(&temp);
         if (temp) {
-            WGS_ListInit(&temp->wgs, DEFAULT_WGS_OPEN_LIMIT);
-            *prc = RefSeqListInit(&temp->refSeqs);
-
             if (atomic_test_and_set_ptr(&g_shared, temp, NULL) != NULL)
                 RestoreReadSharedFree(temp);
         }
@@ -369,21 +385,41 @@ static RestoreReadShared *getRestoreReadShared(rc_t *const prc)
 unsigned RestoreReadShared_getState(unsigned *refSeqs, unsigned *wgs, unsigned *errors, unsigned *activeRefSeqs)
 {
     if (g_shared.ptr) {
+        unsigned n_refSeqs = 0;
+        unsigned n_wgs = 0;
+        unsigned n_errors = 0;
         rc_t rc = 0;
         RestoreReadShared *const ptr = getRestoreReadShared(&rc);
 
         RestoreReadSharedReader(ptr);
-        *refSeqs = ptr->refSeqs.entries;
-        *wgs = ptr->wgs.entries;
-        *errors = ptr->errors.entries;
+
         *activeRefSeqs = 0;
         {
             unsigned i;
-            for (i = 0; i < *refSeqs; ++i) {
-                if (ptr->refSeqs.entry[i].object->async != NULL)
-                    ++*activeRefSeqs;
+            unsigned const n = ptr->cache.entries;
+
+            for (i = 0; i < n; ++i) {
+                switch (ptr->cache.entry[i].type) {
+                case CE_refseq:
+                    ++n_refSeqs;
+                    if (ptr->cache.entry[i].value.refseq->async != NULL)
+                        ++*activeRefSeqs;
+                    break;
+                case CE_WGS:
+                    ++n_wgs;
+                    break;
+                case CE_error:
+                    ++n_errors;
+                    break;
+                default:
+                    break;
+                }
             }
         }
+        *refSeqs = n_refSeqs;
+        *wgs = n_wgs;
+        *errors = n_errors;
+
         RestoreReadSharedReaderDone(ptr);
         RestoreReadSharedRelease(ptr);
         return 1;
@@ -394,20 +430,16 @@ unsigned RestoreReadShared_getState(unsigned *refSeqs, unsigned *wgs, unsigned *
 struct RestoreRead {
     VDBManager const *mgr;
     RestoreReadShared *shared;
-    struct Last {
-        union U {
-            RefSeqListEntry *r;
-            WGS_ListEntry *w;
-        } u;
-        unsigned count; /**< the pointer is invalid if count != current count */
-        enum { L_none, refSeq_type, wgs_type } type;
-    } last;
+    CacheEntry *last;
+    WGS wgs;
+    unsigned count; /**< the last pointer is invalid if count != current count */
 };
 
 void RestoreReadFree(void *vp)
 {
     RestoreRead *const self = (RestoreRead *)vp;
 
+    WGS_close(&self->wgs);
     VDBManagerRelease(self->mgr);
     RestoreReadSharedRelease(self->shared);
 
@@ -431,10 +463,9 @@ static rc_t openSeqID(  RestoreRead *const self
                       , char const *const seq_id
                       , VTable const *const forTable)
 {
-    if (wgs_id_len == 0) {
-        rc_t rc = 0;
+    rc_t rc = 0;
+    if (wgs_id_len == 0 || wgs_id_len == id_len) {
         VTable const *tbl = NULL;
-
         VPath const *const url = getURL(self->mgr, id_len, seq_id, forTable);
         if (url) {
             rc = VDBManagerOpenTableReadVPath(self->mgr, &tbl, NULL, url);
@@ -445,12 +476,22 @@ static rc_t openSeqID(  RestoreRead *const self
 
         if (tbl != NULL && tableSchemaNameIsEqual(tbl, RefSeq_Scheme())) {
             RestoreReadSharedWriter(self->shared);
-            self->last.u.r = RefSeqInsert(&self->shared->refSeqs, id_len, seq_id, tbl, &rc);
-            self->last.count = self->shared->refSeqs.entries;
+            self->last = CacheInsert(&self->shared->cache, seq_id, id_len);
+            if (self->last->type == CE_unset) {
+                self->last->type = CE_refseq;
+                self->last->value.refseq = RefSeqNew(tbl, &rc);
+                if (rc != 0) {
+                    self->last->type = CE_error;
+                    self->last->value.error = rc;
+                    PLOGERR(klogWarn, (klogWarn, rc, "can't open $(name) as a RefSeq", "name=%.*s", (int)id_len, seq_id));
+                }
+                else {
+                    PLOGMSG(klogDebug, (klogDebug, "opened $(name) as a RefSeq", "name=%.*s", (int)id_len, seq_id));
+                }
+            }
             RestoreReadSharedWriterDone(self->shared);
-            if (self->last.u.r)
-                self->last.type = refSeq_type;
-            rc = 0;
+            assert(self->last->type == CE_refseq || self->last->type == CE_error);
+            self->count = self->shared->cache.entries;
         }
         else {
             if (rc == 0)
@@ -461,7 +502,6 @@ static rc_t openSeqID(  RestoreRead *const self
         return rc;
     }
     else {
-        rc_t rc = 0;
         VDatabase const *db = NULL;
         VPath const *const url = getURL(self->mgr, wgs_id_len, seq_id, forTable);
         if (url)
@@ -469,26 +509,39 @@ static rc_t openSeqID(  RestoreRead *const self
         else
             rc = VDBManagerOpenDBRead(self->mgr, &db, NULL, "%.*s", (int)wgs_id_len, seq_id);
 
-        if (db) {
-            if (dbSchemaNameIsEqual(db, WGS_Scheme())) {
-                RestoreReadSharedWriter(self->shared);
-                self->last.u.w = WGS_Insert(&self->shared->wgs, wgs_id_len, seq_id, url, db, &rc);
-                self->last.count = self->shared->wgs.entries;
-                RestoreReadSharedWriterDone(self->shared);
-                if (self->last.u.w)
-                    self->last.type = wgs_type;
-            }
-            else {
-                rc = RC(rcAlign, rcTable, rcAccessing, rcType, rcUnexpected);
-                PLOGERR(klogWarn, (klogWarn, rc, "can't open $(name) as a WGS", "name=%.*s", (int)id_len, seq_id));
-            }
-            VDatabaseRelease(db);
+        if (rc) {
+            // not a database, so not WGS
             VPathRelease(url);
-            return rc;
+            return openSeqID(self, id_len, 0, seq_id, forTable);
         }
-        // not a database, so not WGS
+        if (dbSchemaNameIsEqual(db, WGS_Scheme())) {
+            WGS_close(&self->wgs);
+            RestoreReadSharedWriter(self->shared);
+            self->last = CacheInsert(&self->shared->cache, seq_id, wgs_id_len);
+            if (self->last->type == CE_unset) {
+                rc = WGS_Init(&self->wgs, db);
+                if (rc == 0) {
+                    self->last->type = CE_WGS;
+                    VPathAddRef(self->last->value.WGS_url = url);
+                    PLOGMSG(klogDebug, (klogDebug, "opened $(name) as a WGS reference", "name=%.*s", (int)wgs_id_len, seq_id));
+                }
+                else {
+                    self->last->type = CE_error;
+                    self->last->value.error = rc;
+                    PLOGERR(klogWarn, (klogWarn, rc, "can't open $(name) as a WGS", "name=%.*s", (int)wgs_id_len, seq_id));
+                }
+            }
+            RestoreReadSharedWriterDone(self->shared);
+            assert(self->last->type == CE_WGS || self->last->type == CE_error);
+            self->count = self->shared->cache.entries;
+        }
+        else {
+            rc = RC(rcAlign, rcTable, rcAccessing, rcType, rcUnexpected);
+            PLOGERR(klogWarn, (klogWarn, rc, "can't open $(name) as a WGS", "name=%.*s", (int)id_len, seq_id));
+        }
+        VDatabaseRelease(db);
         VPathRelease(url);
-        return openSeqID(self, id_len, 0, seq_id, forTable);
+        return rc;
     }
 }
 
@@ -499,70 +552,53 @@ static rc_t getSequence(  RestoreRead *const self
                         , unsigned *const actual
                         , VTable const *const forTable)
 {
-    unsigned wgs_namelen = 0;
     int64_t wgs_row = 0;
-    unsigned error_at = 0;
+    unsigned const wgs_namelen = WGS_splitName(&wgs_row, id_len, seq_id);
     rc_t rc = 0;
 
-    for ( ; ; ) {
-        switch (self->last.type) {
-        case refSeq_type:
-            if (isSameCountRefSeqs(self->shared, self->last.count) && name_cmp(self->last.u.r->name, (unsigned)id_len, seq_id) == 0) {
-REFSEQ_FROM_LAST:
-                *actual = RefSeq_getBases(self->last.u.r->object, dst, start, length);
-                return 0;
-            }
-            break;
-        case wgs_type:
-            wgs_namelen = WGS_splitName(&wgs_row, id_len, seq_id);
-            if (wgs_namelen > 0 && isSameCountWGS(self->shared, self->last.count) && name_cmp(self->last.u.w->name, wgs_namelen, seq_id) == 0) {
-                assert(self->last.u.w->object->curs != NULL);
-WGS_FROM_LAST:
-                *actual = WGS_getBases(self->last.u.w->object, dst, start, length, wgs_row);
-                return 0;
-            }
-            break;
+    if (self->count == self->shared->cache.entries
+        && self->last != NULL
+        && name_cmp(self->last->name, seq_id, id_len, wgs_namelen) == 0)
+    {
+    USE_LAST:
+        assert(self->last->type != CE_unset);
+        switch (self->last->type) {
+        case CE_error:
+            return self->last->value.error;
+        case CE_refseq:
+            *actual = RefSeq_getBases(self->last->value.refseq, dst, start, length);
+            return 0;
+        case CE_WGS:
+            *actual = WGS_getBases(&self->wgs, dst, start, length, wgs_row);
+            return 0;
         default:
-            break;
-        }
-        self->last.type = L_none;
-
-        // check error list
-        if (Error_Find(&self->shared->errors, &error_at, id_len, seq_id))
-            return self->shared->errors.entry[error_at].error;
-
-        // check refSeq list
-        if ((self->last.u.r = RefSeqFind(&self->shared->refSeqs, id_len, seq_id)) != NULL) {
-            self->last.count = self->shared->refSeqs.entries;
-            self->last.type = refSeq_type;
-            goto REFSEQ_FROM_LAST;
-        }
-
-        // check WGS list
-        wgs_namelen = WGS_splitName(&wgs_row, id_len, seq_id);
-        if (wgs_namelen > 0 && (self->last.u.w = WGS_Find(&self->shared->wgs, wgs_namelen, seq_id)) != NULL) {
-            if (self->last.u.w->object->curs == NULL) {
-                rc_t rc = 0;
-
-                RestoreReadSharedWriter(self->shared);
-                rc = WGS_reopen(&self->shared->wgs, self->last.u.w->object, self->mgr, wgs_namelen, seq_id);
-                RestoreReadSharedWriterDone(self->shared);
-                if (rc) return rc;
-            }
-            self->last.count = self->shared->wgs.entries;
-            self->last.type = wgs_type;
-            goto WGS_FROM_LAST;
-        }
-
-        // it is a new seq_id
-        rc = openSeqID(self, id_len, wgs_namelen, seq_id, forTable);
-        if (rc) {
-            Error_Insert(&self->shared->errors, error_at, id_len, seq_id, rc);
-            return rc;
+            abort();
         }
     }
-    assert(!"reachable");
-    abort();
+    self->last = CacheFind(&self->shared->cache, seq_id, id_len, wgs_namelen);
+    if (self->last) {
+        self->count = self->shared->cache.entries;
+        if (self->last->type == CE_WGS && self->wgs.curs == NULL) {
+            rc = WGS_reopen(&self->wgs, self->mgr, self->last->value.WGS_url, wgs_namelen, seq_id);
+            if (rc) return rc;
+            PLOGMSG(klogDebug, (klogDebug, "reopened $(name) as a WGS reference", "name=%.*s", (int)wgs_namelen, seq_id));
+        }
+        goto USE_LAST;
+    }
+
+    // it is a new seq_id
+    rc = openSeqID(self, id_len, wgs_namelen, seq_id, forTable);
+    if (rc == 0)
+        goto USE_LAST;
+
+    RestoreReadSharedWriter(self->shared);
+    self->last = CacheInsert(&self->shared->cache, seq_id, id_len);
+    assert(self->last->type == CE_unset);
+    self->last->type = CE_error;
+    self->last->value.error = rc;
+    self->count = self->shared->cache.entries;
+    RestoreReadSharedWriterDone(self->shared);
+    return rc;
 }
 
 rc_t RestoreReadGetSequence(  RestoreRead *self
