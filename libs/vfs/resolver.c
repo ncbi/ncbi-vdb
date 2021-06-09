@@ -2385,6 +2385,9 @@ struct VResolver
         0 when repository is not user protected */
     uint32_t projectId;
 
+    /* directory to be used in VResolverLocal, VResolverCache */
+    char * dir;
+
     char *version;
     VERSNS versions;
     bool resoveOidName;
@@ -2396,6 +2399,23 @@ struct VResolver
  */
 static atomic32_t enable_local, enable_remote, enable_cache;
 
+LIB_EXPORT rc_t CC VResolverSetDir(VResolver * self, const char * dir) {
+    if (self == NULL)
+        return RC(rcVFS, rcResolver, rcUpdating, rcSelf, rcNull);
+
+    if (self->dir != NULL) {
+        free(self->dir);
+        self->dir = NULL;
+    }
+
+    if (dir != NULL) {
+        self->dir = string_dup_measure(dir, NULL);
+        if (self->dir == NULL)
+            return RC(rcVFS, rcResolver, rcUpdating, rcMemory, rcExhausted);
+    }
+
+    return 0;
+}
 
 /* Whack
  */
@@ -2407,6 +2427,7 @@ rc_t VResolverWhack ( VResolver *self )
     assert ( self );
 
     free ( self -> version );
+    free ( self -> dir );
 
     KRefcountWhack ( & self -> refcount, "VResolver" );
 
@@ -3312,7 +3333,7 @@ bool CC VPathHasRefseqContext ( const VPath * accession )
                            option, num_read, (uint32_t)num_read ) == 0 );
 }
 
-LIB_EXPORT rc_t CC VResolverQueryDo(const VResolver * self,
+rc_t CC VResolverQueryDo(const VResolver * self,
     VRemoteProtocols protocols, const VPath * query, const VPath ** local,
     const VPath ** remote, const VPath ** cache, bool forCache);
 
@@ -4584,9 +4605,11 @@ rc_t VResolverQueryURL ( const VResolver * self, VRemoteProtocols protocols,
         rc = VPathExtractAcc ( query, & mapping );
         if ( rc == 0 )
         {
+            const char * dir = self == NULL ? NULL : self->dir;
+
             /* now map to cache location */
             rc = VResolverCacheResolve ( self, mapping, false,
-                                         cache, refseq_ctx, true, NULL, NULL );
+                                         cache, refseq_ctx, true, dir, NULL );
             VPathRelease ( mapping );
             if ( GetRCState ( rc ) == rcNotFound && remote != NULL )
                 rc = 0;
@@ -5177,11 +5200,12 @@ rc_t CC VResolverQueryImpl ( const VResolver * self, VRemoteProtocols protocols,
     return rc;
 }
 
-LIB_EXPORT
 rc_t CC VResolverQueryDo ( const VResolver * self, VRemoteProtocols protocols,
     const VPath * query, const VPath ** aLocal, const VPath ** aRemote,
     const VPath ** aCache, bool forCache )
 {
+    const char * dir = self == NULL ? NULL : self->dir;
+
     if (VDBManagerGetQuality(NULL) < eQualLast) {
         rc_t rc = 0;
         const KNSManager * mgr = NULL;
@@ -5293,7 +5317,7 @@ rc_t CC VResolverQueryDo ( const VResolver * self, VRemoteProtocols protocols,
     }
     else
         return VResolverQueryImpl ( self, protocols, query, 
-            aLocal, aRemote, aCache, false, NULL, NULL, false, NULL, NULL );
+            aLocal, aRemote, aCache, false, dir, NULL, false, NULL, NULL );
 }
 
 LIB_EXPORT
