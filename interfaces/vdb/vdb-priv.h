@@ -50,25 +50,26 @@ extern "C" {
  * forwards
  */
 struct KDatabase;
-struct KTable;
-struct KMetadata;
-struct KMDataNode;
+struct KDataBuffer;
 struct KDBManager;
 struct KDirectory;
+struct KMDataNode;
+struct KMetadata;
+struct KNamelist;
+struct KTable;
+struct String;
+struct VCursor;
+struct VCursorParams;
+struct VDatabase;
+struct VDBDependencies;
 struct VDBManager;
 struct VFSManager;
 struct VPath;
 struct VResolver;
 struct VSchema;
-struct VTypedef;
-struct VDatabase;
 struct VTable;
-struct VCursor;
-struct VCursorParams;
+struct VTypedef;
 struct VXformInfo;
-struct KDataBuffer;
-struct KNamelist;
-struct String;
 
 
 /*--------------------------------------------------------------------------
@@ -372,6 +373,20 @@ typedef bool ( CC * VUntypedFunc )
 
 VDB_EXTERN VQuality CC VDBManagerGetQuality(const struct VDBManager * self);
 
+/* ListDependenciesExt
+ *  create a dependencies object: list all dependencies
+ *
+ *  "dep" [ OUT ] - return for VDBDependencies object
+ *
+ *  "missing" [ IN ] - if true, list only missing dependencies
+ *                     otherwise, list all dependencies
+ *  "directory" [ IN ] - if not NULL - resolve dependencies inside of directory
+ *
+ * N.B. If missing == true then
+ *     just one refseq dependency will be returned for 'container' Refseq files.
+ */
+VDB_EXTERN rc_t CC VDatabaseListDependenciesExt ( struct VDatabase const *self,
+    const struct VDBDependencies **dep, bool missing, const char* directory );
 
 #ifdef __cplusplus
 }
