@@ -599,7 +599,8 @@ LIB_EXPORT rc_t CC KLoaderFile_Make(const KLoaderFile **file, const KDirectory* 
                     char resolved[4096];
                     char* ext = NULL;
 
-                    strcpy(resolved, filename);
+/*                  strcpy(resolved, filename); */
+                    string_copy_measure(resolved, sizeof resolved, filename);
                     ext = strrchr(resolved, '.');
                     DBG(("%s adding %s\n", __func__, resolved));
                     rc = KLoadProgressbar_File(&obj->job, resolved, obj->dir);
