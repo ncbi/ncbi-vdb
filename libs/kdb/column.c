@@ -31,11 +31,14 @@
 #include "table-priv.h"
 #include "kdb-priv.h"
 #include <kdb/kdb-priv.h>
+
 #include <klib/checksum.h>
 #include <klib/data-buffer.h>
-#include <klib/rc.h>
-#include <klib/printf.h>
 #include <klib/debug.h>
+#include <klib/printf.h>
+#include <klib/rc.h>
+#include <klib/text.h> /* string_copy */
+
 #include <atomic32.h>
 #include <sysalloc.h>
 #undef KONST
@@ -174,14 +177,18 @@ rc_t KColumnSever ( const KColumn *self )
 static
 rc_t KColumnMake ( KColumn **colp, const KDirectory *dir, const char *path )
 {
-    KColumn *col = malloc ( sizeof * col + strlen ( path ) );
+    KColumn *col = NULL;
+    size_t src_size = strlen ( path );
+    size_t size = sizeof * col + src_size;
+    col = malloc ( size );
     if ( col == NULL )
         return RC ( rcDB, rcColumn, rcConstructing, rcMemory, rcExhausted );
 
     memset ( col, 0, sizeof * col );
     col -> dir = dir;
     KRefcountInit ( & col -> refcount, 1, "KColumn", "make", path );
-    strcpy ( col -> path, path );
+/*  strcpy ( col -> path, path ); */
+    string_copy ( col -> path, src_size + 1, path, src_size );
 
     * colp = col;
     return 0;

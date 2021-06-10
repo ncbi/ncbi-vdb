@@ -194,11 +194,13 @@ static
 rc_t KTableMake ( KTable **tblp, const KDirectory *dir, const char *path )
 {
     KTable *tbl;
+    size_t src_size = strlen ( path );
+    size_t size = sizeof * tbl + src_size;
 
     assert ( tblp != NULL );
     assert ( path != NULL );
 
-    tbl = malloc ( sizeof * tbl + strlen ( path ) );
+    tbl = malloc ( size );
     if ( tbl == NULL )
     {
         * tblp = NULL;
@@ -208,7 +210,8 @@ rc_t KTableMake ( KTable **tblp, const KDirectory *dir, const char *path )
     memset ( tbl, 0, sizeof * tbl );
     tbl -> dir = dir;
     KRefcountInit ( & tbl -> refcount, 1, "KTable", "make", path );
-    strcpy ( tbl -> path, path );
+/*  strcpy ( tbl -> path, path ); */
+    string_copy ( tbl -> path, src_size + 1, path, src_size );
 
     /* YES,
       DBG_VFS should be used here to be printed along with other VFS messages */

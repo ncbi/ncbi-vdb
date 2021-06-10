@@ -1701,7 +1701,7 @@ void CC gen_log_usage (const char ** _buffers)
     char * pc;
     char * p0;
     char * p1;
-    size_t rem;
+    int64_t rem;
     size_t used;
     KLogLevel level;
 
@@ -1716,7 +1716,7 @@ void CC gen_log_usage (const char ** _buffers)
 
     rem = USAGE_MAX_SIZE; /* makes an assumption */
     pc = buffv;
-    for (level = klogLevelMin; level <= klogLevelMax; ++level)
+    for (level = klogLevelMin; level <= klogLevelMax && rem > 0; ++level)
     {
         rc = KLogLevelExplain (level, pc, rem, &used);
         if (rc || used == 0)
@@ -1727,7 +1727,8 @@ void CC gen_log_usage (const char ** _buffers)
         }
         pc += used;
         rem -= used;
-        strcpy (pc, div);
+/*      strcpy (pc, div); */
+        string_copy (pc, rem, div, sizeof div - 1);
         pc += sizeof div - 1;
         rem -= sizeof div - 1;
     }

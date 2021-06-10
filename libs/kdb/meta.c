@@ -304,13 +304,14 @@ bool CC KMDataNodeInflate_v1 ( PBSTNode *n, void *data )
        followed by value payload */
     const char *name = n -> data . addr;
     size_t size = strlen ( name );
+    size_t msize = sizeof * b + size;
     if ( size >= n -> data . size )
     {
         pb -> rc = RC ( rcDB, rcMetadata, rcConstructing, rcData, rcCorrupt );
         return true;
     }
 
-    b = malloc ( sizeof * b + size );
+    b = malloc ( msize );
     if ( b == NULL )
     {
         pb -> rc = RC ( rcDB, rcMetadata, rcConstructing, rcMemory, rcExhausted );
@@ -324,7 +325,8 @@ bool CC KMDataNodeInflate_v1 ( PBSTNode *n, void *data )
     BSTreeInit ( & b -> attr );
     BSTreeInit ( & b -> child );
     KRefcountInit ( & b -> refcount, 0, "KMDataNode", "inflate", name );
-    strcpy ( b -> name, name );
+/*  strcpy ( b -> name, name ); */
+    string_copy ( b -> name, size + 1, name, size );
      
     /* a name with no associated value */
     if ( b -> vsize == 0 )
@@ -1638,7 +1640,10 @@ rc_t KMetadataMakeRead ( KMetadata **metap,
     const KDirectory *dir, const char *path, uint32_t rev )
 {
     rc_t rc;
-    KMetadata *meta = malloc ( sizeof * meta + strlen ( path ) );
+    KMetadata *meta = NULL;
+    size_t src_size = strlen ( path );
+    size_t size = sizeof * meta + src_size;
+    meta = malloc ( size );
     if ( meta == NULL )
         rc = RC ( rcDB, rcMetadata, rcConstructing, rcMemory, rcExhausted );
     else
@@ -1654,7 +1659,8 @@ rc_t KMetadataMakeRead ( KMetadata **metap,
             KRefcountInit ( & meta -> refcount, 1, "KMetadata", "make-read", path );
             meta -> rev = rev;
             meta -> byteswap = false;
-            strcpy ( meta -> path, path );
+/*          strcpy ( meta -> path, path ); */
+            string_copy ( meta -> path, src_size + 1, path, src_size );
 
             KRefcountInit ( & meta -> root -> refcount, 0, "KMDataNode", "make-read", "/" );
 

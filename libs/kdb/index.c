@@ -199,14 +199,18 @@ rc_t KIndexMake ( KIndex **idxp, const char *path )
             rc = RC ( rcDB, rcIndex, rcCreating, rcPath, rcEmpty );
         else
         {
-            KIndex* idx = malloc ( sizeof *idx + strlen ( path ) );
+            KIndex* idx = NULL;
+            size_t src_size = strlen ( path );
+            size_t size = sizeof *idx + src_size;
+            idx = malloc ( size );
             if ( idx == NULL )
                 rc = RC ( rcDB, rcIndex, rcConstructing, rcMemory, rcExhausted );
             else
             {
                 memset ( idx, 0, sizeof * idx );
                 KRefcountInit ( & idx -> refcount, 1, "KIndex", "make", path );
-                strcpy ( idx -> path, path );
+/*              strcpy ( idx -> path, path ); */
+                string_copy ( idx -> path, src_size + 1, path, src_size );
                 * idxp = idx;
                 return 0;
             }

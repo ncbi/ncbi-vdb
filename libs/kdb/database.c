@@ -180,11 +180,13 @@ static
 rc_t KDatabaseMake ( KDatabase **dbp, const KDirectory *dir, const char *path )
 {
     KDatabase *db;
+    size_t src_size = strlen ( path );
+    size_t size = sizeof * db + src_size;
 
     assert ( dbp != NULL );
     assert ( path != NULL );
 
-    db = malloc ( sizeof * db + strlen ( path ) );
+    db = malloc ( size );
     if ( db == NULL )
     {
         * dbp = NULL;
@@ -200,7 +202,8 @@ rc_t KDatabaseMake ( KDatabase **dbp, const KDirectory *dir, const char *path )
     db -> checksum = kcsNone;
 
     KRefcountInit ( & db -> refcount, 1, "KDatabase", "make", path );
-    strcpy ( db -> path, path );
+/*  strcpy ( db -> path, path ); */
+    string_copy ( db -> path, src_size + 1, path, src_size );
 
     /* YES,
      DBG_VFS should be used here to be printed along with other VFS messages */
