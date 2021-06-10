@@ -81,11 +81,15 @@ public:
         }
     }
 
-    void MakeDatabase ( const std :: string & p_schemaText, const std :: string & p_schemaSpec )
+    void MakeDatabase ( const std :: string & p_schemaText, const std :: string & p_schemaSpec, const char * includes = nullptr )
     {
         RemoveDatabase();
 
         THROW_ON_RC ( VDBManagerMakeUpdate ( & m_mgr, NULL ) );
+        if ( includes != nullptr )
+        {
+            THROW_ON_RC ( VDBManagerAddSchemaIncludePath ( m_mgr, "%s", includes ) );
+        }
         THROW_ON_RC ( VDBManagerMakeSchema ( m_mgr, & m_schema ) );
         ParseSchema ( m_schema, p_schemaText );
         THROW_ON_RC ( VDBManagerCreateDB ( m_mgr,
@@ -196,7 +200,7 @@ public:
         {
             return std :: string ( buf );
         }
-        return "buffer to short for an error message";
+        return "buffer too short for an error message";
     }
 
     bool m_newParse;

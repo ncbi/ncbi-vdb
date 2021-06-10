@@ -1202,21 +1202,29 @@ rc_t KRepositoryMgrCategoryRepositories ( const KConfigNode *cat,
                     subcategory = krepProtectedSubCategory;
 
                 if ( subcategory == krepProtectedSubCategory ) {
-                    bool ignore_protected = false;
-                    KConfigReadBool(kfg, "/repository/user/ignore-protected",
-                        &ignore_protected);
-                    if (!ignore_protected) {
-                        rc_t r2 = LOGERR(klogWarn, 0,
-                            "Protected repository is found and ignored.");
-                        rc = r2;
-                        r2 = LOGERR(klogWarn, 0, "Run 'vdb-config "
-                            "--ignore-protected-repositories' "
-                            "to disable this message.");
-                        if (r2 != 0 && rc == 0)
+                    bool respect_protected = false;
+                    KConfigReadBool(kfg, "/repository/user/respect-protected",
+                        &respect_protected);
+                    if (!respect_protected) {
+                        bool ignore_protected = false;
+                        KConfigReadBool(kfg,
+                            "/repository/user/ignore-protected",
+                            &ignore_protected);
+                        if (!ignore_protected) {
+                            rc_t r2 = LOGERR(klogWarn, 0,
+                                "Protected repository is found and ignored.");
                             rc = r2;
+                            r2 = LOGERR(klogWarn, 0, "Run 'vdb-config "
+                                "--ignore-protected-repositories' "
+                                "to disable this message.");
+                            if (r2 != 0 && rc == 0)
+                                rc = r2;
+                        }
+                        subcategory = krepBadSubCategory;
                     }
                 }
-                else if ( subcategory != krepBadSubCategory )
+
+                if ( subcategory != krepBadSubCategory )
                 {
                     const KConfigNode *sub;
                     rc = KConfigNodeOpenNodeRead ( cat, & sub, "%s", sub_name );
@@ -1402,6 +1410,10 @@ static rc_t KRepositoryCurrentProtectedRepositoryForNgc(
                 "/repository/user/protected/%s/download-ticket", name);
         if (rc == 0)
             rc = KConfigWriteString(kfg, n, v);
+
+        if (rc == 0)
+            rc = KConfigWriteString(kfg,
+                "/repository/user/respect-protected", "true");
 
         if (rc == 0)
             rc = KConfigMakeRepositoryMgrRead(kfg, &mgr);
