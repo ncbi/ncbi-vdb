@@ -1,0 +1,15 @@
+# cmake build directory
+build/
+# test output directories
+actual/
+# don't want checkouts to overwrite the current build config
+Makefile.config
+html/
+.vscode
+test_detail.xml
+vgcore.*
+core
+.gdb_history
+*.o
+*.a
+*.so.*
