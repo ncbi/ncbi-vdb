@@ -1,0 +1,31 @@
+add_library(kfc STATIC
+    ascii.cpp
+    busy.cpp
+    decflt.cpp
+    defs.cpp
+    except.cpp
+    fmt-base.cpp
+    ktrace.cpp
+    ${OS}-tmmgr.cpp
+    mem.cpp
+    memset_s.cpp
+    mmgr.cpp
+    pmem-rgn-lock.cpp
+    pmem.cpp
+    pmmgr.cpp
+    ref-na.cpp
+    ref.cpp
+    rgn-lock.cpp
+    rgn.cpp
+    rsrc-mem.cpp
+    rsrc-tm.cpp
+    strerror_r.c
+    time.cpp
+    tmmgr.cpp
+    xbt.cpp
+    xp.cpp
+    z128.cpp
+    zigzag.cpp
+)
+
+add_subdirectory(test)
