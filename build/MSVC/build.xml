@@ -18,7 +18,7 @@ Usage (in the directory of this file, build.xml):
   ant [options] target1 target2 ...
 
 Example:
-  ant -DConfiguration=Debug help std
+  ant -DConfiguration=Debug -DMSVS=2019 help std
 
 Supported targets:
 	help        - print this text and exit
@@ -28,7 +28,8 @@ Supported targets:
 
 Options:
     -DConfiguration=Debug or -DConfiguration=Release (default)
-    -DOutput=path   folder to create output in (default: ../../../OUTDIR)
+    -DOutput=path folder to create output in (default: ../../../OUTDIR)
+    -DMSVS=2017 (default) or -DMSVS=2019  version of MS Visual Studio to use
   		</echo>
     </target>
 
@@ -62,6 +63,7 @@ Options:
                 <arg value="/p:NGS_OUTDIR=${Output}"/>
                 <arg value="/p:Autorun=true"/>
                 <env key="TMPDIR" path="${Output}\tmp"/>
+                <env key="VDB_CONFIG" value="${basedir}\..\..\test"/>
             </exec>
             <!-->Java/Python tests are run directly, not through msbuild</-->
 
