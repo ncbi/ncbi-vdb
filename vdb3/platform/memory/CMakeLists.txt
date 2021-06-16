@@ -1,4 +1,4 @@
-add_library(memory STATIC
+add_library(memory3 STATIC
     FillingMemoryMgr.cpp
     PinnedMemoryMgr.cpp
     RawMemoryBlock.cpp

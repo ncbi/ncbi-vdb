@@ -5,7 +5,7 @@
 # base64-tables.hpp: $(BINDIR)/gen-base64-tbl
 # 	$< > $@
 
-add_library(cmn STATIC
+add_library(cmn3 STATIC
     base64.cpp
     buffer.cpp
     buffmt.cpp

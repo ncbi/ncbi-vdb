@@ -1,4 +1,4 @@
-add_library(kfc STATIC
+add_library(kfc3 STATIC
     ascii.cpp
     busy.cpp
     decflt.cpp

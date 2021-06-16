@@ -1,9 +1,10 @@
+set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_TEST_OUTPUT_DIRECTORY})
 include_directories( .. )
 add_definitions( -DTESTING )
 
 function( test stem )
     add_executable ( test-cmn-${stem} ${stem}-tst.cpp )
-    target_link_libraries ( test-cmn-${stem} ${GTEST_LIBRARIES} kfc utf8proc ${LQUADMATH} )
+    target_link_libraries ( test-cmn-${stem} ${GTEST_LIBRARIES} kfc3 utf8proc ${LQUADMATH} )
     add_test ( NAME Cmn-${stem}-Test COMMAND test-cmn-${stem} )
 endfunction()
 

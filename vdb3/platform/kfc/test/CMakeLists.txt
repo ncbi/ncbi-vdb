@@ -1,10 +1,11 @@
+set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_TEST_OUTPUT_DIRECTORY})
 include_directories( .. )
 add_definitions( -DTESTING )
 
 # gtest white box tests
 function( test stem )
     add_executable ( test-kfc-${stem} ${stem}-tst.cpp ../strerror_r.c)
-    target_link_libraries ( test-kfc-${stem} ${GTEST_LIBRARIES} kfc ${LQUADMATH} )
+    target_link_libraries ( test-kfc-${stem} ${GTEST_LIBRARIES} kfc3 ${LQUADMATH} )
     add_test ( NAME Kfc-${stem}-Test COMMAND test-kfc-${stem} )
 endfunction()
 

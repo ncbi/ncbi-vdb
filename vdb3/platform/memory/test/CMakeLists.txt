@@ -1,3 +1,4 @@
+set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_TEST_OUTPUT_DIRECTORY})
 add_executable ( test-memory
     test-FillingMemoryMgr.cpp
     test-MemoryBlockItf.cpp
@@ -13,7 +14,7 @@ add_executable ( test-memory
     test-main.cpp
 )
 
-target_link_libraries ( test-memory memory ${GTEST_LIBRARIES} )
+target_link_libraries ( test-memory memory3 ${GTEST_LIBRARIES} )
 
 # gtest white box test
 add_test ( NAME MemoryManagerTest COMMAND test-memory )
