@@ -22,7 +22,7 @@
 #
 # ===========================================================================
 
-TOP ?= $(abspath ../..)
-MODULE = platform
+TOP ?= $(abspath ../../../..)
+MODULE = platform/kfc/test
 
 include $(TOP)/vdb3/Makefile.env

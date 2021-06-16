@@ -22,53 +22,9 @@
 #
 # ===========================================================================
 
-#
-#	Tests for the VDB3 platform library
-#
-# to build/run all test projects, use target 'test' or 'check'
-
 default: test
 
-TOP ?= $(abspath ../../..)
+TOP ?= $(abspath ../../../..)
 MODULE = platform/memory/test
 
-TESTS = test-memory
-
-include $(TOP)/platform/Makefile.test
-
-#
-# subdirectory-specific part
-#
-
-# project memory
-SRC = \
-	../MemoryBlockItf \
-	../MemoryManagerItf \
-	../TrackingMemoryManagerItf \
-	../FillingMemoryMgr \
-	../PinnedMemoryMgr \
-	../QuotaMemoryMgr \
-	../SharedMemoryMgr \
-	../UniqueRawMemoryBlock \
-	../PrimordialMemoryMgr \
-	../RawMemoryBlock \
-	../TypedMemoryBlock \
-	test-main \
-	test-MemoryManagerItf \
-	test-MemoryBlockItf \
-	test-TrackingMemoryManager \
-	test-PrimordialMemoryMgr \
-	test-FillingMemoryMgr \
-	test-PinnedMemoryMgr \
-	test-QuotaMemoryMgr \
-	test-SharedMemoryMgr \
-	test-UniqueRawMemoryBlock \
-	test-RawMemoryBlock \
-	test-TypedMemoryBlock \
-
-
-OBJ = $(addsuffix .$(OBJX),$(SRC))
-
-$(TEST_BINDIR)/test-memory: $(OBJ)
-	$(LP) $(OBJ) -o $@ -lgtest -lpthread
-
+include $(TOP)/vdb3/Makefile.env

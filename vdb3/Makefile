@@ -26,41 +26,11 @@ default all std: makedirs cmake
 
 TOP ?= $(abspath $(CURDIR)/..)
 
-
 include $(TOP)/build/Makefile.env
-
-
-#-------------------------------------------------------------------------------
-# CMake bridge
-#
-
-ifeq (dbg,$(BUILD))
-    CMAKE_BUILD = Debug
-else
-    CMAKE_BUILD = Release
-endif
-
-unexport TOP SRCDIR
-
-CMAKEFLAGS = \
-    -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY=$(ILIBDIR) \
-    -DCMAKE_LIBRARY_OUTPUT_DIRECTORY=$(LIBDIR)  \
-    -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=$(BINDIR)  \
-    -DCMAKE_TEST_OUTPUT_DIRECTORY=$(TEST_BINDIR)\
-    -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD)           \
-    -DCMAKE_INSTALL_PREFIX=$(INST_BINDIR)/..    \
-    -DCMAKE_C_COMPILER=$(shell which gcc)       \
-    -DCMAKE_CXX_COMPILER=$(shell which g++)     \
-
-    # -DVERSION=$(VERSION)                        \
-    # -DMAJVERS=$(MAJVERS)                        \
-    # -DPLATFORM=$(ARCH)                          \
-    # -DOUTDIR=$(BUILD_PREFIX)/..                 \
-
 
 cmake:
 	mkdir -p $(TARGDIR)/vdb3; cd $(TARGDIR)/vdb3; cmake $(CMAKEFLAGS) $(TOP)/vdb3
-	+ make -C $(TARGDIR)/vdb3
+	+ make -C $(TARGDIR)/vdb3 -j$(MAKE_JOBS)
 
 clean: stdclean
 	-rm -rf $(TARGDIR)/vdb3

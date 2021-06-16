@@ -22,39 +22,11 @@
 #
 # ===========================================================================
 
-#
-#	Test for the VDB3 build system, subdirectory of platform/
-#
-
-default: build
-
-TOP ?= $(abspath ../..)
+TOP ?= $(abspath ../../..)
 MODULE = platform/memory
-SUBDIRS =
 
-include $(TOP)/build/Makefile.env
+include $(TOP)/vdb3/Makefile.env
 
-OBJ = $(addsuffix .$(LOBX),$(SRC))
-
-build:
-	@ $(MAKE_CMD) $(OBJ)
-
-#
-# subdirectory-specific part
-#
-
-SRC = \
-	MemoryBlockItf \
-	MemoryManagerItf \
-	TrackingMemoryManagerItf \
-	FillingMemoryMgr \
-	PinnedMemoryMgr \
-	QuotaMemoryMgr \
-	SharedMemoryMgr \
-	UniqueRawMemoryBlock \
-	PrimordialMemoryMgr \
-	RawMemoryBlock \
-	TypedMemoryBlock
 
 
 

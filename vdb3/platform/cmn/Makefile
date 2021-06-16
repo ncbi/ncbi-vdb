@@ -22,7 +22,7 @@
 #
 # ===========================================================================
 
-TOP ?= $(abspath ../..)
-MODULE = platform
+TOP ?= $(abspath ../../..)
+MODULE = platform/cmn
 
 include $(TOP)/vdb3/Makefile.env

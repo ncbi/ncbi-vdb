@@ -22,8 +22,9 @@
 #
 # ===========================================================================
 
-#
-# gmake include to be used in unit test projects under platform/
-#
+default: test
 
-include $(TOP)/build/Makefile.test
+TOP ?= $(abspath ../../../..)
+MODULE = platform/cmn/test
+
+include $(TOP)/vdb3/Makefile.env
