@@ -33,6 +33,7 @@
 
 #include <map>
 #include <string>
+#include <stdexcept>
 
 class VDB_Fixture
 {
