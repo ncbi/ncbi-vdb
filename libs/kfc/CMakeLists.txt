@@ -18,3 +18,4 @@ add_library(kfc STATIC
 )
 
 add_definitions (-D__mod__="libs/kfc")
+include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR} )

@@ -1,5 +1,5 @@
-add_library(sraxf STATIC
+add_library(svdb STATIC
     svdb.c
 )
 
-add_definitions (-D__mod__="libs/sraxf")
+add_definitions (-D__mod__="libs/svdb")

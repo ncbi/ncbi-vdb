@@ -60,6 +60,7 @@ endif()
 # combinations of OS and COMP
 if ( ${OS}-${CMAKE_CXX_COMPILER_ID} STREQUAL "linux-GNU"  )
     add_definitions( -rdynamic )
+    add_definitions( -D_GNU_SOURCE )
 endif()
 
 # combinations of OS, ARCH and COMP
@@ -82,14 +83,10 @@ endif()
 #message( "OS=" ${OS} " ARCH=" ${ARCH} " CXX=" ${CMAKE_CXX_COMPILER} " LMCHECK=" ${LMCHECK} " BITS=" ${BITS} " CMAKE_C_COMPILER_ID=" ${CMAKE_C_COMPILER_ID} " CMAKE_CXX_COMPILER_ID=" ${CMAKE_CXX_COMPILER_ID} )
 
 include_directories(interfaces)
-include_directories(interfaces/klib)
-include_directories(interfaces/kfc)
 include_directories(interfaces/os)
 include_directories(interfaces/ext)
 include_directories(interfaces/ext/hdf5)
-include_directories(libs/klib)
-include_directories(libs/kfc)
-include_directories(libs/ascp)
+
 if ( "GNU" STREQUAL "${CMAKE_C_COMPILER_ID}")
     include_directories(interfaces/cc/gcc)
     include_directories(interfaces/cc/gcc/${ARCH})
@@ -98,14 +95,13 @@ elseif ( "Clang" STREQUAL "${CMAKE_C_COMPILER_ID}")
 endif()
 
 if ( "mac" STREQUAL ${OS} )
+    include_directories(interfaces/os/mac)
     include_directories(interfaces/os/unix)
 elseif( "linux" STREQUAL ${OS} )
-    include_directories(interfaces/os/unix)
     include_directories(interfaces/os/linux)
+    include_directories(interfaces/os/unix)
 elseif( "windows" STREQUAL ${OS} )
     include_directories(interfaces/os/win)
-elseif( "unix" STREQUAL ${OS} )
-    include_directories(interfaces/os/unix)
 endif()
 
 # testing

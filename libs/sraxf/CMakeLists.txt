@@ -15,7 +15,6 @@ add_library(sraxf STATIC
     normalize.c
     prefix-tree-to-name.c
     process-position.c
-    qstat-trigger.c
     qual4_decode.c
     qual4_encode.c
     read-desc.c

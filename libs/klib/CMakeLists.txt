@@ -59,7 +59,6 @@ add_library(klib STATIC
     time.c
     token.c
     trie.c
-    trieval.c
     unpack.c
     utf8.c
     vector.c
@@ -121,4 +120,4 @@ add_library(klib STATIC
 
 add_definitions (-D__mod__="libs/klib")
 add_definitions (-D_ARCH_BITS=${BITS})
-
+include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR} )

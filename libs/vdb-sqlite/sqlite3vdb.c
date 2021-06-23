@@ -60,14 +60,14 @@ SQLITE_EXTENSION_INIT1
 #include <kfc/ctx.h>
 #include <kfc/rsrc.h>
 
-#include <../ngs/NGS_ReadCollection.h>
-#include <../ngs/NGS_Read.h>
-#include <../ngs/NGS_Alignment.h>
-#include <../ngs/NGS_ReadGroup.h>
-#include <../ngs/NGS_Reference.h>
-#include <../ngs/NGS_Pileup.h>
-#include <../ngs/NGS_PileupEvent.h>
-#include <../ngs/NGS_String.h>
+#include "../ngs/NGS_ReadCollection.h"
+#include "../ngs/NGS_Read.h"
+#include "../ngs/NGS_Alignment.h"
+#include "../ngs/NGS_ReadGroup.h"
+#include "../ngs/NGS_Reference.h"
+#include "../ngs/NGS_Pileup.h"
+#include "../ngs/NGS_PileupEvent.h"
+#include "../ngs/NGS_String.h"
 
 /* -------------------------------------------------------------------------------------- */
 static rc_t VNamelist_from_KNamelist( VNamelist ** dst, const KNamelist * src )
@@ -380,7 +380,7 @@ static void col_inst_Uint( column_instance * inst, const VCursor * curs, sqlite3
                 case 16 : txt = print_uint16_t_vec( base, row_len ); break;
                 case 32 : txt = print_uint32_t_vec( base, row_len ); break;
                 case 64 : txt = print_uint64_t_vec( base, row_len ); break;
-                
+
             }
             if ( txt != NULL )
             {
@@ -485,7 +485,7 @@ static void col_inst_Float( column_instance * inst, const VCursor * curs, sqlite
             char * txt = NULL;
             if ( elem_bits == BITSIZE_OF_FLOAT )
                 txt = print_float_vec( base, row_len );
-            else if ( elem_bits == BITSIZE_OF_DOUBLE ) 
+            else if ( elem_bits == BITSIZE_OF_DOUBLE )
                 txt = print_double_vec( base, row_len );
             if ( txt != NULL )
             {
@@ -527,7 +527,7 @@ static void col_inst_cell( column_instance * inst, const VCursor * curs, sqlite3
         default : sqlite3_result_null( ctx );
     }
 }
-    
+
 /* -------------------------------------------------------------------------------------- */
 
 static bool init_col_desc_list( Vector * dst, const String * decl )
@@ -567,7 +567,7 @@ static void print_col_desc_list( const Vector * desc_list )
 {
     if ( desc_list != NULL )
     {
-        uint32_t idx, count;    
+        uint32_t idx, count;
         for ( idx = 0, count = VectorLength( desc_list ); idx < count; ++idx )
         {
             column_description * desc = VectorGet( desc_list, idx );
@@ -610,7 +610,7 @@ static char * make_vdb_create_table_stm( const Vector * desc_list, const char * 
                     if ( idx == 0 )
                         res = sqlite3_mprintf( "%z%s", res, desc->name );
                     else
-                        res = sqlite3_mprintf( "%z, %s ", res, desc->name );    
+                        res = sqlite3_mprintf( "%z, %s ", res, desc->name );
                 }
             }
             /* sqlite3-special-behavior: %z means free the ptr after inserting into result */
@@ -780,9 +780,9 @@ static void release_vdb_obj_desc( vdb_obj_desc * self )
 static void vdb_obj_desc_print( vdb_obj_desc * self )
 {
     printf( "---accession  = %s\n", self->accession != NULL ? self->accession : "None" );
-    printf( "---cache-size = %lu\n", self->cache_size );    
+    printf( "---cache-size = %lu\n", self->cache_size );
     printf( "---table      = %s\n", self->table_name != NULL ? self->table_name : "None" );
-    printf( "---rows       = %s\n", self->row_range_str != NULL ? self->row_range_str : "None" ); 
+    printf( "---rows       = %s\n", self->row_range_str != NULL ? self->row_range_str : "None" );
     printf( "---columns    = " ); print_col_desc_list( &self->column_descriptions ); printf( "\n" );
 }
 
@@ -795,7 +795,7 @@ static void trim_ws( String * S )
 		S->len--;
 		S->size--;
 	}
-	
+
     while( S->len > 0 && ( S->addr[ S->len - 1 ] == ' ' || S->addr[ S->len - 1 ] == '\t' ) )
 	{
 		S->len--;
@@ -821,18 +821,18 @@ static void vdb_obj_desc_parse_arg2( vdb_obj_desc * self, const char * name, con
 {
 	String S_name, S_value;
     bool done = false;
-	
+
 	StringInitCString( &S_name, name );
 	trim_ws( &S_name );
 	StringInitCString( &S_value, value );
 	trim_ws( &S_value );
-	
+
 	if ( is_equal( &S_name, "acc", "A" ) )
     {
 		self->accession = sqlite3_mprintf( "%.*s", S_value.len, S_value.addr );
         done = true;
     }
-    
+
 	if ( !done && is_equal( &S_name, "table", "T" ) )
 	{
         self->table_name = sqlite3_mprintf( "%.*s", S_value.len, S_value.addr );
@@ -862,7 +862,7 @@ static void vdb_obj_desc_parse_arg2( vdb_obj_desc * self, const char * name, con
         self->cache_size = StringToU64( &S_value, NULL );
         done = true;
     }
-    
+
     if ( !done )
         printf( "unknown argument '%.*s' = '%.*s'\n", S_name.len, S_name.addr, S_value.len, S_value.addr );
 }
@@ -913,7 +913,7 @@ static rc_t init_vdb_obj_desc( vdb_obj_desc * self, int argc, const char * const
     return rc;
 }
 
-               
+
 /* -------------------------------------------------------------------------------------- */
 typedef struct vdb_cursor
 {
@@ -922,7 +922,7 @@ typedef struct vdb_cursor
     vdb_obj_desc * desc;            /* cursor does not own this! */
     Vector column_instances;
     const VCursor * curs;
-    int64_t current_row;    
+    int64_t current_row;
     bool eof;
 } vdb_cursor;
 
@@ -956,7 +956,7 @@ static vdb_cursor * make_vdb_cursor( vdb_obj_desc * desc, const VTable * tbl )
             /* this adds the columns to the cursor, opens the cursor, gets types, extracts row-range */
             rc = init_col_inst_list( &res->column_instances, &desc->column_descriptions, res->curs );
         }
-        
+
         if ( rc == 0 )
         {
             int64_t  first = 0x7FFFFFFFFFFFFFFF;
@@ -969,7 +969,7 @@ static vdb_cursor * make_vdb_cursor( vdb_obj_desc * desc, const VTable * tbl )
             else
                 rc = num_gen_trim( desc->row_range, first, count );
         }
-        
+
         if ( rc == 0 )
         {
             rc = num_gen_iterator_make( desc->row_range, &res->row_iter );
@@ -977,8 +977,8 @@ static vdb_cursor * make_vdb_cursor( vdb_obj_desc * desc, const VTable * tbl )
                 res->eof = !num_gen_iterator_next( res->row_iter, &res->current_row, NULL );
             else
                 res->eof = true;
-        } 
-		
+        }
+
         if ( res->eof )
             rc = -1;
 
@@ -1048,14 +1048,14 @@ static int destroy_vdb_obj( vdb_obj * self )
 {
     if ( self->desc.verbosity > 1 )
         printf( "---sqlite3_vdb_Disconnect()\n" );
-    
+
     if ( self->mgr != NULL ) VDBManagerRelease( self->mgr );
     if ( self->tbl != NULL ) VTableRelease( self->tbl );
     if ( self->db != NULL ) VDatabaseRelease( self->db );
     release_vdb_obj_desc( &self->desc );
-    
+
     sqlite3_free( self );
-    return SQLITE_OK;    
+    return SQLITE_OK;
 }
 
 /* check if all requested columns are available */
@@ -1125,7 +1125,7 @@ static rc_t vdb_obj_open_db_without_table_name( vdb_obj * self )
 			if ( rc == 0 )
 			{
 				self->desc.table_name = sqlite3_mprintf( "%s", s );
-				rc = VDatabaseOpenTableRead( self->db, &self->tbl, "%s", self->desc.table_name );	
+				rc = VDatabaseOpenTableRead( self->db, &self->tbl, "%s", self->desc.table_name );
 			}
 		}
 		VNamelistRelease( list );
@@ -1195,7 +1195,7 @@ static rc_t vdb_obj_open_db( vdb_obj * self )
 			if ( rc != 0 )
 				rc = vdb_obj_open_db_with_mismatched_table_name( self );
 		}
-		
+
         if ( rc == 0 )
             rc = vdb_obj_common_table_handler( self );
     }
@@ -1230,7 +1230,7 @@ static vdb_obj * make_vdb_obj( int argc, const char * const * argv )
                 switch ( pt )
                 {
                     case kptDatabase      : rc = vdb_obj_open_db( res ); break;
-                    case kptTable         : 
+                    case kptTable         :
                     case kptPrereleaseTbl : rc = vdb_obj_open_tbl( res ); break;
                     default : rc = -1; break;
                 }
@@ -1270,16 +1270,16 @@ static int sqlite3_vdb_CC( sqlite3 *db, void *pAux, int argc, const char * const
     vdb_obj * obj = make_vdb_obj( argc, argv );
     if ( obj == NULL )
         return SQLITE_ERROR;
-        
+
     *ppVtab = ( sqlite3_vtab * )obj;
 
     if ( obj->desc.verbosity > 1 )
         printf( "%s", msg );
-    
+
     stm = make_vdb_create_table_stm( &obj->desc.column_descriptions, "x" );
     if ( obj->desc.verbosity > 1 )
         printf( "stm = %s\n", stm );
-    return sqlite3_declare_vtab( db, stm );    
+    return sqlite3_declare_vtab( db, stm );
 }
 
 
@@ -1453,7 +1453,7 @@ static int ngs_obj_style_2_int( const char * style )
     int res = 0;
     String S;
     StringInitCString( &S, style );
-    
+
     if ( is_equal( &S, "READS", "R" ) )
         res = NGS_STYLE_READS;
     else if ( is_equal( &S, "FRAGMENTS", "F" ) )
@@ -1474,7 +1474,7 @@ static void ngs_obj_desc_parse_arg1( ngs_obj_desc * self, const char * name )
 {
 	String S_name;
     bool done = false;
-	
+
 	StringInitCString( &S_name, name );
 	trim_ws( &S_name );
 
@@ -1483,7 +1483,7 @@ static void ngs_obj_desc_parse_arg1( ngs_obj_desc * self, const char * name )
 		self->prim = true;
         done = true;
     }
-    
+
 	if ( !done && is_equal( &S_name, "sec", NULL ) )
     {
 		self->sec = true;
@@ -1516,18 +1516,18 @@ static void ngs_obj_desc_parse_arg2( ngs_obj_desc * self, const char * name, con
 {
 	String S_name, S_value;
     bool done = false;
-	
+
 	StringInitCString( &S_name, name );
 	trim_ws( &S_name );
 	StringInitCString( &S_value, value );
 	trim_ws( &S_value );
-	
+
 	if ( is_equal( &S_name, "acc", "A" ) )
     {
 		self->accession = sqlite3_mprintf( "%.*s", S_value.len, S_value.addr );
         done = true;
     }
-    
+
 	if ( !done && is_equal( &S_name, "style", "S" ) )
 	{
         self->style_string = sqlite3_mprintf( "%.*s", S_value.len, S_value.addr );
@@ -1540,7 +1540,7 @@ static void ngs_obj_desc_parse_arg2( ngs_obj_desc * self, const char * name, con
         self->refname = sqlite3_mprintf( "%.*s", S_value.len, S_value.addr );
         done = true;
     }
-    
+
     if ( !done && is_equal( &S_name, "verbose", "v" ) )
     {
         self->verbosity = StringToU64( &S_value, NULL );
@@ -1607,7 +1607,7 @@ static rc_t init_ngs_obj_desc( ngs_obj_desc * self, int argc, const char * const
         self->style = NGS_STYLE_READS;
     if ( !self->prim && !self->sec )
         self->prim = true;
-    if ( !self->full && !self->partial && !self->unaligned )    
+    if ( !self->full && !self->partial && !self->unaligned )
     {
         self->full = true;
         self->partial = true;
@@ -1653,11 +1653,11 @@ static int destroy_ngs_obj( ngs_obj * self )
 {
     if ( self->desc.verbosity > 1 )
         printf( "---sqlite3_ngs_Disconnect()\n" );
-    
+
     release_ngs_obj_desc( &self->desc );
-    
+
     sqlite3_free( self );
-    return SQLITE_OK;    
+    return SQLITE_OK;
 }
 
 /* gather what we want to open, check if it can be opened... */
@@ -1692,7 +1692,7 @@ typedef struct ngs_cursor
     NGS_ReadGroup * m_rd_grp;       /* the read-group-iterator */
     NGS_Reference * m_refs;         /* the reference-iterator */
     NGS_Pileup * m_pileup;          /* the pileup-iterator */
-    int64_t current_row;    
+    int64_t current_row;
     bool eof;
 } ngs_cursor;
 
@@ -1700,19 +1700,19 @@ typedef struct ngs_cursor
 static int destroy_ngs_cursor( ngs_cursor * self )
 {
     HYBRID_FUNC_ENTRY( rcSRA, rcRow, rcAccessing );
-    
+
     if ( self->desc->verbosity > 1 )
         printf( "---sqlite3_ngs_Close()\n" );
 
     if ( self->m_read != NULL )
         NGS_ReadRelease ( self->m_read, ctx );
-    
+
     if ( self->m_alig != NULL )
         NGS_AlignmentRelease ( self->m_alig, ctx );
 
     if ( self->m_rd_grp != NULL )
         NGS_ReadGroupRelease( self->m_rd_grp, ctx );
-    
+
     if ( self->m_pileup != NULL )
         NGS_PileupRelease( self->m_pileup, ctx );
 
@@ -1735,7 +1735,7 @@ static void make_ngs_cursor_READS( ngs_cursor * self, ctx_t ctx )
         /* the user did specify a range: process this as a row-range */
         self->m_read = NGS_ReadCollectionGetReadRange( self->rd_coll, ctx,
                         self->desc->first, self->desc->count,
-                        self->desc->full, self->desc->partial, self->desc->unaligned );                        
+                        self->desc->full, self->desc->partial, self->desc->unaligned );
     else
         self->m_read = NGS_ReadCollectionGetReads( self->rd_coll, ctx,
                         self->desc->full, self->desc->partial, self->desc->unaligned );
@@ -1809,7 +1809,7 @@ static void make_ngs_cursor_PILEUP( ngs_cursor * self, ctx_t ctx )
         /* the user did specify a reference: process a slice of alignments */
         self->m_refs = NGS_ReadCollectionGetReference( self->rd_coll, ctx, self->desc->refname );
     }
-    
+
     if ( !FAILED() )
     {
         if ( self->desc->count > 0 )
@@ -1839,7 +1839,7 @@ static ngs_cursor * make_ngs_cursor( ngs_obj_desc * desc )
     if ( res != NULL )
     {
         HYBRID_FUNC_ENTRY( rcSRA, rcRow, rcAccessing );
-        
+
         memset( res, 0, sizeof( *res ) );
         res->desc = desc;
 
@@ -1874,7 +1874,7 @@ static void ngs_cursor_next_fragment( ngs_cursor * self, ctx_t ctx )
     {
         self->eof = ! NGS_ReadIteratorNext( self->m_read, ctx );
         if ( !FAILED() && !self->eof )
-            self->eof = ! NGS_FragmentIteratorNext ( ( NGS_Fragment * ) self->m_read, ctx );    
+            self->eof = ! NGS_FragmentIteratorNext ( ( NGS_Fragment * ) self->m_read, ctx );
     }
 }
 
@@ -1884,11 +1884,11 @@ static void ngs_cursor_next_pileup( ngs_cursor * self, ctx_t ctx )
     self->eof = ! NGS_PileupEventIteratorNext( ( NGS_PileupEvent * )self->m_pileup, ctx );
     if ( !FAILED() && self->eof )
     {
-        self->eof = ! NGS_PileupIteratorNext( self->m_pileup, ctx );    
+        self->eof = ! NGS_PileupIteratorNext( self->m_pileup, ctx );
         if ( !FAILED() )
         {
             if ( !self->eof )
-                self->eof = ! NGS_PileupEventIteratorNext( ( NGS_PileupEvent * )self->m_pileup, ctx );                
+                self->eof = ! NGS_PileupEventIteratorNext( ( NGS_PileupEvent * )self->m_pileup, ctx );
             else if ( self->desc->refname == NULL )
             {
                 /* only switch to the next reference if the user did not request a specific reference */
@@ -1914,10 +1914,10 @@ static void ngs_cursor_next_pileup( ngs_cursor * self, ctx_t ctx )
 static int ngs_cursor_next( ngs_cursor * self )
 {
     HYBRID_FUNC_ENTRY( rcSRA, rcRow, rcAccessing );
-    
+
     if ( self->desc->verbosity > 2 )
         printf( "---sqlite3_ngs_next()\n" );
-    
+
     switch( self->desc->style )
     {
         case NGS_STYLE_READS      : self->eof = ! NGS_ReadIteratorNext( self->m_read, ctx ); break;
@@ -1956,7 +1956,7 @@ static void ngs_return_NGS_String( sqlite3_context * sql_ctx, ctx_t ctx, NGS_Str
         size_t len = NGS_StringSize( ngs_str, ctx );
         if ( !FAILED() )
             sqlite3_result_text( sql_ctx, (char *)s, len, SQLITE_TRANSIENT );
-        
+
     }
     NGS_StringRelease( ngs_str, ctx );
 }
@@ -2305,10 +2305,10 @@ static void ngs_cursor_column_refs( ngs_cursor * self, sqlite3_context * sql_ctx
 static int ngs_cursor_column( ngs_cursor * self, sqlite3_context * sql_ctx, int column_id )
 {
     HYBRID_FUNC_ENTRY( rcSRA, rcRow, rcAccessing );
-    
+
     if ( self->desc->verbosity > 2 )
         printf( "---sqlite3_ngs_Column( %d )\n", column_id );
-    
+
     switch( self->desc->style )
     {
         case NGS_STYLE_READS      : ngs_cursor_column_read( self, sql_ctx, ctx, column_id ); break;
@@ -2318,7 +2318,7 @@ static int ngs_cursor_column( ngs_cursor * self, sqlite3_context * sql_ctx, int 
         case NGS_STYLE_READGROUPS : ngs_cursor_column_rd_grp( self, sql_ctx, ctx, column_id ); break;
         case NGS_STYLE_REFS       : ngs_cursor_column_refs( self, sql_ctx, ctx, column_id ); break;
     }
-    
+
     if ( FAILED() )
     {
         CLEAR();
@@ -2360,7 +2360,7 @@ static int sqlite3_ngs_CC( sqlite3 *db, void *pAux, int argc, const char * const
     ngs_obj * obj = make_ngs_obj( argc, argv );
     if ( obj == NULL )
         return SQLITE_ERROR;
-        
+
     *ppVtab = ( sqlite3_vtab * )obj;
 
     if ( obj->desc.verbosity > 1 )
@@ -2447,7 +2447,7 @@ static int sqlite3_ngs_Next( sqlite3_vtab_cursor *cur )
 {
     if ( cur != NULL )
         return ngs_cursor_next( ( ngs_cursor * )cur );
-    return SQLITE_ERROR;        
+    return SQLITE_ERROR;
 }
 
 /* check if we are at the end */
@@ -2506,7 +2506,7 @@ sqlite3_module NGS_Module =
 __declspec( dllexport )
 #endif
 
-/* 
+/*
 ** This routine is called when the extension is loaded.  The new vdb/ngs virtual table module is
 ** registered with the calling database connection.
 */

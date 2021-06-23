@@ -9,7 +9,6 @@ add_library(axf STATIC
     generate-mismatch-qual.c
     get-sam-flags.c
     get_mate_align_ids.c
-    list.c
     make-cmp-read_desc.c
     Makefile
     mismatch-restore-qual.c
