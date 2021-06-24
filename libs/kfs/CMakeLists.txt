@@ -79,11 +79,11 @@ set( KFS_CMN
     from_to_namelist
     limitfile
     appendfile
+    mmap
     ${OS_SPECIFIC_SRC}
 )
 
 set( KFS_SRC
-    mmap
     ${KFS_CMN}
 )
 
@@ -93,11 +93,11 @@ set( KFS2_SRC
     directory-v2
 )
 
-# TODO: generate mmap.nommap
-# set( KFS_NOMMAP_SRC
-    # mmap.nommap
-    # ${KFS_CMN}
-# )
+set( KFS_NOMMAP_SRC
+    ${KFS_CMN}
+)
+add_library( kfs-nommap STATIC ${KFS_NOMMAP_SRC} )
+target_compile_definitions(kfs-nommap PRIVATE FORCE_MALLOC_MMAP )
 
 set( KFF_SRC
     fileformat
@@ -108,7 +108,6 @@ set( KFF_SRC
 
 add_library( kfs STATIC ${KFS_SRC} )
 #add_library( kfs.2 STATIC ${KFS2_SRC} )
-#add_library( kfs-nommap STATIC ${KFS_NOMMAP_SRC} )
 add_library( kff STATIC ${KFF_SRC} )
 
 add_definitions (-D__mod__="libs/kfs")

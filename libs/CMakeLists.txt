@@ -1,4 +1,8 @@
+set( CMAKE_POSITION_INDEPENDENT_CODE True )
+add_compile_definitions( _LIBRARY )
+
 # TODO: INT_LIBS/EXT_LIBS
+add_subdirectory(ktst)
 add_subdirectory(align) # TODO: flex & bison
 add_subdirectory(ascp)
 add_subdirectory(axf) # sra tools dependency
@@ -12,7 +16,7 @@ add_subdirectory(kdb)
 add_subdirectory(kfc)
 add_subdirectory(kfg) # Makefile has bison target
 add_subdirectory(kfs) # TODO: libkfs-nommap - generate source file;
-#add_subdirectory(klib)
+add_subdirectory(klib)
 add_subdirectory(kns) # TODO: build only *.c listed in the Makefile (check for every subdirectory)
 add_subdirectory(kproc)
 #add_subdirectory(krypto) # same as XFS (3rd priority)
@@ -31,3 +35,5 @@ add_subdirectory(vdb-sqlite) # includes
 #add_subdirectory(vxf) # Sync with Makefile
 add_subdirectory(wgsxf)
 add_subdirectory(xfs) # 3rd priority
+
+add_subdirectory(ncbi-vdb)

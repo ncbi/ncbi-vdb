@@ -104,11 +104,11 @@ elseif( "windows" STREQUAL ${OS} )
 endif()
 
 # testing
-#enable_testing()
+enable_testing()
 #set(GTEST_LIBRARIES gtest )
 
 add_subdirectory(libs)
-#add_subdirectory(test)
+add_subdirectory(test)
 
 # documentation
 find_package(Doxygen)
