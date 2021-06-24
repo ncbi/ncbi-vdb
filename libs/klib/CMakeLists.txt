@@ -22,11 +22,10 @@ if( BISON_FOUND )
     BISON_TARGET( JsonGrammar json-grammar.y ${CMAKE_CURRENT_SOURCE_DIR}/json-grammar.c
         COMPILE_FLAGS "-Wno-other --no-lines -r state" )
     set( JsonParser ${BISON_JsonGrammar_OUTPUT_SOURCE} )
+    ADD_FLEX_BISON_DEPENDENCY(JsonFlex JsonGrammar)
 else()
     set( JsonParser json-grammar.c )
 endif()
-
-ADD_FLEX_BISON_DEPENDENCY(JsonFlex JsonGrammar)
 
 add_library(klib STATIC
     base64.c

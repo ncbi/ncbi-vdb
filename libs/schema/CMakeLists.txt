@@ -12,11 +12,10 @@ if( BISON_FOUND )
     BISON_TARGET( SchemaGrammar schema-grammar.y ${CMAKE_CURRENT_SOURCE_DIR}/schema-grammar.cpp
         COMPILE_FLAGS "-Wno-other --no-lines -r state -v" )
     set( SchemaParser ${BISON_SchemaGrammar_OUTPUT_SOURCE} )
+    ADD_FLEX_BISON_DEPENDENCY(SchemaFlex SchemaGrammar)
 else()
     set( SchemaParser schema-grammar.cpp )
 endif()
-
-ADD_FLEX_BISON_DEPENDENCY(SchemaFlex SchemaGrammar)
 
 # AST parser
 if( BISON_FOUND )

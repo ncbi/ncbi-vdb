@@ -45,11 +45,11 @@ if( BISON_FOUND )
     BISON_TARGET( SamExtractGrammar samextract-grammar.y ${CMAKE_CURRENT_SOURCE_DIR}/samextract-grammar.c
         COMPILE_FLAGS "-Wno-other --no-lines -r state" )
     set( SamExtractParser ${BISON_SamExtractGrammar_OUTPUT_SOURCE} )
+    ADD_FLEX_BISON_DEPENDENCY(SamExtractFlex SamExtractGrammar)
 else()
     set( SamExtractParser samextract-grammar.c )
 endif()
 
-ADD_FLEX_BISON_DEPENDENCY(SamExtractFlex SamExtractGrammar)
 
 set ( SAM_EXTRACT_SRC
     ${SamExtractParser}

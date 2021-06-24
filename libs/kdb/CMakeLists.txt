@@ -1,50 +1,63 @@
-add_library(kdb STATIC
-    btree.c
-    coldata.c
-    colidx.c
-    colidx0.c
-    colidx1.c
-    colidx2.c
-    column-cc.c
-    column.c
-    database-cc.c
-    database-cmn.c
-    database.c
-    dbcc-cmn.c
-    dbmgr-cmn.c
-    dbmgr.c
-    idstats.c
-    idxblk.c
-    index.c
-    kdb.c
-    meta.c
-    ptrieval-v1.c
-    ptrieval-v2.c
-    rowset-simple.c
-    rowset.c
-    table-cc.c
-    table.c
-    trieidx-v1.c
-    trieidx-v2.c
-    trieval-v1.c
-    trieval-v2.c
-    u64idx-v3.c
-    wcoldata.c
-    wcolidx.c
-    wcolidx0.c
-    wcolidx1.c
-    wcolidx2.c
-    wcolumn.c
-    wdatabase.c
-    wdbmgr.c
-    widxblk.c
-    windex.c
-    wkdb.c
-    wmeta.c
-    wtable.c
-    wtrieidx-v1.c
-    wtrieidx-v2.c
-    wu64idx-v3.c
+set( KDB_CMN
+    btree
+    rowset
+    rowset-simple
+    dbmgr-cmn
 )
+
+set( KDB_SRC
+    ${KDB_CMN}
+    kdb
+    dbmgr
+    dbcc-cmn
+    database
+    database-cc
+    table
+    table-cc
+    column
+    column-cc
+    coldata
+    colidx
+    colidx0
+    colidx1
+    colidx2
+    idxblk
+    meta
+    index
+    idstats
+    trieidx-v1
+    trieval-v1
+    ptrieval-v1
+    trieidx-v2
+    trieval-v2
+    ptrieval-v2
+    u64idx-v3
+)
+
+
+set( WKDB_SRC
+    ${KDB_CMN}
+    wkdb
+    wdbmgr
+    wdatabase
+    wtable
+    wcolumn
+    wcoldata
+    wcolidx
+    wcolidx0
+    wcolidx1
+    wcolidx2
+    idxblk
+    widxblk
+    wmeta
+    windex
+    wtrieidx-v1
+    wtrieidx-v2
+    wu64idx-v3
+)
+
+
+add_library( kdb STATIC ${KDB_SRC} )
+add_library( wkdb STATIC ${WKDB_SRC} )
 
 add_definitions (-D__mod__="libs/kdb")

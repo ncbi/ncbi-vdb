@@ -1,34 +1,44 @@
-if( "linux" STREQUAL ${OS} )
-    set (OS_SPECIFIC_SRC linux/sysendpoint.c linux/syspoll.c)
-elseif ( "mac" STREQUAL ${OS} )
-    set (OS_SPECIFIC_SRC mac/sysendpoint.c mac/syspoll.c)
-elseif( "unix" STREQUAL ${OS} )
-    set (OS_SPECIFIC_SRC unix/sysmgr.c unix/syssock.c unix/sysstream.c)
-elseif ( "win" STREQUAL ${OS} )
-    set (OS_SPECIFIC_SRC win/sysendpoint.c win/sysmgr.c win/syssock.c win/sysstream.c)
+set ( UNIX_SRC unix/sysmgr.c unix/syssock.c unix/sysstream.c )
+set ( LINUX_SRC ${UNIX_SRC} linux/sysendpoint.c linux/syspoll.c )
+set ( MAC_SRC ${UNIX_SRC} mac/sysendpoint.c mac/syspoll.c )
+set ( WIN_SRC win/sysendpoint.c win/sysmgr.c win/syssock.c win/sysstream.c )
+
+if ( "win" STREQUAL ${OS} )
+    set ( OS_SPECIFIC_SRC ${WIN_SRC} )
+    include_directories( win )
+elseif( "linux" STREQUAL ${OS} )
+    set ( OS_SPECIFIC_SRC ${LINUX_SRC} )
+    include_directories( unix )
+elseif( "mac" STREQUAL ${OS} )
+    set ( OS_SPECIFIC_SRC ${MAC_SRC} )
+    include_directories( unix )
 endif()
 
-add_library(kns STATIC
-    buffered-stream.c
-    endpoint.c
-    http-client.c
-    http-file.c
-    http-request.c
-    http-retrier.c
-    http.c
-    kns_manager-ext.c
-    kns_manager.c
-    manager.c
-    proxy.c
-    stable-http-file.c
-    stream-from-buffer.c
-    stream-from-files.c
-    stream-from-streams.c
-    stream.c
-    tls.c
-    url-fetcher-curl.c
-    url-fetcher.c
-    ${OS_SPECIFIC_SRC}
+set( KNS_NO_HTTP_SRC
+    stream-from-buffer
+    kns_manager-ext
+    manager
+    proxy
+    stable-http-file
+    buffered-stream
+    stream
+    stream-from-files
+    stream-from-streams
+    endpoint
+    tls
 )
 
+set( KNS_SRC
+    ${KNS_NO_HTTP_SRC}
+    http-file
+    http-client
+    http-request
+    http-retrier
+    http
+)
+
+add_library( kns STATIC ${KNS_SRC} ${OS_SPECIFIC_SRC} )
+
 add_definitions (-D__mod__="libs/kns")
+add_definitions (-DPKGNAME="${OS}${BITS}")
+include_directories( BEFORE ${CMAKE_CURRENT_SOURCE_DIR} )
