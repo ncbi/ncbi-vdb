@@ -71,7 +71,7 @@ struct KfgConfigNamelist;
 #include "default_kfg.h" /* DEFAUTL_KFG */
 
 #include "kfg-parse.h"
-#include "config-tokens.h"
+#include "config-grammar.h"
 
 #include "../vfs/resolver-cgi.h" /* RESOLVER_CGI */
 #include "docker.h"

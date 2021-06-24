@@ -63,7 +63,7 @@ $(TARGDIR)/std: \
 #INTERM_SRC = \
 	$(SRCDIR)/config-lex.c \
 	$(SRCDIR)/config-grammar.c \
-	$(SRCDIR)/config-tokens.h
+	$(SRCDIR)/config-grammar.h
 
 clean: stdclean
 	@ rm -f $(addsuffix /default.kfg,$(NCBIDIR))
@@ -106,13 +106,13 @@ KFG_SRC = \
 # flex/bison should only be invoked manually in an environment ensures the correct versions:
 # bison 2.5, flex 2.5.35
 bison:
-	bison -o $(SRCDIR)/config-grammar.c --defines=$(SRCDIR)/config-tokens.h -v --no-lines $(SRCDIR)/config-grammar.y
+	bison -o $(SRCDIR)/config-grammar.c --defines=$(SRCDIR)/config-grammar.h -v --no-lines $(SRCDIR)/config-grammar.y
 
 flex:
 	flex --noline -t $(SRCDIR)/config-lex.l > $(SRCDIR)/config-lex.c
 
-#$(SRCDIR)/config-grammar.c $(SRCDIR)/config-tokens.h: $(SRCDIR)/config-grammar.y
-#	$(YACC) -o $(SRCDIR)/config-grammar.c --defines=$(SRCDIR)/config-tokens.h $^
+#$(SRCDIR)/config-grammar.c $(SRCDIR)/config-grammar.h: $(SRCDIR)/config-grammar.y
+#	$(YACC) -o $(SRCDIR)/config-grammar.c --defines=$(SRCDIR)/config-grammar.h $^
 
 KFG_OBJ = \
 	$(addsuffix .$(LOBX),$(KFG_SRC))

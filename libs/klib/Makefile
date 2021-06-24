@@ -184,7 +184,7 @@ fuzz: std $(FUZZ_OBJ)
 #
 
 bison: $(SRCDIR)/json-grammar.y
-	bison -Wno-other --no-lines -r state -o $(SRCDIR)/json-grammar.c --defines=$(SRCDIR)/json-tokens.h $(SRCDIR)/json-grammar.y
+	bison -Wno-other --no-lines -r state -o $(SRCDIR)/json-grammar.c --defines=$(SRCDIR)/json-grammar.h $(SRCDIR)/json-grammar.y
 
 flex: $(SRCDIR)/json-lex.l $(SRCDIR)/json-tokens.h
 	flex --noline -d -t $(SRCDIR)/json-lex.l > $(SRCDIR)/json-lex.c

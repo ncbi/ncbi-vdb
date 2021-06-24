@@ -85,7 +85,6 @@ endif()
 include_directories(interfaces)
 include_directories(interfaces/os)
 include_directories(interfaces/ext)
-include_directories(interfaces/ext/hdf5)
 
 if ( "GNU" STREQUAL "${CMAKE_C_COMPILER_ID}")
     include_directories(interfaces/cc/gcc)

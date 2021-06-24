@@ -33,7 +33,7 @@
 
 using namespace ncbi::SchemaParser;
 #define YYDEBUG 1
-#include "schema-ast-tokens.h"
+#include "schema-ast.hpp"
 
 using namespace std;
 

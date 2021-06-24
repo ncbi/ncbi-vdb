@@ -8,6 +8,26 @@ elseif( "mac" STREQUAL ${OS} )
     set (OS_SPECIFIC_SRC unix/misc.c unix/syserrcode.c unix/syslog.c unix/systime.c unix/syswriter.c)
 endif()
 
+find_package(FLEX) #TODO: specify minimal version
+if( FLEX_FOUND )
+    FLEX_TARGET( JsonFlex json-lex.l ${CMAKE_CURRENT_SOURCE_DIR}/json-lex.c
+        COMPILE_FLAGS "--debug --noline" )
+    set( JsonScanner ${FLEX_JsonFlex_OUTPUTS} )
+else()
+    set( JsonScanner json-lex.c )
+endif()
+
+find_package(BISON) #TODO: specify minimal version
+if( BISON_FOUND )
+    BISON_TARGET( JsonGrammar json-grammar.y ${CMAKE_CURRENT_SOURCE_DIR}/json-grammar.c
+        COMPILE_FLAGS "-Wno-other --no-lines -r state" )
+    set( JsonParser ${BISON_JsonGrammar_OUTPUT_SOURCE} )
+else()
+    set( JsonParser json-grammar.c )
+endif()
+
+ADD_FLEX_BISON_DEPENDENCY(JsonFlex JsonGrammar)
+
 add_library(klib STATIC
     base64.c
     bsearch.c
@@ -23,8 +43,8 @@ add_library(klib STATIC
     hashtable.c
     iso8859-1.c
     iso8859.c
-    json-grammar.c
-    json-lex.c
+    ${JsonParser}
+    ${JsonScanner}
     json.c
     judy-vector.c
     ksort.c
@@ -121,3 +141,4 @@ add_library(klib STATIC
 add_definitions (-D__mod__="libs/klib")
 add_definitions (-D_ARCH_BITS=${BITS})
 include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR} )
+

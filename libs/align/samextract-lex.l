@@ -37,7 +37,7 @@
 #include <string.h>
 #include "samextract.h"
 #include "samextract-pool.h"
-#include "samextract-tokens.h"
+#include "samextract-grammar.h"
 
 /* #define LEXDEBUG 1 */
 #define YY_INPUT(buf,numbytes,maxbytes) moredata(buf,&numbytes,maxbytes)

@@ -105,10 +105,10 @@ $(TARGDIR)/compile: $(OBJFILES)
 bison: grammar ast
 
 grammar: $(SRCDIR)/schema-grammar.y
-	bison -r state -v --no-lines -o $(SRCDIR)/schema-grammar.cpp --defines=$(SRCDIR)/schema-tokens.h $(SRCDIR)/schema-grammar.y
+	bison -r state -v --no-lines -o $(SRCDIR)/schema-grammar.cpp --defines=$(SRCDIR)/schema-grammar.hpp $(SRCDIR)/schema-grammar.y
 
 ast: $(SRCDIR)/schema-ast.y
-	bison -r state -v --no-lines -o $(SRCDIR)/schema-ast.cpp --defines=$(SRCDIR)/schema-ast-tokens.h $(SRCDIR)/schema-ast.y
+	bison -r state -v --no-lines -o $(SRCDIR)/schema-ast.cpp --defines=$(SRCDIR)/schema-ast.hpp $(SRCDIR)/schema-ast.y
 
 flex: $(SRCDIR)/schema-lex.l $(SRCDIR)/schema-grammar.cpp
 	flex -d --noline -t $(SRCDIR)/schema-lex.l> $(SRCDIR)/schema-lex.c

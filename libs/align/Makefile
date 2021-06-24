@@ -184,7 +184,7 @@ SAM_EXTRACT_LIB =
 bison:
 	bison --no-lines -g -r all -Werror=all \
 		-o $(SRCDIR)/samextract-grammar.c \
-	--defines=$(SRCDIR)/samextract-tokens.h \
+	--defines=$(SRCDIR)/samextract-grammar.h \
 	-v -Wall --no-lines \
 	$(SRCDIR)/samextract-grammar.y
 

@@ -830,7 +830,7 @@ static const flex_int16_t yy_rule_linenum[18] =
 
 #include "json-lex.h"
 
-#include "json-tokens.h"
+#include "json-grammar.h"
 
 #define YY_USER_ACTION \
     yylloc->first_line = yylloc->last_line; \

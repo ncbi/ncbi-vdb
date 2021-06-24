@@ -33,7 +33,7 @@
 
 using namespace ncbi::SchemaParser;
 #define YYDEBUG 1
-#include "schema-ast-tokens.h"
+#include "schema-ast.hpp"
 
 using namespace std;
 
@@ -377,7 +377,7 @@ ViewDeclaration :: Extend ( const Token :: Location & p_loc, const SView * p_dad
         }
         if ( ! InitParentInstance ( parent, p_dad, p_params ) ||
             ! m_builder . VectorAppend ( m_self -> parents, NULL, parent ) )
-        {   
+        {
             SViewInstanceWhack ( parent, 0 );
             return false;
         }

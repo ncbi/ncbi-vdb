@@ -26,7 +26,7 @@
 
 #include "samextract.h"
 #include "samextract-pool.h"
-#include "samextract-tokens.h"
+#include "samextract-grammar.h"
 #include <align/samextract-lib.h>
 #include <byteswap.h>
 #include <ctype.h>

@@ -40,7 +40,7 @@ using namespace ncbi::SchemaParser;
 typedef struct ParseTree ParseTree;
 typedef struct ErrorReport ErrorReport;
 
-#include "../../libs/schema/schema-tokens.h"
+#include "../../libs/schema/schema-grammar.hpp"
 
 using namespace std;
 using namespace ncbi::NK;

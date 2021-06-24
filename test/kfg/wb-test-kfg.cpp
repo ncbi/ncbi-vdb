@@ -46,7 +46,7 @@ TEST_SUITE(KfgWbTestSuite);
 //////////////////////////////////////////// tests for flex-generated scanner
 extern "C" {
 #include "../libs/kfg/kfg-parse.h"
-#include "../libs/kfg/config-tokens.h"
+#include "../libs/kfg/config-grammar.h"
 }
 
 // simple symbol table
@@ -59,7 +59,7 @@ protected:
     }
 
     static bool lookup_var(void * self, KFGToken* pb)
-    { 
+    {
         const SymbolTable* tab=(const SymbolTable*)self;
         map<string, string>::const_iterator var=tab->find(string(pb->tokenText+2, pb->tokenLength-3));
         if (var == tab->end())
@@ -77,7 +77,7 @@ protected:
 class KfgScanFixture : public SymbolTable
 {
 public:
-    KfgScanFixture() 
+    KfgScanFixture()
     {
         sb.self=this;
         sb.file="test";
@@ -86,7 +86,7 @@ public:
         sb.scanner=0;
         sb.report_error=report_error;
     }
-    ~KfgScanFixture() 
+    ~KfgScanFixture()
     {
         KFGScan_yylex_destroy(&sb);
     }
@@ -183,7 +183,7 @@ FIXTURE_TEST_CASE(KfgScanLineComments, KfgScanFixture)
 }
 
 FIXTURE_TEST_CASE(KfgScanNestedMultiLineComments, KfgScanFixture)
-{   
+{
     InitScan("/***\n"
              "/**/\n" // the comment ends here
              "*/");
@@ -211,7 +211,7 @@ FIXTURE_TEST_CASE(KfgScanStrings, KfgScanFixture)
     REQUIRE_EQUAL(Scan(), (int)kfgSTRING);          REQUIRE_EQUAL(tokenText, std::string("str1"));
     REQUIRE_EQUAL(Scan(), (int)kfgSTRING);          REQUIRE_EQUAL(tokenText, std::string("str2"));
     REQUIRE_EQUAL(Scan(), (int)kfgEND_INPUT);
-} 
+}
 
 FIXTURE_TEST_CASE(KfgScanString1, KfgScanFixture)
 {   // ( in string
@@ -246,19 +246,19 @@ FIXTURE_TEST_CASE(KfgScanVarRefInStringEscapes3, KfgScanFixture)
 {   // escaped $( in string
     REQUIRE_EQ(MatchToken("\"$\\$(ref)\"", kfgESCAPED_STRING, "$\\$(ref)"), string());
 }
-FIXTURE_TEST_CASE(KfgScanVarRefInStringEscapes4, KfgScanFixture)  
+FIXTURE_TEST_CASE(KfgScanVarRefInStringEscapes4, KfgScanFixture)
 {   // unterminated $( in double quoted string
     REQUIRE_EQ(MatchToken("\"$(qq\"qq", kfgSTRING, "", kfgSTRING), string());
     REQUIRE_EQUAL(tokenText, string("$(qq\"qq"));
     REQUIRE_EQUAL(Scan(), (int)kfgEND_INPUT);
 }
-FIXTURE_TEST_CASE(KfgScanVarRefInStringEscapes5, KfgScanFixture)  
+FIXTURE_TEST_CASE(KfgScanVarRefInStringEscapes5, KfgScanFixture)
 {   // unterminated $( in single quoted string
     REQUIRE_EQ(MatchToken("'$(qq'qq", kfgSTRING, "", kfgSTRING), string());
     REQUIRE_EQUAL(tokenText, string("$(qq\'qq"));
     REQUIRE_EQUAL(Scan(), (int)kfgEND_INPUT);
 }
-FIXTURE_TEST_CASE(KfgScanVarRefInStringEscapes6, KfgScanFixture)  
+FIXTURE_TEST_CASE(KfgScanVarRefInStringEscapes6, KfgScanFixture)
 {   // unterminated $( eats up the rest of the line
     REQUIRE_EQ(MatchToken("'$(qq zzz", kfgSTRING, "", kfgSTRING), string());
     REQUIRE_EQUAL(tokenText, string("$(qq zzz"));
@@ -315,7 +315,7 @@ FIXTURE_TEST_CASE(KfgScanSimplePathNames, KfgScanFixture)
     REQUIRE_EQUAL(Scan(), (int)kfgREL_PATH); REQUIRE_EQUAL(tokenText, string("_aBc"));
     REQUIRE_EQUAL(Scan(), (int)kfgREL_PATH); REQUIRE_EQUAL(tokenText, string("9-9"));
     REQUIRE_EQUAL(Scan(), (int)kfgREL_PATH); REQUIRE_EQUAL(tokenText, string("_--."));
-    REQUIRE_EQUAL(Scan(), (int)kfgUNRECOGNIZED); 
+    REQUIRE_EQUAL(Scan(), (int)kfgUNRECOGNIZED);
     REQUIRE_EQUAL(Scan(), (int)kfgEND_INPUT);
 }
 
@@ -346,7 +346,7 @@ FIXTURE_TEST_CASE(KfgScanVarRefUndefined, KfgScanFixture)
     Add("ref", "value");
     REQUIRE_EQUAL(Scan(), (int)kfgSTRING); REQUIRE(errorMsg.length() == 0); // undefined vars not reported
     REQUIRE_EQUAL(tokenText, string(""));
-    REQUIRE_EQUAL(Scan(), (int)kfgEND_INPUT); 
+    REQUIRE_EQUAL(Scan(), (int)kfgEND_INPUT);
 }
 
 FIXTURE_TEST_CASE(KfgScanVarRefInDoubleString, KfgScanFixture)
@@ -396,9 +396,9 @@ FIXTURE_TEST_CASE(KfgScanMultipleVarRefsInString2, KfgScanFixture)
 
 //// bad token cases
 FIXTURE_TEST_CASE(KfgScanVarRefEndFile, KfgScanFixture)
-{   
+{
     InitScan("$(ref");
-    REQUIRE_EQUAL(Scan(), (int)kfgUNRECOGNIZED); 
+    REQUIRE_EQUAL(Scan(), (int)kfgUNRECOGNIZED);
 }
 
 FIXTURE_TEST_CASE(KfgScanVarRefInStringEndFile, KfgScanFixture)
@@ -421,21 +421,21 @@ FIXTURE_TEST_CASE(KfgScanVarRefInStringEndLine, KfgScanFixture)
 class KfgParseFixture : public SymbolTable
 {
 public:
-    KfgParseFixture() 
+    KfgParseFixture()
     {
     }
-    ~KfgParseFixture() 
+    ~KfgParseFixture()
     {
     }
     rc_t Parse(const char* input)
     {
-        KFGParseBlock pb; 
+        KFGParseBlock pb;
         KFGScanBlock sb;
 
         KFGScan_yylex_init(&sb, input);
 
         pb.write_nvp=write_nvp;
-        
+
         sb.self=this;
         sb.file="test";
         sb.look_up_var=lookup_var;
@@ -520,23 +520,23 @@ FIXTURE_TEST_CASE(KfgParseMultNameValue, KfgParseFixture)
 
 FIXTURE_TEST_CASE(KfgParseAbsPath, KfgParseFixture)
 {
-    REQUIRE_RC(Parse("/id/1name/1 = \"value\"\n")); 
+    REQUIRE_RC(Parse("/id/1name/1 = \"value\"\n"));
     REQUIRE_EQ(size(), (size_t)1);
     REQUIRE_EQ((*this)["/id/1name/1"], string("value"));
 }
 
 FIXTURE_TEST_CASE(KfgParseRelPath, KfgParseFixture)
 {
-    REQUIRE_RC(Parse("1/name1/id = \"value\"\n")); 
+    REQUIRE_RC(Parse("1/name1/id = \"value\"\n"));
     REQUIRE_EQ(size(), (size_t)1);
     REQUIRE_EQ((*this)["1/name1/id"], string("value"));
 }
 
 FIXTURE_TEST_CASE(KfgParseEscString, KfgParseFixture)
 {
-    REQUIRE_RC(Parse("1/name1/id = \"v\\tlue\"\n")); 
+    REQUIRE_RC(Parse("1/name1/id = \"v\\tlue\"\n"));
     REQUIRE_EQ(size(), (size_t)1);
-    REQUIRE_EQ((*this)["1/name1/id"], string("v\tlue")); 
+    REQUIRE_EQ((*this)["1/name1/id"], string("v\tlue"));
 }
 
 FIXTURE_TEST_CASE(KfgParseVarRefSimple, KfgParseFixture)
@@ -544,7 +544,7 @@ FIXTURE_TEST_CASE(KfgParseVarRefSimple, KfgParseFixture)
     REQUIRE_RC(Parse(
         "ref='value'\n"
         "var = $(ref)"
-        )); 
+        ));
     REQUIRE_EQ((*this)["var"], string("value"));
 }
 
@@ -555,10 +555,10 @@ FIXTURE_TEST_CASE(KfgParseVarRefSimpleUndefined, KfgParseFixture)
         "var1 = $(reff)\n"
         "var2 = $(ref)\n"
         "var3 = $(var1)"
-        )); 
-    REQUIRE_EQ((*this)["var1"], string("")); 
+        ));
+    REQUIRE_EQ((*this)["var1"], string(""));
     REQUIRE_EQ((*this)["var2"], string("value")); // and recovered from
-    REQUIRE_EQ((*this)["var3"], string("")); // var1 is usable 
+    REQUIRE_EQ((*this)["var3"], string("")); // var1 is usable
 }
 
 FIXTURE_TEST_CASE(KfgParseSyntaxRecovery1, KfgParseFixture)
@@ -566,12 +566,12 @@ FIXTURE_TEST_CASE(KfgParseSyntaxRecovery1, KfgParseFixture)
     REQUIRE_RC(Parse(
         "a='q'nn\n" // syntax error (name) and skip to eol
         "name='val'" // this should parse
-        )); 
-    REQUIRE_EQ(errorLine, (size_t)1); 
-    REQUIRE_EQ(errorCol, (size_t)6);  
-    REQUIRE_EQ(errorToken, string("nn")); 
-    REQUIRE_EQ(errorMsg, string("syntax error")); 
-    REQUIRE_EQ((*this)["name"], string("val")); 
+        ));
+    REQUIRE_EQ(errorLine, (size_t)1);
+    REQUIRE_EQ(errorCol, (size_t)6);
+    REQUIRE_EQ(errorToken, string("nn"));
+    REQUIRE_EQ(errorMsg, string("syntax error"));
+    REQUIRE_EQ((*this)["name"], string("val"));
 }
 
 FIXTURE_TEST_CASE(KfgParseSyntaxRecovery2, KfgParseFixture)
@@ -579,12 +579,12 @@ FIXTURE_TEST_CASE(KfgParseSyntaxRecovery2, KfgParseFixture)
     REQUIRE_RC(Parse(
         "a='q'%\n"  // syntax error (unrecognized character) and skip to eol
         "name='val'" // this should parse
-        )); 
-    REQUIRE_EQ(errorLine, (size_t)1); 
-    REQUIRE_EQ(errorCol, (size_t)6);  
-    REQUIRE_EQ(errorToken, string("%")); 
-    REQUIRE_EQ(errorMsg, string("syntax error")); 
-    REQUIRE_EQ((*this)["name"], string("val")); 
+        ));
+    REQUIRE_EQ(errorLine, (size_t)1);
+    REQUIRE_EQ(errorCol, (size_t)6);
+    REQUIRE_EQ(errorToken, string("%"));
+    REQUIRE_EQ(errorMsg, string("syntax error"));
+    REQUIRE_EQ((*this)["name"], string("val"));
 }
 
 FIXTURE_TEST_CASE(KfgParseVarRefPath, KfgParseFixture)
@@ -592,7 +592,7 @@ FIXTURE_TEST_CASE(KfgParseVarRefPath, KfgParseFixture)
     REQUIRE_RC(Parse(
         "ref/sub='value'\n"
         "var = $(ref/sub)"
-        )); 
+        ));
     REQUIRE_EQ((*this)["var"], string("value"));
 }
 
