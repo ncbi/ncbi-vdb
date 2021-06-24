@@ -1,4 +1,4 @@
-add_library(search STATIC
+add_library( ksrch STATIC
     agrep-dp.c
     agrep-myers.c
     agrep-myersunltd.c

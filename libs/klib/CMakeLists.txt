@@ -1,9 +1,15 @@
+set ( UNIX_BASE_SRC unix/misc.c unix/syslog.c unix/systime.c unix/syswriter.c )
+set ( UNIX_SRC ${UNIX_BASE_SRC} unix/syserrcode.c )
+set ( LINUX_SRC ${UNIX_BASE_SRC} linux/syserrcode.c )
+set ( MAC_SRC ${UNIX_SRC} )
+set ( WIN_SRC win/misc.c win/sysalloc.c win/syserrcode.c win/syslog.c win/systime.c win/syswriter.c )
+
 if ( "win" STREQUAL ${OS} )
-    set (OS_SPECIFIC_SRC win/misc.c win/sysalloc.c win/syserrcode.c win/syslog.c win/systime.c win/syswriter.c)
+    set ( OS_SPECIFIC_SRC ${WIN_SRC} )
 elseif( "linux" STREQUAL ${OS} )
-    set (OS_SPECIFIC_SRC unix/misc.c unix/syslog.c unix/systime.c unix/syswriter.c linux/syserrcode.c)
+    set ( OS_SPECIFIC_SRC ${LINUX_SRC} )
 elseif( "mac" STREQUAL ${OS} )
-    set (OS_SPECIFIC_SRC unix/misc.c unix/syserrcode.c unix/syslog.c unix/systime.c unix/syswriter.c)
+    set ( OS_SPECIFIC_SRC ${MAC_SRC} )
 endif()
 
 find_package(FLEX) #TODO: specify minimal version
@@ -25,63 +31,72 @@ else()
     set( JsonParser json-grammar.c )
 endif()
 
+# TODO: it's not working yet
+if (CMAKE_BUILD_TYPE EQUAL "Debug")
+    message("DEBUG mode klib")
+    set( BUILD_SPECIFIC_SRC debug.c )
+else()
+    message("RELEASE mode klib")
+    set( BUILD_SPECIFIC_SRC release.c )
+endif (CMAKE_BUILD_TYPE EQUAL "Debug")
+
+
 add_library(klib STATIC
-    base64.c
-    bsearch.c
-    bstpersist.c
-    btree.c
-    container.c
-    cp1252.c
-    crc32.c
-    data-buffer.c
-    debug.c
-    guid.c
-    hashfile.c
-    hashtable.c
-    iso8859-1.c
-    iso8859.c
+    base64
+    bsearch
+    bstpersist #TODO: bstpersist.nopt
+    btree
+    container
+    cp1252
+    crc32
+    data-buffer
+    guid
+    hashfile
+    hashtable
+    iso8859-1
+    iso8859
     ${JsonParser}
     ${JsonScanner}
-    json.c
-    judy-vector.c
-    ksort.c
-    log.c
-    md5.c
-    namelist.c
-    num-gen.c
-    out.c
-    pack.c
-    pbstree-impl.c
-    pbstree-native.c
-    pbstree-swapped.c
-    pbstree.c
-    printf.c
-    progressbar.c
-    ptpersist.c
-    ptrie.c
-    qsort.c
-    rc-idx-tbl.c
-    rc-tbl.c
-    refcount.c
-    release.c
-    report-klib.c
-    SHA-32bit.c
-    SHA-64bit.c
-    sra-release-version.c
-    status-rc-strings.c
-    status-rc.c
-    status.c
-    symtab.c
-    text.c
-    time.c
-    token.c
-    trie.c
-    unpack.c
-    utf8.c
-    vector.c
-    vector_namelist.c
-    vlen-encode.c
-    writer.c
+    json
+    judy-vector
+    ksort
+    log
+    md5
+    namelist
+    num-gen
+    out
+    pack
+    pbstree-impl # TODO: pbstree-impl.nopt pbstree-impl.swap.nopt
+    #pbstree-native.c
+    #pbstree-swapped.c
+    pbstree
+    printf
+    progressbar
+    ptpersist # TODO: ptpersist.nopt
+    ptrie # TODO: ptrie.nopt
+    qsort
+    rc-idx-tbl
+    rc-tbl
+    refcount
+    report-klib
+    SHA-32bit
+    SHA-64bit
+    sra-release-version
+    status-rc-strings
+    status-rc
+    status
+    symtab
+    text
+    time
+    token
+    trie
+    unpack
+    utf8
+    vector
+    vector_namelist
+    vlen-encode
+    writer
+    ${BUILD_SPECIFIC_SRC}
 
 # #    judy/Judy1Tables.32.c
 # #    judy/Judy1Tables.64.c

@@ -16,10 +16,10 @@ add_subdirectory(kdb)
 add_subdirectory(kfc)
 add_subdirectory(kfg) # Makefile has bison target
 add_subdirectory(kfs) # TODO: libkfs-nommap - generate source file;
-add_subdirectory(klib)
+add_subdirectory(klib) # TODO: Judy is not ready
 add_subdirectory(kns) # TODO: build only *.c listed in the Makefile (check for every subdirectory)
 add_subdirectory(kproc)
-#add_subdirectory(krypto) # same as XFS (3rd priority)
+#add_subdirectory(krypto) # same as XFS (3rd priority), a lot of compiler switches
 add_subdirectory(kxml) # TODO: includes
 add_subdirectory(loader)
 #add_subdirectory(ngs) # 2nd priority - dependency on ngs repository
@@ -30,10 +30,10 @@ add_subdirectory(sraxf) # same as axf
 add_subdirectory(svdb)
 add_subdirectory(tui)
 add_subdirectory(vdb)
-add_subdirectory(vdb-sqlite) # includes
-#add_subdirectory(vfs) # TODO: build only *.c listed in the Makefile (check for every subdirectory)
-#add_subdirectory(vxf) # Sync with Makefile
-add_subdirectory(wgsxf)
+add_subdirectory(vdb-sqlite)
+add_subdirectory(vfs)
+add_subdirectory(vxf)
+add_subdirectory(wgsxf) # wgsxf and wwgsxf are the same
 add_subdirectory(xfs) # 3rd priority
 
 add_subdirectory(ncbi-vdb)

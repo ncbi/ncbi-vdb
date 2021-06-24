@@ -1,20 +1,33 @@
-add_library(sra STATIC
-    reader-abi.c
-    reader-cmn.c
-    reader-fastq.c
-    reader-illumina.c
-    reader-sff.c
-    sra-dflt-schema.c
-    sra-schema.c
-    sracache.c
-    sracol.c
-    sramgr-cmn.c
-    sramgr.c
-    sratbl-cmn.c
-    sratbl.c
-    types.c
-    wsramgr.c
-    wsratbl.c
+set( SRADBCMN_SRC
+    sramgr-cmn
+    sratbl-cmn
+    sracol
+    types
+    sracache
 )
+
+set( SRADB_SRC
+    ${SRADBCMN_SRC}
+    sramgr
+    sratbl
+)
+
+set( WSRADB_SRC
+    ${SRADBCMN_SRC}
+    wsramgr
+    wsratbl
+)
+
+set( SRAREADER_SRC
+    reader-cmn
+    reader-fastq
+    reader-sff
+    reader-illumina
+    reader-abi
+)
+
+add_library( sradb STATIC ${SRADB_SRC} )
+add_library( wsradb STATIC ${WSRADB_SRC} )
+add_library( srareader STATIC ${SRAREADER_SRC} )
 
 add_definitions (-D__mod__="libs/sra")

@@ -1,15 +1,20 @@
-if( "linux" STREQUAL ${OS} )
-    #include_directories(linux)
-    set (OS_SPECIFIC_SRC linux/systui.c)
-elseif ( "unix" STREQUAL ${OS} )
-    #include_directories(unix)
-    set (OS_SPECIFIC_SRC unix/systui.c)
-elseif ( "win" STREQUAL ${OS} )
-    #include_directories(win)
-    set (OS_SPECIFIC_SRC win/systui.c)
+set ( UNIX_SRC unix/systui.c )
+set ( LINUX_SRC linux/systui.c )
+set ( MAC_SRC ${UNIX_SRC} )
+set ( WIN_SRC win/systui.c )
+
+if ( "win" STREQUAL ${OS} )
+    set ( OS_SPECIFIC_SRC ${WIN_SRC} )
+    #include_directories( win )
+elseif( "linux" STREQUAL ${OS} )
+    set ( OS_SPECIFIC_SRC ${LINUX_SRC} )
+    #include_directories( unix )
+elseif( "mac" STREQUAL ${OS} )
+    set ( OS_SPECIFIC_SRC ${MAC_SRC} )
+    #include_directories( unix )
 endif()
 
-add_library(tui STATIC
+add_library( tui STATIC
     dir_dlg.c
     eventring.c
     file_dlg.c
@@ -17,7 +22,6 @@ add_library(tui STATIC
     screen.c
     string_cache.c
     tui.c
-    tui_cpp.cpp
     tui_dlg.c
     tui_dlg_helper.c
     tui_menu.c
@@ -37,5 +41,6 @@ add_library(tui STATIC
 
     ${OS_SPECIFIC_SRC}
 )
+add_library( tui_cpp STATIC tui_cpp )
 
 add_definitions (-D__mod__="libs/tui")

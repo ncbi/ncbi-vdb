@@ -1,10 +1,10 @@
 add_library(loader STATIC
-    alignment-writer.c
-    common-reader.c
-    common-writer.c
-    mmarray.c
-    reference-writer.c
-    sequence-writer.c
+    alignment-writer
+    common-reader
+    common-writer
+    mmarray
+    reference-writer
+    sequence-writer
 )
 
 add_definitions (-D__mod__="libs/loader")
