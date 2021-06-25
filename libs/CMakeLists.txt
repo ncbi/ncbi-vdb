@@ -3,7 +3,7 @@ add_compile_definitions( _LIBRARY )
 
 # TODO: INT_LIBS/EXT_LIBS
 add_subdirectory(ktst)
-add_subdirectory(align) # TODO: flex & bison
+add_subdirectory(align) 
 add_subdirectory(ascp)
 add_subdirectory(axf) # sra tools dependency
 add_subdirectory(blast)
@@ -14,10 +14,10 @@ add_subdirectory(hdf5)
 add_subdirectory(kapp)
 add_subdirectory(kdb)
 add_subdirectory(kfc)
-add_subdirectory(kfg) # Makefile has bison target
-add_subdirectory(kfs) # TODO: libkfs-nommap - generate source file;
+add_subdirectory(kfg) 
+add_subdirectory(kfs)
 add_subdirectory(klib) # TODO: Judy is not ready
-add_subdirectory(kns) # TODO: build only *.c listed in the Makefile (check for every subdirectory)
+add_subdirectory(kns) 
 add_subdirectory(kproc)
 #add_subdirectory(krypto) # same as XFS (3rd priority), a lot of compiler switches
 add_subdirectory(kxml) # TODO: includes

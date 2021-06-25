@@ -1,8 +1,8 @@
 add_library( ncbi-vdb STATIC
     $<TARGET_OBJECTS:align-reader>
     $<TARGET_OBJECTS:ascp>
-#TODO    $<TARGET_OBJECTS:srareader>
-#TODO    $<TARGET_OBJECTS:sradb>
+    $<TARGET_OBJECTS:srareader>
+    $<TARGET_OBJECTS:sradb>
     $<TARGET_OBJECTS:vdb-blast>
     $<TARGET_OBJECTS:vdb>
     $<TARGET_OBJECTS:kdb>

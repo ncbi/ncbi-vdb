@@ -2,7 +2,7 @@
 #add_subdirectory(cc)
 #add_subdirectory(ext)
 # add_subdirectory(judy_test)
-#add_subdirectory(kfc)
+add_subdirectory(kfc)
 # add_subdirectory(kfs)
 # add_subdirectory(klib)
 # add_subdirectory(kfg)

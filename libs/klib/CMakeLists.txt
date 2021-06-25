@@ -32,13 +32,13 @@ else()
 endif()
 
 # TODO: it's not working yet
-if (CMAKE_BUILD_TYPE EQUAL "Debug")
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     message("DEBUG mode klib")
     set( BUILD_SPECIFIC_SRC debug.c )
 else()
     message("RELEASE mode klib")
     set( BUILD_SPECIFIC_SRC release.c )
-endif (CMAKE_BUILD_TYPE EQUAL "Debug")
+endif (CMAKE_BUILD_TYPE STREQUAL "Debug")
 
 
 add_library(klib STATIC
