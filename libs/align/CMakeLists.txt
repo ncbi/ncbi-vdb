@@ -31,7 +31,6 @@ set ( ALIGN_WRITER_SRC
     writer-reference
 )
 
-find_package(FLEX)
 if( FLEX_FOUND )
     FLEX_TARGET( SamExtractFlex samextract-lex.l ${CMAKE_CURRENT_SOURCE_DIR}/samextract-lex.c
         COMPILE_FLAGS "--debug --noline" )
@@ -40,7 +39,6 @@ else()
     set( SamExtractScanner samextract-lex.c )
 endif()
 
-find_package(BISON)
 if( BISON_FOUND )
     BISON_TARGET( SamExtractGrammar samextract-grammar.y ${CMAKE_CURRENT_SOURCE_DIR}/samextract-grammar.c
         COMPILE_FLAGS "-Wno-other --no-lines -r state" )

@@ -103,6 +103,7 @@ $(TARGDIR)/std: \
 # clean
 #
 clean: stdclean
+	rm -f $(OBJDIR)/compile-test.*
 
 .PHONY: clean
 
@@ -113,7 +114,7 @@ clean: stdclean
 
 # Silently try to compile three objects
 compiler-test : makedirs
-	@ $(MAKE_CMD) -i $(TARGDIR)/compiler-test >/dev/null 2>/dev/null
+	@ $(MAKE_CMD) -i $(TARGDIR)/compiler-test # >/dev/null 2>/dev/null
 
 
 COMPILE_TEST_SRC = \

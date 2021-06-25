@@ -23,6 +23,9 @@ add_library(vfs STATIC
     services-cache
     SraDesc
     srv-response
+    path
+    ${OS_SPECIFIC_SRC}
 )
 
 add_definitions (-D__mod__="libs/vfs")
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})

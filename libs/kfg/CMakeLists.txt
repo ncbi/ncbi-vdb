@@ -1,4 +1,3 @@
-find_package(FLEX)
 if( FLEX_FOUND )
     FLEX_TARGET( KfgFlex config-lex.l ${CMAKE_CURRENT_SOURCE_DIR}/config-lex.c
         COMPILE_FLAGS "--debug --noline" )
@@ -7,7 +6,6 @@ else()
     set( KfgScanner config-lex.c )
 endif()
 
-find_package(BISON)
 if( BISON_FOUND )
     BISON_TARGET( KfgGrammar config-grammar.y ${CMAKE_CURRENT_SOURCE_DIR}/config-grammar.c
         COMPILE_FLAGS "-Wno-other --no-lines -r state" )

@@ -1,4 +1,3 @@
-find_package(FLEX)
 if( FLEX_FOUND )
     FLEX_TARGET( SchemaFlex schema-lex.l ${CMAKE_CURRENT_SOURCE_DIR}/schema-lex.c
         COMPILE_FLAGS "--debug --noline" )
@@ -7,7 +6,6 @@ else()
     set( SchemaScanner schema-lex.c )
 endif()
 
-find_package(BISON)
 if( BISON_FOUND )
     BISON_TARGET( SchemaGrammar schema-grammar.y ${CMAKE_CURRENT_SOURCE_DIR}/schema-grammar.cpp
         COMPILE_FLAGS "-Wno-other --no-lines -r state -v" )

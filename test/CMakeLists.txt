@@ -1,4 +1,4 @@
-#add_subdirectory(ktst)
+add_subdirectory(ktst)
 #add_subdirectory(cc)
 #add_subdirectory(ext)
 # add_subdirectory(judy_test)

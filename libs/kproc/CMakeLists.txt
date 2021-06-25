@@ -38,5 +38,6 @@ set( SPROC_SRC
 
 add_library( ksproc STATIC ${SPROC_SRC} )
 add_library( kproc STATIC ${PROC_SRC} )
+add_library( kq STATIC queue )
 
 add_definitions (-D__mod__="libs/kproc")

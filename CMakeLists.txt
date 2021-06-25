@@ -77,7 +77,7 @@ if ( "${CMAKE_BUILD_TYPE}" STREQUAL "" )
 endif()
 
 if ( ${CMAKE_BUILD_TYPE} STREQUAL "Debug" )
-    add_definitions( -DDEBUG )
+    add_compile_definitions( DEBUG _DEBUGGING )
 endif()
 
 #message( "OS=" ${OS} " ARCH=" ${ARCH} " CXX=" ${CMAKE_CXX_COMPILER} " LMCHECK=" ${LMCHECK} " BITS=" ${BITS} " CMAKE_C_COMPILER_ID=" ${CMAKE_C_COMPILER_ID} " CMAKE_CXX_COMPILER_ID=" ${CMAKE_CXX_COMPILER_ID} )
@@ -102,6 +102,10 @@ elseif( "linux" STREQUAL ${OS} )
 elseif( "windows" STREQUAL ${OS} )
     include_directories(interfaces/os/win)
 endif()
+
+# Flex/Bison
+find_package(FLEX) #TODO: specify minimal version
+find_package(BISON) #TODO: specify minimal version
 
 # testing
 enable_testing()

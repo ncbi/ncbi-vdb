@@ -12,7 +12,6 @@ elseif( "mac" STREQUAL ${OS} )
     set ( OS_SPECIFIC_SRC ${MAC_SRC} )
 endif()
 
-find_package(FLEX) #TODO: specify minimal version
 if( FLEX_FOUND )
     FLEX_TARGET( JsonFlex json-lex.l ${CMAKE_CURRENT_SOURCE_DIR}/json-lex.c
         COMPILE_FLAGS "--debug --noline" )
@@ -21,7 +20,6 @@ else()
     set( JsonScanner json-lex.c )
 endif()
 
-find_package(BISON) #TODO: specify minimal version
 if( BISON_FOUND )
     BISON_TARGET( JsonGrammar json-grammar.y ${CMAKE_CURRENT_SOURCE_DIR}/json-grammar.c
         COMPILE_FLAGS "-Wno-other --no-lines -r state" )
