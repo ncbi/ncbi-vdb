@@ -29,7 +29,6 @@ else()
     set( JsonParser json-grammar.c )
 endif()
 
-# TODO: it's not working yet
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     message("DEBUG mode klib")
     set( BUILD_SPECIFIC_SRC debug.c )
@@ -38,6 +37,7 @@ else()
     set( BUILD_SPECIFIC_SRC release.c )
 endif (CMAKE_BUILD_TYPE STREQUAL "Debug")
 
+add_subdirectory( judy )
 
 add_library(klib STATIC
     base64
@@ -98,60 +98,9 @@ add_library(klib STATIC
     vlen-encode
     writer
     ${BUILD_SPECIFIC_SRC}
-
-# #    judy/Judy1Tables.32.c
-# #    judy/Judy1Tables.64.c
-    # judy/JudyByCount.c
-    # judy/JudyByCountWithDefs.c
-    # judy/JudyCascade.c
-    # judy/JudyCount.c
-    # judy/JudyCreateBranch.c
-    # judy/JudyDecascade.c
-    # judy/JudyDel.c
-    # judy/JudyFirst.c
-    # judy/JudyFreeArray.c
-    # judy/JudyGet.c
-    # judy/JudyHS.c
-    # judy/JudyIns.c
-    # judy/JudyInsArray.c
-    # judy/JudyInsertBranch.c
-# #    judy/JudyLTables.32.c
-# #    judy/JudyLTables.64.c
-    # judy/JudyMalloc.c
-    # judy/JudyMallocIF.c
-    # judy/JudyMemActive.c
-    # judy/JudyMemUsed.c
-    # judy/JudyNext.c
-    # judy/JudyNextEmpty.c
-    # judy/JudyPrev.c
-    # judy/JudyPrevEmpty.c
-    # judy/JudyPrevNext.c
-    # judy/JudyPrevNextEmpty.c
-    # judy/JudyPrintJP.c
-    # judy/JudySL.c
-    # judy/JudyTablesGen.c
-    # judy/Judy_Bit.c
-    # judy/Judy_Bit_Cascade.c
-    # judy/Judy_Bit_Count.c
-    # judy/Judy_Bit_Decascade.c
-    # judy/Judy_Bit_Next.c
-    # judy/Judy_Bit_NextEmpty.c
-    # judy/Judy_Bit_Prev.c
-    # judy/Judy_Word.c
-    # judy/Judy_Word_Cascade.c
-    # judy/Judy_Word_Count.c
-    # judy/Judy_Word_Decascade.c
-    # judy/Judy_Word_Next.c
-    # judy/Judy_Word_NextEmpty.c
-    # judy/Judy_Word_Prev.c
-    # judy/j__udyGet.c
-    # judy/_Judy1Tables.c
-    # judy/_JudyLTables.c
-
     ${OS_SPECIFIC_SRC}
 )
 
 add_definitions (-D__mod__="libs/klib")
 add_definitions (-D_ARCH_BITS=${BITS})
 include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR} )
-

@@ -21,6 +21,9 @@ add_library( ncbi-vdb STATIC
     $<TARGET_OBJECTS:ksrch>
 	$<TARGET_OBJECTS:kfs>
 	$<TARGET_OBJECTS:klib>
+	$<TARGET_OBJECTS:judy>
+	$<TARGET_OBJECTS:judy1>
+	$<TARGET_OBJECTS:judyL>
 	$<TARGET_OBJECTS:kproc>
     $<TARGET_OBJECTS:kq>
 	$<TARGET_OBJECTS:kfc>
@@ -34,5 +37,7 @@ add_library( ncbi-vdb STATIC
 	$<TARGET_OBJECTS:vxf>
 )
 
-#TOOD: ncbi-wvdb
- 
+#TODO: ncbi-wvdb
+
+#TODO: ncbi-vdb.so
+#TODO: ncbi-wvdb.so

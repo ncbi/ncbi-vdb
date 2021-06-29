@@ -78,6 +78,8 @@ endif()
 
 if ( ${CMAKE_BUILD_TYPE} STREQUAL "Debug" )
     add_compile_definitions( DEBUG _DEBUGGING )
+else()
+    add_compile_definitions( NDEBUG )
 endif()
 
 #message( "OS=" ${OS} " ARCH=" ${ARCH} " CXX=" ${CMAKE_CXX_COMPILER} " LMCHECK=" ${LMCHECK} " BITS=" ${BITS} " CMAKE_C_COMPILER_ID=" ${CMAKE_C_COMPILER_ID} " CMAKE_CXX_COMPILER_ID=" ${CMAKE_CXX_COMPILER_ID} )
