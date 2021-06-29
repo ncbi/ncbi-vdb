@@ -6,36 +6,35 @@ elseif ( "win" STREQUAL ${OS} )
     set (OS_SPECIFIC_SRC win/sysrng.c)
 endif()
 
+message("TEST KRYPTO")
+
+#try_compile( TEST_RESULT "${CMAKE_CURRENT_SOURCE_DIR}/compile-test" compile-test.c )
+#add_library( krypto STATIC compile-test.c )
+
+set_source_files_properties( cipher-no-vec.vec no-null-ncbi.vec PROPERTIES COMPILE_FLAGS -DUSEVEC )
+set_source_files_properties( cipher-no-vec.vecreg no-null-ncbi.vecreg PROPERTIES COMPILE_FLAGS -DUSEVECREG )
+set_source_files_properties( cipher-no-vec.aes-ni no-null-ncbi.aes-ni PROPERTIES COMPILE_FLAGS -DUSEAESNI )
+
 add_library(krypto STATIC
-    aes-byte.c
-    #aes-impl.c
-    #aes-ncbi-ni.c
-    aes-ncbi.c
-    aes.c
-    aesx86.c
-    aes_core.c
-    aes_x86core.c
-    blockcipher.c
-    cipher-byte.c
-    cipher-no-vec.c
-    cipher-vec.c
-    cipher.c
-    ciphermgr.c
-    ciphertest.c
-    compile-test.c
-    csprng.c
-    encfile.c
-    encfilev2.c
-    key.c
-    manager.c
-    no-null-ncbi.c
-    null-ncbi.c
-    reencfile.c
-    rng.c
-    rsa-aes-hmac.c
-    testcipher.c
-    wgaencrypt.c
-    ${OS_SPECIFIC_SRC}
+    ciphermgr
+    wgaencrypt
+    encfile
+    encfilev2
+    cipher
+    aes_core
+    aes-byte
+    cipher-byte
+    key
+    reencfile
+    rsa-aes-hmac
+    no-null-ncbi
+    cipher-no-vec.vec
+    no-null-ncbi.vec
+    cipher-no-vec.vecreg
+    no-null-ncbi.vecreg
+    cipher-no-vec.aes-ni
+    no-null-ncbi.aes-ni
+    #${OS_SPECIFIC_SRC}
 )
 
 add_definitions (-D__mod__="libs/krypto")

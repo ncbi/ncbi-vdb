@@ -19,7 +19,7 @@ add_subdirectory(kfs)
 add_subdirectory(klib) # TODO: Judy is not ready
 add_subdirectory(kns) 
 add_subdirectory(kproc)
-#add_subdirectory(krypto) # same as XFS (3rd priority), a lot of compiler switches
+add_subdirectory(krypto) # TODO: to be replaced with calls to mbedtls
 add_subdirectory(kxml) # TODO: includes
 add_subdirectory(loader)
 #add_subdirectory(ngs) # 2nd priority - dependency on ngs repository
@@ -34,6 +34,6 @@ add_subdirectory(vdb-sqlite)
 add_subdirectory(vfs)
 add_subdirectory(vxf)
 add_subdirectory(wgsxf) # wgsxf and wwgsxf are the same
-add_subdirectory(xfs) # 3rd priority
+#add_subdirectory(xfs) # 3rd priority
 
 add_subdirectory(ncbi-vdb)

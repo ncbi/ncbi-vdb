@@ -17,7 +17,7 @@ add_library( ncbi-vdb STATIC
 	$<TARGET_OBJECTS:mbedcrypto>
 	$<TARGET_OBJECTS:kns>
 	$<TARGET_OBJECTS:kfg>
-#TODO    $<TARGET_OBJECTS:krypto>
+	$<TARGET_OBJECTS:krypto>
     $<TARGET_OBJECTS:ksrch>
 	$<TARGET_OBJECTS:kfs>
 	$<TARGET_OBJECTS:klib>
