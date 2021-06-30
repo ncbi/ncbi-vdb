@@ -5,7 +5,7 @@ add_definitions( -DTESTING )
 # gtest white box tests
 function( test stem )
     add_executable ( test-kfc-${stem} ${stem}-tst.cpp ../strerror_r.c)
-    target_link_libraries ( test-kfc-${stem} ${GTEST_LIBRARIES} kfc3 ${LQUADMATH} )
+    target_link_libraries ( test-kfc-${stem} gtest kfc3 ${LQUADMATH} )
     add_test ( NAME Kfc-${stem}-Test COMMAND test-kfc-${stem} )
 endfunction()
 

@@ -70,7 +70,7 @@ if ( ${OS}-${ARCH}-${CMAKE_CXX_COMPILER_ID} STREQUAL "linux-x86_64-GNU"  )
 elseif ( ${OS}-${ARCH}-${CMAKE_CXX_COMPILER_ID} STREQUAL "linux-x86_64-Clang"  )
 endif()
 
-add_definitions( -DARCHBITS=${BITS} -D${ARCH} -Wall )
+add_definitions( -D_ARCH_BITS=${BITS} -D${ARCH} -Wall )
 
 if ( "${CMAKE_BUILD_TYPE}" STREQUAL "" )
     set ( CMAKE_BUILD_TYPE "Debug" )
@@ -105,6 +105,7 @@ elseif( "windows" STREQUAL ${OS} )
     include_directories(interfaces/os/win)
 endif()
 
+#
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/../ngs/ngs-sdk )
 
 # Flex/Bison
@@ -113,7 +114,6 @@ find_package(BISON) #TODO: specify minimal version
 
 # testing
 enable_testing()
-#set(GTEST_LIBRARIES gtest )
 
 add_subdirectory(libs)
 add_subdirectory(test)

@@ -28,17 +28,20 @@ set( JUDY_CMN
     j__udyGet
 )
 
+# the debug build of Judy is broken!
+remove_definitions( -DDEBUG )
+
 add_library(judyL STATIC
     ${JUDY_CMN}
     _JudyLTables
 )
-target_compile_definitions(judyL PRIVATE JUDYL NDEBUG)
+target_compile_definitions(judyL PRIVATE JUDYL)
 
 add_library(judy1 STATIC
     ${JUDY_CMN}
     _Judy1Tables
 )
-target_compile_definitions(judy1 PRIVATE JUDY1 NDEBUG)
+target_compile_definitions(judy1 PRIVATE JUDY1)
 
 add_definitions (-D__mod__="libs/klib/judy")
 include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/..)

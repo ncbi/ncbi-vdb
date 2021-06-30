@@ -4,7 +4,7 @@ add_definitions( -DTESTING )
 
 function( test stem )
     add_executable ( test-cmn-${stem} ${stem}-tst.cpp )
-    target_link_libraries ( test-cmn-${stem} ${GTEST_LIBRARIES} kfc3 utf8proc ${LQUADMATH} )
+    target_link_libraries ( test-cmn-${stem} gtest kfc3 utf8proc ${LQUADMATH} )
     add_test ( NAME Cmn-${stem}-Test COMMAND test-cmn-${stem} )
 endfunction()
 

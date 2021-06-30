@@ -14,7 +14,7 @@ add_executable ( test-memory
     test-main.cpp
 )
 
-target_link_libraries ( test-memory memory3 ${GTEST_LIBRARIES} )
+target_link_libraries ( test-memory memory3 gtest )
 
 # gtest white box test
 add_test ( NAME MemoryManagerTest COMMAND test-memory )

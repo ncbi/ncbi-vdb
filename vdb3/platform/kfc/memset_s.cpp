@@ -20,7 +20,7 @@ namespace vdb3
 #undef RSIZE_MAX
     const size_t RSIZE_MAX = PREDEFINED_RSIZE_MAX;
 #else
-#if ARCHBITS == 64
+#if _ARCH_BITS == 64
     const size_t RSIZE_MAX = ( size_t ) INT64_MAX;
 #else
     const size_t RSIZE_MAX = ( size_t ) INT32_MAX;
@@ -50,7 +50,7 @@ namespace vdb3
 
         return std :: string ( buffer, status );
     }
-    
+
     /**
      * memset_s
      *  @brief a version of memset() that is not supposed to be optimized away
