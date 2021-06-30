@@ -82,10 +82,21 @@ PrimordialMemoryMgr::deallocate ( pointer p, size_type bytes ) noexcept
 MemoryManagerItf::pointer
 PrimordialMemoryMgr:: reallocate ( pointer p, size_type s )
 {
+    if ( s == 0 && p != nullptr )
+    {   // 'man realloc' on Linux:
+        // "if  size  is equal to zero, and ptr is not NULL, then the call is equivalent to free(ptr)"
+        // (different on Mac, so nail it down here)
+        free ( p );
+        return nullptr;
+    }
+
     pointer ret = realloc ( p, s );
-    if ( ret == nullptr && s != 0 )
+    if ( ret == nullptr )
     {
-        throw std :: bad_alloc (); //TODO: use a VDB3 exception when implemented
+        if ( s != 0 )
+        {
+            throw std :: bad_alloc (); //TODO: use a VDB3 exception when implemented
+        }
     }
     return ret;
 }
