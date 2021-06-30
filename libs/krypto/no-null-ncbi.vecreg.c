@@ -39,7 +39,7 @@
  * this particular CPU.
  */
 struct KBlockCipher;
-rc_t NULLBCMEMBER(Make) (struct KBlockCipher ** new_obj)
+rc_t KNullBlockCipherVecRegMake (struct KBlockCipher ** new_obj)
 {
     rc_t rc;
 

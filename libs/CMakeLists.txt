@@ -22,7 +22,10 @@ add_subdirectory(kproc)
 add_subdirectory(krypto) # TODO: to be replaced with calls to mbedtls
 add_subdirectory(kxml) # TODO: includes
 add_subdirectory(loader)
-#add_subdirectory(ngs) # 2nd priority - dependency on ngs repository
+add_subdirectory(ngs)
+add_subdirectory(ngs-c++)
+add_subdirectory(ngs-jni)
+add_subdirectory(ngs-py)
 add_subdirectory(schema)
 add_subdirectory(search)
 add_subdirectory(sra)

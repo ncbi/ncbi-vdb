@@ -105,6 +105,8 @@ elseif( "windows" STREQUAL ${OS} )
     include_directories(interfaces/os/win)
 endif()
 
+include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/../ngs/ngs-sdk )
+
 # Flex/Bison
 find_package(FLEX) #TODO: specify minimal version
 find_package(BISON) #TODO: specify minimal version
