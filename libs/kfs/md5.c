@@ -433,7 +433,7 @@ LIB_EXPORT rc_t CC KMD5SumFmtMakeRead ( const KMD5SumFmt **fp, const KFile *in )
                     * fp = f;
                     return 0;
                 }
-                
+
                 KMD5SumFmtWhack ( f );
             }
         }
@@ -487,7 +487,7 @@ LIB_EXPORT rc_t CC KMD5SumFmtMakeUpdate ( KMD5SumFmt **fp, KFile *out )
                     * fp = f;
                     return 0;
                 }
-                
+
                 KMD5SumFmtWhack ( f );
             }
         }
@@ -867,7 +867,7 @@ struct KMD5File
 
             /* is transaction open */
             bool topen;
-            
+
             /* was file changed */
             bool changed;
 
@@ -956,14 +956,14 @@ rc_t CC KMD5FileWhackWrite ( KMD5File *self )
 
 static const char MD5TAG [8] = "MD5CNTXT";
 static const char ENDIANTAG [4] =
-{ 
+{
     '0' + (char)((__BYTE_ORDER/1000)%10),
     '0' + (char)((__BYTE_ORDER/100)%10),
     '0' + (char)((__BYTE_ORDER/10)%10),
     '0' + (char)((__BYTE_ORDER/1)%10)
 };
 static const char ENDIANSWAPTAG [4] =
-{ 
+{
     '0' + (char)((__BYTE_ORDER/1)%10),
     '0' + (char)((__BYTE_ORDER/10)%10),
     '0' + (char)((__BYTE_ORDER/100)%10),
@@ -994,7 +994,7 @@ rc_t CC KMD5FileWhackAppend ( KMD5File *self )
         memmove ( closer, MD5TAG, sizeof MD5TAG );
         memmove ( & closer [ sizeof MD5TAG ], ENDIANTAG, sizeof ENDIANTAG );
         memmove ( & closer [ sizeof MD5TAG + sizeof ENDIANTAG ], & self -> md5, sizeof self -> md5 );
-            
+
         /* append this to the file */
         rc = KMD5FileWrite ( self, self -> position, closer, sizeof closer, & num_writ );
         if ( rc == 0 )
@@ -1590,8 +1590,9 @@ LIB_EXPORT rc_t CC KMD5FileMakeWrite ( KMD5File **fp,
             rc = RC ( rcFS, rcFile, rcConstructing, rcPath, rcEmpty );
         else
         {
+            size_t path_size = string_size ( path );
             KMD5File *f = malloc ( sizeof * f - sizeof f -> u +
-                sizeof f -> u . wr + strlen ( path ) );
+                sizeof f -> u . wr + path_size );
             if ( f == NULL )
                 rc = RC ( rcFS, rcFile, rcConstructing, rcMemory, rcExhausted );
             else
@@ -1607,7 +1608,11 @@ LIB_EXPORT rc_t CC KMD5FileMakeWrite ( KMD5File **fp,
                     f -> type = KMD5FileTypeWrite;
 
                     memset ( & f -> u . wr, 0, sizeof f -> u . wr );
-                    strcpy ( f -> u . wr . path, path );
+                    string_copy(
+                        f -> u . wr . path,
+                        path_size,
+                        path,
+                        path_size );
                     f -> u . wr . changed = false;
 
                     rc = KFileSize ( out, & f -> u . wr . max_position );
@@ -1618,7 +1623,7 @@ LIB_EXPORT rc_t CC KMD5FileMakeWrite ( KMD5File **fp,
                             f -> u . wr . max_position  = 0;
                             rc = 0;
                         }
-                    }    
+                    }
                     if ( rc == 0 )
                         rc = KMD5SumFmtAddRef ( md5 );
                     if ( rc == 0 )
@@ -1674,7 +1679,7 @@ LIB_EXPORT rc_t CC KMD5FileMakeAppend ( KMD5File **fp, KFile *out, KMD5SumFmt *m
 {
     rc_t rc;
     KLogLevel lvl = klogInt;
-    
+
     if ( fp == NULL )
         rc = RC ( rcFS, rcFile, rcConstructing, rcParam, rcNull );
     else
@@ -1715,7 +1720,7 @@ LIB_EXPORT rc_t CC KMD5FileMakeAppend ( KMD5File **fp, KFile *out, KMD5SumFmt *m
                     f -> file = out;
                     f -> fmt = md5;
                     f -> type = KMD5FileTypeWrite;
-                    
+
                     rc = KMD5SumFmtAddRef ( md5 );
                     if ( rc != 0 )
                     {
@@ -1763,7 +1768,7 @@ LIB_EXPORT rc_t CC KMD5FileMakeAppend ( KMD5File **fp, KFile *out, KMD5SumFmt *m
                                 {
                                     /* errors from here are usage errors */
                                     lvl = klogErr;
-                                    
+
                                     if ( memcmp ( buffer, MD5TAG, sizeof MD5TAG ) != 0 )
                                         rc = RC ( rcFS, rcFile, rcConstructing, rcFile, rcIncorrect );
                                     else
@@ -1771,7 +1776,7 @@ LIB_EXPORT rc_t CC KMD5FileMakeAppend ( KMD5File **fp, KFile *out, KMD5SumFmt *m
                                         /* forget about the MD5 state */
                                         f -> position -= sizeof buffer;
                                         memmove ( & f -> md5, & buffer [ sizeof MD5TAG + sizeof ENDIANTAG ], sizeof f -> md5 );
-                                        
+
                                         /* check for proper byte order */
                                         if ( memcmp ( & buffer [ sizeof MD5TAG ], ENDIANTAG, sizeof ENDIANTAG ) == 0 )
                                         {
@@ -1792,7 +1797,7 @@ LIB_EXPORT rc_t CC KMD5FileMakeAppend ( KMD5File **fp, KFile *out, KMD5SumFmt *m
                                             * fp = f;
                                             return 0;
                                         }
-                                        
+
                                         /* garbage */
                                         rc = RC ( rcFS, rcFile, rcConstructing, rcFile, rcCorrupt );
                                     }
@@ -1800,19 +1805,19 @@ LIB_EXPORT rc_t CC KMD5FileMakeAppend ( KMD5File **fp, KFile *out, KMD5SumFmt *m
                             }
                         }
                     }
-                    
+
                     KMD5SumFmtRelease ( md5 );
                 }
-                
+
                 free ( f );
             }
         }
-        
+
         * fp = NULL;
     }
-    
+
     LOGERR ( lvl, rc, "append-mode MD5 file" );
-    
+
     return rc;
 }
 
@@ -1835,7 +1840,7 @@ static KFile_vt_v1 sKMD5FileReadCreate_vt =
 /* MakeReadNew
  *  creates an adapter to create MD5 checksum for a file
  *
- *  "in" [ IN ] - input file 
+ *  "in" [ IN ] - input file
  *  since this file is being wrapped by "f", ownership of
  *  the provided reference is transferred to "f"
  */
@@ -1877,7 +1882,7 @@ LIB_EXPORT rc_t CC KFileMakeNewMD5Read ( const KFile **fp,
                     f -> file = (KFile*)in;
                     f -> fmt = md5;
                     f -> type = KMD5FileTypeWrite;
-                    
+
                     memset ( & f -> u . wr, 0, sizeof f -> u . wr );
                     string_copy ( f -> u . wr . path, path_size + 1, path, path_size );
                     f -> u . wr . changed = false;
