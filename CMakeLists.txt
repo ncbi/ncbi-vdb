@@ -73,7 +73,7 @@ endif()
 add_definitions( -D_ARCH_BITS=${BITS} -D${ARCH} -Wall )
 
 if ( "${CMAKE_BUILD_TYPE}" STREQUAL "" )
-    set ( CMAKE_BUILD_TYPE "Debug" )
+    set ( CMAKE_BUILD_TYPE "Debug" CACHE STRING "" FORCE )
 endif()
 
 if ( ${CMAKE_BUILD_TYPE} STREQUAL "Debug" )

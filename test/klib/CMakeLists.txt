@@ -42,7 +42,17 @@ add_test( NAME Test_KLIB_symtab COMMAND test-klib-symtab )
 add_executable( test-klib-json test-json )
 add_test( NAME Test_KLIB_json COMMAND test-klib-json )
 
-# test-json \
-# test-base64 \
-# test-guid \
-# test-report \
+add_executable( test-klib-base64 test-base64 )
+add_test( NAME Test_KLIB_base64 COMMAND test-klib-base64 )
+
+add_executable( test-klib-guid test-guid )
+add_test( NAME Test_KLIB_guid COMMAND test-klib-guid )
+
+add_executable( test-klib-report test-report )
+add_test( NAME Test_KLIB_report COMMAND test-klib-report )
+
+add_executable( test-klib-hashfile test-hashfile )
+add_test( NAME Test_KLIB_hashfile COMMAND test-klib-hashfile )
+
+add_executable( test-klib-hashtable test-hashtable )
+add_test( NAME Test_KLIB_hashtable COMMAND test-klib-hashtable )

@@ -49,12 +49,12 @@ TEST_TOOLS = \
 	test-guid \
 	test-report \
 
+include $(TOP)/build/Makefile.env
+
 ifeq (linux,$(OS))
 TEST_TOOLS += test-hashfile
 TEST_TOOLS += test-hashtable
 endif
-
-include $(TOP)/build/Makefile.env
 
 std: $(TEST_TOOLS)
 
