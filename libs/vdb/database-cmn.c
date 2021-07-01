@@ -1432,8 +1432,8 @@ static bool validName(const String * acc, const String * file) {
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 && !rc) { rc = rc2; } obj = NULL; } while (false)
 
-LIB_EXPORT
-rc_t CC VDatabaseGetAccession(const VDatabase * self, const String ** aAcc)
+LIB_EXPORT rc_t CC VDatabaseGetAccession(const VDatabase * self,
+    const String ** aAcc, const String ** aPath)
 {
     rc_t rc = 0;
 
@@ -1468,7 +1468,10 @@ rc_t CC VDatabaseGetAccession(const VDatabase * self, const String ** aAcc)
             const char * start = NULL;
             uint32_t accLen = 0;
             String acc, file;
+            String parent; /* dir of parent file */
+            StringInit(&parent, path, l, l);
 
+            l = pathLen - fileLen - 1;
             start = string_rchr(path, l, '/'); /* find the second last '/' */
             if (start == NULL)
                 start = path;
@@ -1479,8 +1482,11 @@ rc_t CC VDatabaseGetAccession(const VDatabase * self, const String ** aAcc)
             StringInit(&acc, start, accLen, accLen);
             StringInit(&file, last + 1, fileLen, fileLen);
 
-            if (validName(&acc, &file))
+            if (validName(&acc, &file)) {
                 rc = StringCopy(aAcc, &acc);
+                if (rc == 0 && aPath != NULL)
+                    rc = StringCopy(aPath, &parent);
+            }
         }
     }
 

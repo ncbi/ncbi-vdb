@@ -2378,7 +2378,7 @@ rc_t SKVMakeObj ( const SKV ** self, const SObject * obj,
         else {
             -- num_writ;
             StringInit ( & kv -> k, p, sk, sk );
-            StringInit ( & kv -> v, p + sk + 1, num_writ, num_writ );
+            StringInit ( & kv -> v, p + sk + 1, num_writ - sk, num_writ - sk );
             * self = kv;
         }
     }
@@ -2726,8 +2726,8 @@ rc_t SRequestDataAppendObject ( SRequestData * self, const char * id,
         id_sz = string_measure ( id, NULL );
 
     StringInitCString(&accession, id);
-    app = get_accession_app(&accession, false, NULL, NULL, false, NULL,
-        NULL, -1);
+    app = get_accession_app(&accession, false, NULL, NULL, false,
+        NULL, NULL, NULL, -1);
     if (self->objects == 0)
         self->app = app;
     else if (self->app != app && (self->app == appSRA || app == appSRA))

@@ -58,6 +58,7 @@ rc_t VPathWhack ( VPath * self )
     rc_t rc = VPathRelease(self->vdbcache);
 
     StringWhack(self->accOfParentDb);
+    StringWhack(self->dirOfParentDb);
 
     KDataBufferWhack ( & self -> data );
     KRefcountWhack ( & self -> refcount, "VPath" );
@@ -4550,11 +4551,17 @@ rc_t VPathEqual ( const VPath * l, const VPath * r, int * notequal ) {
     return VPathClose ( l, r, notequal, 0 );
 }
 
-rc_t VPathSetAccOfParentDb(VPath * self, const String * acc) {
+rc_t VPathSetAccOfParentDb(
+    VPath * self, const String * acc, const String * dir)
+{
     rc_t rc = 0;
 
-    if (self != NULL && acc != NULL)
-        rc = StringCopy(&self->accOfParentDb, acc);
+    if (self != NULL) {
+        if (acc != NULL)
+            rc = StringCopy(&self->accOfParentDb, acc);
+        if (dir != NULL)
+            rc = StringCopy(&self->dirOfParentDb, dir);
+    }
 
     return rc;
 }

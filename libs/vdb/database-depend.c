@@ -265,6 +265,7 @@ typedef struct {
     VResolver* resolver;
 
     const String * dbAcc; /* accession of the database */
+    const String * dbPath; /* path to the database */
 
     const Resolved* last;
     bool hasDuplicates;
@@ -318,7 +319,7 @@ static rc_t CtxInit(Ctx* self, const VDatabase *db) {
         }
 
         if (rc == 0)
-            rc = VDatabaseGetAccession(db, &self->dbAcc);
+            rc = VDatabaseGetAccession(db, &self->dbAcc, &self->dbPath);
 
         RELEASE(VFSManager, vfsmgr);
         RELEASE(KDBManager, kmgr);
@@ -389,9 +390,8 @@ static rc_t FindRef(Ctx* ctx, const char* seqId, Resolved* resolved,
             "ncbi-acc:%s?vdb-ctx=refseq", seqId);
         rc = string_printf(ncbiAcc, sizeof ncbiAcc, &num_writ,
             "%s", seqId);
-        if (rc == 0 && num_writ > sizeof ncbiAcc) {
+        if (rc == 0 && num_writ > sizeof ncbiAcc)
             return RC(rcExe, rcFile, rcCopying, rcBuffer, rcInsufficient);
-        }
     }
 
     if (rc == 0)
@@ -404,7 +404,7 @@ static rc_t FindRef(Ctx* ctx, const char* seqId, Resolved* resolved,
             RELEASE(VFSManager, mgr);
 
             if (rc == 0)
-                rc = VPathSetAccOfParentDb(acc, ctx->dbAcc);
+                rc = VPathSetAccOfParentDb(acc, ctx->dbAcc, ctx->dbPath);
         }
     }
 
@@ -425,7 +425,7 @@ static rc_t FindRef(Ctx* ctx, const char* seqId, Resolved* resolved,
                 if (resolved->remoteRc == 0) {
                     if (rc == 0)
                         rc = VPathSetAccOfParentDb((VPath*)resolved->remoteP,
-                            ctx->dbAcc);
+                            ctx->dbAcc, ctx->dbPath);
                     if (rc == 0)
                         rc = VPathMakeString(resolved->remoteP, &resolved->remote);
                     if (rc == 0) {
@@ -472,9 +472,8 @@ static rc_t FindRef(Ctx* ctx, const char* seqId, Resolved* resolved,
 
     RELEASE(VPath, acc);
 
-    if (cacheState != -1) {
+    if (cacheState != -1)
         VResolverCacheEnable(ctx->resolver, vrAlwaysDisable);
-    }
 
     return rc;
 }
