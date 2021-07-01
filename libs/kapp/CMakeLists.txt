@@ -16,6 +16,7 @@ set( KAPP_CMN
     args-conv
     tokenizer
     log-xml
+    queue-file
 )
 
 set( KAPP_SRC
