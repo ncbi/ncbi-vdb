@@ -305,7 +305,8 @@ LIB_EXPORT bool KHashTableFind(const KHashTable* self, const void* key,
         ++triangle;
         bucket += (triangle * (triangle + 1) / 2);
 #ifdef DEBUG
-        assert((bucket & mask) != init_bucket);
+if ( (bucket & mask) == init_bucket ) printf("bucket=%lu mask=%lu bucket & mask = %lu init_bucket=%lu\n", bucket, mask, bucket & mask, init_bucket);
+        //assert((bucket & mask) != init_bucket);
 #endif
     }
 }

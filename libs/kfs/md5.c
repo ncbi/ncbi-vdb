@@ -1610,7 +1610,7 @@ LIB_EXPORT rc_t CC KMD5FileMakeWrite ( KMD5File **fp,
                     memset ( & f -> u . wr, 0, sizeof f -> u . wr );
                     string_copy(
                         f -> u . wr . path,
-                        path_size,
+                        path_size + 1,
                         path,
                         path_size );
                     f -> u . wr . changed = false;
@@ -1703,8 +1703,9 @@ LIB_EXPORT rc_t CC KMD5FileMakeAppend ( KMD5File **fp, KFile *out, KMD5SumFmt *m
             rc = RC ( rcFS, rcFile, rcConstructing, rcPath, rcEmpty );
         else
         {
+            size_t path_size = string_size ( path );
             KMD5File *f = malloc ( sizeof * f - sizeof f -> u +
-                sizeof f -> u . wr + strlen ( path ) );
+                sizeof f -> u . wr + path_size );
             if ( f == NULL )
             {
                 rc = RC ( rcFS, rcFile, rcConstructing, rcMemory, rcExhausted );
@@ -1730,7 +1731,11 @@ LIB_EXPORT rc_t CC KMD5FileMakeAppend ( KMD5File **fp, KFile *out, KMD5SumFmt *m
                     }
 
                     memset ( & f -> u . wr, 0, sizeof f -> u . wr );
-                    strcpy ( f -> u . wr . path, path );
+                    string_copy(
+                        f -> u . wr . path,
+                        path_size + 1,
+                        path,
+                        path_size );
                     f -> u . wr . changed = false;
 
                     lvl = klogSys;

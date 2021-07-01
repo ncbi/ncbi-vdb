@@ -14,8 +14,8 @@ add_executable( test-sparse-col-rd test-sparse-col )
 # add_executable( test-VDB-4156
 
 # Slow tests
-# add_executable( test-vdb-slow 
-# add_executable( test-wvdb-slow 
+# add_executable( test-vdb-slow
+# add_executable( test-wvdb-slow
 
 set( READ_LIBS
     kapp
@@ -49,5 +49,8 @@ target_compile_definitions(test-sparse-col-rd PUBLIC READ_ONLY)
 add_test( NAME Test_VDB_vdb COMMAND test-vdb WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 #add_test( NAME Test_VDB_wvdb COMMAND test-wvdb WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 add_test( NAME Test_VDB_dependencies COMMAND test-dependencies WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+
+# first run test-sparse-col-rw, which will create a database,
+# then test-sparse-col-rd, which will read the databsase,
 add_test( NAME Test_VDB_sparse_col_rw COMMAND test-sparse-col-rw WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 add_test( NAME Test_VDB_sparse_col_rd COMMAND test-sparse-col-rd WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )

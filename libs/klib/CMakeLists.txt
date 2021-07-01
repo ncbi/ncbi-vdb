@@ -40,6 +40,7 @@ endif (CMAKE_BUILD_TYPE STREQUAL "Debug")
 add_subdirectory( judy )
 
 add_library(klib STATIC
+    all-vdb-version
     base64
     bsearch
     bstpersist #TODO: bstpersist.nopt

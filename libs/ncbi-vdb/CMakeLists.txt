@@ -1,9 +1,17 @@
+if( LibXml2_FOUND  )
+    set( KXML "$<TARGET_OBJECTS:kxml>")
+    set( LIBXML2 "xml2")
+else()
+    set( KXML "")
+    set( LIBXML2 "")
+endif()
+
 set( VDB_LIB_CMN
     $<TARGET_OBJECTS:align-access>
     $<TARGET_OBJECTS:ncbi-bam>
     $<TARGET_OBJECTS:vfs>
     $<TARGET_OBJECTS:cloud>
-    $<TARGET_OBJECTS:kxml>
+    ${KXML}
     $<TARGET_OBJECTS:mbedx509>
     $<TARGET_OBJECTS:mbedtls>
     $<TARGET_OBJECTS:mbedcrypto>
@@ -67,9 +75,15 @@ add_library( ncbi-ngs-c++ STATIC
 add_library( ncbi-vdb STATIC ${VDB_LIB_RD} )
 add_library( ncbi-wvdb STATIC ${VDB_LIB_RDWR} )
 
-add_library( ncbi-vdb-shared SHARED ${VDB_LIB_RD} )
+add_library( ncbi-vdb-shared SHARED
+            ${VDB_LIB_RD}
+            $<TARGET_OBJECTS:ngs>
+            $<TARGET_OBJECTS:ngs-jni>
+            $<TARGET_OBJECTS:ngs-py>
+)
+
 set_target_properties( ncbi-vdb-shared PROPERTIES OUTPUT_NAME ncbi-vdb )
-target_link_libraries( ncbi-vdb-shared ncbi-ngs )
+target_link_libraries( ncbi-vdb-shared ncbi-ngs ${LIBXML2} )
 
 add_library( ncbi-wvdb-shared SHARED ${VDB_LIB_RDWR} )
 set_target_properties( ncbi-wvdb-shared PROPERTIES OUTPUT_NAME ncbi-wvdb )
