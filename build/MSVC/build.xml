@@ -62,6 +62,7 @@ Options:
                 <arg value="/p:NGS_OUTDIR=${Output}"/>
                 <arg value="/p:Autorun=true"/>
                 <env key="TMPDIR" path="${Output}\tmp"/>
+                <env key="VDB_CONFIG" value="${basedir}\..\..\test"/>
             </exec>
             <!-->Java/Python tests are run directly, not through msbuild</-->
 

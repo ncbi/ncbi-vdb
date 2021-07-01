@@ -35,6 +35,7 @@ include $(TOP)/build/Makefile.shell
 #
 SUBDIRS = \
 	libs \
+	vdb3 \
 
 # common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
 include $(TOP)/build/Makefile.targets
@@ -62,12 +63,12 @@ $(SUBDIRS_STD):
 # install
 #
 
-install: 
+install:
 	@ echo "Checking make status of object libraries..."
 	@ $(MAKE) -s --no-print-directory TOP=$(CURDIR) $(SUBDIRS)
 	@ $(MAKE) -s --no-print-directory TOP=$(CURDIR) -f build/Makefile.install install
 
-uninstall:    
+uninstall:
 	@ $(MAKE) -s TOP=$(CURDIR) -f build/Makefile.install uninstall
 
 .PHONY: install uninstall
