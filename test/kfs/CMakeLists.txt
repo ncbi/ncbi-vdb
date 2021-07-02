@@ -30,7 +30,7 @@ add_test( NAME Test_KFS_cachetee2 COMMAND test-kfs-cachetee2 )
 
 add_executable( test-kfs-cachetee3 cachetee3test )
 target_link_libraries( test-kfs-cachetee3  ${COMMON_LIBS_READ} )
-add_test( NAME Test_KFS_cachetee3 COMMAND  test-kfs-cachetee3 )
+add_test( NAME SlowTest_KFS_cachetee3 COMMAND  test-kfs-cachetee3 )
 
 add_executable( test-kfs-lru-cache lru_cache_test )
 target_link_libraries( test-kfs-lru-cache  ${COMMON_LIBS_READ} )

@@ -1,22 +1,12 @@
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test-bin )
+
 add_subdirectory(kfc)
 
-set( COMMON_LIBS_READ
-    kapp
-    ktst
-    ncbi-vdb
-    dl
-    pthread
-)
+link_libraries( ktst kapp )
 
-set( COMMON_LIBS_WRITE
-    kapp
-    ktst
-    ncbi-wvdb
-    dl
-    pthread
-)
-
-#link_libraries( ktst kapp pthread )
+# for the tests that link against libncbi-[w]vdb
+set( COMMON_LIBS_READ   ncbi-vdb  dl pthread )
+set( COMMON_LIBS_WRITE  ncbi-wvdb dl pthread )
 
 add_subdirectory(ktst)
 add_subdirectory(cc)
@@ -25,7 +15,7 @@ add_subdirectory(judy_test)
 add_subdirectory(kfs)
 add_subdirectory(klib)
 add_subdirectory(kfg)
-#add_subdirectory(kapp) # TODO: undefined reference to `KFileMakeBzip2ForRead' in kfs
+add_subdirectory(kapp) 
 add_subdirectory(cloud)
 add_subdirectory(kdb)
 add_subdirectory(kproc)

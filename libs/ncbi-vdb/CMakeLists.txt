@@ -1,3 +1,9 @@
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+    CACHE PATH "Output directory for static libraries.")
+
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+    CACHE PATH "Output directory for shared libraries.")
+
 if( LibXml2_FOUND  )
     set( KXML "$<TARGET_OBJECTS:kxml>")
     set( LIBXML2 "xml2")
@@ -87,4 +93,3 @@ target_link_libraries( ncbi-vdb-shared ncbi-ngs ${LIBXML2} )
 
 add_library( ncbi-wvdb-shared SHARED ${VDB_LIB_RDWR} )
 set_target_properties( ncbi-wvdb-shared PROPERTIES OUTPUT_NAME ncbi-wvdb )
-

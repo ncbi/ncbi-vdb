@@ -46,7 +46,7 @@ add_test( NAME Test_KLIB_vnamelist COMMAND test-klib-vnamelist )
 
 add_executable( test-klib-progressbar test-progress )
 target_link_libraries( test-klib-progressbar  ${COMMON_LIBS_READ} )
-add_test( NAME Test_KLIB_progressbar COMMAND test-klib-progressbar )
+add_test( NAME SlowTest_KLIB_progressbar COMMAND test-klib-progressbar )
 
 add_executable( test-klib-symtab test-symtab )
 target_link_libraries( test-klib-symtab  ${COMMON_LIBS_READ} )
@@ -70,8 +70,9 @@ add_test( NAME Test_KLIB_report COMMAND test-klib-report )
 
 add_executable( test-klib-hashfile test-hashfile )
 target_link_libraries( test-klib-hashfile  ${COMMON_LIBS_READ} )
-add_test( NAME Test_KLIB_hashfile COMMAND test-klib-hashfile )
+add_test( NAME SlowTest_KLIB_hashfile COMMAND test-klib-hashfile )
 
+ #TODO: fix assert in Klib_HashTableMapDeletes (currently commented out in hashtable.c)
 add_executable( test-klib-hashtable test-hashtable )
 target_link_libraries( test-klib-hashtable  ${COMMON_LIBS_READ} )
 add_test( NAME Test_KLIB_hashtable COMMAND test-klib-hashtable )

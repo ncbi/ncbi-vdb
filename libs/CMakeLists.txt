@@ -1,9 +1,10 @@
 set( CMAKE_POSITION_INDEPENDENT_CODE True )
 add_compile_definitions( _LIBRARY )
 
-# TODO: INT_LIBS/EXT_LIBS
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/ilib )
+
 add_subdirectory(ktst)
-add_subdirectory(align) 
+add_subdirectory(align)
 add_subdirectory(ascp)
 add_subdirectory(axf) # sra tools dependency
 add_subdirectory(blast)
@@ -14,13 +15,13 @@ add_subdirectory(hdf5)
 add_subdirectory(kapp)
 add_subdirectory(kdb)
 add_subdirectory(kfc)
-add_subdirectory(kfg) 
+add_subdirectory(kfg)
 add_subdirectory(kfs)
-add_subdirectory(klib) # TODO: Judy is not ready
-add_subdirectory(kns) 
+add_subdirectory(klib)
+add_subdirectory(kns)
 add_subdirectory(kproc)
 add_subdirectory(krypto) # TODO: to be replaced with calls to mbedtls
-add_subdirectory(kxml) # TODO: includes
+add_subdirectory(kxml)
 add_subdirectory(loader)
 add_subdirectory(ngs)
 add_subdirectory(ngs-c++)
