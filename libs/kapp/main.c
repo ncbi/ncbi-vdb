@@ -501,7 +501,11 @@ rc_t KMane ( int argc, char *argv [] )
 
             }
             {
-                rc_t r2 = KNSManagerRelease ( kns );
+                rc_t r2 = 0;
+                if ( kns != NULL )
+                    r2 = KNSManagerRelease ( kns );
+                else
+                    r2 = KNSManagerSetUserAgent ( kns, NULL );
                 if ( rc == 0 && r2 != 0 )
                     rc = r2;
                 kns = NULL;

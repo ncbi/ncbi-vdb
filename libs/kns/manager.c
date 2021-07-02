@@ -195,8 +195,6 @@ LIB_EXPORT rc_t CC KNSManagerRelease ( const KNSManager *self )
             return RC ( rcNS, rcMgr, rcAttaching, rcRefcount, rcInvalid );
         }
     }
-    else
-         return KDataBufferWhack(&kns_manager_user_agent);
     return 0;
 }
 
@@ -1073,6 +1071,7 @@ LIB_EXPORT rc_t CC KNSManagerMakeConfig ( KNSManager **mgrp, KConfig *kfg )
     return KNSManagerMakeLocal ( mgrp, kfg );
 }
 
+/* If fmt == NULL -> release kns_manager_user_agent */
 LIB_EXPORT rc_t CC KNSManagerSetUserAgent (
     KNSManager *self, const char *fmt, ... )
 {
@@ -1084,8 +1083,7 @@ LIB_EXPORT rc_t CC KNSManagerSetUserAgent (
 
     rc_t rc = 0;
     if ( fmt == NULL ) {
-        rc = RC ( rcNS, rcMgr, rcUpdating, rcParam, rcNull );
-        return rc;
+        return KDataBufferWhack ( &kns_manager_user_agent );
     }
 
     KDataBufferResize ( &kns_manager_user_agent, 0 );
