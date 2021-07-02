@@ -1,18 +1,34 @@
 add_subdirectory(kfc)
 
-link_libraries( ktst kapp pthread )
+set( COMMON_LIBS_READ
+    kapp
+    ktst
+    ncbi-vdb
+    dl
+    pthread
+)
 
-# add_subdirectory(ktst)
-# add_subdirectory(cc)
-# add_subdirectory(ext)
-# add_subdirectory(judy_test)
-# add_subdirectory(kfs)
-# add_subdirectory(klib)
-#add_subdirectory(kfg)
-# add_subdirectory(kapp)
-# add_subdirectory(cloud)
-#add_subdirectory(kdb)
-#add_subdirectory(kproc)
+set( COMMON_LIBS_WRITE
+    kapp
+    ktst
+    ncbi-wvdb
+    dl
+    pthread
+)
+
+#link_libraries( ktst kapp pthread )
+
+add_subdirectory(ktst)
+add_subdirectory(cc)
+add_subdirectory(ext)
+add_subdirectory(judy_test)
+add_subdirectory(kfs)
+add_subdirectory(klib)
+add_subdirectory(kfg)
+#add_subdirectory(kapp) # TODO: undefined reference to `KFileMakeBzip2ForRead' in kfs
+add_subdirectory(cloud)
+add_subdirectory(kdb)
+add_subdirectory(kproc)
 add_subdirectory(vdb)
 # add_subdirectory(search)
 # add_subdirectory(sraxf)

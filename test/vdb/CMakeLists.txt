@@ -17,30 +17,17 @@ add_executable( test-sparse-col-rd test-sparse-col )
 # add_executable( test-vdb-slow
 # add_executable( test-wvdb-slow
 
-set( READ_LIBS
-    kapp
-    ktst
-    ncbi-vdb
-    dl
-)
-
-set( WRITE_LIBS
-    kapp
-    ktst
-    ncbi-wvdb
-    dl
-)
 
 # TODO: make sure runs are not cached in the user repository when running tests
 
 add_definitions (-D__mod__="test/vdb")
 
 # TODO: link problems
-target_link_libraries( test-vdb  ${READ_LIBS} )
-#target_link_libraries( test-wvdb  ${WRITE_LIBS} )
-target_link_libraries( test-dependencies  ${READ_LIBS} )
-target_link_libraries( test-sparse-col-rw  ${WRITE_LIBS} )
-target_link_libraries( test-sparse-col-rd  ${READ_LIBS} )
+target_link_libraries( test-vdb  ${COMMON_LIBS_READ} )
+#target_link_libraries( test-wvdb  ${COMMON_LIBS_WRITE} )
+target_link_libraries( test-dependencies  ${COMMON_LIBS_READ} )
+target_link_libraries( test-sparse-col-rw  ${COMMON_LIBS_WRITE} )
+target_link_libraries( test-sparse-col-rd  ${COMMON_LIBS_READ} )
 
 target_compile_definitions(test-sparse-col-rd PUBLIC READ_ONLY)
 

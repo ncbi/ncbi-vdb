@@ -9,9 +9,9 @@ add_definitions (-D__mod__="test/kdb")
 
 # TODO: link problems
 #target_link_libraries( test-btree ncbi-vdb )
-target_link_libraries( test-rowset ncbi-wvdb dl )
-target_link_libraries( test-kdb ncbi-vdb dl )
-target_link_libraries( test-wkdb ncbi-wvdb dl )
+target_link_libraries( test-rowset ${COMMON_LIBS_WRITE} )
+target_link_libraries( test-kdb ${COMMON_LIBS_READ} )
+target_link_libraries( test-wkdb ${COMMON_LIBS_WRITE} )
 
 #add_test( NAME Test_KDB_Btree COMMAND test-btree WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 add_test( NAME Test_KDB_Rowset COMMAND test-rowset WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )

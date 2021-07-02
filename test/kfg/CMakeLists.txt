@@ -7,20 +7,14 @@ add_executable( test-properties kfg-fixture propertiestest )
 
 # TODO: fuzz test
 
-set( TEST_LIB
-    ktst
-    kapp
-    ncbi-vdb
-)
-
 add_definitions (-D__mod__="test/kfg")
 
-#target_link_libraries( ncbi-home-from-env ${TEST_LIB} )
-# target_link_libraries( wb-test-kfg ${TEST_LIB} )
-# target_link_libraries( test-kfg ${TEST_LIB} )
-# target_link_libraries( test-repository ${TEST_LIB} )
-# target_link_libraries( test-keystore ${TEST_LIB} )
-# target_link_libraries( test-properties ${TEST_LIB} )
+#target_link_libraries( ncbi-home-from-env ${COMMON_LIBS_READ} )
+target_link_libraries( wb-test-kfg ${COMMON_LIBS_READ} )
+target_link_libraries( test-kfg ${COMMON_LIBS_READ} )
+target_link_libraries( test-repository ${COMMON_LIBS_READ} )
+target_link_libraries( test-keystore ${COMMON_LIBS_READ} )
+target_link_libraries( test-properties ${COMMON_LIBS_READ} )
 
 #add_test( NAME Test_KFG_NCBI_Env COMMAND ncbi-home-from-env )
 add_test( NAME Test_KFG_Wb_test_kfg COMMAND wb-test-kfg )
