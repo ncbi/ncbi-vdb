@@ -33,7 +33,7 @@ cmake:
 	+ make -C $(TARGDIR)/vdb3 -j$(MAKE_JOBS)
 
 clean: stdclean
-	@ if [ -d $(TARGDIR)/vdb3 ] ; then make -C $(TARGDIR)/vdb3 clean; -rm -rf $(TARGDIR)/vdb3; fi
+	@ if [ -d $(TARGDIR)/vdb3 ] ; then make -C $(TARGDIR)/vdb3 clean; rm -rf $(TARGDIR)/vdb3; fi
 
 ctest: cmake
 	cd $(TARGDIR)/vdb3; ctest $(CMAKEFLAGS) $(CTESTARGS) --verbose
