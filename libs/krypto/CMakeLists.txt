@@ -15,7 +15,7 @@ set_source_files_properties( cipher-no-vec.vec no-null-ncbi.vec PROPERTIES COMPI
 set_source_files_properties( cipher-no-vec.vecreg no-null-ncbi.vecreg PROPERTIES COMPILE_FLAGS -DUSEVECREG )
 set_source_files_properties( cipher-no-vec.aes-ni no-null-ncbi.aes-ni PROPERTIES COMPILE_FLAGS -DUSEAESNI )
 
-add_library(krypto STATIC
+set( LIB_SRC
     ciphermgr
     wgaencrypt
     encfile
@@ -34,7 +34,18 @@ add_library(krypto STATIC
     no-null-ncbi.vecreg
     cipher-no-vec.aes-ni
     no-null-ncbi.aes-ni
+)
+
+set( TEST_LIB_SRC
+    testcipher
+    
+)
+
+add_library(krypto STATIC
+    ${LIB_SRC}
     #${OS_SPECIFIC_SRC}
 )
+
+add_library( kryptotest STATIC ${TEST_LIB_SRC} )
 
 add_definitions (-D__mod__="libs/krypto")
