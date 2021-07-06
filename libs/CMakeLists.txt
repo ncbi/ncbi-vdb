@@ -1,8 +1,6 @@
 set( CMAKE_POSITION_INDEPENDENT_CODE True )
 add_compile_definitions( _LIBRARY )
 
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/ilib )
-
 add_subdirectory(ktst)
 add_subdirectory(align)
 add_subdirectory(ascp)

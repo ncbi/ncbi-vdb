@@ -77,8 +77,10 @@ if ( "${CMAKE_BUILD_TYPE}" STREQUAL "" )
 endif()
 
 if ( ${CMAKE_BUILD_TYPE} STREQUAL "Debug" )
+    message("DEBUG mode")
     add_compile_definitions( DEBUG _DEBUGGING )
 else()
+    message("RELEASE mode")
     add_compile_definitions( NDEBUG )
 endif()
 
@@ -116,23 +118,23 @@ find_package(BISON) #TODO: specify minimal version
 find_package(LibXml2)
 
 # Build artefact locations
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
-    CACHE PATH "Output directory for static libraries.")
-
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
-    CACHE PATH "Output directory for shared libraries.")
-
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
-    CACHE PATH "Output directory for executables.")
+set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/ilib )
+set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib )
+set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin )
+file(MAKE_DIRECTORY
+    ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}
+    ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
+    ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+)
 
 # testing
 enable_testing()
 
 add_subdirectory(libs)
 add_subdirectory(test)
+add_subdirectory(vdb3)
 
 # documentation
 find_package(Doxygen)
 # set DOXYGEN_* variables here
 doxygen_add_docs(docs interfaces)
-

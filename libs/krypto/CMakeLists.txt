@@ -6,7 +6,7 @@ elseif ( "win" STREQUAL ${OS} )
     set (OS_SPECIFIC_SRC win/sysrng.c)
 endif()
 
-message("TEST KRYPTO")
+#message("TEST KRYPTO")
 
 #try_compile( TEST_RESULT "${CMAKE_CURRENT_SOURCE_DIR}/compile-test" compile-test.c )
 #add_library( krypto STATIC compile-test.c )

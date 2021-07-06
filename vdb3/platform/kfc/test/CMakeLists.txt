@@ -1,12 +1,12 @@
-set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_TEST_OUTPUT_DIRECTORY})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test-bin )
 include_directories( .. )
 add_definitions( -DTESTING )
 
 # gtest white box tests
 function( test stem )
-    add_executable ( test-kfc-${stem} ${stem}-tst.cpp ../strerror_r.c)
-    target_link_libraries ( test-kfc-${stem} gtest kfc3 ${LQUADMATH} )
-    add_test ( NAME Kfc-${stem}-Test COMMAND test-kfc-${stem} )
+    add_executable ( test-kfc3-${stem} ${stem}-tst.cpp ../strerror_r.c)
+    target_link_libraries ( test-kfc3-${stem} gtest kfc3 ${LQUADMATH} )
+    add_test ( NAME Test_KFC3_${stem} COMMAND test-kfc3-${stem} )
 endfunction()
 
 test ( ascii )
@@ -32,4 +32,3 @@ test ( xbt )
 test ( xp )
 test ( z128 )
 test ( zigzag )
-

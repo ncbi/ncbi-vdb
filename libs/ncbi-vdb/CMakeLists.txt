@@ -75,10 +75,9 @@ add_library( ncbi-ngs-c++ STATIC
     $<TARGET_OBJECTS:ngs-c++>
 )
 
-# TODO: add_library ncbi-ngs-c++
-
-
 add_library( ncbi-vdb STATIC ${VDB_LIB_RD} )
+set_target_properties( ncbi-vdb PROPERTIES LIBRARY_ARCHIVE_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )
+
 add_library( ncbi-wvdb STATIC ${VDB_LIB_RDWR} )
 
 add_library( ncbi-vdb-shared SHARED

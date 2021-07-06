@@ -1,11 +1,11 @@
-set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_TEST_OUTPUT_DIRECTORY})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test-bin )
 include_directories( .. )
 add_definitions( -DTESTING )
 
 function( test stem )
-    add_executable ( test-cmn-${stem} ${stem}-tst.cpp )
-    target_link_libraries ( test-cmn-${stem} gtest kfc3 utf8proc ${LQUADMATH} )
-    add_test ( NAME Cmn-${stem}-Test COMMAND test-cmn-${stem} )
+    add_executable ( test-cmn3-${stem} ${stem}-tst.cpp )
+    target_link_libraries ( test-cmn3-${stem} gtest kfc3 utf8proc ${LQUADMATH} )
+    add_test ( NAME Test_CMN3_${stem} COMMAND test-cmn3-${stem} )
 endfunction()
 
 # gtest white box tests
