@@ -7,7 +7,6 @@ add_executable( test-rowset rowsettest )
 
 add_definitions (-D__mod__="test/kdb")
 
-# TODO: link problems
 #target_link_libraries( test-btree ncbi-vdb )
 target_link_libraries( test-rowset ${COMMON_LIBS_WRITE} )
 target_link_libraries( test-kdb ${COMMON_LIBS_READ} )

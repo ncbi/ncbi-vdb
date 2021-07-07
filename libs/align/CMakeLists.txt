@@ -63,8 +63,6 @@ add_library ( align-access STATIC ${ALIGN_ACCESS_SRC})
 add_library ( sam-extract STATIC ${SAM_EXTRACT_SRC})
 add_library ( align-reader STATIC ${ALIGN_READER_SRC})
 
-# TODO: flex & bison
-
 add_definitions (-D__mod__="libs/align")
 #add_definitions (-D_ARCH_BITS=${BITS})
 

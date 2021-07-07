@@ -6,7 +6,6 @@ add_executable( test-cloud test-cloud )
 
 add_definitions (-D__mod__="test/cloud")
 
-# TODO: fails to link with kapp
 target_link_libraries( test-aws ${COMMON_LIBS_READ} )
 target_link_libraries( test-gcp ${COMMON_LIBS_READ} )
 target_link_libraries( test-cloud ${COMMON_LIBS_READ} )
