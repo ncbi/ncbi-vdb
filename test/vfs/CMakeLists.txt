@@ -8,7 +8,7 @@ add_executable( test-log-names-error test-log-names-error )
 target_link_libraries( test-log-names-error ${COMMON_LIBS_READ} )
 add_test( NAME Test_VFS_log-names-error COMMAND test-log-names-error WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 
-add_executable( test-redirect-rejected-names-cgi-http-to-https redirect-rejected-names-cgi-http-to-https )
+add_executable( test-redirect-rejected-names-cgi-http-to-https redirect-rejected-names-cgi-http-to-https.cpp )
 target_link_libraries( test-redirect-rejected-names-cgi-http-to-https ${COMMON_LIBS_READ} )
 add_test( NAME Test_VFS_redirect-rejected-names-cgi-http-to-https COMMAND test-redirect-rejected-names-cgi-http-to-https WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 
