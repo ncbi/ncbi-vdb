@@ -1,6 +1,17 @@
 cmake_minimum_required(VERSION 3.16)
 project(ncbi-vdb)
 
+include( ${CMAKE_CURRENT_SOURCE_DIR}/build/common.cmake )
+
+# version, taken from the source by default
+if ( "${VERSION}" STREQUAL "" )
+    set( VERSION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/libs/ncbi-vdb/libncbi-vdb.vers")
+    file( READ ${VERSION_FILE} VERSION )
+    string( STRIP ${VERSION} VERSION )
+endif()
+message( VERSION=${VERSION} )
+set( MAJVERS 2 )
+
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -77,12 +88,11 @@ if ( "${CMAKE_BUILD_TYPE}" STREQUAL "" )
 endif()
 
 if ( ${CMAKE_BUILD_TYPE} STREQUAL "Debug" )
-    message("DEBUG mode")
     add_compile_definitions( DEBUG _DEBUGGING )
 else()
-    message("RELEASE mode")
     add_compile_definitions( NDEBUG )
 endif()
+message("CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
 
 #message( "OS=" ${OS} " ARCH=" ${ARCH} " CXX=" ${CMAKE_CXX_COMPILER} " LMCHECK=" ${LMCHECK} " BITS=" ${BITS} " CMAKE_C_COMPILER_ID=" ${CMAKE_C_COMPILER_ID} " CMAKE_CXX_COMPILER_ID=" ${CMAKE_CXX_COMPILER_ID} )
 
@@ -107,7 +117,7 @@ elseif( "windows" STREQUAL ${OS} )
     include_directories(interfaces/os/win)
 endif()
 
-#
+#TODO: plug in proper variable og tthe location of NGS-SDK
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/../ngs/ngs-sdk )
 
 # Flex/Bison

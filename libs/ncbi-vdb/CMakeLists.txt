@@ -1,8 +1,5 @@
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
-    CACHE PATH "Output directory for static libraries.")
-
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
-    CACHE PATH "Output directory for shared libraries.")
+# all static libraries in this directory are published
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
 if( LibXml2_FOUND  )
     set( KXML "$<TARGET_OBJECTS:kxml>")
@@ -70,25 +67,27 @@ add_library( ncbi-ngs STATIC
     $<TARGET_OBJECTS:ngs-jni>
     $<TARGET_OBJECTS:ngs-py>
 )
+ExportStatic( ncbi-ngs )
 
 add_library( ncbi-ngs-c++ STATIC
     $<TARGET_OBJECTS:ngs-c++>
 )
+ExportStatic( ncbi-ngs-c++ )
 
 add_library( ncbi-vdb STATIC ${VDB_LIB_RD} )
-set_target_properties( ncbi-vdb PROPERTIES LIBRARY_ARCHIVE_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )
-
-add_library( ncbi-wvdb STATIC ${VDB_LIB_RDWR} )
-
+ExportStatic( ncbi-vdb )
+# here, creating the shared version is a bit trickier than just calling ExportShared
 add_library( ncbi-vdb-shared SHARED
             ${VDB_LIB_RD}
             $<TARGET_OBJECTS:ngs>
             $<TARGET_OBJECTS:ngs-jni>
             $<TARGET_OBJECTS:ngs-py>
 )
-
 set_target_properties( ncbi-vdb-shared PROPERTIES OUTPUT_NAME ncbi-vdb )
 target_link_libraries( ncbi-vdb-shared ncbi-ngs ${LIBXML2} )
+MakeLinksShared( ncbi-vdb-shared ncbi-vdb )
 
-add_library( ncbi-wvdb-shared SHARED ${VDB_LIB_RDWR} )
-set_target_properties( ncbi-wvdb-shared PROPERTIES OUTPUT_NAME ncbi-wvdb )
+add_library( ncbi-wvdb STATIC ${VDB_LIB_RDWR} )
+ExportStatic( ncbi-wvdb )
+ExportShared( ncbi-wvdb )
+
