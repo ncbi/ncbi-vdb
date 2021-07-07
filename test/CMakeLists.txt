@@ -28,8 +28,8 @@ add_subdirectory(krypto)
 # add_subdirectory(cipher)
 # add_subdirectory(ncbi-vdb)
 # add_subdirectory(ngs-python)
-add_subdirectory(kns) # TODO: Test_KNS_mutual-authentication, Test_KNS_proxy, Test_KNS_proxy-with-env are failing
-add_subdirectory(schema) # TODO: port difftest options from the Makefile to cmake
-add_subdirectory(vfs) # TODO: http test doesn't link properly
+add_subdirectory(kns) # TODO: EXT_TOOLS - see the kns CMakeLists.txt for the details
+add_subdirectory(schema) # TODO: INT_TOOLS - see the schema CMakeLists.txt for the details
+add_subdirectory(vfs)
 #add_subdirectory(ngs-java)
 # add_subdirectory(install)

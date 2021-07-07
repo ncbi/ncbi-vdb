@@ -52,18 +52,20 @@ add_executable( test-timeouts test-timeouts )
 target_link_libraries( test-timeouts ${COMMON_LIBS_READ} )
 add_test( NAME Test_KNS_timeouts COMMAND test-timeouts WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 
+# TODO the following binaries are not unit tests (EXT_TOOLS), they should be started not as ctest
+
 add_executable( test-mutual-authentication test-mutual-authentication gosha )
 target_link_libraries( test-mutual-authentication ${COMMON_LIBS_READ} )
-add_test( NAME Test_KNS_mutual-authentication COMMAND test-mutual-authentication WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+# add_test( NAME Test_KNS_mutual-authentication COMMAND test-mutual-authentication WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 
 add_executable( test-proxy test-proxy http-client )
 target_link_libraries( test-proxy ${COMMON_LIBS_READ} )
-add_test( NAME Test_KNS_proxy COMMAND test-proxy WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+# add_test( NAME Test_KNS_proxy COMMAND test-proxy WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 
 add_executable( test-proxy-with-env test-proxy-with-env http-client )
 target_link_libraries( test-proxy-with-env ${COMMON_LIBS_READ} )
-add_test( NAME Test_KNS_proxy-with-env COMMAND test-proxy-with-env WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+# add_test( NAME Test_KNS_proxy-with-env COMMAND test-proxy-with-env WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 
 add_executable( test-proxy-with-scheme test-proxy-with-scheme )
 target_link_libraries( test-proxy-with-scheme ${COMMON_LIBS_READ} )
-add_test( NAME Test_KNS_proxy-with-scheme COMMAND test-proxy-with-scheme WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+# add_test( NAME Test_KNS_proxy-with-scheme COMMAND test-proxy-with-scheme WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
