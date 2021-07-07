@@ -24,11 +24,6 @@ set( KAPP_SRC
     ${KAPP_CMN}
 )
 
-# set( KAPPR_SRC
-    # main-norsrc
-    # ${KAPP_CMN}
-# )
-
 set( LOADLIB_SRC
     progressbar
     loader-file
@@ -36,7 +31,10 @@ set( LOADLIB_SRC
 )
 
 add_library( kapp STATIC ${KAPP_SRC} ${OS_SPECIFIC_SRC} )
-#add_library( kapp-norsrc STATIC ${KAPPR_SRC} ${OS_SPECIFIC_SRC} )
+
+add_library( kapp-norsrc STATIC ${KAPPR_SRC} ${OS_SPECIFIC_SRC} )
+target_compile_definitions(kapp-norsrc PRIVATE NO_KRSRC=1)
+
 add_library( load STATIC ${LOADLIB_SRC} )
 
 add_definitions (-D__mod__="libs/kapp")

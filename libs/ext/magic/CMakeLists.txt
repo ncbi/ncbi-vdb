@@ -1,4 +1,4 @@
-add_library ( magic STATIC
+add_library ( magic-static STATIC
     magic
     apprentice
     softmagic
