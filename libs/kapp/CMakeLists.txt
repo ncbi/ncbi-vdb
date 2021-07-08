@@ -3,7 +3,7 @@ set ( LINUX_SRC ${UNIX_SRC} linux/ram.c )
 set ( MAC_SRC ${UNIX_SRC} mac/ram.c )
 set ( WIN_SRC win/args-conv-os.c win/ram.c win/sysmain.c )
 
-if ( "win" STREQUAL ${OS} )
+if ( "windows" STREQUAL ${OS} )
     set ( OS_SPECIFIC_SRC ${WIN_SRC} )
 elseif( "linux" STREQUAL ${OS} )
     set ( OS_SPECIFIC_SRC ${LINUX_SRC} )

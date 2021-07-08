@@ -27,10 +27,10 @@
 #ifndef _h_klib_hashfile_
 #define _h_klib_hashfile_
 
-#include <kfs/file.h>
 #include <klib/defs.h>
 #include <klib/extern.h>
 #include <klib/rc.h>
+#include <kfs/file.h>
 #include <sys/types.h>
 
 #ifdef __cplusplus

@@ -26,10 +26,10 @@
 #include <arch-impl.h>
 #include <assert.h>
 #include <atomic.h>
-#include <kfs/mmap.h>
 #include <klib/hashfile.h>
 #include <klib/rc.h>
 #include <klib/vector.h>
+#include <kfs/mmap.h>
 #include <kproc/lock.h>
 #include <stdbool.h>
 #include <stdio.h>
