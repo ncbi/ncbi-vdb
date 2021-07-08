@@ -10,7 +10,7 @@ if ( "${VERSION}" STREQUAL "" )
     string( STRIP ${VERSION} VERSION )
 endif()
 message( VERSION=${VERSION} )
-set( MAJVERS 2 )
+string( REGEX MATCH "^[0-9]+" MAJVERS ${VERSION} )
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
