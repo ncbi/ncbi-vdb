@@ -2,7 +2,7 @@ add_definitions (-D__mod__="test/krypto")
 
 add_executable( test-cipher-speed test-cipher-speed )
 target_link_libraries( test-cipher-speed kryptotest ${COMMON_LIBS_READ} )
-add_test( NAME SlowTest_KRYPTO_cipher_speed COMMAND test-cipher-speed WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+add_test( NAME SlowTest_KRYPTO_cipher_speed COMMAND test-cipher-speed -t 10 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 
 add_executable( test-modes test-modes )
 target_link_libraries( test-modes ${COMMON_LIBS_READ} )
