@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 project(ncbi-vdb)
 
+message( CMAKE_BINARY_DIR: ${CMAKE_BINARY_DIR} )
+
 include( ${CMAKE_CURRENT_SOURCE_DIR}/build/common.cmake )
 
 # version, taken from the source by default
@@ -135,9 +137,15 @@ find_package(BISON) #TODO: specify minimal version
 find_package(LibXml2)
 
 # Build artefact locations
+if( NOT DEFINED CMAKE_ARCHIVE_OUTPUT_DIRECTORY)
 set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/ilib )
+endif()
+if( NOT DEFINED CMAKE_LIBRARY_OUTPUT_DIRECTORY)
 set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib )
+endif()
+if( NOT DEFINED CMAKE_RUNTIME_OUTPUT_DIRECTORY)
 set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin )
+endif()
 file(MAKE_DIRECTORY
     ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}
     ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}

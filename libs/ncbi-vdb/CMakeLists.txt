@@ -69,10 +69,24 @@ add_library( ncbi-ngs STATIC
 )
 ExportStatic( ncbi-ngs )
 
-add_library( ncbi-ngs-c++ STATIC
-    $<TARGET_OBJECTS:ngs-c++>
-)
-ExportStatic( ncbi-ngs-c++ )
+# set( NCBI_NGS_CPP ncbi-ngs-c++)
+# add_library( ${NCBI_NGS_CPP}-exported STATIC
+    # $<TARGET_OBJECTS:ncbi-ngs-c++>
+# )
+#ExportStatic( ncbi-ngs-c++ )
+# the output goes to .../lib
+# set_target_properties( ${NCBI_NGS_CPP}-exported PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )
+# # make the output name versioned, create all symlinks
+# add_custom_command(TARGET ${NCBI_NGS_CPP}-exported
+    # POST_BUILD
+    # COMMAND rm -f lib${NCBI_NGS_CPP}.a.${VERSION}
+    # COMMAND mv ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/lib${NCBI_NGS_CPP}-exported.a lib${NCBI_NGS_CPP}.a.${VERSION}
+    # COMMAND ln -f -s lib${NCBI_NGS_CPP}.a.${VERSION} lib${NCBI_NGS_CPP}.a.${MAJVERS}
+    # COMMAND ln -f -s lib${NCBI_NGS_CPP}.a.${MAJVERS} lib${NCBI_NGS_CPP}.a
+    # COMMAND ln -f -s lib${NCBI_NGS_CPP}.a lib${NCBI_NGS_CPP}-static.a
+    # WORKING_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
+# )
+
 
 add_library( ncbi-vdb STATIC ${VDB_LIB_RD} )
 ExportStatic( ncbi-vdb )

@@ -16,7 +16,6 @@ set( KAPP_CMN
     args-conv
     tokenizer
     log-xml
-    queue-file
 )
 
 set( KAPP_SRC
@@ -28,6 +27,7 @@ set( LOADLIB_SRC
     progressbar
     loader-file
     loader-meta
+    queue-file
 )
 
 add_library( kapp STATIC ${KAPP_SRC} ${OS_SPECIFIC_SRC} )
