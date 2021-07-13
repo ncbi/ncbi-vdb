@@ -22,41 +22,7 @@
 #
 # ===========================================================================
 
-default: runtests
-
 TOP ?= $(abspath ../../..)
-
 MODULE = test/ext/zstd
 
-TEST_TOOLS = \
-	test-zstd \
-
 include $(TOP)/build/Makefile.env
-
-$(TEST_TOOLS): makedirs
-	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
-
-.PHONY: $(TEST_TOOLS)
-
-clean: stdclean
-
-#-------------------------------------------------------------------------------
-# zstd
-#
-ZSTD_SRC = \
-	test-zstd
-
-ZSTD_OBJ = \
-	$(addsuffix .$(OBJX),$(ZSTD_SRC))
-
-ZSTD_LIBS = \
-    -skapp \
-    -sktst \
-	-sncbi-wvdb \
-	-sm
-
-$(TEST_BINDIR)/test-zstd: $(ZSTD_OBJ)
-	$(LP) --exe -o $@ $^ $(ZSTD_LIBS)
-
-zstd: test-zstd
-	$(TEST_BINDIR)/test-zstd

@@ -22,41 +22,7 @@
 #
 # ===========================================================================
 
-default: runtests
-
 TOP ?= $(abspath ../../..)
-
 MODULE = test/ext/bzip2
 
-TEST_TOOLS = \
-	test-bzip2 \
-
 include $(TOP)/build/Makefile.env
-
-$(TEST_TOOLS): makedirs
-	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
-
-.PHONY: $(TEST_TOOLS)
-
-clean: stdclean
-
-#-------------------------------------------------------------------------------
-# bzip2
-#
-BZIP2_SRC = \
-	test-bzip2
-
-BZIP2_OBJ = \
-	$(addsuffix .$(OBJX),$(BZIP2_SRC))
-
-BZIP2_LIBS = \
-    -skapp \
-    -sktst \
-	-sncbi-wvdb \
-	-sm
-
-$(TEST_BINDIR)/test-bzip2: $(BZIP2_OBJ)
-	$(LP) --exe -o $@ $^ $(BZIP2_LIBS)
-
-bzip: test-bzip2
-	$(TEST_BINDIR)/test-bzip2

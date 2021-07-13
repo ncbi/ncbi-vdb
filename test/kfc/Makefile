@@ -22,36 +22,7 @@
 #
 # ===========================================================================
 
-
-default: runtests
-
 TOP ?= $(abspath ../..)
 MODULE = test/kfc
 
-TEST_TOOLS = \
-	test-except
-
 include $(TOP)/build/Makefile.env
-
-$(TEST_TOOLS): makedirs
-	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
-
-.PHONY: $(ALL_LIBS) $(TEST_TOOLS)
-
-clean: stdclean
-
-#-------------------------------------------------------------------------------
-# white-box test
-#
-TEST_SRC = \
-	test-except \
-	kfc \
-    
-TEST_OBJ = \
-	$(addsuffix .$(OBJX),$(TEST_SRC))
-
-TEST_LIB = \
-	-sklib
-
-$(TEST_BINDIR)/test-except: $(TEST_OBJ)
-	$(LD) --exe -o $@ $^ $(TEST_LIB)

@@ -22,39 +22,7 @@
 #
 # ===========================================================================
 
-default: runtests
-
 TOP ?= $(abspath ../..)
-
 MODULE = test/ktst
 
-TEST_TOOLS = \
-	test-ktst
-
 include $(TOP)/build/Makefile.env
-
-$(TEST_TOOLS): makedirs
-	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
-
-.PHONY: $(TEST_TOOLS)
-
-clean: stdclean
-
-#-------------------------------------------------------------------------------
-# test-ktst
-#
-TEST_KFG_SRC = \
-	ktsttest 
-
-TEST_KFG_OBJ = \
-	$(addsuffix .$(OBJX),$(TEST_KFG_SRC))
-
-TEST_KFG_LIB = \
-	-skapp \
-    -sncbi-vdb \
-    -sktst
-
-
-$(TEST_BINDIR)/test-ktst: $(TEST_KFG_OBJ)
-	$(LP) --exe -o $@ $^ $(TEST_KFG_LIB)
-

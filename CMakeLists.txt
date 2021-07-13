@@ -1,8 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 project(ncbi-vdb)
 
-message( CMAKE_BINARY_DIR: ${CMAKE_BINARY_DIR} )
-
 include( ${CMAKE_CURRENT_SOURCE_DIR}/build/common.cmake )
 
 # version, taken from the source by default
@@ -126,8 +124,12 @@ elseif( "windows" STREQUAL ${OS} )
     include_directories(interfaces/os/win)
 endif()
 
-#TODO: plug in proper variable og tthe location of NGS-SDK
-include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/../ngs/ngs-sdk )
+#TODO: plug in proper variable of the location of NGS-SDK
+if( NGS_INCDIR )
+    include_directories( ${NGS_INCDIR} )
+else ()
+    include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/../ngs/ngs-sdk )
+endif ()
 
 # Flex/Bison
 find_package(FLEX) #TODO: specify minimal version
@@ -135,6 +137,8 @@ find_package(BISON) #TODO: specify minimal version
 
 #libxml2
 find_package(LibXml2)
+
+find_package(Python3 COMPONENTS Interpreter)
 
 # Build artefact locations
 if( NOT DEFINED CMAKE_ARCHIVE_OUTPUT_DIRECTORY)

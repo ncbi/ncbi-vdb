@@ -22,39 +22,7 @@
 #
 # ===========================================================================
 
-
-default: runtests
-
 TOP ?= $(abspath ../..)
 MODULE = test/cc
 
-TEST_TOOLS = \
-	test-asm
-
 include $(TOP)/build/Makefile.env
-
-$(TEST_TOOLS): makedirs
-	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
-
-.PHONY: $(ALL_LIBS) $(TEST_TOOLS)
-
-clean: stdclean
-
-#----------------------------------------------------------------
-# asm-test
-#
-
-ASM_TEST_SRC = \
-	asm-test
-
-ASM_TEST_OBJ = \
-	$(addsuffix .$(OBJX),$(ASM_TEST_SRC))
-
-ASM_TEST_LIB = \
-	-skapp \
-    -sncbi-vdb \
-    -sktst
-
-$(TEST_BINDIR)/test-asm: $(ASM_TEST_OBJ)
-	$(LP) --exe -o $@ $^ $(ASM_TEST_LIB)
-

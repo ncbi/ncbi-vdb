@@ -22,37 +22,7 @@
 #
 # ===========================================================================
 
-
-default: runtests
-
 TOP ?= $(abspath ../..)
 MODULE = test/loader
 
-TEST_TOOLS = \
-	test-loader \
-
 include $(TOP)/build/Makefile.env
-
-$(TEST_TOOLS): makedirs
-	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
-
-clean: stdclean
-#-------------------------------------------------------------------------------
-# test-loader
-#
-TEST_LOADER_SRC = \
-	loadertest \
-	sequence-writer
-
-TEST_LOADER_OBJ = \
-	$(addsuffix .$(OBJX),$(TEST_LOADER_SRC))
-
-TEST_LOADER_LIB = \
-	-skapp \
-    -sktst \
-    -sncbi-wvdb \
-    -sload \
-
-$(TEST_BINDIR)/test-loader: $(TEST_LOADER_OBJ)
-	$(LP) --exe -o $@ $^ $(TEST_LOADER_LIB)
-

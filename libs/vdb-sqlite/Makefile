@@ -22,76 +22,7 @@
 #
 # ===========================================================================
 
-
-default: std
-
 TOP ?= $(abspath ../..)
 MODULE = libs/vdb-sqlite
 
-EXT_LIBS = \
-	libvdb-sqlite
-
-ALL_LIBS = \
-	$(EXT_LIBS)
-
 include $(TOP)/build/Makefile.env
-
-#-------------------------------------------------------------------------------
-# outer targets
-#
-ifeq (1,$(HAVE_XML2))
-
-all std: makedirs
-	@ $(MAKE_CMD) $(TARGDIR)/std
-
-$(EXT_LIBS): makedirs
-	@ $(MAKE_CMD) $(LIBDIR)/$@
-
-else
-
-all std: $(ALL_LIBS)
-
-$(EXT_LIBS):
-	@ echo "NOTE - library $(@F) cannot be built: It requires 'libxml2'."
-endif
-
-.PHONY: all std $(ALL_LIBS)
-
-#-------------------------------------------------------------------------------
-# std
-#
-$(TARGDIR)/std: \
-	$(addprefix $(LIBDIR)/,$(EXT_LIBS))
-
-.PHONY: $(TARGDIR)/all $(TARGDIR)/std
-
-#-------------------------------------------------------------------------------
-# clean
-#
-clean: stdclean
-
-.PHONY: clean
-
-#-------------------------------------------------------------------------------
-# vdb - sqlite3 - bridge - lib
-# made in both static and shared versions
-$(LIBDIR)/libvdb-sqlite: $(addprefix $(LIBDIR)/libvdb-sqlite.,$(LIBX) $(SHLX))
-
-VDB_SQLITE_SRC = \
-	sqlite3 \
-	sqlite3vdb
-
-VDB_SQLITE_OBJ = \
-	$(addsuffix .$(LOBX),$(VDB_SQLITE_SRC))
-
-VDB_SQLITE_LIB = \
-	-sncbi-vdb
-
-VDB_SQLITE_VERS = \
-	$(SRCDIR)/../ncbi-vdb/libncbi-vdb.vers
-
-$(LIBDIR)/libvdb-sqlite.$(SHLX): $(VDB_SQLITE_OBJ)
-	$(LD) --dlib --vers $(VDB_SQLITE_VERS) -o $@ $(VDB_SQLITE_OBJ) $(VDB_SQLITE_LIB)
-
-$(LIBDIR)/libvdb-sqlite.$(LIBX): $(VDB_SQLITE_OBJ)
-	$(LD) --slib --vers $(VDB_SQLITE_VERS) -o $@ $(VDB_SQLITE_OBJ) $(VDB_SQLITE_LIB)

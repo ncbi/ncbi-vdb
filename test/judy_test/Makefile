@@ -22,37 +22,7 @@
 #
 # ===========================================================================
 
-default: runtests
-
 TOP ?= $(abspath ../..)
-
 MODULE = test/judy_test
 
-TEST_TOOLS = \
-	test-judy
-
 include $(TOP)/build/Makefile.env
-
-$(TEST_TOOLS): makedirs
-	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
-
-.PHONY: $(TEST_TOOLS)
-
-clean: stdclean
-
-#-------------------------------------------------------------------------------
-# test-judy
-#
-JUDYTEST_SRC = \
-	judytest
-
-JUDYTEST_OBJ = \
-	$(addsuffix .$(OBJX),$(JUDYTEST_SRC))
-
-JUDYTEST_LIB = \
-	-skapp \
-	-sncbi-vdb 
-
-$(TEST_BINDIR)/test-judy: $(JUDYTEST_OBJ)
-	$(LD) --exe $(SRCDIR) -o $@ $^ $(JUDYTEST_LIB)
-

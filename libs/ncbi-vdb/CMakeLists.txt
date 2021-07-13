@@ -98,10 +98,10 @@ add_library( ncbi-vdb-shared SHARED
             $<TARGET_OBJECTS:ngs-py>
 )
 set_target_properties( ncbi-vdb-shared PROPERTIES OUTPUT_NAME ncbi-vdb )
-target_link_libraries( ncbi-vdb-shared ncbi-ngs ${LIBXML2} )
+target_link_libraries( ncbi-vdb-shared ncbi-ngs ${LIBXML2} m dl pthread )
 MakeLinksShared( ncbi-vdb-shared ncbi-vdb )
 
 add_library( ncbi-wvdb STATIC ${VDB_LIB_RDWR} )
 ExportStatic( ncbi-wvdb )
 ExportShared( ncbi-wvdb )
-
+target_link_libraries( ncbi-wvdb-shared ncbi-ngs ${LIBXML2} m dl pthread )

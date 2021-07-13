@@ -22,62 +22,7 @@
 #
 # ===========================================================================
 
-default: runtests
-
 TOP ?= $(abspath ../..)
-
 MODULE = test/vxf
 
-TEST_TOOLS = \
-	wb-test-vxf \
-	vdb-2915-test
-    
 include $(TOP)/build/Makefile.env
-
-$(TEST_TOOLS): makedirs
-	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
-
-.PHONY: $(TEST_TOOLS)
-
-clean: stdclean
-
-#-------------------------------------------------------------------------------
-# white-box test
-#
-TEST_SRC = \
-	wb-test-vxf \
-	wb-irzip-impl
-
-TEST_OBJ = \
-	$(addsuffix .$(OBJX),$(TEST_SRC))
-
-TEST_LIBS = \
-    -skapp \
-    -sktst \
-	-sncbi-vdb \
-	-sxml2 \
-	-sm
-
-$(TEST_BINDIR)/wb-test-vxf: $(TEST_OBJ)
-	$(LP) --exe -o $@ $^ $(TEST_LIBS)
-
-
-#-------------------------------------------------------------------------------
-# vdb-2915
-#
-VDB_2915_SRC = \
-	VDB-2915
-
-VDB_2915_OBJ = \
-	$(addsuffix .$(OBJX),$(VDB_2915_SRC))
-
-VDB_2915_LIBS = \
-    -skapp \
-    -sktst \
-	-sncbi-wvdb \
-	-sxml2 \
-	-sm
-
-$(TEST_BINDIR)/vdb-2915-test: $(VDB_2915_OBJ)
-	$(LP) --exe -o $@ $^ $(VDB_2915_LIBS)
-
