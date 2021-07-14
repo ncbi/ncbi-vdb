@@ -36,6 +36,6 @@ add_subdirectory(vdb-sqlite)
 add_subdirectory(vfs)
 add_subdirectory(vxf)
 add_subdirectory(wgsxf) # wgsxf and wwgsxf are the same
-#add_subdirectory(xfs) # 3rd priority
-
 add_subdirectory(ncbi-vdb)
+
+#add_subdirectory(xfs) # dead

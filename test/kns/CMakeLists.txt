@@ -22,11 +22,11 @@ add_test( NAME Test_KNS COMMAND test-kns WORKING_DIRECTORY ${CMAKE_CURRENT_SOURC
 
 add_executable( test-ipc test-ipc )
 target_link_libraries( test-ipc ${COMMON_LIBS_READ} )
-add_test( NAME Test_KNS_ipc COMMAND test-ipc WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+add_test( NAME SlowTest_KNS_ipc COMMAND test-ipc WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 
 add_executable( test-http HttpFixture httptest )
 target_link_libraries( test-http ${COMMON_LIBS_READ} )
-add_test( NAME Test_KNS_http COMMAND test-http WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+add_test( NAME SlowTest_KNS_http COMMAND test-http WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 
 add_executable( test-http-dropconn http_dropconnection_test )
 target_link_libraries( test-http-dropconn ${COMMON_LIBS_READ} )
