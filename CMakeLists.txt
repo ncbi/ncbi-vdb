@@ -138,7 +138,8 @@ find_package(BISON) #TODO: specify minimal version
 #libxml2
 find_package(LibXml2)
 
-find_package(Python3 COMPONENTS Interpreter)
+set( Python3_EXECUTABLE ${PYTHON_PATH} )
+find_package( Python3 COMPONENTS Interpreter )
 
 # Build artefact locations
 if( NOT DEFINED CMAKE_ARCHIVE_OUTPUT_DIRECTORY)
