@@ -165,5 +165,7 @@ add_subdirectory(vdb3)
 
 # documentation
 find_package(Doxygen)
-# set DOXYGEN_* variables here
-doxygen_add_docs(docs interfaces)
+if ( Doxygen_FOUND)
+    # set DOXYGEN_* variables here
+    doxygen_add_docs(docs interfaces)
+endif()
