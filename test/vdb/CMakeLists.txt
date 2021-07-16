@@ -7,6 +7,7 @@ add_test( NAME SlowTest_VDB_vdb COMMAND test-vdb WORKING_DIRECTORY ${CMAKE_CURRE
 add_executable( test-wvdb test-wvdb )
 target_link_libraries( test-wvdb  ${COMMON_LIBS_WRITE} )
 add_test( NAME Test_VDB_wvdb COMMAND test-wvdb WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+set_tests_properties(Test_VDB_wvdb PROPERTIES ENVIRONMENT VDB_CONFIG=${CMAKE_CURRENT_SOURCE_DIR}/kfg/empty)
 
 add_executable( test-dependencies test-dependencies )
 target_link_libraries( test-dependencies  ${COMMON_LIBS_READ} )
@@ -74,6 +75,3 @@ add_test( NAME SlowTest_VDB_wvdb-slow COMMAND test-wvdb-slow WORKING_DIRECTORY $
 # TODO: make sure runs are not cached in the user repository when running tests
 
 # TODO: valgrind
-
-
-
