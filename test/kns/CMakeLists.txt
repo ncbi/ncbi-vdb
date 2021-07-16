@@ -60,7 +60,7 @@ target_link_libraries( test-mutual-authentication ${COMMON_LIBS_READ} )
 
 add_executable( test-proxy test-proxy http-client )
 target_link_libraries( test-proxy ${COMMON_LIBS_READ} )
-# add_test( NAME Test_KNS_proxy COMMAND test-proxy WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+add_test( NAME Test_KNS_proxy COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test-proxy.sh ${CMAKE_TEST_OUTPUT_DIRECTORY}/test-proxy WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 
 add_executable( test-proxy-with-env test-proxy-with-env http-client )
 target_link_libraries( test-proxy-with-env ${COMMON_LIBS_READ} )
@@ -68,4 +68,5 @@ target_link_libraries( test-proxy-with-env ${COMMON_LIBS_READ} )
 
 add_executable( test-proxy-with-scheme test-proxy-with-scheme )
 target_link_libraries( test-proxy-with-scheme ${COMMON_LIBS_READ} )
-# add_test( NAME Test_KNS_proxy-with-scheme COMMAND test-proxy-with-scheme WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+add_test( NAME Test_KNS_proxy-with-scheme COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test-proxy-with-scheme.sh ${CMAKE_TEST_OUTPUT_DIRECTORY}/test-proxy-with-scheme WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+#set_tests_properties(Test_KNS_proxy-with-scheme PROPERTIES ENVIRONMENT http_proxy=)
