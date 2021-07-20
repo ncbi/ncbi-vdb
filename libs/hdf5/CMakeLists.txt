@@ -7,7 +7,7 @@ if( HDF5_FOUND )
         hdf5file.c
     )
 
-    add_definitions (-D__mod__="libs/hdf5")
+    add_compile_definitions (__mod__="libs/hdf5")
     include_directories( ${HDF5_INCLUDE_DIRS} )
 
     ExportStatic( kdf5 )

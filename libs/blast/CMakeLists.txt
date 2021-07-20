@@ -5,4 +5,4 @@ add_library(vdb-blast STATIC
     run-set.c
 )
 
-add_definitions (-D__mod__="libs/blast")
+add_compile_definitions( __mod__="libs/blast" )

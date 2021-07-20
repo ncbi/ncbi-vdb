@@ -18,5 +18,5 @@ add_library(ktst STATIC
     ${OS_SPECIFIC_SRC}
 )
 
-add_definitions (-D__mod__="libs/ktst")
+add_compile_definitions (__mod__="libs/ktst")
 #include_directories( BEFORE ${CMAKE_CURRENT_SOURCE_DIR} )

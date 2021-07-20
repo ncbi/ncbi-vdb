@@ -29,5 +29,5 @@ add_library(kfg STATIC
     repository
 )
 
-add_definitions (-D__mod__="libs/kfg")
-add_definitions (-D_ARCH_BITS=${BITS})
+add_compile_definitions (__mod__="libs/kfg")
+add_compile_definitions (_ARCH_BITS=${BITS})

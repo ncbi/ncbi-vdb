@@ -8,5 +8,5 @@ if( LibXml2_FOUND  )
         xtoc.c
     )
 
-    add_definitions (-D__mod__="libs/kxml")
+    add_compile_definitions (__mod__="libs/kxml")
 endif()

@@ -42,50 +42,51 @@ endif ()
 
 # create variables based entirely upon OS
 if ( "mac" STREQUAL ${OS} )
-    add_definitions( -DMAC -DBSD -DUNIX )
+    add_compile_definitions( MAC BSD UNIX )
 elseif( "linux" STREQUAL ${OS} )
-    add_definitions( -DLINUX -DUNIX )
+    add_compile_definitions( LINUX UNIX )
     set( LMCHECK -lmcheck )
 endif()
 
 # create variables based entirely upon ARCH
 if ("armv7l" STREQUAL ${ARCH})
 	set( BITS 32 )
-    add_definitions( -DRPI )
+    add_compile_definitions( RPI )
 	add_compile_options( -mcpu=cortex-a53 -mfpu=neon-vfpv4 -Wno-psabi )
 	set ( Z128SRC z128 )
 	set ( Z128LSRC z128.nopt )
 elseif ("aarch64" STREQUAL ${ARCH} )
 	set ( BITS 64 )
-	add_definitions( -DHAVE_Z128 )
+	add_compile_definitions( HAVE_Z128 )
 elseif ("x86_64" STREQUAL ${ARCH} )
     set ( BITS 64 )
-    add_definitions( -DHAVE_Z128 -DLONG_DOUBLE_IS_NOT_R128 )
+    add_compile_definitions( HAVE_Z128 LONG_DOUBLE_IS_NOT_R128 )
 endif()
 
 # now any unique combinations of OS and ARCH
 if     ( "mac-x86_84" STREQUAL ${OS}-${ARCH})
 elseif ( "linux-x86_64" STREQUAL ${OS}-${ARCH})
-    add_definitions( -DHAVE_R128 )
+    add_compile_definitions( HAVE_R128 )
 elseif ( "linux-armv7l" STREQUAL ${OS}-${ARCH})
 elseif ( "linux-aarch64" STREQUAL ${OS}-${ARCH})
-    add_definitions( -DHAVE_R128 -D__float128=_Float128 )
+    add_compile_definitions( HAVE_R128 __float128=_Float128 )
 endif()
 
 # combinations of OS and COMP
 if ( ${OS}-${CMAKE_CXX_COMPILER_ID} STREQUAL "linux-GNU"  )
     add_definitions( -rdynamic )
-    add_definitions( -D_GNU_SOURCE )
+    add_compile_definitions( _GNU_SOURCE )
 endif()
 
 # combinations of OS, ARCH and COMP
 if ( ${OS}-${ARCH}-${CMAKE_CXX_COMPILER_ID} STREQUAL "linux-x86_64-GNU"  )
-    add_definitions( -DHAVE_QUADMATH )
+    add_compile_definitions( HAVE_QUADMATH )
 	set ( LQUADMATH -lquadmath )
 elseif ( ${OS}-${ARCH}-${CMAKE_CXX_COMPILER_ID} STREQUAL "linux-x86_64-Clang"  )
 endif()
 
-add_definitions( -D_ARCH_BITS=${BITS} -D${ARCH} -Wall )
+add_compile_definitions( _ARCH_BITS=${BITS} ${ARCH} )
+add_definitions( -Wall )
 
 if ( "${CMAKE_BUILD_TYPE}" STREQUAL "" )
     set ( CMAKE_BUILD_TYPE "Debug" CACHE STRING "" FORCE )

@@ -39,6 +39,6 @@ set( KNS_SRC
 
 add_library( kns STATIC ${KNS_SRC} ${OS_SPECIFIC_SRC} )
 
-add_definitions (-D__mod__="libs/kns")
-add_definitions (-DPKGNAME="${OS}${BITS}")
+add_compile_definitions (__mod__="libs/kns")
+add_compile_definitions (PKGNAME="${OS}${BITS}")
 include_directories( BEFORE ${CMAKE_CURRENT_SOURCE_DIR} )

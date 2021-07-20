@@ -1,4 +1,4 @@
-add_definitions (-D__mod__="test/vxf")
+add_compile_definitions( __mod__="test/vxf" )
 
 add_executable( wb-test-vxf wb-test-vxf wb-irzip-impl )
 target_link_libraries( wb-test-vxf  ${COMMON_LIBS_READ} )

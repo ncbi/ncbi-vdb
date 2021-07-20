@@ -48,4 +48,4 @@ add_library(krypto STATIC
 
 add_library( kryptotest STATIC ${TEST_LIB_SRC} )
 
-add_definitions (-D__mod__="libs/krypto")
+add_compile_definitions (__mod__="libs/krypto")

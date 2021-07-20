@@ -8,4 +8,4 @@ ExportShared( vdb-sqlite )
 
 add_dependencies( vdb-sqlite-shared ncbi-vdb )
 
-add_definitions (-D__mod__="libs/vdb-sqlite")
+add_compile_definitions (__mod__="libs/vdb-sqlite")

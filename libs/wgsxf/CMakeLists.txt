@@ -7,4 +7,4 @@ set( WGSXF_SRC
 add_library( wgsxf STATIC ${WGSXF_SRC} )
 add_library( wwgsxf STATIC ${WGSXF_SRC} )
 
-add_definitions (-D__mod__="libs/wgsxf")
+add_compile_definitions (__mod__="libs/wgsxf")

@@ -6,4 +6,4 @@ add_library( diagnose STATIC
 ExportStatic( diagnose )
 ExportShared( diagnose )
 
-add_definitions (-D__mod__="libs/diagnose")
+add_compile_definitions( __mod__="libs/diagnose" )

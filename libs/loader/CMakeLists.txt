@@ -7,4 +7,4 @@ add_library(loader STATIC
     sequence-writer
 )
 
-add_definitions (-D__mod__="libs/loader")
+add_compile_definitions (__mod__="libs/loader")

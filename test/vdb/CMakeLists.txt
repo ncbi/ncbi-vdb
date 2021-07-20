@@ -1,4 +1,4 @@
-add_definitions (-D__mod__="test/vdb")
+add_compile_definitions( __mod__="test/vdb" )
 
 add_executable( test-vdb test-vdb )
 target_link_libraries( test-vdb  ${COMMON_LIBS_READ} )

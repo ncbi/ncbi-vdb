@@ -11,4 +11,4 @@ add_library( ksrch STATIC
     sw-search.c
 )
 
-add_definitions (-D__mod__="libs/search")
+add_compile_definitions (__mod__="libs/search")

@@ -1,6 +1,6 @@
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test-bin )
 include_directories( .. )
-add_definitions( -DTESTING )
+add_compile_definitions( TESTING )
 
 # gtest white box tests
 function( test stem )

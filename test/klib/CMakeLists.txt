@@ -1,4 +1,4 @@
-add_definitions (-D__mod__="test/klib")
+add_compile_definitions( __mod__="test/klib" )
 
 add_executable( test-klib-asm asm-test )
 target_link_libraries( test-klib-asm  ${COMMON_LIBS_READ} )

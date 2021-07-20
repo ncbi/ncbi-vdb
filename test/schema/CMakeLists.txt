@@ -1,4 +1,4 @@
-add_definitions (-D__mod__="test/schema")
+add_compile_definitions( __mod__="test/schema" )
 file( MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/actual ) # TODO remove ./actual dir after tests pass (add_test POST?)
 
 add_executable( wb-test-schema-lex wb-test-schema-lex )

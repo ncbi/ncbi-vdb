@@ -1,4 +1,4 @@
-add_definitions (-D__mod__="test/search")
+add_compile_definitions( __mod__="test/search" )
 
 add_executable( test-agrep test-agrep agrep-main search-vdb )
 target_link_libraries( test-agrep  ${COMMON_LIBS_READ} )

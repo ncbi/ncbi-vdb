@@ -3,7 +3,7 @@ add_executable( test-kapp kapp-test )
 
 # TODO: ALL_TOOLS, scripted tests
 
-add_definitions (-D__mod__="test/kapp")
+add_compile_definitions( __mod__="test/kapp" )
 
 target_link_libraries( test-qfile ${COMMON_LIBS_READ} load kq )
 target_link_libraries( test-kapp load ${COMMON_LIBS_WRITE} kq )

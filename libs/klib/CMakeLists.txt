@@ -100,6 +100,6 @@ add_library(klib STATIC
     ${OS_SPECIFIC_SRC}
 )
 
-add_definitions (-D__mod__="libs/klib")
-add_definitions (-D_ARCH_BITS=${BITS})
+add_compile_definitions (__mod__="libs/klib")
+add_compile_definitions (_ARCH_BITS=${BITS})
 include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR} )

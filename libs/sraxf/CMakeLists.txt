@@ -48,4 +48,4 @@ set( WSRAXF_SRC
 add_library( sraxf STATIC ${SRAXF_SRC} )
 add_library( wsraxf STATIC ${WSRAXF_SRC} )
 
-add_definitions (-D__mod__="libs/sraxf")
+add_compile_definitions (__mod__="libs/sraxf")

@@ -18,6 +18,6 @@ add_library ( magic-static STATIC
     strlcpy
 )
 
-add_definitions (-DHAVE_CONFIG_H=1)
-add_definitions ( -D__mod__="libs/ext/magic" )
+add_compile_definitions( HAVE_CONFIG_H=1 )
+add_compile_definitions( __mod__="libs/ext/magic" )
 include_directories( BEFORE ${CMAKE_CURRENT_SOURCE_DIR} )

@@ -110,5 +110,5 @@ add_library( kfs STATIC ${KFS_SRC} )
 #add_library( kfs.2 STATIC ${KFS2_SRC} )
 add_library( kff STATIC ${KFF_SRC} )
 
-add_definitions (-D__mod__="libs/kfs")
+add_compile_definitions (__mod__="libs/kfs")
 include_directories( BEFORE ${CMAKE_CURRENT_SOURCE_DIR} )

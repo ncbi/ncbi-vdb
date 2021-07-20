@@ -57,4 +57,4 @@ set( WVXF_SRC
 add_library( vxf STATIC ${VXF_SRC} )
 add_library( wvxf STATIC ${WVXF_SRC} )
 
-add_definitions (-D__mod__="libs/vxf")
+add_compile_definitions (__mod__="libs/vxf")

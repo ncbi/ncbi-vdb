@@ -43,4 +43,4 @@ add_library( tui STATIC
 )
 add_library( tui_cpp STATIC tui_cpp )
 
-add_definitions (-D__mod__="libs/tui")
+add_compile_definitions (__mod__="libs/tui")

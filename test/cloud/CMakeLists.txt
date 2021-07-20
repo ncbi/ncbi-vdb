@@ -4,7 +4,7 @@ add_executable( test-cloud test-cloud )
 
 # TODO: ALL_TOOLS, scripted tests
 
-add_definitions (-D__mod__="test/cloud")
+add_compile_definitions( __mod__="test/cloud" )
 
 target_link_libraries( test-aws ${COMMON_LIBS_READ} )
 target_link_libraries( test-gcp ${COMMON_LIBS_READ} )

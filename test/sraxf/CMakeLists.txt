@@ -1,4 +1,4 @@
-add_definitions (-D__mod__="test/sraxf")
+add_compile_definitions( __mod__="test/sraxf" )
 
 add_executable( test-format_spot_name test-format_spot_name )
 target_link_libraries( test-format_spot_name ${COMMON_LIBS_READ} )

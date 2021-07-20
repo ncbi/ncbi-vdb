@@ -37,5 +37,5 @@ target_compile_definitions(kapp-norsrc PRIVATE NO_KRSRC=1)
 
 add_library( load STATIC ${LOADLIB_SRC} )
 
-add_definitions (-D__mod__="libs/kapp")
-add_definitions (-DPKGNAME="${OS}${BITS}")
+add_compile_definitions (__mod__="libs/kapp")
+add_compile_definitions (PKGNAME="${OS}${BITS}")

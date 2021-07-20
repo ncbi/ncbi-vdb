@@ -18,4 +18,4 @@ set( LIBZ_SRC
 
 add_library( z STATIC ${LIBZ_SRC} )
 
-add_definitions( -D__mod__="libs/ext/zlib" )
+add_compile_definitions( __mod__="libs/ext/zlib" )

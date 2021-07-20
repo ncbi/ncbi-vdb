@@ -1,4 +1,4 @@
-add_definitions (-D__mod__="test/kfs")
+add_compile_definitions( __mod__="test/kfs" )
 
 add_executable( test-kfs-kdf kdf )
 target_link_libraries( test-kfs-kdf  ${COMMON_LIBS_READ} )

@@ -37,4 +37,4 @@ add_library(ngs STATIC
     VByteBlob
 )
 
-add_definitions (-D__mod__="libs/ngs")
+add_compile_definitions (__mod__="libs/ngs")

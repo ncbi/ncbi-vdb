@@ -1,4 +1,4 @@
-add_definitions (-D__mod__="test/loader")
+add_compile_definitions( __mod__="test/loader" )
 
 add_executable( test-loader loadertest sequence-writer )
 target_link_libraries( test-loader  ${COMMON_LIBS_WRITE} load )

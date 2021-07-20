@@ -1,4 +1,4 @@
-add_definitions (-D__mod__="test/krypto")
+add_compile_definitions( __mod__="test/krypto" )
 
 add_executable( test-cipher-speed test-cipher-speed )
 target_link_libraries( test-cipher-speed kryptotest ${COMMON_LIBS_READ} )

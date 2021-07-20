@@ -8,4 +8,4 @@ add_library(cloud STATIC
     gcp.c
 )
 
-add_definitions (-D__mod__="libs/cloud")
+add_compile_definitions( __mod__="libs/cloud" )

@@ -7,7 +7,7 @@ add_executable( test-properties kfg-fixture propertiestest )
 
 # TODO: fuzz test
 
-add_definitions (-D__mod__="test/kfg")
+add_compile_definitions( __mod__="test/kfg" )
 
 #target_link_libraries( ncbi-home-from-env ${COMMON_LIBS_READ} )
 target_link_libraries( wb-test-kfg ${COMMON_LIBS_READ} )

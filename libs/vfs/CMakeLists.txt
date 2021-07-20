@@ -27,5 +27,5 @@ add_library(vfs STATIC
     ${OS_SPECIFIC_SRC}
 )
 
-add_definitions (-D__mod__="libs/vfs")
+add_compile_definitions (__mod__="libs/vfs")
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})

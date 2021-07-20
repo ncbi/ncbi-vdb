@@ -1,4 +1,4 @@
-add_definitions (-D__mod__="test/kns")
+add_compile_definitions( __mod__="test/kns" )
 
 add_executable( test_allow_all_certificates test_allow_all_certificates )
 target_link_libraries( test_allow_all_certificates ${COMMON_LIBS_READ} )

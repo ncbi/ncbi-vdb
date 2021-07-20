@@ -97,4 +97,4 @@ add_library( mbedcrypto STATIC ${CRYPTO_SRC} )
 add_library( mbedx509 STATIC ${X509_SRC} )
 add_library( mbedtls STATIC ${TLS_SRC} )
 
-add_definitions( -D__mod__="libs/ext/mbedtls" )
+add_compile_definitions( __mod__="libs/ext/mbedtls" )

@@ -43,5 +43,5 @@ add_library(judy1 STATIC
 )
 target_compile_definitions(judy1 PRIVATE JUDY1)
 
-add_definitions (-D__mod__="libs/klib/judy")
+add_compile_definitions (__mod__="libs/klib/judy")
 include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/..)

@@ -8,4 +8,4 @@ add_library ( bz2 STATIC
     bzlib
 )
 
-add_definitions ( -D__mod__="libs/ext/bzip2" )
+add_compile_definitions( __mod__="libs/ext/bzip2" )

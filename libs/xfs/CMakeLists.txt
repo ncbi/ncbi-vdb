@@ -61,4 +61,4 @@ set( XFS_SRC
     ${OS_SPECIFIC_SRC}
 )
 
-add_definitions (-D__mod__="libs/xfs")
+add_compile_definitions (__mod__="libs/xfs")

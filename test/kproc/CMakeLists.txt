@@ -1,6 +1,6 @@
 add_executable( test-kproc kproctest )
 
-add_definitions (-D__mod__="test/kproc")
+add_compile_definitions( __mod__="test/kproc" )
 
 target_link_libraries( test-kproc ${COMMON_LIBS_READ} )
 

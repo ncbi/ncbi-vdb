@@ -1,4 +1,4 @@
-add_definitions (-D__mod__="test/vfs")
+add_compile_definitions( __mod__="test/vfs" )
 
 add_executable( test-attached-vdbcache test-attached-vdbcache )
 target_link_libraries( test-attached-vdbcache ${COMMON_LIBS_READ} )

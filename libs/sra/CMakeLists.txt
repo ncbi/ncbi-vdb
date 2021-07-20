@@ -30,4 +30,4 @@ add_library( sradb STATIC ${SRADB_SRC} )
 add_library( wsradb STATIC ${WSRADB_SRC} )
 add_library( srareader STATIC ${SRAREADER_SRC} )
 
-add_definitions (-D__mod__="libs/sra")
+add_compile_definitions (__mod__="libs/sra")

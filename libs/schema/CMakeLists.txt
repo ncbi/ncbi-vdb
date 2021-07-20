@@ -43,4 +43,4 @@ add_library(schema STATIC
     Token.cpp
 )
 
-add_definitions (-D__mod__="libs/schema")
+add_compile_definitions (__mod__="libs/schema")

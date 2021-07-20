@@ -2,7 +2,7 @@ add_executable(test-mbedtls
     test-mbedtls
 )
 
-add_definitions (-D__mod__="test/ext/mbedtls")
+add_compile_definitions( __mod__="test/ext/mbedtls" )
 
 target_link_libraries( test-mbedtls  ${COMMON_LIBS_READ} )
 

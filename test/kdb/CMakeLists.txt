@@ -5,7 +5,7 @@ add_executable( test-rowset rowsettest )
 
 # TODO: make sure runs are not cached in the user repository when running tests
 
-add_definitions (-D__mod__="test/kdb")
+add_compile_definitions( __mod__="test/kdb" )
 
 #target_link_libraries( test-btree ncbi-vdb )
 target_link_libraries( test-rowset ${COMMON_LIBS_WRITE} )

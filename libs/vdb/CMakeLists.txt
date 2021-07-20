@@ -85,4 +85,4 @@ set( WVDB_SRC
 add_library( vdb STATIC ${VDB_SRC} )
 add_library( wvdb STATIC ${WVDB_SRC} )
 
-add_definitions (-D__mod__="libs/vdb")
+add_compile_definitions (__mod__="libs/vdb")
