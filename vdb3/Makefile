@@ -22,23 +22,10 @@
 #
 # ===========================================================================
 
-default all std: makedirs cmake
-
-TOP ?= $(abspath $(CURDIR)/..)
+TOP ?= $(abspath ..)
+MODULE = vdb3
 
 include $(TOP)/build/Makefile.env
 
-cmake:
-	mkdir -p $(TARGDIR)/vdb3; cd $(TARGDIR)/vdb3; cmake $(CMAKEFLAGS) $(TOP)/vdb3
-	+ make -C $(TARGDIR)/vdb3 -j$(MAKE_JOBS)
 
-clean: stdclean
-	make -C $(TARGDIR)/vdb3 clean
-	-rm -rf $(TARGDIR)/vdb3
 
-ctest: cmake
-	cd $(TARGDIR)/vdb3; ctest $(CMAKEFLAGS) $(CTESTARGS) --verbose
-
-test runtests: ctest
-
-.PHONY: clean cmake ctest
