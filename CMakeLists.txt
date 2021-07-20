@@ -3,6 +3,9 @@ project(ncbi-vdb)
 
 include( ${CMAKE_CURRENT_SOURCE_DIR}/build/common.cmake )
 
+# allow implicit source file extensions
+cmake_policy(SET CMP0115 OLD)
+
 # version, taken from the source by default
 if ( "${VERSION}" STREQUAL "" )
     set( VERSION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/libs/ncbi-vdb/libncbi-vdb.vers")
@@ -19,8 +22,10 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # determine OS
 if ( ${CMAKE_HOST_SYSTEM_NAME} STREQUAL  "Darwin" )
     set(OS "mac")
+    set(SHLX "dylib")
 elseif ( ${CMAKE_HOST_SYSTEM_NAME} STREQUAL  "Linux" )
     set(OS "linux")
+    set(SHLX "so")
 elseif ( ${CMAKE_HOST_SYSTEM_NAME} STREQUAL  "Windows" )
     set(OS "windows")
 elseif()
@@ -108,7 +113,8 @@ include_directories(interfaces/ext)
 if ( "GNU" STREQUAL "${CMAKE_C_COMPILER_ID}")
     include_directories(interfaces/cc/gcc)
     include_directories(interfaces/cc/gcc/${ARCH})
-elseif ( "Clang" STREQUAL "${CMAKE_C_COMPILER_ID}")
+elseif ( CMAKE_CXX_COMPILER_ID MATCHES "^(Apple)?Clang$" )
+    include_directories(interfaces/cc/clang)
     include_directories(interfaces/cc/clang/${ARCH})
 elseif ( "MSVC" STREQUAL "${CMAKE_C_COMPILER_ID}")
     include_directories(interfaces/cc/vc++)

@@ -177,7 +177,7 @@ TEST_CASE(Klib_hashfileMap)
 
     bool found;
     uint64_t val;
-    uint64_t len = 0;
+    size_t len = 0;
     found = KHashFileFind(hmap, str1, strlen(str1), hash, NULL, 0);
     REQUIRE_EQ(found, true);
     found = KHashFileFind(hmap, str1, strlen(str1), hash, &val, &len);

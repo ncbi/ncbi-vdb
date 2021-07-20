@@ -12,4 +12,7 @@ if( HDF5_FOUND )
 
     ExportStatic( kdf5 )
     ExportShared( kdf5 )
+
+    target_link_libraries( kdf5-shared ${HDF5_LIBRARIES} ncbi-vdb)
+
 endif()

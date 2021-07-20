@@ -23,10 +23,10 @@ endfunction()
 function(MakeLinksShared target name)
     add_custom_command(TARGET ${target}
         POST_BUILD
-        COMMAND rm -f lib${name}.so.${VERSION}
-        COMMAND mv lib${name}.so lib${name}.so.${VERSION}
-        COMMAND ln -f -s lib${name}.so.${VERSION} lib${name}.so.${MAJVERS}
-        COMMAND ln -f -s lib${name}.so.${MAJVERS} lib${name}.so
+        COMMAND rm -f lib${name}.${SHLX}.${VERSION}
+        COMMAND mv lib${name}.${SHLX} lib${name}.${SHLX}.${VERSION}
+        COMMAND ln -f -s lib${name}.${SHLX}.${VERSION} lib${name}.${SHLX}.${MAJVERS}
+        COMMAND ln -f -s lib${name}.${SHLX}.${MAJVERS} lib${name}.${SHLX}
         WORKING_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
     )
 endfunction()

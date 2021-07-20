@@ -1,6 +1,6 @@
 set ( UNIX_SRC unix/systui.c )
 set ( LINUX_SRC linux/systui.c )
-set ( MAC_SRC ${UNIX_SRC} )
+set ( MAC_SRC bsd/systui.c )
 set ( WIN_SRC win/systui.c )
 
 if ( "win" STREQUAL ${OS} )
