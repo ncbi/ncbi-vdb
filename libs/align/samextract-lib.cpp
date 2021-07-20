@@ -92,6 +92,7 @@ int moredata( char * buf, int * numbytes, size_t maxbytes )
     if ( curline_len > READBUF_SZ )
         ERR( "Bad length" );
     memmove( buf, curline, (size_t)curline_len );
+    buf[ curline_len ] = 0;
     *numbytes   = curline_len;
     curline_len = 0;
     return 0;
