@@ -26,6 +26,3 @@ TOP ?= $(abspath ..)
 MODULE = vdb3
 
 include $(TOP)/build/Makefile.env
-
-
-
