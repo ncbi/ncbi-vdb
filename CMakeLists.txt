@@ -141,7 +141,7 @@ else ()
 endif ()
 
 # Flex/Bison
-find_package(FLEX) #TODO: specify minimal version
+find_package( FLEX 2.6 )
 find_package(BISON) #TODO: specify minimal version
 
 #libxml2
