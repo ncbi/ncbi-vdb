@@ -12,3 +12,6 @@ add_library( ksrch STATIC
 )
 
 add_compile_definitions (__mod__="libs/search")
+
+# some modules produce a ton of output with DEBUG defined
+remove_definitions(-DDEBUG)
