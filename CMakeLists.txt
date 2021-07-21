@@ -4,7 +4,9 @@ project(ncbi-vdb)
 include( ${CMAKE_CURRENT_SOURCE_DIR}/build/common.cmake )
 
 # allow implicit source file extensions
-cmake_policy(SET CMP0115 OLD)
+if (${CMAKE_VERSION} GREATER_EQUAL "3.20")
+    cmake_policy(SET CMP0115 OLD)
+endif()
 
 # version, taken from the source by default
 if ( "${VERSION}" STREQUAL "" )
