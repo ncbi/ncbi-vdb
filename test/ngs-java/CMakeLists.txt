@@ -6,7 +6,7 @@ if ( Java_Development_FOUND )
     enable_testing()
     project ( ngs_test NONE )
 
-    if ( NGS_JAVA_JAR )
+    if ( NGS_LIBDIR AND NGS_JAVA_JAR )
         set( JUNIT_JAR ${CMAKE_CURRENT_SOURCE_DIR}/../junit-4.11.jar )
         set( CLASSPATH ${NGS_JAVA_JAR}:${JUNIT_JAR} )
         set( CMAKE_JAVA_COMPILE_FLAGS "-d" "${CMAKE_CURRENT_BINARY_DIR}" "-classpath" "${JUNIT_JAR}")
