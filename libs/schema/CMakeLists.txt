@@ -1,17 +1,13 @@
-if( FLEX_FOUND )
+if( FLEX_FOUND AND BISON_FOUND )
     FLEX_TARGET( SchemaFlex schema-lex.l ${CMAKE_CURRENT_SOURCE_DIR}/schema-lex.c
         COMPILE_FLAGS "--debug --noline" )
     set( SchemaScanner ${FLEX_SchemaFlex_OUTPUTS} )
-else()
-    set( SchemaScanner schema-lex.c )
-endif()
-
-if( BISON_FOUND )
     BISON_TARGET( SchemaGrammar schema-grammar.y ${CMAKE_CURRENT_SOURCE_DIR}/schema-grammar.cpp
         COMPILE_FLAGS "-Wno-other --no-lines -r state -v" )
     set( SchemaParser ${BISON_SchemaGrammar_OUTPUT_SOURCE} )
     ADD_FLEX_BISON_DEPENDENCY(SchemaFlex SchemaGrammar)
 else()
+    set( SchemaScanner schema-lex.c )
     set( SchemaParser schema-grammar.cpp )
 endif()
 

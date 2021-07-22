@@ -12,20 +12,16 @@ elseif( "mac" STREQUAL ${OS} )
     set ( OS_SPECIFIC_SRC ${MAC_SRC} )
 endif()
 
-if( FLEX_FOUND )
+if( FLEX_FOUND AND BISON_FOUND )
     FLEX_TARGET( JsonFlex json-lex.l ${CMAKE_CURRENT_SOURCE_DIR}/json-lex.c
         COMPILE_FLAGS "--debug --noline" )
     set( JsonScanner ${FLEX_JsonFlex_OUTPUTS} )
-else()
-    set( JsonScanner json-lex.c )
-endif()
-
-if( BISON_FOUND )
     BISON_TARGET( JsonGrammar json-grammar.y ${CMAKE_CURRENT_SOURCE_DIR}/json-grammar.c
         COMPILE_FLAGS "-Wno-other --no-lines -r state" )
     set( JsonParser ${BISON_JsonGrammar_OUTPUT_SOURCE} )
     ADD_FLEX_BISON_DEPENDENCY(JsonFlex JsonGrammar)
 else()
+    set( JsonScanner json-lex.c )
     set( JsonParser json-grammar.c )
 endif()
 
