@@ -26,8 +26,8 @@ set( SRAREADER_SRC
     reader-abi
 )
 
-add_library( sradb STATIC ${SRADB_SRC} )
-add_library( wsradb STATIC ${WSRADB_SRC} )
-add_library( srareader STATIC ${SRAREADER_SRC} )
+GenerateStaticLibs( sradb ${SRADB_SRC} )
+GenerateStaticLibs( wsradb ${WSRADB_SRC} )
+GenerateStaticLibs( srareader ${SRAREADER_SRC} )
 
 add_compile_definitions (__mod__="libs/sra")

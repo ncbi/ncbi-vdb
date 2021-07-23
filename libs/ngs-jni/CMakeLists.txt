@@ -1,4 +1,4 @@
-add_library(ngs-jni STATIC
+GenerateStaticLibs(ngs-jni
     jni_Manager
     jni_String
     jni_ErrorMsg

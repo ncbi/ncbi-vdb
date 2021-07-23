@@ -40,15 +40,13 @@
 #include <kproc/queue.h>
 #include <kproc/thread.hpp>
 #include <kproc/timeout.h>
-#ifdef _MSC_VER
-#else
+#ifndef WINDOWS
 #include <pthread.h>
 #endif
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 // All memmoves in this file are not overlapping and performance
 // is measurably improved by memcpy.
@@ -744,7 +742,7 @@ size_t fast_u32toa(char* buf, u32 val)
 #ifdef _MSC_VER
     // TODO: Untested
     u64 lg2;
-    _BitScanReverse(&lg2, val | 1);
+    _BitScanReverse((DWORD*)(&lg2), val | 1);
     lg2 = (u32)(64 - lg2);
 #else
     u32 lg2 = (64 - __builtin_clzll(val | 1));

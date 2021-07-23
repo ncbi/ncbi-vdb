@@ -1,4 +1,4 @@
-add_library(cloud STATIC
+GenerateStaticLibs(cloud
     aws-auth.c
     aws.c
     cloud-cmn.c
@@ -7,5 +7,7 @@ add_library(cloud STATIC
     gcp-authentication.c
     gcp.c
 )
+
+MSVS_StaticRuntime( cloud )
 
 add_compile_definitions( __mod__="libs/cloud" )

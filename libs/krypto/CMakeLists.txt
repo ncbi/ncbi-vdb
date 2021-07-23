@@ -1,7 +1,7 @@
 if( "unix" STREQUAL ${OS} )
     #include_directories(unix)
     set (OS_SPECIFIC_SRC unix/sysrng.c)
-elseif ( "win" STREQUAL ${OS} )
+elseif ( "windows" STREQUAL ${OS} )
     #include_directories(win)
     set (OS_SPECIFIC_SRC win/sysrng.c)
 endif()
@@ -41,11 +41,11 @@ set( TEST_LIB_SRC
     
 )
 
-add_library(krypto STATIC
+GenerateStaticLibs(krypto
     ${LIB_SRC}
     #${OS_SPECIFIC_SRC}
 )
 
-add_library( kryptotest STATIC ${TEST_LIB_SRC} )
+GenerateStaticLibs( kryptotest ${TEST_LIB_SRC} )
 
 add_compile_definitions (__mod__="libs/krypto")

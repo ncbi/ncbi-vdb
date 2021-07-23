@@ -1,9 +1,9 @@
 if( LibXml2_FOUND  )
-    add_library( kxml STATIC
+    GenerateStaticLibs( kxml
         xml.c
     )
 
-    add_library( kxfs STATIC
+    GenerateStaticLibs( kxfs
         xtoc-parsexml.c
         xtoc.c
     )

@@ -1,4 +1,4 @@
-add_library(vdb-blast STATIC
+GenerateStaticLibs(vdb-blast
     blast-mgr.c
     reader.c
     reference.c

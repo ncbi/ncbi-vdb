@@ -30,12 +30,12 @@ set( LOADLIB_SRC
     queue-file
 )
 
-add_library( kapp STATIC ${KAPP_SRC} ${OS_SPECIFIC_SRC} )
+GenerateStaticLibs( kapp ${KAPP_SRC} ${OS_SPECIFIC_SRC} )
 
-add_library( kapp-norsrc STATIC ${KAPPR_SRC} ${OS_SPECIFIC_SRC} )
+GenerateStaticLibs( kapp-norsrc ${KAPPR_SRC} ${OS_SPECIFIC_SRC} )
 target_compile_definitions(kapp-norsrc PRIVATE NO_KRSRC=1)
 
-add_library( load STATIC ${LOADLIB_SRC} )
+GenerateStaticLibs( load ${LOADLIB_SRC} )
 
 add_compile_definitions (__mod__="libs/kapp")
 add_compile_definitions (PKGNAME="${OS}${BITS}")

@@ -11,7 +11,7 @@ else()
     set( KfgParser config-grammar.c )
 endif()
 
-add_library(kfg STATIC
+GenerateStaticLibs(kfg
     ${KfgParser}
     ${KfgScanner}
     config-aws

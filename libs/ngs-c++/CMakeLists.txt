@@ -1,4 +1,4 @@
-add_library( ncbi-ngs-c++ STATIC NCBI-NGS )
+GenerateStaticLibs( ncbi-ngs-c++ NCBI-NGS )
 
 add_compile_definitions (__mod__="libs/ngs-c++")
 include_directories( BEFORE ${CMAKE_CURRENT_SOURCE_DIR} )

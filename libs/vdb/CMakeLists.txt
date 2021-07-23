@@ -82,7 +82,7 @@ set( WVDB_SRC
     index_insert
 )
 
-add_library( vdb STATIC ${VDB_SRC} )
-add_library( wvdb STATIC ${WVDB_SRC} )
+GenerateStaticLibs( vdb ${VDB_SRC} )
+GenerateStaticLibs( wvdb ${WVDB_SRC} )
 
 add_compile_definitions (__mod__="libs/vdb")

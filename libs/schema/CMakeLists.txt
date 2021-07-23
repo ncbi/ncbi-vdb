@@ -20,7 +20,7 @@ else()
     set( SchemaAstParser schema-ast.cpp )
 endif()
 
-add_library(schema STATIC
+GenerateStaticLibs(schema
     AST.cpp
     ASTBuilder-db.cpp
     ASTBuilder-func.cpp

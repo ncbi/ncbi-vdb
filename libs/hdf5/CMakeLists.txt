@@ -1,7 +1,7 @@
 find_package(HDF5 COMPONENTS)
 
 if( HDF5_FOUND )
-    add_library(kdf5 STATIC
+    GenerateStaticLibs(kdf5
         hdf5arrayfile.c
         hdf5dir.c
         hdf5file.c

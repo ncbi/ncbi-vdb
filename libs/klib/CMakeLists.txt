@@ -4,7 +4,7 @@ set ( LINUX_SRC ${UNIX_BASE_SRC} linux/syserrcode.c )
 set ( MAC_SRC ${UNIX_SRC} )
 set ( WIN_SRC win/misc.c win/sysalloc.c win/syserrcode.c win/syslog.c win/systime.c win/syswriter.c )
 
-if ( "win" STREQUAL ${OS} )
+if ( "windows" STREQUAL ${OS} )
     set ( OS_SPECIFIC_SRC ${WIN_SRC} )
 elseif( "linux" STREQUAL ${OS} )
     set ( OS_SPECIFIC_SRC ${LINUX_SRC} )
@@ -33,7 +33,7 @@ endif (CMAKE_BUILD_TYPE STREQUAL "Debug")
 
 add_subdirectory( judy )
 
-add_library(klib STATIC
+GenerateStaticLibs(klib
     all-vdb-version
     base64
     bsearch

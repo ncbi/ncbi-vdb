@@ -57,7 +57,7 @@ set( WKDB_SRC
 )
 
 
-add_library( kdb STATIC ${KDB_SRC} )
-add_library( wkdb STATIC ${WKDB_SRC} )
+GenerateStaticLibs( kdb ${KDB_SRC} )
+GenerateStaticLibs( wkdb ${WKDB_SRC} )
 
 add_compile_definitions (__mod__="libs/kdb")

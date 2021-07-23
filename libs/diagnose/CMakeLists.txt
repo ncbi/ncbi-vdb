@@ -1,4 +1,4 @@
-add_library( diagnose STATIC
+GenerateStaticLibs( diagnose
     diagnose.c
     endpoint.c
 )

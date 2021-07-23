@@ -1,4 +1,4 @@
-add_library ( bz2 STATIC
+GenerateStaticLibs ( bz2
     blocksort
     huffman
     crctable

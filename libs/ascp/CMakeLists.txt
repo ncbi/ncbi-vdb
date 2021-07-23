@@ -3,7 +3,7 @@ set ( LINUX_SRC ${UNIX_SRC} linux/ascp-path.c )
 set ( MAC_SRC ${UNIX_SRC} mac/ascp-path.c )
 set ( WIN_SRC win/connect.c win/ascp-path.c )
 
-if ( "win" STREQUAL ${OS} )
+if ( "windows" STREQUAL ${OS} )
     set ( OS_SPECIFIC_SRC ${WIN_SRC} )
 elseif( "linux" STREQUAL ${OS} )
     set ( OS_SPECIFIC_SRC ${LINUX_SRC} )
@@ -11,7 +11,7 @@ elseif( "mac" STREQUAL ${OS} )
     set ( OS_SPECIFIC_SRC ${MAC_SRC} )
 endif()
 
-add_library(ascp STATIC
+GenerateStaticLibs(ascp
     ascp.c
     ${OS_SPECIFIC_SRC}
 )

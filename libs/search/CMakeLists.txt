@@ -1,4 +1,7 @@
-add_library( ksrch STATIC
+# some modules produce a ton of output with DEBUG defined
+remove_definitions(-DDEBUG)
+
+GenerateStaticLibs( ksrch
     agrep-dp.c
     agrep-myers.c
     agrep-myersunltd.c
@@ -12,6 +15,3 @@ add_library( ksrch STATIC
 )
 
 add_compile_definitions (__mod__="libs/search")
-
-# some modules produce a ton of output with DEBUG defined
-remove_definitions(-DDEBUG)

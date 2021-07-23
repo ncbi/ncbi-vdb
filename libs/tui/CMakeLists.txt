@@ -3,7 +3,7 @@ set ( LINUX_SRC linux/systui.c )
 set ( MAC_SRC bsd/systui.c )
 set ( WIN_SRC win/systui.c )
 
-if ( "win" STREQUAL ${OS} )
+if ( "windows" STREQUAL ${OS} )
     set ( OS_SPECIFIC_SRC ${WIN_SRC} )
     #include_directories( win )
 elseif( "linux" STREQUAL ${OS} )
@@ -14,7 +14,7 @@ elseif( "mac" STREQUAL ${OS} )
     #include_directories( unix )
 endif()
 
-add_library( tui STATIC
+GenerateStaticLibs( tui
     dir_dlg.c
     eventring.c
     file_dlg.c
@@ -41,6 +41,6 @@ add_library( tui STATIC
 
     ${OS_SPECIFIC_SRC}
 )
-add_library( tui_cpp STATIC tui_cpp )
+GenerateStaticLibs( tui_cpp tui_cpp )
 
 add_compile_definitions (__mod__="libs/tui")

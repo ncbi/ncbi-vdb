@@ -1,5 +1,5 @@
 
-add_library(judy STATIC
+GenerateStaticLibs(judy
     JudyMalloc
     JudySL
     JudyHS
@@ -31,13 +31,13 @@ set( JUDY_CMN
 # the debug build of Judy is broken!
 remove_definitions( -DDEBUG )
 
-add_library(judyL STATIC
+GenerateStaticLibs(judyL
     ${JUDY_CMN}
     _JudyLTables
 )
 target_compile_definitions(judyL PRIVATE JUDYL)
 
-add_library(judy1 STATIC
+GenerateStaticLibs(judy1
     ${JUDY_CMN}
     _Judy1Tables
 )

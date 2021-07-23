@@ -1,4 +1,4 @@
-add_library(ngs STATIC
+GenerateStaticLibs(ngs
     NCBI-NGS
     CSRA1_PileupEvent
     CSRA1_Pileup

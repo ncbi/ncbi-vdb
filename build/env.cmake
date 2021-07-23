@@ -74,6 +74,8 @@ if ( "mac" STREQUAL ${OS} )
 elseif( "linux" STREQUAL ${OS} )
     add_compile_definitions( LINUX UNIX )
     set( LMCHECK -lmcheck )
+elseif( "windows" STREQUAL ${OS} )
+    add_compile_definitions( WINDOWS _WIN32_WINNT=0x0502 )
 endif()
 
 # create variables based entirely upon ARCH
@@ -88,7 +90,10 @@ elseif ("aarch64" STREQUAL ${ARCH} )
 	add_compile_definitions( HAVE_Z128 )
 elseif ("x86_64" STREQUAL ${ARCH} )
     set ( BITS 64 )
-    add_compile_definitions( HAVE_Z128 LONG_DOUBLE_IS_NOT_R128 )
+    add_compile_definitions( LONG_DOUBLE_IS_NOT_R128 )
+    if( NOT WIN32 )
+        add_compile_definitions( HAVE_Z128 )
+    endif()
 endif()
 
 # now any unique combinations of OS and ARCH

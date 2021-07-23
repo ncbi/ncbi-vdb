@@ -10,8 +10,7 @@ set ( LINUX_SRC_V2 ${UNIX_SRC_V2} )
 set ( MAC_SRC_V2 ${UNIX_SRC_V2} )
 set ( WIN_SRC_V2 win/sysfile-v2.c )
 
-
-if ( "win" STREQUAL ${OS} )
+if ( "windows" STREQUAL ${OS} )
     set ( OS_SPECIFIC_SRC ${WIN_SRC} )
     include_directories( win )
 elseif( "linux" STREQUAL ${OS} )
@@ -23,16 +22,16 @@ elseif( "mac" STREQUAL ${OS} )
 endif()
 
 
-if ( "win" STREQUAL ${OS} )
-    set ( OS_SPECIFIC_SRC_V2 ${WIN_SRC_V2} )
-    include_directories( win )
-elseif( "linux" STREQUAL ${OS} )
-    set ( OS_SPECIFIC_SRC_V2 ${LINUX_SRC_V2} )
-    include_directories( unix )
-elseif( "mac" STREQUAL ${OS} )
-    set ( OS_SPECIFIC_SRC_V2 ${MAC_SRC_V2} )
-    include_directories( unix )
-endif()
+# if ( "windows" STREQUAL ${OS} )
+    # set ( OS_SPECIFIC_SRC_V2 ${WIN_SRC_V2} )
+    # include_directories( win )
+# elseif( "linux" STREQUAL ${OS} )
+    # set ( OS_SPECIFIC_SRC_V2 ${LINUX_SRC_V2} )
+    # include_directories( unix )
+# elseif( "mac" STREQUAL ${OS} )
+    # set ( OS_SPECIFIC_SRC_V2 ${MAC_SRC_V2} )
+    # include_directories( unix )
+# endif()
 
 set( KFS_CMN
     directory
@@ -96,7 +95,7 @@ set( KFS2_SRC
 set( KFS_NOMMAP_SRC
     ${KFS_CMN}
 )
-add_library( kfs-nommap STATIC ${KFS_NOMMAP_SRC} )
+GenerateStaticLibs( kfs-nommap ${KFS_NOMMAP_SRC} )
 target_compile_definitions(kfs-nommap PRIVATE FORCE_MALLOC_MMAP )
 
 set( KFF_SRC
@@ -106,9 +105,9 @@ set( KFF_SRC
     ffmagic
 )
 
-add_library( kfs STATIC ${KFS_SRC} )
-#add_library( kfs.2 STATIC ${KFS2_SRC} )
-add_library( kff STATIC ${KFF_SRC} )
+GenerateStaticLibs( kfs ${KFS_SRC} )
+#GenerateStaticLibs( kfs.2 ${KFS2_SRC} )
+GenerateStaticLibs( kff ${KFF_SRC} )
 
 add_compile_definitions (__mod__="libs/kfs")
 include_directories( BEFORE ${CMAKE_CURRENT_SOURCE_DIR} )

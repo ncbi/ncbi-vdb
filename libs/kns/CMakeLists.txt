@@ -3,7 +3,7 @@ set ( LINUX_SRC ${UNIX_SRC} linux/sysendpoint.c linux/syspoll.c )
 set ( MAC_SRC ${UNIX_SRC} mac/sysendpoint.c mac/syspoll.c )
 set ( WIN_SRC win/sysendpoint.c win/sysmgr.c win/syssock.c win/sysstream.c )
 
-if ( "win" STREQUAL ${OS} )
+if ( "windows" STREQUAL ${OS} )
     set ( OS_SPECIFIC_SRC ${WIN_SRC} )
     include_directories( win )
 elseif( "linux" STREQUAL ${OS} )
@@ -37,7 +37,7 @@ set( KNS_SRC
     http
 )
 
-add_library( kns STATIC ${KNS_SRC} ${OS_SPECIFIC_SRC} )
+GenerateStaticLibs( kns ${KNS_SRC} ${OS_SPECIFIC_SRC} )
 
 add_compile_definitions (__mod__="libs/kns")
 add_compile_definitions (PKGNAME="${OS}${BITS}")

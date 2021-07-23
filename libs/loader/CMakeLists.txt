@@ -1,4 +1,4 @@
-add_library(loader STATIC
+GenerateStaticLibs(loader
     alignment-writer
     common-reader
     common-writer

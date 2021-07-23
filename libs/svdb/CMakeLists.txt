@@ -1,4 +1,4 @@
-add_library(svdb STATIC
+GenerateStaticLibs(svdb
     svdb.c
 )
 

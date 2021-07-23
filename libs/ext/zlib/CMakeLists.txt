@@ -16,6 +16,6 @@ set( LIBZ_SRC
     zutil
 )
 
-add_library( z STATIC ${LIBZ_SRC} )
+GenerateStaticLibs( z ${LIBZ_SRC} )
 
 add_compile_definitions( __mod__="libs/ext/zlib" )

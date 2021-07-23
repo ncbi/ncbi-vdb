@@ -1,4 +1,4 @@
-add_library(vdb-sqlite STATIC
+GenerateStaticLibs(vdb-sqlite
     sqlite3.c
     sqlite3vdb.c
 )

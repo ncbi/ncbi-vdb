@@ -1,3 +1,3 @@
-add_library( zstd STATIC zstd )
+GenerateStaticLibs( zstd zstd )
 
 add_compile_definitions( __mod__="libs/ext/zstd" )
