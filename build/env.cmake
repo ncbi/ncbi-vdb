@@ -27,9 +27,13 @@
 #
 
 # allow implicit source file extensions
-if (${CMAKE_VERSION} GREATER_EQUAL "3.20")
+if ( ${CMAKE_VERSION} VERSION_EQUAL "3.20" OR
+     ${CMAKE_VERSION} VERSION_GREATER "3.20")
     cmake_policy(SET CMP0115 OLD)
 endif()
+
+# ===========================================================================
+# set up CMake variables describing the environment
 
 # version, taken from the source
 set( VERSION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/libs/ncbi-vdb/libncbi-vdb.vers")
@@ -121,6 +125,7 @@ endif()
 add_compile_definitions( _ARCH_BITS=${BITS} ${ARCH} )
 add_definitions( -Wall )
 
+# assume debug build by default
 if ( "${CMAKE_BUILD_TYPE}" STREQUAL "" )
     set ( CMAKE_BUILD_TYPE "Debug" CACHE STRING "" FORCE )
 endif()
@@ -133,6 +138,10 @@ endif()
 message("CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
 
 #message( "OS=" ${OS} " ARCH=" ${ARCH} " CXX=" ${CMAKE_CXX_COMPILER} " LMCHECK=" ${LMCHECK} " BITS=" ${BITS} " CMAKE_C_COMPILER_ID=" ${CMAKE_C_COMPILER_ID} " CMAKE_CXX_COMPILER_ID=" ${CMAKE_CXX_COMPILER_ID} )
+
+# ===========================================================================
+# include directories for C/C++ compilation
+#
 
 include_directories(interfaces)
 include_directories(interfaces/os)
@@ -166,6 +175,9 @@ else ()
     #TODO: if not found, checkout and build
 endif ()
 
+# ===========================================================================
+# 3d party packages
+
 # Flex/Bison
 find_package( FLEX 2.6 )
 find_package( BISON ) #TODO: specify minimal version
@@ -176,25 +188,40 @@ find_package(LibXml2)
 set( Python3_EXECUTABLE ${PYTHON_PATH} )
 find_package( Python3 COMPONENTS Interpreter )
 
-# Build artefact locations
-if( NOT DEFINED CMAKE_ARCHIVE_OUTPUT_DIRECTORY)
-set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/ilib )
-endif()
-if( NOT DEFINED CMAKE_LIBRARY_OUTPUT_DIRECTORY)
-set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib )
-endif()
-if( NOT DEFINED CMAKE_RUNTIME_OUTPUT_DIRECTORY)
-set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin )
-endif()
-file(MAKE_DIRECTORY
-    ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}
-    ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
-    ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-)
+# ===========================================================================
+# Build artefact locations.
+# For XCode and MSVC specify per-configuration output directories
 
+function(SetAndCreate var path )
+    if( NOT DEFINED ${var} )
+        set( ${var} ${path} PARENT_SCOPE )
+    endif()
+    file(MAKE_DIRECTORY ${path} )
+endfunction()
+
+#message(CMAKE_GENERATOR=${CMAKE_GENERATOR})
+if ( ${CMAKE_GENERATOR} MATCHES "Visual Studio.*" OR
+     ${CMAKE_GENERATOR} STREQUAL "Xcode" )
+    # a multi-config generator
+    SetAndCreate( CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG   ${CMAKE_BINARY_DIR}/Debug/ilib )
+    SetAndCreate( CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/Release/ilib )
+    SetAndCreate( CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG   ${CMAKE_BINARY_DIR}/Debug/lib )
+    SetAndCreate( CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/Release/lib )
+    SetAndCreate( CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG   ${CMAKE_BINARY_DIR}/Debug/bin )
+    SetAndCreate( CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/Release/bin )
+
+else() # assume a single-config generator
+    SetAndCreate( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/ilib )
+    SetAndCreate( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib )
+    SetAndCreate( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin )
+
+endif()
+
+# ===========================================================================
 # testing
 enable_testing()
 
+# ===========================================================================
 # documentation
 find_package(Doxygen)
 if ( Doxygen_FOUND)
@@ -202,5 +229,6 @@ if ( Doxygen_FOUND)
     doxygen_add_docs(docs interfaces)
 endif()
 
+# ===========================================================================
 # common functions
 include( ${CMAKE_CURRENT_SOURCE_DIR}/build/common.cmake )

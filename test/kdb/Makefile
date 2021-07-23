@@ -22,7 +22,7 @@
 #
 # ===========================================================================
 
-#TODO: revive test-btree
+default: runtests
 
 TOP ?= $(abspath ../..)
 MODULE = test/kdb

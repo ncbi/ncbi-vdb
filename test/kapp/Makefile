@@ -22,7 +22,7 @@
 #
 # ===========================================================================
 
-#TODO: update qfiletest
+default: runtests
 
 TOP ?= $(abspath ../..)
 MODULE = test/kapp

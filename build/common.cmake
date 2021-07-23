@@ -15,17 +15,35 @@ function( MSVS_DLLRuntime name )
     endif()
 endfunction()
 
-function( GenerateStaticLibs target_name sources )
-    add_library( ${target_name} STATIC ${sources} )
+function( GenerateStaticLibs
+            target_name
+            #[[ followed by any number of source file names, accessed as ARGN, a CMake list ]])
+    list(JOIN ARGN " " sources )
+    cmake_language(EVAL CODE
+        "add_library( ${target_name} STATIC ${sources} )" )
     if( WIN32 )
         MSVS_StaticRuntime( ${target_name} )
-        add_library( ${target_name}-md STATIC ${sources} )
+        add_library( ${target_name}-md STATIC ${sources} ) #TODO: use EVAL
         MSVS_DLLRuntime( ${target_name}-md )
     endif()
 endfunction()
 
 function(ExportStatic name )
     # the output goes to .../lib
+    if( CMAKE_LIBRARY_OUTPUT_DIRECTORY )
+        set_target_properties( ${name} PROPERTIES
+            ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )
+    else
+        if( CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG )
+            set_target_properties( ${name} PROPERTIES
+                LIBRARY_OUTPUT_DIRECTORY_DEBUG ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG} )
+        endif()
+        if( CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE )
+            set_target_properties( ${name} PROPERTIES
+                LIBRARY_OUTPUT_DIRECTORY_RELEASE ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE} )
+        endif()
+    endif()
+
     if( NOT WIN32 )
         set_target_properties( ${name} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )
         # make the output name versioned, create all symlinks

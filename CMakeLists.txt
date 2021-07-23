@@ -49,11 +49,11 @@
 #
 ## ===========================================================================
 
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.18)
 project(ncbi-vdb)
 
 # calculate global settiungs, create output directories
-include( build/env.cmake )
+include( build/env.cmake NO_POLICY_SCOPE )
 
 add_subdirectory(libs)
 add_subdirectory(test)
