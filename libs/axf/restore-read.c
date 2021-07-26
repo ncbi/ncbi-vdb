@@ -51,6 +51,21 @@
 #include "refseq.h"
 #include "wgs.h"
 
+typedef struct SeqID
+{
+    char const *value;
+    int64_t wgs_row;
+    unsigned length_wgs, length;
+} SeqID;
+
+SeqID const *makeSeqID(SeqID *result, unsigned length, char const *name)
+{
+    result->value = name;
+    result->length = length;
+    result->length_wgs = WGS_splitName(&result->wgs_row, length, name);
+    return result;
+}
+
 static VFSManager *getVFSManager(VDBManager const *mgr)
 {
     VFSManager *result = NULL;
