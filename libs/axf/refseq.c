@@ -566,13 +566,12 @@ static rc_t load(  RefSeq *result
 
         result->bases = bases;
         result->length = (unsigned)baseCount;
+        result->reader = readNormalIncomplete;
         result->async = RefSeqAsyncLoadInfoMake(curs, rowRange, info + 1, &rc);
         if (rc == 0) {
             rc = KThreadMake(&result->async->th, run_load_thread, result);
-            if (rc == 0) {
-                result->reader = readNormalIncomplete;
+            if (rc == 0)
                 return 0;
-            }
         }
         RefSeqFree(result);
     }
