@@ -58,12 +58,34 @@ typedef struct SeqID
     unsigned length_wgs, length;
 } SeqID;
 
-SeqID const *makeSeqID(SeqID *result, unsigned length, char const *name)
+SeqID *makeSeqID(SeqID *result, unsigned length, char const *name)
 {
     result->value = name;
     result->length = length;
+    result->wgs_row = 0;
     result->length_wgs = WGS_splitName(&result->wgs_row, length, name);
+    assert(result->length_wgs == 0 || result->length_wgs <= length);
     return result;
+}
+
+static bool SeqID_isNotWGS(SeqID const *const self)
+{
+    return self->length_wgs == 0 || self->length_wgs == self->length;
+}
+
+static unsigned SeqID_length(SeqID const *const self)
+{
+    return (self->length_wgs == 0) ? self->length : self->length_wgs;
+}
+
+static int SeqID_cmp(SeqID const *const self, char const *const name)
+{
+    return strncmp(self->value, name, SeqID_length(self));
+}
+
+static char const *SeqID_copyName(SeqID const *const self)
+{
+    return strndup(self->value, SeqID_length(self) + 1);
 }
 
 static VFSManager *getVFSManager(VDBManager const *mgr)
@@ -82,11 +104,11 @@ static VFSManager *getVFSManager(VDBManager const *mgr)
     return result;
 }
 
-static VPath *makePath(VDBManager const *mgr, unsigned length, char const *accession)
+static VPath *makePath(VDBManager const *mgr, SeqID const *const seqId)
 {
     VPath *result = NULL;
     VFSManager *const vfs = getVFSManager(mgr);
-    VFSManagerMakePath(vfs, &result, "%.*s", (int)length, accession);
+    VFSManagerMakePath(vfs, &result, "%.*s", (int)SeqID_length(seqId), seqId->value);
     VFSManagerRelease(vfs);
     return result;
 }
@@ -105,9 +127,9 @@ static String const *getContainer(VTable const *const forTable)
     return NULL;
 }
 
-static VPath const *getURL(VDBManager const *mgr, unsigned length, char const *accession, VTable const *const forTable)
+static VPath const *getURL(VDBManager const *mgr, SeqID const *const seqId, VTable const *const forTable)
 {
-    VPath * const result = makePath(mgr, length, accession);
+    VPath * const result = makePath(mgr, seqId);
     if (result) {
         String const * const container = getContainer(forTable);
         rc_t const rc = VPathSetAccOfParentDb(result, container);
@@ -197,22 +219,7 @@ struct Cache {
     unsigned allocated;
 };
 
-static int name_cmp(char const *const name, char const *const qry, unsigned const qlen, unsigned const altlen)
-{
-    unsigned i;
-    unsigned const alen = altlen == 0 ? qlen : altlen;
-    for (i = 0; i < qlen; ++i) {
-        int const a = name[i];
-        int const b = qry[i];
-        int const d = a - b;
-        if (a == 0) return (i == alen) ? 0 : d;
-        if (d == 0) continue;
-        return d;
-    }
-    return name[qlen] - '\0';
-}
-
-static bool find(Cache const *self, unsigned *const at, char const *const qry, unsigned const qlen, unsigned const altlen)
+static bool find(Cache const *self, unsigned *const at, SeqID const *const seqId)
 {
     unsigned f = 0;
     unsigned e = self->entries;
@@ -220,7 +227,7 @@ static bool find(Cache const *self, unsigned *const at, char const *const qry, u
     while (f < e) {
         unsigned const m = f + (e - f) / 2;
         CacheEntry const *const M = &self->entry[m];
-        int const d = name_cmp(M->name, qry, qlen, altlen);
+        int const d = -SeqID_cmp(seqId, M->name);
 
         assert(M->type != CE_unset);
         if (d == 0) {
@@ -236,13 +243,11 @@ static bool find(Cache const *self, unsigned *const at, char const *const qry, u
     return false;
 }
 
-static CacheEntry *insert(Cache *list, unsigned const at, unsigned const namelen, char const *name)
+static CacheEntry *insert(Cache *list, unsigned const at, SeqID const *const seqId)
 {
-    char *const copy = malloc(namelen + 1);
+    char const *const copy = SeqID_copyName(seqId);
     if (copy == NULL)
         return NULL;
-    memmove(copy, name, namelen);
-    copy[namelen] = '\0';
 
     if (list->entries >= list->allocated) {
         unsigned const new_alloc = list->allocated == 0 ? 16 : (list->allocated * 2);
@@ -262,19 +267,19 @@ static CacheEntry *insert(Cache *list, unsigned const at, unsigned const namelen
 }
 
 static
-CacheEntry *CacheFind(Cache const *self, char const *const qry, unsigned const qlen, unsigned const altlen)
+CacheEntry *CacheFind(Cache const *const self, SeqID const *const seqId)
 {
     unsigned at = self->entries;
-    return find(self, &at, qry, qlen, altlen) ? &self->entry[at] : NULL;
+    return find(self, &at, seqId) ? &self->entry[at] : NULL;
 }
 
 static
-CacheEntry *CacheInsert(Cache *self, char const *const qry, unsigned const qlen)
+CacheEntry *CacheInsert(Cache *const self, SeqID const *const seqId)
 {
     unsigned at = self->entries;
-    return find(self, &at, qry, qlen, qlen)
+    return find(self, &at, seqId)
            ? &self->entry[at]
-           : insert(self, at, qlen, qry);
+           : insert(self, at, seqId);
 }
 
 static void CacheFree(Cache *list)
@@ -473,77 +478,76 @@ RestoreRead *RestoreReadMake(VDBManager const *vmgr, rc_t *rcp)
 }
 
 static rc_t openSeqID(  RestoreRead *const self
-                      , unsigned const id_len
-                      , unsigned const wgs_id_len
-                      , char const *const seq_id
+                      , SeqID *const seqId
                       , VTable const *const forTable)
 {
     rc_t rc = 0;
-    if (wgs_id_len == 0 || wgs_id_len == id_len) {
+    if (SeqID_isNotWGS(seqId)) {
         VTable const *tbl = NULL;
-        VPath const *const url = getURL(self->mgr, id_len, seq_id, forTable);
+        VPath const *const url = getURL(self->mgr, seqId, forTable);
         if (url) {
             rc = VDBManagerOpenTableReadVPath(self->mgr, &tbl, NULL, url);
             VPathRelease(url);
         }
         else
-            rc = VDBManagerOpenTableRead(self->mgr, &tbl, NULL, "ncbi-acc:%.*s?vdb-ctx=refseq", (int)id_len, seq_id);
+            rc = VDBManagerOpenTableRead(self->mgr, &tbl, NULL, "ncbi-acc:%.*s?vdb-ctx=refseq", (int)seqId->length, seqId->value);
 
         if (tbl != NULL && tableSchemaNameIsEqual(tbl, RefSeq_Scheme())) {
             RestoreReadSharedWriter(self->shared);
-            self->last = CacheInsert(&self->shared->cache, seq_id, id_len);
+            self->last = CacheInsert(&self->shared->cache, seqId);
             if (self->last->type == CE_unset) {
                 self->last->type = CE_refseq;
                 self->last->value.refseq = RefSeqNew(tbl, &rc);
                 if (rc != 0) {
                     self->last->type = CE_error;
                     self->last->value.error = rc;
-                    PLOGERR(klogWarn, (klogWarn, rc, "can't open $(name) as a RefSeq", "name=%.*s", (int)id_len, seq_id));
+                    PLOGERR(klogWarn, (klogWarn, rc, "can't open $(name) as a RefSeq", "name=%.*s", (int)seqId->length, seqId->value));
                 }
                 else {
-                    PLOGMSG(klogDebug, (klogDebug, "opened $(name) as a RefSeq", "name=%.*s", (int)id_len, seq_id));
+                    PLOGMSG(klogDebug, (klogDebug, "opened $(name) as a RefSeq", "name=%.*s", (int)seqId->length, seqId->value));
                 }
             }
+            self->count = self->shared->cache.entries;
             RestoreReadSharedWriterDone(self->shared);
             assert(self->last->type == CE_refseq || self->last->type == CE_error);
-            self->count = self->shared->cache.entries;
         }
         else {
             if (rc == 0)
                 rc = RC(rcAlign, rcTable, rcAccessing, rcType, rcUnexpected);
-            PLOGERR(klogWarn, (klogWarn, rc, "can't open $(name) as a RefSeq", "name=%.*s", (int)id_len, seq_id));
+            PLOGERR(klogWarn, (klogWarn, rc, "can't open $(name) as a RefSeq", "name=%.*s", (int)seqId->length, seqId->value));
         }
         VTableRelease(tbl);
         return rc;
     }
     else {
         VDatabase const *db = NULL;
-        VPath const *const url = getURL(self->mgr, wgs_id_len, seq_id, forTable);
+        VPath const *const url = getURL(self->mgr, seqId, forTable);
         if (url)
             rc = VDBManagerOpenDBReadVPath(self->mgr, &db, NULL, url);
         else
-            rc = VDBManagerOpenDBRead(self->mgr, &db, NULL, "%.*s", (int)wgs_id_len, seq_id);
+            rc = VDBManagerOpenDBRead(self->mgr, &db, NULL, "%.*s", (int)seqId->length_wgs, seqId->value);
 
         if (rc) {
             // not a database, so not WGS
             VPathRelease(url);
-            return openSeqID(self, id_len, 0, seq_id, forTable);
+            seqId->length_wgs = 0;
+            return openSeqID(self, seqId, forTable);
         }
         if (dbSchemaNameIsEqual(db, WGS_Scheme())) {
             WGS_close(&self->wgs);
             RestoreReadSharedWriter(self->shared);
-            self->last = CacheInsert(&self->shared->cache, seq_id, wgs_id_len);
+            self->last = CacheInsert(&self->shared->cache, seqId);
             if (self->last->type == CE_unset) {
                 rc = WGS_Init(&self->wgs, db);
                 if (rc == 0) {
                     self->last->type = CE_WGS;
                     VPathAddRef(self->last->value.WGS_url = url);
-                    PLOGMSG(klogDebug, (klogDebug, "opened $(name) as a WGS reference", "name=%.*s", (int)wgs_id_len, seq_id));
+                    PLOGMSG(klogDebug, (klogDebug, "opened $(name) as a WGS reference", "name=%.*s", (int)seqId->length_wgs, seqId->value));
                 }
                 else {
                     self->last->type = CE_error;
                     self->last->value.error = rc;
-                    PLOGERR(klogWarn, (klogWarn, rc, "can't open $(name) as a WGS", "name=%.*s", (int)wgs_id_len, seq_id));
+                    PLOGERR(klogWarn, (klogWarn, rc, "can't open $(name) as a WGS", "name=%.*s", (int)seqId->length_wgs, seqId->value));
                 }
             }
             RestoreReadSharedWriterDone(self->shared);
@@ -552,7 +556,7 @@ static rc_t openSeqID(  RestoreRead *const self
         }
         else {
             rc = RC(rcAlign, rcTable, rcAccessing, rcType, rcUnexpected);
-            PLOGERR(klogWarn, (klogWarn, rc, "can't open $(name) as a WGS", "name=%.*s", (int)id_len, seq_id));
+            PLOGERR(klogWarn, (klogWarn, rc, "can't open $(name) as a WGS", "name=%.*s", (int)seqId->length, seqId->value));
         }
         VDatabaseRelease(db);
         VPathRelease(url);
@@ -563,17 +567,16 @@ static rc_t openSeqID(  RestoreRead *const self
 static rc_t getSequence(  RestoreRead *const self
                         , unsigned const start
                         , unsigned const length, uint8_t *const dst
-                        , unsigned const id_len, char const *const seq_id
+                        , SeqID *const seqId
                         , unsigned *const actual
                         , VTable const *const forTable)
 {
     int64_t wgs_row = 0;
-    unsigned const wgs_namelen = WGS_splitName(&wgs_row, id_len, seq_id);
     rc_t rc = 0;
 
     if (self->count == self->shared->cache.entries
         && self->last != NULL
-        && name_cmp(self->last->name, seq_id, id_len, wgs_namelen) == 0)
+        && SeqID_cmp(seqId, self->last->name) == 0)
     {
     USE_LAST:
         assert(self->last->type != CE_unset);
@@ -590,24 +593,24 @@ static rc_t getSequence(  RestoreRead *const self
             abort();
         }
     }
-    self->last = CacheFind(&self->shared->cache, seq_id, id_len, wgs_namelen);
+    self->last = CacheFind(&self->shared->cache, seqId);
     if (self->last) {
         self->count = self->shared->cache.entries;
         if (self->last->type == CE_WGS && self->wgs.curs == NULL) {
-            rc = WGS_reopen(&self->wgs, self->mgr, self->last->value.WGS_url, wgs_namelen, seq_id);
+            rc = WGS_reopen(&self->wgs, self->mgr, self->last->value.WGS_url, seqId->length_wgs, seqId->value);
             if (rc) return rc;
-            PLOGMSG(klogDebug, (klogDebug, "reopened $(name) as a WGS reference", "name=%.*s", (int)wgs_namelen, seq_id));
+            PLOGMSG(klogDebug, (klogDebug, "reopened $(name) as a WGS reference", "name=%.*s", (int)seqId->length_wgs, seqId->value));
         }
         goto USE_LAST;
     }
 
     // it is a new seq_id
-    rc = openSeqID(self, id_len, wgs_namelen, seq_id, forTable);
+    rc = openSeqID(self, seqId, forTable);
     if (rc == 0)
         goto USE_LAST;
 
     RestoreReadSharedWriter(self->shared);
-    self->last = CacheInsert(&self->shared->cache, seq_id, id_len);
+    self->last = CacheInsert(&self->shared->cache, seqId);
     assert(self->last->type == CE_unset);
     self->last->type = CE_error;
     self->last->value.error = rc;
@@ -624,12 +627,15 @@ rc_t RestoreReadGetSequence(  RestoreRead *self
                             , VTable const *forTable)
 {
     rc_t rc;
+    SeqID seqId;
 
     assert(length < UINT_MAX);
     assert(id_len < UINT_MAX);
 
     RestoreReadSharedReader(self->shared);
-    rc = getSequence(self, start, (unsigned)length, dst, (unsigned)id_len, seq_id, actual, forTable);
+    rc = getSequence(self, start, (unsigned)length, dst
+                     , makeSeqID(&seqId, (unsigned)id_len, seq_id)
+                     , actual, forTable);
     RestoreReadSharedReaderDone(self->shared);
     return rc;
 }
