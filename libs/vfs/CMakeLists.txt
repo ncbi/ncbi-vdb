@@ -11,7 +11,7 @@ elseif( "mac" STREQUAL ${OS} )
     set ( OS_SPECIFIC_SRC ${MAC_SRC} )
 endif()
 
-GenerateStaticLibs(vfs
+set( SRC
     jwt
     names4-response
     manager
@@ -26,6 +26,8 @@ GenerateStaticLibs(vfs
     path
     ${OS_SPECIFIC_SRC}
 )
+
+GenerateStaticLibs( vfs "${SRC}" )
 
 add_compile_definitions (__mod__="libs/vfs")
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})

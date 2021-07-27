@@ -1,6 +1,9 @@
 add_executable( test-qfile qfiletest )
 add_executable( test-kapp kapp-test )
 
+MSVS_StaticRuntime( test-qfile )
+MSVS_StaticRuntime( test-kapp )
+
 # TODO: ALL_TOOLS, scripted tests
 
 add_compile_definitions( __mod__="test/kapp" )

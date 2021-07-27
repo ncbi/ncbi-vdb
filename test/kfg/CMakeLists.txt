@@ -5,6 +5,12 @@ add_executable( test-repository repositorytest )
 add_executable( test-keystore keystoretest )
 add_executable( test-properties kfg-fixture propertiestest )
 
+MSVS_StaticRuntime( wb-test-kfg )
+MSVS_StaticRuntime( test-kfg )
+MSVS_StaticRuntime( test-repository )
+MSVS_StaticRuntime( test-keystore )
+MSVS_StaticRuntime( test-properties )
+
 # TODO: fuzz test
 
 add_compile_definitions( __mod__="test/kfg" )

@@ -1,7 +1,9 @@
-GenerateStaticLibs( diagnose
+set( SRC
     diagnose.c
     endpoint.c
 )
+
+GenerateStaticLibs( diagnose "${SRC}" )
 
 ExportStatic( diagnose )
 ExportShared( diagnose )

@@ -4,7 +4,7 @@ set( WGSXF_SRC
 )
 
 
-GenerateStaticLibs( wgsxf ${WGSXF_SRC} )
-GenerateStaticLibs( wwgsxf ${WGSXF_SRC} )
+GenerateStaticLibs( wgsxf "${WGSXF_SRC}" )
+GenerateStaticLibs( wwgsxf "${WGSXF_SRC}" )
 
 add_compile_definitions (__mod__="libs/wgsxf")

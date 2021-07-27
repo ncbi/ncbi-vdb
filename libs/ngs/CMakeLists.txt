@@ -1,4 +1,4 @@
-GenerateStaticLibs(ngs
+set( SRC
     NCBI-NGS
     CSRA1_PileupEvent
     CSRA1_Pileup
@@ -36,5 +36,7 @@ GenerateStaticLibs(ngs
     NGS_ReferenceBlobIterator
     VByteBlob
 )
+
+GenerateStaticLibs( ngs "${SRC}" )
 
 add_compile_definitions (__mod__="libs/ngs")

@@ -1,6 +1,7 @@
 add_executable(test-judy
     judytest
 )
+MSVS_StaticRuntime( test-judy )
 
 add_compile_definitions( __mod__="test/judy" )
 

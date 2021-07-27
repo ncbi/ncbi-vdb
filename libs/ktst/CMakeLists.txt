@@ -11,12 +11,14 @@ elseif( "mac" STREQUAL ${OS} )
     set ( OS_SPECIFIC_SRC ${MAC_SRC} )
 endif()
 
-GenerateStaticLibs(ktst
+set( SRC
     testenv
     testcase
     testrunner
     ${OS_SPECIFIC_SRC}
 )
+
+GenerateStaticLibs( ktst "${SRC}" )
 
 add_compile_definitions (__mod__="libs/ktst")
 #include_directories( BEFORE ${CMAKE_CURRENT_SOURCE_DIR} )

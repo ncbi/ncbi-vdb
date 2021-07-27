@@ -35,9 +35,10 @@ set( KNS_SRC
     http-request
     http-retrier
     http
+    ${OS_SPECIFIC_SRC}
 )
 
-GenerateStaticLibs( kns ${KNS_SRC} ${OS_SPECIFIC_SRC} )
+GenerateStaticLibs( kns "${KNS_SRC}" )
 
 add_compile_definitions (__mod__="libs/kns")
 add_compile_definitions (PKGNAME="${OS}${BITS}")

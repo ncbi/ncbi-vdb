@@ -93,8 +93,8 @@ set(TLS_SRC
     ssl_tls13_keys
 )
 
-GenerateStaticLibs( mbedcrypto ${CRYPTO_SRC} )
-GenerateStaticLibs( mbedx509 ${X509_SRC} )
-GenerateStaticLibs( mbedtls ${TLS_SRC} )
+GenerateStaticLibs( mbedcrypto "${CRYPTO_SRC}" )
+GenerateStaticLibs( mbedx509 "${X509_SRC}" )
+GenerateStaticLibs( mbedtls "${TLS_SRC}" )
 
 add_compile_definitions( __mod__="libs/ext/mbedtls" )

@@ -11,7 +11,7 @@ else()
     set( KfgParser config-grammar.c )
 endif()
 
-GenerateStaticLibs(kfg
+set( SRC
     ${KfgParser}
     ${KfgScanner}
     config-aws
@@ -24,6 +24,8 @@ GenerateStaticLibs(kfg
     report-kfg
     repository
 )
+
+GenerateStaticLibs( kfg "${SRC}" )
 
 add_compile_definitions (__mod__="libs/kfg")
 add_compile_definitions (_ARCH_BITS=${BITS})

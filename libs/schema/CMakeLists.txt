@@ -20,7 +20,7 @@ else()
     set( SchemaAstParser schema-ast.cpp )
 endif()
 
-GenerateStaticLibs(schema
+set( SRC
     AST.cpp
     ASTBuilder-db.cpp
     ASTBuilder-func.cpp
@@ -38,5 +38,7 @@ GenerateStaticLibs(schema
     SchemaScanner.cpp
     Token.cpp
 )
+
+GenerateStaticLibs( schema "${SRC}" )
 
 add_compile_definitions (__mod__="libs/schema")

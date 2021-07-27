@@ -1,6 +1,7 @@
 add_executable(test-ktst
     ktsttest
 )
+MSVS_StaticRuntime( test-ktst )
 
 add_compile_definitions( __mod__="test/ktst" )
 

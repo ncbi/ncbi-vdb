@@ -6,11 +6,18 @@ endif()
 
 add_subdirectory(kfc)
 
-link_libraries( ktst kapp )
+set( COMMON_LINK_LIBRARIES ktst kapp )
+#link_libraries( ktst kapp )
 
 # for the tests that link against libncbi-[w]vdb
-set( COMMON_LIBS_READ   ncbi-vdb  dl pthread )
-set( COMMON_LIBS_WRITE  ncbi-wvdb dl pthread )
+if( WIN32 )
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS /ENTRY:wmainCRTStartup")
+    set( COMMON_LIBS_READ   ncbi-vdb Ws2_32 )
+    set( COMMON_LIBS_WRITE  ncbi-wvdb Ws2_32 )
+else()
+    set( COMMON_LIBS_READ   ncbi-vdb  dl pthread )
+    set( COMMON_LIBS_WRITE  ncbi-wvdb dl pthread )
+endif()
 
 add_subdirectory(ktst)
 add_subdirectory(cc)

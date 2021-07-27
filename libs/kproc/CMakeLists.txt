@@ -37,8 +37,8 @@ set( PROC_SRC ${PROC_CMN} sem )
 
 
 
-#GenerateStaticLibs( ksproc ${SPROC_SRC} )
-GenerateStaticLibs( kproc ${PROC_SRC} )
+#GenerateStaticLibs( ksproc "${SPROC_SRC}" )
+GenerateStaticLibs( kproc "${PROC_SRC}" )
 GenerateStaticLibs( kq queue )
 
 add_compile_definitions (__mod__="libs/kproc")

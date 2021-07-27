@@ -45,7 +45,7 @@ set( WSRAXF_SRC
     set-rna-flag
 )
 
-GenerateStaticLibs( sraxf ${SRAXF_SRC} )
-GenerateStaticLibs( wsraxf ${WSRAXF_SRC} )
+GenerateStaticLibs( sraxf "${SRAXF_SRC}" )
+GenerateStaticLibs( wsraxf "${WSRAXF_SRC}" )
 
 add_compile_definitions (__mod__="libs/sraxf")

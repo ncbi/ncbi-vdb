@@ -1,7 +1,8 @@
-GenerateStaticLibs(vdb-sqlite
+set( SRC
     sqlite3.c
     sqlite3vdb.c
 )
+GenerateStaticLibs( vdb-sqlite "${SRC}" )
 
 ExportStatic( vdb-sqlite )
 ExportShared( vdb-sqlite )

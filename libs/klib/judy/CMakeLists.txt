@@ -1,9 +1,10 @@
-
-GenerateStaticLibs(judy
+set( SRC_JUDY
     JudyMalloc
     JudySL
     JudyHS
 )
+
+GenerateStaticLibs( judy "${SRC_JUDY}" )
 
 set( JUDY_CMN
     JudyGet
@@ -31,17 +32,11 @@ set( JUDY_CMN
 # the debug build of Judy is broken!
 remove_definitions( -DDEBUG )
 
-GenerateStaticLibs(judyL
-    ${JUDY_CMN}
-    _JudyLTables
-)
-target_compile_definitions(judyL PRIVATE JUDYL)
+set( SRC_JUDYL ${JUDY_CMN} _JudyLTables )
+GenerateStaticLibsWithDefs( judyL "${SRC_JUDYL}" "JUDYL" )
 
-GenerateStaticLibs(judy1
-    ${JUDY_CMN}
-    _Judy1Tables
-)
-target_compile_definitions(judy1 PRIVATE JUDY1)
+set( SRC_JUDY1 ${JUDY_CMN} _Judy1Tables )
+GenerateStaticLibsWithDefs( judy1 "${SRC_JUDY1}" "JUDY1" )
 
 add_compile_definitions (__mod__="libs/klib/judy")
 include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/..)

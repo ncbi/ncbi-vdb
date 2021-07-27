@@ -3,6 +3,10 @@ add_executable( test-wkdb wkdbtest )
 add_executable( test-rowset rowsettest )
 #add_executable( test-btree test-btree ) #TODO: revive test-btree
 
+MSVS_StaticRuntime( test-kdb )
+MSVS_StaticRuntime( test-wkdb )
+MSVS_StaticRuntime( test-rowset )
+
 # TODO: make sure runs are not cached in the user repository when running tests
 
 add_compile_definitions( __mod__="test/kdb" )

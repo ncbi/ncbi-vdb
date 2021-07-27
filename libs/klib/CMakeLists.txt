@@ -33,7 +33,7 @@ endif (CMAKE_BUILD_TYPE STREQUAL "Debug")
 
 add_subdirectory( judy )
 
-GenerateStaticLibs(klib
+set( SRC
     all-vdb-version
     base64
     bsearch
@@ -95,6 +95,8 @@ GenerateStaticLibs(klib
     ${BUILD_SPECIFIC_SRC}
     ${OS_SPECIFIC_SRC}
 )
+
+GenerateStaticLibs( klib "${SRC}" )
 
 add_compile_definitions (__mod__="libs/klib")
 add_compile_definitions (_ARCH_BITS=${BITS})

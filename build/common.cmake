@@ -15,25 +15,40 @@ function( MSVS_DLLRuntime name )
     endif()
 endfunction()
 
-function( GenerateStaticLibs
-            target_name
-            #[[ followed by any number of source file names, accessed as ARGN, a CMake list ]])
-    list(JOIN ARGN " " sources )
-    cmake_language(EVAL CODE
-        "add_library( ${target_name} STATIC ${sources} )" )
+# function( GenerateStaticLibs
+            # target_name
+            # #[[ followed by any number of source file names, accessed as ARGN, a CMake list ]])
+    # list(JOIN ARGN " " sources )
+    # message( "SOURCES: ${sources}" )
+    # cmake_language(EVAL CODE
+        # "add_library( ${target_name} STATIC ${sources} )" )
+
+function( GenerateStaticLibsWithDefs target_name sources compile_defs )
+    add_library( ${target_name} STATIC ${sources} )
+    if( NOT "" STREQUAL "${compile_defs}" )
+        target_compile_definitions( ${target_name} PRIVATE ${compile_defs} )
+    endif()
     if( WIN32 )
         MSVS_StaticRuntime( ${target_name} )
         add_library( ${target_name}-md STATIC ${sources} ) #TODO: use EVAL
+        if(NOT "" STREQUAL "${compile_defs}" )
+            target_compile_definitions( ${target_name}-md PRIVATE ${compile_defs} )
+        endif()
         MSVS_DLLRuntime( ${target_name}-md )
     endif()
 endfunction()
+
+function( GenerateStaticLibs target_name sources )
+   GenerateStaticLibsWithDefs( ${target_name} "${sources}" "" )
+endfunction()
+
 
 function(ExportStatic name )
     # the output goes to .../lib
     if( CMAKE_LIBRARY_OUTPUT_DIRECTORY )
         set_target_properties( ${name} PROPERTIES
             ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )
-    else
+    else()
         if( CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG )
             set_target_properties( ${name} PROPERTIES
                 LIBRARY_OUTPUT_DIRECTORY_DEBUG ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG} )

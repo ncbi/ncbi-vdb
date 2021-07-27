@@ -1,4 +1,4 @@
-GenerateStaticLibs ( bz2
+set( SRC
     blocksort
     huffman
     crctable
@@ -7,5 +7,7 @@ GenerateStaticLibs ( bz2
     decompress
     bzlib
 )
+
+GenerateStaticLibs ( bz2 "${SRC}" )
 
 add_compile_definitions( __mod__="libs/ext/bzip2" )

@@ -11,9 +11,13 @@ elseif( "mac" STREQUAL ${OS} )
     set ( OS_SPECIFIC_SRC ${MAC_SRC} )
 endif()
 
-GenerateStaticLibs(ascp
+set( SRC
     ascp.c
     ${OS_SPECIFIC_SRC}
+)
+
+GenerateStaticLibs(ascp
+    "${SRC}"
 )
 
 add_compile_definitions( __mod__="libs/ascp" )

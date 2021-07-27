@@ -14,7 +14,7 @@ elseif( "mac" STREQUAL ${OS} )
     #include_directories( unix )
 endif()
 
-GenerateStaticLibs( tui
+set( SRC
     dir_dlg.c
     eventring.c
     file_dlg.c
@@ -38,9 +38,10 @@ GenerateStaticLibs( tui
     tui_widget_spin_edit.c
     tui_widget_string_list.c
     tui_widget_tabhdr.c
-
     ${OS_SPECIFIC_SRC}
 )
+
+GenerateStaticLibs( tui "${SRC}" )
 GenerateStaticLibs( tui_cpp tui_cpp )
 
 add_compile_definitions (__mod__="libs/tui")

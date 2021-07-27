@@ -41,11 +41,10 @@ set( TEST_LIB_SRC
     
 )
 
-GenerateStaticLibs(krypto
-    ${LIB_SRC}
+GenerateStaticLibs(krypto "${LIB_SRC}"
     #${OS_SPECIFIC_SRC}
 )
 
-GenerateStaticLibs( kryptotest ${TEST_LIB_SRC} )
+GenerateStaticLibs( kryptotest "${TEST_LIB_SRC}" )
 
 add_compile_definitions (__mod__="libs/krypto")

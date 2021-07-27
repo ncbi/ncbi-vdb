@@ -1,11 +1,12 @@
 find_package(HDF5 COMPONENTS)
 
 if( HDF5_FOUND )
-    GenerateStaticLibs(kdf5
+    set( SRC
         hdf5arrayfile.c
         hdf5dir.c
         hdf5file.c
     )
+    GenerateStaticLibs(kdf5 "${SRC}" )
 
     add_compile_definitions (__mod__="libs/hdf5")
     include_directories( ${HDF5_INCLUDE_DIRS} )

@@ -1,6 +1,7 @@
 add_executable(test-mbedtls
     test-mbedtls
 )
+MSVS_StaticRuntime( test-mbedtls )
 
 add_compile_definitions( __mod__="test/ext/mbedtls" )
 

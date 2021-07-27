@@ -1,4 +1,5 @@
 add_executable( test-kproc kproctest )
+MSVS_StaticRuntime( test-kproc )
 
 add_compile_definitions( __mod__="test/kproc" )
 

@@ -1,4 +1,4 @@
-GenerateStaticLibs(cloud
+set( SRC
     aws-auth.c
     aws.c
     cloud-cmn.c
@@ -8,6 +8,6 @@ GenerateStaticLibs(cloud
     gcp.c
 )
 
-MSVS_StaticRuntime( cloud )
+GenerateStaticLibs(cloud "${SRC}" )
 
 add_compile_definitions( __mod__="libs/cloud" )

@@ -1,6 +1,7 @@
 add_executable(test-zstd
     test-zstd
 )
+MSVS_StaticRuntime( test-zstd )
 
 add_compile_definitions( __mod__="test/ext/zstd" )
 

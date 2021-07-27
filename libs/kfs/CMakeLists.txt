@@ -95,8 +95,7 @@ set( KFS2_SRC
 set( KFS_NOMMAP_SRC
     ${KFS_CMN}
 )
-GenerateStaticLibs( kfs-nommap ${KFS_NOMMAP_SRC} )
-target_compile_definitions(kfs-nommap PRIVATE FORCE_MALLOC_MMAP )
+GenerateStaticLibsWithDefs( kfs-nommap ${KFS_NOMMAP_SRC} "FORCE_MALLOC_MMAP" )
 
 set( KFF_SRC
     fileformat
@@ -105,9 +104,9 @@ set( KFF_SRC
     ffmagic
 )
 
-GenerateStaticLibs( kfs ${KFS_SRC} )
-#GenerateStaticLibs( kfs.2 ${KFS2_SRC} )
-GenerateStaticLibs( kff ${KFF_SRC} )
+GenerateStaticLibs( kfs "${KFS_SRC}" )
+#GenerateStaticLibs( kfs.2 "${KFS2_SRC}" )
+GenerateStaticLibs( kff "${KFF_SRC}" )
 
 add_compile_definitions (__mod__="libs/kfs")
 include_directories( BEFORE ${CMAKE_CURRENT_SOURCE_DIR} )

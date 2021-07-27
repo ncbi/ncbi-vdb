@@ -11,8 +11,7 @@ elseif( "mac" STREQUAL ${OS} )
     set ( OS_SPECIFIC_SRC ${MAC_SRC} )
 endif()
 
-
-GenerateStaticLibs(kfc
+set( SRC
     except
     refcount
     rsrc
@@ -21,6 +20,8 @@ GenerateStaticLibs(kfc
     xc
     ${OS_SPECIFIC_SRC}
 )
+
+GenerateStaticLibs( kfc "${SRC}" )
 
 add_compile_definitions (__mod__="libs/kfc")
 include_directories( BEFORE ${CMAKE_CURRENT_SOURCE_DIR} )

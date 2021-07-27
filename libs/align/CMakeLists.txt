@@ -53,11 +53,11 @@ set ( SAM_EXTRACT_SRC
     samextract-pool
 )
 
-GenerateStaticLibs( ncbi-bam ${BAM_SRC} )
-GenerateStaticLibs( align-writer ${ALIGN_WRITER_SRC})
-GenerateStaticLibs( align-access ${ALIGN_ACCESS_SRC})
-GenerateStaticLibs( sam-extract ${SAM_EXTRACT_SRC})
-GenerateStaticLibs( align-reader ${ALIGN_READER_SRC})
+GenerateStaticLibs( ncbi-bam "${BAM_SRC}" )
+GenerateStaticLibs( align-writer "${ALIGN_WRITER_SRC}" )
+GenerateStaticLibs( align-access "${ALIGN_ACCESS_SRC}" )
+GenerateStaticLibs( sam-extract "${SAM_EXTRACT_SRC}" )
+GenerateStaticLibs( align-reader "${ALIGN_READER_SRC}" )
 
 add_compile_definitions( __mod__="libs/align" )
 # add_compile_definitions( _ARCH_BITS=${BITS} )

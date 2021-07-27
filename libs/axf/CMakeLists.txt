@@ -34,7 +34,7 @@ set( WAXF_SRC
     refseq-stats
 )
 
-GenerateStaticLibs( axf ${AXF_SRC} )
-GenerateStaticLibs( waxf ${WAXF_SRC} )
+GenerateStaticLibs( axf "${AXF_SRC}" )
+GenerateStaticLibs( waxf "${WAXF_SRC}" )
 
 add_compile_definitions( __mod__="libs/axf" )
