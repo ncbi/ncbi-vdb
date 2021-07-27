@@ -7,7 +7,6 @@ endif()
 add_subdirectory(kfc)
 
 set( COMMON_LINK_LIBRARIES ktst kapp )
-#link_libraries( ktst kapp )
 
 # for the tests that link against libncbi-[w]vdb
 if( WIN32 )
@@ -15,6 +14,7 @@ if( WIN32 )
     set( COMMON_LIBS_READ   ncbi-vdb Ws2_32 )
     set( COMMON_LIBS_WRITE  ncbi-wvdb Ws2_32 )
 else()
+    link_libraries( ${COMMON_LINK_LIBRARIES} )
     set( COMMON_LIBS_READ   ncbi-vdb  dl pthread )
     set( COMMON_LIBS_WRITE  ncbi-wvdb dl pthread )
 endif()
