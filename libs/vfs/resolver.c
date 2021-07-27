@@ -739,8 +739,10 @@ rc_t VResolverAlgLocalResolve ( const VResolverAlg *self,
 
     /* now search all volumes */
     /* else
-    need to check it even if dir != NULL otherwise site repository is skipped */
-    if ( root == NULL )
+    need to check it even if dir != NULL otherwise site repository is skipped
+    don't check all voulumes if dir is set (download to dir)
+    */
+    else if ( root == NULL )
     {
         for ( i = 0; i < count; ++ i )
         {
@@ -3904,7 +3906,8 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
         DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS),
                ("VResolverCacheResolve: app = %d\n", app));
 
-        if (resolveToCache) {
+        /* check just AD when dir is set  */
+        if (resolveToCache && dir == NULL) {
             for (i = 0; i < count; ++i)
             {
                 alg = VectorGet(&self->local, i);
