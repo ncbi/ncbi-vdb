@@ -15,14 +15,6 @@ function( MSVS_DLLRuntime name )
     endif()
 endfunction()
 
-# function( GenerateStaticLibs
-            # target_name
-            # #[[ followed by any number of source file names, accessed as ARGN, a CMake list ]])
-    # list(JOIN ARGN " " sources )
-    # message( "SOURCES: ${sources}" )
-    # cmake_language(EVAL CODE
-        # "add_library( ${target_name} STATIC ${sources} )" )
-
 function( GenerateStaticLibsWithDefs target_name sources compile_defs )
     add_library( ${target_name} STATIC ${sources} )
     if( NOT "" STREQUAL "${compile_defs}" )
@@ -30,7 +22,7 @@ function( GenerateStaticLibsWithDefs target_name sources compile_defs )
     endif()
     if( WIN32 )
         MSVS_StaticRuntime( ${target_name} )
-        add_library( ${target_name}-md STATIC ${sources} ) #TODO: use EVAL
+        add_library( ${target_name}-md STATIC ${sources} )
         if(NOT "" STREQUAL "${compile_defs}" )
             target_compile_definitions( ${target_name}-md PRIVATE ${compile_defs} )
         endif()

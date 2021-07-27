@@ -22,154 +22,160 @@
 #
 # ===========================================================================
 
-
 default: runtests
 
 TOP ?= $(abspath ../..)
 MODULE = test/align
 
-TEST_TOOLS = \
-	test-load-index \
-	test-samextract \
-	test-estimator
-
 include $(TOP)/build/Makefile.env
 
-$(TEST_TOOLS): makedirs
-	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
+# default: runtests
 
-clean: stdclean
+# TOP ?= $(abspath ../..)
+# MODULE = test/align
 
-INCDIRS += -I$(TOP)/libs/align -I$(TOP)/../ngs-tools/libs/general-writer/inc
+# TEST_TOOLS = \
+	# test-load-index \
+	# test-samextract \
+	# test-estimator
 
-#-------------------------------------------------------------------------------
-# test-load-index
-#
-TEST_INDEX_SRC = \
-	indextest
+# include $(TOP)/build/Makefile.env
 
-TEST_INDEX_OBJ = \
-	$(addsuffix .$(OBJX),$(TEST_INDEX_SRC))
+# $(TEST_TOOLS): makedirs
+	# @ $(MAKE_CMD) $(TEST_BINDIR)/$@
 
-TEST_INDEX_LIB = \
-	-skapp \
-	-sktst \
-	-sncbi-vdb 
+# clean: stdclean
 
-$(TEST_BINDIR)/test-load-index: $(TEST_INDEX_OBJ)
-	$(LP) --exe -o $@ $^ $(TEST_INDEX_LIB)
+# INCDIRS += -I$(TOP)/libs/align -I$(TOP)/../ngs-tools/libs/general-writer/inc
 
-#-------------------------------------------------------------------------------
-# test-estimator
-#
-TEST_ESTIMATOR_SRC = \
-	pileup_estimator
+# #-------------------------------------------------------------------------------
+# # test-load-index
+# #
+# TEST_INDEX_SRC = \
+	# indextest
 
-TEST_ESTIMATOR_OBJ = \
-	$(addsuffix .$(OBJX),$(TEST_ESTIMATOR_SRC))
+# TEST_INDEX_OBJ = \
+	# $(addsuffix .$(OBJX),$(TEST_INDEX_SRC))
 
-TEST_ESTIMATOR_LIB = \
-	-skapp \
-	-sktst \
-	-sncbi-ngs-c++ \
-	-sncbi-ngs \
-	-sncbi-vdb \
-	-L$(NGS_LIBDIR) \
-	-sngs-c++
+# TEST_INDEX_LIB = \
+	# -skapp \
+	# -sktst \
+	# -sncbi-vdb 
 
-$(TEST_BINDIR)/test-estimator: $(TEST_ESTIMATOR_OBJ)
-	$(LP) --exe -o $@ $^ $(TEST_ESTIMATOR_LIB)
+# $(TEST_BINDIR)/test-load-index: $(TEST_INDEX_OBJ)
+	# $(LP) --exe -o $@ $^ $(TEST_INDEX_LIB)
 
-#-------------------------------------------------------------------------------
-# samtogw
-#
-SAMTOGW_SRC = \
-		samtogw
+# #-------------------------------------------------------------------------------
+# # test-estimator
+# #
+# TEST_ESTIMATOR_SRC = \
+	# pileup_estimator
 
-SAMTOGW_OBJ = \
-		$(addsuffix .$(OBJX),$(SAMTOGW_SRC))
+# TEST_ESTIMATOR_OBJ = \
+	# $(addsuffix .$(OBJX),$(TEST_ESTIMATOR_SRC))
 
-SAMTOGW_LIB = \
-		-L/home/vartanianmh/ncbi-outdir/ngs-tools/linux/gcc/x86_64/dbg/ilib/ \
-		-skapp \
-		-sktst \
-		-ssam-extract\
-		-sncbi-vdb \
-		-sgeneral-writer
+# TEST_ESTIMATOR_LIB = \
+	# -skapp \
+	# -sktst \
+	# -sncbi-ngs-c++ \
+	# -sncbi-ngs \
+	# -sncbi-vdb \
+	# -L$(NGS_LIBDIR) \
+	# -sngs-c++
 
-$(TEST_BINDIR)/samtogw: $(SAMTOGW_OBJ)
-		$(LP) --exe -o $@ $^ $(SAMTOGW_LIB)
+# $(TEST_BINDIR)/test-estimator: $(TEST_ESTIMATOR_OBJ)
+	# $(LP) --exe -o $@ $^ $(TEST_ESTIMATOR_LIB)
 
-#-------------------------------------------------------------------------------
-# bamfuzz
-#
-BAMFUZZ_SRC = \
-		bamfuzz
+# #-------------------------------------------------------------------------------
+# # samtogw
+# #
+# SAMTOGW_SRC = \
+		# samtogw
 
-BAMFUZZ_OBJ = \
-		$(addsuffix .$(OBJX),$(BAMFUZZ_SRC))
+# SAMTOGW_OBJ = \
+		# $(addsuffix .$(OBJX),$(SAMTOGW_SRC))
 
-BAMFUZZ_LIB = \
-		-skapp \
-		-sktst \
-		-ssam-extract\
-		-sncbi-vdb
+# SAMTOGW_LIB = \
+		# -L/home/vartanianmh/ncbi-outdir/ngs-tools/linux/gcc/x86_64/dbg/ilib/ \
+		# -skapp \
+		# -sktst \
+		# -ssam-extract\
+		# -sncbi-vdb \
+		# -sgeneral-writer
 
-$(TEST_BINDIR)/bamfuzz: $(BAMFUZZ_OBJ)
-		$(LP) --exe -o $@ $^ $(BAMFUZZ_LIB)
+# $(TEST_BINDIR)/samtogw: $(SAMTOGW_OBJ)
+		# $(LP) --exe -o $@ $^ $(SAMTOGW_LIB)
 
-#-------------------------------------------------------------------------------
-# irvrfy
-#
-IRVRFY_SRC = \
-		irvrfy
+# #-------------------------------------------------------------------------------
+# # bamfuzz
+# #
+# BAMFUZZ_SRC = \
+		# bamfuzz
 
-IRVRFY_OBJ = \
-		$(addsuffix .$(OBJX),$(IRVRFY_SRC))
+# BAMFUZZ_OBJ = \
+		# $(addsuffix .$(OBJX),$(BAMFUZZ_SRC))
 
-IRVRFY_LIB = \
-		-L/home/vartanianmh/ncbi-outdir/ngs-tools/linux/gcc/x86_64/dbg/ilib/ \
-		-skapp \
-		-sktst \
-		-ssam-extract\
-		-sncbi-wvdb \
-		-sgeneral-writer
+# BAMFUZZ_LIB = \
+		# -skapp \
+		# -sktst \
+		# -ssam-extract\
+		# -sncbi-vdb
 
-$(TEST_BINDIR)/irvrfy: $(IRVRFY_OBJ)
-		$(LP) --exe -o $@ $^ $(IRVRFY_LIB)
+# $(TEST_BINDIR)/bamfuzz: $(BAMFUZZ_OBJ)
+		# $(LP) --exe -o $@ $^ $(BAMFUZZ_LIB)
 
+# #-------------------------------------------------------------------------------
+# # irvrfy
+# #
+# IRVRFY_SRC = \
+		# irvrfy
 
-#-------------------------------------------------------------------------------
-# test-samextract
-#
-TEST_SAMEXTRACT_SRC = \
-		test-samextract
+# IRVRFY_OBJ = \
+		# $(addsuffix .$(OBJX),$(IRVRFY_SRC))
 
-TEST_SAMEXTRACT_OBJ = \
-		$(addsuffix .$(OBJX),$(TEST_SAMEXTRACT_SRC))
+# IRVRFY_LIB = \
+		# -L/home/vartanianmh/ncbi-outdir/ngs-tools/linux/gcc/x86_64/dbg/ilib/ \
+		# -skapp \
+		# -sktst \
+		# -ssam-extract\
+		# -sncbi-wvdb \
+		# -sgeneral-writer
 
-TEST_SAMEXTRACT_LIB = \
-		-skapp \
-		-ssam-extract\
-		-sktst \
-		-sncbi-vdb
-
-$(TEST_BINDIR)/test-samextract: $(TEST_SAMEXTRACT_OBJ)
-		$(LP) --exe -o $@ $^ $(TEST_SAMEXTRACT_LIB)
-
-valgrind_samextract: std
-	valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-samextract
-
-run-test-samextract: test-samextract
-		@ export LD_LIBRARY_PATH=$(LIBDIR) ; $(TEST_BINDIR)/test-samextract
+# $(TEST_BINDIR)/irvrfy: $(IRVRFY_OBJ)
+		# $(LP) --exe -o $@ $^ $(IRVRFY_LIB)
 
 
-# runtests
-#runtests: run-test-samextract run-test-load-index
-runtests: run-test-samextract
+# #-------------------------------------------------------------------------------
+# # test-samextract
+# #
+# TEST_SAMEXTRACT_SRC = \
+		# test-samextract
 
-miketoys: $(TEST_BINDIR)/irvrfy $(TEST_BINDIR)/samtogw $(TEST_BINDIR)/bamfuzz
+# TEST_SAMEXTRACT_OBJ = \
+		# $(addsuffix .$(OBJX),$(TEST_SAMEXTRACT_SRC))
 
-.PHONY: $(TEST_TOOLS)
+# TEST_SAMEXTRACT_LIB = \
+		# -skapp \
+		# -ssam-extract\
+		# -sktst \
+		# -sncbi-vdb
+
+# $(TEST_BINDIR)/test-samextract: $(TEST_SAMEXTRACT_OBJ)
+		# $(LP) --exe -o $@ $^ $(TEST_SAMEXTRACT_LIB)
+
+# valgrind_samextract: std
+	# valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-samextract
+
+# run-test-samextract: test-samextract
+		# @ export LD_LIBRARY_PATH=$(LIBDIR) ; $(TEST_BINDIR)/test-samextract
+
+
+# # runtests
+# #runtests: run-test-samextract run-test-load-index
+# runtests: run-test-samextract
+
+# miketoys: $(TEST_BINDIR)/irvrfy $(TEST_BINDIR)/samtogw $(TEST_BINDIR)/bamfuzz
+
+# .PHONY: $(TEST_TOOLS)
 
 
