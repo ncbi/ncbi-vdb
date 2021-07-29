@@ -10,5 +10,9 @@ ExportShared( diagnose )
 
 add_compile_definitions( __mod__="libs/diagnose" )
 
+if( WIN32 )
+target_link_libraries( diagnose-shared ncbi-vdb Ws2_32 )
+else()
 target_link_libraries( diagnose-shared ncbi-vdb )
+endif()
 
