@@ -41,7 +41,7 @@ TEST_CASE(TestService) {
     REQUIRE_RC(KDirectoryNativeDir(&dir));
 
     const char path[] = "tmp.perm-file.tmp";
-    REQUIRE_RC(KDirectoryRemove(dir, false, path));
+    KDirectoryRemove(dir, false, path);
 
     KFile * f = NULL;
     REQUIRE_RC(KDirectoryCreateFile(dir, &f, false,
@@ -68,7 +68,7 @@ TEST_CASE(TestService) {
 
     REQUIRE_RC_FAIL(KServiceSetNgcFile(service, path));
 
-    REQUIRE_RC(KDirectoryRemove(dir, false, path));
+    KDirectoryRemove(dir, false, path);
     REQUIRE_RC(KFileRelease(f));
     REQUIRE_RC(KDirectoryRelease(dir));
 

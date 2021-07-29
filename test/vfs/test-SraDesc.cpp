@@ -46,7 +46,7 @@ struct SraDescTestFixture {
 
     SraDescTestFixture() : dir(0), f(0) {
         rc_t rc = KDirectoryNativeDir(&dir); if (rc != 0) throw rc;
-        rc = KDirectoryRemove(dir, true, "%s", DIR); if (rc != 0) throw rc;
+        KDirectoryRemove(dir, true, "%s", DIR);
     }
 
     ~SraDescTestFixture() { Fini(); }
@@ -54,11 +54,9 @@ struct SraDescTestFixture {
     rc_t Fini() {
         rc_t rc = KFileRelease(f); f = 0;
 
-        rc_t r2 = KDirectoryRemove(dir, true, "%s", DIR);
-        if (r2 != 0 && rc == 0)
-            rc = r2;
+        KDirectoryRemove(dir, true, "%s", DIR);
 
-        r2 = KDirectoryRelease(dir); dir = 0;
+        rc_t r2 = KDirectoryRelease(dir); dir = 0;
         if (r2 != 0 && rc == 0)
             rc = r2;
 
@@ -248,4 +246,3 @@ extern "C" {
         return SraDescTestSuite(argc, argv);
     }
 }
-

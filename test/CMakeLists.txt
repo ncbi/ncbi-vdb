@@ -39,7 +39,7 @@ add_subdirectory(sraxf)
 add_subdirectory(vxf)
 add_subdirectory(loader)
 add_subdirectory(align)
-add_subdirectory(align-access)
+#add_subdirectory(align-access) #TODO: move to asm-trace
 add_subdirectory(axf)
 add_subdirectory(schema) # TODO: INT_TOOLS - see the schema CMakeLists.txt for the details
 add_subdirectory(vfs)
