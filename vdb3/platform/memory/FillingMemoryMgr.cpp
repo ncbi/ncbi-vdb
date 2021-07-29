@@ -29,6 +29,7 @@
 // memset
 #include <cstring>
 #include <cassert>
+#include <algorithm>
 
 #include <memory/PrimordialMemoryMgr.hpp>
 

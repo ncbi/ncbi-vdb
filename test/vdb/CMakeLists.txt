@@ -1,5 +1,11 @@
 add_compile_definitions( __mod__="test/vdb" )
 
+if( WIN32 )
+    set( ADDITIONAL_LIBS Crypt32 )
+else()
+    set( ADDITIONAL_LIBS "" )
+endif()
+
 add_executable( test-vdb test-vdb )
 MSVS_StaticRuntime( test-vdb )
 target_link_libraries( test-vdb  ${COMMON_LIBS_READ} )
@@ -20,7 +26,7 @@ add_test( NAME SlowTest_VDB_dependencies COMMAND test-dependencies WORKING_DIREC
 # then test-sparse-col-rd, which will read the databsase,
 add_executable( test-sparse-col-rw test-sparse-col )
 MSVS_StaticRuntime( test-sparse-col-rw )
-target_link_libraries( test-sparse-col-rw  ${COMMON_LIBS_WRITE} )
+target_link_libraries( test-sparse-col-rw  ${COMMON_LIBS_WRITE} ${ADDITIONAL_LIBS} )
 
 add_executable( test-sparse-col-rd test-sparse-col )
 MSVS_StaticRuntime( test-sparse-col-rd )
@@ -48,12 +54,12 @@ add_test( NAME Test_VDB_VDB-3061 COMMAND test-VDB-3061 WORKING_DIRECTORY ${CMAKE
 
 add_executable( test-bytecode test-bytecode )
 MSVS_StaticRuntime( test-bytecode )
-target_link_libraries( test-bytecode  ${COMMON_LIBS_WRITE} )
+target_link_libraries( test-bytecode  ${COMMON_LIBS_WRITE} ${ADDITIONAL_LIBS} )
 add_test( NAME Test_VDB_bytecode COMMAND test-bytecode WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 
 add_executable( test-view test-view )
 MSVS_StaticRuntime( test-view )
-target_link_libraries( test-view  ${COMMON_LIBS_WRITE} schema )
+target_link_libraries( test-view  ${COMMON_LIBS_WRITE} ${ADDITIONAL_LIBS} schema )
 add_test( NAME Test_VDB_view COMMAND test-view WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 
 add_executable( test-tablecursor test-tablecursor )
@@ -63,17 +69,17 @@ add_test( NAME SlowTest_VDB_tablecursor COMMAND test-tablecursor WORKING_DIRECTO
 
 add_executable( test-wtablecursor test-wtablecursor )
 MSVS_StaticRuntime( test-wtablecursor )
-target_link_libraries( test-wtablecursor  ${COMMON_LIBS_WRITE} )
+target_link_libraries( test-wtablecursor  ${COMMON_LIBS_WRITE} ${ADDITIONAL_LIBS} )
 add_test( NAME Test_VDB_wtablecursor COMMAND test-wtablecursor WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 
 add_executable( test-view-cursor test-view-cursor )
 MSVS_StaticRuntime( test-view-cursor )
-target_link_libraries( test-view-cursor  ${COMMON_LIBS_WRITE} schema )
+target_link_libraries( test-view-cursor  ${COMMON_LIBS_WRITE} ${ADDITIONAL_LIBS} schema )
 add_test( NAME Test_VDB_view_cursor COMMAND test-view-cursor WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 
 add_executable( test-VDB-4156 test-VDB-4156 )
 MSVS_StaticRuntime( test-VDB-4156 )
-target_link_libraries( test-VDB-4156  ${COMMON_LIBS_WRITE} )
+target_link_libraries( test-VDB-4156  ${COMMON_LIBS_WRITE} ${ADDITIONAL_LIBS} )
 add_test( NAME Test_VDB_VDB-4156 COMMAND test-VDB-4156 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 
 # Slow tests

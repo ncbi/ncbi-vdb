@@ -53,8 +53,13 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string>
+#ifndef WINDOWS
 #include <sys/time.h>
 #include <unistd.h>
+#else
+#define random rand
+#define srandom srand
+#endif
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>

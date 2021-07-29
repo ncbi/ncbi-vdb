@@ -22,6 +22,8 @@
 *
 * =========================================================================== */
 
+#include <cmath>
+
 #include <kapp/main.h> // KMain
 
 #include <kfs/directory.h> /* KDirectoryRelease */

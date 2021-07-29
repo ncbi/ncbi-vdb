@@ -1,3 +1,9 @@
+if( WIN32 )
+    set( ADDITIONAL_LIBS Crypt32 )
+else()
+    set( ADDITIONAL_LIBS "" )
+endif()
+
 add_executable( test-kdb kdbtest )
 add_executable( test-wkdb wkdbtest )
 add_executable( test-rowset rowsettest )
@@ -12,9 +18,9 @@ MSVS_StaticRuntime( test-rowset )
 add_compile_definitions( __mod__="test/kdb" )
 
 #target_link_libraries( test-btree ncbi-vdb )
-target_link_libraries( test-rowset ${COMMON_LIBS_WRITE} )
+target_link_libraries( test-rowset ${COMMON_LIBS_WRITE} ${ADDITIONAL_LIBS} )
 target_link_libraries( test-kdb ${COMMON_LIBS_READ} )
-target_link_libraries( test-wkdb ${COMMON_LIBS_WRITE} )
+target_link_libraries( test-wkdb ${COMMON_LIBS_WRITE} ${ADDITIONAL_LIBS} )
 
 #add_test( NAME Test_KDB_Btree COMMAND test-btree WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 add_test( NAME Test_KDB_Rowset COMMAND test-rowset WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )

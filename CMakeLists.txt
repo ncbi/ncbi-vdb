@@ -57,4 +57,4 @@ include( build/env.cmake NO_POLICY_SCOPE )
 
 add_subdirectory(libs)
 add_subdirectory(test)
-add_subdirectory(vdb3)
+#add_subdirectory(vdb3)

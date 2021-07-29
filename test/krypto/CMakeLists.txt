@@ -1,5 +1,11 @@
 add_compile_definitions( __mod__="test/krypto" )
 
+if( WIN32 )
+    set( ADDITIONAL_LIBS Crypt32 )
+else()
+    set( ADDITIONAL_LIBS "" )
+endif()
+
 add_executable( test-cipher-speed test-cipher-speed )
 MSVS_StaticRuntime( test-cipher-speed )
 target_link_libraries( test-cipher-speed kryptotest ${COMMON_LIBS_READ} )
@@ -32,7 +38,7 @@ add_test( NAME Test_KRYPTO_hash-in-pwd COMMAND test-hash-in-pwd WORKING_DIRECTOR
 
 add_executable( test-aes-ciphers test-aes-ciphers )
 MSVS_StaticRuntime( test-aes-ciphers )
-target_link_libraries( test-aes-ciphers kryptotest ${COMMON_LIBS_READ} )
+target_link_libraries( test-aes-ciphers kryptotest ${COMMON_LIBS_READ} ${ADDITIONAL_LIBS} )
 add_test( NAME Test_KRYPTO_aes-ciphers COMMAND test-aes-ciphers WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 
 add_executable( test-krypto-slow test-krypto-slow test-cmn )

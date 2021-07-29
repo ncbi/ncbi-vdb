@@ -24,6 +24,8 @@
 *  to establishing an HTTP connection using mutual authentication.
 * =========================================================================== */
 
+#include <cmath>
+
 #include <klib/out.h> // OUTMSG
 #include <klib/text.h> // String
 #include <kns/manager.h> // KNSManager

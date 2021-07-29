@@ -22,6 +22,8 @@
 *
 * =========================================================================== */
 
+#include <cmath>
+
 #include "../libs/vfs/SraDesc.c"
 
 #include <kfg/config.h> /* KConfigDisableUserSettings */

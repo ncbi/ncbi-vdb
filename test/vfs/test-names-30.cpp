@@ -24,6 +24,7 @@
 *
 */
 
+#include <cmath>
 
 #include "../../libs/vfs/services-priv.h" /* KServiceNames3_0StreamTest */
 #include "../../libs/vfs/path-priv.h" /* VPathEqual */
@@ -358,7 +359,7 @@ TEST_CASE ( BAD_TYPE ) {
     REQUIRE_NULL ( response );
 }
 
-TEST_CASE ( ERROR ) {
+TEST_CASE ( ERROR_ ) {
     const KSrvResponse * response = NULL;
     REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.0\n"
         "0|| object-id |90|1981-01-13T13:25:30|0123456789abcdefABCDEF012345678c"

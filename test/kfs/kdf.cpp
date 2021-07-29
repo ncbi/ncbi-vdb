@@ -39,6 +39,10 @@
 
 #include <cmath> // ceil
 #include <cstdio> // popen
+#ifdef WINDOWS
+#define popen _popen
+#define pclose _pclose
+#endif
 
 
 static rc_t argsHandler ( int argc, char * argv [] );
