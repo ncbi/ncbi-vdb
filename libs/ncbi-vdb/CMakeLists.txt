@@ -129,25 +129,9 @@ endif()
 # )
 
 
-if( WIN32 )
-    add_library( ncbi-vdb STATIC "${VDB_LIB_RD}" )
-    target_link_libraries( ncbi-vdb ncbi-ngs ${LIBXML2} Crypt32 )
-    MSVS_StaticRuntime( ncbi-vdb )
-    ExportStatic( ncbi-vdb )
-
-    set( VDB_LIB_RD_MD "" )
-    foreach( target ${VDB_LIB_RD_TARGETS} )
-        list( APPEND VDB_LIB_RD_MD "$<TARGET_OBJECTS:${target}-md>" )
-    endforeach()
-
-    add_library( ncbi-vdb-md STATIC "${VDB_LIB_RD_MD}" )
-    target_link_libraries( ncbi-vdb-md ncbi-ngs-md ${LIBXML2} Crypt32 )
-    MSVS_DLLRuntime( ncbi-vdb-md )
-    ExportStatic( ncbi-vdb-md )
-else()
-    add_library( ncbi-vdb STATIC "${VDB_LIB_RD}" )
-    ExportStatic( ncbi-vdb )
-endif()
+add_library( ncbi-vdb STATIC "${VDB_LIB_RD}" )
+ExportStatic( ncbi-vdb )
+MSVS_StaticRuntime( ncbi-vdb )
 
 # here, creating the shared version is a bit trickier than just calling ExportShared
 set( VDB_LIB_RD_SHARED
@@ -159,7 +143,7 @@ set( VDB_LIB_RD_SHARED
 
 if(WIN32)
     add_library( ncbi-vdb-shared SHARED "${VDB_LIB_RD_SHARED}" )
-    set_target_properties( ncbi-vdb-shared PROPERTIES OUTPUT_NAME ncbi-vdb )
+#    set_target_properties( ncbi-vdb-shared PROPERTIES OUTPUT_NAME ncbi-vdb-dll )
     target_link_libraries( ncbi-vdb-shared ncbi-ngs ${LIBXML2} Crypt32 )
     MSVS_StaticRuntime( ncbi-vdb-shared )
 
@@ -171,6 +155,9 @@ if(WIN32)
     add_library( ncbi-vdb-shared-md SHARED "${VDB_LIB_RD_MD}" )
     target_link_libraries( ncbi-vdb-shared-md ncbi-ngs-md ${LIBXML2} Crypt32 )
     MSVS_DLLRuntime( ncbi-vdb-shared-md )
+
+#TODO: rename dlls
+
 else()
     add_library( ncbi-vdb-shared SHARED "${VDB_LIB_RD_SHARED}" )
     set_target_properties( ncbi-vdb-shared PROPERTIES OUTPUT_NAME ncbi-vdb )
@@ -206,7 +193,7 @@ endif()
 
 if(WIN32)
     add_library( ncbi-wvdb-shared SHARED "${VDB_LIB_RDWR}" )
-    set_target_properties( ncbi-wvdb-shared PROPERTIES OUTPUT_NAME ncbi-wvdb )
+#    set_target_properties( ncbi-wvdb-shared PROPERTIES OUTPUT_NAME ncbi-wvdb-dll )
     target_link_libraries( ncbi-wvdb-shared ncbi-ngs ${LIBXML2} Crypt32 )
     MSVS_StaticRuntime( ncbi-wvdb-shared )
 
@@ -218,10 +205,12 @@ if(WIN32)
     add_library( ncbi-wvdb-shared-md SHARED "${VDB_LIB_RDWR_MD}" )
     target_link_libraries( ncbi-wvdb-shared-md ncbi-ngs-md ${LIBXML2} Crypt32 )
     MSVS_DLLRuntime( ncbi-wvdb-shared-md )
+
+#TODO: rename dlls
+
 else()
     add_library( ncbi-wvdb-shared SHARED "${VDB_LIB_RDWR}" )
     set_target_properties( ncbi-wvdb-shared PROPERTIES OUTPUT_NAME ncbi-wvdb )
     target_link_libraries( ncbi-wvdb-shared ncbi-ngs ${LIBXML2} m dl pthread )
     MakeLinksShared( ncbi-wvdb-shared ncbi-wvdb )
 endif()
-
