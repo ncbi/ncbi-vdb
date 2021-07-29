@@ -1,3 +1,9 @@
+if( WIN32 )
+    set( ADDITIONAL_LIBS Ws2_32 )
+else()
+    set( ADDITIONAL_LIBS "" )
+endif()
+
 set( SRC
     sqlite3.c
     sqlite3vdb.c
@@ -9,4 +15,4 @@ ExportShared( vdb-sqlite )
 
 add_compile_definitions (__mod__="libs/vdb-sqlite")
 
-target_link_libraries( vdb-sqlite-shared ncbi-vdb ncbi-ngs )
+target_link_libraries( vdb-sqlite-shared ncbi-vdb ncbi-ngs ${ADDITIONAL_LIBS} )

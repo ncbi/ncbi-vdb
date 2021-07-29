@@ -13,7 +13,7 @@ add_test( NAME SlowTest_VDB_vdb COMMAND test-vdb WORKING_DIRECTORY ${CMAKE_CURRE
 
 add_executable( test-wvdb test-wvdb )
 MSVS_StaticRuntime( test-wvdb )
-target_link_libraries( test-wvdb  ${COMMON_LIBS_WRITE} )
+target_link_libraries( test-wvdb  ${COMMON_LIBS_WRITE} ${ADDITIONAL_LIBS} )
 add_test( NAME Test_VDB_wvdb COMMAND test-wvdb WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 set_tests_properties(Test_VDB_wvdb PROPERTIES ENVIRONMENT VDB_CONFIG=${CMAKE_CURRENT_SOURCE_DIR}/kfg/empty)
 
@@ -90,7 +90,7 @@ add_test( NAME SlowTest_VDB_vdb-slow COMMAND test-vdb-slow WORKING_DIRECTORY ${C
 
 add_executable( test-wvdb-slow test-wvdb-slow )
 MSVS_StaticRuntime( test-wvdb-slow )
-target_link_libraries( test-wvdb-slow  ${COMMON_LIBS_WRITE} )
+target_link_libraries( test-wvdb-slow  ${COMMON_LIBS_WRITE} ${ADDITIONAL_LIBS} )
 add_test( NAME SlowTest_VDB_wvdb-slow COMMAND test-wvdb-slow WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 
 
