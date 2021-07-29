@@ -1,5 +1,5 @@
 if( WIN32 )
-    set( ADDITIONAL_LIBS Ws2_32 )
+    set( ADDITIONAL_LIBS Crypt32 Ws2_32 )
 else()
     set( ADDITIONAL_LIBS "" )
 endif()
