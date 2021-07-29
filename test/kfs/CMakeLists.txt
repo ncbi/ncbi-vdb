@@ -1,9 +1,11 @@
 add_compile_definitions( __mod__="test/kfs" )
 
-add_executable( test-kfs-kdf kdf )
-MSVS_StaticRuntime( test-kfs-kdf )
-target_link_libraries( test-kfs-kdf  ${COMMON_LIBS_READ} )
-add_test( NAME Test_KFS_kdf COMMAND test-kfs-kdf )
+if( NOT WIN32 )
+    add_executable( test-kfs-kdf kdf )
+    MSVS_StaticRuntime( test-kfs-kdf )
+    target_link_libraries( test-kfs-kdf  ${COMMON_LIBS_READ} )
+    add_test( NAME Test_KFS_kdf COMMAND test-kfs-kdf )
+endif()
 
 add_executable( test-kfs kfstest )
 MSVS_StaticRuntime( test-kfs )
