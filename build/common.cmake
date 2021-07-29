@@ -52,7 +52,6 @@ function(ExportStatic name )
     endif()
 
     if( NOT WIN32 )
-        set_target_properties( ${name} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )
         # make the output name versioned, create all symlinks
         add_custom_command(TARGET ${name}
             POST_BUILD
