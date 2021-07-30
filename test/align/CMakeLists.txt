@@ -13,7 +13,7 @@ if( NOT WIN32 )
     add_test( NAME Test_Align_samextract COMMAND test-samextract WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 endif()
 
-if ( NOT "" STREQUAL "${NGS_LIBDIR}" )
+if ( NGS_LIBDIR )
     add_executable( test-estimator pileup_estimator )
     MSVS_StaticRuntime( test-estimator )
     target_link_directories( test-estimator PUBLIC ${NGS_LIBDIR} )

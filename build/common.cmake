@@ -38,41 +38,31 @@ endfunction()
 function(ExportStatic name )
     # the output goes to .../lib
     if( SINGLE_CONFIG )
+        # make the output name versioned, create all symlinks
         set_target_properties( ${name} PROPERTIES
             ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )
-        set( OUTPUT_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )
-    else()
-        set(CFG $<$<CONFIG:Debug>:DEBUG>$<$<CONFIG:Release>:RELEASE>)
-        set_target_properties( ${name} PROPERTIES
-            LIBRARY_OUTPUT_DIRECTORY_${CFG}
-            ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_${CFG}
-        )
-        set( OUTPUT_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_${CFG} )
-    endif()
-
-    # make the output name versioned, create all symlinks where supported
-    if (NOT WIN32)
         add_custom_command(TARGET ${name}
             POST_BUILD
             COMMAND rm -f lib${name}.a.${VERSION}
-            COMMAND mv ${OUTPUT_DIR}/lib${name}.a lib${name}.a.${VERSION}
+            COMMAND mv lib${name}.a lib${name}.a.${VERSION}
             COMMAND ln -f -s lib${name}.a.${VERSION} lib${name}.a.${MAJVERS}
             COMMAND ln -f -s lib${name}.a.${MAJVERS} lib${name}.a
             COMMAND ln -f -s lib${name}.a lib${name}-static.a
-            WORKING_DIRECTORY ${OUTPUT_DIR}
+            WORKING_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
         )
+    else()
+        set_target_properties( ${name} PROPERTIES
+            ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG})
+        set_target_properties( ${name} PROPERTIES
+            ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE})
     endif()
-
 endfunction()
 
 #
 # create versioned names and symlinks for a shared library
 #
 function(MakeLinksShared target name)
-    if( WIN32 )
-        # TODO: maybe copy binaries to ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
-        # also produce -md version
-    else()
+    if( SINGLE_CONFIG )
         add_custom_command(TARGET ${target}
             POST_BUILD
             COMMAND rm -f lib${name}.${SHLX}.${VERSION}
