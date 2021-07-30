@@ -1,42 +1,27 @@
 set( SRC_JUDY
+    JudyHS
     JudyMalloc
     JudySL
-    JudyHS
-)
-
-GenerateStaticLibs( judy "${SRC_JUDY}" )
-
-set( JUDY_CMN
-    JudyGet
-    JudyIns
-    JudyInsArray
-    JudyDel
-    JudyCascade
-    JudyCount
-    JudyCreateBranch
-    JudyDecascade
-    JudyFirst
-    JudyFreeArray
-    JudyInsertBranch
-    JudyMallocIF
-    JudyMemActive
-    JudyMemUsed
-    JudyNext
-    JudyNextEmpty
-    JudyPrev
-    JudyPrevEmpty
-    JudyByCountWithDefs
-    j__udyGet
+    Judy_Bit
+    Judy_Bit_Cascade
+    Judy_Bit_Count
+    Judy_Bit_Decascade
+    Judy_Bit_Next
+    Judy_Bit_NextEmpty
+    Judy_Bit_Prev
+    Judy_Word
+    Judy_Word_Cascade
+    Judy_Word_Count
+    Judy_Word_Decascade
+    Judy_Word_Next
+    Judy_Word_NextEmpty
+    Judy_Word_Prev
 )
 
 # the debug build of Judy is broken!
 remove_definitions( -DDEBUG )
 
-set( SRC_JUDYL ${JUDY_CMN} _JudyLTables )
-GenerateStaticLibsWithDefs( judyL "${SRC_JUDYL}" "JUDYL" )
-
-set( SRC_JUDY1 ${JUDY_CMN} _Judy1Tables )
-GenerateStaticLibsWithDefs( judy1 "${SRC_JUDY1}" "JUDY1" )
-
-add_compile_definitions (__mod__="libs/klib/judy")
+add_compile_definitions (__mod__="libs/klib/judy" JU_64BIT)
 include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/..)
+
+GenerateStaticLibs( judy "${SRC_JUDY}" )
