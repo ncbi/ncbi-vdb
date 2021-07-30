@@ -37,31 +37,24 @@ endfunction()
 
 function(ExportStatic name )
     # the output goes to .../lib
-    if( CMAKE_LIBRARY_OUTPUT_DIRECTORY )
+    if( SINGLE_CONFIG )
+        # make the output name versioned, create all symlinks
         set_target_properties( ${name} PROPERTIES
             ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )
-    else()
-        if( CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG )
-            set_target_properties( ${name} PROPERTIES
-                LIBRARY_OUTPUT_DIRECTORY_DEBUG ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG} )
-        endif()
-        if( CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE )
-            set_target_properties( ${name} PROPERTIES
-                LIBRARY_OUTPUT_DIRECTORY_RELEASE ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE} )
-        endif()
-    endif()
-
-    if( NOT WIN32 )
-        # make the output name versioned, create all symlinks
         add_custom_command(TARGET ${name}
             POST_BUILD
             COMMAND rm -f lib${name}.a.${VERSION}
-            COMMAND mv ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/lib${name}.a lib${name}.a.${VERSION}
+            COMMAND mv lib${name}.a lib${name}.a.${VERSION}
             COMMAND ln -f -s lib${name}.a.${VERSION} lib${name}.a.${MAJVERS}
             COMMAND ln -f -s lib${name}.a.${MAJVERS} lib${name}.a
             COMMAND ln -f -s lib${name}.a lib${name}-static.a
             WORKING_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
         )
+    else()
+        set_target_properties( ${name} PROPERTIES
+            ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG})
+        set_target_properties( ${name} PROPERTIES
+            ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE})
     endif()
 endfunction()
 
@@ -69,10 +62,7 @@ endfunction()
 # create versioned names and symlinks for a shared library
 #
 function(MakeLinksShared target name)
-    if( WIN32 )
-        # TODO: maybe copy binaries to ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
-        # also produce -md version
-    else()
+    if( SINGLE_CONFIG )
         add_custom_command(TARGET ${target}
             POST_BUILD
             COMMAND rm -f lib${name}.${SHLX}.${VERSION}
