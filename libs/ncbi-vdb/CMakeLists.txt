@@ -24,8 +24,6 @@ set( VDB_LIB_CMN_TARGETS
     kfs
     klib
     judy
-    judy1
-    judyL
     kproc
     kq
     kfc
