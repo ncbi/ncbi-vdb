@@ -183,7 +183,7 @@ endif ()
 
 # Flex/Bison
 find_package( FLEX 2.6 )
-find_package( BISON ) #TODO: specify minimal version
+find_package( BISON 3 )
 
 #libxml2
 find_package(LibXml2)
