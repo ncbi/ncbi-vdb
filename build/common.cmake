@@ -37,32 +37,32 @@ endfunction()
 
 function(ExportStatic name )
     # the output goes to .../lib
-    if( CMAKE_LIBRARY_OUTPUT_DIRECTORY )
+    if( SINGLE_CONFIG )
         set_target_properties( ${name} PROPERTIES
             ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )
+        set( OUTPUT_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )
     else()
-        if( CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG )
-            set_target_properties( ${name} PROPERTIES
-                LIBRARY_OUTPUT_DIRECTORY_DEBUG ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG} )
-        endif()
-        if( CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE )
-            set_target_properties( ${name} PROPERTIES
-                LIBRARY_OUTPUT_DIRECTORY_RELEASE ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE} )
-        endif()
+        set(CFG $<$<CONFIG:Debug>:DEBUG>$<$<CONFIG:Release>:RELEASE>)
+        set_target_properties( ${name} PROPERTIES
+            LIBRARY_OUTPUT_DIRECTORY_${CFG}
+            ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_${CFG}
+        )
+        set( OUTPUT_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_${CFG} )
     endif()
 
-    if( NOT WIN32 )
-        # make the output name versioned, create all symlinks
+    # make the output name versioned, create all symlinks where supported
+    if (NOT WIN32)
         add_custom_command(TARGET ${name}
             POST_BUILD
             COMMAND rm -f lib${name}.a.${VERSION}
-            COMMAND mv ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/lib${name}.a lib${name}.a.${VERSION}
+            COMMAND mv ${OUTPUT_DIR}/lib${name}.a lib${name}.a.${VERSION}
             COMMAND ln -f -s lib${name}.a.${VERSION} lib${name}.a.${MAJVERS}
             COMMAND ln -f -s lib${name}.a.${MAJVERS} lib${name}.a
             COMMAND ln -f -s lib${name}.a lib${name}-static.a
-            WORKING_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
+            WORKING_DIRECTORY ${OUTPUT_DIR}
         )
     endif()
+
 endfunction()
 
 #
