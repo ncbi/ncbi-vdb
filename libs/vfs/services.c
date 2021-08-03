@@ -780,7 +780,7 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
 {
     rc_t RC_NOT_FND
         = SILENT_RC(rcVFS, rcQuery, rcResolving, rcName, rcNotFound);
-    rc_t rc = 0, rcc = 0;
+    rc_t rc = 0;
     ServicesCache * cache = NULL;
     uint32_t i = 0;
     const KSrvRespObj * obj = NULL;
@@ -790,9 +790,6 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
     KSrvRespObjIterator * it = NULL;
     KSrvRespFile * file = NULL;
     KSrvRespFileIterator * fi = NULL;
-
-    int32_t q = -1;
-    bool servicesCacheDisabled = true;
 
 #ifdef DBGNG
     STSMSG(STS_FIN, ("%s: entered", __func__));
@@ -815,91 +812,6 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
 #endif
         if ( rc == 0 )
             response = ( KSrvResponse* ) r;
-    }
-
-    KServiceGetQuality(self, &q);
-    servicesCacheDisabled = q >= eQualLast || q < 0;
-
-    if (!servicesCacheDisabled) {
-#ifdef DBGNG
-        STSMSG(STS_FIN, ("%s: calling KServiceGetServiceCache...", __func__));
-#endif
-        if ((rc == 0 || rc == RC_NOT_FND) && KServiceCallsSdl(self))
-            rcc = KServiceGetServiceCache(self, &cache);
-
-        if (rc == 0 && KServiceCallsSdl(self)) {
-            /* add each file from External Services result to cache */
-            uint32_t n = KSrvResponseLength(response);
-#ifdef DBGNG
-            STSMSG(STS_FIN, ("%s: calling ServicesCacheAddRemote...", __func__));
-#endif
-            for (i = 0; rc == 0 && i < n; ++i) {
-                rc = KSrvResponseGetObjByIdx(response, i, &obj);
-                if (rc == 0) {
-                    rc = KSrvRespObjGetError(obj, &rx, NULL, NULL);
-                    if (rc == 0 && rx == 0) {
-                        rc = KSrvRespObjMakeIterator(obj, &it);
-                        while (rc == 0) {
-                            rc = KSrvRespObjIteratorNextFile(it, &file);
-                            if (rc != 0 || file == NULL)
-                                break;
-                            else {
-                                const char * acc = NULL;
-                                rc = KSrvRespFileGetAccOrId(file, &acc, NULL);
-                                if (rc == 0
-                                    && acc != NULL && acc[0] != '\0'
-                                    && acc[1] == 'R' && acc[2] == 'R')
-                                {
-                                    rc = KSrvRespFileMakeIterator(file, &fi);
-                                    if (rc == 0) {
-                                        rc = KSrvRespFileIteratorNextPath(fi,
-                                            &path);
-                                        if (rc == 0)
-                                            rc = ServicesCacheAddRemote(cache,
-                                                path);
-                                        RELEASE(VPath, path);
-                                    }
-                                    RELEASE(KSrvRespFileIterator, fi);
-                                }
-                                RELEASE(KSrvRespFile, file);
-                            }
-                        }
-                        RELEASE(KSrvRespObjIterator, it);
-                    }
-                }
-                RELEASE(KSrvRespObj, obj);
-            }
-        }
-
-        if (rcc == 0 && KServiceCallsSdl(self)) {
-#ifdef DBGNG
-            STSMSG(STS_FIN, ("%s: before calling ServicesCacheComplete...",
-                __func__));
-#endif
-            if (rc == RC_NOT_FND) {
-                uint32_t i = 0;
-                for (i = 0; ; ++i) {
-                    const char * acc = KServiceGetId(self, i);
-                    if (acc == NULL)
-                        break;
-                    rcc = ServicesCacheAddId(cache, acc);
-                }
-            }
-            if (rcc == 0 && (rc == 0 || rc == RC_NOT_FND)) {
-                bool skipLocal = KServiceSkipLocal(self);
-#ifdef DBGNG
-                STSMSG(STS_FIN, ("%s: entering ServicesCacheComplete...",
-                    __func__));
-#endif
-                rcc = ServicesCacheComplete(cache, outDir, outFile, skipLocal);
-#ifdef DBGNG
-                STSMSG(STS_FIN, ("%s: ...ServicesCacheComplete done with %R",
-                    __func__, rcc));
-#endif
-                if (rcc != 0 && rc == 0)
-                    rc = rcc;
-            }
-        }
     }
 
     if ( rc == 0 ) {
@@ -1079,11 +991,6 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
             }
         }
     }
-
-    /*rx = ServicesCacheWhack(cache);
-    if (rx != 0 && rc == 0)
-        rc = rx;
-    cache = NULL;*/
 
 #ifdef DBGNG
     STSMSG(STS_FIN, ("%s: exiting with %R", __func__, rc));
