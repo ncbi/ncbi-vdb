@@ -114,7 +114,7 @@ LIB_EXPORT rc_t CC KThreadMakeStackSize ( KThread **tp,
             rc = RC ( rcPS, rcThread, rcCreating, rcFunction, rcNull );
         else
         {
-            KThread *t = malloc ( sizeof * t );
+            KThread *t = calloc (1, sizeof * t);
             if ( t == NULL )
                 rc = RC ( rcPS, rcThread, rcCreating, rcMemory, rcExhausted );
             else
@@ -126,8 +126,8 @@ LIB_EXPORT rc_t CC KThreadMakeStackSize ( KThread **tp,
                 t -> data = data;
                 atomic32_set ( & t -> waiting, 0 );
                 atomic32_set ( & t -> refcount, 2 );
-                t -> rc = 0;
                 t -> join = true;
+                *tp = t; /* it is not thread-safe to assign this AFTER the thread has started */
 
                 for ( ; ; ) {
                     int status;
@@ -155,7 +155,6 @@ LIB_EXPORT rc_t CC KThreadMakeStackSize ( KThread **tp,
                     pthread_attr_destroy(&attr);
                     if ( status == 0 )
                     {
-                        * tp = t;
                         return 0;
                     }
 

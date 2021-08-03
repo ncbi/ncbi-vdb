@@ -212,7 +212,8 @@ TEST_CASE(GetPkcs7) {
     if (rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcBusy  ) &&
         rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcNotAvailable) &&
         rc != SILENT_RC(rcNS, rcFile, rcCreating, rcError, rcUnknown) &&
-        rc != SILENT_RC(rcNS, rcFile, rcCreating, rcTimeout   , rcExhausted))
+        rc != SILENT_RC(rcNS, rcFile, rcCreating, rcTimeout, rcExhausted) &&
+        rc != SILENT_RC(rcNS, rcFile, rcReading, rcTimeout, rcExhausted))
     {
 #define rcStream rcFile
         if (rc == SILENT_RC(rcNS, rcStream, rcReading, rcSelf, rcNull)) {
@@ -258,8 +259,8 @@ TEST_CASE(PrintLocation) {
     if (rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcBusy  ) &&
         rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcNotAvailable) &&
         rc != SILENT_RC(rcNS, rcFile, rcCreating, rcError     ,rcUnknown) &&
-        rc != SILENT_RC(rcNS, rcFile, rcCreating,
-            rcTimeout, rcExhausted) &&
+        rc != SILENT_RC(rcNS, rcFile, rcCreating, rcTimeout, rcExhausted) &&
+        rc != SILENT_RC(rcNS, rcFile, rcReading, rcTimeout, rcExhausted) &&
         rc != SILENT_RC(rcNS, rcFile, rcReading, rcSelf, rcNull))
     {
         REQUIRE_RC(rc);

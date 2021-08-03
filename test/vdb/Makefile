@@ -51,19 +51,14 @@ TEST_TOOLS = \
 
 SLOW_TEST_TOOLS =  \
 	test-vdb-slow \
+	test-wvdb-slow \
 
 ALL_TOOLS = $(TEST_TOOLS) $(INT_TOOLS)
 
+# override global configuration
+VDB_CONFIG = $(SRCDIR)/..
+
 include $(TOP)/build/Makefile.env
-
-
-# make sure runs are not cached in the user repository when running tests
-ifeq ($(wildcard ../../../asm-trace),)
-	ifeq (,$(VDB_CONFIG))
-		VDB_CONFIG = $(shell pwd)/../only-remote-repository.kfg
-	endif
-endif
-
 
 $(ALL_TOOLS) $(SLOW_TEST_TOOLS): makedirs
 	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
@@ -135,11 +130,12 @@ TEST_WVDB_OBJ = \
 $(TEST_BINDIR)/test-wvdb: $(TEST_WVDB_OBJ)
 	$(LP) --exe -o $@ $^ $(WRITE_LIBS)
 
+# make sure these targets do not pick up the global schema
 wvdb: test-wvdb
-	$(TEST_BINDIR)/test-wvdb
+	VDB_CONFIG=$(VDB_CONFIG) $(TEST_BINDIR)/test-wvdb
 
 valgrind_wvdb: std
-	valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-wvdb
+	VDB_CONFIG=$(VDB_CONFIG) valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-wvdb
 
 #-------------------------------------------------------------------------------
 # test-sparse-col
@@ -405,5 +401,20 @@ $(TEST_BINDIR)/test-vdb-slow: $(TEST_VDB_SLOW_OBJ)
 
 vdb-slow: test-vdb-slow
 	$(TEST_BINDIR)/test-vdb-slow
+
+#-------------------------------------------------------------------------------
+# test-wvdb-slow
+#
+TEST_WVDB_SLOW_SRC = \
+	test-wvdb-slow
+
+TEST_WVDB_SLOW_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_WVDB_SLOW_SRC))
+
+$(TEST_BINDIR)/test-wvdb-slow: $(TEST_WVDB_SLOW_OBJ)
+	$(LP) --exe -o $@ $^ $(WRITE_LIBS)
+
+wvdb-slow: test-wvdb-slow
+	$(TEST_BINDIR)/test-wvdb-slow
 
 

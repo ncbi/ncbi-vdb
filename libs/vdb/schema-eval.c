@@ -1067,7 +1067,8 @@ rc_t eval_indirect_expr ( const VSchema *self, const VTypedecl *td,
 
     /* just return self */
     * xp = & ( ( SSymExpr* ) expr ) -> dad;
-    atomic32_inc ( & ( ( SSymExpr* ) expr ) -> dad . refcount );
+    /*this was never decremented and caused a leak*/
+    /*atomic32_inc ( & ( ( SSymExpr* ) expr ) -> dad . refcount );*/
     return 0;
 }
 

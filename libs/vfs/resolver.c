@@ -4680,7 +4680,7 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
         rc = RC ( rcVFS, rcResolver, rcResolving, rcParam, rcNull );
     else
     {
-        if ( protocols == eProtocolDefault )
+        if ( protocols == eProtocolDefault && self != NULL )
             protocols = self -> protocols;
 
         if ( local != NULL )
@@ -4883,8 +4883,9 @@ rc_t CC VResolverQueryImpl ( const VResolver * self, VRemoteProtocols protocols,
     const VPath * oldRemote, const VPath * oldMapping )
 {
     rc_t rcs = -1;
+    const char * version = self == NULL ? NULL : self -> version;
     rc_t rc = rcs = VResolverQueryInt ( self, protocols, query, local,
-        remote, cache, self -> version, resolveAllAccToCache, dir, inOutDir,
+        remote, cache, version, resolveAllAccToCache, dir, inOutDir,
         oldRemote, oldMapping );
     if ( rc == 0 )
     {
