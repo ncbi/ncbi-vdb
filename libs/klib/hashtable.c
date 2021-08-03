@@ -32,6 +32,7 @@
 #include <klib/sort.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -305,7 +306,7 @@ LIB_EXPORT bool KHashTableFind(const KHashTable* self, const void* key,
         ++triangle;
         bucket += (triangle * (triangle + 1) / 2);
 #ifdef DEBUG
-if ( (bucket & mask) == init_bucket ) printf("bucket=%lu mask=%lu bucket & mask = %lu init_bucket=%lu\n", bucket, mask, bucket & mask, init_bucket);
+if ( (bucket & mask) == init_bucket ) printf("bucket=%" PRIu64 " mask=%" PRIu64 " bucket & mask = %" PRIu64 " init_bucket=%lu\n", bucket, mask, bucket & mask, init_bucket);
         //assert((bucket & mask) != init_bucket);
 #endif
     }

@@ -157,8 +157,6 @@ i64 fast_strtoi64( const char * p )
 bool inrange( const char * str, i64 low, i64 high )
 {
     i64 i = fast_strtoi64( str );
-    if ( errno )
-        return false;
     if ( i < low || i > high )
         return false;
     return true;
