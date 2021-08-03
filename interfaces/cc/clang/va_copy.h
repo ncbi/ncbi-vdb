@@ -27,7 +27,7 @@
 #ifndef _h_va_copy_
 #define _h_va_copy_
 
-#include <STDARG.H>
+#include <stdarg.h>
 
 #ifdef __cplusplus
 extern "C" {
