@@ -59,7 +59,7 @@ rc_t JwtKartValidateString(const String * cart, size_t * size) {
 
     size_t j = 0;
 
-    uint64_t dummy = 0;
+    size_t dummy = 0;
     if (size == NULL)
         size = &dummy;
 
