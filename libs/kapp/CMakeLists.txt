@@ -32,8 +32,6 @@ set( LOADLIB_SRC
 
 set( SRC ${KAPP_SRC} ${OS_SPECIFIC_SRC} )
 GenerateStaticLibs( kapp "${SRC}" )
-
-set( SRC ${KAPPR_SRC} ${OS_SPECIFIC_SRC} )
 GenerateStaticLibsWithDefs( kapp-norsrc "${SRC}" "NO_KRSRC=1" )
 
 GenerateStaticLibs( load "${LOADLIB_SRC}" )

@@ -21,18 +21,6 @@ elseif( "mac" STREQUAL ${OS} )
     include_directories( unix )
 endif()
 
-
-# if ( "windows" STREQUAL ${OS} )
-    # set ( OS_SPECIFIC_SRC_V2 ${WIN_SRC_V2} )
-    # include_directories( win )
-# elseif( "linux" STREQUAL ${OS} )
-    # set ( OS_SPECIFIC_SRC_V2 ${LINUX_SRC_V2} )
-    # include_directories( unix )
-# elseif( "mac" STREQUAL ${OS} )
-    # set ( OS_SPECIFIC_SRC_V2 ${MAC_SRC_V2} )
-    # include_directories( unix )
-# endif()
-
 set( KFS_CMN
     directory
     arrayfile
@@ -86,12 +74,6 @@ set( KFS_SRC
     ${KFS_CMN}
 )
 
-set( KFS2_SRC
-    ${KFS_SRC_V2}
-    file-v2
-    directory-v2
-)
-
 set( KFS_NOMMAP_SRC
     ${KFS_CMN}
 )
@@ -105,7 +87,6 @@ set( KFF_SRC
 )
 
 GenerateStaticLibs( kfs "${KFS_SRC}" )
-#GenerateStaticLibs( kfs.2 "${KFS2_SRC}" )
 GenerateStaticLibs( kff "${KFF_SRC}" )
 
 add_compile_definitions (__mod__="libs/kfs")

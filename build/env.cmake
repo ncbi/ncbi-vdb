@@ -188,7 +188,9 @@ find_package( BISON 3 )
 #libxml2
 find_package(LibXml2)
 
-set( Python3_EXECUTABLE ${PYTHON_PATH} )
+if ( PYTHO_PATH )
+    set( Python3_EXECUTABLE ${PYTHON_PATH} )
+endif()
 find_package( Python3 COMPONENTS Interpreter )
 
 # ===========================================================================

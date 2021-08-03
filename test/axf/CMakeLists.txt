@@ -2,6 +2,8 @@ add_compile_definitions( __mod__="test/axf" )
 
 if( NOT WIN32 )
     set( ADDITIONAL_LIBS "m" )
+else()
+    set( ADDITIONAL_LIBS "" )
 endif()
 
 add_executable( test-RestoreRead test-RestoreRead )
