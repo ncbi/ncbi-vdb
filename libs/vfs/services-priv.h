@@ -149,9 +149,12 @@ rc_t KServiceNamesExecute ( struct KService * self, VRemoteProtocols protocols,
 
 rc_t KServiceNamesExecuteExtImpl ( struct KService * self,
     VRemoteProtocols protocols, const char * cgi, const char * version,
-    const struct KSrvResponse ** response, const char * expected );
+    const struct KSrvResponse ** response, const char * expected, int idx );
 
 /***************** Interface services.c -> remote-services.c  *****************/
+rc_t KServiceInitNamesRequestWithVersion(KService * self,
+    VRemoteProtocols protocols, const char * cgi, const char * version,
+    bool aProtected, bool adjustVersion, int idx);
 rc_t KServiceGetResponse(const KService * self, const KSrvResponse ** response);
 rc_t KServiceGetConfig ( struct KService * self, const struct KConfig ** kfg);
 rc_t KServiceGetVFSManager ( const KService * self,

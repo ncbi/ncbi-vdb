@@ -804,8 +804,11 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
         STSMSG(STS_FIN, ("%s: entering KServiceNamesExecuteExtImpl...",
             __func__));
 #endif
-        rc = KServiceNamesExecuteExtImpl ( self, protocols, cgi,
-                                       version, & r, expected );
+        rc = KServiceInitNamesRequestWithVersion(self, protocols, cgi, version,
+            false, expected == NULL, -1);
+        if (rc == 0)
+            rc = KServiceNamesExecuteExtImpl ( self, protocols, cgi,
+                                       version, & r, expected, -1 );
 #ifdef DBGNG
         STSMSG(STS_FIN, ("%s: ...KServiceNamesExecuteExtImpl done with %R",
             __func__, rc));

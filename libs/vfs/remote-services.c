@@ -3345,7 +3345,7 @@ static rc_t SRequestAddFile(SRequest * self,
 static
 rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
     VRemoteProtocols protocols, const char * cgi, const char * version,
-    bool aProtected, bool adjustVersion, VQuality quality )
+    bool aProtected, bool adjustVersion, VQuality quality, int idx )
 {
     SCgiRequest * self = NULL;
     rc_t rc = 0;
@@ -3437,8 +3437,10 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
     }
     else {
         uint32_t i = 0;
+        if (idx >= 0)
+            i = idx;
         request -> hasQuery = false;
-        for ( i = 0; i < request -> request . objects; ++i ) {
+        for ( ; i < request -> request . objects; ++i ) {
             request -> request . object [ i ] . ordId = i;
             rc = SObjectCheckUrl ( & request -> request . object [ i ] );
             if ( rc != 0 || ! request -> request . object [ i ] . isUri ) {
@@ -3466,6 +3468,8 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
                 request -> hasQuery = true;
               }
             }
+            if (idx >= 0)
+                break;
         }
         if ( rc != 0 )
             return rc;
@@ -3927,10 +3931,9 @@ rc_t KServiceSetLocation(KService * self, const char * location) {
 }
 
 
-static
 rc_t KServiceInitNamesRequestWithVersion ( KService * self,
     VRemoteProtocols protocols, const char * cgi, const char * version,
-    bool aProtected, bool adjustVersion )
+    bool aProtected, bool adjustVersion, int idx )
 {
     VQuality quality = eQualDefault;
 
@@ -3942,7 +3945,7 @@ rc_t KServiceInitNamesRequestWithVersion ( KService * self,
         quality = self->quality;
 
     return SRequestInitNamesSCgiRequest ( & self -> req,  & self -> helper,
-        protocols, cgi, version, aProtected, adjustVersion, quality );
+        protocols, cgi, version, aProtected, adjustVersion, quality, idx );
 }
 
 
@@ -3951,7 +3954,7 @@ rc_t KServiceInitNamesRequest ( KService * self, VRemoteProtocols protocols,
     const char * cgi )
 {
     return KServiceInitNamesRequestWithVersion ( self, protocols, cgi, "#3.0",
-        false, false );
+        false, false, -1 );
 }
 
 
@@ -4016,7 +4019,7 @@ static rc_t KServiceInitNames1 ( KService * self, const KNSManager * mgr,
 
     if ( rc == 0 )
         rc = KServiceInitNamesRequestWithVersion
-            ( self, protocols, cgi, version, aProtected, true );
+            ( self, protocols, cgi, version, aProtected, true, -1 );
 
     return rc;
 }
@@ -5161,7 +5164,7 @@ bool KServiceSkipLocal(const KService * self) {
 
 rc_t KServiceNamesExecuteExtImpl ( KService * self, VRemoteProtocols protocols,
     const char * cgi, const char * version,
-    const KSrvResponse ** response, const char * expected )
+    const KSrvResponse ** response, const char * expected, int idx )
 {
     rc_t rc = 0;
 
@@ -5175,10 +5178,10 @@ rc_t KServiceNamesExecuteExtImpl ( KService * self, VRemoteProtocols protocols,
 
     if ( version == NULL )
         version = "130";
-
+    /*
     rc = KServiceInitNamesRequestWithVersion ( self, protocols, cgi, version,
-        false, expected == NULL );
-
+        false, expected == NULL, idx );
+    */
     if (rc == 0 && self->req.disabled) {
         DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE), (
             "XXXXXXXXXXXX NOT sending HTTP request XXXXXXXXXXXXXXXXXXXXX\n"));
@@ -5209,8 +5212,12 @@ rc_t KServiceTestNamesExecuteExt ( KService * self, VRemoteProtocols protocols,
     const char * cgi, const char * version,
     const struct KSrvResponse ** response, const char * expected )
 {
-    return KServiceNamesExecuteExtImpl ( self, protocols, cgi, version,
-        response, expected );
+    rc_t rc = KServiceInitNamesRequestWithVersion(self, protocols, cgi, version,
+        false, expected == NULL, -1);
+    if (rc == 0)
+        rc = KServiceNamesExecuteExtImpl ( self, protocols, cgi, version,
+            response, expected, -1 );
+    return rc;
 }
 
 
@@ -5219,8 +5226,12 @@ rc_t KServiceNamesExecuteExt ( KService * self, VRemoteProtocols protocols,
     const char * cgi, const char * version,
     const KSrvResponse ** response )
 {
-    return KServiceNamesExecuteExtImpl ( self, protocols, cgi, version,
-        response, NULL );
+    rc_t rc = KServiceInitNamesRequestWithVersion(self, protocols, cgi, version,
+        false, true, -1);
+    if (rc == 0)
+        rc = KServiceNamesExecuteExtImpl ( self, protocols, cgi, version,
+            response, NULL, -1 );
+    return rc;
 }
 
 
