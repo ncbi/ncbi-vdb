@@ -54,7 +54,7 @@ TEST_INDEX_OBJ = \
 TEST_INDEX_LIB = \
 	-skapp \
 	-sktst \
-	-sncbi-vdb
+	-sncbi-vdb 
 
 $(TEST_BINDIR)/test-load-index: $(TEST_INDEX_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_INDEX_LIB)
@@ -72,6 +72,7 @@ TEST_ESTIMATOR_LIB = \
 	-skapp \
 	-sktst \
 	-sncbi-ngs-c++ \
+	-sncbi-ngs \
 	-sncbi-vdb \
 	-L$(NGS_LIBDIR) \
 	-sngs-c++
@@ -159,7 +160,7 @@ $(TEST_BINDIR)/test-samextract: $(TEST_SAMEXTRACT_OBJ)
 valgrind_samextract: std
 	valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-samextract
 
-run-test-samextract: $(TEST_BINDIR)/test-samextract
+run-test-samextract: test-samextract
 		@ export LD_LIBRARY_PATH=$(LIBDIR) ; $(TEST_BINDIR)/test-samextract
 
 
