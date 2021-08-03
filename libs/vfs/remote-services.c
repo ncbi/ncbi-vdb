@@ -183,7 +183,7 @@ static bool SVersionUseObjidAsAcc ( const SVersion  self ) {
     return self == VERSION_3_0;
 }
 
-static bool SVersionHasMultpileObjects ( const SVersion self, bool sdl ) {
+static bool SVersionHasMultipleObjects ( const SVersion self, bool sdl ) {
     return sdl || self >= VERSION_3_0;
 }
 
@@ -3418,7 +3418,7 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
                 return rc;
         }
     }
-    if ( ! SVersionHasMultpileObjects ( request -> version,
+    if ( ! SVersionHasMultipleObjects ( request -> version,
         request -> sdl ) )
     {
         if ( request -> request . object [ 0 ] . objectId == NULL )
@@ -4174,7 +4174,7 @@ rc_t KServiceProcessLine ( KService * self,
                  self -> resp . header . version );
             uint32_t l = VectorLength ( & self -> resp . rows );
             if ( r2 == 0 ) {
-                if ( SVersionHasMultpileObjects (
+                if ( SVersionHasMultipleObjects (
                         self -> resp . header . version, false )
                     || l == 0 )
                 {
@@ -4216,7 +4216,7 @@ rc_t KServiceProcessLine ( KService * self,
                 }
             }
             if ( r2 == 0 ) {
-                if ( append && ( SVersionHasMultpileObjects
+                if ( append && ( SVersionHasMultipleObjects
                                      ( self -> resp . header . version, false )
                           || KSrvResponseLength ( self -> resp . list ) == 0 ) )
 
