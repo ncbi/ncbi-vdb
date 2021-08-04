@@ -29,3 +29,12 @@ GenerateStaticLibs( kfg "${SRC}" )
 
 add_compile_definitions (__mod__="libs/kfg")
 add_compile_definitions (_ARCH_BITS=${BITS})
+
+if ( SINGLE_CONFIG )
+    install( SCRIPT CODE
+        "execute_process(COMMAND /bin/bash -c \"${CMAKE_SOURCE_DIR}/build/install-kfg.sh default.kfg ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_INSTALL_PREFIX}/lib64/ncbi ${CMAKE_CURRENT_SOURCE_DIR}/kfgsums\" )"
+    )
+    install( SCRIPT CODE
+        "execute_process(COMMAND /bin/bash -c \"${CMAKE_SOURCE_DIR}/build/install-kfg.sh certs.kfg ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_INSTALL_PREFIX}/lib64/ncbi ${CMAKE_CURRENT_SOURCE_DIR}/kfgsums\" )"
+    )
+endif()

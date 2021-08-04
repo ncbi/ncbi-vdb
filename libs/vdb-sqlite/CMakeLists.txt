@@ -10,8 +10,8 @@ set( SRC
 )
 GenerateStaticLibs( vdb-sqlite "${SRC}" )
 
-ExportStatic( vdb-sqlite )
-ExportShared( vdb-sqlite )
+ExportStatic( vdb-sqlite false )
+ExportShared( vdb-sqlite false )
 
 add_compile_definitions (__mod__="libs/vdb-sqlite")
 

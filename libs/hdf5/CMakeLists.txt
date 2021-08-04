@@ -11,8 +11,8 @@ if( HDF5_FOUND )
     add_compile_definitions (__mod__="libs/hdf5")
     include_directories( ${HDF5_INCLUDE_DIRS} )
 
-    ExportStatic( kdf5 )
-    ExportShared( kdf5 )
+    ExportStatic( kdf5 true )
+    ExportShared( kdf5 true )
 
     target_link_libraries( kdf5-shared ${HDF5_LIBRARIES} ncbi-vdb)
 

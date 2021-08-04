@@ -5,8 +5,8 @@ set( SRC
 
 GenerateStaticLibs( diagnose "${SRC}" )
 
-ExportStatic( diagnose )
-ExportShared( diagnose )
+ExportStatic( diagnose false )
+ExportShared( diagnose false )
 
 add_compile_definitions( __mod__="libs/diagnose" )
 

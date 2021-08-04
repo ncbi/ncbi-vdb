@@ -35,7 +35,7 @@ function( GenerateStaticLibs target_name sources )
 endfunction()
 
 
-function(ExportStatic name )
+function( ExportStatic name install )
     # the output goes to .../lib
     if( SINGLE_CONFIG )
         # make the output name versioned, create all symlinks
@@ -50,6 +50,14 @@ function(ExportStatic name )
             COMMAND ln -f -s lib${name}.a lib${name}-static.a
             WORKING_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
         )
+        if ( ${install} )
+            install( FILES  ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/lib${name}.a.${VERSION}
+                            ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/lib${name}.a.${MAJVERS}
+                            ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/lib${name}.a
+                            ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/lib${name}-static.a
+                    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib64
+            )
+         endif()
     else()
         set_target_properties( ${name} PROPERTIES
             ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG})
@@ -61,7 +69,7 @@ endfunction()
 #
 # create versioned names and symlinks for a shared library
 #
-function(MakeLinksShared target name)
+function(MakeLinksShared target name install)
     if( SINGLE_CONFIG )
         add_custom_command(TARGET ${target}
             POST_BUILD
@@ -71,15 +79,22 @@ function(MakeLinksShared target name)
             COMMAND ln -f -s lib${name}.${SHLX}.${MAJVERS} lib${name}.${SHLX}
             WORKING_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
         )
+        if ( ${install} )
+            install( FILES  ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/lib${name}.${SHLX}.${VERSION}
+                            ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/lib${name}.${SHLX}.${MAJVERS}
+                            ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/lib${name}.${SHLX}
+                    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib64
+        )
+        endif()
     endif()
 endfunction()
 
 #
 # for a static library target, create a public shared target with the same base name and contents
 #
-function(ExportShared lib )
+function(ExportShared lib install)
     get_target_property( src ${lib} SOURCES )
     add_library( ${lib}-shared SHARED ${src} )
     set_target_properties( ${lib}-shared PROPERTIES OUTPUT_NAME ${lib} )
-    MakeLinksShared( ${lib}-shared ${lib} )
+    MakeLinksShared( ${lib}-shared ${lib} ${install} )
 endfunction()

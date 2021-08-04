@@ -96,7 +96,7 @@ if( WIN32 )
         $<TARGET_OBJECTS:ngs-py>
     )
     MSVS_StaticRuntime( ncbi-ngs )
-    ExportStatic( ncbi-ngs )
+    ExportStatic( ncbi-ngs true )
 
     add_library( ncbi-ngs-md STATIC
         $<TARGET_OBJECTS:ngs-md>
@@ -104,14 +104,14 @@ if( WIN32 )
         $<TARGET_OBJECTS:ngs-py-md>
     )
     MSVS_DLLRuntime( ncbi-ngs-md )
-    ExportStatic( ncbi-ngs-md )
+    ExportStatic( ncbi-ngs-md true )
 else()
     add_library( ncbi-ngs STATIC
         $<TARGET_OBJECTS:ngs>
         $<TARGET_OBJECTS:ngs-jni>
         $<TARGET_OBJECTS:ngs-py>
     )
-    ExportStatic( ncbi-ngs )
+    ExportStatic( ncbi-ngs true )
 endif()
 
 # set( NCBI_NGS_CPP ncbi-ngs-c++)
@@ -134,7 +134,7 @@ endif()
 
 
 add_library( ncbi-vdb STATIC "${VDB_LIB_RD}" )
-ExportStatic( ncbi-vdb )
+ExportStatic( ncbi-vdb true )
 MSVS_StaticRuntime( ncbi-vdb )
 
 # here, creating the shared version is a bit trickier than just calling ExportShared
@@ -166,7 +166,7 @@ else()
     add_library( ncbi-vdb-shared SHARED "${VDB_LIB_RD_SHARED}" )
     set_target_properties( ncbi-vdb-shared PROPERTIES OUTPUT_NAME ncbi-vdb )
     target_link_libraries( ncbi-vdb-shared ncbi-ngs ${LIBXML2} m dl pthread )
-    MakeLinksShared( ncbi-vdb-shared ncbi-vdb )
+    MakeLinksShared( ncbi-vdb-shared ncbi-vdb true )
 endif()
 
 
@@ -174,7 +174,7 @@ if( WIN32 )
     add_library( ncbi-wvdb STATIC "${VDB_LIB_RDWR}" )
     #target_link_libraries( ncbi-wvdb Crypt32 )
     MSVS_StaticRuntime( ncbi-wvdb )
-    ExportStatic( ncbi-wvdb )
+    ExportStatic( ncbi-wvdb true )
 
     set( VDB_LIB_RDWR_MD "" )
     foreach( target ${VDB_LIB_RDWR_TARGETS} )
@@ -184,10 +184,10 @@ if( WIN32 )
     add_library( ncbi-wvdb-md STATIC "${VDB_LIB_RDWR_MD}" )
     #target_link_libraries( ncbi-wvdb-md Crypt32 )
     MSVS_DLLRuntime( ncbi-wvdb-md )
-    ExportStatic( ncbi-wvdb-md )
+    ExportStatic( ncbi-wvdb-md true )
 else()
     add_library( ncbi-wvdb STATIC "${VDB_LIB_RDWR}" )
-    ExportStatic( ncbi-wvdb )
+    ExportStatic( ncbi-wvdb true )
 endif()
 
 
@@ -216,5 +216,5 @@ else()
     add_library( ncbi-wvdb-shared SHARED "${VDB_LIB_RDWR}" )
     set_target_properties( ncbi-wvdb-shared PROPERTIES OUTPUT_NAME ncbi-wvdb )
     target_link_libraries( ncbi-wvdb-shared ncbi-ngs ${LIBXML2} m dl pthread )
-    MakeLinksShared( ncbi-wvdb-shared ncbi-wvdb )
+    MakeLinksShared( ncbi-wvdb-shared ncbi-wvdb true )
 endif()

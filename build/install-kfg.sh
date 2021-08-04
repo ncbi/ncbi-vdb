@@ -23,6 +23,8 @@
 #
 # ===========================================================================
 
+#echo $*
+
 # install-kfg.sh
 #   copies file $1 from $2 to $3.
 #   Will create a backup copy if the file's md5 is not found in $4 (assumed to be a user's edit)
