@@ -84,7 +84,7 @@ MSVS_StaticRuntime( test-proxy-with-env )
 target_link_libraries( test-proxy-with-env ${COMMON_LIBS_READ} )
 # add_test( NAME Test_KNS_proxy-with-env COMMAND test-proxy-with-env WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 
-if( NOT WIN32 AND NOT CMAKE_GENERATOR STREQUAL Xcode )
+if( SINGLE_TARGET )
     add_executable( test-proxy-with-scheme test-proxy-with-scheme )
     MSVS_StaticRuntime( test-proxy-with-scheme )
     target_link_libraries( test-proxy-with-scheme ${COMMON_LIBS_READ} )

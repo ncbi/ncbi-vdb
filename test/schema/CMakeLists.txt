@@ -18,7 +18,7 @@ add_test( NAME Test_SCHEMA_wb-schema-ast COMMAND wb-test-schema-ast WORKING_DIRE
 
 # TODO the following binaries are not unit tests (INT_TOOLS), they should be started not as ctest
 
-if( NOT WIN32 AND NOT CMAKE_GENERATOR STREQUAL Xcode )
+if( SINGLE_TARGET )
     add_executable( test-schema-scan test-schema-scan )
     MSVS_StaticRuntime( test-schema-scan )
     target_link_libraries( test-schema-scan ${COMMON_LIBS_READ} schema )
