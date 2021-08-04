@@ -24,4 +24,4 @@ remove_definitions( -DDEBUG )
 add_compile_definitions (__mod__="libs/klib/judy" JU_64BIT)
 include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
-GenerateStaticLibs( judy "${SRC_JUDY}" )
+GenerateStaticLibsWithDefs( judy "${SRC_JUDY}" JU_64BIT )

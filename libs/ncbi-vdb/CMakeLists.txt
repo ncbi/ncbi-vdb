@@ -1,4 +1,5 @@
 # all static libraries in this directory are published
+
 if (CMAKE_ARCHIVE_OUTPUT_DIRECTORY)
     set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 elseif( CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG )
@@ -6,6 +7,42 @@ elseif( CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG )
 elseif( CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE )
     set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG})
 endif()
+
+function( GetTargetSources targets out_name_src_files out_name_incl_dirs out_name_compile_definitions )
+    set( out_src_files "" )
+    set( out_incl_dirs "" )
+    set( out_compile_defs "" )
+
+    foreach( target ${targets})
+        get_target_property(TARGET_SRC_DIR ${target} SOURCE_DIR)
+        get_target_property(TARGET_SRC ${target} SOURCES)
+        get_target_property(TARGET_INCLUDE_DIRS ${target} INCLUDE_DIRECTORIES)
+        get_target_property(TARGET_COMPILE_DEFS ${target} COMPILE_DEFINITIONS)
+
+        foreach( src_file ${TARGET_SRC})
+            list( APPEND out_src_files "${TARGET_SRC_DIR}/${src_file}" )
+        endforeach()
+
+        foreach( i ${TARGET_INCLUDE_DIRS})
+            list( APPEND out_incl_dirs "${i}" )
+        endforeach()
+
+        if(NOT "TARGET_COMPILE_DEFS-NOTFOUND" STREQUAL ${TARGET_COMPILE_DEFS})
+            foreach( i ${TARGET_COMPILE_DEFS})
+                list( APPEND out_compile_defs "${i}" )
+            endforeach()
+        endif()
+    endforeach()
+
+    list( REMOVE_DUPLICATES out_src_files )
+    list( REMOVE_DUPLICATES out_incl_dirs )
+    list( REMOVE_DUPLICATES out_compile_defs )
+
+    set( ${out_name_src_files} "${out_src_files}" PARENT_SCOPE )
+    set( ${out_name_incl_dirs} "${out_incl_dirs}" PARENT_SCOPE )
+    set( ${out_name_compile_definitions} "${out_compile_defs}" PARENT_SCOPE )
+endfunction()
+
 
 if( LibXml2_FOUND  )
     set( KXML "$<TARGET_OBJECTS:kxml>")
@@ -106,12 +143,19 @@ if( WIN32 )
     MSVS_DLLRuntime( ncbi-ngs-md )
     ExportStatic( ncbi-ngs-md true )
 else()
-    add_library( ncbi-ngs STATIC
-        $<TARGET_OBJECTS:ngs>
-        $<TARGET_OBJECTS:ngs-jni>
-        $<TARGET_OBJECTS:ngs-py>
-    )
-    ExportStatic( ncbi-ngs true )
+    if( CMAKE_GENERATOR STREQUAL Xcode )
+        GetTargetSources( "ngs;ngs-jni;ngs-py" all_src all_incl_dirs all_compile_defs )
+        include_directories( ${all_incl_dirs} )
+        add_library( ncbi-ngs STATIC ${all_src} )
+        add_compile_definitions( ${all_compile_defs} )
+    else()
+        add_library( ncbi-ngs STATIC
+            $<TARGET_OBJECTS:ngs>
+            $<TARGET_OBJECTS:ngs-jni>
+            $<TARGET_OBJECTS:ngs-py>
+        )
+        ExportStatic( ncbi-ngs )
+    endif()
 endif()
 
 # set( NCBI_NGS_CPP ncbi-ngs-c++)
@@ -132,10 +176,19 @@ endif()
     # WORKING_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
 # )
 
+if( CMAKE_GENERATOR STREQUAL Xcode )
+    GetTargetSources( "${VDB_LIB_RD_TARGETS}" all_src all_incl_dirs all_compile_defs )
+    include_directories( ${all_incl_dirs} )
+    add_library( ncbi-vdb STATIC ${all_src} )
+    #set_target_properties( ncbi-vdb-static PROPERTIES OUTPUT_NAME_DEBUG ncbi-vdb )
+    add_compile_definitions( ${all_compile_defs} )
+    add_compile_definitions (__mod__="libs/ncbi-vdb" PKGNAME="ncbi-vdb")
+else()
+    add_library( ncbi-vdb STATIC "${VDB_LIB_RD}" )
+    ExportStatic( ncbi-vdb )
+    MSVS_StaticRuntime( ncbi-vdb )
+endif()
 
-add_library( ncbi-vdb STATIC "${VDB_LIB_RD}" )
-ExportStatic( ncbi-vdb true )
-MSVS_StaticRuntime( ncbi-vdb )
 
 # here, creating the shared version is a bit trickier than just calling ExportShared
 set( VDB_LIB_RD_SHARED
@@ -163,10 +216,19 @@ if(WIN32)
 #TODO: rename dlls
 
 else()
-    add_library( ncbi-vdb-shared SHARED "${VDB_LIB_RD_SHARED}" )
-    set_target_properties( ncbi-vdb-shared PROPERTIES OUTPUT_NAME ncbi-vdb )
-    target_link_libraries( ncbi-vdb-shared ncbi-ngs ${LIBXML2} m dl pthread )
-    MakeLinksShared( ncbi-vdb-shared ncbi-vdb true )
+    if( CMAKE_GENERATOR STREQUAL Xcode )
+        GetTargetSources( "${VDB_LIB_RD_TARGETS}" all_src all_incl_dirs all_compile_defs )
+        include_directories( ${all_incl_dirs} )
+        add_library( ncbi-vdb-shared SHARED ${all_src} )
+        target_link_libraries( ncbi-vdb-shared ncbi-ngs ${LIBXML2} m dl pthread )
+        add_compile_definitions( ${all_compile_defs} )
+        add_compile_definitions (__mod__="libs/ncbi-vdb" PKGNAME="ncbi-vdb")
+    else()
+        add_library( ncbi-vdb-shared SHARED "${VDB_LIB_RD_SHARED}" )
+        set_target_properties( ncbi-vdb-shared PROPERTIES OUTPUT_NAME ncbi-vdb )
+        target_link_libraries( ncbi-vdb-shared ncbi-ngs ${LIBXML2} m dl pthread )
+        MakeLinksShared( ncbi-vdb-shared ncbi-vdb )
+    endif()
 endif()
 
 
@@ -186,8 +248,15 @@ if( WIN32 )
     MSVS_DLLRuntime( ncbi-wvdb-md )
     ExportStatic( ncbi-wvdb-md true )
 else()
-    add_library( ncbi-wvdb STATIC "${VDB_LIB_RDWR}" )
-    ExportStatic( ncbi-wvdb true )
+    if( CMAKE_GENERATOR STREQUAL Xcode )
+        GetTargetSources( "${VDB_LIB_RDWR_TARGETS}" all_src all_incl_dirs all_compile_defs )
+        include_directories( ${all_incl_dirs} )
+        add_library( ncbi-wvdb STATIC ${all_src} )
+        add_compile_definitions( ${all_compile_defs} )
+    else()
+        add_library( ncbi-wvdb STATIC "${VDB_LIB_RDWR}" )
+        ExportStatic( ncbi-wvdb )
+    endif()
 endif()
 
 
@@ -213,8 +282,17 @@ if(WIN32)
 #TODO: rename dlls
 
 else()
-    add_library( ncbi-wvdb-shared SHARED "${VDB_LIB_RDWR}" )
-    set_target_properties( ncbi-wvdb-shared PROPERTIES OUTPUT_NAME ncbi-wvdb )
-    target_link_libraries( ncbi-wvdb-shared ncbi-ngs ${LIBXML2} m dl pthread )
-    MakeLinksShared( ncbi-wvdb-shared ncbi-wvdb true )
+    if( CMAKE_GENERATOR STREQUAL Xcode )
+        GetTargetSources( "${VDB_LIB_RDWR_TARGETS}" all_src all_incl_dirs all_compile_defs )
+        include_directories( ${all_incl_dirs} )
+        add_library( ncbi-wvdb-shared SHARED ${all_src} )
+        target_link_libraries( ncbi-wvdb-shared ncbi-ngs ${LIBXML2} m dl pthread )
+        add_compile_definitions( ${all_compile_defs} )
+    else()
+        add_library( ncbi-wvdb-shared SHARED "${VDB_LIB_RDWR}" )
+        set_target_properties( ncbi-wvdb-shared PROPERTIES OUTPUT_NAME ncbi-wvdb )
+        target_link_libraries( ncbi-wvdb-shared ncbi-ngs ${LIBXML2} m dl pthread )
+        MakeLinksShared( ncbi-wvdb-shared ncbi-wvdb )
+    endif()
 endif()
+
