@@ -18,7 +18,7 @@ add_test( NAME Test_SCHEMA_wb-schema-ast COMMAND wb-test-schema-ast WORKING_DIRE
 
 # TODO the following binaries are not unit tests (INT_TOOLS), they should be started not as ctest
 
-if( SINGLE_TARGET )
+if( SINGLE_CONFIG )
     add_executable( test-schema-scan test-schema-scan )
     target_link_libraries( test-schema-scan ${COMMON_LIBS_READ} schema )
     add_test( NAME Test_SCHEMA_schema-scan COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test-schema-scan.sh ${CMAKE_TEST_OUTPUT_DIRECTORY}/test-schema-scan ${CMAKE_SOURCE_DIR} WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )

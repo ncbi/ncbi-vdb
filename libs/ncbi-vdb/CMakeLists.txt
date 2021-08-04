@@ -143,7 +143,7 @@ if( WIN32 )
     MSVS_DLLRuntime( ncbi-ngs-md )
     ExportStatic( ncbi-ngs-md true )
 else()
-    if( SINGLE_TARGET)
+    if( SINGLE_CONFIG )
         add_library( ncbi-ngs STATIC
             $<TARGET_OBJECTS:ngs>
             $<TARGET_OBJECTS:ngs-jni>
@@ -176,7 +176,7 @@ endif()
     # WORKING_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
 # )
 
-if( SINGLE_TARGET )
+if( SINGLE_CONFIG )
     add_library( ncbi-vdb STATIC "${VDB_LIB_RD}" )
     ExportStatic( ncbi-vdb true )
     MSVS_StaticRuntime( ncbi-vdb )
@@ -216,7 +216,7 @@ if(WIN32)
 #TODO: rename dlls
 
 else()
-    if( SINGLE_TARGET )
+    if( SINGLE_CONFIG )
         add_library( ncbi-vdb-shared SHARED "${VDB_LIB_RD_SHARED}" )
         set_target_properties( ncbi-vdb-shared PROPERTIES OUTPUT_NAME ncbi-vdb )
         target_link_libraries( ncbi-vdb-shared ncbi-ngs ${LIBXML2} m dl pthread )
@@ -248,7 +248,7 @@ if( WIN32 )
     MSVS_DLLRuntime( ncbi-wvdb-md )
     ExportStatic( ncbi-wvdb-md true )
 else()
-    if( SINGLE_TARGET )
+    if( SINGLE_CONFIG )
         add_library( ncbi-wvdb STATIC "${VDB_LIB_RDWR}" )
         ExportStatic( ncbi-wvdb true )
     else()
@@ -282,7 +282,7 @@ if(WIN32)
 #TODO: rename dlls
 
 else()
-    if( SINGLE_TARGET )
+    if( SINGLE_CONFIG )
         add_library( ncbi-wvdb-shared SHARED "${VDB_LIB_RDWR}" )
         set_target_properties( ncbi-wvdb-shared PROPERTIES OUTPUT_NAME ncbi-wvdb )
         target_link_libraries( ncbi-wvdb-shared ncbi-ngs ${LIBXML2} m dl pthread )
