@@ -40,3 +40,9 @@ set( SRC
 GenerateStaticLibs( ngs "${SRC}" )
 
 add_compile_definitions (__mod__="libs/ngs")
+
+if( SINGLE_CONFIG )
+    install( FILES  ${CMAKE_SOURCE_DIR}/interfaces/ngs/ncbi/NGS.hpp
+             DESTINATION ${CMAKE_INSTALL_PREFIX}/include/ncbi-vdb
+    )
+endif()
