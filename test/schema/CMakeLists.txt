@@ -20,18 +20,15 @@ add_test( NAME Test_SCHEMA_wb-schema-ast COMMAND wb-test-schema-ast WORKING_DIRE
 
 if( SINGLE_TARGET )
     add_executable( test-schema-scan test-schema-scan )
-    MSVS_StaticRuntime( test-schema-scan )
     target_link_libraries( test-schema-scan ${COMMON_LIBS_READ} schema )
     add_test( NAME Test_SCHEMA_schema-scan COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test-schema-scan.sh ${CMAKE_TEST_OUTPUT_DIRECTORY}/test-schema-scan ${CMAKE_SOURCE_DIR} WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 
 
     add_executable( test-schema-parse test-schema-parse )
-    MSVS_StaticRuntime( test-schema-parse )
     target_link_libraries( test-schema-parse ${COMMON_LIBS_READ} schema )
     add_test( NAME Test_SCHEMA_schema-parse COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test-schema-parse.sh ${CMAKE_TEST_OUTPUT_DIRECTORY}/test-schema-parse ${CMAKE_SOURCE_DIR}  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 
     add_executable( test-schema-diff test-schema-diff )
-    MSVS_StaticRuntime( test-schema-diff )
     target_link_libraries( test-schema-diff ${COMMON_LIBS_READ} schema )
     add_test( NAME Test_SCHEMA_schema-diff COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test-schema-diff.sh ${CMAKE_TEST_OUTPUT_DIRECTORY}/test-schema-diff ${CMAKE_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 endif()
