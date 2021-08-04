@@ -10,15 +10,15 @@ if ( Python3_FOUND )
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
 
-    if(NGS_LIBDIR)
+    if( NOT NGS_LIBDIR )
         set( NGS_LIBDIR "" )
     endif()
     if (CMAKE_LIBRARY_OUTPUT_DIRECTORY)
         set_tests_properties(SlowTest_NGS_PY PROPERTIES
             ENVIRONMENT "LD_LIBRARY_PATH=${CMAKE_LIBRARY_OUTPUT_DIRECTORY}:${NGS_LIBDIR}")
-    else() # a multi-config generator; use the release library, or the debug if release does not exist
+    else() # a multi-config generator
         set_tests_properties(SlowTest_NGS_PY PROPERTIES
-            ENVIRONMENT "LD_LIBRARY_PATH=$<CONFIG:Debug,${CMAKE_LIBRARY_OUTPUT_DIRECTORY_CONFIG}:$<CONFIG:Release,${CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG}:>${NGS_LIBDIR}")
+            ENVIRONMENT "LD_LIBRARY_PATH=$<CONFIG:Debug,${CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG}:$<CONFIG:Release,${CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE}:>${NGS_LIBDIR}")
 endif()
     ## seen in the original Makefile:
     # export VDB_CONFIG=$(VDB_CONFIG) ;
