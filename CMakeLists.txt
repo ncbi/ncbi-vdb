@@ -62,19 +62,3 @@ include( build/env.cmake NO_POLICY_SCOPE )
 add_subdirectory(libs)
 add_subdirectory(test)
 #add_subdirectory(vdb3)
-
-# if( HDF5_FOUND )
-# 	set( HDF5_INST "kdf5 kdf5-shared" )
-# else()
-# 	set( HDF5_INST "" )
-# endif()
-
-# install( TARGETS
-# 	ncbi-ngs-c++
-# 	ncbi-vdb
-# 	ncbi-vdb-shared
-# 	ncbi-wvdb
-# 	ncbi-wvdb-shared
-# 	ncbi-ngs
-# 	${HDF5_INST}
-# )
