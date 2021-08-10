@@ -54,11 +54,38 @@ if (WIN32)
 	set (CMAKE_SYSTEM_VERSION 10.0 CACHE STRING INTERNAL FORCE)
 endif()
 
-project(ncbi-vdb)
+if( TESTS_ONLY AND LIBS_ONLY )
+    message( "ERROR: TESTS_ONLY and LIBS_ONLY cannot be specified at the same time" )
+elseif( TESTS_ONLY AND NOT LIBS_ONLY AND (${CMAKE_GENERATOR} MATCHES "Visual Studio.*" OR ${CMAKE_GENERATOR} STREQUAL "Xcode") )
+    project(ncbi-vdb-tests)
+    # calculate global settiungs, create output directories
+    include( build/env.cmake NO_POLICY_SCOPE )
 
-# calculate global settiungs, create output directories
-include( build/env.cmake NO_POLICY_SCOPE )
+    message( "Generating tests only project..." )
+    if(CMAKE_BUILD_TYPE STREQUAL "" OR CMAKE_BUILD_TYPE STREQUAL "Debug")
+        link_directories( ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG} )
+        link_directories( ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG} )
+    else()
+        link_directories( ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE} )
+        link_directories( ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE} )
+    endif()
+    add_subdirectory(test)
+elseif( NOT TESTS_ONLY AND LIBS_ONLY AND (${CMAKE_GENERATOR} MATCHES "Visual Studio.*" OR ${CMAKE_GENERATOR} STREQUAL "Xcode") )
+    project(ncbi-vdb-libs)
+    # calculate global settiungs, create output directories
+    include( build/env.cmake NO_POLICY_SCOPE )
 
-add_subdirectory(libs)
-add_subdirectory(test)
+    message( "Generating libs only project..." )
+    add_subdirectory(libs)
+else()
+    if( TESTS_ONLY OR LIBS_ONLY )
+        message( "ignoring TESTS_ONLY/LIBS_ONLY, use it only for MSVC or XCode" )
+    endif()
+
+    project(ncbi-vdb)
+    # calculate global settiungs, create output directories
+    include( build/env.cmake NO_POLICY_SCOPE )
+    add_subdirectory(libs)
+    add_subdirectory(test)
+endif()
 #add_subdirectory(vdb3)
