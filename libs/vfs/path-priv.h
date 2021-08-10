@@ -146,6 +146,7 @@ struct VPath
     bool       payRequired;
 
     const String * accOfParentDb; /* for refseqs */
+    const String * dirOfParentDb; /* for refseqs */
 
     bool magic; /* was created from magic env.var. */
 

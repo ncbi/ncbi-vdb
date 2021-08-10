@@ -431,8 +431,8 @@ static rc_t VResolversQuery ( const VResolver * self,
                 isSource = StringEqual(&path->objectType, &remote);
         }
 
-        app = get_accession_app(acc, false,
-            NULL, NULL, false, NULL, NULL, -1);
+        app = get_accession_app(acc, false, NULL, NULL,
+            false, NULL, NULL, NULL, -1);
 
         if ( outFile != NULL ) {
             bool exists = false;

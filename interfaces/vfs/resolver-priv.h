@@ -61,6 +61,8 @@ VFS_EXTERN rc_t CC VResolverGetProject ( const VResolver * self,
 VFS_EXTERN rc_t CC VResolverGetKNSManager ( const VResolver * self,
                                          const struct KNSManager ** mgr );
 
+VFS_EXTERN rc_t CC VResolverSetDir ( VResolver * self, const char * dir );
+
 #ifdef __cplusplus
 }
 #endif
