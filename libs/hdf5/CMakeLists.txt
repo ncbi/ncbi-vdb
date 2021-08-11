@@ -15,5 +15,8 @@ if( HDF5_FOUND )
     ExportShared( kdf5 true )
 
     target_link_libraries( kdf5-shared ${HDF5_LIBRARIES} ncbi-vdb)
+    if( WIN32 )
+        target_link_libraries( kdf5-shared-md ${HDF5_LIBRARIES} ncbi-vdb)
+    endif()
 
 endif()
