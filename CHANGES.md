@@ -1,6 +1,26 @@
 # NCBI External Developer Release:
 
 
+## NCBI VDB 2.11.1
+**August 17, 2021**
+
+  **align, axf, sra-pileup, vdb, vfs**: resolve reference sequences within output directory  
+  **cloud, kns, sra-tools**: do not acquire CE more often than necessary  
+  **kapp, kns**: fixed a crash that occurred when multiple threads update HTTP's User-Agent header  
+  **kfg**: improved thread safety  
+  **kns**: fixed test failure on GCP  
+  **kns**: improved reporting of peer certificate information  
+  **kns**: improved thread safety when proxy is used  
+  **kns**: improved timeout management in CacheTeeFile  
+  **kns**: integrated mutual TLS authentication  
+  **ncbi-vdb**: added dependency on cmake  
+  **ncbi-vdb, ngs, ngs-tools, sra-tools**: configure prints the version of compiler  
+  **prefetch, vdb, vfs**: prefetch with "-O" will now correctly place references in output directory  
+  **prefetch, vfs**: fixed error message 'multiple response SRR URLs for the same service...' when downloading  
+  **vdb**: support for Zstd added to the schema  
+  **vfs**: updated interaction with SRA Data Locator  
+
+
 ## NCBI VDB 2.11.0
 **March 15, 2021**
 
