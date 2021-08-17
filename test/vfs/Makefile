@@ -20,7 +20,7 @@
 #
 #  Please cite the author in any work or product based on this material.
 #
-# ===========================================================================
+# ============================================================================
 
 default: runtests
 
@@ -29,6 +29,7 @@ TOP ?= $(abspath ../..)
 MODULE = test/vfs
 
 TEST_TOOLS = \
+	test-attached-vdbcache \
 	test-log-names-error \
 	test-redirect-rejected-names-cgi-http-to-https \
 	test-resolver-with-log \
@@ -264,6 +265,18 @@ RESOLVERTESTLOG_OBJ = \
 	$(addsuffix .$(OBJX),$(RESOLVERTESTLOG_SRC))
 
 $(TEST_BINDIR)/test-resolver-with-log: $(RESOLVERTESTLOG_OBJ)
+	$(LP) --exe -o $@ $^ $(RESOLVERTEST_LIB)
+
+#----------------------------------------------------------------
+# Test of names service attaching vdbcache-s
+#
+AV_SRC = \
+	test-attached-vdbcache
+
+AV_OBJ = \
+	$(addsuffix .$(OBJX),$(AV_SRC))
+
+$(TEST_BINDIR)/test-attached-vdbcache: $(AV_OBJ)
 	$(LP) --exe -o $@ $^ $(RESOLVERTEST_LIB)
 
 #----------------------------------------------------------------

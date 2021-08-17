@@ -52,7 +52,7 @@ struct AWS;
 
 #include "aws-priv.h" /* AWSDoAuthentication */
 #include "cloud-cmn.h" /* KNSManager_Read */
-#include "cloud-priv.h"
+#include "cloud-priv.h" /* CloudGetCachedComputeEnvironmentToken */
 
 static rc_t PopulateCredentials ( AWS * self );
 
@@ -88,8 +88,8 @@ static char const *envCE()
     char const *const env = firstTime ? getenv(ENV_MAGIC_CE_TOKEN) : NULL;
     firstTime = false;
     if ( env != NULL && *env != 0 )
-        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
-               ("Got location from environment\n"));
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_CE),
+               ("Got AWS location from environment\n"));
     return env;
 }
 
@@ -102,8 +102,8 @@ static rc_t readCE(AWS const *const self, size_t size, char location[])
     char pkcs7[4096] = "";
     rc_t rc;
     
-    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
-           ("Reading location from provider\n"));
+    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_CE),
+           ("Reading AWS location from provider\n"));
     rc = KNSManager_Read(self->dad.kns, document, sizeof document,
                  "http://169.254.169.254/latest/dynamic/instance-identity/document",
                  NULL, NULL);
@@ -131,11 +131,19 @@ rc_t CC AWSMakeComputeEnvironmentToken ( const AWS * self, const String ** ce_to
     else {
         char const *const env = envCE();
         char location[4096] = "";
-        rc_t const rc = env == NULL ? readCE(self, sizeof(location), location) : 0;
+        rc_t rc = 0;
+        if (CloudGetCachedComputeEnvironmentToken(&self->dad, ce_token))
+            return 0;
+        rc = env == NULL ? readCE(self, sizeof(location), location) : 0;
         if (rc == 0) {
             String s;
             StringInitCString(&s, env != NULL ? env : location);
-            return StringCopy(ce_token, &s);
+            rc = StringCopy(ce_token, &s);
+            if (rc == 0) { /* ignore rc below */
+                assert(ce_token);
+                CloudSetCachedComputeEnvironmentToken(&self->dad, *ce_token);
+            }
+            return rc;
         }
         return rc;
     }
@@ -245,8 +253,8 @@ LIB_EXPORT rc_t CC CloudMgrMakeAWS ( const CloudMgr * self, AWS ** p_aws )
                 &user_agrees_to_reveal_instance_identity);
         }
 
-        rc = CloudInit ( & aws -> dad, ( const Cloud_vt * ) & AWS_vt_v1, "AWS", self -> kns, user_agrees_to_pay,
-            user_agrees_to_reveal_instance_identity );
+        rc = CloudInit ( & aws -> dad, ( const Cloud_vt * ) & AWS_vt_v1, "AWS",
+            self, user_agrees_to_pay, user_agrees_to_reveal_instance_identity );
         if ( rc == 0 )
         {
             rc = PopulateCredentials( aws );

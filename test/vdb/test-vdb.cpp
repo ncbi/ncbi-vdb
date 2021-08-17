@@ -39,6 +39,9 @@ extern "C" {
 #include <sysalloc.h>
 #include <cstdlib>
 #include <stdexcept>
+#include <iostream>
+#include <sstream>
+#include <fstream>
 
 using namespace std;
 
@@ -542,6 +545,40 @@ FIXTURE_TEST_CASE(VCursor_PermitPostOpenAdd, VDB_Fixture)
     REQUIRE_RC(Setup("SRR000001", columns, false));
     REQUIRE_RC(VCursorPermitPostOpenAdd(curs));
 }
+
+#if TO_FIX_VDB_4470
+static rc_t CC FlushSchema ( void *fd, const void * buffer, size_t size )
+{
+    string * strPtr = static_cast<string *>( fd );
+    strPtr -> append ( static_cast<const char*>( buffer ), size );
+    return 0;
+}
+
+FIXTURE_TEST_CASE(VersionProblem, VDB_Fixture)
+{
+    const string input =
+    "version 1; table NCBI:tbl:base_space #3 {}; "
+    " table NCBI:align:tbl:reference #3 = NCBI:tbl:base_space #3 {}; "
+    " table NCBI:tbl:base_space #3.1 {};";
+
+    string out;
+    {
+        VSchema * schema;
+        REQUIRE_RC ( VDBManagerMakeSchema ( mgr, & schema ) );
+        REQUIRE_RC ( VDBManagerAddSchemaIncludePath ( mgr, "%s", "../../interfaces" ) );
+        REQUIRE_RC ( VSchemaParseText ( schema, NULL, input . c_str(), input . size () ) );
+        REQUIRE_RC ( VSchemaDump ( schema, sdmPrint, "NCBI:align:tbl:reference #3", FlushSchema, & out ) );
+        VSchemaRelease ( schema );
+    }
+cout << out;
+    {
+        VSchema * schema;
+        REQUIRE_RC ( VDBManagerMakeSchema ( mgr, & schema ) );
+        REQUIRE_RC ( VSchemaParseText ( schema, NULL, out . c_str(), out . size () ) );
+        VSchemaRelease ( schema );
+    }
+}
+#endif
 
 //////////////////////////////////////////// Main
 extern "C"

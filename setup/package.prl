@@ -4,11 +4,13 @@ sub PACKAGE_TYPE { 'L' }
 sub PACKAGE_NAME { 'NCBI-VDB' }
 sub PACKAGE_NAMW { 'VDB' }
 sub CONFIG_OUT   { 'build' }
-sub PKG { ( LNG   => 'C',
+sub PKG { my @REQ = qw ( cmake );
+          ( LNG   => 'C',
             OUT   => 'ncbi-outdir',
             LOCOUT=> '../../OUTDIR',
             PATH  => '/usr/local/ncbi/ncbi-vdb',
-            UPATH =>      '$HOME/ncbi/ncbi-vdb', ) }
+            UPATH =>      '$HOME/ncbi/ncbi-vdb',
+            REQ   => \@REQ, ) }
 sub DEPENDS { ( { name => 'fuse' , Include => '/usr/include'        , },
                 { name => 'hdf5' , Include => '/usr/include'        , },
                 { name => 'magic', Include => '/usr/include'        , },

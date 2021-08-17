@@ -83,7 +83,7 @@ struct KNSManager
     struct CloudMgr * cloud;
 
     bool verbose;
-    bool logTlsErrors;
+    uint64_t logTlsErrors;
 
     /* VResolverCache try to resolve to user's cache before cwd/AD */
     bool resolveToCache;
@@ -98,10 +98,14 @@ struct KNSManager
     bool NCBI_VDB_NETkfgValueSet;
     bool NCBI_VDB_NETkfgValue;
 
+    /* TLS client Certificate & Key for mutual authentication */
+    char * own_cert;
+    char * pk_key;
+
     bool notSingleton;
 };
 
-bool KNSManagerLogNcbiVdbNetError ( const struct KNSManager * self );
+uint64_t KNSManagerLogNcbiVdbNetError ( const struct KNSManager * self );
 void KNSManagerSetLogNcbiVdbNetError(struct KNSManager * self, bool set);
 
 /* returns true when we should not try direct internet connection

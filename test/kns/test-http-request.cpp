@@ -97,7 +97,9 @@ FIXTURE_TEST_CASE(HttpRequest_POST_NoParams, HttpRequestFixture)
 FIXTURE_TEST_CASE(HttpRequest_head_as_get, HttpRequestFixture)
 {
     MakeRequest( GetName() );
-    m_req->payRequired = true; // triggers GET for HEAD
+
+#define NAME "NCBI_VDB_GET_AS_HEAD"
+    putenv(const_cast<char*>(NAME "=1")); // triggers GET for HEAD
 
     TestStream::AddResponse(
         "HTTP/1.1 206 Partial Content\r\n"
@@ -108,6 +110,7 @@ FIXTURE_TEST_CASE(HttpRequest_head_as_get, HttpRequestFixture)
         "\r\n");
     KClientHttpResult *rslt;
     REQUIRE_RC ( KClientHttpRequestHEAD ( m_req, & rslt ) );
+    putenv(const_cast<char*>(NAME "="));
     REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
 
     string req = TestStream::m_requests.front();

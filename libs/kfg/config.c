@@ -50,6 +50,9 @@ struct KfgConfigNamelist;
 #include <kfs/file.h>
 #include <kfs/dyload.h>
 #include <kfs/mmap.h>
+
+#include <kproc/lock.h> /* KLockRelease */
+
 #include <vfs/path.h>
 #include <strtol.h>
 #include <sysalloc.h>
@@ -298,6 +301,8 @@ struct KConfig
     KDualRef refcount;
     KConfigIncluded *current_file;
 
+    KLock * nodeLock;
+
     char * load_path;
     size_t load_path_sz_tmp;
 
@@ -353,22 +358,24 @@ rc_t KConfigAppendToLoadPath(KConfig *self, const char* chunk)
 /* Whack
  */
 static
-rc_t KConfigEmpty ( KConfig * self)
+rc_t KConfigEmpty ( KConfig * self )
 {
-    if (self)
+    rc_t rc = 0;
+
+    if ( self != NULL )
     {
         BSTreeWhack ( & self -> tree, KConfigNodeWhack, self );
         BSTreeWhack ( & self -> included, KConfigIncludedWhack, NULL );
 
-        self -> magic_file_path_size = 0;
         free ( ( void* ) self -> magic_file_path );
-        self -> magic_file_path = NULL;
-
-        self->load_path_sz_tmp = 0;
         free ( self->load_path );
-        self->load_path = NULL;
+
+        rc = KLockRelease ( self -> nodeLock );
+
+        memset ( self, 0, sizeof * self );
     }
-    return 0;
+
+    return rc;
 }
 
 static
@@ -652,11 +659,10 @@ rc_t KConfigNodeVOpenNodeReadInt ( const KConfigNode *self, const KConfig *mgr,
                                    const KConfigNode **node, const char *path, va_list args )
 {
     rc_t rc;
-
     if ( node == NULL )
     {
         rc = RC ( rcKFG, rcNode, rcOpening, rcParam, rcNull );
-        PLOGERR (klogErr, (klogErr, rc, "faile to provide node to open $(n)", "n=%s", path));
+        PLOGERR (klogErr, (klogErr, rc, "failed to provide node to open $(n)", "n=%s", path));
     }
     else
     {
@@ -3488,6 +3494,8 @@ rc_t KConfigMakeImpl ( KConfig ** cfg, const KDirectory * cfgdir, bool local,
 
             mgr -> initialized = true;
 
+            if (rc == 0)
+                rc = KLockMake ( & mgr -> nodeLock );
 
             if ( rc == 0 ) {
                 rc_t rc = 0;
@@ -4122,15 +4130,19 @@ LIB_EXPORT rc_t CC KConfigRead ( const KConfig * self, const char * path,
    code to implement the corresponding KConfigGetXXX function */
 #define NODE_TO_CONFIG_ACCESSOR(fn) \
     const KConfigNode* node;                                \
-    rc_t rc = KConfigOpenNodeRead ( self, &node, "%s", path );   \
-    if ( rc == 0)                                           \
-    {                                                       \
-        rc_t rc2;                                           \
-        rc = fn(node, result);                              \
-        rc2 = KConfigNodeRelease(node);                     \
-        if (rc == 0)                                        \
+    assert(self);                                           \
+    rc_t rc = KLockAcquire ( self->nodeLock ), rc2 = 0;     \
+    if (rc == 0)                                            \
+        rc = KConfigOpenNodeRead( self, &node, "%s", path );\
+    if (rc == 0) {                                          \
+        rc = fn ( node, result );                           \
+        rc2 = KConfigNodeRelease ( node );                  \
+        if (rc == 0 && rc2 != 0)                            \
             rc = rc2;                                       \
     }                                                       \
+    rc2 = KLockUnlock  ( self->nodeLock );                  \
+    if (rc == 0 && rc2 != 0)                                \
+        rc = rc2;                                           \
     return rc;
 
 /* THESE FUNCTIONS ARE PROTECTED AGAINST BAD "self" AND "path"

@@ -72,12 +72,6 @@ bool HttpGetRetryCodes ( const HttpRetrySpecs* self, uint16_t code, uint8_t * ma
  */
 KNS_EXTERN rc_t CC KNSManagerMakeConfig ( struct KNSManager **mgr, struct KConfig * kfg );
 
-/* MakeLocal
- *  create a manager instance without initializing singleton, for testing
- */
-KNS_EXTERN rc_t CC KNSManagerMakeLocal ( struct KNSManager ** mgr,
-    struct KConfig * kfg );
-
 /* MakeWithConfig
  *  Create a manager instance using a custom configuration, for testing.
  *  Initialize singleton.

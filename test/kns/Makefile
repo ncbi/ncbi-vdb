@@ -48,6 +48,7 @@ TEST_TOOLS = \
 include $(TOP)/build/Makefile.env
 
 EXT_TOOLS = \
+	test-mutual-authentication \
 	test-proxy \
 	test-proxy-with-env \
 	test-proxy-with-scheme \
@@ -196,6 +197,17 @@ K2_OBJ = \
 	$(addsuffix .$(OBJX),$(K2_SRC))
 
 $(TEST_BINDIR)/test200for-whole-file: $(K2_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
+
+#----------------------------------------------------------------
+MATEST_SRC = \
+    gosha \
+    test-mutual-authentication \
+
+MATEST_OBJ = \
+	$(addsuffix .$(OBJX),$(MATEST_SRC))
+
+$(BINDIR)/test-mutual-authentication: $(MATEST_OBJ)
 	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
 
 #----------------------------------------------------------------

@@ -145,6 +145,8 @@ endif
 
 ifeq (dbg,$(BUILD))
 	KLIB_SRC += debug
+else
+	KLIB_SRC += release
 endif
 
 KLIB_OBJ = \

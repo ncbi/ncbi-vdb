@@ -261,6 +261,8 @@ rc_t VResolverQueryForCache(const VResolver * self, VRemoteProtocols protocols,
 /* version of name service protocol */
 rc_t VResolverSetVersion ( VResolver *self, const char * version );
 
+rc_t VResolverResetKNSManager(VResolver * self, const struct KNSManager * mgr);
+
 /* resolve oid->file mapping inside of VFS
   resolve (resolve oid<->name mapping in resolver):
    0: default VResolver's behavior
@@ -287,7 +289,7 @@ void KConfigReadRemoteProtocols ( struct KConfig const * self, VRemoteProtocols 
 VResolverAppID get_accession_app(const String * accession, bool refseq_ctx,
     struct VResolverAccToken *tok, bool *legacy_wgs_refseq,
     bool resolveAllAccToCache, bool * forDirAdjusted,
-    const String * parentAcc, int64_t projectId);
+    const String * parentAcc, const String * parentPath, int64_t projectId);
 
 void LogNamesServiceErrorsInit(bool enabled);
 void LogNamesServiceErrorsReset();

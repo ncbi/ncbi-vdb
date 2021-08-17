@@ -323,6 +323,7 @@ VFS_EXTERN KTime_t CC VPathGetModDate ( const VPath * self );
 VFS_EXTERN uint64_t CC VPathGetSize ( const VPath * self );
 VFS_EXTERN const uint8_t * CC VPathGetMd5 ( const VPath * self );
 
+/* returns true if self has dbGaP projectId set */
 VFS_EXTERN bool CC VPathGetProjectId(const VPath * self, uint32_t * projectId);
 
 VFS_EXTERN VQuality CC VPathGetQuality(const VPath * self);

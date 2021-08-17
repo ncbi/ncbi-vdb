@@ -529,7 +529,7 @@ static rc_t RefSeq_RefSeq_open(RefSeq *const super, RefSeqMgr const *const mgr)
     if (rc == 0)
         rc = VFSManagerMakePath(vfs, &aOrig, "%s", self->name);
     if (rc == 0)
-        VPathSetAccOfParentDb(aOrig, super->accOfParentDb);
+        VPathSetAccOfParentDb(aOrig, super->accOfParentDb, NULL);
     if (rc == 0)
         rc = VDBManagerOpenTableReadVPath(mgr->vmgr, &tbl, NULL, aOrig);
 
@@ -631,7 +631,7 @@ static int AccessionType(VDBManager const *const mgr,
             if (*rc == 0) /* create VPath from 'accession' */
                 *rc = VFSManagerMakePath(vfs, &aOrig, "%.*s", (int)N, accession);
             if (*rc == 0)
-                VPathSetAccOfParentDb(aOrig, accOfParentDb);
+                VPathSetAccOfParentDb(aOrig, accOfParentDb, NULL);
 
             if (*rc == 0) /* use created VPath... */
                 *rc = VDBManagerOpenDBReadVPath(mgr, &db, NULL, aOrig);

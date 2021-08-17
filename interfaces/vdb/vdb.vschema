@@ -64,6 +64,7 @@ fmtdef fzip_fmt;
 fmtdef rle_fmt;
 fmtdef zlib_fmt;
 fmtdef bzip2_fmt;
+fmtdef zstd_fmt;
 
 
 /*--------------------------------------------------------------------------
@@ -729,6 +730,47 @@ T bzip_encoding #1.0 < * U32 blockSize100k, U32 workFactor >
     encode { return bzip < blockSize100k, workFactor > ( @ ); }
 };
 
+/* zstd
+ * unzstd
+ *  run things through zstd
+ *
+ *  "strategy" [ CONST, OPTIONAL ] - set the compression strategy from 1 to 9, or 0 for the default
+ *
+ *  "level" [ CONST, OPTIONAL ] - set the amount of compression
+ *  from -131072..22 ( fastest/worst compressed to slowest/best compression ), or use 0 for zstd
+ *  default behavior (same as level 3)
+ */
+
+ // zstd strategy, from fast to strong
+const I32 ZSTD_FAST     =  1;
+const I32 ZSTD_DFAST    =  2;
+const I32 ZSTD_GREEDY   =  3;
+const I32 ZSTD_LAZY     =  4;
+const I32 ZSTD_LAZY2    =  5;
+const I32 ZSTD_BTLAZY2  =  6;
+const I32 ZSTD_BTOPT    =  7;
+const I32 ZSTD_BTULTRA  =  8;
+const I32 ZSTD_BTULTRA2 =  9;
+
+const I32 ZSTD_DEFAULT_STRATEGY    =  0;
+
+// zstd level
+const I32 ZSTD_DEFAULT_COMPRESSION = 0;
+
+function
+zstd_fmt zstd #1.0 < * I32 strategy, I32 level > ( any in )
+    = vdb:zstd;
+
+function
+any unzstd #1.0 ( zstd_fmt in )
+    = vdb:unzstd;
+
+physical < type T >
+T zstd_encoding #1.0 < * I32 strategy, I32 level >
+{
+    decode { return unzstd ( @ ); }
+    encode { return zstd < strategy, level > ( @ ); }
+};
 
 /* simple_sub_select
  *  project a column from another table within database

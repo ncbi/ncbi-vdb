@@ -37,6 +37,8 @@
 #include <klib/printf.h> /* string_printf */
 #include <klib/rc.h> /* RC */
 
+#include <kns/manager.h> /* KNSManagerRelease */
+
 #include <vfs/manager.h> /* VFSManagerRelease */
 #include <vfs/path.h> /* VFSManagerMakePath */
 #include <vfs/resolver-priv.h> /* VResolverQueryWithDir */
@@ -244,6 +246,14 @@ static rc_t HResolver(H * self, const KService * service,
         *resolver = self->resolver;
     }
 
+    if (rc == 0) { /* use original manager in case it's not a singleton */
+        KNSManager * kns = NULL;
+        rc = VFSManagerGetKNSMgr(self->mgr, &kns);
+        if (rc == 0)
+            rc = VResolverResetKNSManager(*resolver, kns);
+        RELEASE(KNSManager, kns);
+    }
+
 /*  if (rc == 0 && *resolver != NULL)
         VResolverCacheEnable(*resolver, KServiceGetCacheEnable(service)); */
 
@@ -421,8 +431,8 @@ static rc_t VResolversQuery ( const VResolver * self,
                 isSource = StringEqual(&path->objectType, &remote);
         }
 
-        app = get_accession_app(acc, false,
-            NULL, NULL, false, NULL, NULL, -1);
+        app = get_accession_app(acc, false, NULL, NULL,
+            false, NULL, NULL, NULL, -1);
 
         if ( outFile != NULL ) {
             bool exists = false;

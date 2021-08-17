@@ -29,6 +29,9 @@
 #include <kfg/config.h>
 #include <kfg/properties.h>
 
+#include <kfs/directory.h> /* KDirectoryRelease */
+#include <kfs/file.h> /* KFileRelease */
+
 #include <klib/base64.h>
 #include <klib/data-buffer.h>
 #include <klib/printf.h>
@@ -93,9 +96,7 @@ _Thread_local char kns_manager_ua_suffix [ KNSMANAGER_STRING_MAX ] = { 0 };
 
 quitting_t quitting;
 
-#if USE_SINGLETON
 static atomic_ptr_t kns_singleton;
-#endif
 
 /*
 #define RELEASE( type, obj ) do { rc_t rc2 = type##Release ( obj ); \
@@ -117,19 +118,30 @@ struct KNSProxies *KNSManagerGetProxies ( const KNSManager *self, size_t *cnt )
     return KNSProxiesGetHttpProxy ( self->proxies, cnt );
 }
 
+#ifdef USE_SINGLETON		
+static bool SINGLETON = true;
+#else
+static bool SINGLETON = false;
+#endif
+
+bool KNSManagerUseSingleton(bool use) {
+    bool b = SINGLETON;
+    SINGLETON = use;
+    return b;
+}
 
 static rc_t KNSManagerWhack ( KNSManager *self )
 {
-    rc_t rc;
+    rc_t rc = 0;
 
-#if USE_SINGLETON
-    KNSManager *our_mgr
-        = atomic_test_and_set_ptr ( &kns_singleton, NULL, NULL );
-    if ( self == our_mgr ) {
-        if ( !self->notSingleton ) { return 0; }
-        atomic_test_and_set_ptr ( &kns_singleton, NULL, self );
+    if ( SINGLETON ) {
+        KNSManager *our_mgr
+            = atomic_test_and_set_ptr ( &kns_singleton, NULL, NULL );
+        if ( self == our_mgr ) {
+            if ( !self->notSingleton ) { return 0; }
+            atomic_test_and_set_ptr ( &kns_singleton, NULL, self );
+        }
     }
-#endif
 
     KNSProxiesWhack ( self->proxies );
     CloudMgrRelease ( self->cloud );
@@ -138,14 +150,24 @@ static rc_t KNSManagerWhack ( KNSManager *self )
 
     KTLSGlobalsWhack ( &self->tlsg );
 
+    free ( self->own_cert );
+    free ( self->pk_key );
+
+    memset ( self, 0, sizeof * self );
+
     free ( self );
 
     KNSManagerCleanup ();
-    if ( kns_manager_lock ) {
+
+    if ( kns_manager_lock != NULL ) {
         KLockRelease ( kns_manager_lock );
         kns_manager_lock = NULL;
     }
-    if ( !rc ) rc = KDataBufferWhack ( &kns_manager_user_agent );
+
+    if ( rc == 0 )
+        rc = KDataBufferWhack ( &kns_manager_guid );
+    if ( rc == 0 )
+        rc = KDataBufferWhack ( &kns_manager_user_agent );
 
     return rc;
 }
@@ -173,8 +195,6 @@ LIB_EXPORT rc_t CC KNSManagerRelease ( const KNSManager *self )
             return RC ( rcNS, rcMgr, rcAttaching, rcRefcount, rcInvalid );
         }
     }
-    else
-         return KDataBufferWhack(&kns_manager_user_agent);
     return 0;
 }
 
@@ -194,8 +214,7 @@ static rc_t CC KNSManagerMakeSingleton (
 
         *mgrp = NULL;
 
-#if USE_SINGLETON
-        if ( !local ) {
+        if ( SINGLETON && !local ) {
             /* grab single-shot singleton */
             our_mgr = atomic_test_and_set_ptr ( &kns_singleton, NULL, NULL );
             if ( our_mgr != NULL ) {
@@ -205,7 +224,6 @@ static rc_t CC KNSManagerMakeSingleton (
                 return rc;
             }
         }
-#endif
 
         /* singleton was NULL. Make from scratch. */
         if ( kfg == NULL ) { rc = KConfigMake ( &kfg, NULL ); }
@@ -235,8 +253,7 @@ static rc_t CC KNSManagerMakeSingleton (
             if ( aKfg == NULL ) { KConfigRelease ( kfg ); }
 
             if ( rc == 0 ) {
-#if USE_SINGLETON
-                if ( !local ) {
+                if ( SINGLETON && !local ) {
                     /* try to set single-shot ( set once, never reset ) */
                     KNSManager *new_mgr = atomic_test_and_set_ptr (
                         &kns_singleton, our_mgr, NULL );
@@ -252,7 +269,7 @@ static rc_t CC KNSManagerMakeSingleton (
                         return rc;
                     }
                 }
-#endif
+
                 /* return parameter */
                 *mgrp = our_mgr;
             }
@@ -455,6 +472,132 @@ LIB_EXPORT rc_t CC KNSManagerSetHTTPTimeouts (
 
     self->http_read_timeout = readMillis;
     self->http_write_timeout = writeMillis;
+
+    return 0;
+}
+
+LIB_EXPORT rc_t CC KNSManagerSetOwnCert(KNSManager * self,
+    const char * own_cert, const char * pk_key)
+{
+    if (self == NULL)
+        return RC(rcNS, rcMgr, rcUpdating, rcSelf, rcNull);
+
+    if (own_cert != NULL && pk_key == NULL)
+        return RC(rcNS, rcMgr, rcUpdating, rcParam, rcNull);
+
+    if (self->own_cert != NULL) {
+        /* cannot clear certificate once set */
+        if (own_cert == NULL)
+            return RC(rcNS, rcMgr, rcClearing, rcDoc, rcExists);
+        /* cannot update certificate once set */
+        else
+            return RC(rcNS, rcMgr, rcUpdating, rcDoc, rcExists);
+    }
+
+    assert(self->pk_key == NULL);
+
+    if (own_cert != NULL) {
+        self->own_cert = string_dup_measure(own_cert, NULL);
+        if (self->own_cert == NULL)
+            return RC(rcNS, rcMgr, rcUpdating, rcMemory, rcExhausted);
+    }
+
+    if (pk_key != NULL) {
+        self->pk_key = string_dup_measure(pk_key, NULL);
+        if (self->pk_key == NULL) {
+            free(self->own_cert);
+            self->own_cert = NULL;
+            return RC(rcNS, rcMgr, rcUpdating, rcMemory, rcExhausted);
+        }
+    }
+
+    if (self->own_cert != NULL) {
+        assert(self->pk_key);
+        return
+            KTLSGlobalsSetupOwnCert(&self->tlsg, self->own_cert, self->pk_key);
+    }
+    else
+        return 0;
+}
+
+static
+bool OwnCertfromEnv(const char ** own_cert, const char ** pk_key) {
+    char ** cert = (char**)own_cert;
+    char ** key = (char**)pk_key;
+    assert(cert && key);
+
+    char * e = getenv("VCBI_VDB_OWN_CERT");
+    if (e == NULL)
+        return false;
+
+    KDirectory * dir = NULL;
+    rc_t rc = KDirectoryNativeDir(&dir);
+
+    const KFile * file = NULL;
+    size_t num_read = 0;
+    uint64_t size = 0;
+
+    if (rc == 0) {
+        rc = KDirectoryOpenFileRead(dir, &file, "%s/own_cert", e);
+        if (rc == 0)
+            rc = KFileSize(file, &size);
+        if (rc == 0)
+            *cert = calloc(1, size + 1);
+        if (rc == 0 && *cert == NULL)
+            return false;
+        if (rc == 0)
+            rc = KFileRead(file, 0, *cert, size + 1, &num_read);
+        if (rc == 0)
+            KFileRelease(file);
+    }
+
+    if (rc == 0) {
+        rc = KDirectoryOpenFileRead(dir, &file, "%s/pk_key", e);
+        if (rc == 0)
+            rc = KFileSize(file, &size);
+        if (rc == 0)
+            *key = calloc(1, size + 1);
+        if (rc == 0 && *key == NULL)
+            return false;
+        if (rc == 0)
+            rc = KFileRead(file, 0, *key, size + 1, &num_read);
+        if (rc == 0)
+            KFileRelease(file);
+    }
+
+    KDirectoryRelease(dir);
+
+    return rc == 0;
+}
+
+LIB_EXPORT rc_t CC KNSManagerGetOwnCert(const KNSManager * self,
+    const char ** own_cert, const char ** pk_key)
+{
+    if (own_cert == NULL || pk_key == NULL)
+        return RC(rcNS, rcMgr, rcAccessing, rcParam, rcNull);
+
+    *own_cert = *pk_key = NULL;
+
+    if (OwnCertfromEnv(own_cert, pk_key))
+        return 0;
+
+    if (self == NULL)
+        return RC(rcNS, rcMgr, rcAccessing, rcSelf, rcNull);
+
+    if (self->own_cert != NULL) {
+        *own_cert = string_dup_measure(self->own_cert, NULL);
+        if (*own_cert == NULL)
+            return RC(rcNS, rcMgr, rcAccessing, rcMemory, rcExhausted);
+    }
+
+    if (self->pk_key != NULL) {
+        *pk_key = string_dup_measure(self->pk_key, NULL);
+        if (*pk_key == NULL) {
+            free((char*)*own_cert);
+            *own_cert = NULL;
+            return RC(rcNS, rcMgr, rcAccessing, rcMemory, rcExhausted);
+        }
+    }
 
     return 0;
 }
@@ -740,31 +883,32 @@ static uint8_t KNSManagerLoadMaxNumberOfRetriesOnFailureForReliableURLs
     return result;
 }
 
-#if 0
-static bool KNSManagerLoadLogTlsErrors(KConfig* kfg) {
+#if 1
+static uint64_t KNSManagerLoadLogTlsErrors(KConfig* kfg) {
     const char * e = getenv("NCBI_VDB_TLS_LOG_ERR");
     if (e != NULL)
         if (e[0] == '\0')
-            return true;
+            return 0;
         else {
             if (e[0] == '0' ||
                 e[0] == 'f') /* false */
             {
-                return false;
+                return 0;
             }
             else
-                return true;
+                return atoi(e);
         }
     else {
-        bool log = false;
-        rc_t rc = KConfigReadBool(kfg, "/tls/NCBI_VDB_TLS_LOG_ERR", &log);
+        uint64_t log = 0;
+        rc_t rc = KConfigReadU64(kfg, "/tls/NCBI_VDB_TLS_LOG_ERR", &log);
         if (rc != 0)
-            return false;
+            return 0;
         else
             return log;
     }
 }
-
+#endif
+#if 0
 static int KNSManagerLoadEmulateTldReadErrors(KConfig* kfg) {
     const char * e = getenv("NCBI_VDB_ERR_MBEDTLS_READ");
     if (e != NULL)
@@ -846,7 +990,7 @@ static rc_t CC KNSManagerMakeConfigImpl ( KNSManager **mgrp, KConfig *kfg )
             mgr->retryFirstRead = KNSManagerLoadRetryFirstRead(kfg);
             mgr->retryFile = KNSManagerLoadRetryFile ( kfg );
             mgr->max_http_read_timeout = 60 * 1000; /* 1 minute */
-            /*          mgr->logTlsErrors = KNSManagerLoadLogTlsErrors(kfg);
+            mgr->logTlsErrors = KNSManagerLoadLogTlsErrors(kfg); /*
                         mgr->emulateTlsReadErrors
                             = KNSManagerLoadEmulateTldReadErrors(kfg); */
 
@@ -875,7 +1019,8 @@ static rc_t CC KNSManagerMakeConfigImpl ( KNSManager **mgrp, KConfig *kfg )
 
                 rc = HttpRetrySpecsInit ( &mgr->retry_specs, kfg );
                 if ( rc == 0 ) {
-                    rc = KTLSGlobalsInit ( &mgr->tlsg, kfg );
+                    uint64_t logTlsErrors = KNSManagerLogNcbiVdbNetError(mgr);
+                    rc = KTLSGlobalsInit ( &mgr->tlsg, kfg, logTlsErrors );
 
                     if ( rc == 0 ) {
                         rc = KNSManagerHttpProxyInit ( mgr, kfg );
@@ -928,6 +1073,7 @@ LIB_EXPORT rc_t CC KNSManagerMakeConfig ( KNSManager **mgrp, KConfig *kfg )
     return KNSManagerMakeLocal ( mgrp, kfg );
 }
 
+/* If fmt == NULL -> release kns_manager_user_agent */
 LIB_EXPORT rc_t CC KNSManagerSetUserAgent (
     KNSManager *self, const char *fmt, ... )
 {
@@ -939,8 +1085,7 @@ LIB_EXPORT rc_t CC KNSManagerSetUserAgent (
 
     rc_t rc = 0;
     if ( fmt == NULL ) {
-        rc = RC ( rcNS, rcMgr, rcUpdating, rcParam, rcNull );
-        return rc;
+        return KDataBufferWhack ( &kns_manager_user_agent );
     }
 
     KDataBufferResize ( &kns_manager_user_agent, 0 );
@@ -1067,34 +1212,38 @@ void KNSManagerSetLogNcbiVdbNetError ( KNSManager *self, bool set )
     if ( self ) { self->NCBI_VDB_NETnoLogError = !set; }
 }
 
-bool KNSManagerLogNcbiVdbNetError ( const KNSManager *self )
+uint64_t KNSManagerLogNcbiVdbNetError ( const KNSManager *self )
 {
     if ( self == NULL ) {
 #ifdef NCBI_VDB_NET
-        return true;
+        return 1;
 #else
-        return false;
+        return 0;
 #endif
     }
-    if ( !self->logTlsErrors ) { return false; }
+    if ( self->logTlsErrors == 0 )
+        return 0;
 
-    if ( self->NCBI_VDB_NETnoLogError ) { return false; }
+    if ( self->NCBI_VDB_NETnoLogError ) { return 0; }
     const char *e = getenv ( "NCBI_VDB_NET" );
     if ( e != NULL ) {
-        if ( e[0] == '0' || e[0] == 'f' ) /* false */
+        if ( e[0] == '\0' || e[0] == '0' || e[0] == 'f' ) /* false */
         {
-            return false;
+            return 0;
         }
 
-        return true;
+        return 1;
     }
     if ( self->NCBI_VDB_NETkfgValueSet ) { return self->NCBI_VDB_NETkfgValue; }
 
+    return self->logTlsErrors;
 
+#if 0
 #ifdef NCBI_VDB_NET
     return true;
 #else
     return false;
+#endif
 #endif
 }
 

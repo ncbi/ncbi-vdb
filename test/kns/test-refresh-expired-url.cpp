@@ -126,9 +126,9 @@ public:
         TestStream::AddResponse( ostr.str() );
     }
 
-    bool EnvironmentTokenPresent( const string & url )
+    bool EnvironmentTokenPresent( const string & url, int amp = 1 )
     {
-        return url.find("&ident=") != string::npos;
+        return url.find(amp ? "&ident=" : "ident=") != string::npos;
     }
     bool StringPresent( const string & url, const string & header )
     {
@@ -270,7 +270,7 @@ FIXTURE_TEST_CASE( HttpRefreshTestSuite_RedirectSignedURL_AWS_Token_NoPayer, Clo
 
     // make sure there is an environment token added to the original URL
     string origReq = TestStream::m_requests.front();
-    REQUIRE ( EnvironmentTokenPresent ( origReq ) );
+    REQUIRE ( EnvironmentTokenPresent ( origReq, 0 ) );
     // make sure HEAD was converted into POST 0..255, with User-agent header appended "-head" to, for analytics purposes
     REQUIRE ( ! StringPresent ( origReq, "HEAD" ) );
     REQUIRE ( StringPresent ( origReq, "POST" ) );
