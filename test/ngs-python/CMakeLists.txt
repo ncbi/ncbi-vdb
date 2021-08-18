@@ -4,12 +4,15 @@ if ( Python3_FOUND )
         COMMAND ${Python3_EXECUTABLE} "-c" "from ngs import NGS"
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
+    if( "windows" STREQUAL ${OS} AND PYTHONUSERBASE )
+        set_tests_properties(Test_NGS_PY_import_ngs PROPERTIES
+            ENVIRONMENT "PYTHONUSERBASE=${PYTHONUSERBASE}")
+    endif()
 
     add_test(NAME SlowTest_NGS_PY
         COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests.py
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
-
     if( NOT NGS_LIBDIR )
         set( NGS_LIBDIR "" )
     endif()
@@ -19,7 +22,13 @@ if ( Python3_FOUND )
     else() # a multi-config generator
         set_tests_properties(SlowTest_NGS_PY PROPERTIES
             ENVIRONMENT "LD_LIBRARY_PATH=$<CONFIG:Debug,${CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG}:$<CONFIG:Release,${CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE}:>${NGS_LIBDIR}")
-endif()
+    endif()
+
+    if( "windows" STREQUAL ${OS} AND PYTHONUSERBASE )
+        set_tests_properties(SlowTest_NGS_PY PROPERTIES
+            ENVIRONMENT "PYTHONUSERBASE=${PYTHONUSERBASE}")
+    endif()
+
     ## seen in the original Makefile:
     # export VDB_CONFIG=$(VDB_CONFIG) ;
     # export NGS_PY_DOWNLOAD_LIBRARY=0;
