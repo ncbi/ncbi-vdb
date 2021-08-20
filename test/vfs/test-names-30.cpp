@@ -502,6 +502,8 @@ if ( 1 )
 
     REQUIRE_RC ( KServiceRelease ( service ) );
 
+    TEST_MESSAGE("KServiceRelease->KServiceTestNamesExecuteExt");
+
     REQUIRE_RC_FAIL ( KServiceTestNamesExecuteExt ( service, 0, NULL, NULL,
         NULL, NULL ) );
 }
