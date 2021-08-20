@@ -204,6 +204,8 @@ rc_t KSrvRespObjGetError(const KSrvRespObj * self,
 
 rc_t KSrvRespObjGetFileCount ( const KSrvRespObj * self, uint32_t * count ); 
 
+rc_t KSrvRespObjIsSimple(const KSrvRespObj * self, bool * simple);
+
 rc_t KSrvRespObjMakeIterator ( const KSrvRespObj * self,
                                KSrvRespObjIterator ** it ); 
 rc_t KSrvRespObjIteratorRelease ( const KSrvRespObjIterator * self );

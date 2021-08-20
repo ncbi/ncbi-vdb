@@ -2215,11 +2215,14 @@ static rc_t SResponseInit ( SResponse * self, rc_t aRc ) {
 
     assert ( self );
 
-    VectorInit ( & self -> rows, 0, 5 );
+    if (self->rows.mask == 0) /* just when VectorInit was not called before */
+        VectorInit ( & self -> rows, 0, 5 );
 
-    rc = KSrvResponseMake ( & self -> list );
+    if (self->list == NULL)
+        rc = KSrvResponseMake ( & self -> list );
 
-    self->rc = aRc;
+    if (self->rc == 0 || aRc == 0)
+        self->rc = aRc;
 
     return rc;
 }
@@ -3118,9 +3121,12 @@ static rc_t SRequestAddTicket ( SRequest * self, uint32_t project,
 }
 
 const char * KServiceGetId(const KService * self, uint32_t idx) {
-    assert(self);
+    if (self == NULL)
+        return NULL;
+
     if (idx >= self->req.request.objects)
         return NULL;
+
     return self->req.request.object[idx].objectId;
 }
 
@@ -3340,6 +3346,25 @@ static rc_t SRequestAddFile(SRequest * self,
     }
 
     return 0;
+}
+
+static bool SRequestAnyFormatRequested(const SRequest * self) {
+    String all;
+    String any;
+    String format;
+
+    assert(self);
+
+    CONST_STRING(&all, "all");
+    CONST_STRING(&any, "any");
+    StringInitCString(&format, self->format);
+
+    return StringEqual(&format, &all) || StringEqual(&format, &any);
+}
+
+bool KServiceAnyFormatRequested(const KService * self) {
+    assert(self);
+    return SRequestAnyFormatRequested(&self->req);
 }
 
 static
@@ -3579,7 +3604,7 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
         CONST_STRING(&any, "any");
         StringInitCString(&format, request->format);
 
-        if (!StringEqual(&format, &all) && !StringEqual(&format, &any)) {
+        if (!SRequestAnyFormatRequested(request)) {
             rc = SKVMake(&kv, n, v);
             if (rc == 0) {
                 DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
@@ -3930,7 +3955,6 @@ rc_t KServiceSetLocation(KService * self, const char * location) {
         return 0;
 }
 
-
 rc_t KServiceInitNamesRequestWithVersion ( KService * self,
     VRemoteProtocols protocols, const char * cgi, const char * version,
     bool aProtected, bool adjustVersion, int idx )
@@ -4102,30 +4126,38 @@ static rc_t KServiceProcessJson ( KService * self ) {
     rc_t r2 = 0;
 
     Response4 * r = NULL;
+    bool existed = false;
 
     assert(self);
 
     if (self->resp.rc != 0)
         return self->resp.rc;
 
-    if (self->req.sdl) {
-        int64_t projectId = -1;
-        if (self->req._ngc.ngcObj != NULL) {
-            uint32_t id = 0;
-            rc = KNgcObjGetProjectId(self->req._ngc.ngcObj, &id);
-            if (rc == 0)
-                projectId = id;
-        }
-        if (rc == 0)
-            rc = Response4MakeSdlExt(&r, self->helper.vMgr, self->helper.kMgr,
-                self->helper.kfg, self->helper.input,
-                sLogNamesServiceErrors, projectId, self->quality);
-    }
-    else
-        rc = Response4Make4 ( & r, self -> helper . input );
+    rc = KSrvResponseGetR4(self->resp.list, &r);
+    if (r != NULL)
+        existed = true;
 
-    if ( rc == 0 )
-        rc = KSrvResponseSetR4 ( self -> resp . list, r );
+    if (rc == 0) {
+        if (self->req.sdl) {
+            int64_t projectId = -1;
+            if (self->req._ngc.ngcObj != NULL) {
+                uint32_t id = 0;
+                rc = KNgcObjGetProjectId(self->req._ngc.ngcObj, &id);
+                if (rc == 0)
+                    projectId = id;
+            }
+            if (rc == 0)
+                rc = Response4MakeSdlExt(&r, self->helper.vMgr, self->helper.kMgr,
+                    self->helper.kfg, self->helper.input,
+                    sLogNamesServiceErrors, projectId, self->quality);
+        }
+        else
+            rc = Response4Make4(&r, self->helper.input);
+    }
+
+    if (rc == 0)
+        if (!existed)
+            rc = KSrvResponseSetR4(self->resp.list, r);
 
     if ( rc == 0 )
         Response4GetRc ( r, & rc );
@@ -4259,7 +4291,7 @@ rc_t KServiceProcessStreamAll ( KService * self, KStream * stream )
     rc = TimeoutInit ( & tm, self -> helper . timeoutMs );
     if (rc == 0) {
         rx = self->resp.rc;
-        rc = SResponseFini(&self->resp);
+/*      rc = SResponseFini(&self->resp); keep it to join local & remote */
     }
     if ( rc == 0 )
         rc = SResponseInit ( & self -> resp, rx );
@@ -4811,6 +4843,15 @@ static rc_t KServiceAddIdToCache(KService * self, const char * objId) {
     return rc;
 }
 
+rc_t KServiceHasQuery(const KService * self) {
+    assert(self);
+
+    if (self->req.request.objects == 0 && self->req.jwtKartFile == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcString, rcInsufficient);
+    else
+        return 0;
+}
+
 static
 rc_t KServiceProcessStream ( KService * self, KStream * stream )
 {
@@ -4843,10 +4884,9 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
         }
     }
 
-    if ( self -> req . request. objects == 0 && self->req.jwtKartFile == NULL )
-        return RC ( rcVFS, rcQuery, rcExecuting, rcString, rcInsufficient );
-    else if ( self -> req . hasQuery
-           || self -> req . serviceType == eSTsearch )
+    rc = KServiceHasQuery(self);
+    if ( rc == 0 && (self -> req . hasQuery
+           || self -> req . serviceType == eSTsearch ))
     {
         if (magic != NULL)
             rc = KServiceAddIdToCache(self, objectId);
@@ -5014,8 +5054,13 @@ rc_t KServiceAddLocalAndCacheToResponse(KService * self,
         RELEASE(VFSManager, mgr);
     }
 
-    if (rc == 0)
-        rc = KSrvResponseSetR4(self->resp.list, r4);
+    if (rc == 0
+        || rc == SILENT_RC(rcVFS, rcResolver, rcResolving, rcName, rcNotFound))
+    {
+        rc_t r = KSrvResponseSetR4(self->resp.list, r4);
+        if (r != 0 && rc == 0)
+            rc = r;
+    }
 
     RELEASE(Response4, r4);
 
@@ -5162,6 +5207,11 @@ bool KServiceSkipLocal(const KService * self) {
     return self->skipLocal;
 }
 
+bool KServiceSkipRemote(const KService * self) {
+    assert(self);
+    return self->skipRemote;
+}
+
 rc_t KServiceNamesExecuteExtImpl ( KService * self, VRemoteProtocols protocols,
     const char * cgi, const char * version,
     const KSrvResponse ** response, const char * expected, int idx )
@@ -5212,7 +5262,9 @@ rc_t KServiceTestNamesExecuteExt ( KService * self, VRemoteProtocols protocols,
     const char * cgi, const char * version,
     const struct KSrvResponse ** response, const char * expected )
 {
-    rc_t rc = KServiceInitNamesRequestWithVersion(self, protocols, cgi, version,
+    rc_t rc = 0;
+    if (version == NULL) version = "130";
+    rc = KServiceInitNamesRequestWithVersion(self, protocols, cgi, version,
         false, expected == NULL, -1);
     if (rc == 0)
         rc = KServiceNamesExecuteExtImpl ( self, protocols, cgi, version,
@@ -5226,7 +5278,9 @@ rc_t KServiceNamesExecuteExt ( KService * self, VRemoteProtocols protocols,
     const char * cgi, const char * version,
     const KSrvResponse ** response )
 {
-    rc_t rc = KServiceInitNamesRequestWithVersion(self, protocols, cgi, version,
+    rc_t rc = 0;
+    if (version == NULL) version = "130";
+    rc = KServiceInitNamesRequestWithVersion(self, protocols, cgi, version,
         false, true, -1);
     if (rc == 0)
         rc = KServiceNamesExecuteExtImpl ( self, protocols, cgi, version,
