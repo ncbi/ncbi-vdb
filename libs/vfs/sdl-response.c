@@ -56,6 +56,7 @@ static void DataClone(const Data * self, Data * clone) {
         return;
 
     clone->acc = self->acc;
+    clone->accession = self->accession;
     clone->bundle = self->bundle;
     clone->ceRequired = self->ceRequired;
     clone->cls = self->cls; /* itemClass */
@@ -94,6 +95,9 @@ static rc_t DataUpdate(const Data * self,
 
     if (node == NULL)
         return 0;
+
+    name = "accession";
+    StrSet(&next->accession, KJsonObjectGetMember(node, name), name, path);
 
     name = "bundle";
     StrSet(&next->acc, KJsonObjectGetMember(node, name), name, path);
@@ -260,6 +264,9 @@ rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
                         StringInit(&acc, c + 1, size - 1, len - 1);
                 }
             }
+
+            if (ldata.accession != NULL)
+                StringInitCString(&acc, ldata.accession);
 
             if (ldata.type != NULL) {
                 size_t size = 0;
@@ -754,16 +761,23 @@ rc_t Response4MakeSdlExt(Response4 ** self, const struct VFSManager * vfs,
 
     assert(self);
 
-    rc = Response4MakeEmpty(&r, vfs, kns, kfg,
-        logNamesServiceErrors, projectId, quality);
-    if (rc != 0)
-        return rc;
+    if (*self == NULL) {
+        rc = Response4MakeEmpty(&r, vfs, kns, kfg,
+            logNamesServiceErrors, projectId, quality);
+        if (rc != 0)
+            return rc;
+    }
+    else
+        r = *self;
 
     rc = Response4InitSdl(r, input);
-    if (rc != 0)
-        free(r);
-    else
-        * self = r;
+
+    if (*self == NULL) {
+        if (rc != 0)
+            free(r);
+        else
+            * self = r;
+    }
 
     return rc;
 }
