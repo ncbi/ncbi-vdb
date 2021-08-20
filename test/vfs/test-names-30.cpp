@@ -519,7 +519,7 @@ extern "C" {
         if ( rc == 0 )
             rc = KConfigWriteString ( KFG,
                 "repository/remote/main/CGI/resolver-cgi", RESOLVER_CGI );
-
+ncbi ::NK::TestEnv::SetVerbosity(ncbi ::NK::LogLevel::e_all);
         rc = Names3_0_TestSuite ( argc, argv );
 
         RELEASE ( KConfig, KFG );
