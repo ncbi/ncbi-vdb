@@ -43,6 +43,4 @@ add_subdirectory(axf)
 add_subdirectory(schema) # TODO: INT_TOOLS - see the schema CMakeLists.txt for the details
 add_subdirectory(vfs)
 add_subdirectory(ncbi-vdb)
-add_subdirectory(ngs-python)
-add_subdirectory(ngs-java)
 # add_subdirectory(install)
