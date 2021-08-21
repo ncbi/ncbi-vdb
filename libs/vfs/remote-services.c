@@ -5266,6 +5266,7 @@ rc_t KServiceTestNamesExecuteExt ( KService * self, VRemoteProtocols protocols,
     if (version == NULL) version = "130";
     rc = KServiceInitNamesRequestWithVersion(self, protocols, cgi, version,
         false, expected == NULL, -1);
+    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE), ("KServiceTestNamesExecuteExt"));
     if (rc == 0)
         rc = KServiceNamesExecuteExtImpl ( self, protocols, cgi, version,
             response, expected, -1 );
