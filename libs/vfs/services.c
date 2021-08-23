@@ -834,6 +834,8 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
             uint32_t i = 0;
             H h;
 
+            KServiceInitQuality(self);
+
 /*************** WE ALWAYS RESOLVE LOCALLY FIRST, THEN REMOTELY. **************/
             bool isProtected = false;
             const KNgcObj * o = KServiceGetNgcFile(self, &isProtected); 

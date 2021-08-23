@@ -3957,6 +3957,15 @@ rc_t KServiceSetLocation(KService * self, const char * location) {
         return 0;
 }
 
+rc_t KServiceInitQuality(KService * self) {
+    assert(self);
+
+    if (self->quality < 0)
+        self->quality = VDBManagerGetQuality(0);
+
+    return 0;
+}
+
 rc_t KServiceInitNamesRequestWithVersion ( KService * self,
     VRemoteProtocols protocols, const char * cgi, const char * version,
     bool aProtected, bool adjustVersion, int idx )
@@ -3965,11 +3974,8 @@ rc_t KServiceInitNamesRequestWithVersion ( KService * self,
 
     assert ( self );
 
-    if (!self->inited)
-        return RC(rcVFS, rcQuery, rcInitializing, rcMemory, rcIncomplete);
+    KServiceInitQuality(self);
 
-    if (self->quality < 0)
-        self->quality = VDBManagerGetQuality(0);
     if (self->quality >= 0)
         quality = self->quality;
 

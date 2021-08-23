@@ -135,6 +135,8 @@ rc_t KServiceGetQuality(const KService * self, int32_t * quality);
 bool KServiceSkipLocal(const KService * self);
 bool KServiceSkipRemote(const KService * self);
 
+rc_t KServiceInitQuality(KService * self);
+
 /* call to set VResolverCacheEnable to vrAlwaysEnable
    to simulate prefetch mode
 void KServiceSetCacheEnable(struct KService * self,
