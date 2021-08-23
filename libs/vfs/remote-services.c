@@ -427,6 +427,8 @@ typedef struct {
 
 /* service object */
 struct KService {
+    bool inited;
+
     SHelper helper;
     SRequest req;
     SResponse resp;
@@ -3963,6 +3965,9 @@ rc_t KServiceInitNamesRequestWithVersion ( KService * self,
 
     assert ( self );
 
+    if (!self->inited)
+        return RC(rcVFS, rcQuery, rcInitializing, rcMemory, rcIncomplete);
+
     if (self->quality < 0)
         self->quality = VDBManagerGetQuality(0);
     if (self->quality >= 0)
@@ -4011,6 +4016,8 @@ static rc_t KServiceInit ( KService * self,
 
     self -> resoveOidName = DEFAULT_RESOVE_OID_NAME;
     self -> quality = -1; /* not set */
+
+    self->inited = true;
 
     return rc;
 }
@@ -4107,6 +4114,7 @@ rc_t KServiceRelease ( KService * self ) {
 
     if ( self != NULL ) {
         rc = KServiceFini ( self );
+        memset(self, 0, sizeof *self);
         free ( self );
     }
 
@@ -5263,13 +5271,20 @@ rc_t KServiceTestNamesExecuteExt ( KService * self, VRemoteProtocols protocols,
     const struct KSrvResponse ** response, const char * expected )
 {
     rc_t rc = 0;
+
+    if (response == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
+
     if (version == NULL) version = "130";
+
     rc = KServiceInitNamesRequestWithVersion(self, protocols, cgi, version,
         false, expected == NULL, -1);
+
     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE), ("KServiceTestNamesExecuteExt"));
     if (rc == 0)
         rc = KServiceNamesExecuteExtImpl ( self, protocols, cgi, version,
             response, expected, -1 );
+
     return rc;
 }
 
