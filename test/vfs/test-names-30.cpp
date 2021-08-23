@@ -514,14 +514,19 @@ extern "C" {
     rc_t CC Usage        ( const struct Args * args ) { return 0; }
     ver_t CC KAppVersion ( void ) { return 0; }
     rc_t CC KMain ( int argc, char * argv [] ) {
-        if ( 0 ) assert ( ! KDbgSetString ( "VFS" ) );
+        if ( 
+0 ) assert ( ! KDbgSetString ( "VFS" ) );
+
         KConfigDisableUserSettings ();
 
         rc_t rc = KConfigMake ( & KFG, NULL );
         if ( rc == 0 )
             rc = KConfigWriteString ( KFG,
                 "repository/remote/main/CGI/resolver-cgi", RESOLVER_CGI );
-ncbi ::NK::TestEnv::SetVerbosity(ncbi ::NK::LogLevel::e_all);
+
+        if (
+0) ncbi::NK::TestEnv::SetVerbosity(ncbi::NK::LogLevel::e_all);
+
         rc = Names3_0_TestSuite ( argc, argv );
 
         RELEASE ( KConfig, KFG );
