@@ -29,6 +29,7 @@ TOP ?= $(abspath ../..)
 MODULE = test/vfs
 
 TEST_TOOLS = \
+	test-names-30 \
 	test-attached-vdbcache \
 	test-log-names-error \
 	test-redirect-rejected-names-cgi-http-to-https \
@@ -37,7 +38,6 @@ TEST_TOOLS = \
 	test-services \
 	test-SraDesc \
 	test-caching \
-	test-names-30 \
 	test-path \
 	test-path-c \
 	test-perm \
