@@ -5278,7 +5278,7 @@ rc_t CC VResolverQueryDo ( const VResolver * self, VRemoteProtocols protocols,
 {
     const char * dir = self == NULL ? NULL : self->dir;
 
-    if (VDBManagerGetQuality(NULL) < eQualLast) {
+    if (VDBManagerGetQuality(NULL) != NULL) {
         rc_t rc = 0;
         const KNSManager * mgr = NULL;
         KService * service = NULL;

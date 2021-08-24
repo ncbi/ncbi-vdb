@@ -173,7 +173,7 @@ typedef struct {
 
 struct ServicesCache {
     int64_t projectId;
-    EQuality quality;
+    const char * quality;
 
     KDirectory * dir;
     KConfig * kfg;
@@ -2412,7 +2412,7 @@ static rc_t KRunRemote(KRun * self) {
             }
         }
     }
-
+#ifdef WILL_PROCESS_QUALIY_HERE
     else if (self->dad->quality == eQualNo) {
         if (self->remote[eIdxNo].cnt > 0)
             idx = eIdxNo;
@@ -2464,7 +2464,7 @@ static rc_t KRunRemote(KRun * self) {
             assert(path);
         }
     }
-
+#endif
     if (rc == 0) {
         self->result.remote = path;
         self->result.remoteIdx = idx;
@@ -2539,7 +2539,7 @@ static rc_t KRunLocal(KRun * self) {
         if (idx != eIdxMx)
             path = self->local[idx].path;
     }
-
+#ifdef WILL_PROCESS_QUALIY_HERE
     else if (self->dad->quality == eQualNo) {
         if (self->local[eIdxNo].path != NULL
             && self->localVc[eIdxNo].path != NULL)
@@ -2637,7 +2637,7 @@ static rc_t KRunLocal(KRun * self) {
         if (idx != eIdxMx)
             path = self->local[idx].path;
     }
-
+#endif
     if (rc == 0) {
         self->result.localIdx = idx;
         self->result.local = path;
@@ -2727,7 +2727,7 @@ rc_t KSrvRunQuery(const KRun * self, const VPath ** local,
         return RC(rcVFS, rcQuery, rcExecuting, rcSelf, rcNull);
 
     assert(self->dad);
-    if (self->dad->quality >= eQualLast && self->it != NULL) {
+    if (self->dad->quality == NULL && self->it != NULL) {
         KSrvRunIterator * ri = self->it;
         const KSrvResponse * response = KSrvRunIteratorGetResponse(ri);
         uint32_t i = 0;
@@ -2958,11 +2958,11 @@ static void CC BSTNodeLinkLocalsToRemotes(BSTNode *n, void *data) {
 /* Initialize */
 static rc_t ServicesCacheInit(ServicesCache * self, const VFSManager * vfs,
     const KNSManager * kns, const KConfig * kfg,
-    int64_t projectId, EQuality quality)
+    int64_t projectId, const char * quality)
 {
     rc_t rc = 0;
 
-    assert(self && quality >= 0);
+    assert(self && quality);
 
     self->projectId = projectId;
     self->quality = quality;
@@ -2995,7 +2995,7 @@ static rc_t ServicesCacheInit(ServicesCache * self, const VFSManager * vfs,
 /* Make */
 rc_t ServicesCacheMake(ServicesCache ** self, const VFSManager * vfs,
     const KNSManager * kns, const KConfig * kfg,
-    int64_t projectId, unsigned quality)
+    int64_t projectId, const char * quality)
 {
     rc_t rc = 0;
 
@@ -3147,7 +3147,7 @@ rc_t ServicesCacheAddRemote(ServicesCache * self, const VPath * path) {
     rc_t rc = 0;
 
     assert(self);
-    if (self->quality >= eQualLast)
+    if (self->quality == NULL)
         return 0;
 
     rc = ServicesCacheFindRun(self, path, &run, &notFound);
@@ -3165,7 +3165,7 @@ rc_t ServicesCacheAddId(ServicesCache * self, const char * acc) {
     String srr;
 
     assert(self);
-    if (self->quality >= eQualLast)
+    if (self->quality == NULL)
         return 0;
 
     CONST_STRING(&srr, "RR");
@@ -3209,7 +3209,7 @@ static rc_t ServicesCacheFindLocal(ServicesCache * self,
 
     assert(self);
 
-    if (self->quality >= eQualLast)
+    if (self->quality == NULL)
         return 0;
 
     if (self->dir == NULL)
@@ -3307,7 +3307,7 @@ rc_t ServicesCacheComplete(ServicesCache * self,
 
     assert(self);
 
-    if (self->quality >= eQualLast)
+    if (self->quality == NULL)
         return 0;
 
     if (rc == 0) /* resolve magic env.vars. */
@@ -3399,7 +3399,7 @@ rc_t ServicesCacheResolve(ServicesCache * self, const VPath * remote,
     rc_t rc = 0;
     
     assert(self);
-    if (self->quality >= eQualLast)
+    if (self->quality == NULL)
         return 0;
 
     rc = ServicesCacheFindRun(self, remote, &run, &notFound);
@@ -3419,7 +3419,7 @@ rc_t ServicesCacheGetRun(const ServicesCache * cself, bool tree,
 
     *run = NULL;
 
-    if (self->quality >= eQualLast) {
+    if (self->quality == NULL) {
         KSrvRun * r = NULL;
         rc_t rc = 0;
         if (self->disabledRun == NULL)
@@ -3445,7 +3445,7 @@ rc_t ServicesCacheGetResponse(const ServicesCache * self,
     const char * acc, const struct KSrvResponse ** response)
 {
     assert(self);
-    if (self->quality >= eQualLast)
+    if (self->quality == NULL)
         return 0;
 
     return 1;

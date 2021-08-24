@@ -978,48 +978,42 @@ LIB_EXPORT rc_t CC VDBManagerDeleteCacheOlderThan ( const VDBManager * self,
 
 /******************************************************************************/
 
-static int32_t s_EnvQuality = -2; /* from environment */
-static int32_t s_LoadedQuality = -2; /* default or from configuration */
-static int32_t s_SetQuality = -2; /* explicitly set VDBManagerSetQuality */
+static const char * s_EnvQuality = NULL; /* from environment */
+static bool s_EnvQualitySet = false;     /* set via environment */
+
+static String * s_LoadedQuality = NULL; /* default or from configuration*/
+static const char * s_SetQuality = NULL;/* explicitly set VDBManagerSetQuality*/
+
+static String s_DfltQuality;
 
 LIB_EXPORT rc_t CC VDBManagerSetQuality(VDBManager * self,
-    VQuality quality)
+    const char * quality)
 {
-    if (quality < 0 || quality >= eQualLast)
-        return RC(rcVDB, rcMgr, rcUpdating, rcPath, rcExcessive);
-
     s_SetQuality = quality;
     return 0;
 }
 
 /*#define USE_SERVICES_CACHE*/
 
-LIB_EXPORT VQuality CC VDBManagerGetQuality(const VDBManager * self) {
+LIB_EXPORT const char * CC VDBManagerGetQuality(const VDBManager * self) {
     rc_t rc = 0;
-    bool fullQuality = false;
 
-#ifndef USE_SERVICES_CACHE
-    return eQualLast;
-#endif
+    if (s_DfltQuality.addr == NULL)
+        CONST_STRING(&s_DfltQuality, "RZ");
 
-    if (s_SetQuality >= 0)
+    if (s_SetQuality != NULL)
         return s_SetQuality;
 
-    if (s_EnvQuality < -1) {
+    if (!s_EnvQualitySet) {
         char * e = getenv("NCBI_VDB_QUALITY");
-        s_EnvQuality = -1;
-        if (e != NULL) {
-            int i = atoi(e);
-            if (i >= eQualDefault && i < eQualLast)
-                s_EnvQuality = i;
-        }
+        s_EnvQualitySet = true;
+        s_EnvQuality = e;
     }
-    if (s_EnvQuality >= 0)
+    if (s_EnvQuality != NULL)
         return s_EnvQuality;
 
-    if (s_LoadedQuality < 0) {
+    if (s_LoadedQuality == NULL) {
         const KConfig * kfg = NULL;
-        int64_t quality = -1;
         if (self != NULL) {
             const KDBManager * kmgr = NULL;
             VFSManager * vfs = NULL;
@@ -1033,20 +1027,12 @@ LIB_EXPORT VQuality CC VDBManagerGetQuality(const VDBManager * self) {
         }
         if (kfg == NULL)
             KConfigMake((KConfig**)&kfg, NULL);
-        s_LoadedQuality = eQualDefault;
-        rc = KConfigReadI64(kfg, "/libs/vdb/quality", &quality);
-        if (rc == 0) {
-            if (quality < 0 || quality > eQualLast)
-                quality = eQualLast;
-            s_LoadedQuality = quality;
-        }
-        else {
-            rc = KConfig_Get_FullQuality(kfg, &fullQuality);
-            if (rc == 0 && fullQuality)
-                s_LoadedQuality = eQualFull;
-        }
+        rc = KConfigReadString(kfg, "/libs/vdb/quality", &s_LoadedQuality);
+        if (rc != 0)
+            s_LoadedQuality = &s_DfltQuality;
         KConfigRelease(kfg);
     }
 
-    return s_LoadedQuality;
+    assert(s_LoadedQuality);
+    return s_LoadedQuality->addr;
 }
