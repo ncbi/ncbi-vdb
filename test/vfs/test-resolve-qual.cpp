@@ -135,7 +135,7 @@ public:
     }
 
     void Start(bool setAdCaching,
-        VQuality quality = eQualDefault, int fail = 0)
+        const char * quality = NULL, int fail = 0)
     {
         REQUIRE_RC(KNSManagerMakeLocal(&kns, kfg));
         if (setAdCaching)
@@ -144,7 +144,7 @@ public:
             REQUIRE_RC(KNSManagerSetAdCaching(kns, false));
 
         REQUIRE_RC(KServiceMakeWithMgr(&service, NULL, kns, kfg));
-        if (quality > 0)
+        if (quality != NULL)
             KServiceSetQuality(service, quality);
         REQUIRE_RC(KServiceAddId(service, ACC));
 
@@ -315,11 +315,11 @@ public:
             !obj && !it && !file && !fi && !path);
     }
 };
-
+#ifdef WILL_PROCESS_QUALIY_HERE
 #include "test-resolve-qual-0.hpp"
 #include "test-resolve-qual-1.hpp"
 #include "test-resolve-qual-2.hpp"
-
+#endif
 extern "C" {
     ver_t CC KAppVersion ( void ) { return 0; }
     rc_t CC KMain ( int argc, char * argv [] ) {
