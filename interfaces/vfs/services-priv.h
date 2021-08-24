@@ -42,6 +42,8 @@ struct KNSManager;
 rc_t KServiceMakeWithMgr(KService ** self, const struct VFSManager * vMgr,
     const struct KNSManager * mgr, const struct KConfig * kfg);
 
+rc_t KServiceResolve(KService * self, bool local, bool remote);
+
 rc_t KServiceNamesQueryExt ( KService * self, VRemoteProtocols protocols, 
     const char * cgi, const char * version, const char * outDir,
     const char * outFile, const KSrvResponse ** response );

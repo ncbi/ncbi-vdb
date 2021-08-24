@@ -61,7 +61,8 @@ typedef enum {
 } EState;
 
 typedef struct Data {
-    const char * acc;
+    const char * acc; /* from object or accession or bundle */
+    const char * accession;
     const char * bundle;
     int64_t      code; /* status/code */
     EState       ceRequired;

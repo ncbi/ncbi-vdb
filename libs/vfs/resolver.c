@@ -4889,9 +4889,17 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
                     oldRemote, oldMapping );
                 if (rc != 0) {
                     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
-                        ("Resolver-%s: VResolverQueryAcc('%S') failed, try_name\n",
+                        ("Resolver-%s: VResolverQueryAcc('%S') failed\n",
                             self->version, &sQuery));
-                    goto try_name;
+                    /* goto try_name;
+  VResolverQueryAcc should be able to resolve run by acc in cwd/AD:
+  Don't try to query acc as file name i.e. path in cwd: ./acc
+            
+  A known case is an incomplete AD: VResolverQueryAcc correctly fails,
+                VResolverQueryName will incorrectly find it.
+
+  All other cases should be resolved by using ./path instead of naked file name.
+            */
                 }
                 break;
 
