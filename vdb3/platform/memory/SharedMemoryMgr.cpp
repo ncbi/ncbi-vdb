@@ -29,6 +29,7 @@
 #include <sys/mman.h>
 #include <cassert>
 #include <cstring>
+#include <stdexcept>
 
 #include <memory/PrimordialMemoryMgr.hpp>
 #include <memory/MemoryBlockItf.hpp>

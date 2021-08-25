@@ -28,6 +28,7 @@
 
 #include <sys/mman.h>
 #include <cassert>
+#include <stdexcept>
 
 #include <memory/PrimordialMemoryMgr.hpp>
 

@@ -8,6 +8,7 @@
 #include <vdb3/kfc/ascii.hpp>
 
 #include <ctype.h>
+#include <cstdio>
 
 #if HAVE_QUADMATH
 #include <quadmath.h>
@@ -15,14 +16,14 @@
 
 namespace vdb3
 {
-    
+
     void FmtBase :: setRadix ( N32 _radix ) noexcept
     {
         // must be an integer in 2..36
         if ( _radix >= 2 && _radix <= 36 )
             radix = ( N16 ) _radix;
     }
-    
+
     void FmtBase :: setMinIntegerDigits ( N32 count, ASCII fill ) noexcept
     {
         if ( count < 256 )
@@ -33,7 +34,7 @@ namespace vdb3
                 int_left_pad = fill;
         }
     }
-    
+
     void FmtBase :: setMinFractionDigits ( N32 precision ) noexcept
     {
         if ( precision < 256 )
@@ -61,7 +62,7 @@ namespace vdb3
             break;
         }
     }
-    
+
     void FmtBase :: putBool ( bool val )
     {
         writeField ( val ? ASCIIText ( "true", 4 ) : ASCIIText ( "false", 5 ), right );
@@ -98,7 +99,7 @@ namespace vdb3
         writeInt ( ASCIIText ( & digits [ i ], cur_width ), neg, true );
     }
 
-    
+
 #if HAVE_Z128
     void FmtBase :: putSInt128 ( signed __int128 sval )
     {
@@ -163,7 +164,7 @@ namespace vdb3
         writeInt ( ASCIIText ( & digits [ i ], cur_width ), neg, true );
     }
 #endif
-    
+
     void FmtBase :: putULLInt ( unsigned long long int val )
     {
         // declare a text buffer on the stack
@@ -185,7 +186,7 @@ namespace vdb3
 
         writeInt ( ASCIIText ( & digits [ i ], cur_width ), false, true );
     }
-    
+
 #if HAVE_Z128
     void FmtBase :: putUInt128 ( unsigned __int128 val )
     {
@@ -212,7 +213,7 @@ namespace vdb3
     void FmtBase :: putUInt128 ( const N128 & nval )
     {
         N128 val ( nval );
-        
+
         // declare a text buffer on the stack
         // this is enough space for a radix of 2
         ASCII digits [ sizeof val * 8 ];
@@ -234,7 +235,7 @@ namespace vdb3
         writeInt ( ASCIIText ( & digits [ i ], cur_width ), false, true );
     }
 #endif
-    
+
     void FmtBase :: putD ( double val )
     {
         // just really couldn't care enough to scrape together
@@ -270,7 +271,7 @@ namespace vdb3
         else
             writeField ( ASCIIText ( digits, cur_width ), right );
     }
-    
+
 #if HAVE_R128 && LONG_DOUBLE_IS_NOT_R128 && HAVE_QUADMATH
     void FmtBase :: putF128 ( __float128 val )
     {
@@ -328,12 +329,12 @@ namespace vdb3
             writeField ( ASCIIText ( digits, cur_width ), right );
     }
 #endif
-    
+
     void FmtBase :: putPtr ( const Ptr & pval )
     {
         // assign pointer to a size_t
         size_t val = ( size_t ) pval . addr ();
-        
+
         // declare a text buffer on the stack
         // this is enough space for a radix of 16
         // plus a 2 byte prefix
@@ -407,14 +408,14 @@ namespace vdb3
         // reset defaults
         reset ();
     }
-    
+
     void FmtBase :: writeInt ( const TextRgn & num, bool neg, bool pre )
     {
         // if left-padding with zeros, consider them to be part of number
         count_t zero_fill = 0;
         if ( int_left_pad == '0' && num . count () < ( count_t ) min_int_width )
             zero_fill = ( count_t ) min_int_width - num . count ();
-        
+
         // radix prefix
         const ASCII * p = "";
         if ( pre )
@@ -459,7 +460,7 @@ namespace vdb3
                 space_fill = zero_fill;
                 zero_fill = 0;
             }
-            
+
             switch ( alignment )
             {
             case left:
@@ -523,12 +524,12 @@ namespace vdb3
         // reset defaults
         reset ();
     }
-    
+
     FmtBase :: FmtBase () noexcept
     {
         reset ();
     }
-    
+
     FmtBase :: ~ FmtBase () noexcept
     {
         reset ();
