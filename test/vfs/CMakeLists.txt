@@ -1,5 +1,10 @@
 add_compile_definitions( __mod__="test/vfs" )
 
+add_executable( test-names-30 test-names-30 )
+MSVS_StaticRuntime( test-names-30 )
+target_link_libraries( test-names-30 ${COMMON_LIBS_READ} )
+add_test( NAME Test_VFS_names-30 COMMAND test-names-30 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+
 add_executable( test-attached-vdbcache test-attached-vdbcache )
 MSVS_StaticRuntime( test-attached-vdbcache )
 target_link_libraries( test-attached-vdbcache ${COMMON_LIBS_READ} )
@@ -39,11 +44,6 @@ add_executable( test-caching test-caching )
 MSVS_StaticRuntime( test-caching )
 target_link_libraries( test-caching ${COMMON_LIBS_READ} )
 add_test( NAME Test_VFS_caching COMMAND test-caching WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
-
-add_executable( test-names-30 test-names-30 )
-MSVS_StaticRuntime( test-names-30 )
-target_link_libraries( test-names-30 ${COMMON_LIBS_READ} )
-add_test( NAME Test_VFS_names-30 COMMAND test-names-30 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 
 add_executable( test-path pathtest )
 MSVS_StaticRuntime( test-path )

@@ -374,8 +374,7 @@ TEST_CASE(testLive) {
 "}"    ));
     REQUIRE_RC ( Response4Release ( response ) );
 
-if(1);
-  //REQUIRE_RC(validate(
+  //if(1)REQUIRE_RC(validate(;
 }
 
 
