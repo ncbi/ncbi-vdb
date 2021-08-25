@@ -5278,6 +5278,7 @@ rc_t CC VResolverQueryDo ( const VResolver * self, VRemoteProtocols protocols,
 {
     const char * dir = self == NULL ? NULL : self->dir;
 
+#ifdef WILL_PROCESS_QUALIY_HERE
     if (VDBManagerGetQuality(NULL) != NULL) {
         rc_t rc = 0;
         const KNSManager * mgr = NULL;
@@ -5388,6 +5389,7 @@ rc_t CC VResolverQueryDo ( const VResolver * self, VRemoteProtocols protocols,
         return rc;
     }
     else
+#endif
         return VResolverQueryImpl ( self, protocols, query, 
             aLocal, aRemote, aCache, false, dir, NULL, false, NULL, NULL );
 }
