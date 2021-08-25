@@ -2962,6 +2962,7 @@ static rc_t ServicesCacheInit(ServicesCache * self, const VFSManager * vfs,
 {
     rc_t rc = 0;
 
+#ifdef WILL_PROCESS_QUALIY_HERE
     assert(self && quality);
 
     self->projectId = projectId;
@@ -2988,6 +2989,7 @@ static rc_t ServicesCacheInit(ServicesCache * self, const VFSManager * vfs,
         if (rc == 0)
             self->vfs = vfs;
     }
+#endif
 
     return rc;
 }
