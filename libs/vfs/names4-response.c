@@ -445,9 +445,10 @@ rc_t FileAddVPath ( File * self, const VPath * path,
                         self->size = size;
                     else if (self->size != size)
                         PLOGERR(klogFatal, (klogFatal,
-                            RC(rcVFS, rcQuery, rcExecuting, rcString, rcUnexpected),
-                            "different sizes for the same file '$name$type': $s1:$s2"
-                            "name=%s,type=%s,s1=%lu,s2=%lu",
+                            RC(rcVFS,
+                                rcQuery, rcExecuting, rcString, rcUnexpected),
+                       "different sizes for the same file '$name$type': $s1:$s2"
+                       "name=%s,type=%s,s1=%lu,s2=%lu",
                             self->name, self->cType, self->size, size));
                 }
                 rc = FileSetHttp(self, path);
@@ -2762,6 +2763,9 @@ rc_t KSrvRespFileGetCache ( const KSrvRespFile * self,
 
     if ( self -> file -> cacheRc != 0 )
         return self -> file -> cacheRc;
+
+    if (self->file->cache == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcPath, rcNotFound);
 
     rc = VPathAddRef ( self -> file -> cache );
 
