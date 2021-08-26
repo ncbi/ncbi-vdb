@@ -4384,11 +4384,11 @@ static bool VFSManagerCheckEnvAndAdImpl(const VFSManager * self,
                 }
             }
             if (!found) {
-                if ((KDirectoryPathType(self->cwd, "%s/%s_dbGaP-%d.noqual.sra",
+                if ((KDirectoryPathType(self->cwd, "%s/%s_dbGaP-%d.noqual",
                     rs, slash, projectId) & ~kptAlias) == kptFile)
                 {
                     rc_t r = VFSManagerMakePath(self, (VPath **)outPath,
-                        "%s/%s_dbGaP-%d.noqual.sra", rs, slash, projectId);
+                        "%s/%s_dbGaP-%d.noqual", rs, slash, projectId);
                     if (r == 0)
                         found = true;
                 }
@@ -4409,11 +4409,11 @@ static bool VFSManagerCheckEnvAndAdImpl(const VFSManager * self,
             }
         }
         if (!found) {
-            if ((KDirectoryPathType(self->cwd, "%s/%s.noqual.sra", rs, slash) &
+            if ((KDirectoryPathType(self->cwd, "%s/%s.noqual", rs, slash) &
                 ~kptAlias) == kptFile)
             {
                 rc_t r = VFSManagerMakePath(self, (VPath**)outPath,
-                    "%s/%s.noqual.sra", rs, slash);
+                    "%s/%s.noqual", rs, slash);
                 if (r != 0)
                     rc = 0;
                 else {
