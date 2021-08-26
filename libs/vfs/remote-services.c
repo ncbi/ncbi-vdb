@@ -436,7 +436,7 @@ struct KService {
     bool resoveOidName;
     const char * quality;
     bool skipLocal;
-    bool skipRemote;
+    bool useRemote;
 };
 
 
@@ -5199,7 +5199,7 @@ rc_t KServiceResolve(KService * self, bool local, bool remote) {
     assert(self);
 
     self->skipLocal = !local;
-    self->skipRemote = !remote;
+    self->useRemote = remote;
 
     return 0;
 }
@@ -5211,7 +5211,7 @@ bool KServiceSkipLocal(const KService * self) {
 
 bool KServiceSkipRemote(const KService * self) {
     assert(self);
-    return self->skipRemote;
+    return !self->useRemote;
 }
 
 rc_t KServiceNamesExecuteExtImpl ( KService * self, VRemoteProtocols protocols,
