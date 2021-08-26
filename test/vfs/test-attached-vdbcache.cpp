@@ -59,6 +59,7 @@ public:
 
         KService * service = NULL;
         REQUIRE_RC(KServiceMakeWithMgr(&service, NULL, mgr, NULL));
+        REQUIRE_RC(KServiceResolve(service, false, true));
         REQUIRE_RC(KServiceAddId(service, acc));
         if (format != NULL)
             REQUIRE_RC(KServiceSetFormat(service, format));
