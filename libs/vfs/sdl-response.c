@@ -70,6 +70,7 @@ static void DataClone(const Data * self, Data * clone) {
     clone->mod = self->mod; /* modDate */
     clone->modificationDate = self->modificationDate;
     clone->name = self->name;
+    clone->noqual = self->noqual;
     clone->object = self->object;
     clone->payRequired = self->payRequired;
     clone->qual = self->qual; /* hasOrigQuality */
@@ -87,7 +88,6 @@ static rc_t DataUpdate(const Data * self,
     Data * next, const KJsonObject * node, JsonStack * path)
 {
     const char * name = NULL;
-    const char * str = NULL;
 
     assert(next);
 
@@ -128,6 +128,16 @@ static rc_t DataUpdate(const Data * self,
     name = "name";
     StrSet(&next->name, KJsonObjectGetMember(node, name), name, path);
 
+    name = "noqual";
+    BulSet(&next->noqual, KJsonObjectGetMember(node, name), name, path);
+
+    switch (next->noqual) {
+    case eTrue:
+        next->quality = eQualNo; /* eQualFull; */
+    default:
+        break;
+    }
+
     name = "object";
     StrSet(&next->object, KJsonObjectGetMember(node, name), name, path);
 
@@ -153,30 +163,6 @@ static rc_t DataUpdate(const Data * self,
 
     name = "type";
     StrSet(&next->type, KJsonObjectGetMember(node, name), name, path);
-
-    name = "quality";
-    StrSet(&str, KJsonObjectGetMember(node, name), name, path);
-    if (str != NULL) {
-        String no, full, dbl;
-        CONST_STRING(&no, "no");
-        CONST_STRING(&full, "full");
-        CONST_STRING(&dbl, "dbl");
-        if (string_cmp(str, string_measure(str, NULL),
-            no.addr, no.size, full.size) == 0)
-        {
-            next->quality = eQualNo;
-        }
-        else if (string_cmp(str, string_measure(str, NULL),
-            full.addr, full.size, full.size) == 0)
-        {
-            next->quality = eQualFull;
-        }
-        else if (string_cmp(str, string_measure(str, NULL),
-            dbl.addr, dbl.size, dbl.size) == 0)
-        {
-            next->quality = eQualDefault;
-        }
-    }
 
     return 0;
 }
