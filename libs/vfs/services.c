@@ -888,7 +888,7 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
                             self, acc, vps);
 
 /********* RESOLVE REMOTELY *********/
-                    if (lRc != 0 || !KServiceSkipRemote(self)) {
+                    if (lRc != 0 || skipLocal || !KServiceSkipRemote(self)) {
                         rc_t r2 = 0;
                         if (version == NULL) version = "130";
                         r2 = KServiceInitNamesRequestWithVersion(self,
