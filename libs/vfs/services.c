@@ -257,6 +257,13 @@ static rc_t HResolver(H * self, const KService * service,
 /*  if (rc == 0 && *resolver != NULL)
         VResolverCacheEnable(*resolver, KServiceGetCacheEnable(service)); */
 
+    if (rc == 0) {
+        const char * quality = NULL;
+        rc = KServiceGetQuality(service, &quality);
+        if (rc == 0)
+            rc = VResolverSetQuality(*resolver, quality);
+    }
+
     if (ticket != aTicket)
         StringWhack(ticket);
 
@@ -400,9 +407,12 @@ static rc_t VResolversQuery ( const VResolver * self,
     }
     else
         rc = VFSManagerMakeOidPath ( mgr, & query, oid );
-    if (rc == 0 && path != NULL && path->projectId >= 0) {
-        assert(query);
-        query->projectId = path->projectId;
+    if (rc == 0 && path != NULL) {
+        if (path->projectId >= 0) {
+            assert(query);
+            query->projectId = path->projectId;
+        }
+        query->quality = path->quality;
     }
 
     if ( rc == 0 ) {
@@ -433,7 +443,7 @@ static rc_t VResolversQuery ( const VResolver * self,
         }
 
         app = get_accession_app(acc, false, NULL, NULL,
-            false, NULL, NULL, NULL, -1);
+            false, NULL, NULL, NULL, -1, false);
 
         if ( outFile != NULL ) {
             bool exists = false;

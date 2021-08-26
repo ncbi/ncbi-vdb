@@ -2732,7 +2732,7 @@ rc_t SRequestDataAppendObject ( SRequestData * self, const char * id,
 
     StringInitCString(&accession, id);
     app = get_accession_app(&accession, false, NULL, NULL, false,
-        NULL, NULL, NULL, -1);
+        NULL, NULL, NULL, -1, false);
     if (self->objects == 0)
         self->app = app;
     else if (self->app != app && (self->app == appSRA || app == appSRA))

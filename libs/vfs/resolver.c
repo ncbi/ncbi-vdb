@@ -149,6 +149,7 @@ struct VResolverAccToken
     String accOfParentDb;  /* accession of parent DB for refseqs */
     String dirOfParentDb;  /* directory where parent DB is - for refseqs */
     int64_t projectId; /* < 0 : not set; >= 0: set (dbGaP projectId can be 0) */
+    bool noqual;
 };
 
 static
@@ -458,9 +459,10 @@ rc_t expand_algorithm ( const VResolverAlg *self, const VResolverAccToken *tok,
     case algSRAAD:
         if (tok->projectId < 0)
             rc = string_printf ( expanded, bsize, size,
-                "%S%S/%S%S.%s", & tok -> alpha, & tok -> digits,
+                "%S%S/%S%S%s%s", & tok -> alpha, & tok -> digits,
                 & tok -> alpha, & tok -> digits,
-                tok -> vdbcache ? "sra.vdbcache" : "sra" );
+                tok -> noqual ? ".noqual" : ".sra",
+                tok -> vdbcache ? ".vdbcache" : "" );
         else
             rc = string_printf ( expanded, bsize, size,
                 "%S%S/%S%S_dbGaP-%d.%s", & tok -> alpha, & tok -> digits,
@@ -2436,6 +2438,8 @@ struct VResolver
         0 when repository is not user protected */
     uint32_t projectId;
 
+    const char * quality;
+
     /* directory to be used in VResolverLocal, VResolverCache */
     char * dir;
 
@@ -2780,7 +2784,7 @@ uint32_t get_accession_code ( const String * accession, VResolverAccToken *tok )
 VResolverAppID get_accession_app ( const String * accession, bool refseq_ctx,
     VResolverAccToken *tok, bool *legacy_wgs_refseq, bool resolveAllAccToCache,
     bool * forDirAdjusted, const String * parentAcc, const String * parentPath,
-    int64_t projectId )
+    int64_t projectId, bool noqual )
 {
     VResolverAppID app;
     uint32_t code = 0;
@@ -2797,6 +2801,7 @@ VResolverAppID get_accession_app ( const String * accession, bool refseq_ctx,
 
     memset(tok, 0, sizeof *tok);
     tok->projectId = projectId;
+    tok->noqual = noqual;
 
     code = get_accession_code(accession, tok);
 
@@ -3001,12 +3006,13 @@ rc_t VResolverFuseMountedResolve ( const VResolver * self,
 }
 
 static rc_t VResolverCheckAD(const VResolver *self, const VPath ** path,
-    VResolverAppID app, const VResolverAccToken * tok, bool legacy_wgs_refseq,
+    VResolverAppID app, const VResolverAccToken * cTok, bool legacy_wgs_refseq,
     const char * dir)
 {
+    VResolverAccToken* tok = (VResolverAccToken*)cTok;
     uint32_t i = 0, count = 0;
 
-    assert(self);
+    assert(self && tok);
 
     /* check AD */
     count = VectorLength(&self->ad);
@@ -3015,11 +3021,15 @@ static rc_t VResolverCheckAD(const VResolver *self, const VPath ** path,
         const VResolverAlg *alg = VectorGet(&self->ad, i);
         if (alg->app_id == app)
         {
-            const bool for_cache = false;
-            rc_t rc = VResolverAlgLocalResolve(alg, self->wd,
-                tok, path, legacy_wgs_refseq, for_cache, dir, true);
-            if (rc == 0)
-                return 0;
+            int j = 0;
+            for (j = 0; j < 2; ++j) {
+                const bool for_cache = false;
+                tok->noqual = j == 1;
+                rc_t rc = VResolverAlgLocalResolve(alg, self->wd,
+                    tok, path, legacy_wgs_refseq, for_cache, dir, true);
+                if (rc == 0)
+                    return 0;
+            }
         }
     }
 
@@ -3192,7 +3202,7 @@ rc_t LocalMagicResolve(const KDirectory * dir, const String * accession,
     const VPath ** path)
 {
     VResolverAppID app = get_accession_app(accession,
-        false, NULL, NULL, false, NULL, NULL, NULL, -1);
+        false, NULL, NULL, false, NULL, NULL, NULL, -1, false);
     return KDirectoryMagicResolve(dir, path, accession, app, ENV_MAGIC_LOCAL,
         eCheckExistTrue, eCheckFilePathTrue, eCheckUrlFalse, NULL);
 }
@@ -3302,7 +3312,7 @@ rc_t VResolverLocalResolve ( const VResolver *self, const String * accession,
         projectId = self->projectId;
 
     app = get_accession_app ( accession, refseq_ctx, & tok, & legacy_wgs_refseq,
-        resolveAllAccToCache, NULL, parentAcc, parentPath, projectId );
+        resolveAllAccToCache, NULL, parentAcc, parentPath, projectId, false );
 
     rc = VResolverLocalMagicResolve(
         self, accession, path, app, &tok, legacy_wgs_refseq, dir);
@@ -3614,7 +3624,7 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
     /* subject the accession to pattern recognition */
     if ( ! is_oid )
         app = get_accession_app ( accession, refseq_ctx, & tok,
-                            & legacy_wgs_refseq, true, NULL, NULL, NULL, -1 );
+                    & legacy_wgs_refseq, true, NULL, NULL, NULL, -1, false );
     else
     {
         app = appAny;
@@ -3759,7 +3769,8 @@ VResolverAppID VResolverExtractAccessionApp ( const VResolver *self,
        determine its app to see if we were successful */
     return get_accession_app ( accession, refseq_ctx, tok, legacy_wgs_refseq,
         resolveAllAccToCache, forDirAdjusted,
-        query->accOfParentDb, query->dirOfParentDb, query->projectId );
+        query->accOfParentDb, query->dirOfParentDb, query->projectId,
+        query->quality == eQualNo );
 }
 
 static
@@ -3853,6 +3864,12 @@ bool VResolverResolveToAd(const VResolver *self) {
         KNSManagerGetAdCaching(self->kns, &enabled);
 
     return enabled;
+}
+
+rc_t VResolverSetQuality(VResolver * self, const char * quality) {
+    assert(self);
+    self->quality = quality;
+    return 0;
 }
 
 static
