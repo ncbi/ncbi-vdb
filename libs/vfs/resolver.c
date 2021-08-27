@@ -3020,7 +3020,7 @@ static rc_t VResolverCheckAD(const VResolver *self, const VPath ** path,
     {
         const VResolverAlg *alg = VectorGet(&self->ad, i);
         if (alg->app_id == app)
-        {
+        { /* Always check full-quality first, then - zero-quality. */
             int j = 0;
             for (j = 0; j < 2; ++j) {
                 const bool for_cache = false;
