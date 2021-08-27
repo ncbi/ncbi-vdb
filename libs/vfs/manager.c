@@ -4378,7 +4378,7 @@ static bool VFSManagerCheckEnvAndAdImpl(const VFSManager * self,
         rc = KNgcObjGetProjectId(ngc, &projectId);
 
     /* Check according to user quality preferences. */
-    for (j = 0; quality[j] != '\0'; ++j) {
+    for (j = 0; quality[j] != '\0' && !found; ++j) {
         if (quality[j] == 'R') {
             if (rc == 0 && ngc != NULL && !found) {
                 if ((KDirectoryPathType(self->cwd, "%s/%s_dbGaP-%d.sra",
