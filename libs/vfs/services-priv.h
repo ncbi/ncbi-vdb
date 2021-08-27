@@ -66,6 +66,13 @@ rc_t CC KService1NameWithVersion ( const struct KNSManager * mgr,
     const char * ticket, VRemoteProtocols protocols,
     const struct VPath ** remote, const struct VPath ** mapping,
     bool refseq_ctx, const char * names_version, bool aProtected );
+VFS_EXTERN
+rc_t CC KService1NameWithQuality(const struct KNSManager * mgr,
+    const char * cgi_url, const char * acc, size_t acc_sz,
+    const char * ticket, VRemoteProtocols protocols,
+    const struct VPath ** remote, const struct VPath ** mapping,
+    bool refseq_ctx, const char * names_version, bool aProtected,
+    const char * quality);
 
 
 /******************************** KSrvResponse ********************************/

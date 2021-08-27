@@ -486,6 +486,12 @@ static rc_t DBManagerOpenVdbcache(const VDBManager *self,
                     rc2 = VFSManagerExtractAccessionOrOID(vfs, &acc, orig);
                     if (rc2 == 0)
                     {
+                        VResolver* r = (VResolver*)resolver;
+                        VQuality q = VPathGetQuality(acc);
+                        if (q == eQualNo)
+                            rc2 = VResolverSetQuality(r, "Z");
+                        else if (q == eQualFull)
+                            rc2 = VResolverSetQuality(r, "R");
                         orig = acc;
                     }
                 }

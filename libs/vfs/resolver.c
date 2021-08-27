@@ -1966,7 +1966,7 @@ rc_t oldVResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
 rc_t VResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
     const KNSManager *kns, VRemoteProtocols protocols, const String *acc,
     const VPath ** path, const VPath ** mapping, bool legacy_wgs_refseq,
-    const char * version )
+    const char * version, const char * quality )
 {
     rc_t rc = 0;
     const char * ticket = NULL;
@@ -1999,9 +1999,9 @@ rc_t VResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
     }
 
     if (rc == 0) {
-        rc = KService1NameWithVersion(kns, self->root->addr,
+        rc = KService1NameWithQuality(kns, self->root->addr,
             acc->addr, acc->len, ticket, protocols, path, mapping,
-            legacy_wgs_refseq, version, self -> protected);
+            legacy_wgs_refseq, version, self -> protected, quality);
 
         assert(*path != NULL || rc != 0);
 
@@ -2110,7 +2110,7 @@ static
 rc_t VResolverAlgRemoteResolve ( const VResolverAlg *self,
     const KNSManager *kns, VRemoteProtocols protocols, const VResolverAccToken *tok,
     const VPath ** path, const VPath ** mapping, const KFile ** opt_file_rtn, bool legacy_wgs_refseq,
-    const char * version )
+    const char * version, const char * quality )
 {
     rc_t rc = 0;
     uint32_t i, count;
@@ -2143,7 +2143,7 @@ rc_t VResolverAlgRemoteResolve ( const VResolverAlg *self,
 #endif
             else
               rc = VResolverAlgRemoteProtectedResolve ( self, kns,
-                protocols, & tok -> acc, path, mapping, legacy_wgs_refseq, version );
+                protocols, & tok -> acc, path, mapping, legacy_wgs_refseq, version, quality );
             if ( rc == SILENT_RC (
                 rcVFS, rcResolver, rcResolving, rcConnection, rcUnauthorized )
                 ||  rc == SILENT_RC (
@@ -3686,7 +3686,7 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
                 if (ok) {
                     try_rc = VResolverAlgRemoteResolve(alg, self->kns,
                         protocols, &tok, path, mapping, opt_file_rtn,
-                        legacy_wgs_refseq, version);
+                        legacy_wgs_refseq, version, self->quality);
                     if (try_rc == 0)
                         return 0;
                     if (rc == 0)
@@ -3705,7 +3705,7 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
                 /* fallback to old names service */
                 try_rc = VResolverAlgRemoteResolve(alg4, self->kns,
                     protocols, &tok, path, mapping, opt_file_rtn,
-                    legacy_wgs_refseq, "4");
+                    legacy_wgs_refseq, "4", NULL);
                 if (try_rc == 0)
                     return 0;
                 if (rc == 0)

@@ -4022,7 +4022,8 @@ static rc_t KServiceInit ( KService * self,
 static rc_t KServiceInitNames1 ( KService * self, const KNSManager * mgr,
     const char * cgi, const char * version, const char * acc,
     size_t acc_sz, const char * ticket, VRemoteProtocols protocols,
-    EObjectType objectType, bool refseq_ctx, bool aProtected )
+    EObjectType objectType, bool refseq_ctx, bool aProtected,
+    const char * quality )
 {
     rc_t rc = 0;
 
@@ -4041,6 +4042,9 @@ static rc_t KServiceInitNames1 ( KService * self, const KNSManager * mgr,
         if (ngc != NULL)
             rc = KServiceSetNgcFile(self, ngc);
     }
+
+    if (rc == 0 && quality != NULL)
+        rc = KServiceSetQuality(self, quality);
 
     if ( rc == 0 )
         rc = KServiceInitNamesRequestWithVersion
@@ -5312,19 +5316,20 @@ static rc_t KService1NameWithVersionAndType ( const KNSManager * mgr,
     const char * url, const char * acc, size_t acc_sz, const char * ticket,
     VRemoteProtocols protocols, const VPath ** remote,  const VPath ** mapping,
     bool refseq_ctx, const char * version, EObjectType objectType,
-    bool aProtected )
+    bool aProtected, const char * quality )
 {
     rc_t rc = 0;
 
     KStream * stream = NULL;
 
     KService service;
+    memset(&service, 0, sizeof service);
 
     if ( acc == NULL || remote == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
 
-    rc = KServiceInitNames1 ( & service, mgr, url, version,
-        acc, acc_sz, ticket, protocols, objectType, refseq_ctx, aProtected );
+    rc = KServiceInitNames1 ( & service, mgr, url, version, acc, acc_sz,
+        ticket, protocols, objectType, refseq_ctx, aProtected, quality );
 
     protocols = service . req . protocols;
 
@@ -5505,19 +5510,28 @@ static rc_t KService1NameWithVersionAndType ( const KNSManager * mgr,
 
 /* make name service call : request: 1 object, response: 1 object */
 LIB_EXPORT
-rc_t CC KService1NameWithVersion ( const KNSManager * mgr, const char * url,
+rc_t KService1NameWithQuality ( const KNSManager * mgr, const char * url,
     const char * acc, size_t acc_sz, const char * ticket,
     VRemoteProtocols protocols, const VPath ** remote, const VPath ** mapping,
-    bool refseq_ctx, const char * version, bool aProtected )
+    bool refseq_ctx, const char * version, bool aProtected,
+    const char * quality )
 {
     if ( version == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
 
     return KService1NameWithVersionAndType ( mgr, url, acc, acc_sz, ticket,
         protocols, remote, mapping, refseq_ctx, version, eOT_undefined,
-        aProtected );
+        aProtected, quality );
 }
-
+LIB_EXPORT
+rc_t CC KService1NameWithVersion ( const KNSManager * mgr, const char * url,
+    const char * acc, size_t acc_sz, const char * ticket,
+    VRemoteProtocols protocols, const VPath ** remote, const VPath ** mapping,
+    bool refseq_ctx, const char * version, bool aProtected )
+{
+    return KService1NameWithQuality(mgr, url, acc, acc_sz, ticket,
+        protocols, remote, mapping, refseq_ctx, version, aProtected, NULL);
+}
 
 /* Execute Search Service Call : extended version */
 rc_t KServiceSearchExecuteExt ( KService * self, const char * cgi,
@@ -5647,7 +5661,7 @@ rc_t KServiceRequestTestNames1 ( const KNSManager * mgr,
 {
     KService service;
     rc_t rc = KServiceInitNames1 ( & service, mgr, cgi, version,
-        acc, acc_sz,  ticket, protocols, objectType, false, false );
+        acc, acc_sz,  ticket, protocols, objectType, false, false, NULL );
     if ( rc == 0 ) {
         SKVCheck c;
         SKVCheckInit ( & c, acc, version, protocols );
@@ -5762,7 +5776,7 @@ rc_t SCgiRequestPerformTestNames1 ( const KNSManager * mgr, const char * cgi,
 
     rc_t rc = KServiceInitNames1 ( & service, mgr, cgi, version, acc,
         string_measure ( acc, NULL ), ticket, protocols, objectType, false,
-        false );
+        false, NULL );
 
     if ( rc == 0 ) {
         KStream * response = NULL;
@@ -5791,7 +5805,7 @@ rc_t KServiceProcessStreamTestNames1 ( const KNSManager * mgr,
     if ( rc == 0 )
         rc = KServiceInitNames1 ( & service, mgr, "", version, acc,
             string_measure ( acc, NULL ), ticket, eProtocolHttps,
-            eOT_undefined, false, false );
+            eOT_undefined, false, false, NULL );
     if ( rc == 0 ) {
         DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), (
             "XXXXXXXXXXXX NOT sending HTTP POST request XXXXXXXXXXXXXXXX\n" ) );
@@ -5900,7 +5914,7 @@ rc_t KServiceCgiTest1 ( const KNSManager * mgr, const char * cgi,
     const VPath * path = NULL;
     rc_t rc = KService1NameWithVersionAndType ( mgr, cgi, acc,
         string_measure ( acc, NULL ), ticket, protocols,
-        & path, NULL, false, version, objectType, false );
+        & path, NULL, false, version, objectType, false, NULL );
     if ( rc == 0 ) {
         if ( exp != NULL && rc == 0 ) {
             int notequal = ~ 0;

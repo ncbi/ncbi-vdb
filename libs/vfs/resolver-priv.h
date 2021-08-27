@@ -231,7 +231,8 @@ rc_t VResolverAlgParseResolverCGIResponse_3_0(const char *start,
 rc_t VResolverAlgRemoteProtectedResolve( const struct VResolverAlg *self,
     const struct KNSManager *kns, VRemoteProtocols protocols,
     const struct String *acc, const struct VPath **path,
-    const struct VPath **mapping, bool legacy_wgs_refseq, const char * version);
+    const struct VPath **mapping, bool legacy_wgs_refseq,
+    const char * version, const char * quality);
 
 /** get projectId ( valid for protected user repository ) */
 rc_t VResolverGetProjectId ( const VResolver * self, uint32_t * projectId );
