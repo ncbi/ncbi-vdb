@@ -434,7 +434,7 @@ struct KService {
     SResponse resp;
 
     bool resoveOidName;
-    int32_t quality; /* quality type - 0: default, 1: no-qual, 2: full-qual */
+    const char * quality;
     bool skipLocal;
     bool skipRemote;
 };
@@ -3372,7 +3372,7 @@ bool KServiceAnyFormatRequested(const KService * self) {
 static
 rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
     VRemoteProtocols protocols, const char * cgi, const char * version,
-    bool aProtected, bool adjustVersion, VQuality quality, int idx )
+    bool aProtected, bool adjustVersion, const char * quality, int idx )
 {
     SCgiRequest * self = NULL;
     rc_t rc = 0;
@@ -3634,24 +3634,8 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
                     && request->jwtKartFile != NULL) )) /* and for jwt carts */
         {
             const char n[] = "filetype";
-            if (quality == eQualDefault || quality == eQualFull
-                || quality == eQualFullOnly || quality == eQualDblOnly
-                || quality >= eQualLast || quality < 0)
             {
                 const char v[] = "run";
-                rc = SKVMake(&kv, n, v);
-                if (rc == 0) {
-                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
-                        ("  %s=%s\n", n, v));
-                    rc = VectorAppend(&self->params, NULL, kv);
-                }
-                if (rc != 0)
-                    return rc;
-            }
-            if (quality == eQualDefault || quality == eQualNo
-                || quality == eQualDblOnly)
-            {
-                const char v[] = "noqual_run";
                 rc = SKVMake(&kv, n, v);
                 if (rc == 0) {
                     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
@@ -3733,13 +3717,18 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
 
     if (rc == 0 && request->sdl) {
         const char n[] = "capability";
-        const char v[] = "allow-cloud-refseq";
-        rc = SKVMake(&kv, n, v);
+        char v[99] = "";
+        rc = string_printf(v, sizeof v, NULL, "allow-cloud-refseq,ZQA:%s",
+            quality != NULL ? quality : "");
+        if (rc == 0)
+            rc = SKVMake(&kv, n, v);
         if (rc == 0) {
             DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
                 ("  %s=%s\n", n, v));
             rc = VectorAppend(&self->params, NULL, kv);
         }
+        if (rc != 0)
+            return rc;
     }
 
     return rc;
@@ -3960,7 +3949,7 @@ rc_t KServiceSetLocation(KService * self, const char * location) {
 rc_t KServiceInitQuality(KService * self) {
     assert(self);
 
-    if (self->quality < 0)
+    if (self->quality == NULL)
         self->quality = VDBManagerGetQuality(0);
 
     return 0;
@@ -3970,13 +3959,13 @@ rc_t KServiceInitNamesRequestWithVersion ( KService * self,
     VRemoteProtocols protocols, const char * cgi, const char * version,
     bool aProtected, bool adjustVersion, int idx )
 {
-    VQuality quality = eQualDefault;
+    const char * quality = "RZ";
 
     assert ( self );
 
     KServiceInitQuality(self);
 
-    if (self->quality >= 0)
+    if (self->quality != NULL)
         quality = self->quality;
 
     return SRequestInitNamesSCgiRequest ( & self -> req,  & self -> helper,
@@ -4021,7 +4010,6 @@ static rc_t KServiceInit ( KService * self,
         rc = SRequestInit ( & self -> req );
 
     self -> resoveOidName = DEFAULT_RESOVE_OID_NAME;
-    self -> quality = -1; /* not set */
 
     self->inited = true;
 
@@ -4845,9 +4833,9 @@ static rc_t KSrvRespObj_AttachVdbcaches(const KSrvRespObj * self) {
 static rc_t KServiceAddIdToCache(KService * self, const char * objId) {
     rc_t rc = 0;
     ServicesCache * cache = NULL;
-    int32_t q = -1;
+    const char * q = NULL;
     KServiceGetQuality(self, &q);
-    if (q >= eQualLast || q < 0)
+    if (q == NULL)
         return 0;
     if (!KServiceCallsSdl(self))
         return 0;
@@ -4918,7 +4906,7 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
 
     if (rc == 0 && r4 == NULL)
         rc = Response4MakeEmpty(&r4, NULL, NULL, NULL,
-            sLogNamesServiceErrors, -1, 0);
+            sLogNamesServiceErrors, -1, NULL);
 
     for ( i = 0; rc == 0 && i < self -> req . request . objects; ++ i )
         if ( self -> req . request . object [ i ] . isUri )
@@ -5081,16 +5069,16 @@ rc_t KServiceAddLocalAndCacheToResponse(KService * self,
     return rc;
 }
 
-rc_t KServiceSetQuality(KService * self, VQuality quality) {
+rc_t KServiceSetQuality(KService * self, const char * quality) {
     assert(self);
     self->quality = quality;
     return 0;
 }
 
-rc_t KServiceGetQuality(const KService * self, int32_t * quality) {
+rc_t KServiceGetQuality(const KService * self, const char ** quality) {
     assert(quality);
 
-    *quality = -1;
+    *quality = NULL;
 
     if (self == NULL)
         return RC(rcVFS, rcQuery, rcExecuting, rcSelf, rcNull);

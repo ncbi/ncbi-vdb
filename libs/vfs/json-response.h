@@ -95,14 +95,14 @@ typedef struct Data {
 } Data;
 
 rc_t Response4MakeEmpty  (  Response4 ** self, const struct VFSManager * vfs,
-            const struct KNSManager * kns, const struct KConfig * kfg,
-            bool logNamesServiceErrors, int64_t projectId, unsigned quality);
+        const struct KNSManager * kns, const struct KConfig * kfg,
+        bool logNamesServiceErrors, int64_t projectId, const char * quality);
 rc_t Response4Make4      (       Response4 ** self, const char * input );
 rc_t Response4MakeSdl(Response4 ** self, const char * input);
 rc_t Response4MakeSdlExt(Response4 ** self, const struct VFSManager * vfs,
     const struct KNSManager * kns, const struct KConfig * kfg,
     const char * input,
-    bool logNamesServiceErrors, int64_t projectId, unsigned quality);
+    bool logNamesServiceErrors, int64_t projectId, const char * quality);
 rc_t Response4AddRef     ( const Response4  * self );
 rc_t Response4Release    ( const Response4  * self );
 rc_t Response4AppendUrl  (       Response4  * self, const char * url );

@@ -1126,8 +1126,47 @@ LIB_EXPORT rc_t CC KConfig_Set_GUID( KConfig *self, const char * value )
     return KConfig_Set_Repository_String( self, value, GUID_KEY );
 }
 
+/******************************************************************************/
+
+/* Deprecated, use KConfig_*et_PreferNoToFullQuality instead. */
 #define FULL_QUALITY_KEY "libs/vdb/full-quality"
 LIB_EXPORT rc_t CC KConfig_Get_FullQuality( const KConfig *self, bool * value )
 { return get_bool_value( self, FULL_QUALITY_KEY, value, false ); }
 LIB_EXPORT rc_t CC KConfig_Set_FullQuality( KConfig *self, bool value )
 { return set_bool_value( self, FULL_QUALITY_KEY, value ); }
+
+#define QUALITY_KEY "libs/vdb/quality"
+
+LIB_EXPORT rc_t CC KConfig_Get_PreferNoToFullQuality(
+    const KConfig *self, bool * value )
+{
+    rc_t rc = 0;
+    char buffer[99] = "";
+    size_t num_read = 0;
+
+    if (value == NULL)
+        return RC(rcKFG, rcNode, rcReading, rcParam, rcNull);
+    *value = false;
+
+    rc = KConfigRead(self, QUALITY_KEY, 0, buffer,
+        sizeof buffer, &num_read, NULL);
+    if (rc == 0 && num_read > 0 && buffer[0] == 'Z')
+        *value = true;
+
+    if (GetRCState(rc) == rcNotFound)
+        rc = 0;
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KConfig_Set_PreferNoToFullQuality(
+    KConfig *self, bool value )
+{
+    const char * buffer = NULL;
+    if (value)
+        buffer = "ZR";
+    else
+        buffer = "RZ";
+
+    return KConfigWriteString( self, QUALITY_KEY, buffer );
+}

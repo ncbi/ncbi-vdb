@@ -862,9 +862,14 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
                 ESrvFileFormat ff = eSFFInvalid;
                 uint64_t iid = 0;
                 String id;
+
                 const char * acc = KServiceGetId(self, i);
                 if (acc == NULL)
                     break;
+
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE), (
+                    "VVVVVVVVVVVVVVVVVVVVVVVVVV KServiceNamesQueryExtImpl:\n"));
+
                 StringInitCString(&id, acc);
                 rc = VPathMake(&path, acc);
                 if (rc == 0 && !VPathFromUri(path))

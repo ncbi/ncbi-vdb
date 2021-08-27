@@ -753,7 +753,7 @@ static rc_t Response4InitSdl(Response4 * self, const char * input) {
 rc_t Response4MakeSdlExt(Response4 ** self, const struct VFSManager * vfs,
     const struct KNSManager * kns, const struct KConfig * kfg,
     const char * input,
-    bool logNamesServiceErrors, int64_t projectId, unsigned quality)
+    bool logNamesServiceErrors, int64_t projectId, const char * quality)
 {
     rc_t rc = 0;
 
