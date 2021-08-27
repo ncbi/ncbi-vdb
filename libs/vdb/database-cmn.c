@@ -663,7 +663,7 @@ static rc_t VDBManagerOpenDBReadVPathImpl ( const VDBManager *self,
                                     if ( openVdbcache ) {
                                         DBGMSG(DBG_VFS,
                                             DBG_FLAG(DBG_VFS_SERVICE),
-                                            ("VDatabase is CSRA: "
+                           ("VDBManagerOpenDBReadVPathImpl: VDatabase is CSRA: "
                                                 "searching vdbcache...\n"));
                                         DBManagerOpenVdbcache(self, vfs, db,
                                             schema, orig, is_accession,
@@ -673,7 +673,7 @@ static rc_t VDBManagerOpenDBReadVPathImpl ( const VDBManager *self,
                                     else {
                                         DBGMSG(DBG_VFS,
                                             DBG_FLAG(DBG_VFS_SERVICE),
-                                            ("VDatabase is CSRA: "
+                           ("VDBManagerOpenDBReadVPathImpl: VDatabase is CSRA: "
                                                 "skip searching vdbcache\n"));
                                     }
                                 }
@@ -1366,63 +1366,81 @@ LIB_EXPORT bool CC VDatabaseIsCSRA ( const VDatabase *self )
 }
 
 static bool validRunFileName(const String * acc, const String * file) {
-    assert(acc && file);
+    int j = 0;
+
     const char fullQl[] = ".sra";
     const char noQual[] = ".noqual";
-    if (file->size == acc->size + 4) {
-        if (string_cmp(file->addr, file->size,
-            acc->addr, acc->size, acc->len) == 0)
-        {
-            if (string_cmp(file->addr + acc->size, file->size - acc->size,
-                fullQl, sizeof fullQl - 1, sizeof fullQl - 1) == 0)
+
+    const char * quality = VDBManagerGetQuality(NULL);
+    if (quality == NULL || quality[0] == '\0')
+        quality = "RZ";
+
+    assert(acc && file);
+
+    /* Check according to user quality preferences. */
+
+    for (j = 0; quality[j] != '\0'; ++j) {
+        if (quality[j] == 'R' && file->size == acc->size + 4) {
+            if (string_cmp(file->addr, file->size,
+                acc->addr, acc->size, acc->len) == 0)
             {
-                return true;
-            }
-        }
-        return false;
-    }
-    else if (file->size == acc->size + 7) {
-        if (string_cmp(file->addr + acc->size, file->size - acc->size,
-            noQual, sizeof noQual - 1, sizeof noQual - 1) == 0)
-        {
-                return true;
-        }
-        return false;
-    }
-    else {
-        if (string_cmp(file->addr, file->size,
-            acc->addr, acc->size, acc->len) == 0)
-        {
-            const char sfx[] = "_dbGaP-";
-            if (string_cmp(file->addr + acc->size, sizeof sfx - 1,
-                sfx, sizeof sfx - 1, sizeof sfx - 1) == 0)
-            {
-                size_t i = 0;
-                for (i = acc->size + sizeof sfx - 1;
-                    i < file->size; ++i)
-                {
-                    char c = file->addr[i];
-                    if (c < '0' || c > '9') {
-                        if (c == '.')
-                            break;
-                        else
-                            return false;
-                    }
-                }
-                if (string_cmp(file->addr + i, file->size - acc->size,
+                if (string_cmp(file->addr + acc->size, file->size - acc->size,
                     fullQl, sizeof fullQl - 1, sizeof fullQl - 1) == 0)
                 {
                     return true;
                 }
-                if (string_cmp(file->addr + i, file->size - acc->size,
-                    noQual, sizeof noQual - 1, sizeof noQual - 1) == 0)
+            }
+            return false;
+        }
+        else if (quality[j] == 'Z' && file->size == acc->size + 7) {
+            if (string_cmp(file->addr + acc->size, file->size - acc->size,
+                noQual, sizeof noQual - 1, sizeof noQual - 1) == 0)
+            {
+                return true;
+            }
+            return false;
+        }
+        else {
+            if (string_cmp(file->addr, file->size,
+                acc->addr, acc->size, acc->len) == 0)
+            {
+                const char sfx[] = "_dbGaP-";
+                if (string_cmp(file->addr + acc->size, sizeof sfx - 1,
+                    sfx, sizeof sfx - 1, sizeof sfx - 1) == 0)
                 {
-                    return true;
+                    size_t i = 0;
+                    for (i = acc->size + sizeof sfx - 1;
+                        i < file->size; ++i)
+                    {
+                        char c = file->addr[i];
+                        if (c < '0' || c > '9') {
+                            if (c == '.')
+                                break;
+                            else
+                                return false;
+                        }
+                    }
+                    if (quality[j] == 'R' &&
+                        string_cmp(file->addr + i, file->size - acc->size,
+                                   fullQl, sizeof fullQl - 1, sizeof fullQl - 1
+                                  ) == 0)
+                    {
+                        return true;
+                    }
+                    if (quality[j] == 'Z' &&
+                        string_cmp(file->addr + i, file->size - acc->size,
+                                   noQual, sizeof noQual - 1, sizeof noQual - 1
+                                  ) == 0)
+                    {
+                        return true;
+                    }
                 }
             }
+            return false;
         }
-        return false;
     }
+
+    return false;
 }
 
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
