@@ -3011,8 +3011,12 @@ static rc_t VResolverCheckAD(const VResolver *self, const VPath ** path,
 {
     VResolverAccToken* tok = (VResolverAccToken*)cTok;
     uint32_t i = 0, count = 0;
+    const char * quality = NULL;
 
     assert(self && tok);
+    quality = self->quality;
+    if (quality == NULL || quality[0] == '\0')
+        quality = "RZ";
 
     /* check AD */
     count = VectorLength(&self->ad);
@@ -3020,11 +3024,11 @@ static rc_t VResolverCheckAD(const VResolver *self, const VPath ** path,
     {
         const VResolverAlg *alg = VectorGet(&self->ad, i);
         if (alg->app_id == app)
-        { /* Always check full-quality first, then - zero-quality. */
+        { /* Check quality according to user preferences. */
             int j = 0;
-            for (j = 0; j < 2; ++j) {
+            for (j = 0; quality[j] != '\0'; ++j) {
                 const bool for_cache = false;
-                tok->noqual = j == 1;
+                tok->noqual = quality[j] == 'Z';
                 rc_t rc = VResolverAlgLocalResolve(alg, self->wd,
                     tok, path, legacy_wgs_refseq, for_cache, dir, true);
                 if (rc == 0)
