@@ -1365,16 +1365,16 @@ LIB_EXPORT bool CC VDatabaseIsCSRA ( const VDatabase *self )
     return false;
 }
 
-static bool validName(const String * acc, const String * file) {
+static bool validRunFileName(const String * acc, const String * file) {
     assert(acc && file);
-    const char ext[] = ".sra";
-    const char next[] = ".noqual";
+    const char fullQl[] = ".sra";
+    const char noQual[] = ".noqual";
     if (file->size == acc->size + 4) {
         if (string_cmp(file->addr, file->size,
             acc->addr, acc->size, acc->len) == 0)
         {
             if (string_cmp(file->addr + acc->size, file->size - acc->size,
-                ext, sizeof ext - 1, sizeof ext - 1) == 0)
+                fullQl, sizeof fullQl - 1, sizeof fullQl - 1) == 0)
             {
                 return true;
             }
@@ -1383,7 +1383,7 @@ static bool validName(const String * acc, const String * file) {
     }
     else if (file->size == acc->size + 7) {
         if (string_cmp(file->addr + acc->size, file->size - acc->size,
-            next, sizeof next - 1, sizeof next - 1) == 0)
+            noQual, sizeof noQual - 1, sizeof noQual - 1) == 0)
         {
                 return true;
         }
@@ -1410,12 +1410,12 @@ static bool validName(const String * acc, const String * file) {
                     }
                 }
                 if (string_cmp(file->addr + i, file->size - acc->size,
-                    ext, sizeof ext - 1, sizeof ext - 1) == 0)
+                    fullQl, sizeof fullQl - 1, sizeof fullQl - 1) == 0)
                 {
                     return true;
                 }
                 if (string_cmp(file->addr + i, file->size - acc->size,
-                    next, sizeof next - 1, sizeof next - 1) == 0)
+                    noQual, sizeof noQual - 1, sizeof noQual - 1) == 0)
                 {
                     return true;
                 }
@@ -1478,7 +1478,7 @@ LIB_EXPORT rc_t CC VDatabaseGetAccession(const VDatabase * self,
             StringInit(&acc, start, accLen, accLen);
             StringInit(&file, last + 1, fileLen, fileLen);
 
-            if (validName(&acc, &file)) {
+            if (validRunFileName(&acc, &file)) {
                 rc = StringCopy(aAcc, &acc);
                 if (rc == 0 && aPath != NULL)
                     rc = StringCopy(aPath, &parent);
