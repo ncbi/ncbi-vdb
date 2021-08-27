@@ -2357,6 +2357,7 @@ LIB_EXPORT rc_t CC VFSManagerExtractAccessionOrOID ( const VFSManager * self,
             const char * end = path . addr + path . size;
 
             bool isRun = false;
+            VQuality quality = eQualLast;
 
             switch ( orig -> path_type )
             {
@@ -2415,6 +2416,13 @@ LIB_EXPORT rc_t CC VFSManagerExtractAccessionOrOID ( const VFSManager * self,
                          strcase_cmp ( ".wgs", 4, sep, 4, 4 ) == 0 )
                     {
                         end = sep;
+                        quality = eQualFull;
+                        continue;
+                    }
+                case 7:
+                    if ( strcase_cmp ( ".noqual", 5, sep, 5, 5 ) == 0 ) {
+                        end = sep;
+                        quality = eQualNo;
                         continue;
                     }
                 case 9:
@@ -2433,13 +2441,21 @@ LIB_EXPORT rc_t CC VFSManagerExtractAccessionOrOID ( const VFSManager * self,
             rc = VPathMakeFromText ( acc_or_oid, "%.*s", ( uint32_t ) ( end - start ), start );
             if ( rc == 0 )
             {
-                const VPath * vpath = * acc_or_oid;
-                if ( VPathIsAccessionOrOID ( vpath ) )
-                    return 0;
+                const VPath * vpath = NULL;
+                assert(acc_or_oid);
+                vpath = *acc_or_oid;
 
-                VPathRelease ( vpath );
+                rc = VPathSetQuality ( *acc_or_oid, quality );
 
-                rc = RC ( rcVFS, rcPath, rcConstructing, rcParam, rcIncorrect );
+                if ( rc == 0 ) {
+                    if ( VPathIsAccessionOrOID ( vpath ) )
+                        return 0;
+
+                    VPathRelease ( vpath );
+
+                    rc = RC (
+                        rcVFS, rcPath, rcConstructing, rcParam, rcIncorrect );
+                }
             }
         }
 
