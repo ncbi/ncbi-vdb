@@ -80,6 +80,7 @@ typedef struct Data {
 
     const char * msg;
     const char * name;
+    EState       noqual;
     const char * object;
     const char * objectType;
     EState       payRequired;
