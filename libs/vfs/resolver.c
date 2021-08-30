@@ -472,8 +472,9 @@ rc_t expand_algorithm ( const VResolverAlg *self, const VResolverAccToken *tok,
     case algSRAFlat:
         if (tok->projectId < 0)
             rc = string_printf ( expanded, bsize, size,
-                "%S%S.%s", & tok -> alpha, & tok -> digits,
-                tok -> vdbcache ? "sra.vdbcache" : "sra" );
+                "%S%S%s%s", & tok -> alpha, & tok -> digits,
+                tok -> noqual ? ".noqual" : ".sra",
+                tok -> vdbcache ? ".vdbcache" : "" );
         else
             rc = string_printf ( expanded, bsize, size,
                 "%S%S_dbGaP-%d.%s", & tok -> alpha, & tok -> digits,
@@ -792,9 +793,16 @@ rc_t VResolverAlgLocalResolve ( const VResolverAlg *self,
                     const String * thePath = NULL;
                     assert(path);
                     thePath = &(*path)->path;
-                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (
-                        "VResolverAlgLocalResolve: '%S' found in '%S%s'\n",
-                        &tok->acc, thePath, for_cache ? ".cache" : ""));
+                    if (&tok->noqual) {
+                        ((VPath*)(*path))->quality = eQualNo;
+                        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (
+                      "VResolverAlgLocalResolve: noqual '%S' found in '%S%s'\n",
+                            &tok->acc, thePath, for_cache ? ".cache" : ""));
+                    }
+                    else
+                        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (
+                            "VResolverAlgLocalResolve: '%S' found in '%S%s'\n",
+                            &tok->acc, thePath, for_cache ? ".cache" : ""));
                     if (thePath->size > 4) {
                         VPath * vdbcache = NULL;
                         if (KDirectoryPathType(wd, "%.*s.vdbcache",
@@ -3306,6 +3314,10 @@ rc_t VResolverLocalResolve ( const VResolver *self, const String * accession,
     VResolverAccToken tok;
     bool legacy_wgs_refseq = false;
 
+    const char * quality = VDBManagerGetQuality(NULL);
+    if (quality == NULL || quality[0] == '\0')
+        quality = "RZ";
+
     VResolverAppID app;
 
     assert(path);
@@ -3340,12 +3352,16 @@ rc_t VResolverLocalResolve ( const VResolver *self, const String * accession,
     {
         const VResolverAlg *alg = VectorGet ( & self -> local, i );
         if ( alg -> app_id == app )
-        {
-            const bool for_cache = false;
-            rc_t rc = VResolverAlgLocalResolve ( alg, self -> wd,
-                & tok, path, legacy_wgs_refseq, for_cache, dir, false );
-            if ( rc == 0 )
-                return 0;
+        { /* Check quality according to user preferences. */
+            int j = 0;
+            for (j = 0; quality[j] != '\0'; ++j) {
+                const bool for_cache = false;
+                tok.noqual = quality[j] == 'Z';
+                rc_t rc = VResolverAlgLocalResolve ( alg, self -> wd,
+                    & tok, path, legacy_wgs_refseq, for_cache, dir, false );
+                if ( rc == 0 )
+                    return 0;
+            }
         }
     }
 
