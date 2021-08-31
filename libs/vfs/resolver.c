@@ -592,8 +592,10 @@ rc_t expand_algorithm ( const VResolverAlg *self, const VResolverAccToken *tok,
     case algSRA_NCBI:
         num = ( uint32_t ) strtoul ( tok -> digits . addr, NULL, 10 );
         rc = string_printf ( expanded, bsize, size,
-            "%S/%06u/%S%S%s", & tok -> alpha, num >> 10, & tok -> alpha, & tok -> digits,
-                              tok -> vdbcache ? ".vdbcache" : "" );
+            "%S/%06u/%S%S%s%s",
+                     & tok -> alpha, num >> 10, & tok -> alpha, & tok -> digits,
+                     tok -> noqual ? ".noqual" : "",
+                     tok -> vdbcache ? ".vdbcache" : "" );
         break;
     case algSRA_EBI:
         num = ( uint32_t ) ( tok -> alpha . size + tok -> digits . size - 3 );
@@ -793,7 +795,7 @@ rc_t VResolverAlgLocalResolve ( const VResolverAlg *self,
                     const String * thePath = NULL;
                     assert(path);
                     thePath = &(*path)->path;
-                    if (&tok->noqual) {
+                    if (tok->noqual) {
                         ((VPath*)(*path))->quality = eQualNo;
                         DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (
                       "VResolverAlgLocalResolve: noqual '%S' found in '%S%s'\n",
