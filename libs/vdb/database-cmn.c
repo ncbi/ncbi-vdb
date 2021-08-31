@@ -479,10 +479,10 @@ static rc_t DBManagerOpenVdbcache(const VDBManager *self,
                 self, &vdbcache, schema, clocal); /* vdbcache DB */
             if (rc2 != 0)
             {   /* local vdbcache db does not exist */
+                VPath * acc = NULL;
                 rc2 = 0;
                 if (!is_accession)
                 {
-                    VPath * acc;
                     rc2 = VFSManagerExtractAccessionOrOID(vfs, &acc, orig);
                     if (rc2 == 0)
                     {
@@ -512,6 +512,7 @@ static rc_t DBManagerOpenVdbcache(const VDBManager *self,
                     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
                 (">>>>>>>>>>>>>> calling VResolverQuery to locate vdbcache..."
                             "\n"));
+                    ((VPath*)orig)->quality = plocal->quality;
                     rc2 = VResolverQuery(
                         resolver, 0, orig, NULL, premote, pcache);
                     assert((rc2 == 0) ||
@@ -520,7 +521,7 @@ static rc_t DBManagerOpenVdbcache(const VDBManager *self,
                     /* Here we are restoring log level
                      */
                     KLogLevelSet(lvl);
-                    VPathRelease(orig);
+                    VPathRelease(acc);
                 }
             }
         }
