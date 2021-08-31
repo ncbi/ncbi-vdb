@@ -1055,6 +1055,15 @@ rc_t VPathCheckFromNamesCGI ( const VPath * path,
         case '-':
         case '_':
             continue;
+        case '%':
+            if (i + 2 < size &&
+                isxdigit(start[i + 1]) && isxdigit(start[i + 2]))
+            {   /* expect %NN ( ...ERR036/ERR036591/6007_6_nonhuman%232.bam ):
+                URL Encoding (Percent Encoding):
+                "%" followed by two hexadecimal digits */
+                i += 2;
+                continue;
+            }
         }
         return RC ( rcVFS, rcResolver, rcResolving, rcMessage, rcCorrupt );
     }
