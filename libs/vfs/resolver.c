@@ -3015,6 +3015,7 @@ static rc_t VResolverCheckAD(const VResolver *self, const VPath ** path,
 
     assert(self && tok);
     quality = self->quality;
+    quality = VDBManagerGetQuality(NULL);
     if (quality == NULL || quality[0] == '\0')
         quality = "RZ";
 
