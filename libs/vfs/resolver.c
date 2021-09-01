@@ -789,22 +789,23 @@ rc_t VResolverAlgLocalResolve ( const VResolverAlg *self,
             case kptDir:
                 if ( legacy_wgs_refseq )
                     return VResolverAlgMakeLocalWGSRefseqURI ( self, vol, & exp, & tok -> acc, path );
+
                 rc = VResolverAlgMakeLocalPath ( self, vol, & exp, path,
                     ad ? wd : NULL );
+
                 if (rc == 0) {
+                    bool noqual = tok->noqual;
+
                     const String * thePath = NULL;
                     assert(path);
                     thePath = &(*path)->path;
-                    if (tok->noqual) {
-                        ((VPath*)(*path))->quality = eQualNo;
-                        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (
-                      "VResolverAlgLocalResolve: noqual '%S' found in '%S%s'\n",
-                            &tok->acc, thePath, for_cache ? ".cache" : ""));
-                    }
-                    else
-                        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (
-                            "VResolverAlgLocalResolve: '%S' found in '%S%s'\n",
-                            &tok->acc, thePath, for_cache ? ".cache" : ""));
+
+                    ((VPath*)(*path))->quality = noqual ? eQualNo : eQualFull;
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (
+                        "VResolverAlgLocalResolve: %s '%S' found in '%S%s'\n",
+                        noqual ? "noQual" : "fullQual",
+                        &tok->acc, thePath, for_cache ? ".cache" : ""));
+
                     if (thePath->size > 4) {
                         VPath * vdbcache = NULL;
                         if (KDirectoryPathType(wd, "%.*s.vdbcache",
@@ -4130,14 +4131,26 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
             &query->path));
     }
     else {
+        bool noqual = tok.noqual;
+
+        String empty;
+        CONST_STRING(&empty, "");
+
         alg = best == NULL ? better : best;
         assert ( alg );
+
         rc = VResolverAlgMakeCachePath ( alg, & tok, cache, legacy_wgs_refseq,
             self -> wd );
-        assert(cache);
+
+        if (rc == 0) {
+            assert ( cache );
+            ((VPath*)(*cache))->quality = noqual ? eQualNo : eQualFull;
+        }
+
         DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), ("VResolverCacheResolve: "
-            "cache location of '%S' resolved to '%S' with %R\n",
-            &query->path, &(*cache)->path, rc));
+            "cache location of '%S' resolved to %s '%S' with %R\n",
+            &query->path, noqual ? "noQual" : "fullQual",
+            cache ? &(*cache)->path : &empty, rc));
     }
 
     return rc;
