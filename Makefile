@@ -34,8 +34,11 @@ include $(TOP)/build/Makefile.shell
 # default
 #
 SUBDIRS = \
-	libs \
-	vdb3 \
+	libs
+
+ifeq (,$(NO_VDB3))
+    SUBDIRS += vdb3
+endif
 
 # common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
 include $(TOP)/build/Makefile.targets

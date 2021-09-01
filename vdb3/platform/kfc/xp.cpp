@@ -10,7 +10,11 @@
 #include <vdb3/kfc/ascii.hpp>
 
 #include <cstring>
+#define HAVE_EXECINFO_H 1
+
+#if HAVE_EXECINFO_H
 #include <execinfo.h>
+#endif
 
 #include "strerror_r.h"
 
@@ -273,8 +277,10 @@ namespace vdb3
         , stack_frames ( -1 )
         , rc ( status )
     {
+#if HAVE_EXECINFO_H
         // capture stack
         stack_frames = backtrace ( callstack, sizeof callstack / sizeof callstack [ 0 ] );
+#endif
 
         // eliminate random path prefix
         const UTF8 * cmn = __FILE__;
