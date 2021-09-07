@@ -55,7 +55,7 @@
 #include <kns/manager.h>
 #include <kns/stream.h>
 
-#include <vdb/vdb-priv.h> /* VDBManagerGetQuality */
+#include <vdb/vdb-priv.h> /* VDBManagerGetQualityString */
 
 #include <vfs/manager.h>
 #include <vfs/path.h>
@@ -3034,8 +3034,9 @@ static rc_t VResolverCheckAD(const VResolver *self, const VPath ** path,
     const char * quality = NULL;
 
     assert(self && tok);
+
     quality = self->quality;
-    quality = VDBManagerGetQuality(NULL);
+    VDBManagerGetQualityString(NULL, &quality);
     if (quality == NULL || quality[0] == '\0')
         quality = "RZ";
 
@@ -3326,7 +3327,9 @@ rc_t VResolverLocalResolve ( const VResolver *self, const String * accession,
     VResolverAccToken tok;
     bool legacy_wgs_refseq = false;
 
-    const char * quality = VDBManagerGetQuality(NULL);
+    const char * quality = NULL;
+    
+    VDBManagerGetQualityString(NULL, &quality);
     if (quality == NULL || quality[0] == '\0')
         quality = "RZ";
 

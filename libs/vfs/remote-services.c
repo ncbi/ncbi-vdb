@@ -54,7 +54,7 @@
 
 #include <kproc/timeout.h> /* TimeoutInit */
 
-#include <vdb/vdb-priv.h> /* VDBManagerGetQuality */
+#include <vdb/vdb-priv.h> /* VDBManagerGetQualityString */
 
 #include <vfs/manager.h> /* VFSManager */
 #include <vfs/manager-priv.h> /* VFSManagerMakeFromKfg */
@@ -3950,7 +3950,7 @@ rc_t KServiceInitQuality(KService * self) {
     assert(self);
 
     if (self->quality == NULL)
-        self->quality = VDBManagerGetQuality(0);
+        VDBManagerGetQualityString(NULL, &self->quality);
 
     return 0;
 }

@@ -83,7 +83,7 @@
 #include <klib/time.h> 
 #include <klib/vector.h>
 
-#include <vdb/vdb-priv.h> /* VDBManagerGetQuality */
+#include <vdb/vdb-priv.h> /* VDBManagerGetQualityString */
 
 #include "path-priv.h"
 #include "resolver-priv.h"
@@ -4337,7 +4337,8 @@ static bool VFSManagerCheckEnvAndAdImpl(const VFSManager * self,
     char rs[PATH_MAX] = "";
     int j = 0;
 
-    const char * quality = VDBManagerGetQuality(NULL);
+    const char * quality = NULL;
+    VDBManagerGetQualityString(NULL, &quality);
     assert(quality);
     if (quality == NULL || quality[0] == '\0')
         quality = "RZ";

@@ -1378,7 +1378,8 @@ static bool validRunFileName(const String * acc, const String * file) {
     const char fullQl[] = ".sra";
     const char noQual[] = ".noqual";
 
-    const char * quality = VDBManagerGetQuality(NULL);
+    const char * quality = NULL;
+    VDBManagerGetQualityString(NULL, &quality);
     if (quality == NULL || quality[0] == '\0')
         quality = "RZ";
 

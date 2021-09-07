@@ -367,7 +367,9 @@ typedef bool ( CC * VUntypedFunc )
     ( struct KTable const *tbl, struct KMetadata const *meta );
 
 
-VDB_EXTERN const char * CC VDBManagerGetQuality(const struct VDBManager * self);
+/* Don't release returned quality string */
+VDB_EXTERN rc_t CC VDBManagerGetQualityString(const struct VDBManager * self,
+    const char ** quality);
 
 /* ListDependenciesExt
  *  create a dependencies object: list all dependencies

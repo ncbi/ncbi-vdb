@@ -986,16 +986,17 @@ static const char * s_SetQuality = NULL;/* explicitly set VDBManagerSetQuality*/
 
 static String s_DfltQuality;
 
-LIB_EXPORT rc_t CC VDBManagerSetQuality(VDBManager * self,
+static char s_FullQuality[99];
+static char s_ZeroQuality[99];
+
+static rc_t CC VDBManagerSetQuality(VDBManager * self,
     const char * quality)
 {
     s_SetQuality = quality;
     return 0;
 }
 
-/*#define USE_SERVICES_CACHE*/
-
-LIB_EXPORT const char * CC VDBManagerGetQuality(const VDBManager * self) {
+static const char * VDBManagerGetQuality(const VDBManager * self) {
     rc_t rc = 0;
 
     if (s_DfltQuality.addr == NULL)
@@ -1035,4 +1036,56 @@ LIB_EXPORT const char * CC VDBManagerGetQuality(const VDBManager * self) {
 
     assert(s_LoadedQuality);
     return s_LoadedQuality->addr;
+}
+
+static
+bool fillPrefQual(char * dst, const char * src, size_t sz, char q)
+{
+    assert(dst && src);
+
+    if (dst[0] != '\0')
+        return false;
+    else {
+        int i = 0, j = 0;
+
+        dst[i++] = q;
+
+        for (; src[j] != '\0' && i < sz; ++j) {
+            if (src[j] != q)
+                dst[i++] = src[j];
+        }
+
+        if (i + 1 == sz && sz > 1)
+            --i;
+
+        dst[i] = '\0';
+
+        return true;
+    }
+}
+
+/* currently accepts VDBManager==NULL */
+LIB_EXPORT rc_t CC VDBManagerGetQualityString(const VDBManager * self,
+    const char ** quality)
+{
+    const char * s = NULL;
+    if (quality == NULL)
+        return RC(rcVDB, rcMgr, rcAccessing, rcParam, rcNull);
+    s = *quality = VDBManagerGetQuality(self);
+    if (s == NULL)
+        s = "";
+    fillPrefQual(s_FullQuality, s, sizeof s_FullQuality, 'R');
+    fillPrefQual(s_ZeroQuality, s, sizeof s_ZeroQuality, 'Z');
+
+    return 0;
+}
+
+LIB_EXPORT rc_t CC VDBManagerPreferFullQuality(VDBManager * self) {
+    VDBManagerGetQuality(self);
+    return VDBManagerSetQuality(self, s_FullQuality);
+}
+
+LIB_EXPORT rc_t CC VDBManagerPreferZeroQuality(VDBManager * self) {
+    VDBManagerGetQuality(self);
+    return VDBManagerSetQuality(self, s_ZeroQuality);
 }
