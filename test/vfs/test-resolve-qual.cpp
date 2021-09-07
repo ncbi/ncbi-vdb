@@ -63,7 +63,7 @@ TEST_SUITE(TestResolveQualSuite)
 #define FAIL_REMOTE 3
 #define FAIL_ENV 4
 
-static bool servicesCacheDisabled = VDBManagerGetQuality(NULL) == NULL;
+static bool servicesCacheDisabled = true;//VDBManagerGetQuality(NULL) == NULL;
 
 struct TRQFixture { TRQFixture() {
     unsetenv((char*)ACC);
