@@ -1039,7 +1039,7 @@ static const char * VDBManagerGetQuality(const VDBManager * self) {
 }
 
 static
-bool fillPrefQual(char * dst, const char * src, size_t sz, char q)
+bool fillPrefQual1(char * dst, const char * src, size_t sz, char q)
 {
     assert(dst && src);
 
@@ -1064,28 +1064,39 @@ bool fillPrefQual(char * dst, const char * src, size_t sz, char q)
     }
 }
 
+static bool fillPrefQual(const char * quality) {
+    bool r = false;
+
+    const char * s = quality;
+    if (s == NULL)
+        s = "";
+
+    r = fillPrefQual1(s_FullQuality, s, sizeof s_FullQuality, 'R');
+    r |= fillPrefQual1(s_ZeroQuality, s, sizeof s_ZeroQuality, 'Z');
+
+    return r;
+}
+
 /* currently accepts VDBManager==NULL */
 LIB_EXPORT rc_t CC VDBManagerGetQualityString(const VDBManager * self,
     const char ** quality)
 {
-    const char * s = NULL;
     if (quality == NULL)
         return RC(rcVDB, rcMgr, rcAccessing, rcParam, rcNull);
-    s = *quality = VDBManagerGetQuality(self);
-    if (s == NULL)
-        s = "";
-    fillPrefQual(s_FullQuality, s, sizeof s_FullQuality, 'R');
-    fillPrefQual(s_ZeroQuality, s, sizeof s_ZeroQuality, 'Z');
+    *quality = VDBManagerGetQuality(self);
+    fillPrefQual(*quality);
 
     return 0;
 }
 
 LIB_EXPORT rc_t CC VDBManagerPreferFullQuality(VDBManager * self) {
-    VDBManagerGetQuality(self);
+    const char * quality = VDBManagerGetQuality(self);
+    fillPrefQual(quality);
     return VDBManagerSetQuality(self, s_FullQuality);
 }
 
 LIB_EXPORT rc_t CC VDBManagerPreferZeroQuality(VDBManager * self) {
-    VDBManagerGetQuality(self);
+    const char * quality = VDBManagerGetQuality(self);
+    fillPrefQual(quality);
     return VDBManagerSetQuality(self, s_ZeroQuality);
 }
