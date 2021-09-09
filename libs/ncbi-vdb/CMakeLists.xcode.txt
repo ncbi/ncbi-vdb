@@ -61,10 +61,10 @@ function( GetTargetSources targets out_name_src_files out_name_incl_dirs out_nam
     set( ${out_name_compile_definitions} "${out_compile_defs}" PARENT_SCOPE )
 endfunction()
 
-GetTargetSources( "ngs;ngs-jni;ngs-py" all_src all_incl_dirs all_compile_defs )
-include_directories( ${all_incl_dirs} )
-add_library( ncbi-ngs STATIC ${all_src} )
-add_compile_definitions( ${all_compile_defs} )
+#GetTargetSources( "ngs;ngs-jni;ngs-py" all_src all_incl_dirs all_compile_defs )
+#include_directories( ${all_incl_dirs} )
+#add_library( ncbi-ngs STATIC ${all_src} )
+#add_compile_definitions( ${all_compile_defs} )
 
 ####################################
 GetTargetSources( "${VDB_LIB_RD_TARGETS}" all_src all_incl_dirs all_compile_defs )
@@ -76,7 +76,8 @@ add_compile_definitions( ${all_compile_defs} )
 GetTargetSources( "${VDB_LIB_RD_TARGETS}" all_src all_incl_dirs all_compile_defs )
 include_directories( ${all_incl_dirs} )
 add_library( ncbi-vdb-shared SHARED ${all_src} )
-target_link_libraries( ncbi-vdb-shared ncbi-ngs ${LIBXML2} m dl pthread )
+#target_link_libraries( ncbi-vdb-shared ncbi-ngs ${LIBXML2} m dl pthread )
+target_link_libraries( ncbi-vdb-shared ${LIBXML2} m dl pthread )
 add_compile_definitions( ${all_compile_defs} )
 
 ###################################
@@ -89,5 +90,6 @@ add_compile_definitions( ${all_compile_defs} )
 GetTargetSources( "${VDB_LIB_RDWR_TARGETS}" all_src all_incl_dirs all_compile_defs )
 include_directories( ${all_incl_dirs} )
 add_library( ncbi-wvdb-shared SHARED ${all_src} )
-target_link_libraries( ncbi-wvdb-shared ncbi-ngs ${LIBXML2} m dl pthread )
+#target_link_libraries( ncbi-wvdb-shared ncbi-ngs ${LIBXML2} m dl pthread )
+target_link_libraries( ncbi-wvdb-shared ${LIBXML2} m dl pthread )
 add_compile_definitions( ${all_compile_defs} )

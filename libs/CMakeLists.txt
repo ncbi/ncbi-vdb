@@ -28,7 +28,7 @@ add_subdirectory(sraxf) # same as axf
 add_subdirectory(svdb)
 add_subdirectory(tui)
 add_subdirectory(vdb)
-add_subdirectory(vdb-sqlite)
+# add_subdirectory(vdb-sqlite) TODO: move to SRA tools where it belongs
 add_subdirectory(vfs)
 add_subdirectory(vxf)
 add_subdirectory(wgsxf) # wgsxf and wwgsxf are the same

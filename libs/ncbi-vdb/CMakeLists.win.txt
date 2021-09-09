@@ -25,21 +25,21 @@
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE})
 
-add_library( ncbi-ngs STATIC
-    $<TARGET_OBJECTS:ngs>
-    $<TARGET_OBJECTS:ngs-jni>
-    $<TARGET_OBJECTS:ngs-py>
-)
-MSVS_StaticRuntime( ncbi-ngs )
-ExportStatic( ncbi-ngs true )
+# add_library( ncbi-ngs STATIC
+    # $<TARGET_OBJECTS:ngs>
+    # $<TARGET_OBJECTS:ngs-jni>
+    # $<TARGET_OBJECTS:ngs-py>
+# )
+# MSVS_StaticRuntime( ncbi-ngs )
+# ExportStatic( ncbi-ngs true )
 
-add_library( ncbi-ngs-md STATIC
-    $<TARGET_OBJECTS:ngs-md>
-    $<TARGET_OBJECTS:ngs-jni-md>
-    $<TARGET_OBJECTS:ngs-py-md>
-)
-MSVS_DLLRuntime( ncbi-ngs-md )
-ExportStatic( ncbi-ngs-md true )
+# add_library( ncbi-ngs-md STATIC
+    # $<TARGET_OBJECTS:ngs-md>
+    # $<TARGET_OBJECTS:ngs-jni-md>
+    # $<TARGET_OBJECTS:ngs-py-md>
+# )
+# MSVS_DLLRuntime( ncbi-ngs-md )
+# ExportStatic( ncbi-ngs-md true )
 
 #############################
 set( VDB_LIB_RD "" )
@@ -48,7 +48,8 @@ foreach( target ${VDB_LIB_RD_TARGETS})
 endforeach()
 
 add_library( ncbi-vdb STATIC "${VDB_LIB_RD}" )
-target_link_libraries( ncbi-vdb ncbi-ngs ${LIBXML2} Crypt32 )
+#target_link_libraries( ncbi-vdb ncbi-ngs ${LIBXML2} Crypt32 )
+target_link_libraries( ncbi-vdb ${LIBXML2} Crypt32 )
 MSVS_StaticRuntime( ncbi-vdb )
 ExportStatic( ncbi-vdb true )
 
@@ -59,20 +60,22 @@ foreach( target ${VDB_LIB_RD_TARGETS} )
 endforeach()
 
 add_library( ncbi-vdb-md STATIC "${VDB_LIB_RD_MD}" )
-target_link_libraries( ncbi-vdb-md ncbi-ngs-md ${LIBXML2} Crypt32 )
+#target_link_libraries( ncbi-vdb-md ncbi-ngs-md ${LIBXML2} Crypt32 )
+target_link_libraries( ncbi-vdb-md ${LIBXML2} Crypt32 )
 MSVS_DLLRuntime( ncbi-vdb-md )
 ExportStatic( ncbi-vdb-md true )
 
 #-----------------------------
 set( VDB_LIB_RD_SHARED
     ${VDB_LIB_RD}
-    $<TARGET_OBJECTS:ngs>
-    $<TARGET_OBJECTS:ngs-jni>
-    $<TARGET_OBJECTS:ngs-py>
+    # $<TARGET_OBJECTS:ngs>
+    # $<TARGET_OBJECTS:ngs-jni>
+    # $<TARGET_OBJECTS:ngs-py>
 )
 
 add_library( ncbi-vdb-shared SHARED "${VDB_LIB_RD_SHARED}" )
-target_link_libraries( ncbi-vdb-shared ncbi-ngs ${LIBXML2} Crypt32 )
+#target_link_libraries( ncbi-vdb-shared ncbi-ngs ${LIBXML2} Crypt32 )
+target_link_libraries( ncbi-vdb-shared ${LIBXML2} Crypt32 )
 MSVS_StaticRuntime( ncbi-vdb-shared )
 
 #- - - - - - - - - - - - - - -
@@ -82,7 +85,8 @@ foreach( target ${VDB_LIB_RD_TARGETS} )
 endforeach()
 
 add_library( ncbi-vdb-shared-md SHARED "${VDB_LIB_RD_MD}" )
-target_link_libraries( ncbi-vdb-shared-md ncbi-ngs-md ${LIBXML2} Crypt32 )
+#target_link_libraries( ncbi-vdb-shared-md ncbi-ngs-md ${LIBXML2} Crypt32 )
+target_link_libraries( ncbi-vdb-shared-md ${LIBXML2} Crypt32 )
 MSVS_DLLRuntime( ncbi-vdb-shared-md )
 
 #################################
@@ -107,7 +111,8 @@ ExportStatic( ncbi-wvdb-md true )
 
 #-----------------------------
 add_library( ncbi-wvdb-shared SHARED "${VDB_LIB_RDWR}" )
-target_link_libraries( ncbi-wvdb-shared ncbi-ngs ${LIBXML2} Crypt32 )
+#target_link_libraries( ncbi-wvdb-shared ncbi-ngs ${LIBXML2} Crypt32 )
+target_link_libraries( ncbi-wvdb-shared ${LIBXML2} Crypt32 )
 MSVS_StaticRuntime( ncbi-wvdb-shared )
 
 #- - - - - - - - - - - - - - -
@@ -117,5 +122,6 @@ foreach( target ${VDB_LIB_RDWR_TARGETS} )
 endforeach()
 
 add_library( ncbi-wvdb-shared-md SHARED "${VDB_LIB_RDWR_MD}" )
-target_link_libraries( ncbi-wvdb-shared-md ncbi-ngs-md ${LIBXML2} Crypt32 )
+#target_link_libraries( ncbi-wvdb-shared-md ncbi-ngs-md ${LIBXML2} Crypt32 )
+target_link_libraries( ncbi-wvdb-shared-md ${LIBXML2} Crypt32 )
 MSVS_DLLRuntime( ncbi-wvdb-shared-md )
