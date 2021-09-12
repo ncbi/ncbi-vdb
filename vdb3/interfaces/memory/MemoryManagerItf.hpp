@@ -26,6 +26,7 @@
 #pragma once
 
 #include <memory>
+#include <stddef.h>
 
 namespace VDB3
 {
