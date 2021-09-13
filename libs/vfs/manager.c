@@ -85,8 +85,10 @@
 
 #include <vdb/vdb-priv.h> /* VDBManagerGetQualityString */
 
+#include "manager-priv.h" /* VFSManagerExtNoqual */
 #include "path-priv.h"
 #include "resolver-priv.h"
+#include "services-priv.h" /* VFSManagerExtNoqual */
 
 #include "../kfg/ngc-priv.h" /* KNgcObjMakeFromCmdLine */
 
@@ -4337,11 +4339,15 @@ static bool VFSManagerCheckEnvAndAdImpl(const VFSManager * self,
     char rs[PATH_MAX] = "";
     int j = 0;
 
+    const String * xNoqual = VFSManagerExtNoqual(NULL);
+
     const char * quality = NULL;
     VDBManagerGetQualityString(NULL, &quality);
     assert(quality);
     if (quality == NULL || quality[0] == '\0')
         quality = "RZ";
+
+    assert(xNoqual);
 
     if (outPath == NULL)
         return RC(rcVFS, rcPath, rcResolving, rcParam, rcNull);
@@ -4405,21 +4411,24 @@ static bool VFSManagerCheckEnvAndAdImpl(const VFSManager * self,
         }
         if (quality[j] == 'Z') {
             if (rc == 0 && ngc != NULL && !found) {
-                if ((KDirectoryPathType(self->cwd, "%s/%s_dbGaP-%d.noqual",
-                    rs, slash, projectId) & ~kptAlias) == kptFile)
+                if ((KDirectoryPathType(self->cwd, "%s/%s_dbGaP-%d%.*s",
+                     rs, slash, projectId, xNoqual->size, xNoqual->addr)
+                    & ~kptAlias) == kptFile)
                 {
                     rc_t r = VFSManagerMakePath(self, (VPath **)outPath,
-                        "%s/%s_dbGaP-%d.noqual", rs, slash, projectId);
+                        "%s/%s_dbGaP-%d%.*s",
+                        rs, slash, projectId, xNoqual->size, xNoqual->addr);
                     if (r == 0)
                         found = true;
                 }
             }
             if (rc == 0 && !found) {
-                if ((KDirectoryPathType(self->cwd, "%s/%s.noqual", rs, slash) &
+                if ((KDirectoryPathType(self->cwd, "%s/%s%.*s",
+                     rs, slash, xNoqual->size, xNoqual->addr) &
                     ~kptAlias) == kptFile)
                 {
                     rc_t r = VFSManagerMakePath(self, (VPath**)outPath,
-                        "%s/%s.noqual", rs, slash);
+                        "%s/%s%.*s", rs, slash, xNoqual->size, xNoqual->addr);
                     if (r != 0)
                         rc = 0;
                     else {

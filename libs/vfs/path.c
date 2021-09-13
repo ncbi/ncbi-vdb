@@ -26,12 +26,15 @@
 
 #include <vfs/extern.h>
 
-#include "path-priv.h"
+#include <kfs/directory.h>
 
-#include <vfs/manager.h>
-#include <vfs/resolver.h>
 #include <klib/printf.h>
 #include <klib/rc.h>
+
+#include <vfs/manager.h>
+#include <vfs/manager-priv.h>
+#include <vfs/path-priv.h>
+#include <vfs/resolver.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -40,6 +43,9 @@
 #include <assert.h>
 
 #include <sysalloc.h>
+
+#include "manager-priv.h" /* VFSManagerExtNoqual */
+#include "path-priv.h"
 
 #define MAX_ACCESSION_LEN 20
 #define TREAT_URI_RESERVED_AS_FILENAME 0
@@ -2359,6 +2365,10 @@ LIB_EXPORT rc_t CC VFSManagerExtractAccessionOrOID ( const VFSManager * self,
             bool isRun = false;
             VQuality quality = eQualLast;
 
+            const String * xNoqual = VFSManagerExtNoqual(NULL);
+#define NOQUAL 7
+            assert(xNoqual && xNoqual->size == NOQUAL);
+
             switch ( orig -> path_type )
             {
             case vpInvalid:
@@ -2419,8 +2429,10 @@ LIB_EXPORT rc_t CC VFSManagerExtractAccessionOrOID ( const VFSManager * self,
                         quality = eQualFull;
                         continue;
                     }
-                case 7:
-                    if ( strcase_cmp ( ".noqual", 5, sep, 5, 5 ) == 0 ) {
+                case NOQUAL:
+                    if ( strcase_cmp (
+                        xNoqual->addr, NOQUAL, sep, NOQUAL, NOQUAL ) == 0 )
+                    {
                         end = sep;
                         quality = eQualNo;
                         continue;
@@ -3800,10 +3812,6 @@ LIB_EXPORT rc_t CC VFSManagerMakeOidPath ( const VFSManager * self,
              HACK O' MATIC
  */
 
-#include <vfs/path-priv.h>
-#include <vfs/manager-priv.h>
-#include <kfs/directory.h>
-
 /* MakeDirectoryRelative
  *  apparently the idea was to interpret "posix_path" against
  *  "dir" to come up with a stand-alone path that could be used
@@ -4595,4 +4603,3 @@ LIB_EXPORT VQuality CC VPathGetQuality(const VPath * self) {
     else
         return self->quality;
 }
-
