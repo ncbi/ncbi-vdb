@@ -34,7 +34,7 @@ extern "C" {
 #endif
 
 
-typedef uint32_t VQuality;
+typedef int32_t VQuality;
 typedef enum { /* Run Quality */
     eQualFullOnly = -2,/* use full quality run only, no double-quality run */
     eQualDblOnly,      /* use double quality run only */
