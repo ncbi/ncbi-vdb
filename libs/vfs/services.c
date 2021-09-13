@@ -1361,3 +1361,12 @@ rc_t KServiceTestNamesQueryExt ( KService * self, VRemoteProtocols protocols,
     return KServiceNamesQueryExtImpl
         ( self, protocols, cgi, version, response, dir, file, expected );
 }
+
+/* accepts VFSManager* == NULL */
+const String * VFSManagerExtNoqual(const struct VFSManager * self) {
+    static String xNoqual;
+    if (xNoqual.len == 0)
+        CONST_STRING(&xNoqual, ".noqual");
+
+    return &xNoqual;
+}
