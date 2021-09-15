@@ -66,6 +66,9 @@ rc_t KServiceTestNamesQueryExt ( KService * self, VRemoteProtocols protocols,
     const char * dir, const char * file, const char * expected );
 
 
+rc_t KServiceGetQuality(const KService * self, const char ** quality);
+
+
 rc_t KService1Search ( const struct KNSManager * mgr, const char * cgi,
     const char * acc, const struct Kart ** result );
 
