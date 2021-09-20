@@ -1366,6 +1366,13 @@ rc_t KServiceTestNamesQueryExt ( KService * self, VRemoteProtocols protocols,
 const String * VFSManagerExtNoqual(const struct VFSManager * self) {
     static String xNoqual;
     if (xNoqual.len == 0)
+        CONST_STRING(&xNoqual, ".sralite");
+
+    return &xNoqual;
+}
+const String * VFSManagerExtNoqualOld(const struct VFSManager * self) {
+    static String xNoqual;
+    if (xNoqual.len == 0)
         CONST_STRING(&xNoqual, ".noqual");
 
     return &xNoqual;
