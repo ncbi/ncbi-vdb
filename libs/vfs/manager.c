@@ -88,7 +88,6 @@
 #include "manager-priv.h" /* VFSManagerExtNoqual */
 #include "path-priv.h"
 #include "resolver-priv.h"
-//#include "services-priv.h" /* VFSManagerExtNoqual */
 
 #include "../kfg/ngc-priv.h" /* KNgcObjMakeFromCmdLine */
 
