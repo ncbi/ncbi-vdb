@@ -1378,7 +1378,7 @@ static bool validRunFileName(const String * acc, const String * file) {
 
     const char fullQl[] = ".sra";
 
-    const String * xNoqual = VFSManagerExtNoqual(NULL);
+    const String * xNoqual = VFSManagerExtNoqualOld(NULL);
 
     const char * quality = NULL;
     VDBManagerGetQualityString(NULL, &quality);

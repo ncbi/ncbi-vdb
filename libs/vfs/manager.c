@@ -88,7 +88,7 @@
 #include "manager-priv.h" /* VFSManagerExtNoqual */
 #include "path-priv.h"
 #include "resolver-priv.h"
-#include "services-priv.h" /* VFSManagerExtNoqual */
+//#include "services-priv.h" /* VFSManagerExtNoqual */
 
 #include "../kfg/ngc-priv.h" /* KNgcObjMakeFromCmdLine */
 
@@ -4339,7 +4339,7 @@ static bool VFSManagerCheckEnvAndAdImpl(const VFSManager * self,
     char rs[PATH_MAX] = "";
     int j = 0;
 
-    const String * xNoqual = VFSManagerExtNoqual(NULL);
+    const String * xNoqual = VFSManagerExtNoqualOld(NULL);
 
     const char * quality = NULL;
     VDBManagerGetQualityString(NULL, &quality);

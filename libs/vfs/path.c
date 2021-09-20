@@ -2365,7 +2365,7 @@ LIB_EXPORT rc_t CC VFSManagerExtractAccessionOrOID ( const VFSManager * self,
             bool isRun = false;
             VQuality quality = eQualLast;
 
-            const String * xNoqual = VFSManagerExtNoqual(NULL);
+            const String * xNoqual = VFSManagerExtNoqualOld(NULL);
 #define NOQUAL 7
             assert(xNoqual && xNoqual->size == NOQUAL);
 
