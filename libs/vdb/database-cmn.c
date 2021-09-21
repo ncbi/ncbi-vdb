@@ -1373,12 +1373,12 @@ LIB_EXPORT bool CC VDatabaseIsCSRA ( const VDatabase *self )
     return false;
 }
 
-static bool validRunFileName(const String * acc, const String * file) {
+static bool validRunFileNameExt(const String * acc, const String * file,
+    const String * xNoqual)
+{
     int j = 0;
 
     const char fullQl[] = ".sra";
-
-    const String * xNoqual = VFSManagerExtNoqualOld(NULL);
 
     const char * quality = NULL;
     VDBManagerGetQualityString(NULL, &quality);
@@ -1395,14 +1395,17 @@ static bool validRunFileName(const String * acc, const String * file) {
                 acc->addr, acc->size, acc->len) == 0)
             {
                 if (string_cmp(file->addr + acc->size, file->size - acc->size,
-                    fullQl, sizeof fullQl - 1, sizeof fullQl - 1) == 0)
+                    fullQl, sizeof fullQl - 1, sizeof fullQl - 1)
+                   == 0)
                 {
                     return true;
                 }
             }
             return false;
         }
-        else if (quality[j] == 'Z' && file->size == acc->size + 7) {
+        else if (quality[j] == 'Z'
+              && file->size == acc->size + xNoqual->size)
+        {
             if (string_cmp(file->addr + acc->size, file->size - acc->size,
                 xNoqual->addr, xNoqual->size, xNoqual->size) == 0)
             {
@@ -1450,6 +1453,13 @@ static bool validRunFileName(const String * acc, const String * file) {
     }
 
     return false;
+}
+
+static bool validRunFileName(const String * acc, const String * file) {
+    if (       validRunFileNameExt(acc, file, VFSManagerExtNoqual   (NULL)))
+        return true;
+    else
+        return validRunFileNameExt(acc, file, VFSManagerExtNoqualOld(NULL));
 }
 
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \

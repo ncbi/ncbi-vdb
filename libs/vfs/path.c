@@ -2365,9 +2365,14 @@ LIB_EXPORT rc_t CC VFSManagerExtractAccessionOrOID ( const VFSManager * self,
             bool isRun = false;
             VQuality quality = eQualLast;
 
-            const String * xNoqual = VFSManagerExtNoqualOld(NULL);
-#define NOQUAL 7
-            assert(xNoqual && xNoqual->size == NOQUAL);
+            const String * xNoqual  = VFSManagerExtNoqualOld(NULL);
+            const String * xSraLite = VFSManagerExtNoqual   (NULL);
+#define NOQUAL  7 /* .noqual
+                     1234567 */
+#define SRALITE 8 /* .sralite
+                     12345678 */
+            assert(xNoqual  && xNoqual ->size == NOQUAL
+                && xSraLite && xSraLite->size == SRALITE);
 
             switch ( orig -> path_type )
             {
@@ -2430,8 +2435,16 @@ LIB_EXPORT rc_t CC VFSManagerExtractAccessionOrOID ( const VFSManager * self,
                         continue;
                     }
                 case NOQUAL:
-                    if ( strcase_cmp (
-                        xNoqual->addr, NOQUAL, sep, NOQUAL, NOQUAL ) == 0 )
+                    if ( strcase_cmp ( xNoqual->addr, xNoqual->size,
+                        sep, xNoqual->size, xNoqual->size ) == 0 )
+                    {
+                        end = sep;
+                        quality = eQualNo;
+                        continue;
+                    }
+                case SRALITE:
+                    if ( strcase_cmp ( xSraLite->addr, xNoqual->size,
+                        sep, xNoqual->size, xSraLite->size ) == 0 )
                     {
                         end = sep;
                         quality = eQualNo;

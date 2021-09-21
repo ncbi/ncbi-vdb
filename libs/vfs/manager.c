@@ -4318,8 +4318,9 @@ rc_t CC VFSManagerSetAdCaching(VFSManager * self, bool enabled)
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 && !rc) { rc = rc2; } obj = NULL; } while (false)
 
-static bool VFSManagerCheckEnvAndAdImpl(const VFSManager * self,
-    const VPath * inPath, const VPath ** outPath, bool checkEnv)
+static bool VFSManagerCheckEnvAndAdImplNoqual(const VFSManager * self,
+    const VPath * inPath, const VPath ** outPath, bool checkEnv,
+    const String * xNoqual)
 {
     /* *outPath can be not NULL: in this case it's just reset to a new value;
                                  DON'T RELEASE THE OLD ONE! */
@@ -4337,8 +4338,6 @@ static bool VFSManagerCheckEnvAndAdImpl(const VFSManager * self,
     const char *slash = NULL;
     char rs[PATH_MAX] = "";
     int j = 0;
-
-    const String * xNoqual = VFSManagerExtNoqualOld(NULL);
 
     const char * quality = NULL;
     VDBManagerGetQualityString(NULL, &quality);
@@ -4470,6 +4469,19 @@ static bool VFSManagerCheckEnvAndAdImpl(const VFSManager * self,
     RELEASE(KNgcObj, ngc);
 
     return found;
+}
+
+static bool VFSManagerCheckEnvAndAdImpl(const VFSManager * self,
+    const VPath * inPath, const VPath ** outPath, bool checkEnv)
+{
+    if (VFSManagerCheckEnvAndAdImplNoqual(self, inPath, outPath,
+        checkEnv, VFSManagerExtNoqual(NULL)))
+    {
+        return true;
+    }
+    else
+        return VFSManagerCheckEnvAndAdImplNoqual(self, inPath, outPath,
+            checkEnv, VFSManagerExtNoqualOld(NULL));
 }
 
 /* CheckEnvAndAd
