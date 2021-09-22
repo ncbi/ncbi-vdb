@@ -40,6 +40,11 @@
 
 #include <ctype.h> /* isdigit */
 
+#include <limits.h> /* PATH_MAX */
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
+
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (0)
 
@@ -440,9 +445,10 @@ rc_t FileAddVPath ( File * self, const VPath * path,
                         self->size = size;
                     else if (self->size != size)
                         PLOGERR(klogFatal, (klogFatal,
-                            RC(rcVFS, rcQuery, rcExecuting, rcString, rcUnexpected),
-                            "different sizes for the same file '$name$type': $s1:$s2"
-                            "name=%s,type=%s,s1=%lu,s2=%lu",
+                            RC(rcVFS,
+                                rcQuery, rcExecuting, rcString, rcUnexpected),
+                       "different sizes for the same file '$name$type': $s1:$s2"
+                       "name=%s,type=%s,s1=%lu,s2=%lu",
                             self->name, self->cType, self->size, size));
                 }
                 rc = FileSetHttp(self, path);
@@ -463,6 +469,9 @@ static rc_t FileAddCache
     if ( self == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
 
+    if (self->cache != NULL) /* was already set */
+        return 0;
+
     self -> cacheRc = aRc;
 
     rc = VPathRelease ( self -> cache );
@@ -480,6 +489,12 @@ static rc_t FileAddLocal
 
     if ( self == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
+
+    if (path == NULL && aRc == 0) /* nothing to set */
+        return 0;
+
+    if (self->local != NULL) /* was already set */
+        return 0;
 
     self -> localRc = aRc;
 
@@ -577,20 +592,26 @@ rc_t ItemAddFormat ( Item * self, const char * cType, const Data * dad,
             case eSFFSra     : idx = 0; break;
             case eSFFVdbcache: idx = 0; break;
             case eSFFMax     : {*/
-        uint32_t i =0 ;
-        for ( i = 0; checkSameType && i < self -> nElm; ++ i ) {
-            assert ( ( cType && self -> elm [ i ] . cType )
-                    || type == eSFFSkipped );
-            if ( ( cType != NULL && self -> elm [ i ] . cType != NULL &&
-                   strcmp ( self -> elm [ i ] . cType, cType ) == 0 )
-                 ||
-                 ( cType == NULL && self -> elm [ i ] . cType == NULL &&
-                   self -> elm [ i ] . type == type && type == eSFFSkipped )
-               )
-            {
-                idx = i;
-                break;
+        uint32_t i = 0 ;
+        if (checkSameType)
+            for ( i = 0; i < self -> nElm; ++ i ) {
+                assert ( ( cType && self -> elm [ i ] . cType )
+                        || type == eSFFSkipped );
+                if ( ( cType != NULL && self -> elm [ i ] . cType != NULL &&
+                       strcmp ( self -> elm [ i ] . cType, cType ) == 0 )
+                     ||
+                     ( cType == NULL && self -> elm [ i ] . cType == NULL &&
+                       self -> elm [ i ] . type == type && type == eSFFSkipped )
+                   )
+                {
+                    idx = i;
+                    break;
+                }
             }
+        else { 
+            assert(self->nElm);
+            if (self->elm[self->nElm - 1].path[0] == NULL)
+                idx = self->nElm - 1;
         }
         if ( idx == -1 ) {
             void * tmp = realloc ( self -> elm,
@@ -1119,10 +1140,45 @@ rc_t Response4AppendUrl ( Response4 * self, const char * url ) {
     return rc;
 }
 
+static char * getType(const String * path, const char * acc) {
+    String s;
+    String sPath;
+    char c[PATH_MAX] = "";
+    size_t num_writ = 0;
+    size_t offset = 0;
+    rc_t rc = string_printf(c, sizeof c, &num_writ, "%s.sra", acc);
+    if (rc != 0)
+        return "";
+    if (path->size < num_writ)
+        return "";
+    offset = path->size - num_writ;
+    StringInitCString(&s, c);
+    StringInit(&sPath, path->addr+offset, num_writ, num_writ);
+    if (StringEqual(&s, &sPath))
+        return "sra";
+    else
+        return "";
+}
+
+static bool isSra(const char * acc) {
+    int i = 0;
+
+    assert(acc);
+
+    if (acc[1] != 'R' || acc[2] != 'R')
+        return false;
+
+    for (i = 3; acc[i] != '\0'; ++i)
+        if (!isdigit(acc[i]))
+            return false;
+
+    return true;
+}
+
 rc_t Response4AppendLocalAndCache(Response4 * self,
     const char * acc, const VPathSet * vps, const VFSManager * mgr)
 {
-    rc_t rc = 0, aRc = 0;
+    rc_t rc = 0, cRc = 0, lRc = 0;
     Container * box = NULL;
     Item * item = NULL;
     File * l = NULL;
@@ -1130,17 +1186,25 @@ rc_t Response4AppendLocalAndCache(Response4 * self,
     const VPath * cache = NULL;
     const VPath * local = NULL;
 
+    const char * type = "";
+
     assert(self);
 
-    rc = VPathSetGetLocal(vps, &local);
-    if (rc != 0) {
+    lRc = VPathSetGetLocal(vps, &local);
+/*  if (lRc != 0) {
         if (!self->dontLogNamesServiceErrors)
             PLOGERR(klogErr, (klogErr,
-                rc, "failed to resolve accession '$(acc)'", "acc=%s", acc));
+                lRc, "failed to resolve accession '$(acc)'", "acc=%s", acc));
         return rc;
+    } */
+    if (lRc == 0) {
+        assert(local);
+        type = getType(&local->path, acc);
     }
+    else if (isSra(acc))
+        type = "sra";
 
-    aRc = VPathSetGetCache(vps, &cache);
+    cRc = VPathSetGetCache(vps, &cache);
 
     if (rc == 0)
         rc = Response4AddAccOrId(self, acc, -1, &box);
@@ -1149,18 +1213,18 @@ rc_t Response4AppendLocalAndCache(Response4 * self,
         rc = ContainerAdd(box, acc, -1, &item, NULL);
 
     if (rc == 0)
-        rc = ItemAddFormat(item, "", NULL, &l, true);
+        rc = ItemAddFormat(item, type, NULL, &l, true);
 
     if (rc == 0)
-        rc = FileAddLocal(l, local, 0);
+        rc = FileAddLocal(l, local, lRc);
 
     if (rc == 0)
-        rc = FileAddCache(l, cache, aRc);
+        rc = FileAddCache(l, cache, cRc);
 
     RELEASE(VPath, cache);
     RELEASE(VPath, local);
 
-    return rc;
+    return lRc != 0 ? lRc : rc;
 }
 
 rc_t Response4GetServiceCache(const Response4 * self,
@@ -2122,7 +2186,7 @@ static rc_t Response4Init4 ( Response4 * self, const char * input ) {
 
 rc_t Response4MakeEmpty (Response4 ** self, const VFSManager * vfs,
     const struct KNSManager * kns, const struct KConfig * kfg,
-    bool logNamesServiceErrors, int64_t projectId, unsigned quality)
+    bool logNamesServiceErrors, int64_t projectId, const char * quality)
 {
     rc_t rc = 0;
 
@@ -2387,6 +2451,28 @@ rc_t KSrvRespObjGetFileCount ( const KSrvRespObj * self,
        * aCount = count;
 
     return rc;
+}
+
+rc_t KSrvRespObjIsSimple(const KSrvRespObj * self, bool * simple) {
+    if (simple == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
+
+    if (self == NULL || self->obj == NULL)
+        * simple = true;
+    else if (self->obj->files == NULL)
+        * simple = true;
+    else if (self->obj->nFiles == 0)
+        * simple = true;
+    else if (self->obj->nFiles > 1)
+        * simple = false;
+    else if (self->obj->files->elm == NULL)
+        * simple = true;
+    else if (self->obj->files->nElm <= 1)
+        * simple = true;
+    else
+        * simple = false;
+
+    return 0;
 }
 
 rc_t KSrvRespObjMakeIterator
@@ -2677,6 +2763,9 @@ rc_t KSrvRespFileGetCache ( const KSrvRespFile * self,
 
     if ( self -> file -> cacheRc != 0 )
         return self -> file -> cacheRc;
+
+    if (self->file->cache == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcPath, rcNotFound);
 
     rc = VPathAddRef ( self -> file -> cache );
 

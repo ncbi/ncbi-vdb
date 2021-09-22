@@ -9,11 +9,15 @@
 #include <vdb3/kfc/ktrace.hpp>
 
 #include <cxxabi.h>
+#define HAVE_EXECINFO_H 1
+
+#if HAVE_EXECINFO_H
 #include <execinfo.h>
+#endif
 
 namespace vdb3
 {
-    
+
     /*=====================================================*
      *                       UTILITY                       *
      *=====================================================*/
@@ -37,7 +41,7 @@ namespace vdb3
     const XMsg XBackTrace :: getName () const noexcept
     {
         if ( cur_frame >= num_frames )
-            return copyXMsg ( "<NO MORE FRAMES>" ); 
+            return copyXMsg ( "<NO MORE FRAMES>" );
 
         XMsg m;
         const char * name = frames [ cur_frame ];
@@ -258,7 +262,9 @@ namespace vdb3
     {
         if ( x . stack_frames > 0 )
         {
+#if HAVE_EXECINFO_H
             frames = :: backtrace_symbols ( x . callstack, x . stack_frames );
+#endif
             if ( frames != nullptr )
                 num_frames = x . stack_frames;
         }

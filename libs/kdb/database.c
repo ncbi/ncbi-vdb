@@ -205,7 +205,7 @@ rc_t KDatabaseMake ( KDatabase **dbp, const KDirectory *dir, const char *path )
     /* YES,
      DBG_VFS should be used here to be printed along with other VFS messages */
     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
-        ("Making KDatabase '%s'\n", path));
+        ("KDatabaseMake: Making KDatabase '%s'\n", path));
 
     * dbp = db;
     return 0;

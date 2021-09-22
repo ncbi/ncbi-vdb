@@ -35,10 +35,6 @@
 #include <klib/defs.h>
 #endif
 
-#ifndef _h_vdb_quality_
-#include <vdb/quality.h> /* VQuality */
-#endif
-
 #include <stdarg.h>
 
 #ifdef __cplusplus
@@ -371,7 +367,9 @@ typedef bool ( CC * VUntypedFunc )
     ( struct KTable const *tbl, struct KMetadata const *meta );
 
 
-VDB_EXTERN VQuality CC VDBManagerGetQuality(const struct VDBManager * self);
+/* Don't release returned quality string */
+VDB_EXTERN rc_t CC VDBManagerGetQualityString(const struct VDBManager * self,
+    const char ** quality);
 
 /* ListDependenciesExt
  *  create a dependencies object: list all dependencies

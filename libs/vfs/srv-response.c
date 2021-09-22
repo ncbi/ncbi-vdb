@@ -223,17 +223,18 @@ rc_t VPathSetGetLocal ( const VPathSet * self, const VPath ** path )
         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
     if ( self -> error != NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcError, rcExists );
-    if ( path == NULL )
-        return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
 
-    * path = NULL;
+    if ( path != NULL )
+        * path = NULL;
 
     if ( self -> localRc != 0 )
         return self -> localRc;
 
-    rc = VPathAddRef ( self -> local );
-    if ( rc == 0 )
-        * path = self -> local;
+    if ( path != NULL ) {
+        rc = VPathAddRef ( self -> local );
+        if ( rc == 0 )
+            * path = self -> local;
+    }
 
     return rc;
 }
@@ -248,18 +249,17 @@ rc_t VPathSetGetCache ( const VPathSet * self, const VPath ** path )
     if ( self -> error != NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcError, rcExists );
 
-    if ( path == NULL )
-        return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
-
-    * path = NULL;
+    if ( path != NULL )
+        * path = NULL;
 
     if ( self -> cacheRc != 0 )
         return self -> cacheRc;
 
-    rc = VPathAddRef ( self -> cache );
-
-    if ( rc == 0 )
-        * path = self -> cache;
+    if ( path != NULL ) {
+        rc = VPathAddRef ( self -> cache );
+        if ( rc == 0 )
+            * path = self -> cache;
+    }
 
     return rc;
 }
