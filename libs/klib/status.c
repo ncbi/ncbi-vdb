@@ -112,10 +112,10 @@ LIB_EXPORT rc_t CC KStsInit ( void )
     rc_t rc;
 
     G_sts_level = 0;
-    rc = KStsHandlerSetStdOut();
+    rc = KStsHandlerSetStdErr();
 
     if ( rc == 0 )
-        rc = KStsLibHandlerSetStdOut ();
+        rc = KStsLibHandlerSetStdErr();
 #if 0
     if (rc == 0)
         rc = KStsLibHandlerSet(NULL, NULL);
