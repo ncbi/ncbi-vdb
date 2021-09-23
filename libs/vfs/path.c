@@ -505,7 +505,7 @@ rc_t VPathParseInt ( VPath * self, char * uri, size_t uri_size,
 {
     rc_t rc;
     int bytes;
-    uint32_t port;
+    uint32_t port = 0;
     size_t i, anchor;
     uint32_t count, total;
     VPathParseState state = vppStart;
@@ -518,13 +518,13 @@ rc_t VPathParseInt ( VPath * self, char * uri, size_t uri_size,
     uint32_t acc_suffix = 0;
 
     /* for accummulating ip addresses */
-    uint32_t ip;
+    uint32_t ip = 0;
     uint32_t ipv4 [ 4 ];
     uint32_t ipv6 [ 8 ];
 
     /* for accumulating oid */
-    uint64_t oid;
-    uint32_t oid_anchor;
+    uint64_t oid = 0;
+    uint32_t oid_anchor = 0;
 
     bool pileup_ext_present = false;
     const char pileup_ext[] = ".pileup";
