@@ -40,6 +40,8 @@ extern "C" {
     const String * VFSManagerExtNoqual   (const struct VFSManager *);
     /* Get old ".noqual" extension. */
     const String * VFSManagerExtNoqualOld(const struct VFSManager *);
+    /* Get ".sra" extension. */
+    const String * VFSManagerExtSra      (const struct VFSManager *);
 
 #ifdef __cplusplus
 }
