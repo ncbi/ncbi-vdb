@@ -174,7 +174,7 @@ FIXTURE_TEST_CASE(Mgr_SiteRepositories, RepositoryFixture)
     UpdateNode("/repository/site/main/repo1/", "");
 
     REQUIRE_RC(KRepositoryMgrSiteRepositories(mgr, &repos));
-    REQUIRE_EQ(VectorLength(&repos), (uint32_t)4);
+    REQUIRE_EQ(VectorLength(&repos), (uint32_t)6);
     
     // verify the values and that the vector has been sorted on: subcategory(main<aux<protected), name
     REQUIRE(ValidateRepository(( const KRepository* ) VectorGet ( & repos, 0 ), krepSiteCategory, (uint32_t)krepMainSubCategory, "repo1"));
@@ -193,7 +193,7 @@ FIXTURE_TEST_CASE(Mgr_RemoteRepositories, RepositoryFixture)
     UpdateNode("/repository/remote/main/repo1/", "");
 
     REQUIRE_RC(KRepositoryMgrRemoteRepositories(mgr, &repos));
-    REQUIRE_EQ(VectorLength(&repos), (uint32_t)4);
+    REQUIRE_EQ(VectorLength(&repos), (uint32_t)6);
     
     // verify the values and that the vector has been sorted on: subcategory(main<aux<protected), name
     REQUIRE(ValidateRepository(( const KRepository* ) VectorGet ( & repos, 0 ), krepRemoteCategory, (uint32_t)krepMainSubCategory, "repo1"));

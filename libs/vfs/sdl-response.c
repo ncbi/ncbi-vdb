@@ -168,11 +168,13 @@ static rc_t DataUpdate(const Data * self,
 }
 
 static rc_t VPath_SetQuality(VPath * self, const Data * data) {
-    rc_t rc = 0;
+    VQuality q = eQualFull;
+
     assert(data);
     if (data->quality < eQualLast)
-        rc = VPathSetQuality(self, data->quality);
-    return rc;
+        q = data->quality;
+
+    return VPathSetQuality(self, q);
 }
 
 /* We are adding a location to file */

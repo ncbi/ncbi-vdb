@@ -1,7 +1,7 @@
-#ifndef _h_vdb_quality_
-#define _h_vdb_quality_
+#ifndef _h_libs_vfs_manager_
+#define _h_libs_vfs_manager_
 
-/*==============================================================================
+/*===========================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
 *               National Center for Biotechnology Information
@@ -23,31 +23,25 @@
 *
 *  Please cite the author in any work or product based on this material.
 *
-* ============================================================================*/
+* =========================================================================== */
 
 
-#include <stdint.h> /* uint32_t */
+#include <klib/text.h> /* String */
 
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+    struct VFSManager;
 
-typedef int32_t VQuality;
-typedef enum { /* Run Quality */
-    eQualFullOnly = -2,/* use full quality run only, no double-quality run */
-    eQualDblOnly,      /* use double quality run only */
-    eQualDefault, /* default: in most cases: 'no'- if found, 'full' otherwise */
-    eQualFull,    /* full quality (can be delivered by full-quality-only run
-                                                       or double-quality run) */
-    eQualNo,      /* no-quality = synthetic */
-    eQualLast
-} EQuality;
-
+    /* Get ".noqual" extension.
+     *   accepts VFSManager* == NULL */
+    const String * VFSManagerExtNoqual(const struct VFSManager *);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _h_vdb_quality_ */
+
+#endif /* _h_libs_vfs_manager_ */

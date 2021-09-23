@@ -3022,6 +3022,26 @@ const char * SRequestNgcFile(const SRequest * self) {
     return NULL;
 }
 
+
+rc_t KServiceSetQuality(KService * self, const char * quality) {
+    assert(self);
+    self->quality = quality;
+    return 0;
+}
+
+rc_t KServiceGetQuality(const KService * self, const char ** quality) {
+    assert(quality);
+
+    *quality = NULL;
+
+    if (self == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcSelf, rcNull);
+
+    *quality = self->quality;
+    return 0;
+}
+
+
 const KNgcObj * KServiceGetNgcFile(const KService * self, bool * isProtected) {
     assert(isProtected);
 
@@ -5071,24 +5091,6 @@ rc_t KServiceAddLocalAndCacheToResponse(KService * self,
     RELEASE(Response4, r4);
 
     return rc;
-}
-
-rc_t KServiceSetQuality(KService * self, const char * quality) {
-    assert(self);
-    self->quality = quality;
-    return 0;
-}
-
-rc_t KServiceGetQuality(const KService * self, const char ** quality) {
-    assert(quality);
-
-    *quality = NULL;
-
-    if (self == NULL)
-        return RC(rcVFS, rcQuery, rcExecuting, rcSelf, rcNull);
-
-    *quality = self->quality;
-    return 0;
 }
 
 rc_t KServiceGetConfig ( struct KService * self, const KConfig ** kfg) {

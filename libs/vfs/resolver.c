@@ -23,7 +23,6 @@
  * =============================================================================
  */
 
-
 #include <vfs/extern.h>
 
 #include <kfg/kfg-priv.h> /* KRepositoryFromNgc */
@@ -63,6 +62,7 @@
 #include <vfs/resolver-priv.h> /* VResolverQueryWithDir */
 #include <vfs/services-priv.h> /* KServiceMakeWithMgr */
 
+#include "manager-priv.h" /* VFSManagerExtNoqual */
 #include "services-priv.h"
 #include "path-priv.h"
 #include "resolver-cgi.h" /* RESOLVER_CGI */
@@ -418,6 +418,9 @@ rc_t expand_algorithm ( const VResolverAlg *self, const VResolverAccToken *tok,
     rc_t rc;
     uint32_t num;
 
+    const String * xNoqual = VFSManagerExtNoqual(NULL);
+    assert(xNoqual);
+
     assert(tok);
 
     switch ( self -> alg_id )
@@ -461,7 +464,7 @@ rc_t expand_algorithm ( const VResolverAlg *self, const VResolverAccToken *tok,
             rc = string_printf ( expanded, bsize, size,
                 "%S%S/%S%S%s%s", & tok -> alpha, & tok -> digits,
                 & tok -> alpha, & tok -> digits,
-                tok -> noqual ? ".noqual" : ".sra",
+                tok -> noqual ? xNoqual->addr : ".sra",
                 tok -> vdbcache ? ".vdbcache" : "" );
         else
             rc = string_printf ( expanded, bsize, size,
@@ -473,7 +476,7 @@ rc_t expand_algorithm ( const VResolverAlg *self, const VResolverAccToken *tok,
         if (tok->projectId < 0)
             rc = string_printf ( expanded, bsize, size,
                 "%S%S%s%s", & tok -> alpha, & tok -> digits,
-                tok -> noqual ? ".noqual" : ".sra",
+                tok -> noqual ? xNoqual->addr : ".sra",
                 tok -> vdbcache ? ".vdbcache" : "" );
         else
             rc = string_printf ( expanded, bsize, size,
@@ -594,7 +597,7 @@ rc_t expand_algorithm ( const VResolverAlg *self, const VResolverAccToken *tok,
         rc = string_printf ( expanded, bsize, size,
             "%S/%06u/%S%S%s%s",
                      & tok -> alpha, num >> 10, & tok -> alpha, & tok -> digits,
-                     tok -> noqual ? ".noqual" : "",
+                     tok -> noqual ? xNoqual->addr : "",
                      tok -> vdbcache ? ".vdbcache" : "" );
         break;
     case algSRA_EBI:

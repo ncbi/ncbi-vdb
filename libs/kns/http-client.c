@@ -72,6 +72,15 @@ typedef struct KClientHttpStream KClientHttpStream;
 
 #define KDataBufferClear(buf) KDataBufferMakeBytes(buf, 0)
 
+enum
+{
+    _STAT_USR = 2,       /* normal user verbosity  */
+    _STAT_PWR,           /* power-user verbosity   */
+    _STAT_QA,            /* qa-level description   */
+    _STAT_PRG,           /* programmer description */
+    _STAT_GEEK           /* absurdly verbose       */
+};
+
 #if _DEBUGGING
 static
 bool KDataBufferContainsString ( const KDataBuffer *buf, const String *str )
@@ -340,7 +349,7 @@ rc_t KClientHttpProxyConnect ( KClientHttp * self, const String * hostname, uint
 {
     rc_t rc;
 
-    STATUS ( STAT_GEEK, "%s - extracting stream from socket\n", __func__ );
+    STATUS ( _STAT_GEEK, "%s - extracting stream from socket\n", __func__ );
     assert ( sock != NULL );
     rc = KSocketGetStream ( sock, & self -> sock );
     if ( rc == 0 )
@@ -350,15 +359,15 @@ rc_t KClientHttpProxyConnect ( KClientHttp * self, const String * hostname, uint
 
         KDataBuffer buffer;
 
-        STATUS ( STAT_GEEK, "%s - saving hostname and port\n", __func__ );
+        STATUS ( _STAT_GEEK, "%s - saving hostname and port\n", __func__ );
         hostname_save = self -> hostname;
         port_save = self -> port;
 
-        STATUS ( STAT_GEEK, "%s - saving hostname param\n", __func__ );
+        STATUS ( _STAT_GEEK, "%s - saving hostname param\n", __func__ );
         hostname_copy = * hostname;
 
         assert ( hostname != NULL );
-        STATUS ( STAT_GEEK, "%s - setting hostname and port to '%S:%u'\n", __func__, phostname, pport );
+        STATUS ( _STAT_GEEK, "%s - setting hostname and port to '%S:%u'\n", __func__, phostname, pport );
         self -> hostname = * phostname;
         self -> port = pport;
 
@@ -384,11 +393,11 @@ rc_t KClientHttpProxyConnect ( KClientHttp * self, const String * hostname, uint
                 timeout_t * ptm = NULL;
                 size_t size = buffer.elem_count - 1;
 
-                STATUS(STAT_QA, "%s - created proxy request '%.*s'\n", __func__,
+                STATUS(_STAT_QA, "%s - created proxy request '%.*s'\n", __func__,
                                     (uint32_t)size, (char*)buffer.base);
 
                 /* send request and receive a response */
-                STATUS(STAT_PRG, "%s - sending proxy request\n", __func__);
+                STATUS(_STAT_PRG, "%s - sending proxy request\n", __func__);
                 if (self->write_timeout >= 0) {
                     TimeoutInit(&tm, self->write_timeout);
                     ptm = &tm;
@@ -407,7 +416,7 @@ rc_t KClientHttpProxyConnect ( KClientHttp * self, const String * hostname, uint
 
                     assert(sent == size);
 
-                    STATUS(STAT_PRG, "%s - reading proxy response status line\n", __func__);
+                    STATUS(_STAT_PRG, "%s - reading proxy response status line\n", __func__);
                     if (self->read_timeout >= 0) {
                         TimeoutInit(&tm, self->read_timeout);
                         ptm = &tm;
@@ -429,7 +438,7 @@ rc_t KClientHttpProxyConnect ( KClientHttp * self, const String * hostname, uint
                         }
                         else
                         {
-                            STATUS(STAT_QA, "%s - read proxy response status line: %03u '%S'\n", __func__, status, &msg);
+                            STATUS(_STAT_QA, "%s - read proxy response status line: %03u '%S'\n", __func__, status, &msg);
                             do
                                 rc = KClientHttpGetLine(self, ptm);
                             while (self->line_valid != 0);
@@ -439,11 +448,11 @@ rc_t KClientHttpProxyConnect ( KClientHttp * self, const String * hostname, uint
             }
         }
 
-        STATUS ( STAT_GEEK, "%s - restoring hostname and port\n", __func__ );
+        STATUS ( _STAT_GEEK, "%s - restoring hostname and port\n", __func__ );
         self -> hostname = hostname_save;
         self -> port = port_save;
 
-        STATUS ( STAT_GEEK, "%s - releasing socket stream\n", __func__ );
+        STATUS ( _STAT_GEEK, "%s - releasing socket stream\n", __func__ );
         KStreamRelease ( self -> sock );
         self -> sock = NULL;
     }
@@ -471,7 +480,7 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
         INITED = true;
     }
 
-    STATUS ( STAT_QA, "%s - opening socket to %S:%u\n", __func__, aHostname, aPort );
+    STATUS ( _STAT_QA, "%s - opening socket to %S:%u\n", __func__, aHostname, aPort );
 
     assert ( self );
     mgr = self -> mgr;
@@ -539,11 +548,11 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
         rc_t r = KSocketGetLocalEndpoint ( sock, & self -> local_ep );
         if (PRINT_STAT) {
           if ( r == 0 )
-            STATUS ( STAT_USR, "%s - connected from '%s' to %S (%s)\n",
+            STATUS ( _STAT_USR, "%s - connected from '%s' to %S (%s)\n",
                                __func__, self -> local_ep . ip_address,
                                hostname, self -> ep . ip_address );
           else
-            STATUS ( STAT_USR, "%s - connected to %S (%s)\n",
+            STATUS ( _STAT_USR, "%s - connected to %S (%s)\n",
                                __func__, hostname, self -> ep . ip_address );
         }
 
@@ -551,7 +560,7 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
         {
             KTLSStream * tls_stream;
 
-            STATUS ( STAT_PRG,
+            STATUS ( _STAT_PRG,
                 ">>>>>>>>>>> %s - creating TLS wrapper on socket for '%S:%d'\n",
                 __func__, hostname, port );
             rc = KNSManagerMakeTLSStream ( mgr, & tls_stream, sock, aHostname );
@@ -577,7 +586,7 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
                 }
                 else
                 {
-                    STATUS ( STAT_PRG, "%s - retrying TLS wrapper on socket with proxy hostname\n", __func__ );
+                    STATUS ( _STAT_PRG, "%s - retrying TLS wrapper on socket with proxy hostname\n", __func__ );
                     rc = KNSManagerMakeTLSStream ( mgr, & tls_stream, sock, hostname );
                     if ( rc != 0 )
                         DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_TLS ), (
@@ -586,7 +595,7 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
                 }
             }
 
-            STATUS ( STAT_PRG,
+            STATUS ( _STAT_PRG,
                 "<<<<<<<<<<< %s - created TLS wrapper on socket for '%S:%d'\n",
                 __func__, hostname, port );
 
@@ -595,17 +604,17 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
             if ( rc == 0 )
             {
                 if (PRINT_STAT)
-                    STATUS ( STAT_USR, "%s - verifying CA cert\n", __func__ );
+                    STATUS ( _STAT_USR, "%s - verifying CA cert\n", __func__ );
                 rc = KTLSStreamVerifyCACert ( tls_stream );
                 if ( rc != 0 )
                 {
                     LOGERR ( klogErr, rc, "failed to verify CA cert" );
-                    STATUS ( STAT_QA, "%s - WARNING: failed to verify CA cert - %R\n", __func__, rc );
+                    STATUS ( _STAT_QA, "%s - WARNING: failed to verify CA cert - %R\n", __func__, rc );
                 }
 
                 if ( rc == 0 )
                 {
-                    STATUS ( STAT_PRG, "%s - extracting TLS wrapper as stream\n", __func__ );
+                    STATUS ( _STAT_PRG, "%s - extracting TLS wrapper as stream\n", __func__ );
                     rc = KTLSStreamGetStream ( tls_stream, & self -> sock );
                 }
 
@@ -614,14 +623,14 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
         }
         else
         {
-            STATUS ( STAT_PRG, "%s - extracting stream from socket\n", __func__ );
+            STATUS ( _STAT_PRG, "%s - extracting stream from socket\n", __func__ );
             rc = KSocketGetStream ( sock, & self -> sock );
             KSocketRelease ( sock );
         }
 
         if ( rc == 0 )
         {
-            STATUS ( STAT_PRG, "%s - setting port number - %d\n", __func__, aPort );
+            STATUS ( _STAT_PRG, "%s - setting port number - %d\n", __func__, aPort );
             self -> port = aPort;
             return 0;
         }

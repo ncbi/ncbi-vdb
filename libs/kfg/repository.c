@@ -1201,7 +1201,9 @@ rc_t KRepositoryMgrCategoryRepositories ( const KConfigNode *cat,
                 else if ( strcmp ( "protected", sub_name ) == 0 )
                     subcategory = krepProtectedSubCategory;
 
-                if ( subcategory == krepProtectedSubCategory ) {
+                if ( subcategory == krepProtectedSubCategory
+                    && category == krepUserCategory )
+                {
                     bool respect_protected = false;
                     KConfigReadBool(kfg, "/repository/user/respect-protected",
                         &respect_protected);

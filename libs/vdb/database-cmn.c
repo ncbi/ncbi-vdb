@@ -54,6 +54,7 @@
 
 #include <sysalloc.h>
 
+#include "../vfs/manager-priv.h" /* VFSManagerExtNoqual */
 #include "../vfs/path-priv.h"     /* VPath */
 #include "../vfs/resolver-priv.h" /* rcResolver */
 
@@ -1376,14 +1377,15 @@ static bool validRunFileName(const String * acc, const String * file) {
     int j = 0;
 
     const char fullQl[] = ".sra";
-    const char noQual[] = ".noqual";
+
+    const String * xNoqual = VFSManagerExtNoqual(NULL);
 
     const char * quality = NULL;
     VDBManagerGetQualityString(NULL, &quality);
     if (quality == NULL || quality[0] == '\0')
         quality = "RZ";
 
-    assert(acc && file);
+    assert(acc && file && xNoqual);
 
     /* Check according to user quality preferences. */
 
@@ -1402,7 +1404,7 @@ static bool validRunFileName(const String * acc, const String * file) {
         }
         else if (quality[j] == 'Z' && file->size == acc->size + 7) {
             if (string_cmp(file->addr + acc->size, file->size - acc->size,
-                noQual, sizeof noQual - 1, sizeof noQual - 1) == 0)
+                xNoqual->addr, xNoqual->size, xNoqual->size) == 0)
             {
                 return true;
             }
@@ -1437,8 +1439,7 @@ static bool validRunFileName(const String * acc, const String * file) {
                     }
                     if (quality[j] == 'Z' &&
                         string_cmp(file->addr + i, file->size - acc->size,
-                                   noQual, sizeof noQual - 1, sizeof noQual - 1
-                                  ) == 0)
+                            xNoqual->addr, xNoqual->size, xNoqual->size) == 0)
                     {
                         return true;
                     }

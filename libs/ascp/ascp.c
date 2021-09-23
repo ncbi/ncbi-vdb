@@ -492,7 +492,7 @@ static bool _SystemHelp(const char *command, bool status) {
     value = _SilentSystem("\"%s\" -h", command);
     if (value == 0) {
         if (status) {
-            STSMSG(STS_INFO, ("Using '%s'", command));
+            STSMSG(STAT_PWR, ("Using '%s'", command));
         }
         return true;
     }
