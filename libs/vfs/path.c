@@ -539,6 +539,13 @@ rc_t VPathParseInt ( VPath * self, char * uri, size_t uri_size,
     size_t vdbcache_ext_size = sizeof(vdbcache_ext)
                                                   / sizeof(vdbcache_ext[0]) - 1;
 
+    const String * xSra     = VFSManagerExtSra     (NULL);
+    const String * xNoqual = VFSManagerExtNoqualOld(NULL);
+    const String * xSraLite = VFSManagerExtNoqual  (NULL);
+    VQuality q = eQualLast;
+
+    assert(xSra && xNoqual && xSraLite);
+
     /* remove pileup extension before parsing,
        so that it won't change parsing results */
     if ( uri_size > pileup_ext_size && memcmp
@@ -567,6 +574,24 @@ rc_t VPathParseInt ( VPath * self, char * uri, size_t uri_size,
         == 0)
     {
         vdbcache_ext_present = true;
+    }
+    /* detect sra extensions */
+    else if (uri_size > xSra->size && memcmp
+        (&uri[uri_size - xSra->size], xSra->addr, xSra->size) == 0)
+    {
+        q = eQualFull;
+    }
+    else if (uri_size > xNoqual->size && memcmp
+        (&uri[uri_size - xNoqual->size], xNoqual->addr, xNoqual->size)
+        == 0)
+    {
+        q = eQualNo;
+    }
+    else if (uri_size > xSraLite->size && memcmp
+        (&uri[uri_size - xSraLite->size], xSraLite->addr, xSraLite->size)
+        == 0)
+    {
+        q = eQualNo;
     }
 
     for ( i = anchor = 0, total = count = 0; i < uri_size; ++ total, ++ count, i += bytes )
@@ -2073,6 +2098,12 @@ rc_t VPathParseInt ( VPath * self, char * uri, size_t uri_size,
         break;
     }
 
+    if ((self->path_type == vpFullPath || self->path_type == vpRelPath)
+        && q != eQualLast)
+    {
+        VPathSetQuality(self, q);
+    }
+
     return 0;
 }
 
@@ -2120,9 +2151,6 @@ rc_t VPathMakeFromVText ( VPath ** ppath, const char * path_fmt, va_list args )
 
             /* parse into portions */
             rc = VPathParse ( path, buffer . base, ( size_t ) buffer . elem_count - 1 );
-
-            if ( rc == 0 )
-                rc = VPathSetQuality ( path, eQualLast );
 
             if ( rc == 0 )
             {
