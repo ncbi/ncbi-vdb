@@ -38,7 +38,7 @@ typedef struct ServicesCache ServicesCache;
 /* Make */
 rc_t ServicesCacheMake(ServicesCache ** self, const struct VFSManager * vfs,
     const struct KNSManager * kns, const struct KConfig * kfg,
-    int64_t projectId, VQuality quality);
+    int64_t projectId, const char * quality);
 
 /* Whack */
 rc_t ServicesCacheWhack(ServicesCache * self);

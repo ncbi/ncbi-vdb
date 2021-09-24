@@ -63,6 +63,7 @@ public:
         REQUIRE_RC(KNSManagerSetAdCaching(mgr, true));
         KService * service = NULL;
         REQUIRE_RC(KServiceMakeWithMgr(&service, NULL, mgr, NULL));
+        REQUIRE_RC(KServiceResolve(service, false, true));
         REQUIRE_RC(KServiceAddId(service, acc));
         REQUIRE_RC(KServiceSetFormat(service, format));
         if (ngc != NULL)

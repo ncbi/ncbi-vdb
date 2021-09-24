@@ -66,6 +66,13 @@ rc_t CC KService1NameWithVersion ( const struct KNSManager * mgr,
     const char * ticket, VRemoteProtocols protocols,
     const struct VPath ** remote, const struct VPath ** mapping,
     bool refseq_ctx, const char * names_version, bool aProtected );
+VFS_EXTERN
+rc_t CC KService1NameWithQuality(const struct KNSManager * mgr,
+    const char * cgi_url, const char * acc, size_t acc_sz,
+    const char * ticket, VRemoteProtocols protocols,
+    const struct VPath ** remote, const struct VPath ** mapping,
+    bool refseq_ctx, const char * names_version, bool aProtected,
+    const char * quality);
 
 
 /******************************** KSrvResponse ********************************/
@@ -129,11 +136,12 @@ const KSrvResponse * KSrvRunIteratorGetResponse(
 rc_t KServiceResolveName ( struct KService * service, int resolve );
 
 /* Set quality type in service request */
-rc_t KServiceSetQuality(KService * self, VQuality quality);
-rc_t KServiceGetQuality(const KService * self, int32_t * quality);
+rc_t KServiceSetQuality(KService * self, const char * quality);
 
-rc_t KServiceResolve(KService * self, bool local, bool remote);
 bool KServiceSkipLocal(const KService * self);
+bool KServiceSkipRemote(const KService * self);
+
+rc_t KServiceInitQuality(KService * self);
 
 /* call to set VResolverCacheEnable to vrAlwaysEnable
    to simulate prefetch mode
@@ -149,9 +157,12 @@ rc_t KServiceNamesExecute ( struct KService * self, VRemoteProtocols protocols,
 
 rc_t KServiceNamesExecuteExtImpl ( struct KService * self,
     VRemoteProtocols protocols, const char * cgi, const char * version,
-    const struct KSrvResponse ** response, const char * expected );
+    const struct KSrvResponse ** response, const char * expected, int idx );
 
 /***************** Interface services.c -> remote-services.c  *****************/
+rc_t KServiceInitNamesRequestWithVersion(KService * self,
+    VRemoteProtocols protocols, const char * cgi, const char * version,
+    bool aProtected, bool adjustVersion, int idx);
 rc_t KServiceGetResponse(const KService * self, const KSrvResponse ** response);
 rc_t KServiceGetConfig ( struct KService * self, const struct KConfig ** kfg);
 rc_t KServiceGetVFSManager ( const KService * self,
@@ -179,6 +190,8 @@ rc_t KServiceAddLocalAndCacheToResponse(KService * self,
 /* don't release cache */
 rc_t KServiceGetServiceCache(KService * self, struct ServicesCache ** cache);
 
+rc_t KServiceHasQuery(const KService * self);
+bool KServiceAnyFormatRequested(const KService * self);
 /******************************** TESTS ***************************************/
 typedef struct {
     const char * id;

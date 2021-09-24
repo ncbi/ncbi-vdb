@@ -152,6 +152,12 @@ bool CloudMgrWithinAzure ( const CloudMgr * self );
 
 #endif
 
+bool CloudGetCachedComputeEnvironmentToken ( const Cloud * self,
+    struct String const ** ce_token);
+rc_t CloudSetCachedComputeEnvironmentToken ( const Cloud * self,
+    const String * ce_token );
+
+
 #ifdef __cplusplus
 }
 #endif

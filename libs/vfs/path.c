@@ -26,12 +26,15 @@
 
 #include <vfs/extern.h>
 
-#include "path-priv.h"
+#include <kfs/directory.h>
 
-#include <vfs/manager.h>
-#include <vfs/resolver.h>
 #include <klib/printf.h>
 #include <klib/rc.h>
+
+#include <vfs/manager.h>
+#include <vfs/manager-priv.h>
+#include <vfs/path-priv.h>
+#include <vfs/resolver.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -40,6 +43,9 @@
 #include <assert.h>
 
 #include <sysalloc.h>
+
+#include "manager-priv.h" /* VFSManagerExtNoqual */
+#include "path-priv.h"
 
 #define MAX_ACCESSION_LEN 20
 #define TREAT_URI_RESERVED_AS_FILENAME 0
@@ -58,6 +64,7 @@ rc_t VPathWhack ( VPath * self )
     rc_t rc = VPathRelease(self->vdbcache);
 
     StringWhack(self->accOfParentDb);
+    StringWhack(self->dirOfParentDb);
 
     KDataBufferWhack ( & self -> data );
     KRefcountWhack ( & self -> refcount, "VPath" );
@@ -529,10 +536,14 @@ rc_t VPathParseInt ( VPath * self, char * uri, size_t uri_size,
 
     bool vdbcache_ext_present = false;
     const char vdbcache_ext[] = ".vdbcache";
-    size_t vdbcache_ext_size = sizeof(vdbcache_ext) / sizeof(vdbcache_ext[0]) - 1;
+    size_t vdbcache_ext_size = sizeof(vdbcache_ext)
+                                                  / sizeof(vdbcache_ext[0]) - 1;
 
-    /* remove pileup extension before parsing, so that it won't change parsing results */
-    if ( uri_size > pileup_ext_size && memcmp(&uri[uri_size - pileup_ext_size], pileup_ext, pileup_ext_size) == 0)
+    /* remove pileup extension before parsing,
+       so that it won't change parsing results */
+    if ( uri_size > pileup_ext_size && memcmp
+        (&uri[uri_size - pileup_ext_size], pileup_ext, pileup_ext_size)
+        == 0)
     {
         uri_size -= pileup_ext_size;
         uri[uri_size] = '\0';
@@ -542,16 +553,18 @@ rc_t VPathParseInt ( VPath * self, char * uri, size_t uri_size,
     /* remove realign extension before parsing,
        so that it won't change parsing results */
     else if (uri_size > realign_ext_size && memcmp
-        (&uri[uri_size - realign_ext_size], realign_ext, realign_ext_size) == 0)
+        (&uri[uri_size - realign_ext_size], realign_ext, realign_ext_size)
+        == 0)
     {
         uri_size -= realign_ext_size;
         uri[uri_size] = '\0';
         realign_ext_present = true;
     }
 
-    /* detect vdbcahde extension */
+    /* detect vdbcache extension */
     else if (uri_size > vdbcache_ext_size && memcmp
-        (&uri[uri_size - vdbcache_ext_size], vdbcache_ext, vdbcache_ext_size) == 0)
+        (&uri[uri_size - vdbcache_ext_size], vdbcache_ext, vdbcache_ext_size)
+        == 0)
     {
         vdbcache_ext_present = true;
     }
@@ -2356,6 +2369,11 @@ LIB_EXPORT rc_t CC VFSManagerExtractAccessionOrOID ( const VFSManager * self,
             const char * end = path . addr + path . size;
 
             bool isRun = false;
+            VQuality quality = eQualLast;
+
+            const String * xNoqual = VFSManagerExtNoqual(NULL);
+#define NOQUAL 7
+            assert(xNoqual && xNoqual->size == NOQUAL);
 
             switch ( orig -> path_type )
             {
@@ -2414,6 +2432,15 @@ LIB_EXPORT rc_t CC VFSManagerExtractAccessionOrOID ( const VFSManager * self,
                          strcase_cmp ( ".wgs", 4, sep, 4, 4 ) == 0 )
                     {
                         end = sep;
+                        quality = eQualFull;
+                        continue;
+                    }
+                case NOQUAL:
+                    if ( strcase_cmp (
+                        xNoqual->addr, NOQUAL, sep, NOQUAL, NOQUAL ) == 0 )
+                    {
+                        end = sep;
+                        quality = eQualNo;
                         continue;
                     }
                 case 9:
@@ -2432,13 +2459,21 @@ LIB_EXPORT rc_t CC VFSManagerExtractAccessionOrOID ( const VFSManager * self,
             rc = VPathMakeFromText ( acc_or_oid, "%.*s", ( uint32_t ) ( end - start ), start );
             if ( rc == 0 )
             {
-                const VPath * vpath = * acc_or_oid;
-                if ( VPathIsAccessionOrOID ( vpath ) )
-                    return 0;
+                const VPath * vpath = NULL;
+                assert(acc_or_oid);
+                vpath = *acc_or_oid;
 
-                VPathRelease ( vpath );
+                rc = VPathSetQuality ( *acc_or_oid, quality );
 
-                rc = RC ( rcVFS, rcPath, rcConstructing, rcParam, rcIncorrect );
+                if ( rc == 0 ) {
+                    if ( VPathIsAccessionOrOID ( vpath ) )
+                        return 0;
+
+                    VPathRelease ( vpath );
+
+                    rc = RC (
+                        rcVFS, rcPath, rcConstructing, rcParam, rcIncorrect );
+                }
             }
         }
 
@@ -3783,10 +3818,6 @@ LIB_EXPORT rc_t CC VFSManagerMakeOidPath ( const VFSManager * self,
              HACK O' MATIC
  */
 
-#include <vfs/path-priv.h>
-#include <vfs/manager-priv.h>
-#include <kfs/directory.h>
-
 /* MakeDirectoryRelative
  *  apparently the idea was to interpret "posix_path" against
  *  "dir" to come up with a stand-alone path that could be used
@@ -4286,6 +4317,7 @@ rc_t VPathAttachVdbcache(VPath * self, const VPath * vdbcache) {
             if (rc == 0) {
                 rc = VPathRelease(self->vdbcache);
                 self->vdbcache = vdbcache;
+                ((VPath*)vdbcache)->vdbcacheChecked = true;
             }
         }
 
@@ -4549,11 +4581,17 @@ rc_t VPathEqual ( const VPath * l, const VPath * r, int * notequal ) {
     return VPathClose ( l, r, notequal, 0 );
 }
 
-rc_t VPathSetAccOfParentDb(VPath * self, const String * acc) {
+rc_t VPathSetAccOfParentDb(
+    VPath * self, const String * acc, const String * dir)
+{
     rc_t rc = 0;
 
-    if (self != NULL && acc != NULL)
-        rc = StringCopy(&self->accOfParentDb, acc);
+    if (self != NULL) {
+        if (acc != NULL)
+            rc = StringCopy(&self->accOfParentDb, acc);
+        if (dir != NULL)
+            rc = StringCopy(&self->dirOfParentDb, dir);
+    }
 
     return rc;
 }
@@ -4571,4 +4609,3 @@ LIB_EXPORT VQuality CC VPathGetQuality(const VPath * self) {
     else
         return self->quality;
 }
-

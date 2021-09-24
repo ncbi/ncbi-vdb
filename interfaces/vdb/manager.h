@@ -227,6 +227,13 @@ VDB_EXTERN rc_t CC VDBManagerDeleteCacheOlderThan ( const VDBManager * self,
     uint32_t days );
 
 
+/* PreferFullQuality
+ * PreferZeroQuality
+ * set quality preferences
+ */
+VDB_EXTERN rc_t CC VDBManagerPreferFullQuality(VDBManager * self);
+LIB_EXPORT rc_t CC VDBManagerPreferZeroQuality(VDBManager * self);
+
 #ifdef __cplusplus
 }
 #endif

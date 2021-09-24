@@ -49,6 +49,8 @@ extern "C" {
 #define ENV_VAR_LOG_HTTP_RETRY "NCBI_VDB_LOG_HTTP_RETRY"
 #define ENV_VAR_SESSION_ID "VDB_SESSION_ID"
 
+#define ENV_VAR_QUALITY_PREFERENCE "NCBI_VDB_QUALITY"
+
 
 #define SDL_CGI "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve"
 

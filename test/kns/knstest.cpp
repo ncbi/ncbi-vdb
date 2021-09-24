@@ -28,14 +28,19 @@
 * Unit tests for KNS interfaces
 */
 
-#include <klib/base64.h>
-#include <klib/text.h>
-
 #include <kapp/args.h> /* ArgsMakeAndHandle */
+
+#include <kfg/config.h>
+
+#include <klib/base64.h>
+#include <klib/debug.h>
+#include <klib/text.h>
 
 #include <thread>
 
 #include "KNSManagerFixture.hpp"
+
+#include "../../libs/kns/kns_manager-singleton.h" // KNSManagerUseSingleton
 
 static rc_t argsHandler(int argc, char* argv[]);
 TEST_SUITE_WITH_ARGS_HANDLER(KnsTestSuite, argsHandler);
@@ -276,10 +281,6 @@ static rc_t argsHandler(int argc, char * argv[]) {
 extern "C"
 {
 
-#include <kapp/args.h>
-#include <kfg/config.h>
-#include <klib/debug.h>
-
 ver_t CC KAppVersion ( void )
 {
     return 0x1000000;
@@ -297,9 +298,12 @@ const char UsageDefaultName[] = "test-kns";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
+    // make sure to use singleton, otherwise some tests fail
+    KNSManagerUseSingleton(true);
+
     KConfigDisableUserSettings();
-    rc_t rc=KnsTestSuite(argc, argv);
-    return rc;
+
+    return KnsTestSuite(argc, argv);
 }
 
 }

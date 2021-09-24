@@ -180,24 +180,19 @@ int32_t CalculateTotalReadWait(const KStableHttpFile * self,
 
     *ms = self->mgr->http_read_timeout;
 
-    if (!self->reliable)
-        /* There is no retry for not reliable files.
-           Max wait timeout for regular HTTP file is http_read_timeout */
+    /* Max wait timeout for is
+        maxTotalWaitForReliableURLs_ms : see RetrierAgain() */
+    if (self->mgr->http_read_timeout < 0)
         return self->mgr->http_read_timeout;
+    else if (self->mgr->maxTotalWaitForReliableURLs_ms < 0)
+        return self->mgr->maxTotalWaitForReliableURLs_ms;
+    else if (self->mgr->http_read_timeout >
+        self->mgr->maxTotalWaitForReliableURLs_ms)
+    {
+        return self->mgr->http_read_timeout;
+    }
     else
-        /* Max wait timeout for reliable files is
-           maxTotalWaitForReliableURLs_ms : see RetrierAgain() */
-        if (self->mgr->http_read_timeout < 0)
-            return self->mgr->http_read_timeout;
-        else if (self->mgr->maxTotalWaitForReliableURLs_ms < 0)
-            return self->mgr->maxTotalWaitForReliableURLs_ms;
-        else if (self->mgr->http_read_timeout >
-            self->mgr->maxTotalWaitForReliableURLs_ms)
-        {
-            return self->mgr->http_read_timeout;
-        }
-        else
-            return self->mgr->maxTotalWaitForReliableURLs_ms;
+        return self->mgr->maxTotalWaitForReliableURLs_ms;
 }
 
 
@@ -385,7 +380,8 @@ rc_t CC KStblHttpFileSetSize(KStableHttpFile *self, uint64_t size)
 
 static
 rc_t CC KStblHttpFileTimedRead(const KStableHttpFile *self, uint64_t pos,
-    void *buffer, size_t bsize, size_t *num_read, struct timeout_t *tm)
+    void *buffer, size_t bsize, size_t *num_read,
+    struct timeout_t *tm)
 {
     quitting_t quitting = self->quitting;
 

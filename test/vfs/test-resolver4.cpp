@@ -80,11 +80,11 @@ Create a new KService object for each run! */
 
         const VPath * local = NULL;
         rc_t lRc = KSrvRespFileGetLocal(file, &local);
-        if (lRc != 0); // we cannot get local path to this accession
+        // if (lRc != 0); we cannot get local path to this accession
 
         const VPath * cache = NULL;
         rc_t cRc = KSrvRespFileGetCache(file, &cache);
-        if (cRc != 0); // we cannot get cache location of accession
+        // if (cRc != 0); we cannot get cache location of accession
 
         KSrvRespFileIterator * fi = NULL;
         rc = KSrvRespFileMakeIterator(file, &fi);

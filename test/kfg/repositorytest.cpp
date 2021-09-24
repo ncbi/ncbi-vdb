@@ -155,11 +155,11 @@ FIXTURE_TEST_CASE(Mgr_UserRepositories, RepositoryFixture)
     UpdateNode("/repository/user/main/repo1/", "");
 
     REQUIRE_RC(KRepositoryMgrUserRepositories(mgr, &repos));
-    REQUIRE_EQ(VectorLength(&repos), (uint32_t)6);
+    REQUIRE_EQ(VectorLength(&repos), (uint32_t)4);
     
     // verify the values and that the vector has been sorted on: subcategory(main<aux<protected), name
     REQUIRE(ValidateRepository(( const KRepository* ) VectorGet ( & repos, 0 ), krepUserCategory, (uint32_t)krepMainSubCategory, "repo1"));
-    REQUIRE(ValidateRepository(( const KRepository* ) VectorGet ( & repos, 5 ), krepUserCategory, (uint32_t)krepProtectedSubCategory, "repo5"));
+    REQUIRE(ValidateRepository(( const KRepository* ) VectorGet ( & repos, 3 ), krepUserCategory, (uint32_t)krepAuxSubCategory, "repo6"));
 }
 
 FIXTURE_TEST_CASE(Mgr_SiteRepositories, RepositoryFixture)
@@ -178,7 +178,7 @@ FIXTURE_TEST_CASE(Mgr_SiteRepositories, RepositoryFixture)
     
     // verify the values and that the vector has been sorted on: subcategory(main<aux<protected), name
     REQUIRE(ValidateRepository(( const KRepository* ) VectorGet ( & repos, 0 ), krepSiteCategory, (uint32_t)krepMainSubCategory, "repo1"));
-    REQUIRE(ValidateRepository(( const KRepository* ) VectorGet ( & repos, 5 ), krepSiteCategory, (uint32_t)krepProtectedSubCategory, "repo5"));
+    REQUIRE(ValidateRepository(( const KRepository* ) VectorGet ( & repos, 3 ), krepSiteCategory, (uint32_t)krepAuxSubCategory, "repo6"));
 }
 
 FIXTURE_TEST_CASE(Mgr_RemoteRepositories, RepositoryFixture)
@@ -197,7 +197,7 @@ FIXTURE_TEST_CASE(Mgr_RemoteRepositories, RepositoryFixture)
     
     // verify the values and that the vector has been sorted on: subcategory(main<aux<protected), name
     REQUIRE(ValidateRepository(( const KRepository* ) VectorGet ( & repos, 0 ), krepRemoteCategory, (uint32_t)krepMainSubCategory, "repo1"));
-    REQUIRE(ValidateRepository(( const KRepository* ) VectorGet ( & repos, 5 ), krepRemoteCategory, (uint32_t)krepProtectedSubCategory, "repo5"));
+    REQUIRE(ValidateRepository(( const KRepository* ) VectorGet ( & repos, 3 ), krepRemoteCategory, (uint32_t)krepAuxSubCategory, "repo6"));
 }
 
 FIXTURE_TEST_CASE(Mgr_GetProtectedRepository_OldSpelling, RepositoryFixture)
@@ -208,8 +208,8 @@ FIXTURE_TEST_CASE(Mgr_GetProtectedRepository_OldSpelling, RepositoryFixture)
     UpdateNode("/repository/site/protected/dbGap-321/", "");
     UpdateNode("/repository/user/protected/dbGap-321/", "");
     
-    REQUIRE_RC(KRepositoryMgrGetProtectedRepository(mgr, 321, &repo));
-    REQUIRE(ValidateRepository(repo, krepUserCategory, (uint32_t)krepProtectedSubCategory, "dbGap-321"));
+    REQUIRE_RC_FAIL(KRepositoryMgrGetProtectedRepository(mgr, 321, &repo));
+//  REQUIRE(ValidateRepository(repo, krepUserCategory, (uint32_t)krepProtectedSubCategory, "dbGap-321"));
 }
 FIXTURE_TEST_CASE(Mgr_GetProtectedRepository, RepositoryFixture)
 {
@@ -219,8 +219,8 @@ FIXTURE_TEST_CASE(Mgr_GetProtectedRepository, RepositoryFixture)
     UpdateNode("/repository/site/protected/dbGaP-321/", "");
     UpdateNode("/repository/user/protected/dbGaP-321/", "");
     
-    REQUIRE_RC(KRepositoryMgrGetProtectedRepository(mgr, 321, &repo));
-    REQUIRE(ValidateRepository(repo, krepUserCategory, (uint32_t)krepProtectedSubCategory, "dbGaP-321"));
+    REQUIRE_RC_FAIL(KRepositoryMgrGetProtectedRepository(mgr, 321, &repo));
+//  REQUIRE(ValidateRepository(repo, krepUserCategory, (uint32_t)krepProtectedSubCategory, "dbGaP-321"));
 }
 
 //TODO: KRepositoryMgrCurrentProtectedRepository

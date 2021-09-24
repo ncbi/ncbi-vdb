@@ -54,6 +54,7 @@
 
 #include <sysalloc.h>
 
+#include "../vfs/manager-priv.h" /* VFSManagerExtNoqual */
 #include "../vfs/path-priv.h"     /* VPath */
 #include "../vfs/resolver-priv.h" /* rcResolver */
 
@@ -479,13 +480,19 @@ static rc_t DBManagerOpenVdbcache(const VDBManager *self,
                 self, &vdbcache, schema, clocal); /* vdbcache DB */
             if (rc2 != 0)
             {   /* local vdbcache db does not exist */
+                VPath * acc = NULL;
                 rc2 = 0;
                 if (!is_accession)
                 {
-                    VPath * acc;
                     rc2 = VFSManagerExtractAccessionOrOID(vfs, &acc, orig);
                     if (rc2 == 0)
                     {
+                        VResolver* r = (VResolver*)resolver;
+                        VQuality q = VPathGetQuality(acc);
+                        if (q == eQualNo)
+                            rc2 = VResolverSetQuality(r, "Z");
+                        else if (q == eQualFull)
+                            rc2 = VResolverSetQuality(r, "R");
                         orig = acc;
                     }
                 }
@@ -506,6 +513,7 @@ static rc_t DBManagerOpenVdbcache(const VDBManager *self,
                     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
                 (">>>>>>>>>>>>>> calling VResolverQuery to locate vdbcache..."
                             "\n"));
+                    ((VPath*)orig)->quality = plocal->quality;
                     rc2 = VResolverQuery(
                         resolver, 0, orig, NULL, premote, pcache);
                     assert((rc2 == 0) ||
@@ -514,7 +522,7 @@ static rc_t DBManagerOpenVdbcache(const VDBManager *self,
                     /* Here we are restoring log level
                      */
                     KLogLevelSet(lvl);
-                    VPathRelease(orig);
+                    VPathRelease(acc);
                 }
             }
         }
@@ -663,7 +671,7 @@ static rc_t VDBManagerOpenDBReadVPathImpl ( const VDBManager *self,
                                     if ( openVdbcache ) {
                                         DBGMSG(DBG_VFS,
                                             DBG_FLAG(DBG_VFS_SERVICE),
-                                            ("VDatabase is CSRA: "
+                           ("VDBManagerOpenDBReadVPathImpl: VDatabase is CSRA: "
                                                 "searching vdbcache...\n"));
                                         DBManagerOpenVdbcache(self, vfs, db,
                                             schema, orig, is_accession,
@@ -673,7 +681,7 @@ static rc_t VDBManagerOpenDBReadVPathImpl ( const VDBManager *self,
                                     else {
                                         DBGMSG(DBG_VFS,
                                             DBG_FLAG(DBG_VFS_SERVICE),
-                                            ("VDatabase is CSRA: "
+                           ("VDBManagerOpenDBReadVPathImpl: VDatabase is CSRA: "
                                                 "skip searching vdbcache\n"));
                                     }
                                 }
@@ -1365,75 +1373,90 @@ LIB_EXPORT bool CC VDatabaseIsCSRA ( const VDatabase *self )
     return false;
 }
 
-static bool validName(const String * acc, const String * file) {
-    assert(acc && file);
-    const char ext[] = ".sra";
-    const char next[] = ".noqual.sra";
-    if (file->size == acc->size + 4) {
-        if (string_cmp(file->addr, file->size,
-            acc->addr, acc->size, acc->len) == 0)
-        {
-            if (string_cmp(file->addr + acc->size, file->size - acc->size,
-                ext, sizeof ext - 1, sizeof ext - 1) == 0)
+static bool validRunFileName(const String * acc, const String * file) {
+    int j = 0;
+
+    const char fullQl[] = ".sra";
+
+    const String * xNoqual = VFSManagerExtNoqual(NULL);
+
+    const char * quality = NULL;
+    VDBManagerGetQualityString(NULL, &quality);
+    if (quality == NULL || quality[0] == '\0')
+        quality = "RZ";
+
+    assert(acc && file && xNoqual);
+
+    /* Check according to user quality preferences. */
+
+    for (j = 0; quality[j] != '\0'; ++j) {
+        if (quality[j] == 'R' && file->size == acc->size + 4) {
+            if (string_cmp(file->addr, file->size,
+                acc->addr, acc->size, acc->len) == 0)
             {
-                return true;
-            }
-        }
-        return false;
-    }
-    else if (file->size == acc->size + 4 + 7) {
-        if (string_cmp(file->addr, file->size,
-            acc->addr, acc->size, acc->len) == 0)
-        {
-            if (string_cmp(file->addr + acc->size, file->size - acc->size,
-                next, sizeof next - 1, sizeof next - 1) == 0)
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-    else {
-        if (string_cmp(file->addr, file->size,
-            acc->addr, acc->size, acc->len) == 0)
-        {
-            const char sfx[] = "_dbGaP-";
-            if (string_cmp(file->addr + acc->size, sizeof sfx - 1,
-                sfx, sizeof sfx - 1, sizeof sfx - 1) == 0)
-            {
-                size_t i = 0;
-                for (i = acc->size + sizeof sfx - 1;
-                    i < file->size; ++i)
+                if (string_cmp(file->addr + acc->size, file->size - acc->size,
+                    fullQl, sizeof fullQl - 1, sizeof fullQl - 1) == 0)
                 {
-                    char c = file->addr[i];
-                    if (c < '0' || c > '9') {
-                        if (c == '.')
-                            break;
-                        else
-                            return false;
+                    return true;
+                }
+            }
+            return false;
+        }
+        else if (quality[j] == 'Z' && file->size == acc->size + 7) {
+            if (string_cmp(file->addr + acc->size, file->size - acc->size,
+                xNoqual->addr, xNoqual->size, xNoqual->size) == 0)
+            {
+                return true;
+            }
+            return false;
+        }
+        else {
+            if (string_cmp(file->addr, file->size,
+                acc->addr, acc->size, acc->len) == 0)
+            {
+                const char sfx[] = "_dbGaP-";
+                if (string_cmp(file->addr + acc->size, sizeof sfx - 1,
+                    sfx, sizeof sfx - 1, sizeof sfx - 1) == 0)
+                {
+                    size_t i = 0;
+                    for (i = acc->size + sizeof sfx - 1;
+                        i < file->size; ++i)
+                    {
+                        char c = file->addr[i];
+                        if (c < '0' || c > '9') {
+                            if (c == '.')
+                                break;
+                            else
+                                return false;
+                        }
+                    }
+                    if (quality[j] == 'R' &&
+                        string_cmp(file->addr + i, file->size - acc->size,
+                                   fullQl, sizeof fullQl - 1, sizeof fullQl - 1
+                                  ) == 0)
+                    {
+                        return true;
+                    }
+                    if (quality[j] == 'Z' &&
+                        string_cmp(file->addr + i, file->size - acc->size,
+                            xNoqual->addr, xNoqual->size, xNoqual->size) == 0)
+                    {
+                        return true;
                     }
                 }
-                if (string_cmp(file->addr + i, file->size - acc->size,
-                    ext, sizeof ext - 1, sizeof ext - 1) == 0)
-                {
-                    return true;
-                }
-                if (string_cmp(file->addr + i, file->size - acc->size,
-                    next, sizeof next - 1, sizeof next - 1) == 0)
-                {
-                    return true;
-                }
             }
+            return false;
         }
-        return false;
     }
+
+    return false;
 }
 
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 && !rc) { rc = rc2; } obj = NULL; } while (false)
 
-LIB_EXPORT
-rc_t CC VDatabaseGetAccession(const VDatabase * self, const String ** aAcc)
+LIB_EXPORT rc_t CC VDatabaseGetAccession(const VDatabase * self,
+    const String ** aAcc, const String ** aPath)
 {
     rc_t rc = 0;
 
@@ -1468,7 +1491,10 @@ rc_t CC VDatabaseGetAccession(const VDatabase * self, const String ** aAcc)
             const char * start = NULL;
             uint32_t accLen = 0;
             String acc, file;
+            String parent; /* dir of parent file */
+            StringInit(&parent, path, l, l);
 
+            l = pathLen - fileLen - 1;
             start = string_rchr(path, l, '/'); /* find the second last '/' */
             if (start == NULL)
                 start = path;
@@ -1479,8 +1505,11 @@ rc_t CC VDatabaseGetAccession(const VDatabase * self, const String ** aAcc)
             StringInit(&acc, start, accLen, accLen);
             StringInit(&file, last + 1, fileLen, fileLen);
 
-            if (validName(&acc, &file))
+            if (validRunFileName(&acc, &file)) {
                 rc = StringCopy(aAcc, &acc);
+                if (rc == 0 && aPath != NULL)
+                    rc = StringCopy(aPath, &parent);
+            }
         }
     }
 

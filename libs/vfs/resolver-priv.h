@@ -231,7 +231,8 @@ rc_t VResolverAlgParseResolverCGIResponse_3_0(const char *start,
 rc_t VResolverAlgRemoteProtectedResolve( const struct VResolverAlg *self,
     const struct KNSManager *kns, VRemoteProtocols protocols,
     const struct String *acc, const struct VPath **path,
-    const struct VPath **mapping, bool legacy_wgs_refseq, const char * version);
+    const struct VPath **mapping, bool legacy_wgs_refseq,
+    const char * version, const char * quality);
 
 /** get projectId ( valid for protected user repository ) */
 rc_t VResolverGetProjectId ( const VResolver * self, uint32_t * projectId );
@@ -261,6 +262,8 @@ rc_t VResolverQueryForCache(const VResolver * self, VRemoteProtocols protocols,
 /* version of name service protocol */
 rc_t VResolverSetVersion ( VResolver *self, const char * version );
 
+rc_t VResolverResetKNSManager(VResolver * self, const struct KNSManager * mgr);
+
 /* resolve oid->file mapping inside of VFS
   resolve (resolve oid<->name mapping in resolver):
    0: default VResolver's behavior
@@ -271,6 +274,8 @@ rc_t VResolverResolveName ( VResolver *self, int resolve );
 bool VResolverResolveToAd(const VResolver *self);
 
 VResolverEnableState VResolverGetRemoteEnable();
+
+rc_t VResolverSetQuality(VResolver * self, const char * quality);
 
 /*rc_t VFSManagerMakeDbgapResolver(const struct VFSManager * self,
     VResolver ** new_resolver, const struct KConfig * cfg,
@@ -286,8 +291,8 @@ void KConfigReadRemoteProtocols ( struct KConfig const * self, VRemoteProtocols 
 
 VResolverAppID get_accession_app(const String * accession, bool refseq_ctx,
     struct VResolverAccToken *tok, bool *legacy_wgs_refseq,
-    bool resolveAllAccToCache, bool * forDirAdjusted,
-    const String * parentAcc, int64_t projectId);
+    bool resolveAllAccToCache, bool * forDirAdjusted, const String * parentAcc,
+    const String * parentPath, int64_t projectId, bool noqual);
 
 void LogNamesServiceErrorsInit(bool enabled);
 void LogNamesServiceErrorsReset();

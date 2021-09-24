@@ -76,13 +76,14 @@ static VPath *makePath(VDBManager const *mgr, unsigned length, char const *acces
     return result;
 }
 
-static String const *getContainer(VTable const *const forTable)
+static String const *getContainer(VTable const *const forTable,
+    const String ** path)
 {
     VDatabase const *db = NULL;
     rc_t rc = VTableOpenParentRead(forTable, &db);
     if (rc == 0) {
         String const *container = NULL;
-        rc = VDatabaseGetAccession(db, &container);
+        rc = VDatabaseGetAccession(db, &container, path);
         VDatabaseRelease(db);
         if (rc == 0)
             return container;
@@ -94,9 +95,11 @@ static VPath const *getURL(VDBManager const *mgr, unsigned length, char const *a
 {
     VPath * const result = makePath(mgr, length, accession);
     if (result) {
-        String const * const container = getContainer(forTable);
-        rc_t const rc = VPathSetAccOfParentDb(result, container);
+        String const * path = NULL;
+        String const * const container = getContainer(forTable, &path);
+        rc_t const rc = VPathSetAccOfParentDb(result, container, path);
         StringWhack(container);
+        StringWhack(path);
         if (rc == 0)
             return result;
         VPathRelease(result);

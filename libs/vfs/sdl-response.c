@@ -56,6 +56,7 @@ static void DataClone(const Data * self, Data * clone) {
         return;
 
     clone->acc = self->acc;
+    clone->accession = self->accession;
     clone->bundle = self->bundle;
     clone->ceRequired = self->ceRequired;
     clone->cls = self->cls; /* itemClass */
@@ -69,6 +70,7 @@ static void DataClone(const Data * self, Data * clone) {
     clone->mod = self->mod; /* modDate */
     clone->modificationDate = self->modificationDate;
     clone->name = self->name;
+    clone->noqual = self->noqual;
     clone->object = self->object;
     clone->payRequired = self->payRequired;
     clone->qual = self->qual; /* hasOrigQuality */
@@ -86,7 +88,6 @@ static rc_t DataUpdate(const Data * self,
     Data * next, const KJsonObject * node, JsonStack * path)
 {
     const char * name = NULL;
-    const char * str = NULL;
 
     assert(next);
 
@@ -94,6 +95,9 @@ static rc_t DataUpdate(const Data * self,
 
     if (node == NULL)
         return 0;
+
+    name = "accession";
+    StrSet(&next->accession, KJsonObjectGetMember(node, name), name, path);
 
     name = "bundle";
     StrSet(&next->acc, KJsonObjectGetMember(node, name), name, path);
@@ -124,6 +128,16 @@ static rc_t DataUpdate(const Data * self,
     name = "name";
     StrSet(&next->name, KJsonObjectGetMember(node, name), name, path);
 
+    name = "noqual";
+    BulSet(&next->noqual, KJsonObjectGetMember(node, name), name, path);
+
+    switch (next->noqual) {
+    case eTrue:
+        next->quality = eQualNo; /* eQualFull; */
+    default:
+        break;
+    }
+
     name = "object";
     StrSet(&next->object, KJsonObjectGetMember(node, name), name, path);
 
@@ -150,39 +164,17 @@ static rc_t DataUpdate(const Data * self,
     name = "type";
     StrSet(&next->type, KJsonObjectGetMember(node, name), name, path);
 
-    name = "quality";
-    StrSet(&str, KJsonObjectGetMember(node, name), name, path);
-    if (str != NULL) {
-        String no, full, dbl;
-        CONST_STRING(&no, "no");
-        CONST_STRING(&full, "full");
-        CONST_STRING(&dbl, "dbl");
-        if (string_cmp(str, string_measure(str, NULL),
-            no.addr, no.size, full.size) == 0)
-        {
-            next->quality = eQualNo;
-        }
-        else if (string_cmp(str, string_measure(str, NULL),
-            full.addr, full.size, full.size) == 0)
-        {
-            next->quality = eQualFull;
-        }
-        else if (string_cmp(str, string_measure(str, NULL),
-            dbl.addr, dbl.size, dbl.size) == 0)
-        {
-            next->quality = eQualDefault;
-        }
-    }
-
     return 0;
 }
 
 static rc_t VPath_SetQuality(VPath * self, const Data * data) {
-    rc_t rc = 0;
+    VQuality q = eQualFull;
+
     assert(data);
     if (data->quality < eQualLast)
-        rc = VPathSetQuality(self, data->quality);
-    return rc;
+        q = data->quality;
+
+    return VPathSetQuality(self, q);
 }
 
 /* We are adding a location to file */
@@ -260,6 +252,9 @@ rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
                         StringInit(&acc, c + 1, size - 1, len - 1);
                 }
             }
+
+            if (ldata.accession != NULL)
+                StringInitCString(&acc, ldata.accession);
 
             if (ldata.type != NULL) {
                 size_t size = 0;
@@ -746,7 +741,7 @@ static rc_t Response4InitSdl(Response4 * self, const char * input) {
 rc_t Response4MakeSdlExt(Response4 ** self, const struct VFSManager * vfs,
     const struct KNSManager * kns, const struct KConfig * kfg,
     const char * input,
-    bool logNamesServiceErrors, int64_t projectId, unsigned quality)
+    bool logNamesServiceErrors, int64_t projectId, const char * quality)
 {
     rc_t rc = 0;
 
@@ -754,16 +749,23 @@ rc_t Response4MakeSdlExt(Response4 ** self, const struct VFSManager * vfs,
 
     assert(self);
 
-    rc = Response4MakeEmpty(&r, vfs, kns, kfg,
-        logNamesServiceErrors, projectId, quality);
-    if (rc != 0)
-        return rc;
+    if (*self == NULL) {
+        rc = Response4MakeEmpty(&r, vfs, kns, kfg,
+            logNamesServiceErrors, projectId, quality);
+        if (rc != 0)
+            return rc;
+    }
+    else
+        r = *self;
 
     rc = Response4InitSdl(r, input);
-    if (rc != 0)
-        free(r);
-    else
-        * self = r;
+
+    if (*self == NULL) {
+        if (rc != 0)
+            free(r);
+        else
+            * self = r;
+    }
 
     return rc;
 }

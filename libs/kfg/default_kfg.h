@@ -28,7 +28,8 @@
 #define DEFAUTL_KFG \
 "/config/default = \"true\"\n"                                                 \
                                                                                \
-			                                                       \
+"/libs/cloud/report_instance_identity = \"false\"\n"                           \
+                                                                               \
 "/repository/user/main/public/apps/file/volumes/flat = \"files\"\n"            \
 "/repository/user/main/public/apps/nakmer/volumes/nakmerFlat = \"nannot\"\n"   \
 "/repository/user/main/public/apps/nannot/volumes/nannotFlat = \"nannot\"\n"   \
@@ -38,17 +39,13 @@
 "/repository/user/main/public/apps/sraRealign/volumes/withExtFlat = \"sra\"\n" \
 "/repository/user/main/public/apps/wgs/volumes/wgsFlat = \"wgs\"\n"            \
                                                                                \
+"strings/names = \"" RESOLVER_CGI "\"\n"                                       \
+"strings/sdl = \"" SDL_CGI "\"\n"                                              \
                                                                                \
-"/repository/remote/main/CGI/resolver-cgi = "                                  \
-             "\"https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi\"\n"    \
+"/repository/remote/main/CGI/resolver-cgi = \"$(strings/names)\"\n"            \
+"/repository/remote/protected/CGI/resolver-cgi = \"$(strings/names)\"\n"       \
                                                                                \
-"/repository/remote/protected/CGI/resolver-cgi = "                             \
-             "\"https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi\"\n"    \
-                                                                               \
-"/repository/remote/main/SDL.2/resolver-cgi = "                                \
-             "\"https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve\"\n"            \
-                                                                               \
-"/repository/remote/protected/SDL.2/resolver-cgi = "                           \
-             "\"https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve\"\n"            \
+"/repository/remote/main/SDL.2/resolver-cgi = \"$(strings/sdl)\"\n"            \
+"/repository/remote/protected/SDL.2/resolver-cgi = \"$(strings/sdl)\"\n"       \
                                                                                \
 "/tools/ascp/max_rate = \"450m\"\n"

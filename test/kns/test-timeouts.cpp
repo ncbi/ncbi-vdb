@@ -90,12 +90,12 @@ TEST_CASE ( TestTimeouts ) {
         mgr->retryFile = true;
 
         /* use StableHttpFile: there is retry loop; default values;
-          no retry for unreliable URL-s */
+          the same total TO for unreliable URL-s */
         REQUIRE_RC(KNSManagerMakeHttpFile(mgr, &file, NULL, vers, url));
         REQUIRE(KFileIsKHttpFile(file));
         REQUIRE_RC(HttpFileGetReadTimeouts(file, &millis, &totalMillis));
         REQUIRE_EQ(millis, MAX_HTTP_READ_LIMIT);
-        REQUIRE_EQ(totalMillis, MAX_HTTP_READ_LIMIT);
+        REQUIRE_EQ(totalMillis, MAX_HTTP_TOTAL_READ_LIMIT);
         REQUIRE_RC(KFileRelease(file));
 
         REQUIRE_RC(KNSManagerMakeReliableHttpFile(mgr, &file, NULL, vers, false,
@@ -103,7 +103,7 @@ TEST_CASE ( TestTimeouts ) {
         REQUIRE(KFileIsKHttpFile(file));
         REQUIRE_RC(HttpFileGetReadTimeouts(file, &millis, &totalMillis));
         REQUIRE_EQ(millis, MAX_HTTP_READ_LIMIT);
-        REQUIRE_EQ(totalMillis, MAX_HTTP_READ_LIMIT);
+        REQUIRE_EQ(totalMillis, MAX_HTTP_TOTAL_READ_LIMIT);
         REQUIRE_RC(KFileRelease(file));
 
         /* use StableHttpFile: there is retry loop; default values;
@@ -156,12 +156,12 @@ TEST_CASE ( TestTimeouts ) {
         mgr->retryFile = true;
 
         /* use StableHttpFile: there is retry loop;
-          no retry for unreliable URL-s */
+          the same total TO for unreliable URL-s */
         REQUIRE_RC(KNSManagerMakeHttpFile(mgr, &file, NULL, vers, url));
         REQUIRE(KFileIsKHttpFile(file));
         REQUIRE_RC(HttpFileGetReadTimeouts(file, &millis, &totalMillis));
         REQUIRE_EQ(millis, max_http_read_limit);
-        REQUIRE_EQ(totalMillis, max_http_read_limit);
+        REQUIRE_EQ(totalMillis, max_http_total_read_limit);
         REQUIRE_RC(KFileRelease(file));
 
         REQUIRE_RC(KNSManagerMakeReliableHttpFile(mgr, &file, NULL, vers, false,
@@ -169,7 +169,7 @@ TEST_CASE ( TestTimeouts ) {
         REQUIRE(KFileIsKHttpFile(file));
         REQUIRE_RC(HttpFileGetReadTimeouts(file, &millis, &totalMillis));
         REQUIRE_EQ(millis, max_http_read_limit);
-        REQUIRE_EQ(totalMillis, max_http_read_limit);
+        REQUIRE_EQ(totalMillis, max_http_total_read_limit);
         REQUIRE_RC(KFileRelease(file));
 
         /* use StableHttpFile: there is retry loop */
@@ -282,12 +282,12 @@ TEST_CASE ( TestTimeouts ) {
         mgr->retryFile = true;
 
         /* use StableHttpFile: there is retry loop;
-          no retry for unreliable URL-s */
+          the same total TO for unreliable URL-s */
         REQUIRE_RC(KNSManagerMakeHttpFile(mgr, &file, NULL, vers, url));
         REQUIRE(KFileIsKHttpFile(file));
         REQUIRE_RC(HttpFileGetReadTimeouts(file, &millis, &totalMillis));
         REQUIRE_EQ(millis, max_http_read_limit);
-        REQUIRE_EQ(totalMillis, max_http_read_limit);
+        REQUIRE_EQ(totalMillis, -1);
         REQUIRE_RC(KFileRelease(file));
 
         REQUIRE_RC(KNSManagerMakeReliableHttpFile(mgr, &file, NULL, vers, false,
@@ -295,7 +295,7 @@ TEST_CASE ( TestTimeouts ) {
         REQUIRE(KFileIsKHttpFile(file));
         REQUIRE_RC(HttpFileGetReadTimeouts(file, &millis, &totalMillis));
         REQUIRE_EQ(millis, max_http_read_limit);
-        REQUIRE_EQ(totalMillis, max_http_read_limit);
+        REQUIRE_EQ(totalMillis, -1);
         REQUIRE_RC(KFileRelease(file));
 
         /* use StableHttpFile: there is retry loop */

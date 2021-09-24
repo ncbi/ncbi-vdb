@@ -47,8 +47,8 @@ extern "C" {
 /*--------------------------------------------------------------------------
  * forwards
  */
+struct CloudMgr;
 typedef union Cloud_vt Cloud_vt;
-
 
 
 /*--------------------------------------------------------------------------
@@ -62,6 +62,10 @@ struct Cloud
     struct KNSManager const * kns;
     bool user_agrees_to_pay;
     bool user_agrees_to_reveal_instance_identity;
+
+    uint32_t max_ce_cache_age;
+    const struct String * cached_ce;
+    KTime_t cached_ce_date;
 
     /* bypass Http connection for testing, normally NULL */
     /*TODO: remove when mocked connection becomes a regular feature of KNS */
@@ -101,9 +105,9 @@ union Cloud_vt
 /* Init
  *  initialize a newly allocated cloud object
  */
-CLOUD_EXTERN rc_t CC CloudInit ( Cloud * self, const Cloud_vt * vt, const char * classname,
-    struct KNSManager const * kns, bool user_agrees_to_pay,
-    bool user_agrees_to_reveal_instance_identity);
+CLOUD_EXTERN rc_t CC CloudInit ( Cloud * self, const Cloud_vt * vt,
+    const char * classname, struct CloudMgr const * mgr,
+    bool user_agrees_to_pay, bool user_agrees_to_reveal_instance_identity);
 
 /* Whack
  *  run destructor and free object

@@ -33,12 +33,14 @@
 #include <kfs/file.h>
 #include <kfs/directory.h>
 #include <kfs/impl.h>
+
+#include <klib/log.h> /* LOGERR */
+#include <klib/namelist.h>
+#include <klib/printf.h>
+#include <klib/rc.h>
 #include <klib/refcount.h>
 #include <klib/text.h>
-#include <klib/printf.h>
 #include <klib/vector.h>
-#include <klib/namelist.h>
-#include <klib/rc.h>
 
 #include "kfg-priv.h" /* KConfigGetNgcFile */
 #include "ngc-priv.h" /* KNgcObjMakeFromCmdLine */
@@ -1176,7 +1178,8 @@ rc_t KRepositoryMgrSubCategoryRepositories ( const KConfigNode *sub,
 
 static
 rc_t KRepositoryMgrCategoryRepositories ( const KConfigNode *cat,
-    KRepCategory category, KRepositoryVector *repositories )
+    KRepCategory category, KRepositoryVector *repositories,
+    const KConfig * kfg )
 {
     KNamelist *sub_names;
     rc_t rc = KConfigNodeListChildren ( cat, & sub_names );
@@ -1197,6 +1200,31 @@ rc_t KRepositoryMgrCategoryRepositories ( const KConfigNode *cat,
                     subcategory = krepAuxSubCategory;
                 else if ( strcmp ( "protected", sub_name ) == 0 )
                     subcategory = krepProtectedSubCategory;
+
+                if ( subcategory == krepProtectedSubCategory
+                    && category == krepUserCategory )
+                {
+                    bool respect_protected = false;
+                    KConfigReadBool(kfg, "/repository/user/respect-protected",
+                        &respect_protected);
+                    if (!respect_protected) {
+                        bool ignore_protected = false;
+                        KConfigReadBool(kfg,
+                            "/repository/user/ignore-protected",
+                            &ignore_protected);
+                        if (!ignore_protected) {
+                            rc_t r2 = LOGERR(klogWarn, 0,
+                                "Protected repository is found and ignored.");
+                            rc = r2;
+                            r2 = LOGERR(klogWarn, 0, "Run 'vdb-config "
+                                "--ignore-protected-repositories' "
+                                "to disable this message.");
+                            if (r2 != 0 && rc == 0)
+                                rc = r2;
+                        }
+                        subcategory = krepBadSubCategory;
+                    }
+                }
 
                 if ( subcategory != krepBadSubCategory )
                 {
@@ -1248,7 +1276,7 @@ LIB_EXPORT rc_t CC KRepositoryMgrGetRepositories ( const KRepositoryMgr * self, 
             }
             if ( rc == 0 )
             {
-                rc = KRepositoryMgrCategoryRepositories ( node, category, repositories );
+                rc = KRepositoryMgrCategoryRepositories ( node, category, repositories, kfg );
                 KConfigNodeRelease ( node );
                 if ( rc == 0 )
                     VectorReorder ( repositories, KRepositorySort, NULL );
@@ -1384,6 +1412,10 @@ static rc_t KRepositoryCurrentProtectedRepositoryForNgc(
                 "/repository/user/protected/%s/download-ticket", name);
         if (rc == 0)
             rc = KConfigWriteString(kfg, n, v);
+
+        if (rc == 0)
+            rc = KConfigWriteString(kfg,
+                "/repository/user/respect-protected", "true");
 
         if (rc == 0)
             rc = KConfigMakeRepositoryMgrRead(kfg, &mgr);

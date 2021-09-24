@@ -35,10 +35,6 @@
 #include <klib/defs.h>
 #endif
 
-#ifndef _h_vdb_quality_
-#include <vdb/quality.h> /* VQuality */
-#endif
-
 #include <stdarg.h>
 
 #ifdef __cplusplus
@@ -50,25 +46,26 @@ extern "C" {
  * forwards
  */
 struct KDatabase;
-struct KTable;
-struct KMetadata;
-struct KMDataNode;
+struct KDataBuffer;
 struct KDBManager;
 struct KDirectory;
+struct KMDataNode;
+struct KMetadata;
+struct KNamelist;
+struct KTable;
+struct String;
+struct VCursor;
+struct VCursorParams;
+struct VDatabase;
+struct VDBDependencies;
 struct VDBManager;
 struct VFSManager;
 struct VPath;
 struct VResolver;
 struct VSchema;
-struct VTypedef;
-struct VDatabase;
 struct VTable;
-struct VCursor;
-struct VCursorParams;
+struct VTypedef;
 struct VXformInfo;
-struct KDataBuffer;
-struct KNamelist;
-struct String;
 
 
 /*--------------------------------------------------------------------------
@@ -184,11 +181,11 @@ VDB_EXTERN rc_t CC VDatabaseOpenKDatabaseUpdate ( struct VDatabase *self, struct
  */
 VDB_EXTERN bool CC VDatabaseIsCSRA ( struct VDatabase const *self );
 
-/* Get accession of database (is avalibable)
- *  acc needs to be released
+/* Get accession and path of databasepath (is avalibable)
+ *  acc and path need to be released
  */
-VDB_EXTERN rc_t CC
-VDatabaseGetAccession(const struct VDatabase * self, const struct String ** acc);
+VDB_EXTERN rc_t CC VDatabaseGetAccession(const struct VDatabase * self,
+    const struct String ** acc, const struct String ** path);
 
 /*--------------------------------------------------------------------------
  * VTable
@@ -370,8 +367,24 @@ typedef bool ( CC * VUntypedFunc )
     ( struct KTable const *tbl, struct KMetadata const *meta );
 
 
-VDB_EXTERN VQuality CC VDBManagerGetQuality(const struct VDBManager * self);
+/* Don't release returned quality string */
+VDB_EXTERN rc_t CC VDBManagerGetQualityString(const struct VDBManager * self,
+    const char ** quality);
 
+/* ListDependenciesExt
+ *  create a dependencies object: list all dependencies
+ *
+ *  "dep" [ OUT ] - return for VDBDependencies object
+ *
+ *  "missing" [ IN ] - if true, list only missing dependencies
+ *                     otherwise, list all dependencies
+ *  "directory" [ IN ] - if not NULL - resolve dependencies inside of directory
+ *
+ * N.B. If missing == true then
+ *     just one refseq dependency will be returned for 'container' Refseq files.
+ */
+VDB_EXTERN rc_t CC VDatabaseListDependenciesExt ( struct VDatabase const *self,
+    const struct VDBDependencies **dep, bool missing, const char* directory );
 
 #ifdef __cplusplus
 }

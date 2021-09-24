@@ -83,10 +83,12 @@
 #include <klib/time.h> 
 #include <klib/vector.h>
 
-#include <vdb/vdb-priv.h> /* VDBManagerGetQuality */
+#include <vdb/vdb-priv.h> /* VDBManagerGetQualityString */
 
+#include "manager-priv.h" /* VFSManagerExtNoqual */
 #include "path-priv.h"
 #include "resolver-priv.h"
+#include "services-priv.h" /* VFSManagerExtNoqual */
 
 #include "../kfg/ngc-priv.h" /* KNgcObjMakeFromCmdLine */
 
@@ -4323,10 +4325,11 @@ static bool VFSManagerCheckEnvAndAdImpl(const VFSManager * self,
     /* *outPath can be not NULL: in this case it's just reset to a new value;
                                  DON'T RELEASE THE OLD ONE! */
 
-    /* if path = "/S/S.sra";
+    /* If path = "/S/S.sra";
        or path = "/S/S_dbGaP-NNN.sra"
        then inPath  is S
-            outPath is /S/S*.sra */
+            outPath is /S/S*.sra.
+     The same for *.noqual */
     bool found = false;
     rc_t rc = 0;
     const KNgcObj * ngc = NULL;
@@ -4334,9 +4337,17 @@ static bool VFSManagerCheckEnvAndAdImpl(const VFSManager * self,
     String spath;
     const char *slash = NULL;
     char rs[PATH_MAX] = "";
+    int j = 0;
 
-    VQuality quality = VDBManagerGetQuality(NULL);
-    assert(quality >= 0);
+    const String * xNoqual = VFSManagerExtNoqual(NULL);
+
+    const char * quality = NULL;
+    VDBManagerGetQualityString(NULL, &quality);
+    assert(quality);
+    if (quality == NULL || quality[0] == '\0')
+        quality = "RZ";
+
+    assert(xNoqual);
 
     if (outPath == NULL)
         return RC(rcVFS, rcPath, rcResolving, rcParam, rcNull);
@@ -4370,24 +4381,13 @@ static bool VFSManagerCheckEnvAndAdImpl(const VFSManager * self,
         slash = rs;
 
     rc = KNgcObjMakeFromCmdLine(&ngc);
-    if (ngc != NULL) {
+    if (ngc != NULL)
         rc = KNgcObjGetProjectId(ngc, &projectId);
-        if (rc == 0) {
-            if (quality < eQualLast
-                && (quality == eQualDefault || quality == eQualNo))
-            {
-                if ((KDirectoryPathType(self->cwd, "%s/%s_dbGaP-%d.noqual.sra",
-                    rs, slash, projectId) & ~kptAlias) == kptFile)
-                {
-                    rc_t r = VFSManagerMakePath(self, (VPath **)outPath,
-                        "%s/%s_dbGaP-%d.noqual.sra", rs, slash, projectId);
-                    if (r == 0)
-                        found = true;
-                }
-            }
-            if (!found && (quality == eQualDefault || quality == eQualFull
-                || quality >= eQualLast))
-            {
+
+    /* Check according to user quality preferences. */
+    for (j = 0; quality[j] != '\0' && !found; ++j) {
+        if (quality[j] == 'R') {
+            if (rc == 0 && ngc != NULL && !found) {
                 if ((KDirectoryPathType(self->cwd, "%s/%s_dbGaP-%d.sra",
                     rs, slash, projectId) & ~kptAlias) == kptFile)
                 {
@@ -4397,41 +4397,48 @@ static bool VFSManagerCheckEnvAndAdImpl(const VFSManager * self,
                         found = true;
                 }
             }
-        }
-    }
-
-    if (!found) {
-        if (quality < eQualLast
-            && (quality == eQualDefault || quality == eQualNo))
-        {
-            if ((KDirectoryPathType(self->cwd, "%s/%s.noqual.sra", rs, slash) &
-                ~kptAlias) == kptFile)
-            {
-                rc_t r = VFSManagerMakePath(self, (VPath**)outPath,
-                    "%s/%s.noqual.sra", rs, slash);
-                if (r != 0)
+            if (rc == 0 && !found) {
+                if ((KDirectoryPathType(self->cwd, "%s/%s.sra", rs, slash) &
+                    ~kptAlias) == kptFile)
+                {
+                    rc_t r = VFSManagerMakePath(self, (VPath **)outPath,
+                        "%s/%s.sra", rs, slash);
+                    if (r == 0)
+                        found = true;
                     rc = 0;
-                else {
-                    rc = VPathSetQuality((VPath*)outPath, eQualNo);
-                    found = true;
                 }
             }
         }
-        if (!found && (quality == eQualDefault || quality == eQualFull
-            || quality >= eQualLast))
-        {
-            if ((KDirectoryPathType(self->cwd, "%s/%s.sra", rs, slash) &
-                ~kptAlias) == kptFile)
-            {
-                rc_t r = VFSManagerMakePath(self, (VPath **)outPath,
-                    "%s/%s.sra", rs, slash);
-                if (r == 0)
-                    found = true;
-                rc = 0;
+        if (quality[j] == 'Z') {
+            if (rc == 0 && ngc != NULL && !found) {
+                if ((KDirectoryPathType(self->cwd, "%s/%s_dbGaP-%d%.*s",
+                     rs, slash, projectId, xNoqual->size, xNoqual->addr)
+                    & ~kptAlias) == kptFile)
+                {
+                    rc_t r = VFSManagerMakePath(self, (VPath **)outPath,
+                        "%s/%s_dbGaP-%d%.*s",
+                        rs, slash, projectId, xNoqual->size, xNoqual->addr);
+                    if (r == 0)
+                        found = true;
+                }
+            }
+            if (rc == 0 && !found) {
+                if ((KDirectoryPathType(self->cwd, "%s/%s%.*s",
+                     rs, slash, xNoqual->size, xNoqual->addr) &
+                    ~kptAlias) == kptFile)
+                {
+                    rc_t r = VFSManagerMakePath(self, (VPath**)outPath,
+                        "%s/%s%.*s", rs, slash, xNoqual->size, xNoqual->addr);
+                    if (r != 0)
+                        rc = 0;
+                    else {
+                        rc = VPathSetQuality((VPath*)outPath, eQualNo);
+                        found = true;
+                    }
+                }
             }
         }
     }
-
     /* TODO: add processing of eQualFullOnly and eQualDblOnly */
 
     if (found) {
