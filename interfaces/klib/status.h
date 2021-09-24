@@ -43,7 +43,8 @@ typedef uint32_t KStsLevel;
 
 enum
 {
-    STAT_USR = 1,       /* normal user verbosity  */
+    STAT_ALWAYS,        /* cannot turn off        */
+    STAT_USR,           /* normal user verbosity  */
     STAT_PWR,           /* power-user verbosity   */
     STAT_QA,            /* qa-level description   */
     STAT_PRG,           /* programmer description */
