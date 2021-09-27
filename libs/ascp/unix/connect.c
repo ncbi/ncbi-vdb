@@ -54,7 +54,7 @@
 
 static int logevp(const char *file, char *const argv[], bool dryRun) {
     int result = 0;
-    KStsLevel lvl = STS_INFO;
+    KStsLevel lvl = STAT_PWR;
     if (dryRun)
         lvl = STAT_USR;
     if (lvl > KStsLevelGet()) {
