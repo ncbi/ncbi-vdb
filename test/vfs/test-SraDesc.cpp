@@ -193,7 +193,7 @@ FIXTURE_TEST_CASE(LoalFullQualityTest, SraDescTestFixture) {
     VPath * p = NULL;
     REQUIRE_RC(VPathMake(&p, path));
     REQUIRE_NOT_NULL(p);
-    REQUIRE_EQ(p->quality, (int32_t)eQualLast);
+    REQUIRE_EQ(p->quality, (int32_t)eQualFull);
 
     REQUIRE_RC(VPathLoadQuality(p));
     REQUIRE_EQ(p->quality, q);
@@ -228,7 +228,7 @@ FIXTURE_TEST_CASE(LoalObsoleteQualityTest, SraDescTestFixture) {
     VPath * p = NULL;
     REQUIRE_RC(VPathMake(&p, path));
     REQUIRE_NOT_NULL(p);
-    REQUIRE_EQ(p->quality, (int32_t)eQualLast);
+    REQUIRE_EQ(p->quality, (int32_t)eQualFull);
 
     REQUIRE_RC(VPathLoadQuality(p));
     REQUIRE_EQ(p->quality, (int32_t)eQualLast);
