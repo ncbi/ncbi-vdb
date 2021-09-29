@@ -43,12 +43,14 @@ extern VTRANSFACT_DECL ( meta_attr_write );
 /* newly imported things */
 extern VTRANSFACT_DECL ( NCBI_csra2_stats_trigger );
 extern VTRANSFACT_DECL ( NCBI_SRA_cmp_stats_trigger );
+extern VTRANSFACT_DECL ( NCBI_SRA_cmpb_stats_trigger );
 extern VTRANSFACT_DECL ( NCBI_SRA_cmpf_stats_trigger );
 extern VTRANSFACT_DECL ( NCBI_SRA_extract_name_fmt );
 extern VTRANSFACT_DECL ( NCBI_SRA_extract_spot_name );
 extern VTRANSFACT_DECL ( NCBI_SRA_phred_stats_trigger );
 extern VTRANSFACT_DECL ( NCBI_SRA_qual4_encode );
 extern VTRANSFACT_DECL ( NCBI_SRA_stats_trigger );
+extern VTRANSFACT_DECL ( NCBI_SRA_setRnaFlag );
 #if HAVE_ALIGN_STATS_TRIGGER
 extern VTRANSFACT_DECL ( NCBI_align_stats_trigger );
 extern VTRANSFACT_DECL ( NCBI_seq_stats_trigger );
@@ -60,6 +62,7 @@ extern VTRANSFACT_DECL ( vdb_checksum );
 extern VTRANSFACT_DECL ( vdb_fzip );
 extern VTRANSFACT_DECL ( vdb_rlencode );
 extern VTRANSFACT_DECL ( vdb_zip );
+extern VTRANSFACT_DECL ( vdb_zstd );
 
 /* InitFactories
  */
@@ -72,12 +75,14 @@ rc_t VLinkerInitFactories ( VLinker *self, struct KSymTable *tbl, struct SchemaE
 
         { NCBI_csra2_stats_trigger, "NCBI:csra2:stats_trigger" },
         { NCBI_SRA_cmp_stats_trigger, "NCBI:SRA:cmp_stats_trigger" },
+        { NCBI_SRA_cmpb_stats_trigger, "NCBI:SRA:cmpb_stats_trigger" },
         { NCBI_SRA_cmpf_stats_trigger, "NCBI:SRA:cmpf_stats_trigger" },
         { NCBI_SRA_extract_name_fmt, "NCBI:SRA:extract_name_fmt" },
         { NCBI_SRA_extract_spot_name, "NCBI:SRA:extract_spot_name" },
         { NCBI_SRA_phred_stats_trigger, "NCBI:SRA:phred_stats_trigger" },
         { NCBI_SRA_qual4_encode, "NCBI:SRA:qual4_encode" },
         { NCBI_SRA_stats_trigger, "NCBI:SRA:stats_trigger" },
+        { NCBI_SRA_setRnaFlag, "NCBI:SRA:setRnaFlag" },
 #if HAVE_ALIGN_STATS_TRIGGER
         { NCBI_align_stats_trigger, "NCBI:align:stats_trigger" },
         { NCBI_seq_stats_trigger, "NCBI:seq:stats_trigger" },
@@ -88,7 +93,8 @@ rc_t VLinkerInitFactories ( VLinker *self, struct KSymTable *tbl, struct SchemaE
         { vdb_checksum, "vdb:checksum" },
         { vdb_fzip, "vdb:fzip" },
         { vdb_rlencode, "vdb:rlencode" },
-        { vdb_zip, "vdb:zip" }
+        { vdb_zip, "vdb:zip" },
+        { vdb_zstd, "vdb:zstd" },
     };
 
     rc_t rc = VLinkerInitFactoriesRead ( self, tbl, env );

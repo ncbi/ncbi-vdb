@@ -44,6 +44,7 @@
 #include "../tui-priv.h"
 
 #include <unistd.h>
+#include <sys/select.h>
 #include <sys/ioctl.h>
 #include <termios.h>
 #include <signal.h>
@@ -186,7 +187,7 @@ void CC tui_send_strip( int x, int y, int count, tui_ac * curr, tui_ac * v,
 typedef struct KTUI_pf
 {
 /*    struct termios stored_settings; */
-    struct termio stored_settings;
+    struct termios stored_settings;
     struct sigaction sa_saved;
     es_states es;
     unsigned int mouse_event, mouse_x;
@@ -217,25 +218,32 @@ static void sigwinchHandler( int sig )
 }
 
 
-static void set_kb_raw_mode( struct termio * stored_settings )
+static void set_kb_raw_mode( struct termios * stored_settings )
 {
-    struct termio new_settings;
-    ioctl( STDIN_FILENO, TCGETA, stored_settings );
+    struct termios new_settings;
+
+    /* ioctl( STDIN_FILENO, TCGETA, stored_settings ); */
+    tcgetattr( STDIN_FILENO, stored_settings );    
     memmove ( &new_settings, stored_settings, sizeof new_settings );
+
     new_settings.c_lflag &= ( ~ICANON );    /* exit canonical mode, enter raw mode */
     new_settings.c_lflag &= ( ~ECHO );      /* don't echo the character */
     new_settings.c_lflag &= ( ~IEXTEN );    /* don't enable extended input character processing */
     new_settings.c_lflag &= ( ~ISIG );      /* don't automatically handle control-C */
     new_settings.c_cc[ VTIME ] = 1;         /* timeout (tenths of a second) */
     new_settings.c_cc[ VMIN ] = 0;          /* minimum number of characters */
-    ioctl( STDIN_FILENO, TCSETA, &new_settings ); /* apply the new settings */
+    
+    /* apply the new settings */
+    /* ioctl( STDIN_FILENO, TCSETA, &new_settings ); */
+    tcsetattr( STDIN_FILENO, TCSANOW, &new_settings );
 }
 
 
-static void restore_kb_mode( const struct termio * stored_settings )
+static void restore_kb_mode( const struct termios * stored_settings )
 {
     /* applies the terminal settings supplied as the argument */
-    ioctl( STDIN_FILENO, TCSETA, stored_settings );
+    /* ioctl( STDIN_FILENO, TCSETA, stored_settings ); */
+    tcsetattr( STDIN_FILENO, TCSANOW, stored_settings );
 }
 
 

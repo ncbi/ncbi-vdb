@@ -28,6 +28,7 @@
 #include <kproc/procmgr.h>
 
 #include <pthread.h>
+#include <unistd.h>
 
 /* OnMainThread
  *  returns true if running on main thread
@@ -35,4 +36,14 @@
 LIB_EXPORT bool CC KProcMgrOnMainThread ( void )
 {
     return pthread_main_np () != 0;
+}
+
+uint32_t sys_GetPID ( void )
+{
+    return getpid ();
+}
+
+int sys_GetHostName ( char * buffer, size_t buffer_size )
+{
+    return gethostname( buffer, buffer_size );
 }

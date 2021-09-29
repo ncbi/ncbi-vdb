@@ -93,15 +93,16 @@ enum
 
       /* version 3.0 protocols */
     , eProtocolFile  = 4
-    , eProtocolS3    = 5
+    , eProtocolS3    = 5 /* Amazon Simple Storage Service */
+    , eProtocolGS    = 6 /* Google Cloud Storage */
 
-      /* values 6..7 are available for future */
+      /* value 7 are available for future */
 
     , eProtocolLast
     , eProtocolMax   = eProtocolLast - 1
     , eProtocolMask  = 7
 
-    , eProtocolMaxPref = 5
+    , eProtocolMaxPref = 6
 
       /* macros for building multi-protocol constants
          ordered by preference from least to most significant bits */
@@ -187,7 +188,6 @@ VFS_EXTERN rc_t CC VResolverQuery ( const VResolver * self,
     VRemoteProtocols protocols, struct VPath const * query,
     struct VPath const ** local, struct VPath const ** remote,
     struct VPath const ** cache );
-
 
 /* Local - DEPRECATED
  *  Find an existing local file/directory that is named by the accession.

@@ -38,7 +38,7 @@
 #include <vfs/services.h> /* KSrvResponse */
 #include <vfs/services-priv.h> /* KServiceTestNamesExecuteExt */
 
-#include "resolver-cgi.h" /* RESOLVER_CGI */
+#include "../../libs/vfs/resolver-cgi.h" /* RESOLVER_CGI */
 
 //#include <cstdio> // printf
 
@@ -114,7 +114,8 @@ public:
 
         VPath * p = NULL;
         rc_t rc = VPathMakeFromUrl ( & p, & url, & _tick, true, & _id, _size, t,
-                                     pd5, expiration );
+                pd5, expiration, NULL, NULL, NULL, false, false, NULL, -1, 0,
+            NULL);
 
         if ( rc == 0 )
             rc = VPathMarkHighReliability ( p, true );
@@ -297,14 +298,14 @@ TEST_CASE ( DOUBLE ) {
     const KTime_t exp = 1489700000  ;
     const string date1 (  "1981-01-13T13:25:31" );
     const KTime_t exp1 = 1489710000  ;
-    REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.0\n"
+    REQUIRE_RC ( KServiceNames3_0StreamTestMany ( "#3.0\n"
         "0|| object-id |90|1981-01-13T13:25:30||ticket|"
 "http://url/$fasp://frl/$https://hsl/$file:///p$s3:p||||"
 "http://vdbcacheUrl/$fasp://fvdbcache/$https://vdbcache/$file:///vdbcache$s3:v|"
             "1489700000|200| message\n"
         "1|| object-i1 |10|1981-01-13T13:25:31|| ticke1 |"
           "http://ur1/||||https://vdbcacheUrl1/|1489710000|200| messag1\n"
-        "$1489690000\n", & response, 0 ) );
+        "$1489690000\n", & response, 0, 2 ) );
 
     CHECK_NOT_NULL ( response );
     REQUIRE_EQ ( KSrvResponseLength ( response ), 2u );
@@ -501,6 +502,8 @@ if ( 1 )
 
     REQUIRE_RC ( KServiceRelease ( service ) );
 
+    TEST_MESSAGE("KServiceRelease->KServiceTestNamesExecuteExt");
+
     REQUIRE_RC_FAIL ( KServiceTestNamesExecuteExt ( service, 0, NULL, NULL,
         NULL, NULL ) );
 }
@@ -511,13 +514,18 @@ extern "C" {
     rc_t CC Usage        ( const struct Args * args ) { return 0; }
     ver_t CC KAppVersion ( void ) { return 0; }
     rc_t CC KMain ( int argc, char * argv [] ) {
-        if ( 0 ) assert ( ! KDbgSetString ( "VFS" ) );
+        if ( 
+0 ) assert ( ! KDbgSetString ( "VFS" ) );
+
         KConfigDisableUserSettings ();
 
         rc_t rc = KConfigMake ( & KFG, NULL );
         if ( rc == 0 )
             rc = KConfigWriteString ( KFG,
                 "repository/remote/main/CGI/resolver-cgi", RESOLVER_CGI );
+
+        if (
+0) ncbi::NK::TestEnv::SetVerbosity(ncbi::NK::LogLevel::e_all);
 
         rc = Names3_0_TestSuite ( argc, argv );
 

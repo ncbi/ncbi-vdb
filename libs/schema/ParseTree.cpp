@@ -27,7 +27,6 @@
 #include "ParseTree.hpp"
 
 #include <stdexcept>
-#include <iostream>
 
 #include <klib/text.h>
 #include <klib/printf.h>

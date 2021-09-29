@@ -145,7 +145,7 @@ LIB_EXPORT rc_t CC SRATableOpenColumnRead( const SRATable *self,
                 }
                 else if ( GetRCState ( rc ) == rcUndefined )
                 {
-                    rc = RC ( rcSRA, rcTable, rcOpening, rcColumn, rcNotFound );
+                    rc = SILENT_RC ( rcSRA, rcTable, rcOpening, rcColumn, rcNotFound );
                 }
 
                 free ( col );

@@ -95,6 +95,21 @@ int32_t uint32_lsbit ( uint32_t self )
     return uint16_lsbit ( self >> 16 ) + 16;
 }
 
+static __inline
+int32_t uint64_lsbit ( uint64_t self )
+{
+    /* detect no bits are set */
+    if ( self == 0 )
+        return -1;
+
+    /* detect bits set in lower word */
+    if ( ( uint32_t ) self != 0 )
+        return uint32_lsbit ( ( uint32_t ) self );
+
+    /* return bit set in upper word */
+    return uint32_lsbit ( self >> 32 ) + 32;
+}
+
 static const int8_t msbit_map [] =
 {
     -1, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3,
@@ -148,6 +163,16 @@ int32_t uint32_msbit ( uint32_t self )
     /* return bit set in lower word */
     return uint16_msbit ( ( uint16_t ) self );
 }
+
+#if defined(_WIN64)
+static __inline__
+uint64_t uint64_msbit( uint64_t self )
+{
+    unsigned long idx;
+    _BitScanForward64(&idx, self);
+    return idx;
+}
+#endif
 
 typedef struct int128_t int128_t;
 struct int128_t

@@ -27,7 +27,7 @@
 CC = @ $(TOP)/build/cc.sh $(OS) 'clang -c' \
 	 $(CHECKSUM) --objx $(OBJX) --cflags "$(CFLAGS)" -MD
 CP = @ $(TOP)/build/cc.sh $(OS) 'clang++ -c' \
-	 $(CHECKSUM) --objx $(OBJX) --cflags "$(CPFLAGS)" -MD
+	 $(CHECKSUM) --objx $(OBJX) -stdlib=libc++ --cflags "$(CPFLAGS)" -MD
 
 # C preprocessor
 PP = gcc -E $(CFLAGS)
@@ -47,7 +47,7 @@ LP = @ $(TOP)/build/ld.sh $(OS) $(ARCH) clang++ \
 
 # tool options
 WARN = -Wall -Wno-variadic-macros -Wno-long-long # -Wconversion
-
+# TODO: Lots of new clang options in later versions (-fsanitize, CFI, CPI, ...)
 ifeq (64,$(BITS))
 	CARCH = -m64
 else
@@ -66,7 +66,7 @@ ifeq (dbg, $(BUILD))
 	DBG = -g
 	OPT = $(WARN)
 	NOPT = $(WARN)
-	PED = -std=c99 -pedantic # -fdiagnostics-show-option
+	PED = -std=c11 -pedantic # -fdiagnostics-show-option
 else
 
 ifeq (x86_64, $(ARCH))

@@ -22,19 +22,12 @@
 #
 # ===========================================================================
 
-#
-# run 'make schema' to regenerate the built-in schema
-# run 'make schema std' to regenerate the built-in schema and rebuild the libraries
-#
-
 default: std
 
 TOP ?= $(abspath ../..)
 MODULE = libs/sra
 
 INT_LIBS = \
-	libsraschema \
-	libwsraschema \
 	libsradb \
 	libwsradb \
 	libsrareader
@@ -46,8 +39,6 @@ OBJFILES =            \
 	$(SRADB_OBJ)      \
 	$(WSRADB_OBJ)     \
 	$(SRAREADER_OBJ)  \
-#	$(SRA_SCHEMA_OBJ) \
-	$(WSRA_SCHEMA_OBJ)
 
 include $(TOP)/build/Makefile.env
 
@@ -76,89 +67,8 @@ $(TARGDIR)/std: \
 # clean
 #
 clean: stdclean
-	@ rm -f $(ILIBDIR)/libsra-schema.* $(ILIBDIR)/libwsra-schema.* $(ILIBDIR)/sra-dflt-schema*
-	@ rm -f $(BINDIR)/libsra-schema.* $(BINDIR)/libwsra-schema.*
 
 .PHONY: clean
-
-
-#-------------------------------------------------------------------------------
-# sradb embedded schema
-#
-$(ILIBDIR)/libsraschema: $(ILIBDIR)/libsraschema.$(LIBX)
-
-$(ILIBDIR)/libwsraschema: $(ILIBDIR)/libwsraschema.$(LIBX)
-
-SRA_DFLT_SCHEMA_LIBS = \
-	-skapp \
-	-svdb \
-	$(ALWAYS_STATIC_SCHEMA_LIBS) \
-	-salign-reader \
-	-skdb \
-	-svfs \
-	-skns \
-	-sksrch \
-	-skrypto \
-	-skfg \
-	-skfs \
-	-sksproc \
-	-sklib \
-    -sjudy
-
-SRA_DFLT_SCHEMA_OS_LIBS = \
-	-ldl \
-	-sz \
-	-sbz2 \
-	-lm
-
-# set workdir for RUN_REMOTELY in rwin mode 
-RWORKDIR=$(OBJDIR)
-
-$(ILIBDIR)/sra-dflt-schema: sra-dflt-schema.$(OBJX)
-	$(LD) --exe -o $@ $^ $(SRA_DFLT_SCHEMA_LIBS) $(SRA_DFLT_SCHEMA_OS_LIBS)
-
-$(ILIBDIR)/schema: $(ILIBDIR)/sra-dflt-schema $(SRCDIR)/built-in.vschema
-	$(ILIBDIR)/sra-dflt-schema -o$(SRCDIR)/sra-schema.c -I$(TOP)/interfaces -T$(OBJDIR)/sra-schema.c.d $(SRCDIR)/built-in.vschema
-
-SRA_SCHEMA_SRC = \
-	sraschema \
-	sra-schema
-
-SRA_SCHEMA_OBJ = \
-	$(addsuffix .$(LOBX),$(SRA_SCHEMA_SRC))
-
-WSRA_SCHEMA_OBJ = \
-	$(addsuffix .$(LOBX),$(SRA_SCHEMA_SRC))
-
-SRA_SCHEMA_LIB = \
-	-dvdb \
-	-dklib
-
-WSRA_SCHEMA_LIB = \
-	-dwvdb \
-	-dklib
-
-SRASCHEMA_SRC = \
-	sraschema-stub \
-
-WSRASCHEMA_SRC = \
-	wsraschema-stub
-
-SRASCHEMA_SRC += $(SRA_SCHEMA_SRC)
-WSRASCHEMA_SRC += $(SRA_SCHEMA_SRC)
-
-SRASCHEMA_OBJ = \
-	$(addsuffix .$(LOBX),$(SRASCHEMA_SRC))
-
-WSRASCHEMA_OBJ = \
-	$(addsuffix .$(LOBX),$(WSRASCHEMA_SRC))
-
-$(ILIBDIR)/libsraschema.$(LIBX): $(SRASCHEMA_OBJ) $(SRASCHEMA_DEPS)
-	$(LD) --slib -o $@ $(SRASCHEMA_OBJ) $(SRA_SCHEMA_LIB)
-
-$(ILIBDIR)/libwsraschema.$(LIBX): $(WSRASCHEMA_OBJ) $(WSRASCHEMA_DEPS)
-	$(LD) --slib -o $@ $(WSRASCHEMA_OBJ) $(WSRA_SCHEMA_LIB)
-
 
 #-------------------------------------------------------------------------------
 # sradb library
@@ -181,7 +91,6 @@ SRADB_OBJ = \
 	$(addsuffix .$(LOBX),$(SRADB_SRC))
 
 SRADB_LIB = \
-	-ssraschema \
 	-dvdb \
 	-dkdb \
 	-dvfs \
@@ -208,7 +117,6 @@ WSRADB_OBJ = \
 	$(addsuffix .$(LOBX),$(WSRADB_SRC))
 
 WSRADB_LIB = \
-	-swsraschema \
 	-dwvdb \
 	-dwkdb \
 	-dvfs \
@@ -247,3 +155,9 @@ $(ILIBDIR)/libsrareader.$(LIBX): $(SRAREADER_OBJ)
 compile: stdcompile
 
 $(TARGDIR)/compile: $(OBJFILES)
+
+#-------------------------------------------------------------------------------
+# fuzz
+#
+fuzz: std
+	cp $(addsuffix .$(LIBX),$(addprefix $(ILIBDIR)/,$(INT_LIBS))) $(FLIBDIR)/

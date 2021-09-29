@@ -601,7 +601,7 @@ rc_t KTocRelease ( const KToc *self )
 /* ----------------------------------------------------------------------
  * KTocCreateSubdirs
  *
- * This is a constructor/parse helper method (the p starting the name is meant to 
+ * This is a constructor/parse helper method (the p starting the name is meant to
  * imply a c++/Java private situation)
  *
  * [RET] rc_t					0 for success; anything else for a failure
@@ -976,7 +976,6 @@ rc_t createPath (char ** newpath, const char * path, va_list args)
     char * p;
     char * pp;
     size_t l;
-    int i;
 
     rc = 0;
     p = NULL;
@@ -986,19 +985,22 @@ rc_t createPath (char ** newpath, const char * path, va_list args)
     /* not trusting C99 version of vsnprintf is in place rather than SUSv2 */
     for (;;)
     {
+        int i = 0;
         pp = realloc (p,l);
         if (pp == NULL)
         {
             rc = RC (rcFS, rcToc, rcConstructing, rcMemory, rcExhausted);
             return rc;
         }
-        if (args == NULL)
+	/*VDB-4386: cannot treat va_list as a pointer!*/
+/*        if (args == NULL)
         {
             i = (int)strlen ( path );
             if ( i < (int)l )
             strcpy ( pp, path );
         }
-        else
+        else*/
+        if ( path != NULL )
             i = vsnprintf (pp, l, path, args);
         if (i < 0)
         {
@@ -1010,7 +1012,7 @@ rc_t createPath (char ** newpath, const char * path, va_list args)
         if ( i < (int)l )
             break;
         l = i + 1;
-    } 
+    }
 
     *newpath = pp;
 
@@ -1077,7 +1079,7 @@ rc_t KTocVCreateDir ( KToc *self,KTime_t mtime, uint32_t access,
  */
 rc_t KTocCreateFile ( KToc *self,
 		     uint64_t source_position, uint64_t size,
-		    KTime_t mtime, uint32_t access, 
+		    KTime_t mtime, uint32_t access,
 		     KCreateMode mode, const char *path, ... )
 {
     va_list 	args;
@@ -1092,7 +1094,7 @@ rc_t KTocCreateFile ( KToc *self,
 
 rc_t KTocVCreateFile ( KToc *self,
                        uint64_t source_position, uint64_t size,
-                       KTime_t mtime, uint32_t access, 
+                       KTime_t mtime, uint32_t access,
                        KCreateMode mode, const char *path, va_list args )
 {
     KTocEntryParam	params;
@@ -1120,7 +1122,7 @@ rc_t KTocVCreateFile ( KToc *self,
 
 rc_t KTocCreateZombieFile ( KToc *self,
                             uint64_t source_position, uint64_t size,
-                            KTime_t mtime, uint32_t access, 
+                            KTime_t mtime, uint32_t access,
                             KCreateMode mode, const char *path, ... )
 {
     va_list 	args;
@@ -1135,7 +1137,7 @@ rc_t KTocCreateZombieFile ( KToc *self,
 
 rc_t KTocVCreateZombieFile ( KToc *self,
                              uint64_t source_position, uint64_t size,
-                             KTime_t mtime, uint32_t access, 
+                             KTime_t mtime, uint32_t access,
                              KCreateMode mode, const char *path, va_list args )
 {
     KTocEntryParam	params;
@@ -1298,9 +1300,11 @@ rc_t KTocVCreateHardLink ( KToc *self,KTime_t mtime, uint32_t access,
 #endif
         case ktocentrytype_file:
         case ktocentrytype_zombiefile:
-            size = (args == NULL) ?
-                snprintf  ( link, sizeof link, "%s", link_fmt ) :
-                vsnprintf ( link, sizeof link, link_fmt, args );
+            /* VDB-4386: cannot treat va_list as a pointer! */
+            size = 0;
+            if ( link_fmt != NULL )
+                size = /*(args == NULL) ? snprintf  ( link, sizeof link, "%s", link_fmt ) :*/
+                    vsnprintf ( link, sizeof link, link_fmt, args );
             if (size < 0 || size >= ( int ) sizeof link)
                 rc = RC (rcFS, rcToc, rcConstructing, rcLink, rcExcessive);
             return rc ? rc : KTocCreateFile (self, targ_entry->u.contiguous_file.archive_offset,
@@ -1308,16 +1312,16 @@ rc_t KTocVCreateHardLink ( KToc *self,KTime_t mtime, uint32_t access,
                                    mtime, access, mode, link);
 
         case ktocentrytype_emptyfile:
-            size = (args == NULL) ?
-                snprintf  ( link, sizeof link, "%s", link_fmt ) :
+            size = /*(args == NULL) ?
+                snprintf  ( link, sizeof link, "%s", link_fmt ) :*/
                 vsnprintf ( link, sizeof link, link_fmt, args );
             if (size < 0 || size >= ( int ) sizeof link)
                 rc = RC (rcFS, rcToc, rcConstructing, rcLink, rcExcessive);
             return rc ? rc : KTocCreateFile (self, 0, 0, mtime, access, mode, link);
 
         case ktocentrytype_chunked:
-            size = (args == NULL) ?
-                snprintf  ( link, sizeof link, "%s", link_fmt ) :
+            size = /*(args == NULL) ?
+                snprintf  ( link, sizeof link, "%s", link_fmt ) :*/
                 vsnprintf ( link, sizeof link, link_fmt, args );
             if (size < 0 || size >= ( int ) sizeof link)
                 rc = RC (rcFS, rcToc, rcConstructing, rcLink, rcExcessive);
@@ -1326,8 +1330,8 @@ rc_t KTocVCreateHardLink ( KToc *self,KTime_t mtime, uint32_t access,
                                           targ_entry->u.chunked_file.chunks, mode, link);
 
         case ktocentrytype_softlink:
-            size = (args == NULL) ?
-                snprintf  ( link, sizeof link, "%s", link_fmt ) :
+            size = /*(args == NULL) ?
+                snprintf  ( link, sizeof link, "%s", link_fmt ) :*/
                 vsnprintf ( link, sizeof link, link_fmt, args );
             if (size < 0 || size >= ( int ) sizeof link)
                 rc = RC (rcFS, rcToc, rcConstructing, rcLink, rcExcessive);
@@ -1450,7 +1454,7 @@ rc_t KTocResolvePathTocEntry ( const KToc *self,
     }		  	fentry;		/* Found ENTRY: two ways to access to skip casts */
     rc_t	  	rc;		/* temporary storage for the return from many calls */
     size_t	  	facet_size;	/* length of a single facet (part of a path dir or file) */
-    size_t		path_size;	/* temporary size (shrinks as we go through the path */	
+    size_t		path_size;	/* temporary size (shrinks as we go through the path */
     /* int		  	loopcount;	counter for loop limiting hardlink resolution */
     KTocEntryType 	type = ktocentrytype_unknown;	/* type of a entry found for a facet (init to kill a warning */
     bool		is_last_facet = false;
@@ -1494,7 +1498,7 @@ rc_t KTocResolvePathTocEntry ( const KToc *self,
          * if there was no '/' found then point to the end as that is the end of the facet
          * but also mark that we know this is the last one (be it a directory, link or file)
          */
-        if (slash == NULL)			
+        if (slash == NULL)
         {
             slash = end;
             is_last_facet = true;
@@ -1558,7 +1562,7 @@ rc_t KTocResolvePathTocEntry ( const KToc *self,
         switch (type)
         {
             /* -----
-             * resolve a hardlink immediately 
+             * resolve a hardlink immediately
              * re-resolve until we've gone too many hops or the
              * resolution is to something that isn't another hardlink
              *
@@ -1686,7 +1690,7 @@ const void * KTocGetArchive( const KToc * self )
         return NULL;
     return self->archive.v;
 }
-				
+
 
 
 
@@ -1782,7 +1786,7 @@ rc_t KTocPersist ( const KToc * self,
                             wdata.buffptr = bbuffer + SraHeaderSize(NULL);
                             wdata.limit = bbuffer + SraHeaderGetFileOffset(header);
                             rc = KTocEntryPersistNodeDir (NULL, &self->entry, &treesize,
-                                                          KTocEntryPersistWriteFunc, 
+                                                          KTocEntryPersistWriteFunc,
                                                           &wdata);
                 }
             }

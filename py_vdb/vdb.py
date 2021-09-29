@@ -227,8 +227,8 @@ class typedesc( Structure ) :
 
 
 #------------------------------------------------------------------------------------------------------------
-uint_xf  = { 8  : c_ubyte, 16 : c_ushort, 32 : c_uint, 64 : c_ulonglong }
-int_xf   = { 8  : c_byte,  16 : c_short,  32 : c_int,  64 : c_longlong }
+uint_xf  = { 1 : c_ubyte, 8  : c_ubyte, 16 : c_ushort, 32 : c_uint, 64 : c_ulonglong }
+int_xf   = { 1 : c_byte,  8  : c_byte,  16 : c_short,  32 : c_int,  64 : c_longlong }
 float_xf = { 32 : c_float, 64 : c_double }
 txt_xf   = { 8  : c_char }
 
@@ -309,17 +309,28 @@ class VColumn :
         if self.column_type == None :
             raise vdb_error( 0, "read: undefined column-type", self )
         row_id = c_longlong( row )
+        elem_bits = c_int()
         data = c_void_p()
         row_len = c_int()
-        rc = self.__mgr.VCursorCellDataDirect( self.__cur._VCursor__ptr, row_id, self.__id, None, byref( data ), None, byref( row_len ) )
+        rc = self.__mgr.VCursorCellDataDirect( self.__cur._VCursor__ptr, row_id, self.__id, byref( elem_bits ), byref( data ), None, byref( row_len ) )
         if rc != 0 :
             self.__mgr.raise_rc( rc, "VCursorCellDataDirect( '%s.%s', #%d )"%( self.tabname, self.name, row ), self )
         if self.column_type == c_char :
-            return string_at( data, row_len.value )
+            tmp = string_at( data, row_len.value )
+            if PY3 and isinstance( tmp, bytes ) :
+                return tmp.decode( "utf-8" )
+            return tmp
         else :
             typed_ptr = cast( data, POINTER( self.column_type ) )
+            e_count = row_len.value
+            if elem_bits.value < 8 :
+                e_count *= elem_bits.value
+                if PY3 :
+                    e_count //= 8
+                else :
+                    e_count /= 8
             l = list()
-            for idx in xrange( 0, row_len.value ) :
+            for idx in xrange( 0, e_count ) :
                 l.append( typed_ptr[ idx ] )        
             return l
 
@@ -634,7 +645,7 @@ class VCursor :
     def __del__( self ) :
         rc = self.__mgr.VCursorRelease( self.__ptr )
         if rc != 0 :
-            self.__mgr.raise_rc( rc, "VCursorRelease( '%s' )"%( self.__tab.name ), self )
+            self.__mgr.raise_rc( rc, "VCursorRelease( '%s' )"%( self.__tab._VTable__name ), self )
 
     def __enter__( self ) :
         return self
@@ -673,44 +684,49 @@ class VCursor :
     def Open( self ) :
         rc = self.__mgr.VCursorOpen( self.__ptr )
         if rc != 0 :
-            self.__mgr.raise_rc( rc, "VCursorOpen( '%s' )"%( self.__tab.name ), self )
+            self.__mgr.raise_rc( rc, "VCursorOpen( '%s' )"%( self.__tab._VTable__name ), self )
 
     def Commit( self ) :
         rc = self.__mgr.VCursorCommit( self.__ptr )
         if rc != 0 :
-            self.__mgr.raise_rc( rc, "VCursorCommit( %s )"%( self.__tab.name ), self )
+            self.__mgr.raise_rc( rc, "VCursorCommit( %s )"%( self.__tab._VTable__name ), self )
 
     def OpenRow( self ) :
         rc = self.__mgr.VCursorOpenRow( self.__ptr )
         if rc != 0 :
-            self.__mgr.raise_rc( rc, "VCursorOpenRow( '%s' )"%( self.__tab.name ), self )
+            self.__mgr.raise_rc( rc, "VCursorOpenRow( '%s' )"%( self.__tab._VTable__name ), self )
         
     def CommitRow( self ) :
         rc = self.__mgr.VCursorCommitRow( self.__ptr )
         if rc != 0 :
-            self.__mgr.raise_rc( rc, "VCursorCommitRow( %s )"%( self.__tab.name ), self )
+            self.__mgr.raise_rc( rc, "VCursorCommitRow( '%s' )"%( self.__tab._VTable__name ), self )
 
     def RepeatRow( self, count ) :
         rc = self.__mgr.VCursorRepeatRow( self.__ptr, count )
         if rc != 0 :
-            self.__mgr.raise_rc( rc, "VCursorRepeatRow( %s, %d )"%( self.__tab.name, count ), self )
+            self.__mgr.raise_rc( rc, "VCursorRepeatRow( '%s', %d )"%( self.__tab._VTable__name, count ), self )
 
     def CloseRow( self ) :
         rc = self.__mgr.VCursorCloseRow( self.__ptr )
         if rc != 0 :
-            self.__mgr.raise_rc( rc, "VCursorCloseRow( '%s' )"%( self.__tab.name ), self )
+            self.__mgr.raise_rc( rc, "VCursorCloseRow( '%s' )"%( self.__tab._VTable__name ), self )
 
     def FlushPage( self ) :
         rc = self.__mgr.VCursorFlushPage( self.__ptr )
         if rc != 0 :
-            self.__mgr.raise_rc( rc, "VCursorFlushPage( %s )"%( self.__tab.name ), self )
+            self.__mgr.raise_rc( rc, "VCursorFlushPage( '%s' )"%( self.__tab._VTable__name ), self )
 
     def RowId( self ) :
         row_id = c_longlong()
         rc = self.__mgr.VCursorRowId( self.__ptr, byref( row_id ) )
         if rc != 0 :
-            self.__mgr.raise_rc( rc, "VCursorRowId( '%s' )"%( self.__tab.name ), self )
+            self.__mgr.raise_rc( rc, "VCursorRowId( '%s' )"%( self.__tab._VTable__name ), self )
         return row_id.value
+
+    def SetRowId( self, value ) :
+        rc = self.__mgr.VCursorSetRowId( self.__ptr, value )
+        if rc != 0 :
+            self.__mgr.raise_rc( rc, "VCursorSetRowId( '%s', %d )"%( self.__tab._VTable__name, value ), self )
 
     def ReferenceList( self ) :
         reflist_ptr = c_void_p()
@@ -936,7 +952,10 @@ class KMDataNode :
             return []
         n_values = n_bytes
         if align > 1 :
-            n_values = n_bytes / align
+            if PY3 :
+                n_values = n_bytes / align
+            else :
+                n_values = n_bytes // align
             if n_bytes > ( n_values * align ) :
                 n_values += 1
         buffer = self.Read( n_values * align, n_bytes, offset )
@@ -1200,14 +1219,14 @@ class VTable :
         return KIndex( self.__mgr, k_idx, name )
 
     def OpenMetadata( self, open_mode = OpenMode.Read ) :
-        if self.__kdb_ptr == None :
-            self.__OpenKTableRead__()
         k_meta = c_void_p()
         if open_mode == OpenMode.Write :
-            rc = self.__mgr.KTableOpenMetadataUpdate( self.__kdb_ptr, byref( k_meta ) )
+            rc = self.__mgr.VTableOpenMetadataUpdate(self.__ptr, byref(k_meta))
             if rc != 0 :
-                self.__mgr.raise_rc( rc, "KTableOpenMetadataUpdate( '%s' )"%( self.__name ), self )
+                self.__mgr.raise_rc( rc, "VTableOpenMetadataUpdate( '%s' )"%( self.__name ), self )
         else :
+            if self.__kdb_ptr == None :
+                self.__OpenKTableRead__()
             rc = self.__mgr.KTableOpenMetadataRead( self.__kdb_ptr, byref( k_meta ) )
             if rc != 0 :
                 self.__mgr.raise_rc( rc, "KTableOpenMetadataRead( '%s' )"%( self.__name ), self )
@@ -1832,7 +1851,7 @@ def check_lib_path( mode, path ) :
                 home_ncbi_lib64 = os.path.join( os.path.sep, os.path.expanduser( "~" ), ".ncbi", "lib64" )
                 res = make_lib_name( mode, home_ncbi_lib64 )
         if not os.path.isfile( res ) :
-            raise vdb_error( 0, "cannot find lib: '%s'"%p, None )
+            raise vdb_error( 0, "cannot find lib: '%s'"%path, None )
     return res
 
 
@@ -1876,7 +1895,9 @@ class manager :
         self.VTableCreateCachedCursorRead = self.__func__( "VTableCreateCachedCursorRead", [ c_void_p, c_void_p, c_longlong ] )
         self.VTableLocked = self.__func__( "VTableLocked", [ c_void_p ], c_bool )
         self.VTableOpenKTableRead = self.__func__( "VTableOpenKTableRead", [ c_void_p, c_void_p ] )
-        
+        self.VTableOpenMetadataRead = self.__func__("VTableOpenMetadataRead", [ c_void_p, c_void_p ] )
+        self.VTableOpenMetadataUpdate = self.__func__("VTableOpenMetadataUpdate", [ c_void_p, c_void_p ] )
+
         self.KNamelistCount = self.__func__( "KNamelistCount", [ c_void_p, c_void_p ] )
         self.KNamelistGet = self.__func__( "KNamelistGet", [ c_void_p, c_int, c_void_p ] )
         self.KNamelistRelease = self.__func__( "KNamelistRelease", [ c_void_p ] )
@@ -1894,6 +1915,7 @@ class manager :
         self.VCursorCloseRow = self.__func__( "VCursorCloseRow", [ c_void_p ] )
         self.VCursorIdRange = self.__func__( "VCursorIdRange", [ c_void_p, c_int, c_void_p, c_void_p ] )
         self.VCursorRowId = self.__func__( "VCursorRowId", [ c_void_p, c_void_p ] )
+        self.VCursorSetRowId = self.__func__( "VCursorSetRowId", [ c_void_p, c_longlong ] )
         self.VCursorOpenRow = self.__func__( "VCursorOpenRow", [ c_void_p ] )
         self.VCursorFindNextRowIdDirect = self.__func__( "VCursorFindNextRowIdDirect", [ c_void_p, c_int, c_longlong, c_void_p ] )
 

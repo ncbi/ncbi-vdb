@@ -38,26 +38,69 @@
 #include <stdarg.h>
 #include <assert.h>
 
+static size_t measure(char const *const str)
+{
+    assert(str != NULL);
+    return (size_t)(strchrnul(str, ' ') - str);
+}
+
+static char const *const INVALID = "INVALID";
+static char const *Get_RC_String(size_t *const outsize, int const value, char const *const *const strings, int const limit)
+{
+    char const *const result = (0 <= value && value < limit) ? strings[value] : INVALID;
+    *outsize = measure(result);
+    return result;
+}
+
+static char const *Get_RC_String_Module(size_t *const outsize, rc_t const rc)
+{
+    return Get_RC_String(outsize, (int)GetRCModule(rc), RCModuleStrings, rcLastModule_v1_2);
+}
+
+static char const *Get_RC_String_Target(size_t *const outsize, rc_t const rc)
+{
+    int const value = GetRCTarget(rc);
+    char const *result = INVALID;
+
+    if (value >= rcNoTarg && value <= rcUri)
+        result = RCTargetStrings[value];
+    else if (value == rcProvider)
+        result = RCTargetStrings[rcProvider];
+    *outsize = measure(result);
+    return result;
+}
+
+static char const *Get_RC_String_Context(size_t *const outsize, rc_t const rc)
+{
+    return Get_RC_String(outsize, (int)GetRCContext(rc), RCContextStrings, rcLastContext_v1_1);
+}
+
+static char const *Get_RC_String_Object(size_t *const outsize, rc_t const rc)
+{
+    int const value = GetRCObject(rc);
+    char const *result = INVALID;
+
+    if (value == rcNoObj)
+        result = RCObjectStrings[rcNoObj];
+    else if (value > 0) {
+        if (value <= rcUri)
+            result = RCTargetStrings[value];
+        else if (value < rcLastObject_v1_2)
+            result = RCObjectStrings[value - rcUri];
+    }
+    *outsize = measure(result);
+    return result;
+}
+
+static char const *Get_RC_String_State(size_t *const outsize, rc_t const rc)
+{
+    return Get_RC_String(outsize, (int)GetRCState(rc), RCStateStrings, rcLastState_v1_1);
+}
+
 size_t KWrtFmt_rc_t ( char * pout, size_t max, const char * fmt, rc_t rc_in )
 {
-    rc_t rc;
-    const char * str;
-    const char * mod_str;
-    const char * targ_str;
-    const char * ctx_str;
-    const char * obj_str;
-    const char * state_str;
-    size_t needed;
-    size_t mod_size;
-    size_t targ_size;
-    size_t ctx_size;
-    size_t obj_size;
-    size_t state_size;
-    enum RCModule mod;
-    enum RCTarget targ;
-    enum RCContext ctx;
-    int obj;
-    enum RCState state;
+    rc_t rc = 0;
+    size_t needed = 0;
 
     assert (pout);
     assert (fmt);
@@ -67,63 +110,16 @@ size_t KWrtFmt_rc_t ( char * pout, size_t max, const char * fmt, rc_t rc_in )
 
     else if (rc_in != 0)
     {
-        mod = GetRCModule (rc_in);
-        targ = GetRCTarget (rc_in);
-        ctx = GetRCContext (rc_in);
-        obj = GetRCObject (rc_in);
-        state = GetRCState (rc_in);
-
-        if ((mod < 0) || (mod > rcLastModule_v1_1))
-            mod = rcLastModule_v1_1;
-
-        if ((targ < 0) || (targ > rcLastTarget_v1_1))
-            targ = rcLastTarget_v1_1;
-
-        if ((ctx < 0) || (ctx > rcLastContext_v1_1))
-            ctx = rcLastContext_v1_1;
-
-        if ((obj < 0) || (obj > rcLastObject_v1_1))
-            obj = rcLastObject_v1_1;
-
-        if ((state < 0) || (state > rcLastState_v1_1))
-            state = rcLastState_v1_1;
-
-        mod_str = RCModuleStrings[mod];
-        str = strchrnul(mod_str, ' ');
-        mod_size = str - mod_str;
-
-        targ_str = RCTargetStrings[targ];
-        str = strchrnul(targ_str, ' ');
-        targ_size = str - targ_str;
-
-        ctx_str = RCContextStrings[ctx];
-        str = strchrnul(ctx_str, ' ');
-        ctx_size = str - ctx_str;
-
-/* object is tricky because it overlaps target */
-        if (obj == 0)
-        {
-            obj_str = RCObjectStrings[obj];
-            str = strchrnul(obj_str, ' ');
-            obj_size = str - obj_str;
-        }
-        else if (obj < rcLastTarget_v1_1)
-        {
-            obj_str = RCTargetStrings[obj];
-            str = strchrnul(obj_str, ' ');
-            obj_size = str - obj_str;
-        }
-        else
-        {
-            obj -= (rcLastTarget_v1_1-1);
-            obj_str = RCObjectStrings[obj];
-            str = strchrnul(obj_str, ' ');
-            obj_size = str - obj_str;
-        }
-
-        state_str = RCStateStrings[state];
-        str = strchrnul(state_str, ' ');
-        state_size = str - state_str;
+        size_t mod_size = 0;
+        size_t targ_size = 0;
+        size_t ctx_size = 0;
+        size_t obj_size = 0;
+        size_t state_size = 0;
+        char const *const mod_str = Get_RC_String_Module (&mod_size  , rc_in);
+        char const *const targ_str = Get_RC_String_Target(&targ_size , rc_in);
+        char const *const ctx_str = Get_RC_String_Context(&ctx_size  , rc_in);
+        char const *const obj_str = Get_RC_String_Object (&obj_size  , rc_in);
+        char const *const state_str = Get_RC_String_State(&state_size, rc_in);
 
 #if _DEBUGGING
         rc = string_printf (pout, max, & needed, "RC(%s:%u:%s %*s,%*s,%*s,%*s,%*s)", 
@@ -144,10 +140,9 @@ size_t KWrtFmt_rc_t ( char * pout, size_t max, const char * fmt, rc_t rc_in )
     }
     else
     {
-        state = GetRCState (rc_in);
-        state_str = RCStateStrings[state];
-        str = strchrnul(state_str, ' ');
-        state_size = str - state_str;
+        int state = (int)GetRCState (rc_in);
+        char const *state_str = RCStateStrings[state];
+        size_t const state_size = measure(state_str);
         rc = string_printf (pout, max, & needed, "RC(%*s)",
                            (uint32_t)state_size, state_str);
     }

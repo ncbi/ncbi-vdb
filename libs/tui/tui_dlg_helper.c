@@ -137,33 +137,87 @@ static rc_t add_str_to_listbox( dir_callback_ctx * dctx, const char * name )
     return rc;
 }
 
-
-rc_t fill_widget_with_dirs( struct KTUIDlg * dlg, KDirectory * dir, uint32_t id, const char * path, const char * to_focus )
+static rc_t adjust_path( KDirectory * dir, const char * path_in,
+                         char * buffer, size_t buffer_size, const char ** path_ptr )
 {
-	rc_t rc;
-	
-	dir_callback_ctx dctx;
-	dctx.string_id = 0;
-	dctx.to_focus = 0;
-	dctx.str_to_focus = to_focus;
-	dctx.in_root = ( ( path[ 0 ] == '/' )&&( path[ 1 ] == 0 ) );
+    rc_t rc = 0;
+    uint32_t pt = KDirectoryPathType( dir, "%s", path_in );
+    if ( pt != kptDir )
+    {
+        if ( pt == kptFile )
+        {
+            size_t l = string_size( path_in );
+            if ( l >= buffer_size )
+            {
+                rc = RC( rcFS, rcFile, rcValidating, rcParam, rcInvalid );
+            }
+            else
+            {
+                char * p = string_rchr ( path_in, l, '/' );
+                if ( p == NULL )
+                {
+                    rc = RC( rcFS, rcFile, rcValidating, rcParam, rcInvalid );
+                }
+                else
+                {
+                    size_t pp = ( p - path_in );
+                    string_copy ( buffer, buffer_size, path_in, l );
+                    buffer[ pp ] = 0;
+                    *path_ptr = buffer;
+                }
+            }
+        }
+        else
+        {
+            rc = RC( rcFS, rcFile, rcValidating, rcParam, rcInvalid );
+        }
+    }
+    else
+    {
+        *path_ptr = path_in;    
+    }
+    return rc;
+}
+
+rc_t fill_widget_with_dirs( struct KTUIDlg * dlg, KDirectory * dir, uint32_t id,
+                            const char * path, const char * to_focus, bool clear )
+{
+    rc_t rc = 0;
+    char buffer[ 4096 ];
+    const char *path_ptr;
+    
+    dir_callback_ctx dctx;
+    dctx.string_id = 0;
+    dctx.to_focus = 0;
+    dctx.str_to_focus = to_focus;
+    dctx.in_root = ( ( path[ 0 ] == '/' )&&( path[ 1 ] == 0 ) );
     dctx.dlg = dlg;
     dctx.widget_id = id;
 
-	rc = KTUIDlgRemoveAllWidgetStrings ( dlg, id );
-	if ( rc == 0 )
-	{
-		if ( !dctx.in_root )
-		{
-			rc = KTUIDlgAddWidgetString ( dlg, id, "[ .. ]" );
-			dctx.string_id++;
-		}
-	}
+    if ( clear )
+    {
+        rc = KTUIDlgRemoveAllWidgetStrings ( dlg, id );
+        if ( rc == 0 )
+        {
+            if ( !dctx.in_root )
+            {
+                rc = KTUIDlgAddWidgetString ( dlg, id, "[ .. ]" );
+                dctx.string_id++;
+            }
+        }
+    }
 
-	if ( rc == 0 )
-	{
+    if ( rc == 0 )
+    {
+        /* check if path is actually a file-path, if not look if it is a file-name,
+           in this case extract the path... */
+        rc = adjust_path( dir, path, buffer, sizeof buffer, &path_ptr );
+    }
+    
+    if ( rc == 0 )
+    {
         VNamelist * dir_list;
-        rc = ReadDirEntriesIntoToNamelist( &dir_list, dir, true, false, true, path );
+        rc = ReadDirEntriesIntoToNamelist( &dir_list, dir, true, false, true, path_ptr );
         if ( rc == 0 )
         {
             uint32_t idx, count;
@@ -190,23 +244,38 @@ rc_t fill_widget_with_dirs( struct KTUIDlg * dlg, KDirectory * dir, uint32_t id,
             }
             VNamelistRelease( dir_list );
         }
-
-	}
+    }
     
-	if ( rc == 0 && dctx.to_focus > 0 )
-		rc = KTUIDlgSetWidgetSelectedString ( dlg, id, dctx.to_focus );
+    if ( rc == 0 && dctx.to_focus > 0 )
+        rc = KTUIDlgSetWidgetSelectedString ( dlg, id, dctx.to_focus );
 
     return rc;
 }
 
 
-rc_t fill_widget_with_files( struct KTUIDlg * dlg, KDirectory * dir, uint32_t id, const char * path, const char * extension )
+rc_t fill_widget_with_files( struct KTUIDlg * dlg, KDirectory * dir, uint32_t id,
+                             const char * path, const char * extension, bool clear )
 {
-	rc_t rc = KTUIDlgRemoveAllWidgetStrings ( dlg, id );
-	if ( rc == 0 )
+    rc_t rc = 0;
+    char buffer[ 4096 ];
+    const char *path_ptr;
+
+    if ( clear )
+    {
+        rc = KTUIDlgRemoveAllWidgetStrings ( dlg, id );
+    }
+
+    if ( rc == 0 )
+    {
+        /* check if path is actually a file-path, if not look if it is a file-name,
+           in this case extract the path... */
+        rc = adjust_path( dir, path, buffer, sizeof buffer, &path_ptr );
+    }
+
+    if ( rc == 0 )
     {
         VNamelist * file_list;
-        rc = ReadDirEntriesIntoToNamelist( &file_list, dir, true, true, false, path );
+        rc = ReadDirEntriesIntoToNamelist( &file_list, dir, true, true, false, path_ptr );
         if ( rc == 0 )
         {
             uint32_t idx, count;

@@ -34,10 +34,13 @@ TEST_TOOLS = \
 	test-kfs \
 	test-ramfile \
 	test-resolve \
+	test-link \
 	test-cachetee \
 	test-cachetee2 \
+	test-cachetee3 \
 	test-lru-cache \
-	test-kfs-md5
+	test-kfs-md5    \
+	test-appendfile
 
 include $(TOP)/build/Makefile.env
 
@@ -52,7 +55,7 @@ clean: stdclean
 # test-kfs
 #
 TEST_KFS_SRC = \
-	kfstest 
+	kfstest
 
 TEST_KFS_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_KFS_SRC))
@@ -88,7 +91,7 @@ $(TEST_BINDIR)/kdf: $(DU_OBJ)
 # test-kfs-md5
 #
 TEST_MD5_SRC = \
-	md5test 
+	md5test
 
 TEST_MD5_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_MD5_SRC))
@@ -106,7 +109,7 @@ $(TEST_BINDIR)/test-kfs-md5: $(TEST_MD5_OBJ)
 # test-ramfile
 #
 TEST_RAMFILE_SRC = \
-	ramfiletest 
+	ramfiletest
 
 TEST_RAMFILE_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_RAMFILE_SRC))
@@ -119,11 +122,14 @@ TEST_RAMFILE_LIB = \
 $(TEST_BINDIR)/test-ramfile: $(TEST_RAMFILE_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_RAMFILE_LIB)
 
+ramfile: test-ramfile
+	$(TEST_BINDIR)/test-ramfile
+
 #-------------------------------------------------------------------------------
 # test-resolve
 #
 TEST_RESOLVE_SRC = \
-	resolvetest 
+	resolvetest
 
 TEST_RESOLVE_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_RESOLVE_SRC))
@@ -134,6 +140,18 @@ TEST_RESOLVE_LIB = \
 	-lktst
 
 $(TEST_BINDIR)/test-resolve: $(TEST_RESOLVE_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_RESOLVE_LIB)
+
+#-------------------------------------------------------------------------------
+# test-link
+#
+TEST_L_SRC = \
+	test-link
+
+TEST_L_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_L_SRC))
+
+$(TEST_BINDIR)/test-link: $(TEST_L_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_RESOLVE_LIB)
 
 #-------------------------------------------------------------------------------
@@ -154,7 +172,7 @@ $(TEST_BINDIR)/test-cachetee: $(TEST_CACHETEE_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_CACHETEE_LIB)
 	rm *.o *.d
 
-cachetee: $(TEST_BINDIR)/test-cachetee
+cachetee: test-cachetee
 	$(TEST_BINDIR)/test-cachetee
 
 #-------------------------------------------------------------------------------
@@ -175,8 +193,31 @@ $(TEST_BINDIR)/test-cachetee2: $(TEST_CACHETEE2_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_CACHETEE2_LIB)
 	rm *.o *.d
 
-cachetee2: $(TEST_BINDIR)/test-cachetee2
+cachetee2: test-cachetee2
 	$(TEST_BINDIR)/test-cachetee2
+
+#-------------------------------------------------------------------------------
+# test-cachetee3
+#
+TEST_CACHETEE3_SRC = \
+	cachetee3test
+
+TEST_CACHETEE3_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_CACHETEE3_SRC))
+
+TEST_CACHETEE3_LIB = \
+	-lkapp \
+    -sncbi-vdb \
+	-lktst
+
+$(TEST_BINDIR)/test-cachetee3: $(TEST_CACHETEE3_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_CACHETEE3_LIB)
+#	rm *.o *.d
+
+cachetee3: test-cachetee3
+	rm -f cache.dat.cache org.dat
+	$(TEST_BINDIR)/test-cachetee3
+# $(TEST_BINDIR)/test-cachetee3 -vvv
 
 #-------------------------------------------------------------------------------
 # test-lru-cache
@@ -196,7 +237,7 @@ $(TEST_BINDIR)/test-lru-cache: $(TEST_LRU_CACHE_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_LRU_CACHE_LIB)
 	rm *.o *.d
 
-testlrucache: $(TEST_BINDIR)/test-lru-cache
+testlrucache: test-lru-cache
 	$(TEST_BINDIR)/test-lru-cache
 
 #-------------------------------------------------------------------------------
@@ -220,7 +261,7 @@ $(TEST_BINDIR)/fuse-proxy: $(FUSE_PROXY_OBJ)
 #
 CTOFS_SRC = \
 	cachetee-out-of-space
-    
+
 CTOFS_OBJ = \
 	$(addsuffix .$(OBJX),$(CTOFS_SRC))
 
@@ -232,6 +273,27 @@ CTOFS_LIB = \
 $(TEST_BINDIR)/test-cachetee-out-of-space: $(CTOFS_OBJ)
 	$(LP) --exe -o $@ $^ $(CTOFS_LIB)
 	rm *.o *.d
+
+#-------------------------------------------------------------------------------
+# simple_q_test
+#
+SIMPLE_Q_TEST_SRC = \
+	simple_q_test
+
+SIMPLE_Q_TEST_OBJ = \
+	$(addsuffix .$(OBJX),$(SIMPLE_Q_TEST_SRC))
+
+SIMPLE_Q_TEST_LIB = \
+	-lkapp \
+    -sncbi-vdb \
+	-lktst
+
+$(TEST_BINDIR)/simple_q: $(SIMPLE_Q_TEST_OBJ)
+	$(LP) --exe -o $@ $^ $(SIMPLE_Q_TEST_LIB)
+	rm *.o *.d
+
+simple_q: simple_q
+	$(TEST_BINDIR)/simple_q
 
 ifeq (linux,$(OS))
 ifeq (1,$(HAVE_FUSE))
@@ -246,3 +308,21 @@ cachetee-out-of-space-test: $(TEST_BINDIR)/fuse-proxy $(TEST_BINDIR)/test-cachet
 	@ $(SRCDIR)/run-cachetee-out-of-space-test.sh $(SRCDIR) $(TEST_BINDIR)
 endif
 endif
+
+#-------------------------------------------------------------------------------
+# test-appendfile
+#
+TEST_APPENDFILE_SRC = \
+	appendfiletest
+
+TEST_APPENDFILE_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_APPENDFILE_SRC))
+
+TEST_APPENDFILE_LIB = \
+	-lkapp \
+    -sncbi-vdb \
+	-lktst
+
+$(TEST_BINDIR)/test-appendfile: $(TEST_APPENDFILE_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_APPENDFILE_LIB)
+

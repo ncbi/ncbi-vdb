@@ -116,7 +116,8 @@ VXF_SRC = \
 	strtonum \
 	sprintf \
 	wgs-tokenize-accession \
-	lower-case-tech-reads
+	lower-case-tech-reads \
+	unzstd \
 
 VXF_OBJ = \
 	$(addsuffix .$(LOBX),$(VXF_SRC))
@@ -143,7 +144,8 @@ WVXF_SRC = \
 	bzip \
 	fzip \
 	rlencode \
-	checksum
+	checksum \
+	zstd \
 
 WVXF_OBJ = \
 	$(addsuffix .$(LOBX),$(WVXF_SRC))
@@ -194,3 +196,8 @@ $(ILIBDIR)/libvxfentrez.$(LIBX): $(VXF_ENTREZ_OBJ)
 compile: stdcompile
 
 $(TARGDIR)/compile: $(OBJFILES)
+#-------------------------------------------------------------------------------
+# fuzz
+#
+fuzz: std
+	cp $(addsuffix .$(LIBX),$(addprefix $(ILIBDIR)/,$(INT_LIBS))) $(FLIBDIR)/

@@ -189,10 +189,9 @@ SRA_EXTERN rc_t CC SRAPathFindWithRepLen ( struct SRAPath const *self,
 
 
 /*--------------------------------------------------------------------------
- * SRASchema
+ * SRASchema - DEPRECATED
  */
-
-SRA_SCH_EXTERN rc_t CC SRASchemaMake ( struct VSchema **schema, struct VDBManager const *mgr );
+SRA_EXTERN rc_t CC SRASchemaMake ( struct VSchema **schema, struct VDBManager const *mgr );
 
 
 #if 0

@@ -91,6 +91,8 @@ ALIGN_EXTERN rc_t CC ReferenceMgr_Verify(ReferenceMgr const *self,
                                          bool allowMultiMapping,
                                          bool wasRenamed[]);
 
+ALIGN_EXTERN rc_t CC ReferenceMgr_Get1stRow(const ReferenceMgr* cself, int64_t* row_id, char const id[]);
+    
 ALIGN_EXTERN rc_t CC ReferenceMgr_FastaPath(const ReferenceMgr* cself, const char* fasta_path);
 
 ALIGN_EXTERN rc_t CC ReferenceMgr_FastaFile(const ReferenceMgr* cself, struct KFile const* file);

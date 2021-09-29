@@ -77,47 +77,13 @@ SCHEMA_SRC = \
     schema-ast \
     AST \
     ASTBuilder \
+    ASTBuilder-type \
     ASTBuilder-func \
+    ASTBuilder-phys \
     ASTBuilder-tbl \
     ASTBuilder-db \
 	ErrorReport \
-
-schema-grammar.$(LOBX): $(SRCDIR)/schema-grammar.cpp
-	$(CP) -o $@ -fPIC $(OPT) -D_LIBRARY $< $(LOC_INFO) -D__file_ext__=cpp
-
-bison: grammar ast
-
-grammar: $(SRCDIR)/schema-grammar.cpp
-
-ast: $(SRCDIR)/schema-ast.cpp
-
-#looak at the major version of Bison
-BISON_VERSION = $(word 4,$(subst ., ,$(shell bison -V | grep "(GNU Bison)")))
-
-ifeq (1,$(shell echo "3<=$(BISON_VERSION)" | bc -l))
-
-$(SRCDIR)/schema-grammar.cpp: $(SRCDIR)/schema-grammar.y
-	bison -r state -o $(SRCDIR)/schema-grammar.cpp --defines=$(SRCDIR)/schema-tokens.h $(SRCDIR)/schema-grammar.y
-
-$(SRCDIR)/schema-ast.cpp: $(SRCDIR)/schema-ast.y
-	bison -r state -o $(SRCDIR)/schema-ast.cpp --defines=$(SRCDIR)/schema-ast-tokens.h $(SRCDIR)/schema-ast.y
-
-else
-
-BISON_ERROR = "NOTE: The current Bison version is $(BISON_VERSION). Version 3.0 or newer is required in the PATH. Using the existing $@."
-$(SRCDIR)/schema-grammar.cpp: $(SRCDIR)/schema-grammar.y
-	@echo $(BISON_ERROR)
-
-$(SRCDIR)/schema-ast.cpp: $(SRCDIR)/schema-ast.y
-	@echo $(BISON_ERROR)
-
-endif
-
-schema-lex.$(LOBX): $(SRCDIR)/schema-lex.c
-	$(CC)  -Wno-unused-function -o $@ -fPIC $(OPT) -D_LIBRARY $< $(LOC_INFO) -D__file_ext__=c
-
-flex $(SRCDIR)/schema-lex.c: $(SRCDIR)/schema-lex.l $(SRCDIR)/schema-grammar.cpp
-	flex -d -t $(SRCDIR)/schema-lex.l > $(SRCDIR)/schema-lex.c
+	ASTBuilder-view \
 
 SCHEMA_OBJ = \
 	$(addsuffix .$(LOBX),$(SCHEMA_SRC))
@@ -129,4 +95,28 @@ compile: stdcompile
 
 $(TARGDIR)/compile: $(OBJFILES)
 
+#-------------------------------------------------------------------------------
+#
+# flex/bison for the schema parser
+#
+# Will not be executed in a regular build. Use 'make bison' and/or 'make flex' to re-generate C files
+#
+
+bison: grammar ast
+
+grammar: $(SRCDIR)/schema-grammar.y
+	bison -r state -v --no-lines -o $(SRCDIR)/schema-grammar.cpp --defines=$(SRCDIR)/schema-tokens.h $(SRCDIR)/schema-grammar.y
+
+ast: $(SRCDIR)/schema-ast.y
+	bison -r state -v --no-lines -o $(SRCDIR)/schema-ast.cpp --defines=$(SRCDIR)/schema-ast-tokens.h $(SRCDIR)/schema-ast.y
+
+flex: $(SRCDIR)/schema-lex.l $(SRCDIR)/schema-grammar.cpp
+	flex -d --noline -t $(SRCDIR)/schema-lex.l> $(SRCDIR)/schema-lex.c
+
 .PHONY: bison flex grammar ast
+
+#-------------------------------------------------------------------------------
+# fuzz
+#
+fuzz: std
+	cp $(addsuffix .$(LIBX),$(addprefix $(ILIBDIR)/,$(INT_LIBS))) $(FLIBDIR)/

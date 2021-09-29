@@ -33,6 +33,7 @@
 #include <kfs/impl.h>
 
 #include <vfs/manager.h>
+#include <vfs/manager-priv.h> /* VFSManagerOpenDirectoryReadDecryptUnreliable */
 #include <vfs/resolver.h>
 #include <vfs/path.h>
 #include <vfs/path-priv.h>
@@ -339,7 +340,8 @@ LIB_EXPORT rc_t CC KDBManagerRunPeriodicTasks ( const KDBManager *self )
  * the KDirectory values if a path type is not specifically a
  * kdb object
  */
-LIB_EXPORT int CC KDBManagerPathTypeVP( const KDBManager * self, const VPath * path )
+static int CC KDBManagerPathTypeVPImpl( const KDBManager * self,
+    const VPath * path, bool reliable )
 {
     int path_type = kptBadPath;
     if ( self != NULL && path != NULL )
@@ -358,7 +360,12 @@ LIB_EXPORT int CC KDBManagerPathTypeVP( const KDBManager * self, const VPath * p
              * Most KDBPathType values are based on 'directories'
              * so try to open the resolved path as a directory
              */
-            rc = VFSManagerOpenDirectoryReadDecrypt( self->vfsmgr, &dir, rpath );
+            if ( reliable )
+                rc = VFSManagerOpenDirectoryReadDecrypt          ( self->vfsmgr,
+                    &dir, rpath );
+            else
+                rc = VFSManagerOpenDirectoryReadDecryptUnreliable( self->vfsmgr,
+                    &dir, rpath );
             if ( rc == 0 )
             {
                 path_type = KDBPathTypeDir( dir, kptDir, NULL, "." );
@@ -385,8 +392,14 @@ LIB_EXPORT int CC KDBManagerPathTypeVP( const KDBManager * self, const VPath * p
     return path_type;
 }
 
+LIB_EXPORT
+int CC KDBManagerPathTypeVP( const KDBManager * self, const VPath * path )
+{
+    return KDBManagerPathTypeVPImpl ( self, path, true );
+}
 
-LIB_EXPORT int CC KDBManagerVPathType ( const KDBManager * self, const char *path, va_list args )
+LIB_EXPORT int CC KDBManagerVPathTypeImpl ( const KDBManager * self,
+    const char *path, va_list args, bool reliable )
 {
     int path_type = kptBadPath;
 
@@ -398,13 +411,23 @@ LIB_EXPORT int CC KDBManagerVPathType ( const KDBManager * self, const char *pat
         rc = VFSManagerVMakePath( self -> vfsmgr, &vp, path, args );
         if ( rc == 0 )
         {
-            path_type = KDBManagerPathTypeVP( self, vp );
+            path_type = KDBManagerPathTypeVPImpl( self, vp, reliable );
             VPathRelease( vp );
         }
     }
     return path_type;
 }
 
+LIB_EXPORT int CC KDBManagerVPathType ( const KDBManager * self,
+    const char *path, va_list args )
+{
+    return KDBManagerVPathTypeImpl ( self, path, args, true );
+}
+LIB_EXPORT int CC KDBManagerVPathTypeUnreliable ( const KDBManager * self,
+    const char *path, va_list args )
+{
+    return KDBManagerVPathTypeImpl ( self, path, args, false );
+}
 
 LIB_EXPORT int CC KDBManagerPathType ( const KDBManager * self, const char *path, ... )
 {

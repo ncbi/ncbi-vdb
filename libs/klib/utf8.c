@@ -41,8 +41,9 @@
 /* string_len
  *  length of string in characters
  */
-LIB_EXPORT uint32_t CC string_len ( const char * str, size_t size )
+LIB_EXPORT uint32_t CC string_len ( const char * _str, size_t size )
 {
+    const signed char * str = (const signed char *)_str;
     uint32_t len = 0;
 
     if ( str != NULL )
@@ -65,13 +66,15 @@ LIB_EXPORT uint32_t CC string_len ( const char * str, size_t size )
             if ( str [ i ] == 0 )
                 break;
 
-            /* str [ i ] was < 0 */
-            assert ( c > 0 && c <= 0x7F );
+            /* str [ i ] was < 0, illegal */
+            /*assert ( c > 0 && c <= 0x7F );*/
+            if ( c <= 0 || c > 0x7F )
+                break;
 
             /* if original code was 0b10xxxxxx, illegal */
             if ( c >= 0x40 )
                 break;
-	
+
             /* original code 0b110xxxxx = 2 byte */
             if ( c >= 0x20 )
                 i += 2;
@@ -99,8 +102,9 @@ LIB_EXPORT uint32_t CC string_len ( const char * str, size_t size )
 /* string_measure
  *  measures length of string in both characters and bytes
  */
-LIB_EXPORT uint32_t CC string_measure ( const char * str, size_t * size )
+LIB_EXPORT uint32_t CC string_measure ( const char * _str, size_t * size )
 {
+    const signed char * str = (const signed char *)_str;
     size_t i = 0;
     uint32_t len = 0;
 
@@ -126,12 +130,14 @@ LIB_EXPORT uint32_t CC string_measure ( const char * str, size_t * size )
                 break;
 
             /* str [ i ] was < 0 */
-            assert ( c > 0 && c <= 0x7F );
+            /*assert ( c > 0 && c <= 0x7F );*/
+            if ( c <= 0 || c > 0x7F )
+                break;
 
             /* if original code was 0b10xxxxxx, illegal */
             if ( c >= 0x40 )
                 break;
-	
+
             /* original code 0b110xxxxx = 2 byte */
             if ( c >= 0x20 )
                 i += 2;
@@ -164,11 +170,13 @@ LIB_EXPORT uint32_t CC string_measure ( const char * str, size_t * size )
  *  terminates with null byte if possible
  *  returns the number of bytes copied
  */
-LIB_EXPORT size_t CC string_copy ( char *dst, size_t dst_size, const char *src, size_t src_size )
+LIB_EXPORT size_t CC string_copy ( char *_dst, size_t dst_size, const char *_src, size_t src_size )
 {
+    const signed char * src = (const signed char *)_src;
+    signed char * dst = (signed char *)_dst;
     size_t i;
-    char * dend;
-    const char * send;
+    signed char * dend;
+    const signed char * send;
 
     if ( dst == NULL || src == NULL )
         return 0;
@@ -191,12 +199,12 @@ LIB_EXPORT size_t CC string_copy ( char *dst, size_t dst_size, const char *src, 
             break;
 
         /* read a ( hopefully complete ) UNICODE character ( detect NUL ) */
-        len1 = utf8_utf32 ( & ch, & src [ i ], send );
+        len1 = utf8_utf32 ( & ch, (const char*)& src [ i ], (const char*)send );
         if ( len1 <= 0 || ch == 0 )
             break;
 
         /* write the UNICODE character in UTF-8 */
-        len2 = utf32_utf8 ( & dst [ i ], dend, ch );
+        len2 = utf32_utf8 ( (char*)& dst [ i ], (char*)dend, ch );
         if ( len2 <= 0 )
             break;
 
@@ -273,7 +281,7 @@ LIB_EXPORT size_t CC string_copy_measure ( char *dst, size_t dst_size, const cha
         int len1, len2;
 
         /* optimistic copy of ASCII data ( NUL terminated ) */
-        for ( ; i < dst_size && src [ i ] > 0; ++ i )
+        for ( ; i < dst_size && (signed char)(src [ i ]) > 0; ++ i )
             dst [ i ] = src [ i ];
         if ( i == dst_size || src [ i ] == 0 )
             break;
@@ -360,7 +368,7 @@ LIB_EXPORT size_t CC tolower_copy ( char *dst, size_t dst_size, const char *src,
         int len1, len2;
 
         /* optimistic copy of ASCII data */
-        for ( ; i < src_size && src [ i ] > 0; ++ i )
+        for ( ; i < src_size && (signed char)(src [ i ])  > 0; ++ i )
             dst [ i ] = ( char ) tolower ( src [ i ] );
         if ( i == src_size )
             break;
@@ -460,7 +468,7 @@ LIB_EXPORT size_t CC toupper_copy ( char *dst, size_t dst_size, const char *src,
         int len1, len2;
 
         /* optimistic copy of ASCII data */
-        for ( ; i < src_size && src [ i ] > 0; ++ i )
+        for ( ; i < src_size && (signed char)(src [ i ]) > 0; ++ i )
             dst [ i ] = ( char ) toupper ( src [ i ] );
         if ( i == src_size )
             break;
@@ -1000,7 +1008,7 @@ LIB_EXPORT char * CC string_chr ( const char *str, size_t size, uint32_t ch )
         for ( i = 0; i < size; )
         {
             /* skip over ASCII */
-            for ( ; i < size && str [ i ] > 0; ++ i )
+            for ( ; i < size && (signed char)(str [ i ]) > 0; ++ i )
                 ( void ) 0;
             if ( i == size )
                 break;
@@ -1067,7 +1075,7 @@ LIB_EXPORT char * CC string_rchr ( const char *str, size_t size, uint32_t ch )
         for ( i = ( int64_t ) size - 1; i >= 0; -- i )
         {
             /* skip over ASCII */
-            for ( ; i >= 0 && str [ i ] > 0; -- i )
+            for ( ; i >= 0 && (signed char)(str [ i ]) > 0; -- i )
                 ( void ) 0;
             if ( i < 0 )
                 break;

@@ -153,9 +153,9 @@ REQUIRE_TERMINAL ( Decimal,             DECIMAL,        "123456789" )
 REQUIRE_TERMINAL ( Octal,               OCTAL,          "01234567" )
 REQUIRE_TERMINAL ( Hex_0x,              HEX,            "0x01abCDef23" )
 REQUIRE_TERMINAL ( Hex1_0X,             HEX,            "0X01abCDef23" )
-REQUIRE_TERMINAL ( Float,               FLOAT,          ".1415" )
-REQUIRE_TERMINAL ( Float_NoLeadDigits,  FLOAT,          "3.1415" )
-REQUIRE_TERMINAL ( Float_NoTrailDigits, FLOAT,          "3." )
+REQUIRE_TERMINAL ( Float,               FLOAT_,          ".1415" )
+REQUIRE_TERMINAL ( Float_NoLeadDigits,  FLOAT_,          "3.1415" )
+REQUIRE_TERMINAL ( Float_NoTrailDigits, FLOAT_,          "3." )
 REQUIRE_TERMINAL ( ExpFloat_e,          EXP_FLOAT,      "3.14e1" )
 REQUIRE_TERMINAL ( ExpFloat_E,          EXP_FLOAT,      "3.14E1" )
 
@@ -177,6 +177,9 @@ REQUIRE_TERMINAL ( PhysicalIdentifier,  PHYSICAL_IDENTIFIER_1_0, ".T" )
 REQUIRE_TERMINAL ( Version_Maj,         VERSION, "#1" )
 REQUIRE_TERMINAL ( Version_MajMin,      VERSION, "#1.2" )
 REQUIRE_TERMINAL ( Version_MajMinRel,   VERSION, "#1.2.3" )
+REQUIRE_TERMINAL ( Version_Ws_Maj,         VERSION, "# 1" )
+REQUIRE_TERMINAL ( Version_Ws_MajMin,      VERSION, "#  1.2" )
+REQUIRE_TERMINAL ( Version_Ws_MajMinRel,   VERSION, "#    1.2.3" )
 
 #define REQUIRE_KEYWORD(word) \
 TEST_CASE ( kw_##word ) \
@@ -255,7 +258,7 @@ TEST_CASE ( WhiteSpace )
     REQUIRE_TOKEN ( "abc", t ); \
 }
 
-TEST_CASE ( VERS_1 )
+TEST_CASE ( Version_1 )
 {
     SchemaScanner s ( "version 1;" );
     REQUIRE_EQ ( ( Token :: TokenType ) KW_version, s . NextToken () . GetType () );
@@ -263,12 +266,26 @@ TEST_CASE ( VERS_1 )
     REQUIRE_EQ ( ( Token :: TokenType ) ';', s . NextToken () . GetType () );
 }
 
-TEST_CASE ( VERS_1_comment )
+TEST_CASE ( Version_1_comment )
 {
     SchemaScanner s ( "version /*!!*/ 1;" );
     REQUIRE_EQ ( ( Token :: TokenType ) KW_version, s . NextToken () . GetType () );
     REQUIRE_EQ ( ( Token :: TokenType ) VERS_1_0, s . NextToken () . GetType () );
     REQUIRE_EQ ( ( Token :: TokenType ) ';', s . NextToken () . GetType () );
+}
+
+TEST_CASE ( Version_2 )
+{
+    SchemaScanner s ( "version 2;" );
+    REQUIRE_EQ ( ( Token :: TokenType ) KW_version, s . NextToken () . GetType () );
+    REQUIRE_EQ ( ( Token :: TokenType ) VERS_2_0, s . NextToken () . GetType () );
+}
+
+TEST_CASE ( Version_2_0 )
+{
+    SchemaScanner s ( "version 2.0;" );
+    REQUIRE_EQ ( ( Token :: TokenType ) KW_version, s . NextToken () . GetType () );
+    REQUIRE_EQ ( ( Token :: TokenType ) VERS_2_0, s . NextToken () . GetType () );
 }
 
 //////////////////////////////////////////// Main

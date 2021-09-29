@@ -60,7 +60,7 @@ void VColumnDestroy ( VColumn *self )
 {
 #if PROD_REFCOUNT && ! PROD_ALL_IN_CURSOR
     PROD_TRACK_REFCOUNT (VProductionRelease,self->in);
-    VProductionRelease ( self -> in, NULL ); 
+    VProductionRelease ( self -> in, NULL );
 #endif
 #if USE_KURT
     VBlobRelease ( self -> cache );
@@ -235,7 +235,7 @@ rc_t VColumnReadBlob ( const VColumn *cself, const VBlob **vblobp, int64_t row_i
     else
     {
         VBlob *vblob;
-        rc = VProductionReadBlob ( cself -> in, & vblob, row_id, 1, cctx );
+        rc = VProductionReadBlob ( cself -> in, & vblob, & row_id, 1, cctx );
         if ( rc == 0 )
         {
             VColumn *self = ( VColumn* ) cself;
@@ -275,7 +275,7 @@ rc_t VColumnRead ( const VColumn *cself, int64_t row_id,
         rc = RC ( rcVDB, rcColumn, rcReading, rcColumn, rcNotOpen );
     else
     {
-        rc = VProductionReadBlob ( cself -> in, vblob, row_id, 1, NULL );
+        rc = VProductionReadBlob ( cself -> in, vblob, & row_id, 1, NULL );
         if ( rc == 0 )
         {
             VColumn *self = ( VColumn* ) cself;

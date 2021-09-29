@@ -336,15 +336,15 @@ LIB_EXPORT KTime_t CC KTimeMakeTime ( const KTime *self )
         assert ( self -> year >= 1900 );
         t . tm_year = self -> year - 1900;
         t . tm_mon = self -> month;
-        t . tm_mday = self -> day + 1;
+        t . tm_mday = self -> day;
         t . tm_wday = self -> weekday;
         t . tm_hour = self -> hour;
         t . tm_min = self -> minute;
         t . tm_sec = self -> second;
         t . tm_isdst = self -> dst;
 
-        ts = mktime ( &t );
-#endif /* USE_WINDOWS_NATIVE */
+        ts = _mkgmtime( &t );
+#endif /* USE_WINDOWS_NATIVE */ 
     }
 
     return ts;
@@ -370,7 +370,7 @@ LIB_EXPORT size_t CC KTimeIso8601 ( KTime_t ts, char * s, size_t size )
     if ( r == NULL )
         return 0;
 
-    rc = string_printf ( s, size, & num_writ, "%04d-02d-02dT02d:%02d:%02dZ",
+    rc = string_printf ( s, size, & num_writ, "%04d-%02d-%02dT%02d:%02d:%02dZ",
         ktime . year, ktime . month + 1, ktime . day + 1,
         ktime . hour, ktime . minute, ktime . second );
     if ( rc == 0 )
@@ -384,6 +384,78 @@ LIB_EXPORT size_t CC KTimeIso8601 ( KTime_t ts, char * s, size_t size )
     return 0;
 }
 
+static const char * month(uint16_t month) {
+    switch (month) {
+    case 0: return "Jan";
+    case 1: return "Feb";
+    case 2: return "Mar";
+    case 3: return "Apr";
+    case 4: return "May";
+    case 5: return "Jun";
+    case 6: return "Jul";
+    case 7: return "Aug";
+    case 8: return "Sep";
+    case 9: return "Oct";
+    case 10: return "Nov";
+    case 11: return "Dec";
+    default: return "";
+    }
+}
+
+static const char * weekday(uint16_t weekday) {
+    switch (weekday) {
+    case 0: return "Sun";
+    case 1: return "Mon";
+    case 2: return "Tue";
+    case 3: return "Wed";
+    case 4: return "Thu";
+    case 5: return "Fri";
+    case 6: return "Sat";
+    default: return "";
+    }
+}
+
+/* Iso8601
+*  populate "s" from "ks" according to RFC 2616:
+*         Sun Nov 6 08:49:37 1994 +0000 ; ANSI C's asctime() format
+*
+* https://www.ietf.org/rfc/rfc2616.txt 3.3.1 Full Date
+*
+* https://www.ietf.org/rfc/rfc2822.txt 3.3. Date and Time Specification
+*     The form "+0000" SHOULD be used to indicate a time zone at Universal Time.
+*/
+KLIB_EXTERN size_t CC KTimeRfc2616(KTime_t ts, char * s, size_t size) {
+    rc_t rc = 0;
+    size_t num_writ = 0;
+
+    const KTime * r = NULL;
+    KTime ktime;
+
+    time_t unix_time = (time_t)ts;
+    struct tm t;
+
+    if (ts == 0 || s == NULL || size < 19)
+        return 0;
+
+    r = KTimeGlobal(&ktime, ts);
+    if (r == NULL)
+        return 0;
+
+    rc = string_printf(s, size, &num_writ,
+        "%s, %02d %s %04d 02d:%02d:%02d +0000",
+        weekday(ktime.weekday), ktime.day + 1, month(ktime.month), ktime.year,
+        ktime.hour, ktime.minute, ktime.second);
+    if (rc == 0)
+        return num_writ;
+    else if (rc ==
+        SILENT_RC(rcText, rcString, rcConverting, rcBuffer, rcInsufficient)
+        && num_writ == size)
+    {
+        return num_writ;
+    }
+
+    return 0;
+}
 
 LIB_EXPORT const KTime* CC KTimeFromIso8601 ( KTime *kt, const char * s,
                                               size_t size )

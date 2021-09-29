@@ -28,15 +28,29 @@
 #include <kproc/procmgr.h>
 
 #include <unistd.h>
+
+#if !defined(_GNU_SOURCE)
+
+#define NEED_GET_TID 1
+
+#elif defined(__GLIBC__) && (__GLIBC__ < 2|| (__GLIBC__ == 2 && __GLIBC_MINOR__ < 30))
+
+#define NEED_GET_TID 1
+
+#endif
+
+#if NEED_GET_TID
 #include <sys/syscall.h>
 
-static __thread bool have_tid, on_main_thread;
+#define GET_TID ( syscall ( SYS_gettid ) )
 
-static
-pid_t gettid ( void )
-{
-    return syscall ( SYS_gettid );
-}
+#else
+
+#define GET_TID ( gettid() )
+
+#endif
+
+static __thread bool have_tid, on_main_thread;
 
 /* OnMainThread
  *  returns true if running on main thread
@@ -45,8 +59,19 @@ LIB_EXPORT bool CC KProcMgrOnMainThread ( void )
 {
     if ( ! have_tid )
     {
-        on_main_thread = gettid () == getpid ();
+        on_main_thread = GET_TID == getpid ();
         have_tid = true;
     }
     return on_main_thread;
+}
+
+uint32_t sys_GetPID ( void )
+{
+    return getpid ();
+}
+
+
+int sys_GetHostName ( char * buffer, size_t buffer_size )
+{
+    return gethostname( buffer, buffer_size );
 }

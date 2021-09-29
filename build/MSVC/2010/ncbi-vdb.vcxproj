@@ -18,6 +18,23 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <IncludePath>
+    </IncludePath>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>C:\Program Files (x86)\Windows Kits\8.1\Include\um;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Program Files (x86)\Windows Kits\8.1\Include\shared;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\libs\kns\proxy.c" />
+    <ClInclude Include="..\..\..\libs\diagnose\diagnose.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\libs\diagnose\Makefile" />
+  </ItemGroup>
   <Import Project=".\lib-project.props" />
   <PropertyGroup Label="Globals">
     <ProjectGuid>{A2B91665-2A2A-4D2C-8246-E01CD98FF673}</ProjectGuid>
@@ -25,5 +42,5 @@
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <WholeProgramOptimization>false</WholeProgramOptimization>
   </PropertyGroup>
-  <Import Project="..\ncbi-vdb.files" />  
+  <Import Project="..\ncbi-vdb.files" />
 </Project>

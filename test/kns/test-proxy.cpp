@@ -46,7 +46,7 @@ public:
         cmd << "unset http_proxy ;";
 
         ostringstream s;
-        s << "test-proxy/" << testcase << "/environment";
+        s << "data/test-proxy/" << testcase << "/environment";
         std :: ifstream myfile ( s . str () . c_str () );
         string line;
         while ( getline ( myfile, line) ) {
@@ -58,9 +58,9 @@ public:
         assert ( t -> argv );
         assert ( t -> argv [ 0 ] );
         const char * testBin ( t -> argv [ 0 ] );
-        const char * file = strrchr ( testBin, '/' ); 
+        const char * file = strrchr ( testBin, '/' );
         cmd << string ( testBin, file - testBin )
-            << "/../bin/test-proxy-with-env test-proxy/" << testcase;
+            << "/../bin/test-proxy-with-env data/test-proxy/" << testcase;
 
 //std::cerr<<cmd . str ()<<"\n";
 
@@ -93,27 +93,31 @@ TEST_CASE ( TEST_PROXY_1PATH_NoPort ) { // 1 proxy without port
 }
 
 #ifdef MULTIPLE_PROXIES
+
 TEST_CASE ( TEST_PROXY_2PATH ) { // 2 proxies with port
     C c ( "/http/proxy/path", "proxy.gov:7678,proxy2.org:768");
     E e ( "proxy.gov", 7678 );
     e . add ( "proxy2.org", 768 );
     TestProxy ( this, & c, & e );
 }
+
 TEST_CASE ( TEST_PROXY_2PATH_NoPort ) { // 2 proxies with/without port
     C c ( "/http/proxy/path", "proxy.gov:7678,proxy2.org");
     E e ( "proxy.gov", 7678 );
     e . add ( "proxy2.org", 0 );
     TestProxy ( this, & c, & e );
 }
+
 // 2 proxies from config: proxy only, no direct access
-TEST_CASE ( TEST_PROXY_onlyWithoutEnv ) {
-    C c ( 
+TEST_CASE ( TEST_PROXY_onlyWithoutEnv_withComma ) {
+    C c (
      "/http/proxy/path", "port.config.proxy.gov:678,no-port.config.proxy2.org");
     c . add ( "/http/proxy/only", "true" );
     E e ( "port.config.proxy.gov", 678 );
     e . add ( "no-port.config.proxy2.org", 0 );
     TestProxy ( this, & c, & e );
 }
+
 #endif
 
 // 1 proxy from config: proxy only, no direct access

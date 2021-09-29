@@ -78,6 +78,8 @@ KNS_NO_HTTP_SRC = \
 	stream-from-buffer \
 	kns_manager-ext \
 	manager \
+	proxy \
+	stable-http-file \
 	buffered-stream \
 	stream \
 	stream-from-files \
@@ -98,6 +100,7 @@ KNS_SRC = \
 	$(KNS_NO_HTTP_SRC) \
 	http-file          \
 	http-client        \
+	http-request       \
 	http-retrier       \
 	http               \
 
@@ -115,3 +118,9 @@ $(ILIBDIR)/libkns.$(LIBX): $(KNS_OBJ)
 compile: stdcompile
 
 $(TARGDIR)/compile: $(OBJFILES)
+
+#-------------------------------------------------------------------------------
+# fuzz
+#
+fuzz: std
+	cp $(addsuffix .$(LIBX),$(addprefix $(ILIBDIR)/,$(INT_LIBS))) $(FLIBDIR)/

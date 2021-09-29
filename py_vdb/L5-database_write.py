@@ -2,7 +2,8 @@
 
 from vdb import *
 
-lib_wr = "./2.8.0/libncbi-wvdb.so.2.8.0"
+#for this to work you need:
+#at $HOME/.ncbi/lib64 : libncbi-wvdb.so
 
 schema_txt = '''
 version 1;
@@ -94,7 +95,7 @@ if __name__ == '__main__' :
     
     try :
         #open a manager in read-mode
-        mgr = manager( OpenMode.Write, lib_wr )
+        mgr = manager( OpenMode.Write )
         
         #make a schema from the text above
         schema = mgr.MakeSchema( schema_txt )

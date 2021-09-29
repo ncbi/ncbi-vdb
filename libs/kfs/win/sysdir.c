@@ -396,46 +396,49 @@ struct KSysDir
 static
 rc_t translate_file_error( DWORD error, enum RCContext ctx )
 {
+    rc_t rc;
     switch ( error )
     {
-    case ERROR_FILE_NOT_FOUND :
-    case ERROR_PATH_NOT_FOUND :
-    case ERROR_INVALID_DRIVE :
-        return RC ( rcFS, rcDirectory, ctx, rcPath, rcNotFound );
+        case ERROR_FILE_NOT_FOUND :
+        case ERROR_PATH_NOT_FOUND :
+        case ERROR_INVALID_DRIVE :
+            rc = RC ( rcFS, rcDirectory, ctx, rcPath, rcNotFound ); break;
 
-    case ERROR_ALREADY_EXISTS:
-    case ERROR_FILE_EXISTS :
-        return RC ( rcFS, rcDirectory, ctx, rcPath, rcExists );
+        case ERROR_ALREADY_EXISTS:
+        case ERROR_FILE_EXISTS :
+            rc = RC ( rcFS, rcDirectory, ctx, rcPath, rcExists ); break;
 
-/*    case ERROR_PATH_NOT_FOUND : */
-    case ERROR_INVALID_NAME :
-    case ERROR_BAD_PATHNAME :
-        return RC ( rcFS, rcDirectory, ctx, rcPath, rcInvalid );
+    /*    case ERROR_PATH_NOT_FOUND : */
+        case ERROR_INVALID_NAME :
+        case ERROR_BAD_PATHNAME :
+            rc = RC ( rcFS, rcDirectory, ctx, rcPath, rcInvalid ); break;
 
-    case ERROR_ACCESS_DENIED :
-    case ERROR_INVALID_ACCESS :
-    case ERROR_SHARING_VIOLATION :
-    case ERROR_LOCK_VIOLATION :
-    case ERROR_PATH_BUSY :
-    case ERROR_WRITE_PROTECT :
-    case ERROR_DELETE_PENDING :
-        return RC ( rcFS, rcDirectory, ctx, rcDirectory, rcUnauthorized );
+        case ERROR_ACCESS_DENIED :
+        case ERROR_INVALID_ACCESS :
+        case ERROR_SHARING_VIOLATION :
+        case ERROR_LOCK_VIOLATION :
+        case ERROR_PATH_BUSY :
+        case ERROR_WRITE_PROTECT :
+        case ERROR_DELETE_PENDING :
+            rc = RC ( rcFS, rcDirectory, ctx, rcDirectory, rcUnauthorized ); break;
 
-    case ERROR_NOT_ENOUGH_MEMORY :
-    case ERROR_OUTOFMEMORY :
-        return RC ( rcFS, rcDirectory, ctx, rcMemory, rcExhausted );
+        case ERROR_NOT_ENOUGH_MEMORY :
+        case ERROR_OUTOFMEMORY :
+            rc = RC ( rcFS, rcDirectory, ctx, rcMemory, rcExhausted ); break;
 
-    case ERROR_TOO_MANY_OPEN_FILES :
-        return RC ( rcFS, rcDirectory, ctx, rcFileDesc, rcExhausted );
+        case ERROR_TOO_MANY_OPEN_FILES :
+            rc = RC ( rcFS, rcDirectory, ctx, rcFileDesc, rcExhausted ); break;
 
-    case ERROR_HANDLE_DISK_FULL :
-        return RC ( rcFS, rcDirectory, ctx, rcStorage, rcExhausted );
+        case ERROR_HANDLE_DISK_FULL :
+            rc = RC ( rcFS, rcDirectory, ctx, rcStorage, rcExhausted ); break;
 
-    case ERROR_BUFFER_OVERFLOW :
-    case ERROR_FILENAME_EXCED_RANGE :
-        return RC ( rcFS, rcDirectory, ctx, rcPath, rcExcessive );
+        case ERROR_BUFFER_OVERFLOW :
+        case ERROR_FILENAME_EXCED_RANGE :
+            rc = RC ( rcFS, rcDirectory, ctx, rcPath, rcExcessive );
+        
+        default : RC ( rcFS, rcDirectory, ctx, rcNoObj, rcUnknown );
     }
-    return RC ( rcFS, rcDirectory, ctx, rcNoObj, rcUnknown );
+    return rc;
 }
 
 
@@ -2315,6 +2318,54 @@ rc_t CC KSysDirCreateAlias ( KSysDir *self, uint32_t access, KCreateMode mode,
 }
 
 
+/* CreateLink ( v1.5 )
+ *  creates a new link (also known as a hard link).
+ *
+ *  "access" [ IN ] - standard Unix directory access mode
+ *  used when "mode" has kcmParents set and alias path does
+ *  not exist.
+ *
+ *  "mode" [ IN ] - a creation mode ( see explanation above ).
+ *
+ *  "oldpath" [ IN ] - NUL terminated string in directory-native
+ *  character set denoting existing object. THE PATH IS GIVEN RELATIVE
+ *  TO DIRECTORY ( "self" ), NOT LINK ( "newpath" )!
+ *
+ *  "newpath" [ IN ] - NUL terminated string in directory-native
+ *  character set denoting a new link.
+ */
+static
+rc_t KSysDirCreateLink ( KSysDir * self, uint32_t access, KCreateMode mode,
+    const char *oldpath, const char *newpath )
+    {
+    wchar_t w_target[ MAX_PATH ];
+    rc_t rc = KSysDirMakePath ( self, rcCreating, true,
+        w_target, sizeof w_target, oldpath, NULL );
+    if ( rc == 0 )
+    {
+        wchar_t w_alias[ MAX_PATH ];
+        rc = KSysDirMakePath ( self, rcCreating, true,
+            w_alias, sizeof w_alias, newpath, NULL );
+        if ( rc == 0 )
+        {
+            /* if "self" is chroot'd, "w_alias" must be made relative */
+            if ( self -> root != 0 )
+            {
+                rc = KSysDirRelativePath ( self, rcCreating, w_alias,
+                    w_target, sizeof w_target );
+                if ( rc != 0 )
+                    return rc;
+            }
+            if (CreateSymbolicLinkA( w_alias, w_target, 0x0 ) )
+                rc = 0;
+            else
+                rc = translate_file_error( GetLastError (), rcCreating );
+        }
+    }
+    return rc;
+}
+
+
 /* KSysDirOpenFileRead
  *  opens an existing file with read-only access
  *
@@ -3029,8 +3080,8 @@ rc_t CC KSysDirFileContiguous_v1 ( const KSysDir_v1 *self,
 
 static KDirectory_vt_v1 vtKSysDir =
 {
-    /* version 1.4 */
-    1, 4,
+    /* version 1.5 */
+    1, 5,
 
     /* start minor version 0*/
     KSysDirDestroy,
@@ -3080,8 +3131,12 @@ static KDirectory_vt_v1 vtKSysDir =
     /* end minor version 3 */
 
     /* start minor version 4 */
-    KSysDirOpenFileSharedWrite
+    KSysDirOpenFileSharedWrite,
     /* end minor version 4 */
+
+    /* start minor version 5 */
+    KSysDirCreateLink,
+    /* end minor version 5 */
 };
 
 /* KSysDirInit

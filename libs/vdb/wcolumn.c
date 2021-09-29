@@ -76,7 +76,7 @@
  * VColumn
  */
 
-static 
+static
 void WColumnDestroy ( WColumn * self )
 {
 #if PROD_REFCOUNT && ! PROD_ALL_IN_CURSOR
@@ -99,8 +99,8 @@ void CC VColumnWhack ( void *item, void *data )
     /* remove from cursor */
     if ( curs != NULL )
     {
-        VectorSwap ( & curs -> row, self -> ord, NULL, & item );
-        VCursorCacheSwap ( & curs -> col, & self -> scol -> cid, NULL, & item );
+        VectorSwap ( VCursorGetRow ( curs ), self -> ord, NULL, & item );
+        VCursorCacheSwap ( VCursorColumns ( curs ), & self -> scol -> cid, NULL, & item );
     }
 
     if ( ! self -> read_only )
@@ -260,7 +260,7 @@ rc_t WColumnSetDefault ( VColumn *vcol,
     rc = KDataBufferCast ( & self -> dflt, & self -> dflt, elem_bits, false );
     if ( rc != 0 )
         return rc;
-        
+
     /* allow NULL setting */
     if ( buffer == NULL )
     {
@@ -439,7 +439,7 @@ bool CC WColumnRowDefaults ( void *item, void *data )
             );
         return true;
     }
-        
+
     /* detect NULL row as default */
     if ( self -> dflt . elem_bits == 0 )
     {
@@ -467,7 +467,7 @@ bool CC WColumnRowDefaults ( void *item, void *data )
         self -> dflt . base, 0, self -> dflt . elem_count );
     if ( * rc != 0 )
         return true;
-    
+
     /* record the fact that this was default */
     self -> dflt_last = true;
     return false;
@@ -594,11 +594,19 @@ bool WColumnCommitRowData ( WColumn *self, int64_t *end_id )
     cur_size = ( size_t ) ( self -> bits_in_buffer + 7 ) >> 3;
     if ( cur_size >= self -> trigger )
     {
-        /* if size just crossed the trigger boundary and 
+        DBGMSG(DBG_VDB, DBG_FLAG(DBG_VDB_VDB), ("cur_size = %lu\n", cur_size));
+        /* if size just crossed the trigger boundary and
          * cutoff_id has not been advanced yet */
         if ( self -> cutoff_id == self -> start_id )
         {
-            self -> cutoff_id = * end_id;
+            if ( ( cur_size + cur_size ) >= self -> trigger * 3 )
+            {
+                * end_id = self -> start_id; /*VDB-4341: request an immediate page commit */
+            }
+            else
+            {
+                self -> cutoff_id = * end_id;
+            }
         }
 
         /* or perhaps the buffer is too large */
@@ -658,7 +666,7 @@ bool CC WColumnCommitRow ( void *item, void *data )
         /* if the row range is too great */
         if ( ( self -> end_id - self -> start_id ) >= MAX_ROW_COUNT )
         {
-            /* if row range has just crossed the boundary and 
+            /* if row range has just crossed the boundary and
              * cutoff_id has not been advanced yet */
             if ( self -> cutoff_id == self -> start_id )
             {

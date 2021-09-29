@@ -786,9 +786,9 @@ LIB_EXPORT rc_t CC KDatabaseVCreateIndex ( KDatabase *self, KIndex **idxp,
     if ( self -> read_only )
         return RC ( rcDB, rcDatabase, rcCreating, rcDatabase, rcReadonly );
 
-    rc = KDirectoryVCreateDir ( self -> dir, 0777, kcmOpen, "idx", NULL );
+    rc = KDirectoryCreateDir_v1 ( self -> dir, 0777, kcmOpen, "idx" );
     if ( rc == 0 )
-        rc = KDirectoryVOpenDirUpdate ( self -> dir, & dir, false, "idx", NULL );
+        rc = KDirectoryOpenDirUpdate_v1 ( self -> dir, & dir, false, "idx" );
     if ( rc == 0 )
     {
         char path [ 256 ];
@@ -840,9 +840,9 @@ LIB_EXPORT rc_t CC KTableVCreateIndex ( KTable *self, KIndex **idxp,
     if ( self -> read_only )
         return RC ( rcDB, rcTable, rcCreating, rcTable, rcReadonly );
 
-    rc = KDirectoryVCreateDir ( self -> dir, 0777, kcmOpen, "idx", NULL );
+    rc = KDirectoryCreateDir_v1 ( self -> dir, 0777, kcmOpen, "idx" );
     if ( rc == 0 )
-        rc = KDirectoryVOpenDirUpdate ( self -> dir, & dir, false, "idx", NULL );
+        rc = KDirectoryOpenDirUpdate_v1 ( self -> dir, & dir, false, "idx" );
     if ( rc == 0 )
     {
         char path [ 256 ];
@@ -1170,7 +1170,7 @@ LIB_EXPORT rc_t CC KDatabaseVOpenIndexUpdate ( KDatabase *self,
     if ( self -> read_only )
         return RC ( rcDB, rcDatabase, rcOpening, rcDatabase, rcReadonly );
 
-    rc = KDirectoryVOpenDirUpdate ( self -> dir, & dir, false, "idx", NULL );
+    rc = KDirectoryOpenDirUpdate_v1 ( self -> dir, & dir, false, "idx" );
     if ( rc == 0 )
     {
         char path [ 256 ];
@@ -1220,7 +1220,7 @@ LIB_EXPORT rc_t CC KTableVOpenIndexUpdate ( KTable *self,
     if ( self -> read_only )
         return RC ( rcDB, rcTable, rcOpening, rcTable, rcReadonly );
 
-    rc = KDirectoryVOpenDirUpdate ( self -> dir, & dir, false, "idx", NULL );
+    rc = KDirectoryOpenDirUpdate_v1 ( self -> dir, & dir, false, "idx" );
     if ( rc == 0 )
     {
         char path [ 256 ];

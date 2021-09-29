@@ -66,9 +66,31 @@ rc_t CC HttpRetrySpecsInit ( HttpRetrySpecs* self, struct KConfig* kfg);
 bool HttpGetRetryCodes ( const HttpRetrySpecs* self, uint16_t code, uint8_t * max_retries, const uint16_t ** sleep_before_retry, bool * open_ended );
 
 /* MakeConfig
- *  create a manager instance using a custom configuration, for testing
+ *  Create a manager instance using a custom configuration, for testing.
+ *  Don't imitialize singleton.
+ *  Same as KNSManagerMakeLocal for backward compatibility.
  */
-KNS_EXTERN rc_t CC KNSManagerMakeConfig ( struct KNSManager **mgr, struct KConfig* kfg );
+KNS_EXTERN rc_t CC KNSManagerMakeConfig ( struct KNSManager **mgr, struct KConfig * kfg );
+
+/* MakeWithConfig
+ *  Create a manager instance using a custom configuration, for testing.
+ *  Initialize singleton.
+ */
+KNS_EXTERN rc_t CC KNSManagerMakeWithConfig ( struct KNSManager ** mgr,
+    struct KConfig * kfg );
+
+/* SetAdCaching
+ *  Enable Caching to Accession as Directory in cwd
+ */
+KNS_EXTERN
+rc_t CC KNSManagerSetAdCaching(struct KNSManager* self, bool enabled);
+
+KNS_EXTERN
+rc_t CC KNSManagerGetAdCaching(const struct KNSManager* self, bool * enabled);
+
+KNS_EXTERN
+rc_t CC KNSManagerGetResolveToCache(const struct KNSManager* self,
+    bool * resolveToCache);
 
 /** MakeReliableHttpFile, KNSManagerMakeReliableClientRequest:
  * Make HTTP file/request from a reliable URL:
@@ -76,39 +98,50 @@ KNS_EXTERN rc_t CC KNSManagerMakeConfig ( struct KNSManager **mgr, struct KConfi
  * (make more retries)
  */
 KNS_EXTERN rc_t CC KNSManagerMakeReliableHttpFile(
-    struct KNSManager const *self, struct KFile const **file,
-    struct KStream *conn, ver_t vers, const char *url, ...);
-KNS_EXTERN rc_t CC KNSManagerMakeReliableClientRequest ( 
-    struct KNSManager const *self, struct KClientHttpRequest **req, 
+    struct KNSManager const *self, struct KFile const **file, struct KStream *conn, ver_t vers,
+    bool reliable, bool need_env_token, bool payRequired,
+    const char *url, ...);
+
+KNS_EXTERN rc_t CC KNSManagerMakeReliableClientRequest (
+    struct KNSManager const *self, struct KClientHttpRequest **req,
     ver_t version, struct KStream *conn, const char *url, ... );
+KNS_EXTERN rc_t CC KNSManagerMakePaidHttpFile(struct KNSManager const *self,
+    struct KFile const **file, struct KStream *conn, ver_t vers,
+    bool payRequired, const char *url, ...);
+KNS_EXTERN rc_t CC KNSManagerMakePaidReliableHttpFile(
+    struct KNSManager const *self, struct KFile const **file,
+    struct KStream *conn, ver_t vers, bool payRequired, const char *url, ...);
 
 typedef struct {
     const char *url;
-    
+
     const struct KNSManager * kns; /* used to retrieve HttpRetrySpecs */
     uint32_t last_sleep;
     uint32_t total_wait_ms;
     uint32_t max_total_wait_ms;
-    
+
     uint32_t last_status;
-    
-    uint8_t max_retries;    
-    uint8_t retries_count;    
+
+    uint8_t max_retries;
+    uint8_t retries_count;
 } KHttpRetrier;
 
 rc_t KHttpRetrierInit ( KHttpRetrier * self, const char * url, const struct KNSManager * kns );
 bool KHttpRetrierWait ( KHttpRetrier * self, uint32_t status );
 rc_t KHttpRetrierDestroy ( KHttpRetrier * self );
 
+/*----------------------------------------------------------------------------*/
 
-typedef struct HttpProxy HttpProxy;
-const HttpProxy * KNSManagerGetHttpProxy ( const struct KNSManager * self );
-const HttpProxy * HttpProxyGetNextHttpProxy ( const HttpProxy * self );
+//typedef struct HttpProxy HttpProxy;
+struct KNSProxies * KNSManagerGetProxies ( const struct KNSManager * self,
+                                           size_t * cnt );
 
 /* N.B.: DO NOT WHACK THE RETURNED http_proxy String !!! */
-void HttpProxyGet ( const HttpProxy * self,
-    const String ** http_proxy, uint16_t * http_proxy_port );
+bool KNSProxiesGet ( struct KNSProxies * self, const String ** http_proxy,
+    uint16_t * http_proxy_port, size_t * cnt, bool * last );
 
+/* allow to have multiple comma-separated proxies in a spec */
+#define MULTIPLE_PROXIES 1
 
 /*--------------------------------------------------------------------------
  * URLBlock
@@ -122,6 +155,12 @@ typedef enum
     st_S3
 } SchemeType;
 
+typedef enum
+{
+    ct_NONE,
+    ct_S3,
+} CloudType;
+
 typedef struct URLBlock URLBlock;
 struct URLBlock
 {
@@ -134,6 +173,7 @@ struct URLBlock
     uint32_t port;
 
     SchemeType scheme_type;
+    CloudType cloud_type;
     bool tls;
 
     bool port_dflt;

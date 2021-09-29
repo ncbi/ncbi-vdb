@@ -30,11 +30,13 @@
 
 #include <kapp/args.h> /* ArgsMakeAndHandle */
 
+#include <klib/debug.h> /* KDbgSetString */
 #include <klib/text.h>
 
 #include <ktst/unit_test.hpp>
 
 #include <kfg/config.h>
+#include <kfg/kfg-priv.h>
 #include <kfs/file.h>
 #include <kfs/directory.h>
 
@@ -43,7 +45,7 @@
 #include <vfs/resolver.h>
 #include <vfs/path.h>
 
-#include "resolver-cgi.h" /* RESOLVER_CGI */
+#include "../../libs/vfs/resolver-cgi.h" /* RESOLVER_CGI */
 
 #include <cstdlib>
 #include <fstream>
@@ -52,6 +54,8 @@
 #include <climits> /* PATH_MAX */
 
 #include <sysalloc.h>
+
+#define ALL
 
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (false)
@@ -63,16 +67,6 @@ static rc_t argsHandler(int argc, char* argv[]) {
 TEST_SUITE_WITH_ARGS_HANDLER(VResolverTestSuite, argsHandler);
 
 using namespace std;
-
-static string ToString(const VPath* path)
-{
-    const String * s;
-    if ( VPathMakeString (path, &s) != 0 )
-        throw logic_error ( "ToString(VPath) failed" );
-    string ret = string(s->addr, s->size);
-    free((void*)s);
-    return ret;
-}
 
 class ResolverFixture
 {
@@ -106,6 +100,17 @@ public:
     const VPath * remote;
     const VPath * cache;
 };
+
+#ifdef ALL
+static string ToString(const VPath* path)
+{
+    const String * s;
+    if ( VPathMakeString (path, &s) != 0 )
+        throw logic_error ( "ToString(VPath) failed" );
+    string ret = string(s->addr, s->size);
+    free((void*)s);
+    return ret;
+}
 
 FIXTURE_TEST_CASE ( VDB_2936_resolve_local_WGS_without_version, ResolverFixture )
 {
@@ -191,6 +196,43 @@ FIXTURE_TEST_CASE ( VDB_2936_resolve_local_WGS_with_version, ResolverFixture )
     VPathRelease ( query ); query = 0;
 }
 
+FIXTURE_TEST_CASE(WGS_with_6letter_prefix, ResolverFixture)
+{
+    REQUIRE_RC(VFSManagerMakePath(vfs, &query, "AAAAAA01"));
+    REQUIRE_RC(VResolverQuery(resolver, 0, query, &local, &remote, 0));
+    REQUIRE(local || remote);
+    VPathRelease(query); query = 0;
+    VPathRelease(local); local = 0;
+    VPathRelease(remote); remote = 0;
+}
+
+FIXTURE_TEST_CASE(WGS_with_6letter_prefix_and_version, ResolverFixture)
+{
+    REQUIRE_RC(VFSManagerMakePath(vfs, &query, "AAAAAA01.1"));
+    REQUIRE_RC(VResolverQuery(resolver, 0, query, &local, &remote, 0));
+    REQUIRE(local || remote);
+    VPathRelease(query); query = 0;
+    VPathRelease(local); local = 0;
+    VPathRelease(remote); remote = 0;
+}
+
+// this is NCBI-specific, move to a private repo
+//FIXTURE_TEST_CASE(HS37D5, ResolverFixture) {
+//    REQUIRE_RC(VFSManagerMakePath(vfs, &query, "hs37d5"));
+//
+//    REQUIRE_RC(VResolverQuery(resolver, 0, query, NULL, &remote, NULL));
+//    REQUIRE_RC(VPathRelease(remote)); remote = NULL;
+//
+//    if (hasLocal) {
+//        REQUIRE_RC(VResolverQuery(resolver, 0, query, &local, NULL, NULL));
+//        REQUIRE_RC(VPathRelease(local)); local = NULL;
+//    }
+//    else
+//        REQUIRE_RC_FAIL(VResolverQuery(resolver, 0, query, &local, NULL, NULL));
+//
+//    REQUIRE_RC(VPathRelease(query)); query = NULL;
+//}
+
 class ResolverFixtureCustomConfig
 {
 public:
@@ -227,8 +269,8 @@ public:
             throw logic_error ( "ResolverFixtureCustomConfig::Configure: KDirectoryNativeDir failed" );
 
         KConfig *cfg;
-        if (KConfigMake(&cfg, wd))
-            throw logic_error ( "ResolverFixtureCustomConfig::Configure: KConfigMake failed" );
+        if (KConfigMakeLocal(&cfg, wd))
+            throw logic_error ( "ResolverFixtureCustomConfig::Configure: KConfigMakeLocal failed" );
 
         if (KConfigWriteString ( cfg,
                 "repository/remote/main/CGI/resolver-cgi", RESOLVER_CGI))
@@ -319,6 +361,51 @@ FIXTURE_TEST_CASE(VDB_2963_resolve_local_no_new_wgs, ResolverFixtureCustomConfig
         REQUIRE ( false ); // should throw earlier
     } catch (...) { }
 }
+#endif
+
+#ifdef ALL
+TEST_CASE(Remote_vrAlwaysEnable_vs_not) {
+    KConfig * kfg = NULL;
+    REQUIRE_RC(KConfigMakeLocal(&kfg, NULL));
+    REQUIRE_RC(KConfigWriteString(kfg,
+        "/repository/remote/main/SDL.2/resolver-cgi",
+        "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve"));
+
+    VFSManager * vfs = NULL;
+    REQUIRE_RC(VFSManagerMakeLocal(&vfs, kfg));
+    VResolver * resolver = NULL;
+    REQUIRE_RC(VFSManagerGetResolver(vfs, &resolver));
+
+    VPath * run = NULL;
+    REQUIRE_RC(VFSManagerMakePath(vfs, &run, "SRR619505"));
+    VPath * refseq = NULL;
+    REQUIRE_RC(VFSManagerMakePath(vfs, &refseq, "NC_000005.8"));
+
+    const VPath * remote = NULL;
+
+    REQUIRE_RC(VResolverQuery(resolver, 0, run, NULL, &remote, NULL));
+    REQUIRE_RC(VPathRelease(remote)); remote = NULL;
+
+    REQUIRE_RC(VResolverQuery(resolver, 0, refseq, NULL, &remote, NULL));
+    REQUIRE_RC(VPathRelease(remote)); remote = NULL;
+
+    VResolverRemoteEnable(resolver, vrAlwaysEnable);
+
+    REQUIRE_RC(VResolverQuery(resolver, 0, run, NULL, &remote, NULL));
+    REQUIRE_RC(VPathRelease(remote)); remote = NULL;
+
+    REQUIRE_RC(VResolverQuery(resolver, 0, refseq, NULL, &remote, NULL));
+    REQUIRE_RC(VPathRelease(remote)); remote = NULL;
+
+    REQUIRE_RC(VPathRelease(refseq));
+    REQUIRE_RC(VPathRelease(run));
+
+    REQUIRE_RC(VResolverRelease(resolver));
+    REQUIRE_RC(VFSManagerRelease(vfs));
+
+    REQUIRE_RC(KConfigRelease(kfg));
+}
+#endif
 
 //////////////////////////////////////////// Main
 
@@ -358,9 +445,27 @@ extern "C"
 
     rc_t CC KMain ( int argc, char *argv [] )
     {
-        KConfigDisableUserSettings ();
+        if (
+0) assert(!KDbgSetString("VFS"));
 
-        rc_t rc = VResolverTestSuite ( argc, argv );
+        KConfigDisableUserSettings ();
+		rc_t rc;
+
+		// this is NCBI-specific, move to a private repo
+        //KDirectory * dir = NULL;
+        //rc_t rc = KDirectoryNativeDir(&dir);
+        //if (rc != 0)
+        //    return rc;
+        //uint32_t t = KDirectoryPathType(dir, NETMNT "/traces04") & ~ kptAlias;
+        //if (t == kptNotFound || t == kptBadPath)
+        //{
+        //    hasLocal = false;
+        //}
+        //rc = KDirectoryRelease(dir);
+        //if (rc != 0)
+        //    return rc;
+
+        rc = VResolverTestSuite ( argc, argv );
 
         clear_recorded_errors();
 

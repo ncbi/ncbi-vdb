@@ -45,6 +45,10 @@
 
 #include "os-native.h"
 
+#ifdef __GNUC__
+#pragma GCC diagnostic ignored "-Wpedantic"
+#endif
+
 /* old Sun includes won't define PATH_MAX */
 
 #ifndef __XOPEN_OR_POSIX
@@ -465,7 +469,7 @@ rc_t KDylibSetLogging ( const KDylib *self )
     rc_t ( CC * set_formatter ) ( KFmtWriter writer, KLogFmtFlags flags, void *data );
     rc_t ( CC * set_writer ) ( KWrtWriter writer, void *data );
     rc_t ( CC * set_level ) ( KLogLevel lvl );
-    
+
     if ( ! self -> handle )
     {
         return 0;
@@ -559,17 +563,17 @@ rc_t KDyldLoad ( KDyld *self, KDylib *lib, const char *path )
         if (cmp1 == cmp2)
             rc = RC ( rcFS, rcDylib, rcLoading, rcPath, rcNotFound );
     }
-    
+
     DBGMSG (DBG_KFS, DBG_FLAG(DBG_KFS_DLL), ("%s: %R %s\n", __func__, rc, msg));
     if (GetRCState(rc) == rcUnknown) {
         (void)LOGMSG(klogWarn, (msg));
     }
-    
+
     return rc;
 #else
     lib -> handle = NULL;
     return 0;
-#endif    
+#endif
 }
 
 static
@@ -641,7 +645,7 @@ LIB_EXPORT rc_t CC KDyldVLoadLib ( KDyld *self,
                 rc = KDyldLoad ( self, * lib, NULL );
                 if ( rc == 0 )
                     return 0;
-            
+
                 free ( * lib );
             }
         }
@@ -653,9 +657,10 @@ LIB_EXPORT rc_t CC KDyldVLoadLib ( KDyld *self,
             if ( i == end )
             {
                 char name [ 4096 ];
-                int len = ( args == NULL ) ?
-                    snprintf  ( name, sizeof name, "%s", path ) :
-                    vsnprintf ( name, sizeof name, path, args );
+         	    /* VDB-4386: cannot treat va_list as a pointer!*/
+                int len = 0;
+                if ( path != NULL ) /*( args == NULL ) ? snprintf  ( name, sizeof name, "%s", path ) :*/
+                    len = vsnprintf ( name, sizeof name, path, args );
                 if ( len < 0 || len >= sizeof name )
                     rc = RC ( rcFS, rcDylib, rcLoading, rcPath, rcExcessive );
                 else
@@ -669,7 +674,7 @@ LIB_EXPORT rc_t CC KDyldVLoadLib ( KDyld *self,
                         rc = KDyldLoad ( self, * lib, name );
                         if ( rc == 0 )
                             return 0;
-                    
+
                         free ( * lib );
                     }
                 }
@@ -888,7 +893,7 @@ LIB_EXPORT rc_t CC KDyldMakeSet ( const KDyld *self, KDlset **setp )
                 VectorInit ( & set -> ord, 0, 16 );
                 KRefcountInit ( & set -> refcount, 1, "KDlset", "make", "dlset" );
 #if ! ALWAYS_ADD_EXE
-                {   
+                {
                     KDylib *jni;
                     const char* libname = LIBNAME(LIBPREFIX, "vdb_jni.", SHLIBEXT);
                     if ( KDyldLoadLib ( ( KDyld* ) self, & jni, libname ) == 0 )
@@ -1135,7 +1140,7 @@ rc_t KSymAddrMake ( KSymAddr **symp,
     {
         void *addr = dlsym ( lib -> handle, name );
         const char *estr = dlerror();
-        
+
         if ( addr != NULL || estr == NULL )
         {
             KSymAddr *sym = malloc ( sizeof * sym );

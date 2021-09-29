@@ -89,6 +89,10 @@ KFG_EXTERN rc_t CC KConfig_Set_Site_Access_Enabled( KConfig *self, bool enabled 
 KFG_EXTERN rc_t CC KConfig_Get_User_Access_Enabled( const KConfig *self, bool * enabled );
 KFG_EXTERN rc_t CC KConfig_Set_User_Access_Enabled( KConfig *self, bool enabled );
 
+/* get/set the use of all valid certificates
+ */
+KFG_EXTERN rc_t CC KConfig_Get_Allow_All_Certs( const KConfig *self, bool * enabled );
+KFG_EXTERN rc_t CC KConfig_Set_Allow_All_Certs( KConfig *self, bool enabled );
 
 /* get/set the the cache-enabled-state for the public/protected repositories
  */
@@ -135,6 +139,84 @@ KFG_EXTERN rc_t CC KConfigSetProtectedRepositoryEnabledById( KConfig *self, uint
 
 KFG_EXTERN rc_t CC KConfigGetProtectedRepositoryCachedById( const KConfig *self, uint32_t id, bool * enabled );
 KFG_EXTERN rc_t CC KConfigSetProtectedRepositoryCachedById( KConfig *self, uint32_t id, bool enabled );
+
+/* reads /tools/prefetch/download_to_cache
+   return true if not found */
+KFG_EXTERN rc_t CC KConfig_Get_Prefetch_Download_To_Cache ( const KConfig *self, bool * download_to_cache );
+KFG_EXTERN rc_t CC KConfig_Set_Prefetch_Download_To_Cache ( KConfig *self, bool download_to_cache );
+
+
+/* reads /libs/cloud/accept_aws_charges
+   returns false if not found  */
+KFG_EXTERN rc_t CC KConfig_Get_User_Accept_Aws_Charges ( const KConfig *self, bool * accepts_charges );
+KFG_EXTERN rc_t CC KConfig_Set_User_Accept_Aws_Charges ( KConfig *self, bool accepts_charges );
+
+/* reads /libs/cloud/accept_gcp_charges
+   returns false if not found  */
+KFG_EXTERN rc_t CC KConfig_Get_User_Accept_Gcp_Charges ( const KConfig *self, bool * accepts_charges );
+KFG_EXTERN rc_t CC KConfig_Set_User_Accept_Gcp_Charges ( KConfig *self, bool accepts_charges );
+
+/* reads /libs/cloud/report_instance_identity
+   returns false if not found  */
+KFG_EXTERN rc_t CC KConfig_Get_Report_Cloud_Instance_Identity ( const KConfig *self, bool * value );
+KFG_EXTERN rc_t CC KConfig_Set_Report_Cloud_Instance_Identity ( KConfig *self, bool value );
+
+/* reads /libs/temp_cache */
+KFG_EXTERN rc_t CC KConfig_Get_Temp_Cache ( const KConfig *self, char * buffer, size_t buffer_size, size_t * written );
+KFG_EXTERN rc_t CC KConfig_Set_Temp_Cache ( KConfig *self, const char * value );
+
+/* reads /gcp/credential_file */
+KFG_EXTERN rc_t KConfig_Get_Gcp_Credential_File ( const KConfig *self, char * buffer, size_t buffer_size, size_t * written );
+KFG_EXTERN rc_t KConfig_Set_Gcp_Credential_File ( KConfig *self, const char * value );
+
+/* reads /aws/credential_file */
+KFG_EXTERN rc_t KConfig_Get_Aws_Credential_File ( const KConfig *self, char * buffer, size_t buffer_size, size_t * written );
+KFG_EXTERN rc_t KConfig_Set_Aws_Credential_File ( KConfig *self, const char * value );
+
+/* reads /aws/profile, returns "default" if missing or empty */
+KFG_EXTERN rc_t KConfig_Get_Aws_Profile ( const KConfig *self, char * buffer, size_t buffer_size, size_t * written );
+KFG_EXTERN rc_t KConfig_Set_Aws_Profile ( KConfig *self, const char * value );
+
+/* reads /libs/cache_amount, returns 0 if missing or empty */
+KFG_EXTERN rc_t CC KConfig_Get_Cache_Amount ( const KConfig *self, uint32_t * value );
+KFG_EXTERN rc_t CC KConfig_Set_Cache_Amount( KConfig *self, uint32_t value );
+
+/* getters/setters for cachetee-integration into vfs-manager */
+KFG_EXTERN rc_t CC KConfig_Get_CacheTeeVersion( const KConfig *self, uint32_t * value, uint32_t dflt );
+KFG_EXTERN rc_t CC KConfig_Set_CacheTeeVersion( KConfig *self, uint32_t value );
+KFG_EXTERN rc_t CC KConfig_Get_CacheBlockSize( const KConfig *self, size_t * value, size_t dflt );
+KFG_EXTERN rc_t CC KConfig_Set_CacheBlockSize( KConfig *self, size_t value );
+KFG_EXTERN rc_t CC KConfig_Get_CachePageCount( const KConfig *self, uint32_t * value, uint32_t dflt );
+KFG_EXTERN rc_t CC KConfig_Set_CachePageCount( KConfig *self, uint32_t value );
+KFG_EXTERN rc_t CC KConfig_Get_CacheClusterFactorBits( const KConfig *self, uint32_t * value, uint32_t dflt );
+KFG_EXTERN rc_t CC KConfig_Set_CacheClusterFactorBits( KConfig *self, uint32_t value );
+KFG_EXTERN rc_t CC KConfig_Get_CachePageSizeBits( const KConfig *self, uint32_t * value, uint32_t dflt );
+KFG_EXTERN rc_t CC KConfig_Set_CachePageSizeBits( KConfig *self, uint32_t value );
+KFG_EXTERN rc_t CC KConfig_Get_CacheLogUseCWD( const KConfig *self, bool * value, bool dflt );
+KFG_EXTERN rc_t CC KConfig_Set_CacheLogUseCWD( KConfig *self, bool value );
+KFG_EXTERN rc_t CC KConfig_Get_CacheLogAppend( const KConfig *self, bool * value, bool dflt );
+KFG_EXTERN rc_t CC KConfig_Set_CacheLogAppend( KConfig *self, bool value );
+KFG_EXTERN rc_t CC KConfig_Get_CacheLogTimed( const KConfig *self, bool * value, bool dflt );
+KFG_EXTERN rc_t CC KConfig_Set_CacheLogTimed( KConfig *self, bool value );
+KFG_EXTERN rc_t CC KConfig_Get_CacheLogOuter( const KConfig *self, bool * value, bool dflt );
+KFG_EXTERN rc_t CC KConfig_Set_CacheLogOuter( KConfig *self, bool value );
+KFG_EXTERN rc_t CC KConfig_Get_CacheLogInner( const KConfig *self, bool * value, bool dflt );
+KFG_EXTERN rc_t CC KConfig_Set_CacheLogInner( KConfig *self, bool value );
+
+KFG_EXTERN rc_t CC KConfig_Get_CacheDebug( const KConfig *self, bool * value, bool dflt );
+KFG_EXTERN rc_t CC KConfig_Set_CacheDebug( KConfig *self, bool value );
+
+KFG_EXTERN rc_t CC KConfig_Get_GUID( const KConfig *self, char * value, size_t value_size, size_t * written );
+KFG_EXTERN rc_t CC KConfig_Set_GUID( KConfig *self, const char * value );
+
+/* Deprecated, use KConfig_*et_PreferNoToFullQuality instead. */
+KFG_EXTERN rc_t CC KConfig_Get_FullQuality( const KConfig *self, bool * value );
+KFG_EXTERN rc_t CC KConfig_Set_FullQuality( KConfig *self, bool value );
+
+KFG_EXTERN rc_t CC KConfig_Get_PreferNoToFullQuality(
+    const KConfig *self, bool * value );
+KFG_EXTERN rc_t CC KConfig_Set_PreferNoToFullQuality(
+    KConfig *self, bool value );
 
 #ifdef __cplusplus
 }

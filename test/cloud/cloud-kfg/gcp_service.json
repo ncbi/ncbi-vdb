@@ -1,0 +1,28 @@
+{
+  "type": "service_account",
+  "project_id": "test",
+  "private_key_id": "123456",
+  "private_key": 
+"-----BEGIN PRIVATE KEY-----
+MIICdwIBADANBgkqhkiG9w0BAQEFAASCAmEwggJdAgEAAoGBANoWq8DqARNncY/f
+PFcRKhZ4MueoAPwsfFsrDaifNSW0wfemzAz/N8kkHqyqX2ZdGOaszKI3qBqZ2qxJ
+d7FEDDbOoc8ezFvN5if3gla9vap8rc1Rjb6x31HSbWdPDvnZg+QTI2ASwk45354w
+ocs6BNmSwXn1pZr/OvAuLv3WIXwjAgMBAAECgYA1jY2dcJjVB/jF6H5rruZT4C43
+3nRneBENXhQbjQTC/pEG3CmNI3qyZLE3mxqUC1ZbBqG1T89ywMcGuX+vwtLwiisd
+mF50WSS47neaWtxPcpemk3c/fX2ezrdQ2MafhwJQ4266inxOi+ZRpySiixVCf0Zi
+9kbV4u8D93g0HNDFuQJBAPrFGTphfrCsDkj8SwvN244tzVyPS3aqNrXUVk6soXkq
+Pc+NE+4wrmXfs7HSgSRLMTSKOrS97X5lEPGiLJicfIUCQQDeoxTOCOTJuiehL0HK
+CsAz6z7qzM2rdxXrpgGV7Gbj0ATi0+A9FbRAB6d4NBm262AbhHFN0zvlMplAZaC4
+1iqHAkEAh4+tB6ZUumUIg+P/Ha53FfEkpvi/rrJtSPY0getIjxuKtnxpXcXrQR8h
+IOvO7DPJscFX4wUZMc6ozjcBLK7LkQJAElrJjU7oZcUmHUDDIMAQJnefgUYPMrKn
+qPzPpqeNt/xfWr/y/bY7XQgEg4FwGUeAbeRWXv8qMfQg9FEslfB6IwJBAIi+wddr
+T0xa+PdDKciepM0k1zyno5Pn5ltW58ncbzdwdCtanB+xoKPzOtZFcHRdL99HDXpk
+vvleyN6iF4oqO3M=
+-----END PRIVATE KEY-----",
+  "client_email": "ncbivdb-compute@developer.gserviceaccount.com",
+  "client_id": "12345678",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://accounts.google.com/o/oauth2/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/12345678-compute%40developer.gserviceaccount.com"
+}

@@ -49,6 +49,8 @@ namespace ncbi
 
                 Error( const char * p_message, const ErrorReport :: Location & p_location );
                 ~Error();
+
+                bool Format ( char * p_buf, size_t p_bufSize ) const;
             };
 
         public:
@@ -61,7 +63,7 @@ namespace ncbi
             uint32_t GetCount() const { return VectorLength ( & m_errors ); }
 
             const Error * GetError ( uint32_t p_idx ) const;
-            const char *  GetMessage ( uint32_t p_idx ) const; // if not interested in location
+            const char *  GetMessageText ( uint32_t p_idx ) const; // if not interested in location
 
             void Clear ();
 

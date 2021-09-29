@@ -1,5 +1,275 @@
 # NCBI External Developer Release:
 
+
+## NCBI VDB 2.11.1
+**August 17, 2021**
+
+  **align, axf, sra-pileup, vdb, vfs**: resolve reference sequences within output directory  
+  **cloud, kns, sra-tools**: do not acquire CE more often than necessary  
+  **kapp, kns**: fixed a crash that occurred when multiple threads update HTTP's User-Agent header  
+  **kfg**: improved thread safety  
+  **kns**: fixed test failure on GCP  
+  **kns**: improved reporting of peer certificate information  
+  **kns**: improved thread safety when proxy is used  
+  **kns**: improved timeout management in CacheTeeFile  
+  **kns**: integrated mutual TLS authentication  
+  **ncbi-vdb**: added dependency on cmake  
+  **ncbi-vdb, ngs, ngs-tools, sra-tools**: configure prints the version of compiler  
+  **prefetch, vdb, vfs**: prefetch with "-O" will now correctly place references in output directory  
+  **prefetch, vfs**: fixed error message 'multiple response SRR URLs for the same service...' when downloading  
+  **vdb**: support for Zstd added to the schema  
+  **vfs**: updated interaction with SRA Data Locator  
+
+
+## NCBI VDB 2.11.0
+**March 15, 2021**
+
+  **build, ncbi-vdb, ngs, ngs-tools**: introduced an additional external library, libncbi-ngs  
+  **kfg, prefetch, vfs**: resolve WGS reference sequences into "Accession Directory"  
+  **kfg, sra-tools, vfs**: dropped support of protected repositories  
+  **kns, sra-tools**: fixed formatting of HTTP requests for proxy  
+  **ktst**: improved thread safety  
+  **ncbi-vdb, ngs, ngs-tools, sra-tools, vdb**: added support for 64-bit ARM (AArch64, Apple Silicon)  
+  **prefetch, vfs**: fixed download of protected non-run files  
+  **prefetch, vfs**: fixed segfault during download of JWT cart  
+  **prefetch, vfs**: respect requested version when downloading WGS files  
+  **sra-tools, vfs**: recognize sra file names with version  
+
+
+## NCBI VDB 2.10.9
+**December 16, 2020**
+
+  **align**: alignment enumerator structure is now fully initialized  
+  **align, vdb**: fixed situation where network access could drastically slow down reading references  
+  **build**: added configure option to produce build in output directory relative to sources  
+  **cloud**: implemented using OAuth 2.0 to access GCP buckets  
+  **kfs**: added support of hard links  
+  **kfs, kns**: improved timeout management in CacheTeeFile  
+  **kns**: env_token and pay_required flags are now treated independently  
+  **kns**: memory leak was fixed  
+  **kns**: removed memory leaks in KNS, VDB, VFS  
+  **kns, sra-tools, vdb**: added a loop to retry failed connections when fetching SRA files  
+  **test**: updated test not to fail when the source is not available  
+  **vdb**: writing a big (>3MB) cell now triggers a page commit  
+  **vfs**: allow to find local files when remote repository is disabled  
+  **vfs**: not to call names.cgi but SDL when resolving runs and reference sequences  
+  **vfs**: support of ETL - BQS runs  
+
+
+## NCBI VDB 2.10.8
+**June 29, 2020**
+
+  **kproc, fasterq-dump**: fixed problem with seg-faults caused by too small stack used by threads  
+  **kdb, vdb, vfs, sra-tools**: fixed bug preventing use of path to directory created by prefetch if it ends with '/'  
+  **vfs, sra-tools, ngs-tools**: report an error when file was encrypted for a different ngc file  
+  **vfs, prefetch**: download encrypted phenotype files with encrypted extension  
+  **vdb, sra-docker**: config can auto-generate LIBS/GUID when in a docker container  
+
+
+## NCBI VDB 2.10.7
+**May 21, 2020**
+
+  **kns, ngs-tools, sra-tools**: added new header to HTTP requests to communicate VDB version 
+
+
+## NCBI VDB 2.10.6
+**May 15, 2020**
+
+  **align, sra-tools**: fixed fetching of reference sequences from cloud  
+  **align, sra-tools, vfs**: fixed resolving of hs37d5 reference sequence  
+  **axf**: fixed invalid soft clips with hard clipped secondary alignments  
+  **kfg, sra-tools**: ignore configuration with invalid protected user repository having a single 'root' node  
+  **kns, sra-tools**: added new header to HTTP requests to communicate SRA version  
+  **kns, sra-tools**: close socket when accessing GCP files  
+  **kns, sra-tools**: introduced a additional configurable network retry loop  
+  **kns**: Windows connect() is now asynchronous and supporting timeouts  
+  **krypto, sra-tools, vfs**: fixed decryption when password contains # symbol  
+  **sratools, vdb-dump, vfs**: fixed vdb-dump <accession of prefetched run>  
+  **sra-tools, vdb**: restored possibility to cache WGS references to user repository  
+  **sra-tools, vfs**: fixed working with runs having WGS reference sequences  
+  **sraxf**: synthetic qualities are now generated per read  
+  **sraxf**: synthetic qualities are now generated per read  
+  **vdb**: fixed segfault in VSchemaDumpToKMDataNode  
+  **vfs**: added possibility to control the verbosity of negative response of names service  
+
+
+## NCBI VDB 2.10.5
+**April 1, 2020**
+
+  **build**: the Windows build now uses MS Visual Studio 2017  
+  **cloud**: cloud-specific test projects have been ported to Windows  
+  **cloud**: SRA Tools now filter out cases when internet providers successfully resolve not found DNS entries  
+  **kfg**: AWS credential files are not opened without user permission  
+  **kns**: Internet socket connections are now blocking on Windows  
+  **kns**: KTimeMakeTime() on Windows now returns UTC, not local time  
+  **kns**: SRA Tools were updated to not hang on HTTP calls when the server doesn't return Content-Length in GET requests without a range  
+  **kns**: use of root CA certificates is now supported on Windows  
+  **ncbi-vdb, ngs, ngs-tools, sra-tools**: all Linux builds now use g++ 7.3 (C++11 ABI)  
+  **vdb**: fixed some POSIX header include issues
+
+
+## NCBI VDB 2.10.4
+**February 26, 2020**
+
+  **kns**: fixed errors when using ngc file
+
+
+## NCBI VDB 2.10.3
+**February 18, 2020**
+
+  **sraxf**: fixed a problem resulting in a segmentation fault 
+
+
+## NCBI VDB 2.10.2
+**January 15, 2020**
+
+  **build**: install used to fail on OSX when checking md5  
+  **kfg**: Users now provide the ngc access token on the command line  
+  **kfg**: potential memory leak removed  
+  **kfg, vdb-config, vfs**: new names for caching dbGaP files  
+  **kfg, vfs**: added new configuration node for resolving protected data  
+  **klib**: fixed incorrect access to memory in output writers  
+  **kns**: KNS now provides limited support for attaching files to HTTP POST requests  
+  **kns, vfs**: added support of ngc files and JWT-carts in SDL requests  
+  **krypto**: fixed decryption of dbGaP data on the fly  
+  **vfs**: allow to set dbGaP context by ngc file  
+  **vfs**: fixed detection of cache location of public runs on cloud  
+  **vfs**: fixed double-free when processing names service response  
+  **vfs**: fixed names conflict  
+  **vfs**: new naming scheme for caching dbGaP files  
+
+
+## NCBI VDB 2.10.1
+**December 16, 2019**
+
+  **vfs**: fixed generation of unique file name when caching
+
+
+## NCBI VDB 2.10.0
+**August 19, 2019**
+
+  **cloud**: added support for user-pays access to GCP  
+  **cloud**: cloud-related code was moved to new module  
+  **cloud, vfs**: send cloud instance identity just when user allows it  
+  **kfg, sra-tools**: use trace.ncbi.nlm.nih.gov to call names service  
+  **kfg, vdb-config**: alternative remote repository URL was added to default configuration   
+  **kfs**: introduced readahead strategy for cloud storage  
+  **klib, vdb**: error report is saved to ncbi_error_report.txt  
+  **kns**: Don't log mdebtls error messages. Added possibility to enable them.  
+  **kns**: We now use system root CA certs on Unix   
+  **kns**: increased default value of HTTP read to 5 minutes; made it configurable  
+  **kns**: introduced configurable controls over network timeouts  
+  **kns**: special support for handling SDL interaction  
+  **prefetch, vdb**: adjustments for latest name resolution service  
+  **prefetch, vfs**: added support of "run accession as directory"  
+  **prefetch, vfs**: added support of download of reference sequences in "run accession as directory"  
+  **prefetch, vfs**: fixed regression when prefetch does not download vdbcache  
+  **sratools**: VDB can get URLs- for local/remote/cache locations of accession from environment  
+  **tui, vdb-config**: new look and cloud specific options in 'vdb-config -i'  
+  **vdb**: VDBManagerMakeSRASchema() was deprecated  
+  **vdb**: make greater use of data returned by latest name resolver  
+  **vfs**: added possibility to have multiple remote repositories for backward compatibility  
+  **vfs**: added possibility to set resolver version from configuration  
+  **vfs**: allow to use SDL as remote service  
+
+
+## NCBI VDB 2.9.6
+**March 18, 2019**
+
+  **prefetch, **vfs**: fixed regression that prevented re-download of incomplete files  
+
+
+## NCBI VDB 2.9.4-1
+**March 4, 2019**
+
+  **sra-tools, **vfs**: fixed regression introduced in 2.9.4 release causing delay when starting sra tools  
+
+
+## NCBI VDB 2.9.4
+**January 31, 2019**
+
+  **kns**: added detection of zone where cloud instance runs  
+  **kns**: added support of AWS authentication  
+  **kns**: allow to access googleapis.com via proxy  
+  **kns**: don't add "Accept: */*" request header when it already contains an Accept header  
+  **kns**: updated mbedtls to version 2.16  
+  **sra-tools, vfs**: added support of realign objects  
+  **vdb**: A Json parser is now available in klib  
+
+
+## NCBI VDB 2.9.3
+**October 11, 2018**
+
+  **kns**: added possibility to skip server's certificate validation  
+  **kns**: expect to receive HTTP status 200 when sending range-request that includes the whole file  
+  **vdb**: fixed a bug in accessing pagemap process request for cursors which do not have pagemap thread running
+
+
+## NCBI VDB 2.9.2-1
+**July 31, 2018**
+
+  **vdb**: restored lost exported attribute on several entries in the private API
+
+
+## NCBI VDB 2.9.2
+**July 23, 2018**
+
+  **kfg, vfs**: Introduced enhanced handling of download-only NGC files that lack read/decrypt permissions
+
+
+## NCBI VDB 2.9.1-1
+**June 25, 2018**
+
+  **ncbi-vdb**: fixed break of binary compatibility introduced in release 2.9.1
+
+
+## NCBI VDB 2.9.1
+**June 15, 2018**
+
+  **build**: 'make install' ignore ROOT environment variable  
+  **kfg, kns**: Added API to instruct VDB to silently accept any server certificate as valid.  
+  **kfg, vdb-config**: name resolver service now makes use of fcgi  
+  **kfg, vfs**: Fixed a bug that prevented decryption of objects encrypted with non-UTF8 text password keys  
+  **klib**: added check for NULL format argument to string_printf()  
+  **kns**: Randomly select from multiple proxies in configuration  
+  **test**: added Windows test projects for the new schema and the latest vdb  
+
+
+## NCBI VDB 2.9.0
+**February 23, 2018**
+
+  **align**: AlignAccessRefSeqEnumeratorNext no longer filters by the index  
+  **align**: fixed an order-dependent bug affecting cross-table lookups  
+  **build**: Created a script that allows to add a new volume to existing repository  
+  **build**: Fixed configure allowing to run it on Perl with version >= v5.26 that has "." removed from @INC  
+  **build**: added "smoke tests"  
+  **build**: recognize version of libhdf5 that does not allow static linking and do not try to use it  
+  **build, doc**: added wiki page: Building-from-source-:--configure-options-explained  
+  **build, ncbi-vdb, sra-tools**: the installation script now saves configuration files if they were modified by the user  
+  **build, vdb-sql**: modified build to avoid vdb-sql in absence of libxml2  
+  **kfg**: added searching of configuration files in ../etc/ncbi/ relative to the binaries  
+  **kfg, prefetch**: set limit of Aspera usage to 450m  
+  **kfg, prefetch, remote-fuser, vfs**: Updated resolving of cache location of non-accession objects  
+  **kfs**: fix to improve on windows  
+  **klib**: Reverted KTimeMakeTime to use UTC  
+  **kns**: Accept the same http_proxy specifications as wget  
+  **kns**: Added possibility to report server's IP address after network error  
+  **kns**: Ignore HTTP headers sent multiple times  
+  **kns**: Improved reporting of network errors  
+  **kns**: fixed generation of invalid error code in response to dropped connection  
+  **ncbi-vdb**: add ability to make a cache-tee-file without promtion  
+  **ncbi-vdb**: fixed bug of directory not found on mac  
+  **ncbi-vdb, ngs-engine**: improved handling of blobs inside the NGS engine   
+  **ngs-engine**: improved performance when iterating through partially aligned and unaligned reads  
+  **ngs-engine**: optimized filtered access to unaligned runs  
+  **sra-tools, vdb**: access to vdb/ngs via SQLite  
+  **vdb**: An assert triggered by a rare condition was fixed  
+  **vdb**: new api to estimate pileup-workload based on slice  
+  **vdb**: new function to open HTTP-file with an arbitrary page-size  
+  **vdb**: progressbar can now be created to output on stderr  
+  **vfs**: Name resolving service was updated and switched to protocol version 3.0  
+
+
 ## NCBI VDB 2.8.2
 **March 6, 2017**
 

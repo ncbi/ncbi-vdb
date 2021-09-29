@@ -164,9 +164,10 @@ FIXTURE_TEST_CASE(KeyStoreGetKey_Protected, KeyStoreFixture)
 
     REQUIRE_RC(KKeyStoreSetConfig(ks, kfg));
     
-    REQUIRE_RC(KKeyStoreGetKey(ks, "just give us the current repo's key", &key));
-    REQUIRE_NOT_NULL(key);
-    REQUIRE_EQ(string(tempKey), string(key->value.addr, key->value.len));
+    // VDB-4394: protected repos are ignored
+    REQUIRE_RC_FAIL(KKeyStoreGetKey(ks, "just give us the current repo's key", &key));
+    REQUIRE_NULL(key);
+//  REQUIRE_EQ(string(tempKey), string(key->value.addr, key->value.len));
     
     REQUIRE_RC(KDirectoryRemove(wd, true, GetName()));
 }
@@ -188,10 +189,10 @@ FIXTURE_TEST_CASE(KeyStoreGetKeyById_Protected, KeyStoreFixture)
 
     REQUIRE_RC(KKeyStoreSetConfig(ks, kfg));
     
-    REQUIRE_RC(KKeyStoreGetKeyByProjectId(ks,
+    REQUIRE_RC_FAIL(KKeyStoreGetKeyByProjectId(ks,
         "give us the key for 2957", &key, 2957));
-    REQUIRE_NOT_NULL(key);
-    REQUIRE_EQ(string(tempKey), string(key->value.addr, key->value.len));
+    REQUIRE_NULL(key);
+ // REQUIRE_EQ(string(tempKey), string(key->value.addr, key->value.len));
     
     REQUIRE_RC(KDirectoryRemove(wd, true, GetName()));
 }

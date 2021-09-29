@@ -30,11 +30,11 @@ TOP ?= $(abspath ../..)
 MODULE = test/kfg
 
 TEST_TOOLS = \
-	flat-sra-kfg \
 	wb-test-kfg \
 	test-kfg \
 	test-repository \
-	test-keystore
+	test-keystore \
+	test-properties \
 
 include $(TOP)/build/Makefile.env
 
@@ -44,6 +44,11 @@ $(TEST_TOOLS): makedirs
 .PHONY: $(TEST_TOOLS)
 
 clean: stdclean
+
+TEST_LIB = \
+	-sktst \
+	-skapp \
+    -sncbi-vdb
 
 #-------------------------------------------------------------------------------
 # ncbi-home-from-env
@@ -55,7 +60,7 @@ ENV_OBJ = \
 	$(addsuffix .$(OBJX),$(ENV_SRC))
 
 $(TEST_BINDIR)/ncbi-home-from-env: $(ENV_OBJ)
-	$(LP) --exe -o $@ $^ $(ENV_LIB) 
+	$(LP) --exe -o $@ $^
 
 #-------------------------------------------------------------------------------
 # white-box test
@@ -66,74 +71,97 @@ TEST_SRC = \
 TEST_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_SRC))
 
-TEST_LIB = \
-	-sktst \
-	-skapp \
-    -sncbi-vdb
-
 $(TEST_BINDIR)/wb-test-kfg: $(TEST_OBJ)
-	$(LP) --exe -o $@ $^ $(TEST_LIB)
-
-#-------------------------------------------------------------------------------
-# flat-sra-kfg
-
-FLAT_SRC = \
-	flat-sra-kfg
-
-FLAT_OBJ = \
-	$(addsuffix .$(OBJX),$(FLAT_SRC))
-
-$(TEST_BINDIR)/flat-sra-kfg: $(FLAT_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_LIB)
 
 #-------------------------------------------------------------------------------
 # test-kfg
 #
 TEST_KFG_SRC = \
-	kfgtest 
+	kfg-fixture \
+	kfgtest
 
 TEST_KFG_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_KFG_SRC))
 
-TEST_KFG_LIB = \
-	-sktst \
-	-skapp \
-    -sncbi-vdb
-
 $(TEST_BINDIR)/test-kfg: $(TEST_KFG_OBJ)
-	$(LP) --exe -o $@ $^ $(TEST_KFG_LIB)
+	$(LP) --exe -o $@ $^ $(TEST_LIB)
+
+kfg: test-kfg
+	$(TEST_BINDIR)/test-kfg
 
 #-------------------------------------------------------------------------------
 # test-repository
 #
 TEST_REPOSITORY_SRC = \
-	repositorytest 
+	repositorytest
 
 TEST_REPOSITORY_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_REPOSITORY_SRC))
 
-TEST_REPOSITORY_LIB = \
-	-sktst \
-	-skapp \
-    -sncbi-vdb
-
 $(TEST_BINDIR)/test-repository: $(TEST_REPOSITORY_OBJ)
-	$(LP) --exe -o $@ $^ $(TEST_REPOSITORY_LIB)
+	$(LP) --exe -o $@ $^ $(TEST_LIB)
 
 #-------------------------------------------------------------------------------
 # test-keystore
 #
 TEST_KEYSTORE_SRC = \
-	keystoretest 
+	keystoretest
 
 TEST_KEYSTORE_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_KEYSTORE_SRC))
 
-TEST_KEYSTORE_LIB = \
-	-sktst \
-	-skapp \
-    -sncbi-vdb
-
 $(TEST_BINDIR)/test-keystore: $(TEST_KEYSTORE_OBJ)
-	$(LP) --exe -o $@ $^ $(TEST_KEYSTORE_LIB)
+	$(LP) --exe -o $@ $^ $(TEST_LIB)
 
+#-------------------------------------------------------------------------------
+# test-properties
+#
+TEST_PROPERTIES_SRC = \
+	kfg-fixture \
+	propertiestest
+
+TEST_PROPERTIES_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_PROPERTIES_SRC))
+
+$(TEST_BINDIR)/test-properties: $(TEST_PROPERTIES_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_LIB)
+
+prop: test-properties
+	$(TEST_BINDIR)/test-properties
+
+#-------------------------------------------------------------------------------
+# fuzz test
+#
+FUZZ_SRC = \
+	fuzz-kfg
+
+FUZZ_OBJ = \
+	$(addprefix $(OBJDIR)/,$(addsuffix .fuzz.$(OBJX),$(FUZZ_SRC)))
+
+$(TEST_BINDIR)/fuzz-kfg: $(FUZZ_OBJ) $(FLIBDIR)/libncbi-vdb.a
+	clang++ -o $@ $^ $(FUZZ_LIB) $(FUZZ_OPT)
+
+fuzz: $(TEST_BINDIR)/fuzz-kfg
+
+FUZZ_DICT = fuzz-dict
+FUZZ_PROF_RAW = profile/fuzz-kfg.rawprof
+FUZZ_PROF = profile/fuzz-kfg.profdata
+FUZZ_PROF_REPORT = profile/fuzz-kfg-coverage.txt
+
+RUNS ?= -1
+
+runfuzz $(FUZZ_PROF_RAW): $(TEST_BINDIR)/fuzz-kfg $(FUZZ_DICT)
+	 mkdir -p fuzz-corpus
+	 export LLVM_PROFILE_FILE=$(FUZZ_PROF_RAW); $(TEST_BINDIR)/fuzz-kfg -dict=$(FUZZ_DICT) -runs=$(RUNS) fuzz-corpus fuzz-seeds
+
+$(FUZZ_PROF): $(FUZZ_PROF_RAW)
+	llvm-profdata merge -sparse $(FUZZ_PROF_RAW) -o $(FUZZ_PROF)
+
+proffuzz: $(FUZZ_PROF)
+	llvm-cov report $(TEST_BINDIR)/fuzz-kfg -instr-profile=$(FUZZ_PROF) >$(FUZZ_PROF_REPORT)
+	@head -n 1 $(FUZZ_PROF_REPORT)
+	@tail -n 1 $(FUZZ_PROF_REPORT)
+	@echo "====> see the full coverage report in $(FUZZ_PROF_REPORT)"
+
+.phony: runfuzz

@@ -28,14 +28,21 @@
 #ifndef _h_klib_debug_
 #define _h_klib_debug_
 
+
+#ifndef _h_klib_defs_
+#include <klib/defs.h> /* uint64_t */
+#endif
+
+typedef uint32_t KDbgCond;
+typedef uint64_t KDbgFlag;
+typedef uint64_t KDbgMask;
+typedef int32_t KDbgMod;
+
+
 #if _DEBUGGING
 
 #ifndef _h_klib_extern_
 #include <klib/extern.h>
-#endif
-
-#ifndef _h_klib_defs_
-#include <klib/defs.h>
 #endif
 
 #ifndef _h_klib_status_
@@ -108,7 +115,7 @@ extern "C" {
     _module(LEGREF) _module(LOADLIB) \
     _module(REF)    _module(SEARCH)  _module(SRA) \
     _module(VDB)    _module(VFS)     _module(XARC) _module(XML)  \
-    
+    _module(TLS)
 
 #define APP_CONDITIONS() \
     _condition(APP,0)  _condition(APP,1)  _condition(APP,2)  _condition(APP,3)  \
@@ -146,14 +153,16 @@ extern "C" {
     _condition(KFS,ARCENTRY) _condition(KFS,ARC) _condition(KFS,TOCENTRY) _condition(KFS,TOC)  \
     _condition(KFS,TARENTRY) _condition(KFS,TAR) _condition(KFS,SRASORT)  _condition(KFS,GZIP) \
     _condition(KFS,DIR)  _condition(KFS,COUNTER) _condition(KFS,BZIP)     _condition(KFS,SYS) \
-    _condition(KFS,POS)  _condition(KFS,PAGE)
+    _condition(KFS,POS)  _condition(KFS,PAGE) _condition(KFS,FILE)
 
 #define KNS_CONDITIONS() \
-    _condition(KNS,DNS) _condition(KNS,ERR)    _condition(KNS,HTTP) \
-    _condition(KNS,MGR) _condition(KNS,SOCKET) _condition(KNS,TLS)
+    _condition(KNS,DNS) _condition(KNS,ERR)   _condition(KNS,HTTP) \
+    _condition(KNS,MGR) _condition(KNS,PROXY) _condition(KNS,SOCKET) \
+    _condition(KNS,TLS)
 
 #define VFS_CONDITIONS() \
-    _condition(VFS,MGR)     _condition(VFS,PATH)     _condition(VFS,SERVICE)
+    _condition(VFS,CE)       _condition(VFS,JSON)  _condition(VFS,KFG) \
+    _condition(VFS,MGR)      _condition(VFS,PATH)  _condition(VFS,SERVICE)
 
 #define XML_CONDITIONS() \
     _condition(XML,XML)
@@ -200,6 +209,9 @@ extern "C" {
 #define ARGS_CONDITIONS() \
     _condition(ARGS,WRITER)
 
+#define TLS_CONDITIONS() \
+    _condition(TLS,TLS)
+    
 /*
  * Nothing below here needs to be changed when just adding new modules
  * and/or conditions
@@ -217,7 +229,6 @@ extern "C" {
  */
 #define _module(mod)   DBG_PASTE_2(DBG_,mod),
 
-typedef int32_t KDbgMod;
 enum
 {
     DBG_MOD_NOT_FOUND = -1,
@@ -237,7 +248,6 @@ enum
  */
 
 /* dbg_id is approprite as a array index */
-    typedef uint32_t KDbgCond;
 enum
 {
     DBG_COND_MIN = 0,
@@ -259,9 +269,6 @@ enum
     DBG_COND_59,    DBG_COND_60,    DBG_COND_61,    DBG_COND_62,
     DBG_COND_63,    DBG_COND_MAX = DBG_COND_63
 };
-
-typedef uint64_t KDbgFlag;
-typedef uint64_t KDbgMask;
 
 
 /* to make a KDbgFlag out of a KDbgCond, shift 1 one by the condition id */
@@ -514,8 +521,8 @@ KLIB_EXTERN void* CC KDbgWriterDataGet ( void );
  */
 KLIB_EXTERN rc_t CC KDbgHandlerSet ( KWrtWriter writer, void * data );
 
-KLIB_EXTERN rc_t CC KDbgHandlerSetStdOut();
-KLIB_EXTERN rc_t CC KDbgHandlerSetStdErr();
+KLIB_EXTERN rc_t CC KDbgHandlerSetStdOut(void);
+KLIB_EXTERN rc_t CC KDbgHandlerSetStdErr(void);
 
 
 KLIB_EXTERN void CC KDbgSetRowId( uint64_t row_id );

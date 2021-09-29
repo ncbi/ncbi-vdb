@@ -129,7 +129,14 @@ KLIB_SRC = \
 	num-gen \
 	progressbar \
 	sra-release-version \
-	btree
+	hashtable \
+	hashfile \
+	btree \
+	json \
+	json-grammar \
+	json-lex \
+	base64 \
+	guid
 #	path
 
 ifeq (win,$(OS))
@@ -138,6 +145,8 @@ endif
 
 ifeq (dbg,$(BUILD))
 	KLIB_SRC += debug
+else
+	KLIB_SRC += release
 endif
 
 KLIB_OBJ = \
@@ -157,3 +166,26 @@ compile: makedirs
 	@ $(MAKE_CMD) -j$(MAKE_JOBS) $(TARGDIR)/compile
 
 $(TARGDIR)/compile: $(OBJFILES)
+
+#-------------------------------------------------------------------------------
+# fuzz
+#
+FUZZ_OBJ = \
+	$(addprefix $(OBJDIR)/,$(addsuffix .fuzz.$(LOBX),$(KLIB_SRC)))
+
+fuzz: std $(FUZZ_OBJ)
+	$(AR) $(FLIBDIR)/libklib.$(LIBX) $(FUZZ_OBJ)
+
+#-------------------------------------------------------------------------------
+#
+# flex/bison for the Json parser
+#
+# Will not be executed in a regular build. Use 'make bison' and/or 'make flex' to re-generate C files
+#
+
+bison: $(SRCDIR)/json-grammar.y
+	bison -Wno-other --no-lines -r state -o $(SRCDIR)/json-grammar.c --defines=$(SRCDIR)/json-tokens.h $(SRCDIR)/json-grammar.y
+
+flex: $(SRCDIR)/json-lex.l $(SRCDIR)/json-tokens.h
+	flex --noline -d -t $(SRCDIR)/json-lex.l > $(SRCDIR)/json-lex.c
+

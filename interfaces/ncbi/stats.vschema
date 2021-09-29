@@ -54,6 +54,10 @@ extern function U8 NCBI:SRA:stats_trigger #1
     ( U8 read_bin, U32 read_len, INSDC:SRA:xread_type read_type * ascii spot_group );
 
 /* trigger to build meta statistics from compressed reads
+ *
+ * cmp_stats_trigger takes spot length from quality
+ * cmpf_stats_trigger takes spot length from an explicit spot length input
+ * cmpb_stats_trigger only computes CMP_BASE_COUNT
  */
 extern function
 U8 NCBI:SRA:cmp_stats_trigger #1 ( B8 cmp_read_bin, NCBI:SRA:stats:qual_type qual_bin,
@@ -62,6 +66,12 @@ U8 NCBI:SRA:cmp_stats_trigger #1 ( B8 cmp_read_bin, NCBI:SRA:stats:qual_type qua
 extern function
 U8 NCBI:SRA:cmpf_stats_trigger #1 ( B8 cmp_read_bin, U32 spot_len,
     U32 read_len, INSDC:SRA:xread_type read_type * ascii spot_group );
+
+extern function
+U8 NCBI:SRA:cmpb_stats_trigger #1 ( B8 cmp_read_bin * ascii spot_group );
+
+extern function
+U8 NCBI:SRA:readlen_stats_trigger #1 ( U32 read_len, INSDC:SRA:xread_type read_type );
 
 
 /* trigger to build phred_quality statistics in meta
@@ -81,8 +91,9 @@ U8 NCBI:SRA:phred_stats_trigger #1 ( INSDC:quality:phred qual_bin );
  *  1.1.0 - incorporate stats from compressed read
  *  1.1.1 - sra #1.0.2
  *  1.1.2 - sra #1.0.3 + cmp_base_count or to base_count
+ *  1.2.1 - sra #1.0.4 and readlen_stats trigger
  */
-table NCBI:SRA:tbl:stats #1.2.0 = INSDC:SRA:tbl:stats #1.1, INSDC:SRA:tbl:sra #1.0.3
+table NCBI:SRA:tbl:stats #1.2.1 = INSDC:SRA:tbl:stats #1.1, INSDC:SRA:tbl:sra #1.0.4
 {
     INSDC:SRA:spotid_t min_spot_id
         = < INSDC:SRA:spotid_t > meta:value < "STATS/TABLE/SPOT_MIN" > ();
@@ -108,8 +119,13 @@ table NCBI:SRA:tbl:stats #1.2.0 = INSDC:SRA:tbl:stats #1.1, INSDC:SRA:tbl:sra #1
         | NCBI:SRA:cmp_stats_trigger ( in_cmp_stats_bin, in_stats_qual, in_read_len, in_read_type, in_spot_group )
         | NCBI:SRA:cmp_stats_trigger ( in_cmp_stats_bin, in_stats_qual, in_read_len, in_read_type )
         | NCBI:SRA:cmpf_stats_trigger ( in_cmp_stats_bin, in_spot_len, in_read_len, in_read_type, in_spot_group )
-        | NCBI:SRA:cmpf_stats_trigger ( in_cmp_stats_bin, in_spot_len, in_read_len, in_read_type );
-        
+        | NCBI:SRA:cmpf_stats_trigger ( in_cmp_stats_bin, in_spot_len, in_read_len, in_read_type )
+        | NCBI:SRA:cmpb_stats_trigger ( in_cmp_stats_bin, in_spot_group )
+        | NCBI:SRA:cmpb_stats_trigger ( in_cmp_stats_bin )
+        ;
+
+    trigger readlen_stats
+        = NCBI:SRA:readlen_stats_trigger ( in_read_len, in_read_type );
     trigger qual_stats
         = NCBI:SRA:phred_stats_trigger #1 ( in_qual_phred );
 

@@ -64,7 +64,7 @@ static rc_t HandleErrnoEx ( const char *func, unsigned int lineno, rc_t rc_ctx )
 #define HandleErrno() HandleErrnoEx ( __func__, __LINE__, rc_ctx )
 #define RC_CTX( t, c ) \
     const rc_t rc_ctx = CTX ( rcNS, t, c )
-    
+
 
 #define PIPE_NAME_LENGTH 256
 
@@ -81,9 +81,9 @@ static rc_t HandleErrnoEx ( const char *func, unsigned int lineno, rc_t rc_ctx )
  *  target observed from a movable window. This means that a STREAM cannot be
  *  addressed randomly, whereas a FILE or OBJECT can.
  */
- 
+
  /*
-  * On Windows, we have 2 different mechanisms to implement KSockets, 
+  * On Windows, we have 2 different mechanisms to implement KSockets,
   * WinSock based for Ipv4 connections and named pipes based for IPC
   */
 
@@ -95,7 +95,7 @@ struct KSocketIPv4
     bool remote_addr_valid;
 };
 typedef struct KSocketIPv4 KSocketIPv4;
-  
+
 
 struct KSocketIPv6
 {
@@ -114,7 +114,7 @@ struct KSocketIPC
     wchar_t pipename [ PIPE_NAME_LENGTH ];
 
     uint8_t type;
-    HANDLE listenerPipe;            /* only used if type == isIpcListener */ 
+    HANDLE listenerPipe;            /* only used if type == isIpcListener */
 };
 typedef struct KSocketIPC KSocketIPC;
 
@@ -241,13 +241,17 @@ static rc_t CC KIpv4SocketWhack ( KSocket * self )
         rc = KSocketHandleShutdownCallWin ();
     else
     {
-        while ( 1 ) 
+        while ( 1 )
         {
             char buffer [ 1024 ];
             ssize_t result = recv ( data -> fd, buffer, sizeof buffer, 0 );
-            if ( result <= 0 )
+            if ( result < 0 )
             {
                 rc = KSocketHandleRecvCallWin ( rcClosing );
+                break;
+            }
+            else if (result == 0)
+            {
                 break;
             }
         }
@@ -262,7 +266,7 @@ static rc_t CC KIpv4SocketWhack ( KSocket * self )
     RC_CTX ( rcSocket, rcClosing );
     if ( shutdown ( data -> fd, SHUT_WR ) != -1 )
     {
-        while ( 1 ) 
+        while ( 1 )
         {
             char buffer [ 1024 ];
             ssize_t result = recv ( data -> fd, buffer, sizeof buffer, 0 );
@@ -281,7 +285,7 @@ static rc_t CC KIpv4SocketWhack ( KSocket * self )
     }
     else
         rc = HandleErrno();
-#endif 
+#endif
 
     free ( self );
 
@@ -301,19 +305,19 @@ static rc_t CC KIpv4SocketTimedRead ( const KSocket * self, void * buffer, size_
     struct timeval ts;
     fd_set readFds;
     int selectRes;
-    
+
     /* convert timeout (relative time) */
     if ( tm != NULL )
     {
         ts.tv_sec = tm -> mS / 1000;
         ts.tv_usec = ( tm -> mS % 1000 ) * 1000;
     }
-    
+
     /* wait for socket to become readable */
     FD_ZERO( &readFds );
     FD_SET( data -> fd, &readFds );
     selectRes = select( 0, &readFds, NULL, NULL, ( tm == NULL ) ? NULL : &ts );
-    
+
     /* check for error */
     if ( selectRes == -1 )
         rc = KSocketHandleSelectCallWin ( rcReading );
@@ -340,7 +344,7 @@ static rc_t CC KIpv4SocketTimedRead ( const KSocket * self, void * buffer, size_
             }
         }
     }
-            
+
     return rc;
 }
 
@@ -401,7 +405,7 @@ rc_t KSocketHandleSendCallWin ()
     case WSAETIMEDOUT:
         return RC ( rcNS, rcSocket, rcWriting, rcTimeout, rcExhausted );
     }
-    
+
     return RC ( rcNS, rcSocket, rcWriting, rcError, rcUnknown );
  }
 
@@ -417,19 +421,19 @@ static rc_t CC KIpv4SocketTimedWrite ( KSocket * self, const void * buffer, size
     struct timeval ts;
     fd_set writeFds;
     int selectRes;
-    
+
     /* convert timeout (relative time) */
     if ( tm != NULL )
     {
         ts.tv_sec = tm -> mS / 1000;
         ts.tv_usec = ( tm -> mS % 1000 ) * 1000;
     }
-    
+
     /* wait for socket to become writable */
     FD_ZERO( &writeFds );
     FD_SET( data -> fd, &writeFds );
     selectRes = select( 0, NULL, &writeFds, NULL, ( tm == NULL ) ? NULL : &ts );
-    
+
     /* check for error */
     if ( selectRes == -1 )
         rc = KSocketHandleSelectCallWin ( rcWriting );
@@ -450,7 +454,7 @@ static rc_t CC KIpv4SocketTimedWrite ( KSocket * self, const void * buffer, size
                 return 0;
             }
 
-            break;        
+            break;
         }
     }
 
@@ -535,6 +539,27 @@ rc_t KSocketHandleSocketCallWin ()
 }
 
 static
+rc_t KSocketHandleIoctlsocketCallWin()
+{
+	switch (WSAGetLastError())
+	{
+	case WSANOTINITIALISED:
+		return RC(rcNS, rcSocket, rcCreating, rcEnvironment, rcInvalid);
+	case WSAENETDOWN: /* ENETUNREACH */
+		return RC(rcNS, rcSocket, rcCreating, rcConnection, rcNotAvailable);
+	case WSAEINPROGRESS:
+		return RC(rcNS, rcSocket, rcCreating, rcConnection, rcBusy);
+	case WSAENOTSOCK:
+		return RC(rcNS, rcSocket, rcCreating, rcSocket, rcIncorrect);
+	case WSAEFAULT:
+		return RC(rcNS, rcSocket, rcCreating, rcParam, rcInvalid);
+	}
+
+	return RC(rcNS, rcSocket, rcCreating, rcError, rcUnknown);
+}
+
+
+static
 rc_t KSocketHandleBindCallWin ()
 {
     switch ( WSAGetLastError () )
@@ -598,13 +623,72 @@ rc_t KSocketHandleConnectCallWin ()
     case WSAEWOULDBLOCK:
         return RC ( rcNS, rcSocket, rcCreating, rcData, rcNotAvailable );
     case WSAEACCES: /* failed to connect to socket because setsockopt SO_BROADCAST is not enabled */
-        return RC ( rcNS, rcNoTarg, rcCreating, rcMemory, rcUnauthorized );            
+        return RC ( rcNS, rcNoTarg, rcCreating, rcMemory, rcUnauthorized );
     }
 
     return RC ( rcNS, rcSocket, rcCreating, rcError, rcUnknown );
 }
 
-static 
+static
+rc_t KSocketHandleWSACreateEventCall()
+{
+	switch (WSAGetLastError())
+	{
+	case WSANOTINITIALISED:
+		return RC(rcNS, rcSocket, rcCreating, rcEnvironment, rcInvalid);
+	case WSAENETDOWN:
+		return RC(rcNS, rcSocket, rcCreating, rcConnection, rcNotAvailable);
+	case WSAEINPROGRESS:
+		return RC(rcNS, rcSocket, rcCreating, rcConnection, rcBusy);
+	case WSA_NOT_ENOUGH_MEMORY:
+		return RC(rcNS, rcSocket, rcCreating, rcMemory, rcExhausted);
+	}
+
+	return RC(rcNS, rcSocket, rcCreating, rcError, rcUnknown);
+}
+
+static
+rc_t KSocketHandleWSAEventSelectCallWin()
+{
+	switch (WSAGetLastError())
+	{
+	case WSANOTINITIALISED:
+		return RC(rcNS, rcSocket, rcCreating, rcEnvironment, rcInvalid);
+	case WSAENETDOWN:
+		return RC(rcNS, rcSocket, rcCreating, rcConnection, rcNotAvailable);
+	case WSAEINVAL:
+		return RC(rcNS, rcSocket, rcCreating, rcParam, rcInvalid);
+	case WSAEINPROGRESS:
+		return RC(rcNS, rcSocket, rcCreating, rcConnection, rcBusy);
+	case WSAENOTSOCK:
+		return RC(rcNS, rcSocket, rcCreating, rcSocket, rcIncorrect);
+	}
+
+	return RC(rcNS, rcSocket, rcCreating, rcError, rcUnknown);
+}
+
+static
+rc_t KSocketWSAWaitForMultipleEventsCall()
+{
+	switch (WSAGetLastError())
+	{
+	case WSANOTINITIALISED:
+		return RC(rcNS, rcSocket, rcCreating, rcEnvironment, rcInvalid);
+	case WSAENETDOWN:
+		return RC(rcNS, rcSocket, rcCreating, rcConnection, rcNotAvailable);
+	case WSAEINPROGRESS:
+		return RC(rcNS, rcSocket, rcCreating, rcConnection, rcBusy);
+	case WSA_NOT_ENOUGH_MEMORY:
+		return RC(rcNS, rcSocket, rcCreating, rcMemory, rcExhausted);
+	case WSA_INVALID_HANDLE:
+	case WSA_INVALID_PARAMETER:
+		return RC(rcNS, rcSocket, rcCreating, rcParam, rcInvalid);
+	}
+
+	return RC(rcNS, rcSocket, rcCreating, rcError, rcUnknown);
+}
+
+static
 rc_t KSocketHandleListenCallWin ()
 {
     switch ( WSAGetLastError () )
@@ -675,7 +759,7 @@ rc_t KSocketHandleSocknameCallWin ()
     case WSANOTINITIALISED:
         return RC ( rcNS, rcSocket, rcIdentifying, rcEnvironment, rcInvalid );
     case WSAENETDOWN: /* ENETUNREACH */
-        return RC ( rcNS, rcSocket, rcIdentifying, rcConnection, rcNotAvailable );        
+        return RC ( rcNS, rcSocket, rcIdentifying, rcConnection, rcNotAvailable );
     case WSAEINVAL:
     case WSAEFAULT:
         return RC ( rcNS, rcSocket, rcIdentifying, rcParam, rcInvalid );
@@ -688,8 +772,65 @@ rc_t KSocketHandleSocknameCallWin ()
     return RC ( rcNS, rcSocket, rcIdentifying, rcError, rcUnknown );
 }
 
+rc_t
+connect_wait(int sock, int32_t timeoutMs)
+{   /* asynch connect */
+    RC_CTX(rcSocket, rcWaiting);
+    rc_t rc = 0;
+    WSAEVENT connEvent = WSACreateEvent();
+    if (connEvent != WSA_INVALID_EVENT)
+    {
+        if (WSAEventSelect(sock, connEvent, FD_CONNECT) == 0)
+        {
+            int w = WSAWaitForMultipleEvents(1, &connEvent, false, timeoutMs < 0 ? WSA_INFINITE : timeoutMs, false);
+            switch (w)
+            {
+            case WSA_WAIT_FAILED:
+                rc = KSocketWSAWaitForMultipleEventsCall();
+                break;
+            case WSA_WAIT_TIMEOUT:
+                rc = RC(rcNS, rcSocket, rcCreating, rcTimeout, rcExhausted);
+                break;
+            default:
+                {   // make sure the socket is writeable
+                    struct timeval ts;
+                    fd_set writeFds;
+                    int selectRes;
+
+                    /* convert timeout (relative time) */
+                    ts.tv_sec = timeoutMs / 1000;
+                    ts.tv_usec = (timeoutMs % 1000) * 1000;
+
+                    FD_ZERO(&writeFds);
+                    FD_SET(sock, &writeFds);
+
+                    selectRes = select(0, NULL, &writeFds, NULL, &ts);
+                    if (selectRes == -1)
+                        rc = KSocketHandleSelectCallWin(rcCreating);
+                    else if (selectRes == 0)
+                        rc = RC(rcNS, rcSocket, rcCreating, rcTimeout, rcExhausted); /* timeout */
+                    else if (!FD_ISSET(sock, &writeFds))
+                        rc = HandleErrno(); /* cannot determine return codes of FD_ISSET */
+                    else
+                        rc = 0;
+                }
+            }
+            WSACloseEvent(connEvent);
+        }
+        else
+        {
+            rc = KSocketHandleWSAEventSelectCallWin();
+        }
+    }
+    else
+    {
+        rc = KSocketHandleWSACreateEventCall();
+    }
+    return rc;
+}
+
 static
-rc_t KSocketConnectIPv4 ( KSocket * self, const KEndPoint * from, const KEndPoint * to )
+rc_t KSocketConnectIPv4 ( KSocket * self, const KEndPoint * from, const KEndPoint * to, int32_t timeoutMs )
 {
     rc_t rc = 0;
 
@@ -698,6 +839,8 @@ rc_t KSocketConnectIPv4 ( KSocket * self, const KEndPoint * from, const KEndPoin
         rc = KSocketHandleSocketCallWin ();
     else
     {
+		u_long nonBlockingMode = 1; // non-blocking mode
+		int res;
         struct sockaddr_in ss;
         memset ( & ss, 0, sizeof ss );
         ss . sin_family = AF_INET;
@@ -707,29 +850,46 @@ rc_t KSocketConnectIPv4 ( KSocket * self, const KEndPoint * from, const KEndPoin
             ss . sin_addr . s_addr = htonl ( from -> u . ipv4 . addr );
         }
 
-        if ( bind ( self -> type_data . ipv4_data . fd, ( struct sockaddr * ) & ss, sizeof ss  ) == SOCKET_ERROR ) 
-            rc = KSocketHandleBindCallWin ();
-                
-        if ( rc == 0 )
-        {
-            ss . sin_port = htons ( to -> u . ipv4 . port );
-            ss . sin_addr . s_addr = htonl ( to -> u . ipv4 . addr );
-                
-            if ( connect ( self -> type_data . ipv4_data . fd, ( struct sockaddr * ) & ss, sizeof ss ) == SOCKET_ERROR )
-                rc = KSocketHandleConnectCallWin ();
-            else
+		// set nonblocking mode
+		res = ioctlsocket(self->type_data.ipv4_data.fd, FIONBIO, &nonBlockingMode);
+		if (res != NO_ERROR)
+			rc = KSocketHandleIoctlsocketCallWin();
+
+		if (rc == 0 && bind(self->type_data.ipv4_data.fd, (struct sockaddr *) & ss, sizeof ss) == SOCKET_ERROR)
+			rc = KSocketHandleBindCallWin();
+
+		if (rc == 0)
+		{
+			int res;
+            SOCKET sock = self->type_data.ipv4_data.fd;
+			ss.sin_port = htons(to->u.ipv4.port);
+			ss.sin_addr.s_addr = htonl(to->u.ipv4.addr);
+
+			res = connect(sock, (struct sockaddr *) & ss, sizeof ss);
+            if (res == SOCKET_ERROR && WSAGetLastError() == WSAEWOULDBLOCK)
             {
-                /* not doing non-blocking */
-                return 0;
+                rc = connect_wait((int)sock, timeoutMs);
+                if (rc == 0)
+                {
+                    return 0;
+                }
             }
+			else if (res == 0)
+			{	/* should not happen with a non-blocking socket */
+				DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ("%p: non-blocking connect() returned 0\n", self));
+				return 0;
+			}
+			else
+			{
+				rc = KSocketHandleConnectCallWin();
+			}
+		}
+		/* dump socket */
+		closesocket(self->type_data.ipv4_data.fd);
+		self->type_data.ipv4_data.fd = INVALID_SOCKET;
+	}
 
-            /* dump socket */
-            closesocket ( self -> type_data . ipv4_data . fd );
-            self -> type_data . ipv4_data . fd = INVALID_SOCKET;
-        }
-    }
-
-    DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketConnectIPv4 failed - %R\n", self, rc ) );    
+    DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketConnectIPv4 failed - %R\n", self, rc ) );
     return rc;
 }
 
@@ -771,7 +931,7 @@ static rc_t KNSManagerMakeIPv4Listener ( const KNSManager *self, KSocket **out, 
                 if ( bind ( data -> fd, ( struct sockaddr* ) & ss, sizeof ss ) != 0 )
                     rc = KSocketHandleBindCallWin ();
                 else if ( listen ( data -> fd, 5 ) != 0 )
-                    rc = KSocketHandleListenCallWin (); 
+                    rc = KSocketHandleListenCallWin ();
                 else
                 {
                     * out = listener;
@@ -888,7 +1048,7 @@ static rc_t KSocketGetEndpointV4 ( const KSocket * self, KEndPoint * ep, bool re
 static
 rc_t KSocketConnectIPv6 ( KSocket * self, const KEndPoint * from, const KEndPoint * to )
 {
-    return RC ( rcNS, rcSocket, rcConstructing, rcFunction, rcUnsupported ); 
+    return RC ( rcNS, rcSocket, rcConstructing, rcFunction, rcUnsupported );
 }
 
 
@@ -932,7 +1092,7 @@ static rc_t KNSManagerMakeIPv6Listener ( const KNSManager *self, KSocket **out, 
                 if ( bind ( data -> fd, ( struct sockaddr* ) & ss, sizeof ss ) != 0 )
                     rc = KSocketHandleBindCallWin ();
                 else if ( listen ( data -> fd, 5 ) != 0 )
-                    rc = KSocketHandleListenCallWin (); 
+                    rc = KSocketHandleListenCallWin ();
                 else
                 {
                     * out = listener;
@@ -1059,18 +1219,18 @@ static rc_t KIPCSocketWhack_unconnected_server_side_pipe ( KSocket * self )
     rc_t rc = 0;
     KSocketIPC * data = &( self -> type_data.ipc_data );
 
-    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: isIpcListener\n", self ) );    
+    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: isIpcListener\n", self ) );
     if ( data->listenerPipe != INVALID_HANDLE_VALUE )
     {
         /* !!! In case there is an active call to ConnectNamedPipe()
            on some thread, "wake" the synchronous named pipe,
            otherwise DisconnectNamedPipe/CloseHandle will block forever */
-        HANDLE hPipe = CreateFileW( data->pipename, 
-                                    GENERIC_READ, 
-                                    FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, 
-                                    NULL, 
-                                    OPEN_EXISTING, 
-                                    0, 
+        HANDLE hPipe = CreateFileW( data->pipename,
+                                    GENERIC_READ,
+                                    FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                                    NULL,
+                                    OPEN_EXISTING,
+                                    0,
                                     NULL);
 
         if ( hPipe != INVALID_HANDLE_VALUE )
@@ -1082,7 +1242,7 @@ static rc_t KIPCSocketWhack_unconnected_server_side_pipe ( KSocket * self )
             rc = HandleErrno();
             DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: DisconnectNamedPipe failed\n", self ) );
         }
-        
+
         if ( !CloseHandle( data->listenerPipe ) )
         {
             rc = HandleErrno();
@@ -1107,13 +1267,13 @@ static rc_t KIPCSocketWhack_server_side_pipe ( KSocket * self )
         if ( GetLastError() != ERROR_BROKEN_PIPE )
         {
             rc = HandleErrno();
-            DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: FlushFileBuffers failed, err=%d\n", self, GetLastError() ) );    
+            DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: FlushFileBuffers failed, err=%d\n", self, GetLastError() ) );
         }
     }
     if ( !DisconnectNamedPipe( data -> pipe ) )
     {
         rc = HandleErrno();
-        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: DisconnectNamedPipe failed\n", self ) );    
+        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: DisconnectNamedPipe failed\n", self ) );
     }
     if ( !CloseHandle( data -> pipe ) )
     {
@@ -1149,7 +1309,7 @@ static rc_t CC KIPCSocketWhack ( KSocket * self )
     /* we tolerate a whack on a NULL-pointer */
     if ( self == NULL ) return rc;
 
-    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: KIPCSocketWhack()...\n", self ) ); 
+    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: KIPCSocketWhack()...\n", self ) );
     switch ( self -> type_data.ipc_data.type )
     {
         case isIpcListener   : rc = KIPCSocketWhack_unconnected_server_side_pipe ( self ); break;
@@ -1158,7 +1318,7 @@ static rc_t CC KIPCSocketWhack ( KSocket * self )
 
         case isIpcPipeClient : rc = KIPCSocketWhack_client_side_pipe ( self ); break;
     }
-    
+
     free ( self );
     return rc;
 }
@@ -1170,20 +1330,20 @@ static rc_t WaitForData( const KSocket * self, void * buffer, size_t bsize,
 {
     RC_CTX ( rcSocket, rcReading );
 
-    /* received a ERROR_NO_DATA trying to read from a pipe; wait for the data to arrive or a time out to expire */ 
+    /* received a ERROR_NO_DATA trying to read from a pipe; wait for the data to arrive or a time out to expire */
     /* on success, will leave tmMs set to the remaining portion of timeout, if specified */
 
     const KSocketIPC * data = &( self -> type_data.ipc_data );
-    uint32_t tm_decrement = 100; 
+    uint32_t tm_decrement = 100;
 
-    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), 
-            ( "%p: no data on the pipe - going into a wait loop, tm=%d\n", 
+    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ),
+            ( "%p: no data on the pipe - going into a wait loop, tm=%d\n",
                 self, tmMs == 0 ? -1 : *tmMs ) );
     while ( true )
     {
         BOOL ret;
         DWORD count;
-    
+
         if ( tmMs != NULL )
         {
             if ( *tmMs <= tm_decrement )
@@ -1198,27 +1358,27 @@ static rc_t WaitForData( const KSocket * self, void * buffer, size_t bsize,
         ret = ReadFile( data -> pipe, buffer, ( DWORD )bsize, &count, overlap );
         if ( ret )
         {
-            DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), 
-                    ( "%p: (wait loop) ReadFile completed synchronously, count=%d\n", 
+            DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ),
+                    ( "%p: (wait loop) ReadFile completed synchronously, count=%d\n",
                         self, count ) );
             assert ( num_read != NULL );
             * num_read = ( size_t ) count;
             CloseHandle( overlap -> hEvent );
             return 0;
         }
-        
+
         switch ( GetLastError() )
         {
             case ERROR_IO_PENDING : return 0; /* the caller will wait for completion */
-            
+
             case ERROR_NO_DATA :
                 DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: (wait loop) Sleep(%d)\n", self, tm_decrement ) );
                 Sleep( tm_decrement );
                 break;
-            
+
             case ERROR_SUCCESS: /* not expected in asynch mode */
                 return RC ( rcNS, rcFile, rcReading, rcError, rcUnexpected);
-            
+
             default:
                 return HandleErrno();
         }
@@ -1236,11 +1396,11 @@ static rc_t CC KIPCSocketTimedRead ( const KSocket * self, void * buffer, size_t
     rc_t rc = 0;
     const KSocketIPC * data = &( self -> type_data.ipc_data );
     OVERLAPPED overlap;
-    
+
     if ( num_read == NULL )
         return RC ( rcNS, rcConnection, rcReading, rcParam, rcNull );
 
-    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), 
+    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ),
                 ( "%p: KIPCSocketTimedRead(%d, %p, %d)... \n",
                   self, tm == NULL ? -1 : tm -> mS, buffer, bsize ) );
 
@@ -1249,7 +1409,7 @@ static rc_t CC KIPCSocketTimedRead ( const KSocket * self, void * buffer, size_t
     overlap.hEvent = CreateEvent( NULL,     /* default security attribute */
                                   TRUE,     /* manual reset event */
                                   FALSE,    /* initial state = nonsignalled */
-                                  NULL ); 
+                                  NULL );
     if ( overlap.hEvent != NULL )
     {
         DWORD count;
@@ -1264,13 +1424,13 @@ static rc_t CC KIPCSocketTimedRead ( const KSocket * self, void * buffer, size_t
             CloseHandle( overlap.hEvent );
             return 0;
         }
-        
+
         *num_read = 0;
 
         /* asynch mode - wait for the operation to complete */
         if ( GetLastError() == ERROR_NO_DATA ) /* 232 */
         {
-            DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), 
+            DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ),
                 ( "%p: ReadFile(%x) returned FALSE, GetLastError() = ERROR_NO_DATA\n", self, data -> pipe ) );
             rc = WaitForData( self, buffer, bsize, num_read, tm == NULL ? NULL : &tm -> mS, &overlap );
             if ( *num_read != 0 ) /* read completed*/
@@ -1283,11 +1443,11 @@ static rc_t CC KIPCSocketTimedRead ( const KSocket * self, void * buffer, size_t
                 CloseHandle( overlap.hEvent );
                 return rc;
             }
-        }   
+        }
 
         if ( GetLastError() == ERROR_IO_PENDING ) /* 997 */
         {
-            DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), 
+            DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ),
                 ( "%p: ReadFile(%x) returned FALSE, GetLastError() = ERROR_IO_PENDING\n",
                         self, data -> pipe ) );
 
@@ -1295,14 +1455,14 @@ static rc_t CC KIPCSocketTimedRead ( const KSocket * self, void * buffer, size_t
                 DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: waiting forever\n", self ) );
             else
                 DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: waiting for %d ms\n", self, tm -> mS ) );
-                
+
             switch ( WaitForSingleObject( overlap.hEvent, tm == NULL ? INFINITE : tm -> mS ) )
             {
                 case WAIT_TIMEOUT :
                     DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: timed out\n", self ) );
                     rc = RC ( rcNS, rcFile, rcReading, rcTimeout, rcExhausted );
                     break;
-                    
+
                 case WAIT_OBJECT_0 :
                 {
                     DWORD count;
@@ -1321,7 +1481,7 @@ static rc_t CC KIPCSocketTimedRead ( const KSocket * self, void * buffer, size_t
                     }
                     break;
                 }
-                
+
                 default:
                     rc = HandleErrno();
                     DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: WaitForSingleObject() failed\n", self ) );
@@ -1330,7 +1490,7 @@ static rc_t CC KIPCSocketTimedRead ( const KSocket * self, void * buffer, size_t
         }
         else if ( GetLastError() == ERROR_SUCCESS )
         {
-            DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), 
+            DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ),
                         ( "%p: ReadFile(%x) returned FALSE, GetLastError() = ERROR_SUCCESS\n",
                         self, data -> pipe ) );
             rc = RC ( rcNS, rcFile, rcReading, rcError, rcUnexpected );
@@ -1373,13 +1533,13 @@ static rc_t CC KIPCSocketTimedWrite ( KSocket * self, const void * buffer, size_
     rc_t rc = 0;
     KSocketIPC * data;
     OVERLAPPED overlap;
-    
+
     if ( self == NULL )
         return RC ( rcNS, rcConnection, rcWriting, rcSelf, rcNull );
 
     data = &( self -> type_data.ipc_data );
 
-    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), 
+    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ),
                 ( "%p: KIPCSocketTimedWrite(%d, %d)...", "b=%p,s=%d,t=%d\n",
                 self, bsize, tm == NULL ? -1 : tm -> mS ) );
 
@@ -1388,7 +1548,7 @@ static rc_t CC KIPCSocketTimedWrite ( KSocket * self, const void * buffer, size_
     overlap.hEvent = CreateEvent( NULL,     /* default security attribute */
                                   TRUE,     /* manual reset event */
                                   FALSE,    /* initial state = nonsignalled */
-                                  NULL); 
+                                  NULL);
     if ( overlap.hEvent != NULL )
     {
         DWORD count;
@@ -1400,7 +1560,7 @@ static rc_t CC KIPCSocketTimedWrite ( KSocket * self, const void * buffer, size_
 
         /* completed synchronously; either message is so short that is went out immediately, or the pipe is full */
         if ( ret )
-        {   
+        {
             if ( count > 0 )
             {
                 DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: %d bytes written\n", self, count ) );
@@ -1409,13 +1569,13 @@ static rc_t CC KIPCSocketTimedWrite ( KSocket * self, const void * buffer, size_
                 CloseHandle( overlap.hEvent );
                 return 0;
             }
-            else 
+            else
             {
                 /* pipe is full - go into a wait loop */
                 uint32_t tm_left = ( tm == NULL ) ? 0 : tm -> mS;
-                uint32_t tm_decrement = 100; 
-                DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), 
-                            ( "%p: pipe full - going into a wait loop for %d ms\n", 
+                uint32_t tm_decrement = 100;
+                DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ),
+                            ( "%p: pipe full - going into a wait loop for %d ms\n",
                                 self, ( tm == NULL ) ? -1 : tm -> mS ) );
                 while ( count == 0 )
                 {
@@ -1428,10 +1588,10 @@ static rc_t CC KIPCSocketTimedWrite ( KSocket * self, const void * buffer, size_
                         }
                         tm_left -= tm_decrement;
                     }
-                    
+
                     Sleep( 1 ); /*ms*/
-                    
-                    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: write wait loop: attempting to WriteFile\n", self ) );   
+
+                    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: write wait loop: attempting to WriteFile\n", self ) );
 
                     /* returns FALSE in asynch mode */
                     ret = WriteFile( data->pipe, buffer, ( DWORD )bsize, &count, &overlap );
@@ -1442,7 +1602,7 @@ static rc_t CC KIPCSocketTimedWrite ( KSocket * self, const void * buffer, size_
                 }
             }
         }
-        
+
         /* asynch mode - wait for the operation to complete */
         switch ( err ) /* set by the last call to WriteFile */
         {
@@ -1472,7 +1632,7 @@ static rc_t CC KIPCSocketTimedWrite ( KSocket * self, const void * buffer, size_
                 DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: GetOverlappedResult() failed\n", self ) );
                 break;
             }
-            
+
             default:
                 rc = HandleErrno();
                 DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: WaitForSingleObject() failed\n", self ) );
@@ -1480,7 +1640,7 @@ static rc_t CC KIPCSocketTimedWrite ( KSocket * self, const void * buffer, size_
             }
         }
         case ERROR_NO_DATA:
-            /* the secret MS lore says when WriteFile to a pipe returns ERROR_NO_DATA, it's 
+            /* the secret MS lore says when WriteFile to a pipe returns ERROR_NO_DATA, it's
                 "Pipe was closed (normal exit path)." - see http://support.microsoft.com/kb/190351 */
             CloseHandle( overlap.hEvent );
             return 0;
@@ -1495,7 +1655,7 @@ static rc_t CC KIPCSocketTimedWrite ( KSocket * self, const void * buffer, size_
     }
     else
         rc = HandleErrno();
-        
+
     return rc;
 }
 
@@ -1541,7 +1701,7 @@ rc_t KSocketConnectIPC ( KSocket * self, timeout_t * retryTimeout, const KEndPoi
     rc = string_printf( pipename, sizeof( pipename ), &num_writ, "\\\\.\\pipe\\%s", to->u.ipc_name );
     if ( rc == 0 )
         string_cvt_wchar_copy( pipenameW, sizeof( pipenameW ), pipename, num_writ );
-        
+
     while ( rc == 0 )
     {
         HANDLE h = CreateFileW( pipenameW,                    /* pipe name                   */
@@ -1565,7 +1725,7 @@ rc_t KSocketConnectIPC ( KSocket * self, timeout_t * retryTimeout, const KEndPoi
             }
             else
             {
-                DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), 
+                DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ),
                          ( "%p: KNSManagerMakeIPCConnection(%p,'%s')\n", self, to, pipename ) );
 
                 self -> type_data . ipc_data . type = isIpcPipeClient;
@@ -1608,7 +1768,7 @@ rc_t KSocketConnectIPC ( KSocket * self, timeout_t * retryTimeout, const KEndPoi
                     }
                 }
                 break;
-                
+
             default:
                 rc = HandleErrno();
                 break;
@@ -1623,7 +1783,7 @@ rc_t KSocketConnectIPC ( KSocket * self, timeout_t * retryTimeout, const KEndPoi
 
 static rc_t KNSManagerMakeIPCListener( struct KNSManager const *self, struct KSocket** out,
                                        struct KEndPoint const * ep )
-{   
+{
     rc_t rc = 0;
     KSocket * ksock;
 
@@ -1639,11 +1799,11 @@ static rc_t KNSManagerMakeIPCListener( struct KNSManager const *self, struct KSo
     if ( ep -> type != epIPC )
         return RC ( rcNS, rcConnection, rcCreating, rcParam, rcInvalid );
 
-    
+
     /* use named pipes to implement unix domain socket - like behavior */
     ksock = calloc ( sizeof *ksock, 1 );
     if ( ksock == NULL )
-        rc = RC ( rcNS, rcNoTarg, rcAllocating, rcNoObj, rcNull ); 
+        rc = RC ( rcNS, rcNoTarg, rcAllocating, rcNoObj, rcNull );
     else
     {
         ksock -> type = epIPC;
@@ -1662,13 +1822,13 @@ static rc_t KNSManagerMakeIPCListener( struct KNSManager const *self, struct KSo
             {
                 KSocketIPC * data = &( ksock -> type_data.ipc_data );
                 string_cvt_wchar_copy( data -> pipename, sizeof( data -> pipename ), pipename, num_writ );
-                
+
                 data -> type = isIpcListener;
                 data -> listenerPipe = INVALID_HANDLE_VALUE;
                 ksock -> type = epIPC;
                 *out = ( KSocket * )& ksock -> dad;
-                
-                DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: KNSManagerMakeIPCListener(%p,'%s')\n", 
+
+                DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: KNSManagerMakeIPCListener(%p,'%s')\n",
                             ksock, ep, pipename ) );
                 return 0;
             }
@@ -1677,7 +1837,7 @@ static rc_t KNSManagerMakeIPCListener( struct KNSManager const *self, struct KSo
         else
             free ( ksock );
     }
-        
+
     DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: KNSManagerMakeIPCListener failed\n", ksock ) );
     return rc;
 }
@@ -1695,7 +1855,7 @@ static rc_t KListenerIPCAccept ( KSocket * self, struct KSocket ** out )
     /* make sure listener points to a KIPCSocket */
     if ( data->type != isIpcListener )
         return RC ( rcNS, rcNoTarg, rcValidating, rcParam, rcInvalid );
-        
+
     data -> listenerPipe = CreateNamedPipeW( data -> pipename,        /* pipe name */
                                               FILE_FLAG_OVERLAPPED |   /* using overlapped IO */
                                               PIPE_ACCESS_DUPLEX,      /* read/write access  */
@@ -1714,7 +1874,7 @@ static rc_t KListenerIPCAccept ( KSocket * self, struct KSocket ** out )
         overlap.hEvent = CreateEvent( NULL,    /* default security attribute */
                                       TRUE,     /* manual reset event */
                                       FALSE,    /* initial state = nonsignalled */
-                                      NULL ); 
+                                      NULL );
         if ( overlap.hEvent != NULL )
         {
             BOOL connected =  ConnectNamedPipe( data -> listenerPipe, &overlap );
@@ -1725,7 +1885,7 @@ static rc_t KListenerIPCAccept ( KSocket * self, struct KSocket ** out )
                 {
                 case ERROR_PIPE_CONNECTED: /* client connected since the call to CreateNamedPipeW */
                     break;
-                    
+
                 case ERROR_IO_PENDING:
                     DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "KSocketAccept: calling WaitForSingleObject\n" ) );
                     if ( WaitForSingleObject( overlap.hEvent, INFINITE ) != WAIT_OBJECT_0 )
@@ -1736,7 +1896,7 @@ static rc_t KListenerIPCAccept ( KSocket * self, struct KSocket ** out )
                         return rc;
                     }
                     break;
-                    
+
                 default:
                     rc = HandleErrno();
                     CloseHandle( overlap.hEvent );
@@ -1748,10 +1908,10 @@ static rc_t KListenerIPCAccept ( KSocket * self, struct KSocket ** out )
             {
                 KSocket * ksock = calloc ( sizeof * ksock, 1 );
                 DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: KSocketAccept\n", ksock ) );
-                
+
                 if ( ksock == NULL )
                 {
-                    rc = RC ( rcNS, rcSocket, rcAllocating, rcNoObj, rcNull ); 
+                    rc = RC ( rcNS, rcSocket, rcAllocating, rcNoObj, rcNull );
                     DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "KSocketAccept: calloc failed\n" ) );
                 }
                 else
@@ -1783,14 +1943,14 @@ static rc_t KListenerIPCAccept ( KSocket * self, struct KSocket ** out )
         DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "KSocketAccept: CreateNamedPipeW failed\n" ) );
     }
     return rc;
-}   
+}
 
 
 /* *********************************************************************************************
 
     exported KSocket - interface :
 
-    KNSManagerMakeConnection()  ... implemented in manager.c calling KNSManagerMakeRetryTimedConnection()    
+    KNSManagerMakeConnection()  ... implemented in manager.c calling KNSManagerMakeRetryTimedConnection()
     KNSManagerMakeTimedConnection()         ... like KNSManagerMakeConnection()
     KNSManagerMakeRetryConnection()         ... like KNSManagerMakeConnection()
     KNSManagerMakeRetryTimedConnection()    ... switches via endpoint.type into correct implementation specific creation
@@ -1837,10 +1997,10 @@ KNS_EXTERN rc_t CC KNSManagerMakeRetryTimedConnection ( struct KNSManager const 
                     conn -> type_data . ipv4_data . fd = INVALID_SOCKET;
                     vt = ( const KStream_vt * ) & vtKIpv4Socket;
                     break;
-                    
+
                 case epIPV6:
                     conn -> type_data . ipv6_data . fd = INVALID_SOCKET;
-                    rc = RC ( rcNS, rcSocket, rcConstructing, rcFunction, rcUnsupported ); 
+                    rc = RC ( rcNS, rcSocket, rcConstructing, rcFunction, rcUnsupported );
                     break;
 
                 case epIPC:
@@ -1873,7 +2033,7 @@ KNS_EXTERN rc_t CC KNSManagerMakeRetryTimedConnection ( struct KNSManager const 
                         switch ( to -> type )
                         {
                         case epIPV4:
-                            rc = KSocketConnectIPv4 ( conn, from, to );
+                            rc = KSocketConnectIPv4 ( conn, from, to, retryTimeout -> mS);
                             break;
 
                         case epIPV6:
@@ -1924,7 +2084,7 @@ KNS_EXTERN rc_t CC KNSManagerMakeRetryTimedConnection ( struct KNSManager const 
                     }
 
                     DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET),
-                           ( "%p: KSocketConnect timed out\n", self ) ); 
+                           ( "%p: KSocketConnect timed out\n", self ) );
                 }
 
                 free ( conn );
@@ -2174,10 +2334,10 @@ static rc_t HandleErrnoEx ( const char *func_name, unsigned int lineno, rc_t rc_
         rc = RC_FROM_CTX ( rc_ctx, rcFile, rcNotFound );
         break;
     case ERROR_INVALID_HANDLE:
-        rc = RC_FROM_CTX ( rc_ctx, rcId, rcInvalid );            
+        rc = RC_FROM_CTX ( rc_ctx, rcId, rcInvalid );
         break;
     case ERROR_INVALID_PARAMETER:
-        rc = RC_FROM_CTX ( rc_ctx, rcParam, rcInvalid );            
+        rc = RC_FROM_CTX ( rc_ctx, rcParam, rcInvalid );
         break;
     case ERROR_PIPE_BUSY:
         rc = RC_FROM_CTX ( rc_ctx, rcConnection, rcCanceled );
@@ -2186,7 +2346,7 @@ static rc_t HandleErrnoEx ( const char *func_name, unsigned int lineno, rc_t rc_
         rc = RC_FROM_CTX ( rc_ctx, rcTimeout, rcExhausted );
         break;
     case WSAEACCES: /* write permission denied */
-        rc = RC_FROM_CTX ( rc_ctx, rcMemory, rcUnauthorized );            
+        rc = RC_FROM_CTX ( rc_ctx, rcMemory, rcUnauthorized );
         break;
     case WSAEADDRINUSE:/* address is already in use */
         rc = RC_FROM_CTX ( rc_ctx, rcMemory, rcExists );
@@ -2230,14 +2390,14 @@ static rc_t HandleErrnoEx ( const char *func_name, unsigned int lineno, rc_t rc_
     case WSAENETDOWN:/* network subsystem failed */
         rc = RC_FROM_CTX ( rc_ctx, rcNoObj, rcFailed );
         break;
-    case WSAENETRESET: /* connection broken due to keep-alive activity that 
+    case WSAENETRESET: /* connection broken due to keep-alive activity that
                           detected a failure while in progress */
         rc = RC_FROM_CTX ( rc_ctx, rcConnection, rcCanceled );
         break;
     case WSAENETUNREACH: /* network is unreachable */
         rc = RC_FROM_CTX ( rc_ctx, rcConnection, rcNotAvailable );
         break;
-    case WSAENOBUFS: /* output queue for a network connection was full. 
+    case WSAENOBUFS: /* output queue for a network connection was full.
                      ( wont typically happen in linux. Packets are just silently dropped */
         rc = RC_FROM_CTX ( rc_ctx, rcConnection, rcInterrupted );
         break;

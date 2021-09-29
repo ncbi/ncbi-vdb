@@ -41,9 +41,6 @@
 #include <vdb/table.h>
 #include <vdb/vdb-priv.h>
 
-#include <vfs/manager.h> /* VFSManager */
-#include <vfs/manager-priv.h> /* VFSManagerSetResolver */
-
 #include <kdb/manager.h>
 #include <kdb/database.h>
 #include <kdb/kdb-priv.h> /* KDBManagerGetVFSManager */
@@ -51,11 +48,17 @@
 #include <kdb/meta.h>
 
 #include <kfg/config.h>
+#include <kfg/properties.h> /* KConfig_Get_FullQuality */
+
 #include <kfs/directory.h>
 #include <kfs/dyload.h>
 #include <klib/log.h>
 #include <klib/text.h>
 #include <klib/rc.h>
+
+#include <vfs/manager.h> /* VFSManager */
+#include <vfs/manager-priv.h> /* VFSManagerSetResolver */
+
 #include <sysalloc.h>
 
 #include <stdlib.h>
@@ -316,7 +319,13 @@ rc_t VDBManagerConfigFromKfg ( VDBManager *self, bool update )
 
         /* look for schema paths */
         if ( rc == 0 )
+        {
             rc = VDBManagerGetKfgPath ( kfg, "vdb/schema/paths", full, sizeof full, & num_read );
+            if ( rc == 0 )
+            {
+                DEBUG_PRINT ( "VDBManagerConfigFromKfg: vdb/schema/paths = '%s'", full );
+            }
+        }
         if ( rc != 0 )
             rc = 0;
         else
@@ -833,6 +842,30 @@ LIB_EXPORT int CC VDBManagerVPathType ( const VDBManager * self,
     return kptBadPath;
 }
 
+static int CC VDBManagerVPathTypeUnreliable ( const VDBManager * self,
+    const char *path, va_list args )
+{
+    if ( self != NULL )
+        return KDBManagerVPathTypeUnreliable ( self -> kmgr, path, args );
+
+    return kptBadPath;
+}
+
+LIB_EXPORT int CC VDBManagerPathTypeUnreliable ( const VDBManager * self,
+    const char *path, ... )
+{
+    int type;
+
+    va_list args;
+    va_start ( args, path );
+
+    type = VDBManagerVPathTypeUnreliable ( self, path, args );
+
+    va_end ( args );
+
+    return type;
+}
+
 /** Reset VResolver to set protected repository context */
 LIB_EXPORT rc_t CC VDBManagerSetResolver
     ( const VDBManager * self, struct VResolver * resolver )
@@ -940,4 +973,130 @@ LIB_EXPORT rc_t CC VDBManagerDeleteCacheOlderThan ( const VDBManager * self,
         }
     }
     return rc;
+}
+
+
+/******************************************************************************/
+
+static const char * s_EnvQuality = NULL; /* from environment */
+static bool s_EnvQualitySet = false;     /* set via environment */
+
+static String * s_LoadedQuality = NULL; /* default or from configuration*/
+static const char * s_SetQuality = NULL;/* explicitly set VDBManagerSetQuality*/
+
+static String s_DfltQuality;
+
+static char s_FullQuality[99];
+static char s_ZeroQuality[99];
+
+static rc_t CC VDBManagerSetQuality(VDBManager * self,
+    const char * quality)
+{
+    s_SetQuality = quality;
+    return 0;
+}
+
+static const char * VDBManagerGetQuality(const VDBManager * self) {
+    rc_t rc = 0;
+
+    if (s_DfltQuality.addr == NULL)
+        CONST_STRING(&s_DfltQuality, "RZ");
+
+    if (s_SetQuality != NULL)
+        return s_SetQuality;
+
+    if (!s_EnvQualitySet) {
+        char * e = getenv("NCBI_VDB_QUALITY");
+        s_EnvQualitySet = true;
+        s_EnvQuality = e;
+    }
+    if (s_EnvQuality != NULL)
+        return s_EnvQuality;
+
+    if (s_LoadedQuality == NULL) {
+        const KConfig * kfg = NULL;
+        if (self != NULL) {
+            const KDBManager * kmgr = NULL;
+            VFSManager * vfs = NULL;
+            rc = VDBManagerOpenKDBManagerRead(self, &kmgr);
+            if (rc == 0)
+                rc = KDBManagerGetVFSManager(kmgr, &vfs);
+            if (rc == 0)
+                kfg = VFSManagerGetConfig(vfs);
+            VFSManagerRelease(vfs);
+            KDBManagerRelease(kmgr);
+        }
+        if (kfg == NULL)
+            KConfigMake((KConfig**)&kfg, NULL);
+        rc = KConfigReadString(kfg, "/libs/vdb/quality", &s_LoadedQuality);
+        if (rc != 0)
+            s_LoadedQuality = &s_DfltQuality;
+        KConfigRelease(kfg);
+    }
+
+    assert(s_LoadedQuality);
+    return s_LoadedQuality->addr;
+}
+
+static
+bool fillPrefQual1(char * dst, const char * src, size_t sz, char q)
+{
+    assert(dst && src);
+
+    if (dst[0] != '\0')
+        return false;
+    else {
+        int i = 0, j = 0;
+
+        dst[i++] = q;
+
+        for (; src[j] != '\0' && i < sz; ++j) {
+            if (src[j] != q)
+                dst[i++] = src[j];
+        }
+
+        if (i + 1 == sz && sz > 1)
+            --i;
+
+        dst[i] = '\0';
+
+        return true;
+    }
+}
+
+static bool fillPrefQual(const char * quality) {
+    bool r = false;
+
+    const char * s = quality;
+    if (s == NULL)
+        s = "";
+
+    r = fillPrefQual1(s_FullQuality, s, sizeof s_FullQuality, 'R');
+    r |= fillPrefQual1(s_ZeroQuality, s, sizeof s_ZeroQuality, 'Z');
+
+    return r;
+}
+
+/* currently accepts VDBManager==NULL */
+LIB_EXPORT rc_t CC VDBManagerGetQualityString(const VDBManager * self,
+    const char ** quality)
+{
+    if (quality == NULL)
+        return RC(rcVDB, rcMgr, rcAccessing, rcParam, rcNull);
+    *quality = VDBManagerGetQuality(self);
+    fillPrefQual(*quality);
+
+    return 0;
+}
+
+LIB_EXPORT rc_t CC VDBManagerPreferFullQuality(VDBManager * self) {
+    const char * quality = VDBManagerGetQuality(self);
+    fillPrefQual(quality);
+    return VDBManagerSetQuality(self, s_FullQuality);
+}
+
+LIB_EXPORT rc_t CC VDBManagerPreferZeroQuality(VDBManager * self) {
+    const char * quality = VDBManagerGetQuality(self);
+    fillPrefQual(quality);
+    return VDBManagerSetQuality(self, s_ZeroQuality);
 }

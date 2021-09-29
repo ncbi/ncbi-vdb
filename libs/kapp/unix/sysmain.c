@@ -291,6 +291,6 @@ int main ( int argc, char *argv [] )
     for ( i = 0; i < sizeof sigs / sizeof sigs [ 0 ]; ++ i )
         sigaction ( sigs [ i ] . sig, & sig_saves [ i ], NULL );
 
-    return ( rc == 0 ) ? 0 : 3;
+    return ( rc == 0 ) ? 0 : IF_EXITCODE(rc, 3);
 }
 

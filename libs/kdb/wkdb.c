@@ -623,8 +623,8 @@ rc_t KDBOpenFileAsDirectory (const KDirectory * dir,
 
 
 static rc_t KDBOpenPathTypeReadInt ( const KDBManager * mgr, const KDirectory * dir, const char * path,
-                                     const KDirectory ** pdir, int * type,
-                                     int pathtype, uint32_t rcobj, bool try_srapath )
+        const KDirectory ** pdir, int * type,
+        int pathtype, uint32_t rcobj, bool try_srapath, const VPath * aVpath )
 {
     VFSManager * vmgr = mgr->vfsmgr;
     const KDirectory * ldir = NULL;
@@ -639,7 +639,7 @@ static rc_t KDBOpenPathTypeReadInt ( const KDBManager * mgr, const KDirectory * 
     }
     else
     {
-        VPath * vpath;
+        VPath * vpath = ( VPath * ) aVpath;
 
         /*
          * We've got to decide if the path coming in is a full or relative
@@ -647,7 +647,7 @@ static rc_t KDBOpenPathTypeReadInt ( const KDBManager * mgr, const KDirectory * 
          * accession
          *
          */
-        rc = VPathMakeDirectoryRelative ( &vpath, dir, path );
+        rc = VPathMakeDirectoryRelativeVPath ( &vpath, dir, path, vpath);
         if ( rc == 0 )
         {
             rc = VFSManagerOpenDirectoryReadDirectoryRelativeDecrypt ( vmgr, dir, &ldir, vpath );
@@ -673,14 +673,16 @@ static rc_t KDBOpenPathTypeReadInt ( const KDBManager * mgr, const KDirectory * 
                         KDirectoryRelease( ldir );
                 }
             }
-            VPathRelease ( vpath );
+            if ( aVpath == NULL )
+                VPathRelease ( vpath );
         }
     }
     return rc;
 }
 
 rc_t KDBOpenPathTypeRead ( const KDBManager * mgr, const KDirectory * dir, const char * path, 
-    const KDirectory ** pdir, int pathtype, int * ppathtype, bool try_srapath )
+    const KDirectory ** pdir, int pathtype, int * ppathtype, bool try_srapath,
+    const VPath * vpath )
 {
     const KDirectory *ldir;
     rc_t rc = 0;
@@ -716,7 +718,7 @@ rc_t KDBOpenPathTypeRead ( const KDBManager * mgr, const KDirectory * dir, const
         break;
     }
 
-    rc = KDBOpenPathTypeReadInt( mgr, dir, path, &ldir, &type, pathtype, rcobj, try_srapath );
+    rc = KDBOpenPathTypeReadInt( mgr, dir, path, &ldir, &type, pathtype, rcobj, try_srapath, vpath );
 
     if (rc == 0)
     {
@@ -1212,7 +1214,7 @@ rc_t KDBVDrop ( KDirectory *dir, const KDBManager * mgr,
         case kptFile | kptAlias:
         case kptFile:
 	    /* can we get here?  Will we have needed to open for update to get here? */
-	    rc = KDBOpenPathTypeRead ( mgr, dir, path, NULL, type, NULL, false );
+	    rc = KDBOpenPathTypeRead ( mgr, dir, path, NULL, type, NULL, false, NULL );
 	    if ( rc == 0 )
                 return RC ( rcDB, rcDirectory, rcRemoving, rcPath, rcReadonly );
             /* fall through */

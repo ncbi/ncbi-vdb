@@ -36,8 +36,10 @@ TEST_TOOLS = \
 ALL_TOOLS = \
 	env-test-tool \
 	sig-core \
-	report-kns-agent
-    
+	report-kns-agent \
+	rc-mod-exitcode \
+	append-arg-test
+
 include $(TOP)/build/Makefile.env
 
 $(TEST_TOOLS): makedirs
@@ -123,7 +125,7 @@ SIG_CORE_TEST_LIB = \
 
 $(TEST_BINDIR)/sig-core: $(SIG_CORE_TEST_OBJ)
 	$(LD) --exe -o $@ $^ $(SIG_CORE_TEST_LIB)
-	
+
 #-------------------------------------------------------------------------------
 # report-kns-agent
 #
@@ -141,15 +143,48 @@ $(TEST_BINDIR)/report-kns-agent: $(REPORT_KNS_AGENT_TEST_OBJ)
 	$(LD) --exe -o $@ $^ $(REPORT_KNS_AGENT_TEST_LIB)
 
 #-------------------------------------------------------------------------------
+# append-arg-test
+#
+APPEND_ARG_TEST_SRC = \
+	append-arg-test
+
+APPEND_ARG_TEST_OBJ = \
+	$(addsuffix .$(OBJX),$(APPEND_ARG_TEST_SRC))
+
+APPEND_ARG_TEST_LIB = \
+	-skapp \
+	-sncbi-vdb
+
+$(TEST_BINDIR)/append-arg-test: $(APPEND_ARG_TEST_OBJ)
+	$(LD) --exe -o $@ $^ $(APPEND_ARG_TEST_LIB)
+
+
+#-------------------------------------------------------------------------------
+# rc-mod-exitcode
+#
+RC_MOD_EXITCODE_TEST_SRC = \
+	rc-mod-exitcode
+
+RC_MOD_EXITCODE_TEST_OBJ = \
+	$(addsuffix .$(OBJX),$(RC_MOD_EXITCODE_TEST_SRC))
+
+RC_MOD_EXITCODE_TEST_LIB = \
+	-skapp \
+	-sncbi-vdb
+
+$(TEST_BINDIR)/rc-mod-exitcode: $(RC_MOD_EXITCODE_TEST_OBJ)
+	$(LD) --exe -o $@ $^ $(RC_MOD_EXITCODE_TEST_LIB)
+
+#-------------------------------------------------------------------------------
 # scripted tests
 #
-runtests: sig-core-tests kns-agent-tests
+runtests: kns-agent-tests rc-exitcode-tests append-arg-tests
 
 sig-core-tests: sig-core
 	@ echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 	@ echo "Running $(SRCDIR)/run-sig-core.sh $(TEST_BINDIR)/sig-core"
 	@ $(SRCDIR)/run-sig-core.sh $(TEST_BINDIR)/sig-core $(HOST_OS) $(BUILD)
-	
+
 kns-agent-tests: report-kns-agent
 	@ echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 	@ echo "Running kns-agent tests"
@@ -166,4 +201,13 @@ kns-agent-tests: report-kns-agent
 	@ $(SRCDIR)/run-kns-agent.sh $(TEST_BINDIR)/report-kns-agent ./tmp/abcdefghi abcdefghi.1.2.3
 	@ $(SRCDIR)/run-kns-agent.sh $(TEST_BINDIR)/report-kns-agent ./tmp/abcdefghi.55.111 abcdefghi.1.2.3
 	@ rm -rf ./tmp/
-	
+
+rc-exitcode-tests: rc-mod-exitcode
+	@ echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+	@ echo "Running RC module EXITCODE tests" 
+	@ perl $(SRCDIR)/exitcode.pl $(TEST_BINDIR)/rc-mod-exitcode 75
+
+append-arg-tests:   append-arg-test
+	@ echo "Running append argument tests"
+	@ $(SRCDIR)/run-append-arg.sh $(TEST_BINDIR)/append-arg-test $(DBG)
+	@ echo "JOJOBA!!!"

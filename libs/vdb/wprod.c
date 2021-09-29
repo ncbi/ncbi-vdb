@@ -71,7 +71,7 @@ rc_t VProdResolveColumnRoot ( const VProdResolve *self,
     * out = NULL;
 
     /* decide upon behavior */
-    if ( curs -> read_only )
+    if ( VCursorIsReadOnly ( curs ) )
     {
         rc = VProdResolveColumnRead ( self, out, scol );
         if ( rc == 0 && * out <= FAILED_PRODUCTION )
@@ -80,7 +80,7 @@ rc_t VProdResolveColumnRoot ( const VProdResolve *self,
     }
 
     /* write-only cursor must have existing column */
-    wcol = VCursorCacheGet ( & curs -> col, & scol -> cid );
+    wcol = VCursorCacheGet ( VCursorColumns ( curs ), & scol -> cid );
     if ( wcol == NULL )
         return 0;
 
@@ -96,7 +96,7 @@ rc_t VProdResolveColumnRoot ( const VProdResolve *self,
     else
     {
         VFormatdecl fd;
-        
+
         /* create fmtdecl from typedecl */
         memset ( & fd, 0, sizeof fd );
 
@@ -150,7 +150,7 @@ rc_t VProdResolveColumnRoot ( const VProdResolve *self,
     }
 
     /* install trigger */
-    rc = VectorAppend ( & curs -> trig, NULL, wcol -> val );
+    rc = VCursorInstallTrigger ( curs, wcol -> val );
     if ( rc == 0 )
         * out = wcol -> val;
 
@@ -166,14 +166,14 @@ rc_t VProdResolveColumn ( const VProdResolve *self,
     VCursor *curs = self -> curs;
 
     /* decide upon behavior */
-    if ( curs -> read_only )
+    if ( VCursorIsReadOnly ( curs ) )
     {
         if ( alt )
         {
             /* TODO: Generate warning message */
             return RC ( rcVDB, rcCursor, rcOpening, rcSchema, rcInvalid );
         }
-        vcol = VCursorCacheGet ( & curs -> col, & scol -> cid );
+        vcol = VCursorCacheGet ( VCursorColumns ( curs ), & scol -> cid );
         if ( vcol == NULL )
         {
             rc = VCursorMakeColumn ( curs, & vcol, scol, self -> cx_bind );
@@ -181,19 +181,19 @@ rc_t VProdResolveColumn ( const VProdResolve *self,
                 return rc;
 
 #if OPEN_COLUMN_ALTERS_ROW
-            rc = VectorAppend ( & curs -> row, & vcol -> ord, vcol );
+            rc = VectorAppend ( VCursorGetRow ( curs ), & vcol -> ord, vcol );
             if ( rc != 0 )
             {
                 VColumnWhack ( vcol, NULL );
                 return rc;
             }
 #endif
-            rc = VCursorCacheSet ( & curs -> col, & scol -> cid, vcol );
+            rc = VCursorCacheSet ( VCursorColumns ( curs ), & scol -> cid, vcol );
             if ( rc != 0 )
             {
 #if OPEN_COLUMN_ALTERS_ROW
                 void *ignore;
-                VectorSwap ( & curs -> row, vcol -> ord, NULL, & ignore );
+                VectorSwap ( VCursorGetRow ( curs ), vcol -> ord, NULL, & ignore );
                 vcol -> ord = 0;
 #endif
                 VColumnWhack ( vcol, NULL );
@@ -217,7 +217,7 @@ rc_t VProdResolveColumn ( const VProdResolve *self,
     }
 
     /* get existing column */
-    wcol = VCursorCacheGet ( & curs -> col, & scol -> cid );
+    wcol = VCursorCacheGet ( VCursorColumns ( curs ), & scol -> cid );
     if ( wcol == NULL )
     {
         /* normally write-only cursor must have existing column */
@@ -232,15 +232,15 @@ rc_t VProdResolveColumn ( const VProdResolve *self,
             return rc;
 
         /* add it to the row as if user had done it */
-        rc = VectorAppend ( & curs -> row, & vcol -> ord, vcol );
+        rc = VectorAppend ( VCursorGetRow ( curs ), & vcol -> ord, vcol );
         if ( rc == 0 )
         {
             /* add it to the indexed vector */
-            rc = VCursorCacheSet ( & curs -> col, & scol -> cid, vcol );
+            rc = VCursorCacheSet ( VCursorColumns ( curs ), & scol -> cid, vcol );
             if ( rc != 0 )
             {
                 void *ignore;
-                VectorSwap ( & curs -> row, vcol -> ord, NULL, & ignore );
+                VectorSwap ( VCursorGetRow ( curs ), vcol -> ord, NULL, & ignore );
                 vcol -> ord = 0;
             }
         }
@@ -295,7 +295,7 @@ rc_t VProdResolvePhysicalWrite ( const VProdResolve *self, VPhysical *phys )
        load column metadata/schema, complete
        physical member description. */
     rc_t rc = VPhysicalOpenWrite ( phys,
-        ( VSchema* ) self -> schema, curs -> tbl );
+        ( VSchema* ) self -> schema, VCursorGetTable ( curs ) );
     if ( rc != 0 )
         return rc;
 
@@ -371,7 +371,7 @@ rc_t VProdResolvePhysicalWrite ( const VProdResolve *self, VPhysical *phys )
 rc_t VProdResolvePhysical ( const VProdResolve *self, VPhysical *phys )
 {
     /* build encoding chain if writable cursor */
-    if ( ! self -> curs -> read_only )
+    if ( ! VCursorIsReadOnly ( self -> curs ) )
     {
         rc_t rc = VProdResolvePhysicalWrite ( self, phys );
         if ( rc != 0 || self -> discover_writable_columns )

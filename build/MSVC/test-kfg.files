@@ -2,6 +2,7 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="..\..\..\test\kfg\kfgtest.cpp" />
+    <ClCompile Include="..\..\..\test\kfg\kfg-fixture.cpp" />
   </ItemGroup>
-  
+
 </Project>

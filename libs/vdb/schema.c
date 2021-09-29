@@ -49,6 +49,7 @@
 #include <klib/printf.h>
 #include <klib/out.h>
 #include <klib/rc.h>
+#include <vdb/vdb-priv.h>
 #include <sysalloc.h>
 
 #include <stdlib.h>
@@ -85,93 +86,168 @@ void CC BSTreeMbrWhack ( BSTNode *n, void *ignore )
 /*--------------------------------------------------------------------------
  * KSymbol
  */
-rc_t KSymbolCopy ( BSTree *scope, KSymbol **cp, const KSymbol *orig )
+struct CloneBlock
+{
+    KSymbol * targetNs;
+    rc_t rc;
+};
+
+static rc_t CloneSymbol ( BSTree *scope, const KSymbol **cp, const KSymbol *orig, KSymbol * targetNs );
+
+static
+bool CC CloneNode ( BSTNode *n, void *data )
+{
+    const KSymbol * sym = (const KSymbol *)n;
+    struct CloneBlock * bl = (struct CloneBlock*) data;
+    KSymbol * targetNs = bl -> targetNs;
+    const KSymbol * ignore;
+    bl -> rc = CloneSymbol ( & targetNs -> u . scope, & ignore, sym, bl -> targetNs );
+    return bl -> rc != 0;
+}
+
+static
+rc_t
+CloneSymbol ( BSTree *scope, const KSymbol **cp, const KSymbol *orig, KSymbol * targetNs )
 {
     rc_t rc;
-    KSymbol *copy, *dad = NULL;
+    KSymbol * copy = malloc ( sizeof (*copy) + orig->name.size + 1 );
+    KSymbol * existing;
 
-    /* recursively copy namespaces */
-    if ( orig -> dad != NULL )
-    {
-        rc = KSymbolCopy ( scope, cp, orig -> dad );
-        if ( rc != 0 )
-            return rc;
-
-        /* copied dad becomes scope */
-        dad = * cp;
-        scope = & dad -> u . scope;
-    }
-
-#if COPY_SHARE_TEXT
-    /* create simple copy with no new space for text */
-    copy = malloc ( sizeof * copy );
-#else
-    copy = malloc ( sizeof (*copy) + orig->name.size + 1 );
-#endif
-    if ( copy == NULL )
-        return RC ( rcVDB, rcSchema, rcParsing, rcMemory, rcExhausted );
-
-    /* copy original, including pointer to string */
-    * copy = * orig;
-
-#if ! COPY_SHARE_TEXT
-
+    assert ( targetNs == NULL || scope == & targetNs -> u . scope );
     /* copy original including string */
-    string_copy ( ( char* ) ( copy + 1 ), orig -> name . size + 1,
-        orig -> name . addr, orig -> name . size );
+    * copy = * orig;
+    string_copy ( ( char* ) ( copy + 1 ), orig -> name . size + 1, orig -> name . addr, orig -> name . size );
 
     /* fix up pointer to string */
     copy -> name . addr = ( const char* ) ( copy + 1 );
-#endif
-    copy -> dad = dad;
-
-    /* if we just created a namespace, forget its children */
-    if ( copy -> type == eNamespace )
+    copy -> dad = targetNs; /* NULL for global names */
+    rc = BSTreeInsertUnique ( scope, & copy -> n, (BSTNode **) &existing, KSymbolSort );
+    if ( GetRCState ( rc ) == rcExists )
     {
-        BSTreeInit ( & copy -> u . scope );
-        rc = BSTreeInsertUnique ( scope, & copy -> n, ( BSTNode** ) cp, KSymbolSort );
-        if ( rc != 0 )
+        assert ( existing != NULL );
+
+        free ( copy );
+        rc = 0;
+        if ( orig -> type == eNamespace )
+        {   /* clone the contents of the namespace*/
+            struct CloneBlock bl;
+            assert ( existing -> type == eNamespace );
+            bl . targetNs = existing;
+            if ( BSTreeDoUntil ( & orig -> u . scope, false, CloneNode, & bl ) )
+            {
+                rc = bl . rc;
+            }
+        }
+
+        if ( rc == 0 )
         {
-            free ( copy );
-            copy = * cp;
-            if ( copy -> type == eNamespace )
-                rc = 0;
-            else
-                copy = NULL;
+            *cp = existing;
+        }
+        else
+        {
+            *cp = NULL;
         }
     }
     else
     {
-        rc = BSTreeInsertUnique ( scope, & copy -> n, ( BSTNode** ) cp, KSymbolSort );
-        if ( rc != 0 )
+        if ( rc == 0  && orig -> type == eNamespace )
+        {   /* clone the contents of the namespace*/
+            struct CloneBlock bl;
+            bl . targetNs = copy;
+            BSTreeInit ( & copy -> u . scope );
+            if ( BSTreeDoUntil ( & orig -> u . scope, false, CloneNode, & bl ) )
+            {
+                rc = bl . rc;
+            }
+        }
+
+        if ( rc == 0 )
         {
-            free ( copy );
-            copy = NULL;
+            *cp = copy;
+        }
+        else
+        {
+            *cp = NULL;
         }
     }
+    return rc;
+}
 
-/*     if (*cp != copy) */
-/*      fprintf(stderr,"%p\t%30s %30.*s\tmalloc\t%d\n", (void*)copy,  */
-/*              __func__,(int)copy->name.size,copy->name.addr, copy->type); */
+static
+const KSymbol *
+LookupQualIdent ( const BSTree *scope, const KSymbol *orig )
+{   /* descend the chain of namespaces leading to 'orig' to locate the corresponding leaf in 'scope' */
+    Vector namespaceStack; /* const KSymbol* */
+    {
+        const KSymbol * ns;
+        VectorInit ( & namespaceStack, 0, 32 );
+        ns = orig -> dad;
+        while ( ns != NULL )
+        {
+            VectorAppend( & namespaceStack, NULL, ns );
+            ns = ns -> dad;
+        }
+    }
+    /* now namespaces are in the vector in order from innermost to outermost, traverse back to front to descend to 'orig' starting from 'scope' */
+    {
+        const BSTree * curScope = scope;
+        uint32_t i = VectorLength ( & namespaceStack );
+        while ( i != 0 )
+        {
+            const KSymbol * origNs = ( const KSymbol* ) VectorGet ( & namespaceStack, i - 1 );
+            const KSymbol * newInnerNs = ( const KSymbol* ) BSTreeFind ( curScope, & origNs -> name, KSymbolCmp );
+            assert ( newInnerNs != NULL );
+            assert ( newInnerNs -> type == eNamespace );
+            curScope = & newInnerNs -> u . scope;
+            --i;
+        }
 
-    * cp = copy;
+		{ /* now curScope is the innermost namespace in the copy, find the copy of the 'orig' in it */
+			const KSymbol * ret = ( const KSymbol* ) BSTreeFind ( curScope, & orig -> name, KSymbolCmp );
+			assert ( ret != NULL );
+			VectorWhack ( & namespaceStack, NULL, NULL );
+			return ret;
+		}
+    }
+}
+
+rc_t KSymbolCopy ( BSTree *scope, const KSymbol **cp, const KSymbol *orig )
+{
+    rc_t rc;
+    assert ( scope != NULL );
+    assert ( cp != NULL );
+    assert ( orig != NULL );
+
+    if ( orig -> dad != NULL )
+    {
+        KSymbol * ns = orig -> dad;
+        /* locate the topmost namespace */
+        while ( ns -> dad != NULL )
+        {
+            ns = ns -> dad;
+        }
+        /* copy the entire namespace */
+        rc = CloneSymbol( scope, cp, ns, NULL );
+        if ( rc == 0 )
+        {   /* locate and return the copy of the original symbol */
+            *cp = ( KSymbol * ) LookupQualIdent ( scope, orig );
+        }
+    }
+    else
+    {   /* global name */
+        rc = CloneSymbol( scope, cp, orig, NULL );
+    }
+    if ( rc == 0 )
+    {
+        assert ( *cp != NULL );
+    }
     return rc;
 }
 
 bool CC KSymbolCopyScope ( BSTNode *n, void *scope )
 {
-    const KSymbol *sym = ( const KSymbol* ) n;
-
-    /* perform a deep copy of leaf symbols */
-    if ( sym -> type != eNamespace )
-    {
-        KSymbol *ignore;
-        rc_t rc = KSymbolCopy ( scope, & ignore, sym );
-        return ( rc != 0 ) ? true : false;
-    }
-
-    /* traverse namespaces to find leaves */
-    return BSTreeDoUntil ( & sym -> u . scope, false, KSymbolCopyScope, scope );
+    const KSymbol * ignore;
+    return KSymbolCopy ( scope, & ignore, ( const KSymbol* ) n ) != 0;
 }
 
 #if _DEBUGGING
@@ -327,7 +403,7 @@ rc_t SNameOverloadMake ( SNameOverload **np,
 rc_t SNameOverloadCopy ( BSTree *scope,
     SNameOverload **cp, const SNameOverload *orig )
 {
-    KSymbol *sym;
+    const KSymbol *sym;
     rc_t rc = KSymbolCopy ( scope, & sym, orig -> name );
     if ( rc == 0 )
     {
@@ -346,9 +422,6 @@ rc_t SNameOverloadCopy ( BSTree *scope,
 
             SNameOverloadWhack ( copy, NULL );
         }
-
-        BSTreeUnlink ( scope, & sym -> n );
-        KSymbolWhack ( & sym -> n, NULL );
     }
 
     * cp = NULL;
@@ -388,7 +461,6 @@ rc_t SNameOverloadVectorCopy ( BSTree *scope, const Vector *src, Vector *dest )
 
     return 0;
 }
-
 
 /*--------------------------------------------------------------------------
  * VIncludedPath
@@ -482,6 +554,7 @@ void VSchemaClearMark ( const VSchema *self )
     VectorForEach ( & self -> phys, false, SPhysicalClearMark, NULL );
     VectorForEach ( & self -> tbl, false, STableClearMark, NULL );
     VectorForEach ( & self -> db, false, SDatabaseClearMark, NULL );
+    /*TODO: self -> view ? */
 
     if ( self -> dad != NULL )
         VSchemaClearMark ( self -> dad );
@@ -525,6 +598,9 @@ void CC VSchemaDestroy ( VSchema *self )
     VectorWhack ( & self -> db, SDatabaseWhack, NULL );
     VectorWhack ( & self -> dname, SNameOverloadWhack, NULL );
 #endif
+
+    VectorWhack ( & self -> view, SViewWhack, NULL );
+    VectorWhack ( & self -> vname, SNameOverloadWhack, NULL );
 
     free ( self );
 }
@@ -656,11 +732,13 @@ rc_t VSchemaMake ( VSchema **sp,  const VSchema *dad )
     VSchemaVectorInit ( schema, dad, phys, 0, 32 );
     VSchemaVectorInit ( schema, dad, tbl, 0, 16 );
     VSchemaVectorInit ( schema, dad, db, 0, 4 );
+    VSchemaVectorInit ( schema, dad, view, 0, 16 );
 
     VectorInit ( & schema -> fname, 0, 64 );
     VectorInit ( & schema -> pname, 0, 32 );
     VectorInit ( & schema -> tname, 0, 16 );
     VectorInit ( & schema -> dname, 0, 4 );
+    VectorInit ( & schema -> vname, 0, 16 );
 
     KRefcountInit ( & schema -> refcount, 1, "VSchema", "make", "vschema" );
     schema -> file_count = 0;
@@ -699,6 +777,18 @@ LIB_EXPORT rc_t CC VSchemaVAddIncludePath ( VSchema *self, const char *path, va_
     if ( rc == 0 )
     {
         const KDirectory *dir;
+#if _DEBUGGING
+        {
+            char full_name [4096];
+            size_t num_writ;
+            va_list cargs;
+            va_copy ( cargs, args );
+            string_vprintf ( full_name, sizeof( full_name ), &num_writ, path, cargs );
+            PARSE_DEBUG( ("VSchemaVAddIncludePath(%s)\n", full_name) );
+            va_end ( cargs );
+        }
+#endif
+
         rc = KDirectoryVOpenDirRead ( wd, & dir, false, path, args );
         if ( rc == 0 )
         {
@@ -767,6 +857,8 @@ LIB_EXPORT rc_t CC VSchemaParseText ( VSchema *self, const char *name,
 {
     rc_t rc;
 
+    PARSE_DEBUG( ("VSchemaParseText %s\n", name) );
+
     if ( self == NULL )
         rc = RC ( rcVDB, rcSchema, rcParsing, rcSelf, rcNull );
     else if ( bytes == 0 )
@@ -814,18 +906,36 @@ rc_t CC VSchemaTryOpenFile ( const VSchema *self, const KDirectory *dir, const K
     rc_t rc;
     va_list cpy_args;
 
+#if _DEBUGGING
+    {
+        char full_name [4096];
+        size_t num_writ;
+        va_list cargs;
+        va_copy ( cargs, args );
+        string_vprintf ( full_name, sizeof( full_name ), &num_writ, name, cargs );
+        PARSE_DEBUG( ("VSchemaTryOpenFile(%s)\n", full_name) );
+        va_end ( cargs );
+    }
+#endif
+
     va_copy ( cpy_args, args );
     rc = KDirectoryVResolvePath ( dir, true, path, path_max, name, cpy_args );
     va_end ( cpy_args );
 
     if ( rc == 0 )
     {
+        PARSE_DEBUG( ("VSchemaTryOpenFile: path = '%s'\n", path) );
         /* try to find file in already opened list */
         if ( BSTreeFind ( & self -> paths, path, VIncludedPathCmp ) != NULL )
         {
+            PARSE_DEBUG( ("VSchemaTryOpenFile: '%s' already open\n", path) );
             * fp = NULL;
             return 0;
         }
+    }
+    else
+    {
+        PARSE_DEBUG( ("VSchemaTryOpenFile:  failed\n", path) );
     }
 
     if ( rc == 0 )
@@ -838,14 +948,35 @@ rc_t CC VSchemaOpenFile ( const VSchema *self, const KFile **fp,
     char *path, size_t path_max, const char *name, va_list args )
 {
     const VSchema *schema;
+#if _DEBUGGING
+    {
+        char full_name [4096];
+        size_t num_writ;
+        va_list cpy_args;
+        va_copy ( cpy_args, args );
+        string_vprintf ( full_name, sizeof( full_name ), &num_writ, name, cpy_args );
+        va_end ( cpy_args );
+        PARSE_DEBUG( ("VSchemaOpenFile('%s')\n", full_name) );
+    }
+#endif
+
     for ( schema = self; schema != NULL; schema = schema -> dad )
     {
         uint32_t i, end;
-
         for ( i = VectorStart ( & schema -> inc ), end = i + VectorLength ( & schema -> inc );
               i < end; ++ i )
         {
             const KDirectory *dir = ( const KDirectory* ) VectorGet ( & schema -> inc, i );
+#if _DEBUGGING
+            if ( dir != NULL )
+            {
+                char resolved[4096];
+                if (KDirectoryResolvePath_v1 ( dir, true, resolved, sizeof( resolved ), "." ) == 0 )
+                {
+                    PARSE_DEBUG( ("VSchemaOpenFile trying '%s'\n", resolved ) );
+                }
+            }
+#endif
             if ( dir != NULL )
             {
                 rc_t rc = VSchemaTryOpenFile ( self, dir, fp, path, path_max, name, args );
@@ -891,8 +1022,16 @@ LIB_EXPORT rc_t CC VSchemaVParseFile ( VSchema *self, const char *name, va_list 
             if ( rc == 0 )
             {
                 rc = VSchemaTryOpenFile ( self, wd, & f, path, sizeof path, name, args );
+                if ( rc == 0 )
+                {
+                    PARSE_DEBUG( ("VSchemaTryOpenFile = '%s'\n", path) );
+                }
                 KDirectoryRelease ( wd );
             }
+        }
+        else
+        {
+            PARSE_DEBUG( ("VSchemaOpenFile = '%s'\n", path) );
         }
 
         /* if the file was opened... */
@@ -911,7 +1050,10 @@ LIB_EXPORT rc_t CC VSchemaVParseFile ( VSchema *self, const char *name, va_list 
                 {
                     rc = VIncludedPathMake ( & self -> paths, & self -> file_count, path );
                     if ( rc == 0 )
+                    {
+                        PARSE_DEBUG( ("VSchemaVParseFile %s\n", path) );
                         rc = VSchemaParseTextInt ( self, path, addr, size );
+                    }
                 }
 
                 KMMapRelease ( mm );
@@ -1336,7 +1478,7 @@ rc_t VSchemaRuntimeTablePrint ( VSchemaRuntimeTable *self, const char *fmt, ... 
  *   either a single super-table type string or multiple comma-separated tables
  */
 LIB_EXPORT rc_t CC VSchemaMakeRuntimeTable ( VSchema *self,
-    VSchemaRuntimeTable **tblp, const char *typename, const char *supertype_spec )
+    VSchemaRuntimeTable **tblp, const char *type_name, const char *supertype_spec )
 {
     rc_t rc;
 
@@ -1346,9 +1488,9 @@ LIB_EXPORT rc_t CC VSchemaMakeRuntimeTable ( VSchema *self,
     {
         if ( self == NULL )
             rc = RC ( rcVDB, rcSchema, rcConstructing, rcSelf, rcNull );
-        else if ( typename == NULL )
+        else if ( type_name == NULL )
             rc = RC ( rcVDB, rcSchema, rcConstructing, rcType, rcNull );
-        else if ( typename [ 0 ] == 0 )
+        else if ( type_name [ 0 ] == 0 )
             rc = RC ( rcVDB, rcSchema, rcConstructing, rcType, rcEmpty );
         else
         {
@@ -1364,14 +1506,14 @@ LIB_EXPORT rc_t CC VSchemaMakeRuntimeTable ( VSchema *self,
                     if ( rc == 0 )
                     {
                         const char *dflt_vers = "";
-                        if ( strchr ( typename, '#' ) == NULL )
+                        if ( strchr ( type_name, '#' ) == NULL )
                             dflt_vers = "#1.0";
 
                         tbl -> schema = self;
                         tbl -> bytes = 0;
 
                         /* open the table */
-                        rc = VSchemaRuntimeTablePrint ( tbl, "table %s%s", typename, dflt_vers );
+                        rc = VSchemaRuntimeTablePrint ( tbl, "table %s%s", type_name, dflt_vers );
                         if ( rc == 0 )
                         {
                             if ( supertype_spec != NULL && supertype_spec [ 0 ] != 0 )

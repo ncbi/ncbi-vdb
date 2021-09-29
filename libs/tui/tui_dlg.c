@@ -39,7 +39,7 @@
 
 #include <sysalloc.h>
 #include <stdlib.h>
-
+#include <ctype.h>
 
 /* ******************************************************************************************
 
@@ -49,38 +49,44 @@
 
 /* from tui_widget_label.c */
 void draw_label( struct KTUIWidget * w );
+bool event_label( struct KTUIWidget * w, tui_event * event, bool hotkey );
 
 /* from tui_widget_button.c */
 void draw_button( struct KTUIWidget * w );
-bool event_button( struct KTUIWidget * w, tui_event * event );
+bool event_button( struct KTUIWidget * w, tui_event * event, bool hotkey );
 
 /* from tui_widget_checkbox.c */
 void draw_checkbox( struct KTUIWidget * w );
-bool event_checkbox( struct KTUIWidget * w, tui_event * event );
+bool event_checkbox( struct KTUIWidget * w, tui_event * event, bool hotkey );
+
+/* from tui_widget_tabhdr.c */
+void draw_tabhdr( struct KTUIWidget * w );
+bool event_tabhdr( struct KTUIWidget * w, tui_event * event, bool hotkey );
 
 /* from tui_widget_inputline.c */
 void init_inputline( struct KTUIWidget * w );
 void draw_inputline( struct KTUIWidget * w );
-bool event_inputline( struct KTUIWidget * w, tui_event * event );
+bool event_inputline( struct KTUIWidget * w, tui_event * event, bool hotkey );
 
 /* from tui_widget_radiobox.c */
 void draw_radiobox( struct KTUIWidget * w );
-bool event_radiobox( struct KTUIWidget * w, tui_event * event );
+bool event_radiobox( struct KTUIWidget * w, tui_event * event, bool hotkey );
 
 /* from tui_widget_string_list.c */
 void draw_list( struct KTUIWidget * w );
-bool event_list( struct KTUIWidget * w, tui_event * event );
+bool event_list( struct KTUIWidget * w, tui_event * event, bool hotkey );
 
 /* from tui_widget_progress.c */
 void draw_progress( struct KTUIWidget * w );
 
 /* from tui_widget_spin_edit.c */
 void draw_spinedit( struct KTUIWidget * w );
-bool event_spinedit( struct KTUIWidget * w, tui_event * event );
+bool event_spinedit( struct KTUIWidget * w, tui_event * event, bool hotkey );
 
 /* from tui_widget_grid.c */
 void draw_grid( struct KTUIWidget * w );
-bool event_grid( struct KTUIWidget * w, tui_event * event );
+bool event_grid( struct KTUIWidget * w, tui_event * event, bool hotkey );
+
 uint64_t get_grid_col( struct KTUIWidget * w );
 bool set_grid_col( struct KTUIWidget * w, uint64_t col );
 uint64_t get_grid_row( struct KTUIWidget * w );
@@ -104,8 +110,8 @@ typedef struct KTUIDlg
     Event_Ring events;
     Vector widgets;
     tui_rect r;
-    uint32_t focused;
-    bool menu_active, changed, done;
+    uint32_t focused, active_page;
+    bool menu_active, changed, done, cursor_navigation;
 
 } KTUIDlg;
 
@@ -158,7 +164,9 @@ LIB_EXPORT rc_t CC KTUIDlgMake ( struct KTUI * tui, struct KTUIDlg ** self, stru
             {
                 td->tui = tui;
                 td->parent = parent;
-
+                td->active_page = 0;
+                td->cursor_navigation = true;
+                
                 if ( palette == NULL )
                 {
                     if ( parent == NULL )
@@ -457,6 +465,61 @@ LIB_EXPORT rc_t CC KTUIDlgSetMenu ( struct KTUIDlg * self, struct KTUI_Menu * me
     return rc;
 }
 
+LIB_EXPORT rc_t CC KTUIDlgSetActivePage ( struct KTUIDlg * self, uint32_t page_id )
+{
+    rc_t rc = 0;
+    if ( self == NULL )
+        rc = RC( rcApp, rcAttr, rcSelecting, rcSelf, rcNull );
+    else if ( self -> active_page != page_id )
+    {
+        uint32_t i, n = VectorLength( &self->widgets );
+        bool dlg_redraw = false;
+        
+        /* hide/deactivate all widgets belonging to the current active page */
+        for ( i = 0; i < n; ++i )
+        {
+            KTUIWidget * w = VectorGet ( &self->widgets, i );
+            if ( w != NULL )
+            {
+                if ( w -> page_id == 0 )
+                {
+                    // widgets on page zero are always visible
+                }
+                else if ( w -> page_id == self -> active_page )
+                {
+                    bool redraw;
+                    SetWidgetCanFocus( w, false );
+                    SetWidgetVisible ( w, false, &redraw );
+                    dlg_redraw |= redraw;
+                }
+                else if ( w -> page_id == page_id )
+                {
+                    bool redraw;
+                    SetWidgetCanFocus( w, true );
+                    SetWidgetVisible ( w, true, &redraw );
+                    dlg_redraw |= redraw;
+                }
+            }
+        }
+        self->active_page = page_id;
+        if ( dlg_redraw )
+            rc = KTUIDlgDraw( self, false );    
+    }
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KTUIDlgGetActivePage ( struct KTUIDlg * self, uint32_t * page_id )
+{
+    rc_t rc = 0;
+    if ( self == NULL )
+        rc = RC( rcApp, rcAttr, rcSelecting, rcSelf, rcNull );
+    else if ( page_id == NULL )
+        rc = RC( rcApp, rcAttr, rcSelecting, rcParam, rcNull );
+    else
+        *page_id = self->active_page;
+    return rc;
+   
+}
 
 /* ****************************************************************************************** */
 
@@ -561,7 +624,7 @@ static rc_t KTUIDlgAddWidget( struct KTUIDlg * self, uint32_t id, KTUI_Widget_ty
 
 LIB_EXPORT rc_t CC KTUIDlgAddLabel( struct KTUIDlg * self, uint32_t id, const tui_rect * r, const char * caption )
 {
-    rc_t rc = KTUIDlgAddWidget( self, id, KTUIW_label, r, draw_label, NULL, NULL );
+    rc_t rc = KTUIDlgAddWidget( self, id, KTUIW_label, r, draw_label, event_label, NULL );
     if ( rc == 0 )
         rc = KTUIDlgSetWidgetCanFocus( self, id, false );
     if ( rc == 0 && caption != NULL )
@@ -569,6 +632,13 @@ LIB_EXPORT rc_t CC KTUIDlgAddLabel( struct KTUIDlg * self, uint32_t id, const tu
     return rc;
 }
 
+LIB_EXPORT rc_t CC KTUIDlgAddTabHdr( struct KTUIDlg * self, uint32_t id, const tui_rect * r, const char * caption )
+{
+    rc_t rc = KTUIDlgAddWidget( self, id, KTUIW_tabhdr, r, draw_tabhdr, event_tabhdr, NULL );
+    if ( rc == 0 && caption != NULL )
+        rc = KTUIDlgSetWidgetCaption ( self, id, caption );
+    return rc;
+}
 
 LIB_EXPORT rc_t CC KTUIDlgAddLabel2( struct KTUIDlg * self, uint32_t id,
                                      uint32_t x, uint32_t y, uint32_t w, const char * caption )
@@ -606,7 +676,8 @@ LIB_EXPORT rc_t CC KTUIDlgAddCheckBox ( struct KTUIDlg * self, uint32_t id, cons
 }
 
 
-LIB_EXPORT rc_t CC KTUIDlgAddInput ( struct KTUIDlg * self, uint32_t id, const tui_rect * r, const char * txt, size_t length )
+LIB_EXPORT rc_t CC KTUIDlgAddInput ( struct KTUIDlg * self, uint32_t id, const tui_rect * r,
+                                     const char * txt, size_t length )
 {
     rc_t rc = KTUIDlgAddWidget( self, id, KTUIW_input, r, draw_inputline, event_inputline, init_inputline );
     if ( rc == 0 )
@@ -899,6 +970,10 @@ LIB_EXPORT rc_t CC KTUIDlgGetWidgetRect ( struct KTUIDlg * self, uint32_t id, tu
 LIB_EXPORT rc_t CC KTUIDlgSetWidgetRect ( struct KTUIDlg * self, uint32_t id, const tui_rect * r, bool redraw )
 {   return SetWidgetRect( KTUIDlgGetWidgetById( self, id ), r, redraw );    }
 
+LIB_EXPORT rc_t CC KTUIDlgGetWidgetPageId ( struct KTUIDlg * self, uint32_t id, uint32_t * page_id )
+{   return GetWidgetPageId( KTUIDlgGetWidgetById( self, id ), page_id );    }
+LIB_EXPORT rc_t CC KTUIDlgSetWidgetPageId ( struct KTUIDlg * self, uint32_t id, uint32_t page_id )
+{   return SetWidgetPageId( KTUIDlgGetWidgetById( self, id ), page_id );    }
 
 LIB_EXPORT rc_t CC KTUIDlgSetWidgetCanFocus ( struct KTUIDlg * self, uint32_t id, bool can_focus )
 {   return SetWidgetCanFocus( KTUIDlgGetWidgetById( self, id ), can_focus );    }
@@ -978,6 +1053,10 @@ LIB_EXPORT size_t CC KTUIDlgGetWidgetTextLenght( struct KTUIDlg * self, uint32_t
 LIB_EXPORT rc_t CC KTUIDlgSetWidgetTextLength ( struct KTUIDlg * self, uint32_t id, size_t value )
 {   return SetWidgetTextLength ( KTUIDlgGetWidgetById( self, id ), value ); }
 
+LIB_EXPORT rc_t CC KTUIDlgSetWidgetCarretPos ( struct KTUIDlg * self, uint32_t id, size_t value )
+{   return SetWidgetCarretPos ( KTUIDlgGetWidgetById( self, id ), value ); }
+LIB_EXPORT rc_t CC KTUIDlgSetWidgetAlphaMode ( struct KTUIDlg * self, uint32_t id, uint32_t value )
+{   return SetWidgetAlphaMode ( KTUIDlgGetWidgetById( self, id ), value ); }
 
 LIB_EXPORT rc_t CC KTUIDlgAddWidgetString ( struct KTUIDlg * self, uint32_t id, const char * txt )
 {   return AddWidgetString ( KTUIDlgGetWidgetById( self, id ), txt );  }
@@ -1166,11 +1245,11 @@ static KTUIWidget * KTUIDlgWidgetAtPoint( struct KTUIDlg * self, tui_point * rel
     for ( i = 0; i < n && res == NULL; ++i )
     {
         KTUIWidget * w = VectorGet ( &self->widgets, i );
-        if ( w != NULL )
+        if ( w != NULL && w -> visible && w -> wtype != KTUIW_label )
         {
-            uint32_t x_left  = w->r.top_left.x;
-            uint32_t x_right = w->r.top_left.x + w->r.w;
-            if ( relative_point->x >= x_left && relative_point->x < x_right )
+            uint32_t x_left  = w -> r . top_left . x;
+            uint32_t x_right = w -> r . top_left . x + w -> r . w;
+            if ( relative_point -> x >= x_left && relative_point-> x < x_right )
             {
                 uint32_t y_top    = w->r.top_left.y;
                 uint32_t y_bottom = w->r.top_left.y + w->r.h;
@@ -1182,6 +1261,11 @@ static KTUIWidget * KTUIDlgWidgetAtPoint( struct KTUIDlg * self, tui_point * rel
     return res;
 }
 
+LIB_EXPORT void KTUIDlgEnableCursorNavigation( struct KTUIDlg * self, bool enabled )
+{
+    if ( self != NULL )
+        self -> cursor_navigation = enabled;
+}
 
 /* ****************************************************************************************** */
 
@@ -1189,17 +1273,28 @@ static KTUIWidget * KTUIDlgWidgetAtPoint( struct KTUIDlg * self, tui_point * rel
 static rc_t DlgEventHandler( struct KTUIDlg * self, tui_event * event )
 {
     rc_t rc = 0;
-    if ( event->event_type == ktui_event_kb )
+    if ( event -> event_type == ktui_event_kb )
     {
-        switch( event->data.kb_data.code )
+        if ( self -> cursor_navigation )
         {
-            case ktui_tab   : ;
-            case ktui_down  : ;
-            case ktui_right : rc = KTUIDlgMoveFocus( self, true ); break;
+            switch( event -> data . kb_data . code )
+            {
+                case ktui_tab   : ;
+                case ktui_down  : ;
+                case ktui_right : rc = KTUIDlgMoveFocus( self, true ); break;
 
-            case ktui_shift_tab : ;
-            case ktui_up    : ;
-            case ktui_left  : rc = KTUIDlgMoveFocus( self, false ); break;
+                case ktui_shift_tab : ;
+                case ktui_up    : ;
+                case ktui_left  : rc = KTUIDlgMoveFocus( self, false ); break;
+            }
+        }
+        else
+        {
+            switch( event -> data . kb_data . code )
+            {
+                case ktui_tab   : rc = KTUIDlgMoveFocus( self, true ); break;
+                case ktui_shift_tab : rc = KTUIDlgMoveFocus( self, false ); break;
+            }
         }
     }
     else if ( event->event_type == ktui_event_mouse )
@@ -1207,30 +1302,70 @@ static rc_t DlgEventHandler( struct KTUIDlg * self, tui_event * event )
         tui_point p;
         KTUIWidget * w;
 
-        p.x = event->data.mouse_data.x;
-        p.y = event->data.mouse_data.y;
+        p . x = event -> data . mouse_data . x;
+        p . y = event -> data . mouse_data . y;
         KTUIDlgRelativePoint( self, &p );
         w = KTUIDlgWidgetAtPoint( self, &p );
         if ( w != NULL )
         {
-            rc = KTUIDlgSetFocusTo( self, w );
-            if ( rc == 0 && w->on_event != 0 )
+            if ( w -> can_focus )
+                rc = KTUIDlgSetFocusTo( self, w );
+            if ( rc == 0 && w->on_event != NULL )
             {
                 /* now send the mouse-event with coordinates relative to the widget
                    to this widget */
 
                 tui_event m_event;
-                m_event.event_type = ktui_event_mouse;
-                m_event.data.mouse_data.x = ( p.x - w->r.top_left.x );
-                m_event.data.mouse_data.y = ( p.y - w->r.top_left.y );
-                m_event.data.mouse_data.button = event->data.mouse_data.button;
-                w->on_event( w, &m_event );
+                m_event . event_type = ktui_event_mouse;
+                m_event . data . mouse_data . x = ( p . x - w -> r . top_left . x );
+                m_event . data . mouse_data . y = ( p . y - w -> r . top_left . y );
+                m_event . data . mouse_data.button = event -> data . mouse_data . button;
+                w->on_event( w, &m_event, false );
             }
         }
     }
     return rc;
 }
 
+static char hotkey( const char * s )
+{
+    char res = 0;
+    if ( s != NULL )
+    {
+        size_t s_cap;
+        if ( string_measure( s, &s_cap ) > 0 )
+        {
+            char * ampersand = string_chr ( s, s_cap, '&' );
+            if ( ampersand != NULL )
+            {
+                ampersand++;
+                res = tolower( *ampersand );
+            }
+        }
+    }
+    return res;
+}
+
+static KTUIWidget * GetWidgetByHotKey( struct KTUIDlg * self, tui_event * event )
+{
+    KTUIWidget * res = NULL;
+    if ( event -> event_type == ktui_event_kb && 
+         event -> data . kb_data . code == ktui_alpha )
+    {
+        uint32_t i, n = VectorLength( &self->widgets );
+        for ( i = 0; i < n && res == NULL; ++i )
+        {
+            KTUIWidget * w = VectorGet ( &self->widgets, i );
+            if ( w != NULL && w -> visible )
+            {
+                char c = hotkey( w -> caption );
+                if ( c > 0 && c == tolower( event -> data . kb_data . key ) )
+                    res = w;
+            }
+        }
+    }
+    return res;
+}
 
 LIB_EXPORT rc_t CC KTUIDlgHandleEvent( struct KTUIDlg * self, tui_event * event )
 {
@@ -1240,7 +1375,7 @@ LIB_EXPORT rc_t CC KTUIDlgHandleEvent( struct KTUIDlg * self, tui_event * event 
     else if ( event == NULL )
         rc = RC( rcApp, rcAttr, rcCreating, rcParam, rcNull );
     {
-        if ( self->menu_active )
+        if ( self -> menu_active )
         {
             bool redraw = KTUI_Menu_Event( self->menu, self, event );
             if ( redraw )
@@ -1250,16 +1385,25 @@ LIB_EXPORT rc_t CC KTUIDlgHandleEvent( struct KTUIDlg * self, tui_event * event 
         {
             bool handled = false;
 
-            KTUIWidget * w = KTUIDlgGetWidgetById( self, self->focused );
+            KTUIWidget * w = KTUIDlgGetWidgetById( self, self -> focused );
             if ( w != NULL &&
-                 w->on_event != NULL &&
-                 event->event_type == ktui_event_kb )
+                 w -> on_event != NULL &&
+                 event -> event_type == ktui_event_kb )
             {
-                handled = w->on_event( w, event );
+                handled = w -> on_event( w, event, false );
                 if ( handled )
                     event->event_type = ktui_event_none;
             }
 
+            if ( !handled )
+            {
+                w = GetWidgetByHotKey( self, event );
+                if ( w != NULL && w -> on_event != NULL )
+                    handled = w -> on_event( w, event, true );
+                if ( handled )
+                    event->event_type = ktui_event_none;
+            }
+            
             if ( !handled )
                 rc = DlgEventHandler( self, event );
         }

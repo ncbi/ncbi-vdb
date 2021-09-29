@@ -61,16 +61,6 @@
 
 #undef index
 
-static void KTableGetName(KTable const *self, char const **rslt)
-{
-    char *sep;
-    
-    *rslt = self->path;
-    sep = strrchr(self->path, '/');
-    if (sep != NULL)
-        *rslt = sep + 1;
-}
-
 static
 rc_t KTableCheckMD5 ( const KTable *self, CCReportFunc report, void *ctx )
 {
@@ -181,7 +171,7 @@ rc_t KTableCheckColumns ( const KTable *self, uint32_t depth, int level,
     pb.level = level;
     pb.depth = depth;
     pb.platform = platform;
-    return KDirectoryVVisit(self->dir, false, KTableCheckColumn, &pb, "col", NULL);
+    return KDirectoryVisit_v1(self->dir, false, KTableCheckColumn, &pb, "col");
 }
 
 static

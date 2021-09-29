@@ -95,7 +95,7 @@ LIB_EXPORT rc_t CC KLogLevelSet(KLogLevel lvl)
 /*
  * These need to be kept in sync with type LogLevel
  */
-static const char * logLevelParamStrings [] = 
+static const char * logLevelParamStrings [] =
 {
     "fatal",
     "sys",
@@ -160,7 +160,7 @@ rc_t CC KLogDefaultFormatter( void* self, KWrtHandler* writer,
                               size_t envc, const wrt_nvp_t envs[] )
 {
     rc_t rc = 0;
-    size_t num_writ, nsize, msize;
+    size_t num_writ, nsize;
     uint64_t mlen;
     char buffer[8192], *nbuffer;
     const char* msg, *rc_msg;
@@ -172,7 +172,7 @@ rc_t CC KLogDefaultFormatter( void* self, KWrtHandler* writer,
     msg = wrt_nvp_find_value(envc, envs, "message");
     rc_msg = wrt_nvp_find_value(envc, envs, "reason");
     if( msg != NULL ) {
-        const char* mend = msg + string_measure(msg, &msize);
+        const char* mend = msg + string_size(msg);
         /* strip trailing newlines */
         while( mend != msg && (*mend == '\n' || *mend == '\r') ) {
             --mend;
@@ -218,7 +218,6 @@ rc_t CC KLogDefaultFormatter( void* self, KWrtHandler* writer,
     }
     return rc;
 }
-
 
 /* Init
  *  initialize the logging module with executable identity and version,
@@ -495,7 +494,7 @@ rc_t prep_v_args( uint32_t* argc, wrt_nvp_t argv[], size_t max_argc,
 
 static
 rc_t log_print( KFmtHandler* formatter, const KLogFmtFlags flags, KWrtHandler* writer,
-                KLogLevel lvl, bool use_rc, rc_t status, 
+                KLogLevel lvl, bool use_rc, rc_t status,
                 const char* msg, const char* fmt, va_list args )
 {
     rc_t rc = 0;
@@ -510,7 +509,7 @@ rc_t log_print( KFmtHandler* formatter, const KLogFmtFlags flags, KWrtHandler* w
     char pbuffer[4096];
     char abuffer[4096];
     KFmtWriter fmtwrt;
-    
+
     assert(formatter != NULL);
     assert(writer != NULL);
 
@@ -691,6 +690,19 @@ rc_t log_print( KFmtHandler* formatter, const KLogFmtFlags flags, KWrtHandler* w
     }
 }
 
+static
+rc_t log_print_nofmt( KFmtHandler* formatter, const KLogFmtFlags flags, KWrtHandler* writer,
+                KLogLevel lvl, bool use_rc, rc_t status,
+                const char* msg, ... )
+{   // VDB-4376 it is not portable to call log_print like this: log_print(..., msg, NULL, NULL ), so we have this thunk here
+    va_list vl;
+    va_start( vl, msg );
+    rc_t ret = log_print(formatter, flags, writer, lvl, use_rc, status, msg, NULL, vl );
+    va_end(vl);
+    return ret;
+}
+
+
 /* LogMsg
  *  makes an entry to the log file
  *
@@ -704,8 +716,8 @@ LIB_EXPORT rc_t CC LogMsg ( KLogLevel lvl, const char *msg )
     if ( lvl > KLogLevelGet() )
         return 0;
 
-    return log_print(KLogFmtHandlerGet(), G_log_formatter_flags,
-                     KLogHandlerGet(), lvl, false, 0, msg, NULL, NULL );
+    return log_print_nofmt(KLogFmtHandlerGet(), G_log_formatter_flags,
+                     KLogHandlerGet(), lvl, false, 0, msg );
 }
 
 LIB_EXPORT rc_t CC LogLibMsg ( KLogLevel lvl, const char *msg )
@@ -713,8 +725,8 @@ LIB_EXPORT rc_t CC LogLibMsg ( KLogLevel lvl, const char *msg )
     if ( lvl > KLogLevelGet() )
         return 0;
 
-    return log_print(KLogLibFmtHandlerGet(), G_log_lib_formatter_flags, 
-                     KLogLibHandlerGet(), lvl, false, 0, msg, NULL, NULL );
+    return log_print_nofmt(KLogLibFmtHandlerGet(), G_log_lib_formatter_flags,
+                     KLogLibHandlerGet(), lvl, false, 0, msg );
 }
 
 
@@ -732,8 +744,8 @@ LIB_EXPORT rc_t CC LogErr ( KLogLevel lvl, rc_t status, const char *msg )
     if ( lvl > KLogLevelGet() )
         return 0;
 
-    return log_print(KLogFmtHandlerGet(), G_log_formatter_flags,
-                     KLogHandlerGet(), lvl, true, status, msg, NULL, NULL );
+    return log_print_nofmt(KLogFmtHandlerGet(), G_log_formatter_flags,
+                     KLogHandlerGet(), lvl, true, status, msg );
 }
 
 LIB_EXPORT rc_t CC LogLibErr ( KLogLevel lvl, rc_t status, const char *msg )
@@ -741,8 +753,8 @@ LIB_EXPORT rc_t CC LogLibErr ( KLogLevel lvl, rc_t status, const char *msg )
     if ( lvl > KLogLevelGet() )
         return 0;
 
-    return log_print(KLogLibFmtHandlerGet(), G_log_lib_formatter_flags,
-                     KLogLibHandlerGet(), lvl, true, status, msg, NULL, NULL );
+    return log_print_nofmt(KLogLibFmtHandlerGet(), G_log_lib_formatter_flags,
+                     KLogLibHandlerGet(), lvl, true, status, msg );
 }
 
 /* vLogMsg

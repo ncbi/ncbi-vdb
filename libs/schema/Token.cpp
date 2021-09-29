@@ -33,7 +33,7 @@ using namespace ncbi :: SchemaParser;
 const Token :: TokenType Token :: EndSource;
 
 Token :: Location :: Location ( const char * p_file, uint32_t p_line, uint32_t p_column )
-:   m_file ( p_file ),
+:   m_file ( p_file ), // no copy made
     m_line ( p_line ),
     m_column ( p_column )
 {
@@ -51,6 +51,14 @@ Token :: Token ( TokenType p_type, const char * p_value )
 :   m_type ( p_type ),
     m_value ( string_dup_measure ( p_value, 0 ) ),
     m_location ( "", 0, 0 ),
+    m_ws ( 0 )
+{
+}
+
+Token :: Token ( TokenType p_type, const char * p_value, const Location & p_loc )
+:   m_type ( p_type ),
+    m_value ( string_dup_measure ( p_value, 0 ) ),
+    m_location ( p_loc . m_file, p_loc . m_line, p_loc . m_column ),
     m_ws ( 0 )
 {
 }

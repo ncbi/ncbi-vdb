@@ -27,6 +27,8 @@
 #ifndef _h_resolver_priv_
 #define _h_resolver_priv_
 
+#include <klib/text.h> /* String */
+
 #ifndef _h_vfs_resolver_
 #include <vfs/resolver.h>
 #endif
@@ -137,12 +139,17 @@ extern "C" {
 #define rcResolver   rcTree
 
 struct KDataBuffer;
+struct KDirectory;
+struct KNgcObj;
 struct KNSManager;
 struct String;
+struct VResolverAccToken;
 struct VResolverAlg;
 
+
 rc_t VPathCheckFromNamesCGI(const struct VPath *path,
-    const struct String *ticket, const struct VPath **mapping);
+    const struct String *ticket, int64_t projectId,
+    const struct VPath **mapping);
 
 
 /*--------------------------------------------------------------------------
@@ -161,6 +168,7 @@ typedef enum
     appNANNOT,
     appNAKMER,
     appSRAPileup,
+    appSRARealign,
     appCount
 } VResolverAppID;
 
@@ -168,14 +176,20 @@ typedef enum
 {
     algCGI,
     algFlat,
+    algFlatAD,
+    algWithExtFlat,
+    algAD,    /* Accession as Directory */
+    algSRAAD,    /* Accession as Directory for SRA */
     algSRAFlat,
     algSRA1024,
     algSRA1000,
     algFUSE1000,
     algREFSEQ,
+    algREFSEQAD, /* Accession as Directory for Refseq*/
     algWGS2,                /* ordered to be of higher precedence than algWGS */
     algWGS,
     algWGSFlat,
+    algWGSAD,
     algFuseWGS,
     algSRA_NCBI,
     algSRA_EBI,
@@ -194,6 +208,9 @@ typedef enum
     /* leave as last value */
     algUnknown
 } VResolverAlgID;
+
+#define versSDL2 1
+typedef uint8_t VERSNS;
 
 rc_t VResolverAlgMake(struct VResolverAlg **alg, const struct String *root,
      VResolverAppID app_id, VResolverAlgID alg_id, bool protctd, bool disabled);
@@ -214,10 +231,13 @@ rc_t VResolverAlgParseResolverCGIResponse_3_0(const char *start,
 rc_t VResolverAlgRemoteProtectedResolve( const struct VResolverAlg *self,
     const struct KNSManager *kns, VRemoteProtocols protocols,
     const struct String *acc, const struct VPath **path,
-    const struct VPath **mapping, bool legacy_wgs_refseq, const char * version);
+    const struct VPath **mapping, bool legacy_wgs_refseq,
+    const char * version, const char * quality);
 
 /** get projectId ( valid for protected user repository ) */
 rc_t VResolverGetProjectId ( const VResolver * self, uint32_t * projectId );
+
+bool VResolverIsProtected ( const VResolver * self );
 
 /* RemoteResolve
  *  resolve an accession into a remote VPath or not found
@@ -233,8 +253,16 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
     const struct VPath ** path, const struct VPath **mapping,
     const struct KFile ** opt_file_rtn, bool refseq_ctx, bool is_oid, const char * version );
 
+rc_t VResolverLocalForCache(const VResolver * self,
+    const VPath * accession, const VPath ** path);
+rc_t VResolverQueryForCache(const VResolver * self, VRemoteProtocols protocols,
+    const VPath * query, const VPath ** local, const VPath ** remote,
+    const VPath ** cache);
+
 /* version of name service protocol */
 rc_t VResolverSetVersion ( VResolver *self, const char * version );
+
+rc_t VResolverResetKNSManager(VResolver * self, const struct KNSManager * mgr);
 
 /* resolve oid->file mapping inside of VFS
   resolve (resolve oid<->name mapping in resolver):
@@ -243,10 +271,32 @@ rc_t VResolverSetVersion ( VResolver *self, const char * version );
    2: don't resolve */
 rc_t VResolverResolveName ( VResolver *self, int resolve );
 
+bool VResolverResolveToAd(const VResolver *self);
+
+VResolverEnableState VResolverGetRemoteEnable();
+
+rc_t VResolverSetQuality(VResolver * self, const char * quality);
+
+/*rc_t VFSManagerMakeDbgapResolver(const struct VFSManager * self,
+    VResolver ** new_resolver, const struct KConfig * cfg,
+    const struct KNgcObj * ngc);*/
+
+rc_t LocalMagicResolve(const struct KDirectory * dir, const String * accession,
+    const VPath ** path);
+
 /* default behavior to resolve oid->file mapping inside of VFS */
 #define DEFAULT_RESOVE_OID_NAME true
 
 void KConfigReadRemoteProtocols ( struct KConfig const * self, VRemoteProtocols * remote_protos );
+
+VResolverAppID get_accession_app(const String * accession, bool refseq_ctx,
+    struct VResolverAccToken *tok, bool *legacy_wgs_refseq,
+    bool resolveAllAccToCache, bool * forDirAdjusted, const String * parentAcc,
+    const String * parentPath, int64_t projectId, bool noqual);
+
+void LogNamesServiceErrorsInit(bool enabled);
+void LogNamesServiceErrorsReset();
+
 
 #ifdef __cplusplus
 }

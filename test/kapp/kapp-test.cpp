@@ -119,6 +119,7 @@ rc_t TestArgConvFileCreator(const Args * args, uint32_t arg_index, const char * 
                 
                 *result = file;
                 *whack = WhackArgFile;
+                KDirectoryRelease( dir );
                 return 0;
             }
             
@@ -328,7 +329,7 @@ struct SleepyReader
 
     static rc_t MakeFileRead(KFile const** f)
     {
-        KFile* ret=(KFile*)malloc(sizeof(KFile));
+        KFile* ret=(KFile*)calloc(1, sizeof(KFile));
         ret-> vt = (const KFile_vt*)&vt;
         ret-> dir = NULL;
         atomic32_set ( & ret-> refcount, 1 );

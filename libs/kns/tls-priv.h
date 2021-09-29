@@ -62,11 +62,25 @@ struct KTLSGlobals
     mbedtls_ctr_drbg_context ctr_drbg;
     mbedtls_entropy_context entropy;
     mbedtls_ssl_config config;
+
+    bool allow_all_certs;
+
+    bool safe_to_modify_ssl_config; /* needed for SetAllowAllCerts () */
+
+    mbedtls_x509_crt clicert;
+    mbedtls_pk_context pkey;
+    bool clicert_was_set;
 };
 
 /* Init
  */
-rc_t KTLSGlobalsInit ( KTLSGlobals * tlsg, struct KConfig const * kfg );
+rc_t KTLSGlobalsInit ( KTLSGlobals * tlsg,
+    struct KConfig const * kfg, uint64_t log );
+
+/* SetupOwnCert
+ */
+rc_t KTLSGlobalsSetupOwnCert ( KTLSGlobals * tlsg,
+    const char * own_cert, const char * pk_key );
 
 /* Whack
  */

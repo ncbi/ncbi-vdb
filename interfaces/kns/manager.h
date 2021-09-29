@@ -42,7 +42,7 @@ extern "C" {
 /*--------------------------------------------------------------------------
  * forwards
  */
-
+struct KConfig;
 
 /*--------------------------------------------------------------------------
  * KNSManager
@@ -55,6 +55,15 @@ typedef struct KNSManager KNSManager;
  *  create a manager instance
  */
 KNS_EXTERN rc_t CC KNSManagerMake ( KNSManager **mgr );
+
+/* MakeLocal
+ *  create a manager instance without initializing singleton,
+ *  for testing;
+ *  or using multiple client mTLS certificated
+ */
+KNS_EXTERN rc_t CC KNSManagerMakeLocal ( struct KNSManager ** mgr,
+    struct KConfig * kfg );
+
 
 
 /* AddRef
@@ -89,12 +98,131 @@ KNS_EXTERN rc_t CC KNSManagerSetConnectionTimeouts ( KNSManager *self,
     int32_t connectMillis, int32_t readMillis, int32_t writeMillis );
 
 
-/* Set/Get UserAgent
- *  for http connections
+/******************************************************************************/
+/**************** API to manage HTTP File read retry behavior *****************/
+/******************************************************************************/
+
+/* SetRetryFailedReads
+ *  manages retry layer on HttpFileRead
+ *
+ *  "retry" [ IN ] - true : turn on retry layer,
+ *                   false: don't create retry layer.
+ */
+KNS_EXTERN rc_t CC KNSManagerSetRetryFailedReads ( KNSManager *self,
+    bool retry );
+
+/* GetRetryFailedReads
+ *  returns whether or not retry layer on HttpFileRead is turned on
+ */
+KNS_EXTERN rc_t CC KNSManagerGetRetryFailedReads ( const KNSManager *self,
+    bool *retry );
+
+
+/* SetMaxReadRetryTime
+ *  sets maximum time in HttpFileRead retry loop
+ *
+ *  "millis" [ IN ] - when negative, infinite timeout
+ */
+KNS_EXTERN rc_t CC KNSManagerSetMaxReadRetryTime ( KNSManager *self,
+    int32_t millis );
+
+/* GetMaxReadRetryTime
+ *  returns maximum time in HttpFileRead retry loop
+ *
+ *  "millis" [ OUT ] - when negative, infinite timeout
+ */
+KNS_EXTERN rc_t CC KNSManagerGetMaxReadRetryTime ( const KNSManager *self,
+    int32_t *millis );
+
+
+/* SetMaxConnectRetryTime
+ *  sets maximum time when opening HttpFile
+ *
+ *  "millis" [ IN ] - when negative, infinite timeout
+ */
+KNS_EXTERN rc_t CC KNSManagerSetMaxConnectRetryTime(KNSManager *self,
+    int32_t millis);
+
+/* GetMaxConnectRetryTime
+ *  returns maximum time when opening HttpFile
+ *
+ *  "millis" [ OUT ] - when negative, infinite timeout
+ */
+KNS_EXTERN rc_t CC KNSManagerGetMaxConnectRetryTime(const KNSManager *self,
+    int32_t *millis);
+
+
+/* SetRetryFirstReads
+ *  manages retry on the first HttpFileRead
+ */
+KNS_EXTERN rc_t CC KNSManagerSetRetryFirstReads ( KNSManager *self,
+    bool retry );
+
+/* GetRetryFirstReads
+ *  returns whether or not retry on the first HttpFileRead is turned on
+ */
+KNS_EXTERN rc_t CC KNSManagerGetRetryFirstReads ( const KNSManager *self,
+    bool *retry );
+
+
+/* SetOwnCert
+ *  sets own certificate and key for SSL handshake
+ *
+ * "own_cert" - buffer holding the own public certificate chain data
+ *              in PEM or DER format
+ * "pk_key"   - buffer holding the own private key in PEM or DER format
+ */
+KNS_EXTERN rc_t CC KNSManagerSetOwnCert(struct KNSManager * self,
+    const char * own_cert, const char * pk_key);
+
+/* GetOwnCert
+ *  gets own certificate and key for SSL handshake
+ *
+ * "own_cert" - buffer holding the own public certificate chain data
+ *              in PEM or DER format
+ * "pk_key"   - buffer holding the own private key in PEM or DER format
+ */
+KNS_EXTERN rc_t CC KNSManagerGetOwnCert(const struct KNSManager * self,
+    const char ** own_cert, const char ** pk_key);
+
+
+/******************************************************************************/
+
+/* Setters for https connections */
+
+/* Note that the passed in strings must be NUL terminated, and
+ * shorter than KNSMANAGER_STRING_MAX.
+ * */
+#define KNSMANAGER_STRING_MAX 128
+
+/* Set/Get global UserAgent string for http connections
  */
 KNS_EXTERN rc_t CC KNSManagerSetUserAgent ( KNSManager *self, const char * fmt, ... );
 KNS_EXTERN rc_t CC KNSManagerGetUserAgent ( const char ** user_agent );
 
+/* Set/Get thread-local UserAgent suffix string
+ */
+KNS_EXTERN rc_t CC KNSManagerSetUserAgentSuffix ( const char * suffix );
+KNS_EXTERN rc_t CC KNSManagerGetUserAgentSuffix ( const char ** suffix );
+
+/* Set thread-local logging attributes
+ */
+KNS_EXTERN rc_t CC KNSManagerSetClientIP  ( KNSManager *self, const char * clientip );
+KNS_EXTERN rc_t CC KNSManagerSetSessionID ( KNSManager *self, const char * sessionid );
+KNS_EXTERN rc_t CC KNSManagerSetPageHitID ( KNSManager *self, const char * pagehitid );
+
+/* IP addresses are in network byte order */
+/*
+KNS_EXTERN rc_t CC KNSManagerSetClientIPv4  ( KNSManager *self, uint32_t client_ipv4_addr);
+KNS_EXTERN rc_t CC KNSManagerSetClientIPv6  ( KNSManager *self, const uint16_t client_ipv6_addr[]);
+*/
+
+/******************************************************************************/
+
+typedef rc_t(CC *quitting_t)(void);
+KNS_EXTERN rc_t CC KNSManagerSetQuitting ( KNSManager *self,
+    quitting_t quitting );
+KNS_EXTERN quitting_t CC KNSManagerGetQuitting ( const KNSManager *self );
 
 #ifdef __cplusplus
 }

@@ -1476,7 +1476,7 @@ _Open_File_1 ( struct _GapFilePeer * self, const struct KFile ** File )
 #endif /* _USE_CACHED_CONN_ */
 
                     if ( RCt == 0 ) {
-                        RCt = KDirectoryMakeCacheTee (
+                        RCt = KDirectoryMakeCacheTeePromote (
                                             NatDir,
                                             & File_2,
                                             File_1,
