@@ -1,5 +1,5 @@
 # HISTORY
-This branch is being kept for historical purposes **only**. The features in this code are not currently needed and may never be needed.
+This branch is being kept for historical purposes **only**. The features in this code are not currently needed and may never be needed. This branch is frozen. Any trouble tickets referencing this branch will be ignored. Any pull requests to or from this branch will be ignored.
 
 # The NCBI SRA ( Sequence Read Archive )
 
