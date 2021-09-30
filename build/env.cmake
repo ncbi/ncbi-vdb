@@ -162,6 +162,7 @@ elseif ( CMAKE_CXX_COMPILER_ID MATCHES "^(Apple)?Clang$" )
 elseif ( "MSVC" STREQUAL "${CMAKE_C_COMPILER_ID}")
     include_directories(interfaces/cc/vc++)
     include_directories(interfaces/cc/vc++/${ARCH})
+    add_compile_definitions( UNICODE _UNICODE )
 endif()
 
 if ( "mac" STREQUAL ${OS} )
