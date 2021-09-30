@@ -598,13 +598,18 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
         char location[ 4096 ];
         bool remove_on_close = false;
         bool promote = cps -> promote;
+
+        /* give the user/tool an opportunity to define a definitve cache-location
+        via this environment-variable */
+        const char * definitve_cache_location = getenv ( "NCBI_TMPDIR" );
+
         location[ 0 ] = 0;
     
         if ( cps -> debug )
             KOutMsg( "use file-cache\n" );
 
         /* if we have been given a location, we use it. CacheTeeV3 can deal with invalid/unreachable ones! */
-        if ( cache_loc != NULL )
+        if ( NULL != cache_loc && NULL == definitve_cache_location )
         {
             rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
                                          "%s", cache_loc );
@@ -619,15 +624,19 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
                 remove_on_close = true;
                 promote = false;
                 
-                if ( cps -> temp_cache[ 0 ] != 0 )
-                {
+                if ( NULL != definitve_cache_location ) {
+                    /* use definitve location ( do not try promotion, remove-on-close ) */
+                    rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
+                                                 "%s/%s.sra",
+                                                 definitve_cache_location,
+                                                 id -> addr );
+                }
+                else if ( cps -> temp_cache[ 0 ] != 0 ) {
                     /* we have user given temp cache - location ( do not try promotion, remove-on-close ) */
                     rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
                                                  "%s/%s.sra", cps -> temp_cache, id -> addr );
-                }
-                else
-                {
-                    /* fallback to hardcoded path location ( do not try promotion, remove-on-close */
+                } else {
+                    /* fallback to hardcoded path location ( do not try promotion, remove-on-close ) */
                     rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
                                                  "%s/%s.sra",
                                                  get_fallback_cache_location(),
@@ -635,8 +644,9 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
                 }
                 StringWhack ( id );
             }
-            else
+            else {
                 rc = SILENT_RC( rcVFS, rcPath, rcReading, rcFormat, rcInvalid );
+            }
         }
         
         if ( cps -> debug )
