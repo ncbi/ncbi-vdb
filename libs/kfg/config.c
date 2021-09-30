@@ -3553,9 +3553,12 @@ rc_t KConfigMakeImpl ( KConfig ** cfg, const KDirectory * cfgdir, bool local,
                 if ( rc == 0 && updated )
                     rc = KConfigCommit ( mgr );
 #endif
-                rc = _KConfigFixQualityType(mgr);
-                if (rc == 0)
-                    rc = KConfigCommit ( mgr );
+                if (rc == 0) {
+                    rc = _KConfigFixQualityType(mgr);
+                    if (rc == 0)
+       /* ignore Commit's rc - it will fail if user configuration is disabled */
+                        KConfigCommit(mgr);
+                }
 
                 if ( rc == 0 )
                     _KConfigCheckAd ( mgr );
