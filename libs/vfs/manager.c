@@ -571,6 +571,10 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
     size_t ram_page_count = ( cache_amount + page_size - 1 ) / page_size;
     bool ram_only = true;
 
+    /* give the user/tool an opportunity to define a definitve cache-location
+    via this environment-variable */
+    const char * definitve_cache_location = getenv ( "NCBI_TMP_CACHE" );
+
     if ( cps -> debug ) {
         const String * uri = NULL;
         rc_t rc1 = VPathMakeUri ( path, &uri );
@@ -580,25 +584,16 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
         KOutMsg( "cache.page_size ........ %d bytes\n", page_size );
         KOutMsg( "cache.amount ........... %d MB\n", cps -> cache_amount_mb );
         KOutMsg( "cache.page_count ....... %d\n", ram_page_count );
-        KOutMsg( "cache_loc (resolver) ... %s\n", cache_loc == NULL ? "NULL" : cache_loc );
-        if ( rc1 == 0 ) {
-            if ( uri != NULL ) {
-                KOutMsg( "uri : %S\n", uri );
-            } else {
-                KOutMsg( "uri : NULL\n" );
-            }
-            StringWhack( uri );
-        }
+        KOutMsg( "cache_loc (resolver) ... %s\n", NULL == cache_loc ? "NULL" : cache_loc );
+        KOutMsg( "definitive location .... %s\n", NULL == definitve_cache_location ? "NULL" : definitve_cache_location );
+        KOutMsg( "uri .................... %s\n", NULL == uri || 0 != rc1 ? "NULL" : uri -> addr );
+        if ( 0 == rc1 ) { StringWhack( uri ); }
     }
     
-    if ( cps -> use_file_cache ) {
+    if ( cps -> use_file_cache || NULL != definitve_cache_location ) {
         char location[ 4096 ];
         bool remove_on_close = false;
         bool promote = cps -> promote;
-
-        /* give the user/tool an opportunity to define a definitve cache-location
-        via this environment-variable */
-        const char * definitve_cache_location = getenv ( "NCBI_TMPDIR" );
 
         location[ 0 ] = 0;
     
@@ -609,12 +604,10 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
         if ( NULL != cache_loc && NULL == definitve_cache_location ) {
             rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
                                          "%s", cache_loc );
-        }
-        
+        } else {
         /* if we have no given location or it does not exist or it is not read/writable for us */
-        if ( 0 == location[ 0 ] ) {
             const String * id = make_id( path );
-            if ( id != NULL ) {
+            if ( NULL != id ) {
                 remove_on_close = true;
                 promote = false;
                 
@@ -622,8 +615,7 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
                     /* use definitve location ( do not try promotion, remove-on-close ) */
                     rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
                                                  "%s/%s.sra",
-                                                 definitve_cache_location,
-                                                 id -> addr );
+                                                 definitve_cache_location, id -> addr );
                 }
                 else if ( cps -> temp_cache[ 0 ] != 0 ) {
                     /* we have user given temp cache - location ( do not try promotion, remove-on-close ) */
@@ -633,8 +625,7 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
                     /* fallback to hardcoded path location ( do not try promotion, remove-on-close ) */
                     rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
                                                  "%s/%s.sra",
-                                                 get_fallback_cache_location(),
-                                                 id -> addr );
+                                                 get_fallback_cache_location(), id -> addr );
                 }
                 StringWhack ( id );
             } else {
@@ -648,7 +639,7 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
             KOutMsg( "cache location: '%s', rc = %R\n", location, rc );
         }
         
-        if ( rc == 0 ) {
+        if ( 0 == rc ) {
             /* check if location is writable... */
             rc = KDirectoryMakeKCacheTeeFile_v3 ( dir,
                                                   &temp_file,
@@ -660,13 +651,16 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
                                                   remove_on_close,
                                                   "%s", location );
         }
-        ram_only = ( rc != 0 );
+        if ( 0 != rc ) {
+            ram_only = true;
+            if ( cps -> debug ) { KOutMsg( "KDirectoryMakeKCacheTeeFile_v3() -> %R\n", rc ); }
+        } else {
+            ram_only = false;
+        }
     }
     
     if ( ram_only ) {
-        if ( cps -> debug ) {
-            KOutMsg( "use no file-cache\n" );
-        }
+        if ( cps -> debug ) { KOutMsg( "use RAM only\n" ); }
         rc = KDirectoryMakeKCacheTeeFile_v3 ( dir,
                                               &temp_file,
                                               *cfp,
@@ -680,7 +674,7 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
 
     if ( cps -> debug ) { KOutMsg( "}\n" ); }    
 
-    if ( rc == 0 ) {
+    if ( 0 == rc ) {
         KFileRelease ( * cfp );
         * cfp = temp_file;
     }
