@@ -3114,6 +3114,22 @@ static rc_t _KConfigFixRepeatedDrives(KConfig *self,
 
 #endif
 
+static rc_t _KConfigFixQualityType(KConfig *const self)
+{
+    rc_t rc = 0;
+    KConfigNode *node = NULL;
+
+    rc = KConfigOpenNodeUpdate(self, &node, "/sra/quality_type");
+    if (rc == 0) {
+        rc = KConfigNodeWrite(node, "raw_scores", 10);
+        KConfigNodeRelease(node);
+    }
+    if (rc) {
+        LOGERR(klogErr, rc, "can't set quality type");
+    }
+    return rc;
+}
+
 #if CAN_HAVE_CONTAINER_ID
 static rc_t _KConfigGetContainerGUID(KConfig *const self, bool *const updated)
 {
@@ -3537,6 +3553,13 @@ rc_t KConfigMakeImpl ( KConfig ** cfg, const KDirectory * cfgdir, bool local,
                 if ( rc == 0 && updated )
                     rc = KConfigCommit ( mgr );
 #endif
+                if (rc == 0) {
+                    rc = _KConfigFixQualityType(mgr);
+                    if (rc == 0)
+       /* ignore Commit's rc - it will fail if user configuration is disabled */
+                        KConfigCommit(mgr);
+                }
+
                 if ( rc == 0 )
                     _KConfigCheckAd ( mgr );
             }
