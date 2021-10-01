@@ -505,7 +505,7 @@ rc_t VPathParseInt ( VPath * self, char * uri, size_t uri_size,
 {
     rc_t rc;
     int bytes;
-    uint32_t port;
+    uint32_t port = 0;
     size_t i, anchor;
     uint32_t count, total;
     VPathParseState state = vppStart;
@@ -518,13 +518,13 @@ rc_t VPathParseInt ( VPath * self, char * uri, size_t uri_size,
     uint32_t acc_suffix = 0;
 
     /* for accummulating ip addresses */
-    uint32_t ip;
+    uint32_t ip = 0;
     uint32_t ipv4 [ 4 ];
     uint32_t ipv6 [ 8 ];
 
     /* for accumulating oid */
-    uint64_t oid;
-    uint32_t oid_anchor;
+    uint64_t oid = 0;
+    uint32_t oid_anchor = 0;
 
     bool pileup_ext_present = false;
     const char pileup_ext[] = ".pileup";
@@ -538,6 +538,13 @@ rc_t VPathParseInt ( VPath * self, char * uri, size_t uri_size,
     const char vdbcache_ext[] = ".vdbcache";
     size_t vdbcache_ext_size = sizeof(vdbcache_ext)
                                                   / sizeof(vdbcache_ext[0]) - 1;
+
+    const String * xSra     = VFSManagerExtSra     (NULL);
+    const String * xNoqual = VFSManagerExtNoqualOld(NULL);
+    const String * xSraLite = VFSManagerExtNoqual  (NULL);
+    VQuality q = eQualLast;
+
+    assert(xSra && xNoqual && xSraLite);
 
     /* remove pileup extension before parsing,
        so that it won't change parsing results */
@@ -567,6 +574,24 @@ rc_t VPathParseInt ( VPath * self, char * uri, size_t uri_size,
         == 0)
     {
         vdbcache_ext_present = true;
+    }
+    /* detect sra extensions */
+    else if (uri_size > xSra->size && memcmp
+        (&uri[uri_size - xSra->size], xSra->addr, xSra->size) == 0)
+    {
+        q = eQualFull;
+    }
+    else if (uri_size > xNoqual->size && memcmp
+        (&uri[uri_size - xNoqual->size], xNoqual->addr, xNoqual->size)
+        == 0)
+    {
+        q = eQualNo;
+    }
+    else if (uri_size > xSraLite->size && memcmp
+        (&uri[uri_size - xSraLite->size], xSraLite->addr, xSraLite->size)
+        == 0)
+    {
+        q = eQualNo;
     }
 
     for ( i = anchor = 0, total = count = 0; i < uri_size; ++ total, ++ count, i += bytes )
@@ -2073,6 +2098,12 @@ rc_t VPathParseInt ( VPath * self, char * uri, size_t uri_size,
         break;
     }
 
+    if ((self->path_type == vpFullPath || self->path_type == vpRelPath)
+        && q != eQualLast)
+    {
+        VPathSetQuality(self, q);
+    }
+
     return 0;
 }
 
@@ -2120,9 +2151,6 @@ rc_t VPathMakeFromVText ( VPath ** ppath, const char * path_fmt, va_list args )
 
             /* parse into portions */
             rc = VPathParse ( path, buffer . base, ( size_t ) buffer . elem_count - 1 );
-
-            if ( rc == 0 )
-                rc = VPathSetQuality ( path, eQualLast );
 
             if ( rc == 0 )
             {
@@ -2371,9 +2399,14 @@ LIB_EXPORT rc_t CC VFSManagerExtractAccessionOrOID ( const VFSManager * self,
             bool isRun = false;
             VQuality quality = eQualLast;
 
-            const String * xNoqual = VFSManagerExtNoqual(NULL);
-#define NOQUAL 7
-            assert(xNoqual && xNoqual->size == NOQUAL);
+            const String * xNoqual  = VFSManagerExtNoqualOld(NULL);
+            const String * xSraLite = VFSManagerExtNoqual   (NULL);
+#define NOQUAL  7 /* .noqual
+                     1234567 */
+#define SRALITE 8 /* .sralite
+                     12345678 */
+            assert(xNoqual  && xNoqual ->size == NOQUAL
+                && xSraLite && xSraLite->size == SRALITE);
 
             switch ( orig -> path_type )
             {
@@ -2436,8 +2469,16 @@ LIB_EXPORT rc_t CC VFSManagerExtractAccessionOrOID ( const VFSManager * self,
                         continue;
                     }
                 case NOQUAL:
-                    if ( strcase_cmp (
-                        xNoqual->addr, NOQUAL, sep, NOQUAL, NOQUAL ) == 0 )
+                    if ( strcase_cmp ( xNoqual->addr, xNoqual->size,
+                        sep, xNoqual->size, xNoqual->size ) == 0 )
+                    {
+                        end = sep;
+                        quality = eQualNo;
+                        continue;
+                    }
+                case SRALITE:
+                    if ( strcase_cmp ( xSraLite->addr, xNoqual->size,
+                        sep, xNoqual->size, xSraLite->size ) == 0 )
                     {
                         end = sep;
                         quality = eQualNo;

@@ -413,12 +413,12 @@ rc_t VResolverAlgMakeLocalFilePath(const VResolverAlg *self,
  */
 static
 rc_t expand_algorithm ( const VResolverAlg *self, const VResolverAccToken *tok,
-    char *expanded, size_t bsize, size_t *size, bool legacy_wgs_refseq )
+    char *expanded, size_t bsize, size_t *size, bool legacy_wgs_refseq,
+    const String * xNoqual )
 {
     rc_t rc;
     uint32_t num;
 
-    const String * xNoqual = VFSManagerExtNoqual(NULL);
     assert(xNoqual);
 
     assert(tok);
@@ -669,7 +669,8 @@ rc_t expand_algorithm ( const VResolverAlg *self, const VResolverAccToken *tok,
 static
 rc_t VResolverAlgLocalResolve ( const VResolverAlg *self,
     const KDirectory *wd, const VResolverAccToken *tok, const VPath ** path,
-    bool legacy_wgs_refseq, bool for_cache, const char * dir, bool ad )
+    bool legacy_wgs_refseq, bool for_cache, const char * dir, bool ad,
+    const String * xNoqual )
 {
     KPathType kpt;
     uint32_t i, count;
@@ -683,7 +684,7 @@ rc_t VResolverAlgLocalResolve ( const VResolverAlg *self,
     const String *vol, *root;
 
     /* expand the accession */
-    rc_t rc = expand_algorithm ( self, tok, expanded, sizeof expanded, & size, legacy_wgs_refseq );
+    rc_t rc = expand_algorithm ( self, tok, expanded, sizeof expanded, & size, legacy_wgs_refseq, xNoqual );
 
     /* should never have a problem here... */
     if ( rc != 0 )
@@ -2223,7 +2224,7 @@ rc_t VResolverAlgRemoteResolve ( const VResolverAlg *self,
     root = self -> root;
 
     /* expand the accession */
-    rc = expand_algorithm ( self, tok, expanded, sizeof expanded, & size, legacy_wgs_refseq );
+    rc = expand_algorithm ( self, tok, expanded, sizeof expanded, & size, legacy_wgs_refseq, VFSManagerExtNoqual(NULL) );
 
     /* should never have a problem here... */
     if ( rc != 0 )
@@ -2277,7 +2278,7 @@ static rc_t VResolverAlgCacheResolveDir ( const VResolverAlg *self,
 
     /* expand the accession */
     rc_t rc = expand_algorithm ( self, tok, expanded, sizeof expanded,
-                                 & size, legacy_wgs_refseq );
+                        & size, legacy_wgs_refseq, VFSManagerExtNoqual(NULL) );
 
     /* should never have a problem here... */
     if ( rc != 0 )
@@ -2318,7 +2319,7 @@ rc_t VResolverAlgCacheResolve ( const VResolverAlg *self,
 {
     /* see if the cache file already exists */
     const bool for_cache = true;
-    rc_t rc = VResolverAlgLocalResolve ( self, wd, tok, path, legacy_wgs_refseq, for_cache, NULL, false );
+    rc_t rc = VResolverAlgLocalResolve ( self, wd, tok, path, legacy_wgs_refseq, for_cache, NULL, false, VFSManagerExtNoqual(NULL) );
     if ( rc == 0 )
         return 0;
 
@@ -2367,7 +2368,8 @@ rc_t VResolverAlgMakeCachePath ( const VResolverAlg *self,
     const String *vol;
 
     /* expand the accession */
-    rc_t rc = expand_algorithm ( self, tok, expanded, sizeof expanded, & size, legacy_wgs_refseq );
+    rc_t rc = expand_algorithm ( self, tok, expanded, sizeof expanded, & size,
+        legacy_wgs_refseq, VFSManagerExtNoqual(NULL) );
 
     /* should never have a problem here... */
     if ( rc != 0 )
@@ -3055,7 +3057,13 @@ static rc_t VResolverCheckAD(const VResolver *self, const VPath ** path,
                 const bool for_cache = false;
                 tok->noqual = quality[j] == 'Z';
                 rc_t rc = VResolverAlgLocalResolve(alg, self->wd,
-                    tok, path, legacy_wgs_refseq, for_cache, dir, true);
+                    tok, path, legacy_wgs_refseq, for_cache, dir, true,
+                    VFSManagerExtNoqual(NULL));
+                if (rc == 0)
+                    return 0;
+                rc = VResolverAlgLocalResolve(alg, self->wd,
+                    tok, path, legacy_wgs_refseq, for_cache, dir, true,
+                    VFSManagerExtNoqualOld(NULL));
                 if (rc == 0)
                     return 0;
             }
@@ -3376,7 +3384,13 @@ rc_t VResolverLocalResolve ( const VResolver *self, const String * accession,
                 const bool for_cache = false;
                 tok.noqual = quality[j] == 'Z';
                 rc_t rc = VResolverAlgLocalResolve ( alg, self -> wd,
-                    & tok, path, legacy_wgs_refseq, for_cache, dir, false );
+                    & tok, path, legacy_wgs_refseq, for_cache, dir, false,
+                    VFSManagerExtNoqual(NULL) );
+                if ( rc == 0 )
+                    return 0;
+                rc = VResolverAlgLocalResolve(alg, self->wd,
+                    &tok, path, legacy_wgs_refseq, for_cache, dir, false,
+                    VFSManagerExtNoqualOld(NULL));
                 if ( rc == 0 )
                     return 0;
             }
