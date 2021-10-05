@@ -3114,17 +3114,24 @@ static rc_t _KConfigFixRepeatedDrives(KConfig *self,
 
 #endif
 
-static rc_t _KConfigFixQualityType(KConfig *const self)
+static rc_t _KConfigFixQualityType(KConfig *const self, bool *updated)
 {
     rc_t rc = 0;
-    KConfigNode *node = NULL;
+    String *result = NULL;
+    const char node_name[] = "/sra/quality_type";
 
-    rc = KConfigOpenNodeUpdate(self, &node, "/sra/quality_type");
-    if (rc == 0) {
-        rc = KConfigNodeWrite(node, "raw_scores", 10);
-        KConfigNodeRelease(node);
+    assert(updated);
+    *updated = false;
+
+    rc = KConfigReadString(self, node_name, &result);
+    if (rc == 0) /* found: do nothing */
+        free(result);
+    else {       /* not found: create the node */
+        rc = KConfigWriteString(self, node_name, "raw_scores");
+        *updated = true;
     }
-    if (rc) {
+
+    if (rc != 0) {
         LOGERR(klogErr, rc, "can't set quality type");
     }
     return rc;
@@ -3544,18 +3551,25 @@ rc_t KConfigMakeImpl ( KConfig ** cfg, const KDirectory * cfgdir, bool local,
                 }
 
 #if WINDOWS /* VDB-1554: fix incorrect posix paths in configuration nodes */
-                rc = _KConfigFixRepeatedDrives ( mgr, cfgdir, & updated );
-                if ( rc == 0 && updated )
-                    rc = KConfigCommit ( mgr );
+                if (rc == 0) {
+                    updated = false;
+                    rc = _KConfigFixRepeatedDrives ( mgr, cfgdir, & updated );
+                    if ( rc == 0 && updated )
+                        KConfigCommit ( mgr );
+                }
 #endif
 #if CAN_HAVE_CONTAINER_ID
-                rc = _KConfigGetContainerGUID(mgr, &updated);
-                if ( rc == 0 && updated )
-                    rc = KConfigCommit ( mgr );
+                if (rc == 0) {
+                    updated = false;
+                    rc = _KConfigGetContainerGUID(mgr, &updated);
+                    if ( rc == 0 && updated )
+                        KConfigCommit ( mgr );
+                }
 #endif
                 if (rc == 0) {
-                    rc = _KConfigFixQualityType(mgr);
-                    if (rc == 0)
+                    updated = false;
+                    rc = _KConfigFixQualityType(mgr, &updated);
+                    if (rc == 0 && updated)
        /* ignore Commit's rc - it will fail if user configuration is disabled */
                         KConfigCommit(mgr);
                 }
