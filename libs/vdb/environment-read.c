@@ -44,46 +44,52 @@
 #include <string.h>
 
 static
-rc_t CC environment_read_func(
-                         void *Self,
-                         const VXformInfo *info,
-                         int64_t row_id,
-                         VRowResult *rslt,
-                         uint32_t argc,
-                         const VRowData argv[]
-) {
-    const KDataBuffer *value = Self;
-    rc_t rc = 0;
-    
-    rslt->data->elem_bits = value->elem_bits;
-    rslt->data->elem_count = 0;
-    rc = KDataBufferResize(rslt->data, value->elem_count);
-    if (rc == 0) {
-        memmove(rslt->data->base, value->base, KDataBufferBytes(value));
-        rc = KDataBufferCast(rslt->data, rslt->data, rslt->elem_bits, true);
-        if (rc == 0)
-            rslt->elem_count = rslt->data->elem_count;
-    }
-    return rc;
+rc_t CC environment_read_func(void *Self,
+                              const VXformInfo *info,
+                              int64_t row_id,
+                              VRowResult *rslt,
+                              uint32_t argc,
+                              const VRowData argv[]
+                              )
+{
+    KDataBuffer const *const value = Self;
+
+    // Self, refcount == 1
+    KDataBufferSub(value, &rslt->data, 0, value->elem_count);
+    // rslt->data = Self, refcount == 2
+    // prod-cmn.c:538 blob->data = rslt->data, refcount == 3
+    // prod-cmn.c:540 rslt->data, refcount == 2
+    // blob.c:130 blob->data, refcount == 1
+    return 0;
 }
 
-static rc_t CC get_databuffer( KDataBuffer **rslt, const char *Name, size_t len ) {
-    char name[4096];
-    char *x;
-    rc_t rc;
-    
-    if (len >= sizeof(name))
-        return RC(rcVDB, rcFunction, rcConstructing, rcName, rcTooLong);
-    
-    memmove(name, Name, len);
-    name[len] = '\0';
-    
-    x = getenv(name);
-    rc = KDataBufferMake( *rslt, 8, (uint32_t)( len = strlen( x ) ) );
+static rc_t CC getEnvToDataBuffer(KDataBuffer *const rslt, size_t const name_len, const char *const name)
+{
+    // probably need to add a NUL to the name before calling getenv
+    char *x = NULL;
+    char const *env_val = NULL;
+    rc_t rc = KDataBufferMakeBytes(rslt, name_len + 1);
+
+    if (rc) return rc;
+
+    x = rslt->base;
+    memmove(x, name, name_len);
+    x[len] = '\0';
+
+    env_val = getenv(name);
+    if (env_val) {
+        size_t const len = strlen(x);
+        if (rc == 0)
+            rc = KDataBufferResize(rslt, len);
+        if (rc == 0)
+            memmove(rslt->base, x, len);
+    }
+    else
+        rc = RC(rcVDB, rcFunction, rcConstructing, rcValue, rcNotFound);
     if (rc)
-        return rc;
-    memmove((**rslt).base, x, len);
-    return 0;
+        KDataBufferWhack(rslt);
+
+    return rc;
 }
 
 /* 
@@ -93,16 +99,22 @@ VTRANSFACT_BUILTIN_IMPL(environment_read, 1, 0, 0)
     (const void *Self, const VXfactInfo *info, VFuncDesc *rslt, const VFactoryParams *cp, const VFunctionParams *dp
 ) {
     rc_t rc;
-    KDataBuffer *value;
-            
-    rc = get_databuffer(&value, cp->argv[0].data.ascii, cp->argv[0].count);
-    if (rc == 0) {
-        rslt->self = value;
-        rslt->whack = (void (*)(void *))KDataBufferWhack;
-        
-        rslt->variant = vftRow;
-        rslt->u.rf = environment_read_func;
+    KDataBuffer *value = calloc(1, sizeof(*value));
+
+    if (value != NULL) {
+        rc = getEnvToDataBuffer(value, cp->argv[0].count, cp->argv[0].data.ascii);
+        if (value->elem_count > (uint64_t)(UINT32_MAX))
+            rc = RC(rcVDB, rcFunction, rcConstructing, rcValue, rcTooLong);
+        else if (rc == 0) {
+            rslt->self = value;
+            rslt->whack = (void (*)(void *))KDataBufferWhack;
+
+            rslt->variant = vftRow;
+            rslt->u.rf = environment_read_func;
+        }
     }
+    else
+        rc = RC(rcXF, rcSelf, rcAllocating, rcMemory, rcExhausted);
 
 	return rc;
 }
