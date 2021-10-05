@@ -1071,9 +1071,6 @@
     <ClCompile Include="..\..\..\libs\vdb\delta_average.c">
       <Filter>vdb</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\libs\vdb\environment-read.c">
-      <Filter>vdb</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\libs\vdb\fixed-row-len.c">
       <Filter>vdb</Filter>
     </ClCompile>

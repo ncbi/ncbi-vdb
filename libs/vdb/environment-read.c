@@ -55,7 +55,7 @@ rc_t CC environment_read_func(void *Self,
     KDataBuffer const *const value = Self;
 
     // Self, refcount == 1
-    KDataBufferSub(value, &rslt->data, 0, value->elem_count);
+    KDataBufferSub(value, rslt->data, 0, value->elem_count);
     // rslt->data = Self, refcount == 2
     // prod-cmn.c:538 blob->data = rslt->data, refcount == 3
     // prod-cmn.c:540 rslt->data, refcount == 2
@@ -74,7 +74,7 @@ static rc_t CC getEnvToDataBuffer(KDataBuffer *const rslt, size_t const name_len
 
     x = rslt->base;
     memmove(x, name, name_len);
-    x[len] = '\0';
+    x[name_len] = '\0';
 
     env_val = getenv(name);
     if (env_val) {
@@ -85,7 +85,7 @@ static rc_t CC getEnvToDataBuffer(KDataBuffer *const rslt, size_t const name_len
             memmove(rslt->base, x, len);
     }
     else
-        rc = RC(rcVDB, rcFunction, rcConstructing, rcValue, rcNotFound);
+        rc = RC(rcVDB, rcFunction, rcConstructing, rcName, rcNotFound);
     if (rc)
         KDataBufferWhack(rslt);
 
@@ -104,7 +104,7 @@ VTRANSFACT_BUILTIN_IMPL(environment_read, 1, 0, 0)
     if (value != NULL) {
         rc = getEnvToDataBuffer(value, cp->argv[0].count, cp->argv[0].data.ascii);
         if (value->elem_count > (uint64_t)(UINT32_MAX))
-            rc = RC(rcVDB, rcFunction, rcConstructing, rcValue, rcTooLong);
+            rc = RC(rcVDB, rcFunction, rcConstructing, rcItem, rcTooLong);
         else if (rc == 0) {
             rslt->self = value;
             rslt->whack = (void (*)(void *))KDataBufferWhack;

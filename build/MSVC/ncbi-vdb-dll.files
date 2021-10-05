@@ -1503,9 +1503,6 @@
     <ClCompile Include="..\..\..\libs\vdb\delta_average.c">
         <ObjectFileName>$(IntDir)vdb-%(Filename).obj</ObjectFileName>
     </ClCompile>
-    <ClCompile Include="..\..\..\libs\vdb\environment-read.c">
-        <ObjectFileName>$(IntDir)vdb-%(Filename).obj</ObjectFileName>
-    </ClCompile>
     <ClCompile Include="..\..\..\libs\vdb\fixed-row-len.c">
         <ObjectFileName>$(IntDir)vdb-%(Filename).obj</ObjectFileName>
     </ClCompile>
