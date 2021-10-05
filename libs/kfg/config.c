@@ -3120,14 +3120,23 @@ static rc_t _KConfigFixQualityType(KConfig *const self, bool *updated)
     String *result = NULL;
     const char node_name[] = "/sra/quality_type";
 
+    String value;
+    CONST_STRING(&value, "raw_scores");
+
     assert(updated);
     *updated = false;
 
     rc = KConfigReadString(self, node_name, &result);
-    if (rc == 0) /* found: do nothing */
-        free(result);
-    else {       /* not found: create the node */
-        rc = KConfigWriteString(self, node_name, "raw_scores");
+    if (rc == 0) { /* found */
+        if (!StringEqual(&value, result))
+            *updated = true; /* value is different: needs update */
+        StringWhack(result);
+        result = NULL;
+    }
+    if (rc != 0      /* not found */
+        || *updated) /* or value is different */
+    {   /* update it */
+        rc = KConfigWriteString(self, node_name, value.addr);
         *updated = true;
     }
 
