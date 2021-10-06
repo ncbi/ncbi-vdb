@@ -1,6 +1,15 @@
 # NCBI External Developer Release:
 
 
+## NCBI VDB 2.11.2
+**October 7, 2021**
+
+  **klib, ngs-tools, sra-tools**: status messages (-v) are printed to stderr rather than stdout  
+  **ncbi-vdb, ngs-tools, sra-tools, vdb, vfs**: added  support of SRA Lite files with simplified base quality scores  
+  **prefetch, vfs**: accept Percent Encoding in source URLs  
+  **sra-tools, vdb**: environment variable NCBI_TMP_CACHE sets the caching directory, overriding any other setting  
+
+
 ## NCBI VDB 2.11.1
 **August 17, 2021**
 
