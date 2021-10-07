@@ -31,6 +31,8 @@
 # Cloud settings
 /libs/cloud/report_instance_identity = "false"
 
+/sra/quality_type = "raw_scores"
+
 # The user's default public repository: disabled by default
 /repository/user/main/public/apps/file/volumes/flat = "files"
 /repository/user/main/public/apps/nakmer/volumes/nakmerFlat = "nannot"

@@ -1,3 +1,6 @@
+#ifndef _h_libs_vfs_manager_
+#define _h_libs_vfs_manager_
+
 /*===========================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
@@ -20,8 +23,29 @@
 *
 *  Please cite the author in any work or product based on this material.
 *
-* ===========================================================================
-*
-*/
+* =========================================================================== */
 
-#define LIBVDB_VERS 0x0207002C
+
+#include <klib/text.h> /* String */
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+    struct VFSManager;
+
+    /* Get ".noqual" extension.
+     *   accepts VFSManager* == NULL */
+    const String * VFSManagerExtNoqual   (const struct VFSManager *);
+    /* Get old ".noqual" extension. */
+    const String * VFSManagerExtNoqualOld(const struct VFSManager *);
+    /* Get ".sra" extension. */
+    const String * VFSManagerExtSra      (const struct VFSManager *);
+
+#ifdef __cplusplus
+}
+#endif
+
+
+#endif /* _h_libs_vfs_manager_ */

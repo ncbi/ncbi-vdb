@@ -26,12 +26,15 @@
 
 #include <vfs/extern.h>
 
-#include "path-priv.h"
+#include <kfs/directory.h>
 
-#include <vfs/manager.h>
-#include <vfs/resolver.h>
 #include <klib/printf.h>
 #include <klib/rc.h>
+
+#include <vfs/manager.h>
+#include <vfs/manager-priv.h>
+#include <vfs/path-priv.h>
+#include <vfs/resolver.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -40,6 +43,9 @@
 #include <assert.h>
 
 #include <sysalloc.h>
+
+#include "manager-priv.h" /* VFSManagerExtNoqual */
+#include "path-priv.h"
 
 #define MAX_ACCESSION_LEN 20
 #define TREAT_URI_RESERVED_AS_FILENAME 0
@@ -499,7 +505,7 @@ rc_t VPathParseInt ( VPath * self, char * uri, size_t uri_size,
 {
     rc_t rc;
     int bytes;
-    uint32_t port;
+    uint32_t port = 0;
     size_t i, anchor;
     uint32_t count, total;
     VPathParseState state = vppStart;
@@ -512,13 +518,13 @@ rc_t VPathParseInt ( VPath * self, char * uri, size_t uri_size,
     uint32_t acc_suffix = 0;
 
     /* for accummulating ip addresses */
-    uint32_t ip;
+    uint32_t ip = 0;
     uint32_t ipv4 [ 4 ];
     uint32_t ipv6 [ 8 ];
 
     /* for accumulating oid */
-    uint64_t oid;
-    uint32_t oid_anchor;
+    uint64_t oid = 0;
+    uint32_t oid_anchor = 0;
 
     bool pileup_ext_present = false;
     const char pileup_ext[] = ".pileup";
@@ -530,10 +536,21 @@ rc_t VPathParseInt ( VPath * self, char * uri, size_t uri_size,
 
     bool vdbcache_ext_present = false;
     const char vdbcache_ext[] = ".vdbcache";
-    size_t vdbcache_ext_size = sizeof(vdbcache_ext) / sizeof(vdbcache_ext[0]) - 1;
+    size_t vdbcache_ext_size = sizeof(vdbcache_ext)
+                                                  / sizeof(vdbcache_ext[0]) - 1;
 
-    /* remove pileup extension before parsing, so that it won't change parsing results */
-    if ( uri_size > pileup_ext_size && memcmp(&uri[uri_size - pileup_ext_size], pileup_ext, pileup_ext_size) == 0)
+    const String * xSra     = VFSManagerExtSra     (NULL);
+    const String * xNoqual = VFSManagerExtNoqualOld(NULL);
+    const String * xSraLite = VFSManagerExtNoqual  (NULL);
+    VQuality q = eQualLast;
+
+    assert(xSra && xNoqual && xSraLite);
+
+    /* remove pileup extension before parsing,
+       so that it won't change parsing results */
+    if ( uri_size > pileup_ext_size && memcmp
+        (&uri[uri_size - pileup_ext_size], pileup_ext, pileup_ext_size)
+        == 0)
     {
         uri_size -= pileup_ext_size;
         uri[uri_size] = '\0';
@@ -543,18 +560,38 @@ rc_t VPathParseInt ( VPath * self, char * uri, size_t uri_size,
     /* remove realign extension before parsing,
        so that it won't change parsing results */
     else if (uri_size > realign_ext_size && memcmp
-        (&uri[uri_size - realign_ext_size], realign_ext, realign_ext_size) == 0)
+        (&uri[uri_size - realign_ext_size], realign_ext, realign_ext_size)
+        == 0)
     {
         uri_size -= realign_ext_size;
         uri[uri_size] = '\0';
         realign_ext_present = true;
     }
 
-    /* detect vdbcahde extension */
+    /* detect vdbcache extension */
     else if (uri_size > vdbcache_ext_size && memcmp
-        (&uri[uri_size - vdbcache_ext_size], vdbcache_ext, vdbcache_ext_size) == 0)
+        (&uri[uri_size - vdbcache_ext_size], vdbcache_ext, vdbcache_ext_size)
+        == 0)
     {
         vdbcache_ext_present = true;
+    }
+    /* detect sra extensions */
+    else if (uri_size > xSra->size && memcmp
+        (&uri[uri_size - xSra->size], xSra->addr, xSra->size) == 0)
+    {
+        q = eQualFull;
+    }
+    else if (uri_size > xNoqual->size && memcmp
+        (&uri[uri_size - xNoqual->size], xNoqual->addr, xNoqual->size)
+        == 0)
+    {
+        q = eQualNo;
+    }
+    else if (uri_size > xSraLite->size && memcmp
+        (&uri[uri_size - xSraLite->size], xSraLite->addr, xSraLite->size)
+        == 0)
+    {
+        q = eQualNo;
     }
 
     for ( i = anchor = 0, total = count = 0; i < uri_size; ++ total, ++ count, i += bytes )
@@ -2061,6 +2098,12 @@ rc_t VPathParseInt ( VPath * self, char * uri, size_t uri_size,
         break;
     }
 
+    if ((self->path_type == vpFullPath || self->path_type == vpRelPath)
+        && q != eQualLast)
+    {
+        VPathSetQuality(self, q);
+    }
+
     return 0;
 }
 
@@ -2108,9 +2151,6 @@ rc_t VPathMakeFromVText ( VPath ** ppath, const char * path_fmt, va_list args )
 
             /* parse into portions */
             rc = VPathParse ( path, buffer . base, ( size_t ) buffer . elem_count - 1 );
-
-            if ( rc == 0 )
-                rc = VPathSetQuality ( path, eQualLast );
 
             if ( rc == 0 )
             {
@@ -2357,6 +2397,16 @@ LIB_EXPORT rc_t CC VFSManagerExtractAccessionOrOID ( const VFSManager * self,
             const char * end = path . addr + path . size;
 
             bool isRun = false;
+            VQuality quality = eQualLast;
+
+            const String * xNoqual  = VFSManagerExtNoqualOld(NULL);
+            const String * xSraLite = VFSManagerExtNoqual   (NULL);
+#define NOQUAL  7 /* .noqual
+                     1234567 */
+#define SRALITE 8 /* .sralite
+                     12345678 */
+            assert(xNoqual  && xNoqual ->size == NOQUAL
+                && xSraLite && xSraLite->size == SRALITE);
 
             switch ( orig -> path_type )
             {
@@ -2415,6 +2465,23 @@ LIB_EXPORT rc_t CC VFSManagerExtractAccessionOrOID ( const VFSManager * self,
                          strcase_cmp ( ".wgs", 4, sep, 4, 4 ) == 0 )
                     {
                         end = sep;
+                        quality = eQualFull;
+                        continue;
+                    }
+                case NOQUAL:
+                    if ( strcase_cmp ( xNoqual->addr, xNoqual->size,
+                        sep, xNoqual->size, xNoqual->size ) == 0 )
+                    {
+                        end = sep;
+                        quality = eQualNo;
+                        continue;
+                    }
+                case SRALITE:
+                    if ( strcase_cmp ( xSraLite->addr, xNoqual->size,
+                        sep, xNoqual->size, xSraLite->size ) == 0 )
+                    {
+                        end = sep;
+                        quality = eQualNo;
                         continue;
                     }
                 case 9:
@@ -2433,13 +2500,21 @@ LIB_EXPORT rc_t CC VFSManagerExtractAccessionOrOID ( const VFSManager * self,
             rc = VPathMakeFromText ( acc_or_oid, "%.*s", ( uint32_t ) ( end - start ), start );
             if ( rc == 0 )
             {
-                const VPath * vpath = * acc_or_oid;
-                if ( VPathIsAccessionOrOID ( vpath ) )
-                    return 0;
+                const VPath * vpath = NULL;
+                assert(acc_or_oid);
+                vpath = *acc_or_oid;
 
-                VPathRelease ( vpath );
+                rc = VPathSetQuality ( *acc_or_oid, quality );
 
-                rc = RC ( rcVFS, rcPath, rcConstructing, rcParam, rcIncorrect );
+                if ( rc == 0 ) {
+                    if ( VPathIsAccessionOrOID ( vpath ) )
+                        return 0;
+
+                    VPathRelease ( vpath );
+
+                    rc = RC (
+                        rcVFS, rcPath, rcConstructing, rcParam, rcIncorrect );
+                }
             }
         }
 
@@ -3784,10 +3859,6 @@ LIB_EXPORT rc_t CC VFSManagerMakeOidPath ( const VFSManager * self,
              HACK O' MATIC
  */
 
-#include <vfs/path-priv.h>
-#include <vfs/manager-priv.h>
-#include <kfs/directory.h>
-
 /* MakeDirectoryRelative
  *  apparently the idea was to interpret "posix_path" against
  *  "dir" to come up with a stand-alone path that could be used
@@ -4579,4 +4650,3 @@ LIB_EXPORT VQuality CC VPathGetQuality(const VPath * self) {
     else
         return self->quality;
 }
-

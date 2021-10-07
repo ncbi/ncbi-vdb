@@ -83,8 +83,9 @@
 #include <klib/time.h> 
 #include <klib/vector.h>
 
-#include <vdb/vdb-priv.h> /* VDBManagerGetQuality */
+#include <vdb/vdb-priv.h> /* VDBManagerGetQualityString */
 
+#include "manager-priv.h" /* VFSManagerExtNoqual */
 #include "path-priv.h"
 #include "resolver-priv.h"
 
@@ -570,8 +571,11 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
     size_t ram_page_count = ( cache_amount + page_size - 1 ) / page_size;
     bool ram_only = true;
 
-    if ( cps -> debug )
-    {
+    /* give the user/tool an opportunity to define a definitve cache-location
+    via this environment-variable */
+    const char * definitve_cache_location = getenv ( "NCBI_TMP_CACHE" );
+
+    if ( cps -> debug ) {
         const String * uri = NULL;
         rc_t rc1 = VPathMakeUri ( path, &uri );
         
@@ -580,72 +584,62 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
         KOutMsg( "cache.page_size ........ %d bytes\n", page_size );
         KOutMsg( "cache.amount ........... %d MB\n", cps -> cache_amount_mb );
         KOutMsg( "cache.page_count ....... %d\n", ram_page_count );
-        KOutMsg( "cache_loc (resolver) ... %s\n", cache_loc == NULL ? "NULL" : cache_loc );
-        if ( rc1 == 0 )
-        {
-            if ( uri != NULL )
-                KOutMsg( "uri : %S\n", uri );
-            else
-                KOutMsg( "uri : NULL\n" );
-            
-            StringWhack( uri );
-        }
+        KOutMsg( "cache_loc (resolver) ... %s\n", NULL == cache_loc ? "NULL" : cache_loc );
+        KOutMsg( "definitive location .... %s\n", NULL == definitve_cache_location ? "NULL" : definitve_cache_location );
+        KOutMsg( "uri .................... %s\n", NULL == uri || 0 != rc1 ? "NULL" : uri -> addr );
+        if ( 0 == rc1 ) { StringWhack( uri ); }
     }
     
-    if ( cps -> use_file_cache )
-    {
+    if ( cps -> use_file_cache || NULL != definitve_cache_location ) {
         char location[ 4096 ];
         bool remove_on_close = false;
         bool promote = cps -> promote;
+
         location[ 0 ] = 0;
     
         if ( cps -> debug )
             KOutMsg( "use file-cache\n" );
 
         /* if we have been given a location, we use it. CacheTeeV3 can deal with invalid/unreachable ones! */
-        if ( cache_loc != NULL )
-        {
+        if ( NULL != cache_loc && NULL == definitve_cache_location ) {
             rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
                                          "%s", cache_loc );
-        }
-        
+        } else {
         /* if we have no given location or it does not exist or it is not read/writable for us */
-        if ( location[ 0 ] == 0 )
-        {
             const String * id = make_id( path );
-            if ( id != NULL )
-            {
+            if ( NULL != id ) {
                 remove_on_close = true;
                 promote = false;
                 
-                if ( cps -> temp_cache[ 0 ] != 0 )
-                {
+                if ( NULL != definitve_cache_location ) {
+                    /* use definitve location ( do not try promotion, remove-on-close ) */
+                    rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
+                                                 "%s/%s.sra",
+                                                 definitve_cache_location, id -> addr );
+                }
+                else if ( cps -> temp_cache[ 0 ] != 0 ) {
                     /* we have user given temp cache - location ( do not try promotion, remove-on-close ) */
                     rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
                                                  "%s/%s.sra", cps -> temp_cache, id -> addr );
-                }
-                else
-                {
-                    /* fallback to hardcoded path location ( do not try promotion, remove-on-close */
+                } else {
+                    /* fallback to hardcoded path location ( do not try promotion, remove-on-close ) */
                     rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
                                                  "%s/%s.sra",
-                                                 get_fallback_cache_location(),
-                                                 id -> addr );
+                                                 get_fallback_cache_location(), id -> addr );
                 }
                 StringWhack ( id );
-            }
-            else
+            } else {
                 rc = SILENT_RC( rcVFS, rcPath, rcReading, rcFormat, rcInvalid );
+            }
         }
         
-        if ( cps -> debug )
-        {
+        if ( cps -> debug ) {
             KOutMsg( "cache.remove-on-close ... %s\n", remove_on_close ? "Yes" : "No" );
             KOutMsg( "cache.try-promote ....... %s\n", promote ? "Yes" : "No" );            
             KOutMsg( "cache location: '%s', rc = %R\n", location, rc );
         }
         
-        if ( rc == 0 )
+        if ( 0 == rc ) {
             /* check if location is writable... */
             rc = KDirectoryMakeKCacheTeeFile_v3 ( dir,
                                                   &temp_file,
@@ -656,14 +650,17 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
                                                   promote,
                                                   remove_on_close,
                                                   "%s", location );
-        ram_only = ( rc != 0 );
+        }
+        if ( 0 != rc ) {
+            ram_only = true;
+            if ( cps -> debug ) { KOutMsg( "KDirectoryMakeKCacheTeeFile_v3() -> %R\n", rc ); }
+        } else {
+            ram_only = false;
+        }
     }
     
-    if ( ram_only )
-    {
-        if ( cps -> debug )
-            KOutMsg( "use no file-cache\n" );
-
+    if ( ram_only ) {
+        if ( cps -> debug ) { KOutMsg( "use RAM only\n" ); }
         rc = KDirectoryMakeKCacheTeeFile_v3 ( dir,
                                               &temp_file,
                                               *cfp,
@@ -675,11 +672,9 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
                                               "" );
     }
 
-    if ( cps -> debug )
-        KOutMsg( "}\n" );
-    
-    if ( rc == 0 )
-    {
+    if ( cps -> debug ) { KOutMsg( "}\n" ); }    
+
+    if ( 0 == rc ) {
         KFileRelease ( * cfp );
         * cfp = temp_file;
     }
@@ -4317,16 +4312,18 @@ rc_t CC VFSManagerSetAdCaching(VFSManager * self, bool enabled)
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 && !rc) { rc = rc2; } obj = NULL; } while (false)
 
-static bool VFSManagerCheckEnvAndAdImpl(const VFSManager * self,
-    const VPath * inPath, const VPath ** outPath, bool checkEnv)
+static bool VFSManagerCheckEnvAndAdImplNoqual(const VFSManager * self,
+    const VPath * inPath, const VPath ** outPath, bool checkEnv,
+    const String * xNoqual)
 {
     /* *outPath can be not NULL: in this case it's just reset to a new value;
                                  DON'T RELEASE THE OLD ONE! */
 
-    /* if path = "/S/S.sra";
+    /* If path = "/S/S.sra";
        or path = "/S/S_dbGaP-NNN.sra"
        then inPath  is S
-            outPath is /S/S*.sra */
+            outPath is /S/S*.sra.
+     The same for *.noqual */
     bool found = false;
     rc_t rc = 0;
     const KNgcObj * ngc = NULL;
@@ -4334,9 +4331,15 @@ static bool VFSManagerCheckEnvAndAdImpl(const VFSManager * self,
     String spath;
     const char *slash = NULL;
     char rs[PATH_MAX] = "";
+    int j = 0;
 
-    VQuality quality = VDBManagerGetQuality(NULL);
-    assert(quality >= 0);
+    const char * quality = NULL;
+    VDBManagerGetQualityString(NULL, &quality);
+    assert(quality);
+    if (quality == NULL || quality[0] == '\0')
+        quality = "RZ";
+
+    assert(xNoqual);
 
     if (outPath == NULL)
         return RC(rcVFS, rcPath, rcResolving, rcParam, rcNull);
@@ -4370,24 +4373,13 @@ static bool VFSManagerCheckEnvAndAdImpl(const VFSManager * self,
         slash = rs;
 
     rc = KNgcObjMakeFromCmdLine(&ngc);
-    if (ngc != NULL) {
+    if (ngc != NULL)
         rc = KNgcObjGetProjectId(ngc, &projectId);
-        if (rc == 0) {
-            if (quality < eQualLast
-                && (quality == eQualDefault || quality == eQualNo))
-            {
-                if ((KDirectoryPathType(self->cwd, "%s/%s_dbGaP-%d.noqual.sra",
-                    rs, slash, projectId) & ~kptAlias) == kptFile)
-                {
-                    rc_t r = VFSManagerMakePath(self, (VPath **)outPath,
-                        "%s/%s_dbGaP-%d.noqual.sra", rs, slash, projectId);
-                    if (r == 0)
-                        found = true;
-                }
-            }
-            if (!found && (quality == eQualDefault || quality == eQualFull
-                || quality >= eQualLast))
-            {
+
+    /* Check according to user quality preferences. */
+    for (j = 0; quality[j] != '\0' && !found; ++j) {
+        if (quality[j] == 'R') {
+            if (rc == 0 && ngc != NULL && !found) {
                 if ((KDirectoryPathType(self->cwd, "%s/%s_dbGaP-%d.sra",
                     rs, slash, projectId) & ~kptAlias) == kptFile)
                 {
@@ -4397,41 +4389,48 @@ static bool VFSManagerCheckEnvAndAdImpl(const VFSManager * self,
                         found = true;
                 }
             }
-        }
-    }
-
-    if (!found) {
-        if (quality < eQualLast
-            && (quality == eQualDefault || quality == eQualNo))
-        {
-            if ((KDirectoryPathType(self->cwd, "%s/%s.noqual.sra", rs, slash) &
-                ~kptAlias) == kptFile)
-            {
-                rc_t r = VFSManagerMakePath(self, (VPath**)outPath,
-                    "%s/%s.noqual.sra", rs, slash);
-                if (r != 0)
+            if (rc == 0 && !found) {
+                if ((KDirectoryPathType(self->cwd, "%s/%s.sra", rs, slash) &
+                    ~kptAlias) == kptFile)
+                {
+                    rc_t r = VFSManagerMakePath(self, (VPath **)outPath,
+                        "%s/%s.sra", rs, slash);
+                    if (r == 0)
+                        found = true;
                     rc = 0;
-                else {
-                    rc = VPathSetQuality((VPath*)outPath, eQualNo);
-                    found = true;
                 }
             }
         }
-        if (!found && (quality == eQualDefault || quality == eQualFull
-            || quality >= eQualLast))
-        {
-            if ((KDirectoryPathType(self->cwd, "%s/%s.sra", rs, slash) &
-                ~kptAlias) == kptFile)
-            {
-                rc_t r = VFSManagerMakePath(self, (VPath **)outPath,
-                    "%s/%s.sra", rs, slash);
-                if (r == 0)
-                    found = true;
-                rc = 0;
+        if (quality[j] == 'Z') {
+            if (rc == 0 && ngc != NULL && !found) {
+                if ((KDirectoryPathType(self->cwd, "%s/%s_dbGaP-%d%.*s",
+                     rs, slash, projectId, xNoqual->size, xNoqual->addr)
+                    & ~kptAlias) == kptFile)
+                {
+                    rc_t r = VFSManagerMakePath(self, (VPath **)outPath,
+                        "%s/%s_dbGaP-%d%.*s",
+                        rs, slash, projectId, xNoqual->size, xNoqual->addr);
+                    if (r == 0)
+                        found = true;
+                }
+            }
+            if (rc == 0 && !found) {
+                if ((KDirectoryPathType(self->cwd, "%s/%s%.*s",
+                     rs, slash, xNoqual->size, xNoqual->addr) &
+                    ~kptAlias) == kptFile)
+                {
+                    rc_t r = VFSManagerMakePath(self, (VPath**)outPath,
+                        "%s/%s%.*s", rs, slash, xNoqual->size, xNoqual->addr);
+                    if (r != 0)
+                        rc = 0;
+                    else {
+                        rc = VPathSetQuality((VPath*)outPath, eQualNo);
+                        found = true;
+                    }
+                }
             }
         }
     }
-
     /* TODO: add processing of eQualFullOnly and eQualDblOnly */
 
     if (found) {
@@ -4464,6 +4463,19 @@ static bool VFSManagerCheckEnvAndAdImpl(const VFSManager * self,
     RELEASE(KNgcObj, ngc);
 
     return found;
+}
+
+static bool VFSManagerCheckEnvAndAdImpl(const VFSManager * self,
+    const VPath * inPath, const VPath ** outPath, bool checkEnv)
+{
+    if (VFSManagerCheckEnvAndAdImplNoqual(self, inPath, outPath,
+        checkEnv, VFSManagerExtNoqual(NULL)))
+    {
+        return true;
+    }
+    else
+        return VFSManagerCheckEnvAndAdImplNoqual(self, inPath, outPath,
+            checkEnv, VFSManagerExtNoqualOld(NULL));
 }
 
 /* CheckEnvAndAd

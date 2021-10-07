@@ -35,6 +35,7 @@ include $(TOP)/build/Makefile.config
 # default
 #
 SUBDIRS =       \
+    vfs         \
     ktst        \
     cc          \
     ext         \
@@ -58,7 +59,6 @@ SUBDIRS =       \
     ngs-python  \
     kns         \
     schema      \
-    vfs         \
     ngs-java    \
     install     \
 

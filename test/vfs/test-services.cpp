@@ -89,6 +89,7 @@ TEST_CASE ( TestKServiceAddId ) {
 TEST_CASE(TestKSrvResponseGetLocation) {
     KService * s = NULL;
     REQUIRE_RC(KServiceMake(&s));
+    REQUIRE_RC(KServiceResolve(s, false, true));
     REQUIRE_RC(KServiceAddId(s, "SRR850901"));
     REQUIRE_RC(KServiceSetFormat(s, "all"));
     const KSrvResponse * r = NULL;
@@ -212,6 +213,7 @@ TEST_CASE(TestKSrvResponseGetLocationLocalInAD) {
 
     KService * s = NULL;
     REQUIRE_RC(KServiceMakeWithMgr(&s, NULL, NULL, NULL));
+    REQUIRE_RC(KServiceResolve(s, false, true));
     REQUIRE_RC(KServiceAddId(s, acc));
 
     const KSrvResponse * r = NULL;
@@ -269,6 +271,7 @@ TEST_CASE(TestKSrvResponseGetLocationLocalInUserRepo) {
     REQUIRE_RC(VFSManagerMakeLocal(&mgr, kfg));
     KService * s = NULL;
     REQUIRE_RC(KServiceMakeWithMgr(&s, mgr, NULL, kfg));
+    REQUIRE_RC(KServiceResolve(s, false, true));
     REQUIRE_RC(KServiceAddId(s, acc));
     const KSrvResponse * r = NULL;
     REQUIRE_RC(KServiceNamesQuery(s, 0, &r));
@@ -322,6 +325,7 @@ TEST_CASE(TestKSrvResponseGetLocationCacheInAD) {
 
     KService * s = NULL;
     REQUIRE_RC(KServiceMakeWithMgr(&s, mgr, NULL, NULL));
+    REQUIRE_RC(KServiceResolve(s, false, true));
     REQUIRE_RC(KServiceAddId(s, acc));
 
     const KSrvResponse * r = NULL;

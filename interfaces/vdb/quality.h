@@ -34,14 +34,14 @@ extern "C" {
 #endif
 
 
-typedef uint32_t VQuality;
+typedef int32_t VQuality;
 typedef enum { /* Run Quality */
+    eQualFullOnly = -2,/* use full quality run only, no double-quality run */
+    eQualDblOnly,      /* use double quality run only */
     eQualDefault, /* default: in most cases: 'no'- if found, 'full' otherwise */
-    eQualNo,      /* no-quality = synthetic */
     eQualFull,    /* full quality (can be delivered by full-quality-only run
                                                        or double-quality run) */
-    eQualFullOnly,/* use full quality run only, no double-quality run */
-    eQualDblOnly, /* use double quality run only */
+    eQualNo,      /* no-quality = synthetic */
     eQualLast
 } EQuality;
 

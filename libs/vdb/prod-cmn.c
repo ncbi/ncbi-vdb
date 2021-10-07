@@ -530,7 +530,7 @@ rc_t VFunctionProdCallNullaryRowFunc(VFunctionProd *self,
 #if PROD_NAME
         rc = VBlobNew ( &blob, -INT64_MAX - 1, INT64_MAX, self->dad.name );
 #else
-        rc = VBlobNew ( &blob, -INT64_MAX - 1, INT64_MAX, "VFunctionProdCallDetRowFunc" );
+        rc = VBlobNew ( &blob, -INT64_MAX - 1, INT64_MAX, "VFunctionProdCallNullaryRowFunc" );
 #endif
         if (rc == 0) {
             blob->byte_order = vboNative;
