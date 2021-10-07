@@ -774,7 +774,9 @@ rc_t CC KMain(int argc, char* argv[])
     if (rc) return rc;
 
     rc = KDirectoryRemove(DIR, true, "%s", fname);
+#ifndef WINDOWS
     if (rc) return rc;
+#endif
 
     rc = KFileRelease(BACKING);
     if (rc) return rc;
