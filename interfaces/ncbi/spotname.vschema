@@ -332,7 +332,8 @@ table NCBI:SRA:tbl:skeyname #3.0.2 = INSDC:SRA:tbl:spotname #1.1, NCBI:SRA:tbl:s
 {
     // spot_name
     //  retrieve from hard column
-    ascii out_spot_name = .SPOT_NAME;
+    ascii out_spot_name = .SPOT_NAME
+                        | .RAW_NAME;
 
     // name_fmt
     //  retrieve from hard column or reverse lookup through index
@@ -361,6 +362,9 @@ table NCBI:SRA:tbl:skeyname #3.0.2 = INSDC:SRA:tbl:spotname #1.1, NCBI:SRA:tbl:s
     // .NAME_FMT gets either empty strings or unindexed but recognized strings
     physical column < ascii > zip_encoding .NAME_FMT
         = NCBI:SRA:extract_name_fmt < 'skey' > ( NAME, in_spot_name_tok );
+
+    // unparsed spot name
+    extern column < ascii > zip_encoding RAW_NAME;
 
     // .X, .Y, .T and .L get either empty coordinate or proper coordinate
     INSDC:coord:val in_name_x_coord
