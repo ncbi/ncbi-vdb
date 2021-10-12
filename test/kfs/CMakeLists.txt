@@ -1,6 +1,6 @@
 add_compile_definitions( __mod__="test/kfs" )
 
-if( "linux" STREQUAL ${OS} ) # on TC/Mac, has no permissions to read $HOME
+if( NOT WIN32 )
     add_executable( test-kfs-kdf kdf )
     target_link_libraries( test-kfs-kdf  ${COMMON_LIBS_READ} )
     add_test( NAME Test_KFS_kdf COMMAND test-kfs-kdf )
