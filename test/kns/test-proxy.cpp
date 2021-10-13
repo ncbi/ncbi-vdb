@@ -60,7 +60,7 @@ public:
         const char * testBin ( t -> argv [ 0 ] );
         const char * file = strrchr ( testBin, '/' );
         cmd << string ( testBin, file - testBin )
-            << "/../bin/test-proxy-with-env data/test-proxy/" << testcase;
+            << "/test-kns-proxy-with-env data/test-proxy/" << testcase;
 
 //std::cerr<<cmd . str ()<<"\n";
 

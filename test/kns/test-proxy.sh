@@ -10,6 +10,7 @@ output=$($test_proxy)
 res=$?
 if [ "$res" != "0" ];
 	then echo "test-proxy failed, res=$res output=$output"
+	exit 1
 fi
 
 echo ... test-proxy: END
