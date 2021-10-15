@@ -328,7 +328,7 @@ table NCBI:SRA:tbl:skeyname #2.0.2 = NCBI:SRA:tbl:skeyname_nocol #2.0.2
 	 */
 };
 
-table NCBI:SRA:tbl:skeyname #3.0.2 = INSDC:SRA:tbl:spotname #1.1, NCBI:SRA:tbl:spotcoord #1
+table NCBI:SRA:tbl:skeyname #3.1 = INSDC:SRA:tbl:spotname #1.1, NCBI:SRA:tbl:spotcoord #1
 {
     // spot_name
     //  retrieve from hard column

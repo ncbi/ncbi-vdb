@@ -640,7 +640,7 @@ table NCBI:SRA:tbl:sra #1.0.4 = NCBI:SRA:tbl:sra_nopos #1.0.4, NCBI:SRA:tbl:pos 
  */
 table NCBI:SRA:tbl:sra_nopos #2.1.4
     = INSDC:SRA:tbl:sra #1.0.4
-    , NCBI:SRA:tbl:skeyname #3.0.2
+    , NCBI:SRA:tbl:skeyname #3.1
     , NCBI:SRA:tbl:spotdesc #1.1
     , NCBI:SRA:tbl:stats #1.2.1
 {
@@ -718,7 +718,7 @@ table NCBI:SRA:tbl:sra_nopos #2.1.4
  */
 table NCBI:SRA:tbl:sra #2.1.4
     = INSDC:SRA:tbl:sra #1.0.4
-    , NCBI:SRA:tbl:skeyname #3.0.2
+    , NCBI:SRA:tbl:skeyname #3.1
     , NCBI:SRA:tbl:spotdesc #1.1
     , NCBI:SRA:tbl:stats #1.2.1
     , NCBI:SRA:tbl:pos #1.0.1
