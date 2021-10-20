@@ -41,7 +41,7 @@
 #include "../../libs/schema/ParseTree.hpp"
 
 using namespace ncbi::SchemaParser;
-#include "../../libs/schema/schema-tokens.h"
+#include "../../libs/schema/schema-grammar.hpp"
 
 using namespace std;
 using namespace ncbi::NK;

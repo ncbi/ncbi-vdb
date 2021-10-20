@@ -29,7 +29,7 @@
 #include <kns/manager.h> /* KNSManagerRelease */
 #include <ktst/unit_test_suite.hpp> // TestCase
 
-#include "test-proxy.h" // KNSManagerMakeKEndPointArgsIterator
+#include "../../libs/kns/http-priv.h"
 
 #define RELEASE( type, obj ) do { rc_t rc2 = type##Release ( obj ); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while ( false )

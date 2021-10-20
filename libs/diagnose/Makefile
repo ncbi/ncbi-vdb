@@ -22,73 +22,7 @@
 #
 # ===========================================================================
 
-default: all
-
 TOP ?= $(abspath ../..)
 MODULE = libs/diagnose
 
-INT_LIBS = \
-
-EXT_LIBS = \
-	libdiagnose
-
-ALL_LIBS = \
-	$(INT_LIBS) \
-	$(EXT_LIBS)
-
-OBJFILES = \
-	$(KDIAGNOSE_OBJ)
-
 include $(TOP)/build/Makefile.env
-
-#-------------------------------------------------------------------------------
-# outer targets
-#
-all std: makedirs compile
-	@ $(MAKE_CMD) $(TARGDIR)/std
-
-$(INT_LIBS): makedirs
-	@ $(MAKE_CMD) $(ILIBDIR)/$@
-
-$(EXT_LIBS): makedirs
-	@ $(MAKE_CMD) $(LIBDIR)/$@
-
-.PHONY: all std $(ALL_LIBS)
-
-#-------------------------------------------------------------------------------
-# std
-#
-$(TARGDIR)/std: \
-	$(addprefix $(ILIBDIR)/,$(INT_LIBS)) \
-	$(addprefix $(LIBDIR)/,$(EXT_LIBS))
-
-.PHONY: $(TARGDIR)/std
-
-#-------------------------------------------------------------------------------
-# clean
-#
-clean: stdclean
-
-.PHONY: clean
-
-#-------------------------------------------------------------------------------
-# diagnose
-#
-$(LIBDIR)/libdiagnose: $(addprefix $(LIBDIR)/libdiagnose.,$(LIBEXT))
-
-KDIAGNOSE_SRC = \
-	diagnose \
-	endpoint \
-
-KDIAGNOSE_OBJ = \
-	$(addsuffix .$(LOBX),$(KDIAGNOSE_SRC))
-
-$(LIBDIR)/libdiagnose.$(SHLX): $(KDIAGNOSE_OBJ)
-	$(LD) --dlib --vers $(SRCDIR)/../ncbi-vdb/libncbi-vdb.vers -o $@ $^
-
-$(LIBDIR)/libdiagnose.$(LIBX): $(KDIAGNOSE_OBJ)
-	$(LD) --slib --vers $(SRCDIR)/../ncbi-vdb/libncbi-vdb.vers -o $@ $^
-
-compile: stdcompile
-
-$(TARGDIR)/compile: $(OBJFILES)

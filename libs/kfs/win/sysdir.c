@@ -122,7 +122,7 @@ int utf16_utf32 ( uint32_t *dst, const wchar_t *begin, const wchar_t *end )
  *    return == 0 means insufficient output
  *    return < 0 means bad character or bad argument
  */
-static 
+static
 int utf32_utf16 ( wchar_t *begin, wchar_t *end, uint32_t ch )
 {
     if (ch < 0x10000)
@@ -263,7 +263,7 @@ rc_t KSysDirEnumInit ( KSysDirEnum *self, const wchar_t *path )
 
     PLOGERR ( klogInfo,
              ( klogInfo, rc, "error FindFirstFileW - $(E) - $(C)",
-              "E=%!,C=%u", err, err ) ); 
+              "E=%!,C=%u", err, err ) );
 
     return rc;
 }
@@ -308,7 +308,7 @@ const wchar_t *KSysDirEnumNext ( const KSysDirEnum *cself )
                 case '.':
                     if ( self->fd.cFileName[ 2 ] == 0 )
                         continue;
-                    break; 
+                    break;
                 }
             }
             return self->fd.cFileName;
@@ -364,7 +364,7 @@ rc_t KSysDirListingInit ( KSysDirListing *self, const wchar_t *path, const KDire
                 if ( ! ( * f ) ( dir, utf8_name, data ) )
                     continue;
             }
-            
+
             rc = VNamelistAppend( self, utf8_name );
             if ( rc != 0 )
             {
@@ -435,7 +435,7 @@ rc_t translate_file_error( DWORD error, enum RCContext ctx )
         case ERROR_BUFFER_OVERFLOW :
         case ERROR_FILENAME_EXCED_RANGE :
             rc = RC ( rcFS, rcDirectory, ctx, rcPath, rcExcessive );
-        
+
         default : RC ( rcFS, rcDirectory, ctx, rcNoObj, rcUnknown );
     }
     return rc;
@@ -455,7 +455,7 @@ static rc_t print_error_for( DWORD error, const wchar_t * path, const char * fun
     buffer[ len ] = 0;
     PLOGERR ( level,
               ( level, rc, "error $(F) - $(E) - $(C) for $(D)",
-                "F=%s,E=%!,C=%u,D=%s", function, error, error, buffer ) ); 
+                "F=%s,E=%!,C=%u,D=%s", function, error, error, buffer ) );
 #endif
     return rc;
 }
@@ -471,7 +471,7 @@ static void wchar_2_char( const wchar_t * path, char * buffer, size_t buflen )
 
 
 static
-uint32_t KSysDirPathTypeFromFindData ( WIN32_FIND_DATA *find_data, 
+uint32_t KSysDirPathTypeFromFindData ( WIN32_FIND_DATA *find_data,
                                        const wchar_t * path,
                                        const uint32_t type )
 {
@@ -613,7 +613,7 @@ uint32_t KSysDirFullPathType ( const wchar_t *path )
 		}
 		return path_type;
 	}
-	
+
     /* let the file system tell us */
     return KSysDirFullFSPathType ( path );
 }
@@ -664,7 +664,7 @@ rc_t KSysDirCanonPath ( const KSysDir *self, enum RCContext ctx, wchar_t *path, 
         /* detect special sequences */
         switch ( src - last )
         {
-        case 1: 
+        case 1:
             if ( last [ 1 ] == '\\' && last != path ) /* keep leading double slash */
             {
                 /* "\\\\" -> "\\" */
@@ -707,7 +707,7 @@ rc_t KSysDirCanonPath ( const KSysDir *self, enum RCContext ctx, wchar_t *path, 
 
         /* move destination ahead */
         dst += src - last;
-        
+
         /* if we're done, go */
         if ( src == end )
             break;
@@ -774,7 +774,7 @@ rc_t KSysDirMakeSimulatedFSPath ( const KSysDir* self, enum RCContext ctx, bool 
     {
     /* in the case the path is a absolute path for windows (starting with "C:" for instance)
         we completely ignore the path in self and use the given path only.
-        !!! except we are chrooted, in this case the given path is invalid 
+        !!! except we are chrooted, in this case the given path is invalid
         ( no abs. path for chrooted dir's ) */
         if ( self -> root != 0 )
             return RC ( rcFS, rcDirectory, ctx, rcPath, rcInvalid );
@@ -934,7 +934,7 @@ LIB_EXPORT rc_t KSysDirOSPath ( const KSysDir *self,
  */
 static
 rc_t KSysDirInit ( KSysDir *self, enum RCContext ctx, uint32_t dad_root,
-                   const wchar_t *path, size_t path_size, uint32_t path_length, 
+                   const wchar_t *path, size_t path_size, uint32_t path_length,
                    bool update, bool chroot );
 
 /* KSysDirList
@@ -973,7 +973,7 @@ rc_t CC KSysDirList ( const KSysDir *self, KNamelist **listp,
                 full . path [ len_in_chars + 2 ] = '*';
                 full . path [ len_in_chars + 3 ] = 0;
 
-                rc = VNamelistMake ( &list, 5 ); 
+                rc = VNamelistMake ( &list, 5 );
                 if ( rc == 0 )
                 {
                     rc = KSysDirListingInit( list, full.path, & full.dad, f, data );
@@ -1060,7 +1060,7 @@ rc_t KSysDirVisitDir ( KSysDirVisitData *pb )
     if ( ( path_size + 3 * sizeof pb->dir.path[ 0 ] ) >= sizeof pb->dir.path )
     {
         return RC( rcFS, rcDirectory, rcVisiting, rcPath, rcExcessive );
-    } 
+    }
     /* append '*.*' to make KSysDirEnumInit work under Windows! */
     pb -> dir . path [ path_length + 0 ] = '*';
     pb -> dir . path [ path_length + 1 ] = '.';
@@ -1075,8 +1075,8 @@ rc_t KSysDirVisitDir ( KSysDirVisitData *pb )
         /* truncate the appended '*.*' to visit the entries */
         pb -> dir . path [ path_length ] = 0;
 
-        for ( name = KSysDirEnumNext( &listing ); 
-              name != NULL; 
+        for ( name = KSysDirEnumNext( &listing );
+              name != NULL;
               name = KSysDirEnumNext( &listing ) )
         {
             uint32_t type, name_length;
@@ -1102,7 +1102,7 @@ rc_t KSysDirVisitDir ( KSysDirVisitData *pb )
             }
 
             /* the callback-function expects the name as utf8 !!! */
-            wchar_cvt_string_copy ( temp_utf8_buffer, sizeof temp_utf8_buffer, 
+            wchar_cvt_string_copy ( temp_utf8_buffer, sizeof temp_utf8_buffer,
                                     name, name_size );
             rc = (*pb->f)( &pb->dir.dad, type, temp_utf8_buffer, pb->data );
             if ( rc != 0 )
@@ -1130,7 +1130,7 @@ rc_t KSysDirVisitDir ( KSysDirVisitData *pb )
 
 
 static
-rc_t Enumerate_DriveLetters( const KSysDir *self, 
+rc_t Enumerate_DriveLetters( const KSysDir *self,
 	rc_t ( CC * f ) ( KDirectory *dir, uint32_t type, const char *name, void *data ), void *data )
 {
 	rc_t rc = 0;
@@ -1178,7 +1178,7 @@ rc_t CC KSysDirVisit ( const KSysDir *self, bool recurse,
                 break;
             case kptFakeRoot:
 				return Enumerate_DriveLetters( self, f, data );
-				
+
 			/* call code to enumerate drives */
             default:
                 return RC( rcFS, rcDirectory, rcVisiting, rcPath, rcIncorrect );
@@ -1336,7 +1336,7 @@ rc_t CC KSysDirResolvePath ( const KSysDir *self, bool absolute,
 
     if ( rc == 0 )
     {
-        uint32_t i;    
+        uint32_t i;
         /* convert it back to utf8 */
         utf16_cvt_string_copy ( resolved, rsize, temp, temp_size );
 
@@ -1347,7 +1347,7 @@ rc_t CC KSysDirResolvePath ( const KSysDir *self, bool absolute,
             resolved[ 1 ] = tolower ( resolved [ 0 ] );
             resolved[ 0 ] = '/';
         }
-        
+
         /* convert backward to forward slashes */
         for ( i = 0; resolved[ i ]; ++ i )
         {
@@ -1439,7 +1439,7 @@ rc_t CC KSysDirResolveAlias ( const KSysDir *self, bool absolute,
             /* if not requesting absolute, make self relative */
             if( !absolute )
             {
-                rc = KSysDirRelativePath( self, rcResolving, self->path, 
+                rc = KSysDirRelativePath( self, rcResolving, self->path,
                                           temp.path, w_len );
                 if ( rc != 0 )
                     return rc;
@@ -1698,8 +1698,8 @@ rc_t KSysDirEmptyDir ( wchar_t *path, size_t path_max, bool force )
         path_length++;
         path_size += sizeof *path;
 
-        for ( leaf = KSysDirEnumNext( &list ); 
-              leaf != NULL; 
+        for ( leaf = KSysDirEnumNext( &list );
+              leaf != NULL;
               leaf = KSysDirEnumNext( &list ) )
         {
             size_t leaf_size;
@@ -1791,7 +1791,7 @@ rc_t KSysDirRemoveEntry ( wchar_t *path, size_t path_max, bool force )
             DWORD error = GetLastError();
 
             /* find out if the reason is that it is not empty and force = true --->
-               in this case delete all files and directories in it 
+               in this case delete all files and directories in it
                and then try again... */
             switch ( error )
             {
@@ -1947,7 +1947,7 @@ static
 rc_t KSysDirChangeAccess ( char *path, size_t path_max,
     uint32_t access, uint32_t mask, bool recurse );
 
-    
+
 static
 rc_t KSysDirChangeDirAccess ( char *path, size_t path_max,
     uint32_t access, uint32_t mask )
@@ -2116,7 +2116,7 @@ rc_t CC KSysDirSetAccess ( KSysDir *self, bool recurse,
  *  the callers are: KSysDirCreateParents() and KSysDirCreateDir()
  *  special on windows: path is wchar_t and we ignore access !!!
  *  TBD: translate access into a windows security descriptor...
- *       find out the other possible ERROR_* 's produced 
+ *       find out the other possible ERROR_* 's produced
  */
 static
 rc_t make_dir ( const wchar_t *path, uint32_t access )
@@ -2153,7 +2153,7 @@ rc_t check_and_make( wchar_t *path, uint32_t access )
 
 /* KSysDirCreateParents
  *  creates missing parent directories
- *  Windows special: path is wide-char, separator is back-slash, 
+ *  Windows special: path is wide-char, separator is back-slash,
  *  starts with drive-letter...
  */
 static
@@ -2311,7 +2311,7 @@ rc_t CC KSysDirCreateAlias ( KSysDir *self, uint32_t access, KCreateMode mode,
                     rc = translate_file_error( GetLastError (), rcCreating );
             }
             else
-                rc = RC ( rcFS, rcDirectory, rcCreating, rcMemory, rcExhausted ); 
+                rc = RC ( rcFS, rcDirectory, rcCreating, rcMemory, rcExhausted );
         }
     }
     return rc;
@@ -2382,7 +2382,7 @@ rc_t CC KSysDirOpenFileRead ( const KSysDir *self,
     rc_t rc = KSysDirMakePath( self, rcOpening, false, file_name, sizeof file_name, path, args );
     if ( rc == 0 )
     {
-        HANDLE file_handle = CreateFileW( file_name, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, 
+        HANDLE file_handle = CreateFileW( file_name, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
                                 OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL );
         if ( file_handle == INVALID_HANDLE_VALUE )
         {
@@ -2420,7 +2420,7 @@ rc_t CC KSysDirOpenFileWrite ( KSysDir *self,
     if ( rc == 0 )
     {
         DWORD dwDesiredAccess = update ? GENERIC_READ | GENERIC_WRITE : GENERIC_WRITE;
-        HANDLE file_handle = CreateFileW( file_name, dwDesiredAccess, FILE_SHARE_READ, NULL, 
+        HANDLE file_handle = CreateFileW( file_name, dwDesiredAccess, FILE_SHARE_READ, NULL,
                                 OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL );
 
         if ( file_handle == INVALID_HANDLE_VALUE )
@@ -2460,7 +2460,7 @@ rc_t CC KSysDirOpenFileSharedWrite ( KSysDir *self,
     if ( rc == 0 )
     {
         DWORD dwDesiredAccess = update ? GENERIC_READ | GENERIC_WRITE : GENERIC_WRITE;
-        HANDLE file_handle = CreateFileW( file_name, dwDesiredAccess, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, 
+        HANDLE file_handle = CreateFileW( file_name, dwDesiredAccess, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
                                 OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL );
 
         if ( file_handle == INVALID_HANDLE_VALUE )
@@ -2560,7 +2560,7 @@ rc_t CC KSysDirCreateFile ( KSysDir *self, KFile **f, bool update,
             /*
             PLOGERR ( klogErr,
                       ( klogErr, rc, "error CreateFileW - $(E) - $(C)",
-                        "E=%!,C=%u", error, error ) ); 
+                        "E=%!,C=%u", error, error ) );
             */
 
             /* Unix code has a special case when creating an empty file, which is
@@ -2635,7 +2635,7 @@ rc_t CC KSysDirSetFileSize ( KSysDir *self,
     rc_t rc = KSysDirMakePath ( self, rcUpdating, false, file_name, sizeof file_name, path, args );
     if ( rc == 0 )
     {
-        HANDLE file_handle = CreateFileW( file_name, GENERIC_READ | GENERIC_WRITE, 0, NULL, 
+        HANDLE file_handle = CreateFileW( file_name, GENERIC_READ | GENERIC_WRITE, 0, NULL,
                                 OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL );
         if ( file_handle != INVALID_HANDLE_VALUE )
         {
@@ -2703,7 +2703,7 @@ rc_t CC KSysDirOpenDirRead ( const KSysDir *self,
             rc = RC(rcFS, rcDirectory, rcOpening, rcMemory, rcExhausted );
         else
         {
-            rc = KSysDirInit ( sub, rcOpening, self -> root, dir_name, 
+            rc = KSysDirInit ( sub, rcOpening, self -> root, dir_name,
                                dir_size, dir_length, false, chroot );
             if ( rc == 0 )
             {
@@ -2753,7 +2753,7 @@ rc_t CC KSysDirOpenDirUpdate ( KSysDir *self,
             rc = RC( rcFS, rcDirectory, rcOpening, rcMemory, rcExhausted );
         else
         {
-            rc = KSysDirInit ( sub, rcOpening, self -> root, dir_name, 
+            rc = KSysDirInit ( sub, rcOpening, self -> root, dir_name,
                                dir_size, dir_length, true, chroot );
             if ( rc == 0 )
             {
@@ -2848,10 +2848,10 @@ rc_t change_item_date( wchar_t *path, LPFILETIME win_time, bool dir_flag )
     HANDLE file_handle;
 
     if ( dir_flag )
-        file_handle = CreateFileW( path, GENERIC_READ | GENERIC_WRITE, 0, NULL, 
+        file_handle = CreateFileW( path, GENERIC_READ | GENERIC_WRITE, 0, NULL,
                                    OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL );
     else
-        file_handle = CreateFileW( path, GENERIC_READ | GENERIC_WRITE, 0, NULL, 
+        file_handle = CreateFileW( path, GENERIC_READ | GENERIC_WRITE, 0, NULL,
                                    OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL );
     if ( file_handle == INVALID_HANDLE_VALUE )
     {
@@ -2898,8 +2898,8 @@ rc_t change_dir_date( wchar_t *path, size_t path_max, LPFILETIME win_time, bool 
     path_length++;
     path_size += sizeof *path;
 
-    for ( leaf = KSysDirEnumNext( &list ); 
-          leaf != NULL && rc == 0; 
+    for ( leaf = KSysDirEnumNext( &list );
+          leaf != NULL && rc == 0;
           leaf = KSysDirEnumNext( &list ) )
     {
         size_t leaf_size;
@@ -2954,7 +2954,7 @@ rc_t KSysDirChangeDate ( wchar_t *path, size_t path_max,
                    break;
     }
     return rc;
-}    
+}
 
 
 /*
@@ -3022,7 +3022,7 @@ KSysDir *CC KSysDirGetSysdir ( const KSysDir *cself )
  *  returns a 64-bit key pertinent only to the particular file
  *  system device holding that file.
  *
- *  It can be used as a form of sort key except that it is not 
+ *  It can be used as a form of sort key except that it is not
  *  guaranteed to be unique.
  *
  *  "locator" [ OUT ] - return parameter for file locator
@@ -3062,7 +3062,7 @@ rc_t CC KSysDirFilePhysicalSize_v1 ( const KSysDir_v1 *self,
 /* FileContiguous
  *  returns true if the file is "contiguous".  Chunked or sparse files are not
  *  contiguous while most data files are.  Virtual generated files would likely
- *  not be contiguous.  
+ *  not be contiguous.
  *
  *  "contiguous" [ OUT ] - return parameter for file contiguous
  *
@@ -3157,18 +3157,18 @@ const char *convert_wide_path ( const wchar_t *path, const size_t path_size )
 
 static
 rc_t KSysDirInit ( KSysDir *self, enum RCContext ctx, uint32_t dad_root,
-                   const wchar_t *path, size_t path_size, uint32_t path_length, 
+                   const wchar_t *path, size_t path_size, uint32_t path_length,
                    bool update, bool chroot )
 {
     rc_t rc;
     if ( path == NULL )
     {
-        rc = KDirectoryInit( &self->dad, (const KDirectory_vt*)&vtKSysDir, 
+        rc = KDirectoryInit( &self->dad, (const KDirectory_vt*)&vtKSysDir,
                             "KSysDir", NULL, update );
     }
     else
     {
-        rc = KDirectoryInit( &self->dad, (const KDirectory_vt*)&vtKSysDir, 
+        rc = KDirectoryInit( &self->dad, (const KDirectory_vt*)&vtKSysDir,
                              "KSysDir", convert_wide_path ( path, path_size ), update );
     }
 
@@ -3268,7 +3268,7 @@ LIB_EXPORT rc_t CC KDirectoryNativeDir ( KDirectory **dirp )
         }
         PLOGERR ( klogErr,
                   ( klogErr, rc, "error GetCurrentDirectoryW - $(E) - $(C)",
-                    "E=%!,C=%u", error, error ) ); 
+                    "E=%!,C=%u", error, error ) );
 
         * dirp = NULL;
     }

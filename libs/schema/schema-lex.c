@@ -1037,11 +1037,11 @@ static const flex_int16_t yy_rule_linenum[93] =
 
 #include "schema-lex.h"
 
-/* fake declarations to make the schema-tokens.h compile */
+/* fake declarations to make the schema-grammar.h compile */
 typedef struct ParseTree ParseTree;
 typedef struct ErrorReport ErrorReport;
 
-#include "schema-tokens.h"
+#include "schema-grammar.hpp"
 
 #define YY_USER_ACTION \
     yylloc->first_line = yylloc->last_line; \

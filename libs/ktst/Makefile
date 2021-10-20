@@ -22,72 +22,7 @@
 #
 # ===========================================================================
 
-
-default: std
-
 TOP ?= $(abspath ../..)
 MODULE = libs/ktst
 
-INT_LIBS = \
-    libktst
-
-ALL_LIBS = \
-	$(INT_LIBS)
-
-OBJFILES = \
-	$(TST_OBJ)
-
 include $(TOP)/build/Makefile.env
-
-#-------------------------------------------------------------------------------
-# outer targets
-#
-all std: makedirs compile
-	@ $(MAKE_CMD) $(TARGDIR)/std
-
-$(INT_LIBS): makedirs
-	@ $(MAKE_CMD) $(ILIBDIR)/$@
-
-.PHONY: all std $(ALL_LIBS)
-
-#-------------------------------------------------------------------------------
-# std
-#
-$(TARGDIR)/std: \
-	$(addprefix $(ILIBDIR)/,$(INT_LIBS))
-
-.PHONY: $(TARGDIR)/std
-
-#-------------------------------------------------------------------------------
-# clean
-#
-clean: stdclean
-
-.PHONY: clean
-
-#-------------------------------------------------------------------------------
-# testing framework
-#
-$(ILIBDIR)/libktst: $(addprefix $(ILIBDIR)/libktst.,$(LIBX))
-
-TST_SRC = \
-	testenv \
-    systestenv \
-	testcase \
-	testrunner
-
-TST_OBJ = \
-	$(addsuffix .$(LOBX),$(TST_SRC))
-
-$(ILIBDIR)/libktst.$(LIBX): $(TST_OBJ)
-	$(LP) --slib -o $@ $^ $(TST_LIB)
-
-compile: stdcompile
-
-$(TARGDIR)/compile: $(OBJFILES)
-
-#-------------------------------------------------------------------------------
-# fuzz
-#
-fuzz: std
-	cp $(addsuffix .$(LIBX),$(addprefix $(ILIBDIR)/,$(INT_LIBS))) $(FLIBDIR)/

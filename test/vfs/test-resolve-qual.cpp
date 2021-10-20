@@ -66,13 +66,13 @@ TEST_SUITE(TestResolveQualSuite)
 static bool servicesCacheDisabled = true;//VDBManagerGetQuality(NULL) == NULL;
 
 struct TRQFixture { TRQFixture() {
-    unsetenv((char*)ACC);
-    unsetenv(ENV_MAGIC_REMOTE);
-    unsetenv(ENV_MAGIC_REMOTE_VDBCACHE);
-    unsetenv(ENV_MAGIC_LOCAL);
-    unsetenv(ENV_MAGIC_LOCAL_VDBCACHE);
-    unsetenv(ENV_MAGIC_CACHE);
-    unsetenv(ENV_MAGIC_CACHE_VDBCACHE);
+    putenv((char*)ACC "=");
+    putenv(ENV_MAGIC_REMOTE "=");
+    putenv(ENV_MAGIC_REMOTE_VDBCACHE "=");
+    putenv(ENV_MAGIC_LOCAL "=");
+    putenv(ENV_MAGIC_LOCAL_VDBCACHE "=");
+    putenv(ENV_MAGIC_CACHE "=");
+    putenv(ENV_MAGIC_CACHE_VDBCACHE "=");
 } };
 
 class TRQHelper : protected ncbi::NK::TestCase {

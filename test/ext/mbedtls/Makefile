@@ -25,34 +25,6 @@
 default: runtests
 
 TOP ?= $(abspath ../../..)
-
 MODULE = test/ext/mbedtls
 
-TEST_TOOLS = \
-	test-mbedtls
-
 include $(TOP)/build/Makefile.env
-
-$(TEST_TOOLS): makedirs
-	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
-
-.PHONY: $(TEST_TOOLS)
-
-clean: stdclean
-
-#-------------------------------------------------------------------------------
-# test-mbedtls
-#
-TEST_MBEDTLS_SRC = \
-	test-mbedtls
-
-TEST_MBEDTLS_OBJ = \
-	$(addsuffix .$(OBJX),$(TEST_MBEDTLS_SRC))
-
-TEST_MBEDTLS_LIB = \
-	-skapp \
-    -sncbi-vdb \
-    -sktst
-
-$(TEST_BINDIR)/test-mbedtls: $(TEST_MBEDTLS_OBJ)
-	$(LP) --exe -o $@ $^ $(TEST_MBEDTLS_LIB)

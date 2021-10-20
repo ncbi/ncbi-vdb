@@ -30,10 +30,6 @@
 #include "kdbfmt-priv.h"
 #include "dbmgr-priv.h"
 
-#include <krypto/key.h>
-#include <krypto/encfile.h>
-#include <krypto/wgaencrypt.h>
-
 #include <vfs/manager.h>
 #include <vfs/path.h>
 #include <vfs/resolver.h>

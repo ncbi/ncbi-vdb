@@ -3282,7 +3282,7 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
     rc = flush_buffer ( out );
 
     if ( rc == 0 && out -> overflow )
-        rc = RC ( rcText, rcString, rcConverting, rcBuffer, rcInsufficient );
+        rc = SILENT_RC ( rcText, rcString, rcConverting, rcBuffer, rcInsufficient );
 
     return rc;
 }

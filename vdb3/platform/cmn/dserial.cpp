@@ -10,7 +10,7 @@
 
 namespace vdb3
 {
-    
+
     /*=====================================================*
      *                    DeserialBase                     *
      *=====================================================*/
@@ -30,7 +30,7 @@ namespace vdb3
         }
         val = ( N16 ) v64;
     }
-    
+
     void DeserialBase :: getITypeVarN32 ( N32 & val )
     {
         N64 v64;
@@ -46,7 +46,7 @@ namespace vdb3
         }
         val = ( N32 ) v64;
     }
-    
+
     void DeserialBase :: getITypeVarN64 ( N64 & val )
     {
         // accumulator
@@ -76,7 +76,7 @@ namespace vdb3
                         << "variable-size format exceeds word size"
                         );
                 }
-                
+
                 // accumulate 7-bit byte
                 acc <<= 7;
                 acc |= a [ i ] & 0x7F;
@@ -122,7 +122,7 @@ namespace vdb3
             sz = r . size ();
         }
     }
-    
+
     void DeserialBase :: getITypeVarN128 ( N128 & val )
     {
         // accumulator
@@ -155,7 +155,7 @@ namespace vdb3
                         << "variable-size format exceeds word size"
                         );
                 }
-                
+
                 // accumulate 7-bit byte
                 acc <<= 7;
                 acc |= a [ i ] & 0x7F;
@@ -201,7 +201,7 @@ namespace vdb3
             sz = r . size ();
         }
     }
-    
+
     void DeserialBase :: getITypeFixN16 ( N16 & val )
     {
         const size_t word_size = sizeof ( N16 );
@@ -227,7 +227,7 @@ namespace vdb3
         offset += word_size;
         val = acc;
     }
-    
+
     void DeserialBase :: getITypeFixN32 ( N32 & val )
     {
         const size_t word_size = sizeof ( N32 );
@@ -255,7 +255,7 @@ namespace vdb3
         offset += word_size;
         val = acc;
     }
-    
+
     void DeserialBase :: getITypeFixN48 ( N64 & val )
     {
         const size_t word_size = 3 * sizeof ( N16 );
@@ -285,7 +285,7 @@ namespace vdb3
         offset += word_size;
         val = acc;
     }
-    
+
     void DeserialBase :: getITypeFixN64 ( N64 & val )
     {
         const size_t word_size = sizeof ( N64 );
@@ -317,7 +317,7 @@ namespace vdb3
         offset += word_size;
         val = acc;
     }
-    
+
     void DeserialBase :: getITypeVarZ16 ( Z16 & val )
     {
         Z64 v64;
@@ -333,7 +333,7 @@ namespace vdb3
         }
         val = ( Z16 ) v64;
     }
-    
+
     void DeserialBase :: getITypeVarZ32 ( Z32 & val )
     {
         Z64 v64;
@@ -349,7 +349,7 @@ namespace vdb3
         }
         val = ( Z32 ) v64;
     }
-    
+
     void DeserialBase :: getITypeVarZ64 ( Z64 & val )
     {
         N64 raw;
@@ -358,7 +358,7 @@ namespace vdb3
         zz . raw ( raw );
         val = zz . toZ64 ();
     }
-    
+
     void DeserialBase :: getITypeVarZ128 ( Z128 & val )
     {
         N128 raw;
@@ -367,7 +367,7 @@ namespace vdb3
         zz . raw ( raw );
         val = zz . toZ128 ();
     }
-    
+
     void DeserialBase :: getITypeFixZ16 ( Z16 & val )
     {
         N16 raw;
@@ -376,7 +376,7 @@ namespace vdb3
         zz . raw ( ( N64 ) raw );
         val = ( Z16 ) zz . toZ64 ();
     }
-    
+
     void DeserialBase :: getITypeFixZ32 ( Z32 & val )
     {
         N32 raw;
@@ -385,7 +385,7 @@ namespace vdb3
         zz . raw ( ( N64 ) raw );
         val = ( Z32 ) zz . toZ64 ();
     }
-    
+
     void DeserialBase :: getITypeFixZ48 ( Z64 & val )
     {
         N64 raw;
@@ -394,7 +394,7 @@ namespace vdb3
         zz . raw ( raw );
         val = zz . toZ64 ();
     }
-    
+
     void DeserialBase :: getITypeFixZ64 ( Z64 & val )
     {
         N64 raw;
@@ -403,26 +403,26 @@ namespace vdb3
         zz . raw ( raw );
         val = zz . toZ64 ();
     }
-    
+
     void DeserialBase :: getITypeFixRb32 ( R32 & val )
     {
         N32 raw;
         getITypeFixN32 ( raw );
         :: memcpy ( & val, & raw, sizeof ( R32 ) );
     }
-    
+
     void DeserialBase :: getITypeFixRb64 ( R64 & val )
     {
         N64 raw;
         getITypeFixN64 ( raw );
         :: memcpy ( & val, & raw, sizeof ( R64 ) );
     }
-    
+
     void DeserialBase :: getITypeBlob ( CRgn & val )
     {
         N64 raw;
         getITypeVarN64 ( raw );
-#if ARCHBITS == 32
+#if _ARCH_BITS == 32
         if ( raw > ( N64 ) SIZE_T_MAX )
         {
             throw OverflowException (
@@ -453,14 +453,14 @@ namespace vdb3
         val = r;
         offset += sz;
     }
-    
+
     void DeserialBase :: getUTypeSeqCount ( count_t & count )
     {
         N64 raw;
         getITypeVarN64 ( raw );
         count = ( count_t ) raw;
     }
-    
+
     N32 DeserialBase :: getXTypeFmt ( N32 & fmt )
     {
         N32 prefix;
@@ -468,7 +468,7 @@ namespace vdb3
         fmt = prefix & 0x7U;
         return prefix >> 3;
     }
-    
+
     void DeserialBase :: getXTypeN16 ( N32 fmt, N16 & val )
     {
         switch ( fmt )
@@ -489,7 +489,7 @@ namespace vdb3
                 );
         }
     }
-    
+
     void DeserialBase :: getXTypeN32 ( N32 fmt, N32 & val )
     {
         N16 n16;
@@ -515,7 +515,7 @@ namespace vdb3
                 );
         }
     }
-    
+
     void DeserialBase :: getXTypeN64 ( N32 fmt, N64 & val )
     {
         N16 n16;
@@ -549,7 +549,7 @@ namespace vdb3
                 );
         }
     }
-    
+
     void DeserialBase :: getXTypeN128 ( N32 fmt, N128 & val )
     {
         N16 n16;
@@ -586,7 +586,7 @@ namespace vdb3
                 );
         }
     }
-    
+
     void DeserialBase :: getXTypeZ16 ( N32 fmt, Z16 & val )
     {
         switch ( fmt )
@@ -607,7 +607,7 @@ namespace vdb3
                 );
         }
     }
-    
+
     void DeserialBase :: getXTypeZ32 ( N32 fmt, Z32 & val )
     {
         Z16 z16;
@@ -633,7 +633,7 @@ namespace vdb3
                 );
         }
     }
-    
+
     void DeserialBase :: getXTypeZ64 ( N32 fmt, Z64 & val )
     {
         Z16 z16;
@@ -667,7 +667,7 @@ namespace vdb3
                 );
         }
     }
-    
+
     void DeserialBase :: getXTypeZ128 ( N32 fmt, Z128 & val )
     {
         Z16 z16;
@@ -704,7 +704,7 @@ namespace vdb3
                 );
         }
     }
-    
+
     void DeserialBase :: getXTypeRb32 ( N32 fmt, R32 & val )
     {
         switch ( fmt )
@@ -722,7 +722,7 @@ namespace vdb3
                 );
         }
     }
-    
+
     void DeserialBase :: getXTypeRb64 ( N32 fmt, R64 & val )
     {
         switch ( fmt )
@@ -740,7 +740,7 @@ namespace vdb3
                 );
         }
     }
-    
+
     void DeserialBase :: getXTypeBlob ( N32 fmt, CRgn & val )
     {
         switch ( fmt )
@@ -758,7 +758,7 @@ namespace vdb3
                 );
         }
     }
-    
+
     void DeserialBase :: getXTypeSeqCount ( N32 fmt, count_t & count )
     {
         switch ( fmt )
@@ -781,7 +781,7 @@ namespace vdb3
     {
         return offset < rgn . size ();
     }
-    
+
 
     DeserialBase & DeserialBase :: operator = ( DeserialBase && d ) noexcept
     {
@@ -839,7 +839,7 @@ namespace vdb3
     /*=====================================================*
      *                      Deserial                       *
      *=====================================================*/
-    
+
     Deserial & Deserial :: get ( bool & val )
     {
         N16 n;
@@ -864,7 +864,7 @@ namespace vdb3
         val = ( unsigned long int ) v;
         return self;
     }
-    
+
     Deserial & Deserial :: get ( signed long int & val )
     {
         Z64 v;
@@ -879,7 +879,7 @@ namespace vdb3
         val = ( signed long int ) v;
         return self;
     }
-    
+
     Deserial & Deserial :: get ( long double & val )
     {
         R64 r;
@@ -903,7 +903,7 @@ namespace vdb3
         val = r;
         return self;
     }
-    
+
     void Deserial :: getTyped ( N32 fmt, bool & val )
     {
         N16 n;
@@ -923,7 +923,7 @@ namespace vdb3
         DB :: getXTypeZ64 ( fmt, v );
         val = ( signed long int ) v;
     }
-    
+
     void Deserial :: getTyped ( N32 fmt, long double & val )
     {
         R64 r;
@@ -1013,7 +1013,7 @@ namespace vdb3
     {
         Deserial d;
         get ( d );
-            
+
         Z64 mant = 0; Z32 exp = 0;
         for ( int i = 0; i < 2; ++ i )
         {
@@ -1030,7 +1030,7 @@ namespace vdb3
     {
         Deserial d;
         get ( d );
-            
+
         Z128 mant ( 0 ); Z32 exp = 0;
         for ( int i = 0; i < 2; ++ i )
         {
@@ -1047,7 +1047,7 @@ namespace vdb3
     {
         Deserial d;
         getTyped ( fmt, d );
-            
+
         Z64 mant = 0; Z32 exp = 0;
         for ( int i = 0; i < 2; ++ i )
         {
@@ -1064,7 +1064,7 @@ namespace vdb3
     {
         Deserial d;
         getTyped ( fmt, d );
-            
+
         Z128 mant ( 0 ); Z32 exp = 0;
         for ( int i = 0; i < 2; ++ i )
         {
@@ -1081,7 +1081,7 @@ namespace vdb3
     {
         Deserial d;
         getMbr ( fmt, d );
-            
+
         Z64 mant = 0; Z32 exp = 0;
         for ( int i = 0; i < 2; ++ i )
         {
@@ -1098,7 +1098,7 @@ namespace vdb3
     {
         Deserial d;
         getMbr ( fmt, d );
-            
+
         Z128 mant ( 0 ); Z32 exp = 0;
         for ( int i = 0; i < 2; ++ i )
         {
@@ -1117,7 +1117,7 @@ namespace vdb3
     {
         Deserial d;
         get ( d );
-            
+
         CRgn data; count_t count;
         for ( int i = 0; i < 2; ++ i )
         {
@@ -1130,12 +1130,12 @@ namespace vdb3
         }
         val = makeCText ( data, count );
     }
-    
+
     void Deserial :: getTyped ( N32 fmt, CText & val )
     {
         Deserial d;
         getTyped ( fmt, d );
-            
+
         CRgn data; count_t count;
         for ( int i = 0; i < 2; ++ i )
         {
@@ -1148,12 +1148,12 @@ namespace vdb3
         }
         val = makeCText ( data, count );
     }
-    
+
     void Deserial :: getMbr ( N32 fmt, CText & val )
     {
         Deserial d;
         getMbr ( fmt, d );
-            
+
         CRgn data; count_t count;
         for ( int i = 0; i < 2; ++ i )
         {
@@ -1166,5 +1166,5 @@ namespace vdb3
         }
         val = makeCText ( data, count );
     }
-    
+
 }

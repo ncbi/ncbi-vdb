@@ -27,29 +27,4 @@ default: runtests
 TOP ?= $(abspath ../..)
 MODULE = test/kproc
 
-TEST_TOOLS = \
-	test-kproc \
-
 include $(TOP)/build/Makefile.env
-
-$(TEST_TOOLS): makedirs
-	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
-
-clean: stdclean
-
-#-------------------------------------------------------------------------------
-# test-kproc
-#
-TEST_KPROC_SRC = \
-	kproctest 
-
-TEST_KPROC_OBJ = \
-	$(addsuffix .$(OBJX),$(TEST_KPROC_SRC))
-
-TEST_KPROC_LIB = \
-	-skapp \
-	-sktst \
-    -sncbi-vdb
-
-$(TEST_BINDIR)/test-kproc: $(TEST_KPROC_OBJ)
-	$(LP) --exe -o $@ $^ $(TEST_KPROC_LIB)

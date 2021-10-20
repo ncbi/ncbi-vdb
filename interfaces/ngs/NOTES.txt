@@ -1,9 +1,0 @@
-NGS API NOTES
-
-Alignments have ID numbers
-
-Reads (spots) have ID numbers
-
-Fragments (reads) have ID numbers
-  Andrew already did something like this for blast
-

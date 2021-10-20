@@ -30,7 +30,7 @@
     #define YYINITDEPTH 10000
 
     #include "json-lex.h"
-    #include "json-tokens.h"
+    #include "json-grammar.h"
     #include "json-priv.h"
 
     #include <klib/text.h>

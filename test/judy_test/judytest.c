@@ -550,7 +550,7 @@ static void CC uint64_t_lookup( void * item, void * data )
         {
             ( ctx->found )++;
         }
-    } 
+    }
 }
 
 
@@ -565,7 +565,7 @@ static void CC uint32_t_lookup( void * item, void * data )
         {
             ( ctx->found )++;
         }
-    } 
+    }
 }
 
 
@@ -580,7 +580,7 @@ static void CC uint16_t_lookup( void * item, void * data )
         {
             ( ctx->found )++;
         }
-    } 
+    }
 }
 
 
@@ -595,7 +595,7 @@ static void CC uint8_t_lookup( void * item, void * data )
         {
             ( ctx->found )++;
         }
-    } 
+    }
 }
 
 
@@ -610,7 +610,7 @@ static void CC int64_t_lookup( void * item, void * data )
         {
             ( ctx->found )++;
         }
-    } 
+    }
 }
 
 
@@ -625,7 +625,7 @@ static void CC int32_t_lookup( void * item, void * data )
         {
             ( ctx->found )++;
         }
-    } 
+    }
 }
 
 
@@ -640,7 +640,7 @@ static void CC int16_t_lookup( void * item, void * data )
         {
             ( ctx->found )++;
         }
-    } 
+    }
 }
 
 
@@ -655,7 +655,7 @@ static void CC int8_t_lookup( void * item, void * data )
         {
             ( ctx->found )++;
         }
-    } 
+    }
 }
 
 
@@ -670,7 +670,7 @@ static void CC float_lookup( void * item, void * data )
         {
             ( ctx->found )++;
         }
-    } 
+    }
 }
 
 
@@ -685,7 +685,7 @@ static void CC double_lookup( void * item, void * data )
         {
             ( ctx->found )++;
         }
-    } 
+    }
 }
 
 
@@ -700,7 +700,7 @@ static void CC bool_lookup( void * item, void * data )
         {
             ( ctx->found )++;
         }
-    } 
+    }
 }
 
 
@@ -715,7 +715,7 @@ static void CC ptr_lookup( void * item, void * data )
         {
             ( ctx->found )++;
         }
-    } 
+    }
 }
 
 

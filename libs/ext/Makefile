@@ -22,36 +22,7 @@
 #
 # ===========================================================================
 
-
 TOP ?= $(abspath ../..)
 MODULE = libs/ext
 
-include $(TOP)/build/Makefile.shell
-
-#-------------------------------------------------------------------------------
-# default
-#
-SUBDIRS = \
-	zlib \
-	bzip2 \
-    magic \
-	mbedtls \
-	zstd
-
-include $(TOP)/build/Makefile.targets
-
-default: $(SUBDIRS)
-
-$(SUBDIRS):
-	@ $(MAKE) -C $@
-
-.PHONY: default $(SUBDIRS)
-
-
-#-------------------------------------------------------------------------------
-# pass-through
-#
-out debug profile release GCC ICC VC++:
-	@ $(MAKE) TOP=$(TOP) -f $(TOP)/build/Makefile.env $@
-
-.PHONY: out debug profile release GCC ICC VC++
+include $(TOP)/build/Makefile.env

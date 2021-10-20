@@ -2249,4 +2249,3 @@ const struct VTable * VTableCursorGetBoundTable( const struct VCURSOR_IMPL * sel
 {
     return NULL;
 }
-

@@ -22,80 +22,10 @@
 #
 # ===========================================================================
 
-by_default: default
-
 TOP ?= $(abspath ..)
 MODULE = libs
 
-include $(TOP)/build/Makefile.shell
+# TODO: kxml make
+# TODO: xfs make
 
-include $(TOP)/build/Makefile.config
-
-#-------------------------------------------------------------------------------
-# default
-#
-MAIN_SUBDIRS = \
-	ext      \
-	kfc      \
-	klib     \
-	kproc    \
-	kfs      \
-	cloud    \
-	kns      \
-	kfg      \
-	krypto   \
-	vfs      \
-	kapp     \
-	kdb      \
-	vdb      \
-	vxf      \
-	search   \
-	sraxf    \
-	align    \
-	axf      \
-	wgsxf    \
-	ktst     \
-	loader   \
-	blast    \
-	ascp     \
-	schema   \
-	sra      \
-	ngs      \
-	ngs-c++  \
-	ngs-jni  \
-	ngs-py   \
-	kxml     \
-	hdf5     \
-	diagnose \
-	tui		 \
-
-NCBI_VDB_SUBDIRS =   \
-	$(MAIN_SUBDIRS) \
-	ncbi-vdb
-
-SUBDIRS = \
-	$(NCBI_VDB_SUBDIRS) \
-	vdb-sqlite
-
-# common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
-include $(TOP)/build/Makefile.targets
-
-$(SUBDIRS):
-	@ $(MAKE) -C $@
-
-ncbi-vdb: $(MAIN_SUBDIRS)
-
-vdb-sqlite: $(NCBI_VDB_SUBDIRS)
-
-test:
-	@true
-
-.PHONY: default $(SUBDIRS) test
-
-#-------------------------------------------------------------------------------
-# pass-through
-#
-out debug profile release GCC ICC VC++:
-	@ $(MAKE) TOP=$(TOP) -f $(TOP)/build/Makefile.env $@
-
-.PHONY: out debug profile release GCC ICC VC++
+include $(TOP)/build/Makefile.env

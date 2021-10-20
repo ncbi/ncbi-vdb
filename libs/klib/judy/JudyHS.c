@@ -5,6 +5,8 @@
 //   email - doug@sourcejudy.com -or- dougbaskins@yahoo.com
 //=======================================================================
 
+#undef DEBUG
+
 #include <string.h>                     // for memcmp(), memmove()
 
 #include <Judy.h>                       // for JudyL* routines/macros

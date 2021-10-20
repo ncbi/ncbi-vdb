@@ -28,32 +28,4 @@ TOP ?= $(abspath ../..)
 
 MODULE = test/cipher
 
-ALL_TARGS = \
-
 include $(TOP)/build/Makefile.env
-
-
-# make sure runs are not cached in the user repository when running tests
-ifeq ($(wildcard ../../../asm-trace),)
-	ifeq (,$(VDB_CONFIG))
-		VDB_CONFIG = $(shell pwd)/../only-remote-repository.kfg
-	endif
-endif
-
-
-#-------------------------------------------------------------------------------
-# runtests
-#
-ifdef PYTHON
-runtests: cipher
-
-else
-runtests:
-	@ echo "Skipped, no Python 3 found"
-
-endif
-
-cipher:
-	@ LD_LIBRARY_PATH=$(LIBDIR) PYTHON=$(PYTHON) ./test.sh $(TOP)
-
-.PHONY: cipher
