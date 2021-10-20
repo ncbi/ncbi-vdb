@@ -1117,12 +1117,18 @@ static uint32_t Bits(uint64_t n, EReadIdType idType) {
                 STSMSG(1, ("Error: failed to read %s/%s", self->path, col));
                 return status;
             }
-            switch (rd->platform) { /* TODO */
+            switch (rd->platform) {
+                /* the following platforms have fixed number of reads */
+                /*      Illumina can sometimes have read-type updated */
                 case SRA_PLATFORM_ILLUMINA:
+                    rd->varReadDesc = true; /* no break here */
+                /*      the following platforms have fixed read-type */
                 case SRA_PLATFORM_ABSOLID:
                 case SRA_PLATFORM_COMPLETE_GENOMICS:
                     rd->varReadLen = false;
                     break;
+                /* the following platforms can have different number of reads
+                                            and read-types in different spots */
                 case SRA_PLATFORM_UNDEFINED:
                 case SRA_PLATFORM_454:
                 case SRA_PLATFORM_HELICOS:
@@ -1386,7 +1392,7 @@ static uint64_t _VdbBlastSraRunGetLengthApprox(VdbBlastRun *self,
                 self->bioBasesApprox
                     = _VdbBlastRunCountBioBaseCount(self, status);
             }
-            else {
+            else /* fixed spot descriptor */ {
                 if (self->type == btpREFSEQ) {
                     if (rd->bioBaseCount == ~0) {
                         S
