@@ -342,6 +342,7 @@ static rc_t z_read ( KGZipFile * self, void * buffer, size_t bsize, size_t * _nu
             }
             break;
         case Z_OK:
+            self->completed = false;
             break;
         }
         if (rc)
