@@ -77,17 +77,15 @@ MSVS_StaticRuntime( test-kns-proxy-with-env )
 target_link_libraries( test-kns-proxy-with-env ${COMMON_LIBS_READ} )
 # add_test( NAME Test_KNS_proxy-with-env COMMAND test-kns-proxy-with-env WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 
-if( NOT WIN32 )
+if( SINGLE_TARGET )
+
     add_executable( test-kns-proxy test-proxy )
-    MSVS_StaticRuntime( test-kns-proxy )
     target_link_libraries( test-kns-proxy ${COMMON_LIBS_READ} )
     add_test( NAME Test_KNS_proxy COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test-proxy.sh ${CMAKE_TEST_OUTPUT_DIRECTORY}/test-kns-proxy WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
-endif()
 
-if( SINGLE_TARGET )
     add_executable( test-kns-proxy-with-scheme test-proxy-with-scheme )
-    MSVS_StaticRuntime( test-kns-proxy-with-scheme )
     target_link_libraries( test-kns-proxy-with-scheme ${COMMON_LIBS_READ} )
     add_test( NAME Test_KNS_proxy-with-scheme COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test-proxy-with-scheme.sh ${CMAKE_TEST_OUTPUT_DIRECTORY}/test-kns-proxy-with-scheme WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
     #set_tests_properties(Test_KNS_proxy-with-scheme PROPERTIES ENVIRONMENT http_proxy=)
+
 endif()
