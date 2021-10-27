@@ -41,7 +41,7 @@
 #include "../../libs/schema/ASTBuilder.hpp"
 
 using namespace ncbi::SchemaParser;
-#include "../../libs/schema/schema-tokens.h"
+#include "../../libs/schema/schema-grammar.hpp"
 
 #include "../../libs/vdb/schema-parse.h"
 

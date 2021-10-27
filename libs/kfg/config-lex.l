@@ -28,7 +28,7 @@
     #include "kfg-lex.h"
     #include <sysalloc.h>
     #include "kfg-parse.h"
-    #include "config-tokens.h"
+    #include "config-grammar.h"
 
     #define YYSTYPE KFGToken
 

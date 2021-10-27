@@ -1,8 +1,9 @@
-/* A Bison parser, made by GNU Bison 3.0.4.  */
+/* A Bison parser, made by GNU Bison 3.5.1.  */
 
 /* Bison implementation for Yacc-like parsers in C
 
-   Copyright (C) 1984, 1989-1990, 2000-2015 Free Software Foundation, Inc.
+   Copyright (C) 1984, 1989-1990, 2000-2015, 2018-2020 Free Software Foundation,
+   Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -40,11 +41,14 @@
    define necessary library symbols; they are noted "INFRINGES ON
    USER NAME SPACE" below.  */
 
+/* Undocumented macros, especially those whose name start with YY_,
+   are private implementation details.  Do not rely on them.  */
+
 /* Identify Bison output.  */
 #define YYBISON 1
 
 /* Bison version.  */
-#define YYBISON_VERSION "3.0.4"
+#define YYBISON_VERSION "3.5.1"
 
 /* Skeleton name.  */
 #define YYSKELETON_NAME "yacc.c"
@@ -66,9 +70,7 @@
 #define yydebug         Schema_debug
 #define yynerrs         Schema_nerrs
 
-
-/* Copy the first part of user declarations.  */
-
+/* First part of user prologue.  */
 
     #define YYDEBUG 1
 
@@ -79,7 +81,7 @@
 
     using namespace ncbi::SchemaParser;
 
-    #include "schema-tokens.h"
+    #include "schema-grammar.hpp"
     #include "schema-lex.h"
     #define Schema_lex SchemaScan_yylex
 
@@ -170,12 +172,24 @@
 
 
 
-
-# ifndef YY_NULLPTR
-#  if defined __cplusplus && 201103L <= __cplusplus
-#   define YY_NULLPTR nullptr
+# ifndef YY_CAST
+#  ifdef __cplusplus
+#   define YY_CAST(Type, Val) static_cast<Type> (Val)
+#   define YY_REINTERPRET_CAST(Type, Val) reinterpret_cast<Type> (Val)
 #  else
-#   define YY_NULLPTR 0
+#   define YY_CAST(Type, Val) ((Type) (Val))
+#   define YY_REINTERPRET_CAST(Type, Val) ((Type) (Val))
+#  endif
+# endif
+# ifndef YY_NULLPTR
+#  if defined __cplusplus
+#   if 201103L <= __cplusplus
+#    define YY_NULLPTR nullptr
+#   else
+#    define YY_NULLPTR 0
+#   endif
+#  else
+#   define YY_NULLPTR ((void*)0)
 #  endif
 # endif
 
@@ -187,10 +201,10 @@
 # define YYERROR_VERBOSE 1
 #endif
 
-/* In a future release of Bison, this section will be replaced
-   by #include "schema-tokens.h".  */
-#ifndef YY_SCHEMA_HOME_BOSHKINS_NCBI_DEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_TOKENS_H_INCLUDED
-# define YY_SCHEMA_HOME_BOSHKINS_NCBI_DEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_TOKENS_H_INCLUDED
+/* Use api.header.include to #include this header
+   instead of duplicating it here.  */
+#ifndef YY_SCHEMA_HOME_BOSHKINS_DEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_GRAMMAR_HPP_INCLUDED
+# define YY_SCHEMA_HOME_BOSHKINS_DEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_GRAMMAR_HPP_INCLUDED
 /* Debug traces.  */
 #ifndef YYDEBUG
 # define YYDEBUG 0
@@ -366,9 +380,7 @@ struct YYLTYPE
 
 int Schema_parse (ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb);
 
-#endif /* !YY_SCHEMA_HOME_BOSHKINS_NCBI_DEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_TOKENS_H_INCLUDED  */
-
-/* Copy the second part of user declarations.  */
+#endif /* !YY_SCHEMA_HOME_BOSHKINS_DEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_GRAMMAR_HPP_INCLUDED  */
 
 
 
@@ -376,28 +388,75 @@ int Schema_parse (ParseTree** root, ErrorReport * errors, struct SchemaScanBlock
 # undef short
 #endif
 
-#ifdef YYTYPE_UINT8
-typedef YYTYPE_UINT8 yytype_uint8;
-#else
-typedef unsigned char yytype_uint8;
+/* On compilers that do not define __PTRDIFF_MAX__ etc., make sure
+   <limits.h> and (if available) <stdint.h> are included
+   so that the code can choose integer types of a good width.  */
+
+#ifndef __PTRDIFF_MAX__
+# include <limits.h> /* INFRINGES ON USER NAME SPACE */
+# if defined __STDC_VERSION__ && 199901 <= __STDC_VERSION__
+#  include <stdint.h> /* INFRINGES ON USER NAME SPACE */
+#  define YY_STDINT_H
+# endif
 #endif
 
-#ifdef YYTYPE_INT8
-typedef YYTYPE_INT8 yytype_int8;
+/* Narrow types that promote to a signed type and that can represent a
+   signed or unsigned integer of at least N bits.  In tables they can
+   save space and decrease cache pressure.  Promoting to a signed type
+   helps avoid bugs in integer arithmetic.  */
+
+#ifdef __INT_LEAST8_MAX__
+typedef __INT_LEAST8_TYPE__ yytype_int8;
+#elif defined YY_STDINT_H
+typedef int_least8_t yytype_int8;
 #else
 typedef signed char yytype_int8;
 #endif
 
-#ifdef YYTYPE_UINT16
-typedef YYTYPE_UINT16 yytype_uint16;
+#ifdef __INT_LEAST16_MAX__
+typedef __INT_LEAST16_TYPE__ yytype_int16;
+#elif defined YY_STDINT_H
+typedef int_least16_t yytype_int16;
 #else
-typedef unsigned short int yytype_uint16;
+typedef short yytype_int16;
 #endif
 
-#ifdef YYTYPE_INT16
-typedef YYTYPE_INT16 yytype_int16;
+#if defined __UINT_LEAST8_MAX__ && __UINT_LEAST8_MAX__ <= __INT_MAX__
+typedef __UINT_LEAST8_TYPE__ yytype_uint8;
+#elif (!defined __UINT_LEAST8_MAX__ && defined YY_STDINT_H \
+       && UINT_LEAST8_MAX <= INT_MAX)
+typedef uint_least8_t yytype_uint8;
+#elif !defined __UINT_LEAST8_MAX__ && UCHAR_MAX <= INT_MAX
+typedef unsigned char yytype_uint8;
 #else
-typedef short int yytype_int16;
+typedef short yytype_uint8;
+#endif
+
+#if defined __UINT_LEAST16_MAX__ && __UINT_LEAST16_MAX__ <= __INT_MAX__
+typedef __UINT_LEAST16_TYPE__ yytype_uint16;
+#elif (!defined __UINT_LEAST16_MAX__ && defined YY_STDINT_H \
+       && UINT_LEAST16_MAX <= INT_MAX)
+typedef uint_least16_t yytype_uint16;
+#elif !defined __UINT_LEAST16_MAX__ && USHRT_MAX <= INT_MAX
+typedef unsigned short yytype_uint16;
+#else
+typedef int yytype_uint16;
+#endif
+
+#ifndef YYPTRDIFF_T
+# if defined __PTRDIFF_TYPE__ && defined __PTRDIFF_MAX__
+#  define YYPTRDIFF_T __PTRDIFF_TYPE__
+#  define YYPTRDIFF_MAXIMUM __PTRDIFF_MAX__
+# elif defined PTRDIFF_MAX
+#  ifndef ptrdiff_t
+#   include <stddef.h> /* INFRINGES ON USER NAME SPACE */
+#  endif
+#  define YYPTRDIFF_T ptrdiff_t
+#  define YYPTRDIFF_MAXIMUM PTRDIFF_MAX
+# else
+#  define YYPTRDIFF_T long
+#  define YYPTRDIFF_MAXIMUM LONG_MAX
+# endif
 #endif
 
 #ifndef YYSIZE_T
@@ -405,15 +464,27 @@ typedef short int yytype_int16;
 #  define YYSIZE_T __SIZE_TYPE__
 # elif defined size_t
 #  define YYSIZE_T size_t
-# elif ! defined YYSIZE_T
+# elif defined __STDC_VERSION__ && 199901 <= __STDC_VERSION__
 #  include <stddef.h> /* INFRINGES ON USER NAME SPACE */
 #  define YYSIZE_T size_t
 # else
-#  define YYSIZE_T unsigned int
+#  define YYSIZE_T unsigned
 # endif
 #endif
 
-#define YYSIZE_MAXIMUM ((YYSIZE_T) -1)
+#define YYSIZE_MAXIMUM                                  \
+  YY_CAST (YYPTRDIFF_T,                                 \
+           (YYPTRDIFF_MAXIMUM < YY_CAST (YYSIZE_T, -1)  \
+            ? YYPTRDIFF_MAXIMUM                         \
+            : YY_CAST (YYSIZE_T, -1)))
+
+#define YYSIZEOF(X) YY_CAST (YYPTRDIFF_T, sizeof (X))
+
+/* Stored state numbers (used for stacks). */
+typedef yytype_int16 yy_state_t;
+
+/* State numbers in computations.  */
+typedef int yy_state_fast_t;
 
 #ifndef YY_
 # if defined YYENABLE_NLS && YYENABLE_NLS
@@ -427,30 +498,19 @@ typedef short int yytype_int16;
 # endif
 #endif
 
-#ifndef YY_ATTRIBUTE
-# if (defined __GNUC__                                               \
-      && (2 < __GNUC__ || (__GNUC__ == 2 && 96 <= __GNUC_MINOR__)))  \
-     || defined __SUNPRO_C && 0x5110 <= __SUNPRO_C
-#  define YY_ATTRIBUTE(Spec) __attribute__(Spec)
+#ifndef YY_ATTRIBUTE_PURE
+# if defined __GNUC__ && 2 < __GNUC__ + (96 <= __GNUC_MINOR__)
+#  define YY_ATTRIBUTE_PURE __attribute__ ((__pure__))
 # else
-#  define YY_ATTRIBUTE(Spec) /* empty */
+#  define YY_ATTRIBUTE_PURE
 # endif
 #endif
 
-#ifndef YY_ATTRIBUTE_PURE
-# define YY_ATTRIBUTE_PURE   YY_ATTRIBUTE ((__pure__))
-#endif
-
 #ifndef YY_ATTRIBUTE_UNUSED
-# define YY_ATTRIBUTE_UNUSED YY_ATTRIBUTE ((__unused__))
-#endif
-
-#if !defined _Noreturn \
-     && (!defined __STDC_VERSION__ || __STDC_VERSION__ < 201112)
-# if defined _MSC_VER && 1200 <= _MSC_VER
-#  define _Noreturn __declspec (noreturn)
+# if defined __GNUC__ && 2 < __GNUC__ + (7 <= __GNUC_MINOR__)
+#  define YY_ATTRIBUTE_UNUSED __attribute__ ((__unused__))
 # else
-#  define _Noreturn YY_ATTRIBUTE ((__noreturn__))
+#  define YY_ATTRIBUTE_UNUSED
 # endif
 #endif
 
@@ -461,13 +521,13 @@ typedef short int yytype_int16;
 # define YYUSE(E) /* empty */
 #endif
 
-#if defined __GNUC__ && 407 <= __GNUC__ * 100 + __GNUC_MINOR__
+#if defined __GNUC__ && ! defined __ICC && 407 <= __GNUC__ * 100 + __GNUC_MINOR__
 /* Suppress an incorrect diagnostic about yylval being uninitialized.  */
-# define YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN \
-    _Pragma ("GCC diagnostic push") \
-    _Pragma ("GCC diagnostic ignored \"-Wuninitialized\"")\
+# define YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN                            \
+    _Pragma ("GCC diagnostic push")                                     \
+    _Pragma ("GCC diagnostic ignored \"-Wuninitialized\"")              \
     _Pragma ("GCC diagnostic ignored \"-Wmaybe-uninitialized\"")
-# define YY_IGNORE_MAYBE_UNINITIALIZED_END \
+# define YY_IGNORE_MAYBE_UNINITIALIZED_END      \
     _Pragma ("GCC diagnostic pop")
 #else
 # define YY_INITIAL_VALUE(Value) Value
@@ -480,6 +540,20 @@ typedef short int yytype_int16;
 # define YY_INITIAL_VALUE(Value) /* Nothing. */
 #endif
 
+#if defined __cplusplus && defined __GNUC__ && ! defined __ICC && 6 <= __GNUC__
+# define YY_IGNORE_USELESS_CAST_BEGIN                          \
+    _Pragma ("GCC diagnostic push")                            \
+    _Pragma ("GCC diagnostic ignored \"-Wuseless-cast\"")
+# define YY_IGNORE_USELESS_CAST_END            \
+    _Pragma ("GCC diagnostic pop")
+#endif
+#ifndef YY_IGNORE_USELESS_CAST_BEGIN
+# define YY_IGNORE_USELESS_CAST_BEGIN
+# define YY_IGNORE_USELESS_CAST_END
+#endif
+
+
+#define YY_ASSERT(E) ((void) (0 && (E)))
 
 #if ! defined yyoverflow || YYERROR_VERBOSE
 
@@ -557,18 +631,19 @@ void free (void *); /* INFRINGES ON USER NAME SPACE */
 /* A type that is properly aligned for any stack member.  */
 union yyalloc
 {
-  yytype_int16 yyss_alloc;
+  yy_state_t yyss_alloc;
   YYSTYPE yyvs_alloc;
   YYLTYPE yyls_alloc;
 };
 
 /* The size of the maximum gap between one aligned stack and the next.  */
-# define YYSTACK_GAP_MAXIMUM (sizeof (union yyalloc) - 1)
+# define YYSTACK_GAP_MAXIMUM (YYSIZEOF (union yyalloc) - 1)
 
 /* The size of an array large to enough to hold all stacks, each with
    N elements.  */
 # define YYSTACK_BYTES(N) \
-     ((N) * (sizeof (yytype_int16) + sizeof (YYSTYPE) + sizeof (YYLTYPE)) \
+     ((N) * (YYSIZEOF (yy_state_t) + YYSIZEOF (YYSTYPE) \
+             + YYSIZEOF (YYLTYPE)) \
       + 2 * YYSTACK_GAP_MAXIMUM)
 
 # define YYCOPY_NEEDED 1
@@ -581,11 +656,11 @@ union yyalloc
 # define YYSTACK_RELOCATE(Stack_alloc, Stack)                           \
     do                                                                  \
       {                                                                 \
-        YYSIZE_T yynewbytes;                                            \
+        YYPTRDIFF_T yynewbytes;                                         \
         YYCOPY (&yyptr->Stack_alloc, Stack, yysize);                    \
         Stack = &yyptr->Stack_alloc;                                    \
-        yynewbytes = yystacksize * sizeof (*Stack) + YYSTACK_GAP_MAXIMUM; \
-        yyptr += yynewbytes / sizeof (*yyptr);                          \
+        yynewbytes = yystacksize * YYSIZEOF (*Stack) + YYSTACK_GAP_MAXIMUM; \
+        yyptr += yynewbytes / YYSIZEOF (*yyptr);                        \
       }                                                                 \
     while (0)
 
@@ -597,12 +672,12 @@ union yyalloc
 # ifndef YYCOPY
 #  if defined __GNUC__ && 1 < __GNUC__
 #   define YYCOPY(Dst, Src, Count) \
-      __builtin_memcpy (Dst, Src, (Count) * sizeof (*(Src)))
+      __builtin_memcpy (Dst, Src, YY_CAST (YYSIZE_T, (Count)) * sizeof (*(Src)))
 #  else
 #   define YYCOPY(Dst, Src, Count)              \
       do                                        \
         {                                       \
-          YYSIZE_T yyi;                         \
+          YYPTRDIFF_T yyi;                      \
           for (yyi = 0; yyi < (Count); yyi++)   \
             (Dst)[yyi] = (Src)[yyi];            \
         }                                       \
@@ -625,16 +700,17 @@ union yyalloc
 /* YYNSTATES -- Number of states.  */
 #define YYNSTATES  524
 
-/* YYTRANSLATE[YYX] -- Symbol number corresponding to YYX as returned
-   by yylex, with out-of-bounds checking.  */
 #define YYUNDEFTOK  2
 #define YYMAXUTOK   390
 
+
+/* YYTRANSLATE(TOKEN-NUM) -- Symbol number corresponding to TOKEN-NUM
+   as returned by yylex, with out-of-bounds checking.  */
 #define YYTRANSLATE(YYX)                                                \
-  ((unsigned int) (YYX) <= YYMAXUTOK ? yytranslate[YYX] : YYUNDEFTOK)
+  (0 <= (YYX) && (YYX) <= YYMAXUTOK ? yytranslate[YYX] : YYUNDEFTOK)
 
 /* YYTRANSLATE[TOKEN-NUM] -- Symbol number corresponding to TOKEN-NUM
-   as returned by yylex, without out-of-bounds checking.  */
+   as returned by yylex.  */
 static const yytype_uint8 yytranslate[] =
 {
        0,     2,     2,     2,     2,     2,     2,     2,     2,     2,
@@ -681,7 +757,7 @@ static const yytype_uint8 yytranslate[] =
 
 #if YYDEBUG
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
-static const yytype_uint16 yyrline[] =
+static const yytype_int16 yyrline[] =
 {
        0,   298,   298,   299,   303,   304,   305,   311,   315,   316,
      320,   321,   322,   323,   324,   325,   326,   327,   328,   329,
@@ -797,7 +873,7 @@ static const char *const yytname[] =
 # ifdef YYPRINT
 /* YYTOKNUM[NUM] -- (External) token number corresponding to the
    (internal) symbol number NUM (which must be that of a token).  */
-static const yytype_uint16 yytoknum[] =
+static const yytype_int16 yytoknum[] =
 {
        0,   256,   257,   258,   259,   260,   261,   262,   263,   264,
      265,   266,   267,   268,   269,   270,   271,   272,   273,   274,
@@ -818,14 +894,14 @@ static const yytype_uint16 yytoknum[] =
 };
 # endif
 
-#define YYPACT_NINF -350
+#define YYPACT_NINF (-350)
 
-#define yypact_value_is_default(Yystate) \
-  (!!((Yystate) == (-350)))
+#define yypact_value_is_default(Yyn) \
+  ((Yyn) == YYPACT_NINF)
 
-#define YYTABLE_NINF -247
+#define YYTABLE_NINF (-247)
 
-#define yytable_value_is_error(Yytable_value) \
+#define yytable_value_is_error(Yyn) \
   0
 
   /* YYPACT[STATE-NUM] -- Index in YYTABLE of the portion describing
@@ -890,7 +966,7 @@ static const yytype_int16 yypact[] =
   /* YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
      Performed when YYTABLE does not specify something else to do.  Zero
      means the default is an error.  */
-static const yytype_uint16 yydefact[] =
+static const yytype_int16 yydefact[] =
 {
        0,     2,     0,     0,     0,     0,     0,   244,     0,   244,
      244,     0,     0,     0,     0,     0,    23,     0,     0,     0,
@@ -1168,7 +1244,7 @@ static const yytype_int16 yycheck[] =
 
   /* YYSTOS[STATE-NUM] -- The (internal number of the) accessing
      symbol of state STATE-NUM.  */
-static const yytype_uint16 yystos[] =
+static const yytype_int16 yystos[] =
 {
        0,     0,    23,    25,    27,    31,    33,    34,    35,    37,
       41,    43,    48,    49,    50,    51,   136,   156,   157,   158,
@@ -1226,7 +1302,7 @@ static const yytype_uint16 yystos[] =
 };
 
   /* YYR1[YYN] -- Symbol number of symbol that rule YYN derives.  */
-static const yytype_uint16 yyr1[] =
+static const yytype_int16 yyr1[] =
 {
        0,   155,   156,   156,   157,   157,   157,   158,   159,   159,
      160,   160,   160,   160,   160,   160,   160,   160,   160,   160,
@@ -1259,7 +1335,7 @@ static const yytype_uint16 yyr1[] =
 };
 
   /* YYR2[YYN] -- Number of symbols on the right hand side of rule YYN.  */
-static const yytype_uint8 yyr2[] =
+static const yytype_int8 yyr2[] =
 {
        0,     2,     1,     2,     1,     2,     2,     3,     1,     2,
        1,     1,     1,     1,     1,     1,     1,     1,     1,     1,
@@ -1304,22 +1380,22 @@ static const yytype_uint8 yyr2[] =
 
 #define YYRECOVERING()  (!!yyerrstatus)
 
-#define YYBACKUP(Token, Value)                                  \
-do                                                              \
-  if (yychar == YYEMPTY)                                        \
-    {                                                           \
-      yychar = (Token);                                         \
-      yylval = (Value);                                         \
-      YYPOPSTACK (yylen);                                       \
-      yystate = *yyssp;                                         \
-      goto yybackup;                                            \
-    }                                                           \
-  else                                                          \
-    {                                                           \
-      yyerror (&yylloc, root, errors, sb, YY_("syntax error: cannot back up")); \
-      YYERROR;                                                  \
-    }                                                           \
-while (0)
+#define YYBACKUP(Token, Value)                                    \
+  do                                                              \
+    if (yychar == YYEMPTY)                                        \
+      {                                                           \
+        yychar = (Token);                                         \
+        yylval = (Value);                                         \
+        YYPOPSTACK (yylen);                                       \
+        yystate = *yyssp;                                         \
+        goto yybackup;                                            \
+      }                                                           \
+    else                                                          \
+      {                                                           \
+        yyerror (&yylloc, root, errors, sb, YY_("syntax error: cannot back up")); \
+        YYERROR;                                                  \
+      }                                                           \
+  while (0)
 
 /* Error token number */
 #define YYTERROR        1
@@ -1378,10 +1454,10 @@ do {                                            \
 /* Print *YYLOCP on YYO.  Private, do not rely on its existence. */
 
 YY_ATTRIBUTE_UNUSED
-static unsigned
+static int
 yy_location_print_ (FILE *yyo, YYLTYPE const * const yylocp)
 {
-  unsigned res = 0;
+  int res = 0;
   int end_col = 0 != yylocp->last_column ? yylocp->last_column - 1 : 0;
   if (0 <= yylocp->first_line)
     {
@@ -1424,15 +1500,15 @@ do {                                                                      \
 } while (0)
 
 
-/*----------------------------------------.
-| Print this symbol's value on YYOUTPUT.  |
-`----------------------------------------*/
+/*-----------------------------------.
+| Print this symbol's value on YYO.  |
+`-----------------------------------*/
 
 static void
-yy_symbol_value_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep, YYLTYPE const * const yylocationp, ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb)
+yy_symbol_value_print (FILE *yyo, int yytype, YYSTYPE const * const yyvaluep, YYLTYPE const * const yylocationp, ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb)
 {
-  FILE *yyo = yyoutput;
-  YYUSE (yyo);
+  FILE *yyoutput = yyo;
+  YYUSE (yyoutput);
   YYUSE (yylocationp);
   YYUSE (root);
   YYUSE (errors);
@@ -1441,26 +1517,28 @@ yy_symbol_value_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvalue
     return;
 # ifdef YYPRINT
   if (yytype < YYNTOKENS)
-    YYPRINT (yyoutput, yytoknum[yytype], *yyvaluep);
+    YYPRINT (yyo, yytoknum[yytype], *yyvaluep);
 # endif
+  YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN
   YYUSE (yytype);
+  YY_IGNORE_MAYBE_UNINITIALIZED_END
 }
 
 
-/*--------------------------------.
-| Print this symbol on YYOUTPUT.  |
-`--------------------------------*/
+/*---------------------------.
+| Print this symbol on YYO.  |
+`---------------------------*/
 
 static void
-yy_symbol_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep, YYLTYPE const * const yylocationp, ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb)
+yy_symbol_print (FILE *yyo, int yytype, YYSTYPE const * const yyvaluep, YYLTYPE const * const yylocationp, ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb)
 {
-  YYFPRINTF (yyoutput, "%s %s (",
+  YYFPRINTF (yyo, "%s %s (",
              yytype < YYNTOKENS ? "token" : "nterm", yytname[yytype]);
 
-  YY_LOCATION_PRINT (yyoutput, *yylocationp);
-  YYFPRINTF (yyoutput, ": ");
-  yy_symbol_value_print (yyoutput, yytype, yyvaluep, yylocationp, root, errors, sb);
-  YYFPRINTF (yyoutput, ")");
+  YY_LOCATION_PRINT (yyo, *yylocationp);
+  YYFPRINTF (yyo, ": ");
+  yy_symbol_value_print (yyo, yytype, yyvaluep, yylocationp, root, errors, sb);
+  YYFPRINTF (yyo, ")");
 }
 
 /*------------------------------------------------------------------.
@@ -1469,7 +1547,7 @@ yy_symbol_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep, YYL
 `------------------------------------------------------------------*/
 
 static void
-yy_stack_print (yytype_int16 *yybottom, yytype_int16 *yytop)
+yy_stack_print (yy_state_t *yybottom, yy_state_t *yytop)
 {
   YYFPRINTF (stderr, "Stack now");
   for (; yybottom <= yytop; yybottom++)
@@ -1492,20 +1570,20 @@ do {                                                            \
 `------------------------------------------------*/
 
 static void
-yy_reduce_print (yytype_int16 *yyssp, YYSTYPE *yyvsp, YYLTYPE *yylsp, int yyrule, ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb)
+yy_reduce_print (yy_state_t *yyssp, YYSTYPE *yyvsp, YYLTYPE *yylsp, int yyrule, ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb)
 {
-  unsigned long int yylno = yyrline[yyrule];
+  int yylno = yyrline[yyrule];
   int yynrhs = yyr2[yyrule];
   int yyi;
-  YYFPRINTF (stderr, "Reducing stack by rule %d (line %lu):\n",
+  YYFPRINTF (stderr, "Reducing stack by rule %d (line %d):\n",
              yyrule - 1, yylno);
   /* The symbols being reduced.  */
   for (yyi = 0; yyi < yynrhs; yyi++)
     {
       YYFPRINTF (stderr, "   $%d = ", yyi + 1);
       yy_symbol_print (stderr,
-                       yystos[yyssp[yyi + 1 - yynrhs]],
-                       &(yyvsp[(yyi + 1) - (yynrhs)])
+                       yystos[+yyssp[yyi + 1 - yynrhs]],
+                       &yyvsp[(yyi + 1) - (yynrhs)]
                        , &(yylsp[(yyi + 1) - (yynrhs)])                       , root, errors, sb);
       YYFPRINTF (stderr, "\n");
     }
@@ -1549,13 +1627,13 @@ int yydebug;
 
 # ifndef yystrlen
 #  if defined __GLIBC__ && defined _STRING_H
-#   define yystrlen strlen
+#   define yystrlen(S) (YY_CAST (YYPTRDIFF_T, strlen (S)))
 #  else
 /* Return the length of YYSTR.  */
-static YYSIZE_T
+static YYPTRDIFF_T
 yystrlen (const char *yystr)
 {
-  YYSIZE_T yylen;
+  YYPTRDIFF_T yylen;
   for (yylen = 0; yystr[yylen]; yylen++)
     continue;
   return yylen;
@@ -1591,12 +1669,12 @@ yystpcpy (char *yydest, const char *yysrc)
    backslash-backslash).  YYSTR is taken from yytname.  If YYRES is
    null, do not copy; instead, return the length of what the result
    would have been.  */
-static YYSIZE_T
+static YYPTRDIFF_T
 yytnamerr (char *yyres, const char *yystr)
 {
   if (*yystr == '"')
     {
-      YYSIZE_T yyn = 0;
+      YYPTRDIFF_T yyn = 0;
       char const *yyp = yystr;
 
       for (;;)
@@ -1609,7 +1687,10 @@ yytnamerr (char *yyres, const char *yystr)
           case '\\':
             if (*++yyp != '\\')
               goto do_not_strip_quotes;
-            /* Fall through.  */
+            else
+              goto append;
+
+          append:
           default:
             if (yyres)
               yyres[yyn] = *yyp;
@@ -1624,10 +1705,10 @@ yytnamerr (char *yyres, const char *yystr)
     do_not_strip_quotes: ;
     }
 
-  if (! yyres)
+  if (yyres)
+    return yystpcpy (yyres, yystr) - yyres;
+  else
     return yystrlen (yystr);
-
-  return yystpcpy (yyres, yystr) - yyres;
 }
 # endif
 
@@ -1640,19 +1721,19 @@ yytnamerr (char *yyres, const char *yystr)
    *YYMSG_ALLOC to the required number of bytes.  Return 2 if the
    required number of bytes is too large to store.  */
 static int
-yysyntax_error (YYSIZE_T *yymsg_alloc, char **yymsg,
-                yytype_int16 *yyssp, int yytoken)
+yysyntax_error (YYPTRDIFF_T *yymsg_alloc, char **yymsg,
+                yy_state_t *yyssp, int yytoken)
 {
-  YYSIZE_T yysize0 = yytnamerr (YY_NULLPTR, yytname[yytoken]);
-  YYSIZE_T yysize = yysize0;
   enum { YYERROR_VERBOSE_ARGS_MAXIMUM = 5 };
   /* Internationalized format string. */
   const char *yyformat = YY_NULLPTR;
-  /* Arguments of yyformat. */
+  /* Arguments of yyformat: reported tokens (one for the "unexpected",
+     one per "expected"). */
   char const *yyarg[YYERROR_VERBOSE_ARGS_MAXIMUM];
-  /* Number of reported tokens (one for the "unexpected", one per
-     "expected"). */
+  /* Actual size of YYARG. */
   int yycount = 0;
+  /* Cumulated lengths of YYARG.  */
+  YYPTRDIFF_T yysize = 0;
 
   /* There are many possibilities here to consider:
      - If this state is a consistent state with a default action, then
@@ -1679,7 +1760,9 @@ yysyntax_error (YYSIZE_T *yymsg_alloc, char **yymsg,
   */
   if (yytoken != YYEMPTY)
     {
-      int yyn = yypact[*yyssp];
+      int yyn = yypact[+*yyssp];
+      YYPTRDIFF_T yysize0 = yytnamerr (YY_NULLPTR, yytname[yytoken]);
+      yysize = yysize0;
       yyarg[yycount++] = yytname[yytoken];
       if (!yypact_value_is_default (yyn))
         {
@@ -1704,11 +1787,12 @@ yysyntax_error (YYSIZE_T *yymsg_alloc, char **yymsg,
                   }
                 yyarg[yycount++] = yytname[yyx];
                 {
-                  YYSIZE_T yysize1 = yysize + yytnamerr (YY_NULLPTR, yytname[yyx]);
-                  if (! (yysize <= yysize1
-                         && yysize1 <= YYSTACK_ALLOC_MAXIMUM))
+                  YYPTRDIFF_T yysize1
+                    = yysize + yytnamerr (YY_NULLPTR, yytname[yyx]);
+                  if (yysize <= yysize1 && yysize1 <= YYSTACK_ALLOC_MAXIMUM)
+                    yysize = yysize1;
+                  else
                     return 2;
-                  yysize = yysize1;
                 }
               }
         }
@@ -1720,6 +1804,7 @@ yysyntax_error (YYSIZE_T *yymsg_alloc, char **yymsg,
       case N:                               \
         yyformat = S;                       \
       break
+    default: /* Avoid compiler warnings. */
       YYCASE_(0, YY_("syntax error"));
       YYCASE_(1, YY_("syntax error, unexpected %s"));
       YYCASE_(2, YY_("syntax error, unexpected %s, expecting %s"));
@@ -1730,10 +1815,13 @@ yysyntax_error (YYSIZE_T *yymsg_alloc, char **yymsg,
     }
 
   {
-    YYSIZE_T yysize1 = yysize + yystrlen (yyformat);
-    if (! (yysize <= yysize1 && yysize1 <= YYSTACK_ALLOC_MAXIMUM))
+    /* Don't count the "%s"s in the final size, but reserve room for
+       the terminator.  */
+    YYPTRDIFF_T yysize1 = yysize + (yystrlen (yyformat) - 2 * yycount) + 1;
+    if (yysize <= yysize1 && yysize1 <= YYSTACK_ALLOC_MAXIMUM)
+      yysize = yysize1;
+    else
       return 2;
-    yysize = yysize1;
   }
 
   if (*yymsg_alloc < yysize)
@@ -1759,8 +1847,8 @@ yysyntax_error (YYSIZE_T *yymsg_alloc, char **yymsg,
         }
       else
         {
-          yyp++;
-          yyformat++;
+          ++yyp;
+          ++yyformat;
         }
   }
   return 0;
@@ -1786,2222 +1874,1667 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
   YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN
   switch (yytype)
     {
-          case 0: /* "end of source"  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    case 0: /* "end of source"  */
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 3: /* UNRECOGNIZED  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 4: /* ELLIPSIS  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 5: /* INCREMENT  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 6: /* DECIMAL  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 7: /* OCTAL  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 8: /* HEX  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 9: /* FLOAT_  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 10: /* EXP_FLOAT  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 11: /* STRING  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 12: /* ESCAPED_STRING  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 13: /* IDENTIFIER_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 14: /* PHYSICAL_IDENTIFIER_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 15: /* VERSION  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 16: /* UNTERM_STRING  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 17: /* UNTERM_ESCAPED_STRING  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 18: /* VERS_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 19: /* VERS_2_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 20: /* KW___no_header  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 21: /* KW___row_length  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 22: /* KW___untyped  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 23: /* KW_alias  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 24: /* KW_column  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 25: /* KW_const  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 26: /* KW_control  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 27: /* KW_database  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 28: /* KW_decode  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 29: /* KW_default  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 30: /* KW_encode  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 31: /* KW_extern  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 32: /* KW_false  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 33: /* KW_fmtdef  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 34: /* KW_function  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 35: /* KW_include  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 36: /* KW_limit  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 37: /* KW_physical  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 38: /* KW_read  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 39: /* KW_readonly  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 40: /* KW_return  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 41: /* KW_schema  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 42: /* KW_static  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 43: /* KW_table  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 44: /* KW_template  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 45: /* KW_trigger  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 46: /* KW_true  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 47: /* KW_type  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 48: /* KW_typedef  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 49: /* KW_typeset  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 50: /* KW_validate  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 51: /* KW_version  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 52: /* KW_view  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 53: /* KW_virtual  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 54: /* KW_void  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 55: /* KW_write  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 56: /* PT_ASTLIST  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 57: /* PT_PARSE  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 58: /* PT_SOURCE  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 59: /* PT_VERSION_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 60: /* PT_VERSION_2  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 61: /* PT_SCHEMA_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 62: /* PT_SCHEMA_2_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 63: /* PT_INCLUDE  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 64: /* PT_TYPEDEF  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 65: /* PT_FQN  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 66: /* PT_IDENT  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 67: /* PT_PHYSIDENT  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 68: /* PT_UINT  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 69: /* PT_TYPESET  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 70: /* PT_TYPESETDEF  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 71: /* PT_FORMAT  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 72: /* PT_CONST  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 73: /* PT_ALIAS  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 74: /* PT_EXTERN  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 75: /* PT_FUNCTION  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 76: /* PT_UNTYPED  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 77: /* PT_ROWLENGTH  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 78: /* PT_FUNCDECL  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 79: /* PT_EMPTY  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 80: /* PT_SCHEMASIG  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 81: /* PT_SCHEMAFORMAL  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 82: /* PT_RETURNTYPE  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 83: /* PT_FACTSIG  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 84: /* PT_FUNCSIG  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 85: /* PT_FUNCPARAMS  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 86: /* PT_FORMALPARAM  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 87: /* PT_ELLIPSIS  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 88: /* PT_FUNCPROLOGUE  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 89: /* PT_RETURN  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 90: /* PT_PRODSTMT  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 91: /* PT_PRODTRIGGER  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 92: /* PT_SCHEMA  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 93: /* PT_VALIDATE  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 94: /* PT_PHYSICAL  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 95: /* PT_PHYSPROLOGUE  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 96: /* PT_PHYSSTMT  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 97: /* PT_PHYSBODYSTMT  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 98: /* PT_TABLE  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 99: /* PT_TABLEPARENTS  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 100: /* PT_TABLEBODY  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 101: /* PT_FUNCEXPR  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 102: /* PT_FACTPARMS  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 103: /* PT_COLUMN  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 104: /* PT_COLUMNEXPR  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 105: /* PT_COLDECL  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 106: /* PT_TYPEDCOL  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 107: /* PT_COLSTMT  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 108: /* PT_DFLTVIEW  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 109: /* PT_PHYSMBR  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 110: /* PT_PHYSCOL  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 111: /* PT_PHYSCOLDEF  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 112: /* PT_COLSCHEMAPARMS  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 113: /* PT_COLSCHEMAPARAM  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 114: /* PT_COLUNTYPED  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 115: /* PT_DATABASE  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 116: /* PT_TYPEEXPR  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 117: /* PT_DBBODY  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 118: /* PT_DBDAD  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 119: /* PT_DBMEMBER  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 120: /* PT_TBLMEMBER  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 121: /* PT_NOHEADER  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 122: /* PT_CASTEXPR  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 123: /* PT_CONSTVECT  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 124: /* PT_NEGATE  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 125: /* PT_UNARYPLUS  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 126: /* PT_VERSNAME  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 127: /* PT_ARRAY  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 128: /* PT_PHYSENCREF  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 129: /* PT_TYPEDCOLEXPR  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 130: /* PT_VIEW  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 131: /* PT_VIEWPARAM  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 132: /* PT_VIEWPARENTS  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 133: /* PT_VIEWPARENT  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 134: /* PT_MEMBEREXPR  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 135: /* PT_JOINEXPR  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 136: /* ';'  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 137: /* ','  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 138: /* '{'  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 139: /* '}'  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 140: /* '['  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 141: /* ']'  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 142: /* '*'  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 143: /* '='  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 144: /* '('  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 145: /* ')'  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 146: /* '<'  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 147: /* '>'  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 148: /* '|'  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 149: /* '@'  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 150: /* '-'  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 151: /* '+'  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 152: /* '/'  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 153: /* '.'  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 154: /* ':'  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 156: /* parse  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 157: /* source  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 158: /* version_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 159: /* schema_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 160: /* schema_1_0_decl  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 161: /* typedef_1_0_decl  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 162: /* typedef_1_0_new_name_list  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 163: /* typeset_1_0_decl  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 164: /* typeset_1_0_new_name  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 165: /* typeset_1_0_def  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 166: /* typespec_1_0_list  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 167: /* typespec_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 168: /* dim_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 169: /* format_1_0_decl  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 170: /* format_1_0_new_name  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 171: /* format_1_0_name  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 172: /* const_1_0_decl  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 173: /* alias_1_0_decl  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 174: /* alias_1_0_new_name  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 175: /* function_1_0_decl  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 176: /* func_1_0_decl  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 177: /* untyped_func_1_0_decl  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 178: /* row_length_func_1_0_decl  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 179: /* opt_func_1_0_schema_sig  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 180: /* func_1_0_schema_sig  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 181: /* func_1_0_schema_formals  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 182: /* func_1_0_schema_formal  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 183: /* func_1_0_return_type  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 184: /* opt_func_1_0_fact_sig  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 185: /* func_1_0_fact_sig  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 186: /* func_1_0_fact_signature  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 187: /* func_1_0_fact_params  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 188: /* fact_param_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 189: /* func_1_0_param_sig  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 190: /* func_1_0_param_signature  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 191: /* func_1_0_formal_params  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 192: /* formal_param_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 193: /* func_1_0_vararg_formals  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 194: /* func_1_0_prologue  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 195: /* script_1_0_stmt_seq  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 196: /* script_1_0_stmt  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 197: /* extern_1_0_decl  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 198: /* ext_func_1_0_decl  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 199: /* script_1_0_decl  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 200: /* validate_1_0_decl  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 201: /* physical_1_0_decl  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 202: /* phys_1_0_return_type  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 203: /* phys_1_0_prologue  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 204: /* phys_1_0_body  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 205: /* phys_1_0_body_stmt  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 206: /* phys_1_0_stmt  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 207: /* table_1_0_decl  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 208: /* opt_tbl_1_0_parents  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 209: /* tbl_1_0_parents  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 210: /* tbl_1_0_body  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 211: /* tbl_1_0_stmt_seq  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 212: /* tbl_1_0_stmt  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 213: /* production_1_0_stmt  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 214: /* col_1_0_modifiers  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 215: /* col_1_0_modifier_seq  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 216: /* col_1_0_modifier  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 217: /* col_1_0_decl  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 218: /* phys_enc_ref  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 219: /* typed_column_decl_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 220: /* col_ident  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 221: /* phys_ident  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 222: /* opt_column_body_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 223: /* column_body_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 224: /* column_stmt_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 225: /* default_view_1_0_decl  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 226: /* physmbr_1_0_decl  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 227: /* phys_coldef_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 228: /* opt_col_schema_parms_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 229: /* col_schema_parms_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 230: /* col_schema_parm_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 231: /* col_schema_value_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 232: /* cond_expr_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 233: /* expression_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 234: /* primary_expr_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 235: /* func_expr_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 236: /* schema_parms_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 237: /* schema_parm_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 238: /* opt_factory_parms_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 239: /* factory_parms_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 240: /* factory_parms  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 241: /* opt_func_1_0_parms  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 242: /* func_1_0_parms  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 243: /* uint_expr_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 244: /* float_expr_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 245: /* string_expr_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 246: /* const_vect_expr_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 247: /* opt_const_vect_exprlist_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 248: /* const_vect_exprlist_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 249: /* bool_expr_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 250: /* type_expr_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 251: /* member_expr_2_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 252: /* join_expr_2_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 253: /* database_1_0_decl  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 254: /* opt_database_dad_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 255: /* database_body_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 256: /* database_members_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 257: /* database_member_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 258: /* opt_template_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 259: /* db_member_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 260: /* table_member_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 261: /* include_directive  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 262: /* fqn_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 263: /* ident_1_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 264: /* empty  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 265: /* fqn_vers  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 266: /* fqn_opt_vers  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 267: /* version_2_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 268: /* schema_2_0  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 269: /* schema_2_0_decl  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 270: /* view_2_0_decl  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 271: /* view_parms  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 272: /* view_parm  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 273: /* opt_view_body  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 274: /* view_body  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 275: /* view_member  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 276: /* opt_view_parents  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 277: /* view_parents  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 278: /* view_parent  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
 
     case 279: /* view_parent_parms  */
-
-      {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+            {
+    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
 }
-
         break;
-
 
       default:
         break;
@@ -4040,7 +3573,7 @@ YYLTYPE yylloc = yyloc_default;
     /* Number of syntax errors so far.  */
     int yynerrs;
 
-    int yystate;
+    yy_state_fast_t yystate;
     /* Number of tokens to shift before error messages enabled.  */
     int yyerrstatus;
 
@@ -4053,9 +3586,9 @@ YYLTYPE yylloc = yyloc_default;
        to reallocate them elsewhere.  */
 
     /* The state stack.  */
-    yytype_int16 yyssa[YYINITDEPTH];
-    yytype_int16 *yyss;
-    yytype_int16 *yyssp;
+    yy_state_t yyssa[YYINITDEPTH];
+    yy_state_t *yyss;
+    yy_state_t *yyssp;
 
     /* The semantic value stack.  */
     YYSTYPE yyvsa[YYINITDEPTH];
@@ -4070,7 +3603,7 @@ YYLTYPE yylloc = yyloc_default;
     /* The locations where the error started and ended.  */
     YYLTYPE yyerror_range[3];
 
-    YYSIZE_T yystacksize;
+    YYPTRDIFF_T yystacksize;
 
   int yyn;
   int yyresult;
@@ -4085,7 +3618,7 @@ YYLTYPE yylloc = yyloc_default;
   /* Buffer for error messages, and its allocated size.  */
   char yymsgbuf[128];
   char *yymsg = yymsgbuf;
-  YYSIZE_T yymsg_alloc = sizeof yymsgbuf;
+  YYPTRDIFF_T yymsg_alloc = sizeof yymsgbuf;
 #endif
 
 #define YYPOPSTACK(N)   (yyvsp -= (N), yyssp -= (N), yylsp -= (N))
@@ -4108,29 +3641,41 @@ YYLTYPE yylloc = yyloc_default;
   yylsp[0] = yylloc;
   goto yysetstate;
 
+
 /*------------------------------------------------------------.
-| yynewstate -- Push a new state, which is found in yystate.  |
+| yynewstate -- push a new state, which is found in yystate.  |
 `------------------------------------------------------------*/
- yynewstate:
+yynewstate:
   /* In all cases, when you get here, the value and location stacks
      have just been pushed.  So pushing a state here evens the stacks.  */
   yyssp++;
 
- yysetstate:
-  *yyssp = yystate;
+
+/*--------------------------------------------------------------------.
+| yysetstate -- set current state (the top of the stack) to yystate.  |
+`--------------------------------------------------------------------*/
+yysetstate:
+  YYDPRINTF ((stderr, "Entering state %d\n", yystate));
+  YY_ASSERT (0 <= yystate && yystate < YYNSTATES);
+  YY_IGNORE_USELESS_CAST_BEGIN
+  *yyssp = YY_CAST (yy_state_t, yystate);
+  YY_IGNORE_USELESS_CAST_END
 
   if (yyss + yystacksize - 1 <= yyssp)
+#if !defined yyoverflow && !defined YYSTACK_RELOCATE
+    goto yyexhaustedlab;
+#else
     {
       /* Get the current used size of the three stacks, in elements.  */
-      YYSIZE_T yysize = yyssp - yyss + 1;
+      YYPTRDIFF_T yysize = yyssp - yyss + 1;
 
-#ifdef yyoverflow
+# if defined yyoverflow
       {
         /* Give user a chance to reallocate the stack.  Use copies of
            these so that the &'s don't force the real ones into
            memory.  */
+        yy_state_t *yyss1 = yyss;
         YYSTYPE *yyvs1 = yyvs;
-        yytype_int16 *yyss1 = yyss;
         YYLTYPE *yyls1 = yyls;
 
         /* Each stack pointer address is followed by the size of the
@@ -4138,19 +3683,15 @@ YYLTYPE yylloc = yyloc_default;
            conditional around just the two extra args, but that might
            be undefined if yyoverflow is a macro.  */
         yyoverflow (YY_("memory exhausted"),
-                    &yyss1, yysize * sizeof (*yyssp),
-                    &yyvs1, yysize * sizeof (*yyvsp),
-                    &yyls1, yysize * sizeof (*yylsp),
+                    &yyss1, yysize * YYSIZEOF (*yyssp),
+                    &yyvs1, yysize * YYSIZEOF (*yyvsp),
+                    &yyls1, yysize * YYSIZEOF (*yylsp),
                     &yystacksize);
-
-        yyls = yyls1;
         yyss = yyss1;
         yyvs = yyvs1;
+        yyls = yyls1;
       }
-#else /* no yyoverflow */
-# ifndef YYSTACK_RELOCATE
-      goto yyexhaustedlab;
-# else
+# else /* defined YYSTACK_RELOCATE */
       /* Extend the stack our own way.  */
       if (YYMAXDEPTH <= yystacksize)
         goto yyexhaustedlab;
@@ -4159,44 +3700,45 @@ YYLTYPE yylloc = yyloc_default;
         yystacksize = YYMAXDEPTH;
 
       {
-        yytype_int16 *yyss1 = yyss;
+        yy_state_t *yyss1 = yyss;
         union yyalloc *yyptr =
-          (union yyalloc *) YYSTACK_ALLOC (YYSTACK_BYTES (yystacksize));
+          YY_CAST (union yyalloc *,
+                   YYSTACK_ALLOC (YY_CAST (YYSIZE_T, YYSTACK_BYTES (yystacksize))));
         if (! yyptr)
           goto yyexhaustedlab;
         YYSTACK_RELOCATE (yyss_alloc, yyss);
         YYSTACK_RELOCATE (yyvs_alloc, yyvs);
         YYSTACK_RELOCATE (yyls_alloc, yyls);
-#  undef YYSTACK_RELOCATE
+# undef YYSTACK_RELOCATE
         if (yyss1 != yyssa)
           YYSTACK_FREE (yyss1);
       }
 # endif
-#endif /* no yyoverflow */
 
       yyssp = yyss + yysize - 1;
       yyvsp = yyvs + yysize - 1;
       yylsp = yyls + yysize - 1;
 
-      YYDPRINTF ((stderr, "Stack size increased to %lu\n",
-                  (unsigned long int) yystacksize));
+      YY_IGNORE_USELESS_CAST_BEGIN
+      YYDPRINTF ((stderr, "Stack size increased to %ld\n",
+                  YY_CAST (long, yystacksize)));
+      YY_IGNORE_USELESS_CAST_END
 
       if (yyss + yystacksize - 1 <= yyssp)
         YYABORT;
     }
-
-  YYDPRINTF ((stderr, "Entering state %d\n", yystate));
+#endif /* !defined yyoverflow && !defined YYSTACK_RELOCATE */
 
   if (yystate == YYFINAL)
     YYACCEPT;
 
   goto yybackup;
 
+
 /*-----------.
 | yybackup.  |
 `-----------*/
 yybackup:
-
   /* Do appropriate processing given the current state.  Read a
      lookahead token if we need one and don't already have one.  */
 
@@ -4246,15 +3788,14 @@ yybackup:
 
   /* Shift the lookahead token.  */
   YY_SYMBOL_PRINT ("Shifting", yytoken, &yylval, &yylloc);
-
-  /* Discard the shifted token.  */
-  yychar = YYEMPTY;
-
   yystate = yyn;
   YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN
   *++yyvsp = yylval;
   YY_IGNORE_MAYBE_UNINITIALIZED_END
   *++yylsp = yylloc;
+
+  /* Discard the shifted token.  */
+  yychar = YYEMPTY;
   goto yynewstate;
 
 
@@ -4269,7 +3810,7 @@ yydefault:
 
 
 /*-----------------------------.
-| yyreduce -- Do a reduction.  |
+| yyreduce -- do a reduction.  |
 `-----------------------------*/
 yyreduce:
   /* yyn is the number of a rule to reduce with.  */
@@ -4285,1623 +3826,1086 @@ yyreduce:
      GCC warning that YYVAL may be used uninitialized.  */
   yyval = yyvsp[1-yylen];
 
-  /* Default location.  */
+  /* Default location. */
   YYLLOC_DEFAULT (yyloc, (yylsp - yylen), yylen);
+  yyerror_range[1] = yyloc;
   YY_REDUCE_PRINT (yyn);
   switch (yyn)
     {
-        case 2:
-
-    { *root = MakeTree ( PT_PARSE, T ( (yyvsp[0]) ) );              (yyval) . subtree = 0; (yyval) . leading_ws = 0;  }
-
+  case 2:
+                                { *root = MakeTree ( PT_PARSE, T ( yyvsp[0] ) );              yyval . subtree = 0; yyval . leading_ws = 0;  }
     break;
 
   case 3:
-
-    { *root = MakeTree ( PT_PARSE, P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) );    (yyval) . subtree = 0; (yyval) . leading_ws = 0; }
-
+                                { *root = MakeTree ( PT_PARSE, P ( yyvsp[-1] ), T ( yyvsp[0] ) );    yyval . subtree = 0; yyval . leading_ws = 0; }
     break;
 
   case 4:
-
-    { (yyval) . subtree = MakeTree ( PT_SOURCE, P ( (yyvsp[0]) ) ); }
-
+                                { yyval . subtree = MakeTree ( PT_SOURCE, P ( yyvsp[0] ) ); }
     break;
 
   case 5:
-
-    { (yyval) . subtree = MakeTree ( PT_SOURCE, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                { yyval . subtree = MakeTree ( PT_SOURCE, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 6:
-
-    { (yyval) . subtree = MakeTree ( PT_SOURCE, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                { yyval . subtree = MakeTree ( PT_SOURCE, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 7:
-
-    { (yyval) . subtree = MakeTree ( PT_VERSION_1_0, T ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+                                { yyval . subtree = MakeTree ( PT_VERSION_1_0, T ( yyvsp[-2] ), T ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 8:
-
-    { (yyval) . subtree = MakeTree ( PT_SCHEMA_1_0, P ( (yyvsp[0]) ) ); }
-
+                                   { yyval . subtree = MakeTree ( PT_SCHEMA_1_0, P ( yyvsp[0] ) ); }
     break;
 
   case 9:
-
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-1]) ) , P ( (yyvsp[0]) ) ); }
-
+                                   { yyval . subtree = AddToList ( P ( yyvsp[-1] ) , P ( yyvsp[0] ) ); }
     break;
 
   case 10:
-
-    { (yyval) = (yyvsp[0]); }
-
+                            { yyval = yyvsp[0]; }
     break;
 
   case 11:
-
-    { (yyval) = (yyvsp[0]); }
-
+                            { yyval = yyvsp[0]; }
     break;
 
   case 12:
-
-    { (yyval) = (yyvsp[0]); }
-
+                            { yyval = yyvsp[0]; }
     break;
 
   case 13:
-
-    { (yyval) = (yyvsp[0]); }
-
+                            { yyval = yyvsp[0]; }
     break;
 
   case 14:
-
-    { (yyval) = (yyvsp[0]); }
-
+                            { yyval = yyvsp[0]; }
     break;
 
   case 15:
-
-    { (yyval) = (yyvsp[0]); }
-
+                            { yyval = yyvsp[0]; }
     break;
 
   case 16:
-
-    { (yyval) = (yyvsp[0]); }
-
+                            { yyval = yyvsp[0]; }
     break;
 
   case 17:
-
-    { (yyval) = (yyvsp[0]); }
-
+                            { yyval = yyvsp[0]; }
     break;
 
   case 18:
-
-    { (yyval) = (yyvsp[0]); }
-
+                            { yyval = yyvsp[0]; }
     break;
 
   case 19:
-
-    { (yyval) = (yyvsp[0]); }
-
+                            { yyval = yyvsp[0]; }
     break;
 
   case 20:
-
-    { (yyval) = (yyvsp[0]); }
-
+                            { yyval = yyvsp[0]; }
     break;
 
   case 21:
-
-    { (yyval) = (yyvsp[0]); }
-
+                            { yyval = yyvsp[0]; }
     break;
 
   case 22:
-
-    { (yyval) = (yyvsp[0]); }
-
+                            { yyval = yyvsp[0]; }
     break;
 
   case 23:
-
-    { (yyval) . subtree = T ( (yyvsp[0]) ); }
-
+                            { yyval . subtree = T ( yyvsp[0] ); }
     break;
 
   case 24:
-
-    { (yyval) . subtree = MakeTree ( PT_TYPEDEF, T ( (yyvsp[-3]) ), P ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+                            { yyval . subtree = MakeTree ( PT_TYPEDEF, T ( yyvsp[-3] ), P ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 25:
-
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-
+                                                    { yyval . subtree = MakeList ( yyvsp[0] ); }
     break;
 
   case 26:
-
-    { (yyval) . subtree = AddToList ( P((yyvsp[-2])), T((yyvsp[-1])), P((yyvsp[0])) ); }
-
+                                                    { yyval . subtree = AddToList ( P(yyvsp[-2]), T(yyvsp[-1]), P(yyvsp[0]) ); }
     break;
 
   case 27:
-
-    { (yyval) . subtree = MakeTree ( PT_TYPESET, T ( (yyvsp[-3]) ), P ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+                            { yyval . subtree = MakeTree ( PT_TYPESET, T ( yyvsp[-3] ), P ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 28:
-
-    { (yyval) = (yyvsp[0]); }
-
+                            { yyval = yyvsp[0]; }
     break;
 
   case 29:
-
-    { (yyval) . subtree = MakeTree ( PT_TYPESETDEF, T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+            { yyval . subtree = MakeTree ( PT_TYPESETDEF, T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 30:
-
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-
+                                            { yyval . subtree = MakeList ( yyvsp[0] ); }
     break;
 
   case 31:
-
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                            { yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 32:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                { yyval = yyvsp[0]; }
     break;
 
   case 33:
-
-    { (yyval) . subtree = MakeTree ( PT_ARRAY, P ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+                                { yyval . subtree = MakeTree ( PT_ARRAY, P ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 34:
-
-    { (yyval) = (yyvsp[0]); }
-
+                        { yyval = yyvsp[0]; }
     break;
 
   case 35:
-
-    { (yyval) . subtree = T ( (yyvsp[0]) ); }
-
+                        { yyval . subtree = T ( yyvsp[0] ); }
     break;
 
   case 36:
-
-    { (yyval) . subtree = MakeTree ( PT_FORMAT, T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+                                    { yyval . subtree = MakeTree ( PT_FORMAT, T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 37:
-
-    { (yyval) . subtree = MakeTree ( PT_FORMAT, T ( (yyvsp[-3]) ), P ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+                                    { yyval . subtree = MakeTree ( PT_FORMAT, T ( yyvsp[-3] ), P ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 38:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                    { yyval = yyvsp[0]; }
     break;
 
   case 39:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                    { yyval = yyvsp[0]; }
     break;
 
   case 40:
-
-    { (yyval) . subtree = MakeTree ( PT_CONST, T ( (yyvsp[-5]) ), P ( (yyvsp[-4]) ), P ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+            { yyval . subtree = MakeTree ( PT_CONST, T ( yyvsp[-5] ), P ( yyvsp[-4] ), P ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 41:
-
-    { (yyval) . subtree = MakeTree ( PT_ALIAS, T ( (yyvsp[-3]) ), P ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+            { yyval . subtree = MakeTree ( PT_ALIAS, T ( yyvsp[-3] ), P ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 42:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                    { yyval = yyvsp[0]; }
     break;
 
   case 43:
-
-    { (yyval) . subtree = MakeTree ( PT_FUNCTION, T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                     { yyval . subtree = MakeTree ( PT_FUNCTION, T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 44:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                     { yyval = yyvsp[0]; }
     break;
 
   case 45:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                     { yyval = yyvsp[0]; }
     break;
 
   case 46:
-
-    { (yyval) . subtree = MakeTree ( PT_FUNCDECL, P ( (yyvsp[-5]) ), P ( (yyvsp[-4]) ), P ( (yyvsp[-3]) ), P ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+            { yyval . subtree = MakeTree ( PT_FUNCDECL, P ( yyvsp[-5] ), P ( yyvsp[-4] ), P ( yyvsp[-3] ), P ( yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 47:
-
-    { (yyval) . subtree = MakeTree ( PT_UNTYPED, T ( (yyvsp[-3]) ), P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+            { yyval . subtree = MakeTree ( PT_UNTYPED, T ( yyvsp[-3] ), P ( yyvsp[-2] ), T ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 48:
-
-    { (yyval) . subtree = MakeTree ( PT_ROWLENGTH, T ( (yyvsp[-3]) ), P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+            { yyval . subtree = MakeTree ( PT_ROWLENGTH, T ( yyvsp[-3] ), P ( yyvsp[-2] ), T ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 49:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                { yyval = yyvsp[0]; }
     break;
 
   case 50:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                { yyval = yyvsp[0]; }
     break;
 
   case 51:
-
-    { (yyval) . subtree = MakeTree ( PT_SCHEMASIG, T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+                                            { yyval . subtree = MakeTree ( PT_SCHEMASIG, T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 52:
-
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-
+                                                            { yyval . subtree = MakeList ( yyvsp[0] ); }
     break;
 
   case 53:
-
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                                            { yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 54:
-
-    { (yyval) . subtree = MakeTree ( PT_SCHEMAFORMAL, T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                { yyval . subtree = MakeTree ( PT_SCHEMAFORMAL, T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 55:
-
-    { (yyval) . subtree = MakeTree ( PT_SCHEMAFORMAL, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                { yyval . subtree = MakeTree ( PT_SCHEMAFORMAL, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 56:
-
-    { (yyval) . subtree = MakeTree ( PT_RETURNTYPE, T ( (yyvsp[0]) ) ); }
-
+                        { yyval . subtree = MakeTree ( PT_RETURNTYPE, T ( yyvsp[0] ) ); }
     break;
 
   case 57:
-
-    { (yyval) . subtree = MakeTree ( PT_RETURNTYPE, P ( (yyvsp[0]) ) ); }
-
+                        { yyval . subtree = MakeTree ( PT_RETURNTYPE, P ( yyvsp[0] ) ); }
     break;
 
   case 58:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                { yyval = yyvsp[0]; }
     break;
 
   case 59:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                { yyval = yyvsp[0]; }
     break;
 
   case 60:
-
-    { (yyval) . subtree = MakeTree ( PT_FACTSIG, T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+                                       { yyval . subtree = MakeTree ( PT_FACTSIG, T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 61:
-
-    { (yyval) = (yyvsp[0]); }
-
+                            { yyval = yyvsp[0]; }
     break;
 
   case 62:
-
-    { (yyval) . subtree = MakeTree ( PT_FUNCPARAMS, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                            { yyval . subtree = MakeTree ( PT_FUNCPARAMS, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 63:
-
-    { (yyval) . subtree = MakeTree ( PT_FUNCPARAMS, T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                            { yyval . subtree = MakeTree ( PT_FUNCPARAMS, T ( yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 64:
-
-    { (yyval) . subtree = MakeTree ( PT_FUNCPARAMS, P ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                            { yyval . subtree = MakeTree ( PT_FUNCPARAMS, P ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 65:
-
-    { (yyval) . subtree = MakeTree ( PT_FUNCPARAMS, P ( (yyvsp[-4]) ), T ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                            { yyval . subtree = MakeTree ( PT_FUNCPARAMS, P ( yyvsp[-4] ), T ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 66:
-
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-
+                                                    { yyval . subtree = MakeList ( yyvsp[0] ); }
     break;
 
   case 67:
-
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                                    { yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 68:
-
-    { (yyval) . subtree = MakeTree ( PT_FORMALPARAM, P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+                                        { yyval . subtree = MakeTree ( PT_FORMALPARAM, P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 69:
-
-    { (yyval) . subtree = MakeTree ( PT_FUNCSIG, T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+                                        { yyval . subtree = MakeTree ( PT_FUNCSIG, T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 70:
-
-    { (yyval) = (yyvsp[0]); }
-
+                            { yyval = yyvsp[0]; }
     break;
 
   case 71:
-
-    { (yyval) . subtree = MakeTree ( PT_FUNCPARAMS, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                            { yyval . subtree = MakeTree ( PT_FUNCPARAMS, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 72:
-
-    { (yyval) . subtree = MakeTree ( PT_FUNCPARAMS, T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                            { yyval . subtree = MakeTree ( PT_FUNCPARAMS, T ( yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 73:
-
-    { (yyval) . subtree = MakeTree ( PT_FUNCPARAMS, P ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                            { yyval . subtree = MakeTree ( PT_FUNCPARAMS, P ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 74:
-
-    { (yyval) . subtree = MakeTree ( PT_FUNCPARAMS, P ( (yyvsp[-4]) ), T ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                            { yyval . subtree = MakeTree ( PT_FUNCPARAMS, P ( yyvsp[-4] ), T ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 75:
-
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-
+                                                        { yyval . subtree = MakeList ( yyvsp[0] ); }
     break;
 
   case 76:
-
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                                        { yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 77:
-
-    { (yyval) . subtree = MakeTree ( PT_FORMALPARAM, P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+                                        { yyval . subtree = MakeTree ( PT_FORMALPARAM, P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 78:
-
-    { (yyval) . subtree = MakeTree ( PT_FORMALPARAM, T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+                                        { yyval . subtree = MakeTree ( PT_FORMALPARAM, T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 79:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                { yyval = yyvsp[0]; }
     break;
 
   case 80:
-
-    { (yyval) . subtree = MakeTree ( PT_ELLIPSIS, T ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+                                { yyval . subtree = MakeTree ( PT_ELLIPSIS, T ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 81:
-
-    { (yyval) . subtree = MakeTree ( PT_FUNCPROLOGUE, T ( (yyvsp[0]) ) ); }
-
+                                { yyval . subtree = MakeTree ( PT_FUNCPROLOGUE, T ( yyvsp[0] ) ); }
     break;
 
   case 82:
-
-    { (yyval) . subtree = MakeTree ( PT_FUNCPROLOGUE, T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+                                { yyval . subtree = MakeTree ( PT_FUNCPROLOGUE, T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 83:
-
-    { (yyval) . subtree = MakeTree ( PT_FUNCPROLOGUE, T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+                                { yyval . subtree = MakeTree ( PT_FUNCPROLOGUE, T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 84:
-
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-
+                                            { yyval . subtree = MakeList ( yyvsp[0] ); }
     break;
 
   case 85:
-
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                            { yyval . subtree = AddToList ( P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 86:
-
-    { (yyval) . subtree = MakeTree ( PT_RETURN, T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+                                    { yyval . subtree = MakeTree ( PT_RETURN, T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 87:
-
-    { (yyval) . subtree = MakeTree ( PT_PRODSTMT, P ( (yyvsp[-4]) ), P ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+                                     { yyval . subtree = MakeTree ( PT_PRODSTMT, P ( yyvsp[-4] ), P ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 88:
-
-    { (yyval) . subtree = MakeTree ( PT_EXTERN, T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+            { yyval . subtree = MakeTree ( PT_EXTERN, T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 89:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                    { yyval = yyvsp[0]; }
     break;
 
   case 90:
-
-    { (yyval) . subtree = MakeTree ( PT_SCHEMA, T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                            { yyval . subtree = MakeTree ( PT_SCHEMA, T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 91:
-
-    { (yyval) . subtree = MakeTree ( PT_SCHEMA, T ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                            { yyval . subtree = MakeTree ( PT_SCHEMA, T ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 92:
-
-    { (yyval) . subtree = MakeTree ( PT_VALIDATE, T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                            { yyval . subtree = MakeTree ( PT_VALIDATE, T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 93:
-
-    { (yyval) . subtree = MakeTree ( PT_PHYSICAL, T ( (yyvsp[-5]) ), P ( (yyvsp[-4]) ), P ( (yyvsp[-3]) ), P ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+            { yyval . subtree = MakeTree ( PT_PHYSICAL, T ( yyvsp[-5] ), P ( yyvsp[-4] ), P ( yyvsp[-3] ), P ( yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 94:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                            { yyval = yyvsp[0]; }
     break;
 
   case 95:
-
-    { (yyval) . subtree = MakeTree ( PT_NOHEADER, T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                            { yyval . subtree = MakeTree ( PT_NOHEADER, T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 96:
-
-    { (yyval) . subtree = MakeTree ( PT_PHYSPROLOGUE, T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+            { yyval . subtree = MakeTree ( PT_PHYSPROLOGUE, T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 97:
-
-    { (yyval) . subtree = MakeTree ( PT_PHYSPROLOGUE, T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+            { yyval . subtree = MakeTree ( PT_PHYSPROLOGUE, T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 98:
-
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-
+                                            { yyval . subtree = MakeList ( yyvsp[0] ); }
     break;
 
   case 99:
-
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                            { yyval . subtree = AddToList ( P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 100:
-
-    { (yyval) . subtree = MakeTree ( PT_PHYSBODYSTMT, T ( (yyvsp[0]) ) ); }
-
+            { yyval . subtree = MakeTree ( PT_PHYSBODYSTMT, T ( yyvsp[0] ) ); }
     break;
 
   case 101:
-
-    { (yyval) . subtree = MakeTree ( PT_PHYSBODYSTMT, T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+            { yyval . subtree = MakeTree ( PT_PHYSBODYSTMT, T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 102:
-
-    { (yyval) . subtree = MakeTree ( PT_PHYSBODYSTMT, T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+            { yyval . subtree = MakeTree ( PT_PHYSBODYSTMT, T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 103:
-
-    { (yyval) . subtree = MakeTree ( PT_PHYSBODYSTMT, T ( (yyvsp[-4]) ), T ( (yyvsp[-3]) ), P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+            { yyval . subtree = MakeTree ( PT_PHYSBODYSTMT, T ( yyvsp[-4] ), T ( yyvsp[-3] ), P ( yyvsp[-2] ), T ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 104:
-
-    { (yyval) . subtree = MakeTree ( PT_PHYSSTMT, T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+            { yyval . subtree = MakeTree ( PT_PHYSSTMT, T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 105:
-
-    { (yyval) . subtree = MakeTree ( PT_TABLE, T ( (yyvsp[-3]) ), P ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+            { yyval . subtree = MakeTree ( PT_TABLE, T ( yyvsp[-3] ), P ( yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 106:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                { yyval = yyvsp[0]; }
     break;
 
   case 107:
-
-    { (yyval) . subtree = MakeTree ( PT_TABLEPARENTS, T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                { yyval . subtree = MakeTree ( PT_TABLEPARENTS, T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 108:
-
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-
+                                          { yyval . subtree = MakeList ( yyvsp[0] ); }
     break;
 
   case 109:
-
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                          { yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 110:
-
-    { (yyval) . subtree = MakeTree ( PT_TABLEBODY, T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+            { yyval . subtree = MakeTree ( PT_TABLEBODY, T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 111:
-
-    { (yyval) . subtree = MakeTree ( PT_TABLEBODY, T ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+            { yyval . subtree = MakeTree ( PT_TABLEBODY, T ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 112:
-
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-
+                                        { yyval . subtree = MakeList ( yyvsp[0] ); }
     break;
 
   case 113:
-
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                        { yyval . subtree = AddToList ( P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 114:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                                { yyval = yyvsp[0]; }
     break;
 
   case 115:
-
-    { (yyval) . subtree = MakeTree ( PT_COLUMN, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                                { yyval . subtree = MakeTree ( PT_COLUMN, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 116:
-
-    { (yyval) . subtree = MakeTree ( PT_COLUMNEXPR, T ( (yyvsp[-4]) ), T ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+                        { yyval . subtree = MakeTree ( PT_COLUMNEXPR, T ( yyvsp[-4] ), T ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 117:
-
-    { (yyval) . subtree = MakeTree ( PT_COLUMNEXPR, T ( (yyvsp[-5]) ), T ( (yyvsp[-4]) ), T ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+                        { yyval . subtree = MakeTree ( PT_COLUMNEXPR, T ( yyvsp[-5] ), T ( yyvsp[-4] ), T ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 118:
-
-    { (yyval) . subtree = MakeTree ( PT_PHYSCOL, T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                                { yyval . subtree = MakeTree ( PT_PHYSCOL, T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 119:
-
-    { (yyval) . subtree = MakeTree ( PT_PHYSCOL, T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                                { yyval . subtree = MakeTree ( PT_PHYSCOL, T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 120:
-
-    { (yyval) . subtree = MakeTree ( PT_PHYSCOL, T ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                                { yyval . subtree = MakeTree ( PT_PHYSCOL, T ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 121:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                                { yyval = yyvsp[0]; }
     break;
 
   case 122:
-
-    { (yyval) . subtree = MakeTree ( PT_COLUNTYPED, T ( (yyvsp[-5]) ), T ( (yyvsp[-4]) ), P ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+                        { yyval . subtree = MakeTree ( PT_COLUNTYPED, T ( yyvsp[-5] ), T ( yyvsp[-4] ), P ( yyvsp[-3] ), T ( yyvsp[-2] ), T ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 123:
-
-    { (yyval) . subtree = T ( (yyvsp[0]) ); }
-
+                                                { yyval . subtree = T ( yyvsp[0] ); }
     break;
 
   case 124:
-
-    { (yyval) . subtree = MakeTree ( PT_PRODSTMT, P ( (yyvsp[-4]) ), P ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+                                     { yyval . subtree = MakeTree ( PT_PRODSTMT, P ( yyvsp[-4] ), P ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 125:
-
-    { (yyval) . subtree = MakeTree ( PT_PRODTRIGGER, T ( (yyvsp[-4]) ), P ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+                                     { yyval . subtree = MakeTree ( PT_PRODTRIGGER, T ( yyvsp[-4] ), P ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 126:
-
-    { (yyval) . subtree = T ( (yyvsp[0]) ); }
-
+                                        { yyval . subtree = T ( yyvsp[0] ); }
     break;
 
   case 127:
-
-    { (yyval) = (yyvsp[-1]); AddToList ( P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+                                        { yyval = yyvsp[-1]; AddToList ( P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 128:
-
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-
+                                                { yyval . subtree = MakeList ( yyvsp[0] ); }
     break;
 
   case 129:
-
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                                { yyval . subtree = AddToList ( P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 130:
-
-    { (yyval) . subtree = T ( (yyvsp[0]) ); }
-
+                        { yyval . subtree = T ( yyvsp[0] ); }
     break;
 
   case 131:
-
-    { (yyval) . subtree = T ( (yyvsp[0]) ); }
-
+                        { yyval . subtree = T ( yyvsp[0] ); }
     break;
 
   case 132:
-
-    { (yyval) . subtree = T ( (yyvsp[0]) ); }
-
+                        { yyval . subtree = T ( yyvsp[0] ); }
     break;
 
   case 133:
-
-    { (yyval) . subtree = MakeTree ( PT_COLDECL, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+            { yyval . subtree = MakeTree ( PT_COLDECL, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 134:
-
-    { (yyval) . subtree = MakeTree ( PT_COLDECL, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+            { yyval . subtree = MakeTree ( PT_COLDECL, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 135:
-
-    { (yyval) . subtree = MakeTree ( PT_PHYSENCREF, T ( (yyvsp[-4]) ), P ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+            { yyval . subtree = MakeTree ( PT_PHYSENCREF, T ( yyvsp[-4] ), P ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 136:
-
-    { (yyval) . subtree = MakeTree ( PT_PHYSENCREF, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+            { yyval . subtree = MakeTree ( PT_PHYSENCREF, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 137:
-
-    { (yyval) . subtree = MakeTree ( PT_PHYSENCREF, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+            { yyval . subtree = MakeTree ( PT_PHYSENCREF, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 138:
-
-    { (yyval) . subtree = MakeTree ( PT_TYPEDCOL, P ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+            { yyval . subtree = MakeTree ( PT_TYPEDCOL, P ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 139:
-
-    { (yyval) . subtree = MakeTree ( PT_TYPEDCOLEXPR, P ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+            { yyval . subtree = MakeTree ( PT_TYPEDCOLEXPR, P ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 140:
-
-    { (yyval) . subtree = MakeTree ( PT_TYPEDCOL, P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+            { yyval . subtree = MakeTree ( PT_TYPEDCOL, P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 141:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                    { yyval = yyvsp[0]; }
     break;
 
   case 142:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                    { yyval = yyvsp[0]; }
     break;
 
   case 143:
-
-    { (yyval) . subtree = T ( (yyvsp[0]) ); }
-
+                                    { yyval . subtree = T ( yyvsp[0] ); }
     break;
 
   case 144:
-
-    { (yyval) = (yyvsp[0]); }
-
+                        { yyval = yyvsp[0]; }
     break;
 
   case 145:
-
-    { (yyval) = (yyvsp[0]); }
-
+                        { yyval = yyvsp[0]; }
     break;
 
   case 146:
-
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-
+                                        { yyval . subtree = MakeList ( yyvsp[0] ); }
     break;
 
   case 147:
-
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                        { yyval . subtree = AddToList ( P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 148:
-
-    { (yyval) . subtree = MakeTree ( PT_COLSTMT, T ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+                                        { yyval . subtree = MakeTree ( PT_COLSTMT, T ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 149:
-
-    { (yyval) . subtree = MakeTree ( PT_COLSTMT, T ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+                                        { yyval . subtree = MakeTree ( PT_COLSTMT, T ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 150:
-
-    { (yyval) . subtree = MakeTree ( PT_COLSTMT, T ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+                                        { yyval . subtree = MakeTree ( PT_COLSTMT, T ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 151:
-
-    { (yyval) . subtree = T ( (yyvsp[0]) ); }
-
+                                        { yyval . subtree = T ( yyvsp[0] ); }
     break;
 
   case 152:
-
-    { (yyval) . subtree = MakeTree ( PT_DFLTVIEW, T ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+            { yyval . subtree = MakeTree ( PT_DFLTVIEW, T ( yyvsp[-3] ), T ( yyvsp[-2] ), T ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 153:
-
-    { (yyval) . subtree = MakeTree ( PT_PHYSMBR, P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+            { yyval . subtree = MakeTree ( PT_PHYSMBR, P ( yyvsp[-2] ), T ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 154:
-
-    { (yyval) . subtree = MakeTree ( PT_PHYSMBR, P ( (yyvsp[-4]) ), T ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+            { yyval . subtree = MakeTree ( PT_PHYSMBR, P ( yyvsp[-4] ), T ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 155:
-
-    { (yyval) . subtree = MakeTree ( PT_PHYSMBR, T ( (yyvsp[-3]) ), P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+            { yyval . subtree = MakeTree ( PT_PHYSMBR, T ( yyvsp[-3] ), P ( yyvsp[-2] ), T ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 156:
-
-    { (yyval) . subtree = MakeTree ( PT_PHYSMBR, T ( (yyvsp[-5]) ), P ( (yyvsp[-4]) ), T ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+            { yyval . subtree = MakeTree ( PT_PHYSMBR, T ( yyvsp[-5] ), P ( yyvsp[-4] ), T ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 157:
-
-    { (yyval) . subtree = MakeTree ( PT_PHYSCOLDEF, P ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+            { yyval . subtree = MakeTree ( PT_PHYSCOLDEF, P ( yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 158:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                        { yyval = yyvsp[0]; }
     break;
 
   case 159:
-
-    { (yyval) . subtree = MakeTree ( PT_COLSCHEMAPARMS, T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+                                        { yyval . subtree = MakeTree ( PT_COLSCHEMAPARMS, T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 160:
-
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-
+                                                    { yyval . subtree = MakeList ( yyvsp[0] ); }
     break;
 
   case 161:
-
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                                    { yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 162:
-
-    { (yyval) . subtree = MakeTree ( PT_COLSCHEMAPARAM, P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                            { yyval . subtree = MakeTree ( PT_COLSCHEMAPARAM, P ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 163:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                            { yyval = yyvsp[0]; }
     break;
 
   case 164:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                            { yyval = yyvsp[0]; }
     break;
 
   case 165:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                            { yyval = yyvsp[0]; }
     break;
 
   case 166:
-
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-
+                                            { yyval . subtree = MakeList ( yyvsp[0] ); }
     break;
 
   case 167:
-
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                            { yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 168:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                            { yyval = yyvsp[0]; }
     break;
 
   case 169:
-
-    { (yyval) . subtree = MakeTree ( PT_CASTEXPR, T ( (yyvsp[-3]) ), P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                            { yyval . subtree = MakeTree ( PT_CASTEXPR, T ( yyvsp[-3] ), P ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 170:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                { yyval = yyvsp[0]; }
     break;
 
   case 171:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                { yyval = yyvsp[0]; }
     break;
 
   case 172:
-
-    { (yyval) . subtree = T ( (yyvsp[0]) ); }
-
+                                { yyval . subtree = T ( yyvsp[0] ); }
     break;
 
   case 173:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                { yyval = yyvsp[0]; }
     break;
 
   case 174:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                { yyval = yyvsp[0]; }
     break;
 
   case 175:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                { yyval = yyvsp[0]; }
     break;
 
   case 176:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                { yyval = yyvsp[0]; }
     break;
 
   case 177:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                { yyval = yyvsp[0]; }
     break;
 
   case 178:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                { yyval = yyvsp[0]; }
     break;
 
   case 179:
-
-    { (yyval) . subtree = MakeTree ( PT_NEGATE, T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                { yyval . subtree = MakeTree ( PT_NEGATE, T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 180:
-
-    { (yyval) . subtree = MakeTree ( PT_UNARYPLUS, T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                { yyval . subtree = MakeTree ( PT_UNARYPLUS, T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 181:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                { yyval = yyvsp[0]; }
     break;
 
   case 182:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                { yyval = yyvsp[0]; }
     break;
 
   case 183:
-
-    { (yyval) . subtree = MakeTree ( PT_FUNCEXPR, T ( (yyvsp[-7]) ), P ( (yyvsp[-6]) ), T ( (yyvsp[-5]) ), P ( (yyvsp[-4]) ), P ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+             { yyval . subtree = MakeTree ( PT_FUNCEXPR, T ( yyvsp[-7] ), P ( yyvsp[-6] ), T ( yyvsp[-5] ), P ( yyvsp[-4] ), P ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 184:
-
-    { (yyval) . subtree = MakeTree ( PT_FUNCEXPR, P ( (yyvsp[-4]) ), P ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+             { yyval . subtree = MakeTree ( PT_FUNCEXPR, P ( yyvsp[-4] ), P ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 185:
-
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-
+                                            { yyval . subtree = MakeList ( yyvsp[0] ); }
     break;
 
   case 186:
-
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                            { yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 187:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                { yyval = yyvsp[0]; }
     break;
 
   case 188:
-
-    { (yyval) . subtree = MakeTree ( PT_ARRAY, P ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+                                { yyval . subtree = MakeTree ( PT_ARRAY, P ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 189:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                { yyval = yyvsp[0]; }
     break;
 
   case 190:
-
-    { (yyval) = (yyvsp[0]); }
-
+                        { yyval = yyvsp[0]; }
     break;
 
   case 191:
-
-    { (yyval) = (yyvsp[0]); }
-
+                        { yyval = yyvsp[0]; }
     break;
 
   case 192:
-
-    { (yyval) . subtree = MakeTree ( PT_FACTPARMS, T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+                            { yyval . subtree = MakeTree ( PT_FACTPARMS, T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 193:
-
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-
+                                        { yyval . subtree = MakeList ( yyvsp[0] ); }
     break;
 
   case 194:
-
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                        { yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 195:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                            { yyval = yyvsp[0]; }
     break;
 
   case 196:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                            { yyval = yyvsp[0]; }
     break;
 
   case 197:
-
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-
+                                            { yyval . subtree = MakeList ( yyvsp[0] ); }
     break;
 
   case 198:
-
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                            { yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 199:
-
-    { (yyval) . subtree = MakeTree ( PT_UINT, T ( (yyvsp[0]) ) ); }
-
+                                            { yyval . subtree = MakeTree ( PT_UINT, T ( yyvsp[0] ) ); }
     break;
 
   case 200:
-
-    { (yyval) . subtree = MakeTree ( PT_UINT, T ( (yyvsp[0]) ) ); }
-
+                                            { yyval . subtree = MakeTree ( PT_UINT, T ( yyvsp[0] ) ); }
     break;
 
   case 201:
-
-    { (yyval) . subtree = MakeTree ( PT_UINT, T ( (yyvsp[0]) ) ); }
-
+                                            { yyval . subtree = MakeTree ( PT_UINT, T ( yyvsp[0] ) ); }
     break;
 
   case 202:
-
-    { (yyval) . subtree = T ( (yyvsp[0]) ); }
-
+                                 { yyval . subtree = T ( yyvsp[0] ); }
     break;
 
   case 203:
-
-    { (yyval) . subtree = T ( (yyvsp[0]) ); }
-
+                                { yyval . subtree = T ( yyvsp[0] ); }
     break;
 
   case 204:
-
-    { (yyval) . subtree = T ( (yyvsp[0]) ); }
-
+                                { yyval . subtree = T ( yyvsp[0] ); }
     break;
 
   case 205:
-
-    { (yyval) . subtree = T ( (yyvsp[0]) ); }
-
+                                { yyval . subtree = T ( yyvsp[0] ); }
     break;
 
   case 206:
-
-    { (yyval) . subtree = MakeTree ( PT_CONSTVECT, T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+                                               { yyval . subtree = MakeTree ( PT_CONSTVECT, T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 207:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                { yyval = yyvsp[0]; }
     break;
 
   case 208:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                { yyval = yyvsp[0]; }
     break;
 
   case 209:
-
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-
+                                                    { yyval . subtree = MakeList ( yyvsp[0] ); }
     break;
 
   case 210:
-
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                                    { yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 211:
-
-    { (yyval) . subtree = T ( (yyvsp[0]) ); }
-
+                                { yyval . subtree = T ( yyvsp[0] ); }
     break;
 
   case 212:
-
-    { (yyval) . subtree = T ( (yyvsp[0]) ); }
-
+                                { yyval . subtree = T ( yyvsp[0] ); }
     break;
 
   case 213:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                { yyval = yyvsp[0]; }
     break;
 
   case 214:
-
-    { (yyval) . subtree = MakeTree ( PT_TYPEEXPR, P ( (yyvsp[-2]) ), T ( (yyvsp[-1])), P ( (yyvsp[0]) ) ); }
-
+                                { yyval . subtree = MakeTree ( PT_TYPEEXPR, P ( yyvsp[-2] ), T ( yyvsp[-1]), P ( yyvsp[0] ) ); }
     break;
 
   case 215:
-
-    { (yyval) . subtree = MakeTree ( PT_MEMBEREXPR, P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                        { yyval . subtree = MakeTree ( PT_MEMBEREXPR, P ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 216:
-
-    { (yyval) . subtree = MakeTree ( PT_MEMBEREXPR, P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+                                        { yyval . subtree = MakeTree ( PT_MEMBEREXPR, P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 217:
-
-    { (yyval) . subtree = MakeTree ( PT_JOINEXPR, P ( (yyvsp[-5]) ), T ( (yyvsp[-4]) ), P ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ((yyvsp[0]) ) ); }
-
+        { yyval . subtree = MakeTree ( PT_JOINEXPR, P ( yyvsp[-5] ), T ( yyvsp[-4] ), P ( yyvsp[-3] ), T ( yyvsp[-2] ), T ( yyvsp[-1] ), P (yyvsp[0] ) ); }
     break;
 
   case 218:
-
-    { (yyval) . subtree = MakeTree ( PT_DATABASE, T ( (yyvsp[-3]) ), P ( (yyvsp[-2])), P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+            { yyval . subtree = MakeTree ( PT_DATABASE, T ( yyvsp[-3] ), P ( yyvsp[-2]), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 219:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                    { yyval = yyvsp[0]; }
     break;
 
   case 220:
-
-    { (yyval) . subtree = MakeTree ( PT_DBDAD, T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                    { yyval . subtree = MakeTree ( PT_DBDAD, T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 221:
-
-    { (yyval) . subtree = MakeTree ( PT_DBBODY, T ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+                                    { yyval . subtree = MakeTree ( PT_DBBODY, T ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 222:
-
-    { (yyval) . subtree = MakeTree ( PT_DBBODY, T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+                                    { yyval . subtree = MakeTree ( PT_DBBODY, T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 223:
-
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-
+                                                { yyval . subtree = MakeList ( yyvsp[0] ); }
     break;
 
   case 224:
-
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                                { yyval . subtree = AddToList ( P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 225:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                { yyval = yyvsp[0]; }
     break;
 
   case 226:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                { yyval = yyvsp[0]; }
     break;
 
   case 227:
-
-    { (yyval) . subtree = T ( (yyvsp[0]) ); }
-
+                                { yyval . subtree = T ( yyvsp[0] ); }
     break;
 
   case 228:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                { yyval = yyvsp[0]; }
     break;
 
   case 229:
-
-    { (yyval) . subtree = T ( (yyvsp[0]) ); }
-
+                                { yyval . subtree = T ( yyvsp[0] ); }
     break;
 
   case 230:
-
-    { (yyval) . subtree = MakeTree ( PT_DBMEMBER, P ( (yyvsp[-4]) ), T ( (yyvsp[-3]) ), P ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+            { yyval . subtree = MakeTree ( PT_DBMEMBER, P ( yyvsp[-4] ), T ( yyvsp[-3] ), P ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 231:
-
-    { (yyval) . subtree = MakeTree ( PT_TBLMEMBER, P ( (yyvsp[-4]) ), T ( (yyvsp[-3]) ), P ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+            { yyval . subtree = MakeTree ( PT_TBLMEMBER, P ( yyvsp[-4] ), T ( yyvsp[-3] ), P ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 232:
-
-    { (yyval) . subtree = MakeTree ( PT_INCLUDE, T ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+                            { yyval . subtree = MakeTree ( PT_INCLUDE, T ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 233:
-
-    { (yyval) . subtree = MakeTree ( PT_FQN, P ( (yyvsp[0]) ) ); }
-
+                                { yyval . subtree = MakeTree ( PT_FQN, P ( yyvsp[0] ) ); }
     break;
 
   case 234:
-
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                { yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 235:
-
-    { (yyvsp[0]) . type = IDENTIFIER_1_0; (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), MakeTree ( PT_IDENT, T ( (yyvsp[0]) ) ) ); }
-
+                                { yyvsp[0] . type = IDENTIFIER_1_0; yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), MakeTree ( PT_IDENT, T ( yyvsp[0] ) ) ); }
     break;
 
   case 236:
-
-    { (yyvsp[0]) . type = IDENTIFIER_1_0; (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), MakeTree ( PT_IDENT, T ( (yyvsp[0]) ) ) ); }
-
+                                { yyvsp[0] . type = IDENTIFIER_1_0; yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), MakeTree ( PT_IDENT, T ( yyvsp[0] ) ) ); }
     break;
 
   case 237:
-
-    { (yyvsp[0]) . type = IDENTIFIER_1_0; (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), MakeTree ( PT_IDENT, T ( (yyvsp[0]) ) ) ); }
-
+                                { yyvsp[0] . type = IDENTIFIER_1_0; yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), MakeTree ( PT_IDENT, T ( yyvsp[0] ) ) ); }
     break;
 
   case 238:
-
-    { (yyvsp[0]) . type = IDENTIFIER_1_0; (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), MakeTree ( PT_IDENT, T ( (yyvsp[0]) ) ) ); }
-
+                                { yyvsp[0] . type = IDENTIFIER_1_0; yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), MakeTree ( PT_IDENT, T ( yyvsp[0] ) ) ); }
     break;
 
   case 239:
-
-    { (yyvsp[0]) . type = IDENTIFIER_1_0; (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), MakeTree ( PT_IDENT, T ( (yyvsp[0]) ) ) ); }
-
+                                { yyvsp[0] . type = IDENTIFIER_1_0; yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), MakeTree ( PT_IDENT, T ( yyvsp[0] ) ) ); }
     break;
 
   case 240:
-
-    { (yyvsp[0]) . type = IDENTIFIER_1_0; (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), MakeTree ( PT_IDENT, T ( (yyvsp[0]) ) ) ); }
-
+                                { yyvsp[0] . type = IDENTIFIER_1_0; yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), MakeTree ( PT_IDENT, T ( yyvsp[0] ) ) ); }
     break;
 
   case 241:
-
-    { (yyvsp[0]) . type = IDENTIFIER_1_0; (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), MakeTree ( PT_IDENT, T ( (yyvsp[0]) ) ) ); }
-
+                                { yyvsp[0] . type = IDENTIFIER_1_0; yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), MakeTree ( PT_IDENT, T ( yyvsp[0] ) ) ); }
     break;
 
   case 242:
-
-    { (yyvsp[0]) . type = IDENTIFIER_1_0; (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), MakeTree ( PT_IDENT, T ( (yyvsp[0]) ) ) ); }
-
+                                { yyvsp[0] . type = IDENTIFIER_1_0; yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), MakeTree ( PT_IDENT, T ( yyvsp[0] ) ) ); }
     break;
 
   case 243:
-
-    { (yyval) . subtree = MakeTree ( PT_IDENT, T ( (yyvsp[0]) ) ); }
-
+                        { yyval . subtree = MakeTree ( PT_IDENT, T ( yyvsp[0] ) ); }
     break;
 
   case 244:
-
-    { (yyval) . subtree = MakeTree ( PT_EMPTY ); }
-
+                { yyval . subtree = MakeTree ( PT_EMPTY ); }
     break;
 
   case 245:
-
-    { (yyval) . subtree = MakeTree ( PT_VERSNAME, P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+                            { yyval . subtree = MakeTree ( PT_VERSNAME, P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 246:
-
-    { (yyval) = (yyvsp[0]); }
-
+                     { yyval = yyvsp[0]; }
     break;
 
   case 247:
-
-    { (yyval) = (yyvsp[0]); }
-
+                     { yyval = yyvsp[0]; }
     break;
 
   case 248:
-
-    { (yyval) . subtree = MakeTree ( PT_VERSION_2, T ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+                                   { yyval . subtree = MakeTree ( PT_VERSION_2, T ( yyvsp[-2] ), T ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 249:
-
-    { (yyval) . subtree = MakeTree ( PT_SCHEMA_2_0, P ( (yyvsp[0]) ) ); }
-
+                                   { yyval . subtree = MakeTree ( PT_SCHEMA_2_0, P ( yyvsp[0] ) ); }
     break;
 
   case 250:
-
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-1]) ) , P ( (yyvsp[0]) ) ); }
-
+                                   { yyval . subtree = AddToList ( P ( yyvsp[-1] ) , P ( yyvsp[0] ) ); }
     break;
 
   case 251:
-
-    { (yyval) = (yyvsp[0]); }
-
+                        { yyval = yyvsp[0]; }
     break;
 
   case 252:
-
-    { (yyval) = (yyvsp[0]); }
-
+                        { yyval = yyvsp[0]; }
     break;
 
   case 253:
-
-    { (yyval) . subtree = MakeTree ( PT_VIEW, T ( (yyvsp[-8]) ), P ( (yyvsp[-7]) ), T ( (yyvsp[-6]) ), P ( (yyvsp[-5]) ), T ( (yyvsp[-4]) ), P ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+        { yyval . subtree = MakeTree ( PT_VIEW, T ( yyvsp[-8] ), P ( yyvsp[-7] ), T ( yyvsp[-6] ), P ( yyvsp[-5] ), T ( yyvsp[-4] ), P ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 254:
-
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-
+                                { yyval . subtree = MakeList ( yyvsp[0] ); }
     break;
 
   case 255:
-
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                { yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 256:
-
-    { (yyval) . subtree = MakeTree ( PT_VIEWPARAM, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                { yyval . subtree = MakeTree ( PT_VIEWPARAM, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 257:
-
-    { (yyval) = (yyvsp[0]); }
-
+                { yyval = yyvsp[0]; }
     break;
 
   case 258:
-
-    { (yyval) = (yyvsp[0]); }
-
+                { yyval = yyvsp[0]; }
     break;
 
   case 259:
-
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-
+                            { yyval . subtree = MakeList ( yyvsp[0] ); }
     break;
 
   case 260:
-
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                            { yyval . subtree = AddToList ( P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 261:
-
-    { (yyval) . subtree = MakeTree ( PT_PRODSTMT, P ( (yyvsp[-4]) ), P ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+            { yyval . subtree = MakeTree ( PT_PRODSTMT, P ( yyvsp[-4] ), P ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 262:
-
-    { (yyval) . subtree = MakeTree ( PT_COLUMN, T ( (yyvsp[-5]) ), P ( (yyvsp[-4]) ), P ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+            { yyval . subtree = MakeTree ( PT_COLUMN, T ( yyvsp[-5] ), P ( yyvsp[-4] ), P ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 263:
-
-    { (yyval) . subtree = T ( (yyvsp[0]) ); }
-
+            { yyval . subtree = T ( yyvsp[0] ); }
     break;
 
   case 264:
-
-    { (yyval) = (yyvsp[0]); }
-
+                                { yyval = yyvsp[0]; }
     break;
 
   case 265:
-
-    { (yyval) . subtree = MakeTree ( PT_VIEWPARENTS, T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                { yyval . subtree = MakeTree ( PT_VIEWPARENTS, T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 266:
-
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-
+                                   { yyval . subtree = MakeList ( yyvsp[0] ); }
     break;
 
   case 267:
-
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                   { yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 268:
-
-    { (yyval) . subtree = MakeTree ( PT_VIEWPARENT, P ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-
+        { yyval . subtree = MakeTree ( PT_VIEWPARENT, P ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
     break;
 
   case 269:
-
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-
+                                        { yyval . subtree = MakeList ( yyvsp[0] ); }
     break;
 
   case 270:
-
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-
+                                        { yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
 
@@ -5931,14 +4935,13 @@ yyreduce:
   /* Now 'shift' the result of the reduction.  Determine what state
      that goes to, based on the state we popped back to and the rule
      number reduced by.  */
-
-  yyn = yyr1[yyn];
-
-  yystate = yypgoto[yyn - YYNTOKENS] + *yyssp;
-  if (0 <= yystate && yystate <= YYLAST && yycheck[yystate] == *yyssp)
-    yystate = yytable[yystate];
-  else
-    yystate = yydefgoto[yyn - YYNTOKENS];
+  {
+    const int yylhs = yyr1[yyn] - YYNTOKENS;
+    const int yyi = yypgoto[yylhs] + *yyssp;
+    yystate = (0 <= yyi && yyi <= YYLAST && yycheck[yyi] == *yyssp
+               ? yytable[yyi]
+               : yydefgoto[yylhs]);
+  }
 
   goto yynewstate;
 
@@ -5970,7 +4973,7 @@ yyerrlab:
           {
             if (yymsg != yymsgbuf)
               YYSTACK_FREE (yymsg);
-            yymsg = (char *) YYSTACK_ALLOC (yymsg_alloc);
+            yymsg = YY_CAST (char *, YYSTACK_ALLOC (YY_CAST (YYSIZE_T, yymsg_alloc)));
             if (!yymsg)
               {
                 yymsg = yymsgbuf;
@@ -6021,14 +5024,11 @@ yyerrlab:
 | yyerrorlab -- error raised explicitly by YYERROR.  |
 `---------------------------------------------------*/
 yyerrorlab:
+  /* Pacify compilers when the user code never invokes YYERROR and the
+     label yyerrorlab therefore never appears in user code.  */
+  if (0)
+    YYERROR;
 
-  /* Pacify compilers like GCC when the user code never invokes
-     YYERROR and the label yyerrorlab therefore never appears in user
-     code.  */
-  if (/*CONSTCOND*/ 0)
-     goto yyerrorlab;
-
-  yyerror_range[1] = yylsp[1-yylen];
   /* Do not reclaim the symbols of the rule whose action triggered
      this YYERROR.  */
   YYPOPSTACK (yylen);
@@ -6094,12 +5094,14 @@ yyacceptlab:
   yyresult = 0;
   goto yyreturn;
 
+
 /*-----------------------------------.
 | yyabortlab -- YYABORT comes here.  |
 `-----------------------------------*/
 yyabortlab:
   yyresult = 1;
   goto yyreturn;
+
 
 #if !defined yyoverflow || YYERROR_VERBOSE
 /*-------------------------------------------------.
@@ -6111,6 +5113,10 @@ yyexhaustedlab:
   /* Fall through.  */
 #endif
 
+
+/*-----------------------------------------------------.
+| yyreturn -- parsing is finished, return the result.  |
+`-----------------------------------------------------*/
 yyreturn:
   if (yychar != YYEMPTY)
     {
@@ -6127,7 +5133,7 @@ yyreturn:
   while (yyssp != yyss)
     {
       yydestruct ("Cleanup: popping",
-                  yystos[*yyssp], yyvsp, yylsp, root, errors, sb);
+                  yystos[+*yyssp], yyvsp, yylsp, root, errors, sb);
       YYPOPSTACK (1);
     }
 #ifndef yyoverflow

@@ -35,6 +35,10 @@
 #include <kproc/queue.h>
 #include <sys/types.h>
 
+#ifdef WINDOWS // TODO: at some point we need to put it in some common place (cc or os)
+typedef SSIZE_T ssize_t;
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -336,7 +336,7 @@ LIB_EXPORT KTime_t CC KTimeMakeTime ( const KTime *self )
         assert ( self -> year >= 1900 );
         t . tm_year = self -> year - 1900;
         t . tm_mon = self -> month;
-        t . tm_mday = self -> day;
+        t . tm_mday = self -> day + 1;
         t . tm_wday = self -> weekday;
         t . tm_hour = self -> hour;
         t . tm_min = self -> minute;
@@ -506,7 +506,7 @@ LIB_EXPORT const KTime* CC KTimeFromIso8601 ( KTime *kt, const char * s,
     tmp = tmp * 10 + c - '0';
     if ( tmp == 0 || tmp > 31 )
         return NULL;
-    kt -> day = tmp;
+    kt -> day = tmp - 1;
 
     c = s [ ++ i ];
     if ( c != 'T' )

@@ -35,7 +35,7 @@
 
 using namespace ncbi::SchemaParser;
 #define YYDEBUG 1
-#include "schema-tokens.h"
+#include "schema-grammar.hpp"
 
 SchemaParser :: SchemaParser ()
 :   m_root ( 0 )

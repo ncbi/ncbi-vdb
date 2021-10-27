@@ -25,37 +25,6 @@
 default: runtests
 
 TOP ?= $(abspath ../..)
-
 MODULE = test/search
 
-TEST_TOOLS = \
-	test-agrep
-
 include $(TOP)/build/Makefile.env
-
-$(TEST_TOOLS): makedirs
-	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
-
-.PHONY: $(TEST_TOOLS)
-
-clean: stdclean
-
-#-------------------------------------------------------------------------------
-# test-agrep
-#
-TEST_AGREP_SRC = \
-	test-agrep agrep-main search-vdb
-
-TEST_AGREP_OBJ = \
-	$(addsuffix .$(OBJX),$(TEST_AGREP_SRC))
-
-TEST_AGREP_LIB = \
-	-skapp \
-	-sncbi-vdb \
-	-sktst
-
-$(TEST_BINDIR)/test-agrep: $(TEST_AGREP_OBJ)
-	$(LP) --exe -o $@ $^ $(TEST_AGREP_LIB)
-
-agrep: test-agrep
-	$(TEST_BINDIR)/$^

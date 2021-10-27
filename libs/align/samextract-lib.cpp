@@ -29,7 +29,7 @@
 #define __STDC_LIMIT_MACROS
 #include "samextract.h"
 #include "samextract-pool.h"
-#include "samextract-tokens.h"
+#include "samextract-grammar.h"
 #include <align/samextract-lib.h>
 #include <ctype.h>
 #include <errno.h>
@@ -43,12 +43,10 @@
 #include <kproc/queue.h>
 #include <kproc/thread.hpp>
 #include <kproc/timeout.h>
-#include <pthread.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 static char * fname_desc = NULL;
 char          curline[READBUF_SZ + 1];
@@ -159,8 +157,6 @@ i64 fast_strtoi64( const char * p )
 bool inrange( const char * str, i64 low, i64 high )
 {
     i64 i = fast_strtoi64( str );
-    if ( errno )
-        return false;
     if ( i < low || i > high )
         return false;
     return true;

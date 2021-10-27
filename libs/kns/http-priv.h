@@ -93,6 +93,7 @@ struct KEndPoint;
 struct KStream;
 struct timeout_t;
 struct URLBlock;
+struct KEndPointArgsIterator;
 
 /* Form of Request-URI in HTTP Request-Line used when connecting via proxy */
 typedef enum {
@@ -240,6 +241,14 @@ void KClientHttpGetRemoteEndpoint ( const struct KClientHttp * self,
                                     struct KEndPoint * ep );
 void KClientHttpGetLocalEndpoint ( const struct KClientHttp * self,
                                    struct KEndPoint * ep );
+
+struct KEndPointArgsIterator * KNSManagerMakeKEndPointArgsIterator (
+    const struct KNSManager * self, const String * hostname, uint32_t port,
+    size_t * cnt );
+
+bool KEndPointArgsIterator_Next ( struct KEndPointArgsIterator * self,
+        const String ** hostname, uint16_t * port, bool * proxy_default_port,
+        bool * proxy_ep, size_t * crnt_proxy_idx, bool * last_proxy );
 
 rc_t KClientHttpRequestAttachEnvironmentToken(
     struct KClientHttpRequest * self, struct Cloud * cloud );

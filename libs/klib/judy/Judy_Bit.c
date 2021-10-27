@@ -1,4 +1,5 @@
 #define JUDY1
+#undef DEBUG
 
 #ifdef JU_64BIT
 #   include "Judy1Tables.64.c"

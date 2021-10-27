@@ -16,6 +16,11 @@
 
 #include <cstdarg>
 
+#ifdef WINDOWS
+#include <Windows.h>
+typedef SSIZE_T ssize_t;
+#endif
+
 /**
  * @file cmn/text.hpp
  * @brief accessor to a region of addressable memory with text

@@ -22,67 +22,7 @@
 #
 # ===========================================================================
 
-default: all
-
 TOP ?= $(abspath ../..)
 MODULE = libs/loader
 
-INT_LIBS = \
-
-ALL_LIBS = \
-	$(INT_LIBS)
-
-OBJFILES = \
-	$(LOADER_OBJ)
-
 include $(TOP)/build/Makefile.env
-
-#-------------------------------------------------------------------------------
-# outer targets
-#
-all std: makedirs compile
-	@ $(MAKE_CMD) $(TARGDIR)/std
-
-$(INT_LIBS): makedirs
-	@ $(MAKE_CMD) $(ILIBDIR)/$@
-
-.PHONY: all std $(ALL_LIBS)
-
-#-------------------------------------------------------------------------------
-# std
-#
-$(TARGDIR)/std: \
-	$(addprefix $(ILIBDIR)/,$(INT_LIBS))
-
-.PHONY: $(TARGDIR)/std
-
-#-------------------------------------------------------------------------------
-# clean
-#
-clean: stdclean
-
-.PHONY: clean
-
-#-------------------------------------------------------------------------------
-# libloader
-#
-$(ILIBDIR)/libloader: $(ILIBDIR)/libloader.$(LIBX)
-
-LOADER_SRC = \
-    mmarray \
-	common-reader \
-	common-writer \
-	sequence-writer \
-	reference-writer \
-	alignment-writer
-
-LOADER_OBJ = \
-	$(addsuffix .$(LOBX),$(LOADER_SRC))
-
-$(ILIBDIR)/libloader.$(LIBX): $(LOADER_OBJ)
-	$(LD) --slib -o $@ $^ $(LOADER_LIB)
-
-
-compile: stdcompile
-
-$(TARGDIR)/compile: $(OBJFILES)

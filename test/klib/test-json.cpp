@@ -44,7 +44,7 @@
 
 #define YYDEBUG 0
 #include "../../libs/klib/json-lex.h"
-#include "../../libs/klib/json-tokens.h"
+#include "../../libs/klib/json-grammar.h"
 extern "C" enum yytokentype JsonScan_yylex ( YYSTYPE *lvalp, YYLTYPE *llocp, JsonScanBlock* sb );
 
 #include "../../libs/klib/json-priv.h"

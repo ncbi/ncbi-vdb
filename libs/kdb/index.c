@@ -490,16 +490,17 @@ LIB_EXPORT rc_t CC KTableVOpenIndexRead ( const KTable *self,
 
     if ( self -> prerelease )
     {
-        int len;
+        int len = 0;
         /* VDB-4386: cannot treat va_list as a pointer! */
         /*if ( args == 0 )
             len = snprintf ( path, sizeof path, "%s", name );
         else*/
         if ( name != NULL )
             len = vsnprintf ( path, sizeof path, name, args );
+        else
+            path[0] = '\0';
         if ( len < 0 || ( size_t ) len >= sizeof path )
             return RC ( rcDB, rcTable, rcOpening, rcPath, rcExcessive );
-        rc = 0;
     }
     else
     {

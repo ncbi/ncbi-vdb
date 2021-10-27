@@ -42,7 +42,7 @@
 #include <klib/printf.h>
 
 #include "json-lex.h"
-#include "json-tokens.h"
+#include "json-grammar.h"
 #include "json-priv.h"
 
 /* copy, convert the escapes and NUL-terminate */

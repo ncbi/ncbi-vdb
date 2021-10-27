@@ -84,11 +84,9 @@ struct Fixture {
 
 private:
     rc_t Clean() {
-        rc_t rc = KDirectoryRemove(wd, true, DIR);
-        if (rc != 0)
-            return rc;
-
-        return KDirectoryRemove(wd, true, DIR2);
+        KDirectoryRemove(wd, true, DIR);
+        KDirectoryRemove(wd, true, DIR2);
+        return 0;
     }
 };
 

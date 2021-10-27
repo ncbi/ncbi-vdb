@@ -23,8 +23,8 @@
 * ===========================================================================
 *
 */
- 
-%{  
+
+%{
     #include "kfg-parse.h"
     #include <sysalloc.h>
     #include <klib/rc.h>
@@ -32,13 +32,13 @@
 
     #define YYSTYPE_IS_DECLARED
     #define YYSTYPE KFGSymbol
-    #include "config-tokens.h"
-        
+    #include "config-grammar.h"
+
     #define KFG_lex KFGScan_yylex
-    
+
     /* required parameter to VNamelistMake */
     #define NAMELIST_ALLOC_BLKSIZE 10
-    
+
     static void ReportRc(KFGParseBlock* pb, KFGScanBlock* sb, rc_t rc);
     static void AppendName(KFGScanBlock* sb, VNamelist*, const KFGToken*);
     static void KFG_error(KFGParseBlock* pb, KFGScanBlock* sb, const char* msg);
@@ -52,7 +52,7 @@
 %name-prefix="KFG_"
 
  /* tokens without textual representation or internal for the scanner */
-%token kfgEND_INPUT 0 
+%token kfgEND_INPUT 0
 %token kfgEND_LINE
 %token kfgUNTERM_STRING
 %token kfgUNTERM_ESCAPED_STRING
@@ -71,7 +71,7 @@
     KFGToken                pb;
     const struct VNamelist* namelist;
 }
-%type <pb>          pathname  
+%type <pb>          pathname
 %type <namelist>    value
 
 %destructor
@@ -80,39 +80,39 @@
 } <namelist>
 
 %%
- 
+
 config
-    : name_value_pairs 
-    | kfgEND_INPUT      
+    : name_value_pairs
+    | kfgEND_INPUT
     ;
-    
+
 name_value_pairs
     : name_value_pair
-    | name_value_pairs name_value_pair 
+    | name_value_pairs name_value_pair
     ;
-    
+
 name_value_pair
     : pathname assign_op value line_end
-        { 
+        {
             rc_t rc=pb->write_nvp(sb->self, $1.tokenText, $1.tokenLength, $3);
             if (rc != 0)
             {
                 ReportRc(pb, sb, rc);
             }
             VNamelistRelease($3);
-        } 
-    | kfgEND_LINE       
-    | error line_end    
+        }
+    | kfgEND_LINE
+    | error line_end
     ;
-    
+
 pathname
-    : kfgABS_PATH 
+    : kfgABS_PATH
     | kfgREL_PATH
     ;
-    
+
 assign_op
     : kfgASSIGN
-    ;   
+    ;
 
 value
     : kfgSTRING                 { VNamelistMake(&$$, NAMELIST_ALLOC_BLKSIZE); AppendName(sb, $$, &$1); }
@@ -120,7 +120,7 @@ value
     | value kfgSTRING           { AppendName(sb, $1, &$2); $$=$1; }
     | value kfgESCAPED_STRING   { AppendName(sb, $1, &$2); $$=$1; }
     ;
-    
+
 line_end
     : kfgEND_LINE
     | kfgEND_INPUT
@@ -157,7 +157,7 @@ void AppendName(KFGScanBlock* sb, VNamelist* nl, const KFGToken* pb)
     {
         return;
     }
-            
+
     t.id= pb->tokenId == kfgESCAPED_STRING ? eEscapedString : eString;
     StringInit(&t.str, pb->tokenText-1, pb->tokenLength+2, (uint32_t) (pb->tokenLength + 2) ); /* compensate for clipped quotes in order to use KTokenToString */
     buf=(char*)malloc(t.str.size);
@@ -169,7 +169,7 @@ void AppendName(KFGScanBlock* sb, VNamelist* nl, const KFGToken* pb)
         ReportRc(0, sb, rc);
     }
     else
-    {   
+    {
         assert(value_size < t.str.size);
         buf[value_size]=0;
         rc = VNamelistAppend(nl, buf);
@@ -177,9 +177,9 @@ void AppendName(KFGScanBlock* sb, VNamelist* nl, const KFGToken* pb)
         {
             ReportRc(0, sb, rc);
         }
-    }       
+    }
     free(buf);
 }
 
 
-    
+

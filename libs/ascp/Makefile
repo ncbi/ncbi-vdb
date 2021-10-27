@@ -22,72 +22,7 @@
 #
 # ===========================================================================
 
-
-default: std
-
 TOP ?= $(abspath ../..)
 MODULE = libs/ascp
 
-INT_LIBS = \
-    libascp
-
-ALL_LIBS = \
-	$(INT_LIBS)
-
-OBJFILES = \
-	$(OBJ)
-
 include $(TOP)/build/Makefile.env
-
-#-------------------------------------------------------------------------------
-# outer targets
-#
-all std: makedirs compile
-	@ $(MAKE_CMD) $(TARGDIR)/std
-
-$(INT_LIBS): makedirs
-	@ $(MAKE_CMD) $(ILIBDIR)/$@
-
-.PHONY: all std $(ALL_LIBS)
-
-#-------------------------------------------------------------------------------
-# std
-#
-$(TARGDIR)/std: \
-	$(addprefix $(ILIBDIR)/,$(INT_LIBS))
-
-.PHONY: $(TARGDIR)/std
-
-#-------------------------------------------------------------------------------
-# clean
-#
-clean: stdclean
-
-.PHONY: clean
-
-#-------------------------------------------------------------------------------
-# testing framework
-#
-$(ILIBDIR)/libascp: $(addprefix $(ILIBDIR)/libascp.,$(LIBX))
-
-SRC = \
-	ascp \
-	ascp-path \
-	connect
-#	silent-system
-
-OBJ = \
-	$(addsuffix .$(LOBX),$(SRC))
-
-$(ILIBDIR)/libascp.$(LIBX): $(OBJ)
-	$(LD) --slib -o $@ $^ $(LIB)
-
-compile: stdcompile
-
-$(TARGDIR)/compile: $(OBJFILES)
-
-#-------------------------------------------------------------------------------
-# fuzz
-#
-fuzz: std
-	cp $(addsuffix .$(LIBX),$(addprefix $(ILIBDIR)/,$(INT_LIBS))) $(FLIBDIR)/

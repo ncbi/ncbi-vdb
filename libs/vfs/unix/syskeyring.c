@@ -53,7 +53,7 @@ const char* KeyRingDefaultDataDir = "~/.ncbi";
 
 /*TODO: move to ../keyring.c */
 LIB_EXPORT bool CC KKeyRingIsServerRunning(const char* dataDir)
-{   
+{
     KDirectory* wd;
     rc_t rc = KDirectoryNativeDir (&wd);
     if (rc == 0)
@@ -62,7 +62,7 @@ LIB_EXPORT bool CC KKeyRingIsServerRunning(const char* dataDir)
         if (dataDir == NULL)
             dataDir = KeyRingDefaultDataDir;
         rc = string_printf(lockFileName, sizeof(lockFileName)-1, NULL, "%s/keyring_lock", dataDir);
-        
+
         if (rc == 0)
         {
             KFile* lockedFile;
@@ -78,15 +78,15 @@ LIB_EXPORT bool CC KKeyRingIsServerRunning(const char* dataDir)
 rc_t StartKeyRing(const char* dataDir)
 {
     rc_t rc = 0;
-    
+
     pid_t child = fork();
     switch (child)
     {
         case 0: /* child */
         {   /* become the server */
-        
-/*TODO: calculate based on $(APPPATH) in kfg */
-const char* KeyRingServerExeName = "/home/boshkina/internal/asm-trace/centos/gcc/stat/x86_64/dbg/bin/keyring-srv";
+
+/*TODO: calculate path based on $(APPPATH) in kfg */
+const char* KeyRingServerExeName = "keyring-srv";
 
             if (dataDir == NULL)
                 dataDir = "~/.ncbi";
@@ -99,9 +99,9 @@ const char* KeyRingServerExeName = "/home/boshkina/internal/asm-trace/centos/gcc
                     - etc.
                 */
             }
-            pLogMsg(klogErr, 
-                    "Keyring: execl($(exe)) failed ($(errno)=$(perrno))", 
-                    "exe=%s,errno=%d,perrno=%!", 
+            pLogMsg(klogErr,
+                    "Keyring: execl($(exe)) failed ($(errno)=$(perrno))",
+                    "exe=%s,errno=%d,perrno=%!",
                     KeyRingServerExeName, errno, errno);
             exit(1);
             break;
@@ -126,7 +126,7 @@ const char* KeyRingServerExeName = "/home/boshkina/internal/asm-trace/centos/gcc
         default: /* parent */
             break;
     }
-        
+
     return rc;
 }
 
@@ -143,9 +143,9 @@ rc_t GetAppPath(const char* buf, size_t bufsize)
         char buf[4096];
         size_t num_read;
         rc_t rc2;
-    
+
         rc_t rc=KConfigOpenNodeRead(kfg, &node, path, string_measure(path, NULL), "%s", buf);
-        if (rc == 0) 
+        if (rc == 0)
         {
             rc = KConfigNodeRead(node, 0, buf, bufsize, &num_read, NULL);
             rc2 = KConfigNodeRelease(node);

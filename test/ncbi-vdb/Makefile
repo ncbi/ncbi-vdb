@@ -29,24 +29,3 @@ TOP ?= $(abspath ../..)
 MODULE = test/ncbi-vdb
 
 include $(TOP)/build/Makefile.env
-
-clean: stdclean
-
-#-------------------------------------------------------------------------------
-# make sure shared library have no undefined references (other than to system libraries)
-#
-runtests: test_so
-
-define SO_CHECK
-    K=$$(nm $(LIBDIR)/$1.so | grep " U " | grep -v GLIBC | grep -v " U xml"); \
-	if [ "$$K" != "" ]; \
-		then ( echo "Error: $(LIBDIR)/$1.so contains unresolved external references:\n $$K" && exit 1 ); \
-	fi
-endef
-
-test_so:
-	@ $(call SO_CHECK,libncbi-vdb)
-	@ $(call SO_CHECK,libncbi-wvdb)
-
-.phony: test_so
-

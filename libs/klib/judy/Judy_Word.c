@@ -1,4 +1,5 @@
 #define JUDYL
+#undef DEBUG
 
 #ifdef JU_64BIT
 #   include "JudyLTables.64.c"

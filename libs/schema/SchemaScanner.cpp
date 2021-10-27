@@ -66,7 +66,7 @@ SchemaScanner :: ~SchemaScanner ()
 // need these declared for the following header to compile
 class ParseTree;
 class ErrorReport;
-#include "schema-tokens.h"
+#include "schema-grammar.hpp"
 
 extern "C" {
     extern enum yytokentype SchemaScan_yylex ( YYSTYPE *lvalp, YYLTYPE *llocp, SchemaScanBlock* sb );

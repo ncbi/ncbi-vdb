@@ -32,7 +32,7 @@
     #include "ASTBuilder.hpp"
     using namespace ncbi::SchemaParser;
 
-    #include "schema-ast-tokens.h"
+    #include "schema-ast.hpp"
 
     #define AST_lex NextToken
     static int NextToken ( YYSTYPE * p_token, ParseTreeScanner & p_sb )
