@@ -121,6 +121,10 @@ LDFLAGS += -L$(XML2_LIBDIR)
 endif
 endif
 
+ifneq (,$(MBEDTLS_LIBDIR))
+LDFLAGS += -L$(MBEDTLS_LIBDIR)
+endif
+
 VDB_LIB_CMN =    \
 	align-access \
 	ncbi-bam     \

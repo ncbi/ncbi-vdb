@@ -39,6 +39,10 @@ OBJFILES = \
 
 include $(TOP)/build/Makefile.env
 
+ifdef MBEDTLS_INCDIR
+	INCDIRS += $(addprefix -I,$(MBEDTLS_INCDIR))
+endif
+
 RWORKDIR = $(TOP)/$(MODULE)
 
 #-------------------------------------------------------------------------------
