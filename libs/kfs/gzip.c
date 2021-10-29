@@ -304,7 +304,7 @@ static rc_t z_read ( KGZipFile * self, void * buffer, size_t bsize, size_t * _nu
             GZIP_DEBUG(("%s: stream end %d\n",__func__, zret));
             self->completed = true;
             zret = inflateReset (strm);
-            GZIP_DEBUG (("%s: recall inflateReset zret = %d\n",__func__,zret));
+            GZIP_DEBUG (("%s: inflateReset zret = %d\n",__func__,zret));
             switch (zret)
             {
             case Z_OK:
@@ -324,6 +324,7 @@ static rc_t z_read ( KGZipFile * self, void * buffer, size_t bsize, size_t * _nu
                 if (rc)
                     break;
 
+                GZIP_DEBUG (("%s: read %u more\n",__func__,(unsigned)src_read));
                 strm->avail_in = (uInt) src_read;
                 self->filePosition += src_read;
                 strm->next_in = self->buff;
@@ -342,6 +343,7 @@ static rc_t z_read ( KGZipFile * self, void * buffer, size_t bsize, size_t * _nu
             }
             break;
         case Z_OK:
+            GZIP_DEBUG(("%s: okay %d\n",__func__, zret));
             break;
         }
         if (rc)
