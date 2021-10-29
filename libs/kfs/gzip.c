@@ -343,6 +343,7 @@ static rc_t z_read ( KGZipFile * self, void * buffer, size_t bsize, size_t * _nu
             }
             break;
         case Z_OK:
+            self->completed = false;
             GZIP_DEBUG(("%s: okay %d\n",__func__, zret));
             break;
         }
