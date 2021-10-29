@@ -22,3 +22,8 @@ endif()
 AddExecutableTest( Test_KFS_lru_cache "lru_cache_test" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_KFS_md5 "md5test" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_KFS_appendfile "appendfiletest" "${COMMON_LIBS_READ}" )
+
+if( NOT WIN32 )
+    AddExecutableTest( Test_KFS_GZip "test-gzip" "${COMMON_LIBS_READ}" )
+endif()
+
