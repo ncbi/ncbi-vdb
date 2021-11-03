@@ -965,26 +965,6 @@ FIXTURE_TEST_CASE(ExtractAccessionOrOID_Quality_PathType, PathFixture) {
         REQUIRE_RC(VPathRelease(path)); path = NULL;
     }
 
-    /*vpInvalid
-                case vpName:
-                case vpRelPath:
-                case vpUNCPath:
-                case vpFullPath:
-                default
-                refseq quality
-                SXR123456
-                SRX123456
-                DRR123456.1
-                SRR123456.12
-                SRX123456.1
-                ERR1.sra.wgs.vdbcache.ncbi_enc quality
-                ERR1.wgs.noqual.vdbcache.ncbi_enc quality
-                ERR1.wgs.sralite.vdbcache.ncbi_enc quality
-                SRR123456_
-                SRR123456_dbGaP-
-                SRR123456_dbGaP-0
-                */
-
     REQUIRE_RC(VPathRelease(srr));
 }
 #endif
