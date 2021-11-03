@@ -2460,6 +2460,16 @@ LIB_EXPORT rc_t CC VFSManagerExtractAccessionOrOID ( const VFSManager * self,
                         end = sep;
                         continue;
                     }
+                    break;
+                case 3:
+                    /* remove digits just for run accessions */
+                    if ( isRun && isdigit ( *( sep + 1) ) 
+                               && isdigit ( *( sep + 2) ))
+                    {
+                        end = sep;
+                        continue;
+                    }
+                    break;
                 case 4:
                     if ( strcase_cmp ( ".sra", 4, sep, 4, 4 ) == 0 ||
                          strcase_cmp ( ".wgs", 4, sep, 4, 4 ) == 0 )
@@ -2468,6 +2478,7 @@ LIB_EXPORT rc_t CC VFSManagerExtractAccessionOrOID ( const VFSManager * self,
                         quality = eQualFull;
                         continue;
                     }
+                    break;
                 case NOQUAL:
                     if ( strcase_cmp ( xNoqual->addr, xNoqual->size,
                         sep, xNoqual->size, xNoqual->size ) == 0 )
@@ -2476,6 +2487,7 @@ LIB_EXPORT rc_t CC VFSManagerExtractAccessionOrOID ( const VFSManager * self,
                         quality = eQualNo;
                         continue;
                     }
+                    break;
                 case SRALITE:
                     if ( strcase_cmp ( xSraLite->addr, xNoqual->size,
                         sep, xNoqual->size, xSraLite->size ) == 0 )
@@ -2484,6 +2496,7 @@ LIB_EXPORT rc_t CC VFSManagerExtractAccessionOrOID ( const VFSManager * self,
                         quality = eQualNo;
                         continue;
                     }
+                    break;
                 case 9:
                     if ( strcase_cmp ( ".vdbcache", 9, sep, 9, 9 ) == 0 ||
                          strcase_cmp ( ".ncbi_enc", 9, sep, 9, 9 ) == 0 )
@@ -2494,6 +2507,44 @@ LIB_EXPORT rc_t CC VFSManagerExtractAccessionOrOID ( const VFSManager * self,
                     break;
                 }
                 break;
+            }
+
+            if (isRun && isdigit(start[3])) {
+                /* detect SRR123456_dbGaP-12345 names and remove _dbGaP... */
+                const char * p = start + 3;
+                const char * first = NULL;
+                while (p < end) {
+                    if (isdigit(*p))
+                        ++p;
+                    else if (*p == '_') {
+                        first = p++;
+                        if (end - p > 6
+                            && *(p++) == 'd'
+                            && *(p++) == 'b'
+                            && *(p++) == 'G'
+                            && *(p++) == 'a'
+                            && *(p++) == 'P'
+                            && *(p++) == '-')
+                        {
+                            bool dbGaP = true;
+                            if (p >= end)
+                                dbGaP = false;
+                            while (p < end) {
+                                if (isdigit(*p))
+                                    ++p;
+                                else {
+                                    dbGaP = false;
+                                    break;
+                                }
+                            }
+                            if (dbGaP)
+                                end = first;
+                        }
+                        break;
+                    }
+                    else
+                        break;
+                }
             }
 
             /* create a new VPath */
@@ -3850,6 +3901,7 @@ LIB_EXPORT rc_t CC VFSManagerMakeOidPath ( const VFSManager * self,
         VPathCaptureScheme ( path, "ncbi-obj", 0, 8 );
         path -> obj_id = oid;
         path -> path_type = vpOID;
+        path -> quality = eQualLast;
     }
     return rc;
 }
@@ -4246,6 +4298,8 @@ rc_t VPathMakeVFmtExt ( EVPathType ext, VPath ** new_path, const String * id,
 
                 path->ceRequired = ceRequired;
                 path->payRequired = payRequired;
+
+                path->quality = eQualLast;
 
                 return 0;
             }
