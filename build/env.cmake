@@ -139,7 +139,7 @@ else()
     add_compile_definitions( NDEBUG )
 endif()
 
-if ( SINGLE_TARGET )
+if ( SINGLE_CONFIG )
     message("CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
 endif()
 
