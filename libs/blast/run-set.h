@@ -98,7 +98,8 @@ typedef struct {
     uint8_t *rdFilter;
     EColType rdFilterStatic;
 
-    bool varReadLen;
+    bool varReadLen;  /* read-types, read-len, number of reads can change */
+    bool varReadDesc; /* read-types can change, number of reads is fixed */
     ReadIdDesc readIdDesc;
 } RunDesc;
 
@@ -194,12 +195,14 @@ typedef struct {
     uint32_t col_PRIMARY_ALIGNMENT_ID;
     uint32_t col_READ_FILTER;
     uint32_t col_READ_LEN;
+    uint32_t col_READ_TYPE;
     uint32_t col_TRIM_LEN;
     uint32_t col_TRIM_START;
 
     int64_t *primary_alignment_id;
     uint8_t *read_filter;
     uint32_t *read_len;
+    INSDC_read_type *read_type;
     INSDC_coord_len TRIM_LEN;
     INSDC_coord_val TRIM_START;
 

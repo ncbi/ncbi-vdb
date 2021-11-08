@@ -52,7 +52,7 @@ using namespace ncbi::NK;
 
 static bool TestWithGZip(std::string const &path)
 {
-    auto const command = std::string("gzip --keep --quiet --test ") + path;
+    auto const command = std::string("gzip --quiet --test ") + path;
     auto exitcode = std::system(command.c_str());
     if (exitcode < 0)
         throw std::logic_error("Can't run gzip!");
