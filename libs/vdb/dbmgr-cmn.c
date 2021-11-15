@@ -989,7 +989,7 @@ static String s_DfltQuality;
 static char s_FullQuality[99];
 static char s_ZeroQuality[99];
 
-static rc_t CC VDBManagerSetQuality(VDBManager * self,
+rc_t CC VDBManagerSetQualityString(VDBManager * self,
     const char * quality)
 {
     s_SetQuality = quality;
@@ -1092,11 +1092,11 @@ LIB_EXPORT rc_t CC VDBManagerGetQualityString(const VDBManager * self,
 LIB_EXPORT rc_t CC VDBManagerPreferFullQuality(VDBManager * self) {
     const char * quality = VDBManagerGetQuality(self);
     fillPrefQual(quality);
-    return VDBManagerSetQuality(self, s_FullQuality);
+    return VDBManagerSetQualityString(self, s_FullQuality);
 }
 
 LIB_EXPORT rc_t CC VDBManagerPreferZeroQuality(VDBManager * self) {
     const char * quality = VDBManagerGetQuality(self);
     fillPrefQual(quality);
-    return VDBManagerSetQuality(self, s_ZeroQuality);
+    return VDBManagerSetQualityString(self, s_ZeroQuality);
 }

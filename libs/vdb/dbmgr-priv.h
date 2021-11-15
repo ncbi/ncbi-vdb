@@ -114,6 +114,9 @@ void CC VectMbrWhack ( void *item, void *ignore );
 void CC BSTreeMbrWhack ( BSTNode *n, void *ignore );
 
 
+/*----------------------------------------------------------------------------*/
+rc_t CC VDBManagerSetQualityString(VDBManager * self, const char * quality);
+
 
 #ifdef __cplusplus
 }
