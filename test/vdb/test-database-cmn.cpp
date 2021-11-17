@@ -19,8 +19,10 @@
 //  purpose.
 //
 //  Please cite the author in any work or product based on this material.
-//
-// ===========================================================================
+/*
+* Exersize validRunFileNameExt(accession, file) with different arguments.
+* It will return true if "file" is a valid file name for "accession".
+*=============================================================================*/
 
 #include "../../libs/vdb/database-cmn.c"
 #include <kapp/args.h> /* Args */

@@ -1373,6 +1373,10 @@ LIB_EXPORT bool CC VDatabaseIsCSRA ( const VDatabase *self )
     return false;
 }
 
+/* This function will return true if "file" is recognized
+   as a valid file name for accession "acc".
+   It expect "file" to have extension ".sra" if full-quality is accepted;
+   if zero-quality is accepted: it expects "file" to have extension "xNoqual" */
 static bool validRunFileNameExt(const String * acc, const String * file,
     const String * xNoqual)
 {
@@ -1461,6 +1465,8 @@ static bool validRunFileNameExt(const String * acc, const String * file,
     return false;
 }
 
+/* This function will return true if "file" is recognized
+   as a valid file name for accession "acc": see validRunFileNameExt */
 static bool validRunFileName(const String * acc, const String * file) {
     if (       validRunFileNameExt(acc, file, VFSManagerExtNoqual   (NULL)))
         return true;
