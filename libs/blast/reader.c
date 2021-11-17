@@ -479,6 +479,7 @@ bool _ReadDescNextRead(ReadDesc *self, VdbBlastStatus *status)
             self->read = read;
             ++self->read_id;
             *status = _ReadDescFixReadId(self);
+            return true;
         }
         else
             S
@@ -793,7 +794,7 @@ bool _Reader2naNextData(Reader2na *self,
 
         S
         DBGMSG(DBG_BLAST, DBG_FLAG(DBG_BLAST_BLAST),
-            ("%s: %s:%d:%d(%d): READ_LEN=%d\n", __func__,
+            ("%s: %s:%ld:%d(%ld): READ_LEN=%d\n", __func__,
             self->desc.run->path, self->desc.spot, self->desc.read,
             self->desc.read_id, self->cols.read_len[desc->read - 1]));
 
