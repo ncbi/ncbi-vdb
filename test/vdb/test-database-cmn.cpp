@@ -24,6 +24,9 @@
 * It will return true if "file" is a valid file name for "accession".
 *=============================================================================*/
 
+#undef LIB_EXPORT
+#define LIB_EXPORT /* ignore me */
+
 #include "../../libs/vdb/database-cmn.c"
 #include <kapp/args.h> /* Args */
 #include <kfg/config.h> /* KConfigDisableUserSettings */
