@@ -32,6 +32,27 @@ endforeach()
 
 add_library( ncbi-vdb STATIC "${VDB_LIB_RD}" )
 ExportStatic( ncbi-vdb true )
+
+set( SHARED_SRC_DIR ${CMAKE_INSTALL_PREFIX}/lib64/vdb_shared_sources )
+
+message("Installing ncbi-vdb interfaces (headers) into ${CMAKE_INSTALL_PREFIX}/lib64")
+message("Installing ncbi-vdb shared sources into ${SHARED_SRC_DIR}")
+
+install( DIRECTORY ${CMAKE_SOURCE_DIR}/interfaces DESTINATION ${CMAKE_INSTALL_PREFIX}/lib64 )
+install( FILES
+	${CMAKE_SOURCE_DIR}/libs/vdb/blob-priv.h
+	${CMAKE_SOURCE_DIR}/libs/vdb/page-map.h
+	DESTINATION ${SHARED_SRC_DIR}/libs/vdb )
+install( FILES
+	${CMAKE_SOURCE_DIR}/libs/kfg/default.kfg
+	DESTINATION ${SHARED_SRC_DIR}/libs/kfg )
+install( FILES
+	${CMAKE_SOURCE_DIR}/libs/align/samextract-pool.h
+	${CMAKE_SOURCE_DIR}/libs/align/samextract.h
+	DESTINATION ${SHARED_SRC_DIR}/libs/align )
+
+# install( TARGETS ncbi-vdb DESTINATION ${CMAKE_INSTALL_PREFIX}/lib64 EXPORT FindNcbiVdb)
+# install( EXPORT FindNcbiVdb DESTINATION ${CMAKE_INSTALL_PREFIX}/lib64 )
 MSVS_StaticRuntime( ncbi-vdb )
 
 #--------------------------------
