@@ -24,8 +24,9 @@
 * It will return true if "file" is a valid file name for "accession".
 *=============================================================================*/
 
-#undef LIB_EXPORT
-#define LIB_EXPORT /* ignore me */
+#include <cmath>
+
+#define _LIBRARY       1
 
 #include "../../libs/vdb/database-cmn.c"
 #include <kapp/args.h> /* Args */
