@@ -3,8 +3,6 @@ if(NOT CMAKE_TEST_OUTPUT_DIRECTORY)
 endif()
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_TEST_OUTPUT_DIRECTORY} )
 
-add_subdirectory(kns) # TODO: EXT_TOOLS - see the kns CMakeLists.txt for the details
-
 add_subdirectory(kfc)
 
 set( COMMON_LINK_LIBRARIES ktst kapp )
@@ -20,6 +18,7 @@ else()
     set( COMMON_LIBS_WRITE  ncbi-wvdb dl pthread )
 endif()
 
+add_subdirectory(kns) # TODO: EXT_TOOLS - see the kns CMakeLists.txt for the details
 add_subdirectory(ktst)
 add_subdirectory(cc)
 add_subdirectory(ext)
