@@ -76,7 +76,7 @@ TEST_CASE ( test ) {
     KNSManager * kns = NULL;
     REQUIRE_RC ( VFSManagerGetKNSMgr ( vfs, & kns ) );
 
-    int32_t x=12;//9 1085
+    int32_t x=13;//9 1085
     if ( EXPECTED_FAILURE )
         x=1; // do not do long retries when calling proxy on bad port
     REQUIRE_RC ( KNSManagerSetConnectionTimeouts ( kns, x, 0, 0 ) );
