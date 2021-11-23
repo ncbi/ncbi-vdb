@@ -1,6 +1,5 @@
 add_compile_definitions( __mod__="test/kns" )
 
-AddExecutableTest( Test_KNS_proxy-with-scheme_failure "test-proxy-with-scheme_failure" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_KNS_allow_all_certificates "test_allow_all_certificates" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_KNS_dis_allow_all_certificates "test_dis_allow_all_certificates" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_KNS_google-proxy "test-google-proxy" "${COMMON_LIBS_READ}" )
@@ -41,3 +40,5 @@ if( SINGLE_CONFIG )
     #set_tests_properties(Test_KNS_proxy-with-scheme PROPERTIES ENVIRONMENT http_proxy=)
 
 endif()
+
+AddExecutableTest( Test_KNS_proxy-with-scheme_failure "test-proxy-with-scheme_failure" "${COMMON_LIBS_READ}" )
