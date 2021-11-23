@@ -18,7 +18,6 @@ else()
     set( COMMON_LIBS_WRITE  ncbi-wvdb dl pthread )
 endif()
 
-add_subdirectory(kns) # TODO: EXT_TOOLS - see the kns CMakeLists.txt for the details
 add_subdirectory(ktst)
 add_subdirectory(cc)
 add_subdirectory(ext)
@@ -44,3 +43,4 @@ add_subdirectory(schema) # TODO: INT_TOOLS - see the schema CMakeLists.txt for t
 add_subdirectory(vfs)
 add_subdirectory(ncbi-vdb)
 # add_subdirectory(install)
+add_subdirectory(kns) # TODO: EXT_TOOLS - see the kns CMakeLists.txt for the details
