@@ -74,8 +74,10 @@ TEST_CASE ( test ) {
 
     KNSManager * kns = NULL;
     REQUIRE_RC ( VFSManagerGetKNSMgr ( vfs, & kns ) );
-    // do not do long retries when calling proxy on bad port
-    REQUIRE_RC ( KNSManagerSetConnectionTimeouts ( kns, 1, 0, 0 ) );
+
+    if ( EXPECTED_FAILURE ) // do not do long retries when calling proxy on bad port
+        REQUIRE_RC ( KNSManagerSetConnectionTimeouts ( kns, 1, 0, 0 ) );
+
     RELEASE ( KNSManager, kns );
 
     VResolver * resolver = NULL;
