@@ -50,6 +50,13 @@ install( FILES
 	${CMAKE_SOURCE_DIR}/libs/align/samextract-pool.h
 	${CMAKE_SOURCE_DIR}/libs/align/samextract.h
 	DESTINATION ${SHARED_SRC_DIR}/libs/align )
+install( FILES
+	${CMAKE_SOURCE_DIR}/libs/klib/release-vers.h
+	DESTINATION ${SHARED_SRC_DIR}/libs/klib )
+install( FILES
+	${CMAKE_SOURCE_DIR}/libs/vfs/json-response.h
+	${CMAKE_SOURCE_DIR}/libs/vfs/services-priv.h
+	DESTINATION ${SHARED_SRC_DIR}/libs/vfs )
 
 # install( TARGETS ncbi-vdb DESTINATION ${CMAKE_INSTALL_PREFIX}/lib64 EXPORT FindNcbiVdb)
 # install( EXPORT FindNcbiVdb DESTINATION ${CMAKE_INSTALL_PREFIX}/lib64 )
