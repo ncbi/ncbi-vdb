@@ -19,7 +19,7 @@ if ( ${OS} STREQUAL "linux" )
         strlcat
         strlcpy
     )
-    
+    ExportStatic( magic-static true )
     add_compile_definitions( HAVE_CONFIG_H=1 )
     add_compile_definitions( __mod__="libs/ext/magic" )
     include_directories( BEFORE ${CMAKE_CURRENT_SOURCE_DIR} )

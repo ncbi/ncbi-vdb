@@ -19,6 +19,7 @@ set( SRC
 )
 
 GenerateStaticLibs( ktst "${SRC}" )
+ExportStatic( ktst true )
 
 add_compile_definitions (__mod__="libs/ktst")
 #include_directories( BEFORE ${CMAKE_CURRENT_SOURCE_DIR} )

@@ -87,6 +87,8 @@ set( KFF_SRC
 )
 
 GenerateStaticLibs( kfs "${KFS_SRC}" )
+ExportStatic( kff true )
+
 GenerateStaticLibs( kff "${KFF_SRC}" )
 
 add_compile_definitions (__mod__="libs/kfs")
