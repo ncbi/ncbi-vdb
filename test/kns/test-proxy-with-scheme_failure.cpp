@@ -76,7 +76,7 @@ TEST_CASE ( test ) {
     KNSManager * kns = NULL;
     REQUIRE_RC ( VFSManagerGetKNSMgr ( vfs, & kns ) );
 
-    int32_t x=22;//14 2850
+    int32_t x=25;//14 2850
     if ( EXPECTED_FAILURE )
         x=1; // do not do long retries when calling proxy on bad port
     REQUIRE_RC ( KNSManagerSetConnectionTimeouts ( kns, x, 0, 0 ) );
@@ -94,7 +94,8 @@ TEST_CASE ( test ) {
 
     const VPath * rmt = NULL;
     REQUIRE_NULL ( rmt );
-    if ( EXPECTED_FAILURE )
+	std::cerr << x << "\n";
+	if ( EXPECTED_FAILURE )
         REQUIRE_RC_FAIL ( VResolverQuery ( resolver, 0, query, 0, & rmt, 0 ) );
     else
         REQUIRE_RC      ( VResolverQuery ( resolver, 0, query, 0, & rmt, 0 ) );
