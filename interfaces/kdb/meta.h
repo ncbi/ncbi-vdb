@@ -403,6 +403,15 @@ KDB_EXTERN rc_t CC KMDataNodeVDropChild ( KMDataNode *self, const char *path, va
 KDB_EXTERN rc_t CC KMDataNodeRenameAttr ( KMDataNode *self, const char *from, const char *to );
 KDB_EXTERN rc_t CC KMDataNodeRenameChild ( KMDataNode *self, const char *from, const char *to );
 
+/* Copy
+ *  Replaces the content of the node with the contents of another node.
+ *  This is a deep copy.
+ *
+ *  "source" [ IN ] - the node to copy from
+ */
+
+LIB_EXPORT rc_t CC KMDataNodeCopy(KMDataNode *self, KMDataNode const *source);
+
 
 #ifdef __cplusplus
 }
