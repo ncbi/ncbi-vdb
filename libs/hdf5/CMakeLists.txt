@@ -1,4 +1,4 @@
-find_package(HDF5 COMPONENTS)
+find_package(HDF5 COMPONENTS C)
 
 if( HDF5_FOUND )
     set( SRC
