@@ -1728,3 +1728,117 @@ KDB_EXTERN bool CC KTableHasRemoteData ( const KTable *self )
 {
     return true;
 }
+
+/** @brief Copy a column using directory operations
+ */
+static rc_t KTableCopyObject_int(  KTable *self
+                                 , KTable const *source
+                                 , const char *name
+                                 , char const *type)
+{
+    KDirectory *dst = NULL;
+    KDirectory const *src = NULL;
+    rc_t rc;
+
+    rc = KDirectoryOpenDirRead(source->dir, &src, true, "%s", type);
+    if (rc)
+        return rc;
+
+    rc = KDirectoryOpenDirUpdate(self->dir, &dst, true, "%s", type);
+    if (rc == 0) {
+        rc = KDirectoryCopyPaths(src, dst, true, name, name);
+        KDirectoryRelease(dst);
+    }
+    KDirectoryRelease(src);
+    return rc;
+}
+
+/** @brief A good source exists and is not being written to.
+ */
+static rc_t KTableObjectIsGoodSource(KTable const *self
+                                     , char const *name
+                                     , char const *type)
+{
+    char path [ 256 ];
+    rc_t rc = KDBMakeSubPath(self->dir, path, sizeof(path), type, 3, "%s", name);
+    assert(rc == 0);
+    if (rc)
+        return rc;
+
+    rc = KDBWritable(self->dir, path);
+    if (rc == 0) {
+        if (KDBManagerOpenObjectBusy(self->mgr, path))
+            return RC ( rcDB, rcTable, rcCopying, rcPath, rcBusy );
+    }
+    else if (GetRCState(rc) == rcLocked || GetRCState(rc) == rcReadonly)
+        rc = 0;
+    return rc;
+}
+
+/** @brief A good destination does not exist.
+ */
+static rc_t KTableObjectIsGoodDestination(KTable *self
+                                          , char const *name
+                                          , char const *type)
+{
+    char path [ 256 ];
+    rc_t rc = KDBMakeSubPath(self->dir, path, sizeof(path), type, 3, "%s", name);
+    assert(rc == 0);
+    if (rc)
+        return rc;
+
+    rc = KDBWritable(self->dir, path);
+    if (rc == 0)
+        return RC(rcDB, rcTable, rcCopying, rcPath, rcExists);
+    if (GetRCState(rc) == rcLocked || GetRCState(rc) == rcReadonly)
+        return RC(rcDB, rcTable, rcCopying, rcPath, GetRCState(rc));
+    return 0;
+}
+
+static rc_t KTableCopyObject(  KTable *self
+                             , KTable const *source
+                             , char const *name
+                             , char const *type)
+{
+    rc_t rc = KTableObjectIsGoodDestination(self, name, type);
+    if (rc)
+        return rc;
+
+    rc = KTableObjectIsGoodSource(source, name, type);
+    if (rc)
+        return rc;
+
+    return KTableCopyObject_int(self, source, name, type);
+}
+
+LIB_EXPORT rc_t CC KTableCopyColumn(  KTable *self
+                                    , KTable const *source
+                                    , const char *name)
+{
+    rc_t rc = 0;
+
+    if (self == NULL)
+        return RC(rcDB, rcTable, rcCopying, rcSelf, rcNull);
+
+    if (self->read_only)
+        return RC(rcDB, rcTable, rcCopying, rcSelf, rcReadonly);
+
+    rc = KTableCopyObject(self, source, name, "col");
+    return RC(rcDB, rcTable, rcCopying, rcColumn, GetRCState(rc));
+}
+
+LIB_EXPORT rc_t CC KTableCopyIndex(  KTable *self
+                                    , KTable const *source
+                                    , const char *name)
+{
+    rc_t rc = 0;
+
+    if (self == NULL)
+        return RC(rcDB, rcTable, rcCopying, rcSelf, rcNull);
+
+    if (self->read_only)
+        return RC(rcDB, rcTable, rcCopying, rcSelf, rcReadonly);
+
+    rc = KTableCopyObject(self, source, name, "idx");
+    return RC(rcDB, rcTable, rcCopying, rcIndex, GetRCState(rc));
+}
