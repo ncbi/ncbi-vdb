@@ -205,6 +205,22 @@ KLIB_EXTERN bool CC GetUnreadRCInfo ( rc_t *rc, const char **filename, const cha
     ( enum RCState ) ( ( rc ) & 0x3F )
 
 
+    enum RC_String_Field {
+        rcf_module,
+        rcf_target,
+        rcf_context,
+        rcf_object,
+        rcf_state
+    };
+    struct RC_String {
+        char const *text;
+        size_t size;
+        int value;
+        int field;
+    };
+
+    KLIB_EXTERN void CC Get_RC_Strings(rc_t rc, struct RC_String [5]);
+
 #ifdef __cplusplus
 }
 #endif

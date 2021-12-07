@@ -242,6 +242,7 @@ static rc_t KMAttrNodeMakeCopy(KMAttrNode **node, KMAttrNode const *source)
 
     memmove(result, source, size);
     memset(&result->n, 0, sizeof(result->n));
+    *node = result;
     return 0;
 }
 
@@ -3601,9 +3602,9 @@ static void CC KMDataNodeCopy_cb(BSTNode *n, void *data)
 static void KMDataNodeCopy_int(struct CopyContext *ctx)
 {
     KMDataNodeCopyValue(ctx);
-    BSTreeForEach(&ctx->source->attr, false, KMDataNodeCopyAttribute_cb, &ctx);
-    BSTreeForEach(&ctx->source->child, false, KMDataNodeCopy_cb, &ctx);
-    ctx->dest->meta->dirty = (ctx.rc == 0);
+    BSTreeForEach(&ctx->source->attr, false, KMDataNodeCopyAttribute_cb, ctx);
+    BSTreeForEach(&ctx->source->child, false, KMDataNodeCopy_cb, ctx);
+    ctx->dest->meta->dirty = (ctx->rc == 0);
 }
 
 LIB_EXPORT rc_t CC KMDataNodeCopy(  KMDataNode *self
