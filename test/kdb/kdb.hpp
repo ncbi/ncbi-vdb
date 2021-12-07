@@ -541,39 +541,39 @@ namespace KDB {
 
             switch (sizeof(T)) {
             case 1:
-                RC_Exception::throw_if(KMDataNodeReadB8(get(), &x), "KMDataNodeReadB8");
+                THROW_IF(KMDataNodeReadB8, (get(), &x));
                 return x;
             }
             throw std::logic_error("invalid size for value type");
         }
         template <> int16_t value<int16_t>() const {
             int16_t x;
-            RC_Exception::throw_if(KMDataNodeReadAsI16(get(), &x), "KMDataNodeReadAsI16");
+            THROW_IF(KMDataNodeReadAsI16, (get(), &x));
             return x;
         }
         template <> uint16_t value<uint16_t>() const {
             uint16_t x;
-            RC_Exception::throw_if(KMDataNodeReadAsU16(get(), &x), "KMDataNodeReadAsU16");
+            THROW_IF(KMDataNodeReadAsU16, (get(), &x));
             return x;
         }
         template <> int32_t value<int32_t>() const {
             int32_t x;
-            RC_Exception::throw_if(KMDataNodeReadAsI32(get(), &x), "KMDataNodeReadAsI32");
+            THROW_IF(KMDataNodeReadAsI32, (get(), &x));
             return x;
         }
         template <> uint32_t value<uint32_t>() const {
             uint32_t x;
-            RC_Exception::throw_if(KMDataNodeReadAsU32(get(), &x), "KMDataNodeReadAsU32");
+            THROW_IF(KMDataNodeReadAsU32, (get(), &x));
             return x;
         }
         template <> int64_t value<int64_t>() const {
             int64_t x;
-            RC_Exception::throw_if(KMDataNodeReadAsI64(get(), &x), "KMDataNodeReadAsI64");
+            THROW_IF(KMDataNodeReadAsI64, (get(), &x));
             return x;
         }
         template <> uint64_t value<uint64_t>() const {
             uint64_t x;
-            RC_Exception::throw_if(KMDataNodeReadAsU64(get(), &x), "KMDataNodeReadAsU64");
+            THROW_IF(KMDataNodeReadAsU64, (get(), &x));
             return x;
         }
     };
@@ -584,7 +584,7 @@ namespace KDB {
     {
         MutatingMetadata child(char const *name) {
             Pointer p = nullptr;
-            RC_Exception::throw_if(KMDataNodeOpenNodeUpdate(get(), &p, "%s", name), "KMDataNodeOpenNodeUpdate");
+            THROW_IF(KMDataNodeOpenNodeUpdate, (get(), &p, "%s", name));
             return p;
         }
     public:
@@ -598,16 +598,16 @@ namespace KDB {
             return child(name.c_str());
         }
         void setAttribute(std::string const &name, std::string const &value) {
-            RC_Exception::throw_if(KMDataNodeWriteAttr(get(), name.c_str(), value.c_str()), "KMDataNodeWriteAttr");
+            THROW_IF(KMDataNodeWriteAttr, (get(), name.c_str(), value.c_str()));
         }
         void setValue(size_t const size, void const *const value) {
-            RC_Exception::throw_if(KMDataNodeWrite(get(), value, size), "KMDataNodeWrite");
+            THROW_IF(KMDataNodeWrite, (get(), value, size));
         }
         void setValue(std::string const &value) {
             setValue(value.size(), value.data());
         }
         void copy(Metadata const &other) {
-            RC_Exception::throw_if(KMDataNodeCopy(get(), getPointer(other)), "KMDataNodeCopy");
+            THROW_IF(KMDataNodeCopy, (get(), getPointer(other)));
         }
     };
 
@@ -621,12 +621,12 @@ namespace KDB {
 
         Metadata root() const {
             Metadata::ConstPointer p = nullptr;
-            RC_Exception::throw_if(KMetadataOpenNodeRead(get(), &p, ""), "KMetadataOpenNodeRead");
+            THROW_IF(KMetadataOpenNodeRead, (get(), &p, ""));
             return p;
         }
         Metadata operator [](std::string const &name) const {
             Metadata::ConstPointer p = nullptr;
-            RC_Exception::throw_if(KMetadataOpenNodeRead(get(), &p, "%s", name.c_str()), "KMetadataOpenNodeRead");
+            THROW_IF(KMetadataOpenNodeRead, (get(), &p, "%s", name.c_str()));
             return p;
         }
     };
@@ -643,12 +643,12 @@ namespace KDB {
 
         MutatingMetadata root() {
             Metadata::Pointer p = nullptr;
-            RC_Exception::throw_if(KMetadataOpenNodeUpdate(get(), &p, ""), "KMetadataOpenNodeUpdate");
+            THROW_IF(KMetadataOpenNodeUpdate, (get(), &p, ""));
             return p;
         }
         MutatingMetadata operator [](std::string const &name) {
             Metadata::Pointer p = nullptr;
-            RC_Exception::throw_if(KMetadataOpenNodeUpdate(get(), &p, "%s", name.c_str()), "KMetadataOpenNodeUpdate");
+            THROW_IF(KMetadataOpenNodeUpdate, (get(), &p, "%s", name.c_str()));
             return p;
         }
     };
@@ -662,7 +662,7 @@ namespace KDB {
 
         MetadataCollection metadata() const {
             MetadataCollection::Base::ConstPointer p = nullptr;
-            RC_Exception::throw_if(KColumnOpenMetadataRead(get(), &p), "KColumnOpenMetadataRead");
+            THROW_IF(KColumnOpenMetadataRead, (get(), &p));
             return MetadataCollection(p);
         }
         Metadata operator [](std::string const &name) const {
@@ -682,7 +682,7 @@ namespace KDB {
 
         MutatingMetadataCollection metadata() {
             MetadataCollection::Pointer p = nullptr;
-            RC_Exception::throw_if(KColumnOpenMetadataUpdate(get(), &p), "KColumnOpenMetadataUpdate");
+            THROW_IF(KColumnOpenMetadataUpdate, (get(), &p));
             return p;
         }
         MutatingMetadata operator [](std::string const &name) {
@@ -699,13 +699,13 @@ namespace KDB {
     public:
         MetadataCollection metadata() const {
             MetadataCollection::ConstPointer p = nullptr;
-            RC_Exception::throw_if(KTableOpenMetadataRead(get(), &p), "KTableOpenMetadataRead");
+            THROW_IF(KTableOpenMetadataRead, (get(), &p));
             return p;
         }
 
         Column operator [](std::string const &name) const {
             Column::ConstPointer p = nullptr;
-            RC_Exception::throw_if(KTableOpenColumnRead(get(), &p, "%s", name.c_str()), "KTableOpenColumnRead");
+            THROW_IF(KTableOpenColumnRead, (get(), &p, "%s", name.c_str()));
             return p;
         }
 
@@ -715,6 +715,7 @@ namespace KDB {
 
     class MutatingTable final
     : public Table
+    , Table::Consumer
     {
     public:
         Table readOnly() {
@@ -725,19 +726,19 @@ namespace KDB {
 
         MutatingMetadataCollection metadata() {
             MetadataCollection::Pointer p = nullptr;
-            RC_Exception::throw_if(KTableOpenMetadataUpdate(get(), &p), "KTableOpenMetadataUpdate");
+            THROW_IF(KTableOpenMetadataUpdate, (get(), &p));
             return p;
         }
 
         MutatingColumn createColumn(std::string const &name) {
             Column::Pointer p = nullptr;
-            RC_Exception::throw_if(KTableCreateColumn(get(), &p, kcmCreate, 0, 0, "%s", name.c_str()), "KTableCreateColumn");
+            THROW_IF(KTableCreateColumn, (get(), &p, kcmCreate, 0, 0, "%s", name.c_str()));
             return p;
         }
 
         MutatingColumn openColumn(std::string const &name) {
             Column::Pointer p = nullptr;
-            RC_Exception::throw_if(KTableOpenColumnUpdate(get(), &p, "%s", name.c_str()), "KTableOpenColumnUpdate");
+            THROW_IF(KTableOpenColumnUpdate, (get(), &p, "%s", name.c_str()));
             return p;
         }
 
@@ -752,6 +753,10 @@ namespace KDB {
             }
             return createColumn(name);
         }
+
+        void copyColumn(std::string const &name, Table const &from) {
+             THROW_IF(KTableCopyColumn, (get(), getPointer(from), name.c_str()));
+        }
     };
 
     KlibObject(KDatabase, Database)
@@ -762,18 +767,18 @@ namespace KDB {
 
         Database openDatabase(std::string const &name) const {
             ConstPointer p = nullptr;
-            RC_Exception::throw_if(KDatabaseOpenDBRead(get(), &p, "%s", name.c_str()), "KDatabaseOpenDBRead");
+            THROW_IF(KDatabaseOpenDBRead, (get(), &p, "%s", name.c_str()));
             return p;
         }
         Table openTable(std::string const &name) const {
             Table::ConstPointer p = nullptr;
-            RC_Exception::throw_if(KDatabaseOpenTableRead(get(), &p, "%s", name.c_str()), "KDatabaseOpenTableRead");
+            THROW_IF(KDatabaseOpenTableRead, (get(), &p, "%s", name.c_str()));
             return p;
         }
 
         MetadataCollection metadata() const {
             MetadataCollection::ConstPointer p = nullptr;
-            RC_Exception::throw_if(KDatabaseOpenMetadataRead(get(), &p), "KColumnOpenMetadataRead");
+            THROW_IF(KDatabaseOpenMetadataRead, (get(), &p));
             return p;
         }
 
@@ -796,31 +801,31 @@ namespace KDB {
 
         MutatingDatabase createDatabase(std::string const &name) {
             Database::Pointer p = nullptr;
-            RC_Exception::throw_if(KDatabaseCreateDB(get(), &p, kcmInit|kcmCreate|kcmParents, "%s", name.c_str()), "KDBManagerCreateDB");
+            THROW_IF(KDatabaseCreateDB, (get(), &p, kcmInit|kcmCreate|kcmParents, "%s", name.c_str()));
             return p;
         }
 
         MutatingTable createTable(std::string const &name) {
             Table::Pointer p = nullptr;
-            RC_Exception::throw_if(KDatabaseCreateTable(get(), &p, kcmInit|kcmCreate|kcmParents, "%s", name.c_str()), "KDBManagerCreateTable");
+            THROW_IF(KDatabaseCreateTable, (get(), &p, kcmInit|kcmCreate|kcmParents, "%s", name.c_str()));
             return p;
         }
 
         MutatingDatabase openDatabase(std::string const &name) {
             Pointer p = nullptr;
-            RC_Exception::throw_if(KDatabaseOpenDBUpdate(get(), &p, "%s", name.c_str()), "KDatabaseOpenDBUpdate");
+            THROW_IF(KDatabaseOpenDBUpdate, (get(), &p, "%s", name.c_str()));
             return p;
         }
 
         MutatingTable openTable(std::string const &name) {
             Table::Pointer p = nullptr;
-            RC_Exception::throw_if(KDatabaseOpenTableUpdate(get(), &p, "%s", name.c_str()), "KDatabaseOpenTableUpdate");
+            THROW_IF(KDatabaseOpenTableUpdate, (get(), &p, "%s", name.c_str()));
             return p;
         }
 
         MutatingMetadataCollection metadata() {
             MetadataCollection::Pointer p = nullptr;
-            RC_Exception::throw_if(KDatabaseOpenMetadataUpdate(get(), &p), "KColumnOpenMetadataRead");
+            THROW_IF(KDatabaseOpenMetadataUpdate, (get(), &p));
             return p;
         }
 
@@ -850,12 +855,12 @@ namespace KDB {
 
         static ConstPointer make() {
             ConstPointer p = nullptr;
-            RC_Exception::throw_if(KDBManagerMakeRead(&p, nullptr), "KDBManagerMakeRead");
+            THROW_IF(KDBManagerMakeRead, (&p, nullptr));
             return p;
         }
         static ConstPointer make(KFS::Directory const &dir) {
             ConstPointer p = nullptr;
-            RC_Exception::throw_if(KDBManagerMakeRead(&p, getPointer(dir)), "KDBManagerMakeRead");
+            THROW_IF(KDBManagerMakeRead, (&p, getPointer(dir)));
             return p;
         }
 
@@ -865,13 +870,13 @@ namespace KDB {
 
         Database openDatabase(std::string const &name) const {
             Database::ConstPointer p = nullptr;
-            RC_Exception::throw_if(KDBManagerOpenDBRead(get(), &p, "%s", name.c_str()), "KDBManagerOpenDBRead");
+            THROW_IF(KDBManagerOpenDBRead, (get(), &p, "%s", name.c_str()));
             return p;
         }
 
         Table openTable(std::string const &name) const {
             Table::ConstPointer p = nullptr;
-            RC_Exception::throw_if(KDBManagerOpenTableRead(get(), &p, "%s", name.c_str()), "KDBManagerOpenTableRead");
+            THROW_IF(KDBManagerOpenTableRead, (get(), &p, "%s", name.c_str()));
             return p;
         }
 
@@ -883,12 +888,12 @@ namespace KDB {
     {
         static Pointer make() {
             Pointer p = nullptr;
-            RC_Exception::throw_if(KDBManagerMakeUpdate(&p, nullptr), "KDBManagerMakeUpdate");
+            THROW_IF(KDBManagerMakeUpdate, (&p, nullptr));
             return p;
         }
         static Pointer make(KFS::MutatingDirectory &dir) {
             Pointer p = nullptr;
-            RC_Exception::throw_if(KDBManagerMakeUpdate(&p, getPointer(dir)), "KDBManagerMakeUpdate");
+            THROW_IF(KDBManagerMakeUpdate, (&p, getPointer(dir)));
             return p;
         }
     public:
@@ -904,25 +909,25 @@ namespace KDB {
 
         MutatingDatabase createDatabase(std::string const &name) {
             Database::Pointer p = nullptr;
-            RC_Exception::throw_if(KDBManagerCreateDB(get(), &p, kcmInit|kcmCreate|kcmParents, "%s", name.c_str()), "KDBManagerCreateDB");
+            THROW_IF(KDBManagerCreateDB, (get(), &p, kcmInit|kcmCreate|kcmParents, "%s", name.c_str()));
             return p;
         }
 
         MutatingTable createTable(std::string const &name) {
             Table::Pointer p = nullptr;
-            RC_Exception::throw_if(KDBManagerCreateTable(get(), &p, kcmInit|kcmCreate|kcmParents, "%s", name.c_str()), "KDBManagerCreateTable");
+            THROW_IF(KDBManagerCreateTable, (get(), &p, kcmInit|kcmCreate|kcmParents, "%s", name.c_str()));
             return p;
         }
 
         MutatingDatabase openDatabase(std::string const &name) {
             Database::Pointer p = nullptr;
-            RC_Exception::throw_if(KDBManagerOpenDBUpdate(get(), &p, "%s", name.c_str()), "KDBManagerCreateDB");
+            THROW_IF(KDBManagerOpenDBUpdate, (get(), &p, "%s", name.c_str()));
             return p;
         }
 
         MutatingTable openTable(std::string const &name) {
             Table::Pointer p = nullptr;
-            RC_Exception::throw_if(KDBManagerOpenTableUpdate(get(), &p, "%s", name.c_str()), "KDBManagerOpenTableUpdate");
+            THROW_IF(KDBManagerOpenTableUpdate, (get(), &p, "%s", name.c_str()));
             return p;
         }
     };

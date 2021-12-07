@@ -1824,7 +1824,9 @@ LIB_EXPORT rc_t CC KTableCopyColumn(  KTable *self
         return RC(rcDB, rcTable, rcCopying, rcSelf, rcReadonly);
 
     rc = KTableCopyObject(self, source, name, "col");
-    return RC(rcDB, rcTable, rcCopying, rcColumn, GetRCState(rc));
+    if (rc)
+        return RC(rcDB, rcTable, rcCopying, rcColumn, GetRCState(rc));
+    return rc;
 }
 
 LIB_EXPORT rc_t CC KTableCopyIndex(  KTable *self

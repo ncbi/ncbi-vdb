@@ -40,7 +40,7 @@ using namespace KFS;
 
 TEST_SUITE(KdbTestSuite);
 
-class WKDB_MetaCopyFixture
+class WKDB_ColumnCopyFixture
 {
     void checkValue(Metadata const &src, Metadata const &other) {
         if (src.nodeValue() == other.nodeValue())
@@ -110,8 +110,7 @@ public:
 
     static constexpr char const *tableName() { return "VDB-4706.ktable"; }
     static constexpr char const *tableName2() { return "VDB-4706_2.ktable"; }
-    static constexpr char const *columnName1() { return "COL_1"; }
-    static constexpr char const *columnName2() { return "COL_2"; }
+    static constexpr char const *columnName() { return "COL_1"; }
     static constexpr char const *nodeName() { return "MDN_1"; }
     static constexpr char const *childName() { return "MDN_C"; }
     static constexpr char const *nodeValue() { return "Metadata 1"; }
@@ -121,7 +120,7 @@ public:
 
     MutatingDirectory dir = MutatingDirectory(tempPath());
 
-    WKDB_MetaCopyFixture()
+    WKDB_ColumnCopyFixture()
     {
         try {
             dir.remove(tableName(), true);
@@ -130,7 +129,7 @@ public:
         catch (...) {}
     }
 
-    ~WKDB_MetaCopyFixture()
+    ~WKDB_ColumnCopyFixture()
     {
         dir.remove(tableName(), true);
     }
@@ -144,7 +143,7 @@ public:
     // create column with some metadata
     // this will become the source metadata
     void makeNode(MutatingTable &tbl) {
-        auto md = tbl[columnName1()][nodeName()];
+        auto md = tbl[columnName()][nodeName()];
         auto child = md[childName()];
 
         md.setValue(nodeValue());
@@ -164,53 +163,32 @@ public:
             throw std::logic_error("child node attribute value is unexpected");
     }
 
-    // Copy a metadata node from one column to another
+    // Make a column and copy it to another table
     void makeCopy() {
         MutatingManager mgr(dir);
         auto tbl = mgr.createTable(tableName());
 
         makeNode(tbl);
 
-        auto const &src = tbl.readOnly()[columnName1()][nodeName()];
-        checkNode(src);
-
-        auto dst = tbl[columnName2()][nodeName()];
-        dst.copy(src);
-    }
-
-    // Copy a metadata node from one column to another table
-    void makeCopy2() {
-        MutatingManager mgr(dir);
-        auto tbl = mgr.createTable(tableName());
-
-        makeNode(tbl);
-
-        auto const &src = tbl.readOnly()[columnName1()][nodeName()];
-        checkNode(src);
+        auto const &src = tbl.readOnly();
+        checkNode(src[columnName()][nodeName()]);
 
         auto tbl2 = mgr.createTable(tableName2());
-        auto dst = tbl2[columnName1()][nodeName()];
-        dst.copy(src);
+        tbl2.copyColumn(columnName(), src);
+    }
+
+    void checkCopy() {
+        auto mgr = MutatingManager(dir).readOnly();
+        auto tbl2 = mgr.openTable(tableName2());
+
+        checkNode(tbl2[columnName()][nodeName()]);
     }
 };
 
-FIXTURE_TEST_CASE ( CopyMetadata, WKDB_MetaCopyFixture )
+FIXTURE_TEST_CASE ( CopyColumn, WKDB_ColumnCopyFixture )
 {
     makeCopy();
-
-    auto const &mgr = MutatingManager(dir).readOnly();
-    auto tbl = mgr.openTable(tableName());
-    checkEqual(tbl[columnName1()][nodeName()], tbl[columnName2()][nodeName()]);
-}
-
-FIXTURE_TEST_CASE ( CopyMetadata2, WKDB_MetaCopyFixture )
-{
-    makeCopy2();
-
-    auto const &mgr = MutatingManager(dir).readOnly();
-    auto tbl = mgr.openTable(tableName());
-    auto tbl2 = mgr.openTable(tableName2());
-    checkEqual(tbl[columnName1()][nodeName()], tbl2[columnName1()][nodeName()]);
+    checkCopy();
 }
 
 extern "C"
