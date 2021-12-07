@@ -131,6 +131,10 @@ namespace Klib {
         Object const &operator =(Object const &rhs) {
             p.take(rhs.share());
         }
+        template <class U>
+        bool isSame(Object<U> const &other) const {
+            return reinterpret_cast<void const *>(p.p) == reinterpret_cast<void const *>(other.p.p);
+        }
         friend Consumer<Object>;
         using Consumer = Consumer<Object>;
     };
@@ -607,6 +611,7 @@ namespace KDB {
             setValue(value.size(), value.data());
         }
         void copy(Metadata const &other) {
+            assert(!isSame(other));
             THROW_IF(KMDataNodeCopy, (get(), getPointer(other)));
         }
     };
@@ -755,7 +760,8 @@ namespace KDB {
         }
 
         void copyColumn(std::string const &name, Table const &from) {
-             THROW_IF(KTableCopyColumn, (get(), getPointer(from), name.c_str()));
+            assert(!isSame(from));
+            THROW_IF(KTableCopyColumn, (get(), getPointer(from), name.c_str()));
         }
     };
 

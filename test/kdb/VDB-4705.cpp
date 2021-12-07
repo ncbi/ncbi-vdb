@@ -212,7 +212,7 @@ rc_t CC Usage ( const Args * args )
     return 0;
 }
 
-const char UsageDefaultName[] = "VDB-4706";
+const char UsageDefaultName[] = "VDB-4705";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
