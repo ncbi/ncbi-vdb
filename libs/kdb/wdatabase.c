@@ -386,7 +386,7 @@ rc_t KDBManagerVCreateDBInt ( KDBManager *self,
 	     * or a non related file */
 	    if ( KDBOpenPathTypeRead ( self, wd, dbpath, NULL, kptDatabase, NULL, false,
             NULL ) == 0 )
-		return RC ( rcDB, rcMgr, rcCreating, rcDirectory, rcUnauthorized );
+            return RC ( rcDB, rcMgr, rcCreating, rcDirectory, rcUnauthorized );
 	    /* fall through */
         default:
             return RC ( rcDB, rcMgr, rcCreating, rcPath, rcIncorrect );

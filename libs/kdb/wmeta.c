@@ -233,6 +233,18 @@ rc_t KMAttrNodeMake ( KMAttrNode **np,
     return 0;
 }
 
+static rc_t KMAttrNodeMakeCopy(KMAttrNode **node, KMAttrNode const *source)
+{
+    size_t const size = &((uint8_t const *)source->value)[source->vsize] - ((uint8_t const *)source);
+    KMAttrNode *result = malloc(size);
+    if (result == NULL)
+        return RC ( rcDB, rcNode, rcConstructing, rcMemory, rcExhausted );
+
+    memmove(result, source, size);
+    memset(&result->n, 0, sizeof(result->n));
+    *node = result;
+    return 0;
+}
 
 /*--------------------------------------------------------------------------
  * KMDataNode
@@ -1916,15 +1928,8 @@ LIB_EXPORT rc_t CC KMDataNodeReadAttrAsF64 ( const KMDataNode *self, const char 
  * VDrop
  *  drop some or all node content
  */
-LIB_EXPORT rc_t CC KMDataNodeDropAll ( KMDataNode *self )
+rc_t KMDataNodeDropAll_int ( KMDataNode *self )
 {
-    if ( self == NULL )
-        return RC ( rcDB, rcNode, rcClearing, rcSelf, rcNull );
-    if ( self -> meta == NULL )
-        return RC ( rcDB, rcNode, rcClearing, rcMetadata, rcNull );
-    if ( self -> read_only )
-        return RC ( rcDB, rcNode, rcClearing, rcNode, rcReadonly );
-
     BSTreeWhack ( & self -> attr, KMAttrNodeWhack, NULL );
     BSTreeInit ( & self -> attr );
 
@@ -1937,6 +1942,18 @@ LIB_EXPORT rc_t CC KMDataNodeDropAll ( KMDataNode *self )
     self -> meta -> dirty = true;
 
     return 0;
+}
+
+LIB_EXPORT rc_t CC KMDataNodeDropAll ( KMDataNode *self )
+{
+    if ( self == NULL )
+        return RC ( rcDB, rcNode, rcClearing, rcSelf, rcNull );
+    if ( self -> meta == NULL )
+        return RC ( rcDB, rcNode, rcClearing, rcMetadata, rcNull );
+    if ( self -> read_only )
+        return RC ( rcDB, rcNode, rcClearing, rcNode, rcReadonly );
+
+    return KMDataNodeDropAll_int(self);
 }
 
 LIB_EXPORT rc_t CC KMDataNodeDropAttr ( KMDataNode *self, const char *attr )
@@ -3527,4 +3544,88 @@ LIB_EXPORT rc_t CC KMDataNodeListChildren ( const KMDataNode *self, KNamelist **
         BSTreeForEach ( & self -> child, false, KMDataNodeGrabName, * names );
 
     return rc;
+}
+
+struct CopyContext {
+    KMDataNode *dest;
+    KMDataNode const *source;
+    rc_t rc;
+};
+static void KMDataNodeCopy_int(struct CopyContext *ctx);
+
+static void KMDataNodeCopyValue(struct CopyContext *ctx)
+{
+    if (ctx->rc == 0) {
+        void const *data = NULL;
+        size_t size = 0;
+
+        ctx->rc = KMDataNodeAddr(ctx->source, &data, &size);
+        if (ctx->rc == 0)
+            ctx->rc = KMDataNodeWrite(ctx->dest, data, size);
+    }
+}
+
+static void CC KMDataNodeCopyAttribute_cb(BSTNode *n, void *data)
+{
+    struct CopyContext *const ctx = data;
+    if (ctx->rc == 0) {
+        KMAttrNode *newAttr = NULL;
+        ctx->rc = KMAttrNodeMakeCopy(&newAttr, (KMAttrNode const *)n);
+        if (ctx->rc == 0)
+            BSTreeInsert(&ctx->dest->attr, &newAttr->n, KMAttrNodeSort);
+    }
+}
+
+static void CC KMDataNodeCopy_cb(BSTNode *n, void *data)
+{
+    struct CopyContext *const ctx = data;
+    if (ctx->rc == 0) {
+        char const *const nodeName = ((KMDataNode const *)n)->name;
+        KMDataNode *const dest = ctx->dest;
+        KMDataNode const *const source = ctx->source;
+
+        ctx->rc = KMDataNodeOpenNodeRead(source, &ctx->source, nodeName);
+        assert(ctx->rc == 0);
+        if (ctx->rc == 0) {
+            ctx->rc = KMDataNodeOpenNodeUpdate(dest, &ctx->dest, nodeName);
+            if (ctx->rc == 0) {
+                KMDataNodeCopy_int(ctx);
+                KMDataNodeRelease(ctx->dest);
+            }
+            KMDataNodeRelease(ctx->source);
+        }
+        ctx->source = source;
+        ctx->dest = dest;
+    }
+}
+
+static void KMDataNodeCopy_int(struct CopyContext *ctx)
+{
+    KMDataNodeCopyValue(ctx);
+    BSTreeForEach(&ctx->source->attr, false, KMDataNodeCopyAttribute_cb, ctx);
+    BSTreeForEach(&ctx->source->child, false, KMDataNodeCopy_cb, ctx);
+    ctx->dest->meta->dirty = (ctx->rc == 0);
+}
+
+LIB_EXPORT rc_t CC KMDataNodeCopy(  KMDataNode *self
+                                  , KMDataNode const *source)
+{
+    struct CopyContext ctx;
+
+    if (self == NULL)
+        return RC(rcDB, rcNode, rcCopying, rcSelf, rcNull);
+    if (self->read_only)
+        return RC(rcDB, rcNode, rcCopying, rcNode, rcReadonly);
+    if (source == NULL)
+        return RC(rcDB, rcNode, rcCopying, rcParam, rcNull);
+    if (self->meta == NULL || source->meta == NULL)
+        return RC(rcDB, rcNode, rcCopying, rcMetadata, rcNull);
+
+    ctx.rc = KMDataNodeDropAll_int(self);
+    ctx.dest = self;
+    ctx.source = source;
+
+    KMDataNodeCopy_int(&ctx);
+
+    return ctx.rc;
 }
