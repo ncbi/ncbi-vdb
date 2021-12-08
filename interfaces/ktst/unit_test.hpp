@@ -29,6 +29,12 @@
 
 #include <ktst/unit_test_suite.hpp>
 
+struct test_skipped {
+    std::string reason;
+    test_skipped(std::string const &reason) : reason(reason) {}
+};
+
+
 ////////////////////////////////////////////////////////////////////////////////
 namespace ncbi { namespace NK {
 
@@ -81,6 +87,11 @@ private:
             TCase t(globalFixture); 
             t.test_method(); 
             SetErrorCounter(t.GetErrorCounter()); 
+        }
+        catch (const test_skipped &e)
+        {
+            LOG(ncbi::NK::LogLevel::e_fatal_error, ncbi::NK::TestEnv::lastLocation << ": test skipped: " << e.reason << "\n");
+            SetErrorCounter(0);
         }
         catch (const execution_aborted&)
         {
