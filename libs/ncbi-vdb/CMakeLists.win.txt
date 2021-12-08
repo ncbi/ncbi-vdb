@@ -32,44 +32,11 @@ foreach( target ${VDB_LIB_RD_TARGETS})
 endforeach()
 
 add_library( ncbi-vdb STATIC "${VDB_LIB_RD}" )
-target_link_libraries( ncbi-vdb ${LIBXML2} Crypt32 )
 MSVS_StaticRuntime( ncbi-vdb )
 ExportStatic( ncbi-vdb true )
-
-#- - - - - - - - - - - - - - -
-set( VDB_LIB_RD_MD "" )
-foreach( target ${VDB_LIB_RD_TARGETS} )
-    list( APPEND VDB_LIB_RD_MD "$<TARGET_OBJECTS:${target}-md>" )
-endforeach()
-
-add_library( ncbi-vdb-md STATIC "${VDB_LIB_RD_MD}" )
-target_link_libraries( ncbi-vdb-md ${LIBXML2} Crypt32 )
-MSVS_DLLRuntime( ncbi-vdb-md )
-ExportStatic( ncbi-vdb-md true )
-
-#-----------------------------
-set( VDB_LIB_RD_SHARED
-    ${VDB_LIB_RD}
-    # $<TARGET_OBJECTS:ngs>
-    # $<TARGET_OBJECTS:ngs-jni>
-    # $<TARGET_OBJECTS:ngs-py>
-)
-
-add_library( ncbi-vdb-shared SHARED "${VDB_LIB_RD_SHARED}" )
+ExportShared( ncbi-vdb true )
 target_link_libraries( ncbi-vdb-shared ${LIBXML2} Crypt32 )
-MSVS_StaticRuntime( ncbi-vdb-shared )
-install( TARGETS ncbi-vdb-shared )
-
-#- - - - - - - - - - - - - - -
-set( VDB_LIB_RD_MD "" )
-foreach( target ${VDB_LIB_RD_TARGETS} )
-    list( APPEND VDB_LIB_RD_MD "$<TARGET_OBJECTS:${target}-md>" )
-endforeach()
-
-add_library( ncbi-vdb-shared-md SHARED "${VDB_LIB_RD_MD}" )
 target_link_libraries( ncbi-vdb-shared-md ${LIBXML2} Crypt32 )
-MSVS_DLLRuntime( ncbi-vdb-shared-md )
-install( TARGETS ncbi-vdb-shared-md )
 
 #################################
 set( VDB_LIB_RDWR "" )
@@ -80,28 +47,35 @@ endforeach()
 add_library( ncbi-wvdb STATIC "${VDB_LIB_RDWR}" )
 MSVS_StaticRuntime( ncbi-wvdb )
 ExportStatic( ncbi-wvdb true )
-
-#- - - - - - - - - - - - - - -
-set( VDB_LIB_RDWR_MD "" )
-foreach( target ${VDB_LIB_RDWR_TARGETS} )
-    list( APPEND VDB_LIB_RDWR_MD "$<TARGET_OBJECTS:${target}-md>" )
-endforeach()
-
-add_library( ncbi-wvdb-md STATIC "${VDB_LIB_RDWR_MD}" )
-MSVS_DLLRuntime( ncbi-wvdb-md )
-ExportStatic( ncbi-wvdb-md true )
-
-#-----------------------------
-add_library( ncbi-wvdb-shared SHARED "${VDB_LIB_RDWR}" )
+ExportShared( ncbi-wvdb true )
 target_link_libraries( ncbi-wvdb-shared ${LIBXML2} Crypt32 )
-MSVS_StaticRuntime( ncbi-wvdb-shared )
-
-#- - - - - - - - - - - - - - -
-set( VDB_LIB_RDWR_MD "" )
-foreach( target ${VDB_LIB_RDWR_TARGETS} )
-    list( APPEND VDB_LIB_RDWR_MD "$<TARGET_OBJECTS:${target}-md>" )
-endforeach()
-
-add_library( ncbi-wvdb-shared-md SHARED "${VDB_LIB_RDWR_MD}" )
 target_link_libraries( ncbi-wvdb-shared-md ${LIBXML2} Crypt32 )
-MSVS_DLLRuntime( ncbi-wvdb-shared-md )
+
+################################
+# additional files to install
+
+set( SHARED_SRC_DIR ${CMAKE_INSTALL_PREFIX}/vdb_shared_sources )
+
+message("Installing ncbi-vdb interfaces (headers) into ${CMAKE_INSTALL_PREFIX}")
+message("Installing ncbi-vdb shared sources into ${SHARED_SRC_DIR}")
+
+install( DIRECTORY ${CMAKE_SOURCE_DIR}/interfaces DESTINATION ${CMAKE_INSTALL_PREFIX} )
+install( FILES
+	${CMAKE_SOURCE_DIR}/libs/vdb/blob-priv.h
+	${CMAKE_SOURCE_DIR}/libs/vdb/page-map.h
+	DESTINATION ${SHARED_SRC_DIR}/libs/vdb )
+install( FILES
+	${CMAKE_SOURCE_DIR}/libs/kfg/default.kfg
+	DESTINATION ${SHARED_SRC_DIR}/libs/kfg )
+install( FILES
+	${CMAKE_SOURCE_DIR}/libs/align/samextract-pool.h
+	${CMAKE_SOURCE_DIR}/libs/align/samextract.h
+	DESTINATION ${SHARED_SRC_DIR}/libs/align )
+install( FILES
+	${CMAKE_SOURCE_DIR}/libs/klib/release-vers.h
+	DESTINATION ${SHARED_SRC_DIR}/libs/klib )
+install( FILES
+	${CMAKE_SOURCE_DIR}/libs/vfs/json-response.h
+	${CMAKE_SOURCE_DIR}/libs/vfs/services-priv.h
+	DESTINATION ${SHARED_SRC_DIR}/libs/vfs )
+

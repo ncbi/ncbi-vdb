@@ -33,6 +33,30 @@ endforeach()
 add_library( ncbi-vdb STATIC "${VDB_LIB_RD}" )
 ExportStatic( ncbi-vdb true )
 
+#--------------------------------
+add_library( ncbi-vdb-shared SHARED "${VDB_LIB_RD}" )
+set_target_properties( ncbi-vdb-shared PROPERTIES OUTPUT_NAME ncbi-vdb )
+target_link_libraries( ncbi-vdb-shared ${LIBXML2} m dl pthread )
+MakeLinksShared( ncbi-vdb-shared ncbi-vdb true )
+
+################################
+set( VDB_LIB_RDWR "" )
+foreach( target ${VDB_LIB_RDWR_TARGETS})
+    list( APPEND VDB_LIB_RDWR "$<TARGET_OBJECTS:${target}>" )
+endforeach()
+
+add_library( ncbi-wvdb STATIC "${VDB_LIB_RDWR}" )
+ExportStatic( ncbi-wvdb true )
+
+#--------------------------------
+add_library( ncbi-wvdb-shared SHARED "${VDB_LIB_RDWR}" )
+set_target_properties( ncbi-wvdb-shared PROPERTIES OUTPUT_NAME ncbi-wvdb )
+target_link_libraries( ncbi-wvdb-shared ${LIBXML2} m dl pthread )
+MakeLinksShared( ncbi-wvdb-shared ncbi-wvdb true )
+
+################################
+# additional files to install
+
 set( SHARED_SRC_DIR ${CMAKE_INSTALL_PREFIX}/vdb_shared_sources )
 
 message("Installing ncbi-vdb interfaces (headers) into ${CMAKE_INSTALL_PREFIX}")
@@ -57,38 +81,4 @@ install( FILES
 	${CMAKE_SOURCE_DIR}/libs/vfs/json-response.h
 	${CMAKE_SOURCE_DIR}/libs/vfs/services-priv.h
 	DESTINATION ${SHARED_SRC_DIR}/libs/vfs )
-
-# install( TARGETS ncbi-vdb DESTINATION ${CMAKE_INSTALL_PREFIX} EXPORT FindNcbiVdb)
-# install( EXPORT FindNcbiVdb DESTINATION ${CMAKE_INSTALL_PREFIX} )
-MSVS_StaticRuntime( ncbi-vdb )
-
-#--------------------------------
-set( VDB_LIB_RD_SHARED
-    ${VDB_LIB_RD}
-    # $<TARGET_OBJECTS:ngs>
-    # $<TARGET_OBJECTS:ngs-jni>
-    # $<TARGET_OBJECTS:ngs-py>
-)
-
-add_library( ncbi-vdb-shared SHARED "${VDB_LIB_RD_SHARED}" )
-set_target_properties( ncbi-vdb-shared PROPERTIES OUTPUT_NAME ncbi-vdb )
-#target_link_libraries( ncbi-vdb-shared ncbi-ngs ${LIBXML2} m dl pthread )
-target_link_libraries( ncbi-vdb-shared ${LIBXML2} m dl pthread )
-MakeLinksShared( ncbi-vdb-shared ncbi-vdb true )
-
-################################
-set( VDB_LIB_RDWR "" )
-foreach( target ${VDB_LIB_RDWR_TARGETS})
-    list( APPEND VDB_LIB_RDWR "$<TARGET_OBJECTS:${target}>" )
-endforeach()
-
-add_library( ncbi-wvdb STATIC "${VDB_LIB_RDWR}" )
-ExportStatic( ncbi-wvdb true )
-
-#--------------------------------
-add_library( ncbi-wvdb-shared SHARED "${VDB_LIB_RDWR}" )
-set_target_properties( ncbi-wvdb-shared PROPERTIES OUTPUT_NAME ncbi-wvdb )
-#target_link_libraries( ncbi-wvdb-shared ncbi-ngs ${LIBXML2} m dl pthread )
-target_link_libraries( ncbi-wvdb-shared ${LIBXML2} m dl pthread )
-MakeLinksShared( ncbi-wvdb-shared ncbi-wvdb true )
 
