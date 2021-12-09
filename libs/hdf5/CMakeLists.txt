@@ -12,6 +12,6 @@ if( HDF5_FOUND )
     include_directories( ${HDF5_INCLUDE_DIRS} )
 
     ExportStatic( kdf5 true )
-    ExportShared( kdf5 true ${HDF5_LIBRARIES} ncbi-vdb )
+    ExportShared( kdf5 true "${HDF5_LIBRARIES};ncbi-vdb" )
 
 endif()
