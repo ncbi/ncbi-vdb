@@ -110,7 +110,7 @@ endfunction()
 function(ExportShared lib install extra_libs)
     get_target_property( src ${lib} SOURCES )
     add_library( ${lib}-shared SHARED ${src} )
-    target_link_libraries( ${lib}-shared ${extra_libs})
+    target_link_libraries( ${lib}-shared ${extra_libs} )
     MakeLinksShared( ${lib}-shared ${lib} ${install} )
 
     if( WIN32 )
@@ -118,6 +118,7 @@ function(ExportShared lib install extra_libs)
 
         # on Windows, add a DLL built with /MD
         add_library( ${lib}-shared-md SHARED ${src} )
+        target_link_libraries( ${lib}-shared-md ${extra_libs})
         MSVS_DLLRuntime( ${lib}-shared-md )
         MakeLinksShared( ${lib}-shared-md ${lib}-md ${install} )
     endif()

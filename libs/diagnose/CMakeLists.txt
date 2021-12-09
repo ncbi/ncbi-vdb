@@ -8,10 +8,9 @@ add_compile_definitions( __mod__="libs/diagnose" )
 GenerateStaticLibs( diagnose "${SRC}" )
 ExportStatic( diagnose false )
 
-set( extra_libs ncbi-vdb )
 if( WIN32 )
-    set( extra_libs "${extra_libs} Ws2_32 Crypt32" )
+    set( extra_libs ncbi-vdb Ws2_32 Crypt32 )
+else()
+    set( extra_libs ncbi-vdb )
 endif()
-ExportShared( diagnose false ${extra_libs})
-
-
+ExportShared( diagnose false "${extra_libs}")
