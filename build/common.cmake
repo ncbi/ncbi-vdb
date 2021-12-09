@@ -73,6 +73,7 @@ endfunction()
 # create versioned names and symlinks for a shared library
 #
 function(MakeLinksShared target name install)
+    set_target_properties( ${target} PROPERTIES OUTPUT_NAME ${name} )
     if( SINGLE_CONFIG )
         add_custom_command(TARGET ${target}
             POST_BUILD
@@ -90,7 +91,6 @@ function(MakeLinksShared target name install)
         )
         endif()
     else()
-        set_target_properties( ${target} PROPERTIES OUTPUT_NAME ${name} )
         set_target_properties( ${target} PROPERTIES
             ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG})
         set_target_properties( ${target} PROPERTIES
@@ -107,13 +107,16 @@ endfunction()
 #
 # for a static library target, create a public shared target with the same base name and contents
 #
-function(ExportShared lib install)
+function(ExportShared lib install extra_libs)
     get_target_property( src ${lib} SOURCES )
     add_library( ${lib}-shared SHARED ${src} )
-    MSVS_StaticRuntime( ${lib}-shared )
+    target_link_libraries( ${lib}-shared ${extra_libs})
     MakeLinksShared( ${lib}-shared ${lib} ${install} )
 
     if( WIN32 )
+        MSVS_StaticRuntime( ${lib}-shared )
+
+        # on Windows, add a DLL built with /MD
         add_library( ${lib}-shared-md SHARED ${src} )
         MSVS_DLLRuntime( ${lib}-shared-md )
         MakeLinksShared( ${lib}-shared-md ${lib}-md ${install} )

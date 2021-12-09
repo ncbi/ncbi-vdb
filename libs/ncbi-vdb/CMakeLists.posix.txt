@@ -32,12 +32,7 @@ endforeach()
 
 add_library( ncbi-vdb STATIC "${VDB_LIB_RD}" )
 ExportStatic( ncbi-vdb true )
-
-#--------------------------------
-add_library( ncbi-vdb-shared SHARED "${VDB_LIB_RD}" )
-set_target_properties( ncbi-vdb-shared PROPERTIES OUTPUT_NAME ncbi-vdb )
-target_link_libraries( ncbi-vdb-shared ${LIBXML2} m dl pthread )
-MakeLinksShared( ncbi-vdb-shared ncbi-vdb true )
+ExportShared( ncbi-vdb true "${LIBXML2};m;dl;pthread")
 
 ################################
 set( VDB_LIB_RDWR "" )
@@ -47,38 +42,5 @@ endforeach()
 
 add_library( ncbi-wvdb STATIC "${VDB_LIB_RDWR}" )
 ExportStatic( ncbi-wvdb true )
-
-#--------------------------------
-add_library( ncbi-wvdb-shared SHARED "${VDB_LIB_RDWR}" )
-set_target_properties( ncbi-wvdb-shared PROPERTIES OUTPUT_NAME ncbi-wvdb )
-target_link_libraries( ncbi-wvdb-shared ${LIBXML2} m dl pthread )
-MakeLinksShared( ncbi-wvdb-shared ncbi-wvdb true )
-
-################################
-# additional files to install
-
-set( SHARED_SRC_DIR ${CMAKE_INSTALL_PREFIX}/vdb_shared_sources )
-
-message("Installing ncbi-vdb interfaces (headers) into ${CMAKE_INSTALL_PREFIX}")
-message("Installing ncbi-vdb shared sources into ${SHARED_SRC_DIR}")
-
-install( DIRECTORY ${CMAKE_SOURCE_DIR}/interfaces DESTINATION ${CMAKE_INSTALL_PREFIX} )
-install( FILES
-	${CMAKE_SOURCE_DIR}/libs/vdb/blob-priv.h
-	${CMAKE_SOURCE_DIR}/libs/vdb/page-map.h
-	DESTINATION ${SHARED_SRC_DIR}/libs/vdb )
-install( FILES
-	${CMAKE_SOURCE_DIR}/libs/kfg/default.kfg
-	DESTINATION ${SHARED_SRC_DIR}/libs/kfg )
-install( FILES
-	${CMAKE_SOURCE_DIR}/libs/align/samextract-pool.h
-	${CMAKE_SOURCE_DIR}/libs/align/samextract.h
-	DESTINATION ${SHARED_SRC_DIR}/libs/align )
-install( FILES
-	${CMAKE_SOURCE_DIR}/libs/klib/release-vers.h
-	DESTINATION ${SHARED_SRC_DIR}/libs/klib )
-install( FILES
-	${CMAKE_SOURCE_DIR}/libs/vfs/json-response.h
-	${CMAKE_SOURCE_DIR}/libs/vfs/services-priv.h
-	DESTINATION ${SHARED_SRC_DIR}/libs/vfs )
+ExportShared( ncbi-wvdb true "${LIBXML2};m;dl;pthread")
 

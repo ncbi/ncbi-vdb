@@ -12,11 +12,6 @@ if( HDF5_FOUND )
     include_directories( ${HDF5_INCLUDE_DIRS} )
 
     ExportStatic( kdf5 true )
-    ExportShared( kdf5 true )
-
-    target_link_libraries( kdf5-shared ${HDF5_LIBRARIES} ncbi-vdb)
-    if( WIN32 )
-        target_link_libraries( kdf5-shared-md ${HDF5_LIBRARIES} ncbi-vdb)
-    endif()
+    ExportShared( kdf5 true ${HDF5_LIBRARIES} ncbi-vdb )
 
 endif()
