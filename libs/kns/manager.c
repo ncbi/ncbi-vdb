@@ -1125,6 +1125,9 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
     libc_version = gnu_get_libc_version ();
 #endif
 
+    const char *opt_bitmap=getenv(ENV_MAGIC_OPT_BITMAP); // VDB_OPT_BITMAP
+    if (!opt_bitmap) opt_bitmap="";
+
     /* Sometimes called before KNSManagerMake */
     const char *guid = "nog";
 
@@ -1153,7 +1156,7 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
     KDataBuffer phid;
     KDataBufferMakeBytes ( &phid, 0 );
     rc = KDataBufferPrintf (
-        &phid, "%.3s%.4s%.3s,libc=%s", cloudtrunc, guid, sessid, libc_version );
+        &phid, "%.3s%.4s%.3s,libc=%s,bmap=%s", cloudtrunc, guid, sessid, libc_version, opt_bitmap );
     if ( rc ) { return rc; }
 
     if ( kns_manager_lock ) {
