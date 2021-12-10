@@ -1126,7 +1126,7 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
 #endif
 
     const char *opt_bitmap=getenv(ENV_MAGIC_OPT_BITMAP); // VDB_OPT_BITMAP
-    if (!opt_bitmap) opt_bitmap="";
+    if (!opt_bitmap) opt_bitmap="nob";
 
     /* Sometimes called before KNSManagerMake */
     const char *guid = "nog";
