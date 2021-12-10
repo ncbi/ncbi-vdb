@@ -104,6 +104,15 @@ FIXTURE_TEST_CASE(KNSManagerGetUserAgent_Default, SessionIdFixture)
     REQUIRE_NE( string::npos, string(ua).find(ua_contains) );
 }
 
+FIXTURE_TEST_CASE(KNSManagerGetUserAgentEnv, SessionIdFixture)
+{
+    const char * ua = nullptr;
+    setenv("VDB_OPT_BITMAP","bmaphere",1);
+    KNSManagerGetUserAgent(&ua);
+    const string ua_contains = "bmap=bmaphere";
+    REQUIRE_NE( string::npos, string(ua).find(ua_contains) );
+}
+
 // KNSManagerSetUserAgent
 
 FIXTURE_TEST_CASE(KNSManagerSetUserAgent_Null, SessionIdFixture)
