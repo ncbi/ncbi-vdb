@@ -1184,16 +1184,41 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
 
     if ( rc ) { return rc; }
 
+    KDataBuffer platform;
+    KDataBufferMakeBytes(&platform, 0);
+    if (getenv(ENV_MAGIC_PLATFORM_NAME))
+    {
+        if (getenv(ENV_MAGIC_PLATFORM_VERSION))
+        {
+            rc=KDataBufferPrintf(&platform," via %s %s",
+                                 getenv(ENV_MAGIC_PLATFORM_NAME),
+                                 getenv(ENV_MAGIC_PLATFORM_VERSION));
+            if (rc) { return rc; }
+        }
+        else{
+            rc=KDataBufferPrintf(&platform," via %s", getenv(ENV_MAGIC_PLATFORM_NAME));
+            if (rc) { return rc; }
+        }
+    }
+    else
+    {
+            rc=KDataBufferPrintf(&platform,"%s","");
+            if (rc) { return rc; }
+    }
+
     if ( sessids.base && strlen ( sessids.base ) ) {
         const String *b64;
         encodeBase64 ( &b64, sessids.base, strlen ( sessids.base ) );
         rc = string_printf ( kns_manager_user_agent_append, sizeof kns_manager_user_agent_append, NULL,
-            "%s%s (phid=%s,%s)", kns_manager_user_agent.base,
-            kns_manager_ua_suffix, phid.base, b64->addr );
+            "%s%s%s (phid=%s,%s)",
+            kns_manager_user_agent.base, kns_manager_ua_suffix, platform.base,
+            phid.base, b64->addr );
         StringWhack ( b64 );
     } else {
         rc = string_printf ( kns_manager_user_agent_append, sizeof kns_manager_user_agent_append, NULL,
-            "%s%s (phid=%s)", kns_manager_user_agent.base, kns_manager_ua_suffix, phid.base );
+            "%s%s%s (phid=%s)",
+            kns_manager_user_agent.base, kns_manager_ua_suffix, platform.base,
+            phid.base );
     }
 
     KDataBufferWhack ( &phid );
