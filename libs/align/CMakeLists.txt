@@ -32,16 +32,16 @@ set ( ALIGN_WRITER_SRC
 )
 
 if( FLEX_FOUND AND BISON_FOUND )
-    FLEX_TARGET( SamExtractFlex samextract-lex.l ${CMAKE_CURRENT_SOURCE_DIR}/samextract-lex.c
+    FLEX_TARGET( SamExtractFlex samextract-lex.l ${CMAKE_CURRENT_SOURCE_DIR}/zz_samextract-lex.c
         COMPILE_FLAGS "--debug --noline" )
     set( SamExtractScanner ${FLEX_SamExtractFlex_OUTPUTS} )
-    BISON_TARGET( SamExtractGrammar samextract-grammar.y ${CMAKE_CURRENT_SOURCE_DIR}/samextract-grammar.c
-        COMPILE_FLAGS "-Wno-other --no-lines -r state" )
+    BISON_TARGET( SamExtractGrammar samextract-grammar.y ${CMAKE_CURRENT_SOURCE_DIR}/zz_samextract-grammar.c
+        COMPILE_FLAGS "-Wno-other --no-lines -r state -v --defines=${CMAKE_CURRENT_SOURCE_DIR}/zz_samextract-grammar.h" )
     set( SamExtractParser ${BISON_SamExtractGrammar_OUTPUT_SOURCE} )
     ADD_FLEX_BISON_DEPENDENCY(SamExtractFlex SamExtractGrammar)
 else()
-    set( SamExtractScanner samextract-lex.c )
-    set( SamExtractParser samextract-grammar.c )
+    set( SamExtractScanner zz_samextract-lex.c )
+    set( SamExtractParser zz_samextract-grammar.c )
 endif()
 
 

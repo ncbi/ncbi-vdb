@@ -1,14 +1,14 @@
 if( FLEX_FOUND AND BISON_FOUND )
-    FLEX_TARGET( KfgFlex config-lex.l ${CMAKE_CURRENT_SOURCE_DIR}/config-lex.c
+    FLEX_TARGET( KfgFlex config-lex.l ${CMAKE_CURRENT_SOURCE_DIR}/zz_config-lex.c
         COMPILE_FLAGS "--debug --noline" )
     set( KfgScanner ${FLEX_KfgFlex_OUTPUTS} )
-    BISON_TARGET( KfgGrammar config-grammar.y ${CMAKE_CURRENT_SOURCE_DIR}/config-grammar.c
-        COMPILE_FLAGS "-Wno-other --no-lines -r state" )
+    BISON_TARGET( KfgGrammar config-grammar.y ${CMAKE_CURRENT_SOURCE_DIR}/zz_config-grammar.c
+        COMPILE_FLAGS "-Wno-other --no-lines -r state --defines=${CMAKE_CURRENT_SOURCE_DIR}/zz_config-grammar.h" )
     set( KfgParser ${BISON_KfgGrammar_OUTPUT_SOURCE} )
     ADD_FLEX_BISON_DEPENDENCY(KfgFlex KfgGrammar)
 else()
-    set( KfgScanner config-lex.c )
-    set( KfgParser config-grammar.c )
+    set( KfgScanner zz_config-lex.c )
+    set( KfgParser zz_config-grammar.c )
 endif()
 
 set( SRC

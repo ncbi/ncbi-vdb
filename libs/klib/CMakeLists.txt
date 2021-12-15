@@ -13,16 +13,18 @@ elseif( "mac" STREQUAL ${OS} )
 endif()
 
 if( FLEX_FOUND AND BISON_FOUND )
-    FLEX_TARGET( JsonFlex json-lex.l ${CMAKE_CURRENT_SOURCE_DIR}/json-lex.c
+    # the generated files have names prefized with zz_ to make sure they get checked out last
+    # in order to prevent unneeded invokation of bison and flex
+    FLEX_TARGET( JsonFlex json-lex.l ${CMAKE_CURRENT_SOURCE_DIR}/zz_json-lex.c
         COMPILE_FLAGS "--debug --noline" )
     set( JsonScanner ${FLEX_JsonFlex_OUTPUTS} )
-    BISON_TARGET( JsonGrammar json-grammar.y ${CMAKE_CURRENT_SOURCE_DIR}/json-grammar.c
-        COMPILE_FLAGS "-Wno-other --no-lines -r state" )
+    BISON_TARGET( JsonGrammar json-grammar.y ${CMAKE_CURRENT_SOURCE_DIR}/zz_json-grammar.c
+        COMPILE_FLAGS "-Wno-other --no-lines -r state --defines=${CMAKE_CURRENT_SOURCE_DIR}/zz_json-grammar.h" )
     set( JsonParser ${BISON_JsonGrammar_OUTPUT_SOURCE} )
     ADD_FLEX_BISON_DEPENDENCY(JsonFlex JsonGrammar)
 else()
-    set( JsonScanner json-lex.c )
-    set( JsonParser json-grammar.c )
+    set( JsonScanner zz_json-lex.c )
+    set( JsonParser zz_json-grammar.c )
 endif()
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
