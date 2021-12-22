@@ -54,17 +54,20 @@ TEST_SUITE( WVdbTestSuite )
 #if MAC && DEBUG
 #include <unistd.h>
 #include <sysexits.h>
+#include <vector>
+#include <array>
 
+/// creates a temp directory and chdir to it; rmdir on exit
+/// useful when sandboxed
 class TempDir {
     std::string value;
 public:
     TempDir() {
+        auto constexpr env_vars = std::array<char const *, 6>({"TMPDIR", "TEMPDIR", "TEMP", "TMP", "TMP_DIR", "TEMP_DIR"});
+
         value = "/tmp";
-        static char const *const env_vars[] = {
-            "TMPDIR", "TEMPDIR", "TEMP", "TMP", "TMP_DIR", "TEMP_DIR", nullptr
-        };
-        for (auto var = env_vars; *var; ++var) {
-            auto const val = getenv(*var);
+        for (auto && var : env_vars) {
+            auto const val = getenv(var);
             if (val) {
                 value.assign(val);
                 while (value.size() > 0 && value.back() == '/')
@@ -72,11 +75,18 @@ public:
                 break;
             }
         }
-        value += "/Test_VDB_wvdb.XXXXXX";
+        value += "/Test_VDB_wvdb.";
+        auto const templateAt = value.size();
+        value += "XXXXXX";
+        {
+            auto buffer = std::vector<char>(value.size() + 1);
+            std::copy(value.begin(), value.end(), buffer.begin());
 
-        if (mkdtemp((char *)value.data()) == nullptr) {
-            perror("can't make a temp directory");
-            exit(EX_IOERR);
+            if (mkdtemp(buffer.data()) == nullptr) {
+                perror("can't make a temp directory");
+                exit(EX_IOERR);
+            }
+            std::copy(buffer.begin() + templateAt, buffer.begin() + templateAt + 6, value.begin() + templateAt);
         }
         chdir(value.c_str());
     }
