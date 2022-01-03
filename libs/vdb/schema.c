@@ -560,6 +560,10 @@ void VSchemaClearMark ( const VSchema *self )
         VSchemaClearMark ( self -> dad );
 }
 
+static void includePathFree(void *item, void *dummy)
+{
+    free(item);
+}
 
 /* Destroy
  */
@@ -570,7 +574,7 @@ void CC VSchemaDestroy ( VSchema *self )
 
     BSTreeWhack ( & self -> scope, KSymbolWhack, NULL );
     BSTreeWhack ( & self -> paths, BSTreeMbrWhack, NULL );
-    VectorWhack ( & self -> inc, KDirRefRelease, NULL );
+    VectorWhack ( & self -> inc, includePathFree, NULL );
     VectorWhack ( & self -> alias, NULL, NULL );
     VectorWhack ( & self -> fmt, SFormatWhack, NULL );
 #if SLVL >= 1
@@ -772,33 +776,27 @@ rc_t VSchemaMake ( VSchema **sp,  const VSchema *dad )
  */
 LIB_EXPORT rc_t CC VSchemaVAddIncludePath ( VSchema *self, const char *path, va_list args )
 {
-    KDirectory *wd;
-    rc_t rc = KDirectoryNativeDir ( & wd );
-    if ( rc == 0 )
-    {
-        const KDirectory *dir;
-#if _DEBUGGING
-        {
-            char full_name [4096];
-            size_t num_writ;
-            va_list cargs;
-            va_copy ( cargs, args );
-            string_vprintf ( full_name, sizeof( full_name ), &num_writ, path, cargs );
-            PARSE_DEBUG( ("VSchemaVAddIncludePath(%s)\n", full_name) );
-            va_end ( cargs );
-        }
-#endif
+    rc_t rc = -1;
+    void *temp = NULL;
 
-        rc = KDirectoryVOpenDirRead ( wd, & dir, false, path, args );
-        if ( rc == 0 )
-        {
-            rc = VectorAppend ( & self -> inc, NULL, dir );
-            if ( rc != 0 )
-                KDirectoryRelease ( dir );
-        }
+    if (strchr(path, '%') == NULL)
+        temp = strdup(path);
+    else {
+        KDataBuffer buffer;
 
-        KDirectoryRelease ( wd );
+        memset(&buffer, 0, sizeof(buffer));
+        rc = KDataBufferVPrintf(&buffer, path, args);
+        if (rc)
+            return rc;
+
+        temp = strdup(buffer.base);
+        KDataBufferWhack(&buffer);
     }
+    if (temp == NULL)
+        return RC ( rcVDB, rcString, rcAppending, rcMemory, rcExhausted );
+    rc = VectorAppend(&self->inc, NULL, temp);
+    if (rc)
+        free(temp);
     return rc;
 }
 
@@ -904,7 +902,6 @@ rc_t CC VSchemaTryOpenFile ( const VSchema *self, const KDirectory *dir, const K
     char *path, size_t path_max, const char *name, va_list args )
 {
     rc_t rc;
-    va_list cpy_args;
 
 #if _DEBUGGING
     {
@@ -918,9 +915,7 @@ rc_t CC VSchemaTryOpenFile ( const VSchema *self, const KDirectory *dir, const K
     }
 #endif
 
-    va_copy ( cpy_args, args );
-    rc = KDirectoryVResolvePath ( dir, true, path, path_max, name, cpy_args );
-    va_end ( cpy_args );
+    rc = KDirectoryVResolvePath ( dir, true, path, path_max, name, args );
 
     if ( rc == 0 )
     {
@@ -944,10 +939,47 @@ rc_t CC VSchemaTryOpenFile ( const VSchema *self, const KDirectory *dir, const K
     return rc;
 }
 
+static rc_t VSchemaOpenFile_1 ( const VSchema *self, const KFile **fp, KDirectory const *ndir,
+                         char *path, size_t path_max, const char *name, va_list args )
+{
+    const VSchema *schema = self;
+
+    for ( schema = self; schema != NULL; schema = schema -> dad ) {
+        Vector const *const vec = &schema->inc;
+        uint32_t i = VectorStart(vec);
+        uint32_t const end = i + VectorLength(vec);
+
+        for ( ; i < end; ++i) {
+            char const *const dirname = VectorGet(vec, i);
+
+            if ( dirname != NULL )
+            {
+                KDirectory const *dir = NULL;
+                rc_t rc = KDirectoryOpenDirRead(ndir, &dir, true, dirname);
+
+                if (rc != 0)
+                    continue;
+#if _DEBUGGING
+                PARSE_DEBUG( ("VSchemaOpenFile trying '%s'\n", dirname ) );
+#endif
+                *fp = NULL;
+                rc = VSchemaTryOpenFile(self, dir, fp, path, path_max, name, args);
+                KDirectoryRelease(dir);
+                if (rc == 0 || GetRCState(rc) != rcNotFound)
+                    return rc;
+            }
+        }
+    }
+
+    return RC ( rcVDB, rcSchema, rcOpening, rcPath, rcNotFound );
+}
+
 rc_t CC VSchemaOpenFile ( const VSchema *self, const KFile **fp,
     char *path, size_t path_max, const char *name, va_list args )
 {
-    const VSchema *schema;
+    KDirectory *ndir = NULL;
+    rc_t rc = -1;
+
 #if _DEBUGGING
     {
         char full_name [4096];
@@ -960,33 +992,18 @@ rc_t CC VSchemaOpenFile ( const VSchema *self, const KFile **fp,
     }
 #endif
 
-    for ( schema = self; schema != NULL; schema = schema -> dad )
-    {
-        uint32_t i, end;
-        for ( i = VectorStart ( & schema -> inc ), end = i + VectorLength ( & schema -> inc );
-              i < end; ++ i )
-        {
-            const KDirectory *dir = ( const KDirectory* ) VectorGet ( & schema -> inc, i );
-#if _DEBUGGING
-            if ( dir != NULL )
-            {
-                char resolved[4096];
-                if (KDirectoryResolvePath_v1 ( dir, true, resolved, sizeof( resolved ), "." ) == 0 )
-                {
-                    PARSE_DEBUG( ("VSchemaOpenFile trying '%s'\n", resolved ) );
-                }
-            }
-#endif
-            if ( dir != NULL )
-            {
-                rc_t rc = VSchemaTryOpenFile ( self, dir, fp, path, path_max, name, args );
-                if ( rc == 0 || GetRCState ( rc ) != rcNotFound )
-                    return rc;
-            }
-        }
-    }
+    assert(fp != NULL);
 
-    return RC ( rcVDB, rcSchema, rcOpening, rcPath, rcNotFound );
+    *fp = NULL;
+
+    rc = KDirectoryNativeDir(&ndir);
+    if (rc)
+        return rc;
+
+    rc = VSchemaOpenFile_1(self, fp, ndir, path, path_max, name, args);
+    KDirectoryRelease(ndir);
+
+    return rc;
 }
 
 /* ParseFile
