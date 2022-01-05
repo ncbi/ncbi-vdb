@@ -46,7 +46,7 @@
 
 /* Page maps describe the layout of rows within a blob.
  * The data within a page map is run-length encoded.
- * I.e. if two identical rows are stored sequentially 
+ * I.e. if two identical rows are stored sequentially
  */
 
 
@@ -162,7 +162,7 @@ rc_t PageMapPreExpandFull(const PageMap *cself, row_count_t upto) /*** mostly fo
 		assert(self->exp_rgn_last == 0);
 		rc = KDataBufferResize(&self->istorage, 1); /** one and only one pagemap **/
 		if(rc) return rc;
-		
+
 		self->exp_rgn_last = (PageMapRegion *)self->istorage.base + self->exp_rgn_cnt;
 		self->exp_rgn_cnt = ++self->exp_dr_last;
 
@@ -182,9 +182,9 @@ rc_t PageMapExpandFull(const PageMap *cself)
 {
 	rc_t rc;
 	PageMap *self = (PageMap *)cself;
-	if(self->leng_recs == 1){ 
+	if(self->leng_recs == 1){
 		if(   self->data_recs == 1  /* static */
-                   || self->random_access ){ 
+                   || self->random_access ){
 			return 0;
 		} else if(self->data_recs == self->row_count && !self->random_access){ /** equidistant **/
 			rc=PageMapRegionExpand(self,PM_REGION_EXPAND_EQUIDISTANT,self->row_count,self->length[0],0);
@@ -249,13 +249,13 @@ rc_t PageMapExpand(const PageMap *cself, row_count_t upto)
 					assert(leng_run >= data_run);
 					leng_run -= data_run;
 					self->exp_lr_used += data_run;
-					self->exp_row_last+= data_run; 
+					self->exp_row_last+= data_run;
 					self->exp_dr_last++;
 					self->exp_data_offset_last += length;
 				} else if( /**** quick check if all remaining rows are equidistant ****/
 					     self->exp_lr_last == self->leng_recs - 1 /*** last leng_run ***/
 					  && self->row_count - self->exp_row_last == self->data_recs - self->exp_dr_last /*** all remaining data_runs are 1 ***/
-					  && self->row_count - self->exp_row_last > EQUI_RUN_TRIGGER){ 
+					  && self->row_count - self->exp_row_last > EQUI_RUN_TRIGGER){
 						assert( leng_run == self->row_count - self->exp_row_last);
 						assert(data_run == 1);
 						rc=PageMapRegionExpand(self,PM_REGION_EXPAND_EQUIDISTANT,leng_run, length,self->exp_data_offset_last);
@@ -266,7 +266,7 @@ rc_t PageMapExpand(const PageMap *cself, row_count_t upto)
 						self->exp_lr_last = self->leng_recs;
 						self->exp_lr_used += leng_run;
 						leng_run = 0;
-						
+
 				} else {
 					if( data_run == 1){
 						row_count_t data_run_unique;
@@ -421,7 +421,7 @@ static rc_t PageMapRegionGetData(const PageMapRegion *cself,const elem_count_t *
 				}
 				break;
 			default: /*** should not happen to anything but 2 above **/
-				return RC (rcVDB, rcPagemap, rcSearching, rcData, rcInconsistent ); 
+				return RC (rcVDB, rcPagemap, rcSearching, rcData, rcInconsistent );
 		}
 	}
 	return 0;
@@ -532,7 +532,7 @@ LIB_EXPORT rc_t PageMapNewIterator(const PageMap *self, PageMapIterator *lhs, ui
         assert(first_row + num_rows == (row_count_t)(first_row + num_rows));
     }
 #endif
-    
+
     memset(lhs, 0, sizeof(*lhs));
 
 #if _HEAVY_PAGEMAP_DEBUGGING
@@ -589,7 +589,7 @@ static PageMap *new_StaticPageMap(unsigned length, unsigned data) {
                     + sizeof(y->pm.length[0]) * length
                     + sizeof(y->pm.leng_run[0]) * length
                     + sizeof(y->pm.data_run[0]) * data;
-    
+
     y = malloc(sz);
     if (y) {
 #if PAGEMAP_STATISTICS
@@ -627,12 +627,12 @@ rc_t PageMapGrow(PageMap *self, uint32_t new_reserve_leng, uint32_t new_reserve_
 #endif
     if (new_reserve_leng > (1UL << 31) || new_reserve_data > (1UL << 31))
         return RC(rcVDB, rcPagemap, rcAllocating, rcParam, rcExcessive);
-    
+
     if (reserve_leng == 0)
         reserve_leng = 1;
     if (reserve_data == 0)
         reserve_data = 1;
-#define MIN_KBUF_RESERVE_SIZE 256  
+#define MIN_KBUF_RESERVE_SIZE 256
     while (reserve_leng < new_reserve_leng)
         reserve_leng <<= 1;
     if (reserve_leng < MIN_KBUF_RESERVE_SIZE) reserve_leng = MIN_KBUF_RESERVE_SIZE;
@@ -646,7 +646,7 @@ rc_t PageMapGrow(PageMap *self, uint32_t new_reserve_leng, uint32_t new_reserve_
 #endif
     {
         KDataBuffer new_buffer;
-        
+
         rc = KDataBufferMake(&new_buffer, 8 * sizeof(uint32_t), sz);
         if (rc)
             return rc;
@@ -661,7 +661,7 @@ rc_t PageMapGrow(PageMap *self, uint32_t new_reserve_leng, uint32_t new_reserve_
     self->leng_run = self->length + reserve_leng;
     self->data_run = self->leng_run + reserve_leng;
     self->start_valid = 0;
-    
+
     if (self->leng_recs > 0 && temp.length != NULL) {
         memmove(self->length  , temp.length  , self->reserve_leng * sizeof(uint32_t));
         memmove(self->leng_run, temp.leng_run, self->reserve_leng * sizeof(uint32_t));
@@ -744,7 +744,7 @@ rc_t PageMapToRandomAccess(PageMap **rslt, PageMap * src,uint32_t *data_offset) 
 					}
 				}
 				dst->random_access=true;
-			} 
+			}
 			dst->reserve_leng = dst->leng_recs;
 			dst->reserve_data = dst->row_count;
 			dst->start_valid = dst->row_count;
@@ -763,7 +763,7 @@ rc_t PageMapNewFixedRowLength(PageMap **lhs, uint64_t row_count, uint64_t row_le
 
     if (row_count >> 32 != 0 || row_len >> 32 != 0)
         return RC(rcVDB, rcPagemap, rcConstructing, rcParam, rcTooBig);
-    
+
     rc = PageMapNew(&y, 0);
 #if PAGEMAP_STATISTICS
     ++pm_stats.createFixedRow;
@@ -796,10 +796,10 @@ rc_t PageMapNewFixedRowLength(PageMap **lhs, uint64_t row_count, uint64_t row_le
 rc_t PageMapNewSingle(PageMap **lhs, uint64_t row_count, uint64_t row_len) {
     PageMap *y;
     rc_t rc;
-    
+
     if (row_count >> 32 != 0)
         return RC(rcVDB, rcPagemap, rcConstructing, rcParam, rcTooBig);
-    
+
     rc = PageMapNewFixedRowLength(&y, 1, row_len);
     if (rc == 0) {
 #if PAGEMAP_STATISTICS
@@ -818,7 +818,7 @@ bool PageMapHasRows(const PageMap *self) {
 
 uint32_t PageMapFixedRowLength (const PageMap *self) {
     uint32_t rslt = 0;
-    
+
     if (self->leng_recs == 1)
         rslt = self->length[0];
     return rslt;
@@ -838,7 +838,7 @@ rc_t PageMapRowLengthRange (const PageMap *self,elem_count_t *min,elem_count_t *
 
 uint32_t PageMapHasSimpleStructure(const PageMap *self) {
     uint32_t rslt = PageMapFixedRowLength(self);
-    
+
     if (rslt == 0)
         return rslt;
 
@@ -852,7 +852,7 @@ static bool PageMapValidate(const PageMap *cself) {
     unsigned i;
     uint32_t n;
     uint32_t m;
-        
+
     for (m = 0, i = 0; i != cself->leng_recs; ++i) m += cself->leng_run[i];
     for (n = 0, i = 0; i != cself->data_recs; ++i) n += cself->data_run[i];
 
@@ -869,13 +869,13 @@ rc_t PageMapAppendRows(PageMap *self, uint64_t row_length, uint64_t run_length, 
     rc_t rc;
     uint32_t leng_cur = self->leng_recs - 1;
     uint32_t data_cur = self->data_recs - 1;
-    
+
     if ((uint32_t)row_length != row_length)
         return RC(rcVDB, rcPagemap, rcConstructing, rcParam, rcTooBig);
-    
+
     if ((uint32_t)run_length != run_length)
         return RC(rcVDB, rcPagemap, rcConstructing, rcParam, rcTooBig);
-    
+
     if (self->leng_recs && row_length == self->length[leng_cur])
         self->leng_run[leng_cur] += run_length;
     else {
@@ -886,7 +886,7 @@ rc_t PageMapAppendRows(PageMap *self, uint64_t row_length, uint64_t run_length, 
 #if PAGEMAP_STATISTICS
         pm_stats.currentWaste -= sizeof(self->leng_run[0]) + sizeof(self->length[0]);
 #endif
-        
+
         if (self->leng_recs >= self->reserve_leng) {
             rc = PageMapGrow(self, self->leng_recs, 0);
             if (rc)
@@ -900,11 +900,11 @@ rc_t PageMapAppendRows(PageMap *self, uint64_t row_length, uint64_t run_length, 
     else {
         data_cur = self->data_recs;
         ++self->data_recs;
-        
+
 #if PAGEMAP_STATISTICS
         pm_stats.currentWaste -= sizeof(self->data_run[0]);
 #endif
-        
+
         if (self->data_recs >= self->reserve_data) {
             rc = PageMapGrow(self, 0, self->data_recs);
             if (rc)
@@ -932,7 +932,7 @@ rc_t PageMapAppendRows(PageMap *self, uint64_t row_length, uint64_t run_length, 
 	}
 	self->exp_row_last += run_length;
 	self->exp_rgn_last->numrows += run_length;
-	
+
     }
     self->row_count += run_length;
     return 0;
@@ -940,7 +940,7 @@ rc_t PageMapAppendRows(PageMap *self, uint64_t row_length, uint64_t run_length, 
 
 static rc_t serialize_lengths(
                               KDataBuffer *Dst,
-                              uint64_t offset, 
+                              uint64_t offset,
                               const uint32_t run[],
                               unsigned runs,
                               uint64_t *consumed
@@ -950,15 +950,15 @@ static rc_t serialize_lengths(
     uint64_t j;
     uint64_t n;
     uint8_t *dst = Dst->base;
-    
+
     dst += offset;
     *consumed = 0;
     for (i = 0, j = 0, n = 0, rc = 0; rc == 0 && i != runs; ++i, j += n)
         rc = vlen_encodeU1(dst + j, 5, &n, run[i]);
-    
+
     if (rc == 0)
         *consumed = j;
-    
+
     return rc;
 }
 
@@ -974,12 +974,12 @@ static rc_t deserialize_lengths(
     unsigned i;
     unsigned j;
     uint64_t n;
-    
+
     *consumed = 0;
     for (i = 0, j = 0; i != runs; ++i, j += (unsigned)n) {
         uint64_t val;
         rc_t rc = vlen_decodeU1(&val, src + j, ssize - j, &n);
-        
+
         if (rc) return rc;
         run[i] = (uint32_t)val;
     }
@@ -1006,13 +1006,13 @@ static rc_t deserialize_lengths(
     uint8_t	to_align = 16 - (((long)src)&15);/** alignmentto 16 bytes will make optimizer and cpu happy. don't care about loss in cast - we need the lowest byte **/
     int		si=0;/**source index **/
     int		di=0;/** destination index **/
-    int		pcnt = (ssize - to_align )/8; 
+    int		pcnt = (ssize - to_align )/8;
 
     memset(run,0,runs*sizeof(*run));
     if(pcnt){ /** does it make sense at all ***/
 	uint64_t    *ptr=(uint64_t*) (src + to_align);
 	int         pi;
-	
+
 	for(;si<to_align && di < runs ;si++){ /** align the pointer first **/
 		if(((int8_t)src[si]) < 0) {
 			run[di] += src[si] & 0x7F;
@@ -1020,7 +1020,7 @@ static rc_t deserialize_lengths(
 		} else {
 			run[di++] += src[si];
 		}
-	}	
+	}
 	assert((((long)ptr)&15) == 0);
 	for(pi = 0; pi < pcnt && di < runs; pi++){ /** do bulk staff **/
 		uint64_t flag = ptr[pi] & FLAG_64;
@@ -1039,7 +1039,7 @@ static rc_t deserialize_lengths(
 		}
 	}
     }
-   
+
     for(;si < ssize && di < runs;si++){/** deal with tails **/
 	if(((int8_t)src[si]) < 0) {
 		run[di] += src[si] & 0x7F;
@@ -1073,7 +1073,7 @@ rc_t serialize(const PageMap *self, KDataBuffer *buffer, uint64_t *size) {
     serialize(leng_run)
  versuion 2: same as 2 but random access
     adds serialize(data_offset)
- 
+
  variant 3: variable row length, variable data_run
     vlencode(leng_recs)
     vlencode(data_recs)
@@ -1081,7 +1081,7 @@ rc_t serialize(const PageMap *self, KDataBuffer *buffer, uint64_t *size) {
     serialize(leng_run)
     serialize(data_run)
 
-  
+
 
  */
     uint8_t version = self->random_access?2:1;
@@ -1123,7 +1123,7 @@ rc_t serialize(const PageMap *self, KDataBuffer *buffer, uint64_t *size) {
                 buffer->elem_count = sz + 1;
                 vlen_encodeU1(((uint8_t *)buffer->base) + 1 + sz, 5, &sz, self->data_recs);
                 buffer->elem_count += sz;
-                
+
                 rc = serialize_lengths(&compress, 0, self->data_run, self->data_recs, &sz);
                 compress.elem_count = sz;
             }
@@ -1161,7 +1161,7 @@ rc_t serialize(const PageMap *self, KDataBuffer *buffer, uint64_t *size) {
                 buffer->elem_count = sz + 1;
                 vlen_encodeU1(((uint8_t *)buffer->base) + 1 + sz, 5, &sz, self->data_recs);
                 buffer->elem_count += sz;
-                
+
                 rc = serialize_lengths(&compress, 0, self->length, self->leng_recs, &sz);
                 compress.elem_count = sz;
                 if (rc == 0) {
@@ -1178,7 +1178,7 @@ rc_t serialize(const PageMap *self, KDataBuffer *buffer, uint64_t *size) {
     }
     if (rc == 0 && compress.base) {
         uint64_t hsize = buffer->elem_count;
-        
+
         rc = KDataBufferResize(buffer, hsize + compress.elem_count);
         if (rc == 0) {
             if (version == 0)
@@ -1186,17 +1186,17 @@ rc_t serialize(const PageMap *self, KDataBuffer *buffer, uint64_t *size) {
             else {
                 z_stream zs;
                 int zr;
-                
+
                 memset(&zs, 0, sizeof(zs));
-                
+
                 assert(compress.elem_count >> 32 == 0);
-                
+
                 zs.next_out = ((Bytef *)buffer->base) + hsize;
                 zs.avail_out = (uInt)compress.elem_count;
-                
+
                 zs.next_in = compress.base;
                 zs.avail_in = (uInt)compress.elem_count;
-                
+
                 zr = deflateInit2(&zs, Z_BEST_SPEED, Z_DEFLATED, -15, 9, Z_DEFAULT_STRATEGY);
                 switch (zr) {
                 case Z_OK:
@@ -1233,7 +1233,7 @@ rc_t serialize(const PageMap *self, KDataBuffer *buffer, uint64_t *size) {
     KDataBufferWhack(&compress);
     if (rc == 0)
         *size = buffer->elem_count;
-    
+
     return rc;
 }
 
@@ -1243,11 +1243,11 @@ rc_t PageMapSerialize (const PageMap *self, KDataBuffer *buffer, uint64_t offset
 
     assert(buffer->elem_bits == 8);
     assert(buffer->bit_offset == 0);
-    
+
     rc = KDataBufferMakeBytes(&temp, 0);
     if (rc == 0) {
         uint64_t sz;
-        
+
         rc = serialize(self, &temp, &sz);
         if (rc == 0) {
             rc = KDataBufferResize(buffer, offset + sz);
@@ -1271,7 +1271,7 @@ rc_t PageMapDeserialize_v0(PageMap **lhs, uint8_t const src[], unsigned ssize, r
     uint64_t sz;
     bool     random_access=(version==2?true:false);
     rc_t rc = 0;
-    
+
     switch (variant) {
     case 0:
         /*
@@ -1280,14 +1280,14 @@ rc_t PageMapDeserialize_v0(PageMap **lhs, uint8_t const src[], unsigned ssize, r
          */
         rc = vlen_decodeU1(&row_len, &src[cur], ssize - cur, &sz); if (rc) return rc;
 	cur += sz;
-        
+
         *lhs = new_StaticPageMap(1, random_access?row_count:1);
         if (*lhs == NULL)
             return RC(rcVDB, rcPagemap, rcConstructing, rcMemory, rcExhausted);
-        
+
         (**lhs).data_recs = row_count;
         (**lhs).leng_recs = 1;
-        
+
         (**lhs).length[0] = (elem_count_t)row_len;
         (**lhs).leng_run[0] = row_count;
 
@@ -1306,20 +1306,20 @@ rc_t PageMapDeserialize_v0(PageMap **lhs, uint8_t const src[], unsigned ssize, r
          */
         rc = vlen_decodeU1(&row_len, &src[cur], ssize - cur, &sz); if (rc) return rc;
         cur += sz;
-        
+
         rc = vlen_decodeU1(&data_recs, &src[cur], ssize - cur, &sz); if (rc) return rc;
         cur += sz;
-        
+
         *lhs = new_StaticPageMap(1, data_recs);
         if (*lhs == NULL)
             return RC(rcVDB, rcPagemap, rcConstructing, rcMemory, rcExhausted);
-        
+
         (**lhs).data_recs = data_recs;
         (**lhs).leng_recs = 1;
-        
+
         (**lhs).length[0] = (elem_count_t)row_len;
         (**lhs).leng_run[0] = row_count;
-        
+
         rc = deserialize_lengths((**lhs).data_run, (unsigned)data_recs, &src[cur], ssize - cur, &sz);
         break;
     case 2:
@@ -1331,15 +1331,15 @@ rc_t PageMapDeserialize_v0(PageMap **lhs, uint8_t const src[], unsigned ssize, r
          */
         rc = vlen_decodeU1(&leng_recs, &src[cur], ssize - cur, &sz); if (rc) return rc;
         cur += sz;
-        
+
         *lhs = new_StaticPageMap((unsigned)leng_recs, random_access?row_count:1);
         if (*lhs == NULL)
             return RC(rcVDB, rcPagemap, rcConstructing, rcMemory, rcExhausted);
-        
+
         (**lhs).data_recs = row_count;
         (**lhs).leng_recs = leng_recs;
-        
-#if 0  
+
+#if 0
         rc = deserialize_lengths((**lhs).length, (unsigned)leng_recs, &src[cur], ssize - cur, &sz);
         if (rc == 0) {
             cur += sz;
@@ -1353,7 +1353,7 @@ rc_t PageMapDeserialize_v0(PageMap **lhs, uint8_t const src[], unsigned ssize, r
 		rc = deserialize_lengths((**lhs).data_offset, (unsigned)row_count, &src[cur], ssize - cur, &sz);
 	}
 	(**lhs).data_run = 0;
-		
+
 #endif
         break;
     case 3:
@@ -1367,17 +1367,17 @@ rc_t PageMapDeserialize_v0(PageMap **lhs, uint8_t const src[], unsigned ssize, r
          */
         rc = vlen_decodeU1(&leng_recs, &src[cur], ssize - cur, &sz);  if (rc) return rc;
         cur += sz;
-        
+
         rc = vlen_decodeU1(&data_recs, &src[cur], ssize - cur, &sz);  if (rc) return rc;
         cur += sz;
-        
+
         *lhs = new_StaticPageMap(leng_recs, data_recs);
         if (*lhs == NULL)
             return RC(rcVDB, rcPagemap, rcConstructing, rcMemory, rcExhausted);
-        
+
         (**lhs).data_recs = data_recs;
         (**lhs).leng_recs = leng_recs;
-#if 0   
+#if 0
         rc = deserialize_lengths((**lhs).length, leng_recs, &src[cur], ssize - cur, &sz);
         if (rc == 0) {
             cur += sz;
@@ -1412,7 +1412,7 @@ rc_t PageMapDeserialize_v1(PageMap **lhs, const uint8_t *Src, uint64_t ssize, ui
     z_stream zs;
     int zr;
     bool random_access = ((src[0]>>2)==2);
-    
+
     switch (variant) {
     case 0:
 	if(!random_access)
@@ -1469,22 +1469,22 @@ rc_t PageMapDeserialize_v1(PageMap **lhs, const uint8_t *Src, uint64_t ssize, ui
     }
     if (rc)
         return rc;
-    
+
     rc = KDataBufferMakeBytes(&decompress, hsize + bsize);
     if (rc)
         return rc;
 
     memmove(decompress.base, Src, hsize);
     memset(&zs, 0, sizeof(zs));
-    
+
     zs.next_in = (Bytef *)src;
     assert((endp - src) == (uInt)(endp - src));
     zs.avail_in = (uInt)(endp - src);
-    
+
     zs.next_out = ((Bytef *)decompress.base) + hsize;
     assert(bsize == (uInt)(bsize));
     zs.avail_out = (uInt)bsize;
-    
+
     zr = inflateInit2(&zs, -15);
     if (zr == Z_OK) {
         zr = inflate(&zs, Z_FINISH);
@@ -1494,7 +1494,7 @@ rc_t PageMapDeserialize_v1(PageMap **lhs, const uint8_t *Src, uint64_t ssize, ui
     }
     else
         rc = RC(rcVDB, rcPagemap, rcConstructing, rcMemory, rcExhausted);
-    
+
     if (rc == 0)
         rc = PageMapDeserialize_v0(lhs, decompress.base, hsize + zs.total_out, row_count);
     KDataBufferWhack(&decompress);
@@ -1506,10 +1506,10 @@ rc_t PageMapDeserialize (PageMap **lhs, const void *src, uint64_t ssize, uint64_
 
     if ((uint32_t)row_count != row_count)
         return RC(rcVDB, rcPagemap, rcConstructing, rcParam, rcTooBig);
-        
+
     if (lhs == NULL)
         return RC(rcVDB, rcPagemap, rcConstructing, rcParam, rcNull);
-    
+
     *lhs = NULL;
     if (src == NULL || ssize == 0)
         return 0;
@@ -1542,7 +1542,7 @@ rc_t PageMapDestroy(PageMap *that)
                                  that->reserve_leng * (sizeof(that->leng_run[0]) + sizeof(that->length[0]));
     --pm_stats.alive;
     if (pm_stats.alive == 0) {
-        fprintf(stderr, 
+        fprintf(stderr,
                 "PM Stats:\n"
                 "Footprint (cur/max): %u/%u\n"
                 "Waste (cur/max): %u/%u\n"
@@ -1594,7 +1594,7 @@ uint32_t PageMapGetIdxRowInfo (const PageMap *cself, uint32_t idx, uint32_t *sta
 	rc_t rc=0;
 	elem_count_t len;
     row_count_t data_run = cself->data_run ? cself->data_run[0] : 1;
-    
+
 	if (idx  < data_run || cself->data_recs == 1) {
 		if (starting_element)
             *starting_element = 0;
@@ -1618,7 +1618,7 @@ int PageMapCompare(const PageMap *a, const PageMap *b) {
     unsigned bi;
     unsigned ar; /* runs in a */
     unsigned br; /* runs in b */
-    
+
     if (
         a == b || (
         a->leng_recs == b->leng_recs &&
@@ -1628,11 +1628,11 @@ int PageMapCompare(const PageMap *a, const PageMap *b) {
         memcmp(a->data_run, b->data_run, sizeof(a->data_run[0]) * a->data_recs) == 0
     ))
         return 2;
-    
+
     ai = bi = 0;
     ar = a->leng_run[0];
     br = b->leng_run[0];
-    
+
     while (ai < a->leng_recs && bi < b->leng_recs) {
         if (a->length[ai] != b->length[bi])
             return 0;
@@ -1662,7 +1662,7 @@ int PageMapCompareStatic (const PageMap *a, const PageMap *b) {
 	  a->leng_run[0] != a->data_run[0]
     )
         return -1; /* *a is not static */
-    
+
     if (a == b)
         return 2; /* static and identical */
 
@@ -1672,7 +1672,7 @@ int PageMapCompareStatic (const PageMap *a, const PageMap *b) {
 	  b->leng_run[0] != b->data_run[0]
     )
         return -1; /* *b is not static */
-    
+
     if (a->length[0] == b->length[0] && a->leng_run[0] <= b->leng_run[0])
         /* static and compatible, but we want to prevent deeper inspection
          * so we're lying and saying that they are identical */
@@ -1684,13 +1684,13 @@ int PageMapCompareStatic (const PageMap *a, const PageMap *b) {
 rc_t PageMapAppend(PageMap *self, const PageMap *other) {
     KDataBuffer cstorage;
     rc_t rc;
-    
+
     rc = KDataBufferMake(&cstorage, sizeof(self->length[0]) * 8, (self->leng_recs + other->leng_recs) * 2 + self->data_recs + other->data_recs);
     if (rc == 0) {
         uint32_t *const length = cstorage.base;
         uint32_t *const leng_run = length + self->leng_recs + other->leng_recs;
         uint32_t *const data_run = leng_run + self->leng_recs + other->leng_recs;
-        
+
 #if PAGEMAP_STATISTICS
         ++pm_stats.appends;
         pm_stats.currentWaste -= (self->reserve_data - self->data_recs) * sizeof(self->data_run[0]) +
@@ -1703,23 +1703,23 @@ rc_t PageMapAppend(PageMap *self, const PageMap *other) {
 
         memmove(leng_run                  , self->leng_run , self->leng_recs  * sizeof(leng_run[0]));
         memmove(leng_run + self->leng_recs, other->leng_run, other->leng_recs * sizeof(leng_run[0]));
-        
+
         memmove(data_run                  , self->data_run , self->data_recs  * sizeof(data_run[0]));
         memmove(data_run + self->data_recs, other->data_run, other->data_recs * sizeof(data_run[0]));
-        
+
         KDataBufferWhack(&self->cstorage);
         self->cstorage = cstorage;
 
         self->length = length;
         self->leng_run = leng_run;
         self->data_run = data_run;
-        
+
         self->leng_recs += other->leng_recs;
         self->data_recs += other->data_recs;
         self->row_count += other->row_count;
         self->reserve_leng = self->leng_recs;
         self->reserve_data = self->data_recs;
-        
+
 #if PAGEMAP_STATISTICS
         pm_stats.currentWaste += (self->reserve_data - self->data_recs) * sizeof(self->data_run[0]) +
                                  (self->reserve_leng - self->leng_recs) * (sizeof(self->leng_run[0]) + sizeof(self->length[0]));
@@ -1731,4 +1731,24 @@ rc_t PageMapAppend(PageMap *self, const PageMap *other) {
         return 0;
     }
     return rc;
+}
+
+LIB_EXPORT  elem_count_t CC PageMapIteratorDataLength_Ext(const PageMapIterator *self)
+{
+    return PageMapIteratorDataLength( self );
+}
+
+LIB_EXPORT bool CC PageMapIteratorNext_Ext(PageMapIterator *self)
+{
+    return PageMapIteratorNext( self );
+}
+
+LIB_EXPORT elem_count_t CC PageMapIteratorDataOffset_Ext(const PageMapIterator *self)
+{
+    return PageMapIteratorDataOffset( self );
+}
+
+LIB_EXPORT row_count_t CC PageMapIteratorRepeatCount_Ext(const PageMapIterator *cself)
+{
+    return PageMapIteratorRepeatCount( cself );
 }
