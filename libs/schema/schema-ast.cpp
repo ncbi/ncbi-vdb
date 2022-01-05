@@ -1,9 +1,8 @@
-/* A Bison parser, made by GNU Bison 3.5.1.  */
+/* A Bison parser, made by GNU Bison 3.0.4.  */
 
 /* Bison implementation for Yacc-like parsers in C
 
-   Copyright (C) 1984, 1989-1990, 2000-2015, 2018-2020 Free Software Foundation,
-   Inc.
+   Copyright (C) 1984, 1989-1990, 2000-2015 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -41,14 +40,11 @@
    define necessary library symbols; they are noted "INFRINGES ON
    USER NAME SPACE" below.  */
 
-/* Undocumented macros, especially those whose name start with YY_,
-   are private implementation details.  Do not rely on them.  */
-
 /* Identify Bison output.  */
 #define YYBISON 1
 
 /* Bison version.  */
-#define YYBISON_VERSION "3.5.1"
+#define YYBISON_VERSION "3.0.4"
 
 /* Skeleton name.  */
 #define YYSKELETON_NAME "yacc.c"
@@ -70,7 +66,9 @@
 #define yydebug         AST_debug
 #define yynerrs         AST_nerrs
 
-/* First part of user prologue.  */
+
+/* Copy the first part of user declarations.  */
+
 
     #define YYDEBUG 1
 
@@ -94,24 +92,12 @@
 
 
 
-# ifndef YY_CAST
-#  ifdef __cplusplus
-#   define YY_CAST(Type, Val) static_cast<Type> (Val)
-#   define YY_REINTERPRET_CAST(Type, Val) reinterpret_cast<Type> (Val)
-#  else
-#   define YY_CAST(Type, Val) ((Type) (Val))
-#   define YY_REINTERPRET_CAST(Type, Val) ((Type) (Val))
-#  endif
-# endif
+
 # ifndef YY_NULLPTR
-#  if defined __cplusplus
-#   if 201103L <= __cplusplus
-#    define YY_NULLPTR nullptr
-#   else
-#    define YY_NULLPTR 0
-#   endif
+#  if defined __cplusplus && 201103L <= __cplusplus
+#   define YY_NULLPTR nullptr
 #  else
-#   define YY_NULLPTR ((void*)0)
+#   define YY_NULLPTR 0
 #  endif
 # endif
 
@@ -123,10 +109,10 @@
 # define YYERROR_VERBOSE 1
 #endif
 
-/* Use api.header.include to #include this header
-   instead of duplicating it here.  */
-#ifndef YY_AST_HOME_BOSHKINS_DEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_AST_HPP_INCLUDED
-# define YY_AST_HOME_BOSHKINS_DEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_AST_HPP_INCLUDED
+/* In a future release of Bison, this section will be replaced
+   by #include "schema-ast.hpp".  */
+#ifndef YY_AST_HOME_DURBROWK_PROJECTS_NCBI_NCBI_VDB_LIBS_SCHEMA_SCHEMA_AST_HPP_INCLUDED
+# define YY_AST_HOME_DURBROWK_PROJECTS_NCBI_NCBI_VDB_LIBS_SCHEMA_SCHEMA_AST_HPP_INCLUDED
 /* Debug traces.  */
 #ifndef YYDEBUG
 # define YYDEBUG 0
@@ -279,8 +265,10 @@ extern int AST_debug;
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
+
 union YYSTYPE
 {
+
 
   const Token*  tok;
   AST*          node;
@@ -289,6 +277,7 @@ union YYSTYPE
 
 
 };
+
 typedef union YYSTYPE YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define YYSTYPE_IS_DECLARED 1
@@ -298,7 +287,9 @@ typedef union YYSTYPE YYSTYPE;
 
 int AST_parse (AST*& p_ast, ASTBuilder& p_builder, ParseTreeScanner& p_sb);
 
-#endif /* !YY_AST_HOME_BOSHKINS_DEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_AST_HPP_INCLUDED  */
+#endif /* !YY_AST_HOME_DURBROWK_PROJECTS_NCBI_NCBI_VDB_LIBS_SCHEMA_SCHEMA_AST_HPP_INCLUDED  */
+
+/* Copy the second part of user declarations.  */
 
 
 
@@ -306,75 +297,28 @@ int AST_parse (AST*& p_ast, ASTBuilder& p_builder, ParseTreeScanner& p_sb);
 # undef short
 #endif
 
-/* On compilers that do not define __PTRDIFF_MAX__ etc., make sure
-   <limits.h> and (if available) <stdint.h> are included
-   so that the code can choose integer types of a good width.  */
-
-#ifndef __PTRDIFF_MAX__
-# include <limits.h> /* INFRINGES ON USER NAME SPACE */
-# if defined __STDC_VERSION__ && 199901 <= __STDC_VERSION__
-#  include <stdint.h> /* INFRINGES ON USER NAME SPACE */
-#  define YY_STDINT_H
-# endif
+#ifdef YYTYPE_UINT8
+typedef YYTYPE_UINT8 yytype_uint8;
+#else
+typedef unsigned char yytype_uint8;
 #endif
 
-/* Narrow types that promote to a signed type and that can represent a
-   signed or unsigned integer of at least N bits.  In tables they can
-   save space and decrease cache pressure.  Promoting to a signed type
-   helps avoid bugs in integer arithmetic.  */
-
-#ifdef __INT_LEAST8_MAX__
-typedef __INT_LEAST8_TYPE__ yytype_int8;
-#elif defined YY_STDINT_H
-typedef int_least8_t yytype_int8;
+#ifdef YYTYPE_INT8
+typedef YYTYPE_INT8 yytype_int8;
 #else
 typedef signed char yytype_int8;
 #endif
 
-#ifdef __INT_LEAST16_MAX__
-typedef __INT_LEAST16_TYPE__ yytype_int16;
-#elif defined YY_STDINT_H
-typedef int_least16_t yytype_int16;
+#ifdef YYTYPE_UINT16
+typedef YYTYPE_UINT16 yytype_uint16;
 #else
-typedef short yytype_int16;
+typedef unsigned short int yytype_uint16;
 #endif
 
-#if defined __UINT_LEAST8_MAX__ && __UINT_LEAST8_MAX__ <= __INT_MAX__
-typedef __UINT_LEAST8_TYPE__ yytype_uint8;
-#elif (!defined __UINT_LEAST8_MAX__ && defined YY_STDINT_H \
-       && UINT_LEAST8_MAX <= INT_MAX)
-typedef uint_least8_t yytype_uint8;
-#elif !defined __UINT_LEAST8_MAX__ && UCHAR_MAX <= INT_MAX
-typedef unsigned char yytype_uint8;
+#ifdef YYTYPE_INT16
+typedef YYTYPE_INT16 yytype_int16;
 #else
-typedef short yytype_uint8;
-#endif
-
-#if defined __UINT_LEAST16_MAX__ && __UINT_LEAST16_MAX__ <= __INT_MAX__
-typedef __UINT_LEAST16_TYPE__ yytype_uint16;
-#elif (!defined __UINT_LEAST16_MAX__ && defined YY_STDINT_H \
-       && UINT_LEAST16_MAX <= INT_MAX)
-typedef uint_least16_t yytype_uint16;
-#elif !defined __UINT_LEAST16_MAX__ && USHRT_MAX <= INT_MAX
-typedef unsigned short yytype_uint16;
-#else
-typedef int yytype_uint16;
-#endif
-
-#ifndef YYPTRDIFF_T
-# if defined __PTRDIFF_TYPE__ && defined __PTRDIFF_MAX__
-#  define YYPTRDIFF_T __PTRDIFF_TYPE__
-#  define YYPTRDIFF_MAXIMUM __PTRDIFF_MAX__
-# elif defined PTRDIFF_MAX
-#  ifndef ptrdiff_t
-#   include <stddef.h> /* INFRINGES ON USER NAME SPACE */
-#  endif
-#  define YYPTRDIFF_T ptrdiff_t
-#  define YYPTRDIFF_MAXIMUM PTRDIFF_MAX
-# else
-#  define YYPTRDIFF_T long
-#  define YYPTRDIFF_MAXIMUM LONG_MAX
-# endif
+typedef short int yytype_int16;
 #endif
 
 #ifndef YYSIZE_T
@@ -382,27 +326,15 @@ typedef int yytype_uint16;
 #  define YYSIZE_T __SIZE_TYPE__
 # elif defined size_t
 #  define YYSIZE_T size_t
-# elif defined __STDC_VERSION__ && 199901 <= __STDC_VERSION__
+# elif ! defined YYSIZE_T
 #  include <stddef.h> /* INFRINGES ON USER NAME SPACE */
 #  define YYSIZE_T size_t
 # else
-#  define YYSIZE_T unsigned
+#  define YYSIZE_T unsigned int
 # endif
 #endif
 
-#define YYSIZE_MAXIMUM                                  \
-  YY_CAST (YYPTRDIFF_T,                                 \
-           (YYPTRDIFF_MAXIMUM < YY_CAST (YYSIZE_T, -1)  \
-            ? YYPTRDIFF_MAXIMUM                         \
-            : YY_CAST (YYSIZE_T, -1)))
-
-#define YYSIZEOF(X) YY_CAST (YYPTRDIFF_T, sizeof (X))
-
-/* Stored state numbers (used for stacks). */
-typedef yytype_int16 yy_state_t;
-
-/* State numbers in computations.  */
-typedef int yy_state_fast_t;
+#define YYSIZE_MAXIMUM ((YYSIZE_T) -1)
 
 #ifndef YY_
 # if defined YYENABLE_NLS && YYENABLE_NLS
@@ -416,19 +348,30 @@ typedef int yy_state_fast_t;
 # endif
 #endif
 
-#ifndef YY_ATTRIBUTE_PURE
-# if defined __GNUC__ && 2 < __GNUC__ + (96 <= __GNUC_MINOR__)
-#  define YY_ATTRIBUTE_PURE __attribute__ ((__pure__))
+#ifndef YY_ATTRIBUTE
+# if (defined __GNUC__                                               \
+      && (2 < __GNUC__ || (__GNUC__ == 2 && 96 <= __GNUC_MINOR__)))  \
+     || defined __SUNPRO_C && 0x5110 <= __SUNPRO_C
+#  define YY_ATTRIBUTE(Spec) __attribute__(Spec)
 # else
-#  define YY_ATTRIBUTE_PURE
+#  define YY_ATTRIBUTE(Spec) /* empty */
 # endif
 #endif
 
+#ifndef YY_ATTRIBUTE_PURE
+# define YY_ATTRIBUTE_PURE   YY_ATTRIBUTE ((__pure__))
+#endif
+
 #ifndef YY_ATTRIBUTE_UNUSED
-# if defined __GNUC__ && 2 < __GNUC__ + (7 <= __GNUC_MINOR__)
-#  define YY_ATTRIBUTE_UNUSED __attribute__ ((__unused__))
+# define YY_ATTRIBUTE_UNUSED YY_ATTRIBUTE ((__unused__))
+#endif
+
+#if !defined _Noreturn \
+     && (!defined __STDC_VERSION__ || __STDC_VERSION__ < 201112)
+# if defined _MSC_VER && 1200 <= _MSC_VER
+#  define _Noreturn __declspec (noreturn)
 # else
-#  define YY_ATTRIBUTE_UNUSED
+#  define _Noreturn YY_ATTRIBUTE ((__noreturn__))
 # endif
 #endif
 
@@ -439,13 +382,13 @@ typedef int yy_state_fast_t;
 # define YYUSE(E) /* empty */
 #endif
 
-#if defined __GNUC__ && ! defined __ICC && 407 <= __GNUC__ * 100 + __GNUC_MINOR__
+#if defined __GNUC__ && 407 <= __GNUC__ * 100 + __GNUC_MINOR__
 /* Suppress an incorrect diagnostic about yylval being uninitialized.  */
-# define YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN                            \
-    _Pragma ("GCC diagnostic push")                                     \
-    _Pragma ("GCC diagnostic ignored \"-Wuninitialized\"")              \
+# define YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN \
+    _Pragma ("GCC diagnostic push") \
+    _Pragma ("GCC diagnostic ignored \"-Wuninitialized\"")\
     _Pragma ("GCC diagnostic ignored \"-Wmaybe-uninitialized\"")
-# define YY_IGNORE_MAYBE_UNINITIALIZED_END      \
+# define YY_IGNORE_MAYBE_UNINITIALIZED_END \
     _Pragma ("GCC diagnostic pop")
 #else
 # define YY_INITIAL_VALUE(Value) Value
@@ -458,20 +401,6 @@ typedef int yy_state_fast_t;
 # define YY_INITIAL_VALUE(Value) /* Nothing. */
 #endif
 
-#if defined __cplusplus && defined __GNUC__ && ! defined __ICC && 6 <= __GNUC__
-# define YY_IGNORE_USELESS_CAST_BEGIN                          \
-    _Pragma ("GCC diagnostic push")                            \
-    _Pragma ("GCC diagnostic ignored \"-Wuseless-cast\"")
-# define YY_IGNORE_USELESS_CAST_END            \
-    _Pragma ("GCC diagnostic pop")
-#endif
-#ifndef YY_IGNORE_USELESS_CAST_BEGIN
-# define YY_IGNORE_USELESS_CAST_BEGIN
-# define YY_IGNORE_USELESS_CAST_END
-#endif
-
-
-#define YY_ASSERT(E) ((void) (0 && (E)))
 
 #if ! defined yyoverflow || YYERROR_VERBOSE
 
@@ -548,17 +477,17 @@ void free (void *); /* INFRINGES ON USER NAME SPACE */
 /* A type that is properly aligned for any stack member.  */
 union yyalloc
 {
-  yy_state_t yyss_alloc;
+  yytype_int16 yyss_alloc;
   YYSTYPE yyvs_alloc;
 };
 
 /* The size of the maximum gap between one aligned stack and the next.  */
-# define YYSTACK_GAP_MAXIMUM (YYSIZEOF (union yyalloc) - 1)
+# define YYSTACK_GAP_MAXIMUM (sizeof (union yyalloc) - 1)
 
 /* The size of an array large to enough to hold all stacks, each with
    N elements.  */
 # define YYSTACK_BYTES(N) \
-     ((N) * (YYSIZEOF (yy_state_t) + YYSIZEOF (YYSTYPE)) \
+     ((N) * (sizeof (yytype_int16) + sizeof (YYSTYPE)) \
       + YYSTACK_GAP_MAXIMUM)
 
 # define YYCOPY_NEEDED 1
@@ -571,11 +500,11 @@ union yyalloc
 # define YYSTACK_RELOCATE(Stack_alloc, Stack)                           \
     do                                                                  \
       {                                                                 \
-        YYPTRDIFF_T yynewbytes;                                         \
+        YYSIZE_T yynewbytes;                                            \
         YYCOPY (&yyptr->Stack_alloc, Stack, yysize);                    \
         Stack = &yyptr->Stack_alloc;                                    \
-        yynewbytes = yystacksize * YYSIZEOF (*Stack) + YYSTACK_GAP_MAXIMUM; \
-        yyptr += yynewbytes / YYSIZEOF (*yyptr);                        \
+        yynewbytes = yystacksize * sizeof (*Stack) + YYSTACK_GAP_MAXIMUM; \
+        yyptr += yynewbytes / sizeof (*yyptr);                          \
       }                                                                 \
     while (0)
 
@@ -587,12 +516,12 @@ union yyalloc
 # ifndef YYCOPY
 #  if defined __GNUC__ && 1 < __GNUC__
 #   define YYCOPY(Dst, Src, Count) \
-      __builtin_memcpy (Dst, Src, YY_CAST (YYSIZE_T, (Count)) * sizeof (*(Src)))
+      __builtin_memcpy (Dst, Src, (Count) * sizeof (*(Src)))
 #  else
 #   define YYCOPY(Dst, Src, Count)              \
       do                                        \
         {                                       \
-          YYPTRDIFF_T yyi;                      \
+          YYSIZE_T yyi;                         \
           for (yyi = 0; yyi < (Count); yyi++)   \
             (Dst)[yyi] = (Src)[yyi];            \
         }                                       \
@@ -615,17 +544,16 @@ union yyalloc
 /* YYNSTATES -- Number of states.  */
 #define YYNSTATES  856
 
+/* YYTRANSLATE[YYX] -- Symbol number corresponding to YYX as returned
+   by yylex, with out-of-bounds checking.  */
 #define YYUNDEFTOK  2
 #define YYMAXUTOK   390
 
-
-/* YYTRANSLATE(TOKEN-NUM) -- Symbol number corresponding to TOKEN-NUM
-   as returned by yylex, with out-of-bounds checking.  */
 #define YYTRANSLATE(YYX)                                                \
-  (0 <= (YYX) && (YYX) <= YYMAXUTOK ? yytranslate[YYX] : YYUNDEFTOK)
+  ((unsigned int) (YYX) <= YYMAXUTOK ? yytranslate[YYX] : YYUNDEFTOK)
 
 /* YYTRANSLATE[TOKEN-NUM] -- Symbol number corresponding to TOKEN-NUM
-   as returned by yylex.  */
+   as returned by yylex, without out-of-bounds checking.  */
 static const yytype_uint8 yytranslate[] =
 {
        0,     2,     2,     2,     2,     2,     2,     2,     2,     2,
@@ -672,7 +600,7 @@ static const yytype_uint8 yytranslate[] =
 
 #if YYDEBUG
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
-static const yytype_int16 yyrline[] =
+static const yytype_uint16 yyrline[] =
 {
        0,   261,   261,   262,   266,   267,   268,   272,   276,   280,
      284,   289,   290,   296,   297,   298,   299,   300,   301,   302,
@@ -769,7 +697,7 @@ static const char *const yytname[] =
 # ifdef YYPRINT
 /* YYTOKNUM[NUM] -- (External) token number corresponding to the
    (internal) symbol number NUM (which must be that of a token).  */
-static const yytype_int16 yytoknum[] =
+static const yytype_uint16 yytoknum[] =
 {
        0,   256,   257,   258,   259,   260,   261,   262,   263,   264,
      265,   266,   267,   268,   269,   270,   271,   272,   273,   274,
@@ -790,14 +718,14 @@ static const yytype_int16 yytoknum[] =
 };
 # endif
 
-#define YYPACT_NINF (-664)
+#define YYPACT_NINF -664
 
-#define yypact_value_is_default(Yyn) \
-  ((Yyn) == YYPACT_NINF)
+#define yypact_value_is_default(Yystate) \
+  (!!((Yystate) == (-664)))
 
-#define YYTABLE_NINF (-1)
+#define YYTABLE_NINF -1
 
-#define yytable_value_is_error(Yyn) \
+#define yytable_value_is_error(Yytable_value) \
   0
 
   /* YYPACT[STATE-NUM] -- Index in YYTABLE of the portion describing
@@ -1022,7 +950,7 @@ static const yytype_int16 yydefgoto[] =
   /* YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
      positive, shift that token.  If negative, reduce the rule whose
      number is the opposite.  If YYTABLE_NINF, syntax error.  */
-static const yytype_int16 yytable[] =
+static const yytype_uint16 yytable[] =
 {
      101,   102,   103,   262,   108,   105,   122,   123,   124,   296,
      297,   424,   421,   331,   662,   206,   634,   275,   635,   636,
@@ -1250,7 +1178,7 @@ static const yytype_int16 yycheck[] =
 
   /* YYSTOS[STATE-NUM] -- The (internal number of the) accessing
      symbol of state STATE-NUM.  */
-static const yytype_int16 yystos[] =
+static const yytype_uint16 yystos[] =
 {
        0,    57,   156,   137,     0,     0,    58,   157,   138,   137,
        0,    59,    60,    61,   158,   159,   160,   138,   137,   137,
@@ -1341,7 +1269,7 @@ static const yytype_int16 yystos[] =
 };
 
   /* YYR1[YYN] -- Symbol number of symbol that rule YYN derives.  */
-static const yytype_int16 yyr1[] =
+static const yytype_uint16 yyr1[] =
 {
        0,   155,   156,   156,   157,   157,   157,   158,   159,   160,
      161,   162,   162,   163,   163,   163,   163,   163,   163,   163,
@@ -1371,7 +1299,7 @@ static const yytype_int16 yyr1[] =
 };
 
   /* YYR2[YYN] -- Number of symbols on the right hand side of rule YYN.  */
-static const yytype_int8 yyr2[] =
+static const yytype_uint8 yyr2[] =
 {
        0,     2,     4,     5,     4,     5,     5,     6,     6,     4,
        4,     1,     2,     1,     1,     1,     1,     1,     1,     1,
@@ -1413,22 +1341,22 @@ static const yytype_int8 yyr2[] =
 
 #define YYRECOVERING()  (!!yyerrstatus)
 
-#define YYBACKUP(Token, Value)                                    \
-  do                                                              \
-    if (yychar == YYEMPTY)                                        \
-      {                                                           \
-        yychar = (Token);                                         \
-        yylval = (Value);                                         \
-        YYPOPSTACK (yylen);                                       \
-        yystate = *yyssp;                                         \
-        goto yybackup;                                            \
-      }                                                           \
-    else                                                          \
-      {                                                           \
-        yyerror (p_ast, p_builder, p_sb, YY_("syntax error: cannot back up")); \
-        YYERROR;                                                  \
-      }                                                           \
-  while (0)
+#define YYBACKUP(Token, Value)                                  \
+do                                                              \
+  if (yychar == YYEMPTY)                                        \
+    {                                                           \
+      yychar = (Token);                                         \
+      yylval = (Value);                                         \
+      YYPOPSTACK (yylen);                                       \
+      yystate = *yyssp;                                         \
+      goto yybackup;                                            \
+    }                                                           \
+  else                                                          \
+    {                                                           \
+      yyerror (p_ast, p_builder, p_sb, YY_("syntax error: cannot back up")); \
+      YYERROR;                                                  \
+    }                                                           \
+while (0)
 
 /* Error token number */
 #define YYTERROR        1
@@ -1468,15 +1396,15 @@ do {                                                                      \
 } while (0)
 
 
-/*-----------------------------------.
-| Print this symbol's value on YYO.  |
-`-----------------------------------*/
+/*----------------------------------------.
+| Print this symbol's value on YYOUTPUT.  |
+`----------------------------------------*/
 
 static void
-yy_symbol_value_print (FILE *yyo, int yytype, YYSTYPE const * const yyvaluep, AST*& p_ast, ASTBuilder& p_builder, ParseTreeScanner& p_sb)
+yy_symbol_value_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep, AST*& p_ast, ASTBuilder& p_builder, ParseTreeScanner& p_sb)
 {
-  FILE *yyoutput = yyo;
-  YYUSE (yyoutput);
+  FILE *yyo = yyoutput;
+  YYUSE (yyo);
   YYUSE (p_ast);
   YYUSE (p_builder);
   YYUSE (p_sb);
@@ -1484,26 +1412,24 @@ yy_symbol_value_print (FILE *yyo, int yytype, YYSTYPE const * const yyvaluep, AS
     return;
 # ifdef YYPRINT
   if (yytype < YYNTOKENS)
-    YYPRINT (yyo, yytoknum[yytype], *yyvaluep);
+    YYPRINT (yyoutput, yytoknum[yytype], *yyvaluep);
 # endif
-  YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN
   YYUSE (yytype);
-  YY_IGNORE_MAYBE_UNINITIALIZED_END
 }
 
 
-/*---------------------------.
-| Print this symbol on YYO.  |
-`---------------------------*/
+/*--------------------------------.
+| Print this symbol on YYOUTPUT.  |
+`--------------------------------*/
 
 static void
-yy_symbol_print (FILE *yyo, int yytype, YYSTYPE const * const yyvaluep, AST*& p_ast, ASTBuilder& p_builder, ParseTreeScanner& p_sb)
+yy_symbol_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep, AST*& p_ast, ASTBuilder& p_builder, ParseTreeScanner& p_sb)
 {
-  YYFPRINTF (yyo, "%s %s (",
+  YYFPRINTF (yyoutput, "%s %s (",
              yytype < YYNTOKENS ? "token" : "nterm", yytname[yytype]);
 
-  yy_symbol_value_print (yyo, yytype, yyvaluep, p_ast, p_builder, p_sb);
-  YYFPRINTF (yyo, ")");
+  yy_symbol_value_print (yyoutput, yytype, yyvaluep, p_ast, p_builder, p_sb);
+  YYFPRINTF (yyoutput, ")");
 }
 
 /*------------------------------------------------------------------.
@@ -1512,7 +1438,7 @@ yy_symbol_print (FILE *yyo, int yytype, YYSTYPE const * const yyvaluep, AST*& p_
 `------------------------------------------------------------------*/
 
 static void
-yy_stack_print (yy_state_t *yybottom, yy_state_t *yytop)
+yy_stack_print (yytype_int16 *yybottom, yytype_int16 *yytop)
 {
   YYFPRINTF (stderr, "Stack now");
   for (; yybottom <= yytop; yybottom++)
@@ -1535,20 +1461,20 @@ do {                                                            \
 `------------------------------------------------*/
 
 static void
-yy_reduce_print (yy_state_t *yyssp, YYSTYPE *yyvsp, int yyrule, AST*& p_ast, ASTBuilder& p_builder, ParseTreeScanner& p_sb)
+yy_reduce_print (yytype_int16 *yyssp, YYSTYPE *yyvsp, int yyrule, AST*& p_ast, ASTBuilder& p_builder, ParseTreeScanner& p_sb)
 {
-  int yylno = yyrline[yyrule];
+  unsigned long int yylno = yyrline[yyrule];
   int yynrhs = yyr2[yyrule];
   int yyi;
-  YYFPRINTF (stderr, "Reducing stack by rule %d (line %d):\n",
+  YYFPRINTF (stderr, "Reducing stack by rule %d (line %lu):\n",
              yyrule - 1, yylno);
   /* The symbols being reduced.  */
   for (yyi = 0; yyi < yynrhs; yyi++)
     {
       YYFPRINTF (stderr, "   $%d = ", yyi + 1);
       yy_symbol_print (stderr,
-                       yystos[+yyssp[yyi + 1 - yynrhs]],
-                       &yyvsp[(yyi + 1) - (yynrhs)]
+                       yystos[yyssp[yyi + 1 - yynrhs]],
+                       &(yyvsp[(yyi + 1) - (yynrhs)])
                                               , p_ast, p_builder, p_sb);
       YYFPRINTF (stderr, "\n");
     }
@@ -1592,13 +1518,13 @@ int yydebug;
 
 # ifndef yystrlen
 #  if defined __GLIBC__ && defined _STRING_H
-#   define yystrlen(S) (YY_CAST (YYPTRDIFF_T, strlen (S)))
+#   define yystrlen strlen
 #  else
 /* Return the length of YYSTR.  */
-static YYPTRDIFF_T
+static YYSIZE_T
 yystrlen (const char *yystr)
 {
-  YYPTRDIFF_T yylen;
+  YYSIZE_T yylen;
   for (yylen = 0; yystr[yylen]; yylen++)
     continue;
   return yylen;
@@ -1634,12 +1560,12 @@ yystpcpy (char *yydest, const char *yysrc)
    backslash-backslash).  YYSTR is taken from yytname.  If YYRES is
    null, do not copy; instead, return the length of what the result
    would have been.  */
-static YYPTRDIFF_T
+static YYSIZE_T
 yytnamerr (char *yyres, const char *yystr)
 {
   if (*yystr == '"')
     {
-      YYPTRDIFF_T yyn = 0;
+      YYSIZE_T yyn = 0;
       char const *yyp = yystr;
 
       for (;;)
@@ -1652,10 +1578,7 @@ yytnamerr (char *yyres, const char *yystr)
           case '\\':
             if (*++yyp != '\\')
               goto do_not_strip_quotes;
-            else
-              goto append;
-
-          append:
+            /* Fall through.  */
           default:
             if (yyres)
               yyres[yyn] = *yyp;
@@ -1670,10 +1593,10 @@ yytnamerr (char *yyres, const char *yystr)
     do_not_strip_quotes: ;
     }
 
-  if (yyres)
-    return yystpcpy (yyres, yystr) - yyres;
-  else
+  if (! yyres)
     return yystrlen (yystr);
+
+  return yystpcpy (yyres, yystr) - yyres;
 }
 # endif
 
@@ -1686,19 +1609,19 @@ yytnamerr (char *yyres, const char *yystr)
    *YYMSG_ALLOC to the required number of bytes.  Return 2 if the
    required number of bytes is too large to store.  */
 static int
-yysyntax_error (YYPTRDIFF_T *yymsg_alloc, char **yymsg,
-                yy_state_t *yyssp, int yytoken)
+yysyntax_error (YYSIZE_T *yymsg_alloc, char **yymsg,
+                yytype_int16 *yyssp, int yytoken)
 {
+  YYSIZE_T yysize0 = yytnamerr (YY_NULLPTR, yytname[yytoken]);
+  YYSIZE_T yysize = yysize0;
   enum { YYERROR_VERBOSE_ARGS_MAXIMUM = 5 };
   /* Internationalized format string. */
   const char *yyformat = YY_NULLPTR;
-  /* Arguments of yyformat: reported tokens (one for the "unexpected",
-     one per "expected"). */
+  /* Arguments of yyformat. */
   char const *yyarg[YYERROR_VERBOSE_ARGS_MAXIMUM];
-  /* Actual size of YYARG. */
+  /* Number of reported tokens (one for the "unexpected", one per
+     "expected"). */
   int yycount = 0;
-  /* Cumulated lengths of YYARG.  */
-  YYPTRDIFF_T yysize = 0;
 
   /* There are many possibilities here to consider:
      - If this state is a consistent state with a default action, then
@@ -1725,9 +1648,7 @@ yysyntax_error (YYPTRDIFF_T *yymsg_alloc, char **yymsg,
   */
   if (yytoken != YYEMPTY)
     {
-      int yyn = yypact[+*yyssp];
-      YYPTRDIFF_T yysize0 = yytnamerr (YY_NULLPTR, yytname[yytoken]);
-      yysize = yysize0;
+      int yyn = yypact[*yyssp];
       yyarg[yycount++] = yytname[yytoken];
       if (!yypact_value_is_default (yyn))
         {
@@ -1752,12 +1673,11 @@ yysyntax_error (YYPTRDIFF_T *yymsg_alloc, char **yymsg,
                   }
                 yyarg[yycount++] = yytname[yyx];
                 {
-                  YYPTRDIFF_T yysize1
-                    = yysize + yytnamerr (YY_NULLPTR, yytname[yyx]);
-                  if (yysize <= yysize1 && yysize1 <= YYSTACK_ALLOC_MAXIMUM)
-                    yysize = yysize1;
-                  else
+                  YYSIZE_T yysize1 = yysize + yytnamerr (YY_NULLPTR, yytname[yyx]);
+                  if (! (yysize <= yysize1
+                         && yysize1 <= YYSTACK_ALLOC_MAXIMUM))
                     return 2;
+                  yysize = yysize1;
                 }
               }
         }
@@ -1769,7 +1689,6 @@ yysyntax_error (YYPTRDIFF_T *yymsg_alloc, char **yymsg,
       case N:                               \
         yyformat = S;                       \
       break
-    default: /* Avoid compiler warnings. */
       YYCASE_(0, YY_("syntax error"));
       YYCASE_(1, YY_("syntax error, unexpected %s"));
       YYCASE_(2, YY_("syntax error, unexpected %s, expecting %s"));
@@ -1780,13 +1699,10 @@ yysyntax_error (YYPTRDIFF_T *yymsg_alloc, char **yymsg,
     }
 
   {
-    /* Don't count the "%s"s in the final size, but reserve room for
-       the terminator.  */
-    YYPTRDIFF_T yysize1 = yysize + (yystrlen (yyformat) - 2 * yycount) + 1;
-    if (yysize <= yysize1 && yysize1 <= YYSTACK_ALLOC_MAXIMUM)
-      yysize = yysize1;
-    else
+    YYSIZE_T yysize1 = yysize + yystrlen (yyformat);
+    if (! (yysize <= yysize1 && yysize1 <= YYSTACK_ALLOC_MAXIMUM))
       return 2;
+    yysize = yysize1;
   }
 
   if (*yymsg_alloc < yysize)
@@ -1812,8 +1728,8 @@ yysyntax_error (YYPTRDIFF_T *yymsg_alloc, char **yymsg,
         }
       else
         {
-          ++yyp;
-          ++yyformat;
+          yyp++;
+          yyformat++;
         }
   }
   return 0;
@@ -1863,7 +1779,7 @@ YYSTYPE yylval YY_INITIAL_VALUE (= yyval_default);
     /* Number of syntax errors so far.  */
     int yynerrs;
 
-    yy_state_fast_t yystate;
+    int yystate;
     /* Number of tokens to shift before error messages enabled.  */
     int yyerrstatus;
 
@@ -1875,16 +1791,16 @@ YYSTYPE yylval YY_INITIAL_VALUE (= yyval_default);
        to reallocate them elsewhere.  */
 
     /* The state stack.  */
-    yy_state_t yyssa[YYINITDEPTH];
-    yy_state_t *yyss;
-    yy_state_t *yyssp;
+    yytype_int16 yyssa[YYINITDEPTH];
+    yytype_int16 *yyss;
+    yytype_int16 *yyssp;
 
     /* The semantic value stack.  */
     YYSTYPE yyvsa[YYINITDEPTH];
     YYSTYPE *yyvs;
     YYSTYPE *yyvsp;
 
-    YYPTRDIFF_T yystacksize;
+    YYSIZE_T yystacksize;
 
   int yyn;
   int yyresult;
@@ -1898,7 +1814,7 @@ YYSTYPE yylval YY_INITIAL_VALUE (= yyval_default);
   /* Buffer for error messages, and its allocated size.  */
   char yymsgbuf[128];
   char *yymsg = yymsgbuf;
-  YYPTRDIFF_T yymsg_alloc = sizeof yymsgbuf;
+  YYSIZE_T yymsg_alloc = sizeof yymsgbuf;
 #endif
 
 #define YYPOPSTACK(N)   (yyvsp -= (N), yyssp -= (N))
@@ -1919,54 +1835,46 @@ YYSTYPE yylval YY_INITIAL_VALUE (= yyval_default);
   yychar = YYEMPTY; /* Cause a token to be read.  */
   goto yysetstate;
 
-
 /*------------------------------------------------------------.
-| yynewstate -- push a new state, which is found in yystate.  |
+| yynewstate -- Push a new state, which is found in yystate.  |
 `------------------------------------------------------------*/
-yynewstate:
+ yynewstate:
   /* In all cases, when you get here, the value and location stacks
      have just been pushed.  So pushing a state here evens the stacks.  */
   yyssp++;
 
-
-/*--------------------------------------------------------------------.
-| yysetstate -- set current state (the top of the stack) to yystate.  |
-`--------------------------------------------------------------------*/
-yysetstate:
-  YYDPRINTF ((stderr, "Entering state %d\n", yystate));
-  YY_ASSERT (0 <= yystate && yystate < YYNSTATES);
-  YY_IGNORE_USELESS_CAST_BEGIN
-  *yyssp = YY_CAST (yy_state_t, yystate);
-  YY_IGNORE_USELESS_CAST_END
+ yysetstate:
+  *yyssp = yystate;
 
   if (yyss + yystacksize - 1 <= yyssp)
-#if !defined yyoverflow && !defined YYSTACK_RELOCATE
-    goto yyexhaustedlab;
-#else
     {
       /* Get the current used size of the three stacks, in elements.  */
-      YYPTRDIFF_T yysize = yyssp - yyss + 1;
+      YYSIZE_T yysize = yyssp - yyss + 1;
 
-# if defined yyoverflow
+#ifdef yyoverflow
       {
         /* Give user a chance to reallocate the stack.  Use copies of
            these so that the &'s don't force the real ones into
            memory.  */
-        yy_state_t *yyss1 = yyss;
         YYSTYPE *yyvs1 = yyvs;
+        yytype_int16 *yyss1 = yyss;
 
         /* Each stack pointer address is followed by the size of the
            data in use in that stack, in bytes.  This used to be a
            conditional around just the two extra args, but that might
            be undefined if yyoverflow is a macro.  */
         yyoverflow (YY_("memory exhausted"),
-                    &yyss1, yysize * YYSIZEOF (*yyssp),
-                    &yyvs1, yysize * YYSIZEOF (*yyvsp),
+                    &yyss1, yysize * sizeof (*yyssp),
+                    &yyvs1, yysize * sizeof (*yyvsp),
                     &yystacksize);
+
         yyss = yyss1;
         yyvs = yyvs1;
       }
-# else /* defined YYSTACK_RELOCATE */
+#else /* no yyoverflow */
+# ifndef YYSTACK_RELOCATE
+      goto yyexhaustedlab;
+# else
       /* Extend the stack our own way.  */
       if (YYMAXDEPTH <= yystacksize)
         goto yyexhaustedlab;
@@ -1975,43 +1883,42 @@ yysetstate:
         yystacksize = YYMAXDEPTH;
 
       {
-        yy_state_t *yyss1 = yyss;
+        yytype_int16 *yyss1 = yyss;
         union yyalloc *yyptr =
-          YY_CAST (union yyalloc *,
-                   YYSTACK_ALLOC (YY_CAST (YYSIZE_T, YYSTACK_BYTES (yystacksize))));
+          (union yyalloc *) YYSTACK_ALLOC (YYSTACK_BYTES (yystacksize));
         if (! yyptr)
           goto yyexhaustedlab;
         YYSTACK_RELOCATE (yyss_alloc, yyss);
         YYSTACK_RELOCATE (yyvs_alloc, yyvs);
-# undef YYSTACK_RELOCATE
+#  undef YYSTACK_RELOCATE
         if (yyss1 != yyssa)
           YYSTACK_FREE (yyss1);
       }
 # endif
+#endif /* no yyoverflow */
 
       yyssp = yyss + yysize - 1;
       yyvsp = yyvs + yysize - 1;
 
-      YY_IGNORE_USELESS_CAST_BEGIN
-      YYDPRINTF ((stderr, "Stack size increased to %ld\n",
-                  YY_CAST (long, yystacksize)));
-      YY_IGNORE_USELESS_CAST_END
+      YYDPRINTF ((stderr, "Stack size increased to %lu\n",
+                  (unsigned long int) yystacksize));
 
       if (yyss + yystacksize - 1 <= yyssp)
         YYABORT;
     }
-#endif /* !defined yyoverflow && !defined YYSTACK_RELOCATE */
+
+  YYDPRINTF ((stderr, "Entering state %d\n", yystate));
 
   if (yystate == YYFINAL)
     YYACCEPT;
 
   goto yybackup;
 
-
 /*-----------.
 | yybackup.  |
 `-----------*/
 yybackup:
+
   /* Do appropriate processing given the current state.  Read a
      lookahead token if we need one and don't already have one.  */
 
@@ -2061,13 +1968,15 @@ yybackup:
 
   /* Shift the lookahead token.  */
   YY_SYMBOL_PRINT ("Shifting", yytoken, &yylval, &yylloc);
+
+  /* Discard the shifted token.  */
+  yychar = YYEMPTY;
+
   yystate = yyn;
   YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN
   *++yyvsp = yylval;
   YY_IGNORE_MAYBE_UNINITIALIZED_END
 
-  /* Discard the shifted token.  */
-  yychar = YYEMPTY;
   goto yynewstate;
 
 
@@ -2082,7 +1991,7 @@ yydefault:
 
 
 /*-----------------------------.
-| yyreduce -- do a reduction.  |
+| yyreduce -- Do a reduction.  |
 `-----------------------------*/
 yyreduce:
   /* yyn is the number of a rule to reduce with.  */
@@ -2102,860 +2011,1287 @@ yyreduce:
   YY_REDUCE_PRINT (yyn);
   switch (yyn)
     {
-  case 2:
-                                                    { p_ast = new AST ( (yyvsp[-1].tok) ); }
+        case 2:
+
+    { p_ast = new AST ( (yyvsp[-1].tok) ); }
+
     break;
 
   case 3:
-                                                    { p_ast = (yyvsp[-2].node); }
+
+    { p_ast = (yyvsp[-2].node); }
+
     break;
 
   case 4:
-                                                    { (yyval.node) = (yyvsp[-1].node); }
+
+    { (yyval.node) = (yyvsp[-1].node); }
+
     break;
 
   case 5:
-                                                    { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[-2].tok) ); }
+
+    { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[-2].tok) ); }
+
     break;
 
   case 6:
-                                                    { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[-2].tok) ); }
+
+    { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[-2].tok) ); }
+
     break;
 
   case 7:
-                                                        { (yyval.tok) = (yyvsp[-5].tok); }
+
+    { (yyval.tok) = (yyvsp[-5].tok); }
+
     break;
 
   case 8:
-                                                       { (yyval.tok) = (yyvsp[-5].tok); }
+
+    { (yyval.tok) = (yyvsp[-5].tok); }
+
     break;
 
   case 9:
-                                                    { (yyval.node) = new AST ( (yyvsp[-3].tok), (yyvsp[-1].node) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-3].tok), (yyvsp[-1].node) ); }
+
     break;
 
   case 10:
-                                                    { (yyval.node) = new AST ( (yyvsp[-3].tok), (yyvsp[-1].node) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-3].tok), (yyvsp[-1].node) ); }
+
     break;
 
   case 11:
-                                                    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
+    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 12:
-                                                    { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
+    { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 13:
-                        { (yyval.node) = (yyvsp[0].node); }
+
+    { (yyval.node) = (yyvsp[0].node); }
+
     break;
 
   case 14:
-                        { (yyval.node) = (yyvsp[0].node); }
+
+    { (yyval.node) = (yyvsp[0].node); }
+
     break;
 
   case 15:
-                        { (yyval.node) = (yyvsp[0].node); }
+
+    { (yyval.node) = (yyvsp[0].node); }
+
     break;
 
   case 16:
-                        { (yyval.node) = (yyvsp[0].node); }
+
+    { (yyval.node) = (yyvsp[0].node); }
+
     break;
 
   case 17:
-                        { (yyval.node) = (yyvsp[0].node); }
+
+    { (yyval.node) = (yyvsp[0].node); }
+
     break;
 
   case 18:
-                        { (yyval.node) = (yyvsp[0].node); }
+
+    { (yyval.node) = (yyvsp[0].node); }
+
     break;
 
   case 19:
-                        { (yyval.node) = (yyvsp[0].node); }
+
+    { (yyval.node) = (yyvsp[0].node); }
+
     break;
 
   case 20:
-                        { (yyval.node) = (yyvsp[0].node); }
+
+    { (yyval.node) = (yyvsp[0].node); }
+
     break;
 
   case 21:
-                        { (yyval.node) = (yyvsp[0].node); }
+
+    { (yyval.node) = (yyvsp[0].node); }
+
     break;
 
   case 22:
-                        { (yyval.node) = (yyvsp[0].node); }
+
+    { (yyval.node) = (yyvsp[0].node); }
+
     break;
 
   case 23:
-                        { (yyval.node) = (yyvsp[0].node); }
+
+    { (yyval.node) = (yyvsp[0].node); }
+
     break;
 
   case 24:
-                        { (yyval.node) = (yyvsp[0].node); }
+
+    { (yyval.node) = (yyvsp[0].node); }
+
     break;
 
   case 25:
-                        { (yyval.node) = (yyvsp[0].node); }
+
+    { (yyval.node) = (yyvsp[0].node); }
+
     break;
 
   case 26:
-                        { (yyval.node) = (yyvsp[0].node); }
+
+    { (yyval.node) = (yyvsp[0].node); }
+
     break;
 
   case 27:
-                        { (yyval.node) = new AST (); }
+
+    { (yyval.node) = new AST (); }
+
     break;
 
   case 28:
-                                            { (yyval.node) = p_builder . TypeDef ( (yyvsp[-9].tok), (yyvsp[-6].fqn), (yyvsp[-3].node) ); }
+
+    { (yyval.node) = p_builder . TypeDef ( (yyvsp[-9].tok), (yyvsp[-6].fqn), (yyvsp[-3].node) ); }
+
     break;
 
   case 29:
-                                       { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
+    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 30:
-                                       { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
+    { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 31:
-                { (yyval.node) = (yyvsp[0].fqn); }
+
+    { (yyval.node) = (yyvsp[0].fqn); }
+
     break;
 
   case 32:
-                { (yyval.node) = (yyvsp[0].node); }
+
+    { (yyval.node) = (yyvsp[0].node); }
+
     break;
 
   case 33:
-                                        { (yyval.node) = new AST ( (yyvsp[-6].tok), (yyvsp[-4].fqn), (yyvsp[-2].node) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-6].tok), (yyvsp[-4].fqn), (yyvsp[-2].node) ); }
+
     break;
 
   case 34:
-             { (yyval.node) = (yyvsp[0].expr); }
+
+    { (yyval.node) = (yyvsp[0].expr); }
+
     break;
 
   case 35:
-             { (yyval.node) = new AST ( PT_EMPTY ); }
+
+    { (yyval.node) = new AST ( PT_EMPTY ); }
+
     break;
 
   case 36:
-                { (yyval.node) = p_builder . TypeSet ( (yyvsp[-14].tok), (yyvsp[-11].fqn), (yyvsp[-5].node) ); }
+
+    { (yyval.node) = p_builder . TypeSet ( (yyvsp[-14].tok), (yyvsp[-11].fqn), (yyvsp[-5].node) ); }
+
     break;
 
   case 37:
-                                    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
+    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 38:
-                                    { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
+    { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 39:
-                                                { (yyval.node) = p_builder . FmtDef ( (yyvsp[-5].tok), (yyvsp[-2].fqn), 0 ); }
+
+    { (yyval.node) = p_builder . FmtDef ( (yyvsp[-5].tok), (yyvsp[-2].fqn), 0 ); }
+
     break;
 
   case 40:
-                                                { (yyval.node) = p_builder . FmtDef ( (yyvsp[-6].tok), (yyvsp[-2].fqn), (yyvsp[-3].fqn) ); }
+
+    { (yyval.node) = p_builder . FmtDef ( (yyvsp[-6].tok), (yyvsp[-2].fqn), (yyvsp[-3].fqn) ); }
+
     break;
 
   case 41:
-                                                                 { (yyval.node) = p_builder . ConstDef ( (yyvsp[-8].tok), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
+
+    { (yyval.node) = p_builder . ConstDef ( (yyvsp[-8].tok), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
+
     break;
 
   case 42:
-                                             { (yyval.node) = p_builder . AliasDef ( (yyvsp[-6].tok), (yyvsp[-3].fqn), (yyvsp[-2].fqn) ); }
+
+    { (yyval.node) = p_builder . AliasDef ( (yyvsp[-6].tok), (yyvsp[-3].fqn), (yyvsp[-2].fqn) ); }
+
     break;
 
   case 43:
-                                                { (yyval.node) = (yyvsp[-1].node); }
+
+    { (yyval.node) = (yyvsp[-1].node); }
+
     break;
 
   case 44:
-                                                       { (yyval.node) = p_builder . UntypedFunctionDecl ( (yyvsp[-6].tok), (yyvsp[-3].fqn) ); }
+
+    { (yyval.node) = p_builder . UntypedFunctionDecl ( (yyvsp[-6].tok), (yyvsp[-3].fqn) ); }
+
     break;
 
   case 45:
-                                                       { (yyval.node) = p_builder . RowlenFunctionDecl ( (yyvsp[-6].tok), (yyvsp[-3].fqn) ); }
+
+    { (yyval.node) = p_builder . RowlenFunctionDecl ( (yyvsp[-6].tok), (yyvsp[-3].fqn) ); }
+
     break;
 
   case 46:
-                { (yyval.node) = p_builder . FunctionDecl ( (yyvsp[-8].tok), false, (yyvsp[-6].node), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-3].node), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+
+    { (yyval.node) = p_builder . FunctionDecl ( (yyvsp[-8].tok), false, (yyvsp[-6].node), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-3].node), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+
     break;
 
   case 47:
-                                                                        { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
     break;
 
   case 48:
-                                                                        { (yyval.node) = (yyvsp[-3].node); }
+
+    { (yyval.node) = (yyvsp[-3].node); }
+
     break;
 
   case 49:
-                                        { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
+    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 50:
-                                        { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
+    { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 51:
-                                                { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-1].fqn) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-1].fqn) ); }
+
     break;
 
   case 52:
-                                                { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].fqn) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].fqn) ); }
+
     break;
 
   case 53:
-                                        { (yyval.node) = new AST (); }
+
+    { (yyval.node) = new AST (); }
+
     break;
 
   case 54:
-                                        { (yyval.node) = (yyvsp[-1].node); }
+
+    { (yyval.node) = (yyvsp[-1].node); }
+
     break;
 
   case 55:
-                                                 { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
     break;
 
   case 56:
-                                                 { (yyval.node) = (yyvsp[-2].node); }
+
+    { (yyval.node) = (yyvsp[-2].node); }
+
     break;
 
   case 57:
-                                                  { (yyval.node) = (yyvsp[-2].node); }
+
+    { (yyval.node) = (yyvsp[-2].node); }
+
     break;
 
   case 58:
-                                                                        { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
     break;
 
   case 59:
-                                                                        { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), new AST (), (yyvsp[-1].node) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), new AST (), (yyvsp[-1].node) ); }
+
     break;
 
   case 60:
-                                                                        { (yyval.node) = new AST ( (yyvsp[-5].tok), new AST (), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-5].tok), new AST (), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+
     break;
 
   case 61:
-                                                                        { (yyval.node) = new AST ( (yyvsp[-6].tok), (yyvsp[-4].node), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-6].tok), (yyvsp[-4].node), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+
     break;
 
   case 62:
-                                                                        { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+
     break;
 
   case 63:
-                                    { (yyval.node) = (yyvsp[-1].node); }
+
+    { (yyval.node) = (yyvsp[-1].node); }
+
     break;
 
   case 64:
-                            { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
+    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 65:
-                            { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
+    { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 66:
-                                                                { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), new AST ( (yyvsp[-1].tok) ), new AST () ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), new AST ( (yyvsp[-1].tok) ), new AST () ); }
+
     break;
 
   case 67:
-                                                                { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-2].node), new AST ( (yyvsp[-1].tok) ), new AST ( (yyvsp[-3].tok) ) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-2].node), new AST ( (yyvsp[-1].tok) ), new AST ( (yyvsp[-3].tok) ) ); }
+
     break;
 
   case 68:
-                                        { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
     break;
 
   case 69:
-                                        { (yyval.node) = new AST ( (yyvsp[-4].tok) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-4].tok) ); }
+
     break;
 
   case 70:
-                                            { (yyval.node) = new AST ( PT_EMPTY ); }
+
+    { (yyval.node) = new AST ( PT_EMPTY ); }
+
     break;
 
   case 71:
-                                            { (yyval.node) = (yyvsp[-2].fqn); }
+
+    { (yyval.node) = (yyvsp[-2].fqn); }
+
     break;
 
   case 73:
-                                                                        { (yyval.node) = (yyvsp[-3].node); }
+
+    { (yyval.node) = (yyvsp[-3].node); }
+
     break;
 
   case 74:
-                                { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
+    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 75:
-                                { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
+    { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 76:
-                                                    { (yyval.node) = new AST ( (yyvsp[-3].tok), (yyvsp[-2].expr) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-3].tok), (yyvsp[-2].expr) ); }
+
     break;
 
   case 77:
-                                                    { (yyval.node) = (yyvsp[0].node); }
+
+    { (yyval.node) = (yyvsp[0].node); }
+
     break;
 
   case 78:
-                                                                   { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
+
     break;
 
   case 79:
-                                                                   { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
+
     break;
 
   case 80:
-                                              { (yyval.node) = (yyvsp[-1].node); }
+
+    { (yyval.node) = (yyvsp[-1].node); }
+
     break;
 
   case 81:
-                                                          { (yyval.node) = (yyvsp[-1].node); }
+
+    { (yyval.node) = (yyvsp[-1].node); }
+
     break;
 
   case 82:
-                                                          { (yyval.node) = (yyvsp[-1].node); }
+
+    { (yyval.node) = (yyvsp[-1].node); }
+
     break;
 
   case 83:
-                { (yyval.node) = p_builder . FunctionDecl ( (yyvsp[-8].tok), true, (yyvsp[-6].node), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-3].node), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+
+    { (yyval.node) = p_builder . FunctionDecl ( (yyvsp[-8].tok), true, (yyvsp[-6].node), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-3].node), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+
     break;
 
   case 84:
-        { (yyval.node) = p_builder . FunctionDecl ( (yyvsp[-16].tok), false, (yyvsp[-8].node), (yyvsp[-7].node), (yyvsp[-6].fqn), (yyvsp[-5].node), (yyvsp[-4].node), (yyvsp[-3].node) ); }
+
+    { (yyval.node) = p_builder . FunctionDecl ( (yyvsp[-16].tok), false, (yyvsp[-8].node), (yyvsp[-7].node), (yyvsp[-6].fqn), (yyvsp[-5].node), (yyvsp[-4].node), (yyvsp[-3].node) ); }
+
     break;
 
   case 85:
-            { (yyval.node) = p_builder . PhysicalDecl ( (yyvsp[-8].tok), (yyvsp[-5].node), (yyvsp[-4].node), (yyvsp[-3].fqn), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+
+    { (yyval.node) = p_builder . PhysicalDecl ( (yyvsp[-8].tok), (yyvsp[-5].node), (yyvsp[-4].node), (yyvsp[-3].fqn), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+
     break;
 
   case 86:
-                                                        { (yyval.node) = (yyvsp[0].node); }
+
+    { (yyval.node) = (yyvsp[0].node); }
+
     break;
 
   case 87:
-                                                        { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-1].node) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-1].node) ); }
+
     break;
 
   case 88:
-                { (yyval.node) = new AST ( (yyvsp[-9].tok), (yyvsp[-4].node) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-9].tok), (yyvsp[-4].node) ); }
+
     break;
 
   case 89:
-                { (yyval.node) = (yyvsp[-3].node); }
+
+    { (yyval.node) = (yyvsp[-3].node); }
+
     break;
 
   case 90:
-                                { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
+    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 91:
-                                { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
+    { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 92:
-        { (yyval.node) = new AST ( PT_EMPTY ); }
+
+    { (yyval.node) = new AST ( PT_EMPTY ); }
+
     break;
 
   case 93:
-        { (yyval.node) = new AST ( (yyvsp[-10].tok), (yyvsp[-4].node) ) ; }
+
+    { (yyval.node) = new AST ( (yyvsp[-10].tok), (yyvsp[-4].node) ) ; }
+
     break;
 
   case 94:
-        { (yyval.node) = new AST ( (yyvsp[-10].tok), (yyvsp[-4].node) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-10].tok), (yyvsp[-4].node) ); }
+
     break;
 
   case 95:
-        { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-3].fqn) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-3].fqn) ); }
+
     break;
 
   case 96:
-                { (yyval.node) = p_builder . TableDef ( (yyvsp[-11].tok), (yyvsp[-8].fqn), (yyvsp[-7].node), (yyvsp[-3].node) ); }
+
+    { (yyval.node) = p_builder . TableDef ( (yyvsp[-11].tok), (yyvsp[-8].fqn), (yyvsp[-7].node), (yyvsp[-3].node) ); }
+
     break;
 
   case 97:
-                                                                    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
     break;
 
   case 98:
-                                                                    { (yyval.node) = (yyvsp[-2].node); }
+
+    { (yyval.node) = (yyvsp[-2].node); }
+
     break;
 
   case 99:
-                                    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].fqn) ); }
+
+    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].fqn) ); }
+
     break;
 
   case 100:
-                                    { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].fqn) ); }
+
+    { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].fqn) ); }
+
     break;
 
   case 101:
-                                    { (yyval.node) = new AST ( PT_EMPTY ); }
+
+    { (yyval.node) = new AST ( PT_EMPTY ); }
+
     break;
 
   case 102:
-                                    { (yyval.node) = (yyvsp[-1].node); }
+
+    { (yyval.node) = (yyvsp[-1].node); }
+
     break;
 
   case 103:
-                            { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
+    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 104:
-                            { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
+    { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 105:
-                                                                        { (yyval.node) = (yyvsp[0].node); }
+
+    { (yyval.node) = (yyvsp[0].node); }
+
     break;
 
   case 106:
-                                                                        { (yyval.node) = (yyvsp[0].node); }
+
+    { (yyval.node) = (yyvsp[0].node); }
+
     break;
 
   case 107:
-                                                                        { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-2].expr) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-2].expr) ); }
+
     break;
 
   case 108:
-                                                                        { (yyval.node) = new AST ( (yyvsp[-8].tok), (yyvsp[-2].expr) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-8].tok), (yyvsp[-2].expr) ); }
+
     break;
 
   case 109:
-                                                                        { (yyval.node) = new AST ( (yyvsp[-2].tok), (yyvsp[-1].node) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-2].tok), (yyvsp[-1].node) ); }
+
     break;
 
   case 110:
-                                                                        { (yyval.node) = new AST ( (yyvsp[-2].tok), (yyvsp[-1].node) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-2].tok), (yyvsp[-1].node) ); }
+
     break;
 
   case 111:
-                                                                        { (yyval.node) = new AST ( (yyvsp[-3].tok), (yyvsp[-1].node) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-3].tok), (yyvsp[-1].node) ); }
+
     break;
 
   case 112:
-                                                                        { (yyval.node) = new AST ( (yyvsp[-8].tok), (yyvsp[-4].fqn) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-8].tok), (yyvsp[-4].fqn) ); }
+
     break;
 
   case 113:
-                                                                        { (yyval.node) = new AST (); }
+
+    { (yyval.node) = new AST (); }
+
     break;
 
   case 114:
-                                                   { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+
     break;
 
   case 115:
-                                                    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
     break;
 
   case 116:
-                                                    { (yyval.node) = (yyvsp[-2].node); }
+
+    { (yyval.node) = (yyvsp[-2].node); }
+
     break;
 
   case 117:
-                                    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
+    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 118:
-                                    { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
+    { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 119:
-                    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
     break;
 
   case 120:
-                    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
     break;
 
   case 121:
-                    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
     break;
 
   case 122:
-                                                { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+
     break;
 
   case 123:
-                                                { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+
     break;
 
   case 124:
-                                                        { (yyval.node) = new AST ( (yyvsp[-10].tok), (yyvsp[-5].node), (yyvsp[-2].fqn), (yyvsp[-1].node) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-10].tok), (yyvsp[-5].node), (yyvsp[-2].fqn), (yyvsp[-1].node) ); }
+
     break;
 
   case 125:
-                                                        { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].fqn), (yyvsp[-1].node) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].fqn), (yyvsp[-1].node) ); }
+
     break;
 
   case 126:
-                                                        { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].fqn), (yyvsp[-1].node) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].fqn), (yyvsp[-1].node) ); }
+
     break;
 
   case 127:
-                                                            {  (yyval.node) = new AST ( (yyvsp[-6].tok), (yyvsp[-4].node), (yyvsp[-2].node) ); }
+
+    {  (yyval.node) = new AST ( (yyvsp[-6].tok), (yyvsp[-4].node), (yyvsp[-2].node) ); }
+
     break;
 
   case 128:
-                                                            {  (yyval.node) = new AST ( (yyvsp[-6].tok), (yyvsp[-4].node), (yyvsp[-2].expr) ); }
+
+    {  (yyval.node) = new AST ( (yyvsp[-6].tok), (yyvsp[-4].node), (yyvsp[-2].expr) ); }
+
     break;
 
   case 129:
-                                                            {  (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node) ); }
+
+    {  (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node) ); }
+
     break;
 
   case 130:
-                                { (yyval.node) = (yyvsp[0].fqn); }
+
+    { (yyval.node) = (yyvsp[0].fqn); }
+
     break;
 
   case 131:
-                                { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
     break;
 
   case 132:
-                                    { (yyval.node) = new AST (); }
+
+    { (yyval.node) = new AST (); }
+
     break;
 
   case 133:
-                                    { (yyval.node) = (yyvsp[-1].node); }
+
+    { (yyval.node) = (yyvsp[-1].node); }
+
     break;
 
   case 134:
-                        { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
+    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 135:
-                        { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
+    { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 136:
-                                                        { (yyval.node) = new AST (); }
+
+    { (yyval.node) = new AST (); }
+
     break;
 
   case 137:
-                                                        { (yyval.node) = new AST ( (yyvsp[-6].tok), new AST ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-6].tok), new AST ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
+
     break;
 
   case 138:
-                                                        { (yyval.node) = new AST ( (yyvsp[-6].tok), new AST ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-6].tok), new AST ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
+
     break;
 
   case 139:
-                                                        { (yyval.node) = new AST ( (yyvsp[-6].tok), new AST ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-6].tok), new AST ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
+
     break;
 
   case 140:
-                                                { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-3].node), new AST ( (yyvsp[-2].tok) ) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-3].node), new AST ( (yyvsp[-2].tok) ) ); }
+
     break;
 
   case 141:
-                                                { (yyval.node) = new AST ( (yyvsp[-6].tok), (yyvsp[-3].node), new AST ( (yyvsp[-2].tok) ) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-6].tok), (yyvsp[-3].node), new AST ( (yyvsp[-2].tok) ) ); }
+
     break;
 
   case 142:
-                                                { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), new AST ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), new AST ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
+
     break;
 
   case 143:
-                                                { (yyval.node) = new AST ( (yyvsp[-8].tok), (yyvsp[-5].node), new AST ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-8].tok), (yyvsp[-5].node), new AST ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
+
     break;
 
   case 144:
-                                                                                   { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-3].node), (yyvsp[-2].fqn), (yyvsp[-1].node) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-3].node), (yyvsp[-2].fqn), (yyvsp[-1].node) ); }
+
     break;
 
   case 145:
-                                                                            { (yyval.node) = new AST (); }
+
+    { (yyval.node) = new AST (); }
+
     break;
 
   case 146:
-                                                                            { (yyval.node) = (yyvsp[-3].node); }
+
+    { (yyval.node) = (yyvsp[-3].node); }
+
     break;
 
   case 147:
-                                        { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
+    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 148:
-                                        { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
+    { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 149:
-                                                            { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-3].fqn), (yyvsp[-1].node) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-3].fqn), (yyvsp[-1].node) ); }
+
     break;
 
   case 150:
-                                                            { (yyval.node) = (yyvsp[0].node); }
+
+    { (yyval.node) = (yyvsp[0].node); }
+
     break;
 
   case 151:
-                { (yyval.node) = (yyvsp[0].fqn); }
+
+    { (yyval.node) = (yyvsp[0].fqn); }
+
     break;
 
   case 152:
-                { (yyval.node) = (yyvsp[0].expr); }
+
+    { (yyval.node) = (yyvsp[0].expr); }
+
     break;
 
   case 153:
-                                                                { (yyval.node) = p_builder . DatabaseDef ( (yyvsp[-6].tok), (yyvsp[-3].fqn), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+
+    { (yyval.node) = p_builder . DatabaseDef ( (yyvsp[-6].tok), (yyvsp[-3].fqn), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+
     break;
 
   case 154:
-                                           { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
     break;
 
   case 155:
-                                           { (yyval.node) = (yyvsp[-1].fqn); }
+
+    { (yyval.node) = (yyvsp[-1].fqn); }
+
     break;
 
   case 156:
-                                                                { (yyval.node) = (yyvsp[-3].node); }
+
+    { (yyval.node) = (yyvsp[-3].node); }
+
     break;
 
   case 157:
-                                                                { (yyval.node) = new AST ( (yyvsp[-4].tok) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-4].tok) ); }
+
     break;
 
   case 158:
-                              { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
+    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 159:
-                                { (yyval.node) = new AST (); }
+
+    { (yyval.node) = new AST (); }
+
     break;
 
   case 160:
-                              { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
+    { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 161:
-                                { (yyval.node) = (yyvsp[-1].node); }
+
+    { (yyval.node) = (yyvsp[-1].node); }
+
     break;
 
   case 162:
-        { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-3].fqn), (yyvsp[-2].fqn) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-3].fqn), (yyvsp[-2].fqn) ); }
+
     break;
 
   case 163:
-        { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-3].fqn), (yyvsp[-2].fqn) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-3].fqn), (yyvsp[-2].fqn) ); }
+
     break;
 
   case 164:
-                    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
     break;
 
   case 165:
-                    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
     break;
 
   case 166:
-                                           { (yyval.node) = p_builder . Include ( (yyvsp[-2].tok), (yyvsp[-1].tok) ); }
+
+    { (yyval.node) = p_builder . Include ( (yyvsp[-2].tok), (yyvsp[-1].tok) ); }
+
     break;
 
   case 167:
-                                    { (yyval.expr) = (yyvsp[-1].expr); }
+
+    { (yyval.expr) = (yyvsp[-1].expr); }
+
     break;
 
   case 168:
-                             { (yyval.expr) = new AST_Expr ( (yyvsp[0].expr) ); }
+
+    { (yyval.expr) = new AST_Expr ( (yyvsp[0].expr) ); }
+
     break;
 
   case 169:
-                             { (yyval.expr) = (yyvsp[-2].expr); (yyval.expr) -> AddNode ( (yyvsp[0].expr) ); }
+
+    { (yyval.expr) = (yyvsp[-2].expr); (yyval.expr) -> AddNode ( (yyvsp[0].expr) ); }
+
     break;
 
   case 170:
-                                    { (yyval.expr) = new AST_Expr ( (yyvsp[0].fqn) ); }
+
+    { (yyval.expr) = new AST_Expr ( (yyvsp[0].fqn) ); }
+
     break;
 
   case 171:
-                                    { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+
+    { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+
     break;
 
   case 172:
-                                    { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+
+    { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+
     break;
 
   case 173:
-                                    { (yyval.expr) = (yyvsp[0].expr); }
+
+    { (yyval.expr) = (yyvsp[0].expr); }
+
     break;
 
   case 174:
-                                    { (yyval.expr) = (yyvsp[0].expr); }
+
+    { (yyval.expr) = (yyvsp[0].expr); }
+
     break;
 
   case 175:
-                                    { (yyval.expr) = (yyvsp[0].expr); }
+
+    { (yyval.expr) = (yyvsp[0].expr); }
+
     break;
 
   case 176:
-                                    { (yyval.expr) = (yyvsp[0].expr); }
+
+    { (yyval.expr) = (yyvsp[0].expr); }
+
     break;
 
   case 177:
-                                    { (yyval.expr) = (yyvsp[0].expr); }
+
+    { (yyval.expr) = (yyvsp[0].expr); }
+
     break;
 
   case 178:
-                                    { (yyval.expr) = (yyvsp[0].expr); }
+
+    { (yyval.expr) = (yyvsp[0].expr); }
+
     break;
 
   case 179:
-                                    { (yyval.expr) = (yyvsp[0].expr); }
+
+    { (yyval.expr) = (yyvsp[0].expr); }
+
     break;
 
   case 180:
-                                    { (yyval.expr) = (yyvsp[-1].expr); }
+
+    { (yyval.expr) = (yyvsp[-1].expr); }
+
     break;
 
   case 181:
-                                    { (yyval.expr) = (yyvsp[0].expr); }
+
+    { (yyval.expr) = (yyvsp[0].expr); }
+
     break;
 
   case 182:
-                                    { (yyval.expr) = (yyvsp[0].expr); }
+
+    { (yyval.expr) = (yyvsp[0].expr); }
+
     break;
 
   case 183:
-                                    { (yyval.expr) = (yyvsp[0].expr); }
+
+    { (yyval.expr) = (yyvsp[0].expr); }
+
     break;
 
   case 184:
-        { (yyval.expr) = new AST_Expr ( (yyvsp[-8].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-6].node) ); (yyval.expr) -> AddNode ( (yyvsp[-5].fqn) ); (yyval.expr) -> AddNode ( (yyvsp[-4].node) ); (yyval.expr) -> AddNode ( (yyvsp[-2].node) ); }
+
+    { (yyval.expr) = new AST_Expr ( (yyvsp[-8].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-6].node) ); (yyval.expr) -> AddNode ( (yyvsp[-5].fqn) ); (yyval.expr) -> AddNode ( (yyvsp[-4].node) ); (yyval.expr) -> AddNode ( (yyvsp[-2].node) ); }
+
     break;
 
   case 185:
-                                                { (yyval.node) = new AST ( PT_EMPTY ); }
+
+    { (yyval.node) = new AST ( PT_EMPTY ); }
+
     break;
 
   case 186:
-                                                { (yyval.node) = (yyvsp[-2].node); }
+
+    { (yyval.node) = (yyvsp[-2].node); }
+
     break;
 
   case 187:
-                                    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
+    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 188:
-                                    { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
+    { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 189:
-                    { (yyval.node) = (yyvsp[0].fqn); }
+
+    { (yyval.node) = (yyvsp[0].fqn); }
+
     break;
 
   case 190:
-                    { (yyval.node) = (yyvsp[0].node); }
+
+    { (yyval.node) = (yyvsp[0].node); }
+
     break;
 
   case 191:
-                    { (yyval.node) = (yyvsp[0].expr); }
+
+    { (yyval.node) = (yyvsp[0].expr); }
+
     break;
 
   case 192:
-                            { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
     break;
 
   case 193:
-                            { (yyval.node) = (yyvsp[0].node); }
+
+    { (yyval.node) = (yyvsp[0].node); }
+
     break;
 
   case 194:
-                                                                        { (yyval.node) = (yyvsp[-3].node); }
+
+    { (yyval.node) = (yyvsp[-3].node); }
+
     break;
 
   case 195:
-                                { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].expr) ); }
+
+    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].expr) ); }
+
     break;
 
   case 196:
-                                { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].expr) ); }
+
+    { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].expr) ); }
+
     break;
 
   case 197:
-                                    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
     break;
 
   case 198:
-                                    { (yyval.node) = (yyvsp[-1].node); }
+
+    { (yyval.node) = (yyvsp[-1].node); }
+
     break;
 
   case 199:
-                            { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].expr) ); }
+
+    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].expr) ); }
+
     break;
 
   case 200:
-                            { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].expr) ); }
+
+    { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].expr) ); }
+
     break;
 
   case 201:
-                                { (yyval.expr) = new AST_Expr ( (yyvsp[-3].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-1].tok) ); }
+
+    { (yyval.expr) = new AST_Expr ( (yyvsp[-3].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-1].tok) ); }
+
     break;
 
   case 202:
-                                { (yyval.expr) = new AST_Expr ( (yyvsp[-3].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-1].tok) ); }
+
+    { (yyval.expr) = new AST_Expr ( (yyvsp[-3].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-1].tok) ); }
+
     break;
 
   case 203:
-                                { (yyval.expr) = new AST_Expr ( (yyvsp[-3].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-1].tok) ); }
+
+    { (yyval.expr) = new AST_Expr ( (yyvsp[-3].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-1].tok) ); }
+
     break;
 
   case 204:
-                 { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+
+    { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+
     break;
 
   case 205:
-                { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+
+    { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+
     break;
 
   case 206:
-                        { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+
+    { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+
     break;
 
   case 207:
-                        { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+
+    { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+
     break;
 
   case 208:
-                                                                    { (yyval.expr) = new AST_Expr ( (yyvsp[-8].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-3].node) ); }
+
+    { (yyval.expr) = new AST_Expr ( (yyvsp[-8].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-3].node) ); }
+
     break;
 
   case 209:
-                { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+
+    { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+
     break;
 
   case 210:
-                { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+
+    { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+
     break;
 
   case 211:
-                                 { (yyval.expr) = new AST_Expr ( (yyvsp[-4].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-1].expr) ); }
+
+    { (yyval.expr) = new AST_Expr ( (yyvsp[-4].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-1].expr) ); }
+
     break;
 
   case 212:
-                                                  { (yyval.expr) = new AST_Expr ( (yyvsp[-6].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-3].node) ); (yyval.expr) -> AddNode ( (yyvsp[-1].expr) ); }
+
+    { (yyval.expr) = new AST_Expr ( (yyvsp[-6].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-3].node) ); (yyval.expr) -> AddNode ( (yyvsp[-1].expr) ); }
+
     break;
 
   case 213:
-                                        { (yyval.node) = (yyvsp[0].node); }
+
+    { (yyval.node) = (yyvsp[0].node); }
+
     break;
 
   case 214:
-                                        { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-3].fqn), (yyvsp[-1].fqn) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-3].fqn), (yyvsp[-1].fqn) ); }
+
     break;
 
   case 215:
-                                                            { (yyval.expr) = new AST_Expr ( (yyvsp[-5].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-3].fqn) ); (yyval.expr) -> AddNode ( (yyvsp[-1].fqn) ); }
+
+    { (yyval.expr) = new AST_Expr ( (yyvsp[-5].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-3].fqn) ); (yyval.expr) -> AddNode ( (yyvsp[-1].fqn) ); }
+
     break;
 
   case 216:
-        {   /* remove leading '.'*/
+
+    {   /* remove leading '.'*/
             (yyval.expr) = new AST_Expr ( (yyvsp[-4].tok) );
             (yyval.expr) -> AddNode ( (yyvsp[-2].fqn) );
             AST * ident = new AST ( PT_IDENT );
@@ -2963,110 +3299,163 @@ yyreduce:
             ident -> AddNode ( & t );
             (yyval.expr) -> AddNode ( ident );
         }
+
     break;
 
   case 217:
-        { (yyval.expr) = new AST_Expr ( (yyvsp[-8].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-6].fqn) ); (yyval.expr) -> AddNode ( (yyvsp[-4].expr) ); (yyval.expr) -> AddNode ( (yyvsp[-1].fqn) ); }
+
+    { (yyval.expr) = new AST_Expr ( (yyvsp[-8].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-6].fqn) ); (yyval.expr) -> AddNode ( (yyvsp[-4].expr) ); (yyval.expr) -> AddNode ( (yyvsp[-1].fqn) ); }
+
     break;
 
   case 218:
-                                { (yyval.fqn) = (yyvsp[-1].fqn); }
+
+    { (yyval.fqn) = (yyvsp[-1].fqn); }
+
     break;
 
   case 219:
-                                                        { (yyval.fqn) = new AST_FQN ( (yyvsp[-3].tok) ); (yyval.fqn) -> AddNode ( (yyvsp[-1].tok) ); }
+
+    { (yyval.fqn) = new AST_FQN ( (yyvsp[-3].tok) ); (yyval.fqn) -> AddNode ( (yyvsp[-1].tok) ); }
+
     break;
 
   case 220:
-                                                        { (yyval.fqn) = (yyvsp[-5].fqn); (yyval.fqn) -> AddNode ( (yyvsp[-1].tok) ); }
+
+    { (yyval.fqn) = (yyvsp[-5].fqn); (yyval.fqn) -> AddNode ( (yyvsp[-1].tok) ); }
+
     break;
 
   case 221:
-                                        { (yyval.fqn) = new AST_FQN ( (yyvsp[-3].tok) ); (yyval.fqn) -> AddNode ( (yyvsp[-1].tok) ); }
+
+    { (yyval.fqn) = new AST_FQN ( (yyvsp[-3].tok) ); (yyval.fqn) -> AddNode ( (yyvsp[-1].tok) ); }
+
     break;
 
   case 222:
-                { (yyval.fqn) = (yyvsp[0].fqn); }
+
+    { (yyval.fqn) = (yyvsp[0].fqn); }
+
     break;
 
   case 223:
-                { (yyval.fqn) = (yyvsp[0].fqn); }
+
+    { (yyval.fqn) = (yyvsp[0].fqn); }
+
     break;
 
   case 224:
-                                        { (yyval.fqn) = (yyvsp[-2].fqn); (yyval.fqn) -> SetVersion ( (yyvsp[-1].tok) -> GetValue () ); }
+
+    { (yyval.fqn) = (yyvsp[-2].fqn); (yyval.fqn) -> SetVersion ( (yyvsp[-1].tok) -> GetValue () ); }
+
     break;
 
   case 225:
-        { (yyval.node) = p_builder . ViewDef ( (yyvsp[-14].tok), (yyvsp[-11].fqn), (yyvsp[-7].node), (yyvsp[-4].node), (yyvsp[-2].node) ); }
+
+    { (yyval.node) = p_builder . ViewDef ( (yyvsp[-14].tok), (yyvsp[-11].fqn), (yyvsp[-7].node), (yyvsp[-4].node), (yyvsp[-2].node) ); }
+
     break;
 
   case 226:
-                                { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
+    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 227:
-                                { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
+    { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 228:
-                                                { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].fqn), (yyvsp[-1].fqn) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].fqn), (yyvsp[-1].fqn) ); }
+
     break;
 
   case 229:
-                                    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
     break;
 
   case 230:
-                                    { (yyval.node) = (yyvsp[-1].node); }
+
+    { (yyval.node) = (yyvsp[-1].node); }
+
     break;
 
   case 231:
-                            { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
+    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 232:
-                            { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
+    { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 233:
-                                                                    { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
+
     break;
 
   case 234:
-                                                                    { (yyval.node) = new AST ( (yyvsp[-8].tok), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-8].tok), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
+
     break;
 
   case 235:
-                                                                    { (yyval.node) = new AST ( PT_EMPTY ); }
+
+    { (yyval.node) = new AST ( PT_EMPTY ); }
+
     break;
 
   case 236:
-                                                                    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+
     break;
 
   case 237:
-                                                                    { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-2].node) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-2].node) ); }
+
     break;
 
   case 238:
-                                    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
+    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 239:
-                                    { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
+    { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+
     break;
 
   case 240:
-        { (yyval.node) = new AST ( (yyvsp[-9].tok), (yyvsp[-7].fqn), (yyvsp[-3].node) ); }
+
+    { (yyval.node) = new AST ( (yyvsp[-9].tok), (yyvsp[-7].fqn), (yyvsp[-3].node) ); }
+
     break;
 
   case 241:
-                                    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].fqn) ); }
+
+    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].fqn) ); }
+
     break;
 
   case 242:
-                                    { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].fqn) ); }
+
+    { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].fqn) ); }
+
     break;
 
 
@@ -3095,13 +3484,14 @@ yyreduce:
   /* Now 'shift' the result of the reduction.  Determine what state
      that goes to, based on the state we popped back to and the rule
      number reduced by.  */
-  {
-    const int yylhs = yyr1[yyn] - YYNTOKENS;
-    const int yyi = yypgoto[yylhs] + *yyssp;
-    yystate = (0 <= yyi && yyi <= YYLAST && yycheck[yyi] == *yyssp
-               ? yytable[yyi]
-               : yydefgoto[yylhs]);
-  }
+
+  yyn = yyr1[yyn];
+
+  yystate = yypgoto[yyn - YYNTOKENS] + *yyssp;
+  if (0 <= yystate && yystate <= YYLAST && yycheck[yystate] == *yyssp)
+    yystate = yytable[yystate];
+  else
+    yystate = yydefgoto[yyn - YYNTOKENS];
 
   goto yynewstate;
 
@@ -3133,7 +3523,7 @@ yyerrlab:
           {
             if (yymsg != yymsgbuf)
               YYSTACK_FREE (yymsg);
-            yymsg = YY_CAST (char *, YYSTACK_ALLOC (YY_CAST (YYSIZE_T, yymsg_alloc)));
+            yymsg = (char *) YYSTACK_ALLOC (yymsg_alloc);
             if (!yymsg)
               {
                 yymsg = yymsgbuf;
@@ -3184,10 +3574,12 @@ yyerrlab:
 | yyerrorlab -- error raised explicitly by YYERROR.  |
 `---------------------------------------------------*/
 yyerrorlab:
-  /* Pacify compilers when the user code never invokes YYERROR and the
-     label yyerrorlab therefore never appears in user code.  */
-  if (0)
-    YYERROR;
+
+  /* Pacify compilers like GCC when the user code never invokes
+     YYERROR and the label yyerrorlab therefore never appears in user
+     code.  */
+  if (/*CONSTCOND*/ 0)
+     goto yyerrorlab;
 
   /* Do not reclaim the symbols of the rule whose action triggered
      this YYERROR.  */
@@ -3249,14 +3641,12 @@ yyacceptlab:
   yyresult = 0;
   goto yyreturn;
 
-
 /*-----------------------------------.
 | yyabortlab -- YYABORT comes here.  |
 `-----------------------------------*/
 yyabortlab:
   yyresult = 1;
   goto yyreturn;
-
 
 #if !defined yyoverflow || YYERROR_VERBOSE
 /*-------------------------------------------------.
@@ -3268,10 +3658,6 @@ yyexhaustedlab:
   /* Fall through.  */
 #endif
 
-
-/*-----------------------------------------------------.
-| yyreturn -- parsing is finished, return the result.  |
-`-----------------------------------------------------*/
 yyreturn:
   if (yychar != YYEMPTY)
     {
@@ -3288,7 +3674,7 @@ yyreturn:
   while (yyssp != yyss)
     {
       yydestruct ("Cleanup: popping",
-                  yystos[+*yyssp], yyvsp, p_ast, p_builder, p_sb);
+                  yystos[*yyssp], yyvsp, p_ast, p_builder, p_sb);
       YYPOPSTACK (1);
     }
 #ifndef yyoverflow
