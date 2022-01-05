@@ -125,7 +125,7 @@ size_t KWrtFmt_rc_t ( char * pout, size_t max, const char * fmt, rc_t rc_in )
     {
         struct RC_String out[5];
 
-        Get_RC_Strings(rc, out);
+        Get_RC_Strings(rc_in, out);
         rc = string_printf (pout, max, & needed,
 #if _DEBUGGING
                             "RC(%s:%u:%s %*s,%*s,%*s,%*s,%*s)", GetRCFilename(), GetRCLineno(), GetRCFunction(),
