@@ -87,5 +87,3 @@ ExportStatic( sam-extract true )
 GenerateStaticLibs( align-reader "${ALIGN_READER_SRC}" )
 
 add_compile_definitions( __mod__="libs/align" )
-# add_compile_definitions( _ARCH_BITS=${BITS} )
-

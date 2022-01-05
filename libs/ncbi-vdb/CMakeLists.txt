@@ -97,10 +97,9 @@ endif()
 
 set( SHARED_SRC_DIR ${CMAKE_INSTALL_PREFIX}/vdb_shared_sources )
 
-message("Installing ncbi-vdb interfaces (headers) into ${CMAKE_INSTALL_PREFIX}")
+message("Installing ncbi-vdb interfaces (headers) into ${INST_INCDIR}")
 message("Installing ncbi-vdb shared sources into ${SHARED_SRC_DIR}")
 
-install( DIRECTORY ${CMAKE_SOURCE_DIR}/interfaces DESTINATION ${CMAKE_INSTALL_PREFIX} )
 install( FILES
 	${CMAKE_SOURCE_DIR}/libs/vdb/blob-priv.h
 	${CMAKE_SOURCE_DIR}/libs/vdb/page-map.h

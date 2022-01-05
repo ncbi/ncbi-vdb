@@ -86,7 +86,7 @@ function( ExportStatic name install )
                             ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/lib${name}.a.${MAJVERS}
                             ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/lib${name}.a
                             ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/lib${name}-static.a
-                    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib64
+                    DESTINATION ${INST_LIBDIR}
             )
          endif()
     else()
@@ -95,7 +95,7 @@ function( ExportStatic name install )
         set_target_properties( ${name} PROPERTIES
             ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE})
         if ( ${install} )
-            install( TARGETS ${name} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib64 )
+            install( TARGETS ${name} DESTINATION ${INST_LIBDIR} )
         endif()
     endif()
 endfunction()
@@ -125,7 +125,7 @@ function(MakeLinksShared target name install)
             install( FILES  ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/lib${name}.${SHLX}.${VERSION}
                             ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/lib${name}.${SHLX}.${MAJVERS}
                             ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/lib${name}.${SHLX}
-                    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib64
+                    DESTINATION ${INST_LIBDIR}
         )
         endif()
     else()
@@ -135,8 +135,8 @@ function(MakeLinksShared target name install)
             ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE})
         if ( ${install} )
             install( TARGETS ${target}
-                     ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
-                     RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+                     ARCHIVE DESTINATION ${INST_BINDIR}
+                     RUNTIME DESTINATION ${INST_BINDIR}
             )
         endif()
     endif()
