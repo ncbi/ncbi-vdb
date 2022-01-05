@@ -47,10 +47,6 @@ install( FILES
 	${CMAKE_SOURCE_DIR}/libs/kfg/default.kfg
 	DESTINATION ${SHARED_SRC_DIR}/libs/kfg )
 install( FILES
-	${CMAKE_SOURCE_DIR}/libs/align/samextract-pool.h
-	${CMAKE_SOURCE_DIR}/libs/align/samextract.h
-	DESTINATION ${SHARED_SRC_DIR}/libs/align )
-install( FILES
 	${CMAKE_SOURCE_DIR}/libs/klib/release-vers.h
 	DESTINATION ${SHARED_SRC_DIR}/libs/klib )
 install( FILES
