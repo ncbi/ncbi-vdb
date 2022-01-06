@@ -33,19 +33,8 @@ endforeach()
 add_library( ncbi-vdb STATIC "${VDB_LIB_RD}" )
 ExportStatic( ncbi-vdb true )
 
-set( SHARED_SRC_DIR ${CMAKE_INSTALL_PREFIX}/vdb_shared_sources )
-
 message("Installing ncbi-vdb interfaces (headers) into ${CMAKE_INSTALL_PREFIX}")
-message("Installing ncbi-vdb shared sources into ${SHARED_SRC_DIR}")
-
 install( DIRECTORY ${CMAKE_SOURCE_DIR}/interfaces DESTINATION ${CMAKE_INSTALL_PREFIX} )
-install( FILES
-	${CMAKE_SOURCE_DIR}/libs/kfg/default.kfg
-	DESTINATION ${SHARED_SRC_DIR}/libs/kfg )
-install( FILES
-	${CMAKE_SOURCE_DIR}/libs/vfs/json-response.h
-	${CMAKE_SOURCE_DIR}/libs/vfs/services-priv.h
-	DESTINATION ${SHARED_SRC_DIR}/libs/vfs )
 
 # install( TARGETS ncbi-vdb DESTINATION ${CMAKE_INSTALL_PREFIX} EXPORT FindNcbiVdb)
 # install( EXPORT FindNcbiVdb DESTINATION ${CMAKE_INSTALL_PREFIX} )

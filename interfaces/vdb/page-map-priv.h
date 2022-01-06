@@ -81,6 +81,7 @@ struct PageMapIterator {
 VDB_EXTERN elem_count_t CC PageMapIteratorDataLength_Ext(const PageMapIterator *self);
 VDB_EXTERN elem_count_t CC PageMapIteratorDataOffset_Ext(const PageMapIterator *self);
 VDB_EXTERN row_count_t CC PageMapIteratorRepeatCount_Ext(const PageMapIterator *cself);
+VDB_EXTERN bool CC PageMapIteratorAdvance_Ext(PageMapIterator *self, row_count_t rows);
 VDB_EXTERN bool CC PageMapIteratorNext_Ext(PageMapIterator *self);
 
 #endif /* _h_page_map_ */

@@ -1752,3 +1752,8 @@ LIB_EXPORT row_count_t CC PageMapIteratorRepeatCount_Ext(const PageMapIterator *
 {
     return PageMapIteratorRepeatCount( cself );
 }
+
+LIB_EXPORT bool CC PageMapIteratorAdvance_Ext(PageMapIterator *self, row_count_t rows)
+{
+    return PageMapIteratorAdvance( self, rows );
+}
