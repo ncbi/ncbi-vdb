@@ -91,32 +91,3 @@ elseif( SINGLE_CONFIG )
 else() # XCode
     include( CMakeLists.xcode.txt )
 endif()
-
-################################
-# additional files to install
-
-set( SHARED_SRC_DIR ${CMAKE_INSTALL_PREFIX}/vdb_shared_sources )
-
-message("Installing ncbi-vdb interfaces (headers) into ${INST_INCDIR}")
-message("Installing ncbi-vdb shared sources into ${SHARED_SRC_DIR}")
-
-install( FILES
-	${CMAKE_SOURCE_DIR}/libs/vdb/blob-priv.h
-	${CMAKE_SOURCE_DIR}/libs/vdb/page-map.h
-	DESTINATION ${SHARED_SRC_DIR}/libs/vdb )
-install( FILES
-	${CMAKE_SOURCE_DIR}/libs/kfg/default.kfg
-	DESTINATION ${SHARED_SRC_DIR}/libs/kfg )
-install( FILES
-	${CMAKE_SOURCE_DIR}/libs/align/samextract-pool.h
-	${CMAKE_SOURCE_DIR}/libs/align/samextract.h
-	DESTINATION ${SHARED_SRC_DIR}/libs/align )
-install( FILES
-	${CMAKE_SOURCE_DIR}/libs/klib/release-vers.h
-	DESTINATION ${SHARED_SRC_DIR}/libs/klib )
-install( FILES
-	${CMAKE_SOURCE_DIR}/libs/vfs/json-response.h
-	${CMAKE_SOURCE_DIR}/libs/vfs/services-priv.h
-	DESTINATION ${SHARED_SRC_DIR}/libs/vfs )
-
-

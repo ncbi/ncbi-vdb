@@ -27,25 +27,7 @@
 #ifndef _h_blob_priv_
 #define _h_blob_priv_
 
-#ifndef _h_klib_defs_
-#include <klib/defs.h>
-#endif
-
-#ifndef _h_vdb_blob_
-#include <vdb/blob.h>
-#endif
-
-#ifndef _h_klib_refcount_
-#include <klib/refcount.h>
-#endif
-
-#ifndef _h_klib_data_buffer_
-#include <klib/data-buffer.h>
-#endif
-
-#ifndef _h_vdb_xform_
-#include <vdb/xform.h>
-#endif
+#include <vdb/blob-priv.h>
 
 #define TRACKING_BLOBS 0
 #if TRACKING_BLOBS
@@ -56,18 +38,6 @@
 extern "C" {
 #endif
 
-
-#if _DEBUGGING
-#define VBLOG_HAS_NAME 1
-#endif
-
-/*--------------------------------------------------------------------------
- * forwards
- */
-struct PageMap;
-struct BlobHeaders;
-struct VProduction;
-struct VBlobPageMapCache;
 
 typedef struct PageMapProcessRequest{
     struct PageMap *pm;        /**** deserialized form **/
@@ -89,36 +59,10 @@ typedef struct PageMapProcessRequest{
 } PageMapProcessRequest;
 
 
-/*--------------------------------------------------------------------------
- * VBlob
- */
-struct VBlob
-{
-    int64_t start_id;
-    int64_t stop_id;
-
-    struct PageMap *pm;
-    struct BlobHeaders *headers;
-    struct VBlobPageMapCache *spmc; /* cache for split */
-    KDataBuffer data;
-    KRefcount refcount;
-
-/*    uint32_t row_count; */ /* == stop_id + 1 - start_id */
-    bool no_cache;
-    VByteOrder byte_order;
-#if VBLOG_HAS_NAME
-    const char name[32];
-#endif
-};
-
 struct VBlobPageMapCache {
     int n;
     struct PageMap *pm[1];
 };
-
-#define BlobBufferBits(BLOB) ((uint64_t)KDataBufferBits(&(BLOB)->data))
-#define BlobBufferBytes(BLOB) ((size_t)(KDataBufferBytes(&(BLOB)->data)))
-#define BlobRowCount(BLOB) ((uint32_t)( (uint64_t)((BLOB)->stop_id - (BLOB)->start_id) == UINT64_MAX ? UINT32_MAX : (BLOB)->stop_id + 1 - (BLOB)->start_id ))
 
 #if TRACKING_BLOBS
 /* #define TRACK_BLOB(f,p) fprintf(stderr, "%s %p %d %s:%d:%s\n",#f,(void*)p,*(int*)(&p->refcount),__FILE__,__LINE__,__func__) */

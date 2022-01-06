@@ -38,3 +38,8 @@ core
 *.user
 actual/
 .vs
+test/kdb/user-settings.mkfg
+test/vfs/caching-kfg/unix/user-settings.mkfg
+test/vfs/user-settings.mkfg
+test/vxf/local_config/user-settings.mkfg
+libs/cipher/cipher-1.7/cipher.egg-info
