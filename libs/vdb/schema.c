@@ -61,15 +61,6 @@
 
 
 /*--------------------------------------------------------------------------
- * KDirectory
- */
-static
-void CC KDirRefRelease ( void *item, void *ignore )
-{
-    KDirectoryRelease ( ( const void* ) item );
-}
-
-/*--------------------------------------------------------------------------
  * generic
  */
 
@@ -903,18 +894,6 @@ rc_t CC VSchemaTryOpenFile ( const VSchema *self, const KDirectory *dir, const K
 {
     rc_t rc;
 
-#if _DEBUGGING
-    {
-        char full_name [4096];
-        size_t num_writ;
-        va_list cargs;
-        va_copy ( cargs, args );
-        string_vprintf ( full_name, sizeof( full_name ), &num_writ, name, cargs );
-        PARSE_DEBUG( ("VSchemaTryOpenFile(%s)\n", full_name) );
-        va_end ( cargs );
-    }
-#endif
-
     rc = KDirectoryVResolvePath ( dir, true, path, path_max, name, args );
 
     if ( rc == 0 )
@@ -939,16 +918,18 @@ rc_t CC VSchemaTryOpenFile ( const VSchema *self, const KDirectory *dir, const K
     return rc;
 }
 
-static rc_t VSchemaOpenFile_1 ( const VSchema *self, const KFile **fp, KDirectory const *ndir,
+static rc_t VSchemaOpenFile_1 ( const VSchema *const self, const KFile **fp, KDirectory const *ndir,
                          char *path, size_t path_max, const char *name, va_list args )
 {
     const VSchema *schema = self;
 
+    /* Loop over the list of schema objects */
     for ( schema = self; schema != NULL; schema = schema -> dad ) {
         Vector const *const vec = &schema->inc;
         uint32_t i = VectorStart(vec);
         uint32_t const end = i + VectorLength(vec);
 
+        /* Loop over the list of include paths */
         for ( ; i < end; ++i) {
             char const *const dirname = VectorGet(vec, i);
 
@@ -960,10 +941,17 @@ static rc_t VSchemaOpenFile_1 ( const VSchema *self, const KFile **fp, KDirector
                 if (rc != 0)
                     continue;
 #if _DEBUGGING
-                PARSE_DEBUG( ("VSchemaOpenFile trying '%s'\n", dirname ) );
+                PARSE_DEBUG( ("VSchemaOpenFile looking in '%s'\n", dirname ) );
 #endif
                 *fp = NULL;
-                rc = VSchemaTryOpenFile(self, dir, fp, path, path_max, name, args);
+                { /* since we are in a loop, it is not safe to pass our copy;
+                   * we MUST make a copy and pass that
+                   */
+                    va_list copy;
+                    va_copy(copy, args);
+                    rc = VSchemaTryOpenFile(self, dir, fp, path, path_max, name, copy);
+                    va_end(copy); /* every va_copy needs a matching va_end */
+                }
                 KDirectoryRelease(dir);
                 if (rc == 0 || GetRCState(rc) != rcNotFound)
                     return rc;
@@ -997,6 +985,7 @@ rc_t CC VSchemaOpenFile ( const VSchema *self, const KFile **fp,
     *fp = NULL;
 
     rc = KDirectoryNativeDir(&ndir);
+    assert(rc == 0);
     if (rc)
         return rc;
 
@@ -1015,22 +1004,29 @@ rc_t CC VSchemaOpenFile ( const VSchema *self, const KFile **fp,
  */
 LIB_EXPORT rc_t CC VSchemaVParseFile ( VSchema *self, const char *name, va_list args )
 {
-    rc_t rc;
+    rc_t rc = 0;
 
+    assert(self != NULL);
+    assert(name != NULL);
+    assert(name[0] != '\0');
     if ( self == NULL )
-        rc = RC ( rcVDB, rcSchema, rcOpening, rcSelf, rcNull );
-    else if ( name == NULL )
-        rc = RC ( rcVDB, rcSchema, rcOpening, rcPath, rcNull );
-    else if ( name [ 0 ] == 0 )
-        rc = RC ( rcVDB, rcSchema, rcOpening, rcPath, rcEmpty );
+        return RC ( rcVDB, rcSchema, rcOpening, rcSelf, rcNull );
+    if ( name == NULL )
+        return RC ( rcVDB, rcSchema, rcOpening, rcPath, rcNull );
+    if ( name [ 0 ] == 0 )
+        return RC ( rcVDB, rcSchema, rcOpening, rcPath, rcEmpty );
     else
     {
-        const KFile *f;
+        const KFile *f = NULL;
         char path [ 4096 ];
 
         /* open file using include paths */
-        rc = VSchemaOpenFile ( self, & f, path, sizeof path, name, args );
-
+        { /* we might need to use args again, so make a copy and pass that */
+            va_list copy;
+            va_copy(copy, args);
+            rc = VSchemaOpenFile ( self, & f, path, sizeof path, name, copy );
+            va_end(copy);
+        }
         /* try to open the file according to current directory */
         if ( rc != 0 )
         {
@@ -1038,6 +1034,7 @@ LIB_EXPORT rc_t CC VSchemaVParseFile ( VSchema *self, const char *name, va_list 
             rc = KDirectoryNativeDir ( & wd );
             if ( rc == 0 )
             {
+                /* args is not used again */
                 rc = VSchemaTryOpenFile ( self, wd, & f, path, sizeof path, name, args );
                 if ( rc == 0 )
                 {
