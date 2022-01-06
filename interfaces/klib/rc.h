@@ -77,7 +77,7 @@ KLIB_EXTERN bool CC GetUnreadRCInfo ( rc_t *rc, const char **filename, const cha
     #if defined(__SUNPRO_CC)  &&  __SUNPRO_CC <= 0x590  &&  defined(__cplusplus)
     
         #define SET_RC_FILE_FUNC_LINE( rc ) \
-            SetRCFileFuncLine ( ( rc ), __FILE__, "(unknown)", __LINE__ )
+            SetRCFileFuncLine ( ( rc ), __FILE__, "(N/A)", __LINE__ )
     
     #else
     
@@ -93,45 +93,23 @@ KLIB_EXTERN bool CC GetUnreadRCInfo ( rc_t *rc, const char **filename, const cha
 
 #endif
 
-#ifdef assert
-#define ASSERT_MOD_TARG_CTX()                                    \
-    assert ( ( int ) rcKFG == ( int ) rcSRA + 1 ),               \
-    assert ( ( int ) rcProduction == ( int ) rcExpression + 1 ), \
-    assert ( ( int ) rcFlushing == ( int ) rcInflating + 1 ),    \
-    assert ( ( int ) rcLastModule_v1_1  <= ( 1 << 5 ) ),         \
-    assert ( ( int ) rcLastTarget_v1_1  <= ( 1 << 6 ) ),         \
-    assert ( ( int ) rcLastContext_v1_1  <= ( 1 << 7 ) )
-
-#define ASSERT_OBJ_STATE() \
-    assert ( ( int ) rcLink == ( int ) rcUri + 1 ),              \
-    assert ( ( int ) rcItem == ( int ) rcLibrary + 1 ),          \
-    assert ( ( int ) rcOpen == ( int ) rcOutofrange + 1 ),       \
-    assert ( ( int ) rcLastObject_v1_1  <= ( 1 << 8 ) ),         \
-    assert ( ( int ) rcLastState_v1_1  <= ( 1 << 6 ) )
-#else
-#define ASSERT_MOD_TARG_CTX() ( void ) 0
-
-#define ASSERT_OBJ_STATE() ( void ) 0
-#endif
-
 /* CTX
  *  form a context from parts
  */
 #define CTX( mod, targ, ctx )                                \
-    ( rc_t ) ( ASSERT_MOD_TARG_CTX (),                       \
-               RAW_CTX ( mod, targ, ctx ) )
+    ( rc_t ) ( RAW_CTX ( mod, targ, ctx ) )
 
 /* RC
  *  form a complete return code from parts
  */
 #define SILENT_RC( mod, targ, ctx, obj, state )              \
-    ( rc_t ) ( ASSERT_OBJ_STATE (),                          \
+    ( rc_t ) (                                               \
         CTX ( mod, targ, ctx )    | /* 18 bits */            \
         ( ( rc_t ) ( obj ) << 6 ) | /*  8 bits */            \
         ( ( rc_t ) ( state ) ) )    /*  6 bits */
 
 #define RC( mod, targ, ctx, obj, state )                     \
-    ( rc_t ) ( ASSERT_OBJ_STATE (),                          \
+    ( rc_t ) (                                               \
     SET_RC_FILE_FUNC_LINE (                                  \
         CTX ( mod, targ, ctx )    | /* 18 bits */            \
         ( ( rc_t ) ( obj ) << 6 ) | /*  8 bits */            \
@@ -141,7 +119,7 @@ KLIB_EXTERN bool CC GetUnreadRCInfo ( rc_t *rc, const char **filename, const cha
  *  form an rc but take input from existing CTX()
  */
 #define RC_FROM_CTX( ctx, obj, state )                       \
-    ( rc_t ) ( ASSERT_OBJ_STATE (),                          \
+    ( rc_t ) (                                               \
     SET_RC_FILE_FUNC_LINE (                                  \
         ( ctx )                   | /* 18 bits */            \
         ( ( rc_t ) ( obj ) << 6 ) | /*  8 bits */            \
@@ -204,6 +182,22 @@ KLIB_EXTERN bool CC GetUnreadRCInfo ( rc_t *rc, const char **filename, const cha
 #define GetRCState( rc ) \
     ( enum RCState ) ( ( rc ) & 0x3F )
 
+
+    enum RC_String_Field {
+        rcf_module,
+        rcf_target,
+        rcf_context,
+        rcf_object,
+        rcf_state
+    };
+    struct RC_String {
+        char const *text;
+        size_t size;
+        int value;
+        int field;
+    };
+
+    KLIB_EXTERN void CC Get_RC_Strings(rc_t rc, struct RC_String [5]);
 
 #ifdef __cplusplus
 }

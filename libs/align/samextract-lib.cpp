@@ -48,6 +48,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if LINUX
+#include <unistd.h>
+#define DFL_THREAD_COUNT ((int)sysconf( _SC_NPROCESSORS_ONLN ) - 1)
+#else
+#define DFL_THREAD_COUNT (4)
+#endif
+
 static char * fname_desc = NULL;
 char          curline[READBUF_SZ + 1];
 int           curline_len = 0;
@@ -534,7 +541,7 @@ LIB_EXPORT rc_t CC SAMExtractorMake( SAMExtractor ** state, const KFile * fin,
 
     s->infile  = fin;
     fname_desc = strdup( fname->addr );
-    //    s->fname = fname_desc;
+//    s->fname = fname_desc;
 
     VectorInit( &s->headers, 0, 0 );
     VectorInit( &s->alignments, 0, 0 );
@@ -544,16 +551,7 @@ LIB_EXPORT rc_t CC SAMExtractorMake( SAMExtractor ** state, const KFile * fin,
     s->prev_headers = NULL;
     s->prev_aligns  = NULL;
 
-    s->num_threads = num_threads;
-
-    // Default number of threads to number of cores
-    if ( s->num_threads <= -1 )
-#if LINUX
-        s->num_threads = (int)sysconf( _SC_NPROCESSORS_ONLN ) - 1;
-#else
-    s->num_threads = 8;
-#endif
-
+    s->num_threads = num_threads < 0 ? DFL_THREAD_COUNT : num_threads;
     DBG( "%d threads", s->num_threads );
     DBG( "fname is '%s'", fname_desc );
 
