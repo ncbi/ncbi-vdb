@@ -40,10 +40,6 @@ message("Installing ncbi-vdb shared sources into ${SHARED_SRC_DIR}")
 
 install( DIRECTORY ${CMAKE_SOURCE_DIR}/interfaces DESTINATION ${CMAKE_INSTALL_PREFIX} )
 install( FILES
-	${CMAKE_SOURCE_DIR}/libs/vdb/blob-priv.h
-	${CMAKE_SOURCE_DIR}/libs/vdb/page-map.h
-	DESTINATION ${SHARED_SRC_DIR}/libs/vdb )
-install( FILES
 	${CMAKE_SOURCE_DIR}/libs/kfg/default.kfg
 	DESTINATION ${SHARED_SRC_DIR}/libs/kfg )
 install( FILES
