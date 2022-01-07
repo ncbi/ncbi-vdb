@@ -1,3 +1,4 @@
+#/bin/bash
 # ===========================================================================
 #
 #                            PUBLIC DOMAIN NOTICE
@@ -22,40 +23,22 @@
 #
 # ===========================================================================
 
-if( FLEX_FOUND AND BISON_FOUND )
-    FLEX_TARGET( KfgFlex config-lex.l ${CMAKE_CURRENT_SOURCE_DIR}/config-lex.c
-        COMPILE_FLAGS "--debug --noline" )
-    set( KfgScanner ${FLEX_KfgFlex_OUTPUTS} )
-    BISON_TARGET( KfgGrammar config-grammar.y ${CMAKE_CURRENT_SOURCE_DIR}/config-grammar.c
-        COMPILE_FLAGS "-Wno-other --no-lines -r state" )
-    set( KfgParser ${BISON_KfgGrammar_OUTPUT_SOURCE} )
-    ADD_FLEX_BISON_DEPENDENCY(KfgFlex KfgGrammar)
-else()
-    set( KfgScanner config-lex.c )
-    set( KfgParser config-grammar.c )
-endif()
+#echo $*
 
-set( SRC
-    ${KfgParser}
-    ${KfgScanner}
-    config-aws
-    config
-    docker
-    kart
-    keystore
-    ngc
-    properties
-    report-kfg
-    repository
-)
+# install.sh
+#   installs required .kfg files from $1
+#   to $2 (non-root) or $3 (root)
 
-GenerateStaticLibs( kfg "${SRC}" )
+SRC_DIR=$1
+KONFIG_DIR=$2
+KONFIG_DIR_ROOT=$3
 
-add_compile_definitions (__mod__="libs/kfg")
-add_compile_definitions (_ARCH_BITS=${BITS})
+SCRIPT_DIR=$(cd $(dirname "${BASH_SOURCE[0]}") && pwd)
 
-if ( SINGLE_CONFIG )
-    install( SCRIPT CODE
-        "execute_process(COMMAND /bin/bash -c \"${CMAKE_CURRENT_SOURCE_DIR}/install.sh ${CMAKE_SOURCE_DIR}/interfaces/kfg/ncbi ${CMAKE_INSTALL_PREFIX}/lib64/ncbi /etc/ncbi\" )"
-    )
-endif()
+if [ "$EUID" -eq 0 ]; then
+    $SCRIPT_DIR/install-kfg.sh default.kfg $SRC_DIR $KONFIG_DIR_ROOT $SCRIPT_DIR/kfgsums
+    $SCRIPT_DIR/install-kfg.sh certs.kfg   $SRC_DIR $KONFIG_DIR_ROOT $SCRIPT_DIR/kfgsums
+else
+    $SCRIPT_DIR/install-kfg.sh default.kfg $SRC_DIR $KONFIG_DIR $SCRIPT_DIR/kfgsums
+    $SCRIPT_DIR/install-kfg.sh certs.kfg   $SRC_DIR $KONFIG_DIR $SCRIPT_DIR/kfgsums
+fi
