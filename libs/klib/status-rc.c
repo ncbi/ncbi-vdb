@@ -52,49 +52,62 @@ static char const *Get_RC_String(size_t *const outsize, int const value, char co
     return result;
 }
 
-static char const *Get_RC_String_Module(size_t *const outsize, rc_t const rc)
+static void Get_RC_String_Module(struct RC_String *out, rc_t const rc)
 {
-    return Get_RC_String(outsize, (int)GetRCModule(rc), RCModuleStrings, rcLastModule_v1_2);
+    out->field = rcf_module;
+    out->text = Get_RC_String(&out->size, out->value = (int)GetRCModule(rc), RCModuleStrings, rcLastModule_v1_2);
 }
 
-static char const *Get_RC_String_Target(size_t *const outsize, rc_t const rc)
+static void Get_RC_String_Target(struct RC_String *out, rc_t const rc)
 {
-    int const value = GetRCTarget(rc);
-    char const *result = INVALID;
+    out->field = rcf_target;
+    out->value = GetRCTarget(rc);
+    out->text = INVALID;
 
-    if (value >= rcNoTarg && value <= rcUri)
-        result = RCTargetStrings[value];
-    else if (value == rcProvider)
-        result = RCTargetStrings[rcProvider];
-    *outsize = measure(result);
-    return result;
+    if (out->value >= rcNoTarg && out->value <= rcUri)
+        out->text = RCTargetStrings[out->value];
+    else if (out->value == rcProvider)
+        out->text = RCTargetStrings[rcProvider];
+
+    out->size = measure(out->text);
 }
 
-static char const *Get_RC_String_Context(size_t *const outsize, rc_t const rc)
+static void Get_RC_String_Context(struct RC_String *out, rc_t const rc)
 {
-    return Get_RC_String(outsize, (int)GetRCContext(rc), RCContextStrings, rcLastContext_v1_1);
+    out->field = rcf_context;
+    out->text = Get_RC_String(&out->size, out->value = (int)GetRCContext(rc), RCContextStrings, rcLastContext_v1_1);
 }
 
-static char const *Get_RC_String_Object(size_t *const outsize, rc_t const rc)
+static void Get_RC_String_Object(struct RC_String *out, rc_t const rc)
 {
-    int const value = GetRCObject(rc);
-    char const *result = INVALID;
+    out->field = rcf_object;
+    out->value = GetRCObject(rc);
+    out->text = INVALID;
 
-    if (value == rcNoObj)
-        result = RCObjectStrings[rcNoObj];
-    else if (value > 0) {
-        if (value <= rcUri)
-            result = RCTargetStrings[value];
-        else if (value < rcLastObject_v1_2)
-            result = RCObjectStrings[value - rcUri];
+    if (out->value == rcNoObj)
+        out->text = RCObjectStrings[rcNoObj];
+    else if (out->value > 0) {
+        if (out->value <= rcUri)
+            out->text = RCTargetStrings[out->value];
+        else if (out->value < rcLastObject_v1_2)
+            out->text = RCObjectStrings[out->value - rcUri];
     }
-    *outsize = measure(result);
-    return result;
+    out->size = measure(out->text);
 }
 
-static char const *Get_RC_String_State(size_t *const outsize, rc_t const rc)
+static void Get_RC_String_State(struct RC_String *out, rc_t const rc)
 {
-    return Get_RC_String(outsize, (int)GetRCState(rc), RCStateStrings, rcLastState_v1_1);
+    out->field = rcf_state;
+    out->text = Get_RC_String(&out->size, out->value = (int)GetRCState(rc), RCStateStrings, rcLastState_v1_1);
+}
+
+LIB_EXPORT void CC Get_RC_Strings(rc_t rc, struct RC_String out[5])
+{
+    Get_RC_String_Module(&out[rcf_module], rc);
+    Get_RC_String_Target(&out[rcf_target], rc);
+    Get_RC_String_Context(&out[rcf_context], rc);
+    Get_RC_String_Object(&out[rcf_object], rc);
+    Get_RC_String_State(&out[rcf_state], rc);
 }
 
 size_t KWrtFmt_rc_t ( char * pout, size_t max, const char * fmt, rc_t rc_in )
@@ -110,33 +123,20 @@ size_t KWrtFmt_rc_t ( char * pout, size_t max, const char * fmt, rc_t rc_in )
 
     else if (rc_in != 0)
     {
-        size_t mod_size = 0;
-        size_t targ_size = 0;
-        size_t ctx_size = 0;
-        size_t obj_size = 0;
-        size_t state_size = 0;
-        char const *const mod_str = Get_RC_String_Module (&mod_size  , rc_in);
-        char const *const targ_str = Get_RC_String_Target(&targ_size , rc_in);
-        char const *const ctx_str = Get_RC_String_Context(&ctx_size  , rc_in);
-        char const *const obj_str = Get_RC_String_Object (&obj_size  , rc_in);
-        char const *const state_str = Get_RC_String_State(&state_size, rc_in);
+        struct RC_String out[5];
 
+        Get_RC_Strings(rc_in, out);
+        rc = string_printf (pout, max, & needed,
 #if _DEBUGGING
-        rc = string_printf (pout, max, & needed, "RC(%s:%u:%s %*s,%*s,%*s,%*s,%*s)", 
-                            GetRCFilename(), GetRCLineno(), GetRCFunction(),
-                           (uint32_t)mod_size, mod_str,
-                           (uint32_t)targ_size, targ_str,
-                           (uint32_t)ctx_size, ctx_str,
-                           (uint32_t)obj_size, obj_str,
-                           (uint32_t)state_size, state_str);
+                            "RC(%s:%u:%s %*s,%*s,%*s,%*s,%*s)", GetRCFilename(), GetRCLineno(), GetRCFunction(),
 #else
-        rc = string_printf (pout, max, & needed, "RC(%*s,%*s,%*s,%*s,%*s)", 
-                           (uint32_t)mod_size, mod_str,
-                           (uint32_t)targ_size, targ_str,
-                           (uint32_t)ctx_size, ctx_str,
-                           (uint32_t)obj_size, obj_str,
-                           (uint32_t)state_size, state_str);
+                            "RC(%*s,%*s,%*s,%*s,%*s)",
 #endif
+                            (uint32_t)out[rcf_module].size, out[rcf_module].text,
+                            (uint32_t)out[rcf_target].size, out[rcf_target].text,
+                            (uint32_t)out[rcf_context].size, out[rcf_context].text,
+                            (uint32_t)out[rcf_object].size, out[rcf_object].text,
+                            (uint32_t)out[rcf_state].size, out[rcf_state].text);
     }
     else
     {
@@ -149,3 +149,19 @@ size_t KWrtFmt_rc_t ( char * pout, size_t max, const char * fmt, rc_t rc_in )
 
     return rc != 0 ? 0 : needed;
 }
+
+#include "rc-asserts.h"
+
+#define STATIC_ASSERT(MEMO, EXPR) typedef char BAD_ ## MEMO [(EXPR) ? 0 : (-1)]
+
+STATIC_ASSERT(RC_MODULE_COUNT, ASSERTION_RC_MOD_COUNT);
+STATIC_ASSERT(RC_TARGET_COUNT, ASSERTION_RC_TARG_COUNT);
+STATIC_ASSERT(RC_CONTEXT_COUNT, ASSERTION_RC_CTX_COUNT);
+STATIC_ASSERT(RC_OBJECT_COUNT, ASSERTION_RC_OBJ_COUNT);
+STATIC_ASSERT(RC_STATE_COUNT, ASSERTION_RC_STATE_COUNT);
+
+STATIC_ASSERT(RC_MODULE_EXTENSION, ASSERTION_RC_MOD_EXTENSION);
+STATIC_ASSERT(RC_TARGET_EXTENSION, ASSERTION_RC_TARG_EXTENSION);
+STATIC_ASSERT(RC_CONTEXT_EXTENSION, ASSERTION_RC_CTX_EXTENSION);
+STATIC_ASSERT(RC_OBJECT_EXTENSION, ASSERTION_RC_OBJ_EXTENSION);
+STATIC_ASSERT(RC_STATE_EXTENSION, ASSERTION_RC_STATE_EXTENSION);
