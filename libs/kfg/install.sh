@@ -29,16 +29,16 @@
 #   installs required .kfg files from $1
 #   to $2 (non-root) or $3 (root)
 
-SRC_DIR=$1
-KONFIG_DIR=$2
-KONFIG_DIR_ROOT=$3
-
 SCRIPT_DIR=$(cd $(dirname "${BASH_SOURCE[0]}") && pwd)
+SRC_DIR=$1
 
 if [ "$EUID" -eq 0 ]; then
-    $SCRIPT_DIR/install-kfg.sh default.kfg $SRC_DIR $KONFIG_DIR_ROOT $SCRIPT_DIR/kfgsums
-    $SCRIPT_DIR/install-kfg.sh certs.kfg   $SRC_DIR $KONFIG_DIR_ROOT $SCRIPT_DIR/kfgsums
+    KONFIG_DIR=$3
 else
-    $SCRIPT_DIR/install-kfg.sh default.kfg $SRC_DIR $KONFIG_DIR $SCRIPT_DIR/kfgsums
-    $SCRIPT_DIR/install-kfg.sh certs.kfg   $SRC_DIR $KONFIG_DIR $SCRIPT_DIR/kfgsums
+    KONFIG_DIR=$2
 fi
+KFGSUMS=$SCRIPT_DIR/kfgsums
+
+$SCRIPT_DIR/install-kfg.sh default.kfg $SRC_DIR $KONFIG_DIR $KFGSUMS
+$SCRIPT_DIR/install-kfg.sh certs.kfg   $SRC_DIR $KONFIG_DIR $KFGSUMS
+cp $KFGSUMS $KONFIG_DIR
