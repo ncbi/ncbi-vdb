@@ -77,6 +77,9 @@ struct PageMapIterator {
 #endif
 };
 
+
+VDB_EXTERN rc_t PageMapNewIterator(const struct PageMap *self, PageMapIterator *lhs, uint64_t first_row, uint64_t num_rows);
+
 // these functions are defined as static __inline__ in page-map.h
 VDB_EXTERN elem_count_t CC PageMapIteratorDataLength_Ext(const PageMapIterator *self);
 VDB_EXTERN elem_count_t CC PageMapIteratorDataOffset_Ext(const PageMapIterator *self);

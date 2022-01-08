@@ -175,8 +175,6 @@ int PageMapCompare(const PageMap *a, const PageMap *b);
 /* same but static columns */
 int PageMapCompareStatic(const PageMap *a, const PageMap *b);
 
-VDB_EXTERN rc_t PageMapNewIterator(const PageMap *self, PageMapIterator *lhs, uint64_t first_row, uint64_t num_rows);
-
 static __inline__ bool PageMapIteratorAdvance(PageMapIterator *self, row_count_t rows)
 {
     if (self->cur_row + rows < self->last_row) {
