@@ -152,7 +152,10 @@ size_t KWrtFmt_rc_t ( char * pout, size_t max, const char * fmt, rc_t rc_in )
 
 #include "rc-asserts.h"
 
-#define STATIC_ASSERT(MEMO, EXPR) typedef char BAD_ ## MEMO [(EXPR) ? 0 : (-1)]
+/* creates a typedef for a char array of length 1 or -1,
+ß * the compiler will complain if the length is less than zero.
+ */
+#define STATIC_ASSERT(MEMO, EXPR) typedef char BAD_ ## MEMO [((EXPR) ? (1) : (-1))]
 
 STATIC_ASSERT(RC_MODULE_COUNT, ASSERTION_RC_MOD_COUNT);
 STATIC_ASSERT(RC_TARGET_COUNT, ASSERTION_RC_TARG_COUNT);
