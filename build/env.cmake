@@ -259,3 +259,12 @@ endif()
 # ===========================================================================
 # common functions
 include( ${CMAKE_CURRENT_SOURCE_DIR}/build/common.cmake )
+
+# ===========================================================================
+# installation
+
+if ( SINGLE_CONFIG )
+    install( SCRIPT CODE
+        "execute_process(COMMAND /bin/bash -c \"${CMAKE_SOURCE_DIR}/build/install-root.sh ${VERSION} ${INST_INCDIR} ${INST_LIBDIR} \" )"
+    )
+endif()
