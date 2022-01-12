@@ -825,7 +825,7 @@ LIB_EXPORT rc_t CC VSchemaAddIncludePaths(VSchema *self, size_t length, const ch
         int const ch = *end++;
 
         if (ch == '\0' || ch == ':') {
-            size_t const sz = (end - cp) - 1;
+            size_t const sz = (end - cur) - 1;
             void *const temp = malloc(sz + 1);
 
             assert(temp != NULL);
