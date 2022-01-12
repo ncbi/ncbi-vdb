@@ -815,14 +815,14 @@ LIB_EXPORT rc_t CC VSchemaAddIncludePaths(VSchema *self, size_t length, const ch
     rc_t rc = 0;
     char const *cur = paths;
     char const *end = paths;
-    char const *max = paths + length;
+    char const *const max = paths + length;
 
     assert(self != NULL);
     if (self == NULL)
         return RC ( rcVDB, rcString, rcAppending, rcSelf, rcNull );
 
-    while (end && end < max) {
-        int const ch = *end++;
+    while (end && end <= max) {
+        int const ch = end < max ? *end++ : '\0';
 
         if (ch == '\0' || ch == ':') {
             size_t const sz = (end - cur) - 1;
