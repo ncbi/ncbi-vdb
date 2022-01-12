@@ -3,7 +3,7 @@
 test_schema_scan=$1
 TOP=$2
 
-SCHEMATA=$(find $TOP -name "*.vschema")
+SCHEMATA=$(find $TOP/interfaces -type f -name "*.vschema" -not -name ".*")
 
 echo Starting Schema Scan test
 
