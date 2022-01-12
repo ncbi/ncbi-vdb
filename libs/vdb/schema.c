@@ -193,12 +193,12 @@ LookupQualIdent ( const BSTree *scope, const KSymbol *orig )
             --i;
         }
 
-		{ /* now curScope is the innermost namespace in the copy, find the copy of the 'orig' in it */
-			const KSymbol * ret = ( const KSymbol* ) BSTreeFind ( curScope, & orig -> name, KSymbolCmp );
-			assert ( ret != NULL );
-			VectorWhack ( & namespaceStack, NULL, NULL );
-			return ret;
-		}
+        { /* now curScope is the innermost namespace in the copy, find the copy of the 'orig' in it */
+            const KSymbol * ret = ( const KSymbol* ) BSTreeFind ( curScope, & orig -> name, KSymbolCmp );
+            assert ( ret != NULL );
+            VectorWhack ( & namespaceStack, NULL, NULL );
+            return ret;
+        }
     }
 }
 
@@ -338,15 +338,15 @@ rc_t CC KMDataNodeFillSchema ( void *data, KTokenText *tt, size_t save )
         & pb -> buff [ save ], sizeof pb -> buff - save, & num_read, NULL );
     if ( rc == 0 )
     {
-	/******** PROTECT FROM BUGS IN TOKENIZER ****/
-	if(num_read == sizeof (pb -> buff) - save){ /** not the last chunk ***/
-		int i;
-		for(i=num_read+save-1;i > save && (isalnum(pb -> buff[i]) || pb -> buff[i]=='_');i--){}
-		if(i > save && pb -> buff[i]=='.'){ /*** leave this physical column for the next buffer **/
-			num_read=i-save;
-		}
-	}
-	/********************************************/
+    /******** PROTECT FROM BUGS IN TOKENIZER ****/
+    if(num_read == sizeof (pb -> buff) - save){ /** not the last chunk ***/
+        int i;
+        for(i=num_read+save-1;i > save && (isalnum(pb -> buff[i]) || pb -> buff[i]=='_');i--){}
+        if(i > save && pb -> buff[i]=='.'){ /*** leave this physical column for the next buffer **/
+            num_read=i-save;
+        }
+    }
+    /********************************************/
         /* reset the buffer in "tt" */
         tt -> str . addr = pb -> buff;
         tt -> str . size = save + num_read;
@@ -770,6 +770,10 @@ LIB_EXPORT rc_t CC VSchemaVAddIncludePath ( VSchema *self, const char *path, va_
     rc_t rc = -1;
     void *temp = NULL;
 
+    assert(self != NULL);
+    if (self == NULL)
+        return RC ( rcVDB, rcString, rcAppending, rcSelf, rcNull );
+
     if (strchr(path, '%') == NULL)
         temp = strdup(path);
     else {
@@ -799,6 +803,48 @@ LIB_EXPORT rc_t CC VSchemaAddIncludePath ( VSchema *self, const char *path, ... 
     va_start ( args, path );
     rc = VSchemaVAddIncludePath ( self, path, args );
     va_end ( args );
+
+    return rc;
+}
+
+/*
+ * Add ':' separated paths
+ */
+LIB_EXPORT rc_t CC VSchemaAddIncludePaths(VSchema *self, size_t length, const char *paths)
+{
+    rc_t rc = 0;
+    char const *cur = paths;
+    char const *end = paths;
+    char const *max = paths + length;
+
+    assert(self != NULL);
+    if (self == NULL)
+        return RC ( rcVDB, rcString, rcAppending, rcSelf, rcNull );
+
+    while (end && end < max) {
+        int const ch = *end++;
+
+        if (ch == '\0' || ch == ':') {
+            size_t const sz = (end - cp) - 1;
+            void *const temp = malloc(sz + 1);
+
+            assert(temp != NULL);
+            if (temp == NULL)
+                return RC ( rcVDB, rcString, rcAppending, rcMemory, rcExhausted );
+
+            memmove(temp, cur, sz);
+            ((char *)temp)[sz] = 0;
+            cur = end;
+
+            rc = VectorAppend(&self->inc, NULL, temp);
+            if (rc) {
+                free(temp);
+                break;
+            }
+            if (ch == '\0')
+                break;
+        }
+    }
 
     return rc;
 }
