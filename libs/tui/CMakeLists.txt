@@ -66,6 +66,9 @@ set( SRC
 )
 
 GenerateStaticLibs( tui "${SRC}" )
+ExportStatic( tui true )
+
 GenerateStaticLibs( tui_cpp tui_cpp )
+ExportStatic( tui_cpp true )
 
 add_compile_definitions (__mod__="libs/tui")

@@ -32,6 +32,12 @@ endforeach()
 
 add_library( ncbi-vdb STATIC "${VDB_LIB_RD}" )
 ExportStatic( ncbi-vdb true )
+
+message("Installing ncbi-vdb interfaces (headers) into ${CMAKE_INSTALL_PREFIX}")
+install( DIRECTORY ${CMAKE_SOURCE_DIR}/interfaces DESTINATION ${CMAKE_INSTALL_PREFIX} )
+
+# install( TARGETS ncbi-vdb DESTINATION ${CMAKE_INSTALL_PREFIX} EXPORT FindNcbiVdb)
+# install( EXPORT FindNcbiVdb DESTINATION ${CMAKE_INSTALL_PREFIX} )
 MSVS_StaticRuntime( ncbi-vdb )
 
 #--------------------------------

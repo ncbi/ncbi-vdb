@@ -24,7 +24,7 @@
 
 # libmagic, version 5.04 (ftp://ftp.astron.com/pub/file/file-5.04.tar.gz) configured for 64 bit Linux
 if ( ${OS} STREQUAL "linux" )
-    add_library ( magic-static STATIC
+    add_library ( magic STATIC
         magic
         apprentice
         softmagic
@@ -43,7 +43,7 @@ if ( ${OS} STREQUAL "linux" )
         strlcat
         strlcpy
     )
-    
+    ExportStatic( magic true )
     add_compile_definitions( HAVE_CONFIG_H=1 )
     add_compile_definitions( __mod__="libs/ext/magic" )
     include_directories( BEFORE ${CMAKE_CURRENT_SOURCE_DIR} )
