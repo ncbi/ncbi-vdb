@@ -813,19 +813,22 @@ LIB_EXPORT rc_t CC VSchemaAddIncludePath ( VSchema *self, const char *path, ... 
 LIB_EXPORT rc_t CC VSchemaAddIncludePaths(VSchema *self, size_t length, const char *paths)
 {
     rc_t rc = 0;
-    char const *cur = paths;
-    char const *end = paths;
     char const *const max = paths + length;
+    char const *cur;
+    char const *end;
 
     assert(self != NULL);
     if (self == NULL)
         return RC ( rcVDB, rcString, rcAppending, rcSelf, rcNull );
 
-    while (end && end <= max) {
-        int const ch = end < max ? *end++ : '\0';
+    if (paths == NULL || length == 0)
+    	return 0;
+
+    for (cur = end = paths; end <= max; ++end) {
+        int const ch = end < max ? *end : '\0';
 
         if (ch == '\0' || ch == ':') {
-            size_t const sz = (end - cur) - 1;
+            size_t const sz = end - cur;
             void *const temp = malloc(sz + 1);
 
             assert(temp != NULL);
@@ -834,7 +837,7 @@ LIB_EXPORT rc_t CC VSchemaAddIncludePaths(VSchema *self, size_t length, const ch
 
             memmove(temp, cur, sz);
             ((char *)temp)[sz] = 0;
-            cur = end;
+            cur = end + 1;
 
             rc = VectorAppend(&self->inc, NULL, temp);
             if (rc) {
