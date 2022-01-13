@@ -94,9 +94,9 @@ function( ExportStatic name install )
             ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG})
         set_target_properties( ${name} PROPERTIES
             ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE})
-        if ( ${install} )
-            install( TARGETS ${name} DESTINATION ${INST_LIBDIR} )
-        endif()
+        # if ( ${install} )
+        #     install( TARGETS ${name} DESTINATION ${INST_LIBDIR} )
+        # endif()
     endif()
 endfunction()
 
@@ -133,12 +133,12 @@ function(MakeLinksShared target name install)
             ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG})
         set_target_properties( ${target} PROPERTIES
             ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE})
-        if ( ${install} )
-            install( TARGETS ${target}
-                     ARCHIVE DESTINATION ${INST_BINDIR}
-                     RUNTIME DESTINATION ${INST_BINDIR}
-            )
-        endif()
+        # if ( ${install} )
+        #     install( TARGETS ${target}
+        #              ARCHIVE DESTINATION ${INST_BINDIR}
+        #              RUNTIME DESTINATION ${INST_BINDIR}
+        #     )
+        # endif()
     endif()
 endfunction()
 
