@@ -125,6 +125,11 @@ VDB_EXTERN rc_t CC VDBManagerMakeSchema ( struct VDBManager const *self, VSchema
 VDB_EXTERN rc_t CC VSchemaAddIncludePath ( VSchema *self, const char *path, ... );
 VDB_EXTERN rc_t CC VSchemaVAddIncludePath ( VSchema *self, const char *path, va_list args );
 
+/* AddIncludePaths
+ *  add ':' separated include paths to schema for locating input files
+ */
+VDB_EXTERN rc_t CC VSchemaAddIncludePaths(VSchema *self, size_t length, const char *paths);
+
 
 /* ParseText
  *  parse schema text
