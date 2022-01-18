@@ -773,6 +773,8 @@ LIB_EXPORT rc_t CC VSchemaVAddIncludePath ( VSchema *self, const char *path, va_
     assert(self != NULL);
     if (self == NULL)
         return RC ( rcVDB, rcString, rcAppending, rcSelf, rcNull );
+    if (path == NULL)
+        path=".";
 
     if (strchr(path, '%') == NULL)
         temp = strdup(path);
