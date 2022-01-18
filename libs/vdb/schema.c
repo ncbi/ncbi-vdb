@@ -987,7 +987,7 @@ static rc_t VSchemaOpenFile_1 ( const VSchema *const self, const KFile **fp, KDi
             if ( dirname != NULL )
             {
                 KDirectory const *dir = NULL;
-                rc_t rc = KDirectoryOpenDirRead(ndir, &dir, true, dirname);
+                rc_t rc = KDirectoryOpenDirRead(ndir, &dir, false, dirname);
 
                 if (rc != 0)
                     continue;
