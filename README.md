@@ -14,7 +14,7 @@ using data in the INSDC Sequence Read Archives.
 
 December 10, 2021
 
-NCBI’s SRA will change the source build system to use CMake in the next toolkit release (date TBD). This change is an important step to improve developers’ productivity as it provides unified cross platform access to support multiple build systems. This change affects developers building NCBI SRA tools from source. Old makefiles and build systems will no longer be supported after we make this change.
+NCBI's SRA will change the source build system to use CMake in the next toolkit release, 3.0.0. This change is an important step to improve developers' productivity as it provides unified cross platform access to support multiple build systems. This change affects developers building NCBI SRA tools from source. Old makefiles and build systems will no longer be supported after we make this change.
 
 This change will also include the structure of GitHub repositories, which will undergo consolidation to provide an easier environment for building tools and libraries (NGS libs and dependencies are consolidated). Consolidation of NGS libraries and dependencies provides better usage scope isolation and makes building more straightforward.
 
@@ -22,15 +22,15 @@ This change will also include the structure of GitHub repositories, which will u
 
 1) ncbi/ngs (https://github.com/ncbi/ngs)
 
-   This repository will be frozen, and all the code moved to Github repository ncbi/sra-tools, under subdirectory ngs/. All future modifications       
+   This repository will be frozen, and all the code moved to Github repository ncbi/sra-tools, under subdirectory ngs/. All future modifications
    will take place in sra-tools
 
 2) ncbi/ncbi-vdb (https://github.com/ncbi/ncbi-vdb)
 
-   This project’s build system will be based on CMake. The libraries supporting access to VDB data via NGS API will be moved to Github repository 
-   ncbi/sra-tools. 
+   This project's build system will be based on CMake. The libraries supporting access to VDB data via NGS API will be moved to Github repository
+   ncbi/sra-tools.
 
-The projects to move are: 
+The projects to move are:
 
 | Old location (base URL: https://github.com/ncbi/ncbi-vdb) | New location (base URL: https://github.com/ncbi/sra-tools) |
 | --------------------------------------------------------- | ---------------------------------------------------------- |
@@ -45,10 +45,10 @@ The projects to move are:
 
 3) ncbi/sra-tools (https://github.com/ncbi/sra-tools)
 
-   This project’s build system will be based on CMake. The project will acquire some new components:
+   This project's build system will be based on CMake. The project will acquire some new components:
 
        3a) NGS SDK (now under ngs/, formerly in Github repository ncbi/ngs)
-       
+
        3b) NGS-related VDB access libraries and their dependents, formerly in Github repository ncbi/ncbi-vdb, as listed in the table above.
 
 
