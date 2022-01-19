@@ -33,11 +33,14 @@ SCRIPT_DIR=$(cd $(dirname "${BASH_SOURCE[0]}") && pwd)
 SRC_DIR=$1
 KFGSUMS=$SRC_DIR/kfgsums
 
+
 if [ "$EUID" -eq 0 ]; then
     KONFIG_DIR=$3
+    mkdir -p ${KONFIG_DIR}
     cp $KFGSUMS $KONFIG_DIR
 else
     KONFIG_DIR=$2
+    mkdir -p ${KONFIG_DIR}
 fi
 
 $SCRIPT_DIR/install-kfg.sh default.kfg $SRC_DIR $KONFIG_DIR $KFGSUMS
