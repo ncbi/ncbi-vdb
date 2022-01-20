@@ -1,3 +1,27 @@
+# ===========================================================================
+#
+#                            PUBLIC DOMAIN NOTICE
+#               National Center for Biotechnology Information
+#
+#  This software/database is a "United States Government Work" under the
+#  terms of the United States Copyright Act.  It was written as part of
+#  the author's official duties as a United States Government employee and
+#  thus cannot be copyrighted.  This software/database is freely available
+#  to the public for use. The National Library of Medicine and the U.S.
+#  Government have not placed any restriction on its use or reproduction.
+#
+#  Although all reasonable efforts have been taken to ensure the accuracy
+#  and reliability of the software and data, the NLM and the U.S.
+#  Government do not and cannot warrant the performance or results that
+#  may be obtained by using this software or data. The NLM and the U.S.
+#  Government disclaim all warranties, express or implied, including
+#  warranties of performance, merchantability or fitness for any particular
+#  purpose.
+#
+#  Please cite the author in any work or product based on this material.
+#
+# ===========================================================================
+
 #
 # for a static library target, redirect its output to the public library
 # location (.../lib) and create versioned names and symlinks
@@ -62,7 +86,7 @@ function( ExportStatic name install )
                             ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/lib${name}.a.${MAJVERS}
                             ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/lib${name}.a
                             ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/lib${name}-static.a
-                    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib64
+                    DESTINATION ${INST_LIBDIR}
             )
          endif()
     else()
@@ -70,6 +94,9 @@ function( ExportStatic name install )
             ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG})
         set_target_properties( ${name} PROPERTIES
             ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE})
+        # if ( ${install} )
+        #     install( TARGETS ${name} DESTINATION ${INST_LIBDIR} )
+        # endif()
     endif()
 endfunction()
 
@@ -77,6 +104,7 @@ endfunction()
 # create versioned names and symlinks for a shared library
 #
 function(MakeLinksShared target name install)
+    set_target_properties( ${target} PROPERTIES OUTPUT_NAME ${name} )
     if( SINGLE_CONFIG )
         add_custom_command(TARGET ${target}
             POST_BUILD
@@ -97,26 +125,40 @@ function(MakeLinksShared target name install)
             install( FILES  ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/lib${name}.${SHLX}.${VERSION}
                             ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/lib${name}.${SHLX}.${MAJVERS}
                             ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/lib${name}.${SHLX}
-                    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib64
+                    DESTINATION ${INST_LIBDIR}
         )
         endif()
+    else()
+        set_target_properties( ${target} PROPERTIES
+            ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG})
+        set_target_properties( ${target} PROPERTIES
+            ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE})
+        # if ( ${install} )
+        #     install( TARGETS ${target}
+        #              ARCHIVE DESTINATION ${INST_BINDIR}
+        #              RUNTIME DESTINATION ${INST_BINDIR}
+        #     )
+        # endif()
     endif()
 endfunction()
 
 #
 # for a static library target, create a public shared target with the same base name and contents
 #
-function(ExportShared lib install)
+function(ExportShared lib install extra_libs)
     get_target_property( src ${lib} SOURCES )
     add_library( ${lib}-shared SHARED ${src} )
-    MSVS_StaticRuntime( ${lib}-shared )
-    set_target_properties( ${lib}-shared PROPERTIES OUTPUT_NAME ${lib} )
+    target_link_libraries( ${lib}-shared ${extra_libs} )
     MakeLinksShared( ${lib}-shared ${lib} ${install} )
 
     if( WIN32 )
+        MSVS_StaticRuntime( ${lib}-shared )
+
+        # on Windows, add a DLL built with /MD
         add_library( ${lib}-shared-md SHARED ${src} )
+        target_link_libraries( ${lib}-shared-md ${extra_libs})
         MSVS_DLLRuntime( ${lib}-shared-md )
-        set_target_properties( ${lib}-shared-md PROPERTIES OUTPUT_NAME ${lib}-md )
+        MakeLinksShared( ${lib}-shared-md ${lib}-md ${install} )
     endif()
 endfunction()
 

@@ -828,7 +828,7 @@ apprentice_load(struct magic_set *ms, struct magic **magicp, uint32_t *nmagicp,
 		mentrycount += marray[i].cont_count;
 
 	slen = sizeof(**magicp) * mentrycount;
-	if ((*magicp = CAST(struct magic *, malloc(slen))) == NULL) {
+	if ((*magicp = CAST(struct magic *, calloc(mentrycount + 1, sizeof(struct magic)))) == NULL) { /* because of some off-by-one errors in softmagic.c :128 and :194 */
 		file_oomem(ms, slen);
 		errs++;
 		goto out;

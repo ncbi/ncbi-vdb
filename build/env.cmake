@@ -198,6 +198,22 @@ endif()
 find_package( Python3 COMPONENTS Interpreter )
 
 # ===========================================================================
+# Installation location
+#
+
+#message( CMAKE_INSTALL_PREFIX: ${CMAKE_INSTALL_PREFIX} )
+
+if ( NOT INST_BINDIR )
+    set( INST_BINDIR ${CMAKE_INSTALL_PREFIX}/bin )
+endif()
+if ( NOT INST_LIBDIR )
+    set( INST_LIBDIR ${CMAKE_INSTALL_PREFIX}/lib${BITS} )
+endif()
+if ( NOT INST_INCDIR )
+    set( INST_INCDIR ${CMAKE_INSTALL_PREFIX}/include )
+endif()
+
+# ===========================================================================
 # Build artefact locations.
 # For XCode and MSVC specify per-configuration output directories
 
@@ -243,3 +259,12 @@ endif()
 # ===========================================================================
 # common functions
 include( ${CMAKE_CURRENT_SOURCE_DIR}/build/common.cmake )
+
+# ===========================================================================
+# installation
+
+if ( SINGLE_CONFIG )
+    install( SCRIPT CODE
+        "execute_process(COMMAND /bin/bash -c \"${CMAKE_SOURCE_DIR}/build/install-root.sh ${VERSION} ${INST_INCDIR} ${INST_LIBDIR} \" )"
+    )
+endif()

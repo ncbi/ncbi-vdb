@@ -32,21 +32,7 @@ endforeach()
 
 add_library( ncbi-vdb STATIC "${VDB_LIB_RD}" )
 ExportStatic( ncbi-vdb true )
-MSVS_StaticRuntime( ncbi-vdb )
-
-#--------------------------------
-set( VDB_LIB_RD_SHARED
-    ${VDB_LIB_RD}
-    # $<TARGET_OBJECTS:ngs>
-    # $<TARGET_OBJECTS:ngs-jni>
-    # $<TARGET_OBJECTS:ngs-py>
-)
-
-add_library( ncbi-vdb-shared SHARED "${VDB_LIB_RD_SHARED}" )
-set_target_properties( ncbi-vdb-shared PROPERTIES OUTPUT_NAME ncbi-vdb )
-#target_link_libraries( ncbi-vdb-shared ncbi-ngs ${LIBXML2} m dl pthread )
-target_link_libraries( ncbi-vdb-shared ${LIBXML2} m dl pthread )
-MakeLinksShared( ncbi-vdb-shared ncbi-vdb true )
+ExportShared( ncbi-vdb true "${LIBXML2};m;dl;pthread")
 
 ################################
 set( VDB_LIB_RDWR "" )
@@ -56,11 +42,5 @@ endforeach()
 
 add_library( ncbi-wvdb STATIC "${VDB_LIB_RDWR}" )
 ExportStatic( ncbi-wvdb true )
-
-#--------------------------------
-add_library( ncbi-wvdb-shared SHARED "${VDB_LIB_RDWR}" )
-set_target_properties( ncbi-wvdb-shared PROPERTIES OUTPUT_NAME ncbi-wvdb )
-#target_link_libraries( ncbi-wvdb-shared ncbi-ngs ${LIBXML2} m dl pthread )
-target_link_libraries( ncbi-wvdb-shared ${LIBXML2} m dl pthread )
-MakeLinksShared( ncbi-wvdb-shared ncbi-wvdb true )
+ExportShared( ncbi-wvdb true "${LIBXML2};m;dl;pthread")
 

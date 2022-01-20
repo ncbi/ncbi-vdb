@@ -54,6 +54,9 @@ if (WIN32)
 	set (CMAKE_SYSTEM_VERSION 10.0 CACHE STRING INTERNAL FORCE)
 endif()
 
+option(LIBS_ONLY "Generate library targets only" OFF)
+option(TESTS_ONLY "Generate test targets only" OFF)
+
 if( TESTS_ONLY AND LIBS_ONLY )
     message( "ERROR: TESTS_ONLY and LIBS_ONLY cannot be specified at the same time" )
 elseif( TESTS_ONLY AND NOT LIBS_ONLY AND (${CMAKE_GENERATOR} MATCHES "Visual Studio.*" OR ${CMAKE_GENERATOR} STREQUAL "Xcode") )
