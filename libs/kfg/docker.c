@@ -33,6 +33,7 @@
 
 #include <stdio.h>
 #include <unistd.h>
+#include <inttypes.h>
 
 #include <kfs/file.h>
 #include <kfs/directory.h>
@@ -49,7 +50,7 @@ int KConfig_Get_GUID_Add_Container(  char *const value
 {
 #if CAN_HAVE_CONTAINER_ID
     if (value_size >= 12) {
-        char buffer[4096];
+        char buffer[32];
         size_t inbuf = 0;
         size_t nread = 0;
         uint64_t pos = 0;
@@ -61,44 +62,26 @@ int KConfig_Get_GUID_Add_Container(  char *const value
         rc = KDirectoryNativeDir(&ndir);
         assert(rc == 0);
 
-        rc = KDirectoryOpenFileRead(ndir, &fp, CGROUP_FILE_PATH);
+        /* In a docker container, hostname is the short version of the container
+         * id, it is 12 hex digits
+         */
+        rc = KDirectoryOpenFileRead(ndir, &fp, "/etc/hostname");
         KDirectoryRelease(ndir);
         if (rc) {
-            LogErr(klogDebug, rc, "can not open " CGROUP_FILE_PATH);
+            LogErr(klogDebug, rc, "can not open /etc/hostname");
             return -1;
         }
-        while (good == false && (rc = KFileRead(fp, pos, buffer + inbuf, sizeof(buffer) - inbuf, &nread)) == 0 && nread > 0)
-        {
-            size_t i = 0, start = 0;
+        rc = KFileRead(fp, 0, buffer, sizeof(buffer), &nread);
+        KFileRelease(fp);
+        if (rc == 0 && nread >= 12) {
+            uint64_t hex = 0;
+            int n = 0;
 
-            pos += nread;
-            inbuf += nread;
-            for (i = 0; i < inbuf; ) {
-                int const ch = buffer[i++];
-                if (ch == ':') {
-                    start = i;
-                    continue;
-                }
-                if (ch == '\n') {
-                    char const *id = &buffer[start];
-                    size_t len = (i - 1) - start;
-                    if (len >= 8 && strncmp(id, "/docker/", 8) == 0) {
-                        id += 8; len -= 8;
-                        pLogMsg(klogDebug, "container-id: $(id)", "id=%.*s", (int)(len), id);
-                        if (len >= 12) {
-                            memmove(value + (value_size - 12), id, 12);
-                            good = true;
-                            break;
-                        }
-                    }
-                    inbuf -= i;
-                    memmove(buffer, buffer + i, inbuf);
-                    i = 0;
-                }
+            if (sscanf(buffer, "%" SCNx64 "%n", &hex, &n) == 1 && n >= 12) {
+                memmove(value + (value_size - 12), buffer, 12);
+                return 0;
             }
         }
-        KFileRelease(fp);
-        return good ? 0 : -1;
     }
 #endif
     return -1;
