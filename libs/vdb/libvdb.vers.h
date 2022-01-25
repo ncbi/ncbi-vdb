@@ -24,4 +24,4 @@
 *
 */
 
-#define LIBVDB_VERS 0x0207001E
+#define LIBVDB_VERS 0x0207001F
