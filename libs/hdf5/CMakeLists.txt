@@ -23,11 +23,11 @@
 # ===========================================================================
 
 if( HDF5_LIBDIR )
-    find_library( LIBHDF5_LIBRARIES libhdf5.a HINTS ${HDF5_LIBDIR} )
-    if ( LIBHDF5_LIBRARIES )
+    find_library( HDF5_LIBRARIES libhdf5.a HINTS ${HDF5_LIBDIR} )
+    if ( HDF5_LIBRARIES )
         set( HDF5_FOUND true )
         if ( HDF5_INCDIR )
-            set( LIBHDF5_INCLUDE_DIR ${HDF5_INCDIR} )
+            set( HDF5_C_INCLUDE_DIRS ${HDF5_INCDIR} )
         endif()
     endif()
 else()
