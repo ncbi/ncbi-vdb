@@ -23,13 +23,17 @@
 # ===========================================================================
 
 if( LibXml2_FOUND )
+
+    include_directories( ${LIBXML2_INCLUDE_DIR} )
+
     set( SRC_XML xml.c )
     GenerateStaticLibs( kxml "${SRC_XML}" )
+    target_compile_definitions( kxml PRIVATE __mod__="libs/kxml")
     ExportStatic( kxml true )
 
     set( SRC_KXFS xtoc-parsexml.c xtoc.c )
     GenerateStaticLibs( kxfs "${SRC_KXFS}" )
+    target_compile_definitions( kxfs PRIVATE __mod__="libs/kxfs")
     ExportStatic( kxfs true )
 
-    add_compile_definitions (__mod__="libs/kxml")
 endif()

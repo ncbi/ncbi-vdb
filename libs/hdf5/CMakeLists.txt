@@ -22,9 +22,25 @@
 #
 # ===========================================================================
 
-find_package(HDF5 COMPONENTS C)
+if( HDF5_LIBDIR )
+    find_library( LIBHDF5_LIBRARIES libhdf5.a HINTS ${HDF5_LIBDIR} )
+    if ( LIBHDF5_LIBRARIES )
+        set( HDF5_FOUND true )
+        if ( HDF5_INCDIR )
+            set( LIBHDF5_INCLUDE_DIR ${HDF5_INCDIR} )
+        endif()
+    endif()
+else()
+    find_package( HDF5 COMPONENTS C )
+endif()
 
 if( HDF5_FOUND )
+
+    message( HDF5_INCLUDE_DIRS=${HDF5_C_INCLUDE_DIRS} )
+    message( HDF5_LIBRARIES=${HDF5_LIBRARIES} )
+
+    include_directories( ${HDF5_INCLUDE_DIRS} )
+
     set( SRC
         hdf5arrayfile.c
         hdf5dir.c
@@ -33,7 +49,6 @@ if( HDF5_FOUND )
     GenerateStaticLibs(kdf5 "${SRC}" )
 
     add_compile_definitions (__mod__="libs/hdf5")
-    include_directories( ${HDF5_INCLUDE_DIRS} )
 
     ExportStatic( kdf5 true )
     ExportShared( kdf5 true "${HDF5_LIBRARIES};ncbi-vdb" )
