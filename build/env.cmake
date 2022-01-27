@@ -191,8 +191,11 @@ endif ()
 find_package( FLEX 2.6 )
 find_package( BISON 3 )
 
-#libxml2
-find_package(LibXml2)
+if (XML2_LIBDIR)
+    find_library( LibXml2_FOUND libxml2.a HINTS ${XML2_LIBDIR} )
+else()
+    find_package( LibXml2 )
+endif()
 
 if ( PYTHON_PATH )
     set( Python3_EXECUTABLE ${PYTHON_PATH} )

@@ -43,6 +43,7 @@ if( BISON_FOUND )
     set( SchemaAstParser ${BISON_SchemaAstGrammar_OUTPUT_SOURCE} )
 else()
     set( SchemaAstParser zz_schema-ast.cpp )
+    SET_DIRECTORY_PROPERTIES(PROPERTIES CLEAN_NO_CUSTOM 1)
 endif()
 
 set( SRC
