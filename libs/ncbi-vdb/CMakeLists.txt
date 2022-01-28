@@ -88,6 +88,18 @@ if( WIN32 )
     include( CMakeLists.win.txt )
 elseif( SINGLE_CONFIG )
     include( CMakeLists.posix.txt )
+	add_custom_command( TARGET ncbi-vdb POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/interfaces/kfg/ncbi/default.kfg ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/ncbi/default.kfg
+	)
+	add_custom_command( TARGET ncbi-vdb POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/interfaces/kfg/ncbi/default.kfg ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/ncbi/default.kfg
+	)
+	add_custom_command( TARGET ncbi-vdb POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/interfaces/kfg/ncbi/certs.kfg ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/ncbi/certs.kfg
+	)
+	add_custom_command( TARGET ncbi-vdb POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/interfaces/kfg/ncbi/certs.kfg ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/ncbi/certs.kfg
+	)
 else() # XCode
     include( CMakeLists.xcode.txt )
 endif()
