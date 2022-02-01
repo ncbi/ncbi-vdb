@@ -58,20 +58,22 @@ elseif ( ${CMAKE_HOST_SYSTEM_NAME} STREQUAL  "Linux" )
     set(SHLX "so")
 elseif ( ${CMAKE_HOST_SYSTEM_NAME} STREQUAL  "Windows" )
     set(OS "windows")
-elseif()
+else()
     message ( FATAL_ERROR "unknown OS " ${CMAKE_HOST_SYSTEM_NAME})
 endif()
 
 # determine architecture
 if ( ${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "armv7l")
 	set(ARCH "armv7l")
+elseif ( ${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "arm64")
+    set(ARCH "aarch64")
 elseif ( ${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "aarch64")
     set(ARCH "aarch64")
 elseif ( ${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "x86_64")
     set(ARCH "x86_64")
 elseif ( ${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "AMD64")
     set(ARCH "x86_64")
-elseif()
+else ()
     message ( FATAL_ERROR "unknown architecture " ${CMAKE_HOST_SYSTEM_PROCESSOR})
 endif ()
 
@@ -189,13 +191,42 @@ endif ()
 find_package( FLEX 2.6 )
 find_package( BISON 3 )
 
-#libxml2
-find_package(LibXml2)
+if (XML2_LIBDIR)
+    find_library( LIBXML2_LIBRARIES libxml2.a HINTS ${XML2_LIBDIR} )
+    if ( LIBXML2_LIBRARIES )
+        set( LibXml2_FOUND true )
+        if ( XML2_INCDIR )
+            set( LIBXML2_INCLUDE_DIR ${XML2_INCDIR} )
+        endif()
+    endif()
+else()
+    find_package( LibXml2 )
+endif()
+if( LibXml2_FOUND )
+    message( LIBXML2_INCLUDE_DIR=${LIBXML2_INCLUDE_DIR} )
+    message( LIBXML2_LIBRARIES=${LIBXML2_LIBRARIES} )
+endif()
 
 if ( PYTHON_PATH )
     set( Python3_EXECUTABLE ${PYTHON_PATH} )
 endif()
 find_package( Python3 COMPONENTS Interpreter )
+
+# ===========================================================================
+# Installation location
+#
+
+#message( CMAKE_INSTALL_PREFIX: ${CMAKE_INSTALL_PREFIX} )
+
+if ( NOT INST_BINDIR )
+    set( INST_BINDIR ${CMAKE_INSTALL_PREFIX}/bin )
+endif()
+if ( NOT INST_LIBDIR )
+    set( INST_LIBDIR ${CMAKE_INSTALL_PREFIX}/lib${BITS} )
+endif()
+if ( NOT INST_INCDIR )
+    set( INST_INCDIR ${CMAKE_INSTALL_PREFIX}/include )
+endif()
 
 # ===========================================================================
 # Build artefact locations.
@@ -243,3 +274,12 @@ endif()
 # ===========================================================================
 # common functions
 include( ${CMAKE_CURRENT_SOURCE_DIR}/build/common.cmake )
+
+# ===========================================================================
+# installation
+
+if ( SINGLE_CONFIG )
+    install( SCRIPT CODE
+        "execute_process(COMMAND /bin/bash -c \"${CMAKE_SOURCE_DIR}/build/install-root.sh ${VERSION} ${INST_INCDIR} ${INST_LIBDIR} \" )"
+    )
+endif()
