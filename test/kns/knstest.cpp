@@ -75,6 +75,7 @@ public:
     {
         const char * ua = nullptr;
         KNSManagerGetUserAgent( & ua );
+cout<<ua;
         return string::npos != string( ua ) . find( str );
     }
 
@@ -114,7 +115,7 @@ FIXTURE_TEST_CASE(KNSManagerGetUserAgentEnv, SessionIdFixture)
     const string ua_contains = "bmap=bmaphere";
     //fprintf(stderr,"Got: '%s', expected '%s'\n", ua, ua_contains.data());
     REQUIRE_NE( string::npos, string(ua).find(ua_contains) );
-    putenv(ENV_MAGIC_OPT_BITMAP "=");
+    putenv(ENV_MAGIC_OPT_BITMAP);
 }
 
 FIXTURE_TEST_CASE(KNSManagerGetUserAgentPlatform, SessionIdFixture)
@@ -126,8 +127,8 @@ FIXTURE_TEST_CASE(KNSManagerGetUserAgentPlatform, SessionIdFixture)
     const string ua_contains = " via software softwhat";
     //fprintf(stderr,"Got: '%s', expected '%s'\n", ua, ua_contains.data());
     REQUIRE_NE( string::npos, string(ua).find(ua_contains) );
-    putenv(ENV_MAGIC_PLATFORM_NAME "=");
-    putenv(ENV_MAGIC_PLATFORM_VERSION "=");
+    putenv(ENV_MAGIC_PLATFORM_NAME);
+    putenv(ENV_MAGIC_PLATFORM_VERSION);
 }
 
 // KNSManagerSetUserAgent
