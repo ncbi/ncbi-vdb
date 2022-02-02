@@ -75,7 +75,6 @@ public:
     {
         const char * ua = nullptr;
         KNSManagerGetUserAgent( & ua );
-cout<<ua;
         return string::npos != string( ua ) . find( str );
     }
 
@@ -107,28 +106,33 @@ FIXTURE_TEST_CASE(KNSManagerGetUserAgent_Default, SessionIdFixture)
     REQUIRE_NE( string::npos, string(ua).find(ua_contains) );
 }
 
+#ifdef WIN32
+#define setenv(name, value, over) putenv(name"="value) 
+#define unsetenv(name) putenv(name"=") 
+#endif
+
 FIXTURE_TEST_CASE(KNSManagerGetUserAgentEnv, SessionIdFixture)
 {
-    const char * ua = nullptr;
-    putenv(ENV_MAGIC_OPT_BITMAP "=bmaphere");
+    const char* ua = nullptr;
+    setenv(ENV_MAGIC_OPT_BITMAP, "bmaphere", 1);
     KNSManagerGetUserAgent(&ua);
     const string ua_contains = "bmap=bmaphere";
     //fprintf(stderr,"Got: '%s', expected '%s'\n", ua, ua_contains.data());
-    REQUIRE_NE( string::npos, string(ua).find(ua_contains) );
-    putenv(ENV_MAGIC_OPT_BITMAP);
+    REQUIRE_NE(string::npos, string(ua).find(ua_contains));
+    unsetenv(ENV_MAGIC_OPT_BITMAP);
 }
 
 FIXTURE_TEST_CASE(KNSManagerGetUserAgentPlatform, SessionIdFixture)
 {
-    const char * ua = nullptr;
-    putenv(ENV_MAGIC_PLATFORM_NAME "=software");
-    putenv(ENV_MAGIC_PLATFORM_VERSION "=softwhat");
+    const char* ua = nullptr;
+    setenv(ENV_MAGIC_PLATFORM_NAME, "software", 1);
+    setenv(ENV_MAGIC_PLATFORM_VERSION, "softwhat", 1);
     KNSManagerGetUserAgent(&ua);
     const string ua_contains = " via software softwhat";
     //fprintf(stderr,"Got: '%s', expected '%s'\n", ua, ua_contains.data());
-    REQUIRE_NE( string::npos, string(ua).find(ua_contains) );
-    putenv(ENV_MAGIC_PLATFORM_NAME);
-    putenv(ENV_MAGIC_PLATFORM_VERSION);
+    REQUIRE_NE(string::npos, string(ua).find(ua_contains));
+    unsetenv(ENV_MAGIC_PLATFORM_NAME);
+    unsetenv(ENV_MAGIC_PLATFORM_VERSION);
 }
 
 // KNSManagerSetUserAgent
