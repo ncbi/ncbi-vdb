@@ -1098,6 +1098,12 @@ rc_t VPathCheckFromNamesCGI ( const VPath * path,
                 skip = true;
         }
         if (!skip) {
+            CONST_STRING(&host, "sra-download-internal.ncbi.nlm.nih.gov");
+            /* redirector URLs have query */
+            if (StringEqual(&path->host, &host))
+                skip = true;
+        }
+        if (!skip) {
             CONST_STRING(&host, "storage.googleapis.com");
             /* googleapis URLs can have query */
             if (StringEqual(&path->host, &host))
