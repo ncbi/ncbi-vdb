@@ -6,6 +6,8 @@ email: sra@ncbi.nlm.nih.gov
 ### Change Log
 Please check the CHANGES.md file for change history.
 
+----
+
 ## NCBI VDB
 The SRA Toolkit and SDK from NCBI is a collection of tools and libraries for
 using data in the INSDC Sequence Read Archives.
@@ -20,37 +22,30 @@ This change also includes the structure of GitHub repositories, which underwent 
 
 ### **Affected repositories**
 
-1) ncbi/ngs (https://github.com/ncbi/ngs)
+1) [ncbi/ngs](https://github.com/ncbi/ngs)
 
-   This repository is frozen, and all the code moved to Github repository ncbi/sra-tools, under subdirectory ngs/. All future modifications
-   will take place in sra-tools
+   This repository is frozen. All future development will take place in GitHub repository [ncbi/sra-tools](https://github.com/ncbi/sra-tools), under subdirectory `ngs/`.
 
-2) ncbi/ncbi-vdb (https://github.com/ncbi/ncbi-vdb)
+2) [ncbi/ncbi-vdb](https://github.com/ncbi/ncbi-vdb) (This repository)
 
-   This project's build system is based on CMake. The libraries supporting access to VDB data via NGS API have moved to Github repository
-   ncbi/sra-tools.
+   This project's build system is based on CMake. The libraries providing access to SRA data in VDB format via the NGS API have moved to GitHub repository
+   [ncbi/sra-tools](https://github.com/ncbi/ncbi-vdb).
 
-The projects to move are:
+   | Old (base URL: https://github.com/ncbi/ncbi-vdb) | New (base URL: https://github.com/ncbi/sra-tools) |
+   | -------------------------------------------------| ------------------------------------------------- |
+   | `libs/ngs`        | `ngs/ncbi/ngs`     |
+   | `libs/ngs-c++`    | `ngs/ncbi/ngs-c++` |
+   | `libs/ngs-jni`    | `ngs/ncbi/ngs-jni` |
+   | `libs/ngs-py`     | `ngs/ncbi/ngs-py`  |
+   | `libs/vdb-sqlite` | `libs/vdb-sqlite`  |
+   | `test/ngs-java`   | `test/ngs-java`    |
+   | `test/ngs-python` | `test/ngs-python`  |
 
-| Old location (base URL: https://github.com/ncbi/ncbi-vdb) | New location (base URL: https://github.com/ncbi/sra-tools) |
-| --------------------------------------------------------- | ---------------------------------------------------------- |
-| libs/ngs | ngs/ncbi/ngs |
-| libs/ngs-c++ | ngs/ncbi/ngs-c++ |
-| libs/ngs-jni | ngs/ncbi/ngs-jni |
-| libs/ngs-py | ngs/ncbi/ngs-py |
-| libs/vdb-sqlite | libs/vdb-sqlite |
-| test/ngs-java | test/ngs-java |
-| test/ngs-python | test/ngs-python |
+3) [ncbi/sra-tools](https://github.com/ncbi/sra-tools)
 
+   This project's build system is based on CMake. The project acquired some new components, as listed in the table above.
 
-3) ncbi/sra-tools (https://github.com/ncbi/sra-tools)
-
-   This project's build system is based on CMake. The project acquired some new components:
-
-       3a) NGS SDK (now under ngs/, formerly in Github repository ncbi/ngs)
-
-       3b) NGS-related VDB access libraries and their dependents, formerly in Github repository ncbi/ncbi-vdb, as listed in the table above.
-
+----
 
 ### Antivirus Warnings
 Windows Defender and a few other anti-virus tools have recently been [falsely](https://www.virustotal.com/#/file/042af43fc1318b07a4411c1bea2ff7eed8efe07ca954685268ce42f8f818b10e/detection) warning about test-sra.exe.
