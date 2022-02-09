@@ -139,16 +139,17 @@ static rc_t KArcDirResolvePathNode (const KArcDir *self,
 /* arbitrary number that was originially set much much higher than expected needs. */
 #define	KARC_LINK_RESOLVE_LOOPMAX		(16)
 
-/* -----
- * We use MAX_PATH if it is available but not religiously.  We handle most
- * buffer over-runs with in the module only truncating paths at the border
- * of the module where KDirectory doesn't handle path's longer than MAX_PATH
- */
-#ifdef MAX_PATH
-#define	KARC_DEFAULT_PATH_ALLOC			(MAX_PATH)
-#else
+// SRA-11376
+///* -----
+// * We use MAX_PATH if it is available but not religiously.  We handle most
+// * buffer over-runs with in the module only truncating paths at the border
+// * of the module where KDirectory doesn't handle path's longer than MAX_PATH
+// */
+//#ifdef MAX_PATH
+//#define	KARC_DEFAULT_PATH_ALLOC			(MAX_PATH)
+//#else
 #define	KARC_DEFAULT_PATH_ALLOC			(4096)
-#endif
+//#endif
 
 
 
