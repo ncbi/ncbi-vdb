@@ -2,7 +2,7 @@
 
 
 ## NCBI VDB 3.0.0
-**February 7, 2022**
+**February 10, 2022**
 
   **blast**: processes some unusual ILLUMINA runs  
   **blast, test**: fixed a missed return  
@@ -13,6 +13,7 @@
   **klib**: result codes can be more easily converted to strings  
   **kns**: environment variables NCBI_USAGE_PLATFORM_NAME and NCBI_USAGE_PLATFORM_VERSION are sent to NCBI  
   **kns, test**: test was improved  
+  **kfs, sra-tools**: fixed a bug in handling of long URLs on Windows  
 
 
 ## NCBI VDB 2.11.2
