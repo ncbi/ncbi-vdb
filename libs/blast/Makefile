@@ -22,76 +22,7 @@
 #
 # ===========================================================================
 
-default: all
-
 TOP ?= $(abspath ../..)
-
 MODULE = libs/blast
 
-INT_LIBS = \
-
-ALL_LIBS = \
-	$(INT_LIBS) \
-	$(EXT_LIBS)
-
 include $(TOP)/build/Makefile.env
-
-ifeq (64,$(BITS))
-	INT_LIBS += libvdb-blast
-	OBJFILES = $(BLAST_OBJ)
-endif
-
-#-------------------------------------------------------------------------------
-# outer targets
-#
-all std: makedirs compile
-	@ $(MAKE_CMD) $(TARGDIR)/std
-
-$(INT_LIBS): makedirs
-	@ $(MAKE_CMD) $(ILIBDIR)/$@
-
-.PHONY: all std $(ALL_LIBS)
-
-#-------------------------------------------------------------------------------
-# std
-#
-$(TARGDIR)/std: \
-	$(addprefix $(ILIBDIR)/,$(INT_LIBS))
-
-.PHONY: $(TARGDIR)/std
-
-#-------------------------------------------------------------------------------
-# clean
-#
-clean: stdclean
-
-.PHONY: clean
-
-#-------------------------------------------------------------------------------
-# blast
-#
-$(ILIBDIR)/libvdb-blast: $(addprefix $(ILIBDIR)/libvdb-blast.,$(ILIBEXT))
-
-BLAST_SRC = \
-	blast-mgr \
-	reader \
-	reference \
-	run-set \
-
-BLAST_OBJ = \
-	$(addsuffix .$(LOBX),$(BLAST_SRC))
-
-BLAST_LIB = \
-
-$(ILIBDIR)/libvdb-blast.$(LIBX): $(BLAST_OBJ)
-	$(LD) --slib -o $@ $^ $(BLAST_LIB)
-
-compile: stdcompile
-
-$(TARGDIR)/compile: $(OBJFILES)
-
-#-------------------------------------------------------------------------------
-# fuzz
-#
-fuzz: std
-	cp $(addsuffix .$(LIBX),$(addprefix $(ILIBDIR)/,$(INT_LIBS))) $(FLIBDIR)/

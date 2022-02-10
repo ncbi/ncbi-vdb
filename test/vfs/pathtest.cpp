@@ -53,6 +53,7 @@
 
 #define IGNORE_FAILURE_VDB_1551 0
 
+#define ALL
 
 TEST_SUITE(VPathTestSuite);
 
@@ -73,7 +74,7 @@ public:
     {
         VFSManagerRelease ( vfs );
         if (path && VPathRelease(path) != 0)
-           throw logic_error("~PathFixture: VPathRelease failed");
+            cerr << "~PathFixture: VPathRelease failed\n";
     }
     string PathToString(const string& p_path)
     {
@@ -101,6 +102,50 @@ public:
     size_t num_read;
 };
 
+class ExtractAccessionOrOID : protected ncbi::NK::TestCase {
+    TestCase * dad;
+public:
+    ExtractAccessionOrOID(
+        TestCase * aDad, const std::string & name, const VFSManager * vfs,
+        const VPath * srr, uint8_t path_type, VQuality q)
+        : TestCase(name), dad(aDad)
+    {
+        VPath * path = NULL;
+        VPath * acc_or_oid = NULL;
+        REQUIRE_RC(VPathMakeFmt(&path, name.c_str()));
+        REQUIRE_EQ(path->path_type, path_type);
+        REQUIRE_RC(VFSManagerExtractAccessionOrOID(vfs, &acc_or_oid, path));
+        REQUIRE_EQ(VPathGetQuality(acc_or_oid), q);
+        int notequal = ~0;
+        REQUIRE_RC(VPathEqual(srr, acc_or_oid, &notequal));
+        REQUIRE(!notequal);
+        REQUIRE_RC(VPathRelease(acc_or_oid));
+        REQUIRE_RC(VPathRelease(path));
+    }
+    ExtractAccessionOrOID(
+        TestCase * aDad, int name, const VFSManager * vfs,
+        const VPath * srr, uint8_t path_type, VQuality q)
+        : TestCase(to_string(name)), dad(aDad)
+    {
+        VPath * path = NULL;
+        VPath * acc_or_oid = NULL;
+        REQUIRE_RC(VFSManagerMakeOidPath(vfs, &path, name));
+        REQUIRE_EQ(path->path_type, path_type);
+        REQUIRE_RC(VFSManagerExtractAccessionOrOID(vfs, &acc_or_oid, path));
+        REQUIRE_EQ(VPathGetQuality(acc_or_oid), q);
+        int notequal = ~0;
+        REQUIRE_RC(VPathEqual(srr, acc_or_oid, &notequal));
+        REQUIRE(!notequal);
+        REQUIRE_RC(VPathRelease(acc_or_oid));
+        REQUIRE_RC(VPathRelease(path));
+    }
+    ~ExtractAccessionOrOID() {
+        assert(dad);
+        dad->ErrorCounterAdd(GetErrorCounter());
+    }
+};
+
+#ifdef ALL
 FIXTURE_TEST_CASE(ReadPath, PathFixture)
 {
     REQUIRE_RC(VFSManagerMakePath ( vfs, &path, "ncbi-file:qq?enc"));
@@ -304,13 +349,18 @@ FIXTURE_TEST_CASE(NAME_SERVER_PROTECTED_HTTP, PathFixture) {
         REQUIRE_RC(VPathMakeFmt(&path, "%S?tic=%S", &url, &download_ticket));
         REQUIRE(path);
     }
-/*  {   TODO VFSManagerExtractAccessionOrOID should extract SRR123456
+    {   // VFSManagerExtractAccessionOrOID should extract SRR123456
         VPath *acc_or_oid = NULL;
         REQUIRE_RC(VFSManagerExtractAccessionOrOID(vfs, &acc_or_oid, path));
         REQUIRE(acc_or_oid);
+        VPath * srr = NULL;
+        REQUIRE_RC(VPathMakeFmt(&srr, "SRR123456"));
+        int notequal = ~0;
+        REQUIRE_RC(VPathEqual(srr, acc_or_oid, &notequal));
+        REQUIRE(!notequal);
+        REQUIRE_RC(VPathRelease(srr));
         REQUIRE_RC(VPathRelease(acc_or_oid));
-        acc_or_oid = NULL;
-    }*/
+    }
     REQUIRE(!VPathIsAccessionOrOID(path));
     REQUIRE(VPathIsFSCompatible(path));
     REQUIRE(VPathFromUri(path));
@@ -484,7 +534,336 @@ FIXTURE_TEST_CASE(NAME_SERVER_PROTECTED_HTTP, PathFixture) {
 
     REQUIRE( ! VPathGetOid(path));
 }
+#endif
 
+#ifdef ALL
+/* These tests cover VFSManagerExtractAccessionOrOID()
+   while checking different path_type-s and validates quality */
+FIXTURE_TEST_CASE(ExtractAccessionOrOID_Quality_PathType, PathFixture) {
+    REQUIRE_RC(VPathMakeFmt(&path, "SRR01"));
+    REQUIRE_EQ(path->path_type, (uint8_t)vpNameOrAccession);
+    VPath * acc_or_oid = NULL;
+    VPath * tmp = NULL;
+
+    VPath * srr = NULL;
+    REQUIRE_RC(VPathMakeFmt(&srr, "SRR01"));
+    REQUIRE_EQ(path->path_type, (uint8_t)vpNameOrAccession);
+
+    int notequal = ~0;
+
+    REQUIRE_RC_FAIL(VFSManagerExtractAccessionOrOID(NULL, &acc_or_oid, path));
+    REQUIRE_NULL(acc_or_oid);
+    
+    REQUIRE_RC_FAIL(VFSManagerExtractAccessionOrOID(vfs, NULL, path));
+    REQUIRE_NULL(acc_or_oid);
+
+    REQUIRE_RC_FAIL(VFSManagerExtractAccessionOrOID(vfs, &acc_or_oid, NULL));
+    REQUIRE_NULL(acc_or_oid);
+
+    REQUIRE_EQ(VPathGetQuality(NULL), (VQuality)eQualLast);
+
+    REQUIRE_RC(VPathRelease(path));
+
+    ExtractAccessionOrOID e(this, "SRR01",
+        vfs, srr, vpNameOrAccession, eQualLast);
+    {
+        REQUIRE_RC(VPathMakeFmt(&path, "1?"));
+        REQUIRE_EQ(path->path_type, (uint8_t)vpName);
+        REQUIRE_RC_FAIL(
+            VFSManagerExtractAccessionOrOID(vfs, &acc_or_oid, path));
+        REQUIRE_NULL(acc_or_oid);
+        REQUIRE_RC(VPathRelease(path)); path = NULL;
+    }
+    {
+        REQUIRE_RC(VPathMakeFmt(&path, "./"));
+        REQUIRE_EQ(path->path_type, (uint8_t)vpRelPath);
+        REQUIRE_RC_FAIL(
+            VFSManagerExtractAccessionOrOID(vfs, &acc_or_oid, path));
+        REQUIRE_NULL(acc_or_oid);
+        REQUIRE_RC(VPathRelease(path)); path = NULL;
+    }
+    {
+        REQUIRE_RC(VPathMakeFmt(&path, "//`"));
+        REQUIRE_EQ(path->path_type, (uint8_t)vpUNCPath);
+        REQUIRE_RC_FAIL(
+            VFSManagerExtractAccessionOrOID(vfs, &acc_or_oid, path));
+        REQUIRE_NULL(acc_or_oid);
+        REQUIRE_RC(VPathRelease(path)); path = NULL;
+    }
+    {
+        REQUIRE_RC(VPathMakeFmt(&path, "/"));
+        REQUIRE_EQ(path->path_type, (uint8_t)vpFullPath);
+        REQUIRE_RC_FAIL(
+            VFSManagerExtractAccessionOrOID(vfs, &acc_or_oid, path));
+        REQUIRE_NULL(acc_or_oid);
+        REQUIRE_RC(VPathRelease(path)); path = NULL;
+    }
+    {
+        REQUIRE_RC(VFSManagerMakeOidPath(vfs, &path, 1));
+        ExtractAccessionOrOID e(this, 1,
+            vfs, path, vpOID, eQualLast);
+        REQUIRE_RC(VPathRelease(path)); path = NULL;
+    }
+    {
+        REQUIRE_RC(VPathMakeFmt(&path, "SRR"));
+        ExtractAccessionOrOID e(this, "SRR",
+            vfs, path, vpNameOrAccession, eQualLast);
+        REQUIRE_RC(VPathRelease(path)); path = NULL;
+    }
+    {
+        REQUIRE_RC(VPathMakeFmt(&path, "KC702174.1"));
+        ExtractAccessionOrOID e(this, "KC702174.1",
+            vfs, path, vpAccession, eQualLast);
+        REQUIRE_RC(VPathRelease(path)); path = NULL;
+    }
+    {
+        REQUIRE_RC(VPathMakeFmt(&tmp, "A0123"));
+        ExtractAccessionOrOID e(this, "./A0123",
+            vfs, tmp, vpRelPath, eQualLast);
+        REQUIRE_RC(VPathRelease(tmp));
+    }
+    {
+        REQUIRE_RC(VPathMakeFmt(&tmp, "SXR01"));
+        ExtractAccessionOrOID e(this, "./SXR01",
+            vfs, tmp, vpRelPath, eQualLast);
+        REQUIRE_RC(VPathRelease(tmp));
+    }
+    {
+        REQUIRE_RC(VPathMakeFmt(&tmp, "SRX01"));
+        ExtractAccessionOrOID e(this, "./SRX01",
+            vfs, tmp, vpRelPath, eQualLast);
+        REQUIRE_RC(VPathRelease(tmp));
+    }
+    {
+        REQUIRE_RC(VPathMakeFmt(&tmp, "SXR01"));
+        ExtractAccessionOrOID e(this, "./SXR01",
+            vfs, tmp, vpRelPath, eQualLast);
+        REQUIRE_RC(VPathRelease(tmp));
+    }
+    {
+        REQUIRE_RC(VPathMakeFmt(&tmp, "SRRR1"));
+        ExtractAccessionOrOID e(this, "./SRRR1",
+            vfs, tmp, vpRelPath, eQualLast);
+        REQUIRE_RC(VPathRelease(tmp));
+    }
+    {
+        REQUIRE_RC(VPathMakeFmt(&tmp, "DRR01"));
+        ExtractAccessionOrOID e(this, "./DRR01",
+            vfs, tmp, vpRelPath, eQualLast);
+        REQUIRE_RC(VPathRelease(tmp));
+    }
+    {
+        REQUIRE_RC(VPathMakeFmt(&tmp, "ERR01"));
+        ExtractAccessionOrOID e(this, "./ERR01",
+            vfs, tmp, vpRelPath, eQualLast);
+        REQUIRE_RC(VPathRelease(tmp));
+    }
+    {
+        ExtractAccessionOrOID e(this, "./SRR01",
+            vfs, srr, vpRelPath, eQualLast);
+    }
+    {
+        ExtractAccessionOrOID e(this, "SRR01.wgs.sra.vdbcache.ncbi_enc",
+            vfs, srr, vpName, eQualFull);
+    }
+    {
+        REQUIRE_RC(VPathMakeFmt(&path, "SRR01.1"));
+        ExtractAccessionOrOID e(this, "SRR01.1",
+            vfs, path, vpNameOrAccession, eQualLast);
+        REQUIRE_RC(VPathRelease(path)); path = NULL;
+    }
+    {
+        ExtractAccessionOrOID e(this, "./SRR01.1",
+            vfs, srr, vpRelPath, eQualLast);
+    }
+    {
+        REQUIRE_RC(VPathMakeFmt(&path, "SRR01.a"));
+        REQUIRE_EQ(path->path_type, (uint8_t)vpName);
+        REQUIRE_RC_FAIL(
+            VFSManagerExtractAccessionOrOID(vfs, &acc_or_oid, path));
+        REQUIRE_NULL(acc_or_oid);
+        REQUIRE_RC(VPathRelease(path)); path = NULL;
+    }
+    {
+        REQUIRE_RC(VPathMakeFmt(&path, "SRR01.12"));
+        ExtractAccessionOrOID e(this, "SRR01.12",
+            vfs, path, vpNameOrAccession, eQualLast);
+        REQUIRE_RC(VPathRelease(path)); path = NULL;
+    }
+    {
+        ExtractAccessionOrOID e(this, "./SRR01.12",
+            vfs, srr, vpRelPath, eQualLast);
+    }
+    {
+        REQUIRE_RC(VPathMakeFmt(&path, "SRR01.ab"));
+        REQUIRE_EQ(path->path_type, (uint8_t)vpName);
+        REQUIRE_RC_FAIL(
+            VFSManagerExtractAccessionOrOID(vfs, &acc_or_oid, path));
+        REQUIRE_NULL(acc_or_oid);
+        REQUIRE_RC(VPathRelease(path)); path = NULL;
+    }
+    {
+        REQUIRE_RC(VPathMakeFmt(&path, "SRR01.123"));
+        ExtractAccessionOrOID e(this, "SRR01.123",
+            vfs, path, vpNameOrAccession, eQualLast);
+        REQUIRE_RC(VPathRelease(path)); path = NULL;
+    }
+    {
+        REQUIRE_RC(VPathMakeFmt(&tmp, "SRR01.123"));
+        ExtractAccessionOrOID e(this, "./SRR01.123",
+            vfs, tmp, vpRelPath, eQualLast);
+        REQUIRE_RC(VPathRelease(tmp));
+    }
+    {
+        REQUIRE_RC(VPathMakeFmt(&path, "SRR01.abc"));
+        REQUIRE_EQ(path->path_type, (uint8_t)vpName);
+        REQUIRE_RC_FAIL(
+            VFSManagerExtractAccessionOrOID(vfs, &acc_or_oid, path));
+        REQUIRE_NULL(acc_or_oid);
+        REQUIRE_RC(VPathRelease(path)); path = NULL;
+    }
+    {
+        ExtractAccessionOrOID e(this, "SRR01.noqual",
+            vfs, srr, vpName, eQualNo);
+    }
+    {
+        ExtractAccessionOrOID e(this, "./SRR01.noqual",
+            vfs, srr, vpRelPath, eQualNo);
+    }
+    {
+        REQUIRE_RC(VPathMakeFmt(&path, "SRR01.abcdef"));
+        REQUIRE_EQ(path->path_type, (uint8_t)vpName);
+        REQUIRE_RC_FAIL(
+            VFSManagerExtractAccessionOrOID(vfs, &acc_or_oid, path));
+        REQUIRE_NULL(acc_or_oid);
+        REQUIRE_RC(VPathRelease(path)); path = NULL;
+    }
+    {
+        ExtractAccessionOrOID e(this, "SRR01.sralite",
+            vfs, srr, vpName, eQualNo);
+    }
+    {
+        ExtractAccessionOrOID e(this, "./SRR01.sralite",
+            vfs, srr, vpRelPath, eQualNo);
+    }
+    {
+        REQUIRE_RC(VPathMakeFmt(&path, "SRR01.abcdefg"));
+        REQUIRE_EQ(path->path_type, (uint8_t)vpName);
+        REQUIRE_RC_FAIL(
+            VFSManagerExtractAccessionOrOID(vfs, &acc_or_oid, path));
+        REQUIRE_NULL(acc_or_oid);
+        REQUIRE_RC(VPathRelease(path)); path = NULL;
+    }
+    {
+        REQUIRE_RC(VPathMakeFmt(&path, "SRR01.abcdefgh"));
+        REQUIRE_EQ(path->path_type, (uint8_t)vpName);
+        REQUIRE_RC_FAIL(
+            VFSManagerExtractAccessionOrOID(vfs, &acc_or_oid, path));
+        REQUIRE_NULL(acc_or_oid);
+        REQUIRE_RC(VPathRelease(path)); path = NULL;
+    }
+    {
+        REQUIRE_RC(VPathMakeFmt(&path, "SRR01-"));
+        REQUIRE_EQ(path->path_type, (uint8_t)vpName);
+        REQUIRE_RC_FAIL(
+            VFSManagerExtractAccessionOrOID(vfs, &acc_or_oid, path));
+        REQUIRE_NULL(acc_or_oid);
+        REQUIRE_RC(VPathRelease(path)); path = NULL;
+    }
+    {
+        REQUIRE_RC(VPathMakeFmt(&path, "./SRR01-"));
+        REQUIRE_EQ(path->path_type, (uint8_t)vpRelPath);
+        REQUIRE_RC_FAIL(
+            VFSManagerExtractAccessionOrOID(vfs, &acc_or_oid, path));
+        REQUIRE_NULL(acc_or_oid);
+        REQUIRE_RC(VPathRelease(path)); path = NULL;
+    }
+    {
+        REQUIRE_RC(VPathMakeFmt(&path, "./SRR01_"));
+        REQUIRE_EQ(path->path_type, (uint8_t)vpRelPath);
+        REQUIRE_RC_FAIL(
+            VFSManagerExtractAccessionOrOID(vfs, &acc_or_oid, path));
+        REQUIRE_NULL(acc_or_oid);
+        REQUIRE_RC(VPathRelease(path)); path = NULL;
+    }
+    {
+        REQUIRE_RC(VPathMakeFmt(&path, "./SRR01_d"));
+        REQUIRE_EQ(path->path_type, (uint8_t)vpRelPath);
+        REQUIRE_RC_FAIL(
+            VFSManagerExtractAccessionOrOID(vfs, &acc_or_oid, path));
+        REQUIRE_NULL(acc_or_oid);
+        REQUIRE_RC(VPathRelease(path)); path = NULL;
+    }
+    {
+        REQUIRE_RC(VPathMakeFmt(&path, "./SRR01_db"));
+        REQUIRE_EQ(path->path_type, (uint8_t)vpRelPath);
+        REQUIRE_RC_FAIL(
+            VFSManagerExtractAccessionOrOID(vfs, &acc_or_oid, path));
+        REQUIRE_NULL(acc_or_oid);
+        REQUIRE_RC(VPathRelease(path)); path = NULL;
+    }
+    {
+        REQUIRE_RC(VPathMakeFmt(&path, "./SRR01_dbG"));
+        REQUIRE_EQ(path->path_type, (uint8_t)vpRelPath);
+        REQUIRE_RC_FAIL(
+            VFSManagerExtractAccessionOrOID(vfs, &acc_or_oid, path));
+        REQUIRE_NULL(acc_or_oid);
+        REQUIRE_RC(VPathRelease(path)); path = NULL;
+    }
+    {
+        REQUIRE_RC(VPathMakeFmt(&path, "./SRR01_dbGa"));
+        REQUIRE_EQ(path->path_type, (uint8_t)vpRelPath);
+        REQUIRE_RC_FAIL(
+            VFSManagerExtractAccessionOrOID(vfs, &acc_or_oid, path));
+        REQUIRE_NULL(acc_or_oid);
+        REQUIRE_RC(VPathRelease(path)); path = NULL;
+    }
+    {
+        REQUIRE_RC(VPathMakeFmt(&path, "./SRR01_dbGaP"));
+        REQUIRE_EQ(path->path_type, (uint8_t)vpRelPath);
+        REQUIRE_RC_FAIL(
+            VFSManagerExtractAccessionOrOID(vfs, &acc_or_oid, path));
+        REQUIRE_NULL(acc_or_oid);
+        REQUIRE_RC(VPathRelease(path)); path = NULL;
+    }
+    {
+        REQUIRE_RC(VPathMakeFmt(&path, "./SRR01_dbGaP-"));
+        REQUIRE_EQ(path->path_type, (uint8_t)vpRelPath);
+        REQUIRE_RC_FAIL(
+            VFSManagerExtractAccessionOrOID(vfs, &acc_or_oid, path));
+        REQUIRE_NULL(acc_or_oid);
+        REQUIRE_RC(VPathRelease(path)); path = NULL;
+    }
+    {
+        ExtractAccessionOrOID e(this, "./SRR01_dbGaP-0",
+            vfs, srr, vpRelPath, eQualLast);
+    }
+    {
+        REQUIRE_RC(VPathMakeFmt(&path, "./SRR01_dbGaP-0a"));
+        REQUIRE_EQ(path->path_type, (uint8_t)vpRelPath);
+        REQUIRE_RC_FAIL(
+            VFSManagerExtractAccessionOrOID(vfs, &acc_or_oid, path));
+        REQUIRE_NULL(acc_or_oid);
+        REQUIRE_RC(VPathRelease(path)); path = NULL;
+    }
+    {
+        ExtractAccessionOrOID e(this, "./SRR01_dbGaP-0.sra",
+            vfs, srr, vpRelPath, eQualFull);
+    }
+    {
+        ExtractAccessionOrOID e(this, "./SRR01_dbGaP-0.noqual",
+            vfs, srr, vpRelPath, eQualNo);
+    }
+    {
+        ExtractAccessionOrOID e(this, "./SRR01_dbGaP-0.sralite",
+            vfs, srr, vpRelPath, eQualNo);
+    }
+
+    REQUIRE_RC(VPathRelease(srr));
+}
+#endif
+
+#ifdef ALL
 FIXTURE_TEST_CASE(NAME_SERVER_PROTECTED_FASP, PathFixture) {
     {
 #undef URL
@@ -766,6 +1145,7 @@ FIXTURE_TEST_CASE(Pileup, PathFixture)
     REQUIRE_RC(VPathGetPath(path, & str));
     REQUIRE_EQ ( static_cast<size_t> (str.len), str.size  );
 }
+#endif
 
 //////////////////////////////////////////// Main
 extern "C"

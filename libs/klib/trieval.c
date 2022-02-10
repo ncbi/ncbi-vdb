@@ -27,6 +27,7 @@
 #include <klib/extern.h>
 #include "trie-priv.h"
 #include <klib/log.h>
+#include <rc.h>
 #include <sysalloc.h>
 
 #include <stdlib.h>
@@ -34,6 +35,7 @@
 #include <wctype.h>
 #include <errno.h>
 #include <assert.h>
+#include <stdio.h>
 
 
 /*--------------------------------------------------------------------------
@@ -94,34 +96,39 @@ int CC TTransValidate ( const TTrans *trans, const Trie *tt )
     /* count value tree */
     BSTreeForEach ( & trans -> vals, 0, TTransCountTNodes, & pb );
 
+    rc_t rc = 0;
+    char msg [256];
     /* check validity */
     if ( pb . tcnt != trans -> tcnt )
     {
-        LOGERR ( status = EINVAL, "bad trans -> tcnt => %u, should be %u",
-                 trans -> tcnt, pb . tcnt );
+        snprintf ( msg, sizeof ( msg ), "bad trans -> tcnt => %u, should be %u",
+                   trans -> tcnt, pb . tcnt );
+        rc = RC ( rcRuntime, rcTrie, rcValidating, rcFunctParam, rcInvalid );
+        LOGERR ( klogErr, rc, msg );
     }
 
     /* should have a non-zero tcnt if has child array */
     else if ( pb . tcnt == 0 && trans -> child != NULL )
     {
-        LOGERR ( status = EINVAL, "empty trans -> child", NULL ); /* 3rd parameter is wrong so far... */
+        rc = RC ( rcRuntime, rcTrie, rcValidating, rcFunctParam, rcEmpty );
+        LOGERR ( klogErr, rc, "empty trans -> child" );
     }
 
     if ( pb . vcnt != trans -> vcnt )
     {
-        LOGERR ( status = EINVAL, "bad trans -> vcnt => %u, should be %u",
-                 trans -> vcnt, pb . vcnt );
+        snprintf ( msg, sizeof ( msg ), "bad trans -> vcnt => %u, should be %u",
+                   trans -> vcnt, pb . vcnt );
+        rc = RC ( rcRuntime, rcTrie, rcValidating, rcFunctParam, rcInvalid );
+        LOGERR ( klogErr, rc, msg );
     }
 
     if ( trans -> child == NULL && pb . tcnt != 0 )
     {
         if ( pb . tcnt + pb . vcnt > tt -> limit )
         {
-            /*
-            LOGMSG ( "WARNING: over-limit actual value count => %u, should be %u\n",
-                 pb . tcnt + pb . vcnt, tt -> limit );
-           */
-            LOGMSG ( status = EINVAL, "WARNING: over-limit actual value count => %u, should be %u\n" );
+            snprintf ( msg, sizeof ( msg ), "WARNING: over-limit actual value count => %u, should be %u\n",
+                       pb . tcnt + pb . vcnt, tt -> limit );
+            LOGMSG ( klogInfo, msg );
         }
     }
 
@@ -134,8 +141,10 @@ int CC TTransValidate ( const TTrans *trans, const Trie *tt )
             {
                 if ( child -> depth != trans -> depth + 1 )
                 {
-                    LOGERR ( status = EINVAL, "bad trans -> depth => %u, should be %u",
-                             child -> depth, trans -> depth + 1 );
+                    snprintf ( msg, sizeof ( msg ), "bad trans -> depth => %u, should be %u",
+                               child -> depth, trans -> depth + 1 );
+                    rc = RC ( rcRuntime, rcTrie, rcValidating, rcFunctParam, rcInvalid );
+                    LOGERR ( klogErr, rc, msg );
                 }
                 else
                 {

@@ -168,9 +168,18 @@ typedef uint32_t ver_t;
 #define __file__ stringize ( __file_name__ )
 #endif
 
+#if ! defined __file__
+#define __file__ __FILE__
+#endif
+
 #if ! defined __fext__ && defined __file_ext__
 #define __fext__ stringize ( __file_ext__ )
 #endif
+
+#if ! defined __fext__
+#define __fext__ ""
+#endif
+
 
 /*--------------------------------------------------------------------------
  * PKGNAMESTR

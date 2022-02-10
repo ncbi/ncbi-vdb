@@ -65,7 +65,7 @@ LIB_EXPORT rc_t CC VDBManagerMakeWithVFSManager(const VDBManager ** cmgrp,
     const KDirectory * cwd, struct VFSManager * vmgr)
 {
     VDBManager ** mgrp = (VDBManager**)cmgrp;
-    KDirectory * wd = (KDirectory*)wd;
+    KDirectory * wd = (KDirectory*)cwd;
     return VDBManagerMakeUpdateWithVFSManager(mgrp, wd, NULL);
 }
 

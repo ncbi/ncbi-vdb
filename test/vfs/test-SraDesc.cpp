@@ -22,6 +22,8 @@
 *
 * =========================================================================== */
 
+#include <cmath>
+
 #include "../libs/vfs/SraDesc.c"
 
 #include <kfg/config.h> /* KConfigDisableUserSettings */
@@ -44,7 +46,7 @@ struct SraDescTestFixture {
 
     SraDescTestFixture() : dir(0), f(0) {
         rc_t rc = KDirectoryNativeDir(&dir); if (rc != 0) throw rc;
-        rc = KDirectoryRemove(dir, true, "%s", DIR); if (rc != 0) throw rc;
+        KDirectoryRemove(dir, true, "%s", DIR);
     }
 
     ~SraDescTestFixture() { Fini(); }
@@ -52,11 +54,9 @@ struct SraDescTestFixture {
     rc_t Fini() {
         rc_t rc = KFileRelease(f); f = 0;
 
-        rc_t r2 = KDirectoryRemove(dir, true, "%s", DIR);
-        if (r2 != 0 && rc == 0)
-            rc = r2;
+        KDirectoryRemove(dir, true, "%s", DIR);
 
-        r2 = KDirectoryRelease(dir); dir = 0;
+        rc_t r2 = KDirectoryRelease(dir); dir = 0;
         if (r2 != 0 && rc == 0)
             rc = r2;
 
@@ -193,7 +193,7 @@ FIXTURE_TEST_CASE(LoalFullQualityTest, SraDescTestFixture) {
     VPath * p = NULL;
     REQUIRE_RC(VPathMake(&p, path));
     REQUIRE_NOT_NULL(p);
-    REQUIRE_EQ(p->quality, (int32_t)eQualFull);
+    REQUIRE_EQ(p->quality, (int32_t)eQualLast);
 
     REQUIRE_RC(VPathLoadQuality(p));
     REQUIRE_EQ(p->quality, q);
@@ -228,8 +228,10 @@ FIXTURE_TEST_CASE(LoalObsoleteQualityTest, SraDescTestFixture) {
     VPath * p = NULL;
     REQUIRE_RC(VPathMake(&p, path));
     REQUIRE_NOT_NULL(p);
-    REQUIRE_EQ(p->quality, (int32_t)eQualFull);
+    REQUIRE_EQ(p->quality, (int32_t)eQualLast);
 
+ /* here there is a mismatch of size of sra and size in description:
+    description will be ignored */
     REQUIRE_RC(VPathLoadQuality(p));
     REQUIRE_EQ(p->quality, (int32_t)eQualLast);
 
@@ -246,4 +248,3 @@ extern "C" {
         return SraDescTestSuite(argc, argv);
     }
 }
-

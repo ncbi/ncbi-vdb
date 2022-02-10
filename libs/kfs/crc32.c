@@ -1473,8 +1473,9 @@ LIB_EXPORT rc_t CC KCRC32FileMakeWrite ( KCRC32File **fp,
             rc = RC ( rcFS, rcFile, rcConstructing, rcPath, rcEmpty );
         else
         {
+            size_t const pathlen = strlen(path);
             KCRC32File *f = malloc ( sizeof * f - sizeof f -> u +
-                sizeof f -> u . wr + strlen ( path ) );
+                sizeof f -> u . wr + pathlen );
             if ( f == NULL )
                 rc = RC ( rcFS, rcFile, rcConstructing, rcMemory, rcExhausted );
             else
@@ -1490,7 +1491,7 @@ LIB_EXPORT rc_t CC KCRC32FileMakeWrite ( KCRC32File **fp,
                     f -> type = KCRC32FileTypeWrite;
 
                     memset ( & f -> u . wr, 0, sizeof f -> u . wr );
-                    strcpy ( f -> u . wr . path, path );
+                    memmove ( f -> u . wr . path, path, pathlen + 1 );
 
                     rc = KFileSize ( out, & f -> u . wr . max_position );
                     if (rc)

@@ -1,6 +1,21 @@
 # NCBI External Developer Release:
 
 
+## NCBI VDB 3.0.0
+**February 10, 2022**
+
+  **blast**: processes some unusual ILLUMINA runs  
+  **blast, test**: fixed a missed return  
+  **build, ncbi-vdb**: see https://github.com/ncbi/ncbi-vdb/wiki/Building-and-Installing-from-Source for updated build instructions  
+  **build, ncbi-vdb, sra-tools**: added support for building with XCode  
+  **build, ncbi-vdb, sra-tools**: the build system has been converted to use CMake  
+  **klib**: removed asserts from RC headers  
+  **klib**: result codes can be more easily converted to strings  
+  **kns**: environment variables NCBI_USAGE_PLATFORM_NAME and NCBI_USAGE_PLATFORM_VERSION are sent to NCBI  
+  **kns, test**: test was improved  
+  **kfs, sra-tools**: fixed a bug in handling of long URLs on Windows  
+
+
 ## NCBI VDB 2.11.2
 **October 7, 2021**
 

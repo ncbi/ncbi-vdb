@@ -71,7 +71,7 @@ struct KfgConfigNamelist;
 #include "default_kfg.h" /* DEFAUTL_KFG */
 
 #include "kfg-parse.h"
-#include "config-tokens.h"
+#include "config-grammar.h"
 
 #include "../vfs/resolver-cgi.h" /* RESOLVER_CGI */
 #include "docker.h"
@@ -3139,7 +3139,6 @@ static rc_t _KConfigFixQualityType(KConfig *const self, bool *updated)
         rc = KConfigWriteString(self, node_name, value.addr);
         *updated = true;
     }
-
     if (rc != 0) {
         LOGERR(klogErr, rc, "can't set quality type");
     }
@@ -3560,7 +3559,8 @@ rc_t KConfigMakeImpl ( KConfig ** cfg, const KDirectory * cfgdir, bool local,
                 }
 
 #if WINDOWS /* VDB-1554: fix incorrect posix paths in configuration nodes */
-                if (rc == 0) {
+                if (rc == 0)
+                {
                     updated = false;
                     rc = _KConfigFixRepeatedDrives ( mgr, cfgdir, & updated );
                     if ( rc == 0 && updated )
@@ -3568,14 +3568,16 @@ rc_t KConfigMakeImpl ( KConfig ** cfg, const KDirectory * cfgdir, bool local,
                 }
 #endif
 #if CAN_HAVE_CONTAINER_ID
-                if (rc == 0) {
+                if (rc == 0)
+                {
                     updated = false;
                     rc = _KConfigGetContainerGUID(mgr, &updated);
                     if ( rc == 0 && updated )
                         KConfigCommit ( mgr );
                 }
 #endif
-                if (rc == 0) {
+                if (rc == 0)
+                {
                     updated = false;
                     rc = _KConfigFixQualityType(mgr, &updated);
                     if (rc == 0 && updated)

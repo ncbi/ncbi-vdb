@@ -44,10 +44,13 @@
 
 // IMPORTS:
 
+#undef DEBUG
+
 #include <string.h>                     // for strcmp(), strlen(), strcpy()
 #include <Judy.h>
 
-#ifndef NDEDUG
+
+#ifndef NDEBUG
 #define NDEBUG 1
 #endif
 #include <assert.h>

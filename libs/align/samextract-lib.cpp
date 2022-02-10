@@ -29,7 +29,7 @@
 #define __STDC_LIMIT_MACROS
 #include "samextract.h"
 #include "samextract-pool.h"
-#include "samextract-tokens.h"
+#include "samextract-grammar.h"
 #include <align/samextract-lib.h>
 #include <ctype.h>
 #include <errno.h>
@@ -43,12 +43,17 @@
 #include <kproc/queue.h>
 #include <kproc/thread.hpp>
 #include <kproc/timeout.h>
-#include <pthread.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#if LINUX
 #include <unistd.h>
+#define DFL_THREAD_COUNT ((int)sysconf( _SC_NPROCESSORS_ONLN ) - 1)
+#else
+#define DFL_THREAD_COUNT (4)
+#endif
 
 static char * fname_desc = NULL;
 char          curline[READBUF_SZ + 1];
@@ -159,8 +164,6 @@ i64 fast_strtoi64( const char * p )
 bool inrange( const char * str, i64 low, i64 high )
 {
     i64 i = fast_strtoi64( str );
-    if ( errno )
-        return false;
     if ( i < low || i > high )
         return false;
     return true;
@@ -538,7 +541,7 @@ LIB_EXPORT rc_t CC SAMExtractorMake( SAMExtractor ** state, const KFile * fin,
 
     s->infile  = fin;
     fname_desc = strdup( fname->addr );
-    //    s->fname = fname_desc;
+//    s->fname = fname_desc;
 
     VectorInit( &s->headers, 0, 0 );
     VectorInit( &s->alignments, 0, 0 );
@@ -548,16 +551,7 @@ LIB_EXPORT rc_t CC SAMExtractorMake( SAMExtractor ** state, const KFile * fin,
     s->prev_headers = NULL;
     s->prev_aligns  = NULL;
 
-    s->num_threads = num_threads;
-
-    // Default number of threads to number of cores
-    if ( s->num_threads <= -1 )
-#if LINUX
-        s->num_threads = (int)sysconf( _SC_NPROCESSORS_ONLN ) - 1;
-#else
-    s->num_threads = 8;
-#endif
-
+    s->num_threads = num_threads < 0 ? DFL_THREAD_COUNT : num_threads;
     DBG( "%d threads", s->num_threads );
     DBG( "fname is '%s'", fname_desc );
 

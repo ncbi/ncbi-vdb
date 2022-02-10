@@ -34,7 +34,7 @@
 
     using namespace ncbi::SchemaParser;
 
-    #include "schema-tokens.h"
+    #include "schema-grammar.hpp"
     #include "schema-lex.h"
     #define Schema_lex SchemaScan_yylex
 

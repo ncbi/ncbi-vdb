@@ -196,7 +196,7 @@ rc_t VDatabaseMake ( VDatabase **dbp,
     rc_t rc;
 
     /* create a structure */
-    VDatabase *db = calloc ( 1, sizeof * db );
+    VDatabase *db = (VDatabase*) calloc ( 1, sizeof * db );
     if ( db == NULL )
         rc = RC ( rcVDB, rcDatabase, rcConstructing, rcMemory, rcExhausted );
     else
@@ -1373,6 +1373,10 @@ LIB_EXPORT bool CC VDatabaseIsCSRA ( const VDatabase *self )
     return false;
 }
 
+/* This function will return true if "file" is recognized
+   as a valid file name for accession "acc".
+   It expect "file" to have extension ".sra" if full-quality is accepted;
+   if zero-quality is accepted: it expects "file" to have extension "xNoqual" */
 static bool validRunFileNameExt(const String * acc, const String * file,
     const String * xNoqual)
 {
@@ -1401,60 +1405,68 @@ static bool validRunFileNameExt(const String * acc, const String * file,
                     return true;
                 }
             }
-            return false;
         }
         else if (quality[j] == 'Z'
               && file->size == acc->size + xNoqual->size)
         {
-            if (string_cmp(file->addr + acc->size, file->size - acc->size,
-                xNoqual->addr, xNoqual->size, xNoqual->size) == 0)
+            if (string_cmp(file->addr, file->size,
+                acc->addr, acc->size, acc->len) == 0)
             {
-                return true;
+                if (string_cmp(file->addr + acc->size, file->size - acc->size,
+                    xNoqual->addr, xNoqual->size, xNoqual->size) == 0)
+                {
+                    return true;
+                }
             }
-            return false;
         }
         else {
             if (string_cmp(file->addr, file->size,
                 acc->addr, acc->size, acc->len) == 0)
             {
+                bool gap = true;
                 const char sfx[] = "_dbGaP-";
                 if (string_cmp(file->addr + acc->size, sizeof sfx - 1,
                     sfx, sizeof sfx - 1, sizeof sfx - 1) == 0)
                 {
+                    bool has = false;
                     size_t i = 0;
                     for (i = acc->size + sizeof sfx - 1;
                         i < file->size; ++i)
                     {
                         char c = file->addr[i];
                         if (c < '0' || c > '9') {
-                            if (c == '.')
-                                break;
-                            else
-                                return false;
+                            if (c != '.' || ! has)
+                                gap = false;
+                            break;
                         }
+                        has = true;
                     }
-                    if (quality[j] == 'R' &&
-                        string_cmp(file->addr + i, file->size - acc->size,
-                                   fullQl, sizeof fullQl - 1, sizeof fullQl - 1
-                                  ) == 0)
-                    {
-                        return true;
-                    }
-                    if (quality[j] == 'Z' &&
-                        string_cmp(file->addr + i, file->size - acc->size,
-                            xNoqual->addr, xNoqual->size, xNoqual->size) == 0)
-                    {
-                        return true;
+                    if (gap) {
+                        if (quality[j] == 'R' &&
+                            string_cmp(file->addr + i, file->size - acc->size,
+                                    fullQl, sizeof fullQl - 1, sizeof fullQl - 1
+                                      ) == 0)
+                        {
+                            return true;
+                        }
+                        if (quality[j] == 'Z' &&
+                            string_cmp(file->addr + i, file->size - acc->size,
+                                    xNoqual->addr, xNoqual->size, xNoqual->size
+                                      ) == 0)
+                        {
+                            return true;
+                        }
                     }
                 }
             }
-            return false;
         }
     }
 
     return false;
 }
 
+/* This function will return true if "file" is recognized
+   as a valid file name for accession "acc": see validRunFileNameExt */
 static bool validRunFileName(const String * acc, const String * file) {
     if (       validRunFileNameExt(acc, file, VFSManagerExtNoqual   (NULL)))
         return true;

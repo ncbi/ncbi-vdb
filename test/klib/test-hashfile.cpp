@@ -53,8 +53,13 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string>
+#ifndef WINDOWS
 #include <sys/time.h>
 #include <unistd.h>
+#else
+#define random rand
+#define srandom srand
+#endif
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -177,7 +182,7 @@ TEST_CASE(Klib_hashfileMap)
 
     bool found;
     uint64_t val;
-    uint64_t len = 0;
+    size_t len = 0;
     found = KHashFileFind(hmap, str1, strlen(str1), hash, NULL, 0);
     REQUIRE_EQ(found, true);
     found = KHashFileFind(hmap, str1, strlen(str1), hash, &val, &len);
@@ -769,7 +774,9 @@ rc_t CC KMain(int argc, char* argv[])
     if (rc) return rc;
 
     rc = KDirectoryRemove(DIR, true, "%s", fname);
+#ifndef WINDOWS
     if (rc) return rc;
+#endif
 
     rc = KFileRelease(BACKING);
     if (rc) return rc;

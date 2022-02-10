@@ -247,7 +247,7 @@ namespace vdb3
         EXPECT_EQ ( str, std :: string ( "-2147483648" ) );
     }
 
-#if ARCHBITS == 32
+#if _ARCH_BITS == 32
     TEST_F ( FmtBaseTestFixture, put_SLInt )
     {
         EXPECT_NO_THROW ( putSLInt ( Z32_MAX ) );
@@ -309,7 +309,7 @@ namespace vdb3
         EXPECT_EQ ( str, std :: string ( "4294967295" ) );
     }
 
-#if ARCHBITS == 32
+#if _ARCH_BITS == 32
     TEST_F ( FmtBaseTestFixture, put_ULInt )
     {
         EXPECT_NO_THROW ( putULInt ( N32_MAX ) );

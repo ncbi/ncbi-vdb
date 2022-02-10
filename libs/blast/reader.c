@@ -155,6 +155,7 @@ static void ReaderColsReset(ReaderCols *self) {
     self   ->col_PRIMARY_ALIGNMENT_ID
      = self->col_READ_FILTER
      = self->col_READ_LEN
+     = self->col_READ_TYPE
      = self->col_TRIM_LEN
      = self->col_TRIM_START
      = 0;
@@ -168,6 +169,7 @@ void ReaderColsFini(ReaderCols *self)
     free(self->primary_alignment_id);
     free(self->read_filter);
     free(self->read_len);
+    free(self->read_type);
 
     memset(self, 0, sizeof *self);
 }
@@ -264,6 +266,18 @@ uint32_t _VCursorAddReaderCols(const VCursor *self,
     }
 
     if (rc == 0) {
+        const char name[] = "READ_TYPE";
+        rc = VCursorAddColumn(self, &cols->col_READ_TYPE, name);
+        if (rc != 0) {
+            PLOGERR(klogInt, (klogInt, rc,
+                "Error in VCursorOpen($(name))", "name=%s", name));
+        }
+        else {
+            assert(cols->col_READ_TYPE);
+        }
+    }
+
+    if (rc == 0) {
         const char name[] = "TRIM_LEN";
         rc = VCursorAddColumn(self, &cols->col_TRIM_LEN, name);
         if (rc != 0) {
@@ -330,6 +344,8 @@ static uint32_t _VCursorReadReaderCols(const VCursor *self,
         cols->read_filter = NULL;
         free(cols->read_len);
         cols->read_len = NULL;
+        free(cols->read_type);
+        cols->read_type = NULL;
     }
 
     status = _VCursorReadArray(self, row_id, cols->col_READ_LEN,
@@ -347,6 +363,12 @@ static uint32_t _VCursorReadReaderCols(const VCursor *self,
         "READ_FILTER");
     if (status != eVdbBlastNoErr)
     {   return status; }
+
+    status = _VCursorReadArray(self, row_id, cols->col_READ_TYPE,
+        (void **)&cols->read_type, sizeof *cols->read_type, nReads,
+        "READ_TYPE");
+    if (status != eVdbBlastNoErr)
+        return status;
 
     if (cols->col_PRIMARY_ALIGNMENT_ID != 0) {
         status = _VCursorReadArray(self, row_id, cols->col_PRIMARY_ALIGNMENT_ID,
@@ -420,49 +442,50 @@ bool _ReadDescNextRead(ReadDesc *self, VdbBlastStatus *status)
             return false;
         }
     }
-
-    if (rd->nBioReads == 0) {
-        S
-        return false;
-    }
-
-    if (self->tableId == VDB_READ_UNALIGNED) {
-        nReads = rd->nReads;
-    }
-
-    for (i = self->read + 1; i <= nReads; ++i) {
-        if (rd->readType[i - 1] & SRA_READ_TYPE_BIOLOGICAL) {
-            S
-            read = i;
-            break;
-        }
-    }
-
-    if (read == 0) {
-        if (++self->spot > rd->spotCount) {
+    else /* fixed spot descriptor */ {
+        if (rd->nBioReads == 0) {
             S
             return false;
         }
 
-        for (i = 1; i <= nReads; ++i) {
+        if (self->tableId == VDB_READ_UNALIGNED)
+            nReads = rd->nReads;
+
+        for (i = self->read + 1; i <= nReads; ++i) {
             if (rd->readType[i - 1] & SRA_READ_TYPE_BIOLOGICAL) {
                 S
                 read = i;
                 break;
             }
         }
-    }
 
-    if (read > 0) {
-        S
-        self->read = read;
-        ++self->read_id;
-        *status = _ReadDescFixReadId(self);
-    }
-    else
-    {   S }
+        if (read == 0) {
+            if (++self->spot > rd->spotCount) {
+                S
+                return false;
+            }
 
-    return read;
+            for (i = 1; i <= nReads; ++i) {
+                if (rd->readType[i - 1] & SRA_READ_TYPE_BIOLOGICAL) {
+                    S
+                    read = i;
+                    break;
+                }
+            }
+        }
+
+        if (read > 0) {
+            S
+            self->read = read;
+            ++self->read_id;
+            *status = _ReadDescFixReadId(self);
+            return true;
+        }
+        else
+            S
+
+            return read;
+        }
 }
 
 static
@@ -526,8 +549,44 @@ bool _Reader2naEor(const Reader2na *self)
 }
 
 static uint32_t _Reader2naReadReaderCols(Reader2na *self, bool * empty) {
-    assert(self);
-    return _VCursorReadReaderCols(self->curs, &self->desc, &self->cols, empty);
+    rc_t rc = 0;
+    int i = 0;
+    const ReadDesc * desc = NULL;
+    const RunDesc * runDesc = NULL;
+
+    assert(self && self->desc.run);
+    desc = &self->desc;
+    runDesc = &self->desc.run->rd;
+/*  static int n = 9910;    if (desc->spot == n) {
+        int i = 0;    } */
+    rc = _VCursorReadReaderCols(self->curs, desc, &self->cols, empty);
+
+    /* see _VdbBlastRunFillRunDesc */
+    if (runDesc->varReadLen); /* can have variable read types */
+    else /* fixed number of reads */
+        if (!runDesc->varReadDesc || /* fixed read types */
+            desc->nReads != 2)       /* or nreads != 2 */
+    {   /* we don't expect read types to change through run */
+        for (i = 0; i < desc->nReads; ++i)
+            assert((self->cols.read_type[i] & SRA_READ_TYPE_BIOLOGICAL)
+                    == (runDesc->readType[i] & SRA_READ_TYPE_BIOLOGICAL));
+    }
+    /* if varReadDesc & nreads == 2 : we expect read types to switch */
+    else if ((self->cols.read_type[0] & SRA_READ_TYPE_BIOLOGICAL )
+          != (runDesc   ->readType[0] & SRA_READ_TYPE_BIOLOGICAL))
+    {
+        if ((self->cols.read_type[1] & SRA_READ_TYPE_BIOLOGICAL)
+            != (runDesc->readType[1] & SRA_READ_TYPE_BIOLOGICAL))
+        {
+            for (i = 0; i < desc->nReads; ++i)
+                runDesc->readType[i] = self->cols.read_type[i];
+        }
+        else
+            assert((self->cols.read_type[0] & SRA_READ_TYPE_BIOLOGICAL)
+                == (runDesc   ->readType[0] & SRA_READ_TYPE_BIOLOGICAL));
+    }
+
+    return rc;
 }
 
 static
@@ -702,7 +761,7 @@ bool _Reader2naNextData(Reader2na *self,
     uint32_t to_read = 0;
     const ReadDesc *desc = NULL;
     bool empty = false;
-    assert(self && status && out && self->curs);
+    assert(self && status && out && self->curs && self->desc.run);
     desc = &self->desc;
     memset(out, 0, sizeof *out);
 
@@ -735,7 +794,7 @@ bool _Reader2naNextData(Reader2na *self,
 
         S
         DBGMSG(DBG_BLAST, DBG_FLAG(DBG_BLAST_BLAST),
-            ("%s: %s:%d:%d(%d): READ_LEN=%d\n", __func__,
+            ("%s: %s:%ld:%d(%ld): READ_LEN=%d\n", __func__,
             self->desc.run->path, self->desc.spot, self->desc.read,
             self->desc.read_id, self->cols.read_len[desc->read - 1]));
 

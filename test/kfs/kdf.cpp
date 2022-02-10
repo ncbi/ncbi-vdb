@@ -39,6 +39,10 @@
 
 #include <cmath> // ceil
 #include <cstdio> // popen
+#ifdef WINDOWS
+#define popen _popen
+#define pclose _pclose
+#endif
 
 
 static rc_t argsHandler ( int argc, char * argv [] );
@@ -66,7 +70,11 @@ struct FIXTURE {
             return;
 
         if ( _path [ 0 ] == '~' && _path [ 1 ] == '\0' )
+#if WINDOWS
+            _path = getenv ( "USERPROFILE" );
+#else
             _path = getenv ( "HOME" );
+#endif
 
         if ( _path == NULL )
             return;

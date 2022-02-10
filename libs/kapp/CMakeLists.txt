@@ -1,0 +1,68 @@
+# ===========================================================================
+#
+#                            PUBLIC DOMAIN NOTICE
+#               National Center for Biotechnology Information
+#
+#  This software/database is a "United States Government Work" under the
+#  terms of the United States Copyright Act.  It was written as part of
+#  the author's official duties as a United States Government employee and
+#  thus cannot be copyrighted.  This software/database is freely available
+#  to the public for use. The National Library of Medicine and the U.S.
+#  Government have not placed any restriction on its use or reproduction.
+#
+#  Although all reasonable efforts have been taken to ensure the accuracy
+#  and reliability of the software and data, the NLM and the U.S.
+#  Government do not and cannot warrant the performance or results that
+#  may be obtained by using this software or data. The NLM and the U.S.
+#  Government disclaim all warranties, express or implied, including
+#  warranties of performance, merchantability or fitness for any particular
+#  purpose.
+#
+#  Please cite the author in any work or product based on this material.
+#
+# ===========================================================================
+
+set ( UNIX_SRC unix/args-conv-os.c unix/sysmain.c )
+set ( LINUX_SRC ${UNIX_SRC} linux/ram.c )
+set ( MAC_SRC ${UNIX_SRC} mac/ram.c )
+set ( WIN_SRC win/args-conv-os.c win/ram.c win/sysmain.c )
+
+if ( "windows" STREQUAL ${OS} )
+    set ( OS_SPECIFIC_SRC ${WIN_SRC} )
+elseif( "linux" STREQUAL ${OS} )
+    set ( OS_SPECIFIC_SRC ${LINUX_SRC} )
+elseif( "mac" STREQUAL ${OS} )
+    set ( OS_SPECIFIC_SRC ${MAC_SRC} )
+endif()
+
+set( KAPP_CMN
+    args
+    args-conv
+    tokenizer
+    log-xml
+)
+
+set( KAPP_SRC
+    main
+    ${KAPP_CMN}
+)
+
+set( LOADLIB_SRC
+    progressbar
+    loader-file
+    loader-meta
+    queue-file
+)
+
+set( SRC ${KAPP_SRC} ${OS_SPECIFIC_SRC} )
+
+GenerateStaticLibs( kapp "${SRC}" )
+ExportStatic( kapp true )
+
+GenerateStaticLibsWithDefs( kapp-norsrc "${SRC}" "NO_KRSRC=1" )
+
+GenerateStaticLibs( load "${LOADLIB_SRC}" )
+ExportStatic( load true )
+
+add_compile_definitions (__mod__="libs/kapp")
+add_compile_definitions (PKGNAME="${OS}${BITS}")

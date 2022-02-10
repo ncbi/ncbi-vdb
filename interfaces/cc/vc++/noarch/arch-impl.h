@@ -169,7 +169,9 @@ static __inline__
 uint64_t uint64_msbit( uint64_t self )
 {
     unsigned long idx;
-    _BitScanForward64(&idx, self);
+    int res = _BitScanReverse64 ( &idx, self );
+    if ( ! res )
+        idx = 0;
     return idx;
 }
 #endif

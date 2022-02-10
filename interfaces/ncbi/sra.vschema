@@ -463,7 +463,9 @@ table NCBI:SRA:tbl:pos #1.0.1 = INSDC:tbl:sequence #1.0.1
  *  1.0.3 - base explicitly upon sra #1.0.3, spotdesc_nocol #1.0.2
  *  1.0.4 - base explicitly upon sra #1.0.4
  */
-table NCBI:SRA:tbl:sra_nopos #1.0.4 = INSDC:SRA:tbl:sra #1.0.4, NCBI:SRA:tbl:spotdesc_nocol #1.0.2
+table NCBI:SRA:tbl:sra_nopos #1.0.4
+     = INSDC:SRA:tbl:sra #1.0.4
+     , NCBI:SRA:tbl:spotdesc_nocol #1.1
 {
     // v1 declares the POSITION column for all tables
     // but leaves all physical columns unstated
@@ -638,8 +640,8 @@ table NCBI:SRA:tbl:sra #1.0.4 = NCBI:SRA:tbl:sra_nopos #1.0.4, NCBI:SRA:tbl:pos 
  */
 table NCBI:SRA:tbl:sra_nopos #2.1.4
     = INSDC:SRA:tbl:sra #1.0.4
-    , NCBI:SRA:tbl:skeyname #3.0.2
-    , NCBI:SRA:tbl:spotdesc #1.0.2
+    , NCBI:SRA:tbl:skeyname #3.1
+    , NCBI:SRA:tbl:spotdesc #1.1
     , NCBI:SRA:tbl:stats #1.2.1
 {
     // this is already specified in INSDC:SRA:tbl:sra #1
@@ -716,8 +718,8 @@ table NCBI:SRA:tbl:sra_nopos #2.1.4
  */
 table NCBI:SRA:tbl:sra #2.1.4
     = INSDC:SRA:tbl:sra #1.0.4
-    , NCBI:SRA:tbl:skeyname #3.0.2
-    , NCBI:SRA:tbl:spotdesc #1.0.2
+    , NCBI:SRA:tbl:skeyname #3.1
+    , NCBI:SRA:tbl:spotdesc #1.1
     , NCBI:SRA:tbl:stats #1.2.1
     , NCBI:SRA:tbl:pos #1.0.1
 {

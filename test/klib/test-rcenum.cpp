@@ -52,8 +52,8 @@ TEST_CASE( test )
     } senums;
 
 
-#define __stringify_1(x...) #x
-#define __stringify(x...) __stringify_1(x)
+#define __stringify_1(x) #x
+#define __stringify(x) __stringify_1(x)
 #define RCIT(RCENUM, VAL)  { __stringify(RCENUM) , RCENUM , VAL }
     senums enums[] = {
         RCIT(rcAccessing, 5),

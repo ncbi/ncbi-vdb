@@ -47,6 +47,7 @@
 #include <set>
 #include <algorithm>
 #include <string>
+#include <iterator>
 
 #define ENTRY \
     HYBRID_FUNC_ENTRY ( rcDB, rcVector, rcValidating ); \

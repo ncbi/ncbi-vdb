@@ -36,10 +36,6 @@
 #include <klib/refcount.h>
 #include <klib/rc.h>
 
-#include <krypto/key.h>
-#include <krypto/encfile.h>
-
-
 #include <sysalloc.h>
 #include <stdlib.h>
 

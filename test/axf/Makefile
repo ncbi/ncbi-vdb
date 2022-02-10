@@ -25,35 +25,6 @@
 default: runtests
 
 TOP ?= $(abspath ../..)
+MODULE = test/align
 
-MODULE = test/axf
-
-TEST_TOOLS = \
-	test-RestoreRead
-    
 include $(TOP)/build/Makefile.env
-
-$(TEST_TOOLS): makedirs
-	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
-
-.PHONY: $(TEST_TOOLS)
-
-clean: stdclean
-
-#-------------------------------------------------------------------------------
-# white-box test
-#
-TEST_SRC = \
-	test-RestoreRead
-
-TEST_OBJ = \
-	$(addsuffix .$(OBJX),$(TEST_SRC))
-
-TEST_LIBS = \
-    -skapp \
-    -sktst \
-	-sncbi-vdb \
-	-sm
-
-$(TEST_BINDIR)/test-RestoreRead: $(TEST_OBJ)
-	$(LP) --exe -o $@ $^ $(TEST_LIBS)

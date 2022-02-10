@@ -22,36 +22,9 @@
 #
 # ===========================================================================
 
-
 default: runtests
 
 TOP ?= $(abspath ../..)
-MODULE = test/align-access
-
-TEST_TOOLS = \
-	test-align-access \
+MODULE = test/align
 
 include $(TOP)/build/Makefile.env
-
-$(TEST_TOOLS): makedirs
-	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
-
-clean: stdclean
-#-------------------------------------------------------------------------------
-# test-load-index
-#
-TEST_INDEX_SRC = \
-	test \
-	main
-
-TEST_INDEX_OBJ = \
-	$(addsuffix .$(OBJX),$(TEST_INDEX_SRC))
-
-TEST_INDEX_LIB = \
-	-skapp \
-	-sktst \
-	-sncbi-vdb
-
-$(TEST_BINDIR)/test-align-access: $(TEST_INDEX_OBJ)
-	$(LP) --exe -o $@ $^ $(TEST_INDEX_LIB)
-

@@ -2075,6 +2075,12 @@ class manager :
         self.__dir = self.__make_native_dir__()
         self.__ptr = self.__make_mgr__( mode )
 
+        # Add logging calls
+        self.KWrtInit = self.__func__("KWrtInit", [ c_char_p, c_int] )
+        self.KLogHandlerSetStdErr = self.__func__("KLogHandlerSetStdErr", [])
+        self.KLogLibHandlerSetStdErr = self.__func__("KLogLibHandlerSetStdErr", [])
+        self.KStsLibHandlerSetStdErr = self.__func__("KStsLibHandlerSetStdErr", [])
+        self.KLogLevelSet = self.__func__("KLogLevelSet", [ c_int ])
 
     def __del__( self ) :
         if self.__ptr != None :
@@ -2249,3 +2255,13 @@ class manager :
         if rc != 0 :
             self.raise_rc( rc, "RefVariationIUPACMake( %s )"%( ref_bases ), self )
         return RefVariation( self, ptr )
+
+    def SetLogLevel(self, level):
+        self.KLogLevelSet(c_int(level))
+
+    def InitLogging(self, name, version = 1):
+        n = to_char_p(name)
+        self.KWrtInit(n, c_int(version))
+        self.KLogHandlerSetStdErr()
+        self.KLogLibHandlerSetStdErr()
+        self.KStsLibHandlerSetStdErr()

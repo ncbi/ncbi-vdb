@@ -95,13 +95,8 @@ TEST_CASE( VdbMgr ) {
     // VDBManagerAddSchemaIncludePath
     REQUIRE_RC(VDBManagerAddSchemaIncludePath(mgr, NULL));
     REQUIRE_RC(VDBManagerAddSchemaIncludePath(mgr, ""));
-#ifndef WINDOWS
     REQUIRE_RC(VDBManagerAddSchemaIncludePath(mgr, "/"));
     REQUIRE_RC(VDBManagerAddSchemaIncludePath(mgr, "/usr"));
-#else
-    REQUIRE_RC_FAIL(VDBManagerAddSchemaIncludePath(mgr, "/"));
-    REQUIRE_RC_FAIL(VDBManagerAddSchemaIncludePath(mgr, "/usr"));
-#endif
 
     // VDBManagerAddLoadLibraryPath
     REQUIRE_RC(VDBManagerAddLoadLibraryPath(mgr, NULL));

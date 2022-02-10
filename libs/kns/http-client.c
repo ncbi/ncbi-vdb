@@ -320,6 +320,26 @@ bool KEndPointArgsIteratorNext ( KEndPointArgsIterator * self,
     return found;
 }
 
+struct KEndPointArgsIterator * KNSManagerMakeKEndPointArgsIterator (
+    const struct KNSManager * self, const String * hostname, uint32_t port,
+    size_t * cnt )
+{
+    struct KEndPointArgsIterator * i = calloc ( 1, sizeof * i );
+
+    KEndPointArgsIteratorMake ( i, self, hostname, port, cnt );
+
+    return i;
+}
+
+bool KEndPointArgsIterator_Next ( struct KEndPointArgsIterator * self,
+        const String ** hostname, uint16_t * port, bool * proxy_default_port,
+        bool * proxy_ep, size_t * crnt_proxy_idx, bool * last_proxy )
+{
+    return KEndPointArgsIteratorNext ( self, hostname, port,
+        proxy_default_port, proxy_ep, crnt_proxy_idx, last_proxy );
+}
+
+
 static
 rc_t KClientHttpGetLine ( KClientHttp *self, struct timeout_t *tm );
 
@@ -435,6 +455,8 @@ rc_t KClientHttpProxyConnect ( KClientHttp * self, const String * hostname, uint
         STATUS ( _STAT_GEEK, "%s - releasing socket stream\n", __func__ );
         KStreamRelease ( self -> sock );
         self -> sock = NULL;
+
+        KDataBufferWhack(&buffer);
     }
 
     return rc;

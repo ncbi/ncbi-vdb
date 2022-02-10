@@ -22,69 +22,7 @@
 #
 # ===========================================================================
 
-default: all
-
 TOP ?= $(abspath ../..)
 MODULE = libs/cloud
 
-INT_LIBS = \
-	libcloud
-
-ALL_LIBS = \
-	$(INT_LIBS)
-
-OBJFILES = \
-	$(CLOUD_OBJ)
-
 include $(TOP)/build/Makefile.env
-
-#-------------------------------------------------------------------------------
-# outer targets
-#
-all std: makedirs compile
-	@ $(MAKE_CMD) $(TARGDIR)/std
-
-$(INT_LIBS): makedirs
-	@ $(MAKE_CMD) $(ILIBDIR)/$@
-
-.PHONY: all std $(ALL_LIBS)
-
-#-------------------------------------------------------------------------------
-# std
-#
-$(TARGDIR)/std: \
-	$(addprefix $(ILIBDIR)/,$(INT_LIBS))
-
-.PHONY: $(TARGDIR)/std
-
-#-------------------------------------------------------------------------------
-# clean
-#
-clean: stdclean
-
-.PHONY: clean
-
-#-------------------------------------------------------------------------------
-# cloud
-#
-$(ILIBDIR)/libcloud: $(addprefix $(ILIBDIR)/libcloud.,$(ILIBEXT))
-
-CLOUD_SRC = \
-	cloud-mgr \
-	aws \
-	aws-auth \
-	gcp-authentication \
-	gcp \
-	cloud \
-	cloud-cmn \
-
-CLOUD_OBJ = \
-	$(addsuffix .$(LOBX),$(CLOUD_SRC))
-
-CLOUD_LIB = \
-	-lkns \
-    -lkfs \
-	-dklib
-
-$(ILIBDIR)/libcloud.$(LIBX): $(CLOUD_OBJ)
-	$(LD) --slib -o $@ $^ $(CLOUD_LIB)

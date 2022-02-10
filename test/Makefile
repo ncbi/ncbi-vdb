@@ -22,51 +22,9 @@
 #
 # ===========================================================================
 
-by_default: runtests
+default: runtests
 
 TOP ?= $(abspath ..)
 MODULE = test
 
-include $(TOP)/build/Makefile.shell
-
-include $(TOP)/build/Makefile.config
-
-#-------------------------------------------------------------------------------
-# default
-#
-SUBDIRS =       \
-    vfs         \
-    ktst        \
-    cc          \
-    ext         \
-    judy_test   \
-    kfc         \
-    kfs         \
-    klib        \
-    kfg         \
-    kapp        \
-    cloud       \
-    kdb         \
-    kproc       \
-    vdb         \
-    search      \
-    sraxf       \
-    vxf         \
-    loader      \
-    krypto      \
-    cipher      \
-	ncbi-vdb    \
-    ngs-python  \
-    kns         \
-    schema      \
-    ngs-java    \
-    install     \
-
-# common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
-include $(TOP)/build/Makefile.targets
-
-$(SUBDIRS):
-	@ $(MAKE) -C $@
-
-.PHONY: default $(SUBDIRS)
-
+include $(TOP)/build/Makefile.env
