@@ -943,7 +943,16 @@ rc_t KArcDirMakePath (const KArcDir *self,
 	    if (path[0] != '/')
 	    {
             assert (self->path[self->size - 1] == '/');
-            memmove (buffer, self->path, bsize = self->size);
+            bsize = self->size;
+            if ( asize < bsize )
+            {
+                buffer = realloc (buffer, bsize);
+                if (buffer == NULL)
+                {
+                    return RC (rcFS, rcDirectory, rcAllocating, rcPath, rcExhausted);
+                }
+            }
+            memmove (buffer, self->path, bsize );
 	    }
 	    /* -----
 	     * copy the pre-root portion of the self's path into the buffer
@@ -951,6 +960,14 @@ rc_t KArcDirMakePath (const KArcDir *self,
 	    else if ((bsize = self->root) != 0)
 	    {
             assert (self->path[bsize-1] != '/');
+            if ( asize < bsize )
+            {
+                buffer = realloc (buffer, bsize);
+                if (buffer == NULL)
+                {
+                    return RC (rcFS, rcDirectory, rcAllocating, rcPath, rcExhausted);
+                }
+            }
             memmove (buffer, self->path, bsize);
 	    }
 
