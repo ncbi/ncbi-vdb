@@ -67,3 +67,26 @@ GenerateStaticLibs( kns "${KNS_SRC}" )
 add_compile_definitions (__mod__="libs/kns")
 add_compile_definitions (PKGNAME="${OS}${BITS}")
 include_directories( BEFORE ${CMAKE_CURRENT_SOURCE_DIR} )
+
+include(CheckIncludeFile)
+CHECK_INCLUDE_FILE(gnu/libc-version.h HAVE_GNU_LIBC_VERSION_H LANGUAGE C)
+
+if(HAVE_GNU_LIBC_VERSION_H)
+    include(CheckCSourceRuns)
+    check_c_source_runs("
+#include <stdio.h>
+#include <gnu/libc-version.h>
+
+int main(int argc, char *argv[]) {
+    printf(\"glibc version %s\", gnu_get_libc_version());
+    return 0;
+}
+" HAVE_GNU_GET_LIBC_VERSION_F)
+endif()
+
+if(HAVE_GNU_LIBC_VERSION_H)
+    target_compile_definitions(kns PRIVATE HAVE_GNU_LIBC_VERSION_H)
+endif()
+if(HAVE_GNU_GET_LIBC_VERSION_F)
+    target_compile_definitions(kns PRIVATE HAVE_GNU_GET_LIBC_VERSION_F)
+endif()
