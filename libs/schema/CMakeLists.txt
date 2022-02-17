@@ -21,6 +21,7 @@
 #  Please cite the author in any work or product based on this material.
 #
 # ===========================================================================
+set( CMAKE_DISABLE_SOURCE_CHANGES OFF )
 
 if( FLEX_FOUND AND BISON_FOUND )
     FLEX_TARGET( SchemaFlex schema-lex.l ${CMAKE_CURRENT_SOURCE_DIR}/zz_schema-lex.c
@@ -38,11 +39,9 @@ endif()
 
 # AST parser
 if( BISON_FOUND )
-    set( CMAKE_DISABLE_SOURCE_CHANGES OFF )
     BISON_TARGET( SchemaAstGrammar schema-ast.y ${CMAKE_CURRENT_SOURCE_DIR}/zz_schema-ast.cpp
         COMPILE_FLAGS "-Wno-other --no-lines -r state -v --defines=zz_schema-ast.hpp" )
     set( SchemaAstParser ${BISON_SchemaAstGrammar_OUTPUT_SOURCE} )
-    set( CMAKE_DISABLE_SOURCE_CHANGES ON )
 else()
     set( SchemaAstParser zz_schema-ast.cpp )
     SET_DIRECTORY_PROPERTIES(PROPERTIES CLEAN_NO_CUSTOM 1)
@@ -70,3 +69,4 @@ set( SRC
 GenerateStaticLibs( schema "${SRC}" )
 
 add_compile_definitions (__mod__="libs/schema")
+set( CMAKE_DISABLE_SOURCE_CHANGES ON )
