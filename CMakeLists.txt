@@ -54,7 +54,7 @@ if (WIN32)
 	set (CMAKE_SYSTEM_VERSION 10.0 CACHE STRING INTERNAL FORCE)
 endif()
 
-# set( CMAKE_DISABLE_SOURCE_CHANGES ON )
+# set( CMAKE_DISABLE_SOURCE_CHANGES ON ) # Cannot use with bison
 # set( CMAKE_DISABLE_IN_SOURCE_BUILD ON )
 
 option(LIBS_ONLY "Generate library targets only" OFF)

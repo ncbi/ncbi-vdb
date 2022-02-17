@@ -21,7 +21,6 @@
 #  Please cite the author in any work or product based on this material.
 #
 # ===========================================================================
-#set( CMAKE_DISABLE_SOURCE_CHANGES OFF )
 
 if( FLEX_FOUND AND BISON_FOUND )
     FLEX_TARGET( SchemaFlex schema-lex.l ${CMAKE_CURRENT_SOURCE_DIR}/zz_schema-lex.c
@@ -69,4 +68,3 @@ set( SRC
 GenerateStaticLibs( schema "${SRC}" )
 
 add_compile_definitions (__mod__="libs/schema")
-#set( CMAKE_DISABLE_SOURCE_CHANGES ON )
