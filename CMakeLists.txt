@@ -54,6 +54,9 @@ if (WIN32)
 	set (CMAKE_SYSTEM_VERSION 10.0 CACHE STRING INTERNAL FORCE)
 endif()
 
+set( CMAKE_DISABLE_SOURCE_CHANGES ON )
+set( CMAKE_DISABLE_IN_SOURCE_BUILD ON )
+
 option(LIBS_ONLY "Generate library targets only" OFF)
 option(TESTS_ONLY "Generate test targets only" OFF)
 
@@ -61,6 +64,9 @@ if( TESTS_ONLY AND LIBS_ONLY )
     message( "ERROR: TESTS_ONLY and LIBS_ONLY cannot be specified at the same time" )
 elseif( TESTS_ONLY AND NOT LIBS_ONLY AND (${CMAKE_GENERATOR} MATCHES "Visual Studio.*" OR ${CMAKE_GENERATOR} STREQUAL "Xcode") )
     project(ncbi-vdb-tests)
+    if( PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR )
+        message(FATAL_ERROR "In-source builds are not allowed")
+    endif()
     # calculate global settiungs, create output directories
     include( build/env.cmake NO_POLICY_SCOPE )
 
@@ -75,6 +81,9 @@ elseif( TESTS_ONLY AND NOT LIBS_ONLY AND (${CMAKE_GENERATOR} MATCHES "Visual Stu
     add_subdirectory(test)
 elseif( NOT TESTS_ONLY AND LIBS_ONLY AND (${CMAKE_GENERATOR} MATCHES "Visual Studio.*" OR ${CMAKE_GENERATOR} STREQUAL "Xcode") )
     project(ncbi-vdb-libs)
+    if( PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR )
+        message(FATAL_ERROR "In-source builds are not allowed")
+    endif()
     # calculate global settiungs, create output directories
     include( build/env.cmake NO_POLICY_SCOPE )
 
@@ -86,6 +95,9 @@ else()
     endif()
 
     project(ncbi-vdb)
+    if( PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR )
+        message(FATAL_ERROR "In-source builds are not allowed")
+    endif()
     # calculate global settiungs, create output directories
     include( build/env.cmake NO_POLICY_SCOPE )
     add_subdirectory(libs)
