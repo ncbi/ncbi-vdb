@@ -455,7 +455,8 @@ LIB_EXPORT rc_t CC Pack ( uint32_t unpacked, uint32_t packed,
         return RC ( rcXF, rcBuffer, rcPacking, rcParam, rcNull );
 
     /* detect a byte size so large it can't be converted to bits */
-    if ( ( ssize & ( ( size_t ) 7 << ( sizeof ssize * 8 - 3 ) ) ) != 0 )
+    /* if any of the upper 3 bits are not zero, overflow is about to occur */
+    if ( ( ssize & ( ( size_t ) 7 << ( sizeof ( ssize ) * 8 - 3 ) ) ) != 0 )
         return RC ( rcXF, rcBuffer, rcPacking, rcBuffer, rcExcessive );
 
     /* required destination buffer size */
