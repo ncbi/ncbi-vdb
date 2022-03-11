@@ -58,6 +58,23 @@ public:
     {
         for( size_t i = 0; i < p_b.size(); ++i ) cout << i << ": " << (unsigned int)p_b[i] << endl;
     }
+
+    template<typename T>
+    T 
+    PackUnpackSingle( const T input, uint32_t packed )
+    {
+        const size_t srcBytes = sizeof( input );
+        const size_t srcBits = srcBytes * 8;
+        THROW_ON_RC( Pack( srcBits, packed, &input, srcBytes, & m_consumedBytes, m_packed.data(), 0, m_packed.size() * 8, & m_packedBits ) );
+        THROW_ON_FALSE( srcBytes == m_consumedBytes );
+        THROW_ON_FALSE( (bitsz_t)packed == m_packedBits );
+        T unpacked = 0;
+        THROW_ON_RC( Unpack( packed, srcBits, m_packed.data(), 0, m_packedBits, & m_consumedBits, & unpacked, sizeof( unpacked ), & m_unpackedBytes ) );
+        THROW_ON_FALSE( (bitsz_t)packed == m_consumedBits );
+        THROW_ON_FALSE( srcBytes == m_unpackedBytes );
+        return unpacked;
+    }
+
 };
 
 FIXTURE_TEST_CASE(Pack_null_psize, PackFixture)
@@ -168,19 +185,16 @@ FIXTURE_TEST_CASE(Pack_Unpack_memcpy, PackFixture)
 }
 
 FIXTURE_TEST_CASE(Pack_8_Unpack_single, PackFixture)
-{   // into < 8 bits
+{   
     const uint8_t src = 1;
-    REQUIRE_RC( Pack( 8, 2, &src, sizeof( src ), & m_consumedBytes, m_packed.data(), 0, m_packed.size() * 8, & m_packedBits ) );
-    Buffer expected_packed = { 0b01000000, 0, 0, 0, 0, 0, 0, 0 };
-    REQUIRE( expected_packed == m_packed );
-    REQUIRE_EQ( sizeof( src ), m_consumedBytes );
-    REQUIRE_EQ( (bitsz_t)2, m_packedBits );
-    uint8_t unpacked = 0;
-    REQUIRE_RC( Unpack( 2, 8, m_packed.data(), 0, m_packedBits, & m_consumedBits, & unpacked, sizeof( unpacked ), & m_unpackedBytes ) );
-    REQUIRE( src == unpacked );
-    REQUIRE_EQ( (bitsz_t)2, m_consumedBits );
-    REQUIRE_EQ( (size_t)1, m_unpackedBytes );
+    REQUIRE_EQ( src, PackUnpackSingle( src, 2 ) );
 }
+
+FIXTURE_TEST_CASE(Pack_8_Unpack_single_lossy, PackFixture)
+{   
+    const uint8_t src = 5;
+    REQUIRE_EQ( uint8_t(src & 0x03), PackUnpackSingle( src, 2 ) );
+} 
 
 FIXTURE_TEST_CASE(Pack_8_Unpack_multiple, PackFixture)
 {   // into < 8 bits
@@ -197,100 +211,64 @@ FIXTURE_TEST_CASE(Pack_8_Unpack_multiple, PackFixture)
     REQUIRE_EQ( m_consumedBytes, m_unpackedBytes );
 }
 
-#if FAILS
-FIXTURE_TEST_CASE(Pack_8_Unpack_multiple, PackFixture)
-{   // into < 8 bits
-    REQUIRE_RC( Pack( 8, 2, m_src.data(), m_src.size(), & m_consumedBytes, m_packed.data(), 0, m_packed.size() * 8, & m_packedBits ) );
-    //                        { 0, 1,    2, 3,   3, 2,  1, 0 };
-    Buffer expected_packed = { 0b0001, 0b1011, 0b1110, 0b0100, 0, 0, 0, 0};
-    REQUIRE( expected_packed == m_packed );
-    REQUIRE_EQ( m_src.size(), m_consumedBytes );
-    REQUIRE_EQ( m_src.size() * 2, (size_t) m_packedBits );
-    // REQUIRE_RC( Unpack( 8, 8, m_packed.data(), 0, m_packed.size() * 8, & m_consumedBits, m_unpacked.data(), m_unpacked.size(), & m_unpackedBytes ) );
-    // REQUIRE( m_src == m_unpacked );
-    // REQUIRE_EQ( m_src.size() * 8, m_consumedBits );
-    // REQUIRE_EQ( m_consumedBits, m_unpackedBytes  * 8);
-}
-#endif
-
-FIXTURE_TEST_CASE(Pack_64a_Unpack, PackFixture)
-{   // into <= 32 bits
-    const uint64_t src = 0x01020304;
-    REQUIRE_RC( Pack( 64, 31, &src, sizeof( src ), & m_consumedBytes, m_packed.data(), 0, m_packed.size() * 8, & m_packedBits ) );
-    //REQUIRE_EQ( (uint32_t)src, *(uint32_t*)m_packed.data() );
-    REQUIRE_EQ( sizeof( src ), m_consumedBytes );
-    REQUIRE_EQ( (bitsz_t)31, m_packedBits );
-    REQUIRE_RC( Unpack( 31, 64, m_packed.data(), 0, m_packedBits, & m_consumedBits, m_unpacked.data(), m_unpacked.size(), & m_unpackedBytes ) );
-    REQUIRE_EQ( src, *(uint64_t*)m_unpacked.data() );
-    REQUIRE_EQ( m_packedBits, m_consumedBits );
-    REQUIRE_EQ( sizeof( src ), m_unpackedBytes );
-}
-FIXTURE_TEST_CASE(Pack_64a_Unpack_lossy, PackFixture)
-{   // into <= 32 bits
-    const uint64_t src = 0x0102030405;
-    REQUIRE_RC( Pack( 64, 31, &src, sizeof( src ), & m_consumedBytes, m_packed.data(), 0, m_packed.size() * 8, & m_packedBits ) );
-    //REQUIRE_EQ( (uint32_t)src, *(uint32_t*)m_packed.data() );
-    REQUIRE_EQ( sizeof( src ), m_consumedBytes );
-    REQUIRE_EQ( (bitsz_t)31, m_packedBits );
-    REQUIRE_RC( Unpack( 31, 64, m_packed.data(), 0, m_packedBits, & m_consumedBits, m_unpacked.data(), m_unpacked.size(), & m_unpackedBytes ) );
-    REQUIRE_EQ( 0x2030405ul /*src & 0x7fffffff*/, *(uint64_t*)m_unpacked.data() );
-    REQUIRE_EQ( m_packedBits, m_consumedBits );
-    REQUIRE_EQ( sizeof( src ), m_unpackedBytes );
+FIXTURE_TEST_CASE(Pack_16_Unpack_single, PackFixture)
+{   
+    const uint16_t src = 0x1234;
+    REQUIRE_EQ( src, PackUnpackSingle( src, 13 ) );
 }
 
-#if FAILS
-FIXTURE_TEST_CASE(Pack_64b_Unpack, PackFixture)
+FIXTURE_TEST_CASE(Pack_16_Unpack_single_lossy, PackFixture)
+{   
+    const uint16_t src = 0x1234;
+    REQUIRE_EQ( uint16_t(src & 0x07ff), PackUnpackSingle( src, 11 ) );
+}
+
+FIXTURE_TEST_CASE(Pack_32_Unpack_single, PackFixture)
+{   
+    const uint32_t src = 0x12345678;
+    REQUIRE_EQ( src, PackUnpackSingle( src, 29 ) );
+}
+
+FIXTURE_TEST_CASE(Pack_32_Unpack_single_lossy, PackFixture)
+{   
+    const uint32_t src = 0x1234;
+    REQUIRE_EQ( uint32_t(src & 0x07ff), PackUnpackSingle( src, 11 ) );
+}
+
+//TODO: 
+//FIXTURE_TEST_CASE(Pack_16_Unpack_multiple, PackFixture)
+//FIXTURE_TEST_CASE(Pack_32_Unpack_multiple, PackFixture)
+
+FIXTURE_TEST_CASE(Pack_64a_Unpack_single, PackFixture)
+{   // into <= 32 bits
+    const uint64_t src = 0x12345678;
+    REQUIRE_EQ( src, PackUnpackSingle( src, 31 ) );
+}
+
+FIXTURE_TEST_CASE(Pack_64a_Unpack_single_lossy, PackFixture)
+{   // into <= 32 bits
+    const uint64_t src = 0x1234567812345678;
+    REQUIRE_EQ( uint64_t(src & 0x7fffffff), PackUnpackSingle( src, 31 ) );
+}
+
+FIXTURE_TEST_CASE(Pack_64b_Unpack_single, PackFixture)
 {   // into > 32 bits
-    const uint64_t src = 0x010203040506;
-    REQUIRE_RC( Pack( 64, 50, &src, sizeof( src ), & m_consumedBytes, m_packed.data(), 0, m_packed.size() * 8, & m_packedBits ) );
-    //REQUIRE_EQ( (uint32_t)src, *(uint32_t*)m_packed.data() );
-    REQUIRE_EQ( sizeof( src ), m_consumedBytes );
-    REQUIRE_EQ( (bitsz_t)50, m_packedBits );
-    REQUIRE_RC( Unpack( 50, 64, m_packed.data(), 0, m_packedBits, & m_consumedBits, m_unpacked.data(), m_unpacked.size(), & m_unpackedBytes ) );
-    REQUIRE_EQ( src, *(uint64_t*)m_unpacked.data() );
-    REQUIRE_EQ( m_packedBits, m_consumedBits );
-    REQUIRE_EQ( sizeof( src ), m_unpackedBytes );
+    const uint64_t src = 0x12345678;
+    REQUIRE_EQ( src, PackUnpackSingle( src, 33 ) );
 }
-#endif
 
-// FIXTURE_TEST_CASE(Pack_small_dsize_partially_consumed, PackFixture)
-// {
-//     const unsigned char src[]   = { 0, 1, 2, 3, 4, 5, 6, 7 };
-//     unsigned char packed[]      = { 0, 0, 0, 0, 0, 0, 0, 0 };
-//     REQUIRE_RC_FAIL( Pack( 8, 8, src.data(), src.size(), & m_consumedBits, packed.data(), 0, packed.size() * 8 - 1, & m_psize ) );
-//     // verify psize
-// }
+FIXTURE_TEST_CASE(Pack_64b_Unpack_single_lossy, PackFixture)
+{   // into > 32 bits
+    const uint64_t src = 0x1234567812345678;
+    REQUIRE_EQ( uint64_t(src & 0x1ffffffff), PackUnpackSingle( src, 33 ) );
+}
 
-// TEST_CASE(Pack_success)
-// {
-//     const unsigned char src[] = { 0, 1, 2, 3, 3, 2, 1, 0 };
-//     unsigned char packed[2] = { 0, 0 };
-//     size_t consumed;
-//     bitsz_t psize;
-//     REQUIRE_RC( Pack( 64, 2, src.data(), src.size(), & consumed, packed.data(), 0, packed.size() * 8, & psize ) );
-//     REQUIRE_EQ( sizeof( src ), consumed );
-//     REQUIRE_EQ( (bitsz_t)2, psize );
-// cout<<(unsigned int)packed[0]<<endl;
-// cout<<(unsigned int)packed[1]<<endl;
-// //    REQUIRE_EQ( (unsigned int)0xbe, (unsigned int)packed[0] );
-// //    REQUIRE_EQ( (unsigned int)0xfe, (unsigned int)packed[1] );
-
-//     unsigned char unpacked[8];
-//     REQUIRE_RC( Unpack( 2, 64, packed, 0, packed.size() * 8, &consumed, unpacked, sizeof( unpacked ), & psize ) );
-//     REQUIRE_EQ( packed.size() * 8, consumed );
-//     REQUIRE_EQ( (bitsz_t)64, psize );
-//     REQUIRE_EQ( (unsigned int)src[0], (unsigned int)unpacked[0] );
-//     REQUIRE_EQ( (unsigned int)src[1], (unsigned int)unpacked[1] );
-//     REQUIRE_EQ( (unsigned int)src[2], (unsigned int)unpacked[2] );
-//     REQUIRE_EQ( (unsigned int)src[3], (unsigned int)unpacked[3] );
-//     REQUIRE_EQ( (unsigned int)src[4], (unsigned int)unpacked[4] );
-//     REQUIRE_EQ( (unsigned int)src[5], (unsigned int)unpacked[5] );
-//     REQUIRE_EQ( (unsigned int)src[6], (unsigned int)unpacked[6] );
-//     REQUIRE_EQ( (unsigned int)src[7], (unsigned int)unpacked[7] );
-// }
+//TODO:
+//FIXTURE_TEST_CASE(Pack_64a_Unpack_multiple, PackFixture)
+//FIXTURE_TEST_CASE(Pack_64b_Unpack_multiple, PackFixture)
 
 // TEST_CASE(Pack_fail)
-// {   // no -0 destination offsets are not suported
+// {   // non-0 destination offsets are not suported
 //     const char src[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
 //     char packed[8];
 //     size_t consumed;
