@@ -61,18 +61,82 @@ public:
 
     template<typename T>
     T 
-    PackUnpackSingle( const T input, uint32_t packed )
+    PackUnpackSingle( const T input, uint32_t packed, bool debug = false )
     {
         const size_t srcBytes = sizeof( input );
         const size_t srcBits = srcBytes * 8;
-        THROW_ON_RC( Pack( srcBits, packed, &input, srcBytes, & m_consumedBytes, m_packed.data(), 0, m_packed.size() * 8, & m_packedBits ) );
+        THROW_ON_RC( Pack( srcBits, packed, &input, srcBytes, & m_consumedBytes, m_packed.data(), 0, srcBits, & m_packedBits ) );
         THROW_ON_FALSE( srcBytes == m_consumedBytes );
         THROW_ON_FALSE( (bitsz_t)packed == m_packedBits );
+        if ( debug )
+        {
+            int i = 0;
+            bitsz_t bits = m_packedBits;
+            while ( true )
+            {
+                if ( bits > 8 )
+                {
+                    cout << hex << int( m_packed[i] );
+                    i++;
+                    bits -= 8;
+                }
+                else
+                {   // last byte, // 8 => bits > 0 
+                    // clear (8 - bits) least significant gits
+                    const uint8_t mask[] = { 0, 0x01, 0x03, 0x07, 0x0f, 0x1f, 0x3f, 0x7f, 0xff};
+                    cout << hex << int( m_packed[i] & mask[i] );
+                    break;
+                }
+            }
+            cout << endl;
+        }
+
         T unpacked = 0;
         THROW_ON_RC( Unpack( packed, srcBits, m_packed.data(), 0, m_packedBits, & m_consumedBits, & unpacked, sizeof( unpacked ), & m_unpackedBytes ) );
         THROW_ON_FALSE( (bitsz_t)packed == m_consumedBits );
         THROW_ON_FALSE( srcBytes == m_unpackedBytes );
         return unpacked;
+    }
+
+    template<typename T, size_t N> 
+    array<T, N>
+    PackUnpackMultiple( const array<T, N> & input, uint32_t packed, bool debug = false )
+    {
+        const size_t srcBytes = sizeof( T ) * N;
+        const size_t srcBits = sizeof( T ) * 8;
+        array<T, N> packedBuf;
+        THROW_ON_RC( Pack( srcBits, packed, input.data(), srcBytes, & m_consumedBytes, packedBuf.data(), 0, sizeof( T ) * N * 8, & m_packedBits ) );
+        THROW_ON_FALSE( srcBytes == m_consumedBytes );
+        THROW_ON_FALSE( (bitsz_t)packed * input.size() == m_packedBits );
+
+        if ( debug )
+        {
+            int i = 0;
+            bitsz_t bits = m_packedBits;
+            while ( true )
+            {
+                if ( bits > 8 )
+                {
+                    cout << hex << int( packedBuf[i] );
+                    i++;
+                    bits -= 8;
+                }
+                else
+                {   // last byte, // 8 => bits > 0 
+                    // clear (8 - bits) least significant gits
+                    const uint8_t mask[] = { 0, 0x01, 0x03, 0x07, 0x0f, 0x1f, 0x3f, 0x7f, 0xff};
+                    cout << hex << int( packedBuf[i] & mask[i] );
+                    break;
+                }
+            }
+            cout << endl;
+        }
+
+        array<T, N> unpackedBuf;
+        THROW_ON_RC( Unpack( packed, srcBits, packedBuf.data(), 0, m_packedBits, & m_consumedBits, unpackedBuf.data(), unpackedBuf.size() * N * 8, & m_unpackedBytes ) );
+        THROW_ON_FALSE( m_packedBits == m_consumedBits );
+        THROW_ON_FALSE( srcBytes == m_unpackedBytes );
+        return unpackedBuf;
     }
 
 };
@@ -187,40 +251,39 @@ FIXTURE_TEST_CASE(Pack_Unpack_memcpy, PackFixture)
 FIXTURE_TEST_CASE(Pack_8_Unpack_single, PackFixture)
 {   
     const uint8_t src = 1;
-    REQUIRE_EQ( src, PackUnpackSingle( src, 2 ) );
+    for ( uint8_t packed = 1; packed < 8; ++packed )
+    {
+        REQUIRE_EQ( src, PackUnpackSingle( src, packed ) );
+    }
 }
-
-FIXTURE_TEST_CASE(Pack_8_Unpack_single_lossy, PackFixture)
-{   
-    const uint8_t src = 5;
-    REQUIRE_EQ( uint8_t(src & 0x03), PackUnpackSingle( src, 2 ) );
-} 
 
 FIXTURE_TEST_CASE(Pack_8_Unpack_multiple, PackFixture)
 {   // into < 8 bits
-    Buffer src = { 1, 2, 3, 4, 0, 0, 0, 0 };
-    REQUIRE_RC( Pack( 8, 3, src.data(), 4, & m_consumedBytes, m_packed.data(), 0, m_packed.size() * 8, & m_packedBits ) );
-    Buffer expected_packed = { 0b00101001, 0b11000000, 0, 0, 0, 0, 0, 0 };
-    //DumpBuffer(m_packed);
-    REQUIRE( expected_packed == m_packed );
-    REQUIRE_EQ( (size_t)4, m_consumedBytes );
-    REQUIRE_EQ( (bitsz_t)(3 * 4), m_packedBits );
-    REQUIRE_RC( Unpack( 3, 8, m_packed.data(), 0, m_packedBits, & m_consumedBits, m_unpacked.data(), m_unpacked.size(), & m_unpackedBytes ) );
-    REQUIRE( src == m_unpacked );
-    REQUIRE_EQ( (bitsz_t)(3 * 4), m_consumedBits );
-    REQUIRE_EQ( m_consumedBytes, m_unpackedBytes );
+    array<uint8_t, 8> src = { 1, 2, 3, 4, 0, 0, 0, 0 };
+    for ( uint8_t packed = 3; packed < 8; ++packed )
+    {
+        REQUIRE( src == PackUnpackMultiple( src, packed ) );
+    }
 }
 
 FIXTURE_TEST_CASE(Pack_16_Unpack_single, PackFixture)
 {   
     const uint16_t src = 0x1234;
-    REQUIRE_EQ( src, PackUnpackSingle( src, 13 ) );
+    for ( uint8_t packed = 13; packed < 16; ++packed )
+    {
+        REQUIRE_EQ( src, PackUnpackSingle( src, packed ) );
+    }
 }
 
-FIXTURE_TEST_CASE(Pack_16_Unpack_single_lossy, PackFixture)
-{   
-    const uint16_t src = 0x1234;
-    REQUIRE_EQ( uint16_t(src & 0x07ff), PackUnpackSingle( src, 11 ) );
+FIXTURE_TEST_CASE(Pack_16_Unpack_multiple, PackFixture)
+{   // into < 16 bits
+    array< uint16_t, 8 > src = { 0, 1, 2, 3, 4, 5, 6, 7 };
+    REQUIRE( src == (PackUnpackMultiple( src, 10 )) );
+//    for ( uint16_t packed = 3; packed < 16; ++packed )
+//    {
+//        cout<<packed<<endl;
+//        REQUIRE( src == (PackUnpackMultiple( src, packed )) );
+//    }
 }
 
 FIXTURE_TEST_CASE(Pack_32_Unpack_single, PackFixture)
@@ -229,15 +292,11 @@ FIXTURE_TEST_CASE(Pack_32_Unpack_single, PackFixture)
     REQUIRE_EQ( src, PackUnpackSingle( src, 29 ) );
 }
 
-FIXTURE_TEST_CASE(Pack_32_Unpack_single_lossy, PackFixture)
+FIXTURE_TEST_CASE(Pack_32_Unpack_multiple, PackFixture)
 {   
-    const uint32_t src = 0x1234;
-    REQUIRE_EQ( uint32_t(src & 0x07ff), PackUnpackSingle( src, 11 ) );
+    array< uint32_t, 8 > src = { 1, 2, 3, 4, 5, 6, 7, 8 };
+    REQUIRE( src == (PackUnpackMultiple( src, 4 )) );
 }
-
-//TODO: 
-//FIXTURE_TEST_CASE(Pack_16_Unpack_multiple, PackFixture)
-//FIXTURE_TEST_CASE(Pack_32_Unpack_multiple, PackFixture)
 
 FIXTURE_TEST_CASE(Pack_64a_Unpack_single, PackFixture)
 {   // into <= 32 bits
@@ -245,37 +304,38 @@ FIXTURE_TEST_CASE(Pack_64a_Unpack_single, PackFixture)
     REQUIRE_EQ( src, PackUnpackSingle( src, 31 ) );
 }
 
-FIXTURE_TEST_CASE(Pack_64a_Unpack_single_lossy, PackFixture)
-{   // into <= 32 bits
-    const uint64_t src = 0x1234567812345678;
-    REQUIRE_EQ( uint64_t(src & 0x7fffffff), PackUnpackSingle( src, 31 ) );
-}
-
 FIXTURE_TEST_CASE(Pack_64b_Unpack_single, PackFixture)
 {   // into > 32 bits
-    const uint64_t src = 0x12345678;
-    REQUIRE_EQ( src, PackUnpackSingle( src, 33 ) );
+    const uint64_t src = 0x0000000012345678;
+    for ( uint32_t packed = 33; packed < 64; ++packed )
+    {
+        REQUIRE_EQ( src, PackUnpackSingle( src, packed ) );
+    }
 }
 
-FIXTURE_TEST_CASE(Pack_64b_Unpack_single_lossy, PackFixture)
-{   // into > 32 bits
-    const uint64_t src = 0x1234567812345678;
-    REQUIRE_EQ( uint64_t(src & 0x1ffffffff), PackUnpackSingle( src, 33 ) );
+FIXTURE_TEST_CASE(Pack_64a_Unpack_multiple, PackFixture)
+{   // into <= 32 bits
+    array< uint64_t, 8 > src = { 1, 2, 3, 4, 5, 6, 7, 8 };
+    for ( uint32_t packed = 4; packed < 32; ++packed )
+    {
+        REQUIRE( src == (PackUnpackMultiple( src, packed )) );
+    }
 }
 
-//TODO:
-//FIXTURE_TEST_CASE(Pack_64a_Unpack_multiple, PackFixture)
-//FIXTURE_TEST_CASE(Pack_64b_Unpack_multiple, PackFixture)
+FIXTURE_TEST_CASE(Pack_64b_Unpack_multiple, PackFixture)
+{   // into >= 32 bits
+    array< uint64_t, 8 > src = { 0x1ffffffffUL, 25678, 390123, 45678, 590123, 645678, 790123, 845678 };
+    for ( uint32_t packed = 33; packed < 64; ++packed )
+    {
+        REQUIRE( src == (PackUnpackMultiple( src, packed )) );
+    }
+}
 
-// TEST_CASE(Pack_fail)
-// {   // non-0 destination offsets are not suported
-//     const char src[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
-//     char packed[8];
-//     size_t consumed;
-//     bitsz_t psize;
-//     const bitsz_t UnsupportedDstOff = 2; // non-0 dst_off
-//     REQUIRE_RC_FAIL( Pack( 64, 2, src.data(), src.size(), & consumed, packed, UnsupportedDstOff, packed.size() * 8 - UnsupportedDstOff, & psize ) );
-// }
+FIXTURE_TEST_CASE(Pack_fail, PackFixture)
+{   // non-0 destination offsets are not suported
+    const bitsz_t UnsupportedDstOff = 2; // non-0 dst_off
+    REQUIRE_RC_FAIL( Pack( 64, 2, m_src.data(), m_src.size(), & m_consumedBytes, m_packed.data(), UnsupportedDstOff, m_packed.size() * 8, & m_packedBits ) );
+}
 
 //////////////////////////////////////////////////// Main
 extern "C" {

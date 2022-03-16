@@ -392,8 +392,10 @@ void Pack64b ( uint32_t packed, void *dst, const void *src, uint32_t count )
         uint128_shl ( & acc, 64 - abits );
         out = bswap_64 ( uint128_lo ( & acc ) );
         abits = ( abits + 7 ) & ~ 7;
-        for ( d <<= 3, out >>= 64 - abits; abits != 0; abits -= 8, out >>= 8, ++ d )
+        for ( d <<= 3/*, out >>= (64 - abits)*/; abits != 0; abits -= 8, out >>= 8, ++ d )
+        {
             ( ( uint8_t* ) dst ) [ d ] = ( uint8_t ) out;
+        }
     }
 }
 
