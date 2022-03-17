@@ -55,8 +55,10 @@
 
 #include <assert.h>
 
-#if LINUX
+#if HAVE_GNU_LIBC_VERSION_H
 #include <gnu/libc-version.h>
+#endif
+#if LINUX
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #endif
@@ -1121,7 +1123,7 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
     if ( sessid == NULL ) { sessid = "nos"; }
 
     const char *libc_version = "";
-#if LINUX
+#if HAVE_GNU_GET_LIBC_VERSION_F
     libc_version = gnu_get_libc_version ();
 #endif
 
