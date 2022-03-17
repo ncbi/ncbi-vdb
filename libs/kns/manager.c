@@ -1223,6 +1223,7 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
             phid.base );
     }
 
+    KDataBufferWhack ( &platform );
     KDataBufferWhack ( &phid );
     KDataBufferWhack ( &sessids );
 

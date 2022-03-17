@@ -32,6 +32,7 @@
 
 #include <sysalloc.h>
 
+#include <klib/text.h>
 #include <kdb/manager.h>
 #include <kdb/database.h>
 #include <kdb/index.h>
@@ -59,7 +60,7 @@ public:
         KDBManagerRelease ( m_mgr );
         KDirectoryRelease ( m_wd );
     }
-    
+
     std::string GetColumnMetadata ( const KColumn* p_col, const char* p_metadataName )
     {
         const KMetadata *meta;
@@ -73,7 +74,7 @@ public:
         THROW_ON_RC ( KMetadataRelease ( meta ) );
         return string ( buf, num_read );
     }
-    
+
     KDirectory* m_wd;
     KDBManager* m_mgr;
 };
@@ -83,28 +84,28 @@ FIXTURE_TEST_CASE ( MissingRows, WKDB_Fixture )
     KDirectoryRemove(m_wd, true, GetName());
     KDatabase* db;
     REQUIRE_RC(KDBManagerCreateDB(m_mgr, &db, kcmCreate, GetName()));
- 
+
     KIndex *idx;
     REQUIRE_RC(KDatabaseCreateIndex(db, &idx, kitText, kcmCreate, "index"));
-    
+
     REQUIRE_RC(KIndexInsertText(idx, true, "aaaa1", 1));
     REQUIRE_RC(KIndexInsertText(idx, true, "aaaa3", 3));
-    
+
     int64_t start_id;
     uint64_t id_count;
     REQUIRE_RC(KIndexFindText (idx, "aaaa1", &start_id, &id_count, NULL, NULL));
     REQUIRE_EQ(start_id, (int64_t)1);
     REQUIRE_EQ(id_count, (uint64_t)1);
-    
+
     REQUIRE_RC_FAIL(KIndexFindText (idx, "aaaa2", &start_id, &id_count, NULL, NULL));
     REQUIRE_RC_FAIL(KIndexFindText (idx, "", &start_id, &id_count, NULL, NULL));
-    
+
     REQUIRE_RC(KIndexFindText (idx, "aaaa3", &start_id, &id_count, NULL, NULL));
     REQUIRE_EQ(start_id, (int64_t)3);
     REQUIRE_EQ(id_count, (uint64_t)1);
-    
-    REQUIRE_RC(KIndexRelease(idx));
-   
+
+    KIndexRelease(idx);
+
     REQUIRE_RC(KDatabaseRelease(db));
     KDirectoryRemove(m_wd, true, GetName());
 }
@@ -112,37 +113,37 @@ FIXTURE_TEST_CASE ( MissingRows, WKDB_Fixture )
 FIXTURE_TEST_CASE ( ColumnMetadataWKDB_Fixture, WKDB_Fixture )
 {
     KDirectoryRemove(m_wd, true, GetName());
-    
+
     const char* TableName = "tbl";
     const char* ColumnName = "col";
     const char* MetadataName = "metaname";
     const char* MetadataValue = "metavalue";
-    
+
     {
         KDatabase* db;
         REQUIRE_RC(KDBManagerCreateDB(m_mgr, &db, kcmCreate, GetName()));
-     
+
         KTable* tbl;
         REQUIRE_RC ( KDBManagerCreateTable ( m_mgr, & tbl, kcmInit + kcmMD5, TableName ) );
-        
+
         KColumn* col;
         REQUIRE_RC ( KTableCreateColumn ( tbl, & col, kcmInit, kcmMD5, 0, ColumnName ) );
-        
+
         KMetadata *meta;
         REQUIRE_RC ( KColumnOpenMetadataUpdate ( col, &meta ) );
-        
+
         KMDataNode* node;
         REQUIRE_RC ( KMetadataOpenNodeUpdate ( meta, & node, MetadataName ) );
-        
+
         REQUIRE_RC ( KMDataNodeWrite ( node, MetadataValue, string_size ( MetadataValue ) ) );
-        
+
         REQUIRE_RC ( KMDataNodeRelease ( node ) );
-        
+
         REQUIRE_RC ( KMetadataRelease ( meta ) );
-       
+
         // can only read after metadata has been released
         REQUIRE_EQ ( string ( MetadataValue ), GetColumnMetadata ( col, MetadataName ) );
-        
+
         REQUIRE_RC ( KColumnRelease ( col ) );
         REQUIRE_RC ( KTableRelease ( tbl ) );
         REQUIRE_RC ( KDatabaseRelease ( db ) );
@@ -150,20 +151,20 @@ FIXTURE_TEST_CASE ( ColumnMetadataWKDB_Fixture, WKDB_Fixture )
     {   // reopen, verify
         KDatabase* db;
         REQUIRE_RC ( KDBManagerOpenDBUpdate ( m_mgr, &db, GetName() ) );
-        
+
         const KTable* tbl;
         REQUIRE_RC ( KDBManagerOpenTableRead ( m_mgr, & tbl, TableName ) );
-        
+
         const KColumn* col;
         REQUIRE_RC ( KTableOpenColumnRead ( tbl, & col, ColumnName ) );
-        
+
         REQUIRE_EQ ( string ( MetadataValue ), GetColumnMetadata ( col, MetadataName ) );
-        
+
         REQUIRE_RC ( KColumnRelease ( col ) );
         REQUIRE_RC ( KTableRelease ( tbl ) );
         REQUIRE_RC ( KDatabaseRelease ( db ) );
     }
-    
+
     KDirectoryRemove(m_wd, true, TableName);
     KDirectoryRemove(m_wd, true, GetName());
 }
@@ -180,15 +181,15 @@ public:
     {
         KDBManager* mgr;
         THROW_ON_RC ( KDBManagerMakeUpdate( & mgr, NULL ) );
-        
+
         const KTable* tbl;
         THROW_ON_RC ( KDBManagerOpenTableRead ( mgr, & tbl, "SRR000123" ) );
-        
+
         const KColumn* col;
         THROW_ON_RC ( KTableOpenColumnRead ( tbl, & col, "X" ) );
-        
+
         THROW_ON_RC ( KColumnOpenBlobRead ( col, & m_blob, 1 ) );
-        
+
         THROW_ON_RC ( KColumnRelease ( col ) );
         THROW_ON_RC ( KTableRelease ( tbl ) );
         THROW_ON_RC ( KDBManagerRelease ( mgr ) );
@@ -204,9 +205,9 @@ public:
 };
 
 FIXTURE_TEST_CASE ( ColumnBlobRead_basic, ColumnBlobReadFixture )
-{   
-    const size_t BlobSize = 1882; 
-    const size_t BufSize = 2024; 
+{
+    const size_t BlobSize = 1882;
+    const size_t BufSize = 2024;
     char buffer [ BufSize ];
     REQUIRE_RC ( KColumnBlobRead ( m_blob, 0, buffer, BufSize, & m_num_read, & m_remaining ) );
     REQUIRE_EQ ( BlobSize, m_num_read );
@@ -214,9 +215,9 @@ FIXTURE_TEST_CASE ( ColumnBlobRead_basic, ColumnBlobReadFixture )
 }
 
 FIXTURE_TEST_CASE ( ColumnBlobRead_insufficient_buffer, ColumnBlobReadFixture )
-{   
-    const size_t BlobSize = 1882; 
-    const size_t BufSize = 1024; 
+{
+    const size_t BlobSize = 1882;
+    const size_t BufSize = 1024;
     char buffer [ BufSize ];
     // first read incomplete
     REQUIRE_RC ( KColumnBlobRead ( m_blob, 0, buffer, BufSize, & m_num_read, & m_remaining ) );

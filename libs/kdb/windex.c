@@ -88,49 +88,45 @@ struct KIndex
 static
 rc_t KIndexWhack ( KIndex *self )
 {
-    rc_t rc;
+    rc_t rc, rc2;
     KDBManager *mgr = self -> mgr;
     KSymbol * symb;
 
     KRefcountWhack ( & self -> refcount, "KIndex" );
 
     rc = KIndexCommit( self );
-    if ( rc == 0 )
+
+    /* release owner */
+    if ( self -> db != NULL )
     {
-        /* release owner */
-        if ( self -> db != NULL )
-        {
-            rc = KDatabaseSever ( self -> db );
-            if ( rc != 0 )
-                return rc;
-            self -> db = NULL;
-        }
-        else if ( self -> tbl != NULL )
-        {
-            rc = KTableSever ( self -> tbl );
-            if ( rc != 0 )
-                return rc;
-            self -> tbl = NULL;
-        }
+        rc2 = KDatabaseSever ( self -> db );
+        self -> db = NULL;
     }
+    else if ( self -> tbl != NULL )
+    {
+        rc2 = KTableSever ( self -> tbl );
+        self -> tbl = NULL;
+    }
+    if ( rc == 0 )
+        rc = rc2;
 
     /* remove from mgr */
     symb = KDBManagerOpenObjectFind (mgr, self->path);
     if (symb != NULL)
     {
-        rc = KDBManagerOpenObjectDelete (mgr, symb);
-        if (rc == 0)
+        rc2 = KDBManagerOpenObjectDelete (mgr, symb);
+        if (rc2 == 0)
         {
             /* release manager
                should never fail */
-            rc = KDBManagerSever ( mgr );
-            if ( rc != 0 )
-                rc = KDBManagerOpenObjectAdd (mgr, symb);
+            rc2 = KDBManagerSever ( mgr );
+            if ( rc2 != 0 )
+                rc2 = KDBManagerOpenObjectAdd (mgr, symb);
             else
             {
                 self -> mgr = NULL;
 
-                rc = SILENT_RC ( rcDB, rcIndex, rcDestroying, rcIndex, rcBadVersion );
+                rc2 = SILENT_RC ( rcDB, rcIndex, rcDestroying, rcIndex, rcBadVersion );
 
                 /* complete */
                 switch ( self -> type )
@@ -141,13 +137,13 @@ rc_t KIndexWhack ( KIndex *self )
                     {
                     case 1:
                         KTrieIndexWhack_v1 ( & self -> u . txt1 );
-                        rc = 0;
+                        rc2 = 0;
                         break;
                     case 2:
                     case 3:
                     case 4:
                         KTrieIndexWhack_v2 ( & self -> u . txt2 );
-                        rc = 0;
+                        rc2 = 0;
                         break;
                     }
                     break;
@@ -157,21 +153,23 @@ rc_t KIndexWhack ( KIndex *self )
                     {
                     case 3:
                     case 4:
-                        rc = KU64IndexWhack_v3 ( & self -> u . u64_3 );
+                        rc2 = KU64IndexWhack_v3 ( & self -> u . u64_3 );
                         break;
                     }
                     break;
                 }
             }
         }
+
+        if ( rc == 0 )
+            rc = rc2;
     }
+    
+    rc2 = KDirectoryRelease ( self -> dir );
     if ( rc == 0 )
-    {
-        KDirectoryRelease ( self -> dir );
-        free ( self );
-    }
-    else
-        KRefcountInit ( & self -> refcount, 1, "KIndex", "whack", "kidx" );
+        rc = rc2;
+
+    free ( self );
     return rc;
 }
 
