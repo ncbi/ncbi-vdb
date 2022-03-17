@@ -32,6 +32,7 @@
 
 #include <sysalloc.h>
 
+#include <klib/text.h>
 #include <kdb/manager.h>
 #include <kdb/database.h>
 #include <kdb/index.h>
@@ -44,7 +45,7 @@ using namespace std;
 TEST_SUITE(KdbTestSuite);
 
 #define KDB_MANAGER_MAKE(m_mgr, m_wd) KDBManagerMakeUpdate((KDBManager **)m_mgr, (struct KDirectory *)m_wd)
-//#include "remote_open_test.cpp"
+#include "remote_open_test.cpp"
 
 class WKDB_Fixture
 {
@@ -92,23 +93,23 @@ FIXTURE_TEST_CASE ( MissingRows, WKDB_Fixture )
 
     int64_t start_id;
     uint64_t id_count;
-    // REQUIRE_RC(KIndexFindText (idx, "aaaa1", &start_id, &id_count, NULL, NULL));
-    // REQUIRE_EQ(start_id, (int64_t)1);
-    // REQUIRE_EQ(id_count, (uint64_t)1);
+    REQUIRE_RC(KIndexFindText (idx, "aaaa1", &start_id, &id_count, NULL, NULL));
+    REQUIRE_EQ(start_id, (int64_t)1);
+    REQUIRE_EQ(id_count, (uint64_t)1);
 
-    // REQUIRE_RC_FAIL(KIndexFindText (idx, "aaaa2", &start_id, &id_count, NULL, NULL));
-    // REQUIRE_RC_FAIL(KIndexFindText (idx, "", &start_id, &id_count, NULL, NULL));
+    REQUIRE_RC_FAIL(KIndexFindText (idx, "aaaa2", &start_id, &id_count, NULL, NULL));
+    REQUIRE_RC_FAIL(KIndexFindText (idx, "", &start_id, &id_count, NULL, NULL));
 
-    // REQUIRE_RC(KIndexFindText (idx, "aaaa3", &start_id, &id_count, NULL, NULL));
-    // REQUIRE_EQ(start_id, (int64_t)3);
-    // REQUIRE_EQ(id_count, (uint64_t)1);
+    REQUIRE_RC(KIndexFindText (idx, "aaaa3", &start_id, &id_count, NULL, NULL));
+    REQUIRE_EQ(start_id, (int64_t)3);
+    REQUIRE_EQ(id_count, (uint64_t)1);
 
-    REQUIRE_RC(KIndexRelease(idx));
+    KIndexRelease(idx);
 
     REQUIRE_RC(KDatabaseRelease(db));
     KDirectoryRemove(m_wd, true, GetName());
 }
-#if 0
+
 FIXTURE_TEST_CASE ( ColumnMetadataWKDB_Fixture, WKDB_Fixture )
 {
     KDirectoryRemove(m_wd, true, GetName());
@@ -227,7 +228,7 @@ FIXTURE_TEST_CASE ( ColumnBlobRead_insufficient_buffer, ColumnBlobReadFixture )
     REQUIRE_EQ ( BlobSize - BufSize, m_num_read );
     REQUIRE_EQ ( (size_t)0, m_remaining );
 }
-#endif
+
 //////////////////////////////////////////// Main
 extern "C"
 {
