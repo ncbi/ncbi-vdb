@@ -174,7 +174,7 @@ FIXTURE_TEST_CASE(Pack_small_dsize, PackFixture)
 {   // no error but consumed < dsize
     REQUIRE_RC( Pack( 8, 8, m_src.data(), m_src.size(), & m_consumedBytes, m_packed.data(), 0, m_packed.size() * 8 - 1, & m_packedBits ) );
     REQUIRE_EQ( size_t(7), m_consumedBytes );
-    REQUIRE_EQ( m_consumedBytes * 8, m_packedBits );
+    REQUIRE_EQ( m_consumedBytes * 8, (size_t)m_packedBits );
 }
 FIXTURE_TEST_CASE(Pack_null_dest, PackFixture)
 {
@@ -186,7 +186,7 @@ FIXTURE_TEST_CASE(Pack_memcpy, PackFixture)
     REQUIRE_RC( Pack( 8, 8, m_src.data(), m_src.size(), & m_consumedBytes, m_packed.data(), 0, m_packed.size() * 8, & m_packedBits ) );
     REQUIRE( m_src == m_packed );
     REQUIRE_EQ( m_src.size(), m_consumedBytes );
-    REQUIRE_EQ( m_consumedBytes * 8, m_packedBits );
+    REQUIRE_EQ( m_consumedBytes * 8, (size_t)m_packedBits );
 }
 
 FIXTURE_TEST_CASE(Unpack_null_usize, PackFixture)
@@ -206,14 +206,14 @@ FIXTURE_TEST_CASE(Unpack_bad_unpacked, PackFixture)
 FIXTURE_TEST_CASE(Unpack_ssize_0, PackFixture)
 {
     REQUIRE_RC( Unpack( 8, 8, m_packed.data(), 0, 0, & m_consumedBits, m_unpacked.data(), m_unpacked.size(), & m_unpackedBytes ) );
-    REQUIRE_EQ( size_t(0), m_consumedBits );
+    REQUIRE_EQ( size_t(0), (size_t)m_consumedBits );
     REQUIRE_EQ( size_t(0), m_unpackedBytes );
 }
 
 FIXTURE_TEST_CASE(Unpack_ssize_low, PackFixture)
 {
     REQUIRE_RC( Unpack( 8, 8, m_packed.data(), 0, 7, & m_consumedBits, m_unpacked.data(), m_unpacked.size(), & m_unpackedBytes ) );
-    REQUIRE_EQ( size_t(0), m_consumedBits );
+    REQUIRE_EQ( size_t(0), (size_t)m_consumedBits );
     REQUIRE_EQ( size_t(0), m_unpackedBytes );
 }
 
@@ -241,11 +241,11 @@ FIXTURE_TEST_CASE(Pack_Unpack_memcpy, PackFixture)
     REQUIRE_RC( Pack( 8, 8, m_src.data(), m_src.size(), & m_consumedBytes, m_packed.data(), 0, m_packed.size() * 8, & m_packedBits ) );
     REQUIRE( m_src == m_packed );
     REQUIRE_EQ( m_src.size(), m_consumedBytes );
-    REQUIRE_EQ( m_consumedBytes * 8, m_packedBits );
+    REQUIRE_EQ( m_consumedBytes * 8, (size_t)m_packedBits );
     REQUIRE_RC( Unpack( 8, 8, m_packed.data(), 0, m_packedBits, & m_consumedBits, m_unpacked.data(), m_unpacked.size(), & m_unpackedBytes ) );
     REQUIRE( m_src == m_unpacked );
-    REQUIRE_EQ( m_src.size() * 8, m_consumedBits );
-    REQUIRE_EQ( m_consumedBits, m_unpackedBytes  * 8);
+    REQUIRE_EQ( m_src.size() * 8, (size_t)m_consumedBits );
+    REQUIRE_EQ( (size_t)m_consumedBits, m_unpackedBytes  * 8);
 }
 
 FIXTURE_TEST_CASE(Pack_8_Unpack_single, PackFixture)
