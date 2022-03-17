@@ -324,16 +324,23 @@ void uint128_not ( uint128_t *self )
 static __inline
 void uint128_shr ( uint128_t *self, uint32_t i )
 {
-    if ( i < 64 )
-    {
-        self -> lo = ( self -> hi << ( 64 - i ) ) |  ( self -> lo >> i );
-        self -> hi >>= i;
-    }
-    else
-    {
-        self -> lo = self -> hi >> ( i - 64 );
-        self -> hi >>= 63;
-    }
+	if ((i &= 0x7F) != 0)
+	{
+		uint64_t shifted = self->hi;
+
+		if (i >= 64)
+		{
+			self->hi >>= 63;
+			self->lo = shifted >> (i - 64);
+		}
+		else
+		{
+			self->lo >>= i;
+			shifted <<= 64 - i;
+			self->hi >>= i;
+			self->lo |= shifted;
+		}
+	}
 }
 
 static __inline
