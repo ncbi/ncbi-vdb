@@ -40,6 +40,10 @@ AddExecutableTest( Test_VDB_sparse_col_rw "test-sparse-col" "${COMMON_LIBS_WRITE
 
 AddExecutableTest( Test_VDB_sparse_col_rd "test-sparse-col" "${COMMON_LIBS_READ}" )
 target_compile_definitions(Test_VDB_sparse_col_rd PUBLIC READ_ONLY)
+if( RUN_SANITIZER_TESTS )
+    target_compile_definitions(Test_VDB_sparse_col_rd_asan PUBLIC READ_ONLY)
+    target_compile_definitions(Test_VDB_sparse_col_rd_tsan PUBLIC READ_ONLY)
+endif()
 
 AddExecutableTest( Test_VDB_blob_val "test-blob-val" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_VDB_VDB-3060 "test-VDB-3060" "${COMMON_LIBS_READ}" )
