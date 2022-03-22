@@ -60,7 +60,7 @@ public:
     }
 
     template<typename T>
-    T 
+    T
     PackUnpackSingle( const T input, uint32_t packed, bool debug = false )
     {
         const size_t srcBytes = sizeof( input );
@@ -81,7 +81,7 @@ public:
                     bits -= 8;
                 }
                 else
-                {   // last byte, // 8 => bits > 0 
+                {   // last byte, // 8 => bits > 0
                     // clear (8 - bits) least significant gits
                     const uint8_t mask[] = { 0, 0x01, 0x03, 0x07, 0x0f, 0x1f, 0x3f, 0x7f, 0xff};
                     cout << hex << int( m_packed[i] & mask[i] );
@@ -98,13 +98,16 @@ public:
         return unpacked;
     }
 
-    template<typename T, size_t N> 
+    template<typename T, size_t N>
     array<T, N>
     PackUnpackMultiple( const array<T, N> & input, uint32_t packed, bool debug = false )
     {
         const size_t srcBytes = sizeof( T ) * N;
         const size_t srcBits = sizeof( T ) * 8;
-        array<T, N> packedBuf;
+        array<uint8_t, N * srcBytes> packedBuf;
+        if ( debug )
+            for( size_t i = 0; i < N; ++i ) cout << hex << input[i] << endl;
+
         THROW_ON_RC( Pack( srcBits, packed, input.data(), srcBytes, & m_consumedBytes, packedBuf.data(), 0, sizeof( T ) * N * 8, & m_packedBits ) );
         THROW_ON_FALSE( srcBytes == m_consumedBytes );
         THROW_ON_FALSE( (bitsz_t)packed * input.size() == m_packedBits );
@@ -122,10 +125,10 @@ public:
                     bits -= 8;
                 }
                 else
-                {   // last byte, // 8 => bits > 0 
+                {   // last byte, // 8 => bits > 0
                     // clear (8 - bits) least significant gits
                     const uint8_t mask[] = { 0, 0x01, 0x03, 0x07, 0x0f, 0x1f, 0x3f, 0x7f, 0xff};
-                    cout << hex << int( packedBuf[i] & mask[i] );
+                    cout << hex << int( packedBuf[i] & ~mask[bits] );
                     break;
                 }
             }
@@ -134,6 +137,8 @@ public:
 
         array<T, N> unpackedBuf;
         THROW_ON_RC( Unpack( packed, srcBits, packedBuf.data(), 0, m_packedBits, & m_consumedBits, unpackedBuf.data(), unpackedBuf.size() * N * 8, & m_unpackedBytes ) );
+        if ( debug )
+            for( size_t i = 0; i < N; ++i ) cout << hex << unpackedBuf[i] << endl;
         THROW_ON_FALSE( m_packedBits == m_consumedBits );
         THROW_ON_FALSE( srcBytes == m_unpackedBytes );
         return unpackedBuf;
@@ -249,7 +254,7 @@ FIXTURE_TEST_CASE(Pack_Unpack_memcpy, PackFixture)
 }
 
 FIXTURE_TEST_CASE(Pack_8_Unpack_single, PackFixture)
-{   
+{
     const uint8_t src = 1;
     for ( uint8_t packed = 1; packed < 8; ++packed )
     {
@@ -267,7 +272,7 @@ FIXTURE_TEST_CASE(Pack_8_Unpack_multiple, PackFixture)
 }
 
 FIXTURE_TEST_CASE(Pack_16_Unpack_single, PackFixture)
-{   
+{
     const uint16_t src = 0x1234;
     for ( uint8_t packed = 13; packed < 16; ++packed )
     {
@@ -287,13 +292,13 @@ FIXTURE_TEST_CASE(Pack_16_Unpack_multiple, PackFixture)
 }
 
 FIXTURE_TEST_CASE(Pack_32_Unpack_single, PackFixture)
-{   
+{
     const uint32_t src = 0x12345678;
     REQUIRE_EQ( src, PackUnpackSingle( src, 29 ) );
 }
 
 FIXTURE_TEST_CASE(Pack_32_Unpack_multiple, PackFixture)
-{   
+{
     array< uint32_t, 8 > src = { 1, 2, 3, 4, 5, 6, 7, 8 };
     REQUIRE( src == (PackUnpackMultiple( src, 4 )) );
 }

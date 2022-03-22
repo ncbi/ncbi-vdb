@@ -29,13 +29,6 @@
 
 #include <stdint.h>
 
-/* Intel versions from 11.0 through 13.0 mangle certain shift
- * statements in inline assembly. */
-#if defined(__INTEL_COMPILER)  &&  __INTEL_COMPILER_BUILD_DATE >= 20090131 \
-    &&  __INTEL_COMPILER_BUILD_DATE < 20130607 
-#  define HAVE_ICC_SHIFT_BUG 1 
-#endif
-
 #ifndef USE_GCC_BUILTIN
 #define USE_GCC_BUILTIN 1
 #endif
@@ -152,220 +145,145 @@ void uint128_setlo ( uint128_t *self, uint64_t i )
     self -> lo = i;
 }
 
-static __inline__
+static __inline
 void int128_add ( int128_t *self, const int128_t *i )
 {
-    __asm__ __volatile__
-    (
-        "mov (%%rsi), %%rax;"
-        "mov 8(%%rsi), %%rcx;"
-        "add %%rax, (%%rdi);"
-        "adc %%rcx, 8(%%rdi);"
-        :
-        : "D" ( self ), "S" ( i )
-        : "%rax", "%rcx"
-    );
+    uint64_t carry = ( ( const uint32_t* ) self ) [ 0 ] + ( ( const uint32_t* ) i ) [ 0 ];
+    self -> hi += i -> hi;
+    carry = ( ( const uint32_t* ) self ) [ 1 ] + ( ( const uint32_t* ) i ) [ 1 ] + ( carry >> 32 );
+    self -> lo += i -> lo;
+    self -> hi += carry >> 32;
 }
 
-static __inline__
+static __inline
 void int128_sub ( int128_t *self, const int128_t *i )
 {
-    __asm__ __volatile__
-    (
-        "mov (%%rsi), %%rax;"
-        "mov 8(%%rsi), %%rcx;"
-        "sub %%rax, (%%rdi);"
-        "sbb %%rcx, 8(%%rdi);"
-        :
-        : "D" ( self ), "S" ( i )
-        : "%rax", "%rcx"
-    );
+    int carry = i -> lo > self -> lo;
+    self -> hi -= i -> hi;
+    self -> lo -= i -> lo;
+    self -> hi -= carry;
 }
 
-static __inline__
+static __inline
 void int128_sar ( int128_t *self, uint32_t i )
 {
-    __asm__ __volatile__
-    (
-        "mov %%esi, %%ecx;"
-        "mov 8(%%rdi), %%rax;"
-        "shrd %%cl, %%rax, (%%rdi);"
-        "sar %%cl, %%rax;"
-        "mov %%rax, 8(%%rdi);"
-        :
-        : "D" ( self ), "S" ( i )
-        :  "%rax", "%rcx"
-    );
+    if ( i < 64 )
+    {
+        self -> lo = ( self -> hi << ( 64 - i ) ) |  ( self -> lo >> i );
+        self -> hi >>= i;
+    }
+    else
+    {
+        self -> lo = self -> hi >> ( i - 64 );
+        self -> hi >>= 63;
+    }
 }
 
-static __inline__
+static __inline
 void int128_shl ( int128_t *self, uint32_t i )
 {
-    __asm__ __volatile__
-    (
-        "mov %%esi, %%ecx;"
-        "mov (%%rdi), %%rax;"
-        "shld %%cl, %%rax, 8(%%rdi);"
-        "shl %%cl, %%rax;"
-        "mov %%rax, (%%rdi);"
-        :
-        : "D" ( self ), "S" ( i )
-        : "%rax", "%rcx"
-    );
+    if ( i < 64 )
+    {
+        self -> hi = ( self -> hi << i ) | ( int64_t ) ( self -> lo >> ( 64 - i ) );
+        self -> lo <<= i;
+    }
+    else
+    {
+        self -> hi = ( int64_t ) ( self -> lo << ( i - 64 ) );
+        self -> lo = 0;
+    }
 }
 
-static __inline__
+static __inline
 void uint128_and ( uint128_t *self, const uint128_t *i )
 {
-    __asm__ __volatile__
-    (
-        "mov (%%rsi), %%rax;"
-        "mov 8(%%rsi), %%rcx;"
-        "and %%rax, (%%rdi);"
-        "and %%rcx, 8(%%rdi);"
-        :
-        : "D" ( self ), "S" ( i )
-        :"%rax", "%rcx"
-    );
+    self -> lo &= i -> lo;
+    self -> hi &= i -> hi;
 }
 
-static __inline__
+static __inline
 void uint128_or ( uint128_t *self, const uint128_t *i )
 {
-    __asm__ __volatile__
-    (
-        "mov (%%rsi), %%rax;"
-        "mov 8(%%rsi), %%rcx;"
-        "or %%rax, (%%rdi);"
-        "or %%rcx, 8(%%rdi);"
-        :
-        : "D" ( self ), "S" ( i )
-        :"%rax", "%rcx"
-    );
+    self -> lo |= i -> lo;
+    self -> hi |= i -> hi;
 }
 
-static __inline__
+static __inline
 void uint128_orlo ( uint128_t *self, uint64_t i )
 {
     self -> lo |= i;
 }
 
-static __inline__
+static __inline
 void uint128_xor ( uint128_t *self, const uint128_t *i )
 {
-    __asm__ __volatile__
-    (
-        "mov (%%rsi), %%rax;"
-        "mov 8(%%rsi), %%rcx;"
-        "xor %%rax, (%%rdi);"
-        "xor %%rcx, 8(%%rdi);"
-        :
-        : "D" ( self ), "S" ( i )
-        :"%rax", "%rcx"
-    );
+    self -> lo ^= i -> lo;
+    self -> hi ^= i -> hi;
 }
 
-static __inline__
+static __inline
 void uint128_not ( uint128_t *self )
 {
-    __asm__ __volatile__
-    (
-        "mov (%%rdi), %%rax;"
-        "mov 8(%%rdi), %%rcx;"
-        "not %%rax;"
-        "not %%rcx;"
-        "mov %%rax, (%%rdi);"
-        "mov %%rcx, 8(%%rdi);"
-        :
-        : "D" ( self )
-        : "%rax", "%rcx"
-    );
+    self -> lo = ~ self -> lo;
+    self -> hi = ~ self -> hi;
 }
 
-static __inline__
+static __inline
 void uint128_shr ( uint128_t *self, uint32_t i )
 {
-#ifdef HAVE_ICC_SHIFT_BUG
-    if (i > 0) {
-        self->lo >>= i;
-        self->lo  |= self->hi << (64 - i);
-        self->hi >>= i;
+    if ( i == 0 )
+        return;
+
+    if ( i < 64 )
+    {
+        self -> lo = ( self -> hi << ( 64 - i ) ) |  ( self -> lo >> i );
+        self -> hi >>= i;
     }
-#else
-    __asm__ __volatile__
-    (
-        "mov %%esi, %%ecx;"
-        "mov 8(%%rdi), %%rax;"
-        "shrd %%cl, %%rax, (%%rdi);"
-        "shr %%cl, %%rax;"
-        "mov %%rax, 8(%%rdi);"
-        :
-        : "D" ( self ), "S" ( i )
-        : "%rax", "%rcx"
-    );
-#endif
+    else
+    {
+        self -> lo = self -> hi >> ( i - 64 );
+        self -> hi >>= 63;
+    }
 }
 
-static __inline__
+static __inline
 void uint128_shl ( uint128_t *self, uint32_t i )
 {
-    __asm__ __volatile__
-    (
-        "mov %%esi, %%ecx;"
-        "mov (%%rdi), %%rax;"
-        "shld %%cl, %%rax, 8(%%rdi);"
-        "shl %%cl, %%rax;"
-        "mov %%rax, (%%rdi);"
-        :
-        : "D" ( self ), "S" ( i )
-        : "%rax", "%rcx"
-    );
+    if ( i == 0 )
+        return;
+
+    if ( i < 64 )
+    {
+        self -> hi = ( self -> hi << i ) | ( self -> lo >> ( 64 - i ) );
+        self -> lo <<= i;
+    }
+    else
+    {
+        self -> hi = self -> lo << ( i - 64 );
+        self -> lo = 0;
+    }
 }
 
-static __inline__
+static __inline
 void uint128_bswap ( uint128_t *self )
 {
-    __asm__ __volatile__
-    (
-        "mov (%%rdi), %%rax;"
-        "mov 8(%%rdi), %%rcx;"
-        "bswap %%rax;"
-        "bswap %%rcx;"
-        "mov %%rax, 8(%%rdi);"
-        "mov %%rcx, (%%rdi);"
-        :
-        : "D" ( self )
-        : "%rax", "%rcx"
-    );
+    uint64_t tmp = __builtin_bswap64  ( self -> lo );
+    self -> lo = __builtin_bswap64  ( self -> hi );
+    ( ( uint64_t* ) self ) [ 1 ] = tmp;
 }
 
-static __inline__
+static __inline
 void uint128_bswap_copy ( uint128_t *to, const uint128_t *from )
 {
-    __asm__ __volatile__
-    (
-        "mov (%%rsi), %%rax;"
-        "mov 8(%%rsi), %%rcx;"
-        "bswap %%rax;"
-        "bswap %%rcx;"
-        "mov %%rax, 8(%%rdi);"
-        "mov %%rcx, (%%rdi);"
-        :
-        : "D" ( to ), "S" ( from )
-        : "%rax", "%rcx"
-    );
+    to -> lo = __builtin_bswap64  ( from -> hi );
+    to -> hi = __builtin_bswap64  ( from -> lo );
 }
 
 static __inline__
 uint32_t uint32_rol ( uint32_t val, uint8_t bits )
 {
     uint32_t rtn;
-    __asm__ __volatile__
-    (
-        "rol %%cl, %%eax;"
-        : "=a" ( rtn )
-        : "a" ( val ), "c" ( bits )
-    );
+    rtn = ( val << bits ) | ( val >> ( 32 - bits ) );
     return rtn;
 }
 
@@ -373,12 +291,7 @@ static __inline__
 uint32_t uint32_ror ( uint32_t val, uint8_t bits )
 {
     uint32_t rtn;
-    __asm__ __volatile__
-    (
-        "ror %%cl, %%eax;"
-        : "=a" ( rtn )
-        : "a" ( val ), "c" ( bits )
-    );
+    rtn = ( val >> bits ) | ( val << ( 32 - bits ) );
     return rtn;
 }
 
@@ -386,12 +299,7 @@ static __inline__
 uint64_t uint64_rol ( uint64_t val, uint8_t bits )
 {
     uint64_t rtn;
-    __asm__ __volatile__
-    (
-        "rol %%cl, %%rax;"
-        : "=a" ( rtn )
-        : "a" ( val ), "c" ( bits )
-    );
+    rtn = ( val << bits ) | ( val >> ( 64 - bits ) );
     return rtn;
 }
 
@@ -399,15 +307,9 @@ static __inline__
 uint64_t uint64_ror ( uint64_t val, uint8_t bits )
 {
     uint64_t rtn;
-    __asm__ __volatile__
-    (
-        "ror %%cl, %%rax;"
-        : "=a" ( rtn )
-        : "a" ( val ), "c" ( bits )
-    );
+    rtn = ( val >> bits ) | ( val << ( 64 - bits ) );
     return rtn;
 }
-
 
 #ifdef __cplusplus
 }
