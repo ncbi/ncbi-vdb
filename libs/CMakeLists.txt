@@ -57,8 +57,6 @@ add_subdirectory(vxf)
 add_subdirectory(wgsxf) # wgsxf and wwgsxf are the same
 add_subdirectory(ncbi-vdb)
 
-#add_subdirectory(xfs) # dead
-
 if ( SINGLE_CONFIG )
     #
     # Install header files
