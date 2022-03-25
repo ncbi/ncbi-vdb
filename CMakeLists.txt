@@ -101,6 +101,7 @@ else()
     # calculate global settiungs, create output directories
     include( build/env.cmake NO_POLICY_SCOPE )
     add_subdirectory(libs)
+    add_subdirectory(tools)
     add_subdirectory(test)
 endif()
 
