@@ -5377,7 +5377,7 @@ static rc_t KService1NameWithVersionAndType ( const KNSManager * mgr,
 
                 /* inserted March 29th 2022
                     * the SDL can report only a vdb-cache-file, not an accession
-                    * in the response, this should prevent an endless-loop
+                    * in the response, this prevents an endless-loop
                     */
                 find_loops++;
                 if ( find_loops > 16 ) {
