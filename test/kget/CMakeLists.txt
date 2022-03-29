@@ -22,6 +22,11 @@
 #
 # ===========================================================================
 
-#
-# The tests for kget are located in sra-tools/test/kget, since they depend on srapath and vdb-dump
-#
+if ( NOT WIN32 )
+
+    add_test( NAME SlowTest_Kget
+        COMMAND md5-test.sh ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+
+endif()
+
