@@ -5352,6 +5352,7 @@ static rc_t KService1NameWithVersionAndType ( const KNSManager * mgr,
             service . req . sdl ) )
         {
             uint32_t n = 0;
+            uint32_t find_loops = 0;
             const KSrvResponse * response = NULL;
             const KSrvRespObj * obj = NULL;
             KSrvRespObjIterator * it = NULL;
@@ -5372,31 +5373,43 @@ static rc_t KService1NameWithVersionAndType ( const KNSManager * mgr,
                 rc = KSrvResponseGetObjByIdx ( response, 0, & obj );
             if ( rc == 0 )
                 rc = KSrvRespObjMakeIterator ( obj, & it );
-            while (rc == 0 && !ok) {
-                rc = KSrvRespObjIteratorNextFile(it, &file);
-                if (rc == 0 && file != NULL)
-                    rc = KSrvRespFileMakeIterator(file, &fi);
-                if (rc == 0) {
-                    const VPath * tmp = NULL;
-                    String type;
-                    rc = KSrvRespFileIteratorNextPath(fi, &tmp);
-                    if (rc == 0 && tmp != NULL) {
-                        rc = VPathGetType(tmp, &type);
-                        if (rc == 0)
-                            if (!StringEqual(&type, &vdbcache))
-                                ok = true;
+            while ( rc == 0 && !ok ) {
+
+                /* inserted March 29th 2022
+                    * the SDL can report only a vdb-cache-file, not an accession
+                    * in the response, this should prevent an endless-loop
+                    */
+                find_loops++;
+                if ( find_loops > 16 ) {
+                    rc = RC ( rcVFS, rcQuery, rcExecuting, rcRow, rcIncorrect );                        
+                } else {
+                    rc = KSrvRespObjIteratorNextFile(it, &file);
+                    if (rc == 0 && file != NULL)
+                        rc = KSrvRespFileMakeIterator(file, &fi);
+                    if (rc == 0) {
+                            const VPath * tmp = NULL;
+                            String type;
+                            
+                            rc = KSrvRespFileIteratorNextPath( fi, &tmp );
+                            if ( rc == 0 && tmp != NULL ) {
+                                rc = VPathGetType(tmp, &type);
+                                if ( rc == 0 ) {
+                                    if ( !StringEqual( &type, &vdbcache ) )
+                                        ok = true;
+                                }
+                            }
+                            if (*remote == NULL) {
+                                *remote = tmp;
+                            } else if (ok) {
+                                if (*remote != tmp)
+                                    RELEASE(VPath, *remote);
+                                *remote = tmp;
+                            } else {
+                                RELEASE(VPath, tmp);
+                            }
                     }
-                    if (*remote == NULL)
-                        *remote = tmp;
-                    else if (ok) {
-                        if (*remote != tmp)
-                            RELEASE(VPath, *remote);
-                        *remote = tmp;
-                    }
-                    else
-                        RELEASE(VPath, tmp);
                 }
-            }
+            } /* while */
             if ( rc == 0 && mapping != NULL )
                 rc = KSrvRespFileGetMapping ( file, mapping );
             RELEASE ( KSrvRespFileIterator, fi );
