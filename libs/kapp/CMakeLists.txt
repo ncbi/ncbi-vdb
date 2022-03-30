@@ -47,22 +47,12 @@ set( KAPP_SRC
     ${KAPP_CMN}
 )
 
-set( LOADLIB_SRC
-    progressbar
-    loader-file
-    loader-meta
-    queue-file
-)
-
 set( SRC ${KAPP_SRC} ${OS_SPECIFIC_SRC} )
 
 GenerateStaticLibs( kapp "${SRC}" )
 ExportStatic( kapp true )
 
 GenerateStaticLibsWithDefs( kapp-norsrc "${SRC}" "NO_KRSRC=1" )
-
-GenerateStaticLibs( load "${LOADLIB_SRC}" )
-ExportStatic( load true )
 
 add_compile_definitions (__mod__="libs/kapp")
 add_compile_definitions (PKGNAME="${OS}${BITS}")
