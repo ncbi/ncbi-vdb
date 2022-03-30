@@ -43,7 +43,6 @@ add_subdirectory(klib)
 add_subdirectory(kns)
 add_subdirectory(kproc)
 add_subdirectory(krypto) # TODO: to be replaced with calls to mbedtls
-add_subdirectory(kxml)
 add_subdirectory(loader)
 add_subdirectory(schema)
 add_subdirectory(search)
@@ -68,3 +67,5 @@ if ( SINGLE_CONFIG )
         install( DIRECTORY ${CMAKE_SOURCE_DIR}/interfaces/${h} DESTINATION ${INST_INCDIR} )
     endforeach()
 endif()
+
+#add_subdirectory(kxml) VDB-4797 moved to sra-tools

@@ -31,7 +31,6 @@
 #include <klib/status.h>
 #include <klib/text.h>
 #include <klib/printf.h>
-#include <kxml/xml.h>
 #include <kfs/file.h>
 #include <kfs/kfs-priv.h>
 #include <kfs/directory.h>
@@ -185,7 +184,7 @@ rc_t CC LoaderXMLFormatter( void* data, KWrtHandler* writer,
     }
 
 #define FIX_UP() if(rc != 0){break;} remaining -= num_writ; pbuffer += num_writ
-    
+
     pbuffer = buffer;
     remaining = sizeof(buffer);
     do {
@@ -329,7 +328,7 @@ LIB_EXPORT rc_t CC XMLLogger_Make2(const XMLLogger** self, KDirectory* dir, cons
     } else if( fd >= 0 && (rc = KFileMakeFDFileWrite(&obj->file.file, false, fd)) != 0 ) {
     } else if( logpath != NULL && fd < 0 && (rc = KDirectoryCreateFile(dir ? dir : my_dir, &obj->file.file, false, 0644, kcmInit, "%s", logpath)) != 0 ) {
     } else {
-    
+
         obj->file.pos = 0;
         obj->log.file = &obj->file;
         obj->log.fmt.formatter = KLogFmtWriterGet();
@@ -374,7 +373,7 @@ LIB_EXPORT rc_t CC XMLLogger_Make2(const XMLLogger** self, KDirectory* dir, cons
             DBG(("XML Log file set to handle %d\n", fd));
         } else if( logpath != NULL) {
             DBG(("XML Log file set to %s\n", logpath));
-        } 
+        }
     } else {
         XMLLogger_Release(obj);
         *self = NULL;
