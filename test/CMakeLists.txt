@@ -33,7 +33,7 @@ set( COMMON_LINK_LIBRARIES ktst kapp )
 
 # for the tests that link against libncbi-[w]vdb
 if( WIN32 )
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS /ENTRY:wmainCRTStartup")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /ENTRY:wmainCRTStartup")
     set( COMMON_LIBS_READ  ${COMMON_LINK_LIBRARIES} ncbi-vdb Ws2_32 Crypt32 )
     set( COMMON_LIBS_WRITE ${COMMON_LINK_LIBRARIES} ncbi-wvdb Ws2_32 Crypt32 )
 else()
