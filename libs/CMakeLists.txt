@@ -44,7 +44,6 @@ add_subdirectory(kns)
 add_subdirectory(kproc)
 add_subdirectory(krypto) # TODO: to be replaced with calls to mbedtls
 add_subdirectory(kxml)
-add_subdirectory(loader)
 add_subdirectory(schema)
 add_subdirectory(search)
 add_subdirectory(sra)
@@ -65,3 +64,5 @@ if ( SINGLE_CONFIG )
         install( DIRECTORY ${CMAKE_SOURCE_DIR}/interfaces/${h} DESTINATION ${INST_INCDIR} )
     endforeach()
 endif()
+
+#add_subdirectory(loader) VDB-4855 moved to sra-tools/libs
