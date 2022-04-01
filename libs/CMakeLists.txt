@@ -33,7 +33,6 @@ add_subdirectory(blast)
 add_subdirectory(cloud)
 add_subdirectory(diagnose)
 add_subdirectory(ext)
-add_subdirectory(hdf5)
 add_subdirectory(kapp)
 add_subdirectory(kdb)
 add_subdirectory(kfc)
@@ -68,3 +67,5 @@ if ( SINGLE_CONFIG )
         install( DIRECTORY ${CMAKE_SOURCE_DIR}/interfaces/${h} DESTINATION ${INST_INCDIR} )
     endforeach()
 endif()
+
+#add_subdirectory(hdf5) VDB-4795
