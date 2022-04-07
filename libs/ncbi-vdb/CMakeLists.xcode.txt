@@ -82,5 +82,5 @@ add_library( ncbi-wvdb STATIC ${all_src} )
 add_compile_definitions( ${all_compile_defs} )
 
 ExportStatic( ncbi-wvdb true )
-ExportShared( ncbi-wvdb true "$m;dl;pthread" )
+ExportShared( ncbi-wvdb true "m;dl;pthread" )
 
