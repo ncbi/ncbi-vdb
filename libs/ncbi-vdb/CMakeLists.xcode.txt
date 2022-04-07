@@ -72,7 +72,7 @@ add_library( ncbi-vdb STATIC ${all_src} )
 add_compile_definitions( ${all_compile_defs} )
 
 ExportStatic( ncbi-vdb true )
-ExportShared( ncbi-vdb true "${LIBXML2};m;dl;pthread" )
+ExportShared( ncbi-vdb true "m;dl;pthread" )
 
 
 ###################################
@@ -82,5 +82,5 @@ add_library( ncbi-wvdb STATIC ${all_src} )
 add_compile_definitions( ${all_compile_defs} )
 
 ExportStatic( ncbi-wvdb true )
-ExportShared( ncbi-wvdb true "${LIBXML2};m;dl;pthread" )
+ExportShared( ncbi-wvdb true "$m;dl;pthread" )
 
