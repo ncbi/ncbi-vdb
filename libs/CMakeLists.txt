@@ -43,12 +43,10 @@ add_subdirectory(klib)
 add_subdirectory(kns)
 add_subdirectory(kproc)
 add_subdirectory(krypto) # TODO: to be replaced with calls to mbedtls
-add_subdirectory(loader)
 add_subdirectory(schema)
 add_subdirectory(search)
 add_subdirectory(sra)
 add_subdirectory(sraxf) # same as axf
-add_subdirectory(svdb)
 add_subdirectory(tui)
 add_subdirectory(vdb)
 add_subdirectory(vfs)
@@ -56,12 +54,10 @@ add_subdirectory(vxf)
 add_subdirectory(wgsxf) # wgsxf and wwgsxf are the same
 add_subdirectory(ncbi-vdb)
 
-#add_subdirectory(xfs) # dead
-
 if ( SINGLE_CONFIG )
     #
     # Install header files
-    set( HEADERS align  cloud  diagnose  fastq  insdc  kdb  kfg  klib  kproc   ktst  loader  os     search  sra   tui  vfs
+    set( HEADERS align  cloud  diagnose  fastq  insdc  kdb  kfg  klib  kproc   ktst  os     search  sra   tui  vfs
     cc     csra2  ext       hdf5   kapp   kfc  kfs  kns   krypto  ncbi    rdbms  simple  svdb  vdb  xfs )
     foreach( h IN ITEMS ${HEADERS} )
         install( DIRECTORY ${CMAKE_SOURCE_DIR}/interfaces/${h} DESTINATION ${INST_INCDIR} )
@@ -69,3 +65,4 @@ if ( SINGLE_CONFIG )
 endif()
 
 #add_subdirectory(kxml) VDB-4797 moved to sra-tools
+#add_subdirectory(loader) VDB-4855 moved to sra-tools/libs

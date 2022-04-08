@@ -423,6 +423,7 @@ typedef struct {
     String * jwtKartFile;
     SNgc _ngc;
     bool hasQuery;
+    bool filetypeIsRun;
 } SRequest;
 
 /* service object */
@@ -3402,6 +3403,8 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
 
     assert ( request );
 
+    request -> filetypeIsRun = false;
+
     if ( protocols == eProtocolDefault )
         protocols = SHelperDefaultProtocols ( helper );
     request -> protocols = protocols;
@@ -3637,7 +3640,7 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
                 return rc;
         }
 
-        fileTypeRun = false;
+        fileTypeRun = request -> filetypeIsRun = false;
     }
 
     if (rc == 0 &&
@@ -3664,6 +3667,7 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
                 }
                 if (rc != 0)
                     return rc;
+                request -> filetypeIsRun = true;
             }
         }
     }
@@ -5373,9 +5377,18 @@ static rc_t KService1NameWithVersionAndType ( const KNSManager * mgr,
             if ( rc == 0 )
                 rc = KSrvRespObjMakeIterator ( obj, & it );
             while (rc == 0 && !ok) {
+                RELEASE ( KSrvRespFile, file );
                 rc = KSrvRespObjIteratorNextFile(it, &file);
-                if (rc == 0 && file != NULL)
-                    rc = KSrvRespFileMakeIterator(file, &fi);
+                if (rc == 0) {
+                    if (file != NULL)
+                        rc = KSrvRespFileMakeIterator(file, &fi);
+                    else {
+                        assert(service.req.filetypeIsRun);
+                        assert(*remote == NULL);
+                        rc = RC(rcVFS, rcQuery, rcResolving, rcName, rcNotFound);
+                        break;
+                    }
+                }
                 if (rc == 0) {
                     const VPath * tmp = NULL;
                     String type;
@@ -5386,8 +5399,12 @@ static rc_t KService1NameWithVersionAndType ( const KNSManager * mgr,
                             if (!StringEqual(&type, &vdbcache))
                                 ok = true;
                     }
-                    if (*remote == NULL)
-                        *remote = tmp;
+                    if (*remote == NULL) {
+                        if (ok || !service.req.filetypeIsRun)
+                            *remote = tmp;
+                        else
+                            RELEASE(VPath, tmp);
+                    }
                     else if (ok) {
                         if (*remote != tmp)
                             RELEASE(VPath, *remote);

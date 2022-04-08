@@ -91,6 +91,10 @@ public:
     {
         VResolverRelease ( resolver );
         VFSManagerRelease ( vfs );
+        VPathRelease ( query );
+        VPathRelease ( local );
+        VPathRelease ( remote );
+        VPathRelease ( cache );
     }
     
     VFSManager * vfs;
@@ -101,7 +105,6 @@ public:
     const VPath * cache;
 };
 
-#ifdef ALL
 static string ToString(const VPath* path)
 {
     const String * s;
@@ -112,6 +115,7 @@ static string ToString(const VPath* path)
     return ret;
 }
 
+#ifdef ALL
 FIXTURE_TEST_CASE ( VDB_2936_resolve_local_WGS_without_version, ResolverFixture )
 {
     String acc;
@@ -232,6 +236,7 @@ FIXTURE_TEST_CASE(WGS_with_6letter_prefix_and_version, ResolverFixture)
 //
 //    REQUIRE_RC(VPathRelease(query)); query = NULL;
 //}
+#endif
 
 class ResolverFixtureCustomConfig
 {
@@ -331,6 +336,33 @@ public:
     string m_configName;
 };
 
+#ifdef ALL
+FIXTURE_TEST_CASE(vdbcache_only, ResolverFixture)
+{
+#define ACC "ERR2204002"
+    putenv((char*) ACC "="
+"{"
+" \"result\": ["
+"   { \"status\": 200,"
+"     \"files\": ["
+"       {\"type\": \"vdbcache\","
+"        \"locations\": ["
+"          { \"link\": \"http://gov/.vdbcache\" }"
+"        ]"
+"       }"
+"     ]"
+"   }"
+" ]"
+"}");
+
+    REQUIRE_RC(VFSManagerMakePath(vfs, &query, ACC));
+    REQUIRE_RC_FAIL(VResolverRemote(resolver, 0, query, &remote));
+    
+    putenv(const_cast<char*>(ACC "="));
+}
+#endif
+
+#ifdef ALL
 FIXTURE_TEST_CASE(VDB_2963_resolve_local_new_wgs, ResolverFixtureCustomConfig)
 {
     string config =
