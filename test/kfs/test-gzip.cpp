@@ -88,13 +88,20 @@ class KGZipFileFixture
             size_t numread = 0;
             rc = KFileReadAll(input, actual, buffer, sizeof(buffer), &numread);
             if (rc != 0)
+            {
+                KFileRelease(input);
                 return false;
+            }
             if (numread == 0)
                 break;
             if (isOriginal && memcmp(buffer, orig + actual, numread) != 0)
+            {
+                KFileRelease(input);
                 throw std::logic_error("KGZipFile did not recreate the original");
+            }
             actual += numread;
         }
+        KFileRelease(input);
         if (isOriginal && actual != fileSize)
             throw std::logic_error("KGZipFile did not recreate the original");
         return true;
@@ -199,29 +206,38 @@ class KGZipFileFixture
         if (buffer == nullptr)
             throw std::bad_alloc();
 
-        THROW_ON_RC(KFileReadAll(input, 0, buffer, buffer_size, &actual));
-        if (actual != buffer_size)
-            throw std::logic_error("KFileReadAll didn't");
-        KFileRelease(input); input = nullptr;
+        try
+        {
+            THROW_ON_RC(KFileReadAll(input, 0, buffer, buffer_size, &actual));
+            if (actual != buffer_size)
+                throw std::logic_error("KFileReadAll didn't");
+            KFileRelease(input); input = nullptr;
 
-        THROW_ON_RC(KFileWrite(trunced, 0, buffer, buffer_size, &actual));
-        if (actual != buffer_size)
-            throw std::logic_error("KFileWrite didn't");
-        KFileSetSize(trunced, buffer_size >> 1);
-        KFileRelease(trunced); trunced = nullptr;
+            THROW_ON_RC(KFileWrite(trunced, 0, buffer, buffer_size, &actual));
+            if (actual != buffer_size)
+                throw std::logic_error("KFileWrite didn't");
+            KFileSetSize(trunced, buffer_size >> 1);
+            KFileRelease(trunced); trunced = nullptr;
 
-        memmove(&((char *)buffer)[buffer_size >> 1] - 1, buffer, 2);
-        THROW_ON_RC(KFileWrite(junked, 0, buffer, buffer_size, &actual));
-        if (actual != buffer_size)
-            throw std::logic_error("KFileWrite didn't");
-        KFileRelease(junked); junked = nullptr;
+            memmove(&((char *)buffer)[buffer_size >> 1] - 1, buffer, 2);
+            THROW_ON_RC(KFileWrite(junked, 0, buffer, buffer_size, &actual));
+            if (actual != buffer_size)
+                throw std::logic_error("KFileWrite didn't");
+            KFileRelease(junked); junked = nullptr;
 
-        if (TestWithGZip(BASE_FILE ".gz.trunc")) {
-            throw std::logic_error("gzip shouldn't like a truncated file");
+            if (TestWithGZip(BASE_FILE ".gz.trunc")) {
+                throw std::logic_error("gzip shouldn't like a truncated file");
+            }
+            if (TestWithGZip(BASE_FILE ".gz.junked")) {
+                throw std::logic_error("gzip shouldn't like a junked file");
+            }
         }
-        if (TestWithGZip(BASE_FILE ".gz.junked")) {
-            throw std::logic_error("gzip shouldn't like a junked file");
+        catch ( std::logic_error & e )
+        {
+            free ( buffer );
+            throw;
         }
+        free ( buffer );
     }
 public:
     KGZipFileFixture()
