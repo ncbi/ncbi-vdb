@@ -190,7 +190,7 @@ public:
             }
             catch (std::logic_error & e)
             {
-                rc_t rc = VDBManagerRelease ( mgr );
+                VDBManagerRelease ( mgr );
                 throw;
             }
             THROW_ON_RC ( VDBManagerRelease ( mgr ) );
