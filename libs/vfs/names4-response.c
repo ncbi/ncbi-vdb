@@ -2184,6 +2184,10 @@ static rc_t Response4Init4 ( Response4 * self, const char * input ) {
     return rc;
 }
 
+/*#include <klib/log.h>
+static KLogLevel my_level = klogLevelMax;//klogErr;
+snprintf(logbuf, sizeof(logbuf), "VDBManagerMakeReadWithVFSManager starting: POST mgr=%p", mgr);
+pLogMsg(my_level, "DEBUG: $(logbuf)", "logbuf=%s", logbuf);*/
 rc_t Response4MakeEmpty (Response4 ** self, const VFSManager * vfs,
     const struct KNSManager * kns, const struct KConfig * kfg,
     bool logNamesServiceErrors, int64_t projectId, const char * quality)
@@ -2244,7 +2248,11 @@ rc_t Response4Make4 ( Response4 ** self, const char * input ) {
 
     rc = Response4Init4 ( r, input );
     if ( rc != 0 )
+    {
+        /*Response4Release ( r ); - this doesn't always work, maybe because of some other bug*/
+        Response4Fini ( r );
         free ( r );
+    }
     else
         * self = r;
 
