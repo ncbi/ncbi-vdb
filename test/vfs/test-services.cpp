@@ -50,20 +50,6 @@ TEST_SUITE ( TestServices );
 
 #define ALL
 
-// this is NCBI-specific, move to a private repo
-//#if WINDOWS
-//#define NETMNT "\\\\"
-//#else
-//#ifdef MAC
-//#define NETMNT "/net/"
-//#else 
-//#define NETMNT "/netmnt/"
-//#endif
-//#endif
-//const string Netmnt(NETMNT);
-//
-//static bool hasLocal = true;
-
 #ifdef ALL
 TEST_CASE ( TestKServiceAddId ) {
     KService * s = NULL;
@@ -114,24 +100,6 @@ TEST_CASE(TestKSrvResponseGetLocation) {
     REQUIRE_NULL(local);
     REQUIRE_RC_FAIL(rcLocal);
 
-	// this is NCBI-specific, move to a private repo
-    //REQUIRE_RC(KSrvResponseGetLocation(r, "SRR850901", "SRR850901.vdbcache",
-    //    &local, &rcLocal, 0, 0));
-    //if (false && hasLocal) // SRR850901.vdbcache was moved out
-    //    REQUIRE_RC(rcLocal);
-    //else
-    //    REQUIRE_RC_FAIL(rcLocal);
-
-    //char buffer[PATH_MAX] = "";
-    //if (false && hasLocal) { // SRR850901.vdbcache was moved out
-    //    REQUIRE_RC(VPathReadPath(local, buffer, sizeof buffer, NULL));
-    //    REQUIRE_EQ(string(buffer),
-    //        Netmnt + "/traces04/sra11/SRR/000830/SRR850901.vdbcache");
-    //} else
-    //    REQUIRE_RC_FAIL(VPathReadPath(local, buffer, sizeof buffer, NULL));
-
-    //REQUIRE_RC(VPathRelease(local));
-
     const VPath * cache = NULL;
     rc_t rcCache = 0;
 
@@ -171,19 +139,10 @@ TEST_CASE(TestKSrvResponseGetLocationCache) {
     REQUIRE_RC(KSrvResponseGetLocation2(r, "SRR850901", "SRR850901.vdbcache",
         "vdbcache", &local, &rcLocal, &cache, &rcCache));
 
-	// this is NCBI-specific, move to a private repo
-    //if (false && hasLocal) // SRR850901.vdbcache was moved out
-    //    REQUIRE_RC(rcLocal);
-    //else
 	REQUIRE_RC_FAIL(rcLocal);
     
     char buffer[PATH_MAX] = "";
 
-    //if (false && hasLocal) { // SRR850901.vdbcache was moved out
-    //    REQUIRE_RC(VPathReadPath(local, buffer, sizeof buffer, NULL));
-    //    REQUIRE_EQ(string(buffer),
-    //        Netmnt + "/traces04/sra11/SRR/000830/SRR850901.vdbcache");
-    //} else
 	REQUIRE_RC_FAIL(VPathReadPath(local, buffer, sizeof buffer, NULL));
     
     REQUIRE_RC(VPathRelease(local));
@@ -379,20 +338,6 @@ extern "C" {
 
         if (
 0) assert(!KDbgSetString("VFS"));
-
-		// this is NCBI-specific, move to a private repo
-		//KDirectory * dir = NULL;
-        //rc_t rc = KDirectoryNativeDir(&dir);
-        //if (rc != 0)
-        //    return rc;
-        //if ((KDirectoryPathType(dir,
-        //    NETMNT "/traces04") & ~kptAlias) == kptNotFound)
-        //{
-        //    hasLocal = false;
-        //}
-        //rc = KDirectoryRelease(dir);
-        //if (rc != 0)
-        //    return rc;
 
         return TestServices ( argc, argv );
     }
