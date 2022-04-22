@@ -33,7 +33,6 @@ add_subdirectory(blast)
 add_subdirectory(cloud)
 add_subdirectory(diagnose)
 add_subdirectory(ext)
-add_subdirectory(hdf5)
 add_subdirectory(kapp)
 add_subdirectory(kdb)
 add_subdirectory(kfc)
@@ -66,3 +65,4 @@ endif()
 
 #add_subdirectory(kxml) VDB-4797 moved to sra-tools
 #add_subdirectory(loader) VDB-4855 moved to sra-tools/libs
+#add_subdirectory(hdf5) VDB-4795
