@@ -220,22 +220,6 @@ FIXTURE_TEST_CASE(WGS_with_6letter_prefix_and_version, ResolverFixture)
     VPathRelease(remote); remote = 0;
 }
 
-// this is NCBI-specific, move to a private repo
-//FIXTURE_TEST_CASE(HS37D5, ResolverFixture) {
-//    REQUIRE_RC(VFSManagerMakePath(vfs, &query, "hs37d5"));
-//
-//    REQUIRE_RC(VResolverQuery(resolver, 0, query, NULL, &remote, NULL));
-//    REQUIRE_RC(VPathRelease(remote)); remote = NULL;
-//
-//    if (hasLocal) {
-//        REQUIRE_RC(VResolverQuery(resolver, 0, query, &local, NULL, NULL));
-//        REQUIRE_RC(VPathRelease(local)); local = NULL;
-//    }
-//    else
-//        REQUIRE_RC_FAIL(VResolverQuery(resolver, 0, query, &local, NULL, NULL));
-//
-//    REQUIRE_RC(VPathRelease(query)); query = NULL;
-//}
 #endif
 
 class ResolverFixtureCustomConfig
@@ -481,23 +465,7 @@ extern "C"
 0) assert(!KDbgSetString("VFS"));
 
         KConfigDisableUserSettings ();
-		rc_t rc;
-
-		// this is NCBI-specific, move to a private repo
-        //KDirectory * dir = NULL;
-        //rc_t rc = KDirectoryNativeDir(&dir);
-        //if (rc != 0)
-        //    return rc;
-        //uint32_t t = KDirectoryPathType(dir, NETMNT "/traces04") & ~ kptAlias;
-        //if (t == kptNotFound || t == kptBadPath)
-        //{
-        //    hasLocal = false;
-        //}
-        //rc = KDirectoryRelease(dir);
-        //if (rc != 0)
-        //    return rc;
-
-        rc = VResolverTestSuite ( argc, argv );
+		rc_t rc = VResolverTestSuite ( argc, argv );
 
         clear_recorded_errors();
 
