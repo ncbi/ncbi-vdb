@@ -57,11 +57,12 @@ endif()
 # set( CMAKE_DISABLE_SOURCE_CHANGES ON ) # Cannot use with bison
 # set( CMAKE_DISABLE_IN_SOURCE_BUILD ON )
 
-option(LIBS_ONLY "Generate library targets only" OFF)
+option(LIBS_ONLY "Generate library targets only" ON)
 option(TESTS_ONLY "Generate test targets only" OFF)
 
 if( TESTS_ONLY AND LIBS_ONLY )
     message( "ERROR: TESTS_ONLY and LIBS_ONLY cannot be specified at the same time" )
+
 elseif( TESTS_ONLY AND NOT LIBS_ONLY AND (${CMAKE_GENERATOR} MATCHES "Visual Studio.*" OR ${CMAKE_GENERATOR} STREQUAL "Xcode") )
     project(ncbi-vdb-tests)
     if( PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR )
@@ -79,6 +80,7 @@ elseif( TESTS_ONLY AND NOT LIBS_ONLY AND (${CMAKE_GENERATOR} MATCHES "Visual Stu
         link_directories( ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE} )
     endif()
     add_subdirectory(test)
+
 elseif( NOT TESTS_ONLY AND LIBS_ONLY AND (${CMAKE_GENERATOR} MATCHES "Visual Studio.*" OR ${CMAKE_GENERATOR} STREQUAL "Xcode") )
     project(ncbi-vdb-libs)
     if( PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR )
@@ -90,8 +92,9 @@ elseif( NOT TESTS_ONLY AND LIBS_ONLY AND (${CMAKE_GENERATOR} MATCHES "Visual Stu
     message( "Generating libs only project..." )
     add_subdirectory(libs)
 else()
-    if( TESTS_ONLY OR LIBS_ONLY )
-        message( "ignoring TESTS_ONLY/LIBS_ONLY, use it only for MSVC or XCode" )
+
+    if( TESTS_ONLY )
+        message( "ignoring TESTS_ONLY, use it only for MSVC or XCode" )
     endif()
 
     project(ncbi-vdb)
@@ -101,7 +104,10 @@ else()
     # calculate global settiungs, create output directories
     include( build/env.cmake NO_POLICY_SCOPE )
     add_subdirectory(libs)
-    add_subdirectory(test)
+    if ( NOT LIBS_ONLY )
+        add_subdirectory(test)
+    endif()
+
 endif()
 
 #add_subdirectory(vdb3)
