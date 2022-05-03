@@ -22,33 +22,6 @@
 #
 # ===========================================================================
 
-# ===========================================================================
-#
-# This is the CMake build for the ncbi-vdb project.
-#
-# Usage
-#   cmake [options] <path-to-source>
-#
-# Parameter:
-#   path-to-source    : path to this file's directory
-#
-# Custom CMake variables and defaults:
-#
-#   -DNGS_INCDIR=<path>   : a path to the include/ directory of NGS. By default,
-#                           <path-to-source>/../ngs/ngs-sdk
-#
-#   -DNGS_LIBDIR=<path>   : a path to the NGS libraries. If omitted, tests in
-#                           test/ngs-java will be skipped.
-#   -DNGS_JAVA_JAR=<path> : a path to the jar created by a build of ngs/ngs-java.
-#                           If omitted, tests in test/ngs-java will be skipped.
-#	-DPYTHON_PATH=<path>  : a path to the Python executable to be used to run
-#                           tests in test/ngs-py. If omitted, the tests will be skipped.
-#
-#   In addition, you can use all the standard CMake options, e.g.:
-#   -DCMAKE_BUILD_TYPE=<Debug|Release>
-#
-## ===========================================================================
-
 cmake_minimum_required(VERSION 3.16)
 if (WIN32)
 	set (CMAKE_SYSTEM_VERSION 10.0 CACHE STRING INTERNAL FORCE)
