@@ -57,7 +57,7 @@ if ( SINGLE_CONFIG )
     #
     # Install header files
     set( HEADERS align  cloud  diagnose  insdc  kdb  kfg  klib  kproc   ktst  os     search  sra   tui  vfs
-    cc     csra2  ext       hdf5   kapp   kfc  kfs  kns   krypto  kxml  ncbi  vdb  )
+    cc     csra2  ext  kapp   kfc  kfs  kns   krypto  kxml  ncbi  vdb  )
 
     foreach( h IN ITEMS ${HEADERS} )
         install( DIRECTORY ${CMAKE_SOURCE_DIR}/interfaces/${h} DESTINATION ${INST_INCDIR} )
