@@ -36,13 +36,6 @@
 #include <kfs/impl.h>
 #include <kfs/tar.h>
 
-#include <kfs/ffext.h>
-#include <kfs/ffmagic.h>
-
-#define class clss
-#include <kfs/fileformat.h>
-#undef class
-
 #include "../../libs/kfs/toc-priv.h"
 
 using namespace std;
@@ -50,7 +43,7 @@ using namespace std;
 TEST_SUITE(KfsTestSuite);
 
 TEST_CASE(KMMapMakeRead_and_KMMapRelease)
-{   // create a temporary file, open it with KMMapMakeRead, close KMMap, try to delete 
+{   // create a temporary file, open it with KMMapMakeRead, close KMMap, try to delete
 
     KDirectory *wd;
     REQUIRE_RC(KDirectoryNativeDir ( & wd ));
@@ -77,93 +70,38 @@ TEST_CASE(KMMapMakeRead_and_KMMapRelease)
     }
 
     // now, remove the file
-    // on Windows: used to return ACCESS_DENIED, not removed file 
+    // on Windows: used to return ACCESS_DENIED, not removed file
     // (cause: no call to UnmapViewOfFile in libs\kfs\win\KMapUnmap)
-    REQUIRE_RC(KDirectoryRemove(wd, false, fileName)); 
+    REQUIRE_RC(KDirectoryRemove(wd, false, fileName));
 
     REQUIRE_RC(KDirectoryRelease ( wd ));
 }
 
-#ifdef HAVE_KFF
-
-TEST_CASE(ExtFileFormat)
-{
-    struct KFileFormat* pft;
-    const char format[] = {
-        "ext1\tTestFormat1\n"
-        "ext2\tTestFormat2\n"
-    };
-    const char typeAndClass[] = {
-        "TestFormat1\tTestClass1\n"
-        "TestFormat2\tTestClass2\n"
-    };
-    REQUIRE_RC(KExtFileFormatMake(&pft, format, sizeof(format) - 1, typeAndClass, sizeof(typeAndClass) - 1));
-    
-    KFileFormatType type;
-    KFileFormatClass clss;
-    char descr[1024];
-    size_t length;
-    REQUIRE_RC(KFileFormatGetTypePath(pft, 
-                                      NULL, // ignored
-                                      "qq.ext2", 
-                                      &type, 
-                                      &clss,
-                                      descr, 
-                                      sizeof(descr),
-                                      &length));    
-    REQUIRE_EQ(type, 2);
-    REQUIRE_EQ(clss, 2);
-    REQUIRE_EQ(string(descr, length), string("TestFormat2"));
-    
-    REQUIRE_RC(KFileFormatGetClassDescr(pft, clss, descr, sizeof (descr)));        
-    REQUIRE_EQ(string(descr), string("TestClass2"));
-    REQUIRE_EQ(length, string("TestClass2").length()+1);
-    REQUIRE_RC(KFileFormatRelease(pft));
-}
-
-TEST_CASE(MagicFileFormat)
-{
-    struct KFileFormat* pft;
-    const char magic[] = 
-    {
-        "Generic Format for Sequence Data (SRF)\tSequenceReadFormat\n"
-        "GNU tar archive\tTapeArchive\n"
-    };
-    const char typeAndClass[] = {
-        "SequenceReadFormat\tRead\n"
-        "TapeArchive\tArchive\n"
-    };
-    REQUIRE_RC(KMagicFileFormatMake (&pft, "/usr/share/misc/magic", magic, sizeof(magic) - 1, typeAndClass, sizeof(typeAndClass) - 1));
-    REQUIRE_RC(KFileFormatRelease(pft));
-}
-
-#endif
-
 TEST_CASE(Tar_Parse)
 {
     KDirectory *dir;
-    REQUIRE_RC(KDirectoryNativeDir(&dir));    
-    
+    REQUIRE_RC(KDirectoryNativeDir(&dir));
+
     const KDirectory *tarDir;
     REQUIRE_RC(KDirectoryOpenTarArchiveRead(dir, &tarDir, false, "test.tar"));
-    
+
     struct KNamelist *list;
     REQUIRE_RC(KDirectoryList(tarDir, &list, NULL, NULL, NULL));
-    
+
     uint32_t count;
     REQUIRE_RC(KNamelistCount(list, &count));
     REQUIRE_EQ(count, (uint32_t)2);
-    
+
     const char* name;
     REQUIRE_RC(KNamelistGet(list, 0, &name));
     REQUIRE_EQ(string(name), string("Makefile"));
     REQUIRE_RC(KNamelistGet(list, 1, &name));
     REQUIRE_EQ(string(name), string("kfstest.cpp"));
-    
+
     REQUIRE_RC(KNamelistRelease(list));
     REQUIRE_RC(KDirectoryRelease(tarDir));
     REQUIRE_RC(KDirectoryRelease(dir));
-}                                 
+}
 
 //////////////////////////////////////////// Main
 extern "C"

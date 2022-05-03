@@ -103,17 +103,7 @@ set( KFS_NOMMAP_SRC
 )
 GenerateStaticLibsWithDefs( kfs-nommap ${KFS_NOMMAP_SRC} "FORCE_MALLOC_MMAP" )
 
-set( KFF_SRC
-    fileformat
-    ffext
-    ffkey
-    ffmagic
-)
-
 GenerateStaticLibs( kfs "${KFS_SRC}" )
-
-GenerateStaticLibs( kff "${KFF_SRC}" )
-ExportStatic( kff true )
 
 add_compile_definitions (__mod__="libs/kfs")
 include_directories( BEFORE ${CMAKE_CURRENT_SOURCE_DIR} )

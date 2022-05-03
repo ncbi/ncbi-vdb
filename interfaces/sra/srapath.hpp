@@ -81,7 +81,7 @@ struct SRAPath
      *
      *  "rep" [ IN ] - NUL-terminated server search path
      *  may be a compound path with ':' separator characters, e.g.
-     *  "/panfs/traces01:/panfs/traces31"
+     *  "/path1:/path2"
      *
      *  NB - servers are searched in the order provided,
      *  first to last, until one of them satisfies a request,
@@ -110,7 +110,7 @@ struct SRAPath
      *  creates full path from server, volume & accession
      *
      *  "rep" [ IN ] - NUL terminated full path of replication
-     *  server, e.g. "/panfs/traces01"
+     *  server, e.g. "/path1"
      *
      *  "vol" [ IN ] - NUL terminated relative path of volume,
      *  e.g. "sra2"

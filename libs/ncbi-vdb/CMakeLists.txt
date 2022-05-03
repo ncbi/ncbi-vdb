@@ -48,13 +48,6 @@ set( VDB_LIB_CMN_TARGETS
     zstd
 )
 
-if( LibXml2_FOUND  )
-    list( APPEND VDB_LIB_CMN_TARGETS "kxml" )
-    set( LIBXML2 "xml2")
-else()
-    set( LIBXML2 "")
-endif()
-
 set( VDB_LIB_RD_TARGETS
     ${VDB_LIB_CMN_TARGETS}
     align-reader
