@@ -102,13 +102,13 @@ protected:
     ~BaseMgrFixture()
     {
         if (wd != NULL && KDirectoryRemove(wd, true, pwFileName))
-           throw logic_error("~MgrFixture: KDirectoryRemove failed");   
+           cerr << "~MgrFixture: KDirectoryRemove failed" << endl;
         if (vpath && VPathRelease(vpath) != 0)
-           throw logic_error("~MgrFixture: VPathRelease failed");
+           cerr << "~MgrFixture: VPathRelease failed" << endl;
         if (mgr && VFSManagerRelease(mgr) != 0)
-           throw logic_error("~MgrFixture: VFSManagerRelease failed");
+           cerr << "~MgrFixture: VFSManagerRelease failed" << endl;
         if (KDirectoryRelease(wd) != 0)
-           throw logic_error("~MgrFixture: KDirectoryRelease failed");   
+           cerr << "~MgrFixture: KDirectoryRelease failed" << endl;
     }
     
     void CreateFile(const string& name, const string& content)

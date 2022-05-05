@@ -61,13 +61,13 @@ public:
     ~RepositoryFixture() 
     {
         if (repo && KRepositoryRelease(repo) != 0)
-            throw logic_error("~RepositoryFixture: KRepositoryRelease failed");
+            cerr << "~RepositoryFixture: KRepositoryRelease failed" << endl;
         if (KRepositoryVectorWhack(&repos) != 0)
-            throw logic_error("~RepositoryFixture: KRepositoryVectorWhack failed");
+            cerr << "~RepositoryFixture: KRepositoryVectorWhack failed" << endl;
         if (KRepositoryMgrRelease(mgr) != 0)
-            throw logic_error("~RepositoryFixture: KRepositoryMgrRelease failed");
+            cerr << "~RepositoryFixture: KRepositoryMgrRelease failed" << endl;
         if (KConfigRelease(kfg) != 0)
-            throw logic_error("~RepositoryFixture: KConfigRelease failed");
+            cerr << "~RepositoryFixture: KConfigRelease failed" << endl;
     }
     
     void UpdateNode(const char* key, const char* value)
