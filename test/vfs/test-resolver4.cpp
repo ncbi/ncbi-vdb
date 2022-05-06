@@ -33,6 +33,10 @@
 TEST_SUITE(TestResolver4)
 
 #include <vfs/services.h> /* KService */
+
+#define ALL
+
+#ifdef ALL
 static rc_t example(const char * run) {
     KService * service = NULL; /* remote service */
 /* N.B. KService is not reference counted and not reusable!
@@ -41,8 +45,8 @@ Create a new KService object for each run! */
     if (rc != 0)
         return rc;
     rc = KServiceAddId(service, run); // has vdbcache
-        if (rc != 0)
-            return rc;
+    if (rc != 0)
+        return rc;
     char * filetype = NULL;
     // filetype = "pileup";
     if(filetype != NULL)
@@ -117,9 +121,11 @@ Create a new KService object for each run! */
 TEST_CASE(VDB_CACHE) {
     REQUIRE_RC(example("SRR850901"));
 }
+#endif
 
 #include <vfs/services-priv.h> /* KServiceNamesExecuteExt */
 
+#ifdef ALL
 TEST_CASE ( Test ) {
     KService * s = NULL;
     REQUIRE_RC ( KServiceMake ( & s ) );
@@ -197,6 +203,7 @@ TEST_CASE ( Test ) {
     REQUIRE_RC      ( KSrvResponseRelease ( r ) );
     REQUIRE_RC      ( KServiceRelease ( s ) );
 }
+#endif
 
 extern "C" {
     ver_t CC KAppVersion ( void ) { return 0; }
