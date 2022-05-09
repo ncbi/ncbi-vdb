@@ -38,16 +38,16 @@ def fastq_from_tbl( args, tbl ) :
         fastq = '@{0}.{1}.{2} length={3}\n{4}\n+{0}.{1}.{2} length={3}\n{5}'
         for row in xrange( first, first + count ) :
             if PY3 :
-                name = c_name.Read( row ).decode( "utf-8" )
-                read = c_read.Read( row ).decode( "utf-8" )
-                qual = c_qual.Read( row ).decode( "utf-8" )
+                name = c_name.read( row ).decode( "utf-8" )
+                read = c_read.read( row ).decode( "utf-8" )
+                qual = c_qual.read( row ).decode( "utf-8" )
             else :
-                name = c_name.Read( row )
-                read = c_read.Read( row )
-                qual = c_qual.Read( row )
+                name = c_name.read( row )
+                read = c_read.read( row )
+                qual = c_qual.read( row )
 
-            rd_start = c_read_start.Read( row )
-            rd_len   = c_read_len.Read( row )
+            rd_start = c_read_start.read( row )
+            rd_len   = c_read_len.read( row )
             for x in xrange( 0, len( rd_start ) ) :
                 rlen  = rd_len[ x ]
                 if rlen > 0 :
@@ -58,13 +58,13 @@ def fastq_from_tbl( args, tbl ) :
         fastq = '@{0}.{1} length={2}\n{3}\n+{0}.{1} length={2}\n{4}'
         for row in xrange( first, first + count ) :
             if PY3 :
-                name = c_name.Read( row ).decode( "utf-8" )
-                read = c_read.Read( row ).decode( "utf-8" )
-                qual = c_qual.Read( row ).decode( "utf-8" )
+                name = c_name.read( row ).decode( "utf-8" )
+                read = c_read.read( row ).decode( "utf-8" )
+                qual = c_qual.read( row ).decode( "utf-8" )
             else :
-                name = c_name.Read( row )
-                read = c_read.Read( row )
-                qual = c_qual.Read( row )
+                name = c_name.read( row )
+                read = c_read.read( row )
+                qual = c_qual.read( row )
 
             print( fastq.format( acc, name, len( read ), read, qual ) )
 

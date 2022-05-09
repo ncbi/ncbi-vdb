@@ -17,7 +17,7 @@ table A_TABLE #1.0
     column bool C6;
 };
 
-''' 
+'''
 
 def fill_table_random( cur, cols, row_count, value_count ) :
     for idx in xrange( 0, row_count ) :
@@ -79,15 +79,16 @@ def make_table( mgr, schema_txt, table_name ) :
     except vdb_error as e :
         print( e )
 
-        
+
 if __name__ == '__main__' :
-    
+
     table_name = "L3"
-        
+
     try :
         #open a manager
         mgr = manager( OpenMode.Write, None )
-    
+        print( "library = '%s'"%( mgr.libname ) )
+
         make_table( mgr, schematxt, table_name )
         mgr.OpenTable( table_name ).print_rows()
 

@@ -82,7 +82,7 @@ def copy_table( rd_tbl, wr_tbl, first : int, count : int, freq : int ) :
         if row % freq == 0 : pb.inc( freq )
         wr_cur.OpenRow()                        #this is the meat of the copy-operation
         for rdc, wrc in columns :               #
-            wrc.write( rdc.Read( row ) )        #
+            wrc.write( rdc.read( row ) )        #
         wr_cur.CommitRow()                      #
         wr_cur.CloseRow()                       #
     wr_cur.Commit()

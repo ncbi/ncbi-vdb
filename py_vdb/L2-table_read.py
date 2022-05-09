@@ -10,13 +10,13 @@ def get_one_value_v1( mgr, acc, column_name, row_id ) :
         tbl = mgr.OpenTable( acc )
         cur = tbl.CreateCursor()
         col = cur.OpenColumns( column_name )
-        return col.Read( row_id )
+        return col.read( row_id )
     except vdb_error as e :
         print( e )
 
 def get_one_value_v2( mgr, acc, column_name, row_id ) :
     try :
-        return mgr.OpenTable( acc ).CreateCursor().OpenColumns( column_name ).Read( row_id )
+        return mgr.OpenTable( acc ).CreateCursor().OpenColumns( column_name ).read( row_id )
     except vdb_error as e :
         print( e )
 
@@ -47,17 +47,17 @@ def inspect_column_values( mgr, acc, column_names, row_id ) :
         tbl = mgr.OpenTable( acc )
         cur = tbl.CreateCursor()
         cols = cur.OpenColumns( column_names )
-        
+
         #retrieve a cell-value as an array of Uint32-values ( in this case a single value )
-        spot_id = cols[ "SPOT_ID" ].Read( row_id )
+        spot_id = cols[ "SPOT_ID" ].read( row_id )
         print( "SPOT_ID[1] = %s"%( spot_id ) )
-        
+
         #retrieve a cell-value as a string
-        read = cols[ "READ" ].Read( row_id )
+        read = cols[ "READ" ].read( row_id )
         print( "READ[1] = %s"%( read ) )
-        
+
         #retrieve a cell-value as an array of Uint8-values
-        q = cols[ "QUALITY" ].Read( row_id )
+        q = cols[ "QUALITY" ].read( row_id )
         print( "QUALITY[1] = %s"%( q ) )
         print( "avg of quality values = %f"%( sum( q ) / float( len( q ) ) ) )
 
@@ -65,14 +65,15 @@ def inspect_column_values( mgr, acc, column_names, row_id ) :
         print( e )
 
 if __name__ == '__main__' :
-    
+
     #open a manager in read-mode
     mgr = manager()
-    
+    print( "library=`%s`"%( mgr.libname ) )
+
     #a long and a short way of reading a value from a table
     print( get_one_value_v1( mgr, "SRR000002", "READ", 2000 ) )
     print( get_one_value_v2( mgr, "SRR000002", "READ", 2000 ) )
-    
+
     #print readable columns
     print( get_readable_columns( mgr, "SRR000001" ) )
 
