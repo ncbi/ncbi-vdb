@@ -25,199 +25,271 @@
  */
 
 /**
-* Unit tests for Kdb interface
-*/
+ * Unit tests for Kdb interface
+ */
 
-#define REFCOUNTING_MESSAGES 0
+#include <kapp/args.h>
 
 #include <ktst/unit_test.hpp>
 
-#include "kdb.hpp"
+#include <sysalloc.h>
+
+#include <kdb/column.h>
+#include <kdb/database.h>
+#include <kdb/index.h>
+#include <kdb/manager.h>
+#include <kdb/meta.h>
+#include <kdb/table.h>
+#include <kfs/directory.h>
+#include <klib/printf.h>
+
+
+#include <kdb/kdb-priv.h>
+#include <kdb/namelist.h>
+
+#include <string>
+#include <vector>
+
+//#include <memory>
+//#include <string>
+
 
 using namespace std;
-using namespace KDB;
-using namespace KFS;
 
-TEST_SUITE(KdbTestSuite);
+TEST_SUITE ( KdbTestSuite );
 
-class WKDB_ColumnCopyFixture
-{
-    void checkValue(Metadata const &src, Metadata const &other) {
-        if (src.nodeValue() == other.nodeValue())
-            return;
-        throw std::logic_error("value differs");
-    }
+//#define KDB_MANAGER_MAKE( mgr, wd ) KDBManagerMakeRead ((const KDBManager
+//**)mgr, (struct KDirectory const *)wd ) #include "remote_open_test.cpp"
 
-    void checkAttributes(Metadata const &src, Metadata const &other) {
-        auto const &names = src.attributes();
-        {
-            auto const others = other.attributes();
+const char UsageDefaultName[] = "VDB-4705";
 
-            if (names.count() == others.count())
-                ;
-            else
-                throw std::logic_error("attribute count differs");
-        }
-        names.foreach([&](char const *name) {
-            auto const &value = src.attribute(name);
-            try {
-                auto const &others = other.attribute(name);
-                if (value == others)
-                    ;
-                else
-                    throw std::logic_error(std::string("attribute ") + name + " differs");
-            }
-            catch (Klib::ResultCodeException const &rce) {
-                throw std::logic_error(std::string("attribute ") + name + " does not exist");
-            }
-        });
-    }
 
-    void checkChildren(Metadata const &src, Metadata const &other) {
-        auto const &names = src.children();
-        {
-            auto const &others = other.children();
-            if (names.count() == others.count())
-                ;
-            else
-                throw std::logic_error("child count differs");
-        }
-        names.foreach([&](char const *name) {
-            try {
-                checkEqual(src[name], other[name]);
-            }
-            catch (RC_Exception const &e) {
-                throw std::logic_error("child " + std::string(name) + " does not exist");
-            }
-            catch (std::logic_error const &e) {
-                throw std::logic_error("child " + std::string(name) + " differs; " + e.what());
-            }
-        });
-    }
-
-    static char const *tempPath() {
-        static char const *const env_vars[] = {
-            "TMPDIR", "TEMPDIR", "TEMP", "TMP", "TMP_DIR", "TEMP_DIR", nullptr
-        };
-        for (auto var = env_vars; *var; ++var) {
-            auto const val = getenv(*var);
-            if (val)
-                return val;
-        }
-        return "/tmp";
-    }
+class KDB_ColumnCopyFixture {
 public:
-
-    static constexpr char const *tableName() { return "VDB-4706.ktable"; }
-    static constexpr char const *tableName2() { return "VDB-4706_2.ktable"; }
-    static constexpr char const *columnName() { return "COL_1"; }
-    static constexpr char const *nodeName() { return "MDN_1"; }
-    static constexpr char const *childName() { return "MDN_C"; }
-    static constexpr char const *nodeValue() { return "Metadata 1"; }
-    static constexpr char const *childValue() { return "Metadata child"; }
-    static constexpr char const *attrName() { return "foo"; }
-    static constexpr char const *attrValue() { return "bar"; }
-
-    MutatingDirectory dir = MutatingDirectory(tempPath());
-
-    WKDB_ColumnCopyFixture()
+    void createTable ( const char *tblname )
     {
-        try {
-            dir.remove(tableName(), true);
-            dir.remove(tableName2(), true);
-        }
-        catch (...) {}
-    }
+        KDirectory *Dir = nullptr;
+        THROW_ON_RC ( KDirectoryNativeDir ( &Dir ) );
+        KDBManager *mgr = nullptr;
+        THROW_ON_RC ( KDBManagerMakeUpdate ( &mgr, Dir ) );
 
-    ~WKDB_ColumnCopyFixture()
-    {
-        dir.remove(tableName(), true);
-    }
+        tables.push_back ( tblname );
 
-    void checkEqual(Metadata const &src, Metadata const &other) {
-        checkValue(src, other);
-        checkAttributes(src, other);
-        checkChildren(src, other);
-    }
+        KTable *Tbl = nullptr;
+        THROW_ON_RC ( KDBManagerCreateTable ( mgr, &Tbl,
+            kcmInit | kcmCreate | kcmParents, "%s/%s", tempPath (), tblname ) );
 
-    // create column with some metadata
-    // this will become the source metadata
-    void makeNode(MutatingTable &tbl) {
-        auto md = tbl[columnName()][nodeName()];
-        auto child = md[childName()];
+        KColumn *Col = nullptr;
+        THROW_ON_RC (
+            KTableCreateColumn ( Tbl, &Col, kcmInit, 0, 0, columnName ) );
 
-        md.setValue(nodeValue());
-        child.setValue(childValue());
-        child.setAttribute(attrName(), attrValue());
-    }
+        KMetadata *Meta;
+        THROW_ON_RC ( KColumnOpenMetadataUpdate ( Col, &Meta ) );
 
-    // verify that node has expected values
-    void checkNode(Metadata const &source_md) {
-        if (source_md.value() != nodeValue())
-            throw std::logic_error("node value is unexpected");
+        KMDataNode *Node;
+        THROW_ON_RC ( KMetadataOpenNodeUpdate ( Meta, &Node, nodeName ) );
+        THROW_ON_RC ( KMDataNodeWrite ( Node, colValue, strlen ( colValue ) ) );
+        THROW_ON_RC ( KMDataNodeWriteAttr ( Node, attrName, attrValue ) );
 
-        if (source_md[childName()].value() != childValue())
-            throw std::logic_error("child node value is unexpected");
-
-        if (source_md[childName()].attribute(attrName()) != attrValue())
-            throw std::logic_error("child node attribute value is unexpected");
+        THROW_ON_RC ( KMDataNodeRelease ( Node ) );
+        THROW_ON_RC ( KMetadataRelease ( Meta ) );
+        THROW_ON_RC ( KColumnRelease ( Col ) );
+        THROW_ON_RC ( KTableRelease ( Tbl ) );
+        THROW_ON_RC ( KDBManagerRelease ( mgr ) );
+        THROW_ON_RC ( KDirectoryRelease ( Dir ) );
     }
 
     // Make a column and copy it to another table
-    void makeCopy() {
-        MutatingManager mgr(dir);
-        auto tbl = mgr.createTable(tableName());
+    void makeCopy ( const char *dstTable, const char *srcTable )
+    {
+        fprintf ( stderr, "entering makeCopy\n" );
+        KDirectory *Dir = nullptr;
+        THROW_ON_RC ( KDirectoryNativeDir ( &Dir ) );
+        KDBManager *mgr = nullptr;
+        THROW_ON_RC ( KDBManagerMakeUpdate ( &mgr, Dir ) );
+        tables.push_back ( dstTable );
 
-        makeNode(tbl);
+        const KTable *Tbl1 = nullptr;
+        THROW_ON_RC ( KDBManagerOpenTableRead (
+            mgr, &Tbl1, "%s/%s", tempPath (), srcTable ) );
 
-        auto const &src = tbl.readOnly();
-        checkNode(src[columnName()][nodeName()]);
+        KTable *Tbl2 = nullptr;
+        THROW_ON_RC ( KDBManagerCreateTable ( mgr, &Tbl2,
+            kcmInit | kcmCreate | kcmParents, "%s/%s", tempPath (),
+            dstTable ) );
 
-        auto tbl2 = mgr.createTable(tableName2());
-        tbl2.copyColumn(columnName(), src);
+        rc_t rc = KTableCopyColumn ( Tbl2, Tbl1, dstTable );
+
+        size_t num_writ;
+        char buffer[4096];
+        string_printf ( buffer, sizeof buffer, &num_writ,
+            "KTableCopyColumn failed: rc = %R", rc );
+        fprintf ( stderr, "%s\n", buffer );
+        THROW_ON_RC ( KTableCopyColumn ( Tbl2, Tbl1, dstTable ) );
+        THROW_ON_RC ( KTableRelease ( Tbl1 ) );
+        THROW_ON_RC ( KTableRelease ( Tbl2 ) );
+        THROW_ON_RC ( KDBManagerRelease ( mgr ) );
+        THROW_ON_RC ( KDirectoryRelease ( Dir ) );
+        fprintf ( stderr, "leaving makeCopy\n" );
     }
 
-    void checkCopy() {
-        auto mgr = MutatingManager(dir).readOnly();
-        auto tbl2 = mgr.openTable(tableName2());
-
-        checkNode(tbl2[columnName()][nodeName()]);
+    void checkTable ( const char *tblName )
+    {
+        fprintf ( stderr, "checking %s\n", tblName );
     }
+
+    static char const *tempPath ()
+    {
+        static char const *const env_vars[] = { "TMPDIR", "TEMPDIR", "TEMP",
+            "TMP", "TMP_DIR", "TEMP_DIR", nullptr };
+        for ( auto var = env_vars; *var; ++var ) {
+            auto const val = getenv ( *var );
+            if ( val ) return val;
+        }
+        return "/tmp";
+    }
+
+    /*
+    void checkValue ( Metadata const &src, Metadata const &other )
+    {
+        if ( src.nodeValue () == other.nodeValue () ) return;
+        throw std::logic_error ( "value differs" );
+    }
+
+    void checkAttributes ( Metadata const &src, Metadata const &other )
+    {
+        auto const &names = src.attributes ();
+        {
+            auto const others = other.attributes ();
+
+            if ( names.count () == others.count () )
+                ;
+            else
+                throw std::logic_error ( "attribute count differs" );
+        }
+        names.foreach ( [&] ( char const *name ) {
+            auto const &value = src.attribute ( name );
+            try {
+                auto const &others = other.attribute ( name );
+                if ( value == others )
+                    ;
+                else
+                    throw std::logic_error (
+                        std::string ( "attribute " ) + name + " differs" );
+            } catch ( Klib::ResultCodeException const &rce ) {
+                throw std::logic_error (
+                    std::string ( "attribute " ) + name + " does not exist" );
+            }
+        } );
+    }
+
+    void checkChildren ( Metadata const &src, Metadata const &other )
+    {
+        auto const &names = src.children ();
+        {
+            auto const &others = other.children ();
+            if ( names.count () == others.count () )
+                ;
+            else
+                throw std::logic_error ( "child count differs" );
+        }
+        names.foreach ( [&] ( char const *name ) {
+            try {
+                checkEqual ( src[name], other[name] );
+            } catch ( RC_Exception const &e ) {
+                throw std::logic_error (
+                    "child " + std::string ( name ) + " does not exist" );
+            } catch ( std::logic_error const &e ) {
+                throw std::logic_error ( "child " + std::string ( name )
+                    + " differs; " + e.what () );
+            }
+        } );
+    }
+*/
+
+    ~KDB_ColumnCopyFixture ()
+    {
+        for ( auto tblname : tables ) {
+            fprintf ( stderr, "cleaning up %s\n", tblname.c_str () );
+
+            KDirectory *Dir = nullptr;
+            KDirectoryNativeDir ( &Dir );
+            KDirectoryRemove ( Dir, true, tblname.c_str () );
+            KDirectoryRelease ( Dir );
+        }
+    }
+
+    /*
+        void checkEqual ( Metadata const &src, Metadata const &other )
+        {
+            checkValue ( src, other );
+            checkAttributes ( src, other );
+            checkChildren ( src, other );
+        }
+
+        // create column with some metadata
+        // this will become the source metadata
+        void makeNode ( MutatingTable &tbl )
+        {
+            auto md = tbl[columnName ()][nodeName ()];
+            auto child = md[childName ()];
+
+            md.setValue ( nodeValue () );
+            child.setValue ( childValue () );
+            child.setAttribute ( attrName (), attrValue () );
+        }
+
+        // verify that node has expected values
+        void checkNode ( Metadata const &source_md )
+        {
+            if ( source_md.value () != nodeValue () )
+                throw std::logic_error ( "node value is unexpected" );
+
+            if ( source_md[childName ()].value () != childValue () )
+                throw std::logic_error ( "child node value is unexpected" );
+
+            if ( source_md[childName ()].attribute ( attrName () ) != attrValue
+       () ) throw std::logic_error ( "child node attribute value is unexpected"
+       );
+        }
+        */
+private:
+    static constexpr char const *columnName = "COL_1";
+    static constexpr char const *nodeName = "MDN_1";
+    static constexpr char const *childName = "MDN_C";
+    static constexpr char const *nodeValue = "Metadata 1";
+    static constexpr char const *childValue = "Metadata child";
+    static constexpr char const *attrName = "foo";
+    static constexpr char const *attrValue = "bar";
+    static constexpr char const *colValue = "colValue";
+
+    vector<string> tables;
 };
 
-FIXTURE_TEST_CASE ( CopyColumn, WKDB_ColumnCopyFixture )
+FIXTURE_TEST_CASE ( CopyColumn, KDB_ColumnCopyFixture )
 {
-    makeCopy();
-    checkCopy();
+    static constexpr char const *tableName = "VDB-4705.ktable";
+    static constexpr char const *tableName2 = "VDB-4705_2.ktable";
+    createTable ( tableName );
+    checkTable ( tableName );
+    makeCopy ( tableName2, tableName );
+    checkTable ( tableName2 );
 }
 
-extern "C"
-{
+extern "C" {
 
 #include <kapp/args.h>
 #include <kfg/config.h>
 #include <klib/debug.h> // KDbgSetString
 
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
-}
+ver_t CC KAppVersion ( void ) { return 0x1000000; }
+rc_t CC UsageSummary ( const char *progname ) { return 0; }
 
-rc_t CC Usage ( const Args * args )
+rc_t CC Usage ( const Args *args ) { return 0; }
+
+rc_t CC KMain ( int argc, char *argv[] )
 {
-    return 0;
+    KConfigDisableUserSettings ();
+    return KdbTestSuite ( argc, argv );
 }
-
-const char UsageDefaultName[] = "VDB-4705";
-
-rc_t CC KMain ( int argc, char *argv [] )
-{
-    KConfigDisableUserSettings();
-    return KdbTestSuite(argc, argv);
-}
-
 }

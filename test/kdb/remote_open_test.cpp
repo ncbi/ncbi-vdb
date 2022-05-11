@@ -134,7 +134,7 @@ public:
     {
     }
     
-    ~RemoteDBFixture()
+    ~RemoteDBFixture() noexcept(false)
     {
         if (m_vfsmgr && VFSManagerRelease(m_vfsmgr) != 0)
             throw logic_error ( "~RemoteDBFixture: VFSManagerRelease failed" );
