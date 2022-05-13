@@ -37,9 +37,9 @@
 #include <string>
 #include <vector>
 
-#include <kdb/manager.h>
 #include <kdb/database.h>
 #include <kdb/index.h>
+#include <kdb/manager.h>
 #include <kdb/table.h>
 
 #include <vfs/manager.h>
@@ -54,7 +54,6 @@
 #include <kdb/extern.h>
 #include <kdb/kdb-priv.h>
 #include <kdb/namelist.h>
-
 
 
 //#include <memory>
@@ -129,21 +128,18 @@ public:
 
     void checkTable ( const char *tblName )
     {
-        fprintf ( stderr, "checking %s\n", tblName );
-
         KDirectory *Dir = nullptr;
         THROW_ON_RC ( KDirectoryNativeDir ( &Dir ) );
-        const KDBManager *mgr = nullptr;
-        // THROW_ON_RC ( KDBManagerMakeUpdate ( &mgr, Dir ) );
-        THROW_ON_RC ( KDBManagerMakeRead ( &mgr, NULL ) );
+        KDBManager *mgr = nullptr;
+        THROW_ON_RC ( KDBManagerMakeUpdate ( &mgr, Dir ) );
 
         const KTable *Tbl = nullptr;
         THROW_ON_RC ( KDBManagerOpenTableRead (
             mgr, &Tbl, "%s/%s", tempPath (), tblName ) );
 
-
         const KColumn *Col = nullptr;
-        THROW_ON_RC ( KDBManagerOpenColumnRead ( mgr, &Col, columnName ) );
+        // THROW_ON_RC ( KDBManagerOpenColumnRead ( mgr, &Col, columnName ) );
+        THROW_ON_RC ( KTableOpenColumnRead ( Tbl, &Col, columnName ) );
 
         const KMetadata *Meta;
         THROW_ON_RC ( KColumnOpenMetadataRead ( Col, &Meta ) );
@@ -156,9 +152,13 @@ public:
         THROW_ON_RC (
             KMDataNodeRead ( Node, 0, buf, sizeof buf, &num_read, 0 ) );
 
-        char attrValue[50];
-        THROW_ON_RC ( KMDataNodeReadAttr (
-            Node, attrName, attrValue, sizeof ( attrValue ), &num_read ) );
+        buf[num_read] = '\0';
+        THROW_ON_FALSE ( strcmp ( buf, colValue ) == 0 );
+
+        THROW_ON_RC (
+            KMDataNodeReadAttr ( Node, attrName, buf, sizeof buf, &num_read ) );
+        buf[num_read] = '\0';
+        THROW_ON_FALSE ( strcmp ( buf, attrValue ) == 0 );
 
 
         THROW_ON_RC ( KMDataNodeRelease ( Node ) );
