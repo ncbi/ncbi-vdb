@@ -34,21 +34,28 @@
 
 #include <sysalloc.h>
 
-#include <kdb/column.h>
+#include <string>
+#include <vector>
+
+#include <kdb/manager.h>
 #include <kdb/database.h>
 #include <kdb/index.h>
-#include <kdb/manager.h>
+#include <kdb/table.h>
+
+#include <vfs/manager.h>
+
+#include <kdb/column.h>
 #include <kdb/meta.h>
 #include <kdb/table.h>
 #include <kfs/directory.h>
 #include <klib/printf.h>
 
 
+#include <kdb/extern.h>
 #include <kdb/kdb-priv.h>
 #include <kdb/namelist.h>
 
-#include <string>
-#include <vector>
+
 
 //#include <memory>
 //#include <string>
@@ -58,11 +65,7 @@ using namespace std;
 
 TEST_SUITE ( KdbTestSuite );
 
-//#define KDB_MANAGER_MAKE( mgr, wd ) KDBManagerMakeRead ((const KDBManager
-//**)mgr, (struct KDirectory const *)wd ) #include "remote_open_test.cpp"
-
 const char UsageDefaultName[] = "VDB-4705";
-
 
 class KDB_ColumnCopyFixture {
 public:
@@ -102,7 +105,6 @@ public:
     // Make a column and copy it to another table
     void makeCopy ( const char *dstTable, const char *srcTable )
     {
-        fprintf ( stderr, "entering makeCopy\n" );
         KDirectory *Dir = nullptr;
         THROW_ON_RC ( KDirectoryNativeDir ( &Dir ) );
         KDBManager *mgr = nullptr;
@@ -118,24 +120,53 @@ public:
             kcmInit | kcmCreate | kcmParents, "%s/%s", tempPath (),
             dstTable ) );
 
-        rc_t rc = KTableCopyColumn ( Tbl2, Tbl1, dstTable );
-
-        size_t num_writ;
-        char buffer[4096];
-        string_printf ( buffer, sizeof buffer, &num_writ,
-            "KTableCopyColumn failed: rc = %R", rc );
-        fprintf ( stderr, "%s\n", buffer );
-        THROW_ON_RC ( KTableCopyColumn ( Tbl2, Tbl1, dstTable ) );
+        THROW_ON_RC ( KTableCopyColumn ( Tbl2, Tbl1, columnName ) );
         THROW_ON_RC ( KTableRelease ( Tbl1 ) );
         THROW_ON_RC ( KTableRelease ( Tbl2 ) );
         THROW_ON_RC ( KDBManagerRelease ( mgr ) );
         THROW_ON_RC ( KDirectoryRelease ( Dir ) );
-        fprintf ( stderr, "leaving makeCopy\n" );
     }
 
     void checkTable ( const char *tblName )
     {
         fprintf ( stderr, "checking %s\n", tblName );
+
+        KDirectory *Dir = nullptr;
+        THROW_ON_RC ( KDirectoryNativeDir ( &Dir ) );
+        const KDBManager *mgr = nullptr;
+        // THROW_ON_RC ( KDBManagerMakeUpdate ( &mgr, Dir ) );
+        THROW_ON_RC ( KDBManagerMakeRead ( &mgr, NULL ) );
+
+        const KTable *Tbl = nullptr;
+        THROW_ON_RC ( KDBManagerOpenTableRead (
+            mgr, &Tbl, "%s/%s", tempPath (), tblName ) );
+
+
+        const KColumn *Col = nullptr;
+        THROW_ON_RC ( KDBManagerOpenColumnRead ( mgr, &Col, columnName ) );
+
+        const KMetadata *Meta;
+        THROW_ON_RC ( KColumnOpenMetadataRead ( Col, &Meta ) );
+
+        const KMDataNode *Node;
+        THROW_ON_RC ( KMetadataOpenNodeRead ( Meta, &Node, nodeName ) );
+
+        size_t num_read;
+        char buf[1024];
+        THROW_ON_RC (
+            KMDataNodeRead ( Node, 0, buf, sizeof buf, &num_read, 0 ) );
+
+        char attrValue[50];
+        THROW_ON_RC ( KMDataNodeReadAttr (
+            Node, attrName, attrValue, sizeof ( attrValue ), &num_read ) );
+
+
+        THROW_ON_RC ( KMDataNodeRelease ( Node ) );
+        THROW_ON_RC ( KMetadataRelease ( Meta ) );
+        THROW_ON_RC ( KColumnRelease ( Col ) );
+        THROW_ON_RC ( KTableRelease ( Tbl ) );
+        THROW_ON_RC ( KDBManagerRelease ( mgr ) );
+        THROW_ON_RC ( KDirectoryRelease ( Dir ) );
     }
 
     static char const *tempPath ()
@@ -210,11 +241,10 @@ public:
     ~KDB_ColumnCopyFixture ()
     {
         for ( auto tblname : tables ) {
-            fprintf ( stderr, "cleaning up %s\n", tblname.c_str () );
-
             KDirectory *Dir = nullptr;
             KDirectoryNativeDir ( &Dir );
-            KDirectoryRemove ( Dir, true, tblname.c_str () );
+            KDirectoryRemove (
+                Dir, true, "%s/%s", tempPath (), tblname.c_str () );
             KDirectoryRelease ( Dir );
         }
     }
