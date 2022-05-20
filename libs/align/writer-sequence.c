@@ -393,7 +393,7 @@ LIB_EXPORT rc_t CC TableWriterSeq_Make(const TableWriterSeq** cself, VDatabase* 
         *cself = self;
         ALIGN_DBG("table %s", "created");
     } else {
-        TableWriterSeq_Whack(self, false, NULL, true);
+        TableWriterSeq_Whack(self, false, NULL);
         ALIGN_DBGERR(rc);
     }
     return rc;
@@ -604,15 +604,14 @@ static void SaveMetadata(TableWriterSeq *const self, int64_t const *const rows)
 }
 
 /* compress READ and save metadata */
-static void Commit(TableWriterSeq *const self, bool compressRead)
+static void Commit(TableWriterSeq *const self)
 {
     int64_t rows[2] = {0, 0}; /* to hold first-unaligned and first-half-aligned row id */
 
     if (self->numSpots > 0) {
         if (self->numAlignedSpots > 0)
         {
-            if ( compressRead )
-                CompressREAD(self, rows);
+           CompressREAD(self, rows);
         }
         else
             rows[0] = 1;
@@ -620,7 +619,7 @@ static void Commit(TableWriterSeq *const self, bool compressRead)
     SaveMetadata(self, rows);
 }
 
-LIB_EXPORT rc_t CC TableWriterSeq_Whack(TableWriterSeq const *const cself, bool const commit, uint64_t *const rows, bool compressRead )
+LIB_EXPORT rc_t CC TableWriterSeq_Whack(TableWriterSeq const *const cself, bool const commit, uint64_t *const rows )
 {
     TableWriterSeq *const self = (TableWriterSeq *)cself;
 
@@ -628,7 +627,7 @@ LIB_EXPORT rc_t CC TableWriterSeq_Whack(TableWriterSeq const *const cself, bool 
         TableReader_Whack(self->reader);
         if (commit) {
             TableWriter_CloseCursor(self->base, 1, NULL);
-            Commit(self, compressRead);
+            Commit(self);
         }
         TableWriter_Whack(self->base, commit, rows);
         KVectorRelease(self->stats);
