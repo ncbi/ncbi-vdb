@@ -127,7 +127,7 @@ ALIGN_EXTERN rc_t CC TableWriterSeq_Make(const TableWriterSeq** cself, VDatabase
                                          const uint32_t options, char const quality_quantization[]);
 
 /* rows optional here */
-ALIGN_EXTERN rc_t CC TableWriterSeq_Whack(const TableWriterSeq* cself, bool commit, uint64_t* rows);
+ALIGN_EXTERN rc_t CC TableWriterSeq_Whack(const TableWriterSeq* cself, bool commit, uint64_t* rows, bool compressRead);
 
 ALIGN_EXTERN rc_t CC TableWriteSeq_WriteDefault(const TableWriterSeq* cself,
                                                 enum ETableWriterSeq_ColNames col, const TableWriterData* data);
