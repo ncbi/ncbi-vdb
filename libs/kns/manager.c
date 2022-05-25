@@ -1195,17 +1195,29 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
             rc=KDataBufferPrintf(&platform," via %s %s",
                                  getenv(ENV_MAGIC_PLATFORM_NAME),
                                  getenv(ENV_MAGIC_PLATFORM_VERSION));
-            if (rc) { return rc; }
+            if (rc)
+            {
+                /*KDataBufferWhack ( &platform );*/
+                return rc;
+            }
         }
         else{
             rc=KDataBufferPrintf(&platform," via %s", getenv(ENV_MAGIC_PLATFORM_NAME));
-            if (rc) { return rc; }
+            if (rc)
+            {
+                /*KDataBufferWhack ( &platform );*/
+                return rc;
+            }
         }
     }
     else
     {
             rc=KDataBufferPrintf(&platform,"%s","");
-            if (rc) { return rc; }
+            if (rc)
+            {
+                /*KDataBufferWhack ( &platform );*/
+                return rc;
+            }
     }
 
     if ( sessids.base && strlen ( sessids.base ) ) {

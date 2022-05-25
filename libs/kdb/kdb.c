@@ -652,7 +652,7 @@ static rc_t KDBOpenPathTypeReadInt ( const KDBManager * mgr, const KDirectory * 
                         KDirectoryRelease( ldir );
                 }
             }
-            if ( aVpath == NULL )
+            if ( aVpath != vpath )
                 VPathRelease ( vpath );
         }
     }

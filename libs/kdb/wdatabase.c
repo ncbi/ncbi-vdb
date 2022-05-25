@@ -292,7 +292,7 @@ rc_t KDBManagerMakeDBUpdate ( KDBManager *self,
 
             rc = RC ( rcDB, rcMgr, rcOpening, rcDatabase, rcBusy );
 
-            free ( db );
+            KDatabaseRelease ( db );
         }
         KDirectoryRelease ( dir );
     }
