@@ -73,29 +73,32 @@ TEST_CASE ( TestKServiceAddId ) {
 
 #ifdef ALL
 TEST_CASE(TestKSrvResponseGetLocation) {
+
+#define ACC "SRR850901"
+    
     KService * s = NULL;
     REQUIRE_RC(KServiceMake(&s));
     REQUIRE_RC(KServiceResolve(s, false, true));
-    REQUIRE_RC(KServiceAddId(s, "SRR850901"));
+    REQUIRE_RC(KServiceAddId(s, ACC));
     REQUIRE_RC(KServiceSetFormat(s, "all"));
     const KSrvResponse * r = NULL;
     REQUIRE_RC(KServiceNamesQuery(s, 0, &r));
     REQUIRE_RC_FAIL(KSrvResponseGetLocation2(0, 0, 0, 0, 0, 0, 0, 0));
     REQUIRE_RC_FAIL(KSrvResponseGetLocation2(r, 0, 0, 0, 0, 0, 0, 0));
-    REQUIRE_RC_FAIL(KSrvResponseGetLocation2(r, "SRR850901", 0, 0, 0, 0, 0, 0));
-    REQUIRE_RC_FAIL(KSrvResponseGetLocation2(r, 0, "SRR850901", 0, 0, 0, 0, 0));
-    REQUIRE_RC(KSrvResponseGetLocation2(r, "SRR850901", "SRR850901", "sra",
+    REQUIRE_RC_FAIL(KSrvResponseGetLocation2(r, ACC, 0, 0, 0, 0, 0, 0));
+    REQUIRE_RC_FAIL(KSrvResponseGetLocation2(r, 0, ACC, 0, 0, 0, 0, 0));
+    REQUIRE_RC(KSrvResponseGetLocation2(r, ACC, ACC ".sralite", "sra",
         0, 0, 0, 0));
 
     const VPath * local = NULL;
-    REQUIRE_RC(KSrvResponseGetLocation2(r, "SRR850901", "SRR850901", "sra",
+    REQUIRE_RC(KSrvResponseGetLocation2(r, ACC, ACC ".sralite", "sra",
         &local, 0, 0, 0));
     REQUIRE_NULL(local);
 
     rc_t rcLocal = 0;
-    REQUIRE_RC_FAIL(KSrvResponseGetLocation2(r, "SRR850901", "SRR850901", "sra",
+    REQUIRE_RC_FAIL(KSrvResponseGetLocation2(r, ACC, ACC ".sralite", "sra",
         0, &rcLocal, 0, 0));
-    REQUIRE_RC(KSrvResponseGetLocation2(r, "SRR850901", "SRR850901", "sra",
+    REQUIRE_RC(KSrvResponseGetLocation2(r, ACC, ACC ".sralite", "sra",
         &local, &rcLocal, 0, 0));
     REQUIRE_NULL(local);
     REQUIRE_RC_FAIL(rcLocal);
@@ -103,7 +106,7 @@ TEST_CASE(TestKSrvResponseGetLocation) {
     const VPath * cache = NULL;
     rc_t rcCache = 0;
 
-    REQUIRE_RC_FAIL(KSrvResponseGetLocation2(r, "SRR850901", "SRR850901.qq",
+    REQUIRE_RC_FAIL(KSrvResponseGetLocation2(r, ACC, ACC ".qq",
         "sra", &local, &rcLocal, &cache, &rcCache));
     REQUIRE_NULL(local);
     REQUIRE_NULL(cache);
@@ -167,7 +170,7 @@ TEST_CASE(TestKSrvResponseGetLocationLocalInAD) {
 
     KFile * f = NULL;
     REQUIRE_RC(KDirectoryCreateFile(dr, &f, false,
-        0664, kcmOpen | kcmInit | kcmCreate, "%s/%s.sra", p, acc));
+        0664, kcmOpen | kcmInit | kcmCreate, "%s/%s.sralite", p, acc));
     REQUIRE_RC(KFileRelease(f));
 
     KService * s = NULL;
@@ -183,7 +186,7 @@ TEST_CASE(TestKSrvResponseGetLocationLocalInAD) {
     const VPath * cache = NULL;
     rc_t rcCache = 0;
 
-    REQUIRE_RC(KSrvResponseGetLocation2(r, acc, acc, "sra",
+    REQUIRE_RC(KSrvResponseGetLocation2(r, acc, "SRR850901.sralite", "sra",
         &local, &rcLocal, &cache, &rcCache));
 
     REQUIRE_RC(rcLocal);
@@ -191,7 +194,7 @@ TEST_CASE(TestKSrvResponseGetLocationLocalInAD) {
     char u[PATH_MAX] = "";
     REQUIRE_RC(VPathReadPath(local, u, sizeof u, 0));
     REQUIRE_RC(KDirectoryResolvePath(dr, true, p, sizeof p,
-        "%s/%s.sra", acc, acc));
+        "%s/%s.sralite", acc, acc));
     REQUIRE_EQ(string(p), string(u));
     REQUIRE_RC(VPathRelease(local));
 
@@ -209,16 +212,18 @@ TEST_CASE(TestKSrvResponseGetLocationLocalInAD) {
 
 #ifdef ALL
 TEST_CASE(TestKSrvResponseGetLocationLocalInUserRepo) {
+
+#define ACC "SRR850901"
+
     KDirectory * dr = NULL;
     REQUIRE_RC(KDirectoryNativeDir(&dr));
-    const char * acc = "SRR850901";
     char p[PATH_MAX] = "";
     REQUIRE_RC(KDirectoryResolvePath(dr, true, p, sizeof p, "tmp"));
     REQUIRE_RC(KDirectoryCreateDir(dr, 0775,
         kcmOpen | kcmInit | kcmCreate | kcmParents, "tmp/sra"));
     KFile * f = NULL;
     REQUIRE_RC(KDirectoryCreateFile(dr, &f, false,
-        0664, kcmOpen | kcmInit | kcmCreate, "tmp/sra/%s.sra", acc));
+        0664, kcmOpen | kcmInit | kcmCreate, "tmp/sra/%s.sralite", ACC));
     REQUIRE_RC(KFileRelease(f));
     KConfig * kfg = NULL;
     REQUIRE_RC(KConfigMakeLocal(&kfg, NULL));
@@ -231,19 +236,19 @@ TEST_CASE(TestKSrvResponseGetLocationLocalInUserRepo) {
     KService * s = NULL;
     REQUIRE_RC(KServiceMakeWithMgr(&s, mgr, NULL, kfg));
     REQUIRE_RC(KServiceResolve(s, false, true));
-    REQUIRE_RC(KServiceAddId(s, acc));
+    REQUIRE_RC(KServiceAddId(s, ACC));
     const KSrvResponse * r = NULL;
     REQUIRE_RC(KServiceNamesQuery(s, 0, &r));
     const VPath * local = NULL;
     rc_t rcLocal = 0;
     const VPath * cache = NULL;
     rc_t rcCache = 0;
-    REQUIRE_RC(KSrvResponseGetLocation2(r, acc, acc, "sra",
+    REQUIRE_RC(KSrvResponseGetLocation2(r, ACC, ACC ".sralite", "sra",
         &local, &rcLocal, &cache, &rcCache));
     REQUIRE_RC(rcLocal);
     REQUIRE_NOT_NULL(local);
     REQUIRE_RC(KDirectoryResolvePath(dr, true, p, sizeof p,
-        "tmp/sra/%s.sra", acc));
+        "tmp/sra/%s.sralite", ACC));
     char u[PATH_MAX] = "";
     REQUIRE_RC(VPathReadPath(local, u, sizeof u, 0));
     REQUIRE_EQ(string(p), string(u));
@@ -264,16 +269,18 @@ TEST_CASE(TestKSrvResponseGetLocationLocalInUserRepo) {
 
 #ifdef ALL
 TEST_CASE(TestKSrvResponseGetLocationCacheInAD) {
+
+#define ACC "SRR850901"
+
     KDirectory * dr = NULL;
     REQUIRE_RC(KDirectoryNativeDir(&dr));
-    const char * acc = "SRR850901";
     char p[PATH_MAX] = "";
-    REQUIRE_RC(KDirectoryResolvePath(dr, true, p, sizeof p, "%s", acc));
+    REQUIRE_RC(KDirectoryResolvePath(dr, true, p, sizeof p, "%s", ACC));
     REQUIRE_RC(KDirectoryCreateDir(dr, 0775, kcmOpen | kcmInit | kcmCreate, p));
 
     KFile * f = NULL;
     REQUIRE_RC(KDirectoryCreateFile(dr, &f, false,
-        0664, kcmOpen | kcmInit | kcmCreate, "%s/%s.sra", p, acc));
+        0664, kcmOpen | kcmInit | kcmCreate, "%s/%s.sralite", p, ACC));
     REQUIRE_RC(KFileRelease(f));
 
     VFSManager * mgr = NULL;
@@ -285,7 +292,7 @@ TEST_CASE(TestKSrvResponseGetLocationCacheInAD) {
     KService * s = NULL;
     REQUIRE_RC(KServiceMakeWithMgr(&s, mgr, NULL, NULL));
     REQUIRE_RC(KServiceResolve(s, false, true));
-    REQUIRE_RC(KServiceAddId(s, acc));
+    REQUIRE_RC(KServiceAddId(s, ACC));
 
     const KSrvResponse * r = NULL;
     REQUIRE_RC(KServiceNamesQuery(s, 0, &r));
@@ -295,7 +302,7 @@ TEST_CASE(TestKSrvResponseGetLocationCacheInAD) {
     const VPath * cache = NULL;
     rc_t rcCache = 0;
 
-    REQUIRE_RC(KSrvResponseGetLocation2(r, acc, acc, "sra",
+    REQUIRE_RC(KSrvResponseGetLocation2(r, ACC, ACC ".sralite", "sra",
         &local, &rcLocal, &cache, &rcCache));
 
     REQUIRE_RC(rcLocal);
@@ -303,14 +310,14 @@ TEST_CASE(TestKSrvResponseGetLocationCacheInAD) {
     char u[PATH_MAX] = "";
     REQUIRE_RC(VPathReadPath(local, u, sizeof u, 0));
     REQUIRE_RC(KDirectoryResolvePath(dr, true, p, sizeof p,
-        "%s/%s.sra", acc, acc));
+        "%s/%s.sralite", ACC, ACC));
     REQUIRE_EQ(string(p), string(u));
     REQUIRE_RC(VPathRelease(local));
 
     REQUIRE_RC(rcCache);
     REQUIRE_NOT_NULL(cache);
     REQUIRE_RC(KDirectoryResolvePath(dr, true, p, sizeof p,
-        "%s/%s.sra", acc, acc));
+        "%s/%s.sralite", ACC, ACC));
     REQUIRE_EQ(string(p), string(u));
     REQUIRE_RC(VPathRelease(cache));
 
@@ -320,7 +327,7 @@ TEST_CASE(TestKSrvResponseGetLocationCacheInAD) {
 
     REQUIRE_RC(VFSManagerRelease(mgr));
 
-    REQUIRE_RC(KDirectoryRemove(dr, true, acc));
+    REQUIRE_RC(KDirectoryRemove(dr, true, ACC));
     REQUIRE_RC(KDirectoryRelease(dr));
 }
 #endif
