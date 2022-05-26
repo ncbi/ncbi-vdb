@@ -149,6 +149,8 @@ endif()
 
 #message( "OS=" ${OS} " ARCH=" ${ARCH} " CXX=" ${CMAKE_CXX_COMPILER} " LMCHECK=" ${LMCHECK} " BITS=" ${BITS} " CMAKE_C_COMPILER_ID=" ${CMAKE_C_COMPILER_ID} " CMAKE_CXX_COMPILER_ID=" ${CMAKE_CXX_COMPILER_ID} )
 
+add_compile_definitions (PKGNAME=${OS}${BITS})
+
 # ===========================================================================
 # include directories for C/C++ compilation
 #

@@ -34,7 +34,7 @@ set( test_kns_name "test-kns" )
 add_executable( ${test_kns_name} knstest )
 MSVS_StaticRuntime( ${test_kns_name} )
 target_link_libraries( ${test_kns_name} ${COMMON_LIBS_READ} )
-add_test( NAME Test_KNS COMMAND ${test_kns_name} WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+add_test( NAME Test_KNS_basics COMMAND ${test_kns_name} WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 #AddExecutableTest( Test_KNS "knstest" "${COMMON_LIBS_READ}" )
 
 AddExecutableTest( SlowTest_KNS_ipc "test-ipc" "${COMMON_LIBS_READ}" )
