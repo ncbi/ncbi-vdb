@@ -1156,8 +1156,22 @@ static char * getType(const String * path, const char * acc) {
     StringInit(&sPath, path->addr+offset, num_writ, num_writ);
     if (StringEqual(&s, &sPath))
         return "sra";
-    else
-        return "";
+    else {
+        char c[PATH_MAX] = "";
+        size_t num_writ = 0;
+        rc_t rc = string_printf(c, sizeof c, &num_writ, "%s.sralite", acc);
+        if (rc != 0)
+            return "";
+        if (path->size < num_writ)
+            return "";
+        offset = path->size - num_writ;
+        StringInitCString(&s, c);
+        StringInit(&sPath, path->addr+offset, num_writ, num_writ);
+        if (StringEqual(&s, &sPath))
+            return "sra";
+        else
+            return "";
+    }
 }
 
 static bool isSra(const char * acc) {
