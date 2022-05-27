@@ -55,4 +55,3 @@ ExportStatic( kapp true )
 GenerateStaticLibsWithDefs( kapp-norsrc "${SRC}" "NO_KRSRC=1" )
 
 add_compile_definitions (__mod__="libs/kapp")
-add_compile_definitions (PKGNAME="${OS}${BITS}")

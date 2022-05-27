@@ -75,8 +75,6 @@ set( VDB_LIB_RDWR_TARGETS
     wvxf
 )
 
-add_compile_definitions (__mod__="libs/ncbi-vdb" PKGNAME="ncbi-vdb")
-
 if( WIN32 )
     include( CMakeLists.win.txt )
 elseif( SINGLE_CONFIG )

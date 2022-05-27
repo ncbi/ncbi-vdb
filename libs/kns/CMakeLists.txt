@@ -65,7 +65,6 @@ set( KNS_SRC
 GenerateStaticLibs( kns "${KNS_SRC}" )
 
 add_compile_definitions (__mod__="libs/kns")
-add_compile_definitions (PKGNAME="${OS}${BITS}")
 include_directories( BEFORE ${CMAKE_CURRENT_SOURCE_DIR} )
 
 include(CheckIncludeFile)

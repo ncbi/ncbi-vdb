@@ -104,11 +104,13 @@ FIXTURE_TEST_CASE(KNSManagerGetUserAgent_Default, SessionIdFixture)
     const string ua_contains = "sra-toolkit test-kns.1 (phid=noc";
     //fprintf(stderr,"Got: '%s', expected '%s'\n", ua, ua_contains.data());
     REQUIRE_NE( string::npos, string(ua).find(ua_contains) );
+    // VDB-4896: no double quotes inside UA
+    REQUIRE_EQ( string::npos, string(ua).find("\"") );
 }
 
 #ifdef WIN32
-#define setenv(name, value, over) putenv(name"="value) 
-#define unsetenv(name) putenv(name"=") 
+#define setenv(name, value, over) putenv(name"="value)
+#define unsetenv(name) putenv(name"=")
 #endif
 
 FIXTURE_TEST_CASE(KNSManagerGetUserAgentEnv, SessionIdFixture)
