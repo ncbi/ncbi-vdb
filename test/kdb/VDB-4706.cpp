@@ -135,6 +135,12 @@ public:
 
         THROW_ON_RC ( KMDataNodeCopy ( DstNode, SrcNode ) );
 
+        THROW_ON_RC ( KMetadataRelease ( SrcMeta ) );
+        THROW_ON_RC ( KMetadataRelease ( DstMeta ) );
+        THROW_ON_RC ( KMDataNodeRelease ( SrcNode ) );
+        THROW_ON_RC ( KMDataNodeRelease ( DstNode ) );
+        THROW_ON_RC ( KColumnRelease ( DstCol ) );
+        THROW_ON_RC ( KColumnRelease ( SrcCol ) );
         THROW_ON_RC ( KTableRelease ( SrcTbl ) );
         THROW_ON_RC ( KTableRelease ( DstTbl ) );
         THROW_ON_RC ( KDBManagerRelease ( mgr ) );
@@ -156,11 +162,8 @@ public:
         // THROW_ON_RC ( KDBManagerOpenColumnRead ( mgr, &Col, columnName ) );
         THROW_ON_RC ( KTableOpenColumnRead ( Tbl, &Col, columnName ) );
 
-        fprintf (
-            stderr, "Calling KColumnOpenMetadataRead (%s)\n", columnName );
         const KMetadata *Meta;
         THROW_ON_RC ( KColumnOpenMetadataRead ( Col, &Meta ) );
-        fprintf ( stderr, "Called KColumnOpenMetadataRead (%s)\n", columnName );
 
         const KMDataNode *Node;
         THROW_ON_RC ( KMetadataOpenNodeRead ( Meta, &Node, nodeName ) );
