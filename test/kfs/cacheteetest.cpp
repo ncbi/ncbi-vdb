@@ -553,6 +553,7 @@ TEST_CASE( CacheTee_ReadOnly )
 	/* make a second cache-tee and read all from it... */
 	REQUIRE_RC( KDirectoryMakeCacheTeePromote ( dir, &tee, org, BLOCKSIZE, "%s", CACHEFILE ) );
 	REQUIRE_RC( read_all( tee, 1024 * 32 )	);
+	REQUIRE_RC( KFileRelease( cache ) );
 	REQUIRE_RC( KFileRelease( tee ) );
 
 	/* we read all from the tee-file that should have promoted it on Release,

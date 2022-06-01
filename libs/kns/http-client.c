@@ -455,6 +455,8 @@ rc_t KClientHttpProxyConnect ( KClientHttp * self, const String * hostname, uint
         STATUS ( _STAT_GEEK, "%s - releasing socket stream\n", __func__ );
         KStreamRelease ( self -> sock );
         self -> sock = NULL;
+
+        KDataBufferWhack(&buffer);
     }
 
     return rc;

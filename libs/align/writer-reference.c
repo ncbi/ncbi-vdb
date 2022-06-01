@@ -223,7 +223,7 @@ struct ReferenceMgr {
     KDataBuffer refSeqs;        /* [ReferenceSeq]       */
 
     Bucket used[BUCKETS];
-    Bucket ht[BUCKETS];
+    Bucket keys[BUCKETS];
 };
 
 static unsigned hash(unsigned const length, char const key[])
@@ -259,41 +259,76 @@ static unsigned hash0(char const key[])
     return (unsigned)(((h ^ (h >> 32))) & ((uint64_t)BUCKET_MASK));
 }
 
-static void addToHashBucket(Bucket *const bucket, unsigned const index)
+static bool bucketHasObject(Bucket const *const bucket, unsigned const objectNo)
 {
     unsigned i;
-    void *tmp = NULL;
-    
     for (i = 0; i < bucket->count; ++i) {
-        if (bucket->index[i] == index)
-            return;
+        if (bucket->index[i] == objectNo)
+            return true;
     }
-    
-    tmp = realloc(bucket->index, (1 + bucket->count) * sizeof(bucket->index[0]));
-    assert(tmp != NULL);
-	if (tmp == NULL)
-        abort();
-
-    bucket->index = tmp;
-    bucket->index[bucket->count++] = index;
+    return false;
 }
 
-static void addToHashTable(ReferenceMgr *const self, ReferenceSeq const *const rs)
+static void addToKeys(ReferenceMgr *const self, unsigned const objectNo, char const *const key, size_t length)
+{
+    unsigned const hv = length == 0 ? hash0(key) : hash(length, key);
+    Bucket *const bucket = &self->keys[hv];
+
+    if (!bucketHasObject(bucket, objectNo)) {
+        void *const tmp = realloc(bucket->index, (1 + bucket->count) * sizeof(bucket->index[0]));
+        assert(tmp != NULL);
+
+        ALIGN_CF_DBGF(("(%p) RefSeq object %u: adding key '%s' to bucket %03X[%u]\n", self, objectNo, key, hv, bucket->count));
+        if (tmp != NULL) {
+            bucket->index = tmp;
+            bucket->index[bucket->count] = objectNo;
+            bucket->count += 1;
+        }
+        else {
+            abort();
+        }
+    }
+    return;
+}
+
+static void addToUsed(ReferenceMgr *const self, unsigned const objectNo, char const *const key, size_t length)
+{
+    unsigned const hv = length == 0 ? hash0(key) : hash(length, key);
+    Bucket *const bucket = &self->used[hv];
+
+    if (!bucketHasObject(bucket, objectNo)) {
+        void *const tmp = realloc(bucket->index, (1 + bucket->count) * sizeof(bucket->index[0]));
+        assert(tmp != NULL);
+
+        ALIGN_CF_DBGF(("(%p) RefSeq object %u: adding key '%s' to bucket %03X[%u]\n", self, objectNo, key, hv, bucket->count));
+        if (tmp != NULL) {
+            bucket->index = tmp;
+            bucket->index[bucket->count] = objectNo;
+            bucket->count += 1;
+        }
+        else {
+            abort();
+        }
+    }
+    return;
+}
+
+static void addToKeysTable(ReferenceMgr *const self, ReferenceSeq const *const rs)
 {
     unsigned const index = rs - self->refSeq;
     
     if (rs->id)
-        addToHashBucket(&self->ht[hash0(rs->id)], index);
+        addToKeys(self, index, rs->id, 0);
     if (rs->seqId)
-        addToHashBucket(&self->ht[hash0(rs->seqId)], index);
+        addToKeys(self, index, rs->seqId, 0);
 }
 
 static void freeHashTableEntries(ReferenceMgr *const self)
 {
     unsigned i;
     for (i = 0; i < BUCKETS; ++i) {
-        if (self->ht[i].count > 0)
-            free(self->ht[i].index);
+        if (self->keys[i].count > 0)
+            free(self->keys[i].index);
         if (self->used[i].count > 0)
             free(self->used[i].index);
     }
@@ -447,7 +482,7 @@ static void addToIndex(ReferenceMgr *const self, char const ID[],
         rs->used[n] = id;
     }
 SKIP_INSERT_ID:
-    addToHashBucket(&self->used[hash0(ID)], rs - self->refSeq);
+    addToUsed(self, rs - self->refSeq, ID, 0);
 }
 
 static int findId(ReferenceMgr const *const self, char const id[])
@@ -629,7 +664,7 @@ rc_t ReferenceMgr_ProcessConf(ReferenceMgr *const self, char Data[], unsigned co
         }
         rs->circular = circular;
         
-        addToHashTable(self, rs);
+        addToKeysTable(self, rs);
     }
     KDataBufferWhack(&buf);
     return 0;
@@ -953,9 +988,9 @@ static rc_t ImportFastaFileMany(ReferenceMgr *const self,
                 continue;
             }
             else {
-                ReferenceSeq *p = newReferenceSeq(self, &new_seq);
+                ReferenceSeq *const p = newReferenceSeq(self, &new_seq);
                 index = p - self->refSeq;
-                addToHashBucket(&self->ht[hash0(seqId)], index);
+                addToKeys(self, index, seqId, 0);
             }
         }
         for (k = j; k < len; ++k) {
@@ -986,7 +1021,7 @@ static rc_t ImportFastaFileMany(ReferenceMgr *const self,
                             f = m + 1;
                     }
                 }
-                addToHashBucket(&self->ht[hash(length, value)], index);
+                addToKeys(self, index, value, length);
             IGNORED:
                 j = k + 1;
                 if (ch == '\0' || isspace(ch))
@@ -1046,7 +1081,7 @@ rc_t ImportFastaFile(ReferenceMgr *const self, KFile const *kf,
                         rc = ImportFasta(rslt, &sub);
                         KDataBufferWhack(&sub);
                         if (rc == 0)
-                            addToHashTable(self, rslt);
+                            addToKeysTable(self, rslt);
                     }
                     else {
                         ImportFastaFileMany(self, seqIds, seqIdOffset, &fbuf);
@@ -1102,6 +1137,7 @@ void ReferenceSeq_Dump(ReferenceSeq const *const rs)
         "'RefSeq-by-id'",
         "'RefSeq-by-seqid'",
         "'unmapped'",
+        "'renamed'",
         "'dead'"
     };
     unsigned j;
@@ -1133,7 +1169,7 @@ void ReferenceSeq_Dump(ReferenceSeq const *const rs)
         ALIGN_CF_DBGF(("%02X", rs->md5[j]));
     ALIGN_CF_DBGF(("', "));
     
-    ALIGN_CF_DBGF(("keys: [ "));
+    ALIGN_CF_DBGF(("used: [ "));
     for (j = 0; j != rs->num_used; ++j) {
         char const *key = rs->used[j];
         
@@ -1268,7 +1304,7 @@ static void candidates(ReferenceMgr *const self,
                        uint8_t const md5[16])
 {
     unsigned const hv = hash(idLen, id);
-    Bucket const bucket = self->ht[hv];
+    Bucket const bucket = self->keys[hv];
     unsigned num_possible = 0;
     struct Candidate *possible = malloc(sizeof(possible[0]) * bucket.count);
     unsigned i;
@@ -1325,11 +1361,10 @@ static rc_t tryFastaOrRefSeq(ReferenceMgr *const self,
 
         rc = RefSeqMgr_GetSeq(self->rmgr, &seq->u.refseq, id, idLen);
         if (rc == 0) {
-            unsigned const hv = hash(idLen, id);
             seq->id = string_dup(id, idLen);
             seq->type = rst_refSeqById;
 
-            addToHashBucket(&self->ht[hv], seq - self->refSeq);
+            addToKeys(self, seq - self->refSeq, id, idLen);
 
             ReferenceSeq_GetRefSeqInfo(seq);
             *rslt = seq;
@@ -1381,7 +1416,7 @@ static void setAttachedBit(ReferenceMgr *const self, unsigned const N, struct Ca
 static ReferenceSeq *checkForMultiMapping(ReferenceMgr *const self, ReferenceSeq *const chosen, bool *const wasRenamed)
 {
     unsigned const hv = hash0(chosen->seqId);
-    Bucket const bucket = self->ht[hv];
+    Bucket const bucket = self->keys[hv];
     unsigned i;
 
     for (i = 0; i < bucket.count; ++i) {
@@ -1401,15 +1436,14 @@ static ReferenceSeq *checkForMultiMapping(ReferenceMgr *const self, ReferenceSeq
     return chosen;
 }
 
-static rc_t tryFasta(ReferenceMgr *const self,
-                     ReferenceSeq **const rslt,
+static ReferenceSeq *tryFasta(ReferenceMgr *const self,
+                     ReferenceSeq *const seq,
                      char const seqId[],
                      unsigned const seq_len,
                      uint8_t const md5[16])
 {
-    ReferenceSeq *const seq = *rslt;
     unsigned const hv = hash0(seqId);
-    Bucket const bucket = self->ht[hv];
+    Bucket const bucket = self->keys[hv];
     unsigned best = bucket.count;
     unsigned best_score = 0;
     unsigned i;
@@ -1447,13 +1481,7 @@ static rc_t tryFasta(ReferenceMgr *const self,
             best_score = score;
         }
     }
-    if (best != bucket.count) {
-        *rslt = &self->refSeq[bucket.index[best]];
-        return 0;
-    }
-    else {
-        return RC(rcAlign, rcFile, rcConstructing, rcId, rcNotFound);
-    }
+    return best == bucket.count ? NULL : &self->refSeq[bucket.index[best]];
 }
 
 static rc_t findSeq(ReferenceMgr *const self,
@@ -1505,18 +1533,18 @@ static rc_t findSeq(ReferenceMgr *const self,
     if (chosen->seqId != NULL && !allowMultiMapping) {
         chosen = checkForMultiMapping(self, chosen, wasRenamed);
     }
+    if (chosen->type == rst_unattached && chosen->seqId != NULL) {
+        ReferenceSeq *const fasta = tryFasta(self, chosen, chosen->seqId, seq_len, md5);
+        
+        if (fasta) {
+            chosen->type = rst_dead;
+            chosen = fasta;
+        }
+    }
     if (chosen->type == rst_unattached) {
         rc = ReferenceSeq_Attach(self, chosen);
-        if (rc == 0 && chosen->type == rst_unattached) {
-            /* still not attached; try seqId fasta */
-            char const *const seqId = chosen->seqId;
-
-            chosen->type = rst_dead;
-            if (seqId)
-                rc = tryFasta(self, &chosen, seqId, seq_len, md5);
-            else
-                rc = RC(rcAlign, rcFile, rcConstructing, rcId, rcNotFound);
-        }
+        if (rc == 0 && chosen->type == rst_unattached)
+            rc = RC(rcAlign, rcFile, rcConstructing, rcId, rcNotFound);
     }
     if (rc == 0) {
         if (chosen->id == NULL)
@@ -2284,18 +2312,19 @@ LIB_EXPORT rc_t CC ReferenceMgr_Verify(ReferenceMgr const *const cself,
         return RC(rcAlign, rcFile, rcValidating, rcParam, rcNull);
     {
         ReferenceMgr *self = (ReferenceMgr *)cself;
-        ReferenceSeq *rseq;
+        ReferenceSeq *rseq = NULL;
         rc_t rc = ReferenceMgr_OpenSeq(self, &rseq, id, length, md5, allowMultiMapping, wasRenamed);
         
         if (rc) return rc;
+        assert(rseq != NULL);
         if (rseq->seq_len != length) {
-            rc = RC(rcAlign, rcFile, rcValidating, rcSize, rcUnequal);
+            rc = SILENT_RC(rcAlign, rcFile, rcValidating, rcSize, rcUnequal);
             ALIGN_DBGERRP("%s->%s SEQ_LEN verification", rc, id, rseq->seqId);
         }
         if (md5 && memcmp(md5, rseq->md5, sizeof(rseq->md5)) != 0) {
             unsigned i;
             
-            rc = RC(rcAlign, rcTable, rcValidating, rcChecksum, rcUnequal);
+            rc = SILENT_RC(rcAlign, rcTable, rcValidating, rcChecksum, rcUnequal);
             ALIGN_DBGERRP("%s->%s MD5 verification", rc, id, rseq->seqId);
             ALIGN_DBGF((" found '"));
             for(i = 0; i < sizeof(rseq->md5); i++) {
@@ -2314,6 +2343,8 @@ LIB_EXPORT rc_t CC ReferenceMgr_Verify(ReferenceMgr const *const cself,
         } else {
             ALIGN_DBGERRP("%s verification", rc, id);
         }
+        if (rseq->type == rst_unmapped && rc != 0)
+            rc = SILENT_RC(rcAlign, rcTable, rcValidating, rcId, rcUndefined);
         return rc;
     }
 }

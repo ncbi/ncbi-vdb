@@ -1,11 +1,6 @@
 user.status
 vgcore.*
 /bin64
-/build/COMP.mac
-/build/Makefile.config*
-/build/MSVC/2010/ipch
-/build/MSVC/2010/ncbi-vdb.opensdf
-build/ld.linux.exe_cmd.sh
 /centos
 /ilib64
 /lib64
@@ -38,3 +33,5 @@ core
 *.user
 actual/
 .vs
+user-settings.mkfg
+libs/cipher/cipher-1.7/cipher.egg-info

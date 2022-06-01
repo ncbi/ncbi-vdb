@@ -41,8 +41,7 @@ output=$(VDB_CONFIG=local.kfg $test_schema_diff -I$TOP/interfaces -o$OBJDIR/data
 	$TOP/interfaces/csra2/stats.vschema \
 	$TOP/interfaces/csra2/read.vschema \
 	$TOP/interfaces/csra2/reference.vschema \
-	$TOP/interfaces/csra2/csra2.vschema \
-	$TOP/libs/sra/built-in.vschema
+	$TOP/interfaces/csra2/csra2.vschema
 )
 
 res=$?

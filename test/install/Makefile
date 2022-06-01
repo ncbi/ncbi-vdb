@@ -36,6 +36,7 @@ ROOTDIR = $(SRCDIR)/root
 
 SUBMAKE = $(MAKE) --no-print-directory
 
+# NB: *.kfg and kfgsums are now in $(TOP)/interfaces/kfg/ncbi/; get installed to $(INSTALL_DIR)/include/kfg/ncbi (non-root)
 ifeq (true,$(LINUX_ROOT))
     #settings for the fake root mode
     INSTALL_DIR = $(ROOTDIR)

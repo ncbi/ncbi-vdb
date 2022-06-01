@@ -76,9 +76,9 @@ public:
     ~KLockFixture()
     {
         if (thread != 0 && KThreadRelease(thread) != 0)
-            throw logic_error("~KLockFixture: KThreadRelease failed");
+            cerr << "~KLockFixture: KThreadRelease failed" << endl;
         if (KLockRelease((const KLock*)lock) != 0)
-            throw logic_error("~KLockFixture: KLockRelease failed");
+            cerr << "~KLockFixture: KLockRelease failed" << endl;
     }
     
 protected:
@@ -169,9 +169,9 @@ public:
     ~KTimedLockFixture()
     {
         if (thread != 0 && KThreadRelease(thread) != 0)
-            throw logic_error("~KLockFixture: KThreadRelease failed");
+            cerr << "~KLockFixture: KThreadRelease failed" << endl;
         if (KLockRelease((const KLock*)lock) != 0)
-            throw logic_error("~KLockFixture: KLockRelease failed");
+            cerr << "~KLockFixture: KLockRelease failed" << endl;
     }
     
 protected:
@@ -312,9 +312,9 @@ public:
     ~KRWLockFixture()
     {
         if (thread != 0 && KThreadRelease(thread) != 0)
-            throw logic_error("~KRWLockFixture: KThreadRelease failed");
+            cerr << "~KRWLockFixture: KThreadRelease failed" << endl;
         if (KRWLockRelease((const KRWLock*)lock) != 0)
-            throw logic_error("~KRWLockFixture: KLockRelease failed");
+            cerr << "~KRWLockFixture: KLockRelease failed" << endl;
     }
     
 protected:
@@ -564,16 +564,16 @@ public:
         if (thread != 0)
         {
             if (KThreadWait(thread, NULL) != 0)
-                throw logic_error("~KConditionFixture: KThreadWait failed");
+                cerr << "~KConditionFixture: KThreadWait failed" << endl;
             if (threadRc != 0)
-                throw logic_error("~KConditionFixture: thread failed, threadRc != 0");
+                cerr << "~KConditionFixture: thread failed, threadRc != 0" << endl;
             if (KThreadRelease(thread) != 0)
-                throw logic_error("~KConditionFixture: KThreadRelease failed");
+                cerr << "~KConditionFixture: KThreadRelease failed" << endl;
         }
         if (KLockRelease((const KLock*)lock) != 0)
-            throw logic_error("~KConditionFixture: KLockRelease failed");
+            cerr << "~KConditionFixture: KLockRelease failed" << endl;
         if (KConditionRelease(cond) != 0)
-            throw logic_error("~KConditionFixture: KConditionRelease failed");
+            cerr << "~KConditionFixture: KConditionRelease failed" << endl;
     }
 
 protected:
@@ -743,7 +743,7 @@ public:
             for (unsigned i = 0; i < nStartedThreads; ++i)
             {
                 if (threads[i] != 0 && KThreadRelease(threads[i]) != 0)
-                    throw logic_error("~KQueueFixture: KThreadRelease failed");
+                    cerr << "~KQueueFixture: KThreadRelease failed" << endl;
             }
         }
         free(threads);
@@ -751,7 +751,7 @@ public:
         free(threadRcs);
 
         if (KQueueRelease((const KQueue*)queue) != 0)
-            throw logic_error("~KQueueFixture: KQueueRelease failed");
+            cerr << "~KQueueFixture: KQueueRelease failed" << endl;
     }
 
 protected:

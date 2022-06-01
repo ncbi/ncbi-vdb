@@ -50,7 +50,6 @@
 #define MAX_ACCESSION_LEN 20
 #define TREAT_URI_RESERVED_AS_FILENAME 0
 
-
 /*--------------------------------------------------------------------------
  * VPath
  */
@@ -2560,7 +2559,6 @@ LIB_EXPORT rc_t CC VFSManagerExtractAccessionOrOID ( const VFSManager * self,
                 if ( rc == 0 ) {
                     if ( VPathIsAccessionOrOID ( vpath ) )
                         return 0;
-
                     VPathRelease ( vpath );
 
                     rc = RC (
@@ -4230,8 +4228,12 @@ rc_t VPathMakeVFmtExt ( EVPathType ext, VPath ** new_path, const String * id,
                         string_dup ( acc-> addr, acc -> size ),
                         acc -> size, acc -> len );
                     if ( path -> acc . addr == NULL )
+                    {
+                        VPathRelease ( path );
+                        *new_path = NULL;
                         return RC ( rcVFS,
                             rcPath, rcAllocating, rcMemory, rcExhausted );
+                    }
                 }
 
                 if ( tick != NULL && tick -> size > 0 ) {
@@ -4240,16 +4242,24 @@ rc_t VPathMakeVFmtExt ( EVPathType ext, VPath ** new_path, const String * id,
                         string_dup ( tick -> addr, tick -> size ),
                         tick -> size, tick -> len );
                     if ( path -> tick . addr == NULL )
+                    {
+                        VPathRelease ( path );
+                        *new_path = NULL;
                         return RC ( rcVFS,
                             rcPath, rcAllocating, rcMemory, rcExhausted );
+                    }
                 }
 
                 if ( service != NULL ) {
                     size_t size = 0;
                     char * srv = string_dup_measure ( service, & size );
                     if ( srv == NULL )
+                    {
+                        VPathRelease ( path );
+                        *new_path = NULL;
                         return RC ( rcVFS,
                             rcPath, rcAllocating, rcMemory, rcExhausted );
+                    }
                     free ( ( void * ) path -> service. addr );
                     StringInit ( & path -> service, srv, size, size );
                 }
@@ -4260,8 +4270,12 @@ rc_t VPathMakeVFmtExt ( EVPathType ext, VPath ** new_path, const String * id,
                         string_dup(objectType->addr, objectType->size),
                         objectType->size, objectType->len);
                     if (path->objectType.addr == NULL)
+                    {
+                        VPathRelease ( path );
+                        *new_path = NULL;
                         return RC(rcVFS,
                             rcPath, rcAllocating, rcMemory, rcExhausted);
+                    }
                 }
 
                 if (type != NULL && type->size > 0) {
@@ -4270,16 +4284,24 @@ rc_t VPathMakeVFmtExt ( EVPathType ext, VPath ** new_path, const String * id,
                         string_dup(type->addr, type->size),
                         type->size, type->len);
                     if (path->type.addr == NULL)
+                    {
+                        VPathRelease ( path );
+                        *new_path = NULL;
                         return RC(rcVFS,
                             rcPath, rcAllocating, rcMemory, rcExhausted);
+                    }
                 }
 
                 if (name != NULL) {
                     size_t size = 0;
                     char * c = string_dup_measure(name, &size);
                     if (c == NULL)
+                    {
+                        VPathRelease ( path );
+                        *new_path = NULL;
                         return RC(rcVFS,
                             rcPath, rcAllocating, rcMemory, rcExhausted);
+                    }
                     free((void *)path->name.addr);
                     StringInit(&path->name, c, size, size);
 
@@ -4294,7 +4316,11 @@ rc_t VPathMakeVFmtExt ( EVPathType ext, VPath ** new_path, const String * id,
 
                 rc = VPathSetId(path, id);
                 if ( rc != 0 )
+                {
+                    VPathRelease ( path );
+                    * new_path = NULL;
                     return rc;
+                }
 
                 path->ceRequired = ceRequired;
                 path->payRequired = payRequired;
