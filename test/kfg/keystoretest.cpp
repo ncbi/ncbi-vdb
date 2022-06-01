@@ -75,13 +75,13 @@ public:
     ~KeyStoreFixture()
     {
         if (KEncryptionKeyRelease(key) != 0)
-           throw logic_error("~KeyStoreFixture: KEncryptionKeyRelease failed");
+           cerr << "~KeyStoreFixture: KEncryptionKeyRelease failed" << endl;
         if (KDirectoryRelease(wd) != 0)
-           throw logic_error("~KeyStoreFixture: KDirectoryRelease failed");
+           cerr << "~KeyStoreFixture: KDirectoryRelease failed" << endl;
         if (KKeyStoreRelease(ks) != 0)
-           throw logic_error("~KeyStoreFixture: KKeyStoreRelease failed");
+           cerr << "~KeyStoreFixture: KKeyStoreRelease failed" << endl;
         if (KConfigRelease(kfg) != 0)
-           throw logic_error("~KeyStoreFixture: KConfigRelease failed");
+           cerr << "~KeyStoreFixture: KConfigRelease failed" << endl;
     }
     void KfgUpdateNode(const char* key, const char* value)
     {
@@ -210,7 +210,7 @@ public:
     ~ObjIdBindingFixture()
     {
         if (bindings.length() != 0 && KDirectoryRemove(wd, true, bindings.c_str()) != 0)
-           throw logic_error("ObjIdBindingFixture::TearDown: KDirectoryRemove failed");   
+           cerr << "ObjIdBindingFixture::TearDown: KDirectoryRemove failed" << endl;   
     }
     void SetUp(const string& bindingsFileName)
     {

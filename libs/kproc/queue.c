@@ -314,7 +314,7 @@ LIB_EXPORT rc_t CC KQueuePop ( KQueue *self, void **item, timeout_t *tm )
                     TimeoutInit ( & no_block, 0 );
                     tm = & no_block;
                 }
-                
+
                 QMSG ( "%s[%p]: waiting on read semaphore...\n", __func__, self );
                 rc = KSemaphoreTimedWait ( self -> rc, self -> rl, tm );
                 QMSG ( "%s[%p]: ...done, rc = %R.\n", __func__, self, rc );
@@ -362,7 +362,7 @@ LIB_EXPORT rc_t CC KQueuePop ( KQueue *self, void **item, timeout_t *tm )
                         {
                         case ( int ) rcTimeout:
                         case ( int ) rcSemaphore:
-                            rc = RC ( rcCont, rcQueue, rcRemoving, rcData, rcDone );
+                            rc = SILENT_RC ( rcCont, rcQueue, rcRemoving, rcData, rcDone );
                             QMSG ( "%s[%p]: resetting rc to %R\n", __func__, self, rc );
                             break;
                         }

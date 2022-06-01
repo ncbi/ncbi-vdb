@@ -252,8 +252,7 @@ struct VSchema
     /* paths of opened files */
     BSTree paths;
 
-    /* include path - vector of KDirectory references
-       ordered by precedence */
+    /* include path - vector of char *, ordered by happenstance */
     Vector inc;
 
     /* alias names - owned by scope, but recorded for dumping */

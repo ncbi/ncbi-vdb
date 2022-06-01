@@ -180,11 +180,19 @@ public:
             THROW_ON_RC ( VDBManagerMakeRead ( & mgr, NULL ) );
 #endif
 
-            THROW_ON_RC ( VDBManagerOpenDBRead ( mgr,
+            try
+            {
+                THROW_ON_RC ( VDBManagerOpenDBRead ( mgr,
                                               & m_rdb,
                                               NULL,
                                               "%s",
                                               m_databaseName . c_str () ) );
+            }
+            catch (std::logic_error & e)
+            {
+                VDBManagerRelease ( mgr );
+                throw;
+            }
             THROW_ON_RC ( VDBManagerRelease ( mgr ) );
         }
 
@@ -236,6 +244,7 @@ public:
     {
         uint32_t columnIdx;
         const VCursor * rcursor = OpenDatabaseRead();
+
         THROW_ON_RC ( VCursorAddColumn ( rcursor, & columnIdx, "%s", col ) );
         THROW_ON_RC ( VCursorOpen ( rcursor ) );
 

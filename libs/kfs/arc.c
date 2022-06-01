@@ -113,7 +113,7 @@ extern const char *gRCState_str[];
 
 
 /* ----------------------------------------------------------------------
- * 
+ *
  */
 
 /* -----
@@ -139,20 +139,7 @@ static rc_t KArcDirResolvePathNode (const KArcDir *self,
 /* arbitrary number that was originially set much much higher than expected needs. */
 #define	KARC_LINK_RESOLVE_LOOPMAX		(16)
 
-/* -----
- * We use MAX_PATH if it is available but not religiously.  We handle most
- * buffer over-runs with in the module only truncating paths at the border
- * of the module where KDirectory doesn't handle path's longer than MAX_PATH
- */
-#ifdef MAX_PATH
-#define	KARC_DEFAULT_PATH_ALLOC			(MAX_PATH)
-#else
 #define	KARC_DEFAULT_PATH_ALLOC			(4096)
-#endif
-
-
-
-
 
 /* ======================================================================
  * KArcDirIterator
@@ -160,13 +147,13 @@ static rc_t KArcDirResolvePathNode (const KArcDir *self,
  * This very simple iterator steps in order through the nodes of the binary
  * search tree that is a "directory" in a KToc and thus steps through the
  * list of elements in a directory.  Only the name is made available at each
- * step.  That worked better for sysdir than arcdir from where this was 
+ * step.  That worked better for sysdir than arcdir from where this was
  * borrowed (it was called SysDirEnum there)
  *
  * It is primarily used to build a directory listing.
  *
  * This iterator is a once through iterator.  Whack must be called after Init
- * or a dangling reference is left open.  Init can be called again but only if 
+ * or a dangling reference is left open.  Init can be called again but only if
  * Whack was indeed called.
  *
  * NOTE:
@@ -193,7 +180,7 @@ static rc_t KArcDirResolvePathNode (const KArcDir *self,
  * bool                   isFirst;	upon creation this flag is set to true;
  *					set to false the first next call
  */
-typedef struct KArcDirIterator 	
+typedef struct KArcDirIterator
 {
     const KToc * toc;	        /* a keep alive so the BSTree won't go away in the middle */
     union
@@ -220,7 +207,7 @@ void KArcDirIteratorWhack (KArcDirIterator *self)
 
 /* ----------------------------------------------------------------------
  * KArcDirIteratorInit
- * 
+ *
  * The object constructor
  *
  * [OUT] KArcDirIterator *	self		Iterator self reference: object oriented in C
@@ -232,7 +219,7 @@ void KArcDirIteratorWhack (KArcDirIterator *self)
  * To iterate arcdir use a path of ".".
  */
 static
-rc_t KArcDirIteratorInit (KArcDirIterator *self, const KArcDir * arcdir, 
+rc_t KArcDirIteratorInit (KArcDirIterator *self, const KArcDir * arcdir,
                           const char * path)
 {
     const BSTree * 	tree;
@@ -311,7 +298,7 @@ static const char * KArcDirIteratorNext (KArcDirIterator *self)
     /* -----
      * After the first time we need to bump the pointer until it can't be bumped.
      */
-    else	
+    else
     {
         /* -----
          * It's not specified in klib/container.h but BSTNodeNext
@@ -442,13 +429,13 @@ static rc_t CC KArcListingGet (const KArcListing *self, uint32_t idx, const char
  * KArcListings to determine the order of two names.  Matches the signature of
  * strcmp() and other functions suitable for use by qsort() and others
  *
- * [RET] int					0:  if a == b 
+ * [RET] int					0:  if a == b
  *						<0: if a < b
  *						>0: if a > b
  * [IN] const void *		a
  * [IN] const void *		b
  *
- * Elements are typed as const void * to match the signature needed for 
+ * Elements are typed as const void * to match the signature needed for
  * a call to qsort() but they should be pointers to namelist elements
  */
 static int64_t CC KArcListingSort (const void *a, const void *b, void * ignored)
@@ -543,7 +530,7 @@ static rc_t KArcListingInit (KArcListing *self,
                         if (! (*f) (dir, name, data))
                             continue;
                     }
-		    
+
                     /* if the buffer is full, reallocate it larger */
                     if (self->cnt == len)
                     {
@@ -552,7 +539,7 @@ static rc_t KArcListingInit (KArcListing *self,
                                                      len * sizeof self -> namelist [ 0 ] ) ) )
                         {
                             /* -----
-                             * malloc failure so we fail too  - break not return so we can 
+                             * malloc failure so we fail too  - break not return so we can
                              * free allocated memory
                              */
                             rc = RC (rcFS, rcDirectory, rcListing, rcMemory, rcExhausted);
@@ -560,7 +547,7 @@ static rc_t KArcListingInit (KArcListing *self,
                         }
                         self->namelist = r;
                     }
-                    
+
                     /* get ourselves memory for the name */
                     self->namelist[self->cnt] = malloc (strlen (name) + 1);
                     if (self->namelist[self->cnt] == NULL)
@@ -572,7 +559,7 @@ static rc_t KArcListingInit (KArcListing *self,
                     strcpy ((char*)self->namelist[self->cnt], name);
                     ++self->cnt;
                 }
-		
+
                 if (rc == 0)
                 {
                     /* -----
@@ -648,9 +635,9 @@ struct KArcDir
     } archive;
 
     uint32_t	  	root;					/* offset of / in path to treat as root */
-    uint32_t 	  	size;					/* length of path */		
+    uint32_t 	  	size;					/* length of path */
     char 	  	path	 [KARC_DEFAULT_PATH_ALLOC];	/* name of archive = mount point */
-   
+
 /* actual allocation is based on actual string length */
 };
 
@@ -698,12 +685,12 @@ static rc_t CC KArcDirDestroy (KArcDir *self)
 /* ----------------------------------------------------------------------
  * KArcDirCanonPath
  *
- * In this context CanonPath means to make the path a pure /x/y/z with no back tracking 
- * by using ~/../~ or redundant ~/./~ or ~//~ here notations.  Not exactly the usage of 
+ * In this context CanonPath means to make the path a pure /x/y/z with no back tracking
+ * by using ~/../~ or redundant ~/./~ or ~//~ here notations.  Not exactly the usage of
  * canonical in describing a path in other places but consistent within KFS.  It matches
  * the common meaning of canonical path as the one true path except that processing out
- * of sym links isn't done here but would normally have been.  Not processing the 
- * links means potentially more than one canonical path can reach the same target 
+ * of sym links isn't done here but would normally have been.  Not processing the
+ * links means potentially more than one canonical path can reach the same target
  * violating the usual meaning of canonical path as the one true shortest path to any
  * element.
  *
@@ -794,7 +781,7 @@ rc_t		KArcDirCanonPath	(const KArcDir *self,
 
         /* move destination ahead */
         dst += src - last;
-        
+
         /* if we're done, go */
         if (src == end)
             break;
@@ -820,7 +807,7 @@ rc_t		KArcDirCanonPath	(const KArcDir *self,
  * [IN]  const KArcDir *	self	object oriented self
  * [IN]  enum RCContext		ctx	a hint for context in building
  *					an error return rc_t
- * [IN]  bool			canon	Should the output be made 
+ * [IN]  bool			canon	Should the output be made
  *					canonical per KDirectory's
  *					definition of canonical
  * [OUT] char **		pbuffer The output path
@@ -896,7 +883,7 @@ rc_t KArcDirMakePath (const KArcDir *self,
 	     */
 	    if ( (size_t)psize >= asize )
 	    {
-            asize = psize;
+            asize = psize + 1;
             continue;
 	    }
 
@@ -908,13 +895,13 @@ rc_t KArcDirMakePath (const KArcDir *self,
             /* -----
              * if our KArcDir self has a mount point self->path of length more than 0
              * but that length isn't too long to prepend it to the derived path than
-             * move the derived path over making room for the KArcDir base path and 
+             * move the derived path over making room for the KArcDir base path and
              * then insert that base at the beginning
              */
             bsize = self->size;
             if (bsize + psize >= asize)
             {
-                asize = bsize + psize;
+                asize = bsize + psize + 1;
                 continue;
             }
             /* make room */
@@ -936,7 +923,7 @@ rc_t KArcDirMakePath (const KArcDir *self,
              */
             if (bsize + psize >= asize)
             {
-                asize = bsize + psize;
+                asize = bsize + psize + 1;
                 continue;
             }
             memmove (buffer + self->size, buffer, psize+1);
@@ -956,7 +943,16 @@ rc_t KArcDirMakePath (const KArcDir *self,
 	    if (path[0] != '/')
 	    {
             assert (self->path[self->size - 1] == '/');
-            memmove (buffer, self->path, bsize = self->size);
+            bsize = self->size;
+            if ( asize < bsize )
+            {
+                buffer = realloc (buffer, bsize);
+                if (buffer == NULL)
+                {
+                    return RC (rcFS, rcDirectory, rcAllocating, rcPath, rcExhausted);
+                }
+            }
+            memmove (buffer, self->path, bsize );
 	    }
 	    /* -----
 	     * copy the pre-root portion of the self's path into the buffer
@@ -964,6 +960,14 @@ rc_t KArcDirMakePath (const KArcDir *self,
 	    else if ((bsize = self->root) != 0)
 	    {
             assert (self->path[bsize-1] != '/');
+            if ( asize < bsize )
+            {
+                buffer = realloc (buffer, bsize);
+                if (buffer == NULL)
+                {
+                    return RC (rcFS, rcDirectory, rcAllocating, rcPath, rcExhausted);
+                }
+            }
             memmove (buffer, self->path, bsize);
 	    }
 
@@ -992,7 +996,7 @@ rc_t KArcDirMakePath (const KArcDir *self,
 	     */
 	    if (bsize+psize >= asize)
 	    {
-            asize = bsize+psize;
+            asize = bsize+psize+1;
             continue;
 	    }
 	}
@@ -1081,7 +1085,7 @@ rc_t CC KArcDirList (const KArcDir *self,
 			      self->root,
 			      full_path,
 			      (uint32_t)strlen(full_path),
-			      false, 
+			      false,
 			      0);
 	    if (rc == 0)
 	    {
@@ -1120,9 +1124,9 @@ rc_t CC KArcDirList (const KArcDir *self,
 /* ----------------------------------------------------------------------
  * KArcDirFullPathType
  *
- * Get the KDirectory defined KPathType for whatever is referred to 
+ * Get the KDirectory defined KPathType for whatever is referred to
  * by path that is accessible through the KArcDir self.  The path's
- * root is based on self's root (?) and a relative path is relative to 
+ * root is based on self's root (?) and a relative path is relative to
  * self.
  *
  * [RET] uint32_t			actually this is enum KPathType
@@ -1147,7 +1151,7 @@ uint32_t KArcDirFullPathType (const KArcDir *self, const char * path)
     for (loopcount = 0; loopcount < KARC_LINK_RESOLVE_LOOPMAX; ++loopcount)
     {
         rc = KArcDirResolvePathNode (self,
-            rcConstructing, local_path, false, &node, &type); 
+            rcConstructing, local_path, false, &node, &type);
         if (rc != 0)
         {
             /* TODO: filter rc into kptBadPath or kptNotFound... */
@@ -1230,7 +1234,7 @@ static uint32_t CC KArcDirPathType (const KArcDir *self, const char *path, va_li
  *
  * [IN] KArcDirVisitData *	pb
  */
-typedef struct KArcDirVisitData		
+typedef struct KArcDirVisitData
 {
     rc_t   (CC* f )(const KDirectory*, uint32_t, const char*, void*);
     void *      data;
@@ -1244,7 +1248,7 @@ rc_t KArcDirVisitDir(KArcDirVisitData *pb)
 {
     /* get a directory listing */
     KArcDirIterator 	listing;
-    rc_t		rc; 
+    rc_t		rc;
 
     assert (pb != NULL);
 
@@ -1385,7 +1389,7 @@ rc_t KArcDirRelativePath (const KArcDir *self, enum RCContext ctx,
         /* prevent overflow */
         if (bsize + psize >= path_max)
             return RC (rcFS, rcDirectory, ctx, rcPath, rcExcessive);
-        
+
         memmove (path + bsize, p, psize);
     }
 
@@ -1408,7 +1412,7 @@ rc_t KArcDirRelativePath (const KArcDir *self, enum RCContext ctx,
  *
  * Resolve a path to a KToc Node with a triple return type of
  * success/failure, KTocEntry to use to access the leaf of the path,
- * and the type of the node that could have been easily obtained from 
+ * and the type of the node that could have been easily obtained from
  * that node
  *
  * [RET] rc_t					0 for success; anything else for a failure
@@ -1416,7 +1420,7 @@ rc_t KArcDirRelativePath (const KArcDir *self, enum RCContext ctx,
  * [IN]  const KArcDir *      self	OOP in C self/this pointer
  * [IN]  const char *         path	the path to resolve
  * [IN]  bool		      follow	Follow any links
- * [OUT] const KTocEntry ** pnode	a pointer that will point to the 
+ * [OUT] const KTocEntry ** pnode	a pointer that will point to the
  *					ArcTOCNode for the path
  * [OUT] KTocEntryType *    ptype	Archive specific type for the
  *					entry matching path
@@ -1447,10 +1451,10 @@ rc_t	KArcDirResolvePathNode	(const KArcDir *	self,
     else
     {
 	/* -----
-	 * This loop is to replace recursive approaches to resolving sym links in 
+	 * This loop is to replace recursive approaches to resolving sym links in
 	 * the path.before the last facet.
 	 *
-	 * we used temp_path as an alias for path because we can "recur" by 
+	 * we used temp_path as an alias for path because we can "recur" by
 	 * going through the loop iteratively instead of recursively changing
 	 * temp_path each time where we would have called this function again
 	 */
@@ -1487,9 +1491,9 @@ rc_t	KArcDirResolvePathNode	(const KArcDir *	self,
             if (strncmp(abpath, pathstring->addr, pathstring->size) != 0)
             {
                 /* -----
-                 * This is a key return as it could be used to trigger a call to 
+                 * This is a key return as it could be used to trigger a call to
                  * a containing "parent" KDirectory to try again outside of this KArcDir
-                 * be it another KArcDir, KSysDir, or other KDirectory interface 
+                 * be it another KArcDir, KSysDir, or other KDirectory interface
                  * implementation.
                  */
                 rc = RC (rcFS, rcDirectory, ctx, rcPath, rcOutOfKDirectory);
@@ -1538,7 +1542,7 @@ rc_t	KArcDirResolvePathNode	(const KArcDir *	self,
                 else
                 {
                     size_t	lsize;
-			
+
                     /* -----
                      * successful so far but there might still be some path left if we hit a soft link
                      */
@@ -1597,7 +1601,7 @@ rc_t	KArcDirResolvePathNode	(const KArcDir *	self,
                                 backtrack++; /* get back the '/' */
 
                                 /* -----
-                                 * we need enough space for the 
+                                 * we need enough space for the
                                  */
                                 fsize = backtrack - abpath;	/* current path through start of link */
                                 ssize = strlen(symlink_path);/* length of the link's replacement value */
@@ -1754,7 +1758,7 @@ struct KSysFile *CC KArcFileGetSysFile (const KArcFile *self, uint64_t *offset)
  * Returns zero if Random access is allowed for this KFile
  *
  * [RET] rc_t					0 for success; anything else for a failure
- *						see itf/klib/rc.h for general details		
+ *						see itf/klib/rc.h for general details
  * [IN] const KArcFile *	self		Object oriented C; KArcFile object for this method
  */
 static
@@ -1833,7 +1837,7 @@ rc_t CC KArcFileSetSize (KArcFile *self, uint64_t size)
  *						see itf/klib/rc.h for general details
  * [IN]  const KArcFile *	self		Object oriented C; KArcFile object for this method
  * [IN]  uint64_t		pos		Offset with in the file from where to start reading
- * [OUT] void *			buffer		buffer to which to write the read bytes 
+ * [OUT] void *			buffer		buffer to which to write the read bytes
  * [IN]  size_t			bsize		how many bytes to read
  * [OUT] size_t *		num_read	how many bytes actually read. Will get written even
  *						in failure
@@ -1936,7 +1940,7 @@ rc_t KArcFileReadChunked (const KArcFile *self,
 	uint64_t	end;		/* this will be set to the end offset */
 
 	pbuff = buffer;
-	end = pos + bsize;	
+	end = pos + bsize;
 
 	/* -----
 	 * step through the chunks
@@ -1997,8 +2001,8 @@ rc_t KArcFileReadChunked (const KArcFile *self,
 	     * a little tricky is we call by value the wanted count and the function
 	     * called will over write that with the actual read count
 	     */
-	    rc = KFileRead (self->archive, 
-			    pchunk->source_position + (pchunk->logical_position - pos), 
+	    rc = KFileRead (self->archive,
+			    pchunk->source_position + (pchunk->logical_position - pos),
 			    pbuff, count, &count);
 
 	    *num_read += count;
@@ -2048,7 +2052,7 @@ rc_t CC KArcFileRead	(const KArcFile *self,
     /* -----
      * self and buffer were validated as not NULL before calling here
      *
-     * So get the KTocEntry type: chunked files and contiguous files 
+     * So get the KTocEntry type: chunked files and contiguous files
      * are read differently.
      */
     assert (self != NULL);
@@ -2058,7 +2062,7 @@ rc_t CC KArcFileRead	(const KArcFile *self,
 
     rc = KTocEntryGetType(self->node, &type);
 
-    assert ((type == ktocentrytype_file) || 
+    assert ((type == ktocentrytype_file) ||
             (type == ktocentrytype_chunked) ||
             (type == ktocentrytype_emptyfile));
 
@@ -2073,7 +2077,7 @@ rc_t CC KArcFileRead	(const KArcFile *self,
 	rc = KTocEntryGetFileSize (self->node, &size);
 	if (rc == 0)
 	{
-	    /* ----- 
+	    /* -----
 	     * if we are seeking beyond the end match sysfile.c's use of pread
 	     * and return number read as 0 to mark EOF
 	     */
@@ -2085,7 +2089,7 @@ rc_t CC KArcFileRead	(const KArcFile *self,
 	    {
 		uint64_t	limit;
 
-		limit = 
+		limit =
 		    (pos + bsize > size)	/* if attempt to read beyond end of file */
 		    ? size - pos		/* then force smaller read */
 		    : bsize;			/* else allow full read */
@@ -2271,10 +2275,10 @@ rc_t KArcFileMake (KArcFile ** self,
  *
  *  "path" [ IN ] - NUL terminated string in directory-native character set
  */
-static 
-rc_t CC KArcDirVisit (const KArcDir *self, 
+static
+rc_t CC KArcDirVisit (const KArcDir *self,
                       bool recurse,
-                      rc_t (CC* f) (const KDirectory *, uint32_t, const char *, void *), 
+                      rc_t (CC* f) (const KDirectory *, uint32_t, const char *, void *),
                       void *data,
                       const char *path,
                       va_list args)
@@ -2318,7 +2322,7 @@ rc_t CC KArcDirVisit (const KArcDir *self,
 		      ( path_size > self->root ) && ( full_path[ path_size - 1 ] == '/' );
 		      -- path_size )
 		{}
-		rc = KArcDirMake (&full_dir, 
+		rc = KArcDirMake (&full_dir,
 				  rcVisiting,
 				  self->parent,
 				  self->toc,
@@ -2327,7 +2331,7 @@ rc_t CC KArcDirVisit (const KArcDir *self,
 				  self->arctype,
 				  self->root,
 				  full_path,
-				  path_size, 
+				  path_size,
 				  true,
 				  false);
 		if (rc == 0)
@@ -2391,14 +2395,14 @@ static rc_t CC KArcDirVisitUpdate (KArcDir *self,
  *
  * [IN]  const KArcDir *self		Objected oriented self
  * [IN]	 bool 		absolute	if non-zero, always give a path starting
- *  					with '/'. NB - if the directory is 
+ *  					with '/'. NB - if the directory is
  *					chroot'd, the absolute path
  *					will still be relative to directory root.
- * [OUT] char *		resolved	buffer for NUL terminated result path in 
+ * [OUT] char *		resolved	buffer for NUL terminated result path in
  *					directory-native character set
  * [IN]	 size_t		rsize		limiting size of resolved buffer
  * [IN]  const char *	path		NUL terminated string in directory-native
- *					character set denoting target path. 
+ *					character set denoting target path.
  *					NB - need not exist.
  *
  * NOTE: Does not meet a design target of on stack (localized variable) allocation of single 4kb path
@@ -2411,7 +2415,7 @@ static rc_t CC KArcDirResolvePath (const KArcDir *self,
                                    va_list args)
 {
     char * full;
-    rc_t   rc; 
+    rc_t   rc;
 
     assert (self != NULL);
     assert (resolved != NULL);
@@ -2474,7 +2478,7 @@ static rc_t CC KArcDirResolvePath (const KArcDir *self,
  *
  * NOTE: Does not meet a design target of on stack (localized variable) allocation of single 4kb path
  */
-static rc_t CC KArcDirResolveAlias (const KArcDir * self, 
+static rc_t CC KArcDirResolveAlias (const KArcDir * self,
 				 bool absolute,
 				 char * resolved,
 				 size_t rsize,
@@ -2502,7 +2506,7 @@ static rc_t CC KArcDirResolveAlias (const KArcDir * self,
     }
     else
     {
-    	/* first find the node and it has to be an alias */ 
+    	/* first find the node and it has to be an alias */
         char alias[4096];
         /* VDB-4386: cannot treat va_list as a pointer! */
         int size = /*( args == NULL ) ?
@@ -2513,7 +2517,7 @@ static rc_t CC KArcDirResolveAlias (const KArcDir * self,
             rc = RC ( rcFS, rcDirectory, rcResolving, rcPath, rcExcessive );
         else
         	rc = KArcDirResolvePathNode (self, rcResolving, alias, false, &pnode, &type);
-    
+
     	if (rc != 0)
     	{
     	    /*rc = RC (rcFS, rcDirectory, rcResolving, rcPath, rcInvalid); ? or tweak it? */
@@ -2864,7 +2868,7 @@ rc_t CC KArcDirOpenFileRead	(const KArcDir *self,
 	    }
 	}
 	free (full_path);
-    }    
+    }
     return rc;
 }
 
@@ -3147,7 +3151,7 @@ rc_t CC KArcDirSetFileSize	(KArcDir *self,
  * [IN]  const char *		path	Path to the directory to open
  * [IN]  va_list		args	So far the only use of args is possible additions to path
  */
-static 
+static
 rc_t CC KArcDirOpenDirRead	(const KArcDir *self,
 					 const KDirectory **subp,
 					 bool chroot,
@@ -3175,7 +3179,7 @@ rc_t CC KArcDirOpenDirRead	(const KArcDir *self,
 	    full [ -- path_size ] = 0;
 
 	/* -----
-	 * get the node for this path 
+	 * get the node for this path
 	 */
 	rc = KArcDirResolvePathNode (self, rcOpening, full, true, &pnode, &type);
 	if (rc == 0)
@@ -3229,9 +3233,9 @@ rc_t CC KArcDirOpenDirRead	(const KArcDir *self,
  */
 static
 rc_t CC KArcDirOpenDirUpdate	(KArcDir *self,
-					 KDirectory ** subp, 
-					 bool chroot, 
-					 const char *path, 
+					 KDirectory ** subp,
+					 bool chroot,
+					 const char *path,
 					 va_list args)
 {
     assert (self != NULL);
@@ -3280,7 +3284,7 @@ rc_t CC KArcDirDestroyFile	(KArcDir *self,
 
 /* ----------------------------------------------------------------------
  * KArcDirFileContiguous
- *  
+ *
  *
  *  "path" [ IN ] - NUL terminated string in directory-native
  *  character set denoting target file
@@ -3696,7 +3700,7 @@ rc_t KDirectoryOpenArcDirRead_intern( const KDirectory * self,
                                      PLOG_S (file),
                                      path ) );
             }
-        
+
             break;
 
         case kptDir:
@@ -3728,8 +3732,8 @@ rc_t KDirectoryOpenArcDirRead_intern( const KDirectory * self,
         if ( rc != 0 )
         {
             if ( !silent )
-                PLOGERR ( klogErr, 
-                     ( klogErr, rc, "Failed to initialize Table of Contents for $(path)", 
+                PLOGERR ( klogErr,
+                     ( klogErr, rc, "Failed to initialize Table of Contents for $(path)",
                      PLOG_S ( path ), cpath ) );
         }
         else
@@ -3753,7 +3757,7 @@ rc_t KDirectoryOpenArcDirRead_intern( const KDirectory * self,
             if ( rc != 0 )
             {
                 if ( !silent )
-                PLOGERR ( klogErr, 
+                PLOGERR ( klogErr,
                           ( klogErr, rc, "Failed to allocate for the root KArcDir for $(file)",
                           PLOG_S ( file ), path ) );
             }
@@ -3768,7 +3772,7 @@ rc_t KDirectoryOpenArcDirRead_intern( const KDirectory * self,
                 if ( rc != 0 )
                 {
                     if ( !silent )
-                        PLOGERR ( klogErr, 
+                        PLOGERR ( klogErr,
                              ( klogErr, rc, "Failed to parse $(file)",
                              PLOG_S ( file ), cpath ) );
                 }
@@ -3817,7 +3821,7 @@ rc_t KDirectoryOpenArcDirRead_intern( const KDirectory * self,
 
 /* ----------------------------------------------------------------------
  * KDirectoryOpenArcDirRead
- *  Open an archive file as a KDirectory derived type: made to match 
+ *  Open an archive file as a KDirectory derived type: made to match
  *  KDirectoryOpenDirRead() where parse could be the first element of arg
  *
  * Much of the code in this function is copied directly from KDirectoryVOpenDirRead
@@ -3844,7 +3848,7 @@ rc_t KDirectoryOpenArcDirRead_intern( const KDirectory * self,
  *
  * We will have to wait and fix this right in directory.c where we can instead have
  * an attempt to open using KDirectory[V]OpenDirRead() check if when it tries to
- * open a directory but instead finds it has been given a path it will try to parse 
+ * open a directory but instead finds it has been given a path it will try to parse
  * the file using a known set of parse functions to see if the file can be treated
  * as a directory. Then this function can be called from KDirectoryOpenDirRead.
  */
@@ -3860,7 +3864,7 @@ LIB_EXPORT rc_t CC KDirectoryOpenArcDirRead( const KDirectory * self,
 {
     return KDirectoryOpenArcDirRead_intern( self,
         pdir,
-        chroot, 
+        chroot,
         false,
         path,
         baseType,
@@ -3883,9 +3887,9 @@ LIB_EXPORT rc_t CC KDirectoryOpenArcDirRead_silent( const KDirectory * self,
 {
     return KDirectoryOpenArcDirRead_intern( self,
         pdir,
-        chroot, 
+        chroot,
         true,
-        path, 
+        path,
         baseType,
         NULL,
         parse,
@@ -3905,9 +3909,9 @@ LIB_EXPORT rc_t CC KDirectoryOpenArcDirRead_silent_preopened( const KDirectory *
 {
     return KDirectoryOpenArcDirRead_intern( self,
         pdir,
-        chroot, 
+        chroot,
         true,
-        path, 
+        path,
         baseType,
         archive,
         parse,
@@ -3917,7 +3921,7 @@ LIB_EXPORT rc_t CC KDirectoryOpenArcDirRead_silent_preopened( const KDirectory *
 
 
 /* ======================================================================
- * 
+ *
  */
 typedef struct KArcDirPersistVisitFuncData
 {
@@ -4104,7 +4108,7 @@ rc_t KArcDirPersistHeader (const KArcDir * self,
             VectorWhack (&filevector, whack, NULL);
 	}
     }
- 
+
     return rc;
 }
 
@@ -4121,4 +4125,3 @@ KFS_EXTERN bool CC KArcDirIsFromRemote ( const KArcDir * self )
 
 
 /* end of file arc.c */
-

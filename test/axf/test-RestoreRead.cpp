@@ -79,6 +79,11 @@ public:
         result.isActive = active > 0;
         return result;
     }
+
+    ~RR_Fixture()
+    {
+        VDBManagerRelease(mgr);
+    }
 };
 
 FIXTURE_TEST_CASE(ReadAllAndClose, RR_Fixture)

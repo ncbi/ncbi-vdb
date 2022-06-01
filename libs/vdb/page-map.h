@@ -37,38 +37,11 @@
 #include <klib/defs.h>
 #endif
 
+#include <vdb/page-map-priv.h>
 #include <klib/data-buffer.h>
 #include <klib/refcount.h>
 
-#if _DEBUGGING
-#define _HEAVY_PAGEMAP_DEBUGGING 0
-#endif
-
 struct KDataBuffer;
-
-typedef uint32_t pm_size_t;
-typedef uint32_t row_count_t;
-typedef uint32_t elem_count_t;
-
-typedef enum {  PM_REGION_EXPAND_UNKNOWN=0,     /** notset **/
-                PM_REGION_EXPAND_FULL,          /** full expansion     - 2 arrays: offset,length**/
-                PM_REGION_EXPAND_SAMELEN,       /** partial expansion  - 1 array: offset **/
-                PM_REGION_EXPAND_EQUIDISTANT,   /** data have same length and always unique - no expansion needed **/
-                PM_REGION_EXPAND_SAMEDATA       /** same data - no expansion needed ***/
-} pm_expand_region_type_t;
-
-typedef struct PageMapRegion {
-	row_count_t	start_row;
-	row_count_t	numrows;
-	elem_count_t	data_offset;/** for unexpanded regions first direct offset into data**/
-				    /** for expanded regions - offset into expanded storage **/
-	elem_count_t	length;	    /** first length of the region ***/
-	uint8_t		type;       /** one of the types from pm_expand_region_type_t*/
-	bool		expanded;   /** if expandable storage is being used ***/
-} PageMapRegion;
-
-
-
 
 typedef struct PageMap {
     /* memory allocation object for length[], leng_run[], data_run[] */
@@ -109,7 +82,7 @@ typedef struct PageMap {
     pm_size_t			exp_dr_last;	/* index of last data_run expanded */
     pm_size_t			exp_rgn_cnt;    /* current number of expanded regions */
     elem_count_t		exp_data_offset_last;/* last offset into data */
-    
+
 
     KDataBuffer			istorage;	/* binary searchable storage for expansion regions */
     KDataBuffer			dstorage;	/* storage for expanded data */
@@ -201,23 +174,6 @@ rc_t PageMapFindRow(const PageMap *cself,uint64_t row,uint32_t * data_offset,uin
 int PageMapCompare(const PageMap *a, const PageMap *b);
 /* same but static columns */
 int PageMapCompareStatic(const PageMap *a, const PageMap *b);
-
-typedef struct PageMapIterator PageMapIterator;
-struct PageMapIterator {
-    row_count_t		last_row;
-    row_count_t		cur_row;
-    PageMapRegion**	rgns;	  /** all regions from the pagemap **/
-    pm_size_t		cur_rgn;  /** offset of the current region **/
-    row_count_t 	cur_rgn_row; /** row relative to offset of the region **/
-    elem_count_t	**exp_base; /*** exp buffer ***/
-    row_count_t		repeat_count; /** remaining repeat count **/
-    elem_count_t	static_datalen;
-#if _HEAVY_PAGEMAP_DEBUGGING
-    PageMap *parent;
-#endif
-};
-
-VDB_EXTERN rc_t PageMapNewIterator(const PageMap *self, PageMapIterator *lhs, uint64_t first_row, uint64_t num_rows);
 
 static __inline__ bool PageMapIteratorAdvance(PageMapIterator *self, row_count_t rows)
 {

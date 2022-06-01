@@ -91,6 +91,10 @@ public:
     {
         VResolverRelease ( resolver );
         VFSManagerRelease ( vfs );
+        VPathRelease ( query );
+        VPathRelease ( local );
+        VPathRelease ( remote );
+        VPathRelease ( cache );
     }
     
     VFSManager * vfs;
@@ -101,7 +105,6 @@ public:
     const VPath * cache;
 };
 
-#ifdef ALL
 static string ToString(const VPath* path)
 {
     const String * s;
@@ -112,6 +115,7 @@ static string ToString(const VPath* path)
     return ret;
 }
 
+#ifdef ALL
 FIXTURE_TEST_CASE ( VDB_2936_resolve_local_WGS_without_version, ResolverFixture )
 {
     String acc;
@@ -216,22 +220,7 @@ FIXTURE_TEST_CASE(WGS_with_6letter_prefix_and_version, ResolverFixture)
     VPathRelease(remote); remote = 0;
 }
 
-// this is NCBI-specific, move to a private repo
-//FIXTURE_TEST_CASE(HS37D5, ResolverFixture) {
-//    REQUIRE_RC(VFSManagerMakePath(vfs, &query, "hs37d5"));
-//
-//    REQUIRE_RC(VResolverQuery(resolver, 0, query, NULL, &remote, NULL));
-//    REQUIRE_RC(VPathRelease(remote)); remote = NULL;
-//
-//    if (hasLocal) {
-//        REQUIRE_RC(VResolverQuery(resolver, 0, query, &local, NULL, NULL));
-//        REQUIRE_RC(VPathRelease(local)); local = NULL;
-//    }
-//    else
-//        REQUIRE_RC_FAIL(VResolverQuery(resolver, 0, query, &local, NULL, NULL));
-//
-//    REQUIRE_RC(VPathRelease(query)); query = NULL;
-//}
+#endif
 
 class ResolverFixtureCustomConfig
 {
@@ -331,6 +320,33 @@ public:
     string m_configName;
 };
 
+#ifdef ALL
+FIXTURE_TEST_CASE(vdbcache_only, ResolverFixture)
+{
+#define ACC "ERR2204002"
+    putenv((char*) ACC "="
+"{"
+" \"result\": ["
+"   { \"status\": 200,"
+"     \"files\": ["
+"       {\"type\": \"vdbcache\","
+"        \"locations\": ["
+"          { \"link\": \"http://gov/.vdbcache\" }"
+"        ]"
+"       }"
+"     ]"
+"   }"
+" ]"
+"}");
+
+    REQUIRE_RC(VFSManagerMakePath(vfs, &query, ACC));
+    REQUIRE_RC_FAIL(VResolverRemote(resolver, 0, query, &remote));
+    
+    putenv(const_cast<char*>(ACC "="));
+}
+#endif
+
+#ifdef ALL
 FIXTURE_TEST_CASE(VDB_2963_resolve_local_new_wgs, ResolverFixtureCustomConfig)
 {
     string config =
@@ -449,23 +465,7 @@ extern "C"
 0) assert(!KDbgSetString("VFS"));
 
         KConfigDisableUserSettings ();
-		rc_t rc;
-
-		// this is NCBI-specific, move to a private repo
-        //KDirectory * dir = NULL;
-        //rc_t rc = KDirectoryNativeDir(&dir);
-        //if (rc != 0)
-        //    return rc;
-        //uint32_t t = KDirectoryPathType(dir, NETMNT "/traces04") & ~ kptAlias;
-        //if (t == kptNotFound || t == kptBadPath)
-        //{
-        //    hasLocal = false;
-        //}
-        //rc = KDirectoryRelease(dir);
-        //if (rc != 0)
-        //    return rc;
-
-        rc = VResolverTestSuite ( argc, argv );
+		rc_t rc = VResolverTestSuite ( argc, argv );
 
         clear_recorded_errors();
 

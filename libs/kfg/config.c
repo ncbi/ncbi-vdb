@@ -2228,15 +2228,17 @@ rc_t path_to_magic_file ( const KConfig *self, char *path, size_t buffer_size, s
     const KConfigNode *node;
     rc_t rc = KConfigOpenNodeRead ( self, & node, "NCBI_SETTINGS" );
 
+    assert ( path_size );
+
     if ( rc == 0 )
     {
-        size_t num_read, remaining;
-        rc = KConfigNodeRead ( node, 0, path, buffer_size - 1, & num_read, & remaining );
+        size_t remaining;
+        rc = KConfigNodeRead ( node, 0, path, buffer_size - 1, path_size, & remaining );
 
         if ( rc == 0 && remaining != 0 )
            rc = RC ( rcKFG, rcNode, rcReading, rcBuffer, rcInsufficient );
 
-        path[num_read] = '\0';
+        path[*path_size] = '\0';
 
         KConfigNodeRelease ( node );
     }

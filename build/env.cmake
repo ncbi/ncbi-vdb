@@ -32,6 +32,8 @@ if ( ${CMAKE_VERSION} VERSION_EQUAL "3.20" OR
     cmake_policy(SET CMP0115 OLD)
 endif()
 
+option( RUN_SANITIZER_TESTS "Run ASAN and TSAN tests" OFF )
+
 # ===========================================================================
 # set up CMake variables describing the environment
 
@@ -58,20 +60,22 @@ elseif ( ${CMAKE_HOST_SYSTEM_NAME} STREQUAL  "Linux" )
     set(SHLX "so")
 elseif ( ${CMAKE_HOST_SYSTEM_NAME} STREQUAL  "Windows" )
     set(OS "windows")
-elseif()
+else()
     message ( FATAL_ERROR "unknown OS " ${CMAKE_HOST_SYSTEM_NAME})
 endif()
 
 # determine architecture
 if ( ${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "armv7l")
 	set(ARCH "armv7l")
+elseif ( ${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "arm64")
+    set(ARCH "arm64")
 elseif ( ${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "aarch64")
-    set(ARCH "aarch64")
+    set(ARCH "arm64")
 elseif ( ${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "x86_64")
     set(ARCH "x86_64")
 elseif ( ${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "AMD64")
     set(ARCH "x86_64")
-elseif()
+else ()
     message ( FATAL_ERROR "unknown architecture " ${CMAKE_HOST_SYSTEM_PROCESSOR})
 endif ()
 
@@ -92,7 +96,7 @@ if ("armv7l" STREQUAL ${ARCH})
 	add_compile_options( -mcpu=cortex-a53 -mfpu=neon-vfpv4 -Wno-psabi )
 	set ( Z128SRC z128 )
 	set ( Z128LSRC z128.nopt )
-elseif ("aarch64" STREQUAL ${ARCH} )
+elseif ("arm64" STREQUAL ${ARCH} )
 	set ( BITS 64 )
 	add_compile_definitions( HAVE_Z128 )
 elseif ("x86_64" STREQUAL ${ARCH} )
@@ -108,7 +112,7 @@ if     ( "mac-x86_84" STREQUAL ${OS}-${ARCH})
 elseif ( "linux-x86_64" STREQUAL ${OS}-${ARCH})
     add_compile_definitions( HAVE_R128 )
 elseif ( "linux-armv7l" STREQUAL ${OS}-${ARCH})
-elseif ( "linux-aarch64" STREQUAL ${OS}-${ARCH})
+elseif ( "linux-arm64" STREQUAL ${OS}-${ARCH})
     add_compile_definitions( HAVE_R128 __float128=_Float128 )
 endif()
 
@@ -144,6 +148,8 @@ if ( SINGLE_CONFIG )
 endif()
 
 #message( "OS=" ${OS} " ARCH=" ${ARCH} " CXX=" ${CMAKE_CXX_COMPILER} " LMCHECK=" ${LMCHECK} " BITS=" ${BITS} " CMAKE_C_COMPILER_ID=" ${CMAKE_C_COMPILER_ID} " CMAKE_CXX_COMPILER_ID=" ${CMAKE_CXX_COMPILER_ID} )
+
+add_compile_definitions (PKGNAME=${OS}${BITS})
 
 # ===========================================================================
 # include directories for C/C++ compilation
@@ -189,13 +195,26 @@ endif ()
 find_package( FLEX 2.6 )
 find_package( BISON 3 )
 
-#libxml2
-find_package(LibXml2)
-
 if ( PYTHON_PATH )
     set( Python3_EXECUTABLE ${PYTHON_PATH} )
 endif()
 find_package( Python3 COMPONENTS Interpreter )
+
+# ===========================================================================
+# Installation location
+#
+
+#message( CMAKE_INSTALL_PREFIX: ${CMAKE_INSTALL_PREFIX} )
+
+if ( NOT INST_BINDIR )
+    set( INST_BINDIR ${CMAKE_INSTALL_PREFIX}/bin )
+endif()
+if ( NOT INST_LIBDIR )
+    set( INST_LIBDIR ${CMAKE_INSTALL_PREFIX}/lib${BITS} )
+endif()
+if ( NOT INST_INCDIR )
+    set( INST_INCDIR ${CMAKE_INSTALL_PREFIX}/include )
+endif()
 
 # ===========================================================================
 # Build artefact locations.
@@ -243,3 +262,38 @@ endif()
 # ===========================================================================
 # common functions
 include( ${CMAKE_CURRENT_SOURCE_DIR}/build/common.cmake )
+
+# ===========================================================================
+# installation
+
+if ( SINGLE_CONFIG )
+    install( SCRIPT CODE
+        "execute_process(COMMAND /bin/bash -c \"${CMAKE_SOURCE_DIR}/build/install-root.sh ${VERSION} ${INST_INCDIR} ${INST_LIBDIR} \" )"
+    )
+endif()
+
+if( NOT SINGLE_CONFIG )
+	if( RUN_SANITIZER_TESTS )
+		message( "RUN_SANITIZER_TESTS (${RUN_SANITIZER_TESTS}) cannot be turned on in a non single config mode - overriding to OFF" )
+	endif()
+	set( RUN_SANITIZER_TESTS OFF )
+endif()
+
+if( RUN_SANITIZER_TESTS )
+	find_program(LSB_RELEASE_EXEC lsb_release)
+	execute_process(COMMAND ${LSB_RELEASE_EXEC} -is
+		OUTPUT_VARIABLE LSB_RELEASE_ID_SHORT
+		OUTPUT_STRIP_TRAILING_WHITESPACE
+	)
+	message("LSB_RELEASE_ID_SHORT: ${LSB_RELEASE_ID_SHORT}")
+	if( LSB_RELEASE_ID_SHORT STREQUAL "Ubuntu" )
+		message("Disabling sanitizer tests on Ubuntu...")
+		set( RUN_SANITIZER_TESTS OFF )
+	endif()
+endif()
+
+if( RUN_SANITIZER_TESTS_OVERRIDE )
+	message("Overriding sanitizer tests due to RUN_SANITIZER_TESTS_OVERRIDE: ${RUN_SANITIZER_TESTS_OVERRIDE}")
+	set( RUN_SANITIZER_TESTS ON )
+endif()
+message( "RUN_SANITIZER_TESTS: ${RUN_SANITIZER_TESTS}" )
