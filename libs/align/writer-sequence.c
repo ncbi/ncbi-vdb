@@ -49,6 +49,7 @@
 #include <ctype.h>
 #include <os-native.h>
 #include <assert.h>
+#include <math.h>
 
 static const TableWriterColumn TableWriterSeq_cols[ewseq_cn_Last + 1] =
 {
@@ -520,6 +521,17 @@ rc_t CompressREAD_int(VTable *vtbl, int64_t *const buffer, bool notSavingRead)
     while ((rc = readOneCompressRow(in, &data, i + 1)) == 0) {
         ++i;
         compressOneRead(out, &data, i, buffer);
+
+        // prevent page map overflow
+        const uint64_t ForceFlush = pow( 2, 22 );
+        if ( i % ForceFlush == 0 )
+        {
+            rc = VCursorFlushPage( out );
+            if ( rc != 0 )
+            {
+                break;
+            }
+        }
     }
     if (GetRCState(rc) == rcNotFound) rc = 0;
     assert(rc == 0);
