@@ -70,6 +70,21 @@ static rc_t copyRNA_to_DNA(struct Self *const self
     return 0;
 }
 
+static rc_t copyDNA_to_RNA(struct Self *const self
+                           , uint8_t *const dst
+                           , uint8_t const *const src
+                           , size_t const length)
+{
+    size_t i;
+    
+    ((void)(self));
+    for (i = 0; i < length; ++i) {
+        int const base = src[i];
+        dst[i] = (base != 'T') ? base : 'U';
+    }
+    return 0;
+}
+
 #if WRITE_SIDE
 
 static rc_t setFlag(KMetadata const *const cmeta, char const value)
@@ -137,7 +152,7 @@ static rc_t checkAndCopy(struct Self *const self
     }
     if (rc == 0 && rna == '1') {
         self->function = &copyRNA_to_DNA;
-        return copyRNA_to_DNA(self, dst, src, length);
+        return copyDNA_to_RNA(self, dst, src, length);
     }
     return copyDNA_to_DNA(self, dst, src, length);
 }
