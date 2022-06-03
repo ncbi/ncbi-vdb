@@ -37,3 +37,4 @@ AddExecutableTest( Test_KDB_Rowset "rowsettest" "${COMMON_LIBS_WRITE};${ADDITION
 AddExecutableTest( Test_KDB_Kdb "kdbtest" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_KDB_Wkdb "wkdbtest" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" )
 AddExecutableTest( Test_KDB_CopyColumn "VDB-4705" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" )
+AddExecutableTest( Test_KDB_CopyMeta "VDB-4706" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" )
