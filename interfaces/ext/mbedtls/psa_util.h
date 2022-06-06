@@ -45,7 +45,7 @@
 
 /* Translations for symmetric crypto. */
 
-static inline psa_key_type_t vdb_mbedtls_psa_translate_cipher_type(
+static inline psa_key_type_t mbedtls_psa_translate_cipher_type(
     mbedtls_cipher_type_t cipher )
 {
     switch( cipher )
@@ -78,7 +78,7 @@ static inline psa_key_type_t vdb_mbedtls_psa_translate_cipher_type(
     }
 }
 
-static inline psa_algorithm_t vdb_mbedtls_psa_translate_cipher_mode(
+static inline psa_algorithm_t mbedtls_psa_translate_cipher_mode(
     mbedtls_cipher_mode_t mode, size_t taglen )
 {
     switch( mode )
@@ -99,7 +99,7 @@ static inline psa_algorithm_t vdb_mbedtls_psa_translate_cipher_mode(
     }
 }
 
-static inline psa_key_usage_t vdb_mbedtls_psa_translate_cipher_operation(
+static inline psa_key_usage_t mbedtls_psa_translate_cipher_operation(
     mbedtls_operation_t op )
 {
     switch( op )
@@ -115,7 +115,7 @@ static inline psa_key_usage_t vdb_mbedtls_psa_translate_cipher_operation(
 
 /* Translations for hashing. */
 
-static inline psa_algorithm_t vdb_mbedtls_psa_translate_md( mbedtls_md_type_t md_alg )
+static inline psa_algorithm_t mbedtls_psa_translate_md( mbedtls_md_type_t md_alg )
 {
     switch( md_alg )
     {
@@ -159,7 +159,7 @@ static inline psa_algorithm_t vdb_mbedtls_psa_translate_md( mbedtls_md_type_t md
 
 /* Translations for ECC. */
 
-static inline int vdb_mbedtls_psa_get_ecc_oid_from_id(
+static inline int mbedtls_psa_get_ecc_oid_from_id(
     psa_ecc_family_t curve, size_t bits,
     char const **oid, size_t *oid_len )
 {
@@ -334,7 +334,7 @@ static inline int vdb_mbedtls_psa_get_ecc_oid_from_id(
 
 /* Translations for PK layer */
 
-static inline int vdb_mbedtls_psa_err_translate_pk( psa_status_t status )
+static inline int mbedtls_psa_err_translate_pk( psa_status_t status )
 {
     switch( status )
     {
@@ -366,15 +366,15 @@ static inline int vdb_mbedtls_psa_err_translate_pk( psa_status_t status )
  * https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-8
  * into a PSA ECC group identifier. */
 #if defined(MBEDTLS_ECP_C)
-static inline psa_key_type_t vdb_mbedtls_psa_parse_tls_ecc_group(
+static inline psa_key_type_t mbedtls_psa_parse_tls_ecc_group(
     uint16_t tls_ecc_grp_reg_id, size_t *bits )
 {
     const mbedtls_ecp_curve_info *curve_info =
-        vdb_mbedtls_ecp_curve_info_from_tls_id( tls_ecc_grp_reg_id );
+        mbedtls_ecp_curve_info_from_tls_id( tls_ecc_grp_reg_id );
     if( curve_info == NULL )
         return( 0 );
     return( PSA_KEY_TYPE_ECC_KEY_PAIR(
-                vdb_mbedtls_ecc_group_to_psa( curve_info->grp_id, bits ) ) );
+                mbedtls_ecc_group_to_psa( curve_info->grp_id, bits ) ) );
 }
 #endif /* MBEDTLS_ECP_C */
 
@@ -388,7 +388,7 @@ static inline psa_key_type_t vdb_mbedtls_psa_parse_tls_ecc_group(
  * as a subbuffer, and the function merely selects this subbuffer instead
  * of making a copy.
  */
-static inline int vdb_mbedtls_psa_tls_psa_ec_to_ecpoint( unsigned char *src,
+static inline int mbedtls_psa_tls_psa_ec_to_ecpoint( unsigned char *src,
                                                      size_t srclen,
                                                      unsigned char **dst,
                                                      size_t *dstlen )
@@ -403,7 +403,7 @@ static inline int vdb_mbedtls_psa_tls_psa_ec_to_ecpoint( unsigned char *src,
  * exchanges) and converts it into a format that the PSA key
  * agreement API understands.
  */
-static inline int vdb_mbedtls_psa_tls_ecpoint_to_psa_ec( unsigned char const *src,
+static inline int mbedtls_psa_tls_ecpoint_to_psa_ec( unsigned char const *src,
                                                      size_t srclen,
                                                      unsigned char *dst,
                                                      size_t dstlen,

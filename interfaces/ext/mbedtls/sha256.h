@@ -51,7 +51,7 @@ extern "C" {
  *
  *                 The structure is used both for SHA-256 and for SHA-224
  *                 checksum calculations. The choice between these two is
- *                 made in the call to vdb_mbedtls_sha256_starts_ret().
+ *                 made in the call to mbedtls_sha256_starts_ret().
  */
 typedef struct mbedtls_sha256_context
 {
@@ -72,7 +72,7 @@ mbedtls_sha256_context;
  *
  * \param ctx      The SHA-256 context to initialize. This must not be \c NULL.
  */
-void vdb_mbedtls_sha256_init( mbedtls_sha256_context *ctx );
+void mbedtls_sha256_init( mbedtls_sha256_context *ctx );
 
 /**
  * \brief          This function clears a SHA-256 context.
@@ -81,7 +81,7 @@ void vdb_mbedtls_sha256_init( mbedtls_sha256_context *ctx );
  *                 case this function returns immediately. If it is not \c NULL,
  *                 it must point to an initialized SHA-256 context.
  */
-void vdb_mbedtls_sha256_free( mbedtls_sha256_context *ctx );
+void mbedtls_sha256_free( mbedtls_sha256_context *ctx );
 
 /**
  * \brief          This function clones the state of a SHA-256 context.
@@ -89,7 +89,7 @@ void vdb_mbedtls_sha256_free( mbedtls_sha256_context *ctx );
  * \param dst      The destination context. This must be initialized.
  * \param src      The context to clone. This must be initialized.
  */
-void vdb_mbedtls_sha256_clone( mbedtls_sha256_context *dst,
+void mbedtls_sha256_clone( mbedtls_sha256_context *dst,
                            const mbedtls_sha256_context *src );
 
 /**
@@ -103,7 +103,7 @@ void vdb_mbedtls_sha256_clone( mbedtls_sha256_context *dst,
  * \return         \c 0 on success.
  * \return         A negative error code on failure.
  */
-int vdb_mbedtls_sha256_starts_ret( mbedtls_sha256_context *ctx, int is224 );
+int mbedtls_sha256_starts_ret( mbedtls_sha256_context *ctx, int is224 );
 
 /**
  * \brief          This function feeds an input buffer into an ongoing
@@ -118,7 +118,7 @@ int vdb_mbedtls_sha256_starts_ret( mbedtls_sha256_context *ctx, int is224 );
  * \return         \c 0 on success.
  * \return         A negative error code on failure.
  */
-int vdb_mbedtls_sha256_update_ret( mbedtls_sha256_context *ctx,
+int mbedtls_sha256_update_ret( mbedtls_sha256_context *ctx,
                                const unsigned char *input,
                                size_t ilen );
 
@@ -134,7 +134,7 @@ int vdb_mbedtls_sha256_update_ret( mbedtls_sha256_context *ctx,
  * \return         \c 0 on success.
  * \return         A negative error code on failure.
  */
-int vdb_mbedtls_sha256_finish_ret( mbedtls_sha256_context *ctx,
+int mbedtls_sha256_finish_ret( mbedtls_sha256_context *ctx,
                                unsigned char output[32] );
 
 /**
@@ -149,7 +149,7 @@ int vdb_mbedtls_sha256_finish_ret( mbedtls_sha256_context *ctx,
  * \return         \c 0 on success.
  * \return         A negative error code on failure.
  */
-int vdb_mbedtls_internal_sha256_process( mbedtls_sha256_context *ctx,
+int mbedtls_internal_sha256_process( mbedtls_sha256_context *ctx,
                                      const unsigned char data[64] );
 
 #if !defined(MBEDTLS_DEPRECATED_REMOVED)
@@ -162,20 +162,20 @@ int vdb_mbedtls_internal_sha256_process( mbedtls_sha256_context *ctx,
  * \brief          This function starts a SHA-224 or SHA-256 checksum
  *                 calculation.
  *
- * \deprecated     Superseded by vdb_mbedtls_sha256_starts_ret() in 2.7.0.
+ * \deprecated     Superseded by mbedtls_sha256_starts_ret() in 2.7.0.
  *
  * \param ctx      The context to use. This must be initialized.
  * \param is224    Determines which function to use. This must be
  *                 either \c 0 for SHA-256, or \c 1 for SHA-224.
  */
-MBEDTLS_DEPRECATED void vdb_mbedtls_sha256_starts( mbedtls_sha256_context *ctx,
+MBEDTLS_DEPRECATED void mbedtls_sha256_starts( mbedtls_sha256_context *ctx,
                                                int is224 );
 
 /**
  * \brief          This function feeds an input buffer into an ongoing
  *                 SHA-256 checksum calculation.
  *
- * \deprecated     Superseded by vdb_mbedtls_sha256_update_ret() in 2.7.0.
+ * \deprecated     Superseded by mbedtls_sha256_update_ret() in 2.7.0.
  *
  * \param ctx      The SHA-256 context to use. This must be
  *                 initialized and have a hash operation started.
@@ -183,7 +183,7 @@ MBEDTLS_DEPRECATED void vdb_mbedtls_sha256_starts( mbedtls_sha256_context *ctx,
  *                 buffer of length \p ilen Bytes.
  * \param ilen     The length of the input data in Bytes.
  */
-MBEDTLS_DEPRECATED void vdb_mbedtls_sha256_update( mbedtls_sha256_context *ctx,
+MBEDTLS_DEPRECATED void mbedtls_sha256_update( mbedtls_sha256_context *ctx,
                                                const unsigned char *input,
                                                size_t ilen );
 
@@ -191,14 +191,14 @@ MBEDTLS_DEPRECATED void vdb_mbedtls_sha256_update( mbedtls_sha256_context *ctx,
  * \brief          This function finishes the SHA-256 operation, and writes
  *                 the result to the output buffer.
  *
- * \deprecated     Superseded by vdb_mbedtls_sha256_finish_ret() in 2.7.0.
+ * \deprecated     Superseded by mbedtls_sha256_finish_ret() in 2.7.0.
  *
  * \param ctx      The SHA-256 context. This must be initialized and
  *                 have a hash operation started.
  * \param output   The SHA-224 or SHA-256 checksum result. This must be
  *                 a writable buffer of length \c 32 Bytes.
  */
-MBEDTLS_DEPRECATED void vdb_mbedtls_sha256_finish( mbedtls_sha256_context *ctx,
+MBEDTLS_DEPRECATED void mbedtls_sha256_finish( mbedtls_sha256_context *ctx,
                                                unsigned char output[32] );
 
 /**
@@ -206,13 +206,13 @@ MBEDTLS_DEPRECATED void vdb_mbedtls_sha256_finish( mbedtls_sha256_context *ctx,
  *                 the ongoing SHA-256 computation. This function is for
  *                 internal use only.
  *
- * \deprecated     Superseded by vdb_mbedtls_internal_sha256_process() in 2.7.0.
+ * \deprecated     Superseded by mbedtls_internal_sha256_process() in 2.7.0.
  *
  * \param ctx      The SHA-256 context. This must be initialized.
  * \param data     The buffer holding one block of data. This must be
  *                 a readable buffer of size \c 64 Bytes.
  */
-MBEDTLS_DEPRECATED void vdb_mbedtls_sha256_process( mbedtls_sha256_context *ctx,
+MBEDTLS_DEPRECATED void mbedtls_sha256_process( mbedtls_sha256_context *ctx,
                                                 const unsigned char data[64] );
 
 #undef MBEDTLS_DEPRECATED
@@ -236,7 +236,7 @@ MBEDTLS_DEPRECATED void vdb_mbedtls_sha256_process( mbedtls_sha256_context *ctx,
  * \param is224    Determines which function to use. This must be
  *                 either \c 0 for SHA-256, or \c 1 for SHA-224.
  */
-int vdb_mbedtls_sha256_ret( const unsigned char *input,
+int mbedtls_sha256_ret( const unsigned char *input,
                         size_t ilen,
                         unsigned char output[32],
                         int is224 );
@@ -258,7 +258,7 @@ int vdb_mbedtls_sha256_ret( const unsigned char *input,
  *                 The SHA-256 result is calculated as
  *                 output = SHA-256(input buffer).
  *
- * \deprecated     Superseded by vdb_mbedtls_sha256_ret() in 2.7.0.
+ * \deprecated     Superseded by mbedtls_sha256_ret() in 2.7.0.
  *
  * \param input    The buffer holding the data. This must be a readable
  *                 buffer of length \p ilen Bytes.
@@ -268,7 +268,7 @@ int vdb_mbedtls_sha256_ret( const unsigned char *input,
  * \param is224    Determines which function to use. This must be either
  *                 \c 0 for SHA-256, or \c 1 for SHA-224.
  */
-MBEDTLS_DEPRECATED void vdb_mbedtls_sha256( const unsigned char *input,
+MBEDTLS_DEPRECATED void mbedtls_sha256( const unsigned char *input,
                                         size_t ilen,
                                         unsigned char output[32],
                                         int is224 );
@@ -284,7 +284,7 @@ MBEDTLS_DEPRECATED void vdb_mbedtls_sha256( const unsigned char *input,
  * \return         \c 0 on success.
  * \return         \c 1 on failure.
  */
-int vdb_mbedtls_sha256_self_test( int verbose );
+int mbedtls_sha256_self_test( int verbose );
 
 #endif /* MBEDTLS_SELF_TEST */
 

@@ -36,29 +36,29 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#define vdb_mbedtls_printf printf
+#define mbedtls_printf printf
 #endif /* MBEDTLS_PLATFORM_C */
 #endif /* MBEDTLS_SELF_TEST */
 
 #if !defined(MBEDTLS_ARC4_ALT)
 
-void vdb_mbedtls_arc4_init( mbedtls_arc4_context *ctx )
+void mbedtls_arc4_init( mbedtls_arc4_context *ctx )
 {
     memset( ctx, 0, sizeof( mbedtls_arc4_context ) );
 }
 
-void vdb_mbedtls_arc4_free( mbedtls_arc4_context *ctx )
+void mbedtls_arc4_free( mbedtls_arc4_context *ctx )
 {
     if( ctx == NULL )
         return;
 
-    vdb_mbedtls_platform_zeroize( ctx, sizeof( mbedtls_arc4_context ) );
+    mbedtls_platform_zeroize( ctx, sizeof( mbedtls_arc4_context ) );
 }
 
 /*
  * ARC4 key schedule
  */
-void vdb_mbedtls_arc4_setup( mbedtls_arc4_context *ctx, const unsigned char *key,
+void mbedtls_arc4_setup( mbedtls_arc4_context *ctx, const unsigned char *key,
                  unsigned int keylen )
 {
     int i, j, a;
@@ -88,7 +88,7 @@ void vdb_mbedtls_arc4_setup( mbedtls_arc4_context *ctx, const unsigned char *key
 /*
  * ARC4 cipher function
  */
-int vdb_mbedtls_arc4_crypt( mbedtls_arc4_context *ctx, size_t length, const unsigned char *input,
+int mbedtls_arc4_crypt( mbedtls_arc4_context *ctx, size_t length, const unsigned char *input,
                 unsigned char *output )
 {
     int x, y, a, b;
@@ -149,43 +149,43 @@ static const unsigned char arc4_test_ct[3][8] =
 /*
  * Checkup routine
  */
-int vdb_mbedtls_arc4_self_test( int verbose )
+int mbedtls_arc4_self_test( int verbose )
 {
     int i, ret = 0;
     unsigned char ibuf[8];
     unsigned char obuf[8];
     mbedtls_arc4_context ctx;
 
-    vdb_mbedtls_arc4_init( &ctx );
+    mbedtls_arc4_init( &ctx );
 
     for( i = 0; i < 3; i++ )
     {
         if( verbose != 0 )
-            vdb_mbedtls_printf( "  ARC4 test #%d: ", i + 1 );
+            mbedtls_printf( "  ARC4 test #%d: ", i + 1 );
 
         memcpy( ibuf, arc4_test_pt[i], 8 );
 
-        vdb_mbedtls_arc4_setup( &ctx, arc4_test_key[i], 8 );
-        vdb_mbedtls_arc4_crypt( &ctx, 8, ibuf, obuf );
+        mbedtls_arc4_setup( &ctx, arc4_test_key[i], 8 );
+        mbedtls_arc4_crypt( &ctx, 8, ibuf, obuf );
 
         if( memcmp( obuf, arc4_test_ct[i], 8 ) != 0 )
         {
             if( verbose != 0 )
-                vdb_mbedtls_printf( "failed\n" );
+                mbedtls_printf( "failed\n" );
 
             ret = 1;
             goto exit;
         }
 
         if( verbose != 0 )
-            vdb_mbedtls_printf( "passed\n" );
+            mbedtls_printf( "passed\n" );
     }
 
     if( verbose != 0 )
-        vdb_mbedtls_printf( "\n" );
+        mbedtls_printf( "\n" );
 
 exit:
-    vdb_mbedtls_arc4_free( &ctx );
+    mbedtls_arc4_free( &ctx );
 
     return( ret );
 }

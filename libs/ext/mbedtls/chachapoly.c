@@ -33,7 +33,7 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#define vdb_mbedtls_printf printf
+#define mbedtls_printf printf
 #endif /* MBEDTLS_PLATFORM_C */
 #endif /* MBEDTLS_SELF_TEST */
 
@@ -65,7 +65,7 @@ static int chachapoly_pad_aad( mbedtls_chachapoly_context *ctx )
 
     memset( zeroes, 0, sizeof( zeroes ) );
 
-    return( vdb_mbedtls_poly1305_update( &ctx->poly1305_ctx,
+    return( mbedtls_poly1305_update( &ctx->poly1305_ctx,
                                      zeroes,
                                      16U - partial_block_len ) );
 }
@@ -84,49 +84,49 @@ static int chachapoly_pad_ciphertext( mbedtls_chachapoly_context *ctx )
         return( 0 );
 
     memset( zeroes, 0, sizeof( zeroes ) );
-    return( vdb_mbedtls_poly1305_update( &ctx->poly1305_ctx,
+    return( mbedtls_poly1305_update( &ctx->poly1305_ctx,
                                      zeroes,
                                      16U - partial_block_len ) );
 }
 
-void vdb_mbedtls_chachapoly_init( mbedtls_chachapoly_context *ctx )
+void mbedtls_chachapoly_init( mbedtls_chachapoly_context *ctx )
 {
     CHACHAPOLY_VALIDATE( ctx != NULL );
 
-    vdb_mbedtls_chacha20_init( &ctx->chacha20_ctx );
-    vdb_mbedtls_poly1305_init( &ctx->poly1305_ctx );
+    mbedtls_chacha20_init( &ctx->chacha20_ctx );
+    mbedtls_poly1305_init( &ctx->poly1305_ctx );
     ctx->aad_len        = 0U;
     ctx->ciphertext_len = 0U;
     ctx->state          = CHACHAPOLY_STATE_INIT;
     ctx->mode           = MBEDTLS_CHACHAPOLY_ENCRYPT;
 }
 
-void vdb_mbedtls_chachapoly_free( mbedtls_chachapoly_context *ctx )
+void mbedtls_chachapoly_free( mbedtls_chachapoly_context *ctx )
 {
     if( ctx == NULL )
         return;
 
-    vdb_mbedtls_chacha20_free( &ctx->chacha20_ctx );
-    vdb_mbedtls_poly1305_free( &ctx->poly1305_ctx );
+    mbedtls_chacha20_free( &ctx->chacha20_ctx );
+    mbedtls_poly1305_free( &ctx->poly1305_ctx );
     ctx->aad_len        = 0U;
     ctx->ciphertext_len = 0U;
     ctx->state          = CHACHAPOLY_STATE_INIT;
     ctx->mode           = MBEDTLS_CHACHAPOLY_ENCRYPT;
 }
 
-int vdb_mbedtls_chachapoly_setkey( mbedtls_chachapoly_context *ctx,
+int mbedtls_chachapoly_setkey( mbedtls_chachapoly_context *ctx,
                                const unsigned char key[32] )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     CHACHAPOLY_VALIDATE_RET( ctx != NULL );
     CHACHAPOLY_VALIDATE_RET( key != NULL );
 
-    ret = vdb_mbedtls_chacha20_setkey( &ctx->chacha20_ctx, key );
+    ret = mbedtls_chacha20_setkey( &ctx->chacha20_ctx, key );
 
     return( ret );
 }
 
-int vdb_mbedtls_chachapoly_starts( mbedtls_chachapoly_context *ctx,
+int mbedtls_chachapoly_starts( mbedtls_chachapoly_context *ctx,
                                const unsigned char nonce[12],
                                mbedtls_chachapoly_mode_t mode  )
 {
@@ -136,7 +136,7 @@ int vdb_mbedtls_chachapoly_starts( mbedtls_chachapoly_context *ctx,
     CHACHAPOLY_VALIDATE_RET( nonce != NULL );
 
     /* Set counter = 0, will be update to 1 when generating Poly1305 key */
-    ret = vdb_mbedtls_chacha20_starts( &ctx->chacha20_ctx, nonce, 0U );
+    ret = mbedtls_chacha20_starts( &ctx->chacha20_ctx, nonce, 0U );
     if( ret != 0 )
         goto cleanup;
 
@@ -146,12 +146,12 @@ int vdb_mbedtls_chachapoly_starts( mbedtls_chachapoly_context *ctx,
      * The other 256 bits are discarded.
      */
     memset( poly1305_key, 0, sizeof( poly1305_key ) );
-    ret = vdb_mbedtls_chacha20_update( &ctx->chacha20_ctx, sizeof( poly1305_key ),
+    ret = mbedtls_chacha20_update( &ctx->chacha20_ctx, sizeof( poly1305_key ),
                                       poly1305_key, poly1305_key );
     if( ret != 0 )
         goto cleanup;
 
-    ret = vdb_mbedtls_poly1305_starts( &ctx->poly1305_ctx, poly1305_key );
+    ret = mbedtls_poly1305_starts( &ctx->poly1305_ctx, poly1305_key );
 
     if( ret == 0 )
     {
@@ -162,11 +162,11 @@ int vdb_mbedtls_chachapoly_starts( mbedtls_chachapoly_context *ctx,
     }
 
 cleanup:
-    vdb_mbedtls_platform_zeroize( poly1305_key, 64U );
+    mbedtls_platform_zeroize( poly1305_key, 64U );
     return( ret );
 }
 
-int vdb_mbedtls_chachapoly_update_aad( mbedtls_chachapoly_context *ctx,
+int mbedtls_chachapoly_update_aad( mbedtls_chachapoly_context *ctx,
                                    const unsigned char *aad,
                                    size_t aad_len )
 {
@@ -178,10 +178,10 @@ int vdb_mbedtls_chachapoly_update_aad( mbedtls_chachapoly_context *ctx,
 
     ctx->aad_len += aad_len;
 
-    return( vdb_mbedtls_poly1305_update( &ctx->poly1305_ctx, aad, aad_len ) );
+    return( mbedtls_poly1305_update( &ctx->poly1305_ctx, aad, aad_len ) );
 }
 
-int vdb_mbedtls_chachapoly_update( mbedtls_chachapoly_context *ctx,
+int mbedtls_chachapoly_update( mbedtls_chachapoly_context *ctx,
                                size_t len,
                                const unsigned char *input,
                                unsigned char *output )
@@ -210,21 +210,21 @@ int vdb_mbedtls_chachapoly_update( mbedtls_chachapoly_context *ctx,
 
     if( ctx->mode == MBEDTLS_CHACHAPOLY_ENCRYPT )
     {
-        ret = vdb_mbedtls_chacha20_update( &ctx->chacha20_ctx, len, input, output );
+        ret = mbedtls_chacha20_update( &ctx->chacha20_ctx, len, input, output );
         if( ret != 0 )
             return( ret );
 
-        ret = vdb_mbedtls_poly1305_update( &ctx->poly1305_ctx, output, len );
+        ret = mbedtls_poly1305_update( &ctx->poly1305_ctx, output, len );
         if( ret != 0 )
             return( ret );
     }
     else /* DECRYPT */
     {
-        ret = vdb_mbedtls_poly1305_update( &ctx->poly1305_ctx, input, len );
+        ret = mbedtls_poly1305_update( &ctx->poly1305_ctx, input, len );
         if( ret != 0 )
             return( ret );
 
-        ret = vdb_mbedtls_chacha20_update( &ctx->chacha20_ctx, len, input, output );
+        ret = mbedtls_chacha20_update( &ctx->chacha20_ctx, len, input, output );
         if( ret != 0 )
             return( ret );
     }
@@ -232,7 +232,7 @@ int vdb_mbedtls_chachapoly_update( mbedtls_chachapoly_context *ctx,
     return( 0 );
 }
 
-int vdb_mbedtls_chachapoly_finish( mbedtls_chachapoly_context *ctx,
+int mbedtls_chachapoly_finish( mbedtls_chachapoly_context *ctx,
                                unsigned char mac[16] )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
@@ -280,11 +280,11 @@ int vdb_mbedtls_chachapoly_finish( mbedtls_chachapoly_context *ctx,
     len_block[14] = (unsigned char)( ctx->ciphertext_len >> 48 );
     len_block[15] = (unsigned char)( ctx->ciphertext_len >> 56 );
 
-    ret = vdb_mbedtls_poly1305_update( &ctx->poly1305_ctx, len_block, 16U );
+    ret = mbedtls_poly1305_update( &ctx->poly1305_ctx, len_block, 16U );
     if( ret != 0 )
         return( ret );
 
-    ret = vdb_mbedtls_poly1305_finish( &ctx->poly1305_ctx, mac );
+    ret = mbedtls_poly1305_finish( &ctx->poly1305_ctx, mac );
 
     return( ret );
 }
@@ -301,25 +301,25 @@ static int chachapoly_crypt_and_tag( mbedtls_chachapoly_context *ctx,
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
-    ret = vdb_mbedtls_chachapoly_starts( ctx, nonce, mode );
+    ret = mbedtls_chachapoly_starts( ctx, nonce, mode );
     if( ret != 0 )
         goto cleanup;
 
-    ret = vdb_mbedtls_chachapoly_update_aad( ctx, aad, aad_len );
+    ret = mbedtls_chachapoly_update_aad( ctx, aad, aad_len );
     if( ret != 0 )
         goto cleanup;
 
-    ret = vdb_mbedtls_chachapoly_update( ctx, length, input, output );
+    ret = mbedtls_chachapoly_update( ctx, length, input, output );
     if( ret != 0 )
         goto cleanup;
 
-    ret = vdb_mbedtls_chachapoly_finish( ctx, tag );
+    ret = mbedtls_chachapoly_finish( ctx, tag );
 
 cleanup:
     return( ret );
 }
 
-int vdb_mbedtls_chachapoly_encrypt_and_tag( mbedtls_chachapoly_context *ctx,
+int mbedtls_chachapoly_encrypt_and_tag( mbedtls_chachapoly_context *ctx,
                                         size_t length,
                                         const unsigned char nonce[12],
                                         const unsigned char *aad,
@@ -340,7 +340,7 @@ int vdb_mbedtls_chachapoly_encrypt_and_tag( mbedtls_chachapoly_context *ctx,
                                       input, output, tag ) );
 }
 
-int vdb_mbedtls_chachapoly_auth_decrypt( mbedtls_chachapoly_context *ctx,
+int mbedtls_chachapoly_auth_decrypt( mbedtls_chachapoly_context *ctx,
                                      size_t length,
                                      const unsigned char nonce[12],
                                      const unsigned char *aad,
@@ -373,7 +373,7 @@ int vdb_mbedtls_chachapoly_auth_decrypt( mbedtls_chachapoly_context *ctx,
 
     if( diff != 0 )
     {
-        vdb_mbedtls_platform_zeroize( output, length );
+        mbedtls_platform_zeroize( output, length );
         return( MBEDTLS_ERR_CHACHAPOLY_AUTH_FAILED );
     }
 
@@ -479,14 +479,14 @@ static const unsigned char test_mac[1][16] =
         if( ! ( cond ) )                \
         {                               \
             if( verbose != 0 )          \
-                vdb_mbedtls_printf args;    \
+                mbedtls_printf args;    \
                                         \
             return( -1 );               \
         }                               \
     }                                   \
     while( 0 )
 
-int vdb_mbedtls_chachapoly_self_test( int verbose )
+int mbedtls_chachapoly_self_test( int verbose )
 {
     mbedtls_chachapoly_context ctx;
     unsigned i;
@@ -497,14 +497,14 @@ int vdb_mbedtls_chachapoly_self_test( int verbose )
     for( i = 0U; i < 1U; i++ )
     {
         if( verbose != 0 )
-            vdb_mbedtls_printf( "  ChaCha20-Poly1305 test %u ", i );
+            mbedtls_printf( "  ChaCha20-Poly1305 test %u ", i );
 
-        vdb_mbedtls_chachapoly_init( &ctx );
+        mbedtls_chachapoly_init( &ctx );
 
-        ret = vdb_mbedtls_chachapoly_setkey( &ctx, test_key[i] );
+        ret = mbedtls_chachapoly_setkey( &ctx, test_key[i] );
         ASSERT( 0 == ret, ( "setkey() error code: %i\n", ret ) );
 
-        ret = vdb_mbedtls_chachapoly_encrypt_and_tag( &ctx,
+        ret = mbedtls_chachapoly_encrypt_and_tag( &ctx,
                                                   test_input_len[i],
                                                   test_nonce[i],
                                                   test_aad[i],
@@ -521,14 +521,14 @@ int vdb_mbedtls_chachapoly_self_test( int verbose )
         ASSERT( 0 == memcmp( mac, test_mac[i], 16U ),
                 ( "failure (wrong MAC)\n" ) );
 
-        vdb_mbedtls_chachapoly_free( &ctx );
+        mbedtls_chachapoly_free( &ctx );
 
         if( verbose != 0 )
-            vdb_mbedtls_printf( "passed\n" );
+            mbedtls_printf( "passed\n" );
     }
 
     if( verbose != 0 )
-        vdb_mbedtls_printf( "\n" );
+        mbedtls_printf( "\n" );
 
     return( 0 );
 }

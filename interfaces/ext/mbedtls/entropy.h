@@ -145,14 +145,14 @@ mbedtls_entropy_context;
  *
  * \param ctx       Entropy context to initialize
  */
-void vdb_mbedtls_entropy_init( mbedtls_entropy_context *ctx );
+void mbedtls_entropy_init( mbedtls_entropy_context *ctx );
 
 /**
  * \brief           Free the data in the context
  *
  * \param ctx       Entropy context to free
  */
-void vdb_mbedtls_entropy_free( mbedtls_entropy_context *ctx );
+void mbedtls_entropy_free( mbedtls_entropy_context *ctx );
 
 /**
  * \brief           Adds an entropy source to poll
@@ -162,7 +162,7 @@ void vdb_mbedtls_entropy_free( mbedtls_entropy_context *ctx );
  * \param f_source  Entropy function
  * \param p_source  Function data
  * \param threshold Minimum required from source before entropy is released
- *                  ( with vdb_mbedtls_entropy_func() ) (in bytes)
+ *                  ( with mbedtls_entropy_func() ) (in bytes)
  * \param strong    MBEDTLS_ENTROPY_SOURCE_STRONG or
  *                  MBEDTLS_ENTROPY_SOURCE_WEAK.
  *                  At least one strong source needs to be added.
@@ -171,7 +171,7 @@ void vdb_mbedtls_entropy_free( mbedtls_entropy_context *ctx );
  *
  * \return          0 if successful or MBEDTLS_ERR_ENTROPY_MAX_SOURCES
  */
-int vdb_mbedtls_entropy_add_source( mbedtls_entropy_context *ctx,
+int mbedtls_entropy_add_source( mbedtls_entropy_context *ctx,
                         mbedtls_entropy_f_source_ptr f_source, void *p_source,
                         size_t threshold, int strong );
 
@@ -183,7 +183,7 @@ int vdb_mbedtls_entropy_add_source( mbedtls_entropy_context *ctx,
  *
  * \return          0 if successful, or MBEDTLS_ERR_ENTROPY_SOURCE_FAILED
  */
-int vdb_mbedtls_entropy_gather( mbedtls_entropy_context *ctx );
+int mbedtls_entropy_gather( mbedtls_entropy_context *ctx );
 
 /**
  * \brief           Retrieve entropy from the accumulator
@@ -196,7 +196,7 @@ int vdb_mbedtls_entropy_gather( mbedtls_entropy_context *ctx );
  *
  * \return          0 if successful, or MBEDTLS_ERR_ENTROPY_SOURCE_FAILED
  */
-int vdb_mbedtls_entropy_func( void *data, unsigned char *output, size_t len );
+int mbedtls_entropy_func( void *data, unsigned char *output, size_t len );
 
 /**
  * \brief           Add data to the accumulator manually
@@ -208,7 +208,7 @@ int vdb_mbedtls_entropy_func( void *data, unsigned char *output, size_t len );
  *
  * \return          0 if successful
  */
-int vdb_mbedtls_entropy_update_manual( mbedtls_entropy_context *ctx,
+int mbedtls_entropy_update_manual( mbedtls_entropy_context *ctx,
                            const unsigned char *data, size_t len );
 
 #if defined(MBEDTLS_ENTROPY_NV_SEED)
@@ -220,7 +220,7 @@ int vdb_mbedtls_entropy_update_manual( mbedtls_entropy_context *ctx,
  *
  * \return          0 if successful
  */
-int vdb_mbedtls_entropy_update_nv_seed( mbedtls_entropy_context *ctx );
+int mbedtls_entropy_update_nv_seed( mbedtls_entropy_context *ctx );
 #endif /* MBEDTLS_ENTROPY_NV_SEED */
 
 #if defined(MBEDTLS_FS_IO)
@@ -234,7 +234,7 @@ int vdb_mbedtls_entropy_update_nv_seed( mbedtls_entropy_context *ctx );
  *                      MBEDTLS_ERR_ENTROPY_FILE_IO_ERROR on file error, or
  *                      MBEDTLS_ERR_ENTROPY_SOURCE_FAILED
  */
-int vdb_mbedtls_entropy_write_seed_file( mbedtls_entropy_context *ctx, const char *path );
+int mbedtls_entropy_write_seed_file( mbedtls_entropy_context *ctx, const char *path );
 
 /**
  * \brief               Read and update a seed file. Seed is added to this
@@ -248,7 +248,7 @@ int vdb_mbedtls_entropy_write_seed_file( mbedtls_entropy_context *ctx, const cha
  *                      MBEDTLS_ERR_ENTROPY_FILE_IO_ERROR on file error,
  *                      MBEDTLS_ERR_ENTROPY_SOURCE_FAILED
  */
-int vdb_mbedtls_entropy_update_seed_file( mbedtls_entropy_context *ctx, const char *path );
+int mbedtls_entropy_update_seed_file( mbedtls_entropy_context *ctx, const char *path );
 #endif /* MBEDTLS_FS_IO */
 
 #if defined(MBEDTLS_SELF_TEST)
@@ -256,11 +256,11 @@ int vdb_mbedtls_entropy_update_seed_file( mbedtls_entropy_context *ctx, const ch
  * \brief          Checkup routine
  *
  *                 This module self-test also calls the entropy self-test,
- *                 vdb_mbedtls_entropy_source_self_test();
+ *                 mbedtls_entropy_source_self_test();
  *
  * \return         0 if successful, or 1 if a test failed
  */
-int vdb_mbedtls_entropy_self_test( int verbose );
+int mbedtls_entropy_self_test( int verbose );
 
 #if defined(MBEDTLS_ENTROPY_HARDWARE_ALT)
 /**
@@ -272,11 +272,11 @@ int vdb_mbedtls_entropy_self_test( int verbose );
  *                 Note this is the only hardware entropy source that is known
  *                 at link time, and other entropy sources configured
  *                 dynamically at runtime by the function
- *                 vdb_mbedtls_entropy_add_source() will not be tested.
+ *                 mbedtls_entropy_add_source() will not be tested.
  *
  * \return         0 if successful, or 1 if a test failed
  */
-int vdb_mbedtls_entropy_source_self_test( int verbose );
+int mbedtls_entropy_source_self_test( int verbose );
 #endif /* MBEDTLS_ENTROPY_HARDWARE_ALT */
 #endif /* MBEDTLS_SELF_TEST */
 

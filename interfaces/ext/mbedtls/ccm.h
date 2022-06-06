@@ -86,11 +86,11 @@ mbedtls_ccm_context;
 /**
  * \brief           This function initializes the specified CCM context,
  *                  to make references valid, and prepare the context
- *                  for vdb_mbedtls_ccm_setkey() or vdb_mbedtls_ccm_free().
+ *                  for mbedtls_ccm_setkey() or mbedtls_ccm_free().
  *
  * \param ctx       The CCM context to initialize. This must not be \c NULL.
  */
-void vdb_mbedtls_ccm_init( mbedtls_ccm_context *ctx );
+void mbedtls_ccm_init( mbedtls_ccm_context *ctx );
 
 /**
  * \brief           This function initializes the CCM context set in the
@@ -105,7 +105,7 @@ void vdb_mbedtls_ccm_init( mbedtls_ccm_context *ctx );
  * \return          \c 0 on success.
  * \return          A CCM or cipher-specific error code on failure.
  */
-int vdb_mbedtls_ccm_setkey( mbedtls_ccm_context *ctx,
+int mbedtls_ccm_setkey( mbedtls_ccm_context *ctx,
                         mbedtls_cipher_id_t cipher,
                         const unsigned char *key,
                         unsigned int keybits );
@@ -117,7 +117,7 @@ int vdb_mbedtls_ccm_setkey( mbedtls_ccm_context *ctx,
  * \param ctx       The CCM context to clear. If this is \c NULL, the function
  *                  has no effect. Otherwise, this must be initialized.
  */
-void vdb_mbedtls_ccm_free( mbedtls_ccm_context *ctx );
+void mbedtls_ccm_free( mbedtls_ccm_context *ctx );
 
 /**
  * \brief           This function encrypts a buffer using CCM.
@@ -155,7 +155,7 @@ void vdb_mbedtls_ccm_free( mbedtls_ccm_context *ctx );
  * \return          \c 0 on success.
  * \return          A CCM or cipher-specific error code on failure.
  */
-int vdb_mbedtls_ccm_encrypt_and_tag( mbedtls_ccm_context *ctx, size_t length,
+int mbedtls_ccm_encrypt_and_tag( mbedtls_ccm_context *ctx, size_t length,
                          const unsigned char *iv, size_t iv_len,
                          const unsigned char *add, size_t add_len,
                          const unsigned char *input, unsigned char *output,
@@ -203,7 +203,7 @@ int vdb_mbedtls_ccm_encrypt_and_tag( mbedtls_ccm_context *ctx, size_t length,
  * \return          \c 0 on success.
  * \return          A CCM or cipher-specific error code on failure.
  */
-int vdb_mbedtls_ccm_star_encrypt_and_tag( mbedtls_ccm_context *ctx, size_t length,
+int mbedtls_ccm_star_encrypt_and_tag( mbedtls_ccm_context *ctx, size_t length,
                          const unsigned char *iv, size_t iv_len,
                          const unsigned char *add, size_t add_len,
                          const unsigned char *input, unsigned char *output,
@@ -240,7 +240,7 @@ int vdb_mbedtls_ccm_star_encrypt_and_tag( mbedtls_ccm_context *ctx, size_t lengt
  * \return          #MBEDTLS_ERR_CCM_AUTH_FAILED if the tag does not match.
  * \return          A cipher-specific error code on calculation failure.
  */
-int vdb_mbedtls_ccm_auth_decrypt( mbedtls_ccm_context *ctx, size_t length,
+int mbedtls_ccm_auth_decrypt( mbedtls_ccm_context *ctx, size_t length,
                       const unsigned char *iv, size_t iv_len,
                       const unsigned char *add, size_t add_len,
                       const unsigned char *input, unsigned char *output,
@@ -285,7 +285,7 @@ int vdb_mbedtls_ccm_auth_decrypt( mbedtls_ccm_context *ctx, size_t length,
  * \return          #MBEDTLS_ERR_CCM_AUTH_FAILED if the tag does not match.
  * \return          A cipher-specific error code on calculation failure.
  */
-int vdb_mbedtls_ccm_star_auth_decrypt( mbedtls_ccm_context *ctx, size_t length,
+int mbedtls_ccm_star_auth_decrypt( mbedtls_ccm_context *ctx, size_t length,
                       const unsigned char *iv, size_t iv_len,
                       const unsigned char *add, size_t add_len,
                       const unsigned char *input, unsigned char *output,
@@ -298,7 +298,7 @@ int vdb_mbedtls_ccm_star_auth_decrypt( mbedtls_ccm_context *ctx, size_t length,
  * \return         \c 0 on success.
  * \return         \c 1 on failure.
  */
-int vdb_mbedtls_ccm_self_test( int verbose );
+int mbedtls_ccm_self_test( int verbose );
 #endif /* MBEDTLS_SELF_TEST && MBEDTLS_AES_C */
 
 #ifdef __cplusplus

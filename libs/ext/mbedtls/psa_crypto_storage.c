@@ -45,8 +45,8 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdlib.h>
-#define vdb_mbedtls_calloc   calloc
-#define vdb_mbedtls_free     free
+#define mbedtls_calloc   calloc
+#define mbedtls_free     free
 #endif
 
 
@@ -350,7 +350,7 @@ psa_status_t psa_parse_key_data_from_storage( const uint8_t *storage_data,
     }
     else
     {
-        *key_data = vdb_mbedtls_calloc( 1, *key_data_length );
+        *key_data = mbedtls_calloc( 1, *key_data_length );
         if( *key_data == NULL )
             return( PSA_ERROR_INSUFFICIENT_MEMORY );
         memcpy( *key_data, storage_format->key_data, *key_data_length );
@@ -378,7 +378,7 @@ psa_status_t psa_save_persistent_key( const psa_core_key_attributes_t *attr,
         return PSA_ERROR_INSUFFICIENT_STORAGE;
     storage_data_length = data_length + sizeof( psa_persistent_key_storage_format );
 
-    storage_data = vdb_mbedtls_calloc( 1, storage_data_length );
+    storage_data = mbedtls_calloc( 1, storage_data_length );
     if( storage_data == NULL )
         return( PSA_ERROR_INSUFFICIENT_MEMORY );
 
@@ -387,7 +387,7 @@ psa_status_t psa_save_persistent_key( const psa_core_key_attributes_t *attr,
     status = psa_crypto_storage_store( attr->id,
                                        storage_data, storage_data_length );
 
-    vdb_mbedtls_free( storage_data );
+    mbedtls_free( storage_data );
 
     return( status );
 }
@@ -396,9 +396,9 @@ void psa_free_persistent_key_data( uint8_t *key_data, size_t key_data_length )
 {
     if( key_data != NULL )
     {
-        vdb_mbedtls_platform_zeroize( key_data, key_data_length );
+        mbedtls_platform_zeroize( key_data, key_data_length );
     }
-    vdb_mbedtls_free( key_data );
+    mbedtls_free( key_data );
 }
 
 psa_status_t psa_load_persistent_key( psa_core_key_attributes_t *attr,
@@ -414,7 +414,7 @@ psa_status_t psa_load_persistent_key( psa_core_key_attributes_t *attr,
     if( status != PSA_SUCCESS )
         return( status );
 
-    loaded_data = vdb_mbedtls_calloc( 1, storage_data_length );
+    loaded_data = mbedtls_calloc( 1, storage_data_length );
 
     if( loaded_data == NULL )
         return( PSA_ERROR_INSUFFICIENT_MEMORY );
@@ -427,7 +427,7 @@ psa_status_t psa_load_persistent_key( psa_core_key_attributes_t *attr,
                                               data, data_length, attr );
 
 exit:
-    vdb_mbedtls_free( loaded_data );
+    mbedtls_free( loaded_data );
     return( status );
 }
 

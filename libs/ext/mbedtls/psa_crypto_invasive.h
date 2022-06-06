@@ -41,7 +41,7 @@
 /** \brief Configure entropy sources.
  *
  * This function may only be called before a call to psa_crypto_init(),
- * or after a call to vdb_mbedtls_psa_crypto_free() and before any
+ * or after a call to mbedtls_psa_crypto_free() and before any
  * subsequent call to psa_crypto_init().
  *
  * This function is only intended for test purposes. The functionality
@@ -52,15 +52,15 @@
  * \param entropy_init  Function to initialize the entropy context
  *                      and set up the desired entropy sources.
  *                      It is called by psa_crypto_init().
- *                      By default this is vdb_mbedtls_entropy_init().
+ *                      By default this is mbedtls_entropy_init().
  *                      This function cannot report failures directly.
  *                      To indicate a failure, set the entropy context
- *                      to a state where vdb_mbedtls_entropy_func() will
+ *                      to a state where mbedtls_entropy_func() will
  *                      return an error.
  * \param entropy_free  Function to free the entropy context
  *                      and associated resources.
- *                      It is called by vdb_mbedtls_psa_crypto_free().
- *                      By default this is vdb_mbedtls_entropy_free().
+ *                      It is called by mbedtls_psa_crypto_free().
+ *                      By default this is mbedtls_entropy_free().
  *
  * \retval #PSA_SUCCESS
  *         Success.
@@ -70,7 +70,7 @@
  * \retval #PSA_ERROR_BAD_STATE
  *         The library has already been initialized.
  */
-psa_status_t vdb_mbedtls_psa_crypto_configure_entropy_sources(
+psa_status_t mbedtls_psa_crypto_configure_entropy_sources(
     void (* entropy_init )( mbedtls_entropy_context *ctx ),
     void (* entropy_free )( mbedtls_entropy_context *ctx ) );
 

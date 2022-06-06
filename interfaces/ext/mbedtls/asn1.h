@@ -205,7 +205,7 @@ mbedtls_asn1_named_data;
  *              would end beyond \p end.
  * \return      #MBEDTLS_ERR_ASN1_INVALID_LENGTH if the length is unparseable.
  */
-int vdb_mbedtls_asn1_get_len( unsigned char **p,
+int mbedtls_asn1_get_len( unsigned char **p,
                           const unsigned char *end,
                           size_t *len );
 
@@ -230,7 +230,7 @@ int vdb_mbedtls_asn1_get_len( unsigned char **p,
  *              would end beyond \p end.
  * \return      #MBEDTLS_ERR_ASN1_INVALID_LENGTH if the length is unparseable.
  */
-int vdb_mbedtls_asn1_get_tag( unsigned char **p,
+int mbedtls_asn1_get_tag( unsigned char **p,
                           const unsigned char *end,
                           size_t *len, int tag );
 
@@ -249,7 +249,7 @@ int vdb_mbedtls_asn1_get_tag( unsigned char **p,
  * \return      An ASN.1 error code if the input does not start with
  *              a valid ASN.1 BOOLEAN.
  */
-int vdb_mbedtls_asn1_get_bool( unsigned char **p,
+int mbedtls_asn1_get_bool( unsigned char **p,
                            const unsigned char *end,
                            int *val );
 
@@ -270,7 +270,7 @@ int vdb_mbedtls_asn1_get_bool( unsigned char **p,
  * \return      #MBEDTLS_ERR_ASN1_INVALID_LENGTH if the parsed value does
  *              not fit in an \c int.
  */
-int vdb_mbedtls_asn1_get_int( unsigned char **p,
+int mbedtls_asn1_get_int( unsigned char **p,
                           const unsigned char *end,
                           int *val );
 
@@ -291,7 +291,7 @@ int vdb_mbedtls_asn1_get_int( unsigned char **p,
  * \return      #MBEDTLS_ERR_ASN1_INVALID_LENGTH if the parsed value does
  *              not fit in an \c int.
  */
-int vdb_mbedtls_asn1_get_enum( unsigned char **p,
+int mbedtls_asn1_get_enum( unsigned char **p,
                            const unsigned char *end,
                            int *val );
 
@@ -312,7 +312,7 @@ int vdb_mbedtls_asn1_get_enum( unsigned char **p,
  * \return      An ASN.1 error code if the input does not start with
  *              a valid ASN.1 BIT STRING.
  */
-int vdb_mbedtls_asn1_get_bitstring( unsigned char **p, const unsigned char *end,
+int mbedtls_asn1_get_bitstring( unsigned char **p, const unsigned char *end,
                                 mbedtls_asn1_bitstring *bs );
 
 /**
@@ -333,7 +333,7 @@ int vdb_mbedtls_asn1_get_bitstring( unsigned char **p, const unsigned char *end,
  * \return      An ASN.1 error code if the input does not start with
  *              a valid ASN.1 BIT STRING.
  */
-int vdb_mbedtls_asn1_get_bitstring_null( unsigned char **p,
+int mbedtls_asn1_get_bitstring_null( unsigned char **p,
                                      const unsigned char *end,
                                      size_t *len );
 
@@ -342,7 +342,7 @@ int vdb_mbedtls_asn1_get_bitstring_null( unsigned char **p,
  *              Updates the pointer to immediately behind the full sequence tag.
  *
  * This function allocates memory for the sequence elements. You can free
- * the allocated memory with vdb_mbedtls_asn1_sequence_free().
+ * the allocated memory with mbedtls_asn1_sequence_free().
  *
  * \note        On error, this function may return a partial list in \p cur.
  *              You must set `cur->next = NULL` before calling this function!
@@ -362,8 +362,8 @@ int vdb_mbedtls_asn1_get_bitstring_null( unsigned char **p,
  * \param cur   A ::mbedtls_asn1_sequence which this function fills.
  *              When this function returns, \c *cur is the head of a linked
  *              list. Each node in this list is allocated with
- *              vdb_mbedtls_calloc() apart from \p cur itself, and should
- *              therefore be freed with vdb_mbedtls_free().
+ *              mbedtls_calloc() apart from \p cur itself, and should
+ *              therefore be freed with mbedtls_free().
  *              The list describes the content of the sequence.
  *              The head of the list (i.e. \c *cur itself) describes the
  *              first element, `*cur->next` describes the second element, etc.
@@ -384,7 +384,7 @@ int vdb_mbedtls_asn1_get_bitstring_null( unsigned char **p,
  * \return      An ASN.1 error code if the input does not start with
  *              a valid ASN.1 SEQUENCE.
  */
-int vdb_mbedtls_asn1_get_sequence_of( unsigned char **p,
+int mbedtls_asn1_get_sequence_of( unsigned char **p,
                                   const unsigned char *end,
                                   mbedtls_asn1_sequence *cur,
                                   int tag );
@@ -394,22 +394,22 @@ int vdb_mbedtls_asn1_get_sequence_of( unsigned char **p,
  *
  * There are two common ways to manage the memory used for the representation
  * of a parsed ASN.1 sequence:
- * - Allocate a head node `mbedtls_asn1_sequence *head` with vdb_mbedtls_calloc().
- *   Pass this node as the `cur` argument to vdb_mbedtls_asn1_get_sequence_of().
+ * - Allocate a head node `mbedtls_asn1_sequence *head` with mbedtls_calloc().
+ *   Pass this node as the `cur` argument to mbedtls_asn1_get_sequence_of().
  *   When you have finished processing the sequence,
- *   call vdb_mbedtls_asn1_sequence_free() on `head`.
+ *   call mbedtls_asn1_sequence_free() on `head`.
  * - Allocate a head node `mbedtls_asn1_sequence *head` in any manner,
  *   for example on the stack. Make sure that `head->next == NULL`.
- *   Pass `head` as the `cur` argument to vdb_mbedtls_asn1_get_sequence_of().
+ *   Pass `head` as the `cur` argument to mbedtls_asn1_get_sequence_of().
  *   When you have finished processing the sequence,
- *   call vdb_mbedtls_asn1_sequence_free() on `head->cur`,
+ *   call mbedtls_asn1_sequence_free() on `head->cur`,
  *   then free `head` itself in the appropriate manner.
  *
  * \param seq      The address of the first sequence component. This may
  *                 be \c NULL, in which case this functions returns
  *                 immediately.
  */
-void vdb_mbedtls_asn1_sequence_free( mbedtls_asn1_sequence *seq );
+void mbedtls_asn1_sequence_free( mbedtls_asn1_sequence *seq );
 
 /**
  * \brief                Traverse an ASN.1 SEQUENCE container and
@@ -422,19 +422,19 @@ void vdb_mbedtls_asn1_sequence_free( mbedtls_asn1_sequence *seq );
  * For example, to validate that the input is a SEQUENCE of `tag1` and call
  * `cb` on each element, use
  * ```
- * vdb_mbedtls_asn1_traverse_sequence_of(&p, end, 0xff, tag1, 0, 0, cb, ctx);
+ * mbedtls_asn1_traverse_sequence_of(&p, end, 0xff, tag1, 0, 0, cb, ctx);
  * ```
  *
  * To validate that the input is a SEQUENCE of ANY and call `cb` on
  * each element, use
  * ```
- * vdb_mbedtls_asn1_traverse_sequence_of(&p, end, 0, 0, 0, 0, cb, ctx);
+ * mbedtls_asn1_traverse_sequence_of(&p, end, 0, 0, 0, 0, cb, ctx);
  * ```
  *
  * To validate that the input is a SEQUENCE of CHOICE {NULL, OCTET STRING}
  * and call `cb` on each element that is an OCTET STRING, use
  * ```
- * vdb_mbedtls_asn1_traverse_sequence_of(&p, end, 0xfe, 0x04, 0xff, 0x04, cb, ctx);
+ * mbedtls_asn1_traverse_sequence_of(&p, end, 0xfe, 0x04, 0xff, 0x04, cb, ctx);
  * ```
  *
  * The callback is called on the elements with a "may" tag from left to
@@ -496,7 +496,7 @@ void vdb_mbedtls_asn1_sequence_free( mbedtls_asn1_sequence *seq );
  * \return               A non-zero error code forwarded from the callback
  *                       \p cb in case the latter returns a non-zero value.
  */
-int vdb_mbedtls_asn1_traverse_sequence_of(
+int mbedtls_asn1_traverse_sequence_of(
     unsigned char **p,
     const unsigned char *end,
     unsigned char tag_must_mask, unsigned char tag_must_val,
@@ -524,7 +524,7 @@ int vdb_mbedtls_asn1_traverse_sequence_of(
  *              not fit in an \c int.
  * \return      An MPI error code if the parsed value is too large.
  */
-int vdb_mbedtls_asn1_get_mpi( unsigned char **p,
+int mbedtls_asn1_get_mpi( unsigned char **p,
                           const unsigned char *end,
                           mbedtls_mpi *X );
 #endif /* MBEDTLS_BIGNUM_C */
@@ -545,7 +545,7 @@ int vdb_mbedtls_asn1_get_mpi( unsigned char **p,
  *
  * \return      0 if successful or a specific ASN.1 or MPI error code.
  */
-int vdb_mbedtls_asn1_get_alg( unsigned char **p,
+int mbedtls_asn1_get_alg( unsigned char **p,
                   const unsigned char *end,
                   mbedtls_asn1_buf *alg, mbedtls_asn1_buf *params );
 
@@ -564,7 +564,7 @@ int vdb_mbedtls_asn1_get_alg( unsigned char **p,
  *
  * \return      0 if successful or a specific ASN.1 or MPI error code.
  */
-int vdb_mbedtls_asn1_get_alg_null( unsigned char **p,
+int mbedtls_asn1_get_alg_null( unsigned char **p,
                        const unsigned char *end,
                        mbedtls_asn1_buf *alg );
 
@@ -578,27 +578,27 @@ int vdb_mbedtls_asn1_get_alg_null( unsigned char **p,
  *
  * \return      NULL if not found, or a pointer to the existing entry.
  */
-mbedtls_asn1_named_data *vdb_mbedtls_asn1_find_named_data( mbedtls_asn1_named_data *list,
+mbedtls_asn1_named_data *mbedtls_asn1_find_named_data( mbedtls_asn1_named_data *list,
                                        const char *oid, size_t len );
 
 /**
  * \brief       Free a mbedtls_asn1_named_data entry
  *
  * \param entry The named data entry to free.
- *              This function calls vdb_mbedtls_free() on
+ *              This function calls mbedtls_free() on
  *              `entry->oid.p` and `entry->val.p`.
  */
-void vdb_mbedtls_asn1_free_named_data( mbedtls_asn1_named_data *entry );
+void mbedtls_asn1_free_named_data( mbedtls_asn1_named_data *entry );
 
 /**
  * \brief       Free all entries in a mbedtls_asn1_named_data list.
  *
  * \param head  Pointer to the head of the list of named data entries to free.
- *              This function calls vdb_mbedtls_asn1_free_named_data() and
- *              vdb_mbedtls_free() on each list element and
+ *              This function calls mbedtls_asn1_free_named_data() and
+ *              mbedtls_free() on each list element and
  *              sets \c *head to \c NULL.
  */
-void vdb_mbedtls_asn1_free_named_data_list( mbedtls_asn1_named_data **head );
+void mbedtls_asn1_free_named_data_list( mbedtls_asn1_named_data **head );
 
 #ifdef __cplusplus
 }

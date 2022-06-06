@@ -139,9 +139,9 @@ typedef struct
 } mbedtls_cipher_context_psa;
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
-extern const mbedtls_cipher_definition_t vdb_mbedtls_cipher_definitions[];
+extern const mbedtls_cipher_definition_t mbedtls_cipher_definitions[];
 
-extern int vdb_mbedtls_cipher_supported[];
+extern int mbedtls_cipher_supported[];
 
 #ifdef __cplusplus
 }

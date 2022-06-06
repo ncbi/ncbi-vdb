@@ -89,7 +89,7 @@ mbedtls_des3_context;
  *                 security risk. We recommend considering stronger ciphers
  *                 instead.
  */
-void vdb_mbedtls_des_init( mbedtls_des_context *ctx );
+void mbedtls_des_init( mbedtls_des_context *ctx );
 
 /**
  * \brief          Clear DES context
@@ -100,21 +100,21 @@ void vdb_mbedtls_des_init( mbedtls_des_context *ctx );
  *                 security risk. We recommend considering stronger ciphers
  *                 instead.
  */
-void vdb_mbedtls_des_free( mbedtls_des_context *ctx );
+void mbedtls_des_free( mbedtls_des_context *ctx );
 
 /**
  * \brief          Initialize Triple-DES context
  *
  * \param ctx      DES3 context to be initialized
  */
-void vdb_mbedtls_des3_init( mbedtls_des3_context *ctx );
+void mbedtls_des3_init( mbedtls_des3_context *ctx );
 
 /**
  * \brief          Clear Triple-DES context
  *
  * \param ctx      DES3 context to be cleared
  */
-void vdb_mbedtls_des3_free( mbedtls_des3_context *ctx );
+void mbedtls_des3_free( mbedtls_des3_context *ctx );
 
 /**
  * \brief          Set key parity on the given key to odd.
@@ -128,7 +128,7 @@ void vdb_mbedtls_des3_free( mbedtls_des3_context *ctx );
  *                 security risk. We recommend considering stronger ciphers
  *                 instead.
  */
-void vdb_mbedtls_des_key_set_parity( unsigned char key[MBEDTLS_DES_KEY_SIZE] );
+void mbedtls_des_key_set_parity( unsigned char key[MBEDTLS_DES_KEY_SIZE] );
 
 /**
  * \brief          Check that key parity on the given key is odd.
@@ -144,7 +144,7 @@ void vdb_mbedtls_des_key_set_parity( unsigned char key[MBEDTLS_DES_KEY_SIZE] );
  *                 security risk. We recommend considering stronger ciphers
  *                 instead.
  */
-int vdb_mbedtls_des_key_check_key_parity( const unsigned char key[MBEDTLS_DES_KEY_SIZE] );
+int mbedtls_des_key_check_key_parity( const unsigned char key[MBEDTLS_DES_KEY_SIZE] );
 
 /**
  * \brief          Check that key is not a weak or semi-weak DES key
@@ -157,7 +157,7 @@ int vdb_mbedtls_des_key_check_key_parity( const unsigned char key[MBEDTLS_DES_KE
  *                 security risk. We recommend considering stronger ciphers
  *                 instead.
  */
-int vdb_mbedtls_des_key_check_weak( const unsigned char key[MBEDTLS_DES_KEY_SIZE] );
+int mbedtls_des_key_check_weak( const unsigned char key[MBEDTLS_DES_KEY_SIZE] );
 
 /**
  * \brief          DES key schedule (56-bit, encryption)
@@ -171,7 +171,7 @@ int vdb_mbedtls_des_key_check_weak( const unsigned char key[MBEDTLS_DES_KEY_SIZE
  *                 security risk. We recommend considering stronger ciphers
  *                 instead.
  */
-int vdb_mbedtls_des_setkey_enc( mbedtls_des_context *ctx, const unsigned char key[MBEDTLS_DES_KEY_SIZE] );
+int mbedtls_des_setkey_enc( mbedtls_des_context *ctx, const unsigned char key[MBEDTLS_DES_KEY_SIZE] );
 
 /**
  * \brief          DES key schedule (56-bit, decryption)
@@ -185,7 +185,7 @@ int vdb_mbedtls_des_setkey_enc( mbedtls_des_context *ctx, const unsigned char ke
  *                 security risk. We recommend considering stronger ciphers
  *                 instead.
  */
-int vdb_mbedtls_des_setkey_dec( mbedtls_des_context *ctx, const unsigned char key[MBEDTLS_DES_KEY_SIZE] );
+int mbedtls_des_setkey_dec( mbedtls_des_context *ctx, const unsigned char key[MBEDTLS_DES_KEY_SIZE] );
 
 /**
  * \brief          Triple-DES key schedule (112-bit, encryption)
@@ -195,7 +195,7 @@ int vdb_mbedtls_des_setkey_dec( mbedtls_des_context *ctx, const unsigned char ke
  *
  * \return         0
  */
-int vdb_mbedtls_des3_set2key_enc( mbedtls_des3_context *ctx,
+int mbedtls_des3_set2key_enc( mbedtls_des3_context *ctx,
                       const unsigned char key[MBEDTLS_DES_KEY_SIZE * 2] );
 
 /**
@@ -206,7 +206,7 @@ int vdb_mbedtls_des3_set2key_enc( mbedtls_des3_context *ctx,
  *
  * \return         0
  */
-int vdb_mbedtls_des3_set2key_dec( mbedtls_des3_context *ctx,
+int mbedtls_des3_set2key_dec( mbedtls_des3_context *ctx,
                       const unsigned char key[MBEDTLS_DES_KEY_SIZE * 2] );
 
 /**
@@ -217,7 +217,7 @@ int vdb_mbedtls_des3_set2key_dec( mbedtls_des3_context *ctx,
  *
  * \return         0
  */
-int vdb_mbedtls_des3_set3key_enc( mbedtls_des3_context *ctx,
+int mbedtls_des3_set3key_enc( mbedtls_des3_context *ctx,
                       const unsigned char key[MBEDTLS_DES_KEY_SIZE * 3] );
 
 /**
@@ -228,7 +228,7 @@ int vdb_mbedtls_des3_set3key_enc( mbedtls_des3_context *ctx,
  *
  * \return         0
  */
-int vdb_mbedtls_des3_set3key_dec( mbedtls_des3_context *ctx,
+int mbedtls_des3_set3key_dec( mbedtls_des3_context *ctx,
                       const unsigned char key[MBEDTLS_DES_KEY_SIZE * 3] );
 
 /**
@@ -244,7 +244,7 @@ int vdb_mbedtls_des3_set3key_dec( mbedtls_des3_context *ctx,
  *                 security risk. We recommend considering stronger ciphers
  *                 instead.
  */
-int vdb_mbedtls_des_crypt_ecb( mbedtls_des_context *ctx,
+int mbedtls_des_crypt_ecb( mbedtls_des_context *ctx,
                     const unsigned char input[8],
                     unsigned char output[8] );
 
@@ -271,7 +271,7 @@ int vdb_mbedtls_des_crypt_ecb( mbedtls_des_context *ctx,
  *                 security risk. We recommend considering stronger ciphers
  *                 instead.
  */
-int vdb_mbedtls_des_crypt_cbc( mbedtls_des_context *ctx,
+int mbedtls_des_crypt_cbc( mbedtls_des_context *ctx,
                     int mode,
                     size_t length,
                     unsigned char iv[8],
@@ -288,7 +288,7 @@ int vdb_mbedtls_des_crypt_cbc( mbedtls_des_context *ctx,
  *
  * \return         0 if successful
  */
-int vdb_mbedtls_des3_crypt_ecb( mbedtls_des3_context *ctx,
+int mbedtls_des3_crypt_ecb( mbedtls_des3_context *ctx,
                      const unsigned char input[8],
                      unsigned char output[8] );
 
@@ -313,7 +313,7 @@ int vdb_mbedtls_des3_crypt_ecb( mbedtls_des3_context *ctx,
  *
  * \return         0 if successful, or MBEDTLS_ERR_DES_INVALID_INPUT_LENGTH
  */
-int vdb_mbedtls_des3_crypt_cbc( mbedtls_des3_context *ctx,
+int mbedtls_des3_crypt_cbc( mbedtls_des3_context *ctx,
                      int mode,
                      size_t length,
                      unsigned char iv[8],
@@ -333,7 +333,7 @@ int vdb_mbedtls_des3_crypt_cbc( mbedtls_des3_context *ctx,
  *                 security risk. We recommend considering stronger ciphers
  *                 instead.
  */
-void vdb_mbedtls_des_setkey( uint32_t SK[32],
+void mbedtls_des_setkey( uint32_t SK[32],
                          const unsigned char key[MBEDTLS_DES_KEY_SIZE] );
 
 #if defined(MBEDTLS_SELF_TEST)
@@ -343,7 +343,7 @@ void vdb_mbedtls_des_setkey( uint32_t SK[32],
  *
  * \return         0 if successful, or 1 if the test failed
  */
-int vdb_mbedtls_des_self_test( int verbose );
+int mbedtls_des_self_test( int verbose );
 
 #endif /* MBEDTLS_SELF_TEST */
 

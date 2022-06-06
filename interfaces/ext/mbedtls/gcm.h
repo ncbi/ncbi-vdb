@@ -83,15 +83,15 @@ mbedtls_gcm_context;
 /**
  * \brief           This function initializes the specified GCM context,
  *                  to make references valid, and prepares the context
- *                  for vdb_mbedtls_gcm_setkey() or vdb_mbedtls_gcm_free().
+ *                  for mbedtls_gcm_setkey() or mbedtls_gcm_free().
  *
  *                  The function does not bind the GCM context to a particular
  *                  cipher, nor set the key. For this purpose, use
- *                  vdb_mbedtls_gcm_setkey().
+ *                  mbedtls_gcm_setkey().
  *
  * \param ctx       The GCM context to initialize. This must not be \c NULL.
  */
-void vdb_mbedtls_gcm_init( mbedtls_gcm_context *ctx );
+void mbedtls_gcm_init( mbedtls_gcm_context *ctx );
 
 /**
  * \brief           This function associates a GCM context with a
@@ -109,7 +109,7 @@ void vdb_mbedtls_gcm_init( mbedtls_gcm_context *ctx );
  * \return          \c 0 on success.
  * \return          A cipher-specific error code on failure.
  */
-int vdb_mbedtls_gcm_setkey( mbedtls_gcm_context *ctx,
+int mbedtls_gcm_setkey( mbedtls_gcm_context *ctx,
                         mbedtls_cipher_id_t cipher,
                         const unsigned char *key,
                         unsigned int keybits );
@@ -125,7 +125,7 @@ int vdb_mbedtls_gcm_setkey( mbedtls_gcm_context *ctx,
  * \warning         When this function performs a decryption, it outputs the
  *                  authentication tag and does not verify that the data is
  *                  authentic. You should use this function to perform encryption
- *                  only. For decryption, use vdb_mbedtls_gcm_auth_decrypt() instead.
+ *                  only. For decryption, use mbedtls_gcm_auth_decrypt() instead.
  *
  * \param ctx       The GCM context to use for encryption or decryption. This
  *                  must be initialized.
@@ -138,7 +138,7 @@ int vdb_mbedtls_gcm_setkey( mbedtls_gcm_context *ctx,
  *                    authentication tag is written to \p tag.
  *                    Note that this mode is not recommended, because it does
  *                    not verify the authenticity of the data. For this reason,
- *                    you should use vdb_mbedtls_gcm_auth_decrypt() instead of
+ *                    you should use mbedtls_gcm_auth_decrypt() instead of
  *                    calling this function in decryption mode.
  * \param length    The length of the input data, which is equal to the length
  *                  of the output data.
@@ -165,7 +165,7 @@ int vdb_mbedtls_gcm_setkey( mbedtls_gcm_context *ctx,
  *                  not valid or a cipher-specific error code if the encryption
  *                  or decryption failed.
  */
-int vdb_mbedtls_gcm_crypt_and_tag( mbedtls_gcm_context *ctx,
+int mbedtls_gcm_crypt_and_tag( mbedtls_gcm_context *ctx,
                        int mode,
                        size_t length,
                        const unsigned char *iv,
@@ -210,7 +210,7 @@ int vdb_mbedtls_gcm_crypt_and_tag( mbedtls_gcm_context *ctx,
  *                  not valid or a cipher-specific error code if the decryption
  *                  failed.
  */
-int vdb_mbedtls_gcm_auth_decrypt( mbedtls_gcm_context *ctx,
+int mbedtls_gcm_auth_decrypt( mbedtls_gcm_context *ctx,
                       size_t length,
                       const unsigned char *iv,
                       size_t iv_len,
@@ -238,7 +238,7 @@ int vdb_mbedtls_gcm_auth_decrypt( mbedtls_gcm_context *ctx,
  *
  * \return          \c 0 on success.
  */
-int vdb_mbedtls_gcm_starts( mbedtls_gcm_context *ctx,
+int mbedtls_gcm_starts( mbedtls_gcm_context *ctx,
                 int mode,
                 const unsigned char *iv,
                 size_t iv_len,
@@ -251,7 +251,7 @@ int vdb_mbedtls_gcm_starts( mbedtls_gcm_context *ctx,
  *
  *    `             The function expects input to be a multiple of 16
  *                  Bytes. Only the last call before calling
- *                  vdb_mbedtls_gcm_finish() can be less than 16 Bytes.
+ *                  mbedtls_gcm_finish() can be less than 16 Bytes.
  *
  * \note            For decryption, the output buffer cannot be the same as
  *                  input buffer. If the buffers overlap, the output buffer
@@ -259,7 +259,7 @@ int vdb_mbedtls_gcm_starts( mbedtls_gcm_context *ctx,
  *
  * \param ctx       The GCM context. This must be initialized.
  * \param length    The length of the input data. This must be a multiple of
- *                  16 except in the last call before vdb_mbedtls_gcm_finish().
+ *                  16 except in the last call before mbedtls_gcm_finish().
  * \param input     The buffer holding the input data. If \p length is greater
  *                  than zero, this must be a readable buffer of at least that
  *                  size in Bytes.
@@ -270,7 +270,7 @@ int vdb_mbedtls_gcm_starts( mbedtls_gcm_context *ctx,
  * \return         \c 0 on success.
  * \return         #MBEDTLS_ERR_GCM_BAD_INPUT on failure.
  */
-int vdb_mbedtls_gcm_update( mbedtls_gcm_context *ctx,
+int mbedtls_gcm_update( mbedtls_gcm_context *ctx,
                 size_t length,
                 const unsigned char *input,
                 unsigned char *output );
@@ -291,7 +291,7 @@ int vdb_mbedtls_gcm_update( mbedtls_gcm_context *ctx,
  * \return          \c 0 on success.
  * \return          #MBEDTLS_ERR_GCM_BAD_INPUT on failure.
  */
-int vdb_mbedtls_gcm_finish( mbedtls_gcm_context *ctx,
+int mbedtls_gcm_finish( mbedtls_gcm_context *ctx,
                 unsigned char *tag,
                 size_t tag_len );
 
@@ -302,7 +302,7 @@ int vdb_mbedtls_gcm_finish( mbedtls_gcm_context *ctx,
  * \param ctx       The GCM context to clear. If this is \c NULL, the call has
  *                  no effect. Otherwise, this must be initialized.
  */
-void vdb_mbedtls_gcm_free( mbedtls_gcm_context *ctx );
+void mbedtls_gcm_free( mbedtls_gcm_context *ctx );
 
 #if defined(MBEDTLS_SELF_TEST)
 
@@ -312,7 +312,7 @@ void vdb_mbedtls_gcm_free( mbedtls_gcm_context *ctx );
  * \return         \c 0 on success.
  * \return         \c 1 on failure.
  */
-int vdb_mbedtls_gcm_self_test( int verbose );
+int mbedtls_gcm_self_test( int verbose );
 
 #endif /* MBEDTLS_SELF_TEST */
 

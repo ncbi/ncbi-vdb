@@ -163,7 +163,7 @@ mbedtls_rsa_context;
  *                 \p padding is #MBEDTLS_RSA_PKCS_V21. It is unused
  *                 otherwise.
  */
-void vdb_mbedtls_rsa_init( mbedtls_rsa_context *ctx,
+void mbedtls_rsa_init( mbedtls_rsa_context *ctx,
                        int padding,
                        int hash_id );
 
@@ -175,11 +175,11 @@ void vdb_mbedtls_rsa_init( mbedtls_rsa_context *ctx,
  *                 imports, if the parameters are not simultaneously present.
  *
  *                 Any sequence of calls to this function should be followed
- *                 by a call to vdb_mbedtls_rsa_complete(), which checks and
+ *                 by a call to mbedtls_rsa_complete(), which checks and
  *                 completes the provided information to a ready-for-use
  *                 public or private RSA key.
  *
- * \note           See vdb_mbedtls_rsa_complete() for more information on which
+ * \note           See mbedtls_rsa_complete() for more information on which
  *                 parameters are necessary to set up a private or public
  *                 RSA key.
  *
@@ -196,7 +196,7 @@ void vdb_mbedtls_rsa_init( mbedtls_rsa_context *ctx,
  * \return         \c 0 on success.
  * \return         A non-zero error code on failure.
  */
-int vdb_mbedtls_rsa_import( mbedtls_rsa_context *ctx,
+int mbedtls_rsa_import( mbedtls_rsa_context *ctx,
                         const mbedtls_mpi *N,
                         const mbedtls_mpi *P, const mbedtls_mpi *Q,
                         const mbedtls_mpi *D, const mbedtls_mpi *E );
@@ -209,11 +209,11 @@ int vdb_mbedtls_rsa_import( mbedtls_rsa_context *ctx,
  *                 imports, if the parameters are not simultaneously present.
  *
  *                 Any sequence of calls to this function should be followed
- *                 by a call to vdb_mbedtls_rsa_complete(), which checks and
+ *                 by a call to mbedtls_rsa_complete(), which checks and
  *                 completes the provided information to a ready-for-use
  *                 public or private RSA key.
  *
- * \note           See vdb_mbedtls_rsa_complete() for more information on which
+ * \note           See mbedtls_rsa_complete() for more information on which
  *                 parameters are necessary to set up a private or public
  *                 RSA key.
  *
@@ -235,7 +235,7 @@ int vdb_mbedtls_rsa_import( mbedtls_rsa_context *ctx,
  * \return         \c 0 on success.
  * \return         A non-zero error code on failure.
  */
-int vdb_mbedtls_rsa_import_raw( mbedtls_rsa_context *ctx,
+int mbedtls_rsa_import_raw( mbedtls_rsa_context *ctx,
                             unsigned char const *N, size_t N_len,
                             unsigned char const *P, size_t P_len,
                             unsigned char const *Q, size_t Q_len,
@@ -265,7 +265,7 @@ int vdb_mbedtls_rsa_import_raw( mbedtls_rsa_context *ctx,
  *                 for the imported parameters. In particular, parameters that
  *                 are not needed by the implementation might be silently
  *                 discarded and left unchecked. To check the consistency
- *                 of the key material, see vdb_mbedtls_rsa_check_privkey().
+ *                 of the key material, see mbedtls_rsa_check_privkey().
  *
  * \param ctx      The initialized RSA context holding imported parameters.
  *
@@ -274,7 +274,7 @@ int vdb_mbedtls_rsa_import_raw( mbedtls_rsa_context *ctx,
  *                 failed.
  *
  */
-int vdb_mbedtls_rsa_complete( mbedtls_rsa_context *ctx );
+int mbedtls_rsa_complete( mbedtls_rsa_context *ctx );
 
 /**
  * \brief          This function exports the core parameters of an RSA key.
@@ -316,7 +316,7 @@ int vdb_mbedtls_rsa_complete( mbedtls_rsa_context *ctx );
  * \return         A non-zero return code on any other failure.
  *
  */
-int vdb_mbedtls_rsa_export( const mbedtls_rsa_context *ctx,
+int mbedtls_rsa_export( const mbedtls_rsa_context *ctx,
                         mbedtls_mpi *N, mbedtls_mpi *P, mbedtls_mpi *Q,
                         mbedtls_mpi *D, mbedtls_mpi *E );
 
@@ -367,7 +367,7 @@ int vdb_mbedtls_rsa_export( const mbedtls_rsa_context *ctx,
  *                 functionality or because of security policies.
  * \return         A non-zero return code on any other failure.
  */
-int vdb_mbedtls_rsa_export_raw( const mbedtls_rsa_context *ctx,
+int mbedtls_rsa_export_raw( const mbedtls_rsa_context *ctx,
                             unsigned char *N, size_t N_len,
                             unsigned char *P, size_t P_len,
                             unsigned char *Q, size_t Q_len,
@@ -379,7 +379,7 @@ int vdb_mbedtls_rsa_export_raw( const mbedtls_rsa_context *ctx,
  *
  * \note           Alternative RSA implementations not using CRT-parameters
  *                 internally can implement this function based on
- *                 vdb_mbedtls_rsa_deduce_opt().
+ *                 mbedtls_rsa_deduce_opt().
  *
  * \param ctx      The initialized RSA context.
  * \param DP       The MPI to hold \c D modulo `P-1`,
@@ -393,19 +393,19 @@ int vdb_mbedtls_rsa_export_raw( const mbedtls_rsa_context *ctx,
  * \return         A non-zero error code on failure.
  *
  */
-int vdb_mbedtls_rsa_export_crt( const mbedtls_rsa_context *ctx,
+int mbedtls_rsa_export_crt( const mbedtls_rsa_context *ctx,
                             mbedtls_mpi *DP, mbedtls_mpi *DQ, mbedtls_mpi *QP );
 
 /**
  * \brief          This function sets padding for an already initialized RSA
- *                 context. See vdb_mbedtls_rsa_init() for details.
+ *                 context. See mbedtls_rsa_init() for details.
  *
  * \param ctx      The initialized RSA context to be configured.
  * \param padding  The padding mode to use. This must be either
  *                 #MBEDTLS_RSA_PKCS_V15 or #MBEDTLS_RSA_PKCS_V21.
  * \param hash_id  The #MBEDTLS_RSA_PKCS_V21 hash identifier.
  */
-void vdb_mbedtls_rsa_set_padding( mbedtls_rsa_context *ctx, int padding,
+void mbedtls_rsa_set_padding( mbedtls_rsa_context *ctx, int padding,
                               int hash_id );
 
 /**
@@ -416,12 +416,12 @@ void vdb_mbedtls_rsa_set_padding( mbedtls_rsa_context *ctx, int padding,
  * \return         The length of the RSA modulus in Bytes.
  *
  */
-size_t vdb_mbedtls_rsa_get_len( const mbedtls_rsa_context *ctx );
+size_t mbedtls_rsa_get_len( const mbedtls_rsa_context *ctx );
 
 /**
  * \brief          This function generates an RSA keypair.
  *
- * \note           vdb_mbedtls_rsa_init() must be called before this function,
+ * \note           mbedtls_rsa_init() must be called before this function,
  *                 to set up the RSA context.
  *
  * \param ctx      The initialized RSA context used to hold the key.
@@ -436,7 +436,7 @@ size_t vdb_mbedtls_rsa_get_len( const mbedtls_rsa_context *ctx );
  * \return         \c 0 on success.
  * \return         An \c MBEDTLS_ERR_RSA_XXX error code on failure.
  */
-int vdb_mbedtls_rsa_gen_key( mbedtls_rsa_context *ctx,
+int mbedtls_rsa_gen_key( mbedtls_rsa_context *ctx,
                          int (*f_rng)(void *, unsigned char *, size_t),
                          void *p_rng,
                          unsigned int nbits, int exponent );
@@ -447,7 +447,7 @@ int vdb_mbedtls_rsa_gen_key( mbedtls_rsa_context *ctx,
  *
  *                 If the function runs successfully, it is guaranteed that
  *                 enough information is present to perform an RSA public key
- *                 operation using vdb_mbedtls_rsa_public().
+ *                 operation using mbedtls_rsa_public().
  *
  * \param ctx      The initialized RSA context to check.
  *
@@ -455,17 +455,17 @@ int vdb_mbedtls_rsa_gen_key( mbedtls_rsa_context *ctx,
  * \return         An \c MBEDTLS_ERR_RSA_XXX error code on failure.
  *
  */
-int vdb_mbedtls_rsa_check_pubkey( const mbedtls_rsa_context *ctx );
+int mbedtls_rsa_check_pubkey( const mbedtls_rsa_context *ctx );
 
 /**
  * \brief      This function checks if a context contains an RSA private key
  *             and perform basic consistency checks.
  *
  * \note       The consistency checks performed by this function not only
- *             ensure that vdb_mbedtls_rsa_private() can be called successfully
+ *             ensure that mbedtls_rsa_private() can be called successfully
  *             on the given context, but that the various parameters are
  *             mutually consistent with high probability, in the sense that
- *             vdb_mbedtls_rsa_public() and vdb_mbedtls_rsa_private() are inverses.
+ *             mbedtls_rsa_public() and mbedtls_rsa_private() are inverses.
  *
  * \warning    This function should catch accidental misconfigurations
  *             like swapping of parameters, but it cannot establish full
@@ -474,10 +474,10 @@ int vdb_mbedtls_rsa_check_pubkey( const mbedtls_rsa_context *ctx );
  *             <ul><li>Consistency: Imported parameters that are irrelevant
  *             for the implementation might be silently dropped. If dropped,
  *             the current function does not have access to them,
- *             and therefore cannot check them. See vdb_mbedtls_rsa_complete().
+ *             and therefore cannot check them. See mbedtls_rsa_complete().
  *             If you want to check the consistency of the entire
  *             content of an PKCS1-encoded RSA private key, for example, you
- *             should use vdb_mbedtls_rsa_validate_params() before setting
+ *             should use mbedtls_rsa_validate_params() before setting
  *             up the RSA context.
  *             Additionally, if the implementation performs empirical checks,
  *             these checks substantiate but do not guarantee consistency.</li>
@@ -493,7 +493,7 @@ int vdb_mbedtls_rsa_check_pubkey( const mbedtls_rsa_context *ctx );
  * \return     \c 0 on success.
  * \return     An \c MBEDTLS_ERR_RSA_XXX error code on failure.
  */
-int vdb_mbedtls_rsa_check_privkey( const mbedtls_rsa_context *ctx );
+int mbedtls_rsa_check_privkey( const mbedtls_rsa_context *ctx );
 
 /**
  * \brief          This function checks a public-private RSA key pair.
@@ -506,7 +506,7 @@ int vdb_mbedtls_rsa_check_privkey( const mbedtls_rsa_context *ctx );
  * \return         \c 0 on success.
  * \return         An \c MBEDTLS_ERR_RSA_XXX error code on failure.
  */
-int vdb_mbedtls_rsa_check_pub_priv( const mbedtls_rsa_context *pub,
+int mbedtls_rsa_check_pub_priv( const mbedtls_rsa_context *pub,
                                 const mbedtls_rsa_context *prv );
 
 /**
@@ -528,7 +528,7 @@ int vdb_mbedtls_rsa_check_pub_priv( const mbedtls_rsa_context *pub,
  * \return         \c 0 on success.
  * \return         An \c MBEDTLS_ERR_RSA_XXX error code on failure.
  */
-int vdb_mbedtls_rsa_public( mbedtls_rsa_context *ctx,
+int mbedtls_rsa_public( mbedtls_rsa_context *ctx,
                 const unsigned char *input,
                 unsigned char *output );
 
@@ -563,7 +563,7 @@ int vdb_mbedtls_rsa_public( mbedtls_rsa_context *ctx,
  * \return         An \c MBEDTLS_ERR_RSA_XXX error code on failure.
  *
  */
-int vdb_mbedtls_rsa_private( mbedtls_rsa_context *ctx,
+int mbedtls_rsa_private( mbedtls_rsa_context *ctx,
                  int (*f_rng)(void *, unsigned char *, size_t),
                  void *p_rng,
                  const unsigned char *input,
@@ -591,7 +591,7 @@ int vdb_mbedtls_rsa_private( mbedtls_rsa_context *ctx,
  *                 with \p mode set to #MBEDTLS_RSA_PUBLIC. For PKCS#1 v1.5
  *                 padding encoding and \p mode set to #MBEDTLS_RSA_PRIVATE,
  *                 it is used for blinding and should be provided in this
- *                 case; see vdb_mbedtls_rsa_private() for more.
+ *                 case; see mbedtls_rsa_private() for more.
  * \param p_rng    The RNG context to be passed to \p f_rng. May be
  *                 \c NULL if \p f_rng is \c NULL or if \p f_rng doesn't
  *                 need a context argument.
@@ -608,7 +608,7 @@ int vdb_mbedtls_rsa_private( mbedtls_rsa_context *ctx,
  * \return         \c 0 on success.
  * \return         An \c MBEDTLS_ERR_RSA_XXX error code on failure.
  */
-int vdb_mbedtls_rsa_pkcs1_encrypt( mbedtls_rsa_context *ctx,
+int mbedtls_rsa_pkcs1_encrypt( mbedtls_rsa_context *ctx,
                        int (*f_rng)(void *, unsigned char *, size_t),
                        void *p_rng,
                        int mode, size_t ilen,
@@ -632,7 +632,7 @@ int vdb_mbedtls_rsa_pkcs1_encrypt( mbedtls_rsa_context *ctx,
  * \param f_rng    The RNG function to use. It is needed for padding generation
  *                 if \p mode is #MBEDTLS_RSA_PUBLIC. If \p mode is
  *                 #MBEDTLS_RSA_PRIVATE (discouraged), it is used for
- *                 blinding and should be provided; see vdb_mbedtls_rsa_private().
+ *                 blinding and should be provided; see mbedtls_rsa_private().
  * \param p_rng    The RNG context to be passed to \p f_rng. This may
  *                 be \c NULL if \p f_rng is \c NULL or if \p f_rng
  *                 doesn't need a context argument.
@@ -649,7 +649,7 @@ int vdb_mbedtls_rsa_pkcs1_encrypt( mbedtls_rsa_context *ctx,
  * \return         \c 0 on success.
  * \return         An \c MBEDTLS_ERR_RSA_XXX error code on failure.
  */
-int vdb_mbedtls_rsa_rsaes_pkcs1_v15_encrypt( mbedtls_rsa_context *ctx,
+int mbedtls_rsa_rsaes_pkcs1_v15_encrypt( mbedtls_rsa_context *ctx,
                                  int (*f_rng)(void *, unsigned char *, size_t),
                                  void *p_rng,
                                  int mode, size_t ilen,
@@ -694,7 +694,7 @@ int vdb_mbedtls_rsa_rsaes_pkcs1_v15_encrypt( mbedtls_rsa_context *ctx,
  * \return           \c 0 on success.
  * \return           An \c MBEDTLS_ERR_RSA_XXX error code on failure.
  */
-int vdb_mbedtls_rsa_rsaes_oaep_encrypt( mbedtls_rsa_context *ctx,
+int mbedtls_rsa_rsaes_oaep_encrypt( mbedtls_rsa_context *ctx,
                             int (*f_rng)(void *, unsigned char *, size_t),
                             void *p_rng,
                             int mode,
@@ -729,7 +729,7 @@ int vdb_mbedtls_rsa_rsaes_oaep_encrypt( mbedtls_rsa_context *ctx,
  * \param ctx      The initialized RSA context to use.
  * \param f_rng    The RNG function. If \p mode is #MBEDTLS_RSA_PRIVATE,
  *                 this is used for blinding and should be provided; see
- *                 vdb_mbedtls_rsa_private() for more. If \p mode is
+ *                 mbedtls_rsa_private() for more. If \p mode is
  *                 #MBEDTLS_RSA_PUBLIC, it is ignored.
  * \param p_rng    The RNG context to be passed to \p f_rng. This may be
  *                 \c NULL if \p f_rng is \c NULL or doesn't need a context.
@@ -747,7 +747,7 @@ int vdb_mbedtls_rsa_rsaes_oaep_encrypt( mbedtls_rsa_context *ctx,
  * \return         \c 0 on success.
  * \return         An \c MBEDTLS_ERR_RSA_XXX error code on failure.
  */
-int vdb_mbedtls_rsa_pkcs1_decrypt( mbedtls_rsa_context *ctx,
+int mbedtls_rsa_pkcs1_decrypt( mbedtls_rsa_context *ctx,
                        int (*f_rng)(void *, unsigned char *, size_t),
                        void *p_rng,
                        int mode, size_t *olen,
@@ -778,7 +778,7 @@ int vdb_mbedtls_rsa_pkcs1_decrypt( mbedtls_rsa_context *ctx,
  * \param ctx      The initialized RSA context to use.
  * \param f_rng    The RNG function. If \p mode is #MBEDTLS_RSA_PRIVATE,
  *                 this is used for blinding and should be provided; see
- *                 vdb_mbedtls_rsa_private() for more. If \p mode is
+ *                 mbedtls_rsa_private() for more. If \p mode is
  *                 #MBEDTLS_RSA_PUBLIC, it is ignored.
  * \param p_rng    The RNG context to be passed to \p f_rng. This may be
  *                 \c NULL if \p f_rng is \c NULL or doesn't need a context.
@@ -797,7 +797,7 @@ int vdb_mbedtls_rsa_pkcs1_decrypt( mbedtls_rsa_context *ctx,
  * \return         An \c MBEDTLS_ERR_RSA_XXX error code on failure.
  *
  */
-int vdb_mbedtls_rsa_rsaes_pkcs1_v15_decrypt( mbedtls_rsa_context *ctx,
+int mbedtls_rsa_rsaes_pkcs1_v15_decrypt( mbedtls_rsa_context *ctx,
                                  int (*f_rng)(void *, unsigned char *, size_t),
                                  void *p_rng,
                                  int mode, size_t *olen,
@@ -829,7 +829,7 @@ int vdb_mbedtls_rsa_rsaes_pkcs1_v15_decrypt( mbedtls_rsa_context *ctx,
  * \param ctx        The initialized RSA context to use.
  * \param f_rng      The RNG function. If \p mode is #MBEDTLS_RSA_PRIVATE,
  *                   this is used for blinding and should be provided; see
- *                   vdb_mbedtls_rsa_private() for more. If \p mode is
+ *                   mbedtls_rsa_private() for more. If \p mode is
  *                   #MBEDTLS_RSA_PUBLIC, it is ignored.
  * \param p_rng      The RNG context to be passed to \p f_rng. This may be
  *                   \c NULL if \p f_rng is \c NULL or doesn't need a context.
@@ -851,7 +851,7 @@ int vdb_mbedtls_rsa_rsaes_pkcs1_v15_decrypt( mbedtls_rsa_context *ctx,
  * \return         \c 0 on success.
  * \return         An \c MBEDTLS_ERR_RSA_XXX error code on failure.
  */
-int vdb_mbedtls_rsa_rsaes_oaep_decrypt( mbedtls_rsa_context *ctx,
+int mbedtls_rsa_rsaes_oaep_decrypt( mbedtls_rsa_context *ctx,
                             int (*f_rng)(void *, unsigned char *, size_t),
                             void *p_rng,
                             int mode,
@@ -872,7 +872,7 @@ int vdb_mbedtls_rsa_rsaes_oaep_decrypt( mbedtls_rsa_context *ctx,
  *                 of \p ctx->N. For example, 128 Bytes if RSA-1024 is used.
  *
  * \note           For PKCS#1 v2.1 encoding, see comments on
- *                 vdb_mbedtls_rsa_rsassa_pss_sign() for details on
+ *                 mbedtls_rsa_rsassa_pss_sign() for details on
  *                 \p md_alg and \p hash_id.
  *
  * \deprecated     It is deprecated and discouraged to call this function
@@ -888,7 +888,7 @@ int vdb_mbedtls_rsa_rsaes_oaep_decrypt( mbedtls_rsa_context *ctx,
  * \param f_rng    The RNG function to use. If the padding mode is PKCS#1 v2.1,
  *                 this must be provided. If the padding mode is PKCS#1 v1.5 and
  *                 \p mode is #MBEDTLS_RSA_PRIVATE, it is used for blinding
- *                 and should be provided; see vdb_mbedtls_rsa_private() for more
+ *                 and should be provided; see mbedtls_rsa_private() for more
  *                 more. It is ignored otherwise.
  * \param p_rng    The RNG context to be passed to \p f_rng. This may be \c NULL
  *                 if \p f_rng is \c NULL or doesn't need a context argument.
@@ -911,7 +911,7 @@ int vdb_mbedtls_rsa_rsaes_oaep_decrypt( mbedtls_rsa_context *ctx,
  * \return         \c 0 if the signing operation was successful.
  * \return         An \c MBEDTLS_ERR_RSA_XXX error code on failure.
  */
-int vdb_mbedtls_rsa_pkcs1_sign( mbedtls_rsa_context *ctx,
+int mbedtls_rsa_pkcs1_sign( mbedtls_rsa_context *ctx,
                     int (*f_rng)(void *, unsigned char *, size_t),
                     void *p_rng,
                     int mode,
@@ -936,7 +936,7 @@ int vdb_mbedtls_rsa_pkcs1_sign( mbedtls_rsa_context *ctx,
  * \param ctx      The initialized RSA context to use.
  * \param f_rng    The RNG function. If \p mode is #MBEDTLS_RSA_PRIVATE,
  *                 this is used for blinding and should be provided; see
- *                 vdb_mbedtls_rsa_private() for more. If \p mode is
+ *                 mbedtls_rsa_private() for more. If \p mode is
  *                 #MBEDTLS_RSA_PUBLIC, it is ignored.
  * \param p_rng    The RNG context to be passed to \p f_rng. This may be \c NULL
  *                 if \p f_rng is \c NULL or doesn't need a context argument.
@@ -959,7 +959,7 @@ int vdb_mbedtls_rsa_pkcs1_sign( mbedtls_rsa_context *ctx,
  * \return         \c 0 if the signing operation was successful.
  * \return         An \c MBEDTLS_ERR_RSA_XXX error code on failure.
  */
-int vdb_mbedtls_rsa_rsassa_pkcs1_v15_sign( mbedtls_rsa_context *ctx,
+int mbedtls_rsa_rsassa_pkcs1_v15_sign( mbedtls_rsa_context *ctx,
                                int (*f_rng)(void *, unsigned char *, size_t),
                                void *p_rng,
                                int mode,
@@ -1021,7 +1021,7 @@ int vdb_mbedtls_rsa_rsassa_pkcs1_v15_sign( mbedtls_rsa_context *ctx,
  * \return         \c 0 if the signing operation was successful.
  * \return         An \c MBEDTLS_ERR_RSA_XXX error code on failure.
  */
-int vdb_mbedtls_rsa_rsassa_pss_sign( mbedtls_rsa_context *ctx,
+int mbedtls_rsa_rsassa_pss_sign( mbedtls_rsa_context *ctx,
                          int (*f_rng)(void *, unsigned char *, size_t),
                          void *p_rng,
                          int mode,
@@ -1038,7 +1038,7 @@ int vdb_mbedtls_rsa_rsassa_pss_sign( mbedtls_rsa_context *ctx,
  *                 verification using the mode from the context.
  *
  * \note           For PKCS#1 v2.1 encoding, see comments on
- *                 vdb_mbedtls_rsa_rsassa_pss_verify() about \p md_alg and
+ *                 mbedtls_rsa_rsassa_pss_verify() about \p md_alg and
  *                 \p hash_id.
  *
  * \deprecated     It is deprecated and discouraged to call this function
@@ -1053,7 +1053,7 @@ int vdb_mbedtls_rsa_rsassa_pss_sign( mbedtls_rsa_context *ctx,
  * \param ctx      The initialized RSA public key context to use.
  * \param f_rng    The RNG function to use. If \p mode is #MBEDTLS_RSA_PRIVATE,
  *                 this is used for blinding and should be provided; see
- *                 vdb_mbedtls_rsa_private() for more. Otherwise, it is ignored.
+ *                 mbedtls_rsa_private() for more. Otherwise, it is ignored.
  * \param p_rng    The RNG context to be passed to \p f_rng. This may be
  *                 \c NULL if \p f_rng is \c NULL or doesn't need a context.
  * \param mode     The mode of operation. This must be either
@@ -1074,7 +1074,7 @@ int vdb_mbedtls_rsa_rsassa_pss_sign( mbedtls_rsa_context *ctx,
  * \return         \c 0 if the verify operation was successful.
  * \return         An \c MBEDTLS_ERR_RSA_XXX error code on failure.
  */
-int vdb_mbedtls_rsa_pkcs1_verify( mbedtls_rsa_context *ctx,
+int mbedtls_rsa_pkcs1_verify( mbedtls_rsa_context *ctx,
                       int (*f_rng)(void *, unsigned char *, size_t),
                       void *p_rng,
                       int mode,
@@ -1099,7 +1099,7 @@ int vdb_mbedtls_rsa_pkcs1_verify( mbedtls_rsa_context *ctx,
  * \param ctx      The initialized RSA public key context to use.
  * \param f_rng    The RNG function to use. If \p mode is #MBEDTLS_RSA_PRIVATE,
  *                 this is used for blinding and should be provided; see
- *                 vdb_mbedtls_rsa_private() for more. Otherwise, it is ignored.
+ *                 mbedtls_rsa_private() for more. Otherwise, it is ignored.
  * \param p_rng    The RNG context to be passed to \p f_rng. This may be
  *                 \c NULL if \p f_rng is \c NULL or doesn't need a context.
  * \param mode     The mode of operation. This must be either
@@ -1120,7 +1120,7 @@ int vdb_mbedtls_rsa_pkcs1_verify( mbedtls_rsa_context *ctx,
  * \return         \c 0 if the verify operation was successful.
  * \return         An \c MBEDTLS_ERR_RSA_XXX error code on failure.
  */
-int vdb_mbedtls_rsa_rsassa_pkcs1_v15_verify( mbedtls_rsa_context *ctx,
+int mbedtls_rsa_rsassa_pkcs1_v15_verify( mbedtls_rsa_context *ctx,
                                  int (*f_rng)(void *, unsigned char *, size_t),
                                  void *p_rng,
                                  int mode,
@@ -1156,7 +1156,7 @@ int vdb_mbedtls_rsa_rsassa_pkcs1_v15_verify( mbedtls_rsa_context *ctx,
  * \param ctx      The initialized RSA public key context to use.
  * \param f_rng    The RNG function to use. If \p mode is #MBEDTLS_RSA_PRIVATE,
  *                 this is used for blinding and should be provided; see
- *                 vdb_mbedtls_rsa_private() for more. Otherwise, it is ignored.
+ *                 mbedtls_rsa_private() for more. Otherwise, it is ignored.
  * \param p_rng    The RNG context to be passed to \p f_rng. This may be
  *                 \c NULL if \p f_rng is \c NULL or doesn't need a context.
  * \param mode     The mode of operation. This must be either
@@ -1177,7 +1177,7 @@ int vdb_mbedtls_rsa_rsassa_pkcs1_v15_verify( mbedtls_rsa_context *ctx,
  * \return         \c 0 if the verify operation was successful.
  * \return         An \c MBEDTLS_ERR_RSA_XXX error code on failure.
  */
-int vdb_mbedtls_rsa_rsassa_pss_verify( mbedtls_rsa_context *ctx,
+int mbedtls_rsa_rsassa_pss_verify( mbedtls_rsa_context *ctx,
                            int (*f_rng)(void *, unsigned char *, size_t),
                            void *p_rng,
                            int mode,
@@ -1201,7 +1201,7 @@ int vdb_mbedtls_rsa_rsassa_pss_verify( mbedtls_rsa_context *ctx,
  * \param ctx      The initialized RSA public key context to use.
  * \param f_rng    The RNG function to use. If \p mode is #MBEDTLS_RSA_PRIVATE,
  *                 this is used for blinding and should be provided; see
- *                 vdb_mbedtls_rsa_private() for more. Otherwise, it is ignored.
+ *                 mbedtls_rsa_private() for more. Otherwise, it is ignored.
  * \param p_rng    The RNG context to be passed to \p f_rng. This may be
  *                 \c NULL if \p f_rng is \c NULL or doesn't need a context.
  * \param mode     The mode of operation. This must be either
@@ -1225,7 +1225,7 @@ int vdb_mbedtls_rsa_rsassa_pss_verify( mbedtls_rsa_context *ctx,
  * \return         \c 0 if the verify operation was successful.
  * \return         An \c MBEDTLS_ERR_RSA_XXX error code on failure.
  */
-int vdb_mbedtls_rsa_rsassa_pss_verify_ext( mbedtls_rsa_context *ctx,
+int mbedtls_rsa_rsassa_pss_verify_ext( mbedtls_rsa_context *ctx,
                                int (*f_rng)(void *, unsigned char *, size_t),
                                void *p_rng,
                                int mode,
@@ -1245,7 +1245,7 @@ int vdb_mbedtls_rsa_rsassa_pss_verify_ext( mbedtls_rsa_context *ctx,
  * \return         \c 0 on success.
  * \return         #MBEDTLS_ERR_MPI_ALLOC_FAILED on memory allocation failure.
  */
-int vdb_mbedtls_rsa_copy( mbedtls_rsa_context *dst, const mbedtls_rsa_context *src );
+int mbedtls_rsa_copy( mbedtls_rsa_context *dst, const mbedtls_rsa_context *src );
 
 /**
  * \brief          This function frees the components of an RSA key.
@@ -1254,7 +1254,7 @@ int vdb_mbedtls_rsa_copy( mbedtls_rsa_context *dst, const mbedtls_rsa_context *s
  *                 this function is a no-op. If it is not \c NULL, it must
  *                 point to an initialized RSA context.
  */
-void vdb_mbedtls_rsa_free( mbedtls_rsa_context *ctx );
+void mbedtls_rsa_free( mbedtls_rsa_context *ctx );
 
 #if defined(MBEDTLS_SELF_TEST)
 
@@ -1264,7 +1264,7 @@ void vdb_mbedtls_rsa_free( mbedtls_rsa_context *ctx );
  * \return         \c 0 on success.
  * \return         \c 1 on failure.
  */
-int vdb_mbedtls_rsa_self_test( int verbose );
+int mbedtls_rsa_self_test( int verbose );
 
 #endif /* MBEDTLS_SELF_TEST */
 

@@ -78,15 +78,15 @@ mbedtls_poly1305_context;
  *                  the context.
  *
  *                  It is usually followed by a call to
- *                  \c vdb_mbedtls_poly1305_starts(), then one or more calls to
- *                  \c vdb_mbedtls_poly1305_update(), then one call to
- *                  \c vdb_mbedtls_poly1305_finish(), then finally
- *                  \c vdb_mbedtls_poly1305_free().
+ *                  \c mbedtls_poly1305_starts(), then one or more calls to
+ *                  \c mbedtls_poly1305_update(), then one call to
+ *                  \c mbedtls_poly1305_finish(), then finally
+ *                  \c mbedtls_poly1305_free().
  *
  * \param ctx       The Poly1305 context to initialize. This must
  *                  not be \c NULL.
  */
-void vdb_mbedtls_poly1305_init( mbedtls_poly1305_context *ctx );
+void mbedtls_poly1305_init( mbedtls_poly1305_context *ctx );
 
 /**
  * \brief           This function releases and clears the specified
@@ -96,7 +96,7 @@ void vdb_mbedtls_poly1305_init( mbedtls_poly1305_context *ctx );
  *                  case this function is a no-op. If it is not \c NULL, it must
  *                  point to an initialized Poly1305 context.
  */
-void vdb_mbedtls_poly1305_free( mbedtls_poly1305_context *ctx );
+void mbedtls_poly1305_free( mbedtls_poly1305_context *ctx );
 
 /**
  * \brief           This function sets the one-time authentication key.
@@ -111,15 +111,15 @@ void vdb_mbedtls_poly1305_free( mbedtls_poly1305_context *ctx );
  * \return          \c 0 on success.
  * \return          A negative error code on failure.
  */
-int vdb_mbedtls_poly1305_starts( mbedtls_poly1305_context *ctx,
+int mbedtls_poly1305_starts( mbedtls_poly1305_context *ctx,
                              const unsigned char key[32] );
 
 /**
  * \brief           This functions feeds an input buffer into an ongoing
  *                  Poly1305 computation.
  *
- *                  It is called between \c vdb_mbedtls_cipher_poly1305_starts() and
- *                  \c vdb_mbedtls_cipher_poly1305_finish().
+ *                  It is called between \c mbedtls_cipher_poly1305_starts() and
+ *                  \c mbedtls_cipher_poly1305_finish().
  *                  It can be called repeatedly to process a stream of data.
  *
  * \param ctx       The Poly1305 context to use for the Poly1305 operation.
@@ -132,7 +132,7 @@ int vdb_mbedtls_poly1305_starts( mbedtls_poly1305_context *ctx,
  * \return          \c 0 on success.
  * \return          A negative error code on failure.
  */
-int vdb_mbedtls_poly1305_update( mbedtls_poly1305_context *ctx,
+int mbedtls_poly1305_update( mbedtls_poly1305_context *ctx,
                              const unsigned char *input,
                              size_t ilen );
 
@@ -148,7 +148,7 @@ int vdb_mbedtls_poly1305_update( mbedtls_poly1305_context *ctx,
  * \return          \c 0 on success.
  * \return          A negative error code on failure.
  */
-int vdb_mbedtls_poly1305_finish( mbedtls_poly1305_context *ctx,
+int mbedtls_poly1305_finish( mbedtls_poly1305_context *ctx,
                              unsigned char mac[16] );
 
 /**
@@ -169,7 +169,7 @@ int vdb_mbedtls_poly1305_finish( mbedtls_poly1305_context *ctx,
  * \return          \c 0 on success.
  * \return          A negative error code on failure.
  */
-int vdb_mbedtls_poly1305_mac( const unsigned char key[32],
+int mbedtls_poly1305_mac( const unsigned char key[32],
                           const unsigned char *input,
                           size_t ilen,
                           unsigned char mac[16] );
@@ -181,7 +181,7 @@ int vdb_mbedtls_poly1305_mac( const unsigned char key[32],
  * \return          \c 0 on success.
  * \return          \c 1 on failure.
  */
-int vdb_mbedtls_poly1305_self_test( int verbose );
+int mbedtls_poly1305_self_test( int verbose );
 #endif /* MBEDTLS_SELF_TEST */
 
 #ifdef __cplusplus

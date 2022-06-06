@@ -71,12 +71,12 @@ typedef struct mbedtls_ssl_cookie_ctx
 /**
  * \brief          Initialize cookie context
  */
-void vdb_mbedtls_ssl_cookie_init( mbedtls_ssl_cookie_ctx *ctx );
+void mbedtls_ssl_cookie_init( mbedtls_ssl_cookie_ctx *ctx );
 
 /**
  * \brief          Setup cookie context (generate keys)
  */
-int vdb_mbedtls_ssl_cookie_setup( mbedtls_ssl_cookie_ctx *ctx,
+int mbedtls_ssl_cookie_setup( mbedtls_ssl_cookie_ctx *ctx,
                       int (*f_rng)(void *, unsigned char *, size_t),
                       void *p_rng );
 
@@ -89,22 +89,22 @@ int vdb_mbedtls_ssl_cookie_setup( mbedtls_ssl_cookie_ctx *ctx,
  *                 issued in the meantime.
  *                 0 to disable expiration (NOT recommended)
  */
-void vdb_mbedtls_ssl_cookie_set_timeout( mbedtls_ssl_cookie_ctx *ctx, unsigned long delay );
+void mbedtls_ssl_cookie_set_timeout( mbedtls_ssl_cookie_ctx *ctx, unsigned long delay );
 
 /**
  * \brief          Free cookie context
  */
-void vdb_mbedtls_ssl_cookie_free( mbedtls_ssl_cookie_ctx *ctx );
+void mbedtls_ssl_cookie_free( mbedtls_ssl_cookie_ctx *ctx );
 
 /**
  * \brief          Generate cookie, see \c mbedtls_ssl_cookie_write_t
  */
-mbedtls_ssl_cookie_write_t vdb_mbedtls_ssl_cookie_write;
+mbedtls_ssl_cookie_write_t mbedtls_ssl_cookie_write;
 
 /**
  * \brief          Verify cookie, see \c mbedtls_ssl_cookie_write_t
  */
-mbedtls_ssl_cookie_check_t vdb_mbedtls_ssl_cookie_check;
+mbedtls_ssl_cookie_check_t mbedtls_ssl_cookie_check;
 
 #ifdef __cplusplus
 }

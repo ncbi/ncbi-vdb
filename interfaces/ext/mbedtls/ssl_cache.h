@@ -93,7 +93,7 @@ struct mbedtls_ssl_cache_context
  *
  * \param cache    SSL cache context
  */
-void vdb_mbedtls_ssl_cache_init( mbedtls_ssl_cache_context *cache );
+void mbedtls_ssl_cache_init( mbedtls_ssl_cache_context *cache );
 
 /**
  * \brief          Cache get callback implementation
@@ -102,7 +102,7 @@ void vdb_mbedtls_ssl_cache_init( mbedtls_ssl_cache_context *cache );
  * \param data     SSL cache context
  * \param session  session to retrieve entry for
  */
-int vdb_mbedtls_ssl_cache_get( void *data, mbedtls_ssl_session *session );
+int mbedtls_ssl_cache_get( void *data, mbedtls_ssl_session *session );
 
 /**
  * \brief          Cache set callback implementation
@@ -111,7 +111,7 @@ int vdb_mbedtls_ssl_cache_get( void *data, mbedtls_ssl_session *session );
  * \param data     SSL cache context
  * \param session  session to store entry for
  */
-int vdb_mbedtls_ssl_cache_set( void *data, const mbedtls_ssl_session *session );
+int mbedtls_ssl_cache_set( void *data, const mbedtls_ssl_session *session );
 
 #if defined(MBEDTLS_HAVE_TIME)
 /**
@@ -123,7 +123,7 @@ int vdb_mbedtls_ssl_cache_set( void *data, const mbedtls_ssl_session *session );
  * \param cache    SSL cache context
  * \param timeout  cache entry timeout in seconds
  */
-void vdb_mbedtls_ssl_cache_set_timeout( mbedtls_ssl_cache_context *cache, int timeout );
+void mbedtls_ssl_cache_set_timeout( mbedtls_ssl_cache_context *cache, int timeout );
 #endif /* MBEDTLS_HAVE_TIME */
 
 /**
@@ -133,14 +133,14 @@ void vdb_mbedtls_ssl_cache_set_timeout( mbedtls_ssl_cache_context *cache, int ti
  * \param cache    SSL cache context
  * \param max      cache entry maximum
  */
-void vdb_mbedtls_ssl_cache_set_max_entries( mbedtls_ssl_cache_context *cache, int max );
+void mbedtls_ssl_cache_set_max_entries( mbedtls_ssl_cache_context *cache, int max );
 
 /**
  * \brief          Free referenced items in a cache context and clear memory
  *
  * \param cache    SSL cache context
  */
-void vdb_mbedtls_ssl_cache_free( mbedtls_ssl_cache_context *cache );
+void mbedtls_ssl_cache_free( mbedtls_ssl_cache_context *cache );
 
 #ifdef __cplusplus
 }

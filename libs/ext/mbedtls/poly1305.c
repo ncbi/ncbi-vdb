@@ -33,7 +33,7 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#define vdb_mbedtls_printf printf
+#define mbedtls_printf printf
 #endif /* MBEDTLS_PLATFORM_C */
 #endif /* MBEDTLS_SELF_TEST */
 
@@ -275,22 +275,22 @@ static void poly1305_compute_mac( const mbedtls_poly1305_context *ctx,
     mac[15] = (unsigned char)( acc3 >> 24 );
 }
 
-void vdb_mbedtls_poly1305_init( mbedtls_poly1305_context *ctx )
+void mbedtls_poly1305_init( mbedtls_poly1305_context *ctx )
 {
     POLY1305_VALIDATE( ctx != NULL );
 
-    vdb_mbedtls_platform_zeroize( ctx, sizeof( mbedtls_poly1305_context ) );
+    mbedtls_platform_zeroize( ctx, sizeof( mbedtls_poly1305_context ) );
 }
 
-void vdb_mbedtls_poly1305_free( mbedtls_poly1305_context *ctx )
+void mbedtls_poly1305_free( mbedtls_poly1305_context *ctx )
 {
     if( ctx == NULL )
         return;
 
-    vdb_mbedtls_platform_zeroize( ctx, sizeof( mbedtls_poly1305_context ) );
+    mbedtls_platform_zeroize( ctx, sizeof( mbedtls_poly1305_context ) );
 }
 
-int vdb_mbedtls_poly1305_starts( mbedtls_poly1305_context *ctx,
+int mbedtls_poly1305_starts( mbedtls_poly1305_context *ctx,
                              const unsigned char key[32] )
 {
     POLY1305_VALIDATE_RET( ctx != NULL );
@@ -315,13 +315,13 @@ int vdb_mbedtls_poly1305_starts( mbedtls_poly1305_context *ctx,
     ctx->acc[4] = 0U;
 
     /* Queue initially empty */
-    vdb_mbedtls_platform_zeroize( ctx->queue, sizeof( ctx->queue ) );
+    mbedtls_platform_zeroize( ctx->queue, sizeof( ctx->queue ) );
     ctx->queue_len = 0U;
 
     return( 0 );
 }
 
-int vdb_mbedtls_poly1305_update( mbedtls_poly1305_context *ctx,
+int mbedtls_poly1305_update( mbedtls_poly1305_context *ctx,
                              const unsigned char *input,
                              size_t ilen )
 {
@@ -385,7 +385,7 @@ int vdb_mbedtls_poly1305_update( mbedtls_poly1305_context *ctx,
     return( 0 );
 }
 
-int vdb_mbedtls_poly1305_finish( mbedtls_poly1305_context *ctx,
+int mbedtls_poly1305_finish( mbedtls_poly1305_context *ctx,
                              unsigned char mac[16] )
 {
     POLY1305_VALIDATE_RET( ctx != NULL );
@@ -412,7 +412,7 @@ int vdb_mbedtls_poly1305_finish( mbedtls_poly1305_context *ctx,
     return( 0 );
 }
 
-int vdb_mbedtls_poly1305_mac( const unsigned char key[32],
+int mbedtls_poly1305_mac( const unsigned char key[32],
                           const unsigned char *input,
                           size_t ilen,
                           unsigned char mac[16] )
@@ -423,20 +423,20 @@ int vdb_mbedtls_poly1305_mac( const unsigned char key[32],
     POLY1305_VALIDATE_RET( mac != NULL );
     POLY1305_VALIDATE_RET( ilen == 0 || input != NULL );
 
-    vdb_mbedtls_poly1305_init( &ctx );
+    mbedtls_poly1305_init( &ctx );
 
-    ret = vdb_mbedtls_poly1305_starts( &ctx, key );
+    ret = mbedtls_poly1305_starts( &ctx, key );
     if( ret != 0 )
         goto cleanup;
 
-    ret = vdb_mbedtls_poly1305_update( &ctx, input, ilen );
+    ret = mbedtls_poly1305_update( &ctx, input, ilen );
     if( ret != 0 )
         goto cleanup;
 
-    ret = vdb_mbedtls_poly1305_finish( &ctx, mac );
+    ret = mbedtls_poly1305_finish( &ctx, mac );
 
 cleanup:
-    vdb_mbedtls_poly1305_free( &ctx );
+    mbedtls_poly1305_free( &ctx );
     return( ret );
 }
 
@@ -516,14 +516,14 @@ static const unsigned char test_mac[2][16] =
         if( ! ( cond ) )                \
         {                               \
             if( verbose != 0 )          \
-                vdb_mbedtls_printf args;    \
+                mbedtls_printf args;    \
                                         \
             return( -1 );               \
         }                               \
     }                                   \
     while( 0 )
 
-int vdb_mbedtls_poly1305_self_test( int verbose )
+int mbedtls_poly1305_self_test( int verbose )
 {
     unsigned char mac[16];
     unsigned i;
@@ -532,9 +532,9 @@ int vdb_mbedtls_poly1305_self_test( int verbose )
     for( i = 0U; i < 2U; i++ )
     {
         if( verbose != 0 )
-            vdb_mbedtls_printf( "  Poly1305 test %u ", i );
+            mbedtls_printf( "  Poly1305 test %u ", i );
 
-        ret = vdb_mbedtls_poly1305_mac( test_keys[i],
+        ret = mbedtls_poly1305_mac( test_keys[i],
                                     test_data[i],
                                     test_data_len[i],
                                     mac );
@@ -543,11 +543,11 @@ int vdb_mbedtls_poly1305_self_test( int verbose )
         ASSERT( 0 == memcmp( mac, test_mac[i], 16U ), ( "failed (mac)\n" ) );
 
         if( verbose != 0 )
-            vdb_mbedtls_printf( "passed\n" );
+            mbedtls_printf( "passed\n" );
     }
 
     if( verbose != 0 )
-        vdb_mbedtls_printf( "\n" );
+        mbedtls_printf( "\n" );
 
     return( 0 );
 }

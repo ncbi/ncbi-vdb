@@ -40,7 +40,7 @@
 /*
  * PadLock detection routine
  */
-int vdb_mbedtls_padlock_has_support( int feature )
+int mbedtls_padlock_has_support( int feature )
 {
     static int flags = -1;
     int ebx = 0, edx = 0;
@@ -71,7 +71,7 @@ int vdb_mbedtls_padlock_has_support( int feature )
 /*
  * PadLock AES-ECB block en(de)cryption
  */
-int vdb_mbedtls_padlock_xcryptecb( mbedtls_aes_context *ctx,
+int mbedtls_padlock_xcryptecb( mbedtls_aes_context *ctx,
                        int mode,
                        const unsigned char input[16],
                        unsigned char output[16] )
@@ -111,7 +111,7 @@ int vdb_mbedtls_padlock_xcryptecb( mbedtls_aes_context *ctx,
 /*
  * PadLock AES-CBC buffer en(de)cryption
  */
-int vdb_mbedtls_padlock_xcryptcbc( mbedtls_aes_context *ctx,
+int mbedtls_padlock_xcryptcbc( mbedtls_aes_context *ctx,
                        int mode,
                        size_t length,
                        unsigned char iv[16],

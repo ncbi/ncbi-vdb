@@ -248,7 +248,7 @@ mbedtls_x509_time;
  * \return         The length of the string written (not including the
  *                 terminated nul byte), or a negative error code.
  */
-int vdb_mbedtls_x509_dn_gets( char *buf, size_t size, const mbedtls_x509_name *dn );
+int mbedtls_x509_dn_gets( char *buf, size_t size, const mbedtls_x509_name *dn );
 
 /**
  * \brief          Store the certificate serial in printable form into buf;
@@ -261,7 +261,7 @@ int vdb_mbedtls_x509_dn_gets( char *buf, size_t size, const mbedtls_x509_name *d
  * \return         The length of the string written (not including the
  *                 terminated nul byte), or a negative error code.
  */
-int vdb_mbedtls_x509_serial_gets( char *buf, size_t size, const mbedtls_x509_buf *serial );
+int mbedtls_x509_serial_gets( char *buf, size_t size, const mbedtls_x509_buf *serial );
 
 /**
  * \brief          Check a given mbedtls_x509_time against the system time
@@ -275,7 +275,7 @@ int vdb_mbedtls_x509_serial_gets( char *buf, size_t size, const mbedtls_x509_buf
  * \return         1 if the given time is in the past or an error occurred,
  *                 0 otherwise.
  */
-int vdb_mbedtls_x509_time_is_past( const mbedtls_x509_time *to );
+int mbedtls_x509_time_is_past( const mbedtls_x509_time *to );
 
 /**
  * \brief          Check a given mbedtls_x509_time against the system time
@@ -289,7 +289,7 @@ int vdb_mbedtls_x509_time_is_past( const mbedtls_x509_time *to );
  * \return         1 if the given time is in the future or an error occurred,
  *                 0 otherwise.
  */
-int vdb_mbedtls_x509_time_is_future( const mbedtls_x509_time *from );
+int mbedtls_x509_time_is_future( const mbedtls_x509_time *from );
 
 #if defined(MBEDTLS_SELF_TEST)
 
@@ -298,7 +298,7 @@ int vdb_mbedtls_x509_time_is_future( const mbedtls_x509_time *from );
  *
  * \return         0 if successful, or 1 if the test failed
  */
-int vdb_mbedtls_x509_self_test( int verbose );
+int mbedtls_x509_self_test( int verbose );
 
 #endif /* MBEDTLS_SELF_TEST */
 
@@ -306,40 +306,40 @@ int vdb_mbedtls_x509_self_test( int verbose );
  * Internal module functions. You probably do not want to use these unless you
  * know you do.
  */
-int vdb_mbedtls_x509_get_name( unsigned char **p, const unsigned char *end,
+int mbedtls_x509_get_name( unsigned char **p, const unsigned char *end,
                    mbedtls_x509_name *cur );
-int vdb_mbedtls_x509_get_alg_null( unsigned char **p, const unsigned char *end,
+int mbedtls_x509_get_alg_null( unsigned char **p, const unsigned char *end,
                        mbedtls_x509_buf *alg );
-int vdb_mbedtls_x509_get_alg( unsigned char **p, const unsigned char *end,
+int mbedtls_x509_get_alg( unsigned char **p, const unsigned char *end,
                   mbedtls_x509_buf *alg, mbedtls_x509_buf *params );
 #if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
-int vdb_mbedtls_x509_get_rsassa_pss_params( const mbedtls_x509_buf *params,
+int mbedtls_x509_get_rsassa_pss_params( const mbedtls_x509_buf *params,
                                 mbedtls_md_type_t *md_alg, mbedtls_md_type_t *mgf_md,
                                 int *salt_len );
 #endif
-int vdb_mbedtls_x509_get_sig( unsigned char **p, const unsigned char *end, mbedtls_x509_buf *sig );
-int vdb_mbedtls_x509_get_sig_alg( const mbedtls_x509_buf *sig_oid, const mbedtls_x509_buf *sig_params,
+int mbedtls_x509_get_sig( unsigned char **p, const unsigned char *end, mbedtls_x509_buf *sig );
+int mbedtls_x509_get_sig_alg( const mbedtls_x509_buf *sig_oid, const mbedtls_x509_buf *sig_params,
                       mbedtls_md_type_t *md_alg, mbedtls_pk_type_t *pk_alg,
                       void **sig_opts );
-int vdb_mbedtls_x509_get_time( unsigned char **p, const unsigned char *end,
+int mbedtls_x509_get_time( unsigned char **p, const unsigned char *end,
                    mbedtls_x509_time *t );
-int vdb_mbedtls_x509_get_serial( unsigned char **p, const unsigned char *end,
+int mbedtls_x509_get_serial( unsigned char **p, const unsigned char *end,
                      mbedtls_x509_buf *serial );
-int vdb_mbedtls_x509_get_ext( unsigned char **p, const unsigned char *end,
+int mbedtls_x509_get_ext( unsigned char **p, const unsigned char *end,
                   mbedtls_x509_buf *ext, int tag );
-int vdb_mbedtls_x509_sig_alg_gets( char *buf, size_t size, const mbedtls_x509_buf *sig_oid,
+int mbedtls_x509_sig_alg_gets( char *buf, size_t size, const mbedtls_x509_buf *sig_oid,
                        mbedtls_pk_type_t pk_alg, mbedtls_md_type_t md_alg,
                        const void *sig_opts );
-int vdb_mbedtls_x509_key_size_helper( char *buf, size_t buf_size, const char *name );
-int vdb_mbedtls_x509_string_to_names( mbedtls_asn1_named_data **head, const char *name );
-int vdb_mbedtls_x509_set_extension( mbedtls_asn1_named_data **head, const char *oid, size_t oid_len,
+int mbedtls_x509_key_size_helper( char *buf, size_t buf_size, const char *name );
+int mbedtls_x509_string_to_names( mbedtls_asn1_named_data **head, const char *name );
+int mbedtls_x509_set_extension( mbedtls_asn1_named_data **head, const char *oid, size_t oid_len,
                         int critical, const unsigned char *val,
                         size_t val_len );
-int vdb_mbedtls_x509_write_extensions( unsigned char **p, unsigned char *start,
+int mbedtls_x509_write_extensions( unsigned char **p, unsigned char *start,
                            mbedtls_asn1_named_data *first );
-int vdb_mbedtls_x509_write_names( unsigned char **p, unsigned char *start,
+int mbedtls_x509_write_names( unsigned char **p, unsigned char *start,
                       mbedtls_asn1_named_data *first );
-int vdb_mbedtls_x509_write_sig( unsigned char **p, unsigned char *start,
+int mbedtls_x509_write_sig( unsigned char **p, unsigned char *start,
                     const char *oid, size_t oid_len,
                     unsigned char *sig, size_t size );
 

@@ -92,7 +92,7 @@ extern "C" {
  *                 use the helper function \c mbedtls_rsa_validate_params.
  *
  */
-int vdb_mbedtls_rsa_deduce_primes( mbedtls_mpi const *N, mbedtls_mpi const *E,
+int mbedtls_rsa_deduce_primes( mbedtls_mpi const *N, mbedtls_mpi const *E,
                                mbedtls_mpi const *D,
                                mbedtls_mpi *P, mbedtls_mpi *Q );
 
@@ -117,7 +117,7 @@ int vdb_mbedtls_rsa_deduce_primes( mbedtls_mpi const *N, mbedtls_mpi const *E,
  * \note           This function does not check whether P and Q are primes.
  *
  */
-int vdb_mbedtls_rsa_deduce_private_exponent( mbedtls_mpi const *P,
+int mbedtls_rsa_deduce_private_exponent( mbedtls_mpi const *P,
                                          mbedtls_mpi const *Q,
                                          mbedtls_mpi const *E,
                                          mbedtls_mpi *D );
@@ -143,7 +143,7 @@ int vdb_mbedtls_rsa_deduce_private_exponent( mbedtls_mpi const *P,
  *                 prime and whether D is a valid private exponent.
  *
  */
-int vdb_mbedtls_rsa_deduce_crt( const mbedtls_mpi *P, const mbedtls_mpi *Q,
+int mbedtls_rsa_deduce_crt( const mbedtls_mpi *P, const mbedtls_mpi *Q,
                             const mbedtls_mpi *D, mbedtls_mpi *DP,
                             mbedtls_mpi *DQ, mbedtls_mpi *QP );
 
@@ -178,7 +178,7 @@ int vdb_mbedtls_rsa_deduce_crt( const mbedtls_mpi *P, const mbedtls_mpi *Q,
  *                 to perform specific checks only. E.g., calling it with
  *                 (-,P,-,-,-) and a PRNG amounts to a primality check for P.
  */
-int vdb_mbedtls_rsa_validate_params( const mbedtls_mpi *N, const mbedtls_mpi *P,
+int mbedtls_rsa_validate_params( const mbedtls_mpi *N, const mbedtls_mpi *P,
                                  const mbedtls_mpi *Q, const mbedtls_mpi *D,
                                  const mbedtls_mpi *E,
                                  int (*f_rng)(void *, unsigned char *, size_t),
@@ -213,7 +213,7 @@ int vdb_mbedtls_rsa_validate_params( const mbedtls_mpi *N, const mbedtls_mpi *P,
  *                 to perform specific checks only. E.g., calling it with the
  *                 parameters (P, -, D, DP, -, -) will check DP = D mod P-1.
  */
-int vdb_mbedtls_rsa_validate_crt( const mbedtls_mpi *P,  const mbedtls_mpi *Q,
+int mbedtls_rsa_validate_crt( const mbedtls_mpi *P,  const mbedtls_mpi *Q,
                               const mbedtls_mpi *D,  const mbedtls_mpi *DP,
                               const mbedtls_mpi *DQ, const mbedtls_mpi *QP );
 

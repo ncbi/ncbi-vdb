@@ -65,14 +65,14 @@ mbedtls_xtea_context;
  *
  * \param ctx      XTEA context to be initialized
  */
-void vdb_mbedtls_xtea_init( mbedtls_xtea_context *ctx );
+void mbedtls_xtea_init( mbedtls_xtea_context *ctx );
 
 /**
  * \brief          Clear XTEA context
  *
  * \param ctx      XTEA context to be cleared
  */
-void vdb_mbedtls_xtea_free( mbedtls_xtea_context *ctx );
+void mbedtls_xtea_free( mbedtls_xtea_context *ctx );
 
 /**
  * \brief          XTEA key schedule
@@ -80,7 +80,7 @@ void vdb_mbedtls_xtea_free( mbedtls_xtea_context *ctx );
  * \param ctx      XTEA context to be initialized
  * \param key      the secret key
  */
-void vdb_mbedtls_xtea_setup( mbedtls_xtea_context *ctx, const unsigned char key[16] );
+void mbedtls_xtea_setup( mbedtls_xtea_context *ctx, const unsigned char key[16] );
 
 /**
  * \brief          XTEA cipher function
@@ -92,7 +92,7 @@ void vdb_mbedtls_xtea_setup( mbedtls_xtea_context *ctx, const unsigned char key[
  *
  * \return         0 if successful
  */
-int vdb_mbedtls_xtea_crypt_ecb( mbedtls_xtea_context *ctx,
+int mbedtls_xtea_crypt_ecb( mbedtls_xtea_context *ctx,
                     int mode,
                     const unsigned char input[8],
                     unsigned char output[8] );
@@ -111,7 +111,7 @@ int vdb_mbedtls_xtea_crypt_ecb( mbedtls_xtea_context *ctx,
  * \return         0 if successful,
  *                 MBEDTLS_ERR_XTEA_INVALID_INPUT_LENGTH if the length % 8 != 0
  */
-int vdb_mbedtls_xtea_crypt_cbc( mbedtls_xtea_context *ctx,
+int mbedtls_xtea_crypt_cbc( mbedtls_xtea_context *ctx,
                     int mode,
                     size_t length,
                     unsigned char iv[8],
@@ -126,7 +126,7 @@ int vdb_mbedtls_xtea_crypt_cbc( mbedtls_xtea_context *ctx,
  *
  * \return         0 if successful, or 1 if the test failed
  */
-int vdb_mbedtls_xtea_self_test( int verbose );
+int mbedtls_xtea_self_test( int verbose );
 
 #endif /* MBEDTLS_SELF_TEST */
 
