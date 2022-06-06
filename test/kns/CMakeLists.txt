@@ -59,8 +59,8 @@ if( SINGLE_CONFIG )
     BuildExecutableForTest( Test_KNS_proxy "test-proxy" "${COMMON_LIBS_READ}" )
     add_test( NAME Test_KNS_proxy COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test-proxy.sh ${CMAKE_TEST_OUTPUT_DIRECTORY}/Test_KNS_proxy WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 
-    BuildExecutableForTest( Test_KNS_proxy-with-scheme "test-proxy-with-scheme" "${COMMON_LIBS_READ}" )
-    add_test( NAME Test_KNS_proxy-with-scheme COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test-proxy-with-scheme.sh ${CMAKE_TEST_OUTPUT_DIRECTORY}/Test_KNS_proxy-with-scheme WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+    BuildExecutableForTest( Test_KNS_proxy-with-scheme_dflt "test-proxy-with-scheme" "${COMMON_LIBS_READ}" )
+    add_test( NAME Test_KNS_proxy-with-scheme_dflt COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test-proxy-with-scheme.sh ${CMAKE_TEST_OUTPUT_DIRECTORY}/Test_KNS_proxy-with-scheme_dflt WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
     #set_tests_properties(Test_KNS_proxy-with-scheme PROPERTIES ENVIRONMENT http_proxy=)
 
 endif()
