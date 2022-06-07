@@ -561,10 +561,9 @@ static VTable *getVTable(TableWriterSeq *const self) {
  */
 static rc_t CompressREAD(TableWriterSeq *const self, int64_t *const buffer)
 {
-    return 0;
-    // bool const notSavingRead = ((self->options & ewseq_co_SaveRead) == 0);
-    // VTable *const vtbl = getVTable(self);
-    // return CompressREAD_int(vtbl, buffer, notSavingRead);
+    bool const notSavingRead = ((self->options & ewseq_co_SaveRead) == 0);
+    VTable *const vtbl = getVTable(self);
+    return CompressREAD_int(vtbl, buffer, notSavingRead);
 }
 
 static KMetadata *getMetadata(TableWriterSeq *const self) {
