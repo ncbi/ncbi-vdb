@@ -625,7 +625,7 @@ rc_t PageMapGrow(PageMap *self, uint32_t new_reserve_leng, uint32_t new_reserve_
 #if PAGEMAP_STATISTICS
     ++pm_stats.grows;
 #endif
-    if (new_reserve_leng > (1UL << 31) || new_reserve_data > (1UL << 31))
+    if (new_reserve_leng >= (1UL << 31) || new_reserve_data >= (1UL << 31))
         return RC(rcVDB, rcPagemap, rcAllocating, rcParam, rcExcessive);
 
     if (reserve_leng == 0)
