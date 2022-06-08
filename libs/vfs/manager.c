@@ -4422,7 +4422,7 @@ static bool VFSManagerCheckEnvAndAdImplNoqual(const VFSManager * self,
                     if (r != 0)
                         rc = 0;
                     else {
-                        rc = VPathSetQuality((VPath*)outPath, eQualNo);
+                        rc = VPathSetQuality((VPath*)(*outPath), eQualNo);
                         found = true;
                     }
                 }
