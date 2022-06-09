@@ -151,7 +151,7 @@ static rc_t checkAndCopy(struct Self *const self
         return copyDNA_to_DNA(self, dst, src, length);
     }
     if (rc == 0 && rna == '1') {
-        self->function = &copyRNA_to_DNA;
+        self->function = &copyDNA_to_RNA;
         return copyDNA_to_RNA(self, dst, src, length);
     }
     return copyDNA_to_DNA(self, dst, src, length);
