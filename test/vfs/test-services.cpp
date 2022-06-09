@@ -139,7 +139,7 @@ TEST_CASE(TestKSrvResponseGetLocationCache) {
     const VPath * cache = NULL;
     rc_t rcCache = 0;
 
-    REQUIRE_RC(KSrvResponseGetLocation2(r, "SRR850901", "SRR850901.vdbcache",
+    REQUIRE_RC(KSrvResponseGetLocation2(r, "SRR850901", "SRR850901.sralite.vdbcache",
         "vdbcache", &local, &rcLocal, &cache, &rcCache));
 
 	REQUIRE_RC_FAIL(rcLocal);
