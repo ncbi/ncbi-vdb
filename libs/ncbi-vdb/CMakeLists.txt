@@ -51,7 +51,6 @@ set( VDB_LIB_CMN_TARGETS
 set( VDB_LIB_RD_TARGETS
     ${VDB_LIB_CMN_TARGETS}
     align-reader
-    ascp
     srareader
     sradb
     vdb-blast
