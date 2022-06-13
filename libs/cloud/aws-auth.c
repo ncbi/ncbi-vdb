@@ -31,8 +31,8 @@
 
 #include <kns/http.h> /* KClientHttpRequest */
 
-#include <ext/mbedtls/base64.h> /* mbedtls_base64_encode */
-#include <ext/mbedtls/md.h> /* mbedtls_md_hmac */
+#include <mbedtls/base64.h> /* mbedtls_base64_encode */
+#include <mbedtls/md.h> /* mbedtls_md_hmac */
 
 #include "aws-priv.h" /* AWSDoAuthentication */
 #include "cloud-priv.h" /* struct AWS */
