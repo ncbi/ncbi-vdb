@@ -206,14 +206,29 @@ find_package( Python3 COMPONENTS Interpreter )
 
 #message( CMAKE_INSTALL_PREFIX: ${CMAKE_INSTALL_PREFIX} )
 
+# provide ability to override installation directories
 if ( NOT INST_BINDIR )
-    set( INST_BINDIR ${CMAKE_INSTALL_PREFIX}/bin )
+    if ( CMAKE_INSTALL_BINDIR )
+        set( INST_BINDIR ${CMAKE_INSTALL_BINDIR} )
+    else()
+        set( INST_BINDIR ${CMAKE_INSTALL_PREFIX}/bin )
+    endif()
 endif()
+
 if ( NOT INST_LIBDIR )
-    set( INST_LIBDIR ${CMAKE_INSTALL_PREFIX}/lib${BITS} )
+    if ( CMAKE_INSTALL_LIBDIR )
+        set( INST_LIBDIR ${CMAKE_INSTALL_LIBDIR} )
+    else()
+        set( INST_LIBDIR ${CMAKE_INSTALL_PREFIX}/lib${BITS} )
+    endif()
 endif()
+
 if ( NOT INST_INCDIR )
-    set( INST_INCDIR ${CMAKE_INSTALL_PREFIX}/include )
+    if ( CMAKE_INSTALL_INCLUDEDIR )
+        set( INST_INCDIR ${CMAKE_INSTALL_INCLUDEDIR} )
+    else()
+        set( INST_INCDIR ${CMAKE_INSTALL_PREFIX}/include )
+    endif()
 endif()
 
 # ===========================================================================
