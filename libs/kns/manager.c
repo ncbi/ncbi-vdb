@@ -1197,7 +1197,7 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
                                  getenv(ENV_MAGIC_PLATFORM_VERSION));
             if (rc)
             {
-                /*KDataBufferWhack ( &platform );*/
+                KDataBufferWhack ( &platform );
                 return rc;
             }
         }
@@ -1205,7 +1205,7 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
             rc=KDataBufferPrintf(&platform," via %s", getenv(ENV_MAGIC_PLATFORM_NAME));
             if (rc)
             {
-                /*KDataBufferWhack ( &platform );*/
+                KDataBufferWhack ( &platform );
                 return rc;
             }
         }
@@ -1215,7 +1215,7 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
             rc=KDataBufferPrintf(&platform,"%s","");
             if (rc)
             {
-                /*KDataBufferWhack ( &platform );*/
+                KDataBufferWhack ( &platform );
                 return rc;
             }
     }

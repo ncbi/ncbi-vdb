@@ -604,7 +604,10 @@ static rc_t Response4InitSdl(Response4 * self, const char * input) {
 
     rc = JsonStackInit(&path);
     if (rc != 0)
+    {
+        KJsonValueWhack(root);
         return rc;
+    }
 
     object = KJsonValueToObject(root);
 
@@ -620,6 +623,8 @@ static rc_t Response4InitSdl(Response4 * self, const char * input) {
             if (THRESHOLD > THRESHOLD_NO_DEBUG)
                 DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON), (
                     "... error: cannot get '%s'\n", name));
+            JsonStackRelease(&path, rc != 0);
+            KJsonValueWhack(root);
             return rc;
         }
         if (THRESHOLD > THRESHOLD_ERROR)
@@ -640,6 +645,8 @@ static rc_t Response4InitSdl(Response4 * self, const char * input) {
                 if (THRESHOLD > THRESHOLD_NO_DEBUG)
                     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON), (
                         "... error: cannot get '%s'\n", name));
+                JsonStackRelease(&path, rc != 0);
+                KJsonValueWhack(root);
                 return rc;
             }
             if (THRESHOLD > THRESHOLD_ERROR)
@@ -667,6 +674,8 @@ static rc_t Response4InitSdl(Response4 * self, const char * input) {
             }
             PLOGERR(klogErr, (klogErr, r, "$(msg) ( $(code) )",
                 "msg=%s,code=%lu", message, status));
+            JsonStackRelease(&path, 1);
+            KJsonValueWhack(root);
             return rc;
         }
     }
@@ -688,7 +697,11 @@ static rc_t Response4InitSdl(Response4 * self, const char * input) {
 
             rc = JsonStackPushArr(&path, name);
             if (rc != 0)
+            {
+                JsonStackRelease(&path, 1);
+                KJsonValueWhack(root);
                 return rc;
+            }
 
             if (n == 0) {
                 rc = RC(rcVFS, rcQuery, rcExecuting, rcDoc, rcIncomplete);
