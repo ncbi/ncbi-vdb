@@ -350,6 +350,12 @@ RangeList *extendRangeList(RangeList *list, unsigned position)
 void RangeListFree(RangeList *list)
 {
     free(list->ranges);
+    if ( list->sync )
+    {
+        KLockRelease ( list->sync->mutex );
+        free ( list->sync );
+        list->sync = NULL;
+    }
 }
 
 RangeList const *copyRangeList(RangeList *list)
