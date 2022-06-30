@@ -310,3 +310,8 @@ if( RUN_SANITIZER_TESTS_OVERRIDE )
 	set( RUN_SANITIZER_TESTS ON )
 endif()
 message( "RUN_SANITIZER_TESTS: ${RUN_SANITIZER_TESTS}" )
+
+if( NOT HAVE_MBEDTLS_F )
+	message( "Using local mbedtls headers from interfaces/ext/mbedtls" )
+	include_directories( interfaces/ext/mbedtls )
+endif()
