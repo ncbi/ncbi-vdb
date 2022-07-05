@@ -404,7 +404,9 @@ static rc_t VTableCreateCachedCursorReadImpl ( const VTable *self,
 #if DISABLE_READ_CACHE
     capacity = 0;
 #endif
-    if ( cursp == NULL )
+    if ( self == NULL )
+        rc = RC ( rcVDB, rcTable, rcOpening, rcSelf, rcNull );
+    else if ( cursp == NULL )
         rc = RC ( rcVDB, rcTable, rcOpening, rcParam, rcNull );
     else {
         VTableCursor *curs;

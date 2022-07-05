@@ -51,12 +51,12 @@ AddExecutableTest( Test_VDB_VDB-3061 "test-VDB-3061" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_VDB_bytecode "test-bytecode" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" )
 AddExecutableTest( Test_VDB_database_cmn "test-database-cmn" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" )
 AddExecutableTest( Test_VDB_view "test-view" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS};schema" )
-AddExecutableTest( SlowTest_VDB_tablecursor "test-tablecursor" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_VDB_wtablecursor "test-wtablecursor" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" )
 AddExecutableTest( Test_VDB_view_cursor "test-view-cursor" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS};schema" )
 AddExecutableTest( Test_VDB_VDB-4156 "test-VDB-4156" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" )
 
 # Slow tests
+AddExecutableTest( SlowTest_VDB_tablecursor "test-tablecursor" "${COMMON_LIBS_READ}" )
 AddExecutableTest( SlowTest_VDB_vdb-slow "test-vdb-slow" "${COMMON_LIBS_READ}" )
 AddExecutableTest( SlowTest_VDB_wvdb-slow "test-wvdb-slow" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" )
 
