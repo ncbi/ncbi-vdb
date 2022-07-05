@@ -927,7 +927,7 @@ rc_t leaf_compact (EntryData *pb, void const *pg,uint16_t prefix_len)
     assert(cnode != NULL);
 
     if(cnode->key_prefix_len < prefix_len) {
-        assert(cnode->count   > 0);
+        //assert(cnode->count   > 0);
         if( cnode->count   > 0 && prefix_len > cnode->key_prefix_len ){
             prefix_len -= cnode->key_prefix_len; /*** need only to compact the delta **/
             assert(prefix_len == 0 || memcmp(((uint8_t*)cnode)+cnode->ord[0].key,
