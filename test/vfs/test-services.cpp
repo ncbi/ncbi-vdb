@@ -346,6 +346,7 @@ extern "C" {
         if (
 0) assert(!KDbgSetString("VFS"));
 
+        putenv ( "NCBI_VDB_QUALITY=R" );
         return TestServices ( argc, argv );
     }
 }
