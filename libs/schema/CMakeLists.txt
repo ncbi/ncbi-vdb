@@ -40,10 +40,10 @@ endif()
 if( BISON_FOUND )
     BISON_TARGET( SchemaAstGrammar schema-ast.y ${CMAKE_CURRENT_SOURCE_DIR}/zz_schema-ast.cpp
         COMPILE_FLAGS "-Wno-other --no-lines -r state -v --defines=zz_schema-ast.hpp" )
-    set( SchemaAstParser ${BISON_SchemaAstGrammar_OUTPUT_SOURCE} )
+    set( SchemaAstParser ${BISON_SchemaAstGrammar_OUTPUT_SOURCE} zz_schema-ast.hpp )
+    SET_DIRECTORY_PROPERTIES(PROPERTIES CLEAN_NO_CUSTOM 1)
 else()
     set( SchemaAstParser zz_schema-ast.cpp )
-    SET_DIRECTORY_PROPERTIES(PROPERTIES CLEAN_NO_CUSTOM 1)
 endif()
 
 set( SRC
