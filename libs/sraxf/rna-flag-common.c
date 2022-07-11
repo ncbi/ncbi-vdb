@@ -51,7 +51,7 @@ static rc_t copyDNA_to_DNA(struct Self *const self
                            , size_t const length)
 {
     ((void)(self));
-    memcpy(dst, src, length);
+    memmove(dst, src, length);
     return 0;
 }
 
