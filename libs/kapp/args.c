@@ -91,12 +91,33 @@ bool CC is_valid_name (const char * string)
  */
 typedef void * ParamValueP;
 
-typedef struct ParamValueContainer {
+typedef struct ParamValueContainer ParamValueContainer;
+struct ParamValueContainer {
     uint32_t        param_index;
     ParamValueP     param_value;
     ConvertParamFnP convert_fn;
     WhackParamFnP   whack;
-} ParamValueContainer;
+};
+
+typedef struct Parameter Parameter;
+struct Parameter {
+    uint32_t position;
+    ConvertParamFnP  convert_fn;
+};
+
+struct Args
+{
+    BSTree names;
+    BSTree aliases;
+    Vector params;
+    Vector argv;
+    Vector param_values;
+    Vector help;
+#if HONOR_LEGACY_Q_ALIAS
+    bool   qalias_replaced;
+#endif
+};
+
 
 /*
  * Whack
@@ -443,17 +464,6 @@ void CC OptAliasTreeWhack (BSTNode * node, void * ignored)
     OptAliasWhack ((OptAlias*)node);
 }
 
-#if 0
-static
-const char * CC OptAliasName (const OptAlias * self, size_t * size)
-{
-    assert (self);
-
-    if (size)
-        *size = self->size;
-    return self->name;
-}
-#endif
 static
 Option * CC OptAliasOption (const OptAlias *self)
 {
@@ -491,125 +501,6 @@ int64_t CC OptAliasSort (const BSTNode * item, const BSTNode * n)
     r = (OptAlias*)n;
     return string_cmp (l->name, l->size, r->name, r->size, (uint32_t)( l->size + r->size ) );
 }
-
-#if NOT_USED_YET
-static
-rc_t CC OptDefMakeCopy (OptDef ** pself, OptDef * original)
-{
-    OptDef * self;
-    size_t nsize;
-    size_t asize;
-    size_t hsize;
-
-    nsize = string_size (original->name);
-    asize = original->aliases ? string_size (original->aliases) : 0;
-    hsize = original->help ? string_size (original->help) : 0;
-
-    self = malloc (sizeof (*self) + nsize + 1 + asize + 1 + hsize + 1);
-    if (self == NULL)
-    {
-        rc_t rc;
-        /* assuming DebugMsg is stderr equivalent */
-        rc = RC (rcExe, rcArgv, rcConstructing, rcMemory, rcExhausted);
-        LOGERR (klogFatal, rc, "error creating help for option");
-        return rc;
-    }
-    self->name = (char*)(self+1);
-    string_copy (self->name, nsize + 1, original->name, nsize);
-    self->aliases = self->name + nsize + 1;
-    if (original->aliases)
-    {
-        string_copy (self->aliases, asize + 1, original->aliases, asize);
-    }
-    else
-        self->aliases[0] = '\0';
-    self->help = self->aliases + asize + 1;
-    if (original->help)
-    {
-        string_copy (self->help, hsize + 1, original->help, asize);
-    }
-    else
-        self->help[0] = '\0';
-    self->max_count = original->max_count;
-    self->needs_value = original->needs_value;
-    *pself = self;
-    return 0;
-}
-static
-void CC OptDefCopyVectorWhack (void * self, void * ignored)
-{
-    free (self);
-}
-
-#endif
-
-#if NOT_USED_YET
-
-typedef struct HelpGroup
-{
-    rc_t ( CC * header_fmt) (Args * args, const char * header);
-    Vector options;
-    const char header[1];
-} HelpGroup;
-
-
-static
-rc_t CC HelpGroupMake (HelpGroup ** pself, const char * name)
-{
-    HelpGroup * self;
-    size_t size;
-
-    size = string_size (name);
-    self = malloc (sizeof (*self) + size);
-    if (self == NULL)
-    {
-        fprintf (stderr, "Error allocating help group structure %s\n", name);
-        return RC (rcExe, rcArgv, rcConstructing, rcMemory, rcExhausted);
-    }
-    string_copy (self->name, size+1, name, size);
-    VectorInit (&self->optdefs, 0, 16);
-
-    *pself = self;
-    return 0;
-}
-
-
-static
-rc_t CC HelpGroupAddOptDef (HelpGroup * self, OptDef * option)
-{
-    OptDef * opt;
-    rc_t rc;
-
-    rc = OptDefCopy (&opt, option);
-    if (rc)
-        return rc;
-
-    rc = VectorAppend (&self->optdefs, NULL, opt);
-    if (rc)
-    {
-        fprintf (stderr, "Error appending option for help\n");
-        OptDefCopyVectorWhack (opt, NULL);
-        return rc;
-    }
-    return 0;
-}
-
-static
-void CC HelpGroupVectorWhack (void * item, void * ignored)
-{
-    HelpGroup * self = item;
-
-    assert (self);
-    VectorWhack (&self->optdefs, OptDefCopyVectorWhack, NULL);
-    free (self);
-}
-#endif
-
-typedef struct Parameter
-{
-    uint32_t position;
-    ConvertParamFnP  convert_fn;
-} Parameter;
 
 static
 rc_t CC ParamMake (Parameter ** p_parameter, uint32_t position, ConvertParamFnP convert_fn)
@@ -707,42 +598,134 @@ rc_t CC ParamAddValue (Vector * param_values, uint32_t arg_index, const char * v
     return rc;
 }
 
+static FILE *dumpOptionDefs = NULL;
 
-/* ==========
+/**
+ Print one option definition.
+ 
+ @param def the definition.
  */
-struct Args
+static void printOptionDefinition(OptDef const *const def)
 {
-    BSTree names;
-    BSTree aliases;
-    Vector params;
-    Vector argv;
-    Vector param_values;
-    Vector help;
-#if NOT_USED_YET
-    HelpGroup * def_help;
-#endif
-#if HONOR_LEGACY_Q_ALIAS
-    bool   qalias_replaced;
-#endif
-};
+    if (dumpOptionDefs) {
+        char const *const no_help[] = {NULL};
+        char const *const aliases = def->aliases ? def->aliases : "";
+        char const *const *const help = def->help ? def->help : no_help;
+        int i;
+        char buffer[4] = "\\\0\0\0";
 
-rc_t CC ArgsMake (Args ** pself)
+        fprintf(dumpOptionDefs, "    TOOL_ARG(\"%s\", \"%s\", %s, TOOL_HELP(", def->name, aliases, def->needs_value ? "true" : "false");
+        for (i = 0; help[i]; ++i) {
+            char const *helptext = help[i];
+            if (helptext[0]) {
+                int j;
+                
+                fprintf(dumpOptionDefs, "\"");
+                for (j = 0; helptext[j]; ++j) {
+                    int const ch = helptext[j];
+                    char const *const out = (ch == '\\' || ch == '"') ? buffer : (buffer + 1);
+
+                    buffer[1] = ch;
+                    buffer[2] = '\0';
+                    fprintf(dumpOptionDefs, "%s", out);
+                }
+                fprintf(dumpOptionDefs, "\", ");
+            }
+        }
+        fprintf(dumpOptionDefs, "0)), \\\n");
+    }
+}
+
+static char const *basename(char const *fullpath, size_t *outsize)
 {
-    rc_t rc;
-    Args * self;
+    char const *result = fullpath;
+    
+    for ( ; ; ) {
+        int const ch = *fullpath++;
+        if (ch == '\0') {
+            *outsize = (fullpath - result) - 1;
+            return result;
+        }
+        if (ch == '/')
+            result = fullpath;
+    }
+}
+
+static bool cleaned(unsigned const max, char *result, char const *name)
+{
+    char *const endp = result + max;
+    while (result != endp) {
+        int const ch = *name++;
+        if (ch == '\0') {
+            *result = '\0';
+            return true;
+        }
+        *result++ = isalnum(ch) ? toupper(ch) : '_';
+    }
+    assert(!"not enough space in result string!!!");
+    return false;
+}
+
+/**
+ Open the option definitions file and write tool header information.
+ 
+ The filename is taken from ${SRATOOLS_DUMP_OPTIONS}.
+ The file is opened in append mode.
+
+ @param argv0 argv[0].
+ 
+ Example output:
+ @code
+ #define TOOL_ARGS_VDB_DUMP TOOL_ARGS ( \
+     TOOL_ARG("columns", "C", true, TOOL_HELP("columns (default = all)")), \
+     TOOL_ARG("row_id_on", "I", false, TOOL_HELP("print row id")),\
+     TOOL_ARG(0, 0, 0, TOOL_HELP(0)))
+ @endcode
+ */
+static void openOptionDefs(char const *argv0) {
+#if UNIX && _DEBUGGING
+    char const *const enval = getenv("SRATOOLS_DUMP_OPTIONS");
+    if (enval) {
+        size_t basesize = 0;
+        char const *const base = basename(argv0, &basesize);
+        char toolname[256]; /**< a cleaned-up version of the tool name */
+
+        assert(basesize == strlen(base));
+        assert(basesize < sizeof(toolname));
+        cleaned(sizeof(toolname), toolname, base);
+        
+        dumpOptionDefs = strcmp(enval, "-") ? fopen(enval, "a") : stdout;
+        fprintf(dumpOptionDefs, "#define TOOL_NAME_%s \"%s\" /* from argv[0] */\n", toolname, base);
+        fprintf(dumpOptionDefs, "#define TOOL_ARGS_%s TOOL_ARGS ( \\\n", toolname);
+    }
+#endif
+}
+
+/**
+ Close the option definitions file.
+ 
+ If the file had been opened, this function does not return.
+ */
+static void closeOptionDefs(void) {
+    if (dumpOptionDefs) {
+        fprintf(dumpOptionDefs, "    TOOL_ARG(0, 0, 0, TOOL_HELP(0)))\n\n");
+        fclose(dumpOptionDefs);
+        exit(0);
+    }
+}
+
+static rc_t ArgsMake_int(Args ** pself, char const *const argv0)
+{
+    rc_t rc = 0;
+    Args *self = NULL;
 
     assert (pself);
 
+    if (argv0)
+        openOptionDefs(argv0);
+    
     self = malloc (sizeof (*self));
-    if (self == NULL)
-    {
-        rc = RC (rcExe, rcArgv, rcConstructing, rcMemory, rcExhausted);
-    }
-    else
-    {
-#if NOT_USED_YET
-        HelpGroup * help;
-#endif
+    if (self != NULL) {
         BSTreeInit (&self->names);
         BSTreeInit (&self->aliases);
         VectorInit (&self->params,0,8);
@@ -752,44 +735,40 @@ rc_t CC ArgsMake (Args ** pself)
 #if HONOR_LEGACY_Q_ALIAS
         self -> qalias_replaced = false;
 #endif
-#if NOT_USED_YET
-        rc = HelpGroupMake (&help, "NCBI Options");
-        if (rc)
-        {
-            ArgsWhack (self);
-        }
-        else
-        {
-            self->def_help = help;
-            rc = VectorAppend (&self->help, NULL, help);
-        }
-#else
-        rc = 0;
-#endif
+    }
+    else {
+        assert(self != NULL);
+        rc = RC (rcExe, rcArgv, rcConstructing, rcMemory, rcExhausted);
     }
     *pself = (rc == 0) ? self : NULL;
     return rc;
 }
 
-rc_t CC ArgsWhack (Args * self)
+rc_t CC ArgsMake (Args ** pself)
 {
-    if (self)
-    {
+    return ArgsMake_int(pself, NULL);
+}
+
+rc_t CC ArgsWhack (Args * self) {
+    if (self) {
         BSTreeWhack (&self->names, OptionTreeWhack, NULL);
         BSTreeWhack (&self->aliases, OptAliasTreeWhack, NULL);
         VectorWhack (&self->params, ParamVectorWhack, NULL);
         VectorWhack (&self->argv, ParamValueVectorWhack, NULL);
         VectorWhack (&self->param_values, ParamValueVectorWhack, NULL);
-#if NOT_USED_YET
-        VectorWhack (&self->help, HelpGroupVectorWhack, NULL);
-#endif
         free (self);
     }
     return 0;
 }
 
+static rc_t ArgsAddOption_int(Args *const self, bool isStandardOption, const OptDef * option);
 
 rc_t CC ArgsAddOption (Args * self, const OptDef * option)
+{
+    return ArgsAddOption_int(self, false, option);
+}
+
+static rc_t ArgsAddOption_int(Args *const self, bool isStandardOption, const OptDef *const option)
 {
     rc_t rc = 0;
     Option * node;
@@ -816,6 +795,8 @@ rc_t CC ArgsAddOption (Args * self, const OptDef * option)
         PLOGERR (klogInt, (klogInt, rc, "Error using illegal option name '$(O)'", "O=--%s", name));
         return rc;
     }
+    if (!isStandardOption)
+        printOptionDefinition(option);
     size = string_size (name);
     rc = OptionMake (&node, name, size, option->max_count, option->needs_value, option->required, option->convert_fn);
     if (rc)
@@ -954,41 +935,22 @@ rc_t CC ArgsAddLongOption ( Args * self, const char * opt_short_names, const cha
     return ArgsAddOption ( self, & opt );
 }
 
-rc_t CC ArgsAddOptionArray (Args * self, const OptDef * option, uint32_t count
+rc_t CC ArgsAddOptionArray_int(Args * self, bool areStandardOptions, uint32_t count, const OptDef * options
     /*, rc_t (*header_fmt)(Args * args, const char * header), const char * header */ )
 {
     rc_t rc;
-#if NOT_USED_YET
-    HelpGroup * hg;
 
-    rc = HelpGroupMake (&hg, header, header_fmt, option, count);
-    if (rc == 0)
+    for (rc = 0; (rc == 0) && (count > 0); --count, ++options)
     {
-
-        rc = VectorAppend (&self->help, NULL, hg);
-        if (rc == 0)
-        {
-
-            /* count might be zero for help only sections */
-            for (rc = 0; count > 0; --count, ++option)
-            {
-                rc = ArgsAddOption (self, option);
-                if (rc)
-                    break;
-            }
-            if (rc == 0)
-                return 0;
-        }
-        else
-            HelpGroupVectorWhack (hg, NULL);
+        rc = ArgsAddOption_int (self, areStandardOptions, options);
     }
-#else
-    for (rc = 0; (rc == 0) && (count > 0); --count, ++option)
-    {
-        rc = ArgsAddOption (self, option);
-    }
-#endif
     return rc;
+}
+
+rc_t CC ArgsAddOptionArray (Args * self, const OptDef * options, uint32_t count
+    /*, rc_t (*header_fmt)(Args * args, const char * header), const char * header */ )
+{
+    return ArgsAddOptionArray_int(self, false, count, options);
 }
 
 rc_t CC ArgsAddParam ( Args * self, const ParamDef * param_def )
@@ -1502,13 +1464,24 @@ rc_t ArgsParseInt (Args * self, int argc, char *argv[])
     return rc;
 }
 
-rc_t CC ArgsParse (Args * self, int argc, char *argv[])
+rc_t CC ArgsParse_int (Args * self, int argc, char *argv[])
 {
     KLogLevel lvl = KLogLevelGet ();
     rc_t rc = KLogLevelSet ( klogWarn );
     rc = ArgsParseInt ( self, argc, argv );
     KLogLevelSet ( lvl );
     return rc;
+}
+
+/** Process `argv` using the options that have been defined. */
+rc_t CC ArgsParse (Args * self, int argc, char *argv[])
+{
+    /*
+     This function is called AFTER all options have been defined,
+     so this is where we want to close the option definitions log.
+     */
+    closeOptionDefs();
+    return ArgsParse_int(self, argc, argv);
 }
 
 rc_t CC ArgsOptionCount (const Args * self, const char * option_name, uint32_t * count)
@@ -1808,17 +1781,17 @@ OptDef StandardOptions[]  =
 
 rc_t CC ArgsAddStandardOptions(Args * self)
 {
-    return ArgsAddOptionArray (self, StandardOptions,
-                               sizeof (StandardOptions) / sizeof (OptDef)
-                               /*, NULL, NULL */ );
+    return ArgsAddOptionArray_int (self, true,
+                                   sizeof (StandardOptions) / sizeof (OptDef)
+                                   , StandardOptions );
 }
 
-rc_t CC ArgsMakeStandardOptions (Args** pself)
+static rc_t ArgsMakeStandardOptions_int(Args** pself, char const *const argv0)
 {
     Args * self;
     rc_t rc;
 
-    rc = ArgsMake (&self);
+    rc = ArgsMake_int(&self, argv0);
     if (rc == 0)
     {
         rc = ArgsAddStandardOptions (self);
@@ -1827,6 +1800,11 @@ rc_t CC ArgsMakeStandardOptions (Args** pself)
     }
     *pself = (rc == 0) ? self : NULL;
     return rc;
+}
+
+rc_t CC ArgsMakeStandardOptions (Args** pself)
+{
+    return ArgsMakeStandardOptions_int(pself, NULL);
 }
 
 rc_t CC ArgsHandleHelp (Args * self)
@@ -2049,7 +2027,7 @@ rc_t ArgsMakeAndHandleInt ( Args ** pself, int argc, char ** argv,
         * pself = NULL;
     }
 
-    rc = ArgsMakeStandardOptions (&self);
+    rc = ArgsMakeStandardOptions_int(&self, argv[0]);
     if ( rc == 0 && param_count != 0 )
     {
         if ( params == NULL )
