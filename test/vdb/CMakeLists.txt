@@ -40,12 +40,16 @@ set_tests_properties(Test_VDB_wvdb PROPERTIES ENVIRONMENT VDB_CONFIG=${CMAKE_CUR
 
 AddExecutableTest( SlowTest_VDB_dependencies "test-dependencies" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_VDB_sparse_col_rw "test-sparse-col" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" )
+set_tests_properties( Test_VDB_sparse_col_rw PROPERTIES FIXTURES_SETUP SPARSE_COL )
 
 AddExecutableTest( Test_VDB_sparse_col_rd "test-sparse-col" "${COMMON_LIBS_READ}" )
 target_compile_definitions(Test_VDB_sparse_col_rd PUBLIC READ_ONLY)
+set_tests_properties(Test_VDB_sparse_col_rd PROPERTIES FIXTURES_REQUIRED SPARSE_COL )
 if( RUN_SANITIZER_TESTS )
     target_compile_definitions(Test_VDB_sparse_col_rd_asan PUBLIC READ_ONLY)
+    set_tests_properties(Test_VDB_sparse_col_rd_asan PROPERTIES FIXTURES_REQUIRED SPARSE_COL)
     target_compile_definitions(Test_VDB_sparse_col_rd_tsan PUBLIC READ_ONLY)
+    set_tests_properties(Test_VDB_sparse_col_rd_tsan PROPERTIES FIXTURES_REQUIRED SPARSE_COL)
 endif()
 
 AddExecutableTest( Test_VDB_blob_val "test-blob-val" "${COMMON_LIBS_READ}" )
