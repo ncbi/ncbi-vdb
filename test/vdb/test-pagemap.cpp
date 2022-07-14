@@ -36,7 +36,7 @@ TEST_SUITE( VdbPageMapTestSuite );
 TEST_CASE ( MakeRelease )
 {
     PageMap *pm;
-    const uint32_t Reserve = 1UL<<31;
+    const uint32_t Reserve = 1UL<<31 - 1;
 
     REQUIRE_RC( PageMapNew( &pm, Reserve) );
     REQUIRE_EQUAL( uint64_t( 32 ), pm->cstorage.elem_bits );
@@ -82,10 +82,17 @@ TEST_CASE ( MakeRelease )
 }
 //#endif
 
+TEST_CASE ( PageMap_MaxReserve )
+{   // VDB-4986
+    PageMap *pm;
+    const uint32_t Reserve = 1UL<<31; // too much
+    REQUIRE_RC_FAIL( PageMapNew( &pm, Reserve) );
+}
+
 TEST_CASE ( PageMap_AppendRows )
 {   // VDB-4897
     PageMap *pm;
-    const uint32_t Reserve = 1UL<<31;
+    const uint32_t Reserve = 1UL<<31 - 1;
     REQUIRE_RC( PageMapNew( &pm, Reserve) );
 
     const uint64_t row_length = 1UL << 30;
