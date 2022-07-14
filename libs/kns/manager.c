@@ -1163,7 +1163,10 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
 
     if ( kns_manager_lock ) {
         rc_t rc = KLockAcquire ( kns_manager_lock );
-        if ( rc ) { return rc; }
+        if ( rc ) {
+            KDataBufferWhack ( &phid );
+            return rc;
+        }
     }
 
     /* Some tests call before these are initialized */
@@ -1184,7 +1187,11 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
             kns_manager_pagehitid );
     }
 
-    if ( rc ) { return rc; }
+    if ( rc ) {
+        KDataBufferWhack ( &phid );
+        KDataBufferWhack ( &sessids );
+        return rc;
+    }
 
     KDataBuffer platform;
     KDataBufferMakeBytes(&platform, 0);
@@ -1197,6 +1204,8 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
                                  getenv(ENV_MAGIC_PLATFORM_VERSION));
             if (rc)
             {
+                KDataBufferWhack ( &phid );
+                KDataBufferWhack ( &sessids );
                 KDataBufferWhack ( &platform );
                 return rc;
             }
@@ -1205,6 +1214,8 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
             rc=KDataBufferPrintf(&platform," via %s", getenv(ENV_MAGIC_PLATFORM_NAME));
             if (rc)
             {
+                KDataBufferWhack ( &phid );
+                KDataBufferWhack ( &sessids );
                 KDataBufferWhack ( &platform );
                 return rc;
             }
@@ -1215,6 +1226,8 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
             rc=KDataBufferPrintf(&platform,"%s","");
             if (rc)
             {
+                KDataBufferWhack ( &phid );
+                KDataBufferWhack ( &sessids );
                 KDataBufferWhack ( &platform );
                 return rc;
             }
@@ -1235,9 +1248,9 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
             phid.base );
     }
 
-    KDataBufferWhack ( &platform );
     KDataBufferWhack ( &phid );
     KDataBufferWhack ( &sessids );
+    KDataBufferWhack ( &platform );
 
     ( *user_agent ) = kns_manager_user_agent_append;
     return rc;
