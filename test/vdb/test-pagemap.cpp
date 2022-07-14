@@ -31,28 +31,30 @@ extern "C" {
 
 using namespace std;
 
+const uint32_t MaxReserve = 1UL<<30;
+
+
 TEST_SUITE( VdbPageMapTestSuite );
 
 TEST_CASE ( MakeRelease )
 {
     PageMap *pm;
-    const uint32_t Reserve = 1UL<<31 - 1;
 
-    REQUIRE_RC( PageMapNew( &pm, Reserve) );
+    REQUIRE_RC( PageMapNew( &pm, MaxReserve) );
     REQUIRE_EQUAL( uint64_t( 32 ), pm->cstorage.elem_bits );
-    REQUIRE_EQUAL( uint64_t( Reserve ) * 3, pm->cstorage.elem_count );
+    REQUIRE_EQUAL( uint64_t( MaxReserve ) * 3, pm->cstorage.elem_count );
     REQUIRE_EQUAL( uint8_t( 0 ), pm->cstorage.bit_offset );
 
     REQUIRE_EQUAL( false, pm -> random_access );
 
     REQUIRE_EQUAL( pm_size_t( 0 ), pm -> leng_recs );
-    REQUIRE_EQUAL( pm_size_t( Reserve ), pm -> reserve_leng );
+    REQUIRE_EQUAL( pm_size_t( MaxReserve ), pm -> reserve_leng );
     REQUIRE_NOT_NULL( pm -> length ); // always allocated with capacity of at least 1
     REQUIRE_NOT_NULL( pm -> leng_run ); // always allocated with capacity of at least 1
 
     REQUIRE_EQUAL( pm_size_t( 0 ), pm -> data_recs );
     REQUIRE_NOT_NULL( pm -> data_run ); // always allocated with capacity of at least 1
-    REQUIRE_EQUAL( pm_size_t( Reserve ), pm -> reserve_data );
+    REQUIRE_EQUAL( pm_size_t( MaxReserve ), pm -> reserve_data );
     REQUIRE_NULL( pm -> data_offset ); // only allocated if random_access
 
     REQUIRE_EQUAL( pm_size_t( 0 ), pm -> start_valid );
@@ -92,8 +94,7 @@ TEST_CASE ( PageMap_MaxReserve )
 TEST_CASE ( PageMap_AppendRows )
 {   // VDB-4897
     PageMap *pm;
-    const uint32_t Reserve = 1UL<<31 - 1;
-    REQUIRE_RC( PageMapNew( &pm, Reserve) );
+    REQUIRE_RC( PageMapNew( &pm, MaxReserve) );
 
     const uint64_t row_length = 1UL << 30;
     const uint64_t run_length = 1;

@@ -30,7 +30,6 @@ TEST_SUITE( WVdbSlowTestSuite );
 
 const string ScratchDir = "./db/";
 
-#if 0
 FIXTURE_TEST_CASE ( VCursorCommit_BufferOverflow, WVDB_Fixture )
 {   // VDB-4341
     m_databaseName = ScratchDir + GetName();
@@ -103,7 +102,6 @@ FIXTURE_TEST_CASE ( VCursorCommit_BufferOverflow, WVDB_Fixture )
         REQUIRE_RC ( VCursorRelease ( cursor ) );
     }
 }
-#endif
 
 FIXTURE_TEST_CASE ( VCursor_PageMapOverflow, WVDB_Fixture )
 {   // VDB-4897
@@ -126,10 +124,9 @@ FIXTURE_TEST_CASE ( VCursor_PageMapOverflow, WVDB_Fixture )
         REQUIRE_RC ( VCursorOpen ( cursor ) );
 
         string s = string ();
-        for ( uint64_t i = 0; i < numeric_limits<uint32_t>::max(); ++i)
+        for ( uint64_t i = 1000000UL*4293; i < numeric_limits<uint32_t>::max(); ++i)
         {
-if ( i % 1000000 == 0 )
-cout << i/1000000 <<endl;
+if ( i % 1000000 == 0 ) cout << i/1000000 <<endl;
             REQUIRE_RC ( VCursorOpenRow ( cursor ) );
             REQUIRE_RC ( VCursorWrite ( cursor, column_idx1, 8, s.c_str(), 0, s.size() ) );
             REQUIRE_RC ( VCursorCommitRow ( cursor ) );
