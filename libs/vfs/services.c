@@ -913,16 +913,15 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
                         }
                         if (rc == 0 && r2 != 0)
                             rc = r2;
+                    } else {
+                        if (rc == 0)
+                            rc = KServiceGetResponse(self, &r);
                     }
                 }
                 else
                     rc = 0;
 
                 RELEASE(VPathSet, vps);
-
-                if (rc == 0)
-                    rc = KServiceGetResponse(self, &r);
-
                 RELEASE(VPath, path);
                 if (rc == 0 && lRc != 0 && rRc != 0)
                     rc = rRc;

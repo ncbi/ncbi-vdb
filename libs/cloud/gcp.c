@@ -80,6 +80,7 @@ static
 rc_t CC GCPDestroy(GCP * self)
 {
     free(self->privateKey);
+    free(self->private_key_id);
     free(self->client_email);
     free(self->project_id);
     free(self->access_token);

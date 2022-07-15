@@ -51,7 +51,6 @@ set( VDB_LIB_CMN_TARGETS
 set( VDB_LIB_RD_TARGETS
     ${VDB_LIB_CMN_TARGETS}
     align-reader
-    ascp
     srareader
     sradb
     vdb-blast
@@ -74,8 +73,6 @@ set( VDB_LIB_RDWR_TARGETS
     wwgsxf
     wvxf
 )
-
-add_compile_definitions (__mod__="libs/ncbi-vdb" PKGNAME="ncbi-vdb")
 
 if( WIN32 )
     include( CMakeLists.win.txt )

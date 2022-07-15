@@ -27,11 +27,9 @@ add_compile_definitions( _LIBRARY )
 
 add_subdirectory(ktst)
 add_subdirectory(align)
-add_subdirectory(ascp)
 add_subdirectory(axf) # sra tools dependency
 add_subdirectory(blast)
 add_subdirectory(cloud)
-add_subdirectory(diagnose)
 add_subdirectory(ext)
 add_subdirectory(kapp)
 add_subdirectory(kdb)
@@ -55,7 +53,7 @@ add_subdirectory(ncbi-vdb)
 if ( SINGLE_CONFIG )
     #
     # Install header files
-    set( HEADERS align  cloud  diagnose  insdc  kdb  kfg  klib  kproc   ktst  os     search  sra   vfs
+    set( HEADERS align  cloud  insdc  kdb  kfg  klib  kproc   ktst  os     search  sra   vfs
     cc     csra2  ext  kapp   kfc  kfs  kns   krypto  ncbi  vdb  )
 
     foreach( h IN ITEMS ${HEADERS} )
@@ -67,4 +65,5 @@ endif()
 #add_subdirectory(loader) VDB-4855 moved to sra-tools/libs
 #add_subdirectory(hdf5) VDB-4795
 #add_subdirectory(tui) VDB-4803
-
+#add_subdirectory(diagnose) VDB-4794 moved to sra-tools/test-sra
+#add_subdirectory(ascp) VDB-4794 moved to sra-tools/libs/ascp

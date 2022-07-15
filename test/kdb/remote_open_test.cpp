@@ -43,6 +43,8 @@
 #include <klib/text.h>
 #include <kfg/config.h>
 
+#define ALL
+
 using namespace std;
 
 static string ToString(const VPath* path)
@@ -55,6 +57,7 @@ static string ToString(const VPath* path)
     return ret;
 }
 
+#ifdef ALL
 TEST_CASE(KDBManagerVPathOpenDB_Local)
 {
     VPath * path;
@@ -125,6 +128,7 @@ TEST_CASE(KDBManagerVPathOpenDB_Local_BadPath)
 
     REQUIRE_RC(VPathRelease(path));
 }
+#endif
 
 class RemoteDBFixture
 {
@@ -155,8 +159,8 @@ public:
     {
         m_configName = name+".kfg";
         std::ofstream f(m_configName.c_str());
-        f   << "repository/remote/main/CGI/resolver-cgi "
-                  "= \"https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi\"\n"
+        f   << "repository/remote/main/SDL.2/resolver-cgi "
+                  "= \"https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve\"\n"
             << "repository/user/main/public/root=\"./root\"\n"
             << "repository/user/main/public/apps/sra/volumes/sraFlat=\"sra\"\n";
         f.close();

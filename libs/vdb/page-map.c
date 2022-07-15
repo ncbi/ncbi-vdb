@@ -616,7 +616,7 @@ static PageMap *new_StaticPageMap(unsigned length, unsigned data) {
 
 static
 rc_t PageMapGrow(PageMap *self, uint32_t new_reserve_leng, uint32_t new_reserve_data) {
-    uint32_t sz;
+    uint64_t sz;
     PageMap temp = *self;
     uint32_t reserve_data = self->reserve_data;
     uint32_t reserve_leng = self->reserve_leng;
@@ -625,7 +625,7 @@ rc_t PageMapGrow(PageMap *self, uint32_t new_reserve_leng, uint32_t new_reserve_
 #if PAGEMAP_STATISTICS
     ++pm_stats.grows;
 #endif
-    if (new_reserve_leng > (1UL << 31) || new_reserve_data > (1UL << 31))
+    if (new_reserve_leng >= (1UL << 31) || new_reserve_data >= (1UL << 31))
         return RC(rcVDB, rcPagemap, rcAllocating, rcParam, rcExcessive);
 
     if (reserve_leng == 0)
@@ -640,7 +640,7 @@ rc_t PageMapGrow(PageMap *self, uint32_t new_reserve_leng, uint32_t new_reserve_
         reserve_data <<= 1;
     if (reserve_data < MIN_KBUF_RESERVE_SIZE) reserve_data = MIN_KBUF_RESERVE_SIZE;
 
-    sz = reserve_leng * 2 + reserve_data;
+    sz = (uint64_t)reserve_leng * 2 + reserve_data;
 #if PAGEMAP_STATISTICS
     pm_stats.currentFootprint -= KDataBufferMemorySize(&self->estorage);
 #endif
