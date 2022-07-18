@@ -2258,7 +2258,11 @@ rc_t Response4Make4 ( Response4 ** self, const char * input ) {
 
     rc = Response4Init4 ( r, input );
     if ( rc != 0 )
+    {
+        /*Response4Release ( r ); - this doesn't always work, maybe because of some other bug*/
+        Response4Fini ( r );
         free ( r );
+    }
     else
         * self = r;
 

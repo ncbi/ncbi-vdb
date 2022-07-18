@@ -103,6 +103,42 @@ FIXTURE_TEST_CASE ( VCursorCommit_BufferOverflow, WVDB_Fixture )
     }
 }
 
+FIXTURE_TEST_CASE ( VCursor_PageMapOverflow, WVDB_Fixture )
+{   // VDB-4897
+    m_databaseName = ScratchDir + GetName();
+    RemoveDatabase();
+
+    string schemaText =
+        "table table1 #1.0.0 { column ascii column1; };"
+        "database root_database #1 { table table1 #1 TABLE1; } ;";
+
+    const char* TableName = "TABLE1";
+    const char* ColumnName1 = "column1";
+
+    MakeDatabase ( schemaText, "root_database" );
+    {
+        VCursor* cursor = CreateTable ( TableName );
+
+        uint32_t column_idx1;
+        REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx1, ColumnName1 ) );
+        REQUIRE_RC ( VCursorOpen ( cursor ) );
+
+        string s = string ();
+        for ( uint64_t i = 1000000UL*4293; i < numeric_limits<uint32_t>::max(); ++i)
+        {
+if ( i % 1000000 == 0 ) cout << i/1000000 <<endl;
+            REQUIRE_RC ( VCursorOpenRow ( cursor ) );
+            REQUIRE_RC ( VCursorWrite ( cursor, column_idx1, 8, s.c_str(), 0, s.size() ) );
+            REQUIRE_RC ( VCursorCommitRow ( cursor ) );
+            REQUIRE_RC ( VCursorCloseRow ( cursor ) );
+        }
+
+        REQUIRE_RC ( VCursorCommit ( cursor ) );
+
+        REQUIRE_RC ( VCursorRelease ( cursor ) );
+    }
+}
+
 //////////////////////////////////////////// Main
 extern "C"
 {
