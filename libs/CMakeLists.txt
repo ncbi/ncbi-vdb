@@ -44,7 +44,6 @@ add_subdirectory(schema)
 add_subdirectory(search)
 add_subdirectory(sra)
 add_subdirectory(sraxf) # same as axf
-add_subdirectory(tui)
 add_subdirectory(vdb)
 add_subdirectory(vfs)
 add_subdirectory(vxf)
@@ -54,7 +53,7 @@ add_subdirectory(ncbi-vdb)
 if ( SINGLE_CONFIG )
     #
     # Install header files
-    set( HEADERS align  cloud  insdc  kdb  kfg  klib  kproc   ktst  os     search  sra   tui  vfs
+    set( HEADERS align  cloud  insdc  kdb  kfg  klib  kproc   ktst  os     search  sra   vfs
     cc     csra2  ext  kapp   kfc  kfs  kns   krypto  ncbi  vdb  )
 
     foreach( h IN ITEMS ${HEADERS} )
@@ -65,5 +64,6 @@ endif()
 #add_subdirectory(kxml) VDB-4797 moved to sra-tools
 #add_subdirectory(loader) VDB-4855 moved to sra-tools/libs
 #add_subdirectory(hdf5) VDB-4795
+#add_subdirectory(tui) VDB-4803
 #add_subdirectory(diagnose) VDB-4794 moved to sra-tools/test-sra
 #add_subdirectory(ascp) VDB-4794 moved to sra-tools/libs/ascp
