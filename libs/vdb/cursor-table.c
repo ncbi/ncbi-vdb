@@ -948,7 +948,12 @@ rc_t VCursorOpenRead ( VCURSOR_IMPL *self, const KDlset *libs )
             self -> dad . state = vcReady;
             if( self -> cache_curs )
             {
-                VCursorOpenRead ( ( VTableCursor * ) self -> cache_curs, libs );
+                rc_t const rc2 = VCursorOpenRead ( ( VTableCursor * ) self -> cache_curs, libs );
+                if (rc2) {
+                    LOGERR(klogWarn, rc2, "failed to open cache cursor; not using cache");
+                    VCursorRelease(self->cache_curs);
+                    self->cache_curs = NULL;
+                }
             }
             return rc;
         }
