@@ -127,7 +127,7 @@ static
 void CC ParamValueNotConvWhack (void * self)
 {
     assert (self); /* not an absolute requirement but if NULL we got programming error */
-    
+
     free (self);
 }
 
@@ -136,11 +136,11 @@ void CC ParamValueVectorWhack (void * self, void * ignored)
 {
     ParamValueContainer * p_container;
     assert (self);
-    
+
     p_container = (ParamValueContainer *)self;
     if (p_container->whack)
         p_container->whack(p_container->param_value);
-    
+
     free (self);
 }
 
@@ -153,17 +153,17 @@ static
 rc_t CC ParamValueMake (ParamValueContainer * p_container, uint32_t arg_index, const char * value, size_t value_size, ConvertParamFnP convert_fn)
 {
     size_t alloc_size;
-    
+
     assert (p_container);
     assert (value);
-    
+
     if (value_size == 0)
         return RC ( rcExe, rcArgv, rcConstructing, rcParam, rcEmpty );
 
     p_container->param_index = arg_index;
     p_container->whack = ParamValueNotConvWhack;
     p_container->convert_fn = convert_fn;
-    
+
     alloc_size = value_size + 1;
     p_container->param_value = malloc (alloc_size);
 
@@ -193,7 +193,7 @@ typedef struct Option
     uint32_t    count;          /* count of times option seen on the command line */
     uint32_t    max_count;      /* if non-zero, how many times is it legal to be seen */
     bool        needs_value;    /* does this option take/require a value? */
-    bool        required;       
+    bool        required;
     bool        deprecated;     /* a warning if used */
     bool        error;          /* an error if used */
     bool        called_by_alias;/* short name was used for this option */
@@ -218,7 +218,7 @@ rc_t CC OptionMake (Option ** pself, const char * name, size_t size, uint32_t ma
         rc = RC (rcExe, rcArgv, rcConstructing, rcMemory, rcExhausted);
         PLOGERR (klogErr, (klogErr, rc, "Error adding option '$(O)'","O=--%s",name));
     }
-    else 
+    else
     {
         if ((self->needs_value = needs_value) != false)
             VectorInit (&self->values,0,4);
@@ -287,7 +287,7 @@ uint32_t CC OptionGetCount (const Option *self)
     return self->count;
 }
 
-/* 
+/*
  * GetValue
  *    returns the address of the Nth value (not a copy of the value)
  */
@@ -295,7 +295,7 @@ static
 rc_t CC OptionGetValue (const Option * self, uint32_t number, const void ** value)
 {
     ParamValueContainer * p_container;
-    /* SKH -- not sure why this was here. 
+    /* SKH -- not sure why this was here.
        const char * pc; */
     /* uint32_t count; */
 
@@ -308,9 +308,9 @@ rc_t CC OptionGetValue (const Option * self, uint32_t number, const void ** valu
     /* SKH -- this was checking pc, which is uninitialized */
     if (p_container == NULL)
         return RC (rcExe, rcArgv, rcAccessing, rcIndex, rcExcessive);
-    
+
     *value = p_container->param_value;
-    
+
     return 0;
 }
 
@@ -323,7 +323,7 @@ rc_t CC OptionAddValue (Option * option, uint32_t arg_index, const char * value,
     rc_t rc = 0;
 
     assert (option);
-    
+
     ++option->count;
 
 /*     KOutMsg ("%s: name %s count %u max_count %u value %s\n", __func__, option->name, option->count, option->max_count, value); */
@@ -357,7 +357,7 @@ rc_t CC OptionAddValue (Option * option, uint32_t arg_index, const char * value,
         rc = ParamValueMake (p_container, arg_index, value, size, option->convert_fn);
         if (rc == 0)
         {
-            /* NOTE: effectively going in as a char ** though we will 
+            /* NOTE: effectively going in as a char ** though we will
              * pull it out as a char* with the same value */
             rc = VectorAppend (&option->values, NULL, p_container);
             if (rc)
@@ -436,7 +436,7 @@ rc_t CC OptAliasMake (OptAlias ** pself, const char * name, size_t size,
     {
         rc_t rc = RC (rcExe, rcArgv, rcConstructing, rcMemory, rcExhausted);
         PLOGERR (klogErr,
-                 (klogErr, rc, "Error creating structure for alias '$(A)' for parameter '$(B)", 
+                 (klogErr, rc, "Error creating structure for alias '$(A)' for parameter '$(B)",
                   "A=%s,B=%s", name, option->name));
         *pself = NULL;
         return rc;
@@ -506,7 +506,7 @@ static
 rc_t CC ParamMake (Parameter ** p_parameter, uint32_t position, ConvertParamFnP convert_fn)
 {
     Parameter * parameter;
-    
+
     parameter = malloc (sizeof(Parameter));
     if (parameter == NULL)
     {
@@ -514,10 +514,10 @@ rc_t CC ParamMake (Parameter ** p_parameter, uint32_t position, ConvertParamFnP 
         return RC (rcExe, rcArgv, rcConstructing, rcMemory, rcExhausted);
 
     }
-    
+
     parameter->position = position;
     parameter->convert_fn = convert_fn;
-    
+
     *p_parameter = parameter;
     return 0;
 }
@@ -539,16 +539,16 @@ static
 rc_t CC ParamGetValue (const Vector * param_values, uint32_t number, const void ** value)
 {
     ParamValueContainer * p_container;
-    
+
     assert (param_values);
     assert (value);
-    
+
     p_container = VectorGet (param_values, number);
     if (p_container == NULL)
         return RC (rcExe, rcArgv, rcAccessing, rcIndex, rcExcessive);
-    
+
     *value = p_container->param_value;
-    
+
     return 0;
 }
 
@@ -560,9 +560,9 @@ rc_t CC ParamAddValue (Vector * param_values, uint32_t arg_index, const char * v
 {
     ParamValueContainer * p_container;
     rc_t rc = 0;
-    
+
     assert (param_values);
-    
+
     p_container = (ParamValueContainer *)malloc( sizeof *p_container );
     if (p_container == NULL)
     {
@@ -577,7 +577,7 @@ rc_t CC ParamAddValue (Vector * param_values, uint32_t arg_index, const char * v
         rc = RC (rcExe, rcArgv, rcConstructing, rcParam, rcEmpty);
         return rc;
     }
-    
+
     rc = ParamValueMake (p_container, arg_index, value, size, convert_fn);
     if (rc == 0)
     {
@@ -602,7 +602,7 @@ static FILE *dumpOptionDefs = NULL;
 
 /**
  Print one option definition.
- 
+
  @param def the definition.
  */
 static void printOptionDefinition(OptDef const *const def)
@@ -619,7 +619,7 @@ static void printOptionDefinition(OptDef const *const def)
             char const *helptext = help[i];
             if (helptext[0]) {
                 int j;
-                
+
                 fprintf(dumpOptionDefs, "\"");
                 for (j = 0; helptext[j]; ++j) {
                     int const ch = helptext[j];
@@ -636,10 +636,10 @@ static void printOptionDefinition(OptDef const *const def)
     }
 }
 
-static char const *basename(char const *fullpath, size_t *outsize)
+static char const *base_name(char const *fullpath, size_t *outsize)
 {
     char const *result = fullpath;
-    
+
     for ( ; ; ) {
         int const ch = *fullpath++;
         if (ch == '\0') {
@@ -668,12 +668,12 @@ static bool cleaned(unsigned const max, char *result, char const *name)
 
 /**
  Open the option definitions file and write tool header information.
- 
+
  The filename is taken from ${SRATOOLS_DUMP_OPTIONS}.
  The file is opened in append mode.
 
  @param argv0 argv[0].
- 
+
  Example output:
  @code
  #define TOOL_ARGS_VDB_DUMP TOOL_ARGS ( \
@@ -687,13 +687,13 @@ static void openOptionDefs(char const *argv0) {
     char const *const enval = getenv("SRATOOLS_DUMP_OPTIONS");
     if (enval) {
         size_t basesize = 0;
-        char const *const base = basename(argv0, &basesize);
+        char const *const base = base_name(argv0, &basesize);
         char toolname[256]; /**< a cleaned-up version of the tool name */
 
         assert(basesize == strlen(base));
         assert(basesize < sizeof(toolname));
         cleaned(sizeof(toolname), toolname, base);
-        
+
         dumpOptionDefs = strcmp(enval, "-") ? fopen(enval, "a") : stdout;
         fprintf(dumpOptionDefs, "#define TOOL_NAME_%s \"%s\" /* from argv[0] */\n", toolname, base);
         fprintf(dumpOptionDefs, "#define TOOL_ARGS_%s TOOL_ARGS ( \\\n", toolname);
@@ -703,7 +703,7 @@ static void openOptionDefs(char const *argv0) {
 
 /**
  Close the option definitions file.
- 
+
  If the file had been opened, this function does not return.
  */
 static void closeOptionDefs(void) {
@@ -723,7 +723,7 @@ static rc_t ArgsMake_int(Args ** pself, char const *const argv0)
 
     if (argv0)
         openOptionDefs(argv0);
-    
+
     self = malloc (sizeof (*self));
     if (self != NULL) {
         BSTreeInit (&self->names);
@@ -958,22 +958,22 @@ rc_t CC ArgsAddParam ( Args * self, const ParamDef * param_def )
     rc_t rc;
     Parameter * param;
     uint32_t params_count;
-    
+
     assert(self);
     assert(param_def);
-    
+
     params_count = VectorLength(&self->params);
-    
+
     rc = ParamMake (&param, params_count, param_def->convert_fn);
     if (rc)
         return rc;
-    
+
     rc = VectorAppend(&self->params, NULL, param);
     if (rc != 0)
     {
         ParamWhack(param);
     }
-    
+
     return rc;
 }
 
@@ -991,12 +991,12 @@ rc_t CC ArgsAddLongParam ( Args * self, const char * param_name, const char * he
 rc_t CC ArgsAddParamArray (Args * self, const ParamDef * param, uint32_t count)
 {
     rc_t rc;
-    
+
     for (rc = 0; (rc == 0) && (count > 0); --count, ++param)
     {
         rc = ArgsAddParam (self, param);
     }
-    
+
     return 0;
 }
 
@@ -1063,25 +1063,25 @@ static
 rc_t CC ProcessArgConversion(Args * self, ParamValueContainer * p_container)
 {
     rc_t rc = 0;
-    
+
     assert(p_container);
-    
+
     if (p_container->convert_fn)
     {
         char * param_value = (char *)p_container->param_value;
         WhackParamFnP whack = p_container->whack;
-        
+
         p_container->param_value = NULL;
         p_container->whack = NULL;
         rc = p_container->convert_fn(self, p_container->param_index, param_value, string_size(param_value), &p_container->param_value, &p_container->whack);
         whack(param_value);
-        
+
         if (rc == 0 && p_container->whack == NULL)
         {
             p_container->whack = ParamValueNotConvWhack;
         }
     }
-    
+
     return rc;
 }
 
@@ -1091,7 +1091,7 @@ rc_t CC ProcessArgsConversion(Args * self)
     rc_t rc = 0;
     uint32_t i, param_count = VectorLength(&self->param_values);
     ParamValueContainer * p_container;
-    
+
     for (i = 0; i < param_count; ++i)
     {
         p_container = VectorGet (&self->param_values, i);
@@ -1099,7 +1099,7 @@ rc_t CC ProcessArgsConversion(Args * self)
         if (rc != 0)
             break;
     }
-    
+
     if (rc == 0)
     {
         BSTNode* node = BSTreeFirst(&self->names);
@@ -1116,17 +1116,17 @@ rc_t CC ProcessArgsConversion(Args * self)
                     if (rc != 0)
                         break;
                 }
-                
+
                 if (rc != 0)
                     break;
             }
-            
+
             node = BSTNodeNext(node);
         }
     }
-    
+
     return rc;
-    
+
 }
 
 static
@@ -1140,7 +1140,7 @@ rc_t ArgsParseInt (Args * self, int argc, char *argv[])
     Option * node;
     const char * parg;
     char * equal_sign;
-    
+
     char name [32];
     const char * value = NULL;
     size_t value_len;
@@ -1157,7 +1157,7 @@ rc_t ArgsParseInt (Args * self, int argc, char *argv[])
 
         parg = argv[ix];
         len = string_size ( parg );
-        
+
         p_container = (ParamValueContainer *)malloc( sizeof *p_container );
         if (p_container == NULL)
         {
@@ -1177,7 +1177,7 @@ rc_t ArgsParseInt (Args * self, int argc, char *argv[])
         else
             ARGS_DBG( "ArgsParse: inserted '%s' into self->argv", parg );
     }
-    
+
     if ( rc )
         return rc;
 
@@ -1298,7 +1298,7 @@ rc_t ArgsParseInt (Args * self, int argc, char *argv[])
                     OptAlias *alias;
                     uint32_t c;
 
-                    name_len = utf8_utf32( &c, parg + jx, end ); 
+                    name_len = utf8_utf32( &c, parg + jx, end );
                     string_copy( name, sizeof( name ), parg + jx, name_len );
 
                     alias = ( OptAlias* )BSTreeFind( &self->aliases, name, OptAliasCmp );
@@ -1426,7 +1426,7 @@ rc_t ArgsParseInt (Args * self, int argc, char *argv[])
         if ( rc )
             break;
     }
-    
+
     if (rc == 0)
     {
         rc = ProcessArgsConversion(self);
@@ -1531,7 +1531,7 @@ rc_t CC ArgsOptionValueExt (const Args * self, const char * option_name,
     node = (const Option*)BSTreeFind (&self->names, option_name, OptionCmp);
     if (node == NULL)
         return RC (rcExe, rcArgv, rcAccessing, rcName, rcNotFound);
-    
+
     rc = OptionGetValue (node, iteration, value_bin);
 
     * called_as_alias = node -> called_by_alias;
@@ -1560,7 +1560,7 @@ rc_t CC ArgsParamCount (const Args * self, uint32_t * count)
 rc_t CC ArgsParamValue (const Args * self, uint32_t iteration, const void ** value)
 {
     rc_t rc;
-    
+
     if (self == NULL)
         return RC (rcExe, rcArgv, rcAccessing, rcSelf, rcNull);
 
@@ -1573,7 +1573,7 @@ rc_t CC ArgsParamValue (const Args * self, uint32_t iteration, const void ** val
         return RC (rcExe, rcArgv, rcAccessing, rcParam, rcExcessive);
     }
 
-    
+
     rc = ParamGetValue (&self->param_values, iteration, value);
     return rc;
 }
@@ -1600,7 +1600,7 @@ rc_t CC ArgsArgc (const Args * self, uint32_t * count)
 rc_t CC ArgsArgvValue (const Args * self, uint32_t iteration, const char ** value_string)
 {
     ParamValueContainer * p_container;
-    
+
     if (self == NULL)
         return RC (rcExe, rcArgv, rcAccessing, rcSelf, rcNull);
 
@@ -1615,46 +1615,46 @@ rc_t CC ArgsArgvValue (const Args * self, uint32_t iteration, const char ** valu
 
     p_container = (ParamValueContainer*) VectorGet (&self->argv, iteration);
     assert(p_container);
-    
+
     *value_string = (const char *)p_container->param_value;
     return 0;
 }
 
 #define USAGE_MAX_SIZE 81
 static
-const char * verbose_usage[] = 
+const char * verbose_usage[] =
 { "Increase the verbosity of the program status messages.",
   "Use multiple times for more verbosity.","Negates quiet.", NULL };
 static
-const char * quiet_usage[] = 
+const char * quiet_usage[] =
 { "Turn off all status messages for the program.",
   "Negated by verbose.", NULL };
 static
-const char * debug_usage[] = 
+const char * debug_usage[] =
 { "Turn on debug output for module.",
   "All flags if not specified.", NULL };
 static
-const char * help_usage[] = 
+const char * help_usage[] =
 { "Output a brief explanation for the program.", NULL };
 static
-const char * report_usage[] = 
+const char * report_usage[] =
 { "Control program execution environment report generation (if implemented).",
     "One of (never|error|always). Default is error.", NULL };
 static
-const char * version_usage[] = 
+const char * version_usage[] =
 { "Display the version of the program then quit.", NULL };
 static
-const char * optfile_usage[] = 
+const char * optfile_usage[] =
 { "Read more options and parameters from the file.", NULL};
-static 
+static
 char log0 [USAGE_MAX_SIZE];
-static 
+static
 char log1 [USAGE_MAX_SIZE];
 static
-const char * log_usage[] = 
+const char * log_usage[] =
 { "Logging level as number or enum string.", log0, log1, NULL };
 static
-const char * no_user_settings_usage[] = 
+const char * no_user_settings_usage[] =
 { "Turn off user-specific configuration.", NULL };
 
     /*  We need dat here
@@ -1709,7 +1709,7 @@ void CC gen_log_usage (const char ** _buffers)
         pc -= sizeof div - 1;
         rem += sizeof div - 1;
         *pc = '\0';
-        
+
         rc = string_printf (p0, USAGE_MAX_SIZE, & used,
                             "One of (%s) or (%u-%u)",
                             buffv, klogLevelMin, klogLevelMax);
@@ -1766,7 +1766,7 @@ OptDef StandardOptions[]  =
     },
 #endif
     {
-        OPTION_DEBUG           , ALIAS_DEBUG    , NULL, debug_usage, 
+        OPTION_DEBUG           , ALIAS_DEBUG    , NULL, debug_usage,
         OPT_UNLIM, true , false
     },
     {
@@ -1774,7 +1774,7 @@ OptDef StandardOptions[]  =
         OPT_UNLIM, false, false
     },
     {   /* OPTION_REPORT is used in klib/report.c */
-        OPTION_REPORT          , NULL           , NULL, report_usage, 
+        OPTION_REPORT          , NULL           , NULL, report_usage,
         OPT_UNLIM, true , false
     }
 };
@@ -2003,7 +2003,7 @@ rc_t CC ArgsHandleStandardOptions (Args * self)
         if (rc != 0)
             break;
 
-#if _DEBUGGING 
+#if _DEBUGGING
 	/* called a second time in case more symbols in in files */
         rc = ArgsHandleDebug (self);
         if (rc != 0)
@@ -2097,7 +2097,7 @@ rc_t ArgsMakeAndHandleInt ( Args ** pself, int argc, char ** argv,
 
             break;
         }
-    
+
         ArgsWhack (self);
     }
     return rc;
@@ -2160,7 +2160,7 @@ rc_t CC ArgsProgram (const Args * args, const char ** fullpath, const char ** pr
     else
     {
         f = defaultname;
-        
+
         if (fullpath != NULL)
         {
             if (*fullpath == NULL)
@@ -2314,7 +2314,7 @@ void CC HelpParamLine (const char * param, const char * const * msgs)
     const char * msg;
 
     msg = *msgs++;
-    
+
     if (param)
     {
         OUTMSG (("%*s%s%n", INDENT, " ", param, &msgc));
@@ -2350,7 +2350,7 @@ void CC HelpOptionsStandard(void){
     HelpOptionLine(ALIAS_OPTFILE  ,OPTION_OPTFILE  , "file"  , optfile_usage);
 #endif
 #if _DEBUGGING
-    HelpOptionLine(ALIAS_DEBUG    ,OPTION_DEBUG, "Module[-Flag]", debug_usage); 
+    HelpOptionLine(ALIAS_DEBUG    ,OPTION_DEBUG, "Module[-Flag]", debug_usage);
         /* Dat is spooky place, we will print 'standard' append mode
          * help only it is necessary and only in debugging mode
          */
