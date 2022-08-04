@@ -80,7 +80,7 @@ TestEnv::~TestEnv ()
 #endif
 }
 
-string TestEnv::lastLocation;
+string TestEnv::lastLocation = "<init>";
 LogLevel::E TestEnv::verbosity = LogLevel::e_error;
 bool TestEnv::verbositySet = false;
 
@@ -114,11 +114,8 @@ void CC TestEnv::SigHandler(int sig)
                 "fatal error: signal: " << sig << "\n");
             break;
     }
-    if (!ncbi::NK::TestEnv::lastLocation.empty())
-    {
-        LOG(ncbi::NK::LogLevel::e_fatal_error,
-            ncbi::NK::TestEnv::lastLocation << ": last checkpoint\n");
-    }
+    LOG(ncbi::NK::LogLevel::e_fatal_error,
+        ncbi::NK::TestEnv::lastLocation << ": last checkpoint\n");
     LOG(ncbi::NK::LogLevel::e_fatal_error, "Test is aborted\n");
     exit(sig);
 }

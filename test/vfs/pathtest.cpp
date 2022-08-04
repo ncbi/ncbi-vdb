@@ -949,7 +949,7 @@ FIXTURE_TEST_CASE(CYRYLLIC_WIN_IN_FILENAME, PathFixture) {
 
 FIXTURE_TEST_CASE(CYRYLLIC_IN_FILENAME, PathFixture) {
 #undef PATH
-//   #define PATH "Ä°¹».txt"
+//   This is a string with invalid UTF-8
 #define PATH "\xC4\xB0\xB9\xBB.txt"
     REQUIRE_RC(VFSManagerMakePath(vfs, &path, "%s", PATH));
     REQUIRE(path);

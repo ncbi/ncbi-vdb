@@ -43,16 +43,3 @@
    fun:_ZN24Const_UnterminatedString8Instance11test_methodEv
 }
 
-{
-   Singleton_KNSMgr_UserAgentString
-   Memcheck:Leak
-   match-leak-kinds: definite
-   fun:malloc
-   fun:allocate
-   fun:KDataBufferResizeInt
-   fun:KDataBufferResize
-   fun:KDataBufferVPrintf
-   fun:KNSManagerSetUserAgent
-   fun:KMane
-   fun:main
-}

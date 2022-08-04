@@ -78,9 +78,12 @@ public:
     }
     ~VDB_Fixture()
     {
-#if READ_ONLY
-        RemoveDatabase ();
-#endif
+// leave database in place since we do not know how many times read-only tests are going to be
+// executesx (e.g. with additional asan/tsan options)
+// will be removed at the start of the next run with !READ_ONLY
+// #if READ_ONLY
+//         RemoveDatabase ();
+// #endif
         VDBManagerRelease ( m_mgr );
         KDirectoryRelease ( m_wd );
     }

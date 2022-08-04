@@ -106,6 +106,12 @@ typedef enum {
     /* origin-form: https://tools.ietf.org/html/rfc7230#section-5.3.1
        use it when connect to googleapis.com: it rejects absoluteURI */
     eUFOrigin,
+
+    /* origin-form: https://tools.ietf.org/html/rfc7230#section-5.3.1
+       don't add default port to Host: in HTTP request.
+       use it when connect to amazonaws.com:
+       it rejects eUFOrigin for signed https URLs */
+    eUFOriginNoPort,
 } EUriForm;
 
 /*--------------------------------------------------------------------------
