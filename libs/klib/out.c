@@ -96,31 +96,6 @@ rc_t KOutMsgCharFmt ( uint32_t u32 )
     return rc;
 }
 
-/* Prevent calling memcmp(s1, s2, n) when sizeof (s1) < n */
-static
-int match_format(const char * format, const char * literal, size_t s)
-{
-    static const size_t MAX = 5;
-
-    assert(s <= MAX);
-
-    if (format == NULL)
-        return 1;
-    else {
-        size_t x = 0;
-
-        for (x = 0; x < MAX - 1; ++x)
-            if (format[x] == '\0')
-                break;
-        ++x;
-
-        if (x < s)
-            return x;
-        else
-            return memcmp(format, literal, s);
-    }
-}
-
 LIB_EXPORT rc_t CC KOutVMsg ( const char * fmt, va_list args )
 {
     rc_t rc = 0;
@@ -129,38 +104,34 @@ LIB_EXPORT rc_t CC KOutVMsg ( const char * fmt, va_list args )
     if (kout_msg_handler->writer == NULL)
         return 0; /* writer was not set */
 
-#define MATCH_FORMAT(format, literal) \
-    ( ( const void* ) ( format ) == ( const void* ) ( literal ) )
-
-    /* rapid pointer comparison */
-    if ( MATCH_FORMAT ( fmt, "%s" ) )
-        rc = KOutMsgNulTermStringFmt ( va_arg ( args, const char * ) );
-    else if ( MATCH_FORMAT ( fmt, "%.*s" ) )
-        rc = KOutMsgPrecNulTermStringFmt ( args );
-    else if ( MATCH_FORMAT ( fmt, "%S" ) )
-        rc = KOutMsgStringFmt ( va_arg ( args, const String * ) );
-    else if ( MATCH_FORMAT ( fmt, "%c" ) )
-        rc = KOutMsgCharFmt ( va_arg ( args, unsigned int ) );
-
-#undef MATCH_FORMAT
-#define MATCH_FORMAT(format, literal) \
-    ( match_format ( ( format ), ( literal ), sizeof ( literal ) ) == 0 )
-
-    /* slower value comparison */
-    else if (MATCH_FORMAT(fmt, "%s"))
-        rc = KOutMsgNulTermStringFmt ( va_arg ( args, const char * ) );
-    else if (MATCH_FORMAT(fmt, "%.*s"))
-        rc = KOutMsgPrecNulTermStringFmt ( args );
-    else if (MATCH_FORMAT(fmt, "%S"))
-        rc = KOutMsgStringFmt ( va_arg ( args, const String * ) );
-    else if (MATCH_FORMAT(fmt, "%c"))
-        rc = KOutMsgCharFmt ( va_arg ( args, unsigned int ) );
-    else if( (rc = vkfprintf(KOutHandlerGet(), NULL, fmt, args)) != 0 ) 
-    {
-        kfprintf(KOutHandlerGet(), NULL, "outmsg failure: %R in '%s'\n", rc, fmt);
+    if (fmt == NULL)
+        goto OTHER;
+    if (fmt[0] != '%')
+        goto OTHER;
+    switch (fmt[1]) {
+    case 'c':
+        if (fmt[2] == '\0')
+            return KOutMsgCharFmt ( va_arg ( args, unsigned int ) );
+        break;
+    case 's':
+        if (fmt[2] == '\0')
+            return KOutMsgNulTermStringFmt ( va_arg ( args, const char * ) );
+        break;
+    case 'S':
+        if (fmt[2] == '\0')
+            return KOutMsgStringFmt ( va_arg ( args, const String * ) );
+        break;
+    case '.':
+        if (fmt[2] == '*' && fmt[3] == 's' && fmt[4] == '\0')
+            return KOutMsgPrecNulTermStringFmt ( args );
+        break;
     }
-#undef MATCH_FORMAT
+OTHER:
+    rc = vkfprintf(KOutHandlerGet(), NULL, fmt, args);
+    if (rc == 0)
+        return 0;
 
+    kfprintf(KOutHandlerGet(), NULL, "outmsg failure: %R in '%s'\n", rc, fmt);
     return rc;
 }
 
