@@ -44,7 +44,7 @@ function( GenerateStaticLibsWithDefs target_name sources compile_defs )
     if( NOT "" STREQUAL "${compile_defs}" )
         target_compile_definitions( ${target_name} PRIVATE ${compile_defs} )
     endif()
-    if( WIN32 )
+    if( WIN32 AND NOT _NCBIVDB_CFG_PACKAGING)
         MSVS_StaticRuntime( ${target_name} )
         add_library( ${target_name}-md STATIC ${sources} )
         if(NOT "" STREQUAL "${compile_defs}" )
@@ -78,6 +78,9 @@ endfunction()
 
 
 function( ExportStatic name install )
+    if(_NCBIVDB_CFG_PACKAGING)
+        return()
+    endif()
     # the output goes to .../lib
     if( SINGLE_CONFIG )
         # make the output name versioned, create all symlinks
@@ -122,6 +125,9 @@ endfunction()
 # create versioned names and symlinks for a shared library
 #
 function(MakeLinksShared target name install)
+    if(_NCBIVDB_CFG_PACKAGING)
+        return()
+    endif()
     set_target_properties( ${target} PROPERTIES OUTPUT_NAME ${name} )
     if( SINGLE_CONFIG )
         if( ${OS} STREQUAL "mac" )
@@ -171,6 +177,9 @@ endfunction()
 # for a static library target, create a public shared target with the same base name and contents
 #
 function(ExportShared lib install extra_libs)
+    if(_NCBIVDB_CFG_PACKAGING)
+        return()
+    endif()
     get_target_property( src ${lib} SOURCES )
     add_library( ${lib}-shared SHARED ${src} )
     target_link_libraries( ${lib}-shared ${extra_libs} )
@@ -189,7 +198,9 @@ endfunction()
 
 function( BuildExecutableForTest exe_name sources libraries )
 	add_executable( ${exe_name} ${sources} )
-	MSVS_StaticRuntime( ${exe_name} )
+        if(NOT _NCBIVDB_CFG_PACKAGING)
+	    MSVS_StaticRuntime( ${exe_name} )
+        endif()
 	target_link_libraries( ${exe_name} ${libraries} )
 endfunction()
 

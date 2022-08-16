@@ -25,7 +25,7 @@
 */
 #include <vdb/extern.h>
 
-#include <ext/zstd.h>
+#include <zstd.h>
 
 #include <klib/rc.h>
 #include <vdb/xform.h>

@@ -99,6 +99,7 @@ struct timeout_t
 #define strndup( str, n ) \
     string_dup ( ( str ), ( n ) )
 
+#if 0
 int __cdecl isalnum ( int ch );
 int __cdecl isalpha ( int ch );
 int __cdecl iscntrl ( int ch );
@@ -112,6 +113,7 @@ int __cdecl isspace ( int ch );
 int __cdecl isxdigit ( int ch );
 int __cdecl tolower ( int ch );
 int __cdecl toupper ( int ch );
+#endif
 
 #undef isascii
 int __cdecl isascii ( int ch );
