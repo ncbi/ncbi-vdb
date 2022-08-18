@@ -162,7 +162,7 @@ public:
 private:
     static void TermHandler();
 
-    static void SigHandler(int sig);
+    static void SigHandler(int sig) noexcept;
 
     rc_t process_args(int argc, char* argv[], ArgsHandler* argsHandler);
 
@@ -183,6 +183,7 @@ public:
 
 protected:
     TestCase(const std::string &name) { Init(name); }
+    virtual ~TestCase(void) {}
 
 public:
     // explicit destruction, to be used before calling exit() in out-of-process test runner
