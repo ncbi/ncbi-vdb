@@ -54,6 +54,7 @@ GenerateStaticLibs( kfg "${SRC}" )
 
 add_compile_definitions (__mod__="libs/kfg")
 add_compile_definitions (_ARCH_BITS=${BITS})
+set_source_files_properties(${KfgScanner} PROPERTIES COMPILE_FLAGS -D__STDC_VERSION__=199901L)
 
 if ( SINGLE_CONFIG )
     install( SCRIPT CODE
