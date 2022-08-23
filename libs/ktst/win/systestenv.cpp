@@ -38,7 +38,7 @@ using namespace ncbi::NK;
 #define REPORT_ERROR(msg) _REPORT_CRITICAL_ERROR_(string("TestEnv::") + msg, __FILE__, __LINE__, true)
 
 /* signal handlers for a single-test case thread */
-void CC SigSubHandler(int sig)
+void CC SigSubHandler(int sig) noexcept
 {
     _endthreadex(sig);
 }

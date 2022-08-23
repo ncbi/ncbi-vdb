@@ -22,6 +22,8 @@
 //
 // ===========================================================================
 
+// prevent headers from #defining min/max
+#define NOMINMAX 1
 #include "WVDB_Fixture.hpp"
 
 using namespace std;
