@@ -28,6 +28,8 @@ if( NOT WIN32 )
     set( ADDITIONAL_LIBS "m" )
 else()
     set( ADDITIONAL_LIBS "" )
+    # warning C5039: 'XXX': pointer or reference to potentially throwing function passed to extern C function under -EHc.
+    set_source_files_properties(test-RestoreRead PROPERTIES COMPILE_FLAGS "/wd5039")
 endif()
 
 AddExecutableTest( Test_Axf_RestoreRead "test-RestoreRead" "${COMMON_LINK_LIBRARIES};${COMMON_LIBS_READ};${ADDITIONAL_LIBS}" )
