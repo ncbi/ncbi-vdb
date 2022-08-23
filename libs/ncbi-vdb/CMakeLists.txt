@@ -43,10 +43,11 @@ set( VDB_LIB_CMN_TARGETS
     kproc
     kq
     kfc
-    bz2
-    z
-    zstd
 )
+
+if(NOT _NCBIVDB_CFG_PACKAGING)
+    list( APPEND VDB_LIB_CMN_TARGETS bz2 z zstd )
+endif()
 
 set( VDB_LIB_RD_TARGETS
     ${VDB_LIB_CMN_TARGETS}
@@ -78,6 +79,7 @@ if( WIN32 )
     include( CMakeLists.win.txt )
 elseif( SINGLE_CONFIG )
     include( CMakeLists.posix.txt )
+    if(NOT _NCBIVDB_CFG_PACKAGING)
 	add_custom_command( TARGET ncbi-vdb POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/interfaces/kfg/ncbi/default.kfg ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/ncbi/default.kfg
 	)
@@ -90,6 +92,7 @@ elseif( SINGLE_CONFIG )
 	add_custom_command( TARGET ncbi-vdb POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/interfaces/kfg/ncbi/certs.kfg ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/ncbi/certs.kfg
 	)
+    endif()
 else() # XCode
     include( CMakeLists.xcode.txt )
 endif()

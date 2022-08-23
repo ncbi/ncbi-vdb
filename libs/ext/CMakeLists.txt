@@ -22,7 +22,9 @@
 #
 # ===========================================================================
 
-add_subdirectory ( bzip2 ) # TODO: RETRIEVE from the Internet
 add_subdirectory ( mbedtls )
-add_subdirectory ( zlib )
-add_subdirectory ( zstd )
+if(NOT _NCBIVDB_CFG_PACKAGING)
+    add_subdirectory ( bzip2 ) # TODO: RETRIEVE from the Internet
+    add_subdirectory ( zlib )
+    add_subdirectory ( zstd )
+endif()

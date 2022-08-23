@@ -56,7 +56,7 @@ add_compile_definitions (__mod__="libs/kfg")
 add_compile_definitions (_ARCH_BITS=${BITS})
 set_source_files_properties(${KfgScanner} PROPERTIES COMPILE_FLAGS -D__STDC_VERSION__=199901L)
 
-if ( SINGLE_CONFIG )
+if ( SINGLE_CONFIG AND NOT _NCBIVDB_CFG_PACKAGING)
     install( SCRIPT CODE
         "execute_process(COMMAND /bin/bash -c \"${CMAKE_CURRENT_SOURCE_DIR}/install.sh ${CMAKE_SOURCE_DIR}/interfaces/kfg/ncbi ${CMAKE_INSTALL_PREFIX}/lib64/ncbi /etc/ncbi ${CMAKE_SOURCE_DIR}/interfaces/kfg/ncbi/kfgsums \" )"
     )

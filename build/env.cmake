@@ -35,6 +35,26 @@ endif()
 option( RUN_SANITIZER_TESTS "Run ASAN and TSAN tests" OFF )
 
 # ===========================================================================
+# include Conan setup
+if(_NCBIVDB_CFG_PACKAGING)
+    foreach(_sub IN LISTS CMAKE_BINARY_DIR CMAKE_MODULE_PATH)
+        if (EXISTS "${_sub}/conanbuildinfo.cmake")
+            include(${_sub}/conanbuildinfo.cmake)
+            conan_basic_setup()
+            break()
+        endif()
+    endforeach()
+    if(NOT DEFINED CONAN_LIBS)
+        find_package(BZip2 REQUIRED)
+        find_package(ZLIB REQUIRED)
+        find_package(zstd REQUIRED)
+        include_directories(${BZip2_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS} ${zstd_INCLUDE_DIRS})
+    	add_compile_definitions( ${BZip2_DEFINITIONS}  ${ZLIB_DEFINITIONS} ${zstd_DEFINITIONS})
+    	set( CONAN_LIBS ${BZip2_LIBRARIES}  ${ZLIB_LIBRARIES} ${zstd_LIBRARIES})
+    endif()
+endif()
+
+# ===========================================================================
 # set up CMake variables describing the environment
 
 # version, taken from the source
@@ -52,36 +72,44 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 # determine OS
-if ( ${CMAKE_HOST_SYSTEM_NAME} STREQUAL  "Darwin" )
+if ( ${CMAKE_SYSTEM_NAME} STREQUAL  "Darwin" )
     set(OS "mac")
     set(SHLX "dylib")
-elseif ( ${CMAKE_HOST_SYSTEM_NAME} STREQUAL  "Linux" )
+elseif ( ${CMAKE_SYSTEM_NAME} STREQUAL  "Linux" )
     set(OS "linux")
     set(SHLX "so")
-elseif ( ${CMAKE_HOST_SYSTEM_NAME} STREQUAL  "Windows" )
+elseif ( ${CMAKE_SYSTEM_NAME} STREQUAL  "Windows" )
     set(OS "windows")
 else()
-    message ( FATAL_ERROR "unknown OS " ${CMAKE_HOST_SYSTEM_NAME})
+    message ( FATAL_ERROR "unknown OS " ${CMAKE_SYSTEM_NAME})
 endif()
 
 # determine architecture
-if ( ${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "armv7l")
+set(_system_processor ${CMAKE_SYSTEM_PROCESSOR})
+if (APPLE AND NOT "${CMAKE_OSX_ARCHITECTURES}" STREQUAL "")
+    set(_system_processor ${CMAKE_OSX_ARCHITECTURES})
+endif ()
+if ( ${_system_processor} STREQUAL "armv7l")
 	set(ARCH "armv7l")
-elseif ( ${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "arm64")
+elseif ( ${_system_processor} STREQUAL "arm64")
     set(ARCH "arm64")
-elseif ( ${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "aarch64")
+elseif ( ${_system_processor} STREQUAL "aarch64")
     set(ARCH "arm64")
-elseif ( ${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "x86_64")
+elseif ( ${_system_processor} STREQUAL "x86_64")
     set(ARCH "x86_64")
-elseif ( ${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "AMD64")
+elseif ( ${_system_processor} STREQUAL "AMD64")
     set(ARCH "x86_64")
 else ()
-    message ( FATAL_ERROR "unknown architecture " ${CMAKE_HOST_SYSTEM_PROCESSOR})
+    message ( FATAL_ERROR "unknown architecture " ${_system_processor})
 endif ()
 
 # create variables based entirely upon OS
 if ( "mac" STREQUAL ${OS} )
     add_compile_definitions( MAC BSD UNIX )
+    set(CMAKE_C_ARCHIVE_CREATE   "<CMAKE_AR> Scr <TARGET> <LINK_FLAGS> <OBJECTS>")
+    set(CMAKE_CXX_ARCHIVE_CREATE "<CMAKE_AR> Scr <TARGET> <LINK_FLAGS> <OBJECTS>")
+    set(CMAKE_C_ARCHIVE_FINISH   "<CMAKE_RANLIB> -no_warning_for_no_symbols -c <TARGET>")
+    set(CMAKE_CXX_ARCHIVE_FINISH "<CMAKE_RANLIB> -no_warning_for_no_symbols -c <TARGET>")
 elseif( "linux" STREQUAL ${OS} )
     add_compile_definitions( LINUX UNIX )
     set( LMCHECK -lmcheck )
@@ -208,6 +236,7 @@ elseif( "windows" STREQUAL ${OS} )
     include_directories(interfaces/os/win)
 endif()
 
+if(NOT _NCBIVDB_CFG_PACKAGING)
 if( NGS_INCDIR )
     include_directories( ${NGS_INCDIR} )
 else ()
@@ -226,6 +255,7 @@ if ( PYTHON_PATH )
     set( Python3_EXECUTABLE ${PYTHON_PATH} )
 endif()
 find_package( Python3 COMPONENTS Interpreter )
+endif(NOT _NCBIVDB_CFG_PACKAGING)
 
 # ===========================================================================
 # Installation location
@@ -293,6 +323,7 @@ endif()
 # testing
 enable_testing()
 
+if(NOT _NCBIVDB_CFG_PACKAGING)
 option(COVERAGE "Generate test coverage" OFF)
 
 if( COVERAGE AND "GNU" STREQUAL "${CMAKE_C_COMPILER_ID}")
@@ -313,6 +344,7 @@ if ( Doxygen_FOUND)
     # set DOXYGEN_* variables here
     doxygen_add_docs(docs interfaces)
 endif()
+endif(NOT _NCBIVDB_CFG_PACKAGING)
 
 # ===========================================================================
 # common functions
@@ -321,6 +353,7 @@ include( ${CMAKE_CURRENT_SOURCE_DIR}/build/common.cmake )
 # ===========================================================================
 # installation
 
+if(NOT _NCBIVDB_CFG_PACKAGING)
 if ( SINGLE_CONFIG )
     install( SCRIPT CODE
         "execute_process(COMMAND /bin/bash -c \"${CMAKE_SOURCE_DIR}/build/install-root.sh ${VERSION} ${INST_INCDIR} ${INST_LIBDIR} \" )"
@@ -352,3 +385,4 @@ if( RUN_SANITIZER_TESTS_OVERRIDE )
 	set( RUN_SANITIZER_TESTS ON )
 endif()
 message( "RUN_SANITIZER_TESTS: ${RUN_SANITIZER_TESTS}" )
+endif(NOT _NCBIVDB_CFG_PACKAGING)
