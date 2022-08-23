@@ -40,6 +40,7 @@
 #include <set>
 #include <memory>
 
+#define LIB_EXPORT
 #include "../libs/klib/btree.c"
 
 using namespace std;
