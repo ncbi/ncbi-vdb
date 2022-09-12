@@ -1308,7 +1308,7 @@ static rc_t CC thread_func2 ( const KThread *self, void *data )
                 else
                 {
                     uint32_t magic = 0;
-                    memcpy( &magic, buffer, sizeof( magic ) );
+                    memmove( &magic, buffer, sizeof( magic ) );
 
                     if ( size != td -> exp_size )
                         ( td -> num_errors )++;

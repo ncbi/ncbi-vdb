@@ -225,6 +225,11 @@ LIB_EXPORT rc_t CC VDBManagerAddSchemaIncludePath ( const VDBManager *self, cons
     return rc;
 }
 
+static rc_t VDBManagerAddSchemaIncludePaths(const VDBManager *self, size_t length, const char *paths)
+{
+    return VSchemaAddIncludePaths(self->schema, length, paths);
+}
+
 
 /* AddLoadLibraryPath
  *  add a path[s] to loader for locating dynamic libraries
@@ -330,35 +335,7 @@ rc_t VDBManagerConfigFromKfg ( VDBManager *self, bool update )
             rc = 0;
         else
         {
-            /* split by ':' */
-            const char * path = full;
-            const char *colon = string_chr ( full, num_read, ':' );
-            while ( colon != NULL )
-            {
-                /* add path between "path" and "colon" */
-                rc = VDBManagerAddSchemaIncludePath ( self, "%.*s", ( int ) ( colon - path ), path );
-                if ( rc != 0 )
-                {
-                    PLOGERR ( klogWarn, ( klogWarn, rc, "schema path '$(path)' was rejected",
-                                          "path=%.*s", ( int ) ( colon - path ), path ) );
-                    rc = 0;
-                }
-                num_read -= colon - path + 1;
-                path = colon + 1;
-                colon = string_chr ( path, num_read, ':' );
-            }
-
-            /* add in last portion */
-            if ( rc == 0 && num_read != 0 )
-            {
-                rc = VDBManagerAddSchemaIncludePath ( self, "%.*s", ( int ) ( num_read ), path );
-                if ( rc != 0 )
-                {
-                    PLOGERR ( klogWarn, ( klogWarn, rc, "schema path '$(path)' was rejected",
-                                          "path=%.*s", ( int ) num_read, path ) );
-                    rc = 0;
-                }
-            }
+            rc = VDBManagerAddSchemaIncludePaths(self, num_read, full);
         }
 
         KConfigRelease ( kfg );

@@ -1041,8 +1041,20 @@ static EUriForm EUriFormGuess ( const String * hostname,
                 CONST_STRING ( & googleapis, "storage.googleapis.com" );
                 if ( StringEqual ( & googleapis, hostname ) )
                     return eUFOrigin;
-                else
-                    return eUFAbsolute;
+                else {
+                    String amazonaws;
+                    CONST_STRING ( & amazonaws, "amazonaws.com" );
+                    if ( hostname -> size > amazonaws . size &&
+                      string_cmp ( amazonaws . addr, amazonaws . size,
+                        hostname -> addr +  hostname -> size - amazonaws . size,
+                        amazonaws . size,
+                        amazonaws . size ) == 0 )
+                    {
+                        return eUFOriginNoPort;
+                    }
+                    else
+                        return eUFAbsolute;
+                }
             }
     }
 }
@@ -1088,8 +1100,10 @@ static rc_t KClientHttpRequestFormatMsgBegin (
     }
     else { /* using proxy */
         http -> uf = EUriFormGuess ( & hostname, uriForm, http -> uf );
-        if ( http -> uf == eUFOrigin ) {
-        /* the host does not like absoluteURI: use abs_path ( origin-form ) */
+        if ( http -> uf == eUFOrigin ||
+	     ( http -> uf == eUFOriginNoPort && http -> port != 443 ) )
+	{
+/* the host does not like absoluteURI: use abs_path ( origin-form ) with port */
             rc = KDataBufferPrintf ( buffer,
                              "%s %S%s%S HTTP/%.2V\r\nHost: %S:%u\r\n"
                              , method
@@ -1100,6 +1114,19 @@ static rc_t KClientHttpRequestFormatMsgBegin (
                              , & hostname
                              , http -> port
                 );
+        }
+	else if ( http -> uf == eUFOriginNoPort &&
+	          ( http -> port == 80 || http -> port == 443 ) )
+        {   /* the host does not like absoluteURI:
+	       use abs_path ( origin-form ) without port */
+            rc = KDataBufferPrintf ( buffer,
+                             "%s %S%s%S HTTP/%.2V\r\nHost: %S\r\n"
+                             , method
+                             , & self -> url_block . path
+                             , has_query
+                             , & self -> url_block . query
+                             , http -> vers
+                             , & hostname );
         }
         else if ( http -> port != 80 ) { /* absoluteURI: non-default port */
             rc = KDataBufferPrintf ( buffer,
@@ -1475,6 +1502,7 @@ rc_t KClientHttpRequestHandleRedirection ( KClientHttpRequest *self, const char 
                     rc = KClientHttpRequestInit ( self, &b, &uri );
                     if ( rc == 0 )
                     {
+                        http -> uf = eUFUndefined; /* reset in after redirection */
                         self -> ceRequired = false; /* once redirected, CE token is not needed */
                         rc = FormatForCloud ( self, method );
                         KClientHttpResultRelease ( rslt );

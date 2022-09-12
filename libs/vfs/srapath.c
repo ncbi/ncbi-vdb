@@ -181,12 +181,12 @@ void CC SRARepoWhack ( DLNode *n, void *ignore )
     }
 }
 
-static 
+static
 const char* AlgToStr(uint8_t alg)
 {
     switch (alg)
     {
-    case alg_ncbi: 
+    case alg_ncbi:
     case alg_ddbj:
     case alg_ebi: return "SRA";
     case alg_wgs: return "WGS";
@@ -196,23 +196,23 @@ const char* AlgToStr(uint8_t alg)
 }
 
 
-static 
+static
 void CC LogVolume( DLNode *n, void *data )
 {
     const SRAPathString* self = (const SRAPathString*)n;
-    PATH_DEBUG (("        \"%s\", type=%s\n", 
+    PATH_DEBUG (("        \"%s\", type=%s\n",
                   self->path,
                   AlgToStr(self->alg)));
 }
 
-static 
+static
 void CC LogServer( DLNode *n, void *data )
 {
     const SRAPathString* self = (const SRAPathString*)n;
     PATH_DEBUG (("        \"%s\"\n", self->path));
 }
 
-static 
+static
 void CC LogRepository ( DLNode *n, void *data )
 {
     if (n != NULL)
@@ -240,7 +240,7 @@ struct NCBISRAPath
 
     /* repositories */
     DLList repos;
-    NCBIRepository* dflt_repo; /* default repository (likely to be removed in the future versions) */ 
+    NCBIRepository* dflt_repo; /* default repository (likely to be removed in the future versions) */
 
     atomic32_t refcount;
 };
@@ -380,7 +380,7 @@ rc_t SRAPathAddPath ( DLList *list, const char *path, uint8_t alg )
  *
  *  "rep" [ IN ] - NUL-terminated server search path
  *  may be a compound path with ':' separator characters, e.g.
- *  "/panfs/traces01:/panfs/traces31"
+ *  "/path1:/path2"
  *
  *  NB - servers are searched in the order provided,
  *  first to last, until one of them satisfies a request,
@@ -453,12 +453,12 @@ rc_t SRAPathConfigValue ( const KConfig *kfg, const char *node_path,
                 rc = RC ( rcSRA, rcMgr, rcConstructing, rcString, rcExcessive );
         }
         else
-	    	value[0] = 0;     
+	    	value[0] = 0;
     }
     return rc;
 }
 
-static 
+static
 rc_t ConfigVolume(NCBIRepository* repo, KConfig * kfg, const char* keyPref, const char* keySuff, uint8_t alg )
 {
     char value [ 4096 ];
@@ -473,7 +473,7 @@ rc_t ConfigVolume(NCBIRepository* repo, KConfig * kfg, const char* keyPref, cons
     string_copy(key + pSize, sizeof(key) - pSize, keySuff, sSize);
     key[pSize+sSize] = 0;
     value[0] = '\0';
-    if ( SRAPathConfigValue ( kfg, key, value, sizeof value, NULL ) == 0 )        
+    if ( SRAPathConfigValue ( kfg, key, value, sizeof value, NULL ) == 0 )
         SRAPathAddAlgVolPath ( repo, value, alg );
     return 0;
 }
@@ -484,7 +484,7 @@ rc_t ConfigRepo(KConfig * kfg, const char *dflt, const char* reps, const char* v
     char value [ 4096 ] = "";
     rc_t rc;
 
-    /* set up a new repo */ 
+    /* set up a new repo */
     rc = SRARepoMake(repo);
     if ( rc == 0 )
     {
@@ -607,7 +607,7 @@ rc_t SRAPathConfig ( NCBISRAPath *self )
 
     LogPathInfo(self);
 
-    /* kfg may be NULL */        
+    /* kfg may be NULL */
     KConfigRelease ( kfg );
 
     return rc;
@@ -648,7 +648,7 @@ rc_t SRAPathParseRunAccession ( const char *accession, uint32_t *prefix, uint32_
  *  creates full path from server, volume & accession
  *
  *  "rep" [ IN ] - NUL terminated full path of replication
- *  server, e.g. "/panfs/traces01"
+ *  server, e.g. "/path1"
  *
  *  "vol" [ IN ] - NUL terminated relative path of volume,
  *  e.g. "sra2"
@@ -870,19 +870,19 @@ rc_t SRAPathFullREFSEQArchive(NCBISRAPath const *self,
     VPath *vpath;
     KDirectory const *dir;
     KPathType type;
-    
+
     if (rc)
         return rc;
-    
+
     for (i = 0; i < 4; ++i) {
         int const ch = accession[i];
-        
+
         if (ch == 0 || !isalpha(ch))
             return RC(rcSRA, rcMgr, rcAccessing, rcPath, rcIncorrect);
     }
     for ( ; ; ++i) {
         int const ch = accession[i];
-        
+
         if (ch == 0)
             break;
         if (ch != '.' && !isdigit(ch))
@@ -890,11 +890,11 @@ rc_t SRAPathFullREFSEQArchive(NCBISRAPath const *self,
     }
     if (i < 8)
         return RC(rcSRA, rcMgr, rcAccessing, rcPath, rcIncorrect);
-    
+
     rc = string_printf(path, path_max, &sz, "x-ncbi-legrefseq:%s%s%s%s%.6s", rep, rep_sep, vol, vol_sep, accession);
     if (rc) return rc;
     i = sz;
-    
+
     rc = VPathMake(&vpath, path + 17);
     if (rc) return rc;
 
@@ -902,15 +902,15 @@ rc_t SRAPathFullREFSEQArchive(NCBISRAPath const *self,
     VPathRelease(vpath);
     VFSManagerRelease(vfs);
     if (rc) return rc;
-    
+
     type = KDirectoryPathType(dir, "tbl/%s", accession);
     KDirectoryRelease(dir);
-    
+
     if (type != kptDir)
         return RC(rcSRA, rcMgr, rcAccessing, rcPath, rcIncorrect);
 
     rc = string_printf(path + i, path_max - i, &sz, "#tbl/%s", accession);
-    
+
     return rc;
 }
 
@@ -984,7 +984,7 @@ rc_t SRAPathFullWGS( const NCBISRAPath *self, const char *rep, const char *vol,
 }
 
 static
-rc_t ApplyAlg( const NCBISRAPath *self, const char *rep, const char *vol, 
+rc_t ApplyAlg( const NCBISRAPath *self, const char *rep, const char *vol,
     const char *accession, char *path, size_t path_max, NCBIRepository *repo, bool* found)
 {
     SRAPathFindInfo pb;
@@ -1015,7 +1015,7 @@ rc_t ApplyAlg( const NCBISRAPath *self, const char *rep, const char *vol,
                 	return 0;
                 }
             }
-		}            
+		}
         case alg_wgs:
             return SRAPathFullWGS ( self, rep, vol, accession, path, path_max );
         default:
@@ -1034,7 +1034,7 @@ rc_t CC NCBISRAPathFull ( const NCBISRAPath *self, const char *rep, const char *
     bool found;
     rc_t rc;
 
-    /* loop through repositories */ 
+    /* loop through repositories */
     for ( repo = ( NCBIRepository* ) DLListHead ( & self -> repos );
           repo != NULL; repo = ( NCBIRepository* ) DLNodeNext ( & repo -> n ) )
     {
@@ -1157,7 +1157,7 @@ bool CC NCBISRAPathTest ( const NCBISRAPath *self, const char *path )
 
 
 /* FindOnServer
- *  find accession on rep-server 
+ *  find accession on rep-server
  */
 static
 rc_t SRAPathFindOnServer ( const NCBISRAPath *self, const NCBIRepository *repo, const SRAPathString *srv,
@@ -1234,7 +1234,7 @@ rc_t SRAPathFindOnServer ( const NCBISRAPath *self, const NCBIRepository *repo, 
  *  find accession in a repository
  */
 static
-rc_t SRAPathFindInRepo ( const NCBISRAPath *self, NCBIRepository *repo, const char *accession, 
+rc_t SRAPathFindInRepo ( const NCBISRAPath *self, NCBIRepository *repo, const char *accession,
                          char *path, size_t path_max, size_t *rep_len, int vol_type )
 {
     SRAPathString *srv;
@@ -1257,7 +1257,7 @@ rc_t SRAPathFindInRepo ( const NCBISRAPath *self, NCBIRepository *repo, const ch
 
             if ( rep_len != NULL )
                 * rep_len = strlen ( srv -> path );
-            
+
             return 0;
         }
 
@@ -1275,7 +1275,7 @@ static
 rc_t SRAPathFindInRepoByType ( const NCBISRAPath *self, const char *accession, char *path, size_t path_max, size_t *rep_len, int repo_type, int vol_type )
 {
     /* loop through all repositories */
-    NCBIRepository *repo; 
+    NCBIRepository *repo;
     for ( repo = ( NCBIRepository* ) DLListHead ( & self -> repos ); repo != NULL; repo = ( NCBIRepository* ) DLNodeNext ( & repo -> n ) )
     {
         if ( repo->type == repo_type && SRAPathFindInRepo(self, repo, accession, path, path_max, rep_len, vol_type) == 0 )
@@ -1291,7 +1291,7 @@ static
 rc_t FindFast( const NCBISRAPath *cself, const char *accession, char *path, size_t path_max, size_t *rep_len )
 {
     /*TODO: look up cache first */
-    
+
     /* recognize known naming schemes */
     size_t size = string_size(accession);
     if ( string_cmp(accession, size, "SRR", 3, 3) == 0 )
@@ -1302,13 +1302,13 @@ rc_t FindFast( const NCBISRAPath *cself, const char *accession, char *path, size
 
     if ( string_cmp(accession, size, "DRR", 3, 3) == 0 )
         return SRAPathFindInRepoByType(cself, accession, path, path_max, rep_len, alg_ncbi, alg_ddbj);
-        
+
     if ( string_chr(accession, size, '.') != NULL )
-        return SRAPathFindInRepoByType(cself, accession, path, path_max, rep_len, alg_refseq, alg_none);    
-        
-    if ( size > 2 && isdigit(accession[size-1]) && isdigit(accession[size-2]) && ! isdigit(accession[size-3]) ) 
-        return SRAPathFindInRepoByType(cself, accession, path, path_max, rep_len, alg_wgs, alg_none);    
-        
+        return SRAPathFindInRepoByType(cself, accession, path, path_max, rep_len, alg_refseq, alg_none);
+
+    if ( size > 2 && isdigit(accession[size-1]) && isdigit(accession[size-2]) && ! isdigit(accession[size-3]) )
+        return SRAPathFindInRepoByType(cself, accession, path, path_max, rep_len, alg_wgs, alg_none);
+
     return RC ( rcSRA, rcMgr, rcSelecting, rcPath, rcNotFound );
 }
 
@@ -1336,8 +1336,8 @@ rc_t CC NCBISRAPathFindWithRepLen ( const NCBISRAPath *cself, const char *access
     rc = FindFast( cself, accession, path, path_max, rep_len );
     if ( rc == 0 )
         return 0;
-        
-    /* loop through all repositories */ 
+
+    /* loop through all repositories */
     for ( repo = ( NCBIRepository* ) DLListHead ( & cself -> repos ); repo != NULL; repo = ( NCBIRepository* ) DLNodeNext ( & repo -> n ) )
     {
         rc = SRAPathFindInRepo(cself, repo, accession, path, path_max, rep_len, alg_none);

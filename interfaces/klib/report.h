@@ -88,7 +88,7 @@ KLIB_EXTERN rc_t CC ReportForceFinalize ( void );
 
 
 /* ResetObject
- *  Resets the name of the current object beeing processes(path or accession),
+ *  Resets the name of the current object being processes(path or accession),
  *  usually from command line.
  *  Should be called each time
  *  when starting next command line argument processing.

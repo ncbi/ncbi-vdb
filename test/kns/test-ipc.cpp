@@ -245,7 +245,8 @@ public:
     static string ToUpper(const string& str)
     {
         string ret(str);
-        transform(ret.begin(), ret.end(), ret.begin(), ::toupper);
+		// MSVC prefers explicit conversion from int toupper() to char
+		transform(ret.begin(), ret.end(), ret.begin(), [](char c) { return (char)::toupper(c); });
         return ret;
     }
 

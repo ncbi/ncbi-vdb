@@ -29,6 +29,7 @@
 
 #include <kfg/kfg-priv.h>     /* KConfigMakeEmpty */
 
+#include <klib/debug.h> /* KDbgSetString */
 #include <klib/out.h>         /* KOutMsg */
 
 #include <kns/manager.h>      /* KNSManagerSetConnectionTimeouts */
@@ -56,8 +57,8 @@ TEST_CASE ( test ) {
     REQUIRE_NULL ( kfg );
     REQUIRE_RC ( KConfigMakeEmpty ( & kfg ) );
     REQUIRE_RC ( KConfigWriteString ( kfg,
-                    "/repository/remote/main/CGI/resolver-cgi",
-                    "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi" ) );
+                    "/repository/remote/main/SDL.2/resolver-cgi",
+                    "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve" ) );
 
     if ( PROXY != NULL )
         REQUIRE_RC ( KConfigWriteString ( kfg, "/http/proxy/path", PROXY ) );
@@ -154,6 +155,9 @@ extern "C" {
     ver_t CC KAppVersion ( void ) { return 0; }
 
     rc_t CC KMain ( int argc, char * argv [] ) {
+if ( 0 ) { KDbgSetString ( "VFS" );
+           KDbgSetString ( "KFG" );
+}
         rc_t rc = TestProxySchemeSuite ( argc, argv );
 
         free ( PROXY );

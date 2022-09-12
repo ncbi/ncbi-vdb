@@ -124,6 +124,12 @@ const char * Column = "SPOT_GROUP";
 // methods are plugged in correctly (i.e. do not crash).
 // Evolve as required.
 
+TEST_CASE( VTableCursor_MakeRead_NullTable )
+{   //VDB-4973
+    const VCursor * m_cur;
+    REQUIRE_RC_FAIL ( VTableCreateCursorRead ( nullptr, & m_cur ) );
+}
+
 FIXTURE_TEST_CASE( VTableCursor_MakeRead, TableCursorFixture )
 {
     MakeReadCursor ( Accession );

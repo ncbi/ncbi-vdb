@@ -20,9 +20,7 @@
 *
 *  Please cite the author in any work or product based on this material.
 *
-* ===========================================================================
-*
-*/
+* =========================================================================== */
 
 
 #include <kapp/args.h>        /* Args */
@@ -31,7 +29,9 @@
 
 #include <klib/debug.h>       /* KDbgSetString */
 #include <klib/out.h>         /* KOutMsg */
+#include <klib/text.h>         /* String */
 
+#include <kns/endpoint.h>      /* KNSManagerInitDNSEndpoint */
 #include <kns/manager.h>      /* KNSManagerSetConnectionTimeouts */
 
 #include <vfs/manager.h>      /* VFSManagerRelease */
@@ -47,7 +47,6 @@
 static rc_t argsHandler(int argc, char* argv[]);
 TEST_SUITE_WITH_ARGS_HANDLER(TestProxySchemeSuite, argsHandler);
 
-static bool EXPECTED_FAILURE = false;
 static const char * PROXY = "webproxy.ncbi.nlm.nih.gov";
 
 TEST_CASE ( test ) {
@@ -57,8 +56,8 @@ TEST_CASE ( test ) {
     REQUIRE_NULL ( kfg );
     REQUIRE_RC ( KConfigMakeEmpty ( & kfg ) );
     REQUIRE_RC ( KConfigWriteString ( kfg,
-                    "/repository/remote/main/CGI/resolver-cgi",
-                    "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi" ) );
+                   "/repository/remote/main/SDL.2/resolver-cgi",
+                   "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve" ) );
 
     if ( PROXY != NULL )
         REQUIRE_RC ( KConfigWriteString ( kfg, "/http/proxy/path", PROXY ) );
@@ -76,41 +75,38 @@ TEST_CASE ( test ) {
     KNSManager * kns = NULL;
     REQUIRE_RC ( VFSManagerGetKNSMgr ( vfs, & kns ) );
 
-    int32_t x=1004;//14 2850
-    if ( EXPECTED_FAILURE )
-        x=1; // do not do long retries when calling proxy on bad port
-    REQUIRE_RC ( KNSManagerSetConnectionTimeouts ( kns, x, 0, 0 ) );
+    String dns;
+    StringInitCString(&dns, PROXY);
+    KEndPoint ep;
+    if (KNSManagerInitDNSEndpoint(kns, &ep, &dns, 3128) == 0) {
+        int32_t x = 1004;//14 2850
+        REQUIRE_RC(KNSManagerSetConnectionTimeouts(kns, x, 0, 0));
 
-    RELEASE ( KNSManager, kns );
+        VResolver * resolver = NULL;
+        REQUIRE_RC(VFSManagerMakeResolver(vfs, &resolver, kfg));
+        REQUIRE_NOT_NULL(resolver);
 
-    VResolver * resolver = NULL;
-    REQUIRE_RC ( VFSManagerMakeResolver ( vfs, & resolver, kfg ) );
-    REQUIRE_NOT_NULL ( resolver );
+        VPath * query = NULL;
+        REQUIRE_NULL(query);
+        REQUIRE_RC(VFSManagerMakeAccPath(vfs, &query, "SRR000001"));
+        REQUIRE_NOT_NULL(query);
 
-    VPath * query = NULL;
-    REQUIRE_NULL ( query );
-    REQUIRE_RC ( VFSManagerMakeAccPath ( vfs, & query, "SRR000001" ) );
-    REQUIRE_NOT_NULL ( query );
+        const VPath * rmt = NULL;
+        std::cerr << x << "\n";
+        REQUIRE_RC(VResolverQuery(resolver, 0, query, 0, &rmt, 0));
 
-    const VPath * rmt = NULL;
-    REQUIRE_NULL ( rmt );
-	std::cerr << x << "\n";
-	if ( EXPECTED_FAILURE )
-        REQUIRE_RC_FAIL ( VResolverQuery ( resolver, 0, query, 0, & rmt, 0 ) );
-    else
-        REQUIRE_RC      ( VResolverQuery ( resolver, 0, query, 0, & rmt, 0 ) );
+        std::cerr << x << "\n";
 
-    std::cerr << x << "\n";
+        RELEASE(VPath, rmt);
 
-    RELEASE ( VPath     , rmt );
+        RELEASE(VPath, query);
 
-    RELEASE ( VPath     , query );
+        RELEASE(VResolver, resolver);
+    }
 
-    RELEASE ( VResolver , resolver );
-
-    RELEASE ( VFSManager, vfs );
-
-    RELEASE ( KConfig   , kfg );
+    RELEASE(VFSManager, vfs);
+    RELEASE(KNSManager, kns);
+    RELEASE(KConfig, kfg);
 
     REQUIRE_RC ( rc );
 }
@@ -134,27 +130,7 @@ rc_t CC UsageSummary ( const char * prog_name ) {
 }
 
 static rc_t argsHandler ( int argc, char * argv [] ) {
-    rc_t rc = ArgsMakeAndHandle ( NULL, argc, argv, 0, NULL, 0 );
-    if ( rc != 0 )
-        return rc;
-    /*
-    if ( argc > 1 )
-        if ( argv [ 1 ] [ 0 ] == '=' )
-            PROXY = strdup ( & argv [ 1 ] [ 1 ] );
-
-    switch ( argc ) {
-        case 1:
-            EXPECTED_FAILURE = true;
-            break;
-        case 2:
-            EXPECTED_FAILURE = PROXY != NULL;
-            break;
-        default:
-            EXPECTED_FAILURE = false;
-            break;
-    }
-    */
-    return rc;
+    return ArgsMakeAndHandle ( NULL, argc, argv, 0, NULL, 0 );
 }
 
 extern "C" {
@@ -163,10 +139,6 @@ extern "C" {
     rc_t CC KMain ( int argc, char * argv [] ) {
         //assert(!KDbgSetString("VFS"));
         assert(!KDbgSetString("KNS"));
-        rc_t rc = TestProxySchemeSuite ( argc, argv );
-
-//      free ( PROXY );        PROXY = NULL;
-
-        return rc;
+        return TestProxySchemeSuite ( argc, argv );
     }
 }

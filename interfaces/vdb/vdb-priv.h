@@ -66,6 +66,7 @@ struct VSchema;
 struct VTable;
 struct VTypedef;
 struct VXformInfo;
+struct PageMapIterator;
 
 
 /*--------------------------------------------------------------------------

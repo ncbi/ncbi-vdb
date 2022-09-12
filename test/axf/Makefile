@@ -25,6 +25,6 @@
 default: runtests
 
 TOP ?= $(abspath ../..)
-MODULE = test/align
+MODULE = test/axf
 
 include $(TOP)/build/Makefile.env

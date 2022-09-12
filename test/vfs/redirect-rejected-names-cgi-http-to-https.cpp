@@ -122,8 +122,10 @@ struct Test : protected ncbi :: NK :: SharedTest {
             {
                 std::cerr << "Skipped test of not found " << url << "\n";
             } else {
+/* disabled: names.cgi does not return aws runs
                 REQUIRE_RC
                     ( VResolverQuery ( resolver, 0, query, 0, & remote, 0 ) );
+*/
             }
             RELEASE ( KClientHttpRequest, req );
             RELEASE ( KNSManager, mgr );

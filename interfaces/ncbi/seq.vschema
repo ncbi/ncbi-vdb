@@ -737,8 +737,9 @@ table NCBI:tbl:phred_quality #1.0.1 = NCBI:tbl:phred_quality_nocol #1.0.1
  *  2.0.3 - base explicitly upon sequence #1.0.1
  *  2.0.4 - change compression from izip to zip
  *  2.0.5 - change quality synthesizer to work per read
+ *  2.0.6 - remove config check
  */
-table NCBI:tbl:phred_quality #2.0.5 = INSDC:tbl:sequence #1.0.1
+table NCBI:tbl:phred_quality #2.0.6 = INSDC:tbl:sequence #1.0.1
 {
     // read directly quality as  phred
     INSDC:quality:phred phys_qual_phred
@@ -751,11 +752,6 @@ table NCBI:tbl:phred_quality #2.0.5 = INSDC:tbl:sequence #1.0.1
         | < INSDC:quality:phred > echo < 30 > ( out_4na_bin )
         ;
 
-    INSDC:quality:phred raw_qual_phred
-        = < INSDC:quality:phred > is_configuration_set
-            < "/sra/quality_type", "raw_scores" > ( phys_qual_phred )
-        ;
-
     INSDC:quality:phred syn_qual_phred
         = NCBI:SRA:syn_quality_read < 30, 3 > ( out_read_start, out_read_len, out_read_type, out_rd_filter )
         | NCBI:SRA:syn_quality < 30, 3 > ( out_read_len, out_spot_filter )
@@ -763,7 +759,7 @@ table NCBI:tbl:phred_quality #2.0.5 = INSDC:tbl:sequence #1.0.1
         ;
 
     INSDC:quality:phred out_qual_phred
-        = raw_qual_phred
+        = phys_qual_phred
         | syn_qual_phred
         ;
 

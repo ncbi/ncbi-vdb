@@ -125,7 +125,7 @@ size_t KWrtFmt_rc_t ( char * pout, size_t max, const char * fmt, rc_t rc_in )
     {
         struct RC_String out[5];
 
-        Get_RC_Strings(rc, out);
+        Get_RC_Strings(rc_in, out);
         rc = string_printf (pout, max, & needed,
 #if _DEBUGGING
                             "RC(%s:%u:%s %*s,%*s,%*s,%*s,%*s)", GetRCFilename(), GetRCLineno(), GetRCFunction(),
@@ -149,3 +149,22 @@ size_t KWrtFmt_rc_t ( char * pout, size_t max, const char * fmt, rc_t rc_in )
 
     return rc != 0 ? 0 : needed;
 }
+
+#include "rc-asserts.h"
+
+/* creates a typedef for a char array of length 1 or -1,
+ß * the compiler will complain if the length is less than zero.
+ */
+#define STATIC_ASSERT(MEMO, EXPR) typedef char BAD_ ## MEMO [((EXPR) ? (1) : (-1))]
+
+STATIC_ASSERT(RC_MODULE_COUNT, ASSERTION_RC_MOD_COUNT);
+STATIC_ASSERT(RC_TARGET_COUNT, ASSERTION_RC_TARG_COUNT);
+STATIC_ASSERT(RC_CONTEXT_COUNT, ASSERTION_RC_CTX_COUNT);
+STATIC_ASSERT(RC_OBJECT_COUNT, ASSERTION_RC_OBJ_COUNT);
+STATIC_ASSERT(RC_STATE_COUNT, ASSERTION_RC_STATE_COUNT);
+
+STATIC_ASSERT(RC_MODULE_EXTENSION, ASSERTION_RC_MOD_EXTENSION);
+STATIC_ASSERT(RC_TARGET_EXTENSION, ASSERTION_RC_TARG_EXTENSION);
+STATIC_ASSERT(RC_CONTEXT_EXTENSION, ASSERTION_RC_CTX_EXTENSION);
+STATIC_ASSERT(RC_OBJECT_EXTENSION, ASSERTION_RC_OBJ_EXTENSION);
+STATIC_ASSERT(RC_STATE_EXTENSION, ASSERTION_RC_STATE_EXTENSION);

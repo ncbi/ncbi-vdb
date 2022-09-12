@@ -29,38 +29,69 @@ set( VDB_LIB_RD "" )
 foreach( target ${VDB_LIB_RD_TARGETS})
     list( APPEND VDB_LIB_RD "$<TARGET_OBJECTS:${target}>" )
 endforeach()
-
-add_library( ncbi-vdb STATIC "${VDB_LIB_RD}" )
-ExportStatic( ncbi-vdb true )
-MSVS_StaticRuntime( ncbi-vdb )
-
-#--------------------------------
-set( VDB_LIB_RD_SHARED
-    ${VDB_LIB_RD}
-    # $<TARGET_OBJECTS:ngs>
-    # $<TARGET_OBJECTS:ngs-jni>
-    # $<TARGET_OBJECTS:ngs-py>
-)
-
-add_library( ncbi-vdb-shared SHARED "${VDB_LIB_RD_SHARED}" )
-set_target_properties( ncbi-vdb-shared PROPERTIES OUTPUT_NAME ncbi-vdb )
-#target_link_libraries( ncbi-vdb-shared ncbi-ngs ${LIBXML2} m dl pthread )
-target_link_libraries( ncbi-vdb-shared ${LIBXML2} m dl pthread )
-MakeLinksShared( ncbi-vdb-shared ncbi-vdb true )
-
-################################
 set( VDB_LIB_RDWR "" )
 foreach( target ${VDB_LIB_RDWR_TARGETS})
     list( APPEND VDB_LIB_RDWR "$<TARGET_OBJECTS:${target}>" )
 endforeach()
 
+if(_NCBIVDB_CFG_PACKAGING)
+    if (BUILD_SHARED_LIBS)
+        add_library( ncbi-vdb SHARED "${VDB_LIB_RD}" )
+        add_library( ncbi-wvdb SHARED "${VDB_LIB_RDWR}" )
+    else()
+        add_library( ncbi-vdb STATIC "${VDB_LIB_RD}" )
+        add_library( ncbi-wvdb STATIC "${VDB_LIB_RDWR}" )
+    endif()
+    set( _extra_libs ${CONAN_LIBS};m;dl;pthread)
+    target_link_libraries( ncbi-vdb  ${_extra_libs} )
+    target_link_libraries( ncbi-wvdb  ${_extra_libs} )
+    install(TARGETS ncbi-vdb ncbi-wvdb)
+else()
+
+add_library( ncbi-vdb STATIC "${VDB_LIB_RD}" )
+ExportStatic( ncbi-vdb true )
+ExportShared( ncbi-vdb true "m;dl;pthread")
+
+################################
+
 add_library( ncbi-wvdb STATIC "${VDB_LIB_RDWR}" )
 ExportStatic( ncbi-wvdb true )
+ExportShared( ncbi-wvdb true "m;dl;pthread")
 
-#--------------------------------
-add_library( ncbi-wvdb-shared SHARED "${VDB_LIB_RDWR}" )
-set_target_properties( ncbi-wvdb-shared PROPERTIES OUTPUT_NAME ncbi-wvdb )
-#target_link_libraries( ncbi-wvdb-shared ncbi-ngs ${LIBXML2} m dl pthread )
-target_link_libraries( ncbi-wvdb-shared ${LIBXML2} m dl pthread )
-MakeLinksShared( ncbi-wvdb-shared ncbi-wvdb true )
+if( RUN_SANITIZER_TESTS )
+    set( asan_defs "-fsanitize=address" )
+    set( VDB_LIB_RD_ASAN "" )
+    foreach( target ${VDB_LIB_RD_TARGETS})
+        list( APPEND VDB_LIB_RD_ASAN "$<TARGET_OBJECTS:${target}-asan>" )
+    endforeach()
+    add_library( ncbi-vdb-asan STATIC "${VDB_LIB_RD_ASAN}" )
+    target_compile_options( ncbi-vdb-asan PRIVATE ${asan_defs} )
+    target_link_options( ncbi-vdb-asan PRIVATE ${asan_defs} )
 
+    set( tsan_defs "-fsanitize=thread" )
+    set( VDB_LIB_RD_TSAN "" )
+    foreach( target ${VDB_LIB_RD_TARGETS})
+        list( APPEND VDB_LIB_RD_TSAN "$<TARGET_OBJECTS:${target}-tsan>" )
+    endforeach()
+    add_library( ncbi-vdb-tsan STATIC "${VDB_LIB_RD_TSAN}" )
+    target_compile_options( ncbi-vdb-tsan PRIVATE ${tsan_defs} )
+    target_link_options( ncbi-vdb-tsan PRIVATE ${tsan_defs} )
+
+    ################################
+    set( VDB_LIB_RDWR_ASAN "" )
+    foreach( target ${VDB_LIB_RDWR_TARGETS})
+        list( APPEND VDB_LIB_RDWR_ASAN "$<TARGET_OBJECTS:${target}-asan>" )
+    endforeach()
+    add_library( ncbi-wvdb-asan STATIC "${VDB_LIB_RDWR_ASAN}" )
+    target_compile_options( ncbi-wvdb-asan PRIVATE ${asan_defs} )
+    target_link_options( ncbi-wvdb-asan PRIVATE ${asan_defs} )
+
+    set( VDB_LIB_RDWR_TSAN "" )
+    foreach( target ${VDB_LIB_RDWR_TARGETS})
+        list( APPEND VDB_LIB_RDWR_TSAN "$<TARGET_OBJECTS:${target}-tsan>" )
+    endforeach()
+    add_library( ncbi-wvdb-tsan STATIC "${VDB_LIB_RDWR_TSAN}" )
+    target_compile_options( ncbi-wvdb-tsan PRIVATE ${tsan_defs} )
+    target_link_options( ncbi-wvdb-tsan PRIVATE ${tsan_defs} )
+endif()
+endif()

@@ -455,6 +455,8 @@ rc_t KClientHttpProxyConnect ( KClientHttp * self, const String * hostname, uint
         STATUS ( _STAT_GEEK, "%s - releasing socket stream\n", __func__ );
         KStreamRelease ( self -> sock );
         self -> sock = NULL;
+
+        KDataBufferWhack(&buffer);
     }
 
     return rc;
@@ -704,7 +706,14 @@ rc_t KClientHttpInit ( KClientHttp * http, const KDataBuffer *hostname_buffer, v
         const char * ua = NULL;
         rc = KNSManagerGetUserAgent(&ua);
         if (rc == 0)
+        {
+            /* It looks like KClientHttpInit can be called twice
+               and http->ua will be allocated here already - we need to free it first
+               this behaviour occurs in Test_KNS_refresh-expired_asan
+            */
+            free ( http->ua );
             http->ua = string_dup_measure(ua, NULL);
+        }
         /* update UserAgent with -head */
         if (rc == 0)
             rc = KNSManagerGetUserAgentSuffix(&s);
@@ -720,7 +729,14 @@ rc_t KClientHttpInit ( KClientHttp * http, const KDataBuffer *hostname_buffer, v
             if (rc == 0)
                 rc = KNSManagerGetUserAgent(&ua);
             if (rc == 0)
+            {
+                /* It looks like KClientHttpInit can be called twice
+                   and http->ua_head will be allocated here already - we need to free it first
+                   this behaviour occurs in Test_KNS_refresh-expired_asan
+                */
+                free ( http->ua_head );
                 http->ua_head = string_dup_measure(ua, NULL);
+            }
             {   /* Restore UserAgent */
                 rc_t rc2 = KNSManagerSetUserAgentSuffix(orig_suffix);
                 if (rc == 0 && rc2 != 0)
