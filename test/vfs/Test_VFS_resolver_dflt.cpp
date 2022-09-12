@@ -20,7 +20,7 @@
 *
 *  Please cite the author in any work or product based on this material.
 *
-* ==============================================================================
+* =============================================================================$
 *
 */
 
@@ -343,6 +343,7 @@ FIXTURE_TEST_CASE(vdbcache_only, ResolverFixture)
     REQUIRE_RC_FAIL(VResolverRemote(resolver, 0, query, &remote));
     
     putenv(const_cast<char*>(ACC "="));
+#undef ACC
 }
 #endif
 
@@ -423,6 +424,24 @@ TEST_CASE(Remote_vrAlwaysEnable_vs_not) {
 }
 #endif
 
+FIXTURE_TEST_CASE(noqual_vdbcache, ResolverFixture) {
+#define ACC "SRR341578"
+    putenv((char*) ACC "="
+"{ \"result\": [ { \"status\": 200, \"files\": [ { \"type\": \"sra\", \"name\": \"SRR341578.sralite\", \"locations\": [ { \"link\": \"https://nih.gov/SRR341578.sralite\" } ] },"
+"                                  { \"type\": \"vdbcache\", \"name\": \"SRR341578.sralite.vdbcache\", \"locations\": [ { \"link\": \"https://nih.gov/SRR341578.sralite.vdbcache\""
+"                                                                                                       } ] } ] } ] }");
+
+    REQUIRE_RC(VFSManagerMakePath(vfs, &query, ACC));
+    REQUIRE_NULL(remote);
+    REQUIRE_RC(VResolverRemote(resolver, 0, query, &remote));
+    const VPath * vdbcache(NULL);
+    bool vdbcacheChecked(false);
+    REQUIRE_RC(VPathGetVdbcache(remote, &vdbcache, &vdbcacheChecked));
+    REQUIRE_NOT_NULL(vdbcache);
+    REQUIRE(vdbcacheChecked);
+    REQUIRE_RC(VPathRelease(vdbcache));
+}
+
 //////////////////////////////////////////// Main
 
 extern "C"
@@ -465,7 +484,7 @@ extern "C"
 0) assert(!KDbgSetString("VFS"));
 
         KConfigDisableUserSettings ();
-		rc_t rc = VResolverTestSuite ( argc, argv );
+        rc_t rc = VResolverTestSuite ( argc, argv );
 
         clear_recorded_errors();
 
