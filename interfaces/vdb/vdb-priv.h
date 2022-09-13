@@ -212,6 +212,13 @@ VDB_EXTERN rc_t CC VTableVDropColumn ( struct VTable *self, const char *name, va
 VDB_EXTERN rc_t CC VTableRenameColumn ( struct VTable *self, bool force,
     const char *from, const char *to );
 
+/* CopyColumn
+ */
+VDB_EXTERN rc_t CC VTableCopyColumn (  struct VTable *self
+                                     , bool force
+                                     , struct VTable const *source
+                                     , const char *name );
+
 /* ListPhysColumns
  * ListSeededWritableColumns
  *  avail: 2.4
