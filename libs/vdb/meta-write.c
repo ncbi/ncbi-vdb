@@ -153,3 +153,38 @@ VTRANSFACT_BUILTIN_IMPL(meta_write, 1, 0, 0) (const void *Self, const VXfactInfo
 
 	return rc;
 }
+
+/* VTableMetaCopy
+ *  copies node ( at given path ) from src to self
+ */
+LIB_EXPORT rc_t CC VTableMetaCopy( VTable *self, const VTable *src, const char * path ) {
+    rc_t rc = 0;
+    if ( NULL == self ) {
+        rc = RC ( rcDB, rcTable, rcComparing, rcSelf, rcNull );
+    } else if ( NULL == src || NULL == path ) {
+        rc = RC ( rcDB, rcTable, rcComparing, rcParam, rcNull );        
+    } else {
+        KMetadata *self_meta;
+        rc = VTableOpenMetadataUpdate( self, &self_meta );
+        if ( 0 == rc ) {
+            const KMetadata *src_meta;
+            rc = VTableOpenMetadataRead( src, &src_meta );
+            if ( 0 == rc ) {
+                KMDataNode * self_node;
+                rc = KMetadataOpenNodeUpdate( self_meta, &self_node, path );
+                if ( 0 == rc ) {
+                    const KMDataNode * src_node;
+                    rc = KMetadataOpenNodeRead( src_meta, &src_node, path );
+                    if ( 0 == rc ) {
+                        rc = KMDataNodeCopy( self_node, src_node );
+                        KMDataNodeRelease( src_node );
+                    }
+                    KMDataNodeRelease( self_node );
+                }
+                KMetadataRelease( src_meta );                
+            }
+            KMetadataRelease( self_meta );
+        }
+    }
+    return rc;
+}

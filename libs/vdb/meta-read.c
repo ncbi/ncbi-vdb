@@ -138,3 +138,44 @@ VTRANSFACT_BUILTIN_IMPL ( meta_read, 1, 0, 0 ) ( const void *Self, const VXfactI
 	}
     return rc;
 }
+
+/* Compare Metadata-Node(s) on tables
+ *  compares the content of 2 nodes ( given by path )
+ *  This is a deep comparison.
+ *
+ *  "other"  [ IN ]  - the table to compare with
+ *  "path"   [ IN ]  - selects the node to compare
+ *  "equal"  [ OUT ] - signals if the 2 nodes have the same content...
+ */
+LIB_EXPORT rc_t CC VTableMetaCompare ( const VTable *self, const VTable *other,
+                                       const char * path, bool * equal ) {
+    rc_t rc = 0;
+    if ( NULL == self ) {
+        rc = RC ( rcDB, rcTable, rcComparing, rcSelf, rcNull );
+    } else if ( NULL == other || NULL == path || NULL == equal ) {
+        rc = RC ( rcDB, rcTable, rcComparing, rcParam, rcNull );        
+    } else {
+        const KMetadata *self_meta;
+        rc = VTableOpenMetadataRead( self, &self_meta );
+        if ( 0 == rc ) {
+            const KMetadata *other_meta;
+            rc = VTableOpenMetadataRead( other, &other_meta );
+            if ( 0 == rc ) {
+                const KMDataNode * self_node;
+                rc = KMetadataOpenNodeRead( self_meta, &self_node, path );
+                if ( 0 == rc ) {
+                    const KMDataNode * other_node;
+                    rc = KMetadataOpenNodeRead( other_meta, &other_node, path );
+                    if ( 0 == rc ) {
+                        rc = KMDataNodeCompare( self_node, other_node, equal );
+                        KMDataNodeRelease( other_node );
+                    }
+                    KMDataNodeRelease( self_node );
+                }
+                KMetadataRelease( other_meta );                
+            }
+            KMetadataRelease( self_meta );
+        }
+    }
+    return rc;
+}

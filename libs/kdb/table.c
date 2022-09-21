@@ -837,7 +837,7 @@ LIB_EXPORT rc_t CC KTableListIdx ( const KTable *self, KNamelist **names )
  *  indicates whether some/all table data comes from network resource
  *  such as HttpFile or CacheteeFile
  */
-KDB_EXTERN bool CC KTableHasRemoteData ( const KTable *self )
+LIB_EXPORT bool CC KTableHasRemoteData ( const KTable *self )
 {
     bool result = self != NULL && KDirectoryIsKArcDir ( self -> dir ) &&
             KArcDirIsFromRemote ( (const KArcDir * ) self -> dir );

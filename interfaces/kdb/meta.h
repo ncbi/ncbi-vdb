@@ -428,17 +428,17 @@ KDB_EXTERN rc_t CC KMDataNodeCompare( const KMDataNode *self, KMDataNode const *
  *  "source" [ IN ] - the table to copy from
  *  "path"   [ IN ] - selects the node to copy
  */
-KDB_EXTERN rc_t CC KTableMetaCopy( KTable *self, const KTable *src, const char * path );
+KDB_EXTERN rc_t CC KTableMetaCopy( struct KTable *self, const struct KTable *src, const char * path );
 
 /* Compare Node on tables
  *  compares the content of 2 nodes ( given by path )
  *  This is a deep comparison.
  *
- *  "other"  [ IN ]  - the table to compare wiht
+ *  "other"  [ IN ]  - the table to compare with
  *  "path"   [ IN ]  - selects the node to compare
  *  "equal"  [ OUT ] - signals if the 2 nodes have the same content...
  */
-KDB_EXTERN rc_t CC KTableMetaCompare ( const KTable *self, const KTable *other,
+KDB_EXTERN rc_t CC KTableMetaCompare ( const struct KTable *self, const struct KTable *other,
                                        const char * path, bool * equal );
 
 #ifdef __cplusplus
