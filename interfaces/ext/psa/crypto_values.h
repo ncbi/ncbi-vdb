@@ -1670,7 +1670,7 @@
  * \param unused  Unused parameter.
  * \param key_id  Identifier of the key.
  */
-static inline mbedtls_svc_key_id_t vdb_mbedtls_svc_key_id_make(
+static inline mbedtls_svc_key_id_t mbedtls_svc_key_id_make(
     unsigned int unused, psa_key_id_t key_id )
 {
     (void)unused;
@@ -1685,7 +1685,7 @@ static inline mbedtls_svc_key_id_t vdb_mbedtls_svc_key_id_make(
  *
  * \return Non-zero if the two key identifier are equal, zero otherwise.
  */
-static inline int vdb_mbedtls_svc_key_id_equal( mbedtls_svc_key_id_t id1,
+static inline int mbedtls_svc_key_id_equal( mbedtls_svc_key_id_t id1,
                                             mbedtls_svc_key_id_t id2 )
 {
     return( id1 == id2 );
@@ -1697,7 +1697,7 @@ static inline int vdb_mbedtls_svc_key_id_equal( mbedtls_svc_key_id_t id1,
  *
  * \return Non-zero if the key identifier is null, zero otherwise.
  */
-static inline int vdb_mbedtls_svc_key_id_is_null( mbedtls_svc_key_id_t key )
+static inline int mbedtls_svc_key_id_is_null( mbedtls_svc_key_id_t key )
 {
     return( key == 0 );
 }
@@ -1713,7 +1713,7 @@ static inline int vdb_mbedtls_svc_key_id_is_null( mbedtls_svc_key_id_t key )
  * \param owner_id Identifier of the key owner.
  * \param key_id   Identifier of the key.
  */
-static inline mbedtls_svc_key_id_t vdb_mbedtls_svc_key_id_make(
+static inline mbedtls_svc_key_id_t mbedtls_svc_key_id_make(
     mbedtls_key_owner_id_t owner_id, psa_key_id_t key_id )
 {
     return( (mbedtls_svc_key_id_t){ .key_id = key_id,
@@ -1727,11 +1727,11 @@ static inline mbedtls_svc_key_id_t vdb_mbedtls_svc_key_id_make(
  *
  * \return Non-zero if the two key identifier are equal, zero otherwise.
  */
-static inline int vdb_mbedtls_svc_key_id_equal( mbedtls_svc_key_id_t id1,
+static inline int mbedtls_svc_key_id_equal( mbedtls_svc_key_id_t id1,
                                             mbedtls_svc_key_id_t id2 )
 {
     return( ( id1.key_id == id2.key_id ) &&
-            vdb_mbedtls_key_owner_id_equal( id1.owner, id2.owner ) );
+            mbedtls_key_owner_id_equal( id1.owner, id2.owner ) );
 }
 
 /** Check whether a key identifier is null.
@@ -1740,7 +1740,7 @@ static inline int vdb_mbedtls_svc_key_id_equal( mbedtls_svc_key_id_t id1,
  *
  * \return Non-zero if the key identifier is null, zero otherwise.
  */
-static inline int vdb_mbedtls_svc_key_id_is_null( mbedtls_svc_key_id_t key )
+static inline int mbedtls_svc_key_id_is_null( mbedtls_svc_key_id_t key )
 {
     return( ( key.key_id == 0 ) && ( key.owner == 0 ) );
 }

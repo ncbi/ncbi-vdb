@@ -22,9 +22,10 @@
 #
 # ===========================================================================
 
-add_subdirectory ( mbedtls )
-if(NOT _NCBIVDB_CFG_PACKAGING)
-    add_subdirectory ( bzip2 ) # TODO: RETRIEVE from the Internet
-    add_subdirectory ( zlib )
-    add_subdirectory ( zstd )
+add_subdirectory ( bzip2 ) # TODO: RETRIEVE from the Internet
+if( NOT HAVE_MBEDTLS_F )
+	message( "Building local copy ext/mbedtls..." )
+	add_subdirectory ( mbedtls )
 endif()
+add_subdirectory ( zlib )
+add_subdirectory ( zstd )

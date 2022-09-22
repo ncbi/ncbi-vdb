@@ -81,9 +81,9 @@ static int ecdh_gen_public_restartable( mbedtls_ecp_group *grp,
 #if defined(MBEDTLS_ECP_RESTARTABLE)
     if( rs_ctx == NULL || rs_ctx->rsm == NULL )
 #endif
-        MBEDTLS_MPI_CHK( vdb_mbedtls_ecp_gen_privkey( grp, d, f_rng, p_rng ) );
+        MBEDTLS_MPI_CHK( mbedtls_ecp_gen_privkey( grp, d, f_rng, p_rng ) );
 
-    MBEDTLS_MPI_CHK( vdb_mbedtls_ecp_mul_restartable( grp, Q, d, &grp->G,
+    MBEDTLS_MPI_CHK( mbedtls_ecp_mul_restartable( grp, Q, d, &grp->G,
                                                   f_rng, p_rng, rs_ctx ) );
 
 cleanup:
@@ -93,7 +93,7 @@ cleanup:
 /*
  * Generate public key
  */
-int vdb_mbedtls_ecdh_gen_public( mbedtls_ecp_group *grp, mbedtls_mpi *d, mbedtls_ecp_point *Q,
+int mbedtls_ecdh_gen_public( mbedtls_ecp_group *grp, mbedtls_mpi *d, mbedtls_ecp_point *Q,
                      int (*f_rng)(void *, unsigned char *, size_t),
                      void *p_rng )
 {
@@ -119,21 +119,21 @@ static int ecdh_compute_shared_restartable( mbedtls_ecp_group *grp,
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     mbedtls_ecp_point P;
 
-    vdb_mbedtls_ecp_point_init( &P );
+    mbedtls_ecp_point_init( &P );
 
-    MBEDTLS_MPI_CHK( vdb_mbedtls_ecp_mul_restartable( grp, &P, d, Q,
+    MBEDTLS_MPI_CHK( mbedtls_ecp_mul_restartable( grp, &P, d, Q,
                                                   f_rng, p_rng, rs_ctx ) );
 
-    if( vdb_mbedtls_ecp_is_zero( &P ) )
+    if( mbedtls_ecp_is_zero( &P ) )
     {
         ret = MBEDTLS_ERR_ECP_BAD_INPUT_DATA;
         goto cleanup;
     }
 
-    MBEDTLS_MPI_CHK( vdb_mbedtls_mpi_copy( z, &P.X ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_copy( z, &P.X ) );
 
 cleanup:
-    vdb_mbedtls_ecp_point_free( &P );
+    mbedtls_ecp_point_free( &P );
 
     return( ret );
 }
@@ -141,7 +141,7 @@ cleanup:
 /*
  * Compute shared secret (SEC1 3.3.1)
  */
-int vdb_mbedtls_ecdh_compute_shared( mbedtls_ecp_group *grp, mbedtls_mpi *z,
+int mbedtls_ecdh_compute_shared( mbedtls_ecp_group *grp, mbedtls_mpi *z,
                          const mbedtls_ecp_point *Q, const mbedtls_mpi *d,
                          int (*f_rng)(void *, unsigned char *, size_t),
                          void *p_rng )
@@ -157,29 +157,29 @@ int vdb_mbedtls_ecdh_compute_shared( mbedtls_ecp_group *grp, mbedtls_mpi *z,
 
 static void ecdh_init_internal( mbedtls_ecdh_context_mbed *ctx )
 {
-    vdb_mbedtls_ecp_group_init( &ctx->grp );
-    vdb_mbedtls_mpi_init( &ctx->d  );
-    vdb_mbedtls_ecp_point_init( &ctx->Q   );
-    vdb_mbedtls_ecp_point_init( &ctx->Qp  );
-    vdb_mbedtls_mpi_init( &ctx->z  );
+    mbedtls_ecp_group_init( &ctx->grp );
+    mbedtls_mpi_init( &ctx->d  );
+    mbedtls_ecp_point_init( &ctx->Q   );
+    mbedtls_ecp_point_init( &ctx->Qp  );
+    mbedtls_mpi_init( &ctx->z  );
 
 #if defined(MBEDTLS_ECP_RESTARTABLE)
-    vdb_mbedtls_ecp_restart_init( &ctx->rs );
+    mbedtls_ecp_restart_init( &ctx->rs );
 #endif
 }
 
 /*
  * Initialize context
  */
-void vdb_mbedtls_ecdh_init( mbedtls_ecdh_context *ctx )
+void mbedtls_ecdh_init( mbedtls_ecdh_context *ctx )
 {
     ECDH_VALIDATE( ctx != NULL );
 
 #if defined(MBEDTLS_ECDH_LEGACY_CONTEXT)
     ecdh_init_internal( ctx );
-    vdb_mbedtls_ecp_point_init( &ctx->Vi  );
-    vdb_mbedtls_ecp_point_init( &ctx->Vf  );
-    vdb_mbedtls_mpi_init( &ctx->_d );
+    mbedtls_ecp_point_init( &ctx->Vi  );
+    mbedtls_ecp_point_init( &ctx->Vf  );
+    mbedtls_mpi_init( &ctx->_d );
 #else
     memset( ctx, 0, sizeof( mbedtls_ecdh_context ) );
 
@@ -196,7 +196,7 @@ static int ecdh_setup_internal( mbedtls_ecdh_context_mbed *ctx,
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
-    ret = vdb_mbedtls_ecp_group_load( &ctx->grp, grp_id );
+    ret = mbedtls_ecp_group_load( &ctx->grp, grp_id );
     if( ret != 0 )
     {
         return( MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE );
@@ -208,7 +208,7 @@ static int ecdh_setup_internal( mbedtls_ecdh_context_mbed *ctx,
 /*
  * Setup context
  */
-int vdb_mbedtls_ecdh_setup( mbedtls_ecdh_context *ctx, mbedtls_ecp_group_id grp_id )
+int mbedtls_ecdh_setup( mbedtls_ecdh_context *ctx, mbedtls_ecp_group_id grp_id )
 {
     ECDH_VALIDATE_RET( ctx != NULL );
 
@@ -236,14 +236,14 @@ int vdb_mbedtls_ecdh_setup( mbedtls_ecdh_context *ctx, mbedtls_ecp_group_id grp_
 
 static void ecdh_free_internal( mbedtls_ecdh_context_mbed *ctx )
 {
-    vdb_mbedtls_ecp_group_free( &ctx->grp );
-    vdb_mbedtls_mpi_free( &ctx->d  );
-    vdb_mbedtls_ecp_point_free( &ctx->Q   );
-    vdb_mbedtls_ecp_point_free( &ctx->Qp  );
-    vdb_mbedtls_mpi_free( &ctx->z  );
+    mbedtls_ecp_group_free( &ctx->grp );
+    mbedtls_mpi_free( &ctx->d  );
+    mbedtls_ecp_point_free( &ctx->Q   );
+    mbedtls_ecp_point_free( &ctx->Qp  );
+    mbedtls_mpi_free( &ctx->z  );
 
 #if defined(MBEDTLS_ECP_RESTARTABLE)
-    vdb_mbedtls_ecp_restart_free( &ctx->rs );
+    mbedtls_ecp_restart_free( &ctx->rs );
 #endif
 }
 
@@ -251,7 +251,7 @@ static void ecdh_free_internal( mbedtls_ecdh_context_mbed *ctx )
 /*
  * Enable restartable operations for context
  */
-void vdb_mbedtls_ecdh_enable_restart( mbedtls_ecdh_context *ctx )
+void mbedtls_ecdh_enable_restart( mbedtls_ecdh_context *ctx )
 {
     ECDH_VALIDATE( ctx != NULL );
 
@@ -262,15 +262,15 @@ void vdb_mbedtls_ecdh_enable_restart( mbedtls_ecdh_context *ctx )
 /*
  * Free context
  */
-void vdb_mbedtls_ecdh_free( mbedtls_ecdh_context *ctx )
+void mbedtls_ecdh_free( mbedtls_ecdh_context *ctx )
 {
     if( ctx == NULL )
         return;
 
 #if defined(MBEDTLS_ECDH_LEGACY_CONTEXT)
-    vdb_mbedtls_ecp_point_free( &ctx->Vi );
-    vdb_mbedtls_ecp_point_free( &ctx->Vf );
-    vdb_mbedtls_mpi_free( &ctx->_d );
+    mbedtls_ecp_point_free( &ctx->Vi );
+    mbedtls_ecp_point_free( &ctx->Vf );
+    mbedtls_mpi_free( &ctx->_d );
     ecdh_free_internal( ctx );
 #else
     switch( ctx->var )
@@ -324,19 +324,19 @@ static int ecdh_make_params_internal( mbedtls_ecdh_context_mbed *ctx,
                                              f_rng, p_rng, rs_ctx ) ) != 0 )
         return( ret );
 #else
-    if( ( ret = vdb_mbedtls_ecdh_gen_public( &ctx->grp, &ctx->d, &ctx->Q,
+    if( ( ret = mbedtls_ecdh_gen_public( &ctx->grp, &ctx->d, &ctx->Q,
                                          f_rng, p_rng ) ) != 0 )
         return( ret );
 #endif /* MBEDTLS_ECP_RESTARTABLE */
 
-    if( ( ret = vdb_mbedtls_ecp_tls_write_group( &ctx->grp, &grp_len, buf,
+    if( ( ret = mbedtls_ecp_tls_write_group( &ctx->grp, &grp_len, buf,
                                              blen ) ) != 0 )
         return( ret );
 
     buf += grp_len;
     blen -= grp_len;
 
-    if( ( ret = vdb_mbedtls_ecp_tls_write_point( &ctx->grp, &ctx->Q, point_format,
+    if( ( ret = mbedtls_ecp_tls_write_point( &ctx->grp, &ctx->Q, point_format,
                                              &pt_len, buf, blen ) ) != 0 )
         return( ret );
 
@@ -351,7 +351,7 @@ static int ecdh_make_params_internal( mbedtls_ecdh_context_mbed *ctx,
  *          ECPoint         public;
  *      } ServerECDHParams;
  */
-int vdb_mbedtls_ecdh_make_params( mbedtls_ecdh_context *ctx, size_t *olen,
+int mbedtls_ecdh_make_params( mbedtls_ecdh_context *ctx, size_t *olen,
                               unsigned char *buf, size_t blen,
                               int (*f_rng)(void *, unsigned char *, size_t),
                               void *p_rng )
@@ -394,7 +394,7 @@ static int ecdh_read_params_internal( mbedtls_ecdh_context_mbed *ctx,
                                       const unsigned char **buf,
                                       const unsigned char *end )
 {
-    return( vdb_mbedtls_ecp_tls_read_point( &ctx->grp, &ctx->Qp, buf,
+    return( mbedtls_ecp_tls_read_point( &ctx->grp, &ctx->Qp, buf,
                                         end - *buf ) );
 }
 
@@ -405,7 +405,7 @@ static int ecdh_read_params_internal( mbedtls_ecdh_context_mbed *ctx,
  *          ECPoint         public;
  *      } ServerECDHParams;
  */
-int vdb_mbedtls_ecdh_read_params( mbedtls_ecdh_context *ctx,
+int mbedtls_ecdh_read_params( mbedtls_ecdh_context *ctx,
                               const unsigned char **buf,
                               const unsigned char *end )
 {
@@ -416,11 +416,11 @@ int vdb_mbedtls_ecdh_read_params( mbedtls_ecdh_context *ctx,
     ECDH_VALIDATE_RET( *buf != NULL );
     ECDH_VALIDATE_RET( end != NULL );
 
-    if( ( ret = vdb_mbedtls_ecp_tls_read_group_id( &grp_id, buf, end - *buf ) )
+    if( ( ret = mbedtls_ecp_tls_read_group_id( &grp_id, buf, end - *buf ) )
             != 0 )
         return( ret );
 
-    if( ( ret = vdb_mbedtls_ecdh_setup( ctx, grp_id ) ) != 0 )
+    if( ( ret = mbedtls_ecdh_setup( ctx, grp_id ) ) != 0 )
         return( ret );
 
 #if defined(MBEDTLS_ECDH_LEGACY_CONTEXT)
@@ -450,14 +450,14 @@ static int ecdh_get_params_internal( mbedtls_ecdh_context_mbed *ctx,
 
     /* If it's not our key, just import the public part as Qp */
     if( side == MBEDTLS_ECDH_THEIRS )
-        return( vdb_mbedtls_ecp_copy( &ctx->Qp, &key->Q ) );
+        return( mbedtls_ecp_copy( &ctx->Qp, &key->Q ) );
 
     /* Our key: import public (as Q) and private parts */
     if( side != MBEDTLS_ECDH_OURS )
         return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
 
-    if( ( ret = vdb_mbedtls_ecp_copy( &ctx->Q, &key->Q ) ) != 0 ||
-        ( ret = vdb_mbedtls_mpi_copy( &ctx->d, &key->d ) ) != 0 )
+    if( ( ret = mbedtls_ecp_copy( &ctx->Q, &key->Q ) ) != 0 ||
+        ( ret = mbedtls_mpi_copy( &ctx->d, &key->d ) ) != 0 )
         return( ret );
 
     return( 0 );
@@ -466,7 +466,7 @@ static int ecdh_get_params_internal( mbedtls_ecdh_context_mbed *ctx,
 /*
  * Get parameters from a keypair
  */
-int vdb_mbedtls_ecdh_get_params( mbedtls_ecdh_context *ctx,
+int mbedtls_ecdh_get_params( mbedtls_ecdh_context *ctx,
                              const mbedtls_ecp_keypair *key,
                              mbedtls_ecdh_side side )
 {
@@ -480,7 +480,7 @@ int vdb_mbedtls_ecdh_get_params( mbedtls_ecdh_context *ctx,
     {
         /* This is the first call to get_params(). Set up the context
          * for use with the group. */
-        if( ( ret = vdb_mbedtls_ecdh_setup( ctx, key->grp.id ) ) != 0 )
+        if( ( ret = mbedtls_ecdh_setup( ctx, key->grp.id ) ) != 0 )
             return( ret );
     }
     else
@@ -545,19 +545,19 @@ static int ecdh_make_public_internal( mbedtls_ecdh_context_mbed *ctx,
                                              f_rng, p_rng, rs_ctx ) ) != 0 )
         return( ret );
 #else
-    if( ( ret = vdb_mbedtls_ecdh_gen_public( &ctx->grp, &ctx->d, &ctx->Q,
+    if( ( ret = mbedtls_ecdh_gen_public( &ctx->grp, &ctx->d, &ctx->Q,
                                          f_rng, p_rng ) ) != 0 )
         return( ret );
 #endif /* MBEDTLS_ECP_RESTARTABLE */
 
-    return vdb_mbedtls_ecp_tls_write_point( &ctx->grp, &ctx->Q, point_format, olen,
+    return mbedtls_ecp_tls_write_point( &ctx->grp, &ctx->Q, point_format, olen,
                                         buf, blen );
 }
 
 /*
  * Setup and export the client public value
  */
-int vdb_mbedtls_ecdh_make_public( mbedtls_ecdh_context *ctx, size_t *olen,
+int mbedtls_ecdh_make_public( mbedtls_ecdh_context *ctx, size_t *olen,
                               unsigned char *buf, size_t blen,
                               int (*f_rng)(void *, unsigned char *, size_t),
                               void *p_rng )
@@ -600,7 +600,7 @@ static int ecdh_read_public_internal( mbedtls_ecdh_context_mbed *ctx,
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     const unsigned char *p = buf;
 
-    if( ( ret = vdb_mbedtls_ecp_tls_read_point( &ctx->grp, &ctx->Qp, &p,
+    if( ( ret = mbedtls_ecp_tls_read_point( &ctx->grp, &ctx->Qp, &p,
                                             blen ) ) != 0 )
         return( ret );
 
@@ -613,7 +613,7 @@ static int ecdh_read_public_internal( mbedtls_ecdh_context_mbed *ctx,
 /*
  * Parse and import the client's public value
  */
-int vdb_mbedtls_ecdh_read_public( mbedtls_ecdh_context *ctx,
+int mbedtls_ecdh_read_public( mbedtls_ecdh_context *ctx,
                               const unsigned char *buf, size_t blen )
 {
     ECDH_VALIDATE_RET( ctx != NULL );
@@ -670,28 +670,28 @@ static int ecdh_calc_secret_internal( mbedtls_ecdh_context_mbed *ctx,
         return( ret );
     }
 #else
-    if( ( ret = vdb_mbedtls_ecdh_compute_shared( &ctx->grp, &ctx->z, &ctx->Qp,
+    if( ( ret = mbedtls_ecdh_compute_shared( &ctx->grp, &ctx->z, &ctx->Qp,
                                              &ctx->d, f_rng, p_rng ) ) != 0 )
     {
         return( ret );
     }
 #endif /* MBEDTLS_ECP_RESTARTABLE */
 
-    if( vdb_mbedtls_mpi_size( &ctx->z ) > blen )
+    if( mbedtls_mpi_size( &ctx->z ) > blen )
         return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
 
     *olen = ctx->grp.pbits / 8 + ( ( ctx->grp.pbits % 8 ) != 0 );
 
-    if( vdb_mbedtls_ecp_get_type( &ctx->grp ) == MBEDTLS_ECP_TYPE_MONTGOMERY )
-        return vdb_mbedtls_mpi_write_binary_le( &ctx->z, buf, *olen );
+    if( mbedtls_ecp_get_type( &ctx->grp ) == MBEDTLS_ECP_TYPE_MONTGOMERY )
+        return mbedtls_mpi_write_binary_le( &ctx->z, buf, *olen );
 
-    return vdb_mbedtls_mpi_write_binary( &ctx->z, buf, *olen );
+    return mbedtls_mpi_write_binary( &ctx->z, buf, *olen );
 }
 
 /*
  * Derive and export the shared secret
  */
-int vdb_mbedtls_ecdh_calc_secret( mbedtls_ecdh_context *ctx, size_t *olen,
+int mbedtls_ecdh_calc_secret( mbedtls_ecdh_context *ctx, size_t *olen,
                               unsigned char *buf, size_t blen,
                               int (*f_rng)(void *, unsigned char *, size_t),
                               void *p_rng )

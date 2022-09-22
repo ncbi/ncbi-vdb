@@ -25,7 +25,7 @@
 #include "mbedtls/platform_util.h"
 #include "mbedtls/error.h"
 
-int vdb_mbedtls_hkdf( const mbedtls_md_info_t *md, const unsigned char *salt,
+int mbedtls_hkdf( const mbedtls_md_info_t *md, const unsigned char *salt,
                   size_t salt_len, const unsigned char *ikm, size_t ikm_len,
                   const unsigned char *info, size_t info_len,
                   unsigned char *okm, size_t okm_len )
@@ -33,20 +33,20 @@ int vdb_mbedtls_hkdf( const mbedtls_md_info_t *md, const unsigned char *salt,
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     unsigned char prk[MBEDTLS_MD_MAX_SIZE];
 
-    ret = vdb_mbedtls_hkdf_extract( md, salt, salt_len, ikm, ikm_len, prk );
+    ret = mbedtls_hkdf_extract( md, salt, salt_len, ikm, ikm_len, prk );
 
     if( ret == 0 )
     {
-        ret = vdb_mbedtls_hkdf_expand( md, prk, vdb_mbedtls_md_get_size( md ),
+        ret = mbedtls_hkdf_expand( md, prk, mbedtls_md_get_size( md ),
                                    info, info_len, okm, okm_len );
     }
 
-    vdb_mbedtls_platform_zeroize( prk, sizeof( prk ) );
+    mbedtls_platform_zeroize( prk, sizeof( prk ) );
 
     return( ret );
 }
 
-int vdb_mbedtls_hkdf_extract( const mbedtls_md_info_t *md,
+int mbedtls_hkdf_extract( const mbedtls_md_info_t *md,
                           const unsigned char *salt, size_t salt_len,
                           const unsigned char *ikm, size_t ikm_len,
                           unsigned char *prk )
@@ -62,7 +62,7 @@ int vdb_mbedtls_hkdf_extract( const mbedtls_md_info_t *md,
             return MBEDTLS_ERR_HKDF_BAD_INPUT_DATA;
         }
 
-        hash_len = vdb_mbedtls_md_get_size( md );
+        hash_len = mbedtls_md_get_size( md );
 
         if( hash_len == 0 )
         {
@@ -73,10 +73,10 @@ int vdb_mbedtls_hkdf_extract( const mbedtls_md_info_t *md,
         salt_len = hash_len;
     }
 
-    return( vdb_mbedtls_md_hmac( md, salt, salt_len, ikm, ikm_len, prk ) );
+    return( mbedtls_md_hmac( md, salt, salt_len, ikm, ikm_len, prk ) );
 }
 
-int vdb_mbedtls_hkdf_expand( const mbedtls_md_info_t *md, const unsigned char *prk,
+int mbedtls_hkdf_expand( const mbedtls_md_info_t *md, const unsigned char *prk,
                          size_t prk_len, const unsigned char *info,
                          size_t info_len, unsigned char *okm, size_t okm_len )
 {
@@ -94,7 +94,7 @@ int vdb_mbedtls_hkdf_expand( const mbedtls_md_info_t *md, const unsigned char *p
         return( MBEDTLS_ERR_HKDF_BAD_INPUT_DATA );
     }
 
-    hash_len = vdb_mbedtls_md_get_size( md );
+    hash_len = mbedtls_md_get_size( md );
 
     if( prk_len < hash_len || hash_len == 0 )
     {
@@ -123,9 +123,9 @@ int vdb_mbedtls_hkdf_expand( const mbedtls_md_info_t *md, const unsigned char *p
         return( MBEDTLS_ERR_HKDF_BAD_INPUT_DATA );
     }
 
-    vdb_mbedtls_md_init( &ctx );
+    mbedtls_md_init( &ctx );
 
-    if( ( ret = vdb_mbedtls_md_setup( &ctx, md, 1 ) ) != 0 )
+    if( ( ret = mbedtls_md_setup( &ctx, md, 1 ) ) != 0 )
     {
         goto exit;
     }
@@ -141,19 +141,19 @@ int vdb_mbedtls_hkdf_expand( const mbedtls_md_info_t *md, const unsigned char *p
         size_t num_to_copy;
         unsigned char c = i & 0xff;
 
-        ret = vdb_mbedtls_md_hmac_starts( &ctx, prk, prk_len );
+        ret = mbedtls_md_hmac_starts( &ctx, prk, prk_len );
         if( ret != 0 )
         {
             goto exit;
         }
 
-        ret = vdb_mbedtls_md_hmac_update( &ctx, t, t_len );
+        ret = mbedtls_md_hmac_update( &ctx, t, t_len );
         if( ret != 0 )
         {
             goto exit;
         }
 
-        ret = vdb_mbedtls_md_hmac_update( &ctx, info, info_len );
+        ret = mbedtls_md_hmac_update( &ctx, info, info_len );
         if( ret != 0 )
         {
             goto exit;
@@ -161,13 +161,13 @@ int vdb_mbedtls_hkdf_expand( const mbedtls_md_info_t *md, const unsigned char *p
 
         /* The constant concatenated to the end of each T(n) is a single octet.
          * */
-        ret = vdb_mbedtls_md_hmac_update( &ctx, &c, 1 );
+        ret = mbedtls_md_hmac_update( &ctx, &c, 1 );
         if( ret != 0 )
         {
             goto exit;
         }
 
-        ret = vdb_mbedtls_md_hmac_finish( &ctx, t );
+        ret = mbedtls_md_hmac_finish( &ctx, t );
         if( ret != 0 )
         {
             goto exit;
@@ -180,8 +180,8 @@ int vdb_mbedtls_hkdf_expand( const mbedtls_md_info_t *md, const unsigned char *p
     }
 
 exit:
-    vdb_mbedtls_md_free( &ctx );
-    vdb_mbedtls_platform_zeroize( t, sizeof( t ) );
+    mbedtls_md_free( &ctx );
+    mbedtls_platform_zeroize( t, sizeof( t ) );
 
     return( ret );
 }

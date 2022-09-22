@@ -133,7 +133,7 @@ static
 const char * mbedtls_strerror2 ( int err )
 {
     static char buffer [ 256 ];
-    vdb_mbedtls_strerror ( err, buffer, sizeof buffer );
+    mbedtls_strerror ( err, buffer, sizeof buffer );
     return buffer;
 }
 
@@ -183,7 +183,7 @@ rc_t tlsg_seed_rng ( KTLSGlobals *self )
 
     STATUS ( STAT_QA, "Seeding the random number generator\n" );
 
-    ret = vdb_mbedtls_ctr_drbg_seed ( &self -> ctr_drbg, vdb_mbedtls_entropy_func,
+    ret = mbedtls_ctr_drbg_seed ( &self -> ctr_drbg, mbedtls_entropy_func,
                                   &self -> entropy, ( const unsigned char * ) pers, pers_size );
 
     if ( ret != 0 )
@@ -334,7 +334,7 @@ rc_t tlsg_init_certs ( KTLSGlobals *self, const KConfig * kfg )
                         /* these guys take a length, so presumably the string is not NUL terminated.
                            yet, the first thing they do is see if the NUL is included in the length! */
                         STATUS ( STAT_GEEK, "Parsing text for node '%s' from CA root certificates\n", cert_name );
-                        ret = vdb_mbedtls_x509_crt_parse ( &self -> cacert,
+                        ret = mbedtls_x509_crt_parse ( &self -> cacert,
                             ( const unsigned char * ) cert_string -> addr, cert_string -> size + 1 );
 
                         StringWhack ( cert_string );
@@ -381,7 +381,7 @@ rc_t tlsg_init_certs ( KTLSGlobals *self, const KConfig * kfg )
             if ( rc2 == 0 )
             {
                 STATUS ( STAT_GEEK, "Parsing text from CA root certificate file '%S'\n", ca_crt_path );
-                ret = vdb_mbedtls_x509_crt_parse_file ( &self -> cacert, ca_crt_path -> addr );
+                ret = mbedtls_x509_crt_parse_file ( &self -> cacert, ca_crt_path -> addr );
                 if ( ret >= 0 )
                     cert_file_loaded = true;
                 else
@@ -420,7 +420,7 @@ rc_t tlsg_init_certs ( KTLSGlobals *self, const KConfig * kfg )
                 }
 
                 // ignore errors
-                if ( vdb_mbedtls_x509_crt_parse(&self->cacert, (const unsigned char*)pCertContext->pbCertEncoded, pCertContext->cbCertEncoded ) == 0 )
+                if ( mbedtls_x509_crt_parse(&self->cacert, (const unsigned char*)pCertContext->pbCertEncoded, pCertContext->cbCertEncoded ) == 0 )
                 {
                     cert_file_loaded = true;
                 }
@@ -457,11 +457,11 @@ rc_t tlsg_init_certs ( KTLSGlobals *self, const KConfig * kfg )
                 {
                 case kptFile:
                     STATUS ( STAT_GEEK, "Parsing text from CA root certificate file '%s'\n", path);
-                    ret = vdb_mbedtls_x509_crt_parse_file ( &self -> cacert, path );
+                    ret = mbedtls_x509_crt_parse_file ( &self -> cacert, path );
                     break;
                 case kptDir:
                     STATUS ( STAT_GEEK, "Parsing text from CA root certificate directory '%s'\n", path );
-                    ret = vdb_mbedtls_x509_crt_parse_path ( &self -> cacert, path );
+                    ret = mbedtls_x509_crt_parse_path ( &self -> cacert, path );
                     break;
                 }
 
@@ -476,7 +476,7 @@ rc_t tlsg_init_certs ( KTLSGlobals *self, const KConfig * kfg )
     if ( num_certs == 0 )
     {
         STATUS ( STAT_QA, "Parsing text for default CA root certificates\n" );
-        ret = vdb_mbedtls_x509_crt_parse ( &self -> cacert,
+        ret = mbedtls_x509_crt_parse ( &self -> cacert,
             ( const unsigned char * ) ca_crt_ncbi1, sizeof ca_crt_ncbi1 );
 
         if ( ret < 0 )
@@ -493,7 +493,7 @@ rc_t tlsg_init_certs ( KTLSGlobals *self, const KConfig * kfg )
         {
             num_certs = 1;
 
-            ret = vdb_mbedtls_x509_crt_parse ( &self -> cacert,
+            ret = mbedtls_x509_crt_parse ( &self -> cacert,
                 ( const unsigned char * ) ca_crt_ncbi2, sizeof ca_crt_ncbi2 );
 
             if ( ret >= 0 )
@@ -525,7 +525,7 @@ my_verify(void *data, mbedtls_x509_crt *crt, int depth, uint32_t *flags)
     if (!log)
         return 0;
 
-    vdb_mbedtls_x509_crt_info(buf, sizeof buf - 1, " ", crt);
+    mbedtls_x509_crt_info(buf, sizeof buf - 1, " ", crt);
 
     if (*flags == 0)
         PLOGMSG(klogSys, (klogSys
@@ -553,7 +553,7 @@ rc_t tlsg_setup ( KTLSGlobals * self, uint64_t log )
 
     STATUS ( STAT_QA, "Configuring SSl defaults\n" );
 
-    ret = vdb_mbedtls_ssl_config_defaults ( &self -> config,
+    ret = mbedtls_ssl_config_defaults ( &self -> config,
                                         MBEDTLS_SSL_IS_CLIENT,
                                         MBEDTLS_SSL_TRANSPORT_STREAM,
                                         MBEDTLS_SSL_PRESET_DEFAULT );
@@ -571,15 +571,15 @@ rc_t tlsg_setup ( KTLSGlobals * self, uint64_t log )
     }
 
     /* turn off certificate validation when self -> allow_all_certs == true */
-    vdb_mbedtls_ssl_conf_authmode( &self -> config,
+    mbedtls_ssl_conf_authmode( &self -> config,
         self -> allow_all_certs ? MBEDTLS_SSL_VERIFY_OPTIONAL
                                 : MBEDTLS_SSL_VERIFY_REQUIRED );
 
-    vdb_mbedtls_ssl_conf_ca_chain( &self -> config, &self -> cacert, NULL );
-    vdb_mbedtls_ssl_conf_rng( &self -> config, vdb_mbedtls_ctr_drbg_random, &self -> ctr_drbg );
+    mbedtls_ssl_conf_ca_chain( &self -> config, &self -> cacert, NULL );
+    mbedtls_ssl_conf_rng( &self -> config, mbedtls_ctr_drbg_random, &self -> ctr_drbg );
 
         /*  We need that to be sure that we are free to call
-         *  vdb_mbedtls_ssl_conf_authmode () next time when
+         *  mbedtls_ssl_conf_authmode () next time when
          *  KNSManagerSetAllowAllCerts () will be called
          *
          *  Because smart special design we do not need to add
@@ -587,7 +587,7 @@ rc_t tlsg_setup ( KTLSGlobals * self, uint64_t log )
          */
     self -> safe_to_modify_ssl_config = true;
 
-    vdb_mbedtls_ssl_conf_verify(&self->config, my_verify,
+    mbedtls_ssl_conf_verify(&self->config, my_verify,
         log > 1 ? (void*)1 : 0);
 
     return 0;
@@ -632,7 +632,7 @@ static int set_threshold ( const KConfig * kfg ) {
     }
 
     if ( set )
-        vdb_mbedtls_debug_set_threshold ( ( int ) threshold );
+        mbedtls_debug_set_threshold ( ( int ) threshold );
 
     return ( int ) threshold;
 }
@@ -647,16 +647,16 @@ rc_t KTLSGlobalsInit ( KTLSGlobals * tlsg,
     assert ( tlsg != NULL );
     assert ( kfg != NULL );
 
-    vdb_mbedtls_x509_crt_init ( &tlsg -> cacert );
-    vdb_mbedtls_ctr_drbg_init ( &tlsg -> ctr_drbg );
-    vdb_mbedtls_entropy_init ( &tlsg -> entropy );
-    vdb_mbedtls_ssl_config_init ( &tlsg -> config );
+    mbedtls_x509_crt_init ( &tlsg -> cacert );
+    mbedtls_ctr_drbg_init ( &tlsg -> ctr_drbg );
+    mbedtls_entropy_init ( &tlsg -> entropy );
+    mbedtls_ssl_config_init ( &tlsg -> config );
 
-    vdb_mbedtls_x509_crt_init ( &tlsg -> clicert );
-    vdb_mbedtls_pk_init ( &tlsg -> pkey );
+    mbedtls_x509_crt_init ( &tlsg -> clicert );
+    mbedtls_pk_init ( &tlsg -> pkey );
 
     if ( set_threshold ( kfg ) > 0 )
-        vdb_mbedtls_ssl_conf_dbg ( &tlsg -> config, ktls_ssl_dbg_print, tlsg );
+        mbedtls_ssl_conf_dbg ( &tlsg -> config, ktls_ssl_dbg_print, tlsg );
 
     rc = tlsg_seed_rng ( tlsg );
     if ( rc == 0 )
@@ -675,12 +675,12 @@ void KTLSGlobalsWhack ( KTLSGlobals * self )
 {
     assert ( self != NULL );
 
-    vdb_mbedtls_ssl_config_free ( &self -> config );
-    vdb_mbedtls_entropy_free ( &self -> entropy );
-    vdb_mbedtls_ctr_drbg_free ( &self -> ctr_drbg );
-    vdb_mbedtls_x509_crt_free ( &self -> cacert );
-    vdb_mbedtls_x509_crt_free ( &self -> clicert );
-    vdb_mbedtls_pk_free ( &self -> pkey );
+    mbedtls_ssl_config_free ( &self -> config );
+    mbedtls_entropy_free ( &self -> entropy );
+    mbedtls_ctr_drbg_free ( &self -> ctr_drbg );
+    mbedtls_x509_crt_free ( &self -> cacert );
+    mbedtls_x509_crt_free ( &self -> clicert );
+    mbedtls_pk_free ( &self -> pkey );
 
     memset ( self, 0, sizeof * self );
 }
@@ -705,7 +705,7 @@ LIB_EXPORT rc_t CC KNSManagerSetAllowAllCerts ( KNSManager *self, bool allow_all
              *  handshake
              */
         if ( self -> tlsg . safe_to_modify_ssl_config ) {
-            vdb_mbedtls_ssl_conf_authmode(
+            mbedtls_ssl_conf_authmode(
                             &self -> tlsg . config,
                                 ( self -> tlsg . allow_all_certs
                                         ? MBEDTLS_SSL_VERIFY_OPTIONAL
@@ -769,8 +769,8 @@ static
 void KTLSStreamDestroy ( KTLSStream *self )
 {
     /* tear down all of the stuff created during Make */
-    vdb_mbedtls_ssl_close_notify( &self -> ssl ); /* close connection - this might need to be elsewhere */
-    vdb_mbedtls_ssl_free ( &self -> ssl );
+    mbedtls_ssl_close_notify( &self -> ssl ); /* close connection - this might need to be elsewhere */
+    mbedtls_ssl_free ( &self -> ssl );
 
     /* release the ciphertext object */
     KStreamRelease ( self -> ciphertext );
@@ -830,7 +830,7 @@ rc_t CC KTLSStreamRead ( const KTLSStream * cself,
         static int e = 0;
 
         /* read through TLS library */
-        ret = vdb_mbedtls_ssl_read( &self -> ssl, buffer, bsize );
+        ret = mbedtls_ssl_read( &self -> ssl, buffer, bsize );
 
         if (!inited) { /* simulate mbedtls read timeout */
             const char * v = getenv("NCBI_VDB_ERR_MBEDTLS_READ");
@@ -883,7 +883,7 @@ rc_t CC KTLSStreamRead ( const KTLSStream * cself,
         {
             /* The ret is anything other than the following 3, then the ssl context becomes
              * becomes unusable and should either be freed or call
-             * vdb_mbedtls_ssl_session_reset () before a new connection; current connection
+             * mbedtls_ssl_session_reset () before a new connection; current connection
              * must be closed
              */
         case MBEDTLS_ERR_SSL_WANT_READ:
@@ -895,7 +895,7 @@ rc_t CC KTLSStreamRead ( const KTLSStream * cself,
              * is initiating a new connection using the same source port.
              * You can either treat that as a connection close and wait
              * for the client to resend a ClientHello, or directly
-             * continue with \c vdb_mbedtls_ssl_handshake() with the same
+             * continue with \c mbedtls_ssl_handshake() with the same
              * context (as it has beeen reset internally). Either way, you
              * should make sure this is seen by the application as a new
              * connection: application state, if any, should be reset, and
@@ -959,7 +959,7 @@ rc_t CC KTLSStreamWrite ( KTLSStream * self,
         *  We expect to be called through KStreamWriteAll that will
         *  avoid the issue above.
         */
-        ret = vdb_mbedtls_ssl_write ( &self -> ssl, buffer, size );
+        ret = mbedtls_ssl_write ( &self -> ssl, buffer, size );
 
         /* no error */
         if ( ret >= 0 )
@@ -1074,7 +1074,7 @@ int CC ktls_net_send ( void *ctx, const unsigned char *buf, size_t len )
     return ( int ) num_writ;
 }
 
-/* called by vdb_mbedtls_ssl_fetch_input */
+/* called by mbedtls_ssl_fetch_input */
 static
 int CC ktls_net_recv ( void *ctx, unsigned char *buf, size_t len )
 {
@@ -1119,7 +1119,7 @@ rc_t KTLSGlobalsSetupOwnCert(KTLSGlobals * tlsg,
     if (tlsg->clicert_was_set || own_cert == NULL || pk_key == NULL)
         return 0;
 
-    ret = vdb_mbedtls_x509_crt_parse(&tlsg->clicert,
+    ret = mbedtls_x509_crt_parse(&tlsg->clicert,
         (const unsigned char *)own_cert,
         string_measure(own_cert, NULL) + 1);
     if (ret < 0) {
@@ -1133,14 +1133,14 @@ rc_t KTLSGlobalsSetupOwnCert(KTLSGlobals * tlsg,
     }
 
     if (rc == 0) {
-        ret = vdb_mbedtls_pk_parse_key(&tlsg->pkey,
+        ret = mbedtls_pk_parse_key(&tlsg->pkey,
             (const unsigned char *)pk_key,
             string_measure(pk_key, NULL) + 1,
             NULL, 0);
         if (ret < 0) {
             rc = RC(rcKrypto, rcToken, rcInitializing, rcEncryption, rcFailed);
             PLOGERR(klogSys, (klogSys, rc
-                , "vdb_mbedtls_pk_parse_key returned $(ret) ( $(expl) )"
+                , "mbedtls_pk_parse_key returned $(ret) ( $(expl) )"
                 , "ret=%d,expl=%s"
                 , ret
                 , mbedtls_strerror2(ret)
@@ -1149,12 +1149,12 @@ rc_t KTLSGlobalsSetupOwnCert(KTLSGlobals * tlsg,
     }
 
     if (rc == 0) {
-        ret = vdb_mbedtls_ssl_conf_own_cert(&tlsg->config,
+        ret = mbedtls_ssl_conf_own_cert(&tlsg->config,
             &tlsg->clicert, &tlsg->pkey);
         if (ret < 0) {
             rc = RC(rcKrypto, rcToken, rcInitializing, rcEncryption, rcFailed);
             PLOGERR(klogSys, (klogSys, rc
-                , "vdb_mbedtls_ssl_conf_own_cert returned $(ret) ( $(expl) )"
+                , "mbedtls_ssl_conf_own_cert returned $(ret) ( $(expl) )"
                 , "ret=%d,expl=%s"
                 , ret
                 , mbedtls_strerror2(ret)
@@ -1184,7 +1184,7 @@ rc_t ktls_ssl_setup ( KTLSStream *self, const String *host )
     assert ( self -> mgr != NULL );
     tlsg = & self -> mgr -> tlsg;
 
-    ret = vdb_mbedtls_ssl_setup( &self -> ssl, &tlsg -> config );
+    ret = mbedtls_ssl_setup( &self -> ssl, &tlsg -> config );
     if ( ret != 0 )
     {
         rc_t rc = RC ( rcKrypto, rcSocket, rcFormatting, rcEncryption, rcFailed );
@@ -1225,7 +1225,7 @@ rc_t ktls_ssl_setup ( KTLSStream *self, const String *host )
             return rc;
     }
 
-    ret = vdb_mbedtls_ssl_set_hostname( &self -> ssl, hostz -> addr );
+    ret = mbedtls_ssl_set_hostname( &self -> ssl, hostz -> addr );
 
     if ( hostz != host )
         StringWhack ( hostz );
@@ -1243,7 +1243,7 @@ rc_t ktls_ssl_setup ( KTLSStream *self, const String *host )
     }
 
 
-    vdb_mbedtls_ssl_set_bio( &self -> ssl, ( void * ) self, ktls_net_send, ktls_net_recv, NULL );
+    mbedtls_ssl_set_bio( &self -> ssl, ( void * ) self, ktls_net_send, ktls_net_recv, NULL );
 
     return 0;
 }
@@ -1261,7 +1261,7 @@ rc_t ktls_handshake ( KTLSStream *self )
 
     assert(self && self->mgr);
 
-    ret = vdb_mbedtls_ssl_handshake( &self -> ssl );
+    ret = mbedtls_ssl_handshake( &self -> ssl );
 
     if (!inited) { /* simulate mbedtls handshake timeout */
         const char * v = getenv("NCBI_VDB_ERR_MBEDTLS_HANDSHAKE");
@@ -1317,11 +1317,11 @@ rc_t ktls_handshake ( KTLSStream *self )
 
                 if ( ret == MBEDTLS_ERR_X509_CERT_VERIFY_FAILED )
                 {
-                    uint32_t flags = vdb_mbedtls_ssl_get_verify_result( &self -> ssl );
+                    uint32_t flags = mbedtls_ssl_get_verify_result( &self -> ssl );
                     if ( flags != 0 )
                     {
                         char buf [ 4096 ];
-                        vdb_mbedtls_x509_crt_verify_info ( buf, sizeof( buf ), " !! ", flags );
+                        mbedtls_x509_crt_verify_info ( buf, sizeof( buf ), " !! ", flags );
 
                         PLOGMSG ( klogSys, ( klogSys
                             , "mbedtls_ssl_get_verify_result for '$(host)'"
@@ -1337,7 +1337,7 @@ rc_t ktls_handshake ( KTLSStream *self )
 
             return rc;
         }
-        ret = vdb_mbedtls_ssl_handshake( &self -> ssl );
+        ret = mbedtls_ssl_handshake( &self -> ssl );
     }
 
     return 0;
@@ -1373,7 +1373,7 @@ rc_t KTLSStreamMake ( KTLSStream ** objp, const KNSManager * mgr, const KSocket 
                     obj -> mgr = mgr;
 
                     STATUS ( STAT_PRG, "%s - initializing tls wrapper\n", __func__ );
-                    vdb_mbedtls_ssl_init ( & obj -> ssl );
+                    mbedtls_ssl_init ( & obj -> ssl );
 
                     * objp = obj;
                     return 0;
@@ -1515,13 +1515,13 @@ LIB_EXPORT rc_t CC KTLSStreamVerifyCACert ( const KTLSStream * self )
        rc = RC ( rcKrypto, rcToken, rcValidating, rcSelf, rcNull );
    else if ( ! self -> mgr -> tlsg . allow_all_certs )
    {
-       uint32_t flags = vdb_mbedtls_ssl_get_verify_result( &self -> ssl );
+       uint32_t flags = mbedtls_ssl_get_verify_result( &self -> ssl );
        if ( flags != 0 )
        {
            char buf [ 4096 ];
            rc_t rc = RC ( rcKrypto, rcToken, rcValidating, rcEncryption, rcFailed );
 
-           vdb_mbedtls_x509_crt_verify_info ( buf, sizeof( buf ), "  ! ", flags );
+           mbedtls_x509_crt_verify_info ( buf, sizeof( buf ), "  ! ", flags );
 
            PLOGERR ( klogSys, ( klogSys, rc
                                 , "mbedtls_ssl_get_verify_result returned $(flags) ( $(info) )"

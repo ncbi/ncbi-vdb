@@ -65,8 +65,8 @@
 #if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
 #else
-#define vdb_mbedtls_calloc calloc
-#define vdb_mbedtls_free   free
+#define mbedtls_calloc calloc
+#define mbedtls_free   free
 #endif
 
 #define CIPHER_VALIDATE_RET( cond )    \
@@ -97,15 +97,15 @@ static int mbedtls_constant_time_memcmp( const void *v1, const void *v2,
 
 static int supported_init = 0;
 
-const int *vdb_mbedtls_cipher_list( void )
+const int *mbedtls_cipher_list( void )
 {
     const mbedtls_cipher_definition_t *def;
     int *type;
 
     if( ! supported_init )
     {
-        def = vdb_mbedtls_cipher_definitions;
-        type = vdb_mbedtls_cipher_supported;
+        def = mbedtls_cipher_definitions;
+        type = mbedtls_cipher_supported;
 
         while( def->type != 0 )
             *type++ = (*def++).type;
@@ -115,22 +115,22 @@ const int *vdb_mbedtls_cipher_list( void )
         supported_init = 1;
     }
 
-    return( vdb_mbedtls_cipher_supported );
+    return( mbedtls_cipher_supported );
 }
 
-const mbedtls_cipher_info_t *vdb_mbedtls_cipher_info_from_type(
+const mbedtls_cipher_info_t *mbedtls_cipher_info_from_type(
     const mbedtls_cipher_type_t cipher_type )
 {
     const mbedtls_cipher_definition_t *def;
 
-    for( def = vdb_mbedtls_cipher_definitions; def->info != NULL; def++ )
+    for( def = mbedtls_cipher_definitions; def->info != NULL; def++ )
         if( def->type == cipher_type )
             return( def->info );
 
     return( NULL );
 }
 
-const mbedtls_cipher_info_t *vdb_mbedtls_cipher_info_from_string(
+const mbedtls_cipher_info_t *mbedtls_cipher_info_from_string(
     const char *cipher_name )
 {
     const mbedtls_cipher_definition_t *def;
@@ -138,21 +138,21 @@ const mbedtls_cipher_info_t *vdb_mbedtls_cipher_info_from_string(
     if( NULL == cipher_name )
         return( NULL );
 
-    for( def = vdb_mbedtls_cipher_definitions; def->info != NULL; def++ )
+    for( def = mbedtls_cipher_definitions; def->info != NULL; def++ )
         if( !  strcmp( def->info->name, cipher_name ) )
             return( def->info );
 
     return( NULL );
 }
 
-const mbedtls_cipher_info_t *vdb_mbedtls_cipher_info_from_values(
+const mbedtls_cipher_info_t *mbedtls_cipher_info_from_values(
     const mbedtls_cipher_id_t cipher_id,
     int key_bitlen,
     const mbedtls_cipher_mode_t mode )
 {
     const mbedtls_cipher_definition_t *def;
 
-    for( def = vdb_mbedtls_cipher_definitions; def->info != NULL; def++ )
+    for( def = mbedtls_cipher_definitions; def->info != NULL; def++ )
         if( def->info->base->cipher == cipher_id &&
             def->info->key_bitlen == (unsigned) key_bitlen &&
             def->info->mode == mode )
@@ -161,13 +161,13 @@ const mbedtls_cipher_info_t *vdb_mbedtls_cipher_info_from_values(
     return( NULL );
 }
 
-void vdb_mbedtls_cipher_init( mbedtls_cipher_context_t *ctx )
+void mbedtls_cipher_init( mbedtls_cipher_context_t *ctx )
 {
     CIPHER_VALIDATE( ctx != NULL );
     memset( ctx, 0, sizeof( mbedtls_cipher_context_t ) );
 }
 
-void vdb_mbedtls_cipher_free( mbedtls_cipher_context_t *ctx )
+void mbedtls_cipher_free( mbedtls_cipher_context_t *ctx )
 {
     if( ctx == NULL )
         return;
@@ -186,11 +186,11 @@ void vdb_mbedtls_cipher_free( mbedtls_cipher_context_t *ctx )
                 (void) psa_destroy_key( cipher_psa->slot );
             }
 
-            vdb_mbedtls_platform_zeroize( cipher_psa, sizeof( *cipher_psa ) );
-            vdb_mbedtls_free( cipher_psa );
+            mbedtls_platform_zeroize( cipher_psa, sizeof( *cipher_psa ) );
+            mbedtls_free( cipher_psa );
         }
 
-        vdb_mbedtls_platform_zeroize( ctx, sizeof(mbedtls_cipher_context_t) );
+        mbedtls_platform_zeroize( ctx, sizeof(mbedtls_cipher_context_t) );
         return;
     }
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
@@ -198,19 +198,19 @@ void vdb_mbedtls_cipher_free( mbedtls_cipher_context_t *ctx )
 #if defined(MBEDTLS_CMAC_C)
     if( ctx->cmac_ctx )
     {
-       vdb_mbedtls_platform_zeroize( ctx->cmac_ctx,
+       mbedtls_platform_zeroize( ctx->cmac_ctx,
                                  sizeof( mbedtls_cmac_context_t ) );
-       vdb_mbedtls_free( ctx->cmac_ctx );
+       mbedtls_free( ctx->cmac_ctx );
     }
 #endif
 
     if( ctx->cipher_ctx )
         ctx->cipher_info->base->ctx_free_func( ctx->cipher_ctx );
 
-    vdb_mbedtls_platform_zeroize( ctx, sizeof(mbedtls_cipher_context_t) );
+    mbedtls_platform_zeroize( ctx, sizeof(mbedtls_cipher_context_t) );
 }
 
-int vdb_mbedtls_cipher_setup( mbedtls_cipher_context_t *ctx,
+int mbedtls_cipher_setup( mbedtls_cipher_context_t *ctx,
                           const mbedtls_cipher_info_t *cipher_info )
 {
     CIPHER_VALIDATE_RET( ctx != NULL );
@@ -229,9 +229,9 @@ int vdb_mbedtls_cipher_setup( mbedtls_cipher_context_t *ctx,
      * Ignore possible errors caused by a cipher mode that doesn't use padding
      */
 #if defined(MBEDTLS_CIPHER_PADDING_PKCS7)
-    (void) vdb_mbedtls_cipher_set_padding_mode( ctx, MBEDTLS_PADDING_PKCS7 );
+    (void) mbedtls_cipher_set_padding_mode( ctx, MBEDTLS_PADDING_PKCS7 );
 #else
-    (void) vdb_mbedtls_cipher_set_padding_mode( ctx, MBEDTLS_PADDING_NONE );
+    (void) mbedtls_cipher_set_padding_mode( ctx, MBEDTLS_PADDING_NONE );
 #endif
 #endif /* MBEDTLS_CIPHER_MODE_WITH_PADDING */
 
@@ -259,7 +259,7 @@ int mbedtls_cipher_setup_psa( mbedtls_cipher_context_t *ctx,
 
     memset( ctx, 0, sizeof( mbedtls_cipher_context_t ) );
 
-    cipher_psa = vdb_mbedtls_calloc( 1, sizeof(mbedtls_cipher_context_psa ) );
+    cipher_psa = mbedtls_calloc( 1, sizeof(mbedtls_cipher_context_psa ) );
     if( cipher_psa == NULL )
         return( MBEDTLS_ERR_CIPHER_ALLOC_FAILED );
     cipher_psa->alg  = alg;
@@ -270,7 +270,7 @@ int mbedtls_cipher_setup_psa( mbedtls_cipher_context_t *ctx,
 }
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
-int vdb_mbedtls_cipher_setkey( mbedtls_cipher_context_t *ctx,
+int mbedtls_cipher_setkey( mbedtls_cipher_context_t *ctx,
                            const unsigned char *key,
                            int key_bitlen,
                            const mbedtls_operation_t operation )
@@ -331,7 +331,7 @@ int vdb_mbedtls_cipher_setkey( mbedtls_cipher_context_t *ctx,
                 return( MBEDTLS_ERR_CIPHER_HW_ACCEL_FAILED );
         }
         /* Indicate that we own the key slot and need to
-         * destroy it in vdb_mbedtls_cipher_free(). */
+         * destroy it in mbedtls_cipher_free(). */
         cipher_psa->slot_state = MBEDTLS_CIPHER_PSA_KEY_OWNED;
 
         ctx->key_bitlen = key_bitlen;
@@ -368,7 +368,7 @@ int vdb_mbedtls_cipher_setkey( mbedtls_cipher_context_t *ctx,
     return( MBEDTLS_ERR_CIPHER_BAD_INPUT_DATA );
 }
 
-int vdb_mbedtls_cipher_set_iv( mbedtls_cipher_context_t *ctx,
+int mbedtls_cipher_set_iv( mbedtls_cipher_context_t *ctx,
                            const unsigned char *iv,
                            size_t iv_len )
 {
@@ -406,7 +406,7 @@ int vdb_mbedtls_cipher_set_iv( mbedtls_cipher_context_t *ctx,
 #if defined(MBEDTLS_CHACHA20_C)
     if ( ctx->cipher_info->type == MBEDTLS_CIPHER_CHACHA20 )
     {
-        if ( 0 != vdb_mbedtls_chacha20_starts( (mbedtls_chacha20_context*)ctx->cipher_ctx,
+        if ( 0 != mbedtls_chacha20_starts( (mbedtls_chacha20_context*)ctx->cipher_ctx,
                                            iv,
                                            0U ) ) /* Initial counter value */
         {
@@ -424,7 +424,7 @@ int vdb_mbedtls_cipher_set_iv( mbedtls_cipher_context_t *ctx,
     return( 0 );
 }
 
-int vdb_mbedtls_cipher_reset( mbedtls_cipher_context_t *ctx )
+int mbedtls_cipher_reset( mbedtls_cipher_context_t *ctx )
 {
     CIPHER_VALIDATE_RET( ctx != NULL );
     if( ctx->cipher_info == NULL )
@@ -445,7 +445,7 @@ int vdb_mbedtls_cipher_reset( mbedtls_cipher_context_t *ctx )
 }
 
 #if defined(MBEDTLS_GCM_C) || defined(MBEDTLS_CHACHAPOLY_C)
-int vdb_mbedtls_cipher_update_ad( mbedtls_cipher_context_t *ctx,
+int mbedtls_cipher_update_ad( mbedtls_cipher_context_t *ctx,
                       const unsigned char *ad, size_t ad_len )
 {
     CIPHER_VALIDATE_RET( ctx != NULL );
@@ -466,7 +466,7 @@ int vdb_mbedtls_cipher_update_ad( mbedtls_cipher_context_t *ctx,
 #if defined(MBEDTLS_GCM_C)
     if( MBEDTLS_MODE_GCM == ctx->cipher_info->mode )
     {
-        return( vdb_mbedtls_gcm_starts( (mbedtls_gcm_context *) ctx->cipher_ctx, ctx->operation,
+        return( mbedtls_gcm_starts( (mbedtls_gcm_context *) ctx->cipher_ctx, ctx->operation,
                                     ctx->iv, ctx->iv_size, ad, ad_len ) );
     }
 #endif
@@ -481,13 +481,13 @@ int vdb_mbedtls_cipher_update_ad( mbedtls_cipher_context_t *ctx,
                 ? MBEDTLS_CHACHAPOLY_ENCRYPT
                 : MBEDTLS_CHACHAPOLY_DECRYPT;
 
-        result = vdb_mbedtls_chachapoly_starts( (mbedtls_chachapoly_context*) ctx->cipher_ctx,
+        result = mbedtls_chachapoly_starts( (mbedtls_chachapoly_context*) ctx->cipher_ctx,
                                                         ctx->iv,
                                                         mode );
         if ( result != 0 )
             return( result );
 
-        return( vdb_mbedtls_chachapoly_update_aad( (mbedtls_chachapoly_context*) ctx->cipher_ctx,
+        return( mbedtls_chachapoly_update_aad( (mbedtls_chachapoly_context*) ctx->cipher_ctx,
                                                ad, ad_len ) );
     }
 #endif
@@ -496,7 +496,7 @@ int vdb_mbedtls_cipher_update_ad( mbedtls_cipher_context_t *ctx,
 }
 #endif /* MBEDTLS_GCM_C || MBEDTLS_CHACHAPOLY_C */
 
-int vdb_mbedtls_cipher_update( mbedtls_cipher_context_t *ctx, const unsigned char *input,
+int mbedtls_cipher_update( mbedtls_cipher_context_t *ctx, const unsigned char *input,
                    size_t ilen, unsigned char *output, size_t *olen )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
@@ -520,7 +520,7 @@ int vdb_mbedtls_cipher_update( mbedtls_cipher_context_t *ctx, const unsigned cha
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
     *olen = 0;
-    block_size = vdb_mbedtls_cipher_get_block_size( ctx );
+    block_size = mbedtls_cipher_get_block_size( ctx );
     if ( 0 == block_size )
     {
         return( MBEDTLS_ERR_CIPHER_INVALID_CONTEXT );
@@ -546,7 +546,7 @@ int vdb_mbedtls_cipher_update( mbedtls_cipher_context_t *ctx, const unsigned cha
     if( ctx->cipher_info->mode == MBEDTLS_MODE_GCM )
     {
         *olen = ilen;
-        return( vdb_mbedtls_gcm_update( (mbedtls_gcm_context *) ctx->cipher_ctx, ilen, input,
+        return( mbedtls_gcm_update( (mbedtls_gcm_context *) ctx->cipher_ctx, ilen, input,
                                     output ) );
     }
 #endif
@@ -555,7 +555,7 @@ int vdb_mbedtls_cipher_update( mbedtls_cipher_context_t *ctx, const unsigned cha
     if ( ctx->cipher_info->type == MBEDTLS_CIPHER_CHACHA20_POLY1305 )
     {
         *olen = ilen;
-        return( vdb_mbedtls_chachapoly_update( (mbedtls_chachapoly_context*) ctx->cipher_ctx,
+        return( mbedtls_chachapoly_update( (mbedtls_chachapoly_context*) ctx->cipher_ctx,
                                            ilen, input, output ) );
     }
 #endif
@@ -898,7 +898,7 @@ static int get_zeros_padding( unsigned char *input, size_t input_len,
 /*
  * No padding: don't pad :)
  *
- * There is no add_padding function (check for NULL in vdb_mbedtls_cipher_finish)
+ * There is no add_padding function (check for NULL in mbedtls_cipher_finish)
  * but a trivial get_padding function
  */
 static int get_no_padding( unsigned char *input, size_t input_len,
@@ -913,7 +913,7 @@ static int get_no_padding( unsigned char *input, size_t input_len,
 }
 #endif /* MBEDTLS_CIPHER_MODE_WITH_PADDING */
 
-int vdb_mbedtls_cipher_finish( mbedtls_cipher_context_t *ctx,
+int mbedtls_cipher_finish( mbedtls_cipher_context_t *ctx,
                    unsigned char *output, size_t *olen )
 {
     CIPHER_VALIDATE_RET( ctx != NULL );
@@ -974,10 +974,10 @@ int vdb_mbedtls_cipher_finish( mbedtls_cipher_context_t *ctx,
                 return( 0 );
             }
 
-            ctx->add_padding( ctx->unprocessed_data, vdb_mbedtls_cipher_get_iv_size( ctx ),
+            ctx->add_padding( ctx->unprocessed_data, mbedtls_cipher_get_iv_size( ctx ),
                     ctx->unprocessed_len );
         }
-        else if( vdb_mbedtls_cipher_get_block_size( ctx ) != ctx->unprocessed_len )
+        else if( mbedtls_cipher_get_block_size( ctx ) != ctx->unprocessed_len )
         {
             /*
              * For decrypt operations, expect a full block,
@@ -991,7 +991,7 @@ int vdb_mbedtls_cipher_finish( mbedtls_cipher_context_t *ctx,
 
         /* cipher block */
         if( 0 != ( ret = ctx->cipher_info->base->cbc_func( ctx->cipher_ctx,
-                ctx->operation, vdb_mbedtls_cipher_get_block_size( ctx ), ctx->iv,
+                ctx->operation, mbedtls_cipher_get_block_size( ctx ), ctx->iv,
                 ctx->unprocessed_data, output ) ) )
         {
             return( ret );
@@ -999,11 +999,11 @@ int vdb_mbedtls_cipher_finish( mbedtls_cipher_context_t *ctx,
 
         /* Set output size for decryption */
         if( MBEDTLS_DECRYPT == ctx->operation )
-            return( ctx->get_padding( output, vdb_mbedtls_cipher_get_block_size( ctx ),
+            return( ctx->get_padding( output, mbedtls_cipher_get_block_size( ctx ),
                                       olen ) );
 
         /* Set output size for encryption */
-        *olen = vdb_mbedtls_cipher_get_block_size( ctx );
+        *olen = mbedtls_cipher_get_block_size( ctx );
         return( 0 );
     }
 #else
@@ -1014,7 +1014,7 @@ int vdb_mbedtls_cipher_finish( mbedtls_cipher_context_t *ctx,
 }
 
 #if defined(MBEDTLS_CIPHER_MODE_WITH_PADDING)
-int vdb_mbedtls_cipher_set_padding_mode( mbedtls_cipher_context_t *ctx,
+int mbedtls_cipher_set_padding_mode( mbedtls_cipher_context_t *ctx,
                                      mbedtls_cipher_padding_t mode )
 {
     CIPHER_VALIDATE_RET( ctx != NULL );
@@ -1077,7 +1077,7 @@ int vdb_mbedtls_cipher_set_padding_mode( mbedtls_cipher_context_t *ctx,
 #endif /* MBEDTLS_CIPHER_MODE_WITH_PADDING */
 
 #if defined(MBEDTLS_GCM_C) || defined(MBEDTLS_CHACHAPOLY_C)
-int vdb_mbedtls_cipher_write_tag( mbedtls_cipher_context_t *ctx,
+int mbedtls_cipher_write_tag( mbedtls_cipher_context_t *ctx,
                       unsigned char *tag, size_t tag_len )
 {
     CIPHER_VALIDATE_RET( ctx != NULL );
@@ -1100,7 +1100,7 @@ int vdb_mbedtls_cipher_write_tag( mbedtls_cipher_context_t *ctx,
 
 #if defined(MBEDTLS_GCM_C)
     if( MBEDTLS_MODE_GCM == ctx->cipher_info->mode )
-        return( vdb_mbedtls_gcm_finish( (mbedtls_gcm_context *) ctx->cipher_ctx,
+        return( mbedtls_gcm_finish( (mbedtls_gcm_context *) ctx->cipher_ctx,
                                     tag, tag_len ) );
 #endif
 
@@ -1111,7 +1111,7 @@ int vdb_mbedtls_cipher_write_tag( mbedtls_cipher_context_t *ctx,
         if ( tag_len != 16U )
             return( MBEDTLS_ERR_CIPHER_BAD_INPUT_DATA );
 
-        return( vdb_mbedtls_chachapoly_finish(
+        return( mbedtls_chachapoly_finish(
                     (mbedtls_chachapoly_context*) ctx->cipher_ctx, tag ) );
     }
 #endif
@@ -1119,7 +1119,7 @@ int vdb_mbedtls_cipher_write_tag( mbedtls_cipher_context_t *ctx,
     return( 0 );
 }
 
-int vdb_mbedtls_cipher_check_tag( mbedtls_cipher_context_t *ctx,
+int mbedtls_cipher_check_tag( mbedtls_cipher_context_t *ctx,
                       const unsigned char *tag, size_t tag_len )
 {
     unsigned char check_tag[16];
@@ -1151,7 +1151,7 @@ int vdb_mbedtls_cipher_check_tag( mbedtls_cipher_context_t *ctx,
         if( tag_len > sizeof( check_tag ) )
             return( MBEDTLS_ERR_CIPHER_BAD_INPUT_DATA );
 
-        if( 0 != ( ret = vdb_mbedtls_gcm_finish(
+        if( 0 != ( ret = mbedtls_gcm_finish(
                        (mbedtls_gcm_context *) ctx->cipher_ctx,
                        check_tag, tag_len ) ) )
         {
@@ -1173,7 +1173,7 @@ int vdb_mbedtls_cipher_check_tag( mbedtls_cipher_context_t *ctx,
         if ( tag_len != sizeof( check_tag ) )
             return( MBEDTLS_ERR_CIPHER_BAD_INPUT_DATA );
 
-        ret = vdb_mbedtls_chachapoly_finish(
+        ret = mbedtls_chachapoly_finish(
             (mbedtls_chachapoly_context*) ctx->cipher_ctx, check_tag );
         if ( ret != 0 )
         {
@@ -1195,7 +1195,7 @@ int vdb_mbedtls_cipher_check_tag( mbedtls_cipher_context_t *ctx,
 /*
  * Packet-oriented wrapper for non-AEAD modes
  */
-int vdb_mbedtls_cipher_crypt( mbedtls_cipher_context_t *ctx,
+int mbedtls_cipher_crypt( mbedtls_cipher_context_t *ctx,
                   const unsigned char *iv, size_t iv_len,
                   const unsigned char *input, size_t ilen,
                   unsigned char *output, size_t *olen )
@@ -1267,17 +1267,17 @@ int vdb_mbedtls_cipher_crypt( mbedtls_cipher_context_t *ctx,
     }
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
-    if( ( ret = vdb_mbedtls_cipher_set_iv( ctx, iv, iv_len ) ) != 0 )
+    if( ( ret = mbedtls_cipher_set_iv( ctx, iv, iv_len ) ) != 0 )
         return( ret );
 
-    if( ( ret = vdb_mbedtls_cipher_reset( ctx ) ) != 0 )
+    if( ( ret = mbedtls_cipher_reset( ctx ) ) != 0 )
         return( ret );
 
-    if( ( ret = vdb_mbedtls_cipher_update( ctx, input, ilen,
+    if( ( ret = mbedtls_cipher_update( ctx, input, ilen,
                                        output, olen ) ) != 0 )
         return( ret );
 
-    if( ( ret = vdb_mbedtls_cipher_finish( ctx, output + *olen,
+    if( ( ret = mbedtls_cipher_finish( ctx, output + *olen,
                                        &finish_olen ) ) != 0 )
         return( ret );
 
@@ -1289,7 +1289,7 @@ int vdb_mbedtls_cipher_crypt( mbedtls_cipher_context_t *ctx,
 #if defined(MBEDTLS_CIPHER_MODE_AEAD)
 /*
  * Packet-oriented encryption for AEAD modes: internal function shared by
- * vdb_mbedtls_cipher_auth_encrypt() and vdb_mbedtls_cipher_auth_encrypt_ext().
+ * mbedtls_cipher_auth_encrypt() and mbedtls_cipher_auth_encrypt_ext().
  */
 static int mbedtls_cipher_aead_encrypt( mbedtls_cipher_context_t *ctx,
                          const unsigned char *iv, size_t iv_len,
@@ -1334,7 +1334,7 @@ static int mbedtls_cipher_aead_encrypt( mbedtls_cipher_context_t *ctx,
     if( MBEDTLS_MODE_GCM == ctx->cipher_info->mode )
     {
         *olen = ilen;
-        return( vdb_mbedtls_gcm_crypt_and_tag( ctx->cipher_ctx, MBEDTLS_GCM_ENCRYPT,
+        return( mbedtls_gcm_crypt_and_tag( ctx->cipher_ctx, MBEDTLS_GCM_ENCRYPT,
                                            ilen, iv, iv_len, ad, ad_len,
                                            input, output, tag_len, tag ) );
     }
@@ -1343,7 +1343,7 @@ static int mbedtls_cipher_aead_encrypt( mbedtls_cipher_context_t *ctx,
     if( MBEDTLS_MODE_CCM == ctx->cipher_info->mode )
     {
         *olen = ilen;
-        return( vdb_mbedtls_ccm_encrypt_and_tag( ctx->cipher_ctx, ilen,
+        return( mbedtls_ccm_encrypt_and_tag( ctx->cipher_ctx, ilen,
                                      iv, iv_len, ad, ad_len, input, output,
                                      tag, tag_len ) );
     }
@@ -1359,7 +1359,7 @@ static int mbedtls_cipher_aead_encrypt( mbedtls_cipher_context_t *ctx,
         }
 
         *olen = ilen;
-        return( vdb_mbedtls_chachapoly_encrypt_and_tag( ctx->cipher_ctx,
+        return( mbedtls_chachapoly_encrypt_and_tag( ctx->cipher_ctx,
                                 ilen, iv, ad, ad_len, input, output, tag ) );
     }
 #endif /* MBEDTLS_CHACHAPOLY_C */
@@ -1369,7 +1369,7 @@ static int mbedtls_cipher_aead_encrypt( mbedtls_cipher_context_t *ctx,
 
 /*
  * Packet-oriented encryption for AEAD modes: internal function shared by
- * vdb_mbedtls_cipher_auth_encrypt() and vdb_mbedtls_cipher_auth_encrypt_ext().
+ * mbedtls_cipher_auth_encrypt() and mbedtls_cipher_auth_encrypt_ext().
  */
 static int mbedtls_cipher_aead_decrypt( mbedtls_cipher_context_t *ctx,
                          const unsigned char *iv, size_t iv_len,
@@ -1417,7 +1417,7 @@ static int mbedtls_cipher_aead_decrypt( mbedtls_cipher_context_t *ctx,
         int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
         *olen = ilen;
-        ret = vdb_mbedtls_gcm_auth_decrypt( ctx->cipher_ctx, ilen,
+        ret = mbedtls_gcm_auth_decrypt( ctx->cipher_ctx, ilen,
                                 iv, iv_len, ad, ad_len,
                                 tag, tag_len, input, output );
 
@@ -1433,7 +1433,7 @@ static int mbedtls_cipher_aead_decrypt( mbedtls_cipher_context_t *ctx,
         int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
         *olen = ilen;
-        ret = vdb_mbedtls_ccm_auth_decrypt( ctx->cipher_ctx, ilen,
+        ret = mbedtls_ccm_auth_decrypt( ctx->cipher_ctx, ilen,
                                 iv, iv_len, ad, ad_len,
                                 input, output, tag, tag_len );
 
@@ -1456,7 +1456,7 @@ static int mbedtls_cipher_aead_decrypt( mbedtls_cipher_context_t *ctx,
         }
 
         *olen = ilen;
-        ret = vdb_mbedtls_chachapoly_auth_decrypt( ctx->cipher_ctx, ilen,
+        ret = mbedtls_chachapoly_auth_decrypt( ctx->cipher_ctx, ilen,
                                 iv, ad, ad_len, tag, input, output );
 
         if( ret == MBEDTLS_ERR_CHACHAPOLY_AUTH_FAILED )
@@ -1473,7 +1473,7 @@ static int mbedtls_cipher_aead_decrypt( mbedtls_cipher_context_t *ctx,
 /*
  * Packet-oriented encryption for AEAD modes: public legacy function.
  */
-int vdb_mbedtls_cipher_auth_encrypt( mbedtls_cipher_context_t *ctx,
+int mbedtls_cipher_auth_encrypt( mbedtls_cipher_context_t *ctx,
                          const unsigned char *iv, size_t iv_len,
                          const unsigned char *ad, size_t ad_len,
                          const unsigned char *input, size_t ilen,
@@ -1496,7 +1496,7 @@ int vdb_mbedtls_cipher_auth_encrypt( mbedtls_cipher_context_t *ctx,
 /*
  * Packet-oriented decryption for AEAD modes: public legacy function.
  */
-int vdb_mbedtls_cipher_auth_decrypt( mbedtls_cipher_context_t *ctx,
+int mbedtls_cipher_auth_decrypt( mbedtls_cipher_context_t *ctx,
                          const unsigned char *iv, size_t iv_len,
                          const unsigned char *ad, size_t ad_len,
                          const unsigned char *input, size_t ilen,
@@ -1522,7 +1522,7 @@ int vdb_mbedtls_cipher_auth_decrypt( mbedtls_cipher_context_t *ctx,
 /*
  * Packet-oriented encryption for AEAD/NIST_KW: public function.
  */
-int vdb_mbedtls_cipher_auth_encrypt_ext( mbedtls_cipher_context_t *ctx,
+int mbedtls_cipher_auth_encrypt_ext( mbedtls_cipher_context_t *ctx,
                          const unsigned char *iv, size_t iv_len,
                          const unsigned char *ad, size_t ad_len,
                          const unsigned char *input, size_t ilen,
@@ -1555,7 +1555,7 @@ int vdb_mbedtls_cipher_auth_encrypt_ext( mbedtls_cipher_context_t *ctx,
         (void) iv;
         (void) ad;
 
-        return( vdb_mbedtls_nist_kw_wrap( ctx->cipher_ctx, mode, input, ilen,
+        return( mbedtls_nist_kw_wrap( ctx->cipher_ctx, mode, input, ilen,
                                       output, olen, output_len ) );
     }
 #endif /* MBEDTLS_NIST_KW_C */
@@ -1578,7 +1578,7 @@ int vdb_mbedtls_cipher_auth_encrypt_ext( mbedtls_cipher_context_t *ctx,
 /*
  * Packet-oriented decryption for AEAD/NIST_KW: public function.
  */
-int vdb_mbedtls_cipher_auth_decrypt_ext( mbedtls_cipher_context_t *ctx,
+int mbedtls_cipher_auth_decrypt_ext( mbedtls_cipher_context_t *ctx,
                          const unsigned char *iv, size_t iv_len,
                          const unsigned char *ad, size_t ad_len,
                          const unsigned char *input, size_t ilen,
@@ -1611,7 +1611,7 @@ int vdb_mbedtls_cipher_auth_decrypt_ext( mbedtls_cipher_context_t *ctx,
         (void) iv;
         (void) ad;
 
-        return( vdb_mbedtls_nist_kw_unwrap( ctx->cipher_ctx, mode, input, ilen,
+        return( mbedtls_nist_kw_unwrap( ctx->cipher_ctx, mode, input, ilen,
                                         output, olen, output_len ) );
     }
 #endif /* MBEDTLS_NIST_KW_C */

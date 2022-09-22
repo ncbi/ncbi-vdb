@@ -822,7 +822,7 @@ typedef enum
     PSA_KEY_CREATION_COPY, /**< During psa_copy_key() */
 
 #ifndef __DOXYGEN_ONLY__
-    /** A key is being registered with vdb_mbedtls_psa_register_se_key().
+    /** A key is being registered with mbedtls_psa_register_se_key().
      *
      * The core only passes this value to
      * psa_drv_se_key_management_t::p_validate_slot_number, not to
