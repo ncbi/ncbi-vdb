@@ -235,8 +235,8 @@ static void hkv_encode( const HKV * in, u8 * out )
     }
     if ( test.key_size != in->key_size )
     {
-        fprintf( stderr, "key_size mismatch %ld %ld\n", test.key_size,
-                 in->key_size );
+        fprintf( stderr, "key_size mismatch %ld %ld\n", (long)test.key_size,
+                 (long)in->key_size );
         abort();
     }
     if ( test.value_size != in->value_size )

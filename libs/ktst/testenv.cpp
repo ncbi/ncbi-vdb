@@ -89,7 +89,7 @@ void CC TestEnv::TermHandler()
     SigHandler(SIGTERM);
 }
 
-void CC TestEnv::SigHandler(int sig)
+void CC TestEnv::SigHandler(int sig) noexcept
 {
     switch (sig)
     {

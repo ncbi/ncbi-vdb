@@ -27,44 +27,9 @@
 #ifndef _h_compiler_
 #define _h_compiler_
 
-#include <math.h>
-#include <float.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-static __inline
-float roundf( float value_in )
-{
-    return ( value_in < 0 ) ? ceilf ( value_in - 0.5F ) : floorf ( value_in + 0.5F );
-}
-
-#define lroundf( x ) (long int)roundf( x )
-
-static __inline
-double round( double value_in )
-{
-    return ( value_in < 0 ) ? ceil ( value_in - 0.5 ) : floor ( value_in + 0.5 );
-}
-
-typedef double double_t;
-
-#ifndef isnan
-#define isnan( x ) _isnan ( x )
-#endif
-
-static __inline
-float truncf( float value_in )
-{
-	return ( value_in < 0 ) ? ceilf( value_in ) : floorf( value_in );
-}
-
-static __inline
-double trunc( double value_in )
-{
-	return ( value_in < 0 ) ? ceil( value_in ) : floor( value_in );
-}
 
 #ifdef __cplusplus
 }

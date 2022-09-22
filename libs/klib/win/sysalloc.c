@@ -32,9 +32,10 @@
 #undef calloc
 #undef realloc
 #undef free
-
+              
 #if _DEBUGGING
 #define _CRTDBG_MAP_ALLOC 1
+#undef _malloca
 #include <crtdbg.h>
 #endif
 
