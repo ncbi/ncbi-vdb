@@ -2145,8 +2145,10 @@ LIB_EXPORT rc_t CC KMDataNodeListChildren ( const KMDataNode *self, KNamelist **
  * deep comparison of 2 Metadata-nodes
  */
 
+/* >>>>>> !!! any changes here have to be duplicated in wmeta.c !!! <<<<<< */
 static rc_t KMDataNodeCompare_int( const KMDataNode *self, const KMDataNode *other, bool *equal );
 
+/* >>>>>> !!! any changes here have to be duplicated in wmeta.c !!! <<<<<< */
 static rc_t KMDataNodeCompareValue( const KMDataNode *self, const KMDataNode *other, bool *equal ) {
     void const *self_data = NULL;
     size_t self_size = 0;
@@ -2169,12 +2171,14 @@ static rc_t KMDataNodeCompareValue( const KMDataNode *self, const KMDataNode *ot
     return rc;
 }
 
+/* >>>>>> !!! any changes here have to be duplicated in wmeta.c !!! <<<<<< */
 struct CompareContext {
     KMDataNode const *other;
     bool *equal;
     rc_t rc;
 };
 
+/* >>>>>> !!! any changes here have to be duplicated in wmeta.c !!! <<<<<< */
 static void CC KMDataNodeCompareChildren_cb( BSTNode *n, void *data ) {
     struct CompareContext *const ctx = data;
     if ( 0 == ctx -> rc && *( ctx -> equal ) ) {
@@ -2191,6 +2195,7 @@ static void CC KMDataNodeCompareChildren_cb( BSTNode *n, void *data ) {
     }
 }
 
+/* >>>>>> !!! any changes here have to be duplicated in wmeta.c !!! <<<<<< */
 static void CC KMDataNodeCompareAttr_cb( BSTNode *n, void *data ) {
     struct CompareContext *const ctx = data;
     if ( 0 == ctx -> rc && *( ctx -> equal ) ) {
@@ -2213,6 +2218,7 @@ static void CC KMDataNodeCompareAttr_cb( BSTNode *n, void *data ) {
     }
 }
 
+/* >>>>>> !!! any changes here have to be duplicated in wmeta.c !!! <<<<<< */
 static rc_t KMDataNodeCompare_int( const KMDataNode *self, const KMDataNode *other, bool *equal ) {
     /* first we compare the value of these 2 nodes */
     rc_t rc = KMDataNodeCompareValue( self, other, equal );
@@ -2230,6 +2236,7 @@ static rc_t KMDataNodeCompare_int( const KMDataNode *self, const KMDataNode *oth
     return rc;
 }
 
+/* >>>>>> !!! any changes here have to be duplicated in wmeta.c !!! <<<<<< */
 LIB_EXPORT rc_t CC KMDataNodeCompare( const KMDataNode *self, KMDataNode const *other, bool *equal ) {
     rc_t rc = 0;
     if ( self == NULL ) { 
@@ -2254,6 +2261,7 @@ LIB_EXPORT rc_t CC KMDataNodeCompare( const KMDataNode *self, KMDataNode const *
 /* KTableMetaCompare
  *  test if 2 tables have the same MetaDataNode ( and content ) for a given path
  */
+/* >>>>>> !!! any changes here have to be duplicated in wmeta.c !!! <<<<<< */
 LIB_EXPORT rc_t CC KTableMetaCompare( const KTable *self, const KTable *other,
                                       const char * path, bool * equal ) {
     rc_t rc = 0;
