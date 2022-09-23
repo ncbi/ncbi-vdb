@@ -50,7 +50,7 @@ struct GCP;
 #include <kfs/directory.h>
 #include <kfs/file.h>
 #include <kns/stream.h> /* KStreamRelease */
-#include <kns/kns-mgr-priv.h> 
+#include <kns/kns-mgr-priv.h>
 #include <kns/http-priv.h>
 
 #include <kproc/procmgr.h>
@@ -126,7 +126,7 @@ static
 rc_t CC GCPMakeComputeEnvironmentToken ( const GCP * self, const String ** ce_token )
 {
     assert(self);
-    
+
     if (!self->dad.user_agrees_to_reveal_instance_identity)
         return RC(rcCloud, rcProvider, rcIdentifying,
                   rcCondition, rcUnauthorized);

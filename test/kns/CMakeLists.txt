@@ -33,10 +33,13 @@ AddExecutableTest( Test_KNS_test200for-whole-file "test200for-whole-file" "${COM
 # TODO: only succeeds when the executable name is test-kns
 set( test_kns_name "test-kns" )
 add_executable( ${test_kns_name} knstest )
+if (WIN32)
+    # warning C5039: 'XXX': pointer or reference to potentially throwing function passed to extern C function under -EHc.
+    set_source_files_properties(knstest PROPERTIES COMPILE_FLAGS "/wd5039")
+endif()
 MSVS_StaticRuntime( ${test_kns_name} )
 target_link_libraries( ${test_kns_name} ${COMMON_LIBS_READ} )
 add_test( NAME Test_KNS_basics COMMAND ${test_kns_name} WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
-#AddExecutableTest( Test_KNS "knstest" "${COMMON_LIBS_READ}" )
 
 AddExecutableTest( SlowTest_KNS_ipc "test-ipc" "${COMMON_LIBS_READ}" )
 AddExecutableTest( SlowTest_KNS_http "HttpFixture;httptest" "${COMMON_LIBS_READ}" )

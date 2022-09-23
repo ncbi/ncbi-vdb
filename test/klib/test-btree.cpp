@@ -40,6 +40,7 @@
 #include <set>
 #include <memory>
 
+#define LIB_EXPORT
 #include "../libs/klib/btree.c"
 
 using namespace std;
@@ -618,7 +619,7 @@ FIXTURE_TEST_CASE( BTree_randomInserts, BtreeFixture )
     for( auto i = 0; i != 1000000; ++i )
     {   // key sizes 1..1024 are taken from sra-sort ( they are not enforced but longer keys
         // are likelier to trigger a constraint violation error in btree.c:leaf_insert() )
-        string s = string(1 + random() % 1024, random() % 256 );
+        string s = string(1 + rand() % 1024, rand() % 256 );
         id = i +1;
         //cout << endl << "***Inserting id=" << id << ", size=" << s.size() << ", " << (int)(unsigned char)s[0] << endl;
         TreeEntry ( s, id, false );
@@ -632,7 +633,7 @@ FIXTURE_TEST_CASE( LotsaFixedSizeInserts, BtreeFixture )
 
     for( int i = 0; i < 375000; ++i )
     {
-        int key = random();
+        int key = rand();
         // does not have to return "true" as duplicates are allowed
         TreeEntry ( string( (char *)&key, sizeof(key) ), i, i > 350000 );
     }

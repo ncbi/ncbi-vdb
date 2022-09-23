@@ -32,6 +32,8 @@
 #include <vfs/path.h> /* VPathRelease */
 #include <vfs/services.h> /* KServiceRelease */
 
+#include "../../libs/vfs/services-priv.h" /* KServiceSetQuality */
+
 #include <climits> /* PATH_MAX */
 #ifndef PATH_MAX
     #define PATH_MAX 4096
@@ -54,6 +56,7 @@ TEST_CASE ( AwsProxyTest ) {
     REQUIRE_RC ( KServiceMake ( & service ) );
     REQUIRE_RC ( KServiceAddId ( service, "SRR1219902" ) );
     REQUIRE_RC ( KServiceSetNgcFile ( service, "data/prj_phs710EA_test.ngc" ) );
+    REQUIRE_RC ( KServiceSetQuality ( service, "R" ) );
 
     const KSrvResponse * r = NULL;
     REQUIRE_RC ( KServiceNamesQuery ( service, 0, & r ) );

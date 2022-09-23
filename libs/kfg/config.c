@@ -25,6 +25,7 @@
  */
 
 #include <kfg/kfg-priv.h>
+#include <kfg/properties.h> /* KConfig_Get_GUID */
 #include "kfg-priv.h"
 
 struct KfgConfigNamelist;
@@ -35,6 +36,8 @@ struct KfgConfigNamelist;
 #include <klib/container.h>
 #include <klib/data-buffer.h> /* KDataBuffer */
 #include <klib/debug.h>
+#include <klib/guid.h> /* KGUIDMake */
+#include <klib/klib-priv.h>
 #include <klib/log.h>
 #include <klib/out.h> /* OUTMSG */
 #include <klib/printf.h>
@@ -42,7 +45,6 @@ struct KfgConfigNamelist;
 #include <klib/refcount.h>
 #include <klib/text.h>
 #include <klib/token.h>
-#include <klib/klib-priv.h>
 
 #include <kfs/directory.h>
 #include <kfs/gzip.h> /* KFileMakeGzipForRead */
@@ -3147,6 +3149,30 @@ static rc_t _KConfigFixQualityType(KConfig *const self, bool *updated)
     return rc;
 }
 
+static rc_t _KConfigSetGuid(KConfig *self, bool *updated) {
+    rc_t rc = 0;
+
+    char buf[999] = "";
+    size_t written = 0;
+
+    assert(updated);
+    *updated = false;
+
+    rc = KConfig_Get_GUID(self, buf, sizeof buf, &written);
+    if (rc == 0 && buf[0] != '\0' && written > 5)
+        return rc;
+
+    rc = KGUIDMake(buf, sizeof buf);
+
+    if (rc == 0)
+        rc = KConfig_Set_GUID(self, buf);
+
+    if (rc == 0)
+        *updated = true;
+
+    return rc;
+}
+
 #if CAN_HAVE_CONTAINER_ID
 static rc_t _KConfigGetContainerGUID(KConfig *const self, bool *const updated)
 {
@@ -3584,6 +3610,14 @@ rc_t KConfigMakeImpl ( KConfig ** cfg, const KDirectory * cfgdir, bool local,
                     rc = _KConfigFixQualityType(mgr, &updated);
                     if (rc == 0 && updated)
        /* ignore Commit's rc - it will fail if user configuration is disabled */
+                        KConfigCommit(mgr);
+                }
+
+                if (rc == 0)
+                {
+                    updated = false;
+                    rc = _KConfigSetGuid(mgr, &updated);
+                    if (rc == 0 && updated)
                         KConfigCommit(mgr);
                 }
 

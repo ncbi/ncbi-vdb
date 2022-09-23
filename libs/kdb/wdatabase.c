@@ -380,14 +380,14 @@ rc_t KDBManagerVCreateDBInt ( KDBManager *self,
         case kptMetadata | kptAlias:
             return RC (rcDB, rcMgr, rcCreating, rcMetadata, rcExists);
 
-	case kptFile:
-	case kptFile | kptAlias:
-	    /* if we find a file, vary the failure if it is an archive that is a database
-	     * or a non related file */
-	    if ( KDBOpenPathTypeRead ( self, wd, dbpath, NULL, kptDatabase, NULL, false,
-            NULL ) == 0 )
-            return RC ( rcDB, rcMgr, rcCreating, rcDirectory, rcUnauthorized );
-	    /* fall through */
+        case kptFile:
+        case kptFile | kptAlias:
+            /* if we find a file, vary the failure if it is an archive that is a database
+             * or a non related file */
+            if ( KDBOpenPathTypeRead ( self, wd, dbpath, NULL, kptDatabase, NULL, false,
+                                      NULL ) == 0 )
+                return RC ( rcDB, rcMgr, rcCreating, rcDirectory, rcUnauthorized );
+            /* fall through */
         default:
             return RC ( rcDB, rcMgr, rcCreating, rcPath, rcIncorrect );
         }

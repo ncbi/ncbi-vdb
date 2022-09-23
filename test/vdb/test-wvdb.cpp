@@ -51,6 +51,56 @@ using namespace std;
 
 TEST_SUITE( WVdbTestSuite )
 
+#if MAC && DEBUG
+#include <unistd.h>
+#include <sysexits.h>
+#include <vector>
+#include <array>
+
+/// creates a temp directory and chdir to it; rmdir on exit
+/// useful when sandboxed
+class TempDir {
+    std::string value;
+public:
+    TempDir() {
+        auto constexpr env_vars = std::array<char const *, 6>({"TMPDIR", "TEMPDIR", "TEMP", "TMP", "TMP_DIR", "TEMP_DIR"});
+
+        value = "/tmp";
+        for (auto && var : env_vars) {
+            auto const val = getenv(var);
+            if (val) {
+                value.assign(val);
+                while (value.size() > 0 && value.back() == '/')
+                    value.pop_back();
+                break;
+            }
+        }
+        value += "/Test_VDB_wvdb.";
+        auto const templateAt = value.size();
+        value += "XXXXXX";
+        {
+            auto buffer = std::vector<char>(value.size() + 1);
+            std::copy(value.begin(), value.end(), buffer.begin());
+
+            if (mkdtemp(buffer.data()) == nullptr) {
+                perror("can't make a temp directory");
+                exit(EX_IOERR);
+            }
+            std::copy(buffer.begin() + templateAt, buffer.begin() + templateAt + 6, value.begin() + templateAt);
+        }
+        chdir(value.c_str());
+    }
+    ~TempDir() {
+        chdir("/");
+        KDirectory *nd;
+        KDirectoryNativeDir(&nd);
+        if (KDirectoryRemove(nd, true, value.c_str()))
+            perror("could not remove temp directory");
+    }
+    operator std::string const &() const { return value; }
+};
+TempDir tempDir;
+#endif
 const string ScratchDir = "./db/";
 
 // this test case is not very useful but is here as a blueprint for other write-side tests
@@ -333,6 +383,76 @@ FIXTURE_TEST_CASE ( VTableDropColumn_MetadataColumn_VDB_2735, WVDB_Fixture )
     }
 }
 
+FIXTURE_TEST_CASE ( CopyColumn, WVDB_Fixture )
+{
+    m_databaseName = ScratchDir + GetName();
+
+    string schemaText =
+        "table table1 #1.0.0 { column ascii column1; column ascii column2; };"
+        "database root_database #1 {"
+            " table table1 #1 TABLE1; "
+            " table table1 #1 TABLE2; "
+        "} ;";
+
+    const char* sourceName = "TABLE1";
+    const char* destName = "TABLE2";
+    const char* ColumnName1 = "column1";
+    const char* ColumnName2 = "column2";
+
+    MakeDatabase ( schemaText, "root_database" );
+    {
+        VCursor* cursor = CreateTable ( sourceName );
+
+        uint32_t column_idx1;
+        uint32_t column_idx2;
+        REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx1, ColumnName1 ) );
+        REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx2, ColumnName2 ) );
+        REQUIRE_RC ( VCursorOpen ( cursor ) );
+
+        // need to insert 2 rows with same values to keep the column in metadata
+        REQUIRE_RC ( VCursorOpenRow ( cursor ) );
+        REQUIRE_RC ( VCursorWrite ( cursor, column_idx1, 8, "blah", 0, 4 ) );
+        REQUIRE_RC ( VCursorWrite ( cursor, column_idx2, 8, "blah", 0, 4 ) );
+        REQUIRE_RC ( VCursorCommitRow ( cursor ) );
+        REQUIRE_RC ( VCursorCloseRow ( cursor ) );
+
+        REQUIRE_RC ( VCursorOpenRow ( cursor ) );
+        REQUIRE_RC ( VCursorWrite ( cursor, column_idx1, 8, "blah", 0, 4 ) );
+        REQUIRE_RC ( VCursorWrite ( cursor, column_idx2, 8, "blargh", 0, 4 ) );
+        REQUIRE_RC ( VCursorCommitRow ( cursor ) );
+        REQUIRE_RC ( VCursorCloseRow ( cursor ) );
+
+        REQUIRE_RC ( VCursorCommit ( cursor ) );
+
+        REQUIRE_RC ( VCursorRelease ( cursor ) );
+    }
+
+    {
+        VTable const* sourceTable;
+        VTable* destTable;
+        REQUIRE_RC ( VDatabaseCreateTable(m_db, &destTable, "TABLE2", kcmInit, destName) );
+        REQUIRE_RC ( VDatabaseOpenTableRead (m_db , & sourceTable, sourceName ) );
+
+        REQUIRE_RC(VTableCopyColumn(destTable, false, sourceTable, ColumnName1));
+        REQUIRE_RC(VTableCopyColumn(destTable, false, sourceTable, ColumnName2));
+
+        VTableRelease ( destTable );
+        VTableRelease ( sourceTable );
+    }
+    // finally, check resulted db
+    {
+        const VCursor* cursor = OpenTable ( destName );
+        uint32_t column_idx1;
+        uint32_t column_idx2;
+        REQUIRE_RC ( VCursorOpen ( cursor ) );
+
+        REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx1, ColumnName1 ) );
+        REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx2, ColumnName2 ) );
+
+        REQUIRE_RC ( VCursorRelease ( cursor ) );
+    }
+}
+
 FIXTURE_TEST_CASE ( VCursor_FindNextRowIdDirect, WVDB_Fixture )
 {
     m_databaseName = ScratchDir + GetName();
@@ -488,7 +608,7 @@ FIXTURE_TEST_CASE ( MemoryLeak_DefaultFactoryParam, WVDB_Fixture )
                  "{ decode { return @; } encode { return zstd < strategy > ( @ ); }}; "
                  "table table1 #1.0.0 { column <ascii> zstd_encoding C; }; " /* no <strategy> specified */
                  "database root_database #1 { table table1 #1 T; } ;" );
-    WVDB_Fixture::MakeDatabase ( schemaText, "root_database", "../../interfaces" );
+    WVDB_Fixture::MakeDatabase ( schemaText, "root_database" );
     VCursor* cursor = CreateTable ( "T" );
     uint32_t column_idx;
     REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx, "C" ) );
@@ -504,6 +624,9 @@ FIXTURE_TEST_CASE ( MemoryLeak_DefaultFactoryParam, WVDB_Fixture )
 class EncodingFixture : public WVDB_Fixture
 {
 public:
+    EncodingFixture() {
+        readable_or_skip("../../interfaces");
+    }
     void MakeDatabaseWithEncoding( const string & name, const string & encoding, bool p_debug = false )
     {
         if ( p_debug )
