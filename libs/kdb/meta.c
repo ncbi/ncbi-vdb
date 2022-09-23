@@ -2254,8 +2254,8 @@ LIB_EXPORT rc_t CC KMDataNodeCompare( const KMDataNode *self, KMDataNode const *
 /* KTableMetaCompare
  *  test if 2 tables have the same MetaDataNode ( and content ) for a given path
  */
-LIB_EXPORT rc_t CC KTableMetaCompare ( const KTable *self, const KTable *other,
-                                       const char * path, bool * equal ) {
+LIB_EXPORT rc_t CC KTableMetaCompare( const KTable *self, const KTable *other,
+                                      const char * path, bool * equal ) {
     rc_t rc = 0;
     if ( NULL == self ) {
         rc = RC ( rcDB, rcTable, rcComparing, rcSelf, rcNull );
