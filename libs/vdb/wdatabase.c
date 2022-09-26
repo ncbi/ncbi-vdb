@@ -35,6 +35,7 @@
 #include <kdb/kdb-priv.h>
 #include <vdb/manager.h>
 #include <vdb/database.h>
+#include <vdb/table.h>
 #include <kdb/manager.h>
 #include <kdb/database.h>
 #include <kdb/meta.h>
@@ -677,4 +678,77 @@ LIB_EXPORT rc_t CC VDatabaseOpenKDatabaseUpdate ( VDatabase *self, KDatabase **k
     }
 
     return rc;
+}
+
+/* VDatabaseMetaCopy
+ *  deep copy of metadata-nodes form src to self...
+ */
+
+static rc_t copy_meta_for_one_table_in_db ( VDatabase *self, const VDatabase *src,
+                                      const char * node_path, const char * tbl_name ) {
+    VTable * tbl1;
+    rc_t rc = VDatabaseOpenTableUpdate( self, &tbl1, tbl_name );
+    if ( 0 == rc ) {
+        const VTable * tbl2;
+        rc = VDatabaseOpenTableRead( src, &tbl2, tbl_name );
+        if ( 0 == rc ) {
+            rc = VTableMetaCopy( tbl1, tbl2, node_path );
+            VTableRelease( tbl2 );
+        }
+        VTableRelease( tbl1 );
+    }
+    return rc;
+}
+
+static rc_t copy_meta_for_all_tables_in_db( VDatabase *self, const VDatabase *src,
+                                            const char * node_path ) {
+    KNamelist * tables_1;
+    rc_t rc = VDatabaseListTbl( self, &tables_1 );
+    if ( 0 == rc ) {
+        KNamelist * tables_2;
+        rc = VDatabaseListTbl( src, &tables_2 );
+        if ( 0 == rc ) {
+            uint32_t count;
+            rc = KNamelistCount( tables_1, &count );
+            if ( 0 == rc ) {
+                uint32_t idx;
+                for ( idx = 0; 0 == rc && idx < count; ++idx ) { 
+                    const char * tbl_name;
+                    rc = KNamelistGet( tables_1, idx, &tbl_name );
+                    if ( 0 == rc ) {
+                        if ( KNamelistContains( tables_2, tbl_name ) ) {
+                            rc = copy_meta_for_one_table_in_db( self, src, node_path, tbl_name );
+                        }
+                    }
+                }
+            }
+            KNamelistRelease( tables_2 );
+        }
+        KNamelistRelease( tables_1 );
+    }
+    return rc;
+}
+
+static bool is_empty( const char * s ) {
+    bool res = ( NULL == s );
+    if ( !res ) { res = ( 0 == s[ 0 ] ); }
+    return res;
+}
+
+LIB_EXPORT rc_t CC VDatabaseMetaCopy ( VDatabase *self, const VDatabase *src,
+                                       const char * node_path, const char * tbl_name ) {
+    rc_t rc = 0;
+    if ( NULL == self ) {
+        rc = RC ( rcVDB, rcDatabase, rcComparing, rcSelf, rcNull );
+    } else if ( NULL == src ) {
+        rc = RC ( rcVDB, rcDatabase, rcComparing, rcParam, rcNull );
+    } else {
+        if ( is_empty( tbl_name ) ) {
+            rc = copy_meta_for_all_tables_in_db( self, src, node_path );
+        } else {
+            rc = copy_meta_for_one_table_in_db( self, src, node_path, tbl_name );
+        }
+    }
+    return rc;
+                                           
 }

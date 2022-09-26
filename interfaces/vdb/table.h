@@ -458,6 +458,11 @@ VDB_EXTERN rc_t CC VTableSetFullQualityType ( VTable *self );
  */
 VDB_EXTERN rc_t CC VTableSetSynthQualityType ( VTable *self );
 
+/* VTableMetaCompare
+ *  deep comparison of meta-data-nodes between 2 tables
+ */
+VDB_EXTERN rc_t CC VTableMetaCompare ( const VTable *self, const VTable *other,
+                                       const char * path, bool * equal );
 
 #ifdef __cplusplus
 }
