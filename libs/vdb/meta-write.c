@@ -170,12 +170,13 @@ LIB_EXPORT rc_t CC VTableMetaCopy( VTable *self, const VTable *src, const char *
             const KMetadata *src_meta;
             rc = VTableOpenMetadataRead( src, &src_meta );
             if ( 0 == rc ) {
+                /* is is ok, if a node cannot be found.. */
                 KMDataNode * self_node;
-                rc = KMetadataOpenNodeUpdate( self_meta, &self_node, path );
-                if ( 0 == rc ) {
+                rc_t rc2 = KMetadataOpenNodeUpdate( self_meta, &self_node, path );
+                if ( 0 == rc2 ) {
                     const KMDataNode * src_node;
-                    rc = KMetadataOpenNodeRead( src_meta, &src_node, path );
-                    if ( 0 == rc ) {
+                    rc2 = KMetadataOpenNodeRead( src_meta, &src_node, path );
+                    if ( 0 == rc2 ) {
                         rc = KMDataNodeCopy( self_node, src_node );
                         KMDataNodeRelease( src_node );
                     }

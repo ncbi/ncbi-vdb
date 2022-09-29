@@ -157,16 +157,18 @@ LIB_EXPORT rc_t CC VTableMetaCompare ( const VTable *self, const VTable *other,
     } else {
         const KMetadata *self_meta;
         rc = VTableOpenMetadataRead( self, &self_meta );
+        *equal = false;        
         if ( 0 == rc ) {
             const KMetadata *other_meta;
             rc = VTableOpenMetadataRead( other, &other_meta );
             if ( 0 == rc ) {
                 const KMDataNode * self_node;
-                rc = KMetadataOpenNodeRead( self_meta, &self_node, path );
-                if ( 0 == rc ) {
+                /* is is OK if one or both tables do not have the node in question */
+                rc_t rc2 = KMetadataOpenNodeRead( self_meta, &self_node, path );
+                if ( 0 == rc2 ) {
                     const KMDataNode * other_node;
-                    rc = KMetadataOpenNodeRead( other_meta, &other_node, path );
-                    if ( 0 == rc ) {
+                    rc2 = KMetadataOpenNodeRead( other_meta, &other_node, path );
+                    if ( 0 == rc2 ) {
                         rc = KMDataNodeCompare( self_node, other_node, equal );
                         KMDataNodeRelease( other_node );
                     }

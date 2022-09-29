@@ -31,13 +31,19 @@
 
 #include <ktst/unit_test.hpp> // THROW_ON_RC
 
-#include <sstream>
+#include <map>
+#include <string>
+#include <stdexcept>
 
 using namespace std;
 
 TEST_SUITE( VDB_META_CMP_COPY_Suite )
 
 const char * tbl_test_schema = "version 1; table A_TABLE #1.0 { column U8 C1; column U32 C2; };";
+
+const char * db_test_schema = "version 1;\
+    table SUB_TAB #1.0 { column U8 C1; column U16 C2; };\
+    database MAIN_DB #1.0 { table SUB_TAB #1 T1; }; ";
 
 rc_t write_some_data( VTable * t, bool full ) {
     VCursor * c;
@@ -82,39 +88,144 @@ rc_t append_some_metadata( VTable * t ) {
     return rc;
 }
 
-void remove_dir( KDirectory *d, const char * name ) {
-    if ( nullptr != d ) { KDirectoryRemove( d, true, "%s", name ); }
-}
+class Test_Meta_Fixture {
+public:
+    typedef std::map< std::string, const VTable * > t_tables;
+    typedef std::map< std::string, const VDatabase * > t_dbs;
+    
+    KDirectory * dir;
+    VDBManager * mgr;
+    VSchema * schema;
+    bool remove_in_destructor;
+    t_tables tables;
+    t_dbs dbs;
+    
+    Test_Meta_Fixture() : dir( nullptr ), mgr( nullptr ), schema( nullptr ),
+                         remove_in_destructor( true ) {
+        if ( 0 != KDirectoryNativeDir( &dir ) ) {
+            throw std :: logic_error ( "Test_Meta_Fixture: KDirectoryNativeDir failed" );
+        }
+        if ( 0 != VDBManagerMakeUpdate( &mgr, dir ) ) {
+            throw std :: logic_error ( "Test_Meta_Fixture: VDBManagerMakeUpdate failed" );
+        }
+        if ( 0 != VDBManagerMakeSchema( mgr, &schema ) ) {
+            throw std :: logic_error ( "Test_Meta_Fixture: VDBManagerMakeSchema failed" );
+        }
+    }
 
-void remove_dirs( KDirectory *d, const char * name1, const char * name2 ) {
-    remove_dir( d, name1 );
-    remove_dir( d, name2 );
-}
+    VTable * create_table( const char * spec, std::string name, VDatabase * db = nullptr ) {
+        VTable * tbl = nullptr;
+        if ( nullptr == db ) {
+            if ( 0 != VDBManagerCreateTable( mgr, &tbl, schema, spec, kcmInit | kcmMD5,
+                                        name.c_str() ) ) {
+                throw std :: logic_error ( "Test_Meta_Fixture: VDBManagerCreateTable failed" );
+            }
+        } else {
+            if ( 0 != VDatabaseCreateTable( db, &tbl, spec, kcmInit | kcmMD5,
+                                        name.c_str() ) ) {
+                throw std :: logic_error ( "Test_Meta_Fixture: VDatabaseCreateTable failed" );
+            }
+        }
+        tables . insert( { name, tbl } ); 
+        return tbl;
+    }
+
+    VDatabase * create_db( const char * spec, std::string name ) {
+        VDatabase * db = nullptr;
+        if ( 0 != VDBManagerCreateDB( mgr, &db, schema, spec, kcmInit | kcmMD5,
+                                       name.c_str() ) ) {
+            throw std :: logic_error ( "Test_Meta_Fixture: VDBManagerCreateDB failed" );
+        }
+        dbs . insert( { name, db } ); 
+        return db;
+    }
+
+    const VTable * open_table_read( std::string name, const VDatabase * db = nullptr ) {
+        const VTable * tbl = nullptr;
+        if ( nullptr == db ) {
+            if ( 0 != VDBManagerOpenTableRead( mgr, &tbl, nullptr, name .  c_str() ) ) {
+                throw std :: logic_error ( "Test_Meta_Fixture: VDBManagerOpenTableRead failed" );
+            }
+        } else {
+            if ( 0 != VDatabaseOpenTableRead( db, &tbl, nullptr, name .  c_str() ) ) {
+                throw std :: logic_error ( "Test_Meta_Fixture: VDatabaseOpenTableRead failed" );
+            }
+        }
+        tables . insert( { name, tbl } ); 
+        return tbl;
+    }
+
+    const VDatabase * open_db_read( std::string name ) {
+        const VDatabase * db = nullptr;
+        if ( 0 != VDBManagerOpenDBRead( mgr, &db, nullptr, name . c_str() ) ) {
+            throw std :: logic_error ( "Test_Meta_Fixture: VDBManagerOpenDBRead failed" );
+        }
+        dbs . insert( { name, db } ); 
+        return db;
+    }
+
+    VTable * open_table_update( std::string name, VDatabase * db = nullptr ) {
+        VTable * tbl = nullptr;
+        if ( nullptr == db ) {
+            if ( 0 != VDBManagerOpenTableUpdate( mgr, &tbl, nullptr, name .  c_str() ) ) {
+                throw std :: logic_error ( "Test_Meta_Fixture: VDBManagerOpenTableUpdate failed" );
+            }
+        } else {
+            if ( 0 != VDatabaseOpenTableUpdate( db, &tbl, nullptr, name .  c_str() ) ) {
+                throw std :: logic_error ( "Test_Meta_Fixture: VDatabaseOpenTableRead failed" );
+            }
+        }
+        tables . insert( { name, tbl } ); 
+        return tbl;
+    }
+
+    VDatabase * open_db_update( std::string name ) {
+        VDatabase * db = nullptr;
+        if ( 0 != VDBManagerOpenDBUpdate( mgr, &db, nullptr, name .  c_str() ) ) {
+            throw std :: logic_error ( "Test_Meta_Fixture: VDBManagerOpenDBUpdate failed" );
+        }
+        dbs . insert( { name, db } ); 
+        return db;
+    }
+
+    void close_tables( bool remove_dir ) {
+        for ( auto i = tables . begin(); i != tables . end(); ++i ) {
+            VTableRelease( i -> second );
+            if ( remove_dir ) { KDirectoryRemove( dir, true, "%s", i -> first . c_str() ); }
+        }
+        tables . clear();
+    }
+
+    void close_dbs( bool remove_dir ) {
+        for ( auto i = dbs . begin(); i != dbs . end(); ++i ) {
+            VDatabaseRelease( i -> second );
+            if ( remove_dir ) { KDirectoryRemove( dir, true, "%s", i -> first . c_str() ); }
+        }
+        dbs . clear();
+    }
+
+    ~Test_Meta_Fixture() {
+        close_tables( remove_in_destructor );
+        close_dbs( remove_in_destructor );
+        VSchemaRelease( schema );
+        VDBManagerRelease( mgr );
+        KDirectoryRelease( dir );
+    }
+};
 
 /*
  * create 2 vdb-tables, insert some rows, create some meta-data, compare them
  */
-TEST_CASE( Compare_Table_Meta_Equal ) {
-    KDirectory * Dir;
-    REQUIRE_RC( KDirectoryNativeDir( &Dir ) );
+FIXTURE_TEST_CASE( Compare_Table_Meta_Equal, Test_Meta_Fixture ) {
+    REQUIRE_RC( VSchemaParseText( schema, "TableTestSchema", tbl_test_schema, strlen( tbl_test_schema ) ) );
 
-    VDBManager * Mgr;
-    REQUIRE_RC( VDBManagerMakeUpdate( &Mgr, Dir ) );
+    VTable * Tbl1 = create_table( "A_TABLE", "TBL1" );
+    VTable * Tbl2 = create_table( "A_TABLE", "TBL2" );
 
-    /* make 2 simple tables */
-    VSchema * Schema;
-    REQUIRE_RC( VDBManagerMakeSchema( Mgr, &Schema ) );
-    REQUIRE_RC( VSchemaParseText( Schema, "TableTestSchema", tbl_test_schema, strlen( tbl_test_schema ) ) );
-
-    VTable * Tbl1;
-    VTable * Tbl2;    
-    REQUIRE_RC( VDBManagerCreateTable( Mgr, &Tbl1, Schema, "A_TABLE", kcmInit | kcmMD5, "%s", "TBL1" ) );
-    REQUIRE_RC( VDBManagerCreateTable( Mgr, &Tbl2, Schema, "A_TABLE", kcmInit | kcmMD5, "%s", "TBL2" ) );
-
-    /* write some data into them */
     REQUIRE_RC( write_some_data( Tbl1, true ) );    // creates identical data in both tables
     REQUIRE_RC( write_some_data( Tbl2, true ) );
-
+    close_tables( false );
+    
     /* the meta-node 'col' should now be equal in both tables... */
     /*
      * very important: we cannot compare tables that are still open after
@@ -123,44 +234,21 @@ TEST_CASE( Compare_Table_Meta_Equal ) {
      * these tables have to be closed, then reopened in read-only mode!
      * --- the write_some_data() - function does that...
      */
-    const VTable * Tbl1_c;
-    const VTable * Tbl2_c;
-    REQUIRE_RC( VDBManagerOpenTableRead( Mgr, &Tbl1_c, nullptr, "TBL1" ) );
-    REQUIRE_RC( VDBManagerOpenTableRead( Mgr, &Tbl2_c, nullptr, "TBL2" ) );
+    const VTable * Tbl1_c = open_table_read( "TBL1" );
+    const VTable * Tbl2_c = open_table_read( "TBL2" );
 
     bool equal;
     REQUIRE_RC( VTableMetaCompare( Tbl1_c, Tbl2_c, "col", &equal ) );
     REQUIRE_EQ( equal, true );
-
-    REQUIRE_RC( VTableRelease( Tbl2_c ) );
-    REQUIRE_RC( VTableRelease( Tbl1_c ) );
-
-    REQUIRE_RC( VSchemaRelease( Schema ) );
-    REQUIRE_RC( VDBManagerRelease( Mgr ) );
-    remove_dirs( Dir, "TBL1", "TBL2" );
-    REQUIRE_RC( KDirectoryRelease( Dir ) );
 }
 
-TEST_CASE( Compare_Table_Meta_Not_Equal ) {
-    KDirectory * Dir;
-    REQUIRE_RC( KDirectoryNativeDir( &Dir ) );
+FIXTURE_TEST_CASE( Compare_Table_Meta_Not_Equal, Test_Meta_Fixture ) {
+    REQUIRE_RC( VSchemaParseText( schema, "TableTestSchema", tbl_test_schema, strlen( tbl_test_schema ) ) );
 
-    VDBManager * Mgr;
-    REQUIRE_RC( VDBManagerMakeUpdate( &Mgr, Dir ) );
-
-    /* make 2 simple tables */
-    VSchema * Schema;
-    REQUIRE_RC( VDBManagerMakeSchema( Mgr, &Schema ) );
-    REQUIRE_RC( VSchemaParseText( Schema, "TableTestSchema", tbl_test_schema, strlen( tbl_test_schema ) ) );
-
-    VTable * Tbl1;
-    REQUIRE_RC( VDBManagerCreateTable( Mgr, &Tbl1, Schema, "A_TABLE", kcmInit | kcmMD5, "%s", "TBL1" ) );
-
-    VTable * Tbl2;
-    REQUIRE_RC( VDBManagerCreateTable( Mgr, &Tbl2, Schema, "A_TABLE", kcmInit | kcmMD5, "%s", "TBL2" ) );
+    VTable * Tbl1 = create_table( "A_TABLE", "TBL1" );
+    VTable * Tbl2 = create_table( "A_TABLE", "TBL2" );
 
     REQUIRE_RC( append_some_metadata( Tbl1 ) );
-    /* write some data into them */
     REQUIRE_RC( write_some_data( Tbl1, true ) );        // creates different data in the tables
     REQUIRE_RC( write_some_data( Tbl2, false ) );
 
@@ -172,55 +260,30 @@ TEST_CASE( Compare_Table_Meta_Not_Equal ) {
      * these tables have to be closed, then reopened in read-only mode!
      * --- the write_some_data() - function does that...     * 
      */
-    const VTable * Tbl1_c;
-    const VTable * Tbl2_c;
-    REQUIRE_RC( VDBManagerOpenTableRead( Mgr, &Tbl1_c, nullptr, "TBL1" ) );
-    REQUIRE_RC( VDBManagerOpenTableRead( Mgr, &Tbl2_c, nullptr, "TBL2" ) );
+    const VTable * Tbl1_c = open_table_read( "TBL1" );
+    const VTable * Tbl2_c = open_table_read( "TBL2" );
 
     bool equal;
     REQUIRE_RC( VTableMetaCompare( Tbl1_c, Tbl2_c, "col", &equal ) );
     REQUIRE_EQ( equal, false );
-
-    REQUIRE_RC( VTableRelease( Tbl2_c ) );
-    REQUIRE_RC( VTableRelease( Tbl1_c ) );
-
-    REQUIRE_RC( VSchemaRelease( Schema ) );
-    REQUIRE_RC( VDBManagerRelease( Mgr ) );
-    REQUIRE_RC( KDirectoryRelease( Dir ) );
 }
 
-TEST_CASE( Copy_Table_Meta ) {
-    KDirectory * Dir;
-    REQUIRE_RC( KDirectoryNativeDir( &Dir ) );
+FIXTURE_TEST_CASE( Copy_Table_Meta, Test_Meta_Fixture ) {
+    REQUIRE_RC( VSchemaParseText( schema, "TableTestSchema", tbl_test_schema, strlen( tbl_test_schema ) ) );
 
-    VDBManager * Mgr;
-    REQUIRE_RC( VDBManagerMakeUpdate( &Mgr, Dir ) );
-
-    /* make 2 simple tables */
-    VSchema * Schema;
-    REQUIRE_RC( VDBManagerMakeSchema( Mgr, &Schema ) );
-    REQUIRE_RC( VSchemaParseText( Schema, "TableTestSchema", tbl_test_schema, strlen( tbl_test_schema ) ) );
-
-    VTable * Tbl1;
-    REQUIRE_RC( VDBManagerCreateTable( Mgr, &Tbl1, Schema, "A_TABLE", kcmInit | kcmMD5, "%s", "TBL1" ) );
-
-    VTable * Tbl2;
-    REQUIRE_RC( VDBManagerCreateTable( Mgr, &Tbl2, Schema, "A_TABLE", kcmInit | kcmMD5, "%s", "TBL2" ) );
+    VTable * Tbl1 = create_table( "A_TABLE", "TBL1" );
+    VTable * Tbl2 = create_table( "A_TABLE", "TBL2" );
 
     REQUIRE_RC( append_some_metadata( Tbl1 ) );
-    /* write some data into them */
     REQUIRE_RC( write_some_data( Tbl1, true ) );        // creates different data in the tables
     REQUIRE_RC( write_some_data( Tbl2, false ) );
 
-    const VTable * src;
-    VTable * dst;
-    REQUIRE_RC( VDBManagerOpenTableRead( Mgr, &src, nullptr, "TBL1" ) );
-    REQUIRE_RC( VDBManagerOpenTableUpdate( Mgr, &dst, nullptr, "TBL2" ) );
+    const VTable * src = open_table_read( "TBL1" );
+    VTable * dst = open_table_update( "TBL2" );
 
     // check that there is not special-node in dst
     bool equal;
-    rc_t rc = VTableMetaCompare( src, dst, "special", &equal );
-    REQUIRE_NE( rc, ( rc_t )0 );
+    REQUIRE_RC( VTableMetaCompare( src, dst, "special", &equal ) );
     REQUIRE_EQ( equal, false );
 
     // copy the special node from src to dst
@@ -228,14 +291,111 @@ TEST_CASE( Copy_Table_Meta ) {
     // check that this special node is now equal in both tables
     REQUIRE_RC( VTableMetaCompare( src, dst, "special", &equal ) );
     REQUIRE_EQ( equal, true );
-    
-    REQUIRE_RC( VTableRelease( src ) );
-    REQUIRE_RC( VTableRelease( dst ) );
+}
 
-    REQUIRE_RC( VSchemaRelease( Schema ) );
-    REQUIRE_RC( VDBManagerRelease( Mgr ) );
-    remove_dirs( Dir, "TBL1", "TBL2" );
-    REQUIRE_RC( KDirectoryRelease( Dir ) );
+FIXTURE_TEST_CASE( Compare_DB_Meta_Equal, Test_Meta_Fixture ) {
+    REQUIRE_RC( VSchemaParseText( schema, "DBTestSchema", db_test_schema, strlen( db_test_schema ) ) );
+
+    VDatabase * db1 = create_db( "MAIN_DB", "DB1" );
+    VDatabase * db2 = create_db( "MAIN_DB", "DB2" );
+
+    VTable * db1_t1 = create_table( "T1", "TBL1", db1 );
+    VTable * db1_t2 = create_table( "T1", "TBL2", db1 );
+    REQUIRE_RC( write_some_data( db1_t1, true ) );    // creates identical data in both tables
+    REQUIRE_RC( write_some_data( db1_t2, true ) );
+
+    VTable * db2_t1 = create_table( "T1", "TBL1", db2 );
+    VTable * db2_t2 = create_table( "T1", "TBL2", db2 );
+    REQUIRE_RC( write_some_data( db2_t1, true ) );    // creates identical data in both tables
+    REQUIRE_RC( write_some_data( db2_t2, true ) );
+
+    close_tables( false );
+    close_dbs( false );
+
+    const VDatabase * db1_c = open_db_read( "DB1" );
+    const VDatabase * db2_c = open_db_read( "DB2" );
+    
+    bool equal;
+    REQUIRE_RC( VDatabaseMetaCompare( db1_c, db2_c, "col", "TBL1", &equal ) );
+    REQUIRE_EQ( equal, true );
+
+    REQUIRE_RC( VDatabaseMetaCompare( db1_c, db2_c, "col", "TBL2", &equal ) );
+    REQUIRE_EQ( equal, true );
+
+    REQUIRE_RC( VDatabaseMetaCompare( db1_c, db2_c, "col", nullptr, &equal ) );
+    REQUIRE_EQ( equal, true );
+}
+
+FIXTURE_TEST_CASE( Compare_DB_Meta_Not_Equal, Test_Meta_Fixture ) {
+    REQUIRE_RC( VSchemaParseText( schema, "DBTestSchema", db_test_schema, strlen( db_test_schema ) ) );
+
+    VDatabase * db1 = create_db( "MAIN_DB", "DB1" );
+    VDatabase * db2 = create_db( "MAIN_DB", "DB2" );
+
+    VTable * db1_t1 = create_table( "T1", "TBL1", db1 );
+    VTable * db1_t2 = create_table( "T1", "TBL2", db1 );
+    REQUIRE_RC( write_some_data( db1_t1, true ) );    // creates identical data in both tables
+    REQUIRE_RC( write_some_data( db1_t2, true ) );
+
+    VTable * db2_t1 = create_table( "T1", "TBL1", db2 );
+    VTable * db2_t2 = create_table( "T1", "TBL2", db2 );
+    REQUIRE_RC( write_some_data( db2_t1, false ) );    // creates different data in both tables
+    REQUIRE_RC( write_some_data( db2_t2, false ) );    // different from db1_*
+
+    close_tables( false );
+    close_dbs( false );
+
+    const VDatabase * db1_c = open_db_read( "DB1" );
+    const VDatabase * db2_c = open_db_read( "DB2" );
+    
+    bool equal;
+    REQUIRE_RC( VDatabaseMetaCompare( db1_c, db2_c, "col", "TBL1", &equal ) );
+    REQUIRE_EQ( equal, false );
+
+    REQUIRE_RC( VDatabaseMetaCompare( db1_c, db2_c, "col", "TBL2", &equal ) );
+    REQUIRE_EQ( equal, false );
+
+    REQUIRE_RC( VDatabaseMetaCompare( db1_c, db2_c, "col", nullptr, &equal ) );
+    REQUIRE_EQ( equal, false );
+}
+
+FIXTURE_TEST_CASE( Copy_DB_Meta, Test_Meta_Fixture ) {
+    REQUIRE_RC( VSchemaParseText( schema, "DBTestSchema", db_test_schema, strlen( db_test_schema ) ) );
+
+    VDatabase * db1 = create_db( "MAIN_DB", "DB1" );
+    VDatabase * db2 = create_db( "MAIN_DB", "DB2" );
+
+    VTable * db1_t1 = create_table( "T1", "TBL1", db1 );
+    VTable * db1_t2 = create_table( "T1", "TBL2", db1 );
+    REQUIRE_RC( append_some_metadata( db1_t1 ) );
+    REQUIRE_RC( write_some_data( db1_t1, true ) );    // creates identical data in both tables
+    REQUIRE_RC( write_some_data( db1_t2, true ) );
+
+    VTable * db2_t1 = create_table( "T1", "TBL1", db2 );
+    VTable * db2_t2 = create_table( "T1", "TBL2", db2 );
+    REQUIRE_RC( write_some_data( db2_t1, true ) );    // creates different data in both tables
+    REQUIRE_RC( write_some_data( db2_t2, true ) );    // different from db1_*
+
+    close_tables( false );
+    close_dbs( false );
+
+    const VDatabase * src = open_db_read( "DB1" );
+    VDatabase * dst = open_db_update( "DB2" );
+
+    bool equal;
+    REQUIRE_RC( VDatabaseMetaCompare( src, dst, "special", nullptr, &equal ) );
+    REQUIRE_EQ( equal, false );
+
+    // copy the special node from src to dst
+    REQUIRE_RC( VDatabaseMetaCopy( dst, src, "special", nullptr ) );
+
+    // it is not equal for all tables...
+    REQUIRE_RC( VDatabaseMetaCompare( src, dst, "special", nullptr, &equal ) );
+    REQUIRE_EQ( equal, false );
+
+    // but it is equal for TBL1...
+    REQUIRE_RC( VDatabaseMetaCompare( src, dst, "special", "TBL1", &equal ) );
+    REQUIRE_EQ( equal, true );
 
 }
 
