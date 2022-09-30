@@ -50,15 +50,13 @@ if(_NCBIVDB_CFG_PACKAGING)
 
     install(TARGETS ncbi-vdb ncbi-wvdb)
 else()
-add_library( ncbi-vdb STATIC "${VDB_LIB_RD}" )
-MSVS_StaticRuntime( ncbi-vdb )
-ExportStatic( ncbi-vdb true )
-ExportShared( ncbi-vdb true "Crypt32")
+    add_library( ncbi-vdb STATIC "${VDB_LIB_RD}" )
+    MSVS_StaticRuntime( ncbi-vdb )
+    ExportStatic( ncbi-vdb true )
+    ExportShared( ncbi-vdb true "Crypt32;${MBEDTLS_LIBS}")
 
-#################################
-
-add_library( ncbi-wvdb STATIC "${VDB_LIB_RDWR}" )
-MSVS_StaticRuntime( ncbi-wvdb )
-ExportStatic( ncbi-wvdb true )
-ExportShared( ncbi-wvdb true  "Crypt32")
+    add_library( ncbi-wvdb STATIC "${VDB_LIB_RDWR}" )
+    MSVS_StaticRuntime( ncbi-wvdb )
+    ExportStatic( ncbi-wvdb true )
+    ExportShared( ncbi-wvdb true  "Crypt32;${MBEDTLS_LIBS}")
 endif()

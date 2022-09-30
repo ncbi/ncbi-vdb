@@ -82,7 +82,7 @@ endif()
 add_compile_definitions( ${all_compile_defs} )
 
 ExportStatic( ncbi-vdb true )
-ExportShared( ncbi-vdb true "m;dl;pthread" )
+ExportShared( ncbi-vdb true "m;dl;pthread;${MBEDTLS_LIBS}" )
 
 
 ###################################
@@ -101,7 +101,7 @@ endif()
 add_compile_definitions( ${all_compile_defs} )
 
 ExportStatic( ncbi-wvdb true )
-ExportShared( ncbi-wvdb true "m;dl;pthread" )
+ExportShared( ncbi-wvdb true "m;dl;pthread;${MBEDTLS_LIBS}" )
 
 if(_NCBIVDB_CFG_PACKAGING)
     install(TARGETS ncbi-vdb ncbi-wvdb)

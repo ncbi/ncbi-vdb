@@ -39,7 +39,7 @@
 /*
  * This implementation should never be optimized out by the compiler
  *
- * This implementation for vdb_mbedtls_platform_zeroize() was inspired from Colin
+ * This implementation for mbedtls_platform_zeroize() was inspired from Colin
  * Percival's blog article at:
  *
  * http://www.daemonology.net/blog/2014-09-04-how-to-zero-a-buffer.html
@@ -56,15 +56,15 @@
  *     memset_func( buf, 0, len );
  *
  * Note that it is extremely difficult to guarantee that
- * vdb_mbedtls_platform_zeroize() will not be optimized out by aggressive compilers
+ * mbedtls_platform_zeroize() will not be optimized out by aggressive compilers
  * in a portable way. For this reason, Mbed TLS also provides the configuration
  * option MBEDTLS_PLATFORM_ZEROIZE_ALT, which allows users to configure
- * vdb_mbedtls_platform_zeroize() to use a suitable implementation for their
+ * mbedtls_platform_zeroize() to use a suitable implementation for their
  * platform and needs.
  */
 static void * (* const volatile memset_func)( void *, int, size_t ) = memset;
 
-void vdb_mbedtls_platform_zeroize( void *buf, size_t len )
+void mbedtls_platform_zeroize( void *buf, size_t len )
 {
     MBEDTLS_INTERNAL_VALIDATE( len == 0 || buf != NULL );
 
@@ -100,7 +100,7 @@ void vdb_mbedtls_platform_zeroize( void *buf, size_t len )
              ( defined(_POSIX_THREAD_SAFE_FUNCTIONS ) &&                     \
                 _POSIX_THREAD_SAFE_FUNCTIONS >= 200112L ) ) */
 
-struct tm *vdb_mbedtls_platform_gmtime_r( const mbedtls_time_t *tt,
+struct tm *mbedtls_platform_gmtime_r( const mbedtls_time_t *tt,
                                       struct tm *tm_buf )
 {
 #if defined(_WIN32) && !defined(EFIX64) && !defined(EFI32)
@@ -111,7 +111,7 @@ struct tm *vdb_mbedtls_platform_gmtime_r( const mbedtls_time_t *tt,
     struct tm *lt;
 
 #if defined(MBEDTLS_THREADING_C)
-    if( mbedtls_mutex_lock( &vdb_mbedtls_threading_gmtime_mutex ) != 0 )
+    if( mbedtls_mutex_lock( &mbedtls_threading_gmtime_mutex ) != 0 )
         return( NULL );
 #endif /* MBEDTLS_THREADING_C */
 
@@ -123,7 +123,7 @@ struct tm *vdb_mbedtls_platform_gmtime_r( const mbedtls_time_t *tt,
     }
 
 #if defined(MBEDTLS_THREADING_C)
-    if( mbedtls_mutex_unlock( &vdb_mbedtls_threading_gmtime_mutex ) != 0 )
+    if( mbedtls_mutex_unlock( &mbedtls_threading_gmtime_mutex ) != 0 )
         return( NULL );
 #endif /* MBEDTLS_THREADING_C */
 

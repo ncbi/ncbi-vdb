@@ -161,7 +161,7 @@ int mbedtls_ssl_tls1_3_hkdf_expand_label(
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
-    md = vdb_mbedtls_md_info_from_type( hash_alg );
+    md = mbedtls_md_info_from_type( hash_alg );
     if( md == NULL )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
@@ -171,7 +171,7 @@ int mbedtls_ssl_tls1_3_hkdf_expand_label(
                                   hkdf_label,
                                   &hkdf_label_len );
 
-    return( vdb_mbedtls_hkdf_expand( md,
+    return( mbedtls_hkdf_expand( md,
                                  secret, slen,
                                  hkdf_label, hkdf_label_len,
                                  buf, blen ) );
@@ -252,16 +252,16 @@ int mbedtls_ssl_tls1_3_derive_secret(
     unsigned char hashed_context[ MBEDTLS_MD_MAX_SIZE ];
 
     const mbedtls_md_info_t *md;
-    md = vdb_mbedtls_md_info_from_type( hash_alg );
+    md = mbedtls_md_info_from_type( hash_alg );
     if( md == NULL )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
     if( ctx_hashed == MBEDTLS_SSL_TLS1_3_CONTEXT_UNHASHED )
     {
-        ret = vdb_mbedtls_md( md, ctx, clen, hashed_context );
+        ret = mbedtls_md( md, ctx, clen, hashed_context );
         if( ret != 0 )
             return( ret );
-        clen = vdb_mbedtls_md_get_size( md );
+        clen = mbedtls_md_get_size( md );
     }
     else
     {
@@ -296,11 +296,11 @@ int mbedtls_ssl_tls1_3_evolve_secret(
     unsigned char tmp_input [ MBEDTLS_MD_MAX_SIZE ] = { 0 };
 
     const mbedtls_md_info_t *md;
-    md = vdb_mbedtls_md_info_from_type( hash_alg );
+    md = mbedtls_md_info_from_type( hash_alg );
     if( md == NULL )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
-    hlen = vdb_mbedtls_md_get_size( md );
+    hlen = mbedtls_md_get_size( md );
 
     /* For non-initial runs, call Derive-Secret( ., "derived", "")
      * on the old secret. */
@@ -330,7 +330,7 @@ int mbedtls_ssl_tls1_3_evolve_secret(
     /* HKDF-Extract takes a salt and input key material.
      * The salt is the old secret, and the input key material
      * is the input secret (PSK / ECDHE). */
-    ret = vdb_mbedtls_hkdf_extract( md,
+    ret = mbedtls_hkdf_extract( md,
                     tmp_secret, hlen,
                     tmp_input, ilen,
                     secret_new );
@@ -341,8 +341,8 @@ int mbedtls_ssl_tls1_3_evolve_secret(
 
  cleanup:
 
-    vdb_mbedtls_platform_zeroize( tmp_secret, sizeof(tmp_secret) );
-    vdb_mbedtls_platform_zeroize( tmp_input,  sizeof(tmp_input)  );
+    mbedtls_platform_zeroize( tmp_secret, sizeof(tmp_secret) );
+    mbedtls_platform_zeroize( tmp_input,  sizeof(tmp_input)  );
     return( ret );
 }
 

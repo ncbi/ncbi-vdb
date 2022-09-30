@@ -22,7 +22,6 @@
 #
 # ===========================================================================
 
-
 # all static libraries in this directory are published
 
 set( VDB_LIB_CMN_TARGETS
@@ -30,9 +29,6 @@ set( VDB_LIB_CMN_TARGETS
     ncbi-bam
     vfs
     cloud
-    mbedx509
-    mbedtls
-    mbedcrypto
     kns
     kfg
     krypto
@@ -44,6 +40,12 @@ set( VDB_LIB_CMN_TARGETS
     kq
     kfc
 )
+if ( HAVE_MBEDTLS_F )
+    message("Using mbedtls installed in the system")
+else()
+    message("No mbedtls libs found installed in the system, using local copy...")
+    list( APPEND VDB_LIB_CMN_TARGETS mbedx509 mbedtls mbedcrypto )
+endif()
 
 if(NOT _NCBIVDB_CFG_PACKAGING)
     list( APPEND VDB_LIB_CMN_TARGETS bz2 z zstd )

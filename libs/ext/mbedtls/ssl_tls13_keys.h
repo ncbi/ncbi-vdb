@@ -55,7 +55,7 @@ struct mbedtls_ssl_tls1_3_labels_struct
 };
 #undef MBEDTLS_SSL_TLS1_3_LABEL
 
-extern const struct mbedtls_ssl_tls1_3_labels_struct vdb_mbedtls_ssl_tls1_3_labels;
+extern const struct mbedtls_ssl_tls1_3_labels_struct mbedtls_ssl_tls1_3_labels;
 
 #define MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( LABEL )  \
     mbedtls_ssl_tls1_3_labels.LABEL,              \
@@ -106,7 +106,7 @@ extern const struct mbedtls_ssl_tls1_3_labels_struct vdb_mbedtls_ssl_tls1_3_labe
  * \return          A negative error code on failure.
  */
 
-int vdb_mbedtls_ssl_tls1_3_hkdf_expand_label(
+int mbedtls_ssl_tls1_3_hkdf_expand_label(
                      mbedtls_md_type_t hash_alg,
                      const unsigned char *secret, size_t slen,
                      const unsigned char *label, size_t llen,
@@ -142,7 +142,7 @@ int vdb_mbedtls_ssl_tls1_3_hkdf_expand_label(
  * \returns             A negative error code on failure.
  */
 
-int vdb_mbedtls_ssl_tls1_3_make_traffic_keys(
+int mbedtls_ssl_tls1_3_make_traffic_keys(
                      mbedtls_md_type_t hash_alg,
                      const unsigned char *client_secret,
                      const unsigned char *server_secret,
@@ -190,7 +190,7 @@ int vdb_mbedtls_ssl_tls1_3_make_traffic_keys(
  * \returns        \c 0 on success.
  * \returns        A negative error code on failure.
  */
-int vdb_mbedtls_ssl_tls1_3_derive_secret(
+int mbedtls_ssl_tls1_3_derive_secret(
                    mbedtls_md_type_t hash_alg,
                    const unsigned char *secret, size_t slen,
                    const unsigned char *label, size_t llen,
@@ -228,7 +228,7 @@ int vdb_mbedtls_ssl_tls1_3_derive_secret(
  *
  * Each of the three secrets in turn is the basis for further
  * key derivations, such as the derivation of traffic keys and IVs;
- * see e.g. vdb_mbedtls_ssl_tls1_3_make_traffic_keys().
+ * see e.g. mbedtls_ssl_tls1_3_make_traffic_keys().
  *
  * This function implements one step in this evolution of secrets:
  *
@@ -265,7 +265,7 @@ int vdb_mbedtls_ssl_tls1_3_derive_secret(
  * \returns           A negative error code on failure.
  */
 
-int vdb_mbedtls_ssl_tls1_3_evolve_secret(
+int mbedtls_ssl_tls1_3_evolve_secret(
                    mbedtls_md_type_t hash_alg,
                    const unsigned char *secret_old,
                    const unsigned char *input, size_t input_len,
