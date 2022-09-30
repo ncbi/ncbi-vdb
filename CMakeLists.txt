@@ -55,7 +55,7 @@ elseif( TESTS_ONLY AND NOT LIBS_ONLY AND (${CMAKE_GENERATOR} MATCHES "Visual Stu
     add_subdirectory(test)
 
 elseif( NOT TESTS_ONLY AND LIBS_ONLY AND (${CMAKE_GENERATOR} MATCHES "Visual Studio.*" OR ${CMAKE_GENERATOR} STREQUAL "Xcode") )
-    project(ncbi-vdb-libs)
+    project(ncbi-vdb)
     if( PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR )
         message(FATAL_ERROR "In-source builds are not allowed")
     endif()
