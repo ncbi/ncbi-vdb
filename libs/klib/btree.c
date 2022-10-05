@@ -1763,6 +1763,9 @@ static void printf_branch(uint32_t nodeid, Pager *pager, Pager_vt const *vt )
     BranchNode const *const node = (const BranchNode *)vt->access(pager, page);
     assert(node != NULL);
 
+    printf("Branch id = %u:\n", (nodeid << 1) + 1);
+    PrintBranch(node);
+    
     {   // left transition
         uint32_t const child = node->ltrans;
         if (child != 0)
@@ -1791,7 +1794,7 @@ static void printf_branch(uint32_t nodeid, Pager *pager, Pager_vt const *vt )
 
 void btree_printf(uint32_t root, Pager *pager, Pager_vt const *vt )
 {
-    printf("Root:\n");
+    printf("Root = %u:\n", root >> 1 );
     if (root & 1) {
         printf_branch(root >> 1, pager, vt);
     }

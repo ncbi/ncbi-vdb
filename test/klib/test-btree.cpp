@@ -406,50 +406,9 @@ FIXTURE_TEST_CASE( KeyTooLong, BtreeFixture )
     REQUIRE_RC_FAIL( BTreeEntry ( & pb -> root, &pager, &KPageFile_vt, &id, &was_inserted, key.c_str(), key.size() ) );    
 }
 
-// splitting leaves
-FIXTURE_TEST_CASE( Split_2_Right, BtreeFixture )
-{   // leaf(A) + B -> branch(B, left=(A), right=()) VDB-5026
-    Setup( GetName() );
-    in.push_back( string(6000, 'A' ) );
-    in.push_back( string(7000, 'B' ) );
-    Populate();
-}
-
-FIXTURE_TEST_CASE( Split_2_Left, BtreeFixture )
-{   // leaf(B) + A -> branch(A, left=(), right=(B)) VDB-5026
-    Setup( GetName() );
-    in.push_back( string(6000, 'B' ) );
-    in.push_back( string(7000, 'A' ) );
-    Populate();
-}
-
-FIXTURE_TEST_CASE( Split_3_First, BtreeFixture )
-{   // leaf(B,C) + A -> branch(A, left=(), right=(B,C)) VDB-5026
-    Setup( GetName() );
-    in.push_back( string(5000, 'B' ) );
-    in.push_back( string(6000, 'C' ) ); // B and C fit in one leaf
-    in.push_back( string(8000, 'A' ) ); // A has to be on its own
-    Populate();
-}
-FIXTURE_TEST_CASE( Split_3_Middle, BtreeFixture )
-{   // leaf(A,C) + B -> branch(B, left=(A), right=(C)) VDB-5026
-    Setup( GetName() );
-    in.push_back( string(5000, 'A' ) );
-    in.push_back( string(6000, 'C' ) ); // A and C fit in one leaf
-    in.push_back( string(8000, 'B' ) ); // B has to be on its own
-    Populate();
-}
-FIXTURE_TEST_CASE( Split_Insert_Right_Leaf, BtreeFixture )
-{   // leaf(A,B) + C -> branch(B, left=(A), right=(C)) VDB-5026
-    Setup( GetName() );
-    in.push_back( string(5000, 'A' ) );
-    in.push_back( string(6000, 'B' ) ); // A and B fit in one leaf
-    in.push_back( string(8000, 'C' ) ); // C has to be on its own
-    Populate();
-}
-FIXTURE_TEST_CASE( Split_Insert_Left_Leaf, BtreeFixture )
-{   // leaf(A) + C -> branch(C, left=(A), right=())
-    // + D -> branch(C, left=(A), right=(D) )
+FIXTURE_TEST_CASE( Split_leaf, BtreeFixture )
+{   // leaf(A) + C -> leaf( A C )
+    // + D -> leaf( A C  D )
     // + B -> branch(C, left=(A B), right=(D) )
     Setup( GetName() );
     in.push_back( string(8000, 'A' ) );
@@ -458,78 +417,6 @@ FIXTURE_TEST_CASE( Split_Insert_Left_Leaf, BtreeFixture )
     in.push_back( string(10000,  'B' ) );
     Populate();
     //Print();
-}
-
-// splitting branches
-FIXTURE_TEST_CASE( Insert_Branch, BtreeFixture )
-{   // leaf(A) + B -> branch(B, [leaf(A)])
-    // + C -> branch(B, [leaf(A), leaf(C)] )
-    // + D -> branch(D, [ branch(B, [leaf(A), leaf(C)])] )
-    // + E -> branch(D, [ branch(B, [leaf(A), leaf(C)]),
-    //                    branch(,  [leaf(E)] ) ] )
-    // + F -> branch(D, [ branch(B, [leaf(A), leaf(C)]),
-    //                    branch(F, [leaf(E)] ) ] )
-    Setup( GetName() );
-    // each of these keys should occupy a separate block
-    in.push_back( string(5000, 'A' ) );
-    in.push_back( string(6000, 'B' ) );
-    in.push_back( string(7000, 'C' ) );
-    in.push_back( string(8000, 'D' ) );
-    in.push_back( string(9000, 'E' ) );
-    in.push_back( string(10000, 'F' ) );
-    Populate();
-    //Print();
-}
-
-FIXTURE_TEST_CASE( Insert_Branch_Rebalance_1, BtreeFixture )
-{   // leaf(A) + B -> branch(B, [leaf(A)])
-    // + D -> branch( B, [leaf(A), leaf(D)] )
-    // + C -> branch( C, [ branch(B, [leaf(A)]) ],
-    //                     branch(,  [leaf(D)]) )
-
-    Setup( GetName() );
-    // each of these keys should occupy a separate block
-    in.push_back( string(7000, 'A' ) );
-    in.push_back( string(8000, 'B' ) );
-    in.push_back( string(10000, 'D' ) );
-    in.push_back( string(9000, 'C' ) );
-    Populate();
-    //Print();
-}
-FIXTURE_TEST_CASE( Insert_Branch_Rebalance, BtreeFixture )
-{   // leaf(A) + B -> branch(B, [leaf(A)])
-    // + D -> branch(B, [leaf(A), leaf(D)] )
-    // + E -> branch(E, [ branch(B, [ leaf(A), leaf(D)]) ]
-    // + F -> branch(E, [ branch(B, [ leaf(A), leaf(D)]),
-    //                    branch(,  [ leaf(F) ] )
-    // + G -> branch(E, [ branch(B, [ leaf(A), leaf(D)]),
-    //                    branch(G, [ leaf(F) ] )
-    // now, a rebalancing
-    // + C -> branch(E, [ branch(B, [ leaf(A), leaf(D)]),
-    //                    branch(G, [ leaf(F) ] )
-
-    Setup( GetName() );
-    // each of these keys should occupy a separate block
-    in.push_back( string(4000, 'A' ) );
-    in.push_back( string(5000, 'B' ) );
-    in.push_back( string(7000, 'D' ) );
-    in.push_back( string(8000, 'E' ) );
-//    in.push_back( string(9000, 'F' ) );
-//    in.push_back( string(10000, 'G' ) );
-    in.push_back( string(6000, 'C' ) );
-    Populate();
-//    Print();
-}
-
-FIXTURE_TEST_CASE( Split_Last_1, BtreeFixture )
-{   // leaf(A) + B -> branch(B, left=(A), right=())
-    // + D -> branch(B, left=(A), right=(D) )
-    // + C -> branch(C, branch(B, left=(A), right=(C) )
-    Setup( GetName() );
-    in.push_back( string(8000, 'A' ) );
-    in.push_back( string(9000, 'B' ) );
-    in.push_back( string(10000, 'C' ) );
-    Populate();
 }
 
 FIXTURE_TEST_CASE( Split_LeftOfMedian, BtreeFixture )
@@ -701,34 +588,6 @@ FIXTURE_TEST_CASE( Find, BtreeFixture )
 }
 
 //TODO: ForEach, both directions
-
-FIXTURE_TEST_CASE( BTree_insert, BtreeFixture )
-{   // VDB-4959
-    std::ifstream file(DataDir + "btree_keys.bin", std::ios::binary);
-    file.unsetf(std::ios::skipws);
-
-    Setup( GetName() );
-
-    uint32_t id = 0;
-    while ( file )
-    {
-        size_t size;
-        file.read((char*)&size, sizeof(size));
-        if ( ! file ) break;
-        char * buf = new char[size];
-        file.read(buf, size);
-        if ( ! file ) break;
-
-        ++id;
-//cout << "inserting " << size << endl;
-        REQUIRE( TreeEntry ( string(  buf, size ), false ) );
-        //Print();
-        //Validate();
-//cout << "root=" << pb -> root << ",size=" << size << ", id=" << id << endl;
-
-        delete [] buf;
-    }
-}
 
 FIXTURE_TEST_CASE( BTree_randomInserts, BtreeFixture )
 {
