@@ -64,6 +64,7 @@
 #include "../kns/mgr-priv.h" /* KNSManagerGetCloudLocation */
 #include "json-response.h" /* Response4 */
 #include "jwt.h" /* JwtKartValidateFile */
+#include "manager-priv.h" /* VFSManagerExtNoqual */
 #include "path-priv.h" /* VPathMakeFmt */
 #include "resolver-cgi.h" /* RESOLVER_CGI */
 #include "resolver-priv.h" /* VPathCheckFromNamesCGI */
@@ -4730,8 +4731,23 @@ static rc_t KSrvRespObj_AttachVdbcaches(const KSrvRespObj * self) {
                 }
                 if (StringCompare(&type, &sra) == 0) {
                     rc = VPathGetNameExt(next, &nameExt);
-                    if (rc == 0 && nameExt.size == 0)
-                        aType = eSra;
+                    if (rc == 0) {
+                        if (nameExt.size == 0)
+                            aType = eSra;
+                        else {
+                            String sralite;
+                            const String * sralitE = VFSManagerExtNoqual(NULL);
+                            memset(&sralite, 0, sizeof sralite);
+                            if (sralitE != NULL &&
+                               sralitE->addr != NULL && sralitE->addr[0] != '\0'
+                               && sralitE->size > 0 && sralitE->len > 0)
+                            {
+                                StringInitCString(&sralite, sralitE->addr + 1);
+                            }
+                            if (StringEqual(&nameExt, &sralite))
+                                aType = eSra;
+                        }
+                    }
                 }
                 else if (StringCompare(&type, &vdbcache) == 0)
                     aType = eVdbcache;
