@@ -683,7 +683,7 @@ LIB_EXPORT rc_t CC VDatabaseOpenKDatabaseUpdate ( VDatabase *self, KDatabase **k
 /* VDatabaseMetaCopy
  *  deep copy of metadata-nodes form src to self...
  */
-
+/*
 static rc_t copy_meta_for_one_table_in_db ( VDatabase *self, const VDatabase *src,
                                       const char * node_path, const char * tbl_name ) {
     VTable * tbl1;
@@ -734,6 +734,7 @@ static bool is_empty( const char * s ) {
     if ( !res ) { res = ( 0 == s[ 0 ] ); }
     return res;
 }
+*/
 
 LIB_EXPORT rc_t CC VDatabaseMetaCopy ( VDatabase *self, const VDatabase *src,
                                        const char * node_path, const char * tbl_name ) {
@@ -743,12 +744,15 @@ LIB_EXPORT rc_t CC VDatabaseMetaCopy ( VDatabase *self, const VDatabase *src,
     } else if ( NULL == src ) {
         rc = RC ( rcVDB, rcDatabase, rcComparing, rcParam, rcNull );
     } else {
+        /* do the work in the KDB - realm ... */
+        rc = KDatabaseMetaCopy( self -> kdb, src -> kdb, node_path, tbl_name );
+        /*
         if ( is_empty( tbl_name ) ) {
             rc = copy_meta_for_all_tables_in_db( self, src, node_path );
         } else {
             rc = copy_meta_for_one_table_in_db( self, src, node_path, tbl_name );
         }
+        */
     }
     return rc;
-                                           
 }
