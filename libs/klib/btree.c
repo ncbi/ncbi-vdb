@@ -36,6 +36,9 @@
 #include <stdio.h>
 #include <ctype.h>
 
+ 
+//#define assert(e) { if ( ! (e) ) abort(); }
+
 typedef struct SearchWindow {
     uint16_t	lower;
     uint16_t	upper;
