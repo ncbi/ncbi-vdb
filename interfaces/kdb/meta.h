@@ -428,7 +428,8 @@ KDB_EXTERN rc_t CC KMDataNodeCompare( const KMDataNode *self, KMDataNode const *
  *  "source" [ IN ] - the table to copy from
  *  "path"   [ IN ] - selects the node to copy
  */
-KDB_EXTERN rc_t CC KTableMetaCopy( struct KTable *self, const struct KTable *src, const char * path );
+KDB_EXTERN rc_t CC KTableMetaCopy( struct KTable *self, const struct KTable *src,
+                                const char * path, bool src_node_has_to_exist );
 
 /* Compare Node on tables
  *  compares the content of 2 nodes ( given by path )

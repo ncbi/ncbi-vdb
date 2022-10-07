@@ -271,7 +271,8 @@ KDB_EXTERN rc_t CC KDatabaseOpenParentRead ( const KDatabase *self, const KDatab
 KDB_EXTERN rc_t CC KDatabaseOpenParentUpdate ( KDatabase *self, KDatabase **par );
 
 KDB_EXTERN rc_t CC KDatabaseMetaCopy ( KDatabase *self, const KDatabase *src,
-                                       const char * node_path, const char * tbl_name );
+                                       const char * node_path, const char * tbl_name,
+                                       bool src_node_has_to_exist );
 
 #ifdef __cplusplus
 }

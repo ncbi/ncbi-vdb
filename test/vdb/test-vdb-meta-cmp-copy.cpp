@@ -28,6 +28,7 @@
 #include <vdb/table.h>
 #include <vdb/database.h>
 #include <kdb/meta.h>
+#include <klib/out.h>
 
 #include <ktst/unit_test.hpp> // THROW_ON_RC
 
@@ -66,7 +67,6 @@ rc_t write_some_data( VTable * t, bool full ) {
         if ( 0 == rc ) { rc = VCursorCommit( c ); }
         VCursorRelease( c );
     }
-    if ( 0 == rc ) { rc = VTableRelease( t ); }
     return rc;
 }
 
@@ -90,7 +90,7 @@ rc_t append_some_metadata( VTable * t ) {
 
 class Test_Meta_Fixture {
 public:
-    typedef std::map< std::string, const VTable * > t_tables;
+    typedef std::map< std::string, const VTable * > t_tables;    
     typedef std::map< std::string, const VDatabase * > t_dbs;
     
     KDirectory * dir;
@@ -190,7 +190,10 @@ public:
 
     void close_tables( bool remove_dir ) {
         for ( auto i = tables . begin(); i != tables . end(); ++i ) {
-            VTableRelease( i -> second );
+            rc_t rc = VTableRelease( i -> second );
+            if ( 0 != rc ) {
+                throw std :: logic_error ( "Test_Meta_Fixture: close_tables.VTableRelease failed" );
+            }
             if ( remove_dir ) { KDirectoryRemove( dir, true, "%s", i -> first . c_str() ); }
         }
         tables . clear();
@@ -198,7 +201,10 @@ public:
 
     void close_dbs( bool remove_dir ) {
         for ( auto i = dbs . begin(); i != dbs . end(); ++i ) {
-            VDatabaseRelease( i -> second );
+            rc_t rc = VDatabaseRelease( i -> second );
+            if ( 0 != rc ) {
+                throw std :: logic_error ( "Test_Meta_Fixture: close_dbs.VDatabaseRelease failed" );
+            }
             if ( remove_dir ) { KDirectoryRemove( dir, true, "%s", i -> first . c_str() ); }
         }
         dbs . clear();
@@ -219,13 +225,17 @@ public:
 FIXTURE_TEST_CASE( Compare_Table_Meta_Equal, Test_Meta_Fixture ) {
     REQUIRE_RC( VSchemaParseText( schema, "TableTestSchema", tbl_test_schema, strlen( tbl_test_schema ) ) );
 
-    VTable * Tbl1 = create_table( "A_TABLE", "TBL1" );
-    VTable * Tbl2 = create_table( "A_TABLE", "TBL2" );
+    {
+        VTable * t1 = create_table( "A_TABLE", "TBL1" );
+        REQUIRE( t1 != nullptr );
+        VTable * t2 = create_table( "A_TABLE", "TBL2" );
+        REQUIRE( t2 != nullptr );
 
-    REQUIRE_RC( write_some_data( Tbl1, true ) );    // creates identical data in both tables
-    REQUIRE_RC( write_some_data( Tbl2, true ) );
-    close_tables( false );
-    
+        REQUIRE_RC( write_some_data( t1, true ) );    // creates identical data in both tables
+        REQUIRE_RC( write_some_data( t2, true ) );
+        close_tables( false );
+    }
+
     /* the meta-node 'col' should now be equal in both tables... */
     /*
      * very important: we cannot compare tables that are still open after
@@ -234,52 +244,66 @@ FIXTURE_TEST_CASE( Compare_Table_Meta_Equal, Test_Meta_Fixture ) {
      * these tables have to be closed, then reopened in read-only mode!
      * --- the write_some_data() - function does that...
      */
-    const VTable * Tbl1_c = open_table_read( "TBL1" );
-    const VTable * Tbl2_c = open_table_read( "TBL2" );
+    const VTable * t1 = open_table_read( "TBL1" );
+    REQUIRE( t1 != nullptr );
+    const VTable * t2 = open_table_read( "TBL2" );
+    REQUIRE( t2 != nullptr );
 
     bool equal;
-    REQUIRE_RC( VTableMetaCompare( Tbl1_c, Tbl2_c, "col", &equal ) );
+    REQUIRE_RC( VTableMetaCompare( t1, t2, "col", &equal ) );
     REQUIRE_EQ( equal, true );
 }
 
 FIXTURE_TEST_CASE( Compare_Table_Meta_Not_Equal, Test_Meta_Fixture ) {
     REQUIRE_RC( VSchemaParseText( schema, "TableTestSchema", tbl_test_schema, strlen( tbl_test_schema ) ) );
 
-    VTable * Tbl1 = create_table( "A_TABLE", "TBL1" );
-    VTable * Tbl2 = create_table( "A_TABLE", "TBL2" );
+    {
+        VTable * t1 = create_table( "A_TABLE", "TBL1" );
+        REQUIRE( t1 != nullptr );
+        VTable * t2 = create_table( "A_TABLE", "TBL2" );
+        REQUIRE( t2 != nullptr );
 
-    REQUIRE_RC( append_some_metadata( Tbl1 ) );
-    REQUIRE_RC( write_some_data( Tbl1, true ) );        // creates different data in the tables
-    REQUIRE_RC( write_some_data( Tbl2, false ) );
+        REQUIRE_RC( append_some_metadata( t1 ) );
+        REQUIRE_RC( write_some_data( t1, true ) );        // creates different data in the tables
+        REQUIRE_RC( write_some_data( t2, false ) );
+        close_tables( false );
+    }
 
-    /* the meta-node 'col' should not be equal in both tables... ( different data )*/
-    /*
-     * very important: we cannot compare tables that are still open after
-     * beeing written into them.
-     * 
-     * these tables have to be closed, then reopened in read-only mode!
-     * --- the write_some_data() - function does that...     * 
-     */
-    const VTable * Tbl1_c = open_table_read( "TBL1" );
-    const VTable * Tbl2_c = open_table_read( "TBL2" );
+    // the meta-node 'col' should not be equal in both tables... ( different data )
+    //
+    // very important: we cannot compare tables that are still open after
+    // beeing written into them.
+    // 
+    // these tables have to be closed, then reopened in read-only mode!
+    // --- the write_some_data() - function does that...
+
+    const VTable * t1 = open_table_read( "TBL1" );
+    REQUIRE( t1 != nullptr );
+    const VTable * t2 = open_table_read( "TBL2" );
+    REQUIRE( t2 != nullptr );
 
     bool equal;
-    REQUIRE_RC( VTableMetaCompare( Tbl1_c, Tbl2_c, "col", &equal ) );
+    REQUIRE_RC( VTableMetaCompare( t1, t2, "col", &equal ) );
     REQUIRE_EQ( equal, false );
 }
 
 FIXTURE_TEST_CASE( Copy_Table_Meta, Test_Meta_Fixture ) {
     REQUIRE_RC( VSchemaParseText( schema, "TableTestSchema", tbl_test_schema, strlen( tbl_test_schema ) ) );
 
-    VTable * Tbl1 = create_table( "A_TABLE", "TBL1" );
-    VTable * Tbl2 = create_table( "A_TABLE", "TBL2" );
+    VTable * t1 = create_table( "A_TABLE", "TBL1" );
+    REQUIRE( t1 != nullptr );
+    VTable * t2 = create_table( "A_TABLE", "TBL2" );
+    REQUIRE( t1 != nullptr );
 
-    REQUIRE_RC( append_some_metadata( Tbl1 ) );
-    REQUIRE_RC( write_some_data( Tbl1, true ) );        // creates different data in the tables
-    REQUIRE_RC( write_some_data( Tbl2, false ) );
+    REQUIRE_RC( append_some_metadata( t1 ) );
+    REQUIRE_RC( write_some_data( t1, true ) );        // creates different data in the tables
+    REQUIRE_RC( write_some_data( t2, false ) );
+    close_tables( false );
 
     const VTable * src = open_table_read( "TBL1" );
+    REQUIRE( src != nullptr );
     VTable * dst = open_table_update( "TBL2" );
+    REQUIRE( dst != nullptr );
 
     // check that there is not special-node in dst
     bool equal;
@@ -296,98 +320,133 @@ FIXTURE_TEST_CASE( Copy_Table_Meta, Test_Meta_Fixture ) {
 FIXTURE_TEST_CASE( Compare_DB_Meta_Equal, Test_Meta_Fixture ) {
     REQUIRE_RC( VSchemaParseText( schema, "DBTestSchema", db_test_schema, strlen( db_test_schema ) ) );
 
-    VDatabase * db1 = create_db( "MAIN_DB", "DB1" );
-    VDatabase * db2 = create_db( "MAIN_DB", "DB2" );
+    {
+        VDatabase * db = create_db( "MAIN_DB", "DB1" );
+        REQUIRE( db != nullptr );
+        VTable * t1 = create_table( "T1", "TBL1", db );
+        REQUIRE( t1 != nullptr );
+        VTable * t2 = create_table( "T1", "TBL2", db );
+        REQUIRE( t2 != nullptr );
+        REQUIRE_RC( write_some_data( t1, true ) );    // creates identical data in both tables
+        REQUIRE_RC( write_some_data( t2, true ) );
+        close_tables( false );
+        close_dbs( false );
+    }
 
-    VTable * db1_t1 = create_table( "T1", "TBL1", db1 );
-    VTable * db1_t2 = create_table( "T1", "TBL2", db1 );
-    REQUIRE_RC( write_some_data( db1_t1, true ) );    // creates identical data in both tables
-    REQUIRE_RC( write_some_data( db1_t2, true ) );
+    {
+        VDatabase * db = create_db( "MAIN_DB", "DB2" );
+        REQUIRE( db != nullptr );
+        VTable * t1 = create_table( "T1", "TBL1", db );
+        REQUIRE( t1 != nullptr );
+        VTable * t2 = create_table( "T1", "TBL2", db );
+        REQUIRE( t2 != nullptr );
+        REQUIRE_RC( write_some_data( t1, true ) );    // creates identical data in both tables
+        REQUIRE_RC( write_some_data( t2, true ) );
+        close_tables( false );
+        close_dbs( false );
+    }
 
-    VTable * db2_t1 = create_table( "T1", "TBL1", db2 );
-    VTable * db2_t2 = create_table( "T1", "TBL2", db2 );
-    REQUIRE_RC( write_some_data( db2_t1, true ) );    // creates identical data in both tables
-    REQUIRE_RC( write_some_data( db2_t2, true ) );
+    const VDatabase * db1 = open_db_read( "DB1" );
+    REQUIRE( db1 != nullptr );
+    const VDatabase * db2 = open_db_read( "DB2" );
+    REQUIRE( db2 != nullptr );
 
-    close_tables( false );
-    close_dbs( false );
-
-    const VDatabase * db1_c = open_db_read( "DB1" );
-    const VDatabase * db2_c = open_db_read( "DB2" );
-    
     bool equal;
-    REQUIRE_RC( VDatabaseMetaCompare( db1_c, db2_c, "col", "TBL1", &equal ) );
+    REQUIRE_RC( VDatabaseMetaCompare( db1, db2, "col", "TBL1", &equal ) );  // compare col-node in TBL1 between 2 db's
     REQUIRE_EQ( equal, true );
 
-    REQUIRE_RC( VDatabaseMetaCompare( db1_c, db2_c, "col", "TBL2", &equal ) );
+    REQUIRE_RC( VDatabaseMetaCompare( db1, db2, "col", "TBL2", &equal ) );  // compare col-node in TBL2 between 2 db's
     REQUIRE_EQ( equal, true );
 
-    REQUIRE_RC( VDatabaseMetaCompare( db1_c, db2_c, "col", nullptr, &equal ) );
+    REQUIRE_RC( VDatabaseMetaCompare( db1, db2, "col", nullptr, &equal ) ); // compare col-node in all tables between 2 db's
     REQUIRE_EQ( equal, true );
 }
 
 FIXTURE_TEST_CASE( Compare_DB_Meta_Not_Equal, Test_Meta_Fixture ) {
     REQUIRE_RC( VSchemaParseText( schema, "DBTestSchema", db_test_schema, strlen( db_test_schema ) ) );
 
-    VDatabase * db1 = create_db( "MAIN_DB", "DB1" );
-    VDatabase * db2 = create_db( "MAIN_DB", "DB2" );
+    {
+        VDatabase * db = create_db( "MAIN_DB", "DB1" );
+        REQUIRE( db != nullptr );
+        VTable * t1 = create_table( "T1", "TBL1", db );
+        REQUIRE( t1 != nullptr );
+        VTable * t2 = create_table( "T1", "TBL2", db );
+        REQUIRE( t2 != nullptr );
+        REQUIRE_RC( write_some_data( t1, true ) );    // creates identical data in both tables
+        REQUIRE_RC( write_some_data( t2, true ) );
+        close_tables( false );
+        close_dbs( false );
+    }
 
-    VTable * db1_t1 = create_table( "T1", "TBL1", db1 );
-    VTable * db1_t2 = create_table( "T1", "TBL2", db1 );
-    REQUIRE_RC( write_some_data( db1_t1, true ) );    // creates identical data in both tables
-    REQUIRE_RC( write_some_data( db1_t2, true ) );
+    {
+        VDatabase * db = create_db( "MAIN_DB", "DB2" );
+        VTable * t1 = create_table( "T1", "TBL1", db );
+        REQUIRE( t1 != nullptr );
+        VTable * t2 = create_table( "T1", "TBL2", db );
+        REQUIRE( t2 != nullptr );
+        REQUIRE_RC( write_some_data( t1, false ) );    // creates different data in both tables
+        REQUIRE_RC( write_some_data( t2, false ) );    // different from DB1
+        close_tables( false );
+        close_dbs( false );
+    }
 
-    VTable * db2_t1 = create_table( "T1", "TBL1", db2 );
-    VTable * db2_t2 = create_table( "T1", "TBL2", db2 );
-    REQUIRE_RC( write_some_data( db2_t1, false ) );    // creates different data in both tables
-    REQUIRE_RC( write_some_data( db2_t2, false ) );    // different from db1_*
+    const VDatabase * db1 = open_db_read( "DB1" );
+    REQUIRE( db1 != nullptr );
+    const VDatabase * db2 = open_db_read( "DB2" );
+    REQUIRE( db2 != nullptr );
 
-    close_tables( false );
-    close_dbs( false );
-
-    const VDatabase * db1_c = open_db_read( "DB1" );
-    const VDatabase * db2_c = open_db_read( "DB2" );
-    
     bool equal;
-    REQUIRE_RC( VDatabaseMetaCompare( db1_c, db2_c, "col", "TBL1", &equal ) );
+    REQUIRE_RC( VDatabaseMetaCompare( db1, db2, "col", "TBL1", &equal ) );
     REQUIRE_EQ( equal, false );
 
-    REQUIRE_RC( VDatabaseMetaCompare( db1_c, db2_c, "col", "TBL2", &equal ) );
+    REQUIRE_RC( VDatabaseMetaCompare( db1, db2, "col", "TBL2", &equal ) );
     REQUIRE_EQ( equal, false );
 
-    REQUIRE_RC( VDatabaseMetaCompare( db1_c, db2_c, "col", nullptr, &equal ) );
+    REQUIRE_RC( VDatabaseMetaCompare( db1, db2, "col", nullptr, &equal ) );
     REQUIRE_EQ( equal, false );
 }
 
 FIXTURE_TEST_CASE( Copy_DB_Meta, Test_Meta_Fixture ) {
     REQUIRE_RC( VSchemaParseText( schema, "DBTestSchema", db_test_schema, strlen( db_test_schema ) ) );
 
-    VDatabase * db1 = create_db( "MAIN_DB", "DB1" );
-    VDatabase * db2 = create_db( "MAIN_DB", "DB2" );
+    {
+        VDatabase * db = create_db( "MAIN_DB", "DB1" );
+        REQUIRE( db != nullptr );
+        VTable * t1 = create_table( "T1", "TBL1", db );
+        REQUIRE( t1 != nullptr );
+        VTable * t2 = create_table( "T1", "TBL2", db );
+        REQUIRE( t2 != nullptr );
+        REQUIRE_RC( append_some_metadata( t1 ) );
+        REQUIRE_RC( write_some_data( t1, true ) );    // creates identical data in both tables
+        REQUIRE_RC( write_some_data( t2, true ) );
+        close_tables( false );
+        close_dbs( false );
+    }
 
-    VTable * db1_t1 = create_table( "T1", "TBL1", db1 );
-    VTable * db1_t2 = create_table( "T1", "TBL2", db1 );
-    REQUIRE_RC( append_some_metadata( db1_t1 ) );
-    REQUIRE_RC( write_some_data( db1_t1, true ) );    // creates identical data in both tables
-    REQUIRE_RC( write_some_data( db1_t2, true ) );
-
-    VTable * db2_t1 = create_table( "T1", "TBL1", db2 );
-    VTable * db2_t2 = create_table( "T1", "TBL2", db2 );
-    REQUIRE_RC( write_some_data( db2_t1, true ) );    // creates different data in both tables
-    REQUIRE_RC( write_some_data( db2_t2, true ) );    // different from db1_*
-
-    close_tables( false );
-    close_dbs( false );
+    {
+        VDatabase * db = create_db( "MAIN_DB", "DB2" );
+        REQUIRE( db != nullptr );
+        VTable * t1 = create_table( "T1", "TBL1", db );
+        REQUIRE( t1 != nullptr );
+        VTable * t2 = create_table( "T1", "TBL2", db );
+        REQUIRE( t2 != nullptr );
+        REQUIRE_RC( write_some_data( t1, true ) );    // creates different data in both tables
+        REQUIRE_RC( write_some_data( t2, true ) );    // different from db1_*
+        close_tables( false );
+        close_dbs( false );
+    }
 
     const VDatabase * src = open_db_read( "DB1" );
+    REQUIRE( src != nullptr );
     VDatabase * dst = open_db_update( "DB2" );
+    REQUIRE( dst != nullptr );
 
     bool equal;
     REQUIRE_RC( VDatabaseMetaCompare( src, dst, "special", nullptr, &equal ) );
     REQUIRE_EQ( equal, false );
 
     // copy the special node from src to dst
-    REQUIRE_RC( VDatabaseMetaCopy( dst, src, "special", nullptr ) );
+    REQUIRE_RC( VDatabaseMetaCopy( dst, src, "special", nullptr, false ) );
 
     // it is not equal for all tables...
     REQUIRE_RC( VDatabaseMetaCompare( src, dst, "special", nullptr, &equal ) );
@@ -396,7 +455,6 @@ FIXTURE_TEST_CASE( Copy_DB_Meta, Test_Meta_Fixture ) {
     // but it is equal for TBL1...
     REQUIRE_RC( VDatabaseMetaCompare( src, dst, "special", "TBL1", &equal ) );
     REQUIRE_EQ( equal, true );
-
 }
 
 //////////////////////////////////////////// Main

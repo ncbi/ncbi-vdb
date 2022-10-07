@@ -1693,14 +1693,15 @@ KChecksum KDatabaseSetChecksum ( KDatabase *self, KChecksum new_val)
 /* ------------------------------------------------------------------------------------ */
 
 static rc_t copy_meta_for_one_table_in_db ( KDatabase *self, const KDatabase *src,
-                                      const char * node_path, const char * tbl_name ) {
+                                      const char * node_path, const char * tbl_name,
+                                      bool src_node_has_to_exist ) {
     KTable * dst_tbl;
     rc_t rc = KDatabaseOpenTableUpdate( self, &dst_tbl, tbl_name );
     if ( 0 == rc ) {
         const KTable * src_tbl;
         rc = KDatabaseOpenTableRead( src, &src_tbl, tbl_name );
         if ( 0 == rc ) {
-            rc = KTableMetaCopy( dst_tbl, src_tbl, node_path );
+            rc = KTableMetaCopy( dst_tbl, src_tbl, node_path, src_node_has_to_exist );
             KTableRelease( src_tbl );
         }
         KTableRelease( dst_tbl );
@@ -1709,7 +1710,7 @@ static rc_t copy_meta_for_one_table_in_db ( KDatabase *self, const KDatabase *sr
 }
 
 static rc_t copy_meta_for_all_tables_in_db( KDatabase *self, const KDatabase *src,
-                                            const char * node_path ) {
+                                            const char * node_path, bool src_node_has_to_exist ) {
     KNamelist * tables_1;
     rc_t rc = KDatabaseListTbl( self, &tables_1 );
     if ( 0 == rc ) {
@@ -1725,7 +1726,7 @@ static rc_t copy_meta_for_all_tables_in_db( KDatabase *self, const KDatabase *sr
                     rc = KNamelistGet( tables_1, idx, &tbl_name );
                     if ( 0 == rc ) {
                         if ( KNamelistContains( tables_2, tbl_name ) ) {
-                            rc = copy_meta_for_one_table_in_db( self, src, node_path, tbl_name );
+                            rc = copy_meta_for_one_table_in_db( self, src, node_path, tbl_name, src_node_has_to_exist );
                         }
                     }
                 }
@@ -1744,7 +1745,8 @@ static bool is_empty( const char * s ) {
 }
 
 LIB_EXPORT rc_t CC KDatabaseMetaCopy ( KDatabase *self, const KDatabase *src,
-                                       const char * node_path, const char * tbl_name ) {
+                                       const char * node_path, const char * tbl_name,
+                                       bool src_node_has_to_exist ) {
     rc_t rc = 0;
     if ( NULL == self ) {
         rc = RC ( rcDB, rcDatabase, rcComparing, rcSelf, rcNull );
@@ -1752,11 +1754,10 @@ LIB_EXPORT rc_t CC KDatabaseMetaCopy ( KDatabase *self, const KDatabase *src,
         rc = RC ( rcDB, rcDatabase, rcComparing, rcParam, rcNull );
     } else {
         if ( is_empty( tbl_name ) ) {
-            rc = copy_meta_for_all_tables_in_db( self, src, node_path );
+            rc = copy_meta_for_all_tables_in_db( self, src, node_path, src_node_has_to_exist );
         } else {
-            rc = copy_meta_for_one_table_in_db( self, src, node_path, tbl_name );
+            rc = copy_meta_for_one_table_in_db( self, src, node_path, tbl_name, true );
         }
     }
     return rc;
-                                           
 }

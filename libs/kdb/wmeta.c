@@ -3637,7 +3637,8 @@ LIB_EXPORT rc_t CC KMDataNodeCopy(  KMDataNode *self
 /* KTableMetaCopy
  *  copies node ( at given path ) from src to self
  */
-LIB_EXPORT rc_t CC KTableMetaCopy( KTable *self, const KTable *src, const char * path ) {
+LIB_EXPORT rc_t CC KTableMetaCopy( KTable *self, const KTable *src, const char * path,
+                                   bool src_node_has_to_exist ) {
     rc_t rc = 0;
     if ( NULL == self ) {
         rc = RC ( rcDB, rcTable, rcComparing, rcSelf, rcNull );
@@ -3658,10 +3659,12 @@ LIB_EXPORT rc_t CC KTableMetaCopy( KTable *self, const KTable *src, const char *
                     if ( 0 == rc ) {
                         rc = KMDataNodeCopy( self_node, src_node );
                         KMDataNodeRelease( src_node );
+                    } else {
+                        if ( !src_node_has_to_exist ) { rc = 0; }
                     }
                     KMDataNodeRelease( self_node );
                 }
-                KMetadataRelease( src_meta );                
+                KMetadataRelease( src_meta );
             }
             KMetadataRelease( self_meta );
         }
