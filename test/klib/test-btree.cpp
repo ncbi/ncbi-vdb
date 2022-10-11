@@ -403,7 +403,7 @@ FIXTURE_TEST_CASE( KeyTooLong, BtreeFixture )
     string key (11000, 'A');
     pb.reset( MakeEntry( string( key.c_str(), key.size() ) ) );
     bool was_inserted;
-    REQUIRE_RC_FAIL( BTreeEntry ( & pb -> root, &pager, &KPageFile_vt, &id, &was_inserted, key.c_str(), key.size() ) );    
+    REQUIRE_RC_FAIL( BTreeEntry ( & pb -> root, &pager, &KPageFile_vt, &id, &was_inserted, key.c_str(), key.size() ) );
 }
 
 FIXTURE_TEST_CASE( Split_leaf, BtreeFixture )
@@ -594,7 +594,7 @@ FIXTURE_TEST_CASE( BTree_randomInserts, BtreeFixture )
     Setup( GetName() );
 
     uint32_t id = 0;
-    for( auto i = 0; i != 100000000; ++i )
+    for( auto i = 0; i != 10000000; ++i )
     {   // key sizes 1..1024 are taken from sra-sort ( they are not enforced but longer keys
         // are likelier to trigger a constraint violation error in btree.c:leaf_insert() )
         string s = string(1 + rand() % 1024, rand() % 256 );
