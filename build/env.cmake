@@ -185,6 +185,9 @@ elseif ( "MSVC" STREQUAL "${CMAKE_C_COMPILER_ID}")
     set( DISABLED_WARNINGS_CXX "/wd4623 /wd4625 /wd4626 /wd5026 /wd5027 /wd4571")
     set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${DISABLED_WARNINGS_C}" )
     set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${DISABLED_WARNINGS_C} ${DISABLED_WARNINGS_CXX}" )
+
+    # properly report the C++ version in __cplusplus (by default, always set to "199711L" !)
+    add_compile_options("/Zc:__cplusplus")    
 endif()
 
 # assume debug build by default
