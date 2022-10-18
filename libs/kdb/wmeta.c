@@ -3720,6 +3720,7 @@ static void CC KMDataNodeCompareChildren_cb( BSTNode *n, void *data ) {
         ctx -> rc = KMDataNodeOpenNodeRead( ctx -> other, &other_child, childName );
         if ( 0 == ctx -> rc ) {
             ctx -> rc = KMDataNodeCompare_int( child, other_child, ctx -> equal ); /* recursion here! */
+            KMDataNodeRelease( other_child );
         } else {
             *( ctx -> equal ) = false;
         }

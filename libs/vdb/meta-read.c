@@ -157,7 +157,7 @@ LIB_EXPORT rc_t CC VTableMetaCompare ( const VTable *self, const VTable *other,
     } else {
         const KMetadata *self_meta;
         rc = VTableOpenMetadataRead( self, &self_meta );
-        *equal = false;        
+        *equal = false;
         if ( 0 == rc ) {
             const KMetadata *other_meta;
             rc = VTableOpenMetadataRead( other, &other_meta );
@@ -174,7 +174,7 @@ LIB_EXPORT rc_t CC VTableMetaCompare ( const VTable *self, const VTable *other,
                     }
                     KMDataNodeRelease( self_node );
                 }
-                KMetadataRelease( other_meta );                
+                KMetadataRelease( other_meta );
             }
             KMetadataRelease( self_meta );
         }

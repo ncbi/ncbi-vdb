@@ -1648,7 +1648,9 @@ LIB_EXPORT rc_t CC VDatabaseMetaCompare( const VDatabase *self, const VDatabase 
         if ( is_empty( tbl_name ) ) {
             rc = compare_meta_on_all_tables_in_db( self, other, node_path, equal );
             if ( 0 == rc && *equal ) {
-                rc = compare_meta_on_all_tables_in_db( other, self, node_path, equal );            
+                /* one more time with swapped self/other to catch the case where one table
+                   has the node and the other does not */
+                rc = compare_meta_on_all_tables_in_db( other, self, node_path, equal );
             }
         } else {
             rc = compare_meta_on_one_table_in_db( self, other, node_path, tbl_name, equal );
