@@ -85,7 +85,7 @@ public:
         KDirectory* wd;
         KDirectoryNativeDir ( & wd );
         uint32_t mode = 0;
-        bool is_good = (0 == KDirectoryAccess_v1(wd, &mode, "%s", path.c_str()) & (mode & 0111) != 0);
+        bool is_good = (0 == KDirectoryAccess_v1(wd, &mode, "%s", path.c_str()) && (mode & 0111) != 0);
 
         KDirectoryRelease(wd);
         if (is_good) return;
