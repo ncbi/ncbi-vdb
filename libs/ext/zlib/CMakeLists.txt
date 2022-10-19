@@ -42,4 +42,5 @@ set( LIBZ_SRC
 
 GenerateStaticLibs( z "${LIBZ_SRC}" )
 
+add_compile_definitions( Z_HAVE_UNISTD_H=1 )
 add_compile_definitions( __mod__="libs/ext/zlib" )
