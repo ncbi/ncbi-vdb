@@ -24,13 +24,13 @@
  *
  */
 /*
- * don't compare inverse cipher when we know we are using 
+ * don't compare inverse cipher when we know we are using
  * equivalent inverse cipher
  */
 #define COMPARE_INV_CIPHER 0
 
 /*
- * do compare equivalent inverse cipher when we know we are using 
+ * do compare equivalent inverse cipher when we know we are using
  * equivalent inverse cipher
  */
 #define COMPARE_EQ_INV_CIPHER 1
@@ -39,24 +39,17 @@
 #include <kapp/args.h>
 
 #include <krypto/ciphermgr.h>
-#include <krypto/cipher.h>
 #include <krypto/cipher-test.h>
-#include "../../libs/krypto/blockcipher-priv.h"
-#include "../../libs/krypto/cipher-priv.h"
+
 #include "../../libs/krypto/cipher-impl.h"
 #include "../../libs/krypto/aes-priv.h"
 
 #include <klib/status.h>
 #include <klib/log.h>
 #include <klib/out.h>
-#include <klib/status.h>
 #include <klib/rc.h>
-#include <klib/defs.h>
 
 #include <byteswap.h>
-
-#include <string.h>
-#include <stdlib.h>
 
 /*
   https://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
@@ -65,7 +58,7 @@
 */
 
 const char * types[]
-= 
+=
 {
     "AES byte",
     "AES vector",
@@ -125,7 +118,7 @@ bool block_compare (const uint8_t control [16], const uint8_t test [16])
         passed = passed && passed_this;
 
         STSMSG (4,("byte %u: control %0.2x test %0.2x %s\n",
-                   ix, 
+                   ix,
                    control[ix], test[ix],
                    passed_string[passed_this]));
     }
@@ -141,7 +134,7 @@ typedef struct key_expansion
 } key_expansion;
 
 
-const key_expansion  a_1 = 
+const key_expansion  a_1 =
 {
     {
         0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6,
@@ -171,7 +164,7 @@ const key_expansion a_2 = {
     { 0x8e, 0x73, 0xb0, 0xf7, 0xda, 0x0e, 0x64, 0x52,
       0xc8, 0x10, 0xf3, 0x2b, 0x80, 0x90, 0x79, 0xe5,
       0x62, 0xf8, 0xea, 0xd2, 0x52, 0x2c, 0x6b, 0x7b },
-    { 
+    {
         { 0xf7b0738e, 0x52640eda, 0x2bf310c8, 0xe5799080, /* 0-3 */
           0xd2eaf862, 0x7b6b2c52, 0xf7910cfe, 0xa5f50224, /* 4-7 */
           0x8e0612ec, 0x6b7f826c, 0xb9957a0e, 0xc2fe565c, /* 8-11 */
@@ -242,7 +235,7 @@ typedef struct cipher_example
     uint8_t cipher [16];
 } cipher_example;
 
-const cipher_example b = 
+const cipher_example b =
 {
     { 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6,
       0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c
@@ -262,7 +255,7 @@ const cipher_example b =
         10
     },
     {
-        
+
         0x32, 0x43, 0xF6, 0xA8, 0x88, 0x5A, 0x30, 0x8D,
         0x31, 0x31, 0x98, 0xA2, 0xE0, 0x37, 0x07, 0x34
     },
@@ -315,7 +308,7 @@ typedef struct example_vectors
 } example_vectors;
 
 
-example_vectors c_1 = 
+example_vectors c_1 =
 {
     /* Plain text */
     {
@@ -384,7 +377,7 @@ example_vectors c_1 =
     }
 };
 
-example_vectors c_2 = 
+example_vectors c_2 =
 {
     /* Plain text */
     {
@@ -446,7 +439,7 @@ example_vectors c_2 =
     }
 };
 
-example_vectors c_3 = 
+example_vectors c_3 =
 {
     /* Plain text */
     {
@@ -569,7 +562,7 @@ bool ExampleVector (KCipher * cipher, const example_vectors * ev)
             else
             {
                 passed_enc = block_compare (ev->cipher, cipher_text);
-                
+
                 rc = KCipherDecrypt (cipher, ev->cipher, plain_text);
                 if (rc)
                     ;
@@ -591,7 +584,7 @@ bool ExampleVector (KCipher * cipher, const example_vectors * ev)
 
 /* ==================================================== */
 
-/* typedef uint8_t VVV __attribute__ ((vector_size (16))); unused and non-portable */ 
+/* typedef uint8_t VVV __attribute__ ((vector_size (16))); unused and non-portable */
 
 bool run_one (KCipher * cipher)
 {
