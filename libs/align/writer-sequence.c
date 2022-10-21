@@ -552,6 +552,7 @@ static VTable *getVTable(TableWriterSeq *const self) {
     VTable *vtbl = NULL;
     rc_t rc = TableWriter_GetVTable(self->base, &vtbl);
     assert(rc == 0);
+    UNUSED(rc); /* suppress "unused variable" warning in Release mode */
     return vtbl;
 }
 
@@ -570,6 +571,7 @@ static KMetadata *getMetadata(TableWriterSeq *const self) {
     VTable *vtbl = getVTable(self);
     rc_t const rc = VTableOpenMetadataUpdate(vtbl, &md);
     assert(rc == 0);
+    UNUSED(rc);
     return md;
 }
 
@@ -577,6 +579,7 @@ static KMDataNode *openNode(KMetadata *const md, char const *const nodeName) {
     KMDataNode *node = NULL;
     rc_t const rc = KMetadataOpenNodeUpdate(md, &node, "%s", nodeName);
     assert(rc == 0);
+    UNUSED(rc);
     return node;
 }
 
@@ -585,6 +588,7 @@ static void writeStatsMetadata(TableWriterSeq *const self, KMetadata *const md) 
     rc_t const rc = TableWriterSeq_WriteStatistics(self, node);
     KMDataNodeRelease(node);
     assert(rc == 0);
+    UNUSED(rc);
 }
 
 static void writeInt64Metadata(KMDataNode *const pnode, char const *const nodeName, int64_t const *const pValue)
@@ -595,6 +599,8 @@ static void writeInt64Metadata(KMDataNode *const pnode, char const *const nodeNa
     KMDataNodeRelease(sub);
     assert(rc1 == 0);
     assert(rc2 == 0);
+    UNUSED(rc1);
+    UNUSED(rc2);
 }
 
 static void writeUnalignedMetadata(KMetadata *const md, int64_t const *const rows)

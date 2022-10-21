@@ -128,7 +128,7 @@ class BGZFview
 
                 if (bgzf->state != uncompressed) {
                     ERR("\t\tParser queue bad state");
-                    RC(rcAlign, rcFile, rcConstructing, rcNoObj,
+                    rc = RC(rcAlign, rcFile, rcConstructing, rcNoObj,
                        rcUnexpected);
                     return false;
                 }

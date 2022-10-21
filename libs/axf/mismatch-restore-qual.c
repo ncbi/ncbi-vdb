@@ -53,27 +53,28 @@ rc_t CC mismatch_restore_qual_impl ( void *data, const VXformInfo *info, int64_t
     unsigned const nmis = ( unsigned const )argv[ 1 ].u.data.elem_count;
     INSDC_quality_phred const rqual = ( INSDC_quality_phred const )( intptr_t )data;
     INSDC_quality_phred *dst;
-    
+
     qual += argv[ 0 ].u.data.first_elem;
     mismatch += argv[ 1 ].u.data.first_elem;
-    
+
     rslt->data->elem_bits = argv[ 0 ].u.data.elem_bits;
     rc = KDataBufferResize( rslt -> data, nmis );
     if ( rc != 0 )
         return rc;
     rslt -> elem_count = nmis;
     dst = rslt -> data -> base;
-    
+
     for ( j = i = 0; i != nmis; ++i )
     {
         dst[ i ] = mismatch[ i ] ? qual[ j++ ] : rqual;
     }
     assert( j == nqual );
+    UNUSED(nqual);
     return 0;
 }
 
 
-/* 
+/*
  * function INSDC:quality:phred NCBI:align:mismatch_restore_qual #1 < INSDC:quality:phred matched_qual >
  *    ( INSDC:quality:phred mismatch_qual, bool has_mismatch );
  */
@@ -99,27 +100,28 @@ rc_t CC decompress_quality_impl ( void *data, const VXformInfo *info, int64_t ro
     unsigned const readlen = ( unsigned const )argv[ 1 ].u.data.elem_count;
     INSDC_quality_phred const rqual = ( INSDC_quality_phred const )( intptr_t )data;
     INSDC_quality_phred *dst;
-    
+
     qual += argv[ 0 ].u.data.first_elem;
     preserved += argv[ 1 ].u.data.first_elem;
-    
+
     rslt->data->elem_bits = argv[ 0 ].u.data.elem_bits;
     rc = KDataBufferResize( rslt -> data, readlen );
     if ( rc != 0 )
         return rc;
     rslt -> elem_count = readlen;
     dst = rslt -> data -> base;
-    
+
     for ( j = i = 0; i != readlen; ++i )
     {
         dst[ i ] = preserved[ i ] ? qual[ j++ ] : rqual;
     }
     assert( j == nqual );
+    UNUSED(nqual);
     return 0;
 }
 
 
-/* 
+/*
  * function INSDC:quality:phred NCBI:align:decompress_quality #1
  *    < INSDC:quality:phred restored_qual_value >
  *    ( INSDC:quality:phred cmp_quality, bool preserved );

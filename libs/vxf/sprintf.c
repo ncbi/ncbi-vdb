@@ -204,7 +204,7 @@ rc_t CC sprintf_func ( void *obj,
         size_t arg_size;
         bool check_index;
         uint64_t row_len, start_idx, select_len;
-        uint32_t ext_start_index, ext_stop_index;
+        uint32_t ext_start_index = 0, ext_stop_index = 0;
 
         row_len = 0;
 

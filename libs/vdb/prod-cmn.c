@@ -2138,6 +2138,7 @@ rc_t VPivotProdRead ( VPivotProd * p_self, struct VBlob ** p_vblob, int64_t * p_
 
 		assert ( rowLen == 1);
         assert ( repeat_count == 1);
+        UNUSED(rowLen);
 
 		vblob_release ( rowIdBlob, NULL );
 

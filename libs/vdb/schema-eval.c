@@ -88,6 +88,7 @@ uint32_t VSchemaCacheIntrinsicTypeId ( const VSchema *self,
         /* this SHOULD be idempotent */
         prev = atomic32_test_and_set ( cache, ( int ) dt -> id, id );
         assert ( prev == id || prev == dt -> id );
+        UNUSED(prev);
 
         id = dt -> id;
     }

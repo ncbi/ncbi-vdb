@@ -21,6 +21,10 @@ set( SRC_JUDY
 # the debug build of Judy is broken!
 remove_definitions( -DDEBUG )
 
+if ( "GNU" STREQUAL "${CMAKE_C_COMPILER_ID}")
+    set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-array-bounds -Wno-aggressive-loop-optimizations" )
+endif()
+
 add_compile_definitions (__mod__="libs/klib/judy" JU_64BIT)
 include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/..)
 

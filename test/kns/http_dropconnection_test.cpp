@@ -85,7 +85,7 @@ static const string Response_GET_Content = "HTTP/1.1 206 Partial Content\n"
                                             "7\n"
                                             "content\n";
 
-static rc_t RC_TransferIncomplete = SILENT_RC ( rcNS, rcFile, rcWriting, rcTransfer, rcIncomplete );
+//static rc_t RC_TransferIncomplete = SILENT_RC ( rcNS, rcFile, rcWriting, rcTransfer, rcIncomplete );
 static rc_t RC_Timeout = SILENT_RC ( rcNS, rcStream, rcReading, rcTimeout, rcExhausted );
 
 //

@@ -58,7 +58,7 @@ static rc_t make_progressbar_cmn( progressbar ** pb, const uint8_t digits, bool 
     {
         void * h_stdout;
         void * h_stderr;
-        
+
         *pb = NULL;
         rc = KWrtSysInit( &h_stdout, &h_stderr );
         if ( rc == 0 )
@@ -196,7 +196,7 @@ static rc_t progress_forward( progressbar * pb, const percent_t to )
     percent_t step = pb->percent;
     while ( rc == 0 && step < to )
     {
-        step++;    
+        step++;
         switch( pb -> digits )
         {
             case 0 : rc = progess_0( pb, step ); break;
@@ -215,14 +215,14 @@ LIB_EXPORT rc_t CC update_progressbar( progressbar * pb, const percent_t percent
         rc = RC( rcVDB, rcNoTarg, rcParsing, rcSelf, rcNull );
     else
     {
-        percent_t to;
+        percent_t to = 0;
         switch( pb -> digits )
         {
             case 0 : to = percent > 100 ? 100 : percent; break;
             case 1 : to = percent > 1000 ? 1000 : percent; break;
             case 2 : to = percent > 10000 ? 10000 : percent; break;
         }
-        
+
         if ( pb->initialized )
         {
             if ( to > pb->percent )

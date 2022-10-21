@@ -1971,6 +1971,7 @@ static rc_t VCursorParamsLookupOrCreate(struct VCursorParams const *cself,
 
         rc = BSTreeInsertUnique(&self->named_params, (BSTNode *)node, NULL, NamedParamNodeComp);
         assert(rc == 0);
+        UNUSED(rc);
     }
     *value = &node->value;
     return 0;

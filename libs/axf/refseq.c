@@ -261,7 +261,7 @@ static unsigned readNormalIncomplete(Object const *self, uint8_t *const dst, uns
                 getBases_2na(buf, rowToPosition(async, row), async->max_seq_len, self->bases, &self->Ns);
             }
             else {
-                ReadStringResult read;
+                ReadStringResult read = { NULL, 0 };
 
                 memset(buf, 15, async->max_seq_len);
                 KLockAcquire(async->mutex);
@@ -310,7 +310,7 @@ static rc_t runLoadThread(Object *self)
     VCursor const *const curs = async->curs;
     CursorAddResult *const seqLenInfo = &async->car[0];
     CursorAddResult *const readInfo = &async->car[1];
-    ReadStringResult read;
+    ReadStringResult read = { NULL, 0 };
     int accum = 0;
     int n = 0;
     uint64_t i;
