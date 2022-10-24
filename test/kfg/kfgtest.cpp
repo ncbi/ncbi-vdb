@@ -498,6 +498,7 @@ FIXTURE_TEST_CASE(DropAllChildren, KfgFixture)
     KNamelistRelease(children);
 }
 
+#ifdef IT_IS_STILL_VALID
 FIXTURE_TEST_CASE(FixUserSettings, KfgFixture)
 {   // fix spelling of nodes dbGap-<number> to dbGaP-<number>
 
@@ -506,7 +507,7 @@ FIXTURE_TEST_CASE(FixUserSettings, KfgFixture)
 
     string mkfgFilename = "./user-settings.mkfg";
     // fake global settings since we do not want to modify the real ~/.ncbi/user-settings.mkfg
-    string globalMkfgFilename = "./global-settings.mkfg";
+    string globalMkfgFilename = "./g-lobal-settings.mkfg";
 
     REQUIRE_RC(KConfigRelease(kfg));
     // create the local .mkfg with the old spelling of dbGap;
@@ -525,6 +526,7 @@ FIXTURE_TEST_CASE(FixUserSettings, KfgFixture)
     REQUIRE_RC(KDirectoryRemove(wd, true, globalMkfgFilename.c_str()));
     REQUIRE_RC(KDirectoryRemove(wd, true, mkfgFilename.c_str()));
 }
+#endif
 
 //////////////////////////////////////////// KConfig Accessors
 
