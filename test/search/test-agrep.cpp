@@ -745,10 +745,10 @@ void
 ConvertAsciiTo2NAPacked ( const string& p_read, unsigned char* pBuf2NA, size_t nBuf2NASize )
 {
     static unsigned char map [ 1 << ( sizeof ( char ) * 8 ) ];
-    map['A'] = map['a'] = 0;
-    map['C'] = map['c'] = 1;
-    map['G'] = map['g'] = 2;
-    map['T'] = map['t'] = 3;
+    map[(unsigned)'A'] = map[(unsigned)'a'] = 0;
+    map[(unsigned)'C'] = map[(unsigned)'c'] = 1;
+    map[(unsigned)'G'] = map[(unsigned)'g'] = 2;
+    map[(unsigned)'T'] = map[(unsigned)'t'] = 3;
 
     static size_t shiftLeft [ 4 ] = { 6, 4, 2, 0 };
 

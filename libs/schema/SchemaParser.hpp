@@ -52,7 +52,6 @@ namespace ncbi
             const ErrorReport & GetErrors () const { return m_errors; }
 
         private:
-            bool m_debug;
             ParseTree* m_root;
 
             ErrorReport m_errors;

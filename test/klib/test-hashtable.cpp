@@ -62,6 +62,13 @@ using namespace std;
 
 TEST_SUITE(KHashTableTestSuite);
 
+static uint64_t distance( uint64_t a, uint64_t b )
+{
+   if ( a > b )
+      return a - b;
+   return b - a;
+}
+
 TEST_CASE(Klib_KHash)
 {
     const char* str = "Tu estas probando este hoy, no manana";
@@ -93,7 +100,7 @@ TEST_CASE(Klib_KHash_Adjacent)
     hash1 = KHash((char*)&val, 8);
     ++val;
     hash2 = KHash((char*)&val, 8);
-    diff = labs(hash2 - hash1);
+    diff = distance(hash1, hash2);
     REQUIRE_LE(diff, (uint64_t)7);
 
     const char* str1 = "string01";
@@ -101,9 +108,9 @@ TEST_CASE(Klib_KHash_Adjacent)
     size_t size = strlen(str1);
     hash1 = KHash(str1, size);
     hash2 = KHash(str2, size);
-    diff = labs(hash2 - hash1) & 0xfffff;
+    diff = distance(hash1, hash2) & 0xfffff;
     if (diff > 7) {
-        fprintf(stderr, "%lx %lx\n", hash1, hash2);
+        fprintf(stderr, "%llx %llx\n", hash1, hash2);
         REQUIRE_LE(diff, (uint64_t)7);
     }
 
@@ -112,7 +119,7 @@ TEST_CASE(Klib_KHash_Adjacent)
     size = strlen(str1);
     hash1 = KHash(str1, size);
     hash2 = KHash(str2, size);
-    diff = labs(hash2 - hash1);
+    diff = distance(hash1, hash2);
     REQUIRE_LE(diff, (uint64_t)7);
 }
 
@@ -136,8 +143,8 @@ TEST_CASE(Klib_KHash_Collide)
                 if (count) {
                     collisions++;
                     fprintf(stderr,
-                            "Collision at %lu on hash of len %lu is %lx: "
-                            "%lu elements %lx\n",
+                            "Collision at %lu on hash of len %lu is %llx: "
+                            "%lu elements %llx\n",
                             j, l, hash, set.size(), *(uint64_t*)buf);
                 }
                 set.insert(hash);

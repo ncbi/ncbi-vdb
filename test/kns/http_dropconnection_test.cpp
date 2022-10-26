@@ -85,7 +85,6 @@ static const string Response_GET_Content = "HTTP/1.1 206 Partial Content\n"
                                             "7\n"
                                             "content\n";
 
-//static rc_t RC_TransferIncomplete = SILENT_RC ( rcNS, rcFile, rcWriting, rcTransfer, rcIncomplete );
 static rc_t RC_Timeout = SILENT_RC ( rcNS, rcStream, rcReading, rcTimeout, rcExhausted );
 
 //
@@ -321,6 +320,9 @@ FIXTURE_TEST_CASE(HEAD_BrokenConnection, HttpFixture)
 }
 
 #if CAN_USE_RECONNECT_HOOK
+
+static rc_t RC_TransferIncomplete = SILENT_RC ( rcNS, rcFile, rcWriting, rcTransfer, rcIncomplete );
+
 FIXTURE_TEST_CASE(HEAD_Invalid_Reconnect_Succeed, HttpFixture)
 {
     TestStream::AddWriteRC ( RC_TransferIncomplete ); // first send HEAD fails
