@@ -110,7 +110,7 @@ TEST_CASE(Klib_KHash_Adjacent)
     hash2 = KHash(str2, size);
     diff = distance(hash1, hash2) & 0xfffff;
     if (diff > 7) {
-        fprintf(stderr, "%llx %llx\n", hash1, hash2);
+        fprintf(stderr, "%llx %llx\n", (long long unsigned int)hash1, (long long unsigned int)hash2);
         REQUIRE_LE(diff, (uint64_t)7);
     }
 
@@ -145,7 +145,7 @@ TEST_CASE(Klib_KHash_Collide)
                     fprintf(stderr,
                             "Collision at %lu on hash of len %lu is %llx: "
                             "%lu elements %llx\n",
-                            j, l, hash, set.size(), *(uint64_t*)buf);
+                            j, l, (long long unsigned int)hash, set.size(), *(long long unsigned int*)buf);
                 }
                 set.insert(hash);
                 inserts++;
