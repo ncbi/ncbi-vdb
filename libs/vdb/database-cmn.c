@@ -36,6 +36,7 @@
 
 #include <vdb/manager.h>
 #include <vdb/database.h>
+#include <vdb/table.h>
 #include <kdb/kdb-priv.h>
 #include <kdb/manager.h>
 #include <kdb/database.h>
@@ -1577,4 +1578,83 @@ LIB_EXPORT rc_t CC VDatabaseSetSynthQualityType ( VDatabase *self )
     if (self == NULL)
         return RC ( rcVDB, rcDatabase, rcResetting, rcSelf, rcNull );
     return RC ( rcVDB, rcDatabase, rcResetting, rcMode, rcNotAvailable );
+}
+
+/* VDatabaseMetaCompare
+ *  deep comparison of metadata-nodes between 2 databases...
+ */
+
+static rc_t compare_meta_on_one_table_in_db( const VDatabase *self, const VDatabase *other,
+                                      const char * node_path, const char * tbl_name,
+                                      bool * equal ) {
+    const VTable * tbl1;
+    rc_t rc = VDatabaseOpenTableRead( self, &tbl1, tbl_name );
+    if ( 0 == rc ) {
+        const VTable * tbl2;
+        rc = VDatabaseOpenTableRead( other, &tbl2, tbl_name );
+        if ( 0 == rc ) {
+            rc = VTableMetaCompare( tbl1, tbl2, node_path, equal );
+            VTableRelease( tbl2 );   
+        }
+        VTableRelease( tbl1 );
+    }
+    return rc;
+}
+
+static rc_t compare_meta_on_all_tables_in_db( const VDatabase *self, const VDatabase *other,
+                                      const char * node_path, bool * equal ) {
+    KNamelist * tables_1;
+    rc_t rc = VDatabaseListTbl( self, &tables_1 );
+    if ( 0 == rc ) {
+        KNamelist * tables_2;
+        rc = VDatabaseListTbl( other, &tables_2 );
+        if ( 0 == rc ) {
+            uint32_t count;
+            rc = KNamelistCount( tables_1, &count );
+            if ( 0 == rc ) {
+                uint32_t idx;
+                for ( idx = 0; 0 == rc && idx < count; ++idx ) { 
+                    const char * tbl_name;
+                    rc = KNamelistGet( tables_1, idx, &tbl_name );
+                    if ( 0 == rc ) {
+                        if ( KNamelistContains( tables_2, tbl_name ) ) {
+                            rc = compare_meta_on_one_table_in_db( self, other, node_path, tbl_name, equal );
+                        }
+                    }
+                }
+            }
+            KNamelistRelease( tables_2 );
+        }
+        KNamelistRelease( tables_1 );
+    }
+    return rc;
+}
+
+static bool is_empty( const char * s ) {
+    bool res = ( NULL == s );
+    if ( !res ) { res = ( 0 == s[ 0 ] ); }
+    return res;
+}
+
+LIB_EXPORT rc_t CC VDatabaseMetaCompare( const VDatabase *self, const VDatabase *other,
+                                         const char * node_path, const char * tbl_name,
+                                         bool * equal ) {
+    rc_t rc = 0;
+    if ( NULL == self ) {
+        rc = RC ( rcVDB, rcDatabase, rcComparing, rcSelf, rcNull );
+    } else if ( NULL == other || NULL == equal ) {
+        rc = RC ( rcVDB, rcDatabase, rcComparing, rcParam, rcNull );
+    } else {
+        if ( is_empty( tbl_name ) ) {
+            rc = compare_meta_on_all_tables_in_db( self, other, node_path, equal );
+            if ( 0 == rc && *equal ) {
+                /* one more time with swapped self/other to catch the case where one table
+                   has the node and the other does not */
+                rc = compare_meta_on_all_tables_in_db( other, self, node_path, equal );
+            }
+        } else {
+            rc = compare_meta_on_one_table_in_db( self, other, node_path, tbl_name, equal );
+        }
+    }
+    return rc;
 }

@@ -54,6 +54,10 @@
 #include <string.h>
 #include <assert.h>
 
+/*--------------------------------------------------------------------------
+ * turns ON verbose REFCOUNT tracing
+ */
+#define REPORT_KTABLE_REFCOUNT 0
 
 /*--------------------------------------------------------------------------
  * KTable
@@ -107,6 +111,9 @@ rc_t KTableWhack ( KTable *self )
     return rc;
 }
 
+#if REPORT_KTABLE_REFCOUNT
+void KTableGetName( KTable const *self, char const **rslt );
+#endif
 
 /* AddRef
  * Release
@@ -117,7 +124,17 @@ LIB_EXPORT rc_t CC KTableAddRef ( const KTable *self )
 {
     if ( self != NULL )
     {
-        switch ( KRefcountAdd ( & self -> refcount, "KTable" ) )
+#if REPORT_KTABLE_REFCOUNT
+        uint32_t before = atomic32_read( &self -> refcount );
+#endif
+        int ret = KRefcountAdd ( & self -> refcount, "KTable" );
+#if REPORT_KTABLE_REFCOUNT
+        uint32_t after = atomic32_read( &self -> refcount );
+        char const * name;
+        KTableGetName( self, &name );
+        KDbgMsg( "KTableAddRef( %p %s ) %x ---> %x\n", self, name, before, after );
+#endif
+        switch ( ret )
         {
         case krefLimit:
             return RC ( rcDB, rcTable, rcAttaching, rcRange, rcExcessive );
@@ -130,7 +147,18 @@ LIB_EXPORT rc_t CC KTableRelease ( const KTable *self )
 {
     if ( self != NULL )
     {
-        switch ( KRefcountDrop ( & self -> refcount, "KTable" ) )
+#if REPORT_KTABLE_REFCOUNT
+        uint32_t before = atomic32_read( &self -> refcount );
+#endif
+        int ret = KRefcountDrop ( & self -> refcount, "KTable" );
+#if REPORT_KTABLE_REFCOUNT
+        uint32_t after = atomic32_read( &self -> refcount );
+        char const * name;
+        KTableGetName( self, &name );
+        KDbgMsg( "KTableRelease( %p %s ) %x ---> %x\n", self, name, before, after );
+#endif
+
+        switch ( ret )
         {
         case krefWhack:
             return KTableWhack ( ( KTable* ) self );
@@ -148,7 +176,18 @@ KTable *KTableAttach ( const KTable *self )
 {
     if ( self != NULL )
     {
-        switch ( KRefcountAddDep ( & self -> refcount, "KTable" ) )
+#if REPORT_KTABLE_REFCOUNT
+        uint32_t before = atomic32_read( &self -> refcount );
+#endif
+        int ret = KRefcountAddDep ( & self -> refcount, "KTable" );
+#if REPORT_KTABLE_REFCOUNT
+        uint32_t after = atomic32_read( &self -> refcount );
+        char const * name;
+        KTableGetName( self, &name );
+        KDbgMsg( "KTableAttach( %p %s ) %x ---> %x\n", self, name, before, after );
+#endif
+
+        switch ( ret )
         {
         case krefLimit:
             return NULL;
@@ -165,7 +204,18 @@ rc_t KTableSever ( const KTable *self )
 {
     if ( self != NULL )
     {
-        switch ( KRefcountDropDep ( & self -> refcount, "KTable" ) )
+#if REPORT_KTABLE_REFCOUNT
+        uint32_t before = atomic32_read( &self -> refcount );
+#endif
+        int ret = KRefcountDropDep ( & self -> refcount, "KTable" );
+#if REPORT_KTABLE_REFCOUNT
+        uint32_t after = atomic32_read( &self -> refcount );
+        char const * name;
+        KTableGetName( self, &name );
+        KDbgMsg( "KTableSever( %p %s ) %x ---> %x\n", self, name, before, after );
+#endif
+
+        switch ( ret )
         {
         case krefWhack:
             return KTableWhack ( ( KTable* ) self );
@@ -209,6 +259,14 @@ rc_t KTableMake ( KTable **tblp, const KDirectory *dir, const char *path )
     tbl -> dir = dir;
     KRefcountInit ( & tbl -> refcount, 1, "KTable", "make", path );
     strcpy ( tbl -> path, path );
+#if REPORT_KTABLE_REFCOUNT
+    {
+        uint32_t after = atomic32_read( &tbl -> refcount );
+        char const * name;
+        KTableGetName( tbl, &name );
+        KDbgMsg( "KTableMake( %p %s ) %x\n", self, name, after );
+    }
+#endif
 
     /* YES,
       DBG_VFS should be used here to be printed along with other VFS messages */
@@ -837,7 +895,7 @@ LIB_EXPORT rc_t CC KTableListIdx ( const KTable *self, KNamelist **names )
  *  indicates whether some/all table data comes from network resource
  *  such as HttpFile or CacheteeFile
  */
-KDB_EXTERN bool CC KTableHasRemoteData ( const KTable *self )
+LIB_EXPORT bool CC KTableHasRemoteData ( const KTable *self )
 {
     bool result = self != NULL && KDirectoryIsKArcDir ( self -> dir ) &&
             KArcDirIsFromRemote ( (const KArcDir * ) self -> dir );

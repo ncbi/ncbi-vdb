@@ -74,6 +74,10 @@ KLIB_EXTERN rc_t CC KNamelistCount ( const KNamelist *self, uint32_t *count );
 KLIB_EXTERN rc_t CC KNamelistGet ( const KNamelist *self,
     uint32_t idx, const char **name );
 
+/* Contains
+ * checks if to_find is in the given KNamelist
+ */
+KLIB_EXTERN bool KNamelistContains( const KNamelist * self, const char * to_find );
 
 /*--------------------------------------------------------------------------
  * VNamelist

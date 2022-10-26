@@ -147,3 +147,27 @@ LIB_EXPORT rc_t CC KNamelistInit ( KNamelist *self, const KNamelist_vt *vt )
 
     return 0;
 }
+
+/* Contains
+ * checks if to_find is in the given KNamelist
+ */
+LIB_EXPORT bool KNamelistContains( const KNamelist * self, const char * to_find ) {
+    bool res = false;
+    if ( NULL != self && NULL != to_find ) {
+        uint32_t count, idx;
+        size_t to_find_size = string_size( to_find );
+        rc_t rc = KNamelistCount( self, &count );
+        for ( idx = 0; 0 == rc && idx < count && !res; ++idx ) { 
+            const char * entry;
+            rc = KNamelistGet( self, idx, &entry );
+            if ( 0 == rc ) {
+                size_t entry_size = string_size( entry );
+                if ( to_find_size == entry_size ) {
+                    int cmp = string_cmp( to_find, to_find_size, entry, entry_size, entry_size );
+                    res = ( 0 == cmp );
+                }
+            }
+        }
+    }
+    return res;
+}
