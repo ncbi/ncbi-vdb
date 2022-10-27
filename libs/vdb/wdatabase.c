@@ -35,6 +35,7 @@
 #include <kdb/kdb-priv.h>
 #include <vdb/manager.h>
 #include <vdb/database.h>
+#include <vdb/table.h>
 #include <kdb/manager.h>
 #include <kdb/database.h>
 #include <kdb/meta.h>
@@ -676,5 +677,23 @@ LIB_EXPORT rc_t CC VDatabaseOpenKDatabaseUpdate ( VDatabase *self, KDatabase **k
         * kdb = NULL;
     }
 
+    return rc;
+}
+
+/* VDatabaseMetaCopy
+ *  deep copy of metadata-nodes form src to self...
+ */
+LIB_EXPORT rc_t CC VDatabaseMetaCopy ( VDatabase *self, const VDatabase *src,
+                                       const char * node_path, const char * tbl_name,
+                                       bool src_node_has_to_exist ) {
+    rc_t rc = 0;
+    if ( NULL == self ) {
+        rc = RC ( rcVDB, rcDatabase, rcComparing, rcSelf, rcNull );
+    } else if ( NULL == src ) {
+        rc = RC ( rcVDB, rcDatabase, rcComparing, rcParam, rcNull );
+    } else {
+        /* do the work in the KDB - realm ... */
+        rc = KDatabaseMetaCopy( self -> kdb, src -> kdb, node_path, tbl_name, src_node_has_to_exist );
+    }
     return rc;
 }

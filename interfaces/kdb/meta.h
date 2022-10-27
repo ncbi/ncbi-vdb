@@ -403,15 +403,44 @@ KDB_EXTERN rc_t CC KMDataNodeVDropChild ( KMDataNode *self, const char *path, va
 KDB_EXTERN rc_t CC KMDataNodeRenameAttr ( KMDataNode *self, const char *from, const char *to );
 KDB_EXTERN rc_t CC KMDataNodeRenameChild ( KMDataNode *self, const char *from, const char *to );
 
-/* Copy
+/* Copy Node
  *  Replaces the content of the node with the contents of another node.
  *  This is a deep copy.
  *
  *  "source" [ IN ] - the node to copy from
  */
+KDB_EXTERN rc_t CC KMDataNodeCopy( KMDataNode *self, KMDataNode const *source );
 
-LIB_EXPORT rc_t CC KMDataNodeCopy(KMDataNode *self, KMDataNode const *source);
+/* Compare
+ *  Compares the content of 2 nodes with each other.
+ *  This is a deep compare.
+ *
+ *  "other" [ IN ]  - the node to compare to
+ *  "equal" [ OUT ] - result of the comparison 
+ * ( rc reports only failure to aquire info internaly, not the result of the comparison )
+ */
+KDB_EXTERN rc_t CC KMDataNodeCompare( const KMDataNode *self, KMDataNode const *other, bool *equal );
 
+/* Copy Node on tables
+ *  Replaces the content of the node ( of given path ) with the contents of another node.
+ *  This is a deep copy.
+ *
+ *  "source" [ IN ] - the table to copy from
+ *  "path"   [ IN ] - selects the node to copy
+ */
+KDB_EXTERN rc_t CC KTableMetaCopy( struct KTable *self, const struct KTable *src,
+                                const char * path, bool src_node_has_to_exist );
+
+/* Compare Node on tables
+ *  compares the content of 2 nodes ( given by path )
+ *  This is a deep comparison.
+ *
+ *  "other"  [ IN ]  - the table to compare with
+ *  "path"   [ IN ]  - selects the node to compare
+ *  "equal"  [ OUT ] - signals if the 2 nodes have the same content...
+ */
+KDB_EXTERN rc_t CC KTableMetaCompare ( const struct KTable *self, const struct KTable *other,
+                                       const char * path, bool * equal );
 
 #ifdef __cplusplus
 }
