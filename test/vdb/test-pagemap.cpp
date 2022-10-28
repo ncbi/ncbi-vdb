@@ -40,7 +40,10 @@ TEST_CASE ( MakeRelease )
 {
     PageMap *pm;
 
-    REQUIRE_RC( PageMapNew( &pm, MaxReserve) );
+    if ( PageMapNew( &pm, MaxReserve) != 0 )
+    {   // not enough memory for this test
+        return;
+    }
     REQUIRE_EQUAL( uint64_t( 32 ), pm->cstorage.elem_bits );
     REQUIRE_EQUAL( uint64_t( MaxReserve ) * 3, pm->cstorage.elem_count );
     REQUIRE_EQUAL( uint8_t( 0 ), pm->cstorage.bit_offset );
@@ -94,7 +97,10 @@ TEST_CASE ( PageMap_MaxReserve )
 TEST_CASE ( PageMap_AppendRows )
 {   // VDB-4897
     PageMap *pm;
-    REQUIRE_RC( PageMapNew( &pm, MaxReserve) );
+    if ( PageMapNew( &pm, MaxReserve) != 0 )
+    {   // not enough memory for this test
+        return;
+    }
 
     const uint64_t row_length = 1UL << 30;
     const uint64_t run_length = 1;

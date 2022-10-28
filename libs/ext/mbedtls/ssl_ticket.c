@@ -25,8 +25,8 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdlib.h>
-#define vdb_mbedtls_calloc    calloc
-#define vdb_mbedtls_free      free
+#define mbedtls_calloc    calloc
+#define mbedtls_free      free
 #endif
 
 #include "mbedtls/ssl_internal.h"
@@ -39,7 +39,7 @@
 /*
  * Initialze context
  */
-void vdb_mbedtls_ssl_ticket_init( mbedtls_ssl_ticket_context *ctx )
+void mbedtls_ssl_ticket_init( mbedtls_ssl_ticket_context *ctx )
 {
     memset( ctx, 0, sizeof( mbedtls_ssl_ticket_context ) );
 
@@ -84,11 +84,11 @@ static int ssl_ticket_gen_key( mbedtls_ssl_ticket_context *ctx,
         return( ret );
 
     /* With GCM and CCM, same context can encrypt & decrypt */
-    ret = vdb_mbedtls_cipher_setkey( &key->ctx, buf,
-                                 vdb_mbedtls_cipher_get_key_bitlen( &key->ctx ),
+    ret = mbedtls_cipher_setkey( &key->ctx, buf,
+                                 mbedtls_cipher_get_key_bitlen( &key->ctx ),
                                  MBEDTLS_ENCRYPT );
 
-    vdb_mbedtls_platform_zeroize( buf, sizeof( buf ) );
+    mbedtls_platform_zeroize( buf, sizeof( buf ) );
 
     return( ret );
 }
@@ -124,7 +124,7 @@ static int ssl_ticket_update_keys( mbedtls_ssl_ticket_context *ctx )
 /*
  * Setup context for actual use
  */
-int vdb_mbedtls_ssl_ticket_setup( mbedtls_ssl_ticket_context *ctx,
+int mbedtls_ssl_ticket_setup( mbedtls_ssl_ticket_context *ctx,
     int (*f_rng)(void *, unsigned char *, size_t), void *p_rng,
     mbedtls_cipher_type_t cipher,
     uint32_t lifetime )
@@ -137,7 +137,7 @@ int vdb_mbedtls_ssl_ticket_setup( mbedtls_ssl_ticket_context *ctx,
 
     ctx->ticket_lifetime = lifetime;
 
-    cipher_info = vdb_mbedtls_cipher_info_from_type( cipher);
+    cipher_info = mbedtls_cipher_info_from_type( cipher);
     if( cipher_info == NULL )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
@@ -156,10 +156,10 @@ int vdb_mbedtls_ssl_ticket_setup( mbedtls_ssl_ticket_context *ctx,
     if( ret != 0 && ret != MBEDTLS_ERR_CIPHER_FEATURE_UNAVAILABLE )
         return( ret );
     /* We don't yet expect to support all ciphers through PSA,
-     * so allow fallback to ordinary vdb_mbedtls_cipher_setup(). */
+     * so allow fallback to ordinary mbedtls_cipher_setup(). */
     if( ret == MBEDTLS_ERR_CIPHER_FEATURE_UNAVAILABLE )
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
-    if( ( ret = vdb_mbedtls_cipher_setup( &ctx->keys[0].ctx, cipher_info ) ) != 0 )
+    if( ( ret = mbedtls_cipher_setup( &ctx->keys[0].ctx, cipher_info ) ) != 0 )
         return( ret );
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
@@ -169,7 +169,7 @@ int vdb_mbedtls_ssl_ticket_setup( mbedtls_ssl_ticket_context *ctx,
         return( ret );
     if( ret == MBEDTLS_ERR_CIPHER_FEATURE_UNAVAILABLE )
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
-    if( ( ret = vdb_mbedtls_cipher_setup( &ctx->keys[1].ctx, cipher_info ) ) != 0 )
+    if( ( ret = mbedtls_cipher_setup( &ctx->keys[1].ctx, cipher_info ) ) != 0 )
         return( ret );
 
     if( ( ret = ssl_ticket_gen_key( ctx, 0 ) ) != 0 ||
@@ -195,7 +195,7 @@ int vdb_mbedtls_ssl_ticket_setup( mbedtls_ssl_ticket_context *ctx,
  * authenticated data.
  */
 
-int vdb_mbedtls_ssl_ticket_write( void *p_ticket,
+int mbedtls_ssl_ticket_write( void *p_ticket,
                               const mbedtls_ssl_session *session,
                               unsigned char *start,
                               const unsigned char *end,
@@ -238,7 +238,7 @@ int vdb_mbedtls_ssl_ticket_write( void *p_ticket,
         goto cleanup;
 
     /* Dump session state */
-    if( ( ret = vdb_mbedtls_ssl_session_save( session,
+    if( ( ret = mbedtls_ssl_session_save( session,
                                           state, end - state,
                                           &clear_len ) ) != 0 ||
         (unsigned long) clear_len > 65535 )
@@ -249,7 +249,7 @@ int vdb_mbedtls_ssl_ticket_write( void *p_ticket,
     state_len_bytes[1] = ( clear_len      ) & 0xff;
 
     /* Encrypt and authenticate */
-    if( ( ret = vdb_mbedtls_cipher_auth_encrypt_ext( &key->ctx,
+    if( ( ret = mbedtls_cipher_auth_encrypt_ext( &key->ctx,
                     iv, TICKET_IV_BYTES,
                     /* Additional data: key name, IV and length */
                     key_name, TICKET_ADD_DATA_LEN,
@@ -293,9 +293,9 @@ static mbedtls_ssl_ticket_key *ssl_ticket_select_key(
 }
 
 /*
- * Load session ticket (see vdb_mbedtls_ssl_ticket_write for structure)
+ * Load session ticket (see mbedtls_ssl_ticket_write for structure)
  */
-int vdb_mbedtls_ssl_ticket_parse( void *p_ticket,
+int mbedtls_ssl_ticket_parse( void *p_ticket,
                               mbedtls_ssl_session *session,
                               unsigned char *buf,
                               size_t len )
@@ -341,7 +341,7 @@ int vdb_mbedtls_ssl_ticket_parse( void *p_ticket,
     }
 
     /* Decrypt and authenticate */
-    if( ( ret = vdb_mbedtls_cipher_auth_decrypt_ext( &key->ctx,
+    if( ( ret = mbedtls_cipher_auth_decrypt_ext( &key->ctx,
                     iv, TICKET_IV_BYTES,
                     /* Additional data: key name, IV and length */
                     key_name, TICKET_ADD_DATA_LEN,
@@ -361,7 +361,7 @@ int vdb_mbedtls_ssl_ticket_parse( void *p_ticket,
     }
 
     /* Actually load session */
-    if( ( ret = vdb_mbedtls_ssl_session_load( session, ticket, clear_len ) ) != 0 )
+    if( ( ret = mbedtls_ssl_session_load( session, ticket, clear_len ) ) != 0 )
         goto cleanup;
 
 #if defined(MBEDTLS_HAVE_TIME)
@@ -390,16 +390,16 @@ cleanup:
 /*
  * Free context
  */
-void vdb_mbedtls_ssl_ticket_free( mbedtls_ssl_ticket_context *ctx )
+void mbedtls_ssl_ticket_free( mbedtls_ssl_ticket_context *ctx )
 {
-    vdb_mbedtls_cipher_free( &ctx->keys[0].ctx );
-    vdb_mbedtls_cipher_free( &ctx->keys[1].ctx );
+    mbedtls_cipher_free( &ctx->keys[0].ctx );
+    mbedtls_cipher_free( &ctx->keys[1].ctx );
 
 #if defined(MBEDTLS_THREADING_C)
     mbedtls_mutex_free( &ctx->mutex );
 #endif
 
-    vdb_mbedtls_platform_zeroize( ctx, sizeof( mbedtls_ssl_ticket_context ) );
+    mbedtls_platform_zeroize( ctx, sizeof( mbedtls_ssl_ticket_context ) );
 }
 
 #endif /* MBEDTLS_SSL_TICKET_C */

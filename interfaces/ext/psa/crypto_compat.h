@@ -52,7 +52,7 @@ typedef mbedtls_svc_key_id_t psa_key_handle_t;
  */
 static inline int psa_key_handle_is_null( psa_key_handle_t handle )
 {
-    return( vdb_mbedtls_svc_key_id_is_null( handle ) );
+    return( mbedtls_svc_key_id_is_null( handle ) );
 }
 
 #if !defined(MBEDTLS_DEPRECATED_REMOVED)

@@ -32,7 +32,7 @@
 #include <vdb/xform.h>
 
 #define ZSTD_STATIC_LINKING_ONLY
-#include <ext/zstd.h>
+#include <zstd.h>
 
 #ifndef ZSTD_MIN_LEVEL
 #define ZSTD_MIN_LEVEL (-131072)

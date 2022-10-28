@@ -31,8 +31,8 @@
 
 #include <kns/http.h> /* KClientHttpRequest */
 
-#include <ext/mbedtls/base64.h> /* vdb_mbedtls_base64_encode */
-#include <ext/mbedtls/md.h> /* vdb_mbedtls_md_hmac */
+#include <mbedtls/base64.h> /* mbedtls_base64_encode */
+#include <mbedtls/md.h> /* mbedtls_md_hmac */
 
 #include "aws-priv.h" /* AWSDoAuthentication */
 #include "cloud-priv.h" /* struct AWS */
@@ -45,12 +45,12 @@ static rc_t HMAC_SHA1(
 {
     int ret = 0;
 
-    const mbedtls_md_info_t *md_info = vdb_mbedtls_md_info_from_type(MBEDTLS_MD_SHA1);
+    const mbedtls_md_info_t *md_info = mbedtls_md_info_from_type(MBEDTLS_MD_SHA1);
 
     size_t keylen = string_measure(key, NULL);
     size_t ilen = string_measure(input, NULL);
 
-    ret = vdb_mbedtls_md_hmac(md_info, (unsigned char *)key, keylen,
+    ret = mbedtls_md_hmac(md_info, (unsigned char *)key, keylen,
         (unsigned char *)input, ilen, output);
 
     return ret == 0
@@ -75,7 +75,7 @@ static rc_t Base64(
     puts("");
 #endif
 
-    if (vdb_mbedtls_base64_encode((unsigned char *)dst, dlen, &olen, src, slen) != 0)
+    if (mbedtls_base64_encode((unsigned char *)dst, dlen, &olen, src, slen) != 0)
         rc = RC(rcCloud, rcUri, rcEncoding, rcString, rcInsufficient);
 
 #if DEBUGGING

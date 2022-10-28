@@ -29,6 +29,12 @@
 
 #include <ktst/unit_test_suite.hpp>
 
+struct test_skipped {
+    std::string reason;
+    test_skipped(std::string const &reason) : reason(reason) {}
+};
+
+
 ////////////////////////////////////////////////////////////////////////////////
 namespace ncbi { namespace NK {
 
@@ -41,88 +47,87 @@ struct TestCaseTraits
 
 // create an executable test case class with the given fixture.
 template <class TCaseTraits, class TFixture>
-class FixtureTestCase : public ncbi::NK::TestCase, public TFixture { 
+class FixtureTestCase : public ncbi::NK::TestCase, public TFixture {
 public:
     typedef TCaseTraits Traits;
 
     // Represents the global test fixture. Cast to the correct data type in the test code
     typedef void AUTO_TEST_CASE_FIXTURE;
 
-public: 
-    FixtureTestCase(void* globalFixture) 
-    : TestCase(TCaseTraits::name), _globalFixture (static_cast<AUTO_TEST_CASE_FIXTURE*>(globalFixture)) 
+public:
+    FixtureTestCase(void* globalFixture)
+    : TestCase(TCaseTraits::name), _globalFixture (static_cast<AUTO_TEST_CASE_FIXTURE*>(globalFixture))
     {
     }
 
-protected: 
-    AUTO_TEST_CASE_FIXTURE* GET_GLOBAL_FIXTURE(void) const { return _globalFixture; } 
-    AUTO_TEST_CASE_FIXTURE* _globalFixture; 
+protected:
+    AUTO_TEST_CASE_FIXTURE* GET_GLOBAL_FIXTURE(void) const { return _globalFixture; }
+    AUTO_TEST_CASE_FIXTURE* _globalFixture;
 
-    const TFixture* GET_FIXTURE(void) const { return this; } 
-    TFixture* GET_FIXTURE(void) { return this; } 
-}; 
+    const TFixture* GET_FIXTURE(void) const { return this; }
+    TFixture* GET_FIXTURE(void) { return this; }
+};
 
 // Create an invoker object for a test case with a given fixture.
 // The invoker object is static and registers itself with the global test suite during initialization.
-// When executed, the invoker will instantiate a fixture and a test case object and execute object's test method 
+// When executed, the invoker will instantiate a fixture and a test case object and execute object's test method
 // on the current thread.
 template <class TCase, class TFixture>
-class TestCaseInvoker : ncbi::NK::TestInvoker { 
-public: 
-    TestCaseInvoker() : TestInvoker(TCase::Traits::name) 
-    { 
-        ncbi::NK::GetTestSuite()->Add(this); 
-    } 
-private: 
+class TestCaseInvoker : ncbi::NK::TestInvoker {
+public:
+    TestCaseInvoker() : TestInvoker(TCase::Traits::name)
+    {
+        ncbi::NK::GetTestSuite()->Add(this);
+    }
+private:
     virtual void Run(void* globalFixture) throw ()
-    { 
+    {
         try
-        { 
-            TCase t(globalFixture); 
-            t.test_method(); 
-            SetErrorCounter(t.GetErrorCounter()); 
+        {
+            TCase t(globalFixture);
+            t.test_method();
+            SetErrorCounter(t.GetErrorCounter());
+        }
+        catch (const test_skipped &e)
+        {
+            LOG(ncbi::NK::LogLevel::e_fatal_error, ncbi::NK::TestEnv::lastLocation << ": test skipped: " << e.reason << "\n");
+            SetErrorCounter(0);
         }
         catch (const execution_aborted&)
         {
             SetErrorCounter(1);
-        } 
+        }
         catch (const std::exception& ex)
         {
-            if (!ncbi::NK::TestEnv::lastLocation.empty())
-            {
-                LOG(ncbi::NK::LogLevel::e_fatal_error, ncbi::NK::TestEnv::lastLocation << ": last checkpoint before exception \"" << ex.what() << "\"\n");
-            }        
+            LOG(ncbi::NK::LogLevel::e_fatal_error, ncbi::NK::TestEnv::lastLocation << ": last checkpoint before exception \"" << ex.what() << "\"\n");
             SetErrorCounter(1);
-        } 
+        }
         catch (...) // a non-framework exception escaped
-        { 
-            if (!ncbi::NK::TestEnv::lastLocation.empty())
-            {
-                LOG(ncbi::NK::LogLevel::e_fatal_error, ncbi::NK::TestEnv::lastLocation << ": last checkpoint before an unknown exception\n");
-            }        
+        {
+            LOG(ncbi::NK::LogLevel::e_fatal_error, ncbi::NK::TestEnv::lastLocation << ": last checkpoint before an unknown exception\n");
             SetErrorCounter(1);
-        } 
-    } 
+        }
+    }
     static TestCaseInvoker instance;
-}; 
+};
 
 // Create an out-of-thread invoker object for a test case with a given fixture.
 // The invoker object is static and registers itself with the global test suite during initialization.
-// When executed, the invoker will instantiate a fixture and a test case object and execute object's test method 
+// When executed, the invoker will instantiate a fixture and a test case object and execute object's test method
 // as a child process (Unix) or on a separate thread(Windows).
 template <class TCase, class TFixture, int rc, int timeout>
-class ProcessTestCaseInvoker : ncbi::NK::TestInvoker { 
-public: 
-    ProcessTestCaseInvoker() : TestInvoker(TCase::Traits::name) 
-    { 
-        ncbi::NK::GetTestSuite()->Add(this); 
-    } 
-private: 
+class ProcessTestCaseInvoker : ncbi::NK::TestInvoker {
+public:
+    ProcessTestCaseInvoker() : TestInvoker(TCase::Traits::name)
+    {
+        ncbi::NK::GetTestSuite()->Add(this);
+    }
+private:
     virtual void Run(void* globalFixture) throw ()
-    { 
+    {
         try
         {
-            TCase t(globalFixture); 
+            TCase t(globalFixture);
             TestCase :: TestMethod method = static_cast <TestCase :: TestMethod> ( & TCase::test_method );
             if (ncbi::NK::TestEnv::RunProcessTestCase(t, method, timeout) != rc)
             {
@@ -136,31 +141,25 @@ private:
         catch (const execution_aborted&)
         {
             SetErrorCounter(1);
-        } 
+        }
         catch (const std::exception& ex)
         {
-            if (!ncbi::NK::TestEnv::lastLocation.empty())
-            {
-                LOG(ncbi::NK::LogLevel::e_fatal_error, ncbi::NK::TestEnv::lastLocation << ": last checkpoint before exception \"" << ex.what() << "\"\n");
-            }        
+            LOG(ncbi::NK::LogLevel::e_fatal_error, ncbi::NK::TestEnv::lastLocation << ": last checkpoint before exception \"" << ex.what() << "\"\n");
             SetErrorCounter(1);
-        } 
+        }
         catch (...) // a non-framework exception escaped
-        { 
-            if (!ncbi::NK::TestEnv::lastLocation.empty())
-            {
-                LOG(ncbi::NK::LogLevel::e_fatal_error, ncbi::NK::TestEnv::lastLocation << ": last checkpoint before an unknown exception\n");
-            }        
+        {
+            LOG(ncbi::NK::LogLevel::e_fatal_error, ncbi::NK::TestEnv::lastLocation << ": last checkpoint before an unknown exception\n");
             SetErrorCounter(1);
-        } 
+        }
     }
-}; 
+};
 
 }} // namespace
 
 // macros to be used to instantiate test cases
 
-// user code should not not use this directly. 
+// user code should not not use this directly.
 #define DEFINE_TEST_CASE(testcase, F, rc, timeout) \
     struct testcase { \
         class dummy{}; \
@@ -207,7 +206,7 @@ private:
 #define DECLARE_EXTERN_C_ENTRYPOINTS
 #endif
 
-// define a suite of test cases with a global fixture 
+// define a suite of test cases with a global fixture
 // Note: Typed access to global fixture from the test cases' code is not currently implemented
 #define FIXTURE_TEST_SUITE( suite_name, F ) \
 DECLARE_EXTERN_C_ENTRYPOINTS \
@@ -221,7 +220,7 @@ int suite_name(int argc, char* argv[]) { \
     } catch (...) { return 1; } \
     ncbi::NK::counter_t ec = ncbi::NK::Main<AUTO_TEST_CASE_FIXTURE>(argc, argv, #suite_name); \
     return ec == 0 ? 0 : -ec; /* positive rc represents the signal that killed the process */ \
-} 
+}
 
 // define a suite of test cases with a global fixture
 // with callback to handle application command line arguments
@@ -251,7 +250,7 @@ int suite_name(int argc, char* argv[]) { \
     } catch (...) { return 1; } \
     ncbi::NK::counter_t ec = ncbi::NK::Main<AUTO_TEST_CASE_FIXTURE>(argc, argv, #suite_name); \
     return ec == 0 ? 0 : -ec; /* positive rc represents the signal that killed the process */ \
-} 
+}
 
 #define TEST_SUITE( suite_name ) FIXTURE_TEST_SUITE(suite_name, ncbi::NK::Empty)
 #define TEST_SUITE_WITH_USAGE( suite_name ) FIXTURE_TEST_SUITE_WITH_USAGE(suite_name, ncbi::NK::Empty)

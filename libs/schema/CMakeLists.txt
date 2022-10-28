@@ -72,3 +72,4 @@ set( SRC
 GenerateStaticLibs( schema "${SRC}" )
 
 add_compile_definitions (__mod__="libs/schema")
+set_source_files_properties(${SchemaScanner} PROPERTIES COMPILE_FLAGS -D__STDC_VERSION__=199901L)

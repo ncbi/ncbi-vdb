@@ -752,7 +752,7 @@ ConvertAsciiTo2NAPacked ( const string& p_read, unsigned char* pBuf2NA, size_t n
 
     static size_t shiftLeft [ 4 ] = { 6, 4, 2, 0 };
 
-    fill ( pBuf2NA, pBuf2NA + nBuf2NASize, 0 );
+    fill ( pBuf2NA, pBuf2NA + nBuf2NASize, (unsigned char)0 );
 
     for ( size_t iChar = 0; iChar < p_read . size (); ++iChar )
     {

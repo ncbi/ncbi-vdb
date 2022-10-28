@@ -157,7 +157,7 @@ static void psa_set_key_id( psa_key_attributes_t *attributes,
  * \param[out] attributes  The attribute structure to write to.
  * \param owner_id         The key owner identifier.
  */
-static void vdb_mbedtls_set_key_owner_id( psa_key_attributes_t *attributes,
+static void mbedtls_set_key_owner_id( psa_key_attributes_t *attributes,
                                       mbedtls_key_owner_id_t owner_id );
 #endif
 

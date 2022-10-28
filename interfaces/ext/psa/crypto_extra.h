@@ -191,7 +191,7 @@ static inline void psa_clear_key_slot_number(
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
-psa_status_t vdb_mbedtls_psa_register_se_key(
+psa_status_t mbedtls_psa_register_se_key(
     const psa_key_attributes_t *attributes);
 
 #endif /* MBEDTLS_PSA_CRYPTO_SE_C */
@@ -206,7 +206,7 @@ psa_status_t vdb_mbedtls_psa_register_se_key(
  *
  * This is an Mbed TLS extension.
  */
-void vdb_mbedtls_psa_crypto_free( void );
+void mbedtls_psa_crypto_free( void );
 
 /** \brief Statistics about
  * resource consumption related to the PSA keystore.
@@ -246,7 +246,7 @@ typedef struct mbedtls_psa_stats_s
  *       between the application and the keystore, the service may or
  *       may not expose this function.
  */
-void vdb_mbedtls_psa_get_stats( mbedtls_psa_stats_t *stats );
+void mbedtls_psa_get_stats( mbedtls_psa_stats_t *stats );
 
 /**
  * \brief Inject an initial entropy seed for the random generator into
@@ -291,7 +291,7 @@ void vdb_mbedtls_psa_get_stats( mbedtls_psa_stats_t *stats );
  * \note This function is only available on the following platforms:
  * * If the compile-time option MBEDTLS_PSA_INJECT_ENTROPY is enabled.
  *   Note that you must provide compatible implementations of
- *   vdb_mbedtls_nv_seed_read and vdb_mbedtls_nv_seed_write.
+ *   mbedtls_nv_seed_read and mbedtls_nv_seed_write.
  * * In a client-server integration of PSA Cryptography, on the client side,
  *   if the server supports this feature.
  * \param[in] seed          Buffer containing the seed value to inject.
@@ -315,7 +315,7 @@ void vdb_mbedtls_psa_get_stats( mbedtls_psa_stats_t *stats );
  *         The library has already been initialized. It is no longer
  *         possible to call this function.
  */
-psa_status_t vdb_mbedtls_psa_inject_entropy(const uint8_t *seed,
+psa_status_t mbedtls_psa_inject_entropy(const uint8_t *seed,
                                         size_t seed_size);
 
 /** \addtogroup crypto_types
@@ -578,7 +578,7 @@ psa_status_t psa_get_key_domain_parameters(
  *                      (`PSA_ECC_FAMILY_xxx`).
  * \return              \c 0 on failure (\p grpid is not recognized).
  */
-static inline psa_ecc_family_t vdb_mbedtls_ecc_group_to_psa( mbedtls_ecp_group_id grpid,
+static inline psa_ecc_family_t mbedtls_ecc_group_to_psa( mbedtls_ecp_group_id grpid,
                                                         size_t *bits )
 {
     switch( grpid )
@@ -643,7 +643,7 @@ static inline psa_ecc_family_t vdb_mbedtls_ecc_group_to_psa( mbedtls_ecp_group_i
  * \return              #MBEDTLS_ECP_DP_NONE if \p byte_length is not
  *                      correct for \p curve.
  */
-mbedtls_ecp_group_id vdb_mbedtls_ecc_group_of_psa( psa_ecc_family_t curve,
+mbedtls_ecp_group_id mbedtls_ecc_group_of_psa( psa_ecc_family_t curve,
                                                size_t byte_length );
 #endif /* MBEDTLS_ECP_C */
 

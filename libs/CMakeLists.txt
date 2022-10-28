@@ -50,7 +50,7 @@ add_subdirectory(vxf)
 add_subdirectory(wgsxf) # wgsxf and wwgsxf are the same
 add_subdirectory(ncbi-vdb)
 
-if ( SINGLE_CONFIG )
+if ( SINGLE_CONFIG OR _NCBIVDB_CFG_PACKAGING )
     #
     # Install header files
     set( HEADERS align  cloud  insdc  kdb  kfg  klib  kproc   ktst  os     search  sra   vfs
@@ -59,6 +59,9 @@ if ( SINGLE_CONFIG )
     foreach( h IN ITEMS ${HEADERS} )
         install( DIRECTORY ${CMAKE_SOURCE_DIR}/interfaces/${h} DESTINATION ${INST_INCDIR} )
     endforeach()
+endif()
+if(_NCBIVDB_CFG_PACKAGING)
+    install( FILES ${CMAKE_SOURCE_DIR}/LICENSE DESTINATION licenses)
 endif()
 
 #add_subdirectory(kxml) VDB-4797 moved to sra-tools

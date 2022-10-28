@@ -146,44 +146,44 @@ class MbedTlsFixture
 public:
     MbedTlsFixture()
     {
-        vdb_mbedtls_ssl_init( & m_ssl );
+        mbedtls_ssl_init( & m_ssl );
 
-        vdb_mbedtls_x509_crt_init( & m_chain);
-        vdb_mbedtls_entropy_init ( & m_entropy );
-        vdb_mbedtls_ssl_config_init ( & m_config );
+        mbedtls_x509_crt_init( & m_chain);
+        mbedtls_entropy_init ( & m_entropy );
+        mbedtls_ssl_config_init ( & m_config );
 
-        vdb_mbedtls_ctr_drbg_init ( & m_ctr_drbg );
+        mbedtls_ctr_drbg_init ( & m_ctr_drbg );
         string pers = "test-mbedtls";
-        vdb_mbedtls_ctr_drbg_seed ( &m_ctr_drbg, vdb_mbedtls_entropy_func,
+        mbedtls_ctr_drbg_seed ( &m_ctr_drbg, mbedtls_entropy_func,
                                   &m_entropy, (const unsigned char*)pers.c_str(), pers.size() );
     }
     ~MbedTlsFixture()
     {
-        vdb_mbedtls_ssl_config_free ( & m_config );
-        vdb_mbedtls_entropy_free ( & m_entropy );
-        vdb_mbedtls_ctr_drbg_free ( & m_ctr_drbg );
-        vdb_mbedtls_x509_crt_free( & m_chain );
+        mbedtls_ssl_config_free ( & m_config );
+        mbedtls_entropy_free ( & m_entropy );
+        mbedtls_ctr_drbg_free ( & m_ctr_drbg );
+        mbedtls_x509_crt_free( & m_chain );
 
-        vdb_mbedtls_ssl_free( & m_ssl );
+        mbedtls_ssl_free( & m_ssl );
     }
 
     bool Config( BasicIO & bio, bool allow_all_certs = true )
     {
-        if ( 0 != vdb_mbedtls_ssl_config_defaults ( & m_config,
+        if ( 0 != mbedtls_ssl_config_defaults ( & m_config,
                                             MBEDTLS_SSL_IS_CLIENT,
                                             MBEDTLS_SSL_TRANSPORT_STREAM,
                                             MBEDTLS_SSL_PRESET_DEFAULT ) )
         {
             return false;
         }
-        vdb_mbedtls_ssl_conf_dbg( & m_config, NULL, NULL ); // if not called, valgrind complains
+        mbedtls_ssl_conf_dbg( & m_config, NULL, NULL ); // if not called, valgrind complains
 
-        vdb_mbedtls_ssl_conf_authmode( & m_config, allow_all_certs ? MBEDTLS_SSL_VERIFY_OPTIONAL : MBEDTLS_SSL_VERIFY_REQUIRED );
+        mbedtls_ssl_conf_authmode( & m_config, allow_all_certs ? MBEDTLS_SSL_VERIFY_OPTIONAL : MBEDTLS_SSL_VERIFY_REQUIRED );
 
-        vdb_mbedtls_ssl_conf_ca_chain( & m_config, & m_chain, NULL );
-        vdb_mbedtls_ssl_conf_rng( & m_config, vdb_mbedtls_ctr_drbg_random, & m_ctr_drbg );
-        vdb_mbedtls_ssl_set_bio( & m_ssl, & bio, KTLSStreamWrite, KTLSStreamRead, NULL );
-        if ( 0 != vdb_mbedtls_ssl_setup( & m_ssl, & m_config ) )
+        mbedtls_ssl_conf_ca_chain( & m_config, & m_chain, NULL );
+        mbedtls_ssl_conf_rng( & m_config, mbedtls_ctr_drbg_random, & m_ctr_drbg );
+        mbedtls_ssl_set_bio( & m_ssl, & bio, KTLSStreamWrite, KTLSStreamRead, NULL );
+        if ( 0 != mbedtls_ssl_setup( & m_ssl, & m_config ) )
         {
             return false;
         }
@@ -200,26 +200,26 @@ public:
 
 FIXTURE_TEST_CASE(ParseCert, MbedTlsFixture)
 {
-    REQUIRE_EQ ( 0, vdb_mbedtls_x509_crt_parse_file( & m_chain, "./ca-certificates.crt" ) );
+    REQUIRE_EQ ( 0, mbedtls_x509_crt_parse_file( & m_chain, "./ca-certificates.crt" ) );
 }
 
 FIXTURE_TEST_CASE(Config, MbedTlsFixture)
 {
-    REQUIRE_EQ ( 0, vdb_mbedtls_x509_crt_parse_file( & m_chain, "./ca-certificates.crt" ) );
+    REQUIRE_EQ ( 0, mbedtls_x509_crt_parse_file( & m_chain, "./ca-certificates.crt" ) );
     BasicIO bio( HOST );
     REQUIRE( Config( bio ) );
 }
 FIXTURE_TEST_CASE(Handshake_AllowAll, MbedTlsFixture)
 {
-    REQUIRE_EQ ( 0, vdb_mbedtls_x509_crt_parse_file( & m_chain, "./ca-certificates.crt" ) );
+    REQUIRE_EQ ( 0, mbedtls_x509_crt_parse_file( & m_chain, "./ca-certificates.crt" ) );
     BasicIO bio( HOST );
     REQUIRE( Config( bio, true )  );
-    REQUIRE_EQ ( 0, vdb_mbedtls_ssl_set_hostname( & m_ssl, HOST ) );
-    int ret = vdb_mbedtls_ssl_handshake( & m_ssl );
+    REQUIRE_EQ ( 0, mbedtls_ssl_set_hostname( & m_ssl, HOST ) );
+    int ret = mbedtls_ssl_handshake( & m_ssl );
     if ( ret != 0 )
     {
         char buf[1024];
-        vdb_mbedtls_strerror( ret, buf, sizeof ( buf ) );
+        mbedtls_strerror( ret, buf, sizeof ( buf ) );
         cout << buf << endl;
     }
     REQUIRE_EQ ( 0, ret );
@@ -227,19 +227,19 @@ FIXTURE_TEST_CASE(Handshake_AllowAll, MbedTlsFixture)
 
 FIXTURE_TEST_CASE(Handshake_Success, MbedTlsFixture)
 {
-    REQUIRE_EQ ( 0, vdb_mbedtls_x509_crt_parse_file( & m_chain, "./ca-certificates.crt" ) );
+    REQUIRE_EQ ( 0, mbedtls_x509_crt_parse_file( & m_chain, "./ca-certificates.crt" ) );
     BasicIO bio(HOST);
     REQUIRE(Config(bio, false));
-    REQUIRE_EQ(0, vdb_mbedtls_ssl_set_hostname(&m_ssl, HOST));
-    REQUIRE_EQ(0, vdb_mbedtls_ssl_handshake(&m_ssl));
+    REQUIRE_EQ(0, mbedtls_ssl_set_hostname(&m_ssl, HOST));
+    REQUIRE_EQ(0, mbedtls_ssl_handshake(&m_ssl));
 }
 FIXTURE_TEST_CASE(Handshake_NoCertFail, MbedTlsFixture)
 {
-    //not doing this: REQUIRE_EQ ( 0, vdb_mbedtls_x509_crt_parse_file( & m_chain, "./ca-certificates.crt" ) );
+    //not doing this: REQUIRE_EQ ( 0, mbedtls_x509_crt_parse_file( & m_chain, "./ca-certificates.crt" ) );
     BasicIO bio(HOST);
     REQUIRE(Config(bio, false));
-    REQUIRE_EQ(0, vdb_mbedtls_ssl_set_hostname(&m_ssl, HOST));
-    REQUIRE_EQ(MBEDTLS_ERR_X509_CERT_VERIFY_FAILED, vdb_mbedtls_ssl_handshake(&m_ssl));
+    REQUIRE_EQ(0, mbedtls_ssl_set_hostname(&m_ssl, HOST));
+    REQUIRE_EQ(MBEDTLS_ERR_X509_CERT_VERIFY_FAILED, mbedtls_ssl_handshake(&m_ssl));
 }
 
 #if WINDOWS
@@ -262,14 +262,14 @@ FIXTURE_TEST_CASE(WindowsRootStore, MbedTlsFixture)
         }
 
         // ignore errors
-        vdb_mbedtls_x509_crt_parse(&m_chain, (const unsigned char*)pCertContext->pbCertEncoded, pCertContext->cbCertEncoded); 
+        mbedtls_x509_crt_parse(&m_chain, (const unsigned char*)pCertContext->pbCertEncoded, pCertContext->cbCertEncoded); 
     }
     REQUIRE(CertCloseStore(hSystemStore, 0));
 
     BasicIO bio(HOST);
     REQUIRE(Config(bio, false));
-    REQUIRE_EQ(0, vdb_mbedtls_ssl_set_hostname(&m_ssl, HOST));
-    REQUIRE_EQ(0, vdb_mbedtls_ssl_handshake(&m_ssl));
+    REQUIRE_EQ(0, mbedtls_ssl_set_hostname(&m_ssl, HOST));
+    REQUIRE_EQ(0, mbedtls_ssl_handshake(&m_ssl));
 }
 
 #endif

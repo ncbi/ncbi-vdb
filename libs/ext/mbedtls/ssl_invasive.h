@@ -40,9 +40,9 @@
  * max_data_len bytes from \p data.
  *
  * \param ctx               The HMAC context. It must have keys configured
- *                          with vdb_mbedtls_md_hmac_starts() and use one of the
+ *                          with mbedtls_md_hmac_starts() and use one of the
  *                          following hashes: SHA-384, SHA-256, SHA-1 or MD-5.
- *                          It is reset using vdb_mbedtls_md_hmac_reset() after
+ *                          It is reset using mbedtls_md_hmac_reset() after
  *                          the computation is complete to prepare for the
  *                          next computation.
  * \param add_data          The additional data prepended to \p data. This
@@ -65,7 +65,7 @@
  * \retval MBEDTLS_ERR_PLATFORM_HW_ACCEL_FAILED
  *         The hardware accelerator failed.
  */
-int vdb_mbedtls_ssl_cf_hmac(
+int mbedtls_ssl_cf_hmac(
         mbedtls_md_context_t *ctx,
         const unsigned char *add_data, size_t add_data_len,
         const unsigned char *data, size_t data_len_secret,
@@ -90,7 +90,7 @@ int vdb_mbedtls_ssl_cf_hmac(
  * \param offset_max    The maximal value of \p offset_secret.
  * \param len           The number of bytes to copy.
  */
-void vdb_mbedtls_ssl_cf_memcpy_offset( unsigned char *dst,
+void mbedtls_ssl_cf_memcpy_offset( unsigned char *dst,
                                    const unsigned char *src_base,
                                    size_t offset_secret,
                                    size_t offset_min, size_t offset_max,

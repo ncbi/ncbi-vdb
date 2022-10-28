@@ -1800,11 +1800,11 @@ static rc_t KTableCopyObject(  KTable *self
                              , char const *name
                              , char const *type)
 {
-    rc_t rc = KTableObjectIsGoodDestination(self, name, type);
+    rc_t rc = KTableObjectIsGoodSource(source, name, type);
     if (rc)
         return rc;
 
-    rc = KTableObjectIsGoodSource(source, name, type);
+    rc = KTableObjectIsGoodDestination(self, name, type);
     if (rc)
         return rc;
 

@@ -33,18 +33,18 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdlib.h>
-#define vdb_mbedtls_calloc    calloc
-#define vdb_mbedtls_free       free
+#define mbedtls_calloc    calloc
+#define mbedtls_free       free
 #endif
 
 #include <string.h>
 
-void vdb_mbedtls_pkcs11_init( mbedtls_pkcs11_context *ctx )
+void mbedtls_pkcs11_init( mbedtls_pkcs11_context *ctx )
 {
     memset( ctx, 0, sizeof( mbedtls_pkcs11_context ) );
 }
 
-int vdb_mbedtls_pkcs11_x509_cert_bind( mbedtls_x509_crt *cert, pkcs11h_certificate_t pkcs11_cert )
+int mbedtls_pkcs11_x509_cert_bind( mbedtls_x509_crt *cert, pkcs11h_certificate_t pkcs11_cert )
 {
     int ret = 1;
     unsigned char *cert_blob = NULL;
@@ -63,7 +63,7 @@ int vdb_mbedtls_pkcs11_x509_cert_bind( mbedtls_x509_crt *cert, pkcs11h_certifica
         goto cleanup;
     }
 
-    cert_blob = vdb_mbedtls_calloc( 1, cert_blob_size );
+    cert_blob = mbedtls_calloc( 1, cert_blob_size );
     if( NULL == cert_blob )
     {
         ret = 4;
@@ -77,7 +77,7 @@ int vdb_mbedtls_pkcs11_x509_cert_bind( mbedtls_x509_crt *cert, pkcs11h_certifica
         goto cleanup;
     }
 
-    if( 0 != vdb_mbedtls_x509_crt_parse( cert, cert_blob, cert_blob_size ) )
+    if( 0 != mbedtls_x509_crt_parse( cert, cert_blob, cert_blob_size ) )
     {
         ret = 6;
         goto cleanup;
@@ -87,44 +87,44 @@ int vdb_mbedtls_pkcs11_x509_cert_bind( mbedtls_x509_crt *cert, pkcs11h_certifica
 
 cleanup:
     if( NULL != cert_blob )
-        vdb_mbedtls_free( cert_blob );
+        mbedtls_free( cert_blob );
 
     return( ret );
 }
 
 
-int vdb_mbedtls_pkcs11_priv_key_bind( mbedtls_pkcs11_context *priv_key,
+int mbedtls_pkcs11_priv_key_bind( mbedtls_pkcs11_context *priv_key,
         pkcs11h_certificate_t pkcs11_cert )
 {
     int ret = 1;
     mbedtls_x509_crt cert;
 
-    vdb_mbedtls_x509_crt_init( &cert );
+    mbedtls_x509_crt_init( &cert );
 
     if( priv_key == NULL )
         goto cleanup;
 
-    if( 0 != vdb_mbedtls_pkcs11_x509_cert_bind( &cert, pkcs11_cert ) )
+    if( 0 != mbedtls_pkcs11_x509_cert_bind( &cert, pkcs11_cert ) )
         goto cleanup;
 
-    priv_key->len = vdb_mbedtls_pk_get_len( &cert.pk );
+    priv_key->len = mbedtls_pk_get_len( &cert.pk );
     priv_key->pkcs11h_cert = pkcs11_cert;
 
     ret = 0;
 
 cleanup:
-    vdb_mbedtls_x509_crt_free( &cert );
+    mbedtls_x509_crt_free( &cert );
 
     return( ret );
 }
 
-void vdb_mbedtls_pkcs11_priv_key_free( mbedtls_pkcs11_context *priv_key )
+void mbedtls_pkcs11_priv_key_free( mbedtls_pkcs11_context *priv_key )
 {
     if( NULL != priv_key )
         pkcs11h_certificate_freeCertificate( priv_key->pkcs11h_cert );
 }
 
-int vdb_mbedtls_pkcs11_decrypt( mbedtls_pkcs11_context *ctx,
+int mbedtls_pkcs11_decrypt( mbedtls_pkcs11_context *ctx,
                        int mode, size_t *olen,
                        const unsigned char *input,
                        unsigned char *output,
@@ -162,7 +162,7 @@ int vdb_mbedtls_pkcs11_decrypt( mbedtls_pkcs11_context *ctx,
     return( 0 );
 }
 
-int vdb_mbedtls_pkcs11_sign( mbedtls_pkcs11_context *ctx,
+int mbedtls_pkcs11_sign( mbedtls_pkcs11_context *ctx,
                     int mode,
                     mbedtls_md_type_t md_alg,
                     unsigned int hashlen,
@@ -181,14 +181,14 @@ int vdb_mbedtls_pkcs11_sign( mbedtls_pkcs11_context *ctx,
 
     if( md_alg != MBEDTLS_MD_NONE )
     {
-        const mbedtls_md_info_t *md_info = vdb_mbedtls_md_info_from_type( md_alg );
+        const mbedtls_md_info_t *md_info = mbedtls_md_info_from_type( md_alg );
         if( md_info == NULL )
             return( MBEDTLS_ERR_RSA_BAD_INPUT_DATA );
 
-        if( vdb_mbedtls_oid_get_oid_by_md( md_alg, &oid, &oid_size ) != 0 )
+        if( mbedtls_oid_get_oid_by_md( md_alg, &oid, &oid_size ) != 0 )
             return( MBEDTLS_ERR_RSA_BAD_INPUT_DATA );
 
-        hashlen = vdb_mbedtls_md_get_size( md_info );
+        hashlen = mbedtls_md_get_size( md_info );
         asn_len = 10 + oid_size;
     }
 

@@ -50,15 +50,15 @@ struct GCP;
 #include <kfs/directory.h>
 #include <kfs/file.h>
 #include <kns/stream.h> /* KStreamRelease */
-#include <kns/kns-mgr-priv.h> 
+#include <kns/kns-mgr-priv.h>
 #include <kns/http-priv.h>
 
 #include <kproc/procmgr.h>
 
-#include <ext/mbedtls/md.h> /* vdb_mbedtls_md_hmac */
-#include <ext/mbedtls/pk.h>
-#include <ext/mbedtls/ctr_drbg.h>
-#include <ext/mbedtls/entropy.h>
+#include <mbedtls/md.h> /* mbedtls_md_hmac */
+#include <mbedtls/pk.h>
+#include <mbedtls/ctr_drbg.h>
+#include <mbedtls/entropy.h>
 
 #include <assert.h>
 
@@ -126,7 +126,7 @@ static
 rc_t CC GCPMakeComputeEnvironmentToken ( const GCP * self, const String ** ce_token )
 {
     assert(self);
-    
+
     if (!self->dad.user_agrees_to_reveal_instance_identity)
         return RC(rcCloud, rcProvider, rcIdentifying,
                   rcCondition, rcUnauthorized);
@@ -257,12 +257,12 @@ const String ** output)
         , pid
         );
 
-    vdb_mbedtls_entropy_init(&ent_ctx);
+    mbedtls_entropy_init(&ent_ctx);
 
-    vdb_mbedtls_ctr_drbg_init(&ctr_drbg);
-    ret = vdb_mbedtls_ctr_drbg_seed(
+    mbedtls_ctr_drbg_init(&ctr_drbg);
+    ret = mbedtls_ctr_drbg_seed(
         &ctr_drbg,
-        vdb_mbedtls_entropy_func,
+        mbedtls_entropy_func,
         &ent_ctx,
         (const unsigned char *)pers,
         (size_t)pers_size
@@ -271,20 +271,20 @@ const String ** output)
     {
         /* 1. parse key_PEM */
         mbedtls_pk_context pk;
-        vdb_mbedtls_pk_init(&pk);
-        ret = vdb_mbedtls_pk_parse_key(&pk,
+        mbedtls_pk_init(&pk);
+        ret = mbedtls_pk_parse_key(&pk,
             (unsigned char *)key_PEM,
             string_measure(key_PEM, NULL) + 1,
             NULL, 0);
         if (ret == 0)
         {
             /* 2. generate the checksum */
-            const mbedtls_md_info_t * info = vdb_mbedtls_md_info_from_type(md_type);
-            size_t dsize = vdb_mbedtls_md_get_size(info);
+            const mbedtls_md_info_t * info = mbedtls_md_info_from_type(md_type);
+            size_t dsize = mbedtls_md_get_size(info);
 
             unsigned char checksum[512 / 8];
             assert(sizeof checksum >= dsize);
-            ret = vdb_mbedtls_md(info,
+            ret = mbedtls_md(info,
                 (const unsigned char *)input,
                 string_measure(input, NULL),
                 checksum);
@@ -292,16 +292,16 @@ const String ** output)
             {
                 /* 3. compute the signature */
                 String * out = NULL;
-                mbedtls_rsa_context * ctx = vdb_mbedtls_pk_rsa(pk);
+                mbedtls_rsa_context * ctx = mbedtls_pk_rsa(pk);
 
                 out = malloc(sizeof(String) + ctx->len);
                 if (out != NULL)
                 {
                     StringInit( out, (char*)out + sizeof(String), ctx->len, (uint32_t)ctx->len );
 
-                    ret = vdb_mbedtls_rsa_rsassa_pkcs1_v15_sign(
+                    ret = mbedtls_rsa_rsassa_pkcs1_v15_sign(
                         ctx,
-                        vdb_mbedtls_ctr_drbg_random,
+                        mbedtls_ctr_drbg_random,
                         (void *)& ctr_drbg,
                         MBEDTLS_RSA_PRIVATE,
                         md_type,
@@ -313,8 +313,8 @@ const String ** output)
                     {
 #ifdef _DEBUGGING
                         /* 4. verify the signature */
-                        ret = vdb_mbedtls_rsa_rsassa_pkcs1_v15_verify(
-                            vdb_mbedtls_pk_rsa(pk),
+                        ret = mbedtls_rsa_rsassa_pkcs1_v15_verify(
+                            mbedtls_pk_rsa(pk),
                             NULL,
                             NULL,
                             MBEDTLS_RSA_PUBLIC,
@@ -325,14 +325,14 @@ const String ** output)
                             );
                         if (ret != 0)
                         {
-                            TRACE("vdb_mbedtls_rsa_rsassa_pkcs1_v15_verify = -%#.4X\n", -ret);
+                            TRACE("mbedtls_rsa_rsassa_pkcs1_v15_verify = -%#.4X\n", -ret);
                             rc = RC(rcCloud, rcUri, rcInitializing, rcEncryption, rcFailed);
                         }
 #endif
                     }
                     else
                     {
-                        TRACE("vdb_mbedtls_rsa_rsassa_pkcs1_v15_sign = -%#.4X\n", -ret);
+                        TRACE("mbedtls_rsa_rsassa_pkcs1_v15_sign = -%#.4X\n", -ret);
                         rc = RC(rcCloud, rcUri, rcInitializing, rcEncryption, rcFailed);
                     }
 
@@ -352,26 +352,26 @@ const String ** output)
             }
             else
             {
-                TRACE("vdb_mbedtls_md = -%#.4X\n", -ret);
+                TRACE("mbedtls_md = -%#.4X\n", -ret);
                 rc = RC(rcCloud, rcUri, rcInitializing, rcEncryption, rcFailed);
             }
         }
         else
         {
-            TRACE("vdb_mbedtls_pk_parse_key = -%#.4X\n", -ret);
+            TRACE("mbedtls_pk_parse_key = -%#.4X\n", -ret);
             rc = RC(rcCloud, rcUri, rcInitializing, rcEncryption, rcFailed);
         }
 
-        vdb_mbedtls_pk_free(&pk);
+        mbedtls_pk_free(&pk);
     }
     else
     {
-        TRACE("vdb_mbedtls_ctr_drbg_seed = -%#.4X\n", -ret);
+        TRACE("mbedtls_ctr_drbg_seed = -%#.4X\n", -ret);
         rc = RC(rcCloud, rcUri, rcInitializing, rcEncryption, rcFailed);
     }
 
-    vdb_mbedtls_entropy_free(&ent_ctx);
-    vdb_mbedtls_ctr_drbg_free(&ctr_drbg);
+    mbedtls_entropy_free(&ent_ctx);
+    mbedtls_ctr_drbg_free(&ctr_drbg);
 
     return rc;
 }

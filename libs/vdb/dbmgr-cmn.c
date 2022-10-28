@@ -20,7 +20,7 @@
 *
 *  Please cite the author in any work or product based on this material.
 *
-* ===========================================================================
+* =============================================================================$
 *
 */
 
@@ -72,6 +72,8 @@
 #define DEBUG_PRINT(fmt, ...) fprintf(stderr, "%s - " fmt "\n", __func__, __VA_ARGS__)
 #endif
 
+static String * s_LoadedQuality = NULL; /* default or from configuration*/
+
 /*--------------------------------------------------------------------------
  * VDBManager
  *  opaque handle to library
@@ -99,6 +101,10 @@ rc_t VDBManagerWhack ( VDBManager *self )
 
         VSchemaRelease ( self -> schema );
         VLinkerRelease ( self -> linker );
+	
+        StringWhack ( s_LoadedQuality );
+        s_LoadedQuality = NULL;
+	
         free ( self );
         return 0;
     }
@@ -958,7 +964,6 @@ LIB_EXPORT rc_t CC VDBManagerDeleteCacheOlderThan ( const VDBManager * self,
 static const char * s_EnvQuality = NULL; /* from environment */
 static bool s_EnvQualitySet = false;     /* set via environment */
 
-static String * s_LoadedQuality = NULL; /* default or from configuration*/
 static const char * s_SetQuality = NULL;/* explicitly set VDBManagerSetQuality*/
 
 static String s_DfltQuality;
@@ -992,6 +997,7 @@ static const char * VDBManagerGetQuality(const VDBManager * self) {
 
     if (s_LoadedQuality == NULL) {
         const KConfig * kfg = NULL;
+
         if (self != NULL) {
             const KDBManager * kmgr = NULL;
             VFSManager * vfs = NULL;
@@ -1003,11 +1009,14 @@ static const char * VDBManagerGetQuality(const VDBManager * self) {
             VFSManagerRelease(vfs);
             KDBManagerRelease(kmgr);
         }
+
         if (kfg == NULL)
             KConfigMake((KConfig**)&kfg, NULL);
+
         rc = KConfigReadString(kfg, "/libs/vdb/quality", &s_LoadedQuality);
         if (rc != 0)
-            s_LoadedQuality = &s_DfltQuality;
+            StringCopy((const String**)&s_LoadedQuality, &s_DfltQuality);
+
         KConfigRelease(kfg);
     }
 
