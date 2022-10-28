@@ -426,6 +426,7 @@ static rc_t ReportCrntRepository(const ReportFuncs *f,
 
     const char root[] = "CurrentProtectedRepository";
     bool open = false;
+    bool notFound = false;
 
     if (rc == 0) {
         rc = KRepositoryMgrCurrentProtectedRepository(mgr, &protectd);
@@ -434,6 +435,7 @@ static rc_t ReportCrntRepository(const ReportFuncs *f,
                 rcKFG, rcMgr, rcAccessing, rcNode, rcNotFound))
             {
                 report(indent, root, 1, "found", 's', "false");
+                notFound = true;
             }
             else {
                 reportOpen(indent, root, 0);
@@ -462,6 +464,9 @@ static rc_t ReportCrntRepository(const ReportFuncs *f,
     }
 
     RELEASE(KRepository, protectd);
+
+    if (notFound)
+       rc = 0;
 
     return rc;
 }
