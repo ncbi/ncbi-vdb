@@ -96,5 +96,7 @@ elseif( SINGLE_CONFIG )
 	)
     endif()
 else() # XCode
+    list(REMOVE_ITEM VDB_LIB_RD_TARGETS bz2 z)
+    list(REMOVE_ITEM VDB_LIB_RDWR_TARGETS bz2 z)
     include( CMakeLists.xcode.txt )
 endif()

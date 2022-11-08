@@ -29,11 +29,6 @@
 
 #include <ktst/unit_test_suite.hpp>
 
-struct test_skipped {
-    std::string reason;
-    test_skipped(std::string const &reason) : reason(reason) {}
-};
-
 
 ////////////////////////////////////////////////////////////////////////////////
 namespace ncbi { namespace NK {

@@ -89,7 +89,7 @@ public:
 
         KDirectoryRelease(wd);
         if (is_good) return;
-        throw test_skipped("path not readable: " + path);
+        throw ncbi::NK::test_skipped("path not readable: " + path);
     }
 
     void MakeDatabase ( const std :: string & p_schemaText, const std :: string & p_schemaSpec, const char * includes = nullptr )

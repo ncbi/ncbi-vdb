@@ -96,6 +96,11 @@ class Empty {};
 
 class execution_aborted {};
 
+struct test_skipped {
+    std::string reason;
+    test_skipped(std::string const &reason) : reason(reason) {}
+};
+
 class LogLevel {
 public:
     enum E {

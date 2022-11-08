@@ -27,10 +27,21 @@
 #ifndef _h_kfg_priv_
 #define _h_kfg_priv_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct KConfig;
 
 extern void add_aws_nodes ( struct KConfig *self );
 
 const char * KConfigGetNgcFile(void);
+
+bool KConfigDisabledUserSettings(void);
+bool KConfigSetUserSettingsDisabled(bool disable);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _h_kfg_priv_ */
