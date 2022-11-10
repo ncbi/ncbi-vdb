@@ -25,7 +25,7 @@
   **vdb**: fixed a bug that allowed a null pointer to be used  
   **vdb**: kxml and kxfs are combined and moved to sra-tools  
   **vdb**: memmove should be used instead of memcpy in this repository. We added an automated check for that. New code containing memcpy will fail this check  
-  **vdb**: updated zlib version to fix vulnerability.  
+  **vdb**: updated zlib version to fix vulnerability  
   **vdb**: VTable can copy columns  
   **vfs**: now recognizes sralite.vdbcache files  
 
