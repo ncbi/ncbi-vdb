@@ -65,6 +65,10 @@
 #include <string.h>
 #include <assert.h>
 
+/*--------------------------------------------------------------------------
+ * turns ON verbose REFCOUNT tracing
+ */
+#define REPORT_VTABLE_REFCOUNT 0
 
 /*--------------------------------------------------------------------------
  * VTable
@@ -100,7 +104,17 @@ LIB_EXPORT rc_t CC VTableAddRef ( const VTable *self )
 {
     if ( self != NULL )
     {
-        switch ( KRefcountAdd ( & self -> refcount, "VTable" ) )
+#if REPORT_VTABLE_REFCOUNT
+        uint32_t before = atomic32_read( &self -> refcount );
+#endif
+        int ret = KRefcountAdd ( & self -> refcount, "VTable" );
+#if REPORT_VTABLE_REFCOUNT
+        uint32_t after = atomic32_read( &self -> refcount );
+        const char * name = self -> stbl -> name -> name . addr;
+        KDbgMsg( "VTableAddRef( %p %s ) ref: %x ---> %x\n", self, name, before, after );
+#endif
+
+        switch ( ret )
         {
         case krefLimit:
             return RC ( rcVDB, rcTable, rcAttaching, rcRange, rcExcessive );
@@ -113,7 +127,17 @@ LIB_EXPORT rc_t CC VTableRelease ( const VTable *self )
 {
     if ( self != NULL )
     {
-        switch ( KRefcountDrop ( & self -> refcount, "VTable" ) )
+#if REPORT_VTABLE_REFCOUNT
+        uint32_t before = atomic32_read( &self -> refcount );
+#endif
+        int ret = KRefcountDrop ( & self -> refcount, "VTable" );
+#if REPORT_VTABLE_REFCOUNT
+        uint32_t after = atomic32_read( &self -> refcount );
+        const char * name = self -> stbl -> name -> name . addr;
+        KDbgMsg( "VTableRelease( %p %s ) ref: %x ---> %x\n", self, name, before, after );
+#endif
+
+        switch ( ret )
         {
         case krefWhack:
             return VTableWhack ( ( VTable* ) self );
@@ -132,7 +156,17 @@ VTable *VTableAttach ( const VTable *self )
 {
     if ( self != NULL )
     {
-        switch ( KRefcountAddDep ( & self -> refcount, "VTable" ) )
+#if REPORT_VTABLE_REFCOUNT
+        uint32_t before = atomic32_read( &self -> refcount );
+#endif
+        int ret = KRefcountAddDep ( & self -> refcount, "VTable" );
+#if REPORT_VTABLE_REFCOUNT
+        uint32_t after = atomic32_read( &self -> refcount );
+        const char * name = self -> stbl -> name -> name . addr;
+        KDbgMsg( "VTableAttach( %p %s ) %x ---> %x\n", self, name, before, after );
+#endif
+
+        switch ( ret )
         {
         case krefLimit:
             return NULL;
@@ -145,7 +179,17 @@ rc_t VTableSever ( const VTable *self )
 {
     if ( self != NULL )
     {
-        switch ( KRefcountDropDep ( & self -> refcount, "VTable" ) )
+#if REPORT_VTABLE_REFCOUNT
+        uint32_t before = atomic32_read( &self -> refcount );
+#endif
+        int ret = KRefcountDropDep ( & self -> refcount, "VTable" );
+#if REPORT_VTABLE_REFCOUNT
+        uint32_t after = atomic32_read( &self -> refcount );
+        const char * name = self -> stbl -> name -> name . addr;
+        KDbgMsg( "VTableSever( %p %s ) %x ---> %x\n", self, name, before, after );
+#endif
+
+        switch ( ret )
         {
         case krefWhack:
             return VTableWhack ( ( VTable* ) self );
@@ -181,6 +225,11 @@ rc_t VTableMake ( VTable **tblp,
             BSTreeInit ( & tbl -> write_col_cache );
 
             KRefcountInit ( & tbl -> refcount, 1, "VTable", "make", "vtbl" );
+
+#if REPORT_VTABLE_REFCOUNT
+            uint32_t after = atomic32_read( &tbl -> refcount );
+            KDbgMsg( "VTableMake( %p ) %u\n", tbl, after );
+#endif
 
             tbl -> cmode = ( uint8_t ) kcmOpen;
             tbl -> checksum = ( uint8_t ) kcsNone;

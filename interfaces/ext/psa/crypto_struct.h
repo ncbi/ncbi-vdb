@@ -394,7 +394,7 @@ static inline mbedtls_svc_key_id_t psa_get_key_id(
 }
 
 #ifdef MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER
-static inline void vdb_mbedtls_set_key_owner_id( psa_key_attributes_t *attributes,
+static inline void mbedtls_set_key_owner_id( psa_key_attributes_t *attributes,
                                              mbedtls_key_owner_id_t owner )
 {
     attributes->core.id.owner = owner;

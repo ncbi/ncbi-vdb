@@ -233,6 +233,18 @@ rc_t KMAttrNodeMake ( KMAttrNode **np,
     return 0;
 }
 
+static rc_t KMAttrNodeMakeCopy(KMAttrNode **node, KMAttrNode const *source)
+{
+    size_t const size = &((uint8_t const *)source->value)[source->vsize] - ((uint8_t const *)source);
+    KMAttrNode *result = malloc(size);
+    if (result == NULL)
+        return RC ( rcDB, rcNode, rcConstructing, rcMemory, rcExhausted );
+
+    memmove(result, source, size);
+    memset(&result->n, 0, sizeof(result->n));
+    *node = result;
+    return 0;
+}
 
 /*--------------------------------------------------------------------------
  * KMDataNode
@@ -1916,15 +1928,8 @@ LIB_EXPORT rc_t CC KMDataNodeReadAttrAsF64 ( const KMDataNode *self, const char 
  * VDrop
  *  drop some or all node content
  */
-LIB_EXPORT rc_t CC KMDataNodeDropAll ( KMDataNode *self )
+rc_t KMDataNodeDropAll_int ( KMDataNode *self )
 {
-    if ( self == NULL )
-        return RC ( rcDB, rcNode, rcClearing, rcSelf, rcNull );
-    if ( self -> meta == NULL )
-        return RC ( rcDB, rcNode, rcClearing, rcMetadata, rcNull );
-    if ( self -> read_only )
-        return RC ( rcDB, rcNode, rcClearing, rcNode, rcReadonly );
-
     BSTreeWhack ( & self -> attr, KMAttrNodeWhack, NULL );
     BSTreeInit ( & self -> attr );
 
@@ -1937,6 +1942,18 @@ LIB_EXPORT rc_t CC KMDataNodeDropAll ( KMDataNode *self )
     self -> meta -> dirty = true;
 
     return 0;
+}
+
+LIB_EXPORT rc_t CC KMDataNodeDropAll ( KMDataNode *self )
+{
+    if ( self == NULL )
+        return RC ( rcDB, rcNode, rcClearing, rcSelf, rcNull );
+    if ( self -> meta == NULL )
+        return RC ( rcDB, rcNode, rcClearing, rcMetadata, rcNull );
+    if ( self -> read_only )
+        return RC ( rcDB, rcNode, rcClearing, rcNode, rcReadonly );
+
+    return KMDataNodeDropAll_int(self);
 }
 
 LIB_EXPORT rc_t CC KMDataNodeDropAttr ( KMDataNode *self, const char *attr )
@@ -3526,5 +3543,286 @@ LIB_EXPORT rc_t CC KMDataNodeListChildren ( const KMDataNode *self, KNamelist **
     if ( rc == 0 )
         BSTreeForEach ( & self -> child, false, KMDataNodeGrabName, * names );
 
+    return rc;
+}
+
+/*--------------------------------------------------------------------------
+ * deep copy of a Metadata-node
+ */
+
+struct CopyContext {
+    KMDataNode *dest;
+    KMDataNode const *source;
+    rc_t rc;
+};
+static void KMDataNodeCopy_int(struct CopyContext *ctx);
+
+static void KMDataNodeCopyValue(struct CopyContext *ctx)
+{
+    if (ctx->rc == 0) {
+        void const *data = NULL;
+        size_t size = 0;
+
+        ctx->rc = KMDataNodeAddr(ctx->source, &data, &size);
+        if (ctx->rc == 0)
+            ctx->rc = KMDataNodeWrite(ctx->dest, data, size);
+    }
+}
+
+static void CC KMDataNodeCopyAttribute_cb(BSTNode *n, void *data)
+{
+    struct CopyContext *const ctx = data;
+    if (ctx->rc == 0) {
+        KMAttrNode *newAttr = NULL;
+        ctx->rc = KMAttrNodeMakeCopy(&newAttr, (KMAttrNode const *)n);
+        if (ctx->rc == 0)
+            BSTreeInsert(&ctx->dest->attr, &newAttr->n, KMAttrNodeSort);
+    }
+}
+
+static void CC KMDataNodeCopy_cb(BSTNode *n, void *data)
+{
+    struct CopyContext *const ctx = data;
+    if (ctx->rc == 0) {
+        char const *const nodeName = ((KMDataNode const *)n)->name;
+        KMDataNode *const dest = ctx->dest;
+        KMDataNode const *const source = ctx->source;
+
+        ctx->rc = KMDataNodeOpenNodeRead(source, &ctx->source, nodeName);
+        assert(ctx->rc == 0);
+        if (ctx->rc == 0) {
+            ctx->rc = KMDataNodeOpenNodeUpdate(dest, &ctx->dest, nodeName);
+            if (ctx->rc == 0) {
+                KMDataNodeCopy_int(ctx);
+                KMDataNodeRelease(ctx->dest);
+            }
+            KMDataNodeRelease(ctx->source);
+        }
+        ctx->source = source;
+        ctx->dest = dest;
+    }
+}
+
+static void KMDataNodeCopy_int(struct CopyContext *ctx)
+{
+    KMDataNodeCopyValue(ctx);
+    BSTreeForEach(&ctx->source->attr, false, KMDataNodeCopyAttribute_cb, ctx);
+    BSTreeForEach(&ctx->source->child, false, KMDataNodeCopy_cb, ctx);
+    ctx->dest->meta->dirty = (ctx->rc == 0);
+}
+
+LIB_EXPORT rc_t CC KMDataNodeCopy(  KMDataNode *self
+                                  , KMDataNode const *source)
+{
+    struct CopyContext ctx;
+
+    if (self == NULL)
+        return RC(rcDB, rcNode, rcCopying, rcSelf, rcNull);
+    if (self->read_only)
+        return RC(rcDB, rcNode, rcCopying, rcNode, rcReadonly);
+    if (source == NULL)
+        return RC(rcDB, rcNode, rcCopying, rcParam, rcNull);
+    if (self->meta == NULL || source->meta == NULL)
+        return RC(rcDB, rcNode, rcCopying, rcMetadata, rcNull);
+
+    ctx.rc = KMDataNodeDropAll_int(self);
+    ctx.dest = self;
+    ctx.source = source;
+
+    KMDataNodeCopy_int(&ctx);
+
+    return ctx.rc;
+}
+
+/* KTableMetaCopy
+ *  copies node ( at given path ) from src to self
+ */
+LIB_EXPORT rc_t CC KTableMetaCopy( KTable *self, const KTable *src, const char * path,
+                                   bool src_node_has_to_exist ) {
+    rc_t rc = 0;
+    if ( NULL == self ) {
+        rc = RC ( rcDB, rcTable, rcComparing, rcSelf, rcNull );
+    } else if ( NULL == src || NULL == path ) {
+        rc = RC ( rcDB, rcTable, rcComparing, rcParam, rcNull );        
+    } else {
+        KMetadata *self_meta;
+        rc = KTableOpenMetadataUpdate( self, &self_meta );
+        if ( 0 == rc ) {
+            const KMetadata *src_meta;
+            rc = KTableOpenMetadataRead( src, &src_meta );
+            if ( 0 == rc ) {
+                KMDataNode * self_node;
+                rc = KMetadataOpenNodeUpdate( self_meta, &self_node, path );
+                if ( 0 == rc ) {
+                    const KMDataNode * src_node;
+                    rc = KMetadataOpenNodeRead( src_meta, &src_node, path );
+                    if ( 0 == rc ) {
+                        rc = KMDataNodeCopy( self_node, src_node );
+                        KMDataNodeRelease( src_node );
+                    } else {
+                        if ( !src_node_has_to_exist ) { rc = 0; }
+                    }
+                    KMDataNodeRelease( self_node );
+                }
+                KMetadataRelease( src_meta );
+            }
+            KMetadataRelease( self_meta );
+        }
+    }
+    return rc;
+}
+
+/*--------------------------------------------------------------------------
+ * deep comparison of 2 Metadata-nodes
+ */
+
+/* >>>>>> !!! any changes here have to be duplicated in meta.c !!! <<<<<< */
+static rc_t KMDataNodeCompare_int( const KMDataNode *self, const KMDataNode *other, bool *equal );
+
+/* >>>>>> !!! any changes here have to be duplicated in meta.c !!! <<<<<< */
+static rc_t KMDataNodeCompareValue( const KMDataNode *self, const KMDataNode *other, bool *equal ) {
+    void const *self_data = NULL;
+    size_t self_size = 0;
+    rc_t rc = KMDataNodeAddr( self, &self_data, &self_size );
+    if ( 0 == rc ) {
+        void const *other_data = NULL;
+        size_t other_size = 0;
+        rc = KMDataNodeAddr( other, &other_data, &other_size );
+        if ( 0 == rc ) {
+            if ( self_size != other_size ) {
+                *equal = false; /* if the sizes are different - they can't be equal... */
+            } else if ( 0 == self_size ) {
+                *equal = true; /* if both nodes have no data... */                
+            } else {
+                int cmp = memcmp( self_data, other_data, self_size );
+                *equal = ( 0 == cmp );
+            }
+        }
+    }
+    return rc;
+}
+
+/* >>>>>> !!! any changes here have to be duplicated in meta.c !!! <<<<<< */
+struct CompareContext {
+    KMDataNode const *other;
+    bool *equal;
+    rc_t rc;
+};
+
+/* >>>>>> !!! any changes here have to be duplicated in meta.c !!! <<<<<< */
+static void CC KMDataNodeCompareChildren_cb( BSTNode *n, void *data ) {
+    struct CompareContext *const ctx = data;
+    if ( 0 == ctx -> rc && *( ctx -> equal ) ) {
+        const KMDataNode *child = ( const KMDataNode * )n;
+        const char * childName = child -> name;
+        // find the corresponding child-node in ctx -> other
+        const KMDataNode *other_child;
+        ctx -> rc = KMDataNodeOpenNodeRead( ctx -> other, &other_child, childName );
+        if ( 0 == ctx -> rc ) {
+            ctx -> rc = KMDataNodeCompare_int( child, other_child, ctx -> equal ); /* recursion here! */
+            KMDataNodeRelease( other_child );
+        } else {
+            *( ctx -> equal ) = false;
+        }
+    }
+}
+
+/* >>>>>> !!! any changes here have to be duplicated in meta.c !!! <<<<<< */
+static void CC KMDataNodeCompareAttr_cb( BSTNode *n, void *data ) {
+    struct CompareContext *const ctx = data;
+    if ( 0 == ctx -> rc && *( ctx -> equal ) ) {
+        const KMAttrNode *attr = ( const KMAttrNode * )n;
+        if ( NULL != attr ) {
+            const char * attrName = attr -> name;
+            const KMAttrNode *other_attr = ( const KMAttrNode* )BSTreeFind( &( ctx -> other -> attr ),
+                                                                            attrName, KMAttrNodeCmp );
+            if ( NULL == other_attr ) {
+                *( ctx -> equal ) = false; /* not found in other... */
+            } else if ( attr -> vsize != other_attr -> vsize ) {
+                *( ctx -> equal ) = false; /* if the sizes are different - they can't be equal... */
+            } else if ( 0 == attr -> vsize ) {
+                *( ctx -> equal ) = true; /* both attributes have no data... */
+            } else {
+                int cmp = memcmp( attr -> value, other_attr -> value, attr -> vsize );
+                *( ctx -> equal ) = ( 0 == cmp );
+            }
+        }
+    }
+}
+
+/* >>>>>> !!! any changes here have to be duplicated in meta.c !!! <<<<<< */
+static rc_t KMDataNodeCompare_int( const KMDataNode *self, const KMDataNode *other, bool *equal ) {
+    /* first we compare the value of these 2 nodes */
+    rc_t rc = KMDataNodeCompareValue( self, other, equal );
+    if ( 0 == rc && *equal ) {
+        /* if they are equal, we compare all of the children of self with the children of other */
+        struct CompareContext ctx = { other, equal, 0 };
+        BSTreeForEach( &( self -> child ), false, KMDataNodeCompareChildren_cb, &ctx );
+        rc = ctx . rc;
+        if ( 0 == rc && *equal ) {
+            /* if they are equal we compare all attributes... */
+            BSTreeForEach( &( self -> attr ), false, KMDataNodeCompareAttr_cb, &ctx );
+            rc = ctx .rc;
+        }
+    }
+    return rc;
+}
+
+/* >>>>>> !!! any changes here have to be duplicated in meta.c !!! <<<<<< */
+LIB_EXPORT rc_t CC KMDataNodeCompare( const KMDataNode *self, KMDataNode const *other, bool *equal ) {
+    rc_t rc = 0;
+    if ( self == NULL ) { 
+        rc = RC( rcDB, rcNode, rcComparing, rcSelf, rcNull );
+    } else if ( other == NULL || equal == NULL ) { 
+        rc = RC( rcDB, rcNode, rcComparing, rcParam, rcNull );
+    } else if ( self -> meta == NULL && other -> meta == NULL ) {
+        *equal = true;
+    } else if ( self -> meta == NULL || other -> meta == NULL ) {
+        *equal = false;
+        rc = RC( rcDB, rcNode, rcComparing, rcMetadata, rcNull );
+    } else {
+        /* 2 way comparison, to make sure that both nodes have the same children... */
+        rc =  KMDataNodeCompare_int( self, other, equal );
+        if ( 0 == rc && *equal ) {
+            rc =  KMDataNodeCompare_int( other, self, equal );            
+        }
+    }
+    return rc;
+}
+
+/* KTableMetaCompare
+ *  test if 2 tables have the same MetaDataNode ( and content ) for a given path
+ */
+/* >>>>>> !!! any changes here have to be duplicated in meta.c !!! <<<<<< */
+LIB_EXPORT rc_t CC KTableMetaCompare( const KTable *self, const KTable *other,
+                                      const char * path, bool * equal ) {
+    rc_t rc = 0;
+    if ( NULL == self ) {
+        rc = RC ( rcDB, rcTable, rcComparing, rcSelf, rcNull );
+    } else if ( NULL == other || NULL == path || NULL == equal ) {
+        rc = RC ( rcDB, rcTable, rcComparing, rcParam, rcNull );        
+    } else {
+        const KMetadata *self_meta;
+        rc = KTableOpenMetadataRead( self, &self_meta );
+        if ( 0 == rc ) {
+            const KMetadata *other_meta;
+            rc = KTableOpenMetadataRead( other, &other_meta );
+            if ( 0 == rc ) {
+                const KMDataNode * self_node;
+                rc = KMetadataOpenNodeRead( self_meta, &self_node, path );
+                if ( 0 == rc ) {
+                    const KMDataNode * other_node;
+                    rc = KMetadataOpenNodeRead( other_meta, &other_node, path );
+                    if ( 0 == rc ) {
+                        rc = KMDataNodeCompare( self_node, other_node, equal );
+                        KMDataNodeRelease( other_node );
+                    }
+                    KMDataNodeRelease( self_node );
+                }
+                KMetadataRelease( other_meta );                
+            }
+            KMetadataRelease( self_meta );
+        }
+    }
     return rc;
 }

@@ -54,8 +54,8 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdlib.h>
-#define vdb_mbedtls_calloc    calloc
-#define vdb_mbedtls_free       free
+#define mbedtls_calloc    calloc
+#define mbedtls_free       free
 #endif
 
 #include <limits.h>
@@ -71,7 +71,7 @@ static int rsa_can_do( mbedtls_pk_type_t type )
 static size_t rsa_get_bitlen( const void *ctx )
 {
     const mbedtls_rsa_context * rsa = (const mbedtls_rsa_context *) ctx;
-    return( 8 * vdb_mbedtls_rsa_get_len( rsa ) );
+    return( 8 * mbedtls_rsa_get_len( rsa ) );
 }
 
 static int rsa_verify_wrap( void *ctx, mbedtls_md_type_t md_alg,
@@ -80,7 +80,7 @@ static int rsa_verify_wrap( void *ctx, mbedtls_md_type_t md_alg,
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     mbedtls_rsa_context * rsa = (mbedtls_rsa_context *) ctx;
-    size_t rsa_len = vdb_mbedtls_rsa_get_len( rsa );
+    size_t rsa_len = mbedtls_rsa_get_len( rsa );
 
 #if SIZE_MAX > UINT_MAX
     if( md_alg == MBEDTLS_MD_NONE && UINT_MAX < hash_len )
@@ -90,14 +90,14 @@ static int rsa_verify_wrap( void *ctx, mbedtls_md_type_t md_alg,
     if( sig_len < rsa_len )
         return( MBEDTLS_ERR_RSA_VERIFY_FAILED );
 
-    if( ( ret = vdb_mbedtls_rsa_pkcs1_verify( rsa, NULL, NULL,
+    if( ( ret = mbedtls_rsa_pkcs1_verify( rsa, NULL, NULL,
                                   MBEDTLS_RSA_PUBLIC, md_alg,
                                   (unsigned int) hash_len, hash, sig ) ) != 0 )
         return( ret );
 
     /* The buffer contains a valid signature followed by extra data.
      * We have a special error code for that so that so that callers can
-     * use vdb_mbedtls_pk_verify() to check "Does the buffer start with a
+     * use mbedtls_pk_verify() to check "Does the buffer start with a
      * valid signature?" and not just "Does the buffer contain a valid
      * signature?". */
     if( sig_len > rsa_len )
@@ -118,9 +118,9 @@ static int rsa_sign_wrap( void *ctx, mbedtls_md_type_t md_alg,
         return( MBEDTLS_ERR_PK_BAD_INPUT_DATA );
 #endif /* SIZE_MAX > UINT_MAX */
 
-    *sig_len = vdb_mbedtls_rsa_get_len( rsa );
+    *sig_len = mbedtls_rsa_get_len( rsa );
 
-    return( vdb_mbedtls_rsa_pkcs1_sign( rsa, f_rng, p_rng, MBEDTLS_RSA_PRIVATE,
+    return( mbedtls_rsa_pkcs1_sign( rsa, f_rng, p_rng, MBEDTLS_RSA_PRIVATE,
                 md_alg, (unsigned int) hash_len, hash, sig ) );
 }
 
@@ -131,10 +131,10 @@ static int rsa_decrypt_wrap( void *ctx,
 {
     mbedtls_rsa_context * rsa = (mbedtls_rsa_context *) ctx;
 
-    if( ilen != vdb_mbedtls_rsa_get_len( rsa ) )
+    if( ilen != mbedtls_rsa_get_len( rsa ) )
         return( MBEDTLS_ERR_RSA_BAD_INPUT_DATA );
 
-    return( vdb_mbedtls_rsa_pkcs1_decrypt( rsa, f_rng, p_rng,
+    return( mbedtls_rsa_pkcs1_decrypt( rsa, f_rng, p_rng,
                 MBEDTLS_RSA_PRIVATE, olen, input, output, osize ) );
 }
 
@@ -144,35 +144,35 @@ static int rsa_encrypt_wrap( void *ctx,
                     int (*f_rng)(void *, unsigned char *, size_t), void *p_rng )
 {
     mbedtls_rsa_context * rsa = (mbedtls_rsa_context *) ctx;
-    *olen = vdb_mbedtls_rsa_get_len( rsa );
+    *olen = mbedtls_rsa_get_len( rsa );
 
     if( *olen > osize )
         return( MBEDTLS_ERR_RSA_OUTPUT_TOO_LARGE );
 
-    return( vdb_mbedtls_rsa_pkcs1_encrypt( rsa, f_rng, p_rng, MBEDTLS_RSA_PUBLIC,
+    return( mbedtls_rsa_pkcs1_encrypt( rsa, f_rng, p_rng, MBEDTLS_RSA_PUBLIC,
                                        ilen, input, output ) );
 }
 
 static int rsa_check_pair_wrap( const void *pub, const void *prv )
 {
-    return( vdb_mbedtls_rsa_check_pub_priv( (const mbedtls_rsa_context *) pub,
+    return( mbedtls_rsa_check_pub_priv( (const mbedtls_rsa_context *) pub,
                                 (const mbedtls_rsa_context *) prv ) );
 }
 
 static void *rsa_alloc_wrap( void )
 {
-    void *ctx = vdb_mbedtls_calloc( 1, sizeof( mbedtls_rsa_context ) );
+    void *ctx = mbedtls_calloc( 1, sizeof( mbedtls_rsa_context ) );
 
     if( ctx != NULL )
-        vdb_mbedtls_rsa_init( (mbedtls_rsa_context *) ctx, 0, 0 );
+        mbedtls_rsa_init( (mbedtls_rsa_context *) ctx, 0, 0 );
 
     return( ctx );
 }
 
 static void rsa_free_wrap( void *ctx )
 {
-    vdb_mbedtls_rsa_free( (mbedtls_rsa_context *) ctx );
-    vdb_mbedtls_free( ctx );
+    mbedtls_rsa_free( (mbedtls_rsa_context *) ctx );
+    mbedtls_free( ctx );
 }
 
 static void rsa_debug( const void *ctx, mbedtls_pk_debug_item *items )
@@ -188,7 +188,7 @@ static void rsa_debug( const void *ctx, mbedtls_pk_debug_item *items )
     items->value = &( ((mbedtls_rsa_context *) ctx)->E );
 }
 
-const mbedtls_pk_info_t vdb_mbedtls_rsa_info = {
+const mbedtls_pk_info_t mbedtls_rsa_info = {
     MBEDTLS_PK_RSA,
     "RSA",
     rsa_get_bitlen,
@@ -246,12 +246,12 @@ static int eckey_verify_wrap( void *ctx, mbedtls_md_type_t md_alg,
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     mbedtls_ecdsa_context ecdsa;
 
-    vdb_mbedtls_ecdsa_init( &ecdsa );
+    mbedtls_ecdsa_init( &ecdsa );
 
-    if( ( ret = vdb_mbedtls_ecdsa_from_keypair( &ecdsa, ctx ) ) == 0 )
+    if( ( ret = mbedtls_ecdsa_from_keypair( &ecdsa, ctx ) ) == 0 )
         ret = ecdsa_verify_wrap( &ecdsa, md_alg, hash, hash_len, sig, sig_len );
 
-    vdb_mbedtls_ecdsa_free( &ecdsa );
+    mbedtls_ecdsa_free( &ecdsa );
 
     return( ret );
 }
@@ -264,13 +264,13 @@ static int eckey_sign_wrap( void *ctx, mbedtls_md_type_t md_alg,
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     mbedtls_ecdsa_context ecdsa;
 
-    vdb_mbedtls_ecdsa_init( &ecdsa );
+    mbedtls_ecdsa_init( &ecdsa );
 
-    if( ( ret = vdb_mbedtls_ecdsa_from_keypair( &ecdsa, ctx ) ) == 0 )
+    if( ( ret = mbedtls_ecdsa_from_keypair( &ecdsa, ctx ) ) == 0 )
         ret = ecdsa_sign_wrap( &ecdsa, md_alg, hash, hash_len, sig, sig_len,
                                f_rng, p_rng );
 
-    vdb_mbedtls_ecdsa_free( &ecdsa );
+    mbedtls_ecdsa_free( &ecdsa );
 
     return( ret );
 }
@@ -304,13 +304,13 @@ static void *eckey_rs_alloc( void )
 {
     eckey_restart_ctx *rs_ctx;
 
-    void *ctx = vdb_mbedtls_calloc( 1, sizeof( eckey_restart_ctx ) );
+    void *ctx = mbedtls_calloc( 1, sizeof( eckey_restart_ctx ) );
 
     if( ctx != NULL )
     {
         rs_ctx = ctx;
-        vdb_mbedtls_ecdsa_restart_init( &rs_ctx->ecdsa_rs );
-        vdb_mbedtls_ecdsa_init( &rs_ctx->ecdsa_ctx );
+        mbedtls_ecdsa_restart_init( &rs_ctx->ecdsa_rs );
+        mbedtls_ecdsa_init( &rs_ctx->ecdsa_ctx );
     }
 
     return( ctx );
@@ -324,10 +324,10 @@ static void eckey_rs_free( void *ctx )
         return;
 
     rs_ctx = ctx;
-    vdb_mbedtls_ecdsa_restart_free( &rs_ctx->ecdsa_rs );
-    vdb_mbedtls_ecdsa_free( &rs_ctx->ecdsa_ctx );
+    mbedtls_ecdsa_restart_free( &rs_ctx->ecdsa_rs );
+    mbedtls_ecdsa_free( &rs_ctx->ecdsa_ctx );
 
-    vdb_mbedtls_free( ctx );
+    mbedtls_free( ctx );
 }
 
 static int eckey_verify_rs_wrap( void *ctx, mbedtls_md_type_t md_alg,
@@ -344,7 +344,7 @@ static int eckey_verify_rs_wrap( void *ctx, mbedtls_md_type_t md_alg,
 
     /* set up our own sub-context if needed (that is, on first run) */
     if( rs->ecdsa_ctx.grp.pbits == 0 )
-        MBEDTLS_MPI_CHK( vdb_mbedtls_ecdsa_from_keypair( &rs->ecdsa_ctx, ctx ) );
+        MBEDTLS_MPI_CHK( mbedtls_ecdsa_from_keypair( &rs->ecdsa_ctx, ctx ) );
 
     MBEDTLS_MPI_CHK( ecdsa_verify_rs_wrap( &rs->ecdsa_ctx,
                                            md_alg, hash, hash_len,
@@ -369,7 +369,7 @@ static int eckey_sign_rs_wrap( void *ctx, mbedtls_md_type_t md_alg,
 
     /* set up our own sub-context if needed (that is, on first run) */
     if( rs->ecdsa_ctx.grp.pbits == 0 )
-        MBEDTLS_MPI_CHK( vdb_mbedtls_ecdsa_from_keypair( &rs->ecdsa_ctx, ctx ) );
+        MBEDTLS_MPI_CHK( mbedtls_ecdsa_from_keypair( &rs->ecdsa_ctx, ctx ) );
 
     MBEDTLS_MPI_CHK( ecdsa_sign_rs_wrap( &rs->ecdsa_ctx, md_alg,
                                          hash, hash_len, sig, sig_len,
@@ -383,24 +383,24 @@ cleanup:
 
 static int eckey_check_pair( const void *pub, const void *prv )
 {
-    return( vdb_mbedtls_ecp_check_pub_priv( (const mbedtls_ecp_keypair *) pub,
+    return( mbedtls_ecp_check_pub_priv( (const mbedtls_ecp_keypair *) pub,
                                 (const mbedtls_ecp_keypair *) prv ) );
 }
 
 static void *eckey_alloc_wrap( void )
 {
-    void *ctx = vdb_mbedtls_calloc( 1, sizeof( mbedtls_ecp_keypair ) );
+    void *ctx = mbedtls_calloc( 1, sizeof( mbedtls_ecp_keypair ) );
 
     if( ctx != NULL )
-        vdb_mbedtls_ecp_keypair_init( ctx );
+        mbedtls_ecp_keypair_init( ctx );
 
     return( ctx );
 }
 
 static void eckey_free_wrap( void *ctx )
 {
-    vdb_mbedtls_ecp_keypair_free( (mbedtls_ecp_keypair *) ctx );
-    vdb_mbedtls_free( ctx );
+    mbedtls_ecp_keypair_free( (mbedtls_ecp_keypair *) ctx );
+    mbedtls_free( ctx );
 }
 
 static void eckey_debug( const void *ctx, mbedtls_pk_debug_item *items )
@@ -410,7 +410,7 @@ static void eckey_debug( const void *ctx, mbedtls_pk_debug_item *items )
     items->value = &( ((mbedtls_ecp_keypair *) ctx)->Q );
 }
 
-const mbedtls_pk_info_t vdb_mbedtls_eckey_info = {
+const mbedtls_pk_info_t mbedtls_eckey_info = {
     MBEDTLS_PK_ECKEY,
     "EC",
     eckey_get_bitlen,
@@ -447,7 +447,7 @@ static int eckeydh_can_do( mbedtls_pk_type_t type )
             type == MBEDTLS_PK_ECKEY_DH );
 }
 
-const mbedtls_pk_info_t vdb_mbedtls_eckeydh_info = {
+const mbedtls_pk_info_t mbedtls_eckeydh_info = {
     MBEDTLS_PK_ECKEY_DH,
     "EC_DH",
     eckey_get_bitlen,         /* Same underlying key structure */
@@ -488,7 +488,7 @@ static int extract_ecdsa_sig_int( unsigned char **from, const unsigned char *end
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t unpadded_len, padding_len;
 
-    if( ( ret = vdb_mbedtls_asn1_get_tag( from, end, &unpadded_len,
+    if( ( ret = mbedtls_asn1_get_tag( from, end, &unpadded_len,
                                       MBEDTLS_ASN1_INTEGER ) ) != 0 )
     {
         return( ret );
@@ -522,7 +522,7 @@ static int extract_ecdsa_sig( unsigned char **p, const unsigned char *end,
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t tmp_size;
 
-    if( ( ret = vdb_mbedtls_asn1_get_tag( p, end, &tmp_size,
+    if( ( ret = mbedtls_asn1_get_tag( p, end, &tmp_size,
                 MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE ) ) != 0 )
         return( ret );
 
@@ -550,23 +550,23 @@ static int ecdsa_verify_wrap( void *ctx_arg, mbedtls_md_type_t md_alg,
     /* see ECP_PUB_DER_MAX_BYTES in pkwrite.c */
     unsigned char buf[30 + 2 * MBEDTLS_ECP_MAX_BYTES];
     unsigned char *p;
-    mbedtls_pk_info_t pk_info = vdb_mbedtls_eckey_info;
+    mbedtls_pk_info_t pk_info = mbedtls_eckey_info;
     psa_algorithm_t psa_sig_md = PSA_ALG_ECDSA_ANY;
     size_t curve_bits;
     psa_ecc_family_t curve =
-        vdb_mbedtls_ecc_group_to_psa( ctx->grp.id, &curve_bits );
+        mbedtls_ecc_group_to_psa( ctx->grp.id, &curve_bits );
     const size_t signature_part_size = ( ctx->grp.nbits + 7 ) / 8;
     ((void) md_alg);
 
     if( curve == 0 )
         return( MBEDTLS_ERR_PK_BAD_INPUT_DATA );
 
-    /* vdb_mbedtls_pk_write_pubkey() expects a full PK context;
+    /* mbedtls_pk_write_pubkey() expects a full PK context;
      * re-construct one to make it happy */
     key.pk_info = &pk_info;
     key.pk_ctx = ctx;
     p = buf + sizeof( buf );
-    key_len = vdb_mbedtls_pk_write_pubkey( &p, buf, &key );
+    key_len = mbedtls_pk_write_pubkey( &p, buf, &key );
     if( key_len <= 0 )
         return( MBEDTLS_ERR_PK_BAD_INPUT_DATA );
 
@@ -626,7 +626,7 @@ static int ecdsa_verify_wrap( void *ctx, mbedtls_md_type_t md_alg,
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     ((void) md_alg);
 
-    ret = vdb_mbedtls_ecdsa_read_signature( (mbedtls_ecdsa_context *) ctx,
+    ret = mbedtls_ecdsa_read_signature( (mbedtls_ecdsa_context *) ctx,
                                 hash, hash_len, sig, sig_len );
 
     if( ret == MBEDTLS_ERR_ECP_SIG_LEN_MISMATCH )
@@ -641,7 +641,7 @@ static int ecdsa_sign_wrap( void *ctx, mbedtls_md_type_t md_alg,
                    unsigned char *sig, size_t *sig_len,
                    int (*f_rng)(void *, unsigned char *, size_t), void *p_rng )
 {
-    return( vdb_mbedtls_ecdsa_write_signature( (mbedtls_ecdsa_context *) ctx,
+    return( mbedtls_ecdsa_write_signature( (mbedtls_ecdsa_context *) ctx,
                 md_alg, hash, hash_len, sig, sig_len, f_rng, p_rng ) );
 }
 
@@ -654,7 +654,7 @@ static int ecdsa_verify_rs_wrap( void *ctx, mbedtls_md_type_t md_alg,
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     ((void) md_alg);
 
-    ret = vdb_mbedtls_ecdsa_read_signature_restartable(
+    ret = mbedtls_ecdsa_read_signature_restartable(
             (mbedtls_ecdsa_context *) ctx,
             hash, hash_len, sig, sig_len,
             (mbedtls_ecdsa_restart_ctx *) rs_ctx );
@@ -671,7 +671,7 @@ static int ecdsa_sign_rs_wrap( void *ctx, mbedtls_md_type_t md_alg,
                    int (*f_rng)(void *, unsigned char *, size_t), void *p_rng,
                    void *rs_ctx )
 {
-    return( vdb_mbedtls_ecdsa_write_signature_restartable(
+    return( mbedtls_ecdsa_write_signature_restartable(
                 (mbedtls_ecdsa_context *) ctx,
                 md_alg, hash, hash_len, sig, sig_len, f_rng, p_rng,
                 (mbedtls_ecdsa_restart_ctx *) rs_ctx ) );
@@ -681,39 +681,39 @@ static int ecdsa_sign_rs_wrap( void *ctx, mbedtls_md_type_t md_alg,
 
 static void *ecdsa_alloc_wrap( void )
 {
-    void *ctx = vdb_mbedtls_calloc( 1, sizeof( mbedtls_ecdsa_context ) );
+    void *ctx = mbedtls_calloc( 1, sizeof( mbedtls_ecdsa_context ) );
 
     if( ctx != NULL )
-        vdb_mbedtls_ecdsa_init( (mbedtls_ecdsa_context *) ctx );
+        mbedtls_ecdsa_init( (mbedtls_ecdsa_context *) ctx );
 
     return( ctx );
 }
 
 static void ecdsa_free_wrap( void *ctx )
 {
-    vdb_mbedtls_ecdsa_free( (mbedtls_ecdsa_context *) ctx );
-    vdb_mbedtls_free( ctx );
+    mbedtls_ecdsa_free( (mbedtls_ecdsa_context *) ctx );
+    mbedtls_free( ctx );
 }
 
 #if defined(MBEDTLS_ECP_RESTARTABLE)
 static void *ecdsa_rs_alloc( void )
 {
-    void *ctx = vdb_mbedtls_calloc( 1, sizeof( mbedtls_ecdsa_restart_ctx ) );
+    void *ctx = mbedtls_calloc( 1, sizeof( mbedtls_ecdsa_restart_ctx ) );
 
     if( ctx != NULL )
-        vdb_mbedtls_ecdsa_restart_init( ctx );
+        mbedtls_ecdsa_restart_init( ctx );
 
     return( ctx );
 }
 
 static void ecdsa_rs_free( void *ctx )
 {
-    vdb_mbedtls_ecdsa_restart_free( ctx );
-    vdb_mbedtls_free( ctx );
+    mbedtls_ecdsa_restart_free( ctx );
+    mbedtls_free( ctx );
 }
 #endif /* MBEDTLS_ECP_RESTARTABLE */
 
-const mbedtls_pk_info_t vdb_mbedtls_ecdsa_info = {
+const mbedtls_pk_info_t mbedtls_ecdsa_info = {
     MBEDTLS_PK_ECDSA,
     "ECDSA",
     eckey_get_bitlen,     /* Compatible key structures */
@@ -823,7 +823,7 @@ static int rsa_alt_check_pair( const void *pub, const void *prv )
 
 static void *rsa_alt_alloc_wrap( void )
 {
-    void *ctx = vdb_mbedtls_calloc( 1, sizeof( mbedtls_rsa_alt_context ) );
+    void *ctx = mbedtls_calloc( 1, sizeof( mbedtls_rsa_alt_context ) );
 
     if( ctx != NULL )
         memset( ctx, 0, sizeof( mbedtls_rsa_alt_context ) );
@@ -833,11 +833,11 @@ static void *rsa_alt_alloc_wrap( void )
 
 static void rsa_alt_free_wrap( void *ctx )
 {
-    vdb_mbedtls_platform_zeroize( ctx, sizeof( mbedtls_rsa_alt_context ) );
-    vdb_mbedtls_free( ctx );
+    mbedtls_platform_zeroize( ctx, sizeof( mbedtls_rsa_alt_context ) );
+    mbedtls_free( ctx );
 }
 
-const mbedtls_pk_info_t vdb_mbedtls_rsa_alt_info = {
+const mbedtls_pk_info_t mbedtls_rsa_alt_info = {
     MBEDTLS_PK_RSA_ALT,
     "RSA-alt",
     rsa_alt_get_bitlen,
@@ -870,7 +870,7 @@ const mbedtls_pk_info_t vdb_mbedtls_rsa_alt_info = {
 
 static void *pk_opaque_alloc_wrap( void )
 {
-    void *ctx = vdb_mbedtls_calloc( 1, sizeof( psa_key_id_t ) );
+    void *ctx = mbedtls_calloc( 1, sizeof( psa_key_id_t ) );
 
     /* no _init() function to call, an calloc() already zeroized */
 
@@ -879,8 +879,8 @@ static void *pk_opaque_alloc_wrap( void )
 
 static void pk_opaque_free_wrap( void *ctx )
 {
-    vdb_mbedtls_platform_zeroize( ctx, sizeof( psa_key_id_t ) );
-    vdb_mbedtls_free( ctx );
+    mbedtls_platform_zeroize( ctx, sizeof( psa_key_id_t ) );
+    mbedtls_free( ctx );
 }
 
 static size_t pk_opaque_get_bitlen( const void *ctx )
@@ -911,7 +911,7 @@ static int pk_opaque_can_do( mbedtls_pk_type_t type )
 /*
  * Simultaneously convert and move raw MPI from the beginning of a buffer
  * to an ASN.1 MPI at the end of the buffer.
- * See also vdb_mbedtls_asn1_write_mpi().
+ * See also mbedtls_asn1_write_mpi().
  *
  * p: pointer to the end of the output buffer
  * start: start of the output buffer, and also of the mpi to write at the end
@@ -954,8 +954,8 @@ static int asn1_write_mpibuf( unsigned char **p, unsigned char *start,
         len += 1;
     }
 
-    MBEDTLS_ASN1_CHK_ADD( len, vdb_mbedtls_asn1_write_len( p, start, len ) );
-    MBEDTLS_ASN1_CHK_ADD( len, vdb_mbedtls_asn1_write_tag( p, start,
+    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_len( p, start, len ) );
+    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_tag( p, start,
                                                 MBEDTLS_ASN1_INTEGER ) );
 
     return( (int) len );
@@ -980,8 +980,8 @@ static int pk_ecdsa_sig_asn1_from_psa( unsigned char *sig, size_t *sig_len,
     MBEDTLS_ASN1_CHK_ADD( len, asn1_write_mpibuf( &p, sig + rs_len, rs_len ) );
     MBEDTLS_ASN1_CHK_ADD( len, asn1_write_mpibuf( &p, sig, rs_len ) );
 
-    MBEDTLS_ASN1_CHK_ADD( len, vdb_mbedtls_asn1_write_len( &p, sig, len ) );
-    MBEDTLS_ASN1_CHK_ADD( len, vdb_mbedtls_asn1_write_tag( &p, sig,
+    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_len( &p, sig, len ) );
+    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_tag( &p, sig,
                           MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE ) );
 
     memmove( sig, p, len );

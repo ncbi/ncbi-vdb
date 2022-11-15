@@ -69,6 +69,7 @@ TEST_CASE ( KBase64_decodeBase64 )
     StringCopy ( &encoding, &str );
     
     rc = decodeBase64 ( &decoded, encoding );
+    StringWhack ( encoding );
     REQUIRE_RC ( rc );
 
     std :: string expected ( "Test for basic Base64 encoding" );
@@ -109,6 +110,7 @@ TEST_CASE ( KBase64_decodeBase64_rfc1 )
     StringCopy ( &encoding, &str );
     
     rc = decodeBase64 ( &decoded, encoding );
+    StringWhack ( encoding );
     REQUIRE_RC ( rc );
 
     std :: string expected ( "" );
@@ -153,6 +155,7 @@ TEST_CASE ( KBase64_decodeBase64_rfc2 )
     StringCopy ( &encoding, &str );
     
     rc = decodeBase64 ( &decoded, encoding );
+    StringWhack ( encoding );
     REQUIRE_RC ( rc );
 
     std :: string expected ( "f" );
@@ -197,6 +200,7 @@ TEST_CASE ( KBase64_decodeBase64_rfc3 )
     StringCopy ( &encoding, &str );
     
     rc = decodeBase64 ( &decoded, encoding );
+    StringWhack ( encoding );
     REQUIRE_RC ( rc );
 
     std :: string expected ( "fo" );
@@ -237,6 +241,7 @@ TEST_CASE ( KBase64_decodeBase64_rfc4 )
     StringCopy ( &encoding, &str );
     
     rc = decodeBase64 ( &decoded, encoding );
+    StringWhack ( encoding );
     REQUIRE_RC ( rc );
 
     std :: string expected ( "foo" );
@@ -281,6 +286,7 @@ TEST_CASE ( KBase64_decodeBase64_rfc5 )
     StringCopy ( &encoding, &str );
     
     rc = decodeBase64 ( &decoded, encoding );
+    StringWhack ( encoding );
     REQUIRE_RC ( rc );
 
     std :: string expected ( "foob" );
@@ -325,6 +331,7 @@ TEST_CASE ( KBase64_decodeBase64_rfc6 )
     StringCopy ( &encoding, &str );
     
     rc = decodeBase64 ( &decoded, encoding );
+    StringWhack ( encoding );
     REQUIRE_RC ( rc );
 
     std :: string expected ( "fooba" );
@@ -365,6 +372,7 @@ TEST_CASE ( KBase64_decodeBase64_rfc7 )
     StringCopy ( &encoding, &str );
     
     rc = decodeBase64 ( &decoded, encoding );
+    StringWhack ( encoding );
     REQUIRE_RC ( rc );
 
     std :: string expected ( "foobar" );

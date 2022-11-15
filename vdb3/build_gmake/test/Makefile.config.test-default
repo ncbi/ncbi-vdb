@@ -1,2 +1,0 @@
-OUTDIR=$(TOP)/actual/outdir
-BUILD=dbg

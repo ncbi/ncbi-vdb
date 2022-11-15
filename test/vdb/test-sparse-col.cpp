@@ -78,9 +78,12 @@ public:
     }
     ~VDB_Fixture()
     {
-#if READ_ONLY
-        RemoveDatabase ();
-#endif
+// leave database in place since we do not know how many times read-only tests are going to be
+// executesx (e.g. with additional asan/tsan options)
+// will be removed at the start of the next run with !READ_ONLY
+// #if READ_ONLY
+//         RemoveDatabase ();
+// #endif
         VDBManagerRelease ( m_mgr );
         KDirectoryRelease ( m_wd );
     }
@@ -180,11 +183,19 @@ public:
             THROW_ON_RC ( VDBManagerMakeRead ( & mgr, NULL ) );
 #endif
 
-            THROW_ON_RC ( VDBManagerOpenDBRead ( mgr,
+            try
+            {
+                THROW_ON_RC ( VDBManagerOpenDBRead ( mgr,
                                               & m_rdb,
                                               NULL,
                                               "%s",
                                               m_databaseName . c_str () ) );
+            }
+            catch (std::logic_error & e)
+            {
+                VDBManagerRelease ( mgr );
+                throw;
+            }
             THROW_ON_RC ( VDBManagerRelease ( mgr ) );
         }
 
@@ -236,6 +247,7 @@ public:
     {
         uint32_t columnIdx;
         const VCursor * rcursor = OpenDatabaseRead();
+
         THROW_ON_RC ( VCursorAddColumn ( rcursor, & columnIdx, "%s", col ) );
         THROW_ON_RC ( VCursorOpen ( rcursor ) );
 

@@ -22,7 +22,6 @@
 #
 # ===========================================================================
 
-
 # all static libraries in this directory are published
 
 set( VDB_LIB_CMN_TARGETS
@@ -30,9 +29,6 @@ set( VDB_LIB_CMN_TARGETS
     ncbi-bam
     vfs
     cloud
-    mbedx509
-    mbedtls
-    mbedcrypto
     kns
     kfg
     krypto
@@ -43,22 +39,21 @@ set( VDB_LIB_CMN_TARGETS
     kproc
     kq
     kfc
-    bz2
-    z
-    zstd
 )
-
-if( LibXml2_FOUND  )
-    list( APPEND VDB_LIB_CMN_TARGETS "kxml" )
-    set( LIBXML2 "xml2")
+if ( HAVE_MBEDTLS_F )
+    message("Using mbedtls installed in the system")
 else()
-    set( LIBXML2 "")
+    message("No mbedtls libs found installed in the system, using local copy...")
+    list( APPEND VDB_LIB_CMN_TARGETS mbedx509 mbedtls mbedcrypto )
+endif()
+
+if(NOT _NCBIVDB_CFG_PACKAGING)
+    list( APPEND VDB_LIB_CMN_TARGETS bz2 z zstd )
 endif()
 
 set( VDB_LIB_RD_TARGETS
     ${VDB_LIB_CMN_TARGETS}
     align-reader
-    ascp
     srareader
     sradb
     vdb-blast
@@ -82,12 +77,11 @@ set( VDB_LIB_RDWR_TARGETS
     wvxf
 )
 
-add_compile_definitions (__mod__="libs/ncbi-vdb" PKGNAME="ncbi-vdb")
-
 if( WIN32 )
     include( CMakeLists.win.txt )
 elseif( SINGLE_CONFIG )
     include( CMakeLists.posix.txt )
+    if(NOT _NCBIVDB_CFG_PACKAGING)
 	add_custom_command( TARGET ncbi-vdb POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/interfaces/kfg/ncbi/default.kfg ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/ncbi/default.kfg
 	)
@@ -100,6 +94,9 @@ elseif( SINGLE_CONFIG )
 	add_custom_command( TARGET ncbi-vdb POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/interfaces/kfg/ncbi/certs.kfg ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/ncbi/certs.kfg
 	)
+    endif()
 else() # XCode
+    list(REMOVE_ITEM VDB_LIB_RD_TARGETS bz2 z)
+    list(REMOVE_ITEM VDB_LIB_RDWR_TARGETS bz2 z)
     include( CMakeLists.xcode.txt )
 endif()

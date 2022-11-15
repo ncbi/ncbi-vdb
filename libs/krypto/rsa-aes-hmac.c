@@ -137,7 +137,7 @@ rc_t handle_mbedtls_return ( const char * func_desc, int ret )
 }
 
 #define CALL_MBEDTLS( func_name, params ) \
-    handle_mbedtls_return ( # func_name, vdb_ ## func_name params )
+    handle_mbedtls_return ( # func_name, func_name params )
 
 typedef struct EncryptStuff EncryptStuff;
 struct EncryptStuff
@@ -178,17 +178,17 @@ void EncryptStuffWhack ( EncryptStuff * s )
     switch ( s -> state )
     {
     case es_aes:
-        vdb_mbedtls_aes_free ( & s -> aes );
+        mbedtls_aes_free ( & s -> aes );
     case es_md:
-        vdb_mbedtls_md_free ( & s -> md );
+        mbedtls_md_free ( & s -> md );
     case es_aes_key:
         memset ( s -> sk, 0, sizeof s -> sk );
     case es_pek:
-        vdb_mbedtls_pk_free ( & s -> pek );
+        mbedtls_pk_free ( & s -> pek );
     case es_ctr_drbg:
-        vdb_mbedtls_ctr_drbg_free ( & s -> ctr_drbg );
+        mbedtls_ctr_drbg_free ( & s -> ctr_drbg );
     case es_entropy:
-        vdb_mbedtls_entropy_free ( & s -> entropy );
+        mbedtls_entropy_free ( & s -> entropy );
         break;
     }
 }
@@ -208,22 +208,22 @@ rc_t EncryptStuffAdvance ( EncryptStuff * s, uint32_t state )
     switch ( state )
     {
     case es_entropy:
-        vdb_mbedtls_entropy_init ( & s -> entropy );
+        mbedtls_entropy_init ( & s -> entropy );
         break;
     case es_ctr_drbg:
-        vdb_mbedtls_ctr_drbg_init ( & s -> ctr_drbg );
+        mbedtls_ctr_drbg_init ( & s -> ctr_drbg );
         break;
     case es_pek:
-        vdb_mbedtls_pk_init ( & s -> pek );
+        mbedtls_pk_init ( & s -> pek );
         break;
     case es_aes_key:
         rc = CALL_MBEDTLS ( mbedtls_ctr_drbg_random, ( & s -> ctr_drbg, s -> sk, sizeof s -> sk ) );
         break;
     case es_md:
-        vdb_mbedtls_md_init ( & s -> md );
+        mbedtls_md_init ( & s -> md );
         break;
     case es_aes:
-        vdb_mbedtls_aes_init ( & s -> aes );
+        mbedtls_aes_init ( & s -> aes );
         break;
     }
 
@@ -271,7 +271,7 @@ rc_t RsaAesHmacEncryptInt ( KDataBuffer * out,
                flavor oddly with some constant data... */
             STATUS ( STAT_PRG, "%s - seeding PRNG\n", __func__ );
             rc = CALL_MBEDTLS ( mbedtls_ctr_drbg_seed, ( & s . ctr_drbg,
-                    vdb_mbedtls_entropy_func, & s . entropy,
+                    mbedtls_entropy_func, & s . entropy,
                     ( const unsigned char * ) pers, strlen ( pers )
                  ) );
             if ( rc != 0 )
@@ -301,7 +301,7 @@ rc_t RsaAesHmacEncryptInt ( KDataBuffer * out,
             rc = CALL_MBEDTLS ( mbedtls_pk_encrypt, ( & s . pek,
                     s . sk, sizeof s . sk,
                     esk, & esk_size, sizeof esk,
-                    vdb_mbedtls_ctr_drbg_random, & s . ctr_drbg
+                    mbedtls_ctr_drbg_random, & s . ctr_drbg
                 ) );
             if ( rc != 0 )
                 break;
@@ -386,7 +386,7 @@ rc_t RsaAesHmacEncryptInt ( KDataBuffer * out,
                 break;
             STATUS ( STAT_PRG, "%s - setting up MD context for SHA-256\n", __func__ );
             rc = CALL_MBEDTLS ( mbedtls_md_setup, ( & s . md,
-                vdb_mbedtls_md_info_from_type ( MBEDTLS_MD_SHA256 ), true ) );
+                mbedtls_md_info_from_type ( MBEDTLS_MD_SHA256 ), true ) );
             if ( rc != 0 )
                 break;
 
@@ -457,10 +457,10 @@ rc_t RsaAesHmacEncryptInt ( KDataBuffer * out,
             STATUS ( STAT_GEEK, "%s - deriving HMAC key from iv and AES key\n", __func__ );
             for ( i = 0; i < 8 * 1024; ++ i )
             {
-                vdb_mbedtls_md_starts ( & s . md );
-                vdb_mbedtls_md_update ( & s . md, digest . p, digest . s );
-                vdb_mbedtls_md_update ( & s . md, s . sk, sizeof s . sk );
-                vdb_mbedtls_md_finish ( & s . md, digest . p );
+                mbedtls_md_starts ( & s . md );
+                mbedtls_md_update ( & s . md, digest . p, digest . s );
+                mbedtls_md_update ( & s . md, s . sk, sizeof s . sk );
+                mbedtls_md_finish ( & s . md, digest . p );
             }
 
             /* at this point, the digest has sensitive information */
@@ -532,18 +532,18 @@ void DecryptStuffWhack ( DecryptStuff * s )
     switch ( s -> state )
     {
     case ds_aes:
-        vdb_mbedtls_aes_free ( & s -> aes );
+        mbedtls_aes_free ( & s -> aes );
     case ds_md:
         memset ( s -> digest, 0, sizeof s -> digest );
-        vdb_mbedtls_md_free ( & s -> md );
+        mbedtls_md_free ( & s -> md );
     case ds_aes_key:
         memset ( s -> sk, 0, sizeof s -> sk );
     case ds_pdk:
-        vdb_mbedtls_pk_free ( & s -> pdk );
+        mbedtls_pk_free ( & s -> pdk );
     case ds_ctr_drbg:
-        vdb_mbedtls_ctr_drbg_free ( & s -> ctr_drbg );
+        mbedtls_ctr_drbg_free ( & s -> ctr_drbg );
     case ds_entropy:
-        vdb_mbedtls_entropy_free ( & s -> entropy );
+        mbedtls_entropy_free ( & s -> entropy );
         break;
     }
 }
@@ -563,21 +563,21 @@ rc_t DecryptStuffAdvance ( DecryptStuff * s, uint32_t state )
     switch ( state )
     {
     case ds_entropy:
-        vdb_mbedtls_entropy_init ( & s -> entropy );
+        mbedtls_entropy_init ( & s -> entropy );
         break;
     case ds_ctr_drbg:
-        vdb_mbedtls_ctr_drbg_init ( & s -> ctr_drbg );
+        mbedtls_ctr_drbg_init ( & s -> ctr_drbg );
         break;
     case ds_pdk:
-        vdb_mbedtls_pk_init ( & s -> pdk );
+        mbedtls_pk_init ( & s -> pdk );
         break;
     case ds_aes_key:
         break;
     case ds_md:
-        vdb_mbedtls_md_init ( & s -> md );
+        mbedtls_md_init ( & s -> md );
         break;
     case ds_aes:
-        vdb_mbedtls_aes_init ( & s -> aes );
+        mbedtls_aes_init ( & s -> aes );
         break;
     }
 
@@ -625,7 +625,7 @@ rc_t RsaAesHmacDecryptInt ( KDataBuffer * out,
                flavor oddly with some constant data... */
             STATUS ( STAT_PRG, "%s - seeding PRNG\n", __func__ );
             rc = CALL_MBEDTLS ( mbedtls_ctr_drbg_seed, ( & s . ctr_drbg,
-                    vdb_mbedtls_entropy_func, & s . entropy,
+                    mbedtls_entropy_func, & s . entropy,
                     ( const unsigned char * ) pers, strlen ( pers )
                  ) );
             if ( rc != 0 )
@@ -645,10 +645,10 @@ rc_t RsaAesHmacDecryptInt ( KDataBuffer * out,
 
             /* capture encrypted symmetric key */
             STATUS ( STAT_GEEK, "%s - capturing esk from input\n", __func__ );
-            esk = RgnSubRgn2 ( & ib, 0, vdb_mbedtls_pk_get_len ( & s . pdk ) );
+            esk = RgnSubRgn2 ( & ib, 0, mbedtls_pk_get_len ( & s . pdk ) );
             STATUS ( STAT_GEEK, "%s - esk Rgn ptr = %p\n", __func__, esk . p );
             STATUS ( STAT_GEEK, "%s - esk Rgn size = %zu\n", __func__, esk . s );
-            if ( esk . s != vdb_mbedtls_pk_get_len ( & s . pdk ) )
+            if ( esk . s != mbedtls_pk_get_len ( & s . pdk ) )
             {
                 rc = RC ( rcKrypto, rcBlob, rcDecrypting, rcData, rcInsufficient );
                 break;
@@ -663,7 +663,7 @@ rc_t RsaAesHmacDecryptInt ( KDataBuffer * out,
             STATUS ( STAT_PRG, "%s - decrypting AES key with RSA key\n", __func__ );
             rc = CALL_MBEDTLS ( mbedtls_pk_decrypt, ( & s .pdk,
                 esk . p, esk . s, s . sk, & sk_size, sizeof s . sk,
-                vdb_mbedtls_ctr_drbg_random, & s . ctr_drbg ) );
+                mbedtls_ctr_drbg_random, & s . ctr_drbg ) );
             if ( rc != 0 )
                 break;
             STATUS ( STAT_GEEK, "%s - AES key size = %zu\n", __func__, sk_size );
@@ -740,7 +740,7 @@ rc_t RsaAesHmacDecryptInt ( KDataBuffer * out,
                 break;
             STATUS ( STAT_PRG, "%s - setting up MD context for SHA-256\n", __func__ );
             rc = CALL_MBEDTLS ( mbedtls_md_setup, ( & s . md,
-                vdb_mbedtls_md_info_from_type ( MBEDTLS_MD_SHA256 ), true ) );
+                mbedtls_md_info_from_type ( MBEDTLS_MD_SHA256 ), true ) );
             if ( rc != 0 )
                 break;
 
@@ -755,10 +755,10 @@ rc_t RsaAesHmacDecryptInt ( KDataBuffer * out,
             STATUS ( STAT_GEEK, "%s - deriving HMAC key from iv and AES key\n", __func__ );
             for ( i = 0; i < 8 * 1024; ++ i )
             {
-                vdb_mbedtls_md_starts ( & s . md );
-                vdb_mbedtls_md_update ( & s . md, s . digest, sizeof s . digest );
-                vdb_mbedtls_md_update ( & s . md, s . sk, sizeof s . sk );
-                vdb_mbedtls_md_finish ( & s . md, s . digest );
+                mbedtls_md_starts ( & s . md );
+                mbedtls_md_update ( & s . md, s . digest, sizeof s . digest );
+                mbedtls_md_update ( & s . md, s . sk, sizeof s . sk );
+                mbedtls_md_finish ( & s . md, s . digest );
             }
 
             /* at this point, the digest has sensitive information */

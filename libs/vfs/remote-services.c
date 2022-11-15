@@ -64,6 +64,7 @@
 #include "../kns/mgr-priv.h" /* KNSManagerGetCloudLocation */
 #include "json-response.h" /* Response4 */
 #include "jwt.h" /* JwtKartValidateFile */
+#include "manager-priv.h" /* VFSManagerExtNoqual */
 #include "path-priv.h" /* VPathMakeFmt */
 #include "resolver-cgi.h" /* RESOLVER_CGI */
 #include "resolver-priv.h" /* VPathCheckFromNamesCGI */
@@ -423,6 +424,7 @@ typedef struct {
     String * jwtKartFile;
     SNgc _ngc;
     bool hasQuery;
+    bool filetypeIsRun;
 } SRequest;
 
 /* service object */
@@ -3402,6 +3404,8 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
 
     assert ( request );
 
+    request -> filetypeIsRun = false;
+
     if ( protocols == eProtocolDefault )
         protocols = SHelperDefaultProtocols ( helper );
     request -> protocols = protocols;
@@ -3637,7 +3641,7 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
                 return rc;
         }
 
-        fileTypeRun = false;
+        fileTypeRun = request -> filetypeIsRun = false;
     }
 
     if (rc == 0 &&
@@ -3664,6 +3668,7 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
                 }
                 if (rc != 0)
                     return rc;
+                request -> filetypeIsRun = true;
             }
         }
     }
@@ -4726,8 +4731,23 @@ static rc_t KSrvRespObj_AttachVdbcaches(const KSrvRespObj * self) {
                 }
                 if (StringCompare(&type, &sra) == 0) {
                     rc = VPathGetNameExt(next, &nameExt);
-                    if (rc == 0 && nameExt.size == 0)
-                        aType = eSra;
+                    if (rc == 0) {
+                        if (nameExt.size == 0)
+                            aType = eSra;
+                        else {
+                            String sralite;
+                            const String * sralitE = VFSManagerExtNoqual(NULL);
+                            memset(&sralite, 0, sizeof sralite);
+                            if (sralitE != NULL &&
+                               sralitE->addr != NULL && sralitE->addr[0] != '\0'
+                               && sralitE->size > 0 && sralitE->len > 0)
+                            {
+                                StringInitCString(&sralite, sralitE->addr + 1);
+                            }
+                            if (StringEqual(&nameExt, &sralite))
+                                aType = eSra;
+                        }
+                    }
                 }
                 else if (StringCompare(&type, &vdbcache) == 0)
                     aType = eVdbcache;
@@ -5373,9 +5393,18 @@ static rc_t KService1NameWithVersionAndType ( const KNSManager * mgr,
             if ( rc == 0 )
                 rc = KSrvRespObjMakeIterator ( obj, & it );
             while (rc == 0 && !ok) {
+                RELEASE ( KSrvRespFile, file );
                 rc = KSrvRespObjIteratorNextFile(it, &file);
-                if (rc == 0 && file != NULL)
-                    rc = KSrvRespFileMakeIterator(file, &fi);
+                if (rc == 0) {
+                    if (file != NULL)
+                        rc = KSrvRespFileMakeIterator(file, &fi);
+                    else {
+                        assert(service.req.filetypeIsRun);
+                        assert(*remote == NULL);
+                        rc = RC(rcVFS, rcQuery, rcResolving, rcName, rcNotFound);
+                        break;
+                    }
+                }
                 if (rc == 0) {
                     const VPath * tmp = NULL;
                     String type;
@@ -5386,8 +5415,12 @@ static rc_t KService1NameWithVersionAndType ( const KNSManager * mgr,
                             if (!StringEqual(&type, &vdbcache))
                                 ok = true;
                     }
-                    if (*remote == NULL)
-                        *remote = tmp;
+                    if (*remote == NULL) {
+                        if (ok || !service.req.filetypeIsRun)
+                            *remote = tmp;
+                        else
+                            RELEASE(VPath, tmp);
+                    }
                     else if (ok) {
                         if (*remote != tmp)
                             RELEASE(VPath, *remote);

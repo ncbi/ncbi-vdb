@@ -553,6 +553,7 @@ TEST_CASE( CacheTee2_ReadOnly )
 
 	REQUIRE_RC( read_all( tee, 1024 * 32 )	);
 	REQUIRE_RC( KFileRelease( tee ) );
+	REQUIRE_RC( KFileRelease( cache ) );
 
 	/* we read all from the tee-file that should have promoted it on Release,
 	   but we made it read only before the creation of the 2nd tee-file

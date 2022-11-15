@@ -206,6 +206,6 @@ psa_status_t psa_copy_key_material_into_slot( psa_key_slot_t *slot,
  *
  * \return              The corresponding PSA error code
  */
-psa_status_t vdb_mbedtls_to_psa_error( int ret );
+psa_status_t mbedtls_to_psa_error( int ret );
 
 #endif /* PSA_CRYPTO_CORE_H */

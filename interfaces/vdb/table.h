@@ -263,6 +263,25 @@ VDB_EXTERN rc_t CC VTableVUnlock ( VTable *self, uint32_t type,
 VDB_EXTERN rc_t CC VTableOpenMetadataRead ( const VTable *self, struct KMetadata const **meta );
 VDB_EXTERN rc_t CC VTableOpenMetadataUpdate ( VTable *self, struct KMetadata **meta );
 
+/* Copy Metadata-Node(s) on tables
+ *  Replaces the content of the node ( of given path ) with the contents of another node.
+ *  This is a deep copy.
+ *
+ *  "src"  [ IN ] - the table to copy from
+ *  "path" [ IN ] - selects the node to copy
+ */
+VDB_EXTERN rc_t CC VTableMetaCopy( VTable *self, const VTable *src, const char * path );
+
+/* Compare Metadata-Node(s) on tables
+ *  compares the content of 2 nodes ( given by path )
+ *  This is a deep comparison.
+ *
+ *  "other"  [ IN ]  - the table to compare with
+ *  "path"   [ IN ]  - selects the node to compare
+ *  "equal"  [ OUT ] - signals if the 2 nodes have the same content...
+ */
+VDB_EXTERN rc_t CC VTableMetaCompare ( const VTable *self, const VTable *other,
+                                       const char * path, bool * equal );
 
 /* ColumnCreateParams
  *  sets the creation parameters for physical columns
@@ -438,7 +457,6 @@ VDB_EXTERN rc_t CC VTableSetFullQualityType ( VTable *self );
  *  switch table to deliver synthetic quality
  */
 VDB_EXTERN rc_t CC VTableSetSynthQualityType ( VTable *self );
-
 
 #ifdef __cplusplus
 }

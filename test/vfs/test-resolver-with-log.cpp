@@ -116,7 +116,7 @@ FIXTURE_TEST_CASE ( SRR1008846, Fixture ) {
 }
 
 FIXTURE_TEST_CASE ( SRR100884612, Fixture ) {
-    REQUIRE_RC ( VResolverSetVersion ( _resolver, "1.2" ));
+  //REQUIRE_RC ( VResolverSetVersion ( _resolver, "1.2" ));
 
     REQUIRE_RC ( VFSManagerMakePath ( _mgr, & _query, "SRR1008846" ) );
     REQUIRE_RC ( VResolverQuery

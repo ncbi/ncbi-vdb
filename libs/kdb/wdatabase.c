@@ -25,11 +25,13 @@
 */
 
 #include <kdb/extern.h>
+#include <kdb/meta.h>
 #include "database-priv.h"
 #include "dbmgr-priv.h"
 #include "wtable-priv.h"
 #include "windex-priv.h"
 #include "wkdb-priv.h"
+
 #include <klib/namelist.h>
 #include <klib/symbol.h>
 #include <klib/log.h>
@@ -292,7 +294,7 @@ rc_t KDBManagerMakeDBUpdate ( KDBManager *self,
 
             rc = RC ( rcDB, rcMgr, rcOpening, rcDatabase, rcBusy );
 
-            free ( db );
+            KDatabaseRelease ( db );
         }
         KDirectoryRelease ( dir );
     }
@@ -380,14 +382,14 @@ rc_t KDBManagerVCreateDBInt ( KDBManager *self,
         case kptMetadata | kptAlias:
             return RC (rcDB, rcMgr, rcCreating, rcMetadata, rcExists);
 
-	case kptFile:
-	case kptFile | kptAlias:
-	    /* if we find a file, vary the failure if it is an archive that is a database
-	     * or a non related file */
-	    if ( KDBOpenPathTypeRead ( self, wd, dbpath, NULL, kptDatabase, NULL, false,
-            NULL ) == 0 )
-		return RC ( rcDB, rcMgr, rcCreating, rcDirectory, rcUnauthorized );
-	    /* fall through */
+        case kptFile:
+        case kptFile | kptAlias:
+            /* if we find a file, vary the failure if it is an archive that is a database
+             * or a non related file */
+            if ( KDBOpenPathTypeRead ( self, wd, dbpath, NULL, kptDatabase, NULL, false,
+                                      NULL ) == 0 )
+                return RC ( rcDB, rcMgr, rcCreating, rcDirectory, rcUnauthorized );
+            /* fall through */
         default:
             return RC ( rcDB, rcMgr, rcCreating, rcPath, rcIncorrect );
         }
@@ -1686,4 +1688,76 @@ KChecksum KDatabaseSetChecksum ( KDatabase *self, KChecksum new_val)
     KCreateMode old_val = self -> checksum;
     self -> checksum = new_val;
     return old_val;
+}
+
+/* ------------------------------------------------------------------------------------ */
+
+static rc_t copy_meta_for_one_table_in_db ( KDatabase *self, const KDatabase *src,
+                                      const char * node_path, const char * tbl_name,
+                                      bool src_node_has_to_exist ) {
+    KTable * dst_tbl;
+    rc_t rc = KDatabaseOpenTableUpdate( self, &dst_tbl, tbl_name );
+    if ( 0 == rc ) {
+        const KTable * src_tbl;
+        rc = KDatabaseOpenTableRead( src, &src_tbl, tbl_name );
+        if ( 0 == rc ) {
+            rc = KTableMetaCopy( dst_tbl, src_tbl, node_path, src_node_has_to_exist );
+            KTableRelease( src_tbl );
+        }
+        KTableRelease( dst_tbl );
+    }
+    return rc;
+}
+
+static rc_t copy_meta_for_all_tables_in_db( KDatabase *self, const KDatabase *src,
+                                            const char * node_path, bool src_node_has_to_exist ) {
+    KNamelist * tables_1;
+    rc_t rc = KDatabaseListTbl( self, &tables_1 );
+    if ( 0 == rc ) {
+        KNamelist * tables_2;
+        rc = KDatabaseListTbl( src, &tables_2 );
+        if ( 0 == rc ) {
+            uint32_t count;
+            rc = KNamelistCount( tables_1, &count );
+            if ( 0 == rc ) {
+                uint32_t idx;
+                for ( idx = 0; 0 == rc && idx < count; ++idx ) { 
+                    const char * tbl_name;
+                    rc = KNamelistGet( tables_1, idx, &tbl_name );
+                    if ( 0 == rc ) {
+                        if ( KNamelistContains( tables_2, tbl_name ) ) {
+                            rc = copy_meta_for_one_table_in_db( self, src, node_path, tbl_name, src_node_has_to_exist );
+                        }
+                    }
+                }
+            }
+            KNamelistRelease( tables_2 );
+        }
+        KNamelistRelease( tables_1 );
+    }
+    return rc;
+}
+
+static bool is_empty( const char * s ) {
+    bool res = ( NULL == s );
+    if ( !res ) { res = ( 0 == s[ 0 ] ); }
+    return res;
+}
+
+LIB_EXPORT rc_t CC KDatabaseMetaCopy ( KDatabase *self, const KDatabase *src,
+                                       const char * node_path, const char * tbl_name,
+                                       bool src_node_has_to_exist ) {
+    rc_t rc = 0;
+    if ( NULL == self ) {
+        rc = RC ( rcDB, rcDatabase, rcComparing, rcSelf, rcNull );
+    } else if ( NULL == src ) {
+        rc = RC ( rcDB, rcDatabase, rcComparing, rcParam, rcNull );
+    } else {
+        if ( is_empty( tbl_name ) ) {
+            rc = copy_meta_for_all_tables_in_db( self, src, node_path, src_node_has_to_exist );
+        } else {
+            rc = copy_meta_for_one_table_in_db( self, src, node_path, tbl_name, true );
+        }
+    }
+    return rc;
 }

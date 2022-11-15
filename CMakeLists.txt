@@ -22,45 +22,25 @@
 #
 # ===========================================================================
 
-# ===========================================================================
-#
-# This is the CMake build for the ncbi-vdb project.
-#
-# Usage
-#   cmake [options] <path-to-source>
-#
-# Parameter:
-#   path-to-source    : path to this file's directory
-#
-# Custom CMake variables and defaults:
-#
-#   -DNGS_INCDIR=<path>   : a path to the include/ directory of NGS. By default,
-#                           <path-to-source>/../ngs/ngs-sdk
-#
-#   -DNGS_LIBDIR=<path>   : a path to the NGS libraries. If omitted, tests in
-#                           test/ngs-java will be skipped.
-#   -DNGS_JAVA_JAR=<path> : a path to the jar created by a build of ngs/ngs-java.
-#                           If omitted, tests in test/ngs-java will be skipped.
-#	-DPYTHON_PATH=<path>  : a path to the Python executable to be used to run
-#                           tests in test/ngs-py. If omitted, the tests will be skipped.
-#
-#   In addition, you can use all the standard CMake options, e.g.:
-#   -DCMAKE_BUILD_TYPE=<Debug|Release>
-#
-## ===========================================================================
-
 cmake_minimum_required(VERSION 3.16)
 if (WIN32)
 	set (CMAKE_SYSTEM_VERSION 10.0 CACHE STRING INTERNAL FORCE)
 endif()
 
-option(LIBS_ONLY "Generate library targets only" OFF)
+# set( CMAKE_DISABLE_SOURCE_CHANGES ON ) # Cannot use with bison
+# set( CMAKE_DISABLE_IN_SOURCE_BUILD ON )
+
+option(LIBS_ONLY "Generate library targets only" ON)
 option(TESTS_ONLY "Generate test targets only" OFF)
 
 if( TESTS_ONLY AND LIBS_ONLY )
     message( "ERROR: TESTS_ONLY and LIBS_ONLY cannot be specified at the same time" )
+
 elseif( TESTS_ONLY AND NOT LIBS_ONLY AND (${CMAKE_GENERATOR} MATCHES "Visual Studio.*" OR ${CMAKE_GENERATOR} STREQUAL "Xcode") )
     project(ncbi-vdb-tests)
+    if( PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR )
+        message(FATAL_ERROR "In-source builds are not allowed")
+    endif()
     # calculate global settiungs, create output directories
     include( build/env.cmake NO_POLICY_SCOPE )
 
@@ -73,23 +53,34 @@ elseif( TESTS_ONLY AND NOT LIBS_ONLY AND (${CMAKE_GENERATOR} MATCHES "Visual Stu
         link_directories( ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE} )
     endif()
     add_subdirectory(test)
+
 elseif( NOT TESTS_ONLY AND LIBS_ONLY AND (${CMAKE_GENERATOR} MATCHES "Visual Studio.*" OR ${CMAKE_GENERATOR} STREQUAL "Xcode") )
-    project(ncbi-vdb-libs)
+    project(ncbi-vdb)
+    if( PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR )
+        message(FATAL_ERROR "In-source builds are not allowed")
+    endif()
     # calculate global settiungs, create output directories
     include( build/env.cmake NO_POLICY_SCOPE )
 
     message( "Generating libs only project..." )
     add_subdirectory(libs)
 else()
-    if( TESTS_ONLY OR LIBS_ONLY )
-        message( "ignoring TESTS_ONLY/LIBS_ONLY, use it only for MSVC or XCode" )
+
+    if( TESTS_ONLY )
+        message( "ignoring TESTS_ONLY, use it only for MSVC or XCode" )
     endif()
 
     project(ncbi-vdb)
+    if( PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR )
+        message(FATAL_ERROR "In-source builds are not allowed")
+    endif()
     # calculate global settiungs, create output directories
     include( build/env.cmake NO_POLICY_SCOPE )
     add_subdirectory(libs)
-    add_subdirectory(test)
+    if ( NOT LIBS_ONLY )
+        add_subdirectory(test)
+    endif()
+
 endif()
 
 #add_subdirectory(vdb3)

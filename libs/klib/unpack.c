@@ -262,7 +262,7 @@ void CC Unpack8 ( uint32_t packed, uint32_t count, void *dst,
 		return;
 	}
     }
-	
+
 
 
     /* convert to bytes */
@@ -799,6 +799,9 @@ LIB_EXPORT rc_t CC Unpack ( uint32_t packed, uint32_t unpacked,
     }
 
     /* all parameters are validated */
+    if ( consumed != NULL )
+        * consumed = (size_t)count * packed;
+
     if ( unpacked == 8 && packed == 8 && src_off == 0 )
     {
         if ( ( const void* ) dst != src )

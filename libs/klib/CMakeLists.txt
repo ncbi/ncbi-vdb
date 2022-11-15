@@ -71,8 +71,8 @@ set( SRC
     crc32
     data-buffer
     guid
-    hashfile
-    hashtable
+    hashfile # TODO: dead code
+    hashtable # TODO: dead code
     iso8859-1
     iso8859
     ${JsonParser}

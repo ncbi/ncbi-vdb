@@ -42,14 +42,14 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#define vdb_mbedtls_printf printf
+#define mbedtls_printf printf
 #endif /* MBEDTLS_SELF_TEST */
 #endif /* MBEDTLS_PLATFORM_C */
 
 /*
  * HMAC_DRBG context initialization
  */
-void vdb_mbedtls_hmac_drbg_init( mbedtls_hmac_drbg_context *ctx )
+void mbedtls_hmac_drbg_init( mbedtls_hmac_drbg_context *ctx )
 {
     memset( ctx, 0, sizeof( mbedtls_hmac_drbg_context ) );
 
@@ -63,11 +63,11 @@ void vdb_mbedtls_hmac_drbg_init( mbedtls_hmac_drbg_context *ctx )
 /*
  * HMAC_DRBG update, using optional additional data (10.1.2.2)
  */
-int vdb_mbedtls_hmac_drbg_update_ret( mbedtls_hmac_drbg_context *ctx,
+int mbedtls_hmac_drbg_update_ret( mbedtls_hmac_drbg_context *ctx,
                                   const unsigned char *additional,
                                   size_t add_len )
 {
-    size_t md_len = vdb_mbedtls_md_get_size( ctx->md_ctx.md_info );
+    size_t md_len = mbedtls_md_get_size( ctx->md_ctx.md_info );
     unsigned char rounds = ( additional != NULL && add_len != 0 ) ? 2 : 1;
     unsigned char sep[1];
     unsigned char K[MBEDTLS_MD_MAX_SIZE];
@@ -76,57 +76,57 @@ int vdb_mbedtls_hmac_drbg_update_ret( mbedtls_hmac_drbg_context *ctx,
     for( sep[0] = 0; sep[0] < rounds; sep[0]++ )
     {
         /* Step 1 or 4 */
-        if( ( ret = vdb_mbedtls_md_hmac_reset( &ctx->md_ctx ) ) != 0 )
+        if( ( ret = mbedtls_md_hmac_reset( &ctx->md_ctx ) ) != 0 )
             goto exit;
-        if( ( ret = vdb_mbedtls_md_hmac_update( &ctx->md_ctx,
+        if( ( ret = mbedtls_md_hmac_update( &ctx->md_ctx,
                                             ctx->V, md_len ) ) != 0 )
             goto exit;
-        if( ( ret = vdb_mbedtls_md_hmac_update( &ctx->md_ctx,
+        if( ( ret = mbedtls_md_hmac_update( &ctx->md_ctx,
                                             sep, 1 ) ) != 0 )
             goto exit;
         if( rounds == 2 )
         {
-            if( ( ret = vdb_mbedtls_md_hmac_update( &ctx->md_ctx,
+            if( ( ret = mbedtls_md_hmac_update( &ctx->md_ctx,
                                                 additional, add_len ) ) != 0 )
             goto exit;
         }
-        if( ( ret = vdb_mbedtls_md_hmac_finish( &ctx->md_ctx, K ) ) != 0 )
+        if( ( ret = mbedtls_md_hmac_finish( &ctx->md_ctx, K ) ) != 0 )
             goto exit;
 
         /* Step 2 or 5 */
-        if( ( ret = vdb_mbedtls_md_hmac_starts( &ctx->md_ctx, K, md_len ) ) != 0 )
+        if( ( ret = mbedtls_md_hmac_starts( &ctx->md_ctx, K, md_len ) ) != 0 )
             goto exit;
-        if( ( ret = vdb_mbedtls_md_hmac_update( &ctx->md_ctx,
+        if( ( ret = mbedtls_md_hmac_update( &ctx->md_ctx,
                                             ctx->V, md_len ) ) != 0 )
             goto exit;
-        if( ( ret = vdb_mbedtls_md_hmac_finish( &ctx->md_ctx, ctx->V ) ) != 0 )
+        if( ( ret = mbedtls_md_hmac_finish( &ctx->md_ctx, ctx->V ) ) != 0 )
             goto exit;
     }
 
 exit:
-    vdb_mbedtls_platform_zeroize( K, sizeof( K ) );
+    mbedtls_platform_zeroize( K, sizeof( K ) );
     return( ret );
 }
 
 #if !defined(MBEDTLS_DEPRECATED_REMOVED)
-void vdb_mbedtls_hmac_drbg_update( mbedtls_hmac_drbg_context *ctx,
+void mbedtls_hmac_drbg_update( mbedtls_hmac_drbg_context *ctx,
                                const unsigned char *additional,
                                size_t add_len )
 {
-    (void) vdb_mbedtls_hmac_drbg_update_ret( ctx, additional, add_len );
+    (void) mbedtls_hmac_drbg_update_ret( ctx, additional, add_len );
 }
 #endif /* MBEDTLS_DEPRECATED_REMOVED */
 
 /*
  * Simplified HMAC_DRBG initialisation (for use with deterministic ECDSA)
  */
-int vdb_mbedtls_hmac_drbg_seed_buf( mbedtls_hmac_drbg_context *ctx,
+int mbedtls_hmac_drbg_seed_buf( mbedtls_hmac_drbg_context *ctx,
                         const mbedtls_md_info_t * md_info,
                         const unsigned char *data, size_t data_len )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
-    if( ( ret = vdb_mbedtls_md_setup( &ctx->md_ctx, md_info, 1 ) ) != 0 )
+    if( ( ret = mbedtls_md_setup( &ctx->md_ctx, md_info, 1 ) ) != 0 )
         return( ret );
 
     /*
@@ -134,12 +134,12 @@ int vdb_mbedtls_hmac_drbg_seed_buf( mbedtls_hmac_drbg_context *ctx,
      * Use the V memory location, which is currently all 0, to initialize the
      * MD context with an all-zero key. Then set V to its initial value.
      */
-    if( ( ret = vdb_mbedtls_md_hmac_starts( &ctx->md_ctx, ctx->V,
-                                        vdb_mbedtls_md_get_size( md_info ) ) ) != 0 )
+    if( ( ret = mbedtls_md_hmac_starts( &ctx->md_ctx, ctx->V,
+                                        mbedtls_md_get_size( md_info ) ) ) != 0 )
         return( ret );
-    memset( ctx->V, 0x01, vdb_mbedtls_md_get_size( md_info ) );
+    memset( ctx->V, 0x01, mbedtls_md_get_size( md_info ) );
 
-    if( ( ret = vdb_mbedtls_hmac_drbg_update_ret( ctx, data, data_len ) ) != 0 )
+    if( ( ret = mbedtls_hmac_drbg_update_ret( ctx, data, data_len ) ) != 0 )
         return( ret );
 
     return( 0 );
@@ -214,7 +214,7 @@ static int hmac_drbg_reseed_core( mbedtls_hmac_drbg_context *ctx,
     }
 
     /* 2. Update state */
-    if( ( ret = vdb_mbedtls_hmac_drbg_update_ret( ctx, seed, seedlen ) ) != 0 )
+    if( ( ret = mbedtls_hmac_drbg_update_ret( ctx, seed, seedlen ) ) != 0 )
         goto exit;
 
     /* 3. Reset reseed_counter */
@@ -222,14 +222,14 @@ static int hmac_drbg_reseed_core( mbedtls_hmac_drbg_context *ctx,
 
 exit:
     /* 4. Done */
-    vdb_mbedtls_platform_zeroize( seed, seedlen );
+    mbedtls_platform_zeroize( seed, seedlen );
     return( ret );
 }
 
 /*
  * HMAC_DRBG reseeding: 10.1.2.4 + 9.2
  */
-int vdb_mbedtls_hmac_drbg_reseed( mbedtls_hmac_drbg_context *ctx,
+int mbedtls_hmac_drbg_reseed( mbedtls_hmac_drbg_context *ctx,
                       const unsigned char *additional, size_t len )
 {
     return( hmac_drbg_reseed_core( ctx, additional, len, 0 ) );
@@ -241,7 +241,7 @@ int vdb_mbedtls_hmac_drbg_reseed( mbedtls_hmac_drbg_context *ctx,
  * The nonce is not passed as a separate parameter but extracted
  * from the entropy source as suggested in 8.6.7.
  */
-int vdb_mbedtls_hmac_drbg_seed( mbedtls_hmac_drbg_context *ctx,
+int mbedtls_hmac_drbg_seed( mbedtls_hmac_drbg_context *ctx,
                     const mbedtls_md_info_t * md_info,
                     int (*f_entropy)(void *, unsigned char *, size_t),
                     void *p_entropy,
@@ -251,17 +251,17 @@ int vdb_mbedtls_hmac_drbg_seed( mbedtls_hmac_drbg_context *ctx,
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t md_size;
 
-    if( ( ret = vdb_mbedtls_md_setup( &ctx->md_ctx, md_info, 1 ) ) != 0 )
+    if( ( ret = mbedtls_md_setup( &ctx->md_ctx, md_info, 1 ) ) != 0 )
         return( ret );
 
-    md_size = vdb_mbedtls_md_get_size( md_info );
+    md_size = mbedtls_md_get_size( md_info );
 
     /*
      * Set initial working state.
      * Use the V memory location, which is currently all 0, to initialize the
      * MD context with an all-zero key. Then set V to its initial value.
      */
-    if( ( ret = vdb_mbedtls_md_hmac_starts( &ctx->md_ctx, ctx->V, md_size ) ) != 0 )
+    if( ( ret = mbedtls_md_hmac_starts( &ctx->md_ctx, ctx->V, md_size ) ) != 0 )
         return( ret );
     memset( ctx->V, 0x01, md_size );
 
@@ -294,7 +294,7 @@ int vdb_mbedtls_hmac_drbg_seed( mbedtls_hmac_drbg_context *ctx,
 /*
  * Set prediction resistance
  */
-void vdb_mbedtls_hmac_drbg_set_prediction_resistance( mbedtls_hmac_drbg_context *ctx,
+void mbedtls_hmac_drbg_set_prediction_resistance( mbedtls_hmac_drbg_context *ctx,
                                           int resistance )
 {
     ctx->prediction_resistance = resistance;
@@ -303,7 +303,7 @@ void vdb_mbedtls_hmac_drbg_set_prediction_resistance( mbedtls_hmac_drbg_context 
 /*
  * Set entropy length grabbed for seeding
  */
-void vdb_mbedtls_hmac_drbg_set_entropy_len( mbedtls_hmac_drbg_context *ctx, size_t len )
+void mbedtls_hmac_drbg_set_entropy_len( mbedtls_hmac_drbg_context *ctx, size_t len )
 {
     ctx->entropy_len = len;
 }
@@ -311,7 +311,7 @@ void vdb_mbedtls_hmac_drbg_set_entropy_len( mbedtls_hmac_drbg_context *ctx, size
 /*
  * Set reseed interval
  */
-void vdb_mbedtls_hmac_drbg_set_reseed_interval( mbedtls_hmac_drbg_context *ctx, int interval )
+void mbedtls_hmac_drbg_set_reseed_interval( mbedtls_hmac_drbg_context *ctx, int interval )
 {
     ctx->reseed_interval = interval;
 }
@@ -320,13 +320,13 @@ void vdb_mbedtls_hmac_drbg_set_reseed_interval( mbedtls_hmac_drbg_context *ctx, 
  * HMAC_DRBG random function with optional additional data:
  * 10.1.2.5 (arabic) + 9.3 (Roman)
  */
-int vdb_mbedtls_hmac_drbg_random_with_add( void *p_rng,
+int mbedtls_hmac_drbg_random_with_add( void *p_rng,
                                unsigned char *output, size_t out_len,
                                const unsigned char *additional, size_t add_len )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     mbedtls_hmac_drbg_context *ctx = (mbedtls_hmac_drbg_context *) p_rng;
-    size_t md_len = vdb_mbedtls_md_get_size( ctx->md_ctx.md_info );
+    size_t md_len = mbedtls_md_get_size( ctx->md_ctx.md_info );
     size_t left = out_len;
     unsigned char *out = output;
 
@@ -343,7 +343,7 @@ int vdb_mbedtls_hmac_drbg_random_with_add( void *p_rng,
         ( ctx->prediction_resistance == MBEDTLS_HMAC_DRBG_PR_ON ||
           ctx->reseed_counter > ctx->reseed_interval ) )
     {
-        if( ( ret = vdb_mbedtls_hmac_drbg_reseed( ctx, additional, add_len ) ) != 0 )
+        if( ( ret = mbedtls_hmac_drbg_reseed( ctx, additional, add_len ) ) != 0 )
             return( ret );
 
         add_len = 0; /* VII.4 */
@@ -352,7 +352,7 @@ int vdb_mbedtls_hmac_drbg_random_with_add( void *p_rng,
     /* 2. Use additional data if any */
     if( additional != NULL && add_len != 0 )
     {
-        if( ( ret = vdb_mbedtls_hmac_drbg_update_ret( ctx,
+        if( ( ret = mbedtls_hmac_drbg_update_ret( ctx,
                                                   additional, add_len ) ) != 0 )
             goto exit;
     }
@@ -362,12 +362,12 @@ int vdb_mbedtls_hmac_drbg_random_with_add( void *p_rng,
     {
         size_t use_len = left > md_len ? md_len : left;
 
-        if( ( ret = vdb_mbedtls_md_hmac_reset( &ctx->md_ctx ) ) != 0 )
+        if( ( ret = mbedtls_md_hmac_reset( &ctx->md_ctx ) ) != 0 )
             goto exit;
-        if( ( ret = vdb_mbedtls_md_hmac_update( &ctx->md_ctx,
+        if( ( ret = mbedtls_md_hmac_update( &ctx->md_ctx,
                                             ctx->V, md_len ) ) != 0 )
             goto exit;
-        if( ( ret = vdb_mbedtls_md_hmac_finish( &ctx->md_ctx, ctx->V ) ) != 0 )
+        if( ( ret = mbedtls_md_hmac_finish( &ctx->md_ctx, ctx->V ) ) != 0 )
             goto exit;
 
         memcpy( out, ctx->V, use_len );
@@ -376,7 +376,7 @@ int vdb_mbedtls_hmac_drbg_random_with_add( void *p_rng,
     }
 
     /* 6. Update */
-    if( ( ret = vdb_mbedtls_hmac_drbg_update_ret( ctx,
+    if( ( ret = mbedtls_hmac_drbg_update_ret( ctx,
                                               additional, add_len ) ) != 0 )
         goto exit;
 
@@ -391,7 +391,7 @@ exit:
 /*
  * HMAC_DRBG random function
  */
-int vdb_mbedtls_hmac_drbg_random( void *p_rng, unsigned char *output, size_t out_len )
+int mbedtls_hmac_drbg_random( void *p_rng, unsigned char *output, size_t out_len )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     mbedtls_hmac_drbg_context *ctx = (mbedtls_hmac_drbg_context *) p_rng;
@@ -401,7 +401,7 @@ int vdb_mbedtls_hmac_drbg_random( void *p_rng, unsigned char *output, size_t out
         return( ret );
 #endif
 
-    ret = vdb_mbedtls_hmac_drbg_random_with_add( ctx, output, out_len, NULL, 0 );
+    ret = mbedtls_hmac_drbg_random_with_add( ctx, output, out_len, NULL, 0 );
 
 #if defined(MBEDTLS_THREADING_C)
     if( mbedtls_mutex_unlock( &ctx->mutex ) != 0 )
@@ -413,9 +413,9 @@ int vdb_mbedtls_hmac_drbg_random( void *p_rng, unsigned char *output, size_t out
 
 /*
  *  This function resets HMAC_DRBG context to the state immediately
- *  after initial call of vdb_mbedtls_hmac_drbg_init().
+ *  after initial call of mbedtls_hmac_drbg_init().
  */
-void vdb_mbedtls_hmac_drbg_free( mbedtls_hmac_drbg_context *ctx )
+void mbedtls_hmac_drbg_free( mbedtls_hmac_drbg_context *ctx )
 {
     if( ctx == NULL )
         return;
@@ -423,8 +423,8 @@ void vdb_mbedtls_hmac_drbg_free( mbedtls_hmac_drbg_context *ctx )
 #if defined(MBEDTLS_THREADING_C)
     mbedtls_mutex_free( &ctx->mutex );
 #endif
-    vdb_mbedtls_md_free( &ctx->md_ctx );
-    vdb_mbedtls_platform_zeroize( ctx, sizeof( mbedtls_hmac_drbg_context ) );
+    mbedtls_md_free( &ctx->md_ctx );
+    mbedtls_platform_zeroize( ctx, sizeof( mbedtls_hmac_drbg_context ) );
     ctx->reseed_interval = MBEDTLS_HMAC_DRBG_RESEED_INTERVAL;
 #if defined(MBEDTLS_THREADING_C)
     mbedtls_mutex_init( &ctx->mutex );
@@ -432,7 +432,7 @@ void vdb_mbedtls_hmac_drbg_free( mbedtls_hmac_drbg_context *ctx )
 }
 
 #if defined(MBEDTLS_FS_IO)
-int vdb_mbedtls_hmac_drbg_write_seed_file( mbedtls_hmac_drbg_context *ctx, const char *path )
+int mbedtls_hmac_drbg_write_seed_file( mbedtls_hmac_drbg_context *ctx, const char *path )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     FILE *f;
@@ -441,7 +441,7 @@ int vdb_mbedtls_hmac_drbg_write_seed_file( mbedtls_hmac_drbg_context *ctx, const
     if( ( f = fopen( path, "wb" ) ) == NULL )
         return( MBEDTLS_ERR_HMAC_DRBG_FILE_IO_ERROR );
 
-    if( ( ret = vdb_mbedtls_hmac_drbg_random( ctx, buf, sizeof( buf ) ) ) != 0 )
+    if( ( ret = mbedtls_hmac_drbg_random( ctx, buf, sizeof( buf ) ) ) != 0 )
         goto exit;
 
     if( fwrite( buf, 1, sizeof( buf ), f ) != sizeof( buf ) )
@@ -454,12 +454,12 @@ int vdb_mbedtls_hmac_drbg_write_seed_file( mbedtls_hmac_drbg_context *ctx, const
 
 exit:
     fclose( f );
-    vdb_mbedtls_platform_zeroize( buf, sizeof( buf ) );
+    mbedtls_platform_zeroize( buf, sizeof( buf ) );
 
     return( ret );
 }
 
-int vdb_mbedtls_hmac_drbg_update_seed_file( mbedtls_hmac_drbg_context *ctx, const char *path )
+int mbedtls_hmac_drbg_update_seed_file( mbedtls_hmac_drbg_context *ctx, const char *path )
 {
     int ret = 0;
     FILE *f = NULL;
@@ -484,15 +484,15 @@ int vdb_mbedtls_hmac_drbg_update_seed_file( mbedtls_hmac_drbg_context *ctx, cons
     fclose( f );
     f = NULL;
 
-    ret = vdb_mbedtls_hmac_drbg_update_ret( ctx, buf, n );
+    ret = mbedtls_hmac_drbg_update_ret( ctx, buf, n );
 
 exit:
-    vdb_mbedtls_platform_zeroize( buf, sizeof( buf ) );
+    mbedtls_platform_zeroize( buf, sizeof( buf ) );
     if( f != NULL )
         fclose( f );
     if( ret != 0 )
         return( ret );
-    return( vdb_mbedtls_hmac_drbg_write_seed_file( ctx, path ) );
+    return( mbedtls_hmac_drbg_write_seed_file( ctx, path ) );
 }
 #endif /* MBEDTLS_FS_IO */
 
@@ -501,7 +501,7 @@ exit:
 
 #if !defined(MBEDTLS_SHA1_C)
 /* Dummy checkup routine */
-int vdb_mbedtls_hmac_drbg_self_test( int verbose )
+int mbedtls_hmac_drbg_self_test( int verbose )
 {
     (void) verbose;
     return( 0 );
@@ -555,67 +555,67 @@ static int hmac_drbg_self_test_entropy( void *data,
 #define CHK( c )    if( (c) != 0 )                          \
                     {                                       \
                         if( verbose != 0 )                  \
-                            vdb_mbedtls_printf( "failed\n" );  \
+                            mbedtls_printf( "failed\n" );  \
                         return( 1 );                        \
                     }
 
 /*
  * Checkup routine for HMAC_DRBG with SHA-1
  */
-int vdb_mbedtls_hmac_drbg_self_test( int verbose )
+int mbedtls_hmac_drbg_self_test( int verbose )
 {
     mbedtls_hmac_drbg_context ctx;
     unsigned char buf[OUTPUT_LEN];
-    const mbedtls_md_info_t *md_info = vdb_mbedtls_md_info_from_type( MBEDTLS_MD_SHA1 );
+    const mbedtls_md_info_t *md_info = mbedtls_md_info_from_type( MBEDTLS_MD_SHA1 );
 
-    vdb_mbedtls_hmac_drbg_init( &ctx );
+    mbedtls_hmac_drbg_init( &ctx );
 
     /*
      * PR = True
      */
     if( verbose != 0 )
-        vdb_mbedtls_printf( "  HMAC_DRBG (PR = True) : " );
+        mbedtls_printf( "  HMAC_DRBG (PR = True) : " );
 
     test_offset = 0;
-    CHK( vdb_mbedtls_hmac_drbg_seed( &ctx, md_info,
+    CHK( mbedtls_hmac_drbg_seed( &ctx, md_info,
                          hmac_drbg_self_test_entropy, (void *) entropy_pr,
                          NULL, 0 ) );
-    vdb_mbedtls_hmac_drbg_set_prediction_resistance( &ctx, MBEDTLS_HMAC_DRBG_PR_ON );
-    CHK( vdb_mbedtls_hmac_drbg_random( &ctx, buf, OUTPUT_LEN ) );
-    CHK( vdb_mbedtls_hmac_drbg_random( &ctx, buf, OUTPUT_LEN ) );
+    mbedtls_hmac_drbg_set_prediction_resistance( &ctx, MBEDTLS_HMAC_DRBG_PR_ON );
+    CHK( mbedtls_hmac_drbg_random( &ctx, buf, OUTPUT_LEN ) );
+    CHK( mbedtls_hmac_drbg_random( &ctx, buf, OUTPUT_LEN ) );
     CHK( memcmp( buf, result_pr, OUTPUT_LEN ) );
-    vdb_mbedtls_hmac_drbg_free( &ctx );
+    mbedtls_hmac_drbg_free( &ctx );
 
-    vdb_mbedtls_hmac_drbg_free( &ctx );
+    mbedtls_hmac_drbg_free( &ctx );
 
     if( verbose != 0 )
-        vdb_mbedtls_printf( "passed\n" );
+        mbedtls_printf( "passed\n" );
 
     /*
      * PR = False
      */
     if( verbose != 0 )
-        vdb_mbedtls_printf( "  HMAC_DRBG (PR = False) : " );
+        mbedtls_printf( "  HMAC_DRBG (PR = False) : " );
 
-    vdb_mbedtls_hmac_drbg_init( &ctx );
+    mbedtls_hmac_drbg_init( &ctx );
 
     test_offset = 0;
-    CHK( vdb_mbedtls_hmac_drbg_seed( &ctx, md_info,
+    CHK( mbedtls_hmac_drbg_seed( &ctx, md_info,
                          hmac_drbg_self_test_entropy, (void *) entropy_nopr,
                          NULL, 0 ) );
-    CHK( vdb_mbedtls_hmac_drbg_reseed( &ctx, NULL, 0 ) );
-    CHK( vdb_mbedtls_hmac_drbg_random( &ctx, buf, OUTPUT_LEN ) );
-    CHK( vdb_mbedtls_hmac_drbg_random( &ctx, buf, OUTPUT_LEN ) );
+    CHK( mbedtls_hmac_drbg_reseed( &ctx, NULL, 0 ) );
+    CHK( mbedtls_hmac_drbg_random( &ctx, buf, OUTPUT_LEN ) );
+    CHK( mbedtls_hmac_drbg_random( &ctx, buf, OUTPUT_LEN ) );
     CHK( memcmp( buf, result_nopr, OUTPUT_LEN ) );
-    vdb_mbedtls_hmac_drbg_free( &ctx );
+    mbedtls_hmac_drbg_free( &ctx );
 
-    vdb_mbedtls_hmac_drbg_free( &ctx );
-
-    if( verbose != 0 )
-        vdb_mbedtls_printf( "passed\n" );
+    mbedtls_hmac_drbg_free( &ctx );
 
     if( verbose != 0 )
-        vdb_mbedtls_printf( "\n" );
+        mbedtls_printf( "passed\n" );
+
+    if( verbose != 0 )
+        mbedtls_printf( "\n" );
 
     return( 0 );
 }

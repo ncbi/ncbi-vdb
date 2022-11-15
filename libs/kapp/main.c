@@ -51,61 +51,6 @@
 #include <assert.h>
 #include <string.h>
 
-#if 0
-/* NextArg
- *  extracts the next argument from a switch parameter
- *
- *  "arg" is an indirect pointer to somewhere within an
- *  argument string, representing the last character parsed,
- *  e.g. "-auv"
- *         ^    : "arg" indicates the 'a'.
- *  in the example given, NextArg will advance the pointer
- *  to point to the 'u'.
- *
- *  had "arg" pointed instead to the 'v' above, i.e. there
- *  are no characters remaining in "arg" to be parsed, then
- *  an attempt to return the next element of "argv" will be
- *  made by invoking NextArgh.
- *
- *  "arg" [ IN, OUT ] - current argument string as indicated above
- *
- *  "i" [ IN, OUT ] - loop counter. required to be < argc,
- *  advanced if necessary to access next argument in argv.
- *
- *  "argc" [ IN ] - number of arguments in argv
- *
- *  "argv" [ IN ] - program arguments
- *
- *  "handle_null" [ IN, NULL OKAY ] and "data" [ IN, OPAQUE ] -
- *  optional callback function to handle NULL arguments. default
- *  behavior is to log error using "logerr" and invoke "exit".
- */
-const char * CC NextArg ( const char **argp, int *i, int argc, char *argv [],
-    const char * ( CC * handle_null ) ( void *data ), void *data )
-{
-    if ( argp != NULL )
-    {
-        const char *arg = * argp;
-        if ( arg != NULL && arg [ 0 ] != 0 && arg [ 1 ] != 0 )
-        {
-            * argp = "-";
-            return arg + 1;
-        }
-        return NextArgh ( i, argc, argv, handle_null, data );
-    }
-
-    /* report a fatal error if no arg given */
-    if ( handle_null == NULL )
-    {
-        rc_t rc = RC ( rcApp, rcArgv, rcAccessing, rcParam, rcNull );
-        LOGERR ( klogFatal, ( klogFatal, rc, "internal error" ));
-        exit ( 5 );
-    }
-
-    return ( * handle_null ) ( data );
-}
-#endif
-
 rc_t CC KAppCheckEnvironment ( bool require64Bits, uint64_t requireRamSize )
 {
     rc_t rc;
@@ -333,54 +278,6 @@ rc_t CC NextLogLevelCommon ( const char * level_parameter )
 
     return LogLevelAbsolute ( level_parameter );
 }
-
-#if 0
-static
-void CC HandleLogLevelError ( rc_t rc )
-{
-    LOGERR ( klogFatal, rc, "expected log level" );
-    exit ( 10 );
-}
-
-/* NextLogLevel
- *  handle a numeric or textual argument to --log-level <level>  The --log-level is not
- *  specified here and could be any string of the programmers choice
- */ 
-void CC NextLogLevel ( const char ** argp,
-		    int *ip,
-		    int argc,
-		    char *argv [],
-		    const char* ( CC * handle_null ) ( void *data ), void *data )
-{
-    rc_t rc = NextLogLevelCommon ( NextArg ( argp, ip, argc, argv, handle_null, data ) );
-    if ( rc != 0 )
-    {
-        if ( handle_null != NULL )
-            ( * handle_null ) ( data );
-        else
-            HandleLogLevelError ( rc );
-    }
-}
-
-/* NextLogLevelh
- *  handle a numeric or textual argument to --log-level <level>  The --log-level is not
- *  specified here and could be any string of the programmers choice
- */ 
-void CC NextLogLevelh (int *ip,
-		    int argc,
-		    char *argv [],
-		    const char* ( CC * handle_null ) ( void *data ), void *data )
-{
-    rc_t rc = NextLogLevelCommon ( NextArgh ( ip, argc, argv, handle_null, data ) );
-    if ( rc != 0 )
-    {
-        if ( handle_null != NULL )
-            ( * handle_null ) ( data );
-        else
-            HandleLogLevelError ( rc );
-    }
-}
-#endif
 
 /* KMane
  *  executable entrypoint "main" is implemented by

@@ -29,8 +29,8 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdlib.h>
-#define vdb_mbedtls_calloc    calloc
-#define vdb_mbedtls_free      free
+#define mbedtls_calloc    calloc
+#define mbedtls_free      free
 #endif
 
 #include "mbedtls/ssl_cache.h"
@@ -38,7 +38,7 @@
 
 #include <string.h>
 
-void vdb_mbedtls_ssl_cache_init( mbedtls_ssl_cache_context *cache )
+void mbedtls_ssl_cache_init( mbedtls_ssl_cache_context *cache )
 {
     memset( cache, 0, sizeof( mbedtls_ssl_cache_context ) );
 
@@ -50,7 +50,7 @@ void vdb_mbedtls_ssl_cache_init( mbedtls_ssl_cache_context *cache )
 #endif
 }
 
-int vdb_mbedtls_ssl_cache_get( void *data, mbedtls_ssl_session *session )
+int mbedtls_ssl_cache_get( void *data, mbedtls_ssl_session *session )
 {
     int ret = 1;
 #if defined(MBEDTLS_HAVE_TIME)
@@ -87,7 +87,7 @@ int vdb_mbedtls_ssl_cache_get( void *data, mbedtls_ssl_session *session )
                     entry->session.id_len ) != 0 )
             continue;
 
-        ret = vdb_mbedtls_ssl_session_copy( session, &entry->session );
+        ret = mbedtls_ssl_session_copy( session, &entry->session );
         if( ret != 0 )
         {
             ret = 1;
@@ -102,21 +102,21 @@ int vdb_mbedtls_ssl_cache_get( void *data, mbedtls_ssl_session *session )
         if( entry->peer_cert.p != NULL )
         {
             /* `session->peer_cert` is NULL after the call to
-             * vdb_mbedtls_ssl_session_copy(), because cache entries
+             * mbedtls_ssl_session_copy(), because cache entries
              * have the `peer_cert` field set to NULL. */
 
-            if( ( session->peer_cert = vdb_mbedtls_calloc( 1,
+            if( ( session->peer_cert = mbedtls_calloc( 1,
                                  sizeof(mbedtls_x509_crt) ) ) == NULL )
             {
                 ret = 1;
                 goto exit;
             }
 
-            vdb_mbedtls_x509_crt_init( session->peer_cert );
-            if( vdb_mbedtls_x509_crt_parse( session->peer_cert, entry->peer_cert.p,
+            mbedtls_x509_crt_init( session->peer_cert );
+            if( mbedtls_x509_crt_parse( session->peer_cert, entry->peer_cert.p,
                                 entry->peer_cert.len ) != 0 )
             {
-                vdb_mbedtls_free( session->peer_cert );
+                mbedtls_free( session->peer_cert );
                 session->peer_cert = NULL;
                 ret = 1;
                 goto exit;
@@ -137,7 +137,7 @@ exit:
     return( ret );
 }
 
-int vdb_mbedtls_ssl_cache_set( void *data, const mbedtls_ssl_session *session )
+int mbedtls_ssl_cache_set( void *data, const mbedtls_ssl_session *session )
 {
     int ret = 1;
 #if defined(MBEDTLS_HAVE_TIME)
@@ -224,7 +224,7 @@ int vdb_mbedtls_ssl_cache_set( void *data, const mbedtls_ssl_session *session )
             /*
              * max_entries not reached, create new entry
              */
-            cur = vdb_mbedtls_calloc( 1, sizeof(mbedtls_ssl_cache_entry) );
+            cur = mbedtls_calloc( 1, sizeof(mbedtls_ssl_cache_entry) );
             if( cur == NULL )
             {
                 ret = 1;
@@ -249,7 +249,7 @@ int vdb_mbedtls_ssl_cache_set( void *data, const mbedtls_ssl_session *session )
      */
     if( cur->peer_cert.p != NULL )
     {
-        vdb_mbedtls_free( cur->peer_cert.p );
+        mbedtls_free( cur->peer_cert.p );
         memset( &cur->peer_cert, 0, sizeof(mbedtls_x509_buf) );
     }
 #endif /* MBEDTLS_X509_CRT_PARSE_C && MBEDTLS_SSL_KEEP_PEER_CERTIFICATE */
@@ -259,7 +259,7 @@ int vdb_mbedtls_ssl_cache_set( void *data, const mbedtls_ssl_session *session )
      * This inefficiency will go away as soon as we implement on-demand
      * parsing of CRTs, in which case there's no need for the `peer_cert`
      * field anymore in the first place, and we're done after this call. */
-    ret = vdb_mbedtls_ssl_session_copy( &cur->session, session );
+    ret = mbedtls_ssl_session_copy( &cur->session, session );
     if( ret != 0 )
     {
         ret = 1;
@@ -272,7 +272,7 @@ int vdb_mbedtls_ssl_cache_set( void *data, const mbedtls_ssl_session *session )
     if( cur->session.peer_cert != NULL )
     {
         cur->peer_cert.p =
-            vdb_mbedtls_calloc( 1, cur->session.peer_cert->raw.len );
+            mbedtls_calloc( 1, cur->session.peer_cert->raw.len );
         if( cur->peer_cert.p == NULL )
         {
             ret = 1;
@@ -284,8 +284,8 @@ int vdb_mbedtls_ssl_cache_set( void *data, const mbedtls_ssl_session *session )
                 cur->session.peer_cert->raw.len );
         cur->peer_cert.len = session->peer_cert->raw.len;
 
-        vdb_mbedtls_x509_crt_free( cur->session.peer_cert );
-        vdb_mbedtls_free( cur->session.peer_cert );
+        mbedtls_x509_crt_free( cur->session.peer_cert );
+        mbedtls_free( cur->session.peer_cert );
         cur->session.peer_cert = NULL;
     }
 #endif /* MBEDTLS_X509_CRT_PARSE_C && MBEDTLS_SSL_KEEP_PEER_CERTIFICATE */
@@ -302,7 +302,7 @@ exit:
 }
 
 #if defined(MBEDTLS_HAVE_TIME)
-void vdb_mbedtls_ssl_cache_set_timeout( mbedtls_ssl_cache_context *cache, int timeout )
+void mbedtls_ssl_cache_set_timeout( mbedtls_ssl_cache_context *cache, int timeout )
 {
     if( timeout < 0 ) timeout = 0;
 
@@ -310,14 +310,14 @@ void vdb_mbedtls_ssl_cache_set_timeout( mbedtls_ssl_cache_context *cache, int ti
 }
 #endif /* MBEDTLS_HAVE_TIME */
 
-void vdb_mbedtls_ssl_cache_set_max_entries( mbedtls_ssl_cache_context *cache, int max )
+void mbedtls_ssl_cache_set_max_entries( mbedtls_ssl_cache_context *cache, int max )
 {
     if( max < 0 ) max = 0;
 
     cache->max_entries = max;
 }
 
-void vdb_mbedtls_ssl_cache_free( mbedtls_ssl_cache_context *cache )
+void mbedtls_ssl_cache_free( mbedtls_ssl_cache_context *cache )
 {
     mbedtls_ssl_cache_entry *cur, *prv;
 
@@ -328,14 +328,14 @@ void vdb_mbedtls_ssl_cache_free( mbedtls_ssl_cache_context *cache )
         prv = cur;
         cur = cur->next;
 
-        vdb_mbedtls_ssl_session_free( &prv->session );
+        mbedtls_ssl_session_free( &prv->session );
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C) && \
     defined(MBEDTLS_SSL_KEEP_PEER_CERTIFICATE)
-        vdb_mbedtls_free( prv->peer_cert.p );
+        mbedtls_free( prv->peer_cert.p );
 #endif /* MBEDTLS_X509_CRT_PARSE_C && MBEDTLS_SSL_KEEP_PEER_CERTIFICATE */
 
-        vdb_mbedtls_free( prv );
+        mbedtls_free( prv );
     }
 
 #if defined(MBEDTLS_THREADING_C)

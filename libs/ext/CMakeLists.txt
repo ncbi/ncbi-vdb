@@ -23,7 +23,9 @@
 # ===========================================================================
 
 add_subdirectory ( bzip2 ) # TODO: RETRIEVE from the Internet
-add_subdirectory ( magic )
-add_subdirectory ( mbedtls )
+if( NOT HAVE_MBEDTLS_F )
+	message( "Building local copy ext/mbedtls..." )
+	add_subdirectory ( mbedtls )
+endif()
 add_subdirectory ( zlib )
 add_subdirectory ( zstd )

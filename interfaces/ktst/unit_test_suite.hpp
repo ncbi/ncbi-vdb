@@ -30,7 +30,6 @@
 // turn on INT64_C, UINT64_C etc.
 #define __STDC_CONSTANT_MACROS
 #include <klib/defs.h>
-#undef memcpy
 
 #include <string>
 #include <vector>
@@ -96,6 +95,11 @@ typedef int counter_t;
 class Empty {};
 
 class execution_aborted {};
+
+struct test_skipped {
+    std::string reason;
+    test_skipped(std::string const &reason) : reason(reason) {}
+};
 
 class LogLevel {
 public:
@@ -163,7 +167,7 @@ public:
 private:
     static void TermHandler();
 
-    static void SigHandler(int sig);
+    static void SigHandler(int sig) noexcept;
 
     rc_t process_args(int argc, char* argv[], ArgsHandler* argsHandler);
 
@@ -184,6 +188,7 @@ public:
 
 protected:
     TestCase(const std::string &name) { Init(name); }
+    virtual ~TestCase(void) {}
 
 public:
     // explicit destruction, to be used before calling exit() in out-of-process test runner

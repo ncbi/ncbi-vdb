@@ -53,6 +53,7 @@ extern "C" {
 #define ENV_VAR_SESSION_ID "VDB_SESSION_ID"
 
 #define ENV_VAR_QUALITY_PREFERENCE "NCBI_VDB_QUALITY"
+#define ENV_VAR_PARAMETER_BITS "VDB_OPT_BITMAP"
 
 
 #define SDL_CGI "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve"

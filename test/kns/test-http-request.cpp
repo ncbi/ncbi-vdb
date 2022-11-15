@@ -404,7 +404,7 @@ FIXTURE_TEST_CASE(HttpReliableRequest_ContentLength, HttpFixture)
     REQUIRE_RC ( KHttpRequestPOST ( m_req, & rslt ) );
     uint32_t code = 0;
     REQUIRE_RC ( KClientHttpResultStatus ( rslt, & code, NULL, 0, NULL ) );
-    REQUIRE_EQ ( code, 200u );
+    REQUIRE_EQ ( code, 406u );
 
     KStream * response;
     REQUIRE_RC ( KHttpResultGetInputStream ( rslt, & response ) );
@@ -413,7 +413,9 @@ FIXTURE_TEST_CASE(HttpReliableRequest_ContentLength, HttpFixture)
     REQUIRE_RC (KStreamRead( response, buffer, sizeof buffer - 1,  &num_read ));
     REQUIRE_LT ( num_read, sizeof buffer );
     buffer [ num_read ] = '\0';
-    REQUIRE_EQ ( string ( buffer + num_read - 7 ), string ( "200|ok\n" ) );
+    REQUIRE_EQ ( string ( buffer ), string ( 
+"This service has been deprecated, please update to the latest version of the toolkit. See https://github.com/ncbi/sra-tools/wiki/01.-Downloading-SRA-Toolkit\n"
+                                           ) );
     REQUIRE_RC ( KStreamRelease ( response ) );
 
     REQUIRE_RC ( KHttpResultRelease( rslt ) );

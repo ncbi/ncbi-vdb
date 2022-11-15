@@ -26,16 +26,20 @@ add_compile_definitions( __mod__="test/kns" )
 
 AddExecutableTest( Test_KNS_allow_all_certificates "test_allow_all_certificates" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_KNS_dis_allow_all_certificates "test_dis_allow_all_certificates" "${COMMON_LIBS_READ}" )
+AddExecutableTest( Test_KNS_aws-proxy "test-aws-proxy" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_KNS_google-proxy "test-google-proxy" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_KNS_test200for-whole-file "test200for-whole-file" "${COMMON_LIBS_READ}" )
 
 # TODO: only succeeds when the executable name is test-kns
 set( test_kns_name "test-kns" )
 add_executable( ${test_kns_name} knstest )
+if (WIN32)
+    # warning C5039: 'XXX': pointer or reference to potentially throwing function passed to extern C function under -EHc.
+    set_source_files_properties(knstest PROPERTIES COMPILE_FLAGS "/wd5039")
+endif()
 MSVS_StaticRuntime( ${test_kns_name} )
 target_link_libraries( ${test_kns_name} ${COMMON_LIBS_READ} )
-add_test( NAME Test_KNS COMMAND ${test_kns_name} WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
-#AddExecutableTest( Test_KNS "knstest" "${COMMON_LIBS_READ}" )
+add_test( NAME Test_KNS_basics COMMAND ${test_kns_name} WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 
 AddExecutableTest( SlowTest_KNS_ipc "test-ipc" "${COMMON_LIBS_READ}" )
 AddExecutableTest( SlowTest_KNS_http "HttpFixture;httptest" "${COMMON_LIBS_READ}" )
@@ -59,8 +63,8 @@ if( SINGLE_CONFIG )
     BuildExecutableForTest( Test_KNS_proxy "test-proxy" "${COMMON_LIBS_READ}" )
     add_test( NAME Test_KNS_proxy COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test-proxy.sh ${CMAKE_TEST_OUTPUT_DIRECTORY}/Test_KNS_proxy WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 
-    BuildExecutableForTest( Test_KNS_proxy-with-scheme "test-proxy-with-scheme" "${COMMON_LIBS_READ}" )
-    add_test( NAME Test_KNS_proxy-with-scheme COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test-proxy-with-scheme.sh ${CMAKE_TEST_OUTPUT_DIRECTORY}/Test_KNS_proxy-with-scheme WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+    BuildExecutableForTest( Test_KNS_proxy-with-scheme_dflt "test-proxy-with-scheme" "${COMMON_LIBS_READ}" )
+    add_test( NAME Test_KNS_proxy-with-scheme_dflt COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test-proxy-with-scheme.sh ${CMAKE_TEST_OUTPUT_DIRECTORY}/Test_KNS_proxy-with-scheme_dflt WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
     #set_tests_properties(Test_KNS_proxy-with-scheme PROPERTIES ENVIRONMENT http_proxy=)
 
 endif()

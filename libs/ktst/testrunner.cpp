@@ -40,10 +40,10 @@ void TestRunner::ReportTestNumber(void)
     }
 }
 
-void TestRunner::SetArgs(int argc, char* argv[])
+void TestRunner::SetArgs(int p_argc, char* p_argv[])
 {
-    this->argc = argc;
-    this->argv = argv;
+    this->argc = p_argc;
+    this->argv = p_argv;
 }
 
 void TestRunner::Add(ncbi::NK::TestInvoker* t)

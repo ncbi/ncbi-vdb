@@ -1055,3 +1055,29 @@ LIB_EXPORT rc_t CC VTableRenameColumn ( struct VTable *self, bool force,
     return rc;
 }
 
+LIB_EXPORT rc_t CC VTableCopyColumn (  struct VTable *self, bool force
+                                     , struct VTable const *source
+                                     , const char *name )
+{
+    rc_t rc;
+
+    if ( self == NULL )
+        rc = RC ( rcVDB, rcTable, rcAccessing, rcSelf, rcNull );
+    else if ( source == NULL )
+        rc = RC ( rcVDB, rcTable, rcAccessing, rcParam, rcNull );
+    else if ( name == NULL )
+        rc = RC ( rcVDB, rcTable, rcAccessing, rcParam, rcNull );
+    else if ( name[0] == '\0' )
+        rc = RC ( rcVDB, rcTable, rcAccessing, rcParam, rcEmpty );
+    else
+    {
+        if (force)
+            KTableDropColumn(self->ktbl, "%s", name);
+        rc = KTableCopyColumn(self->ktbl, source->ktbl, name);
+        if (GetRCState(rc) == rcNotFound)
+            rc = KMDataNodeCopy(self->col_node, source->col_node);
+    }
+
+    return rc;
+}
+

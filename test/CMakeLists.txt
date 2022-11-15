@@ -33,13 +33,13 @@ set( COMMON_LINK_LIBRARIES ktst kapp )
 
 # for the tests that link against libncbi-[w]vdb
 if( WIN32 )
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS /ENTRY:wmainCRTStartup")
-    set( COMMON_LIBS_READ  ${COMMON_LINK_LIBRARIES} ncbi-vdb Ws2_32 Crypt32 )
-    set( COMMON_LIBS_WRITE ${COMMON_LINK_LIBRARIES} ncbi-wvdb Ws2_32 Crypt32 )
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /ENTRY:wmainCRTStartup")
+    set( COMMON_LIBS_READ  ${COMMON_LINK_LIBRARIES} ncbi-vdb Ws2_32 Crypt32 ${MBEDTLS_LIBS} )
+    set( COMMON_LIBS_WRITE ${COMMON_LINK_LIBRARIES} ncbi-wvdb Ws2_32 Crypt32 ${MBEDTLS_LIBS} )
 else()
     link_libraries( ${COMMON_LINK_LIBRARIES} )
-    set( COMMON_LIBS_READ   ncbi-vdb  dl pthread )
-    set( COMMON_LIBS_WRITE  ncbi-wvdb dl pthread )
+    set( COMMON_LIBS_READ  ncbi-vdb  dl pthread ${MBEDTLS_LIBS} )
+    set( COMMON_LIBS_WRITE ncbi-wvdb dl pthread ${MBEDTLS_LIBS} )
 endif()
 
 add_subdirectory(ktst)
@@ -59,12 +59,13 @@ add_subdirectory(vdb)
 add_subdirectory(search)
 add_subdirectory(sraxf)
 add_subdirectory(vxf)
-add_subdirectory(loader)
-# add_subdirectory(align) TODO move to sra-tools
-#add_subdirectory(align-access) #TODO: move to asm-trace
 add_subdirectory(axf)
 add_subdirectory(schema) # TODO: INT_TOOLS - see the schema CMakeLists.txt for the details
 add_subdirectory(vfs)
 add_subdirectory(ncbi-vdb)
 # add_subdirectory(install)
 add_subdirectory(kns) # TODO: EXT_TOOLS - see the kns CMakeLists.txt for the details
+
+# add_subdirectory(loader) VDB-4855 moved to sra-tools/libs
+# add_subdirectory(align) moved to sra-tools
+# add_subdirectory(align-access) #VDB-4140 moved to asm-trace

@@ -242,6 +242,18 @@ KDB_EXTERN rc_t CC KTableRenameIndex ( KTable *self, bool force,
     const char *from, const char *to );
 
 
+/* Copy
+ *  Copies a contained object from another table
+ *
+ *  "name" [ IN ] - NUL terminated string in UTF-8
+ *  giving name of contained object
+ */
+KDB_EXTERN rc_t CC KTableCopyColumn ( KTable *self, KTable const *source,
+    const char *name );
+KDB_EXTERN rc_t CC KTableCopyIndex ( KTable *self, KTable const *source,
+    const char *name );
+
+
 /* Alias
  *  create an alias to an existing contained object
  *

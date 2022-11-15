@@ -28,7 +28,7 @@ if( NOT WIN32 )
     AddExecutableTest( Test_KFS_kdf "kdf" "${COMMON_LIBS_READ}" )
 endif()
 
-AddExecutableTest( Test_KFS "kfstest" "${COMMON_LIBS_READ}" )
+AddExecutableTest( Test_KFS_base "kfstest" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_KFS_ramfile "ramfiletest" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_KFS_resolve "resolvetest" "${COMMON_LIBS_READ}" )
 
@@ -50,4 +50,3 @@ AddExecutableTest( Test_KFS_appendfile "appendfiletest" "${COMMON_LIBS_READ}" )
 if( NOT WIN32 )
     AddExecutableTest( Test_KFS_GZip "test-gzip" "${COMMON_LIBS_READ}" )
 endif()
-

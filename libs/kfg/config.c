@@ -25,6 +25,7 @@
  */
 
 #include <kfg/kfg-priv.h>
+#include <kfg/properties.h> /* KConfig_Get_GUID */
 #include "kfg-priv.h"
 
 struct KfgConfigNamelist;
@@ -35,6 +36,8 @@ struct KfgConfigNamelist;
 #include <klib/container.h>
 #include <klib/data-buffer.h> /* KDataBuffer */
 #include <klib/debug.h>
+#include <klib/guid.h> /* KGUIDMake */
+#include <klib/klib-priv.h>
 #include <klib/log.h>
 #include <klib/out.h> /* OUTMSG */
 #include <klib/printf.h>
@@ -42,7 +45,6 @@ struct KfgConfigNamelist;
 #include <klib/refcount.h>
 #include <klib/text.h>
 #include <klib/token.h>
-#include <klib/klib-priv.h>
 
 #include <kfs/directory.h>
 #include <kfs/gzip.h> /* KFileMakeGzipForRead */
@@ -2035,24 +2037,11 @@ void _KConfigIniKfgSettings ( const KConfig * self, KfgSettings * ks ) {
 static
 bool MayICommitTo(const KConfig *self, const char *path, size_t size)
 {
-    if ( ! s_disable_user_settings ) {
+    if ( ! KConfigDisabledUserSettings() ) {
         return true;
     }
     else {
-        size_t bytes = 0;
-        char home             [ PATH_MAX ] = "";
-        char dfltNcbiSettings [ PATH_MAX ] = "";
-        size_t num_read = 0;
-        size_t remaining = 0;
-        rc_t rc = KConfigRead
-            ( self, "HOME", 0, home, sizeof home, & num_read, & remaining);
-        if ( rc != 0 || remaining != 0 ) {
-            return false;
-        }
-        string_printf ( dfltNcbiSettings, sizeof dfltNcbiSettings,
-            & bytes, "%.*s/.ncbi/%s", num_read, home, MAGIC_LEAF_NAME );
-        return string_cmp
-            (dfltNcbiSettings, bytes, path, size, sizeof dfltNcbiSettings) != 0;
+        return false;
     }
 }
 
@@ -2228,15 +2217,17 @@ rc_t path_to_magic_file ( const KConfig *self, char *path, size_t buffer_size, s
     const KConfigNode *node;
     rc_t rc = KConfigOpenNodeRead ( self, & node, "NCBI_SETTINGS" );
 
+    assert ( path_size );
+
     if ( rc == 0 )
     {
-        size_t num_read, remaining;
-        rc = KConfigNodeRead ( node, 0, path, buffer_size - 1, & num_read, & remaining );
+        size_t remaining;
+        rc = KConfigNodeRead ( node, 0, path, buffer_size - 1, path_size, & remaining );
 
         if ( rc == 0 && remaining != 0 )
            rc = RC ( rcKFG, rcNode, rcReading, rcBuffer, rcInsufficient );
 
-        path[num_read] = '\0';
+        path[*path_size] = '\0';
 
         KConfigNodeRelease ( node );
     }
@@ -2783,7 +2774,7 @@ rc_t load_config_files ( KConfig * self,
     if ( ! loaded )
         loaded = load_from_default_string ( self );
 
-    if ( ! s_disable_user_settings )
+    if ( ! KConfigDisabledUserSettings() )
         loaded |= load_from_home
             ( self, wd, ks, ncbi_settings, sizeof ncbi_settings );
     else {
@@ -3142,6 +3133,30 @@ static rc_t _KConfigFixQualityType(KConfig *const self, bool *updated)
     if (rc != 0) {
         LOGERR(klogErr, rc, "can't set quality type");
     }
+    return rc;
+}
+
+static rc_t _KConfigSetGuid(KConfig *self, bool *updated) {
+    rc_t rc = 0;
+
+    char buf[999] = "";
+    size_t written = 0;
+
+    assert(updated);
+    *updated = false;
+
+    rc = KConfig_Get_GUID(self, buf, sizeof buf, &written);
+    if (rc == 0 && buf[0] != '\0' && written > 5)
+        return rc;
+
+    rc = KGUIDMake(buf, sizeof buf);
+
+    if (rc == 0)
+        rc = KConfig_Set_GUID(self, buf);
+
+    if (rc == 0)
+        *updated = true;
+
     return rc;
 }
 
@@ -3533,7 +3548,7 @@ rc_t KConfigMakeImpl ( KConfig ** cfg, const KDirectory * cfgdir, bool local,
 
                 bool updated = false;
 
-                if ( ! s_disable_user_settings ) {
+                if ( ! KConfigDisabledUserSettings() ) {
                     bool updatd2 = false;
 
                     rc = _KConfigLowerAscpRate ( mgr,  & updated );
@@ -3582,6 +3597,14 @@ rc_t KConfigMakeImpl ( KConfig ** cfg, const KDirectory * cfgdir, bool local,
                     rc = _KConfigFixQualityType(mgr, &updated);
                     if (rc == 0 && updated)
        /* ignore Commit's rc - it will fail if user configuration is disabled */
+                        KConfigCommit(mgr);
+                }
+
+                if (rc == 0)
+                {
+                    updated = false;
+                    rc = _KConfigSetGuid(mgr, &updated);
+                    if (rc == 0 && updated)
                         KConfigCommit(mgr);
                 }
 
@@ -4277,6 +4300,14 @@ LIB_EXPORT void CC KConfigDisableUserSettings ( void )
 {
     s_disable_user_settings = true;
 }
+
+bool KConfigSetUserSettingsDisabled(bool disable) {
+    bool old = s_disable_user_settings;
+    s_disable_user_settings = disable;
+    return old;
+}
+
+bool KConfigDisabledUserSettings(void) { return s_disable_user_settings; }
 
 LIB_EXPORT void CC KConfigSetNgcFile(const char * path) { s_ngc_file = path; }
 const char * KConfigGetNgcFile(void) { return s_ngc_file; }

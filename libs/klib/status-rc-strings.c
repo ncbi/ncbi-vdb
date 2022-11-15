@@ -24,8 +24,6 @@
 *
 */
 
-#include <sysalloc.h>
-
 #define PASTE2(a,b) a##b
 #define STRINGIFY(a) #a
 #define RC_ENUM(type) const char * PASTE2(type,Strings)[] =

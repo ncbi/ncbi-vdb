@@ -45,8 +45,8 @@
 #include <string.h>
 #include "mbedtls/platform.h"
 #if !defined(MBEDTLS_PLATFORM_C)
-#define vdb_mbedtls_calloc calloc
-#define vdb_mbedtls_free   free
+#define mbedtls_calloc calloc
+#define mbedtls_free   free
 #endif
 
 #include "mbedtls/arc4.h"
@@ -383,7 +383,7 @@ static inline int psa_key_slot_is_external( const psa_key_slot_t *slot )
     defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_PUBLIC_KEY) || \
     defined(MBEDTLS_PSA_ACCEL_KEY_TYPE_ECC_KEY_PAIR) || \
     defined(MBEDTLS_PSA_ACCEL_KEY_TYPE_ECC_PUBLIC_KEY)
-mbedtls_ecp_group_id vdb_mbedtls_ecc_group_of_psa( psa_ecc_family_t curve,
+mbedtls_ecp_group_id mbedtls_ecc_group_of_psa( psa_ecc_family_t curve,
                                                size_t byte_length )
 {
     switch( curve )
@@ -513,7 +513,7 @@ static psa_status_t validate_unstructured_key_bit_size( psa_key_type_t type,
 
 /* Mbed TLS doesn't support non-byte-aligned key sizes (i.e. key sizes
  * that are not a multiple of 8) well. For example, there is only
- * vdb_mbedtls_rsa_get_len(), which returns a number of bytes, and no
+ * mbedtls_rsa_get_len(), which returns a number of bytes, and no
  * way to return the exact bit size of a key.
  * To keep things simple, reject non-byte-aligned key sizes. */
 static psa_status_t psa_check_rsa_key_byte_aligned(
@@ -521,15 +521,15 @@ static psa_status_t psa_check_rsa_key_byte_aligned(
 {
     mbedtls_mpi n;
     psa_status_t status;
-    vdb_mbedtls_mpi_init( &n );
+    mbedtls_mpi_init( &n );
     status = mbedtls_to_psa_error(
-        vdb_mbedtls_rsa_export( rsa, &n, NULL, NULL, NULL, NULL ) );
+        mbedtls_rsa_export( rsa, &n, NULL, NULL, NULL, NULL ) );
     if( status == PSA_SUCCESS )
     {
-        if( vdb_mbedtls_mpi_bitlen( &n ) % 8 != 0 )
+        if( mbedtls_mpi_bitlen( &n ) % 8 != 0 )
             status = PSA_ERROR_NOT_SUPPORTED;
     }
-    vdb_mbedtls_mpi_free( &n );
+    mbedtls_mpi_free( &n );
     return( status );
 }
 
@@ -551,21 +551,21 @@ static psa_status_t psa_load_rsa_representation( psa_key_type_t type,
     psa_status_t status;
     mbedtls_pk_context ctx;
     size_t bits;
-    vdb_mbedtls_pk_init( &ctx );
+    mbedtls_pk_init( &ctx );
 
     /* Parse the data. */
     if( PSA_KEY_TYPE_IS_KEY_PAIR( type ) )
         status = mbedtls_to_psa_error(
-            vdb_mbedtls_pk_parse_key( &ctx, data, data_length, NULL, 0 ) );
+            mbedtls_pk_parse_key( &ctx, data, data_length, NULL, 0 ) );
     else
         status = mbedtls_to_psa_error(
-            vdb_mbedtls_pk_parse_public_key( &ctx, data, data_length ) );
+            mbedtls_pk_parse_public_key( &ctx, data, data_length ) );
     if( status != PSA_SUCCESS )
         goto exit;
 
     /* We have something that the pkparse module recognizes. If it is a
      * valid RSA key, store it. */
-    if( vdb_mbedtls_pk_get_type( &ctx ) != MBEDTLS_PK_RSA )
+    if( mbedtls_pk_get_type( &ctx ) != MBEDTLS_PK_RSA )
     {
         status = PSA_ERROR_INVALID_ARGUMENT;
         goto exit;
@@ -573,24 +573,24 @@ static psa_status_t psa_load_rsa_representation( psa_key_type_t type,
 
     /* The size of an RSA key doesn't have to be a multiple of 8. Mbed TLS
      * supports non-byte-aligned key sizes, but not well. For example,
-     * vdb_mbedtls_rsa_get_len() returns the key size in bytes, not in bits. */
-    bits = PSA_BYTES_TO_BITS( vdb_mbedtls_rsa_get_len( vdb_mbedtls_pk_rsa( ctx ) ) );
+     * mbedtls_rsa_get_len() returns the key size in bytes, not in bits. */
+    bits = PSA_BYTES_TO_BITS( mbedtls_rsa_get_len( mbedtls_pk_rsa( ctx ) ) );
     if( bits > PSA_VENDOR_RSA_MAX_KEY_BITS )
     {
         status = PSA_ERROR_NOT_SUPPORTED;
         goto exit;
     }
-    status = psa_check_rsa_key_byte_aligned( vdb_mbedtls_pk_rsa( ctx ) );
+    status = psa_check_rsa_key_byte_aligned( mbedtls_pk_rsa( ctx ) );
     if( status != PSA_SUCCESS )
         goto exit;
 
     /* Copy out the pointer to the RSA context, and reset the PK context
      * such that pk_free doesn't free the RSA context we just grabbed. */
-    *p_rsa = vdb_mbedtls_pk_rsa( ctx );
+    *p_rsa = mbedtls_pk_rsa( ctx );
     ctx.pk_info = NULL;
 
 exit:
-    vdb_mbedtls_pk_free( &ctx );
+    mbedtls_pk_free( &ctx );
     return( status );
 }
 
@@ -623,17 +623,17 @@ static psa_status_t psa_export_rsa_key( psa_key_type_t type,
     mbedtls_pk_context pk;
     uint8_t *pos = data + data_size;
 
-    vdb_mbedtls_pk_init( &pk );
-    pk.pk_info = &vdb_mbedtls_rsa_info;
+    mbedtls_pk_init( &pk );
+    pk.pk_info = &mbedtls_rsa_info;
     pk.pk_ctx = rsa;
 
     /* PSA Crypto API defines the format of an RSA key as a DER-encoded
      * representation of the non-encrypted PKCS#1 RSAPrivateKey for a
      * private key and of the RFC3279 RSAPublicKey for a public key. */
     if( PSA_KEY_TYPE_IS_KEY_PAIR( type ) )
-        ret = vdb_mbedtls_pk_write_key_der( &pk, data, data_size );
+        ret = mbedtls_pk_write_key_der( &pk, data, data_size );
     else
-        ret = vdb_mbedtls_pk_write_pubkey( &pos, data, &pk );
+        ret = mbedtls_pk_write_pubkey( &pos, data, &pk );
 
     if( ret < 0 )
     {
@@ -691,13 +691,13 @@ static psa_status_t psa_import_rsa_key( psa_key_slot_t *slot,
         goto exit;
 
     slot->attr.bits = (psa_key_bits_t) PSA_BYTES_TO_BITS(
-        vdb_mbedtls_rsa_get_len( rsa ) );
+        mbedtls_rsa_get_len( rsa ) );
 
     /* Re-export the data to PSA export format, such that we can store export
      * representation in the key slot. Export representation in case of RSA is
      * the smallest representation that's allowed as input, so a straight-up
      * allocation of the same size as the input buffer will be large enough. */
-    output = vdb_mbedtls_calloc( 1, data_length );
+    output = mbedtls_calloc( 1, data_length );
     if( output == NULL )
     {
         status = PSA_ERROR_INSUFFICIENT_MEMORY;
@@ -711,13 +711,13 @@ static psa_status_t psa_import_rsa_key( psa_key_slot_t *slot,
                                  &data_length);
 exit:
     /* Always free the RSA object */
-    vdb_mbedtls_rsa_free( rsa );
-    vdb_mbedtls_free( rsa );
+    mbedtls_rsa_free( rsa );
+    mbedtls_free( rsa );
 
     /* Free the allocated buffer only on error. */
     if( status != PSA_SUCCESS )
     {
-        vdb_mbedtls_free( output );
+        mbedtls_free( output );
         return( status );
     }
 
@@ -777,13 +777,13 @@ static psa_status_t psa_load_ecp_representation( psa_key_type_t type,
     }
 
     /* Allocate and initialize a key representation. */
-    ecp = vdb_mbedtls_calloc( 1, sizeof( mbedtls_ecp_keypair ) );
+    ecp = mbedtls_calloc( 1, sizeof( mbedtls_ecp_keypair ) );
     if( ecp == NULL )
         return( PSA_ERROR_INSUFFICIENT_MEMORY );
-    vdb_mbedtls_ecp_keypair_init( ecp );
+    mbedtls_ecp_keypair_init( ecp );
 
     /* Load the group. */
-    grp_id = vdb_mbedtls_ecc_group_of_psa( PSA_KEY_TYPE_ECC_GET_FAMILY( type ),
+    grp_id = mbedtls_ecc_group_of_psa( PSA_KEY_TYPE_ECC_GET_FAMILY( type ),
                                        curve_size );
     if( grp_id == MBEDTLS_ECP_DP_NONE )
     {
@@ -792,7 +792,7 @@ static psa_status_t psa_load_ecp_representation( psa_key_type_t type,
     }
 
     status = mbedtls_to_psa_error(
-                vdb_mbedtls_ecp_group_load( &ecp->grp, grp_id ) );
+                mbedtls_ecp_group_load( &ecp->grp, grp_id ) );
     if( status != PSA_SUCCESS )
         goto exit;
 
@@ -801,7 +801,7 @@ static psa_status_t psa_load_ecp_representation( psa_key_type_t type,
     {
         /* Load the public value. */
         status = mbedtls_to_psa_error(
-            vdb_mbedtls_ecp_point_read_binary( &ecp->grp, &ecp->Q,
+            mbedtls_ecp_point_read_binary( &ecp->grp, &ecp->Q,
                                            data,
                                            data_length ) );
         if( status != PSA_SUCCESS )
@@ -809,7 +809,7 @@ static psa_status_t psa_load_ecp_representation( psa_key_type_t type,
 
         /* Check that the point is on the curve. */
         status = mbedtls_to_psa_error(
-            vdb_mbedtls_ecp_check_pubkey( &ecp->grp, &ecp->Q ) );
+            mbedtls_ecp_check_pubkey( &ecp->grp, &ecp->Q ) );
         if( status != PSA_SUCCESS )
             goto exit;
     }
@@ -817,7 +817,7 @@ static psa_status_t psa_load_ecp_representation( psa_key_type_t type,
     {
         /* Load and validate the secret value. */
         status = mbedtls_to_psa_error(
-            vdb_mbedtls_ecp_read_key( ecp->grp.id,
+            mbedtls_ecp_read_key( ecp->grp.id,
                                   ecp,
                                   data,
                                   data_length ) );
@@ -829,8 +829,8 @@ static psa_status_t psa_load_ecp_representation( psa_key_type_t type,
 exit:
     if( status != PSA_SUCCESS )
     {
-        vdb_mbedtls_ecp_keypair_free( ecp );
-        vdb_mbedtls_free( ecp );
+        mbedtls_ecp_keypair_free( ecp );
+        mbedtls_free( ecp );
     }
 
     return( status );
@@ -862,18 +862,18 @@ static psa_status_t psa_export_ecp_key( psa_key_type_t type,
     if( PSA_KEY_TYPE_IS_PUBLIC_KEY( type ) )
     {
         /* Check whether the public part is loaded */
-        if( vdb_mbedtls_ecp_is_zero( &ecp->Q ) )
+        if( mbedtls_ecp_is_zero( &ecp->Q ) )
         {
             /* Calculate the public key */
             status = mbedtls_to_psa_error(
-                vdb_mbedtls_ecp_mul( &ecp->grp, &ecp->Q, &ecp->d, &ecp->grp.G,
-                                 vdb_mbedtls_ctr_drbg_random, &global_data.ctr_drbg ) );
+                mbedtls_ecp_mul( &ecp->grp, &ecp->Q, &ecp->d, &ecp->grp.G,
+                                 mbedtls_ctr_drbg_random, &global_data.ctr_drbg ) );
             if( status != PSA_SUCCESS )
                 return( status );
         }
 
         status = mbedtls_to_psa_error(
-                    vdb_mbedtls_ecp_point_write_binary( &ecp->grp, &ecp->Q,
+                    mbedtls_ecp_point_write_binary( &ecp->grp, &ecp->Q,
                                                     MBEDTLS_ECP_PF_UNCOMPRESSED,
                                                     data_length,
                                                     data,
@@ -889,7 +889,7 @@ static psa_status_t psa_export_ecp_key( psa_key_type_t type,
             return( PSA_ERROR_BUFFER_TOO_SMALL );
 
         status = mbedtls_to_psa_error(
-                    vdb_mbedtls_ecp_write_key( ecp,
+                    mbedtls_ecp_write_key( ecp,
                                            data,
                                            PSA_BITS_TO_BYTES( ecp->grp.nbits ) ) );
         if( status == PSA_SUCCESS )
@@ -931,7 +931,7 @@ static psa_status_t psa_import_ecp_key( psa_key_slot_t *slot,
     /* Re-export the data to PSA export format. There is currently no support
      * for other input formats then the export format, so this is a 1-1
      * copy operation. */
-    output = vdb_mbedtls_calloc( 1, data_length );
+    output = mbedtls_calloc( 1, data_length );
     if( output == NULL )
     {
         status = PSA_ERROR_INSUFFICIENT_MEMORY;
@@ -945,13 +945,13 @@ static psa_status_t psa_import_ecp_key( psa_key_slot_t *slot,
                                  &data_length);
 exit:
     /* Always free the PK object (will also free contained ECP context) */
-    vdb_mbedtls_ecp_keypair_free( ecp );
-    vdb_mbedtls_free( ecp );
+    mbedtls_ecp_keypair_free( ecp );
+    mbedtls_free( ecp );
 
     /* Free the allocated buffer only on error. */
     if( status != PSA_SUCCESS )
     {
-        vdb_mbedtls_free( output );
+        mbedtls_free( output );
         return( status );
     }
 
@@ -993,7 +993,7 @@ static psa_status_t psa_allocate_buffer_to_slot( psa_key_slot_t *slot,
     if( slot->data.key.data != NULL )
         return( PSA_ERROR_ALREADY_EXISTS );
 
-    slot->data.key.data = vdb_mbedtls_calloc( 1, buffer_length );
+    slot->data.key.data = mbedtls_calloc( 1, buffer_length );
     if( slot->data.key.data == NULL )
         return( PSA_ERROR_INSUFFICIENT_MEMORY );
 
@@ -1326,8 +1326,8 @@ static psa_status_t psa_remove_key_data_from_memory( psa_key_slot_t *slot )
         /* Data pointer will always be either a valid pointer or NULL in an
          * initialized slot, so we can just free it. */
         if( slot->data.key.data != NULL )
-            vdb_mbedtls_platform_zeroize( slot->data.key.data, slot->data.key.bytes);
-        vdb_mbedtls_free( slot->data.key.data );
+            mbedtls_platform_zeroize( slot->data.key.data, slot->data.key.bytes);
+        mbedtls_free( slot->data.key.data );
         slot->data.key.data = NULL;
         slot->data.key.bytes = 0;
     }
@@ -1377,7 +1377,7 @@ psa_status_t psa_destroy_key( mbedtls_svc_key_id_t key )
     psa_se_drv_table_entry_t *driver;
 #endif /* MBEDTLS_PSA_CRYPTO_SE_C */
 
-    if( vdb_mbedtls_svc_key_id_is_null( key ) )
+    if( mbedtls_svc_key_id_is_null( key ) )
         return( PSA_SUCCESS );
 
     /*
@@ -1476,7 +1476,7 @@ exit:
 
 void psa_reset_key_attributes( psa_key_attributes_t *attributes )
 {
-    vdb_mbedtls_free( attributes->domain_parameters );
+    mbedtls_free( attributes->domain_parameters );
     memset( attributes, 0, sizeof( *attributes ) );
 }
 
@@ -1489,7 +1489,7 @@ psa_status_t psa_set_key_domain_parameters( psa_key_attributes_t *attributes,
 
     if( data_length != 0 )
     {
-        copy = vdb_mbedtls_calloc( 1, data_length );
+        copy = mbedtls_calloc( 1, data_length );
         if( copy == NULL )
             return( PSA_ERROR_INSUFFICIENT_MEMORY );
         memcpy( copy, data, data_length );
@@ -1499,7 +1499,7 @@ psa_status_t psa_set_key_domain_parameters( psa_key_attributes_t *attributes,
 
     if( attributes->domain_parameters != NULL )
     {
-        vdb_mbedtls_free( attributes->domain_parameters );
+        mbedtls_free( attributes->domain_parameters );
         attributes->domain_parameters = NULL;
         attributes->domain_parameters_size = 0;
     }
@@ -1533,35 +1533,35 @@ static psa_status_t psa_get_rsa_public_exponent(
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     uint8_t *buffer = NULL;
     size_t buflen;
-    vdb_mbedtls_mpi_init( &mpi );
+    mbedtls_mpi_init( &mpi );
 
-    ret = vdb_mbedtls_rsa_export( rsa, NULL, NULL, NULL, NULL, &mpi );
+    ret = mbedtls_rsa_export( rsa, NULL, NULL, NULL, NULL, &mpi );
     if( ret != 0 )
         goto exit;
-    if( vdb_mbedtls_mpi_cmp_int( &mpi, 65537 ) == 0 )
+    if( mbedtls_mpi_cmp_int( &mpi, 65537 ) == 0 )
     {
         /* It's the default value, which is reported as an empty string,
          * so there's nothing to do. */
         goto exit;
     }
 
-    buflen = vdb_mbedtls_mpi_size( &mpi );
-    buffer = vdb_mbedtls_calloc( 1, buflen );
+    buflen = mbedtls_mpi_size( &mpi );
+    buffer = mbedtls_calloc( 1, buflen );
     if( buffer == NULL )
     {
         ret = MBEDTLS_ERR_MPI_ALLOC_FAILED;
         goto exit;
     }
-    ret = vdb_mbedtls_mpi_write_binary( &mpi, buffer, buflen );
+    ret = mbedtls_mpi_write_binary( &mpi, buffer, buflen );
     if( ret != 0 )
         goto exit;
     attributes->domain_parameters = buffer;
     attributes->domain_parameters_size = buflen;
 
 exit:
-    vdb_mbedtls_mpi_free( &mpi );
+    mbedtls_mpi_free( &mpi );
     if( ret != 0 )
-        vdb_mbedtls_free( buffer );
+        mbedtls_free( buffer );
     return( mbedtls_to_psa_error( ret ) );
 }
 #endif /* defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_RSA_KEY_PAIR) ||
@@ -1617,8 +1617,8 @@ psa_status_t psa_get_key_attributes( mbedtls_svc_key_id_t key,
 
                 status = psa_get_rsa_public_exponent( rsa,
                                                       attributes );
-                vdb_mbedtls_rsa_free( rsa );
-                vdb_mbedtls_free( rsa );
+                mbedtls_rsa_free( rsa );
+                mbedtls_free( rsa );
             }
             break;
 #endif /* defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_RSA_KEY_PAIR) ||
@@ -1752,8 +1752,8 @@ static psa_status_t psa_internal_export_key( const psa_key_slot_t *slot,
                                          data_size,
                                          data_length );
 
-            vdb_mbedtls_rsa_free( rsa );
-            vdb_mbedtls_free( rsa );
+            mbedtls_rsa_free( rsa );
+            mbedtls_free( rsa );
 
             return( status );
 #else
@@ -1783,8 +1783,8 @@ static psa_status_t psa_internal_export_key( const psa_key_slot_t *slot,
                                          data_size,
                                          data_length );
 
-            vdb_mbedtls_ecp_keypair_free( ecp );
-            vdb_mbedtls_free( ecp );
+            mbedtls_ecp_keypair_free( ecp );
+            mbedtls_free( ecp );
             return( status );
 #else
             /* We don't know how to convert a private ECC key to public */
@@ -2242,24 +2242,24 @@ static psa_status_t psa_validate_optional_attributes(
             if( status != PSA_SUCCESS )
                 return( status );
 
-            vdb_mbedtls_mpi_init( &actual );
-            vdb_mbedtls_mpi_init( &required );
-            ret = vdb_mbedtls_rsa_export( rsa,
+            mbedtls_mpi_init( &actual );
+            mbedtls_mpi_init( &required );
+            ret = mbedtls_rsa_export( rsa,
                                       NULL, NULL, NULL, NULL, &actual );
-            vdb_mbedtls_rsa_free( rsa );
-            vdb_mbedtls_free( rsa );
+            mbedtls_rsa_free( rsa );
+            mbedtls_free( rsa );
             if( ret != 0 )
                 goto rsa_exit;
-            ret = vdb_mbedtls_mpi_read_binary( &required,
+            ret = mbedtls_mpi_read_binary( &required,
                                            attributes->domain_parameters,
                                            attributes->domain_parameters_size );
             if( ret != 0 )
                 goto rsa_exit;
-            if( vdb_mbedtls_mpi_cmp_mpi( &actual, &required ) != 0 )
+            if( mbedtls_mpi_cmp_mpi( &actual, &required ) != 0 )
                 ret = MBEDTLS_ERR_RSA_BAD_INPUT_DATA;
         rsa_exit:
-            vdb_mbedtls_mpi_free( &actual );
-            vdb_mbedtls_mpi_free( &required );
+            mbedtls_mpi_free( &actual );
+            mbedtls_mpi_free( &required );
             if( ret != 0)
                 return( mbedtls_to_psa_error( ret ) );
         }
@@ -2469,39 +2469,39 @@ static const mbedtls_md_info_t *mbedtls_md_info_from_psa( psa_algorithm_t alg )
     {
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_MD2)
         case PSA_ALG_MD2:
-            return( &vdb_mbedtls_md2_info );
+            return( &mbedtls_md2_info );
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_MD4)
         case PSA_ALG_MD4:
-            return( &vdb_mbedtls_md4_info );
+            return( &mbedtls_md4_info );
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_MD5)
         case PSA_ALG_MD5:
-            return( &vdb_mbedtls_md5_info );
+            return( &mbedtls_md5_info );
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_RIPEMD160)
         case PSA_ALG_RIPEMD160:
-            return( &vdb_mbedtls_ripemd160_info );
+            return( &mbedtls_ripemd160_info );
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_SHA_1)
         case PSA_ALG_SHA_1:
-            return( &vdb_mbedtls_sha1_info );
+            return( &mbedtls_sha1_info );
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_SHA_224)
         case PSA_ALG_SHA_224:
-            return( &vdb_mbedtls_sha224_info );
+            return( &mbedtls_sha224_info );
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_SHA_256)
         case PSA_ALG_SHA_256:
-            return( &vdb_mbedtls_sha256_info );
+            return( &mbedtls_sha256_info );
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_SHA_384)
         case PSA_ALG_SHA_384:
-            return( &vdb_mbedtls_sha384_info );
+            return( &mbedtls_sha384_info );
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_SHA_512)
         case PSA_ALG_SHA_512:
-            return( &vdb_mbedtls_sha512_info );
+            return( &mbedtls_sha512_info );
 #endif
         default:
             return( NULL );
@@ -2523,47 +2523,47 @@ psa_status_t psa_hash_abort( psa_hash_operation_t *operation )
             break;
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_MD2)
         case PSA_ALG_MD2:
-            vdb_mbedtls_md2_free( &operation->ctx.md2 );
+            mbedtls_md2_free( &operation->ctx.md2 );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_MD4)
         case PSA_ALG_MD4:
-            vdb_mbedtls_md4_free( &operation->ctx.md4 );
+            mbedtls_md4_free( &operation->ctx.md4 );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_MD5)
         case PSA_ALG_MD5:
-            vdb_mbedtls_md5_free( &operation->ctx.md5 );
+            mbedtls_md5_free( &operation->ctx.md5 );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_RIPEMD160)
         case PSA_ALG_RIPEMD160:
-            vdb_mbedtls_ripemd160_free( &operation->ctx.ripemd160 );
+            mbedtls_ripemd160_free( &operation->ctx.ripemd160 );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_SHA_1)
         case PSA_ALG_SHA_1:
-            vdb_mbedtls_sha1_free( &operation->ctx.sha1 );
+            mbedtls_sha1_free( &operation->ctx.sha1 );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_SHA_224)
         case PSA_ALG_SHA_224:
-            vdb_mbedtls_sha256_free( &operation->ctx.sha256 );
+            mbedtls_sha256_free( &operation->ctx.sha256 );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_SHA_256)
         case PSA_ALG_SHA_256:
-            vdb_mbedtls_sha256_free( &operation->ctx.sha256 );
+            mbedtls_sha256_free( &operation->ctx.sha256 );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_SHA_384)
         case PSA_ALG_SHA_384:
-            vdb_mbedtls_sha512_free( &operation->ctx.sha512 );
+            mbedtls_sha512_free( &operation->ctx.sha512 );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_SHA_512)
         case PSA_ALG_SHA_512:
-            vdb_mbedtls_sha512_free( &operation->ctx.sha512 );
+            mbedtls_sha512_free( &operation->ctx.sha512 );
             break;
 #endif
         default:
@@ -2588,56 +2588,56 @@ psa_status_t psa_hash_setup( psa_hash_operation_t *operation,
     {
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_MD2)
         case PSA_ALG_MD2:
-            vdb_mbedtls_md2_init( &operation->ctx.md2 );
-            ret = vdb_mbedtls_md2_starts_ret( &operation->ctx.md2 );
+            mbedtls_md2_init( &operation->ctx.md2 );
+            ret = mbedtls_md2_starts_ret( &operation->ctx.md2 );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_MD4)
         case PSA_ALG_MD4:
-            vdb_mbedtls_md4_init( &operation->ctx.md4 );
-            ret = vdb_mbedtls_md4_starts_ret( &operation->ctx.md4 );
+            mbedtls_md4_init( &operation->ctx.md4 );
+            ret = mbedtls_md4_starts_ret( &operation->ctx.md4 );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_MD5)
         case PSA_ALG_MD5:
-            vdb_mbedtls_md5_init( &operation->ctx.md5 );
-            ret = vdb_mbedtls_md5_starts_ret( &operation->ctx.md5 );
+            mbedtls_md5_init( &operation->ctx.md5 );
+            ret = mbedtls_md5_starts_ret( &operation->ctx.md5 );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_RIPEMD160)
         case PSA_ALG_RIPEMD160:
-            vdb_mbedtls_ripemd160_init( &operation->ctx.ripemd160 );
-            ret = vdb_mbedtls_ripemd160_starts_ret( &operation->ctx.ripemd160 );
+            mbedtls_ripemd160_init( &operation->ctx.ripemd160 );
+            ret = mbedtls_ripemd160_starts_ret( &operation->ctx.ripemd160 );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_SHA_1)
         case PSA_ALG_SHA_1:
-            vdb_mbedtls_sha1_init( &operation->ctx.sha1 );
-            ret = vdb_mbedtls_sha1_starts_ret( &operation->ctx.sha1 );
+            mbedtls_sha1_init( &operation->ctx.sha1 );
+            ret = mbedtls_sha1_starts_ret( &operation->ctx.sha1 );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_SHA_224)
         case PSA_ALG_SHA_224:
-            vdb_mbedtls_sha256_init( &operation->ctx.sha256 );
-            ret = vdb_mbedtls_sha256_starts_ret( &operation->ctx.sha256, 1 );
+            mbedtls_sha256_init( &operation->ctx.sha256 );
+            ret = mbedtls_sha256_starts_ret( &operation->ctx.sha256, 1 );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_SHA_256)
         case PSA_ALG_SHA_256:
-            vdb_mbedtls_sha256_init( &operation->ctx.sha256 );
-            ret = vdb_mbedtls_sha256_starts_ret( &operation->ctx.sha256, 0 );
+            mbedtls_sha256_init( &operation->ctx.sha256 );
+            ret = mbedtls_sha256_starts_ret( &operation->ctx.sha256, 0 );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_SHA_384)
         case PSA_ALG_SHA_384:
-            vdb_mbedtls_sha512_init( &operation->ctx.sha512 );
-            ret = vdb_mbedtls_sha512_starts_ret( &operation->ctx.sha512, 1 );
+            mbedtls_sha512_init( &operation->ctx.sha512 );
+            ret = mbedtls_sha512_starts_ret( &operation->ctx.sha512, 1 );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_SHA_512)
         case PSA_ALG_SHA_512:
-            vdb_mbedtls_sha512_init( &operation->ctx.sha512 );
-            ret = vdb_mbedtls_sha512_starts_ret( &operation->ctx.sha512, 0 );
+            mbedtls_sha512_init( &operation->ctx.sha512 );
+            ret = mbedtls_sha512_starts_ret( &operation->ctx.sha512, 0 );
             break;
 #endif
         default:
@@ -2667,55 +2667,55 @@ psa_status_t psa_hash_update( psa_hash_operation_t *operation,
     {
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_MD2)
         case PSA_ALG_MD2:
-            ret = vdb_mbedtls_md2_update_ret( &operation->ctx.md2,
+            ret = mbedtls_md2_update_ret( &operation->ctx.md2,
                                           input, input_length );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_MD4)
         case PSA_ALG_MD4:
-            ret = vdb_mbedtls_md4_update_ret( &operation->ctx.md4,
+            ret = mbedtls_md4_update_ret( &operation->ctx.md4,
                                           input, input_length );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_MD5)
         case PSA_ALG_MD5:
-            ret = vdb_mbedtls_md5_update_ret( &operation->ctx.md5,
+            ret = mbedtls_md5_update_ret( &operation->ctx.md5,
                                           input, input_length );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_RIPEMD160)
         case PSA_ALG_RIPEMD160:
-            ret = vdb_mbedtls_ripemd160_update_ret( &operation->ctx.ripemd160,
+            ret = mbedtls_ripemd160_update_ret( &operation->ctx.ripemd160,
                                                 input, input_length );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_SHA_1)
         case PSA_ALG_SHA_1:
-            ret = vdb_mbedtls_sha1_update_ret( &operation->ctx.sha1,
+            ret = mbedtls_sha1_update_ret( &operation->ctx.sha1,
                                            input, input_length );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_SHA_224)
         case PSA_ALG_SHA_224:
-            ret = vdb_mbedtls_sha256_update_ret( &operation->ctx.sha256,
+            ret = mbedtls_sha256_update_ret( &operation->ctx.sha256,
                                              input, input_length );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_SHA_256)
         case PSA_ALG_SHA_256:
-            ret = vdb_mbedtls_sha256_update_ret( &operation->ctx.sha256,
+            ret = mbedtls_sha256_update_ret( &operation->ctx.sha256,
                                              input, input_length );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_SHA_384)
         case PSA_ALG_SHA_384:
-            ret = vdb_mbedtls_sha512_update_ret( &operation->ctx.sha512,
+            ret = mbedtls_sha512_update_ret( &operation->ctx.sha512,
                                              input, input_length );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_SHA_512)
         case PSA_ALG_SHA_512:
-            ret = vdb_mbedtls_sha512_update_ret( &operation->ctx.sha512,
+            ret = mbedtls_sha512_update_ret( &operation->ctx.sha512,
                                              input, input_length );
             break;
 #endif
@@ -2757,47 +2757,47 @@ psa_status_t psa_hash_finish( psa_hash_operation_t *operation,
     {
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_MD2)
         case PSA_ALG_MD2:
-            ret = vdb_mbedtls_md2_finish_ret( &operation->ctx.md2, hash );
+            ret = mbedtls_md2_finish_ret( &operation->ctx.md2, hash );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_MD4)
         case PSA_ALG_MD4:
-            ret = vdb_mbedtls_md4_finish_ret( &operation->ctx.md4, hash );
+            ret = mbedtls_md4_finish_ret( &operation->ctx.md4, hash );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_MD5)
         case PSA_ALG_MD5:
-            ret = vdb_mbedtls_md5_finish_ret( &operation->ctx.md5, hash );
+            ret = mbedtls_md5_finish_ret( &operation->ctx.md5, hash );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_RIPEMD160)
         case PSA_ALG_RIPEMD160:
-            ret = vdb_mbedtls_ripemd160_finish_ret( &operation->ctx.ripemd160, hash );
+            ret = mbedtls_ripemd160_finish_ret( &operation->ctx.ripemd160, hash );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_SHA_1)
         case PSA_ALG_SHA_1:
-            ret = vdb_mbedtls_sha1_finish_ret( &operation->ctx.sha1, hash );
+            ret = mbedtls_sha1_finish_ret( &operation->ctx.sha1, hash );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_SHA_224)
         case PSA_ALG_SHA_224:
-            ret = vdb_mbedtls_sha256_finish_ret( &operation->ctx.sha256, hash );
+            ret = mbedtls_sha256_finish_ret( &operation->ctx.sha256, hash );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_SHA_256)
         case PSA_ALG_SHA_256:
-            ret = vdb_mbedtls_sha256_finish_ret( &operation->ctx.sha256, hash );
+            ret = mbedtls_sha256_finish_ret( &operation->ctx.sha256, hash );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_SHA_384)
         case PSA_ALG_SHA_384:
-            ret = vdb_mbedtls_sha512_finish_ret( &operation->ctx.sha512, hash );
+            ret = mbedtls_sha512_finish_ret( &operation->ctx.sha512, hash );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_SHA_512)
         case PSA_ALG_SHA_512:
-            ret = vdb_mbedtls_sha512_finish_ret( &operation->ctx.sha512, hash );
+            ret = mbedtls_sha512_finish_ret( &operation->ctx.sha512, hash );
             break;
 #endif
         default:
@@ -2900,55 +2900,55 @@ psa_status_t psa_hash_clone( const psa_hash_operation_t *source_operation,
             return( PSA_ERROR_BAD_STATE );
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_MD2)
         case PSA_ALG_MD2:
-            vdb_mbedtls_md2_clone( &target_operation->ctx.md2,
+            mbedtls_md2_clone( &target_operation->ctx.md2,
                                &source_operation->ctx.md2 );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_MD4)
         case PSA_ALG_MD4:
-            vdb_mbedtls_md4_clone( &target_operation->ctx.md4,
+            mbedtls_md4_clone( &target_operation->ctx.md4,
                                &source_operation->ctx.md4 );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_MD5)
         case PSA_ALG_MD5:
-            vdb_mbedtls_md5_clone( &target_operation->ctx.md5,
+            mbedtls_md5_clone( &target_operation->ctx.md5,
                                &source_operation->ctx.md5 );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_RIPEMD160)
         case PSA_ALG_RIPEMD160:
-            vdb_mbedtls_ripemd160_clone( &target_operation->ctx.ripemd160,
+            mbedtls_ripemd160_clone( &target_operation->ctx.ripemd160,
                                      &source_operation->ctx.ripemd160 );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_SHA_1)
         case PSA_ALG_SHA_1:
-            vdb_mbedtls_sha1_clone( &target_operation->ctx.sha1,
+            mbedtls_sha1_clone( &target_operation->ctx.sha1,
                                 &source_operation->ctx.sha1 );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_SHA_224)
         case PSA_ALG_SHA_224:
-            vdb_mbedtls_sha256_clone( &target_operation->ctx.sha256,
+            mbedtls_sha256_clone( &target_operation->ctx.sha256,
                                   &source_operation->ctx.sha256 );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_SHA_256)
         case PSA_ALG_SHA_256:
-            vdb_mbedtls_sha256_clone( &target_operation->ctx.sha256,
+            mbedtls_sha256_clone( &target_operation->ctx.sha256,
                                   &source_operation->ctx.sha256 );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_SHA_384)
         case PSA_ALG_SHA_384:
-            vdb_mbedtls_sha512_clone( &target_operation->ctx.sha512,
+            mbedtls_sha512_clone( &target_operation->ctx.sha512,
                                   &source_operation->ctx.sha512 );
             break;
 #endif
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_SHA_512)
         case PSA_ALG_SHA_512:
-            vdb_mbedtls_sha512_clone( &target_operation->ctx.sha512,
+            mbedtls_sha512_clone( &target_operation->ctx.sha512,
                                   &source_operation->ctx.sha512 );
             break;
 #endif
@@ -3053,7 +3053,7 @@ static const mbedtls_cipher_info_t *mbedtls_cipher_info_from_psa(
     if( cipher_id != NULL )
         *cipher_id = cipher_id_tmp;
 
-    return( vdb_mbedtls_cipher_info_from_values( cipher_id_tmp,
+    return( mbedtls_cipher_info_from_values( cipher_id_tmp,
                                              (int) key_bits, mode ) );
 }
 
@@ -3104,7 +3104,7 @@ static psa_status_t psa_mac_init( psa_mac_operation_t *operation,
     if( alg == PSA_ALG_CMAC )
     {
         operation->iv_required = 0;
-        vdb_mbedtls_cipher_init( &operation->ctx.cmac );
+        mbedtls_cipher_init( &operation->ctx.cmac );
         status = PSA_SUCCESS;
     }
     else
@@ -3131,7 +3131,7 @@ static psa_status_t psa_mac_init( psa_mac_operation_t *operation,
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_HMAC)
 static psa_status_t psa_hmac_abort_internal( psa_hmac_internal_data *hmac )
 {
-    vdb_mbedtls_platform_zeroize( hmac->opad, sizeof( hmac->opad ) );
+    mbedtls_platform_zeroize( hmac->opad, sizeof( hmac->opad ) );
     return( psa_hash_abort( &hmac->hash_ctx ) );
 }
 #endif /* MBEDTLS_PSA_BUILTIN_ALG_HMAC */
@@ -3149,7 +3149,7 @@ psa_status_t psa_mac_abort( psa_mac_operation_t *operation )
 #if defined(MBEDTLS_CMAC_C)
     if( operation->alg == PSA_ALG_CMAC )
     {
-        vdb_mbedtls_cipher_free( &operation->ctx.cmac );
+        mbedtls_cipher_free( &operation->ctx.cmac );
     }
     else
 #endif /* MBEDTLS_CMAC_C */
@@ -3194,11 +3194,11 @@ static int psa_cmac_setup( psa_mac_operation_t *operation,
 
     operation->mac_size = cipher_info->block_size;
 
-    ret = vdb_mbedtls_cipher_setup( &operation->ctx.cmac, cipher_info );
+    ret = mbedtls_cipher_setup( &operation->ctx.cmac, cipher_info );
     if( ret != 0 )
         return( ret );
 
-    ret = vdb_mbedtls_cipher_cmac_starts( &operation->ctx.cmac,
+    ret = mbedtls_cipher_cmac_starts( &operation->ctx.cmac,
                                       slot->data.key.data,
                                       key_bits );
     return( ret );
@@ -3263,7 +3263,7 @@ static psa_status_t psa_hmac_setup_internal( psa_hmac_internal_data *hmac,
     status = psa_hash_update( &hmac->hash_ctx, ipad, block_size );
 
 cleanup:
-    vdb_mbedtls_platform_zeroize( ipad, sizeof( ipad ) );
+    mbedtls_platform_zeroize( ipad, sizeof( ipad ) );
 
     return( status );
 }
@@ -3419,7 +3419,7 @@ psa_status_t psa_mac_update( psa_mac_operation_t *operation,
 #if defined(MBEDTLS_CMAC_C)
     if( operation->alg == PSA_ALG_CMAC )
     {
-        int ret = vdb_mbedtls_cipher_cmac_update( &operation->ctx.cmac,
+        int ret = mbedtls_cipher_cmac_update( &operation->ctx.cmac,
                                               input, input_length );
         status = mbedtls_to_psa_error( ret );
     }
@@ -3479,7 +3479,7 @@ static psa_status_t psa_hmac_finish_internal( psa_hmac_internal_data *hmac,
     memcpy( mac, tmp, mac_size );
 
 exit:
-    vdb_mbedtls_platform_zeroize( tmp, hash_size );
+    mbedtls_platform_zeroize( tmp, hash_size );
     return( status );
 }
 #endif /* MBEDTLS_PSA_BUILTIN_ALG_HMAC */
@@ -3500,10 +3500,10 @@ static psa_status_t psa_mac_finish_internal( psa_mac_operation_t *operation,
     if( operation->alg == PSA_ALG_CMAC )
     {
         uint8_t tmp[PSA_MAX_BLOCK_CIPHER_BLOCK_SIZE];
-        int ret = vdb_mbedtls_cipher_cmac_finish( &operation->ctx.cmac, tmp );
+        int ret = mbedtls_cipher_cmac_finish( &operation->ctx.cmac, tmp );
         if( ret == 0 )
             memcpy( mac, tmp, operation->mac_size );
-        vdb_mbedtls_platform_zeroize( tmp, sizeof( tmp ) );
+        mbedtls_platform_zeroize( tmp, sizeof( tmp ) );
         return( mbedtls_to_psa_error( ret ) );
     }
     else
@@ -3600,7 +3600,7 @@ cleanup:
     else
         psa_mac_abort( operation );
 
-    vdb_mbedtls_platform_zeroize( actual_mac, sizeof( actual_mac ) );
+    mbedtls_platform_zeroize( actual_mac, sizeof( actual_mac ) );
 
     return( status );
 }
@@ -3621,7 +3621,7 @@ static psa_status_t psa_rsa_decode_md_type( psa_algorithm_t alg,
 {
     psa_algorithm_t hash_alg = PSA_ALG_SIGN_GET_HASH( alg );
     const mbedtls_md_info_t *md_info = mbedtls_md_info_from_psa( hash_alg );
-    *md_alg = vdb_mbedtls_md_get_type( md_info );
+    *md_alg = mbedtls_md_get_type( md_info );
 
     /* The Mbed TLS RSA module uses an unsigned int for hash length
      * parameters. Validate that it fits so that we don't risk an
@@ -3639,7 +3639,7 @@ static psa_status_t psa_rsa_decode_md_type( psa_algorithm_t alg,
     {
         if( md_info == NULL )
             return( PSA_ERROR_NOT_SUPPORTED );
-        if( vdb_mbedtls_md_get_size( md_info ) != hash_length )
+        if( mbedtls_md_get_size( md_info ) != hash_length )
             return( PSA_ERROR_INVALID_ARGUMENT );
     }
 #endif /* MBEDTLS_PSA_BUILTIN_ALG_RSA_PKCS1V15_SIGN */
@@ -3672,16 +3672,16 @@ static psa_status_t psa_rsa_sign( mbedtls_rsa_context *rsa,
     if( status != PSA_SUCCESS )
         return( status );
 
-    if( signature_size < vdb_mbedtls_rsa_get_len( rsa ) )
+    if( signature_size < mbedtls_rsa_get_len( rsa ) )
         return( PSA_ERROR_BUFFER_TOO_SMALL );
 
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_RSA_PKCS1V15_SIGN)
     if( PSA_ALG_IS_RSA_PKCS1V15_SIGN( alg ) )
     {
-        vdb_mbedtls_rsa_set_padding( rsa, MBEDTLS_RSA_PKCS_V15,
+        mbedtls_rsa_set_padding( rsa, MBEDTLS_RSA_PKCS_V15,
                                  MBEDTLS_MD_NONE );
-        ret = vdb_mbedtls_rsa_pkcs1_sign( rsa,
-                                      vdb_mbedtls_ctr_drbg_random,
+        ret = mbedtls_rsa_pkcs1_sign( rsa,
+                                      mbedtls_ctr_drbg_random,
                                       &global_data.ctr_drbg,
                                       MBEDTLS_RSA_PRIVATE,
                                       md_alg,
@@ -3694,9 +3694,9 @@ static psa_status_t psa_rsa_sign( mbedtls_rsa_context *rsa,
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_RSA_PSS)
     if( PSA_ALG_IS_RSA_PSS( alg ) )
     {
-        vdb_mbedtls_rsa_set_padding( rsa, MBEDTLS_RSA_PKCS_V21, md_alg );
-        ret = vdb_mbedtls_rsa_rsassa_pss_sign( rsa,
-                                           vdb_mbedtls_ctr_drbg_random,
+        mbedtls_rsa_set_padding( rsa, MBEDTLS_RSA_PKCS_V21, md_alg );
+        ret = mbedtls_rsa_rsassa_pss_sign( rsa,
+                                           mbedtls_ctr_drbg_random,
                                            &global_data.ctr_drbg,
                                            MBEDTLS_RSA_PRIVATE,
                                            MBEDTLS_MD_NONE,
@@ -3711,7 +3711,7 @@ static psa_status_t psa_rsa_sign( mbedtls_rsa_context *rsa,
     }
 
     if( ret == 0 )
-        *signature_length = vdb_mbedtls_rsa_get_len( rsa );
+        *signature_length = mbedtls_rsa_get_len( rsa );
     return( mbedtls_to_psa_error( ret ) );
 }
 
@@ -3730,16 +3730,16 @@ static psa_status_t psa_rsa_verify( mbedtls_rsa_context *rsa,
     if( status != PSA_SUCCESS )
         return( status );
 
-    if( signature_length != vdb_mbedtls_rsa_get_len( rsa ) )
+    if( signature_length != mbedtls_rsa_get_len( rsa ) )
         return( PSA_ERROR_INVALID_SIGNATURE );
 
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_RSA_PKCS1V15_SIGN)
     if( PSA_ALG_IS_RSA_PKCS1V15_SIGN( alg ) )
     {
-        vdb_mbedtls_rsa_set_padding( rsa, MBEDTLS_RSA_PKCS_V15,
+        mbedtls_rsa_set_padding( rsa, MBEDTLS_RSA_PKCS_V15,
                                  MBEDTLS_MD_NONE );
-        ret = vdb_mbedtls_rsa_pkcs1_verify( rsa,
-                                        vdb_mbedtls_ctr_drbg_random,
+        ret = mbedtls_rsa_pkcs1_verify( rsa,
+                                        mbedtls_ctr_drbg_random,
                                         &global_data.ctr_drbg,
                                         MBEDTLS_RSA_PUBLIC,
                                         md_alg,
@@ -3752,9 +3752,9 @@ static psa_status_t psa_rsa_verify( mbedtls_rsa_context *rsa,
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_RSA_PSS)
     if( PSA_ALG_IS_RSA_PSS( alg ) )
     {
-        vdb_mbedtls_rsa_set_padding( rsa, MBEDTLS_RSA_PKCS_V21, md_alg );
-        ret = vdb_mbedtls_rsa_rsassa_pss_verify( rsa,
-                                             vdb_mbedtls_ctr_drbg_random,
+        mbedtls_rsa_set_padding( rsa, MBEDTLS_RSA_PKCS_V21, md_alg );
+        ret = mbedtls_rsa_rsassa_pss_verify( rsa,
+                                             mbedtls_ctr_drbg_random,
                                              &global_data.ctr_drbg,
                                              MBEDTLS_RSA_PUBLIC,
                                              MBEDTLS_MD_NONE,
@@ -3781,7 +3781,7 @@ static psa_status_t psa_rsa_verify( mbedtls_rsa_context *rsa,
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_ECDSA) || \
     defined(MBEDTLS_PSA_BUILTIN_ALG_DETERMINISTIC_ECDSA)
 /* `ecp` cannot be const because `ecp->grp` needs to be non-const
- * for vdb_mbedtls_ecdsa_sign() and vdb_mbedtls_ecdsa_sign_det()
+ * for mbedtls_ecdsa_sign() and mbedtls_ecdsa_sign_det()
  * (even though these functions don't modify it). */
 static psa_status_t psa_ecdsa_sign( mbedtls_ecp_keypair *ecp,
                                     psa_algorithm_t alg,
@@ -3794,8 +3794,8 @@ static psa_status_t psa_ecdsa_sign( mbedtls_ecp_keypair *ecp,
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     mbedtls_mpi r, s;
     size_t curve_bytes = PSA_BITS_TO_BYTES( ecp->grp.pbits );
-    vdb_mbedtls_mpi_init( &r );
-    vdb_mbedtls_mpi_init( &s );
+    mbedtls_mpi_init( &r );
+    mbedtls_mpi_init( &s );
 
     if( signature_size < 2 * curve_bytes )
     {
@@ -3808,33 +3808,33 @@ static psa_status_t psa_ecdsa_sign( mbedtls_ecp_keypair *ecp,
     {
         psa_algorithm_t hash_alg = PSA_ALG_SIGN_GET_HASH( alg );
         const mbedtls_md_info_t *md_info = mbedtls_md_info_from_psa( hash_alg );
-        mbedtls_md_type_t md_alg = vdb_mbedtls_md_get_type( md_info );
-        MBEDTLS_MPI_CHK( vdb_mbedtls_ecdsa_sign_det_ext( &ecp->grp, &r, &s,
+        mbedtls_md_type_t md_alg = mbedtls_md_get_type( md_info );
+        MBEDTLS_MPI_CHK( mbedtls_ecdsa_sign_det_ext( &ecp->grp, &r, &s,
                                                      &ecp->d, hash,
                                                      hash_length, md_alg,
-                                                     vdb_mbedtls_ctr_drbg_random,
+                                                     mbedtls_ctr_drbg_random,
                                                      &global_data.ctr_drbg ) );
     }
     else
 #endif /* defined(MBEDTLS_PSA_BUILTIN_ALG_DETERMINISTIC_ECDSA) */
     {
         (void) alg;
-        MBEDTLS_MPI_CHK( vdb_mbedtls_ecdsa_sign( &ecp->grp, &r, &s, &ecp->d,
+        MBEDTLS_MPI_CHK( mbedtls_ecdsa_sign( &ecp->grp, &r, &s, &ecp->d,
                                              hash, hash_length,
-                                             vdb_mbedtls_ctr_drbg_random,
+                                             mbedtls_ctr_drbg_random,
                                              &global_data.ctr_drbg ) );
     }
 
-    MBEDTLS_MPI_CHK( vdb_mbedtls_mpi_write_binary( &r,
+    MBEDTLS_MPI_CHK( mbedtls_mpi_write_binary( &r,
                                                signature,
                                                curve_bytes ) );
-    MBEDTLS_MPI_CHK( vdb_mbedtls_mpi_write_binary( &s,
+    MBEDTLS_MPI_CHK( mbedtls_mpi_write_binary( &s,
                                                signature + curve_bytes,
                                                curve_bytes ) );
 
 cleanup:
-    vdb_mbedtls_mpi_free( &r );
-    vdb_mbedtls_mpi_free( &s );
+    mbedtls_mpi_free( &r );
+    mbedtls_mpi_free( &s );
     if( ret == 0 )
         *signature_length = 2 * curve_bytes;
     return( mbedtls_to_psa_error( ret ) );
@@ -3849,33 +3849,33 @@ static psa_status_t psa_ecdsa_verify( mbedtls_ecp_keypair *ecp,
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     mbedtls_mpi r, s;
     size_t curve_bytes = PSA_BITS_TO_BYTES( ecp->grp.pbits );
-    vdb_mbedtls_mpi_init( &r );
-    vdb_mbedtls_mpi_init( &s );
+    mbedtls_mpi_init( &r );
+    mbedtls_mpi_init( &s );
 
     if( signature_length != 2 * curve_bytes )
         return( PSA_ERROR_INVALID_SIGNATURE );
 
-    MBEDTLS_MPI_CHK( vdb_mbedtls_mpi_read_binary( &r,
+    MBEDTLS_MPI_CHK( mbedtls_mpi_read_binary( &r,
                                               signature,
                                               curve_bytes ) );
-    MBEDTLS_MPI_CHK( vdb_mbedtls_mpi_read_binary( &s,
+    MBEDTLS_MPI_CHK( mbedtls_mpi_read_binary( &s,
                                               signature + curve_bytes,
                                               curve_bytes ) );
 
     /* Check whether the public part is loaded. If not, load it. */
-    if( vdb_mbedtls_ecp_is_zero( &ecp->Q ) )
+    if( mbedtls_ecp_is_zero( &ecp->Q ) )
     {
         MBEDTLS_MPI_CHK(
-            vdb_mbedtls_ecp_mul( &ecp->grp, &ecp->Q, &ecp->d, &ecp->grp.G,
-                             vdb_mbedtls_ctr_drbg_random, &global_data.ctr_drbg ) );
+            mbedtls_ecp_mul( &ecp->grp, &ecp->Q, &ecp->d, &ecp->grp.G,
+                             mbedtls_ctr_drbg_random, &global_data.ctr_drbg ) );
     }
 
-    ret = vdb_mbedtls_ecdsa_verify( &ecp->grp, hash, hash_length,
+    ret = mbedtls_ecdsa_verify( &ecp->grp, hash, hash_length,
                                 &ecp->Q, &r, &s );
 
 cleanup:
-    vdb_mbedtls_mpi_free( &r );
-    vdb_mbedtls_mpi_free( &s );
+    mbedtls_mpi_free( &r );
+    mbedtls_mpi_free( &s );
     return( mbedtls_to_psa_error( ret ) );
 }
 #endif /* defined(MBEDTLS_PSA_BUILTIN_ALG_ECDSA) ||
@@ -3944,8 +3944,8 @@ psa_status_t psa_sign_hash( mbedtls_svc_key_id_t key,
                                signature, signature_size,
                                signature_length );
 
-        vdb_mbedtls_rsa_free( rsa );
-        vdb_mbedtls_free( rsa );
+        mbedtls_rsa_free( rsa );
+        mbedtls_free( rsa );
     }
     else
 #endif /* defined(MBEDTLS_PSA_BUILTIN_ALG_RSA_PKCS1V15_SIGN) ||
@@ -3974,8 +3974,8 @@ psa_status_t psa_sign_hash( mbedtls_svc_key_id_t key,
                                      hash, hash_length,
                                      signature, signature_size,
                                      signature_length );
-            vdb_mbedtls_ecp_keypair_free( ecp );
-            vdb_mbedtls_free( ecp );
+            mbedtls_ecp_keypair_free( ecp );
+            mbedtls_free( ecp );
         }
         else
 #endif /* defined(MBEDTLS_PSA_BUILTIN_ALG_ECDSA) ||
@@ -4052,8 +4052,8 @@ psa_status_t psa_verify_hash( mbedtls_svc_key_id_t key,
                                  alg,
                                  hash, hash_length,
                                  signature, signature_length );
-        vdb_mbedtls_rsa_free( rsa );
-        vdb_mbedtls_free( rsa );
+        mbedtls_rsa_free( rsa );
+        mbedtls_free( rsa );
         goto exit;
     }
     else
@@ -4075,8 +4075,8 @@ psa_status_t psa_verify_hash( mbedtls_svc_key_id_t key,
             status = psa_ecdsa_verify( ecp,
                                        hash, hash_length,
                                        signature, signature_length );
-            vdb_mbedtls_ecp_keypair_free( ecp );
-            vdb_mbedtls_free( ecp );
+            mbedtls_ecp_keypair_free( ecp );
+            mbedtls_free( ecp );
             goto exit;
         }
         else
@@ -4104,8 +4104,8 @@ static void psa_rsa_oaep_set_padding_mode( psa_algorithm_t alg,
 {
     psa_algorithm_t hash_alg = PSA_ALG_RSA_OAEP_GET_HASH( alg );
     const mbedtls_md_info_t *md_info = mbedtls_md_info_from_psa( hash_alg );
-    mbedtls_md_type_t md_alg = vdb_mbedtls_md_get_type( md_info );
-    vdb_mbedtls_rsa_set_padding( rsa, MBEDTLS_RSA_PKCS_V21, md_alg );
+    mbedtls_md_type_t md_alg = mbedtls_md_get_type( md_info );
+    mbedtls_rsa_set_padding( rsa, MBEDTLS_RSA_PKCS_V21, md_alg );
 }
 #endif /* defined(MBEDTLS_PSA_BUILTIN_ALG_RSA_OAEP) */
 
@@ -4157,7 +4157,7 @@ psa_status_t psa_asymmetric_encrypt( mbedtls_svc_key_id_t key,
         if( status != PSA_SUCCESS )
             goto rsa_exit;
 
-        if( output_size < vdb_mbedtls_rsa_get_len( rsa ) )
+        if( output_size < mbedtls_rsa_get_len( rsa ) )
         {
             status = PSA_ERROR_BUFFER_TOO_SMALL;
             goto rsa_exit;
@@ -4166,8 +4166,8 @@ psa_status_t psa_asymmetric_encrypt( mbedtls_svc_key_id_t key,
         if( alg == PSA_ALG_RSA_PKCS1V15_CRYPT )
         {
             status = mbedtls_to_psa_error(
-                    vdb_mbedtls_rsa_pkcs1_encrypt( rsa,
-                                               vdb_mbedtls_ctr_drbg_random,
+                    mbedtls_rsa_pkcs1_encrypt( rsa,
+                                               mbedtls_ctr_drbg_random,
                                                &global_data.ctr_drbg,
                                                MBEDTLS_RSA_PUBLIC,
                                                input_length,
@@ -4181,8 +4181,8 @@ psa_status_t psa_asymmetric_encrypt( mbedtls_svc_key_id_t key,
         {
             psa_rsa_oaep_set_padding_mode( alg, rsa );
             status = mbedtls_to_psa_error(
-                vdb_mbedtls_rsa_rsaes_oaep_encrypt( rsa,
-                                                vdb_mbedtls_ctr_drbg_random,
+                mbedtls_rsa_rsaes_oaep_encrypt( rsa,
+                                                mbedtls_ctr_drbg_random,
                                                 &global_data.ctr_drbg,
                                                 MBEDTLS_RSA_PUBLIC,
                                                 salt, salt_length,
@@ -4198,10 +4198,10 @@ psa_status_t psa_asymmetric_encrypt( mbedtls_svc_key_id_t key,
         }
 rsa_exit:
         if( status == PSA_SUCCESS )
-            *output_length = vdb_mbedtls_rsa_get_len( rsa );
+            *output_length = mbedtls_rsa_get_len( rsa );
 
-        vdb_mbedtls_rsa_free( rsa );
-        vdb_mbedtls_free( rsa );
+        mbedtls_rsa_free( rsa );
+        mbedtls_free( rsa );
     }
     else
 #endif /* defined(MBEDTLS_PSA_BUILTIN_ALG_RSA_PKCS1V15_CRYPT) ||
@@ -4263,7 +4263,7 @@ psa_status_t psa_asymmetric_decrypt( mbedtls_svc_key_id_t key,
         if( status != PSA_SUCCESS )
             goto exit;
 
-        if( input_length != vdb_mbedtls_rsa_get_len( rsa ) )
+        if( input_length != mbedtls_rsa_get_len( rsa ) )
         {
             status = PSA_ERROR_INVALID_ARGUMENT;
             goto rsa_exit;
@@ -4273,8 +4273,8 @@ psa_status_t psa_asymmetric_decrypt( mbedtls_svc_key_id_t key,
         if( alg == PSA_ALG_RSA_PKCS1V15_CRYPT )
         {
             status = mbedtls_to_psa_error(
-                vdb_mbedtls_rsa_pkcs1_decrypt( rsa,
-                                           vdb_mbedtls_ctr_drbg_random,
+                mbedtls_rsa_pkcs1_decrypt( rsa,
+                                           mbedtls_ctr_drbg_random,
                                            &global_data.ctr_drbg,
                                            MBEDTLS_RSA_PRIVATE,
                                            output_length,
@@ -4289,8 +4289,8 @@ psa_status_t psa_asymmetric_decrypt( mbedtls_svc_key_id_t key,
         {
             psa_rsa_oaep_set_padding_mode( alg, rsa );
             status = mbedtls_to_psa_error(
-                vdb_mbedtls_rsa_rsaes_oaep_decrypt( rsa,
-                                                vdb_mbedtls_ctr_drbg_random,
+                mbedtls_rsa_rsaes_oaep_decrypt( rsa,
+                                                mbedtls_ctr_drbg_random,
                                                 &global_data.ctr_drbg,
                                                 MBEDTLS_RSA_PRIVATE,
                                                 salt, salt_length,
@@ -4306,8 +4306,8 @@ psa_status_t psa_asymmetric_decrypt( mbedtls_svc_key_id_t key,
         }
 
 rsa_exit:
-        vdb_mbedtls_rsa_free( rsa );
-        vdb_mbedtls_free( rsa );
+        mbedtls_rsa_free( rsa );
+        mbedtls_free( rsa );
     }
     else
 #endif /* defined(MBEDTLS_PSA_BUILTIN_ALG_RSA_PKCS1V15_CRYPT) ||
@@ -4392,7 +4392,7 @@ static psa_status_t psa_cipher_setup( psa_cipher_operation_t *operation,
 
     /* Proceed with initializing an mbed TLS cipher context if no driver is
      * available for the given algorithm & key. */
-    vdb_mbedtls_cipher_init( &operation->ctx.cipher );
+    mbedtls_cipher_init( &operation->ctx.cipher );
 
     /* Once the cipher context is initialised, it needs to be freed using
      * psa_cipher_abort. Indicate there is something to be freed through setting
@@ -4409,7 +4409,7 @@ static psa_status_t psa_cipher_setup( psa_cipher_operation_t *operation,
         goto exit;
     }
 
-    ret = vdb_mbedtls_cipher_setup( &operation->ctx.cipher, cipher_info );
+    ret = mbedtls_cipher_setup( &operation->ctx.cipher, cipher_info );
     if( ret != 0 )
         goto exit;
 
@@ -4420,14 +4420,14 @@ static psa_status_t psa_cipher_setup( psa_cipher_operation_t *operation,
         uint8_t keys[24];
         memcpy( keys, slot->data.key.data, 16 );
         memcpy( keys + 16, slot->data.key.data, 8 );
-        ret = vdb_mbedtls_cipher_setkey( &operation->ctx.cipher,
+        ret = mbedtls_cipher_setkey( &operation->ctx.cipher,
                                      keys,
                                      192, cipher_operation );
     }
     else
 #endif
     {
-        ret = vdb_mbedtls_cipher_setkey( &operation->ctx.cipher,
+        ret = mbedtls_cipher_setkey( &operation->ctx.cipher,
                                      slot->data.key.data,
                                      (int) key_bits, cipher_operation );
     }
@@ -4438,11 +4438,11 @@ static psa_status_t psa_cipher_setup( psa_cipher_operation_t *operation,
     switch( alg )
     {
         case PSA_ALG_CBC_NO_PADDING:
-            ret = vdb_mbedtls_cipher_set_padding_mode( &operation->ctx.cipher,
+            ret = mbedtls_cipher_set_padding_mode( &operation->ctx.cipher,
                                                    MBEDTLS_PADDING_NONE );
             break;
         case PSA_ALG_CBC_PKCS7:
-            ret = vdb_mbedtls_cipher_set_padding_mode( &operation->ctx.cipher,
+            ret = mbedtls_cipher_set_padding_mode( &operation->ctx.cipher,
                                                    MBEDTLS_PADDING_PKCS7 );
             break;
         default:
@@ -4525,7 +4525,7 @@ psa_status_t psa_cipher_generate_iv( psa_cipher_operation_t *operation,
         status = PSA_ERROR_BUFFER_TOO_SMALL;
         goto exit;
     }
-    ret = vdb_mbedtls_ctr_drbg_random( &global_data.ctr_drbg,
+    ret = mbedtls_ctr_drbg_random( &global_data.ctr_drbg,
                                    iv, operation->iv_size );
     if( ret != 0 )
     {
@@ -4568,7 +4568,7 @@ psa_status_t psa_cipher_set_iv( psa_cipher_operation_t *operation,
         status = PSA_ERROR_INVALID_ARGUMENT;
         goto exit;
     }
-    ret = vdb_mbedtls_cipher_set_iv( &operation->ctx.cipher, iv, iv_length );
+    ret = mbedtls_cipher_set_iv( &operation->ctx.cipher, iv, iv_length );
     status = mbedtls_to_psa_error( ret );
 exit:
     if( status == PSA_SUCCESS )
@@ -4581,7 +4581,7 @@ exit:
 /* Process input for which the algorithm is set to ECB mode. This requires
  * manual processing, since the PSA API is defined as being able to process
  * arbitrary-length calls to psa_cipher_update() with ECB mode, but the
- * underlying vdb_mbedtls_cipher_update only takes full blocks. */
+ * underlying mbedtls_cipher_update only takes full blocks. */
 static psa_status_t psa_cipher_update_ecb_internal(
     mbedtls_cipher_context_t *ctx,
     const uint8_t *input,
@@ -4618,7 +4618,7 @@ static psa_status_t psa_cipher_update_ecb_internal(
         if( ctx->unprocessed_len == block_size )
         {
             status = mbedtls_to_psa_error(
-                vdb_mbedtls_cipher_update( ctx,
+                mbedtls_cipher_update( ctx,
                                        ctx->unprocessed_data,
                                        block_size,
                                        output, &internal_output_length ) );
@@ -4637,7 +4637,7 @@ static psa_status_t psa_cipher_update_ecb_internal(
     {
         /* Run all full blocks we have, one by one */
         status = mbedtls_to_psa_error(
-            vdb_mbedtls_cipher_update( ctx, input,
+            mbedtls_cipher_update( ctx, input,
                                    block_size,
                                    output, &internal_output_length ) );
 
@@ -4718,7 +4718,7 @@ psa_status_t psa_cipher_update( psa_cipher_operation_t *operation,
 
     if( operation->alg == PSA_ALG_ECB_NO_PADDING )
     {
-        /* vdb_mbedtls_cipher_update has an API inconsistency: it will only
+        /* mbedtls_cipher_update has an API inconsistency: it will only
         * process a single block at a time in ECB mode. Abstract away that
         * inconsistency here to match the PSA API behaviour. */
         status = psa_cipher_update_ecb_internal( &operation->ctx.cipher,
@@ -4731,7 +4731,7 @@ psa_status_t psa_cipher_update( psa_cipher_operation_t *operation,
     else
     {
         status = mbedtls_to_psa_error(
-            vdb_mbedtls_cipher_update( &operation->ctx.cipher, input,
+            mbedtls_cipher_update( &operation->ctx.cipher, input,
                                    input_length, output, output_length ) );
     }
 exit:
@@ -4776,7 +4776,7 @@ psa_status_t psa_cipher_finish( psa_cipher_operation_t *operation,
     }
 
     status = mbedtls_to_psa_error(
-        vdb_mbedtls_cipher_finish( &operation->ctx.cipher,
+        mbedtls_cipher_finish( &operation->ctx.cipher,
                                temp_output_buffer,
                                output_length ) );
     if( status != PSA_SUCCESS )
@@ -4791,7 +4791,7 @@ psa_status_t psa_cipher_finish( psa_cipher_operation_t *operation,
 
 exit:
     if( operation->mbedtls_in_use == 1 )
-        vdb_mbedtls_platform_zeroize( temp_output_buffer, sizeof( temp_output_buffer ) );
+        mbedtls_platform_zeroize( temp_output_buffer, sizeof( temp_output_buffer ) );
 
     if( status == PSA_SUCCESS )
         return( psa_cipher_abort( operation ) );
@@ -4822,7 +4822,7 @@ psa_status_t psa_cipher_abort( psa_cipher_operation_t *operation )
     if( operation->mbedtls_in_use == 0 )
         psa_driver_wrapper_cipher_abort( &operation->ctx.driver );
     else
-        vdb_mbedtls_cipher_free( &operation->ctx.cipher );
+        mbedtls_cipher_free( &operation->ctx.cipher );
 
     operation->alg = 0;
     operation->key_set = 0;
@@ -4872,12 +4872,12 @@ static void psa_aead_abort_internal( aead_operation_t *operation )
     {
 #if defined(MBEDTLS_CCM_C)
         case PSA_ALG_CCM:
-            vdb_mbedtls_ccm_free( &operation->ctx.ccm );
+            mbedtls_ccm_free( &operation->ctx.ccm );
             break;
 #endif /* MBEDTLS_CCM_C */
 #if defined(MBEDTLS_GCM_C)
         case PSA_ALG_GCM:
-            vdb_mbedtls_gcm_free( &operation->ctx.gcm );
+            mbedtls_gcm_free( &operation->ctx.gcm );
             break;
 #endif /* MBEDTLS_GCM_C */
     }
@@ -4917,16 +4917,16 @@ static psa_status_t psa_aead_setup( aead_operation_t *operation,
             operation->core_alg = PSA_ALG_CCM;
             operation->full_tag_length = 16;
             /* CCM allows the following tag lengths: 4, 6, 8, 10, 12, 14, 16.
-             * The call to vdb_mbedtls_ccm_encrypt_and_tag or
-             * vdb_mbedtls_ccm_auth_decrypt will validate the tag length. */
+             * The call to mbedtls_ccm_encrypt_and_tag or
+             * mbedtls_ccm_auth_decrypt will validate the tag length. */
             if( PSA_BLOCK_CIPHER_BLOCK_SIZE( operation->slot->attr.type ) != 16 )
             {
                 status = PSA_ERROR_INVALID_ARGUMENT;
                 goto cleanup;
             }
-            vdb_mbedtls_ccm_init( &operation->ctx.ccm );
+            mbedtls_ccm_init( &operation->ctx.ccm );
             status = mbedtls_to_psa_error(
-                vdb_mbedtls_ccm_setkey( &operation->ctx.ccm, cipher_id,
+                mbedtls_ccm_setkey( &operation->ctx.ccm, cipher_id,
                                     operation->slot->data.key.data,
                                     (unsigned int) key_bits ) );
             if( status != 0 )
@@ -4939,16 +4939,16 @@ static psa_status_t psa_aead_setup( aead_operation_t *operation,
             operation->core_alg = PSA_ALG_GCM;
             operation->full_tag_length = 16;
             /* GCM allows the following tag lengths: 4, 8, 12, 13, 14, 15, 16.
-             * The call to vdb_mbedtls_gcm_crypt_and_tag or
-             * vdb_mbedtls_gcm_auth_decrypt will validate the tag length. */
+             * The call to mbedtls_gcm_crypt_and_tag or
+             * mbedtls_gcm_auth_decrypt will validate the tag length. */
             if( PSA_BLOCK_CIPHER_BLOCK_SIZE( operation->slot->attr.type ) != 16 )
             {
                 status = PSA_ERROR_INVALID_ARGUMENT;
                 goto cleanup;
             }
-            vdb_mbedtls_gcm_init( &operation->ctx.gcm );
+            mbedtls_gcm_init( &operation->ctx.gcm );
             status = mbedtls_to_psa_error(
-                vdb_mbedtls_gcm_setkey( &operation->ctx.gcm, cipher_id,
+                mbedtls_gcm_setkey( &operation->ctx.gcm, cipher_id,
                                     operation->slot->data.key.data,
                                     (unsigned int) key_bits ) );
             if( status != 0 )
@@ -4966,9 +4966,9 @@ static psa_status_t psa_aead_setup( aead_operation_t *operation,
                 status = PSA_ERROR_NOT_SUPPORTED;
                 goto cleanup;
             }
-            vdb_mbedtls_chachapoly_init( &operation->ctx.chachapoly );
+            mbedtls_chachapoly_init( &operation->ctx.chachapoly );
             status = mbedtls_to_psa_error(
-                vdb_mbedtls_chachapoly_setkey( &operation->ctx.chachapoly,
+                mbedtls_chachapoly_setkey( &operation->ctx.chachapoly,
                                            operation->slot->data.key.data ) );
             if( status != 0 )
                 goto cleanup;
@@ -5029,7 +5029,7 @@ psa_status_t psa_aead_encrypt( mbedtls_svc_key_id_t key,
     if( operation.core_alg == PSA_ALG_GCM )
     {
         status = mbedtls_to_psa_error(
-            vdb_mbedtls_gcm_crypt_and_tag( &operation.ctx.gcm,
+            mbedtls_gcm_crypt_and_tag( &operation.ctx.gcm,
                                        MBEDTLS_GCM_ENCRYPT,
                                        plaintext_length,
                                        nonce, nonce_length,
@@ -5043,7 +5043,7 @@ psa_status_t psa_aead_encrypt( mbedtls_svc_key_id_t key,
     if( operation.core_alg == PSA_ALG_CCM )
     {
         status = mbedtls_to_psa_error(
-            vdb_mbedtls_ccm_encrypt_and_tag( &operation.ctx.ccm,
+            mbedtls_ccm_encrypt_and_tag( &operation.ctx.ccm,
                                          plaintext_length,
                                          nonce, nonce_length,
                                          additional_data,
@@ -5062,7 +5062,7 @@ psa_status_t psa_aead_encrypt( mbedtls_svc_key_id_t key,
             goto exit;
         }
         status = mbedtls_to_psa_error(
-            vdb_mbedtls_chachapoly_encrypt_and_tag( &operation.ctx.chachapoly,
+            mbedtls_chachapoly_encrypt_and_tag( &operation.ctx.chachapoly,
                                                 plaintext_length,
                                                 nonce,
                                                 additional_data,
@@ -5140,7 +5140,7 @@ psa_status_t psa_aead_decrypt( mbedtls_svc_key_id_t key,
     if( operation.core_alg == PSA_ALG_GCM )
     {
         status = mbedtls_to_psa_error(
-            vdb_mbedtls_gcm_auth_decrypt( &operation.ctx.gcm,
+            mbedtls_gcm_auth_decrypt( &operation.ctx.gcm,
                                       ciphertext_length - operation.tag_length,
                                       nonce, nonce_length,
                                       additional_data,
@@ -5154,7 +5154,7 @@ psa_status_t psa_aead_decrypt( mbedtls_svc_key_id_t key,
     if( operation.core_alg == PSA_ALG_CCM )
     {
         status = mbedtls_to_psa_error(
-            vdb_mbedtls_ccm_auth_decrypt( &operation.ctx.ccm,
+            mbedtls_ccm_auth_decrypt( &operation.ctx.ccm,
                                       ciphertext_length - operation.tag_length,
                                       nonce, nonce_length,
                                       additional_data,
@@ -5173,7 +5173,7 @@ psa_status_t psa_aead_decrypt( mbedtls_svc_key_id_t key,
             goto exit;
         }
         status = mbedtls_to_psa_error(
-            vdb_mbedtls_chachapoly_auth_decrypt( &operation.ctx.chachapoly,
+            mbedtls_chachapoly_auth_decrypt( &operation.ctx.chachapoly,
                                              ciphertext_length - operation.tag_length,
                                              nonce,
                                              additional_data,
@@ -5238,7 +5238,7 @@ psa_status_t psa_key_derivation_abort( psa_key_derivation_operation_t *operation
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_HKDF)
     if( PSA_ALG_IS_HKDF( kdf_alg ) )
     {
-        vdb_mbedtls_free( operation->ctx.hkdf.info );
+        mbedtls_free( operation->ctx.hkdf.info );
         status = psa_hmac_abort_internal( &operation->ctx.hkdf.hmac );
     }
     else
@@ -5251,22 +5251,22 @@ psa_status_t psa_key_derivation_abort( psa_key_derivation_operation_t *operation
     {
         if( operation->ctx.tls12_prf.seed != NULL )
         {
-            vdb_mbedtls_platform_zeroize( operation->ctx.tls12_prf.seed,
+            mbedtls_platform_zeroize( operation->ctx.tls12_prf.seed,
                                       operation->ctx.tls12_prf.seed_length );
-            vdb_mbedtls_free( operation->ctx.tls12_prf.seed );
+            mbedtls_free( operation->ctx.tls12_prf.seed );
         }
 
         if( operation->ctx.tls12_prf.label != NULL )
         {
-            vdb_mbedtls_platform_zeroize( operation->ctx.tls12_prf.label,
+            mbedtls_platform_zeroize( operation->ctx.tls12_prf.label,
                                       operation->ctx.tls12_prf.label_length );
-            vdb_mbedtls_free( operation->ctx.tls12_prf.label );
+            mbedtls_free( operation->ctx.tls12_prf.label );
         }
 
         status = psa_hmac_abort_internal( &operation->ctx.tls12_prf.hmac );
 
         /* We leave the fields Ai and output_block to be erased safely by the
-         * vdb_mbedtls_platform_zeroize() in the end of this function. */
+         * mbedtls_platform_zeroize() in the end of this function. */
     }
     else
 #endif /* defined(MBEDTLS_PSA_BUILTIN_ALG_TLS12_PRF) ||
@@ -5274,7 +5274,7 @@ psa_status_t psa_key_derivation_abort( psa_key_derivation_operation_t *operation
     {
         status = PSA_ERROR_BAD_STATE;
     }
-    vdb_mbedtls_platform_zeroize( operation, sizeof( *operation ) );
+    mbedtls_platform_zeroize( operation, sizeof( *operation ) );
     return( status );
 }
 
@@ -5602,11 +5602,11 @@ exit:
 static void psa_des_set_key_parity( uint8_t *data, size_t data_size )
 {
     if( data_size >= 8 )
-        vdb_mbedtls_des_key_set_parity( data );
+        mbedtls_des_key_set_parity( data );
     if( data_size >= 16 )
-        vdb_mbedtls_des_key_set_parity( data + 8 );
+        mbedtls_des_key_set_parity( data + 8 );
     if( data_size >= 24 )
-        vdb_mbedtls_des_key_set_parity( data + 16 );
+        mbedtls_des_key_set_parity( data + 16 );
 }
 #endif /* MBEDTLS_DES_C */
 
@@ -5623,7 +5623,7 @@ static psa_status_t psa_generate_derived_key_internal(
         return( PSA_ERROR_INVALID_ARGUMENT );
     if( bits % 8 != 0 )
         return( PSA_ERROR_INVALID_ARGUMENT );
-    data = vdb_mbedtls_calloc( 1, bytes );
+    data = mbedtls_calloc( 1, bytes );
     if( data == NULL )
         return( PSA_ERROR_INSUFFICIENT_MEMORY );
 
@@ -5637,7 +5637,7 @@ static psa_status_t psa_generate_derived_key_internal(
     status = psa_import_key_into_slot( slot, data, bytes );
 
 exit:
-    vdb_mbedtls_free( data );
+    mbedtls_free( data );
     return( status );
 }
 
@@ -5820,7 +5820,7 @@ static psa_status_t psa_hkdf_input( psa_hkdf_key_derivation_t *hkdf,
             hkdf->info_length = data_length;
             if( data_length != 0 )
             {
-                hkdf->info = vdb_mbedtls_calloc( 1, data_length );
+                hkdf->info = mbedtls_calloc( 1, data_length );
                 if( hkdf->info == NULL )
                     return( PSA_ERROR_INSUFFICIENT_MEMORY );
                 memcpy( hkdf->info, data, data_length );
@@ -5844,7 +5844,7 @@ static psa_status_t psa_tls12_prf_set_seed( psa_tls12_prf_key_derivation_t *prf,
 
     if( data_length != 0 )
     {
-        prf->seed = vdb_mbedtls_calloc( 1, data_length );
+        prf->seed = mbedtls_calloc( 1, data_length );
         if( prf->seed == NULL )
             return( PSA_ERROR_INSUFFICIENT_MEMORY );
 
@@ -5884,7 +5884,7 @@ static psa_status_t psa_tls12_prf_set_label( psa_tls12_prf_key_derivation_t *prf
 
     if( data_length != 0 )
     {
-        prf->label = vdb_mbedtls_calloc( 1, data_length );
+        prf->label = mbedtls_calloc( 1, data_length );
         if( prf->label == NULL )
             return( PSA_ERROR_INSUFFICIENT_MEMORY );
 
@@ -5950,7 +5950,7 @@ static psa_status_t psa_tls12_prf_psk_to_ms_set_key(
 
     status = psa_tls12_prf_set_key( prf, hash_alg, pms, cur - pms );
 
-    vdb_mbedtls_platform_zeroize( pms, sizeof( pms ) );
+    mbedtls_platform_zeroize( pms, sizeof( pms ) );
     return( status );
 }
 
@@ -6118,8 +6118,8 @@ static psa_status_t psa_key_agreement_ecdh( const uint8_t *peer_key,
     mbedtls_ecdh_context ecdh;
     psa_status_t status;
     size_t bits = 0;
-    psa_ecc_family_t curve = vdb_mbedtls_ecc_group_to_psa( our_key->grp.id, &bits );
-    vdb_mbedtls_ecdh_init( &ecdh );
+    psa_ecc_family_t curve = mbedtls_ecc_group_to_psa( our_key->grp.id, &bits );
+    mbedtls_ecdh_init( &ecdh );
 
     status = psa_load_ecp_representation( PSA_KEY_TYPE_ECC_PUBLIC_KEY(curve),
                                           peer_key,
@@ -6129,19 +6129,19 @@ static psa_status_t psa_key_agreement_ecdh( const uint8_t *peer_key,
         goto exit;
 
     status = mbedtls_to_psa_error(
-        vdb_mbedtls_ecdh_get_params( &ecdh, their_key, MBEDTLS_ECDH_THEIRS ) );
+        mbedtls_ecdh_get_params( &ecdh, their_key, MBEDTLS_ECDH_THEIRS ) );
     if( status != PSA_SUCCESS )
         goto exit;
     status = mbedtls_to_psa_error(
-        vdb_mbedtls_ecdh_get_params( &ecdh, our_key, MBEDTLS_ECDH_OURS ) );
+        mbedtls_ecdh_get_params( &ecdh, our_key, MBEDTLS_ECDH_OURS ) );
     if( status != PSA_SUCCESS )
         goto exit;
 
     status = mbedtls_to_psa_error(
-        vdb_mbedtls_ecdh_calc_secret( &ecdh,
+        mbedtls_ecdh_calc_secret( &ecdh,
                                   shared_secret_length,
                                   shared_secret, shared_secret_size,
-                                  vdb_mbedtls_ctr_drbg_random,
+                                  mbedtls_ctr_drbg_random,
                                   &global_data.ctr_drbg ) );
     if( status != PSA_SUCCESS )
         goto exit;
@@ -6150,10 +6150,10 @@ static psa_status_t psa_key_agreement_ecdh( const uint8_t *peer_key,
 
 exit:
     if( status != PSA_SUCCESS )
-        vdb_mbedtls_platform_zeroize( shared_secret, shared_secret_size );
-    vdb_mbedtls_ecdh_free( &ecdh );
-    vdb_mbedtls_ecp_keypair_free( their_key );
-    vdb_mbedtls_free( their_key );
+        mbedtls_platform_zeroize( shared_secret, shared_secret_size );
+    mbedtls_ecdh_free( &ecdh );
+    mbedtls_ecp_keypair_free( their_key );
+    mbedtls_free( their_key );
 
     return( status );
 }
@@ -6187,8 +6187,8 @@ static psa_status_t psa_key_agreement_raw_internal( psa_algorithm_t alg,
                                              ecp,
                                              shared_secret, shared_secret_size,
                                              shared_secret_length );
-            vdb_mbedtls_ecp_keypair_free( ecp );
-            vdb_mbedtls_free( ecp );
+            mbedtls_ecp_keypair_free( ecp );
+            mbedtls_free( ecp );
             return( status );
 #endif /* MBEDTLS_PSA_BUILTIN_ALG_ECDH */
         default:
@@ -6235,7 +6235,7 @@ static psa_status_t psa_key_agreement_internal( psa_key_derivation_operation_t *
                                                 shared_secret,
                                                 shared_secret_length );
 exit:
-    vdb_mbedtls_platform_zeroize( shared_secret, shared_secret_length );
+    mbedtls_platform_zeroize( shared_secret, shared_secret_length );
     return( status );
 }
 
@@ -6332,7 +6332,7 @@ psa_status_t psa_generate_random( uint8_t *output,
 
     while( output_size > MBEDTLS_CTR_DRBG_MAX_REQUEST )
     {
-        ret = vdb_mbedtls_ctr_drbg_random( &global_data.ctr_drbg,
+        ret = mbedtls_ctr_drbg_random( &global_data.ctr_drbg,
                                        output,
                                        MBEDTLS_CTR_DRBG_MAX_REQUEST );
         if( ret != 0 )
@@ -6341,7 +6341,7 @@ psa_status_t psa_generate_random( uint8_t *output,
         output_size -= MBEDTLS_CTR_DRBG_MAX_REQUEST;
     }
 
-    ret = vdb_mbedtls_ctr_drbg_random( &global_data.ctr_drbg, output, output_size );
+    ret = mbedtls_ctr_drbg_random( &global_data.ctr_drbg, output, output_size );
     return( mbedtls_to_psa_error( ret ) );
 }
 
@@ -6445,9 +6445,9 @@ static psa_status_t psa_generate_key_internal(
                                         &exponent );
         if( status != PSA_SUCCESS )
             return( status );
-        vdb_mbedtls_rsa_init( &rsa, MBEDTLS_RSA_PKCS_V15, MBEDTLS_MD_NONE );
-        ret = vdb_mbedtls_rsa_gen_key( &rsa,
-                                   vdb_mbedtls_ctr_drbg_random,
+        mbedtls_rsa_init( &rsa, MBEDTLS_RSA_PKCS_V15, MBEDTLS_MD_NONE );
+        ret = mbedtls_rsa_gen_key( &rsa,
+                                   mbedtls_ctr_drbg_random,
                                    &global_data.ctr_drbg,
                                    (unsigned int) bits,
                                    exponent );
@@ -6460,7 +6460,7 @@ static psa_status_t psa_generate_key_internal(
         status = psa_allocate_buffer_to_slot( slot, bytes );
         if( status != PSA_SUCCESS )
         {
-            vdb_mbedtls_rsa_free( &rsa );
+            mbedtls_rsa_free( &rsa );
             return( status );
         }
 
@@ -6469,7 +6469,7 @@ static psa_status_t psa_generate_key_internal(
                                      slot->data.key.data,
                                      bytes,
                                      &slot->data.key.bytes );
-        vdb_mbedtls_rsa_free( &rsa );
+        mbedtls_rsa_free( &rsa );
         if( status != PSA_SUCCESS )
             psa_remove_key_data_from_memory( slot );
         return( status );
@@ -6482,22 +6482,22 @@ static psa_status_t psa_generate_key_internal(
     {
         psa_ecc_family_t curve = PSA_KEY_TYPE_ECC_GET_FAMILY( type );
         mbedtls_ecp_group_id grp_id =
-            vdb_mbedtls_ecc_group_of_psa( curve, PSA_BITS_TO_BYTES( bits ) );
+            mbedtls_ecc_group_of_psa( curve, PSA_BITS_TO_BYTES( bits ) );
         const mbedtls_ecp_curve_info *curve_info =
-            vdb_mbedtls_ecp_curve_info_from_grp_id( grp_id );
+            mbedtls_ecp_curve_info_from_grp_id( grp_id );
         mbedtls_ecp_keypair ecp;
         int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
         if( domain_parameters_size != 0 )
             return( PSA_ERROR_NOT_SUPPORTED );
         if( grp_id == MBEDTLS_ECP_DP_NONE || curve_info == NULL )
             return( PSA_ERROR_NOT_SUPPORTED );
-        vdb_mbedtls_ecp_keypair_init( &ecp );
-        ret = vdb_mbedtls_ecp_gen_key( grp_id, &ecp,
-                                   vdb_mbedtls_ctr_drbg_random,
+        mbedtls_ecp_keypair_init( &ecp );
+        ret = mbedtls_ecp_gen_key( grp_id, &ecp,
+                                   mbedtls_ctr_drbg_random,
                                    &global_data.ctr_drbg );
         if( ret != 0 )
         {
-            vdb_mbedtls_ecp_keypair_free( &ecp );
+            mbedtls_ecp_keypair_free( &ecp );
             return( mbedtls_to_psa_error( ret ) );
         }
 
@@ -6507,14 +6507,14 @@ static psa_status_t psa_generate_key_internal(
         psa_status_t status = psa_allocate_buffer_to_slot( slot, bytes );
         if( status != PSA_SUCCESS )
         {
-            vdb_mbedtls_ecp_keypair_free( &ecp );
+            mbedtls_ecp_keypair_free( &ecp );
             return( status );
         }
 
         status = mbedtls_to_psa_error(
-            vdb_mbedtls_ecp_write_key( &ecp, slot->data.key.data, bytes ) );
+            mbedtls_ecp_write_key( &ecp, slot->data.key.data, bytes ) );
 
-        vdb_mbedtls_ecp_keypair_free( &ecp );
+        mbedtls_ecp_keypair_free( &ecp );
         if( status != PSA_SUCCESS ) {
             memset( slot->data.key.data, 0, bytes );
             psa_remove_key_data_from_memory( slot );
@@ -6590,13 +6590,13 @@ void mbedtls_psa_crypto_free( void )
     psa_wipe_all_key_slots( );
     if( global_data.rng_state != RNG_NOT_INITIALIZED )
     {
-        vdb_mbedtls_ctr_drbg_free( &global_data.ctr_drbg );
+        mbedtls_ctr_drbg_free( &global_data.ctr_drbg );
         global_data.entropy_free( &global_data.entropy );
     }
     /* Wipe all remaining data, including configuration.
      * In particular, this sets all state indicator to the value
      * indicating "uninitialized". */
-    vdb_mbedtls_platform_zeroize( &global_data, sizeof( global_data ) );
+    mbedtls_platform_zeroize( &global_data, sizeof( global_data ) );
 #if defined(MBEDTLS_PSA_CRYPTO_SE_C)
     /* Unregister all secure element drivers, so that we restart from
      * a pristine state. */
@@ -6642,9 +6642,9 @@ psa_status_t psa_crypto_init( void )
     /* Set default configuration if
      * mbedtls_psa_crypto_configure_entropy_sources() hasn't been called. */
     if( global_data.entropy_init == NULL )
-        global_data.entropy_init = vdb_mbedtls_entropy_init;
+        global_data.entropy_init = mbedtls_entropy_init;
     if( global_data.entropy_free == NULL )
-        global_data.entropy_free = vdb_mbedtls_entropy_free;
+        global_data.entropy_free = mbedtls_entropy_free;
 
     /* Initialize the random generator. */
     global_data.entropy_init( &global_data.entropy );
@@ -6652,16 +6652,16 @@ psa_status_t psa_crypto_init( void )
     defined(MBEDTLS_NO_DEFAULT_ENTROPY_SOURCES)
     /* The PSA entropy injection feature depends on using NV seed as an entropy
      * source. Add NV seed as an entropy source for PSA entropy injection. */
-    vdb_mbedtls_entropy_add_source( &global_data.entropy,
-                                vdb_mbedtls_nv_seed_poll, NULL,
+    mbedtls_entropy_add_source( &global_data.entropy,
+                                mbedtls_nv_seed_poll, NULL,
                                 MBEDTLS_ENTROPY_BLOCK_SIZE,
                                 MBEDTLS_ENTROPY_SOURCE_STRONG );
 #endif
-    vdb_mbedtls_ctr_drbg_init( &global_data.ctr_drbg );
+    mbedtls_ctr_drbg_init( &global_data.ctr_drbg );
     global_data.rng_state = RNG_INITIALIZED;
     status = mbedtls_to_psa_error(
-        vdb_mbedtls_ctr_drbg_seed( &global_data.ctr_drbg,
-                               vdb_mbedtls_entropy_func,
+        mbedtls_ctr_drbg_seed( &global_data.ctr_drbg,
+                               mbedtls_entropy_func,
                                &global_data.entropy,
                                drbg_seed, sizeof( drbg_seed ) - 1 ) );
     if( status != PSA_SUCCESS )

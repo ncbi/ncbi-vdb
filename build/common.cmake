@@ -44,13 +44,31 @@ function( GenerateStaticLibsWithDefs target_name sources compile_defs )
     if( NOT "" STREQUAL "${compile_defs}" )
         target_compile_definitions( ${target_name} PRIVATE ${compile_defs} )
     endif()
-    if( WIN32 )
+    if( WIN32 AND NOT _NCBIVDB_CFG_PACKAGING)
         MSVS_StaticRuntime( ${target_name} )
         add_library( ${target_name}-md STATIC ${sources} )
         if(NOT "" STREQUAL "${compile_defs}" )
             target_compile_definitions( ${target_name}-md PRIVATE ${compile_defs} )
         endif()
         MSVS_DLLRuntime( ${target_name}-md )
+    endif()
+
+    if( RUN_SANITIZER_TESTS )
+        set( asan_defs "-fsanitize=address" )
+        add_library( "${target_name}-asan" STATIC ${sources} )
+        if( NOT "" STREQUAL "${compile_defs}" )
+            target_compile_definitions( "${target_name}-asan" PRIVATE ${compile_defs} )
+        endif()
+        target_compile_options( "${target_name}-asan" PRIVATE ${asan_defs} )
+        target_link_options( "${target_name}-asan" PRIVATE ${asan_defs} )
+
+        set( tsan_defs "-fsanitize=thread" )
+        add_library( "${target_name}-tsan" STATIC ${sources} )
+        if( NOT "" STREQUAL "${compile_defs}" )
+            target_compile_definitions( "${target_name}-tsan" PRIVATE ${compile_defs} )
+        endif()
+        target_compile_options( "${target_name}-tsan" PRIVATE ${tsan_defs} )
+        target_link_options( "${target_name}-tsan" PRIVATE ${tsan_defs} )
     endif()
 endfunction()
 
@@ -60,6 +78,9 @@ endfunction()
 
 
 function( ExportStatic name install )
+    if(_NCBIVDB_CFG_PACKAGING)
+        return()
+    endif()
     # the output goes to .../lib
     if( SINGLE_CONFIG )
         # make the output name versioned, create all symlinks
@@ -104,6 +125,9 @@ endfunction()
 # create versioned names and symlinks for a shared library
 #
 function(MakeLinksShared target name install)
+    if(_NCBIVDB_CFG_PACKAGING)
+        return()
+    endif()
     set_target_properties( ${target} PROPERTIES OUTPUT_NAME ${name} )
     if( SINGLE_CONFIG )
         if( ${OS} STREQUAL "mac" )
@@ -153,6 +177,9 @@ endfunction()
 # for a static library target, create a public shared target with the same base name and contents
 #
 function(ExportShared lib install extra_libs)
+    if(_NCBIVDB_CFG_PACKAGING)
+        return()
+    endif()
     get_target_property( src ${lib} SOURCES )
     add_library( ${lib}-shared SHARED ${src} )
     target_link_libraries( ${lib}-shared ${extra_libs} )
@@ -171,11 +198,46 @@ endfunction()
 
 function( BuildExecutableForTest exe_name sources libraries )
 	add_executable( ${exe_name} ${sources} )
-	MSVS_StaticRuntime( ${exe_name} )
+        if(NOT _NCBIVDB_CFG_PACKAGING)
+	    MSVS_StaticRuntime( ${exe_name} )
+        endif()
 	target_link_libraries( ${exe_name} ${libraries} )
 endfunction()
 
 function( AddExecutableTest test_name sources libraries )
 	BuildExecutableForTest( "${test_name}" "${sources}" "${libraries}" )
 	add_test( NAME ${test_name} COMMAND ${test_name} WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+
+	if( RUN_SANITIZER_TESTS )
+		set( asan_defs "-fsanitize=address" )
+		BuildExecutableForTest( "${test_name}_asan" "${sources}" "${libraries}" )
+		target_compile_options( "${test_name}_asan" PRIVATE ${asan_defs} )
+		target_link_options( "${test_name}_asan" PRIVATE ${asan_defs} )
+		add_test( NAME "${test_name}_asan" COMMAND "${test_name}_asan" WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+
+		set( tsan_defs "-fsanitize=thread" )
+		BuildExecutableForTest( "${test_name}_tsan" "${sources}" "${libraries}" )
+		target_compile_options( "${test_name}_tsan" PRIVATE ${tsan_defs} )
+		target_link_options( "${test_name}_tsan" PRIVATE ${tsan_defs} )
+		add_test( NAME "${test_name}_tsan" COMMAND "${test_name}_tsan" WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+	endif()
 endfunction()
+
+include(CheckIncludeFileCXX)
+check_include_file_cxx(mbedtls/md.h HAVE_MBEDTLS_H)
+if ( HAVE_MBEDTLS_H )
+	set( MBEDTLS_LIBS mbedx509 mbedtls mbedcrypto )
+	set(CMAKE_REQUIRED_LIBRARIES ${MBEDTLS_LIBS})
+	include(CheckCXXSourceRuns)
+	check_cxx_source_runs("
+#include <stdio.h>
+#include \"mbedtls/md.h\"
+#include \"mbedtls/sha256.h\"
+int main(int argc, char *argv[]) {
+	mbedtls_md_context_t ctx;
+	mbedtls_md_type_t md_type = MBEDTLS_MD_SHA256;
+	mbedtls_md_init(&ctx);
+	printf(\"test p: %p\", ctx.md_ctx);
+}
+" HAVE_MBEDTLS_F)
+endif()

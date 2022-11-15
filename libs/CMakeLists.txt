@@ -27,13 +27,10 @@ add_compile_definitions( _LIBRARY )
 
 add_subdirectory(ktst)
 add_subdirectory(align)
-add_subdirectory(ascp)
 add_subdirectory(axf) # sra tools dependency
 add_subdirectory(blast)
 add_subdirectory(cloud)
-add_subdirectory(diagnose)
 add_subdirectory(ext)
-add_subdirectory(hdf5)
 add_subdirectory(kapp)
 add_subdirectory(kdb)
 add_subdirectory(kfc)
@@ -43,28 +40,33 @@ add_subdirectory(klib)
 add_subdirectory(kns)
 add_subdirectory(kproc)
 add_subdirectory(krypto) # TODO: to be replaced with calls to mbedtls
-add_subdirectory(kxml)
-add_subdirectory(loader)
 add_subdirectory(schema)
 add_subdirectory(search)
 add_subdirectory(sra)
 add_subdirectory(sraxf) # same as axf
-add_subdirectory(svdb)
-add_subdirectory(tui)
 add_subdirectory(vdb)
 add_subdirectory(vfs)
 add_subdirectory(vxf)
 add_subdirectory(wgsxf) # wgsxf and wwgsxf are the same
 add_subdirectory(ncbi-vdb)
 
-#add_subdirectory(xfs) # dead
-
-if ( SINGLE_CONFIG )
+if ( SINGLE_CONFIG OR _NCBIVDB_CFG_PACKAGING )
     #
     # Install header files
-    set( HEADERS align  cloud  diagnose  fastq  insdc  kdb  kfg  klib  kproc   ktst  loader  os     search  sra   tui  vfs
-    cc     csra2  ext       hdf5   kapp   kfc  kfs  kns   krypto  kxml  ncbi    rdbms  simple  svdb  vdb  xfs )
+    set( HEADERS align  cloud  insdc  kdb  kfg  klib  kproc   ktst  os     search  sra   vfs
+    cc     csra2  ext  kapp   kfc  kfs  kns   krypto  ncbi  vdb  )
+
     foreach( h IN ITEMS ${HEADERS} )
         install( DIRECTORY ${CMAKE_SOURCE_DIR}/interfaces/${h} DESTINATION ${INST_INCDIR} )
     endforeach()
 endif()
+if(_NCBIVDB_CFG_PACKAGING)
+    install( FILES ${CMAKE_SOURCE_DIR}/LICENSE DESTINATION licenses)
+endif()
+
+#add_subdirectory(kxml) VDB-4797 moved to sra-tools
+#add_subdirectory(loader) VDB-4855 moved to sra-tools/libs
+#add_subdirectory(hdf5) VDB-4795
+#add_subdirectory(tui) VDB-4803
+#add_subdirectory(diagnose) VDB-4794 moved to sra-tools/test-sra
+#add_subdirectory(ascp) VDB-4794 moved to sra-tools/libs/ascp

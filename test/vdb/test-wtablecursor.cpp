@@ -224,7 +224,7 @@ FIXTURE_TEST_CASE( VTableCursor_Write, TableCursorFixture )
     MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
     REQUIRE_RC ( VCursorOpenRow ( m_cur ) );
 
-    const char * buf = "abc";
+    const char buf[] = "abc";
     REQUIRE_RC ( VCursorWrite ( m_cur, m_columnIdx, 8, (const void*)buf, 0, sizeof( buf ) ) );
 }
 
@@ -232,7 +232,7 @@ FIXTURE_TEST_CASE( VTableCursor_CommitRow, TableCursorFixture )
 {
     MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
     REQUIRE_RC ( VCursorOpenRow ( m_cur ) );
-    const char * buf = "abc";
+    const char buf[] = "abc";
     REQUIRE_RC ( VCursorWrite ( m_cur, m_columnIdx, 8, (const void*)buf, 0, sizeof( buf ) ) );
 
     REQUIRE_RC ( VCursorCommitRow ( m_cur ) );

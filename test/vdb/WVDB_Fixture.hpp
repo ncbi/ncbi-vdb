@@ -81,6 +81,17 @@ public:
         }
     }
 
+    static void readable_or_skip(std::string const &path) {
+        KDirectory* wd;
+        KDirectoryNativeDir ( & wd );
+        uint32_t mode = 0;
+        bool is_good = (0 == KDirectoryAccess_v1(wd, &mode, "%s", path.c_str()) & (mode & 0111) != 0);
+
+        KDirectoryRelease(wd);
+        if (is_good) return;
+        throw ncbi::NK::test_skipped("path not readable: " + path);
+    }
+
     void MakeDatabase ( const std :: string & p_schemaText, const std :: string & p_schemaSpec, const char * includes = nullptr )
     {
         RemoveDatabase();
@@ -96,7 +107,7 @@ public:
                                           & m_db,
                                           m_schema,
                                           p_schemaSpec . c_str (),
-                                          kcmInit + kcmMD5,
+                                          kcmInit + kcmMD5 + kcmParents,
                                           "%s",
                                           m_databaseName . c_str () ) );
     }
