@@ -45,14 +45,15 @@ public:
     VDBManager const *mgr;
     std::string const seqid = "NC_000001.11";
     uint8_t read[5000];
-    
+
     RR_Fixture()
     : mgr(0)
     {
         auto const rc = VDBManagerMakeRead(&mgr, 0);
         assert(rc == 0);
+        UNUSED(rc);
     }
-    
+
     RestoreRead *make() {
         rc_t rc = 0;
         RestoreRead *rr = RestoreReadMake(mgr, &rc);
@@ -66,9 +67,10 @@ public:
         unsigned nread = 0;
         auto const rc = RestoreReadGetSequence(rr, start, 5000, read, seqid.size(), seqid.c_str(), &nread, nullptr);
         assert(rc == 0);
+        UNUSED(rc);
         return nread;
     }
-    
+
     struct State {
         unsigned refSeqs, wgs, errors, activeRefSeqs;
         bool isActive;
@@ -93,7 +95,7 @@ FIXTURE_TEST_CASE(ReadAllAndClose, RR_Fixture)
         unsigned pos = 0;
         unsigned nread = 0;
         bool done = false;
-    
+
         REQUIRE_EQ(5000u, nread = sequence(rr, pos));
         {
             auto const &state = status();
@@ -140,7 +142,7 @@ FIXTURE_TEST_CASE(ReadSomeAndClose, RR_Fixture)
 {
     {
         auto const &rr = make();
-    
+
         REQUIRE_EQ(5000u, sequence(rr, 0));
         {
             auto const &state = status();
@@ -148,14 +150,14 @@ FIXTURE_TEST_CASE(ReadSomeAndClose, RR_Fixture)
             REQUIRE_EQ(state.refSeqs, 1u);
             REQUIRE_EQ(state.wgs, 0u);
             REQUIRE_EQ(state.errors, 0u);
-        }    
-    
+        }
+
         free(rr);
     }
     {
         auto const &state = status();
         REQUIRE(!state.isActive);
-    }    
+    }
 }
 
 //////////////////////////////////////////// Main

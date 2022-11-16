@@ -481,6 +481,7 @@ rc_t prep_v_args( uint32_t* argc, wrt_nvp_t argv[], size_t max_argc,
         {
             size_t c = string_copy_measure ( pbuffer + pos, pbsize, truncated );
             assert ( c + 1 == sizeof truncated );
+            UNUSED(c);
             rc = 0;
         }
     }

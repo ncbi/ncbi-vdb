@@ -612,7 +612,7 @@ KToken *KConfigNodeCreate ( KConfigNode *self, KConfigNode **n, KTokenSource *sr
                 ( & self -> children, & t -> str, KConfigNodeCmp );
             if ( nself == NULL )
             {
-                KConfigNode *child;
+                KConfigNode *child = NULL;
                 rc_t rc = KConfigNodeMake ( & child, & t -> str );
                 if ( rc != 0 )
                     return t;
@@ -3456,7 +3456,7 @@ static
 rc_t KConfigFill ( KConfig * self, const KDirectory * cfgdir,
     const char * appname, bool local )
 {
-    KConfigNode * root;
+    KConfigNode * root = 0;
     String empty;
     rc_t rc;
 

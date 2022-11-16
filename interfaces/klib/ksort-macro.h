@@ -97,8 +97,8 @@ struct ksort_stack_node
 #define KSORT_SWAP( a, b, off, size )           \
     do                                          \
     {                                           \
-        register size_t i, end = off + size;    \
-        register char *__a = (a), *__b = (b);   \
+        size_t i, end = off + size;             \
+        char *__a = (a), *__b = (b);            \
         for ( i = off; i < end; ++ i )          \
         {                                       \
             char __tmp = __a [ i ];             \
@@ -143,7 +143,7 @@ struct ksort_stack_node
    stack size is needed (actually O(1) in this case)!  */
 
 #define KSORT( PBASE, TOTAL_ELEMS, ELEM_SIZE, SWAP_OFFSET, SWAP_SIZE )            \
-    register char *base_ptr = ( char* ) ( PBASE );                                \
+    char *base_ptr = ( char* ) ( PBASE );                                         \
     const size_t max_thresh = KSORT_MAX_THRESH * ( ELEM_SIZE );                   \
     if ( ( TOTAL_ELEMS ) < 2)                                                     \
         return;                                                                   \
@@ -216,7 +216,7 @@ struct ksort_stack_node
         }                                                                         \
     }                                                                             \
     {                                                                             \
-        register char *run_ptr;                                                   \
+        char *run_ptr;                                                            \
         char *const end_ptr = & base_ptr [(ELEM_SIZE)*((TOTAL_ELEMS)-1)];         \
         char *tmp_ptr = base_ptr;                                                 \
         char *thresh = base_ptr + max_thresh;                                     \

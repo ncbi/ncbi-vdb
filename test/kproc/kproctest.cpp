@@ -665,7 +665,8 @@ TEST_CASE(KQueueSimpleTest) {
     KQueue * queue = NULL;
     REQUIRE_RC(KQueueMake(&queue, 2));
 
-    timeout_t tm = { 0 };
+    timeout_t tm;
+    memset( & tm, 0, sizeof( tm ) );
     void *item = NULL;
     {   // pushed 2 - popped 2 = ok
         for (uint64_t i = 1; i < 3; ++i) {
@@ -777,7 +778,8 @@ protected:
 
             for (int i = 0; i < numOps; ++i)
             {
-                timeout_t tm = { 0 };
+                timeout_t tm;
+                memset( & tm, 0, sizeof( tm ) );
                 timeout_t* tm_p = &tm;
                 void * item;
                 if (tm_p != NULL)

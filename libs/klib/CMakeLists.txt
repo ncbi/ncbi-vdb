@@ -123,6 +123,13 @@ set( SRC
     ${OS_SPECIFIC_SRC}
 )
 
+# suppress certain compiler warnings
+if ( "GNU" STREQUAL "${CMAKE_C_COMPILER_ID}")
+    set_source_files_properties( container judy-vector ptrie PROPERTIES COMPILE_FLAGS -Wstrict-aliasing=0 )
+elseif ( CMAKE_C_COMPILER_ID MATCHES "^(Apple)?Clang$" )
+    set_source_files_properties( out PROPERTIES COMPILE_FLAGS -Wno-string-compare )
+endif()
+
 GenerateStaticLibs( klib "${SRC}" )
 
 add_compile_definitions (__mod__="libs/klib")

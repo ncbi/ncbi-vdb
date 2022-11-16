@@ -305,6 +305,7 @@ LIB_EXPORT rc_t CC ReferenceList_MakeCursor( const ReferenceList** cself, const 
                 /* index is optional */
                 rc_t rctmp = TableReader_OpenIndex( tmp, "i_name", &iname );
                 ALIGN_DBGERRP( "index '%s' was not found", rctmp, "i_name" );
+                UNUSED(rctmp);
 
                 rc = TableReader_IdRange( tmp, &start, &count );
                 assert( rc == 0 );
@@ -406,7 +407,7 @@ LIB_EXPORT rc_t CC ReferenceList_MakeCursor( const ReferenceList** cself, const 
 
                                 if ( h[ 6 ].len > 0 )
                                 {/** CMP_READ > 0 -- truly local ***/
-                                    node->read_present = true; 
+                                    node->read_present = true;
                                     read_determination_done = true;
                                 }
                                 else if ( h[ 5 ].base.coord1[ 0 ] != 0 )
@@ -811,7 +812,7 @@ LIB_EXPORT rc_t ReferenceObj_AddRef( const ReferenceObj *cself )
     if ( cself == NULL )
     {
         return RC( rcAlign, rcType, rcAccessing, rcParam, rcInvalid );
-    } 
+    }
     else
     {
         return ReferenceList_AddRef( cself->mgr );
@@ -1132,7 +1133,7 @@ LIB_EXPORT void * CC PlacementRecord_get_ext_data_ptr ( const PlacementRecord *s
 
 LIB_EXPORT void CC PlacementRecordWhack( const PlacementRecord *cself )
 {
-    if ( cself != NULL ) 
+    if ( cself != NULL )
     {
         PlacementRecord * self = ( PlacementRecord * )cself;
         PlacementRecExtensionInfo * ext_info;
@@ -1237,13 +1238,13 @@ static int64_t calc_overlaped( PlacementIterator * o, align_id_src ids )
         case evidence_align_ids  : ofs = 2; break;
     }
 
-    if ( o->ref_cols[ ereflst_cn_OVERLAP_REF_LEN ].idx != 0 && 
+    if ( o->ref_cols[ ereflst_cn_OVERLAP_REF_LEN ].idx != 0 &&
          o->ref_cols[ ereflst_cn_OVERLAP_REF_LEN ].len > ofs )
     {
         INSDC_coord_len overlap_ref_len = o->ref_cols[ ereflst_cn_OVERLAP_REF_LEN ].base.coord_len[ ofs ];
         if ( overlap_ref_len < o->obj->mgr->max_seq_len )
         {
-            if ( o->ref_cols[ ereflst_cn_OVERLAP_REF_POS ].idx != 0 && 
+            if ( o->ref_cols[ ereflst_cn_OVERLAP_REF_POS ].idx != 0 &&
                  o->ref_cols[ ereflst_cn_OVERLAP_REF_POS ].len > ofs )
             {
                 res = o->ref_cols[ereflst_cn_OVERLAP_REF_POS].base.coord0[ ofs ];
@@ -1593,7 +1594,7 @@ static rc_t allocate_populate_rec( const PlacementIterator *cself,
         }
         else
             size1 = cself->ext_1.fixed_size;
-        
+
         /* allocate the record ( or take it from a pool ) */
         total_size = ( sizeof **rec ) + spot_group_len + ( 2 * ( sizeof *ext_info ) ) + size0 + size1;
         *rec = calloc( 1, total_size );
@@ -1661,7 +1662,7 @@ static rc_t allocate_populate_rec( const PlacementIterator *cself,
             if ( rc == 0 && cself->ext_1.populate != NULL )
             {
                 void * obj = PlacementRecordCast ( pr, placementRecordExtension1 );
-                rc = cself->ext_1.populate( obj, pr, curs, 
+                rc = cself->ext_1.populate( obj, pr, curs,
                                             cself->ref_window_start,
                                             cself->ref_window_len,
                                             cself->ext_1.data,
@@ -1780,9 +1781,9 @@ static rc_t read_alignments( PlacementIterator *self )
             }
             else if ( ( self->obj->circular )&&
                        ( apos + alen > self->obj->seq_len )&&
-                       ( self->cur_ref_row_rel < 0 ) ) 
+                       ( self->cur_ref_row_rel < 0 ) )
             {
-                /* the end of the alignment sticks over the end of the reference! 
+                /* the end of the alignment sticks over the end of the reference!
                    ---> we have the rare case of an alignment that wraps arround !
                    let as insert the alignment 2 times!
                    ( one with neg. position, one at real position ) */

@@ -425,7 +425,7 @@ rc_t SConstExprDump ( const SConstExpr *self, SDumper *b )
 
         for ( i = 0; i < dim; ++ i )
         {
-            char buff [ 8 ];
+            char buff [ 11 ];
             uint32_t ch = ( bits == 16 ) ?
                 ( uint32_t )  self -> u . utf16 [ i ] :
                 self -> u . utf32 [ i ];

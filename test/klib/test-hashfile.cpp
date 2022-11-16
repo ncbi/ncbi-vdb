@@ -764,7 +764,7 @@ rc_t CC KMain(int argc, char* argv[])
     rc = KDirectoryNativeDir(&DIR);
     if (rc) return rc;
 
-    const char* fname = tmpnam(NULL);
+    const char* fname = "test-hashfile.data";
     rc = KDirectoryCreateFile(DIR, &BACKING, true, 0600, kcmInit, fname);
     if (rc) return rc;
 

@@ -147,7 +147,7 @@ struct KCacheTeeFile_v3
     volatile bool quitting;         /* shared use    */
     bool buffer_was_cached;         /* bg thread use */
     bool try_promote_on_close;      /* fg thread use */
-    bool remove_on_close;           /* fg thread use */    
+    bool remove_on_close;           /* fg thread use */
     bool whole_file;                /* constant      */
     char path [ 4098 ];             /* constant      */
 };
@@ -404,18 +404,18 @@ static
 rc_t KCacheTeeFileSaveBitmap ( KCacheTeeFile_v3 * self )
 {
     rc_t rc = 0;
-    
+
     if ( self -> cache_file != NULL )
     {
         STATUS ( STAT_PRG, "BG: %s - saving cache bitmap\n", __func__ );
-    
+
         rc = KFileWriteExactly_v1 ( self -> cache_file, self -> source_size,
             ( const void * ) self -> bitmap, self -> bmap_size );
-    
+
         STATUS ( STAT_GEEK, "BG: %s - saved bm result code %R\n", __func__, rc );
 
     }
-    
+
     return rc;
 }
 
@@ -467,7 +467,7 @@ rc_t CC KCacheTeeChunkReaderConsume ( KCacheTeeChunkReader * chunk,
             /* set the "present" bit in bitmap */
             STATUS ( STAT_PRG, "BG: %s - set page %zu present in bitmap\n", __func__, pg_idx );
             self -> bitmap [ pg_idx >> BMWORDBITS ] |= 1U << ( pg_idx & BMWORDMASK );
-            
+
             /* save the change immediately */
             KCacheTeeFileSaveBitmap ( self );
 
@@ -574,7 +574,7 @@ rc_t CC KCacheTeeFileDestroy ( KCacheTeeFile_v3 *self )
                 BSTreeUnlink ( & open_cache_tee_files, node );
                 free ( node );
             }
-            
+
             EXIT_CRIT_SECTION ();
         }
     }
@@ -680,7 +680,7 @@ rc_t CC KCacheTeeFileDestroy ( KCacheTeeFile_v3 *self )
     /* delete cache file */
     if ( self -> remove_on_close )
     {
-        STATUS ( STAT_PRG, "%s - removing cache-file on exit\n", __func__ );        
+        STATUS ( STAT_PRG, "%s - removing cache-file on exit\n", __func__ );
         KDirectoryRemove ( self -> dir, false, "%s.cache", self -> path );
     }
 
@@ -690,7 +690,7 @@ rc_t CC KCacheTeeFileDestroy ( KCacheTeeFile_v3 *self )
         KProcMgrRemoveCleanupTask ( self -> procmgr, & self -> rm_file_tkt );
         KProcMgrRelease ( self -> procmgr );
     }
-    
+
     /* release directory */
     STATUS ( STAT_PRG, "%s - releasing cache file directory\n", __func__ );
     KDirectoryRelease ( self -> dir );
@@ -927,7 +927,7 @@ uint32_t KCacheTeeFileContigPagesInFileCache ( const KCacheTeeFile_v3 * self,
              , BMWORDSIZE
              , ( uint64_t ) word
         );
-    
+
     /* limit the count after seeing max pages */
     assert ( initial_page_idx < end_page_idx );
     max_page_count = ( uint32_t ) ( end_page_idx - initial_page_idx );
@@ -1088,7 +1088,7 @@ rc_t CC KCacheTeeFileTimedReadImpl ( const KCacheTeeFile_v3 *cself,
         while ( ! KCacheTeeFilePageInCache ( self, initial_page_idx ) )
         {
             KCacheTeeFileMsg msg;
-            
+
             STATUS ( STAT_PRG, "%lu: %s - starting page not found in cache\n", cur_thread_id, __func__ );
 
             /* 5. deliver read request message to bg thread */
@@ -1137,7 +1137,7 @@ rc_t CC KCacheTeeFileTimedReadImpl ( const KCacheTeeFile_v3 *cself,
                 KLockUnlock ( self -> cache_lock );
                 return rc;
             }
-            
+
             /* 6. wait for event */
             STATUS ( STAT_PRG, "%lu: %s - waiting on broadcast from bg thread\n", cur_thread_id, __func__ );
             rc = KConditionTimedWait ( self -> fgcond, self -> cache_lock,
@@ -1297,7 +1297,7 @@ rc_t CC KCacheTeeFileReadChunked ( const KCacheTeeFile_v3 *self, uint64_t pos,
             size_t to_read = chsize;
             if ( total + chsize > bsize )
                 to_read = bsize - total;
-            
+
             STATUS ( STAT_PRG, "%s - reading from file @ %lu\n", __func__, pos + total );
             rc = KFileReadAll_v1 ( & self -> dad, pos + total, chbuf, to_read, & num_read );
             if ( rc == 0 && num_read != 0 )
@@ -1346,7 +1346,7 @@ rc_t CC KCacheTeeFileTimedReadChunked ( const KCacheTeeFile_v3 *self, uint64_t p
             size_t to_read = chsize;
             if ( total + chsize > bsize )
                 to_read = bsize - total;
-            
+
             STATUS ( STAT_PRG, "%s - reading from file @ %lu\n", __func__, pos + total );
             rc = KFileTimedReadAll_v1 ( & self -> dad, pos + total, chbuf, to_read, & num_read, tm );
             if ( rc == 0 && num_read != 0 )
@@ -1766,7 +1766,7 @@ rc_t KCacheTeeFileInitNew ( KCacheTeeFile_v3 * self )
             KProcMgrRelease ( procmgr );
         }
 #else
-        STATUS ( STAT_PRG, "%s - removing cache-file '%s.cache' after creation\n", __func__, self -> path );        
+        STATUS ( STAT_PRG, "%s - removing cache-file '%s.cache' after creation\n", __func__, self -> path );
         rc = KDirectoryRemove ( self -> dir, false, "%s.cache", self -> path );
         if ( rc != 0 )
         {
@@ -1818,7 +1818,7 @@ rc_t KCacheTeeFileInitNew ( KCacheTeeFile_v3 * self )
 
     if ( rc != 0 && ! unlinked && ! self -> remove_on_close )
     {
-        STATUS ( STAT_QA, "%s - marking cache-file '%s.cache' for removal\n", __func__, self -> path );        
+        STATUS ( STAT_QA, "%s - marking cache-file '%s.cache' for removal\n", __func__, self -> path );
         self -> remove_on_close = true;
     }
 
@@ -1868,7 +1868,7 @@ rc_t KCacheTeeFileInitExisting ( KCacheTeeFile_v3 * self )
                      , actual_eof
                      , calculated_eof
                 );
-            
+
             rc = RC ( rcFS, rcFile, rcOpening, rcData, actual_eof == 0 ? rcEmpty : rcUnequal );
         }
         else
@@ -1947,7 +1947,7 @@ rc_t KCacheTeeFileInitShared ( KCacheTeeFile_v3 * self )
     }
 
     calculated_eof = self -> source_size + self -> bmap_size + sizeof * self -> tail;
-    
+
     STATUS ( STAT_PRG, "%s - setting file size to %lu bytes\n", __func__, calculated_eof );
     rc = KFileSetSize ( self -> cache_file, calculated_eof );
     if ( rc != 0 )
@@ -1992,12 +1992,12 @@ rc_t KCacheTeeFileOpen ( KCacheTeeFile_v3 * self, KDirectory * dir, const KFile 
     {
         uint32_t wait_loop_count;
         KLockFile * lock = NULL;
-        
+
         self -> dir = dir;
 
         for ( wait_loop_count = 0; wait_loop_count < 10; ++ wait_loop_count )
         {
-            
+
             STATUS ( STAT_PRG, "%s - attempting to open file '%s' read-only\n", __func__, self -> path );
             rc = KDirectoryOpenFileRead ( dir, promoted, "%s", self -> path );
             if ( rc == 0 )
@@ -2009,7 +2009,7 @@ rc_t KCacheTeeFileOpen ( KCacheTeeFile_v3 * self, KDirectory * dir, const KFile 
                 if ( GetRCState ( rc ) == rcBusy )
                 {
                     STATUS ( STAT_QA, "%s - file '%s' is busy - sleeping\n", __func__, self -> path );
-                    
+
                     /* sleep */
                     KSleepMs ( 250 );
                     continue;
@@ -2020,7 +2020,7 @@ rc_t KCacheTeeFileOpen ( KCacheTeeFile_v3 * self, KDirectory * dir, const KFile 
                     STATUS ( STAT_QA, "%s - failed to acquire lock for '%s' - %R\n", __func__, self -> path, rc );
                     return rc;
                 }
-            
+
                 STATUS ( STAT_PRG
                          , "%s - attempting to open file '%s.cache' shared read/write\n"
                          , __func__
@@ -2327,10 +2327,11 @@ rc_t KDirectoryVMakeKCacheTeeFileInt ( KDirectory * self,
                             size_t cache_path_size = string_copy_measure
                                 ( obj -> path, sizeof obj -> path, nul_term_cache_path );
                             assert ( cache_path_size < sizeof obj -> path );
+                            UNUSED(cache_path_size);
 
                             KCacheTeeFileOpen ( obj, self, tee );
                         }
-                        
+
                         /* if the promoted file exists,
                            then just hand out that */
                         if ( * tee != NULL )
@@ -2354,7 +2355,7 @@ rc_t KDirectoryVMakeKCacheTeeFileInt ( KDirectory * self,
                     }
                 }
             }
- 
+
             KFileRelease_v1 ( & obj -> dad );
         }
     }
@@ -2472,7 +2473,7 @@ LIB_EXPORT rc_t CC KDirectoryVMakeKCacheTeeFile_v3 ( KDirectory * self,
                                 }
                             }
                         }
-            
+
                         EXIT_CRIT_SECTION ();
                     }
                 }
@@ -2872,7 +2873,7 @@ static rc_t finalize_v3 ( KCacheTeeFile_v3 * self )
                 char buffer[ 4096 ];
                 size_t num_writ;
                 self -> cache_file = NULL;
-                
+
                 rc = string_printf ( buffer, sizeof buffer, &num_writ, "%s.cache", self -> path );
                 if ( rc != 0 )
                 {

@@ -120,6 +120,7 @@ rc_t KBZipFileWriteInt (KBZipFile *self,
         /* state not clobbered */
         assert(zret == BZ_OK || zret == BZ_RUN_OK
                || zret == BZ_FINISH_OK || zret == BZ_STREAM_END);
+        UNUSED(zret);
 
         /* compression used the sizeof of the outbuffer - the amount
          * it says it didn't use */
@@ -332,7 +333,7 @@ rc_t KBZipFileReadInt (KBZipFile * self, void * buffer, size_t bsize, size_t * p
             tot_read += num_read;
             if (strm->avail_in == 0)
             {
-                rc = KFileRead (self->file, self->filePosition, self->buff, 
+                rc = KFileRead (self->file, self->filePosition, self->buff,
                                 sizeof self->buff, &src_read);
                 if (rc)
                     return rc;
@@ -342,7 +343,7 @@ rc_t KBZipFileReadInt (KBZipFile * self, void * buffer, size_t bsize, size_t * p
                 if (src_read == 0)
                 {
                     BZIP_DEBUG (("%s: end %u in %u out %u\n", __func__, end, bin, bout));
-                
+
                     if (!end && bin && !bout)
                         rc = RC (rcFS, rcFile, rcReading, rcData, rcInsufficient);
                     goto done;

@@ -625,10 +625,10 @@ void SFunctionRestSchemaParms ( const SFunction *self, Vector *prior, Vector *cx
         /* restore the binding vector */
         rc = VectorSwap ( cx_bind, ic -> expr_id, cx_old, & ignore );
         assert ( rc == 0 );
+        UNUSED(rc);
 
         DBG_CXBIND2 ( "restore bind const", ic -> name -> name, ic -> expr_id, ignore, cx_old );
     }
-
     VectorWhack ( prior, NULL, NULL );
 }
 
@@ -654,6 +654,7 @@ void SFunctionRestFactParms ( const SFunction *self, Vector *prior, Vector *cx_b
         /* restore the binding vector */
         rc = VectorSwap ( cx_bind, ic -> expr_id, cx_old, & ignore );
         assert ( rc == 0 );
+        UNUSED(rc);
 
         DBG_CXBIND2 ( "restore bind const", ic -> name -> name, ic -> expr_id, ignore, cx_old );
     }

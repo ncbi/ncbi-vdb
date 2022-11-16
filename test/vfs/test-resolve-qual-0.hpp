@@ -2109,7 +2109,7 @@ FIXTURE_TEST_CASE(_040_01_1, TRQFixture) {
     REQUIRE_RC_FAIL(KSrvRespFileGetCache(f.file, &path));
 
     // NOT_TODO: doesn't work for noqual runs. Use KSrvRunQuery instead
-    REQUIRE_RC(KSrvRespFileGetLocal(f.file, &path)); 
+    REQUIRE_RC(KSrvRespFileGetLocal(f.file, &path));
     f.PathNOT_Equals(path, f.spath);
     f.VdbcacheNotChecked(path);
 

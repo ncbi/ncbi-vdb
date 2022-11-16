@@ -25,20 +25,20 @@
 */
 
 /*
-  From Gene Myers, 1998, 
+  From Gene Myers, 1998,
   "A Fast Bit-vector Algorithm for Approxsimat String Matching
   Based on Dynamic Programming" -- explains dp pretty well.
 
   If we place the pattern down the left of a matrix,
   and the scored text along the top horizontally,
   pattern p(length m) and text t(length n),
-  we can compute the dynamic programming matrix C[0..m, 0..n] as 
+  we can compute the dynamic programming matrix C[0..m, 0..n] as
 
   C[i,j] = min{C[i-1,j-1]+(if p(i)=t(j) then 0 else 1), C[i-1,j]+1, C[i,j-1]+1}
 
   given that C[0,j] = 0 for all j.
   We can replace the constants with table-driven scores,
-  so that we have a match cost for (P(i),t(i)), 
+  so that we have a match cost for (P(i),t(i)),
   and costs for skippings parts of the pattern (first 1) or text (second 1).
 */
 
@@ -46,6 +46,8 @@
 #include <os-native.h>
 #include <compiler.h>
 #include <sysalloc.h>
+#include <klib/text.h>
+
 #include "search-priv.h"
 
 #include <ctype.h>
@@ -57,7 +59,7 @@
 #define _TRACE 0
 
 static
-void reverse_string(const char* from, int32_t len, char *to) 
+void reverse_string(const char* from, int32_t len, char *to)
 {
     const char* p = from + len;
     while( p != from ) {
@@ -117,7 +119,7 @@ void AgrepDPFree( DPParams *self )
 
 #if _TRACE
 static
-void print_col_as_row(int32_t *col, int32_t plen) 
+void print_col_as_row(int32_t *col, int32_t plen)
 {
     int32_t i;
     for (i=0; i<=plen; i++) {
@@ -134,7 +136,7 @@ void init_col(const char *p, int32_t plen, int32_t *col)
     col[0] = 0;
     for (i=1; i<=plen; i++) {
         col[i] = col[i-1] + 1;
-    }  
+    }
 }
 
 bool na4_match(unsigned char p, unsigned char c)
@@ -221,7 +223,7 @@ compare with the (reversed) pattern to see if it really matches
 the end of the pattern.  See how it's used in the system for more hints.
 */
 
-LIB_EXPORT void CC dp_scan_for_left_match ( char *pattern, int errors, char *buf, 
+LIB_EXPORT void CC dp_scan_for_left_match ( char *pattern, int errors, char *buf,
     int buflen, int *bestpos, int *ret_hits, int *ret_misses )
 {
     int plen = strlen(pattern);
@@ -278,7 +280,7 @@ LIB_EXPORT void CC dp_scan_for_left_match ( char *pattern, int errors, char *buf
         cont = (misses < (1.0+play));
 
 #if _TRACE
-        printf("i %d char %c score %d diff %d continue %d misses %d play %f\n", 
+        printf("i %d char %c score %d diff %d continue %d misses %d play %f\n",
                i, buf[i], nxt[plen], lastscore - nxt[plen], cont, misses, play);
 #endif
         lastscore = nxt[plen];
@@ -332,7 +334,7 @@ AgrepContinueFlag dp_callback_begin(const AgrepCallArgs *args, int32_t end, int3
     limit = end - args->self->dp->plen - threshold - 1;
     if (limit < 0)
         limit = 0;
-    
+
     for (i=end; i>=limit; i--) {
         tmp = prev; prev = nxt; nxt = tmp;
         /* For the reverse scan, we need to make the initial cost
@@ -436,7 +438,7 @@ void dp_callback_end( const AgrepCallArgs *args )
 #if _TRACE
     print_col_as_row(nxt, plen);
 #endif
-    
+
     limit = buflen;
     if (mode & AGREP_ANCHOR_LEFT) {
         limit = args->self->dp->plen + threshold+1;
@@ -450,9 +452,9 @@ void dp_callback_end( const AgrepCallArgs *args )
     for (i=0; i<limit; i++) {
         tmp = prev; prev = nxt; nxt = tmp;
 
-        if (mode & AGREP_ANCHOR_LEFT) 
+        if (mode & AGREP_ANCHOR_LEFT)
             startingcost = i+1;
-        compute_dp_next_col(pattern, plen, mode, startingcost, 
+        compute_dp_next_col(pattern, plen, mode, startingcost,
                             buf[i], prev, nxt);
         if (nxt[plen] <= threshold) {
 
@@ -503,7 +505,7 @@ void dp_callback_end( const AgrepCallArgs *args )
                     goto EXIT;
             }
             /* If we're no longer under the threshold, we might
-               have been moving forward looking for a better match 
+               have been moving forward looking for a better match
             */
         } else if (continuing) {
             continuing = 0;
@@ -544,7 +546,7 @@ EXIT:
 
 
 static
-uint32_t dp_find_end(const char *pattern, AgrepFlags mode, int32_t threshold, const char *buf, int32_t buflen, int32_t *bestpos, int32_t *bestscore) 
+uint32_t dp_find_end(const char *pattern, AgrepFlags mode, int32_t threshold, const char *buf, int32_t buflen, int32_t *bestpos, int32_t *bestscore)
 {
     int32_t plen = strlen(pattern);
     int32_t *prev = malloc(sizeof(int32_t)*(plen+1));
@@ -601,7 +603,7 @@ EXIT:
 
 
 static
-uint32_t dp_find_begin(char *reverse_pattern, AgrepFlags mode, int32_t threshold, const char *buf, int32_t buflen, int32_t end, int32_t *begin) 
+uint32_t dp_find_begin(char *reverse_pattern, AgrepFlags mode, int32_t threshold, const char *buf, int32_t buflen, int32_t end, int32_t *begin)
 {
     int32_t plen = strlen(reverse_pattern);
     int32_t *prev = malloc(sizeof(int32_t)*(plen+1));
@@ -652,7 +654,7 @@ EXIT:
 }
 
 
-uint32_t AgrepDPFindFirst ( const DPParams *self, int32_t threshold, AgrepFlags mode, 
+uint32_t AgrepDPFindFirst ( const DPParams *self, int32_t threshold, AgrepFlags mode,
         const char *buf, int32_t buflen, AgrepMatch *match )
 {
     int32_t begin, end;
@@ -676,8 +678,8 @@ void AgrepDPFindAll( const AgrepCallArgs *args )
 
 
 /* Try the longest match first. */
-LIB_EXPORT uint32_t CC has_left_approx_match( char *pattern, uint32_t errors, 
-                               char *buf, size_t buflen, 
+LIB_EXPORT uint32_t CC has_left_approx_match( char *pattern, uint32_t errors,
+                               char *buf, size_t buflen,
                                uint32_t *length, uint32_t *errcnt )
 {
     int32_t plen = strlen(pattern);
@@ -735,8 +737,8 @@ LIB_EXPORT uint32_t CC has_left_approx_match( char *pattern, uint32_t errors,
 
 
 /* Try the longest match first. */
-LIB_EXPORT uint32_t CC has_right_approx_match( char *pattern, uint32_t errors, 
-                                char *buf, size_t buflen, 
+LIB_EXPORT uint32_t CC has_right_approx_match( char *pattern, uint32_t errors,
+                                char *buf, size_t buflen,
                                 uint32_t *bestpos, uint32_t *errcnt )
 {
     uint32_t plen = strlen(pattern);
@@ -761,7 +763,8 @@ LIB_EXPORT uint32_t CC has_right_approx_match( char *pattern, uint32_t errors,
 
     subpattern = malloc(plen + 1);
     subpattern_r = malloc(plen + 1);
-    strncpy(subpattern, pattern, plen);
+
+    string_copy ( subpattern, plen + 1, pattern, plen );
 
     for (i=bound; i>=8; i--, subpattern[i] = chBackup) {
 
@@ -818,8 +821,8 @@ LIB_EXPORT uint32_t CC has_right_approx_match( char *pattern, uint32_t errors,
 
 /* Try the longest match first. */
 /* Call with pattern as the text, text as pattern. */
-LIB_EXPORT uint32_t CC has_inside_approx_match( char *pattern, uint32_t plen, uint32_t errors, 
-                                 char *buf, size_t buflen, 
+LIB_EXPORT uint32_t CC has_inside_approx_match( char *pattern, uint32_t plen, uint32_t errors,
+                                 char *buf, size_t buflen,
                                  uint32_t *skip, uint32_t *errcnt )
 {
     int32_t *prev = malloc(sizeof(int)*(plen+1));
@@ -837,21 +840,21 @@ LIB_EXPORT uint32_t CC has_inside_approx_match( char *pattern, uint32_t plen, ui
 
 
     init_col(pattern, plen, nxt);
-    
+
     for (j=0; j<buflen; j++) {
         tmp = prev; prev = nxt; nxt = tmp;
         compute_dp_next_col(pattern, plen, 0, buf[j], 0, prev, nxt);
 
         dist = nxt[plen];
 
-        /* 
+        /*
            We still have to do this kind of thing because otherwise
            the match will extend past the end of the text (here pattern),
            and will match "useless" letters that just increase the score.
            So we continue looking at smaller subsequences of the pattern
-           to see if something smaller matches better. 
+           to see if something smaller matches better.
         */
-        
+
         if (found) {
             if (dist <= founderr && dist <= allowable) {
                 foundpos = j;

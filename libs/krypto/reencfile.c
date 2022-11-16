@@ -140,7 +140,7 @@ rc_t CC KReencFileDestroy (KReencFile *self)
  *  suitable for memory mapping, or NULL if
  *  no such file is available.
  *
- * We do not allow this for read, write or update as you can not memory map the 
+ * We do not allow this for read, write or update as you can not memory map the
  * unencrypted file in a meaningful way.
  */
 static
@@ -181,7 +181,7 @@ rc_t CC KReencFileSize (const KReencFile *self, uint64_t *size)
     assert (self->encrypted != NULL);
 
     /* -----
-     * the re-encrypted file will be the same size as the 
+     * the re-encrypted file will be the same size as the
      * previously encrypted file and we have the same understanding
      * about knowing the size
      */
@@ -199,7 +199,7 @@ rc_t CC KEncryptFileSize (const KReencFile *self, uint64_t *size)
     assert (self->encrypted != NULL);
 
     /* -----
-     * the re-encrypted file will be the same size as the 
+     * the re-encrypted file will be the same size as the
      * previously encrypted file and we have the same understanding
      * about knowing the size
      */
@@ -259,7 +259,7 @@ rc_t KReencFileReadHeaderOut (KReencFile * self, size_t offset, void * buffer,
     memmove (buffer, self->block.text + offset, bsize);
     self->block_id = NO_CURRENT_BLOCK;
     *num_read = bsize;
-    
+
     return 0;
 }
 
@@ -321,7 +321,7 @@ rc_t KReencFileReadFooterOut (KReencFile * self, size_t offset,
 /*
  * Handle Read within the Encrypted file header
  *
- * We use a private interface into the KEncFile then 
+ * We use a private interface into the KEncFile then
  * the Out function below to take what we write with
  * the Encryptor and copy it to the callers read buffer.
  */
@@ -369,7 +369,7 @@ rc_t KReencFileReadHandleHeader (KReencFile *self,
     else
     {
         /*
-         * assume it worked and its the right size 
+         * assume it worked and its the right size
          * copy the requested portion of the header out to finish the read
          */
         rc = KReencFileReadHeaderOut (self, pos, buffer, bsize, num_read);
@@ -577,9 +577,10 @@ rc_t KReencFileReadHandleFooter (KReencFile *self,
     offset = pos - BlockId_to_CiphertextOffset ( block_id );
 
     assert (offset < sizeof self->foot);
+    UNUSED(offset);
 
     /* if we are tying to treat this as a footer but it wasn't the next
-     * expected block mark all inbetween as missing to handle in the 
+     * expected block mark all inbetween as missing to handle in the
      * function just below this
      */
 
@@ -620,26 +621,26 @@ rc_t KReencFileReadHandleBlock (KReencFile *self,
                                 void *buffer,
                                 size_t bsize,
                                 size_t *num_read)
-{ 
+{
     rc_t rc = 0;            /* we have a path where we need to check this without set */
     uint64_t block_id;      /* block id for the requeted position */
     uint32_t offset;        /* how far into the encrypted block */
     bool new_block;         /* is this the first time for this block */
 
     /* -----
-     * figure out what block this corresponds to. 
+     * figure out what block this corresponds to.
      * the header is for this purpose part of the first block
      * when we decide what to give the reader. We only care
      * about which block and not whether it is in the payload
      * or framing.
-     * This block id is not to a known to exist block. It could be 
+     * This block id is not to a known to exist block. It could be
      * to the header, the footer or past the end of the file.
      *
      * NOTE: This could be a pre-fetch of the first block when
      * processing the header - it will have some funny values
      * with just a self and all other parameters 0s.
      * pos of zero gives block_id of 0 and the bsize of zero
-     * means we never look at the others. Thi sis to allow the 
+     * means we never look at the others. Thi sis to allow the
      * (at the time this was written) new feature of two
      * different file-signatures for encrypted files.
      */
@@ -845,7 +846,7 @@ uint32_t CC KReencFileType (const KReencFile *self)
  * common parameter validation for both reencryptors
  */
 static
-rc_t KReencFileMakeParamValidate (const KFile ** pself, const KFile * encrypted, 
+rc_t KReencFileMakeParamValidate (const KFile ** pself, const KFile * encrypted,
                                   const KKey * deckey, const KKey * enckey)
 {
     rc_t rc = 0;
@@ -866,7 +867,7 @@ rc_t KReencFileMakeParamValidate (const KFile ** pself, const KFile * encrypted,
         if (encrypted == NULL)
         {
             rc = RC (rcFS, rcFile, rcConstructing, rcParam, rcNull);
-            LOGERR (klogErr, rc, 
+            LOGERR (klogErr, rc,
                     "encrypted file not supplied when creating "
                     "an encryptor/decryptor");
             break;
@@ -875,7 +876,7 @@ rc_t KReencFileMakeParamValidate (const KFile ** pself, const KFile * encrypted,
         if ((enckey == NULL) || (deckey == NULL))
         {
             rc = RC (rcFS, rcFile, rcConstructing, rcParam, rcNull);
-            LOGERR (klogErr, rc, 
+            LOGERR (klogErr, rc,
                     "key not supplied when creating a re-encryptor");
             break;
         }
@@ -938,7 +939,7 @@ static const KFile_vt_v1 vtKReencFileRead =
 };
 
 
-LIB_EXPORT rc_t CC KReencFileMakeRead (const KFile ** pself, 
+LIB_EXPORT rc_t CC KReencFileMakeRead (const KFile ** pself,
                                        const KFile * encrypted,
                                        const KKey * deckey,
                                        const KKey * enckey)
@@ -963,7 +964,7 @@ LIB_EXPORT rc_t CC KReencFileMakeRead (const KFile ** pself,
         LOGERR (klogErr, rc, "Can't re-encrypt files that don't support KFileSize");
         return rc;
     }
-    
+
     if (rc)
     {
         LOGERR (klogErr, rc, "Unable to attempt to size encrypted file for reencryption");
@@ -1038,10 +1039,10 @@ LIB_EXPORT rc_t CC KReencFileMakeRead (const KFile ** pself,
 
             else
             {
-                rc = KRamFileMakeUpdate (&self->ram, self->block.text, 
+                rc = KRamFileMakeUpdate (&self->ram, self->block.text,
                                          sizeof self->block.text);
                 if (rc)
-                    LOGERR (klogErr, rc, 
+                    LOGERR (klogErr, rc,
                             "Failed to create re-enc encryptor");
                 else
                 {
@@ -1086,7 +1087,7 @@ static const KFile_vt_v1 vtKEncryptFileRead =
 };
 
 
-LIB_EXPORT rc_t CC KEncryptFileMakeRead (const KFile ** pself, 
+LIB_EXPORT rc_t CC KEncryptFileMakeRead (const KFile ** pself,
                                          const KFile * encrypted,
                                          const KKey * enckey)
 {
@@ -1110,7 +1111,7 @@ LIB_EXPORT rc_t CC KEncryptFileMakeRead (const KFile ** pself,
         LOGERR (klogErr, rc, "Can't encrypt files that don't support KFileSize");
         return rc;
     }
-    
+
     if (rc)
     {
         LOGERR (klogErr, rc, "Unable to attempt to size encrypted file for encryption");
@@ -1161,14 +1162,14 @@ LIB_EXPORT rc_t CC KEncryptFileMakeRead (const KFile ** pself,
 
             else
             {
-                rc = KRamFileMakeUpdate (&self->ram, self->block.text, 
+                rc = KRamFileMakeUpdate (&self->ram, self->block.text,
                                          sizeof self->block.text);
                 if (rc)
-                    LOGERR (klogErr, rc, 
+                    LOGERR (klogErr, rc,
                             "Failed to create ram file for encryptor");
                 else
                 {
-                    
+
                     rc = KEncFileMakeWriteBlock (&self->enc, self->ram, enckey);
                     if (rc)
                         LOGERR (klogErr, rc,
@@ -1191,7 +1192,7 @@ LIB_EXPORT rc_t CC KEncryptFileMakeRead (const KFile ** pself,
 
 
 /* ----------
- * Write mode re-encrypted file 
+ * Write mode re-encrypted file
  */
 #if 0
 static const KFile_vt_v1 vtKReencFileWrite =
@@ -1213,7 +1214,7 @@ static const KFile_vt_v1 vtKReencFileWrite =
 };
 #endif
 
-LIB_EXPORT rc_t CC KReencFileMakeWrite (KFile ** pself, 
+LIB_EXPORT rc_t CC KReencFileMakeWrite (KFile ** pself,
                                         KFile * encrypted,
                                         const KKey * deckey,
                                         const KKey * enckey)

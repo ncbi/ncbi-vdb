@@ -911,7 +911,7 @@ rc_t KDBManagerVOpenColumnReadInt ( const KDBManager *cself,
 static
 rc_t KDBManagerVOpenColumnReadInt_noargs ( const KDBManager *cself,
     const KColumn **colp, const KDirectory *wd,
-    const char *path_fmt, bool *cached, bool try_srapath, ... )
+    const char *path_fmt, bool *cached, int try_srapath, ... )
 {
     rc_t rc;
     va_list args;
