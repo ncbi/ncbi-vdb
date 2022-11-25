@@ -86,8 +86,8 @@ struct timeout_t
 #define putenv( s ) _putenv ( s )
 #endif
 
-#define setenv(name, value, over) putenv(name"="value)
-#define unsetenv(name) putenv(name"=")
+#define setenv(name, value, over) putenv(name "=" value)
+#define unsetenv(name) putenv(name "=")
 
 #define mkdir( d, m ) _mkdir( d )
 #define strcasecmp _stricmp
@@ -222,8 +222,8 @@ long int lround ( double x )
 #define ispunct( ch ) ispunct   ( ( unsigned char ) ( ch ) )
 #define isspace( ch ) isspace   ( ( unsigned char ) ( ch ) )
 #define isxdigit( ch ) isxdigit ( ( unsigned char ) ( ch ) )
-#define tolower( ch ) tolower ( ( unsigned char ) ( ch ) )
-#define toupper( ch ) toupper ( ( unsigned char ) ( ch ) )
+//#define tolower( ch ) tolower ( ( unsigned char ) ( ch ) )
+//#define toupper( ch ) toupper ( ( unsigned char ) ( ch ) )
 
 #define _Thread_local __declspec( thread )
 
