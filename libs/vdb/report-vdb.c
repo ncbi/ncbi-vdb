@@ -31,6 +31,7 @@
 #include <klib/namelist.h> /* KNamelistRelease */
 #include <klib/out.h> /* OUTMSG */
 #include <klib/klib-priv.h> /* ReportFuncs */
+#include <klib/log.h> /* KPathType strings */
 
 #include <vdb/report.h> /* ... */
 #include <vdb/manager.h> /* VDBManagerVersion */
@@ -386,8 +387,12 @@ static rc_t CC visitor(const KDirectory* dir,
         case kptDir: 
             rc = KDirectoryVisit(dir, false, visitor, total, "%s", name);
             break;
+        case kptZombieFile:
+            rc = RC(rcVDB, rcDirectory, rcVisiting, rcFile, rcTooShort);
+            break;
         default:
             rc = RC(rcVDB, rcDirectory, rcVisiting, rcType, rcUnexpected);
+            PLOGERR(klogErr, (klogErr, "$(name): unexpected type $(ftype)", "name=%s, ftype=%s", name, KLogPathTypeName(type)));
             break;
     }
     return rc;
@@ -557,6 +562,10 @@ static rc_t CC ReportObj(const ReportFuncs *f, uint32_t indent,
         }
         if (file_type == kptDir) {
             rc_t rc2 = ReportDir(f, indent + 1, ktbl);
+            if ((int)RCGetObject(rc2) == rcFile && (int)RCGetState(rc2) == rcTooShort) {
+                /* TODO: report truncated archive */
+                /* PLOGERR(klogErr, (klogErr, rc, "$(object) is truncated!", "object=%s", object)); */
+            }
             if (rc == 0)
             {   rc = rc2; }
         }
