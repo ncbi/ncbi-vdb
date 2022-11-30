@@ -31,6 +31,7 @@
 #include <klib/printf.h>
 #include <klib/sort.h>
 #include <klib/rc.h>
+#include <kfs/defs.h> /* for path types */
 #include <sysalloc.h>
 #include <os-native.h>
 
@@ -1014,4 +1015,92 @@ LIB_EXPORT KLogFmtFlags CC KLogFmtFlagsGet ( void )
 LIB_EXPORT KLogFmtFlags CC KLogLibFmtFlagsGet ( void )
 {
     return G_log_lib_formatter_flags;
+}
+
+LIB_EXPORT char const * CC KLogPathTypeName(KPathType kpt) {
+    static char const *namesBare[] = {
+        "Any",
+        "BadPath",
+        "BlockDev",
+        "CharDev",
+        "Column",
+        "Database",
+        "Dataset",
+        "Datatype",
+        "Directory",
+        "FIFO",
+        "Root",
+        "File",
+        "Index",
+        "Metadata",
+        "NotFound",
+        "PrereleaseTable",
+        "Table",
+        "ZombieFile",
+    }
+    static char const *namesAlias[] = {
+        "Any@",
+        "BadPath@",
+        "BlockDev@",
+        "CharDev@",
+        "Column@",
+        "Database@",
+        "Dataset@",
+        "Datatype@",
+        "Directory@",
+        "FIFO@",
+        "Root@",
+        "File@",
+        "Index@",
+        "Metadata@",
+        "NotFound@",
+        "PrereleaseTable@",
+        "Table@",
+        "ZombieFile@",
+    }
+    static char scratch[256];
+    char const *const *const names = (kpt & kptAlias) == 0 ? namesBare : namesAlias;
+
+    switch (kpt & ~kptAlias) {
+    case kptAny:
+        return names[0];
+    case kptBadPath:
+        return names[1];
+    case kptBlockDev:
+        return names[2];
+    case kptCharDev:
+        return names[3];
+    case kptColumn:
+        return names[4];
+    case kptDatabase:
+        return names[5];
+    case kptDataset:
+        return names[6];
+    case kptDatatype:
+        return names[7];
+    case kptDir:
+        return names[8];
+    case kptFIFO:
+        return names[9];
+    case kptFakeRoot:
+        return names[10];
+    case kptFile:
+        return names[11];
+    case kptIndex:
+        return names[12];
+    case kptMetadata:
+        return names[13];
+    case kptNotFound:
+        return names[14];
+    case kptPrereleaseTbl:
+        return names[15];
+    case kptTable:
+        return names[16];
+    case kptZombieFile:
+        return names[17];
+    default:
+        break;
+    }
+    string_printf(scratch, sizeof(scratch), "unknown (%u)", kpt);
+    return scratch;
 }

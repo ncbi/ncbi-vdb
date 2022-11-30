@@ -24,6 +24,8 @@
 *
 */
 
+#pragma once
+
 #ifndef _h_klib_log_
 #define _h_klib_log_
 
@@ -41,6 +43,10 @@
 
 #ifndef _h_klib_writer_
 #include <klib/writer.h>
+#endif
+
+#ifndef _h_kfs_defs_
+#include <kfs/defs.h>
 #endif
 
 #include <stdarg.h>
@@ -167,6 +173,8 @@ enum
     klogFmtStateText = 0x00040000, /* rc enum text for state */
     klogFmtLocalTimestamp = 0x00080000 /* print time stamp in local time, if both bits set local takes over */
 };
+
+KLIB_EXTERN char const * CC KLogPathTypeName ( KPathType );
 
 KLIB_EXTERN KFmtHandler* CC KLogFmtHandlerGet (void);
 KLIB_EXTERN KFmtHandler* CC KLogLibFmtHandlerGet (void);
