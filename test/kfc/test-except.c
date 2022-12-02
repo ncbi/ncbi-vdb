@@ -105,8 +105,8 @@ int main ( int argc, char * argv [] )
         status = 1;
     }
 
-    /*return status;*/
-    return 99;
+    return status;
+    /*return 99;*/
 }
 
 #if WINDOWS
