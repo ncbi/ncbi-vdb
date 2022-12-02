@@ -115,8 +115,8 @@ public:
     };
 };
 
-extern void saveLocation(const char* file, int line);
-extern void _REPORT_CRITICAL_ERROR_(const std::string& msg, const char* file, int line, bool is_msg);
+extern void saveLocation(const char* file, unsigned int line);
+extern void _REPORT_CRITICAL_ERROR_(const std::string& msg, const char* file, unsigned int line, bool is_msg);
 
 template<class T> const T abs(const T& a) { return a >= 0 ? a : -a; }
 
@@ -165,7 +165,7 @@ public:
     {   verbosity = v; verbositySet = true; }
 
 private:
-    static void TermHandler();
+    static void TermHandler() noexcept;
 
     static void SigHandler(int sig) noexcept;
 
@@ -200,13 +200,13 @@ public:
     void ErrorCounterAdd(ncbi::NK::counter_t ec) { _ec += ec; }
 
 protected:
-    void report_error(const char* msg, const char* file, int line, bool is_msg = false, bool isCritical = false);
+    void report_error(const char* msg, const char* file, unsigned int line, bool is_msg = false, bool isCritical = false);
 
-    void report_passed(const char* msg, const char* file, int line);
+    void report_passed(const char* msg, const char* file, unsigned int line);
 
     template<class T1>
     void report_error2(const char* e1, const char* e2, T1 t1, T1 t2,
-        const char* file, int line, const char* eq, const char* ne,
+        const char* file, unsigned int line, const char* eq, const char* ne,
         bool isCritical = false)
     {
         ncbi::NK::saveLocation(file, line);
@@ -228,14 +228,14 @@ protected:
     // pointers reported as ints (otherwise << may crash if given an invalid pointer)
     template<class T1>
     void report_error2(const char* e1, const char* e2, const T1* t1, const T1* t2,
-        const char* file, int line, const char* eq, const char* ne,
+        const char* file, unsigned int line, const char* eq, const char* ne,
         bool isCritical = false)
     {
         report_error2(e1, e2, (uint64_t)t1, (uint64_t)t2,file, line, eq, ne,isCritical);
     }
     template<class T1>
     void report_error2(const char* e1, const char* e2, T1* t1, T1* t2,
-        const char* file, int line, const char* eq, const char* ne,
+        const char* file, unsigned int line, const char* eq, const char* ne,
         bool isCritical = false)
     {
         report_error2(e1, e2, (uint64_t)t1, (uint64_t)t2,file, line, eq, ne,isCritical);
@@ -245,7 +245,7 @@ protected:
     template<class T1, class T2>
     void report_passed2(const char* e1, const char* e2,
         const T1& t1, const T2& t2,
-        const char* file, int line, const char* eq, const char* ne)
+        const char* file, unsigned int line, const char* eq, const char* ne)
     {
         ncbi::NK::saveLocation(file, line);
         LOG(LogLevel::e_all, file << "(" << line << "): info: "
@@ -255,7 +255,7 @@ protected:
     template<class T1, class T2, class T3>
     void report_passed_close(const char* e1, const char* e2,
         const T1& t1, const T2& t2, const T3& tolerance,
-        const char* file, int line)
+        const char* file, unsigned int line)
     {
         ncbi::NK::saveLocation(file, line);
         LOG(LogLevel::e_all, file << "(" << line << "): "
@@ -267,7 +267,7 @@ protected:
     template<class T1, class T2, class T3, class T4>
     void report_error_close(const char* e1, const char* e2,
         const T1& t1, const T2& t2, const T3& tolerance, const T4& diff,
-        const char* file, int line, bool isCritical = false)
+        const char* file, unsigned int line, bool isCritical = false)
     {
         ncbi::NK::saveLocation(file, line);
         ++_ec;
@@ -283,7 +283,7 @@ protected:
         { throw ncbi::NK::execution_aborted(); }
     }
 
-    void _REPORT_CRITICAL_ERROR_(const std::string& msg, const char* file, int line, bool is_msg = false);
+    void _REPORT_CRITICAL_ERROR_(const std::string& msg, const char* file, unsigned int line, bool is_msg = false);
 
 #define CHECK(exp)       \
   ( (exp)                      \
@@ -408,7 +408,7 @@ protected:
 #define CHECK_LT(e1, e2)    AssertLess((e1),(e2),#e1,#e2,__FILE__,__LINE__, false)
 #define REQUIRE_LT(e1, e2)  AssertLess((e1),(e2),#e1,#e2,__FILE__,__LINE__, true)
 
-    void report_rc(rc_t rc, const char* callStr, const char* file, int line, int successExpected, bool isCritical = false);
+    void report_rc(rc_t rc, const char* callStr, const char* file, unsigned int line, int successExpected, bool isCritical = false);
 
 #define CHECK_RC(exp)   report_rc((exp), #exp, __FILE__, __LINE__, true, false)
 #define REQUIRE_RC(exp) report_rc((exp), #exp, __FILE__, __LINE__, true, true)

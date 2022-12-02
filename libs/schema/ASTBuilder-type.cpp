@@ -402,7 +402,7 @@ struct STypesetMbr
 };
 
 static
-void CC STypesetPopulate ( BSTNode *n, void *data )
+void CC STypesetPopulate ( BSTNode *n, void *data ) noexcept
 {
     const STypesetMbr *mbr = ( const STypesetMbr* ) n;
     STypeset *ts = static_cast < STypeset * > ( data );
@@ -421,7 +421,7 @@ int64_t VTypedeclCmp ( const VTypedecl *a, const VTypedecl *b )
 }
 
 static
-int64_t CC STypesetMbrSort ( const BSTNode *item, const BSTNode *n )
+int64_t CC STypesetMbrSort ( const BSTNode *item, const BSTNode *n ) noexcept
 {
     const STypesetMbr *a = ( const STypesetMbr* ) item;
     const STypesetMbr *b = ( const STypesetMbr* ) n;

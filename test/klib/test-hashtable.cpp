@@ -145,7 +145,7 @@ TEST_CASE(Klib_KHash_Collide)
                     fprintf(stderr,
                             "Collision at %lu on hash of len %lu is %llx: "
                             "%lu elements %llx\n",
-                            j, l, (long long unsigned int)hash, set.size(), *(long long unsigned int*)buf);
+                            (unsigned long)j, (unsigned long)l, (long long unsigned int)hash, (unsigned long)set.size(), *(long long unsigned int*)buf);
                 }
                 set.insert(hash);
                 inserts++;
@@ -584,7 +584,7 @@ TEST_CASE(Klib_HashTableMapSmallKeys)
     const int loops = 1000;
     for (int i = 0; i != loops; ++i) {
         uint16_t key = random() % loops;
-        uint16_t value = i;
+        uint16_t value = (uint16_t)i;
 
         auto pair = std::make_pair(key, value);
         map.erase(key);
@@ -632,7 +632,7 @@ TEST_CASE(Klib_HashTableMapReserve)
         REQUIRE_RC(rc);
 
         uint16_t key = random() % loops;
-        uint16_t value = i;
+        uint16_t value = (uint16_t)i;
 
         auto pair = std::make_pair(key, value);
         map.erase(key);

@@ -322,7 +322,7 @@ rc_t CC ALIGN_CMN_TABLE_sub_select(RefTableSubSelect* self, int64_t ref_row_id,
 
     if ( rc == 0 && num_read < ref_len )
     {
-        const INSDC_coord_len* al_ref_len;
+        const INSDC_coord_len* al_ref_len = NULL;
         /* copy right portion of underlying reference */
         if ( al_ref_id == NULL || al_ref_start == NULL )
         {

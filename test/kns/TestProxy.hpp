@@ -47,14 +47,14 @@ struct C { // Configuration Helper
         next = NULL;
     }
 
-    void add ( const std::string & path, const std::string & value )
+    void add ( const std::string & p_path, const std::string & p_value )
     {
         C * p = this;
         while ( p -> next != NULL) {
             p = p -> next;
         }
 
-        p -> next = new C ( path, value );
+        p -> next = new C ( p_path, p_value );
     }
 
     bool contains ( const std::string & name, const std::string & aValue )
@@ -106,14 +106,14 @@ struct E { // Expected Proxy Values
         return r;
     }
 
-    void add ( const std::string & path, uint16_t port )
+    void add ( const std::string & p_path, uint16_t p_port )
     {
         E * p = this;
         while ( p -> next != NULL) {
             p = p -> next;
         }
 
-        p -> next = new E ( path, port );
+        p -> next = new E ( p_path, p_port );
     }
 
     const std::string path;

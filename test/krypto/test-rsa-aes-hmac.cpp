@@ -344,9 +344,9 @@ TEST_CASE ( KEncryptAlteredPubKeyDecryptRoundTrip )
     // as a twist, alter the public encryption key by a single bit
     char old = zpek [ 250 ];
     if ( :: isupper ( old ) )
-        old = :: tolower ( old );
+        old = (char)::tolower(old);
     else if ( :: islower ( old ) )
-        old = :: toupper ( old );
+        old = (char) :: toupper ( old );
     else if ( :: isdigit ( old ) )
     {
         old -= '0';
@@ -437,9 +437,9 @@ TEST_CASE ( KEncryptAlteredPrivKeyDecryptRoundTrip )
     // past the PEM encryption. but still...
     char old = pdk_base64 [ 250 ];
     if ( :: isupper ( old ) )
-        old = :: tolower ( old );
+        old = (char) :: tolower ( old );
     else if ( :: islower ( old ) )
-        old = :: toupper ( old );
+        old = (char) :: toupper ( old );
     else if ( :: isdigit ( old ) )
     {
         old -= '0';

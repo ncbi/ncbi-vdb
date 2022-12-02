@@ -60,7 +60,7 @@ checkWriteFile ( KFile * File, size_t Pos, size_t Size )
     Offset = 0;
     ToWr = 0;
 
-    printf ( "[WRI] [%lu]@[%lu]\n", Size, Pos );
+    printf ( "[WRI] [%lu]@[%lu]\n", (unsigned long)Size, (unsigned long)Pos );
 
     while ( Offset < Size ) {
         ToWr = Size - Offset;
@@ -101,7 +101,7 @@ checkReadFile ( KFile * File, size_t Pos, size_t Size )
     Offset = 0;
     Buf = NULL;
 
-    printf ( "[REA] [%lu]@[%lu]\n", Size, Pos );
+    printf ( "[REA] [%lu]@[%lu]\n", (unsigned long)Size, (unsigned long)Pos );
 
     Buf = (char *) calloc ( Size, sizeof ( char ) );
     if ( Buf == NULL ) {
@@ -142,7 +142,7 @@ checkMakeFile ( const char * Name, size_t Size )
     Dir = NULL;
     File = NULL;
 
-    printf ( "[CRE] [%s] SZ[%lu]\n", FileName, Size );
+    printf ( "[CRE] [%s] SZ[%lu]\n", FileName, (unsigned long)Size );
 
     RCt = KDirectoryNativeDir ( & Dir );
     if ( RCt == 0 ) {
@@ -194,7 +194,7 @@ checkOpenFile ( KFile ** File, const char * Name, bool Write )
 
 static
 bool
-checkFileSize ( const char * FileName, uint64_t Size )
+checkFileSize ( const char * p_FileName, uint64_t Size )
 {
     rc_t RCt;
     KDirectory * Dir;
@@ -204,11 +204,11 @@ checkFileSize ( const char * FileName, uint64_t Size )
     Dir = NULL;
     FileSize = 0;
 
-    printf ( "[SIZ] [%s] [%llu]\n", FileName, ( long long unsigned int ) Size );
+    printf ( "[SIZ] [%s] [%llu]\n", p_FileName, ( long long unsigned int ) Size );
 
     RCt = KDirectoryNativeDir ( & Dir );
     if ( RCt == 0 ) {
-        RCt = KDirectoryFileSize ( Dir, & FileSize, "%s", FileName );
+        RCt = KDirectoryFileSize ( Dir, & FileSize, "%s", p_FileName );
 
         KDirectoryRelease ( Dir );
     }
@@ -218,7 +218,7 @@ checkFileSize ( const char * FileName, uint64_t Size )
 
 static
 bool
-checkFileDelete ( const char * FileName )
+checkFileDelete ( const char * p_FileName )
 {
     rc_t RCt;
     KDirectory * Dir;
@@ -226,11 +226,11 @@ checkFileDelete ( const char * FileName )
     RCt = 0;
     Dir = NULL;
 
-    printf ( "[REM] [%s]\n", FileName );
+    printf ( "[REM] [%s]\n", p_FileName );
 
     RCt = KDirectoryNativeDir ( & Dir );
     if ( RCt == 0 ) {
-        RCt = KDirectoryRemove ( Dir, "%s", FileName );
+        RCt = KDirectoryRemove ( Dir, "%s", p_FileName );
 
         KDirectoryRelease ( Dir );
     }
@@ -242,7 +242,7 @@ static
 rc_t
 checkFileSetSize ( KFile * File, size_t Size )
 {
-    printf ( "[SET] [%s] SZ[%lu]\n", FileName, Size );
+    printf ( "[SET] [%s] SZ[%lu]\n", FileName, (unsigned long)Size );
 
     return KFileSetSize ( File, Size );
 }   /* checkFileSetSize () */

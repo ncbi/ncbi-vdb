@@ -1183,7 +1183,7 @@ VTRANSFACT_IMPL ( vdb_sprintf, 1, 0, 0 ) ( const void *self, const VXfactInfo *i
     VFuncDesc *rslt, const VFactoryParams *cp, const VFunctionParams *dp )
 {
     rc_t rc;
-    Sprintf *obj;
+    Sprintf *obj = NULL;
 
     /* const format string */
     VAList vargs;

@@ -63,7 +63,7 @@ public:
 
     struct KConfig* MakeConfig( const char* name, const char* contents );
 
-    static struct KStream * Reconnect ();
+    static struct KStream * Reconnect () noexcept;
 
     static std :: string MakeURL(const std :: string & base);
 

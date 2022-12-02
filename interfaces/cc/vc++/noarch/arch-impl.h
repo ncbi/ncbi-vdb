@@ -33,6 +33,8 @@
 #include <stdlib.h>
 #endif
 
+#include <intrin.h>
+
 #if _M_IX86_FP == 1
 	#define __SSE__ 1
 #else if _M_IX86_FP == 2
@@ -267,7 +269,7 @@ void int128_sar ( int128_t *self, uint32_t i )
     }
     else
     {
-        self -> lo = self -> hi >> ( i - 64 );
+        self -> lo = (uint64_t) ( self -> hi >> ( i - 64 ) );
         self -> hi >>= 63;
     }
 }

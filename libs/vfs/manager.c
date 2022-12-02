@@ -562,7 +562,7 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
                                const VPath * path )
 {
     rc_t rc = 0;
-    const KFile * temp_file;
+    const KFile * temp_file = NULL;
     uint32_t cluster_factor = ( 1 << ( cps -> cluster_factor_bits - 1 ) );
     size_t page_size = ( 1 << ( cps -> page_size_bits - 1 ));
     size_t cache_amount = ( ( size_t )cps -> cache_amount_mb * 1024 * 1024 );
@@ -1207,7 +1207,7 @@ static rc_t VFSManagerResolvePathInt (const VFSManager * self,
              * assumes path within VPath is ASCIZ
              */
             size_t s;
-            VPath * v;
+            VPath * v = NULL;
             char u [32 * 1024];
 
             switch ( uri_type )

@@ -84,7 +84,7 @@ string TestEnv::lastLocation = "<init>";
 LogLevel::E TestEnv::verbosity = LogLevel::e_error;
 bool TestEnv::verbositySet = false;
 
-void CC TestEnv::TermHandler()
+void CC TestEnv::TermHandler() noexcept
 {
     SigHandler(SIGTERM);
 }
@@ -154,7 +154,7 @@ OptDef Options[] = {
 
 rc_t TestEnv::process_args(int argc, char* argv[], ArgsHandler* argsHandler)
 {
-    int arg2 = 9;
+    size_t arg2 = 9;
     argv2 = static_cast<char**>(calloc(arg2, sizeof *argv2));
     if (argv2 == NULL)
     {   return RC (rcApp, rcArgv, rcAccessing, rcMemory, rcExhausted); }
@@ -429,7 +429,7 @@ rc_t TestEnv::process_args(int argc, char* argv[], ArgsHandler* argsHandler)
 }
 
 std::mutex saveLocation_mtx;
-void ::ncbi::NK::saveLocation(const char* file, int line)
+void ::ncbi::NK::saveLocation(const char* file, unsigned int line)
 {
     std::ostringstream s;
     s << file << "(" << line << ")";
@@ -438,7 +438,7 @@ void ::ncbi::NK::saveLocation(const char* file, int line)
     saveLocation_mtx.unlock();
 }
 
-void ::ncbi::NK::_REPORT_CRITICAL_ERROR_(const string& msg, const char* file, int line, bool is_msg)
+void ::ncbi::NK::_REPORT_CRITICAL_ERROR_(const string& msg, const char* file, unsigned int line, bool is_msg)
 {
     LOG(ncbi::NK::LogLevel::e_error, file << "(" << line << "): ");
     LOG(ncbi::NK::LogLevel::e_error, "fatal ");

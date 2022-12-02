@@ -313,7 +313,7 @@ TEST_CASE(Klib_hashfileMapDeletes)
     KHashFileDispose(hmap);
 }
 
-static rc_t inserter(const KThread* thread, void* data)
+static rc_t inserter(const KThread* thread, void* data) noexcept
 {
     rc_t rc;
     uint64_t state = random();
@@ -335,7 +335,7 @@ static rc_t inserter(const KThread* thread, void* data)
     return 0;
 }
 
-static rc_t deleter(const KThread* thread, void* data)
+static rc_t deleter(const KThread* thread, void* data) noexcept
 {
     uint64_t state = random();
     while (KEEPRUNNING) {
@@ -348,7 +348,7 @@ static rc_t deleter(const KThread* thread, void* data)
     return 0;
 }
 
-static rc_t finder(const KThread* thread, void* data)
+static rc_t finder(const KThread* thread, void* data) noexcept
 {
     uint64_t state = random();
     while (KEEPRUNNING) {
@@ -378,7 +378,7 @@ static rc_t finder(const KThread* thread, void* data)
     return 0;
 }
 
-static rc_t notfinder(const KThread* thread, void* data)
+static rc_t notfinder(const KThread* thread, void* data) noexcept
 {
     uint64_t state = random();
     while (KEEPRUNNING) {
@@ -617,7 +617,7 @@ TEST_CASE(Klib_hashfilethreads)
     }
 
     for (size_t loops = 0; loops != 10; ++loops) {
-        fprintf(stderr, "Count is %lu\n", KHashFileCount(HMAP));
+        fprintf(stderr, "Count is %lu\n", (unsigned long)KHashFileCount(HMAP));
         KSleepMs(1000);
     }
     KEEPRUNNING = false;

@@ -361,7 +361,7 @@ AST_Fixture :: CreateFile ( const char * p_name, const char * p_content )
 
 static
 void
-DumpSymbol ( BSTNode *n, void *data )
+DumpSymbol ( BSTNode *n, void *data ) noexcept
 {
     const KSymbol * sym = (const KSymbol*) n;
     int indent = *(int*)data;

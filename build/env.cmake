@@ -186,8 +186,11 @@ elseif ( "MSVC" STREQUAL "${CMAKE_C_COMPILER_ID}")
 	# warning C5032: detected #pragma warning(push) with no corresponding #pragma warning(pop)
     # Warning C4464 relative include path contains '..'
     # Warning C4100 'XXX': unreferenced formal parameter
-    set( DISABLED_WARNINGS_C "/wd4820 /wd5045 /wd4668 /wd5105 /wd4514 /wd4774 /wd4255 /wd4710 /wd5031 /wd5032 /wd4464 /wd4100")
-    set( DISABLED_WARNINGS_CXX "/wd4623 /wd4625 /wd4626 /wd5026 /wd5027 /wd4571")
+    # Warning C4061	enumerator 'XXX' in switch of enum 'YYY' is not explicitly handled by a case label
+    # Warning C5264	'XXX': 'const' variable is not used
+    # Warning C5220	'XXX': a non-static data member with a volatile qualified type no longer implies that compiler generated copy/move constructors and copy/move assignment operators are not trivial
+    set( DISABLED_WARNINGS_C "/wd4820 /wd5045 /wd4668 /wd5105 /wd4514 /wd4774 /wd4255 /wd4710 /wd5031 /wd5032 /wd4464 /wd4100 /wd4061")
+    set( DISABLED_WARNINGS_CXX "/wd4623 /wd4625 /wd4626 /wd5026 /wd5027 /wd4571 /wd5264 /wd5220")
     # properly report the C++ version in __cplusplus (by default, always set to "199711L" !)
     add_compile_options("/Zc:__cplusplus")
 endif()

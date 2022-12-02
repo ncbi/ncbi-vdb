@@ -644,7 +644,7 @@ LIB_EXPORT rc_t CC VDBManagerGetObjVersion ( const VDBManager *self, ver_t * ver
         {
             const KTable *tbl;
             const KDatabase *db;
-            const KMetadata *meta;
+            const KMetadata *meta = NULL;
 
             int path_type = KDBManagerPathType ( self -> kmgr, "%s", path ) & ~ kptAlias;
             switch ( path_type )

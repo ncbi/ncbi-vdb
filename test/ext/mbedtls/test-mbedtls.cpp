@@ -129,13 +129,13 @@ struct BasicIO
     }
 };
 
-int KTLSStreamRead ( void * cself, unsigned char * buffer, size_t len )
+int KTLSStreamRead ( void * cself, unsigned char * buffer, size_t len ) noexcept
 {
     BasicIO * self = static_cast<BasicIO *>(cself);
     return self -> Read(buffer, len);
 }
 
-int KTLSStreamWrite ( void * cself, const unsigned char * buffer, size_t len )
+int KTLSStreamWrite ( void * cself, const unsigned char * buffer, size_t len ) noexcept
 {
     BasicIO * self = static_cast<BasicIO *>(cself);
     return self -> Write(buffer, len);

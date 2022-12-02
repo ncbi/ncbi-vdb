@@ -413,7 +413,7 @@ struct ThreadData
     const KFile * cacheteefile; // optional
 };
 
-static rc_t CC thread_func( const KThread *self, void *data )
+static rc_t CC thread_func( const KThread *self, void *data ) noexcept
 {
     ThreadData * td = ( ThreadData * ) data;
     if ( td -> cacheteefile == NULL || td -> origfile == NULL )

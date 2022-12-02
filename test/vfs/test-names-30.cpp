@@ -65,7 +65,7 @@ static int getDigit ( char c, rc_t * rc ) {
         if ( * rc != 0 )
             return 0;
  
-        c = tolower ( c );
+        c = (char) tolower ( c );
         if ( ! isdigit ( c ) && c < 'a' && c > 'f' ) {
             * rc = RC ( rcVFS, rcQuery, rcExecuting, rcItem, rcIncorrect );
             return 0;
