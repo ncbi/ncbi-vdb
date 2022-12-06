@@ -373,7 +373,7 @@ rc_t TestEnv::process_args(int argc, char* argv[], ArgsHandler* argsHandler)
             }
             char* pch = strtok(a ," ");
             while (pch != NULL) {
-                if (argc2 >= arg2) {
+                if ( (size_t)argc2 >= arg2 ) {
                     arg2 *= 2;
                     char** tmp = static_cast<char**>(
                         realloc(argv2, arg2 * sizeof *argv2));
@@ -393,7 +393,7 @@ rc_t TestEnv::process_args(int argc, char* argv[], ArgsHandler* argsHandler)
             }
         }
         else {
-            if ( argc2 >= arg2 ) {
+            if ( (size_t)argc2 >= arg2 ) {
                 arg2 *= 2;
                 char ** tmp = static_cast < char ** > (
                     realloc ( argv2, arg2 * sizeof *argv2 ) );
