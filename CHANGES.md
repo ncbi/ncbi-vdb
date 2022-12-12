@@ -1,6 +1,12 @@
 # NCBI External Developer Release:
 
 
+## NCBI VDB 3.0.2
+**December 12, 2022**
+
+  **ncbi-vdb**: changed version to match that of _sra-tools_
+
+
 ## NCBI VDB 3.0.1
 **November 15, 2022**
 
