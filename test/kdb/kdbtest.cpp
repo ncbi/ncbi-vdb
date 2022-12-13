@@ -95,7 +95,7 @@ public:
         THROW_ON_RC ( KDBManagerMakeRead ( & mgr, NULL ) );
 
         const KTable* tbl;
-        THROW_ON_RC ( KDBManagerOpenTableRead ( mgr, & tbl, "SRR000123" ) );
+        THROW_ON_RC ( KDBManagerOpenTableRead ( mgr, & tbl, "../test_accessions/SRR000123.copy" ) );
 
         const KColumn* col;
         THROW_ON_RC ( KTableOpenColumnRead ( tbl, & col, "X" ) );
@@ -118,8 +118,8 @@ public:
 
 FIXTURE_TEST_CASE ( ColumnBlobRead_basic, ColumnBlobReadFixture )
 {
-    const size_t BlobSize = 1882;
-    const size_t BufSize = 2024;
+    const size_t BlobSize = 119;//1882;
+    const size_t BufSize = 119;//2024;
     char buffer [ BufSize ];
     REQUIRE_RC ( KColumnBlobRead ( m_blob, 0, buffer, BufSize, & m_num_read, & m_remaining ) );
     REQUIRE_EQ ( BlobSize, m_num_read );
@@ -128,8 +128,8 @@ FIXTURE_TEST_CASE ( ColumnBlobRead_basic, ColumnBlobReadFixture )
 
 FIXTURE_TEST_CASE ( ColumnBlobRead_insufficient_buffer, ColumnBlobReadFixture )
 {
-    const size_t BlobSize = 1882;
-    const size_t BufSize = 1024;
+    const size_t BlobSize = 119;//1882;
+    const size_t BufSize = 119;//1024;
     char buffer [ BufSize ];
     // first read incomplete
     REQUIRE_RC ( KColumnBlobRead ( m_blob, 0, buffer, BufSize, & m_num_read, & m_remaining ) );
