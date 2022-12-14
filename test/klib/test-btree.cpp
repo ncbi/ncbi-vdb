@@ -197,7 +197,7 @@ public:
         ret -> pager = & pager;
         ret -> vt = & KPageFile_vt;
         ret -> root = pb.get() == nullptr ? 0 : pb -> root;
-        ret -> id = & id;
+        ret -> id = & m_id;
         ret -> key = key.c_str();
         ret -> key_size = key.size();
         ret -> was_inserted = false;
@@ -276,7 +276,7 @@ protected:
     Pager pager;
 
     vector<string> in;
-    uint32_t id;
+    uint32_t m_id;
     unique_ptr<EntryData> pb;
     LeafNode* node = nullptr; // memory owned by pager
 };
@@ -403,7 +403,7 @@ FIXTURE_TEST_CASE( KeyTooLong, BtreeFixture )
     string key (11000, 'A');
     pb.reset( MakeEntry( string( key.c_str(), key.size() ) ) );
     bool was_inserted;
-    REQUIRE_RC_FAIL( BTreeEntry ( & pb -> root, &pager, &KPageFile_vt, &id, &was_inserted, key.c_str(), key.size() ) );
+    REQUIRE_RC_FAIL( BTreeEntry ( & pb -> root, &pager, &KPageFile_vt, &m_id, &was_inserted, key.c_str(), key.size() ) );
 }
 
 FIXTURE_TEST_CASE( Split_leaf, BtreeFixture )
