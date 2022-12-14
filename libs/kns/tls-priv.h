@@ -34,10 +34,10 @@
 #if ! defined ( MBEDTLS_CONFIG_FILE )
 #include <mbedtls/config.h>
 #else
-#include MBEDTLS_CONFIG_FILE 
+#include MBEDTLS_CONFIG_FILE
 #endif
 
-#include <mbedtls/net.h>
+#include <mbedtls/net_sockets.h>
 #include <mbedtls/debug.h>
 #include <mbedtls/ssl.h>
 #include <mbedtls/aes.h>

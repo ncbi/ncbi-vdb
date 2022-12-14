@@ -75,7 +75,7 @@ TEST_CASE ( TestKServiceAddId ) {
 TEST_CASE(TestKSrvResponseGetLocation) {
 
 #define ACC "SRR850901"
-    
+
     KService * s = NULL;
     REQUIRE_RC(KServiceMake(&s));
     REQUIRE_RC(KServiceResolve(s, false, true));
@@ -143,11 +143,11 @@ TEST_CASE(TestKSrvResponseGetLocationCache) {
         "sra", &local, &rcLocal, &cache, &rcCache));
 
 	REQUIRE_RC_FAIL(rcLocal);
-    
+
     char buffer[PATH_MAX] = "";
 
 	REQUIRE_RC_FAIL(VPathReadPath(local, buffer, sizeof buffer, NULL));
-    
+
     REQUIRE_RC(VPathRelease(local));
 
     REQUIRE_RC_FAIL(rcCache);
@@ -346,7 +346,7 @@ extern "C" {
         if (
 0) assert(!KDbgSetString("VFS"));
 
-        putenv ( "NCBI_VDB_QUALITY=R" );
+        setenv ( "NCBI_VDB_QUALITY", "R", 1 );
         return TestServices ( argc, argv );
     }
 }

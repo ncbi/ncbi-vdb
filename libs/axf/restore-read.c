@@ -63,6 +63,7 @@ static VFSManager *getVFSManager(VDBManager const *mgr)
     rc = KDBManagerGetVFSManager(kmgr, &result);
     KDBManagerRelease(kmgr);
     assert(rc == 0);
+    UNUSED(rc);
 
     return result;
 }
@@ -267,12 +268,14 @@ static void RestoreReadSharedReader(RestoreReadShared *self)
 {
     rc_t const rc = KRWLockAcquireShared(self->rwl);
     assert(rc == 0);
+    UNUSED(rc);
 }
 
 static void RestoreReadSharedReaderDone(RestoreReadShared *self)
 {
     rc_t const rc = KRWLockUnlock(self->rwl);
     assert(rc == 0);
+    UNUSED(rc);
 }
 
 static void RestoreReadSharedWriter(RestoreReadShared *self)
@@ -281,6 +284,7 @@ static void RestoreReadSharedWriter(RestoreReadShared *self)
     {
         rc_t const rc = KRWLockAcquireExcl(self->rwl);
         assert(rc == 0);
+        UNUSED(rc);
     }
 }
 
@@ -289,6 +293,7 @@ static void RestoreReadSharedWriterDone(RestoreReadShared *self)
     {
         rc_t const rc = KRWLockUnlock(self->rwl);
         assert(rc == 0);
+        UNUSED(rc);
     }
     RestoreReadSharedReader(self);
 }

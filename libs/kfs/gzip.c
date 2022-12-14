@@ -263,7 +263,7 @@ static rc_t z_read ( KGZipFile * self, void * buffer, size_t bsize, size_t * _nu
         z_stream * strm = &self->strm;
         size_t src_read;
         int zret;
-        
+
         strm->next_out  = (uint8_t*)buffer + num_read;
         strm->avail_out = (uInt) bleft;
 
@@ -319,7 +319,7 @@ static rc_t z_read ( KGZipFile * self, void * buffer, size_t bsize, size_t * _nu
             GZIP_DEBUG(("%s: buf error %d\n",__func__, zret));
             if (strm->avail_out > 0)
             {
-                rc = KFileRead (self->file, self->filePosition, 
+                rc = KFileRead (self->file, self->filePosition,
                                 self->buff, sizeof (self->buff), &src_read);
                 if (rc)
                     break;
@@ -333,7 +333,7 @@ static rc_t z_read ( KGZipFile * self, void * buffer, size_t bsize, size_t * _nu
                 else if (self->completed)
                     goto done;
                 else if (zret == Z_BUF_ERROR)
-                {                
+                {
                     /* this is either a truncated file or a blocked stream
                      * code outside of here has to handle it */
                     GZIP_DEBUG(("%s: truncated input\n",__func__));
@@ -519,7 +519,8 @@ static rc_t CC KGZipFile_OutDestroy( KGZipFile *self)
             return rc;
 
         assert( ret == Z_STREAM_END ); /* stream will be complete */
-        
+        UNUSED(ret);
+
         deflateEnd( strm ); /* clean up */
         self->completed = true;
     }
@@ -558,6 +559,7 @@ static rc_t CC KGZipFile_OutWrite( struct KGZipFile *self,
     if ( rc != 0 )
         return rc;
     assert( ret != Z_STREAM_END );  /* stream will be complete */
+    UNUSED(ret);
 
     self->myPosition += * num_writ;
 

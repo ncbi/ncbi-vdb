@@ -108,11 +108,6 @@ FIXTURE_TEST_CASE(KNSManagerGetUserAgent_Default, SessionIdFixture)
     REQUIRE_EQ( string::npos, string(ua).find("\"") );
 }
 
-#ifdef WIN32
-#define setenv(name, value, over) putenv(name"="value)
-#define unsetenv(name) putenv(name"=")
-#endif
-
 FIXTURE_TEST_CASE(KNSManagerGetUserAgentEnv, SessionIdFixture)
 {
     const char* ua = nullptr;

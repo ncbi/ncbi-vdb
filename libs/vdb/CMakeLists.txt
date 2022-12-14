@@ -109,4 +109,9 @@ set( WVDB_SRC
 GenerateStaticLibs( vdb "${VDB_SRC}" )
 GenerateStaticLibs( wvdb "${WVDB_SRC}" )
 
+# suppress certain compiler warnings
+if ( "GNU" STREQUAL "${CMAKE_C_COMPILER_ID}")
+    set_target_properties( vdb wvdb PROPERTIES COMPILE_FLAGS -Wstrict-aliasing=0 )
+endif()
+
 add_compile_definitions (__mod__="libs/vdb")

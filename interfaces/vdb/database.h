@@ -348,6 +348,19 @@ VDB_EXTERN rc_t CC VDatabaseSetFullQualityType ( VDatabase *self );
  */
 VDB_EXTERN rc_t CC VDatabaseSetSynthQualityType ( VDatabase *self );
 
+/* VDatabaseMetaCompare
+ *  deep comparison of metadata-nodes between 2 databases...
+ */
+VDB_EXTERN rc_t CC VDatabaseMetaCompare ( const VDatabase *self, const VDatabase *other,
+                                          const char * node_path, const char * tbl_name,
+                                          bool * equal );
+
+/* VDatabaseMetaCopy
+ *  deep copy of metadata-nodes form src to self...
+ */
+VDB_EXTERN rc_t CC VDatabaseMetaCopy ( VDatabase *self, const VDatabase *src,
+                                       const char * node_path, const char * tbl_name,
+                                       bool src_node_has_to_exist );
 
 #ifdef __cplusplus
 }

@@ -52,13 +52,13 @@ static int string_buffer_add(KDataBuffer *const self,
 {
     size_t const rslt = self->elem_count;
     size_t const newsize = rslt + len + 1; /* +1 for nul-terminator */
-    
+
     if (KDataBufferResize(self, newsize) != 0)
         return -1;
     else {
         char *const dst = (char *)self->base + rslt;
         unsigned i;
-        
+
         for (i = 0; i < len; ++i)
             dst[i] = name[i];
         dst[len] = '\0';
@@ -66,7 +66,7 @@ static int string_buffer_add(KDataBuffer *const self,
 #if 1
     PLOGMSG(klogInfo, (klogInfo, "New spot group '$(NAME)'", "NAME=%.*s", (int)len, name));
 #endif
-    
+
     return (int)rslt;
 }
 
@@ -145,12 +145,12 @@ static void stats_data_update_mru(stats_data_t *const self, group_stats_t *const
         group_stats_t *newmru[STATS_DATA_MRU_COUNT];
         unsigned di;
         unsigned si;
-        
+
         memset(newmru, 0, sizeof(newmru));
         newmru[0] = mru;
         for (di = 1, si = 0; di < STATS_DATA_MRU_COUNT && si < STATS_DATA_MRU_COUNT; ++si) {
             group_stats_t *const u = self->mru[si];
-            
+
             if (u != mru) {
                 newmru[di] = u;
                 ++di;
@@ -169,12 +169,12 @@ static int stats_data_name_cmp(stats_data_t *const self,
     char const *const Bname = get_name(self, B);
     unsigned Ai;
     unsigned Bi;
-    
+
     for (Ai = Bi = 0; Ai < Alen && Bi < Blen; ++Ai, ++Bi) {
         int const a = toupper(Aname[Ai]);
         int const b = toupper(Bname[Bi]);
         int const diff = a - b;
-        
+
         if (diff != 0)
             return diff;
     }
@@ -197,11 +197,11 @@ static unsigned stats_data_search(stats_data_t *const self,
 {
     unsigned f = 0;
     unsigned e = self->count;
-    
+
     while (f < e) {
         unsigned const m = f + (e - f) / 2;
         int const diff = stats_data_name_cmp_idx(self, m, len, name);
-        
+
         if (diff < 0)
             e = m;
         else if (diff > 0)
@@ -217,10 +217,10 @@ static group_stats_t *search_mru_list(stats_data_t *const self,
                                       char const name[])
 {
     unsigned i;
-    
+
     for (i = 0; i < STATS_DATA_MRU_COUNT && i < self->count; ++i) {
         group_stats_t *const k = self->mru[i];
-        
+
         if (k && stats_data_name_cmp(self, k, len, name) == 0)
             return k;
     }
@@ -232,7 +232,7 @@ static group_stats_t *stats_data_get_group(stats_data_t *const self,
                                            char const name[])
 {
     group_stats_t *fnd = search_mru_list(self, len, name);
-    
+
     if (fnd == NULL) {
         unsigned const which = stats_data_search(self, len, name);
         if (which < self->count && stats_data_name_cmp_idx(self, which, len, name) == 0)
@@ -240,20 +240,20 @@ static group_stats_t *stats_data_get_group(stats_data_t *const self,
         else {
             int const offset = string_buffer_add(&self->names, len, name);
             unsigned const move = self->count - which;
-            
+
             if (offset < 0)
                 return NULL;
-            
+
             if (++self->count > MAX_GROUP_COUNT)
                 return get_group(self, MAX_GROUP_COUNT);
-            
+
             if (KDataBufferResize(&self->group, self->count) != 0)
                 return NULL;
-            
+
             fnd = get_group(self, which);
             assert(fnd + move + 1 <= get_group(self, self->count) || move == 0);
             memmove(fnd + 1, fnd, move * sizeof(*fnd));
-            
+
             *fnd = group_stats_init(offset, len, self->count);
             stats_data_invald_mru(self);
         }
@@ -313,7 +313,7 @@ static rc_t group_stats_write(group_stats_t const *const self,
                               stats_data_t const *const parent)
 {
     static char const namebase[] = "STATS/SPOT_GROUP/";
-    char namepath[sizeof(namebase) + 3]; /* sizeof(namebase) includes terminator */
+    char namepath[sizeof(namebase) + 4]; /* sizeof(namebase) includes terminator */
     char *const name = namepath + sizeof(namebase) - 1;
     unsigned nodeid = self->node_id - 1;
     KMDataNode *node;
@@ -325,12 +325,12 @@ static rc_t group_stats_write(group_stats_t const *const self,
     name[2] = nodeid % 26 + 'A'; nodeid /= 26;
     name[1] = nodeid % 26 + 'A'; nodeid /= 26;
     name[0] = nodeid % 26 + 'A'; nodeid /= 26;
-    
+
     RC_THROW(KMetadataOpenNodeUpdate(parent->meta, &node, namepath)); /* namepath is safe (we just generated it) */
 
     rc = group_stats_write_with_name(self, parent, node);
     KMDataNodeRelease(node);
-    
+
     return rc;
 }
 
@@ -339,12 +339,12 @@ static rc_t group_stats_write_default(group_stats_t const *const self,
 {
     KMDataNode *node;
     rc_t rc;
-    
+
     RC_THROW(KMetadataOpenNodeUpdate(parent->meta, &node, "STATS/SPOT_GROUP/default"));
 
     rc = group_stats_write_stats(self, parent, node);
     KMDataNodeRelease(node);
-    
+
     return rc;
 }
 
@@ -353,12 +353,12 @@ static rc_t group_stats_write_table(group_stats_t const *const self,
 {
     KMDataNode *node;
     rc_t rc;
-    
+
     RC_THROW(KMetadataOpenNodeUpdate(parent->meta, &node, "STATS/TABLE"));
 
     rc = group_stats_write_stats(self, parent, node);
     KMDataNodeRelease(node);
-    
+
     return rc;
 }
 
@@ -369,7 +369,7 @@ static rc_t stats_data_write_all(stats_data_t *const self)
     RC_THROW(group_stats_write_table(&self->table, self));
     if ((self->options & so_HasSpotGroup) == 0)
         return 0;
-    
+
     if (self->deflt.spot_count != 0)
         RC_THROW(group_stats_write_default(&self->deflt, self));
 
@@ -387,7 +387,7 @@ void CC stats_data_whack(void *const data)
     stats_data_t *const self = data;
 
     VCursorRelease(self->curs);
-    
+
     stats_data_write_all(self);
     KDataBufferWhack(&self->group);
     KDataBufferWhack(&self->names);
@@ -442,10 +442,10 @@ rc_t stats_data_update_group(stats_data_t *self,
     else
     {
         group_stats_t *const fnd = stats_data_get_group(self, (unsigned)grp_len, grp);
-        
+
         if (fnd == NULL)
             return RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted);
-        
+
         if (fnd - get_group(self, 0) < MAX_GROUP_COUNT)
             group_stats_update(fnd, spot_id, spot_len, bio_spot_len, cmp_spot_len);
         else {
@@ -461,7 +461,7 @@ rc_t stats_data_update_group(stats_data_t *self,
 static KMetadata *openMetadataUpdate(VTable const *const tbl, rc_t *const rc)
 {
     KMetadata *meta = NULL;
-    
+
     *rc = VTableOpenMetadataUpdate((VTable *)tbl, &meta);
     assert(*rc == 0 && meta != NULL);
     if (*rc != 0 || meta == NULL)
@@ -592,14 +592,14 @@ rc_t CC stats_data_cmpb_trigger(void *data, const VXformInfo *info, int64_t row_
     stats_data_t *const self = data;
     char const *grp = phys_grp;
     unsigned len = phys_len;
-    
+
     if (grp == NULL && self->curs != NULL) {
         void const *base;
         uint32_t count;
         uint32_t boff;
         uint32_t elem_bits;
         rc_t rc;
-        
+
         rc = VCursorCellDataDirect(self->curs, row_id, self->cid, &elem_bits, &base, &boff, &count);
         grp = base;
         len = count;
@@ -651,12 +651,12 @@ VTRANSFACT_IMPL ( NCBI_SRA_cmp_stats_trigger, 1, 0, 0 )
                           | so_CmpBaseCount
                           | (dp->argc > 4 ? so_HasSpotGroup : 0);
     rc_t rc = 0;
-    
+
     rslt->self = stats_data_make(info->tbl, options, NULL, 0, &rc);
     rslt->whack = stats_data_whack;
     rslt->variant = vftNonDetRow;
     rslt->u.rf = stats_data_cmp_trigger;
-    
+
     return rc;
 }
 
@@ -670,12 +670,12 @@ VTRANSFACT_IMPL ( NCBI_SRA_cmpf_stats_trigger, 1, 0, 0 )
                           | so_CmpBaseCount
                           | (dp->argc > 4 ? so_HasSpotGroup : 0);
     rc_t rc = 0;
-    
+
     rslt->self = stats_data_make(info->tbl, options, NULL, 0, &rc);
     rslt->whack = stats_data_whack;
     rslt->variant = vftNonDetRow;
     rslt->u.rf = stats_data_cmpf_trigger;
-    
+
     return rc;
 }
 
@@ -688,12 +688,12 @@ VTRANSFACT_IMPL ( NCBI_csra2_stats_trigger, 1, 0, 0 )
                           | so_BioBaseCount
                           | (dp->argc > 1 ? so_HasSpotGroup : 0);
     rc_t rc = 0;
-    
+
     rslt->self = stats_data_make(info->tbl, options, NULL, 0, &rc);
     rslt->whack = stats_data_whack;
     rslt->variant = vftNonDetRow;
     rslt->u.rf = stats_data_csra2_trigger;
-    
+
     return rc;
 }
 
@@ -722,6 +722,6 @@ VTRANSFACT_IMPL ( NCBI_SRA_cmpb_stats_trigger, 1, 0, 0 )
     rslt->whack = stats_data_whack;
     rslt->variant = vftNonDetRow;
     rslt->u.rf = stats_data_cmpb_trigger;
-    
+
     return rc;
 }

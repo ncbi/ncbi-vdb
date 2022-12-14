@@ -352,7 +352,7 @@ static
 void Pack64b ( uint32_t packed, void *dst, const void *src, uint32_t count )
 {
     /* accumulator */
-    uint128_t acc;
+    uint128_t acc = { 0, 0 };
     uint32_t abits;
 
     /* loop indices */

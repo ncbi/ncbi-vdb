@@ -20,7 +20,7 @@
 *
 *  Please cite the author in any work or product based on this material.
 *
-* ===========================================================================
+* =============================================================================$
 *
 */
 
@@ -59,6 +59,7 @@
 #include <cstring>
 
 #include "kfg-fixture.hpp"
+#include "../../libs/kfg/kfg-priv.h"
 
 using namespace std;
 
@@ -70,7 +71,7 @@ TEST_SUITE_WITH_ARGS_HANDLER(KfgTestSuite, argsHandler);
 #ifdef ALL
 FIXTURE_TEST_CASE(testKConfigPrint, KfgFixture)
 {
-	REQUIRE_RC(KConfigPrint(kfg, 0));
+//	REQUIRE_RC(KConfigPrint(kfg, 0));
 }
 #endif
 
@@ -420,6 +421,8 @@ FIXTURE_TEST_CASE(include_files, KfgFixture)
 #ifdef ALL
 FIXTURE_TEST_CASE(ChangeCommit, KfgFixture)
 {
+bool disabled = KConfigSetUserSettingsDisabled(false);
+
     const char* contents=
         "one=\"1\"\n"
         "one/two=\"2\"\n"
@@ -447,10 +450,14 @@ FIXTURE_TEST_CASE(ChangeCommit, KfgFixture)
     REQUIRE(! GetValue("one/two/three", s)); // unchanged values are not saved
 
     REQUIRE_RC(KDirectoryRemove(wd, true, LocalSettingsFile));
+
+KConfigSetUserSettingsDisabled(disabled);
 }
 
 FIXTURE_TEST_CASE(ChangeCommitEscapes, KfgFixture)
 {
+bool disabled = KConfigSetUserSettingsDisabled(false);
+
     const char* LocalSettingsFile = "settings.mkfg";
     string FullMagicPath = DirPath(wd) + "/" + LocalSettingsFile;
     CreateAndLoad( GetName(), (string() + "NCBI_SETTINGS=\"" + FullMagicPath + "\"\n").c_str() );
@@ -465,11 +472,12 @@ FIXTURE_TEST_CASE(ChangeCommitEscapes, KfgFixture)
     REQUIRE_RC(KConfigMake(&kfg,wd));
     LoadFile(FullMagicPath.c_str());
 
-    // verify changes
     REQUIRE(ValueMatches("double/quote", "\""));
     REQUIRE(ValueMatches("escaped/hex", "\x0a"));
 
     REQUIRE_RC(KDirectoryRemove(wd, true, LocalSettingsFile));
+
+KConfigSetUserSettingsDisabled(disabled);    // verify changes
 }
 
 FIXTURE_TEST_CASE(DropAllChildren, KfgFixture)
@@ -490,6 +498,7 @@ FIXTURE_TEST_CASE(DropAllChildren, KfgFixture)
     KNamelistRelease(children);
 }
 
+#ifdef IT_IS_STILL_VALID
 FIXTURE_TEST_CASE(FixUserSettings, KfgFixture)
 {   // fix spelling of nodes dbGap-<number> to dbGaP-<number>
 
@@ -498,7 +507,7 @@ FIXTURE_TEST_CASE(FixUserSettings, KfgFixture)
 
     string mkfgFilename = "./user-settings.mkfg";
     // fake global settings since we do not want to modify the real ~/.ncbi/user-settings.mkfg
-    string globalMkfgFilename = "./global-settings.mkfg";
+    string globalMkfgFilename = "./g-lobal-settings.mkfg";
 
     REQUIRE_RC(KConfigRelease(kfg));
     // create the local .mkfg with the old spelling of dbGap;
@@ -517,6 +526,7 @@ FIXTURE_TEST_CASE(FixUserSettings, KfgFixture)
     REQUIRE_RC(KDirectoryRemove(wd, true, globalMkfgFilename.c_str()));
     REQUIRE_RC(KDirectoryRemove(wd, true, mkfgFilename.c_str()));
 }
+#endif
 
 //////////////////////////////////////////// KConfig Accessors
 
@@ -936,9 +946,10 @@ TEST_CASE(TestAdCreating) { // create AD automaticlly
 }
 #endif
 
+#define NAME "tmp.kfg"
+
 #ifdef ALL
 TEST_CASE(TestAdRepair) { // VDB-4276: automaticlly repait incomplete AD
-#define NAME "tmp.kfg"
     putenv((char*)"VDB_CONFIG=" NAME);
     KDirectory * wd = NULL;
     REQUIRE_RC(KDirectoryNativeDir(&wd));
@@ -977,6 +988,51 @@ TEST_CASE(TestAdRepair) { // VDB-4276: automaticlly repait incomplete AD
     REQUIRE_RC(KFileRelease(file));
     REQUIRE_RC(KDirectoryRemove(wd, true, NAME));
     REQUIRE_RC(KDirectoryRelease(wd));
+}
+#endif
+
+#ifdef ALL
+TEST_CASE(DontSaveCustomUserKfg) {
+    REQUIRE(KConfigDisabledUserSettings());
+
+    KDirectory* d = NULL;
+    REQUIRE_RC(KDirectoryNativeDir(&d));
+
+    KFile* w = NULL;
+    REQUIRE_RC(KDirectoryCreateFile(d, &w, true, 0664, kcmInit, NAME));
+    const char contents[] = "a = \"b\"\n";
+    REQUIRE_RC(KFileWrite(w, 0, contents, strlen(contents), NULL));
+    REQUIRE_RC(KFileRelease(w));
+
+    KConfig* kfg = NULL;
+    REQUIRE_RC(KConfigMake(&kfg, NULL));
+
+    const KFile* r = NULL;
+    REQUIRE_RC(KDirectoryOpenFileRead(d, &r, NAME));
+    char b[99] = "";
+    size_t num_read = 0;
+    REQUIRE_RC(KFileRead(r, 0, b, sizeof b, &num_read));
+    REQUIRE_EQ(strlen(contents), num_read);
+    REQUIRE_EQ(string_cmp(contents, num_read, b, num_read, num_read), 0);
+    REQUIRE_RC(KFileRelease(r));
+
+    REQUIRE_RC(KConfigRelease(kfg));
+
+    putenv((char*)"NCBI_SETTINGS=" NAME);
+
+    REQUIRE_RC(KConfigMake(&kfg, NULL));
+
+    REQUIRE_RC(KDirectoryOpenFileRead(d, &r, NAME));
+    REQUIRE_RC(KFileRead(r, 0, b, sizeof b, &num_read));
+    REQUIRE_EQ(strlen(contents), num_read);
+    REQUIRE_EQ(string_cmp(contents, num_read, b, num_read, num_read), 0);
+    REQUIRE_RC(KFileRelease(r));
+
+    REQUIRE_RC(KConfigRelease(kfg));
+
+    REQUIRE_RC(KDirectoryRemove(d, true, NAME));
+
+    REQUIRE_RC(KDirectoryRelease(d));
 }
 #endif
 

@@ -69,9 +69,9 @@ FIXTURE_TEST_CASE(BinFileTest, SraDescTestFixture) { // load from binary file
     REQUIRE_RC(KDirectoryCreateFile(dir, &f, false,
         0664, kcmInit | kcmParents, "%s/sdb", DIR));
 
-    char b[512] = "";
+    unsigned char b[512] = "";
     size_t num_writ = 0;
-    REQUIRE_RC(string_printf(b, sizeof b, &num_writ, "NCBIRrDs"));
+    REQUIRE_RC(string_printf((char*)b, sizeof b, &num_writ, "NCBIRrDs"));
     b[num_writ++] = 255;
 
     union {

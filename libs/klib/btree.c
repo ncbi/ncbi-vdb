@@ -724,6 +724,7 @@ rc_t leaf_entry ( EntryData *pb, void const *page, Split *split)
         const size_t key_prefix_len=cnode->key_prefix_len;
         /*** prefix must match ***/
         assert(key_prefix_len == 0 || compare_keys(key_prefix_len, query, key_prefix_len, ((uint8_t *)cnode )+cnode->key_prefix) == 0);
+        UNUSED(key_prefix_len);
         /*************************/
         query += cnode->key_prefix_len;
         qsize -= cnode->key_prefix_len;
@@ -819,6 +820,7 @@ rc_t branch_insert ( BranchNode *node, const Split *split, uint32_t slot )
     ksize -= node -> key_prefix_len;
 
     assert(node->key_prefix_len == 0 || memcmp(key,page + node->key_prefix, node -> key_prefix_len)==0);/*** validate in debug mode **/
+    UNUSED(page);
     key   += node -> key_prefix_len;
 
     /* check that key will fit */
@@ -1207,6 +1209,7 @@ rc_t branch_entry ( EntryData *pb, void const *page, Split *rsplit)
         const size_t key_prefix_len=cnode->key_prefix_len;
         /*** prefix must match ***/
         assert(key_prefix_len == 0 || compare_keys(key_prefix_len, query,key_prefix_len, ((uint8_t *)cnode )+cnode->key_prefix) == 0);
+        UNUSED(key_prefix_len);
         /*************************/
         query += cnode->key_prefix_len;
         qsize -= cnode->key_prefix_len;

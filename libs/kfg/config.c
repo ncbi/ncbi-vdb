@@ -612,7 +612,7 @@ KToken *KConfigNodeCreate ( KConfigNode *self, KConfigNode **n, KTokenSource *sr
                 ( & self -> children, & t -> str, KConfigNodeCmp );
             if ( nself == NULL )
             {
-                KConfigNode *child;
+                KConfigNode *child = NULL;
                 rc_t rc = KConfigNodeMake ( & child, & t -> str );
                 if ( rc != 0 )
                     return t;
@@ -2037,24 +2037,11 @@ void _KConfigIniKfgSettings ( const KConfig * self, KfgSettings * ks ) {
 static
 bool MayICommitTo(const KConfig *self, const char *path, size_t size)
 {
-    if ( ! s_disable_user_settings ) {
+    if ( ! KConfigDisabledUserSettings() ) {
         return true;
     }
     else {
-        size_t bytes = 0;
-        char home             [ PATH_MAX ] = "";
-        char dfltNcbiSettings [ PATH_MAX ] = "";
-        size_t num_read = 0;
-        size_t remaining = 0;
-        rc_t rc = KConfigRead
-            ( self, "HOME", 0, home, sizeof home, & num_read, & remaining);
-        if ( rc != 0 || remaining != 0 ) {
-            return false;
-        }
-        string_printf ( dfltNcbiSettings, sizeof dfltNcbiSettings,
-            & bytes, "%.*s/.ncbi/%s", num_read, home, MAGIC_LEAF_NAME );
-        return string_cmp
-            (dfltNcbiSettings, bytes, path, size, sizeof dfltNcbiSettings) != 0;
+        return false;
     }
 }
 
@@ -2787,7 +2774,7 @@ rc_t load_config_files ( KConfig * self,
     if ( ! loaded )
         loaded = load_from_default_string ( self );
 
-    if ( ! s_disable_user_settings )
+    if ( ! KConfigDisabledUserSettings() )
         loaded |= load_from_home
             ( self, wd, ks, ncbi_settings, sizeof ncbi_settings );
     else {
@@ -3469,7 +3456,7 @@ static
 rc_t KConfigFill ( KConfig * self, const KDirectory * cfgdir,
     const char * appname, bool local )
 {
-    KConfigNode * root;
+    KConfigNode * root = 0;
     String empty;
     rc_t rc;
 
@@ -3561,7 +3548,7 @@ rc_t KConfigMakeImpl ( KConfig ** cfg, const KDirectory * cfgdir, bool local,
 
                 bool updated = false;
 
-                if ( ! s_disable_user_settings ) {
+                if ( ! KConfigDisabledUserSettings() ) {
                     bool updatd2 = false;
 
                     rc = _KConfigLowerAscpRate ( mgr,  & updated );
@@ -4313,6 +4300,14 @@ LIB_EXPORT void CC KConfigDisableUserSettings ( void )
 {
     s_disable_user_settings = true;
 }
+
+bool KConfigSetUserSettingsDisabled(bool disable) {
+    bool old = s_disable_user_settings;
+    s_disable_user_settings = disable;
+    return old;
+}
+
+bool KConfigDisabledUserSettings(void) { return s_disable_user_settings; }
 
 LIB_EXPORT void CC KConfigSetNgcFile(const char * path) { s_ngc_file = path; }
 const char * KConfigGetNgcFile(void) { return s_ngc_file; }

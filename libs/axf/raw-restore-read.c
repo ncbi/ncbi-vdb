@@ -61,8 +61,6 @@ static INSDC_4na_bin  map[]={
 /*15  1111 - 1111*/ 15
 };
 
-
-
 static
 rc_t CC raw_restore_read_impl ( void *data, const VXformInfo *info, int64_t row_id,
     VRowResult *rslt, uint32_t argc, const VRowData argv [] )
@@ -73,17 +71,18 @@ rc_t CC raw_restore_read_impl ( void *data, const VXformInfo *info, int64_t row_
     const uint32_t	read_len 	= (uint32_t)argv[ 0 ].u.data.elem_count;
     const uint8_t	*strand		= argv[ 1 ].u.data.base;
     const uint32_t	strand_len 	= (uint32_t)argv[ 1 ].u.data.elem_count;
-    
+
     INSDC_4na_bin *dst;
-    
+
     assert( argv[ 0 ].u.data.elem_bits == 8 );
     assert( argv[ 1 ].u.data.elem_bits == 8 );
     assert( strand_len == 1 );
-    
+    UNUSED(strand_len);
+
     read   += argv[ 0 ].u.data.first_elem;
     strand += argv[ 1 ].u.data.first_elem;
-    
-    /* resize output row for the total number of reads */    
+
+    /* resize output row for the total number of reads */
     rslt -> data -> elem_bits = 8;
     rc = KDataBufferResize ( rslt -> data, read_len );
     if ( rc != 0 )
@@ -104,7 +103,7 @@ rc_t CC raw_restore_read_impl ( void *data, const VXformInfo *info, int64_t row_
 }
 
 
-/* 
+/*
  * function
  * INSDC:4na:bin ALIGN:raw_restore_read #1( INSDC:4na:bin ref_read, bool ref_orientation);
  */

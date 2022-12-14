@@ -1,6 +1,41 @@
 # NCBI External Developer Release:
 
 
+## NCBI VDB 3.0.2
+**December 12, 2022**
+
+  **ncbi-vdb**: changed version to match that of _sra-tools_
+
+
+## NCBI VDB 3.0.1
+**November 15, 2022**
+
+  **build**: adapted to support building for Conan  
+  **build**: added support for generating coverage reports  
+  **build**: added support for overriding cmake and ctest commands  
+  **build**: in source builds are no longer supported  
+  **build**: now supports custom library installation directory  
+  **build**: will use a system-provided libmbedtls, otherwise the copy included in the source code will be used  
+  **kff**: now using system-provided libmagic if present  
+  **kfg**: fixed a bug that caused override of user configuration  
+  **kfg, ncbi-vdb**: fixed tests that overwrite user configuration  
+  **kfg, sra-tools**: removed interactive requirement to configure SRA Toolkit  
+  **kfs**: fixed bug with long paths  
+  **kns, sra-tools**: allow to use AWS data with compute environment via proxy  
+  **ncbi-vdb**: fixed crash related to mbedtls  
+  **ncbi-vdb**: fixed failing tests related to sralite  
+  **pacbio-load, vdb**: hdf5 support is now a part of sra-tools/pacbio-load; uses system-provided libhdf5   
+  **sra-pileup, vfs**: fixed crash when working with no-quality run  
+  **sra-tools, vdb**: retired vdb-get  
+  **sra-tools, vfs**: fixed infinite loop when processing bad response when resolving accession  
+  **vdb**: fixed a bug that allowed a null pointer to be used  
+  **vdb**: kxml and kxfs are combined and moved to sra-tools  
+  **vdb**: memmove should be used instead of memcpy in this repository. We added an automated check for that. New code containing memcpy will fail this check  
+  **vdb**: updated zlib version to fix vulnerability  
+  **vdb**: VTable can copy columns  
+  **vfs**: now recognizes sralite.vdbcache files  
+
+
 ## NCBI VDB 3.0.0
 **February 10, 2022**
 

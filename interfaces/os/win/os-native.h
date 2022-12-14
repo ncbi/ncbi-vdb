@@ -86,6 +86,9 @@ struct timeout_t
 #define putenv( s ) _putenv ( s )
 #endif
 
+#define setenv(name, value, over) putenv(name"="value)
+#define unsetenv(name) putenv(name"=")
+
 #define mkdir( d, m ) _mkdir( d )
 #define strcasecmp _stricmp
 #define strtoll _strtoi64

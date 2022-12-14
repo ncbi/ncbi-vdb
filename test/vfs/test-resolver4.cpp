@@ -55,12 +55,11 @@ Create a new KService object for each run! */
         return rc;
     VRemoteProtocols protocols = eProtocolHttpHttps;
     const KSrvResponse * response = NULL;
-    uint32_t length = 0;
     rc = KServiceNamesQuery(service, protocols, &response);
     if (rc != 0)
         return rc;
 
-    length = KSrvResponseLength(response);;
+    /*uint32_t length =*/ KSrvResponseLength(response);;
     //  FOR RUNS LENGTH SHOULD BE 1
 
     const KSrvRespObj * obj = NULL;
@@ -83,11 +82,11 @@ Create a new KService object for each run! */
         but is's not published yet */
 
         const VPath * local = NULL;
-        rc_t lRc = KSrvRespFileGetLocal(file, &local);
+        /*rc_t lRc =*/ KSrvRespFileGetLocal(file, &local);
         // if (lRc != 0); we cannot get local path to this accession
 
         const VPath * cache = NULL;
-        rc_t cRc = KSrvRespFileGetCache(file, &cache);
+        /*rc_t cRc =*/ KSrvRespFileGetCache(file, &cache);
         // if (cRc != 0); we cannot get cache location of accession
 
         KSrvRespFileIterator * fi = NULL;

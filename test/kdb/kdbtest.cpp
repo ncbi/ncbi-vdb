@@ -173,7 +173,7 @@ const char UsageDefaultName[] = "test-kdb";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
-    //assert(!KDbgSetString("KFG"));
+    assert(!KDbgSetString("KFG"));
     assert(!KDbgSetString("VFS"));
     //KDbgSetModConds ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), DBG_FLAG ( DBG_KNS_SOCKET ) );
     KConfigDisableUserSettings();

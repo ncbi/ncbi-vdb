@@ -85,11 +85,11 @@ public:
         KDirectory* wd;
         KDirectoryNativeDir ( & wd );
         uint32_t mode = 0;
-        bool is_good = (0 == KDirectoryAccess_v1(wd, &mode, "%s", path.c_str()) & (mode & 0111) != 0);
+        bool is_good = (0 == KDirectoryAccess_v1(wd, &mode, "%s", path.c_str()) && (mode & 0111) != 0);
 
         KDirectoryRelease(wd);
         if (is_good) return;
-        throw test_skipped("path not readable: " + path);
+        throw ncbi::NK::test_skipped("path not readable: " + path);
     }
 
     void MakeDatabase ( const std :: string & p_schemaText, const std :: string & p_schemaSpec, const char * includes = nullptr )

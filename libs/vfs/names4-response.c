@@ -608,7 +608,7 @@ rc_t ItemAddFormat ( Item * self, const char * cType, const Data * dad,
                     break;
                 }
             }
-        else { 
+        else {
             assert(self->nElm);
             if (self->elm[self->nElm - 1].path[0] == NULL)
                 idx = self->nElm - 1;
@@ -1613,6 +1613,7 @@ static rc_t FileAddLinks ( File * self, const KJsonObject * node,
         if (THRESHOLD > THRESHOLD_NO_DEBUG)
             DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
                 ( "... %s: cannot find any link\n", error ) );
+        UNUSED(error);
     }
 
     return rc;

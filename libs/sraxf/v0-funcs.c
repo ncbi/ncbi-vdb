@@ -108,6 +108,7 @@ rc_t CC sra_read_decompress_slx ( void *self, const VXformInfo *info,
     uint32_t row_len = HTONS ( * ( const uint16_t* ) & p [ 5 ] );
     assert ( row_len != 0 );
     assert ( num_bases % row_len == 0 );
+    UNUSED(row_len);
     hdr_size = 7;
 
     /* make sub-buffer from input */

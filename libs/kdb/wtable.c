@@ -56,6 +56,11 @@
 #define V0_BACKWARD_COMPAT 0
 
 /*--------------------------------------------------------------------------
+ * turns ON verbose REFCOUNT tracing
+ */
+#define REPORT_KTABLE_REFCOUNT 0
+
+/*--------------------------------------------------------------------------
  * KTable
  *  a collection of columns indexed by row id, metadata, indices
  */
@@ -124,6 +129,9 @@ rc_t KTableWhack ( KTable *self )
     return rc;
 }
 
+#if REPORT_KTABLE_REFCOUNT
+void KTableGetName( KTable const *self, char const **rslt );
+#endif
 
 /* AddRef
  * Release
@@ -135,7 +143,18 @@ LIB_EXPORT rc_t CC KTableAddRef ( const KTable *cself )
     KTable *self = ( KTable* ) cself;
     if ( self != NULL )
     {
-        switch ( KRefcountAdd ( & self -> refcount, "KTable" ) )
+#if REPORT_KTABLE_REFCOUNT
+        uint32_t before = atomic32_read( &self -> refcount );
+#endif
+        int ret = KRefcountAdd ( & self -> refcount, "KTable" );
+#if REPORT_KTABLE_REFCOUNT
+        uint32_t after = atomic32_read( &self -> refcount );
+        char const * name;
+        KTableGetName( self, &name );
+        KDbgMsg( "KTableAddRef( %p %s ) %x ---> %x\n", self, name, before, after );
+#endif
+
+        switch ( ret )
         {
         case krefLimit:
             return RC ( rcDB, rcTable, rcAttaching, rcRange, rcExcessive );
@@ -150,7 +169,18 @@ LIB_EXPORT rc_t CC KTableRelease ( const KTable *cself )
     KTable *self = ( KTable* ) cself;
     if ( self != NULL )
     {
-        switch ( KRefcountDrop ( & self -> refcount, "KTable" ) )
+#if REPORT_KTABLE_REFCOUNT
+        uint32_t before = atomic32_read( &self -> refcount );
+#endif
+        int ret = KRefcountDrop ( & self -> refcount, "KTable" );
+#if REPORT_KTABLE_REFCOUNT
+        uint32_t after = atomic32_read( &self -> refcount );
+        char const * name;
+        KTableGetName( self, &name );
+        KDbgMsg( "KTableRelease( %p %s ) %x ---> %x\n", self, name, before, after );
+#endif
+
+        switch ( ret )
         {
         case krefWhack:
             return KTableWhack ( ( KTable* ) self );
@@ -170,7 +200,18 @@ KTable *KTableAttach ( const KTable *self )
 {
     if ( self != NULL )
     {
-        switch ( KRefcountAddDep ( & self -> refcount, "KTable" ) )
+#if REPORT_KTABLE_REFCOUNT
+        uint32_t before = atomic32_read( &self -> refcount );
+#endif
+        int ret = KRefcountAddDep ( & self -> refcount, "KTable" );
+#if REPORT_KTABLE_REFCOUNT
+        uint32_t after = atomic32_read( &self -> refcount );
+        char const * name;
+        KTableGetName( self, &name );
+        KDbgMsg( "KTableAttach( %p %s ) %x ---> %x\n", self, name, before, after );
+#endif
+
+        switch ( ret )
         {
         case krefLimit:
             return NULL;
@@ -187,7 +228,18 @@ rc_t KTableSever ( const KTable *self )
 {
     if ( self != NULL )
     {
-        switch ( KRefcountDropDep ( & self -> refcount, "KTable" ) )
+#if REPORT_KTABLE_REFCOUNT
+        uint32_t before = atomic32_read( &self -> refcount );
+#endif
+        int ret = KRefcountDropDep ( & self -> refcount, "KTable" );
+#if REPORT_KTABLE_REFCOUNT
+        uint32_t after = atomic32_read( &self -> refcount );
+        char const * name;
+        KTableGetName( self, &name );
+        KDbgMsg( "KTableSever( %p %s ) %x ---> %x\n", self, name, before, after );
+#endif
+
+        switch ( ret )
         {
         case krefWhack:
             assert ( self -> opencount == 0 );
@@ -239,6 +291,15 @@ rc_t KTableMake ( KTable **tblp, const KDirectory *dir, const char *path,
     tbl -> use_md5 = ( md5 == NULL ) ? false : true;
     tbl -> read_only = read_only;
     strcpy ( tbl -> path, path );
+
+#if REPORT_KTABLE_REFCOUNT
+    {
+        uint32_t after = atomic32_read( &tbl -> refcount );
+        char const * name;
+        KTableGetName( tbl, &name );
+        KDbgMsg( "KTableMake( %p %s ) %x\n", tbl, name, after );
+    }
+#endif
 
     tbl->sym.u.obj = tbl;
     StringInitCString (&tbl->sym.name, tbl->path);

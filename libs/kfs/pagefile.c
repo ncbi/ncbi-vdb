@@ -665,6 +665,7 @@ void * KPageFile_whack_recursive( void **idx, uint8_t depth, uint32_t count,
             if ( ccount != NULL )
                 ccount[ 0 ]--;
             assert( rc == 0 );
+            UNUSED(rc);
         }
         else
         {
@@ -680,7 +681,7 @@ void * KPageFile_whack_recursive( void **idx, uint8_t depth, uint32_t count,
                 {
                     idx[ i ] = KPageFile_whack_recursive( (void**)idx[ i ], depth, 0, mru, ccount );
                 }
-            }   
+            }
 
             if ( depth == 0 )
             {
@@ -714,7 +715,7 @@ void * KPageFile_whack_recursive( void **idx, uint8_t depth, uint32_t count,
 static
 rc_t KPageFileSetPageCount( KPageFile * self, uint32_t count )
 {
-    void **tmp; 
+    void **tmp;
     uint8_t new_depth = PAGE_IDX_DEPTH( count );
 
     /******* Adjust depth and change structure of the index if needed ****/
@@ -885,7 +886,7 @@ LIB_EXPORT rc_t CC KPageFileMakeUpdate ( KPageFile **pf, KFile * backing, size_t
             {
                 rc = RC ( rcFS, rcFile, rcConstructing, rcMemory, rcExhausted );
             }
-            else 
+            else
             {
                 f->page_idx = NULL;
                 f->page_idx_depth = 0;
@@ -1178,7 +1179,7 @@ static KPage * KPageFileIndexFind( KPageFile *self, uint32_t page_id )
     return ( KPage * )tmp[ offset ];
 }
 
-    
+
 /* CachePage
  *  insert a page into cache
  */
@@ -1189,7 +1190,7 @@ static rc_t KPageFileCachePage ( KPageFile *self, KPage *page )
     /* perform insert */
     rc = KPageFileIndexInsert( self, page );
     if ( rc != 0 )
-        return rc;  
+        return rc;
 
     PAGE_DEBUG( ( "PAGE: {%p}.[%s] insert #%u\n", self, KDbgGetColName(), page->page_id ) );
 

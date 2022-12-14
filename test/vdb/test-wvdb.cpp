@@ -629,10 +629,12 @@ public:
     }
     void MakeDatabaseWithEncoding( const string & name, const string & encoding, bool p_debug = false )
     {
+#if _DEBUGGING
         if ( p_debug )
         {
             KDbgSetString("VDB");
         }
+#endif
 
         m_databaseName = name;
 

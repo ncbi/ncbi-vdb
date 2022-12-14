@@ -81,7 +81,7 @@ rc_t make_lru_cache ( lru_cache ** cache,
 {
     rc_t rc;
     KVector * v;
-    
+
     if ( cache == NULL )
         return RC ( rcFS, rcFile, rcConstructing, rcSelf, rcNull );
     *cache = NULL;
@@ -156,17 +156,18 @@ static lru_page * get_tail_page( lru_cache * self )
     if ( node != NULL )
     {
         rc_t rc;
-        
+
         res = ( lru_page * )node;
 
         if ( self -> num_pages > 0 )
             self -> num_pages--;
-        
+
         rc = KVectorUnset ( self -> page_lookup, res -> block_nr );
-        
 #if _DEBUGGING
         if ( rc == 0 && self -> handler != NULL )
             self -> handler( self -> handler_data, CE_DISCARD, res -> pos, self -> page_size, res -> block_nr );
+#else
+        UNUSED(rc);
 #endif
     }
     return res;
@@ -183,7 +184,7 @@ static rc_t get_a_page( lru_cache * self, lru_page ** page )
         lru_page * p = get_tail_page( self );
         release_lru_page( ( DLNode * )p, NULL );
     }
-    
+
     if ( self -> num_pages == self -> max_pages )
     {
         *page = get_tail_page( self );
@@ -237,7 +238,7 @@ static rc_t new_entry_in_lru_cache ( lru_cache * self,
     uint64_t blocks = 1; /* we are not testing block #0, this has been tested by the
                            caller already */
     bool done = false;
-    
+
     /* we are testing how many blocks are not cached... */
     while ( !done && blocks < block_count )
     {
@@ -246,7 +247,7 @@ static rc_t new_entry_in_lru_cache ( lru_cache * self,
         if ( !done )
             blocks++;
     }
-    
+
     if ( blocks > 1 )
     {
         /* we have to produce multiple blocks */
@@ -256,7 +257,7 @@ static rc_t new_entry_in_lru_cache ( lru_cache * self,
         {
             /* read the whole request from the wrapped file */
             size_t elem_count;
-            uint64_t first_pos = first_block_nr * self -> page_size; 
+            uint64_t first_pos = first_block_nr * self -> page_size;
             rc = KFileTimedReadAll ( self -> wrapped,
                                 first_pos,
                                 data . base,
@@ -283,7 +284,7 @@ static rc_t new_entry_in_lru_cache ( lru_cache * self,
                         if ( rc == 0 )
                         {
                             uint8_t * src = data . base;
-                            
+
                             src += ( block * self -> page_size );
                             if ( available > self -> page_size )
                                 page -> data . elem_count = self -> page_size;
@@ -300,7 +301,7 @@ static rc_t new_entry_in_lru_cache ( lru_cache * self,
                                 data_offset += self -> page_size;
                             }
                         }
-                        
+
                         if ( rc != 0 )
                             release_lru_page( ( DLNode * )page, NULL );
                     }
@@ -363,7 +364,7 @@ rc_t read_lru_cache ( lru_cache * self,
     {
         void * ptr;
         uint64_t block_nr = pos / self -> page_size;
-        
+
 #if _DEBUGGING
         if ( self -> handler != NULL )
             self -> handler ( self -> handler_data, CE_REQUEST, pos, bsize, block_nr );
