@@ -92,7 +92,7 @@ TEST_CASE(KDBManagerVPathOpenDB_Local_Table)
     {
         VFSManager* vfsmgr;
         REQUIRE_RC(VFSManagerMake(&vfsmgr));
-        REQUIRE_RC(VFSManagerMakePath(vfsmgr, &path, "SRR000123"));
+        REQUIRE_RC(VFSManagerMakePath(vfsmgr, &path, "../test_accessions/SRR000123.copy"));
         REQUIRE_RC(VFSManagerRelease(vfsmgr));
     }
 
