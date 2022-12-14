@@ -34,6 +34,10 @@
 #include <string.h>
 #include <assert.h>
 #include <stdio.h>
+#include <ctype.h>
+
+ 
+//#define assert(e) { if ( ! (e) ) abort(); }
 
 typedef struct SearchWindow {
     uint16_t	lower;
@@ -55,6 +59,63 @@ struct LeafEntry
     uint16_t ksize;
 };
 
+static
+void
+PrintKey( const void * blob, uint16_t offset, uint16_t length )
+{
+    const unsigned char * b = (const unsigned char * )blob;
+    printf("(off=%u len=%u)='", offset, length);
+    if ( length > 0 )
+    {
+        unsigned int prev_c = 0;
+        unsigned int repeat = 1;
+        for(int i = 0; i < length; ++i)
+        {
+            unsigned int c = b[ offset + i ];
+            if ( i == 0 )
+            {
+                prev_c = c;
+                continue;
+            }
+            if ( c == prev_c )
+            {
+                ++ repeat;
+                continue;
+            }
+
+            if( iscntrl( prev_c ) )
+            {
+                printf("\\%d", prev_c);
+            }
+            else
+            {
+                printf("%c", prev_c);
+            }
+            if ( repeat > 1 )
+            {
+                printf("<%d>", repeat);
+                repeat = 1;
+            }
+
+            prev_c = c;
+        }
+
+        if( iscntrl( prev_c ) )
+        {
+            printf("\\%d", prev_c);
+        }
+        else
+        {
+            printf("%c", prev_c);
+        }
+        if ( repeat > 1 )
+        {
+            printf("<%d>", repeat);
+        }
+    }
+    printf("'\n");
+}
+
 typedef struct LeafNode LeafNode;
 struct LeafNode
 {
@@ -66,6 +127,27 @@ struct LeafNode
     LeafEntry ord [ ( PGSIZE - 8 - 256 * sizeof(SearchWindow)) / sizeof ( LeafEntry ) ];
 };
 
+void PrintLeaf( const LeafNode * node )
+{
+    printf("LeafNode(%p){\n", node);
+    printf("    count=%u\n", node->count);
+    for(int i = 0; i < 256; ++i)
+    {
+        if ( node->win[i].lower != node->win[i].upper )
+        {
+            printf("    win[%d]=%u...%u\n", i, node->win[i].lower, node->win[i].upper);
+        }
+    }
+    for(int i = 0; i < node->count; ++i)
+    {
+        printf("    ord[%d]={key", i);
+        PrintKey( node, node->ord[i].key, node->ord[i].ksize );
+    }
+    printf("    prefix");
+    PrintKey( node, node->key_prefix, node->key_prefix_len );
+    printf("    key_bytes=%u\n", node->key_bytes);
+    printf("}\n");
+}
 
 /* the branch node works out to be an even key count
  which means that we also split before insert when
@@ -96,17 +178,29 @@ struct BranchNode
     BranchEntry ord [ ( PGSIZE - 12 - 256 * sizeof(SearchWindow) ) / sizeof ( BranchEntry ) ];
 };
 
-
-
-/* when keys are stored in pages, the max key size
- will be such that some number of keys are guaranteed to fit */
-#define MIN_KEY_COUNT 2
-#define MAX_KEY_SIZE \
-(( PGSIZE - 12 - 256 * sizeof(SearchWindow)   - \
-MIN_KEY_COUNT * ( sizeof ( BranchEntry ) + sizeof ( uint32_t ) ) \
-) / MIN_KEY_COUNT )
-
-
+void PrintBranch( const BranchNode * node )
+{
+    printf("BranchNode(%p){\n", node);
+    printf("    count=%u\n", node->count);
+    for(int i = 0; i < 256; ++i)
+    {
+        if ( node->win[i].lower != node->win[i].upper )
+        {
+            printf("    win[%d]=%u...%u\n", i, node->win[i].lower, node->win[i].upper);
+        }
+    }
+    printf("    ltrans=%u\n", node->ltrans);
+    for(int i = 0; i < node->count; ++i)
+    {
+        printf("    ord[%d]={key", i);
+        PrintKey( node, node->ord[i].key, node->ord[i].ksize );
+        printf(" trans=%u}\n", node->ord[i].trans );
+    }
+    printf("    prefix");
+    PrintKey( node, node->key_prefix, node->key_prefix_len );
+    printf("    key_bytes=%u\n", node->key_bytes);
+    printf("}\n");
+}
 
 /* Find
  *  searches for a match
@@ -1308,6 +1402,20 @@ LIB_EXPORT rc_t CC BTreeEntry ( uint32_t *root, Pager *pager, Pager_vt const *vt
     assert(was_inserted != NULL);
     assert(key != NULL);
     assert(key_size != 0);
+
+/* when keys are stored in pages, the max key size
+ will be such that some number of keys are guaranteed to fit */
+#define MIN_KEY_COUNT 3
+#define MAX_KEY_SIZE \
+(( PGSIZE - 12 - 256 * sizeof(SearchWindow)   - \
+MIN_KEY_COUNT * ( sizeof ( BranchEntry ) + sizeof ( uint32_t ) ) \
+) / MIN_KEY_COUNT )
+
+    if ( key_size > MAX_KEY_SIZE)
+    {
+        return RC ( rcDB, rcTree, rcInserting, rcData, rcTooLong );
+    }    
+
     {
         EntryData pb;
 
@@ -1475,23 +1583,84 @@ LIB_EXPORT rc_t CC BTreeForEach ( uint32_t root, Pager *pager, Pager_vt const *v
 static void validate_leaf(uint32_t nodeid, Pager *pager, Pager_vt const *vt )
 {
     void const *const page = vt->use(pager, nodeid);
-    assert(page != NULL);
+    if( page == NULL )
+    {
+        printf("validate_leaf nodeid=%d\n", nodeid);
+        assert( page != NULL );
+    }
 
     LeafNode const *const node = (const LeafNode *)vt->access(pager, page);
     assert(node != NULL);
 
-    // validate node->win[i]
-    for (int i = 0; i < 256; ++i) {
-        assert( node->win[i].lower <= node->win[i].upper );
-        assert( node->win[i].upper <= node->count );
+    // sort keys by descending offset on the page (ord[0] is the rightmost)
+    uint16_t ord [ ( sizeof node -> ord / sizeof node -> ord [ 0 ] + 1 ) / 2 ];
+    LeafEntry_sort_desc_by_offset(ord, node->count, node);
+
+    // 1. Common prefix for the keys in the node
+    if ( node->key_prefix_len > 0 )
+    {
+        // the value of the prefix immediately precedes the rightmost key in the buffer
+        if ( node->count > 0 )
+        {
+            assert( node->key_prefix == node->ord[ord[0]].key - node->key_prefix_len );
+        }
+        else
+        {   // no keys; the prefix is at the end
+            assert( node->key_prefix + node->key_prefix_len == PGSIZE);
+        }
     }
 
-    for (int i = 0; i < node->count; ++i) {
-        // validate node->ord[i]
+    // 1. validate node->win[i]
+    for (int i = 0; i < 256; ++i)
+    {
+        assert( node->win[i].lower <= node->win[i].upper );
+        assert( node->win[i].upper <= node->count );
+        if ( i != 0 )
+        {
+            assert( node->win[i].lower == node->win[i-1].upper );
+        }
+        if ( i < 255 )
+        {
+            assert( node->win[i].upper == node->win[i+1].lower );
+        }
+    }
+
+    // 3. validate node->ord[i]
+    LeafEntry prev = { PGSIZE, 0 };
+    for (int i = 0; i < node->count; ++i)
+    {
+        LeafEntry n = node->ord[ord[i]];
+        assert( n.ksize > 0 );
+        // ends right where the previous node begins
+        //  (except the very first which is preceded by the common prefix)
+        uint16_t off = prev.key;
+        if ( i == 1 )
+        {
+            off -= node->key_prefix_len;
+        }
+
+        if (! ( n.key + n.ksize + sizeof( uint32_t ) == off ) )
+        {
+            PrintLeaf( node );
+            printf("n={%d %d} off={%d}\n", n.key, n.ksize, off);
+            assert( n.key + n.ksize + sizeof( uint32_t ) == off );
+        }
+
+        prev=n;
+    }
+
+    //4. links from node->win to node->ord
+    for (int i = 0; i < node->count; ++i)
+    {
+        // in the correct search window
+        const uint8_t *key = & ( ( const uint8_t* ) node ) [ node -> ord [ i ] . key ];
+        const SearchWindow * win = & node->win [ key [ 0 ] ]; // the 1st byte of the key's continuation is an index into win
+        assert( i >= win->lower && i <= win->upper );
     }
 
     vt->unuse(pager, page);
 }
+
 static void validate_branch(uint32_t nodeid, Pager *pager, Pager_vt const *vt )
 {
     void const *const page = vt->use(pager, nodeid);
@@ -1499,21 +1668,58 @@ static void validate_branch(uint32_t nodeid, Pager *pager, Pager_vt const *vt )
     BranchNode const *const node = (const BranchNode *)vt->access(pager, page);
     assert(node != NULL);
 
-    {   // left transition
-        uint32_t const child = node->ltrans;
-        if (child & 1) {
-            validate_branch(child >> 1, pager, vt);
+    // sort keys by descending offset on the page (ord[0] is the rightmost)
+    uint16_t ord [ ( sizeof node -> ord / sizeof node -> ord [ 0 ] + 1 ) / 2 ];
+    BranchEntry_sort_desc_by_offset(ord, node->count, node);
+
+    // 1. Common prefix for the keys in the node
+    if ( node->key_prefix_len > 0 )
+    {
+        // the value of the prefix immediately precedes the rightmost key in the buffer
+        if ( node->count > 0 )
+        {
+            assert( node->key_prefix == node->ord[ord[0]].key - node->key_prefix_len );
         }
-        else {
-            validate_leaf(child >> 1, pager, vt);
+        else
+        {   // no keys; the prefix is at the end
+            assert( node->key_prefix + node->key_prefix_len == PGSIZE);
+        }
+    }
+
+    {   // left transition
+
+        // is only allowed to be 0 if the branch has no keys
+        uint32_t const child = node->ltrans;
+        assert( /*node->count == 0 ||*/ child != 0 );
+        if ( child > 0 )
+        {
+            if (child & 1) {
+                validate_branch(child >> 1, pager, vt);
+            }
+            else {
+                validate_leaf(child >> 1, pager, vt);
+            }
         }
     }
 
     for (int i = 0; i < node->count; ++i) {
         uint32_t const child = node->ord[i].trans;
+        assert( child != 0 );
 
         // validate node->win[i]
+        for (int i = 0; i < 256; ++i) {
+            assert( node->win[i].lower <= node->win[i].upper );
+            assert( node->win[i].upper <= node->count );
+        }
+
         // validate node->ord[i]
+        for (int i = 0; i < node->count; ++i) {
+            assert( node->ord[i].ksize > 0 );
+            // in the correct search window
+            const uint8_t *key = & ( ( const uint8_t* ) node ) [ node -> ord [ i ] . key ];
+            const SearchWindow * win = & node->win [ key [ 0 ] ]; // the 1st byte of the key's continuation is an index into win
+            assert( i >= win->lower && i <= win->upper );
+        }
 
         if (child & 1) {
             validate_branch(child >> 1, pager, vt);
@@ -1526,12 +1732,79 @@ static void validate_branch(uint32_t nodeid, Pager *pager, Pager_vt const *vt )
     vt->unuse(pager, page);
 }
 
-static void btree_validate(uint32_t root, Pager *pager, Pager_vt const *vt )
+void btree_validate(uint32_t root, Pager *pager, Pager_vt const *vt )
 {
     if (root & 1) {
         validate_branch(root >> 1, pager, vt);
     }
     else {
         validate_leaf(root >> 1, pager, vt);
+    }
+}
+
+// Printout, left-to-right, bottom-up
+
+static void printf_leaf(uint32_t nodeid, Pager *pager, Pager_vt const *vt )
+{
+    void const *const page = vt->use(pager, nodeid);
+    if(page == NULL)
+    {
+        printf("Leaf, page == NULL! id = %u:\n", nodeid << 1 );
+        return;
+    }
+
+    LeafNode const *const node = (const LeafNode *)vt->access(pager, page);
+    assert(node != NULL);
+
+    printf("Leaf id = %u:\n", nodeid << 1 );
+    PrintLeaf(node);
+
+    vt->unuse(pager, page);
+}
+
+static void printf_branch(uint32_t nodeid, Pager *pager, Pager_vt const *vt )
+{
+    void const *const page = vt->use(pager, nodeid);
+    assert(page != NULL);
+    BranchNode const *const node = (const BranchNode *)vt->access(pager, page);
+    assert(node != NULL);
+
+    printf("Branch id = %u:\n", (nodeid << 1) + 1);
+    PrintBranch(node);
+    
+    {   // left transition
+        uint32_t const child = node->ltrans;
+        if (child != 0)
+        {
+            if (child & 1) {
+                printf_branch(child >> 1, pager, vt);
+            }
+            else {
+                printf_leaf(child >> 1, pager, vt);
+            }
+        }
+    }
+
+    for (int i = 0; i < node->count; ++i) {
+        uint32_t const child = node->ord[i].trans;
+        if (child & 1) {
+            printf_branch(child >> 1, pager, vt);
+        }
+        else {
+            printf_leaf(child >> 1, pager, vt);
+        }
+    }
+
+    vt->unuse(pager, page);
+}
+
+void btree_printf(uint32_t root, Pager *pager, Pager_vt const *vt )
+{
+    printf("Root = %u:\n", root >> 1 );
+    if (root & 1) {
+        printf_branch(root >> 1, pager, vt);
+    }
+    else {
+        printf_leaf(root >> 1, pager, vt);
     }
 }
