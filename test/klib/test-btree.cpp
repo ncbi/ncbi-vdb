@@ -93,7 +93,7 @@ static Pager_vt const KPageFile_vt = {
     PagerUnuse
 };
 
-const static string DataDir = "./";
+const static string DataDir = "./data/";
 
 class BtreeFixture
 {
@@ -105,7 +105,7 @@ public:
     }
     void Setup( const char* test_name)
     {
-        const string backingFileName = DataDir + test_name + ".backing";
+        backingFileName = DataDir + test_name + ".backing";
         remove( backingFileName.c_str() );
         THROW_ON_RC( KDirectoryCreateFile_v1 ( dir, &backing, true, 0664, kcmCreate, "%s", backingFileName.c_str() ) );
         THROW_ON_RC( KPageFileMakeUpdate (
@@ -126,6 +126,8 @@ public:
         KPageFileRelease ( pager.pager );
         KFileRelease ( backing );
         KDirectoryRelease ( dir );
+
+        remove( backingFileName.c_str() );
     }
 
     bool TreeEntry( const string & key, uint32_t id, bool validate = true )
@@ -138,8 +140,9 @@ public:
         rc_t rc = BTreeEntry ( & pb -> root, &pager, &KPageFile_vt, &id, &was_inserted, key.c_str(), key.size() );
         if ( rc )
         {
-            cerr << rc << endl;
-            abort();
+            ostringstream s;
+            s << "BTreeEntry() returned rc=" << rc;
+            throw logic_error( s.str() );
         }
 
         if ( validate )
@@ -164,9 +167,28 @@ public:
         ++(*iter);
     }
 
+    void Populate( bool verbose = false, bool validate = true )
+    {
+        uint32_t id = 0;
+        for( auto i = in.begin(); i != in.end(); ++i )
+        {
+            ++id;
+            if (verbose)
+                cout << endl << "***Inserting id=" << id << ", size=" << i->size() << ", " << (int)(unsigned char)(*i)[0] << endl;
+            THROW_ON_FALSE( TreeEntry ( *i, id, validate ) );
+            if (verbose)
+                Print();
+        }
+    }
+
     void Validate()
     {
         btree_validate ( pb -> root, &pager, &KPageFile_vt );
+    }
+
+    void Print()
+    {
+        btree_printf ( pb -> root, &pager, &KPageFile_vt );
     }
 
     EntryData* MakeEntry( const string & key )
@@ -198,7 +220,7 @@ public:
     }
 
     bool CheckCount( const LeafNode & node, unsigned int count, unsigned int key_length = 1 )
-    { // for testing, assume all keys have fixed length
+    { // for testing, assume all keys have teh same length
         if ( node.count != count )
         {
             cerr << "CheckCount/count: expected " << count << ", actual " << node.count << endl;
@@ -247,10 +269,13 @@ public:
     }
 
 protected:
+    string backingFileName;
+
     KDirectory_v1 *dir;
     KFile *backing;
     Pager pager;
 
+    vector<string> in;
     uint32_t id;
     unique_ptr<EntryData> pb;
     LeafNode* node = nullptr; // memory owned by pager
@@ -275,7 +300,6 @@ FIXTURE_TEST_CASE( InsertIntoEmpty, BtreeFixture )
     REQUIRE( CheckWindow( * node, 'A', 0, 1 ));
     REQUIRE( CheckWindow( * node, 'A'+1, 1, 1 ));
 }
-
 FIXTURE_TEST_CASE( InsertWithoutSplit_Last, BtreeFixture )
 {
     Setup( GetName() );
@@ -356,24 +380,43 @@ FIXTURE_TEST_CASE( InsertWithoutSplit_Middle, BtreeFixture )
     REQUIRE( CheckWindow( * node, 'C'+1, 3, 3 ));
 }
 
-// splitting leaves
-FIXTURE_TEST_CASE( Split_LeftOfMedian_via_API, BtreeFixture )
-{   // leaf(B,C) + A -> split(B, left=(A), right=(C))
+// API
+FIXTURE_TEST_CASE( Basic_Insert, BtreeFixture )
+{
     Setup( GetName() );
+    in.push_back( "A" );
+    Populate();
+}
+FIXTURE_TEST_CASE( Simple_Prefix, BtreeFixture )
+{
+    Setup( GetName() );
+    in.push_back( "A" );
+    in.push_back( "AAA" );
+    in.push_back( "AA" );
+    Populate();
+}
 
-    uint32_t id = 0;
-    vector<string> in;
-    in.push_back( string(10886, 'B' ) );
-    in.push_back( string(16915, 'C' ) );
-    in.push_back( string(18335, 'A' ) );
+// key size limit
+FIXTURE_TEST_CASE( KeyTooLong, BtreeFixture )
+{   // leaf(A) + B -> branch(B, left=(A), right=()) VDB-5026
+    Setup( GetName() );
+    string key (11000, 'A');
+    pb.reset( MakeEntry( string( key.c_str(), key.size() ) ) );
+    bool was_inserted;
+    REQUIRE_RC_FAIL( BTreeEntry ( & pb -> root, &pager, &KPageFile_vt, &id, &was_inserted, key.c_str(), key.size() ) );
+}
 
-    for( auto i = in.begin(); i != in.end(); ++i )
-    {
-        ++id;
-        //cout << endl << "***Inserting id=" << id << ", size=" << i->size() << ", " << (int)(unsigned char)(*i)[0] << endl;
-        REQUIRE( TreeEntry ( *i, id ) );
-    }
-    Validate();
+FIXTURE_TEST_CASE( Split_leaf, BtreeFixture )
+{   // leaf(A) + C -> leaf( A C )
+    // + D -> leaf( A C  D )
+    // + B -> branch(C, left=(A B), right=(D) )
+    Setup( GetName() );
+    in.push_back( string(8000, 'A' ) );
+    in.push_back( string(9000, 'C' ) );
+    in.push_back( string(10000, 'D' ) );
+    in.push_back( string(10000,  'B' ) );
+    Populate();
+    //Print();
 }
 
 FIXTURE_TEST_CASE( Split_LeftOfMedian, BtreeFixture )
@@ -546,77 +589,12 @@ FIXTURE_TEST_CASE( Find, BtreeFixture )
 
 //TODO: ForEach, both directions
 
-FIXTURE_TEST_CASE( BTree_insert, BtreeFixture )
-{   // VDB-4959
-    std::ifstream file("./btree_keys.bin", std::ios::binary);
-    file.unsetf(std::ios::skipws);
-
-    Setup( GetName() );
-
-    uint32_t id = 0;
-    while ( file )
-    {
-        size_t size;
-        file.read((char*)&size, sizeof(size));
-        if ( ! file ) break;
-        char * buf = new char[size];
-        file.read(buf, size);
-        if ( ! file ) break;
-
-        ++id;
-//cout << "inserting " << size << endl;
-        REQUIRE( TreeEntry ( string(  buf, size ), id, false ) );
-
-//cout << "root=" << root << ",size=" << size << ", id=" << id << endl;
-
-        delete [] buf;
-    }
-
-    Validate();
-}
-
-
-// FIXTURE_TEST_CASE( ConstraintViolation, BtreeFixture )
-// {
-//     Setup( GetName() );
-
-//     uint32_t id = 0;
-//     vector<string> in;
-//     in.push_back( string(10886, 103 ) ); //'g'
-//     in.push_back( string(16915, 105 ) ); //'i'
-//     in.push_back( string(18335, 81) ); //'Q'
-//     in.push_back( string(492, 74) ); //'J'
-//     in.push_back( string(1421, 41) );
-//     in.push_back( string(10027, 186) );
-//     in.push_back( string(59, 242) );
-//     in.push_back( string(13926, 227) );
-
-//     in.push_back( string(3426, 124) );
-
-//     in.push_back( string(15736, 84) ); // 'T' -- this does not fit into the same 32K page as it neighbor 'Q', triggering a constraint violation rc, see btree.c:leaf_insert()
-
-//     in.push_back( string(15368, 27) );
-//     in.push_back( string(16429, 231) );
-//     in.push_back( string(1530, 118) );
-//     in.push_back( string(5123, 46) );
-//     in.push_back( string(3135, 51) );
-//     in.push_back( string(19802, 201) );
-
-//     for( auto i = in.begin(); i != in.end(); ++i )
-//     {
-//         ++id;
-//         cout << endl << "***Inserting id=" << id << ", size=" << i->size() << ", " << (int)(unsigned char)(*i)[0] << endl;
-//         REQUIRE( TreeEntry ( *i, id ) );
-//     }
-//     Validate();
-// }
-
 FIXTURE_TEST_CASE( BTree_randomInserts, BtreeFixture )
 {
     Setup( GetName() );
 
     uint32_t id = 0;
-    for( auto i = 0; i != 1000000; ++i )
+    for( auto i = 0; i != 10000000; ++i )
     {   // key sizes 1..1024 are taken from sra-sort ( they are not enforced but longer keys
         // are likelier to trigger a constraint violation error in btree.c:leaf_insert() )
         string s = string(1 + rand() % 1024, rand() % 256 );
@@ -635,7 +613,7 @@ FIXTURE_TEST_CASE( LotsaFixedSizeInserts, BtreeFixture )
     {
         int key = rand();
         // does not have to return "true" as duplicates are allowed
-        TreeEntry ( string( (char *)&key, sizeof(key) ), i, i > 350000 );
+        TreeEntry ( string( (char *)&key, sizeof(key) ), i, false );
     }
     Validate();
 }
