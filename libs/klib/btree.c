@@ -28,6 +28,7 @@
 #include <klib/btree.h>
 #include <klib/ksort-macro.h>
 #include <klib/rc.h>
+#include <klib/log.h>
 #include <sysalloc.h>
 
 #include <stdlib.h>
@@ -38,6 +39,11 @@
 
  
 //#define assert(e) { if ( ! (e) ) abort(); }
+
+#if ! _DEBUGGING
+    #undef assert
+    #define assert(e) { if ( ! (e) ) { pLogMsg( klogFatal, "Assertion failed: $(expr), $(file):$(line)", "expr=%s,file=%s,line=%d", #e, __FILE__, __LINE__ ); abort(); } }
+#endif
 
 typedef struct SearchWindow {
     uint16_t	lower;
