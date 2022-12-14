@@ -428,7 +428,7 @@ TEST_CASE(KLib_text_StringToU64)
 static char UserData[] = "User data";
 
 // this is used by qsort and (indirectly) ksort
-int CC baseCompare(const void* a, const void* b)
+int CC baseCompare(const void* a, const void* b) noexcept
 {
     const char* pa = (const char*)a;
     const char* pb = (const char*)b;
@@ -441,7 +441,7 @@ int CC baseCompare(const void* a, const void* b)
     return 0;
 }
 // this is used by ksort
-int64_t CC compare(const void* a, const void* b, void* data)
+int64_t CC compare(const void* a, const void* b, void* data) noexcept
 {
     // if data is not pointing where we waint it to, do not sort
     const char* pdata = (const char*)data;
@@ -494,7 +494,7 @@ TEST_CASE(KLib_ksort_vs_qsort)
 
 // an example of a bad function (compating pointers not values, in reverse
 // order) that causes an implementaion of ksort to crash.
-int64_t CC badCompare(const void* a, const void* b, void* data)
+int64_t CC badCompare(const void* a, const void* b, void* data) noexcept
 {
     const char* pa = (const char*)a;
     const char* pb = (const char*)b;
@@ -536,7 +536,7 @@ TEST_CASE(KSORT_simple)
 #undef SWAP
 }
 
-static int64_t CC cmp_int64_t(const void* a, const void* b, void* data)
+static int64_t CC cmp_int64_t(const void* a, const void* b, void* data) noexcept
 {
     const int64_t* ap = (const int64_t*)a;
     const int64_t* bp = (const int64_t*)b;
@@ -860,7 +860,7 @@ TEST_CASE(KLog_LevelExplainInsufficientBuffer)
 static const size_t BufSize = 1024;
 // implementation of KWrtWriter for testing purposes
 rc_t CC TestWrtWriter(void* data, const char* buffer, size_t bufsize,
-                      size_t* num_writ)
+                      size_t* num_writ) noexcept
 {
     size_t nw = string_copy((char*)data, BufSize, buffer, bufsize);
     if (num_writ != 0) *num_writ = nw;
@@ -892,7 +892,7 @@ TEST_CASE(KLog_DefaultFormatterBasic)
 // implementation of KFmtWriter for testing purposes
 rc_t CC TestFmtWriter(void* self, KWrtHandler* writer, size_t argc,
                       const wrt_nvp_t args[], size_t envc,
-                      const wrt_nvp_t envs[])
+                      const wrt_nvp_t envs[]) noexcept
 {
     char buffer[BufSize];
     size_t num_writ;

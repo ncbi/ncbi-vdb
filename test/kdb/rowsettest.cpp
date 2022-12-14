@@ -75,7 +75,7 @@
 
 TEST_SUITE(KRowSetTestSuite);
 
-void vector_inserter ( ctx_t ctx, int64_t row_id, void *data )
+void vector_inserter ( ctx_t ctx, int64_t row_id, void *data ) noexcept
 {
     std::vector<int64_t> * rows = (std::vector<int64_t> *) data;
     rows->push_back ( row_id );

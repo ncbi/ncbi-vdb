@@ -22,6 +22,8 @@
 *
 * =========================================================================== */
 
+#include <os-native.h>
+
 #include <kfg/kfg-priv.h> /* KConfigMakeLocal */
 
 #include <kfs/directory.h> /* KDirectoryRelease */

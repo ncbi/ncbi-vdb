@@ -86,8 +86,8 @@ struct timeout_t
 #define putenv( s ) _putenv ( s )
 #endif
 
-#define setenv(name, value, over) putenv(name"="value)
-#define unsetenv(name) putenv(name"=")
+#define setenv(name, value, over) putenv(name "=" value)
+#define unsetenv(name) putenv(name "=")
 
 #define mkdir( d, m ) _mkdir( d )
 #define strcasecmp _stricmp
@@ -105,7 +105,7 @@ struct timeout_t
 #undef isascii
 int __cdecl isascii ( int ch );
 
-static __inline int isblank(int x)
+__inline int isblank(int x)
 {
     return (((x) == ' ') || ((x) == '\t'));
 }
@@ -165,7 +165,6 @@ char *strsep ( char **stringp, const char *delim )
 			}
 		} while ( delim_char != 0 );
 	}
-	return NULL;
 }
 
 #define gmtime_r(t, tm) gmtime_s(tm, t)
@@ -180,7 +179,7 @@ int strncasecmp( const char *s1, const char *s2, size_t n )
 static __inline
 const char *strcasestr (const char *s1, const char *s2)
 {
-    unsigned char c2 = tolower((unsigned char) *s2);
+    unsigned char c2 = (unsigned char)tolower((unsigned char) *s2);
     size_t l1 = strlen(s1), l2 = strlen(s2);
 
     if (l2 == 0) {
@@ -199,7 +198,7 @@ const char *strcasestr (const char *s1, const char *s2)
     return NULL;
 }
 
-static __inline
+__inline
 long int lround ( double x )
 {
     double val = ( x < 0.0 ) ? ceil ( x - 0.5 ) : floor ( x + 0.5 );
@@ -222,8 +221,8 @@ long int lround ( double x )
 #define ispunct( ch ) ispunct   ( ( unsigned char ) ( ch ) )
 #define isspace( ch ) isspace   ( ( unsigned char ) ( ch ) )
 #define isxdigit( ch ) isxdigit ( ( unsigned char ) ( ch ) )
-#define tolower( ch ) tolower ( ( unsigned char ) ( ch ) )
-#define toupper( ch ) toupper ( ( unsigned char ) ( ch ) )
+//#define tolower( ch ) tolower ( ( unsigned char ) ( ch ) )
+//#define toupper( ch ) toupper ( ( unsigned char ) ( ch ) )
 
 #define _Thread_local __declspec( thread )
 

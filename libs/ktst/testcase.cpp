@@ -35,7 +35,7 @@ using namespace ncbi::NK;
 
 void TestCase::Init(const std::string& name)  { _name = name; _ec = 0; } 
 
-void TestCase::report_error(const char* msg, const char* file, int line, bool is_msg, bool isCritical)
+void TestCase::report_error(const char* msg, const char* file, unsigned int line, bool is_msg, bool isCritical)
 {
     ncbi::NK::saveLocation(file, line);
     ++_ec;
@@ -64,18 +64,18 @@ void TestCase::report_error(const char* msg, const char* file, int line, bool is
     }
 }
 
-void TestCase::report_passed(const char* msg, const char* file, int line) 
+void TestCase::report_passed(const char* msg, const char* file, unsigned int line) 
 {
     ncbi::NK::saveLocation(file, line);
     LOG(LogLevel::e_all, file << "(" << line << "): info: " "check " << msg << " passed" << std::endl);
 }
 
-void TestCase::_REPORT_CRITICAL_ERROR_(const std::string& msg, const char* file, int line, bool is_msg)
+void TestCase::_REPORT_CRITICAL_ERROR_(const std::string& msg, const char* file, unsigned int line, bool is_msg)
 { 
     report_error( msg.c_str(), file, line, is_msg, true ); 
 }
 
-void TestCase::report_rc(rc_t rc, const char* callStr, const char* file, int line, int successExpected, bool isCritical)
+void TestCase::report_rc(rc_t rc, const char* callStr, const char* file, unsigned int line, int successExpected, bool isCritical)
 {
     if ((successExpected && rc != 0) || (!successExpected && rc == 0))
     {

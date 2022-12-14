@@ -51,7 +51,7 @@ TEST_SUITE(KOutTestSuite);
 
 // short-circuit formats in KMsgOut
 rc_t CC writerFn(void * self,
-    const char * buffer, size_t bufsize, size_t * num_writ)
+    const char * buffer, size_t bufsize, size_t * num_writ) noexcept
 {
     string & res = *(string *)self;
     res += string(buffer, bufsize);

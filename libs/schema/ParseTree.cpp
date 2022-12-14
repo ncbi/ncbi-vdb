@@ -55,7 +55,7 @@ ParseTree :: ParseTree ( const Token& p_token )
     VectorInit ( & m_children, 0, ChildrenBlockSize );
 }
 
-void DestroyChild ( void * item, void * )
+void DestroyChild ( void * item, void * ) noexcept
 {
     delete ( ParseTree * ) item;
 }

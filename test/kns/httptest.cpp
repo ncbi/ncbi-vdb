@@ -185,7 +185,7 @@ struct ReadThreadData
 };
 
 #ifdef ALL
-static rc_t CC read_thread_func( const KThread *self, void *data )
+static rc_t CC read_thread_func( const KThread *self, void *data ) noexcept
 {
     rc_t rc;
     ReadThreadData * td = ( ReadThreadData * ) data;

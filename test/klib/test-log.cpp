@@ -38,7 +38,7 @@ using namespace std;
 
 static const size_t BufSize = 1024;
 // implementation of KWrtWriter for testing purposes
-rc_t CC TestWrtWriter( void * data, const char * buffer, size_t bufsize, size_t * num_writ )
+rc_t CC TestWrtWriter( void * data, const char * buffer, size_t bufsize, size_t * num_writ ) noexcept
 {
     size_t nw = string_copy((char*)data, BufSize, buffer, bufsize);
     if (num_writ != 0)

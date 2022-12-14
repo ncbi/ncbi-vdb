@@ -771,7 +771,7 @@ LIB_EXPORT rc_t CC KDatabaseVCreateIndex ( KDatabase *self, KIndex **idxp,
     KIdxType type, KCreateMode cmode, const char *name, va_list args )
 {
     rc_t rc = 0;
-    KDirectory *dir;
+    KDirectory *dir = NULL;
 
     if ( idxp == NULL )
         return RC ( rcDB, rcDatabase, rcCreating, rcParam, rcNull );

@@ -25,6 +25,8 @@ if ( "GNU" STREQUAL "${CMAKE_C_COMPILER_ID}")
     set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-array-bounds -Wno-aggressive-loop-optimizations" )
 elseif ( CMAKE_CXX_COMPILER_ID MATCHES "^(Apple)?Clang$" )
     set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-array-bounds" )
+elseif ( "MSVC" STREQUAL "${CMAKE_C_COMPILER_ID}" )
+    set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W0")
 endif()
 
 add_compile_definitions (__mod__="libs/klib/judy" JU_64BIT)

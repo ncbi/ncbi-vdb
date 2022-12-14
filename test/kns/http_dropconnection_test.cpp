@@ -245,7 +245,7 @@ public:
     {
         return string("http://") + base + ".com/";
     }
-    static struct KStream * Reconnect ()
+    static struct KStream * Reconnect () noexcept
     {
         m_reconnected = true;
         return & m_stream;

@@ -266,7 +266,7 @@ LIB_EXPORT rc_t CC AbsolidReaderHeader(const AbsolidReader* self, uint32_t readI
     size_t x;
     int spotname_sz;
     INSDC_coord_len read_label_sz = 0;
-    const char* read_label;
+    const char* read_label = NULL;
 
     CHECK_SELF(AbsolidReader);
     CHECK_SPOT(self->dad);

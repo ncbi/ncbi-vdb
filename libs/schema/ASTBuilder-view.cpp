@@ -333,7 +333,7 @@ ViewDeclaration :: InitParentInstance( SViewInstance * p_inst, const SView * p_p
 
 static
 int64_t
-CC SViewNameCmp ( const void * key, const void * n )
+CC SViewNameCmp ( const void * key, const void * n ) noexcept
 {
     const SView * a = ( const SView * ) key;
     const SViewInstance * b = (const SViewInstance *)n;

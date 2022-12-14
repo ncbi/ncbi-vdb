@@ -97,7 +97,7 @@ void bitcpy ( void *dbase, bitsz_t doff, const void *sbase, bitsz_t soff, bitsz_
         dcountz = ( size_t ) ( ( doff + sz + ( WRDSIZE - 1 ) - WRDSIZE ) >> WRDSHIFT );
 
         /* calculate masks */
-        lmask = rmask = ~ 0;
+        lmask = rmask = ~ 0u;
         lmask >>= doff;
         rmask >>= ( doff + sz ) & ( WRDSIZE - 1 );
         if ( ( WRD ) ( rmask + 1 ) == 0 )
@@ -178,7 +178,7 @@ void bitcpy ( void *dbase, bitsz_t doff, const void *sbase, bitsz_t soff, bitsz_
                     acc |= BSWAP ( src [ i + 1 ] );
                     reg |= ( WRD ) ( acc >> shift ) & lmask;
                     dst [ i ++ ] = BSWAP ( reg );
-                    lmask = ~ 0;
+                    lmask = ~ 0u;
                     reg = 0;
                 }
 
@@ -262,7 +262,7 @@ int bitcmp ( const void *abase, bitsz_t aoff, const void *bbase, bitsz_t boff, b
         lcountz = ( size_t ) ( ( aoff + sz + ( WRDSIZE - 1 ) - WRDSIZE ) >> WRDSHIFT );
 
         /* calculate masks */
-        lmask = rmask = ~ 0;
+        lmask = rmask = ~ 0u;
         lmask >>= aoff;
         rmask >>= ( aoff + sz ) & ( WRDSIZE - 1 );
         if ( ( WRD ) ( rmask + 1 ) == 0 )
@@ -380,7 +380,7 @@ int bitcmp ( const void *abase, bitsz_t aoff, const void *bbase, bitsz_t boff, b
                     lreg = BSWAP ( left [ i ] );
 
                     /* no more left mask */
-                    lmask = ~ 0;
+                    lmask = ~ 0u;
                 }
 
                 /* if there is one more word in right */

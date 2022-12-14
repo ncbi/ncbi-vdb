@@ -73,7 +73,7 @@ TEST_CASE ( TEST_PROXY_FROM_ENV ) {
         while ( getline ( myfile, line) ) {
             istringstream s ( line );
             string host;
-            int port;
+            uint16_t port;
             s >> host >> port;
             if ( e == NULL ) {
                 e = new E ( host, port );

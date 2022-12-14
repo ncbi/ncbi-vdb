@@ -134,7 +134,7 @@ TEST_CASE(TestJwtKartValidateStringWhite) {
 
     /* check valid characters */
     for (int i = 0; i < 256; ++i) {
-        b1[9] = i;
+        b1[9] = (char)i;
         if ((i >= 'a' && i <= 'z') || (i >= 'A' && i <= 'Z') ||
             (i >= '0' && i <= '9') || i == '-' || i == '_')
         {

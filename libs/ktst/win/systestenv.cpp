@@ -42,7 +42,7 @@ void CC SigSubHandler(int sig) noexcept
 {
     _endthreadex(sig);
 }
-void CC TermSubHandler() 
+void CC TermSubHandler() noexcept
 {
     SigSubHandler(SIGTERM);
 }
@@ -58,7 +58,7 @@ struct TestCaseCall
     void(TestCase::*method)();
 };
 
-unsigned __stdcall ThreadProc(void* call)
+unsigned __stdcall ThreadProc(void* call) noexcept
 {
     signal(SIGABRT, SigSubHandler);
     signal(SIGFPE, SigSubHandler);

@@ -498,7 +498,7 @@ static rc_t CC seq_restore_read_impl2 ( void *data, const VXformInfo *info, int6
             memmove( dst, src, len );
         else
         {
-            rr_entry * ep;
+            rr_entry * ep = NULL;
             const INSDC_4na_bin * rd;
             uint32_t rd_len;
             bool found_in_cache;

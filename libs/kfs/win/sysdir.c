@@ -396,7 +396,7 @@ struct KSysDir
 static
 rc_t translate_file_error( DWORD error, enum RCContext ctx )
 {
-    rc_t rc;
+    rc_t rc = 0;
     switch ( error )
     {
         case ERROR_FILE_NOT_FOUND :
@@ -1139,7 +1139,7 @@ rc_t Enumerate_DriveLetters( const KSysDir *self,
 		rc = translate_file_error( GetLastError(), rcListing );
 	else
 	{
-		uint32_t i, n, mask = 1;
+		uint32_t i, mask = 1;
 		for ( i = 0; i < 26 && rc == 0; ++i, mask <<= 1 )
 		{
 			if ( ( drivebitmask & mask ) == mask )
@@ -2812,6 +2812,8 @@ rc_t CC KSysDirCreateDir ( KSysDir *self,
             case rcNotFound:
                 if ( ( mode & kcmParents ) != 0 )
                     rc = KSysDirCreateParents ( self, dir_name, access, false );
+                break;
+            default:
                 break;
             }
         }

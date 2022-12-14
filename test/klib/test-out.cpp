@@ -73,7 +73,7 @@ TEST_CASE(Out_KOutMsg)
 // KOutHandlerSetStdErr 
 
 // VDB-1352: short-circuit certain formats in KMsgOut
-rc_t CC writerFn ( void * self, const char * buffer, size_t bufsize, size_t * num_writ )
+rc_t CC writerFn ( void * self, const char * buffer, size_t bufsize, size_t * num_writ ) noexcept
 {
     string& res = *(string*)self;
     res += string(buffer, bufsize);

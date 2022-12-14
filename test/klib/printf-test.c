@@ -178,10 +178,11 @@ rc_t final ( const char *flags, int32_t *field_width, int32_t *precision,
         case 't':
 #if WINDOWS
             return 0; /* hh does not work as we expect on Windows */
-#endif
+#else
             stdcfmt [ j ++ ] = 'h';
             stdcfmt [ j ++ ] = 'h';
             break;
+#endif
         case 'z':
             if ( sizeof ( size_t ) != sizeof ( uint32_t ) )
                 stdcfmt [ j ++ ] = 'l';
@@ -420,7 +421,7 @@ rc_t run ( const char *progname )
     for ( i = 0 ; i < 8 ; ++ i )
     {
         /* create random number */
-        srand ( time ( NULL ) );
+        srand ( (unsigned int) time ( NULL ) );
         
         
         /* signed integer */

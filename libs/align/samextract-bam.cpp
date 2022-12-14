@@ -193,7 +193,7 @@ class BGZFview
 
 static BGZFview bview;
 
-static rc_t seeker(const KThread* kt, void* in)
+static rc_t seeker(const KThread* kt, void* in) noexcept
 {
     rc_t rc;
     SAMExtractor* state = (SAMExtractor*)in;
@@ -290,7 +290,7 @@ static rc_t seeker(const KThread* kt, void* in)
         if (head.extra && head.extra_len == 6 && head.extra[0] == 'B'
             && head.extra[1] == 'C' && head.extra[2] == 2
             && head.extra[3] == 0) {
-            u16 bsize = head.extra[4] + head.extra[5] * 256;
+            u16 bsize = (u16) ( head.extra[4] + head.extra[5] * 256 );
             inflateEnd(&strm);
             DBG("total_in:%d", strm.avail_in);
             if (bsize <= 28) {
@@ -376,7 +376,7 @@ static rc_t seeker(const KThread* kt, void* in)
     return 0;
 }
 
-static rc_t inflater(const KThread* kt, void* in)
+static rc_t inflater(const KThread* kt, void* in) noexcept
 {
     SAMExtractor* state = (SAMExtractor*)in;
     struct timeout_t tm;
@@ -527,7 +527,7 @@ rc_t BAMGetHeaders(SAMExtractor* state)
     DBG("l_text=%d", l_text);
     if (l_text) {
         char* text = (char*)pool_alloc((u32)l_text + 1);
-        if (!bview.getbytes(state->parsequeue, text, l_text))
+        if (!bview.getbytes(state->parsequeue, text, (size_t)l_text))
             return RC(rcAlign, rcFile, rcParsing, rcData, rcInvalid);
         text[l_text] = '\0';
 

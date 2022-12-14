@@ -28,8 +28,9 @@
 * Unit tests for KNS interfaces
 */
 
-#include <kapp/args.h> /* ArgsMakeAndHandle */
+#include <os-native.h>
 
+#include <kapp/args.h> /* ArgsMakeAndHandle */
 #include <kfg/config.h>
 
 #include <klib/base64.h>

@@ -791,7 +791,7 @@ FIXTURE_TEST_CASE ( ViewCursor_SetUserData_NoDestructor, ViewOnTableCursorFixtur
 }
 
 static void * UserDestroyCalledWith = 0;
-static void CC UserDestroy(void* p_param)
+static void CC UserDestroy(void* p_param) noexcept
 {
     UserDestroyCalledWith = p_param;
 }

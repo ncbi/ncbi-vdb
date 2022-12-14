@@ -1577,7 +1577,7 @@ static
 rc_t KTrieIndexPersistProj_v3 ( const KTrieIndex_v2 *self, PersistTrieData *pb )
 {
     rc_t rc = 0;
-    void * addr;
+    void * addr = NULL;
     size_t map_size;
     uint64_t file_size;
     size_t num_to_read;
