@@ -240,4 +240,6 @@ int main(int argc, char *argv[]) {
 	printf(\"test p: %p\", ctx.md_ctx);
 }
 " HAVE_MBEDTLS_F)
+else()
+    set(MBEDTLS_LIBS "")
 endif()
