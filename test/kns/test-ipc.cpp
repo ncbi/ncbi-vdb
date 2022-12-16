@@ -228,7 +228,7 @@ public:
         else
             cout << "~SocketFixture() called from child" << endl;
     }
-    static rc_t ServerThreadFn ( const KThread *self, void *data ) noexcept
+    static rc_t ServerThreadFn ( const KThread *self, void *data )
     {
         try
         {
@@ -238,12 +238,7 @@ public:
         catch (const exception& ex)
         {
             cout << "SocketFixture server thread threw " << ex.what() << endl;
-            abort();
-        }
-        catch (...)
-        {
-            cout << "SocketFixture server thread threw something that is not an std::exception" << endl;
-            abort();
+            throw;
         }
     }
 
@@ -284,7 +279,7 @@ public:
             throw logic_error ( "SocketFixture: KNSMakeListener failed" );
     }
 
-    static rc_t DefaultWorkerThreadFn ( const KThread *self, void *data ) noexcept
+    static rc_t DefaultWorkerThreadFn ( const KThread *self, void *data )
     {
         try
         {   // this server worker converts the incoming message to all uppercase and sends it back
@@ -297,7 +292,7 @@ public:
             LOG(LogLevel::e_message, "worker "  << (void*)self << " after KStreamRead(" << string(localBuf, num) << ")" << endl);
 
             for (size_t i = 0 ; i < num; ++i)
-                localBuf[i] = (char)toupper(localBuf[i]);
+                localBuf[i] = toupper(localBuf[i]);
 
             THROW_ON_RC ( KStreamWrite(stream, localBuf, num, &num) );
             LOG(LogLevel::e_message, "worker "  << (void*)self << " after KStreamWrite" << endl);
@@ -318,12 +313,7 @@ public:
         catch (const exception& ex)
         {
             cout << "SocketFixture worker thread threw " << ex.what() << endl;
-            abort();
-        }
-        catch (...)
-        {
-            cout << "SocketFixture worker thread threw something that is not an std::exception"<< endl;
-            abort();
+            throw;
         }
         LOG(LogLevel::e_message, "worker "  << (void*)self << " exiting" << endl);
         return KThreadRelease(self);
@@ -501,7 +491,7 @@ public:
             LOG(LogLevel::e_message, "worker "  << (void*)self << " after KStreamRead(" << string(localBuf, localNumRead) << ")" << endl);
 
             for (size_t i = 0 ; i < localNumRead; ++i)
-                localBuf[i] = (char)toupper(localBuf[i]);
+                localBuf[i] = toupper(localBuf[i]);
 
             // send outgoing message after a pause for SERVER_WRITE_DELAY_MS
             LOG(LogLevel::e_message, "worker "  << (void*)self << " sleeping for " << SERVER_WRITE_DELAY_MS << " ms" << endl);
