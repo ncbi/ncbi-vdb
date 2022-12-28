@@ -933,7 +933,7 @@ LIB_EXPORT rc_t CC KColumnBlobRead ( const KColumnBlob *self,
     size_t offset, void *buffer, size_t bsize,
     size_t *num_read, size_t *remaining )
 {
-    rc_t rc;
+    rc_t rc = 0;
     size_t ignore;
     if ( remaining == NULL )
         remaining = & ignore;
