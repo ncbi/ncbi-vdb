@@ -95,7 +95,7 @@ public:
         THROW_ON_RC ( KDBManagerMakeRead ( & mgr, NULL ) );
 
         const KTable* tbl;
-        THROW_ON_RC ( KDBManagerOpenTableRead ( mgr, & tbl, "../test_accessions/SRR000123.copy" ) );
+        THROW_ON_RC ( KDBManagerOpenTableRead ( mgr, & tbl, "../test_accessions/SRR000123.sra" ) );
 
         const KColumn* col;
         THROW_ON_RC ( KTableOpenColumnRead ( tbl, & col, "X" ) );
