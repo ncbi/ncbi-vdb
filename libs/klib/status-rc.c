@@ -24,6 +24,9 @@
 *
 */
 
+// need for strchrnul
+#define _GNU_SOURCE
+
 #include <klib/extern.h>
 #include "writer-priv.h"
 #include <klib/writer.h>

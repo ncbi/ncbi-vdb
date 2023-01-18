@@ -54,6 +54,8 @@ struct KSysFile_v1;
 #include <sys/stat.h>
 #include <assert.h>
 #include <string.h>
+
+#define __USE_GNU
 #include <poll.h>
 
 #ifdef _DEBUGGING
@@ -161,7 +163,7 @@ rc_t KSysFileRandomAccess_v1 ( const KSysFile_v1 *self )
     if ( ! S_ISREG ( st . st_mode ) )
     {
         rc = RC ( rcFS, rcFile, rcAccessing, rcFunction, rcUnsupported );
-        /* not a deadly error so don't log now         
+        /* not a deadly error so don't log now
         LOGERR (klogErr, (klogErr, rc, ""));
         */
         return rc;
@@ -357,7 +359,7 @@ rc_t KSysFileTimedRead_v1 ( const KSysFile_v1 * self, uint64_t pos,
 {
     rc_t rc;
     int revents;
-    
+
     assert ( self != NULL );
     assert ( num_read != NULL );
 
@@ -616,7 +618,7 @@ rc_t CC KSysFileReadChunked_v1 ( const KSysFile_v1 * self, uint64_t pos,
             size_t to_read = bsize - total;
             if ( to_read > chsize )
                 to_read = chsize;
-            
+
             rc = KFileReadAll_v1 ( & self -> dad, pos + total, chbuf, to_read, & num_read );
             if ( rc == 0 )
                 rc = KChunkReaderConsumeChunk ( chunks, pos + total, chbuf, num_read );
@@ -651,7 +653,7 @@ rc_t CC KSysFileTimedReadChunked_v1 ( const KFILE_IMPL *self, uint64_t pos,
             size_t to_read = bsize - total;
             if ( to_read > chsize )
                 to_read = chsize;
-            
+
             rc = KSysFileTimedRead_v1 ( self, pos + total, chbuf, to_read, & num_read, tm );
             if ( rc == 0 && num_read != 0 )
                 rc = KChunkReaderConsumeChunk ( chunks, pos + total, chbuf, num_read );
@@ -947,7 +949,7 @@ rc_t KStdIOFileWrite ( KSysFile_v1 *dad, uint64_t pos,
             rc = RC ( rcFS, rcFile, rcWriting, rcTransfer, rcUnknown );
             LOGERR (klogErr, rc, "system I/O error - broken pipe");
             return rc;
-            
+
         case EBADF:
             rc = RC ( rcFS, rcFile, rcWriting, rcFileDesc, rcInvalid );
             PLOGERR (klogInt,

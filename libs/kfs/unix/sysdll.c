@@ -65,6 +65,7 @@
 #include <errno.h>
 #include <assert.h>
 
+#define __USE_GNU
 #include <dlfcn.h>
 
 

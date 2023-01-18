@@ -54,7 +54,7 @@
 #if _DEBUGGING && ! defined PRODUCE_CORE
 #define PRODUCE_CORE 1
 #endif
- 
+
 
 /*--------------------------------------------------------------------------
  * Main
@@ -214,14 +214,14 @@ int main ( int argc, char *argv [] )
 #if CATCH_SIGHUP
         { SigHupHandler, SIGHUP },
 #endif
-        { SigQuitHandler, SIGINT }, 
+        { SigQuitHandler, SIGINT },
 #if CATCH_SIGSEGV
         { SigSegvHandler, SIGSEGV },
 #endif
         { SigQuitHandler, SIGTERM }
     }
 #if ! PRODUCE_CORE
-    , core_sigs [] = 
+    , core_sigs [] =
     {
 #if ! CATCH_SIGSEGV
         { SigCoreHandler, SIGSEGV },
@@ -237,7 +237,7 @@ int main ( int argc, char *argv [] )
     rc_t rc;
     int i, status;
     struct sigaction sig_saves [ sizeof sigs / sizeof sigs [ 0 ] ];
-#if ! PRODUCE_CORE    
+#if ! PRODUCE_CORE
     struct sigaction core_sig_saves [ sizeof core_sigs / sizeof core_sigs [ 0 ] ];
 #endif
 
