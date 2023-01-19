@@ -218,6 +218,12 @@ KFG_EXTERN rc_t CC KConfig_Get_PreferNoToFullQuality(
 KFG_EXTERN rc_t CC KConfig_Set_PreferNoToFullQuality(
     KConfig *self, bool value );
 
+/* enable reporting the command line options back to SRA */
+KFG_EXTERN rc_t CC KConfig_Get_SendTelemetry(const KConfig *self, bool *value);
+KFG_EXTERN rc_t CC KConfig_Set_SendTelemetry(      KConfig *self, bool  value);
+
+
+
 #ifdef __cplusplus
 }
 #endif
