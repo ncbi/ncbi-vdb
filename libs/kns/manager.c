@@ -1102,6 +1102,9 @@ LIB_EXPORT rc_t CC KNSManagerSetUserAgent (
 LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
 {
     rc_t rc = 0;
+    
+    bool telemetry = true;
+    
     if ( user_agent == NULL ) {
         rc = RC ( rcNS, rcMgr, rcAccessing, rcParam, rcNull );
         return rc;
@@ -1130,35 +1133,48 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
     const char *opt_bitmap=getenv(ENV_MAGIC_OPT_BITMAP); // VDB_OPT_BITMAP
     if (!opt_bitmap) opt_bitmap="nob";
 
-    /* Sometimes called before KNSManagerMake */
     const char *guid = "nog";
 
-    if ( ( KDataBufferBytes ( &kns_manager_guid ) == 0 )
-        || ( strlen ( kns_manager_guid.base ) == 0 ) ) {
+    {
         KConfig *kfg = NULL;
         KConfigMake ( &kfg, NULL );
-        size_t written = 0;
 
-        rc = KDataBufferResize ( &kns_manager_guid, 37 );
-        if ( rc ) {
-            /* Some tests whack guid */
-            rc = KDataBufferMakeBytes ( &kns_manager_guid, 37 );
-            if ( rc ) { return rc; }
+        KConfig_Get_SendTelemetry(kfg, &telemetry); /* ignore rc */
+
+        /* Sometimes called before KNSManagerMake */
+        if ( ( KDataBufferBytes ( &kns_manager_guid ) == 0 )
+            || ( strlen ( kns_manager_guid.base ) == 0 ) )
+        {
+            size_t written = 0;
+
+            rc = KDataBufferResize ( &kns_manager_guid, 37 );
+            if ( rc != 0 ) {
+                /* Some tests whack guid */
+                rc = KDataBufferMakeBytes ( &kns_manager_guid, 37 );
+                if ( rc != 0)
+                { return rc; }
+            }
+
+            KConfig_Get_GUID ( kfg, kns_manager_guid.base,
+                KDataBufferBytes ( &kns_manager_guid ), &written );
+            assert ( written <= 37 );
         }
 
-        KConfig_Get_GUID ( kfg, kns_manager_guid.base,
-            KDataBufferBytes ( &kns_manager_guid ), &written );
-        assert ( written <= 37 );
-
-        if ( kfg ) KConfigRelease ( kfg );
+        if ( kfg != NULL )
+            KConfigRelease ( kfg );
     }
 
     if ( strlen ( kns_manager_guid.base ) ) guid = kns_manager_guid.base;
 
     KDataBuffer phid;
     KDataBufferMakeBytes ( &phid, 0 );
-    rc = KDataBufferPrintf (
+
+    if ( telemetry )
+      rc = KDataBufferPrintf (
         &phid, "%.3s%.4s%.3s,libc=%s,bmap=%s", cloudtrunc, guid, sessid, libc_version, opt_bitmap );
+    else
+      rc = KDataBufferPrintf (
+        &phid, "%.3s%.4s%.3s,libc=%s"        , cloudtrunc, guid, sessid, libc_version             );
     if ( rc ) { return rc; }
 
     if ( kns_manager_lock ) {

@@ -1170,3 +1170,27 @@ LIB_EXPORT rc_t CC KConfig_Set_PreferNoToFullQuality(
 
     return KConfigWriteString( self, QUALITY_KEY, buffer );
 }
+
+/* enable reporting the command line options back to SRA: default - enabled */
+#define TELEMETRY_KEY "libs/kns/send-telemetry"
+LIB_EXPORT rc_t CC KConfig_Get_SendTelemetry(const KConfig *self, bool *value) {
+    if ( self == NULL ) {
+        return RC ( rcKFG, rcNode, rcReading, rcSelf, rcNull );
+    } else if ( value == NULL ) {
+        return RC ( rcKFG, rcNode, rcReading, rcParam, rcNull );
+    } else {
+        *value = true;
+        KConfigReadBool ( self, TELEMETRY_KEY, value );
+        return 0;
+    }
+}
+
+LIB_EXPORT rc_t CC KConfig_Set_SendTelemetry(KConfig *self, bool value) {
+    if ( self == NULL ) {
+        return RC ( rcKFG, rcNode, rcReading, rcSelf, rcNull );
+    } else {
+        KConfigWriteBool ( self, TELEMETRY_KEY, value );
+        return 0;
+    }
+}
+
