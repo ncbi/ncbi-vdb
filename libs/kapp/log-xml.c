@@ -54,8 +54,9 @@ enum OptDefIndex {
     eopt_fd
 };
 
-const char* XMLLogger_file_usage[] = {"produce XML-formatted log file", NULL};
-const char* XMLLogger_fd_usage[] = {NULL, "produce XML-formatted output to given file descriptor", NULL};
+const char* XMLLogger_file_usage[] = {"Produce XML-formatted log file.", NULL};
+const char* XMLLogger_fd_usage[] = {NULL,
+               "Produce XML-formatted output to given file descriptor.", NULL};
 
 const OptDef XMLLogger_Args[] =
 {
