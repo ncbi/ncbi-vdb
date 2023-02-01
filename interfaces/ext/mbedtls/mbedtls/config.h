@@ -1912,7 +1912,7 @@
  *
  * Comment this macro to disable support for truncated HMAC in SSL
  */
-#define MBEDTLS_SSL_TRUNCATED_HMAC
+/* removed in new mbedtls #define MBEDTLS_SSL_TRUNCATED_HMAC*/
 
 /**
  * \def MBEDTLS_SSL_TRUNCATED_HMAC_COMPAT

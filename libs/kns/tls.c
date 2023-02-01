@@ -1136,7 +1136,8 @@ rc_t KTLSGlobalsSetupOwnCert(KTLSGlobals * tlsg,
         ret = mbedtls_pk_parse_key(&tlsg->pkey,
             (const unsigned char *)pk_key,
             string_measure(pk_key, NULL) + 1,
-            NULL, 0);
+            NULL, 0,
+            mbedtls_ctr_drbg_random, &tlsg->ctr_drbg);
         if (ret < 0) {
             rc = RC(rcKrypto, rcToken, rcInitializing, rcEncryption, rcFailed);
             PLOGERR(klogSys, (klogSys, rc
@@ -1327,7 +1328,7 @@ rc_t ktls_handshake ( KTLSStream *self )
                             , "mbedtls_ssl_get_verify_result for '$(host)'"
                               " returned $(flags) ($(info))"
                             , "host=%s,flags=0x%X,info=%s"
-                            , self->ssl.hostname
+                            , self->ssl.MBEDTLS_PRIVATE(hostname)
                             , flags
                             , buf
                         ) );
