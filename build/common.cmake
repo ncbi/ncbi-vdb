@@ -226,9 +226,9 @@ endfunction()
 include(CheckIncludeFileCXX)
 #check_include_file_cxx(mbedtls/md.h HAVE_MBEDTLS_H)
 set(HAVE_MBEDTLS_H 0) # TODO: disabling system mbedtls since it may be outdated
+set( MBEDTLS_LIBS mbedx509 mbedtls mbedcrypto ) # need to link against mbedtls in any case: system or local mbedtls
+set(CMAKE_REQUIRED_LIBRARIES ${MBEDTLS_LIBS})
 if ( HAVE_MBEDTLS_H )
-	set( MBEDTLS_LIBS mbedx509 mbedtls mbedcrypto )
-	set(CMAKE_REQUIRED_LIBRARIES ${MBEDTLS_LIBS})
 	include(CheckCXXSourceRuns)
 	check_cxx_source_runs("
 #include <stdio.h>
