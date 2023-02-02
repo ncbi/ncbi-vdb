@@ -224,7 +224,8 @@ function( AddExecutableTest test_name sources libraries )
 endfunction()
 
 include(CheckIncludeFileCXX)
-check_include_file_cxx(mbedtls/md.h HAVE_MBEDTLS_H)
+#check_include_file_cxx(mbedtls/md.h HAVE_MBEDTLS_H)
+set(HAVE_MBEDTLS_H 0) # TODO: disabling system mbedtls since it may be outdated
 if ( HAVE_MBEDTLS_H )
 	set( MBEDTLS_LIBS mbedx509 mbedtls mbedcrypto )
 	set(CMAKE_REQUIRED_LIBRARIES ${MBEDTLS_LIBS})

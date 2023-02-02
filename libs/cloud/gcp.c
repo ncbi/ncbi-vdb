@@ -315,8 +315,6 @@ const String ** output)
                         /* 4. verify the signature */
                         ret = mbedtls_rsa_rsassa_pkcs1_v15_verify(
                             mbedtls_pk_rsa(pk),
-                            NULL,
-                            NULL,
                             md_type,
                             (unsigned int)dsize,
                             checksum,
