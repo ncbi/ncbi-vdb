@@ -63,6 +63,7 @@ set(CRYPTO_SRC
     pkcs5.c
     pkparse.c
     pkwrite.c
+    platform.c
     platform_util.c
     poly1305.c
     psa_crypto.c
