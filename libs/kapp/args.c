@@ -1723,7 +1723,7 @@ void CC gen_log_usage (const char ** _buffers)
     {
         buffv[used] = '\0';
         rc = string_printf (p1, USAGE_MAX_SIZE, & used,
-                         "Current/default is %s",
+                         "Current/default is %s.",
                          buffv);
         if (used == 0)
             p1 = NULL;
