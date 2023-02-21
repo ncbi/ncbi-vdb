@@ -59,6 +59,8 @@
 #include <ctype.h>
 #include <assert.h>
 
+extern char *strcasestr(const char *haystack, const char *needle);
+
 /*
  * ReferenceSeq objects:
  *  ReferenceSeq objects may be unattached, i.e. they might not yet represent an

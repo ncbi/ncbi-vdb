@@ -40,6 +40,8 @@
 #include <string.h>
 #include <math.h>
 
+extern void *memrchr(const void *s, int c, size_t n);
+
 typedef enum IlluminaReaderOptions_enum {
     eRead = 0x02,
     eQual1 = 0x04,
@@ -169,7 +171,7 @@ LIB_EXPORT rc_t CC IlluminaReaderCurrentSpot(const IlluminaReader* self, spotid_
 
 LIB_EXPORT rc_t CC IlluminaReader_SpotInfo(const IlluminaReader* self,
                                            const char** spotname, size_t* spotname_sz,
-                                           INSDC_coord_val* lane, INSDC_coord_val* tile, 
+                                           INSDC_coord_val* lane, INSDC_coord_val* tile,
                                            INSDC_coord_val* x, INSDC_coord_val* y,
                                            uint32_t* spot_len, uint32_t* num_reads)
 {

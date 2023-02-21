@@ -37,6 +37,7 @@
 #include <sys/time.h>
 #include <errno.h>
 
+extern char *strptime(const char *s, const char *format, struct tm *tm);
 
 /*--------------------------------------------------------------------------
  * KTime_t
@@ -134,7 +135,7 @@ LIB_EXPORT KTime_t CC KTimeMakeTime ( const KTime *self )
         t . tm_mday = self -> day + 1;
         t . tm_wday = self -> weekday;
 #if !defined(__SunOS)  &&  !defined(__sun__)
-        t . tm_gmtoff = self -> tzoff * 60; 
+        t . tm_gmtoff = self -> tzoff * 60;
 #endif
         t . tm_hour = self -> hour;
         t . tm_min = self -> minute;
