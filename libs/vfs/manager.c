@@ -20,7 +20,7 @@
  *
  *  Please cite the author in any work or product based on this material.
  *
- * ===========================================================================
+ * ============================================================================$
  *
  */
 
@@ -4463,6 +4463,22 @@ static bool VFSManagerCheckEnvAndAdImplNoqual(const VFSManager * self,
     return found;
 }
 
+/* check unkared directory */
+rc_t VFSManagerCheckRunDir(const KDirectory* wd, const VPath* path) {
+    rc_t rc = 0;
+    String spath;
+    rc = VPathGetPath(path, &spath);
+    if (rc != 0)
+        return rc;
+    if (KDirectoryPathType(wd, "%.*s/md", (int)spath.size, spath.addr)
+        == kptDir)
+    {
+        return 0;
+    }
+    else
+        return  RC(rcVFS, rcResolver, rcResolving, rcPath, rcNotFound);;
+}
+
 static bool VFSManagerCheckEnvAndAdImpl(const VFSManager * self,
     const VPath * inPath, const VPath ** outPath, bool checkEnv)
 {
@@ -4471,9 +4487,15 @@ static bool VFSManagerCheckEnvAndAdImpl(const VFSManager * self,
     {
         return true;
     }
-    else
-        return VFSManagerCheckEnvAndAdImplNoqual(self, inPath, outPath,
-            checkEnv, VFSManagerExtNoqualOld(NULL));
+    else if (VFSManagerCheckEnvAndAdImplNoqual(self, inPath, outPath,
+        checkEnv, VFSManagerExtNoqualOld(NULL)))
+    {
+        return true;
+    }
+    else { /* check unkared directory */
+        assert(self);
+        return VFSManagerCheckRunDir(self->cwd, inPath) == 0;
+    }
 }
 
 /* CheckEnvAndAd
