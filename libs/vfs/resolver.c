@@ -1786,23 +1786,8 @@ rc_t VResolverAlgParseResolverCGIResponse ( const KDataBuffer *result,
 }
 
 
-#ifdef VDB_3162
-#error 1
-/*  test-only code to emulate 403 response while calling names.cgi */
-static bool TEST_VDB_3162 = false;
-void TESTING_VDB_3162 ( void ) {
-    TEST_VDB_3162 = true;
-}
-static uint32_t TESTING_VDB_3162_CODE ( rc_t rc, uint32_t code ) {
-    if ( rc == 0 && TEST_VDB_3162 ) {
-        TEST_VDB_3162 = false;
-        return 403;
-    } else {
-        return code;
-    }
-}
-#endif
 
+#ifdef NAMESCGI
 #ifdef TESTING_SERVICES_VS_OLD_RESOLVING
 /* RemoteProtectedResolve
  *  use NCBI CGI to resolve accession into URL
@@ -1817,7 +1802,7 @@ rc_t oldVResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
 
     assert(path);
 
-    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), ("names.cgi = %S\n", self -> root));
+    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), ("name s.cgi = %S\n", self -> root));
     if(((self)->root)->addr[self->root->size - 1] == 'i')
         rc = KNSManagerMakeReliableClientRequest ( kns, & req, 0x01010000, NULL,
             self -> root -> addr );
@@ -2003,6 +1988,7 @@ rc_t oldVResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
 
     return rc;
 }
+#endif
 #endif
 
 rc_t VResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
@@ -3725,7 +3711,9 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
        case of resolving oid to cache location */
 
     {
+#ifdef NAMESCGI
         const VResolverAlg * alg4 = NULL;
+#endif
         ver_t v = InitVersion(version, self->ticket);
         for ( i = 0; i < count; ++ i )
         {
@@ -3759,17 +3747,20 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
                     if (rc == 0)
                         rc = try_rc;
                 }
+#ifdef NAMESCGI
                 else if (alg->version == VERSION_3_0 ||
                     alg->version == VERSION_4_0)
                 {
                     alg4 = alg;
                 }
+#endif
               }
             }
         }
         if (rc == 0 && count > 0) {
+#ifdef NAMESCGI
             if (v > VERSION_4_0 && alg4 != NULL) {
-                /* fallback to old names service */
+                /* fallback to old name s service */
                 try_rc = VResolverAlgRemoteResolve(alg4, self->kns,
                     protocols, &tok, path, mapping, opt_file_rtn,
                     legacy_wgs_refseq, "4", NULL);
@@ -3779,9 +3770,11 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
                     rc = try_rc;
             }
             else {
+#endif
+            {
                 rc = RC(rcVFS, rcResolver, rcResolving, rcName, rcNotFound);
 /*              PLOGERR(klogErr, (klogErr, rc,
-                    "cannot find names service version $(vers). "
+                    "cannot find name s service version $(vers). "
                     "Hint: run \"vdb-config --restore-defaults\"",
                     "vers=%V", v));*/
             }

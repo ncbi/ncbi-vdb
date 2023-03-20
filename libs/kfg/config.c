@@ -3344,6 +3344,7 @@ static rc_t _KConfigUpdateDefault( KConfig * self, bool * updated,
 }
 #endif
 
+#ifdef NAMESCGI
 static rc_t _KConfigLowerAscpRate ( KConfig * self, bool * updated ) {
     return 0;
 /*
@@ -3358,12 +3359,13 @@ static rc_t _KConfigUseTraceCgi(KConfig * self, bool * updated) {
 /*
     return _KConfigUpdateDefault(self, updated,
         "/repository/remote/main/CGI/resolver-cgi",
-        "/repository/remote/protected/CGI/resolver-cgi",
-        "https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi",
+        "/repository/remote/protected/CGI/resolver-cgi",/
+        "https://www.ncbi.nlm.nih.gov/Traces/name s/name `s.fcgi",
         RESOLVER_CGI,
         "/repository_remote/CGI/resolver-cgi/trace");
 */
 }
+#endif
 
 /* create Accession as Directory repository when it does not exist */
 static rc_t _KConfigCheckAd(KConfig * self) {
@@ -3551,11 +3553,13 @@ rc_t KConfigMakeImpl ( KConfig ** cfg, const KDirectory * cfgdir, bool local,
                 if ( ! KConfigDisabledUserSettings() ) {
                     bool updatd2 = false;
 
+#ifdef NAMESCGI
                     rc = _KConfigLowerAscpRate ( mgr,  & updated );
                     if (rc == 0) {
                         rc = _KConfigUseTraceCgi(mgr, &updatd2);
                         updated |= updatd2;
                     }
+#endif
 
                     if (rc == 0) {
                         rc = _KConfigUsePileupAppWithExtFlatAlg(mgr, &updatd2);
@@ -4506,6 +4510,7 @@ rc_t _KConfigNncToKGapConfig(const KConfig *self, char *text, KGapConfig *kgc)
 LIB_EXPORT rc_t KConfigFixMainResolverCgiNode ( KConfig * self ) {
     rc_t rc = 0;
 
+#ifdef NAMESCGI
     KConfigNode *node = NULL;
     struct String *result = NULL;
 
@@ -4534,6 +4539,7 @@ LIB_EXPORT rc_t KConfigFixMainResolverCgiNode ( KConfig * self ) {
     free(result);
 
     KConfigNodeRelease(node);
+#endif
 
     return rc;
 }
@@ -4573,6 +4579,7 @@ static rc_t KConfigFixProtectedSdlCgiNode(KConfig * self) {
 LIB_EXPORT rc_t KConfigFixProtectedResolverCgiNode ( KConfig * self ) {
     rc_t rc = 0;
 
+#ifdef NAMESCGI
     KConfigNode *node = NULL;
     struct String *result = NULL;
 
@@ -4604,6 +4611,7 @@ LIB_EXPORT rc_t KConfigFixProtectedResolverCgiNode ( KConfig * self ) {
 
     if (rc == 0)
         rc = KConfigFixProtectedSdlCgiNode(self);
+#endif
 
     return rc;
 }

@@ -262,7 +262,7 @@ public:
             throw logic_error ( "ResolverFixtureCustomConfig::Configure: KConfigMakeLocal failed" );
 
         if (KConfigWriteString ( cfg,
-                "repository/remote/main/CGI/resolver-cgi", RESOLVER_CGI))
+                "repository/remote/main/SDL.2/resolver-cgi", SDL_CGI))
         {
             throw logic_error ( "ResolverFixtureCustomConfig::Configure:"
                 " KConfigWriteString failed" );
