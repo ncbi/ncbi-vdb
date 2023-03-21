@@ -4475,8 +4475,8 @@ rc_t VFSManagerCheckRunDir(const KDirectory* wd, const VPath* path) {
     {
         return 0;
     }
-    else
-        return  RC(rcVFS, rcResolver, rcResolving, rcPath, rcNotFound);;
+    else    /* RC must match response of names resolver */
+        return RC(rcVFS, rcResolver, rcResolving, rcName, rcNotFound);
 }
 
 static bool VFSManagerCheckEnvAndAdImpl(const VFSManager * self,
