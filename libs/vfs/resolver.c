@@ -4997,7 +4997,8 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
                         }
                         if (rc == 0) {
                             DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (
-                                "VResolverQueryInt: '%S' found in '%S'\n",
+                                "VResolverQueryInt: "
+                                "unkared '%S' found in '%S'\n",
                                 &query->path, &(*local)->path));
                             break;
                         }
