@@ -31,8 +31,8 @@
 #include <kns/tls.h>
 #endif
 
+/* TODO: check if this if-else-endif is needed */
 #if ! defined ( MBEDTLS_CONFIG_FILE )
-/*#include <mbedtls/config.h>*/
 #else
 #include MBEDTLS_CONFIG_FILE
 #endif
