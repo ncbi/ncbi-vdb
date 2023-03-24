@@ -55,7 +55,7 @@ struct KTLSStream;
 #include <stdlib.h>
 
 #if ! defined ( MBEDTLS_CONFIG_FILE )
-#include <mbedtls/config.h>
+/*#include <mbedtls/config.h>*/
 #else
 #include MBEDTLS_CONFIG_FILE
 #endif
@@ -67,7 +67,7 @@ struct KTLSStream;
 #include <mbedtls/entropy.h>
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/error.h>
-#include <mbedtls/certs.h>
+/*#include <mbedtls/certs.h>*/
 
 #if WINDOWS
 #define IGNORE_ALL_CERTS_ALLOWED 1
