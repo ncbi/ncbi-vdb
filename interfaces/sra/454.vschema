@@ -290,3 +290,8 @@ table NCBI:SRA:_454_:tbl:v2 #2
     physical column NCBI:SRA:_454_:encoding:SIGNAL #2
         .SIGNAL = SIGNAL;
 };
+
+database NCBI:SRA:_454_:db #1
+{
+    table NCBI:SRA:_454_:tbl:v2 #2 SEQUENCE;
+};
