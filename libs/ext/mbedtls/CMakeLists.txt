@@ -44,6 +44,7 @@ set(CRYPTO_SRC
     dhm.c
     ecdh.c
     ecdsa.c
+    ecjpake.c
     ecp.c
     ecp_curves.c
     entropy.c
@@ -78,6 +79,8 @@ set(CRYPTO_SRC
     psa_crypto_hash.c
     psa_crypto_cipher.c
     psa_crypto_aead.c
+    psa_crypto_pake.c
+    psa_util.c
     ripemd160.c
     rsa.c
     rsa_alt_helpers.c
