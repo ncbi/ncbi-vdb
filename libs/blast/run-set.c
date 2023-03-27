@@ -3219,8 +3219,8 @@ uint64_t _VdbBlastRunSet2naRead(const VdbBlastRunSet *self,
     else {
         const Core2na *c
             = mode != VDB_READ_REFERENCE ? &self->core2na : &self->core2naRef;
-        n = _Core2naRead((Core2na*)c, &self->runs, status,
-            read_id, starting_base, buffer, buffer_size);
+        n = _Core2naRead((Core2na*)c, &self->runs, status, read_id,
+            starting_base, buffer, buffer_size, self->ignoreReadFilter);
         if (n == 0 && self->core2na.eos) {
             *read_id = ~0;
         }

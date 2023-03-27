@@ -254,6 +254,7 @@ typedef struct Core4na {
 struct VdbBlastRunSet {
     KRefcount refcount;
     bool protein;
+    bool ignoreReadFilter;
     VdbBlastMgr *mgr;
 
     RunSet runs;
