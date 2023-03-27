@@ -117,3 +117,8 @@ table NCBI:SRA:IonTorrent:tbl:v2 #2
     // signal
     column < NCBI:isamp1 > izip_encoding SIGNAL;
 };
+
+database NCBI:SRA:IonTorrent:db #1
+{
+    table NCBI:SRA:IonTorrent:tbl:v2 #2 SEQUENCE;
+};
