@@ -78,7 +78,7 @@ table NCBI:SRA:IonTorrent:tbl:v2 #2
     = INSDC:SRA:tbl:sra #1.0.4
     , NCBI:SRA:tbl:sra_nopos #2.1.4
     , NCBI:tbl:base_space #3
-    , NCBI:tbl:phred_quality #2.0
+    , NCBI:tbl:phred_quality #2.0.6
     , NCBI:SRA:tbl:clip #1.0.2
 {
     /* PLATFORM is always ION_TORRENT */
