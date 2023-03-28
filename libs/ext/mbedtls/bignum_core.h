@@ -222,7 +222,7 @@ int mbedtls_mpi_core_read_le(mbedtls_mpi_uint *X,
  * most significant zero bytes in the input).
  *
  * \param[out] X        The address of the MPI.
- *                      May only be #NULL if \X_limbs is 0 and \p input_length
+ *                      May only be #NULL if \p X_limbs is 0 and \p input_length
  *                      is 0.
  * \param X_limbs       The number of limbs of \p X.
  * \param[in] input     The input buffer to import from.
@@ -663,7 +663,7 @@ static inline size_t mbedtls_mpi_core_montmul_working_limbs(size_t AN_limbs)
  *
  * \p X may be aliased to \p A, but may not otherwise overlap it.
  *
- * \p X may not alias \p N (it is in canonical form, so must be stricly less
+ * \p X may not alias \p N (it is in canonical form, so must be strictly less
  * than \p N). Nor may it alias or overlap \p rr (this is unlikely to be
  * required in practice.)
  *
@@ -702,7 +702,7 @@ void mbedtls_mpi_core_to_mont_rep(mbedtls_mpi_uint *X,
  *
  * \p X may be aliased to \p A, but may not otherwise overlap it.
  *
- * \p X may not alias \p N (it is in canonical form, so must be stricly less
+ * \p X may not alias \p N (it is in canonical form, so must be strictly less
  * than \p N).
  *
  * This function is a thin wrapper around `mbedtls_mpi_core_montmul()` that is

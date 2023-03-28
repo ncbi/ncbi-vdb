@@ -98,8 +98,24 @@ typedef enum {
  *                  See \c mbedtls_rsa_rsassa_pss_verify_ext()
  */
 typedef struct mbedtls_pk_rsassa_pss_options {
-    mbedtls_md_type_t MBEDTLS_PRIVATE(mgf1_hash_id);
-    int MBEDTLS_PRIVATE(expected_salt_len);
+    /** The digest to use for MGF1 in PSS.
+     *
+     * \note When #MBEDTLS_USE_PSA_CRYPTO is enabled and #MBEDTLS_RSA_C is
+     *       disabled, this must be equal to the \c md_alg argument passed
+     *       to mbedtls_pk_verify_ext(). In a future version of the library,
+     *       this constraint may apply whenever #MBEDTLS_USE_PSA_CRYPTO is
+     *       enabled regardless of the status of #MBEDTLS_RSA_C.
+     */
+    mbedtls_md_type_t mgf1_hash_id;
+
+    /** The expected length of the salt, in bytes. This may be
+     * #MBEDTLS_RSA_SALT_LEN_ANY to accept any salt length.
+     *
+     * \note When #MBEDTLS_USE_PSA_CRYPTO is enabled, only
+     *       #MBEDTLS_RSA_SALT_LEN_ANY is valid. Any other value may be
+     *       ignored (allowing any salt length).
+     */
+    int expected_salt_len;
 
 } mbedtls_pk_rsassa_pss_options;
 
@@ -154,6 +170,38 @@ typedef struct mbedtls_pk_rsassa_pss_options {
 #define MBEDTLS_PK_SIGNATURE_MAX_SIZE (PSA_VENDOR_ECDSA_SIGNATURE_MAX_SIZE + 11)
 #endif
 #endif /* defined(MBEDTLS_USE_PSA_CRYPTO) */
+
+/**
+ * \brief   The following defines are meant to list ECDSA capabilities of the
+ *          PK module in a general way (without any reference to how this
+ *          is achieved, which can be either through PSA driver or
+ *          MBEDTLS_ECDSA_C)
+ */
+#if !defined(MBEDTLS_USE_PSA_CRYPTO)
+#if defined(MBEDTLS_ECDSA_C)
+#define MBEDTLS_PK_CAN_ECDSA_SIGN
+#define MBEDTLS_PK_CAN_ECDSA_VERIFY
+#endif
+#else /* MBEDTLS_USE_PSA_CRYPTO */
+#if defined(PSA_WANT_ALG_ECDSA)
+#if defined(PSA_WANT_KEY_TYPE_ECC_KEY_PAIR)
+#define MBEDTLS_PK_CAN_ECDSA_SIGN
+#endif
+#if defined(PSA_WANT_KEY_TYPE_ECC_PUBLIC_KEY)
+#define MBEDTLS_PK_CAN_ECDSA_VERIFY
+#endif
+#endif /* PSA_WANT_ALG_ECDSA */
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
+
+/* Symbol for ECDH capabilities, no matter how it is provided */
+#if (defined(MBEDTLS_USE_PSA_CRYPTO) && defined(PSA_HAVE_FULL_ECDH)) || \
+    (!defined(MBEDTLS_USE_PSA_CRYPTO) && defined(MBEDTLS_ECDH_C))
+#define MBEDTLS_PK_CAN_ECDH
+#endif
+
+#if defined(MBEDTLS_PK_CAN_ECDSA_VERIFY) || defined(MBEDTLS_PK_CAN_ECDSA_SIGN)
+#define MBEDTLS_PK_CAN_ECDSA_SOME
+#endif
 
 /**
  * \brief           Types for interfacing with the debug module
@@ -754,6 +802,10 @@ static inline mbedtls_ecp_keypair *mbedtls_pk_ec(const mbedtls_pk_context pk)
 /**
  * \brief           Parse a private key in PEM or DER format
  *
+ * \note            If #MBEDTLS_USE_PSA_CRYPTO is enabled, the PSA crypto
+ *                  subsystem must have been initialized by calling
+ *                  psa_crypto_init() before calling this function.
+ *
  * \param ctx       The PK context to fill. It must have been initialized
  *                  but not set up.
  * \param key       Input buffer to parse.
@@ -790,6 +842,10 @@ int mbedtls_pk_parse_key(mbedtls_pk_context *ctx,
 /**
  * \brief           Parse a public key in PEM or DER format
  *
+ * \note            If #MBEDTLS_USE_PSA_CRYPTO is enabled, the PSA crypto
+ *                  subsystem must have been initialized by calling
+ *                  psa_crypto_init() before calling this function.
+ *
  * \param ctx       The PK context to fill. It must have been initialized
  *                  but not set up.
  * \param key       Input buffer to parse.
@@ -804,6 +860,9 @@ int mbedtls_pk_parse_key(mbedtls_pk_context *ctx,
  *                  with mbedtls_pk_init() or reset with mbedtls_pk_free(). If you need a
  *                  specific key type, check the result with mbedtls_pk_can_do().
  *
+ * \note            For compressed points, see #MBEDTLS_ECP_PF_COMPRESSED for
+ *                  limitations.
+ *
  * \note            The key is also checked for correctness.
  *
  * \return          0 if successful, or a specific PK or PEM error code
@@ -815,6 +874,10 @@ int mbedtls_pk_parse_public_key(mbedtls_pk_context *ctx,
 /** \ingroup pk_module */
 /**
  * \brief           Load and parse a private key
+ *
+ * \note            If #MBEDTLS_USE_PSA_CRYPTO is enabled, the PSA crypto
+ *                  subsystem must have been initialized by calling
+ *                  psa_crypto_init() before calling this function.
  *
  * \param ctx       The PK context to fill. It must have been initialized
  *                  but not set up.

@@ -877,4 +877,3 @@ void (*mbedtls_test_hook_error_add)(int, int, const char *, int);
 #endif
 
 #endif /* MBEDTLS_ERROR_C || MBEDTLS_ERROR_STRERROR_DUMMY */
-
