@@ -72,7 +72,7 @@ mgr.SetLogLevel(5)
 schema = mgr.MakeSchema()
 schema.AddIncludePath(os.path.abspath('../../interfaces'))
 schema.ParseFile('sra/454.vschema')
-db = mgr.CreateDB(schema, 'NCBI:SRA:_454_:db', output)
+db = mgr.CreateDB(schema, 'NCBI:SRA:_454_:db', "test_VDB-5250.db")
 schema = None
 mgr = None
 tbl = db.CreateTable('SEQUENCE')
@@ -83,13 +83,7 @@ cols = {}
 
 cursDef = {
     'READ': {},
-    'READ_START': { 'default': [0, 100] },
-    'READ_LEN': { 'default': [100, 100] },
-    'READ_TYPE': { 'default': [1, 1] },
-    'READ_FILTER': { 'default': [0, 0] },
     'RAW_NAME': {},
-    'SPOT_GROUP': { 'default': 'foo' },
-    'PLATFORM': { 'default': 1 }
 }
 
 for name, define in cursDef.items():
