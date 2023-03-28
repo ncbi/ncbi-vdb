@@ -233,7 +233,7 @@ physical INSDC:position:one NCBI:SRA:_454_:encoding:POSITION #2
 table NCBI:SRA:_454_:tbl:v2 #2
     = NCBI:SRA:tbl:sra_nopos #2.1.4
     , NCBI:tbl:base_space #3
-    , NCBI:tbl:phred_quality #2.0.3
+    , NCBI:tbl:phred_quality #2.0.6
     , NCBI:SRA:_454_:common #1.0.5
 {
     /* NAME tokenizing and coordinates
