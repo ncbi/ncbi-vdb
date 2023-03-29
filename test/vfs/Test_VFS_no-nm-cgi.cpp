@@ -34,7 +34,7 @@
 
 #define ALL
 const bool PRINT_KFG = 0;
-const bool PRINT_SDL = true;
+const bool PRINT_SDL = 0;
 
 extern "C" {rc_t LegacyVPathMake(VPath** new_path, const char* posix_path); }
 

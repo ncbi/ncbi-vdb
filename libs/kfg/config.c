@@ -4450,41 +4450,6 @@ static rc_t KConfigFixProtectedSdlCgiNode(KConfig * self) {
 
 LIB_EXPORT rc_t KConfigFixProtectedResolverCgiNode ( KConfig * self ) {
     rc_t rc = 0;
-
-#ifdef NAMESCGI
-    KConfigNode *node = NULL;
-    struct String *result = NULL;
-
-    assert(self);
-
-    if (rc == 0) {
-        rc = KConfigOpenNodeUpdate(self, &node,
-            "/repository/remote/protected/CGI/resolver-cgi");
-    }
-
-    if (rc == 0) {
-        rc = KConfigNodeReadString(node, &result);
-    }
-
-    if (rc == 0) {
-        String http;
-        CONST_STRING ( & http,
-                   "http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" );
-        assert(result);
-        if ( result->size == 0 || StringEqual ( & http, result ) ) {
-            const char https[] = RESOLVER_CGI;
-            rc = KConfigNodeWrite ( node, https, sizeof https );
-        }
-    }
-
-    free(result);
-
-    KConfigNodeRelease(node);
-
-    if (rc == 0)
-        rc = KConfigFixProtectedSdlCgiNode(self);
-#endif
-
     return rc;
 }
 
