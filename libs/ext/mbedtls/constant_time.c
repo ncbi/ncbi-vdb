@@ -46,6 +46,11 @@
 #endif
 
 #include <string.h>
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+#define PSA_TO_MBEDTLS_ERR(status) PSA_TO_MBEDTLS_ERR_LIST(status,    \
+                                                           psa_to_ssl_errors,              \
+                                                           psa_generic_status_to_mbedtls)
+#endif
 
 /*
  * Define MBEDTLS_EFFICIENT_UNALIGNED_VOLATILE_ACCESS where assembly is present to
@@ -72,9 +77,9 @@ static inline uint32_t mbedtls_get_unaligned_volatile_uint32(volatile const unsi
      */
     uint32_t r;
 #if defined(__arm__) || defined(__thumb__) || defined(__thumb2__)
-    asm ("ldr %0, [%1]" : "=r" (r) : "r" (p) :);
+    asm volatile ("ldr %0, [%1]" : "=r" (r) : "r" (p) :);
 #elif defined(__aarch64__)
-    asm ("ldr %w0, [%1]" : "=r" (r) : "r" (p) :);
+    asm volatile ("ldr %w0, [%1]" : "=r" (r) : "r" (p) :);
 #endif
     return r;
 }
@@ -620,7 +625,7 @@ cleanup:
 
     psa_hash_abort(&operation);
     psa_hash_abort(&aux_operation);
-    return psa_ssl_status_to_mbedtls(status);
+    return PSA_TO_MBEDTLS_ERR(status);
 }
 
 #undef MAX_HASH_BLOCK_LENGTH

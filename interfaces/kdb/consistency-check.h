@@ -124,8 +124,7 @@ KDB_EXTERN rc_t CC KDatabaseConsistencyCheck ( struct KDatabase const *self,
  * KTable
  */
 KDB_EXTERN rc_t CC KTableConsistencyCheck ( struct KTable const *self,
-    uint32_t depth, uint32_t level, CCReportFunc report, void *data,
-    INSDC_SRA_platform_id platform);
+    uint32_t depth, uint32_t level, CCReportFunc report, void *data);
 
 
 /*--------------------------------------------------------------------------
