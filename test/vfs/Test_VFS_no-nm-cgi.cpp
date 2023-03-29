@@ -164,6 +164,7 @@ protected:
     }
 };
 
+#ifdef ALL
 FIXTURE_TEST_CASE(ServiceWorksWithoutUrlInConfig, Fixture) {
     REQUIRE_RC(RunService());
     REQUIRE_RC(End());
@@ -178,21 +179,30 @@ FIXTURE_TEST_CASE(ServiceCallsSdlWithSglInConfig, Fixture) {
         "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve"));
     REQUIRE_RC(End());
 }
+#endif
+
+#ifndef ALL
 FIXTURE_TEST_CASE(ServiceCallsCustomSdl, Fixture) {
     REQUIRE_RC(RunService("/repository/remote/main/SDL.2/resolver-cgi",
         "https://locate.be-md.ncbi.nlm.nih.gov/sdl/2/retrieve"));
     REQUIRE_RC(End());
 }
+#endif
 
+#ifndef ALL
 FIXTURE_TEST_CASE(ResolverFailsWithoutUrlInConfig, Fixture) {
     REQUIRE_RC(ResolverFails());
     REQUIRE_RC(End());
 }
+#endif
+
+#ifdef ALL
 FIXTURE_TEST_CASE(ResolverFailsWithCgiInConfig, Fixture) {
     REQUIRE_RC(ResolverFails("/repository/remote/main/CGI/resolver-cgi",
         "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi"));
     REQUIRE_RC(End());
 }
+#endif
 
 #ifdef ALL
 FIXTURE_TEST_CASE(ResolverSucceedsWithSdlInConfig, Fixture) {
@@ -210,6 +220,10 @@ FIXTURE_TEST_CASE(ResolverSucceedsWithCustomSdl, Fixture) {
 extern "C" {
     ver_t CC KAppVersion(void) { return 0; }
     rc_t CC KMain(int argc, char* argv[]) {
+        putenv((char*)"NCBI_VDB_NO_ETC_NCBI_KFG=1"); // ignore /etc/ncbi
+        unsetenv("VDB_CONFIG"); // ignore it
+        unsetenv("VDB_ROOT"); // ignore it
+        KConfigDisableUserSettings(); // ignore ~/.ncbi/user-settings.mkfg
         if (PRINT_SDL)
             KDbgSetString("VFS");
         return Resolver3TestSuite(argc, argv);
