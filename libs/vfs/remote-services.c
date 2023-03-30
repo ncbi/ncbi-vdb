@@ -54,6 +54,7 @@
 
 #include <kproc/timeout.h> /* TimeoutInit */
 
+#include <vdb/manager.h> /* VDBManagerRelease */
 #include <vdb/vdb-priv.h> /* VDBManagerGetQualityString */
 
 #include <vfs/manager.h> /* VFSManager */
@@ -4179,6 +4180,10 @@ static rc_t KServiceFini ( KService * self ) {
 
     r2 = SHelperFini ( & self -> helper );
     if ( rc == 0 )
+        rc = r2;
+
+    r2 = VDBManagerRelease(0);
+    if (rc == 0 && r2 != 0)
         rc = r2;
 
     return rc;
