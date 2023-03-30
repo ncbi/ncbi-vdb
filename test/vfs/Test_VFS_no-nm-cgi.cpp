@@ -32,9 +32,10 @@
 #include <vfs/resolver.h> // VResolverRelease
 #include <vfs/services-priv.h> /* KServiceMakeWithMgr */
 
+//#define NEED_TO_TRACK_DOWN_CONFIG_REFCOUNT
 #define ALL
-const bool PRINT_KFG = 1;
-const bool PRINT_SDL = 1;
+const bool PRINT_KFG = 0;
+const bool PRINT_SDL = 0;
 
 extern "C" {rc_t LegacyVPathMake(VPath** new_path, const char* posix_path); }
 
@@ -111,7 +112,15 @@ class Fixture {
 
 protected:
     Fixture() :k(0), m(0) {
+#ifdef NEED_TO_TRACK_DOWN_CONFIG_REFCOUNT
+        /* This is the call that has to be used.
+        However there is a mismatch in reference counting of KConfig.
+        KConfig is expeted to start with an empty config.
+        Now it picks up the previous config that makes the tests fail. */
         rc_t rc(KConfigMakeEmpty(&k));
+#else
+        rc_t rc(KConfigMakeLocal(&k, 0));
+#endif
         if (rc)
             throw rc;
     }
@@ -132,7 +141,7 @@ protected:
         rc_t rc(Begin(path, value));
 
         KService* s(0);
-        rc_t r2(KServiceMakeWithMgr(&s, NULL, NULL, k));
+        rc_t r2(KServiceMakeWithMgr(&s, m, NULL, k));
         if (rc == 0 && r2 != 0)
             rc = r2;
 
@@ -151,8 +160,8 @@ protected:
 
         r2 = KServiceRelease(s); s = NULL;
         if (rc == 0 && r2 != 0)
-
             rc = r2;
+
         return rc;
     }
 
@@ -169,6 +178,9 @@ FIXTURE_TEST_CASE(ServiceWorksWithoutUrlInConfig, Fixture) {
     REQUIRE_RC(RunService());
     REQUIRE_RC(End());
 }
+#endif
+
+#ifdef ALL
 FIXTURE_TEST_CASE(ServiceCallsSdlWithCgiInConfig, Fixture) {
     REQUIRE_RC(RunService("/repository/remote/main/CGI/resolver-cgi",
         "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi"));
@@ -181,7 +193,7 @@ FIXTURE_TEST_CASE(ServiceCallsSdlWithSglInConfig, Fixture) {
 }
 #endif
 
-#ifndef ALL
+#ifdef ALL
 FIXTURE_TEST_CASE(ServiceCallsCustomSdl, Fixture) {
     REQUIRE_RC(RunService("/repository/remote/main/SDL.2/resolver-cgi",
         "https://locate.be-md.ncbi.nlm.nih.gov/sdl/2/retrieve"));
@@ -189,7 +201,7 @@ FIXTURE_TEST_CASE(ServiceCallsCustomSdl, Fixture) {
 }
 #endif
 
-#ifndef ALL
+#ifdef ALL
 FIXTURE_TEST_CASE(ResolverFailsWithoutUrlInConfig, Fixture) {
     REQUIRE_RC(ResolverFails());
     REQUIRE_RC(End());
@@ -219,13 +231,19 @@ FIXTURE_TEST_CASE(ResolverSucceedsWithCustomSdl, Fixture) {
 
 extern "C" {
     ver_t CC KAppVersion(void) { return 0; }
+
     rc_t CC KMain(int argc, char* argv[]) {
         putenv((char*)"NCBI_VDB_NO_ETC_NCBI_KFG=1"); // ignore /etc/ncbi
-        unsetenv("VDB_CONFIG"); // ignore it
-        unsetenv("VDB_ROOT"); // ignore it
+#ifndef NEED_TO_TRACK_DOWN_CONFIG_REFCOUNT
+     // Currently make sure we start with an emty config when we create it here.
+        putenv((char*)"VDB_CONFIG=redirect-rejected-names-cgi-http-to-https");
+#endif
+        unsetenv("VDB_ROOT"); // Ignore it. Probably it's not needed.
         KConfigDisableUserSettings(); // ignore ~/.ncbi/user-settings.mkfg
+
         if (PRINT_SDL)
             KDbgSetString("VFS");
+ 
         return Resolver3TestSuite(argc, argv);
     }
 }
