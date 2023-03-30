@@ -33,8 +33,8 @@
 #include <vfs/services-priv.h> /* KServiceMakeWithMgr */
 
 #define ALL
-const bool PRINT_KFG = 0;
-const bool PRINT_SDL = 0;
+const bool PRINT_KFG = 1;
+const bool PRINT_SDL = 1;
 
 extern "C" {rc_t LegacyVPathMake(VPath** new_path, const char* posix_path); }
 
