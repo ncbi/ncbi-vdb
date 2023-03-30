@@ -20,7 +20,7 @@
  *
  *  Please cite the author in any work or product based on this material.
  *
- * =============================================================================
+ * ============================================================================$
  */
 
 #include <vfs/extern.h>
@@ -1797,105 +1797,6 @@ rc_t oldVResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
     const KNSManager *kns, VRemoteProtocols protocols, const String *acc,
     const VPath ** path, const VPath ** mapping, bool legacy_wgs_refseq )
 {
-    rc_t rc;
-    KHttpRequest *req;
-
-    assert(path);
-
-    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), ("name s.cgi = %S\n", self -> root));
-    if(((self)->root)->addr[self->root->size - 1] == 'i')
-        rc = KNSManagerMakeReliableClientRequest ( kns, & req, 0x01010000, NULL,
-            self -> root -> addr );
-    else if (((self)->root)->addr[4] == 's')
-        rc = KNSManagerMakeReliableClientRequest ( kns, & req, 0x01010000, NULL,
-            RESOLVER_CGI);
-    else
-        rc = KNSManagerMakeReliableClientRequest ( kns, & req, 0x01010000, NULL,
-            RESOLVER_CGI_HTTP);
-
-    if ( rc == 0 )
-    {
-        /* build up POST information: */
-        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), ("  version = %u.%u\n",
-            NAME_SERVICE_MAJ_VERS, NAME_SERVICE_MIN_VERS));
-        rc = KHttpRequestAddPostParam ( req, "version=%u.%u",
-            NAME_SERVICE_MAJ_VERS, NAME_SERVICE_MIN_VERS );
-        if ( rc == 0 )
-        {
-            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), ("  acc = %S\n", acc));
-            rc = KHttpRequestAddPostParam ( req, "acc=%S", acc );
-        }
-        if ( rc == 0 && legacy_wgs_refseq )
-        {
-            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), ("  ctx = refseq\n"));
-            rc = KHttpRequestAddPostParam ( req, "ctx=refseq" );
-        }
-        if ( rc == 0 && self -> ticket != NULL )
-        {
-            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), ("  tic = %S\n", self -> ticket));
-            rc = KHttpRequestAddPostParam ( req, "tic=%S", self -> ticket );
-        }
-
-        if ( rc == 0 && NAME_SERVICE_VERS >= ONE_DOT_ONE )
-        {
-            uint32_t i;
-            const char * prefs [ eProtocolMaxPref ];
-            const char * seps [ eProtocolMaxPref ];
-            VRemoteProtocols protos = protocols;
-
-            prefs [ 0 ] = seps [ 0 ] = NULL;
-            prefs [ 1 ] = prefs [ 2 ] = seps [ 1 ] = seps [ 2 ] = "";
-
-            for ( i = 0; protos != 0 && i < sizeof prefs / sizeof prefs [ 0 ]; protos >>= 3 )
-            {
-                /* 1.1 protocols */
-                switch ( protos & eProtocolMask )
-                {
-                case eProtocolHttp:
-                    prefs [ i ] = "http";
-                    seps [ i ++ ] = ",";
-                    break;
-                case eProtocolFasp:
-                    prefs [ i ] = "fasp";
-                    seps [ i ++ ] = ",";
-                    break;
-                default:
-                    if ( NAME_SERVICE_VERS > ONE_DOT_ONE )
-                    {
-                        /* 1.2 protocols */
-                        switch ( protos & eProtocolMask )
-                        {
-                        case eProtocolHttps:
-                            prefs [ i ] = "https";
-                            seps [ i ++ ] = ",";
-                            break;
-                        }
-                    }
-                }
-            }
-
-            if ( prefs [ 0 ] == NULL )
-                rc = RC ( rcVFS, rcResolver, rcResolving, rcParam, rcInvalid );
-
-            else
-            {
-                DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS ),
-                         ("  accept-proto = %s%s%s%s%s\n", prefs [ 0 ], seps [ 1 ], prefs [ 1 ], seps [ 2 ], prefs [ 2 ] ) );
-                rc = KHttpRequestAddPostParam ( req, "accept-proto=%s%s%s%s%s", prefs [ 0 ], seps [ 1 ], prefs [ 1 ], seps [ 2 ], prefs [ 2 ] );
-            }
-        }
-
-        if ( rc == 0 )
-        {
-            KHttpResult *rslt;
-
-            rc = KHttpRequestPOST ( req, &rslt ); /* will retry if needed `*/
-            if ( rc == 0 )
-            {
-                uint32_t code;
-
-                rc = KHttpResultStatus ( rslt, &code, NULL, 0, NULL );
-
 #ifdef VDB_3162
                 if ( TEST_VDB_3162 ) {
                     code = TESTING_VDB_3162_CODE ( rc, code );
