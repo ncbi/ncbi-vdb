@@ -32,9 +32,15 @@
 #include <vfs/resolver.h> // VResolverRelease
 #include <vfs/services-priv.h> /* KServiceMakeWithMgr */
 
-//#define NEED_TO_TRACK_DOWN_CONFIG_REFCOUNT
+/* TODO: need to fix refcount mismatch
+#define NEED_TO_TRACK_DOWN_CONFIG_REFCOUNT */
+
 #define ALL
+
+// enable it to see used configuration
 const bool PRINT_KFG = 0;
+
+// enable it to see communication with SDL
 const bool PRINT_SDL = 0;
 
 extern "C" {rc_t LegacyVPathMake(VPath** new_path, const char* posix_path); }
