@@ -45,9 +45,13 @@ if( SINGLE_CONFIG )
 endif()
 
 if (Python3_EXECUTABLE)
-    add_test( NAME Test_VDB-5250
+    add_test( NAME Test_SCHEMA_454_db
         COMMAND ${Python3_EXECUTABLE} test_VDB-5250.py
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+    set_tests_properties( Test_SCHEMA_454_db
+        PROPERTIES
+        ENVIRONMENT VDB_LIBRARY_PATH=${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
     )
 
     add_test( NAME Test_VDB-5251
