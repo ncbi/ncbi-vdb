@@ -51,6 +51,6 @@ if (Python3_EXECUTABLE)
     )
     set_tests_properties( Test_SCHEMA_454_db
         PROPERTIES
-        ENVIRONMENT VDB_LIBRARY_PATH=${VDB_LIBDIR}
+        ENVIRONMENT VDB_LIBRARY_PATH=${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
     )
 endif()
