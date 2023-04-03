@@ -87,7 +87,6 @@ typedef struct KTableCheckColumn_pb_s {
     unsigned n;
     int level;
     uint32_t depth;
-    INSDC_SRA_platform_id platform;
 } KTableCheckColumn_pb_t;
 
 static rc_t CC KTableCheckColumn(const KDirectory *dir, uint32_t type, const char *name, void *data)
@@ -111,7 +110,6 @@ static rc_t CC KTableCheckColumn(const KDirectory *dir, uint32_t type, const cha
     }
     else {
         bool hasZombies;
-        INSDC_SRA_platform_id platform = pb->platform;
         uint32_t ktype = KDBPathType(dir, &hasZombies, name);
         rc_t rc;
         
@@ -126,16 +124,12 @@ static rc_t CC KTableCheckColumn(const KDirectory *dir, uint32_t type, const cha
         info.type = ccrpt_Done;
         
         if (hasZombies) {
-#if 0
-            info.info.done.rc = RC(rcDB, rcTable, rcValidating, rcFile, rcTooShort);
-#else
             info.info.done.rc = 0;
-#endif
             info.info.done.mesg = "Column may be truncated";
             rc = pb->report(&info, pb->rpt_ctx);
             if (rc) return rc;
         }
-        info.info.done.rc = RC(rcDB, rcTable, rcValidating, rcType, rcIncorrect);
+        info.info.done.rc = SILENT_RC(rcDB, rcTable, rcValidating, rcType, rcIncorrect);
         if ((ktype & ~kptAlias) == kptColumn) {
             const KColumn *col;
             
@@ -146,6 +140,7 @@ static rc_t CC KTableCheckColumn(const KDirectory *dir, uint32_t type, const cha
                 return info.info.done.rc;
             }
         }
+#if 0
         if (platform != SRA_PLATFORM_UNDEFINED && platform != SRA_PLATFORM_454
             && name != NULL && name[0] != '\0' && strcmp(name, "SIGNAL") == 0)
         {
@@ -153,6 +148,7 @@ static rc_t CC KTableCheckColumn(const KDirectory *dir, uint32_t type, const cha
                 "name=%s", name));
             return 0;
         }
+#endif
         info.info.done.mesg = "Failed to open column";
         return pb->report(&info, pb->rpt_ctx);
     }
@@ -160,7 +156,7 @@ static rc_t CC KTableCheckColumn(const KDirectory *dir, uint32_t type, const cha
 
 static
 rc_t KTableCheckColumns ( const KTable *self, uint32_t depth, int level,
-    CCReportFunc report, void *ctx, INSDC_SRA_platform_id platform )
+    CCReportFunc report, void *ctx )
 {
     KTableCheckColumn_pb_t pb;
     
@@ -170,7 +166,6 @@ rc_t KTableCheckColumns ( const KTable *self, uint32_t depth, int level,
     pb.n = 0;
     pb.level = level;
     pb.depth = depth;
-    pb.platform = platform;
     return KDirectoryVisit_v1(self->dir, false, KTableCheckColumn, &pb, "col");
 }
 
@@ -301,7 +296,7 @@ rc_t KTableCheckIndices(const KTable *self, uint32_t depth, int level, CCReportF
 
 LIB_EXPORT
 rc_t CC KTableConsistencyCheck(const KTable *self, uint32_t depth, uint32_t level,
-    CCReportFunc report, void *ctx, INSDC_SRA_platform_id platform)
+    CCReportFunc report, void *ctx)
 {
     rc_t rc = 0;
     uint32_t type;
@@ -359,7 +354,7 @@ rc_t CC KTableConsistencyCheck(const KTable *self, uint32_t depth, uint32_t leve
     }
 
     if ( rc == 0 && ! indexOnly )
-        rc = KTableCheckColumns(self, depth, level, report, ctx, platform);
+        rc = KTableCheckColumns(self, depth, level, report, ctx);
 
     if ( rc == 0 )    
         rc = KTableCheckIndices(self, depth, level, report, ctx);

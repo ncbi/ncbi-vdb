@@ -27,6 +27,7 @@
  *
  */
 
+#include <stdbool.h> /* bool */
 #include <stddef.h> /* size_t */
 #include <stdint.h> /* uint64_t */
 
@@ -44,7 +45,8 @@ typedef struct Data2na {
 
 uint64_t _Core2naRead(struct Core2na *self,
     const struct RunSet *runs, uint32_t *status, uint64_t *read_id,
-    size_t *starting_base, uint8_t *buffer, size_t buffer_size);
+    size_t *starting_base, uint8_t *buffer, size_t buffer_size,
+    bool ignoreReadFilter);
 
 #ifdef __cplusplus
 }
