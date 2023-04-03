@@ -53,4 +53,13 @@ if (Python3_EXECUTABLE)
         PROPERTIES
         ENVIRONMENT VDB_LIBRARY_PATH=${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
     )
+
+    add_test( NAME Test_SCHEMA_IonTorrent_db
+        COMMAND ${Python3_EXECUTABLE} test_VDB-5251.py
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+    set_tests_properties( Test_SCHEMA_IonTorrent_db
+        PROPERTIES
+        ENVIRONMENT VDB_LIBRARY_PATH=${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
+    )
 endif()
