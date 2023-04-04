@@ -4882,6 +4882,22 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
                     cache, version, resolveAllAccToCache, dir, resolvedToDir,
                     oldRemote, oldMapping );
                 if (rc != 0) {
+                    if (local != NULL) {
+                        rc = VFSManagerCheckRunDir(self->wd, query);
+                        if (rc == 0) {
+                            assert(query);
+                            rc = LegacyVPathMakeFmt(
+                                (VPath**)local, query->path.addr);
+                        }
+                        if (rc == 0) {
+                            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (
+                                "VResolverQueryInt: "
+                                "unkared '%S' found in '%S'\n",
+                                &query->path, &(*local)->path));
+                            break;
+                        }
+
+                    }
                     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
                         ("Resolver-%s: VResolverQueryAcc('%S') failed\n",
                             self->version, &sQuery));
