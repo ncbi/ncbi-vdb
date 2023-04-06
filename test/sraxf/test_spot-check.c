@@ -39,7 +39,7 @@ static void check_check_quality1(self_t const *self) {
     assert(result == notRejected);
 }
 
-/* test short biological read fails  */ 
+/* test short biological read fails  */
 static void check_check_quality2(self_t const *self) {
     int32_t const start[] = { 0, 9 };
     uint32_t const len[] = { 9, 75 };
@@ -190,6 +190,9 @@ static void check_check_quality() {
     check_check_quality9(&self);
 }
 
+#ifdef WINDOWS
+#define main wmain
+#endif
 int main(int argc, char *argv[]) {
     check_check_quality();
 }
