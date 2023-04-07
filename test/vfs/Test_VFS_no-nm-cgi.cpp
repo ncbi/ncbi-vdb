@@ -22,6 +22,8 @@
 *
 * =========================================================================== */
 
+#include <os-native.h>
+
 #include <kfg/kfg-priv.h> /* KConfigMakeEmpty */
 #include <klib/debug.h> /* KDbgSetString */
 #include <klib/rc.h> /* SILENT_RC */
@@ -249,7 +251,7 @@ extern "C" {
 
         if (PRINT_SDL)
             KDbgSetString("VFS");
- 
+
         return Resolver3TestSuite(argc, argv);
     }
 }
