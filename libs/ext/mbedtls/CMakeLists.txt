@@ -24,6 +24,7 @@
 
 set(CRYPTO_SRC
     aes.c
+    aesce.c
     aesni.c
     aria.c
     asn1parse.c
@@ -31,6 +32,8 @@ set(CRYPTO_SRC
     base64.c
     bignum.c
     bignum_core.c
+    bignum_mod.c
+    bignum_mod_raw.c
     camellia.c
     ccm.c
     chacha20.c
@@ -57,6 +60,7 @@ set(CRYPTO_SRC
     md5.c
     nist_kw.c
     oid.c
+    padlock.c
     pem.c
     pk.c
     pk_wrap.c
@@ -80,6 +84,7 @@ set(CRYPTO_SRC
     psa_crypto_cipher.c
     psa_crypto_aead.c
     psa_crypto_pake.c
+    psa_crypto_se.c
     psa_util.c
     ripemd160.c
     rsa.c
@@ -102,6 +107,7 @@ set(TLS_SRC
     ssl_tls.c
     ssl_tls12_client.c
     ssl_tls12_server.c
+    ssl_tls13_keys.c
     ssl_debug_helpers_generated.c
 )
 
