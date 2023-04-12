@@ -20,7 +20,7 @@
  *
  *  Please cite the author in any work or product based on this material.
  *
- * ===========================================================================
+ * ============================================================================$
  *
  */
 
@@ -3279,92 +3279,6 @@ static rc_t _KConfigUseRealignAppWithExtFlatAlg(KConfig * self,
         "/repository/user/main/public/apps/sraRealign/withExtFlat");
 }
 
-#if 0
-static rc_t _KConfigUpdateDefault( KConfig * self, bool * updated,
-    const char * node_name,
-    const char * node2_name,
-    const char * old_value,
-    const char * new_value,
-    const char * updated_name )
-{
-    rc_t rc = 0;
-
-    String * result = NULL;
-
-    String sOldValue;
-
-    bool update1 = false, update2 = false;
-
-    assert(node_name && old_value && new_value && updated_name);
-
-    StringInitCString(&sOldValue, old_value);
-
-    assert ( updated );
-    * updated = false;
-
-    rc = KConfigReadString ( self, updated_name, & result );
-    if ( rc == 0 ) { /* was updated already */
-        free ( result );
-        return rc;
-    }
-
-    rc = KConfigReadString ( self, node_name, & result );
-    if ( rc == 0 ) { /* when found: update just value = old-value */
-        if ( StringEqual ( & sOldValue, result ) )
-            update1 = * updated = true;
-        free ( result );
-        result = NULL;
-    }
-    else /* don't update when node did not exist */
-        rc = 0;
-
-    if (node2_name != NULL) {
-        rc = KConfigReadString(self, node2_name, &result);
-        if (rc == 0) { /* when found: update just value = old-value */
-            if (StringEqual(&sOldValue, result))
-                update2 = * updated = true;
-            free(result);
-            result = NULL;
-        }
-        else /* don't update when node did not exist */
-            rc = 0;
-    }
-
-    if ( * updated ) {
-        assert ( rc == 0 );
-        if (update1)
-            rc = KConfigWriteString ( self, node_name, new_value);
-        if (rc == 0 && update2)
-            rc = KConfigWriteString(self, node2_name, new_value);
-        if ( rc == 0 )
-            rc = KConfigWriteString ( self, updated_name, "updated" );
-    }
-
-    return rc;
-}
-#endif
-
-static rc_t _KConfigLowerAscpRate ( KConfig * self, bool * updated ) {
-    return 0;
-/*
-    return _KConfigUpdateDefault(self, updated,
-        "/tools/ascp/max_rate", NULL, "1000m", "450m",
-        "/tools/ascp/max_rate/450m");
-*/
-}
-
-static rc_t _KConfigUseTraceCgi(KConfig * self, bool * updated) {
-    return 0;
-/*
-    return _KConfigUpdateDefault(self, updated,
-        "/repository/remote/main/CGI/resolver-cgi",
-        "/repository/remote/protected/CGI/resolver-cgi",
-        "https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi",
-        RESOLVER_CGI,
-        "/repository_remote/CGI/resolver-cgi/trace");
-*/
-}
-
 /* create Accession as Directory repository when it does not exist */
 static rc_t _KConfigCheckAd(KConfig * self) {
     const KConfigNode * kfg = NULL;
@@ -3550,12 +3464,6 @@ rc_t KConfigMakeImpl ( KConfig ** cfg, const KDirectory * cfgdir, bool local,
 
                 if ( ! KConfigDisabledUserSettings() ) {
                     bool updatd2 = false;
-
-                    rc = _KConfigLowerAscpRate ( mgr,  & updated );
-                    if (rc == 0) {
-                        rc = _KConfigUseTraceCgi(mgr, &updatd2);
-                        updated |= updatd2;
-                    }
 
                     if (rc == 0) {
                         rc = _KConfigUsePileupAppWithExtFlatAlg(mgr, &updatd2);
@@ -4505,36 +4413,6 @@ rc_t _KConfigNncToKGapConfig(const KConfig *self, char *text, KGapConfig *kgc)
 
 LIB_EXPORT rc_t KConfigFixMainResolverCgiNode ( KConfig * self ) {
     rc_t rc = 0;
-
-    KConfigNode *node = NULL;
-    struct String *result = NULL;
-
-    assert(self);
-
-    if (rc == 0) {
-        rc = KConfigOpenNodeUpdate(self, &node,
-            "/repository/remote/main/CGI/resolver-cgi");
-    }
-
-    if (rc == 0) {
-        rc = KConfigNodeReadString(node, &result);
-    }
-
-    if (rc == 0) {
-        String http;
-        CONST_STRING ( & http,
-                   "http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" );
-        assert(result);
-        if ( result->size == 0 || StringEqual ( & http, result ) ) {
-            const char https[] = RESOLVER_CGI;
-            rc = KConfigNodeWrite ( node, https, sizeof https );
-        }
-    }
-
-    free(result);
-
-    KConfigNodeRelease(node);
-
     return rc;
 }
 
@@ -4572,39 +4450,6 @@ static rc_t KConfigFixProtectedSdlCgiNode(KConfig * self) {
 
 LIB_EXPORT rc_t KConfigFixProtectedResolverCgiNode ( KConfig * self ) {
     rc_t rc = 0;
-
-    KConfigNode *node = NULL;
-    struct String *result = NULL;
-
-    assert(self);
-
-    if (rc == 0) {
-        rc = KConfigOpenNodeUpdate(self, &node,
-            "/repository/remote/protected/CGI/resolver-cgi");
-    }
-
-    if (rc == 0) {
-        rc = KConfigNodeReadString(node, &result);
-    }
-
-    if (rc == 0) {
-        String http;
-        CONST_STRING ( & http,
-                   "http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" );
-        assert(result);
-        if ( result->size == 0 || StringEqual ( & http, result ) ) {
-            const char https[] = RESOLVER_CGI;
-            rc = KConfigNodeWrite ( node, https, sizeof https );
-        }
-    }
-
-    free(result);
-
-    KConfigNodeRelease(node);
-
-    if (rc == 0)
-        rc = KConfigFixProtectedSdlCgiNode(self);
-
     return rc;
 }
 

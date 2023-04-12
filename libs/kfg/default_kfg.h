@@ -41,13 +41,13 @@
 "/repository/user/main/public/apps/sraRealign/volumes/withExtFlat = \"sra\"\n" \
 "/repository/user/main/public/apps/wgs/volumes/wgsFlat = \"wgs\"\n"            \
                                                                                \
-"strings/names = \"" RESOLVER_CGI "\"\n"                                       \
 "strings/sdl = \"" SDL_CGI "\"\n"                                              \
-                                                                               \
-"/repository/remote/main/CGI/resolver-cgi = \"$(strings/names)\"\n"            \
-"/repository/remote/protected/CGI/resolver-cgi = \"$(strings/names)\"\n"       \
                                                                                \
 "/repository/remote/main/SDL.2/resolver-cgi = \"$(strings/sdl)\"\n"            \
 "/repository/remote/protected/SDL.2/resolver-cgi = \"$(strings/sdl)\"\n"       \
                                                                                \
 "/tools/ascp/max_rate = \"450m\"\n"
+
+// "strings/name s = \"" RESOLVER_CGI "\"\n"
+// "/repository/remote/main/CGI/resolver-cgi = \"$(strings/name s)\"\n"
+// "/repository/remote/protected/CGI/resolver-cgi = \"$(strings/name s)\"\n"
