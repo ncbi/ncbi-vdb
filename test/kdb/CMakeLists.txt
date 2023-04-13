@@ -24,7 +24,7 @@
 
 if( WIN32 )
     set( ADDITIONAL_LIBS Crypt32 )
-	set( TMPDIR ${CMAKE_CURRENT_SOURCE_DIR}/data/ )
+	set( TMPDIR ./data)
 else()
     set( ADDITIONAL_LIBS "" )
 	set( TMPDIR /tmp )
