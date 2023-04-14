@@ -245,7 +245,7 @@ public:
 
         VFSManager * vfs = NULL;
 
-//KConfigPrint(cfg, 0);
+KConfigPrint(cfg, 0);
 
         REQUIRE_RC ( VFSManagerMakeLocal ( & vfs, cfg ) );
         REQUIRE_RC ( SET :: resetSingleton ( vfs ) );
@@ -635,7 +635,7 @@ extern "C" {
     rc_t CC KMain ( int argc, char * argv [] ) {
         KConfigDisableUserSettings ();
 if (
-0 ) assert ( ! KDbgSetString ( "VFS" ) );
+1 ) assert ( ! KDbgSetString ( "VFS" ) );
         return CachingSuite ( argc, argv );
     }
 }
