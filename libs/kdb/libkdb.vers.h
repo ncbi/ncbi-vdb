@@ -24,4 +24,4 @@
 *
 */
 
-#define LIBKDB_VERS 0x02070031
+#define LIBKDB_VERS 0x02070032
