@@ -24,16 +24,12 @@
 
 set(CRYPTO_SRC
     aes.c
-    aesce.c
     aesni.c
     aria.c
     asn1parse.c
     asn1write.c
     base64.c
     bignum.c
-    bignum_core.c
-    bignum_mod.c
-    bignum_mod_raw.c
     camellia.c
     ccm.c
     chacha20.c
@@ -54,7 +50,6 @@ set(CRYPTO_SRC
     entropy_poll.c
     error.c
     gcm.c
-    hash_info.c
     hmac_drbg.c
     md.c
     md5.c
@@ -72,6 +67,7 @@ set(CRYPTO_SRC
     platform_util.c
     poly1305.c
     psa_crypto.c
+    psa_crypto_client.c
     psa_crypto_driver_wrappers.c
     psa_crypto_slot_management.c
     psa_crypto_storage.c
@@ -83,9 +79,7 @@ set(CRYPTO_SRC
     psa_crypto_hash.c
     psa_crypto_cipher.c
     psa_crypto_aead.c
-    psa_crypto_pake.c
     psa_crypto_se.c
-    psa_util.c
     ripemd160.c
     rsa.c
     rsa_alt_helpers.c
