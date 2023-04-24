@@ -20,7 +20,7 @@
 #
 #  Please cite the author in any work or product based on this material.
 #
-# ===========================================================================
+# =============================================================================$
 
 use strict;
 
@@ -336,7 +336,19 @@ if ($OSTYPE =~ /linux/i) {
     $SHLX = 'so';
     $EXEX = '';
     $OSINC = 'unix';
-    $TOOLS = 'gcc' unless ($TOOLS);
+    unless ($TOOLS) {
+        if ($ENV{CC}) {
+            if ($ENV{CC} =~ /clang/) {
+                $TOOLS = 'clang'
+            } elsif ($ENV{CC} =~ /gcc/) {
+                $TOOLS = 'gcc'
+            } else {
+                die "unrecognized CC '$ENV{CC}'; expected: clang, gcc"
+            }
+        } else {
+            $TOOLS = 'gcc'
+        }
+    }
     $PYTHON = 'python';
 } elsif ($OSTYPE =~ /darwin/i) {
     $LPFX = 'lib';
@@ -346,7 +358,19 @@ if ($OSTYPE =~ /linux/i) {
     $SHLX = 'dylib';
     $EXEX = '';
     $OSINC = 'unix';
-    $TOOLS = 'clang' unless ($TOOLS);
+    unless ($TOOLS) {
+        if ($ENV{CC}) {
+            if ($ENV{CC} =~ /clang/) {
+                $TOOLS = 'clang'
+            } elsif ($ENV{CC} =~ /gcc/) {
+                $TOOLS = 'gcc'
+            } else {
+                die "unrecognized CC '$ENV{CC}'; expected: clang, gcc"
+            }
+        } else {
+            $TOOLS = 'clang'
+        }
+    }
     $PYTHON = 'python';
 } elsif ($OSTYPE eq 'win') {
     $TOOLS = 'vc++';
@@ -363,12 +387,17 @@ my ($ARCH_FL, $DBG, $OPT, $PIC, $INC, $MD, $LDFLAGS) = ('');
 
 print "checking for supported tool chain... " unless ($AUTORUN);
 
-$CPP     = $OPT{CXX    } if ($OPT{CXX    });
+if ($OPT{CXX}) {
+    $CPP = $OPT{CXX}
+} elsif ($ENV{CXX}) {
+    $CPP = $ENV{CXX}
+}
+
 $LDFLAGS = $OPT{LDFLAGS} if ($OPT{LDFLAGS});
 
 if ($TOOLS =~ /gcc$/) {
     $CPP  = 'g++' unless ($CPP);
-    $CC   = "$TOOLS -c";
+    $CC   = $ENV{CC} ? $ENV{CC} : $TOOLS; $CC .= ' -c';
     $CP   = "$CPP -c";
     $AR   = 'ar rc';
     $ARX  = 'ar x';
@@ -383,8 +412,8 @@ if ($TOOLS =~ /gcc$/) {
     $MD  = '-MD';
 } elsif ($TOOLS eq 'clang') {
     $CPP  = 'clang++' unless ($CPP);
-    $CC   = 'clang -c';
-    #my $versionMin = '-mmacosx-version-min=10.10';
+    $CC   = $ENV{CC} ? $ENV{CC} : $TOOLS; $CC .= ' -c';
+#   my $versionMin = '-mmacosx-version-min=10.10';
     my $versionMin = '';
     $CP   = "$CPP -c $versionMin";
     if ($BITS ne '32_64') {
