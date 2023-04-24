@@ -458,7 +458,7 @@ if ($OS ne 'win' && $PKG{LNG} ne 'JAVA') {
 
 if ($CPP) {
     print "checking for $TOOLS... ";
-    my $cmd = "$TOOLS --version | head -1";
+    my $cmd = "$CC --version | head -1";
     print "\n\t\trunning $cmd\n\t" if ($OPT{'debug'});
     my $out = `$cmd 2>&1`;
     if ($? == 0) {
@@ -1701,7 +1701,7 @@ sub find_lib {
 
 sub check_compiler {
     my ($t, $n, $I, @l) = @_;
-    my $tool = $TOOLS;
+    my $tool = $CC;
 
     if ($t eq 'L') {
         print "checking for $n library... ";
