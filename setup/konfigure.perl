@@ -398,13 +398,15 @@ $LDFLAGS = $OPT{LDFLAGS} if ($OPT{LDFLAGS});
 
 if ($TOOLS =~ /gcc$/) {
     $CPP  = 'g++' unless ($CPP);
-    $CC   = $TOOLS unless ($CC); $CC .= ' -c';
     $CP   = "$CPP -c";
     $AR   = 'ar rc';
     $ARX  = 'ar x';
     $ARLS = 'ar t';
-    $LD   = $TOOLS;
     $LP   = $CPP;
+
+    $CC   = $TOOLS unless ($CC);
+    $LD   = $CC;
+    $CC .= ' -c';
 
     $DBG = '-g -DDEBUG';
     $OPT = '-O3';
@@ -413,24 +415,27 @@ if ($TOOLS =~ /gcc$/) {
     $MD  = '-MD';
 } elsif ($TOOLS eq 'clang') {
     $CPP  = 'clang++' unless ($CPP);
-    $CC   = $TOOLS unless ($CC); $CC .= ' -c';
 #   my $versionMin = '-mmacosx-version-min=10.10';
     my $versionMin = '';
     $CP   = "$CPP -c $versionMin";
+
+    $CC   = $TOOLS unless ($CC);
     if ($BITS ne '32_64') {
         $ARCH_FL = '-arch i386' if ($BITS == 32);
         $OPT = '-O3';
         $AR      = 'ar rc';
-        $LD      = "clang $ARCH_FL";
+        $LD      = "$CC $ARCH_FL";
         $LP      = "$CPP $versionMin $ARCH_FL";
     } else {
         $MAKE_MANIFEST = '( echo "$^" > $@/manifest )';
         $ARCH_FL       = '-arch i386 -arch x86_64';
         $OPT    = '-O3';
         $AR     = 'libtool -static -o';
-        $LD     = "clang -Wl,-arch_multiple $ARCH_FL -Wl,-all_load";
+        $LD     = "$CC -Wl,-arch_multiple $ARCH_FL -Wl,-all_load";
         $LP     = "$CPP $versionMin -Wl,-arch_multiple $ARCH_FL -Wl,-all_load";
     }
+    $CC .= ' -c';
+
     $ARX  = 'ar x';
     $ARLS = 'ar t';
 
