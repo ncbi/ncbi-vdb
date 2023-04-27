@@ -193,7 +193,8 @@ if ($OPT{'help'}) {
 foreach (@ARGV) {
     @_ = split('=');
     next if ($#_ != 1);
-    $OPT{$_[0]} = $_[1] if ($_[0] eq 'CXX' || $_[0] eq 'LDFLAGS');
+    if ($_[0] eq 'CC' || $_[0] eq 'CXX' || $_[0] eq 'LDFLAGS')
+    {   $OPT{$_[0]} = $ENV{$_[0]} ? $ENV{$_[0]} : $_[1] }
 }
 
 println "Configuring $PACKAGE_NAME package";
@@ -337,13 +338,13 @@ if ($OSTYPE =~ /linux/i) {
     $EXEX = '';
     $OSINC = 'unix';
     unless ($TOOLS) {
-        if ($ENV{CC}) {
-            if ($ENV{CC} =~ /clang/) {
+        if ($OPT{CC}) {
+            if ($OPT{CC} =~ /clang/) {
                 $TOOLS = 'clang'
-            } elsif ($ENV{CC} =~ /gcc/) {
+            } elsif ($OPT{CC} =~ /gcc/) {
                 $TOOLS = 'gcc'
             } else {
-                die "unrecognized CC '$ENV{CC}'; expected: clang, gcc"
+                die "unrecognized CC '$OPT{CC}'; expected: clang, gcc"
             }
         } else {
             $TOOLS = 'gcc'
@@ -359,13 +360,13 @@ if ($OSTYPE =~ /linux/i) {
     $EXEX = '';
     $OSINC = 'unix';
     unless ($TOOLS) {
-        if ($ENV{CC}) {
-            if ($ENV{CC} =~ /clang/) {
+        if ($OPT{CC}) {
+            if ($OPT{CC} =~ /clang/) {
                 $TOOLS = 'clang'
-            } elsif ($ENV{CC} =~ /gcc/) {
+            } elsif ($OPT{CC} =~ /gcc/) {
                 $TOOLS = 'gcc'
             } else {
-                die "unrecognized CC '$ENV{CC}'; expected: clang, gcc"
+                die "unrecognized CC '$OPT{CC}'; expected: clang, gcc"
             }
         } else {
             $TOOLS = 'clang'
@@ -387,17 +388,13 @@ my ($ARCH_FL, $DBG, $OPT, $PIC, $INC, $MD, $LDFLAGS) = ('');
 
 print "checking for supported tool chain... " unless ($AUTORUN);
 
-if ($OPT{CXX}) {
-    $CPP = $OPT{CXX}
-} elsif ($ENV{CXX}) {
-    $CPP = $ENV{CXX}
-}
-
+$CC      = $OPT{CC     } if ($OPT{CC     });
+$CPP     = $OPT{CXX    } if ($OPT{CXX    });
 $LDFLAGS = $OPT{LDFLAGS} if ($OPT{LDFLAGS});
 
 if ($TOOLS =~ /gcc$/) {
     $CPP  = 'g++' unless ($CPP);
-    $CC   = $ENV{CC} ? $ENV{CC} : $TOOLS; $CC .= ' -c';
+    $CC   = $TOOLS unless ($CC); $CC .= ' -c';
     $CP   = "$CPP -c";
     $AR   = 'ar rc';
     $ARX  = 'ar x';
@@ -412,7 +409,7 @@ if ($TOOLS =~ /gcc$/) {
     $MD  = '-MD';
 } elsif ($TOOLS eq 'clang') {
     $CPP  = 'clang++' unless ($CPP);
-    $CC   = $ENV{CC} ? $ENV{CC} : $TOOLS; $CC .= ' -c';
+    $CC   = $TOOLS unless ($CC); $CC .= ' -c';
 #   my $versionMin = '-mmacosx-version-min=10.10';
     my $versionMin = '';
     $CP   = "$CPP -c $versionMin";
@@ -1869,7 +1866,10 @@ sub help {
     print <<EndText;
 `configure' configures $PACKAGE_NAME to adapt to many kinds of systems.
 
-Usage: ./configure [OPTION]...
+Usage: ./configure [OPTION]... [VAR=VALUE]...
+
+To assign environment variables (e.g., CC, CFLAGS...), specify them as
+VAR=VALUE. See below for descriptions of some of the useful variables.
 
 Defaults for the options are specified in brackets.
 
@@ -2028,6 +2028,15 @@ EndText
     print <<EndText;
   --clean                  remove all configuration results
   --debug                  print lots of debugging information
+
+Some influential environment variables:
+  CC          C compiler command
+  CXX         C++ compiler command
+  LDFLAGS     linker flags, e.g. -L<lib dir> if you have libraries in a
+              nonstandard directory <lib dir>
+
+Use these variables to override the choices made by `configure' or to
+help it to find libraries and programs with nonstandard names/locations.
 
 If `configure' was already run running `configure' without options
 will rerun `configure' using the same command-line arguments.
