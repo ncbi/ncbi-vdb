@@ -191,6 +191,7 @@ namespace ncbi
             uint64_t EvalConstExpr ( const AST_Expr &expr );
 
             const struct KFile * OpenIncludeFile ( const Token :: Location & p_loc, const char * p_fmt, ... );
+            const KSymbol* ResolveNestedName ( const AST_FQN & p_fqn, uint32_t p_idx, uint32_t & p_missingIdx );
 
         private:
             VSchema*    m_schema;

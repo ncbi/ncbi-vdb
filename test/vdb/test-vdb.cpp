@@ -155,6 +155,36 @@ TEST_CASE( VdbMgr ) {
 
 }
 
+TEST_CASE(SimultaneousCursors)
+{   // SRA-1669 WGS ALWZ01 cannot open multiple cursors with SEQUENCE.CONTIG_NAME column simultaneously (Win32)
+
+    for ( int i = 0; i < 1; ++i ) {
+        const VDBManager* mgr = 0;
+        REQUIRE_RC(VDBManagerMakeRead(&mgr, 0));
+        const VDatabase* db = 0;
+        REQUIRE_RC(VDBManagerOpenDBRead(mgr, &db, 0, "ALWZ01"));
+        const VTable* table = 0;
+        REQUIRE_RC(VDatabaseOpenTableRead(db, &table, "SEQUENCE"));
+        const size_t CURSOR_CNT = 10;
+        const VCursor* cursors[CURSOR_CNT] = {};
+        for ( size_t i = 0; i < CURSOR_CNT; ++i ) {
+            const VCursor* cursor = 0;
+            REQUIRE_RC(VTableCreateCursorRead(table, &cursor));
+            cursors[i] = cursor;
+            REQUIRE_RC(VCursorPermitPostOpenAdd(cursor));
+            REQUIRE_RC(VCursorOpen(cursor));
+            uint32_t col_index;
+            REQUIRE_RC(VCursorAddColumn(cursor, &col_index, "CONTIG_NAME"));
+        }
+        for ( size_t i = 0; i < CURSOR_CNT; ++i ) {
+            REQUIRE_RC(VCursorRelease(cursors[i]));
+        }
+        REQUIRE_RC(VTableRelease(table));
+        REQUIRE_RC(VDatabaseRelease(db));
+        REQUIRE_RC(VDBManagerRelease(mgr));
+    }
+}
+
 FIXTURE_TEST_CASE(TestCursorIsStatic_SingleRowRun1, VDB_Fixture)
 {
     static char const *columns[] = { "READ_LEN", 0 };
@@ -432,6 +462,22 @@ cout << out;
     }
 }
 #endif
+FIXTURE_TEST_CASE ( V2ParserError, VDB_Fixture )
+{   // This exercises an "extended schema" scenario, when a schema embedded
+    // in a table gets tacked onto the exsiting schema, possibly creating namespaces
+    // that opaque the parent schema (see callers of VSchemaParseTextCallback)
+    const VTable *tbl = NULL;
+    VSchema *schema = NULL;
+    REQUIRE_RC ( VDBManagerMakeSRASchema(mgr, &schema) );
+    REQUIRE_RC ( VDBManagerOpenTableRead ( mgr, &tbl, schema, "SRR053325" ) );
+    REQUIRE_RC ( VTableCreateCursorRead(tbl, &curs) );
+    uint32_t colIdx;
+    REQUIRE_RC ( VCursorAddColumn ( curs, & colIdx, "READ" ) );
+    REQUIRE_RC ( VCursorOpen (curs ) );
+    REQUIRE_RC ( VSchemaRelease ( schema ) );
+    REQUIRE_RC ( VTableRelease ( tbl ) );
+}
+
 
 //////////////////////////////////////////// Main
 extern "C"

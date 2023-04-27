@@ -27,11 +27,15 @@
 #include "SchemaParser.hpp"
 
 #include <klib/text.h>
+#include <klib/log.h>
 
 #include <kfs/mmap.h>
 
+#include "../vdb/schema-priv.h"
+
 #include "SchemaScanner.hpp"
 #include "ParseTree.hpp"
+#include "ASTBuilder.hpp"
 
 using namespace ncbi::SchemaParser;
 #define YYDEBUG 1
@@ -96,4 +100,42 @@ SchemaParser :: MoveParseTree ()
     ParseTree* ret = m_root;
     m_root = 0;
     return ret;
+}
+
+static
+void
+LogErrors ( const ErrorReport & p_rep )
+{
+    uint32_t count = p_rep . GetCount ();
+    for (uint32_t i = 0; i < count; ++i)
+    {
+        char buf [1024];
+        p_rep . GetError ( i ) -> Format ( buf, sizeof ( buf )  );
+        LogMsg ( klogErr, buf );
+    }
+}
+
+bool
+VSchemaParse_v2 ( VSchema * p_self, const char * p_text )
+{
+    ncbi :: SchemaParser :: SchemaParser parser;
+    if ( ! parser . ParseString ( p_text ) )
+    {
+        LogErrors ( parser . GetErrors () );
+        return false;
+    }
+    ncbi :: SchemaParser :: ParseTree * parseTree = parser . MoveParseTree ();
+    assert ( parseTree != 0 );
+
+    ncbi :: SchemaParser :: ASTBuilder builder ( p_self );
+    ncbi :: SchemaParser :: AST * ast = builder . Build ( * parseTree, "", false );
+    delete ast;
+    delete parseTree;
+
+    if ( builder . GetErrorCount() != 0)
+    {
+        LogErrors ( builder . GetErrors () );
+        return false;
+    }
+    return true;
 }

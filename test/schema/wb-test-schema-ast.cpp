@@ -341,14 +341,20 @@ FIXTURE_TEST_CASE(Typedef_UndefinedBase, AST_Fixture)
     VerifyErrorMessage ( "typedef zz t;", "Undeclared identifier: 'zz'" );
 }
 
-FIXTURE_TEST_CASE(Typedef_DuplicateDefinition_1, AST_Fixture)
+FIXTURE_TEST_CASE(Typedef_BenignRedefinesAllowed_1, AST_Fixture)
 {
-    VerifyErrorMessage ( "typedef U8 t; typedef U8 t;", "Object already declared: 't'" );
+    MakeAst ( "typedef U8 t; typedef U8 t;" );
+    VerifyDatatype ( "t", "U8", 1, 8 );
+}
+FIXTURE_TEST_CASE(Typedef_BenignRedefinesAllowed_2, AST_Fixture)
+{
+    MakeAst ( "typedef U8 t, t;" );
+    VerifyDatatype ( "t", "U8", 1, 8 );
 }
 
-FIXTURE_TEST_CASE(Typedef_DuplicateDefinition_2, AST_Fixture)
+FIXTURE_TEST_CASE(Typedef_DuplicateDefinition_1, AST_Fixture)
 {
-    VerifyErrorMessage ( "typedef U8 t, t;", "Object already declared: 't'" );
+    VerifyErrorMessage ( "typedef U8 t; typedef U32 t;", "Type already declared differently: 't'" );
 }
 
 FIXTURE_TEST_CASE(Typedef_BaseNotAType, AST_Fixture)

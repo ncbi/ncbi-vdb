@@ -27,6 +27,7 @@
 #ifndef _hpp_ErrorReport_
 #define _hpp_ErrorReport_
 
+//#include <exception>
 #include <klib/vector.h>
 
 #include "Token.hpp"
@@ -35,6 +36,18 @@ namespace ncbi
 {
     namespace SchemaParser
     {
+
+        class InternalError //: public std :: exception
+        {
+        public:
+            InternalError(const char * p_text);
+            virtual ~InternalError() throw();
+            virtual const char* what() const throw();
+
+        private:
+            char * m_text;
+        };
+
         class ErrorReport
         {
         public:

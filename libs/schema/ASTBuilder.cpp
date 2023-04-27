@@ -202,8 +202,49 @@ ASTBuilder :: Resolve ( const Token :: Location & p_loc, const char* p_ident, bo
 }
 
 const KSymbol*
+ASTBuilder :: ResolveNestedName ( const AST_FQN & p_fqn, uint32_t p_idx, uint32_t & p_missingIdx )
+{
+    const KSymbol* ret = 0;
+    String name;
+    StringInitCString ( & name, p_fqn . GetChild ( p_idx ) -> GetTokenValue () );
+    if ( p_idx == p_fqn . ChildrenCount () - 1 )
+    {   // we pushed all the namespaces; if all of them existed we can look for the identifier in the innermost namespace
+        ret = KSymTableFindShallow ( & m_symtab, & name );
+        if ( ret == 0 )
+        {   // for error reporting, specify which of the names in the chain was not found
+            p_missingIdx = p_idx;
+        }
+    }
+    else
+    {   // we are still inside the chain of namespaces
+        KSymbol *ns = KSymTableFindShallow ( & m_symtab, & name );
+        rc_t rc;
+        if ( ns == 0 )
+        {   // create a new namespace
+            rc = KSymTableCreateNamespace ( & m_symtab, & ns, & name );
+            if ( rc != 0 )
+            {
+                ReportRc ( "KSymTableCreateNamespace", rc );
+                return 0;
+            }
+        }
+        rc = KSymTablePushNamespace ( & m_symtab, ns );
+        if ( rc != 0 )
+        {
+            ReportRc ( "KSymTablePushNamespace", rc );
+            return 0;
+        }
+        ret = ResolveNestedName ( p_fqn, p_idx + 1, p_missingIdx );
+        KSymTablePopNamespace ( & m_symtab );
+    }
+
+    return ret;
+}
+
+const KSymbol*
 ASTBuilder :: Resolve ( const AST_FQN & p_fqn, bool p_reportUnknown )
 {
+    rc_t rc = 0;
     uint32_t count = p_fqn . ChildrenCount ();
     assert ( count > 0 );
 
@@ -212,69 +253,69 @@ ASTBuilder :: Resolve ( const AST_FQN & p_fqn, bool p_reportUnknown )
         return Resolve ( p_fqn .GetLocation (), p_fqn . GetChild ( 0 ) -> GetTokenValue (), p_reportUnknown );
     }
 
-    // work the namespaces
-    bool ns_resolved = true;
-    for ( uint32_t i = 0 ; i < count - 1; ++ i )
-    {
-        String name;
-        StringInitCString ( & name, p_fqn . GetChild ( i ) -> GetTokenValue () );
-        KSymbol *ns = 0;
-        if ( i == 0 )
-        {
-            ns = KSymTableFindGlobal ( & m_symtab, & name );
-        }
-        else if ( ns_resolved )
-        {
-            ns = KSymTableFindShallow ( & m_symtab, & name );
-        }
-
-        if ( ns == 0 )
-        {
-            ns_resolved = false; // no need to do any lookup from now on
-            // create a new namespace
-            rc_t rc = KSymTableCreateNamespace ( & m_symtab, & ns, & name );
-            if ( rc != 0 )
-            {
-                ReportRc ( "KSymTableCreateNamespace", rc );
-                count = i;
-                break;
-            }
-        }
-
-        rc_t rc = KSymTablePushNamespace ( & m_symtab, ns );
+    const KSymbol * ret = 0;
+    uint32_t missingIdx = 0;
+    // resolve the outer namespace
+    String name;
+    StringInitCString ( & name, p_fqn . GetChild ( 0 ) -> GetTokenValue () );
+    KSymbol * ns = KSymTableFind ( & m_symtab, & name );
+    if ( ns == 0 )
+    {   // create a new namespace
+        rc = KSymTableCreateNamespace ( & m_symtab, & ns, & name );
         if ( rc != 0 )
         {
-            ReportRc ( "KSymTablePushNamespace", rc );
-            count = i;
-            ns_resolved = false;
-            break;
+            ReportRc ( "KSymTableCreateNamespace", rc );
+            return 0;
         }
     }
 
-    // we pushed all the namespaces; if all of them existed we can look for the identifier in the innermost namespace
-    String name;
-    p_fqn . GetIdentifier ( name );
-
-    const KSymbol * ret = 0;
-    if ( ns_resolved )
+    rc = KSymTablePushNamespace ( & m_symtab, ns );
+    if ( rc != 0 )
     {
-        ret = KSymTableFindShallow ( & m_symtab, & name );
-    }
-    if ( ret == 0 && p_reportUnknown )
-    {
-        ReportError ( p_fqn . GetChild ( p_fqn . ChildrenCount () - 1 ) -> GetLocation (), "Undeclared identifier", name );
+        ReportRc ( "KSymTablePushNamespace", rc );
+        KSymTablePopNamespace ( & m_symtab );
+        return 0;
     }
 
-    // pop the namespaces, count is how many to pop
-    if ( count > 0 )
+    ret = ResolveNestedName ( p_fqn, 1, missingIdx );
+    KSymTablePopNamespace ( & m_symtab );
+    if ( ret != 0 )
     {
-        for ( uint32_t i = 0 ; i < count - 1; ++ i )
+        return ret;
+    }
+
+    /* before returning an error, look harder.
+        extended VSchema can create symtab entries
+        for namespaces that opaque the parent schema */
+    uint32_t scope = 0;
+    while ( ns != 0 )
+    {
+        /* find a deeper symbol */
+        ns = KSymTableFindNext ( & m_symtab, ns, & scope );
+        if ( ns != NULL && ns -> type == eNamespace )
         {
+            rc = KSymTablePushNamespace ( & m_symtab, ns );
+            if ( rc != 0 )
+            {
+                ReportRc ( "KSymTablePushNamespace", rc );
+                KSymTablePopNamespace ( & m_symtab );
+                return 0;
+            }
+            ret = ResolveNestedName ( p_fqn, 1, missingIdx );
             KSymTablePopNamespace ( & m_symtab );
+            if ( ret != 0 )
+            {
+                return ret;
+            }
         }
     }
 
-    return ret;
+    if ( p_reportUnknown )
+    {
+        const AST * missing = p_fqn . GetChild ( missingIdx );
+        ReportError ( missing -> GetLocation (), "Undeclared identifier", missing -> GetTokenValue () );
+    }
+    return 0;
 }
 
 uint32_t
@@ -462,7 +503,8 @@ ASTBuilder :: AddProduction ( const AST & p_node, Vector & p_list, const char * 
         sym -> u . obj = prod;
 
         prod -> expr = p_expr . MakeExpression ( *this ) ;
-
+        /* ctx = 0 for params, ctx == 1 for productions */
+        prod -> cid . ctx = 1;
         if ( ! VectorAppend ( p_list, & prod -> cid . id, prod ) )
         {
             SProductionWhack ( prod, NULL );

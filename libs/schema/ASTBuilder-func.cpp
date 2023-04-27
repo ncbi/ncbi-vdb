@@ -42,6 +42,7 @@ using namespace std;
 FunctionDeclaration :: FunctionDeclaration ( ASTBuilder & p_builder )
 :   m_builder ( p_builder ),
     m_self ( m_builder . Alloc < SFunction > () ),
+    m_hasReturn ( false ),
     m_destroy ( true )
 {
     if ( m_self != 0 )
@@ -53,6 +54,7 @@ FunctionDeclaration :: FunctionDeclaration ( ASTBuilder & p_builder )
 FunctionDeclaration :: FunctionDeclaration ( ASTBuilder & p_builder, SFunction & p_func )
 :   m_builder ( p_builder ),
     m_self ( & p_func ),
+    m_hasReturn ( false ),
     m_destroy ( false )
 {
     memset ( m_self, 0, sizeof * m_self );
@@ -445,6 +447,7 @@ FunctionDeclaration :: HandleStatement ( const AST & p_stmt )
     {
     case KW_return:
         {
+            m_hasReturn = true;
             if ( m_self -> u . script . rtn == 0 )
             {
                 assert ( p_stmt . ChildrenCount () == 1 );
@@ -486,7 +489,7 @@ FunctionDeclaration :: HandleScript ( const AST & p_body, const String & p_funcN
     {
         HandleStatement ( * p_body . GetChild ( i ) );
     }
-    if ( m_self -> script && m_self -> u . script . rtn == 0 )
+    if ( m_self -> script && ! m_hasReturn )
     {
         m_builder . ReportError ( p_body . GetLocation (), "Schema function does not contain a return statement", p_funcName );
     }

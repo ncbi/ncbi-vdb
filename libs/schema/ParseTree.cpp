@@ -26,10 +26,10 @@
 
 #include "ParseTree.hpp"
 
-#include <stdexcept>
-
 #include <klib/text.h>
 #include <klib/printf.h>
+
+#include "ErrorReport.hpp"
 
 using namespace std;
 using namespace ncbi::SchemaParser;
@@ -42,8 +42,7 @@ ThrowRc ( const char* p_msg, rc_t p_rc )
 {
     char msg[1024];
     string_printf ( msg, sizeof msg, NULL, "%s, rc = %R", p_msg, p_rc );
-    //INTERNAL_ERROR ( xcUnexpected, "VectorRemove: rc = %R", rc );
-    throw logic_error ( msg );
+    throw InternalError ( msg );
 }
 
 // ParseTree

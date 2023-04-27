@@ -52,30 +52,50 @@ ASTBuilder :: DeclareType ( const AST_FQN& p_fqn, const KSymbol& p_super, const 
     assert ( p_super . type == eDatatype );
     const SDatatype * super = static_cast < const SDatatype * > ( p_super . u . obj );
 
-    /* allocate a datatype */
-    SDatatype * dt = Alloc < SDatatype > ();
-    if ( dt != 0 )
-    {
-        /* insert into type vector */
-        if ( VectorAppend ( m_schema -> dt, & dt -> id, dt ) )
+    const KSymbol * previous = Resolve ( p_fqn, false ); // will not report unknown name
+    if ( previous != 0 )
+    {   // Allow benign redefine
+        if ( previous -> type != eDatatype )
         {
-            // create a symtab entry
-            const KSymbol* symbol = CreateFqnSymbol ( p_fqn, eDatatype, dt ); // will add missing namespaces to symtab
-            if ( symbol != 0 )
-            {
-                /* fill it out from super-type */
-                dt -> super     = super;
-                dt -> byte_swap = super -> byte_swap;
-                dt -> name      = symbol;
-                uint32_t dimension = p_dimension == 0 ? 1 : ( uint32_t ) EvalConstExpr ( * p_dimension );
-                dt -> size      = super -> size * dimension;
-                dt -> dim       = dimension;
-                dt -> domain    = super -> domain;
-            }
+            ReportError ( "Already declared and is not a datatype", p_fqn );
         }
         else
         {
-            SDatatypeWhack ( dt, 0 );
+            const SDatatype * dt = static_cast < const SDatatype * > ( previous -> u . obj );
+            uint32_t dimension = p_dimension == 0 ? 1 : ( uint32_t ) EvalConstExpr ( * p_dimension );
+            if ( dt -> super != super || dt -> dim != dimension )
+            {
+                ReportError ( "Type already declared differently", p_fqn );
+            }
+        }
+    }
+    else
+    {
+        /* allocate a datatype */
+        SDatatype * dt = Alloc < SDatatype > ();
+        if ( dt != 0 )
+        {
+            /* insert into type vector */
+            if ( VectorAppend ( m_schema -> dt, & dt -> id, dt ) )
+            {
+                // create a symtab entry
+                const KSymbol* symbol = CreateFqnSymbol ( p_fqn, eDatatype, dt ); // will add missing namespaces to symtab
+                if ( symbol != 0 )
+                {
+                    /* fill it out from super-type */
+                    dt -> super     = super;
+                    dt -> byte_swap = super -> byte_swap;
+                    dt -> name      = symbol;
+                    uint32_t dimension = p_dimension == 0 ? 1 : ( uint32_t ) EvalConstExpr ( * p_dimension );
+                    dt -> size      = super -> size * dimension;
+                    dt -> dim       = dimension;
+                    dt -> domain    = super -> domain;
+                }
+            }
+            else
+            {
+                SDatatypeWhack ( dt, 0 );
+            }
         }
     }
 }

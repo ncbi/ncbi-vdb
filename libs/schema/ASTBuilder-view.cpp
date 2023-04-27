@@ -530,7 +530,7 @@ ViewDeclaration :: AddColumn ( const AST & p_type, const AST & p_ident, const AS
                     }
                     c -> name = priorDecl;
                     // add column to m_self -> col
-                    if ( ! m_builder . VectorAppend ( m_self -> col, 0, c ) )
+                    if ( ! m_builder . VectorAppend ( m_self -> col, & c -> cid . id, c ) )
                     {
                         SColumnWhack ( c, 0 );
                         return;
