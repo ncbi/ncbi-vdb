@@ -194,7 +194,11 @@ foreach (@ARGV) {
     @_ = split('=');
     next if ($#_ != 1);
     if ($_[0] eq 'CC' || $_[0] eq 'CXX' || $_[0] eq 'LDFLAGS')
-    {   $OPT{$_[0]} = $ENV{$_[0]} ? $ENV{$_[0]} : $_[1] }
+    {   $OPT{$_[0]} = $_[1] }
+}
+foreach ( qw ( CC CXX LDFLAGS ) ) {
+    unless ( $OPT{$_} )
+    {   $OPT{$_} = $ENV{$_} if ( $ENV{$_} ) }
 }
 
 println "Configuring $PACKAGE_NAME package";
