@@ -185,7 +185,7 @@ bool VCursorIsReadOnly ( const struct VCursor * self );
 VBlobMRUCache * VCursorGetBlobMruCache ( struct VCursor * self );
 uint32_t VCursorIncrementPhysicalProductionCount ( struct VCursor * curs );
 
-const struct KSymbol * VCursorFindOverride ( const struct VCursor *self, const struct VCtxId *cid );
+const struct KSymbol * VCursorFindOverride ( const struct VCursor *self, const struct VCtxId *cid, const struct VTable * tbl, const struct VView * view );
 
 rc_t VCursorLaunchPagemapThread ( struct VCursor *self );
 const PageMapProcessRequest* VCursorPageMapProcessRequest ( const struct VCursor *self );

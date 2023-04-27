@@ -29,6 +29,8 @@
 #include <klib/refcount.h>
 #include <klib/symbol.h>
 
+#include <vdb/cursor.h>
+
 #include "table-priv.h"
 #include "column-priv.h"
 #include "schema-parse.h"
@@ -44,13 +46,10 @@
  *  creates a read cursor object onto view
  *
  *  "curs" [ OUT ] - return parameter for newly created cursor
- *
- *  "capacity" [ IN ] - the maximum bytes to cache on the cursor before
- *  dropping least recently used blobs
  */
 LIB_EXPORT
 rc_t CC
-VViewCreateCursor ( struct VView const * p_self, const struct VViewCursor ** p_curs )
+VViewCreateCursor ( struct VView const * p_self, const struct VCursor ** p_curs )
 {
     rc_t rc = 0;
     if ( p_curs == NULL )
@@ -63,7 +62,7 @@ VViewCreateCursor ( struct VView const * p_self, const struct VViewCursor ** p_c
     }
     else
     {
-        rc = VViewCursorMake ( p_self, (struct VViewCursor **) p_curs );
+        rc = VViewCursorMake ( p_self, ( struct VViewCursor ** ) p_curs );
     }
     return rc;
 }
@@ -95,6 +94,7 @@ VViewWhack ( VView * p_self )
         }
     }
 
+    VSchemaRelease ( p_self -> schema );
     VectorWhack ( & p_self -> bindings, 0, 0 );
     VLinkerRelease ( p_self -> linker );
     KRefcountWhack ( & p_self -> refcount, "VView" );
@@ -184,12 +184,17 @@ VDBManagerOpenView ( struct VDBManager const *   p_mgr,
                     rc = VLinkerMake ( & view -> linker, p_mgr -> linker, p_mgr -> linker -> dl );
                     if ( rc == 0 )
                     {
-                        KRefcountInit ( & view -> refcount, 1, "VView", "make", "vtbl" );
-                        view -> sview = v;
-                        view -> schema = p_schema;
-                        VectorInit ( & view -> bindings, 0, 8 );
-                        * p_view = view;
-                        return 0;
+                        rc = VSchemaAddRef ( p_schema );
+                        if ( rc == 0 )
+                        {
+                            KRefcountInit ( & view -> refcount, 1, "VView", "make", "vtbl" );
+                            view -> sview = v;
+                            view -> schema = p_schema;
+                            VectorInit ( & view -> bindings, 0, 8 );
+                            * p_view = view;
+                            return 0;
+                        }
+                        VLinkerRelease ( view -> linker );
                     }
                 }
             }
@@ -454,3 +459,34 @@ VViewGetBoundObject( const VView * p_self, const SView * p_sview, uint32_t p_par
     return NULL;
 }
 
+LIB_EXPORT
+rc_t CC
+VViewListCol ( const VView * p_self, struct KNamelist ** p_names )
+{
+    if ( p_self == NULL )
+    {
+        return RC ( rcVDB, rcTable, rcListing, rcSelf, rcNull );
+    }
+    else if ( p_names == NULL )
+    {
+        return RC ( rcVDB, rcTable, rcListing, rcParam, rcNull );
+    }
+    else
+    {
+        const VCursor * cursor;
+        rc_t rc = VViewCreateCursor ( p_self,  & cursor );
+        if ( rc == 0 )
+        {
+            BSTree columns;
+            BSTreeInit ( & columns );
+            rc = VCursorListReadableColumns ( ( VCursor* ) cursor, & columns );
+            if ( rc == 0 )
+            {
+                rc = make_column_namelist ( & columns, p_names );
+            }
+            BSTreeWhack ( & columns, NULL, NULL );
+            VCursorRelease ( cursor );
+        }
+        return rc;
+    }
+}

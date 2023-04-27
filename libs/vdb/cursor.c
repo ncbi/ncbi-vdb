@@ -97,8 +97,6 @@ static VCursor_vt VTableCursor_read_vt =
     VTableCursorPermitPostOpenAdd,
     VTableCursorSuspendTriggers,
     VTableCursorGetSchema,
-    VTableCursorLinkedCursorGet,
-    VTableCursorLinkedCursorSet,
     VTableCursorSetCacheCapacity,
     VTableCursorGetCacheCapacity,
     VTableReadCursorMakeColumn,
@@ -110,7 +108,8 @@ static VCursor_vt VTableCursor_read_vt =
     VTableCursorLaunchPagemapThread,
     VTableCursorPageMapProcessRequest,
     VTableCursorCacheActive,
-    VTableReadCursorInstallTrigger
+    VTableReadCursorInstallTrigger,
+    VTableCursorListReadableColumns
 };
 
 /*--------------------------------------------------------------------------

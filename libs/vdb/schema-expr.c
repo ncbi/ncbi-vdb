@@ -30,6 +30,7 @@
 #include "schema-parse.h"
 #include "schema-expr.h"
 #include "schema-dump.h"
+#include "prod-priv.h"
 
 #include <klib/symbol.h>
 #include <klib/symtab.h>
@@ -42,7 +43,6 @@
 #include <ctype.h>
 #include <os-native.h>
 #include <assert.h>
-
 
 /*--------------------------------------------------------------------------
  * SExpression
@@ -613,8 +613,23 @@ rc_t SExpressionDump ( const SExpression *self, SDumper *b )
         return SExpressionBracketListDump ( & x -> expr, b, "[ ", " ]" );
     }
     case eMembExpr:
-        assert (false); //TODO: SMembExprDump
-        break;
+    {
+        rc_t rc;
+        const SMembExpr *x = ( const SMembExpr* ) self;
+        if ( x -> rowId != NULL )
+        {
+            rc = SDumperPrint ( b, "param%u[%E].", x -> paramId, x -> rowId );
+        }
+        else
+        {
+            rc = SDumperPrint ( b, "param%u.", x -> paramId );
+        }
+        if ( rc == 0 )
+        {
+            rc =  StringDump ( & x -> member -> name, b );
+        }
+        return rc;
+    }
     }
 
     return SDumperPrint ( b, "EXPR-UNKNOWN" );

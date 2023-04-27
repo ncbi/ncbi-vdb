@@ -781,12 +781,12 @@ bool CC STableScanVirtuals ( void *item, void *data )
             {
                 /* copy the original */
                 const KSymbol *copy;
+                KSymbol *prior;
                 rc_t rc = KSymbolCopy ( scope, & copy, orig );
                 if ( rc != 0 )
                     return true;
-
                 /* replace the parent virtual with an updatable copy */
-                VectorSwap ( & to -> by_parent, i, copy, & ignore );
+                VectorSwap ( & to -> by_parent, i, copy, (void**)& prior );
             }
         }
     }
@@ -964,7 +964,6 @@ rc_t STableImplicitPhysMember ( STable *self,
             m -> name = sym;
             sym -> u . obj = m;
             sym -> type = ePhysMember;
-
             /* add member to table */
             m -> cid . ctx = self -> id;
             rc = VectorAppend ( & self -> phys, & m -> cid . id, m );

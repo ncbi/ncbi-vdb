@@ -410,7 +410,6 @@ const struct KSymbol *
 SViewFindOverride ( const SView * p_self, const VCtxId * p_cid )
 {
     const SViewOverrides *to;
-
     /* it may be on the existing view */
     if ( p_cid -> ctx == p_self -> id )
     {

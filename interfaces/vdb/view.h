@@ -48,6 +48,7 @@ struct VSchema;
 struct VDBManager;
 struct VTable;
 struct VSchema;
+struct KNamelist;
 
 /*--------------------------------------------------------------------------
  * VView
@@ -119,6 +120,14 @@ VDB_EXTERN rc_t CC VViewBindParameterView (
     const VView * self,
     const struct String * param_name,
     const struct VView * view );
+
+
+/* ListCol
+ *  list readable column names
+ *
+ *  "names" [ OUT ] - return parameter for namelist
+ */
+VDB_EXTERN rc_t CC VViewListCol ( const VView *self, struct KNamelist **names );
 
 #ifdef __cplusplus
 }
