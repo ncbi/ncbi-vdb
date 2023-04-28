@@ -43,7 +43,6 @@
 using namespace std;
 
 TEST_SUITE( VdbTableCursorTestSuite_Write )
-const string ScratchDir = "./db/";
 
 class TableCursorFixture : public WVDB_Fixture
 {
@@ -63,9 +62,8 @@ public:
 
     void MakeWriteCursor( const char * p_dbName, const char * p_schema )
     {
-        m_databaseName = ScratchDir + p_dbName;
         const char * schemaSpec = "db";
-        MakeDatabase ( p_schema, schemaSpec );
+        MakeDatabase ( p_dbName, p_schema, schemaSpec );
 
         VTable* table;
         THROW_ON_RC ( VDatabaseCreateTable ( m_db, & table, "t", kcmCreate | kcmMD5, "%s", "t" ) );
@@ -110,8 +108,7 @@ static const char * SimpleSchema =
 
 FIXTURE_TEST_CASE( VTableCursor_MakeWrite, TableCursorFixture )
 {
-    m_databaseName = ScratchDir + GetName();
-    MakeDatabase ( SimpleSchema, "db" );
+    MakeDatabase ( GetName(), SimpleSchema, "db" );
 
     VTable* table;
     REQUIRE_RC ( VDatabaseCreateTable ( m_db, & table, "t", kcmCreate | kcmMD5, "%s", "t" ) );

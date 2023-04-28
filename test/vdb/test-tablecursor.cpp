@@ -50,8 +50,6 @@ using namespace std;
 static rc_t argsHandler ( int argc, char * argv [] );
 TEST_SUITE_WITH_ARGS_HANDLER ( VdbTableCursorTestSuite_Read, argsHandler );
 
-const string ScratchDir = "./db/";
-
 const char * Accession = "SRR600096";
 
 // VTable

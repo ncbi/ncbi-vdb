@@ -148,6 +148,12 @@ public:
         // ... that reads the value of p_col
         VerifySymExpr ( phys . expr, eColExpr, ToCppString ( p_col . name -> name ), eColumn );
     }
+    void VerifyVCtxId ( const VCtxId & p_ctxId, uint32_t p_ctx, uint32_t p_id, uint32_t p_ctx_type )
+    {
+        THROW_ON_TRUE ( p_ctxId . ctx != p_ctx );
+        THROW_ON_TRUE ( p_ctxId . id != p_id );
+        THROW_ON_TRUE ( p_ctxId . ctx_type != p_ctx_type );
+    }
 #undef THROW_ON_TRUE
 };
 
@@ -416,8 +422,7 @@ FIXTURE_TEST_CASE(Table_Production, AST_Table_Fixture)
     REQUIRE_EQ ( (uint32_t)eProduction, prod . name -> type );
     REQUIRE_EQ ( & prod, (const SProduction*) prod . name -> u . obj );
     REQUIRE_NOT_NULL ( prod . expr );
-    REQUIRE_EQ ( 1u, prod . cid . ctx );
-    REQUIRE_EQ ( 0u, prod . cid . id );
+    VerifyVCtxId ( prod . cid, 1, 0, eTable );
 }
 
 FIXTURE_TEST_CASE(Table_Production_ForwardReference, AST_Table_Fixture)
@@ -465,8 +470,7 @@ FIXTURE_TEST_CASE(Table_ColumnDecl_Simple, AST_Table_Fixture)
     REQUIRE_NULL ( c . ptype );
     REQUIRE_EQ ( U8_id, c . td . type_id );
     REQUIRE_EQ ( 1u, c . td . dim);
-    REQUIRE_EQ ( 0u, c . cid . ctx );
-    REQUIRE_EQ ( 0u, c . cid . id );
+    VerifyVCtxId ( c . cid, 0, 0, eTable );
     REQUIRE ( ! c . dflt );
     REQUIRE ( ! c . read_only );
     REQUIRE ( c . simple );
@@ -475,31 +479,43 @@ FIXTURE_TEST_CASE(Table_ColumnDecl_Simple, AST_Table_Fixture)
     VerifyImplicitPhysicalColumn ( c, ".c" );
 }
 
+FIXTURE_TEST_CASE(Table_ColumnLookup, AST_Table_Fixture)
+{
+    TableAccess t = ParseTable ( "table t#1 { column U8 c; }", "t" );
+    REQUIRE_EQ ( 1u, t . Columns () . Count () );
+    REQUIRE_EQ ( 1u, t . ColumnNames () . Count () );
+
+    const SColumn & c = * t . Columns () . Get ( 0 );
+
+    String memName;
+    StringInitCString ( & memName, "c");
+
+    const KSymbol *sym = ( const KSymbol* ) BSTreeFind ( & t.Scope(), & memName, KSymbolCmp );
+    REQUIRE_NOT_NULL ( sym );
+    const SNameOverload * ovl = ( const SNameOverload * ) sym -> u . obj;
+    REQUIRE_EQ ( 1u, VectorLength(& ovl -> items) );
+    REQUIRE_EQ ( & c, ( const SColumn* ) VectorGet ( & ovl -> items, 0 ) );
+}
+
+FIXTURE_TEST_CASE(Table_ColumnDecl_Simple_Array, AST_Table_Fixture)
+{
+    TableAccess t = ParseTable ( "table t#1 { column U8[2] c; }", "t" );
+
+    const SColumn & c = * t . Columns () . Get ( 0 );
+    REQUIRE_EQ ( U8_id, c . td . type_id );
+    REQUIRE_EQ ( 2u, c . td . dim);
+}
+
 FIXTURE_TEST_CASE(Table_ColumnDecl_Context, AST_Table_Fixture)
 {
     TableAccess v = ParseTable (
         "table T#1 {};"
         "table W#1 { column U8 c1 = 1; column U8 c2 = 2; }",
     "W", 1 );
-    const SNameOverload * ovl = v . ColumnNames () . Get ( 0 );
-    REQUIRE_NOT_NULL ( ovl );
-    REQUIRE_EQ ( 1u, ovl -> cid . ctx );
-    REQUIRE_EQ ( 0u, ovl -> cid . id );
-    REQUIRE_EQ ( (uint32_t)eTable, ovl -> cid . ctx_type );
-    const SColumn * col = v . Columns () . Get ( 0 );
-    REQUIRE_NOT_NULL ( col );
-    REQUIRE_EQ ( ovl -> cid . ctx, col -> cid . ctx );
-    REQUIRE_EQ ( ovl -> cid . id, col -> cid . id );
-    REQUIRE_EQ ( ovl -> cid . ctx_type, col -> cid . ctx_type );
-
-    ovl = v . ColumnNames () . Get ( 1 );
-    REQUIRE_NOT_NULL ( ovl );
-    REQUIRE_EQ ( 1u, ovl -> cid . ctx );
-    REQUIRE_EQ ( 1u, ovl -> cid . id );
-    col = v . Columns () . Get ( 1 );
-    REQUIRE_NOT_NULL ( col );
-    REQUIRE_EQ ( ovl -> cid . ctx, col -> cid . ctx );
-    REQUIRE_EQ ( ovl -> cid . id, col -> cid . id );
+    VerifyVCtxId ( v . ColumnNames () . Get ( 0 ) -> cid, 1, 0, eTable );
+    VerifyVCtxId ( v . Columns     () . Get ( 0 ) -> cid, 1, 0, eTable );
+    VerifyVCtxId ( v . ColumnNames () . Get ( 1 ) -> cid, 1, 1, eTable );
+    VerifyVCtxId ( v . Columns     () . Get ( 1 ) -> cid, 1, 1, eTable );
 }
 
 FIXTURE_TEST_CASE(Table_ColumnDecl_Context_Inherited, AST_Table_Fixture)
@@ -512,25 +528,23 @@ FIXTURE_TEST_CASE(Table_ColumnDecl_Context_Inherited, AST_Table_Fixture)
         "};"
         "table W#1 = T { U32 c = READ_LEN; }",
     "W", 2 );
-    REQUIRE_EQ ( 0u, v . Columns () . Count () );
-    REQUIRE_EQ ( 1u, v . ColumnNames () . Count () );
+    REQUIRE_EQ ( 0u, v . Columns () . Count () ); // no own columns
+    REQUIRE_EQ ( 1u, v . ColumnNames () . Count () ); // one set of overloaded column inherited
 
+    // verify inherited columns
     const SNameOverload * ovl = v . ColumnNames () . Get ( 0 );
     REQUIRE_NOT_NULL ( ovl );
-    REQUIRE_EQ ( 1u, ovl -> cid . ctx );
-    REQUIRE_EQ ( 0u, ovl -> cid . id );
+    VerifyVCtxId ( ovl -> cid, 1, 0, eTable );
     REQUIRE_EQ ( 2u, VectorLength ( & ovl -> items ) );
     {
         const SColumn * col = ( const SColumn * ) VectorGet( & ovl -> items, 0 );
         REQUIRE_NOT_NULL ( col );
-        REQUIRE_EQ ( 1u, col -> cid . ctx );
-        REQUIRE_EQ ( 1u, col -> cid . id );
+        VerifyVCtxId ( col -> cid, 1, 1, eTable );
     }
     {
         const SColumn * col = ( const SColumn * ) VectorGet( & ovl -> items, 1 );
         REQUIRE_NOT_NULL ( col );
-        REQUIRE_EQ ( 1u, col -> cid . ctx );
-        REQUIRE_EQ ( 0u, col -> cid . id );
+        VerifyVCtxId ( col -> cid, 1, 0, eTable );
     }
 }
 
@@ -618,8 +632,7 @@ FIXTURE_TEST_CASE(Table_ColumnDecl_ColumnOverload, AST_Table_Fixture)
     const SNameOverload * ovl = t . ColumnNames () . Get ( 0 );
     REQUIRE_NOT_NULL ( ovl );
     REQUIRE_EQ ( string ("c"), ToCppString ( ovl -> name -> name ) );
-    REQUIRE_EQ ( 0u, ovl -> cid . ctx );
-    REQUIRE_EQ ( 0u, ovl -> cid . id );
+    VerifyVCtxId ( ovl -> cid, 0, 0, eTable );
     VdbVector < SColumn > names ( ovl -> items );
     REQUIRE_EQ ( 3u, names . Count () );
     REQUIRE_EQ ( t . Columns () . Get ( 0 ), names . Get ( 0 ) );
@@ -670,8 +683,7 @@ FIXTURE_TEST_CASE(Table_Parents_ColumnOverload, AST_Table_Fixture)
     const SNameOverload * ovl = t . ColumnNames () . Get ( 0 );
     REQUIRE_NOT_NULL ( ovl );
     REQUIRE_EQ ( string ("p"), ToCppString ( ovl -> name -> name ) );
-    REQUIRE_EQ ( 0u, ovl -> cid . ctx );
-    REQUIRE_EQ ( 0u, ovl -> cid . id );
+    VerifyVCtxId ( ovl -> cid, 0, 0, eTable );
 
     VdbVector < SColumn > names ( ovl -> items );
     REQUIRE_EQ ( 2u, names . Count () );
@@ -976,8 +988,7 @@ FIXTURE_TEST_CASE(Table_PhysicalColumn_Static, AST_Table_Fixture)
     REQUIRE_EQ ( U8_id, c -> td . type_id );
     REQUIRE_NULL ( c -> expr );
     REQUIRE_EQ ( 1u, c -> td . dim);
-    REQUIRE_EQ ( 0u, c -> cid . ctx );
-    REQUIRE_EQ ( 0u, c -> cid . id );
+    VerifyVCtxId ( c -> cid, 0, 0, eTable );
     REQUIRE ( c -> stat );
     REQUIRE ( ! c -> simple );
 }
@@ -1012,8 +1023,7 @@ FIXTURE_TEST_CASE(Table_PhysicalColumnWithEncoding_Simple, AST_Table_Fixture)
     REQUIRE_EQ ( U8_id, c -> td . type_id );
     REQUIRE_NULL ( c -> expr );
     REQUIRE_EQ ( 1u, c -> td . dim);
-    REQUIRE_EQ ( 0u, c -> cid . ctx );
-    REQUIRE_EQ ( 0u, c -> cid . id );
+    VerifyVCtxId ( c -> cid, 0, 0, eTable );
     REQUIRE ( ! c -> stat );
     REQUIRE ( ! c -> simple );
 

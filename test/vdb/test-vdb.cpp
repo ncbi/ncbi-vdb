@@ -482,7 +482,7 @@ FIXTURE_TEST_CASE ( V2ParserError, VDB_Fixture )
     REQUIRE_RC ( VSchemaRelease ( schema ) );
     REQUIRE_RC ( VTableRelease ( tbl ) );
 }
-#if 0
+
 TEST_CASE ( View_On_An_Existing_Schema )
 {
     const VDBManager * mgr;
@@ -501,7 +501,7 @@ TEST_CASE ( View_On_An_Existing_Schema )
     REQUIRE_RC ( VDatabaseRelease ( db ) );
     REQUIRE_RC ( VDBManagerRelease ( mgr ) );
 }
-#endif
+
 //////////////////////////////////////////// Main
 extern "C"
 {

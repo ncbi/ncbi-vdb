@@ -738,9 +738,19 @@ TEST_CASE ( View_MemberExpression )
     ParseAndVerify ( "version 2; table T#1 { column U8 c1 = 1; }; view W#1 <T t> { column U8 c2 = t . c1; }" );
 }
 
+TEST_CASE ( View_MemberExpression_LikePhysicalIdent )
+{
+    ParseAndVerify ( "version 2; table T#1 { column U8 c1 = 1; }; view W#1 <T t> { column U8 c2 = t .c1; }" );
+}
+
 TEST_CASE ( View_JoinExpression )
 {
     ParseAndVerify ( "version 2; table T#1 { column U8 c1 = 1; }; view W#1 <T t> { column U8 c2 = t [ 1 ] . c1; }" );
+}
+
+TEST_CASE ( View_JoinExpressionLikePhysicalIdent )
+{
+    ParseAndVerify ( "version 2; table T#1 { column U8 c1 = 1; }; view W#1 <T t> { column U8 c2 = t [ 1 ] .c1; }" );
 }
 
 //////////////////////////////////////////// Main

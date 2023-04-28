@@ -53,7 +53,7 @@ void cut8(const struct self_t *self, void *Dst, const void *Src, size_t elem_cou
     int j;
     int doff;
     int soff;
-    
+
     for (doff = soff = i = 0; i != elem_count; ++i, doff += self->n, soff += self->dim) {
         for (j = 0; j != self->n; ++j) {
             dst[doff + j] = src[soff + self->idx[j]];
@@ -69,7 +69,7 @@ void cut16(const struct self_t *self, void *Dst, const void *Src, size_t elem_co
     int j;
     int doff;
     int soff;
-    
+
     for (doff = soff = i = 0; i != elem_count; ++i, doff += self->n, soff += self->dim) {
         for (j = 0; j != self->n; ++j) {
             dst[doff + j] = src[soff + self->idx[j]];
@@ -85,7 +85,7 @@ void cut32(const struct self_t *self, void *Dst, const void *Src, size_t elem_co
     int j;
     int doff;
     int soff;
-    
+
     for (doff = soff = i = 0; i != elem_count; ++i, doff += self->n, soff += self->dim) {
         for (j = 0; j != self->n; ++j) {
             dst[doff + j] = src[soff + self->idx[j]];
@@ -101,7 +101,7 @@ void cut64(const struct self_t *self, void *Dst, const void *Src, size_t elem_co
     int j;
     int doff;
     int soff;
-    
+
     for (doff = soff = i = 0; i != elem_count; ++i, doff += self->n, soff += self->dim) {
         for (j = 0; j != self->n; ++j) {
             dst[doff + j] = src[soff + self->idx[j]];
@@ -120,7 +120,7 @@ void cut_bytes(const struct self_t *self, void *Dst, const void *Src, size_t ele
     const int sz = self->type_size >> 3;
     const int di = sz * self->n;
     const int si = sz * self->dim;
-    
+
     for (doff = soff = i = 0; i != elem_count; ++i, doff += di, soff += si) {
         for (j = 0; j != self->n; ++j) {
             memmove(dst + doff + j * sz, src + soff + self->idx[j] * sz, sz);
@@ -137,7 +137,7 @@ void cut_bits(const struct self_t *self, void *dst, const void *src, size_t elem
     const int sz = self->type_size;
     const int di = sz * self->n;
     const int si = sz * self->dim;
-    
+
     for (doff = soff = i = 0; i != elem_count; ++i, doff += di, soff += si) {
         for (j = 0; j != self->n; ++j) {
             bitcpy(dst, doff + j * sz, src, soff + self->idx[j] * sz, sz);
@@ -155,7 +155,7 @@ rc_t CC cut_driver (
                     )
 {
     const self_t *self = Self;
-    
+
     self->f( self, dst, src, elem_count );
     return 0;
 }
@@ -175,13 +175,14 @@ VTRANSFACT_IMPL(vdb_cut, 1, 0, 0) (const void *self, const VXfactInfo *info, VFu
     uint32_t dim = cp->argc;
     int i;
     self_t *ctx;
-    
+
     assert(dim != 0);
     for (i = 0; i != dim; ++i) {
+printf("vdb_cut:%u %u\n", *(cp->argv[i].data.u32), dp->argv[0].fd.td.dim);
         if (*(cp->argv[i].data.u32) >= dp->argv[0].fd.td.dim)
             return RC(rcVDB, rcFunction, rcConstructing, rcParam, rcInvalid);
     }
-    
+
     ctx = malloc ( sizeof * ctx - sizeof ctx -> idx + dim * sizeof ctx -> idx [ 0 ] );
     if (ctx == NULL)
         return RC(rcVDB, rcFunction, rcConstructing, rcMemory, rcExhausted);
@@ -199,12 +200,12 @@ VTRANSFACT_IMPL(vdb_cut, 1, 0, 0) (const void *self, const VXfactInfo *info, VFu
             return RC(rcVDB, rcFunction, rcConstructing, rcParam, rcInvalid);
         }
     }
-    
+
     rslt->self = ctx;
     rslt->whack = vxf_cut_wrapper;
     rslt->variant = vftArray;
     rslt->u.af = cut_driver;
-    
+
     switch (ctx->type_size) {
         case 8:
             ctx->f = cut8;
@@ -222,6 +223,6 @@ VTRANSFACT_IMPL(vdb_cut, 1, 0, 0) (const void *self, const VXfactInfo *info, VFu
             ctx->f = (ctx->type_size & 7) == 0 ? cut_bytes : cut_bits;
             break;
     }
-    
+
 	return 0;
 }
