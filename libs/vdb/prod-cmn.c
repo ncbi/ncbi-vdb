@@ -2157,11 +2157,6 @@ rc_t VPivotProdRead ( VPivotProd * p_self, struct VBlob ** p_vblob, int64_t * p_
         * p_vblob = 0;
         * p_id = 0;
     }
-    else
-    {
-        * p_vblob = 0;
-        * p_id = 0;
-    }
     return rc;
 }
 
