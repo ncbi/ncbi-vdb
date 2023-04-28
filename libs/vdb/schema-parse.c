@@ -288,6 +288,9 @@ const void *resolve_object ( const KSymTable *tbl,
         case ePhysMember:
         case eTblMember:
         case eDBMember:
+        case eProduction:
+        case eForward:
+        case eVirtual:
             needs_name = false;
             obj = st . sym -> u . obj;
             break;
