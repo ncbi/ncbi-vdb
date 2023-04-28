@@ -621,7 +621,7 @@ ViewDeclaration :: HandleBody ( const AST & p_body )
         for ( uint32_t i = 0; i < count; ++ i )
         {
             SViewOverrides * ov = static_cast < SViewOverrides * > ( VectorGet ( & m_self -> overrides, start + i ) );
-            if ( ! m_builder . ScanVirtuals ( p_body . GetLocation (), ov -> by_parent ) )
+            if ( ! m_builder . ScanVirtuals ( p_body . GetLocation (), ov -> by_parent, m_builder . GetSymTab () ) )
             {
                 pop_view_scope ( & m_builder . GetSymTab (), m_self );
                 return;
@@ -668,7 +668,7 @@ ViewDeclaration :: HandleBody ( const AST & p_body )
 AST *
 ASTBuilder :: ViewDef ( const Token * p_token, AST_FQN * p_name, AST * p_params, AST * p_parents, AST * p_body )
 {
-    AST * ret = new AST ( p_token, p_name, p_params, p_parents, p_body );
+    AST * ret = AST :: Make ( p_token, p_name, p_params, p_parents, p_body );
 
     ViewDeclaration view ( * this );
     assert ( p_name != 0 );

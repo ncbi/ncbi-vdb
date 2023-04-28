@@ -114,7 +114,7 @@
     T ( SchemaToken & p_term )
     {
         assert ( p_term . subtree == 0 );
-        return new ParseTree ( p_term );
+        return ParseTree::Make ( p_term );
     }
 
     /* Create production node */
@@ -132,7 +132,7 @@
                ParseTree * p_ch9 = 0
              )
     {
-        ParseTree * ret = new ParseTree ( Token ( p_token ) );
+        ParseTree * ret = ParseTree :: Make ( Token ( p_token ) );
         if ( p_ch1 != 0 ) ret -> AddChild ( p_ch1 );
         if ( p_ch2 != 0 ) ret -> AddChild ( p_ch2 );
         if ( p_ch3 != 0 ) ret -> AddChild ( p_ch3 );
@@ -150,7 +150,7 @@
     ParseTree *
     MakeList ( SchemaToken & p_prod )
     {
-        ParseTree * ret = new ParseTree ( Token ( PT_ASTLIST ) );
+        ParseTree * ret = ParseTree :: Make ( Token ( PT_ASTLIST ) );
         ret -> AddChild ( P ( p_prod ) );
         return ret;
     }
@@ -1880,1663 +1880,1663 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     {
     case 0: /* "end of source"  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 3: /* UNRECOGNIZED  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 4: /* ELLIPSIS  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 5: /* INCREMENT  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 6: /* DECIMAL  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 7: /* OCTAL  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 8: /* HEX  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 9: /* FLOAT_  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 10: /* EXP_FLOAT  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 11: /* STRING  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 12: /* ESCAPED_STRING  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 13: /* IDENTIFIER_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 14: /* PHYSICAL_IDENTIFIER_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 15: /* VERSION  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 16: /* UNTERM_STRING  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 17: /* UNTERM_ESCAPED_STRING  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 18: /* VERS_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 19: /* VERS_2_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 20: /* KW___no_header  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 21: /* KW___row_length  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 22: /* KW___untyped  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 23: /* KW_alias  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 24: /* KW_column  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 25: /* KW_const  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 26: /* KW_control  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 27: /* KW_database  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 28: /* KW_decode  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 29: /* KW_default  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 30: /* KW_encode  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 31: /* KW_extern  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 32: /* KW_false  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 33: /* KW_fmtdef  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 34: /* KW_function  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 35: /* KW_include  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 36: /* KW_limit  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 37: /* KW_physical  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 38: /* KW_read  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 39: /* KW_readonly  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 40: /* KW_return  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 41: /* KW_schema  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 42: /* KW_static  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 43: /* KW_table  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 44: /* KW_template  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 45: /* KW_trigger  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 46: /* KW_true  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 47: /* KW_type  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 48: /* KW_typedef  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 49: /* KW_typeset  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 50: /* KW_validate  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 51: /* KW_version  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 52: /* KW_view  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 53: /* KW_virtual  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 54: /* KW_void  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 55: /* KW_write  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 56: /* PT_ASTLIST  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 57: /* PT_PARSE  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 58: /* PT_SOURCE  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 59: /* PT_VERSION_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 60: /* PT_VERSION_2  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 61: /* PT_SCHEMA_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 62: /* PT_SCHEMA_2_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 63: /* PT_INCLUDE  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 64: /* PT_TYPEDEF  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 65: /* PT_FQN  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 66: /* PT_IDENT  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 67: /* PT_PHYSIDENT  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 68: /* PT_UINT  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 69: /* PT_TYPESET  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 70: /* PT_TYPESETDEF  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 71: /* PT_FORMAT  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 72: /* PT_CONST  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 73: /* PT_ALIAS  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 74: /* PT_EXTERN  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 75: /* PT_FUNCTION  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 76: /* PT_UNTYPED  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 77: /* PT_ROWLENGTH  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 78: /* PT_FUNCDECL  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 79: /* PT_EMPTY  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 80: /* PT_SCHEMASIG  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 81: /* PT_SCHEMAFORMAL  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 82: /* PT_RETURNTYPE  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 83: /* PT_FACTSIG  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 84: /* PT_FUNCSIG  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 85: /* PT_FUNCPARAMS  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 86: /* PT_FORMALPARAM  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 87: /* PT_ELLIPSIS  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 88: /* PT_FUNCPROLOGUE  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 89: /* PT_RETURN  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 90: /* PT_PRODSTMT  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 91: /* PT_PRODTRIGGER  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 92: /* PT_SCHEMA  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 93: /* PT_VALIDATE  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 94: /* PT_PHYSICAL  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 95: /* PT_PHYSPROLOGUE  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 96: /* PT_PHYSSTMT  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 97: /* PT_PHYSBODYSTMT  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 98: /* PT_TABLE  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 99: /* PT_TABLEPARENTS  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 100: /* PT_TABLEBODY  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 101: /* PT_FUNCEXPR  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 102: /* PT_FACTPARMS  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 103: /* PT_COLUMN  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 104: /* PT_COLUMNEXPR  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 105: /* PT_COLDECL  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 106: /* PT_TYPEDCOL  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 107: /* PT_COLSTMT  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 108: /* PT_DFLTVIEW  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 109: /* PT_PHYSMBR  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 110: /* PT_PHYSCOL  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 111: /* PT_PHYSCOLDEF  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 112: /* PT_COLSCHEMAPARMS  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 113: /* PT_COLSCHEMAPARAM  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 114: /* PT_COLUNTYPED  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 115: /* PT_DATABASE  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 116: /* PT_TYPEEXPR  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 117: /* PT_DBBODY  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 118: /* PT_DBDAD  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 119: /* PT_DBMEMBER  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 120: /* PT_TBLMEMBER  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 121: /* PT_NOHEADER  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 122: /* PT_CASTEXPR  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 123: /* PT_CONSTVECT  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 124: /* PT_NEGATE  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 125: /* PT_UNARYPLUS  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 126: /* PT_VERSNAME  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 127: /* PT_ARRAY  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 128: /* PT_PHYSENCREF  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 129: /* PT_TYPEDCOLEXPR  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 130: /* PT_VIEW  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 131: /* PT_VIEWPARAM  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 132: /* PT_VIEWPARENTS  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 133: /* PT_VIEWPARENT  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 134: /* PT_MEMBEREXPR  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 135: /* PT_JOINEXPR  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 136: /* ';'  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 137: /* ','  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 138: /* '{'  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 139: /* '}'  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 140: /* '['  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 141: /* ']'  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 142: /* '*'  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 143: /* '='  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 144: /* '('  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 145: /* ')'  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 146: /* '<'  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 147: /* '>'  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 148: /* '|'  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 149: /* '@'  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 150: /* '-'  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 151: /* '+'  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 152: /* '/'  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 153: /* '.'  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 154: /* ':'  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 156: /* parse  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 157: /* source  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 158: /* version_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 159: /* schema_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 160: /* schema_1_0_decl  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 161: /* typedef_1_0_decl  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 162: /* typedef_1_0_new_name_list  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 163: /* typeset_1_0_decl  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 164: /* typeset_1_0_new_name  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 165: /* typeset_1_0_def  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 166: /* typespec_1_0_list  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 167: /* typespec_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 168: /* dim_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 169: /* format_1_0_decl  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 170: /* format_1_0_new_name  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 171: /* format_1_0_name  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 172: /* const_1_0_decl  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 173: /* alias_1_0_decl  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 174: /* alias_1_0_new_name  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 175: /* function_1_0_decl  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 176: /* func_1_0_decl  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 177: /* untyped_func_1_0_decl  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 178: /* row_length_func_1_0_decl  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 179: /* opt_func_1_0_schema_sig  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 180: /* func_1_0_schema_sig  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 181: /* func_1_0_schema_formals  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 182: /* func_1_0_schema_formal  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 183: /* func_1_0_return_type  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 184: /* opt_func_1_0_fact_sig  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 185: /* func_1_0_fact_sig  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 186: /* func_1_0_fact_signature  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 187: /* func_1_0_fact_params  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 188: /* fact_param_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 189: /* func_1_0_param_sig  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 190: /* func_1_0_param_signature  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 191: /* func_1_0_formal_params  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 192: /* formal_param_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 193: /* func_1_0_vararg_formals  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 194: /* func_1_0_prologue  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 195: /* script_1_0_stmt_seq  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 196: /* script_1_0_stmt  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 197: /* extern_1_0_decl  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 198: /* ext_func_1_0_decl  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 199: /* script_1_0_decl  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 200: /* validate_1_0_decl  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 201: /* physical_1_0_decl  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 202: /* phys_1_0_return_type  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 203: /* phys_1_0_prologue  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 204: /* phys_1_0_body  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 205: /* phys_1_0_body_stmt  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 206: /* phys_1_0_stmt  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 207: /* table_1_0_decl  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 208: /* opt_tbl_1_0_parents  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 209: /* tbl_1_0_parents  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 210: /* tbl_1_0_body  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 211: /* tbl_1_0_stmt_seq  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 212: /* tbl_1_0_stmt  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 213: /* production_1_0_stmt  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 214: /* col_1_0_modifiers  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 215: /* col_1_0_modifier_seq  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 216: /* col_1_0_modifier  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 217: /* col_1_0_decl  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 218: /* phys_enc_ref  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 219: /* typed_column_decl_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 220: /* col_ident  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 221: /* phys_ident  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 222: /* opt_column_body_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 223: /* column_body_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 224: /* column_stmt_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 225: /* default_view_1_0_decl  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 226: /* physmbr_1_0_decl  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 227: /* phys_coldef_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 228: /* opt_col_schema_parms_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 229: /* col_schema_parms_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 230: /* col_schema_parm_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 231: /* col_schema_value_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 232: /* cond_expr_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 233: /* expression_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 234: /* primary_expr_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 235: /* func_expr_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 236: /* schema_parms_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 237: /* schema_parm_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 238: /* opt_factory_parms_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 239: /* factory_parms_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 240: /* factory_parms  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 241: /* opt_func_1_0_parms  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 242: /* func_1_0_parms  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 243: /* uint_expr_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 244: /* float_expr_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 245: /* string_expr_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 246: /* const_vect_expr_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 247: /* opt_const_vect_exprlist_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 248: /* const_vect_exprlist_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 249: /* bool_expr_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 250: /* type_expr_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 251: /* member_expr_2_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 252: /* join_expr_2_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 253: /* database_1_0_decl  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 254: /* opt_database_dad_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 255: /* database_body_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 256: /* database_members_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 257: /* database_member_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 258: /* opt_template_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 259: /* db_member_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 260: /* table_member_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 261: /* include_directive  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 262: /* fqn_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 263: /* ident_1_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 264: /* empty  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 265: /* fqn_vers  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 266: /* fqn_opt_vers  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 267: /* version_2_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 268: /* schema_2_0  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 269: /* schema_2_0_decl  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 270: /* view_2_0_decl  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 271: /* view_parms  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 272: /* view_parm  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 273: /* opt_view_body  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 274: /* view_body  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 275: /* view_member  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 276: /* opt_view_parents  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 277: /* view_parents  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 278: /* view_parent  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 
     case 279: /* view_parent_parms  */
             {
-    delete ( ParseTree * ) ( (*yyvaluep) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
 }
         break;
 

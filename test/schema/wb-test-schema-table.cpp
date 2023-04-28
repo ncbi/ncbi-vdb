@@ -25,8 +25,21 @@
 */
 
 /**
-* Unit tests for table declarations in schema, this file is #included into a bigger test suite
+* Unit tests for table declarations in schema
 */
+
+#include "AST_Fixture.hpp"
+
+#include <ktst/unit_test.hpp>
+
+#include <klib/symbol.h>
+
+#include "../../libs/vdb/schema-expr.h"
+
+using namespace std;
+using namespace ncbi::NK;
+
+TEST_SUITE ( SchemaTableTestSuite );
 
 class TableAccess // encapsulates access to an STable in a VSchema
 {
@@ -156,7 +169,7 @@ public:
     }
 #undef THROW_ON_TRUE
 };
-#if 0
+
 FIXTURE_TEST_CASE(Table_Empty, AST_Table_Fixture)
 {
     TableAccess t = ParseTable ( "table t#1.1 { };", "t" );
@@ -351,7 +364,6 @@ FIXTURE_TEST_CASE(Table_Parent_InheritedVirtualProduction_Defined, AST_Table_Fix
         "table t#1 = dad { column U16 c = v; }", // v is accessible in child tables
         "t", 2 );
 }
-#endif
 FIXTURE_TEST_CASE(Table_Parent_InheritedVirtualProduction_Undefined, AST_Table_Fixture)
 {
     ParseTable (
@@ -360,7 +372,6 @@ FIXTURE_TEST_CASE(Table_Parent_InheritedVirtualProduction_Undefined, AST_Table_F
         "table t#1 = dad { column U16 c = v; }", // v is accessible in child tables
         "t", 2 );
 }
-#if 0
 FIXTURE_TEST_CASE(Table_Parent_InheritedVirtualProduction_DefinedHigher, AST_Table_Fixture)
 {
     ParseTable (
@@ -1188,4 +1199,35 @@ FIXTURE_TEST_CASE(Table_segfault, AST_Table_Fixture)
     MakeAst ( "typedef ascii n:p:t; table n:t:s #1 {}; table n:t:p #1 {};" );
 }
 
-#endif
+//////////////////////////////////////////// Main
+#include <kapp/args.h>
+#include <kfg/config.h>
+#include <klib/out.h>
+
+extern "C"
+{
+
+ver_t CC KAppVersion ( void )
+{
+    return 0x1000000;
+}
+
+const char UsageDefaultName[] = "wb-test-schema-table";
+
+rc_t CC UsageSummary (const char * progname)
+{
+    return KOutMsg ( "Usage:\n" "\t%s [options] -o path\n\n", progname );
+}
+
+rc_t CC Usage( const Args* args )
+{
+    return 0;
+}
+
+rc_t CC KMain ( int argc, char *argv [] )
+{
+    return SchemaTableTestSuite(argc, argv);
+}
+
+}
+

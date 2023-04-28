@@ -1439,7 +1439,7 @@ rc_t fwd_decl_expr ( KSymTable *tbl, KTokenSource *src, KToken *t,
     SSymExpr *x = malloc ( sizeof * x );
     if ( x == NULL )
         return RC ( rcVDB, rcSchema, rcParsing, rcMemory, rcExhausted );
-printf("fwd_decl_expr(%.*s)\n", t->str.len, t->str.addr);
+//printf("fwd_decl_expr(%.*s)\n", t->str.len, t->str.addr);
     rc = KSymTableCreateConstSymbol ( tbl, & x -> _sym, & t -> str, eForward, NULL );
     if ( rc != 0 )
     {

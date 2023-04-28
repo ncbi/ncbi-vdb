@@ -29,6 +29,7 @@
 #include <strtol.h>
 #include <ctype.h>
 #include <os-native.h>
+#include <new>
 
 #include <klib/symbol.h>
 #include <klib/printf.h>
@@ -48,6 +49,155 @@ using namespace std;
 
 // AST
 
+AST *
+AST :: Make ( const Token* token )
+{
+    void * ret = malloc ( sizeof ( AST ) );
+    if ( ret == 0 ) return 0; // TODO: raise KFC error
+    return new ( ret ) AST ( token );
+}
+
+AST * AST :: Make ( Token :: TokenType tokenType )
+{
+    void * ret = malloc ( sizeof ( AST ) );
+    if ( ret == 0 ) return 0; // TODO: raise KFC error
+    return new ( ret ) AST ( tokenType );
+}
+
+AST * AST :: Make ()
+{
+    void * ret = malloc ( sizeof ( AST ) );
+    if ( ret == 0 ) return 0; // TODO: raise KFC error
+    return new ( ret ) AST ();
+}
+
+AST *
+AST :: Make ( const Token * p_token, AST * p_child1 )
+{
+    assert ( p_child1 != 0 );
+    AST * ret = Make ( p_token );
+    if ( ret != 0 )
+    {
+        ret -> AddNode ( p_child1 );
+    }
+    return ret;
+}
+
+AST *
+AST :: Make ( const Token * p_token, AST * p_child1, AST * p_child2 )
+{
+    assert ( p_child1 != 0 );
+    assert ( p_child2 != 0 );
+    AST * ret = Make ( p_token );
+    if ( ret != 0 )
+    {
+        ret -> AddNode ( p_child1 );
+        ret -> AddNode ( p_child2 );
+    }
+    return ret;
+}
+
+AST *
+AST :: Make ( const Token * p_token, AST * p_child1, AST * p_child2, AST * p_child3 )
+{
+    assert ( p_child1 != 0 );
+    assert ( p_child2 != 0 );
+    assert ( p_child3 != 0 );
+    AST * ret = Make ( p_token );
+    if ( ret != 0 )
+    {
+        ret -> AddNode ( p_child1 );
+        ret -> AddNode ( p_child2 );
+        ret -> AddNode ( p_child3 );
+    }
+    return ret;
+}
+
+AST *
+AST :: Make( const Token * p_token,
+             AST * p_child1,
+             AST * p_child2,
+             AST * p_child3,
+             AST * p_child4 )
+{
+    assert ( p_child1 != 0 );
+    assert ( p_child2 != 0 );
+    assert ( p_child3 != 0 );
+    assert ( p_child4 != 0 );
+    AST * ret = Make ( p_token );
+    if ( ret != 0 )
+    {
+        ret -> AddNode ( p_child1 );
+        ret -> AddNode ( p_child2 );
+        ret -> AddNode ( p_child3 );
+        ret -> AddNode ( p_child4 );
+    }
+    return ret;
+}
+
+AST *
+AST :: Make ( const Token * p_token,
+             AST * p_child1,
+             AST * p_child2,
+             AST * p_child3,
+             AST * p_child4,
+             AST * p_child5 )
+{
+    assert ( p_child1 != 0 );
+    assert ( p_child2 != 0 );
+    assert ( p_child3 != 0 );
+    assert ( p_child4 != 0 );
+    assert ( p_child5 != 0 );
+    AST * ret = Make ( p_token );
+    if ( ret != 0 )
+    {
+        ret -> AddNode ( p_child1 );
+        ret -> AddNode ( p_child2 );
+        ret -> AddNode ( p_child3 );
+        ret -> AddNode ( p_child4 );
+        ret -> AddNode ( p_child5 );
+    }
+    return ret;
+}
+
+AST *
+AST :: Make ( const Token * p_token,
+             AST * p_child1,
+             AST * p_child2,
+             AST * p_child3,
+             AST * p_child4,
+             AST * p_child5,
+             AST * p_child6 )
+{
+    assert ( p_child1 != 0 );
+    assert ( p_child2 != 0 );
+    assert ( p_child3 != 0 );
+    assert ( p_child4 != 0 );
+    assert ( p_child5 != 0 );
+    assert ( p_child6 != 0 );
+    AST * ret = Make ( p_token );
+    if ( ret != 0 )
+    {
+        ret -> AddNode ( p_child1 );
+        ret -> AddNode ( p_child2 );
+        ret -> AddNode ( p_child3 );
+        ret -> AddNode ( p_child4 );
+        ret -> AddNode ( p_child5 );
+        ret -> AddNode ( p_child6 );
+    }
+    return ret;
+}
+
+void
+AST :: Destroy ( AST * self )
+{
+    if ( self != 0 )
+    {
+        self -> ~AST();
+        free ( self );
+    }
+}
+
 AST :: AST ()
 : ParseTree ( Token ( PT_EMPTY ) )
 {
@@ -63,91 +213,8 @@ AST :: AST ( const Token * p_token )
 {
 }
 
-AST :: AST ( const Token * p_token, AST * p_child1 )
-: ParseTree ( * p_token )
+AST :: ~AST ()
 {
-    assert ( p_child1 != 0 );
-    AddNode ( p_child1 );
-}
-
-AST :: AST ( const Token * p_token, AST * p_child1, AST * p_child2 )
-: ParseTree ( * p_token )
-{
-    assert ( p_child1 != 0 );
-    AddNode ( p_child1 );
-    assert ( p_child2 != 0 );
-    AddNode ( p_child2 );
-}
-
-AST :: AST ( const Token * p_token, AST * p_child1, AST * p_child2, AST * p_child3 )
-: ParseTree ( * p_token )
-{
-    assert ( p_child1 != 0 );
-    AddNode ( p_child1 );
-    assert ( p_child2 != 0 );
-    AddNode ( p_child2 );
-    assert ( p_child3 != 0 );
-    AddNode ( p_child3 );
-}
-
-AST :: AST ( const Token * p_token,
-             AST * p_child1,
-             AST * p_child2,
-             AST * p_child3,
-             AST * p_child4,
-             AST * p_child5 )
-: ParseTree ( * p_token )
-{
-    assert ( p_child1 != 0 );
-    AddNode ( p_child1 );
-    assert ( p_child2 != 0 );
-    AddNode ( p_child2 );
-    assert ( p_child3 != 0 );
-    AddNode ( p_child3 );
-    assert ( p_child4 != 0 );
-    AddNode ( p_child4 );
-    assert ( p_child5 != 0 );
-    AddNode ( p_child5 );
-}
-
-AST :: AST ( const Token * p_token,
-             AST * p_child1,
-             AST * p_child2,
-             AST * p_child3,
-             AST * p_child4 )
-: ParseTree ( * p_token )
-{
-    assert ( p_child1 != 0 );
-    AddNode ( p_child1 );
-    assert ( p_child2 != 0 );
-    AddNode ( p_child2 );
-    assert ( p_child3 != 0 );
-    AddNode ( p_child3 );
-    assert ( p_child4 != 0 );
-    AddNode ( p_child4 );
-}
-
-AST :: AST ( const Token * p_token,
-             AST * p_child1,
-             AST * p_child2,
-             AST * p_child3,
-             AST * p_child4,
-             AST * p_child5,
-             AST * p_child6 )
-: ParseTree ( * p_token )
-{
-    assert ( p_child1 != 0 );
-    AddNode ( p_child1 );
-    assert ( p_child2 != 0 );
-    AddNode ( p_child2 );
-    assert ( p_child3 != 0 );
-    AddNode ( p_child3 );
-    assert ( p_child4 != 0 );
-    AddNode ( p_child4 );
-    assert ( p_child5 != 0 );
-    AddNode ( p_child5 );
-    assert ( p_child6 != 0 );
-    AddNode ( p_child6 );
 }
 
 void
@@ -159,16 +226,27 @@ AST :: AddNode ( AST * p_child )
 void
 AST :: AddNode ( const Token * p_child )
 {
-    AddChild ( new AST ( p_child ) );
+    AddChild ( AST :: Make ( p_child ) );
 }
 
 // AST_FQN
+AST_FQN *
+AST_FQN :: Make ( const Token* token )
+{
+    void * ret = malloc ( sizeof ( AST_FQN ) );
+    if ( ret == 0 ) return 0; // TODO: raise KFC error
+    return new ( ret ) AST_FQN ( token );
+}
 
 AST_FQN :: AST_FQN ( const Token* p_token )
 :   AST ( p_token ),
     m_version ( 0 )
 {
     assert ( p_token -> GetType () == PT_IDENT );
+}
+
+AST_FQN :: ~AST_FQN ()
+{
 }
 
 uint32_t
@@ -249,41 +327,74 @@ AST_FQN *
 ncbi :: SchemaParser :: ToFQN ( AST * p_ast)
 {
     assert ( p_ast != 0 );
-    AST_FQN * ret = dynamic_cast < AST_FQN * > ( p_ast );
-    assert ( ret != 0 );
-    return ret;
+    if ( p_ast -> GetTokenType () == PT_IDENT )
+    {
+        return static_cast < AST_FQN * > ( p_ast );
+    }
+    return 0;
 }
 
 const AST_FQN *
 ncbi :: SchemaParser :: ToFQN ( const AST * p_ast)
 {
     assert ( p_ast != 0 );
-    const AST_FQN * ret = dynamic_cast < const AST_FQN * > ( p_ast );
-    assert ( ret != 0 );
-    return ret;
+    if ( p_ast -> GetTokenType () == PT_IDENT )
+    {
+        return static_cast < const AST_FQN * > ( p_ast );
+    }
+    return 0;
 }
 
 // AST_Expr
+AST_Expr *
+AST_Expr :: Make ( const Token * token )
+{
+    void * ret = malloc ( sizeof ( AST_Expr ) );
+    if ( ret == 0 ) return 0; // TODO: raise KFC error
+    return new ( ret ) AST_Expr ( token );
+}
+
+AST_Expr *
+AST_Expr :: Make  ( AST_FQN * fqn )
+{
+    void * p = malloc ( sizeof ( AST_Expr ) );
+    if ( p == 0 ) return 0; // TODO: raise KFC error
+    AST_Expr * ret = new ( p ) AST_Expr (  & fqn -> GetToken () );
+    ret -> AddNode ( fqn );
+    return ret;
+}
+
+AST_Expr *
+AST_Expr :: Make  ( AST_Expr* expr)
+{
+    void * p = malloc ( sizeof ( AST_Expr ) );
+    if ( p == 0 ) return 0; // TODO: raise KFC error
+    AST_Expr * ret = new ( p ) AST_Expr ();
+    ret -> AddNode ( expr );
+    return ret;
+}
+
+AST_Expr *
+AST_Expr :: Make  ( Token :: TokenType tt )
+{
+    void * p = malloc ( sizeof ( AST_Expr ) );
+    if ( p == 0 ) return 0; // TODO: raise KFC error
+    AST_Expr * ret = new ( p ) AST_Expr ();
+    ret -> SetToken ( Token ( tt ) );
+    return ret;
+}
 
 AST_Expr :: AST_Expr ( const Token* p_token )
 : AST ( p_token )
 {
 }
 
-AST_Expr :: AST_Expr ( AST_FQN* p_fqn )
-: AST ( & p_fqn -> GetToken () )
+AST_Expr :: AST_Expr ()
 {
-    AddNode ( p_fqn );
 }
 
-AST_Expr :: AST_Expr ( AST_Expr* p_fqn )
+AST_Expr :: ~AST_Expr ()
 {
-    AddNode ( p_fqn );
-}
-
-AST_Expr :: AST_Expr ( Token :: TokenType p_type )    // '@' etc
-{
-    SetToken ( Token ( p_type ) );
 }
 
 SExpression *
@@ -835,20 +946,6 @@ SMembExprMake ( ASTBuilder & p_builder, const KSymbol* p_obj, const KSymbol* p_m
     return & x -> dad;
 }
 
-// #include <iostream>
-// using namespace std;
-// static
-// int64_t CC
-// KSymbolCmp ( const void * key, const void * n )
-// {
-//     const KSymbol * sym = (const KSymbol *) n;
-//     String ident;
-//     StringInitCString ( & ident, (const char *) key );
-// cout<<"KSymbolCmp("<<(const char *) key<<", "<<string(sym -> name.addr,sym -> name.len)<<")"<<endl;
-//     return StringCompare ( & sym -> name, & ident );
-// }
-
-#include<iostream>
 static
 SExpression *
 MakeSMembExpr ( ASTBuilder & p_builder, const AST & p_struc, const AST & p_member, const AST_Expr * p_rowId = 0 )
@@ -884,31 +981,43 @@ MakeSMembExpr ( ASTBuilder & p_builder, const AST & p_struc, const AST & p_membe
                 rc_t rc = init_tbl_symtab ( &symtab, p_builder . GetSchema(), table );
                 if ( rc == 0 )
                 {
-                    /* scan override tables for virtual symbols */
-                    uint32_t start = VectorStart ( & table -> overrides );
-                    uint32_t count = VectorLength ( & table -> overrides );
-                    for ( uint32_t i = 0; i < count; ++ i )
-                    {
-                        STableOverrides * ov = static_cast < STableOverrides * > ( VectorGet ( & table -> overrides, start + i ) );
-                        if ( ! p_builder . ScanVirtuals ( p_struc . GetChild ( 0 ) -> GetLocation (), ov -> by_parent ) )
+                    { /* scan override tables for virtual symbols */
+                        uint32_t start = VectorStart ( & table -> overrides );
+                        uint32_t count = VectorLength ( & table -> overrides );
+                        for ( uint32_t i = 0; i < count; ++ i )
                         {
-                            pop_tbl_scope ( & p_builder . GetSymTab (), table );
-                            KSymTableWhack ( & symtab );
-                            return 0;
+                            STableOverrides * ov = static_cast < STableOverrides * > ( VectorGet ( & table -> overrides, start + i ) );
+                            if ( ! p_builder . ScanVirtuals ( p_struc . GetChild ( 0 ) -> GetLocation (), ov -> by_parent, symtab ) )
+                            {
+                                pop_tbl_scope ( & p_builder . GetSymTab (), table );
+                                KSymTableWhack ( & symtab );
+                                return 0;
+                            }
                         }
                     }
 
                     String memName;
                     StringInitCString ( & memName, memberName );
-std::cout<<"MakeSMembExpr("<<memberName<<"), vprods="<<VectorLength(&table->vprods)<<std::endl;
-KSymTableDump(&p_builder.GetSymTab ());
-                    const KSymbol * mem = ( const KSymbol* ) KSymTableFind ( & p_builder . GetSymTab (), & memName );
-std::cout<<"Resolve("<<memberName<<")"<<(mem == 0 ? "not found":"found")<<std::endl;
 
+                    { /* Add virtual symbols introduced by this table */
+                        uint32_t start = VectorStart ( & table -> vprods );
+                        uint32_t count = VectorLength ( & table -> vprods );
+                        for ( uint32_t i = 0; i < count; ++ i )
+                        {
+                            const KSymbol * mem = static_cast < const KSymbol * > ( VectorGet ( & table -> vprods, start + i ) );
+                            if ( StringCompare ( & mem -> name, & memName ) == 0 )
+                            {
+                                KSymTableWhack ( & symtab );
+                                return SMembExprMake ( p_builder, sym, mem, rowId );
+                            }
+                        }
+                    }
+
+                    const KSymbol * mem = ( const KSymbol* ) KSymTableFind ( & symtab, & memName );
                     KSymTableWhack ( & symtab );
                     if ( mem != 0 )
                     {
-                        assert ( mem -> type == eColumn || mem -> type == eProduction );
+                        assert ( mem -> type == eColumn || mem -> type == eProduction || mem -> type == eVirtual );
                         return SMembExprMake ( p_builder, sym, mem, rowId );
                     }
                     p_builder . ReportError ( p_member . GetLocation (), "Column/production not found", memberName );
@@ -965,9 +1074,38 @@ AST_Expr :: MakeJoin ( ASTBuilder & p_builder ) const
                            ToExpr ( GetChild ( 1 ) ) );
 }
 
+static
+bool IsExpression ( const AST & p_node )
+{
+    switch ( p_node . GetTokenType () )
+    {
+    case PT_EMPTY: // expr [ | expr | ... ]
+    case PT_UINT:
+    case FLOAT_:
+    case EXP_FLOAT:
+    case STRING:
+    case ESCAPED_STRING:
+    case PT_CONSTVECT:
+    case KW_true:
+    case KW_false:
+    case PT_IDENT:
+    case PHYSICAL_IDENTIFIER_1_0 :
+    case '@':
+    case PT_FUNCEXPR:
+    case PT_NEGATE:
+    case PT_CASTEXPR:
+    case PT_MEMBEREXPR:
+    case PT_JOINEXPR:
+        return true;
+    default:
+        return false;
+    }
+}
+
 SExpression *
 AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
 {
+    assert ( IsExpression ( * this ) );
     switch ( GetTokenType () )
     {
     case PT_EMPTY: // expr [ | expr | ... ]
@@ -1150,16 +1288,20 @@ AST_Expr  *
 ncbi :: SchemaParser :: ToExpr ( AST * p_ast)
 {
     assert ( p_ast != 0 );
-    AST_Expr * ret = dynamic_cast < AST_Expr * > ( p_ast );
-    assert ( ret != 0 );
-    return ret;
+    if ( IsExpression ( * p_ast ) )
+    {
+        return static_cast < AST_Expr * > ( p_ast );
+    }
+    return 0;
 }
 
 const AST_Expr *
 ncbi :: SchemaParser :: ToExpr ( const AST * p_ast)
 {
     assert ( p_ast != 0 );
-    const AST_Expr * ret = dynamic_cast < const AST_Expr * > ( p_ast );
-    assert ( ret != 0 );
-    return ret;
+    if ( IsExpression ( * p_ast ) )
+    {
+        return static_cast < const AST_Expr * > ( p_ast );
+    }
+    return 0;
 }

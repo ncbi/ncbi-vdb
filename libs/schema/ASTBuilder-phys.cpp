@@ -271,7 +271,7 @@ ASTBuilder :: PhysicalDecl ( const Token *  p_token,
                              AST *          p_fact,
                              AST *          p_body )
 {
-    AST * ret = new AST ( p_token, p_schema, p_returnType, p_name, p_fact, p_body );
+    AST * ret = AST :: Make ( p_token, p_schema, p_returnType, p_name, p_fact, p_body );
 
     PhysicalDeclaration decl ( * this, * p_returnType );
     if ( decl . SetName ( * p_name ) )

@@ -335,7 +335,7 @@ DatabaseDeclaration :: HandleMemberTable ( const AST & p_member )
 AST *
 ASTBuilder :: DatabaseDef ( const Token * p_token, AST_FQN * p_fqn, AST * p_parent, AST * p_body )
 {
-    AST * ret = new AST ( p_token, p_fqn, p_parent, p_body );
+    AST * ret = AST :: Make ( p_token, p_fqn, p_parent, p_body );
 
     DatabaseDeclaration db ( * this );
     if ( db . SetName ( * p_fqn ) )

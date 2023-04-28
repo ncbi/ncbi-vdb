@@ -64,9 +64,9 @@ AST_Fixture :: AST_Fixture()
 }
 AST_Fixture :: ~AST_Fixture()
 {
-    delete m_ast;
+    AST :: Destroy ( m_ast );
     delete m_builder;
-    delete m_parseTree;
+    ParseTree :: Destroy ( m_parseTree );
     VSchemaRelease ( m_schema );
 }
 
@@ -154,7 +154,7 @@ AST_FQN *
 AST_Fixture :: MakeFqn ( const char* p_text ) // p_text = (ident:)+ident
 {
     Token ident ( PT_IDENT );
-    AST_FQN * ret = new AST_FQN ( & ident );
+    AST_FQN * ret = AST_FQN :: Make ( & ident );
 
     std::string s ( p_text );
 
@@ -190,7 +190,7 @@ AST_Fixture :: MakeAst ( const char* p_source )
         }
         if ( m_parseTree != 0 )
         {
-            delete m_parseTree;
+            ParseTree :: Destroy ( m_parseTree );
         }
         m_parseTree = m_parser . MoveParseTree ();
         if ( m_parseTree == 0 )
@@ -203,7 +203,7 @@ AST_Fixture :: MakeAst ( const char* p_source )
         }
         if ( m_ast != 0 )
         {
-            delete m_ast;
+            AST :: Destroy ( m_ast );
         }
         m_ast = m_builder -> Build ( * m_parseTree, "", m_debugAst );
         if ( m_builder -> GetErrorCount() != 0)
@@ -237,7 +237,7 @@ AST_Fixture :: VerifyErrorMessage ( const char* p_source, const char* p_expected
         {
             throw std :: logic_error ( "AST_Fixture::VerifyErrorMessage : MoveParseTree() returned 0" );
         }
-        delete m_builder -> Build ( * m_parseTree );
+        ParseTree :: Destroy ( m_builder -> Build ( * m_parseTree ) );
         if ( m_builder -> GetErrorCount() == 0 )
         {
             throw std :: logic_error ( "AST_Fixture::VerifyErrorMessage : no error" );
@@ -280,7 +280,7 @@ AST_Fixture :: VerifySymbol ( const char* p_name, uint32_t p_type )
         {
             throw std :: logic_error ( "AST_Fixture::VerifySymbol : object name mismatch" );
         }
-        delete ast;
+        AST :: Destroy ( ast );
     }
     else // old parser
     {

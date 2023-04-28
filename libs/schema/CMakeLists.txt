@@ -71,5 +71,11 @@ set( SRC
 
 GenerateStaticLibs( schema "${SRC}" )
 
+if ( WIN32 )
+    target_compile_options( schema PRIVATE /EHsc )
+else()
+    target_compile_options( schema PRIVATE -fno-exceptions )
+endif()
+
 add_compile_definitions (__mod__="libs/schema")
 #set_source_files_properties(${SchemaScanner} PROPERTIES COMPILE_FLAGS -D__STDC_VERSION__=199901L)

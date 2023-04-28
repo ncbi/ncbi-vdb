@@ -47,7 +47,7 @@ namespace ncbi
             bool ParseFile ( const struct KFile * file, const char * fileName = 0 );
 
             const ParseTree* GetParseTree () const { return m_root; }
-                  ParseTree* MoveParseTree (); // Transfer ownership to caller; destroy with delete
+                  ParseTree* MoveParseTree (); // Transfer ownership to caller
 
             const ErrorReport & GetErrors () const { return m_errors; }
 

@@ -27,7 +27,6 @@
 #ifndef _hpp_ErrorReport_
 #define _hpp_ErrorReport_
 
-//#include <exception>
 #include <klib/vector.h>
 
 #include "Token.hpp"
@@ -37,12 +36,12 @@ namespace ncbi
     namespace SchemaParser
     {
 
-        class InternalError //: public std :: exception
+        class InternalError
         {
         public:
             InternalError(const char * p_text);
-            virtual ~InternalError() throw();
-            virtual const char* what() const throw();
+            ~InternalError();
+            const char* what() const;
 
         private:
             char * m_text;
@@ -60,10 +59,14 @@ namespace ncbi
                 uint32_t  m_line;
                 uint32_t  m_column;
 
-                Error( const char * p_message, const ErrorReport :: Location & p_location );
-                ~Error();
+                static Error * Make( const char * p_message, const ErrorReport :: Location & p_location );
+                static void Destroy( Error * );
 
                 bool Format ( char * p_buf, size_t p_bufSize ) const;
+
+            private:
+                Error( const char * p_message, const ErrorReport :: Location & p_location ); // use Make()
+                ~Error(); // use Destroy()
             };
 
         public:

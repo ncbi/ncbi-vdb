@@ -258,7 +258,7 @@
 %%
 
 parse
-    : PT_PARSE '(' END_SOURCE ')'                   { p_ast = new AST ( $3 ); }
+    : PT_PARSE '(' END_SOURCE ')'                   { p_ast = AST :: Make ( $3 ); }
     | PT_PARSE '(' source END_SOURCE ')'            { p_ast = $3; }
     ;
 
@@ -277,16 +277,16 @@ version_2
     ;
 
 schema_1
-    : PT_SCHEMA_1_0 '(' schema_decls ')'            { $$ = new AST ( $1, $3 ); }
+    : PT_SCHEMA_1_0 '(' schema_decls ')'            { $$ = AST :: Make ( $1, $3 ); }
     ;
 
  schema_2
-    : PT_SCHEMA_2_0 '(' schema_decls ')'            { $$ = new AST ( $1, $3 ); }
+    : PT_SCHEMA_2_0 '(' schema_decls ')'            { $$ = AST :: Make ( $1, $3 ); }
     ;
 
 
 schema_decls
-    : schema_decl                                   { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    : schema_decl                                   { $$ = AST :: Make (); $$ -> AddNode ( $1 ); }
     | schema_decls schema_decl                      { $$ = $1; $$ -> AddNode ( $2 ); }
     ;
 
@@ -307,7 +307,7 @@ schema_decl
     | database          { $$ = $1; }
     | include           { $$ = $1; }
     | view              { $$ = $1; }
-    | ';'               { $$ = new AST (); }
+    | ';'               { $$ = AST :: Make (); }
     ;
 
 typedef
@@ -316,7 +316,7 @@ typedef
     ;
 
 new_type_names
-    : typespec                         { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    : typespec                         { $$ = AST :: Make (); $$ -> AddNode ( $1 ); }
     | new_type_names ',' typespec      { $$ = $1; $$ -> AddNode ( $3 ); }
     ;
 
@@ -326,12 +326,12 @@ typespec
     ;
 
 arrayspec
-    : PT_ARRAY '(' fqn '[' dim ']' ')'  { $$ = new AST ( $1, $3, $5 ); }
+    : PT_ARRAY '(' fqn '[' dim ']' ')'  { $$ = AST :: Make ( $1, $3, $5 ); }
     ;
 
 dim
     : expr   { $$ = $1; }
-    | '*'    { $$ = new AST ( PT_EMPTY ); }
+    | '*'    { $$ = AST :: Make ( PT_EMPTY ); }
     ;
 
 typeset
@@ -340,7 +340,7 @@ typeset
     ;
 
 typeset_spec
-    : typespec                      { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    : typespec                      { $$ = AST :: Make (); $$ -> AddNode ( $1 ); }
     | typeset_spec ',' typespec     { $$ = $1; $$ -> AddNode ( $3 ); }
     ;
 
@@ -369,27 +369,27 @@ func_decl
     ;
 
 schema_sig_opt
-    : PT_EMPTY                                                          { $$ = new AST ( $1 ); }
+    : PT_EMPTY                                                          { $$ = AST :: Make ( $1 ); }
     | PT_SCHEMASIG '(' '<' PT_ASTLIST '(' schema_formals ')' '>' ')'    { $$ = $6; }
     ;
 
 schema_formals
-    : schema_formal                     { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    : schema_formal                     { $$ = AST :: Make (); $$ -> AddNode ( $1 ); }
     | schema_formals ',' schema_formal  { $$ = $1; $$ -> AddNode ( $3 ); }
     ;
 
 schema_formal
-    : PT_SCHEMAFORMAL '(' KW_type ident ')'     { $$ = new AST ( $1, $4 ); }
-    | PT_SCHEMAFORMAL '(' type_expr ident ')'   { $$ = new AST ( $1, $3, $4 ); }
+    : PT_SCHEMAFORMAL '(' KW_type ident ')'     { $$ = AST :: Make ( $1, $4 ); }
+    | PT_SCHEMAFORMAL '(' type_expr ident ')'   { $$ = AST :: Make ( $1, $3, $4 ); }
     ;
 
 return_type
-    : PT_RETURNTYPE '(' KW_void ')'     { $$ = new AST (); }
+    : PT_RETURNTYPE '(' KW_void ')'     { $$ = AST :: Make (); }
     | PT_RETURNTYPE '(' type_expr ')'   { $$ = $3; }
     ;
 
 fact_sig
-    : PT_EMPTY                                   { $$ = new AST ( $1 ); }
+    : PT_EMPTY                                   { $$ = AST :: Make ( $1 ); }
     | PT_FACTSIG '(' '<' param_signature '>' ')' { $$ = $4; }
     ;
 
@@ -398,11 +398,11 @@ param_sig
     ;
 
 param_signature
-    : PT_EMPTY                                                          { $$ = new AST ( $1 ); }
-    | PT_FUNCPARAMS '(' formals_list vararg ')'                         { $$ = new AST ( $1, $3, new AST (), $4 ); }
-    | PT_FUNCPARAMS '(' '*' formals_list vararg ')'                     { $$ = new AST ( $1, new AST (), $4, $5 ); }
-    | PT_FUNCPARAMS '(' formals_list '*' formals_list vararg ')'        { $$ = new AST ( $1, $3, $5, $6 ); }
-    | PT_FUNCPARAMS '(' formals_list ',' '*' formals_list vararg ')'    { $$ = new AST ( $1, $3, $6, $7 ); }
+    : PT_EMPTY                                                          { $$ = AST :: Make ( $1 ); }
+    | PT_FUNCPARAMS '(' formals_list vararg ')'                         { $$ = AST :: Make ( $1, $3, AST :: Make (), $4 ); }
+    | PT_FUNCPARAMS '(' '*' formals_list vararg ')'                     { $$ = AST :: Make ( $1, AST :: Make (), $4, $5 ); }
+    | PT_FUNCPARAMS '(' formals_list '*' formals_list vararg ')'        { $$ = AST :: Make ( $1, $3, $5, $6 ); }
+    | PT_FUNCPARAMS '(' formals_list ',' '*' formals_list vararg ')'    { $$ = AST :: Make ( $1, $3, $6, $7 ); }
     ;
 
 formals_list
@@ -410,22 +410,22 @@ formals_list
     ;
 
 formals
-    : formal                { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    : formal                { $$ = AST :: Make (); $$ -> AddNode ( $1 ); }
     | formals ',' formal    { $$ = $1; $$ -> AddNode ( $3 ); }
     ;
 
 formal
-    : PT_FORMALPARAM '(' typespec IDENTIFIER_1_0 ')'            { $$ = new AST ( $1, $3, new AST ( $4 ), new AST () ); }
-    | PT_FORMALPARAM '(' KW_control typespec IDENTIFIER_1_0 ')' { $$ = new AST ( $1, $4, new AST ( $5 ), new AST ( $3 ) ); }
+    : PT_FORMALPARAM '(' typespec IDENTIFIER_1_0 ')'            { $$ = AST :: Make ( $1, $3, AST :: Make ( $4 ), AST :: Make () ); }
+    | PT_FORMALPARAM '(' KW_control typespec IDENTIFIER_1_0 ')' { $$ = AST :: Make ( $1, $4, AST :: Make ( $5 ), AST :: Make ( $3 ) ); }
     ;
 
 vararg
-    : PT_EMPTY                          { $$ = new AST ( $1 ); }
-    | PT_ELLIPSIS '(' ',' ELLIPSIS ')'  { $$ = new AST ( $1 ); }
+    : PT_EMPTY                          { $$ = AST :: Make ( $1 ); }
+    | PT_ELLIPSIS '(' ',' ELLIPSIS ')'  { $$ = AST :: Make ( $1 ); }
     ;
 
 prologue
-    : PT_FUNCPROLOGUE '(' ';' ')'           { $$ = new AST ( PT_EMPTY ); }
+    : PT_FUNCPROLOGUE '(' ';' ')'           { $$ = AST :: Make ( PT_EMPTY ); }
     | PT_FUNCPROLOGUE '(' '=' fqn ';' ')'   { $$ = $4; }
     | script_prologue
     ;
@@ -435,18 +435,18 @@ script_prologue
     ;
 
 script_stmts
-    : script_stmt               { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    : script_stmt               { $$ = AST :: Make (); $$ -> AddNode ( $1 ); }
     | script_stmts script_stmt  { $$ = $1; $$ -> AddNode ( $2 ); }
     ;
 
 script_stmt
-    : PT_RETURN '(' KW_return cond_expr ';' ')'     { $$ = new AST ( $3, $4 ); }
+    : PT_RETURN '(' KW_return cond_expr ';' ')'     { $$ = AST :: Make ( $3, $4 ); }
     | production                                    { $$ = $1; }
     ;
 
 production
-    : PT_PRODSTMT '(' type_expr ident '=' cond_expr ';' ')'        { $$ = new AST ( $1, $3, $4, $6 ); }
-    | PT_PRODTRIGGER '(' KW_trigger ident '=' cond_expr ';' ')'    { $$ = new AST ( $1, $4, $6 ); }
+    : PT_PRODSTMT '(' type_expr ident '=' cond_expr ';' ')'        { $$ = AST :: Make ( $1, $3, $4, $6 ); }
+    | PT_PRODTRIGGER '(' KW_trigger ident '=' cond_expr ';' ')'    { $$ = AST :: Make ( $1, $4, $6 ); }
     ;
 
 extern_function
@@ -478,29 +478,29 @@ physical
 
 phys_return_type
     : return_type                                       { $$ = $1; }
-    | PT_NOHEADER '(' KW___no_header return_type ')'    { $$ = new AST ( $1, $4 ); }
+    | PT_NOHEADER '(' KW___no_header return_type ')'    { $$ = AST :: Make ( $1, $4 ); }
 
 phys_prologue
     : PT_PHYSPROLOGUE '(' '=' PT_PHYSSTMT '(' '{' PT_ASTLIST '(' script_stmts ')' '}' ')' ')'
-                { $$ = new AST ( $4, $9 ); }
+                { $$ = AST :: Make ( $4, $9 ); }
     | PT_PHYSPROLOGUE '(' '{' PT_ASTLIST '(' phys_body ')' '}' ')'
                 { $$ = $6; }
     ;
 
 phys_body
-    : phys_body_stmt            { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    : phys_body_stmt            { $$ = AST :: Make (); $$ -> AddNode ( $1 ); }
     | phys_body phys_body_stmt  { $$ = $1; $$ -> AddNode ( $2 ); }
     ;
 
 phys_body_stmt
     : PT_PHYSBODYSTMT '(' ';' ')'
-        { $$ = new AST ( PT_EMPTY ); }
+        { $$ = AST :: Make ( PT_EMPTY ); }
     | PT_PHYSBODYSTMT '(' KW_decode PT_PHYSSTMT '(' '{' PT_ASTLIST '(' script_stmts ')' '}' ')' ')'
-        { $$ = new AST ( $3, $9 ) ; }
+        { $$ = AST :: Make ( $3, $9 ) ; }
     | PT_PHYSBODYSTMT '(' KW_encode PT_PHYSSTMT '(' '{' PT_ASTLIST '(' script_stmts ')' '}' ')' ')'
-        { $$ = new AST ( $3, $9 ); }
+        { $$ = AST :: Make ( $3, $9 ); }
     | PT_PHYSBODYSTMT '(' KW___row_length '=' fqn '(' ')' ')'
-        { $$ = new AST ( $3, $5 ); }
+        { $$ = AST :: Make ( $3, $5 ); }
     ;
 
 /* tables */
@@ -511,124 +511,124 @@ table
     ;
 
 parents_opt
-    : PT_EMPTY                                                      { $$ = new AST ( $1 ); }
+    : PT_EMPTY                                                      { $$ = AST :: Make ( $1 ); }
     | PT_TABLEPARENTS '(' '=' PT_ASTLIST '(' tbl_parents ')' ')'    { $$ = $6; }
     ;
 
 tbl_parents
-    : fqn_opt_vers                  { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    : fqn_opt_vers                  { $$ = AST :: Make (); $$ -> AddNode ( $1 ); }
     | tbl_parents ',' fqn_opt_vers  { $$ = $1; $$ -> AddNode ( $3 ); }
     ;
 
 tbl_body
-    : %empty                        { $$ = new AST ( PT_EMPTY ); }
+    : %empty                        { $$ = AST :: Make ( PT_EMPTY ); }
     | PT_ASTLIST '(' tbl_stmts ')'  { $$ = $3; }
     ;
 
 tbl_stmts
-    : tbl_stmt              { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    : tbl_stmt              { $$ = AST :: Make (); $$ -> AddNode ( $1 ); }
     | tbl_stmts tbl_stmt    { $$ = $1; $$ -> AddNode ( $2 ); }
     ;
 
 tbl_stmt
     : production                                                        { $$ = $1; }
     | column_decl                                                       { $$ = $1; }
-    | PT_COLUMNEXPR '(' KW_column KW_limit '=' expr ';' ')'             { $$ = new AST ( $1, $6 ); }
-    | PT_COLUMNEXPR '(' KW_column KW_default KW_limit '=' expr ';' ')'  { $$ = new AST ( $1, $7 ); }
-    | PT_PHYSCOL '(' KW_static physmbr_decl ')'                         { $$ = new AST ( $3, $4 ); }
-    | PT_PHYSCOL '(' KW_physical physmbr_decl ')'                       { $$ = new AST ( $3, $4 ); }
-    | PT_PHYSCOL '(' KW_static KW_physical physmbr_decl ')'             { $$ = new AST ( $3, $5 ); }
-    | PT_COLUNTYPED '(' KW___untyped '=' fqn '(' ')' ';' ')'            { $$ = new AST ( $1, $5 ); }
-    | ';'                                                               { $$ = new AST (); }
+    | PT_COLUMNEXPR '(' KW_column KW_limit '=' expr ';' ')'             { $$ = AST :: Make ( $1, $6 ); }
+    | PT_COLUMNEXPR '(' KW_column KW_default KW_limit '=' expr ';' ')'  { $$ = AST :: Make ( $1, $7 ); }
+    | PT_PHYSCOL '(' KW_static physmbr_decl ')'                         { $$ = AST :: Make ( $3, $4 ); }
+    | PT_PHYSCOL '(' KW_physical physmbr_decl ')'                       { $$ = AST :: Make ( $3, $4 ); }
+    | PT_PHYSCOL '(' KW_static KW_physical physmbr_decl ')'             { $$ = AST :: Make ( $3, $5 ); }
+    | PT_COLUNTYPED '(' KW___untyped '=' fqn '(' ')' ';' ')'            { $$ = AST :: Make ( $1, $5 ); }
+    | ';'                                                               { $$ = AST :: Make (); }
 ;
 
 column_decl
-    : PT_COLUMN '(' col_modifiers_opt col_decl ')' { $$ = new AST ( $1, $3, $4 ); }
+    : PT_COLUMN '(' col_modifiers_opt col_decl ')' { $$ = AST :: Make ( $1, $3, $4 ); }
     ;
 
 col_modifiers_opt
-    : KW_column                                     { $$ = new AST ( $1 ); }
+    : KW_column                                     { $$ = AST :: Make ( $1 ); }
     | PT_ASTLIST '(' col_modifiers KW_column ')'    { $$ = $3; }
     ;
 
 col_modifiers
-    : col_modifier                  { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    : col_modifier                  { $$ = AST :: Make (); $$ -> AddNode ( $1 ); }
     | col_modifiers col_modifier    { $$ = $1; $$ -> AddNode ( $2 ); }
     ;
 
 col_modifier
-    : KW_default    { $$ = new AST ( $1 ); }
-    | KW_extern     { $$ = new AST ( $1 ); }
-    | KW_readonly   { $$ = new AST ( $1 ); }
+    : KW_default    { $$ = AST :: Make ( $1 ); }
+    | KW_extern     { $$ = AST :: Make ( $1 ); }
+    | KW_readonly   { $$ = AST :: Make ( $1 ); }
     ;
 
 col_decl
-    : PT_COLDECL '(' typespec typed_col ')'     { $$ = new AST ( $1, $3, $4 ); }
-    | PT_COLDECL '(' phys_enc_ref typed_col ')' { $$ = new AST ( $1, $3, $4 ); }
+    : PT_COLDECL '(' typespec typed_col ')'     { $$ = AST :: Make ( $1, $3, $4 ); }
+    | PT_COLDECL '(' phys_enc_ref typed_col ')' { $$ = AST :: Make ( $1, $3, $4 ); }
     ;
 
 phys_enc_ref
     : PT_PHYSENCREF '(' '<' PT_ASTLIST '(' schema_parms ')' '>' fqn_opt_vers factory_parms_opt ')'
-                                                        { $$ = new AST ( $1, $6, $9, $10 ); }
-    | PT_PHYSENCREF '(' fqn_vers factory_parms_opt ')'  { $$ = new AST ( $1, $3, $4 ); }
-    | PT_PHYSENCREF '(' fqn factory_parms_list ')'      { $$ = new AST ( $1, $3, $4 ); }
+                                                        { $$ = AST :: Make ( $1, $6, $9, $10 ); }
+    | PT_PHYSENCREF '(' fqn_vers factory_parms_opt ')'  { $$ = AST :: Make ( $1, $3, $4 ); }
+    | PT_PHYSENCREF '(' fqn factory_parms_list ')'      { $$ = AST :: Make ( $1, $3, $4 ); }
     ;
 
 typed_col
-    : PT_TYPEDCOL '(' col_ident '{' col_body_opt '}' ')'    {  $$ = new AST ( $1, $3, $5 ); }
-    | PT_TYPEDCOLEXPR '(' col_ident '=' cond_expr ';' ')'   {  $$ = new AST ( $1, $3, $5 ); }
-    | PT_TYPEDCOL '(' col_ident ';' ')'                     {  $$ = new AST ( $1, $3 ); }
+    : PT_TYPEDCOL '(' col_ident '{' col_body_opt '}' ')'    {  $$ = AST :: Make ( $1, $3, $5 ); }
+    | PT_TYPEDCOLEXPR '(' col_ident '=' cond_expr ';' ')'   {  $$ = AST :: Make ( $1, $3, $5 ); }
+    | PT_TYPEDCOL '(' col_ident ';' ')'                     {  $$ = AST :: Make ( $1, $3 ); }
     ;
 
 col_ident
     : ident                     { $$ = $1; }
-    | PHYSICAL_IDENTIFIER_1_0   { $$ = new AST ( $1 ); }
+    | PHYSICAL_IDENTIFIER_1_0   { $$ = AST :: Make ( $1 ); }
     ;
 
 col_body_opt
-    : PT_EMPTY                      { $$ = new AST (); }
+    : PT_EMPTY                      { $$ = AST :: Make (); }
     | PT_ASTLIST '(' col_body ')'   { $$ = $3; }
     ;
 
 col_body
-    : col_stmt          { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    : col_stmt          { $$ = AST :: Make (); $$ -> AddNode ( $1 ); }
     | col_body col_stmt { $$ = $1; $$ -> AddNode ( $2 ); }
     ;
 
 col_stmt
-    : ';'                                               { $$ = new AST (); }
-    | PT_COLSTMT '(' KW_read '=' cond_expr ';' ')'      { $$ = new AST ( $1, new AST ( $3 ), $5 ); }
-    | PT_COLSTMT '(' KW_validate '=' cond_expr ';' ')'  { $$ = new AST ( $1, new AST ( $3 ), $5 ); }
-    | PT_COLSTMT '(' KW_limit '=' uint_expr ';' ')'     { $$ = new AST ( $1, new AST ( $3 ), $5 ); }
+    : ';'                                               { $$ = AST :: Make (); }
+    | PT_COLSTMT '(' KW_read '=' cond_expr ';' ')'      { $$ = AST :: Make ( $1, AST :: Make ( $3 ), $5 ); }
+    | PT_COLSTMT '(' KW_validate '=' cond_expr ';' ')'  { $$ = AST :: Make ( $1, AST :: Make ( $3 ), $5 ); }
+    | PT_COLSTMT '(' KW_limit '=' uint_expr ';' ')'     { $$ = AST :: Make ( $1, AST :: Make ( $3 ), $5 ); }
     ;
 
 physmbr_decl
     : PT_PHYSMBR '(' phys_coldef PHYSICAL_IDENTIFIER_1_0 ';' ')'
-                                                { $$ = new AST ( $1, $3, new AST ( $4 ) ); }
+                                                { $$ = AST :: Make ( $1, $3, AST :: Make ( $4 ) ); }
     | PT_PHYSMBR '(' KW_column phys_coldef PHYSICAL_IDENTIFIER_1_0 ';' ')'
-                                                { $$ = new AST ( $1, $4, new AST ( $5 ) ); }
+                                                { $$ = AST :: Make ( $1, $4, AST :: Make ( $5 ) ); }
     | PT_PHYSMBR '(' phys_coldef PHYSICAL_IDENTIFIER_1_0 '=' cond_expr ';' ')'
-                                                { $$ = new AST ( $1, $3, new AST ( $4 ), $6 ); }
+                                                { $$ = AST :: Make ( $1, $3, AST :: Make ( $4 ), $6 ); }
     | PT_PHYSMBR '(' KW_column phys_coldef PHYSICAL_IDENTIFIER_1_0 '=' cond_expr ';' ')'
-                                                { $$ = new AST ( $1, $4, new AST ( $5 ), $7 ); }
+                                                { $$ = AST :: Make ( $1, $4, AST :: Make ( $5 ), $7 ); }
     ;
 
 phys_coldef
-    : PT_PHYSCOLDEF '(' col_schema_parms_opt fqn_opt_vers factory_parms_opt ')'    { $$ = new AST ( $1, $3, $4, $5 ); }
+    : PT_PHYSCOLDEF '(' col_schema_parms_opt fqn_opt_vers factory_parms_opt ')'    { $$ = AST :: Make ( $1, $3, $4, $5 ); }
     ;
 
 col_schema_parms_opt
-    : PT_EMPTY                                                              { $$ = new AST (); }
+    : PT_EMPTY                                                              { $$ = AST :: Make (); }
     | PT_COLSCHEMAPARMS '(' '<' PT_ASTLIST '(' col_schema_parms ')' '>' ')' { $$ = $6; }
     ;
 
 col_schema_parms
-    : col_schema_parm                   { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    : col_schema_parm                   { $$ = AST :: Make (); $$ -> AddNode ( $1 ); }
     | col_schema_parms col_schema_parm  { $$ = $1; $$ -> AddNode ( $2 ); }
     ;
 
 col_schema_parm
-    : PT_COLSCHEMAPARAM '(' fqn '=' col_schema_value ')'    { $$ = new AST ( $1, $3, $5 ); }
+    : PT_COLSCHEMAPARAM '(' fqn '=' col_schema_value ')'    { $$ = AST :: Make ( $1, $3, $5 ); }
     | col_schema_value                                      { $$ = $1; }
     ;
 
@@ -643,31 +643,31 @@ database
     ;
 
 dbdad_opt
-    : PT_EMPTY                             { $$ = new AST ( $1 ); }
+    : PT_EMPTY                             { $$ = AST :: Make ( $1 ); }
     | PT_DBDAD '(' '=' fqn_opt_vers ')'    { $$ = $4; }
 
 dbbody
     : PT_DBBODY '(' '{' PT_ASTLIST '(' db_members ')' '}' ')'   { $$ = $6; }
-    | PT_DBBODY '(' '{' '}' ')'                                 { $$ = new AST ( $1 ); }
+    | PT_DBBODY '(' '{' '}' ')'                                 { $$ = AST :: Make ( $1 ); }
     ;
 
 db_members
-    : db_member               { $$ = new AST (); $$ -> AddNode ( $1 ); }
-    | ';'                       { $$ = new AST (); }
+    : db_member               { $$ = AST :: Make (); $$ -> AddNode ( $1 ); }
+    | ';'                       { $$ = AST :: Make (); }
     | db_members db_member    { $$ = $1; $$ -> AddNode ( $2 ); }
     | db_members ';'            { $$ = $1; }
     ;
 
 db_member
     : PT_DBMEMBER '(' template_opt KW_database fqn_opt_vers ident ';' ')'
-        { $$ = new AST ( $1, $3, $5, $6 ); }
+        { $$ = AST :: Make ( $1, $3, $5, $6 ); }
     | PT_TBLMEMBER '(' template_opt KW_table fqn_opt_vers ident ';' ')'
-        { $$ = new AST ( $1, $3, $5, $6 ); }
+        { $$ = AST :: Make ( $1, $3, $5, $6 ); }
     ;
 
 template_opt
-    : PT_EMPTY      { $$ = new AST ( $1 ); }
-    | KW_template   { $$ = new AST ( $1 ); }
+    : PT_EMPTY      { $$ = AST :: Make ( $1 ); }
+    | KW_template   { $$ = AST :: Make ( $1 ); }
     ;
 
 /* include */
@@ -683,14 +683,14 @@ cond_expr
     ;
 
 cond_chain
-    : expr                   { $$ = new AST_Expr ( $1 ); }
+    : expr                   { $$ = AST_Expr :: Make ( $1 ); }
     | cond_chain '|' expr    { $$ = $1; $$ -> AddNode ( $3 ); }
     ;
 
 expr
-    : fqn                           { $$ = new AST_Expr ( $1 ); }
-    | PHYSICAL_IDENTIFIER_1_0       { $$ = new AST_Expr ( $1 ); }
-    | '@'                           { $$ = new AST_Expr ( $1 ); }
+    : fqn                           { $$ = AST_Expr :: Make ( $1 ); }
+    | PHYSICAL_IDENTIFIER_1_0       { $$ = AST_Expr :: Make ( $1 ); }
+    | '@'                           { $$ = AST_Expr :: Make ( $1 ); }
     | func_expr                     { $$ = $1; }
     | uint_expr                     { $$ = $1; }
     | float_expr                    { $$ = $1; }
@@ -706,15 +706,15 @@ expr
 
 func_expr
     : PT_FUNCEXPR '(' schema_parts_opt fqn_opt_vers factory_parms_opt '(' func_parms_opt ')' ')'
-        { $$ = new AST_Expr ( $1 ); $$ -> AddNode ( $3 ); $$ -> AddNode ( $4 ); $$ -> AddNode ( $5 ); $$ -> AddNode ( $7 ); }
+        { $$ = AST_Expr :: Make ( $1 ); $$ -> AddNode ( $3 ); $$ -> AddNode ( $4 ); $$ -> AddNode ( $5 ); $$ -> AddNode ( $7 ); }
     ;
 
 schema_parts_opt
-    : %empty                                    { $$ = new AST ( PT_EMPTY ); }
+    : %empty                                    { $$ = AST :: Make ( PT_EMPTY ); }
     | '<' PT_ASTLIST '(' schema_parms ')' '>'   { $$ = $4; }
 
 schema_parms
-    : schema_parm                   { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    : schema_parm                   { $$ = AST :: Make (); $$ -> AddNode ( $1 ); }
     | schema_parms ',' schema_parm  { $$ = $1; $$ -> AddNode ( $3 ); }
     ;
 
@@ -725,7 +725,7 @@ schema_parm
     ;
 
 factory_parms_opt
-    : PT_EMPTY              { $$ = new AST ( $1 ); }
+    : PT_EMPTY              { $$ = AST :: Make ( $1 ); }
     | factory_parms_list    { $$ = $1; }
     ;
 
@@ -734,64 +734,64 @@ factory_parms_list
     ;
 
 factory_parms
-    : expr                      { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    : expr                      { $$ = AST :: Make (); $$ -> AddNode ( $1 ); }
     | factory_parms ',' expr    { $$ = $1; $$ -> AddNode ( $3 ); }
     ;
 
 func_parms_opt
-    : PT_EMPTY                      { $$ = new AST ( $1 ); }
+    : PT_EMPTY                      { $$ = AST :: Make ( $1 ); }
     | PT_ASTLIST '(' expr_list ')'  { $$ = $3; }
     ;
 
 expr_list
-    : expr                  { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    : expr                  { $$ = AST :: Make (); $$ -> AddNode ( $1 ); }
     | expr_list ',' expr    { $$ = $1; $$ -> AddNode ( $3 ); }
     ;
 
 uint_expr
-    : PT_UINT '(' DECIMAL ')'   { $$ = new AST_Expr ( $1 ); $$ -> AddNode ( $3 ); }
-    | PT_UINT '(' HEX ')'       { $$ = new AST_Expr ( $1 ); $$ -> AddNode ( $3 ); }
-    | PT_UINT '(' OCTAL ')'     { $$ = new AST_Expr ( $1 ); $$ -> AddNode ( $3 ); }
+    : PT_UINT '(' DECIMAL ')'   { $$ = AST_Expr :: Make ( $1 ); $$ -> AddNode ( $3 ); }
+    | PT_UINT '(' HEX ')'       { $$ = AST_Expr :: Make ( $1 ); $$ -> AddNode ( $3 ); }
+    | PT_UINT '(' OCTAL ')'     { $$ = AST_Expr :: Make ( $1 ); $$ -> AddNode ( $3 ); }
     ;
 
 float_expr
-    : FLOAT_     { $$ = new AST_Expr ( $1 ); }
-    | EXP_FLOAT { $$ = new AST_Expr ( $1 ); }
+    : FLOAT_     { $$ = AST_Expr :: Make ( $1 ); }
+    | EXP_FLOAT { $$ = AST_Expr :: Make ( $1 ); }
     ;
 
 string_expr
-    : STRING            { $$ = new AST_Expr ( $1 ); }
-    | ESCAPED_STRING    { $$ = new AST_Expr ( $1 ); }
+    : STRING            { $$ = AST_Expr :: Make ( $1 ); }
+    | ESCAPED_STRING    { $$ = AST_Expr :: Make ( $1 ); }
     ;
 
 const_vect_expr
-    : PT_CONSTVECT '(' '[' PT_ASTLIST '(' expr_list ')' ']' ')'     { $$ = new AST_Expr ( $1 ); $$ -> AddNode ( $6 ); }
+    : PT_CONSTVECT '(' '[' PT_ASTLIST '(' expr_list ')' ']' ')'     { $$ = AST_Expr :: Make ( $1 ); $$ -> AddNode ( $6 ); }
     ;
 
 bool_expr
-    : KW_true   { $$ = new AST_Expr ( $1 ); }
-    | KW_false  { $$ = new AST_Expr ( $1 ); }
+    : KW_true   { $$ = AST_Expr :: Make ( $1 ); }
+    | KW_false  { $$ = AST_Expr :: Make ( $1 ); }
     ;
 
 negate_expr
-    : PT_NEGATE '(' '-' expr ')' { $$ = new AST_Expr ( $1 ); $$ -> AddNode ( $4 ); }
+    : PT_NEGATE '(' '-' expr ')' { $$ = AST_Expr :: Make ( $1 ); $$ -> AddNode ( $4 ); }
 
 cast_expr
-    : PT_CASTEXPR '(' '(' type_expr ')' expr  ')' { $$ = new AST_Expr ( $1 ); $$ -> AddNode ( $4 ); $$ -> AddNode ( $6 ); }
+    : PT_CASTEXPR '(' '(' type_expr ')' expr  ')' { $$ = AST_Expr :: Make ( $1 ); $$ -> AddNode ( $4 ); $$ -> AddNode ( $6 ); }
     ;
 
 type_expr
     : typespec                          { $$ = $1; }
-    | PT_TYPEEXPR '(' fqn '/' fqn ')'   { $$ = new AST ( $1, $3, $5 ); }
+    | PT_TYPEEXPR '(' fqn '/' fqn ')'   { $$ = AST :: Make ( $1, $3, $5 ); }
     ;
 
 member_expr
-    : PT_MEMBEREXPR '(' ident '.' ident ')'                 { $$ = new AST_Expr ( $1 ); $$ -> AddNode ( $3 ); $$ -> AddNode ( $5 ); }
+    : PT_MEMBEREXPR '(' ident '.' ident ')'                 { $$ = AST_Expr :: Make ( $1 ); $$ -> AddNode ( $3 ); $$ -> AddNode ( $5 ); }
     | PT_MEMBEREXPR '(' ident PHYSICAL_IDENTIFIER_1_0 ')'
         {   /* remove leading '.'*/
-            $$ = new AST_Expr ( $1 );
+            $$ = AST_Expr :: Make ( $1 );
             $$ -> AddNode ( $3 );
-            AST * ident = new AST ( PT_IDENT );
+            AST * ident = AST :: Make ( PT_IDENT );
             Token t ( IDENTIFIER_1_0, $4 -> GetValue() + 1, $$ -> GetLocation() );
             ident -> AddNode ( & t );
             $$ -> AddNode ( ident );
@@ -800,13 +800,13 @@ member_expr
 
 join_expr
     : PT_JOINEXPR '(' ident '[' cond_expr ']' '.' ident ')'
-        { $$ = new AST_Expr ( $1 ); $$ -> AddNode ( $3 ); $$ -> AddNode ( $5 ); $$ -> AddNode ( $8 ); }
+        { $$ = AST_Expr :: Make ( $1 ); $$ -> AddNode ( $3 ); $$ -> AddNode ( $5 ); $$ -> AddNode ( $8 ); }
     | PT_JOINEXPR '(' ident '[' cond_expr ']' PHYSICAL_IDENTIFIER_1_0 ')'
         {   /* remove leading '.'*/
-            $$ = new AST_Expr ( $1 );
+            $$ = AST_Expr :: Make ( $1 );
             $$ -> AddNode ( $3 );
             $$ -> AddNode ( $5 );
-            AST * ident = new AST ( PT_IDENT );
+            AST * ident = AST :: Make ( PT_IDENT );
             Token t ( IDENTIFIER_1_0, $7 -> GetValue() + 1, $$ -> GetLocation() );
             ident -> AddNode ( & t );
             $$ -> AddNode ( ident );
@@ -820,12 +820,12 @@ fqn
     ;
 
 qualnames
-    : PT_IDENT '(' IDENTIFIER_1_0 ')'                   { $$ = new AST_FQN ( $1 ); $$ -> AddNode ( $3 ); }
+    : PT_IDENT '(' IDENTIFIER_1_0 ')'                   { $$ = AST_FQN :: Make ( $1 ); $$ -> AddNode ( $3 ); }
     | qualnames ':' PT_IDENT  '(' IDENTIFIER_1_0 ')'    { $$ = $1; $$ -> AddNode ( $5 ); }
     ;
 
 ident
-    : PT_IDENT '(' IDENTIFIER_1_0 ')'   { $$ = new AST_FQN ( $1 ); $$ -> AddNode ( $3 ); }
+    : PT_IDENT '(' IDENTIFIER_1_0 ')'   { $$ = AST_FQN :: Make ( $1 ); $$ -> AddNode ( $3 ); }
     ;
 
 fqn_opt_vers
@@ -845,46 +845,46 @@ view
     ;
 
 view_parms
-    : view_parm                 { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    : view_parm                 { $$ = AST :: Make (); $$ -> AddNode ( $1 ); }
     | view_parms ',' view_parm  { $$ = $1; $$ -> AddNode ( $3 ); }
     ;
 
 view_parm
-    : PT_VIEWPARAM '(' fqn_opt_vers ident ')'   { $$ = new AST ( $1, $3, $4 ); }
+    : PT_VIEWPARAM '(' fqn_opt_vers ident ')'   { $$ = AST :: Make ( $1, $3, $4 ); }
     ;
 
 view_body_opt
-    : PT_EMPTY                      { $$ = new AST ( $1 ); }
+    : PT_EMPTY                      { $$ = AST :: Make ( $1 ); }
     | PT_ASTLIST '(' view_body ')'  { $$ = $3; }
     ;
 
 view_body
-    : view_member           { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    : view_member           { $$ = AST :: Make (); $$ -> AddNode ( $1 ); }
     | view_body view_member { $$ = $1; $$ -> AddNode ( $2 ); }
     ;
 
 view_member
-    : PT_PRODSTMT '(' typespec ident '=' cond_expr ';' ')'          { $$ = new AST ( $1, $3, $4, $6 ); }
-    | PT_COLUMN '(' KW_column typespec ident '=' cond_expr ';' ')'  { $$ = new AST ( $1, $4, $5, $7 ); }
-    | ';'                                                           { $$ = new AST ( PT_EMPTY ); }
+    : PT_PRODSTMT '(' typespec ident '=' cond_expr ';' ')'          { $$ = AST :: Make ( $1, $3, $4, $6 ); }
+    | PT_COLUMN '(' KW_column typespec ident '=' cond_expr ';' ')'  { $$ = AST :: Make ( $1, $4, $5, $7 ); }
+    | ';'                                                           { $$ = AST :: Make ( PT_EMPTY ); }
     ;
 
 view_parents_opt
-    : PT_EMPTY                                                      { $$ = new AST ( $1 ); }
-    | PT_VIEWPARENTS '(' '=' PT_ASTLIST '(' view_parents ')' ')'    { $$ = new AST ( $1, $6 ); }
+    : PT_EMPTY                                                      { $$ = AST :: Make ( $1 ); }
+    | PT_VIEWPARENTS '(' '=' PT_ASTLIST '(' view_parents ')' ')'    { $$ = AST :: Make ( $1, $6 ); }
     ;
 
 view_parents
-    : view_parent                   { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    : view_parent                   { $$ = AST :: Make (); $$ -> AddNode ( $1 ); }
     | view_parents ',' view_parent  { $$ = $1; $$ -> AddNode ( $3 ); }
     ;
 
 view_parent
     : PT_VIEWPARENT '(' fqn_opt_vers '<' PT_ASTLIST '(' view_parent_parms ')' '>' ')'
-        { $$ = new AST ( $1, $3, $7 ); }
+        { $$ = AST :: Make ( $1, $3, $7 ); }
     ;
 
 view_parent_parms
-    : ident                         { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    : ident                         { $$ = AST :: Make (); $$ -> AddNode ( $1 ); }
     | view_parent_parms ',' ident   { $$ = $1; $$ -> AddNode ( $3 ); }
     ;

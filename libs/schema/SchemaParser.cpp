@@ -48,7 +48,7 @@ SchemaParser :: SchemaParser ()
 
 SchemaParser :: ~SchemaParser ()
 {
-    delete m_root;
+    ParseTree :: Destroy ( m_root );
 }
 
 bool
@@ -56,7 +56,7 @@ SchemaParser :: ParseString ( const char * p_input, bool p_debug )
 {
     SchemaScanner s ( p_input, string_size ( p_input ), false );
     Schema_debug = p_debug;
-    delete m_root;
+    ParseTree :: Destroy ( m_root );
     m_root = 0;
     return Schema_parse ( & m_root, & m_errors, & s . GetScanBlock () ) == 0;
 }
@@ -64,7 +64,7 @@ SchemaParser :: ParseString ( const char * p_input, bool p_debug )
 bool
 SchemaParser :: ParseFile ( const struct KFile * p_file, const char * p_fileName )
 {
-    delete m_root;
+    ParseTree :: Destroy ( m_root );
     m_root = 0;
 
     assert ( p_file != 0 );
@@ -136,8 +136,8 @@ VSchemaParse_v2 ( VSchema * p_self, const char * p_text, size_t p_bytes )
 
     ncbi :: SchemaParser :: ASTBuilder builder ( p_self );
     ncbi :: SchemaParser :: AST * ast = builder . Build ( * parseTree, "", false );
-    delete ast;
-    delete parseTree;
+    AST :: Destroy ( ast );
+    ParseTree :: Destroy ( parseTree );
 
     if ( builder . GetErrorCount() != 0)
     {

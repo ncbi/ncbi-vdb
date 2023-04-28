@@ -2113,7 +2113,7 @@ yyreduce:
   switch (yyn)
     {
   case 2:
-                                                    { p_ast = new AST ( (yyvsp[-1].tok) ); }
+                                                    { p_ast = AST :: Make ( (yyvsp[-1].tok) ); }
     break;
 
   case 3:
@@ -2141,15 +2141,15 @@ yyreduce:
     break;
 
   case 9:
-                                                    { (yyval.node) = new AST ( (yyvsp[-3].tok), (yyvsp[-1].node) ); }
+                                                    { (yyval.node) = AST :: Make ( (yyvsp[-3].tok), (yyvsp[-1].node) ); }
     break;
 
   case 10:
-                                                    { (yyval.node) = new AST ( (yyvsp[-3].tok), (yyvsp[-1].node) ); }
+                                                    { (yyval.node) = AST :: Make ( (yyvsp[-3].tok), (yyvsp[-1].node) ); }
     break;
 
   case 11:
-                                                    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+                                                    { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
     break;
 
   case 12:
@@ -2213,7 +2213,7 @@ yyreduce:
     break;
 
   case 27:
-                        { (yyval.node) = new AST (); }
+                        { (yyval.node) = AST :: Make (); }
     break;
 
   case 28:
@@ -2221,7 +2221,7 @@ yyreduce:
     break;
 
   case 29:
-                                       { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+                                       { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
     break;
 
   case 30:
@@ -2237,7 +2237,7 @@ yyreduce:
     break;
 
   case 33:
-                                        { (yyval.node) = new AST ( (yyvsp[-6].tok), (yyvsp[-4].fqn), (yyvsp[-2].node) ); }
+                                        { (yyval.node) = AST :: Make ( (yyvsp[-6].tok), (yyvsp[-4].fqn), (yyvsp[-2].node) ); }
     break;
 
   case 34:
@@ -2245,7 +2245,7 @@ yyreduce:
     break;
 
   case 35:
-             { (yyval.node) = new AST ( PT_EMPTY ); }
+             { (yyval.node) = AST :: Make ( PT_EMPTY ); }
     break;
 
   case 36:
@@ -2253,7 +2253,7 @@ yyreduce:
     break;
 
   case 37:
-                                    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+                                    { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
     break;
 
   case 38:
@@ -2293,7 +2293,7 @@ yyreduce:
     break;
 
   case 47:
-                                                                        { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+                                                                        { (yyval.node) = AST :: Make ( (yyvsp[0].tok) ); }
     break;
 
   case 48:
@@ -2301,7 +2301,7 @@ yyreduce:
     break;
 
   case 49:
-                                        { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+                                        { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
     break;
 
   case 50:
@@ -2309,15 +2309,15 @@ yyreduce:
     break;
 
   case 51:
-                                                { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-1].fqn) ); }
+                                                { (yyval.node) = AST :: Make ( (yyvsp[-4].tok), (yyvsp[-1].fqn) ); }
     break;
 
   case 52:
-                                                { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].fqn) ); }
+                                                { (yyval.node) = AST :: Make ( (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].fqn) ); }
     break;
 
   case 53:
-                                        { (yyval.node) = new AST (); }
+                                        { (yyval.node) = AST :: Make (); }
     break;
 
   case 54:
@@ -2325,7 +2325,7 @@ yyreduce:
     break;
 
   case 55:
-                                                 { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+                                                 { (yyval.node) = AST :: Make ( (yyvsp[0].tok) ); }
     break;
 
   case 56:
@@ -2337,23 +2337,23 @@ yyreduce:
     break;
 
   case 58:
-                                                                        { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+                                                                        { (yyval.node) = AST :: Make ( (yyvsp[0].tok) ); }
     break;
 
   case 59:
-                                                                        { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), new AST (), (yyvsp[-1].node) ); }
+                                                                        { (yyval.node) = AST :: Make ( (yyvsp[-4].tok), (yyvsp[-2].node), AST :: Make (), (yyvsp[-1].node) ); }
     break;
 
   case 60:
-                                                                        { (yyval.node) = new AST ( (yyvsp[-5].tok), new AST (), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+                                                                        { (yyval.node) = AST :: Make ( (yyvsp[-5].tok), AST :: Make (), (yyvsp[-2].node), (yyvsp[-1].node) ); }
     break;
 
   case 61:
-                                                                        { (yyval.node) = new AST ( (yyvsp[-6].tok), (yyvsp[-4].node), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+                                                                        { (yyval.node) = AST :: Make ( (yyvsp[-6].tok), (yyvsp[-4].node), (yyvsp[-2].node), (yyvsp[-1].node) ); }
     break;
 
   case 62:
-                                                                        { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+                                                                        { (yyval.node) = AST :: Make ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-2].node), (yyvsp[-1].node) ); }
     break;
 
   case 63:
@@ -2361,7 +2361,7 @@ yyreduce:
     break;
 
   case 64:
-                            { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+                            { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
     break;
 
   case 65:
@@ -2369,23 +2369,23 @@ yyreduce:
     break;
 
   case 66:
-                                                                { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), new AST ( (yyvsp[-1].tok) ), new AST () ); }
+                                                                { (yyval.node) = AST :: Make ( (yyvsp[-4].tok), (yyvsp[-2].node), AST :: Make ( (yyvsp[-1].tok) ), AST :: Make () ); }
     break;
 
   case 67:
-                                                                { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-2].node), new AST ( (yyvsp[-1].tok) ), new AST ( (yyvsp[-3].tok) ) ); }
+                                                                { (yyval.node) = AST :: Make ( (yyvsp[-5].tok), (yyvsp[-2].node), AST :: Make ( (yyvsp[-1].tok) ), AST :: Make ( (yyvsp[-3].tok) ) ); }
     break;
 
   case 68:
-                                        { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+                                        { (yyval.node) = AST :: Make ( (yyvsp[0].tok) ); }
     break;
 
   case 69:
-                                        { (yyval.node) = new AST ( (yyvsp[-4].tok) ); }
+                                        { (yyval.node) = AST :: Make ( (yyvsp[-4].tok) ); }
     break;
 
   case 70:
-                                            { (yyval.node) = new AST ( PT_EMPTY ); }
+                                            { (yyval.node) = AST :: Make ( PT_EMPTY ); }
     break;
 
   case 71:
@@ -2397,7 +2397,7 @@ yyreduce:
     break;
 
   case 74:
-                                { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+                                { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
     break;
 
   case 75:
@@ -2405,7 +2405,7 @@ yyreduce:
     break;
 
   case 76:
-                                                    { (yyval.node) = new AST ( (yyvsp[-3].tok), (yyvsp[-2].expr) ); }
+                                                    { (yyval.node) = AST :: Make ( (yyvsp[-3].tok), (yyvsp[-2].expr) ); }
     break;
 
   case 77:
@@ -2413,11 +2413,11 @@ yyreduce:
     break;
 
   case 78:
-                                                                   { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
+                                                                   { (yyval.node) = AST :: Make ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
     break;
 
   case 79:
-                                                                   { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
+                                                                   { (yyval.node) = AST :: Make ( (yyvsp[-7].tok), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
     break;
 
   case 80:
@@ -2449,11 +2449,11 @@ yyreduce:
     break;
 
   case 87:
-                                                        { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-1].node) ); }
+                                                        { (yyval.node) = AST :: Make ( (yyvsp[-4].tok), (yyvsp[-1].node) ); }
     break;
 
   case 88:
-                { (yyval.node) = new AST ( (yyvsp[-9].tok), (yyvsp[-4].node) ); }
+                { (yyval.node) = AST :: Make ( (yyvsp[-9].tok), (yyvsp[-4].node) ); }
     break;
 
   case 89:
@@ -2461,7 +2461,7 @@ yyreduce:
     break;
 
   case 90:
-                                { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+                                { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
     break;
 
   case 91:
@@ -2469,19 +2469,19 @@ yyreduce:
     break;
 
   case 92:
-        { (yyval.node) = new AST ( PT_EMPTY ); }
+        { (yyval.node) = AST :: Make ( PT_EMPTY ); }
     break;
 
   case 93:
-        { (yyval.node) = new AST ( (yyvsp[-10].tok), (yyvsp[-4].node) ) ; }
+        { (yyval.node) = AST :: Make ( (yyvsp[-10].tok), (yyvsp[-4].node) ) ; }
     break;
 
   case 94:
-        { (yyval.node) = new AST ( (yyvsp[-10].tok), (yyvsp[-4].node) ); }
+        { (yyval.node) = AST :: Make ( (yyvsp[-10].tok), (yyvsp[-4].node) ); }
     break;
 
   case 95:
-        { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-3].fqn) ); }
+        { (yyval.node) = AST :: Make ( (yyvsp[-5].tok), (yyvsp[-3].fqn) ); }
     break;
 
   case 96:
@@ -2489,7 +2489,7 @@ yyreduce:
     break;
 
   case 97:
-                                                                    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+                                                                    { (yyval.node) = AST :: Make ( (yyvsp[0].tok) ); }
     break;
 
   case 98:
@@ -2497,7 +2497,7 @@ yyreduce:
     break;
 
   case 99:
-                                    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].fqn) ); }
+                                    { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].fqn) ); }
     break;
 
   case 100:
@@ -2505,7 +2505,7 @@ yyreduce:
     break;
 
   case 101:
-                                    { (yyval.node) = new AST ( PT_EMPTY ); }
+                                    { (yyval.node) = AST :: Make ( PT_EMPTY ); }
     break;
 
   case 102:
@@ -2513,7 +2513,7 @@ yyreduce:
     break;
 
   case 103:
-                            { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+                            { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
     break;
 
   case 104:
@@ -2529,39 +2529,39 @@ yyreduce:
     break;
 
   case 107:
-                                                                        { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-2].expr) ); }
+                                                                        { (yyval.node) = AST :: Make ( (yyvsp[-7].tok), (yyvsp[-2].expr) ); }
     break;
 
   case 108:
-                                                                        { (yyval.node) = new AST ( (yyvsp[-8].tok), (yyvsp[-2].expr) ); }
+                                                                        { (yyval.node) = AST :: Make ( (yyvsp[-8].tok), (yyvsp[-2].expr) ); }
     break;
 
   case 109:
-                                                                        { (yyval.node) = new AST ( (yyvsp[-2].tok), (yyvsp[-1].node) ); }
+                                                                        { (yyval.node) = AST :: Make ( (yyvsp[-2].tok), (yyvsp[-1].node) ); }
     break;
 
   case 110:
-                                                                        { (yyval.node) = new AST ( (yyvsp[-2].tok), (yyvsp[-1].node) ); }
+                                                                        { (yyval.node) = AST :: Make ( (yyvsp[-2].tok), (yyvsp[-1].node) ); }
     break;
 
   case 111:
-                                                                        { (yyval.node) = new AST ( (yyvsp[-3].tok), (yyvsp[-1].node) ); }
+                                                                        { (yyval.node) = AST :: Make ( (yyvsp[-3].tok), (yyvsp[-1].node) ); }
     break;
 
   case 112:
-                                                                        { (yyval.node) = new AST ( (yyvsp[-8].tok), (yyvsp[-4].fqn) ); }
+                                                                        { (yyval.node) = AST :: Make ( (yyvsp[-8].tok), (yyvsp[-4].fqn) ); }
     break;
 
   case 113:
-                                                                        { (yyval.node) = new AST (); }
+                                                                        { (yyval.node) = AST :: Make (); }
     break;
 
   case 114:
-                                                   { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+                                                   { (yyval.node) = AST :: Make ( (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].node) ); }
     break;
 
   case 115:
-                                                    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+                                                    { (yyval.node) = AST :: Make ( (yyvsp[0].tok) ); }
     break;
 
   case 116:
@@ -2569,7 +2569,7 @@ yyreduce:
     break;
 
   case 117:
-                                    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+                                    { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
     break;
 
   case 118:
@@ -2577,47 +2577,47 @@ yyreduce:
     break;
 
   case 119:
-                    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+                    { (yyval.node) = AST :: Make ( (yyvsp[0].tok) ); }
     break;
 
   case 120:
-                    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+                    { (yyval.node) = AST :: Make ( (yyvsp[0].tok) ); }
     break;
 
   case 121:
-                    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+                    { (yyval.node) = AST :: Make ( (yyvsp[0].tok) ); }
     break;
 
   case 122:
-                                                { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+                                                { (yyval.node) = AST :: Make ( (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].node) ); }
     break;
 
   case 123:
-                                                { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+                                                { (yyval.node) = AST :: Make ( (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].node) ); }
     break;
 
   case 124:
-                                                        { (yyval.node) = new AST ( (yyvsp[-10].tok), (yyvsp[-5].node), (yyvsp[-2].fqn), (yyvsp[-1].node) ); }
+                                                        { (yyval.node) = AST :: Make ( (yyvsp[-10].tok), (yyvsp[-5].node), (yyvsp[-2].fqn), (yyvsp[-1].node) ); }
     break;
 
   case 125:
-                                                        { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].fqn), (yyvsp[-1].node) ); }
+                                                        { (yyval.node) = AST :: Make ( (yyvsp[-4].tok), (yyvsp[-2].fqn), (yyvsp[-1].node) ); }
     break;
 
   case 126:
-                                                        { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].fqn), (yyvsp[-1].node) ); }
+                                                        { (yyval.node) = AST :: Make ( (yyvsp[-4].tok), (yyvsp[-2].fqn), (yyvsp[-1].node) ); }
     break;
 
   case 127:
-                                                            {  (yyval.node) = new AST ( (yyvsp[-6].tok), (yyvsp[-4].node), (yyvsp[-2].node) ); }
+                                                            {  (yyval.node) = AST :: Make ( (yyvsp[-6].tok), (yyvsp[-4].node), (yyvsp[-2].node) ); }
     break;
 
   case 128:
-                                                            {  (yyval.node) = new AST ( (yyvsp[-6].tok), (yyvsp[-4].node), (yyvsp[-2].expr) ); }
+                                                            {  (yyval.node) = AST :: Make ( (yyvsp[-6].tok), (yyvsp[-4].node), (yyvsp[-2].expr) ); }
     break;
 
   case 129:
-                                                            {  (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node) ); }
+                                                            {  (yyval.node) = AST :: Make ( (yyvsp[-4].tok), (yyvsp[-2].node) ); }
     break;
 
   case 130:
@@ -2625,11 +2625,11 @@ yyreduce:
     break;
 
   case 131:
-                                { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+                                { (yyval.node) = AST :: Make ( (yyvsp[0].tok) ); }
     break;
 
   case 132:
-                                    { (yyval.node) = new AST (); }
+                                    { (yyval.node) = AST :: Make (); }
     break;
 
   case 133:
@@ -2637,7 +2637,7 @@ yyreduce:
     break;
 
   case 134:
-                        { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+                        { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
     break;
 
   case 135:
@@ -2645,43 +2645,43 @@ yyreduce:
     break;
 
   case 136:
-                                                        { (yyval.node) = new AST (); }
+                                                        { (yyval.node) = AST :: Make (); }
     break;
 
   case 137:
-                                                        { (yyval.node) = new AST ( (yyvsp[-6].tok), new AST ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
+                                                        { (yyval.node) = AST :: Make ( (yyvsp[-6].tok), AST :: Make ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
     break;
 
   case 138:
-                                                        { (yyval.node) = new AST ( (yyvsp[-6].tok), new AST ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
+                                                        { (yyval.node) = AST :: Make ( (yyvsp[-6].tok), AST :: Make ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
     break;
 
   case 139:
-                                                        { (yyval.node) = new AST ( (yyvsp[-6].tok), new AST ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
+                                                        { (yyval.node) = AST :: Make ( (yyvsp[-6].tok), AST :: Make ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
     break;
 
   case 140:
-                                                { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-3].node), new AST ( (yyvsp[-2].tok) ) ); }
+                                                { (yyval.node) = AST :: Make ( (yyvsp[-5].tok), (yyvsp[-3].node), AST :: Make ( (yyvsp[-2].tok) ) ); }
     break;
 
   case 141:
-                                                { (yyval.node) = new AST ( (yyvsp[-6].tok), (yyvsp[-3].node), new AST ( (yyvsp[-2].tok) ) ); }
+                                                { (yyval.node) = AST :: Make ( (yyvsp[-6].tok), (yyvsp[-3].node), AST :: Make ( (yyvsp[-2].tok) ) ); }
     break;
 
   case 142:
-                                                { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), new AST ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
+                                                { (yyval.node) = AST :: Make ( (yyvsp[-7].tok), (yyvsp[-5].node), AST :: Make ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
     break;
 
   case 143:
-                                                { (yyval.node) = new AST ( (yyvsp[-8].tok), (yyvsp[-5].node), new AST ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
+                                                { (yyval.node) = AST :: Make ( (yyvsp[-8].tok), (yyvsp[-5].node), AST :: Make ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
     break;
 
   case 144:
-                                                                                   { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-3].node), (yyvsp[-2].fqn), (yyvsp[-1].node) ); }
+                                                                                   { (yyval.node) = AST :: Make ( (yyvsp[-5].tok), (yyvsp[-3].node), (yyvsp[-2].fqn), (yyvsp[-1].node) ); }
     break;
 
   case 145:
-                                                                            { (yyval.node) = new AST (); }
+                                                                            { (yyval.node) = AST :: Make (); }
     break;
 
   case 146:
@@ -2689,7 +2689,7 @@ yyreduce:
     break;
 
   case 147:
-                                        { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+                                        { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
     break;
 
   case 148:
@@ -2697,7 +2697,7 @@ yyreduce:
     break;
 
   case 149:
-                                                            { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-3].fqn), (yyvsp[-1].node) ); }
+                                                            { (yyval.node) = AST :: Make ( (yyvsp[-5].tok), (yyvsp[-3].fqn), (yyvsp[-1].node) ); }
     break;
 
   case 150:
@@ -2717,7 +2717,7 @@ yyreduce:
     break;
 
   case 154:
-                                           { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+                                           { (yyval.node) = AST :: Make ( (yyvsp[0].tok) ); }
     break;
 
   case 155:
@@ -2729,15 +2729,15 @@ yyreduce:
     break;
 
   case 157:
-                                                                { (yyval.node) = new AST ( (yyvsp[-4].tok) ); }
+                                                                { (yyval.node) = AST :: Make ( (yyvsp[-4].tok) ); }
     break;
 
   case 158:
-                              { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+                              { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
     break;
 
   case 159:
-                                { (yyval.node) = new AST (); }
+                                { (yyval.node) = AST :: Make (); }
     break;
 
   case 160:
@@ -2749,19 +2749,19 @@ yyreduce:
     break;
 
   case 162:
-        { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-3].fqn), (yyvsp[-2].fqn) ); }
+        { (yyval.node) = AST :: Make ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-3].fqn), (yyvsp[-2].fqn) ); }
     break;
 
   case 163:
-        { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-3].fqn), (yyvsp[-2].fqn) ); }
+        { (yyval.node) = AST :: Make ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-3].fqn), (yyvsp[-2].fqn) ); }
     break;
 
   case 164:
-                    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+                    { (yyval.node) = AST :: Make ( (yyvsp[0].tok) ); }
     break;
 
   case 165:
-                    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+                    { (yyval.node) = AST :: Make ( (yyvsp[0].tok) ); }
     break;
 
   case 166:
@@ -2773,7 +2773,7 @@ yyreduce:
     break;
 
   case 168:
-                             { (yyval.expr) = new AST_Expr ( (yyvsp[0].expr) ); }
+                             { (yyval.expr) = AST_Expr :: Make ( (yyvsp[0].expr) ); }
     break;
 
   case 169:
@@ -2781,15 +2781,15 @@ yyreduce:
     break;
 
   case 170:
-                                    { (yyval.expr) = new AST_Expr ( (yyvsp[0].fqn) ); }
+                                    { (yyval.expr) = AST_Expr :: Make ( (yyvsp[0].fqn) ); }
     break;
 
   case 171:
-                                    { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+                                    { (yyval.expr) = AST_Expr :: Make ( (yyvsp[0].tok) ); }
     break;
 
   case 172:
-                                    { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+                                    { (yyval.expr) = AST_Expr :: Make ( (yyvsp[0].tok) ); }
     break;
 
   case 173:
@@ -2837,11 +2837,11 @@ yyreduce:
     break;
 
   case 184:
-        { (yyval.expr) = new AST_Expr ( (yyvsp[-8].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-6].node) ); (yyval.expr) -> AddNode ( (yyvsp[-5].fqn) ); (yyval.expr) -> AddNode ( (yyvsp[-4].node) ); (yyval.expr) -> AddNode ( (yyvsp[-2].node) ); }
+        { (yyval.expr) = AST_Expr :: Make ( (yyvsp[-8].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-6].node) ); (yyval.expr) -> AddNode ( (yyvsp[-5].fqn) ); (yyval.expr) -> AddNode ( (yyvsp[-4].node) ); (yyval.expr) -> AddNode ( (yyvsp[-2].node) ); }
     break;
 
   case 185:
-                                                { (yyval.node) = new AST ( PT_EMPTY ); }
+                                                { (yyval.node) = AST :: Make ( PT_EMPTY ); }
     break;
 
   case 186:
@@ -2849,7 +2849,7 @@ yyreduce:
     break;
 
   case 187:
-                                    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+                                    { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
     break;
 
   case 188:
@@ -2869,7 +2869,7 @@ yyreduce:
     break;
 
   case 192:
-                            { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+                            { (yyval.node) = AST :: Make ( (yyvsp[0].tok) ); }
     break;
 
   case 193:
@@ -2881,7 +2881,7 @@ yyreduce:
     break;
 
   case 195:
-                                { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].expr) ); }
+                                { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].expr) ); }
     break;
 
   case 196:
@@ -2889,7 +2889,7 @@ yyreduce:
     break;
 
   case 197:
-                                    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+                                    { (yyval.node) = AST :: Make ( (yyvsp[0].tok) ); }
     break;
 
   case 198:
@@ -2897,7 +2897,7 @@ yyreduce:
     break;
 
   case 199:
-                            { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].expr) ); }
+                            { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].expr) ); }
     break;
 
   case 200:
@@ -2905,51 +2905,51 @@ yyreduce:
     break;
 
   case 201:
-                                { (yyval.expr) = new AST_Expr ( (yyvsp[-3].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-1].tok) ); }
+                                { (yyval.expr) = AST_Expr :: Make ( (yyvsp[-3].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-1].tok) ); }
     break;
 
   case 202:
-                                { (yyval.expr) = new AST_Expr ( (yyvsp[-3].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-1].tok) ); }
+                                { (yyval.expr) = AST_Expr :: Make ( (yyvsp[-3].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-1].tok) ); }
     break;
 
   case 203:
-                                { (yyval.expr) = new AST_Expr ( (yyvsp[-3].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-1].tok) ); }
+                                { (yyval.expr) = AST_Expr :: Make ( (yyvsp[-3].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-1].tok) ); }
     break;
 
   case 204:
-                 { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+                 { (yyval.expr) = AST_Expr :: Make ( (yyvsp[0].tok) ); }
     break;
 
   case 205:
-                { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+                { (yyval.expr) = AST_Expr :: Make ( (yyvsp[0].tok) ); }
     break;
 
   case 206:
-                        { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+                        { (yyval.expr) = AST_Expr :: Make ( (yyvsp[0].tok) ); }
     break;
 
   case 207:
-                        { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+                        { (yyval.expr) = AST_Expr :: Make ( (yyvsp[0].tok) ); }
     break;
 
   case 208:
-                                                                    { (yyval.expr) = new AST_Expr ( (yyvsp[-8].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-3].node) ); }
+                                                                    { (yyval.expr) = AST_Expr :: Make ( (yyvsp[-8].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-3].node) ); }
     break;
 
   case 209:
-                { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+                { (yyval.expr) = AST_Expr :: Make ( (yyvsp[0].tok) ); }
     break;
 
   case 210:
-                { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+                { (yyval.expr) = AST_Expr :: Make ( (yyvsp[0].tok) ); }
     break;
 
   case 211:
-                                 { (yyval.expr) = new AST_Expr ( (yyvsp[-4].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-1].expr) ); }
+                                 { (yyval.expr) = AST_Expr :: Make ( (yyvsp[-4].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-1].expr) ); }
     break;
 
   case 212:
-                                                  { (yyval.expr) = new AST_Expr ( (yyvsp[-6].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-3].node) ); (yyval.expr) -> AddNode ( (yyvsp[-1].expr) ); }
+                                                  { (yyval.expr) = AST_Expr :: Make ( (yyvsp[-6].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-3].node) ); (yyval.expr) -> AddNode ( (yyvsp[-1].expr) ); }
     break;
 
   case 213:
@@ -2957,18 +2957,18 @@ yyreduce:
     break;
 
   case 214:
-                                        { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-3].fqn), (yyvsp[-1].fqn) ); }
+                                        { (yyval.node) = AST :: Make ( (yyvsp[-5].tok), (yyvsp[-3].fqn), (yyvsp[-1].fqn) ); }
     break;
 
   case 215:
-                                                            { (yyval.expr) = new AST_Expr ( (yyvsp[-5].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-3].fqn) ); (yyval.expr) -> AddNode ( (yyvsp[-1].fqn) ); }
+                                                            { (yyval.expr) = AST_Expr :: Make ( (yyvsp[-5].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-3].fqn) ); (yyval.expr) -> AddNode ( (yyvsp[-1].fqn) ); }
     break;
 
   case 216:
         {   /* remove leading '.'*/
-            (yyval.expr) = new AST_Expr ( (yyvsp[-4].tok) );
+            (yyval.expr) = AST_Expr :: Make ( (yyvsp[-4].tok) );
             (yyval.expr) -> AddNode ( (yyvsp[-2].fqn) );
-            AST * ident = new AST ( PT_IDENT );
+            AST * ident = AST :: Make ( PT_IDENT );
             Token t ( IDENTIFIER_1_0, (yyvsp[-1].tok) -> GetValue() + 1, (yyval.expr) -> GetLocation() );
             ident -> AddNode ( & t );
             (yyval.expr) -> AddNode ( ident );
@@ -2976,15 +2976,15 @@ yyreduce:
     break;
 
   case 217:
-        { (yyval.expr) = new AST_Expr ( (yyvsp[-8].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-6].fqn) ); (yyval.expr) -> AddNode ( (yyvsp[-4].expr) ); (yyval.expr) -> AddNode ( (yyvsp[-1].fqn) ); }
+        { (yyval.expr) = AST_Expr :: Make ( (yyvsp[-8].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-6].fqn) ); (yyval.expr) -> AddNode ( (yyvsp[-4].expr) ); (yyval.expr) -> AddNode ( (yyvsp[-1].fqn) ); }
     break;
 
   case 218:
         {   /* remove leading '.'*/
-            (yyval.expr) = new AST_Expr ( (yyvsp[-7].tok) );
+            (yyval.expr) = AST_Expr :: Make ( (yyvsp[-7].tok) );
             (yyval.expr) -> AddNode ( (yyvsp[-5].fqn) );
             (yyval.expr) -> AddNode ( (yyvsp[-3].expr) );
-            AST * ident = new AST ( PT_IDENT );
+            AST * ident = AST :: Make ( PT_IDENT );
             Token t ( IDENTIFIER_1_0, (yyvsp[-1].tok) -> GetValue() + 1, (yyval.expr) -> GetLocation() );
             ident -> AddNode ( & t );
             (yyval.expr) -> AddNode ( ident );
@@ -2996,7 +2996,7 @@ yyreduce:
     break;
 
   case 220:
-                                                        { (yyval.fqn) = new AST_FQN ( (yyvsp[-3].tok) ); (yyval.fqn) -> AddNode ( (yyvsp[-1].tok) ); }
+                                                        { (yyval.fqn) = AST_FQN :: Make ( (yyvsp[-3].tok) ); (yyval.fqn) -> AddNode ( (yyvsp[-1].tok) ); }
     break;
 
   case 221:
@@ -3004,7 +3004,7 @@ yyreduce:
     break;
 
   case 222:
-                                        { (yyval.fqn) = new AST_FQN ( (yyvsp[-3].tok) ); (yyval.fqn) -> AddNode ( (yyvsp[-1].tok) ); }
+                                        { (yyval.fqn) = AST_FQN :: Make ( (yyvsp[-3].tok) ); (yyval.fqn) -> AddNode ( (yyvsp[-1].tok) ); }
     break;
 
   case 223:
@@ -3024,7 +3024,7 @@ yyreduce:
     break;
 
   case 227:
-                                { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+                                { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
     break;
 
   case 228:
@@ -3032,11 +3032,11 @@ yyreduce:
     break;
 
   case 229:
-                                                { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].fqn), (yyvsp[-1].fqn) ); }
+                                                { (yyval.node) = AST :: Make ( (yyvsp[-4].tok), (yyvsp[-2].fqn), (yyvsp[-1].fqn) ); }
     break;
 
   case 230:
-                                    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+                                    { (yyval.node) = AST :: Make ( (yyvsp[0].tok) ); }
     break;
 
   case 231:
@@ -3044,7 +3044,7 @@ yyreduce:
     break;
 
   case 232:
-                            { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+                            { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
     break;
 
   case 233:
@@ -3052,27 +3052,27 @@ yyreduce:
     break;
 
   case 234:
-                                                                    { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
+                                                                    { (yyval.node) = AST :: Make ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
     break;
 
   case 235:
-                                                                    { (yyval.node) = new AST ( (yyvsp[-8].tok), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
+                                                                    { (yyval.node) = AST :: Make ( (yyvsp[-8].tok), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
     break;
 
   case 236:
-                                                                    { (yyval.node) = new AST ( PT_EMPTY ); }
+                                                                    { (yyval.node) = AST :: Make ( PT_EMPTY ); }
     break;
 
   case 237:
-                                                                    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+                                                                    { (yyval.node) = AST :: Make ( (yyvsp[0].tok) ); }
     break;
 
   case 238:
-                                                                    { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-2].node) ); }
+                                                                    { (yyval.node) = AST :: Make ( (yyvsp[-7].tok), (yyvsp[-2].node) ); }
     break;
 
   case 239:
-                                    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+                                    { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
     break;
 
   case 240:
@@ -3080,11 +3080,11 @@ yyreduce:
     break;
 
   case 241:
-        { (yyval.node) = new AST ( (yyvsp[-9].tok), (yyvsp[-7].fqn), (yyvsp[-3].node) ); }
+        { (yyval.node) = AST :: Make ( (yyvsp[-9].tok), (yyvsp[-7].fqn), (yyvsp[-3].node) ); }
     break;
 
   case 242:
-                                    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].fqn) ); }
+                                    { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].fqn) ); }
     break;
 
   case 243:
