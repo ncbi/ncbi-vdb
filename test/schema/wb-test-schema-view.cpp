@@ -462,8 +462,13 @@ FIXTURE_TEST_CASE(View_Column_ReferenceToParamTablesProduction, AST_View_Fixture
     ViewAccess v = ParseView ( "version 2; table T#1 { U8 c1 = 1; }; view W#1 <T t> { column U8 c2 = t . c1; }", "W" );
     REQUIRE_EQ ( ( uint32_t ) eMembExpr, v . Columns () . Get ( 0 ) -> read -> var );
 }
+FIXTURE_TEST_CASE(View_Column_ReferenceToParamTablesProduction_Inherited, AST_View_Fixture)
+{
+    ViewAccess v = ParseView ( "version 2; table T0#1 { U8 c0 = 1; }; table T#1 = T0#1{ U8 c1 = c0; };  table T2#1 = T#1{ U8 c2 = c0; }; view W#1 <T0 t> { column U8 c2 = t . c0; }", "W" );
+    REQUIRE_EQ ( ( uint32_t ) eMembExpr, v . Columns () . Get ( 0 ) -> read -> var );
+}
 FIXTURE_TEST_CASE(View_Column_ReferenceToParamTablesArrayColumn, AST_View_Fixture)
-{   // introducing member expressions!
+{
     ViewAccess v = ParseView (
         "version 2;"
         "table T#1 { column U8[2] c1; };"

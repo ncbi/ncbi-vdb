@@ -656,6 +656,25 @@ FIXTURE_TEST_CASE ( View_ListCol, ViewFixture )
     REQUIRE_RC ( KNamelistRelease ( names ) );
 }
 
+FIXTURE_TEST_CASE ( View_OpenSchema_NullSelf, ViewFixture )
+{
+    VSchema const * schema;
+    REQUIRE_RC_FAIL ( VViewOpenSchema ( NULL, & schema ) );
+}
+FIXTURE_TEST_CASE ( View_OpenSchema_NullParam, ViewFixture )
+{
+    CreateView ( GetName(), "V" );
+    REQUIRE_RC_FAIL ( VViewOpenSchema ( m_view, NULL ) );
+}
+FIXTURE_TEST_CASE ( View_OpenSchema, ViewFixture )
+{
+    CreateView ( GetName(), "V" );
+    VSchema const * schema;
+    REQUIRE_RC ( VViewOpenSchema ( m_view, & schema ) );
+    REQUIRE_NOT_NULL ( schema );
+    REQUIRE_RC ( VSchemaRelease ( schema ) );
+}
+
 //////////////////////////////////////////// Main
 extern "C"
 {

@@ -542,3 +542,34 @@ VViewListCol ( const VView * p_self, struct KNamelist ** p_names )
         return rc;
     }
 }
+
+/* OpenSchema
+ *  duplicate reference to view schema
+ *  NB - returned reference must be released
+ */
+LIB_EXPORT
+rc_t CC VViewOpenSchema ( const VView *self, const VSchema **schema )
+{
+    rc_t rc;
+
+    if ( schema == NULL )
+        rc = RC ( rcVDB, rcTable, rcAccessing, rcParam, rcNull );
+    else
+    {
+        if ( self == NULL )
+            rc = RC ( rcVDB, rcTable, rcAccessing, rcSelf, rcNull );
+        else
+        {
+            rc = VSchemaAddRef ( self -> schema );
+            if ( rc == 0 )
+            {
+                * schema = self -> schema;
+                return 0;
+            }
+        }
+
+        * schema = NULL;
+    }
+
+    return rc;
+}
