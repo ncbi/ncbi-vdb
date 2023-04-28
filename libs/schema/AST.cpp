@@ -988,8 +988,12 @@ AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
                 {
                     return MakeSymExpr ( p_builder, sym );
                 }
+                else if ( ChildrenCount () > 1 )
+                {
+                    p_builder . ReportError ( "Undeclared identifier", * fqn );
+                }
                 else
-                {   // Resolve() has created all the required namespaces; create the identifier as a forward reference
+                {   // create simple identifier as a forward reference
                     SSymExpr * x = p_builder . Alloc < SSymExpr > ();
                     x -> _sym = p_builder . CreateFqnSymbol ( * fqn, eForward, NULL );
                     if (x -> _sym != 0 )
