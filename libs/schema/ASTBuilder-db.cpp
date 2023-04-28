@@ -40,27 +40,28 @@ using namespace std;
 class DatabaseDeclaration // Wrapper around SDatabase
 {
 public:
-    DatabaseDeclaration ( ASTBuilder & p_builder );
+    DatabaseDeclaration ( ctx_t ctx, ASTBuilder & p_builder );
     ~DatabaseDeclaration ();
 
-    bool SetName ( const AST_FQN &  p_fqn );
-    bool HandleParent ( const AST & p_parents );
-    void HandleBody ( const AST & p_body );
+    bool SetName ( ctx_t ctx, const AST_FQN &  p_fqn );
+    bool HandleParent ( ctx_t ctx, const AST & p_parents );
+    void HandleBody ( ctx_t ctx, const AST & p_body );
 
 private:
-    bool HandleOverload ( const KSymbol * p_priorDecl );
-    void HandleMemberDb ( const AST & p_member );
-    void HandleMemberTable ( const AST & p_member );
+    bool HandleOverload ( ctx_t ctx, const KSymbol * p_priorDecl );
+    void HandleMemberDb ( ctx_t ctx, const AST & p_member );
+    void HandleMemberTable ( ctx_t ctx, const AST & p_member );
 
 private:
     ASTBuilder &    m_builder;
     SDatabase *     m_self;
 };
 
-DatabaseDeclaration :: DatabaseDeclaration ( ASTBuilder & p_builder )
-:   m_builder ( p_builder ),
-    m_self ( m_builder . Alloc < SDatabase > () )
+DatabaseDeclaration :: DatabaseDeclaration ( ctx_t ctx, ASTBuilder & p_builder )
+:   m_builder ( p_builder )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+    m_self = m_builder . Alloc < SDatabase > ( ctx );
     if ( m_self != 0 )
     {
         /* prepare vectors */
@@ -74,18 +75,20 @@ DatabaseDeclaration :: ~DatabaseDeclaration ()
 }
 
 bool
-DatabaseDeclaration :: SetName ( const AST_FQN &  p_fqn )
+DatabaseDeclaration :: SetName ( ctx_t ctx, const AST_FQN &  p_fqn )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     if ( m_self != 0 )
     {
        /* version */
         m_self -> version = p_fqn . GetVersion ();
-        const KSymbol * priorDecl = m_builder . Resolve ( p_fqn, false );
+        const KSymbol * priorDecl = m_builder . Resolve ( ctx, p_fqn, false );
         if ( priorDecl == 0 )
         {
-            m_self -> name = m_builder . CreateFqnSymbol ( p_fqn, eDatabase, & m_self );
+            m_self -> name = m_builder . CreateFqnSymbol ( ctx, p_fqn, eDatabase, & m_self );
             if ( m_self -> name != 0 &&
-                 m_builder . CreateOverload ( m_self -> name,
+                 m_builder . CreateOverload ( ctx,
+                                              m_self -> name,
                                               m_self,
                                               0,
                                               SDatabaseSort,
@@ -96,7 +99,7 @@ DatabaseDeclaration :: SetName ( const AST_FQN &  p_fqn )
                 return true;
             }
         }
-        else if ( HandleOverload ( priorDecl ) )
+        else if ( HandleOverload ( ctx, priorDecl ) )
         {
             // declared previously, this declaration not ignored
             m_self -> name = priorDecl;
@@ -109,26 +112,27 @@ DatabaseDeclaration :: SetName ( const AST_FQN &  p_fqn )
 }
 
 bool
-DatabaseDeclaration :: HandleParent ( const AST & p_parent )
+DatabaseDeclaration :: HandleParent ( ctx_t ctx, const AST & p_parent )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     /* look for inheritance */
     if ( p_parent . GetTokenType () != PT_EMPTY )
     {
         const AST_FQN & parent = * ToFQN ( & p_parent );
-        const KSymbol * parentDecl = m_builder . Resolve ( parent, true );
+        const KSymbol * parentDecl = m_builder . Resolve ( ctx, parent, true );
         if ( parentDecl -> type != eDatabase )
         {
-            m_builder . ReportError ( "Not a database", parent );
+            m_builder . ReportError ( ctx, "Not a database", parent );
             return false;
         }
 
-        const SDatabase * dad = static_cast < const SDatabase * > ( m_builder . SelectVersion ( parent, * parentDecl, SDatabaseCmp ) );
+        const SDatabase * dad = static_cast < const SDatabase * > ( m_builder . SelectVersion ( ctx, parent, * parentDecl, SDatabaseCmp ) );
         if ( dad != 0 )
         {
             rc_t rc = SDatabaseExtend ( m_self, dad );
             if ( rc != 0 )
             {
-                m_builder . ReportRc ( "SDatabaseExtend", rc );
+                m_builder . ReportRc ( ctx, "SDatabaseExtend", rc );
                 return false;
             }
         }
@@ -137,8 +141,9 @@ DatabaseDeclaration :: HandleParent ( const AST & p_parent )
 }
 
 void
-DatabaseDeclaration :: HandleBody ( const AST & p_body )
+DatabaseDeclaration :: HandleBody ( ctx_t ctx, const AST & p_body )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     rc_t rc = push_db_scope ( & m_builder . GetSymTab (), m_self );
     if ( rc == 0 )
     {
@@ -152,11 +157,11 @@ DatabaseDeclaration :: HandleBody ( const AST & p_body )
                 switch ( member . GetTokenType () )
                 {
                 case PT_DBMEMBER:
-                    HandleMemberDb ( member );
+                    HandleMemberDb ( ctx, member );
                     break;
 
                 case PT_TBLMEMBER:
-                    HandleMemberTable ( member );
+                    HandleMemberTable ( ctx, member );
                     break;
 
                 case PT_EMPTY:
@@ -170,20 +175,21 @@ DatabaseDeclaration :: HandleBody ( const AST & p_body )
         }
         else
         {
-            m_builder . ReportRc ( "KSymTablePushScope", rc);
+            m_builder . ReportRc ( ctx, "KSymTablePushScope", rc);
         }
 
         pop_db_scope ( & m_builder . GetSymTab (), m_self );
     }
     else
     {
-        m_builder . ReportRc ( "push_db_scope", rc);
+        m_builder . ReportRc ( ctx, "push_db_scope", rc);
     }
 }
 
 bool
-DatabaseDeclaration :: HandleOverload ( const KSymbol * p_priorDecl )
+DatabaseDeclaration :: HandleOverload ( ctx_t ctx, const KSymbol * p_priorDecl )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     assert ( p_priorDecl != 0 );
 
     Vector & dbs = m_builder . GetSchema () -> db;
@@ -195,7 +201,7 @@ DatabaseDeclaration :: HandleOverload ( const KSymbol * p_priorDecl )
     rc_t rc = VectorInsertUnique ( & name -> items, m_self, & idx, SDatabaseSort );
     if ( rc == 0 ) // overload added
     {
-        return m_builder . VectorAppend ( dbs, & m_self -> id, m_self );
+        return m_builder . VectorAppend ( ctx, dbs, & m_self -> id, m_self );
     }
     if ( GetRCState ( rc ) == rcExists )
     {   /* an overload with the same major version exists */
@@ -210,7 +216,7 @@ DatabaseDeclaration :: HandleOverload ( const KSymbol * p_priorDecl )
             VectorSwap ( & name -> items, idx, m_self, & ignore );
             m_self -> id = exist -> id;
 
-            if ( m_builder . VectorAppend ( dbs, & m_self -> id, m_self ) )
+            if ( m_builder . VectorAppend ( ctx, dbs, & m_self -> id, m_self ) )
             {
                 /* TODO - need to update parent/child relationships */
                 return true;
@@ -219,17 +225,18 @@ DatabaseDeclaration :: HandleOverload ( const KSymbol * p_priorDecl )
     }
     else if ( rc != 0 )
     {
-        m_builder . ReportRc ( "VectorInsertUnique", rc );
+        m_builder . ReportRc ( ctx, "VectorInsertUnique", rc );
     }
     return false;
 }
 
 void
-DatabaseDeclaration :: HandleMemberDb ( const AST & p_member )
+DatabaseDeclaration :: HandleMemberDb ( ctx_t ctx, const AST & p_member )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     assert ( p_member . ChildrenCount () == 3 );
 
-    SDBMember * m = m_builder . Alloc < SDBMember > ();
+    SDBMember * m = m_builder . Alloc < SDBMember > ( ctx );
     if ( m != 0 )
     {
         if ( p_member . GetChild ( 0 ) -> GetTokenType () == KW_template )
@@ -238,7 +245,7 @@ DatabaseDeclaration :: HandleMemberDb ( const AST & p_member )
         }
 
         const AST_FQN & type = * ToFQN ( p_member . GetChild ( 1 ) );
-        const KSymbol * dbName = m_builder . Resolve ( type );
+        const KSymbol * dbName = m_builder . Resolve ( ctx, type );
         if ( dbName != 0 )
         {
             if ( dbName -> type == eDatabase )
@@ -252,30 +259,30 @@ DatabaseDeclaration :: HandleMemberDb ( const AST & p_member )
                     rc_t rc = KSymTableCreateConstSymbol ( & m_builder . GetSymTab (), & m -> name, & memName, eDBMember, m );
                     if ( rc == 0 )
                     {
-                        m -> db = static_cast < const SDatabase * > ( m_builder . SelectVersion ( type, * dbName, SDatabaseCmp ) );
+                        m -> db = static_cast < const SDatabase * > ( m_builder . SelectVersion ( ctx, type, * dbName, SDatabaseCmp ) );
                         if ( m -> db != 0 )
                         {
-                            m_builder . VectorAppend ( m_self -> db, & m -> cid . id, m );
+                            m_builder . VectorAppend ( ctx, m_self -> db, & m -> cid . id, m );
                             return;
                         }
                     }
                     else if ( GetRCState ( rc ) == rcExists )
                     {
-                        m_builder . ReportError ( ident . GetLocation (), "Member already exists", memName );
+                        m_builder . ReportError ( ctx, ident . GetLocation (), "Member already exists", memName );
                     }
                     else
                     {
-                        m_builder . ReportRc ( "KSymTableCreateConstSymbol", rc);
+                        m_builder . ReportRc ( ctx, "KSymTableCreateConstSymbol", rc);
                     }
                 }
                 else
                 {
-                    m_builder . ReportError ( "Database declared but not defined", type );
+                    m_builder . ReportError ( ctx, "Database declared but not defined", type );
                 }
             }
             else
             {
-                m_builder . ReportError ( "Not a database", type );
+                m_builder . ReportError ( ctx, "Not a database", type );
             }
         }
         SDBMemberWhack ( m, 0 );
@@ -283,11 +290,12 @@ DatabaseDeclaration :: HandleMemberDb ( const AST & p_member )
 }
 
 void
-DatabaseDeclaration :: HandleMemberTable ( const AST & p_member )
+DatabaseDeclaration :: HandleMemberTable ( ctx_t ctx, const AST & p_member )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     assert ( p_member . ChildrenCount () == 3 );
 
-    STblMember * m = m_builder . Alloc < STblMember > ();
+    STblMember * m = m_builder . Alloc < STblMember > ( ctx );
     if ( m != 0 )
     {
         if ( p_member . GetChild ( 0 ) -> GetTokenType () == KW_template )
@@ -296,7 +304,7 @@ DatabaseDeclaration :: HandleMemberTable ( const AST & p_member )
         }
 
         const AST_FQN & type = * ToFQN ( p_member . GetChild ( 1 ) );
-        const KSymbol * tblName = m_builder . Resolve ( type );
+        const KSymbol * tblName = m_builder . Resolve ( ctx, type );
         if ( tblName != 0 )
         {
             if ( tblName -> type == eTable )
@@ -307,25 +315,25 @@ DatabaseDeclaration :: HandleMemberTable ( const AST & p_member )
                 rc_t rc = KSymTableCreateConstSymbol ( & m_builder . GetSymTab (), & m -> name, & memName, eTblMember, m );
                 if ( rc == 0 )
                 {
-                    m -> tbl = static_cast < const STable * > ( m_builder . SelectVersion ( type, * tblName, STableCmp ) );
+                    m -> tbl = static_cast < const STable * > ( m_builder . SelectVersion ( ctx, type, * tblName, STableCmp ) );
                     if ( m -> tbl != 0 )
                     {
-                        m_builder . VectorAppend ( m_self -> tbl, & m -> cid . id, m );
+                        m_builder . VectorAppend ( ctx, m_self -> tbl, & m -> cid . id, m );
                         return;
                     }
                 }
                 else if ( GetRCState ( rc ) == rcExists )
                 {
-                    m_builder . ReportError ( p_member . GetLocation (), "Member already exists", memName );
+                    m_builder . ReportError ( ctx, p_member . GetLocation (), "Member already exists", memName );
                 }
                 else
                 {
-                    m_builder . ReportRc ( "KSymTableCreateConstSymbol", rc);
+                    m_builder . ReportRc ( ctx, "KSymTableCreateConstSymbol", rc);
                 }
             }
             else
             {
-                m_builder . ReportError ( "Not a table", type );
+                m_builder . ReportError ( ctx, "Not a table", type );
             }
         }
         STblMemberWhack ( m, 0 );
@@ -333,16 +341,17 @@ DatabaseDeclaration :: HandleMemberTable ( const AST & p_member )
 }
 
 AST *
-ASTBuilder :: DatabaseDef ( const Token * p_token, AST_FQN * p_fqn, AST * p_parent, AST * p_body )
+ASTBuilder :: DatabaseDef ( ctx_t ctx, const Token * p_token, AST_FQN * p_fqn, AST * p_parent, AST * p_body )
 {
-    AST * ret = AST :: Make ( p_token, p_fqn, p_parent, p_body );
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+    AST * ret = AST :: Make ( ctx, p_token, p_fqn, p_parent, p_body );
 
-    DatabaseDeclaration db ( * this );
-    if ( db . SetName ( * p_fqn ) )
+    DatabaseDeclaration db ( ctx, * this );
+    if ( db . SetName ( ctx, * p_fqn ) )
     {
-        if ( db . HandleParent ( * p_parent ) )
+        if ( db . HandleParent ( ctx, * p_parent ) )
         {
-            db . HandleBody ( * p_body );
+            db . HandleBody ( ctx, * p_body );
         }
     }
 

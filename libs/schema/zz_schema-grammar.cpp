@@ -86,14 +86,16 @@
     #define Schema_lex SchemaScan_yylex
 
     void Schema_error ( YYLTYPE *                   p_llocp,
+                        ctx_t                       ctx,
                         ParseTree **                p_root,
                         ErrorReport *               p_errors,
                         struct SchemaScanBlock *    p_sb,
                         const char *                p_msg )
     {
+        FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
         /* send message to the C++ parser for proper display and recovery */
         Token :: Location loc ( p_sb -> file_name, p_llocp -> first_line, p_llocp -> first_column );
-        p_errors -> ReportError ( loc, "%s", p_msg);
+        p_errors -> ReportError ( ctx, loc, "%s", p_msg);
     }
 
     extern "C"
@@ -111,16 +113,18 @@
 
     static
     ParseTree*
-    T ( SchemaToken & p_term )
+    T ( ctx_t ctx, SchemaToken & p_term )
     {
+        FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );//TODO: catch
         assert ( p_term . subtree == 0 );
-        return ParseTree::Make ( p_term );
+        return ParseTree::Make ( ctx, p_term );
     }
 
     /* Create production node */
     static
     ParseTree *
-    MakeTree ( int p_token,
+    MakeTree ( ctx_t ctx,
+               int p_token,
                ParseTree * p_ch1 = 0,
                ParseTree * p_ch2 = 0,
                ParseTree * p_ch3 = 0,
@@ -132,43 +136,45 @@
                ParseTree * p_ch9 = 0
              )
     {
-        ParseTree * ret = ParseTree :: Make ( Token ( p_token ) );
-        if ( p_ch1 != 0 ) ret -> AddChild ( p_ch1 );
-        if ( p_ch2 != 0 ) ret -> AddChild ( p_ch2 );
-        if ( p_ch3 != 0 ) ret -> AddChild ( p_ch3 );
-        if ( p_ch4 != 0 ) ret -> AddChild ( p_ch4 );
-        if ( p_ch5 != 0 ) ret -> AddChild ( p_ch5 );
-        if ( p_ch6 != 0 ) ret -> AddChild ( p_ch6 );
-        if ( p_ch7 != 0 ) ret -> AddChild ( p_ch7 );
-        if ( p_ch8 != 0 ) ret -> AddChild ( p_ch8 );
-        if ( p_ch9 != 0 ) ret -> AddChild ( p_ch9 );
+        FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+        ParseTree * ret = ParseTree :: Make ( ctx, Token ( p_token ) );
+        if ( p_ch1 != 0 ) ret -> AddChild ( ctx, p_ch1 );
+        if ( p_ch2 != 0 ) ret -> AddChild ( ctx, p_ch2 );
+        if ( p_ch3 != 0 ) ret -> AddChild ( ctx, p_ch3 );
+        if ( p_ch4 != 0 ) ret -> AddChild ( ctx, p_ch4 );
+        if ( p_ch5 != 0 ) ret -> AddChild ( ctx, p_ch5 );
+        if ( p_ch6 != 0 ) ret -> AddChild ( ctx, p_ch6 );
+        if ( p_ch7 != 0 ) ret -> AddChild ( ctx, p_ch7 );
+        if ( p_ch8 != 0 ) ret -> AddChild ( ctx, p_ch8 );
+        if ( p_ch9 != 0 ) ret -> AddChild ( ctx, p_ch9 );
         return ret;
     }
 
     /* Create a flat list */
     static
     ParseTree *
-    MakeList ( SchemaToken & p_prod )
+    MakeList ( ctx_t ctx, SchemaToken & p_prod )
     {
-        ParseTree * ret = ParseTree :: Make ( Token ( PT_ASTLIST ) );
-        ret -> AddChild ( P ( p_prod ) );
+        FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+        ParseTree * ret = ParseTree :: Make ( ctx, Token ( PT_ASTLIST ) );
+        ret -> AddChild ( ctx, P ( p_prod ) );
         return ret;
     }
 
     /* Add to a flat list node */
     static
     ParseTree *
-    AddToList ( ParseTree * p_root, ParseTree * p_br1, ParseTree * p_br2 = 0 )
+    AddToList ( ctx_t ctx, ParseTree * p_root, ParseTree * p_br1, ParseTree * p_br2 = 0 )
     {
+        FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
         assert ( p_br1 != 0 );
-        p_root -> AddChild ( p_br1 );
+        p_root -> AddChild ( ctx, p_br1 );
         if ( p_br2 != 0 )
         {
-            p_root -> AddChild ( p_br2 );
+            p_root -> AddChild ( ctx, p_br2 );
         }
         return p_root;
     }
-
 
 
 
@@ -378,7 +384,7 @@ struct YYLTYPE
 
 
 
-int Schema_parse (ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb);
+int Schema_parse (ctx_t ctx, ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb);
 
 #endif /* !YY_SCHEMA_HOME_BOSHKINS_NCBI_DEVEL_NCBI_VDB_LIBS_SCHEMA_ZZ_SCHEMA_GRAMMAR_HPP_INCLUDED  */
 
@@ -759,34 +765,34 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_int16 yyrline[] =
 {
-       0,   298,   298,   299,   303,   304,   305,   311,   315,   316,
-     320,   321,   322,   323,   324,   325,   326,   327,   328,   329,
-     330,   331,   332,   333,   339,   347,   348,   354,   359,   363,
-     370,   371,   375,   376,   380,   381,   387,   389,   394,   398,
-     405,   412,   417,   423,   427,   428,   429,   439,   444,   449,
-     450,   454,   458,   459,   463,   464,   468,   469,   473,   474,
-     478,   482,   483,   485,   487,   489,   494,   495,   499,   503,
-     507,   508,   510,   512,   514,   519,   520,   524,   525,   530,
-     531,   535,   537,   539,   544,   545,   549,   550,   557,   562,
-     569,   571,   579,   586,   596,   597,   601,   603,   608,   609,
-     613,   615,   617,   619,   624,   631,   639,   640,   644,   645,
-     649,   651,   656,   657,   661,   662,   663,   665,   667,   668,
-     669,   670,   671,   673,   677,   679,   684,   685,   689,   690,
-     694,   695,   696,   700,   702,   707,   709,   711,   716,   718,
-     720,   725,   726,   730,   734,   735,   739,   740,   744,   745,
-     746,   747,   751,   756,   758,   760,   762,   767,   772,   773,
-     777,   778,   782,   783,   787,   788,   795,   796,   800,   801,
-     805,   806,   807,   808,   809,   810,   811,   812,   813,   814,
-     815,   816,   817,   821,   828,   837,   838,   842,   843,   844,
-     848,   849,   853,   857,   858,   862,   863,   867,   868,   872,
-     873,   874,   878,   879,   883,   884,   888,   892,   893,   897,
-     898,   902,   903,   907,   908,   912,   913,   917,   919,   926,
-     934,   935,   939,   940,   944,   945,   949,   950,   951,   955,
-     956,   960,   965,   973,   981,   982,   984,   985,   986,   987,
-     988,   989,   990,   991,   995,   999,  1003,  1007,  1008,  1014,
-    1018,  1019,  1023,  1024,  1028,  1033,  1034,  1038,  1042,  1043,
-    1047,  1048,  1052,  1054,  1056,  1060,  1061,  1065,  1066,  1070,
-    1075,  1076
+       0,   306,   306,   307,   311,   312,   313,   319,   323,   324,
+     328,   329,   330,   331,   332,   333,   334,   335,   336,   337,
+     338,   339,   340,   341,   347,   355,   356,   362,   367,   371,
+     378,   379,   383,   384,   388,   389,   395,   397,   402,   406,
+     413,   420,   425,   431,   435,   436,   437,   447,   452,   457,
+     458,   462,   466,   467,   471,   472,   476,   477,   481,   482,
+     486,   490,   491,   493,   495,   497,   502,   503,   507,   511,
+     515,   516,   518,   520,   522,   527,   528,   532,   533,   538,
+     539,   543,   545,   547,   552,   553,   557,   558,   565,   570,
+     577,   579,   587,   594,   604,   605,   609,   611,   616,   617,
+     621,   623,   625,   627,   632,   639,   647,   648,   652,   653,
+     657,   659,   664,   665,   669,   670,   671,   673,   675,   676,
+     677,   678,   679,   681,   685,   687,   692,   693,   697,   698,
+     702,   703,   704,   708,   710,   715,   717,   719,   724,   726,
+     728,   733,   734,   738,   742,   743,   747,   748,   752,   753,
+     754,   755,   759,   764,   766,   768,   770,   775,   780,   781,
+     785,   786,   790,   791,   795,   796,   803,   804,   808,   809,
+     813,   814,   815,   816,   817,   818,   819,   820,   821,   822,
+     823,   824,   825,   829,   836,   845,   846,   850,   851,   852,
+     856,   857,   861,   865,   866,   870,   871,   875,   876,   880,
+     881,   882,   886,   887,   891,   892,   896,   900,   901,   905,
+     906,   910,   911,   915,   916,   920,   921,   925,   927,   934,
+     942,   943,   947,   948,   952,   953,   957,   958,   959,   963,
+     964,   968,   973,   981,   989,   990,   992,   993,   994,   995,
+     996,   997,   998,   999,  1003,  1007,  1011,  1015,  1016,  1022,
+    1026,  1027,  1031,  1032,  1036,  1041,  1042,  1046,  1050,  1051,
+    1055,  1056,  1060,  1062,  1064,  1068,  1069,  1073,  1074,  1078,
+    1083,  1084
 };
 #endif
 
@@ -1396,7 +1402,7 @@ static const yytype_int8 yyr2[] =
       }                                                           \
     else                                                          \
       {                                                           \
-        yyerror (&yylloc, root, errors, sb, YY_("syntax error: cannot back up")); \
+        yyerror (&yylloc, ctx, root, errors, sb, YY_("syntax error: cannot back up")); \
         YYERROR;                                                  \
       }                                                           \
   while (0)
@@ -1498,7 +1504,7 @@ do {                                                                      \
     {                                                                     \
       YYFPRINTF (stderr, "%s ", Title);                                   \
       yy_symbol_print (stderr,                                            \
-                  Type, Value, Location, root, errors, sb); \
+                  Type, Value, Location, ctx, root, errors, sb); \
       YYFPRINTF (stderr, "\n");                                           \
     }                                                                     \
 } while (0)
@@ -1509,11 +1515,12 @@ do {                                                                      \
 `-----------------------------------*/
 
 static void
-yy_symbol_value_print (FILE *yyo, int yytype, YYSTYPE const * const yyvaluep, YYLTYPE const * const yylocationp, ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb)
+yy_symbol_value_print (FILE *yyo, int yytype, YYSTYPE const * const yyvaluep, YYLTYPE const * const yylocationp, ctx_t ctx, ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb)
 {
   FILE *yyoutput = yyo;
   YYUSE (yyoutput);
   YYUSE (yylocationp);
+  YYUSE (ctx);
   YYUSE (root);
   YYUSE (errors);
   YYUSE (sb);
@@ -1534,14 +1541,14 @@ yy_symbol_value_print (FILE *yyo, int yytype, YYSTYPE const * const yyvaluep, YY
 `---------------------------*/
 
 static void
-yy_symbol_print (FILE *yyo, int yytype, YYSTYPE const * const yyvaluep, YYLTYPE const * const yylocationp, ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb)
+yy_symbol_print (FILE *yyo, int yytype, YYSTYPE const * const yyvaluep, YYLTYPE const * const yylocationp, ctx_t ctx, ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb)
 {
   YYFPRINTF (yyo, "%s %s (",
              yytype < YYNTOKENS ? "token" : "nterm", yytname[yytype]);
 
   YY_LOCATION_PRINT (yyo, *yylocationp);
   YYFPRINTF (yyo, ": ");
-  yy_symbol_value_print (yyo, yytype, yyvaluep, yylocationp, root, errors, sb);
+  yy_symbol_value_print (yyo, yytype, yyvaluep, yylocationp, ctx, root, errors, sb);
   YYFPRINTF (yyo, ")");
 }
 
@@ -1574,7 +1581,7 @@ do {                                                            \
 `------------------------------------------------*/
 
 static void
-yy_reduce_print (yy_state_t *yyssp, YYSTYPE *yyvsp, YYLTYPE *yylsp, int yyrule, ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb)
+yy_reduce_print (yy_state_t *yyssp, YYSTYPE *yyvsp, YYLTYPE *yylsp, int yyrule, ctx_t ctx, ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb)
 {
   int yylno = yyrline[yyrule];
   int yynrhs = yyr2[yyrule];
@@ -1588,7 +1595,7 @@ yy_reduce_print (yy_state_t *yyssp, YYSTYPE *yyvsp, YYLTYPE *yylsp, int yyrule, 
       yy_symbol_print (stderr,
                        yystos[+yyssp[yyi + 1 - yynrhs]],
                        &yyvsp[(yyi + 1) - (yynrhs)]
-                       , &(yylsp[(yyi + 1) - (yynrhs)])                       , root, errors, sb);
+                       , &(yylsp[(yyi + 1) - (yynrhs)])                       , ctx, root, errors, sb);
       YYFPRINTF (stderr, "\n");
     }
 }
@@ -1596,7 +1603,7 @@ yy_reduce_print (yy_state_t *yyssp, YYSTYPE *yyvsp, YYLTYPE *yylsp, int yyrule, 
 # define YY_REDUCE_PRINT(Rule)          \
 do {                                    \
   if (yydebug)                          \
-    yy_reduce_print (yyssp, yyvsp, yylsp, Rule, root, errors, sb); \
+    yy_reduce_print (yyssp, yyvsp, yylsp, Rule, ctx, root, errors, sb); \
 } while (0)
 
 /* Nonzero means print parse trace.  It is left uninitialized so that
@@ -1864,10 +1871,11 @@ yysyntax_error (YYPTRDIFF_T *yymsg_alloc, char **yymsg,
 `-----------------------------------------------*/
 
 static void
-yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocationp, ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb)
+yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocationp, ctx_t ctx, ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb)
 {
   YYUSE (yyvaluep);
   YYUSE (yylocationp);
+  YYUSE (ctx);
   YYUSE (root);
   YYUSE (errors);
   YYUSE (sb);
@@ -3554,7 +3562,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
 `----------*/
 
 int
-yyparse (ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb)
+yyparse (ctx_t ctx, ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb)
 {
 /* The lookahead symbol.  */
 int yychar;
@@ -3837,35 +3845,35 @@ yyreduce:
   switch (yyn)
     {
   case 2:
-                                { *root = MakeTree ( PT_PARSE, T ( yyvsp[0] ) );              yyval . subtree = 0; yyval . leading_ws = 0;  }
+                                { *root = MakeTree ( ctx, PT_PARSE, T ( ctx, yyvsp[0] ) );              yyval . subtree = 0; yyval . leading_ws = 0;  }
     break;
 
   case 3:
-                                { *root = MakeTree ( PT_PARSE, P ( yyvsp[-1] ), T ( yyvsp[0] ) );    yyval . subtree = 0; yyval . leading_ws = 0; }
+                                { *root = MakeTree ( ctx, PT_PARSE, P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) );    yyval . subtree = 0; yyval . leading_ws = 0; }
     break;
 
   case 4:
-                                { yyval . subtree = MakeTree ( PT_SOURCE, P ( yyvsp[0] ) ); }
+                                { yyval . subtree = MakeTree ( ctx, PT_SOURCE, P ( yyvsp[0] ) ); }
     break;
 
   case 5:
-                                { yyval . subtree = MakeTree ( PT_SOURCE, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                { yyval . subtree = MakeTree ( ctx, PT_SOURCE, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 6:
-                                { yyval . subtree = MakeTree ( PT_SOURCE, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                { yyval . subtree = MakeTree ( ctx, PT_SOURCE, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 7:
-                                { yyval . subtree = MakeTree ( PT_VERSION_1_0, T ( yyvsp[-2] ), T ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+                                { yyval . subtree = MakeTree ( ctx, PT_VERSION_1_0, T ( ctx, yyvsp[-2] ), T ( ctx, yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 8:
-                                   { yyval . subtree = MakeTree ( PT_SCHEMA_1_0, P ( yyvsp[0] ) ); }
+                                   { yyval . subtree = MakeTree ( ctx, PT_SCHEMA_1_0, P ( yyvsp[0] ) ); }
     break;
 
   case 9:
-                                   { yyval . subtree = AddToList ( P ( yyvsp[-1] ) , P ( yyvsp[0] ) ); }
+                                   { yyval . subtree = AddToList ( ctx, P ( yyvsp[-1] ) , P ( yyvsp[0] ) ); }
     break;
 
   case 10:
@@ -3921,23 +3929,23 @@ yyreduce:
     break;
 
   case 23:
-                            { yyval . subtree = T ( yyvsp[0] ); }
+                            { yyval . subtree = T ( ctx, yyvsp[0] ); }
     break;
 
   case 24:
-                            { yyval . subtree = MakeTree ( PT_TYPEDEF, T ( yyvsp[-3] ), P ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+                            { yyval . subtree = MakeTree ( ctx, PT_TYPEDEF, T ( ctx, yyvsp[-3] ), P ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 25:
-                                                    { yyval . subtree = MakeList ( yyvsp[0] ); }
+                                                    { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
   case 26:
-                                                    { yyval . subtree = AddToList ( P(yyvsp[-2]), T(yyvsp[-1]), P(yyvsp[0]) ); }
+                                                    { yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 27:
-                            { yyval . subtree = MakeTree ( PT_TYPESET, T ( yyvsp[-3] ), P ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+                            { yyval . subtree = MakeTree ( ctx, PT_TYPESET, T ( ctx, yyvsp[-3] ), P ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 28:
@@ -3945,15 +3953,15 @@ yyreduce:
     break;
 
   case 29:
-            { yyval . subtree = MakeTree ( PT_TYPESETDEF, T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+            { yyval . subtree = MakeTree ( ctx, PT_TYPESETDEF, T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 30:
-                                            { yyval . subtree = MakeList ( yyvsp[0] ); }
+                                            { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
   case 31:
-                                            { yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                            { yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 32:
@@ -3961,7 +3969,7 @@ yyreduce:
     break;
 
   case 33:
-                                { yyval . subtree = MakeTree ( PT_ARRAY, P ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+                                { yyval . subtree = MakeTree ( ctx, PT_ARRAY, P ( yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 34:
@@ -3969,15 +3977,15 @@ yyreduce:
     break;
 
   case 35:
-                        { yyval . subtree = T ( yyvsp[0] ); }
+                        { yyval . subtree = T ( ctx, yyvsp[0] ); }
     break;
 
   case 36:
-                                    { yyval . subtree = MakeTree ( PT_FORMAT, T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+                                    { yyval . subtree = MakeTree ( ctx, PT_FORMAT, T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 37:
-                                    { yyval . subtree = MakeTree ( PT_FORMAT, T ( yyvsp[-3] ), P ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+                                    { yyval . subtree = MakeTree ( ctx, PT_FORMAT, T ( ctx, yyvsp[-3] ), P ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 38:
@@ -3989,11 +3997,11 @@ yyreduce:
     break;
 
   case 40:
-            { yyval . subtree = MakeTree ( PT_CONST, T ( yyvsp[-5] ), P ( yyvsp[-4] ), P ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+            { yyval . subtree = MakeTree ( ctx, PT_CONST, T ( ctx, yyvsp[-5] ), P ( yyvsp[-4] ), P ( yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 41:
-            { yyval . subtree = MakeTree ( PT_ALIAS, T ( yyvsp[-3] ), P ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+            { yyval . subtree = MakeTree ( ctx, PT_ALIAS, T ( ctx, yyvsp[-3] ), P ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 42:
@@ -4001,7 +4009,7 @@ yyreduce:
     break;
 
   case 43:
-                                     { yyval . subtree = MakeTree ( PT_FUNCTION, T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                     { yyval . subtree = MakeTree ( ctx, PT_FUNCTION, T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 44:
@@ -4013,15 +4021,15 @@ yyreduce:
     break;
 
   case 46:
-            { yyval . subtree = MakeTree ( PT_FUNCDECL, P ( yyvsp[-5] ), P ( yyvsp[-4] ), P ( yyvsp[-3] ), P ( yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+            { yyval . subtree = MakeTree ( ctx, PT_FUNCDECL, P ( yyvsp[-5] ), P ( yyvsp[-4] ), P ( yyvsp[-3] ), P ( yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 47:
-            { yyval . subtree = MakeTree ( PT_UNTYPED, T ( yyvsp[-3] ), P ( yyvsp[-2] ), T ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+            { yyval . subtree = MakeTree ( ctx, PT_UNTYPED, T ( ctx, yyvsp[-3] ), P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 48:
-            { yyval . subtree = MakeTree ( PT_ROWLENGTH, T ( yyvsp[-3] ), P ( yyvsp[-2] ), T ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+            { yyval . subtree = MakeTree ( ctx, PT_ROWLENGTH, T ( ctx, yyvsp[-3] ), P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 49:
@@ -4033,31 +4041,31 @@ yyreduce:
     break;
 
   case 51:
-                                            { yyval . subtree = MakeTree ( PT_SCHEMASIG, T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+                                            { yyval . subtree = MakeTree ( ctx, PT_SCHEMASIG, T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 52:
-                                                            { yyval . subtree = MakeList ( yyvsp[0] ); }
+                                                            { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
   case 53:
-                                                            { yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                                            { yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 54:
-                                { yyval . subtree = MakeTree ( PT_SCHEMAFORMAL, T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                { yyval . subtree = MakeTree ( ctx, PT_SCHEMAFORMAL, T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 55:
-                                { yyval . subtree = MakeTree ( PT_SCHEMAFORMAL, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                { yyval . subtree = MakeTree ( ctx, PT_SCHEMAFORMAL, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 56:
-                        { yyval . subtree = MakeTree ( PT_RETURNTYPE, T ( yyvsp[0] ) ); }
+                        { yyval . subtree = MakeTree ( ctx, PT_RETURNTYPE, T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 57:
-                        { yyval . subtree = MakeTree ( PT_RETURNTYPE, P ( yyvsp[0] ) ); }
+                        { yyval . subtree = MakeTree ( ctx, PT_RETURNTYPE, P ( yyvsp[0] ) ); }
     break;
 
   case 58:
@@ -4069,7 +4077,7 @@ yyreduce:
     break;
 
   case 60:
-                                       { yyval . subtree = MakeTree ( PT_FACTSIG, T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+                                       { yyval . subtree = MakeTree ( ctx, PT_FACTSIG, T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 61:
@@ -4077,35 +4085,35 @@ yyreduce:
     break;
 
   case 62:
-                            { yyval . subtree = MakeTree ( PT_FUNCPARAMS, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                            { yyval . subtree = MakeTree ( ctx, PT_FUNCPARAMS, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 63:
-                            { yyval . subtree = MakeTree ( PT_FUNCPARAMS, T ( yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                            { yyval . subtree = MakeTree ( ctx, PT_FUNCPARAMS, T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 64:
-                            { yyval . subtree = MakeTree ( PT_FUNCPARAMS, P ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                            { yyval . subtree = MakeTree ( ctx, PT_FUNCPARAMS, P ( yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 65:
-                            { yyval . subtree = MakeTree ( PT_FUNCPARAMS, P ( yyvsp[-4] ), T ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                            { yyval . subtree = MakeTree ( ctx, PT_FUNCPARAMS, P ( yyvsp[-4] ), T ( ctx, yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 66:
-                                                    { yyval . subtree = MakeList ( yyvsp[0] ); }
+                                                    { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
   case 67:
-                                                    { yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                                    { yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 68:
-                                        { yyval . subtree = MakeTree ( PT_FORMALPARAM, P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+                                        { yyval . subtree = MakeTree ( ctx, PT_FORMALPARAM, P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 69:
-                                        { yyval . subtree = MakeTree ( PT_FUNCSIG, T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+                                        { yyval . subtree = MakeTree ( ctx, PT_FUNCSIG, T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 70:
@@ -4113,35 +4121,35 @@ yyreduce:
     break;
 
   case 71:
-                            { yyval . subtree = MakeTree ( PT_FUNCPARAMS, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                            { yyval . subtree = MakeTree ( ctx, PT_FUNCPARAMS, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 72:
-                            { yyval . subtree = MakeTree ( PT_FUNCPARAMS, T ( yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                            { yyval . subtree = MakeTree ( ctx, PT_FUNCPARAMS, T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 73:
-                            { yyval . subtree = MakeTree ( PT_FUNCPARAMS, P ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                            { yyval . subtree = MakeTree ( ctx, PT_FUNCPARAMS, P ( yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 74:
-                            { yyval . subtree = MakeTree ( PT_FUNCPARAMS, P ( yyvsp[-4] ), T ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                            { yyval . subtree = MakeTree ( ctx, PT_FUNCPARAMS, P ( yyvsp[-4] ), T ( ctx, yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 75:
-                                                        { yyval . subtree = MakeList ( yyvsp[0] ); }
+                                                        { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
   case 76:
-                                                        { yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                                        { yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 77:
-                                        { yyval . subtree = MakeTree ( PT_FORMALPARAM, P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+                                        { yyval . subtree = MakeTree ( ctx, PT_FORMALPARAM, P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 78:
-                                        { yyval . subtree = MakeTree ( PT_FORMALPARAM, T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+                                        { yyval . subtree = MakeTree ( ctx, PT_FORMALPARAM, T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 79:
@@ -4149,39 +4157,39 @@ yyreduce:
     break;
 
   case 80:
-                                { yyval . subtree = MakeTree ( PT_ELLIPSIS, T ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+                                { yyval . subtree = MakeTree ( ctx, PT_ELLIPSIS, T ( ctx, yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 81:
-                                { yyval . subtree = MakeTree ( PT_FUNCPROLOGUE, T ( yyvsp[0] ) ); }
+                                { yyval . subtree = MakeTree ( ctx, PT_FUNCPROLOGUE, T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 82:
-                                { yyval . subtree = MakeTree ( PT_FUNCPROLOGUE, T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+                                { yyval . subtree = MakeTree ( ctx, PT_FUNCPROLOGUE, T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 83:
-                                { yyval . subtree = MakeTree ( PT_FUNCPROLOGUE, T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+                                { yyval . subtree = MakeTree ( ctx, PT_FUNCPROLOGUE, T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 84:
-                                            { yyval . subtree = MakeList ( yyvsp[0] ); }
+                                            { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
   case 85:
-                                            { yyval . subtree = AddToList ( P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                            { yyval . subtree = AddToList ( ctx, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 86:
-                                    { yyval . subtree = MakeTree ( PT_RETURN, T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+                                    { yyval . subtree = MakeTree ( ctx, PT_RETURN, T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 87:
-                                     { yyval . subtree = MakeTree ( PT_PRODSTMT, P ( yyvsp[-4] ), P ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+                                     { yyval . subtree = MakeTree ( ctx, PT_PRODSTMT, P ( yyvsp[-4] ), P ( yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 88:
-            { yyval . subtree = MakeTree ( PT_EXTERN, T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+            { yyval . subtree = MakeTree ( ctx, PT_EXTERN, T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 89:
@@ -4189,19 +4197,19 @@ yyreduce:
     break;
 
   case 90:
-                            { yyval . subtree = MakeTree ( PT_SCHEMA, T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                            { yyval . subtree = MakeTree ( ctx, PT_SCHEMA, T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 91:
-                            { yyval . subtree = MakeTree ( PT_SCHEMA, T ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                            { yyval . subtree = MakeTree ( ctx, PT_SCHEMA, T ( ctx, yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 92:
-                            { yyval . subtree = MakeTree ( PT_VALIDATE, T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                            { yyval . subtree = MakeTree ( ctx, PT_VALIDATE, T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 93:
-            { yyval . subtree = MakeTree ( PT_PHYSICAL, T ( yyvsp[-5] ), P ( yyvsp[-4] ), P ( yyvsp[-3] ), P ( yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+            { yyval . subtree = MakeTree ( ctx, PT_PHYSICAL, T ( ctx, yyvsp[-5] ), P ( yyvsp[-4] ), P ( yyvsp[-3] ), P ( yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 94:
@@ -4209,47 +4217,47 @@ yyreduce:
     break;
 
   case 95:
-                                            { yyval . subtree = MakeTree ( PT_NOHEADER, T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                            { yyval . subtree = MakeTree ( ctx, PT_NOHEADER, T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 96:
-            { yyval . subtree = MakeTree ( PT_PHYSPROLOGUE, T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+            { yyval . subtree = MakeTree ( ctx, PT_PHYSPROLOGUE, T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 97:
-            { yyval . subtree = MakeTree ( PT_PHYSPROLOGUE, T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+            { yyval . subtree = MakeTree ( ctx, PT_PHYSPROLOGUE, T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 98:
-                                            { yyval . subtree = MakeList ( yyvsp[0] ); }
+                                            { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
   case 99:
-                                            { yyval . subtree = AddToList ( P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                            { yyval . subtree = AddToList ( ctx, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 100:
-            { yyval . subtree = MakeTree ( PT_PHYSBODYSTMT, T ( yyvsp[0] ) ); }
+            { yyval . subtree = MakeTree ( ctx, PT_PHYSBODYSTMT, T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 101:
-            { yyval . subtree = MakeTree ( PT_PHYSBODYSTMT, T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+            { yyval . subtree = MakeTree ( ctx, PT_PHYSBODYSTMT, T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 102:
-            { yyval . subtree = MakeTree ( PT_PHYSBODYSTMT, T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+            { yyval . subtree = MakeTree ( ctx, PT_PHYSBODYSTMT, T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 103:
-            { yyval . subtree = MakeTree ( PT_PHYSBODYSTMT, T ( yyvsp[-4] ), T ( yyvsp[-3] ), P ( yyvsp[-2] ), T ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+            { yyval . subtree = MakeTree ( ctx, PT_PHYSBODYSTMT, T ( ctx, yyvsp[-4] ), T ( ctx, yyvsp[-3] ), P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 104:
-            { yyval . subtree = MakeTree ( PT_PHYSSTMT, T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+            { yyval . subtree = MakeTree ( ctx, PT_PHYSSTMT, T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 105:
-            { yyval . subtree = MakeTree ( PT_TABLE, T ( yyvsp[-3] ), P ( yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+            { yyval . subtree = MakeTree ( ctx, PT_TABLE, T ( ctx, yyvsp[-3] ), P ( yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 106:
@@ -4257,31 +4265,31 @@ yyreduce:
     break;
 
   case 107:
-                                { yyval . subtree = MakeTree ( PT_TABLEPARENTS, T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                { yyval . subtree = MakeTree ( ctx, PT_TABLEPARENTS, T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 108:
-                                          { yyval . subtree = MakeList ( yyvsp[0] ); }
+                                          { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
   case 109:
-                                          { yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                          { yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 110:
-            { yyval . subtree = MakeTree ( PT_TABLEBODY, T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+            { yyval . subtree = MakeTree ( ctx, PT_TABLEBODY, T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 111:
-            { yyval . subtree = MakeTree ( PT_TABLEBODY, T ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+            { yyval . subtree = MakeTree ( ctx, PT_TABLEBODY, T ( ctx, yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 112:
-                                        { yyval . subtree = MakeList ( yyvsp[0] ); }
+                                        { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
   case 113:
-                                        { yyval . subtree = AddToList ( P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                        { yyval . subtree = AddToList ( ctx, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 114:
@@ -4289,27 +4297,27 @@ yyreduce:
     break;
 
   case 115:
-                                                { yyval . subtree = MakeTree ( PT_COLUMN, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                                { yyval . subtree = MakeTree ( ctx, PT_COLUMN, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 116:
-                        { yyval . subtree = MakeTree ( PT_COLUMNEXPR, T ( yyvsp[-4] ), T ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+                        { yyval . subtree = MakeTree ( ctx, PT_COLUMNEXPR, T ( ctx, yyvsp[-4] ), T ( ctx, yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 117:
-                        { yyval . subtree = MakeTree ( PT_COLUMNEXPR, T ( yyvsp[-5] ), T ( yyvsp[-4] ), T ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+                        { yyval . subtree = MakeTree ( ctx, PT_COLUMNEXPR, T ( ctx, yyvsp[-5] ), T ( ctx, yyvsp[-4] ), T ( ctx, yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 118:
-                                                { yyval . subtree = MakeTree ( PT_PHYSCOL, T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                                { yyval . subtree = MakeTree ( ctx, PT_PHYSCOL, T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 119:
-                                                { yyval . subtree = MakeTree ( PT_PHYSCOL, T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                                { yyval . subtree = MakeTree ( ctx, PT_PHYSCOL, T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 120:
-                                                { yyval . subtree = MakeTree ( PT_PHYSCOL, T ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                                { yyval . subtree = MakeTree ( ctx, PT_PHYSCOL, T ( ctx, yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 121:
@@ -4317,79 +4325,79 @@ yyreduce:
     break;
 
   case 122:
-                        { yyval . subtree = MakeTree ( PT_COLUNTYPED, T ( yyvsp[-5] ), T ( yyvsp[-4] ), P ( yyvsp[-3] ), T ( yyvsp[-2] ), T ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+                        { yyval . subtree = MakeTree ( ctx, PT_COLUNTYPED, T ( ctx, yyvsp[-5] ), T ( ctx, yyvsp[-4] ), P ( yyvsp[-3] ), T ( ctx, yyvsp[-2] ), T ( ctx, yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 123:
-                                                { yyval . subtree = T ( yyvsp[0] ); }
+                                                { yyval . subtree = T ( ctx, yyvsp[0] ); }
     break;
 
   case 124:
-                                     { yyval . subtree = MakeTree ( PT_PRODSTMT, P ( yyvsp[-4] ), P ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+                                     { yyval . subtree = MakeTree ( ctx, PT_PRODSTMT, P ( yyvsp[-4] ), P ( yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 125:
-                                     { yyval . subtree = MakeTree ( PT_PRODTRIGGER, T ( yyvsp[-4] ), P ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+                                     { yyval . subtree = MakeTree ( ctx, PT_PRODTRIGGER, T ( ctx, yyvsp[-4] ), P ( yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 126:
-                                        { yyval . subtree = T ( yyvsp[0] ); }
+                                        { yyval . subtree = T ( ctx, yyvsp[0] ); }
     break;
 
   case 127:
-                                        { yyval = yyvsp[-1]; AddToList ( P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+                                        { yyval = yyvsp[-1]; AddToList ( ctx, P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 128:
-                                                { yyval . subtree = MakeList ( yyvsp[0] ); }
+                                                { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
   case 129:
-                                                { yyval . subtree = AddToList ( P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                                { yyval . subtree = AddToList ( ctx, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 130:
-                        { yyval . subtree = T ( yyvsp[0] ); }
+                        { yyval . subtree = T ( ctx, yyvsp[0] ); }
     break;
 
   case 131:
-                        { yyval . subtree = T ( yyvsp[0] ); }
+                        { yyval . subtree = T ( ctx, yyvsp[0] ); }
     break;
 
   case 132:
-                        { yyval . subtree = T ( yyvsp[0] ); }
+                        { yyval . subtree = T ( ctx, yyvsp[0] ); }
     break;
 
   case 133:
-            { yyval . subtree = MakeTree ( PT_COLDECL, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+            { yyval . subtree = MakeTree ( ctx, PT_COLDECL, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 134:
-            { yyval . subtree = MakeTree ( PT_COLDECL, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+            { yyval . subtree = MakeTree ( ctx, PT_COLDECL, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 135:
-            { yyval . subtree = MakeTree ( PT_PHYSENCREF, T ( yyvsp[-4] ), P ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+            { yyval . subtree = MakeTree ( ctx, PT_PHYSENCREF, T ( ctx, yyvsp[-4] ), P ( yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 136:
-            { yyval . subtree = MakeTree ( PT_PHYSENCREF, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+            { yyval . subtree = MakeTree ( ctx, PT_PHYSENCREF, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 137:
-            { yyval . subtree = MakeTree ( PT_PHYSENCREF, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+            { yyval . subtree = MakeTree ( ctx, PT_PHYSENCREF, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 138:
-            { yyval . subtree = MakeTree ( PT_TYPEDCOL, P ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+            { yyval . subtree = MakeTree ( ctx, PT_TYPEDCOL, P ( yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 139:
-            { yyval . subtree = MakeTree ( PT_TYPEDCOLEXPR, P ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+            { yyval . subtree = MakeTree ( ctx, PT_TYPEDCOLEXPR, P ( yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 140:
-            { yyval . subtree = MakeTree ( PT_TYPEDCOL, P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+            { yyval . subtree = MakeTree ( ctx, PT_TYPEDCOL, P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 141:
@@ -4401,7 +4409,7 @@ yyreduce:
     break;
 
   case 143:
-                                    { yyval . subtree = T ( yyvsp[0] ); }
+                                    { yyval . subtree = T ( ctx, yyvsp[0] ); }
     break;
 
   case 144:
@@ -4413,51 +4421,51 @@ yyreduce:
     break;
 
   case 146:
-                                        { yyval . subtree = MakeList ( yyvsp[0] ); }
+                                        { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
   case 147:
-                                        { yyval . subtree = AddToList ( P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                        { yyval . subtree = AddToList ( ctx, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 148:
-                                        { yyval . subtree = MakeTree ( PT_COLSTMT, T ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+                                        { yyval . subtree = MakeTree ( ctx, PT_COLSTMT, T ( ctx, yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 149:
-                                        { yyval . subtree = MakeTree ( PT_COLSTMT, T ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+                                        { yyval . subtree = MakeTree ( ctx, PT_COLSTMT, T ( ctx, yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 150:
-                                        { yyval . subtree = MakeTree ( PT_COLSTMT, T ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+                                        { yyval . subtree = MakeTree ( ctx, PT_COLSTMT, T ( ctx, yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 151:
-                                        { yyval . subtree = T ( yyvsp[0] ); }
+                                        { yyval . subtree = T ( ctx, yyvsp[0] ); }
     break;
 
   case 152:
-            { yyval . subtree = MakeTree ( PT_DFLTVIEW, T ( yyvsp[-3] ), T ( yyvsp[-2] ), T ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+            { yyval . subtree = MakeTree ( ctx, PT_DFLTVIEW, T ( ctx, yyvsp[-3] ), T ( ctx, yyvsp[-2] ), T ( ctx, yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 153:
-            { yyval . subtree = MakeTree ( PT_PHYSMBR, P ( yyvsp[-2] ), T ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+            { yyval . subtree = MakeTree ( ctx, PT_PHYSMBR, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 154:
-            { yyval . subtree = MakeTree ( PT_PHYSMBR, P ( yyvsp[-4] ), T ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+            { yyval . subtree = MakeTree ( ctx, PT_PHYSMBR, P ( yyvsp[-4] ), T ( ctx, yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 155:
-            { yyval . subtree = MakeTree ( PT_PHYSMBR, T ( yyvsp[-3] ), P ( yyvsp[-2] ), T ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+            { yyval . subtree = MakeTree ( ctx, PT_PHYSMBR, T ( ctx, yyvsp[-3] ), P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 156:
-            { yyval . subtree = MakeTree ( PT_PHYSMBR, T ( yyvsp[-5] ), P ( yyvsp[-4] ), T ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+            { yyval . subtree = MakeTree ( ctx, PT_PHYSMBR, T ( ctx, yyvsp[-5] ), P ( yyvsp[-4] ), T ( ctx, yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 157:
-            { yyval . subtree = MakeTree ( PT_PHYSCOLDEF, P ( yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+            { yyval . subtree = MakeTree ( ctx, PT_PHYSCOLDEF, P ( yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 158:
@@ -4465,19 +4473,19 @@ yyreduce:
     break;
 
   case 159:
-                                        { yyval . subtree = MakeTree ( PT_COLSCHEMAPARMS, T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+                                        { yyval . subtree = MakeTree ( ctx, PT_COLSCHEMAPARMS, T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 160:
-                                                    { yyval . subtree = MakeList ( yyvsp[0] ); }
+                                                    { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
   case 161:
-                                                    { yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                                    { yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 162:
-                                            { yyval . subtree = MakeTree ( PT_COLSCHEMAPARAM, P ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                            { yyval . subtree = MakeTree ( ctx, PT_COLSCHEMAPARAM, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 163:
@@ -4493,11 +4501,11 @@ yyreduce:
     break;
 
   case 166:
-                                            { yyval . subtree = MakeList ( yyvsp[0] ); }
+                                            { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
   case 167:
-                                            { yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                            { yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 168:
@@ -4505,7 +4513,7 @@ yyreduce:
     break;
 
   case 169:
-                                            { yyval . subtree = MakeTree ( PT_CASTEXPR, T ( yyvsp[-3] ), P ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                            { yyval . subtree = MakeTree ( ctx, PT_CASTEXPR, T ( ctx, yyvsp[-3] ), P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 170:
@@ -4517,7 +4525,7 @@ yyreduce:
     break;
 
   case 172:
-                                { yyval . subtree = T ( yyvsp[0] ); }
+                                { yyval . subtree = T ( ctx, yyvsp[0] ); }
     break;
 
   case 173:
@@ -4545,11 +4553,11 @@ yyreduce:
     break;
 
   case 179:
-                                { yyval . subtree = MakeTree ( PT_NEGATE, T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                { yyval . subtree = MakeTree ( ctx, PT_NEGATE, T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 180:
-                                { yyval . subtree = MakeTree ( PT_UNARYPLUS, T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                { yyval . subtree = MakeTree ( ctx, PT_UNARYPLUS, T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 181:
@@ -4561,19 +4569,19 @@ yyreduce:
     break;
 
   case 183:
-             { yyval . subtree = MakeTree ( PT_FUNCEXPR, T ( yyvsp[-7] ), P ( yyvsp[-6] ), T ( yyvsp[-5] ), P ( yyvsp[-4] ), P ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+             { yyval . subtree = MakeTree ( ctx, PT_FUNCEXPR, T ( ctx, yyvsp[-7] ), P ( yyvsp[-6] ), T ( ctx, yyvsp[-5] ), P ( yyvsp[-4] ), P ( yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 184:
-             { yyval . subtree = MakeTree ( PT_FUNCEXPR, P ( yyvsp[-4] ), P ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+             { yyval . subtree = MakeTree ( ctx, PT_FUNCEXPR, P ( yyvsp[-4] ), P ( yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 185:
-                                            { yyval . subtree = MakeList ( yyvsp[0] ); }
+                                            { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
   case 186:
-                                            { yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                            { yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 187:
@@ -4581,7 +4589,7 @@ yyreduce:
     break;
 
   case 188:
-                                { yyval . subtree = MakeTree ( PT_ARRAY, P ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+                                { yyval . subtree = MakeTree ( ctx, PT_ARRAY, P ( yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 189:
@@ -4597,15 +4605,15 @@ yyreduce:
     break;
 
   case 192:
-                            { yyval . subtree = MakeTree ( PT_FACTPARMS, T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+                            { yyval . subtree = MakeTree ( ctx, PT_FACTPARMS, T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 193:
-                                        { yyval . subtree = MakeList ( yyvsp[0] ); }
+                                        { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
   case 194:
-                                        { yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                        { yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 195:
@@ -4617,43 +4625,43 @@ yyreduce:
     break;
 
   case 197:
-                                            { yyval . subtree = MakeList ( yyvsp[0] ); }
+                                            { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
   case 198:
-                                            { yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                            { yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 199:
-                                            { yyval . subtree = MakeTree ( PT_UINT, T ( yyvsp[0] ) ); }
+                                            { yyval . subtree = MakeTree ( ctx, PT_UINT, T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 200:
-                                            { yyval . subtree = MakeTree ( PT_UINT, T ( yyvsp[0] ) ); }
+                                            { yyval . subtree = MakeTree ( ctx, PT_UINT, T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 201:
-                                            { yyval . subtree = MakeTree ( PT_UINT, T ( yyvsp[0] ) ); }
+                                            { yyval . subtree = MakeTree ( ctx, PT_UINT, T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 202:
-                                 { yyval . subtree = T ( yyvsp[0] ); }
+                                 { yyval . subtree = T ( ctx, yyvsp[0] ); }
     break;
 
   case 203:
-                                { yyval . subtree = T ( yyvsp[0] ); }
+                                { yyval . subtree = T ( ctx, yyvsp[0] ); }
     break;
 
   case 204:
-                                { yyval . subtree = T ( yyvsp[0] ); }
+                                { yyval . subtree = T ( ctx, yyvsp[0] ); }
     break;
 
   case 205:
-                                { yyval . subtree = T ( yyvsp[0] ); }
+                                { yyval . subtree = T ( ctx, yyvsp[0] ); }
     break;
 
   case 206:
-                                               { yyval . subtree = MakeTree ( PT_CONSTVECT, T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+                                               { yyval . subtree = MakeTree ( ctx, PT_CONSTVECT, T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 207:
@@ -4665,19 +4673,19 @@ yyreduce:
     break;
 
   case 209:
-                                                    { yyval . subtree = MakeList ( yyvsp[0] ); }
+                                                    { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
   case 210:
-                                                    { yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                                    { yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 211:
-                                { yyval . subtree = T ( yyvsp[0] ); }
+                                { yyval . subtree = T ( ctx, yyvsp[0] ); }
     break;
 
   case 212:
-                                { yyval . subtree = T ( yyvsp[0] ); }
+                                { yyval . subtree = T ( ctx, yyvsp[0] ); }
     break;
 
   case 213:
@@ -4685,27 +4693,27 @@ yyreduce:
     break;
 
   case 214:
-                                { yyval . subtree = MakeTree ( PT_TYPEEXPR, P ( yyvsp[-2] ), T ( yyvsp[-1]), P ( yyvsp[0] ) ); }
+                                { yyval . subtree = MakeTree ( ctx, PT_TYPEEXPR, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1]), P ( yyvsp[0] ) ); }
     break;
 
   case 215:
-                                        { yyval . subtree = MakeTree ( PT_MEMBEREXPR, P ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                        { yyval . subtree = MakeTree ( ctx, PT_MEMBEREXPR, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 216:
-                                        { yyval . subtree = MakeTree ( PT_MEMBEREXPR, P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+                                        { yyval . subtree = MakeTree ( ctx, PT_MEMBEREXPR, P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 217:
-        { yyval . subtree = MakeTree ( PT_JOINEXPR, P ( yyvsp[-5] ), T ( yyvsp[-4] ), P ( yyvsp[-3] ), T ( yyvsp[-2] ), T ( yyvsp[-1] ), P (yyvsp[0] ) ); }
+        { yyval . subtree = MakeTree ( ctx, PT_JOINEXPR, P ( yyvsp[-5] ), T ( ctx, yyvsp[-4] ), P ( yyvsp[-3] ), T ( ctx, yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P (yyvsp[0] ) ); }
     break;
 
   case 218:
-        { yyval . subtree = MakeTree ( PT_JOINEXPR, P ( yyvsp[-4] ), T ( yyvsp[-3] ), P ( yyvsp[-2] ), T ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+        { yyval . subtree = MakeTree ( ctx, PT_JOINEXPR, P ( yyvsp[-4] ), T ( ctx, yyvsp[-3] ), P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 219:
-            { yyval . subtree = MakeTree ( PT_DATABASE, T ( yyvsp[-3] ), P ( yyvsp[-2]), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+            { yyval . subtree = MakeTree ( ctx, PT_DATABASE, T ( ctx, yyvsp[-3] ), P ( yyvsp[-2]), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 220:
@@ -4713,23 +4721,23 @@ yyreduce:
     break;
 
   case 221:
-                                    { yyval . subtree = MakeTree ( PT_DBDAD, T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                    { yyval . subtree = MakeTree ( ctx, PT_DBDAD, T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 222:
-                                    { yyval . subtree = MakeTree ( PT_DBBODY, T ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+                                    { yyval . subtree = MakeTree ( ctx, PT_DBBODY, T ( ctx, yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 223:
-                                    { yyval . subtree = MakeTree ( PT_DBBODY, T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+                                    { yyval . subtree = MakeTree ( ctx, PT_DBBODY, T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 224:
-                                                { yyval . subtree = MakeList ( yyvsp[0] ); }
+                                                { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
   case 225:
-                                                { yyval . subtree = AddToList ( P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                                { yyval . subtree = AddToList ( ctx, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 226:
@@ -4741,7 +4749,7 @@ yyreduce:
     break;
 
   case 228:
-                                { yyval . subtree = T ( yyvsp[0] ); }
+                                { yyval . subtree = T ( ctx, yyvsp[0] ); }
     break;
 
   case 229:
@@ -4749,71 +4757,71 @@ yyreduce:
     break;
 
   case 230:
-                                { yyval . subtree = T ( yyvsp[0] ); }
+                                { yyval . subtree = T ( ctx, yyvsp[0] ); }
     break;
 
   case 231:
-            { yyval . subtree = MakeTree ( PT_DBMEMBER, P ( yyvsp[-4] ), T ( yyvsp[-3] ), P ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+            { yyval . subtree = MakeTree ( ctx, PT_DBMEMBER, P ( yyvsp[-4] ), T ( ctx, yyvsp[-3] ), P ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 232:
-            { yyval . subtree = MakeTree ( PT_TBLMEMBER, P ( yyvsp[-4] ), T ( yyvsp[-3] ), P ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+            { yyval . subtree = MakeTree ( ctx, PT_TBLMEMBER, P ( yyvsp[-4] ), T ( ctx, yyvsp[-3] ), P ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 233:
-                            { yyval . subtree = MakeTree ( PT_INCLUDE, T ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+                            { yyval . subtree = MakeTree ( ctx, PT_INCLUDE, T ( ctx, yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 234:
-                                { yyval . subtree = MakeTree ( PT_FQN, P ( yyvsp[0] ) ); }
+                                { yyval . subtree = MakeTree ( ctx, PT_FQN, P ( yyvsp[0] ) ); }
     break;
 
   case 235:
-                                { yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                { yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 236:
-                                { yyvsp[0] . type = IDENTIFIER_1_0; yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), MakeTree ( PT_IDENT, T ( yyvsp[0] ) ) ); }
+                                { yyvsp[0] . type = IDENTIFIER_1_0; yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), MakeTree ( ctx, PT_IDENT, T ( ctx, yyvsp[0] ) ) ); }
     break;
 
   case 237:
-                                { yyvsp[0] . type = IDENTIFIER_1_0; yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), MakeTree ( PT_IDENT, T ( yyvsp[0] ) ) ); }
+                                { yyvsp[0] . type = IDENTIFIER_1_0; yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), MakeTree ( ctx, PT_IDENT, T ( ctx, yyvsp[0] ) ) ); }
     break;
 
   case 238:
-                                { yyvsp[0] . type = IDENTIFIER_1_0; yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), MakeTree ( PT_IDENT, T ( yyvsp[0] ) ) ); }
+                                { yyvsp[0] . type = IDENTIFIER_1_0; yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), MakeTree ( ctx, PT_IDENT, T ( ctx, yyvsp[0] ) ) ); }
     break;
 
   case 239:
-                                { yyvsp[0] . type = IDENTIFIER_1_0; yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), MakeTree ( PT_IDENT, T ( yyvsp[0] ) ) ); }
+                                { yyvsp[0] . type = IDENTIFIER_1_0; yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), MakeTree ( ctx, PT_IDENT, T ( ctx, yyvsp[0] ) ) ); }
     break;
 
   case 240:
-                                { yyvsp[0] . type = IDENTIFIER_1_0; yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), MakeTree ( PT_IDENT, T ( yyvsp[0] ) ) ); }
+                                { yyvsp[0] . type = IDENTIFIER_1_0; yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), MakeTree ( ctx, PT_IDENT, T ( ctx, yyvsp[0] ) ) ); }
     break;
 
   case 241:
-                                { yyvsp[0] . type = IDENTIFIER_1_0; yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), MakeTree ( PT_IDENT, T ( yyvsp[0] ) ) ); }
+                                { yyvsp[0] . type = IDENTIFIER_1_0; yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), MakeTree ( ctx, PT_IDENT, T ( ctx, yyvsp[0] ) ) ); }
     break;
 
   case 242:
-                                { yyvsp[0] . type = IDENTIFIER_1_0; yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), MakeTree ( PT_IDENT, T ( yyvsp[0] ) ) ); }
+                                { yyvsp[0] . type = IDENTIFIER_1_0; yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), MakeTree ( ctx, PT_IDENT, T ( ctx, yyvsp[0] ) ) ); }
     break;
 
   case 243:
-                                { yyvsp[0] . type = IDENTIFIER_1_0; yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), MakeTree ( PT_IDENT, T ( yyvsp[0] ) ) ); }
+                                { yyvsp[0] . type = IDENTIFIER_1_0; yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), MakeTree ( ctx, PT_IDENT, T ( ctx, yyvsp[0] ) ) ); }
     break;
 
   case 244:
-                        { yyval . subtree = MakeTree ( PT_IDENT, T ( yyvsp[0] ) ); }
+                        { yyval . subtree = MakeTree ( ctx, PT_IDENT, T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 245:
-                { yyval . subtree = MakeTree ( PT_EMPTY ); }
+                { yyval . subtree = MakeTree ( ctx, PT_EMPTY ); }
     break;
 
   case 246:
-                            { yyval . subtree = MakeTree ( PT_VERSNAME, P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+                            { yyval . subtree = MakeTree ( ctx, PT_VERSNAME, P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 247:
@@ -4825,15 +4833,15 @@ yyreduce:
     break;
 
   case 249:
-                                   { yyval . subtree = MakeTree ( PT_VERSION_2, T ( yyvsp[-2] ), T ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+                                   { yyval . subtree = MakeTree ( ctx, PT_VERSION_2, T ( ctx, yyvsp[-2] ), T ( ctx, yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 250:
-                                   { yyval . subtree = MakeTree ( PT_SCHEMA_2_0, P ( yyvsp[0] ) ); }
+                                   { yyval . subtree = MakeTree ( ctx, PT_SCHEMA_2_0, P ( yyvsp[0] ) ); }
     break;
 
   case 251:
-                                   { yyval . subtree = AddToList ( P ( yyvsp[-1] ) , P ( yyvsp[0] ) ); }
+                                   { yyval . subtree = AddToList ( ctx, P ( yyvsp[-1] ) , P ( yyvsp[0] ) ); }
     break;
 
   case 252:
@@ -4845,19 +4853,19 @@ yyreduce:
     break;
 
   case 254:
-        { yyval . subtree = MakeTree ( PT_VIEW, T ( yyvsp[-8] ), P ( yyvsp[-7] ), T ( yyvsp[-6] ), P ( yyvsp[-5] ), T ( yyvsp[-4] ), P ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+        { yyval . subtree = MakeTree ( ctx, PT_VIEW, T ( ctx, yyvsp[-8] ), P ( yyvsp[-7] ), T ( ctx, yyvsp[-6] ), P ( yyvsp[-5] ), T ( ctx, yyvsp[-4] ), P ( yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 255:
-                                { yyval . subtree = MakeList ( yyvsp[0] ); }
+                                { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
   case 256:
-                                { yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                { yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 257:
-                                { yyval . subtree = MakeTree ( PT_VIEWPARAM, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                { yyval . subtree = MakeTree ( ctx, PT_VIEWPARAM, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 258:
@@ -4869,23 +4877,23 @@ yyreduce:
     break;
 
   case 260:
-                            { yyval . subtree = MakeList ( yyvsp[0] ); }
+                            { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
   case 261:
-                            { yyval . subtree = AddToList ( P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                            { yyval . subtree = AddToList ( ctx, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 262:
-            { yyval . subtree = MakeTree ( PT_PRODSTMT, P ( yyvsp[-4] ), P ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+            { yyval . subtree = MakeTree ( ctx, PT_PRODSTMT, P ( yyvsp[-4] ), P ( yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 263:
-            { yyval . subtree = MakeTree ( PT_COLUMN, T ( yyvsp[-5] ), P ( yyvsp[-4] ), P ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+            { yyval . subtree = MakeTree ( ctx, PT_COLUMN, T ( ctx, yyvsp[-5] ), P ( yyvsp[-4] ), P ( yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 264:
-            { yyval . subtree = T ( yyvsp[0] ); }
+            { yyval . subtree = T ( ctx, yyvsp[0] ); }
     break;
 
   case 265:
@@ -4893,27 +4901,27 @@ yyreduce:
     break;
 
   case 266:
-                                { yyval . subtree = MakeTree ( PT_VIEWPARENTS, T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                { yyval . subtree = MakeTree ( ctx, PT_VIEWPARENTS, T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 267:
-                                   { yyval . subtree = MakeList ( yyvsp[0] ); }
+                                   { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
   case 268:
-                                   { yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                   { yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
   case 269:
-        { yyval . subtree = MakeTree ( PT_VIEWPARENT, P ( yyvsp[-3] ), T ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( yyvsp[0] ) ); }
+        { yyval . subtree = MakeTree ( ctx, PT_VIEWPARENT, P ( yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
   case 270:
-                                        { yyval . subtree = MakeList ( yyvsp[0] ); }
+                                        { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
   case 271:
-                                        { yyval . subtree = AddToList ( P ( yyvsp[-2] ), T ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
+                                        { yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
 
@@ -4967,7 +4975,7 @@ yyerrlab:
     {
       ++yynerrs;
 #if ! YYERROR_VERBOSE
-      yyerror (&yylloc, root, errors, sb, YY_("syntax error"));
+      yyerror (&yylloc, ctx, root, errors, sb, YY_("syntax error"));
 #else
 # define YYSYNTAX_ERROR yysyntax_error (&yymsg_alloc, &yymsg, \
                                         yyssp, yytoken)
@@ -4994,7 +5002,7 @@ yyerrlab:
                 yymsgp = yymsg;
               }
           }
-        yyerror (&yylloc, root, errors, sb, yymsgp);
+        yyerror (&yylloc, ctx, root, errors, sb, yymsgp);
         if (yysyntax_error_status == 2)
           goto yyexhaustedlab;
       }
@@ -5018,7 +5026,7 @@ yyerrlab:
       else
         {
           yydestruct ("Error: discarding",
-                      yytoken, &yylval, &yylloc, root, errors, sb);
+                      yytoken, &yylval, &yylloc, ctx, root, errors, sb);
           yychar = YYEMPTY;
         }
     }
@@ -5072,7 +5080,7 @@ yyerrlab1:
 
       yyerror_range[1] = *yylsp;
       yydestruct ("Error: popping",
-                  yystos[yystate], yyvsp, yylsp, root, errors, sb);
+                  yystos[yystate], yyvsp, yylsp, ctx, root, errors, sb);
       YYPOPSTACK (1);
       yystate = *yyssp;
       YY_STACK_PRINT (yyss, yyssp);
@@ -5116,7 +5124,7 @@ yyabortlab:
 | yyexhaustedlab -- memory exhaustion comes here.  |
 `-------------------------------------------------*/
 yyexhaustedlab:
-  yyerror (&yylloc, root, errors, sb, YY_("memory exhausted"));
+  yyerror (&yylloc, ctx, root, errors, sb, YY_("memory exhausted"));
   yyresult = 2;
   /* Fall through.  */
 #endif
@@ -5132,7 +5140,7 @@ yyreturn:
          user semantic actions for why this is necessary.  */
       yytoken = YYTRANSLATE (yychar);
       yydestruct ("Cleanup: discarding lookahead",
-                  yytoken, &yylval, &yylloc, root, errors, sb);
+                  yytoken, &yylval, &yylloc, ctx, root, errors, sb);
     }
   /* Do not reclaim the symbols of the rule whose action triggered
      this YYABORT or YYACCEPT.  */
@@ -5141,7 +5149,7 @@ yyreturn:
   while (yyssp != yyss)
     {
       yydestruct ("Cleanup: popping",
-                  yystos[+*yyssp], yyvsp, yylsp, root, errors, sb);
+                  yystos[+*yyssp], yyvsp, yylsp, ctx, root, errors, sb);
       YYPOPSTACK (1);
     }
 #ifndef yyoverflow

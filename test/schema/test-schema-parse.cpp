@@ -113,6 +113,7 @@ rc_t CC Usage( const Args* args )
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
+    HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
     int failed = 0;
     if ( argc < 2 )
     {
@@ -132,7 +133,7 @@ rc_t CC KMain ( int argc, char *argv [] )
             }
             buffer << in.rdbuf();
             SchemaParser parser;
-            if ( ! parser . ParseString ( buffer . str () . c_str () ) )
+            if ( ! parser . ParseString ( ctx, buffer . str () . c_str () ) )
             {
                 cout << string ( "Parsing failed: " ) + argv [ i + 1 ] << endl;
                 ++ failed;

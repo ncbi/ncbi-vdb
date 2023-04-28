@@ -39,36 +39,37 @@ namespace ncbi
         class FunctionDeclaration // Wrapper around SFunction
         {
         public:
-            FunctionDeclaration ( ASTBuilder & p_builder );
+            FunctionDeclaration ( ctx_t ctx, ASTBuilder & p_builder );
             FunctionDeclaration ( ASTBuilder & p_builder, SFunction & ); // physical function; will not be overloaded or added to symtab
             ~FunctionDeclaration ();
 
             BSTree * SchemaScope () { return m_self == 0 ? 0 : & m_self -> sscope; }
             BSTree * FunctionScope () { return m_self == 0 ? 0 : & m_self -> fscope; }
 
-            bool SetName ( const AST_FQN &  p_fqn,
-                        uint32_t         p_type,
-                        bool             p_canOverload,
-                        bool             p_validate );
+            bool SetName ( ctx_t ctx,
+                           const AST_FQN &  p_fqn,
+                           uint32_t         p_type,
+                           bool             p_canOverload,
+                           bool             p_validate );
 
-            void SetSchemaParams ( const AST & p_sig );
+            void SetSchemaParams ( ctx_t ctx, const AST & p_sig );
             void SetReturnType ( STypeExpr * p_retType );
-            void SetFactoryParams ( const AST & p_sig );
-            void SetFormalParams ( const AST & p_sig );
-            void SetPhysicalParams ();
-            void SetPrologue ( const AST & p_prologue );
+            void SetFactoryParams ( ctx_t ctx, const AST & p_sig );
+            void SetFormalParams ( ctx_t ctx, const AST & p_sig );
+            void SetPhysicalParams ( ctx_t ctx );
+            void SetPrologue ( ctx_t ctx, const AST & p_prologue );
 
-            void HandleScript ( const AST & p_body, const String & p_funcName );
+            void HandleScript ( ctx_t ctx, const AST & p_body, const String & p_funcName );
 
             SFunction * GetSFunction () { return m_self; }
 
         private:
-            bool HandleOverload ( const AST_FQN &  p_fqn, const KSymbol *  p_priorDecl );
-            void AddFactoryParams ( Vector& p_sig, const AST & p_params );
-            void AddFormalParams ( Vector& p_sig, const AST & p_params );
-            SIndirectType * MakeSchemaParamType ( const AST_FQN & p_name );
-            SIndirectConst * MakeSchemaParamConst ( const AST_FQN & p_name );
-            void HandleStatement ( const AST & p_stmt );
+            bool HandleOverload ( ctx_t ctx, const AST_FQN &  p_fqn, const KSymbol *  p_priorDecl );
+            void AddFactoryParams ( ctx_t ctx, Vector& p_sig, const AST & p_params );
+            void AddFormalParams ( ctx_t ctx, Vector& p_sig, const AST & p_params );
+            SIndirectType * MakeSchemaParamType ( ctx_t ctx, const AST_FQN & p_name );
+            SIndirectConst * MakeSchemaParamConst ( ctx_t ctx, const AST_FQN & p_name );
+            void HandleStatement ( ctx_t ctx, const AST & p_stmt );
 
         private:
             ASTBuilder &    m_builder;

@@ -44,15 +44,15 @@ using namespace std;
 class PhysicalDeclaration // Wrapper around SPhysical
 {
 public:
-    PhysicalDeclaration ( ASTBuilder & p_builder, const AST & p_returnType );
+    PhysicalDeclaration ( ctx_t ctx, ASTBuilder & p_builder, const AST & p_returnType );
     ~PhysicalDeclaration ();
 
-    bool SetName ( const AST_FQN &  p_fqn );
+    bool SetName ( ctx_t ctx, const AST_FQN &  p_fqn );
 
-    void SetParams ( const AST & p_schemaParams, const AST & p_factParams );
+    void SetParams ( ctx_t ctx, const AST & p_schemaParams, const AST & p_factParams );
 
-    void HandleBody ( const AST & p_body, FunctionDeclaration & );
-    void HandleRowLength ( const AST & p_body );
+    void HandleBody ( ctx_t ctx, const AST & p_body, FunctionDeclaration & );
+    void HandleRowLength ( ctx_t ctx, const AST & p_body );
 
     FunctionDeclaration & GetDecode () { return m_decode; }
     FunctionDeclaration & GetEncode () { return m_encode; }
@@ -61,7 +61,7 @@ public:
     void SetReadOnly ( bool p_yes ) { m_self -> read_only = p_yes; }
 
 private:
-    bool HandleOverload ( const KSymbol * p_priorDecl );
+    bool HandleOverload ( ctx_t ctx, const KSymbol * p_priorDecl );
 
 private:
     ASTBuilder &            m_builder;
@@ -74,10 +74,10 @@ private:
     bool m_delete;
 };
 
-PhysicalDeclaration :: PhysicalDeclaration ( ASTBuilder & p_builder, const AST & p_returnType )
+PhysicalDeclaration :: PhysicalDeclaration ( ctx_t ctx, ASTBuilder & p_builder, const AST & p_returnType )
 :   m_builder ( p_builder ),
     m_returnType ( p_returnType . GetTokenType () == PT_NOHEADER ? * p_returnType . GetChild ( 0 ) : p_returnType ),
-    m_self ( m_builder . Alloc < SPhysical > () ),
+    m_self ( m_builder . Alloc < SPhysical > ( ctx ) ),
     m_decode ( p_builder, m_self -> decode ),
     m_encode ( p_builder, m_self -> encode ),
     m_delete ( false )
@@ -99,8 +99,9 @@ PhysicalDeclaration :: ~PhysicalDeclaration ()
 }
 
 bool
-PhysicalDeclaration :: HandleOverload ( const KSymbol * p_priorDecl )
+PhysicalDeclaration :: HandleOverload ( ctx_t ctx, const KSymbol * p_priorDecl )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     assert ( p_priorDecl != 0 );
 
     Vector & functions = m_builder . GetSchema () -> phys;
@@ -111,7 +112,7 @@ PhysicalDeclaration :: HandleOverload ( const KSymbol * p_priorDecl )
     rc_t rc = VectorInsertUnique ( & name -> items, m_self, & idx, SPhysicalSort );
     if ( rc == 0 ) // overload added
     {
-        return m_builder . VectorAppend ( functions, & m_self -> id, m_self );
+        return m_builder . VectorAppend ( ctx, functions, & m_self -> id, m_self );
     }
     if ( GetRCState ( rc ) == rcExists )
     {   /* an overload with the same major version exists */
@@ -137,22 +138,24 @@ PhysicalDeclaration :: HandleOverload ( const KSymbol * p_priorDecl )
     }
     else if ( rc != 0 )
     {
-        m_builder . ReportRc ( "VectorInsertUnique", rc );
+        m_builder . ReportRc ( ctx, "VectorInsertUnique", rc );
     }
     return false;
 }
 
 bool
-PhysicalDeclaration :: SetName ( const AST_FQN &  p_name )
+PhysicalDeclaration :: SetName ( ctx_t ctx, const AST_FQN &  p_name )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     m_self -> version = p_name . GetVersion ();
 
-    const KSymbol* priorDecl = m_builder . Resolve ( p_name, false );
+    const KSymbol* priorDecl = m_builder . Resolve ( ctx, p_name, false );
     if ( priorDecl == 0 )
     {
-        m_self -> name = m_builder . CreateFqnSymbol ( p_name, ePhysical, m_self );
+        m_self -> name = m_builder . CreateFqnSymbol ( ctx, p_name, ePhysical, m_self );
         if ( m_self -> name == 0 ||
-             ! m_builder . CreateOverload ( m_self -> name,
+             ! m_builder . CreateOverload ( ctx,
+                                            m_self -> name,
                                             m_self,
                                             0,
                                             SPhysicalSort,
@@ -168,12 +171,12 @@ PhysicalDeclaration :: SetName ( const AST_FQN &  p_name )
     {
         if ( priorDecl -> type != ePhysical )
         {
-            m_builder . ReportError ( "Declared earlier and cannot be overloaded", p_name );
+            m_builder . ReportError ( ctx, "Declared earlier and cannot be overloaded", p_name );
             m_delete = true;
             return false;
         }
 
-        if ( ! HandleOverload ( priorDecl ) )
+        if ( ! HandleOverload ( ctx, priorDecl ) )
         {
             m_delete = true;
             return false;
@@ -185,17 +188,18 @@ PhysicalDeclaration :: SetName ( const AST_FQN &  p_name )
 }
 
 void
-PhysicalDeclaration :: SetParams ( const AST & p_schemaParams, const AST & p_factParams )
+PhysicalDeclaration :: SetParams ( ctx_t ctx, const AST & p_schemaParams, const AST & p_factParams )
 {   // schema/factory parameters are evaluated once for decode and then copied over to encode
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     rc_t rc = KSymTablePushScope ( & m_builder . GetSymTab (), m_decode . SchemaScope () );
     if ( rc != 0 )
     {
-        m_builder . ReportRc ( "KSymTablePushScope", rc );
+        m_builder . ReportRc ( ctx, "KSymTablePushScope", rc );
         return;
     }
 
-    m_decode . SetSchemaParams ( p_schemaParams );
-    m_decode . SetFactoryParams ( p_factParams );
+    m_decode . SetSchemaParams ( ctx, p_schemaParams );
+    m_decode . SetFactoryParams ( ctx, p_factParams );
 
     /* copy schema and factory parameters
         NB - must be cleared before destruction ( see SPhysicalWhack() ) */
@@ -209,46 +213,48 @@ PhysicalDeclaration :: SetParams ( const AST & p_schemaParams, const AST & p_fac
     /* clone factory parameter symbols */
     if ( BSTreeDoUntil ( & enc . fscope, false, KSymbolCopyScope, const_cast < BSTree * > ( & dec . fscope ) ) )
     {
-        m_builder . ReportRc ( "FunctionDeclaration::CopyParams BSTreeDoUntil", RC ( rcVDB, rcSchema, rcParsing, rcMemory, rcExhausted ) );
+        m_builder . ReportRc ( ctx, "FunctionDeclaration::CopyParams BSTreeDoUntil", RC ( rcVDB, rcSchema, rcParsing, rcMemory, rcExhausted ) );
     }
 
     /* interpret return type within schema param scope */
-    m_self -> td = & m_builder . MakeTypeExpr ( m_returnType ) -> dad;
+    m_self -> td = & m_builder . MakeTypeExpr ( ctx, m_returnType ) -> dad;
 
     KSymTablePopScope ( & m_builder . GetSymTab () );
 }
 
 void
-PhysicalDeclaration :: HandleBody ( const AST & p_body, FunctionDeclaration & p_func )
+PhysicalDeclaration :: HandleBody ( ctx_t ctx, const AST & p_body, FunctionDeclaration & p_func )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     rc_t rc = KSymTablePushScope ( & m_builder . GetSymTab (), p_func . SchemaScope () );
     if ( rc != 0 )
     {
-        m_builder . ReportRc ( "KSymTablePushScope", rc );
+        m_builder . ReportRc ( ctx, "KSymTablePushScope", rc );
         return;
     }
 
     rc = KSymTablePushScope ( & m_builder . GetSymTab (), p_func . FunctionScope () );
     if ( rc == 0 )
     {
-        p_func . SetPhysicalParams ();  /* simulate a schema function signature */
-        p_func . HandleScript ( p_body, m_self -> name -> name );
+        p_func . SetPhysicalParams ( ctx );  /* simulate a schema function signature */
+        p_func . HandleScript ( ctx, p_body, m_self -> name -> name );
 
         KSymTablePopScope ( & m_builder . GetSymTab () );
     }
     else
     {
-        m_builder . ReportRc ( "KSymTablePushScope", rc );
+        m_builder . ReportRc ( ctx, "KSymTablePushScope", rc );
     }
 
     KSymTablePopScope ( & m_builder . GetSymTab () );
 }
 
 void
-PhysicalDeclaration :: HandleRowLength ( const AST & p_body )
+PhysicalDeclaration :: HandleRowLength ( ctx_t ctx, const AST & p_body )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     const AST_FQN & b = * ToFQN ( & p_body );
-    const KSymbol * rl = m_builder . Resolve ( b, true );
+    const KSymbol * rl = m_builder . Resolve ( ctx, b, true );
     if ( rl != 0 )
     {
         if ( rl -> type == eRowLengthFunc )
@@ -258,29 +264,33 @@ PhysicalDeclaration :: HandleRowLength ( const AST & p_body )
         }
         else
         {
-            m_builder . ReportError ( b . GetLocation (), "Not a row_length function", rl -> name );
+            m_builder . ReportError ( ctx, b . GetLocation (), "Not a row_length function", rl -> name );
         }
     }
 }
 
 AST *
-ASTBuilder :: PhysicalDecl ( const Token *  p_token,
+ASTBuilder :: PhysicalDecl ( ctx_t ctx,
+                             const Token *  p_token,
                              AST *          p_schema,
                              AST *          p_returnType,
                              AST_FQN *      p_name,
                              AST *          p_fact,
                              AST *          p_body )
 {
-    AST * ret = AST :: Make ( p_token, p_schema, p_returnType, p_name, p_fact, p_body );
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+    assert ( p_body != 0 );
 
-    PhysicalDeclaration decl ( * this, * p_returnType );
-    if ( decl . SetName ( * p_name ) )
+    AST * ret = AST :: Make ( ctx, p_token, p_schema, p_returnType, p_name, p_fact, p_body );
+
+    PhysicalDeclaration decl ( ctx, * this, * p_returnType );
+    if ( decl . SetName ( ctx, * p_name ) )
     {
-        decl . SetParams ( * p_schema, * p_fact );
+        decl . SetParams ( ctx, * p_schema, * p_fact );
 
         if ( p_body -> GetTokenType () == PT_PHYSSTMT ) // shorthand for decode-only
         {
-            decl . HandleBody ( * p_body -> GetChild ( 0 ), decl . GetDecode () );
+            decl . HandleBody ( ctx, * p_body -> GetChild ( 0 ), decl . GetDecode () );
             decl . SetReadOnly ( true );
         }
         else
@@ -298,37 +308,37 @@ ASTBuilder :: PhysicalDecl ( const Token *  p_token,
                 case KW_decode:
                     if ( ! hasDecode )
                     {
-                        decl . HandleBody ( * node . GetChild ( 0 ), decl . GetDecode () );
+                        decl . HandleBody ( ctx, * node . GetChild ( 0 ), decl . GetDecode () );
                         hasDecode = true;
                     }
                     else
                     {
-                        ReportError ( "Multiply defined decode()", * p_name );
+                        ReportError ( ctx, "Multiply defined decode()", * p_name );
                     }
                     break;
                 case KW_encode:
                     if ( hasEncode )
                     {
-                        ReportError ( "Multiply defined encode()", * p_name );
+                        ReportError ( ctx, "Multiply defined encode()", * p_name );
                     }
                     else if ( decl . NoHeader () )
                     {
-                        ReportError ( "__no_header cannot define enable()", * p_name );
+                        ReportError ( ctx, "__no_header cannot define enable()", * p_name );
                     }
                     else
                     {
-                        decl . HandleBody ( * node . GetChild ( 0 ), decl . GetEncode () );
+                        decl . HandleBody ( ctx, * node . GetChild ( 0 ), decl . GetEncode () );
                         hasEncode = true;
                     }
                     break;
                 case KW___row_length:
                     if ( hasRowLength )
                     {
-                        ReportError ( "Multiply defined __row_length()", * p_name );
+                        ReportError ( ctx, "Multiply defined __row_length()", * p_name );
                     }
                     else
                     {
-                        decl . HandleRowLength ( * node . GetChild ( 0 ) );
+                        decl . HandleRowLength ( ctx, * node . GetChild ( 0 ) );
                         hasRowLength = true;
                     }
                     break;
@@ -343,7 +353,7 @@ ASTBuilder :: PhysicalDecl ( const Token *  p_token,
             decl . SetReadOnly ( ! hasEncode );
             if ( ! hasDecode )
             {
-                ReportError ( "Missing decode()", * p_name );
+                ReportError ( ctx, "Missing decode()", * p_name );
             }
         }
     }

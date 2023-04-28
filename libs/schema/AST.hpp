@@ -45,22 +45,22 @@ namespace ncbi
         class AST : public ParseTree
         {
         public:
-            static AST * Make ( const Token* token );
-            static AST * Make ( Token :: TokenType tokenType ); // no-value token
-            static AST * Make (); // no token; a synthesized node
+            static AST * Make ( ctx_t ctx,  const Token* token );
+            static AST * Make ( ctx_t ctx, Token :: TokenType tokenType ); // no-value token
+            static AST * Make ( ctx_t ctx ); // no token; a synthesized node
 
             static void Destroy ( AST * );
 
             // convenience overloads; chilren nodes cannot be NULL
-            static AST * Make ( const Token* token, AST* );
-            static AST * Make ( const Token* token, AST*, AST* );
-            static AST * Make ( const Token* token, AST*, AST*, AST* );
-            static AST * Make ( const Token* token, AST*, AST*, AST*, AST * );
-            static AST * Make ( const Token* token, AST*, AST*, AST*, AST *, AST * );
-            static AST * Make ( const Token* token, AST*, AST*, AST*, AST *, AST *, AST* );
+            static AST * Make ( ctx_t ctx, const Token* token, AST* );
+            static AST * Make ( ctx_t ctx, const Token* token, AST*, AST* );
+            static AST * Make ( ctx_t ctx, const Token* token, AST*, AST*, AST* );
+            static AST * Make ( ctx_t ctx, const Token* token, AST*, AST*, AST*, AST * );
+            static AST * Make ( ctx_t ctx, const Token* token, AST*, AST*, AST*, AST *, AST * );
+            static AST * Make ( ctx_t ctx, const Token* token, AST*, AST*, AST*, AST *, AST *, AST* );
 
-            void AddNode ( AST * );
-            void AddNode ( const Token * );
+            void AddNode ( ctx_t ctx, AST * );
+            void AddNode ( ctx_t ctx, const Token * );
 
             const AST* GetChild ( uint32_t idx ) const  { return static_cast < const AST * > ( ParseTree :: GetChild ( idx ) ); }
                   AST* GetChild ( uint32_t idx )        { return static_cast <       AST * > ( ParseTree :: GetChild ( idx ) ); }
@@ -78,7 +78,7 @@ namespace ncbi
         class AST_FQN : public AST
         {
         public:
-            static AST_FQN * Make ( const Token* ); // always PT_IDENT
+            static AST_FQN * Make ( ctx_t ctx, const Token* ); // always PT_IDENT
 
             void SetVersion ( const char* ); // version specified as "#maj[.min[.rel]]]"
             uint32_t GetVersion () const { return m_version; } // encoded as ( maj << 24 ) | ( min << 16 ) | ( rel )
@@ -107,16 +107,16 @@ namespace ncbi
         class AST_Expr : public AST
         {
         public:
-            static AST_Expr * Make ( const Token* ); // literal constant
-            static AST_Expr * Make  ( AST_FQN* );      // fully qualified name
-            static AST_Expr * Make  ( AST_Expr* );     // first sub-expression in a conditional ( ex1 | ex2 | ... )
-            static AST_Expr * Make  ( Token :: TokenType );    // '@' etc
+            static AST_Expr * Make ( ctx_t ctx, const Token* ); // literal constant
+            static AST_Expr * Make ( ctx_t ctx, AST_FQN* );      // fully qualified name
+            static AST_Expr * Make ( ctx_t ctx, AST_Expr* );     // first sub-expression in a conditional ( ex1 | ex2 | ... )
+            static AST_Expr * Make ( ctx_t ctx, Token :: TokenType );    // '@' etc
 
             // these methods report problems
-            SExpression * EvaluateConst ( ASTBuilder & ) const;
-            SExpression * MakeExpression ( ASTBuilder & ) const;
-            SExpression * MakeSymExpr ( ASTBuilder & , const KSymbol * p_sym ) const;
-            SExpression * MakeUnsigned ( ASTBuilder & ) const;
+            SExpression * EvaluateConst ( ctx_t ctx, ASTBuilder & ) const;
+            SExpression * MakeExpression ( ctx_t ctx, ASTBuilder & ) const;
+            SExpression * MakeSymExpr ( ctx_t ctx, ASTBuilder & , const KSymbol * p_sym ) const;
+            SExpression * MakeUnsigned ( ctx_t ctx, ASTBuilder & ) const;
 
         protected:
             AST_Expr ( const Token* );
@@ -124,15 +124,15 @@ namespace ncbi
             ~AST_Expr(); // call AST::Destroy() instead
 
         private:
-            SExpression * MakeFloat ( ASTBuilder & ) const;
-            SExpression * MakeString ( ASTBuilder & p_builder ) const;
-            SExpression * MakeEscapedString ( ASTBuilder & p_builder ) const;
-            SExpression * MakeVectorConstant ( ASTBuilder & p_builder ) const;
-            SExpression * MakeBool ( ASTBuilder & ) const;
-            SExpression * MakeNegate ( ASTBuilder & ) const;
-            SExpression * MakeCast ( ASTBuilder & p_builder ) const;
-            SExpression * MakeMember ( ASTBuilder & p_builder ) const;
-            SExpression * MakeJoin ( ASTBuilder & p_builder ) const;
+            SExpression * MakeFloat ( ctx_t ctx, ASTBuilder & ) const;
+            SExpression * MakeString ( ctx_t ctx, ASTBuilder & p_builder ) const;
+            SExpression * MakeEscapedString ( ctx_t ctx, ASTBuilder & p_builder ) const;
+            SExpression * MakeVectorConstant ( ctx_t ctx, ASTBuilder & p_builder ) const;
+            SExpression * MakeBool ( ctx_t ctx, ASTBuilder & ) const;
+            SExpression * MakeNegate ( ctx_t ctx, ASTBuilder & ) const;
+            SExpression * MakeCast ( ctx_t ctx, ASTBuilder & p_builder ) const;
+            SExpression * MakeMember ( ctx_t ctx, ASTBuilder & p_builder ) const;
+            SExpression * MakeJoin ( ctx_t ctx, ASTBuilder & p_builder ) const;
         };
 
         // these conversion function will assert if the argument is NULL or not an AST_Expr,

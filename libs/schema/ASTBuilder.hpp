@@ -30,6 +30,9 @@
 #include <cstring>
 
 #include <kfc/callconv.h>
+#include <kfc/xc.h>
+#include <kfc/except.h>
+
 #include <klib/rc.h>
 
 #include "AST.hpp"
@@ -59,25 +62,24 @@ namespace ncbi
         class ASTBuilder
         {
         public:
-            ASTBuilder ( VSchema * schema );
+            ASTBuilder ( ctx_t ctx, VSchema * schema );
             ~ASTBuilder ();
 
-            void AddIncludePath ( const char * path );
+            void AddIncludePath ( ctx_t ctx, const char * path );
 
-            AST* Build ( const ParseTree& p_root, const char * p_sourceFileName = "", bool p_debugParse = false );
+            AST* Build ( ctx_t ctx, const ParseTree& p_root, const char * p_sourceFileName = "", bool p_debugParse = false );
 
-            const KSymbol* Resolve ( const AST_FQN& p_fqn, bool p_reportUnknown = true );
-            KSymbol* Resolve ( const Token :: Location & p_loc, const char* p_ident, bool p_reportUnknown = true );
+            const KSymbol* Resolve ( ctx_t ctx, const AST_FQN& p_fqn, bool p_reportUnknown = true );
+            KSymbol* Resolve ( ctx_t ctx, const Token :: Location & p_loc, const char* p_ident, bool p_reportUnknown = true );
 
             uint32_t IntrinsicTypeId ( const char * p_type ) const;
 
-            void ReportError ( const Token :: Location & p_loc, const char * p_msg );
-            void ReportError ( const Token :: Location & p_loc, const char * p_msg, const String & p_str );
-            void ReportError ( const Token :: Location & p_loc, const char * p_msg, const char * p_str );
-            void ReportError ( const Token :: Location & p_loc, const char * p_msg, int64_t p_val );
-            void ReportError ( const char * p_msg, const AST_FQN & p_fqn ); // use location of p_fqn
-            void ReportInternalError ( const char * p_msg, const char * p_source = "" ); // no line/col
-            void ReportRc ( const char * p_msg, rc_t );
+            void ReportError ( ctx_t ctx, const Token :: Location & p_loc, const char * p_msg );
+            void ReportError ( ctx_t ctx, const Token :: Location & p_loc, const char * p_msg, const String & p_str );
+            void ReportError ( ctx_t ctx, const Token :: Location & p_loc, const char * p_msg, const char * p_str );
+            void ReportError ( ctx_t ctx, const Token :: Location & p_loc, const char * p_msg, int64_t p_val );
+            void ReportError ( ctx_t ctx, const char * p_msg, const AST_FQN & p_fqn ); // use location of p_fqn
+            void ReportRc ( ctx_t ctx, const char * p_msg, rc_t );
 
             // error list is cleared by a call to Build
             uint32_t GetErrorCount() const { return m_errors . GetCount (); }
@@ -85,7 +87,7 @@ namespace ncbi
             const ErrorReport & GetErrors () const { return m_errors; }
 
             // uses malloc(); reports allocation failure
-            template < typename T > T* Alloc ( size_t p_size = sizeof ( T ) );
+            template < typename T > T* Alloc ( ctx_t ctx, size_t p_size = sizeof ( T ) );
 
             const VSchema * GetSchema () const { return m_schema; }
             VSchema * GetSchema () { return m_schema; }
@@ -98,14 +100,15 @@ namespace ncbi
 
         public:
             // AST node creation methods for use from bison
-            AST * TypeDef ( const Token *, AST_FQN * baseType, AST * newTypes );
-            AST * TypeSet ( const Token *, AST_FQN * name, AST * typeSpecs );
-            AST * FmtDef  ( const Token *, AST_FQN * name, AST_FQN * super_opt );
-            AST * ConstDef  ( const Token *, AST * type, AST_FQN * name, AST_Expr * expr );
-            AST * AliasDef  ( const Token *, AST_FQN * name, AST_FQN * newName );
-            AST * UntypedFunctionDecl ( const Token *, AST_FQN * name );
-            AST * RowlenFunctionDecl ( const Token *, AST_FQN * name );
-            AST * FunctionDecl ( const Token *,
+            AST * TypeDef ( ctx_t ctx, const Token *, AST_FQN * baseType, AST * newTypes );
+            AST * TypeSet ( ctx_t ctx, const Token *, AST_FQN * name, AST * typeSpecs );
+            AST * FmtDef  ( ctx_t ctx, const Token *, AST_FQN * name, AST_FQN * super_opt );
+            AST * ConstDef  ( ctx_t ctx, const Token *, AST * type, AST_FQN * name, AST_Expr * expr );
+            AST * AliasDef  ( ctx_t ctx, const Token *, AST_FQN * name, AST_FQN * newName );
+            AST * UntypedFunctionDecl ( ctx_t ctx, const Token *, AST_FQN * name );
+            AST * RowlenFunctionDecl ( ctx_t ctx, const Token *, AST_FQN * name );
+            AST * FunctionDecl ( ctx_t ctx,
+                                 const Token *,
                                  bool           script,
                                  AST *          schema,
                                  AST *          returnType,
@@ -113,26 +116,27 @@ namespace ncbi
                                  AST  *         fact,
                                  AST *          params,
                                  AST *          prologue );
-            AST * PhysicalDecl ( const Token *, AST * schema, AST * returnType, AST_FQN * name, AST * fact, AST * body );
-            AST * TableDef ( const Token *, AST_FQN * name, AST * parents, AST * body );
-            AST * DatabaseDef ( const Token *, AST_FQN * name, AST * parent, AST * body );
-            AST * Include ( const Token *, const Token * filename );
-            AST * ViewDef ( const Token *, AST_FQN * name, AST * params, AST * parents, AST * body );
+            AST * PhysicalDecl ( ctx_t ctx, const Token *, AST * schema, AST * returnType, AST_FQN * name, AST * fact, AST * body );
+            AST * TableDef ( ctx_t ctx, const Token *, AST_FQN * name, AST * parents, AST * body );
+            AST * DatabaseDef ( ctx_t ctx, const Token *, AST_FQN * name, AST * parent, AST * body );
+            AST * Include ( ctx_t ctx, const Token *, const Token * filename );
+            AST * ViewDef ( ctx_t ctx, const Token *, AST_FQN * name, AST * params, AST * parents, AST * body );
 
         public: // schema object construction helpers
-            const KSymbol* CreateFqnSymbol ( const AST_FQN& fqn, uint32_t type, const void * obj );
+            const KSymbol* CreateFqnSymbol ( ctx_t ctx, const AST_FQN& fqn, uint32_t type, const void * obj );
 
-            KSymbol * CreateLocalSymbol ( const AST & p_node, const char* p_name, int p_type, const void * p_obj );
-            KSymbol * CreateLocalSymbol ( const AST & p_node, const String & p_name, int p_type, const void * p_obj );
+            KSymbol * CreateLocalSymbol ( ctx_t ctx, const AST & p_node, const char* p_name, int p_type, const void * p_obj );
+            KSymbol * CreateLocalSymbol ( ctx_t ctx, const AST & p_node, const String & p_name, int p_type, const void * p_obj );
 
-            KSymbol * CreateConstSymbol ( const char* p_name, int p_type, const void * p_obj );
+            KSymbol * CreateConstSymbol ( ctx_t ctx, const char* p_name, int p_type, const void * p_obj );
 
-            struct STypeExpr * MakeTypeExpr ( const AST & p_type );
+            struct STypeExpr * MakeTypeExpr ( ctx_t ctx, const AST & p_type );
 
             // false - failed, error reported
-            bool VectorAppend ( Vector & self, uint32_t *idx, const void *item );
+            bool VectorAppend ( ctx_t ctx, Vector & self, uint32_t *idx, const void *item );
 
-            bool CreateOverload ( const KSymbol * p_name,
+            bool CreateOverload ( ctx_t ctx,
+                                  const KSymbol * p_name,
                                   const void * p_object,
                                   uint32_t p_context_type,
                                   int64_t (CC * p_sort)(const void *, const void *),
@@ -155,33 +159,35 @@ namespace ncbi
                                     const KSymbol *              p_priorDecl,
                                     uint32_t *                   p_id );
 
-            void AddProduction ( const AST &        p_node,
+            void AddProduction ( ctx_t              ctx,
+                                 const AST &        p_node,
                                  Vector &           p_list,
                                  const char *       p_name,
                                  const AST_Expr &   p_expr,
                                  const AST *        p_type );
 
-            bool FillSchemaParms ( const AST & p_parms, Vector & p_v );
-            bool FillFactoryParms ( const AST & p_parms, Vector & p_v );
-            bool FillArguments ( const AST & p_parms, Vector & p_v );
+            bool FillSchemaParms ( ctx_t ctx, const AST & p_parms, Vector & p_v );
+            bool FillFactoryParms ( ctx_t ctx, const AST & p_parms, Vector & p_v );
+            bool FillArguments ( ctx_t ctx, const AST & p_parms, Vector & p_v );
 
-            const void * SelectVersion ( const AST_FQN & fqn,
+            const void * SelectVersion ( ctx_t ctx,
+                                         const AST_FQN & fqn,
                                          const struct KSymbol & p_ovl,
                                          int64_t ( CC * p_cmp ) ( const void *item, const void *n ),
                                          uint32_t * p_version = 0 ); // OUT, NULL OK
 
-            const KSymbol * TypeSpec ( const AST & p_spec, VTypedecl & p_td );
+            const KSymbol * TypeSpec ( ctx_t ctx, const AST & p_spec, VTypedecl & p_td );
 
             bool CheckForColumnCollision ( const KSymbol *sym );
-            bool ScanVirtuals ( const Token :: Location & p_loc, Vector & p_byParent, KSymTable & symtab );
+            bool ScanVirtuals ( ctx_t ctx, const Token :: Location & p_loc, Vector & p_byParent, KSymTable & symtab );
 
             const struct SView * GetView () const { return m_view; }
 
         private:
             bool Init();
 
-            void DeclareType ( const AST_FQN& fqn, const KSymbol& super, const AST_Expr* dimension_opt );
-            void DeclareTypeSet ( const AST_FQN& fqn, const BSTree& types, uint32_t typeCount );
+            void DeclareType ( ctx_t ctx, const AST_FQN& fqn, const KSymbol& super, const AST_Expr* dimension_opt );
+            void DeclareTypeSet ( ctx_t ctx, const AST_FQN& fqn, const BSTree& types, uint32_t typeCount );
 
             struct SFormParmlist * MakeFactoryParams ( const AST & );
             void AddFactoryParams ( Vector& sig, const AST & params );
@@ -189,10 +195,10 @@ namespace ncbi
             struct SFormParmlist * MakeFormalParams ( const AST & );
             void AddFormalParams ( Vector& sig, const AST & params );
 
-            uint64_t EvalConstExpr ( const AST_Expr &expr );
+            uint64_t EvalConstExpr ( ctx_t ctx, const AST_Expr &expr );
 
-            const struct KFile * OpenIncludeFile ( const Token :: Location & p_loc, const char * p_fmt, ... );
-            const KSymbol* ResolveNestedName ( const AST_FQN & p_fqn, uint32_t p_idx, uint32_t & p_missingIdx );
+            const struct KFile * OpenIncludeFile ( ctx_t ctx, const Token :: Location & p_loc, const char * p_fmt, ... );
+            const KSymbol* ResolveNestedName ( ctx_t ctx, const AST_FQN & p_fqn, uint32_t p_idx, uint32_t & p_missingIdx );
 
         private:
             VSchema*    m_schema;
@@ -207,12 +213,14 @@ namespace ncbi
 
         template < typename T >
         T*
-        ASTBuilder :: Alloc ( size_t p_size )
+        ASTBuilder :: Alloc ( ctx_t ctx, size_t p_size )
         {
             T * ret = static_cast < T * > ( malloc ( p_size ) ); // VSchema's tables dispose of objects with free()
             if ( ret == 0 )
             {
-                ReportRc ( "malloc", RC ( rcVDB, rcSchema, rcParsing, rcMemory, rcExhausted ) );
+                FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+                SYSTEM_ERROR ( xcNoMemory, "" );
+                return 0;
             }
             memset ( ret, 0, p_size );
             return ret;
