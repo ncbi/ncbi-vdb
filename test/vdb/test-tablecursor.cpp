@@ -83,7 +83,7 @@ TEST_CASE( VTable_ListReadableColumns )
 
     REQUIRE_RC ( KNamelistRelease ( columns ) );
 }
-#if 0
+
 // VTableCursor
 
 class TableCursorFixture
@@ -675,7 +675,7 @@ FIXTURE_TEST_CASE( VTableCursor_ListReadableColumns, TableCursorFixture )
 
     BSTreeWhack ( &columns, VColumnRefWhack, NULL );
 }
-#endif
+
 //////////////////////////////////////////// Main
 #include <kfg/config.h>
 
