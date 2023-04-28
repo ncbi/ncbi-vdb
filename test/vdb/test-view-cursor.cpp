@@ -601,9 +601,9 @@ FIXTURE_TEST_CASE( ViewCursor_Join_NullKey, ViewOnTableCursorFixture )
     m_columnIdx = AddColumn ( "v" );
     REQUIRE_RC ( VCursorOpen ( m_cur ) );
 
-    THROW_ON_RC ( VCursorReadDirect ( m_cur, 1, m_columnIdx, 8 * sizeof ( int64_t ), m_buf, 1, & m_rowLen ) );
+    REQUIRE_RC ( VCursorReadDirect ( m_cur, 1, m_columnIdx, 8 * sizeof ( int64_t ), m_buf, 1, & m_rowLen ) );
     REQUIRE_EQ ( 0u, m_rowLen );
-    THROW_ON_RC ( VCursorReadDirect ( m_cur, 2, m_columnIdx, 8 * sizeof ( int64_t ), m_buf, 1, & m_rowLen ) );
+    REQUIRE_RC ( VCursorReadDirect ( m_cur, 2, m_columnIdx, 8 * sizeof ( int64_t ), m_buf, 1, & m_rowLen ) );
     REQUIRE_EQ ( 0u, m_rowLen );
 }
 
