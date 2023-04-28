@@ -95,6 +95,7 @@ static rc_t VViewCursorCellDataDirect ( const VViewCursor *self, int64_t row_id,
     uint32_t *elem_bits, const void **base, uint32_t *boff, uint32_t *row_len );
 static rc_t VViewCursorDataPrefetch ( const VViewCursor *cself, const int64_t *row_ids, uint32_t col_idx, uint32_t num_rows, int64_t min_valid_row_id, int64_t max_valid_row_id, bool continue_on_error );
 static rc_t VViewCursorOpenParentRead ( const VViewCursor * p_self, const VTable ** p_tbl );
+static rc_t VViewCursorIdRange ( const VViewCursor *self, uint32_t idx, int64_t *first, uint64_t *count );
 
 static rc_t VViewCursorPermitPostOpenAdd ( const VViewCursor * self );
 static rc_t VViewCursorSuspendTriggers ( const VViewCursor * self );
@@ -138,6 +139,7 @@ static VCursor_vt VViewCursor_vt =
     VViewCursorCommit,
     VViewCursorOpenParentRead,
     VViewCursorOpenParentUpdate,
+    VViewCursorIdRange,
     VViewCursorPermitPostOpenAdd,
     VViewCursorSuspendTriggers,
     VViewCursorGetSchema,
@@ -1244,6 +1246,76 @@ VViewCursorOpenParentRead ( const VViewCursor * p_self, const VTable ** p_tbl )
         * p_tbl = NULL;
     }
 
+    return rc;
+}
+
+static
+void CC addColumn ( BSTNode *n, void *data )
+{
+    VColumnRef * cref = (VColumnRef *) n;
+    VCursor * curs = (VCursor *) data;
+    uint32_t ignore;
+    VCursorAddColumn( curs, & ignore, "%.*s", cref -> name . size, cref -> name . addr );
+}
+
+rc_t
+VViewCursorIdRange ( const VViewCursor * p_self, uint32_t p_idx, int64_t * p_first, uint64_t * p_count )
+{   /* always return rowId range of the primary table, ignore p_idx */
+    rc_t rc;
+    const VTable * tbl = VViewCursorGetTable ( p_self );
+    if ( tbl == NULL ) /* primary table parameter has not been bound */
+    {
+        rc = RC ( rcVDB, rcCursor, rcResolving, rcParam, rcUndefined );
+    }
+    else
+    {
+        int64_t dummy;
+        uint64_t dummy_count;
+
+        if ( p_first == NULL )
+        {
+            p_first = & dummy;
+        }
+        else if ( p_count == NULL )
+        {
+            p_count = & dummy_count;
+        }
+
+        if ( p_self -> dad . state < vcReady )
+        {
+            if ( p_self -> dad . state == vcFailed )
+            {
+                rc = RC ( rcVDB, rcCursor, rcAccessing, rcCursor, rcInvalid );
+            }
+            else
+            {
+                rc = RC ( rcVDB, rcCursor, rcAccessing, rcCursor, rcNotOpen );
+            }
+        }
+        else
+        {
+            VCursor *curs;
+            rc = VTableCreateCachedCursorRead ( tbl, (const VCursor **) & curs, 0 );
+            if (  rc == 0 )
+            {   /* add all columns to the cursor */
+                BSTree columns;
+                BSTreeInit (& columns );
+                rc = VCursorListReadableColumns ( curs, & columns );
+                if ( rc == 0 )
+                {
+                    BSTreeForEach ( & columns, false, addColumn, curs );
+                    rc = VCursorOpen ( curs );
+                    if ( rc == 0 )
+                    {   /* the resultsing id range is the union of id ranges for all the resolvable
+                        columns of the primary table*/
+                        rc = VCursorIdRange( curs, 0, p_first, p_count );
+                    }
+                }
+                BSTreeWhack ( & columns, VColumnRefWhack, NULL );
+                VCursorRelease ( curs );
+            }
+        }
+    }
     return rc;
 }
 

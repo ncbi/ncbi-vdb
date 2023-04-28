@@ -221,6 +221,45 @@ FIXTURE_TEST_CASE ( ViewCursor_IdRange, ViewOnTableCursorFixture )
     REQUIRE_EQ((uint64_t)2, count);
 }
 
+FIXTURE_TEST_CASE( ViewCursor_IdRange_SameAsPrimaryTable, ViewOnTableCursorFixture )
+{   // always the range of the primary table
+
+    string schema_text =
+        "version 2;"
+        "view V#1 < NCBI:align:tbl:align_sorted t >"
+        "{  column INSDC:SRA:spotid_t spot_id = t . SPOT_ID; }";
+        // the view's id range is t's row_id range
+
+    REQUIRE_RC ( VDBManagerMakeUpdate ( & m_mgr, NULL ) );
+    const VDatabase * db;
+    REQUIRE_RC ( VDBManagerOpenDBRead ( m_mgr, & db, NULL, "SRR1063272" ) );
+    VSchema * schema = NULL;
+    REQUIRE_RC ( VDatabaseOpenSchema ( db, ( const VSchema ** ) & schema ) );
+    const VTable * tbl;
+    REQUIRE_RC ( VDatabaseOpenTableRead ( db, & tbl, "PRIMARY_ALIGNMENT" ) );
+
+    ParseSchema ( schema, schema_text );
+    REQUIRE_RC ( VDBManagerOpenView ( m_mgr, & m_view, schema, "V" ) );
+
+    String n;
+    StringInitCString ( & n, "t" );
+    REQUIRE_RC ( VViewBindParameterTable ( m_view, & n, tbl ) );
+
+    REQUIRE_RC ( VViewCreateCursor ( m_view, & m_cur ) );
+    AddColumn ( "spot_id" );
+    REQUIRE_RC ( VCursorOpen ( m_cur ) ); // this leaks a reference to KDatabase
+
+    int64_t first;
+    uint64_t count;
+    REQUIRE_RC ( VCursorIdRange ( m_cur, 0, & first, & count ) );
+    REQUIRE_EQ((int64_t)1, first);
+    REQUIRE_EQ((uint64_t)3987701, count);   // the full range of PRIMARY_ALIGNMENT
+
+    REQUIRE_RC ( VTableRelease ( tbl ) );
+    REQUIRE_RC ( VSchemaRelease ( schema ) );
+    REQUIRE_RC ( VDatabaseRelease ( db ) );
+}
+
 // VViewCursorRowId
 FIXTURE_TEST_CASE ( ViewCursor_RowId_NullParam, ViewOnTableCursorFixture )
 {

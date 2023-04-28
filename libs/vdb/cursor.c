@@ -94,6 +94,7 @@ static VCursor_vt VTableCursor_read_vt =
     VTableReadCursorCommit,
     VTableCursorOpenParentRead,
     VTableReadCursorOpenParentUpdate,
+    VTableCursorIdRange,
     VTableCursorPermitPostOpenAdd,
     VTableCursorSuspendTriggers,
     VTableCursorGetSchema,
@@ -162,7 +163,7 @@ rc_t VTableReadCursorOpen ( const VTableCursor *cself )
         rc = VLinkerOpen ( ld, & libs );
         if ( rc == 0 )
         {
-            rc = VCursorOpenRead ( self, libs );
+            rc = VTableCursorOpenRead ( self, libs );
             if ( rc == 0 )
             {
                 int64_t first;

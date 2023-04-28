@@ -103,8 +103,9 @@ struct VCursor_vt
     rc_t ( CC * commit ) ( VCURSOR_IMPL *self );
     rc_t ( CC * openParentRead ) ( const VCURSOR_IMPL *self, struct VTable const **tbl );
     rc_t ( CC * openParentUpdate ) ( VCURSOR_IMPL *self, struct VTable **tbl );
+    rc_t ( CC * idRange ) ( const VCURSOR_IMPL *self, uint32_t idx, int64_t *first, uint64_t *count );
 
-    /* Private API, deined in interfaces/vdb/vdb-priv.h */
+    /* Private API, defined in interfaces/vdb/vdb-priv.h */
     rc_t ( CC * permitPostOpenAdd ) ( const VCURSOR_IMPL * self );
     rc_t ( CC * suspendTriggers ) ( const VCURSOR_IMPL * self );
     struct VSchema const * ( * getSchema ) ( const VCURSOR_IMPL * self);
