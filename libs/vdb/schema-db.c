@@ -701,7 +701,7 @@ rc_t database_declaration ( KSymTable *tbl, KTokenSource *src, KToken *t,
         SNameOverload *name = ( void* ) db -> name -> u . obj;
         if ( name == NULL )
         {
-            rc = SNameOverloadMake ( & name, db -> name, 0, 4 );
+            rc = SNameOverloadMake ( & name, db -> name, 0, 0, 4 );
             if ( rc == 0 )
             {
                 rc = VectorAppend ( & self -> dname, & name -> cid . id, name );

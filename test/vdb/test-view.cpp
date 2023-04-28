@@ -613,7 +613,10 @@ FIXTURE_TEST_CASE ( View_ListCol, ViewFixture )
     struct KNamelist * names = NULL;
     REQUIRE_RC ( VViewListCol ( m_view, & names ) );
     REQUIRE_NOT_NULL ( names );
-    // TODO: verify
+    uint32_t count = 0;
+    REQUIRE_RC ( KNamelistCount ( names, & count ) );
+    REQUIRE_EQ ( 2u, count );
+    // TODO: verify columns
     REQUIRE_RC ( KNamelistRelease ( names ) );
 }
 

@@ -374,7 +374,7 @@ void CC SNameOverloadWhack ( void *item, void *ignore )
 /* Make
  */
 rc_t SNameOverloadMake ( SNameOverload **np,
-    const KSymbol *sym, uint32_t start, uint32_t len )
+    const KSymbol *sym, uint32_t ctx_type, uint32_t start, uint32_t len )
 {
     SNameOverload *name = malloc ( sizeof * name );
     if ( name == NULL )
@@ -384,6 +384,7 @@ rc_t SNameOverloadMake ( SNameOverload **np,
     ( ( KSymbol* ) sym ) -> u . obj = name;
     VectorInit ( & name -> items, start, len );
     name -> cid . ctx = 0;
+    name -> cid . ctx_type = ctx_type; /* 0 for top-level objects (table, db, function) */
 
     * np = name;
     return 0;
@@ -399,7 +400,7 @@ rc_t SNameOverloadCopy ( BSTree *scope,
     if ( rc == 0 )
     {
         SNameOverload *copy;
-        rc = SNameOverloadMake ( & copy, sym, 0, 0 );
+        rc = SNameOverloadMake ( & copy, sym, orig -> cid . ctx_type, 0, 0 );
         if ( rc == 0 )
         {
             /* copy contents */

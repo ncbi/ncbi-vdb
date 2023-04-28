@@ -52,6 +52,12 @@ struct VViewCursor
 
     /* attached reference to view */
     const VView * view;
+
+    /* view column objects by cid ( not-owned ) */
+    VCursorCache view_col;
+
+    /* productions by cid ( not-owned ) */
+    VCursorCache view_prod;
 };
 
 static rc_t VViewCursorWhack ( const VViewCursor * p_self );
@@ -95,7 +101,7 @@ static rc_t VViewCursorSuspendTriggers ( const VViewCursor * self );
 static uint64_t VViewCursorSetCacheCapacity ( VViewCursor *self,uint64_t capacity);
 static uint64_t VViewCursorGetCacheCapacity ( const VViewCursor *self);
 
-static const KSymbol * VViewCursorFindOverride ( const VViewCursor * p_self, const struct VCtxId * p_cid, const VTable * tbl, const struct VView * view );
+static const KSymbol * VViewCursorFindOverride ( const VViewCursor * p_self, const struct VCtxId * p_cid, const VTable * tbl );
 
 static rc_t VViewCursorLaunchPagemapThread ( struct VViewCursor *self );
 static const PageMapProcessRequest* VViewCursorPageMapProcessRequest ( const struct VViewCursor *self );
@@ -103,6 +109,8 @@ static bool VViewCursorCacheActive ( const struct VViewCursor * self, int64_t * 
 static rc_t VViewCursorInstallTrigger ( struct VViewCursor * self, struct VProduction * prod );
 
 static rc_t VViewCursorListReadableColumns ( struct VViewCursor *self, BSTree *columns );
+static VCursorCache * VViewCursorColumns ( struct VViewCursor * self, uint32_t ctx_type );
+static VCursorCache * VViewCursorProductions ( struct VViewCursor * self, uint32_t ctx_type );
 
 static VCursor_vt VViewCursor_vt =
 {
@@ -145,7 +153,9 @@ static VCursor_vt VViewCursor_vt =
     VViewCursorPageMapProcessRequest,
     VViewCursorCacheActive,
     VViewCursorInstallTrigger,
-    VViewCursorListReadableColumns
+    VViewCursorListReadableColumns,
+    VViewCursorColumns,
+    VViewCursorProductions
 };
 
 // VViewCursor
@@ -173,6 +183,8 @@ VViewCursorMake ( const VView * p_view, VViewCursor ** p_curs )
             VectorInit ( & curs -> dad . owned, 0, 64 );
             KRefcountInit ( & curs -> dad . refcount, 1, "VViewCursor", "make", "vcurs" );
             curs -> dad . state = vcConstruct;
+            VCursorCacheInit ( & curs -> view_col, 0, 16 );
+            VCursorCacheInit ( & curs -> view_prod, 0, 16 );
             * p_curs = curs;
             return 0;
         }
@@ -185,6 +197,8 @@ rc_t
 VViewCursorWhack ( const VViewCursor * p_self )
 {
     VViewCursor * self = ( VViewCursor * ) p_self;
+    VCursorCacheWhack ( & self -> view_col, NULL, NULL );
+    VCursorCacheWhack ( & self -> view_prod, NULL, NULL );
     VViewRelease ( self -> view );
     return VCursorWhackInt ( & self -> dad );
 }
@@ -208,7 +222,7 @@ VViewCursorAddSColumn ( VViewCursor *      p_self,
     }
 
     /* must not already be there - benign error */
-    col = VCursorCacheGet ( & p_self -> dad . col, & p_scol -> cid );
+    col = VCursorCacheGet ( & p_self -> view_col, & p_scol -> cid );
     if ( col != NULL )
     {
         * p_idx = col -> ord;
@@ -240,27 +254,20 @@ VViewCursorAddSColumn ( VViewCursor *      p_self,
 
             if ( rc == 0 )
             {
-printf("VViewCursorAddSColumn(%p/%.*s, %.*s)...",
-        (void*)p_self,
-        p_self->view->sview->name->name.len, p_self->view->sview->name->name.addr,
-        p_scol->name->name.len, p_scol->name->name.addr
-         );
                 /* insert it into vectors */
                 rc = VectorAppend ( & p_self -> dad . row, & col -> ord, col );
                 if ( rc == 0 )
                 {
                     void * ignore;
-                    rc = VCursorCacheSet ( & p_self -> dad . col, & p_scol -> cid, col );
+                    rc = VCursorCacheSet ( & p_self -> view_col, & p_scol -> cid, col );
                     if ( rc == 0 )
                     {
                         * p_idx = col -> ord;
-printf("success. len=%u\n", VectorLength(& p_self -> dad . row));
                         return 0;
                     }
                     VectorSwap ( & p_self -> dad . row, col -> ord, NULL, & ignore );
                 }
             }
-printf("failure\n");
             VColumnWhack ( col, NULL );
         }
     }
@@ -459,7 +466,7 @@ VViewCursorResolveColumn ( void *item, void *data )
 
         /* remove from row and cache */
         VectorSwap ( & self -> dad . row, col -> ord, NULL, & ignore );
-        VCursorCacheSwap ( & self -> dad . col, & scol -> cid, NULL, & ignore );
+        VCursorCacheSwap ( & self -> view_col, & scol -> cid, NULL, & ignore );
 
         /* dump the VColumn */
         VColumnWhack ( col, NULL );
@@ -490,7 +497,7 @@ VViewCursorResolveColumnProductions ( VViewCursor * p_self, const struct KDlset 
     pb . pr . primary_table = tbl;
     pb . pr . view      = p_self -> view;
     pb . pr . curs      = ( VCursor * ) p_self;
-    pb . pr . cache     = & p_self -> dad . prod;
+    pb . pr . prod     = & p_self -> view_prod;
     pb . pr . owned     = & p_self -> dad . owned;
     pb . pr . cx_bind   = & cx_bind;
 
@@ -1240,25 +1247,14 @@ VViewCursorOpenParentRead ( const VViewCursor * p_self, const VTable ** p_tbl )
     return rc;
 }
 
-const KSymbol * VViewCursorFindOverride ( const VViewCursor * p_self, const struct VCtxId * p_cid, const VTable * p_tbl, const struct VView * view )
+const KSymbol * VViewCursorFindOverride ( const VViewCursor * p_self, const struct VCtxId * p_cid, const VTable * p_tbl )
 {
-    /*TODO: need to know the current view/table, and dispatch to the corresponding S-object */
-
-    if ( p_tbl != NULL )
+    if ( p_cid -> ctx_type == eTable )
     {
-        const struct KSymbol * ret = STableFindOverride ( p_tbl -> stbl, p_cid );
-printf ( "VViewCursorFindOverride - table (%.*s, ctx={%u,%u}) = %p\n",
-            p_tbl -> stbl -> name -> name . len, p_tbl -> stbl -> name -> name . addr,
-            p_cid -> ctx, p_cid -> id, (void*) ret
-        );
-        return ret;
+        return STableFindOverride ( p_tbl -> stbl, p_cid );
     }
-    const struct KSymbol * ret = SViewFindOverride ( p_self -> view -> sview, p_cid );
-printf ( "VViewCursorFindOverride - view (%.*s, ctx={%u,%u}) = %p\n",
-        p_self -> view -> sview -> name -> name . len, p_self -> view -> sview -> name -> name . addr,
-        p_cid -> ctx, p_cid -> id, (void*) ret
-    );
-    return ret;
+    assert ( p_cid -> ctx_type == eView );
+    return SViewFindOverride ( p_self -> view -> sview, p_cid );
 }
 
 rc_t VViewCursorPermitPostOpenAdd ( const VViewCursor * self )
@@ -1359,11 +1355,13 @@ rc_t VCursorListCol_consolidate_and_insert( const VViewCursor *self, BSTree *col
     {
         uint32_t idx = VectorStart ( & self -> dad . row );
         uint32_t end = VectorLength ( & self -> dad . row );
-printf("%p count=%u\n", (void*)self, end);
         for ( end += idx; idx < end; ++idx )
         {
             const VColumn* vcol = ( const VColumn* ) VectorGet ( & self -> dad . row, idx );
-            if ( vcol != NULL )
+            /* filter out non-view columns */
+            if ( vcol != NULL &&
+                 vcol -> scol -> cid . ctx == self -> view -> sview -> id &&
+                 vcol -> scol -> cid . ctx_type == eView )
             {
                 VColumnRef *cref;
                 rc = VColumnRefMake ( & cref, self -> view -> schema, vcol -> scol );
@@ -1386,6 +1384,24 @@ rc_t VViewCursorListReadableColumns ( struct VViewCursor *self, BSTree *columns 
 
     /* insert all columns into tree */
     return VCursorListCol_consolidate_and_insert ( self, columns );
+}
+
+VCursorCache * VViewCursorColumns ( struct VViewCursor * self, uint32_t ctx_type )
+{
+    if ( ctx_type == eView )
+    {
+        return & self -> view_col;
+    }
+    return & self -> dad . col;
+}
+
+VCursorCache * VViewCursorProductions ( struct VViewCursor * self, uint32_t ctx_type )
+{
+    if ( ctx_type == eView )
+    {
+        return & self -> view_prod;
+    }
+    return & self -> dad . prod;
 }
 
 // not implemented for views (read-only)

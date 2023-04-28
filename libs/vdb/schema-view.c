@@ -204,6 +204,7 @@ view_fwd_scan ( BSTNode *n, void *data )
     {
         /* this symbol was introduced in THIS view */
         sym -> u . fwd . ctx = self -> id;
+        sym -> u . fwd . ctx_type = eView;
 
         /* add it to the introduced virtual productions and make it virtual */
         pb -> rc = VectorAppend ( & self -> vprods, & sym -> u . fwd . id, sym );
@@ -232,6 +233,7 @@ void column_set_context ( void *item, void *data )
 {
     SColumn *self = item;
     self -> cid . ctx = * ( const uint32_t* ) data;
+    self -> cid . ctx_type = eView;
 }
 
 static
@@ -239,7 +241,10 @@ void name_set_context ( void *item, void *data )
 {
     SNameOverload *self = item;
     if ( ( int32_t ) self -> cid . ctx < 0 )
+    {
         self -> cid . ctx = * ( const uint32_t* ) data;
+        self -> cid . ctx_type = eView;
+    }
 }
 
 static
@@ -247,6 +252,7 @@ void production_set_context ( void *item, void *data )
 {
     SProduction *self = item;
     self -> cid . ctx = * ( const uint32_t* ) data;
+    self -> cid . ctx_type = eView;
 }
 
 static
@@ -254,14 +260,15 @@ void symbol_set_context ( void *item, void *data )
 {
     KSymbol *self = item;
     self -> u . fwd . ctx = * ( const uint32_t* ) data;
+    self -> u . fwd . ctx_type = eView;
 }
 
-void CC view_set_context ( SView *self, uint32_t p_ctxId )
+void CC view_set_context ( SView *self )
 {
-    VectorForEach ( & self -> col, false, column_set_context, & p_ctxId );
-    VectorForEach ( & self -> cname, false, name_set_context, & p_ctxId );
-    VectorForEach ( & self -> prod, false, production_set_context, & p_ctxId );
-    VectorForEach ( & self -> vprods, false, symbol_set_context, & p_ctxId );
+    VectorForEach ( & self -> col, false, column_set_context, & self -> id );
+    VectorForEach ( & self -> cname, false, name_set_context, & self -> id );
+    VectorForEach ( & self -> prod, false, production_set_context, & self -> id );
+    VectorForEach ( & self -> vprods, false, symbol_set_context, & self -> id );
 }
 
 static

@@ -159,12 +159,26 @@ rc_t CC VCursorMakeColumn ( struct VCursor *self,
 rc_t VCursorWhackInt ( const struct VCursor * p_self );
 
 /* Columns
+ * ctx_type either eTable or eView
 */
-VCursorCache * VCursorColumns ( struct VCursor * self );
+VCursorCache * VCursorColumns ( struct VCursor * self, uint32_t ctx_type );
+
+/* GetColumn
+*/
+struct VColumn * VCursorGetColumn ( struct VCursor * self, const struct VCtxId * ctx );
+
+/* SetColumn
+*/
+rc_t VCursorSetColumn ( struct VCursor * self, struct VColumn * col );
 
 /* PhysicalColumns
 */
 VCursorCache * VCursorPhysicalColumns ( struct VCursor * self );
+
+/* Productions
+ * ctx_type either eTable or eView
+*/
+VCursorCache * VCursorProductions ( struct VCursor * self, uint32_t ctx_type );
 
 /* GetRow
 */
@@ -185,7 +199,7 @@ bool VCursorIsReadOnly ( const struct VCursor * self );
 VBlobMRUCache * VCursorGetBlobMruCache ( struct VCursor * self );
 uint32_t VCursorIncrementPhysicalProductionCount ( struct VCursor * curs );
 
-const struct KSymbol * VCursorFindOverride ( const struct VCursor *self, const struct VCtxId *cid, const struct VTable * tbl, const struct VView * view );
+const struct KSymbol * VCursorFindOverride ( const struct VCursor *self, const struct VCtxId *cid, const struct VTable * tbl );
 
 rc_t VCursorLaunchPagemapThread ( struct VCursor *self );
 const PageMapProcessRequest* VCursorPageMapProcessRequest ( const struct VCursor *self );

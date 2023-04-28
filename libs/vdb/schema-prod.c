@@ -948,7 +948,7 @@ rc_t physical_declaration ( KSymTable *tbl, KTokenSource *src, KToken *t,
         SNameOverload *name = ( void* ) p -> name -> u . obj;
         if ( name == NULL )
         {
-            rc = SNameOverloadMake ( & name, p -> name, 0, 8 );
+            rc = SNameOverloadMake ( & name, p -> name, 0, 0, 8 );
             if ( rc == 0 )
             {
                 rc = VectorAppend ( & self -> pname, & name -> cid . id, name );

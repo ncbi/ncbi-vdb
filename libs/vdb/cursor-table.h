@@ -169,12 +169,6 @@ rc_t VTableCursorListReadableColumns ( VCURSOR_IMPL *self, BSTree *columns );
 rc_t VCursorListWritableColumns ( VCURSOR_IMPL *self, BSTree *columns );
 rc_t VCursorListSeededWritableColumns ( VCURSOR_IMPL *self, BSTree *columns, struct KNamelist const *seed );
 
-/* PostOpenAdd
- *  handle opening of a column after the cursor is opened
- */
-rc_t VCursorPostOpenAdd ( VCURSOR_IMPL *self, struct VColumn *col );
-rc_t VCursorPostOpenAddRead ( VCURSOR_IMPL *self, struct VColumn *col );
-
 /* Open
  */
 rc_t VCursorOpenRead ( VCURSOR_IMPL *self, struct KDlset const *libs );
@@ -189,7 +183,7 @@ const struct VSchema * VTableCursorGetSchema ( const VCURSOR_IMPL * self );
 VBlobMRUCache * VTableCursorGetBlobMruCache ( VCURSOR_IMPL * self );
 uint32_t VTableCursorIncrementPhysicalProductionCount ( VCURSOR_IMPL * self );
 
-const struct KSymbol * VTableCursorFindOverride ( const VCURSOR_IMPL *self, const struct VCtxId *cid, const struct VTable * tbl, const struct VView * view );
+const struct KSymbol * VTableCursorFindOverride ( const VCURSOR_IMPL *self, const struct VCtxId *cid, const struct VTable * tbl );
 
 rc_t CC VTableCursorPermitPostOpenAdd ( struct VCURSOR_IMPL const *self );
 
@@ -209,6 +203,9 @@ const PageMapProcessRequest* VTableCursorPageMapProcessRequest ( const struct VC
 rc_t VTableCursorTerminatePagemapThread(struct VCURSOR_IMPL *self);
 
 bool VTableCursorCacheActive ( const struct VCURSOR_IMPL * self, int64_t * cache_empty_end );
+
+struct VCursorCache * VTableCursorColumns ( struct VCURSOR_IMPL * self, uint32_t ctx_type );
+struct VCursorCache * VTableCursorProductions ( struct VCURSOR_IMPL * self, uint32_t ctx_type );
 
 #ifdef __cplusplus
 }

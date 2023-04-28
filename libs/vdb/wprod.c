@@ -34,6 +34,7 @@
 #include "schema-priv.h"
 #include "schema-expr.h"
 #include "cursor-priv.h"
+#include "cursor-struct.h"
 #include "column-priv.h"
 #include "phys-priv.h"
 #undef KONST
@@ -80,7 +81,7 @@ rc_t VProdResolveColumnRoot ( const VProdResolve *self,
     }
 
     /* write-only cursor must have existing column */
-    wcol = VCursorCacheGet ( VCursorColumns ( curs ), & scol -> cid );
+    wcol = (WColumn*) VCursorGetColumn ( curs, & scol -> cid );
     if ( wcol == NULL )
         return 0;
 
@@ -161,19 +162,19 @@ rc_t VProdResolveColumn ( const VProdResolve *self,
     VProduction **out, const SColumn *scol, bool alt )
 {
     rc_t rc;
-    VColumn *vcol;
     WColumn *wcol;
     VCursor *curs = self -> curs;
 
     /* decide upon behavior */
     if ( VCursorIsReadOnly ( curs ) )
     {
+        VColumn *vcol;
         if ( alt )
         {
             /* TODO: Generate warning message */
             return RC ( rcVDB, rcCursor, rcOpening, rcSchema, rcInvalid );
         }
-        vcol = VCursorCacheGet ( VCursorColumns ( curs ), & scol -> cid );
+        vcol = VCursorGetColumn ( curs, & scol -> cid );
         if ( vcol == NULL )
         {
             rc = VCursorMakeColumn ( curs, & vcol, scol, self -> cx_bind );
@@ -188,7 +189,7 @@ rc_t VProdResolveColumn ( const VProdResolve *self,
                 return rc;
             }
 #endif
-            rc = VCursorCacheSet ( VCursorColumns ( curs ), & scol -> cid, vcol );
+            rc = VCursorSetColumn ( curs, vcol );
             if ( rc != 0 )
             {
 #if OPEN_COLUMN_ALTERS_ROW
@@ -217,9 +218,11 @@ rc_t VProdResolveColumn ( const VProdResolve *self,
     }
 
     /* get existing column */
-    wcol = VCursorCacheGet ( VCursorColumns ( curs ), & scol -> cid );
+    wcol = VCursorCacheGet ( & curs -> col, & scol -> cid );
     if ( wcol == NULL )
     {
+        VColumn *vcol;
+
         /* normally write-only cursor must have existing column */
         if ( ! self -> discover_writable_columns )
             return 0;
@@ -236,7 +239,7 @@ rc_t VProdResolveColumn ( const VProdResolve *self,
         if ( rc == 0 )
         {
             /* add it to the indexed vector */
-            rc = VCursorCacheSet ( VCursorColumns ( curs ), & scol -> cid, vcol );
+            rc = VCursorSetColumn ( curs, vcol );
             if ( rc != 0 )
             {
                 void *ignore;
