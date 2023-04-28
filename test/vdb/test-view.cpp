@@ -302,6 +302,22 @@ FIXTURE_TEST_CASE ( View_BindParameterTable_AlreadyBound, ViewFixture )
     REQUIRE_RC_FAIL ( VViewBindParameterTable ( m_view, & t, m_table ) ); // already done
 }
 
+FIXTURE_TEST_CASE ( View_BindParameterTable_Derived, ViewFixture )
+{
+    m_schemaText =
+        "version 2.0;"
+        "table T#1 { column ascii c1; };"
+        "table P#1 = T#1 { column ascii c2; };"
+        "database DB#1 { table T t; table P p; };"
+        "view V#1 < T tbl > {};";   // should accept P since it is derived from T
+
+    CreateView ( GetName(), "V" );
+    REQUIRE_RC ( VDatabaseOpenTableRead ( m_db, & m_table, "p" ) );
+    String t;
+    StringInitCString ( & t, TableParamName );
+    REQUIRE_RC ( VViewBindParameterTable ( m_view, & t, m_table ) );
+}
+
 // BindParameterView
 
 const string ViewOnView = BaseSchemaText + "view W#1 < V vw > {};";
@@ -377,6 +393,26 @@ FIXTURE_TEST_CASE ( View_BindParameterView_AlreadyBound, ViewFixture )
     CONST_STRING ( & t, "vw" );
     REQUIRE_RC ( VViewBindParameterView ( m_view, & t, v ) ); // W<V>
     REQUIRE_RC_FAIL ( VViewBindParameterView ( m_view, & t, v ) ); // already done
+    REQUIRE_RC ( VViewRelease ( v ) );
+}
+
+FIXTURE_TEST_CASE ( View_BindParameterView_Derived, ViewFixture )
+{
+    m_schemaText =
+        "version 2.0;"
+        "table T#1 { column ascii c1; };"
+        "table P#1 = T#1 { column ascii c2; };"
+        "database DB#1 { table T t; table P p; };"
+        "view W#1 < T tbl > {};"
+        "view WW#1 < T tbl > = W < tbl > {};"
+        "view V#1 < W vw > {};";   // should accept WW since it is derived from W
+
+    CreateView ( GetName(), "V" );
+    const VView * v;
+    REQUIRE_RC ( VDBManagerOpenView ( m_mgr, & v, m_schema, "WW" ) );
+    String t;
+    CONST_STRING ( & t, "vw" );
+    REQUIRE_RC ( VViewBindParameterView ( m_view, & t, v ) ); // V<WW>
     REQUIRE_RC ( VViewRelease ( v ) );
 }
 
