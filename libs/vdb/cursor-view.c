@@ -240,6 +240,11 @@ VViewCursorAddSColumn ( VViewCursor *      p_self,
 
             if ( rc == 0 )
             {
+printf("VViewCursorAddSColumn(%p/%.*s, %.*s)...",
+        (void*)p_self,
+        p_self->view->sview->name->name.len, p_self->view->sview->name->name.addr,
+        p_scol->name->name.len, p_scol->name->name.addr
+         );
                 /* insert it into vectors */
                 rc = VectorAppend ( & p_self -> dad . row, & col -> ord, col );
                 if ( rc == 0 )
@@ -249,11 +254,13 @@ VViewCursorAddSColumn ( VViewCursor *      p_self,
                     if ( rc == 0 )
                     {
                         * p_idx = col -> ord;
+printf("success. len=%u\n", VectorLength(& p_self -> dad . row));
                         return 0;
                     }
                     VectorSwap ( & p_self -> dad . row, col -> ord, NULL, & ignore );
                 }
             }
+printf("failure\n");
             VColumnWhack ( col, NULL );
         }
     }
@@ -1236,11 +1243,22 @@ VViewCursorOpenParentRead ( const VViewCursor * p_self, const VTable ** p_tbl )
 const KSymbol * VViewCursorFindOverride ( const VViewCursor * p_self, const struct VCtxId * p_cid, const VTable * p_tbl, const struct VView * view )
 {
     /*TODO: need to know the current view/table, and dispatch to the corresponding S-object */
+
     if ( p_tbl != NULL )
     {
-        return STableFindOverride ( p_tbl -> stbl, p_cid );
+        const struct KSymbol * ret = STableFindOverride ( p_tbl -> stbl, p_cid );
+printf ( "VViewCursorFindOverride - table (%.*s, ctx={%u,%u}) = %p\n",
+            p_tbl -> stbl -> name -> name . len, p_tbl -> stbl -> name -> name . addr,
+            p_cid -> ctx, p_cid -> id, (void*) ret
+        );
+        return ret;
     }
-    return SViewFindOverride ( p_self -> view -> sview, p_cid );
+    const struct KSymbol * ret = SViewFindOverride ( p_self -> view -> sview, p_cid );
+printf ( "VViewCursorFindOverride - view (%.*s, ctx={%u,%u}) = %p\n",
+        p_self -> view -> sview -> name -> name . len, p_self -> view -> sview -> name -> name . addr,
+        p_cid -> ctx, p_cid -> id, (void*) ret
+    );
+    return ret;
 }
 
 rc_t VViewCursorPermitPostOpenAdd ( const VViewCursor * self )
@@ -1341,7 +1359,7 @@ rc_t VCursorListCol_consolidate_and_insert( const VViewCursor *self, BSTree *col
     {
         uint32_t idx = VectorStart ( & self -> dad . row );
         uint32_t end = VectorLength ( & self -> dad . row );
-
+printf("%p count=%u\n", (void*)self, end);
         for ( end += idx; idx < end; ++idx )
         {
             const VColumn* vcol = ( const VColumn* ) VectorGet ( & self -> dad . row, idx );

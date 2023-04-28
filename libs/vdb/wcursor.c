@@ -369,6 +369,8 @@ rc_t VTableWriteCursorOpen ( const VTableCursor *cself )
                     pr . ld = ld;
                     pr . libs = libs;
                     pr . name = & self -> stbl -> name -> name;
+                    pr . primary_table = VCursorGetTable ( & self -> dad );
+                    pr . view = NULL;
                     pr . curs = & self -> dad;
                     pr . cache = & self -> dad . prod;
                     pr . owned = & self -> dad . owned;
