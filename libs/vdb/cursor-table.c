@@ -529,11 +529,6 @@ rc_t VTableCursorAddSColumn ( VCURSOR_IMPL *self, uint32_t *idx,
     rc = VCursorMakeColumn ( & self -> dad, & col, scol, cx_bind );
     if ( rc == 0 )
     {
-printf("VTableCursorAddSColumn(%p/%.*s, %.*s)...",
-        (void*)self,
-        self->tbl->stbl->name->name.len, self->tbl->stbl->name->name.addr,
-        scol->name->name.len, scol->name->name.addr
-         );
         /* insert it into vectors */
         rc = VectorAppend ( & self -> dad . row, & col -> ord, col );
         if ( rc == 0 )
@@ -558,7 +553,6 @@ printf("VTableCursorAddSColumn(%p/%.*s, %.*s)...",
                     {
                         /* has been entered */
                         * idx = col -> ord;
-printf("success. len=%u\n", VectorLength(& self -> dad . row));
                         return 0;
                     }
                 }
@@ -2159,12 +2153,7 @@ uint32_t VTableCursorIncrementPhysicalProductionCount ( struct VCURSOR_IMPL * se
 const struct KSymbol * VTableCursorFindOverride ( const VCURSOR_IMPL * self, const struct VCtxId * cid, const struct VTable * tbl, const struct VView * view )
 {
     assert ( tbl == self -> tbl );
-    const struct KSymbol * ret = STableFindOverride ( self -> stbl, cid );
-    DBGMSG(DBG_VDB, DBG_FLAG(DBG_VDB_VDB), ("VTableCursorFindOverride(%.*s, ctx={%u,%u}) = %p\n",
-        self -> stbl -> name -> name . len, self -> stbl -> name -> name . addr,
-        cid -> ctx, cid -> id, (void*) ret
-    ));
-    return ret;
+    return STableFindOverride ( self -> stbl, cid );
 }
 
 const struct VTable * VTableCursorGetBoundTable( const struct VCURSOR_IMPL * self, const struct String * name )

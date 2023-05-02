@@ -256,11 +256,6 @@ VViewCursorAddSColumn ( VViewCursor *      p_self,
 
             if ( rc == 0 )
             {
-printf("VViewCursorAddSColumn(%p/%.*s, %.*s)...",
-        (void*)p_self,
-        p_self->view->sview->name->name.len, p_self->view->sview->name->name.addr,
-        p_scol->name->name.len, p_scol->name->name.addr
-         );
                 /* insert it into vectors */
                 rc = VectorAppend ( & p_self -> dad . row, & col -> ord, col );
                 if ( rc == 0 )
@@ -270,13 +265,11 @@ printf("VViewCursorAddSColumn(%p/%.*s, %.*s)...",
                     if ( rc == 0 )
                     {
                         * p_idx = col -> ord;
-printf("success. len=%u\n", VectorLength(& p_self -> dad . row));
                         return 0;
                     }
                     VectorSwap ( & p_self -> dad . row, col -> ord, NULL, & ignore );
                 }
             }
-printf("failure\n");
             VColumnWhack ( col, NULL );
         }
     }
