@@ -956,7 +956,6 @@ FIXTURE_TEST_CASE ( KDBManager_Leak, WVDB_Fixture )
     }
 }
 
-
 //////////////////////////////////////////// Main
 extern "C"
 {
