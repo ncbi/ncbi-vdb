@@ -2150,7 +2150,7 @@ uint32_t VTableCursorIncrementPhysicalProductionCount ( struct VCURSOR_IMPL * se
     return ++ self -> phys_cnt;
 }
 
-const struct KSymbol * VTableCursorFindOverride ( const VCURSOR_IMPL * self, const struct VCtxId * cid, const struct VTable * tbl )
+const struct KSymbol * VTableCursorFindOverride ( const VCURSOR_IMPL * self, const struct VCtxId * cid, const struct VTable * tbl, const struct VView * view )
 {
     assert ( tbl == self -> tbl );
     return STableFindOverride ( self -> stbl, cid );

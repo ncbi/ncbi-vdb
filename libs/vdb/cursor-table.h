@@ -183,7 +183,7 @@ const struct VSchema * VTableCursorGetSchema ( const VCURSOR_IMPL * self );
 VBlobMRUCache * VTableCursorGetBlobMruCache ( VCURSOR_IMPL * self );
 uint32_t VTableCursorIncrementPhysicalProductionCount ( VCURSOR_IMPL * self );
 
-const struct KSymbol * VTableCursorFindOverride ( const VCURSOR_IMPL *self, const struct VCtxId *cid, const struct VTable * tbl );
+const struct KSymbol * VTableCursorFindOverride ( const VCURSOR_IMPL *self, const struct VCtxId *cid, const struct VTable * tbl, const struct VView * view );
 
 rc_t CC VTableCursorPermitPostOpenAdd ( struct VCURSOR_IMPL const *self );
 

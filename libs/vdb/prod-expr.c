@@ -410,7 +410,9 @@ rc_t VProdResolveFwdExpr ( const VProdResolve *self, VProduction **out,
     if ( sym -> type == eVirtual )
     {
         /* most derived table/view */
-        const KSymbol *sym2 = VCursorFindOverride ( self -> curs, ( const VCtxId* ) & sym -> u . fwd, self -> primary_table );
+        const KSymbol *sym2 = sym;
+        const VCtxId* ctx = ( const VCtxId* ) & sym -> u . fwd;
+        sym2 = VCursorFindOverride ( self -> curs, ctx, self -> primary_table, self -> view );
         if ( sym2 == NULL )
         {
             PLOGMSG ( klogWarn, ( klogWarn, "virtual reference '$(fwd)' not found in overrides table"

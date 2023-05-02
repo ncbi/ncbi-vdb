@@ -102,7 +102,7 @@ static rc_t VViewCursorSuspendTriggers ( const VViewCursor * self );
 static uint64_t VViewCursorSetCacheCapacity ( VViewCursor *self,uint64_t capacity);
 static uint64_t VViewCursorGetCacheCapacity ( const VViewCursor *self);
 
-static const KSymbol * VViewCursorFindOverride ( const VViewCursor * p_self, const struct VCtxId * p_cid, const VTable * tbl );
+static const KSymbol * VViewCursorFindOverride ( const VViewCursor * p_self, const struct VCtxId * p_cid, const VTable * tbl, const struct VView * view );
 
 static rc_t VViewCursorLaunchPagemapThread ( struct VViewCursor *self );
 static const PageMapProcessRequest* VViewCursorPageMapProcessRequest ( const struct VViewCursor *self );
@@ -1319,7 +1319,7 @@ VViewCursorIdRange ( const VViewCursor * p_self, uint32_t p_idx, int64_t * p_fir
     return rc;
 }
 
-const KSymbol * VViewCursorFindOverride ( const VViewCursor * p_self, const struct VCtxId * p_cid, const VTable * p_tbl )
+const KSymbol * VViewCursorFindOverride ( const VViewCursor * p_self, const struct VCtxId * p_cid, const VTable * p_tbl, const struct VView * view )
 {
     if ( p_cid -> ctx_type == eTable )
     {

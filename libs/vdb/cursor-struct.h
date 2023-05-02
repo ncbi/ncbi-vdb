@@ -118,7 +118,7 @@ struct VCursor_vt
     bool ( * isReadOnly ) ( const VCURSOR_IMPL * self );
     VBlobMRUCache * ( * getBlobMruCache ) ( VCURSOR_IMPL * self );
     uint32_t ( * incrementPhysicalProductionCount ) ( VCURSOR_IMPL * self );
-    const struct KSymbol * ( * findOverride ) ( const VCURSOR_IMPL *self, const struct VCtxId *cid, const struct VTable * tbl );
+    const struct KSymbol * ( * findOverride ) ( const VCURSOR_IMPL *self, const struct VCtxId *cid, const struct VTable * tbl, const struct VView * view );
     rc_t ( * launchPagemapThread ) ( VCURSOR_IMPL *self );
     const PageMapProcessRequest * ( * pageMapProcessRequest ) ( const VCURSOR_IMPL *self );
     bool ( * cacheActive ) ( const VCURSOR_IMPL * self, int64_t * cache_empty_end );

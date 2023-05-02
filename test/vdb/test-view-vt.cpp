@@ -790,7 +790,7 @@ FIXTURE_TEST_CASE( ViewCursor_FindOverride, ViewOnTableCursorFixture )
 
     CreateCursor ( GetName(), "V" );
     VCtxId id = {0, 1, eView };
-    const KSymbol * sym = VCursorFindOverride ( m_cur, & id, NULL );
+    const KSymbol * sym = VCursorFindOverride ( m_cur, & id, NULL, NULL );
     REQUIRE_NOT_NULL ( sym );
     REQUIRE_EQ ( string ("virt"), ToCppString ( sym -> name ) );
 }

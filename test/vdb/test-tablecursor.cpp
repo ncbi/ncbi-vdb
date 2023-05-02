@@ -606,7 +606,7 @@ FIXTURE_TEST_CASE( VTableCursor_FindOverride, TableCursorFixture )
 {
     MakeReadCursor ( Accession );
     VCtxId id = {5, 3};
-    const KSymbol * sym = VCursorFindOverride ( m_cur, & id, VCursorGetTable ( m_cur ) );
+    const KSymbol * sym = VCursorFindOverride ( m_cur, & id, VCursorGetTable ( m_cur ), NULL );
     REQUIRE_NOT_NULL ( sym );
     REQUIRE_EQ ( string ("out_spot_group"), ToCppString ( sym -> name ) );
 }

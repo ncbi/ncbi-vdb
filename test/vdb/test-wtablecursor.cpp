@@ -555,7 +555,7 @@ FIXTURE_TEST_CASE( VTableCursor_FindOverride, TableCursorFixture )
 
     MakeWriteCursor ( GetName(), SchemaWithOverrides );
     VCtxId id = {0, 1}; // 0 is the id of T0 which first introduced x, 1 is its column id in T
-    const KSymbol * sym = VCursorFindOverride ( m_cur, & id, VCursorGetTable ( m_cur ) );
+    const KSymbol * sym = VCursorFindOverride ( m_cur, & id, VCursorGetTable ( m_cur ), NULL );
     REQUIRE_NOT_NULL ( sym );
     REQUIRE_EQ ( string ("x"), ToCppString ( sym -> name ) );
 }

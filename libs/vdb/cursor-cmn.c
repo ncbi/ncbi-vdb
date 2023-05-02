@@ -183,9 +183,9 @@ uint32_t VCursorIncrementPhysicalProductionCount ( struct VCursor * self )
 {
     DISPATCH_VALUE ( incrementPhysicalProductionCount ( self ), 0 );
 }
-const struct KSymbol * VCursorFindOverride ( const VCursor *self, const struct VCtxId *cid, const VTable * tbl )
+const struct KSymbol * VCursorFindOverride ( const VCursor *self, const struct VCtxId *cid, const VTable * tbl, const struct VView * view  )
 {
-    DISPATCH_VALUE ( findOverride ( self, cid, tbl ), NULL );
+    DISPATCH_VALUE ( findOverride ( self, cid, tbl, view ), NULL );
 }
 LIB_EXPORT rc_t CC VCursorPermitPostOpenAdd(struct VCursor const *self)
 {
