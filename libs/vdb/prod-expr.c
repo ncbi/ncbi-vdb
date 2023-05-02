@@ -669,6 +669,7 @@ rc_t VProdResolveExpr ( const VProdResolve *self,
 
     case eCondExpr:
         /* run left and right expressions in order until exit condition */
+VDB_DEBUG (( "eCondExpr(%p: %p/%u, %p/%u )\n", (void*)expr, (void*) ( ( const SBinExpr* ) expr ) -> left, ( ( const SBinExpr* ) expr ) -> left -> var, (void*) ( ( const SBinExpr* ) expr ) -> right, ( ( const SBinExpr* ) expr ) -> right -> var));
         rc = VProdResolveExpr ( self, out, desc, fd, ( ( const SBinExpr* ) expr ) -> left, casting );
         assert (rc != -1);
         if ( ( rc == 0 && * out == NULL ) || self -> discover_writable_columns )

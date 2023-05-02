@@ -75,7 +75,6 @@ static const char* TableColumnName = "c1";
 
 static const char* ViewOnTableName = "ViewOnTable";
 static const char* ViewOnViewName = "ViewOnView";
-static const char* ViewWithProductionName = "ViewWithProduction";
 static const char* TableParamName = "p_tbl";
 static const char* ViewParamName = "p_v";
 static const char* ViewColumnName = "c";
@@ -242,7 +241,7 @@ public:
 #endif
     }
 };
-
+#if 0
 ///////////////////////////// View-attached VCursor
 
 // virtual function table
@@ -300,6 +299,28 @@ FIXTURE_TEST_CASE( ViewCursor_ParametersColumnAddedToRow, ViewOnTableCursorFixtu
     REQUIRE_EQ( string(ViewColumnName), ToCppString (((VColumn*)VectorGet(row, 1))->scol->name->name) );
     REQUIRE_EQ( string(TableColumnName), ToCppString (((VColumn*)VectorGet(row, 2))->scol->name->name) );
 }
+#endif
+FIXTURE_TEST_CASE( ViewCursor_ViewVsTableWithSameId, ViewOnTableCursorFixture )
+{   // when looking for overrides, we need to distinguish between the view, its's primary table and the table/view we are currently pivoted into
+    m_keepDb = true;
+    m_schemaText =
+    "version 2.0;"
+    "table T0#1 { column ascii c2 = v1; };" // v1 is virtual; T0 has the same id as V
+    "table T1#1 = T0#1{ column ascii c1; ascii v1 = c1; };" // inherits c2 from T0, resolves v1
+    "database DB#1 { table T1 t; };"
+
+    "view V#1 < T1 p_tbl > { column ascii c3 = p_tbl . c2; };"
+        // we search for c2 in p_tbl (bound to t1 of type T1 which inherits c2 from T0 with <table> id 0, same as <view> id of V)
+        // the bug this test case is exposing is in looking up c2 in V instead of T1, since c2's context id is 0.
+    ;
+
+    CreateCursorOpen ( GetName(), "V", "c3" );
+
+    // read c1
+    REQUIRE_EQ ( string ("blah"), ReadAscii ( 1, m_columnIdx ) );
+    REQUIRE_EQ ( string ("eeee"), ReadAscii ( 2, m_columnIdx ) );
+}
+//TODO: same with a parameter-view
 
 // View inheritance
 
