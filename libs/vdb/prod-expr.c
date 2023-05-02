@@ -807,7 +807,6 @@ rc_t VProdResolveColumnRead ( const VProdResolve *self,
                       scol -> name, __func__ ) );
         return 0;
     }
-VDB_DEBUG ( ( "-> %.*s\n", vcol->scol->name->name.len, vcol->scol->name->name.addr ) );
     /* if the read production is in place, return it */
     if ( vcol -> in != NULL )
     {
