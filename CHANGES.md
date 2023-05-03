@@ -1,6 +1,15 @@
 # NCBI External Developer Release:
 
 
+## NCBI VDB 3.0.5
+**May 9, 2023**
+
+  **blast**: added possibility to return filtered reads  
+  **build, ncbi-vdb**: ncbi-vdb upgraded to mbedtls major version 3 to fix crypto errors on some Macs (clang 14), and ncbi-vdb will not use the system mbedtls  
+  **build, ncbi-vdb**: downgraded internal mbedtls to 3.2.1 to fix MSVC 2017 build issues  
+  **kfg, ngs-tools, sra-tools, vfs**: stopped using old names resolver cgi  
+
+
 ## NCBI VDB 3.0.2
 **December 12, 2022**
 
