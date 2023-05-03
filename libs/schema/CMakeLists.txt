@@ -52,6 +52,7 @@ endif()
 
 set( SRC
     AST.cpp
+    AST_Expr.cpp
     ASTBuilder-db.cpp
     ASTBuilder-func.cpp
     ASTBuilder-phys.cpp

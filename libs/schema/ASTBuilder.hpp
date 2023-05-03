@@ -34,6 +34,9 @@
 #include <kfc/except.h>
 
 #include <klib/rc.h>
+#include <klib/symtab.h>
+
+#include <vdb/schema.h>
 
 #include "AST.hpp"
 #include "ErrorReport.hpp"

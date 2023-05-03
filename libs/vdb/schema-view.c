@@ -336,11 +336,10 @@ CC SViewInstanceWhack ( void *item, void *ignore )
 
 /*
  * init-tbl-symtab
- *  initializes "p_view"
+ *  initializes "p_tbl"
  *  places view in scope
  *  must be balanced by KSymTableWhack
  */
-static
 rc_t
 init_view_symtab ( KSymTable * p_tbl, const VSchema * p_schema, const SView * p_view )
 {
