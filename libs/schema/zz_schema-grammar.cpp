@@ -765,34 +765,34 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_int16 yyrline[] =
 {
-       0,   306,   306,   307,   311,   312,   313,   319,   323,   324,
-     328,   329,   330,   331,   332,   333,   334,   335,   336,   337,
-     338,   339,   340,   341,   347,   355,   356,   362,   367,   371,
-     378,   379,   383,   384,   388,   389,   395,   397,   402,   406,
-     413,   420,   425,   431,   435,   436,   437,   447,   452,   457,
-     458,   462,   466,   467,   471,   472,   476,   477,   481,   482,
-     486,   490,   491,   493,   495,   497,   502,   503,   507,   511,
-     515,   516,   518,   520,   522,   527,   528,   532,   533,   538,
-     539,   543,   545,   547,   552,   553,   557,   558,   565,   570,
-     577,   579,   587,   594,   604,   605,   609,   611,   616,   617,
-     621,   623,   625,   627,   632,   639,   647,   648,   652,   653,
-     657,   659,   664,   665,   669,   670,   671,   673,   675,   676,
-     677,   678,   679,   681,   685,   687,   692,   693,   697,   698,
-     702,   703,   704,   708,   710,   715,   717,   719,   724,   726,
-     728,   733,   734,   738,   742,   743,   747,   748,   752,   753,
-     754,   755,   759,   764,   766,   768,   770,   775,   780,   781,
-     785,   786,   790,   791,   795,   796,   803,   804,   808,   809,
-     813,   814,   815,   816,   817,   818,   819,   820,   821,   822,
-     823,   824,   825,   829,   836,   845,   846,   850,   851,   852,
-     856,   857,   861,   865,   866,   870,   871,   875,   876,   880,
-     881,   882,   886,   887,   891,   892,   896,   900,   901,   905,
-     906,   910,   911,   915,   916,   920,   921,   925,   927,   934,
-     942,   943,   947,   948,   952,   953,   957,   958,   959,   963,
-     964,   968,   973,   981,   989,   990,   992,   993,   994,   995,
-     996,   997,   998,   999,  1003,  1007,  1011,  1015,  1016,  1022,
-    1026,  1027,  1031,  1032,  1036,  1041,  1042,  1046,  1050,  1051,
-    1055,  1056,  1060,  1062,  1064,  1068,  1069,  1073,  1074,  1078,
-    1083,  1084
+       0,   313,   313,   314,   318,   319,   320,   326,   330,   331,
+     335,   336,   337,   338,   339,   340,   341,   342,   343,   344,
+     345,   346,   347,   348,   354,   362,   363,   369,   374,   378,
+     385,   386,   390,   391,   395,   396,   402,   404,   409,   413,
+     420,   427,   432,   438,   442,   443,   444,   454,   459,   464,
+     465,   469,   473,   474,   478,   479,   483,   484,   488,   489,
+     493,   497,   498,   500,   502,   504,   509,   510,   514,   518,
+     522,   523,   525,   527,   529,   534,   535,   539,   540,   545,
+     546,   550,   552,   554,   559,   560,   564,   565,   572,   577,
+     584,   586,   594,   601,   611,   612,   616,   618,   623,   624,
+     628,   630,   632,   634,   639,   646,   654,   655,   659,   660,
+     664,   666,   671,   672,   676,   677,   678,   680,   682,   683,
+     684,   685,   686,   688,   692,   694,   699,   700,   704,   705,
+     709,   710,   711,   715,   717,   722,   724,   726,   731,   733,
+     735,   740,   741,   745,   749,   750,   754,   755,   759,   760,
+     761,   762,   766,   771,   773,   775,   777,   782,   787,   788,
+     792,   793,   797,   798,   802,   803,   810,   811,   815,   816,
+     820,   821,   822,   823,   824,   825,   826,   827,   828,   829,
+     830,   831,   832,   836,   843,   852,   853,   857,   858,   859,
+     863,   864,   868,   872,   873,   877,   878,   882,   883,   887,
+     888,   889,   893,   894,   898,   899,   903,   907,   908,   912,
+     913,   917,   918,   922,   923,   927,   928,   932,   934,   941,
+     949,   950,   954,   955,   959,   960,   964,   965,   966,   970,
+     971,   975,   980,   988,   996,   997,   999,  1000,  1001,  1002,
+    1003,  1004,  1005,  1006,  1010,  1014,  1018,  1022,  1023,  1029,
+    1033,  1034,  1038,  1039,  1043,  1048,  1049,  1053,  1057,  1058,
+    1062,  1063,  1067,  1069,  1071,  1075,  1076,  1080,  1081,  1085,
+    1090,  1091
 };
 #endif
 
@@ -1888,1663 +1888,3602 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     {
     case 0: /* "end of source"  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 3: /* UNRECOGNIZED  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 4: /* ELLIPSIS  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 5: /* INCREMENT  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 6: /* DECIMAL  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 7: /* OCTAL  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 8: /* HEX  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 9: /* FLOAT_  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 10: /* EXP_FLOAT  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 11: /* STRING  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 12: /* ESCAPED_STRING  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 13: /* IDENTIFIER_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 14: /* PHYSICAL_IDENTIFIER_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 15: /* VERSION  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 16: /* UNTERM_STRING  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 17: /* UNTERM_ESCAPED_STRING  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 18: /* VERS_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 19: /* VERS_2_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 20: /* KW___no_header  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 21: /* KW___row_length  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 22: /* KW___untyped  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 23: /* KW_alias  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 24: /* KW_column  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 25: /* KW_const  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 26: /* KW_control  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 27: /* KW_database  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 28: /* KW_decode  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 29: /* KW_default  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 30: /* KW_encode  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 31: /* KW_extern  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 32: /* KW_false  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 33: /* KW_fmtdef  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 34: /* KW_function  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 35: /* KW_include  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 36: /* KW_limit  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 37: /* KW_physical  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 38: /* KW_read  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 39: /* KW_readonly  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 40: /* KW_return  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 41: /* KW_schema  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 42: /* KW_static  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 43: /* KW_table  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 44: /* KW_template  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 45: /* KW_trigger  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 46: /* KW_true  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 47: /* KW_type  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 48: /* KW_typedef  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 49: /* KW_typeset  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 50: /* KW_validate  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 51: /* KW_version  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 52: /* KW_view  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 53: /* KW_virtual  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 54: /* KW_void  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 55: /* KW_write  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 56: /* PT_ASTLIST  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 57: /* PT_PARSE  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 58: /* PT_SOURCE  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 59: /* PT_VERSION_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 60: /* PT_VERSION_2  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 61: /* PT_SCHEMA_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 62: /* PT_SCHEMA_2_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 63: /* PT_INCLUDE  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 64: /* PT_TYPEDEF  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 65: /* PT_FQN  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 66: /* PT_IDENT  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 67: /* PT_PHYSIDENT  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 68: /* PT_UINT  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 69: /* PT_TYPESET  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 70: /* PT_TYPESETDEF  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 71: /* PT_FORMAT  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 72: /* PT_CONST  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 73: /* PT_ALIAS  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 74: /* PT_EXTERN  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 75: /* PT_FUNCTION  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 76: /* PT_UNTYPED  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 77: /* PT_ROWLENGTH  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 78: /* PT_FUNCDECL  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 79: /* PT_EMPTY  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 80: /* PT_SCHEMASIG  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 81: /* PT_SCHEMAFORMAL  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 82: /* PT_RETURNTYPE  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 83: /* PT_FACTSIG  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 84: /* PT_FUNCSIG  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 85: /* PT_FUNCPARAMS  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 86: /* PT_FORMALPARAM  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 87: /* PT_ELLIPSIS  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 88: /* PT_FUNCPROLOGUE  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 89: /* PT_RETURN  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 90: /* PT_PRODSTMT  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 91: /* PT_PRODTRIGGER  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 92: /* PT_SCHEMA  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 93: /* PT_VALIDATE  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 94: /* PT_PHYSICAL  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 95: /* PT_PHYSPROLOGUE  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 96: /* PT_PHYSSTMT  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 97: /* PT_PHYSBODYSTMT  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 98: /* PT_TABLE  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 99: /* PT_TABLEPARENTS  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 100: /* PT_TABLEBODY  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 101: /* PT_FUNCEXPR  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 102: /* PT_FACTPARMS  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 103: /* PT_COLUMN  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 104: /* PT_COLUMNEXPR  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 105: /* PT_COLDECL  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 106: /* PT_TYPEDCOL  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 107: /* PT_COLSTMT  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 108: /* PT_DFLTVIEW  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 109: /* PT_PHYSMBR  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 110: /* PT_PHYSCOL  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 111: /* PT_PHYSCOLDEF  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 112: /* PT_COLSCHEMAPARMS  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 113: /* PT_COLSCHEMAPARAM  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 114: /* PT_COLUNTYPED  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 115: /* PT_DATABASE  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 116: /* PT_TYPEEXPR  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 117: /* PT_DBBODY  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 118: /* PT_DBDAD  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 119: /* PT_DBMEMBER  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 120: /* PT_TBLMEMBER  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 121: /* PT_NOHEADER  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 122: /* PT_CASTEXPR  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 123: /* PT_CONSTVECT  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 124: /* PT_NEGATE  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 125: /* PT_UNARYPLUS  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 126: /* PT_VERSNAME  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 127: /* PT_ARRAY  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 128: /* PT_PHYSENCREF  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 129: /* PT_TYPEDCOLEXPR  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 130: /* PT_VIEW  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 131: /* PT_VIEWPARAM  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 132: /* PT_VIEWPARENTS  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 133: /* PT_VIEWPARENT  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 134: /* PT_MEMBEREXPR  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 135: /* PT_JOINEXPR  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 136: /* ';'  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 137: /* ','  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 138: /* '{'  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 139: /* '}'  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 140: /* '['  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 141: /* ']'  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 142: /* '*'  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 143: /* '='  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 144: /* '('  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 145: /* ')'  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 146: /* '<'  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 147: /* '>'  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 148: /* '|'  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 149: /* '@'  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 150: /* '-'  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 151: /* '+'  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 152: /* '/'  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 153: /* '.'  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 154: /* ':'  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 156: /* parse  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 157: /* source  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 158: /* version_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 159: /* schema_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 160: /* schema_1_0_decl  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 161: /* typedef_1_0_decl  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 162: /* typedef_1_0_new_name_list  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 163: /* typeset_1_0_decl  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 164: /* typeset_1_0_new_name  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 165: /* typeset_1_0_def  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 166: /* typespec_1_0_list  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 167: /* typespec_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 168: /* dim_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 169: /* format_1_0_decl  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 170: /* format_1_0_new_name  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 171: /* format_1_0_name  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 172: /* const_1_0_decl  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 173: /* alias_1_0_decl  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 174: /* alias_1_0_new_name  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 175: /* function_1_0_decl  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 176: /* func_1_0_decl  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 177: /* untyped_func_1_0_decl  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 178: /* row_length_func_1_0_decl  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 179: /* opt_func_1_0_schema_sig  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 180: /* func_1_0_schema_sig  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 181: /* func_1_0_schema_formals  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 182: /* func_1_0_schema_formal  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 183: /* func_1_0_return_type  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 184: /* opt_func_1_0_fact_sig  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 185: /* func_1_0_fact_sig  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 186: /* func_1_0_fact_signature  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 187: /* func_1_0_fact_params  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 188: /* fact_param_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 189: /* func_1_0_param_sig  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 190: /* func_1_0_param_signature  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 191: /* func_1_0_formal_params  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 192: /* formal_param_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 193: /* func_1_0_vararg_formals  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 194: /* func_1_0_prologue  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 195: /* script_1_0_stmt_seq  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 196: /* script_1_0_stmt  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 197: /* extern_1_0_decl  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 198: /* ext_func_1_0_decl  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 199: /* script_1_0_decl  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 200: /* validate_1_0_decl  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 201: /* physical_1_0_decl  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 202: /* phys_1_0_return_type  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 203: /* phys_1_0_prologue  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 204: /* phys_1_0_body  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 205: /* phys_1_0_body_stmt  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 206: /* phys_1_0_stmt  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 207: /* table_1_0_decl  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 208: /* opt_tbl_1_0_parents  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 209: /* tbl_1_0_parents  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 210: /* tbl_1_0_body  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 211: /* tbl_1_0_stmt_seq  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 212: /* tbl_1_0_stmt  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 213: /* production_1_0_stmt  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 214: /* col_1_0_modifiers  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 215: /* col_1_0_modifier_seq  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 216: /* col_1_0_modifier  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 217: /* col_1_0_decl  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 218: /* phys_enc_ref  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 219: /* typed_column_decl_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 220: /* col_ident  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 221: /* phys_ident  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 222: /* opt_column_body_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 223: /* column_body_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 224: /* column_stmt_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 225: /* default_view_1_0_decl  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 226: /* physmbr_1_0_decl  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 227: /* phys_coldef_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 228: /* opt_col_schema_parms_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 229: /* col_schema_parms_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 230: /* col_schema_parm_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 231: /* col_schema_value_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 232: /* cond_expr_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 233: /* expression_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 234: /* primary_expr_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 235: /* func_expr_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 236: /* schema_parms_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 237: /* schema_parm_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 238: /* opt_factory_parms_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 239: /* factory_parms_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 240: /* factory_parms  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 241: /* opt_func_1_0_parms  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 242: /* func_1_0_parms  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 243: /* uint_expr_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 244: /* float_expr_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 245: /* string_expr_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 246: /* const_vect_expr_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 247: /* opt_const_vect_exprlist_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 248: /* const_vect_exprlist_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 249: /* bool_expr_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 250: /* type_expr_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 251: /* member_expr_2_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 252: /* join_expr_2_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 253: /* database_1_0_decl  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 254: /* opt_database_dad_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 255: /* database_body_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 256: /* database_members_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 257: /* database_member_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 258: /* opt_template_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 259: /* db_member_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 260: /* table_member_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 261: /* include_directive  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 262: /* fqn_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 263: /* ident_1_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 264: /* empty  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 265: /* fqn_vers  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 266: /* fqn_opt_vers  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 267: /* version_2_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 268: /* schema_2_0  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 269: /* schema_2_0_decl  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 270: /* view_2_0_decl  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 271: /* view_parms  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 272: /* view_parm  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 273: /* opt_view_body  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 274: /* view_body  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 275: /* view_member  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 276: /* opt_view_parents  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 277: /* view_parents  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 278: /* view_parent  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
     case 279: /* view_parent_parms  */
             {
-    ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    if ( (*yyvaluep) . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( (*yyvaluep) . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( (*yyvaluep) . leading_ws );
+    }
 }
         break;
 
