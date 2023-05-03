@@ -30,6 +30,8 @@
 
 #include <kfc/except.h>
 
+#include <kfc/except.h>
+
 #include <vdb/database.h>
 #include <vdb/manager.h>
 #include <vdb/schema.h>

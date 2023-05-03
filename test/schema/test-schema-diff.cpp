@@ -211,6 +211,13 @@ rc_t CC KMain ( int argc, char *argv [] )
                     ++ failed;
                     compare = false;
                 }
+                else if ( FAILED () )
+                {
+                    cerr << WHAT () << endl;
+                    cout << string ( "ParseFile failed! " ) << endl;
+                    ++ failed;
+                    compare = false;
+                }
                 else
                 {
                     VSchema * schema;
