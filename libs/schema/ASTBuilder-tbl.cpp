@@ -464,8 +464,6 @@ TableDeclaration :: HandleStatement ( ctx_t ctx, const AST & p_stmt )
     }
 }
 
-#include <iostream>
-using namespace std;
 void
 TableDeclaration :: HandleBody ( ctx_t ctx, const AST & p_body )
 {
@@ -474,8 +472,6 @@ TableDeclaration :: HandleBody ( ctx_t ctx, const AST & p_body )
     if ( rc == 0 )
     {
         /* scan override tables for virtual symbols */
-cout<<"before ScanVirtuals()"<<endl;
-KSymTableDump(&m_builder.GetSymTab ());
         uint32_t start = VectorStart ( & m_self -> overrides );
         uint32_t count = VectorLength ( & m_self -> overrides );
         for ( uint32_t i = 0; i < count; ++ i )
@@ -487,8 +483,6 @@ KSymTableDump(&m_builder.GetSymTab ());
                 return;
             }
         }
-cout<<"ScanVirtuals() done"<<endl;
-KSymTableDump(&m_builder.GetSymTab ());
 
         /* handle table declarations */
         count = p_body . ChildrenCount ();
@@ -496,9 +490,6 @@ KSymTableDump(&m_builder.GetSymTab ());
         {
             HandleStatement ( ctx, * p_body . GetChild ( i ) );
         }
-
-cout<<"HandleBody() done"<<endl;
-KSymTableDump(&m_builder.GetSymTab ());
 
         STableScanData pb;
         pb . self = m_self;

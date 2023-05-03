@@ -112,7 +112,7 @@
     T ( SchemaToken & p_term )
     {
         assert ( p_term . subtree == 0 );
-        return new ParseTree ( p_term );
+        return ParseTree::Make ( p_term );
     }
 
     /* Create production node */
@@ -130,7 +130,7 @@
                ParseTree * p_ch9 = 0
              )
     {
-        ParseTree * ret = new ParseTree ( Token ( p_token ) );
+        ParseTree * ret = ParseTree :: Make ( Token ( p_token ) );
         if ( p_ch1 != 0 ) ret -> AddChild ( p_ch1 );
         if ( p_ch2 != 0 ) ret -> AddChild ( p_ch2 );
         if ( p_ch3 != 0 ) ret -> AddChild ( p_ch3 );
@@ -148,7 +148,7 @@
     ParseTree *
     MakeList ( SchemaToken & p_prod )
     {
-        ParseTree * ret = new ParseTree ( Token ( PT_ASTLIST ) );
+        ParseTree * ret = ParseTree :: Make ( Token ( PT_ASTLIST ) );
         ret -> AddChild ( P ( p_prod ) );
         return ret;
     }
@@ -1793,7 +1793,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
           case 0: /* "end of source"  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1799 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -1801,7 +1801,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 3: /* UNRECOGNIZED  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1807 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -1809,7 +1809,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 4: /* ELLIPSIS  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1815 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -1817,7 +1817,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 5: /* INCREMENT  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1823 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -1825,7 +1825,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 6: /* DECIMAL  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1831 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -1833,7 +1833,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 7: /* OCTAL  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1839 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -1841,7 +1841,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 8: /* HEX  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1847 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -1849,7 +1849,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 9: /* FLOAT_  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1855 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -1857,7 +1857,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 10: /* EXP_FLOAT  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1863 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -1865,7 +1865,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 11: /* STRING  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1871 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -1873,7 +1873,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 12: /* ESCAPED_STRING  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1879 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -1881,7 +1881,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 13: /* IDENTIFIER_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1887 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -1889,7 +1889,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 14: /* PHYSICAL_IDENTIFIER_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1895 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -1897,7 +1897,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 15: /* VERSION  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1903 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -1905,7 +1905,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 16: /* UNTERM_STRING  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1911 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -1913,7 +1913,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 17: /* UNTERM_ESCAPED_STRING  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1919 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -1921,7 +1921,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 18: /* VERS_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1927 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -1929,7 +1929,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 19: /* VERS_2_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1935 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -1937,7 +1937,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 20: /* KW___no_header  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1943 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -1945,7 +1945,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 21: /* KW___row_length  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1951 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -1953,7 +1953,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 22: /* KW___untyped  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1959 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -1961,7 +1961,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 23: /* KW_alias  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1967 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -1969,7 +1969,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 24: /* KW_column  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1975 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -1977,7 +1977,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 25: /* KW_const  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1983 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -1985,7 +1985,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 26: /* KW_control  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1991 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -1993,7 +1993,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 27: /* KW_database  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1999 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2001,7 +2001,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 28: /* KW_decode  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2007 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2009,7 +2009,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 29: /* KW_default  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2015 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2017,7 +2017,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 30: /* KW_encode  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2023 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2025,7 +2025,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 31: /* KW_extern  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2031 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2033,7 +2033,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 32: /* KW_false  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2039 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2041,7 +2041,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 33: /* KW_fmtdef  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2047 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2049,7 +2049,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 34: /* KW_function  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2055 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2057,7 +2057,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 35: /* KW_include  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2063 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2065,7 +2065,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 36: /* KW_limit  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2071 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2073,7 +2073,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 37: /* KW_physical  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2079 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2081,7 +2081,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 38: /* KW_read  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2087 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2089,7 +2089,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 39: /* KW_readonly  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2095 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2097,7 +2097,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 40: /* KW_return  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2103 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2105,7 +2105,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 41: /* KW_schema  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2111 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2113,7 +2113,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 42: /* KW_static  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2119 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2121,7 +2121,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 43: /* KW_table  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2127 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2129,7 +2129,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 44: /* KW_template  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2135 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2137,7 +2137,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 45: /* KW_trigger  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2143 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2145,7 +2145,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 46: /* KW_true  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2151 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2153,7 +2153,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 47: /* KW_type  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2159 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2161,7 +2161,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 48: /* KW_typedef  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2167 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2169,7 +2169,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 49: /* KW_typeset  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2175 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2177,7 +2177,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 50: /* KW_validate  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2183 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2185,7 +2185,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 51: /* KW_version  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2191 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2193,7 +2193,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 52: /* KW_view  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2199 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2201,7 +2201,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 53: /* KW_virtual  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2207 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2209,7 +2209,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 54: /* KW_void  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2215 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2217,7 +2217,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 55: /* KW_write  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2223 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2225,7 +2225,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 56: /* PT_ASTLIST  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2231 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2233,7 +2233,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 57: /* PT_PARSE  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2239 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2241,7 +2241,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 58: /* PT_SOURCE  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2247 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2249,7 +2249,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 59: /* PT_VERSION_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2255 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2257,7 +2257,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 60: /* PT_VERSION_2  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2263 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2265,7 +2265,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 61: /* PT_SCHEMA_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2271 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2273,7 +2273,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 62: /* PT_SCHEMA_2_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2279 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2281,7 +2281,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 63: /* PT_INCLUDE  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2287 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2289,7 +2289,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 64: /* PT_TYPEDEF  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2295 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2297,7 +2297,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 65: /* PT_FQN  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2303 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2305,7 +2305,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 66: /* PT_IDENT  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2311 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2313,7 +2313,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 67: /* PT_PHYSIDENT  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2319 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2321,7 +2321,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 68: /* PT_UINT  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2327 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2329,7 +2329,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 69: /* PT_TYPESET  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2335 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2337,7 +2337,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 70: /* PT_TYPESETDEF  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2343 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2345,7 +2345,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 71: /* PT_FORMAT  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2351 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2353,7 +2353,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 72: /* PT_CONST  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2359 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2361,7 +2361,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 73: /* PT_ALIAS  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2367 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2369,7 +2369,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 74: /* PT_EXTERN  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2375 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2377,7 +2377,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 75: /* PT_FUNCTION  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2383 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2385,7 +2385,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 76: /* PT_UNTYPED  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2391 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2393,7 +2393,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 77: /* PT_ROWLENGTH  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2399 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2401,7 +2401,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 78: /* PT_FUNCDECL  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2407 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2409,7 +2409,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 79: /* PT_EMPTY  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2415 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2417,7 +2417,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 80: /* PT_SCHEMASIG  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2423 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2425,7 +2425,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 81: /* PT_SCHEMAFORMAL  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2431 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2433,7 +2433,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 82: /* PT_RETURNTYPE  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2439 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2441,7 +2441,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 83: /* PT_FACTSIG  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2447 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2449,7 +2449,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 84: /* PT_FUNCSIG  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2455 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2457,7 +2457,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 85: /* PT_FUNCPARAMS  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2463 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2465,7 +2465,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 86: /* PT_FORMALPARAM  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2471 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2473,7 +2473,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 87: /* PT_ELLIPSIS  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2479 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2481,7 +2481,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 88: /* PT_FUNCPROLOGUE  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2487 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2489,7 +2489,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 89: /* PT_RETURN  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2495 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2497,7 +2497,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 90: /* PT_PRODSTMT  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2503 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2505,7 +2505,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 91: /* PT_PRODTRIGGER  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2511 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2513,7 +2513,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 92: /* PT_SCHEMA  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2519 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2521,7 +2521,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 93: /* PT_VALIDATE  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2527 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2529,7 +2529,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 94: /* PT_PHYSICAL  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2535 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2537,7 +2537,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 95: /* PT_PHYSPROLOGUE  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2543 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2545,7 +2545,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 96: /* PT_PHYSSTMT  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2551 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2553,7 +2553,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 97: /* PT_PHYSBODYSTMT  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2559 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2561,7 +2561,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 98: /* PT_TABLE  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2567 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2569,7 +2569,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 99: /* PT_TABLEPARENTS  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2575 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2577,7 +2577,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 100: /* PT_TABLEBODY  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2583 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2585,7 +2585,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 101: /* PT_FUNCEXPR  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2591 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2593,7 +2593,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 102: /* PT_FACTPARMS  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2599 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2601,7 +2601,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 103: /* PT_COLUMN  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2607 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2609,7 +2609,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 104: /* PT_COLUMNEXPR  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2615 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2617,7 +2617,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 105: /* PT_COLDECL  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2623 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2625,7 +2625,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 106: /* PT_TYPEDCOL  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2631 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2633,7 +2633,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 107: /* PT_COLSTMT  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2639 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2641,7 +2641,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 108: /* PT_DFLTVIEW  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2647 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2649,7 +2649,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 109: /* PT_PHYSMBR  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2655 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2657,7 +2657,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 110: /* PT_PHYSCOL  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2663 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2665,7 +2665,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 111: /* PT_PHYSCOLDEF  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2671 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2673,7 +2673,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 112: /* PT_COLSCHEMAPARMS  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2679 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2681,7 +2681,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 113: /* PT_COLSCHEMAPARAM  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2687 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2689,7 +2689,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 114: /* PT_COLUNTYPED  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2695 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2697,7 +2697,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 115: /* PT_DATABASE  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2703 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2705,7 +2705,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 116: /* PT_TYPEEXPR  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2711 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2713,7 +2713,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 117: /* PT_DBBODY  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2719 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2721,7 +2721,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 118: /* PT_DBDAD  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2727 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2729,7 +2729,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 119: /* PT_DBMEMBER  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2735 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2737,7 +2737,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 120: /* PT_TBLMEMBER  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2743 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2745,7 +2745,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 121: /* PT_NOHEADER  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2751 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2753,7 +2753,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 122: /* PT_CASTEXPR  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2759 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2761,7 +2761,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 123: /* PT_CONSTVECT  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2767 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2769,7 +2769,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 124: /* PT_NEGATE  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2775 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2777,7 +2777,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 125: /* PT_UNARYPLUS  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2783 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2785,7 +2785,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 126: /* PT_VERSNAME  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2791 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2793,7 +2793,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 127: /* PT_ARRAY  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2799 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2801,7 +2801,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 128: /* PT_PHYSENCREF  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2807 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2809,7 +2809,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 129: /* PT_TYPEDCOLEXPR  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2815 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2817,7 +2817,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 130: /* PT_VIEW  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2823 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2825,7 +2825,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 131: /* PT_VIEWPARAM  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2831 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2833,7 +2833,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 132: /* PT_VIEWPARENTS  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2839 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2841,7 +2841,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 133: /* PT_VIEWPARENT  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2847 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2849,7 +2849,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 134: /* PT_MEMBEREXPR  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2855 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2857,7 +2857,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 135: /* PT_JOINEXPR  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2863 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2865,7 +2865,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 136: /* ';'  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2871 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2873,7 +2873,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 137: /* ','  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2879 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2881,7 +2881,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 138: /* '{'  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2887 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2889,7 +2889,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 139: /* '}'  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2895 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2897,7 +2897,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 140: /* '['  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2903 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2905,7 +2905,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 141: /* ']'  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2911 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2913,7 +2913,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 142: /* '*'  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2919 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2921,7 +2921,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 143: /* '='  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2927 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2929,7 +2929,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 144: /* '('  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2935 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2937,7 +2937,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 145: /* ')'  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2943 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2945,7 +2945,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 146: /* '<'  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2951 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2953,7 +2953,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 147: /* '>'  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2959 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2961,7 +2961,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 148: /* '|'  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2967 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2969,7 +2969,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 149: /* '@'  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2975 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2977,7 +2977,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 150: /* '-'  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2983 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2985,7 +2985,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 151: /* '+'  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2991 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -2993,7 +2993,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 152: /* '/'  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2999 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3001,7 +3001,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 153: /* '.'  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3007 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3009,7 +3009,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 154: /* ':'  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3015 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3017,7 +3017,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 156: /* parse  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3023 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3025,7 +3025,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 157: /* source  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3031 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3033,7 +3033,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 158: /* version_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3039 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3041,7 +3041,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 159: /* schema_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3047 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3049,7 +3049,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 160: /* schema_1_0_decl  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3055 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3057,7 +3057,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 161: /* typedef_1_0_decl  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3063 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3065,7 +3065,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 162: /* typedef_1_0_new_name_list  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3071 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3073,7 +3073,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 163: /* typeset_1_0_decl  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3079 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3081,7 +3081,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 164: /* typeset_1_0_new_name  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3087 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3089,7 +3089,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 165: /* typeset_1_0_def  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3095 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3097,7 +3097,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 166: /* typespec_1_0_list  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3103 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3105,7 +3105,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 167: /* typespec_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3111 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3113,7 +3113,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 168: /* dim_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3119 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3121,7 +3121,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 169: /* format_1_0_decl  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3127 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3129,7 +3129,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 170: /* format_1_0_new_name  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3135 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3137,7 +3137,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 171: /* format_1_0_name  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3143 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3145,7 +3145,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 172: /* const_1_0_decl  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3151 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3153,7 +3153,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 173: /* alias_1_0_decl  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3159 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3161,7 +3161,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 174: /* alias_1_0_new_name  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3167 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3169,7 +3169,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 175: /* function_1_0_decl  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3175 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3177,7 +3177,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 176: /* func_1_0_decl  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3183 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3185,7 +3185,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 177: /* untyped_func_1_0_decl  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3191 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3193,7 +3193,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 178: /* row_length_func_1_0_decl  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3199 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3201,7 +3201,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 179: /* opt_func_1_0_schema_sig  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3207 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3209,7 +3209,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 180: /* func_1_0_schema_sig  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3215 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3217,7 +3217,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 181: /* func_1_0_schema_formals  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3223 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3225,7 +3225,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 182: /* func_1_0_schema_formal  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3231 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3233,7 +3233,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 183: /* func_1_0_return_type  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3239 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3241,7 +3241,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 184: /* opt_func_1_0_fact_sig  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3247 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3249,7 +3249,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 185: /* func_1_0_fact_sig  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3255 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3257,7 +3257,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 186: /* func_1_0_fact_signature  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3263 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3265,7 +3265,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 187: /* func_1_0_fact_params  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3271 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3273,7 +3273,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 188: /* fact_param_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3279 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3281,7 +3281,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 189: /* func_1_0_param_sig  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3287 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3289,7 +3289,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 190: /* func_1_0_param_signature  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3295 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3297,7 +3297,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 191: /* func_1_0_formal_params  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3303 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3305,7 +3305,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 192: /* formal_param_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3311 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3313,7 +3313,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 193: /* func_1_0_vararg_formals  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3319 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3321,7 +3321,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 194: /* func_1_0_prologue  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3327 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3329,7 +3329,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 195: /* script_1_0_stmt_seq  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3335 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3337,7 +3337,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 196: /* script_1_0_stmt  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3343 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3345,7 +3345,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 197: /* extern_1_0_decl  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3351 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3353,7 +3353,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 198: /* ext_func_1_0_decl  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3359 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3361,7 +3361,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 199: /* script_1_0_decl  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3367 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3369,7 +3369,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 200: /* validate_1_0_decl  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3375 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3377,7 +3377,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 201: /* physical_1_0_decl  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3383 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3385,7 +3385,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 202: /* phys_1_0_return_type  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3391 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3393,7 +3393,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 203: /* phys_1_0_prologue  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3399 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3401,7 +3401,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 204: /* phys_1_0_body  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3407 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3409,7 +3409,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 205: /* phys_1_0_body_stmt  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3415 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3417,7 +3417,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 206: /* phys_1_0_stmt  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3423 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3425,7 +3425,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 207: /* table_1_0_decl  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3431 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3433,7 +3433,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 208: /* opt_tbl_1_0_parents  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3439 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3441,7 +3441,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 209: /* tbl_1_0_parents  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3447 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3449,7 +3449,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 210: /* tbl_1_0_body  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3455 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3457,7 +3457,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 211: /* tbl_1_0_stmt_seq  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3463 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3465,7 +3465,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 212: /* tbl_1_0_stmt  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3471 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3473,7 +3473,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 213: /* production_1_0_stmt  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3479 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3481,7 +3481,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 214: /* col_1_0_modifiers  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3487 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3489,7 +3489,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 215: /* col_1_0_modifier_seq  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3495 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3497,7 +3497,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 216: /* col_1_0_modifier  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3503 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3505,7 +3505,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 217: /* col_1_0_decl  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3511 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3513,7 +3513,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 218: /* phys_enc_ref  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3519 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3521,7 +3521,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 219: /* typed_column_decl_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3527 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3529,7 +3529,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 220: /* col_ident  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3535 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3537,7 +3537,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 221: /* phys_ident  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3543 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3545,7 +3545,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 222: /* opt_column_body_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3551 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3553,7 +3553,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 223: /* column_body_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3559 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3561,7 +3561,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 224: /* column_stmt_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3567 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3569,7 +3569,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 225: /* default_view_1_0_decl  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3575 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3577,7 +3577,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 226: /* physmbr_1_0_decl  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3583 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3585,7 +3585,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 227: /* phys_coldef_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3591 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3593,7 +3593,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 228: /* opt_col_schema_parms_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3599 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3601,7 +3601,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 229: /* col_schema_parms_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3607 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3609,7 +3609,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 230: /* col_schema_parm_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3615 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3617,7 +3617,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 231: /* col_schema_value_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3623 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3625,7 +3625,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 232: /* cond_expr_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3631 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3633,7 +3633,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 233: /* expression_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3639 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3641,7 +3641,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 234: /* primary_expr_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3647 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3649,7 +3649,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 235: /* func_expr_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3655 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3657,7 +3657,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 236: /* schema_parms_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3663 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3665,7 +3665,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 237: /* schema_parm_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3671 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3673,7 +3673,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 238: /* opt_factory_parms_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3679 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3681,7 +3681,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 239: /* factory_parms_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3687 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3689,7 +3689,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 240: /* factory_parms  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3695 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3697,7 +3697,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 241: /* opt_func_1_0_parms  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3703 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3705,7 +3705,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 242: /* func_1_0_parms  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3711 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3713,7 +3713,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 243: /* uint_expr_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3719 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3721,7 +3721,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 244: /* float_expr_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3727 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3729,7 +3729,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 245: /* string_expr_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3735 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3737,7 +3737,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 246: /* const_vect_expr_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3743 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3745,7 +3745,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 247: /* opt_const_vect_exprlist_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3751 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3753,7 +3753,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 248: /* const_vect_exprlist_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3759 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3761,7 +3761,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 249: /* bool_expr_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3767 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3769,7 +3769,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 250: /* type_expr_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3775 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3777,7 +3777,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 251: /* member_expr_2_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3783 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3785,7 +3785,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 252: /* join_expr_2_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3791 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3793,7 +3793,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 253: /* database_1_0_decl  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3799 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3801,7 +3801,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 254: /* opt_database_dad_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3807 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3809,7 +3809,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 255: /* database_body_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3815 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3817,7 +3817,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 256: /* database_members_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3823 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3825,7 +3825,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 257: /* database_member_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3831 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3833,7 +3833,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 258: /* opt_template_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3839 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3841,7 +3841,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 259: /* db_member_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3847 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3849,7 +3849,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 260: /* table_member_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3855 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3857,7 +3857,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 261: /* include_directive  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3863 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3865,7 +3865,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 262: /* fqn_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3871 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3873,7 +3873,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 263: /* ident_1_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3879 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3881,7 +3881,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 264: /* empty  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3887 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3889,7 +3889,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 265: /* fqn_vers  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3895 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3897,7 +3897,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 266: /* fqn_opt_vers  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3903 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3905,7 +3905,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 267: /* version_2_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3911 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3913,7 +3913,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 268: /* schema_2_0  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3919 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3921,7 +3921,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 269: /* schema_2_0_decl  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3927 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3929,7 +3929,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 270: /* view_2_0_decl  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3935 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3937,7 +3937,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 271: /* view_parms  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3943 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3945,7 +3945,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 272: /* view_parm  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3951 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3953,7 +3953,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 273: /* opt_view_body  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3959 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3961,7 +3961,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 274: /* view_body  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3967 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3969,7 +3969,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 275: /* view_member  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3975 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3977,7 +3977,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 276: /* opt_view_parents  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3983 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3985,7 +3985,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 277: /* view_parents  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3991 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -3993,7 +3993,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 278: /* view_parent  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3999 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
@@ -4001,7 +4001,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 279: /* view_parent_parms  */
 #line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
-    delete ( ParseTree * ) ( ((*yyvaluep)) . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 4007 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
