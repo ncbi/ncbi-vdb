@@ -2123,10 +2123,11 @@ void VPivotProdDestroy ( VPivotProd * p_self )
  */
 rc_t VPivotProdRead ( VPivotProd * p_self, struct VBlob ** p_vblob, int64_t * p_id, uint32_t p_cnt )
 {
-    struct VBlob * rowIdBlob;
-    rc_t rc;
+    assert ( p_vblob != NULL );
     assert ( p_id != NULL );
-    rc = VProductionReadBlob ( p_self -> row_id, & rowIdBlob, p_id , p_cnt, NULL);
+
+    struct VBlob * rowIdBlob;
+    rc_t rc = VProductionReadBlob ( p_self -> row_id, & rowIdBlob, p_id , p_cnt, NULL);
     if ( rc == 0 && rowIdBlob != NULL )
     {
         uint32_t elemNum;
@@ -2143,20 +2144,18 @@ rc_t VPivotProdRead ( VPivotProd * p_self, struct VBlob ** p_vblob, int64_t * p_
                 /* the cache mechanism will get confused by our overwriting p_id, so turn it off */
                 ( * p_vblob ) -> no_cache = true;
                 * p_id = newRowId;
-            }
-            else
-            {   /* return an empty value p_id == 0 */
-                vblob_release ( rowIdBlob, NULL );
-                * p_vblob = 0;
-                * p_id = 0;
+                return 0;
             }
         }
+        else
+        {   
+            vblob_release ( rowIdBlob, NULL );
+        }
     }
-    else
-    {
-        * p_vblob = 0;
-        * p_id = 0;
-    }
+
+    /* return an empty value p_id == 0 */
+    * p_vblob = 0;
+    * p_id = 0;
     return rc;
 }
 
