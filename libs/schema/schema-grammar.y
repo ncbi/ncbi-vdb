@@ -144,7 +144,14 @@
 
 %define api.pure full
 %destructor {
-    ParseTree :: Destroy ( ( ParseTree * ) ( $$ . subtree ) );
+    if ( $$ . subtree != NULL )
+    {
+        ParseTree :: Destroy ( ( ParseTree * ) ( $$ . subtree ) );
+    }
+    else
+    {   /* terminal; release associated whitespace */
+        free ( $$ . leading_ws );
+    }
 } <>
 
  /* !!! Keep token declarations in synch with schema-ast.y */
