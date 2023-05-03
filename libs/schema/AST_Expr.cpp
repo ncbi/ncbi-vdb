@@ -686,30 +686,41 @@ FindMember ( ctx_t ctx,
              const char * memberName,
              KSymTable & symtab )
 {
-    // /* scan override tables for virtual symbols */
-    // uint32_t start = VectorStart ( & overrides );
-    // uint32_t count = VectorLength ( & overrides );
-    // for ( uint32_t i = 0; i < count; ++ i )
-    // {
-    //     STableOverrides * ov = static_cast < STableOverrides * > ( VectorGet ( & overrides, start + i ) );
-    //     if ( ! p_builder . ScanVirtuals ( ctx, loc, ov -> by_parent, symtab ) )
-    //     {
-    //         return 0;
-    //     }
-    // }
-
     String memName;
     StringInitCString ( & memName, memberName );
 
-    /* Add virtual symbols introduced by this table */
-    uint32_t start = VectorStart ( & vprods );
-    uint32_t count = VectorLength ( & vprods );
-    for ( uint32_t i = 0; i < count; ++ i )
-    {
-        const KSymbol * mem = static_cast < const KSymbol * > ( VectorGet ( & vprods, start + i ) );
-        if ( StringCompare ( & mem -> name, & memName ) == 0 )
+    /* first, check members that are not added to symtab */
+
+    {   /* Look between virtual symbols introduced by this table/view */
+        uint32_t start = VectorStart ( & vprods );
+        uint32_t count = VectorLength ( & vprods );
+        for ( uint32_t i = 0; i < count; ++ i )
         {
-            return mem;
+            const KSymbol * mem = static_cast < const KSymbol * > ( VectorGet ( & vprods, start + i ) );
+            if ( StringCompare ( & mem -> name, & memName ) == 0 )
+            {
+                return mem;
+            }
+        }
+    }
+
+    {   /* Look between unresolved virtual symbols introduced by parents */
+        uint32_t start = VectorStart ( & overrides );
+        uint32_t count = VectorLength ( & overrides );
+        for ( uint32_t i = 0; i < count; ++ i )
+        {
+            STableOverrides * ov = static_cast < STableOverrides * > ( VectorGet ( & overrides, start + i ) );
+            uint32_t parentStart = VectorStart ( & ov -> by_parent );
+            uint32_t parentCount = VectorLength ( & ov -> by_parent );
+            for ( uint32_t j = 0; j < parentCount; ++ j )
+            {
+                const KSymbol * mem = static_cast < const KSymbol * > ( VectorGet ( & ov -> by_parent, parentStart + j ) );
+                assert ( mem != NULL );
+                if ( mem -> type == eVirtual && StringCompare ( & mem -> name, & memName ) == 0 )
+                {
+                    return mem;
+                }
+            }
         }
     }
 
