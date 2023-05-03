@@ -2349,7 +2349,6 @@ rc_t table_body ( KSymTable *tbl, KTokenSource *src, KToken *t,
     rc_t rc = expect ( tbl, src, t, eLeftCurly, "{", true );
     if ( rc != 0 )
         return rc;
-
     while ( t -> id != eRightCurly )
     {
         rc = table_local_decl ( tbl, src, t, env, self, table );
@@ -2902,7 +2901,6 @@ rc_t table_declaration ( KSymTable *tbl, KTokenSource *src, KToken *t,
                 rc = VectorInsertUnique ( & name -> items, table, & idx, STableSort );
                 if ( rc == 0 )
                     return 0;
-
                 if ( GetRCState ( rc ) == rcExists )
                 {
                     const STable *newer;
@@ -2912,7 +2910,6 @@ rc_t table_declaration ( KSymTable *tbl, KTokenSource *src, KToken *t,
                     {
                         /* put the new one in place of the existing */
                         VectorSwap ( & name -> items, idx, table, & ignore );
-
                         /* tell everyone to use new table */
                         return schema_update_tbl_ref ( self, exist, table );
                     }
@@ -2926,7 +2923,6 @@ rc_t table_declaration ( KSymTable *tbl, KTokenSource *src, KToken *t,
     {
         rc = 0;
     }
-
     STableWhack ( table, NULL );
 
     return rc;

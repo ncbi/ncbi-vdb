@@ -888,7 +888,6 @@ VSchemaParseTextInt_v1 ( VSchema *self, const char *name, const char *text, size
     KTokenSourceInit ( & src, & tt );
 
     rc = schema ( & src, self );
-
     if (rc == 0)
     {
         PARSE_DEBUG( ("Parsed schema v1 from %s\n", name) );
@@ -979,18 +978,50 @@ LIB_EXPORT rc_t CC VSchemaParseText ( VSchema *self, const char *name,
 rc_t VSchemaParseTextCallback ( VSchema *self, const char *name,
     rc_t ( CC * fill ) ( void *self, KTokenText *tt, size_t save ), void *data )
 {
-    KTokenText tt;
-    KTokenSource src;
+    KConfig * kfg;
+    rc_t rc = KConfigMake ( & kfg, NULL );
+    if ( rc == 0 )
+    {
+        uint8_t version;
 
-    KTokenTextInitCString ( & tt, "", name );
-    tt . read = fill;
-    tt . data = data;
+version=1;
+//        rc = KConfigGetSchemaParserVersion( kfg , & version );
+//        if ( rc == 0 )
+        {
+            switch (version)
+            {
+            case 1:
+                {
+                    KTokenText tt;
+                    KTokenSource src;
 
-    KTokenSourceInit ( & src, & tt );
-    /*NB: this invokes v1 parser, even though the parent schema may have been
-          processed by v2 parser. The reason is the possibility of v0 constructs
-          coming from older objects */
-    return schema ( & src, self );
+                    KTokenTextInitCString ( & tt, "", name );
+                    tt . read = fill;
+                    tt . data = data;
+
+                    KTokenSourceInit ( & src, & tt );
+                    /*NB: this invokes v1 parser, even though the parent schema may have been
+                        processed by v2 parser. The reason is the possibility of v0 constructs
+                        coming from older objects */
+                    rc = schema ( & src, self );
+                }
+                break;
+            case 2:
+                {
+                    KTokenText tt;
+                    rc = fill ( data, & tt, 0 );
+                    rc = VSchemaParseTextInt_v2 ( self, name, tt.str.addr, tt.str.size );
+                }
+                break;
+            default:
+                rc = RC ( rcVDB, rcSchema, rcParsing, rcFileFormat, rcUnsupported );
+                break;
+            }
+        }
+    }
+    KConfigRelease ( kfg );
+    return rc;
+
 }
 
 

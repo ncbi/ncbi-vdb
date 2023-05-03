@@ -686,24 +686,24 @@ FindMember ( ctx_t ctx,
              const char * memberName,
              KSymTable & symtab )
 {
-    /* scan override tables for virtual symbols */
-    uint32_t start = VectorStart ( & overrides );
-    uint32_t count = VectorLength ( & overrides );
-    for ( uint32_t i = 0; i < count; ++ i )
-    {
-        STableOverrides * ov = static_cast < STableOverrides * > ( VectorGet ( & overrides, start + i ) );
-        if ( ! p_builder . ScanVirtuals ( ctx, loc, ov -> by_parent, symtab ) )
-        {
-            return 0;
-        }
-    }
+    // /* scan override tables for virtual symbols */
+    // uint32_t start = VectorStart ( & overrides );
+    // uint32_t count = VectorLength ( & overrides );
+    // for ( uint32_t i = 0; i < count; ++ i )
+    // {
+    //     STableOverrides * ov = static_cast < STableOverrides * > ( VectorGet ( & overrides, start + i ) );
+    //     if ( ! p_builder . ScanVirtuals ( ctx, loc, ov -> by_parent, symtab ) )
+    //     {
+    //         return 0;
+    //     }
+    // }
 
     String memName;
     StringInitCString ( & memName, memberName );
 
     /* Add virtual symbols introduced by this table */
-    start = VectorStart ( & vprods );
-    count = VectorLength ( & vprods );
+    uint32_t start = VectorStart ( & vprods );
+    uint32_t count = VectorLength ( & vprods );
     for ( uint32_t i = 0; i < count; ++ i )
     {
         const KSymbol * mem = static_cast < const KSymbol * > ( VectorGet ( & vprods, start + i ) );
