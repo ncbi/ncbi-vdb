@@ -1012,6 +1012,20 @@ SMembExprMake ( ctx_t ctx, ASTBuilder & p_builder, const KSymbol* p_obj, const K
     return & x -> dad;
 }
 
+// #include <iostream>
+// using namespace std;
+// static
+// int64_t CC
+// KSymbolCmp ( const void * key, const void * n )
+// {
+//     const KSymbol * sym = (const KSymbol *) n;
+//     String ident;
+//     StringInitCString ( & ident, (const char *) key );
+// cout<<"KSymbolCmp("<<(const char *) key<<", "<<string(sym -> name.addr,sym -> name.len)<<")"<<endl;
+//     return StringCompare ( & sym -> name, & ident );
+// }
+
+#include<iostream>
 static
 SExpression *
 MakeSMembExpr ( ctx_t ctx, ASTBuilder & p_builder, const AST & p_struc, const AST & p_member, const AST_Expr * p_rowId = 0 )

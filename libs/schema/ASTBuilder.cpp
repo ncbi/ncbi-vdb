@@ -191,13 +191,17 @@ ASTBuilder :: CreateFqnSymbol ( ctx_t ctx, const AST_FQN& p_fqn, uint32_t p_type
     return ret;
 }
 
+#include<iostream>
 KSymbol*
 ASTBuilder :: Resolve ( ctx_t ctx, const Token :: Location & p_loc, const char* p_ident, bool p_reportUnknown )
 {
     FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     String name;
     StringInitCString ( & name, p_ident );
+std::cout<<"Resolve("<<p_ident<<")"<<std::endl;
+KSymTableDump(&GetSymTab ());
     KSymbol* ret = KSymTableFind ( & m_symtab, & name );
+std::cout<<"Resolve("<<p_ident<<")"<<(ret == 0 ? "not found":"found")<<std::endl;
     if ( ret == 0 && p_reportUnknown )
     {
         ReportError ( ctx, p_loc, "Undeclared identifier", p_ident );
