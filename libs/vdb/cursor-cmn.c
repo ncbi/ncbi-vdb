@@ -32,6 +32,8 @@
 #include "prod-priv.h"
 
 #include <vdb/cursor.h>
+#include <vdb/vdb-priv.h>
+
 #include <klib/rc.h>
 #include <stdbool.h>
 
@@ -958,6 +960,7 @@ VCursorLinkedCursorSet(const VCursor * cself,const char *tbl,VCursor const *curs
     return rc;
 }
 
+LIB_EXPORT
 VColumn *
 VCursorGetColumn ( struct VCursor * p_self, const VCtxId * p_ctx )
 {

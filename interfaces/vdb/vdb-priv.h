@@ -71,6 +71,8 @@ struct PageMapIterator;
 struct KDataBuffer;
 struct KNamelist;
 struct BSTree;
+struct VColumn;
+struct VCtxId;
 
 /*--------------------------------------------------------------------------
  * VDBManager
@@ -333,6 +335,10 @@ VDB_EXTERN uint64_t CC VCursorGetCacheCapacity(const struct VCursor *self);
  *  populates BTree with VColumnRef objects
  */
 rc_t VCursorListReadableColumns ( struct VCursor *self, struct BSTree *columns );
+
+/* GetColumn
+*/
+VDB_EXTERN struct VColumn * VCursorGetColumn(struct VCursor * self, const struct VCtxId * ctx);
 
 /*--------------------------------------------------------------------------
  * VCursorParams

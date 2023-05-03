@@ -22,6 +22,10 @@
 //
 // ===========================================================================
 
+#include <sysalloc.h>
+
+#include <sstream>
+#include <cstdlib>
 
 #include <klib/log.h>
 #include <klib/symbol.h>
@@ -48,11 +52,6 @@
 #include <../../libs/vdb/cursor-priv.h>
 
 #include "WVDB_Fixture.hpp"
-
-#include <sysalloc.h>
-
-#include <sstream>
-#include <cstdlib>
 
 using namespace std;
 
@@ -909,8 +908,8 @@ FIXTURE_TEST_CASE ( VCursor_Use_cut_ToAccessArrayElement, WVDB_Fixture )
         uint32_t row_len = 0;
         REQUIRE_RC ( VCursorReadDirect(cursor, 1, column_idx, 64, buf, 2, & row_len ) );
         REQUIRE_EQ ( 1u, row_len );
-        REQUIRE_EQ ( 2l, buf[0] );
-        REQUIRE_EQ ( 0l, buf[1] );
+        REQUIRE_EQ((int64_t)2, buf[0]);
+        REQUIRE_EQ((int64_t)0, buf[1]);
 
         REQUIRE_RC ( VCursorRelease ( cursor ) );
 

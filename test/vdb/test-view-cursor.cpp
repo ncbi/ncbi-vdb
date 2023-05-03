@@ -563,8 +563,8 @@ FIXTURE_TEST_CASE( ViewCursor_Join_Self, ViewOnTableCursorFixture )
     m_columnIdx = AddColumn ( "v" );
     REQUIRE_RC ( VCursorOpen ( m_cur ) );
 
-    REQUIRE_EQ ( 1l, ReadI64 ( 1, m_columnIdx ) );
-    REQUIRE_EQ ( 2l, ReadI64 ( 2, m_columnIdx ) );
+    REQUIRE_EQ ( (int64_t)1, ReadI64 ( 1, m_columnIdx ) );
+    REQUIRE_EQ( (int64_t)2, ReadI64(2, m_columnIdx));
 }
 
 FIXTURE_TEST_CASE( ViewCursor_Join_NullKey, ViewOnTableCursorFixture )

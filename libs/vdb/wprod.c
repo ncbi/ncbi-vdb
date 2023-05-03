@@ -40,6 +40,7 @@
 #undef KONST
 
 #include <vdb/cursor.h>
+#include <vdb/vdb-priv.h>
 #include <klib/symbol.h>
 #include <klib/log.h>
 #include <klib/debug.h>

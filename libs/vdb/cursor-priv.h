@@ -163,10 +163,6 @@ rc_t VCursorWhackInt ( const struct VCursor * p_self );
 */
 VCursorCache * VCursorColumns ( struct VCursor * self, uint32_t ctx_type );
 
-/* GetColumn
-*/
-struct VColumn * VCursorGetColumn ( struct VCursor * self, const struct VCtxId * ctx );
-
 /* SetColumn
 */
 rc_t VCursorSetColumn ( struct VCursor * self, struct VColumn * col );
