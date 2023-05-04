@@ -24,6 +24,11 @@
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
+if ( ${OS}-${CMAKE_CXX_COMPILER_ID} STREQUAL "linux-GNU"  )
+    # need explicit libgcc to prevent picking up certain names from libg++
+    set( MBEDTLS_LIBS ${MBEDTLS_LIBS};gcc )
+endif()
+
 #################################
 set( VDB_LIB_RD "" )
 foreach( target ${VDB_LIB_RD_TARGETS})
