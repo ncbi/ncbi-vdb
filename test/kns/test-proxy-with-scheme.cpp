@@ -155,9 +155,10 @@ extern "C" {
     ver_t CC KAppVersion ( void ) { return 0; }
 
     rc_t CC KMain ( int argc, char * argv [] ) {
-if ( 0 ) { KDbgSetString ( "VFS" );
-           KDbgSetString ( "KFG" );
-}
+#if 0 && _DEBUGGING
+        KDbgSetString ( "VFS" );
+        KDbgSetString ( "KFG" );
+#endif
         rc_t rc = TestProxySchemeSuite ( argc, argv );
 
         free ( PROXY );

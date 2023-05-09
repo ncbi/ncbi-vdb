@@ -50,6 +50,3 @@ if ( WIN32 )
     # warning C5039: 'XXX': pointer or reference to potentially throwing function passed to extern C function under -EHc. Undefined behavior may occur if this function throws an exception.
     set_source_files_properties(testenv.cpp PROPERTIES COMPILE_FLAGS "/wd5039")
 endif()
-
-set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${DISABLED_WARNINGS}" )
-set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${DISABLED_WARNINGS}" )

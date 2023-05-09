@@ -27,9 +27,14 @@ if(NOT CMAKE_TEST_OUTPUT_DIRECTORY)
 endif()
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_TEST_OUTPUT_DIRECTORY} )
 
+if ( "GNU" STREQUAL "${CMAKE_C_COMPILER_ID}")
+    set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-but-set-variable" )
+endif()
+
 add_subdirectory(kfc)
 
 set( COMMON_LINK_LIBRARIES ktst kapp )
+set( ADDITIONAL_LIBS "" )
 
 # for the tests that link against libncbi-[w]vdb
 if( WIN32 )
@@ -41,6 +46,7 @@ else()
     set( COMMON_LIBS_READ  ncbi-vdb  dl pthread ${MBEDTLS_LIBS} )
     set( COMMON_LIBS_WRITE ncbi-wvdb dl pthread ${MBEDTLS_LIBS} )
 endif()
+
 
 add_subdirectory(ktst)
 add_subdirectory(cc)

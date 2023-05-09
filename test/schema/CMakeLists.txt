@@ -43,3 +43,23 @@ if( SINGLE_CONFIG )
     BuildExecutableForTest( Test_SCHEMA_schema-diff "test-schema-diff" "${COMMON_LIBS_READ};schema" )
     add_test( NAME Test_SCHEMA_schema-diff COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test-schema-diff.sh ${CMAKE_TEST_OUTPUT_DIRECTORY}/Test_SCHEMA_schema-diff ${CMAKE_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 endif()
+
+if (Python3_EXECUTABLE)
+    add_test( NAME Test_SCHEMA_454_db
+        COMMAND ${Python3_EXECUTABLE} test_VDB-5250.py
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+    set_tests_properties( Test_SCHEMA_454_db
+        PROPERTIES
+        ENVIRONMENT VDB_LIBRARY_PATH=${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
+    )
+
+    add_test( NAME Test_SCHEMA_IonTorrent_db
+        COMMAND ${Python3_EXECUTABLE} test_VDB-5251.py
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+    set_tests_properties( Test_SCHEMA_IonTorrent_db
+        PROPERTIES
+        ENVIRONMENT VDB_LIBRARY_PATH=${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
+    )
+endif()

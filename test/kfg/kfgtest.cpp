@@ -799,6 +799,7 @@ public:
     }
 };
 
+#ifdef NAMESCGI
 #ifdef ALL
 FIXTURE_TEST_CASE(KConfigImportNgc_Basic, KfgFixture)
 {
@@ -883,6 +884,7 @@ FIXTURE_TEST_CASE(KConfigImportNgc_Basic, KfgFixture)
 
     REQUIRE_RC(KDirectoryRemove(wd, true, "repos"));
 }
+#endif
 #endif
 
 #ifdef ALL

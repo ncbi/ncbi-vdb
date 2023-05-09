@@ -639,7 +639,7 @@ rc_t RsaAesHmacDecryptInt ( KDataBuffer * out,
 
             /* parse the PEM keyfile */
             STATUS ( STAT_PRG, "%s - parsing PDK from file\n", __func__ );
-            rc = CALL_MBEDTLS ( mbedtls_pk_parse_keyfile, ( & s . pdk, zpdk, zpwd ) );
+            rc = CALL_MBEDTLS ( mbedtls_pk_parse_keyfile, ( & s . pdk, zpdk, zpwd, mbedtls_ctr_drbg_random, & s . ctr_drbg ) );
             if ( rc != 0 )
                 break;
 

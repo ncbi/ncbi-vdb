@@ -643,7 +643,7 @@ rc_t KDBManagerVOpenDBReadInt ( const KDBManager *cself,
 static
 rc_t KDBManagerVOpenDBReadInt_noargs ( const KDBManager *cself,
     const KDatabase **dbp, KDirectory *wd,
-    const char *path, bool *cached, bool try_srapath, ... )
+    const char *path, bool *cached, int try_srapath, ... )
 {
     rc_t rc;
     va_list args;

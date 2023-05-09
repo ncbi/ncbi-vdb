@@ -35,10 +35,6 @@
 
 #include <string.h>
 
-#if defined(MBEDTLS_ARC4_C)
-#include "mbedtls/arc4.h"
-#endif
-
 #if defined(MBEDTLS_DES_C)
 #include "mbedtls/des.h"
 #endif
@@ -60,21 +56,21 @@ static int pkcs12_parse_pbe_params( mbedtls_asn1_buf *params,
      *
      */
     if( params->tag != ( MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE ) )
-        return( MBEDTLS_ERR_PKCS12_PBE_INVALID_FORMAT +
-                MBEDTLS_ERR_ASN1_UNEXPECTED_TAG );
+        return( MBEDTLS_ERROR_ADD( MBEDTLS_ERR_PKCS12_PBE_INVALID_FORMAT,
+                MBEDTLS_ERR_ASN1_UNEXPECTED_TAG ) );
 
     if( ( ret = mbedtls_asn1_get_tag( p, end, &salt->len, MBEDTLS_ASN1_OCTET_STRING ) ) != 0 )
-        return( MBEDTLS_ERR_PKCS12_PBE_INVALID_FORMAT + ret );
+        return( MBEDTLS_ERROR_ADD( MBEDTLS_ERR_PKCS12_PBE_INVALID_FORMAT, ret ) );
 
     salt->p = *p;
     *p += salt->len;
 
     if( ( ret = mbedtls_asn1_get_int( p, end, iterations ) ) != 0 )
-        return( MBEDTLS_ERR_PKCS12_PBE_INVALID_FORMAT + ret );
+        return( MBEDTLS_ERROR_ADD( MBEDTLS_ERR_PKCS12_PBE_INVALID_FORMAT, ret ) );
 
     if( *p != end )
-        return( MBEDTLS_ERR_PKCS12_PBE_INVALID_FORMAT +
-                MBEDTLS_ERR_ASN1_LENGTH_MISMATCH );
+        return( MBEDTLS_ERROR_ADD( MBEDTLS_ERR_PKCS12_PBE_INVALID_FORMAT,
+                MBEDTLS_ERR_ASN1_LENGTH_MISMATCH ) );
 
     return( 0 );
 }
@@ -125,47 +121,6 @@ static int pkcs12_pbe_derive_key_iv( mbedtls_asn1_buf *pbe_params, mbedtls_md_ty
 
 #undef PKCS12_MAX_PWDLEN
 
-int mbedtls_pkcs12_pbe_sha1_rc4_128( mbedtls_asn1_buf *pbe_params, int mode,
-                             const unsigned char *pwd,  size_t pwdlen,
-                             const unsigned char *data, size_t len,
-                             unsigned char *output )
-{
-#if !defined(MBEDTLS_ARC4_C)
-    ((void) pbe_params);
-    ((void) mode);
-    ((void) pwd);
-    ((void) pwdlen);
-    ((void) data);
-    ((void) len);
-    ((void) output);
-    return( MBEDTLS_ERR_PKCS12_FEATURE_UNAVAILABLE );
-#else
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-    unsigned char key[16];
-    mbedtls_arc4_context ctx;
-    ((void) mode);
-
-    mbedtls_arc4_init( &ctx );
-
-    if( ( ret = pkcs12_pbe_derive_key_iv( pbe_params, MBEDTLS_MD_SHA1,
-                                          pwd, pwdlen,
-                                          key, 16, NULL, 0 ) ) != 0 )
-    {
-        return( ret );
-    }
-
-    mbedtls_arc4_setup( &ctx, key, 16 );
-    if( ( ret = mbedtls_arc4_crypt( &ctx, len, data, output ) ) != 0 )
-        goto exit;
-
-exit:
-    mbedtls_platform_zeroize( key, sizeof( key ) );
-    mbedtls_arc4_free( &ctx );
-
-    return( ret );
-#endif /* MBEDTLS_ARC4_C */
-}
-
 int mbedtls_pkcs12_pbe( mbedtls_asn1_buf *pbe_params, int mode,
                 mbedtls_cipher_type_t cipher_type, mbedtls_md_type_t md_type,
                 const unsigned char *pwd,  size_t pwdlen,
@@ -178,6 +133,9 @@ int mbedtls_pkcs12_pbe( mbedtls_asn1_buf *pbe_params, int mode,
     const mbedtls_cipher_info_t *cipher_info;
     mbedtls_cipher_context_t cipher_ctx;
     size_t olen = 0;
+
+    if( pwd == NULL && pwdlen != 0 )
+        return( MBEDTLS_ERR_PKCS12_BAD_INPUT_DATA );
 
     cipher_info = mbedtls_cipher_info_from_type( cipher_type );
     if( cipher_info == NULL )
@@ -231,12 +189,23 @@ static void pkcs12_fill_buffer( unsigned char *data, size_t data_len,
     unsigned char *p = data;
     size_t use_len;
 
-    while( data_len > 0 )
+    if( filler != NULL && fill_len != 0 )
     {
-        use_len = ( data_len > fill_len ) ? fill_len : data_len;
-        memcpy( p, filler, use_len );
-        p += use_len;
-        data_len -= use_len;
+        while( data_len > 0 )
+        {
+            use_len = ( data_len > fill_len ) ? fill_len : data_len;
+            memcpy( p, filler, use_len );
+            p += use_len;
+            data_len -= use_len;
+        }
+    }
+    else
+    {
+        /* If either of the above are not true then clearly there is nothing
+         * that this function can do. The function should *not* be called
+         * under either of those circumstances, as you could end up with an
+         * incorrect output but for safety's sake, leaving the check in as
+         * otherwise we could end up with memory corruption.*/
     }
 }
 
@@ -249,10 +218,12 @@ int mbedtls_pkcs12_derivation( unsigned char *data, size_t datalen,
     unsigned int j;
 
     unsigned char diversifier[128];
-    unsigned char salt_block[128], pwd_block[128], hash_block[128];
+    unsigned char salt_block[128], pwd_block[128], hash_block[128] = {0};
     unsigned char hash_output[MBEDTLS_MD_MAX_SIZE];
     unsigned char *p;
     unsigned char c;
+    int           use_password = 0;
+    int           use_salt = 0;
 
     size_t hlen, use_len, v, i;
 
@@ -262,6 +233,15 @@ int mbedtls_pkcs12_derivation( unsigned char *data, size_t datalen,
     // This version only allows max of 64 bytes of password or salt
     if( datalen > 128 || pwdlen > 64 || saltlen > 64 )
         return( MBEDTLS_ERR_PKCS12_BAD_INPUT_DATA );
+
+    if( pwd == NULL && pwdlen != 0 )
+        return( MBEDTLS_ERR_PKCS12_BAD_INPUT_DATA );
+
+    if( salt == NULL && saltlen != 0 )
+        return( MBEDTLS_ERR_PKCS12_BAD_INPUT_DATA );
+
+    use_password = ( pwd && pwdlen != 0 );
+    use_salt = ( salt && saltlen != 0 );
 
     md_info = mbedtls_md_info_from_type( md_type );
     if( md_info == NULL )
@@ -280,8 +260,15 @@ int mbedtls_pkcs12_derivation( unsigned char *data, size_t datalen,
 
     memset( diversifier, (unsigned char) id, v );
 
-    pkcs12_fill_buffer( salt_block, v, salt, saltlen );
-    pkcs12_fill_buffer( pwd_block,  v, pwd,  pwdlen  );
+    if( use_salt != 0 )
+    {
+        pkcs12_fill_buffer( salt_block, v, salt, saltlen );
+    }
+
+    if( use_password != 0 )
+    {
+        pkcs12_fill_buffer( pwd_block,  v, pwd,  pwdlen  );
+    }
 
     p = data;
     while( datalen > 0 )
@@ -293,11 +280,17 @@ int mbedtls_pkcs12_derivation( unsigned char *data, size_t datalen,
         if( ( ret = mbedtls_md_update( &md_ctx, diversifier, v ) ) != 0 )
             goto exit;
 
-        if( ( ret = mbedtls_md_update( &md_ctx, salt_block, v ) ) != 0 )
-            goto exit;
+        if( use_salt != 0 )
+        {
+            if( ( ret = mbedtls_md_update( &md_ctx, salt_block, v )) != 0 )
+                goto exit;
+        }
 
-        if( ( ret = mbedtls_md_update( &md_ctx, pwd_block, v ) ) != 0 )
-            goto exit;
+        if( use_password != 0)
+        {
+            if( ( ret = mbedtls_md_update( &md_ctx, pwd_block, v )) != 0 )
+                goto exit;
+        }
 
         if( ( ret = mbedtls_md_finish( &md_ctx, hash_output ) ) != 0 )
             goto exit;
@@ -325,22 +318,28 @@ int mbedtls_pkcs12_derivation( unsigned char *data, size_t datalen,
             if( ++hash_block[i - 1] != 0 )
                 break;
 
-        // salt_block += B
-        c = 0;
-        for( i = v; i > 0; i-- )
+        if( use_salt != 0 )
         {
-            j = salt_block[i - 1] + hash_block[i - 1] + c;
-            c = (unsigned char) (j >> 8);
-            salt_block[i - 1] = j & 0xFF;
+            // salt_block += B
+            c = 0;
+            for( i = v; i > 0; i-- )
+            {
+                j = salt_block[i - 1] + hash_block[i - 1] + c;
+                c = MBEDTLS_BYTE_1( j );
+                salt_block[i - 1] = MBEDTLS_BYTE_0( j );
+            }
         }
 
-        // pwd_block  += B
-        c = 0;
-        for( i = v; i > 0; i-- )
+        if( use_password != 0 )
         {
-            j = pwd_block[i - 1] + hash_block[i - 1] + c;
-            c = (unsigned char) (j >> 8);
-            pwd_block[i - 1] = j & 0xFF;
+            // pwd_block  += B
+            c = 0;
+            for( i = v; i > 0; i-- )
+            {
+                j = pwd_block[i - 1] + hash_block[i - 1] + c;
+                c = MBEDTLS_BYTE_1( j );
+                pwd_block[i - 1] = MBEDTLS_BYTE_0( j );
+            }
         }
     }
 

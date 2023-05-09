@@ -160,7 +160,7 @@ TEST_CASE(KRamFileWrite_shift_right)
         REQUIRE_RC(KRamFileMakeWrite (&wfile, buffer, sizeof buffer - 1));
 
         REQUIRE_RC(KFileWrite(wfile, 0, input, bsize, &num_writ));
-        REQUIRE(bsize = num_writ);
+        REQUIRE_EQ(bsize, num_writ);
 
         REQUIRE_RC(KFileRelease(wfile));
     }

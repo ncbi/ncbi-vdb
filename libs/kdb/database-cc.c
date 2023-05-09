@@ -111,7 +111,7 @@ rc_t KDatabaseCheckTables (const KDatabase *self, uint32_t depth, int level, CCR
                 if (rc == 0)
                 {
                     rc = KTableConsistencyCheck (tbl, depth + 1, level, report,
-                        ctx, SRA_PLATFORM_UNDEFINED);
+                        ctx);
                     KTableRelease (tbl);
                 }
             }

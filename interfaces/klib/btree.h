@@ -129,12 +129,16 @@ KLIB_EXTERN rc_t CC BTreeFind ( uint32_t root, Pager *pager, Pager_vt const *vt,
 KLIB_EXTERN rc_t CC BTreeEntry ( uint32_t *root, Pager *pager, Pager_vt const *vt, uint32_t *id,
     bool *was_inserted, const void *key, size_t key_size );
 
-/* ForEach
+/* ForEach (deprecated)
  *  executes a function on each tree element
  *
  *  "reverse" [ IN ] - if true, iterate in reverse order
  *
  *  "f" [ IN ] and "data" [ IN, OPAQUE ] - callback function
+ * 
+ * NOTE: the key passed to f() may not include some leading bytes, and this API 
+ *  provides no way of accessing the complete key.
+ *  This way of traversing the structure is of limited usefulness and therefore deprecated.
  */
 
 KLIB_EXTERN rc_t CC BTreeForEach ( uint32_t root, Pager *pager, Pager_vt const *vt, bool reverse,

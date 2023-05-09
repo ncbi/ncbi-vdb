@@ -168,7 +168,7 @@ extern "C" {
         rc_t rc = KConfigMake ( & KFG, NULL );
         if ( rc == 0 )
             rc = KConfigWriteString ( KFG,
-                "repository/remote/main/CGI/resolver-cgi", RESOLVER_CGI );
+                "repository/remote/main/SDL.2/resolver-cgi", SDL_CGI );
         if ( rc == 0 )
             rc = KConfigWriteString ( KFG,
                 "repository/user/main/public/root", "/TMP" );

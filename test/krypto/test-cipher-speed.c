@@ -880,7 +880,7 @@ rc_t CC KMain ( int argc, char *argv [] )
         rc = ArgsMakeAndHandle (&args, argc, argv, 1, Options, sizeof Options / sizeof (Options[0]));
         if (rc == 0)
         {
-            clock_t timer;
+            clock_t timer = 0;
             uint32_t pcount;
 
             rc = ArgsOptionCount (args, OPTION_TIMER, &pcount);

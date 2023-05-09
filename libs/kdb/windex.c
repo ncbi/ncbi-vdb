@@ -88,7 +88,7 @@ struct KIndex
 static
 rc_t KIndexWhack ( KIndex *self )
 {
-    rc_t rc, rc2;
+    rc_t rc, rc2 = 0;
     KDBManager *mgr = self -> mgr;
     KSymbol * symb;
 
@@ -164,7 +164,7 @@ rc_t KIndexWhack ( KIndex *self )
         if ( rc == 0 )
             rc = rc2;
     }
-    
+
     rc2 = KDirectoryRelease ( self -> dir );
     if ( rc == 0 )
         rc = rc2;
@@ -747,7 +747,7 @@ rc_t KDBManagerCreateIndexInt ( KDBManager *self, KIndex **idxp,
                 * idxp = idx;
                 return 0;
             }
-            
+
             KIndexRelease ( idx );
         }
     }
@@ -771,7 +771,7 @@ LIB_EXPORT rc_t CC KDatabaseVCreateIndex ( KDatabase *self, KIndex **idxp,
     KIdxType type, KCreateMode cmode, const char *name, va_list args )
 {
     rc_t rc = 0;
-    KDirectory *dir;
+    KDirectory *dir = NULL;
 
     if ( idxp == NULL )
         return RC ( rcDB, rcDatabase, rcCreating, rcParam, rcNull );
@@ -889,7 +889,7 @@ rc_t KDBManagerOpenIndexReadInt ( KDBManager *self,
         {
             const KIndex * cidx;
             rc_t obj;
-            
+
             switch (sym->type)
             {
             case kptIndex:
@@ -910,7 +910,7 @@ rc_t KDBManagerOpenIndexReadInt ( KDBManager *self,
                 }
                 obj = rcDatabase;
                 break;
-                
+
             default:
                 obj = rcPath;
                 break;
@@ -929,7 +929,7 @@ rc_t KDBManagerOpenIndexReadInt ( KDBManager *self,
             }
             return  RC (rcDB, rcMgr, rcOpening, obj, rcBusy);
         }
-        
+
         switch ( KDirectoryPathType ( wd, "%s", idxpath ) )
         {
         case kptNotFound:
@@ -957,7 +957,7 @@ rc_t KDBManagerOpenIndexReadInt ( KDBManager *self,
             KIndexRelease ( idx );
         }
     }
-    
+
     return rc;
 }
 
@@ -1131,7 +1131,7 @@ rc_t KDBManagerOpenIndexUpdate ( KDBManager *self,
                 * idxp = idx;
                 return 0;
             }
-            
+
             KIndexRelease ( idx );
         }
     }
@@ -1522,7 +1522,7 @@ LIB_EXPORT rc_t CC KIndexFindText ( const KIndex *self, const char *key, int64_t
 
     if ( id_count != NULL )
         * id_count = span;
-    
+
     return rc;
 }
 
@@ -1577,7 +1577,7 @@ LIB_EXPORT rc_t CC KIndexFindAllText ( const KIndex *self, const char *key,
     default:
         return RC ( rcDB, rcIndex, rcSelecting, rcType, rcUnsupported );
     }
-    
+
     return rc;
 }
 
@@ -1609,7 +1609,7 @@ LIB_EXPORT rc_t CC KIndexProjectText ( const KIndex *self,
 
     if ( self == NULL )
         return RC ( rcDB, rcIndex, rcProjecting, rcSelf, rcNull );
-        
+
     if ( ( ( KIdxType ) self -> type & kitProj ) == 0 )
         return RC ( rcDB, rcIndex, rcProjecting, rcFunction, rcInvalid );
 
@@ -1652,7 +1652,7 @@ LIB_EXPORT rc_t CC KIndexProjectText ( const KIndex *self,
 
     if ( id_count != NULL )
         * id_count = span;
-        
+
     return rc;
 }
 
@@ -1676,7 +1676,7 @@ LIB_EXPORT rc_t CC KIndexProjectAllText ( const KIndex *self, int64_t id,
         return RC ( rcDB, rcIndex, rcProjecting, rcFunction, rcNull );
     if ( ( ( KIdxType ) self -> type & kitProj ) == 0 )
         return RC ( rcDB, rcIndex, rcProjecting, rcFunction, rcInvalid );
-        
+
     span = 1;
 
     switch ( self -> type )
@@ -1695,7 +1695,7 @@ LIB_EXPORT rc_t CC KIndexProjectAllText ( const KIndex *self, int64_t id,
             if ( rc == 0 )
                 rc = ( * f ) ( id, 1, key, data );
             break;
-            
+
         case 2:
         case 3:
         case 4:
@@ -1707,7 +1707,7 @@ LIB_EXPORT rc_t CC KIndexProjectAllText ( const KIndex *self, int64_t id,
             if ( rc == 0 )
                 rc = ( * f ) ( start_id, span, key, data );
             break;
-            
+
         default:
             return RC ( rcDB, rcIndex, rcProjecting, rcIndex, rcBadVersion );
         }
@@ -1715,11 +1715,11 @@ LIB_EXPORT rc_t CC KIndexProjectAllText ( const KIndex *self, int64_t id,
     default:
         return RC ( rcDB, rcIndex, rcProjecting, rcType, rcUnsupported );
     }
-        
+
     return rc;
 }
 
-LIB_EXPORT rc_t CC KIndexInsertU64( KIndex *self, bool unique, uint64_t key, 
+LIB_EXPORT rc_t CC KIndexInsertU64( KIndex *self, bool unique, uint64_t key,
     uint64_t key_size, int64_t id, uint64_t id_qty )
 {
     rc_t rc = 0;
@@ -1744,7 +1744,7 @@ LIB_EXPORT rc_t CC KIndexInsertU64( KIndex *self, bool unique, uint64_t key,
             return RC(rcDB, rcIndex, rcInserting, rcIndex, rcBadVersion);
         }
         break;
-        
+
     default:
         return RC(rcDB, rcIndex, rcInserting, rcType, rcUnsupported);
     }
@@ -1797,7 +1797,7 @@ LIB_EXPORT rc_t CC KIndexDeleteU64( KIndex *self, uint64_t key )
     return rc;
 }
 
-LIB_EXPORT rc_t CC KIndexFindU64( const KIndex* self, uint64_t offset, uint64_t* key, 
+LIB_EXPORT rc_t CC KIndexFindU64( const KIndex* self, uint64_t offset, uint64_t* key,
     uint64_t* key_size, int64_t* id, uint64_t* id_qty )
 {
     rc_t rc = 0;

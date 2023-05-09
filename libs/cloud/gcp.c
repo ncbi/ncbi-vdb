@@ -275,7 +275,8 @@ const String ** output)
         ret = mbedtls_pk_parse_key(&pk,
             (unsigned char *)key_PEM,
             string_measure(key_PEM, NULL) + 1,
-            NULL, 0);
+            NULL, 0,
+            mbedtls_ctr_drbg_random, &ctr_drbg);
         if (ret == 0)
         {
             /* 2. generate the checksum */
@@ -294,16 +295,15 @@ const String ** output)
                 String * out = NULL;
                 mbedtls_rsa_context * ctx = mbedtls_pk_rsa(pk);
 
-                out = malloc(sizeof(String) + ctx->len);
+                out = malloc(sizeof(String) + (uint32_t)ctx->MBEDTLS_PRIVATE(len));
                 if (out != NULL)
                 {
-                    StringInit( out, (char*)out + sizeof(String), ctx->len, (uint32_t)ctx->len );
+                    StringInit( out, (char*)out + sizeof(String), ctx->MBEDTLS_PRIVATE(len), (uint32_t)ctx->MBEDTLS_PRIVATE(len) );
 
                     ret = mbedtls_rsa_rsassa_pkcs1_v15_sign(
                         ctx,
                         mbedtls_ctr_drbg_random,
                         (void *)& ctr_drbg,
-                        MBEDTLS_RSA_PRIVATE,
                         md_type,
                         (unsigned int)dsize,
                         checksum,
@@ -315,9 +315,6 @@ const String ** output)
                         /* 4. verify the signature */
                         ret = mbedtls_rsa_rsassa_pkcs1_v15_verify(
                             mbedtls_pk_rsa(pk),
-                            NULL,
-                            NULL,
-                            MBEDTLS_RSA_PUBLIC,
                             md_type,
                             (unsigned int)dsize,
                             checksum,

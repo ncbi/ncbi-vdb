@@ -54,20 +54,19 @@ struct KTLSStream;
 #include <string.h>
 #include <stdlib.h>
 
+/* TODO: check if this if-else-endif is needed */
 #if ! defined ( MBEDTLS_CONFIG_FILE )
-#include <mbedtls/config.h>
 #else
 #include MBEDTLS_CONFIG_FILE
 #endif
 
-#include <mbedtls/net.h>
+#include <mbedtls/net_sockets.h>
 #include <mbedtls/debug.h>
 #include <mbedtls/ssl.h>
 #include <mbedtls/aes.h>
 #include <mbedtls/entropy.h>
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/error.h>
-#include <mbedtls/certs.h>
 
 #if WINDOWS
 #define IGNORE_ALL_CERTS_ALLOWED 1
@@ -1136,7 +1135,8 @@ rc_t KTLSGlobalsSetupOwnCert(KTLSGlobals * tlsg,
         ret = mbedtls_pk_parse_key(&tlsg->pkey,
             (const unsigned char *)pk_key,
             string_measure(pk_key, NULL) + 1,
-            NULL, 0);
+            NULL, 0,
+            mbedtls_ctr_drbg_random, &tlsg->ctr_drbg);
         if (ret < 0) {
             rc = RC(rcKrypto, rcToken, rcInitializing, rcEncryption, rcFailed);
             PLOGERR(klogSys, (klogSys, rc
@@ -1327,7 +1327,7 @@ rc_t ktls_handshake ( KTLSStream *self )
                             , "mbedtls_ssl_get_verify_result for '$(host)'"
                               " returned $(flags) ($(info))"
                             , "host=%s,flags=0x%X,info=%s"
-                            , self->ssl.hostname
+                            , self->ssl.MBEDTLS_PRIVATE(hostname)
                             , flags
                             , buf
                         ) );

@@ -365,13 +365,13 @@ AST_Expr :: MakeSymExpr ( ASTBuilder & p_builder, const KSymbol* p_sym ) const
     return 0;
 }
 
-/* hex_to_int
+/* hex_to_uint
  *  where 'c' is known to be hex
  */
 static
-unsigned int CC hex_to_int ( char c )
+unsigned int CC hex_to_uint ( char c )
 {
-    int i = c - '0';
+    unsigned int i = c - '0';
     if ( c > '9' )
     {
         if ( c < 'a' )
@@ -381,7 +381,7 @@ unsigned int CC hex_to_int ( char c )
     }
 
     assert ( i >= 0 && i < 16 );
-    return i;
+    return (unsigned int)i;
 }
 
 SExpression *
@@ -413,7 +413,7 @@ AST_Expr :: MakeUnsigned ( ASTBuilder & p_builder ) const
                 while ( val [ i ] != 0 )
                 {
                     i64 <<= 4;
-                    i64 += hex_to_int ( val [ i ] );
+                    i64 += hex_to_uint ( val [ i ] );
                     ++ i;
                 }
             }
@@ -550,8 +550,8 @@ AST_Expr :: MakeEscapedString ( ASTBuilder & p_builder ) const
                     {
                         /* go ahead and convert */
                         buffer [ j ] = ( char )
-                            ( ( hex_to_int ( val [ i + 1 ] ) << 4 ) |
-                                hex_to_int ( val [ i + 2 ] ) );
+                            ( ( hex_to_uint ( val [ i + 1 ] ) << 4 ) |
+                                hex_to_uint ( val [ i + 2 ] ) );
                         i += 2;
                         break;
                     }

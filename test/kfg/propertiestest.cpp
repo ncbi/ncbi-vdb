@@ -39,8 +39,11 @@ using namespace ncbi::NK;
 
 TEST_SUITE(PropertiesTestSuite);
 
+#define ALL
+
 // KConfig_Get_Http_Proxy_Path, KConfig_Get_Http_Proxy_Path
 
+#ifdef ALL
 FIXTURE_TEST_CASE( GetHttpProxyPath_NotFound, KfgFixture )
 {
     CreateAndLoad(GetName(), "#");
@@ -254,6 +257,28 @@ FIXTURE_TEST_CASE( GetSet_FullQuality, KfgFixture )
     REQUIRE_RC ( KConfig_Get_FullQuality( kfg, &value ) );
     REQUIRE_EQ ( value, false );
 }
+
+// Test disable reporting the command line options back to SRA
+FIXTURE_TEST_CASE( GetSet_Telemetry, KfgFixture ) {
+    bool value = false;
+    REQUIRE(!value);
+
+    REQUIRE_RC(KConfig_Get_SendTelemetry(kfg, &value));
+    REQUIRE(value);
+
+    REQUIRE_RC(KConfig_Set_SendTelemetry(kfg, false));
+    REQUIRE_RC(KConfig_Get_SendTelemetry(kfg, &value));
+    REQUIRE(!value);
+
+    REQUIRE_RC(KConfig_Set_SendTelemetry(kfg, true));
+    REQUIRE_RC(KConfig_Get_SendTelemetry(kfg, &value));
+    REQUIRE(value);
+
+    REQUIRE_RC(KConfig_Set_SendTelemetry(kfg, false));
+
+//  REQUIRE_RC(KConfigCommit(kfg));
+}
+#endif
 
 //////////////////////////////////////////// Main
 

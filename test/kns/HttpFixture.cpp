@@ -199,7 +199,7 @@ HttpFixture :: MakeConfig( const char* name, const char* contents )
 }
 
 struct KStream *
-HttpFixture :: Reconnect ()
+HttpFixture :: Reconnect () noexcept
 {
     return & m_stream;
 }

@@ -160,11 +160,16 @@ endif()
 add_compile_definitions( _ARCH_BITS=${BITS} ${ARCH} )
 
 # global compiler warnings settings
-add_definitions( -Wall )
 if ( "GNU" STREQUAL "${CMAKE_C_COMPILER_ID}")
+    set( DISABLED_WARNINGS_C "-Wno-unused-function")
+    set( DISABLED_WARNINGS_CXX "-Wno-noexcept-type")
 elseif ( CMAKE_CXX_COMPILER_ID MATCHES "^(Apple)?Clang$" )
+    set( DISABLED_WARNINGS_C "-Wno-unused-function")
+    set( DISABLED_WARNINGS_CXX "")
 elseif ( "MSVC" STREQUAL "${CMAKE_C_COMPILER_ID}")
+    #
     # Unhelpful warnings, generated in particular by MSVC and Windows SDK header files
+    #
     # Warning C4820: 'XXX': 'N' bytes padding added after data member 'YYY'
     # Warning C5045 Compiler will insert Spectre mitigation for memory load if /Qspectre switch specified
     # Warning C4668	'XXX' is not defined as a preprocessor macro, replacing with '0' for '#if/#elif'
@@ -181,11 +186,19 @@ elseif ( "MSVC" STREQUAL "${CMAKE_C_COMPILER_ID}")
     # warning C4710: 'XXX': function not inlined
     # warning C5031: #pragma warning(pop): likely mismatch, popping warning state pushed in different file
 	# warning C5032: detected #pragma warning(push) with no corresponding #pragma warning(pop)
-    set( DISABLED_WARNINGS_C "/wd4820 /wd5045 /wd4668 /wd5105 /wd4514 /wd4774 /wd4255 /wd4710 /wd5031 /wd5032")
-    set( DISABLED_WARNINGS_CXX "/wd4623 /wd4625 /wd4626 /wd5026 /wd5027 /wd4571")
-    set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${DISABLED_WARNINGS_C}" )
-    set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${DISABLED_WARNINGS_C} ${DISABLED_WARNINGS_CXX}" )
+    # Warning C4464 relative include path contains '..'
+    # Warning C4100 'XXX': unreferenced formal parameter
+    # Warning C4061	enumerator 'XXX' in switch of enum 'YYY' is not explicitly handled by a case label
+    # Warning C5264	'XXX': 'const' variable is not used
+    # Warning C5220	'XXX': a non-static data member with a volatile qualified type no longer implies that compiler generated copy/move constructors and copy/move assignment operators are not trivial
+    set( DISABLED_WARNINGS_C "/wd4820 /wd5045 /wd4668 /wd5105 /wd4514 /wd4774 /wd4255 /wd4710 /wd5031 /wd5032 /wd4464 /wd4100 /wd4061")
+    set( DISABLED_WARNINGS_CXX "/wd4623 /wd4625 /wd4626 /wd5026 /wd5027 /wd4571 /wd5264 /wd5220")
+
+    # properly report the C++ version in __cplusplus (by default, always set to "199711L" !)
+    add_compile_options("/Zc:__cplusplus")
 endif()
+set( CMAKE_C_FLAGS "-Wall ${CMAKE_C_FLAGS} ${DISABLED_WARNINGS_C}" )
+set( CMAKE_CXX_FLAGS "-Wall ${CMAKE_CXX_FLAGS} ${DISABLED_WARNINGS_C} ${DISABLED_WARNINGS_CXX}" )
 
 # assume debug build by default
 if ( "${CMAKE_BUILD_TYPE}" STREQUAL "" )
@@ -385,9 +398,9 @@ if( RUN_SANITIZER_TESTS_OVERRIDE )
 	set( RUN_SANITIZER_TESTS ON )
 endif()
 message( "RUN_SANITIZER_TESTS: ${RUN_SANITIZER_TESTS}" )
+endif(NOT _NCBIVDB_CFG_PACKAGING)
 
 if( NOT HAVE_MBEDTLS_F )
 	message( "Using local mbedtls headers from interfaces/ext/mbedtls" )
 	include_directories( interfaces/ext/mbedtls )
 endif()
-endif(NOT _NCBIVDB_CFG_PACKAGING)

@@ -188,6 +188,12 @@ typedef uint32_t ver_t;
 #define PKGNAMESTR stringize ( PKGNAME )
 #endif
 
+/*--------------------------------------------------------------------------
+ * UNUSED
+ * use to suppress any "unused variable" warnings
+ */
+#define UNUSED(x) ((void)(x))
+
 #ifdef __cplusplus
 }
 #endif

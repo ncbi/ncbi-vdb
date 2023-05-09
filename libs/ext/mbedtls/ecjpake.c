@@ -128,6 +128,20 @@ cleanup:
     return( ret );
 }
 
+int mbedtls_ecjpake_set_point_format( mbedtls_ecjpake_context *ctx,
+                                      int point_format )
+{
+    switch( point_format )
+    {
+        case MBEDTLS_ECP_PF_UNCOMPRESSED:
+        case MBEDTLS_ECP_PF_COMPRESSED:
+            ctx->point_format = point_format;
+            return( 0 );
+        default:
+            return( MBEDTLS_ERR_ECP_BAD_INPUT_DATA );
+    }
+}
+
 /*
  * Check if context is ready for use
  */
@@ -166,10 +180,7 @@ static int ecjpake_write_len_point( unsigned char **p,
     if( ret != 0 )
         return( ret );
 
-    (*p)[0] = (unsigned char)( ( len >> 24 ) & 0xFF );
-    (*p)[1] = (unsigned char)( ( len >> 16 ) & 0xFF );
-    (*p)[2] = (unsigned char)( ( len >>  8 ) & 0xFF );
-    (*p)[3] = (unsigned char)( ( len       ) & 0xFF );
+    MBEDTLS_PUT_UINT32_BE( len, *p, 0 );
 
     *p += 4 + len;
 
@@ -209,10 +220,8 @@ static int ecjpake_hash( const mbedtls_md_info_t *md_info,
     if( end - p < 4 )
         return( MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL );
 
-    *p++ = (unsigned char)( ( id_len >> 24 ) & 0xFF );
-    *p++ = (unsigned char)( ( id_len >> 16 ) & 0xFF );
-    *p++ = (unsigned char)( ( id_len >>  8 ) & 0xFF );
-    *p++ = (unsigned char)( ( id_len       ) & 0xFF );
+    MBEDTLS_PUT_UINT32_BE( id_len, p, 0 );
+    p += 4;
 
     if( end < p || (size_t)( end - p ) < id_len )
         return( MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL );
@@ -273,7 +282,7 @@ static int ecjpake_zkp_read( const mbedtls_md_info_t *md_info,
 
     r_len = *(*p)++;
 
-    if( end < *p || (size_t)( end - *p ) < r_len )
+    if( end < *p || (size_t)( end - *p ) < r_len || r_len == 0 )
     {
         ret = MBEDTLS_ERR_ECP_BAD_INPUT_DATA;
         goto cleanup;
@@ -352,7 +361,7 @@ static int ecjpake_zkp_write( const mbedtls_md_info_t *md_info,
         goto cleanup;
     }
 
-    *(*p)++ = (unsigned char)( len & 0xFF );
+    *(*p)++ = MBEDTLS_BYTE_0( len );
     MBEDTLS_MPI_CHK( mbedtls_mpi_write_binary( &h, *p, len ) ); /* r */
     *p += len;
 
@@ -440,7 +449,7 @@ cleanup:
 
 /*
  * Read a ECJPAKEKeyKPPairList (7.4.2.3) and check proofs
- * Ouputs: verified peer public keys Xa, Xb
+ * Outputs: verified peer public keys Xa, Xb
  */
 static int ecjpake_kkpp_read( const mbedtls_md_info_t *md_info,
                               const mbedtls_ecp_group *grp,
@@ -820,6 +829,8 @@ static const unsigned char ecjpake_test_password[] = {
     0x65, 0x73, 0x74
 };
 
+#if !defined(MBEDTLS_ECJPAKE_ALT)
+
 static const unsigned char ecjpake_test_x1[] = {
     0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c,
     0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18,
@@ -946,6 +957,28 @@ static const unsigned char ecjpake_test_pms[] = {
     0xb4, 0x38, 0xf7, 0x19, 0xd3, 0xc4, 0xf3, 0x51
 };
 
+/*
+ * PRNG for test - !!!INSECURE NEVER USE IN PRODUCTION!!!
+ *
+ * This is the linear congruential generator from numerical recipes,
+ * except we only use the low byte as the output. See
+ * https://en.wikipedia.org/wiki/Linear_congruential_generator#Parameters_in_common_use
+ */
+static int self_test_rng( void *ctx, unsigned char *out, size_t len )
+{
+    static uint32_t state = 42;
+
+    (void) ctx;
+
+    for( size_t i = 0; i < len; i++ )
+    {
+        state = state * 1664525u + 1013904223u;
+        out[i] = (unsigned char) state;
+    }
+
+    return( 0 );
+}
+
 /* Load my private keys and generate the corresponding public keys */
 static int ecjpake_test_load( mbedtls_ecjpake_context *ctx,
                               const unsigned char *xm1, size_t len1,
@@ -956,13 +989,15 @@ static int ecjpake_test_load( mbedtls_ecjpake_context *ctx,
     MBEDTLS_MPI_CHK( mbedtls_mpi_read_binary( &ctx->xm1, xm1, len1 ) );
     MBEDTLS_MPI_CHK( mbedtls_mpi_read_binary( &ctx->xm2, xm2, len2 ) );
     MBEDTLS_MPI_CHK( mbedtls_ecp_mul( &ctx->grp, &ctx->Xm1, &ctx->xm1,
-                                      &ctx->grp.G, NULL, NULL ) );
+                                      &ctx->grp.G, self_test_rng, NULL ) );
     MBEDTLS_MPI_CHK( mbedtls_ecp_mul( &ctx->grp, &ctx->Xm2, &ctx->xm2,
-                                      &ctx->grp.G, NULL, NULL ) );
+                                      &ctx->grp.G, self_test_rng, NULL ) );
 
 cleanup:
     return( ret );
 }
+
+#endif /* ! MBEDTLS_ECJPAKE_ALT */
 
 /* For tests we don't need a secure RNG;
  * use the LGC from Numerical Recipes for simplicity */
@@ -1059,6 +1094,12 @@ int mbedtls_ecjpake_self_test( int verbose )
     if( verbose != 0 )
         mbedtls_printf( "passed\n" );
 
+#if !defined(MBEDTLS_ECJPAKE_ALT)
+    /* 'reference handshake' tests can only be run against implementations
+     * for which we have 100% control over how the random ephemeral keys
+     * are generated. This is only the case for the internal mbed TLS
+     * implementation, so these tests are skipped in case the internal
+     * implementation is swapped out for an alternative one. */
     if( verbose != 0 )
         mbedtls_printf( "  ECJPAKE test #2 (reference handshake): " );
 
@@ -1107,6 +1148,7 @@ int mbedtls_ecjpake_self_test( int verbose )
 
     if( verbose != 0 )
         mbedtls_printf( "passed\n" );
+#endif /* ! MBEDTLS_ECJPAKE_ALT */
 
 cleanup:
     mbedtls_ecjpake_free( &cli );

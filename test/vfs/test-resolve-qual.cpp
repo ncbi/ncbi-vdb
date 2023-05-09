@@ -22,6 +22,8 @@
 *
 * =========================================================================== */
 
+#include <os-native.h>
+
 #include <kfg/kfg-priv.h> /* KConfigMakeLocal */
 
 #include <kfs/directory.h> /* KDirectoryRelease */
@@ -63,16 +65,16 @@ TEST_SUITE(TestResolveQualSuite)
 #define FAIL_REMOTE 3
 #define FAIL_ENV 4
 
-static bool servicesCacheDisabled = true;//VDBManagerGetQuality(NULL) == NULL;
+//static bool servicesCacheDisabled = true;//VDBManagerGetQuality(NULL) == NULL;
 
 struct TRQFixture { TRQFixture() {
-    putenv((char*)ACC "=");
-    putenv(ENV_MAGIC_REMOTE "=");
-    putenv(ENV_MAGIC_REMOTE_VDBCACHE "=");
-    putenv(ENV_MAGIC_LOCAL "=");
-    putenv(ENV_MAGIC_LOCAL_VDBCACHE "=");
-    putenv(ENV_MAGIC_CACHE "=");
-    putenv(ENV_MAGIC_CACHE_VDBCACHE "=");
+    setenv(ACC,"",1);
+    setenv(ENV_MAGIC_REMOTE,"",1);
+    setenv(ENV_MAGIC_REMOTE_VDBCACHE,"",1);
+    setenv(ENV_MAGIC_LOCAL,"",1);
+    setenv(ENV_MAGIC_LOCAL_VDBCACHE,"",1);
+    setenv(ENV_MAGIC_CACHE,"",1);
+    setenv(ENV_MAGIC_CACHE_VDBCACHE,"",1);
 } };
 
 class TRQHelper : protected ncbi::NK::TestCase {

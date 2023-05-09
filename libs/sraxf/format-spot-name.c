@@ -92,7 +92,7 @@ rc_t CC format_spot_name ( void *self,
         size_t num_writ;
         char sname[1024]; /** name on stack **/
         const char *name_fmt = ((char*)argv[0].u.data.base) + argv[0].u.data.first_elem;
-        uint32_t i, j, x, y;
+        uint32_t i, j, x = 0, y = 0;
         bool have_x = false, have_y = false;
         const uint32_t fmt_size = argv [ 0 ] . u . data . elem_count;
 
@@ -175,7 +175,7 @@ rc_t CC format_spot_name ( void *self,
                     return RC ( rcXF, rcFunction, rcDecoding, rcBuffer, rcInsufficient );
                 }
             }
-            if( j > sizeof(sname)-1){	
+            if( j > sizeof(sname)-1){
                 return RC ( rcXF, rcFunction, rcDecoding, rcBuffer, rcInsufficient );
             }
         }
@@ -186,7 +186,7 @@ rc_t CC format_spot_name ( void *self,
                 return RC ( rcXF, rcFunction, rcDecoding, rcBuffer, rcInsufficient );
             }
         }
-        
+
         /* j is our new element count **/
         elem_count = j;
 
@@ -197,10 +197,10 @@ rc_t CC format_spot_name ( void *self,
             if ( rc != 0 )
                 return rc;
         }
-        
+
         /* the output name */
         name = dst -> base;
-        
+
         memmove ( name, sname, elem_count );
         rslt -> elem_count = elem_count;
         return 0;
@@ -274,7 +274,7 @@ rc_t CC format_spot_name_no_coord ( void *self,
                     return RC ( rcXF, rcFunction, rcDecoding, rcBuffer, rcInsufficient );
                 }
             }
-            if( j > sizeof(sname)-1){	
+            if( j > sizeof(sname)-1){
                 return RC ( rcXF, rcFunction, rcDecoding, rcBuffer, rcInsufficient );
             }
         }
@@ -285,7 +285,7 @@ rc_t CC format_spot_name_no_coord ( void *self,
                 return RC ( rcXF, rcFunction, rcDecoding, rcBuffer, rcInsufficient );
             }
         }
-        
+
         /* j is our new element count **/
         elem_count = j;
 
@@ -296,10 +296,10 @@ rc_t CC format_spot_name_no_coord ( void *self,
             if ( rc != 0 )
                 return rc;
         }
-        
+
         /* the output name */
         name = dst -> base;
-        
+
         memmove ( name, sname, elem_count );
         rslt -> elem_count = elem_count;
         return 0;

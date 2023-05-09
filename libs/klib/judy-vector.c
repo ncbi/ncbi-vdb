@@ -235,7 +235,7 @@ LIB_EXPORT rc_t CC KVectorGet ( const KVector *self, uint64_t key,
         {
             if ( self -> nancy_bool )
             {
-                bool data;
+                bool data = false;
                 rc = Nancy1Test ( self -> nancy, key, & data );
                 if ( rc == 0 )
                 {
@@ -249,7 +249,7 @@ LIB_EXPORT rc_t CC KVectorGet ( const KVector *self, uint64_t key,
             }
             else
             {
-                Word_t data;
+                Word_t data = 0;
                 rc = NancyLGet ( self -> nancy, key, & data );
                 if ( rc == 0 )
                 {
@@ -482,7 +482,7 @@ LIB_EXPORT rc_t CC KVectorGetFirst ( const KVector *self, uint64_t *first,
             rc = RC ( rcCont, rcVector, rcAccessing, rcType, rcUnsupported );
         else
         {
-            Word_t data;
+            Word_t data = 0;
             rc = NancyLGetFirst ( self -> nancy, first, & data );
             if ( rc == 0 )
             {
@@ -696,7 +696,7 @@ KLIB_EXTERN rc_t CC KVectorGetPrev ( const KVector *self, uint64_t *prev,
         {
             if ( self -> nancy_bool )
             {
-                bool data;
+                bool data = false;
                 rc = Nancy1TestPrev ( self -> nancy, prev, key, & data );
                 if ( rc == 0 )
                 {
@@ -710,7 +710,7 @@ KLIB_EXTERN rc_t CC KVectorGetPrev ( const KVector *self, uint64_t *prev,
             }
             else
             {
-                Word_t data;
+                Word_t data = 0;
                 rc = NancyLGetPrev ( self -> nancy, prev, key, & data );
                 if ( rc == 0 )
                 {
@@ -967,7 +967,7 @@ KLIB_EXTERN rc_t CC KVectorGetNext ( const KVector *self, uint64_t *next,
         {
             if ( self -> nancy_bool )
             {
-                bool data;
+                bool data = false;
                 rc = Nancy1TestNext ( self -> nancy, next, key, & data );
                 if ( rc == 0 )
                 {
@@ -981,7 +981,7 @@ KLIB_EXTERN rc_t CC KVectorGetNext ( const KVector *self, uint64_t *next,
             }
             else
             {
-                Word_t data;
+                Word_t data = 0;
                 rc = NancyLGetNext ( self -> nancy, next, key, & data );
                 if ( rc == 0 )
                 {
@@ -1229,7 +1229,7 @@ LIB_EXPORT rc_t CC KVectorSet ( KVector *self, uint64_t key,
         rc = RC ( rcCont, rcVector, rcWriting, rcParam, rcEmpty );
     else
     {
-        Word_t value;
+        Word_t value = 0;
 
         /* detect first set */
         if ( self -> nancy == NULL )
@@ -1476,7 +1476,7 @@ LIB_EXPORT rc_t CC KVectorVisit ( const KVector *self, bool reverse,
             JError_t err;
             Word_t first, last, idx;
 
-	    /** Judy1First searches for first value higher then first**/ 
+	    /** Judy1First searches for first value higher then first**/
             first = 0;
 	    /** Judy1Last searches for first value lower then last **/
             last = (Word_t)-1;

@@ -195,7 +195,7 @@ rc_t KBTreeWhack ( KBTree *self )
         /* drop the page file and its cache */
         KPageFileRelease ( self -> pgfile.pager );
 
-        /* write header to tail */        
+        /* write header to tail */
         rc = KFileWrite ( self -> file, eof, & self -> hdr, sizeof self -> hdr, & num_writ );
         if ( rc == 0 && num_writ != sizeof self -> hdr )
             rc = RC ( rcDB, rcTree, rcPersisting, rcTransfer, rcIncomplete );
@@ -313,7 +313,7 @@ LIB_EXPORT rc_t CC KBTreeMakeRead_1 ( const KBTree **btp,
 LIB_EXPORT rc_t CC KBTreeMakeUpdate_1 ( KBTree **btp, KFile *backing,
     size_t climit )
 {
-    rc_t rc;
+    rc_t rc = 0;
 
     if ( btp == NULL )
         rc = RC ( rcDB, rcTree, rcConstructing, rcParam, rcNull );

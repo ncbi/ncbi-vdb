@@ -40,6 +40,7 @@
 #include <set>
 #include <memory>
 
+#undef LIB_EXPORT
 #define LIB_EXPORT
 #include "../libs/klib/btree.c"
 
@@ -93,7 +94,7 @@ static Pager_vt const KPageFile_vt = {
     PagerUnuse
 };
 
-const static string DataDir = "./";
+const static string DataDir = "./data/";
 
 class BtreeFixture
 {
@@ -101,11 +102,12 @@ public:
     BtreeFixture()
     : backing(nullptr)
     {
+		memset( &pager, 0, sizeof(pager));
         THROW_ON_RC( KDirectoryNativeDir_v1 ( &dir ) );
     }
     void Setup( const char* test_name)
     {
-        const string backingFileName = DataDir + test_name + ".backing";
+        backingFileName = DataDir + test_name + ".backing";
         remove( backingFileName.c_str() );
         THROW_ON_RC( KDirectoryCreateFile_v1 ( dir, &backing, true, 0664, kcmCreate, "%s", backingFileName.c_str() ) );
         THROW_ON_RC( KPageFileMakeUpdate (
@@ -118,14 +120,16 @@ public:
     }
     ~BtreeFixture()
     {
-        if ( node != nullptr )
+        if ( m_node != nullptr )
         {
-            KPageFile_vt.unuse( &pager, node );
+            KPageFile_vt.unuse( &pager, m_node );
         }
 
         KPageFileRelease ( pager.pager );
         KFileRelease ( backing );
         KDirectoryRelease ( dir );
+
+        remove( backingFileName.c_str() );
     }
 
     bool TreeEntry( const string & key, uint32_t id, bool validate = true )
@@ -138,8 +142,9 @@ public:
         rc_t rc = BTreeEntry ( & pb -> root, &pager, &KPageFile_vt, &id, &was_inserted, key.c_str(), key.size() );
         if ( rc )
         {
-            cerr << rc << endl;
-            abort();
+            ostringstream s;
+            s << "BTreeEntry() returned rc=" << rc;
+            throw logic_error( s.str() );
         }
 
         if ( validate )
@@ -164,9 +169,28 @@ public:
         ++(*iter);
     }
 
+    void Populate( bool verbose = false, bool validate = true )
+    {
+        uint32_t id = 0;
+        for( auto i = in.begin(); i != in.end(); ++i )
+        {
+            ++id;
+            if (verbose)
+                cout << endl << "***Inserting id=" << id << ", size=" << i->size() << ", " << (int)(unsigned char)(*i)[0] << endl;
+            THROW_ON_FALSE( TreeEntry ( *i, id, validate ) );
+            if (verbose)
+                Print();
+        }
+    }
+
     void Validate()
     {
         btree_validate ( pb -> root, &pager, &KPageFile_vt );
+    }
+
+    void Print()
+    {
+        btree_printf ( pb -> root, &pager, &KPageFile_vt );
     }
 
     EntryData* MakeEntry( const string & key )
@@ -175,14 +199,14 @@ public:
         ret -> pager = & pager;
         ret -> vt = & KPageFile_vt;
         ret -> root = pb.get() == nullptr ? 0 : pb -> root;
-        ret -> id = & id;
+        ret -> id = & m_id;
         ret -> key = key.c_str();
         ret -> key_size = key.size();
         ret -> was_inserted = false;
         return ret;
     }
 
-    LeafNode* MakeLeaf( EntryData * pb, uint32_t * rootId = nullptr )
+    LeafNode* MakeLeaf( uint32_t * rootId = nullptr )
     {
         uint32_t new_id = 0;
         const void * page = pb->vt->alloc(pb->pager, &new_id);
@@ -198,7 +222,7 @@ public:
     }
 
     bool CheckCount( const LeafNode & node, unsigned int count, unsigned int key_length = 1 )
-    { // for testing, assume all keys have fixed length
+    { // for testing, assume all keys have teh same length
         if ( node.count != count )
         {
             cerr << "CheckCount/count: expected " << count << ", actual " << node.count << endl;
@@ -247,172 +271,198 @@ public:
     }
 
 protected:
-    KDirectory_v1 *dir;
-    KFile *backing;
+    string backingFileName;
+
+    KDirectory_v1 *dir = nullptr;
+    KFile *backing = nullptr;
     Pager pager;
 
-    uint32_t id;
+    vector<string> in;
+    uint32_t m_id;
     unique_ptr<EntryData> pb;
-    LeafNode* node = nullptr; // memory owned by pager
+    LeafNode* m_node = nullptr; // memory owned by pager
+
+	const string A = "A";
+	const string B = "B";
+	const string C = "C";
+	const string D = "D";
+	const string E = "E";
 };
 
 FIXTURE_TEST_CASE( InsertIntoEmpty, BtreeFixture )
 {
     Setup( GetName() );
+    pb.reset( MakeEntry( A ) );
+    m_node = MakeLeaf( &pb -> root );
 
-    pb.reset( MakeEntry( "A" ) );
-    node = MakeLeaf( pb.get(), &pb -> root );
-
-    REQUIRE_RC( leaf_insert( pb.get(), node, 0 ) );
+    REQUIRE_RC( leaf_insert( pb.get(), m_node, 0 ) );
     Validate();
 
-    REQUIRE( CheckPrefix( * node ) );
+    REQUIRE( CheckPrefix( * m_node ) );
 
-    REQUIRE( CheckCount( * node, 1 ) );
-    REQUIRE( CheckKey( * node, 0, "A" ) );
+    REQUIRE( CheckCount( * m_node, 1 ) );
+    REQUIRE( CheckKey( * m_node, 0, A ) );
 
-    REQUIRE( CheckWindow( * node, 'A'-1, 0, 0 ));
-    REQUIRE( CheckWindow( * node, 'A', 0, 1 ));
-    REQUIRE( CheckWindow( * node, 'A'+1, 1, 1 ));
+    REQUIRE( CheckWindow( * m_node, 'A'-1, 0, 0 ));
+    REQUIRE( CheckWindow( * m_node, 'A', 0, 1 ));
+    REQUIRE( CheckWindow( * m_node, 'A'+1, 1, 1 ));
 }
-
 FIXTURE_TEST_CASE( InsertWithoutSplit_Last, BtreeFixture )
 {
     Setup( GetName() );
 
-    pb.reset( MakeEntry( "A" ) );
-    node = MakeLeaf( pb.get(), &pb -> root );
-    REQUIRE_RC( leaf_insert( pb.get(), node, 0 ) );
+    pb.reset( MakeEntry( A ) );
+    m_node = MakeLeaf( &pb -> root );
+    REQUIRE_RC( leaf_insert( pb.get(), m_node, 0 ) );
 
-    pb.reset( MakeEntry( "B" ) );
-    REQUIRE_RC( leaf_insert( pb.get(), node, 1 ) );
+    pb.reset( MakeEntry( B ) );
+    REQUIRE_RC( leaf_insert( pb.get(), m_node, 1 ) );
     Validate();
 
-    REQUIRE( CheckPrefix( * node ) );
+    REQUIRE( CheckPrefix( * m_node ) );
 
-    REQUIRE( CheckCount( * node, 2 ) );
+    REQUIRE( CheckCount( * m_node, 2 ) );
 
-    REQUIRE( CheckKey( * node, 0, "A" ) );
-    REQUIRE( CheckKey( * node, 1, "B" ) );
+    REQUIRE( CheckKey( * m_node, 0, A ) );
+    REQUIRE( CheckKey( * m_node, 1, B ) );
 
-    REQUIRE( CheckWindow( * node, 'A'-1, 0, 0 ));
-    REQUIRE( CheckWindow( * node, 'A', 0, 1 ));
-    REQUIRE( CheckWindow( * node, 'B', 1, 2 ));
-    REQUIRE( CheckWindow( * node, 'B'+1, 2, 2 ));
+    REQUIRE( CheckWindow( * m_node, 'A'-1, 0, 0 ));
+    REQUIRE( CheckWindow( * m_node, 'A', 0, 1 ));
+    REQUIRE( CheckWindow( * m_node, 'B', 1, 2 ));
+    REQUIRE( CheckWindow( * m_node, 'B'+1, 2, 2 ));
 }
 
 FIXTURE_TEST_CASE( InsertWithoutSplit_First, BtreeFixture )
 {
     Setup( GetName() );
 
-    pb.reset( MakeEntry( "B" ) );
-    node = MakeLeaf( pb.get(), &pb -> root );
-    REQUIRE_RC( leaf_insert( pb.get(), node, 0 ) );
+    pb.reset( MakeEntry( B ) );
+    m_node = MakeLeaf( &pb -> root );
+    REQUIRE_RC( leaf_insert( pb.get(), m_node, 0 ) );
 
-    pb.reset( MakeEntry( "A" ) );
-    REQUIRE_RC( leaf_insert( pb.get(), node, 0 ) );
+    pb.reset( MakeEntry( A ) );
+    REQUIRE_RC( leaf_insert( pb.get(), m_node, 0 ) );
     Validate();
 
-    REQUIRE( CheckPrefix( * node ) );
+    REQUIRE( CheckPrefix( * m_node ) );
 
-    REQUIRE( CheckCount( * node, 2 ) );
+    REQUIRE( CheckCount( * m_node, 2 ) );
 
-    REQUIRE( CheckKey( * node, 0, "A" ) );
-    REQUIRE( CheckKey( * node, 1, "B" ) );
+    REQUIRE( CheckKey( * m_node, 0, A ) );
+    REQUIRE( CheckKey( * m_node, 1, B ) );
 
-    REQUIRE( CheckWindow( * node, 'A'-1, 0, 0 ));
-    REQUIRE( CheckWindow( * node, 'A', 0, 1 ));
-    REQUIRE( CheckWindow( * node, 'B', 1, 2 ));
-    REQUIRE( CheckWindow( * node, 'B'+1, 2, 2 ));
+    REQUIRE( CheckWindow( * m_node, 'A'-1, 0, 0 ));
+    REQUIRE( CheckWindow( * m_node, 'A', 0, 1 ));
+    REQUIRE( CheckWindow( * m_node, 'B', 1, 2 ));
+    REQUIRE( CheckWindow( * m_node, 'B'+1, 2, 2 ));
 }
 
 FIXTURE_TEST_CASE( InsertWithoutSplit_Middle, BtreeFixture )
 {
     Setup( GetName() );
 
-    pb.reset( MakeEntry( "A" ) );
-    node = MakeLeaf( pb.get(), &pb -> root );
-    REQUIRE_RC( leaf_insert( pb.get(), node, 0 ) );
+    pb.reset( MakeEntry( A ) );
+    m_node = MakeLeaf( &pb -> root );
+    REQUIRE_RC( leaf_insert( pb.get(), m_node, 0 ) );
 
-    pb.reset( MakeEntry( "C" ) );
-    REQUIRE_RC( leaf_insert( pb.get(), node, 1 ) );
+    pb.reset( MakeEntry( C ) );
+    REQUIRE_RC( leaf_insert( pb.get(), m_node, 1 ) );
 
-    pb.reset( MakeEntry( "B" ) );
-    REQUIRE_RC( leaf_insert( pb.get(), node, 1 ) );
+    pb.reset( MakeEntry( B ) );
+    REQUIRE_RC( leaf_insert( pb.get(), m_node, 1 ) );
     Validate();
 
-    REQUIRE( CheckPrefix( * node ) );
+    REQUIRE( CheckPrefix( * m_node ) );
 
-    REQUIRE( CheckCount( * node, 3 ) );
+    REQUIRE( CheckCount( * m_node, 3 ) );
 
-    REQUIRE( CheckKey( * node, 0, "A" ) );
-    REQUIRE( CheckKey( * node, 1, "B" ) );
-    REQUIRE( CheckKey( * node, 2, "C" ) );
+    REQUIRE( CheckKey( * m_node, 0, A ) );
+    REQUIRE( CheckKey( * m_node, 1, B ) );
+    REQUIRE( CheckKey( * m_node, 2, C ) );
 
-    REQUIRE( CheckWindow( * node, 'A'-1, 0, 0 ));
-    REQUIRE( CheckWindow( * node, 'A', 0, 1 ));
-    REQUIRE( CheckWindow( * node, 'B', 1, 2 ));
-    REQUIRE( CheckWindow( * node, 'C', 2, 3 ));
-    REQUIRE( CheckWindow( * node, 'C'+1, 3, 3 ));
+    REQUIRE( CheckWindow( * m_node, 'A'-1, 0, 0 ));
+    REQUIRE( CheckWindow( * m_node, 'A', 0, 1 ));
+    REQUIRE( CheckWindow( * m_node, 'B', 1, 2 ));
+    REQUIRE( CheckWindow( * m_node, 'C', 2, 3 ));
+    REQUIRE( CheckWindow( * m_node, 'C'+1, 3, 3 ));
 }
 
-// splitting leaves
-FIXTURE_TEST_CASE( Split_LeftOfMedian_via_API, BtreeFixture )
-{   // leaf(B,C) + A -> split(B, left=(A), right=(C))
+// API
+FIXTURE_TEST_CASE( Basic_Insert, BtreeFixture )
+{
     Setup( GetName() );
+    in.push_back( A );
+    Populate();
+}
+FIXTURE_TEST_CASE( Simple_Prefix, BtreeFixture )
+{
+    Setup( GetName() );
+    in.push_back( A );
+    in.push_back( "AAA" );
+    in.push_back( "AA" );
+    Populate();
+}
 
-    uint32_t id = 0;
-    vector<string> in;
-    in.push_back( string(10886, 'B' ) );
-    in.push_back( string(16915, 'C' ) );
-    in.push_back( string(18335, 'A' ) );
+// key size limit
+FIXTURE_TEST_CASE( KeyTooLong, BtreeFixture )
+{   // leaf(A) + B -> branch(B, left=(A), right=()) VDB-5026
+    Setup( GetName() );
+    string key (11000, 'A');
+    pb.reset( MakeEntry( key ) );
+    bool was_inserted;
+    REQUIRE_RC_FAIL( BTreeEntry ( & pb -> root, &pager, &KPageFile_vt, &m_id, &was_inserted, key.c_str(), key.size() ) );
+}
 
-    for( auto i = in.begin(); i != in.end(); ++i )
-    {
-        ++id;
-        //cout << endl << "***Inserting id=" << id << ", size=" << i->size() << ", " << (int)(unsigned char)(*i)[0] << endl;
-        REQUIRE( TreeEntry ( *i, id ) );
-    }
-    Validate();
+FIXTURE_TEST_CASE( Split_leaf, BtreeFixture )
+{   // leaf(A) + C -> leaf( A C )
+    // + D -> leaf( A C  D )
+    // + B -> branch(C, left=(A B), right=(D) )
+    Setup( GetName() );
+    in.push_back( string(8000, 'A' ) );
+    in.push_back( string(9000, 'C' ) );
+    in.push_back( string(10000, 'D' ) );
+    in.push_back( string(10000,  'B' ) );
+    Populate();
+    //Print();
 }
 
 FIXTURE_TEST_CASE( Split_LeftOfMedian, BtreeFixture )
 {   // leaf(B,C) + A -> split(B, left=(A), right=(C))
     Setup( GetName() );
 
-    pb.reset( MakeEntry( "B" ) );
-    node = MakeLeaf( pb.get(), &pb -> root );
-    REQUIRE_RC( leaf_insert( pb.get(), node, 0 ) );
+    pb.reset( MakeEntry( B ) );
+    m_node = MakeLeaf( &pb -> root );
+    REQUIRE_RC( leaf_insert( pb.get(), m_node, 0 ) );
 
-    pb.reset( MakeEntry( "C" ) );
-    REQUIRE_RC( leaf_insert( pb.get(), node, 1 ) );
+    pb.reset( MakeEntry( C ) );
+    REQUIRE_RC( leaf_insert( pb.get(), m_node, 1 ) );
 
     Split split;
     SplitInit ( & split );
-    LeafNode *newNode = MakeLeaf( pb.get(), & split.right);
+    LeafNode *newNode = MakeLeaf( & split.right);
 
-    pb.reset( MakeEntry( "A" ) );
+    pb.reset( MakeEntry( A ) );
 
-    REQUIRE_RC( split_leaf ( pb.get(), node, newNode, 0, & split) );
+    REQUIRE_RC( split_leaf ( pb.get(), m_node, newNode, 0, & split) );
     Validate();
 
-    REQUIRE( CheckPrefix( * node ) );
+    REQUIRE( CheckPrefix( * m_node ) );
 
-    REQUIRE( CheckCount( * node, 1 ) );
-    REQUIRE( CheckKey( * node, 0, "A" ) );
+    REQUIRE( CheckCount( * m_node, 1 ) );
+    REQUIRE( CheckKey( * m_node, 0, A ) );
 
-    REQUIRE( CheckWindow( * node, 'A'-1, 0, 0 ));
-    REQUIRE( CheckWindow( * node, 'A', 0, 1 ));
-    REQUIRE( CheckWindow( * node, 'A'+1, 1, 1 ));
+    REQUIRE( CheckWindow( * m_node, 'A'-1, 0, 0 ));
+    REQUIRE( CheckWindow( * m_node, 'A', 0, 1 ));
+    REQUIRE( CheckWindow( * m_node, 'A'+1, 1, 1 ));
 
     REQUIRE( CheckPrefix( * newNode ) );
     REQUIRE( CheckCount( * newNode, 1 ) );
-    REQUIRE( CheckKey( * newNode, 0, "C" ) );
+    REQUIRE( CheckKey( * newNode, 0, C ) );
     REQUIRE( CheckWindow( * newNode, 'C'-1, 0, 0 ));
     REQUIRE( CheckWindow( * newNode, 'C', 0, 1 ));
     REQUIRE( CheckWindow( * newNode, 'C'+1, 1, 1 ));
 
-    REQUIRE_EQ( string("B"), string((const char*)split.key, split.ksize));
+    REQUIRE_EQ( string(B), string((const char*)split.key, split.ksize));
     REQUIRE_EQ( 0, (int)split.left );
     REQUIRE_EQ( 4, (int)split.right );
 }
@@ -421,35 +471,35 @@ FIXTURE_TEST_CASE( Split_RightOfMedian, BtreeFixture )
 {   // leaf(A,B,C,E) + D -> split(C, left=(A,B), right=(D,E))
     Setup( GetName() );
 
-    pb.reset( MakeEntry( "A" ) );
-    node = MakeLeaf( pb.get(), &pb -> root );
-    REQUIRE_RC( leaf_insert( pb.get(), node, 0 ) );
-    pb.reset( MakeEntry( "B" ) );
-    REQUIRE_RC( leaf_insert( pb.get(), node, 1 ) );
-    pb.reset( MakeEntry( "C" ) );
-    REQUIRE_RC( leaf_insert( pb.get(), node, 2 ) );
-    pb.reset( MakeEntry( "E" ) );
-    REQUIRE_RC( leaf_insert( pb.get(), node, 3 ) );
+    pb.reset( MakeEntry( A ) );
+    m_node = MakeLeaf( &pb -> root );
+    REQUIRE_RC( leaf_insert( pb.get(), m_node, 0 ) );
+    pb.reset( MakeEntry( B ) );
+    REQUIRE_RC( leaf_insert( pb.get(), m_node, 1 ) );
+    pb.reset( MakeEntry( C ) );
+    REQUIRE_RC( leaf_insert( pb.get(), m_node, 2 ) );
+    pb.reset( MakeEntry( E ) );
+    REQUIRE_RC( leaf_insert( pb.get(), m_node, 3 ) );
 
     Split split;
     SplitInit ( & split );
-    LeafNode *newNode = MakeLeaf( pb.get(), & split.right);
+    LeafNode *newNode = MakeLeaf( & split.right);
 
-    pb.reset( MakeEntry( "D" ) );
+    pb.reset( MakeEntry( D ) );
 
-    REQUIRE_RC( split_leaf ( pb.get(), node, newNode, 3, & split) );
+    REQUIRE_RC( split_leaf ( pb.get(), m_node, newNode, 3, & split) );
     Validate();
 
-    REQUIRE( CheckPrefix( * node ) );
+    REQUIRE( CheckPrefix( * m_node ) );
 
-    REQUIRE( CheckCount( * node, 2 ) );
-    REQUIRE( CheckKey( * node, 0, "A" ) );
-    REQUIRE( CheckKey( * node, 1, "B" ) );
+    REQUIRE( CheckCount( * m_node, 2 ) );
+    REQUIRE( CheckKey( * m_node, 0, A ) );
+    REQUIRE( CheckKey( * m_node, 1, B ) );
 
-    REQUIRE( CheckWindow( * node, 'A'-1, 0, 0 ));
-    REQUIRE( CheckWindow( * node, 'A', 0, 1 ));
-    REQUIRE( CheckWindow( * node, 'B', 1, 2 ));
-    REQUIRE( CheckWindow( * node, 'B'+1, 2, 2 ));
+    REQUIRE( CheckWindow( * m_node, 'A'-1, 0, 0 ));
+    REQUIRE( CheckWindow( * m_node, 'A', 0, 1 ));
+    REQUIRE( CheckWindow( * m_node, 'B', 1, 2 ));
+    REQUIRE( CheckWindow( * m_node, 'B'+1, 2, 2 ));
 
     REQUIRE( CheckPrefix( * newNode ) );
     REQUIRE( CheckCount( * newNode, 2 ) );
@@ -462,7 +512,7 @@ FIXTURE_TEST_CASE( Split_RightOfMedian, BtreeFixture )
     REQUIRE( CheckWindow( * newNode, 'E', 1, 2 ));
     REQUIRE( CheckWindow( * newNode, 'E'+1, 2, 2 ));
 
-    REQUIRE_EQ( string("C"), string((const char*)split.key, split.ksize));
+    REQUIRE_EQ( string(C), string((const char*)split.key, split.ksize));
     REQUIRE_EQ( 0, (int)split.left );
     REQUIRE_EQ( 4, (int)split.right );
 }
@@ -471,37 +521,37 @@ FIXTURE_TEST_CASE( Split_Median, BtreeFixture )
 {   // leaf(A,B,D,E) + C -> split(D, left=(A,B,C), right=(E))
     Setup( GetName() );
 
-    pb.reset( MakeEntry( "A" ) );
-    node = MakeLeaf( pb.get(), &pb -> root );
-    REQUIRE_RC( leaf_insert( pb.get(), node, 0 ) );
-    pb.reset( MakeEntry( "B" ) );
-    REQUIRE_RC( leaf_insert( pb.get(), node, 1 ) );
-    pb.reset( MakeEntry( "D" ) );
-    REQUIRE_RC( leaf_insert( pb.get(), node, 2 ) );
-    pb.reset( MakeEntry( "E" ) );
-    REQUIRE_RC( leaf_insert( pb.get(), node, 3 ) );
+    pb.reset( MakeEntry( A ) );
+    m_node = MakeLeaf( &pb -> root );
+    REQUIRE_RC( leaf_insert( pb.get(), m_node, 0 ) );
+    pb.reset( MakeEntry( B ) );
+    REQUIRE_RC( leaf_insert( pb.get(), m_node, 1 ) );
+    pb.reset( MakeEntry( D ) );
+    REQUIRE_RC( leaf_insert( pb.get(), m_node, 2 ) );
+    pb.reset( MakeEntry( E ) );
+    REQUIRE_RC( leaf_insert( pb.get(), m_node, 3 ) );
 
     Split split;
     SplitInit ( & split );
-    LeafNode *newNode = MakeLeaf( pb.get(), & split.right);
+    LeafNode *newNode = MakeLeaf( & split.right);
 
-    pb.reset( MakeEntry( "C" ) );
+    pb.reset( MakeEntry( C ) );
 
-    REQUIRE_RC( split_leaf ( pb.get(), node, newNode, 2, & split) );
+    REQUIRE_RC( split_leaf ( pb.get(), m_node, newNode, 2, & split) );
     Validate();
 
-    REQUIRE( CheckPrefix( * node ) );
+    REQUIRE( CheckPrefix( * m_node ) );
 
-    REQUIRE( CheckCount( * node, 3 ) );
-    REQUIRE( CheckKey( * node, 0, "A" ) );
-    REQUIRE( CheckKey( * node, 1, "B" ) );
-    REQUIRE( CheckKey( * node, 2, "C" ) );
+    REQUIRE( CheckCount( * m_node, 3 ) );
+    REQUIRE( CheckKey( * m_node, 0, A ) );
+    REQUIRE( CheckKey( * m_node, 1, B ) );
+    REQUIRE( CheckKey( * m_node, 2, C ) );
 
-    REQUIRE( CheckWindow( * node, 'A'-1, 0, 0 ));
-    REQUIRE( CheckWindow( * node, 'A', 0, 1 ));
-    REQUIRE( CheckWindow( * node, 'B', 1, 2 ));
-    REQUIRE( CheckWindow( * node, 'C', 2, 3 ));
-    REQUIRE( CheckWindow( * node, 'C'+1, 3, 3 ));
+    REQUIRE( CheckWindow( * m_node, 'A'-1, 0, 0 ));
+    REQUIRE( CheckWindow( * m_node, 'A', 0, 1 ));
+    REQUIRE( CheckWindow( * m_node, 'B', 1, 2 ));
+    REQUIRE( CheckWindow( * m_node, 'C', 2, 3 ));
+    REQUIRE( CheckWindow( * m_node, 'C'+1, 3, 3 ));
 
     REQUIRE( CheckPrefix( * newNode ) );
     REQUIRE( CheckCount( * newNode, 1 ) );
@@ -546,80 +596,15 @@ FIXTURE_TEST_CASE( Find, BtreeFixture )
 
 //TODO: ForEach, both directions
 
-FIXTURE_TEST_CASE( BTree_insert, BtreeFixture )
-{   // VDB-4959
-    std::ifstream file("./btree_keys.bin", std::ios::binary);
-    file.unsetf(std::ios::skipws);
-
-    Setup( GetName() );
-
-    uint32_t id = 0;
-    while ( file )
-    {
-        size_t size;
-        file.read((char*)&size, sizeof(size));
-        if ( ! file ) break;
-        char * buf = new char[size];
-        file.read(buf, size);
-        if ( ! file ) break;
-
-        ++id;
-//cout << "inserting " << size << endl;
-        REQUIRE( TreeEntry ( string(  buf, size ), id, false ) );
-
-//cout << "root=" << root << ",size=" << size << ", id=" << id << endl;
-
-        delete [] buf;
-    }
-
-    Validate();
-}
-
-
-// FIXTURE_TEST_CASE( ConstraintViolation, BtreeFixture )
-// {
-//     Setup( GetName() );
-
-//     uint32_t id = 0;
-//     vector<string> in;
-//     in.push_back( string(10886, 103 ) ); //'g'
-//     in.push_back( string(16915, 105 ) ); //'i'
-//     in.push_back( string(18335, 81) ); //'Q'
-//     in.push_back( string(492, 74) ); //'J'
-//     in.push_back( string(1421, 41) );
-//     in.push_back( string(10027, 186) );
-//     in.push_back( string(59, 242) );
-//     in.push_back( string(13926, 227) );
-
-//     in.push_back( string(3426, 124) );
-
-//     in.push_back( string(15736, 84) ); // 'T' -- this does not fit into the same 32K page as it neighbor 'Q', triggering a constraint violation rc, see btree.c:leaf_insert()
-
-//     in.push_back( string(15368, 27) );
-//     in.push_back( string(16429, 231) );
-//     in.push_back( string(1530, 118) );
-//     in.push_back( string(5123, 46) );
-//     in.push_back( string(3135, 51) );
-//     in.push_back( string(19802, 201) );
-
-//     for( auto i = in.begin(); i != in.end(); ++i )
-//     {
-//         ++id;
-//         cout << endl << "***Inserting id=" << id << ", size=" << i->size() << ", " << (int)(unsigned char)(*i)[0] << endl;
-//         REQUIRE( TreeEntry ( *i, id ) );
-//     }
-//     Validate();
-// }
-
 FIXTURE_TEST_CASE( BTree_randomInserts, BtreeFixture )
 {
     Setup( GetName() );
 
     uint32_t id = 0;
-    for( auto i = 0; i != 1000000; ++i )
+    for( auto i = 0u; i != 1000000; ++i )
     {   // key sizes 1..1024 are taken from sra-sort ( they are not enforced but longer keys
         // are likelier to trigger a constraint violation error in btree.c:leaf_insert() )
-        string s = string(1 + rand() % 1024, rand() % 256 );
+        string s = string( 1 + (size_t)rand() % 1024, rand() % 256 );
         id = i +1;
         //cout << endl << "***Inserting id=" << id << ", size=" << s.size() << ", " << (int)(unsigned char)s[0] << endl;
         TreeEntry ( s, id, false );
@@ -631,11 +616,11 @@ FIXTURE_TEST_CASE( LotsaFixedSizeInserts, BtreeFixture )
 {
     Setup( GetName() );
 
-    for( int i = 0; i < 375000; ++i )
+    for( auto i = 0u; i < 375000; ++i )
     {
         int key = rand();
         // does not have to return "true" as duplicates are allowed
-        TreeEntry ( string( (char *)&key, sizeof(key) ), i, i > 350000 );
+        TreeEntry ( string( (char *)&key, sizeof(key) ), i, false );
     }
     Validate();
 }

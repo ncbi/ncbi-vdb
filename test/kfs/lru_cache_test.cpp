@@ -41,7 +41,7 @@
 static size_t rand_32( size_t min, size_t max )
 {
        double scaled = ( ( double )rand() / RAND_MAX );
-       return ( ( max - min + 1 ) * scaled ) + min;
+       return ( (double)( max - min + 1 ) * scaled ) + min;
 }
 
 static rc_t fill_file_with_random_data( KFile * file, size_t file_size )
@@ -185,7 +185,7 @@ typedef struct events
     uint32_t requests, found, enter, discard, failed;
 } events;
 
-void on_event( void * data, enum cache_event event, uint64_t pos, size_t len, uint32_t block_nr )
+void on_event( void * data, enum cache_event event, uint64_t pos, size_t len, uint32_t block_nr ) noexcept
 {
     events * ev = ( events * )data;
     if ( ev != NULL )

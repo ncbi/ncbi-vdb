@@ -83,22 +83,22 @@ public:
         const String* uri;
         if ( VPathMakeString(path, &uri) != 0 )
            throw logic_error("PathToString: VPathMakeString failed");
-        
+
         string ret = string(uri->addr, uri->size);
-        
+
         free((void*)uri);
         if (VPathRelease(path))
            throw logic_error("PathToString: VPathRelease failed");
         path = 0;
-          
+
         return ret;
     }
-    
+
     VPath* path;
     VFSManager * vfs;
-    
+
     static const int BufSize = 1024;
-    char buf[BufSize]; 
+    char buf[BufSize];
     size_t num_read;
 };
 
@@ -193,7 +193,7 @@ FIXTURE_TEST_CASE(GetScheme_t, PathFixture)
 FIXTURE_TEST_CASE(GetScheme_NcbiObj, PathFixture)
 {
     REQUIRE_RC(VFSManagerMakePath ( vfs, &path, "ncbi-obj:12/1/345"));
-    
+
     VPUri_t uri_type;
     REQUIRE_RC(VPathGetScheme_t(path, &uri_type));
     REQUIRE_EQ(uri_type, (VPUri_t)vpuri_ncbi_obj);
@@ -201,7 +201,7 @@ FIXTURE_TEST_CASE(GetScheme_NcbiObj, PathFixture)
     String sch;
     REQUIRE_RC(VPathGetScheme(path, &sch));
     REQUIRE_EQ(string(sch.addr, sch.size), string("ncbi-obj"));
-    
+
     REQUIRE_RC(VPathReadPath(path, buf, BufSize, &num_read));
     REQUIRE_EQ(string(buf, num_read), string("12/1/345"));
 }
@@ -215,7 +215,7 @@ FIXTURE_TEST_CASE( VFS_Native2Internal_1, PathFixture )
     cout << "VFSManagerMakeSysPath(native) -> VPathMakeString(internal)\n";
     REQUIRE_RC(
         VFSManagerMakeSysPath( vfs, &path, "C:\\somepath\\somefile.something"));
-    
+
     const String *uri = NULL;
     REQUIRE_RC( VPathMakeString( path, &uri ) );
     REQUIRE_NOT_NULL( uri );
@@ -305,11 +305,11 @@ FIXTURE_TEST_CASE( VFS_Internal2Native_2, PathFixture )
 //  VPathGetPath
 
 // Functions from path-priv.h
-    
+
 FIXTURE_TEST_CASE(Option_Encrypt, PathFixture)
 {
     REQUIRE_RC(VFSManagerMakePath ( vfs, &path, "ncbi-file:qq?enc"));
-    
+
     REQUIRE_RC(VPathOption (path, vpopt_encrypted, buf, BufSize, &num_read));
     REQUIRE_EQ(num_read, (size_t)0);
 }
@@ -317,21 +317,21 @@ FIXTURE_TEST_CASE(Option_Encrypt, PathFixture)
 //TODO:
 // VPathMakeFmt
 // VPathMakeVFmt
-// VPathMakeRelative 
-// VPathMakeRelativeFmt 
-// VPathVMakeRelativeFmt 
-// VPathMakeCurrentPath 
-// VPathMakeURI 
+// VPathMakeRelative
+// VPathMakeRelativeFmt
+// VPathVMakeRelativeFmt
+// VPathMakeCurrentPath
+// VPathMakeURI
 // VPathGetCWD
 
 FIXTURE_TEST_CASE(MarkHighReliability, PathFixture)
 {
     REQUIRE_RC ( VFSManagerMakePath ( vfs, &path, "ncbi-file:qq?enc" ) );
     REQUIRE ( ! VPathIsHighlyReliable ( path ) );
-    
+
     REQUIRE_RC ( VPathMarkHighReliability(path, true) );
     REQUIRE ( VPathIsHighlyReliable ( path ) );
-    
+
     REQUIRE_RC ( VPathMarkHighReliability(path, false) );
     REQUIRE ( ! VPathIsHighlyReliable ( path ) );
 }
@@ -549,11 +549,11 @@ FIXTURE_TEST_CASE(ExtractAccessionOrOID_Quality_PathType, PathFixture) {
     REQUIRE_RC(VPathMakeFmt(&srr, "SRR01"));
     REQUIRE_EQ(path->path_type, (uint8_t)vpNameOrAccession);
 
-    int notequal = ~0;
+    //int notequal = ~0;
 
     REQUIRE_RC_FAIL(VFSManagerExtractAccessionOrOID(NULL, &acc_or_oid, path));
     REQUIRE_NULL(acc_or_oid);
-    
+
     REQUIRE_RC_FAIL(VFSManagerExtractAccessionOrOID(vfs, NULL, path));
     REQUIRE_NULL(acc_or_oid);
 

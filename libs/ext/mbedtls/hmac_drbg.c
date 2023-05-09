@@ -54,16 +54,12 @@ void mbedtls_hmac_drbg_init( mbedtls_hmac_drbg_context *ctx )
     memset( ctx, 0, sizeof( mbedtls_hmac_drbg_context ) );
 
     ctx->reseed_interval = MBEDTLS_HMAC_DRBG_RESEED_INTERVAL;
-
-#if defined(MBEDTLS_THREADING_C)
-    mbedtls_mutex_init( &ctx->mutex );
-#endif
 }
 
 /*
  * HMAC_DRBG update, using optional additional data (10.1.2.2)
  */
-int mbedtls_hmac_drbg_update_ret( mbedtls_hmac_drbg_context *ctx,
+int mbedtls_hmac_drbg_update( mbedtls_hmac_drbg_context *ctx,
                                   const unsigned char *additional,
                                   size_t add_len )
 {
@@ -108,15 +104,6 @@ exit:
     return( ret );
 }
 
-#if !defined(MBEDTLS_DEPRECATED_REMOVED)
-void mbedtls_hmac_drbg_update( mbedtls_hmac_drbg_context *ctx,
-                               const unsigned char *additional,
-                               size_t add_len )
-{
-    (void) mbedtls_hmac_drbg_update_ret( ctx, additional, add_len );
-}
-#endif /* MBEDTLS_DEPRECATED_REMOVED */
-
 /*
  * Simplified HMAC_DRBG initialisation (for use with deterministic ECDSA)
  */
@@ -129,6 +116,10 @@ int mbedtls_hmac_drbg_seed_buf( mbedtls_hmac_drbg_context *ctx,
     if( ( ret = mbedtls_md_setup( &ctx->md_ctx, md_info, 1 ) ) != 0 )
         return( ret );
 
+#if defined(MBEDTLS_THREADING_C)
+    mbedtls_mutex_init( &ctx->mutex );
+#endif
+
     /*
      * Set initial working state.
      * Use the V memory location, which is currently all 0, to initialize the
@@ -139,7 +130,7 @@ int mbedtls_hmac_drbg_seed_buf( mbedtls_hmac_drbg_context *ctx,
         return( ret );
     memset( ctx->V, 0x01, mbedtls_md_get_size( md_info ) );
 
-    if( ( ret = mbedtls_hmac_drbg_update_ret( ctx, data, data_len ) ) != 0 )
+    if( ( ret = mbedtls_hmac_drbg_update( ctx, data, data_len ) ) != 0 )
         return( ret );
 
     return( 0 );
@@ -214,7 +205,7 @@ static int hmac_drbg_reseed_core( mbedtls_hmac_drbg_context *ctx,
     }
 
     /* 2. Update state */
-    if( ( ret = mbedtls_hmac_drbg_update_ret( ctx, seed, seedlen ) ) != 0 )
+    if( ( ret = mbedtls_hmac_drbg_update( ctx, seed, seedlen ) ) != 0 )
         goto exit;
 
     /* 3. Reset reseed_counter */
@@ -253,6 +244,11 @@ int mbedtls_hmac_drbg_seed( mbedtls_hmac_drbg_context *ctx,
 
     if( ( ret = mbedtls_md_setup( &ctx->md_ctx, md_info, 1 ) ) != 0 )
         return( ret );
+
+    /* The mutex is initialized iff the md context is set up. */
+#if defined(MBEDTLS_THREADING_C)
+    mbedtls_mutex_init( &ctx->mutex );
+#endif
 
     md_size = mbedtls_md_get_size( md_info );
 
@@ -352,7 +348,7 @@ int mbedtls_hmac_drbg_random_with_add( void *p_rng,
     /* 2. Use additional data if any */
     if( additional != NULL && add_len != 0 )
     {
-        if( ( ret = mbedtls_hmac_drbg_update_ret( ctx,
+        if( ( ret = mbedtls_hmac_drbg_update( ctx,
                                                   additional, add_len ) ) != 0 )
             goto exit;
     }
@@ -376,7 +372,7 @@ int mbedtls_hmac_drbg_random_with_add( void *p_rng,
     }
 
     /* 6. Update */
-    if( ( ret = mbedtls_hmac_drbg_update_ret( ctx,
+    if( ( ret = mbedtls_hmac_drbg_update( ctx,
                                               additional, add_len ) ) != 0 )
         goto exit;
 
@@ -421,14 +417,13 @@ void mbedtls_hmac_drbg_free( mbedtls_hmac_drbg_context *ctx )
         return;
 
 #if defined(MBEDTLS_THREADING_C)
-    mbedtls_mutex_free( &ctx->mutex );
+    /* The mutex is initialized iff the md context is set up. */
+    if( ctx->md_ctx.md_info != NULL )
+        mbedtls_mutex_free( &ctx->mutex );
 #endif
     mbedtls_md_free( &ctx->md_ctx );
     mbedtls_platform_zeroize( ctx, sizeof( mbedtls_hmac_drbg_context ) );
     ctx->reseed_interval = MBEDTLS_HMAC_DRBG_RESEED_INTERVAL;
-#if defined(MBEDTLS_THREADING_C)
-    mbedtls_mutex_init( &ctx->mutex );
-#endif
 }
 
 #if defined(MBEDTLS_FS_IO)
@@ -440,6 +435,9 @@ int mbedtls_hmac_drbg_write_seed_file( mbedtls_hmac_drbg_context *ctx, const cha
 
     if( ( f = fopen( path, "wb" ) ) == NULL )
         return( MBEDTLS_ERR_HMAC_DRBG_FILE_IO_ERROR );
+
+    /* Ensure no stdio buffering of secrets, as such buffers cannot be wiped. */
+    mbedtls_setbuf( f, NULL );
 
     if( ( ret = mbedtls_hmac_drbg_random( ctx, buf, sizeof( buf ) ) ) != 0 )
         goto exit;
@@ -470,6 +468,9 @@ int mbedtls_hmac_drbg_update_seed_file( mbedtls_hmac_drbg_context *ctx, const ch
     if( ( f = fopen( path, "rb" ) ) == NULL )
         return( MBEDTLS_ERR_HMAC_DRBG_FILE_IO_ERROR );
 
+    /* Ensure no stdio buffering of secrets, as such buffers cannot be wiped. */
+    mbedtls_setbuf( f, NULL );
+
     n = fread( buf, 1, sizeof( buf ), f );
     if( fread( &c, 1, 1, f ) != 0 )
     {
@@ -484,7 +485,7 @@ int mbedtls_hmac_drbg_update_seed_file( mbedtls_hmac_drbg_context *ctx, const ch
     fclose( f );
     f = NULL;
 
-    ret = mbedtls_hmac_drbg_update_ret( ctx, buf, n );
+    ret = mbedtls_hmac_drbg_update( ctx, buf, n );
 
 exit:
     mbedtls_platform_zeroize( buf, sizeof( buf ) );

@@ -51,13 +51,13 @@ int KConfig_Get_GUID_Add_Container(  char *const value
 #if CAN_HAVE_CONTAINER_ID
     if (value_size >= 12) {
         char buffer[32];
-        size_t inbuf = 0;
+        //size_t inbuf = 0;
         size_t nread = 0;
-        uint64_t pos = 0;
+        //uint64_t pos = 0;
         KFile const *fp = NULL;
         KDirectory *ndir = NULL;
         rc_t rc = 0;
-        bool good = false;
+        //bool good = false;
 
         rc = KDirectoryNativeDir(&ndir);
         assert(rc == 0);

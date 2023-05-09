@@ -22,10 +22,17 @@
 #
 # ===========================================================================
 
+if( "MSVC" STREQUAL "${CMAKE_C_COMPILER_ID}" )
+	# do not need to see compiler warnings from 3d party code
+    set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W0")
+endif()
+
 add_subdirectory ( bzip2 ) # TODO: RETRIEVE from the Internet
+
 if( NOT HAVE_MBEDTLS_F )
 	message( "Building local copy ext/mbedtls..." )
 	add_subdirectory ( mbedtls )
 endif()
+
 add_subdirectory ( zlib )
 add_subdirectory ( zstd )

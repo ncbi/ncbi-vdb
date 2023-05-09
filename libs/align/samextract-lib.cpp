@@ -445,14 +445,14 @@ rc_t process_alignment( SAMExtractor * state, const char * qname,
     Alignment * align = (Alignment *)pool_alloc( sizeof( *align ) );
 
     align->qname = qname;
-    align->flags = fast_strtoi64( flag );
+    align->flags = (uint16_t)fast_strtoi64( flag );
     align->rname = rname;
     align->pos   = ipos;
-    align->mapq  = fast_strtoi64( mapq );
+    align->mapq  = (uint8_t)fast_strtoi64( mapq );
     align->cigar = cigar;
     align->rnext = rnext;
-    align->pnext = fast_strtoi64( pnext );
-    align->tlen  = fast_strtoi64( tlen );
+    align->pnext = (uint32_t)fast_strtoi64( pnext );
+    align->tlen  = (uint32_t)fast_strtoi64( tlen );
     align->read  = seq;
     align->qual  = qual;
     VectorAppend( &state->alignments, NULL, align );

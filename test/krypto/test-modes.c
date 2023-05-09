@@ -1253,7 +1253,7 @@ rc_t CC KMain ( int argc, char *argv [] )
     if (rc)
         LOGERR (klogErr, rc, "Exiting status");
     else
-        STSMSG (0, ("Exiting okay\n"));
+        STSMSG (klogLevelMax, ("Exiting okay\n"));
 
     return rc;
 }

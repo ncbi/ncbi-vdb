@@ -79,7 +79,7 @@ ErrorReport :: ~ErrorReport ()
 
 static
 void CC
-WhackError ( void *item, void *data )
+WhackError ( void *item, void *data ) noexcept
 {
     ErrorReport :: Error * it = reinterpret_cast < ErrorReport :: Error * > ( item );
     delete ( it ); // was allocated with new (see below)

@@ -1611,10 +1611,10 @@ LIB_EXPORT void CC NucStrstrWhack ( NucStrstr *self )
 /*--------------------------------------------------------------------------
  * expression evaluation
  */
-#if __BYTE_ORDER == __LITTLE_ENDIAN 
+#if __BYTE_ORDER == __LITTLE_ENDIAN
     #define LOAD64( ptr ) bswap_64 ( * ( const uint64_t* ) ptr )
 #else
-    #if __BYTE_ORDER == __BIG_ENDIAN 
+    #if __BYTE_ORDER == __BIG_ENDIAN
         #define LOAD64( ptr ) ( * ( const uint64_t* ) ptr )
     #else
         #error "Endian-ness is not defined"
@@ -2522,7 +2522,7 @@ int eval_2na_16 ( const NucStrFastaExpr *self,
     /* kludge for streaming in a byte at a time
        only needed when qbytes > 1 */
 #if qbytes > 1
-    int slam;
+    int slam = 0;
     const uint8_t *p;
 #endif
 
@@ -2815,7 +2815,7 @@ int eval_2na_32 ( const NucStrFastaExpr *self,
     /* kludge for streaming in a byte at a time
        only needed when qbytes > 1 */
 #if qbytes > 1
-    int slam;
+    int slam = 0;
     const uint8_t *p;
 #endif
 
@@ -3109,7 +3109,7 @@ int eval_2na_64 ( const NucStrFastaExpr *self,
     /* kludge for streaming in a byte at a time
        only needed when qbytes > 1 */
 #if qbytes > 1
-    int slam;
+    int slam = 0;
     const uint8_t *p;
 #endif
 
@@ -3402,7 +3402,7 @@ int eval_2na_128 ( const NucStrFastaExpr *self,
     /* kludge for streaming in a byte at a time
        only needed when qbytes > 1 */
 #if qbytes > 1
-    int slam;
+    int slam = 0;
     const uint8_t *p;
 #endif
 
@@ -3701,7 +3701,7 @@ int eval_2na_pos ( const NucStrFastaExpr *self,
     /* kludge for streaming in a byte at a time
        only needed when qbytes > 1 */
 #if qbytes > 1
-    int slam;
+    int slam = 0;
     const uint8_t *p;
 #endif
 

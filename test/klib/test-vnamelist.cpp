@@ -57,7 +57,7 @@ struct on_part_ctx
     int idx;
 };
 
-static rc_t CC on_part( const String * part, void * data )
+static rc_t CC on_part( const String * part, void * data ) noexcept
 {
     rc_t rc = 0;
     struct on_part_ctx * ctx = ( struct on_part_ctx * ) data;

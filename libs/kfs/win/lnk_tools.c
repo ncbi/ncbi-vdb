@@ -226,7 +226,6 @@ static bool lnk_file_validate( const wchar_t *path )
 static int lnk_file_resolve_buffer( const unsigned char * buffer, const size_t buffsize,
                                     wchar_t ** resolved )
 {
-    char * base_path = NULL;
     int res = LNK_RES_ERROR;
     if ( lnk_file_validate_buffer( buffer, buffsize ) )
     {

@@ -20,7 +20,7 @@
  *
  *  Please cite the author in any work or product based on this material.
  *
- * ===========================================================================
+ * ============================================================================$
  *
  */
 
@@ -562,7 +562,7 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
                                const VPath * path )
 {
     rc_t rc = 0;
-    const KFile * temp_file;
+    const KFile * temp_file = NULL;
     uint32_t cluster_factor = ( 1 << ( cps -> cluster_factor_bits - 1 ) );
     size_t page_size = ( 1 << ( cps -> page_size_bits - 1 ));
     size_t cache_amount = ( ( size_t )cps -> cache_amount_mb * 1024 * 1024 );
@@ -1207,7 +1207,7 @@ static rc_t VFSManagerResolvePathInt (const VFSManager * self,
              * assumes path within VPath is ASCIZ
              */
             size_t s;
-            VPath * v;
+            VPath * v = NULL;
             char u [32 * 1024];
 
             switch ( uri_type )
@@ -4463,6 +4463,22 @@ static bool VFSManagerCheckEnvAndAdImplNoqual(const VFSManager * self,
     return found;
 }
 
+/* check unkared directory */
+rc_t VFSManagerCheckRunDir(const KDirectory* wd, const VPath* path) {
+    rc_t rc = 0;
+    String spath;
+    rc = VPathGetPath(path, &spath);
+    if (rc != 0)
+        return rc;
+    if (KDirectoryPathType(wd, "%.*s/md", (int)spath.size, spath.addr)
+        == kptDir)
+    {
+        return 0;
+    }
+    else    /* RC must match response of names resolver */
+        return RC(rcVFS, rcResolver, rcResolving, rcName, rcNotFound);
+}
+
 static bool VFSManagerCheckEnvAndAdImpl(const VFSManager * self,
     const VPath * inPath, const VPath ** outPath, bool checkEnv)
 {
@@ -4471,9 +4487,15 @@ static bool VFSManagerCheckEnvAndAdImpl(const VFSManager * self,
     {
         return true;
     }
-    else
-        return VFSManagerCheckEnvAndAdImplNoqual(self, inPath, outPath,
-            checkEnv, VFSManagerExtNoqualOld(NULL));
+    else if (VFSManagerCheckEnvAndAdImplNoqual(self, inPath, outPath,
+        checkEnv, VFSManagerExtNoqualOld(NULL)))
+    {
+        return true;
+    }
+    else { /* check unkared directory */
+        assert(self);
+        return VFSManagerCheckRunDir(self->cwd, inPath) == 0;
+    }
 }
 
 /* CheckEnvAndAd

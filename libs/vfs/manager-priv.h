@@ -43,6 +43,7 @@ extern "C" {
     /* Get ".sra" extension. */
     const String * VFSManagerExtSra      (const struct VFSManager *);
 
+    rc_t VFSManagerCheckRunDir(const KDirectory* dir, const struct VPath* path);
 #ifdef __cplusplus
 }
 #endif

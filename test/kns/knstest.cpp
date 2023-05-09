@@ -28,8 +28,9 @@
 * Unit tests for KNS interfaces
 */
 
-#include <kapp/args.h> /* ArgsMakeAndHandle */
+#include <os-native.h>
 
+#include <kapp/args.h> /* ArgsMakeAndHandle */
 #include <kfg/config.h>
 
 #include <klib/base64.h>
@@ -108,11 +109,6 @@ FIXTURE_TEST_CASE(KNSManagerGetUserAgent_Default, SessionIdFixture)
     REQUIRE_EQ( string::npos, string(ua).find("\"") );
 }
 
-#ifdef WIN32
-#define setenv(name, value, over) putenv(name"="value)
-#define unsetenv(name) putenv(name"=")
-#endif
-
 FIXTURE_TEST_CASE(KNSManagerGetUserAgentEnv, SessionIdFixture)
 {
     const char* ua = nullptr;
@@ -120,7 +116,7 @@ FIXTURE_TEST_CASE(KNSManagerGetUserAgentEnv, SessionIdFixture)
     KNSManagerGetUserAgent(&ua);
     const string ua_contains = "bmap=bmaphere";
     //fprintf(stderr,"Got: '%s', expected '%s'\n", ua, ua_contains.data());
-    REQUIRE_NE(string::npos, string(ua).find(ua_contains));
+    REQUIRE_EQ(string::npos, string(ua).find(ua_contains));
     unsetenv(ENV_MAGIC_OPT_BITMAP);
 }
 
