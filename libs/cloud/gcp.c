@@ -520,6 +520,53 @@ GetJsonNumMember(const KJsonObject *obj, const char * name, int64_t * value)
     return KJsonGetNumber(member, value);
 }
 
+rc_t
+ParseAccessToken( const char * jsonResponse, char ** token, KTime_t * expiration )
+{
+    /* 5. Response:
+    {
+    "access_token" : "1/8xbJqaOZXSUZbHLl5EOtu1pxz3fmmetKx9W8CV4t79M",
+    "token_type" : "Bearer",
+    "expires_in" : 3600
+    }
+    */
+    KJsonValue * root;
+    char error[1024];
+    rc_t rc = KJsonValueMake(&root, jsonResponse, error, sizeof(error));
+    if (rc == 0)
+    {
+        const KJsonObject *obj = KJsonValueToObject(root);
+        if (rc == 0)
+        {
+            const char * value;
+            rc = GetJsonStringMember(obj, "access_token", &value);
+            if (rc == 0)
+            {
+                *token = string_dup(value, string_measure(value, NULL));
+                if (*token == NULL)
+                {
+                    rc = RC(rcNS, rcMgr, rcAllocating, rcMemory, rcExhausted);
+                }
+            }
+            if (rc == 0)
+            {
+                int64_t expires;
+                rc = GetJsonNumMember(obj, "expires_in", &expires);
+                if (rc == 0)
+                {
+                    *expiration = KTimeStamp() + expires;
+                }
+            }
+        }
+    }
+    if (rc != 0)
+    {
+        rc = RC(rcCloud, rcUri, rcInitializing, rcFormat, rcUnexpected);
+    }
+    KJsonValueWhack(root);
+    return rc;
+}
+
 static
 rc_t GetAccessToken(const GCP * self, const char * jwt, struct KStream * opt_conn, char ** token, KTime_t * expiration)
 {
@@ -619,47 +666,7 @@ rc_t GetAccessToken(const GCP * self, const char * jwt, struct KStream * opt_con
 
     if (rc == 0)
     {
-        /* 5. Response:
-        {
-        "access_token" : "1/8xbJqaOZXSUZbHLl5EOtu1pxz3fmmetKx9W8CV4t79M",
-        "token_type" : "Bearer",
-        "expires_in" : 3600
-        }
-        */
-        KJsonValue * root;
-        char error[1024];
-        rc = KJsonValueMake(&root, jsonResponse, error, sizeof(error));
-        if (rc == 0)
-        {
-            const KJsonObject *obj = KJsonValueToObject(root);
-            if (rc == 0)
-            {
-                const char * value;
-                rc = GetJsonStringMember(obj, "access_token", &value);
-                if (rc == 0)
-                {
-                    *token = string_dup(value, string_measure(value, NULL));
-                    if (*token == NULL)
-                    {
-                        rc = RC(rcNS, rcMgr, rcAllocating, rcMemory, rcExhausted);
-                    }
-                }
-                if (rc == 0)
-                {
-                    int64_t expires;
-                    rc = GetJsonNumMember(obj, "expires_in", &expires);
-                    if (rc == 0)
-                    {
-                        *expiration = KTimeStamp() + expires;
-                    }
-                }
-            }
-        }
-        if (rc != 0)
-        {
-            rc = RC(rcCloud, rcUri, rcInitializing, rcFormat, rcUnexpected);
-        }
-        KJsonValueWhack(root);
+        rc = ParseAccessToken( jsonResponse, token, expiration );
     }
     return rc;
 }
