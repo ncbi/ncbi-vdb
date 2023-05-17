@@ -558,12 +558,12 @@ ParseAccessToken( const char * jsonResponse, char ** token, KTime_t * expiration
                 }
             }
         }
+        KJsonValueWhack(root);
     }
     if (rc != 0)
     {
         rc = RC(rcCloud, rcUri, rcInitializing, rcFormat, rcUnexpected);
     }
-    KJsonValueWhack(root);
     return rc;
 }
 
@@ -624,7 +624,7 @@ rc_t GetAccessToken(const GCP * self, const char * jwt, struct KStream * opt_con
             rc = KClientHttpResultGetInputStream(rslt, &s);
             if (rc == 0)
             {
-                rc = KStreamRead(s, jsonResponse, sizeof(jsonResponse), &num_read);
+                rc = KStreamReadAll(s, jsonResponse, sizeof(jsonResponse), &num_read);
                 if (rc == 0)
                 {
                     if (num_read == sizeof(jsonResponse))
