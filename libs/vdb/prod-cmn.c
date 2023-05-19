@@ -2093,6 +2093,7 @@ static uint32_t VScriptProdFixedRowLength ( const VScriptProd *self, int64_t row
 /*--------------------------------------------------------------------------
  * VPivotProd
  *  potentially pivots to a new row-id space
+ *  member with a pivot: tbl [ row_id ] . member  
  */
 
 rc_t VPivotProdMake ( VPivotProd ** p_prodp,
@@ -2135,8 +2136,15 @@ rc_t VPivotProdRead ( VPivotProd * p_self, struct VBlob ** p_vblob, int64_t * p_
         uint32_t rowLen = PageMapGetIdxRowInfo ( rowIdBlob -> pm, ( uint32_t ) ( * p_id - rowIdBlob -> start_id ), & elemNum, & repeat_count );
         if ( rowLen == 1 && repeat_count == 1)
         {
-            /* assume elem size is 64 */
-            int64_t newRowId = * ( ( int64_t* ) rowIdBlob -> data . base + elemNum );
+            int64_t newRowId;
+            switch ( rowIdBlob -> data . elem_bits )
+            {
+            case 64: newRowId = * ( ( int64_t* ) rowIdBlob -> data . base + elemNum ); break;
+            case 32: newRowId = * ( ( int32_t* ) rowIdBlob -> data . base + elemNum ); break;
+            case 16: newRowId = * ( ( int16_t* ) rowIdBlob -> data . base + elemNum ); break;
+            case 8:  newRowId = * ( ( int8_t* ) rowIdBlob -> data . base + elemNum ); break;
+            default: assert(false);
+            }
             vblob_release ( rowIdBlob, NULL );
             rc = VProductionReadBlob ( p_self -> member, p_vblob, & newRowId, p_cnt, NULL);
             if ( rc == 0 )
