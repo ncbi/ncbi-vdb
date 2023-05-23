@@ -48,7 +48,10 @@
 
 /* ---------------------------------------------------------------------------------------------------- */
 
-static rc_t native_to_internal( const char * native_path, char * internal_path, size_t internal_path_size, size_t * written ) {
+LIB_EXPORT rc_t native_to_internal( const char * native_path, 
+                                    char * internal_path,
+                                    size_t internal_path_size,
+                                    size_t * written ) {
     VFSManager * vfs_mgr;
     rc_t rc = VFSManagerMake( &vfs_mgr );
     if ( 0 == rc ) {
