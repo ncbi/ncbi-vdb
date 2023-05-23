@@ -26,10 +26,15 @@
 
 #include <klib/namelist.h>
 #include <klib/printf.h>
-#include <klib/strings.h> /* KFG_USER_ACCEPT_GCP_CHARGES etc */
+#include <klib/strings.h>   /* KFG_USER_ACCEPT_GCP_CHARGES etc */
 #include <klib/rc.h>
 #include <klib/text.h>
 #include <klib/vector.h>
+
+#include <klib/out.h>
+
+#include <vfs/manager.h>    /* needed by native-internal conversions */
+#include <vfs/path.h>       /* needed by native-internal conversions */
 
 #include <kfs/directory.h>
 #include <kfs/file.h>
@@ -40,6 +45,80 @@
 #include "ngc-priv.h"
 
 #include <va_copy.h>
+
+/* ---------------------------------------------------------------------------------------------------- */
+
+static rc_t native_to_internal( const char * native_path, char * internal_path, size_t internal_path_size, size_t * written ) {
+    VFSManager * vfs_mgr;
+    rc_t rc = VFSManagerMake( &vfs_mgr );
+    if ( 0 == rc ) {
+        VPath * native_v_path;
+        rc = VFSManagerMakeSysPath( vfs_mgr, &native_v_path, native_path );
+        if ( 0 == rc ) {
+            KDirectory * dir;
+            rc = VFSManagerGetCWD( vfs_mgr, &dir );
+            if ( 0 == rc ) {
+                size_t wr;
+                char buffer[ 4096 ];
+                rc = VPathReadPath( native_v_path, buffer, sizeof buffer, &wr );
+                if ( 0 == rc ) {
+                    buffer[ wr ] = 0;
+                    KOutMsg( "native_to_internal: %s ---> %s\n", native_path, buffer );
+                }
+                KDirectoryRelease( dir );
+            }
+            VPathRelease ( native_v_path );
+        }
+        VFSManagerRelease( vfs_mgr );
+    }
+    /*
+    VPath * temp_v_path;
+    rc_t rc = VFSManagerMakeSysPath ( _vfs_mgr, &temp_v_path, s.c_str() );
+    if ( rc == 0 )
+    {
+        size_t written;
+        char buffer[ PATH_MAX ];
+        rc = VPathReadPath ( temp_v_path, buffer, sizeof buffer, &written );
+        if ( rc == 0 ) {
+            char resolved [ PATH_MAX ] = "";
+            rc_t rc = KDirectoryResolvePath
+            ( _dir, true, resolved, sizeof resolved, buffer );
+            if ( rc == 0 ) {
+                if ( string_cmp ( buffer, written, resolved,
+                    string_measure ( resolved, NULL ), PATH_MAX ) != 0 )
+                {   // make sure the path is canonic
+                    res = resolved;
+                }
+                else {
+                    res.assign( buffer, written );
+                }
+            }
+        }
+        VPathRelease ( temp_v_path );
+    }
+    return res;
+    */
+    return rc;
+}
+
+/*
+std::string vdbconf_model::internal_to_native( const std::string &s ) const
+{
+    std::string res = "";
+    VPath * temp_v_path;
+    rc_t rc = VFSManagerMakePath ( _vfs_mgr, &temp_v_path, "%s", s.c_str() );
+    if ( rc == 0 )
+    {
+        size_t written;
+        char buffer[ PATH_MAX ];
+        rc = VPathReadSysPath ( temp_v_path, buffer, sizeof buffer, &written );
+        if ( rc == 0 )
+            res.assign( buffer, written );
+        VPathRelease ( temp_v_path );
+    }
+    return res;
+}
+*/
 
 /* ---------------------------------------------------------------------------------------------------- */
 
@@ -857,6 +936,9 @@ KConfig_Get_Temp_Cache( const KConfig *self,
 LIB_EXPORT rc_t CC
 KConfig_Set_Temp_Cache( KConfig *self, const char * value )
 {
+    char buffer[ 4096 ];
+    size_t written;
+    native_to_internal( value, buffer, sizeof buffer, &written );
     return KConfig_Set_Repository_String( self, value, TEMP_CACHE );
 }
 
