@@ -259,7 +259,7 @@ TEST_CASE ( EmptyInput )
 
 TEST_CASE ( Version1 )
 {
-    ParseAndVerify ( "version 1; include \"qq\";" );
+    ParseAndVerify ( "version 1;" );
 }
 
 TEST_CASE ( MultipleDecls )

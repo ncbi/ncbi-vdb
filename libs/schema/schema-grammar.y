@@ -315,15 +315,20 @@ parse
     ;
 
 source
-    : schema_1_0                { $$ . subtree = MakeTree ( ctx, PT_SOURCE, P ( $1 ) ); }
-    | version_1_0 schema_1_0    { $$ . subtree = MakeTree ( ctx, PT_SOURCE, P ( $1 ), P ( $2 ) ); }
-    | version_2_0 schema_2_0    { $$ . subtree = MakeTree ( ctx, PT_SOURCE, P ( $1 ), P ( $2 ) ); }
+    : schema_1_0                    { $$ . subtree = MakeTree ( ctx, PT_SOURCE, P ( $1 ) ); }
+    | version_1_0 schema_1_0_opt    { $$ . subtree = MakeTree ( ctx, PT_SOURCE, P ( $1 ), P ( $2 ) ); }
+    | version_2_0 schema_2_0        { $$ . subtree = MakeTree ( ctx, PT_SOURCE, P ( $1 ), P ( $2 ) ); }
     ;
 
 /* schema-1.0
  */
 version_1_0
     : KW_version VERS_1_0 ';'   { $$ . subtree = MakeTree ( ctx, PT_VERSION_1_0, T ( ctx, $1 ), T ( ctx, $2 ), T ( ctx, $3 ) ); }
+    ;
+
+schema_1_0_opt
+    : schema_1_0    { $$ . subtree = P ( $1 ); }
+    | empty         { $$ = $1; }
     ;
 
 schema_1_0

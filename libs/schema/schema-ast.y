@@ -279,6 +279,7 @@ version_2
 
 schema_1
     : PT_SCHEMA_1_0 '(' schema_decls ')'            { $$ = AST :: Make ( ctx, $1, $3 ); }
+    | PT_EMPTY                                      { $$ = AST :: Make ( ctx, PT_SCHEMA_1_0 ); }
     ;
 
  schema_2

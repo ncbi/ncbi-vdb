@@ -257,12 +257,11 @@ FIXTURE_TEST_CASE(NoVersion, AST_Fixture)
 
 FIXTURE_TEST_CASE(Version1, AST_Fixture)
 {
-    MakeAst ( "version 1; ;" );
+    MakeAst ( "version 1;" );
 
     REQUIRE_EQ ( PT_SCHEMA_1_0,     TokenType ( m_ast ) );
-    REQUIRE_EQ ( 2u,                m_ast -> ChildrenCount () );
-    REQUIRE_EQ ( PT_EMPTY,          TokenType ( m_ast -> GetChild ( 0 ) ) );
-    REQUIRE_EQ ( PT_VERSION_1_0,    TokenType ( m_ast -> GetChild ( 1 ) ) );
+    REQUIRE_EQ ( 1u,                m_ast -> ChildrenCount () );
+    REQUIRE_EQ ( PT_VERSION_1_0,    TokenType ( m_ast -> GetChild ( 0 ) ) );
 }
 
 FIXTURE_TEST_CASE(MultipleCallsToBuilder, AST_Fixture)
