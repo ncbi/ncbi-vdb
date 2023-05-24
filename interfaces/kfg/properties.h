@@ -47,7 +47,11 @@ KFG_EXTERN rc_t native_to_internal( const char * native_path,
                                     char * internal_path,
                                     size_t internal_path_size,
                                     size_t * written );
-        
+KFG_EXTERN rc_t internal_to_native( const char * internal_path,
+                                    char * native_path,
+                                    size_t native_path_size,
+                                    size_t * written );
+    
 /* get/set HTTP proxy path */
 KFG_EXTERN rc_t CC KConfig_Get_Http_Proxy_Path
     ( const KConfig *self, char *buffer, size_t buffer_size, size_t *written );

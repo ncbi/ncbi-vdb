@@ -58,70 +58,31 @@ LIB_EXPORT rc_t native_to_internal( const char * native_path,
         VPath * native_v_path;
         rc = VFSManagerMakeSysPath( vfs_mgr, &native_v_path, native_path );
         if ( 0 == rc ) {
-            KDirectory * dir;
-            rc = VFSManagerGetCWD( vfs_mgr, &dir );
-            if ( 0 == rc ) {
-                size_t wr;
-                char buffer[ 4096 ];
-                rc = VPathReadPath( native_v_path, buffer, sizeof buffer, &wr );
-                if ( 0 == rc ) {
-                    buffer[ wr ] = 0;
-                    KOutMsg( "native_to_internal: %s ---> %s\n", native_path, buffer );
-                }
-                KDirectoryRelease( dir );
-            }
+            rc = VPathReadPath( native_v_path, internal_path, internal_path_size, written );
             VPathRelease ( native_v_path );
         }
         VFSManagerRelease( vfs_mgr );
     }
-    /*
-    VPath * temp_v_path;
-    rc_t rc = VFSManagerMakeSysPath ( _vfs_mgr, &temp_v_path, s.c_str() );
-    if ( rc == 0 )
-    {
-        size_t written;
-        char buffer[ PATH_MAX ];
-        rc = VPathReadPath ( temp_v_path, buffer, sizeof buffer, &written );
-        if ( rc == 0 ) {
-            char resolved [ PATH_MAX ] = "";
-            rc_t rc = KDirectoryResolvePath
-            ( _dir, true, resolved, sizeof resolved, buffer );
-            if ( rc == 0 ) {
-                if ( string_cmp ( buffer, written, resolved,
-                    string_measure ( resolved, NULL ), PATH_MAX ) != 0 )
-                {   // make sure the path is canonic
-                    res = resolved;
-                }
-                else {
-                    res.assign( buffer, written );
-                }
-            }
-        }
-        VPathRelease ( temp_v_path );
-    }
-    return res;
-    */
     return rc;
 }
 
-/*
-std::string vdbconf_model::internal_to_native( const std::string &s ) const
-{
-    std::string res = "";
-    VPath * temp_v_path;
-    rc_t rc = VFSManagerMakePath ( _vfs_mgr, &temp_v_path, "%s", s.c_str() );
-    if ( rc == 0 )
-    {
-        size_t written;
-        char buffer[ PATH_MAX ];
-        rc = VPathReadSysPath ( temp_v_path, buffer, sizeof buffer, &written );
-        if ( rc == 0 )
-            res.assign( buffer, written );
-        VPathRelease ( temp_v_path );
+LIB_EXPORT rc_t internal_to_native( const char * internal_path,
+                                    char * native_path,
+                                    size_t native_path_size,
+                                    size_t * written ) {
+    VFSManager * vfs_mgr;
+    rc_t rc = VFSManagerMake( &vfs_mgr );
+    if ( 0 == rc ) {
+        VPath * internal_v_path;
+        rc = VFSManagerMakePath( vfs_mgr, &internal_v_path, internal_path );
+        if ( 0 == rc ) {
+            rc = VPathReadSysPath( internal_v_path, native_path, native_path_size, written );
+            VPathRelease ( internal_v_path );
+        }
+        VFSManagerRelease( vfs_mgr );
     }
-    return res;
+    return rc;
 }
-*/
 
 /* ---------------------------------------------------------------------------------------------------- */
 
