@@ -139,13 +139,13 @@ namespace ncbi
             bool VectorAppend ( ctx_t ctx, Vector & self, uint32_t *idx, const void *item );
 
             bool CreateOverload ( ctx_t ctx,
-                                  const KSymbol * p_name,
+                                  const KSymbol & p_name,
                                   const void * p_object,
                                   uint32_t p_context_type,
                                   int64_t (CC * p_sort)(const void *, const void *),
                                   Vector & p_objects,
                                   Vector & p_names,
-                                  uint32_t * p_id );
+                                  uint32_t & p_id );
 
             bool HandleFunctionOverload ( const void * p_object, uint32_t p_version, const KSymbol * p_priorDecl, uint32_t * p_id );
             bool HandlePhysicalOverload ( const void * p_object, uint32_t p_version, const KSymbol * p_priorDecl, uint32_t * p_id );

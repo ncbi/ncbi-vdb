@@ -103,13 +103,13 @@ ViewDeclaration :: SetName ( ctx_t ctx, const AST_FQN &  p_fqn )
         m_self -> name = m_builder . CreateFqnSymbol ( ctx, p_fqn, eView, m_self );
         if ( m_self -> name != 0 &&
              m_builder . CreateOverload ( ctx,
-                                          m_self -> name,
+                                          * m_self -> name,
                                           m_self,
                                           0,
                                           SViewSort,
                                           m_builder . GetSchema () -> view,
                                           m_builder . GetSchema () -> vname,
-                                          & m_self -> id ) )
+                                          m_self -> id ) )
         {
             return true;
         }
@@ -480,13 +480,13 @@ ViewDeclaration :: AddNewColumn ( ctx_t ctx, SColumn & p_col, String & p_name )
         return false;
     }
     return m_builder .CreateOverload ( ctx,
-                                       p_col . name,
+                                       * p_col . name,
                                        & p_col,
                                        eView,
                                        SColumnSort,
                                        m_self -> col,
                                        m_self -> cname,
-                                       & p_col . cid . id );
+                                       p_col . cid . id );
 }
 
 void
@@ -523,13 +523,13 @@ ViewDeclaration :: AddColumn ( ctx_t ctx, const AST & p_type, const AST & p_iden
                     c -> name = priorDecl;
                     priorDecl -> type = eColumn;
                     if ( ! m_builder .CreateOverload ( ctx,
-                                                       c -> name,
+                                                       * c -> name,
                                                        c,
                                                        eView,
                                                        SColumnSort,
                                                        m_self -> col,
                                                        m_self -> cname,
-                                                       0 ) )
+                                                       c -> cid . id ) )
                     {
                         SColumnWhack ( c, 0 );
                         return;

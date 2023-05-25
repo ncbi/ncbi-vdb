@@ -165,13 +165,13 @@ FunctionDeclaration :: SetName ( ctx_t ctx,
         if ( m_self -> name != 0 )
         {
             if ( m_builder . CreateOverload ( ctx,
-                                              m_self -> name,
+                                              * m_self -> name,
                                               m_self,
                                               0,
                                               SFunctionSort,
                                               m_builder . GetSchema () -> func,
                                               m_builder . GetSchema () -> fname,
-                                              & m_self -> id ) )
+                                              m_self -> id ) )
             {
                 m_destroy = false;
                 return true;

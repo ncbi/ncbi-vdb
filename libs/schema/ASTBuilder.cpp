@@ -444,25 +444,23 @@ ASTBuilder :: CreateConstSymbol ( ctx_t ctx, const char* p_name, int p_type, con
 
 bool
 ASTBuilder :: CreateOverload ( ctx_t ctx,
-                               const KSymbol *  p_name,
+                               const KSymbol &  p_name,
                                const void *     p_object,
                                uint32_t         p_context_type,
                                int64_t          (CC *p_sort)(const void *, const void *) noexcept,
                                Vector &         p_objects,
                                Vector &         p_names,
-                               uint32_t *       p_id )
+                               uint32_t &       p_id )
 {
     FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
-    assert ( p_name != 0 );
-    assert ( p_id != 0 );
     SNameOverload * ovl;
-    rc_t rc = SNameOverloadMake ( & ovl, p_name, p_context_type, 0, 4 );
+    rc_t rc = SNameOverloadMake ( & ovl, & p_name, p_context_type, 0, 4 );
     if ( rc == 0 )
     {
         rc = VectorInsertUnique ( & ovl -> items, p_object, 0, p_sort );
         if ( rc == 0 )
         {
-            if ( VectorAppend ( ctx, p_objects, p_id, p_object ) )
+            if ( VectorAppend ( ctx, p_objects, & p_id, p_object ) )
             {
                 if ( VectorAppend ( ctx, p_names, & ovl -> cid . id, ovl ) )
                 {

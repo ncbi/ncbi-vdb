@@ -88,13 +88,13 @@ DatabaseDeclaration :: SetName ( ctx_t ctx, const AST_FQN &  p_fqn )
             m_self -> name = m_builder . CreateFqnSymbol ( ctx, p_fqn, eDatabase, & m_self );
             if ( m_self -> name != 0 &&
                  m_builder . CreateOverload ( ctx,
-                                              m_self -> name,
+                                              * m_self -> name,
                                               m_self,
                                               0,
                                               SDatabaseSort,
                                               m_builder . GetSchema () -> db,
                                               m_builder . GetSchema () -> dname,
-                                              & m_self -> id ) )
+                                              m_self -> id ) )
             {
                 return true;
             }

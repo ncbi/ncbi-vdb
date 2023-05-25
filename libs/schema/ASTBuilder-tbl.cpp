@@ -115,13 +115,13 @@ TableDeclaration :: SetName ( ctx_t ctx, const AST_FQN & p_fqn )
         m_self -> name = m_builder . CreateFqnSymbol ( ctx, p_fqn, eTable, m_self );
         if ( m_self -> name != 0 &&
              m_builder . CreateOverload ( ctx,
-                                          m_self -> name,
+                                          * m_self -> name,
                                           m_self,
                                           0,
                                           STableSort,
                                           m_builder . GetSchema () -> tbl,
                                           m_builder . GetSchema () -> tname,
-                                          & m_self -> id ) )
+                                          m_self -> id ) )
         {
             return true;
         }
@@ -792,13 +792,13 @@ TableDeclaration :: AddNewColumn ( ctx_t ctx, SColumn & p_col, String & p_name )
         return false;
     }
     return m_builder . CreateOverload ( ctx,
-                                        p_col . name,
+                                        * p_col . name,
                                         & p_col,
                                         eTable,
                                         SColumnSort,
                                         m_self -> col,
                                         m_self -> cname,
-                                        & p_col . cid . id );
+                                        p_col . cid . id );
 }
 
 bool
@@ -829,13 +829,13 @@ TableDeclaration :: HandleTypedColumn ( ctx_t ctx, SColumn & p_col, const AST & 
                 p_col . name = priorDecl;
                 priorDecl -> type = eColumn;
                 if ( ! m_builder . CreateOverload ( ctx,
-                                                    p_col . name,
+                                                    * p_col . name,
                                                     & p_col,
                                                     eTable,
                                                     SColumnSort,
                                                     m_self -> col,
                                                     m_self -> cname,
-                                                    & p_col . cid . id ) )
+                                                    p_col . cid . id ) )
                 {
                     return false;
                 }
