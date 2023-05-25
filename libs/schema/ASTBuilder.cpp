@@ -454,6 +454,7 @@ ASTBuilder :: CreateOverload ( ctx_t ctx,
 {
     FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     assert ( p_name != 0 );
+    assert ( p_id != 0 );
     SNameOverload * ovl;
     rc_t rc = SNameOverloadMake ( & ovl, p_name, p_context_type, 0, 4 );
     if ( rc == 0 )

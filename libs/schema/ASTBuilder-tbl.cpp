@@ -835,7 +835,7 @@ TableDeclaration :: HandleTypedColumn ( ctx_t ctx, SColumn & p_col, const AST & 
                                                     SColumnSort,
                                                     m_self -> col,
                                                     m_self -> cname,
-                                                    0 ) )
+                                                    & p_col . cid . id ) )
                 {
                     return false;
                 }

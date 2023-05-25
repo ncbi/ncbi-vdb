@@ -516,6 +516,8 @@ rc_t VCursorListSeededWritableColumns ( VTableCursor *self, BSTree *columns, con
     pb . pr . schema = self -> schema;
     pb . pr . ld = self -> tbl -> linker;
     pb . pr . name = & self -> stbl -> name -> name;
+    pb . pr . primary_table = VCursorGetTable ( & self -> dad );
+    pb . pr . view = NULL;
     pb . pr . curs = & self -> dad;
     pb . pr . prod = & self -> dad . prod;
     pb . pr . owned = & self -> dad . owned;
