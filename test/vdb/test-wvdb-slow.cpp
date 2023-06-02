@@ -30,8 +30,6 @@ using namespace std;
 
 TEST_SUITE( WVdbSlowTestSuite );
 
-const string ScratchDir = "./db/";
-
 FIXTURE_TEST_CASE ( VCursorCommit_BufferOverflow, WVDB_Fixture )
 {   // VDB-4341
     m_databaseName = ScratchDir + GetName();
@@ -44,7 +42,7 @@ FIXTURE_TEST_CASE ( VCursorCommit_BufferOverflow, WVDB_Fixture )
     const char* TableName = "TABLE1";
     const char* ColumnName1 = "column1";
 
-    MakeDatabase ( schemaText, "root_database" );
+    MakeDatabase ( GetName(), schemaText, "root_database" );
     {
         VCursor* cursor = CreateTable ( TableName );
 
@@ -117,7 +115,7 @@ FIXTURE_TEST_CASE ( VCursor_PageMapOverflow, WVDB_Fixture )
     const char* TableName = "TABLE1";
     const char* ColumnName1 = "column1";
 
-    MakeDatabase ( schemaText, "root_database" );
+    MakeDatabase ( GetName(), schemaText, "root_database" );
     {
         VCursor* cursor = CreateTable ( TableName );
 

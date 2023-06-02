@@ -50,7 +50,6 @@ using namespace std;
 TEST_SUITE( KDBVDBTestSuite )
 
 const string DName = "VDB-4156";
-const string ScratchDir = "./db/";
 
 // this test case is not very useful but is here as a blueprint for other write-side tests
 FIXTURE_TEST_CASE ( DumpToKMDataNode, WVDB_Fixture)

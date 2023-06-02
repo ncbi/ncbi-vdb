@@ -26,7 +26,10 @@
 
 #include "ErrorReport.hpp"
 
-#include <stdexcept>
+#include <new>
+
+#include <kfc/xc.h>
+#include <kfc/except.h>
 
 #include <klib/symbol.h>
 #include <klib/printf.h>
@@ -37,7 +40,48 @@
 using namespace ncbi::SchemaParser;
 using namespace std;
 
+///////////////////////////////////////// InternalError exception
+
+InternalError :: InternalError(const char * p_text)
+: m_text ( string_dup( p_text, string_size ( p_text ) ) )
+{
+}
+
+InternalError :: ~InternalError()
+{
+    free ( m_text );
+}
+
+const char*
+InternalError :: what() const
+{
+    return m_text;
+}
+
 ///////////////////////////////////////// Error Report :: Error
+
+ErrorReport :: Error *
+ErrorReport :: Error :: Make ( ctx_t ctx, const char * p_message, const ErrorReport :: Location & p_location )
+{
+    void * ret = malloc ( sizeof ( ErrorReport :: Error ) );
+    if ( ret == 0 )
+    {
+        FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+        SYSTEM_ERROR ( xcNoMemory, "" );
+        return 0;
+    }
+    return new ( ret ) ErrorReport :: Error ( p_message, p_location );
+}
+
+void
+ErrorReport :: Error :: Destroy ( ErrorReport :: Error * self )
+{
+    if ( self != 0 )
+    {
+        self -> ~Error();
+        free ( self );
+    }
+}
 
 ErrorReport :: Error :: Error( const char * p_message, const ErrorReport :: Location & p_location )
 :   m_message ( string_dup_measure ( p_message, 0 ) )
@@ -54,15 +98,22 @@ ErrorReport :: Error :: ~Error()
 }
 
 bool
-ErrorReport :: Error :: Format ( char * p_buf, size_t p_bufSize ) const
+ErrorReport :: Error :: Format ( ctx_t ctx, char * p_buf, size_t p_bufSize ) const
 {
     if ( p_buf == 0 )
     {
         return false;
     }
-    return string_printf ( p_buf, p_bufSize, 0,
+    rc_t rc = string_printf ( p_buf, p_bufSize, 0,
                            "%s:%u:%u %s",
-                           m_file, m_line, m_column, m_message ) == 0;
+                           m_file, m_line, m_column, m_message );
+    if ( rc != 0 )
+    {
+        FUNC_ENTRY ( ctx, rcSRA, rcSchema, rcParsing );
+        INTERNAL_ERROR ( xcUnexpected, "string_printf, rc=%R", rc );
+        return false;
+    }
+    return true;
 }
 
 ///////////////////////////////////////// Error Report
@@ -81,8 +132,7 @@ static
 void CC
 WhackError ( void *item, void *data ) noexcept
 {
-    ErrorReport :: Error * it = reinterpret_cast < ErrorReport :: Error * > ( item );
-    delete ( it ); // was allocated with new (see below)
+    ErrorReport :: Error :: Destroy ( reinterpret_cast < ErrorReport :: Error * > ( item ) );
 }
 
 void
@@ -92,39 +142,28 @@ ErrorReport :: Clear ()
 }
 
 void
-ErrorReport :: ReportError ( const Location & p_location, const char* p_fmt, ... )
+ErrorReport :: ReportError ( ctx_t ctx, const Location & p_location, const char* p_fmt, ... )
 {
+    FUNC_ENTRY ( ctx, rcSRA, rcSchema, rcParsing );
     const unsigned int BufSize = 1024;
     char buf [ BufSize ];
 
     va_list args;
     va_start ( args, p_fmt );
-    string_vprintf ( buf, BufSize, 0, p_fmt, args );
+    rc_t rc = string_vprintf ( buf, BufSize, 0, p_fmt, args );
     va_end ( args );
 
-    rc_t rc = :: VectorAppend ( & m_errors, 0, new Error ( buf, p_location ) );
     if ( rc != 0 )
     {
-        throw logic_error ( "ReportError() : VectorAppend() failed" );
+        INTERNAL_ERROR ( xcUnexpected, "string_vprintf, rc=%R", rc );
     }
-}
-
-void
-ErrorReport :: ReportInternalError ( const char * p_source, const char* p_fmt, ... )
-{
-    const unsigned int BufSize = 1024;
-    char buf [ BufSize ];
-
-    va_list args;
-    va_start ( args, p_fmt );
-    string_vprintf ( buf, BufSize, 0, p_fmt, args );
-    va_end ( args );
-
-    Location loc ( p_source, 0, 0 );
-    rc_t rc = :: VectorAppend ( & m_errors, 0, new Error ( buf, loc ) );
-    if ( rc != 0 )
+    else
     {
-        throw logic_error ( "ReportError() : VectorAppend() failed" );
+        rc = :: VectorAppend ( & m_errors, 0, Error :: Make ( ctx, buf, p_location ) );
+        if ( rc != 0 )
+        {
+            INTERNAL_ERROR ( xcUnexpected, "VectorAppend, rc=%R", rc );
+        }
     }
 }
 

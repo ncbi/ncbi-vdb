@@ -52,6 +52,7 @@ endif()
 
 set( SRC
     AST.cpp
+    AST_Expr.cpp
     ASTBuilder-db.cpp
     ASTBuilder-func.cpp
     ASTBuilder-phys.cpp
@@ -71,5 +72,10 @@ set( SRC
 
 GenerateStaticLibs( schema "${SRC}" )
 
+if ( WIN32 )
+    target_compile_options( schema PRIVATE /EHsc )
+else()
+    target_compile_options( schema PRIVATE -fno-exceptions -Wno-unused-variable)
+endif()
+
 add_compile_definitions (__mod__="libs/schema")
-#set_source_files_properties(${SchemaScanner} PROPERTIES COMPILE_FLAGS -D__STDC_VERSION__=199901L)

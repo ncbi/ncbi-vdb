@@ -43,10 +43,12 @@ extern "C" {
 /*--------------------------------------------------------------------------
  * forwards
  */
+struct String;
 struct VSchema;
 struct VDBManager;
 struct VTable;
 struct VSchema;
+struct KNamelist;
 
 /*--------------------------------------------------------------------------
  * VView
@@ -77,6 +79,24 @@ VDB_EXTERN rc_t CC VDBManagerOpenView (
     const struct VSchema *      schema,
     const char *                name );
 
+/* ParameterCount
+ *  returns the number of view's parameters
+ */
+VDB_EXTERN uint32_t CC VViewParameterCount ( struct VView const * self );
+
+/* GetParameter
+ *  retirve view parameter by its number
+ *
+ *  idx - 0-based number of the parameter
+ *  name [ OUT ] - name of the parameter
+ *  is_table [ OUT ] - true is table, false if view
+ */
+VDB_EXTERN rc_t CC  VViewGetParameter (
+    struct VView const * self,
+    uint32_t idx,
+    const struct String ** name,
+    bool * is_table );
+
 /* BindParameterTable
  *  Bind a view's parameter to a table.
  *
@@ -86,7 +106,7 @@ VDB_EXTERN rc_t CC VDBManagerOpenView (
  */
 VDB_EXTERN rc_t CC VViewBindParameterTable (
     const VView * self,
-    const char * param_name,
+    const struct String * param_name,
     const struct VTable * table );
 
 /* BindParameterView
@@ -98,8 +118,22 @@ VDB_EXTERN rc_t CC VViewBindParameterTable (
  */
 VDB_EXTERN rc_t CC VViewBindParameterView (
     const VView * self,
-    const char * param_name,
+    const struct String * param_name,
     const struct VView * view );
+
+
+/* ListCol
+ *  list readable column names
+ *
+ *  "names" [ OUT ] - return parameter for namelist
+ */
+VDB_EXTERN rc_t CC VViewListCol ( const VView *self, struct KNamelist **names );
+
+/* OpenSchema
+ *  duplicate reference to view schema
+ *  NB - returned reference must be released
+ */
+VDB_EXTERN rc_t CC VViewOpenSchema ( const VView *self, struct VSchema const **schema );
 
 #ifdef __cplusplus
 }

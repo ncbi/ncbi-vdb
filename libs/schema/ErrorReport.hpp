@@ -27,6 +27,7 @@
 #ifndef _hpp_ErrorReport_
 #define _hpp_ErrorReport_
 
+#include <kfc/ctx.h>
 #include <klib/vector.h>
 
 #include "Token.hpp"
@@ -35,6 +36,18 @@ namespace ncbi
 {
     namespace SchemaParser
     {
+
+        class InternalError
+        {
+        public:
+            InternalError(const char * p_text);
+            ~InternalError();
+            const char* what() const;
+
+        private:
+            char * m_text;
+        };
+
         class ErrorReport
         {
         public:
@@ -47,18 +60,21 @@ namespace ncbi
                 uint32_t  m_line;
                 uint32_t  m_column;
 
-                Error( const char * p_message, const ErrorReport :: Location & p_location );
-                ~Error();
+                static Error * Make( ctx_t ctx, const char * p_message, const ErrorReport :: Location & p_location );
+                static void Destroy( Error * );
 
-                bool Format ( char * p_buf, size_t p_bufSize ) const;
+                bool Format ( ctx_t ctx, char * p_buf, size_t p_bufSize ) const;
+
+            private:
+                Error( const char * p_message, const ErrorReport :: Location & p_location ); // use Make()
+                ~Error(); // use Destroy()
             };
 
         public:
             ErrorReport ();
             ~ErrorReport ();
 
-            void ReportError ( const Location & p_loc, const char* p_fmt, ... );
-            void ReportInternalError ( const char * p_source, const char* p_fmt, ... );
+            void ReportError ( ctx_t ctx, const Location & p_loc, const char* p_fmt, ... );
 
             uint32_t GetCount() const { return VectorLength ( & m_errors ); }
 

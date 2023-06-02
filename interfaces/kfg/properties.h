@@ -223,6 +223,8 @@ KFG_EXTERN rc_t CC KConfig_Get_SendTelemetry(const KConfig *self, bool *value);
 KFG_EXTERN rc_t CC KConfig_Set_SendTelemetry(      KConfig *self, bool  value);
 
 
+/* Version of the schema parser to use */
+KFG_EXTERN rc_t CC KConfigGetSchemaParserVersion( const KConfig *self, uint8_t * version );
 
 #ifdef __cplusplus
 }
