@@ -1332,13 +1332,25 @@ static rc_t VDatabaseListDependenciesImpl(const VDatabase* self,
     }
     BSTreeInit(obj->tr);
 
-    /* initialize dependencie tree */
-    rc = VDatabaseDependencies(self, obj->tr, &has_no_REFERENCE, &hasDuplicates,
-        disableCaching, alwaysResolveRemote, dir);
-    if (rc == 0 && has_no_REFERENCE) {
-        KRefcountInit(&obj->refcount, 1, CLSNAME, "make", "nodep");
-        *dep = obj;
-        return rc;
+    if (rc == 0) {
+        bool enabled = true;
+        VFSManagerGetLogNamesServiceErrors(NULL, &enabled);
+        /* Don't log 404 errors for refseqs
+           to disable false alarms for internal references. */
+        VFSManagerLogNamesServiceErrors(NULL, false);
+
+        /* initialize dependencie tree */
+        rc = VDatabaseDependencies(self, obj->tr, &has_no_REFERENCE,
+            &hasDuplicates, disableCaching, alwaysResolveRemote, dir);
+
+        /* Restore logging SDL errors. */
+        VFSManagerLogNamesServiceErrors(NULL, enabled);
+
+        if (rc == 0 && has_no_REFERENCE) {
+            KRefcountInit(&obj->refcount, 1, CLSNAME, "make", "nodep");
+            *dep = obj;
+            return rc;
+        }
     }
 
     if (rc == 0) {
