@@ -893,17 +893,24 @@ LIB_EXPORT rc_t CC KConfig_Set_Report_Cloud_Instance_Identity ( KConfig *self, b
 #define TEMP_CACHE "/libs/temp_cache"
 LIB_EXPORT rc_t CC
 KConfig_Get_Temp_Cache( const KConfig *self,
-    char * value, size_t value_size, size_t * written )
+    char * native_value, size_t native_value_size, size_t * native_written )
 {
-    return KConfig_Get_Repository_String( self, value, value_size, written, TEMP_CACHE );
+    char internal[ 4096 ];
+    size_t internal_written;    
+    rc_t rc = KConfig_Get_Repository_String( self, internal, sizeof internal, &internal_written, TEMP_CACHE );
+    if ( 0 ==rc ) {
+        internal_to_native( internal, native_value, native_value_size, native_written );
+    }
+    return rc;
 }
 LIB_EXPORT rc_t CC
-KConfig_Set_Temp_Cache( KConfig *self, const char * value )
+KConfig_Set_Temp_Cache( KConfig *self, const char * native_value )
 {
-    char buffer[ 4096 ];
-    size_t written;
-    native_to_internal( value, buffer, sizeof buffer, &written );
-    return KConfig_Set_Repository_String( self, value, TEMP_CACHE );
+    char internal[ 4096 ];
+    size_t internal_written;
+    native_to_internal( native_value, internal, sizeof internal, &internal_written );
+    internal[ internal_written ] = 0;
+    return KConfig_Set_Repository_String( self, internal, TEMP_CACHE );
 }
 
 #define GCP_CREDENTIAL_FILE "/gcp/credential_file"
