@@ -895,22 +895,30 @@ LIB_EXPORT rc_t CC
 KConfig_Get_Temp_Cache( const KConfig *self,
     char * native_value, size_t native_value_size, size_t * native_written )
 {
-    char internal[ 4096 ];
-    size_t internal_written;    
-    rc_t rc = KConfig_Get_Repository_String( self, internal, sizeof internal, &internal_written, TEMP_CACHE );
-    if ( 0 ==rc ) {
-        internal_to_native( internal, native_value, native_value_size, native_written );
-    }
+#if WINDOWS
+        char internal[ 4096 ];
+        size_t internal_written;    
+        rc_t rc = KConfig_Get_Repository_String( self, internal, sizeof internal, &internal_written, TEMP_CACHE );
+        if ( 0 ==rc ) {
+            internal_to_native( internal, native_value, native_value_size, native_written );
+        }
     return rc;
+#else
+    return KConfig_Get_Repository_String( self, native_value, native_value_size, native_written, TEMP_CACHE );
+#endif
 }
 LIB_EXPORT rc_t CC
 KConfig_Set_Temp_Cache( KConfig *self, const char * native_value )
 {
+#if WINDOWS
     char internal[ 4096 ];
     size_t internal_written;
     native_to_internal( native_value, internal, sizeof internal, &internal_written );
     internal[ internal_written ] = 0;
     return KConfig_Set_Repository_String( self, internal, TEMP_CACHE );
+#else
+    return KConfig_Set_Repository_String( self, native_value, TEMP_CACHE );
+#endif
 }
 
 #define GCP_CREDENTIAL_FILE "/gcp/credential_file"
