@@ -28,6 +28,10 @@
 #include <string>
 #include <cmath>
 
+#include <kfc/except.h>
+
+#include <kfc/except.h>
+
 #include <vdb/database.h>
 #include <vdb/manager.h>
 #include <vdb/schema.h>
@@ -38,6 +42,8 @@
 #include "../libs/schema/ASTBuilder.hpp"
 
 #include <ktst/unit_test.hpp> // THROW_ON_RC
+
+const std :: string ScratchDir = "./db/";
 
 class WVDB_Fixture
 {
@@ -92,8 +98,12 @@ public:
         throw ncbi::NK::test_skipped("path not readable: " + path);
     }
 
-    void MakeDatabase ( const std :: string & p_schemaText, const std :: string & p_schemaSpec, const char * includes = nullptr )
+    void MakeDatabase ( const std :: string & p_testName,
+                        const std :: string & p_schemaText,
+                        const std :: string & p_schemaSpec,
+                        const char * includes = nullptr )
     {
+        m_databaseName = ScratchDir + p_testName;
         RemoveDatabase();
 
         THROW_ON_RC ( VDBManagerMakeUpdate ( & m_mgr, NULL ) );
@@ -151,6 +161,13 @@ public:
         THROW_ON_RC ( VCursorCommitRow ( p_cursor ) );
         THROW_ON_RC ( VCursorCloseRow ( p_cursor ) );
     }
+    void WriteRow ( VCursor * p_cursor, uint32_t p_colIdx, int64_t * p_value, uint32_t p_count )
+    {
+        THROW_ON_RC ( VCursorOpenRow ( p_cursor ) );
+        THROW_ON_RC ( VCursorWrite ( p_cursor, p_colIdx, sizeof(p_value)*8, p_value, 0, p_count ) );
+        THROW_ON_RC ( VCursorCommitRow ( p_cursor ) );
+        THROW_ON_RC ( VCursorCloseRow ( p_cursor ) );
+    }
 
     static std :: string ToCppString ( const String & p_str)
     {
@@ -180,8 +197,9 @@ public:
             return WVDB_Fixture :: ParseSchema ( p_schema, p_schemaText );
         }
 
+        HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
         ncbi :: SchemaParser :: SchemaParser parser;
-        if ( ! parser . ParseString ( p_schemaText . c_str () ) )
+        if ( ! parser . ParseString ( ctx, p_schemaText . c_str () ) )
         {
             throw std :: logic_error ( std :: string ( "WVDB_Fixture::MakeDatabase : ParseString() failed: " ) + FormatErrorMessage ( * parser . GetErrors () . GetError ( 0 ) ) );
         }
@@ -190,8 +208,8 @@ public:
         {
             throw std :: logic_error ( "WVDB_Fixture::MakeDatabase : MoveParseTree() returned 0" );
         }
-        ncbi :: SchemaParser :: ASTBuilder builder ( p_schema );
-        ncbi :: SchemaParser :: AST * ast = builder . Build ( * parseTree, "", false );
+        ncbi :: SchemaParser :: ASTBuilder builder ( ctx, p_schema );
+        ncbi :: SchemaParser :: AST * ast = builder . Build ( ctx, * parseTree, "", false );
         if ( builder . GetErrorCount() != 0)
         {
             throw std :: logic_error ( std :: string ( "AST_Fixture::MakeAst : ASTBuilder::Build() failed: " ) + FormatErrorMessage ( * builder . GetErrors () . GetError ( 0 ) ) );
@@ -200,14 +218,20 @@ public:
         {
             throw std :: logic_error ( "AST_Fixture::MakeAst : ASTBuilder::Build() failed, no message!" );
         }
-        delete ast;
-        delete parseTree;
+        ncbi :: SchemaParser :: AST :: Destroy ( ast );
+        ncbi :: SchemaParser :: ParseTree :: Destroy ( parseTree );
+
+        if ( FAILED () )
+        {
+            throw std :: logic_error ( WHAT() );
+        }
     }
 
     static std :: string FormatErrorMessage( const ncbi :: SchemaParser :: ErrorReport :: Error & p_err )
     {
+        HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
         char buf [1024];
-        if ( p_err . Format ( buf, sizeof ( buf ) ) )
+        if ( p_err . Format ( ctx, buf, sizeof ( buf ) ) )
         {
             return std :: string ( buf );
         }

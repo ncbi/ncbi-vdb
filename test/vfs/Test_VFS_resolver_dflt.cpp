@@ -96,7 +96,7 @@ public:
         VPathRelease ( remote );
         VPathRelease ( cache );
     }
-    
+
     VFSManager * vfs;
     VResolver * resolver;
     VPath * query;
@@ -341,7 +341,7 @@ FIXTURE_TEST_CASE(vdbcache_only, ResolverFixture)
 
     REQUIRE_RC(VFSManagerMakePath(vfs, &query, ACC));
     REQUIRE_RC_FAIL(VResolverRemote(resolver, 0, query, &remote));
-    
+
     putenv(const_cast<char*>(ACC "="));
 #undef ACC
 }

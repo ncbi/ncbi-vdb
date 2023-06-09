@@ -78,11 +78,11 @@ VFS_EXTERN rc_t CC VFSManagerRelease ( const VFSManager *self );
  *
  *  "path" [ IN ] VPath representing the path, URL or URN of the desired file
  */
-VFS_EXTERN rc_t CC VFSManagerOpenFileRead ( const VFSManager *self, 
+VFS_EXTERN rc_t CC VFSManagerOpenFileRead ( const VFSManager *self,
                                            struct KFile const **f,
                                            const struct VPath * path );
 
-VFS_EXTERN rc_t CC VFSManagerOpenFileReadWithBlocksize ( const VFSManager *self, 
+VFS_EXTERN rc_t CC VFSManagerOpenFileReadWithBlocksize ( const VFSManager *self,
                                            struct KFile const **f,
                                            const struct VPath * path,
                                            uint32_t blocksize,
@@ -131,7 +131,7 @@ VFS_EXTERN rc_t CC VFSManagerOpenFileWrite (const VFSManager *self,
  *
  *  "path" [ IN ] VPath representing the path, URL or URN of the desired file
  */
-VFS_EXTERN rc_t CC VFSManagerCreateFile (const VFSManager *self, 
+VFS_EXTERN rc_t CC VFSManagerCreateFile (const VFSManager *self,
                                          struct KFile **f,
                                          bool update, uint32_t access,
                                          KCreateMode mode,
@@ -199,7 +199,7 @@ VFS_EXTERN rc_t CC VFSManagerGetKryptoPassword (const VFSManager * self, char * 
     pwd_dir is not updated if pwd_dir == NULL or pwd_dir_size == 0
                   or pwd_dir_size is insufficient to copy the path
  */
-VFS_EXTERN rc_t CC VFSManagerUpdateKryptoPassword (const VFSManager * self, 
+VFS_EXTERN rc_t CC VFSManagerUpdateKryptoPassword (const VFSManager * self,
                                                    const char * password,
                                                    size_t size,
                                                    char * pwd_dir,
@@ -251,7 +251,7 @@ VFS_EXTERN rc_t CC KConfigNodeReadVPath ( struct KConfigNode const *self, struct
  * take a VPath and resolve to a final form apropriate for KDB
  *
  * that is take a relative path and resolve it against the CWD
- * or take an accession and resolve into the local or remote 
+ * or take an accession and resolve into the local or remote
  * VResolver file based on config. It is just a single resolution percall
  *
  * flags
@@ -286,23 +286,23 @@ VFS_EXTERN rc_t CC VFSManagerResolvePathRelative (const VFSManager * self,
 
 /*
  * Registering bindings between dbGaP object Ids and object names
- */                                                  
+ */
 
 /* VFSManagerRegisterObject
- *  registers a binding between an object Id and an object name (object = accession or dbGaP file) 
- * 
+ *  registers a binding between an object Id and an object name (object = accession or dbGaP file)
+ *
  * self [ IN ] - VFSManager object
  * oid [ IN ] - object id
- * obj [ IN ] - Vpath representing the object's name (scheme is "ncbi-acc" for accessions, "ncbi-file" for dbGaP files; 
+ * obj [ IN ] - Vpath representing the object's name (scheme is "ncbi-acc" for accessions, "ncbi-file" for dbGaP files;
  *              the name itself is the 'path' component
  */
 VFS_EXTERN rc_t CC VFSManagerRegisterObject(struct VFSManager* self, uint32_t oid, const struct VPath* obj);
 
 /* VFSManagerGetObjectId
- *  look up an object id by an object name 
- * 
+ *  look up an object id by an object name
+ *
  * self [ IN ] - VFSManager object
- * obj [ IN ] - Vpath representing the object's name (scheme is "ncbi-acc" for accessions, "ncbi-file" for dbGaP files; 
+ * obj [ IN ] - Vpath representing the object's name (scheme is "ncbi-acc" for accessions, "ncbi-file" for dbGaP files;
  *              the name itself is the 'path' component
  * oid [ OUT ] - object id
  */
@@ -310,10 +310,10 @@ VFS_EXTERN rc_t CC VFSManagerGetObjectId(const struct VFSManager* self, const st
 
 /* VFSManagerGetObject
  *  look up an object name by an object id
- * 
+ *
  * self [ IN ] - VFSManager object
  * oid [ IN ] - object id
- * obj [ OUT ] - Vpath representing the object's name (scheme is "ncbi-acc" for accessions, "ncbi-file" for dbGaP files; 
+ * obj [ OUT ] - Vpath representing the object's name (scheme is "ncbi-acc" for accessions, "ncbi-file" for dbGaP files;
  *              the name itself is the 'path' component
  */
 VFS_EXTERN rc_t CC VFSManagerGetObject(const struct VFSManager* self, uint32_t oid, struct VPath** obj);
@@ -323,7 +323,7 @@ VFS_EXTERN rc_t CC VFSManagerGetObject(const struct VFSManager* self, uint32_t o
  */
 VFS_EXTERN
 rc_t CC VFSManagerSetAdCaching(struct VFSManager* self, bool enabled);
-   
+
 
 /* CheckAd
  *  Verify that inPath is path/to/Accession-as-Directory (AD)

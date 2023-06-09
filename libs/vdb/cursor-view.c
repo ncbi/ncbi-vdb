@@ -52,6 +52,12 @@ struct VViewCursor
 
     /* attached reference to view */
     const VView * view;
+
+    /* view column objects by cid ( not-owned ) */
+    VCursorCache view_col;
+
+    /* productions by cid ( not-owned ) */
+    VCursorCache view_prod;
 };
 
 static rc_t VViewCursorWhack ( const VViewCursor * p_self );
@@ -89,20 +95,23 @@ static rc_t VViewCursorCellDataDirect ( const VViewCursor *self, int64_t row_id,
     uint32_t *elem_bits, const void **base, uint32_t *boff, uint32_t *row_len );
 static rc_t VViewCursorDataPrefetch ( const VViewCursor *cself, const int64_t *row_ids, uint32_t col_idx, uint32_t num_rows, int64_t min_valid_row_id, int64_t max_valid_row_id, bool continue_on_error );
 static rc_t VViewCursorOpenParentRead ( const VViewCursor * p_self, const VTable ** p_tbl );
+static rc_t VViewCursorIdRange ( const VViewCursor *self, uint32_t idx, int64_t *first, uint64_t *count );
 
 static rc_t VViewCursorPermitPostOpenAdd ( const VViewCursor * self );
 static rc_t VViewCursorSuspendTriggers ( const VViewCursor * self );
-static rc_t VViewCursorLinkedCursorGet ( const VViewCursor *cself,const char *tbl, struct VCursor const **curs);
-static rc_t VViewCursorLinkedCursorSet ( const VViewCursor *cself,const char *tbl, struct VCursor const *curs);
 static uint64_t VViewCursorSetCacheCapacity ( VViewCursor *self,uint64_t capacity);
 static uint64_t VViewCursorGetCacheCapacity ( const VViewCursor *self);
 
-static const KSymbol * VViewCursorFindOverride ( const VViewCursor * p_self, const struct VCtxId * p_cid );
+static const KSymbol * VViewCursorFindOverride ( const VViewCursor * p_self, const struct VCtxId * p_cid, const VTable * tbl, const struct VView * view );
 
 static rc_t VViewCursorLaunchPagemapThread ( struct VViewCursor *self );
 static const PageMapProcessRequest* VViewCursorPageMapProcessRequest ( const struct VViewCursor *self );
 static bool VViewCursorCacheActive ( const struct VViewCursor * self, int64_t * cache_empty_end );
 static rc_t VViewCursorInstallTrigger ( struct VViewCursor * self, struct VProduction * prod );
+
+static rc_t VViewCursorListReadableColumns ( struct VViewCursor *self, BSTree *columns );
+static VCursorCache * VViewCursorColumns ( struct VViewCursor * self, uint32_t ctx_type );
+static VCursorCache * VViewCursorProductions ( struct VViewCursor * self, uint32_t ctx_type );
 
 static VCursor_vt VViewCursor_vt =
 {
@@ -130,11 +139,10 @@ static VCursor_vt VViewCursor_vt =
     VViewCursorCommit,
     VViewCursorOpenParentRead,
     VViewCursorOpenParentUpdate,
+    VViewCursorIdRange,
     VViewCursorPermitPostOpenAdd,
     VViewCursorSuspendTriggers,
     VViewCursorGetSchema,
-    VViewCursorLinkedCursorGet,
-    VViewCursorLinkedCursorSet,
     VViewCursorSetCacheCapacity,
     VViewCursorGetCacheCapacity,
     VViewCursorMakeColumn,
@@ -146,7 +154,10 @@ static VCursor_vt VViewCursor_vt =
     VViewCursorLaunchPagemapThread,
     VViewCursorPageMapProcessRequest,
     VViewCursorCacheActive,
-    VViewCursorInstallTrigger
+    VViewCursorInstallTrigger,
+    VViewCursorListReadableColumns,
+    VViewCursorColumns,
+    VViewCursorProductions
 };
 
 // VViewCursor
@@ -174,6 +185,8 @@ VViewCursorMake ( const VView * p_view, VViewCursor ** p_curs )
             VectorInit ( & curs -> dad . owned, 0, 64 );
             KRefcountInit ( & curs -> dad . refcount, 1, "VViewCursor", "make", "vcurs" );
             curs -> dad . state = vcConstruct;
+            VCursorCacheInit ( & curs -> view_col, 0, 16 );
+            VCursorCacheInit ( & curs -> view_prod, 0, 16 );
             * p_curs = curs;
             return 0;
         }
@@ -186,6 +199,8 @@ rc_t
 VViewCursorWhack ( const VViewCursor * p_self )
 {
     VViewCursor * self = ( VViewCursor * ) p_self;
+    VCursorCacheWhack ( & self -> view_col, NULL, NULL );
+    VCursorCacheWhack ( & self -> view_prod, NULL, NULL );
     VViewRelease ( self -> view );
     return VCursorWhackInt ( & self -> dad );
 }
@@ -202,7 +217,6 @@ VViewCursorAddSColumn ( VViewCursor *      p_self,
 {
     rc_t rc = 0;
     VColumn *col;
-
     /* must be readable */
     if ( p_scol -> read == NULL )
     {
@@ -210,7 +224,7 @@ VViewCursorAddSColumn ( VViewCursor *      p_self,
     }
 
     /* must not already be there - benign error */
-    col = VCursorCacheGet ( & p_self -> dad . col, & p_scol -> cid );
+    col = VCursorCacheGet ( & p_self -> view_col, & p_scol -> cid );
     if ( col != NULL )
     {
         * p_idx = col -> ord;
@@ -247,7 +261,7 @@ VViewCursorAddSColumn ( VViewCursor *      p_self,
                 if ( rc == 0 )
                 {
                     void * ignore;
-                    rc = VCursorCacheSet ( & p_self -> dad . col, & p_scol -> cid, col );
+                    rc = VCursorCacheSet ( & p_self -> view_col, & p_scol -> cid, col );
                     if ( rc == 0 )
                     {
                         * p_idx = col -> ord;
@@ -454,7 +468,7 @@ VViewCursorResolveColumn ( void *item, void *data )
 
         /* remove from row and cache */
         VectorSwap ( & self -> dad . row, col -> ord, NULL, & ignore );
-        VCursorCacheSwap ( & self -> dad . col, & scol -> cid, NULL, & ignore );
+        VCursorCacheSwap ( & self -> view_col, & scol -> cid, NULL, & ignore );
 
         /* dump the VColumn */
         VColumnWhack ( col, NULL );
@@ -468,11 +482,15 @@ VViewCursorResolveColumn ( void *item, void *data )
 
 static
 rc_t
-VViewCursorResolveColumnProductions ( VViewCursor * p_self, const struct KDlset * p_libs )
+VViewCursorResolveColumnProductions ( VViewCursor * p_self, const struct KDlset * p_libs, bool ignore_failures )
 {
     Vector cx_bind;
     VProdResolveData pb;
     const VTable * tbl = VViewCursorGetTable ( p_self );
+    if ( tbl == NULL ) /* primary table parameter has not been bound */
+    {
+        return RC ( rcVDB, rcCursor, rcResolving, rcParam, rcUndefined );
+    }
 
     pb . pr . schema    = p_self -> view -> schema;
     pb . pr . ld        = tbl -> linker;
@@ -481,13 +499,13 @@ VViewCursorResolveColumnProductions ( VViewCursor * p_self, const struct KDlset 
     pb . pr . primary_table = tbl;
     pb . pr . view      = p_self -> view;
     pb . pr . curs      = ( VCursor * ) p_self;
-    pb . pr . cache     = & p_self -> dad . prod;
+    pb . pr . prod     = & p_self -> view_prod;
     pb . pr . owned     = & p_self -> dad . owned;
     pb . pr . cx_bind   = & cx_bind;
 
     pb . pr . chain     = chainDecoding;
     pb . pr . blobbing  = false;
-    pb . pr . ignore_column_errors = false;
+    pb . pr . ignore_column_errors = ignore_failures;
     pb . pr . discover_writable_columns = false;
     pb . rc = 0;
 
@@ -519,7 +537,7 @@ VViewCursorOpenRead ( VViewCursor * p_self, const struct KDlset * p_libs )
     }
     else
     {
-        rc = VViewCursorResolveColumnProductions ( p_self, p_libs );
+        rc = VViewCursorResolveColumnProductions ( p_self, p_libs, false );
         if ( rc == 0 )
         {
             p_self -> dad . row_id = p_self -> dad . start_id = p_self -> dad . end_id = 1;
@@ -840,7 +858,7 @@ VViewCursorReadInt ( const VViewCursor *  p_self,
                 const void *base;
                 uint32_t boff;
                 rc = VColumnRead ( col, p_row_id, & elem_size, & base, & boff, p_row_len, NULL );
-                if ( rc == 0 )
+                if ( rc == 0 && base != NULL )
                 {
                     return CopyCell ( elem_size, p_elem_bits, base, boff, p_buffer, p_blen, p_row_len );
                 }
@@ -1231,21 +1249,87 @@ VViewCursorOpenParentRead ( const VViewCursor * p_self, const VTable ** p_tbl )
     return rc;
 }
 
-const KSymbol * VViewCursorFindOverride ( const VViewCursor * p_self, const struct VCtxId * p_cid )
+static
+void CC addColumn ( BSTNode *n, void *data )
 {
+    VColumnRef * cref = (VColumnRef *) n;
+    VCursor * curs = (VCursor *) data;
+    uint32_t ignore;
+    VCursorAddColumn( curs, & ignore, "%.*s", cref -> name . size, cref -> name . addr );
+}
+
+rc_t
+VViewCursorIdRange ( const VViewCursor * p_self, uint32_t p_idx, int64_t * p_first, uint64_t * p_count )
+{   /* always return rowId range of the primary table, ignore p_idx */
+    rc_t rc;
+    const VTable * tbl = VViewCursorGetTable ( p_self );
+    if ( tbl == NULL ) /* primary table parameter has not been bound */
+    {
+        rc = RC ( rcVDB, rcCursor, rcResolving, rcParam, rcUndefined );
+    }
+    else
+    {
+        int64_t dummy;
+        uint64_t dummy_count;
+
+        if ( p_first == NULL )
+        {
+            p_first = & dummy;
+        }
+        else if ( p_count == NULL )
+        {
+            p_count = & dummy_count;
+        }
+
+        if ( p_self -> dad . state < vcReady )
+        {
+            if ( p_self -> dad . state == vcFailed )
+            {
+                rc = RC ( rcVDB, rcCursor, rcAccessing, rcCursor, rcInvalid );
+            }
+            else
+            {
+                rc = RC ( rcVDB, rcCursor, rcAccessing, rcCursor, rcNotOpen );
+            }
+        }
+        else
+        {
+            VCursor *curs;
+            rc = VTableCreateCachedCursorRead ( tbl, (const VCursor **) & curs, 0 );
+            if (  rc == 0 )
+            {   /* add all columns to the cursor */
+                BSTree columns;
+                BSTreeInit (& columns );
+                rc = VCursorListReadableColumns ( curs, & columns );
+                if ( rc == 0 )
+                {
+                    BSTreeForEach ( & columns, false, addColumn, curs );
+                    rc = VCursorOpen ( curs );
+                    if ( rc == 0 )
+                    {   /* the resultsing id range is the union of id ranges for all the resolvable
+                        columns of the primary table*/
+                        rc = VCursorIdRange( curs, 0, p_first, p_count );
+                    }
+                }
+                BSTreeWhack ( & columns, VColumnRefWhack, NULL );
+                VCursorRelease ( curs );
+            }
+        }
+    }
+    return rc;
+}
+
+const KSymbol * VViewCursorFindOverride ( const VViewCursor * p_self, const struct VCtxId * p_cid, const VTable * p_tbl, const struct VView * view )
+{
+    if ( p_cid -> ctx_type == eTable )
+    {
+        return STableFindOverride ( p_tbl -> stbl, p_cid );
+    }
+    assert ( p_cid -> ctx_type == eView );
     return SViewFindOverride ( p_self -> view -> sview, p_cid );
 }
 
 rc_t VViewCursorPermitPostOpenAdd ( const VViewCursor * self )
-{
-    return RC ( rcVDB, rcCursor, rcReading, rcCursor, rcUnsupported );
-}
-
-rc_t VViewCursorLinkedCursorGet ( const VViewCursor *cself,const char *tbl, struct VCursor const **curs)
-{
-    return RC ( rcVDB, rcCursor, rcReading, rcCursor, rcUnsupported );
-}
-rc_t VViewCursorLinkedCursorSet ( const VViewCursor *cself,const char *tbl, struct VCursor const *curs)
 {
     return RC ( rcVDB, rcCursor, rcReading, rcCursor, rcUnsupported );
 }
@@ -1275,6 +1359,121 @@ bool VViewCursorCacheActive ( const struct VViewCursor * self, int64_t * cache_e
         * cache_empty_end = 0;
     }
     return false;
+}
+
+
+struct insert_overloaded_pb
+{
+    VViewCursor *curs;
+    Vector *cx_bind;
+};
+
+static
+void CC insert_overloaded_scolumns ( void *item, void *data )
+{
+    struct insert_overloaded_pb *pb = data;
+    const SColumn *scol = ( const void* ) item;
+
+    uint32_t ignore;
+    VViewCursorAddSColumn ( pb -> curs, & ignore, scol, NULL, pb -> cx_bind );
+}
+
+static
+void VCursorListCol_walk_through_columns_and_add_to_cursor ( VViewCursor *self )
+{
+    uint32_t idx = VectorStart ( & self -> view -> sview -> cname );
+    uint32_t end = VectorLength ( & self -> view -> sview -> cname );
+
+    Vector cx_bind;
+    struct insert_overloaded_pb pb;
+    pb . curs = self;
+    pb . cx_bind = & cx_bind;
+    VectorInit ( & cx_bind, 1, self -> view -> schema -> num_indirect );
+
+    for ( end += idx; idx < end; ++idx )
+    {
+        /* look at the table column name guy */
+        const SNameOverload* ol_entry = ( const SNameOverload* ) VectorGet ( & self -> view -> sview -> cname, idx );
+        if ( ol_entry != NULL )
+            VectorForEach ( & ol_entry -> items, false, insert_overloaded_scolumns, & pb );
+    }
+
+    VectorWhack ( & cx_bind, NULL, NULL );
+}
+
+static
+rc_t VViewCursorOpenForListing ( const VViewCursor *cself )
+{
+    rc_t rc;
+    VViewCursor *self = ( VViewCursor* ) cself;
+
+    VLinker *ld = self -> view -> linker;
+
+    KDlset *libs;
+    rc = VLinkerOpen ( ld, & libs );
+    if ( rc == 0 )
+    {
+        rc = VViewCursorResolveColumnProductions ( self, libs, true );
+        KDlsetRelease ( libs );
+    }
+    return rc;
+}
+
+static
+rc_t VCursorListCol_consolidate_and_insert( const VViewCursor *self, BSTree *columns )
+{
+    rc_t rc = VViewCursorOpenForListing ( self );
+    if ( rc == 0 )
+    {
+        uint32_t idx = VectorStart ( & self -> dad . row );
+        uint32_t end = VectorLength ( & self -> dad . row );
+        for ( end += idx; idx < end; ++idx )
+        {
+            const VColumn* vcol = ( const VColumn* ) VectorGet ( & self -> dad . row, idx );
+            /* filter out non-view columns */
+            if ( vcol != NULL &&
+                 vcol -> scol -> cid . ctx == self -> view -> sview -> id &&
+                 vcol -> scol -> cid . ctx_type == eView )
+            {
+                VColumnRef *cref;
+                rc = VColumnRefMake ( & cref, self -> view -> schema, vcol -> scol );
+                if ( rc != 0 )
+                    break;
+
+                rc = BSTreeInsert ( columns, & cref -> n, VColumnRefSort );
+                assert ( rc == 0 );
+            }
+        }
+    }
+
+    return rc;
+}
+
+rc_t VViewCursorListReadableColumns ( struct VViewCursor *self, BSTree *columns )
+{
+    /* add '*' to cursor */
+    VCursorListCol_walk_through_columns_and_add_to_cursor ( self );
+
+    /* insert all columns into tree */
+    return VCursorListCol_consolidate_and_insert ( self, columns );
+}
+
+VCursorCache * VViewCursorColumns ( struct VViewCursor * self, uint32_t ctx_type )
+{
+    if ( ctx_type == eView )
+    {
+        return & self -> view_col;
+    }
+    return & self -> dad . col;
+}
+
+VCursorCache * VViewCursorProductions ( struct VViewCursor * self, uint32_t ctx_type )
+{
+    if ( ctx_type == eView )
+    {
+        return & self -> view_prod;
+    }
+    return & self -> dad . prod;
 }
 
 // not implemented for views (read-only)

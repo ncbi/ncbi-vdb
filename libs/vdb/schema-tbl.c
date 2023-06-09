@@ -781,12 +781,12 @@ bool CC STableScanVirtuals ( void *item, void *data )
             {
                 /* copy the original */
                 const KSymbol *copy;
+                KSymbol *prior;
                 rc_t rc = KSymbolCopy ( scope, & copy, orig );
                 if ( rc != 0 )
                     return true;
-
                 /* replace the parent virtual with an updatable copy */
-                VectorSwap ( & to -> by_parent, i, copy, & ignore );
+                VectorSwap ( & to -> by_parent, i, copy, (void**)& prior );
             }
         }
     }
@@ -964,7 +964,6 @@ rc_t STableImplicitPhysMember ( STable *self,
             m -> name = sym;
             sym -> u . obj = m;
             sym -> type = ePhysMember;
-
             /* add member to table */
             m -> cid . ctx = self -> id;
             rc = VectorAppend ( & self -> phys, & m -> cid . id, m );
@@ -1032,6 +1031,7 @@ rc_t STableImplicitColMember ( STable *self,
                     {
                         /* add column to table */
                         col -> cid . ctx = self -> id;
+                        col -> cid . ctx_type = eTable;
                         rc = VectorAppend ( & self -> col, & col -> cid . id, col );
                         if ( rc == 0 )
                         {
@@ -1039,7 +1039,7 @@ rc_t STableImplicitColMember ( STable *self,
                             SNameOverload *name;
 
                             /* create a column name with a single typed column */
-                            rc = SNameOverloadMake ( & name, csym, 0, 1 );
+                            rc = SNameOverloadMake ( & name, csym, eTable, 0, 1 );
                             if ( rc == 0 )
                             {
                                 /* being the only column, "col" may be simply
@@ -2143,7 +2143,7 @@ rc_t column_declaration ( KSymTable *tbl, KTokenSource *src, KToken *t,
             SNameOverload *name = ( void* ) c -> name -> u . obj;
             if ( name == NULL )
             {
-                rc = SNameOverloadMake ( & name, c -> name, 0, 4 );
+                rc = SNameOverloadMake ( & name, c -> name, eTable, 0, 4 );
                 if ( rc == 0 )
                 {
                     name -> cid . ctx = -1;
@@ -2318,6 +2318,7 @@ bool CC table_fwd_scan ( BSTNode *n, void *data )
     {
         /* this symbol was introduced in THIS table */
         sym -> u . fwd . ctx = self -> id;
+        sym -> u . fwd . ctx_type = eTable;
 
         /* add it to the introduced virtual productions and make it virtual */
         pb -> rc = VectorAppend ( & self -> vprods, & sym -> u . fwd . id, sym );
@@ -2348,7 +2349,6 @@ rc_t table_body ( KSymTable *tbl, KTokenSource *src, KToken *t,
     rc_t rc = expect ( tbl, src, t, eLeftCurly, "{", true );
     if ( rc != 0 )
         return rc;
-
     while ( t -> id != eRightCurly )
     {
         rc = table_local_decl ( tbl, src, t, env, self, table );
@@ -2641,6 +2641,7 @@ void CC column_set_context ( void *item, void *data )
 {
     SColumn *self = item;
     self -> cid . ctx = * ( const uint32_t* ) data;
+    self -> cid . ctx_type = eTable;
 }
 
 static
@@ -2648,7 +2649,10 @@ void CC name_set_context ( void *item, void *data )
 {
     SNameOverload *self = item;
     if ( ( int32_t ) self -> cid . ctx < 0 )
+    {
         self -> cid . ctx = * ( const uint32_t* ) data;
+        self -> cid . ctx_type = eTable;
+    }
 }
 
 static
@@ -2656,6 +2660,7 @@ void CC physical_set_context ( void *item, void *data )
 {
     SPhysMember *self = item;
     self -> cid . ctx = * ( const uint32_t* ) data;
+    self -> cid . ctx_type = eTable;
 }
 
 static
@@ -2663,6 +2668,7 @@ void CC production_set_context ( void *item, void *data )
 {
     SProduction *self = item;
     self -> cid . ctx = * ( const uint32_t* ) data;
+    self -> cid . ctx_type = eTable;
 }
 
 static
@@ -2670,15 +2676,16 @@ void CC symbol_set_context ( void *item, void *data )
 {
     KSymbol *self = item;
     self -> u . fwd . ctx = * ( const uint32_t* ) data;
+    self -> u . fwd . ctx_type = eTable;
 }
 
-void CC table_set_context ( STable *self, uint32_t p_ctxId )
+void CC table_set_context ( STable *self )
 {
-    VectorForEach ( & self -> col, false, column_set_context, & p_ctxId );
-    VectorForEach ( & self -> cname, false, name_set_context, & p_ctxId );
-    VectorForEach ( & self -> phys, false, physical_set_context, & p_ctxId );
-    VectorForEach ( & self -> prod, false, production_set_context, & p_ctxId );
-    VectorForEach ( & self -> vprods, false, symbol_set_context, & p_ctxId );
+    VectorForEach ( & self -> col, false, column_set_context, & self -> id );
+    VectorForEach ( & self -> cname, false, name_set_context, & self -> id );
+    VectorForEach ( & self -> phys, false, physical_set_context, & self -> id );
+    VectorForEach ( & self -> prod, false, production_set_context, & self -> id );
+    VectorForEach ( & self -> vprods, false, symbol_set_context, & self -> id );
 }
 
 #if NO_UPDATE_TBL_REF || 0
@@ -2871,7 +2878,7 @@ rc_t table_declaration ( KSymTable *tbl, KTokenSource *src, KToken *t,
         SNameOverload *name = ( void* ) table -> name -> u . obj;
         if ( name == NULL )
         {
-            rc = SNameOverloadMake ( & name, table -> name, 0, 4 );
+            rc = SNameOverloadMake ( & name, table -> name, 0, 0, 4 );
             if ( rc == 0 )
             {
                 rc = VectorAppend ( & self -> tname, & name -> cid . id, name );
@@ -2888,13 +2895,12 @@ rc_t table_declaration ( KSymTable *tbl, KTokenSource *src, KToken *t,
                 uint32_t idx;
 
                 /* set the table context id on all members */
-                table_set_context ( table, table -> id );
+                table_set_context ( table );
 
                 /* add to named table overrides */
                 rc = VectorInsertUnique ( & name -> items, table, & idx, STableSort );
                 if ( rc == 0 )
                     return 0;
-
                 if ( GetRCState ( rc ) == rcExists )
                 {
                     const STable *newer;
@@ -2904,7 +2910,6 @@ rc_t table_declaration ( KSymTable *tbl, KTokenSource *src, KToken *t,
                     {
                         /* put the new one in place of the existing */
                         VectorSwap ( & name -> items, idx, table, & ignore );
-
                         /* tell everyone to use new table */
                         return schema_update_tbl_ref ( self, exist, table );
                     }
@@ -2918,7 +2923,6 @@ rc_t table_declaration ( KSymTable *tbl, KTokenSource *src, KToken *t,
     {
         rc = 0;
     }
-
     STableWhack ( table, NULL );
 
     return rc;

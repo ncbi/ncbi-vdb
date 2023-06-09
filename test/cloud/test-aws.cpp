@@ -229,7 +229,7 @@ TEST_CASE(GetPkcs7) {
             REQUIRE_RC(rc);
             uint32_t len = string_measure(pkcs7, NULL);
             REQUIRE_LT( 1000u, len);
-            REQUIRE_GT( 3000u, len);            
+            REQUIRE_GT( 3000u, len);
         }
     }
     REQUIRE_RC(KNSManagerRelease(kns));
@@ -270,7 +270,7 @@ TEST_CASE(PrintLocation) {
 #endif
     }
     StringWhack(ce_token);
-    
+
     REQUIRE_RC(CloudRelease(cloud));
 
     REQUIRE_RC(CloudMgrRelease(mgr));
@@ -348,6 +348,7 @@ rc_t CC KMain ( int argc, char *argv [] )
 #ifdef TO_SHOW_RESULTS
     assert(!KDbgSetString("KNS"));
 #endif
+KDbgSetString ( "KNS-PROXY" );
 
     if (rc == 0)
         rc = AwsTestSuite(argc, argv);
