@@ -48,7 +48,7 @@
 
 /* ---------------------------------------------------------------------------------------------------- */
 
-LIB_EXPORT rc_t native_to_internal( const char * native_path, 
+static rc_t prop_native_to_internal( const char * native_path, 
                                     char * internal_path,
                                     size_t internal_path_size,
                                     size_t * written ) {
@@ -66,7 +66,7 @@ LIB_EXPORT rc_t native_to_internal( const char * native_path,
     return rc;
 }
 
-LIB_EXPORT rc_t internal_to_native( const char * internal_path,
+static rc_t prop_internal_to_native( const char * internal_path,
                                     char * native_path,
                                     size_t native_path_size,
                                     size_t * written ) {
@@ -900,7 +900,7 @@ KConfig_Get_Temp_Cache( const KConfig *self,
         size_t internal_written;    
         rc_t rc = KConfig_Get_Repository_String( self, internal, sizeof internal, &internal_written, TEMP_CACHE );
         if ( 0 ==rc ) {
-            internal_to_native( internal, native_value, native_value_size, native_written );
+            rc = prop_internal_to_native( internal, native_value, native_value_size, native_written );
         }
     return rc;
 #else
@@ -913,9 +913,12 @@ KConfig_Set_Temp_Cache( KConfig *self, const char * native_value )
 #if WINDOWS
     char internal[ 4096 ];
     size_t internal_written;
-    native_to_internal( native_value, internal, sizeof internal, &internal_written );
-    internal[ internal_written ] = 0;
-    return KConfig_Set_Repository_String( self, internal, TEMP_CACHE );
+    rc_t rc = prop_native_to_internal( native_value, internal, sizeof internal, &internal_written );
+    if ( 0 == rc ) {
+        internal[ internal_written ] = 0;
+        rc = KConfig_Set_Repository_String( self, internal, TEMP_CACHE );
+    }
+    return rc;
 #else
     return KConfig_Set_Repository_String( self, native_value, TEMP_CACHE );
 #endif
