@@ -584,18 +584,22 @@ rc_t AddRow(BSTree* tr, BSTree* trWgs, Row* data, Ctx* ctx, int cacheState,
         char e[256] = "";
         String acc;
         StringInitCString(&acc, sn->seqId);
+        /* Verify that refseq is WGS */
         rc_t r2 = VResolverWgsAccessionToFileName(
             ctx->resolver, &acc, e, sizeof e);
         if (r2 == 0 && e[0] != '\0')
+            /* find cached SDL response for WGS refseq */
             sw = (RefNode*)BSTreeFind(trWgs, e, bstCmpBySeqId);
 
-        if (sw != NULL)
+        if (sw != NULL) /* found - reuse it */
             rc = ResolvedCopy(&sn->resolved, &sw->resolved);
         else {
+            /* find refseq - locally and/or remotely */
             rc = FindRef(ctx,
                 sn->seqId, &sn->resolved, cacheState, alwaysResolveRemote, dir);
 
             if (reuseWgsResponse && rc == 0 && r2 == 0 && e[0] != '\0') {
+                /* save SDL response for WGS refseqs */
                 sw = calloc(1, sizeof *sw);
                 if (sw == NULL)
                     return RC(rcVDB,
