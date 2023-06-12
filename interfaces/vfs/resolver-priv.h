@@ -23,11 +23,12 @@
 *
 *  Please cite the author in any work or product based on this material.
 *
-* ===========================================================================
+* =============================================================================$
 *
 */
 
 
+#include <klib/text.h> /* String */
 #include <vfs/resolver.h> /* VResolver */
 
 
@@ -62,6 +63,12 @@ VFS_EXTERN rc_t CC VResolverGetKNSManager ( const VResolver * self,
                                          const struct KNSManager ** mgr );
 
 VFS_EXTERN rc_t CC VResolverSetDir ( VResolver * self, const char * dir );
+
+
+/* convert WGS accession to corresponding WSG file name */
+rc_t VResolverWgsAccessionToFileName(const VResolver *unused,
+    const String *accession, char *expanded, size_t bsize);
+
 
 #ifdef __cplusplus
 }
