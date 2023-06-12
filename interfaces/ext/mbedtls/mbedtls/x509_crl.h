@@ -48,7 +48,8 @@ extern "C" {
  * them except via Mbed TLS library functions: the effect of modifying
  * those fields or the data that those fields points to is unspecified.
  */
-typedef struct mbedtls_x509_crl_entry {
+typedef struct mbedtls_x509_crl_entry
+{
     /** Direct access to the whole entry inside the containing buffer. */
     mbedtls_x509_buf raw;
     /** The serial number of the revoked certificate. */
@@ -73,7 +74,8 @@ mbedtls_x509_crl_entry;
  * Certificate revocation list structure.
  * Every CRL may have multiple entries.
  */
-typedef struct mbedtls_x509_crl {
+typedef struct mbedtls_x509_crl
+{
     mbedtls_x509_buf raw;           /**< The raw certificate data (DER). */
     mbedtls_x509_buf tbs;           /**< The raw certificate body (DER). The part that is To Be Signed. */
 
@@ -114,8 +116,8 @@ mbedtls_x509_crl;
  *
  * \return         0 if successful, or a specific X509 or PEM error code
  */
-int mbedtls_x509_crl_parse_der(mbedtls_x509_crl *chain,
-                               const unsigned char *buf, size_t buflen);
+int mbedtls_x509_crl_parse_der( mbedtls_x509_crl *chain,
+                        const unsigned char *buf, size_t buflen );
 /**
  * \brief          Parse one or more CRLs and append them to the chained list
  *
@@ -128,7 +130,7 @@ int mbedtls_x509_crl_parse_der(mbedtls_x509_crl *chain,
  *
  * \return         0 if successful, or a specific X509 or PEM error code
  */
-int mbedtls_x509_crl_parse(mbedtls_x509_crl *chain, const unsigned char *buf, size_t buflen);
+int mbedtls_x509_crl_parse( mbedtls_x509_crl *chain, const unsigned char *buf, size_t buflen );
 
 #if defined(MBEDTLS_FS_IO)
 /**
@@ -141,7 +143,7 @@ int mbedtls_x509_crl_parse(mbedtls_x509_crl *chain, const unsigned char *buf, si
  *
  * \return         0 if successful, or a specific X509 or PEM error code
  */
-int mbedtls_x509_crl_parse_file(mbedtls_x509_crl *chain, const char *path);
+int mbedtls_x509_crl_parse_file( mbedtls_x509_crl *chain, const char *path );
 #endif /* MBEDTLS_FS_IO */
 
 #if !defined(MBEDTLS_X509_REMOVE_INFO)
@@ -156,8 +158,8 @@ int mbedtls_x509_crl_parse_file(mbedtls_x509_crl *chain, const char *path);
  * \return         The length of the string written (not including the
  *                 terminated nul byte), or a negative error code.
  */
-int mbedtls_x509_crl_info(char *buf, size_t size, const char *prefix,
-                          const mbedtls_x509_crl *crl);
+int mbedtls_x509_crl_info( char *buf, size_t size, const char *prefix,
+                   const mbedtls_x509_crl *crl );
 #endif /* !MBEDTLS_X509_REMOVE_INFO */
 
 /**
@@ -165,14 +167,14 @@ int mbedtls_x509_crl_info(char *buf, size_t size, const char *prefix,
  *
  * \param crl      CRL chain to initialize
  */
-void mbedtls_x509_crl_init(mbedtls_x509_crl *crl);
+void mbedtls_x509_crl_init( mbedtls_x509_crl *crl );
 
 /**
  * \brief          Unallocate all CRL data
  *
  * \param crl      CRL chain to free
  */
-void mbedtls_x509_crl_free(mbedtls_x509_crl *crl);
+void mbedtls_x509_crl_free( mbedtls_x509_crl *crl );
 
 /** \} name Structures and functions for parsing CRLs */
 /** \} addtogroup x509_module */

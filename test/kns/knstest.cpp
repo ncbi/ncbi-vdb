@@ -116,7 +116,7 @@ FIXTURE_TEST_CASE(KNSManagerGetUserAgentEnv, SessionIdFixture)
     KNSManagerGetUserAgent(&ua);
     const string ua_contains = "bmap=bmaphere";
     //fprintf(stderr,"Got: '%s', expected '%s'\n", ua, ua_contains.data());
-    REQUIRE_NE(string::npos, string(ua).find(ua_contains));
+    REQUIRE_EQ(string::npos, string(ua).find(ua_contains));
     unsetenv(ENV_MAGIC_OPT_BITMAP);
 }
 

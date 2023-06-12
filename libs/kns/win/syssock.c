@@ -1348,7 +1348,7 @@ static rc_t WaitForData( const KSocket * self, void * buffer, size_t bsize,
         {
             if ( *tmMs <= tm_decrement )
             {
-                CloseHandle( overlap -> hEvent );
+                // CloseHandle( overlap -> hEvent ); // done by the caller
                 return RC ( rcNS, rcFile, rcReading, rcTimeout, rcExhausted );
             }
             *tmMs -= tm_decrement;
@@ -1363,7 +1363,7 @@ static rc_t WaitForData( const KSocket * self, void * buffer, size_t bsize,
                         self, count ) );
             assert ( num_read != NULL );
             * num_read = ( size_t ) count;
-            CloseHandle( overlap -> hEvent );
+            //CloseHandle( overlap -> hEvent ); // done by the caller
             return 0;
         }
 

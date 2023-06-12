@@ -20,7 +20,7 @@
  *
  *  Please cite the author in any work or product based on this material.
  *
- * =============================================================================
+ * ============================================================================$
  *
  */
 
@@ -652,7 +652,8 @@ static
 uint32_t _Reader2naCalcReadReaderColsParams(const ReadDesc *desc,
     const ReaderCols *cols,
     uint32_t *start,
-    uint32_t min_read_length)
+    uint32_t min_read_length,
+    bool ignoreReadFilter)
 {
     uint32_t i = 1;
     uint32_t to_read = 0;
@@ -682,7 +683,9 @@ uint32_t _Reader2naCalcReadReaderColsParams(const ReadDesc *desc,
             __func__, desc->run->path, desc->spot, desc->read, desc->read_id));
         return 0;
     }
-    else if (cols->read_filter[desc->read - 1] != READ_FILTER_PASS) {
+    else if (!ignoreReadFilter
+        && cols->read_filter[desc->read - 1] != READ_FILTER_PASS)
+    {
         S
         DBGMSG(DBG_BLAST, DBG_FLAG(DBG_BLAST_BLAST),
             ("%s: %s:%d:%d(%d): READ_FILTER != READ_FILTER_PASS\n",
@@ -755,7 +758,8 @@ bool _Reader2naNextData(Reader2na *self,
     const VBlob *blob,
     uint32_t *status,
     Packed2naRead *out,
-    uint32_t min_read_length)
+    uint32_t min_read_length,
+    bool ignoreReadFilter)
 {
     uint32_t start = 0;
     uint32_t to_read = 0;
@@ -784,7 +788,7 @@ bool _Reader2naNextData(Reader2na *self,
     }
 
     to_read = _Reader2naCalcReadReaderColsParams(&self->desc, &self->cols,
-        &start, min_read_length);
+        &start, min_read_length, ignoreReadFilter);
     if (to_read == 0) {
         return true;
     }
@@ -847,7 +851,8 @@ uint32_t _Reader2naData(Reader2na *self,
     VdbBlastStatus *status,
     Packed2naRead *buffer,
     uint32_t buffer_length,
-    uint32_t min_read_length)
+    uint32_t min_read_length,
+    bool ignoreReadFilter)
 {
     ReadDesc *desc = NULL;
     uint32_t n = 0;
@@ -872,8 +877,8 @@ uint32_t _Reader2naData(Reader2na *self,
 
     for (n = 0; n < buffer_length; ) {
         Packed2naRead *p = buffer + n;
-        bool ignorable
-            = _Reader2naNextData(self, data->blob, status, p, min_read_length);
+        bool ignorable = _Reader2naNextData(
+            self, data->blob, status, p, min_read_length, ignoreReadFilter);
         if (*status == eVdbBlastErr) {
             if (ignorable) {
                 /* special case */
@@ -920,7 +925,8 @@ uint64_t _Reader2naRead(Reader2na *self,
     size_t *starting_base,
     uint8_t *buffer,
     size_t buffer_size,
-    uint32_t min_read_length)
+    uint32_t min_read_length,
+    bool ignoreReadFilter)
 {
     uint32_t num_read = 0;
     uint32_t to_read = 0;
@@ -962,7 +968,7 @@ uint64_t _Reader2naRead(Reader2na *self,
         }
 
         to_read = _Reader2naCalcReadReaderColsParams(&self->desc, &self->cols,
-            &start, min_read_length);
+            &start, min_read_length, ignoreReadFilter);
         if (to_read <= self->starting_base) {
             S
             DBGMSG(DBG_BLAST, DBG_FLAG(DBG_BLAST_BLAST), (
@@ -1199,7 +1205,8 @@ uint32_t _Core2naDataSeq(Core2na *self,
     const RunSet *runs,
     VdbBlastStatus *status,
     Packed2naRead *buffer,
-    uint32_t buffer_length)
+    uint32_t buffer_length,
+    bool ignoreReadFilter)
 {
     uint32_t num_read = 0;
 
@@ -1231,7 +1238,7 @@ uint32_t _Core2naDataSeq(Core2na *self,
         }
 
         num_read = _Reader2naData(&self->reader, data, status,
-            buffer, buffer_length, self->min_read_length);
+            buffer, buffer_length, self->min_read_length, ignoreReadFilter);
     }
 
     if (*status == eVdbBlastNoErr) {
@@ -1250,12 +1257,14 @@ uint32_t _Core2naData(Core2na *self,
     const RunSet *runs,
     VdbBlastStatus *status,
     Packed2naRead *buffer,
-    uint32_t buffer_length)
+    uint32_t buffer_length,
+    bool ignoreReadFilter)
 {
     assert(self);
 
     if (self->reader.mode != VDB_READ_REFERENCE) {
-        return _Core2naDataSeq(self, data, runs, status, buffer, buffer_length);
+        return _Core2naDataSeq(self, data, runs, status, buffer, buffer_length,
+            ignoreReadFilter);
     }
     else {
         return _Core2naDataRef(self, data, status, buffer, buffer_length);
@@ -1269,7 +1278,8 @@ uint64_t _Core2naReadSeq(Core2na *self,
     uint64_t *read_id,
     size_t *starting_base,
     uint8_t *buffer,
-    size_t buffer_size)
+    size_t buffer_size,
+    bool ignoreReadFilter)
 {
     uint64_t num_read = 0;
 
@@ -1298,8 +1308,8 @@ uint64_t _Core2naReadSeq(Core2na *self,
             return 0;
         }
 
-        num_read = _Reader2naRead(&self->reader, status,
-            read_id, starting_base, buffer, buffer_size, self->min_read_length);
+        num_read = _Reader2naRead(&self->reader, status, read_id, starting_base,
+            buffer, buffer_size, self->min_read_length, ignoreReadFilter);
         S
     }
 
@@ -1308,17 +1318,15 @@ uint64_t _Core2naReadSeq(Core2na *self,
 
 uint64_t _Core2naRead(Core2na *self, const RunSet *runs,
     uint32_t *status, uint64_t *read_id, size_t *starting_base,
-    uint8_t *buffer, size_t buffer_size)
+    uint8_t *buffer, size_t buffer_size, bool ignoreReadFilter)
 {
     assert(self);
 
-    if (self->reader.mode != VDB_READ_REFERENCE) {
-        return _Core2naReadSeq(self, runs, status,
-            read_id, starting_base, buffer, buffer_size);
-    }
-    else {
+    if (self->reader.mode == VDB_READ_REFERENCE)
         return _Core2naReadRef(self, status, read_id, buffer, buffer_size);
-    }
+    else
+        return _Core2naReadSeq(self, runs, status,
+            read_id, starting_base, buffer, buffer_size, ignoreReadFilter);
 }
 
 void _Core4naFini(Core4na *self) {
@@ -1335,7 +1343,8 @@ void _Core4naFini(Core4na *self) {
 
 static size_t _Core4naReadSeq(Core4na *self, const RunSet *runs,
     uint32_t *status, uint64_t read_id, size_t starting_base,
-    uint8_t *buffer, size_t buffer_length)
+    uint8_t *buffer, size_t buffer_length,
+    bool ignoreReadFilter)
 {
     uint32_t num_read = 0;
     ReadDesc *desc = NULL;
@@ -1373,7 +1382,8 @@ static size_t _Core4naReadSeq(Core4na *self, const RunSet *runs,
                 if (!empty) {
                     assert(self->cols.read_len && self->cols.read_filter);
                     to_read = _Reader2naCalcReadReaderColsParams(&self->desc,
-                        &self->cols, &start, self->min_read_length);
+                        &self->cols, &start, self->min_read_length,
+                        ignoreReadFilter);
                 }
                 if (to_read == 0) {
                     /* When _Reader2naCalcReadReaderColsParams returns 0
@@ -1419,13 +1429,14 @@ static size_t _Core4naReadSeq(Core4na *self, const RunSet *runs,
 
 static size_t _Core4naRead(Core4na *self, const RunSet *runs,
     uint32_t *status, uint64_t read_id, size_t starting_base,
-    uint8_t *buffer, size_t buffer_length)
+    uint8_t *buffer, size_t buffer_length,
+    bool ignoreReadFilter)
 {
     assert(self);
 
     if (self->mode != VDB_READ_REFERENCE) {
         return _Core4naReadSeq(self, runs, status,
-            read_id, starting_base, buffer, buffer_length);
+            read_id, starting_base, buffer, buffer_length, ignoreReadFilter);
     }
     else {
         return _Core4naReadRef(self, runs, status,
@@ -1434,7 +1445,7 @@ static size_t _Core4naRead(Core4na *self, const RunSet *runs,
 }
 
 static const uint8_t* _Core4naDataSeq(Core4na *self, const RunSet *runs,
-    uint32_t *status, uint64_t read_id, size_t *length)
+    uint32_t *status, uint64_t read_id, size_t *length, bool ignoreReadFilter)
 {
     ReadDesc *desc = NULL;
     assert(self && runs && status && length);
@@ -1476,8 +1487,8 @@ static const uint8_t* _Core4naDataSeq(Core4na *self, const RunSet *runs,
             assert(self->cols.read_len && self->cols.read_filter
                 && desc->run->path);
 
-            if (self->cols.read_filter[desc->read - 1]
-                != READ_FILTER_PASS)
+            if (!ignoreReadFilter
+                && self->cols.read_filter[desc->read - 1] != READ_FILTER_PASS)
             {   /* FILTERed reads are not returned by 2na reader:
                    4na readed should not ask for them */
                 *status = eVdbBlastInvalidId;
@@ -1538,8 +1549,8 @@ static const uint8_t* _Core4naDataSeq(Core4na *self, const RunSet *runs,
                             else {
                                 uint32_t start = 0;
                                 to_read = _Reader2naCalcReadReaderColsParams(
-                                    &self->desc, &self->cols,
-                                    &start, self->min_read_length);
+                                    &self->desc, &self->cols, &start,
+                                    self->min_read_length, ignoreReadFilter);
                                 base += boff + start;
                                 if (row_len >= start) {
                                     row_len -= start;
@@ -1584,12 +1595,13 @@ static const uint8_t* _Core4naDataSeq(Core4na *self, const RunSet *runs,
 }
 
 static const uint8_t* _Core4naData(Core4na *self, const RunSet *runs,
-    uint32_t *status, uint64_t read_id, size_t *length)
+    uint32_t *status, uint64_t read_id, size_t *length, bool ignoreReadFilter)
 {
     assert(self);
 
     if (self->mode != VDB_READ_REFERENCE) {
-        return _Core4naDataSeq(self, runs, status, read_id, length);
+        return _Core4naDataSeq(self, runs, status, read_id, length,
+            ignoreReadFilter);
     }
     else {
         return _Core4naDataRef(self, runs, status, read_id, length);
@@ -1861,8 +1873,8 @@ uint32_t CC VdbBlast2naReaderData(VdbBlast2naReader *self,
         fflush(stderr);
     }
     if (rc == 0) {
-        n = _Core2naData((Core2na*)core2na, &self->data,
-            &self->set->runs, status, buffer, buffer_length);
+        n = _Core2naData((Core2na*)core2na, &self->data, &self->set->runs,
+            status, buffer, buffer_length, self->set->ignoreReadFilter);
         S
         if (n > 0 && verbose)
         {   _Packed2naReadPrint(buffer, self->data.blob); }
@@ -1942,6 +1954,18 @@ VdbBlast4naReader* CC VdbBlastRunSetMake4naReader(const VdbBlastRunSet *self,
 }
 
 LIB_EXPORT
+VdbBlastStatus CC VdbBlastRunSetIgnoreReadFilter(VdbBlastRunSet* self,
+    bool ignore)
+{
+    if (self == NULL) {
+        STSMSG(1, ("VdbBlastRunSetIgnoreReadFilter(NULL)"));
+        return eVdbBlastErr;
+    }
+    self->ignoreReadFilter = ignore;
+    return eVdbBlastNoErr;
+}
+
+LIB_EXPORT
 VdbBlast4naReader* CC VdbBlast4naReaderAddRef(VdbBlast4naReader *self)
 {
     if (self == NULL) {
@@ -2010,8 +2034,8 @@ size_t CC VdbBlast4naReaderRead(const VdbBlast4naReader *self,
         LOGERR(klogInt, rc, "Error in KLockAcquire");
     }
     else {
-        n = _Core4naRead(c, &self->set->runs, status,
-            read_id, starting_base, buffer, buffer_length);
+        n = _Core4naRead(c, &self->set->runs, status, read_id, starting_base,
+            buffer, buffer_length, self->set->ignoreReadFilter);
         rc = KLockUnlock(c->mutex);
         if (rc != 0) {
             LOGERR(klogInt, rc, "Error in KLockUnlock");
@@ -2068,7 +2092,8 @@ const uint8_t* CC VdbBlast4naReaderData(const VdbBlast4naReader *self,
         LOGERR(klogInt, rc, "Error in KLockAcquire");
     }
     else {
-        d = _Core4naData(c, &self->set->runs, status, read_id, length);
+        d = _Core4naData(c, &self->set->runs, status, read_id, length,
+            self->set->ignoreReadFilter);
         rc = KLockUnlock(c->mutex);
         if (rc != 0) {
             LOGERR(klogInt, rc, "Error in KLockUnlock");

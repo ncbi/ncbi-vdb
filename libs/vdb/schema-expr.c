@@ -30,6 +30,7 @@
 #include "schema-parse.h"
 #include "schema-expr.h"
 #include "schema-dump.h"
+#include "prod-priv.h"
 
 #include <klib/symbol.h>
 #include <klib/symtab.h>
@@ -42,7 +43,6 @@
 #include <ctype.h>
 #include <os-native.h>
 #include <assert.h>
-
 
 /*--------------------------------------------------------------------------
  * SExpression
@@ -160,7 +160,7 @@ void CC SExpressionMark ( void * item, void * data )
                         SExpressionMark, data );
         break;
     case eMembExpr:
-        assert (false); //TODO SMembExprMark
+        assert (false); /*TODO SMembExprMark*/
         break;
     }
 }
@@ -613,11 +613,26 @@ rc_t SExpressionDump ( const SExpression *self, SDumper *b )
         return SExpressionBracketListDump ( & x -> expr, b, "[ ", " ]" );
     }
     case eMembExpr:
-        assert (false); //TODO: SMembExprDump
-        break;
+    {
+        rc_t rc;
+        const SMembExpr *x = ( const SMembExpr* ) self;
+        if ( x -> rowId != NULL )
+        {
+            rc = SDumperPrint ( b, "param%u[%E].", x -> paramId, x -> rowId );
+        }
+        else
+        {
+            rc = SDumperPrint ( b, "param%u.", x -> paramId );
+        }
+        if ( rc == 0 )
+        {
+            rc =  StringDump ( & x -> member -> name, b );
+        }
+        return rc;
+    }
     }
 
-    return SDumperPrint ( b, "EXPR-UNKNOWN" );
+    return SDumperPrint ( b, "EXPR-UNKNOWN: %u", self -> var );
 
 }
 
@@ -1377,7 +1392,6 @@ rc_t sym_expr ( KSymTable *tbl, KTokenSource *src, KToken *t,
     x -> _sym = t -> sym;
     x -> alt = alt;
     * xp = x;
-
     next_token ( tbl, src, t );
     return 0;
 }
@@ -1424,7 +1438,6 @@ rc_t fwd_decl_expr ( KSymTable *tbl, KTokenSource *src, KToken *t,
     SSymExpr *x = malloc ( sizeof * x );
     if ( x == NULL )
         return RC ( rcVDB, rcSchema, rcParsing, rcMemory, rcExhausted );
-
     rc = KSymTableCreateConstSymbol ( tbl, & x -> _sym, & t -> str, eForward, NULL );
     if ( rc != 0 )
     {

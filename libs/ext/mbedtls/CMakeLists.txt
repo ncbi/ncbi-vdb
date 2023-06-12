@@ -30,7 +30,6 @@ set(CRYPTO_SRC
     asn1write.c
     base64.c
     bignum.c
-    bignum_core.c
     camellia.c
     ccm.c
     chacha20.c
@@ -44,18 +43,19 @@ set(CRYPTO_SRC
     dhm.c
     ecdh.c
     ecdsa.c
+    ecjpake.c
     ecp.c
     ecp_curves.c
     entropy.c
     entropy_poll.c
     error.c
     gcm.c
-    hash_info.c
     hmac_drbg.c
     md.c
     md5.c
     nist_kw.c
     oid.c
+    padlock.c
     pem.c
     pk.c
     pk_wrap.c
@@ -67,6 +67,7 @@ set(CRYPTO_SRC
     platform_util.c
     poly1305.c
     psa_crypto.c
+    psa_crypto_client.c
     psa_crypto_driver_wrappers.c
     psa_crypto_slot_management.c
     psa_crypto_storage.c
@@ -78,6 +79,7 @@ set(CRYPTO_SRC
     psa_crypto_hash.c
     psa_crypto_cipher.c
     psa_crypto_aead.c
+    psa_crypto_se.c
     ripemd160.c
     rsa.c
     rsa_alt_helpers.c
@@ -99,6 +101,7 @@ set(TLS_SRC
     ssl_tls.c
     ssl_tls12_client.c
     ssl_tls12_server.c
+    ssl_tls13_keys.c
     ssl_debug_helpers_generated.c
 )
 

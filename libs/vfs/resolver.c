@@ -20,7 +20,7 @@
  *
  *  Please cite the author in any work or product based on this material.
  *
- * =============================================================================
+ * ============================================================================$
  */
 
 #include <vfs/extern.h>
@@ -1786,23 +1786,8 @@ rc_t VResolverAlgParseResolverCGIResponse ( const KDataBuffer *result,
 }
 
 
-#ifdef VDB_3162
-#error 1
-/*  test-only code to emulate 403 response while calling names.cgi */
-static bool TEST_VDB_3162 = false;
-void TESTING_VDB_3162 ( void ) {
-    TEST_VDB_3162 = true;
-}
-static uint32_t TESTING_VDB_3162_CODE ( rc_t rc, uint32_t code ) {
-    if ( rc == 0 && TEST_VDB_3162 ) {
-        TEST_VDB_3162 = false;
-        return 403;
-    } else {
-        return code;
-    }
-}
-#endif
 
+#ifdef NAMESCGI
 #ifdef TESTING_SERVICES_VS_OLD_RESOLVING
 /* RemoteProtectedResolve
  *  use NCBI CGI to resolve accession into URL
@@ -1812,105 +1797,6 @@ rc_t oldVResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
     const KNSManager *kns, VRemoteProtocols protocols, const String *acc,
     const VPath ** path, const VPath ** mapping, bool legacy_wgs_refseq )
 {
-    rc_t rc;
-    KHttpRequest *req;
-
-    assert(path);
-
-    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), ("names.cgi = %S\n", self -> root));
-    if(((self)->root)->addr[self->root->size - 1] == 'i')
-        rc = KNSManagerMakeReliableClientRequest ( kns, & req, 0x01010000, NULL,
-            self -> root -> addr );
-    else if (((self)->root)->addr[4] == 's')
-        rc = KNSManagerMakeReliableClientRequest ( kns, & req, 0x01010000, NULL,
-            RESOLVER_CGI);
-    else
-        rc = KNSManagerMakeReliableClientRequest ( kns, & req, 0x01010000, NULL,
-            RESOLVER_CGI_HTTP);
-
-    if ( rc == 0 )
-    {
-        /* build up POST information: */
-        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), ("  version = %u.%u\n",
-            NAME_SERVICE_MAJ_VERS, NAME_SERVICE_MIN_VERS));
-        rc = KHttpRequestAddPostParam ( req, "version=%u.%u",
-            NAME_SERVICE_MAJ_VERS, NAME_SERVICE_MIN_VERS );
-        if ( rc == 0 )
-        {
-            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), ("  acc = %S\n", acc));
-            rc = KHttpRequestAddPostParam ( req, "acc=%S", acc );
-        }
-        if ( rc == 0 && legacy_wgs_refseq )
-        {
-            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), ("  ctx = refseq\n"));
-            rc = KHttpRequestAddPostParam ( req, "ctx=refseq" );
-        }
-        if ( rc == 0 && self -> ticket != NULL )
-        {
-            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), ("  tic = %S\n", self -> ticket));
-            rc = KHttpRequestAddPostParam ( req, "tic=%S", self -> ticket );
-        }
-
-        if ( rc == 0 && NAME_SERVICE_VERS >= ONE_DOT_ONE )
-        {
-            uint32_t i;
-            const char * prefs [ eProtocolMaxPref ];
-            const char * seps [ eProtocolMaxPref ];
-            VRemoteProtocols protos = protocols;
-
-            prefs [ 0 ] = seps [ 0 ] = NULL;
-            prefs [ 1 ] = prefs [ 2 ] = seps [ 1 ] = seps [ 2 ] = "";
-
-            for ( i = 0; protos != 0 && i < sizeof prefs / sizeof prefs [ 0 ]; protos >>= 3 )
-            {
-                /* 1.1 protocols */
-                switch ( protos & eProtocolMask )
-                {
-                case eProtocolHttp:
-                    prefs [ i ] = "http";
-                    seps [ i ++ ] = ",";
-                    break;
-                case eProtocolFasp:
-                    prefs [ i ] = "fasp";
-                    seps [ i ++ ] = ",";
-                    break;
-                default:
-                    if ( NAME_SERVICE_VERS > ONE_DOT_ONE )
-                    {
-                        /* 1.2 protocols */
-                        switch ( protos & eProtocolMask )
-                        {
-                        case eProtocolHttps:
-                            prefs [ i ] = "https";
-                            seps [ i ++ ] = ",";
-                            break;
-                        }
-                    }
-                }
-            }
-
-            if ( prefs [ 0 ] == NULL )
-                rc = RC ( rcVFS, rcResolver, rcResolving, rcParam, rcInvalid );
-
-            else
-            {
-                DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS ),
-                         ("  accept-proto = %s%s%s%s%s\n", prefs [ 0 ], seps [ 1 ], prefs [ 1 ], seps [ 2 ], prefs [ 2 ] ) );
-                rc = KHttpRequestAddPostParam ( req, "accept-proto=%s%s%s%s%s", prefs [ 0 ], seps [ 1 ], prefs [ 1 ], seps [ 2 ], prefs [ 2 ] );
-            }
-        }
-
-        if ( rc == 0 )
-        {
-            KHttpResult *rslt;
-
-            rc = KHttpRequestPOST ( req, &rslt ); /* will retry if needed `*/
-            if ( rc == 0 )
-            {
-                uint32_t code;
-
-                rc = KHttpResultStatus ( rslt, &code, NULL, 0, NULL );
-
 #ifdef VDB_3162
                 if ( TEST_VDB_3162 ) {
                     code = TESTING_VDB_3162_CODE ( rc, code );
@@ -2003,6 +1889,7 @@ rc_t oldVResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
 
     return rc;
 }
+#endif
 #endif
 
 rc_t VResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
@@ -3357,7 +3244,7 @@ rc_t VResolverLocalResolve ( const VResolver *self, const String * accession,
     bool legacy_wgs_refseq = false;
 
     const char * quality = NULL;
-    
+
     VDBManagerGetQualityString(NULL, &quality);
     if (quality == NULL || quality[0] == '\0')
         quality = "RZ";
@@ -3725,7 +3612,9 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
        case of resolving oid to cache location */
 
     {
+#ifdef NAMESCGI
         const VResolverAlg * alg4 = NULL;
+#endif
         ver_t v = InitVersion(version, self->ticket);
         for ( i = 0; i < count; ++ i )
         {
@@ -3759,17 +3648,20 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
                     if (rc == 0)
                         rc = try_rc;
                 }
+#ifdef NAMESCGI
                 else if (alg->version == VERSION_3_0 ||
                     alg->version == VERSION_4_0)
                 {
                     alg4 = alg;
                 }
+#endif
               }
             }
         }
         if (rc == 0 && count > 0) {
+#ifdef NAMESCGI
             if (v > VERSION_4_0 && alg4 != NULL) {
-                /* fallback to old names service */
+                /* fallback to old name s service */
                 try_rc = VResolverAlgRemoteResolve(alg4, self->kns,
                     protocols, &tok, path, mapping, opt_file_rtn,
                     legacy_wgs_refseq, "4", NULL);
@@ -3779,9 +3671,11 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
                     rc = try_rc;
             }
             else {
+#endif
+            {
                 rc = RC(rcVFS, rcResolver, rcResolving, rcName, rcNotFound);
 /*              PLOGERR(klogErr, (klogErr, rc,
-                    "cannot find names service version $(vers). "
+                    "cannot find name s service version $(vers). "
                     "Hint: run \"vdb-config --restore-defaults\"",
                     "vers=%V", v));*/
             }
@@ -4988,13 +4882,29 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
                     cache, version, resolveAllAccToCache, dir, resolvedToDir,
                     oldRemote, oldMapping );
                 if (rc != 0) {
+                    if (local != NULL) {
+                        rc = VFSManagerCheckRunDir(self->wd, query);
+                        if (rc == 0) {
+                            assert(query);
+                            rc = LegacyVPathMakeFmt(
+                                (VPath**)local, query->path.addr);
+                        }
+                        if (rc == 0) {
+                            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (
+                                "VResolverQueryInt: "
+                                "unkared '%S' found in '%S'\n",
+                                &query->path, &(*local)->path));
+                            break;
+                        }
+
+                    }
                     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
                         ("Resolver-%s: VResolverQueryAcc('%S') failed\n",
                             self->version, &sQuery));
                     /* goto try_name;
   VResolverQueryAcc should be able to resolve run by acc in cwd/AD:
   Don't try to query acc as file name i.e. path in cwd: ./acc
-            
+
   A known case is an incomplete AD: VResolverQueryAcc correctly fails,
                 VResolverQueryName will incorrectly find it.
 
@@ -5490,7 +5400,7 @@ rc_t CC VResolverQueryDo ( const VResolver * self, VRemoteProtocols protocols,
     }
     else
 #endif
-        return VResolverQueryImpl ( self, protocols, query, 
+        return VResolverQueryImpl ( self, protocols, query,
             aLocal, aRemote, aCache, false, dir, NULL, false, NULL, NULL );
 }
 

@@ -33,6 +33,7 @@
 #include <vdb/vdb-priv.h>
 
 #include <../libs/vdb/schema-priv.h>
+#include <../libs/vdb/schema-parse.h>
 #include <../libs/vdb/table-priv.h>
 #include <../libs/vdb/cursor-priv.h>
 #include <../libs/vdb/prod-priv.h>
@@ -42,7 +43,6 @@
 using namespace std;
 
 TEST_SUITE( VdbTableCursorTestSuite_Write )
-const string ScratchDir = "./db/";
 
 class TableCursorFixture : public WVDB_Fixture
 {
@@ -62,9 +62,8 @@ public:
 
     void MakeWriteCursor( const char * p_dbName, const char * p_schema )
     {
-        m_databaseName = ScratchDir + p_dbName;
         const char * schemaSpec = "db";
-        MakeDatabase ( p_schema, schemaSpec );
+        MakeDatabase ( p_dbName, p_schema, schemaSpec );
 
         VTable* table;
         THROW_ON_RC ( VDatabaseCreateTable ( m_db, & table, "t", kcmCreate | kcmMD5, "%s", "t" ) );
@@ -109,8 +108,7 @@ static const char * SimpleSchema =
 
 FIXTURE_TEST_CASE( VTableCursor_MakeWrite, TableCursorFixture )
 {
-    m_databaseName = ScratchDir + GetName();
-    MakeDatabase ( SimpleSchema, "db" );
+    MakeDatabase ( GetName(), SimpleSchema, "db" );
 
     VTable* table;
     REQUIRE_RC ( VDatabaseCreateTable ( m_db, & table, "t", kcmCreate | kcmMD5, "%s", "t" ) );
@@ -495,7 +493,7 @@ FIXTURE_TEST_CASE( VTableCursor_SetCacheCapacity, TableCursorFixture )
 FIXTURE_TEST_CASE( VTableCursor_Columns, TableCursorFixture )
 {
     MakeWriteCursorAddColumn ( GetName(), SimpleSchema );
-    VCursorCache * cols = VCursorColumns ( (VCursor*)m_cur );
+    VCursorCache * cols = VCursorColumns ( (VCursor*)m_cur, eTable );
     REQUIRE_EQ ( 1u, VectorLength ( & cols -> cache ) );
 }
 
@@ -557,7 +555,7 @@ FIXTURE_TEST_CASE( VTableCursor_FindOverride, TableCursorFixture )
 
     MakeWriteCursor ( GetName(), SchemaWithOverrides );
     VCtxId id = {0, 1}; // 0 is the id of T0 which first introduced x, 1 is its column id in T
-    const KSymbol * sym = VCursorFindOverride ( m_cur, & id );
+    const KSymbol * sym = VCursorFindOverride ( m_cur, & id, VCursorGetTable ( m_cur ), NULL );
     REQUIRE_NOT_NULL ( sym );
     REQUIRE_EQ ( string ("x"), ToCppString ( sym -> name ) );
 }
@@ -590,6 +588,16 @@ FIXTURE_TEST_CASE( VTableCursor_InstallTrigger, TableCursorFixture )
     MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
     VProduction prod;
     REQUIRE_RC ( VCursorInstallTrigger ( (VCursor*)m_cur, & prod ) );
+}
+
+FIXTURE_TEST_CASE( VTableCursor_ListReadableColumns, TableCursorFixture )
+{
+    MakeWriteCursor ( GetName(), SimpleSchema );
+    REQUIRE_RC ( VCursorOpen ( m_cur ) );
+
+    BSTree columns; // VColumnRef
+    BSTreeInit ( & columns );
+    REQUIRE_RC_FAIL ( VCursorListReadableColumns ( m_cur, & columns ) );
 }
 
 //////////////////////////////////////////// Main

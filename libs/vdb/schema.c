@@ -50,6 +50,7 @@
 #include <klib/out.h>
 #include <klib/rc.h>
 #include <vdb/vdb-priv.h>
+#include <kfg/properties.h>
 #include <sysalloc.h>
 
 #include <stdlib.h>
@@ -353,7 +354,6 @@ rc_t CC KMDataNodeFillSchema ( void *data, KTokenText *tt, size_t save )
         tt -> str . len = string_len ( pb -> buff, save + num_read );
         pb -> pos += num_read;
     }
-
     return rc;
 }
 
@@ -374,7 +374,7 @@ void CC SNameOverloadWhack ( void *item, void *ignore )
 /* Make
  */
 rc_t SNameOverloadMake ( SNameOverload **np,
-    const KSymbol *sym, uint32_t start, uint32_t len )
+    const KSymbol *sym, uint32_t ctx_type, uint32_t start, uint32_t len )
 {
     SNameOverload *name = malloc ( sizeof * name );
     if ( name == NULL )
@@ -384,6 +384,7 @@ rc_t SNameOverloadMake ( SNameOverload **np,
     ( ( KSymbol* ) sym ) -> u . obj = name;
     VectorInit ( & name -> items, start, len );
     name -> cid . ctx = 0;
+    name -> cid . ctx_type = ctx_type; /* 0 for top-level objects (table, db, function) */
 
     * np = name;
     return 0;
@@ -399,7 +400,7 @@ rc_t SNameOverloadCopy ( BSTree *scope,
     if ( rc == 0 )
     {
         SNameOverload *copy;
-        rc = SNameOverloadMake ( & copy, sym, 0, 0 );
+        rc = SNameOverloadMake ( & copy, sym, orig -> cid . ctx_type, 0, 0 );
         if ( rc == 0 )
         {
             /* copy contents */
@@ -855,7 +856,7 @@ LIB_EXPORT rc_t CC VSchemaAddIncludePaths(VSchema *self, size_t length, const ch
 }
 
 
-/* ParseText
+/* ParseText_v1
  *  parse schema text
  *  add productions to existing schema
  *
@@ -865,8 +866,8 @@ LIB_EXPORT rc_t CC VSchemaAddIncludePaths(VSchema *self, size_t length, const ch
  *  "text" [ IN ] and "bytes" [ IN ] - input buffer of text
  */
 static
-rc_t CC VSchemaParseTextInt ( VSchema *self,
-    const char *name, const char *text, size_t bytes )
+rc_t
+VSchemaParseTextInt_v1 ( VSchema *self, const char *name, const char *text, size_t bytes )
 {
     KTokenText tt;
     KTokenSource src;
@@ -874,21 +875,72 @@ rc_t CC VSchemaParseTextInt ( VSchema *self,
     rc_t rc;
 
     if ( name == NULL || name [ 0 ] == 0 )
+    {
         CONST_STRING ( & path, "<unnamed>" );
+    }
     else
+    {
         StringInitCString ( & path, name );
+    }
 
     StringInit ( & str, text, bytes, string_len ( text, bytes ) );
     KTokenTextInit ( & tt, & str, & path );
     KTokenSourceInit ( & src, & tt );
 
     rc = schema ( & src, self );
-
     if (rc == 0)
-        PARSE_DEBUG( ("Parsed schema from %s\n", name) );
+    {
+        PARSE_DEBUG( ("Parsed schema v1 from %s\n", name) );
+    }
     else
-        PARSE_DEBUG( ("Failed to parse schema from %s\n", name) );
+    {
+        PARSE_DEBUG( ("Failed to parse v1 schema from %s\n", name) );
+    }
 
+    return rc;
+}
+
+static
+rc_t
+VSchemaParseTextInt_v2 ( VSchema *self, const char *name, const char *text, size_t bytes )
+{
+    if ( VSchemaParse_v2 ( self, text, bytes ) )
+    {
+        PARSE_DEBUG( ("Parsed schema v2 from %s\n", name) );
+        return 0;
+    }
+
+    PARSE_DEBUG( ("Failed to parse v2 schema from %s\n", name) );
+    return RC ( rcVDB, rcSchema, rcOpening, rcSchema, rcFailed );
+}
+
+static
+rc_t
+VSchemaParseTextInt ( VSchema *self, const char *name, const char *text, size_t bytes )
+{
+    KConfig * kfg;
+    rc_t rc = KConfigMake ( & kfg, NULL );
+    if ( rc == 0 )
+    {
+        uint8_t version;
+        rc = KConfigGetSchemaParserVersion( kfg , & version );
+        if ( rc == 0 )
+        {
+            switch (version)
+            {
+            case 1:
+                rc = VSchemaParseTextInt_v1 ( self, name, text, bytes );
+                break;
+            case 2:
+                rc = VSchemaParseTextInt_v2 ( self, name, text, bytes );
+                break;
+            default:
+                rc = RC ( rcVDB, rcSchema, rcParsing, rcFileFormat, rcUnsupported );
+                break;
+            }
+        }
+    }
+    KConfigRelease ( kfg );
     return rc;
 }
 
@@ -906,7 +958,9 @@ LIB_EXPORT rc_t CC VSchemaParseText ( VSchema *self, const char *name,
     else if ( text == NULL )
         rc = RC ( rcVDB, rcSchema, rcParsing, rcParam, rcNull );
     else
-        rc = VSchemaParseTextInt ( self, name, text, bytes );
+    {
+        rc = VSchemaParseTextInt ( self, name, text, bytes);
+    }
 
     return rc;
 }
@@ -924,16 +978,50 @@ LIB_EXPORT rc_t CC VSchemaParseText ( VSchema *self, const char *name,
 rc_t VSchemaParseTextCallback ( VSchema *self, const char *name,
     rc_t ( CC * fill ) ( void *self, KTokenText *tt, size_t save ), void *data )
 {
-    KTokenText tt;
-    KTokenSource src;
+    KConfig * kfg;
+    rc_t rc = KConfigMake ( & kfg, NULL );
+    if ( rc == 0 )
+    {
+        uint8_t version;
 
-    KTokenTextInitCString ( & tt, "", name );
-    tt . read = fill;
-    tt . data = data;
+version=1;
+//        rc = KConfigGetSchemaParserVersion( kfg , & version );
+//        if ( rc == 0 )
+        {
+            switch (version)
+            {
+            case 1:
+                {
+                    KTokenText tt;
+                    KTokenSource src;
 
-    KTokenSourceInit ( & src, & tt );
+                    KTokenTextInitCString ( & tt, "", name );
+                    tt . read = fill;
+                    tt . data = data;
 
-    return schema ( & src, self );
+                    KTokenSourceInit ( & src, & tt );
+                    /*NB: this invokes v1 parser, even though the parent schema may have been
+                        processed by v2 parser. The reason is the possibility of v0 constructs
+                        coming from older objects */
+                    rc = schema ( & src, self );
+                }
+                break;
+            case 2:
+                {
+                    KTokenText tt;
+                    rc = fill ( data, & tt, 0 );
+                    rc = VSchemaParseTextInt_v2 ( self, name, tt.str.addr, tt.str.size );
+                }
+                break;
+            default:
+                rc = RC ( rcVDB, rcSchema, rcParsing, rcFileFormat, rcUnsupported );
+                break;
+            }
+        }
+    }
+    KConfigRelease ( kfg );
+    return rc;
+
 }
 
 

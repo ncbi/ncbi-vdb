@@ -73,7 +73,7 @@ const char *mbedtls_ssl_named_group_to_str( uint16_t in )
 
     return "UNKOWN";
 }
-const char *mbedtls_ssl_sig_alg_to_str( uint16_t in )
+const char* mbedtls_ssl_sig_alg_to_str( uint16_t in )
 {
     switch( in )
     {
@@ -135,7 +135,8 @@ const char *mbedtls_ssl_states_str( mbedtls_ssl_states in )
         [MBEDTLS_SSL_SERVER_FINISHED] = "MBEDTLS_SSL_SERVER_FINISHED",
         [MBEDTLS_SSL_FLUSH_BUFFERS] = "MBEDTLS_SSL_FLUSH_BUFFERS",
         [MBEDTLS_SSL_HANDSHAKE_WRAPUP] = "MBEDTLS_SSL_HANDSHAKE_WRAPUP",
-        [MBEDTLS_SSL_NEW_SESSION_TICKET] = "MBEDTLS_SSL_NEW_SESSION_TICKET",
+        [MBEDTLS_SSL_HANDSHAKE_OVER] = "MBEDTLS_SSL_HANDSHAKE_OVER",
+        [MBEDTLS_SSL_SERVER_NEW_SESSION_TICKET] = "MBEDTLS_SSL_SERVER_NEW_SESSION_TICKET",
         [MBEDTLS_SSL_SERVER_HELLO_VERIFY_REQUEST_SENT] = "MBEDTLS_SSL_SERVER_HELLO_VERIFY_REQUEST_SENT",
         [MBEDTLS_SSL_HELLO_RETRY_REQUEST] = "MBEDTLS_SSL_HELLO_RETRY_REQUEST",
         [MBEDTLS_SSL_ENCRYPTED_EXTENSIONS] = "MBEDTLS_SSL_ENCRYPTED_EXTENSIONS",
@@ -144,9 +145,6 @@ const char *mbedtls_ssl_states_str( mbedtls_ssl_states in )
         [MBEDTLS_SSL_CLIENT_CCS_BEFORE_2ND_CLIENT_HELLO] = "MBEDTLS_SSL_CLIENT_CCS_BEFORE_2ND_CLIENT_HELLO",
         [MBEDTLS_SSL_SERVER_CCS_AFTER_SERVER_HELLO] = "MBEDTLS_SSL_SERVER_CCS_AFTER_SERVER_HELLO",
         [MBEDTLS_SSL_SERVER_CCS_AFTER_HELLO_RETRY_REQUEST] = "MBEDTLS_SSL_SERVER_CCS_AFTER_HELLO_RETRY_REQUEST",
-        [MBEDTLS_SSL_HANDSHAKE_OVER] = "MBEDTLS_SSL_HANDSHAKE_OVER",
-        [MBEDTLS_SSL_TLS1_3_NEW_SESSION_TICKET] = "MBEDTLS_SSL_TLS1_3_NEW_SESSION_TICKET",
-        [MBEDTLS_SSL_TLS1_3_NEW_SESSION_TICKET_FLUSH] = "MBEDTLS_SSL_TLS1_3_NEW_SESSION_TICKET_FLUSH",
     };
 
     if( in > ( sizeof( in_to_str )/sizeof( in_to_str[0]) - 1 ) ||
@@ -220,5 +218,4 @@ const char *mbedtls_ssl_key_export_type_str( mbedtls_ssl_key_export_type in )
 
 #endif /* MBEDTLS_DEBUG_C */
 /* End of automatically generated file. */
-
 

@@ -88,35 +88,44 @@ operator == ( const Token & l, const Token & r)
     return l . GetType() == r . GetType() && string ( l . GetValue() ) == string ( r . GetValue() );
 }
 
+//TODO: KFC error reporting
+
 TEST_CASE(ParseTree_Construct)
 {
-    ParseTree t ( st );
-    REQUIRE ( t . GetToken() == Token ( st ) );
+    HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
+    ParseTree * t = ParseTree :: Make ( ctx, st );
+    REQUIRE ( t -> GetToken() == Token ( st ) );
+    ParseTree :: Destroy ( t );
 }
 
 TEST_CASE(ParseTree_AddChild)
 {
-    ParseTree t = Token ( PT_PARSE );
-    t. AddChild ( new ParseTree ( st0 ) );
-    t. AddChild ( new ParseTree ( st1 ) );
+    HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
+    ParseTree * t = ParseTree :: Make ( ctx, Token ( PT_PARSE ) );
+    t -> AddChild ( ctx, ParseTree :: Make ( ctx, st0 ) );
+    t -> AddChild ( ctx, ParseTree :: Make ( ctx, st1 ) );
 
-    REQUIRE ( t . GetChild ( 0 ) -> GetToken () == Token ( st0 ) );
-    REQUIRE ( t . GetChild ( 1 ) -> GetToken () == Token ( st1 ) );
+    REQUIRE ( t -> GetChild ( 0 ) -> GetToken () == Token ( st0 ) );
+    REQUIRE ( t -> GetChild ( 1 ) -> GetToken () == Token ( st1 ) );
+    ParseTree :: Destroy ( t );
 }
 TEST_CASE(ParseTree_ChildrenCount)
 {
-    ParseTree t = Token ( PT_PARSE );
-    t. AddChild ( new ParseTree ( st0 ) );
-    t. AddChild ( new ParseTree ( st1 ) );
+    HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
+    ParseTree * t = ParseTree :: Make ( ctx, Token ( PT_PARSE ) );
+    t -> AddChild ( ctx, ParseTree :: Make ( ctx, st0 ) );
+    t -> AddChild ( ctx, ParseTree :: Make ( ctx, st1 ) );
 
-    REQUIRE_EQ ( 2u, t . ChildrenCount () );
+    REQUIRE_EQ ( 2u, t -> ChildrenCount () );
+    ParseTree :: Destroy ( t );
 }
 
 TEST_CASE(ParseTree_MoveChildren)
 {
-    ParseTree source = Token ( PT_PARSE );
-    source. AddChild ( new ParseTree ( st0 ) );
-    source. AddChild ( new ParseTree ( st1 ) );
+    HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
+    ParseTree * source = ParseTree :: Make ( ctx, Token ( PT_PARSE ) );
+    source -> AddChild ( ctx, ParseTree :: Make ( ctx, st0 ) );
+    source -> AddChild ( ctx, ParseTree :: Make ( ctx, st1 ) );
 
     class TestTree : public ParseTree
     {
@@ -125,48 +134,56 @@ TEST_CASE(ParseTree_MoveChildren)
         TestTree(const Token & p_t) : ParseTree( p_t ) {};
     } target ( st );
 
-    target . MoveChildren ( source );
+    target . MoveChildren ( ctx, * source );
 
-    REQUIRE_EQ ( 0u, source . ChildrenCount () );
+    REQUIRE_EQ ( 0u, source -> ChildrenCount () );
 
     REQUIRE_EQ ( 2u, target . ChildrenCount () );
     REQUIRE ( target . GetChild ( 0 ) -> GetToken () == Token ( st0 ) );
     REQUIRE ( target . GetChild ( 1 ) -> GetToken () == Token ( st1 ) );
+
+    ParseTree :: Destroy ( source );
 }
 
 TEST_CASE(ParseTree_Location)
 {
     // start with a fake token, its empty location is used as the tree's location
-    ParseTree source = Token ( PT_PARSE );
-    REQUIRE_EQ ( string (), string ( source . GetLocation() . m_file ) );
-    REQUIRE_EQ ( 0u, source . GetLocation() . m_line );
-    REQUIRE_EQ ( 0u, source . GetLocation() . m_column );
+    HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
+    ParseTree * source = ParseTree :: Make ( ctx, Token ( PT_PARSE ) );
+
+    REQUIRE_EQ ( string (), string ( source -> GetLocation() . m_file ) );
+    REQUIRE_EQ ( 0u, source -> GetLocation() . m_line );
+    REQUIRE_EQ ( 0u, source -> GetLocation() . m_column );
 
     // add a real token, make sure its location is used as the tree's location
-    SchemaToken t1 = { KW_view, "view", 4, 0, 0, "file", 1, 2 };
-    source . AddChild ( new ParseTree ( t1 ) );
-    REQUIRE_EQ ( string ( "file" ), string ( source . GetLocation() . m_file ) ); // first real token
-    REQUIRE_EQ ( 1u, source . GetLocation() . m_line );
-    REQUIRE_EQ ( 2u, source . GetLocation() . m_column );
+    SchemaToken st1 = { KW_view, "view", 4, 0, 0, "file", 1, 2 };
+    source -> AddChild ( ctx, ParseTree :: Make ( ctx, st1 ) );
+    REQUIRE_EQ ( string ( "file" ), string ( source -> GetLocation() . m_file ) ); // first real token
+    REQUIRE_EQ ( 1u, source -> GetLocation() . m_line );
+    REQUIRE_EQ ( 2u, source -> GetLocation() . m_column );
 
     // add more real tokens, make sure the location does not change
-    SchemaToken t2 = { KW_view, "view", 4, 0, 0, "file", 2, 3 };
-    source . AddChild ( new ParseTree ( t2 ) );
-    REQUIRE_EQ ( 1u, source . GetLocation() . m_line );
-    REQUIRE_EQ ( 2u, source . GetLocation() . m_column );
+    SchemaToken st2 = { KW_view, "view", 4, 0, 0, "file", 2, 3 };
+    source -> AddChild ( ctx, ParseTree :: Make ( ctx, st2 ) );
+    REQUIRE_EQ ( 1u, source -> GetLocation() . m_line );
+    REQUIRE_EQ ( 2u, source -> GetLocation() . m_column );
+
+    ParseTree :: Destroy ( source );
 }
 
 // SchemaParser
 
 TEST_CASE(SchemaParser_ParseString)
 {
+    HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
     SchemaParser p;
-    REQUIRE ( p . ParseString ( "" ) );
+    REQUIRE ( p . ParseString ( ctx, "" ) );
     REQUIRE_NOT_NULL ( p . GetParseTree () );
 }
 
 TEST_CASE(SchemaParser_ParseFile)
 {
+    HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
     const string FileName = DataDir + "/" + GetName ();
     {
         ofstream out ( FileName . c_str () );
@@ -180,18 +197,19 @@ TEST_CASE(SchemaParser_ParseFile)
     KDirectoryRelease ( wd );
 
     SchemaParser p;
-    REQUIRE ( p . ParseFile ( f ) );
+    REQUIRE ( p . ParseFile ( ctx, f ) );
     REQUIRE_NOT_NULL ( p . GetParseTree () );
     KFileRelease ( f );
 }
 
 TEST_CASE(SchemaParser_MoveParseTree)
 {
+    HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
     SchemaParser p;
-    p . ParseString ( "" );
+    p . ParseString ( ctx, "" );
     ParseTree * root = p . MoveParseTree ();
     REQUIRE_NULL ( p . GetParseTree () );
-    delete root;
+    ParseTree :: Destroy ( root );
 }
 
 // Grammar
@@ -218,8 +236,9 @@ static
 void
 ParseAndVerify ( const char* p_source, bool p_debug = false )
 {
+    HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
     SchemaParser p;
-    if ( ! p . ParseString ( p_source, p_debug ) )
+    if ( ! p . ParseString ( ctx, p_source, p_debug ) )
     {
         throw logic_error ( string ( "ParseAndVerify : ParseString() failed: " ) + p . GetErrors () . GetMessageText ( 0 ) );
     }
@@ -240,7 +259,7 @@ TEST_CASE ( EmptyInput )
 
 TEST_CASE ( Version1 )
 {
-    ParseAndVerify ( "version 1; include \"qq\";" );
+    ParseAndVerify ( "version 1;" );
 }
 
 TEST_CASE ( MultipleDecls )
@@ -685,7 +704,8 @@ TEST_CASE ( PhysicalIdent )
 
 TEST_CASE ( VersionOther )
 {
-    REQUIRE ( ! SchemaParser () . ParseString ( "version 3.14; $" ) );
+    HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
+    REQUIRE ( ! SchemaParser () . ParseString ( ctx, "version 3.14; $" ) );
 }
 
 TEST_CASE ( Version2_Decl1 )
@@ -695,7 +715,8 @@ TEST_CASE ( Version2_Decl1 )
 
 TEST_CASE ( View_InVers1 )
 {
-    REQUIRE ( ! SchemaParser () . ParseString ( "view X#1 < T t > {};" ) );
+    HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
+    REQUIRE ( ! SchemaParser () . ParseString ( ctx, "view X#1 < T t > {};" ) );
 }
 
 TEST_CASE ( Decls_1_And_2 )
@@ -730,7 +751,8 @@ TEST_CASE ( View_OneParam_EmptyBody )
 
 TEST_CASE ( View_NoPhysicalColumns )
 {
-    REQUIRE ( ! SchemaParser () . ParseString ( "version 2; view X#1 < T t > { column U8 .PHYS = 1; };" ) );
+    HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
+    REQUIRE ( ! SchemaParser () . ParseString ( ctx, "version 2; view X#1 < T t > { column U8 .PHYS = 1; };" ) );
 }
 
 TEST_CASE ( View_MemberExpression )
@@ -738,9 +760,19 @@ TEST_CASE ( View_MemberExpression )
     ParseAndVerify ( "version 2; table T#1 { column U8 c1 = 1; }; view W#1 <T t> { column U8 c2 = t . c1; }" );
 }
 
+TEST_CASE ( View_MemberExpression_LikePhysicalIdent )
+{
+    ParseAndVerify ( "version 2; table T#1 { column U8 c1 = 1; }; view W#1 <T t> { column U8 c2 = t .c1; }" );
+}
+
 TEST_CASE ( View_JoinExpression )
 {
     ParseAndVerify ( "version 2; table T#1 { column U8 c1 = 1; }; view W#1 <T t> { column U8 c2 = t [ 1 ] . c1; }" );
+}
+
+TEST_CASE ( View_JoinExpressionLikePhysicalIdent )
+{
+    ParseAndVerify ( "version 2; table T#1 { column U8 c1 = 1; }; view W#1 <T t> { column U8 c2 = t [ 1 ] .c1; }" );
 }
 
 //////////////////////////////////////////// Main

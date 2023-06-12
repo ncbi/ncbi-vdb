@@ -1169,6 +1169,10 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
     KDataBuffer phid;
     KDataBufferMakeBytes ( &phid, 0 );
 
+#ifndef TELEMETRY
+    telemetry = false;
+#endif
+
     if ( telemetry )
       rc = KDataBufferPrintf (
         &phid, "%.3s%.4s%.3s,libc=%s,bmap=%s", cloudtrunc, guid, sessid, libc_version, opt_bitmap );

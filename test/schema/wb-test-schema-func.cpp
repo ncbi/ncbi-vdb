@@ -25,8 +25,21 @@
 */
 
 /**
-* Unit tests for function declarations in schema, this file is #included into a bigger test suite
+* Unit tests for function declarations in schema
 */
+
+#include "AST_Fixture.hpp"
+
+#include <ktst/unit_test.hpp>
+
+#include <klib/symbol.h>
+
+#include "../../libs/vdb/schema-expr.h"
+
+using namespace std;
+using namespace ncbi::NK;
+
+TEST_SUITE ( SchemaFuncTestSuite );
 
 class FunctionAccess // encapsulates access to an SFunction in a VSchema
 {
@@ -929,3 +942,36 @@ FIXTURE_TEST_CASE(Func_Physical_SchemaParams, AST_Function_Fixture)
     PhysicalAccess fn = ParsePhysical  ( "physical <type T> T f#1.2 { decode { return 1; } }", "f" );
     REQUIRE_EQ ( 1u, fn . Decode () . SchemaTypeParamCount () );
 }
+
+//////////////////////////////////////////// Main
+#include <kapp/args.h>
+#include <kfg/config.h>
+#include <klib/out.h>
+
+extern "C"
+{
+
+ver_t CC KAppVersion ( void )
+{
+    return 0x1000000;
+}
+
+const char UsageDefaultName[] = "wb-test-schema-func";
+
+rc_t CC UsageSummary (const char * progname)
+{
+    return KOutMsg ( "Usage:\n" "\t%s [options] -o path\n\n", progname );
+}
+
+rc_t CC Usage( const Args* args )
+{
+    return 0;
+}
+
+rc_t CC KMain ( int argc, char *argv [] )
+{
+    return SchemaFuncTestSuite(argc, argv);
+}
+
+}
+

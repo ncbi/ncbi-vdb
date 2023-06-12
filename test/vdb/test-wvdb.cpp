@@ -22,6 +22,10 @@
 //
 // ===========================================================================
 
+#include <sysalloc.h>
+
+#include <sstream>
+#include <cstdlib>
 
 #include <klib/log.h>
 #include <klib/symbol.h>
@@ -40,12 +44,14 @@
 #include <kdb/meta.h>
 #include <kdb/table.h>
 
+#include <kfg/config.h>
+
+#include <../../libs/vdb/schema-priv.h>
+#include <../../libs/vdb/schema-parse.h>
+#include <../../libs/vdb/column-priv.h>
+#include <../../libs/vdb/cursor-priv.h>
+
 #include "WVDB_Fixture.hpp"
-
-#include <sysalloc.h>
-
-#include <sstream>
-#include <cstdlib>
 
 using namespace std;
 
@@ -101,13 +107,10 @@ public:
 };
 TempDir tempDir;
 #endif
-const string ScratchDir = "./db/";
 
 // this test case is not very useful but is here as a blueprint for other write-side tests
 FIXTURE_TEST_CASE ( BlobCorruptOnCommit, WVDB_Fixture)
 {
-    m_databaseName = ScratchDir + GetName();
-
     const string schemaText =
 "function < type T > T echo #1.0 < T val > ( * any row_len ) = vdb:echo;\n"
 "table spotdesc #1\n"
@@ -132,7 +135,7 @@ FIXTURE_TEST_CASE ( BlobCorruptOnCommit, WVDB_Fixture)
 "};\n"
 ;
     const char * schemaSpec = "db";
-    MakeDatabase ( schemaText, schemaSpec );
+    MakeDatabase ( GetName(), schemaText, schemaSpec );
 
     // MakeCursor
     VCursor* cursor = CreateTable ( "REFERENCE" );
@@ -159,15 +162,13 @@ FIXTURE_TEST_CASE ( BlobCorruptOnCommit, WVDB_Fixture)
 
 FIXTURE_TEST_CASE ( ColumnOpenMetadata, WVDB_Fixture )
 {   // setting column metadata in a freshly created VDatabase
-    m_databaseName = ScratchDir + GetName();
-
     string schemaText = "table table1 #1.0.0 { column ascii column1; };"
                         "database root_database #1 { table table1 #1 TABLE1; } ;";
 
     const char* TableName = "TABLE1";
     const char* ColumnName = "column1";
 
-    MakeDatabase ( schemaText, "root_database" );
+    MakeDatabase ( GetName(), schemaText, "root_database" );
 
     {
         VCursor* cursor = CreateTable ( TableName );
@@ -212,8 +213,6 @@ FIXTURE_TEST_CASE ( ColumnOpenMetadata, WVDB_Fixture )
 
 FIXTURE_TEST_CASE ( VTableDropColumn_PhysicalColumn, WVDB_Fixture )
 {
-    m_databaseName = ScratchDir + GetName();
-
     string schemaText = "table table1 #1.0.0 { column ascii column1; column ascii column2; };"
                         "database root_database #1 { table table1 #1 TABLE1; } ;";
 
@@ -221,7 +220,7 @@ FIXTURE_TEST_CASE ( VTableDropColumn_PhysicalColumn, WVDB_Fixture )
     const char* ColumnName1 = "column1";
     const char* ColumnName2 = "column2";
 
-    MakeDatabase ( schemaText, "root_database" );
+    MakeDatabase ( GetName(), schemaText, "root_database" );
     {
         VCursor* cursor = CreateTable ( TableName );
 
@@ -278,14 +277,13 @@ FIXTURE_TEST_CASE ( VTableDropColumn_PhysicalColumn, WVDB_Fixture )
 
 FIXTURE_TEST_CASE ( CreateTableInNestedDatabase, WVDB_Fixture )
 {   // VDB-1617: VDatabaseOpenTableRead inside a nested database segfaults
-    m_databaseName = ScratchDir + GetName();
     string schemaText =
         "table table1 #1.0.0 { column ascii column1; };"
         "database database0 #1 { table table1 #1 TABLE1; } ;"
         "database db #1 { database database0 #1 SUBDB; } ;" ;
 
     // Create the database and the table
-    MakeDatabase ( schemaText, "db" );
+    MakeDatabase ( GetName(), schemaText, "db" );
     {   // make nested database and a table in it
         VDatabase* subdb;
         REQUIRE_RC ( VDatabaseCreateDB ( m_db, & subdb, "SUBDB", kcmInit + kcmMD5, "SUBDB" ) );
@@ -323,8 +321,6 @@ FIXTURE_TEST_CASE ( CreateTableInNestedDatabase, WVDB_Fixture )
 
 FIXTURE_TEST_CASE ( VTableDropColumn_MetadataColumn_VDB_2735, WVDB_Fixture )
 {
-    m_databaseName = ScratchDir + GetName();
-
     string schemaText = "table table1 #1.0.0 { column ascii column1; column ascii column2; };"
                         "database root_database #1 { table table1 #1 TABLE1; } ;";
 
@@ -332,7 +328,7 @@ FIXTURE_TEST_CASE ( VTableDropColumn_MetadataColumn_VDB_2735, WVDB_Fixture )
     const char* ColumnName1 = "column1";
     const char* ColumnName2 = "column2";
 
-    MakeDatabase ( schemaText, "root_database" );
+    MakeDatabase ( GetName(), schemaText, "root_database" );
     {
         VCursor* cursor = CreateTable ( TableName );
 
@@ -399,7 +395,7 @@ FIXTURE_TEST_CASE ( CopyColumn, WVDB_Fixture )
     const char* ColumnName1 = "column1";
     const char* ColumnName2 = "column2";
 
-    MakeDatabase ( schemaText, "root_database" );
+    MakeDatabase ( GetName(), schemaText, "root_database" );
     {
         VCursor* cursor = CreateTable ( sourceName );
 
@@ -455,15 +451,13 @@ FIXTURE_TEST_CASE ( CopyColumn, WVDB_Fixture )
 
 FIXTURE_TEST_CASE ( VCursor_FindNextRowIdDirect, WVDB_Fixture )
 {
-    m_databaseName = ScratchDir + GetName();
-
     string schemaText = "table table1 #1.0.0 { column ascii column1; };"
                         "database root_database #1 { table table1 #1 TABLE1; } ;";
 
     const char* TableName = "TABLE1";
     const char* ColumnName = "column1";
 
-    MakeDatabase ( schemaText, "root_database" );
+    MakeDatabase ( GetName(), schemaText, "root_database" );
     {
         VCursor* cursor = CreateTable ( TableName );
 
@@ -505,62 +499,6 @@ FIXTURE_TEST_CASE ( VCursor_FindNextRowIdDirect, WVDB_Fixture )
 
 }
 
-FIXTURE_TEST_CASE ( EmbeddedOnGlobal_ShareIdenticalIds, WVDB_Fixture )
-{ // VDB-3635: global schema and embedded schema should share IDs for identical objects
-    m_databaseName = ScratchDir + GetName();
-
-    string schemaText = "typedef U8 INSDC:4na:bin;" // same as in insdc/insdc.vschema
-                        "table table1 #1.0.0 { column INSDC:4na:bin column1; };"
-                        "database root_database #1 { table table1 #1 TABLE1; } ;";
-
-    const char* TableName = "TABLE1";
-    const char* ColumnName = "column1";
-
-    MakeDatabase ( schemaText, "root_database" );
-    {
-        VCursor* cursor = CreateTable ( TableName );
-
-        uint32_t column_idx;
-        REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx, ColumnName ) );
-        REQUIRE_RC ( VCursorOpen ( cursor ) );
-
-        // need to insert 2 rows with different values to make the column physical
-        WriteRow ( cursor, column_idx, 1 );
-        WriteRow ( cursor, column_idx, 2 );
-
-        REQUIRE_RC ( VCursorCommit ( cursor ) );
-
-        REQUIRE_RC ( VCursorRelease ( cursor ) );
-        REQUIRE_RC ( VDatabaseRelease ( m_db ) );
-        m_db = 0;
-        REQUIRE_RC ( VDBManagerRelease ( m_mgr ) );
-        m_mgr = 0;
-    }
-
-    REQUIRE_RC ( VSchemaRelease ( m_schema ) );
-    {
-        REQUIRE_RC ( VDBManagerMakeUpdate ( & m_mgr, NULL ) );
-        REQUIRE_RC ( VDBManagerMakeSRASchema ( m_mgr, & m_schema ) );
-
-        VTypedecl resolved_sra;
-        REQUIRE_RC_FAIL ( VSchemaResolveTypedecl ( m_schema, & resolved_sra, "INSDC:4na:bin" ) );
-
-        REQUIRE_RC ( VDBManagerOpenDBRead ( m_mgr, (const VDatabase**)& m_db, m_schema, m_databaseName . c_str () ) );
-
-        const VSchema *embedded;
-        REQUIRE_RC ( VDatabaseOpenSchema ( m_db, & embedded ) );
-        REQUIRE_EQ ( (const VSchema *) m_schema, embedded -> dad );
-
-        // verify: INSDC:dna:text used in the embedded schema has the same Id as INSDC:dna:text from the linker-provided SRA schema
-        VTypedecl resolved_embedded;
-        REQUIRE_RC ( VSchemaResolveTypedecl ( embedded, & resolved_embedded, "INSDC:4na:bin" ) );
-        REQUIRE_NE ( resolved_sra . type_id, resolved_embedded . type_id );
-
-        REQUIRE_RC ( VSchemaRelease ( embedded ) );
-    }
-
-}
-
 FIXTURE_TEST_CASE ( VCursorCommit_without_VCursorCloseRow, WVDB_Fixture )
 {
     m_databaseName = ScratchDir + GetName();
@@ -573,7 +511,7 @@ FIXTURE_TEST_CASE ( VCursorCommit_without_VCursorCloseRow, WVDB_Fixture )
     const char* TableName = "TABLE1";
     const char* ColumnName1 = "column1";
 
-    MakeDatabase ( schemaText, "root_database" );
+    MakeDatabase ( GetName(), schemaText, "root_database" );
     {
         VCursor* cursor = CreateTable ( TableName );
 
@@ -608,7 +546,7 @@ FIXTURE_TEST_CASE ( MemoryLeak_DefaultFactoryParam, WVDB_Fixture )
                  "{ decode { return @; } encode { return zstd < strategy > ( @ ); }}; "
                  "table table1 #1.0.0 { column <ascii> zstd_encoding C; }; " /* no <strategy> specified */
                  "database root_database #1 { table table1 #1 T; } ;" );
-    WVDB_Fixture::MakeDatabase ( schemaText, "root_database" );
+    WVDB_Fixture::MakeDatabase ( GetName(), schemaText, "root_database" );
     VCursor* cursor = CreateTable ( "T" );
     uint32_t column_idx;
     REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx, "C" ) );
@@ -636,8 +574,6 @@ public:
         }
 #endif
 
-        m_databaseName = name;
-
         const char* TableName = "TABLE1";
         const char* ColumnName = "c";
         string schemaText =
@@ -646,7 +582,7 @@ public:
             "table table1 #1.0.0 { column <ascii> " ) + encoding + " " + ColumnName +"; }; "
             "database root_database #1 { table table1 #1 " + TableName +"; } ;";
 
-        WVDB_Fixture::MakeDatabase ( schemaText, "root_database", "../../interfaces" );
+        WVDB_Fixture::MakeDatabase ( ScratchDir + name, schemaText, "root_database", "../../interfaces" );
 
         VCursor* cursor = CreateTable ( TableName );
         try
@@ -669,39 +605,39 @@ public:
 
 FIXTURE_TEST_CASE ( Zstd_defaultCompression, EncodingFixture )
 {
-    MakeDatabaseWithEncoding( ScratchDir + GetName(), "zstd_encoding" );
+    MakeDatabaseWithEncoding( GetName(), "zstd_encoding" );
 }
 FIXTURE_TEST_CASE ( Zstd_FastestCompression, EncodingFixture )
 {
-    MakeDatabaseWithEncoding( ScratchDir + GetName(), "zstd_encoding <ZSTD_DEFAULT_STRATEGY, ZSTD_DEFAULT_COMPRESSION>" );
+    MakeDatabaseWithEncoding( GetName(), "zstd_encoding <ZSTD_DEFAULT_STRATEGY, ZSTD_DEFAULT_COMPRESSION>" );
 }
 FIXTURE_TEST_CASE ( Zstd_BestestCompression, EncodingFixture )
 {
-    MakeDatabaseWithEncoding( ScratchDir + GetName(), "zstd_encoding <ZSTD_DEFAULT_STRATEGY, 22>" );
+    MakeDatabaseWithEncoding( GetName(), "zstd_encoding <ZSTD_DEFAULT_STRATEGY, 22>" );
 }
 FIXTURE_TEST_CASE ( Zstd_WeakSrategyLowCompression, EncodingFixture )
 {
-    MakeDatabaseWithEncoding( ScratchDir + GetName(), "zstd_encoding <ZSTD_BTULTRA2, -131073>" );
+    MakeDatabaseWithEncoding( GetName(), "zstd_encoding <ZSTD_BTULTRA2, -131073>" );
 }
 FIXTURE_TEST_CASE ( Zstd_StrongSrategyHighCompression, EncodingFixture )
 {
-    MakeDatabaseWithEncoding( ScratchDir + GetName(), "zstd_encoding <ZSTD_BTULTRA2, 9999999>" );
+    MakeDatabaseWithEncoding( GetName(), "zstd_encoding <ZSTD_BTULTRA2, 9999999>" );
 }
 
 FIXTURE_TEST_CASE ( Zlib_default, EncodingFixture )
 {
-    MakeDatabaseWithEncoding( ScratchDir + GetName(), "zip_encoding" );
+    MakeDatabaseWithEncoding( GetName(), "zip_encoding" );
 }
 
 // triggers an assert in vdb/blob.c:387
 // FIXTURE_TEST_CASE ( Zlib_badLevel, EncodingFixture )
 // {
-//     MakeDatabaseWithEncoding( ScratchDir + GetName(), "zip_encoding<Z_DEFAULT_STRATEGY, 10>" );
+//     MakeDatabaseWithEncoding( GetName(), "zip_encoding<Z_DEFAULT_STRATEGY, 10>" );
 // }
 
 FIXTURE_TEST_CASE ( Bzip_default, EncodingFixture )
 {   //NB: will not do well if the blob size is less than 27 bytes
-    MakeDatabaseWithEncoding( ScratchDir + GetName(), "bzip_encoding" );
+    MakeDatabaseWithEncoding( GetName(), "bzip_encoding" );
 }
 
 FIXTURE_TEST_CASE ( FactoryArgcBug, WVDB_Fixture )
@@ -729,7 +665,7 @@ FIXTURE_TEST_CASE ( FactoryArgcBug, WVDB_Fixture )
     const char* TableName = "TABLE1";
     const char* ColumnName1 = "column1";
 
-    MakeDatabase ( schemaText, "root_database" );
+    MakeDatabase ( GetName(), schemaText, "root_database" );
     {
         VCursor* cursor = CreateTable ( TableName );
 
@@ -743,6 +679,225 @@ FIXTURE_TEST_CASE ( FactoryArgcBug, WVDB_Fixture )
     }
 }
 
+FIXTURE_TEST_CASE ( VSchema_Version2, WVDB_Fixture )
+{   // parses as v2 by default
+    string schemaText = "version 2; table table1 #1.0.0 { column ascii column1; };"
+                        "database root_database #1 { table table1 #1 TABLE1; } ; "
+                        "view V#1 < table1 t > {};";
+    MakeDatabase ( GetName(), schemaText, "root_database" );
+}
+
+FIXTURE_TEST_CASE ( VSchema_Version2_Fail, WVDB_Fixture )
+{   // tries to parse as v1
+    KConfig * kfg;
+    REQUIRE_RC ( KConfigMake ( & kfg, NULL ) );
+
+    String * saved;
+    const char * versionPath = "vdb/schema/version";
+    REQUIRE_RC ( KConfigReadString ( kfg, versionPath, & saved ) );
+    REQUIRE_RC ( KConfigWriteString( kfg, versionPath, "1" ) );
+
+    string schemaText = "version 2; table table1 #1.0.0 { column ascii column1; };"
+                        "database root_database #1 { table table1 #1 TABLE1; } ; "
+                        "view V#1 < table1 t > {};";
+    REQUIRE_RC ( VDBManagerMakeUpdate ( & m_mgr, NULL ) );
+    REQUIRE_RC ( VDBManagerMakeSchema ( m_mgr, & m_schema ) );
+
+    // this is expected to log "expected 'include, typedef, typeset, fmtdef, function, schema, database or table' but found 'view'"
+    REQUIRE_RC_FAIL ( VSchemaParseText ( m_schema, NULL, schemaText . c_str(), schemaText . size () ) );
+
+    // restore version setting
+    KConfigWriteSString( kfg, versionPath, saved );
+    free ( saved );
+}
+
+FIXTURE_TEST_CASE ( VCursor_TypePropagation, WVDB_Fixture )
+{
+    string schemaText = "table table1 #1.0.0 { column ascii column1; column any col = column1; };"
+                        "database root_database #1 { table table1 #1 TABLE1; } ;";
+
+    const char* TableName = "TABLE1";
+    const char* ColumnName = "column1";
+
+    MakeDatabase ( GetName(), schemaText, "root_database" );
+    {
+        VCursor* cursor = CreateTable ( TableName );
+
+        uint32_t column_idx;
+        REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx, ColumnName ) );
+        REQUIRE_RC ( VCursorOpen ( cursor ) );
+
+        // insert some rows
+        WriteRow ( cursor, column_idx, "blah" );
+        WriteRow ( cursor, column_idx, "eeee" );
+
+        REQUIRE_RC ( VCursorCommit ( cursor ) );
+
+        REQUIRE_RC ( VCursorRelease ( cursor ) );
+    }
+    REQUIRE_RC ( VDatabaseRelease ( m_db ) );
+
+    {   // reopen
+        VDBManager * mgr;
+        REQUIRE_RC ( VDBManagerMakeUpdate ( & mgr, NULL ) );
+        VDBManagerOpenDBRead ( mgr, (const VDatabase**)& m_db, NULL, m_databaseName . c_str () );
+
+        const VCursor* cursor = OpenTable ( TableName );
+
+        uint32_t column_idx;
+        REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx, "col" ) );
+        REQUIRE_RC ( VCursorOpen ( cursor ) );
+
+        // col has the type of column1
+        VCtxId id = { 0, 0, eTable };
+        id . id = column_idx;
+        const VColumn * vcol = VCursorGetColumn ( (VCursor*)cursor, & id );
+        REQUIRE_NOT_NULL ( vcol );
+        const uint32_t AsciiId = 23;
+        REQUIRE_EQ ( AsciiId, vcol -> td . type_id );
+        REQUIRE_EQ ( 1u, vcol -> td . dim );
+
+        REQUIRE_RC ( VCursorRelease ( cursor ) );
+
+        VDBManagerRelease ( mgr );
+    }
+}
+
+FIXTURE_TEST_CASE ( VCursor_TypePropagation_Array, WVDB_Fixture )
+{
+    string schemaText = "table table1 #1.0.0 { column I64[2] column1; column any col = column1; };"
+                        "database root_database #1 { table table1 #1 TABLE1; } ;";
+
+    const char* TableName = "TABLE1";
+    const char* ColumnName = "column1";
+
+    MakeDatabase ( GetName(), schemaText, "root_database" );
+    {
+        VCursor* cursor = CreateTable ( TableName );
+        uint32_t column_idx;
+        REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx, ColumnName ) );
+        REQUIRE_RC ( VCursorOpen ( cursor ) );
+        // insert some rows
+        int64_t v[2] = {1, 2};
+        WriteRow ( cursor, column_idx, v, 2 );
+        REQUIRE_RC ( VCursorCommit ( cursor ) );
+        REQUIRE_RC ( VCursorRelease ( cursor ) );
+    }
+    REQUIRE_RC ( VDatabaseRelease ( m_db ) );
+
+    {   // reopen
+        VDBManager * mgr;
+        REQUIRE_RC ( VDBManagerMakeUpdate ( & mgr, NULL ) );
+        VDBManagerOpenDBRead ( mgr, (const VDatabase**)& m_db, NULL, m_databaseName . c_str () );
+
+        const VCursor* cursor = OpenTable ( TableName );
+
+        uint32_t column_idx;
+        REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx, "col" ) );
+        REQUIRE_RC ( VCursorOpen ( cursor ) );
+
+        // col has the type of column1
+        VCtxId id = { 0, 0, eTable };
+        id . id = column_idx;
+        const VColumn * vcol = VCursorGetColumn ( (VCursor*)cursor, & id );
+        REQUIRE_NOT_NULL ( vcol );
+        const uint32_t I64Id = 16;
+        REQUIRE_EQ ( I64Id, vcol -> td . type_id );
+        REQUIRE_EQ ( 2u, vcol -> td . dim );
+
+        REQUIRE_RC ( VCursorRelease ( cursor ) );
+
+        VDBManagerRelease ( mgr );
+    }
+}
+
+FIXTURE_TEST_CASE ( VCursor_Use_cut_ToAccessArrayElement, WVDB_Fixture )
+{
+    string schemaText = "function any NCBI:cut #1.0 < U32 idx, ... > ( any in ) = vdb:cut;\n"
+                        "table table1 #1.0.0\n"
+                        "{\n"
+                        " column I64 [ 2 ] column1;\n"
+                        " column I64 col = NCBI:cut < 1 > ( column1 );\n"
+                        "};\n"
+                        "database root_database #1 { table table1 #1 TABLE1; } ;\n";
+    const char* TableName = "TABLE1";
+    const char* ColumnName = "column1";
+
+    MakeDatabase ( GetName(), schemaText, "root_database" );
+    {
+        VCursor* cursor = CreateTable ( TableName );
+        uint32_t column_idx;
+        REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx, ColumnName ) );
+        REQUIRE_RC ( VCursorOpen ( cursor ) );
+        // insert some rows
+        int64_t v[2] = {1, 2};
+        WriteRow ( cursor, column_idx, v, 2 );
+        REQUIRE_RC ( VCursorCommit ( cursor ) );
+        REQUIRE_RC ( VCursorRelease ( cursor ) );
+    }
+    REQUIRE_RC ( VDatabaseRelease ( m_db ) );
+
+    {   // reopen
+        VDBManager * mgr;
+        REQUIRE_RC ( VDBManagerMakeUpdate ( & mgr, NULL ) );
+        VDBManagerOpenDBRead ( mgr, (const VDatabase**)& m_db, NULL, m_databaseName . c_str () );
+
+        const VCursor* cursor = OpenTable ( TableName );
+
+        uint32_t column_idx;
+        REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx, "col" ) );
+        REQUIRE_RC ( VCursorOpen ( cursor ) );
+
+        int64_t buf[2] = {0, 0};
+        uint32_t row_len = 0;
+        REQUIRE_RC ( VCursorReadDirect(cursor, 1, column_idx, 64, buf, 2, & row_len ) );
+        REQUIRE_EQ ( 1u, row_len );
+        REQUIRE_EQ((int64_t)2, buf[0]);
+        REQUIRE_EQ((int64_t)0, buf[1]);
+
+        REQUIRE_RC ( VCursorRelease ( cursor ) );
+
+        VDBManagerRelease ( mgr );
+    }
+}
+
+FIXTURE_TEST_CASE ( KDBManager_Leak, WVDB_Fixture )
+{   // use valgrind to detect the leak
+    string schemaText = "table table1 #1.0.0 { column ascii column1; };"
+                        "database root_database #1 { table table1 #1 TABLE1; } ;";
+
+    const char* TableName = "TABLE1";
+    const char* ColumnName = "column1";
+
+    MakeDatabase ( GetName(), schemaText, "root_database" );
+    {
+        VCursor* cursor = CreateTable ( TableName );
+        uint32_t column_idx;
+        REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx, ColumnName ) );
+        REQUIRE_RC ( VCursorRelease ( cursor ) );
+    }
+    REQUIRE_RC ( VDatabaseRelease ( m_db ) );
+    m_db = 0;
+
+    {   // reopen
+        VDBManager * mgr;
+        REQUIRE_RC ( VDBManagerMakeUpdate ( & mgr, NULL ) );
+        const VDatabase * db;
+        REQUIRE_RC ( VDBManagerOpenDBRead ( mgr, & db, NULL, m_databaseName . c_str () ) );
+
+        // opening the same table twice leaks a reference to KDBManager
+        const VTable* table1;
+        REQUIRE_RC ( VDatabaseOpenTableRead ( db, & table1, "%s", TableName ) );
+        const VTable* table2;
+        REQUIRE_RC ( VDatabaseOpenTableRead ( db, & table2, "%s", TableName ) );
+
+        REQUIRE_RC ( VTableRelease ( table2 ) );
+        REQUIRE_RC ( VTableRelease ( table1 ) );
+
+        REQUIRE_RC ( VDatabaseRelease ( db ) );
+        REQUIRE_RC ( VDBManagerRelease ( mgr ) );
+    }
+}
 
 //////////////////////////////////////////// Main
 extern "C"

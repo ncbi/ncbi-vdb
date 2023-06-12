@@ -25,8 +25,21 @@
 */
 
 /**
-* Unit tests for table declarations in schema, this file is #included into a bigger test suite
+* Unit tests for table declarations in schema
 */
+
+#include "AST_Fixture.hpp"
+
+#include <ktst/unit_test.hpp>
+
+#include <klib/symbol.h>
+
+#include "../../libs/vdb/schema-expr.h"
+
+using namespace std;
+using namespace ncbi::NK;
+
+TEST_SUITE ( SchemaTableTestSuite );
 
 class TableAccess // encapsulates access to an STable in a VSchema
 {
@@ -147,6 +160,12 @@ public:
         THROW_ON_TRUE ( read . _sym != phys . name );
         // ... that reads the value of p_col
         VerifySymExpr ( phys . expr, eColExpr, ToCppString ( p_col . name -> name ), eColumn );
+    }
+    void VerifyVCtxId ( const VCtxId & p_ctxId, uint32_t p_ctx, uint32_t p_id, uint32_t p_ctx_type )
+    {
+        THROW_ON_TRUE ( p_ctxId . ctx != p_ctx );
+        THROW_ON_TRUE ( p_ctxId . id != p_id );
+        THROW_ON_TRUE ( p_ctxId . ctx_type != p_ctx_type );
     }
 #undef THROW_ON_TRUE
 };
@@ -289,10 +308,18 @@ FIXTURE_TEST_CASE(Table_ParentRedeclared, AST_Table_Fixture)
 }
 
 FIXTURE_TEST_CASE(Table_Parent_Override, AST_Table_Fixture)
-{
-    TableAccess t = ParseTable ( "table dad#1 { U8 a = c; } table t#1 = dad#1 { U16 b = 1; }", "t", 1 );
-    // c is inherited and is added to Overrides
-    REQUIRE_EQ ( 1u, t . Productions () . Count () );
+{   // virtual productions forward-referenced in parent tables are added to overrides of the children
+    TableAccess t = ParseTable ( "table dad#1 { U8 a = c; } table t#1 = dad#1 { column U16 b = 1; }", "t", 1 );
+
+    TableAccess dad = GetTable ( 0 );
+    // c is not in dad's overrides but in vprods
+    REQUIRE_EQ ( 1u, dad . Productions () . Count () );
+    REQUIRE_EQ ( 1u, dad . VirtualProductions () . Count () );
+    REQUIRE_EQ ( 0u, dad . Overrides () . Count () );
+
+    // c is inherited and is added to Overrides; no productions of its own
+    REQUIRE_EQ ( 0u, t . Productions () . Count () );
+    REQUIRE_EQ ( 0u, t . VirtualProductions () . Count () );
     REQUIRE_EQ ( 1u, t . Overrides () . Count () );
 }
 
@@ -301,15 +328,20 @@ FIXTURE_TEST_CASE(Table_Parent_InheritedVirtualProduction, AST_Table_Fixture)
     TableAccess t = ParseTable (
         "table granddad#1 { U8 a = v; }"
         "table dad#1 = granddad { U8 b = v; }"
-        "table t#1 = dad { column U16 c = 1; }",
+        "table t#1 = dad { column U16 c = v; }",
         "t", 2 );
 
     // verify overrides
+    // gdad
+    TableAccess gdad = GetTable ( 0 );
+    REQUIRE_EQ ( 1u, gdad . VirtualProductions () . Count  () );
+
     // dad
     TableAccess dad = GetTable ( 1 );
     REQUIRE_EQ ( 1u, dad . Overrides () . Count () ); // inherits from granddad
     VdbVector < const KSymbol > dadOvr ( dad . Overrides () . Get ( 0 ) -> by_parent );
     REQUIRE_EQ ( 1u, dadOvr . Count () ); // 1 override copied from granddad
+    REQUIRE_EQ ( 0u, dad . VirtualProductions () . Count  () ); // no forward reference introduced in dad
 
     // t
     REQUIRE_EQ ( 2u, t . Overrides () . Count () ); // v inherits from dad and granddad
@@ -321,8 +353,33 @@ FIXTURE_TEST_CASE(Table_Parent_InheritedVirtualProduction, AST_Table_Fixture)
     VdbVector < const KSymbol > tGdadOvr ( t . Overrides () . Get ( 1 ) -> by_parent );
     REQUIRE_EQ ( 0u, tGdadOvr . Count () ); // no overrides copied from granddad
 
-    // v is not resolved in t
-    REQUIRE_EQ ( 0u, t . VirtualProductions () . Count  () );
+    REQUIRE_EQ ( 0u, t . VirtualProductions () . Count  () ); // no forward reference introduced in t
+}
+
+FIXTURE_TEST_CASE(Table_Parent_InheritedVirtualProduction_Defined, AST_Table_Fixture)
+{
+    ParseTable (
+        "table granddad#1 { U8 a = v; }"
+        "table dad#1 = granddad { U8 v = 1; }" // v is defined in dad
+        "table t#1 = dad { column U16 c = v; }", // v is accessible in child tables
+        "t", 2 );
+}
+FIXTURE_TEST_CASE(Table_Parent_InheritedVirtualProduction_Undefined, AST_Table_Fixture)
+{
+    ParseTable (
+        "table granddad#1 { U8 a = v; }"
+        "table dad#1 = granddad { }" // v is not defined
+        "table t#1 = dad { column U16 c = v; }", // v is accessible in child tables
+        "t", 2 );
+}
+FIXTURE_TEST_CASE(Table_Parent_InheritedVirtualProduction_DefinedHigher, AST_Table_Fixture)
+{
+    ParseTable (
+        "table greatgranddad#1              { U8 a = v; }"
+        "table granddad#1 = greatgranddad   { U8 v = 1; }" // v is defined in dad
+        "table dad#1 = granddad             { }"
+        "table t#1 = dad                    { column U16 c = v; }", // v is accessible in grandchild tables
+        "t", 3 );
 }
 
 FIXTURE_TEST_CASE(Table_Parent_MultuipleInheritedOverride, AST_Table_Fixture)
@@ -409,9 +466,14 @@ FIXTURE_TEST_CASE(Table_Parent_VirtualProductionUndefined, AST_Table_Fixture)
 
 FIXTURE_TEST_CASE(Table_Production, AST_Table_Fixture)
 {
-    TableAccess t = ParseTable ( "table t#1 { U8 i = 1; }", "t" );
+    TableAccess t = ParseTable ( "table t0#1 { U8 i = 1; } table t#1 { U8 i = 1; }", "t", 1 );
     REQUIRE_EQ ( 1u, t . Productions () . Count () );
-    REQUIRE ( ! t . Productions () . Get ( 0 ) -> trigger );
+    const SProduction & prod = * t . Productions () . Get ( 0 );
+    REQUIRE ( ! prod . trigger );
+    REQUIRE_EQ ( (uint32_t)eProduction, prod . name -> type );
+    REQUIRE_EQ ( & prod, (const SProduction*) prod . name -> u . obj );
+    REQUIRE_NOT_NULL ( prod . expr );
+    VerifyVCtxId ( prod . cid, 1, 0, eTable );
 }
 
 FIXTURE_TEST_CASE(Table_Production_ForwardReference, AST_Table_Fixture)
@@ -459,8 +521,7 @@ FIXTURE_TEST_CASE(Table_ColumnDecl_Simple, AST_Table_Fixture)
     REQUIRE_NULL ( c . ptype );
     REQUIRE_EQ ( U8_id, c . td . type_id );
     REQUIRE_EQ ( 1u, c . td . dim);
-    REQUIRE_EQ ( 0u, c . cid . ctx );
-    REQUIRE_EQ ( 0u, c . cid . id );
+    VerifyVCtxId ( c . cid, 0, 0, eTable );
     REQUIRE ( ! c . dflt );
     REQUIRE ( ! c . read_only );
     REQUIRE ( c . simple );
@@ -469,29 +530,73 @@ FIXTURE_TEST_CASE(Table_ColumnDecl_Simple, AST_Table_Fixture)
     VerifyImplicitPhysicalColumn ( c, ".c" );
 }
 
+FIXTURE_TEST_CASE(Table_ColumnLookup, AST_Table_Fixture)
+{
+    TableAccess t = ParseTable ( "table t#1 { column U8 c; }", "t" );
+    REQUIRE_EQ ( 1u, t . Columns () . Count () );
+    REQUIRE_EQ ( 1u, t . ColumnNames () . Count () );
+
+    const SColumn & c = * t . Columns () . Get ( 0 );
+
+    String memName;
+    StringInitCString ( & memName, "c");
+
+    const KSymbol *sym = ( const KSymbol* ) BSTreeFind ( & t.Scope(), & memName, KSymbolCmp );
+    REQUIRE_NOT_NULL ( sym );
+    const SNameOverload * ovl = ( const SNameOverload * ) sym -> u . obj;
+    REQUIRE_EQ ( 1u, VectorLength(& ovl -> items) );
+    REQUIRE_EQ ( & c, ( const SColumn* ) VectorGet ( & ovl -> items, 0 ) );
+}
+
+FIXTURE_TEST_CASE(Table_ColumnDecl_Simple_Array, AST_Table_Fixture)
+{
+    TableAccess t = ParseTable ( "table t#1 { column U8[2] c; }", "t" );
+
+    const SColumn & c = * t . Columns () . Get ( 0 );
+    REQUIRE_EQ ( U8_id, c . td . type_id );
+    REQUIRE_EQ ( 2u, c . td . dim);
+}
+
 FIXTURE_TEST_CASE(Table_ColumnDecl_Context, AST_Table_Fixture)
 {
     TableAccess v = ParseTable (
         "table T#1 {};"
         "table W#1 { column U8 c1 = 1; column U8 c2 = 2; }",
     "W", 1 );
+    VerifyVCtxId ( v . ColumnNames () . Get ( 0 ) -> cid, 1, 0, eTable );
+    VerifyVCtxId ( v . Columns     () . Get ( 0 ) -> cid, 1, 0, eTable );
+    VerifyVCtxId ( v . ColumnNames () . Get ( 1 ) -> cid, 1, 1, eTable );
+    VerifyVCtxId ( v . Columns     () . Get ( 1 ) -> cid, 1, 1, eTable );
+}
+
+FIXTURE_TEST_CASE(Table_ColumnDecl_Context_Inherited, AST_Table_Fixture)
+{
+    TableAccess v = ParseTable (
+        "table T0#1 {};"
+        "table T#1 {"
+        	"column U32 READ_LEN = 1;"
+	        "column U16 READ_LEN = 2;"
+        "};"
+        "table W#1 = T { U32 c = READ_LEN; }",
+    "W", 2 );
+    REQUIRE_EQ ( 0u, v . Columns () . Count () ); // no own columns
+    REQUIRE_EQ ( 1u, v . ColumnNames () . Count () ); // one set of overloaded column inherited
+
+    // verify inherited columns
     const SNameOverload * ovl = v . ColumnNames () . Get ( 0 );
     REQUIRE_NOT_NULL ( ovl );
-    REQUIRE_EQ ( 1u, ovl -> cid . ctx );
-    REQUIRE_EQ ( 0u, ovl -> cid . id );
-    const SColumn * col = v . Columns () . Get ( 0 );
-    REQUIRE_NOT_NULL ( col );
-    REQUIRE_EQ ( ovl -> cid . ctx, col -> cid . ctx );
-    REQUIRE_EQ ( ovl -> cid . id, col -> cid . id );
-
-    ovl = v . ColumnNames () . Get ( 1 );
-    REQUIRE_NOT_NULL ( ovl );
-    REQUIRE_EQ ( 1u, ovl -> cid . ctx );
-    REQUIRE_EQ ( 1u, ovl -> cid . id );
-    col = v . Columns () . Get ( 1 );
-    REQUIRE_NOT_NULL ( col );
-    REQUIRE_EQ ( ovl -> cid . ctx, col -> cid . ctx );
-    REQUIRE_EQ ( ovl -> cid . id, col -> cid . id );
+    VerifyVCtxId ( ovl -> cid, 1, 0, eTable );
+    REQUIRE_EQ ( 2u, VectorLength ( & ovl -> items ) );
+    {
+        const SColumn * col = ( const SColumn * ) VectorGet( & ovl -> items, 0 );
+        REQUIRE_NOT_NULL ( col );
+        VerifyVCtxId ( col -> cid, 1, 1, eTable );
+    }
+    {
+        const SColumn * col = ( const SColumn * ) VectorGet( & ovl -> items, 1 );
+        REQUIRE_NOT_NULL ( col );
+        VerifyVCtxId ( col -> cid, 1, 0, eTable );
+    }
 }
 
 FIXTURE_TEST_CASE(Table_ColumnDecl_SimpleColumn_Typeset, AST_Table_Fixture)
@@ -578,8 +683,7 @@ FIXTURE_TEST_CASE(Table_ColumnDecl_ColumnOverload, AST_Table_Fixture)
     const SNameOverload * ovl = t . ColumnNames () . Get ( 0 );
     REQUIRE_NOT_NULL ( ovl );
     REQUIRE_EQ ( string ("c"), ToCppString ( ovl -> name -> name ) );
-    REQUIRE_EQ ( 0u, ovl -> cid . ctx );
-    REQUIRE_EQ ( 0u, ovl -> cid . id );
+    VerifyVCtxId ( ovl -> cid, 0, 0, eTable );
     VdbVector < SColumn > names ( ovl -> items );
     REQUIRE_EQ ( 3u, names . Count () );
     REQUIRE_EQ ( t . Columns () . Get ( 0 ), names . Get ( 0 ) );
@@ -630,8 +734,7 @@ FIXTURE_TEST_CASE(Table_Parents_ColumnOverload, AST_Table_Fixture)
     const SNameOverload * ovl = t . ColumnNames () . Get ( 0 );
     REQUIRE_NOT_NULL ( ovl );
     REQUIRE_EQ ( string ("p"), ToCppString ( ovl -> name -> name ) );
-    REQUIRE_EQ ( 0u, ovl -> cid . ctx );
-    REQUIRE_EQ ( 0u, ovl -> cid . id );
+    VerifyVCtxId ( ovl -> cid, 0, 0, eTable );
 
     VdbVector < SColumn > names ( ovl -> items );
     REQUIRE_EQ ( 2u, names . Count () );
@@ -936,8 +1039,7 @@ FIXTURE_TEST_CASE(Table_PhysicalColumn_Static, AST_Table_Fixture)
     REQUIRE_EQ ( U8_id, c -> td . type_id );
     REQUIRE_NULL ( c -> expr );
     REQUIRE_EQ ( 1u, c -> td . dim);
-    REQUIRE_EQ ( 0u, c -> cid . ctx );
-    REQUIRE_EQ ( 0u, c -> cid . id );
+    VerifyVCtxId ( c -> cid, 0, 0, eTable );
     REQUIRE ( c -> stat );
     REQUIRE ( ! c -> simple );
 }
@@ -972,8 +1074,7 @@ FIXTURE_TEST_CASE(Table_PhysicalColumnWithEncoding_Simple, AST_Table_Fixture)
     REQUIRE_EQ ( U8_id, c -> td . type_id );
     REQUIRE_NULL ( c -> expr );
     REQUIRE_EQ ( 1u, c -> td . dim);
-    REQUIRE_EQ ( 0u, c -> cid . ctx );
-    REQUIRE_EQ ( 0u, c -> cid . id );
+    VerifyVCtxId ( c -> cid, 0, 0, eTable );
     REQUIRE ( ! c -> stat );
     REQUIRE ( ! c -> simple );
 
@@ -1097,3 +1198,36 @@ FIXTURE_TEST_CASE(Table_segfault, AST_Table_Fixture)
 {   // segfault caused by a bug in ASTBuilder :: Resolve ( const AST_FQN & p_fqn )
     MakeAst ( "typedef ascii n:p:t; table n:t:s #1 {}; table n:t:p #1 {};" );
 }
+
+//////////////////////////////////////////// Main
+#include <kapp/args.h>
+#include <kfg/config.h>
+#include <klib/out.h>
+
+extern "C"
+{
+
+ver_t CC KAppVersion ( void )
+{
+    return 0x1000000;
+}
+
+const char UsageDefaultName[] = "wb-test-schema-table";
+
+rc_t CC UsageSummary (const char * progname)
+{
+    return KOutMsg ( "Usage:\n" "\t%s [options] -o path\n\n", progname );
+}
+
+rc_t CC Usage( const Args* args )
+{
+    return 0;
+}
+
+rc_t CC KMain ( int argc, char *argv [] )
+{
+    return SchemaTableTestSuite(argc, argv);
+}
+
+}
+

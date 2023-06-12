@@ -103,13 +103,12 @@ struct VCursor_vt
     rc_t ( CC * commit ) ( VCURSOR_IMPL *self );
     rc_t ( CC * openParentRead ) ( const VCURSOR_IMPL *self, struct VTable const **tbl );
     rc_t ( CC * openParentUpdate ) ( VCURSOR_IMPL *self, struct VTable **tbl );
+    rc_t ( CC * idRange ) ( const VCURSOR_IMPL *self, uint32_t idx, int64_t *first, uint64_t *count );
 
-    /* Private API, deined in interfaces/vdb/vdb-priv.h */
+    /* Private API, defined in interfaces/vdb/vdb-priv.h */
     rc_t ( CC * permitPostOpenAdd ) ( const VCURSOR_IMPL * self );
     rc_t ( CC * suspendTriggers ) ( const VCURSOR_IMPL * self );
     struct VSchema const * ( * getSchema ) ( const VCURSOR_IMPL * self);
-    rc_t ( CC * linkedCursorGet ) ( const VCURSOR_IMPL *cself,const char *tbl, struct VCursor const **curs);
-    rc_t ( CC * linkedCursorSet ) ( const VCURSOR_IMPL *cself,const char *tbl, struct VCursor const *curs);
     uint64_t ( CC * setCacheCapacity ) ( VCURSOR_IMPL *self,uint64_t capacity);
     uint64_t ( CC * getCacheCapacity ) ( const VCURSOR_IMPL *self);
 
@@ -119,11 +118,15 @@ struct VCursor_vt
     bool ( * isReadOnly ) ( const VCURSOR_IMPL * self );
     VBlobMRUCache * ( * getBlobMruCache ) ( VCURSOR_IMPL * self );
     uint32_t ( * incrementPhysicalProductionCount ) ( VCURSOR_IMPL * self );
-    const struct KSymbol * ( * findOverride ) ( const VCURSOR_IMPL *self, const struct VCtxId *cid );
+    const struct KSymbol * ( * findOverride ) ( const VCURSOR_IMPL *self, const struct VCtxId *cid, const struct VTable * tbl, const struct VView * view );
     rc_t ( * launchPagemapThread ) ( VCURSOR_IMPL *self );
     const PageMapProcessRequest * ( * pageMapProcessRequest ) ( const VCURSOR_IMPL *self );
     bool ( * cacheActive ) ( const VCURSOR_IMPL * self, int64_t * cache_empty_end );
     rc_t ( * installTrigger ) ( VCURSOR_IMPL * self, struct VProduction * prod );
+    rc_t ( * listReadableColumns ) ( VCURSOR_IMPL *self, BSTree *columns );
+
+    struct VCursorCache * ( * columns ) ( VCURSOR_IMPL * self, uint32_t ctx_type );
+    struct VCursorCache * ( * productions ) ( VCURSOR_IMPL * self, uint32_t ctx_type );
 };
 
 struct VCursor
@@ -144,7 +147,7 @@ struct VCursor
     /* external row of VColumn* by ord ( owned ) */
     Vector row;
 
-    /* column objects by cid ( not-owned ) */
+    /* table column objects by cid ( not-owned ) */
     VCursorCache col;
 
     /* physical columns by cid ( owned ) */
@@ -160,6 +163,11 @@ struct VCursor
 
     /* foreground state */
     uint8_t state;
+
+    /* linked cursors */
+    BSTree linked_cursors;
+    /* cursor used in sub-selects */
+    bool is_sub_cursor;
 };
 
 #ifdef __cplusplus

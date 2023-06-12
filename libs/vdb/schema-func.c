@@ -1543,7 +1543,7 @@ rc_t function_decl ( KSymTable *tbl, KTokenSource *src, KToken *t,
         if ( name == NULL )
         {
             /* create name */
-            rc = SNameOverloadMake ( & name, f -> name, 0, 4 );
+            rc = SNameOverloadMake ( & name, f -> name, 0, 0, 4 );
             if ( rc == 0 )
             {
                 /* insert it - it's allowed to be empty */

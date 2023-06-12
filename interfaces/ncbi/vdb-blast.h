@@ -20,7 +20,7 @@
 *
 *  Please cite the author in any work or product based on this material.
 *
-* ===========================================================================
+* =============================================================================$
 *
 */
 
@@ -146,6 +146,21 @@ VDB_EXTERN void CC VdbBlastRunSetRelease ( VdbBlastRunSet *self );
  */
 VDB_EXTERN VdbBlastStatus CC VdbBlastRunSetAddRun ( VdbBlastRunSet *self,
     const char *rundesc );
+
+/* IgnoreReadFilter
+ *
+ * Created readers will return reads that have any value in READ_FILTER column.
+ * By default just reads with READ_FILTER = READ_FILTER_PATH are returned.
+ *
+ * "ignore" [ IN ] - if false, readers will return
+ *                   just reads with READ_FILTER = READ_FILTER_PATH;
+ *                 - if true, readers will return all reads.
+ *
+ * N.B. It is not recommended to Ignore Read Filter.
+ *      It will make readers to return filtered-out reads that have to be ignored.
+ */
+VDB_EXTERN VdbBlastStatus CC VdbBlastRunSetIgnoreReadFilter
+    ( VdbBlastRunSet *self, bool ignore );
 
 
 /* GetNumSequences

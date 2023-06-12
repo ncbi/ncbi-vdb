@@ -413,8 +413,8 @@ if ($TOOLS =~ /gcc$/) {
     $MD  = '-MD';
 } elsif ($TOOLS eq 'clang') {
     $CPP  = 'clang++' unless ($CPP);
-    $CC   = $TOOLS unless ($CC); $CC .= ' -c';
-#   my $versionMin = '-mmacosx-version-min=10.10';
+    $CC   = 'clang -c';
+    #my $versionMin = '-mmacosx-version-min=10.10';
     my $versionMin = '';
     $CP   = "$CPP -c $versionMin";
     if ($BITS ne '32_64') {

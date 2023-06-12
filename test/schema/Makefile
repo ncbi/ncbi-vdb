@@ -28,3 +28,9 @@ TOP ?= $(abspath ../..)
 MODULE = test/schema
 
 include $(TOP)/build/Makefile.env
+
+ast:
+	$(MAKE) CTESTARGS="-R Test_SCHEMA_wb-schema-ast -V"
+
+parse:
+	$(MAKE) CTESTARGS="-R Test_SCHEMA_wb-schema-parser -V"

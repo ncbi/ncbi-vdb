@@ -279,7 +279,16 @@ rc_t VTableOpenRead ( VTable *self )
         }
     }
 
-    DBGMSG(DBG_VDB, DBG_FLAG(DBG_VDB_VDB), ("VTableOpenRead = %d\n", rc));
+    if ( self -> stbl && self -> stbl -> name )
+    {
+        DBGMSG(DBG_VDB, DBG_FLAG(DBG_VDB_VDB), ("VTableOpenRead(%S) = %d\n", & self -> stbl -> name -> name, rc));
+    }
+    else
+    {
+        const char * path = "?";
+        KTableGetPath ( self -> ktbl, & path );
+        DBGMSG(DBG_VDB, DBG_FLAG(DBG_VDB_VDB), ("VTableOpenRead(%s) = %d\n", path, rc));
+    }
 
     return rc;
 }
@@ -650,7 +659,7 @@ rc_t list_readable_columns ( const VTable *cself )
     if (  rc == 0 )
     {
         /* let this private VCursor-function list the columns */
-        rc = VCursorListReadableColumns ( curs, & self -> read_col_cache );
+        rc = VTableCursorListReadableColumns ( curs, & self -> read_col_cache );
         VCursorRelease ( ( VCursor * ) curs );
         if ( rc == 0 )
             self -> read_col_cache_valid = true;
@@ -1241,7 +1250,7 @@ rc_t VColumnRefMake ( VColumnRef **rp, const VSchema *schema, const SColumn *sco
     {
         size_t tdsize = strlen ( text );
         const String *name = & scol -> name -> name;
-        VColumnRef *cref = malloc ( sizeof * cref + name -> size + tdsize );
+        VColumnRef *cref = calloc ( 1, sizeof * cref + name -> size + tdsize );
         if ( cref == NULL )
             rc = RC ( rcVDB, rcTable, rcListing, rcMemory, rcExhausted );
         else

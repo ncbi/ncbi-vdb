@@ -219,13 +219,15 @@ rc_t KServiceRequestTestNames1 ( const struct KNSManager * mgr,
     const char * ticket, VRemoteProtocols protocols,
     EObjectType objectType );
 
-/* Parse "buffer" as names-3.0 response.
+/* Parse "buffer" as name s-3.0 response.
    Do not log "errorsToIgnore" messages during response processing */
+#ifdef NAMESCGI
 rc_t KServiceNames3_0StreamTest ( const char * buffer,
     const struct KSrvResponse ** response, int errorsToIgnore );
 rc_t KServiceNames3_0StreamTestMany ( const char * buffer,
     const struct KSrvResponse ** response, int errorsToIgnore,
     int itemsInRequest );
+#endif
 rc_t KServiceNamesRequestTest ( const struct KNSManager * mgr, const char * b,
     const char * cgi, VRemoteProtocols protocols,
     const SServiceRequestTestData * d, ... );

@@ -52,6 +52,7 @@
 
 #include <klib/rc.h>
 #include <klib/text.h>
+#include <klib/debug.h>
 
 using namespace std;
 
@@ -247,7 +248,7 @@ FIXTURE_TEST_CASE(Handshake_NoCertFail, MbedTlsFixture)
 FIXTURE_TEST_CASE(WindowsRootStore, MbedTlsFixture)
 {
     //-------------------------------------------------------------------
-    // Pull all the certificates from the ROOT store. 
+    // Pull all the certificates from the ROOT store.
 
     HCERTSTORE hSystemStore = CertOpenSystemStoreA(0, "ROOT");
     REQUIRE_NOT_NULL(hSystemStore);
@@ -262,7 +263,7 @@ FIXTURE_TEST_CASE(WindowsRootStore, MbedTlsFixture)
         }
 
         // ignore errors
-        mbedtls_x509_crt_parse(&m_chain, (const unsigned char*)pCertContext->pbCertEncoded, pCertContext->cbCertEncoded); 
+        mbedtls_x509_crt_parse(&m_chain, (const unsigned char*)pCertContext->pbCertEncoded, pCertContext->cbCertEncoded);
     }
     REQUIRE(CertCloseStore(hSystemStore, 0));
 
@@ -297,6 +298,7 @@ const char UsageDefaultName[] = "test-mmbedtls";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
+KDbgSetString ( "KNS-PROXY" );
     rc_t rc=MbedTlsTestSuite(argc, argv);
     return rc;
 }

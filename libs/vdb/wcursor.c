@@ -84,6 +84,7 @@ static rc_t VTableWriteCursorCommit ( VTableCursor *self );
 static rc_t VTableWriteCursorOpenParentUpdate ( VTableCursor *self, VTable **tbl );
 static rc_t VTableWriteCursorMakeColumn ( VTableCursor *self, VColumn **col, const SColumn *scol, Vector *cx_bind );
 static rc_t VTableWriteCursorInstallTrigger ( struct VTableCursor * self, struct VProduction * prod );
+static rc_t VTableWriteCursorListReadableColumns ( struct VTableCursor *self, BSTree *columns );
 
 static VCursor_vt VTableCursor_write_vt =
 {
@@ -111,11 +112,10 @@ static VCursor_vt VTableCursor_write_vt =
     VTableWriteCursorCommit,
     VTableCursorOpenParentRead,
     VTableWriteCursorOpenParentUpdate,
+    VTableCursorIdRange,
     VTableCursorPermitPostOpenAdd,
     VTableCursorSuspendTriggers,
     VTableCursorGetSchema,
-    VTableCursorLinkedCursorGet,
-    VTableCursorLinkedCursorSet,
     VTableCursorSetCacheCapacity,
     VTableCursorGetCacheCapacity,
     VTableWriteCursorMakeColumn,
@@ -127,7 +127,10 @@ static VCursor_vt VTableCursor_write_vt =
     VTableCursorLaunchPagemapThread,
     VTableCursorPageMapProcessRequest,
     VTableCursorCacheActive,
-    VTableWriteCursorInstallTrigger
+    VTableWriteCursorInstallTrigger,
+    VTableWriteCursorListReadableColumns,
+    VTableCursorColumns,
+    VTableCursorProductions
 };
 
 /*--------------------------------------------------------------------------
@@ -278,23 +281,6 @@ rc_t VTableWriteCursorMakeColumn ( VTableCursor *self, VColumn **col, const SCol
     return WColumnMake ( col, self -> schema, scol, vtbl -> stbl -> limit, vtbl -> mgr, cx_bind );
 }
 
-
-/* PostOpenAdd
- *  handle opening of a column after the cursor is opened
- */
-rc_t VCursorPostOpenAdd ( VTableCursor *self, VColumn *col )
-{
-    rc_t rc = VCursorPostOpenAddRead ( self, col );
-
-    if ( ! self -> read_only && rc == 0 && self -> dad . state == vcRowOpen )
-    {
-        int64_t row_id = self -> dad . row_id;
-        WColumnOpenRow ( col, & row_id );
-    }
-
-    return rc;
-}
-
 /* Open
  *  open cursor, resolving schema
  *  for the set of opened columns
@@ -358,7 +344,7 @@ rc_t VTableWriteCursorOpen ( const VTableCursor *cself )
         rc = VLinkerOpen ( ld, & libs );
         if ( rc == 0 )
         {
-            rc = VCursorOpenRead ( self, libs );
+            rc = VTableCursorOpenRead ( self, libs );
             if ( rc == 0 )
             {
                 if ( ! self -> read_only )
@@ -369,8 +355,10 @@ rc_t VTableWriteCursorOpen ( const VTableCursor *cself )
                     pr . ld = ld;
                     pr . libs = libs;
                     pr . name = & self -> stbl -> name -> name;
+                    pr . primary_table = VCursorGetTable ( & self -> dad );
+                    pr . view = NULL;
                     pr . curs = & self -> dad;
-                    pr . cache = & self -> dad . prod;
+                    pr . prod = & self -> dad . prod;
                     pr . owned = & self -> dad . owned;
                     pr . cx_bind = & cx_bind;
                     pr . chain = chainEncoding;
@@ -528,8 +516,10 @@ rc_t VCursorListSeededWritableColumns ( VTableCursor *self, BSTree *columns, con
     pb . pr . schema = self -> schema;
     pb . pr . ld = self -> tbl -> linker;
     pb . pr . name = & self -> stbl -> name -> name;
+    pb . pr . primary_table = VCursorGetTable ( & self -> dad );
+    pb . pr . view = NULL;
     pb . pr . curs = & self -> dad;
-    pb . pr . cache = & self -> dad . prod;
+    pb . pr . prod = & self -> dad . prod;
     pb . pr . owned = & self -> dad . owned;
     pb . pr . cx_bind = & cx_bind;
     pb . pr . chain = chainEncoding;
@@ -1329,4 +1319,16 @@ rc_t VTableWriteCursorOpenParentUpdate ( VTableCursor *self, VTable **tbl )
 rc_t VTableWriteCursorInstallTrigger ( struct VTableCursor * self, struct VProduction * prod )
 {
     return VectorAppend ( & self -> trig, NULL, prod );
+}
+
+rc_t VTableWriteCursorListReadableColumns ( struct VTableCursor *self, BSTree *columns )
+{
+    /* this is normally called on an empty cursor to add all columns, but for
+    an empty write cursor resolution asserts `wcol -> val == NULL' in VProdResolveColumnRoot().
+    Disabling for now. */
+    if ( self -> read_only )
+    {
+        return VTableCursorListReadableColumns ( self, columns );
+    }
+    return RC ( rcVDB, rcCursor, rcAccessing, rcMode, rcUnsupported );
 }

@@ -39,6 +39,7 @@ set( VDB_LIB_CMN_TARGETS
     kproc
     kq
     kfc
+    schema
 )
 if ( HAVE_MBEDTLS_F )
     message("Using mbedtls installed in the system")
