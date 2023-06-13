@@ -149,12 +149,12 @@ static rc_t ResolvedCopy(Resolved *cpy, const Resolved *self) {
         rc = VPathAddRef(self->remoteP);
 
     if (rc == 0) {
+        cpy->count = 0;
         cpy->cacheP = self->cacheP;
         cpy->cacheRc = self->cacheRc;
         cpy->localP = self->localP;
         cpy->remoteP = self->remoteP;
         cpy->remoteRc = self->remoteRc;
-        cpy->count = self->count;
         cpy->rc = self->rc;
     }
 
