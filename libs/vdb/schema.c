@@ -49,6 +49,7 @@
 #include <klib/printf.h>
 #include <klib/out.h>
 #include <klib/rc.h>
+#include <klib/text.h>
 #include <vdb/vdb-priv.h>
 #include <kfg/properties.h>
 #include <sysalloc.h>
@@ -778,7 +779,7 @@ LIB_EXPORT rc_t CC VSchemaVAddIncludePath ( VSchema *self, const char *path, va_
         path=".";
 
     if (strchr(path, '%') == NULL)
-        temp = strdup(path);
+        temp = string_dup_measure(path, NULL);
     else {
         KDataBuffer buffer;
 
@@ -787,7 +788,7 @@ LIB_EXPORT rc_t CC VSchemaVAddIncludePath ( VSchema *self, const char *path, va_
         if (rc)
             return rc;
 
-        temp = strdup(buffer.base);
+        temp = string_dup_measure(buffer.base, NULL);
         KDataBufferWhack(&buffer);
     }
     if (temp == NULL)

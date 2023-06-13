@@ -35,6 +35,7 @@
 #endif
 
 #include <klib/rc.h>
+#include <klib/text.h>
 #include <sstream>
 #include <csignal>
 #include <cstdlib>
@@ -158,7 +159,7 @@ rc_t TestEnv::process_args(int argc, char* argv[], ArgsHandler* argsHandler)
     argv2 = static_cast<char**>(calloc(arg2, sizeof *argv2));
     if (argv2 == NULL)
     {   return RC (rcApp, rcArgv, rcAccessing, rcMemory, rcExhausted); }
-    argv2[argc2] = strdup(argv[argc2]);
+    argv2[argc2] = string_dup_measure(argv[argc2], NULL);
     if (argv2[argc2] == NULL)
     {   return RC (rcApp, rcArgv, rcAccessing, rcMemory, rcExhausted); }
     ++argc2;
@@ -383,7 +384,7 @@ rc_t TestEnv::process_args(int argc, char* argv[], ArgsHandler* argsHandler)
                     }
                     argv2 = tmp;
                 }
-                argv2[argc2] = strdup(pch);
+                argv2[argc2] = string_dup_measure(pch, NULL);
                 if (argv2[argc2] == NULL) {
                     return RC(
                         rcApp, rcArgv, rcAccessing, rcMemory, rcExhausted);
@@ -402,7 +403,7 @@ rc_t TestEnv::process_args(int argc, char* argv[], ArgsHandler* argsHandler)
                         rcApp, rcArgv, rcAccessing, rcMemory, rcExhausted );
                 argv2 = tmp;
             }
-            argv2 [ argc2 ] = strdup ( argv [ i ] );
+            argv2 [ argc2 ] = string_dup_measure ( argv [ i ], NULL );
             if ( argv2 [ argc2 ] == NULL )
                 return RC ( rcApp, rcArgv, rcAccessing, rcMemory, rcExhausted );
             ++ argc2;

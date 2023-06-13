@@ -26,6 +26,7 @@
 #include <sra/extern.h>
 #include <klib/rc.h>
 #include <klib/log.h>
+#include <klib/text.h>
 #include <sra/types.h>
 #include <os-native.h>
 #include <sysalloc.h>
@@ -124,7 +125,7 @@ rc_t SRAReaderAlloc(SRAReader** reader, size_t size, const char* accession)
     if( *reader == NULL ) {
         return RC(rcSRA, rcFormatter, rcConstructing, rcMemory, rcExhausted);
     } else {
-		(*reader)->accession = strdup(accession);
+		(*reader)->accession = string_dup_measure(accession, NULL);
         if( (*reader)->accession == NULL ) {
             free(*reader);
             *reader = NULL;

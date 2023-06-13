@@ -42,11 +42,11 @@
   and costs for skippings parts of the pattern (first 1) or text (second 1).
 */
 
+#include <klib/text.h>
 #include <search/extern.h>
 #include <os-native.h>
 #include <compiler.h>
 #include <sysalloc.h>
-#include <klib/text.h>
 
 #include "search-priv.h"
 
@@ -84,7 +84,7 @@ rc_t AgrepDPMake( DPParams **self, AgrepFlags mode, const char *pattern )
     } else {
         int32_t i;
         (*self)->mode = mode;
-        (*self)->pattern = strdup(pattern);
+        (*self)->pattern = string_dup_measure(pattern, NULL);
         (*self)->plen = strlen(pattern);
         (*self)->rpattern = malloc((*self)->plen + 1);
         if( (*self)->pattern == NULL || (*self)->rpattern == NULL ) {
