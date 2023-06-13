@@ -139,6 +139,12 @@ rc_t KSrvResponseGetPath ( const KSrvResponse * self, uint32_t idx,
 rc_t KSrvResponseGetCache(const KSrvResponse * self, uint32_t idx,
     const struct VPath ** path);
 
+/* GetLocal
+ * get local location for KSrvResponse element number "idx"
+ */
+rc_t KSrvResponseGetLocal(const KSrvResponse * self, uint32_t idx,
+    const struct VPath ** path);
+
 /* GetNextToken:
  * is returned in case user need to ask for next page.
  * Do not release returned value.
