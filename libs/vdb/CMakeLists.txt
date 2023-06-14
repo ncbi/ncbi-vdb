@@ -112,7 +112,7 @@ GenerateStaticLibs( wvdb "${WVDB_SRC}" )
 # suppress certain compiler warnings
 if ( "GNU" STREQUAL "${CMAKE_C_COMPILER_ID}")
     set_target_properties( vdb wvdb PROPERTIES COMPILE_FLAGS -Wstrict-aliasing=0 )
-else ( "Clang" STREQUAL "${CMAKE_C_COMPILER_ID}")
+elseif ( "Clang" STREQUAL "${CMAKE_C_COMPILER_ID}")
     set_source_files_properties( cast PROPERTIES COMPILE_FLAGS -Wno-implicit-int-float-conversion )
 endif()
 

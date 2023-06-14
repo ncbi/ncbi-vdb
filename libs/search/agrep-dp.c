@@ -42,11 +42,11 @@
   and costs for skippings parts of the pattern (first 1) or text (second 1).
 */
 
-#include <klib/text.h>
 #include <search/extern.h>
 #include <os-native.h>
 #include <compiler.h>
 #include <sysalloc.h>
+#include <klib/text.h>
 
 #include "search-priv.h"
 

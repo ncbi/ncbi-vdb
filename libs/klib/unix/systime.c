@@ -37,7 +37,6 @@
 #include <sys/time.h>
 #include <errno.h>
 
-extern char *strptime(const char *s, const char *format, struct tm *tm);
 
 /*--------------------------------------------------------------------------
  * KTime_t

@@ -40,8 +40,6 @@
 #include <string.h>
 #include <math.h>
 
-extern void *memrchr(const void *s, int c, size_t n);
-
 typedef enum IlluminaReaderOptions_enum {
     eRead = 0x02,
     eQual1 = 0x04,
