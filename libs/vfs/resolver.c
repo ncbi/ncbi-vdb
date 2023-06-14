@@ -4945,6 +4945,15 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
             case vpFullPath:
             case vpUNCPath:
                 rc = VResolverQueryPath ( self, query, local );
+                if (rc == 0)
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (
+                        "VResolverQueryInt: "
+                        "path '%S' is found in '%S'\n",
+                        &query->path, &(*local)->path));
+                else
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                        "VResolverQueryInt('%S') failed\n",
+                        &query->path));
                 break;
 
             default:

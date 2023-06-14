@@ -2414,7 +2414,12 @@ rc_t KSrvRespObjRelease ( const KSrvRespObj * cself ) {
 rc_t KSrvRespObjGetAccOrId(const KSrvRespObj * self,
     const char ** acc, uint32_t * id)
 {
-    assert( self && self ->obj && acc && id );
+    if (acc == NULL || id == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
+    if (self == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcSelf, rcNull);
+
+    assert(self->obj);
 
     *acc = self->obj->acc;
     *id = self->obj->id;
