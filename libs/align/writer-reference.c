@@ -59,7 +59,7 @@
 #include <ctype.h>
 #include <assert.h>
 
-extern char *strcasestr(const char *haystack, const char *needle);
+extern const char *strcasestr(const char *haystack, const char *needle);
 
 /*
  * ReferenceSeq objects:
