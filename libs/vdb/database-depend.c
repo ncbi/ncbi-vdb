@@ -591,8 +591,13 @@ rc_t AddRow(BSTree* tr, BSTree* trWgs, Row* data, Ctx* ctx, int cacheState,
             /* find cached SDL response for WGS refseq */
             sw = (RefNode*)BSTreeFind(trWgs, e, bstCmpBySeqId);
 
-        if (sw != NULL) /* found - reuse it */
+        if (sw != NULL) { /* found - reuse it */
             rc = ResolvedCopy(&sn->resolved, &sw->resolved);
+/* We need to use VFS logging here to see it together with other VFS messages */
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
+                ("VDatabaseDependencies: reusing for '%s' '%S' of '%s'\n",
+                    sn->seqId, sn->resolved.remote, sw->seqId));
+        }
         else {
             /* find refseq - locally and/or remotely */
             rc = FindRef(ctx,
@@ -618,6 +623,10 @@ rc_t AddRow(BSTree* tr, BSTree* trWgs, Row* data, Ctx* ctx, int cacheState,
                     return rc;
 
                 BSTreeInsert(trWgs, (BSTNode*)sw, bstSortBySeqId);
+
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
+                    ("VDatabaseDependencies: saving '%S' for '%s' as '%s'\n",
+                    sw->resolved.remote, sn->seqId, sw->seqId));
             }
         }
     }
