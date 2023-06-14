@@ -129,6 +129,15 @@ SViewWhack ( void * item, void *ignore )
     free ( self );
 }
 
+void CC SViewMark ( void * item, void * data )
+{
+    SView * self = item;
+    if ( self != NULL && ! self -> marked )
+    {
+        self -> marked = true;
+    }
+}
+
 /* Cmp
  * Sort
  */

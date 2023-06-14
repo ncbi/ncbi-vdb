@@ -675,6 +675,11 @@ FIXTURE_TEST_CASE ( View_OpenSchema, ViewFixture )
     REQUIRE_RC ( VSchemaRelease ( schema ) );
 }
 
+FIXTURE_TEST_CASE ( View_Instantiate, ViewFixture )
+{
+    FAIL();
+}
+
 //////////////////////////////////////////// Main
 extern "C"
 {

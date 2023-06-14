@@ -208,6 +208,13 @@ VDBManagerOpenView ( struct VDBManager const *   p_mgr,
     return rc;
 }
 
+LIB_EXPORT
+rc_t CC
+VViewInstantiate ( const struct VView * p_self, const SViewInstance * inst )
+{
+    return 0;
+}
+
 static
 int32_t
 BindingIdxByName ( const SView * p_self, const String * p_name )

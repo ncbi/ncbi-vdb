@@ -51,6 +51,7 @@ private:
     bool HandleOverload ( ctx_t ctx, const KSymbol * p_priorDecl );
     void HandleMemberDb ( ctx_t ctx, const AST & p_member );
     void HandleMemberTable ( ctx_t ctx, const AST & p_member );
+    void HandleMemberViewAlias ( ctx_t ctx, const AST & p_member );
 
 private:
     ASTBuilder &    m_builder;
@@ -162,6 +163,10 @@ DatabaseDeclaration :: HandleBody ( ctx_t ctx, const AST & p_body )
 
                 case PT_TBLMEMBER:
                     HandleMemberTable ( ctx, member );
+                    break;
+
+                case PT_ALIASMEMBER:
+                    HandleMemberViewAlias ( ctx, member );
                     break;
 
                 case PT_EMPTY:
@@ -337,6 +342,79 @@ DatabaseDeclaration :: HandleMemberTable ( ctx_t ctx, const AST & p_member )
             }
         }
         STblMemberWhack ( m, 0 );
+    }
+}
+
+void
+DatabaseDeclaration :: HandleMemberViewAlias ( ctx_t ctx, const AST & p_member )
+{
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+
+    assert ( p_member . GetTokenType () == PT_ALIASMEMBER );
+    assert ( p_member . ChildrenCount () == 2 ); // view_spec, memName
+
+    SViewAliasMember * m = m_builder . Alloc < SViewAliasMember > ( ctx );
+    if ( m != 0 )
+    {
+        const AST & view_spec = * p_member . GetChild ( 0 );
+        assert ( view_spec . GetTokenType () == PT_VIEWSPEC );
+
+        const AST_FQN & view = * ToFQN ( view_spec . GetChild ( 0 ) );
+        const KSymbol * viewName = m_builder . Resolve ( ctx, view );
+        if ( viewName != 0 )
+        {
+            if ( viewName -> type == eView )
+            {
+                String memName;
+                assert ( p_member . GetChild ( 1 ) != 0 );
+                StringInitCString ( & memName, p_member . GetChild ( 1 ) -> GetChild ( 0 ) -> GetTokenValue () );
+                rc_t rc = KSymTableCreateConstSymbol ( & m_builder . GetSymTab (), & m -> name, & memName, eViewAliasMember, m );
+                if ( rc == 0 )
+                {
+                    m -> view . dad = static_cast < const SView * > ( m_builder . SelectVersion ( ctx, view, * viewName, SViewCmp ) );
+                    assert( m -> view . dad );
+
+                    // verify parameter tables/views
+                    const AST & params = * view_spec . GetChild ( 1 );
+                    uint32_t count = params . ChildrenCount ();
+                    for ( uint32_t i = 0; i < count; ++i )
+                    {
+                        const AST_FQN & param = * ToFQN ( params . GetChild ( i ) );
+                        assert ( param . GetTokenType () == PT_IDENT );
+
+                        const KSymbol * paramDecl = m_builder . Resolve ( ctx, param ); // will report unknown name
+                        if ( paramDecl != 0 )
+                        {
+                            if ( paramDecl -> type == eTblMember || paramDecl -> type == eViewAliasMember )
+                            {
+                                //TODO: check compatibility
+                                m_builder . VectorAppend ( ctx, m -> view . params, nullptr, paramDecl );
+                            }
+                            else
+                            {
+                                m_builder . ReportError ( ctx, "Not a table/view member", param );
+                            }
+                        }
+                    }
+
+                    m_builder . VectorAppend ( ctx, m_self -> aliases, & m -> cid . id, m );
+                    return;
+                }
+                else if ( GetRCState ( rc ) == rcExists )
+                {
+                    m_builder . ReportError ( ctx, p_member . GetLocation (), "Member already exists", memName );
+                }
+                else
+                {
+                    m_builder . ReportRc ( ctx, "KSymTableCreateConstSymbol", rc);
+                }
+            }
+            else
+            {
+                m_builder . ReportError ( ctx, "Not a view", view );
+            }
+        }
+        SViewAliasMemberWhack ( m, 0 );
     }
 }
 

@@ -53,7 +53,7 @@
 
     extern "C"
     {
-        extern enum yytokentype SchemaScan_yylex ( YYSTYPE *lvalp, YYLTYPE *llocp, SchemaScanBlock* sb );
+        extern enum Schema_tokentype SchemaScan_yylex ( SCHEMA_STYPE *lvalp, SCHEMA_LTYPE *llocp, SchemaScanBlock* sb );
     }
 
     static
@@ -131,7 +131,8 @@
 
 %}
 
-%name-prefix "Schema_"
+%define api.prefix "Schema_"
+ /*%name-prefix "Schema_"*/
 %parse-param { ctx_t ctx }
 %parse-param { ParseTree** root }
 %parse-param { ErrorReport * errors }
@@ -301,6 +302,8 @@
 %token PT_VIEWPARENT
 %token PT_MEMBEREXPR
 %token PT_JOINEXPR
+%token PT_ALIASMEMBER
+%token PT_VIEWSPEC
 
  /* !!! Keep token declarations above in synch with schema-ast.y */
 
@@ -968,6 +971,7 @@ database_members_1_0
 database_member_1_0
     : db_member_1_0             { $$ = $1; }
     | table_member_1_0          { $$ = $1; }
+    | alias_member_1_0          { $$ = $1; }
     | ';'                       { $$ . subtree = T ( ctx, $1 ); }
     ;
 
@@ -984,6 +988,21 @@ db_member_1_0
 table_member_1_0
     : opt_template_1_0 KW_table fqn_opt_vers ident_1_0 ';'
             { $$ . subtree = MakeTree ( ctx, PT_TBLMEMBER, P ( $1 ), T ( ctx, $2 ), P ( $3 ), P ( $4 ), T ( ctx, $5 ) ); }
+    ;
+
+alias_member_1_0
+    : KW_alias view_spec ident_1_0 ';'
+            { $$ . subtree = MakeTree ( ctx, PT_ALIASMEMBER, T ( ctx, $1 ), P ( $2 ), P ( $3 ), T ( ctx, $4 ) ); }
+    ;
+
+view_spec
+    : fqn_opt_vers '<' view_parms '>'
+        { $$ . subtree = MakeTree ( ctx, PT_VIEWSPEC, P ( $1 ), T ( ctx, $2 ), P ( $3 ), T ( ctx, $4 ) ); }
+    ;
+
+view_parms
+    : ident_1_0                { $$ . subtree = MakeList ( ctx, $1 ); }
+    | view_parms ',' ident_1_0 { $$ . subtree = AddToList ( ctx, P ( $1 ), T ( ctx, $2 ), P ( $3 ) ); }
     ;
 
 /* include

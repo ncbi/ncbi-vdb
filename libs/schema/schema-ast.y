@@ -47,7 +47,7 @@
 
 %}
 
-%name-prefix "AST_"
+%define api.prefix {AST_}
 %parse-param { ctx_t ctx }
 %parse-param { AST*& p_ast }
 %parse-param { ASTBuilder& p_builder }
@@ -213,6 +213,8 @@
 %token PT_VIEWPARENT
 %token PT_MEMBEREXPR
 %token PT_JOINEXPR
+%token PT_ALIASMEMBER
+%token PT_VIEWSPEC
 
  /* !!! Keep token declarations above in synch with schema-grammar.y */
 
@@ -234,7 +236,7 @@
 %type <node> col_schema_value col_schema_parm phys_coldef factory_parms_list
 %type <node> vararg param_sig param_signature fact_sig
 %type <node> view view_parms view_parm view_body_opt view_body view_member
-%type <node> view_parents_opt view_parents view_parent view_parent_parms
+%type <node> view_parents_opt view_parents view_parent view_parent_parms view_spec
 
 %type <fqn> fqn qualnames fqn_opt_vers ident fqn_vers
 
@@ -255,6 +257,7 @@
 %type <tok> KW_physical PT_COLUNTYPED EXP_FLOAT ESCAPED_STRING PT_CONSTVECT KW_true KW_false
 %type <tok> PT_NEGATE PT_CASTEXPR '@' KW_control PT_SCHEMA_2_0
 %type <tok> PT_VIEW PT_VIEWPARAM PT_VIEWPARENTS PT_MEMBEREXPR PT_VIEWPARENT PT_JOINEXPR
+%type <tok> PT_ALIASMEMBER PT_VIEWSPEC
 
 %%
 
@@ -655,9 +658,9 @@ dbbody
 
 db_members
     : db_member               { $$ = AST :: Make ( ctx ); $$ -> AddNode ( ctx, $1 ); }
-    | ';'                       { $$ = AST :: Make ( ctx ); }
+    | ';'                     { $$ = AST :: Make ( ctx ); }
     | db_members db_member    { $$ = $1; $$ -> AddNode ( ctx, $2 ); }
-    | db_members ';'            { $$ = $1; }
+    | db_members ';'          { $$ = $1; }
     ;
 
 db_member
@@ -665,11 +668,23 @@ db_member
         { $$ = AST :: Make ( ctx, $1, $3, $5, $6 ); }
     | PT_TBLMEMBER '(' template_opt KW_table fqn_opt_vers ident ';' ')'
         { $$ = AST :: Make ( ctx, $1, $3, $5, $6 ); }
+    | PT_ALIASMEMBER '(' KW_alias view_spec ident ';' ')'
+        { $$ = AST :: Make ( ctx, $1, $4, $5 ); }
     ;
 
 template_opt
     : PT_EMPTY      { $$ = AST :: Make ( ctx, $1 ); }
     | KW_template   { $$ = AST :: Make ( ctx, $1 ); }
+    ;
+
+view_spec
+    : PT_VIEWSPEC '(' fqn_opt_vers '<' PT_ASTLIST '(' view_parms ')' '>' ')'
+        { $$ = AST :: Make ( ctx, $1 ); $$ -> AddNode ( ctx, $3 ); $$ -> AddNode ( ctx, $7 ); }
+    ;
+
+view_parms
+    : ident                 { $$ = AST :: Make ( ctx ); $$ -> AddNode ( ctx, $1 ); }
+    | view_parms ',' ident  { $$ = $1; $$ -> AddNode ( ctx, $3 ); }
     ;
 
 /* include */

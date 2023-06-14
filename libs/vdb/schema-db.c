@@ -76,6 +76,44 @@ rc_t STblMemberDump ( const STblMember *self, SDumper *d )
     return FQNDump ( self != NULL ? self -> name : NULL, d );
 }
 
+/*--------------------------------------------------------------------------
+ * SViewAliasMember
+ *  alias member
+ */
+
+/* Mark
+ */
+static
+void CC SViewAliasMemberMark ( void * item, void * data )
+{
+    const SViewAliasMember * self = item;
+    if ( item != NULL )
+        SViewMark ( ( void * )self -> view . dad, data );
+}
+
+/* Dump
+ */
+bool CC SViewAliasMemberDefDump ( void *item, void *dumper )
+{
+    SDumper *b = dumper;
+    SViewAliasMember *self = item;
+
+    b -> rc = SDumperPrint ( b, "\talias " );
+    if ( b -> rc == 0 )
+        b -> rc = SDumperPrint ( b, " %N < \n", self -> view . dad -> name );
+    if ( b -> rc == 0 )
+        VectorDoUntil ( & self -> view . params, false, SViewAliasMemberDefDump, b );
+    if ( b -> rc == 0 )
+        b -> rc = SDumperPrint ( b, " > %N;\n", self -> name );
+
+    return ( b -> rc != 0 ) ? true : false;
+}
+
+rc_t SViewAliasMemberDump ( const STblMember *self, SDumper *d )
+{
+    return FQNDump ( self != NULL ? self -> name : NULL, d );
+}
+
 
 /*--------------------------------------------------------------------------
  * SDBMember
@@ -134,6 +172,7 @@ void CC SDatabaseWhack ( void *item, void *ignore )
     BSTreeWhack ( & self -> scope, KSymbolWhack, NULL );
     VectorWhack ( & self -> db, SDBMemberWhack, NULL );
     VectorWhack ( & self -> tbl, STblMemberWhack, NULL );
+    VectorWhack ( & self -> aliases, SViewAliasMemberWhack, NULL );
 
     free ( self );
 }
@@ -244,6 +283,7 @@ void CC SDatabaseMark ( void * item, void * data )
         self -> marked = true;
         VectorForEach ( & self -> db, false, SDBMemberMark, data );
         VectorForEach ( & self -> tbl, false, STblMemberMark, data );
+        VectorForEach ( & self -> tbl, false, SViewAliasMemberMark, data );
         SDatabaseMark ( ( void * )self -> dad, data );
     }
 }
@@ -294,6 +334,9 @@ bool CC SDatabaseDefDump ( void *item, void *data )
 
     if ( b -> rc == 0 )
         VectorDoUntil ( & self -> db, false, SDBMemberDefDump, b );
+
+    if ( b -> rc == 0 )
+        VectorDoUntil ( & self -> aliases, false, SViewAliasMemberDefDump, b );
 
     SDumperDecIndentLevel ( b );
 

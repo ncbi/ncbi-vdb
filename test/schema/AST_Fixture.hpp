@@ -72,9 +72,9 @@ public:
 
     void VerifyErrorMessage ( const char* p_source, const char* p_expectedError, uint32_t p_line = 0, uint32_t p_column = 0 );
 
-    enum yytokentype TokenType ( const ParseTree * p_node ) const
+    enum Schema_tokentype TokenType ( const ParseTree * p_node ) const
     {
-        return ( enum yytokentype ) p_node -> GetToken () . GetType ();
+        return ( enum Schema_tokentype ) p_node -> GetToken () . GetType ();
     }
 
     const struct KSymbol* VerifySymbol ( const char* p_name, uint32_t p_type );
