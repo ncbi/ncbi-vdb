@@ -277,30 +277,6 @@ rc_t CC  VViewGetParameter (
     return 0;
 }
 
-static
-bool
-STableIsA ( const STable * p_self, const STable * p_table )
-{
-    if ( p_self == p_table )
-    {
-        return true;
-    }
-    else
-    {
-        uint32_t i = VectorStart ( & p_self -> parents );
-        uint32_t count = VectorLength ( & p_self -> parents );
-        for ( count += i; i < count; ++ i )
-        {
-            const STable * dad = VectorGet ( & p_self -> parents, i );
-            if ( STableIsA ( dad, p_table ) )
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-}
-
 /* BindParameterTable
  *  Bind a view's parameter to a table.
  *
@@ -357,7 +333,6 @@ VViewBindParameterTable ( const VView *     p_self,
     }
 }
 
-static
 bool
 SViewIsA ( const SView * p_self, const SView * p_view )
 {

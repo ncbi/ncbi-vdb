@@ -1058,6 +1058,12 @@ rc_t STableDump ( const STable *self, struct SDumper *d );
  */
 rc_t CC STableExtend ( struct KSymTable *tbl, STable *self, const STable *dad );
 
+/* IsA
+ * true if p_self and p_table are the same, or p_self is derived (directly or indirectly) from p_table
+ */
+bool
+STableIsA ( const STable * p_self, const STable * p_table );
+
 /* schema_update_tbl_ref
  * updates references to a table's ancestor with the ancestor's newer version
  */
@@ -1393,7 +1399,7 @@ struct SViewAliasMember
 
 /* Whack
  */
-#define SViewAliasMemberWhack VectMbrWhack
+void CC SViewAliasMemberWhack( void * self, void * ignore );
 
 /* Dump
  */
@@ -1521,6 +1527,9 @@ void SViewMark ( void *self, void *ignore );
  */
 int64_t SViewCmp ( const void *item, const void *n );
 int64_t SViewSort ( const void *item, const void *n );
+
+bool
+SViewIsA ( const SView * p_self, const SView * p_view );
 
 /* push/pop view scope
  *

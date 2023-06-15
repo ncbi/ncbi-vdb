@@ -677,7 +677,7 @@ FIXTURE_TEST_CASE ( View_OpenSchema, ViewFixture )
 
 FIXTURE_TEST_CASE ( View_Instantiate, ViewFixture )
 {
-    FAIL();
+    FAIL("not implemented");
 }
 
 //////////////////////////////////////////// Main

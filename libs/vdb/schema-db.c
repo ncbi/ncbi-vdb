@@ -114,6 +114,13 @@ rc_t SViewAliasMemberDump ( const STblMember *self, SDumper *d )
     return FQNDump ( self != NULL ? self -> name : NULL, d );
 }
 
+void CC SViewAliasMemberWhack( void * item, void * ignore )
+{
+    SViewAliasMember *self = item;
+    VectorWhack ( & self -> view . params, NULL, NULL );
+    free ( item );
+}
+
 
 /*--------------------------------------------------------------------------
  * SDBMember

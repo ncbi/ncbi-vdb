@@ -244,21 +244,26 @@ FIXTURE_TEST_CASE(DB_ViewAliasMember_WrongParameter, AST_Db_Fixture)
     VerifyErrorMessage ( "version 2; table t#1 {}; view v#1 <t t > {}; database d#1 { table t T; alias v<t> vv; };",
                          "Not a table/view member: 't'" );
 }
+FIXTURE_TEST_CASE(DB_ViewAliasMember_WrongParameterCount, AST_Db_Fixture)
+{
+    VerifyErrorMessage ( "version 2; table t#1 {}; view v#1 <t t > {}; database d#1 { table t T; alias v<T,T> vv; };",
+                         "Incorrect number of view parameters: 'v'" );
+}
 FIXTURE_TEST_CASE(DB_ViewAliasMember_TableParamTypeMismatch, AST_Db_Fixture)
 {
     VerifyErrorMessage (
         "version 2;"
         "table t1#1 {}; table t2#1 {}; view v#1 < t1 t > {}; "
         "database d#1 { table t2 T; alias v<T> vv; };",
-        "" );
+        "View parameter type mismatch: 'T'" );
 }
 FIXTURE_TEST_CASE(DB_ViewAliasMember_ViewParamTypeMismatch, AST_Db_Fixture)
 {
     VerifyErrorMessage (
         "version 2;"
         "table t#1 {}; view v1#1 < t t > {}; view v2#1 < t t > {}; view u#1<v1 v>{};"
-        "database d#1 { table t T; alias u<v2<T>> vv; };",
-        "" );
+        "database d#1 { table t T; alias v2<T> vv; alias u< vv > uu; };",
+        "View parameter type mismatch: 'vv'" );
 }
 
 FIXTURE_TEST_CASE(DB_ViewAliasMember, AST_Db_Fixture)
@@ -285,22 +290,23 @@ FIXTURE_TEST_CASE(DB_ViewAliasMember, AST_Db_Fixture)
 FIXTURE_TEST_CASE(DB_ViewOnAliasMemberOnAnotherViewAliasMember, AST_Db_Fixture)
 {
     DbAccess db = ParseDatabase (
-        "version 2; table t#1 {}; view v#1 < t t > {}; "
-        "database d#1 { table t T; alias v<T> v1; alias v<v1> v2; };",
+        "version 2;"
+        "table t#1 {}; view v1#1 < t t > {}; view v2#1 < v1 v > {};"
+        "database d#1 { table t T; alias v1<T> vv1; alias v2< vv1 > vv2; };",
         "d", 0 );
     REQUIRE_EQ ( 2u, db . AliasMemberCount () );
     const SViewAliasMember * m = db . GetAliasMember ( 1 );
     REQUIRE ( m );
     // verify the internals
-    REQUIRE_EQ( string("v2"), ToCppString ( m -> name -> name ) );
+    REQUIRE_EQ( string("vv2"), ToCppString ( m -> name -> name ) );
     const struct SViewInstance & inst = m -> view;
-    REQUIRE_EQ( string("v"), ToCppString ( inst . dad -> name -> name ) );
+    REQUIRE_EQ( string("v2"), ToCppString ( inst . dad -> name -> name ) );
 
     VdbVector<KSymbol> params ( inst . params );
     REQUIRE_EQ( 1u, params.Count() );
     const KSymbol* p ( params.Get( 0 ) );
     REQUIRE_NOT_NULL( p );
-    REQUIRE_EQ( string("v1"), ToCppString ( p -> name ) );
+    REQUIRE_EQ( string("vv1"), ToCppString ( p -> name ) );
 
     REQUIRE_EQ( 0u, m -> cid . ctx );
     REQUIRE_EQ( 1u, m -> cid . id );
