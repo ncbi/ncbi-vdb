@@ -208,11 +208,28 @@ VDBManagerOpenView ( struct VDBManager const *   p_mgr,
     return rc;
 }
 
-LIB_EXPORT
-rc_t CC
-VViewInstantiate ( const struct VView * p_self, const SViewInstance * inst )
+/* VDatabaseOpenView
+ *  open a view alias defined in a database
+ *
+ *  "view" [ OUT ] - return parameter for newly opened view
+ *
+ *  "name" [ IN ] - name of the view alias
+ *
+ *  View's parameters will have to be bound using VViewBindParameterXXX() before View can be used
+ */
+VDB_EXTERN rc_t CC VDatabaseOpenView (
+    struct VDatabase const *    p_self,
+    const VView **              p_view,
+    const char *                p_name )
 {
-    return 0;
+    rc_t rc;
+
+    if ( p_self == NULL )
+    {
+        rc = RC ( rcVDB, rcTable, rcOpening, rcSelf, rcNull );
+    }
+
+    return rc;
 }
 
 static

@@ -93,6 +93,15 @@ void CC SViewAliasMemberMark ( void * item, void * data )
 
 /* Dump
  */
+static
+bool DumpIdent( void * item, void * dumper )
+{
+    const KSymbol * self = (const KSymbol *)item;
+    SDumper * b = dumper;
+    b -> rc = SDumperPrint ( b, " %S ", & self -> name );
+    return ( b -> rc != 0 ) ? true : false;
+}
+
 bool CC SViewAliasMemberDefDump ( void *item, void *dumper )
 {
     SDumper *b = dumper;
@@ -102,7 +111,9 @@ bool CC SViewAliasMemberDefDump ( void *item, void *dumper )
     if ( b -> rc == 0 )
         b -> rc = SDumperPrint ( b, " %N < \n", self -> view . dad -> name );
     if ( b -> rc == 0 )
-        VectorDoUntil ( & self -> view . params, false, SViewAliasMemberDefDump, b );
+    {
+        VectorDoUntil ( & self -> view . params, false, DumpIdent, b );
+    }
     if ( b -> rc == 0 )
         b -> rc = SDumperPrint ( b, " > %N;\n", self -> name );
 

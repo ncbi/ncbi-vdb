@@ -48,8 +48,8 @@ static string BaseSchemaText =
     "version 2.0;"
     "table T#1 { column ascii c1; };"
     "table P#1 { column ascii c1; };"
-    "database DB#1 { table T t; table P p; };"
     "view V#1 < T tbl > {};"
+    "database DB#1 { table T t; table P p; alias V< t > view_alias; };"
     ;
 
 static const char* TableName_1 = "t";
@@ -224,6 +224,22 @@ FIXTURE_TEST_CASE ( OpenView, ViewFixture )
 //TODO: OpenView with the latest version
 //TODO: OpenView with an old version
 //TODO: OpenView with a non-existent version
+
+// VDatabaseOpenView (open a view alias)
+
+FIXTURE_TEST_CASE ( OpenViewAlias_BadSelf, ViewFixture )
+{
+    CreateDb ( GetName() );
+    REQUIRE_RC_FAIL ( VDatabaseOpenView ( 0, & m_view, "view_alias" ) );
+}
+
+FIXTURE_TEST_CASE ( OpenViewAlias_BadView, ViewFixture )
+{
+    CreateDb ( GetName() );
+    VDatabaseRelease ( m_db );
+    REQUIRE_RC( VDBManagerOpenDBUpdate( m_mgr, & m_db, nullptr, "%s", m_databaseName . c_str () ) );
+    REQUIRE_RC_FAIL ( VDatabaseOpenView ( m_db, nullptr, "view_alias" ) );
+}
 
 // AddRef/Release
 
@@ -415,6 +431,12 @@ FIXTURE_TEST_CASE ( View_BindParameterView_Derived, ViewFixture )
     REQUIRE_RC ( VViewBindParameterView ( m_view, & t, v ) ); // V<WW>
     REQUIRE_RC ( VViewRelease ( v ) );
 }
+
+//TODO: View_Instantiate_Db_Table
+//TODO: View_Instantiate_View
+//TODO: View_Instantiate_MultipleParams
+//TODO: ViewAlias_Instantiate_Table
+//TODO: ViewAlias_Instantiate_View
 
 // VViewCreateCursor
 
@@ -618,7 +640,7 @@ FIXTURE_TEST_CASE ( View_ListCol_SelfNull, ViewFixture )
     REQUIRE_RC_FAIL ( VViewListCol ( NULL, & names ) );
 }
 
-FIXTURE_TEST_CASE ( View_ListCol_PAramNull, ViewFixture )
+FIXTURE_TEST_CASE ( View_ListCol_ParamNull, ViewFixture )
 {
     CreateView ( GetName(), "V" );
 
@@ -673,11 +695,6 @@ FIXTURE_TEST_CASE ( View_OpenSchema, ViewFixture )
     REQUIRE_RC ( VViewOpenSchema ( m_view, & schema ) );
     REQUIRE_NOT_NULL ( schema );
     REQUIRE_RC ( VSchemaRelease ( schema ) );
-}
-
-FIXTURE_TEST_CASE ( View_Instantiate, ViewFixture )
-{
-    FAIL("not implemented");
 }
 
 //////////////////////////////////////////// Main

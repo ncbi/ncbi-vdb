@@ -613,6 +613,8 @@ FIXTURE_TEST_CASE( ViewCursor_Join_NullKey, ViewOnTableCursorFixture )
 
 //TODO: external function call in a view parameter's productions
 
+//TODO: cursor for a view alias defined in a database
+
 #include "test-view-on-view-cursor.cpp"
 
 //////////////////////////////////////////// Main
