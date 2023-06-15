@@ -53,7 +53,7 @@ TEST_CASE(TryPost) {
     REQUIRE_RC(KNSManagerMake(&kns));
     KClientHttpRequest *req = NULL;
     REQUIRE_RC(KNSManagerMakeRequest(kns, &req, 0x01010000, NULL,
-        "https://nlm.nih.gov"));
+        "https://www.nlm.nih.gov"));
     KClientHttpResult * rslt = NULL;
     REQUIRE_RC(KClientHttpRequestPOST(req, &rslt));
     REQUIRE_RC(KClientHttpResultRelease(rslt));
