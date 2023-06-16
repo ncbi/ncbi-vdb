@@ -806,7 +806,7 @@ LocateAlias( const VSchema & p_schema, const String & p_name )
     while ( i < VectorLength( & p_schema . alias ) )
     {
         const KSymbol * s = (const KSymbol *)VectorGet( & p_schema . alias, i );
-        if ( StringCompare( & s -> name, & p_name ) == 0 )
+        if ( s != nullptr && StringCompare( & s -> name, & p_name ) == 0 )
         {
             return s;
         }
