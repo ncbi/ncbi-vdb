@@ -805,7 +805,7 @@ LocateAlias( const VSchema & p_schema, const String & p_name )
     uint32_t i = 0;
     while ( i < VectorLength( & p_schema . alias ) )
     {
-        const KSymbol * s = (const KSymbol *)VectorGet( & p_schema . alias, i );
+        const KSymbol * s = (const KSymbol *)VectorGet( & p_schema . alias, VectorStart( & p_schema . alias ) + i );
         if ( s != nullptr && StringCompare( & s -> name, & p_name ) == 0 )
         {
             return s;
@@ -847,7 +847,8 @@ ASTBuilder :: AliasDef  ( ctx_t ctx, const Token* p_token, AST_FQN* p_name, AST_
             const KSymbol * fqnSym = CreateFqnSymbol ( ctx, * p_newName, sym -> type, sym -> u . obj );
             if ( fqnSym != 0 )
             {
-                VectorAppend ( ctx, m_schema -> alias, 0, fqnSym );
+                uint32_t idx;
+                VectorAppend ( ctx, m_schema -> alias, &idx, fqnSym );
             }
         }
     }
