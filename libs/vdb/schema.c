@@ -984,9 +984,8 @@ rc_t VSchemaParseTextCallback ( VSchema *self, const char *name,
     {
         uint8_t version;
 
-version=1;
-//        rc = KConfigGetSchemaParserVersion( kfg , & version );
-//        if ( rc == 0 )
+        rc = KConfigGetSchemaParserVersion( kfg , & version );
+        if ( rc == 0 )
         {
             switch (version)
             {
