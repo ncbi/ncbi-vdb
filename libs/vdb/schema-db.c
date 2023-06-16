@@ -109,7 +109,7 @@ bool CC SViewAliasMemberDefDump ( void *item, void *dumper )
 
     b -> rc = SDumperPrint ( b, "\talias " );
     if ( b -> rc == 0 )
-        b -> rc = SDumperPrint ( b, " %N < \n", self -> view . dad -> name );
+        b -> rc = SDumperPrint ( b, " %N < ", self -> view . dad -> name );
     if ( b -> rc == 0 )
     {
         VectorDoUntil ( & self -> view . params, false, DumpIdent, b );

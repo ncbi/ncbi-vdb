@@ -831,7 +831,7 @@ ASTBuilder :: AliasDef  ( ctx_t ctx, const Token* p_token, AST_FQN* p_name, AST_
         const KSymbol * previous = Resolve ( ctx, * p_newName, false ); // will not report unknown name
         if ( previous != 0 )
         {   // Allow benign redefine
-            // locate in m_schema -> alias
+            // locate in m_schema -> alias or its parents
             const KSymbol * existing_alias = LocateAlias( * m_schema, previous -> name );
             if ( existing_alias == nullptr )
             {
@@ -847,8 +847,7 @@ ASTBuilder :: AliasDef  ( ctx_t ctx, const Token* p_token, AST_FQN* p_name, AST_
             const KSymbol * fqnSym = CreateFqnSymbol ( ctx, * p_newName, sym -> type, sym -> u . obj );
             if ( fqnSym != 0 )
             {
-                uint32_t idx;
-                VectorAppend ( ctx, m_schema -> alias, &idx, fqnSym );
+                VectorAppend ( ctx, m_schema -> alias, 0, fqnSym );
             }
         }
     }

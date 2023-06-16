@@ -57,6 +57,16 @@ static const char* TableName_2 = "p";
 static const char* TableColumnName = "c1";
 static const char* TableParamName = "tbl";
 
+FIXTURE_TEST_CASE ( ViewAlias_DumpSchema, WVDB_v2_Fixture )
+{
+    REQUIRE_RC ( VDBManagerMakeUpdate ( & m_mgr, NULL ) );
+    VSchema * schema = nullptr;
+    REQUIRE_RC ( VDBManagerMakeSchema ( m_mgr, & schema ) );
+    ParseSchema ( schema, BaseSchemaText );
+    string d = DumpSchema( * schema );
+    REQUIRE_EQ( BaseSchemaText, d );
+}
+
 class ViewFixture : public WVDB_v2_Fixture
 {
 public:

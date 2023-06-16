@@ -27,6 +27,7 @@
 
 #include <string>
 #include <cmath>
+#include <sstream>
 
 #include <kfc/except.h>
 
@@ -173,6 +174,27 @@ public:
     {
         return std :: string ( p_str . addr, p_str . len );
     }
+
+    #include <sstream>
+    static std :: string DumpSchema(const VSchema & p_schema)
+    {
+
+        auto FlushSchema = [](void *fd, const void * buffer, size_t size) -> rc_t
+        {
+            std :: ostream & out = *static_cast < std :: ostream * > (fd);
+            out.write(static_cast < const char * > (buffer), size);
+            out.flush();
+            return 0;
+        };
+
+        std :: ostringstream out;
+        if (VSchemaDump( & p_schema, sdmPrint, 0, FlushSchema, &out) != 0)
+        {
+            throw std :: runtime_error("DumpSchema failed");
+        }
+        return out.str();
+    }
+
 
     std :: string   m_databaseName;
     VDBManager *    m_mgr;
