@@ -695,34 +695,46 @@ ASTBuilder :: FmtDef ( ctx_t ctx, const Token* p_token, AST_FQN* p_fqn, AST_FQN*
         ret -> AddNode ( ctx, p_super_opt );
     }
 
-    SFormat * fmt = Alloc < SFormat > ( ctx );
-    if ( fmt != 0 )
+    // allow redefinition (always benign)
+    const KSymbol* previous = Resolve ( ctx, * p_fqn, false ); // will not report undefined
+    if ( previous != 0 )
     {
-        // superfmt
-        fmt -> super = 0;
-        if ( p_super_opt != 0 )
+        if ( previous -> type != eFormat )
         {
-            const KSymbol* super = Resolve ( ctx, * p_super_opt ); // will report undefined
-            if ( super != 0 )
+            ReportError ( ctx, "Objject already declared", * p_fqn );
+        }
+    }
+    else
+    {
+        SFormat * fmt = Alloc < SFormat > ( ctx );
+        if ( fmt != 0 )
+        {
+            // superfmt
+            fmt -> super = 0;
+            if ( p_super_opt != 0 )
             {
-                if ( super -> type != eFormat )
+                const KSymbol* super = Resolve ( ctx, * p_super_opt ); // will report undefined
+                if ( super != 0 )
                 {
-                    ReportError ( ctx, "Not a format", * p_super_opt );
-                    SFormatWhack ( fmt, 0 );
-                    return ret;
+                    if ( super -> type != eFormat )
+                    {
+                        ReportError ( ctx, "Not a format", * p_super_opt );
+                        SFormatWhack ( fmt, 0 );
+                        return ret;
+                    }
+                    fmt -> super = static_cast < const SFormat * > ( super -> u . obj );
                 }
-                fmt -> super = static_cast < const SFormat * > ( super -> u . obj );
             }
-        }
 
-        /* insert into vector */
-        if ( VectorAppend ( ctx, m_schema -> fmt, & fmt -> id, fmt ) )
-        {   // create a symtab entry, link fmt to it
-            fmt -> name = CreateFqnSymbol ( ctx, * p_fqn, eFormat, fmt ); // will add missing namespaces to symtab
-        }
-        else
-        {
-            SFormatWhack ( fmt, 0 );
+            /* insert into vector */
+            if ( VectorAppend ( ctx, m_schema -> fmt, & fmt -> id, fmt ) )
+            {   // create a symtab entry, link fmt to it
+                fmt -> name = CreateFqnSymbol ( ctx, * p_fqn, eFormat, fmt ); // will add missing namespaces to symtab
+            }
+            else
+            {
+                SFormatWhack ( fmt, 0 );
+            }
         }
     }
 
@@ -785,6 +797,28 @@ ASTBuilder :: ConstDef  ( ctx_t ctx, const Token* p_token, AST* p_type, AST_FQN*
     return ret;
 }
 
+// look up an alias in a schema inheritance chain
+static
+const KSymbol *
+LocateAlias( const VSchema & p_schema, const String & p_name )
+{
+    uint32_t i = 0;
+    while ( i < VectorLength( & p_schema . alias ) )
+    {
+        const KSymbol * s = (const KSymbol *)VectorGet( & p_schema . alias, VectorStart( & p_schema . alias ) + i );
+        if ( s != nullptr && StringCompare( & s -> name, & p_name ) == 0 )
+        {
+            return s;
+        }
+        ++i;
+    }
+    if ( p_schema . dad != nullptr )
+    {
+        return LocateAlias( * p_schema . dad, p_name );
+    }
+    return nullptr;
+}
+
 AST *
 ASTBuilder :: AliasDef  ( ctx_t ctx, const Token* p_token, AST_FQN* p_name, AST_FQN* p_newName )
 {
@@ -794,10 +828,28 @@ ASTBuilder :: AliasDef  ( ctx_t ctx, const Token* p_token, AST_FQN* p_name, AST_
     const KSymbol * sym = Resolve ( ctx, * p_name ); // will report unknown name
     if ( sym != 0 )
     {
-        const KSymbol * fqnSym = CreateFqnSymbol ( ctx, * p_newName, sym -> type, sym -> u . obj );
-        if ( fqnSym != 0 )
+        const KSymbol * previous = Resolve ( ctx, * p_newName, false ); // will not report unknown name
+        if ( previous != 0 )
+        {   // Allow benign redefine
+            // locate in m_schema -> alias
+            const KSymbol * existing_alias = LocateAlias( * m_schema, previous -> name );
+            if ( existing_alias == nullptr )
+            {
+                ReportError ( ctx, "Already declared and is not an alias", * p_newName );
+            }
+            else if ( existing_alias -> u . obj != sym -> u . obj )
+            {
+                ReportError ( ctx, "Alias already declared differently", * p_newName );
+            }
+        }
+        else
         {
-            VectorAppend ( ctx, m_schema -> alias, 0, fqnSym );
+            const KSymbol * fqnSym = CreateFqnSymbol ( ctx, * p_newName, sym -> type, sym -> u . obj );
+            if ( fqnSym != 0 )
+            {
+                uint32_t idx;
+                VectorAppend ( ctx, m_schema -> alias, &idx, fqnSym );
+            }
         }
     }
 

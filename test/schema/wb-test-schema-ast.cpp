@@ -519,6 +519,10 @@ FIXTURE_TEST_CASE(Format_SuperWrong, AST_Fixture)
 {
     VerifyErrorMessage ( "typedef U8 s; fmtdef s f;", "Not a format: 's'" );
 }
+FIXTURE_TEST_CASE(Format_Redeclaration, AST_Fixture)
+{
+    MakeAst ( "fmtdef s; fmtdef s;" );
+}
 
 ///////// const
 
@@ -704,6 +708,37 @@ FIXTURE_TEST_CASE(AliasedTypesetInTypeset, AST_Fixture)
 {
     MakeAst ( "typeset ts1 { U8 }; alias ts1 ats; typeset ts2 { ats };" );
     VerifySymbol ( "ts2", eTypeset );
+}
+
+FIXTURE_TEST_CASE(Alias_Redefinition_Benign, AST_Fixture)
+{
+    MakeAst ( "typeset ts1 { U8 }; alias ts1 ats; alias ts1 ats; " );
+}
+FIXTURE_TEST_CASE(Alias_Redefinition_Benign_FromParent, AST_Fixture)
+{
+    MakeAst  ( "typeset ts1 { U8 }; alias ts1 ats;"  );
+
+    VSchema * child;
+    REQUIRE_RC ( VSchemaMake ( &child, m_schema ) );
+
+    string child_source = "alias ts1 ats;";
+    REQUIRE_RC ( VSchemaParseText ( child, 0, child_source . c_str (), child_source . size () ) );
+}
+
+FIXTURE_TEST_CASE(Alias_Redefinition_DifferentSource, AST_Fixture)
+{
+    VerifyErrorMessage (
+        "typeset ts1 { U8 }; alias ts1 ats; alias U8 ats; ",
+        "Alias already declared differently: 'ats'"
+    );
+
+}
+FIXTURE_TEST_CASE(Alias_Redefinition_NotAlias, AST_Fixture)
+{
+    VerifyErrorMessage (
+        "typeset ts1 { U8 }; alias ts1 ats; alias ts1 ts1; ",
+        "Already declared and is not an alias: 'ts1'"
+    );
 }
 
 // include
