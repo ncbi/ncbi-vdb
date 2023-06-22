@@ -714,6 +714,11 @@ TEST_CASE ( VersionOther )
     REQUIRE ( ! SchemaParser () . ParseString ( ctx, "version 3.14; $" ) );
 }
 
+TEST_CASE ( Version2_Empty )
+{
+    ParseAndVerify ( "version 2;" );
+}
+
 TEST_CASE ( Version2_Decl1 )
 {
     ParseAndVerify ( "version 2; include \"qq\";" );

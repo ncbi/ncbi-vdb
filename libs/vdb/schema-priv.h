@@ -1518,9 +1518,14 @@ rc_t SViewExtend ( struct KSymTable *tbl, SView *self, const SView *dad );
  */
 void SViewWhack ( void *self, void *ignore );
 
-/* Whack
+/* Mark
  */
 void SViewMark ( void *self, void *ignore );
+
+/* Dump
+ */
+bool CC SViewDefDump ( void *item, void *dumper );
+rc_t SViewDump ( const SView *self, struct SDumper *d );
 
 /* Cmp
  * Sort

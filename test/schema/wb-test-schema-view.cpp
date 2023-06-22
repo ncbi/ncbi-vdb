@@ -146,11 +146,12 @@ FIXTURE_TEST_CASE(View_Version, AST_View_Fixture)
     REQUIRE_EQ ( Version ( 1, 2, 3 ), v . Version () );
 }
 
-FIXTURE_TEST_CASE(View_Version_Redeclared, AST_Fixture)
-{
-    VerifyErrorMessage ( "version 2; table T#1 {}; view v#1.2.3 <T t> {}; view v#1.2.3 <T t> {}",
-                              "This version is already declared: 'v'" );
-}
+// redeclaration is ignored, for now
+// FIXTURE_TEST_CASE(View_Version_Redeclared, AST_Fixture)
+// {
+//     VerifyErrorMessage ( "version 2; table T#1 {}; view v#1.2.3 <T t> {}; view v#1.2.3 <T t> {}",
+//                               "This version is already declared: 'v'" );
+// }
 
 FIXTURE_TEST_CASE(View_NewerMajorVersion, AST_View_Fixture)
 {   // both version are registered

@@ -37,6 +37,8 @@
 #include <klib/symtab.h>
 #include <klib/log.h>
 #include <klib/rc.h>
+#include <kfg/config.h>
+#include <kfg/properties.h>
 #include <os-native.h>
 #include <sysalloc.h>
 
@@ -491,10 +493,18 @@ bool VSchemaDumpInt ( const VSchema *self, SDumper *b, int dump_class )
     if ( self -> dad == NULL )
     {
 #if SLVL >= 1
-        if ( SDumperMode ( b ) == sdmCompact )
-            SDumperPrint ( b, "version 1;" );
-        else
-            SDumperPrint ( b, "version 1;\n" );
+        KConfig * kfg;
+        b -> rc = KConfigMake ( & kfg, NULL );
+        if ( b -> rc == 0 )
+        {
+            uint8_t version;
+            b -> rc = KConfigGetSchemaParserVersion( kfg , & version );
+            if ( b -> rc == 0 )
+                    b -> rc = SDumperPrint ( b, "version %u;", version );
+            if ( b -> rc == 0 && SDumperMode ( b ) != sdmCompact )
+                    b -> rc = SDumperPrint ( b, "\n" );
+            KConfigRelease ( kfg );
+        }
 #endif
         return false;
     }
@@ -535,9 +545,13 @@ bool VSchemaDumpInt ( const VSchema *self, SDumper *b, int dump_class )
     if ( ( dump_class == 0 || dump_class == sdcTables ) &&
          VectorDoUntil ( & self -> tbl, false, STableDefDump, b ) )
         return true;
+    if ( ( dump_class == 0 || dump_class == sdcViews ) &&
+         VectorDoUntil ( & self -> view, false, SViewDefDump, b ) )
+        return true;
     if ( ( dump_class == 0 || dump_class == sdcDatabases ) &&
          VectorDoUntil ( & self -> db, false, SDatabaseDefDump, b ) )
         return true;
+
 #endif
     return false;
 }
@@ -590,6 +604,9 @@ LIB_EXPORT rc_t CC VSchemaDump ( const VSchema *self, uint32_t mode, const char 
             break;
         case eDatabase:
             SDatabaseMark ( ( void * )obj, ( void * )self );
+            break;
+        case eView:
+            SViewMark ( ( void * )obj, ( void * )self );
             break;
         }
         else if ( name != NULL ) switch ( type )

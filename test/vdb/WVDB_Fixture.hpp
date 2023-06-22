@@ -39,6 +39,7 @@
 #include <vdb/cursor.h>
 #include <vdb/table.h>
 
+#include "../libs/vdb/schema-priv.h"
 #include "../libs/schema/SchemaParser.hpp"
 #include "../libs/schema/ASTBuilder.hpp"
 
@@ -176,7 +177,7 @@ public:
     }
 
     #include <sstream>
-    static std :: string DumpSchema(const VSchema & p_schema)
+    static std :: string DumpSchema(VSchema & p_schema, bool compact = true)
     {
 
         auto FlushSchema = [](void *fd, const void * buffer, size_t size) -> rc_t
@@ -187,11 +188,24 @@ public:
             return 0;
         };
 
+        bool free_intrinsic = false;
+        if ( p_schema . dad == nullptr )
+        {
+            THROW_ON_RC( VSchemaMakeIntrinsic ( (VSchema**) & p_schema . dad ) );
+            free_intrinsic = true;
+        }
         std :: ostringstream out;
-        if (VSchemaDump( & p_schema, sdmPrint, 0, FlushSchema, &out) != 0)
+        bool failed = VSchemaDump( & p_schema, compact ? sdmCompact : sdmPrint, 0, FlushSchema, &out);
+        if ( free_intrinsic )
+        {
+            VSchemaRelease( p_schema.dad );
+            p_schema.dad = nullptr;
+        }
+        if ( failed )
         {
             throw std :: runtime_error("DumpSchema failed");
         }
+
         return out.str();
     }
 

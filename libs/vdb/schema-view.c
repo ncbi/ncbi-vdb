@@ -32,6 +32,7 @@
 
 #include "schema-priv.h"
 #include "schema-parse.h"
+#include "schema-dump.h"
 
 /* Cmp
  * Sort
@@ -137,6 +138,84 @@ void CC SViewMark ( void * item, void * data )
         self -> marked = true;
     }
 }
+
+rc_t CC SViewDump ( const SView *self, struct SDumper *d )
+{
+    d -> rc = FQNDump ( self != NULL ? self -> name : NULL, d );
+    if ( d -> rc == 0 && self != NULL )
+        d -> rc = SDumperVersion ( d, self -> version );
+    return d -> rc;
+}
+
+bool CC SViewDefDump ( void *item, void *data )
+{
+    SDumper *b = data;
+    const SView *self = ( const void* ) item;
+
+    if ( SDumperMarkedMode ( b ) && ! self -> marked )
+        return false;
+
+    b -> rc = SDumperPrint ( b, "\tview %N", self -> name );
+
+    if ( b -> rc == 0 )
+        b -> rc = SDumperVersion ( b, self -> version );
+
+    if ( b -> rc == 0 )
+        b -> rc = SDumperPrint ( b, "<" );
+    if ( b -> rc == 0 )
+        for ( uint32_t i = 0; i < VectorLength( & self -> params ); ++i )
+        {
+            if ( b -> rc == 0 && i > 0 )
+            {
+                b -> rc = SDumperPrint ( b, "," );
+                if ( b -> rc == 0 && SDumperMode ( b ) != sdmCompact )
+                    b -> rc = SDumperPrint ( b, " " );
+            }
+            const KSymbol * s = VectorGet( & self -> params, VectorStart ( & self -> params ) + i );
+            if ( b -> rc == 0 )
+            {
+                if ( s -> type == eTable )
+                {
+                    const STable * param = (const STable *) s -> u . obj;
+                    b -> rc = SDumperPrint ( b, "%N %N", param -> name, s );
+                }
+                else // assume view
+                {
+                    const SView * param = (const SView *) s -> u . obj;
+                    b -> rc = SDumperPrint ( b, "%N %N", param -> name, s );
+                }
+            }
+        }
+    if ( b -> rc == 0 )
+        b -> rc = SDumperPrint ( b, ">" );
+
+    if ( b -> rc == 0 && VectorLength( & self -> parents ) > 0 )
+    {
+        b -> rc = SDumperPrint ( b, "=" );
+        //TODO: iterate over self->parents
+    }
+
+    if ( SDumperMode ( b ) != sdmCompact )
+        b -> rc = SDumperPrint ( b, "\n" );
+    if ( b -> rc == 0 )
+        b -> rc = SDumperPrint ( b, "{" );
+    if ( SDumperMode ( b ) != sdmCompact )
+        b -> rc = SDumperPrint ( b, "\n" );
+
+    SDumperIncIndentLevel ( b );
+
+    // same as Table
+
+    SDumperDecIndentLevel ( b );
+
+    if ( b -> rc == 0 )
+        b -> rc = SDumperPrint ( b, "\t}" );
+    if ( SDumperMode ( b ) != sdmCompact )
+        b -> rc = SDumperPrint ( b, "\n" );
+
+    return ( b -> rc != 0 ) ? true : false;
+}
+
 
 /* Cmp
  * Sort

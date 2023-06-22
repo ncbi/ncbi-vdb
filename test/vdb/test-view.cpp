@@ -45,11 +45,11 @@ using namespace ncbi :: SchemaParser;
 TEST_SUITE( ViewTestSuite )
 
 static string BaseSchemaText =
-    "version 2.0;"
-    "table T#1 { column ascii c1; };"
-    "table P#1 { column ascii c1; };"
-    "view V#1 < T tbl > {};"
-    "database DB#1 { table T t; table P p; alias V< t > view_alias; };"
+    "version 2;"
+    "table T#1{column ascii c1;}"
+    "table P#1{column ascii c1;}"
+    "view V#1<T tbl>{}"
+    "database DB#1{table T#1 t;table P#1 p;alias V#1<t> view_alias;}"
     ;
 
 static const char* TableName_1 = "t";
@@ -57,14 +57,53 @@ static const char* TableName_2 = "p";
 static const char* TableColumnName = "c1";
 static const char* TableParamName = "tbl";
 
-FIXTURE_TEST_CASE ( ViewAlias_DumpSchema, WVDB_v2_Fixture )
+const string CompactSchemaText =
+    "version 2;"
+    "table T#1{column ascii c1;}"
+    "table P#1{column ascii c1;}"
+    "view V#1<T tbl1,T tbl2>{}"
+    "database DB#1{table T#1 t;table P#1 p;alias V#1<t,t> view_alias;}"
+;
+
+FIXTURE_TEST_CASE ( ViewAlias_DumpSchema_Compact, WVDB_v2_Fixture )
 {
     REQUIRE_RC ( VDBManagerMakeUpdate ( & m_mgr, NULL ) );
     VSchema * schema = nullptr;
     REQUIRE_RC ( VDBManagerMakeSchema ( m_mgr, & schema ) );
-    ParseSchema ( schema, BaseSchemaText );
+    ParseSchema ( schema, CompactSchemaText );
     string d = DumpSchema( * schema );
-    REQUIRE_EQ( BaseSchemaText, d );
+    REQUIRE_EQ( CompactSchemaText, d );
+}
+
+FIXTURE_TEST_CASE ( ViewAlias_DumpSchema_Full, WVDB_v2_Fixture )
+{
+    const string FullSchemaText =
+        "version 2;\n"
+        "table T #1\n"
+        "{\n"
+        "\tcolumn ascii c1;\n"
+        "}\n"
+        "table P #1\n"
+        "{\n"
+        "\tcolumn ascii c1;\n"
+        "}\n"
+        "view V #1<T tbl1, T tbl2>\n"
+        "{\n"
+        "}\n"
+        "database DB #1\n"
+        "{\n"
+        "\ttable T #1 t;\n"
+        "\ttable P #1 p;\n"
+        "\talias V #1<t, t> view_alias;\n"
+        "}\n"
+    ;
+
+    REQUIRE_RC ( VDBManagerMakeUpdate ( & m_mgr, NULL ) );
+    VSchema * schema = nullptr;
+    REQUIRE_RC ( VDBManagerMakeSchema ( m_mgr, & schema ) );
+    ParseSchema ( schema, CompactSchemaText );
+    string d = DumpSchema( * schema, false );
+    REQUIRE_EQ(  FullSchemaText, d );
 }
 
 class ViewFixture : public WVDB_v2_Fixture
