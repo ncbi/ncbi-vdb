@@ -107,7 +107,7 @@ public:
 };
 TempDir tempDir;
 #endif
-#if 0
+
 // this test case is not very useful but is here as a blueprint for other write-side tests
 FIXTURE_TEST_CASE ( BlobCorruptOnCommit, WVDB_Fixture)
 {
@@ -210,7 +210,7 @@ FIXTURE_TEST_CASE ( ColumnOpenMetadata, WVDB_Fixture )
         REQUIRE_RC ( VTableRelease ( table ) );
     }
 }
-#endif
+
 FIXTURE_TEST_CASE ( VTableDropColumn_PhysicalColumn, WVDB_Fixture )
 {
     string schemaText = "table table1 #1.0.0 { column ascii column1; column ascii column2; };"
@@ -274,7 +274,7 @@ FIXTURE_TEST_CASE ( VTableDropColumn_PhysicalColumn, WVDB_Fixture )
         REQUIRE_RC ( VTableRelease ( table ) );
     }
 }
-#if 0
+
 FIXTURE_TEST_CASE ( CreateTableInNestedDatabase, WVDB_Fixture )
 {   // VDB-1617: VDatabaseOpenTableRead inside a nested database segfaults
     string schemaText =
@@ -898,7 +898,7 @@ FIXTURE_TEST_CASE ( KDBManager_Leak, WVDB_Fixture )
         REQUIRE_RC ( VDBManagerRelease ( mgr ) );
     }
 }
-#endif
+
 //////////////////////////////////////////// Main
 extern "C"
 {

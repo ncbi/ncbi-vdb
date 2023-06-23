@@ -31,6 +31,7 @@
 
 #include <vdb/cursor.h>
 
+#include "database-priv.h"
 #include "table-priv.h"
 #include "column-priv.h"
 #include "schema-parse.h"
@@ -133,6 +134,79 @@ VViewRelease ( const VView * p_self )
     return 0;
 }
 
+/*
+* Locate a view by name in a schema chain
+*/
+static
+const SView *
+LocateView( const struct VSchema * p_schema,
+            const char *           p_name)
+{
+    uint32_t i;
+    uint32_t start = VectorStart ( & p_schema -> view );
+    uint32_t count = VectorLength ( & p_schema -> view );
+    String name;
+    StringInitCString ( & name, p_name );
+    for ( i = 0; i < count; ++ i )
+    {
+        const SView * v = ( const SView * ) VectorGet ( & p_schema -> view, start + i );
+        /* for now, grab the first view with the given name */
+        /*TODO: pick the best version */
+        if ( StringCompare ( & v -> name -> name, & name ) == 0 )
+        {
+            return v;
+        }
+    }
+    if ( p_schema -> dad )
+    {
+        return LocateView( p_schema -> dad, p_name );
+    }
+    return NULL;
+}
+
+static
+rc_t
+OpenView(struct VLinker const * p_linker,
+         const VView **         p_view,
+         const struct VSchema * p_schema,
+         const char *           p_name)
+{
+    rc_t rc = 0;
+    /* create a structure */
+    VView * view = calloc ( sizeof * view, 1 );
+    if ( view == NULL )
+    {
+        rc = RC ( rcVDB, rcTable, rcConstructing, rcMemory, rcExhausted );
+    }
+    else
+    {
+        const SView * v = LocateView( p_schema, p_name );
+        if ( v != NULL )
+        {
+            rc = VLinkerMake ( & view -> linker, p_linker, p_linker -> dl );
+            if ( rc == 0 )
+            {
+                rc = VSchemaAddRef ( p_schema );
+                if ( rc == 0 )
+                {
+                    KRefcountInit ( & view -> refcount, 1, "VView", "make", "vtbl" );
+                    view -> sview = v;
+                    view -> schema = p_schema;
+                    VectorInit ( & view -> bindings, 0, 8 );
+                    * p_view = view;
+                    return 0;
+                }
+                VLinkerRelease ( view -> linker );
+            }
+        }
+        rc = RC ( rcVDB, rcTable, rcConstructing, rcTable, rcUnknown );
+        free ( view );
+    }
+
+    * p_view = NULL;
+    return rc;
+}
+
 /* OpenView
  *  open a view for read using manager.
  *
@@ -161,51 +235,50 @@ VDBManagerOpenView ( struct VDBManager const *   p_mgr,
     }
     else
     {
-        /* create a structure */
-        VView * view = calloc ( sizeof * view, 1 );
-        if ( view == NULL )
-        {
-            rc = RC ( rcVDB, rcTable, rcConstructing, rcMemory, rcExhausted );
-        }
-        else
-        {
-            uint32_t i;
-            uint32_t start = VectorStart ( & p_schema -> view );
-            uint32_t count = VectorLength ( & p_schema -> view );
-            String name;
-            StringInitCString ( & name, p_name );
-            for ( i = 0; i < count; ++ i )
-            {
-                const SView * v = ( const SView * ) VectorGet ( & p_schema -> view, start + i );
-                /* for now, grab the first view with the given name */
-                /*TODO: pick the best version */
-                if ( StringCompare ( & v -> name -> name, & name ) == 0 )
-                {
-                    rc = VLinkerMake ( & view -> linker, p_mgr -> linker, p_mgr -> linker -> dl );
-                    if ( rc == 0 )
-                    {
-                        rc = VSchemaAddRef ( p_schema );
-                        if ( rc == 0 )
-                        {
-                            KRefcountInit ( & view -> refcount, 1, "VView", "make", "vtbl" );
-                            view -> sview = v;
-                            view -> schema = p_schema;
-                            VectorInit ( & view -> bindings, 0, 8 );
-                            * p_view = view;
-                            return 0;
-                        }
-                        VLinkerRelease ( view -> linker );
-                    }
-                }
-            }
-            rc = RC ( rcVDB, rcTable, rcConstructing, rcTable, rcUnknown );
-            free ( view );
-        }
-
-        * p_view = NULL;
+        return OpenView( p_mgr -> linker, p_view, p_schema, p_name );
     }
 
     return rc;
+}
+
+static
+rc_t
+SViewAliasMember_Bind( const SViewInstance * p_self, struct VDatabase const * p_db, const VView * view )
+{
+    uint32_t start = VectorStart ( & p_self -> params );
+    uint32_t count = VectorLength ( & p_self -> params );
+    for ( uint32_t i = 0; i < count; ++i )
+    {
+        const KSymbol * param = VectorGet ( & p_self -> params, start + i );
+        assert( param );
+        if ( param -> type == eTblMember )
+        {
+            const VTable * t;
+            rc_t rc = VDatabaseOpenTableRead( p_db, &t, "%.*s", (int)param -> name . size, param -> name . addr );
+            if ( rc == 0 )
+            {
+                const String * formal_name;
+                bool is_table;
+                rc = VViewGetParameter( view, i, & formal_name, & is_table );
+                if ( rc == 0 )
+                {
+                    assert( is_table );
+                    rc = VViewBindParameterTable ( view, formal_name, t );
+                }
+                VTableRelease( t );
+            }
+            if ( rc != 0 )
+            {
+                return rc;
+            }
+        }
+        else
+        {
+            assert( param->type == eViewAliasMember);
+            assert(false);
+        }
+    }
+    return 0;
 }
 
 /* VDatabaseOpenView
@@ -222,11 +295,44 @@ VDB_EXTERN rc_t CC VDatabaseOpenView (
     const VView **              p_view,
     const char *                p_name )
 {
-    rc_t rc;
+    rc_t rc = 0;
 
     if ( p_self == NULL )
     {
         rc = RC ( rcVDB, rcTable, rcOpening, rcSelf, rcNull );
+    }
+    else if ( p_view == NULL )
+    {
+        rc = RC ( rcVDB, rcTable, rcOpening, rcParam, rcNull );
+    }
+    else
+    {
+        String name;
+        StringInitCString( & name, p_name );
+        const Vector * views = & p_self -> sdb -> aliases;
+        for( uint32_t i = 0; i < VectorLength( views ); ++i )
+        {
+            const SViewAliasMember * al = VectorGet( views, VectorStart( views ) + i );
+            if ( StringCompare( & name, & al -> name -> name ) == 0 )
+            {
+                rc = OpenView(
+                        p_self -> mgr -> linker,
+                        p_view,
+                        p_self -> schema,
+                        al -> view . dad -> name -> name . addr );
+                if ( rc == 0 )
+                {   // open and bind parameters
+                    rc = SViewAliasMember_Bind( & al -> view, p_self, *p_view );
+                    if ( rc != 0 )
+                    {
+                        VViewRelease( *p_view );
+                        *p_view = 0;
+                    }
+                    return rc;
+                }
+            }
+        }
+        rc = RC ( rcVDB, rcTable, rcOpening, rcName, rcNotFound );
     }
 
     return rc;
