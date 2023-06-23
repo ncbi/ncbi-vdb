@@ -331,6 +331,32 @@ FIXTURE_TEST_CASE(GCP_AddUserPays_AccessTokenRefreshCloseToExpiration, GCP_Fixtu
     REQUIRE_RC ( KClientHttpRequestRelease ( req ) );
 }
 
+TEST_CASE( Parse_Access_Token )
+{// VDB-5300
+    const char * json = "{\"access_token\":\"ya29.c.b0Aaekm1KHnhBBtg-LyS7f14YPluMdtJ69aJhldY6t4ghugyK7WIBDZ2Db9tcI06CIToW4B4b7bxzV5Z1brLQlM987VHBNssc0MzTZ-Va6Lw6TCw_c3y0B6sjr619f-YnU1OCkwl-ftLe0hlyEywtDHzYJm-SJWuJA3WmsXpJk-_2Mv9uDu"
+"1NhYFza0O5XtCfAcqngx5-fNrjXWTegjaFzRb9A761zxBkauLws40Q6ch73WSTm53EilbOTweKg2g86_0a8xlbs-_GeVJqO0Crq5EWp92Ou0mz4n5C7Ymuyac0rL0TAxjYI2_kc3RLsGV6SxplE1_xCH337Dy3ZrWQ_0WbOwsSBeIobSx5ljmOtgaBBoze3dq37Y_w-RSkY"
+"Z0X98rdBmF5crqjkwB3bX3a67jw29cfpb8Sxb1n7OdhvRc-2j1VJkVc4ZI6j3JMFxFaY-R7xVXX3-plr22mRmUJBouz-xOIj1kJb6xeqRu-5xU9X8Oj3X87Jjk-gzMmUrl4daFpMvu33zjqZXrQZdjYqOnUMlkQX0iojc8hmdy42gbrzlV2zr5UV4YaFgBV1kw9IrXlVZlq"
+"YzIJJv0zJJFpIMYzlFQzsQB-0U5Fze_frBWbeXR3Rd5yWO3VIYsywW4VWXadXv_dq_JdveBfqoxl_BQbRsoBoJc-BB29QM_Bl_-MSzdY_gBwYXh3rg9Mucha5SR20OkYQiS02tasxh0Jew0hI-u5rUo7MQB0wMzOyvfgW0x88bXYInB8fhjpZ7b0I4BfXmi3RIxfv4F8dV0"
+"-1SVeU6mlsRkyJ00eeFRn89bMxWuzZbIiUw9jcSlSl53RY_yk8krk9mb9_hSWwn4ft-ialSl0R86xJJfSBa6h0s02I4tvydmRpl3jxogS7bB8_6MjXyh-2We3UJ5Zok59_V0MlXmm4Fxt8OYIkjazhjJFUwIwe4m4MnrXRfmsJekiewaF57FFw77IfeUqt7h0kdBRonbB53"
+"kVJaV16IrSUxYwUhglMuxzljhU\",\"expires_in\":3599,\"token_type\":\"Bearer\"}";
+    char * token; 
+    KTime_t expiration;
+    REQUIRE_RC( ParseAccessToken( json, & token, & expiration ) );
+}
+TEST_CASE( Parse_Access_Token_Bad )
+{// VDB-5300, check protection against truncated json
+    const char * json = "{\"access_token\":\"ya29.c.b0Aaekm1KHnhBBtg-LyS7f14YPluMdtJ69aJhldY6t4ghugyK7WIBDZ2Db9tcI06CIToW4B4b7bxzV5Z1brLQlM987VHBNssc0MzTZ-Va6Lw6TCw_c3y0B6sjr619f-YnU1OCkwl-ftLe0hlyEywtDHzYJm-SJWuJA3WmsXpJk-_2Mv9uDu"
+"1NhYFza0O5XtCfAcqngx5-fNrjXWTegjaFzRb9A761zxBkauLws40Q6ch73WSTm53EilbOTweKg2g86_0a8xlbs-_GeVJqO0Crq5EWp92Ou0mz4n5C7Ymuyac0rL0TAxjYI2_kc3RLsGV6SxplE1_xCH337Dy3ZrWQ_0WbOwsSBeIobSx5ljmOtgaBBoze3dq37Y_w-RSkY"
+"Z0X98rdBmF5crqjkwB3bX3a67jw29cfpb8Sxb1n7OdhvRc-2j1VJkVc4ZI6j3JMFxFaY-R7xVXX3-plr22mRmUJBouz-xOIj1kJb6xeqRu-5xU9X8Oj3X87Jjk-gzMmUrl4daFpMvu33zjqZXrQZdjYqOnUMlkQX0iojc8hmdy42gbrzlV2zr5UV4YaFgBV1kw9IrXlVZlq"
+"YzIJJv0zJJFpIMYzlFQzsQB-0U5Fze_f";
+    char * token; 
+    KTime_t expiration;
+    REQUIRE_RC_FAIL( ParseAccessToken( json, & token, & expiration ) );
+}
+
+rc_t ParseAccessToken( const char * jsonResponse, char ** token, KTime_t * expiration );
+
+
 //////////////////////////////////////////// Main
 
 static rc_t argsHandler(int argc, char * argv[]) {
