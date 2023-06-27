@@ -192,7 +192,36 @@ bool CC SViewDefDump ( void *item, void *data )
     if ( b -> rc == 0 && VectorLength( & self -> parents ) > 0 )
     {
         b -> rc = SDumperPrint ( b, "=" );
-        //TODO: iterate over self->parents
+        for ( uint32_t i = 0; i < VectorLength( & self -> parents ); ++i )
+        {
+            if ( b -> rc == 0 && i > 0 )
+            {
+                b -> rc = SDumperPrint ( b, "," );
+                if ( b -> rc == 0 && SDumperMode ( b ) != sdmCompact )
+                    b -> rc = SDumperPrint ( b, " " );
+            }
+            if ( b -> rc == 0 )
+            {
+                const SViewInstance * p = VectorGet( & self -> parents, VectorStart ( & self -> parents ) + i );
+                b -> rc = SDumperPrint ( b, "%N<", p -> dad -> name );
+
+                for ( uint32_t j = 0; j < VectorLength( & p -> params ); ++j )
+                {
+                    if ( b -> rc == 0 && j > 0 )
+                    {
+                        b -> rc = SDumperPrint ( b, "," );
+                        if ( b -> rc == 0 && SDumperMode ( b ) != sdmCompact )
+                            b -> rc = SDumperPrint ( b, " " );
+                    }
+                    const KSymbol* param = VectorGet( & p -> params, VectorStart ( & p -> params ) + j );
+                    if ( b -> rc == 0 )
+                        b -> rc = SDumperPrint ( b, "%N", param );
+                }
+
+                if ( b -> rc == 0 )
+                    b -> rc = SDumperPrint ( b, ">" );
+            }
+        }
     }
 
     if ( SDumperMode ( b ) != sdmCompact )

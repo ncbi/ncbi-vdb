@@ -241,6 +241,11 @@ VDBManagerOpenView ( struct VDBManager const *   p_mgr,
     return rc;
 }
 
+static rc_t VDatabaseOpenViewInt(
+    struct VDatabase const *    p_self,
+    const VView **              p_view,
+    const String *              p_name);
+
 static
 rc_t
 SViewAliasMember_Bind( const SViewInstance * p_self, struct VDatabase const * p_db, const VView * view )
@@ -275,10 +280,60 @@ SViewAliasMember_Bind( const SViewInstance * p_self, struct VDatabase const * p_
         else
         {
             assert( param->type == eViewAliasMember);
-            assert(false);
+            const VView * v;
+            rc_t rc = VDatabaseOpenViewInt( p_db, & v, & param -> name );
+            if ( rc == 0 )
+            {
+                const String * formal_name;
+                bool is_table;
+                rc = VViewGetParameter( view, i, & formal_name, & is_table );
+                if ( rc == 0 )
+                {
+                    assert( ! is_table );
+                    rc = VViewBindParameterView ( view, formal_name, v );
+                }
+                VViewRelease( v );
+            }
+            if ( rc != 0 )
+            {
+                return rc;
+            }
         }
     }
     return 0;
+}
+
+static
+rc_t
+VDatabaseOpenViewInt(
+    struct VDatabase const *    p_self,
+    const VView **              p_view,
+    const String *              p_name)
+{
+    const Vector * views = & p_self -> sdb -> aliases;
+    for( uint32_t i = 0; i < VectorLength( views ); ++i )
+    {
+        const SViewAliasMember * al = VectorGet( views, VectorStart( views ) + i );
+        if ( StringCompare( p_name, & al -> name -> name ) == 0 )
+        {
+            rc_t rc = OpenView(
+                    p_self -> mgr -> linker,
+                    p_view,
+                    p_self -> schema,
+                    al -> view . dad -> name -> name . addr );
+            if ( rc == 0 )
+            {   // open and bind parameters
+                rc = SViewAliasMember_Bind( & al -> view, p_self, *p_view );
+                if ( rc != 0 )
+                {
+                    VViewRelease( *p_view );
+                    *p_view = 0;
+                }
+                return rc;
+            }
+        }
+    }
+    return RC ( rcVDB, rcTable, rcOpening, rcName, rcNotFound );
 }
 
 /* VDatabaseOpenView
@@ -309,30 +364,7 @@ VDB_EXTERN rc_t CC VDatabaseOpenView (
     {
         String name;
         StringInitCString( & name, p_name );
-        const Vector * views = & p_self -> sdb -> aliases;
-        for( uint32_t i = 0; i < VectorLength( views ); ++i )
-        {
-            const SViewAliasMember * al = VectorGet( views, VectorStart( views ) + i );
-            if ( StringCompare( & name, & al -> name -> name ) == 0 )
-            {
-                rc = OpenView(
-                        p_self -> mgr -> linker,
-                        p_view,
-                        p_self -> schema,
-                        al -> view . dad -> name -> name . addr );
-                if ( rc == 0 )
-                {   // open and bind parameters
-                    rc = SViewAliasMember_Bind( & al -> view, p_self, *p_view );
-                    if ( rc != 0 )
-                    {
-                        VViewRelease( *p_view );
-                        *p_view = 0;
-                    }
-                    return rc;
-                }
-            }
-        }
-        rc = RC ( rcVDB, rcTable, rcOpening, rcName, rcNotFound );
+        rc = VDatabaseOpenViewInt( p_self, p_view, & name );
     }
 
     return rc;

@@ -86,23 +86,29 @@ FIXTURE_TEST_CASE ( ViewAlias_DumpSchema_Full, WVDB_v2_Fixture )
         "{\n"
         "\tcolumn ascii c1;\n"
         "}\n"
-        "view V #1<T tbl1, T tbl2>\n"
+        "view V1 #1<T tbl1, T tbl2>\n"
+        "{\n"
+        "}\n"
+        "view V2 #1<T tbl1, T tbl2>\n"
+        "{\n"
+        "}\n"
+        "view V3 #1<T t1, T t2>=V1<t1, t2>, V2<t1, t2>\n"
         "{\n"
         "}\n"
         "database DB #1\n"
         "{\n"
         "\ttable T #1 t;\n"
         "\ttable P #1 p;\n"
-        "\talias V #1<t, t> view_alias;\n"
+        "\talias V1 #1<t, t> view_alias1;\n"
+        "\talias V3 #1<t, t> view_alias3;\n"
         "}\n"
     ;
 
     REQUIRE_RC ( VDBManagerMakeUpdate ( & m_mgr, NULL ) );
     REQUIRE_RC ( VDBManagerMakeSchema ( m_mgr, & m_schema ) );
-    ParseSchema ( m_schema, CompactSchemaText );
+    ParseSchema ( m_schema, FullSchemaText );
     string d = DumpSchema( * m_schema, false );
     REQUIRE_EQ(  FullSchemaText, d );
-    //TODO: dumping a view's parents (single and multiple)
 }
 
 class ViewFixture : public WVDB_v2_Fixture
@@ -725,8 +731,6 @@ FIXTURE_TEST_CASE ( OpenView, ViewFixture )
 //TODO: OpenView with an old version
 //TODO: OpenView with a non-existent version
 
-// VDatabaseOpenView (open a view alias)
-
 FIXTURE_TEST_CASE ( OpenViewAlias_BadSelf, ViewFixture )
 {
     CreateDb ( GetName() );
@@ -766,9 +770,104 @@ FIXTURE_TEST_CASE ( OpenViewAlias_ParamTable, ViewFixture )
     REQUIRE_RC( VCursorRelease ( cur ) );
 }
 
-//TODO: OpenViewAlias_ParamView
-//TODO: open alias from a parent db
-//TODO: OpenViewAlias_MultipleParams
+FIXTURE_TEST_CASE ( OpenViewAlias_ParamView, ViewFixture )
+{
+    m_schemaText =
+    "version 2;"
+    "table T#1{column ascii c1;}"
+    "table P#1{column ascii c1;}"
+
+    "view V1#1<T tbl>{ column ascii c = tbl.c1; }"
+    "view V2#1<V1 v> { column ascii d = v.c; }"
+
+    "database DB#1{ table T#1 t;table P#1 p; alias V1#1< t > va1; alias V2#1< va1 > va2; }"
+    ;
+    CreateDb ( GetName() );
+    REQUIRE_RC( VDatabaseOpenView ( m_db, & m_view, "va2" ) );
+    REQUIRE_NOT_NULL( m_view );
+
+    const VCursor * cur;
+    REQUIRE_RC( VViewCreateCursor ( m_view, & cur ) );
+    uint32_t idx;
+    REQUIRE_RC( VCursorAddColumn ( cur, & idx, "d" ) );
+    REQUIRE_RC( VCursorOpen ( cur ) );
+    char buf [1024];
+    uint32_t rowLen;
+    REQUIRE_RC( VCursorReadDirect ( cur, 1, idx, 8, buf, sizeof ( buf ), & rowLen ) );
+    REQUIRE_EQ( string("blah"), string(buf, rowLen) );
+    REQUIRE_RC( VCursorReadDirect ( cur, 2, idx, 8, buf, sizeof ( buf ), & rowLen ) );
+    REQUIRE_EQ( string("eeee"), string(buf, rowLen) );
+
+    REQUIRE_RC( VCursorRelease ( cur ) );
+}
+
+FIXTURE_TEST_CASE ( OpenViewAlias_FromParentDb, ViewFixture )
+{
+    m_schemaText =
+    "version 2;"
+    "table T#1{column ascii c1;}"
+    "table P#1{column ascii c1;}"
+
+    "view V1#1<T tbl>{ column ascii c = tbl.c1; }"
+    "view V2#1<V1 v> { column ascii d = v.c; }"
+
+    "database DB0#1{ table T#1 t;table P#1 p; }"
+    "database DB#1 = DB0{ alias V1#1< t > va1; alias V2#1< va1 > va2; }"
+    ;
+    CreateDb ( GetName() );
+    REQUIRE_RC( VDatabaseOpenView ( m_db, & m_view, "va2" ) );
+    REQUIRE_NOT_NULL( m_view );
+
+    const VCursor * cur;
+    REQUIRE_RC( VViewCreateCursor ( m_view, & cur ) );
+    uint32_t idx;
+    REQUIRE_RC( VCursorAddColumn ( cur, & idx, "d" ) );
+    REQUIRE_RC( VCursorOpen ( cur ) );
+    char buf [1024];
+    uint32_t rowLen;
+    REQUIRE_RC( VCursorReadDirect ( cur, 1, idx, 8, buf, sizeof ( buf ), & rowLen ) );
+    REQUIRE_EQ( string("blah"), string(buf, rowLen) );
+    REQUIRE_RC( VCursorReadDirect ( cur, 2, idx, 8, buf, sizeof ( buf ), & rowLen ) );
+    REQUIRE_EQ( string("eeee"), string(buf, rowLen) );
+
+    REQUIRE_RC( VCursorRelease ( cur ) );
+}
+
+FIXTURE_TEST_CASE ( OpenViewAlias_MultipleParams, ViewFixture )
+{
+    m_schemaText =
+    "version 2;"
+    "table T#1{column ascii c1;}"
+    "table P#1{column ascii c1;}"
+
+    "view V1#1<T t, P p>{ column ascii c_t = t.c1; column ascii c_p = p.c1; }"
+
+    "database DB#1{ table T#1 t;table P#1 p; alias V1#1< t, p > va; }"
+    ;
+    CreateDb ( GetName() );
+    REQUIRE_RC( VDatabaseOpenView ( m_db, & m_view, "va" ) );
+    REQUIRE_NOT_NULL( m_view );
+
+    const VCursor * cur;
+    REQUIRE_RC( VViewCreateCursor ( m_view, & cur ) );
+    uint32_t idx_t;
+    REQUIRE_RC( VCursorAddColumn ( cur, & idx_t, "c_t" ) );
+    uint32_t idx_p;
+    REQUIRE_RC( VCursorAddColumn ( cur, & idx_p, "c_p" ) );
+    REQUIRE_RC( VCursorOpen ( cur ) );
+    char buf [1024];
+    uint32_t rowLen;
+    REQUIRE_RC( VCursorReadDirect ( cur, 1, idx_t, 8, buf, sizeof ( buf ), & rowLen ) );
+    REQUIRE_EQ( string("blah"), string(buf, rowLen) );
+    REQUIRE_RC( VCursorReadDirect ( cur, 2, idx_t, 8, buf, sizeof ( buf ), & rowLen ) );
+    REQUIRE_EQ( string("eeee"), string(buf, rowLen) );
+    REQUIRE_RC( VCursorReadDirect ( cur, 1, idx_p, 8, buf, sizeof ( buf ), & rowLen ) );
+    REQUIRE_EQ( string("123"), string(buf, rowLen) );
+    REQUIRE_RC( VCursorReadDirect ( cur, 2, idx_p, 8, buf, sizeof ( buf ), & rowLen ) );
+    REQUIRE_EQ( string("456789"), string(buf, rowLen) );
+
+    REQUIRE_RC( VCursorRelease ( cur ) );
+}
 
 
 //////////////////////////////////////////// Main
