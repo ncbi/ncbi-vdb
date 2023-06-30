@@ -45,5 +45,5 @@ set_property(TEST Test_KDB_CopyColumn PROPERTY ENVIRONMENT "TMPDIR=${TMPDIR}")
 AddExecutableTest( Test_KDB_CopyMeta "VDB-4706" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" )
 set_property(TEST Test_KDB_CopyMeta PROPERTY ENVIRONMENT "TMPDIR=${TMPDIR}")
 
-AddExecutableTest( Test_KDB_Index_OneKey "VDB-5323" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" )
-set_property(TEST Test_KDB_Index_OneKey PROPERTY ENVIRONMENT "TMPDIR=${TMPDIR}")
+AddExecutableTest( Test_KDB_Index "VDB-5323" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" )
+set_property(TEST Test_KDB_Index PROPERTY ENVIRONMENT "TMPDIR=${TMPDIR}")

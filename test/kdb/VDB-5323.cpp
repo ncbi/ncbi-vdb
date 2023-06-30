@@ -59,7 +59,7 @@ const char UsageDefaultName[] = "VDB-5323";
 
 class KDB_KIndexFixture {
 public:
-    void createTable ( const char *tblname )
+    void createTable(const char *tblname, unsigned keys, char const *const *key)
     {
         created.push_back ( tblname );
 
@@ -71,32 +71,27 @@ public:
         THROW_ON_RC (
             KTableCreateIndex ( Tbl, &Ndx, kitText | kitProj, kcmOpen, "%s", indexName ) );
 
-        THROW_ON_RC ( KIndexInsertText(Ndx, false, keyValue, 1) );
-#if INSERT_2
-        THROW_ON_RC ( KIndexInsertText(Ndx, false, keyValue2, 2) );
-#endif
-
+        for (unsigned i = 0; i < keys; ++i) {
+            THROW_ON_RC ( KIndexInsertText(Ndx, false, key[i], i + 1) );
+        }
         THROW_ON_RC ( KIndexRelease ( Ndx ) );
         THROW_ON_RC ( KTableRelease ( Tbl ) );
     }
 
-    void checkTable(const char *tblname) {
+    void checkTable(const char *tblname, unsigned keys, char const *const *key) {
         KTable const *Tbl = nullptr;
         THROW_ON_RC(KDBManagerOpenTableRead(mgr, &Tbl, "%s/%s", tempPath(), tblname));
 
         KIndex const *Ndx = nullptr;
         THROW_ON_RC(KTableOpenIndexRead(Tbl, &Ndx, "%s", indexName));
 
-        int64_t start_id = 0;
-        uint64_t count = 0;
-        THROW_ON_RC(KIndexFindText(Ndx, keyValue, &start_id, &count, NULL, NULL));
-        THROW_ON_FALSE(start_id == 1);
-        THROW_ON_FALSE(count == 1);
-#if INSERT_2
-        THROW_ON_RC(KIndexFindText(Ndx, keyValue2, &start_id, &count, NULL, NULL));
-        THROW_ON_FALSE(start_id == 2);
-        THROW_ON_FALSE(count == 1);
-#endif
+        for (unsigned i = 0; i < keys; ++i) {
+            int64_t start_id = 0;
+            uint64_t count = 0;
+            THROW_ON_RC(KIndexFindText(Ndx, key[i], &start_id, &count, NULL, NULL));
+            THROW_ON_FALSE(start_id == i + 1);
+            THROW_ON_FALSE(count == 1);
+        }
         THROW_ON_RC ( KIndexRelease ( Ndx ) );
         THROW_ON_RC ( KTableRelease ( Tbl ) );
     }
@@ -117,8 +112,8 @@ public:
             KDirectoryRemove (
                 Dir, true, "%s/%s", tempPath (), tblname.c_str () );
         }
-        THROW_ON_RC ( KDBManagerRelease ( mgr ) );
-        THROW_ON_RC ( KDirectoryRelease ( Dir ) );
+        KDBManagerRelease(mgr);
+        KDirectoryRelease(Dir);
     }
 
     KDB_KIndexFixture() {
@@ -128,19 +123,29 @@ public:
 
 private:
     static constexpr char const *indexName = "NDX_1";
-    static constexpr char const *keyValue = "K_1";
-    static constexpr char const *keyValue2 = "K_2";
 
     KDirectory *Dir;
     KDBManager *mgr;
     vector<string> created;
 };
 
-FIXTURE_TEST_CASE ( CheckIndex, KDB_KIndexFixture )
+static constexpr char const *keyValues[] = {
+    "K_1",
+    "K_2"
+};
+
+FIXTURE_TEST_CASE ( CheckIndex2, KDB_KIndexFixture )
 {
-    static constexpr char const *tableName = "VDB-5323.ktable";
-    createTable(tableName);
-    checkTable(tableName);
+    static constexpr char const *tableName = "VDB-5323_2.ktable";
+    createTable(tableName, 2, &keyValues[0]);
+    checkTable(tableName, 2, &keyValues[0]);
+}
+
+FIXTURE_TEST_CASE ( CheckIndex1, KDB_KIndexFixture )
+{
+    static constexpr char const *tableName = "VDB-5323_1.ktable";
+    createTable(tableName, 1, &keyValues[0]);
+    checkTable(tableName, 1, &keyValues[0]);
 }
 
 extern "C" {
