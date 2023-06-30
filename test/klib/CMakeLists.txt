@@ -45,4 +45,3 @@ AddExecutableTest( SlowTest_KLIB_hashfile "test-hashfile" "${COMMON_LIBS_READ}" 
 AddExecutableTest( Test_KLIB_hashtable "test-hashtable" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_KLIB_pack "test-pack" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_KLIB_btree "test-btree" "${COMMON_LIBS_READ}" )
-AddExecutableTest( Test_KLIB_sha-32bit "test-sha-32bit" "${COMMON_LIBS_READ}" )

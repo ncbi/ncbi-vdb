@@ -92,7 +92,7 @@ KLIB_EXTERN void CC MD5StateFinish ( MD5State *md5, uint8_t digest [ 16 ] );
 /*--------------------------------------------------------------------------
  * SHA
  */
-typedef struct SHA32bitState SHA1State, SHA224State, SHA256State;
+typedef struct SHA32bitState SHA1State, SHA256State;
 struct SHA32bitState
 {
     uint64_t len;
@@ -115,7 +115,6 @@ struct SHA64bitState
  *  initialize the algorithm and state block
  */
 KLIB_EXTERN void CC SHA1StateInit ( SHA1State *state );
-KLIB_EXTERN void CC SHA224StateInit ( SHA224State *state );
 KLIB_EXTERN void CC SHA256StateInit ( SHA256State *state );
 KLIB_EXTERN void CC SHA384StateInit ( SHA384State *state );
 KLIB_EXTERN void CC SHA512StateInit ( SHA512State *state );
@@ -127,7 +126,6 @@ KLIB_EXTERN void CC SHA512StateInit ( SHA512State *state );
  *  processes data in chunks
  */
 KLIB_EXTERN void CC SHA1StateAppend ( SHA1State *state, const void *data, size_t size );
-KLIB_EXTERN void CC SHA224StateAppend ( SHA224State *state, const void *data, size_t size );
 KLIB_EXTERN void CC SHA256StateAppend ( SHA256State *state, const void *data, size_t size );
 KLIB_EXTERN void CC SHA384StateAppend ( SHA384State *state, const void *data, size_t size );
 KLIB_EXTERN void CC SHA512StateAppend ( SHA512State *state, const void *data, size_t size );
@@ -137,13 +135,11 @@ KLIB_EXTERN void CC SHA512StateAppend ( SHA512State *state, const void *data, si
  *  processes any remaining data in "state"
  *  returns N bytes of digest
  *  N = 20 for SHA-1
- *  N = 28 for SHA-224
  *  N = 32 for SHA-256
  *  N = 48 for SHA-384
  *  N = 64 for SHA-512
  */
 KLIB_EXTERN void CC SHA1StateFinish ( SHA1State *state, uint8_t digest [ 20 ] );
-KLIB_EXTERN void CC SHA224StateFinish ( SHA224State *state, uint8_t digest [ 28 ] );
 KLIB_EXTERN void CC SHA256StateFinish ( SHA256State *state, uint8_t digest [ 32 ] );
 KLIB_EXTERN void CC SHA384StateFinish ( SHA384State *state, uint8_t digest [ 48 ] );
 KLIB_EXTERN void CC SHA512StateFinish ( SHA512State *state, uint8_t digest [ 64 ] );
