@@ -24,6 +24,18 @@
 *
 */
 
+#if (_POSIX_C_SOURCE >= 200112L) && !  _GNU_SOURCE
+  ERROR - XSI-compliant strerror_r returns int, our code expects char*
+#else
+  #if ! _GNU_SOURCE
+    /* non-XSI clang? strerror_r is not declared probably */
+    #include <stdlib.h> /* size_t */
+    char *strerror_r(int errnum, char *buf, size_t buflen);
+  #else
+    /* strerror_r is declared by the system headers */
+  #endif
+#endif
+
 #include <klib/extern.h>
 #include "writer-priv.h"
 #include <klib/writer.h>

@@ -41,6 +41,7 @@
 
 #include <ctype.h>
 #include <string.h>
+#include <strings.h> /* strcasecmp */
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>

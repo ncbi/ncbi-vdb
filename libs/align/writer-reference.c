@@ -22,6 +22,9 @@
 *
 * ===========================================================================
 */
+
+#define _GNU_SOURCE /* strcasestr */
+
 #include <align/extern.h>
 
 #include <klib/log.h>

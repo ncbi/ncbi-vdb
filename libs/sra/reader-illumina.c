@@ -23,6 +23,9 @@
 * ===========================================================================
 *
 */
+
+#define _GNU_SOURCE /* memrchr */
+
 #include <sra/rd-extern.h>
 
 #include <klib/rc.h>
