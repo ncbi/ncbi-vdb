@@ -24,8 +24,11 @@
 *
 */
 
+#if _POSIX_C_SOURCE < 200112L
+#define _POSIX_C_SOURCE 200112L
+#endif
+
 #if (_POSIX_C_SOURCE >= 200112L) && !  _GNU_SOURCE
-  ERROR - XSI-compliant strerror_r returns int, our code expects char*
 #else
   #if ! _GNU_SOURCE
     /* non-XSI clang? strerror_r is not declared probably */
@@ -35,6 +38,8 @@
     /* strerror_r is declared by the system headers */
   #endif
 #endif
+
+#include <errno.h>
 
 #include <klib/extern.h>
 #include "writer-priv.h"
@@ -49,6 +54,29 @@
 #include <stdarg.h>
 #include <assert.h>
 
+
+#if (_POSIX_C_SOURCE >= 200112L) && !  _GNU_SOURCE
+size_t KWrtFmt_error_code ( char * buffer, size_t buffer_size, uint32_t error_code )
+{
+    int res = strerror_r ((int)error_code, buffer, buffer_size);
+
+    if ( res == 0 )
+    {
+        return string_size (buffer);
+    }
+
+    if ( res == EINVAL )
+    {
+        snprintf( buffer, buffer_size, "The value of errnum (%d) is not a valid error number", (int)error_code );
+    }
+    if ( res == ERANGE )
+    {
+        snprintf( buffer, buffer_size, "Insufficient storage was supplied to contain the error description string: buffer=%p, buffer_size=%ld", buffer, buffer_size );
+    }
+
+    return string_size (buffer);
+}
+#else
 size_t KWrtFmt_error_code ( char * buffer, size_t buffer_size, uint32_t error_code )
 {
     char * pc;
@@ -63,3 +91,4 @@ size_t KWrtFmt_error_code ( char * buffer, size_t buffer_size, uint32_t error_co
     }
     return string_size (buffer);
 }
+#endif

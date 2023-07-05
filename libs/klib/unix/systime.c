@@ -28,6 +28,10 @@
 #endif*/
 #define _XOPEN_SOURCE /* strptime */
 
+#if _POSIX_C_SOURCE < 199309L
+#define _POSIX_C_SOURCE 199309L
+#endif
+
 #include <klib/extern.h>
 #include <klib/time.h>
 #include <klib/rc.h> /* RC */
@@ -246,7 +250,8 @@ LIB_EXPORT rc_t CC KSleepMs(uint32_t milliseconds) {
 #if _POSIX_C_SOURCE >= 199309L
     if ( nanosleep ( & time, NULL ) != 0 )
 #else
-    #warning "nanosleep is not guaranteed here"
+    #error "nanosleep is not guaranteed here"
+    if ( nanosleep ( & time, NULL ) != 0 )
 #endif
     {
         switch ( errno )
