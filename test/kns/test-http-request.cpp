@@ -389,38 +389,6 @@ FIXTURE_TEST_CASE(HttpReliableRequest_POST_5xx_retry, HttpFixture)
     REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
 }
 
-/* VDB-3059: KHttpRequestPOST generates incorrect Content-Length after retry :
- it makes web server to return 400 Bad Request */
-FIXTURE_TEST_CASE(HttpReliableRequest_ContentLength, HttpFixture)
-{
-    /* calling good cgi returns 200 and resolved path */
-    REQUIRE_RC ( KNSManagerMakeReliableClientRequest ( m_mgr, &m_req, 0x01010000, NULL,
-        "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi" ) );
-    REQUIRE_RC ( KHttpRequestAddPostParam ( m_req, "acc=AAAB01" ) );
-    REQUIRE_RC ( KHttpRequestAddPostParam ( m_req, "accept-proto=https" ) );
-    REQUIRE_RC ( KHttpRequestAddPostParam ( m_req, "version=1.2" ) );
-
-    KHttpResult * rslt;
-    REQUIRE_RC ( KHttpRequestPOST ( m_req, & rslt ) );
-    uint32_t code = 0;
-    REQUIRE_RC ( KClientHttpResultStatus ( rslt, & code, NULL, 0, NULL ) );
-    REQUIRE_EQ ( code, 406u );
-
-    KStream * response;
-    REQUIRE_RC ( KHttpResultGetInputStream ( rslt, & response ) );
-    char buffer [ 512 ] = "";
-    size_t num_read = 0;
-    REQUIRE_RC (KStreamRead( response, buffer, sizeof buffer - 1,  &num_read ));
-    REQUIRE_LT ( num_read, sizeof buffer );
-    buffer [ num_read ] = '\0';
-    REQUIRE_EQ ( string ( buffer ), string ( 
-"This service has been deprecated, please update to the latest version of the toolkit. See https://github.com/ncbi/sra-tools/wiki/01.-Downloading-SRA-Toolkit\n"
-                                           ) );
-    REQUIRE_RC ( KStreamRelease ( response ) );
-
-    REQUIRE_RC ( KHttpResultRelease( rslt ) );
-}
-
 FIXTURE_TEST_CASE(HttpReliableRequest_BadCgi, HttpFixture)
 {
     /* calling non-existing cgi returns 404 */
