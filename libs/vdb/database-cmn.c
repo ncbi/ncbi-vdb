@@ -37,6 +37,7 @@
 #include <vdb/manager.h>
 #include <vdb/database.h>
 #include <vdb/table.h>
+
 #include <kdb/kdb-priv.h>
 #include <kdb/manager.h>
 #include <kdb/database.h>
@@ -58,6 +59,8 @@
 #include "../vfs/manager-priv.h" /* VFSManagerExtNoqual */
 #include "../vfs/path-priv.h"     /* VPath */
 #include "../vfs/resolver-priv.h" /* rcResolver */
+
+#include "schema-parse.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -1594,7 +1597,7 @@ static rc_t compare_meta_on_one_table_in_db( const VDatabase *self, const VDatab
         rc = VDatabaseOpenTableRead( other, &tbl2, tbl_name );
         if ( 0 == rc ) {
             rc = VTableMetaCompare( tbl1, tbl2, node_path, equal );
-            VTableRelease( tbl2 );   
+            VTableRelease( tbl2 );
         }
         VTableRelease( tbl1 );
     }
@@ -1613,7 +1616,7 @@ static rc_t compare_meta_on_all_tables_in_db( const VDatabase *self, const VData
             rc = KNamelistCount( tables_1, &count );
             if ( 0 == rc ) {
                 uint32_t idx;
-                for ( idx = 0; 0 == rc && idx < count; ++idx ) { 
+                for ( idx = 0; 0 == rc && idx < count; ++idx ) {
                     const char * tbl_name;
                     rc = KNamelistGet( tables_1, idx, &tbl_name );
                     if ( 0 == rc ) {
@@ -1654,6 +1657,57 @@ LIB_EXPORT rc_t CC VDatabaseMetaCompare( const VDatabase *self, const VDatabase 
             }
         } else {
             rc = compare_meta_on_one_table_in_db( self, other, node_path, tbl_name, equal );
+        }
+    }
+    return rc;
+}
+
+LIB_EXPORT
+rc_t
+VDatabaseMemberType(const struct VDatabase * self, const char * name, uint32_t * type)
+{
+    rc_t rc = 0;
+    if ( NULL == self )
+    {
+        rc = RC ( rcVDB, rcDatabase, rcReading, rcSelf, rcNull );
+    }
+    else if ( NULL == name || NULL == type)
+    {
+        rc = RC ( rcVDB, rcDatabase, rcReading, rcParam, rcNull );
+    }
+    else
+    {
+        const SDatabase * db_schema = self -> sdb;
+        assert( db_schema );
+
+        const SNameOverload * mem_name;
+        uint32_t mem_type;
+        if ( SDatabaseFind (
+                self -> sdb,
+                self -> schema,
+                & mem_name,
+                & mem_type,
+                name,
+                "VDatabaseMemberType" ) != NULL )
+        {
+            switch ( mem_type )
+            {
+            case eDBMember:
+                *type = dbmDatabase;
+                break;
+            case eTblMember:
+                *type = dbmTable;
+                break;
+            case eViewAliasMember:
+                *type = dbmViewAlias;
+                break;
+            default:
+                assert(false);
+            }
+        }
+        else
+        {
+            * type = dbmUnknown;
         }
     }
     return rc;

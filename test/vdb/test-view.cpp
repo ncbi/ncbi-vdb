@@ -31,6 +31,7 @@
 #include <vdb/cursor.h>
 #include <vdb/view.h>
 #include <vdb/blob.h>
+#include <vdb/vdb-priv.h>
 
 #include "../libs/vdb/database-priv.h"
 #include "../libs/vdb/schema-priv.h"
@@ -61,7 +62,7 @@ const string CompactSchemaText =
     "version 2;"
     "table T#1{column ascii c1;}"
     "table P#1{column ascii c1;}"
-    "view V#1<T tbl1,T tbl2>{}"
+    "view V#1<T tbl1,T tbl2>{column ascii c = tbl1.c1;}"
     "database DB#1{table T#1 t;table P#1 p;alias V#1<t,t> view_alias;}"
 ;
 
@@ -869,6 +870,82 @@ FIXTURE_TEST_CASE ( OpenViewAlias_MultipleParams, ViewFixture )
     REQUIRE_RC( VCursorRelease ( cur ) );
 }
 
+/////////////////// VDatabaseMemberType
+
+FIXTURE_TEST_CASE(VDatabaseMemberType_SelfNull, ViewFixture)
+{
+    uint32_t t;
+    REQUIRE_RC_FAIL( VDatabaseMemberType( nullptr, "member", &t ) );
+}
+
+FIXTURE_TEST_CASE(VDatabaseMemberType_NullName, ViewFixture)
+{
+    CreateDb ( GetName() );
+    uint32_t t;
+    REQUIRE_RC_FAIL( VDatabaseMemberType( m_db, nullptr, &t ) );
+}
+
+FIXTURE_TEST_CASE(VDatabaseMemberType_NullType, ViewFixture)
+{
+    CreateDb ( GetName() );
+    REQUIRE_RC_FAIL( VDatabaseMemberType( m_db, "t", nullptr ) );
+}
+
+FIXTURE_TEST_CASE(VDatabaseMemberType_NotFound, ViewFixture)
+{
+    CreateDb ( GetName() );
+    uint32_t t;
+    REQUIRE_RC( VDatabaseMemberType( m_db, "not_in_there", &t ) );
+    REQUIRE_EQ( (uint32_t)dbmUnknown, t );
+}
+FIXTURE_TEST_CASE(VDatabaseMemberType_Table, ViewFixture)
+{
+    CreateDb ( GetName() );
+    uint32_t t;
+    REQUIRE_RC( VDatabaseMemberType( m_db, "t", &t ) );
+    REQUIRE_EQ( (uint32_t)dbmTable, t );
+}
+FIXTURE_TEST_CASE(VDatabaseMemberType_ViewAlias, ViewFixture)
+{
+    CreateDb ( GetName() );
+    uint32_t t;
+    REQUIRE_RC( VDatabaseMemberType( m_db, "view_alias", &t ) );
+    REQUIRE_EQ( (uint32_t)dbmViewAlias, t );
+}
+FIXTURE_TEST_CASE(VDatabaseMemberType_Database, ViewFixture)
+{
+    m_schemaText =
+    "version 2;"
+    "table T#1{column ascii c1;}"
+    "table P#1{column ascii c1;}"
+
+    "view V1#1<T tbl>{ column ascii c = tbl.c1; }"
+    "view V2#1<V1 v> { column ascii d = v.c; }"
+
+    "database DB0#1{ }"
+    "database DB#1{ database DB0 d; table T#1 t; table P#1 p; }"
+    ;
+    CreateDb ( GetName() );
+    uint32_t t;
+    REQUIRE_RC( VDatabaseMemberType( m_db, "d", &t ) );
+    REQUIRE_EQ( (uint32_t)dbmDatabase, t );
+}
+FIXTURE_TEST_CASE(VDatabaseMemberType_Inherited, ViewFixture)
+{
+    m_schemaText =
+    "version 2;"
+    "table T#1{column ascii c1;}"
+    "table P#1{column ascii c1;}"
+    "database DB0#1{ table T#1 t0; }"
+    "database DB#1 = DB0#1 { table T#1 t; table P#1 p; }"
+    ;
+    CreateDb ( GetName() );
+    uint32_t t;
+    REQUIRE_RC( VDatabaseMemberType( m_db, "t0", &t ) );
+    REQUIRE_EQ( (uint32_t)dbmTable, t );
+}
+
+//TODO: break these tests out to test-database.c
 
 //////////////////////////////////////////// Main
 extern "C"

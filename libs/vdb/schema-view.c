@@ -147,6 +147,54 @@ rc_t CC SViewDump ( const SView *self, struct SDumper *d )
     return d -> rc;
 }
 
+static
+bool SViewColumnDefDump ( void *item, void *data )
+{
+    SDumper *b = data;
+    const SColumn *self = ( const void* ) item;
+    bool compact = SDumperMode ( b ) == sdmCompact;
+
+    if ( self -> simple )
+    {
+        if ( self -> ptype != NULL )
+        {
+            b -> rc = SDumperPrint ( b, compact ? "column %E %N;" : "\tcolumn %E %N;\n"
+                                        , self -> ptype
+                                        , self -> name
+                );
+        }
+        else
+        {
+            b -> rc = SDumperPrint ( b, compact ? "column %T %N;" : "\tcolumn %T %N;\n"
+                                        , & self -> td
+                                        , self -> name
+                );
+        }
+    }
+    else
+    {
+        assert ( self -> read != NULL );
+        b -> rc = SDumperPrint ( b, compact ? "column %T %N = %E;" : "\tcolumn %T %N = %E;\n"
+                                    , & self -> td
+                                    , self -> name
+                                    , self -> read
+            );
+    }
+
+    return ( b -> rc != 0 );
+}
+
+static
+bool SViewDumpBody ( const SView *self, SDumper *b )
+{
+    if ( VectorDoUntil ( & self -> col, false, SViewColumnDefDump, b ) )
+        return true;
+    if ( VectorDoUntil ( & self -> prod, false, SProductionDefDump, b ) )
+        return true;
+
+    return false;
+}
+
 bool CC SViewDefDump ( void *item, void *data )
 {
     SDumper *b = data;
@@ -232,10 +280,10 @@ bool CC SViewDefDump ( void *item, void *data )
         b -> rc = SDumperPrint ( b, "\n" );
 
     SDumperIncIndentLevel ( b );
-
-    // same as Table
-
+    bool rtn = SViewDumpBody( self, b );
     SDumperDecIndentLevel ( b );
+    if (rtn)
+        return true;
 
     if ( b -> rc == 0 )
         b -> rc = SDumperPrint ( b, "\t}" );
