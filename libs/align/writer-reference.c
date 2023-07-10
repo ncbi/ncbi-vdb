@@ -23,7 +23,9 @@
 * ===========================================================================
 */
 
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE /* strcasestr */
+#endif
 
 #include <align/extern.h>
 

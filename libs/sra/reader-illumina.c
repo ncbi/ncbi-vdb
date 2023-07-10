@@ -24,7 +24,9 @@
 *
 */
 
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE /* memrchr */
+#endif
 
 #include <sra/rd-extern.h>
 

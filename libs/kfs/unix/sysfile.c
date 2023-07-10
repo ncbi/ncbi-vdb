@@ -55,7 +55,9 @@ struct KSysFile_v1;
 #include <assert.h>
 #include <string.h>
 
+#ifndef __USE_GNU
 #define __USE_GNU
+#endif
 #include <poll.h>
 
 #ifdef _DEBUGGING

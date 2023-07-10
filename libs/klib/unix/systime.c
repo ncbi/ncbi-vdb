@@ -45,7 +45,7 @@
 #include <sys/time.h>
 #include <errno.h>
 
-#ifdef __USE_MISC
+#if (defined __USE_MISC || defined MAC || defined BSD)
 #define TM_GMTOFF tm_gmtoff
 #else
 #define TM_GMTOFF __tm_gmtoff
