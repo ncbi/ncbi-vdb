@@ -66,7 +66,7 @@ struct KSymbol
         BSTree scope;
 
         /* unresolved forward decl id */
-        struct { uint32_t ctx, id; } fwd;
+        struct { uint32_t ctx, id, ctx_type; } fwd;
 
     } u;
 
@@ -112,7 +112,7 @@ KLIB_EXTERN rc_t CC KSymbolMake ( KSymbol **sym,
  *  "obj" [ IN, NULL OKAY ] - optional object mapping
  *
  */
-KLIB_EXTERN rc_t CC KSymbolInit ( KSymbol * self, 
+KLIB_EXTERN rc_t CC KSymbolInit ( KSymbol * self,
     const String * name, uint32_t type, const void * obj);
 
 
@@ -122,7 +122,7 @@ KLIB_EXTERN rc_t CC KSymbolInit ( KSymbol * self,
  */
 KLIB_EXTERN void CC KSymbolWhack ( BSTNode *n, void *ignore );
 
-/* there is currently no need for a real Destroy function 
+/* there is currently no need for a real Destroy function
  * but a macro to do nothing is included for orthogonality.
  */
 #define KSymbolDestroy(s,i) ((void)0)

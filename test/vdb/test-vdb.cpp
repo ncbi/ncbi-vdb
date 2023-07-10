@@ -24,6 +24,11 @@
 
 #include "VDB_Fixture.hpp"
 
+#include <vdb/manager.h> // VDBManager
+#include <vdb/database.h>
+#include <vdb/table.h>
+#include <vdb/view.h>
+#include <vdb/cursor.h>
 #include <vdb/blob.h>
 #include <vdb/vdb-priv.h>
 #include <vdb/blob.h>
@@ -34,6 +39,7 @@ extern "C" {
 }
 
 #include <ktst/unit_test.hpp> // TEST_CASE
+#include <klib/container.h>
 #include <kfg/config.h>
 
 #include <sysalloc.h>
@@ -154,6 +160,41 @@ TEST_CASE( VdbMgr ) {
     mgr = NULL;
 
 }
+
+#if CANT_WAIT_FOR_THIS_ONE_TO_FINISH_INVESTIGATE_AND_SPEEDUP
+TEST_CASE(SimultaneousCursors)
+{   // SRA-1669 WGS ALWZ01 cannot open multiple cursors with SEQUENCE.CONTIG_NAME column simultaneously (Win32)
+
+    for ( int i = 0; i < 1; ++i ) {
+        const VDBManager* mgr = 0;
+        REQUIRE_RC(VDBManagerMakeRead(&mgr, 0));
+        const VDatabase* db = 0;
+        REQUIRE_RC(VDBManagerOpenDBRead(mgr, &db, 0, "ALWZ01"));
+        const VTable* table = 0;
+        REQUIRE_RC(VDatabaseOpenTableRead(db, &table, "SEQUENCE"));
+        const size_t CURSOR_CNT = 10;
+        const VCursor* cursors[CURSOR_CNT] = {};
+        for ( size_t i = 0; i < CURSOR_CNT; ++i ) {
+            const VCursor* cursor = 0;
+            REQUIRE_RC(VTableCreateCursorRead(table, &cursor));
+            cursors[i] = cursor;
+            REQUIRE_RC(VCursorPermitPostOpenAdd(cursor));
+            REQUIRE_RC(VCursorOpen(cursor));
+            uint32_t col_index;
+
+The following call takes an insane amount of time, abnout 3 minutes!
+            REQUIRE_RC(VCursorAddColumn(cursor, &col_index, "CONTIG_NAME"));
+
+        }
+        for ( size_t i = 0; i < CURSOR_CNT; ++i ) {
+            REQUIRE_RC(VCursorRelease(cursors[i]));
+        }
+        REQUIRE_RC(VTableRelease(table));
+        REQUIRE_RC(VDatabaseRelease(db));
+        REQUIRE_RC(VDBManagerRelease(mgr));
+    }
+}
+#endif
 
 FIXTURE_TEST_CASE(TestCursorIsStatic_SingleRowRun1, VDB_Fixture)
 {
@@ -432,6 +473,77 @@ cout << out;
     }
 }
 #endif
+FIXTURE_TEST_CASE ( V2ParserError, VDB_Fixture )
+{   // This exercises an "extended schema" scenario, when a schema embedded
+    // in a table gets tacked onto the exsiting schema, possibly creating namespaces
+    // that obscure the parent schema (see callers of VSchemaParseTextCallback)
+    const VTable *tbl = NULL;
+    VSchema *schema = NULL;
+    REQUIRE_RC ( VDBManagerMakeSRASchema(mgr, &schema) );
+    REQUIRE_RC ( VDBManagerOpenTableRead ( mgr, &tbl, schema, "SRR053325" ) );
+    REQUIRE_RC ( VTableCreateCursorRead(tbl, &curs) );
+    uint32_t colIdx;
+    REQUIRE_RC ( VCursorAddColumn ( curs, & colIdx, "READ" ) );
+    REQUIRE_RC ( VCursorOpen (curs ) );
+    REQUIRE_RC ( VSchemaRelease ( schema ) );
+    REQUIRE_RC ( VTableRelease ( tbl ) );
+}
+
+rc_t CC FlushSchema(void *fd, const void * buffer, size_t size)
+{
+    ostream & out = *static_cast < ostream * > (fd);
+    out.write(static_cast < const char * > (buffer), size);
+    out.flush();
+    return 0;
+}
+
+#include <sstream>
+string
+DumpSchema(const VSchema * p_schema)
+{
+    ostringstream out;
+    if (VSchemaDump(p_schema, sdmPrint, 0, FlushSchema, &out) != 0)
+    {
+        throw runtime_error("DumpSchema failed");
+    }
+    return out.str();
+}
+
+TEST_CASE(View_On_An_Existing_Schema)
+{
+    const VDBManager * mgr;
+    REQUIRE_RC(VDBManagerMakeRead(&mgr, NULL));
+
+    const VDatabase *db = NULL;
+    const char * acc = "SRR1063272";
+
+    const string schemaText =
+        "version 2; "
+        "view V1#1 < NCBI:align:tbl:align_cmn align >"
+        "{"
+        "    column I64 SEQ_SPOT_ID = align.SEQ_SPOT_ID;"
+        "}";
+
+    VSchema * schema;
+    REQUIRE_RC(VDBManagerOpenDBRead(mgr, &db, NULL, acc));
+    REQUIRE_RC(VDatabaseOpenSchema(db, (const VSchema **)& schema));
+    REQUIRE_RC(VSchemaParseText(schema, "", schemaText.c_str(), schemaText.size()));
+
+    const VView * view;
+    REQUIRE_RC(VDBManagerOpenView(mgr, &view, schema, "V1"));
+
+    const VTable * tbl_pa;
+    REQUIRE_RC(VDatabaseOpenTableRead(db, &tbl_pa, "PRIMARY_ALIGNMENT")); // this used to mess up VSchema
+
+    string d = DumpSchema(schema);
+
+    REQUIRE_RC(VTableRelease(tbl_pa));
+    REQUIRE_RC(VViewRelease(view));
+    REQUIRE_RC(VSchemaRelease(schema));
+
+    REQUIRE_RC(VDatabaseRelease(db));
+    REQUIRE_RC(VDBManagerRelease(mgr));
+}
 
 //////////////////////////////////////////// Main
 extern "C"

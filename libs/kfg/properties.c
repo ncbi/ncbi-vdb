@@ -1194,3 +1194,13 @@ LIB_EXPORT rc_t CC KConfig_Set_SendTelemetry(KConfig *self, bool value) {
     }
 }
 
+LIB_EXPORT rc_t CC KConfigGetSchemaParserVersion( const KConfig *self, uint8_t * version )
+{
+    uint64_t result = 0;
+    rc_t rc = KConfigReadU64 ( self, "vdb/schema/version", & result );
+    if ( rc == 0 )
+    {
+        * version = result;
+    }
+    return rc;
+}

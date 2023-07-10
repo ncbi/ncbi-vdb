@@ -37,6 +37,7 @@
 #undef KONST
 
 #include <vdb/cursor.h>
+#include <vdb/vdb-priv.h>
 #include <klib/symbol.h>
 #include <klib/log.h>
 #include <klib/rc.h>
@@ -76,7 +77,7 @@ rc_t VProdResolveColumn ( const VProdResolve *self,
         return RC(rcVDB, rcCursor, rcOpening, rcSchema, rcInvalid);
     }
     /* read-only cursor may add columns from schema */
-    vcol = VCursorCacheGet ( VCursorColumns ( curs ), & scol -> cid );
+    vcol = VCursorGetColumn ( curs, & scol -> cid );
     if ( vcol == NULL )
     {
         rc = VCursorMakeColumn ( curs, & vcol, scol, self -> cx_bind );
@@ -91,7 +92,7 @@ rc_t VProdResolveColumn ( const VProdResolve *self,
             return rc;
         }
 #endif
-        rc = VCursorCacheSet ( VCursorColumns ( curs ), & scol -> cid, vcol );
+        rc = VCursorSetColumn ( curs, vcol );
         if ( rc != 0 )
         {
 #if OPEN_COLUMN_ALTERS_ROW

@@ -94,11 +94,10 @@ static VCursor_vt VTableCursor_read_vt =
     VTableReadCursorCommit,
     VTableCursorOpenParentRead,
     VTableReadCursorOpenParentUpdate,
+    VTableCursorIdRange,
     VTableCursorPermitPostOpenAdd,
     VTableCursorSuspendTriggers,
     VTableCursorGetSchema,
-    VTableCursorLinkedCursorGet,
-    VTableCursorLinkedCursorSet,
     VTableCursorSetCacheCapacity,
     VTableCursorGetCacheCapacity,
     VTableReadCursorMakeColumn,
@@ -110,7 +109,10 @@ static VCursor_vt VTableCursor_read_vt =
     VTableCursorLaunchPagemapThread,
     VTableCursorPageMapProcessRequest,
     VTableCursorCacheActive,
-    VTableReadCursorInstallTrigger
+    VTableReadCursorInstallTrigger,
+    VTableCursorListReadableColumns,
+    VTableCursorColumns,
+    VTableCursorProductions
 };
 
 /*--------------------------------------------------------------------------
@@ -139,14 +141,6 @@ rc_t VTableReadCursorMakeColumn ( VTableCursor *self, VColumn **col, const SColu
     return VColumnMake ( col, self -> schema, scol );
 }
 
-/* PostOpenAdd
- *  handle opening of a column after the cursor is opened
- */
-rc_t VCursorPostOpenAdd ( VTableCursor *self, VColumn *col )
-{
-    return VCursorPostOpenAddRead ( self, col );
-}
-
 /* Open
  *  open cursor, resolving schema
  *  for the set of opened columns
@@ -169,7 +163,7 @@ rc_t VTableReadCursorOpen ( const VTableCursor *cself )
         rc = VLinkerOpen ( ld, & libs );
         if ( rc == 0 )
         {
-            rc = VCursorOpenRead ( self, libs );
+            rc = VTableCursorOpenRead ( self, libs );
             if ( rc == 0 )
             {
                 int64_t first;

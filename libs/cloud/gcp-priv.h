@@ -48,6 +48,8 @@ rc_t GetJsonNumMember(const struct KJsonObject *obj, const char * name,
 rc_t GetJsonStringMember(const struct KJsonObject *obj, const char * name,
     const char ** value);
 
+rc_t ParseAccessToken( const char * jsonResponse, char ** token, KTime_t * expiration );
+
 /*TODO: use log.h instead, or promote to cloud-priv.h
     (there is a copy in cloud-mgr.c) */
 #if 0

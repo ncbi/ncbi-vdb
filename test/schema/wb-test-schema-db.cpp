@@ -25,8 +25,21 @@
 */
 
 /**
-* Unit tests for database declarations in schema, this file is #included into a bigger test suite
+* Unit tests for database declarations in schema
 */
+
+#include "AST_Fixture.hpp"
+
+#include <ktst/unit_test.hpp>
+
+#include <klib/symbol.h>
+
+//#include "../../libs/vdb/schema-expr.h"
+
+using namespace std;
+using namespace ncbi::NK;
+
+TEST_SUITE ( SchemaDbTestSuite );
 
 class DbAccess // encapsulates access to an STable in a VSchema
 {
@@ -115,7 +128,7 @@ FIXTURE_TEST_CASE(DB_Parent, AST_Db_Fixture)
     REQUIRE_EQ ( 0u, db . Parent () -> id );
 }
 
-FIXTURE_TEST_CASE(DB_ParentNotADatabase, AST_Table_Fixture)
+FIXTURE_TEST_CASE(DB_ParentNotADatabase, AST_Db_Fixture)
 {
     VerifyErrorMessage ( "table p#1 {}; database d#1 = p#1 {};", "Not a database: 'p'" );
 }
@@ -147,7 +160,7 @@ FIXTURE_TEST_CASE(DB_DbMember, AST_Db_Fixture)
     REQUIRE_EQ ( (uint32_t)eDBMember, sym -> type );
 }
 
-FIXTURE_TEST_CASE(DB_DbMemberDeclaredTwice, AST_Table_Fixture)
+FIXTURE_TEST_CASE(DB_DbMemberDeclaredTwice, AST_Db_Fixture)
 {
     VerifyErrorMessage ( "database p#1 {}; database d#1 { database p m_p; database p m_p; };",
                          "Member already exists: 'm_p'",
@@ -156,17 +169,17 @@ FIXTURE_TEST_CASE(DB_DbMemberDeclaredTwice, AST_Table_Fixture)
 
 //TODO: table member declared twice
 
-FIXTURE_TEST_CASE(DB_ItselfAsMember, AST_Table_Fixture)
+FIXTURE_TEST_CASE(DB_ItselfAsMember, AST_Db_Fixture)
 {
     VerifyErrorMessage ( "database d#1 { database d m_p; };", "Database declared but not defined: 'd'" );
 }
 
-FIXTURE_TEST_CASE(DB_DbMemberNotADatabase, AST_Table_Fixture)
+FIXTURE_TEST_CASE(DB_DbMemberNotADatabase, AST_Db_Fixture)
 {
     VerifyErrorMessage ( "table p#1 {}; database d#1 { database p m_p; };", "Not a database: 'p'" );
 }
 
-FIXTURE_TEST_CASE(DB_DbMemberVersionDoesNotExist, AST_Table_Fixture)
+FIXTURE_TEST_CASE(DB_DbMemberVersionDoesNotExist, AST_Db_Fixture)
 {
     VerifyErrorMessage ( "database p#1 {}; database d#1 { database p#2 m_p; };",
                          "Requested version does not exist: 'p#2'" );
@@ -204,3 +217,36 @@ FIXTURE_TEST_CASE(DB_TableMemberTemplate, AST_Db_Fixture)
     const STblMember * m = db . GetTableMember ( 0 );
     REQUIRE ( m -> tmpl );
 }
+
+//////////////////////////////////////////// Main
+#include <kapp/args.h>
+#include <kfg/config.h>
+#include <klib/out.h>
+
+extern "C"
+{
+
+ver_t CC KAppVersion ( void )
+{
+    return 0x1000000;
+}
+
+const char UsageDefaultName[] = "wb-test-schema-db";
+
+rc_t CC UsageSummary (const char * progname)
+{
+    return KOutMsg ( "Usage:\n" "\t%s [options] -o path\n\n", progname );
+}
+
+rc_t CC Usage( const Args* args )
+{
+    return 0;
+}
+
+rc_t CC KMain ( int argc, char *argv [] )
+{
+    return SchemaDbTestSuite(argc, argv);
+}
+
+}
+

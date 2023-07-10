@@ -1074,7 +1074,7 @@ FIXTURE_TEST_CASE(UTF8_FILENAME, PathFixture) {
     }
 }
 
-FIXTURE_TEST_CASE(Http, PathFixture)
+FIXTURE_TEST_CASE(Http_, PathFixture)
 {
 #undef SRC
 #define SRC "http://u@h.d:9/d/f"
@@ -1086,7 +1086,7 @@ FIXTURE_TEST_CASE(Http, PathFixture)
     REQUIRE_EQ(string(buffer), string(SRC));
 }
 
-FIXTURE_TEST_CASE(Fasp, PathFixture)
+FIXTURE_TEST_CASE(Fasp_, PathFixture)
 {
 #undef SRC
 #define SRC "fasp://u@hst.com:dir/file"
@@ -1103,7 +1103,7 @@ FIXTURE_TEST_CASE(Fasp, PathFixture)
     REQUIRE_EQ(string(buffer), e);
 }
 
-FIXTURE_TEST_CASE(F_asp, PathFixture)
+FIXTURE_TEST_CASE(F_asp_, PathFixture)
 {
 #undef SRC
 #define SRC "fasp://u@hst.com:a-dir/file"
@@ -1120,7 +1120,7 @@ FIXTURE_TEST_CASE(F_asp, PathFixture)
     REQUIRE_EQ(string(buffer), e);
 }
 
-FIXTURE_TEST_CASE(Fasp1G, PathFixture)
+FIXTURE_TEST_CASE(Fasp1G_, PathFixture)
 {
 #undef SRC
 #define SRC "fasp://u@ftp.gov:1G"

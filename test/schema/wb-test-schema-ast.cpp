@@ -34,6 +34,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kfc/except.h>
+
 #include <klib/symbol.h>
 
 #include <kfs/directory.h>
@@ -57,26 +59,28 @@ VerifyNextToken ( ParseTreeScanner& p_scan, int p_type)
 
 TEST_CASE(Construct_Empty)
 {
+    HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
     SchemaParser p;
-    REQUIRE ( p . ParseString ( "" ) );
+    REQUIRE ( p . ParseString ( ctx, "" ) );
     ParseTree * root = p . MoveParseTree ();
     REQUIRE_NOT_NULL ( root );
-    ParseTreeScanner scan ( * root );
+    ParseTreeScanner scan ( ctx, * root );
     REQUIRE ( VerifyNextToken ( scan, PT_PARSE ) );
     REQUIRE ( VerifyNextToken ( scan, '(' ) );
     REQUIRE ( VerifyNextToken ( scan, Token :: EndSource ) );
     REQUIRE ( VerifyNextToken ( scan, ')' ) );
 
-    delete root;
+    ParseTree :: Destroy ( root );
 }
 
 TEST_CASE(WalkParseTree)
 {
+    HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
     SchemaParser p;
-    REQUIRE ( p . ParseString ( "version 1; include \"qq\";" ) );
+    REQUIRE ( p . ParseString ( ctx, "version 1; include \"qq\";" ) );
     ParseTree * root = p . MoveParseTree ();
     REQUIRE_NOT_NULL ( root );
-    ParseTreeScanner scan ( * root );
+    ParseTreeScanner scan ( ctx, * root );
     REQUIRE ( VerifyNextToken ( scan, PT_PARSE ) );
     REQUIRE ( VerifyNextToken ( scan, '(' ) );
 
@@ -108,38 +112,43 @@ TEST_CASE(WalkParseTree)
     REQUIRE ( VerifyNextToken ( scan, Token :: EndSource ) );
     REQUIRE ( VerifyNextToken ( scan, ')' ) );
 
-    delete root;
+    ParseTree :: Destroy ( root );
 }
 
 // ErrorReport
 TEST_CASE ( ErrorReport_Formatting_NullBuf )
 {
+    HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
     ErrorReport rep;
-    rep . ReportError ( ErrorReport :: Location ( "", 0, 0 ), "" );
+    rep . ReportError ( ctx, ErrorReport :: Location ( "", 0, 0 ), "" );
     const ErrorReport :: Error * err = rep . GetError ( 0 );
     REQUIRE_NOT_NULL ( err );
-    REQUIRE ( ! err -> Format ( 0, 1024 ) );
+    REQUIRE ( ! err -> Format ( ctx, 0, 1024 ) );
 }
 
 TEST_CASE ( ErrorReport_Formatting_ShortBuf )
 {
+    HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
     ErrorReport rep;
-    rep . ReportError ( ErrorReport :: Location ( "", 0, 0 ), "msg" );
+    rep . ReportError ( ctx, ErrorReport :: Location ( "", 0, 0 ), "msg" );
     const ErrorReport :: Error * err = rep . GetError ( 0 );
     REQUIRE_NOT_NULL ( err );
     char buf [1];
-    REQUIRE ( ! err -> Format ( buf, sizeof ( buf ) ) );
+    REQUIRE ( ! err -> Format ( ctx, buf, sizeof ( buf ) ) );
+    REQUIRE ( string ( WHAT() ) != string () );
+    CLEAR();
 }
 
 TEST_CASE ( ErrorReport_Formatting )
 {
+    HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
     ErrorReport rep;
     ErrorReport :: Location loc ( "dir/file", 1, 2 ); // file/line/col
-    rep . ReportError ( loc, "msg: %s, num: %i", "error message", 42 );
+    rep . ReportError ( ctx, loc, "msg: %s, num: %i", "error message", 42 );
     const ErrorReport :: Error * err = rep . GetError ( 0 );
     REQUIRE_NOT_NULL ( err );
     char buf [ 1024 ];
-    REQUIRE ( err -> Format ( buf, sizeof buf ) );
+    REQUIRE ( err -> Format ( ctx, buf, sizeof buf ) );
     REQUIRE_EQ ( string ( buf ), string ( "dir/file:1:2 msg: error message, num: 42" ) );
 }
 
@@ -159,7 +168,7 @@ TEST_CASE ( AST_FQN_NakedIdent )
     fqn -> GetFullName ( buf, sizeof buf );
     REQUIRE_EQ ( string ("a"), string ( buf ) );
 
-    delete fqn;
+    AST_FQN :: Destroy ( fqn );
 }
 
 TEST_CASE ( AST_FQN_Full )
@@ -179,7 +188,7 @@ TEST_CASE ( AST_FQN_Full )
     fqn -> GetPartialName ( buf, sizeof buf, 1 );
     REQUIRE_EQ ( string ("a:b"), string ( buf ) );
 
-    delete fqn;
+    AST_FQN :: Destroy ( fqn );
 }
 
 TEST_CASE ( AST_FQN_WithVersionMaj )
@@ -187,21 +196,21 @@ TEST_CASE ( AST_FQN_WithVersionMaj )
     AST_FQN* fqn = AST_Fixture :: MakeFqn ( "a" );
     fqn -> SetVersion ( "#1" );
     REQUIRE_EQ ( 1 << 24, ( int ) fqn -> GetVersion () );
-    delete fqn;
+    AST_FQN :: Destroy ( fqn );
 }
 TEST_CASE ( AST_FQN_WithVersionMajMin )
 {
     AST_FQN* fqn = AST_Fixture :: MakeFqn ( "a" );
     fqn -> SetVersion ( "#1.22" );
     REQUIRE_EQ ( ( 1 << 24 ) | ( 22 << 16 ), ( int ) fqn -> GetVersion () );
-    delete fqn;
+    AST_FQN :: Destroy ( fqn );
 }
 TEST_CASE ( AST_FQN_WithVersionMajMinRel )
 {
     AST_FQN* fqn = AST_Fixture :: MakeFqn ( "a" );
     fqn -> SetVersion ( "#1.22.33" );
     REQUIRE_EQ ( ( 1 << 24 ) | ( 22 << 16 ) | 33, ( int ) fqn -> GetVersion () );
-    delete fqn;
+    AST_FQN :: Destroy ( fqn );
 }
 
 // AST builder
@@ -220,13 +229,21 @@ FIXTURE_TEST_CASE(Intrinsic, AST_Fixture)
 
 FIXTURE_TEST_CASE(Builder_ErrorReporting, AST_Fixture)
 {
+    HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
+
     AST_FQN * id = AST_Fixture :: MakeFqn ( "foo" );
-    REQUIRE_NULL ( m_builder -> Resolve ( * id ) ); delete id;
+    REQUIRE_NULL ( m_builder -> Resolve ( ctx, * id ) );
+    AST_FQN :: Destroy ( id );
+
     id = AST_Fixture :: MakeFqn ( "bar" );
-    REQUIRE_NULL ( m_builder -> Resolve ( * id ) ); delete id;
+    REQUIRE_NULL ( m_builder -> Resolve ( ctx, * id ) );
+    AST_FQN :: Destroy ( id );
+
     REQUIRE_EQ ( 2u, m_builder -> GetErrorCount () );
     REQUIRE_EQ ( string ( "Undeclared identifier: 'foo'" ), string ( m_builder -> GetErrorMessage ( 0 ) ) );
     REQUIRE_EQ ( string ( "Undeclared identifier: 'bar'" ), string ( m_builder -> GetErrorMessage ( 1 ) ) );
+
+    REQUIRE ( ! FAILED () );
 }
 
 FIXTURE_TEST_CASE(NoVersion, AST_Fixture)
@@ -240,12 +257,11 @@ FIXTURE_TEST_CASE(NoVersion, AST_Fixture)
 
 FIXTURE_TEST_CASE(Version1, AST_Fixture)
 {
-    MakeAst ( "version 1; ;" );
+    MakeAst ( "version 1;" );
 
     REQUIRE_EQ ( PT_SCHEMA_1_0,     TokenType ( m_ast ) );
-    REQUIRE_EQ ( 2u,                m_ast -> ChildrenCount () );
-    REQUIRE_EQ ( PT_EMPTY,          TokenType ( m_ast -> GetChild ( 0 ) ) );
-    REQUIRE_EQ ( PT_VERSION_1_0,    TokenType ( m_ast -> GetChild ( 1 ) ) );
+    REQUIRE_EQ ( 1u,                m_ast -> ChildrenCount () );
+    REQUIRE_EQ ( PT_VERSION_1_0,    TokenType ( m_ast -> GetChild ( 0 ) ) );
 }
 
 FIXTURE_TEST_CASE(MultipleCallsToBuilder, AST_Fixture)
@@ -276,6 +292,16 @@ FIXTURE_TEST_CASE(MultipleDecls, AST_Fixture)
     REQUIRE_EQ ( PT_EMPTY,  TokenType ( child -> GetChild ( 1 ) ) );
 }
 
+FIXTURE_TEST_CASE(Version_2_Empty_Source, AST_Fixture)
+{
+    AST * ast = MakeAst ( "version 2; table t#1 {};" );
+    REQUIRE_NOT_NULL ( ast );
+    REQUIRE_EQ ( ( int ) PT_SCHEMA_2_0, ast -> GetTokenType () );
+    REQUIRE_EQ ( 2u, ast -> ChildrenCount () );
+    REQUIRE_EQ ( ( int ) PT_EMPTY,      ast -> GetChild ( 0 ) -> GetTokenType () ); // declarations in a list
+    REQUIRE_EQ ( ( int ) PT_VERSION_2,  ast -> GetChild ( 1 ) -> GetTokenType () );
+}
+
 ///////// typedef
 
 FIXTURE_TEST_CASE(Typedef_SimpleNames_OneScalar, AST_Fixture)
@@ -303,10 +329,11 @@ FIXTURE_TEST_CASE(LocationInErrorMessages, AST_Fixture)
 {
     if ( m_newParse )
     {
-        REQUIRE ( m_parser . ParseString ( "\n\ntypedef a:zz t;" ) );
+        HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
+        REQUIRE ( m_parser . ParseString ( ctx, "\n\ntypedef a:zz t;" ) );
         m_parseTree = m_parser . MoveParseTree ();
         REQUIRE_NOT_NULL ( m_parseTree );
-        delete m_builder -> Build ( * m_parseTree );
+        ParseTree :: Destroy ( m_builder -> Build ( ctx, * m_parseTree ) );
         const ErrorReport & errors = m_builder -> GetErrors ();
         REQUIRE_EQ ( 1u, errors . GetCount () );
         const ErrorReport :: Error * err = errors . GetError ( 0 );
@@ -341,14 +368,20 @@ FIXTURE_TEST_CASE(Typedef_UndefinedBase, AST_Fixture)
     VerifyErrorMessage ( "typedef zz t;", "Undeclared identifier: 'zz'" );
 }
 
-FIXTURE_TEST_CASE(Typedef_DuplicateDefinition_1, AST_Fixture)
+FIXTURE_TEST_CASE(Typedef_BenignRedefinesAllowed_1, AST_Fixture)
 {
-    VerifyErrorMessage ( "typedef U8 t; typedef U8 t;", "Object already declared: 't'" );
+    MakeAst ( "typedef U8 t; typedef U8 t;" );
+    VerifyDatatype ( "t", "U8", 1, 8 );
+}
+FIXTURE_TEST_CASE(Typedef_BenignRedefinesAllowed_2, AST_Fixture)
+{
+    MakeAst ( "typedef U8 t, t;" );
+    VerifyDatatype ( "t", "U8", 1, 8 );
 }
 
-FIXTURE_TEST_CASE(Typedef_DuplicateDefinition_2, AST_Fixture)
+FIXTURE_TEST_CASE(Typedef_DuplicateDefinition_1, AST_Fixture)
 {
-    VerifyErrorMessage ( "typedef U8 t, t;", "Object already declared: 't'" );
+    VerifyErrorMessage ( "typedef U8 t; typedef U32 t;", "Type already declared differently: 't'" );
 }
 
 FIXTURE_TEST_CASE(Typedef_BaseNotAType, AST_Fixture)
@@ -485,6 +518,10 @@ FIXTURE_TEST_CASE(Format_SuperUndefined, AST_Fixture)
 FIXTURE_TEST_CASE(Format_SuperWrong, AST_Fixture)
 {
     VerifyErrorMessage ( "typedef U8 s; fmtdef s f;", "Not a format: 's'" );
+}
+FIXTURE_TEST_CASE(Format_Redeclaration, AST_Fixture)
+{
+    MakeAst ( "fmtdef s; fmtdef s;" );
 }
 
 ///////// const
@@ -673,6 +710,37 @@ FIXTURE_TEST_CASE(AliasedTypesetInTypeset, AST_Fixture)
     VerifySymbol ( "ts2", eTypeset );
 }
 
+FIXTURE_TEST_CASE(Alias_Redefinition_Benign, AST_Fixture)
+{
+    MakeAst ( "typeset ts1 { U8 }; alias ts1 ats; alias ts1 ats; " );
+}
+FIXTURE_TEST_CASE(Alias_Redefinition_Benign_FromParent, AST_Fixture)
+{
+    MakeAst  ( "typeset ts1 { U8 }; alias ts1 ats;"  );
+
+    VSchema * child;
+    REQUIRE_RC ( VSchemaMake ( &child, m_schema ) );
+
+    string child_source = "alias ts1 ats;";
+    REQUIRE_RC ( VSchemaParseText ( child, 0, child_source . c_str (), child_source . size () ) );
+}
+
+FIXTURE_TEST_CASE(Alias_Redefinition_DifferentSource, AST_Fixture)
+{
+    VerifyErrorMessage (
+        "typeset ts1 { U8 }; alias ts1 ats; alias U8 ats; ",
+        "Alias already declared differently: 'ats'"
+    );
+
+}
+FIXTURE_TEST_CASE(Alias_Redefinition_NotAlias, AST_Fixture)
+{
+    VerifyErrorMessage (
+        "typeset ts1 { U8 }; alias ts1 ats; alias ts1 ts1; ",
+        "Already declared and is not an alias: 'ts1'"
+    );
+}
+
 // include
 FIXTURE_TEST_CASE(Include, AST_Fixture)
 {
@@ -684,11 +752,13 @@ FIXTURE_TEST_CASE(Include, AST_Fixture)
 
 FIXTURE_TEST_CASE(Include_SearchPath, AST_Fixture)
 {
+    HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
     CreateFile ( "./actual/inc", "typedef U8 t;" );
-    m_builder -> AddIncludePath ( "./actual" );
+    m_builder -> AddIncludePath ( ctx, "./actual" );
     MakeAst ( "include \"inc\";" );
     VerifySymbol ( "t", eDatatype );
     remove ( "./actual/inc" );
+    REQUIRE ( ! FAILED () );
 }
 
 FIXTURE_TEST_CASE(Include_MoreThanOnce, AST_Fixture)
@@ -1019,6 +1089,29 @@ FIXTURE_TEST_CASE(ChildSchema_AccessToParentsNames, AST_Fixture)
     REQUIRE_RC ( VSchemaRelease ( child ) );
 }
 
+FIXTURE_TEST_CASE(CondExpr, AST_Fixture)
+{
+    MakeAst  ( "table t#1 { column U8 a = 1|2|3; } " );
+    const STable * t = static_cast < const STable* > ( VectorGet ( & GetSchema () -> tbl, 0 ) );
+    const SColumn * c = static_cast < const SColumn * > ( VectorGet ( & t -> col, 0 ) );
+    REQUIRE_EQ ( ( uint32_t ) eCondExpr, c -> read -> var );
+    const SBinExpr * expr = reinterpret_cast < const SBinExpr * > ( c -> read );
+
+    // first child is "1 | 2"
+    REQUIRE_NOT_NULL ( expr -> left );
+    REQUIRE_EQ ( ( uint32_t ) eCondExpr, expr -> left -> var );
+    const SBinExpr * left = reinterpret_cast < const SBinExpr * > ( expr -> left );
+    REQUIRE_EQ ( ( uint32_t ) eConstExpr, left -> left -> var );
+    REQUIRE_EQ ( 1, (int)reinterpret_cast < const SConstExpr * > ( left -> left ) -> u . u64 [0] );
+
+    REQUIRE_EQ ( ( uint32_t ) eConstExpr, left -> right -> var );
+    REQUIRE_EQ ( 2, (int)reinterpret_cast < const SConstExpr * > ( left -> right ) -> u . u64 [0] );
+
+    // second child is "3"
+    REQUIRE_NOT_NULL ( expr -> right );
+    REQUIRE_EQ ( ( uint32_t ) eConstExpr, expr -> right -> var );
+    REQUIRE_EQ ( 3, (int)reinterpret_cast < const SConstExpr * > ( expr -> right ) -> u . u64 [0] );
+}
 //TODO: invalid float
 //TODO: nested vector constants - error
 //TODO: negation applied to non-scalar - error
@@ -1026,11 +1119,6 @@ FIXTURE_TEST_CASE(ChildSchema_AccessToParentsNames, AST_Fixture)
 //TODO: eCastExpr
 //TODO: eVectorExpr
 //TODO: eCondExpr
-
-#include "wb-test-schema-func.cpp"
-#include "wb-test-schema-table.cpp"
-#include "wb-test-schema-db.cpp"
-#include "wb-test-schema-view.cpp"
 
 //////////////////////////////////////////// Main
 #include <kapp/args.h>

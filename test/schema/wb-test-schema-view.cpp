@@ -25,20 +25,23 @@
 */
 
 /**
-* Unit tests for view declarations in schema, this file is #included into a bigger test suite
+* Unit tests for view declarations in schema
 */
 
-FIXTURE_TEST_CASE(Version_2_Empty_Source, AST_Fixture)
-{
-    AST * ast = MakeAst ( "version 2; table t#1 {};" );
-    REQUIRE_NOT_NULL ( ast );
-    REQUIRE_EQ ( ( int ) PT_SCHEMA_2_0, ast -> GetTokenType () );
-    REQUIRE_EQ ( 2u, ast -> ChildrenCount () );
-    REQUIRE_EQ ( ( int ) PT_EMPTY,      ast -> GetChild ( 0 ) -> GetTokenType () ); // declarations in a list
-    REQUIRE_EQ ( ( int ) PT_VERSION_2,  ast -> GetChild ( 1 ) -> GetTokenType () );
-}
+#include "AST_Fixture.hpp"
 
-class ViewAccess // encapsulates access to an STable in a VSchema
+#include <ktst/unit_test.hpp>
+
+#include <klib/symbol.h>
+
+#include "../../libs/vdb/schema-expr.h"
+
+using namespace std;
+using namespace ncbi::NK;
+
+TEST_SUITE ( SchemaViewTestSuite );
+
+class ViewAccess // encapsulates access to an SView in a VSchema
 {
 public:
     ViewAccess ( const SView* p_fn ) : m_self ( p_fn ) {}
@@ -375,8 +378,9 @@ FIXTURE_TEST_CASE(View_Column, AST_View_Fixture)
     REQUIRE_NULL ( c . ptype );
     REQUIRE_EQ ( U8_id, c . td . type_id );
     REQUIRE_EQ ( 1u, c . td . dim);
-    REQUIRE_EQ ( 1u, c . cid . ctx ); // T;s contextId is 0, W's is 1
+    REQUIRE_EQ ( 0u, c . cid . ctx );
     REQUIRE_EQ ( 0u, c . cid . id );
+    REQUIRE_EQ ( (uint32_t)eView, c . cid . ctx_type );
     REQUIRE ( ! c . dflt );
     REQUIRE ( c . read_only );
     REQUIRE ( ! c . simple );
@@ -402,12 +406,13 @@ FIXTURE_TEST_CASE(View_Column_Overloaded, AST_View_Fixture)
     const SNameOverload * ovl = v . ColumnNames () . Get ( 0 );
     REQUIRE_NOT_NULL ( ovl );
     REQUIRE_EQ ( string ("c"), ToCppString ( ovl -> name -> name ) );
-    REQUIRE_EQ ( 1u, ovl -> cid . ctx );
+    REQUIRE_EQ ( 0u, ovl -> cid . ctx );
     REQUIRE_EQ ( 0u, ovl -> cid . id );
+
     const SColumn * col = v . Columns () . Get ( 0 );
     REQUIRE_NOT_NULL ( col );
     REQUIRE_EQ ( ovl -> cid . ctx, col -> cid . ctx );
-    REQUIRE_EQ ( ovl -> cid . id, col -> cid . id );
+    REQUIRE_EQ ( 0u, col -> cid . id );
 
     VdbVector < SColumn > names ( ovl -> items );
     REQUIRE_EQ ( 2u, names . Count () );
@@ -417,7 +422,7 @@ FIXTURE_TEST_CASE(View_Column_Overloaded, AST_View_Fixture)
     col = v . Columns () . Get ( 1 );
     REQUIRE_NOT_NULL ( col );
     REQUIRE_EQ ( ovl -> cid . ctx, col -> cid . ctx );
-    REQUIRE_EQ ( ovl -> cid . id, col -> cid . id );
+    REQUIRE_EQ ( 1u, col -> cid . id );
 }
 
 FIXTURE_TEST_CASE(View_Column_Reference, AST_View_Fixture)
@@ -433,27 +438,92 @@ FIXTURE_TEST_CASE(View_Column_Reference, AST_View_Fixture)
 
 FIXTURE_TEST_CASE(View_Column_ReferenceToParamTablesColumn, AST_View_Fixture)
 {   // introducing member expressions!
-    ViewAccess v = ParseView ( "version 2; table T#1 { column U8 c1 = 1; }; view W#1 <T t0, T t1> { column U8 c2 = t1 . c1; }", "W" );
+    ViewAccess v = ParseView (
+        "version 2; "
+        "table T#1 { column U8 c1 = 1; };"
+        "view W#1 <T t0, T t1> { column U8 c2 = t1 . c1; }",
+        "W" );
     REQUIRE_EQ ( 1u, v . Columns () . Count () );
     const SColumn & c = * v . Columns () . Get ( 0 );
     REQUIRE_NOT_NULL ( c . name );
     REQUIRE_EQ ( string ("c2"), ToCppString ( c . name -> name ) );
     REQUIRE_NOT_NULL ( c . read );
     REQUIRE_EQ ( ( uint32_t ) eMembExpr, c . read -> var );
+
     const SMembExpr * expr = reinterpret_cast < const SMembExpr * > ( c . read );
-    REQUIRE_EQ ( v .m_self, expr -> view );
+    REQUIRE_EQ ( v . m_self, expr -> view );
     REQUIRE_EQ ( 1u, expr -> paramId );
     REQUIRE_EQ ( string("c1"), ToCppString ( expr -> member -> name ) );
 }
+
 FIXTURE_TEST_CASE(View_Column_ReferenceToParamTablesColumn_PseudoPhysicalToken, AST_View_Fixture)
 {   // .b looks like a physical identifier
     ViewAccess v = ParseView ( "version 2; table T#1 { column U8 c1 = 1; }; view W#1 <T t> { column U8 c2 = t .c1; }", "W" );
     REQUIRE_EQ ( ( uint32_t ) eMembExpr, v . Columns () . Get ( 0 ) -> read -> var );
 }
+
 FIXTURE_TEST_CASE(View_Column_ReferenceToParamTablesProduction, AST_View_Fixture)
-{
-    ViewAccess v = ParseView ( "version 2; table T#1 { U8 c1 = 1; }; view W#1 <T t> { column U8 c2 = t . c1; }", "W" );
+{    // can access non-virtual productions defined in the parameter table
+    ViewAccess v = ParseView (
+        "version 2;"
+        "table T#1 { U8 p = 1; };"
+        "view W#1 <T t> { column U8 c2 = t . p; }", "W" );
     REQUIRE_EQ ( ( uint32_t ) eMembExpr, v . Columns () . Get ( 0 ) -> read -> var );
+    //TODO: verify c2's value
+}
+
+FIXTURE_TEST_CASE(View_Column_ReferenceToParamTablesVirtualProduction, AST_View_Fixture)
+{
+    ViewAccess v = ParseView (
+        "version 2;"
+        "table T1#1         { U8 p = q; };"
+        "view W#1 <T1 t>    { column U8 c2 = t . q; }", "W" ); // p is a virtual production introduced but not defined in T1, accessible to the view
+    REQUIRE_EQ ( ( uint32_t ) eMembExpr, v . Columns () . Get ( 0 ) -> read -> var );
+}
+
+FIXTURE_TEST_CASE(View_Column_ReferenceToParamTablesVirtualProduction_Inherited, AST_View_Fixture)
+{
+    ViewAccess v = ParseView (
+        "version 2;"
+        "table T0#1         { U8 p = q; };"
+        "table T1#1 = T0    { };"
+        "view W#1 <T1 t>    { column U8 c2 = t . q; }", "W" ); // p is a virtual production introduced in a parent table of T1 but never defined, accessible to the view
+    REQUIRE_EQ ( ( uint32_t ) eMembExpr, v . Columns () . Get ( 0 ) -> read -> var );
+}
+
+FIXTURE_TEST_CASE(View_Column_ReferenceToParamTablesProduction_Inherited, AST_View_Fixture)
+{
+    ViewAccess v = ParseView (
+        "version 2;"
+        "table T1#1         { U8 p = 1; };"
+        "table T2#1 = T1#1  { };"
+        "view W#1 <T2 t>    { column U8 c2 = t . p; }", "W" ); // p is a non-virtual production defined in a parent table of T2, accessible to the view
+    REQUIRE_EQ ( ( uint32_t ) eMembExpr, v . Columns () . Get ( 0 ) -> read -> var );
+}
+
+FIXTURE_TEST_CASE(View_Column_ReferenceToParamTablesArrayColumn, AST_View_Fixture)
+{
+    ViewAccess v = ParseView (
+        "version 2;"
+        "table T#1 { column U8[2] c1; };"
+        "view W#1 <T t0, T t1> { column U8[2] c2 = t1 . c1; }",
+        "W" );
+    REQUIRE_EQ ( 1u, v . Columns () . Count () );
+    const SColumn & c = * v . Columns () . Get ( 0 );
+    REQUIRE_EQ ( 2u, c . td . dim );
+    REQUIRE_NOT_NULL ( c . read );
+    REQUIRE_EQ ( ( uint32_t ) eMembExpr, c . read -> var );
+    const SMembExpr * expr = reinterpret_cast < const SMembExpr * > ( c . read );
+    REQUIRE_EQ ( v . m_self, expr -> view );
+    REQUIRE_EQ ( 1u, expr -> paramId );
+    REQUIRE_EQ ( string("c1"), ToCppString ( expr -> member -> name ) );
+
+    const SNameOverload * c1 = reinterpret_cast < const SNameOverload * > ( expr -> member -> u . obj );
+    REQUIRE_NOT_NULL ( c1 );
+
+    REQUIRE_EQ ( 1u, VectorLength(& c1 -> items) );
+    const SColumn * col = ( const SColumn* ) VectorGet ( & c1 -> items, 0 );
+    REQUIRE_EQ ( 2u, col -> td . dim );
 }
 
 FIXTURE_TEST_CASE(View_Join_Shorthand, AST_View_Fixture)
@@ -484,6 +554,23 @@ FIXTURE_TEST_CASE(View_Join_Shorthand, AST_View_Fixture)
     REQUIRE_NULL ( rowId -> rowId );
 }
 
+FIXTURE_TEST_CASE(View_Join_PseudoPhysicalToken, AST_View_Fixture)
+{   // .c2 looks like a physical identifier
+    ParseView (
+        "version 2;"
+        "table T1#1 { column I64 c1; };"
+        "table T2#1 { column U8 c2; };"
+        "view X#1 <T1 t1, T2 t2> { column U8 c3 = t2 [ t1 . c1 ].c2; }; ", // here
+        "X" );
+}
+
+FIXTURE_TEST_CASE(View_Column_MemberInvalid, AST_View_Fixture)
+{
+    VerifyErrorMessage (
+        "version 2; table T#1 { column U8 c1 = 1; }; view W#1 <T t> { column U8 c2 = t . c1; U8 bad = c2 . t; }",
+        "Not a view parameter: 'c2'" );
+}
+
 FIXTURE_TEST_CASE(View_Column_ReferenceToParamTablesColumn_Undefined, AST_View_Fixture)
 {
     VerifyErrorMessage (
@@ -494,9 +581,9 @@ FIXTURE_TEST_CASE(View_Column_ReferenceToParamTablesColumn_Undefined, AST_View_F
 FIXTURE_TEST_CASE(View_Column_ReferenceToParamViewsColumn, AST_View_Fixture)
 {
     ViewAccess v = ParseView (
-        "version 2; table T#1 { U8 c1 = 1; };"
-        " view V#1 <T t> { column U8 c2 = t . c1; }"
-        " view W#1 <V v> { column U8 c3 = v . c2; }",
+        "version 2; table T#1 { U8 p = 1; };"
+        " view V#1 <T t> { column U8 c1 = t . p; }"
+        " view W#1 <V v> { column U8 c2 = v . c1; }",
     "W", 1 );
     const SColumn & c = * v . Columns () . Get ( 0 );
     REQUIRE_NOT_NULL ( c . read );
@@ -506,10 +593,59 @@ FIXTURE_TEST_CASE(View_Column_ReferenceToParamViewsColumn, AST_View_Fixture)
 FIXTURE_TEST_CASE(View_Column_ReferenceToParamViewsColumn_Undefined, AST_View_Fixture)
 {
     VerifyErrorMessage (
-        "version 2; table T#1 { U8 c1 = 1; };"
-        " view V#1 <T t> { column U8 c2 = t . c1; }"
-        " view W#1 <V v> { column U8 c3 = v . c22222222; }",
+        "version 2; table T#1 { U8 p = 1; };"
+        " view V#1 <T t> { column U8 c1 = t . p; }"
+        " view W#1 <V v> { column U8 c2 = v . c22222222; }",
         "Column/production not found: 'c22222222'" );
+}
+
+FIXTURE_TEST_CASE(View_Column_ReferenceToParamViewsProduction, AST_View_Fixture)
+{    // can access non-virtual productions defined in the parameter table
+    ViewAccess v = ParseView (
+        "version 2; table T#1 { U8 p = 1; };"
+        " view V#1 <T t> { U8 c1 = t . p; }"
+        " view W#1 <V v> { column U8 c2 = v . c1; }",
+        "W", 1 );
+    REQUIRE_NOT_NULL ( v . Columns () . Get ( 0 ) -> read );
+    REQUIRE_EQ ( ( uint32_t ) eMembExpr, v . Columns () . Get ( 0 ) -> read -> var );
+    //TODO: verify c2's value
+}
+
+FIXTURE_TEST_CASE(View_Column_ReferenceToParamViewsVirtualProduction, AST_View_Fixture)
+{
+    ViewAccess v = ParseView (
+        "version 2; table T#1 {};"
+        " view V#1 <T t> { U8 c1 = q; }"
+        " view W#1 <V v> { column U8 c2 = v . q; }",
+        "W", 1 );
+    // p is a virtual production introduced but not defined in V, accessible to child W
+    REQUIRE_NOT_NULL ( v . Columns () . Get ( 0 ) -> read );
+    REQUIRE_EQ ( ( uint32_t ) eMembExpr, v . Columns () . Get ( 0 ) -> read -> var );
+}
+
+FIXTURE_TEST_CASE(View_Column_ReferenceToParamViewVirtualProduction_Inherited, AST_View_Fixture)
+{
+    ViewAccess v = ParseView (
+        "version 2; table T#1 {};"
+        " view V0#1 <T t> {}"
+        " view V1#1 <V0 v> { U8 c1 = q; }"
+        " view W#1 <V1 v> { column U8 c2 = v . q; }",
+        "W", 2 );
+    // p is a virtual production introduced in a parent table of T1 but never defined, accessible to the view
+    REQUIRE_NOT_NULL ( v . Columns () . Get ( 0 ) -> read );
+    REQUIRE_EQ ( ( uint32_t ) eMembExpr, v . Columns () . Get ( 0 ) -> read -> var );
+}
+
+FIXTURE_TEST_CASE(View_Column_ReferenceToParamViewsProduction_Inherited, AST_View_Fixture)
+{
+    ViewAccess v = ParseView (
+        "version 2; table T#1 {};"
+        " view V0#1 <T t> {}"
+        " view V1#1 <V0 v> { U8 p = q; }"
+        " view W#1 <V1 v> { column U8 c2 = v . p; }",
+        "W", 2 );
+    // p is a non-virtual production defined in a parent table of T2, accessible to the view
+    REQUIRE_EQ ( ( uint32_t ) eMembExpr, v . Columns () . Get ( 0 ) -> read -> var );
 }
 
 FIXTURE_TEST_CASE(View_Column_Context, AST_View_Fixture)
@@ -521,7 +657,7 @@ FIXTURE_TEST_CASE(View_Column_Context, AST_View_Fixture)
     "W", 1 );
     const SNameOverload * ovl = v . ColumnNames () . Get ( 0 );
     REQUIRE_NOT_NULL ( ovl );
-    REQUIRE_EQ ( 2u, ovl -> cid . ctx ); // W'1 contextId is 2
+    REQUIRE_EQ ( 1u, ovl -> cid . ctx ); // W's contextId is 1
     REQUIRE_EQ ( 0u, ovl -> cid . id );
     const SColumn * col = v . Columns () . Get ( 0 );
     REQUIRE_NOT_NULL ( col );
@@ -530,7 +666,7 @@ FIXTURE_TEST_CASE(View_Column_Context, AST_View_Fixture)
 
     ovl = v . ColumnNames () . Get ( 1 );
     REQUIRE_NOT_NULL ( ovl );
-    REQUIRE_EQ ( 2u, ovl -> cid . ctx );
+    REQUIRE_EQ ( 1u, ovl -> cid . ctx );
     REQUIRE_EQ ( 1u, ovl -> cid . id );
     col = v . Columns () . Get ( 1 );
     REQUIRE_NOT_NULL ( col );
@@ -762,12 +898,76 @@ FIXTURE_TEST_CASE(View_Parents_OverloadingParentsColumn, AST_View_Fixture)
     REQUIRE_NOT_NULL ( ovl );
     REQUIRE_NOT_NULL ( ovl -> name );
     REQUIRE_EQ ( string ("c"), ToCppString ( ovl -> name -> name ) );
-    REQUIRE_EQ ( 1u, ovl -> cid . ctx ); // inherited from W whose contexId is 1
+    REQUIRE_EQ ( 0u, ovl -> cid . ctx ); // inherited from W whose contexId is 0
     REQUIRE_EQ ( 0u, ovl -> cid . id );
 
     VdbVector < SColumn > names ( ovl -> items );
     REQUIRE_EQ ( 2u, names . Count () );
     REQUIRE_EQ ( dad . Columns () . Get ( 0 ), names . Get ( 0 ) );
     REQUIRE_EQ ( v . Columns () . Get ( 0 ), names . Get ( 1 ) );
+}
+
+FIXTURE_TEST_CASE(View_ColumnDecl_Context_Inherited, AST_View_Fixture)
+{
+    ViewAccess v = ParseView (
+        "version 2; table T#1 {};"
+        "view V#1<T tbl> {"
+        	"column U32 READ_LEN = 1;"
+	        "column U16 READ_LEN = 2;"
+        "};"
+        "view W#1<T tbl> = V<tbl> { U32 c = READ_LEN; }",
+    "W", 1 );
+    REQUIRE_EQ ( 0u, v . Columns () . Count () );
+    REQUIRE_EQ ( 1u, v . ColumnNames () . Count () );
+
+    const SNameOverload * ovl = v . ColumnNames () . Get ( 0 );
+    REQUIRE_NOT_NULL ( ovl );
+    REQUIRE_EQ ( 0u, ovl -> cid . ctx );
+    REQUIRE_EQ ( 0u, ovl -> cid . id );
+    REQUIRE_EQ ( 2u, VectorLength ( & ovl -> items ) );
+    {
+        const SColumn * col = ( const SColumn * ) VectorGet( & ovl -> items, 0 );
+        REQUIRE_NOT_NULL ( col );
+        REQUIRE_EQ ( 0u, col -> cid . ctx );
+        REQUIRE_EQ ( 1u, col -> cid . id );
+    }
+    {
+        const SColumn * col = ( const SColumn * ) VectorGet( & ovl -> items, 1 );
+        REQUIRE_NOT_NULL ( col );
+        REQUIRE_EQ ( 0u, col -> cid . ctx );
+        REQUIRE_EQ ( 0u, col -> cid . id );
+    }
+}
+
+//////////////////////////////////////////// Main
+#include <kapp/args.h>
+#include <kfg/config.h>
+#include <klib/out.h>
+
+extern "C"
+{
+
+ver_t CC KAppVersion ( void )
+{
+    return 0x1000000;
+}
+
+const char UsageDefaultName[] = "wb-test-schema-view";
+
+rc_t CC UsageSummary (const char * progname)
+{
+    return KOutMsg ( "Usage:\n" "\t%s [options] -o path\n\n", progname );
+}
+
+rc_t CC Usage( const Args* args )
+{
+    return 0;
+}
+
+rc_t CC KMain ( int argc, char *argv [] )
+{
+    return SchemaViewTestSuite(argc, argv);
+}
+
 }
 

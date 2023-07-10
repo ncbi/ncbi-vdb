@@ -316,7 +316,7 @@ rc_t VSimpleProdRead ( VSimpleProd *self, VBlob **vblob, int64_t * id, uint32_t 
         return RC ( rcVDB, rcProduction, rcReading, rcProduction, rcCorrupt );
     }
 
-    if ( rc == 0 )
+    if ( rc == 0 && * vblob != NULL )
     {
         VBlob *blob = * vblob;
 
@@ -2093,6 +2093,7 @@ static uint32_t VScriptProdFixedRowLength ( const VScriptProd *self, int64_t row
 /*--------------------------------------------------------------------------
  * VPivotProd
  *  potentially pivots to a new row-id space
+ *  member with a pivot: tbl [ row_id ] . member  
  */
 
 rc_t VPivotProdMake ( VPivotProd ** p_prodp,
@@ -2104,9 +2105,8 @@ rc_t VPivotProdMake ( VPivotProd ** p_prodp,
 {
     VPivotProd * prod;
     VFormatdecl fd = { { 0, 0 }, 0 };
-    VTypedesc desc = { 64, 1, vtdInt };
     rc_t rc = VProductionMake ( ( VProduction** ) p_prodp, p_owned, sizeof * prod,
-        prodPivot, 0, p_name, & fd, & desc, NULL, p_chain );
+        prodPivot, 0, p_name, & fd, & p_member -> desc, NULL, p_chain );
     if ( rc == 0 )
     {
         prod = * p_prodp;
@@ -2124,32 +2124,46 @@ void VPivotProdDestroy ( VPivotProd * p_self )
  */
 rc_t VPivotProdRead ( VPivotProd * p_self, struct VBlob ** p_vblob, int64_t * p_id, uint32_t p_cnt )
 {
-    struct VBlob * rowIdBlob;
-    rc_t rc;
+    assert ( p_vblob != NULL );
     assert ( p_id != NULL );
-    rc = VProductionReadBlob ( p_self -> row_id, & rowIdBlob, p_id , p_cnt, NULL);
-    if ( rc == 0 )
+
+    struct VBlob * rowIdBlob;
+    rc_t rc = VProductionReadBlob ( p_self -> row_id, & rowIdBlob, p_id , p_cnt, NULL);
+    if ( rc == 0 && rowIdBlob != NULL )
     {
         uint32_t elemNum;
         uint32_t repeat_count;
         uint32_t rowLen = PageMapGetIdxRowInfo ( rowIdBlob -> pm, ( uint32_t ) ( * p_id - rowIdBlob -> start_id ), & elemNum, & repeat_count );
-        /* assume elem size is 64 */
-        int64_t newRowId = * ( ( int64_t* ) rowIdBlob -> data . base + elemNum );
-
-		assert ( rowLen == 1);
-        assert ( repeat_count == 1);
-        UNUSED(rowLen);
-
-		vblob_release ( rowIdBlob, NULL );
-
-		rc = VProductionReadBlob ( p_self -> member, p_vblob, & newRowId, p_cnt, NULL);
-        if ( rc == 0 )
+        if ( rowLen == 1 && repeat_count == 1)
         {
-            /* the cache mechanism will get confused by our overwriting p_id, so turn it off */
-            ( * p_vblob ) -> no_cache = true;
-            * p_id = newRowId;
+            int64_t newRowId;
+            switch ( rowIdBlob -> data . elem_bits )
+            {
+            case 64: newRowId = * ( ( int64_t* ) rowIdBlob -> data . base + elemNum ); break;
+            case 32: newRowId = * ( ( int32_t* ) rowIdBlob -> data . base + elemNum ); break;
+            case 16: newRowId = * ( ( int16_t* ) rowIdBlob -> data . base + elemNum ); break;
+            case 8:  newRowId = * ( ( int8_t* ) rowIdBlob -> data . base + elemNum ); break;
+            default: assert(false);
+            }
+            vblob_release ( rowIdBlob, NULL );
+            rc = VProductionReadBlob ( p_self -> member, p_vblob, & newRowId, p_cnt, NULL);
+            if ( rc == 0 )
+            {
+                /* the cache mechanism will get confused by our overwriting p_id, so turn it off */
+                ( * p_vblob ) -> no_cache = true;
+                * p_id = newRowId;
+                return 0;
+            }
+        }
+        else
+        {   
+            vblob_release ( rowIdBlob, NULL );
         }
     }
+
+    /* return an empty value p_id == 0 */
+    * p_vblob = 0;
+    * p_id = 0;
     return rc;
 }
 
@@ -2389,6 +2403,8 @@ rc_t VProductionReadBlob ( const VProduction *cself, VBlob **vblob, int64_t * p_
     int i;
     VBlob *blob;
 #endif
+
+/*printf("VProductionReadBlob(%s, %li)\n", cself->name, *p_id);*/
 
     * vblob = NULL;
 

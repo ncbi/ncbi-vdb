@@ -3244,7 +3244,7 @@ rc_t VResolverLocalResolve ( const VResolver *self, const String * accession,
     bool legacy_wgs_refseq = false;
 
     const char * quality = NULL;
-    
+
     VDBManagerGetQualityString(NULL, &quality);
     if (quality == NULL || quality[0] == '\0')
         quality = "RZ";
@@ -4904,7 +4904,7 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
                     /* goto try_name;
   VResolverQueryAcc should be able to resolve run by acc in cwd/AD:
   Don't try to query acc as file name i.e. path in cwd: ./acc
-            
+
   A known case is an incomplete AD: VResolverQueryAcc correctly fails,
                 VResolverQueryName will incorrectly find it.
 
@@ -4945,6 +4945,15 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
             case vpFullPath:
             case vpUNCPath:
                 rc = VResolverQueryPath ( self, query, local );
+                if (rc == 0)
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (
+                        "VResolverQueryInt: "
+                        "path '%S' is found in '%S'\n",
+                        &query->path, &(*local)->path));
+                else
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                        "VResolverQueryInt('%S') failed\n",
+                        &query->path));
                 break;
 
             default:
@@ -5400,7 +5409,7 @@ rc_t CC VResolverQueryDo ( const VResolver * self, VRemoteProtocols protocols,
     }
     else
 #endif
-        return VResolverQueryImpl ( self, protocols, query, 
+        return VResolverQueryImpl ( self, protocols, query,
             aLocal, aRemote, aCache, false, dir, NULL, false, NULL, NULL );
 }
 

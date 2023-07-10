@@ -38,11 +38,13 @@
 #include "prod-expr.h"
 #include "phys-priv.h"
 #include "view-priv.h"
+#include "table-priv.h"
 #undef KONST
 
 #include <vdb/schema.h>
 #include <vdb/cursor.h>
 #include <vdb/xform.h>
+#include <vdb/vdb-priv.h>
 #include <klib/symbol.h>
 #include <klib/debug.h>
 #include <klib/log.h>
@@ -141,7 +143,7 @@ rc_t VProdResolveCastExpr ( const VProdResolve *self, VProduction **out, const S
 LIB_EXPORT rc_t CC VProdResolveParamExpr ( const VProdResolve *self, VProduction **out, const KSymbol *sym )
 {
     const SProduction *sprod = sym -> u . obj;
-    VProduction *vprod = VCursorCacheGet ( self -> cache, & sprod -> cid );
+    VProduction *vprod = VCursorCacheGet ( self -> prod, & sprod -> cid );
     if ( vprod != NULL )
     {
         * out = vprod;
@@ -166,7 +168,7 @@ rc_t VProdResolveSProduction ( const VProdResolve *self, VProduction **out, cons
     VFormatdecl fd;
 
     /* check cache */
-    VProduction *vprod = VCursorCacheGet ( self -> cache, & sprod -> cid );
+    VProduction *vprod = VCursorCacheGet ( self -> prod, & sprod -> cid );
     if ( vprod != NULL )
     {
         /* return valid or failed production */
@@ -175,7 +177,7 @@ rc_t VProdResolveSProduction ( const VProdResolve *self, VProduction **out, cons
     }
 
     /* pre-fail */
-    rc = VCursorCacheSet ( self -> cache, & sprod -> cid, FAILED_PRODUCTION );
+    rc = VCursorCacheSet ( self -> prod, & sprod -> cid, FAILED_PRODUCTION );
     if ( rc == 0 )
     {
         /* resolve production type */
@@ -202,7 +204,7 @@ rc_t VProdResolveSProduction ( const VProdResolve *self, VProduction **out, cons
             if ( rc == 0 )
             {
                 void *ignore;
-                rc = VCursorCacheSwap ( self -> cache, & sprod -> cid, * out, & ignore );
+                rc = VCursorCacheSwap ( self -> prod, & sprod -> cid, * out, & ignore );
             }
         }
     }
@@ -250,7 +252,6 @@ rc_t VProdResolveBestColumn ( const VProdResolve *self,
     {
         /* look for open column */
         const SColumn *scol = n -> scol;
-
         /* resolve the column as appropriate */
         rc = VProdResolveColumn ( self, out, scol, alt );
         if ( rc != 0 || * out != NULL )
@@ -307,7 +308,6 @@ rc_t VProdResolveColExpr ( const VProdResolve *self, VProduction **out,
     {
         /* get SColumn */
         nodes [ i ] . scol = ( const void* ) VectorGet ( & sname -> items, i );
-
         /* perform type cast and measure distance */
         if ( casting ?
              VTypedeclCommonAncestor ( & nodes [ i ] . scol -> td, self -> schema,
@@ -396,7 +396,6 @@ rc_t VProdResolvePhysExpr ( const VProdResolve *self,
     return VProdResolveSPhysMember ( self, out, sym -> u . obj );
 }
 
-
 /* FwdExpr
  *  handle a forwarded symbol in expression
  *  if the symbol is "virtual", check for its override
@@ -411,17 +410,19 @@ rc_t VProdResolveFwdExpr ( const VProdResolve *self, VProduction **out,
     const KSymbol *sym = x -> _sym;
     if ( sym -> type == eVirtual )
     {
-        /* most derived table/view class */
+        /* most derived table/view */
         const KSymbol *sym2 = sym;
-        sym = VCursorFindOverride ( self -> curs, ( const VCtxId* ) & sym -> u . fwd );
-        if ( sym == NULL )
+        const VCtxId* ctx = ( const VCtxId* ) & sym -> u . fwd;
+        sym2 = VCursorFindOverride ( self -> curs, ctx, self -> primary_table, self -> view );
+        if ( sym2 == NULL )
         {
             PLOGMSG ( klogWarn, ( klogWarn, "virtual reference '$(fwd)' not found in overrides table"
                        , "fwd=%.*s"
-                       , ( int ) sym2 -> name . size
-                       , sym2 -> name . addr ));
+                       , ( int ) sym -> name . size
+                       , sym -> name . addr ));
             return 0;
         }
+        sym = sym2;
     }
 
     /* test symbol type */
@@ -489,7 +490,7 @@ rc_t VProdResolveMembExpr ( const VProdResolve *    p_self,
                     VProduction * vmember;
                     rc = VProdResolveExpr ( & pr, & vmember, NULL, p_fd, ref, p_casting );
                     SExpressionWhack ( ref );
-                    if ( rc == 0 )
+                    if ( rc == 0 && vmember != NULL )
                     {
                         if ( p_x -> rowId == NULL )
                         {   /* simple member: tbl . col */
@@ -501,10 +502,10 @@ rc_t VProdResolveMembExpr ( const VProdResolve *    p_self,
                             VProduction * rowId;
                             VFormatdecl fd = { { 0, 0 }, 0 };
                             rc = VProdResolveExpr ( p_self, & rowId, NULL, & fd, p_x -> rowId, p_casting );
-                            if ( rc == 0 )
+                            if ( rc == 0 && rowId != NULL )
                             {
                                 VPivotProd * ret;
-                                rc = VPivotProdMake ( & ret, p_self -> owned, vmember, rowId, p_x -> member -> name . addr, p_self -> chain );
+                                rc = VPivotProdMake ( & ret, p_self -> owned, vmember, rowId, pr . name -> addr, p_self -> chain );
                                 if ( rc == 0 )
                                 {
                                     * p_out = & ret -> dad;
@@ -670,11 +671,11 @@ rc_t VProdResolveExpr ( const VProdResolve *self,
     case eCondExpr:
         /* run left and right expressions in order until exit condition */
         rc = VProdResolveExpr ( self, out, desc, fd, ( ( const SBinExpr* ) expr ) -> left, casting );
-    assert (rc != -1);
+        assert (rc != -1);
         if ( ( rc == 0 && * out == NULL ) || self -> discover_writable_columns )
         {
             rc = VProdResolveExpr ( self, out, desc, fd, ( ( const SBinExpr* ) expr ) -> right, casting );
-    assert (rc != -1);
+            assert (rc != -1);
         }
 #if _DEBUGGING
         -- indent_level;
@@ -689,8 +690,9 @@ rc_t VProdResolveExpr ( const VProdResolve *self,
 
     default:
         /* report bad expression, but don't die */
-        PLOGMSG ( klogWarn, ( klogWarn, "unrecognized expression in '$(tbl)' table schema"
-                   , "tbl=%.*s"
+        PLOGMSG ( klogWarn, ( klogWarn, "unrecognized expression type $(expr) in '$(tbl)' table schema"
+                   , "expr=%u,tbl=%.*s"
+                   , expr -> var
                    , ( int ) self -> name -> size
                    , self -> name -> addr ));
 #if _DEBUGGING
@@ -799,19 +801,22 @@ rc_t VProdResolveColumnRead ( const VProdResolve *self,
     }
 
     /* fetch the column */
-    vcol = VCursorCacheGet ( VCursorColumns ( curs ), & scol -> cid );
+    vcol = VCursorGetColumn ( curs, & scol -> cid );
     if ( vcol == NULL )
     {
         VDB_DEBUG ( ( "failed to fetch NULL for column '%N'; no output was produced by '%s'\n",
                       scol -> name, __func__ ) );
         return 0;
     }
-
     /* if the read production is in place, return it */
     if ( vcol -> in != NULL )
     {
         if ( vcol -> in != FAILED_PRODUCTION )
             * out = vcol -> in;
+        else
+            VDB_DEBUG ( ( "column '%N' is failed; no output was produced by '%s'\n",
+                          scol -> name, __func__ ) );
+
         return 0;
     }
 

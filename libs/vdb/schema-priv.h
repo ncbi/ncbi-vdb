@@ -131,6 +131,7 @@ struct VCtxId
 {
     uint32_t ctx;
     uint32_t id;
+    uint32_t ctx_type; /* eTable, eView etc. */
 };
 
 /* Cmp
@@ -219,9 +220,11 @@ struct SNameOverload
 };
 
 /* Make
+    ctx_type = 0 for top-level objects (table, db, function), otherwise the type of the
+    enclosing object (eTable, eView etc.)
  */
 rc_t SNameOverloadMake ( SNameOverload **name,
-    struct KSymbol const *sym, uint32_t start, uint32_t len );
+    struct KSymbol const *sym, uint32_t ctx_type, uint32_t start, uint32_t len );
 
 /* Copy
  */
@@ -1073,7 +1076,7 @@ bool CC table_fwd_scan ( BSTNode *n, void *data );
 /* table_set_context
  * set context id on all table members
  */
-void CC table_set_context ( STable *self, uint32_t p_ctxId );
+void CC table_set_context ( STable *self );
 
 /* ScanVirtuals
  * scan override tables for virtual symbols
@@ -1493,13 +1496,20 @@ bool view_fwd_scan ( BSTNode *n, void *data );
 /* view_set_context
  * set context id on all view members
  */
-void view_set_context ( SView *self, uint32_t p_ctxId );
+void view_set_context ( SView *self );
 
 /* view_fix_forward_refs
  * fix forward references to newly resolved productions
  */
 
 rc_t view_fix_forward_refs ( const SView *table );
+
+/* init-tbl-symtab
+ *  initializes "p_tbl"
+ *  places view in scope
+ *  must be balanced by KSymTableWhack
+ */
+rc_t init_view_symtab ( struct KSymTable * p_tbl, const VSchema * p_schema, const SView * p_view );
 
 /* SViewOverrides
 */
@@ -1561,6 +1571,12 @@ const void * SViewFind ( const SView *           self,
  *  finds an inherited or introduced overridden symbol
  */
 const struct KSymbol * SViewFindOverride ( const SView * self, const VCtxId * cid );
+
+/* Parse_v2
+ * Parse the text using bison-based front end and grammar version 2
+ * Log all errors
+ */
+bool VSchemaParse_v2 ( VSchema *self, const char *text, size_t bytes );
 
 #ifdef __cplusplus
 }

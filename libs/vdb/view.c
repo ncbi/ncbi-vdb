@@ -29,6 +29,8 @@
 #include <klib/refcount.h>
 #include <klib/symbol.h>
 
+#include <vdb/cursor.h>
+
 #include "table-priv.h"
 #include "column-priv.h"
 #include "schema-parse.h"
@@ -44,13 +46,10 @@
  *  creates a read cursor object onto view
  *
  *  "curs" [ OUT ] - return parameter for newly created cursor
- *
- *  "capacity" [ IN ] - the maximum bytes to cache on the cursor before
- *  dropping least recently used blobs
  */
 LIB_EXPORT
 rc_t CC
-VViewCreateCursor ( struct VView const * p_self, const struct VViewCursor ** p_curs )
+VViewCreateCursor ( struct VView const * p_self, const struct VCursor ** p_curs )
 {
     rc_t rc = 0;
     if ( p_curs == NULL )
@@ -63,7 +62,7 @@ VViewCreateCursor ( struct VView const * p_self, const struct VViewCursor ** p_c
     }
     else
     {
-        rc = VViewCursorMake ( p_self, (struct VViewCursor **) p_curs );
+        rc = VViewCursorMake ( p_self, ( struct VViewCursor ** ) p_curs );
     }
     return rc;
 }
@@ -95,6 +94,7 @@ VViewWhack ( VView * p_self )
         }
     }
 
+    VSchemaRelease ( p_self -> schema );
     VectorWhack ( & p_self -> bindings, 0, 0 );
     VLinkerRelease ( p_self -> linker );
     KRefcountWhack ( & p_self -> refcount, "VView" );
@@ -184,12 +184,17 @@ VDBManagerOpenView ( struct VDBManager const *   p_mgr,
                     rc = VLinkerMake ( & view -> linker, p_mgr -> linker, p_mgr -> linker -> dl );
                     if ( rc == 0 )
                     {
-                        KRefcountInit ( & view -> refcount, 1, "VView", "make", "vtbl" );
-                        view -> sview = v;
-                        view -> schema = p_schema;
-                        VectorInit ( & view -> bindings, 0, 8 );
-                        * p_view = view;
-                        return 0;
+                        rc = VSchemaAddRef ( p_schema );
+                        if ( rc == 0 )
+                        {
+                            KRefcountInit ( & view -> refcount, 1, "VView", "make", "vtbl" );
+                            view -> sview = v;
+                            view -> schema = p_schema;
+                            VectorInit ( & view -> bindings, 0, 8 );
+                            * p_view = view;
+                            return 0;
+                        }
+                        VLinkerRelease ( view -> linker );
                     }
                 }
             }
@@ -221,6 +226,74 @@ BindingIdxByName ( const SView * p_self, const String * p_name )
     return -1;
 }
 
+LIB_EXPORT
+uint32_t CC
+VViewParameterCount ( struct VView const * p_self )
+{
+    if ( p_self == NULL || p_self -> sview == NULL )
+    {
+        return 0;
+    }
+    return VectorLength ( & p_self -> sview -> params );
+}
+
+LIB_EXPORT
+rc_t CC  VViewGetParameter (
+    struct VView const *    p_self,
+    uint32_t                p_idx,
+    const String **         p_name,
+    bool *                  p_is_table )
+{
+    if ( p_self == NULL || p_self -> sview == NULL )
+    {
+        return RC ( rcVDB, rcTable, rcOpening, rcSelf, rcNull );
+    }
+    if ( p_name == NULL && p_is_table == NULL )
+    {
+        return RC ( rcVDB, rcTable, rcOpening, rcParam, rcNull );
+    }
+
+    const KSymbol * p = VectorGet ( & p_self -> sview -> params, p_idx );
+    if ( p == NULL )
+    {
+        return RC ( rcVDB, rcTable, rcOpening, rcParam, rcOutofrange );
+    }
+
+    if ( p_name != NULL )
+    {
+        * p_name = & p -> name;
+    }
+    if ( p_is_table != NULL )
+    {
+        * p_is_table = p -> type == eTable;
+    }
+    return 0;
+}
+
+static
+bool
+STableIsA ( const STable * p_self, const STable * p_table )
+{
+    if ( p_self == p_table )
+    {
+        return true;
+    }
+    else
+    {
+        uint32_t i = VectorStart ( & p_self -> parents );
+        uint32_t count = VectorLength ( & p_self -> parents );
+        for ( count += i; i < count; ++ i )
+        {
+            const STable * dad = VectorGet ( & p_self -> parents, i );
+            if ( STableIsA ( dad, p_table ) )
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
 /* BindParameterTable
  *  Bind a view's parameter to a table.
  *
@@ -229,31 +302,30 @@ BindingIdxByName ( const SView * p_self, const String * p_name )
  *  "index" [ IN ] - 0-based index of the corresponding parameter in the view's parameter list
  */
 LIB_EXPORT
-rc_t
+rc_t CC
 VViewBindParameterTable ( const VView *     p_self,
-                          const char *      p_param_name,
+                          const String *    p_param_name,
                           const VTable *    p_table )
 {
     if ( p_self == NULL )
     {
         return RC ( rcVDB, rcTable, rcOpening, rcSelf, rcNull );
     }
-    if ( p_table == NULL )
+    if ( p_param_name == NULL || p_table == NULL )
     {
         return RC ( rcVDB, rcTable, rcOpening, rcParam, rcNull );
     }
     else
     {   /* locate the view's parameter, make sure it is a table, bind to the given table */
-		int32_t idx;
-        String name;
-        StringInitCString( & name, p_param_name );
-        idx = BindingIdxByName ( p_self -> sview, & name );
+        int32_t idx = BindingIdxByName ( p_self -> sview, p_param_name );
         if ( idx >= 0 )
         {   /* self->bindings is parallel to self->sview->params */
             const KSymbol * param = VectorGet ( & p_self -> sview -> params, idx );
-            if ( StringEqual ( & param -> name, & name ) )
+            if ( StringEqual ( & param -> name, p_param_name ) )
             {
-                if ( param -> type != eTable || param -> u . obj != p_table -> stbl )
+                const STable * param_table = (const STable *) param -> u . obj;
+                if ( param -> type != eTable ||
+                     ! STableIsA ( p_table -> stbl, param_table ) )
                 {
                     return RC ( rcVDB, rcTable, rcOpening, rcParam, rcWrongType );
                 }
@@ -263,10 +335,10 @@ VViewBindParameterTable ( const VView *     p_self,
                 }
 				else
 				{
-					VView * self = (VView*) p_self;
 					rc_t rc = VTableAddRef ( p_table );
 					if ( rc == 0 )
 					{
+    					VView * self = (VView*) p_self;
 						return VectorSet( & self -> bindings, idx, p_table );
 					}
 					return rc;
@@ -278,6 +350,30 @@ VViewBindParameterTable ( const VView *     p_self,
     }
 }
 
+static
+bool
+SViewIsA ( const SView * p_self, const SView * p_view )
+{
+    if ( p_self == p_view )
+    {
+        return true;
+    }
+    else
+    {
+        uint32_t i = VectorStart ( & p_self -> parents );
+        uint32_t count = VectorLength ( & p_self -> parents );
+        for ( count += i; i < count; ++ i )
+        {
+            const SViewInstance * dad = VectorGet ( & p_self -> parents, i );
+            if ( SViewIsA ( dad -> dad, p_view ) )
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
 /* BindParameterView
  *  Bind a view's parameter to a view.
  *
@@ -286,31 +382,30 @@ VViewBindParameterTable ( const VView *     p_self,
  *  "index" [ IN ] - 0-based index of the corresponding parameter in "self"'s parameter list
  */
 LIB_EXPORT
-rc_t
+rc_t CC
 VViewBindParameterView ( const VView *          p_self,
-                         const char *           p_param_name,
+                         const String *         p_param_name,
                          const struct VView *   p_view )
 {
     if ( p_self == NULL )
     {
         return RC ( rcVDB, rcTable, rcOpening, rcSelf, rcNull );
     }
-    if ( p_view == NULL )
+    if ( p_param_name == NULL || p_view == NULL )
     {
         return RC ( rcVDB, rcTable, rcOpening, rcParam, rcNull );
     }
     else
     {   /* locate the view's parameter, make sure it is a view, bind to the given view */
-        int32_t idx;
-		String name;
-        StringInitCString( & name, p_param_name );
-        idx = BindingIdxByName ( p_self -> sview, & name );
+        int32_t idx = BindingIdxByName ( p_self -> sview, p_param_name );
         if ( idx >= 0 )
         {   /* self->bindings is parallel to self->sview->params */
             const KSymbol * param = VectorGet ( & p_self -> sview -> params, idx );
-            if ( StringEqual ( & param -> name, & name ) )
+            if ( StringEqual ( & param -> name, p_param_name ) )
             {
-                if ( param -> type != eView || param -> u . obj != p_view -> sview )
+                const SView * param_view = (const SView *) param -> u . obj;
+                if ( param -> type != eView ||
+                     ! SViewIsA ( p_view -> sview, param_view ) )
                 {
                     return RC ( rcVDB, rcTable, rcOpening, rcParam, rcWrongType );
                 }
@@ -414,4 +509,67 @@ VViewGetBoundObject( const VView * p_self, const SView * p_sview, uint32_t p_par
         }
     }
     return NULL;
+}
+
+LIB_EXPORT
+rc_t CC
+VViewListCol ( const VView * p_self, struct KNamelist ** p_names )
+{
+    if ( p_self == NULL )
+    {
+        return RC ( rcVDB, rcTable, rcListing, rcSelf, rcNull );
+    }
+    else if ( p_names == NULL )
+    {
+        return RC ( rcVDB, rcTable, rcListing, rcParam, rcNull );
+    }
+    else
+    {
+        const VCursor * cursor;
+        rc_t rc = VViewCreateCursor ( p_self,  & cursor );
+        if ( rc == 0 )
+        {
+            BSTree columns;
+            BSTreeInit ( & columns );
+            rc = VCursorListReadableColumns ( ( VCursor* ) cursor, & columns );
+            if ( rc == 0 )
+            {
+                rc = make_column_namelist ( & columns, p_names );
+            }
+            BSTreeWhack ( & columns, VColumnRefWhack, NULL );
+            VCursorRelease ( cursor );
+        }
+        return rc;
+    }
+}
+
+/* OpenSchema
+ *  duplicate reference to view schema
+ *  NB - returned reference must be released
+ */
+LIB_EXPORT
+rc_t CC VViewOpenSchema ( const VView *self, const VSchema **schema )
+{
+    rc_t rc;
+
+    if ( schema == NULL )
+        rc = RC ( rcVDB, rcTable, rcAccessing, rcParam, rcNull );
+    else
+    {
+        if ( self == NULL )
+            rc = RC ( rcVDB, rcTable, rcAccessing, rcSelf, rcNull );
+        else
+        {
+            rc = VSchemaAddRef ( self -> schema );
+            if ( rc == 0 )
+            {
+                * schema = self -> schema;
+                return 0;
+            }
+        }
+
+        * schema = NULL;
+    }
+
+    return rc;
 }
