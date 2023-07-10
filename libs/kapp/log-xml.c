@@ -41,7 +41,9 @@
 
 #include <ctype.h>
 #include <string.h>
+#ifndef WINDOWS
 #include <strings.h> /* strcasecmp */
+#endif
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
