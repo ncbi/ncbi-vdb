@@ -673,8 +673,10 @@ FIXTURE_TEST_CASE ( View_ListCol, ViewFixture )
     uint32_t count = 0;
     REQUIRE_RC ( KNamelistCount ( names, & count ) );
     REQUIRE_EQ ( 2u, count );
-    // TODO: verify columns
+    REQUIRE( KNamelistContains( names, "p_c" ) );
+    REQUIRE( KNamelistContains( names, "t_c" ) );
     REQUIRE_RC ( KNamelistRelease ( names ) );
+    m_keepDb = true;
 }
 
 FIXTURE_TEST_CASE ( View_OpenSchema_NullSelf, ViewFixture )
@@ -868,6 +870,42 @@ FIXTURE_TEST_CASE ( OpenViewAlias_MultipleParams, ViewFixture )
     REQUIRE_EQ( string("456789"), string(buf, rowLen) );
 
     REQUIRE_RC( VCursorRelease ( cur ) );
+}
+
+FIXTURE_TEST_CASE ( OpenViewAlias_ListColumns, ViewFixture )
+{
+    m_schemaText =
+    "version 2;"
+    "table T#1{column ascii c1;}"
+    "table P#1{column ascii c1;}"
+
+    "view V1#1<T t, P p>{ column ascii c_t = t.c1; column ascii c_p = p.c1; }"
+
+    "database DB#1{ table T#1 t;table P#1 p; alias V1#1< t, p > va; }"
+    ;
+    CreateDb ( GetName() );
+
+    REQUIRE_RC( VDatabaseRelease ( m_db ) );
+
+    const VDatabase *rdb;
+    REQUIRE_RC( VDBManagerOpenDBRead ( m_mgr, &rdb, NULL, m_databaseName.c_str() ) );
+
+    REQUIRE_RC( VDatabaseOpenView ( rdb, & m_view, "va" ) );
+    REQUIRE_NOT_NULL( m_view );
+
+    struct KNamelist * names;
+    REQUIRE_RC( VViewListCol ( m_view, & names ) );
+
+    uint32_t count;
+    REQUIRE_RC( KNamelistCount ( names, & count ) );
+    REQUIRE_EQ( (uint32_t)2, count );
+
+    REQUIRE( KNamelistContains( names, "c_t" ) );
+    REQUIRE( KNamelistContains( names, "c_p" ) );
+
+    KNamelistRelease( names );
+
+    REQUIRE_RC( VDatabaseRelease ( rdb ) );
 }
 
 /////////////////// VDatabaseMemberType
