@@ -1716,13 +1716,14 @@ rc_t CC KClientHttpStreamTimedReadChunked ( const KClientHttpStream *cself,
 
         /* TBD - eat spaces here? */
         /* check if there was no hex number, or sep isn't pointing to nul byte */
-        if ( sep == http -> line_buffer . base || ( * sep != 0 && * sep != ';' ) )
-        {
+        if ( * sep != 0)
+          if ( sep == http -> line_buffer . base || ( * sep != 0 && * sep != ';' ) )
+          {
             KClientHttpClose ( http );
             rc = RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcIncorrect);
             self -> state = error_state;
             break;
-        }
+          }
 
         /* check for end of stream */
         if ( self -> content_length == 0 )

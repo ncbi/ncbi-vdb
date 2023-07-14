@@ -2341,6 +2341,7 @@ struct VResolver
     Vector local;
     Vector remote;
     Vector ad; /* vector having 1 dummy alg to implement AccessionAsDirectory */
+    VResolverAlg *wgsToFName; /* convert WGS accession to WGS file name */
 
     /* working directory for testing local paths */
     const KDirectory *wd;
@@ -2422,6 +2423,8 @@ rc_t VResolverWhack ( VResolver *self )
     VectorWhack ( & self -> local, VResolverAlgWhack, NULL );
 
     VectorWhack ( & self -> ad, VResolverAlgWhack, NULL );
+
+    VResolverAlgWhack(self->wgsToFName, NULL);
 
     /* drop download ticket */
     if ( self -> ticket != NULL )
@@ -6764,6 +6767,10 @@ static rc_t VResolverInitVersion(VResolver * self, const KConfig *kfg) {
     }
 }
 
+static rc_t VResolverAlgMakeWgsAccToFName(VResolverAlg **self) {
+    return VResolverAlgMake(self, NULL, appWGS, algWGSAD, false, false);
+}
+
 /* Make
  *  internal factory function
  */
@@ -6830,6 +6837,9 @@ rc_t VResolverMake ( VResolver ** objp, const KDirectory *wd,
             rc = VResolverInitVersion(obj, kfg);
 
         obj -> resoveOidName = DEFAULT_RESOVE_OID_NAME; /* just in case */
+
+        if (rc == 0)
+            rc = VResolverAlgMakeWgsAccToFName(&obj->wgsToFName);
 
         if ( rc == 0 )
         {
@@ -7018,4 +7028,36 @@ rc_t VResolverResetKNSManager(VResolver * self,
     if (rc == 0)
         self->kns = mgr;
     return rc;
+}
+
+rc_t VResolverWgsAccessionToFileName(const VResolver *self,
+    const String *accession, char *expanded, size_t bsize)
+{
+    if (accession == NULL)
+        return RC(rcVFS, rcResolver, rcResolving, rcParam, rcNull);
+    else if (expanded == NULL)
+        return RC(rcVFS, rcResolver, rcResolving, rcParam, rcNull);
+    else {
+        rc_t rc = 0;
+        VResolverAccToken tok;
+        VResolverAppID app = get_accession_app(
+            accession, false, &tok, NULL, false, NULL, NULL, NULL, -1, false);
+        expanded[0] = '\0';
+        if (app == appWGS) {
+            VResolverAlg *alg = NULL;
+            if (self == NULL)
+                rc = VResolverAlgMakeWgsAccToFName(&alg);
+            else
+                alg = self->wgsToFName;
+            if (rc == 0) {
+                String xNoqual;
+                CONST_STRING(&xNoqual, "");
+                rc = expand_algorithm(
+                    alg, &tok, expanded, bsize, NULL, false, &xNoqual);
+            }
+            if (self == NULL)
+                VResolverAlgWhack(alg, NULL);
+        }
+        return rc;
+    }
 }
