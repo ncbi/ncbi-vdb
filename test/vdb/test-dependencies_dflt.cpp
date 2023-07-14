@@ -263,7 +263,10 @@ FIXTURE_TEST_CASE(TestManyNoDep, EmptyFixture) {
     RELEASE(VDatabase, db);
     RELEASE(VPath, local);
 }
-
+/* SRR353827 has 2 AAAB01 dependencies. They refer to the same file.
+ * So total number of dependencies is 2.
+ * Number of missing dependencies is 1:
+ * it is enough to download 1 and all of them will be found locally. */
 FIXTURE_TEST_CASE(TestDoubleNoDep, EmptyFixture) {
     rc_t rc = 0;
 
@@ -287,6 +290,7 @@ FIXTURE_TEST_CASE(TestDoubleNoDep, EmptyFixture) {
     CHECK_EQUAL(count, (uint32_t)1);
     RELEASE(VDBDependencies, dep);
 
+    //                                             all dependencies
     REQUIRE_RC(VDatabaseListDependencies(db, &dep, false));
     REQUIRE_RC(VDBDependenciesCount(dep, &count));
     CHECK_EQUAL(count, (uint32_t)2);

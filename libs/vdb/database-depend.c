@@ -593,6 +593,7 @@ rc_t AddRow(BSTree* tr, BSTree* trWgs, Row* data, Ctx* ctx, int cacheState,
 
         if (sw != NULL) { /* found - reuse it */
             rc = ResolvedCopy(&sn->resolved, &sw->resolved);
+            ctx->hasDuplicates = true;
 /* We need to use VFS logging here to see it together with other VFS messages */
             DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
                 ("VDatabaseDependencies: reusing for '%s' '%S' of '%s'\n",
