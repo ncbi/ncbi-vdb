@@ -135,7 +135,8 @@ public:
         THROW_ON_RC ( string_printf ( env, sizeof( env ), &num_writ, "GOOGLE_APPLICATION_CREDENTIALS=%s", credFile ) );
         THROW_ON_FALSE ( 0 == putenv ( env ) );
 
-        THROW_ON_RC ( CloudMgrMakeWithProvider ( & mgr, cloud_provider_gcp ) );
+        THROW_ON_RC ( CloudMgrMakeWithProvider ( & mgr, cloud_provider_gcp,
+            NULL) );
 
         THROW_ON_RC ( CloudMgrMakeCloud ( mgr, & cloud, cloud_provider_gcp ) );
         putenv ( (char *) "GOOGLE_APPLICATION_CREDENTIALS=" );

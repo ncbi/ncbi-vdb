@@ -965,8 +965,12 @@ rc_t PopulateCredentials(GCP * self, KConfig * aKfg)
             rc = KConfig_Get_Gcp_Credential_File(
                 cfg, buffer, sizeof buffer, NULL);
 
-        if (rc == 0)
+        if (rc == 0) {
             pathToJsonFile = buffer;
+            DBGMSG(DBG_CLOUD, DBG_FLAG(DBG_CLOUD_LOAD), ("Got "
+                "gcp/credential_file '%s' from configuration\n",
+                pathToJsonFile));
+        }
         else
             rc = 0;
 
@@ -976,6 +980,10 @@ rc_t PopulateCredentials(GCP * self, KConfig * aKfg)
                 rc = r2;
         }
     }
+    else
+        DBGMSG(DBG_CLOUD, DBG_FLAG(DBG_CLOUD_LOAD), (
+            "Got GOOGLE_APPLICATION_CREDENTIALS from environment\n"));
+
 
     if (pathToJsonFile != NULL && *pathToJsonFile != 0)
     {   /* read the credentials file */

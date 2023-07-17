@@ -1,7 +1,7 @@
 #ifndef _h_cloud_cloud_priv_
 #define _h_cloud_cloud_priv_
 
-/*=====================================================================================
+/*==============================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
 *               National Center for Biotechnology Information
@@ -23,7 +23,7 @@
 *
 *  Please cite the author in any work or product based on this material.
 *
-* ================================================================================== */
+* =========================================================================== */
 
 
 #ifndef _h_cloud_extern_
@@ -43,7 +43,7 @@ struct KStream;
 /* CloudMgrMakeWithProvider
  *  Create a non-singleton, object to access cloud-related resources, with a set provider
  */
-CLOUD_EXTERN rc_t CC CloudMgrMakeWithProvider ( CloudMgr ** mgrp, CloudProviderId provider );
+CLOUD_EXTERN rc_t CC CloudMgrMakeWithProvider ( CloudMgr ** mgrp, CloudProviderId provider, const struct KConfig * kfg );
 
 /* Set a pre-opened HTTP connection, for testing (NULL OK)
  * TODO: remove when mocked connection becomes a regular feature of KNS
