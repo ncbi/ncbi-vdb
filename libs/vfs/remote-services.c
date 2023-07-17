@@ -3381,7 +3381,9 @@ static rc_t SRequestSetDisabled(SRequest * self, SHelper * helper) {
     rc = SHelperInitKfg(helper);
 
     if (rc == 0) {
-        KConfigReadBool(helper->kfg, "/repository/remote/disabled", &self->disabled);
+        bool enabled = true;
+        KConfig_Get_Remote_Access_Enabled(helper->kfg, &enabled);
+        self->disabled = !enabled;
         if (self->disabled && VResolverGetRemoteEnable() == vrAlwaysEnable)
             self->disabled = false;
     }
