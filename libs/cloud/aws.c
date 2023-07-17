@@ -54,7 +54,7 @@ struct AWS;
 #include "cloud-cmn.h" /* KNSManager_Read */
 #include "cloud-priv.h" /* CloudGetCachedComputeEnvironmentToken */
 
-static rc_t PopulateCredentials ( AWS * self );
+static rc_t PopulateCredentials ( AWS * self, KConfig * kfg );
 
 /* Destroy
  */
@@ -257,7 +257,7 @@ LIB_EXPORT rc_t CC CloudMgrMakeAWS ( const CloudMgr * self, AWS ** p_aws )
             self, user_agrees_to_pay, user_agrees_to_reveal_instance_identity );
         if ( rc == 0 )
         {
-            rc = PopulateCredentials( aws );
+            rc = PopulateCredentials( aws, (KConfig*)self->kfg );
             if ( rc == 0 )
             {
                 * p_aws = aws;
@@ -401,109 +401,111 @@ static void aws_parse_file ( AWS * self, const KFile *cred_file )
     {
         free ( buffer );
     }
-	else
-	{
-		String bracket;
-		String profile;
-		const String *temp1;
-		const String *brack_profile;
+    else
+    {
+        String bracket;
+        String profile;
+        const String *temp1;
+        const String *brack_profile;
 
-		const char *start = buffer;
-		const char *end = start + buf_size;
-		const char *sep = start;
-		bool in_profile = false;
+        const char *start = buffer;
+        const char *end = start + buf_size;
+        const char *sep = start;
+        bool in_profile = false;
 
-		CONST_STRING ( &bracket, "[" );
+        CONST_STRING ( &bracket, "[" );
 
-		StringInitCString( & profile, self -> profile );
+        StringInitCString( & profile, self -> profile );
 
-		StringConcat ( &temp1, &bracket, &profile );
-		CONST_STRING ( &bracket, "]" );
-		StringConcat ( &brack_profile, temp1, &bracket );
+        StringConcat ( &temp1, &bracket, &profile );
+        CONST_STRING ( &bracket, "]" );
+        StringConcat ( &brack_profile, temp1, &bracket );
 
-		--sep;
+        --sep;
 
 
-		for ( ; start < end; start = sep + 1 ) {
-			rc_t rc;
-			String string, trim;
-			String key, value;
-			String access_key_id, secret_access_key;
-			String region, output;
+        for ( ; start < end; start = sep + 1 ) {
+            rc_t rc;
+            String string, trim;
+            String key, value;
+            String access_key_id, secret_access_key;
+            String region, output;
 
-			sep = string_chr ( start, end - start, '\n' );
-			if ( sep == NULL ) sep = (char *)end;
+            sep = string_chr ( start, end - start, '\n' );
+            if ( sep == NULL ) sep = (char *)end;
 
-			StringInit (
-				&string, start, sep - start, string_len ( start, sep - start ) );
+            StringInit (
+                &string, start, sep - start, string_len ( start, sep - start ) );
 
-			StringTrim ( &string, &trim );
-			/* check for empty line and skip */
-			if ( StringLength ( &trim ) == 0 ) continue;
-			/*
-					{
-						char *p = string_dup ( trim.addr, StringLength ( &trim ) );
-						fprintf ( stderr, "line: %s\n", p );
-						free ( p );
-					}
-			*/
-			/* check for comment line and skip */
-			if ( trim.addr[0] == '#' ) continue;
+            StringTrim ( &string, &trim );
+            /* check for empty line and skip */
+            if ( StringLength ( &trim ) == 0 ) continue;
+            /*
+                    {
+                        char *p = string_dup ( trim.addr, StringLength ( &trim ) );
+                        fprintf ( stderr, "line: %s\n", p );
+                        free ( p );
+                    }
+            */
+            /* check for comment line and skip */
+            if ( trim.addr[0] == '#' ) continue;
 
-			/* check for [profile] line */
-			if ( trim.addr[0] == '[' ) {
-				in_profile = StringEqual ( &trim, brack_profile );
-				continue;
-			}
+            /* check for [profile] line */
+            if ( trim.addr[0] == '[' ) {
+                in_profile = StringEqual ( &trim, brack_profile );
+                continue;
+            }
 
-			if ( !in_profile ) continue;
+            if ( !in_profile ) continue;
 
-			/* check for key/value pairs and skip if none found */
-			rc = aws_extract_key_value_pair ( &trim, &key, &value );
-			if ( rc != 0 ) continue;
+            /* check for key/value pairs and skip if none found */
+            rc = aws_extract_key_value_pair ( &trim, &key, &value );
+            if ( rc != 0 ) continue;
 
-			/* now check keys we are looking for and populate the node*/
+            /* now check keys we are looking for and populate the node*/
 
-			CONST_STRING ( &access_key_id, "aws_access_key_id" );
-			CONST_STRING ( &secret_access_key, "aws_secret_access_key" );
+            CONST_STRING ( &access_key_id, "aws_access_key_id" );
+            CONST_STRING ( &secret_access_key, "aws_secret_access_key" );
 
-			if ( StringCaseEqual ( &key, &access_key_id ) ) {
-				free ( self -> access_key_id );
-				self -> access_key_id = string_dup ( value . addr, value . size );
-			}
+            if ( StringCaseEqual ( &key, &access_key_id ) ) {
+                free ( self -> access_key_id );
+                self -> access_key_id = string_dup ( value . addr, value . size );
+            }
 
-			if ( StringCaseEqual ( &key, &secret_access_key ) ) {
-				free ( self -> secret_access_key );
-				self -> secret_access_key = string_dup ( value . addr, value . size );
-			}
+            if ( StringCaseEqual ( &key, &secret_access_key ) ) {
+                free ( self -> secret_access_key );
+                self -> secret_access_key = string_dup ( value . addr, value . size );
+            }
 
-			CONST_STRING ( &region, "region" );
-			CONST_STRING ( &output, "output" );
+            CONST_STRING ( &region, "region" );
+            CONST_STRING ( &output, "output" );
 
-			if ( StringCaseEqual ( &key, &region ) ) {
-				free ( self -> region );
-				self -> region = string_dup ( value . addr, value . size );
-			}
-			if ( StringCaseEqual ( &key, &output ) ) {
-				free ( self -> output );
-				self -> output = string_dup ( value . addr, value . size );
-			}
+            if ( StringCaseEqual ( &key, &region ) ) {
+                free ( self -> region );
+                self -> region = string_dup ( value . addr, value . size );
+            }
+            if ( StringCaseEqual ( &key, &output ) ) {
+                free ( self -> output );
+                self -> output = string_dup ( value . addr, value . size );
+            }
 
-		}
+        }
 
-		StringWhack ( temp1 );
-		StringWhack ( brack_profile );
-		free ( buffer );
-	}
+        StringWhack ( temp1 );
+        StringWhack ( brack_profile );
+        free ( buffer );
+    }
 }
 
-static void make_home_node ( char *path, size_t path_size )
+static void make_home_node ( char *path, size_t path_size, KConfig * aKfg )
 {
     size_t num_read;
     const char *home;
 
-    KConfig * kfg;
-    rc_t rc = KConfigMakeLocal( & kfg, NULL );
+    rc_t rc = 0;
+    KConfig * kfg = aKfg;
+    if (kfg == NULL)
+        rc = KConfigMakeLocal(&kfg, NULL);
     if ( rc == 0 )
     {
         const KConfigNode *home_node;
@@ -531,22 +533,25 @@ static void make_home_node ( char *path, size_t path_size )
             KConfigNodeRelease ( home_node );
         }
 
-        KConfigRelease ( kfg );
+        if (aKfg == NULL)
+            KConfigRelease ( kfg );
     }
 }
 
-static rc_t LoadCredentials ( AWS * self  )
+static rc_t LoadCredentials ( AWS * self, KConfig * kfg )
 {
     const char *conf_env = getenv ( "AWS_CONFIG_FILE" );
     const char *cred_env = getenv ( "AWS_SHARED_CREDENTIAL_FILE" );
 
-	KDirectory *wd = NULL;
+    KDirectory *wd = NULL;
     rc_t rc = KDirectoryNativeDir ( &wd );
     if ( rc ) return rc;
 
     if ( conf_env && *conf_env != 0 ) 
     {
         const KFile *cred_file = NULL;
+        DBGMSG(DBG_CLOUD, DBG_FLAG(DBG_CLOUD_LOAD),
+            ("Got AWS_CONFIG_FILE '%s' from environment\n", conf_env));
         rc = KDirectoryOpenFileRead ( wd, &cred_file, "%s", conf_env );
         if ( rc == 0 ) 
         {
@@ -560,6 +565,8 @@ static rc_t LoadCredentials ( AWS * self  )
     if ( cred_env && *cred_env != 0 ) 
     {
         const KFile *cred_file = NULL;
+        DBGMSG(DBG_CLOUD, DBG_FLAG(DBG_CLOUD_LOAD), ("Got "
+            "AWS_SHARED_CREDENTIAL_FILE '%s' from environment\n", cred_env));
         rc = KDirectoryOpenFileRead ( wd, &cred_file, "%s", cred_env );
         if ( rc == 0 )
         {
@@ -572,19 +579,49 @@ static rc_t LoadCredentials ( AWS * self  )
 
     {
         char home[4096] = "";
-        make_home_node ( home, sizeof home );
+        make_home_node ( home, sizeof home, kfg );
 
         if ( home[0] != 0 ) 
         {
             char aws_path[4096] = "";
             size_t num_writ = 0;
-            rc = string_printf ( aws_path, sizeof aws_path, &num_writ, "%s/.aws", home );
+            rc = string_printf (aws_path, sizeof aws_path, &num_writ, "%s/.aws",
+                home );
             if ( rc == 0 && num_writ != 0 )
             {
                 const KFile *cred_file = NULL;
                 rc = KDirectoryOpenFileRead ( wd, &cred_file, "%s%s", aws_path, "/credentials" );
-                if ( rc == 0 ) 
+
+                if (rc != 0) {
+                    KConfig * cfg = kfg;
+                    rc = 0;
+                    if (cfg == NULL)
+                        rc = KConfigMake(&cfg, NULL);
+
+                    if (rc == 0)
+                        rc = KConfig_Get_Aws_Credential_File(
+                            cfg, aws_path, sizeof aws_path, NULL);
+
+                    if (rc == 0) {
+                        DBGMSG(DBG_CLOUD, DBG_FLAG(DBG_CLOUD_LOAD), ("Got "
+                            "aws/credential_file '%s' from configuration\n",
+                            aws_path));
+                        rc = KDirectoryOpenFileRead(
+                            wd, &cred_file, "%s", aws_path);
+                    }
+
+                    if (kfg == NULL) {
+                        rc_t r2 = KConfigRelease(cfg);
+                        if (rc == 0 && r2 != 0)
+                            rc = r2;
+                    }
+                }
+
+                if ( rc == 0 )
                 {
+                    DBGMSG(DBG_CLOUD, DBG_FLAG(DBG_CLOUD_LOAD), ("Loading "
+                        "aws/credentials from '%s%s'\n",
+                        aws_path, "/credentials"));
                     aws_parse_file ( self, cred_file );
                     KFileRelease ( cred_file );
 
@@ -605,12 +642,13 @@ static rc_t LoadCredentials ( AWS * self  )
 
 //TODO: check results of strdups and string_dups
 static
-rc_t PopulateCredentials ( AWS * self )
+rc_t PopulateCredentials ( AWS * self, KConfig * aKfg )
 {
     /* Check Environment first */
+    const char * profile = NULL;
+    
     const char * aws_access_key_id = getenv ( "AWS_ACCESS_KEY_ID" );
     const char * aws_secret_access_key = getenv ( "AWS_SECRET_ACCESS_KEY" );
-    const char * profile = getenv ( "AWS_PROFILE" );
 
     if ( aws_access_key_id != NULL && aws_secret_access_key != NULL
         && strlen ( aws_access_key_id ) > 0
@@ -618,18 +656,25 @@ rc_t PopulateCredentials ( AWS * self )
     {   /* Use environment variables */
         self -> access_key_id = string_dup( aws_access_key_id, string_size( aws_access_key_id ) );
         self -> secret_access_key = string_dup( aws_secret_access_key, string_size( aws_secret_access_key ) );
+        DBGMSG(DBG_CLOUD, DBG_FLAG(DBG_CLOUD_LOAD), ("Got "
+            "AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY from environment\n"));
         return 0;
     }
 
     /* Get Profile */
+    profile = getenv("AWS_PROFILE");
     if ( profile != NULL && *profile != 0 )
     {
         self -> profile = string_dup ( profile, string_size ( profile ) );
+        DBGMSG(DBG_CLOUD, DBG_FLAG(DBG_CLOUD_LOAD),
+            ("Got AWS_PROFILE '%s' from environment\n", self->profile));
     }
     else
     {
-        KConfig * kfg;
-        rc_t rc = KConfigMakeLocal( & kfg, NULL );
+        KConfig * kfg = aKfg;
+        rc_t rc = 0;
+        if (kfg == NULL)
+            rc = KConfigMakeLocal(&kfg, NULL);
 /*KConfigPrint(kfg,0);*/
         if ( rc == 0 )
         {
@@ -639,18 +684,24 @@ rc_t PopulateCredentials ( AWS * self )
             if ( rc == 0 && num_writ > 0 )
             {
                 self -> profile = string_dup ( buffer, string_size ( buffer ) );
+                DBGMSG(DBG_CLOUD, DBG_FLAG(DBG_CLOUD_LOAD), ("Got "
+                    "aws/profile '%s' from configuration\n",
+                    self->profile));
             }
-            KConfigRelease( kfg );
+            if (aKfg == NULL)
+                KConfigRelease(kfg);
         }
     }
 
     if ( self -> profile == NULL )
     {
         self -> profile = strdup ( "default" );
+        DBGMSG(DBG_CLOUD, DBG_FLAG(DBG_CLOUD_LOAD),
+            ("Set '%s' AWS_PROFILE\n", self->profile));
     }
 
     /* OK if no credentials are found */
-    LoadCredentials ( self );
+    LoadCredentials ( self, aKfg );
     return 0;
 }
 
