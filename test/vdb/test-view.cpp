@@ -31,6 +31,7 @@
 #include <vdb/cursor.h>
 #include <vdb/view.h>
 #include <vdb/blob.h>
+#include <vdb/vdb-priv.h>
 
 #include "../libs/vdb/database-priv.h"
 #include "../libs/vdb/schema-priv.h"
@@ -45,17 +46,71 @@ using namespace ncbi :: SchemaParser;
 TEST_SUITE( ViewTestSuite )
 
 static string BaseSchemaText =
-    "version 2.0;"
-    "table T#1 { column ascii c1; };"
-    "table P#1 { column ascii c1; };"
-    "database DB#1 { table T t; table P p; };"
-    "view V#1 < T tbl > {};"
+    "version 2;"
+    "table T#1{column ascii c1;}"
+    "table P#1{column ascii c1;}"
+    "view V#1<T tbl>{ column ascii c = tbl.c1; }"
+    "database DB#1{table T#1 t;table P#1 p;alias V#1<t> view_alias;}"
     ;
 
 static const char* TableName_1 = "t";
 static const char* TableName_2 = "p";
 static const char* TableColumnName = "c1";
 static const char* TableParamName = "tbl";
+
+const string CompactSchemaText =
+    "version 2;"
+    "table T#1{column ascii c1;}"
+    "table P#1{column ascii c1;}"
+    "view V#1<T tbl1,T tbl2>{column ascii c = tbl1.c1;}"
+    "database DB#1{table T#1 t;table P#1 p;alias V#1<t,t> view_alias;}"
+;
+
+FIXTURE_TEST_CASE ( ViewAlias_DumpSchema_Compact, WVDB_v2_Fixture )
+{
+    REQUIRE_RC ( VDBManagerMakeUpdate ( & m_mgr, NULL ) );
+    REQUIRE_RC ( VDBManagerMakeSchema ( m_mgr, & m_schema ) );
+    ParseSchema ( m_schema, CompactSchemaText );
+    string d = DumpSchema( * m_schema );
+    REQUIRE_EQ( CompactSchemaText, d );
+}
+
+FIXTURE_TEST_CASE ( ViewAlias_DumpSchema_Full, WVDB_v2_Fixture )
+{
+    const string FullSchemaText =
+        "version 2;\n"
+        "table T #1\n"
+        "{\n"
+        "\tcolumn ascii c1;\n"
+        "}\n"
+        "table P #1\n"
+        "{\n"
+        "\tcolumn ascii c1;\n"
+        "}\n"
+        "view V1 #1<T tbl1, T tbl2>\n"
+        "{\n"
+        "}\n"
+        "view V2 #1<T tbl1, T tbl2>\n"
+        "{\n"
+        "}\n"
+        "view V3 #1<T t1, T t2>=V1<t1, t2>, V2<t1, t2>\n"
+        "{\n"
+        "}\n"
+        "database DB #1\n"
+        "{\n"
+        "\ttable T #1 t;\n"
+        "\ttable P #1 p;\n"
+        "\talias V1 #1<t, t> view_alias1;\n"
+        "\talias V3 #1<t, t> view_alias3;\n"
+        "}\n"
+    ;
+
+    REQUIRE_RC ( VDBManagerMakeUpdate ( & m_mgr, NULL ) );
+    REQUIRE_RC ( VDBManagerMakeSchema ( m_mgr, & m_schema ) );
+    ParseSchema ( m_schema, FullSchemaText );
+    string d = DumpSchema( * m_schema, false );
+    REQUIRE_EQ(  FullSchemaText, d );
+}
 
 class ViewFixture : public WVDB_v2_Fixture
 {
@@ -182,48 +237,13 @@ public:
     const VCursor * m_cur;
     uint32_t        m_colIdx;
     const VBlob *   m_blob;
-    char            m_buf [1024];
+    char            buf [1024];
     uint32_t        m_rowLen;
     const void *    m_base;
     uint32_t        m_elemBits;
     uint32_t        m_boff;
 };
 
-// VDBManagerOpenView
-
-FIXTURE_TEST_CASE ( OpenView_BadSelf, ViewFixture )
-{
-    CreateDb ( GetName() );
-    REQUIRE_RC_FAIL ( VDBManagerOpenView ( 0, & m_view, m_schema, "V" ) );
-}
-
-FIXTURE_TEST_CASE ( OpenView_BadView, ViewFixture )
-{
-    CreateDb ( GetName() );
-    REQUIRE_RC_FAIL ( VDBManagerOpenView ( m_mgr, 0, m_schema, "V" ) );
-}
-
-FIXTURE_TEST_CASE ( OpenView_BadSchema, ViewFixture )
-{
-    CreateDb ( GetName() );
-    REQUIRE_RC_FAIL ( VDBManagerOpenView ( m_mgr, & m_view, 0, "V" ) );
-}
-
-FIXTURE_TEST_CASE ( OpenView_BadName, ViewFixture )
-{
-    CreateDb ( GetName() );
-    REQUIRE_RC_FAIL ( VDBManagerOpenView ( m_mgr, & m_view, m_schema, "zzz" ) );
-}
-
-FIXTURE_TEST_CASE ( OpenView, ViewFixture )
-{
-    CreateDb ( GetName() );
-    REQUIRE_RC ( VDBManagerOpenView ( m_mgr, & m_view, m_schema, "V" ) );
-}
-
-//TODO: OpenView with the latest version
-//TODO: OpenView with an old version
-//TODO: OpenView with a non-existent version
 
 // AddRef/Release
 
@@ -437,6 +457,7 @@ FIXTURE_TEST_CASE ( View_CreateCursor_Release, ViewFixture )
     const VCursor * curs;
     REQUIRE_RC ( VViewCreateCursor ( m_view, & curs ) );
     REQUIRE_NOT_NULL ( curs );
+    //NB. tests on view cursors are in test-view-cursor
     REQUIRE_RC ( VCursorRelease ( curs ) );
 }
 
@@ -618,7 +639,7 @@ FIXTURE_TEST_CASE ( View_ListCol_SelfNull, ViewFixture )
     REQUIRE_RC_FAIL ( VViewListCol ( NULL, & names ) );
 }
 
-FIXTURE_TEST_CASE ( View_ListCol_PAramNull, ViewFixture )
+FIXTURE_TEST_CASE ( View_ListCol_ParamNull, ViewFixture )
 {
     CreateView ( GetName(), "V" );
 
@@ -652,8 +673,10 @@ FIXTURE_TEST_CASE ( View_ListCol, ViewFixture )
     uint32_t count = 0;
     REQUIRE_RC ( KNamelistCount ( names, & count ) );
     REQUIRE_EQ ( 2u, count );
-    // TODO: verify columns
+    REQUIRE( KNamelistContains( names, "p_c" ) );
+    REQUIRE( KNamelistContains( names, "t_c" ) );
     REQUIRE_RC ( KNamelistRelease ( names ) );
+    m_keepDb = true;
 }
 
 FIXTURE_TEST_CASE ( View_OpenSchema_NullSelf, ViewFixture )
@@ -674,6 +697,293 @@ FIXTURE_TEST_CASE ( View_OpenSchema, ViewFixture )
     REQUIRE_NOT_NULL ( schema );
     REQUIRE_RC ( VSchemaRelease ( schema ) );
 }
+
+// VDBManagerOpenView
+
+FIXTURE_TEST_CASE ( OpenView_BadSelf, ViewFixture )
+{
+    CreateDb ( GetName() );
+    REQUIRE_RC_FAIL ( VDBManagerOpenView ( 0, & m_view, m_schema, "V" ) );
+}
+
+FIXTURE_TEST_CASE ( OpenView_BadView, ViewFixture )
+{
+    CreateDb ( GetName() );
+    REQUIRE_RC_FAIL ( VDBManagerOpenView ( m_mgr, 0, m_schema, "V" ) );
+}
+
+FIXTURE_TEST_CASE ( OpenView_BadSchema, ViewFixture )
+{
+    CreateDb ( GetName() );
+    REQUIRE_RC_FAIL ( VDBManagerOpenView ( m_mgr, & m_view, 0, "V" ) );
+}
+
+FIXTURE_TEST_CASE ( OpenView_BadName, ViewFixture )
+{
+    CreateDb ( GetName() );
+    REQUIRE_RC_FAIL ( VDBManagerOpenView ( m_mgr, & m_view, m_schema, "zzz" ) );
+}
+
+FIXTURE_TEST_CASE ( OpenView, ViewFixture )
+{
+    CreateDb ( GetName() );
+    REQUIRE_RC ( VDBManagerOpenView ( m_mgr, & m_view, m_schema, "V" ) );
+}
+
+//TODO: OpenView with the latest version
+//TODO: OpenView with an old version
+//TODO: OpenView with a non-existent version
+
+FIXTURE_TEST_CASE ( OpenViewAlias_BadSelf, ViewFixture )
+{
+    CreateDb ( GetName() );
+    REQUIRE_RC_FAIL ( VDatabaseOpenView ( 0, & m_view, "view_alias" ) );
+}
+
+FIXTURE_TEST_CASE ( OpenViewAlias_BadViewPtr, ViewFixture )
+{
+    CreateDb ( GetName() );
+    REQUIRE_RC_FAIL ( VDatabaseOpenView ( m_db, nullptr, "view_alias" ) );
+}
+
+FIXTURE_TEST_CASE ( OpenViewAlias_BadViewName, ViewFixture )
+{
+    CreateDb ( GetName() );
+    REQUIRE_RC_FAIL ( VDatabaseOpenView ( m_db, & m_view, "view_shmalias" ) );
+}
+
+FIXTURE_TEST_CASE ( OpenViewAlias_ParamTable, ViewFixture )
+{
+    CreateDb ( GetName() );
+    REQUIRE_RC( VDatabaseOpenView ( m_db, & m_view, "view_alias" ) );
+    REQUIRE_NOT_NULL( m_view );
+
+    const VCursor * cur;
+    REQUIRE_RC( VViewCreateCursor ( m_view, & cur ) );
+    uint32_t idx;
+    REQUIRE_RC( VCursorAddColumn ( cur, & idx, "c" ) );
+    REQUIRE_RC( VCursorOpen ( cur ) );
+    char buf [1024];
+    uint32_t rowLen;
+    REQUIRE_RC( VCursorReadDirect ( cur, 1, idx, 8, buf, sizeof ( buf ), & rowLen ) );
+    REQUIRE_EQ( string("blah"), string(buf, rowLen) );
+    REQUIRE_RC( VCursorReadDirect ( cur, 2, idx, 8, buf, sizeof ( buf ), & rowLen ) );
+    REQUIRE_EQ( string("eeee"), string(buf, rowLen) );
+
+    REQUIRE_RC( VCursorRelease ( cur ) );
+}
+
+FIXTURE_TEST_CASE ( OpenViewAlias_ParamView, ViewFixture )
+{
+    m_schemaText =
+    "version 2;"
+    "table T#1{column ascii c1;}"
+    "table P#1{column ascii c1;}"
+
+    "view V1#1<T tbl>{ column ascii c = tbl.c1; }"
+    "view V2#1<V1 v> { column ascii d = v.c; }"
+
+    "database DB#1{ table T#1 t;table P#1 p; alias V1#1< t > va1; alias V2#1< va1 > va2; }"
+    ;
+    CreateDb ( GetName() );
+    REQUIRE_RC( VDatabaseOpenView ( m_db, & m_view, "va2" ) );
+    REQUIRE_NOT_NULL( m_view );
+
+    const VCursor * cur;
+    REQUIRE_RC( VViewCreateCursor ( m_view, & cur ) );
+    uint32_t idx;
+    REQUIRE_RC( VCursorAddColumn ( cur, & idx, "d" ) );
+    REQUIRE_RC( VCursorOpen ( cur ) );
+    char buf [1024];
+    uint32_t rowLen;
+    REQUIRE_RC( VCursorReadDirect ( cur, 1, idx, 8, buf, sizeof ( buf ), & rowLen ) );
+    REQUIRE_EQ( string("blah"), string(buf, rowLen) );
+    REQUIRE_RC( VCursorReadDirect ( cur, 2, idx, 8, buf, sizeof ( buf ), & rowLen ) );
+    REQUIRE_EQ( string("eeee"), string(buf, rowLen) );
+
+    REQUIRE_RC( VCursorRelease ( cur ) );
+}
+
+FIXTURE_TEST_CASE ( OpenViewAlias_FromParentDb, ViewFixture )
+{
+    m_schemaText =
+    "version 2;"
+    "table T#1{column ascii c1;}"
+    "table P#1{column ascii c1;}"
+
+    "view V1#1<T tbl>{ column ascii c = tbl.c1; }"
+    "view V2#1<V1 v> { column ascii d = v.c; }"
+
+    "database DB0#1{ table T#1 t;table P#1 p; }"
+    "database DB#1 = DB0{ alias V1#1< t > va1; alias V2#1< va1 > va2; }"
+    ;
+    CreateDb ( GetName() );
+    REQUIRE_RC( VDatabaseOpenView ( m_db, & m_view, "va2" ) );
+    REQUIRE_NOT_NULL( m_view );
+
+    const VCursor * cur;
+    REQUIRE_RC( VViewCreateCursor ( m_view, & cur ) );
+    uint32_t idx;
+    REQUIRE_RC( VCursorAddColumn ( cur, & idx, "d" ) );
+    REQUIRE_RC( VCursorOpen ( cur ) );
+    char buf [1024];
+    uint32_t rowLen;
+    REQUIRE_RC( VCursorReadDirect ( cur, 1, idx, 8, buf, sizeof ( buf ), & rowLen ) );
+    REQUIRE_EQ( string("blah"), string(buf, rowLen) );
+    REQUIRE_RC( VCursorReadDirect ( cur, 2, idx, 8, buf, sizeof ( buf ), & rowLen ) );
+    REQUIRE_EQ( string("eeee"), string(buf, rowLen) );
+
+    REQUIRE_RC( VCursorRelease ( cur ) );
+}
+
+FIXTURE_TEST_CASE ( OpenViewAlias_MultipleParams, ViewFixture )
+{
+    m_schemaText =
+    "version 2;"
+    "table T#1{column ascii c1;}"
+    "table P#1{column ascii c1;}"
+
+    "view V1#1<T t, P p>{ column ascii c_t = t.c1; column ascii c_p = p.c1; }"
+
+    "database DB#1{ table T#1 t;table P#1 p; alias V1#1< t, p > va; }"
+    ;
+    CreateDb ( GetName() );
+    REQUIRE_RC( VDatabaseOpenView ( m_db, & m_view, "va" ) );
+    REQUIRE_NOT_NULL( m_view );
+
+    const VCursor * cur;
+    REQUIRE_RC( VViewCreateCursor ( m_view, & cur ) );
+    uint32_t idx_t;
+    REQUIRE_RC( VCursorAddColumn ( cur, & idx_t, "c_t" ) );
+    uint32_t idx_p;
+    REQUIRE_RC( VCursorAddColumn ( cur, & idx_p, "c_p" ) );
+    REQUIRE_RC( VCursorOpen ( cur ) );
+    char buf [1024];
+    uint32_t rowLen;
+    REQUIRE_RC( VCursorReadDirect ( cur, 1, idx_t, 8, buf, sizeof ( buf ), & rowLen ) );
+    REQUIRE_EQ( string("blah"), string(buf, rowLen) );
+    REQUIRE_RC( VCursorReadDirect ( cur, 2, idx_t, 8, buf, sizeof ( buf ), & rowLen ) );
+    REQUIRE_EQ( string("eeee"), string(buf, rowLen) );
+    REQUIRE_RC( VCursorReadDirect ( cur, 1, idx_p, 8, buf, sizeof ( buf ), & rowLen ) );
+    REQUIRE_EQ( string("123"), string(buf, rowLen) );
+    REQUIRE_RC( VCursorReadDirect ( cur, 2, idx_p, 8, buf, sizeof ( buf ), & rowLen ) );
+    REQUIRE_EQ( string("456789"), string(buf, rowLen) );
+
+    REQUIRE_RC( VCursorRelease ( cur ) );
+}
+
+FIXTURE_TEST_CASE ( OpenViewAlias_ListColumns, ViewFixture )
+{
+    m_schemaText =
+    "version 2;"
+    "table T#1{column ascii c1;}"
+    "table P#1{column ascii c1;}"
+
+    "view V1#1<T t, P p>{ column ascii c_t = t.c1; column ascii c_p = p.c1; }"
+
+    "database DB#1{ table T#1 t;table P#1 p; alias V1#1< t, p > va; }"
+    ;
+    CreateDb ( GetName() );
+
+    REQUIRE_RC( VDatabaseRelease ( m_db ) );
+
+    const VDatabase *rdb;
+    REQUIRE_RC( VDBManagerOpenDBRead ( m_mgr, &rdb, NULL, m_databaseName.c_str() ) );
+
+    REQUIRE_RC( VDatabaseOpenView ( rdb, & m_view, "va" ) );
+    REQUIRE_NOT_NULL( m_view );
+
+    struct KNamelist * names;
+    REQUIRE_RC( VViewListCol ( m_view, & names ) );
+
+    uint32_t count;
+    REQUIRE_RC( KNamelistCount ( names, & count ) );
+    REQUIRE_EQ( (uint32_t)2, count );
+
+    REQUIRE( KNamelistContains( names, "c_t" ) );
+    REQUIRE( KNamelistContains( names, "c_p" ) );
+
+    KNamelistRelease( names );
+
+    REQUIRE_RC( VDatabaseRelease ( rdb ) );
+}
+
+/////////////////// VDatabaseMemberType
+
+FIXTURE_TEST_CASE(VDatabaseMemberType_SelfNull, ViewFixture)
+{
+    uint32_t t;
+    REQUIRE_RC_FAIL( VDatabaseMemberType( nullptr, "member", &t ) );
+}
+
+FIXTURE_TEST_CASE(VDatabaseMemberType_NullName, ViewFixture)
+{
+    CreateDb ( GetName() );
+    uint32_t t;
+    REQUIRE_RC_FAIL( VDatabaseMemberType( m_db, nullptr, &t ) );
+}
+
+FIXTURE_TEST_CASE(VDatabaseMemberType_NullType, ViewFixture)
+{
+    CreateDb ( GetName() );
+    REQUIRE_RC_FAIL( VDatabaseMemberType( m_db, "t", nullptr ) );
+}
+
+FIXTURE_TEST_CASE(VDatabaseMemberType_NotFound, ViewFixture)
+{
+    CreateDb ( GetName() );
+    uint32_t t;
+    REQUIRE_RC( VDatabaseMemberType( m_db, "not_in_there", &t ) );
+    REQUIRE_EQ( (uint32_t)dbmUnknown, t );
+}
+FIXTURE_TEST_CASE(VDatabaseMemberType_Table, ViewFixture)
+{
+    CreateDb ( GetName() );
+    uint32_t t;
+    REQUIRE_RC( VDatabaseMemberType( m_db, "t", &t ) );
+    REQUIRE_EQ( (uint32_t)dbmTable, t );
+}
+FIXTURE_TEST_CASE(VDatabaseMemberType_ViewAlias, ViewFixture)
+{
+    CreateDb ( GetName() );
+    uint32_t t;
+    REQUIRE_RC( VDatabaseMemberType( m_db, "view_alias", &t ) );
+    REQUIRE_EQ( (uint32_t)dbmViewAlias, t );
+}
+FIXTURE_TEST_CASE(VDatabaseMemberType_Database, ViewFixture)
+{
+    m_schemaText =
+    "version 2;"
+    "table T#1{column ascii c1;}"
+    "table P#1{column ascii c1;}"
+
+    "view V1#1<T tbl>{ column ascii c = tbl.c1; }"
+    "view V2#1<V1 v> { column ascii d = v.c; }"
+
+    "database DB0#1{ }"
+    "database DB#1{ database DB0 d; table T#1 t; table P#1 p; }"
+    ;
+    CreateDb ( GetName() );
+    uint32_t t;
+    REQUIRE_RC( VDatabaseMemberType( m_db, "d", &t ) );
+    REQUIRE_EQ( (uint32_t)dbmDatabase, t );
+}
+FIXTURE_TEST_CASE(VDatabaseMemberType_Inherited, ViewFixture)
+{
+    m_schemaText =
+    "version 2;"
+    "table T#1{column ascii c1;}"
+    "table P#1{column ascii c1;}"
+    "database DB0#1{ table T#1 t0; }"
+    "database DB#1 = DB0#1 { table T#1 t; table P#1 p; }"
+    ;
+    CreateDb ( GetName() );
+    uint32_t t;
+    REQUIRE_RC( VDatabaseMemberType( m_db, "t0", &t ) );
+    REQUIRE_EQ( (uint32_t)dbmTable, t );
+}
+
+//TODO: break these tests out to test-database.c
 
 //////////////////////////////////////////// Main
 extern "C"

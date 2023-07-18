@@ -66,7 +66,9 @@ bool CC STblMemberDefDump ( void *item, void *dumper )
     if ( b -> rc == 0 )
         b -> rc = STableDump ( self -> tbl, b );
     if ( b -> rc == 0 )
-        b -> rc = SDumperPrint ( b, " %N;\n", self -> name );
+        b -> rc = SDumperPrint ( b, " %N;", self -> name );
+    if ( b -> rc == 0 && SDumperMode ( b ) != sdmCompact )
+        b -> rc = SDumperPrint ( b, "\n" );
 
     return ( b -> rc != 0 ) ? true : false;
 }
@@ -74,6 +76,68 @@ bool CC STblMemberDefDump ( void *item, void *dumper )
 rc_t STblMemberDump ( const STblMember *self, SDumper *d )
 {
     return FQNDump ( self != NULL ? self -> name : NULL, d );
+}
+
+/*--------------------------------------------------------------------------
+ * SViewAliasMember
+ *  alias member
+ */
+
+/* Mark
+ */
+static
+void CC SViewAliasMemberMark ( void * item, void * data )
+{
+    const SViewAliasMember * self = item;
+    if ( item != NULL )
+        SViewMark ( ( void * )self -> view . dad, data );
+}
+
+/* Dump
+ */
+bool CC SViewAliasMemberDefDump ( void *item, void *dumper )
+{
+    SDumper *b = dumper;
+    SViewAliasMember *self = item;
+
+    b -> rc = SDumperPrint ( b, "\talias " );
+    if ( b -> rc == 0 )
+        b -> rc = SViewDump ( self -> view . dad, b );
+    if ( b -> rc == 0 )
+        b -> rc = SDumperPrint ( b, "<" );
+    if ( b -> rc == 0 )
+    {
+        for ( uint32_t i = 0; i < VectorLength( & self -> view . params ); ++i )
+        {
+            if ( b -> rc == 0 && i > 0 )
+            {
+                b -> rc = SDumperPrint ( b, "," );
+                if ( b -> rc == 0 && SDumperMode ( b ) != sdmCompact )
+                    b -> rc = SDumperPrint ( b, " " );
+            }
+            const KSymbol * s = VectorGet( & self -> view . params, VectorStart ( & self -> view . params ) + i );
+            if ( b -> rc == 0 )
+                b -> rc = SDumperPrint ( b, "%S", & s -> name );
+        }
+    }
+    if ( b -> rc == 0 )
+        b -> rc = SDumperPrint ( b, "> %N;", self -> name );
+    if ( b -> rc == 0 && SDumperMode ( b ) != sdmCompact )
+        b -> rc = SDumperPrint ( b, "\n" );
+
+    return ( b -> rc != 0 ) ? true : false;
+}
+
+rc_t SViewAliasMemberDump ( const STblMember *self, SDumper *d )
+{
+    return FQNDump ( self != NULL ? self -> name : NULL, d );
+}
+
+void CC SViewAliasMemberWhack( void * item, void * ignore )
+{
+    SViewAliasMember *self = item;
+    VectorWhack ( & self -> view . params, NULL, NULL );
+    free ( item );
 }
 
 
@@ -134,6 +198,7 @@ void CC SDatabaseWhack ( void *item, void *ignore )
     BSTreeWhack ( & self -> scope, KSymbolWhack, NULL );
     VectorWhack ( & self -> db, SDBMemberWhack, NULL );
     VectorWhack ( & self -> tbl, STblMemberWhack, NULL );
+    VectorWhack ( & self -> aliases, SViewAliasMemberWhack, NULL );
 
     free ( self );
 }
@@ -244,6 +309,7 @@ void CC SDatabaseMark ( void * item, void * data )
         self -> marked = true;
         VectorForEach ( & self -> db, false, SDBMemberMark, data );
         VectorForEach ( & self -> tbl, false, STblMemberMark, data );
+        VectorForEach ( & self -> aliases, false, SViewAliasMemberMark, data );
         SDatabaseMark ( ( void * )self -> dad, data );
     }
 }
@@ -271,6 +337,7 @@ bool CC SDatabaseDefDump ( void *item, void *data )
 {
     SDumper *b = data;
     const SDatabase *self = ( const void* ) item;
+    bool compact = SDumperMode ( b ) == sdmCompact ? true : false;
 
     if ( SDumperMarkedMode ( b ) && ! self -> marked )
         return false;
@@ -284,10 +351,15 @@ bool CC SDatabaseDefDump ( void *item, void *data )
     if ( b -> rc == 0 && self -> dad != NULL )
         b -> rc = SDumperPrint ( b, "= %N", self -> dad -> name );
 
+    if ( b -> rc == 0 && ! compact )
+        b -> rc = SDumperPrint ( b, "\n" );
     if ( b -> rc == 0 )
-        b -> rc = SDumperPrint ( b, "\n\t{\n" );
+        b -> rc = SDumperPrint ( b, "\t{" );
+    if ( b -> rc == 0 && ! compact )
+        b -> rc = SDumperPrint ( b, "\n" );
 
-    SDumperIncIndentLevel ( b );
+    if ( b -> rc == 0 && ! compact )
+        SDumperIncIndentLevel ( b );
 
     if ( b -> rc == 0 )
         VectorDoUntil ( & self -> tbl, false, STblMemberDefDump, b );
@@ -295,10 +367,16 @@ bool CC SDatabaseDefDump ( void *item, void *data )
     if ( b -> rc == 0 )
         VectorDoUntil ( & self -> db, false, SDBMemberDefDump, b );
 
-    SDumperDecIndentLevel ( b );
+    if ( b -> rc == 0 )
+        VectorDoUntil ( & self -> aliases, false, SViewAliasMemberDefDump, b );
+
+    if ( b -> rc == 0 && ! compact )
+        SDumperDecIndentLevel ( b );
 
     if ( b -> rc == 0 )
-        b -> rc = SDumperPrint ( b, "\t}\n" );
+        b -> rc = SDumperPrint ( b, "\t}" );
+    if ( b -> rc == 0 && ! compact )
+        b -> rc = SDumperPrint ( b, "\n" );
 
     return ( b -> rc != 0 ) ? true : false;
 }

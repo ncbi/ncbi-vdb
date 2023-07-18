@@ -145,6 +145,9 @@ enum
     /* view */
     eView,
 
+    /* view alias member*/
+    eViewAliasMember,
+
     /* keywords */
     eFirstKeyword,
 

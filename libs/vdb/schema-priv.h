@@ -120,6 +120,7 @@ struct KSymTable;
 struct SchemaEnv;
 struct KFile;
 struct KDirectory;
+struct SView;
 
 /*--------------------------------------------------------------------------
  * VCtxId
@@ -1057,6 +1058,12 @@ rc_t STableDump ( const STable *self, struct SDumper *d );
  */
 rc_t CC STableExtend ( struct KSymTable *tbl, STable *self, const STable *dad );
 
+/* IsA
+ * true if p_self and p_table are the same, or p_self is derived (directly or indirectly) from p_table
+ */
+bool
+STableIsA ( const STable * p_self, const STable * p_table );
+
 /* schema_update_tbl_ref
  * updates references to a table's ancestor with the ancestor's newer version
  */
@@ -1265,6 +1272,9 @@ struct SDatabase
     /* tables */
     Vector tbl;
 
+    /* view aliases */
+    Vector aliases;
+
     /* required version */
     uint32_t version;
 
@@ -1357,6 +1367,44 @@ void CC STableMark ( void * item, void * data );
 bool CC STblMemberDefDump ( void *item, void *dumper );
 rc_t STblMemberDump ( const STblMember *self, struct SDumper *d );
 
+/*--------------------------------------------------------------------------
+ * SViewInstance
+ * A view with specified parameters
+*/
+typedef struct SViewInstance SViewInstance;
+struct SViewInstance
+{
+    const struct SView * dad;
+    Vector params; /* const KSymbol* */
+};
+
+void SViewInstanceWhack ( void *item, void *ignore );
+
+/*--------------------------------------------------------------------------
+ * SViewAliasMember
+ *  view alias member
+ */
+typedef struct SViewAliasMember SViewAliasMember;
+struct SViewAliasMember
+{
+    /* symbolic name */
+    struct KSymbol const *name;
+
+    /* parametrized view */
+    struct SViewInstance view;
+
+    /* contextual id */
+    VCtxId cid;
+};
+
+/* Whack
+ */
+void CC SViewAliasMemberWhack( void * self, void * ignore );
+
+/* Dump
+ */
+bool CC SViewAliasMemberDefDump ( void *item, void *dumper );
+rc_t SViewAliasMemberDump ( const STblMember *self, struct SDumper *d );
 
 /*--------------------------------------------------------------------------
  * SDBMember
@@ -1449,14 +1497,15 @@ struct SView
     /* owned KSymbols that are not in scope */
     Vector syms;
 
+    /* marking */
+    bool marked;
+
 #if NOT_NEEDED_YET
 
     /* source file & line */
     String src_file;
     uint32_t src_line;
 
-    /* marking */
-    bool marked;
 #endif
 };
 
@@ -1469,11 +1518,23 @@ rc_t SViewExtend ( struct KSymTable *tbl, SView *self, const SView *dad );
  */
 void SViewWhack ( void *self, void *ignore );
 
+/* Mark
+ */
+void SViewMark ( void *self, void *ignore );
+
+/* Dump
+ */
+bool CC SViewDefDump ( void *item, void *dumper );
+rc_t SViewDump ( const SView *self, struct SDumper *d );
+
 /* Cmp
  * Sort
  */
 int64_t SViewCmp ( const void *item, const void *n );
 int64_t SViewSort ( const void *item, const void *n );
+
+bool
+SViewIsA ( const SView * p_self, const SView * p_view );
 
 /* push/pop view scope
  *
@@ -1524,18 +1585,6 @@ struct SViewOverrides
 rc_t SViewOverridesMake ( Vector *parents, const SView *dad, const Vector *overrides );
 
 int64_t SViewOverridesCmp ( const void *item, const void *n );
-
-/* SViewInstance
- * A view with specified parameters
-*/
-typedef struct SViewInstance SViewInstance;
-struct SViewInstance
-{
-    const SView * dad;
-    Vector params; /* const KSymbol* */
-};
-
-void SViewInstanceWhack ( void *item, void *ignore );
 
 /* Find
  *  generic object find within view scope

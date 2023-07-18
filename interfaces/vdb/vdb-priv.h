@@ -193,6 +193,18 @@ VDB_EXTERN bool CC VDatabaseIsCSRA ( struct VDatabase const *self );
 VDB_EXTERN rc_t CC VDatabaseGetAccession(const struct VDatabase * self,
     const struct String ** acc, const struct String ** path);
 
+/* VDatabaseMemberType
+ * Characterize a database member
+ */
+enum
+{
+    dbmUnknown,
+    dbmDatabase,
+    dbmTable,
+    dbmViewAlias
+};
+VDB_EXTERN rc_t VDatabaseMemberType(const struct VDatabase * self, const char * name, uint32_t * type);
+
 /*--------------------------------------------------------------------------
  * VTable
  */

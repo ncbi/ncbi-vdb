@@ -904,6 +904,7 @@ static
 rc_t
 VSchemaParseTextInt_v2 ( VSchema *self, const char *name, const char *text, size_t bytes )
 {
+    //printf("VSchemaParseTextInt_v2:\n%.*s\n", (int)bytes, text);
     if ( VSchemaParse_v2 ( self, text, bytes ) )
     {
         PARSE_DEBUG( ("Parsed schema v2 from %s\n", name) );
