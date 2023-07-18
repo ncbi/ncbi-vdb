@@ -381,6 +381,8 @@ FIXTURE_TEST_CASE(AWS_Credentials_AwsConfigFile_ProfileFromKfg_IsEmpty, AwsFixtu
 }
 #endif
 
+#define CREDENTIALS_KFG "cloud-kfg/credentialsKfg"
+
 /* AWS_SHARED_CREDENTIAL_FILE overrides configuration and .aws/c[or]*
    AWS_PROFILE overrides profile from configuration */
 FIXTURE_TEST_CASE(AWS_Credentials_AwsSharedCredentialFile, AwsFixture)
@@ -410,8 +412,8 @@ FIXTURE_TEST_CASE(AWS_Credentials_AwsSharedCredentialFile, AwsFixture)
     // 4) create configuration
     char credentialsKfg[PATH_MAX] = "";
     REQUIRE_RC(KDirectoryResolvePath(m_dir, true, credentialsKfg,
-        sizeof credentialsKfg, "cloud-kfg/credentialsKfg"));
-    CreateFile(credentialsKfg,
+        sizeof credentialsKfg, CREDENTIALS_KFG));
+    CreateFile(CREDENTIALS_KFG,
         "[other_profile]\n"
         "aws_access_key_id = ABC123_KFG\n"
         "aws_secret_access_key = SECRET_KFG\n");
@@ -447,8 +449,8 @@ FIXTURE_TEST_CASE(AWS_Credentials_AwsUserHomeCredentials_ConfigOverrides, AwsFix
     // 4) create configuration
     char credentialsKfg[PATH_MAX] = "";
     REQUIRE_RC(KDirectoryResolvePath(m_dir, true, credentialsKfg,
-        sizeof credentialsKfg, "cloud-kfg/credentialsKfg"));
-    CreateFile(credentialsKfg,
+        sizeof credentialsKfg, CREDENTIALS_KFG));
+    CreateFile(CREDENTIALS_KFG,
         "[other_profile]\naws_access_key_id = ABC123_KFG\n"
         "aws_secret_access_key = SECRET_KFG\n");
     CreateFile(CONFIG,
@@ -477,8 +479,8 @@ FIXTURE_TEST_CASE(AWS_Credentials_AwsUserHomeCredentials, AwsFixture)
     // 4) create configuration
     char credentialsKfg[PATH_MAX] = "";
     REQUIRE_RC(KDirectoryResolvePath(m_dir, true, credentialsKfg,
-        sizeof credentialsKfg, "cloud-kfg/credentialsKfg"));
-    CreateFile(credentialsKfg,
+        sizeof credentialsKfg, CREDENTIALS_KFG));
+    CreateFile(CREDENTIALS_KFG,
         "[other_profile]\n"
         "aws_access_key_id = ABC123_KFG\n"
         "aws_secret_access_key = SECRET_KFG\n");
@@ -494,8 +496,8 @@ FIXTURE_TEST_CASE(AWS_Credentials_KfgCredentials, AwsFixture)
     // 4) create configuration
     char credentialsKfg[PATH_MAX] = "";
     REQUIRE_RC(KDirectoryResolvePath(m_dir, true, credentialsKfg,
-        sizeof credentialsKfg, "cloud-kfg/credentialsKfg"));
-    CreateFile(credentialsKfg,
+        sizeof credentialsKfg, CREDENTIALS_KFG));
+    CreateFile(CREDENTIALS_KFG,
         "[other_profile]\n"
         "aws_access_key_id = ABC123_KFG\n"
         "aws_secret_access_key = SECRET_KFG\n");
@@ -636,8 +638,8 @@ FIXTURE_TEST_CASE(GCP_Credentials, GcpFixture)
     // B) create configuration
     char credentialsKfg[PATH_MAX] = "";
     REQUIRE_RC(KDirectoryResolvePath(m_dir, true, credentialsKfg,
-        sizeof credentialsKfg, "cloud-kfg/credentialsKfg"));
-    CreateFile(credentialsKfg,
+        sizeof credentialsKfg, CREDENTIALS_KFG));
+    CreateFile(CREDENTIALS_KFG,
         "{\n"
         "  \"type\": \"service_account\",\n"
         "  \"project_id\": \"prid\",\n"
@@ -676,8 +678,8 @@ FIXTURE_TEST_CASE(GCP_Credentials_KfgCredentials, GcpFixture) {
     // B) create configuration
     char credentialsKfg[PATH_MAX] = "";
     REQUIRE_RC(KDirectoryResolvePath(m_dir, true, credentialsKfg,
-        sizeof credentialsKfg, "cloud-kfg/credentialsKfg"));
-    CreateFile(credentialsKfg,
+        sizeof credentialsKfg, CREDENTIALS_KFG));
+    CreateFile(CREDENTIALS_KFG,
         "{\n"
         "  \"type\": \"service_account\",\n"
         "  \"project_id\": \"prid\",\n"
@@ -752,6 +754,8 @@ const char UsageDefaultName[] = "test-kns";
 rc_t CC KMain ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
+
+//  assert(!KDbgSetString("CLOUD"));
 
     // this makes messages from the test code appear
     // (same as running the executable with "-l=message")
