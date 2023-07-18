@@ -323,7 +323,7 @@ rc_t KPTrieIndexInitFromV1_v2 ( KPTrieIndex_v2 *self, const KMMap *mm, bool byte
                 }
             }
         }
-        
+
         if ( rc == 0 )
         {
             if ( i == self -> count )
@@ -410,7 +410,7 @@ rc_t KPTrieIndexInit_v2 ( KPTrieIndex_v2 *self, const KMMap *mm, bool byteswap )
                     if ( ptsize == size )
                         return 0;
 
-                    /* calculate remaining bytes */                     
+                    /* calculate remaining bytes */
                     size -= ptsize;
 
                     /* there must be enough for an array of 4-byte node ids */
@@ -547,7 +547,7 @@ rc_t KPTrieIndexInit_v3_v4 ( KPTrieIndex_v2 *self, const KMMap *mm, bool byteswa
                     if ( ptsize == size )
                         return 0;
 
-                    /* calculate remaining bytes */                     
+                    /* calculate remaining bytes */
                     size -= ptsize;
 
                     /* there must be enough for an array of 4-byte node ids */
@@ -778,19 +778,19 @@ rc_t KPTrieIndexProject_v2 ( const KPTrieIndex_v2 *self,
             * start_id = self -> id2ord . v16 [ ord - 1 ];
             * span = ( uint32_t ) ( ( ( ord == self -> count ) ?
                 ( self -> maxid - self -> first + 1 ) : self -> id2ord . v16 [ ord ] ) - * start_id );
-            *start_id += self -> first; 
+            *start_id += self -> first;
             break;
         case 3:
             * start_id = self -> id2ord . v32 [ ord - 1 ];
             * span = ( uint32_t ) ( ( ( ord == self -> count ) ?
                 ( self -> maxid - self -> first + 1 ) : self -> id2ord . v32 [ ord ] ) - * start_id );
-            *start_id += self -> first; 
+            *start_id += self -> first;
             break;
         case 4:
             * start_id = self -> id2ord . v64 [ ord - 1 ];
             * span = ( uint32_t ) ( ( ( ord == self -> count ) ?
                 ( self -> maxid - self -> first + 1 ) : self -> id2ord . v64 [ ord ] ) - * start_id );
-            *start_id += self -> first; 
+            *start_id += self -> first;
             break;
         }
 
@@ -836,7 +836,7 @@ rc_t KPTrieIndexFind_v2 ( const KPTrieIndex_v2 *self,
 #endif
     int ( CC * custom_cmp ) ( const void *item, const PBSTNode *n, void *data ), void *data, bool convertFromV1 )
 {
-    rc_t rc;
+    rc_t rc = 0;
 
     /* search within in-core index */
     if ( self -> count == 0 )
@@ -866,20 +866,17 @@ rc_t KPTrieIndexFind_v2 ( const KPTrieIndex_v2 *self,
                 * start_id = id;
                 rc = 0;
             }
-            else
+            else if ( self -> id_bits > 0 )
             {
                 /* should be native v2 */
-                if ( self -> id_bits > 0 )
-                {
-                    rc = Unpack ( self -> id_bits, sizeof * start_id * 8,
-                        pnode . data . addr, 0, self -> id_bits, NULL,
-                        start_id, sizeof * start_id, & usize );
-                }
-                else
-                {
-                    rc = 0;
-                }
+                rc = Unpack ( self -> id_bits, sizeof * start_id * 8,
+                    pnode . data . addr, 0, self -> id_bits, NULL,
+                    start_id, sizeof * start_id, & usize );
                 * start_id += self -> first;
+            }
+            else
+            {
+                * start_id = self -> first;
             }
 
             if ( rc == 0 )
