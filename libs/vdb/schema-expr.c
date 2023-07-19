@@ -616,13 +616,15 @@ rc_t SExpressionDump ( const SExpression *self, SDumper *b )
     {
         rc_t rc;
         const SMembExpr *x = ( const SMembExpr* ) self;
+        const KSymbol * p = VectorGet( & x -> view -> params, x -> paramId );
+        assert ( p );
         if ( x -> rowId != NULL )
         {
-            rc = SDumperPrint ( b, "param%u[%E].", x -> paramId, x -> rowId );
+            rc = SDumperPrint ( b, "%N[%E].", p, x -> rowId );
         }
         else
         {
-            rc = SDumperPrint ( b, "param%u.", x -> paramId );
+            rc = SDumperPrint ( b, "%N.", p );
         }
         if ( rc == 0 )
         {

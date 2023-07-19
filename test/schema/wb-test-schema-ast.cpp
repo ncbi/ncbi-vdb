@@ -294,12 +294,11 @@ FIXTURE_TEST_CASE(MultipleDecls, AST_Fixture)
 
 FIXTURE_TEST_CASE(Version_2_Empty_Source, AST_Fixture)
 {
-    AST * ast = MakeAst ( "version 2; table t#1 {};" );
+    AST * ast = MakeAst ( "version 2;" );
     REQUIRE_NOT_NULL ( ast );
     REQUIRE_EQ ( ( int ) PT_SCHEMA_2_0, ast -> GetTokenType () );
-    REQUIRE_EQ ( 2u, ast -> ChildrenCount () );
-    REQUIRE_EQ ( ( int ) PT_EMPTY,      ast -> GetChild ( 0 ) -> GetTokenType () ); // declarations in a list
-    REQUIRE_EQ ( ( int ) PT_VERSION_2,  ast -> GetChild ( 1 ) -> GetTokenType () );
+    REQUIRE_EQ ( 1u, ast -> ChildrenCount () );
+    REQUIRE_EQ ( ( int ) PT_VERSION_2, ast -> GetChild ( 0 ) -> GetTokenType () );
 }
 
 ///////// typedef

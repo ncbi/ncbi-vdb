@@ -23,239 +23,239 @@
 
 /* %if-c-only */
 #ifdef yy_create_buffer
-#define schema_yy_create_buffer_ALREADY_DEFINED
+#define Schema__create_buffer_ALREADY_DEFINED
 #else
-#define yy_create_buffer schema_yy_create_buffer
+#define yy_create_buffer Schema__create_buffer
 #endif
 
 #ifdef yy_delete_buffer
-#define schema_yy_delete_buffer_ALREADY_DEFINED
+#define Schema__delete_buffer_ALREADY_DEFINED
 #else
-#define yy_delete_buffer schema_yy_delete_buffer
+#define yy_delete_buffer Schema__delete_buffer
 #endif
 
 #ifdef yy_scan_buffer
-#define schema_yy_scan_buffer_ALREADY_DEFINED
+#define Schema__scan_buffer_ALREADY_DEFINED
 #else
-#define yy_scan_buffer schema_yy_scan_buffer
+#define yy_scan_buffer Schema__scan_buffer
 #endif
 
 #ifdef yy_scan_string
-#define schema_yy_scan_string_ALREADY_DEFINED
+#define Schema__scan_string_ALREADY_DEFINED
 #else
-#define yy_scan_string schema_yy_scan_string
+#define yy_scan_string Schema__scan_string
 #endif
 
 #ifdef yy_scan_bytes
-#define schema_yy_scan_bytes_ALREADY_DEFINED
+#define Schema__scan_bytes_ALREADY_DEFINED
 #else
-#define yy_scan_bytes schema_yy_scan_bytes
+#define yy_scan_bytes Schema__scan_bytes
 #endif
 
 #ifdef yy_init_buffer
-#define schema_yy_init_buffer_ALREADY_DEFINED
+#define Schema__init_buffer_ALREADY_DEFINED
 #else
-#define yy_init_buffer schema_yy_init_buffer
+#define yy_init_buffer Schema__init_buffer
 #endif
 
 #ifdef yy_flush_buffer
-#define schema_yy_flush_buffer_ALREADY_DEFINED
+#define Schema__flush_buffer_ALREADY_DEFINED
 #else
-#define yy_flush_buffer schema_yy_flush_buffer
+#define yy_flush_buffer Schema__flush_buffer
 #endif
 
 #ifdef yy_load_buffer_state
-#define schema_yy_load_buffer_state_ALREADY_DEFINED
+#define Schema__load_buffer_state_ALREADY_DEFINED
 #else
-#define yy_load_buffer_state schema_yy_load_buffer_state
+#define yy_load_buffer_state Schema__load_buffer_state
 #endif
 
 #ifdef yy_switch_to_buffer
-#define schema_yy_switch_to_buffer_ALREADY_DEFINED
+#define Schema__switch_to_buffer_ALREADY_DEFINED
 #else
-#define yy_switch_to_buffer schema_yy_switch_to_buffer
+#define yy_switch_to_buffer Schema__switch_to_buffer
 #endif
 
 #ifdef yypush_buffer_state
-#define schema_yypush_buffer_state_ALREADY_DEFINED
+#define Schema_push_buffer_state_ALREADY_DEFINED
 #else
-#define yypush_buffer_state schema_yypush_buffer_state
+#define yypush_buffer_state Schema_push_buffer_state
 #endif
 
 #ifdef yypop_buffer_state
-#define schema_yypop_buffer_state_ALREADY_DEFINED
+#define Schema_pop_buffer_state_ALREADY_DEFINED
 #else
-#define yypop_buffer_state schema_yypop_buffer_state
+#define yypop_buffer_state Schema_pop_buffer_state
 #endif
 
 #ifdef yyensure_buffer_stack
-#define schema_yyensure_buffer_stack_ALREADY_DEFINED
+#define Schema_ensure_buffer_stack_ALREADY_DEFINED
 #else
-#define yyensure_buffer_stack schema_yyensure_buffer_stack
+#define yyensure_buffer_stack Schema_ensure_buffer_stack
 #endif
 
 #ifdef yylex
-#define schema_yylex_ALREADY_DEFINED
+#define Schema_lex_ALREADY_DEFINED
 #else
-#define yylex schema_yylex
+#define yylex Schema_lex
 #endif
 
 #ifdef yyrestart
-#define schema_yyrestart_ALREADY_DEFINED
+#define Schema_restart_ALREADY_DEFINED
 #else
-#define yyrestart schema_yyrestart
+#define yyrestart Schema_restart
 #endif
 
 #ifdef yylex_init
-#define schema_yylex_init_ALREADY_DEFINED
+#define Schema_lex_init_ALREADY_DEFINED
 #else
-#define yylex_init schema_yylex_init
+#define yylex_init Schema_lex_init
 #endif
 
 #ifdef yylex_init_extra
-#define schema_yylex_init_extra_ALREADY_DEFINED
+#define Schema_lex_init_extra_ALREADY_DEFINED
 #else
-#define yylex_init_extra schema_yylex_init_extra
+#define yylex_init_extra Schema_lex_init_extra
 #endif
 
 #ifdef yylex_destroy
-#define schema_yylex_destroy_ALREADY_DEFINED
+#define Schema_lex_destroy_ALREADY_DEFINED
 #else
-#define yylex_destroy schema_yylex_destroy
+#define yylex_destroy Schema_lex_destroy
 #endif
 
 #ifdef yyget_debug
-#define schema_yyget_debug_ALREADY_DEFINED
+#define Schema_get_debug_ALREADY_DEFINED
 #else
-#define yyget_debug schema_yyget_debug
+#define yyget_debug Schema_get_debug
 #endif
 
 #ifdef yyset_debug
-#define schema_yyset_debug_ALREADY_DEFINED
+#define Schema_set_debug_ALREADY_DEFINED
 #else
-#define yyset_debug schema_yyset_debug
+#define yyset_debug Schema_set_debug
 #endif
 
 #ifdef yyget_extra
-#define schema_yyget_extra_ALREADY_DEFINED
+#define Schema_get_extra_ALREADY_DEFINED
 #else
-#define yyget_extra schema_yyget_extra
+#define yyget_extra Schema_get_extra
 #endif
 
 #ifdef yyset_extra
-#define schema_yyset_extra_ALREADY_DEFINED
+#define Schema_set_extra_ALREADY_DEFINED
 #else
-#define yyset_extra schema_yyset_extra
+#define yyset_extra Schema_set_extra
 #endif
 
 #ifdef yyget_in
-#define schema_yyget_in_ALREADY_DEFINED
+#define Schema_get_in_ALREADY_DEFINED
 #else
-#define yyget_in schema_yyget_in
+#define yyget_in Schema_get_in
 #endif
 
 #ifdef yyset_in
-#define schema_yyset_in_ALREADY_DEFINED
+#define Schema_set_in_ALREADY_DEFINED
 #else
-#define yyset_in schema_yyset_in
+#define yyset_in Schema_set_in
 #endif
 
 #ifdef yyget_out
-#define schema_yyget_out_ALREADY_DEFINED
+#define Schema_get_out_ALREADY_DEFINED
 #else
-#define yyget_out schema_yyget_out
+#define yyget_out Schema_get_out
 #endif
 
 #ifdef yyset_out
-#define schema_yyset_out_ALREADY_DEFINED
+#define Schema_set_out_ALREADY_DEFINED
 #else
-#define yyset_out schema_yyset_out
+#define yyset_out Schema_set_out
 #endif
 
 #ifdef yyget_leng
-#define schema_yyget_leng_ALREADY_DEFINED
+#define Schema_get_leng_ALREADY_DEFINED
 #else
-#define yyget_leng schema_yyget_leng
+#define yyget_leng Schema_get_leng
 #endif
 
 #ifdef yyget_text
-#define schema_yyget_text_ALREADY_DEFINED
+#define Schema_get_text_ALREADY_DEFINED
 #else
-#define yyget_text schema_yyget_text
+#define yyget_text Schema_get_text
 #endif
 
 #ifdef yyget_lineno
-#define schema_yyget_lineno_ALREADY_DEFINED
+#define Schema_get_lineno_ALREADY_DEFINED
 #else
-#define yyget_lineno schema_yyget_lineno
+#define yyget_lineno Schema_get_lineno
 #endif
 
 #ifdef yyset_lineno
-#define schema_yyset_lineno_ALREADY_DEFINED
+#define Schema_set_lineno_ALREADY_DEFINED
 #else
-#define yyset_lineno schema_yyset_lineno
+#define yyset_lineno Schema_set_lineno
 #endif
 
 #ifdef yyget_column
-#define schema_yyget_column_ALREADY_DEFINED
+#define Schema_get_column_ALREADY_DEFINED
 #else
-#define yyget_column schema_yyget_column
+#define yyget_column Schema_get_column
 #endif
 
 #ifdef yyset_column
-#define schema_yyset_column_ALREADY_DEFINED
+#define Schema_set_column_ALREADY_DEFINED
 #else
-#define yyset_column schema_yyset_column
+#define yyset_column Schema_set_column
 #endif
 
 #ifdef yywrap
-#define schema_yywrap_ALREADY_DEFINED
+#define Schema_wrap_ALREADY_DEFINED
 #else
-#define yywrap schema_yywrap
+#define yywrap Schema_wrap
 #endif
 
 /* %endif */
 
 #ifdef yyget_lval
-#define schema_yyget_lval_ALREADY_DEFINED
+#define Schema_get_lval_ALREADY_DEFINED
 #else
-#define yyget_lval schema_yyget_lval
+#define yyget_lval Schema_get_lval
 #endif
 
 #ifdef yyset_lval
-#define schema_yyset_lval_ALREADY_DEFINED
+#define Schema_set_lval_ALREADY_DEFINED
 #else
-#define yyset_lval schema_yyset_lval
+#define yyset_lval Schema_set_lval
 #endif
 
 #ifdef yyget_lloc
-#define schema_yyget_lloc_ALREADY_DEFINED
+#define Schema_get_lloc_ALREADY_DEFINED
 #else
-#define yyget_lloc schema_yyget_lloc
+#define yyget_lloc Schema_get_lloc
 #endif
 
 #ifdef yyset_lloc
-#define schema_yyset_lloc_ALREADY_DEFINED
+#define Schema_set_lloc_ALREADY_DEFINED
 #else
-#define yyset_lloc schema_yyset_lloc
+#define yyset_lloc Schema_set_lloc
 #endif
 
 #ifdef yyalloc
-#define schema_yyalloc_ALREADY_DEFINED
+#define Schema_alloc_ALREADY_DEFINED
 #else
-#define yyalloc schema_yyalloc
+#define yyalloc Schema_alloc
 #endif
 
 #ifdef yyrealloc
-#define schema_yyrealloc_ALREADY_DEFINED
+#define Schema_realloc_ALREADY_DEFINED
 #else
-#define yyrealloc schema_yyrealloc
+#define yyrealloc Schema_realloc
 #endif
 
 #ifdef yyfree
-#define schema_yyfree_ALREADY_DEFINED
+#define Schema_free_ALREADY_DEFINED
 #else
-#define yyfree schema_yyfree
+#define yyfree Schema_free
 #endif
 
 /* %if-c-only */
@@ -636,7 +636,7 @@ void yyfree ( void * , yyscan_t yyscanner );
 /* %% [1.0] yytext/yyin/yyout/yy_state_type/yylineno etc. def's & init go here */
 /* Begin user sect3 */
 
-#define schema_yywrap(yyscanner) (/*CONSTCOND*/1)
+#define Schema_wrap(yyscanner) (/*CONSTCOND*/1)
 #define YY_SKIP_YYWRAP
 
 #define FLEX_DEBUG
@@ -987,16 +987,16 @@ static const flex_int32_t yy_rule_can_match_eol[94] =
 
 static const flex_int16_t yy_rule_linenum[93] =
     {   0,
-       89,   90,   91,   92,   93,   94,   95,   96,   97,   98,
-       99,  100,  101,  102,  103,  104,  105,  106,  107,  108,
-      109,  111,  113,  114,  115,  116,  117,  118,  119,  122,
-      123,  124,  125,  128,  129,  130,  131,  134,  135,  136,
-      137,  138,  139,  140,  141,  142,  143,  144,  145,  146,
-      147,  148,  149,  150,  151,  152,  153,  154,  155,  156,
-      157,  158,  159,  160,  161,  162,  163,  164,  166,  167,
-      168,  169,  170,  176,  177,  178,  179,  181,  182,  183,
-      185,  186,  187,  190,  191,  192,  193,  194,  195,  198,
-      201,  204
+       92,   93,   94,   95,   96,   97,   98,   99,  100,  101,
+      102,  103,  104,  105,  106,  107,  108,  109,  110,  111,
+      112,  114,  116,  117,  118,  119,  120,  121,  122,  125,
+      126,  127,  128,  131,  132,  133,  134,  137,  138,  139,
+      140,  141,  142,  143,  144,  145,  146,  147,  148,  149,
+      150,  151,  152,  153,  154,  155,  156,  157,  158,  159,
+      160,  161,  162,  163,  164,  165,  166,  167,  169,  170,
+      171,  172,  173,  179,  180,  181,  182,  184,  185,  186,
+      188,  189,  190,  193,  194,  195,  196,  197,  198,  201,
+      204,  207
 
     } ;
 
@@ -1032,8 +1032,15 @@ static const flex_int16_t yy_rule_linenum[93] =
 * ===========================================================================
 *
 */
+#define YY_NO_UNISTD_H 1
+/* re-entrant scanner */
+ /* maintain state stack */
+ /* let parser handle EOF */
 
 #define YYDEBUG 1
+#define YYSTYPE SCHEMA_STYPE
+#define YYLTYPE SCHEMA_LTYPE
+#define yytokentype Schema_tokentype
 
 #include "schema-lex.h"
 
@@ -1060,10 +1067,6 @@ static void AddWhitespace ( SchemaScanBlock* p_sb, const char* p_ws, size_t p_le
 
 #define AddWs() AddWhitespace ( ( SchemaScanBlock * ) yyextra, yytext, yyleng )
 
-#define YY_NO_UNISTD_H 1
-/* re-entrant scanner */
- /* maintain state stack */
- /* let parser handle EOF */
  /* start-state for slash-star comments */
 
 #define INITIAL 0
