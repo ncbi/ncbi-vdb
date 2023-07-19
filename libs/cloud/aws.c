@@ -33,11 +33,12 @@ struct AWS;
 #include <cloud/aws.h>
 
 #include <klib/debug.h> /* DBGMSG */
+#include <klib/log.h> /* PLOGMSG */
+#include <klib/printf.h>
 #include <klib/rc.h>
 #include <klib/status.h>
 #include <klib/strings.h> /* ENV_MAGIC_CE_TOKEN */
 #include <klib/text.h>
-#include <klib/printf.h>
 
 #include <kfg/config.h>
 #include <kfg/kfg-priv.h>
@@ -565,8 +566,9 @@ static rc_t LoadCredentials ( AWS * self, KConfig * kfg )
     if ( cred_env && *cred_env != 0 ) 
     {
         const KFile *cred_file = NULL;
-        DBGMSG(DBG_CLOUD, DBG_FLAG(DBG_CLOUD_LOAD), ("Got "
-            "AWS_SHARED_CREDENTIAL_FILE '%s' from environment\n", cred_env));
+        PLOGMSG ( klogInfo, ( klogInfo,
+                    "Got AWS_SHARED_CREDENTIAL_FILE '$(F)' from environment",
+                    "F=%s", cred_env ) );
         rc = KDirectoryOpenFileRead ( wd, &cred_file, "%s", cred_env );
         if ( rc == 0 )
         {
@@ -603,9 +605,9 @@ static rc_t LoadCredentials ( AWS * self, KConfig * kfg )
                             cfg, aws_path, sizeof aws_path, NULL);
 
                     if (rc == 0) {
-                        DBGMSG(DBG_CLOUD, DBG_FLAG(DBG_CLOUD_LOAD), ("Got "
-                            "aws/credential_file '%s' from configuration\n",
-                            aws_path));
+                        PLOGMSG ( klogInfo, ( klogInfo,
+                                        "Loading AWS credential file '$(F)' from configuration",
+                                        "F=%s", aws_path ) );
                         rc = KDirectoryOpenFileRead(
                             wd, &cred_file, "%s", aws_path);
                     }
@@ -619,15 +621,18 @@ static rc_t LoadCredentials ( AWS * self, KConfig * kfg )
 
                 if ( rc == 0 )
                 {
-                    DBGMSG(DBG_CLOUD, DBG_FLAG(DBG_CLOUD_LOAD), ("Loading "
-                        "aws/credentials from '%s%s'\n",
-                        aws_path, "/credentials"));
+                    PLOGMSG ( klogInfo, ( klogInfo,
+                                              "Loading AWS credentials from '$(P)/credentials'",
+                                              "P=%s", aws_path ) );
                     aws_parse_file ( self, cred_file );
                     KFileRelease ( cred_file );
 
                     rc = KDirectoryOpenFileRead ( wd, &cred_file, "%s%s", aws_path, "/config" );
                     if ( rc == 0 )
                     {
+                        PLOGMSG ( klogInfo, ( klogInfo,
+                                              "Loading AWS credentials from '$(P)/config'",
+                                              "P=%s", aws_path ) );
                         aws_parse_file ( self, cred_file );
                         KFileRelease ( cred_file );
                     }
@@ -666,8 +671,8 @@ rc_t PopulateCredentials ( AWS * self, KConfig * aKfg )
     if ( profile != NULL && *profile != 0 )
     {
         self -> profile = string_dup ( profile, string_size ( profile ) );
-        DBGMSG(DBG_CLOUD, DBG_FLAG(DBG_CLOUD_LOAD),
-            ("Got AWS_PROFILE '%s' from environment\n", self->profile));
+        PLOGMSG ( klogInfo, ( klogInfo, "Got AWS_PROFILE '$(P)' from environment",
+                                        "P=%s", self->profile ) );
     }
     else
     {
@@ -684,9 +689,9 @@ rc_t PopulateCredentials ( AWS * self, KConfig * aKfg )
             if ( rc == 0 && num_writ > 0 )
             {
                 self -> profile = string_dup ( buffer, string_size ( buffer ) );
-                DBGMSG(DBG_CLOUD, DBG_FLAG(DBG_CLOUD_LOAD), ("Got "
-                    "aws/profile '%s' from configuration\n",
-                    self->profile));
+                PLOGMSG ( klogInfo, ( klogInfo,
+                                           "Got AWS profile '$(P)' from configuration",
+                                           "P=%s", self->profile ) );
             }
             if (aKfg == NULL)
                 KConfigRelease(kfg);

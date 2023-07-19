@@ -733,6 +733,7 @@ static rc_t argsHandler(int argc, char * argv[]) {
 
 #include <kfg/config.h>
 #include <klib/debug.h>
+#include <klib/log.h> /* KLogLevelSet */
 
 extern "C"
 {
@@ -756,6 +757,7 @@ rc_t CC KMain ( int argc, char *argv [] )
     KConfigDisableUserSettings();
 
 //  assert(!KDbgSetString("CLOUD"));
+//  KLogLevelSet( klogInfo );
 
     // this makes messages from the test code appear
     // (same as running the executable with "-l=message")

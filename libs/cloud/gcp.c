@@ -38,6 +38,7 @@ struct GCP;
 #include <klib/data-buffer.h>
 #include <klib/debug.h> /* DBGMSG */
 #include <klib/json.h>
+#include <klib/log.h> /* PLOGMSG */
 #include <klib/printf.h> /* string_printf */
 #include <klib/rc.h>
 #include <klib/status.h>
@@ -967,9 +968,9 @@ rc_t PopulateCredentials(GCP * self, KConfig * aKfg)
 
         if (rc == 0) {
             pathToJsonFile = buffer;
-            DBGMSG(DBG_CLOUD, DBG_FLAG(DBG_CLOUD_LOAD), ("Got "
-                "gcp/credential_file '%s' from configuration\n",
-                pathToJsonFile));
+            PLOGMSG ( klogInfo, ( klogInfo, "Got "
+                "GCP credential file '$(F)' from configuration",
+                "F=%s", pathToJsonFile ) ); 
         }
         else
             rc = 0;
@@ -981,9 +982,9 @@ rc_t PopulateCredentials(GCP * self, KConfig * aKfg)
         }
     }
     else
-        DBGMSG(DBG_CLOUD, DBG_FLAG(DBG_CLOUD_LOAD), (
-            "Got GOOGLE_APPLICATION_CREDENTIALS from environment\n"));
-
+        PLOGMSG ( klogInfo, ( klogInfo, "Got "
+            "GOOGLE_APPLICATION_CREDENTIALS file '$(F)' from environment",
+            "F=%s", pathToJsonFile ) );
 
     if (pathToJsonFile != NULL && *pathToJsonFile != 0)
     {   /* read the credentials file */
