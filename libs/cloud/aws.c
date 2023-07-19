@@ -594,7 +594,11 @@ static rc_t LoadCredentials ( AWS * self, KConfig * kfg )
                 const KFile *cred_file = NULL;
                 rc = KDirectoryOpenFileRead ( wd, &cred_file, "%s%s", aws_path, "/credentials" );
 
-                if (rc != 0) {
+                if (rc == 0)
+                    PLOGMSG ( klogInfo, ( klogInfo,
+                                              "Loading AWS credentials from '$(P)/credentials'",
+                                              "P=%s", aws_path ) );
+                else {
                     KConfig * cfg = kfg;
                     rc = 0;
                     if (cfg == NULL)
@@ -621,9 +625,6 @@ static rc_t LoadCredentials ( AWS * self, KConfig * kfg )
 
                 if ( rc == 0 )
                 {
-                    PLOGMSG ( klogInfo, ( klogInfo,
-                                              "Loading AWS credentials from '$(P)/credentials'",
-                                              "P=%s", aws_path ) );
                     aws_parse_file ( self, cred_file );
                     KFileRelease ( cred_file );
 
