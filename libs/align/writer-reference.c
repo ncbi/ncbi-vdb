@@ -189,7 +189,7 @@ struct ReferenceSeq {
     } u;
 };
 
-#define BUCKET_BITS (12U)
+#define BUCKET_BITS (16U)
 #define BUCKETS (1U << BUCKET_BITS)
 #define BUCKET_MASK (BUCKETS - 1U)
 
@@ -222,8 +222,9 @@ struct ReferenceMgr {
     KDataBuffer seq;            /* [byte](max_seq_len)  */
     KDataBuffer refSeqs;        /* [ReferenceSeq]       */
 
-    Bucket used[BUCKETS];
-    Bucket keys[BUCKETS];
+    /* Hash tables for reference IDs */
+    Bucket used[BUCKETS]; /* populated on use */
+    Bucket keys[BUCKETS]; /* populated from config and fasta deflines */
 };
 
 static unsigned hash(unsigned const length, char const key[])
@@ -259,6 +260,26 @@ static unsigned hash0(char const key[])
     return (unsigned)(((h ^ (h >> 32))) & ((uint64_t)BUCKET_MASK));
 }
 
+#define MIN_BUCKET_CAPACITY (4u)
+/* The capacity grows exponentially.
+ * It's the smallest integer power of 2
+ * that is not less than the count.
+ */
+static unsigned bucketIndexCapacity(unsigned const count, unsigned const hint) {
+    unsigned result = hint;
+
+    if (count == 0)
+        return 0;
+
+    if (result < MIN_BUCKET_CAPACITY)
+        result = MIN_BUCKET_CAPACITY;
+
+    while (result < count)
+        result <<= 1;
+
+    return result;
+}
+
 static bool bucketHasObject(Bucket const *const bucket, unsigned const objectNo)
 {
     unsigned i;
@@ -269,6 +290,7 @@ static bool bucketHasObject(Bucket const *const bucket, unsigned const objectNo)
     return false;
 }
 
+/*
 static void addToKeys(ReferenceMgr *const self, unsigned const objectNo, char const *const key, size_t length)
 {
     unsigned const hv = length == 0 ? hash0(key) : hash(length, key);
@@ -312,15 +334,68 @@ static void addToUsed(ReferenceMgr *const self, unsigned const objectNo, char co
     }
     return;
 }
+ */
+
+/* Add object index to bucket if it isn't already there.
+ */ 
+static void addToHashTable(Bucket *table,
+                           unsigned const objectNo,
+                           char const *const key,
+                           size_t const length,
+                           char const keyType[],
+                           char const tableName[])
+{
+    unsigned const hashValue = length == 0 ? hash0(key) : hash(length, key);
+    Bucket *const bucket = &table[hashValue];
+
+    if (!bucketHasObject(bucket, objectNo)) {
+        unsigned const cap = bucketIndexCapacity(bucket->count, 0);
+        unsigned const newCap = bucketIndexCapacity(1 + bucket->count, cap);
+
+        ALIGN_CF_DBGF(("RefSeq object %u: adding %s '%s' to %s bucket %03X[%u]\n",
+                       objectNo, keyType, key, tableName, hashValue, bucket->count));
+        assert(bucket->count < newCap);
+        if (newCap > cap) {
+            void *const tmp = realloc(bucket->index, newCap * sizeof(bucket->index[0]));
+            assert(tmp != NULL);
+            bucket->index = tmp;
+            if (tmp == NULL)
+                abort();
+        }
+        bucket->index[bucket->count] = objectNo;
+        bucket->count += 1;
+    }
+}
+
+/* Add object index to `keys` hash table. 
+*/
+static void addToKeys(ReferenceMgr *const self,
+                      unsigned const objectNo,
+                      char const *const key,
+                      size_t length,
+                      char const keyType[])
+{
+    addToHashTable(self->keys, objectNo, key, length, keyType, "keys");
+}
+
+/* Add object index to `used` hash table. 
+*/
+static void addToUsed(ReferenceMgr *const self,
+                      unsigned const objectNo,
+                      char const *const key,
+                      size_t length)
+{
+    addToHashTable(self->used, objectNo, key, length, "key", "used");
+}
 
 static void addToKeysTable(ReferenceMgr *const self, ReferenceSeq const *const rs)
 {
     unsigned const index = rs - self->refSeq;
 
     if (rs->id)
-        addToKeys(self, index, rs->id, 0);
+        addToKeys(self, index, rs->id, 0, "Id");
     if (rs->seqId)
-        addToKeys(self, index, rs->seqId, 0);
+        addToKeys(self, index, rs->seqId, 0, "seqId");
 }
 
 static void freeHashTableEntries(ReferenceMgr *const self)
@@ -564,7 +639,7 @@ rc_t ReferenceMgr_ProcessConf(ReferenceMgr *const self, char Data[], unsigned co
 
     memset(&buf, 0, sizeof(buf));
     buf.elem_bits = sizeof(data[0]) * 8;
-    data=buf.base;
+    data = buf.base;
 
     for (j = i = 0; i < len; ++j) {
         unsigned lineEnd;
@@ -991,7 +1066,7 @@ static rc_t ImportFastaFileMany(ReferenceMgr *const self,
             else {
                 ReferenceSeq *const p = newReferenceSeq(self, &new_seq);
                 index = p - self->refSeq;
-                addToKeys(self, index, seqId, 0);
+                addToKeys(self, index, seqId, 0, "seqId");
             }
         }
         for (k = j; k < len; ++k) {
@@ -1022,7 +1097,7 @@ static rc_t ImportFastaFileMany(ReferenceMgr *const self,
                             f = m + 1;
                     }
                 }
-                addToKeys(self, index, value, length);
+                addToKeys(self, index, value, length, "defline");
             IGNORED:
                 j = k + 1;
                 if (ch == '\0' || isspace(ch))
@@ -1366,7 +1441,7 @@ static rc_t tryFastaOrRefSeq(ReferenceMgr *const self,
             seq->id = string_dup(id, idLen);
             seq->type = rst_refSeqById;
 
-            addToKeys(self, seq - self->refSeq, id, idLen);
+            addToKeys(self, seq - self->refSeq, id, idLen, "Id");
 
             ReferenceSeq_GetRefSeqInfo(seq);
             *rslt = seq;
