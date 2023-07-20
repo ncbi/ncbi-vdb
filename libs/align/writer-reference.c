@@ -2361,6 +2361,7 @@ LIB_EXPORT rc_t CC ReferenceMgr_GetSeq(ReferenceMgr const *const cself,
 
     *seq = NULL;
     *shouldUnmap = false;
+    *wasRenamed = false;
     {
         ReferenceSeq *obj;
         rc_t rc = ReferenceMgr_OpenSeq(self, &obj, id, 0, NULL, allowMultiMapping, wasRenamed);
