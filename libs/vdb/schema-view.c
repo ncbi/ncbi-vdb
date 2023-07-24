@@ -32,6 +32,7 @@
 
 #include "schema-priv.h"
 #include "schema-parse.h"
+#include "schema-dump.h"
 
 /* Cmp
  * Sort
@@ -128,6 +129,170 @@ SViewWhack ( void * item, void *ignore )
 
     free ( self );
 }
+
+void CC SViewMark ( void * item, void * data )
+{
+    SView * self = item;
+    if ( self != NULL && ! self -> marked )
+    {
+        self -> marked = true;
+    }
+}
+
+rc_t CC SViewDump ( const SView *self, struct SDumper *d )
+{
+    d -> rc = FQNDump ( self != NULL ? self -> name : NULL, d );
+    if ( d -> rc == 0 && self != NULL )
+        d -> rc = SDumperVersion ( d, self -> version );
+    return d -> rc;
+}
+
+static
+bool SViewColumnDefDump ( void *item, void *data )
+{
+    SDumper *b = data;
+    const SColumn *self = ( const void* ) item;
+    bool compact = SDumperMode ( b ) == sdmCompact;
+
+    if ( self -> simple )
+    {
+        if ( self -> ptype != NULL )
+        {
+            b -> rc = SDumperPrint ( b, compact ? "column %E %N;" : "\tcolumn %E %N;\n"
+                                        , self -> ptype
+                                        , self -> name
+                );
+        }
+        else
+        {
+            b -> rc = SDumperPrint ( b, compact ? "column %T %N;" : "\tcolumn %T %N;\n"
+                                        , & self -> td
+                                        , self -> name
+                );
+        }
+    }
+    else
+    {
+        assert ( self -> read != NULL );
+        b -> rc = SDumperPrint ( b, compact ? "column %T %N = %E;" : "\tcolumn %T %N = %E;\n"
+                                    , & self -> td
+                                    , self -> name
+                                    , self -> read
+            );
+    }
+
+    return ( b -> rc != 0 );
+}
+
+static
+bool SViewDumpBody ( const SView *self, SDumper *b )
+{
+    if ( VectorDoUntil ( & self -> col, false, SViewColumnDefDump, b ) )
+        return true;
+    if ( VectorDoUntil ( & self -> prod, false, SProductionDefDump, b ) )
+        return true;
+
+    return false;
+}
+
+bool CC SViewDefDump ( void *item, void *data )
+{
+    SDumper *b = data;
+    const SView *self = ( const void* ) item;
+
+    if ( SDumperMarkedMode ( b ) && ! self -> marked )
+        return false;
+
+    b -> rc = SDumperPrint ( b, "\tview %N", self -> name );
+
+    if ( b -> rc == 0 )
+        b -> rc = SDumperVersion ( b, self -> version );
+
+    if ( b -> rc == 0 )
+        b -> rc = SDumperPrint ( b, "<" );
+    if ( b -> rc == 0 )
+        for ( uint32_t i = 0; i < VectorLength( & self -> params ); ++i )
+        {
+            if ( b -> rc == 0 && i > 0 )
+            {
+                b -> rc = SDumperPrint ( b, "," );
+                if ( b -> rc == 0 && SDumperMode ( b ) != sdmCompact )
+                    b -> rc = SDumperPrint ( b, " " );
+            }
+            const KSymbol * s = VectorGet( & self -> params, VectorStart ( & self -> params ) + i );
+            if ( b -> rc == 0 )
+            {
+                if ( s -> type == eTable )
+                {
+                    const STable * param = (const STable *) s -> u . obj;
+                    b -> rc = SDumperPrint ( b, "%N %N", param -> name, s );
+                }
+                else // assume view
+                {
+                    const SView * param = (const SView *) s -> u . obj;
+                    b -> rc = SDumperPrint ( b, "%N %N", param -> name, s );
+                }
+            }
+        }
+    if ( b -> rc == 0 )
+        b -> rc = SDumperPrint ( b, ">" );
+
+    if ( b -> rc == 0 && VectorLength( & self -> parents ) > 0 )
+    {
+        b -> rc = SDumperPrint ( b, "=" );
+        for ( uint32_t i = 0; i < VectorLength( & self -> parents ); ++i )
+        {
+            if ( b -> rc == 0 && i > 0 )
+            {
+                b -> rc = SDumperPrint ( b, "," );
+                if ( b -> rc == 0 && SDumperMode ( b ) != sdmCompact )
+                    b -> rc = SDumperPrint ( b, " " );
+            }
+            if ( b -> rc == 0 )
+            {
+                const SViewInstance * p = VectorGet( & self -> parents, VectorStart ( & self -> parents ) + i );
+                b -> rc = SDumperPrint ( b, "%N<", p -> dad -> name );
+
+                for ( uint32_t j = 0; j < VectorLength( & p -> params ); ++j )
+                {
+                    if ( b -> rc == 0 && j > 0 )
+                    {
+                        b -> rc = SDumperPrint ( b, "," );
+                        if ( b -> rc == 0 && SDumperMode ( b ) != sdmCompact )
+                            b -> rc = SDumperPrint ( b, " " );
+                    }
+                    const KSymbol* param = VectorGet( & p -> params, VectorStart ( & p -> params ) + j );
+                    if ( b -> rc == 0 )
+                        b -> rc = SDumperPrint ( b, "%N", param );
+                }
+
+                if ( b -> rc == 0 )
+                    b -> rc = SDumperPrint ( b, ">" );
+            }
+        }
+    }
+
+    if ( SDumperMode ( b ) != sdmCompact )
+        b -> rc = SDumperPrint ( b, "\n" );
+    if ( b -> rc == 0 )
+        b -> rc = SDumperPrint ( b, "{" );
+    if ( SDumperMode ( b ) != sdmCompact )
+        b -> rc = SDumperPrint ( b, "\n" );
+
+    SDumperIncIndentLevel ( b );
+    bool rtn = SViewDumpBody( self, b );
+    SDumperDecIndentLevel ( b );
+    if (rtn)
+        return true;
+
+    if ( b -> rc == 0 )
+        b -> rc = SDumperPrint ( b, "\t}" );
+    if ( SDumperMode ( b ) != sdmCompact )
+        b -> rc = SDumperPrint ( b, "\n" );
+
+    return ( b -> rc != 0 ) ? true : false;
+}
+
 
 /* Cmp
  * Sort

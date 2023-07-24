@@ -288,6 +288,7 @@ const void *resolve_object ( const KSymTable *tbl,
         case ePhysMember:
         case eTblMember:
         case eDBMember:
+        case eViewAliasMember:
         case eProduction:
         case eForward:
         case eVirtual:

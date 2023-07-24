@@ -146,8 +146,8 @@ ViewDeclaration :: HandleOverload ( ctx_t ctx, const AST_FQN & p_fqn, const KSym
         /* see if new function trumps old */
         SView *exist = static_cast < SView * > ( VectorGet ( & name -> items, idx ) );
         if ( m_self -> version == exist -> version )
-        {
-            m_builder . ReportError ( ctx, "This version is already declared", p_fqn );
+        {   // ignore the new declaration
+            // m_builder . ReportError ( ctx, "This version is already declared", p_fqn );
         }
         else if ( m_self -> version > exist -> version )
         {

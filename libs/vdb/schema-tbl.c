@@ -1360,6 +1360,32 @@ rc_t STableDump ( const STable *self, struct SDumper *d )
     return d -> rc;
 }
 
+/* IsA
+ * true if p_self and p_table are the same, or p_self is derived (directly or indirectly) from p_table
+ */
+bool
+STableIsA ( const STable * p_self, const STable * p_table )
+{
+    if ( p_self == p_table )
+    {
+        return true;
+    }
+    else
+    {
+        uint32_t i = VectorStart ( & p_self -> parents );
+        uint32_t count = VectorLength ( & p_self -> parents );
+        for ( count += i; i < count; ++ i )
+        {
+            const STable * dad = VectorGet ( & p_self -> parents, i );
+            if ( STableIsA ( dad, p_table ) )
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
 #if _DEBUGGING
 static
 bool CC SProductionDumpVirtuals ( void *item, void *data )

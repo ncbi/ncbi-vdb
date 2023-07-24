@@ -51,6 +51,7 @@ private:
     bool HandleOverload ( ctx_t ctx, const KSymbol * p_priorDecl );
     void HandleMemberDb ( ctx_t ctx, const AST & p_member );
     void HandleMemberTable ( ctx_t ctx, const AST & p_member );
+    void HandleMemberViewAlias ( ctx_t ctx, const AST & p_member );
 
 private:
     ASTBuilder &    m_builder;
@@ -162,6 +163,10 @@ DatabaseDeclaration :: HandleBody ( ctx_t ctx, const AST & p_body )
 
                 case PT_TBLMEMBER:
                     HandleMemberTable ( ctx, member );
+                    break;
+
+                case PT_ALIASMEMBER:
+                    HandleMemberViewAlias ( ctx, member );
                     break;
 
                 case PT_EMPTY:
@@ -337,6 +342,154 @@ DatabaseDeclaration :: HandleMemberTable ( ctx_t ctx, const AST & p_member )
             }
         }
         STblMemberWhack ( m, 0 );
+    }
+}
+
+class MemberViewAlias
+{
+public:
+    MemberViewAlias( const AST & p_ast ) : m_ast( p_ast )
+    {
+        assert ( m_ast . GetTokenType () == PT_ALIASMEMBER );
+        assert ( m_ast . ChildrenCount () == 2 );
+    }
+
+    // ViewAlias: spec name
+    const AST & ViewSpec() const
+    {
+        const AST * ret = m_ast.GetChild( 0 );
+        assert ( ret -> GetTokenType () == PT_VIEWSPEC );
+        return * ret;
+    }
+    const char * MemberName() const
+    {
+        const AST * n = m_ast.GetChild( 1 );
+        assert ( n != nullptr );
+        assert ( n -> GetTokenType () == PT_IDENT );
+        const AST * ret = n -> GetChild( 0 );
+        assert ( ret != nullptr );
+        return ret -> GetTokenValue ();
+    }
+
+    // ViewSpec: view < params >
+    const AST_FQN & ViewSpec_View() const
+    {
+        const AST_FQN * ret = ToFQN( ViewSpec() . GetChild ( 0 ) );
+        assert ( ret != nullptr );
+        return * ret;
+    }
+    const AST & ViewSpec_Params() const
+    {
+        const AST * ret = ViewSpec() . GetChild ( 1 );
+        assert ( ret != nullptr );
+        return * ret;
+    }
+
+private:
+    const AST & m_ast;
+};
+
+void
+DatabaseDeclaration :: HandleMemberViewAlias ( ctx_t ctx, const AST & p_member )
+{
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+
+    MemberViewAlias alias( p_member );
+
+    SViewAliasMember * m = m_builder . Alloc < SViewAliasMember > ( ctx );
+    if ( m != 0 )
+    {
+        const KSymbol * viewName = m_builder . Resolve ( ctx, alias.ViewSpec_View() );
+        if ( viewName != 0 )
+        {
+            if ( viewName -> type == eView )
+            {
+                String memName;
+                StringInitCString ( & memName, alias . MemberName() );
+                rc_t rc = KSymTableCreateConstSymbol ( & m_builder . GetSymTab (), & m -> name, & memName, eViewAliasMember, m );
+                if ( rc == 0 )
+                {
+                    m -> view . dad = static_cast < const SView * > ( m_builder . SelectVersion ( ctx, alias.ViewSpec_View(), * viewName, SViewCmp ) );
+                    assert( m -> view . dad );
+
+                    // verify parameter tables/views
+                    const AST & params = alias.ViewSpec_Params();
+                    uint32_t count = params . ChildrenCount ();
+
+                    const Vector & formalParams = m -> view . dad -> params;
+                    if ( VectorLength( & formalParams ) != count )
+                    {
+                        m_builder . ReportError ( ctx, "Incorrect number of view parameters", alias.ViewSpec_View() );
+                    }
+                    else
+                    {
+                        for ( uint32_t i = 0; i < count; ++i )
+                        {
+                            const AST_FQN & param = * ToFQN ( params . GetChild ( i ) );
+                            assert ( param . GetTokenType () == PT_IDENT );
+                            const KSymbol * formal = static_cast< const KSymbol * > ( VectorGet( & formalParams, i ) );
+
+                            const KSymbol * paramDecl = m_builder . Resolve ( ctx, param ); // will report unknown name
+                            if ( paramDecl != 0 )
+                            {
+                                switch ( paramDecl -> type )
+                                {
+                                case eTblMember:
+                                {
+                                    //check compatibility
+                                    if ( formal -> type == eTable )
+                                    {
+                                        const STable * param_table = ((const STblMember *) paramDecl -> u . obj) -> tbl;
+                                        if ( STableIsA ( param_table, (const STable *) formal -> u . obj ) )
+                                        {
+                                            m_builder . VectorAppend ( ctx, m -> view . params, nullptr, paramDecl );
+                                            break;
+                                        }
+                                    }
+                                    m_builder . ReportError ( ctx, "View parameter type mismatch", param );
+                                    break;
+                                }
+                                case eViewAliasMember:
+                                {
+                                    //check compatibility
+                                    if ( formal -> type == eView )
+                                    {
+                                        const SView * param_view = ((const SViewAliasMember *) paramDecl -> u . obj) -> view . dad;
+                                        if ( SViewIsA ( param_view, (const SView *) formal -> u . obj ) )
+                                        {
+                                            m_builder . VectorAppend ( ctx, m -> view . params, nullptr, paramDecl );
+                                            break;
+                                        }
+                                    }
+                                    m_builder . ReportError ( ctx, "View parameter type mismatch", param );
+                                    break;
+                                }
+                                default:
+                                    m_builder . ReportError ( ctx, "Not a table/view member", param );
+                                    break;
+                                }
+                            }
+                        }
+
+                        m_builder . VectorAppend ( ctx, m_self -> aliases, & m -> cid . id, m );
+                        return;
+                    }
+                }
+                else if ( GetRCState ( rc ) == rcExists )
+                {
+                    m_builder . ReportError ( ctx, p_member . GetLocation (), "Member already exists", memName );
+                }
+                else
+                {
+                    m_builder . ReportRc ( ctx, "KSymTableCreateConstSymbol", rc);
+                }
+            }
+            else
+            {
+                m_builder . ReportError ( ctx, "Not a view", alias.ViewSpec_View() );
+            }
+        }
+        SViewAliasMemberWhack ( m, 0 );
     }
 }
 

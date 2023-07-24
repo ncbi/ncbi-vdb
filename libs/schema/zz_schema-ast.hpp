@@ -37,17 +37,25 @@
 #ifndef YY_AST_HOME_BOSHKINS_NCBI_DEVEL_NCBI_VDB_LIBS_SCHEMA_ZZ_SCHEMA_AST_HPP_INCLUDED
 # define YY_AST_HOME_BOSHKINS_NCBI_DEVEL_NCBI_VDB_LIBS_SCHEMA_ZZ_SCHEMA_AST_HPP_INCLUDED
 /* Debug traces.  */
-#ifndef YYDEBUG
-# define YYDEBUG 0
-#endif
+#ifndef AST_DEBUG
+# if defined YYDEBUG
 #if YYDEBUG
+#   define AST_DEBUG 1
+#  else
+#   define AST_DEBUG 0
+#  endif
+# else /* ! defined YYDEBUG */
+#  define AST_DEBUG 0
+# endif /* ! defined YYDEBUG */
+#endif  /* ! defined AST_DEBUG */
+#if AST_DEBUG
 extern int AST_debug;
 #endif
 
 /* Token type.  */
-#ifndef YYTOKENTYPE
-# define YYTOKENTYPE
-  enum yytokentype
+#ifndef AST_TOKENTYPE
+# define AST_TOKENTYPE
+  enum AST_tokentype
   {
     END_SOURCE = 0,
     UNRECOGNIZED = 258,
@@ -182,13 +190,15 @@ extern int AST_debug;
     PT_VIEWPARENTS = 387,
     PT_VIEWPARENT = 388,
     PT_MEMBEREXPR = 389,
-    PT_JOINEXPR = 390
+    PT_JOINEXPR = 390,
+    PT_ALIASMEMBER = 391,
+    PT_VIEWSPEC = 392
   };
 #endif
 
 /* Value type.  */
-#if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
-union YYSTYPE
+#if ! defined AST_STYPE && ! defined AST_STYPE_IS_DECLARED
+union AST_STYPE
 {
 
   const Token*  tok;
@@ -198,9 +208,9 @@ union YYSTYPE
 
 
 };
-typedef union YYSTYPE YYSTYPE;
-# define YYSTYPE_IS_TRIVIAL 1
-# define YYSTYPE_IS_DECLARED 1
+typedef union AST_STYPE AST_STYPE;
+# define AST_STYPE_IS_TRIVIAL 1
+# define AST_STYPE_IS_DECLARED 1
 #endif
 
 
