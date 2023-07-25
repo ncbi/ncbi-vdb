@@ -646,7 +646,7 @@ rc_t PopulateCredentials ( AWS * self )
 
     if ( self -> profile == NULL )
     {
-        self -> profile = strdup ( "default" );
+        self -> profile = string_dup_measure ( "default", NULL );
     }
 
     /* OK if no credentials are found */

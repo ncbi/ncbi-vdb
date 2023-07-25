@@ -64,10 +64,12 @@ string( STRIP ${VERSION} VERSION )
 message( VERSION=${VERSION} )
 string( REGEX MATCH "^[0-9]+" MAJVERS ${VERSION} )
 
-set(CMAKE_C_STANDARD 11)
+set(C_STANDARD 11)
+#set(C_STANDARD 17)
+set(CMAKE_C_STANDARD ${C_STANDARD})
 set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_C_EXTENSIONS OFF)
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_C_EXTENSIONS ON) # need for some gnu-isms
+set(CMAKE_CXX_STANDARD ${C_STANDARD})
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -165,7 +167,7 @@ if ( "GNU" STREQUAL "${CMAKE_C_COMPILER_ID}")
     set( DISABLED_WARNINGS_CXX "-Wno-noexcept-type")
 elseif ( CMAKE_CXX_COMPILER_ID MATCHES "^(Apple)?Clang$" )
     set( DISABLED_WARNINGS_C "-Wno-unused-function")
-    set( DISABLED_WARNINGS_CXX "")
+    set( DISABLED_WARNINGS_CXX "-Wno-c++17-compat-mangling")
 elseif ( "MSVC" STREQUAL "${CMAKE_C_COMPILER_ID}")
     #
     # Unhelpful warnings, generated in particular by MSVC and Windows SDK header files

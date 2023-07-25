@@ -27,6 +27,7 @@
 #include <klib/log.h> /* PLOGERR */
 #include <klib/printf.h> /* string_printf */
 #include <klib/rc.h> /* RC */
+#include <klib/text.h>
 
 #include <vfs/manager.h> /* VFSManagerMake */
 #include <vfs/path.h> /* VPath */
@@ -636,7 +637,7 @@ rc_t ItemAddFormat ( Item * self, const char * cType, const Data * dad,
 
     if ( elm -> cType == NULL ) {
         if ( cType != NULL ) {
-            elm -> cType = strdup ( cType );
+            elm -> cType = string_dup_measure ( cType, NULL );
             if ( elm -> cType == NULL )
                 return RC ( rcVFS, rcQuery, rcExecuting,
                                    rcMemory, rcExhausted );
@@ -646,7 +647,7 @@ rc_t ItemAddFormat ( Item * self, const char * cType, const Data * dad,
 
     if (elm->name == NULL ) {
         if ( name != NULL) {
-            elm->name = strdup(name);
+            elm->name = string_dup_measure(name, NULL);
             if (elm->name == NULL)
                 return RC(rcVFS, rcQuery, rcExecuting,
                                  rcMemory, rcExhausted);
