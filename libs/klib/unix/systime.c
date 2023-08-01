@@ -24,6 +24,14 @@
 *
 */
 
+/*#ifndef _XOPEN_SOURCE
+#endif*/
+#define _XOPEN_SOURCE /* strptime */
+
+#if _POSIX_C_SOURCE < 199309L
+#define _POSIX_C_SOURCE 199309L
+#endif
+
 #include <klib/extern.h>
 #include <klib/time.h>
 #include <klib/rc.h> /* RC */
@@ -37,6 +45,11 @@
 #include <sys/time.h>
 #include <errno.h>
 
+#if (defined __USE_MISC || defined MAC || defined BSD)
+#define TM_GMTOFF tm_gmtoff
+#else
+#define TM_GMTOFF __tm_gmtoff
+#endif
 
 /*--------------------------------------------------------------------------
  * KTime_t
@@ -76,7 +89,7 @@ void KTimeMake ( KTime *kt, struct tm const *t )
     kt -> day = t -> tm_mday - 1;
     kt -> weekday = t -> tm_wday;
 #if !defined(__SunOS)  &&  !defined(__sun__)
-    kt -> tzoff = ( int16_t ) ( t -> tm_gmtoff / 60 );
+    kt -> tzoff = ( int16_t ) ( t -> TM_GMTOFF / 60 );
 #endif
     kt -> hour = ( uint8_t ) t -> tm_hour;
     kt -> minute = ( uint8_t ) t -> tm_min;
@@ -134,7 +147,7 @@ LIB_EXPORT KTime_t CC KTimeMakeTime ( const KTime *self )
         t . tm_mday = self -> day + 1;
         t . tm_wday = self -> weekday;
 #if !defined(__SunOS)  &&  !defined(__sun__)
-        t . tm_gmtoff = self -> tzoff * 60; 
+        t . TM_GMTOFF = self -> tzoff * 60;
 #endif
         t . tm_hour = self -> hour;
         t . tm_min = self -> minute;
@@ -234,8 +247,12 @@ LIB_EXPORT rc_t CC KSleepMs(uint32_t milliseconds) {
 
     time.tv_sec = (milliseconds / 1000);
     time.tv_nsec = (milliseconds % 1000) * 1000 * 1000;
-
+#if _POSIX_C_SOURCE >= 199309L
     if ( nanosleep ( & time, NULL ) != 0 )
+#else
+    #error "nanosleep is not guaranteed here"
+    if ( nanosleep ( & time, NULL ) != 0 )
+#endif
     {
         switch ( errno )
         {

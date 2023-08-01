@@ -31,6 +31,7 @@
 
 #include <klib/debug.h> /* KDbgSetString */
 #include <klib/out.h>         /* KOutMsg */
+#include <klib/text.h>
 
 #include <kns/manager.h>      /* KNSManagerSetConnectionTimeouts */
 
@@ -134,7 +135,7 @@ static rc_t argsHandler ( int argc, char * argv [] ) {
 
     if ( argc > 1 )
         if ( argv [ 1 ] [ 0 ] == '=' )
-            PROXY = strdup ( & argv [ 1 ] [ 1 ] );
+            PROXY = string_dup_measure ( & argv [ 1 ] [ 1 ], NULL );
 
     switch ( argc ) {
         case 1:

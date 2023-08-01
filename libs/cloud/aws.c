@@ -701,7 +701,7 @@ rc_t PopulateCredentials ( AWS * self, KConfig * aKfg )
 
     if ( self -> profile == NULL )
     {
-        self -> profile = strdup ( "default" );
+        self -> profile = string_dup_measure ( "default", NULL );
         DBGMSG(DBG_CLOUD, DBG_FLAG(DBG_CLOUD_LOAD),
             ("Set '%s' AWS_PROFILE\n", self->profile));
     }
