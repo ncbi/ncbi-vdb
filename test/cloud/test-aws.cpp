@@ -311,21 +311,29 @@ TEST_CASE(CallCloudAddComputeEnvironmentTokenForSigner) {
 
 TEST_CASE(GetLocation) {
     CloudMgr * mgr = nullptr;
-    REQUIRE_RC(CloudMgrMake(&mgr, KFG, nullptr));
+    REQUIRE_RC( CloudMgrMake(&mgr, KFG, nullptr) );
 
     Cloud * cloud = nullptr;
     if ( CloudMgrMakeCloud(mgr, &cloud, cloud_provider_aws) == 0 )
     {
         String const * location = nullptr;
-        if ( CloudGetLocation ( cloud, & location ) == 0 )
+        rc_t rc = CloudGetLocation ( cloud, & location );
+        if ( rc != 0 )
+        {
+            if ( rc != SILENT_RC(rcNS, rcFile, rcCreating, rcTimeout, rcExhausted) )
+            {
+                REQUIRE_RC( rc );
+            }
+        }
+        else
         {
             REQUIRE_NOT_NULL( location );
             cout << "location=" << string( location -> addr, location -> size ) << endl;
         }
-        REQUIRE_RC(CloudRelease(cloud));
+        REQUIRE_RC( CloudRelease(cloud) );
     }
 
-    REQUIRE_RC(CloudMgrRelease(mgr));
+    REQUIRE_RC( CloudMgrRelease(mgr) );
 }
 
 //////////////////////////////////////////// Main
