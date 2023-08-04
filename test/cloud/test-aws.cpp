@@ -50,12 +50,12 @@ static rc_t argsHandler(int argc, char* argv[]);
 TEST_SUITE_WITH_ARGS_HANDLER(AwsTestSuite, argsHandler)
 
 TEST_CASE(TryPost) {
-    KNSManager * kns = NULL;
+    KNSManager * kns = nullptr;
     REQUIRE_RC(KNSManagerMake(&kns));
-    KClientHttpRequest *req = NULL;
-    REQUIRE_RC(KNSManagerMakeRequest(kns, &req, 0x01010000, NULL,
+    KClientHttpRequest *req = nullptr;
+    REQUIRE_RC(KNSManagerMakeRequest(kns, &req, 0x01010000, nullptr,
         "https://www.nlm.nih.gov"));
-    KClientHttpResult * rslt = NULL;
+    KClientHttpResult * rslt = nullptr;
     REQUIRE_RC(KClientHttpRequestPOST(req, &rslt));
     REQUIRE_RC(KClientHttpResultRelease(rslt));
     REQUIRE_RC(KClientHttpRequestRelease(req));
@@ -201,15 +201,15 @@ TEST_CASE(TestBase64MakeLocation) {
         ));
 }
 
-static KConfig * KFG = NULL;
+static KConfig * KFG = nullptr;
 
 TEST_CASE(GetPkcs7) {
-    KNSManager * kns = NULL;
+    KNSManager * kns = nullptr;
     REQUIRE_RC(KNSManagerMake(&kns));
     char pkcs7[2048] = "";
     rc_t rc = KNSManager_Read(kns, pkcs7, sizeof pkcs7,
         "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7",
-        NULL, NULL);
+        nullptr, nullptr);
     if (rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcBusy  ) &&
         rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcNotAvailable) &&
         rc != SILENT_RC(rcNS, rcFile, rcCreating, rcError, rcUnknown) &&
@@ -218,8 +218,8 @@ TEST_CASE(GetPkcs7) {
     {
 #define rcStream rcFile
         if (rc == SILENT_RC(rcNS, rcStream, rcReading, rcSelf, rcNull)) {
-            CloudMgr * mgr = NULL;
-            REQUIRE_RC(CloudMgrMake(&mgr, KFG, NULL));
+            CloudMgr * mgr = nullptr;
+            REQUIRE_RC(CloudMgrMake(&mgr, KFG, nullptr));
             CloudProviderId cloud_provider = cloud_provider_none;
             REQUIRE_RC(CloudMgrCurrentProvider(mgr, &cloud_provider));
             REQUIRE(cloud_provider == cloud_provider_gcp
@@ -228,7 +228,7 @@ TEST_CASE(GetPkcs7) {
         }
         else {
             REQUIRE_RC(rc);
-            uint32_t len = string_measure(pkcs7, NULL);
+            uint32_t len = string_measure(pkcs7, nullptr);
             REQUIRE_LT( 1000u, len);
             REQUIRE_GT( 3000u, len);
         }
@@ -239,10 +239,10 @@ TEST_CASE(GetPkcs7) {
 TEST_CASE(PrintLocation) {
     REQUIRE_RC(KConfig_Set_Report_Cloud_Instance_Identity(KFG, false));
 
-    CloudMgr * mgr = NULL;
-    REQUIRE_RC(CloudMgrMake(&mgr, KFG, NULL));
+    CloudMgr * mgr = nullptr;
+    REQUIRE_RC(CloudMgrMake(&mgr, KFG, nullptr));
 
-    Cloud * cloud = NULL;
+    Cloud * cloud = nullptr;
     rc_t rc = CloudMgrGetCurrentCloud(mgr, &cloud);
     if (rc == SILENT_RC(
         rcCloud, rcMgr, rcAccessing, rcCloudProvider, rcNotFound))
@@ -251,7 +251,7 @@ TEST_CASE(PrintLocation) {
     }
     REQUIRE_RC(rc);
 
-    const String * ce_token = NULL;
+    const String * ce_token = nullptr;
     REQUIRE_RC_FAIL(CloudMakeComputeEnvironmentToken(cloud, &ce_token));
 
     CloudSetUserAgreesToRevealInstanceIdentity(cloud, true);
@@ -278,10 +278,10 @@ TEST_CASE(PrintLocation) {
 }
 
 TEST_CASE(CallCloudAddComputeEnvironmentTokenForSigner) {
-    CloudMgr * mgr = NULL;
-    REQUIRE_RC(CloudMgrMake(&mgr, KFG, NULL));
+    CloudMgr * mgr = nullptr;
+    REQUIRE_RC(CloudMgrMake(&mgr, KFG, nullptr));
 
-    Cloud * cloud = NULL;
+    Cloud * cloud = nullptr;
     rc_t rc = CloudMgrGetCurrentCloud(mgr, &cloud);
     if (rc != 0) {
         if (rc !=
@@ -291,14 +291,14 @@ TEST_CASE(CallCloudAddComputeEnvironmentTokenForSigner) {
         }
     }
     else {
-        KNSManager * kns = NULL;
+        KNSManager * kns = nullptr;
         REQUIRE_RC(KNSManagerMake(&kns));
-        KClientHttpRequest *req = NULL;
-        REQUIRE_RC(KNSManagerMakeRequest(kns, &req, 0x01010000, NULL,
+        KClientHttpRequest *req = nullptr;
+        REQUIRE_RC(KNSManagerMakeRequest(kns, &req, 0x01010000, nullptr,
             "https://www.nih.gov"));
         REQUIRE_RC(KHttpRequestAddPostParam(req, "foo=bar"));
         REQUIRE_RC(CloudAddComputeEnvironmentTokenForSigner(cloud, req));
-        KClientHttpResult * rslt = NULL;
+        KClientHttpResult * rslt = nullptr;
         REQUIRE_RC(KClientHttpRequestPOST(req, &rslt));
         REQUIRE_RC(KClientHttpResultRelease(rslt));
         REQUIRE_RC(KClientHttpRequestRelease(req));
@@ -310,33 +310,29 @@ TEST_CASE(CallCloudAddComputeEnvironmentTokenForSigner) {
 }
 
 TEST_CASE(GetLocation) {
-    CloudMgr * mgr = NULL;
-    REQUIRE_RC(CloudMgrMake(&mgr, KFG, NULL));
+    CloudMgr * mgr = nullptr;
+    REQUIRE_RC(CloudMgrMake(&mgr, KFG, nullptr));
 
-    Cloud * cloud = NULL;
-    rc_t rc = CloudMgrGetCurrentCloud(mgr, &cloud);
-    if (rc != 0) {
-        if (rc !=
-            SILENT_RC(rcCloud, rcMgr, rcAccessing, rcCloudProvider, rcNotFound))
+    Cloud * cloud = nullptr;
+    if ( CloudMgrMakeCloud(mgr, &cloud, cloud_provider_aws) == 0 )
+    {
+        String const * location = nullptr;
+        if ( CloudGetLocation ( cloud, & location ) == 0 )
         {
-            REQUIRE_RC(rc);
+            REQUIRE_NOT_NULL( location );
+            cout << "location=" << string( location -> addr, location -> size ) << endl;
         }
-    }
-    else {
-        String const * location;
-        REQUIRE_RC( CloudGetLocation ( cloud, & location ) );
-        cout << "location=" << string( location -> addr, location -> size ) << endl;
+        REQUIRE_RC(CloudRelease(cloud));
     }
 
-    REQUIRE_RC(CloudRelease(cloud));
     REQUIRE_RC(CloudMgrRelease(mgr));
 }
 
 //////////////////////////////////////////// Main
 
 static rc_t argsHandler(int argc, char * argv[]) {
-    Args * args = NULL;
-    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
+    Args * args = nullptr;
+    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, nullptr, 0);
     ArgsWhack(args);
     return rc;
 }
