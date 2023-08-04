@@ -73,7 +73,7 @@ rc_t CC AWSDestroy ( AWS * self )
 static rc_t KNSManager_GetAWSLocation(
     const KNSManager * self, char *buffer, size_t bsize)
 {
-    // try IMDSv2 first
+    // try IMDSv2 first, TOKEN = 'PUT http://169.254.169.254/latest/api/token'
     char token[1024];
 //    rc_t rc = KNSManager_Read(self, token, sizeof( token ), "http://169.254.169.254/latest/api/token", NULL, NULL);
     rc_t rc = KNSManager_Read(self, buffer, bsize, "http://169.254.169.254/latest/api/token", NULL, NULL);
