@@ -44,6 +44,7 @@
 #include "../../libs/cloud/cloud-cmn.h" /* KNSManager_Read */
 
 using std::string;
+using namespace::std;
 
 static rc_t argsHandler(int argc, char* argv[]);
 TEST_SUITE_WITH_ARGS_HANDLER(AwsTestSuite, argsHandler)
@@ -305,6 +306,29 @@ TEST_CASE(CallCloudAddComputeEnvironmentTokenForSigner) {
     }
     REQUIRE_RC(CloudRelease(cloud));
 
+    REQUIRE_RC(CloudMgrRelease(mgr));
+}
+
+TEST_CASE(GetLocation) {
+    CloudMgr * mgr = NULL;
+    REQUIRE_RC(CloudMgrMake(&mgr, KFG, NULL));
+
+    Cloud * cloud = NULL;
+    rc_t rc = CloudMgrGetCurrentCloud(mgr, &cloud);
+    if (rc != 0) {
+        if (rc !=
+            SILENT_RC(rcCloud, rcMgr, rcAccessing, rcCloudProvider, rcNotFound))
+        {
+            REQUIRE_RC(rc);
+        }
+    }
+    else {
+        String const * location;
+        REQUIRE_RC( CloudGetLocation ( cloud, & location ) );
+        cout << "location=" << string( location -> addr, location -> size ) << endl;
+    }
+
+    REQUIRE_RC(CloudRelease(cloud));
     REQUIRE_RC(CloudMgrRelease(mgr));
 }
 
