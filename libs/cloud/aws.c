@@ -73,9 +73,20 @@ rc_t CC AWSDestroy ( AWS * self )
 static rc_t KNSManager_GetAWSLocation(
     const KNSManager * self, char *buffer, size_t bsize)
 {
-    return KNSManager_Read(self, buffer, bsize,
-        "http://169.254.169.254/latest/meta-data/placement/availability-zone",
-        NULL, NULL);
+    // try IMDSv2 first
+    char token[1024];
+//    rc_t rc = KNSManager_Read(self, token, sizeof( token ), "http://169.254.169.254/latest/api/token", NULL, NULL);
+    rc_t rc = KNSManager_Read(self, buffer, bsize, "http://169.254.169.254/latest/api/token", NULL, NULL);
+    if ( rc != 0 )
+    {   // try IMDSv1
+        return KNSManager_Read(self, buffer, bsize,
+            "http://169.254.169.254/latest/meta-data/placement/availability-zone",
+            NULL, NULL);
+    }
+    // TODO: use the IMDSv1 token
+    // header = "X-aws-ec2-metadata-token: $TOKEN"
+    // rc = KNSManager_Read(self, token, sizeof( token ), "http://169.254.169.254/latest/api/token", NULL, NULL);
+    return rc;
 }
 
 /* envCE
@@ -102,7 +113,7 @@ static rc_t readCE(AWS const *const self, size_t size, char location[])
     char document[4096] = "";
     char pkcs7[4096] = "";
     rc_t rc;
-    
+
     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_CE),
            ("Reading AWS location from provider\n"));
     rc = KNSManager_Read(self->dad.kns, document, sizeof document,
@@ -125,7 +136,7 @@ static
 rc_t CC AWSMakeComputeEnvironmentToken ( const AWS * self, const String ** ce_token )
 {
     assert(self);
-    
+
     if (!self->dad.user_agrees_to_reveal_instance_identity)
         return RC(rcCloud, rcProvider, rcIdentifying,
                   rcCondition, rcUnauthorized);
@@ -548,13 +559,13 @@ static rc_t LoadCredentials ( AWS * self, KConfig * kfg )
     rc_t rc = KDirectoryNativeDir ( &wd );
     if ( rc ) return rc;
 
-    if ( conf_env && *conf_env != 0 ) 
+    if ( conf_env && *conf_env != 0 )
     {
         const KFile *cred_file = NULL;
         DBGMSG(DBG_CLOUD, DBG_FLAG(DBG_CLOUD_LOAD),
             ("Got AWS_CONFIG_FILE '%s' from environment\n", conf_env));
         rc = KDirectoryOpenFileRead ( wd, &cred_file, "%s", conf_env );
-        if ( rc == 0 ) 
+        if ( rc == 0 )
         {
             aws_parse_file ( self, cred_file );
             KFileRelease ( cred_file );
@@ -563,7 +574,7 @@ static rc_t LoadCredentials ( AWS * self, KConfig * kfg )
         return rc;
     }
 
-    if ( cred_env && *cred_env != 0 ) 
+    if ( cred_env && *cred_env != 0 )
     {
         const KFile *cred_file = NULL;
         PLOGMSG ( klogInfo, ( klogInfo,
@@ -583,7 +594,7 @@ static rc_t LoadCredentials ( AWS * self, KConfig * kfg )
         char home[4096] = "";
         make_home_node ( home, sizeof home, kfg );
 
-        if ( home[0] != 0 ) 
+        if ( home[0] != 0 )
         {
             char aws_path[4096] = "";
             size_t num_writ = 0;
@@ -652,7 +663,7 @@ rc_t PopulateCredentials ( AWS * self, KConfig * aKfg )
 {
     /* Check Environment first */
     const char * profile = NULL;
-    
+
     const char * aws_access_key_id = getenv ( "AWS_ACCESS_KEY_ID" );
     const char * aws_secret_access_key = getenv ( "AWS_SECRET_ACCESS_KEY" );
 

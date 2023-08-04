@@ -328,7 +328,9 @@ TEST_CASE(GetLocation) {
         else
         {
             REQUIRE_NOT_NULL( location );
+#ifdef TO_SHOW_RESULTS
             cout << "location=" << string( location -> addr, location -> size ) << endl;
+#endif
         }
         REQUIRE_RC( CloudRelease(cloud) );
     }
