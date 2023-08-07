@@ -38,6 +38,7 @@ struct GCP;
 #include <klib/data-buffer.h>
 #include <klib/debug.h> /* DBGMSG */
 #include <klib/json.h>
+#include <klib/log.h> /* PLOGMSG */
 #include <klib/printf.h> /* string_printf */
 #include <klib/rc.h>
 #include <klib/status.h>
@@ -72,7 +73,7 @@ struct GCP;
 #define PATH_MAX 4096
 #endif
 
-static rc_t PopulateCredentials(GCP * self);
+static rc_t PopulateCredentials(GCP * self, KConfig * kfg);
 
 /* Destroy
 */
@@ -796,7 +797,7 @@ LIB_EXPORT rc_t CC CloudMgrMakeGCP(const CloudMgr * self, GCP ** p_gcp)
             self, user_agrees_to_pay, user_agrees_to_reveal_instance_identity );
         if ( rc == 0 )
         {
-            rc = PopulateCredentials(gcp);
+            rc = PopulateCredentials(gcp, (KConfig*)self->kfg);
             if (rc == 0)
             {
                 *p_gcp = gcp;
@@ -943,7 +944,7 @@ bool CloudMgrWithinGCP(const CloudMgr * self)
 }
 
 static
-rc_t PopulateCredentials(GCP * self)
+rc_t PopulateCredentials(GCP * self, KConfig * aKfg)
 {
     rc_t rc = 0;
 
@@ -957,24 +958,33 @@ rc_t PopulateCredentials(GCP * self)
 
     if (pathToJsonFile == NULL || *pathToJsonFile == 0)
     {
-        KConfig * cfg = NULL;
-        rc = KConfigMake(&cfg, NULL);
+        KConfig * cfg = aKfg;
+        if (cfg == NULL)
+            rc = KConfigMake(&cfg, NULL);
 
         if (rc == 0)
             rc = KConfig_Get_Gcp_Credential_File(
                 cfg, buffer, sizeof buffer, NULL);
 
-        if (rc == 0)
+        if (rc == 0) {
             pathToJsonFile = buffer;
+            PLOGMSG ( klogInfo, ( klogInfo, "Got "
+                "GCP credential file '$(F)' from configuration",
+                "F=%s", pathToJsonFile ) ); 
+        }
         else
             rc = 0;
 
-        {
+        if (aKfg == NULL) {
             rc_t r2 = KConfigRelease(cfg);
             if (rc == 0 && r2 != 0)
                 rc = r2;
         }
     }
+    else
+        PLOGMSG ( klogInfo, ( klogInfo, "Got "
+            "GOOGLE_APPLICATION_CREDENTIALS file '$(F)' from environment",
+            "F=%s", pathToJsonFile ) );
 
     if (pathToJsonFile != NULL && *pathToJsonFile != 0)
     {   /* read the credentials file */

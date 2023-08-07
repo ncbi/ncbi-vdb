@@ -110,7 +110,7 @@ extern "C" {
 
 #define MODULE_NAMES() \
     _module(AES)    _module(ALIGN)   _module(APP)  _module(ARGS) \
-    _module(BLAST)  _module(KDB) \
+    _module(BLAST)  _module(CLOUD)   _module(KDB) \
     _module(KFG)    _module(KFS)     _module(KNS)  _module(KRYPTO) \
     _module(LEGREF) _module(LOADLIB) \
     _module(REF)    _module(SEARCH)  _module(SRA) \
@@ -137,6 +137,9 @@ extern "C" {
 
 #define BLAST_CONDITIONS() \
     _condition(BLAST,BLAST)
+
+#define CLOUD_CONDITIONS() \
+    _condition(CLOUD,LOAD)
 
 #define KDB_CONDITIONS() \
     _condition(KDB,KDB) _condition(KDB,POS)

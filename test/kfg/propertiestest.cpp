@@ -258,6 +258,154 @@ FIXTURE_TEST_CASE( GetSet_FullQuality, KfgFixture )
     REQUIRE_EQ ( value, false );
 }
 
+FIXTURE_TEST_CASE(GetSet_Http_Proxy_Enabled, KfgFixture)
+{
+    CreateAndLoad(GetName(), "#");
+    bool value = false;
+
+    REQUIRE_RC(KConfig_Get_Http_Proxy_Enabled(kfg, &value, true));
+    REQUIRE_EQ(value, true);
+
+    REQUIRE_RC(KConfig_Get_Http_Proxy_Enabled(kfg, &value, false));
+    REQUIRE_EQ(value, false);
+
+    REQUIRE_RC(KConfig_Set_Http_Proxy_Enabled(kfg, true));
+    REQUIRE_RC(KConfig_Get_Http_Proxy_Enabled(kfg, &value, false));
+    REQUIRE_EQ(value, true);
+
+    REQUIRE_RC(KConfig_Set_Http_Proxy_Enabled(kfg, false));
+    REQUIRE_RC(KConfig_Get_Http_Proxy_Enabled(kfg, &value, true));
+    REQUIRE_EQ(value, false);
+}
+
+FIXTURE_TEST_CASE(HasSet_Http_Proxy_Env_Higher_Priority, KfgFixture)
+{
+    CreateAndLoad(GetName(), "#");
+    bool value = true;
+
+    REQUIRE_RC(KConfig_Has_Http_Proxy_Env_Higher_Priority(kfg, &value));
+    REQUIRE_EQ(value, false);
+
+    REQUIRE_RC(KConfig_Set_Http_Proxy_Env_Higher_Priority(kfg, true));
+    REQUIRE_RC(KConfig_Has_Http_Proxy_Env_Higher_Priority(kfg, &value));
+    REQUIRE_EQ(value, true);
+
+    REQUIRE_RC(KConfig_Set_Http_Proxy_Env_Higher_Priority(kfg, false));
+    REQUIRE_RC(KConfig_Has_Http_Proxy_Env_Higher_Priority(kfg, &value));
+    REQUIRE_EQ(value, false);
+}
+
+FIXTURE_TEST_CASE(GetSet_Repository_State, KfgFixture)
+{
+    CreateAndLoad(GetName(), "#");
+    bool value = false;
+
+
+    REQUIRE_RC(KConfig_Get_Remote_Access_Enabled(kfg, &value));
+    REQUIRE_EQ(value, true);
+
+    REQUIRE_RC(KConfig_Set_Remote_Access_Enabled(kfg, false));
+    REQUIRE_RC(KConfig_Get_Remote_Access_Enabled(kfg, &value));
+    REQUIRE_EQ(value, false);
+
+    REQUIRE_RC(KConfig_Set_Remote_Access_Enabled(kfg, true));
+    REQUIRE_RC(KConfig_Get_Remote_Access_Enabled(kfg, &value));
+    REQUIRE_EQ(value, true);
+
+
+    value = false;
+    REQUIRE_RC(KConfig_Get_Remote_Main_Cgi_Access_Enabled(kfg, &value));
+    REQUIRE_EQ(value, true);
+
+    REQUIRE_RC(KConfigWriteBool(
+        kfg, "/repository/remote/main/CGI/disabled", true));
+    REQUIRE_RC(KConfig_Get_Remote_Main_Cgi_Access_Enabled(kfg, &value));
+    REQUIRE_EQ(value, false);
+
+    REQUIRE_RC(KConfigWriteBool(
+        kfg, "/repository/remote/main/CGI/disabled", false));
+    REQUIRE_RC(KConfig_Get_Remote_Main_Cgi_Access_Enabled(kfg, &value));
+    REQUIRE_EQ(value, true);
+
+
+    value = false;
+    REQUIRE_RC(KConfig_Get_Remote_Aux_Ncbi_Access_Enabled(kfg, &value));
+    REQUIRE_EQ(value, true);
+
+    REQUIRE_RC(KConfigWriteBool(
+        kfg, "/repository/remote/aux/NCBI/disabled", true));
+    REQUIRE_RC(KConfig_Get_Remote_Aux_Ncbi_Access_Enabled(kfg, &value));
+    REQUIRE_EQ(value, false);
+
+    REQUIRE_RC(KConfigWriteBool(
+        kfg, "/repository/remote/aux/NCBI/disabled", false));
+    REQUIRE_RC(KConfig_Get_Remote_Aux_Ncbi_Access_Enabled(kfg, &value));
+    REQUIRE_EQ(value, true);
+
+
+    value = false;
+    REQUIRE_RC(KConfig_Get_Site_Access_Enabled(kfg, &value));
+    REQUIRE_EQ(value, true);
+
+    REQUIRE_RC(KConfig_Set_Site_Access_Enabled(kfg, false));
+    REQUIRE_RC(KConfig_Get_Site_Access_Enabled(kfg, &value));
+    REQUIRE_EQ(value, false);
+
+    REQUIRE_RC(KConfig_Set_Site_Access_Enabled(kfg, true));
+    REQUIRE_RC(KConfig_Get_Site_Access_Enabled(kfg, &value));
+    REQUIRE_EQ(value, true);
+
+
+    value = false;
+    REQUIRE_RC(KConfig_Get_User_Access_Enabled(kfg, &value));
+    REQUIRE_EQ(value, true);
+
+    REQUIRE_RC(KConfig_Set_User_Access_Enabled(kfg, false));
+    REQUIRE_RC(KConfig_Get_User_Access_Enabled(kfg, &value));
+    REQUIRE_EQ(value, false);
+
+    REQUIRE_RC(KConfig_Set_User_Access_Enabled(kfg, true));
+    REQUIRE_RC(KConfig_Get_User_Access_Enabled(kfg, &value));
+    REQUIRE_EQ(value, true);
+
+
+    REQUIRE_RC(KConfig_Get_Allow_All_Certs(kfg, &value));
+    REQUIRE_EQ(value, false);
+
+    REQUIRE_RC(KConfig_Set_Allow_All_Certs(kfg, true));
+    REQUIRE_RC(KConfig_Get_Allow_All_Certs(kfg, &value));
+    REQUIRE_EQ(value, true);
+
+    REQUIRE_RC(KConfig_Set_Allow_All_Certs(kfg, false));
+    REQUIRE_RC(KConfig_Get_Allow_All_Certs(kfg, &value));
+    REQUIRE_EQ(value, false);
+
+
+    REQUIRE_RC(KConfig_Get_User_Public_Enabled(kfg, &value));
+    REQUIRE_EQ(value, true);
+
+    REQUIRE_RC(KConfig_Set_User_Public_Enabled(kfg, false));
+    REQUIRE_RC(KConfig_Get_User_Public_Enabled(kfg, &value));
+    REQUIRE_EQ(value, false);
+
+    REQUIRE_RC(KConfig_Set_User_Public_Enabled(kfg, true));
+    REQUIRE_RC(KConfig_Get_User_Public_Enabled(kfg, &value));
+    REQUIRE_EQ(value, true);
+
+
+    value = false;
+    REQUIRE_RC(KConfig_Get_User_Public_Cached(kfg, &value));
+    REQUIRE_EQ(value, true);
+
+    REQUIRE_RC(KConfig_Set_User_Public_Cached(kfg, false));
+    REQUIRE_RC(KConfig_Get_User_Public_Cached(kfg, &value));
+    REQUIRE_EQ(value, false);
+
+    REQUIRE_RC(KConfig_Set_User_Public_Cached(kfg, true));
+    REQUIRE_RC(KConfig_Get_User_Public_Cached(kfg, &value));
+    REQUIRE_EQ(value, true);
+}
+
 // Test disable reporting the command line options back to SRA
 FIXTURE_TEST_CASE( GetSet_Telemetry, KfgFixture ) {
     bool value = false;
