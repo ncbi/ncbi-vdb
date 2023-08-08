@@ -1278,7 +1278,7 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
 static
 rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
     struct KDataBuffer * buffer, const char *method,
-    uint32_t uriForm )
+    uint32_t uriForm, bool format_sra )
 {
     rc_t rc;
     rc_t r2 = 0;
@@ -1354,55 +1354,58 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
                                 , & node -> value );
     }
 
-  /* add an Accept header if we did not find one already in the header tree */
-    if (!have_accept) {
-        r2 = KDataBufferPrintf(buffer, "Accept: */*\r\n");
-        if (rc == 0 && r2 != 0)
-            rc = r2;
-    }
-
-    /* add a X-SRA-Release header if we did not find one
-       already in the header tree */
-    if (!have_sra_release) {
-        SraReleaseVersion version;
-        r2 = SraReleaseVersionGet(&version);
-        if (r2 == 0) {
-            r2 = KDataBufferPrintf(buffer, "X-SRA-Release: %V\r\n",
-                version.version);
-        }
-        if (rc == 0 && r2 != 0)
-            rc = r2;
-    }
-
-    /* add a X-VDB-Release header if we did not find one
-       already in the header tree */
-    if (!have_vdb_release) {
-        SraReleaseVersion version;
-        r2 = SraReleaseVersionGet(&version);
-        if (r2 == 0) {
-            r2 = KDataBufferPrintf(buffer, "X-VDB-Release: %V\r\n",
-                version.version);
-        }
-        if (rc == 0 && r2 != 0)
-            rc = r2;
-    }
-
-    /* add an User-Agent header from the kns-manager if we did not find one already in the header tree */
-    if ( !have_user_agent )
+    if ( format_sra )
     {
-        rc_t r3 = 0;
-        const char * ua = NULL;
-        if ( self -> http != NULL ) {
-            ua = self -> head ? self -> http -> ua_head : self -> http -> ua;
-        }
-        if ( ua == NULL )
-            r3 = KNSManagerGetUserAgent ( &ua );
-        if ( r3 == 0 )
-        {
-            r2 = KDataBufferPrintf ( buffer, "User-Agent: %s\r\n", ua );
-            if ( rc == 0 )
-            {
+        /* add an Accept header if we did not find one already in the header tree */
+        if (!have_accept) {
+            r2 = KDataBufferPrintf(buffer, "Accept: */*\r\n");
+            if (rc == 0 && r2 != 0)
                 rc = r2;
+        }
+
+        /* add a X-SRA-Release header if we did not find one
+        already in the header tree */
+        if (!have_sra_release) {
+            SraReleaseVersion version;
+            r2 = SraReleaseVersionGet(&version);
+            if (r2 == 0) {
+                r2 = KDataBufferPrintf(buffer, "X-SRA-Release: %V\r\n",
+                    version.version);
+            }
+            if (rc == 0 && r2 != 0)
+                rc = r2;
+        }
+
+        /* add a X-VDB-Release header if we did not find one
+        already in the header tree */
+        if (!have_vdb_release) {
+            SraReleaseVersion version;
+            r2 = SraReleaseVersionGet(&version);
+            if (r2 == 0) {
+                r2 = KDataBufferPrintf(buffer, "X-VDB-Release: %V\r\n",
+                    version.version);
+            }
+            if (rc == 0 && r2 != 0)
+                rc = r2;
+        }
+
+        /* add an User-Agent header from the kns-manager if we did not find one already in the header tree */
+        if ( !have_user_agent )
+        {
+            rc_t r3 = 0;
+            const char * ua = NULL;
+            if ( self -> http != NULL ) {
+                ua = self -> head ? self -> http -> ua_head : self -> http -> ua;
+            }
+            if ( ua == NULL )
+                r3 = KNSManagerGetUserAgent ( &ua );
+            if ( r3 == 0 )
+            {
+                r2 = KDataBufferPrintf ( buffer, "User-Agent: %s\r\n", ua );
+                if ( rc == 0 )
+                {
+                    rc = r2;
+                }
             }
         }
     }
@@ -1421,7 +1424,7 @@ rc_t CC KClientHttpRequestFormatMsg(const KClientHttpRequest *self,
     struct KDataBuffer * buffer, const char *method)
 {
     return KClientHttpRequestFormatMsgInt(self,
-        buffer, method, 1);
+        buffer, method, 1, true); // format for SRA
 }
 
 LIB_EXPORT
@@ -1429,7 +1432,7 @@ rc_t CC KClientHttpRequestFormatPostMsg(const KClientHttpRequest *self,
     struct KDataBuffer * buffer)
 {
     return KClientHttpRequestFormatMsgInt(self,
-        buffer, "POST", 0);
+        buffer, "POST", 0, true); // formas for SRA
 }
 
 static
@@ -1518,7 +1521,7 @@ rc_t KClientHttpRequestHandleRedirection ( KClientHttpRequest *self, const char 
 }
 
 static
-rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientHttpResult **_rslt, const char *method )
+rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientHttpResult **_rslt, const char *method, bool format_sra )
 {
     rc_t rc = 0;
     uint32_t i;
@@ -1542,7 +1545,7 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
             break;
 
         /* create message */
-        rc = KClientHttpRequestFormatMsgInt ( self, & buffer, method, uriForm );
+        rc = KClientHttpRequestFormatMsgInt ( self, & buffer, method, uriForm, format_sra );
         if ( rc != 0 ) {
             KDataBufferWhack( & buffer );
             break;
@@ -1642,7 +1645,7 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
 }
 
 static
-rc_t KClientHttpRequestSendReceiveNoBody ( KClientHttpRequest *self, KClientHttpResult **_rslt, const char *method )
+rc_t KClientHttpRequestSendReceiveNoBody ( KClientHttpRequest *self, KClientHttpResult **_rslt, const char *method, bool format_sra )
 {
     KHttpRetrier retrier;
     rc_t rc = KHttpRetrierInit ( & retrier,
@@ -1652,7 +1655,7 @@ rc_t KClientHttpRequestSendReceiveNoBody ( KClientHttpRequest *self, KClientHttp
     {
         while ( rc == 0 )
         {
-            rc = KClientHttpRequestSendReceiveNoBodyInt ( self, _rslt, method );
+            rc = KClientHttpRequestSendReceiveNoBodyInt ( self, _rslt, method, format_sra );
             if ( rc != 0 )
             {   /* a non-HTTP problem */
                 break;
@@ -1768,7 +1771,7 @@ LIB_EXPORT rc_t CC KClientHttpRequestHEAD ( KClientHttpRequest *self, KClientHtt
     }
     else
     {
-        rc = KClientHttpRequestSendReceiveNoBody ( self, rslt, "HEAD" );
+        rc = KClientHttpRequestSendReceiveNoBody ( self, rslt, "HEAD", true ); // format for SRA
     }
 
     self->head = false; /* reset head value: just in case*/
@@ -1781,7 +1784,7 @@ LIB_EXPORT rc_t CC KClientHttpRequestHEAD ( KClientHttpRequest *self, KClientHtt
  */
 LIB_EXPORT rc_t CC KClientHttpRequestGET ( KClientHttpRequest *self, KClientHttpResult **rslt )
 {
-    return KClientHttpRequestSendReceiveNoBody ( self, rslt, "GET" );
+    return KClientHttpRequestSendReceiveNoBody ( self, rslt, "GET", true ); // fotmat for SRA
 }
 
 rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult **_rslt )
@@ -1840,7 +1843,7 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
             break;
 
         /* create message */
-        rc = KClientHttpRequestFormatMsgInt ( self, & buffer, method, uriForm );
+        rc = KClientHttpRequestFormatMsgInt ( self, & buffer, method, uriForm, true ); // format for SRA
         if ( rc != 0 )
         {
             KDataBufferWhack( & buffer );
@@ -1883,7 +1886,7 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
         case 200:
         case 206:
             /* expiration has to reach the caller */
-            rslt -> expiration = expiration; 
+            rslt -> expiration = expiration;
             expiration = NULL;
             return 0;
         case 304:
@@ -1967,7 +1970,10 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
     return rc;
 }
 
-
+LIB_EXPORT rc_t CC KClientHttpRequestPUT ( KClientHttpRequest *self, KClientHttpResult **rslt, bool format_sra )
+{
+    return KClientHttpRequestSendReceiveNoBody ( self, rslt, "PUT", format_sra );
+}
 
 typedef enum {
     eUPSBegin,
