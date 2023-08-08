@@ -122,9 +122,14 @@ static rc_t KNSManager_GetAWSLocation(
                                 rc = KClientHttpRequestGET( request2, & result2 );
                                 if ( rc == 0 )
                                 {
-                                    uint32_t code2 = 0;
-                                    size_t msg_size2 = 0;
-                                    rc = KClientHttpResultStatus ( result2, & code2, buffer, bsize, & msg_size2 );
+                                    KStream * stream2 = NULL;
+                                    rc = KClientHttpResultGetInputStream( result2, & stream2 );
+                                    if (rc == 0)
+                                    {
+                                        size_t num_read2 = 0;
+                                        rc = KStreamRead( stream2, buffer, bsize, & num_read2 );
+                                        KStreamRelease( stream2 );
+                                    }
                                     KClientHttpResultRelease( result2 );
                                 }
                             }
