@@ -46,6 +46,7 @@ struct AWS;
 #include <kns/endpoint.h>
 #include <kns/socket.h>
 #include <kns/http.h>
+#include <kns/stream.h>
 #include <kfs/directory.h>
 #include <kfs/file.h>
 
@@ -101,34 +102,38 @@ static rc_t KNSManager_GetAWSLocation(
             rc = KClientHttpRequestPUT( request, & result, false ); // do not add SRA headers
             if ( rc == 0 )
             {   // extract token from the result
-                uint32_t code = 0;
-                size_t msg_size = 0;
-                rc = KClientHttpResultStatus ( result, & code, token, sizeof( token ), & msg_size );
-                if ( rc == 0 )
-                {   // Step 2.
-                    // curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/availability-zone
-                    KClientHttpRequest * request2;
-                    rc = KClientHttpMakeRequest ( http, & request2, "http://169.254.169.254/latest/meta-data/placement/availability-zone" );
+                KStream * stream = NULL;
+                rc = KClientHttpResultGetInputStream( result, & stream );
+                if (rc == 0)
+                {
+                    size_t num_read = 0;
+                    rc = KStreamRead( stream, token, sizeof( token ), & num_read );
                     if ( rc == 0 )
-                    {
-                        rc = KClientHttpRequestAddHeader ( request2, "X-aws-ec2-metadata-token", "%.*s", msg_size, token );
+                    {   // Step 2.
+                        // curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/availability-zone
+                        KClientHttpRequest * request2;
+                        rc = KClientHttpMakeRequest ( http, & request2, "http://169.254.169.254/latest/meta-data/placement/availability-zone" );
                         if ( rc == 0 )
                         {
-                            KClientHttpResult * result2;
-                            rc = KClientHttpRequestGET( request2, & result2 );
+                            rc = KClientHttpRequestAddHeader ( request2, "X-aws-ec2-metadata-token", "%.*s", num_read, token );
                             if ( rc == 0 )
                             {
-                                uint32_t code2 = 0;
-                                size_t msg_size2 = 0;
-                                rc = KClientHttpResultStatus ( result2, & code2, buffer, bsize, & msg_size2 );
-                                KClientHttpResultRelease( result2 );
+                                KClientHttpResult * result2;
+                                rc = KClientHttpRequestGET( request2, & result2 );
+                                if ( rc == 0 )
+                                {
+                                    uint32_t code2 = 0;
+                                    size_t msg_size2 = 0;
+                                    rc = KClientHttpResultStatus ( result2, & code2, buffer, bsize, & msg_size2 );
+                                    KClientHttpResultRelease( result2 );
+                                }
                             }
+
+                            KClientHttpRequestRelease( request2 );
                         }
-
-                        KClientHttpRequestRelease( request2 );
                     }
+                    KStreamRelease( stream );
                 }
-
                 KClientHttpResultRelease( result );
             }
 
