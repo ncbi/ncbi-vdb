@@ -49,19 +49,6 @@ using namespace::std;
 static rc_t argsHandler(int argc, char* argv[]);
 TEST_SUITE_WITH_ARGS_HANDLER(AwsTestSuite, argsHandler)
 
-TEST_CASE(TryPost) {
-    KNSManager * kns = nullptr;
-    REQUIRE_RC(KNSManagerMake(&kns));
-    KClientHttpRequest *req = nullptr;
-    REQUIRE_RC(KNSManagerMakeRequest(kns, &req, 0x01010000, nullptr,
-        "https://www.nlm.nih.gov"));
-    KClientHttpResult * rslt = nullptr;
-    REQUIRE_RC(KClientHttpRequestPOST(req, &rslt));
-    REQUIRE_RC(KClientHttpResultRelease(rslt));
-    REQUIRE_RC(KClientHttpRequestRelease(req));
-    REQUIRE_RC(KNSManagerRelease(kns));
-}
-
 TEST_CASE(TestBase64InIdentityDocument) {
     const char src[] =
         "{\n"
@@ -378,7 +365,7 @@ rc_t CC KMain ( int argc, char *argv [] )
 #ifdef TO_SHOW_RESULTS
     assert(!KDbgSetString("KNS"));
 #endif
-KDbgSetString ( "KNS-PROXY" );
+//KDbgSetString ( "KNS-PROXY" );
 
     if (rc == 0)
         rc = AwsTestSuite(argc, argv);
