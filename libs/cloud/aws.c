@@ -166,6 +166,16 @@ static char const *envCE()
     return env;
 }
 
+/* Get Pkcs7 signature from provider network
+ */
+rc_t GetPkcs7( const struct AWS * self, char *dst, size_t dlen )
+{
+    return KNSManager_Read(
+        self->dad.kns, dst, dlen,
+        "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7",
+        NULL, NULL);
+}
+
 /* readCE
  * Get Compute Environment Token by reading from provider network
  */
@@ -182,9 +192,7 @@ static rc_t readCE(AWS const *const self, size_t size, char location[])
                  NULL, NULL);
     if (rc) return rc;
 
-    rc = KNSManager_Read(self->dad.kns, pkcs7, sizeof pkcs7,
-                 "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7",
-                 NULL, NULL);
+    rc = GetPkcs7( self, pkcs7, sizeof pkcs7 );
     if (rc) return rc;
 
     return MakeLocation(pkcs7, document, location, size);

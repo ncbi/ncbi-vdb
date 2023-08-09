@@ -27,6 +27,8 @@
 #include <cmath>
 
 #include <cloud/manager.h> /* CloudMgrMake */
+#include <cloud/aws.h>
+
 #include <kapp/args.h> /* ArgsMakeAndHandle */
 #include <kfg/kfg-priv.h> /* KConfigMakeEmpty */
 #include <kfg/properties.h> /* KConfig_Set_Report_Cloud_Instance_Identity */
@@ -48,6 +50,10 @@ using namespace::std;
 
 static rc_t argsHandler(int argc, char* argv[]);
 TEST_SUITE_WITH_ARGS_HANDLER(AwsTestSuite, argsHandler)
+
+//
+// Unit tests for functions in cloud/aws-auth.c
+//
 
 TEST_CASE(TestBase64InIdentityDocument) {
     const char src[] =
@@ -188,39 +194,36 @@ TEST_CASE(TestBase64MakeLocation) {
         ));
 }
 
+//
+// Unit tests for functions in cloud/aws.c
+//
+
 static KConfig * KFG = nullptr;
 
-TEST_CASE(GetPkcs7) {
-    KNSManager * kns = nullptr;
-    REQUIRE_RC(KNSManagerMake(&kns));
-    char pkcs7[2048] = "";
-    rc_t rc = KNSManager_Read(kns, pkcs7, sizeof pkcs7,
-        "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7",
-        nullptr, nullptr);
-    if (rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcBusy  ) &&
-        rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcNotAvailable) &&
-        rc != SILENT_RC(rcNS, rcFile, rcCreating, rcError, rcUnknown) &&
-        rc != SILENT_RC(rcNS, rcFile, rcCreating, rcTimeout, rcExhausted) &&
-        rc != SILENT_RC(rcNS, rcFile, rcReading, rcTimeout, rcExhausted))
+TEST_CASE(Get_Pkcs7)
+{
+    CloudMgr * mgr = nullptr;
+    REQUIRE_RC(CloudMgrMake(&mgr, KFG, nullptr));
+    CloudProviderId cloud_provider = cloud_provider_none;
+    REQUIRE_RC(CloudMgrCurrentProvider(mgr, &cloud_provider));
+    if (cloud_provider == cloud_provider_aws )
     {
-#define rcStream rcFile
-        if (rc == SILENT_RC(rcNS, rcStream, rcReading, rcSelf, rcNull)) {
-            CloudMgr * mgr = nullptr;
-            REQUIRE_RC(CloudMgrMake(&mgr, KFG, nullptr));
-            CloudProviderId cloud_provider = cloud_provider_none;
-            REQUIRE_RC(CloudMgrCurrentProvider(mgr, &cloud_provider));
-            REQUIRE(cloud_provider == cloud_provider_gcp
-                 || cloud_provider == cloud_provider_none);
-            REQUIRE_RC(CloudMgrRelease(mgr));
-        }
-        else {
-            REQUIRE_RC(rc);
-            uint32_t len = string_measure(pkcs7, nullptr);
-            REQUIRE_LT( 1000u, len);
-            REQUIRE_GT( 3000u, len);
-        }
+        Cloud * cloud = nullptr;
+        REQUIRE_RC( CloudMgrGetCurrentCloud ( mgr, & cloud ) );
+        AWS * aws = nullptr;
+        REQUIRE_RC( CloudToAWS ( cloud, & aws ) );
+
+        char pkcs7[4096];
+        REQUIRE_RC( GetPkcs7( aws, pkcs7, sizeof( pkcs7 ) ) );
+
+        uint32_t len = string_measure(pkcs7, nullptr);
+        REQUIRE_LT( 1000u, len);
+        REQUIRE_GT( 3000u, len);
+
+        REQUIRE_RC( AWSRelease( aws ) );
     }
-    REQUIRE_RC(KNSManagerRelease(kns));
+
+    REQUIRE_RC(CloudMgrRelease(mgr));
 }
 
 TEST_CASE(PrintLocation) {
