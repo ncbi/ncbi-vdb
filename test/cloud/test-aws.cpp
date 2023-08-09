@@ -48,6 +48,8 @@
 using std::string;
 using namespace::std;
 
+#define TO_SHOW_RESULTS 1
+
 static rc_t argsHandler(int argc, char* argv[]);
 TEST_SUITE_WITH_ARGS_HANDLER(AwsTestSuite, argsHandler)
 
@@ -219,6 +221,9 @@ TEST_CASE(Get_Pkcs7)
         uint32_t len = string_measure(pkcs7, nullptr);
         REQUIRE_LT( 1000u, len);
         REQUIRE_GT( 3000u, len);
+#ifdef TO_SHOW_RESULTS
+        std::cout << "Pkcs7=" << string( pkcs7, len ) << endl;
+#endif
 
         REQUIRE_RC( AWSRelease( aws ) );
     }
