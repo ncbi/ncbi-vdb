@@ -49,13 +49,13 @@ typedef struct KSymbolName {
     struct KSymbolNameElm * name;
 } KSymbolName;
 
-rc_t SDatabaseGetDad(const struct SDatabase *self, const struct SDatabase **dd);
-rc_t STableGetParents(const struct STable *self, const struct Vector **parents);
-rc_t SViewGetParents(const struct SView *self, const struct Vector **parents);
-
 rc_t VSchemaGetDb(const struct VSchema *self, const struct Vector **db);
 rc_t VSchemaGetTbl(const struct VSchema *self, const struct Vector **tbl);
 rc_t VSchemaGetView(const struct VSchema *self, const struct Vector **view);
+
+rc_t SDatabaseGetDad(const struct SDatabase *self, const struct SDatabase **dd);
+rc_t STableGetParents(const struct STable *self, const struct Vector **parents);
+rc_t SViewGetParents(const struct SView *self, const struct Vector **parents);
 
 rc_t SDatabaseMakeKSymbolName(const struct SDatabase *self, KSymbolName **sn);
 rc_t STableMakeKSymbolName(const struct STable *self, KSymbolName **sn);
