@@ -248,43 +248,55 @@ TEST_CASE(Get_Pkcs7)
     REQUIRE_RC(CloudMgrRelease(mgr));
 }
 
-TEST_CASE(PrintLocation) {
+TEST_CASE(PrintInstance_NotAllowed) {
     REQUIRE_RC(KConfig_Set_Report_Cloud_Instance_Identity(KFG, false));
 
     CloudMgr * mgr = nullptr;
     REQUIRE_RC(CloudMgrMake(&mgr, KFG, nullptr));
-
-    Cloud * cloud = nullptr;
-    rc_t rc = CloudMgrGetCurrentCloud(mgr, &cloud);
-    if (rc == SILENT_RC(
-        rcCloud, rcMgr, rcAccessing, rcCloudProvider, rcNotFound))
+    CloudProviderId cloud_provider = cloud_provider_none;
+    REQUIRE_RC(CloudMgrCurrentProvider(mgr, &cloud_provider));
+    if (cloud_provider == cloud_provider_aws )
     {
-        rc = CloudMgrMakeCloud(mgr, &cloud, cloud_provider_aws);
+        Cloud * cloud = nullptr;
+        REQUIRE_RC( CloudMgrGetCurrentCloud ( mgr, & cloud ) );
+        AWS * aws = nullptr;
+        REQUIRE_RC( CloudToAWS ( cloud, & aws ) );
+
+        const String * ce_token = nullptr;
+        REQUIRE_RC_FAIL(CloudMakeComputeEnvironmentToken(cloud, &ce_token));
+
+        REQUIRE_RC(CloudRelease(cloud));
     }
-    REQUIRE_RC(rc);
 
-    const String * ce_token = nullptr;
-    REQUIRE_RC_FAIL(CloudMakeComputeEnvironmentToken(cloud, &ce_token));
+    REQUIRE_RC(CloudMgrRelease(mgr));
+}
 
-    CloudSetUserAgreesToRevealInstanceIdentity(cloud, true);
+TEST_CASE(PrintInstance_Allowed) {
+    REQUIRE_RC(KConfig_Set_Report_Cloud_Instance_Identity(KFG, false));
 
-    rc = CloudMakeComputeEnvironmentToken(cloud, &ce_token);
-    if (rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcBusy  ) &&
-        rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcNotAvailable) &&
-        rc != SILENT_RC(rcNS, rcFile, rcCreating, rcError     ,rcUnknown) &&
-        rc != SILENT_RC(rcNS, rcFile, rcCreating, rcTimeout, rcExhausted) &&
-        rc != SILENT_RC(rcNS, rcFile, rcReading, rcTimeout, rcExhausted) &&
-        rc != SILENT_RC(rcNS, rcFile, rcReading, rcSelf, rcNull))
+    CloudMgr * mgr = nullptr;
+    REQUIRE_RC(CloudMgrMake(&mgr, KFG, nullptr));
+    CloudProviderId cloud_provider = cloud_provider_none;
+    REQUIRE_RC(CloudMgrCurrentProvider(mgr, &cloud_provider));
+    if (cloud_provider == cloud_provider_aws )
     {
-        REQUIRE_RC(rc);
+        Cloud * cloud = nullptr;
+        REQUIRE_RC( CloudMgrGetCurrentCloud ( mgr, & cloud ) );
+        AWS * aws = nullptr;
+        REQUIRE_RC( CloudToAWS ( cloud, & aws ) );
+
+        CloudSetUserAgreesToRevealInstanceIdentity(cloud, true);
+
+        const String * ce_token = nullptr;
+        REQUIRE_RC( CloudMakeComputeEnvironmentToken(cloud, &ce_token) );
         REQUIRE_NOT_NULL(ce_token);
-#ifdef TO_SHOW_RESULTS
-        std::cout << ce_token->addr;
-#endif
-    }
-    StringWhack(ce_token);
+    #ifdef TO_SHOW_RESULTS
+            std::cout << ce_token->addr;
+    #endif
+        StringWhack(ce_token);
 
-    REQUIRE_RC(CloudRelease(cloud));
+        REQUIRE_RC(CloudRelease(cloud));
+    }
 
     REQUIRE_RC(CloudMgrRelease(mgr));
 }

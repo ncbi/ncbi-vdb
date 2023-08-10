@@ -71,6 +71,36 @@ rc_t CC AWSDestroy ( AWS * self )
     return CloudWhack ( & self -> dad );
 }
 
+static
+void
+AWSInitAccess( AWS * self )
+{
+    // try IMDSv1 first
+    char buffer[4096];
+    rc_t rc = KNSManager_Read( self -> dad . kns, buffer, sizeof( buffer ),
+                              "http://169.254.169.254/latest/meta-data",  HttpMethod_Get,
+                              NULL, NULL);
+    if ( rc == 0 )
+    {
+        self -> IMDS_version = 1;
+    }
+    else
+    {
+        rc = KNSManager_Read( self -> dad . kns, buffer, sizeof( buffer ),
+                              "http://169.254.169.254/latest/api/token", HttpMethod_Put,
+                              "X-aws-ec2-metadata-token-ttl-seconds", "%u", (uint64_t)21600 );
+        if ( rc == 0 )
+        {
+            self -> IMDS_version = 2;
+        }
+        else
+        {   // no AWS but this object can still be usable for testing
+            self -> IMDS_version = 0;
+        }
+        rc = 0;
+    }
+}
+
 static rc_t KNSManager_GetAWSLocation(
     const KNSManager * self, char *buffer, size_t bsize)
 {
@@ -288,6 +318,7 @@ LIB_EXPORT rc_t CC CloudMgrMakeAWS ( const CloudMgr * self, AWS ** p_aws )
             rc = PopulateCredentials( aws, (KConfig*)self->kfg );
             if ( rc == 0 )
             {
+                AWSInitAccess( aws );
                 * p_aws = aws;
             }
             else
