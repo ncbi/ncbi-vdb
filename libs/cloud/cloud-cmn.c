@@ -32,6 +32,7 @@
 #include "cloud-cmn.h" /* KNSManager_Read */
 
 #include "../kns/mgr-priv.h" /* KNSManager */
+#include "../kns/http-priv.h" /* KClientHttpVAddHeader */
 
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 && !rc) { rc = rc2; } obj = NULL; } while (false)
@@ -68,7 +69,7 @@ rc_t KNSManager_Read(const struct KNSManager *cself, char *buffer, size_t bsize,
     {
         va_list args;
         va_start ( args, hdrValue );
-        rc = KClientHttpRequestAddHeader(req, hdrName, hdrValue, args );
+        rc = KClientHttpVAddHeader( & req -> hdrs, false, hdrName, hdrValue, args );
         va_end ( args );
     }
 
