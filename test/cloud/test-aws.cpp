@@ -43,6 +43,7 @@
 #include <ktst/unit_test.hpp>
 
 #include "../../libs/cloud/aws-priv.h" /* TestBase64IIdentityDocument */
+#include "../../libs/cloud/cloud-priv.h" /* AWS */
 #include "../../libs/cloud/cloud-cmn.h" /* KNSManager_Read */
 
 using std::string;
@@ -201,6 +202,22 @@ TEST_CASE(TestBase64MakeLocation) {
 //
 
 static KConfig * KFG = nullptr;
+
+TEST_CASE(Get_IMDS_version)
+{
+    CloudMgr * mgr = nullptr;
+    REQUIRE_RC(CloudMgrMake(&mgr, KFG, nullptr));
+    CloudProviderId cloud_provider = cloud_provider_none;
+    REQUIRE_RC(CloudMgrCurrentProvider(mgr, &cloud_provider));
+    if (cloud_provider == cloud_provider_aws )
+    {
+        Cloud * cloud = nullptr;
+        REQUIRE_RC( CloudMgrGetCurrentCloud ( mgr, & cloud ) );
+        AWS * aws = nullptr;
+        REQUIRE_RC( CloudToAWS ( cloud, & aws ) );
+        REQUIRE( aws -> IMDS_version == 1 || aws -> IMDS_version == 2);
+    }
+}
 
 TEST_CASE(Get_Pkcs7)
 {

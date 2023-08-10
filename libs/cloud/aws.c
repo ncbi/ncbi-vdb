@@ -88,7 +88,7 @@ static rc_t KNSManager_GetAWSLocation(
     char token[1024];
     rc = KNSManager_Read( self, token, sizeof( token ),
                               "http://169.254.169.254/latest/api/token", HttpMethod_Put,
-                              "X-aws-ec2-metadata-token-ttl-seconds", "%u", 21600 );
+                              "X-aws-ec2-metadata-token-ttl-seconds", "%u", (uint64_t)21600 );
     if ( rc == 0 )
     {   // Step 2.
         // curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/availability-zone

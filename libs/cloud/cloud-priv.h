@@ -70,7 +70,7 @@ struct CloudMgr
     AWS * aws;
 #endif
 #ifdef _h_cloud_gcp_
-    /* cached GCP */    
+    /* cached GCP */
     GCP * gcp;
 #endif
 #ifdef _h_cloud_azure_
@@ -102,6 +102,8 @@ struct AWS
 
     char * region;
     char * output;
+
+    uint8_t IMDS_version; // 1 or 2; 0 if not on AWS
 };
 
 /* WithinAWS
