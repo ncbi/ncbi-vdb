@@ -117,7 +117,7 @@ static rc_t readCE(GCP const *const self, size_t size, char location[])
     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_CE),
         ("Reading GCP location from provider\n"));
     return KNSManager_Read(self->dad.kns, location, size,
-                         identityUrl, "Metadata-Flavor", "Google");
+                         identityUrl, HttpMethod_Get, "Metadata-Flavor", "Google");
 }
 
 /* MakeComputeEnvironmentToken
@@ -169,7 +169,7 @@ static rc_t GCPGetLocation(const GCP * self, const String ** location) {
     assert(self);
 
     rc = KNSManager_Read(self->dad.kns, b, sizeof b,
-        zoneUrl, "Metadata-Flavor", "Google");
+        zoneUrl, HttpMethod_Get, "Metadata-Flavor", "Google");
 
     if (rc == 0)
         slash = string_rchr(b, sizeof b, '/');
@@ -970,7 +970,7 @@ rc_t PopulateCredentials(GCP * self, KConfig * aKfg)
             pathToJsonFile = buffer;
             PLOGMSG ( klogInfo, ( klogInfo, "Got "
                 "GCP credential file '$(F)' from configuration",
-                "F=%s", pathToJsonFile ) ); 
+                "F=%s", pathToJsonFile ) );
         }
         else
             rc = 0;

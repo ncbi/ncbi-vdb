@@ -74,78 +74,25 @@ rc_t CC AWSDestroy ( AWS * self )
 static rc_t KNSManager_GetAWSLocation(
     const KNSManager * self, char *buffer, size_t bsize)
 {
-    // try IMDSv2 first
-    char token[1024];
-    rc_t rc = KNSManager_Read(self, token, sizeof( token ), "http://169.254.169.254/latest/api/token", NULL, NULL);
-    if ( rc != 0 )
-    {   // try IMDSv1
-        return KNSManager_Read(self, buffer, bsize,
-            "http://169.254.169.254/latest/meta-data/placement/availability-zone",
-            NULL, NULL);
+    // try IMDSv1 first
+    rc_t rc = KNSManager_Read(self, buffer, bsize,
+                              "http://169.254.169.254/latest/meta-data/placement/availability-zone",  HttpMethod_Get,
+                              NULL, NULL);
+    if ( rc == 0 )
+    {
+        return 0;
     }
 
     // Use the IMDSv2 token
     // Step 1. TOKEN=`curl -X PUT "http://169.254.169.254/latest/api/token" -H X-aws-ec2-metadata-token-ttl-seconds: 60"`
-    KClientHttp * http;
-    String host;
-    CONST_STRING( & host, "169.254.169.254" );
-    rc = KNSManagerMakeClientHttp ( self, & http, NULL, 0x01010000, & host, 80 );
+    char token[1024];
+    rc = KNSManager_Read( self, token, sizeof( token ),
+                              "http://169.254.169.254/latest/api/token", HttpMethod_Put,
+                              "X-aws-ec2-metadata-token-ttl-seconds", "%u", 21600 );
     if ( rc == 0 )
-    {
-        KClientHttpRequest * request;
-        rc = KClientHttpMakeRequest ( http, & request, "http://169.254.169.254/latest/api/token" );
-        if ( rc == 0 )
-        {   // life time of the token
-            rc = KClientHttpRequestAddHeader ( request, "X-aws-ec2-metadata-token-ttl-seconds", "60" );
-
-            KClientHttpResult * result;
-            rc = KClientHttpRequestPUT( request, & result, false ); // do not add SRA headers
-            if ( rc == 0 )
-            {   // extract token from the result
-                KStream * stream = NULL;
-                rc = KClientHttpResultGetInputStream( result, & stream );
-                if (rc == 0)
-                {
-                    size_t num_read = 0;
-                    rc = KStreamRead( stream, token, sizeof( token ), & num_read );
-                    if ( rc == 0 )
-                    {   // Step 2.
-                        // curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/availability-zone
-                        KClientHttpRequest * request2;
-                        rc = KClientHttpMakeRequest ( http, & request2, "http://169.254.169.254/latest/meta-data/placement/availability-zone" );
-                        if ( rc == 0 )
-                        {
-                            rc = KClientHttpRequestAddHeader ( request2, "X-aws-ec2-metadata-token", "%.*s", num_read, token );
-                            if ( rc == 0 )
-                            {
-                                KClientHttpResult * result2;
-                                rc = KClientHttpRequestGET( request2, & result2 );
-                                if ( rc == 0 )
-                                {
-                                    KStream * stream2 = NULL;
-                                    rc = KClientHttpResultGetInputStream( result2, & stream2 );
-                                    if (rc == 0)
-                                    {
-                                        size_t num_read2 = 0;
-                                        rc = KStreamRead( stream2, buffer, bsize, & num_read2 );
-                                        KStreamRelease( stream2 );
-                                    }
-                                    KClientHttpResultRelease( result2 );
-                                }
-                            }
-
-                            KClientHttpRequestRelease( request2 );
-                        }
-                    }
-                    KStreamRelease( stream );
-                }
-                KClientHttpResultRelease( result );
-            }
-
-            KClientHttpRequestRelease( request );
-        }
-
-        KClientHttpRelease( http );
+    {   // Step 2.
+        // curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/availability-zone
+        rc = KNSManager_Read( self, buffer, bsize, "http://169.254.169.254/latest/meta-data/placement/availability-zone", HttpMethod_Get, "X-aws-ec2-metadata-token", "%s", token );
     }
     return rc;
 }
@@ -172,7 +119,7 @@ rc_t GetPkcs7( const struct AWS * self, char *dst, size_t dlen )
 {
     return KNSManager_Read(
         self->dad.kns, dst, dlen,
-        "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7",
+        "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7", HttpMethod_Get,
         NULL, NULL);
 }
 
@@ -188,7 +135,7 @@ static rc_t readCE(AWS const *const self, size_t size, char location[])
     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_CE),
            ("Reading AWS location from provider\n"));
     rc = KNSManager_Read(self->dad.kns, document, sizeof document,
-                 "http://169.254.169.254/latest/dynamic/instance-identity/document",
+                 "http://169.254.169.254/latest/dynamic/instance-identity/document", HttpMethod_Get,
                  NULL, NULL);
     if (rc) return rc;
 
