@@ -215,6 +215,9 @@ TEST_CASE(Get_IMDS_version)
         REQUIRE_RC( CloudMgrGetCurrentCloud ( mgr, & cloud ) );
         AWS * aws = nullptr;
         REQUIRE_RC( CloudToAWS ( cloud, & aws ) );
+#ifdef TO_SHOW_RESULTS
+        std::cout << "IMDSv=" << aws -> IMDS_version << endl;
+#endif
         REQUIRE( aws -> IMDS_version == 1 || aws -> IMDS_version == 2);
     }
 }
