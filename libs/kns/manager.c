@@ -55,12 +55,13 @@
 
 #include <assert.h>
 
-#if HAVE_GNU_LIBC_VERSION_H
-#include <gnu/libc-version.h>
+#if HAVE_GNU_GET_LIBC_VERSION_F
+    #include <gnu/libc-version.h>
 #endif
+
 #if LINUX
-#include <arpa/inet.h>
-#include <netinet/in.h>
+    #include <arpa/inet.h>
+    #include <netinet/in.h>
 #endif
 
 #include <stdio.h> /* fprintf */
@@ -120,7 +121,7 @@ struct KNSProxies *KNSManagerGetProxies ( const KNSManager *self, size_t *cnt )
     return KNSProxiesGetHttpProxy ( self->proxies, cnt );
 }
 
-#ifdef USE_SINGLETON		
+#ifdef USE_SINGLETON
 static bool SINGLETON = true;
 #else
 static bool SINGLETON = false;
@@ -1102,9 +1103,9 @@ LIB_EXPORT rc_t CC KNSManagerSetUserAgent (
 LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
 {
     rc_t rc = 0;
-    
+
     bool telemetry = true;
-    
+
     if ( user_agent == NULL ) {
         rc = RC ( rcNS, rcMgr, rcAccessing, rcParam, rcNull );
         return rc;
