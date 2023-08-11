@@ -33,12 +33,7 @@ AddExecutableTest( Test_KNS "knstest" "${COMMON_LIBS_READ}" )
 AddExecutableTest( SlowTest_KNS_ipc "test-ipc" "${COMMON_LIBS_READ}" )
 AddExecutableTest( SlowTest_KNS_http "HttpFixture;httptest" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_KNS_http-dropconn "http_dropconnection_test" "${COMMON_LIBS_READ}" )
-
 AddExecutableTest( Test_KNS_http_request "HttpFixture;test-http-request" "${COMMON_LIBS_READ}" )
-if(HAVE_GNU_GET_LIBC_VERSION_F)
-    target_compile_definitions(Test_KNS_http_request PRIVATE HAVE_GNU_GET_LIBC_VERSION_F)
-endif()
-
 AddExecutableTest( Test_KNS_KNSManagerSingletonTest "KNSManagerSingletonTest" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_KNS_connect "HttpFixture;test-connect" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_KNS_refresh-expired "HttpFixture;KStableHttpFile;test-refresh-expired-url" "${COMMON_LIBS_READ}" )

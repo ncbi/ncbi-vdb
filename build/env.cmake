@@ -221,22 +221,6 @@ endif()
 
 add_compile_definitions (PKGNAME=${OS}${BITS})
 
-include(CheckIncludeFile)
-CHECK_INCLUDE_FILE(gnu/libc-version.h HAVE_GNU_LIBC_VERSION_H LANGUAGE C)
-
-if(HAVE_GNU_LIBC_VERSION_H)
-    include(CheckCSourceRuns)
-    check_c_source_runs("
-#include <stdio.h>
-#include <gnu/libc-version.h>
-
-int main(int argc, char *argv[]) {
-    printf(\"glibc version %s\", gnu_get_libc_version());
-    return 0;
-}
-" HAVE_GNU_GET_LIBC_VERSION_F)
-endif()
-
 # ===========================================================================
 # include directories for C/C++ compilation
 #

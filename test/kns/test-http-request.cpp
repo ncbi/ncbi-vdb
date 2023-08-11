@@ -44,10 +44,6 @@
 
 #include <ktst/unit_test.hpp>
 
-#if HAVE_GNU_GET_LIBC_VERSION_F
-    #include <gnu/libc-version.h>
-#endif
-
 #define ALL
 
 static rc_t argsHandler ( int argc, char * argv [] );
@@ -107,21 +103,14 @@ FIXTURE_TEST_CASE(HttpRequest_PUT_sra, HttpRequestFixture)
     REQUIRE_RC ( KClientHttpRequestPUT ( m_req, & rslt, true ) ); // format for SRA
     REQUIRE_EQ( size_t(1), TestStream::m_requests.size() );
 
-    string libc_version;
-#if HAVE_GNU_GET_LIBC_VERSION_F
-    libc_version = gnu_get_libc_version ();
-#endif
     string expected =
         "PUT /blah HTTP/1.1\r\n"
         "Host: HttpRequest_PUT_sra.com\r\n"
         "Accept: */*\r\n"
         "X-SRA-Release: 3.0.7\r\n"
         "X-VDB-Release: 3.0.7\r\n"
-        "User-Agent: linux64 sra-toolkit Test_KNS_http_request.1 (phid=noc62e4nos,libc=";
-    expected += libc_version +
-        ")\r\n"
-        "\r\n";
-
+        "User-Agent: linux64 sra-toolkit Test_KNS_http_request.1";
+    // match expected against the start of the actual (stop before GUID and livc version)
     auto m = mismatch(expected.begin(), expected.end(), TestStream::m_requests.front().begin() );
     if ( m.first != expected.end() )
     {

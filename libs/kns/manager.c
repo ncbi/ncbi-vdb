@@ -55,13 +55,12 @@
 
 #include <assert.h>
 
-#if HAVE_GNU_GET_LIBC_VERSION_F
-    #include <gnu/libc-version.h>
+#if HAVE_GNU_LIBC_VERSION_H
+#include <gnu/libc-version.h>
 #endif
-
 #if LINUX
-    #include <arpa/inet.h>
-    #include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
 #endif
 
 #include <stdio.h> /* fprintf */
