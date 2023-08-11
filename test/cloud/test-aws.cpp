@@ -49,7 +49,7 @@
 using std::string;
 using namespace::std;
 
-#define TO_SHOW_RESULTS 1
+#define TO_SHOW_RESULTS 0
 
 static rc_t argsHandler(int argc, char* argv[]);
 TEST_SUITE_WITH_ARGS_HANDLER(AwsTestSuite, argsHandler)
@@ -403,9 +403,9 @@ rc_t CC KMain ( int argc, char *argv [] )
     //TestEnv::verbosity = LogLevel::e_message;
 
 #ifdef TO_SHOW_RESULTS
-//    assert(!KDbgSetString("KNS"));
+    assert(!KDbgSetString("KNS"));
 #endif
-//KDbgSetString ( "KNS-PROXY" );
+KDbgSetString ( "KNS-PROXY" );
 
     if (rc == 0)
         rc = AwsTestSuite(argc, argv);
