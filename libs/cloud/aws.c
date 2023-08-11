@@ -71,7 +71,7 @@ rc_t CC AWSDestroy ( AWS * self )
     return CloudWhack ( & self -> dad );
 }
 
-static uint64_t AccessTokenLifetime_sec = 1; //21600; // 6 hours
+static uint64_t AccessTokenLifetime_sec = 21600; // 6 hours
 
 #define INSTANCE_URL_PREFIX "http://169.254.169.254/latest/"
 
@@ -110,7 +110,7 @@ AWSInitAccess( AWS * self )
         self -> dad . access_token_expiration = KTimeStamp() + AccessTokenLifetime_sec;
     }
 }
-#include <stdio.h>
+
 static
 rc_t
 GetInstanceInfo( const AWS * cself, const char * url, char *buffer, size_t bsize )
@@ -124,7 +124,6 @@ GetInstanceInfo( const AWS * cself, const char * url, char *buffer, size_t bsize
             /* see if cached access_token has to be generated/refreshed */
             if ( cself -> dad . access_token_expiration < KTimeStamp() + 60 ) /* expires in less than a minute */
             {
-                printf("********regenerating access code\n");
                 AWS * self = (AWS *)cself;
                 free( self -> dad . access_token );
                 self -> dad . access_token = NULL;
