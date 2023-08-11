@@ -330,7 +330,6 @@ LIB_EXPORT rc_t CC CloudMgrMakeAWS ( const CloudMgr * self, AWS ** p_aws )
         {
             free ( aws );
         }
-
     }
 
     return rc;
