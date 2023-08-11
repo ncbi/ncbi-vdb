@@ -71,60 +71,62 @@ rc_t CC AWSDestroy ( AWS * self )
     return CloudWhack ( & self -> dad );
 }
 
+static uint64_t AccessTokenLifetime_sec = 21600; // 6 hours
+
+static
+uint8_t
+IMDS_version( const KNSManager * kns, char *buffer, size_t bsize )
+{
+    // try IMDSv1 first
+    if ( KNSManager_Read( kns, buffer, bsize,
+                          "http://169.254.169.254/latest/meta-data",  HttpMethod_Get,
+                          NULL, NULL) == 0 )
+    {
+        buffer[ 0 ] = 0;
+        return 1;
+    }
+
+    if ( KNSManager_Read( kns, buffer, bsize,
+                          "http://169.254.169.254/latest/api/token", HttpMethod_Put,
+                          "X-aws-ec2-metadata-token-ttl-seconds", "%u", AccessTokenLifetime_sec ) == 0 )
+    {
+        return 2;
+    }
+    return 0;
+}
+
 static
 void
 AWSInitAccess( AWS * self )
 {
     // try IMDSv1 first
     char buffer[4096];
-    rc_t rc = KNSManager_Read( self -> dad . kns, buffer, sizeof( buffer ),
-                              "http://169.254.169.254/latest/meta-data",  HttpMethod_Get,
-                              NULL, NULL);
-    if ( rc == 0 )
-    {
-        self -> IMDS_version = 1;
-    }
-    else
-    {
-        rc = KNSManager_Read( self -> dad . kns, buffer, sizeof( buffer ),
-                              "http://169.254.169.254/latest/api/token", HttpMethod_Put,
-                              "X-aws-ec2-metadata-token-ttl-seconds", "%u", (uint64_t)21600 );
-        if ( rc == 0 )
-        {
-            self -> IMDS_version = 2;
-        }
-        else
-        {   // no AWS but this object can still be usable for testing
-            self -> IMDS_version = 0;
-        }
-        rc = 0;
+    self -> IMDS_version = IMDS_version( self -> dad . kns, buffer, sizeof( buffer ) );
+    if ( self -> IMDS_version == 2 )
+    {   // save off the session token and its expiration
+        self -> dad . access_token = string_dup ( buffer, string_size ( buffer ) );
+        self -> dad . access_token_expiration = KTimeStamp() + AccessTokenLifetime_sec;
     }
 }
 
-static rc_t KNSManager_GetAWSLocation(
-    const KNSManager * self, char *buffer, size_t bsize)
+static
+rc_t
+KNSManager_GetAWSLocation( const AWS * self, char *buffer, size_t bsize )
 {
-    // try IMDSv1 first
-    rc_t rc = KNSManager_Read(self, buffer, bsize,
-                              "http://169.254.169.254/latest/meta-data/placement/availability-zone",  HttpMethod_Get,
-                              NULL, NULL);
-    if ( rc == 0 )
+    switch ( self -> IMDS_version )
     {
+    case 1:
+        return KNSManager_Read( self -> dad . kns, buffer, bsize,
+                                "http://169.254.169.254/latest/meta-data/placement/availability-zone",  HttpMethod_Get,
+                                NULL, NULL );
+    case 2:
+        // curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/availability-zone
+        return KNSManager_Read( self -> dad . kns, buffer, bsize,
+                                "http://169.254.169.254/latest/meta-data/placement/availability-zone", HttpMethod_Get, "X-aws-ec2-metadata-token", "%s", self -> dad . access_token );
+    default:
+        // on AWS; the object can still be useful for  testing
         return 0;
     }
-
-    // Use the IMDSv2 token
-    // Step 1. TOKEN=`curl -X PUT "http://169.254.169.254/latest/api/token" -H X-aws-ec2-metadata-token-ttl-seconds: 60"`
-    char token[1024];
-    rc = KNSManager_Read( self, token, sizeof( token ),
-                              "http://169.254.169.254/latest/api/token", HttpMethod_Put,
-                              "X-aws-ec2-metadata-token-ttl-seconds", "%u", (uint64_t)21600 );
-    if ( rc == 0 )
-    {   // Step 2.
-        // curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/availability-zone
-        rc = KNSManager_Read( self, buffer, bsize, "http://169.254.169.254/latest/meta-data/placement/availability-zone", HttpMethod_Get, "X-aws-ec2-metadata-token", "%s", token );
-    }
-    return rc;
 }
 
 /* envCE
@@ -147,10 +149,21 @@ static char const *envCE()
  */
 rc_t GetPkcs7( const struct AWS * self, char *dst, size_t dlen )
 {
-    return KNSManager_Read(
-        self->dad.kns, dst, dlen,
-        "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7", HttpMethod_Get,
-        NULL, NULL);
+    switch ( self -> IMDS_version )
+    {
+    case 1:
+        return KNSManager_Read( self -> dad . kns, dst, dlen,
+            "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7", HttpMethod_Get,
+            NULL, NULL );
+    case 2:
+        // curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/availability-zone
+        return KNSManager_Read( self -> dad . kns, dst, dlen,
+            "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7", HttpMethod_Get,
+            "X-aws-ec2-metadata-token", "%s", self -> dad . access_token );
+    default:
+        dst[0] = 0;
+        return 0;
+    }
 }
 
 /* readCE
@@ -218,7 +231,7 @@ static rc_t AwsGetLocation(const AWS * self, const String ** location)
 
     assert(self);
 
-    rc = KNSManager_GetAWSLocation(self->dad.kns, zone, sizeof zone);
+    rc = KNSManager_GetAWSLocation( self, zone, sizeof zone );
 
     if (rc == 0)
         rc = string_printf(buffer, sizeof buffer, NULL, "s3.%s", zone);
@@ -387,22 +400,9 @@ LIB_EXPORT rc_t CC AWSToCloud ( const AWS * cself, Cloud ** cloud )
  */
 bool CloudMgrWithinAWS ( const CloudMgr * self )
 {
-#if 0
-    KEndPoint ep;
-    /* describe address 169.254.169.254 on port 80 */
-    KNSManagerInitIPv4Endpoint ( self -> kns, & ep,
-                                 ( ( 169 << 24 ) |
-                                   ( 254 << 16 ) |
-                                   ( 169 <<  8 ) |
-                                   ( 254 <<  0 ) ), 80 );
-
-#endif
-
-    char buffer[999] = "";
-
     assert(self);
-
-    return KNSManager_GetAWSLocation(self->kns, buffer, sizeof buffer) == 0;
+    char buffer[1024];
+    return IMDS_version( self -> kns, buffer, sizeof buffer ) != 0;
 }
 
 /*** Finding/loading credentials  */
