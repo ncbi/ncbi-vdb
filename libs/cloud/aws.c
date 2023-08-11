@@ -73,13 +73,15 @@ rc_t CC AWSDestroy ( AWS * self )
 
 static uint64_t AccessTokenLifetime_sec = 21600; // 6 hours
 
+#define INSTANCE_URL_PREFIX "http://169.254.169.254/latest/"
+
 static
 uint8_t
 IMDS_version( const KNSManager * kns, char *buffer, size_t bsize )
 {
     // try IMDSv1 first
     if ( KNSManager_Read( kns, buffer, bsize,
-                          "http://169.254.169.254/latest/meta-data",  HttpMethod_Get,
+                          INSTANCE_URL_PREFIX "meta-data",  HttpMethod_Get,
                           NULL, NULL) == 0 )
     {
         buffer[ 0 ] = 0;
@@ -87,7 +89,7 @@ IMDS_version( const KNSManager * kns, char *buffer, size_t bsize )
     }
 
     if ( KNSManager_Read( kns, buffer, bsize,
-                          "http://169.254.169.254/latest/api/token", HttpMethod_Put,
+                          INSTANCE_URL_PREFIX "api/token", HttpMethod_Put,
                           "X-aws-ec2-metadata-token-ttl-seconds", "%u", AccessTokenLifetime_sec ) == 0 )
     {
         return 2;
@@ -111,22 +113,28 @@ AWSInitAccess( AWS * self )
 
 static
 rc_t
-KNSManager_GetAWSLocation( const AWS * self, char *buffer, size_t bsize )
+GetInstanceInfo( const AWS * self, const char * url, char *buffer, size_t bsize )
 {
     switch ( self -> IMDS_version )
     {
     case 1:
-        return KNSManager_Read( self -> dad . kns, buffer, bsize,
-                                "http://169.254.169.254/latest/meta-data/placement/availability-zone",  HttpMethod_Get,
-                                NULL, NULL );
+        return KNSManager_Read( self -> dad . kns, buffer, bsize, url, HttpMethod_Get, NULL, NULL );
     case 2:
         // curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/availability-zone
-        return KNSManager_Read( self -> dad . kns, buffer, bsize,
-                                "http://169.254.169.254/latest/meta-data/placement/availability-zone", HttpMethod_Get, "X-aws-ec2-metadata-token", "%s", self -> dad . access_token );
+        return KNSManager_Read( self -> dad . kns, buffer, bsize, url, HttpMethod_Get,
+                                "X-aws-ec2-metadata-token", "%s", self -> dad . access_token );
     default:
         // on AWS; the object can still be useful for  testing
+        buffer[ 0 ] = 0;
         return 0;
     }
+}
+
+static
+rc_t
+KNSManager_GetAWSLocation( const AWS * self, char *buffer, size_t bsize )
+{
+    return GetInstanceInfo( self, INSTANCE_URL_PREFIX "meta-data/placement/availability-zone", buffer, bsize );
 }
 
 /* envCE
@@ -147,23 +155,9 @@ static char const *envCE()
 
 /* Get Pkcs7 signature from provider network
  */
-rc_t GetPkcs7( const struct AWS * self, char *dst, size_t dlen )
+rc_t GetPkcs7( const struct AWS * self, char *buffer, size_t bsize )
 {
-    switch ( self -> IMDS_version )
-    {
-    case 1:
-        return KNSManager_Read( self -> dad . kns, dst, dlen,
-            "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7", HttpMethod_Get,
-            NULL, NULL );
-    case 2:
-        // curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/availability-zone
-        return KNSManager_Read( self -> dad . kns, dst, dlen,
-            "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7", HttpMethod_Get,
-            "X-aws-ec2-metadata-token", "%s", self -> dad . access_token );
-    default:
-        dst[0] = 0;
-        return 0;
-    }
+    return GetInstanceInfo( self, INSTANCE_URL_PREFIX "dynamic/instance-identity/pkcs7", buffer, bsize );
 }
 
 /* readCE
@@ -178,7 +172,7 @@ static rc_t readCE(AWS const *const self, size_t size, char location[])
     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_CE),
            ("Reading AWS location from provider\n"));
     rc = KNSManager_Read(self->dad.kns, document, sizeof document,
-                 "http://169.254.169.254/latest/dynamic/instance-identity/document", HttpMethod_Get,
+                 INSTANCE_URL_PREFIX "dynamic/instance-identity/document", HttpMethod_Get,
                  NULL, NULL);
     if (rc) return rc;
 
