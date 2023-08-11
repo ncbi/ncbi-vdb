@@ -171,9 +171,7 @@ static rc_t readCE(AWS const *const self, size_t size, char location[])
 
     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_CE),
            ("Reading AWS location from provider\n"));
-    rc = KNSManager_Read(self->dad.kns, document, sizeof document,
-                 INSTANCE_URL_PREFIX "dynamic/instance-identity/document", HttpMethod_Get,
-                 NULL, NULL);
+    rc = GetInstanceInfo( self, INSTANCE_URL_PREFIX "dynamic/instance-identity/document", document, sizeof document );
     if (rc) return rc;
 
     rc = GetPkcs7( self, pkcs7, sizeof pkcs7 );
