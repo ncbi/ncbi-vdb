@@ -111,14 +111,14 @@ FIXTURE_TEST_CASE(HttpRequest_PUT_sra, HttpRequestFixture)
 #if HAVE_GNU_GET_LIBC_VERSION_F
     libc_version = gnu_get_libc_version ();
 #endif
-    const string expected =
+    string expected =
         "PUT /blah HTTP/1.1\r\n"
         "Host: HttpRequest_PUT_sra.com\r\n"
         "Accept: */*\r\n"
         "X-SRA-Release: 3.0.7\r\n"
         "X-VDB-Release: 3.0.7\r\n"
-        "User-Agent: linux64 sra-toolkit Test_KNS_http_request.1 (phid=noc62e4nos,libc="
-        + libc_version +
+        "User-Agent: linux64 sra-toolkit Test_KNS_http_request.1 (phid=noc62e4nos,libc=";
+    expected += libc_version +
         ")\r\n"
         "\r\n";
 
