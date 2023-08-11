@@ -45,7 +45,9 @@ static void OnDb(void *item, void *data) {
     assert(item && data);
     const struct SDatabase *self(static_cast<const struct SDatabase*>(item));
     rc_t *aRc = static_cast<rc_t*>(data);
- 
+    if (*aRc != 0)
+        return;
+
     // SDatabaseMakeKSymbolName
     KSymbolName *sn(NULL);
     rc_t rc(SDatabaseMakeKSymbolName(self, &sn));
@@ -56,6 +58,10 @@ static void OnDb(void *item, void *data) {
     else if (sn->name->next == NULL)
         *aRc = 2;
     else {
+#ifdef SHOW_RESULTS
+        std::cerr << "DB-NAME: " <<
+            std::string(sn->name->name->addr, sn->name->name->size) << std::endl;
+#endif
         String name;
         CONST_STRING(&name, "NCBI");
         if (!StringEqual(&name, sn->name->name))
@@ -82,6 +88,8 @@ static void OnTbl(void *item, void *data) {
     assert(item && data);
     const struct STable *self(static_cast<const struct STable*>(item));
     rc_t *aRc = static_cast<rc_t*>(data);
+    if (*aRc != 0)
+        return;
 
     // STableMakeKSymbolName
     KSymbolName *sn(NULL);
@@ -93,6 +101,11 @@ static void OnTbl(void *item, void *data) {
         *aRc = 10;
     else if (sn->name->name->size == 0)
         *aRc = 20;
+#ifdef SHOW_RESULTS
+    else
+        std::cerr << "TABLE-NAME: " <<
+           std::string(sn->name->name->addr, sn->name->name->size) << std::endl;
+#endif
 }
 
 TEST_CASE(TestSchemaPriv) {
