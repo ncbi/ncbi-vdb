@@ -24,47 +24,20 @@
 *
 */
 
-#include "../main-priv.h"
-#include <kapp/main.h>
-#include <klib/log.h>
-#include <klib/rc.h>
+#ifndef _h_os_native_
+#define _h_os_native_
 
-#include <string.h>
-#include <errno.h>
-#include <assert.h>
-#include <sys/sysctl.h>
-
-/* KAppGetTotalRam
- *  Mac specific function of getting amount of RAM
- */
-rc_t KAppGetTotalRam ( uint64_t * totalRam )
-{
-    rc_t rc;
-
-    size_t len = sizeof *totalRam;
-    int ret;
-
-    assert ( totalRam != 0 );
-
-// FIXME: This file should probably be moved to bsd/ram.c
-#if defined(__APPLE__)
-    ret = sysctlbyname("hw.memsize", totalRam, &len, NULL, 0 );
-#elif defined(__FreeBSD__) || defined(__NetBSD__)
-    ret = sysctlbyname("hw.usermem", totalRam, &len, NULL, 0 );
-#else
-    #error "You need to add a sysctl for this platform."
+#ifndef _h_unix_native_
+#include "../unix/unix-native.h"
 #endif
-    if ( ret < 0 )
-    {
-		int status = errno;
-        rc = RC ( rcApp, rcNoTarg, rcInitializing, rcMemory, rcFailed );
-        PLOGERR ( klogFatal, ( klogFatal, rc,
-                    "failed to retrieve number of RAM pages. error code: $(status) - $(msg)"
-                    , "status=%d,msg=%!"
-                    , status, status
-                        ));
-        return rc;
-    }
 
-    return 0;
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+#ifdef __cplusplus
 }
+#endif
+
+#endif /* _h_os_native_ */
