@@ -216,7 +216,7 @@ TEST_CASE(Get_IMDS_version)
         AWS * aws = nullptr;
         REQUIRE_RC( CloudToAWS ( cloud, & aws ) );
 #ifdef TO_SHOW_RESULTS
-        std::cout << "IMDSv=" << (unsigned int)aws -> IMDS_version << endl;
+        std::cout << "***IMDSv=" << (unsigned int)aws -> IMDS_version << endl;
 #endif
         REQUIRE( aws -> IMDS_version == 1 || aws -> IMDS_version == 2);
     }
@@ -242,7 +242,7 @@ TEST_CASE(Get_Pkcs7)
         REQUIRE_LT( 1000u, len);
         REQUIRE_GT( 3000u, len);
 #ifdef TO_SHOW_RESULTS
-        std::cout << "Pkcs7=" << string( pkcs7, len ) << endl;
+        std::cout << "***Pkcs7=" << string( pkcs7, len ) << endl;
 #endif
 
         REQUIRE_RC( AWSRelease( aws ) );
@@ -294,7 +294,7 @@ TEST_CASE(PrintInstance_Allowed) {
         REQUIRE_RC( CloudMakeComputeEnvironmentToken(cloud, &ce_token) );
         REQUIRE_NOT_NULL(ce_token);
     #ifdef TO_SHOW_RESULTS
-            std::cout << ce_token->addr;
+            std::cout << "***ce_token=" << ce_token->addr << endl;
     #endif
         StringWhack(ce_token);
 
@@ -356,7 +356,7 @@ TEST_CASE(GetLocation) {
         {
             REQUIRE_NOT_NULL( location );
 #ifdef TO_SHOW_RESULTS
-            cout << "location=" << string( location -> addr, location -> size ) << endl;
+            cout << "***location=" << string( location -> addr, location -> size ) << endl;
 #endif
         }
         REQUIRE_RC( CloudRelease(cloud) );
@@ -403,7 +403,7 @@ rc_t CC KMain ( int argc, char *argv [] )
     //TestEnv::verbosity = LogLevel::e_message;
 
 #ifdef TO_SHOW_RESULTS
-    assert(!KDbgSetString("KNS"));
+//    assert(!KDbgSetString("KNS"));
 #endif
 //KDbgSetString ( "KNS-PROXY" );
 

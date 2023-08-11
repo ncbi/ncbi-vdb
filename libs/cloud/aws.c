@@ -71,7 +71,7 @@ rc_t CC AWSDestroy ( AWS * self )
     return CloudWhack ( & self -> dad );
 }
 
-static uint64_t AccessTokenLifetime_sec = 21600; // 6 hours
+static uint64_t AccessTokenLifetime_sec = 1; //21600; // 6 hours
 
 #define INSTANCE_URL_PREFIX "http://169.254.169.254/latest/"
 
@@ -110,19 +110,40 @@ AWSInitAccess( AWS * self )
         self -> dad . access_token_expiration = KTimeStamp() + AccessTokenLifetime_sec;
     }
 }
-
+#include <stdio.h>
 static
 rc_t
-GetInstanceInfo( const AWS * self, const char * url, char *buffer, size_t bsize )
+GetInstanceInfo( const AWS * cself, const char * url, char *buffer, size_t bsize )
 {
-    switch ( self -> IMDS_version )
+    switch ( cself -> IMDS_version )
     {
     case 1:
-        return KNSManager_Read( self -> dad . kns, buffer, bsize, url, HttpMethod_Get, NULL, NULL );
+        return KNSManager_Read( cself -> dad . kns, buffer, bsize, url, HttpMethod_Get, NULL, NULL );
     case 2:
-        // curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/availability-zone
-        return KNSManager_Read( self -> dad . kns, buffer, bsize, url, HttpMethod_Get,
-                                "X-aws-ec2-metadata-token", "%s", self -> dad . access_token );
+        {
+            /* see if cached access_token has to be generated/refreshed */
+            if ( cself -> dad . access_token_expiration < KTimeStamp() + 60 ) /* expires in less than a minute */
+            {
+                printf("********regenerating access code\n");
+                AWS * self = (AWS *)cself;
+                free( self -> dad . access_token );
+                self -> dad . access_token = NULL;
+                char buffer[4096];
+                rc_t rc = KNSManager_Read( self -> dad . kns, buffer, sizeof( buffer ),
+                          INSTANCE_URL_PREFIX "api/token", HttpMethod_Put,
+                          "X-aws-ec2-metadata-token-ttl-seconds", "%u", AccessTokenLifetime_sec );
+                if ( rc != 0 )
+                {
+                    return rc;
+                }
+                self -> dad . access_token = string_dup ( buffer, string_size ( buffer ) );
+                self -> dad . access_token_expiration = KTimeStamp() + AccessTokenLifetime_sec;
+            }
+
+            // curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/availability-zone
+            return KNSManager_Read( cself -> dad . kns, buffer, bsize, url, HttpMethod_Get,
+                                    "X-aws-ec2-metadata-token", "%s", cself -> dad . access_token );
+        }
     default:
         // on AWS; the object can still be useful for  testing
         buffer[ 0 ] = 0;
