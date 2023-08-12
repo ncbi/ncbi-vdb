@@ -51,12 +51,18 @@ static void OnDb(void *item, void *data) {
     // SDatabaseMakeKSymbolName
     KSymbolName *sn(NULL);
     rc_t rc(SDatabaseMakeKSymbolName(self, &sn));
-    if (rc != 0)
+    if (rc != 0) {
         *aRc = rc;
-    else if (sn->version != 0x01030000)
+        return;
+    }
+    else if (sn->version != 0x01030000) {
         *aRc = 1;
-    else if (sn->name->next == NULL)
+        return;
+    }
+    else if (sn->name->next == NULL) {
         *aRc = 2;
+        return;
+    }
     else {
 #ifdef SHOW_RESULTS
         std::cerr << "DB-NAME: " <<
@@ -64,20 +70,20 @@ static void OnDb(void *item, void *data) {
 #endif
         String name;
         CONST_STRING(&name, "NCBI");
-        if (!StringEqual(&name, sn->name->name))
+        if (!StringEqual(&name, sn->name->name)) {
             *aRc = 2;
+            return;
+        }
     }
 
     // SDatabaseGetDad
     const struct SDatabase *dd(NULL);
     rc = SDatabaseGetDad(self, &dd);
-    if (rc != 0)
+    if (rc != 0) {
         *aRc = rc;
-    if (rc != 0)
-        *aRc = rc;
-    if (rc != 0)
-        *aRc = rc;
-   
+        return;
+    }
+
     // KSymbolNameWhack
     rc = KSymbolNameWhack(sn);
     if (rc != 0)
@@ -95,12 +101,18 @@ static void OnTbl(void *item, void *data) {
     KSymbolName *sn(NULL);
     rc_t rc(STableMakeKSymbolName(self, &sn));
     assert(sn->name->name);
-    if (rc != 0)
+    if (rc != 0) {
         *aRc = rc;
-    else if (sn->name->next == NULL)
+        return;
+    }
+    else if (sn->name->next == NULL) {
         *aRc = 10;
-    else if (sn->name->name->size == 0)
+        return;
+    }
+    else if (sn->name->name->size == 0) {
         *aRc = 20;
+        return;
+    }
 #ifdef SHOW_RESULTS
     else
         std::cerr << "TABLE-NAME: " <<
