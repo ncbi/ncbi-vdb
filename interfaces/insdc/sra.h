@@ -103,7 +103,14 @@ enum
     SRA_PLATFORM_PACBIO_SMRT       = 6,
     SRA_PLATFORM_ION_TORRENT       = 7,
     SRA_PLATFORM_CAPILLARY         = 8,
-    SRA_PLATFORM_OXFORD_NANOPORE   = 9
+    SRA_PLATFORM_OXFORD_NANOPORE   = 9,
+    SRA_PLATFORM_ELEMENT_BIO       = 10,
+    SRA_PLATFORM_TAPESTRI          = 11,
+    SRA_PLATFORM_VELA_DIAG         = 12,
+    SRA_PLATFORM_GENAPSYS          = 13,
+    SRA_PLATFORM_ULTIMA            = 14,
+    SRA_PLATFORM_GENEMIND          = 15,
+    SRA_PLATFORM_BGISEQ            = 16
 };
 
 #ifdef __cplusplus
