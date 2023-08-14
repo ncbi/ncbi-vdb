@@ -113,6 +113,25 @@ enum
     SRA_PLATFORM_BGISEQ            = 16
 };
 
+#define INSDC_SRA_PLATFORM_SYMBOLS    \
+    "SRA_PLATFORM_UNDEFINED",         \
+    "SRA_PLATFORM_454",               \
+    "SRA_PLATFORM_ILLUMINA",          \
+    "SRA_PLATFORM_ABSOLID",           \
+    "SRA_PLATFORM_COMPLETE_GENOMICS", \
+    "SRA_PLATFORM_HELICOS",           \
+    "SRA_PLATFORM_PACBIO_SMRT",       \
+    "SRA_PLATFORM_ION_TORRENT",       \
+    "SRA_PLATFORM_CAPILLARY",         \
+    "SRA_PLATFORM_OXFORD_NANOPORE",   \
+    "SRA_PLATFORM_ELEMENT_BIO",       \
+    "SRA_PLATFORM_TAPESTRI",          \
+    "SRA_PLATFORM_VELA_DIAG",         \
+    "SRA_PLATFORM_GENAPSYS",          \
+    "SRA_PLATFORM_ULTIMA",            \
+    "SRA_PLATFORM_GENEMIND",          \
+    "SRA_PLATFORM_BGISEQ"
+
 #ifdef __cplusplus
 }
 #endif
