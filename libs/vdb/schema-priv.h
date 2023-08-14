@@ -24,8 +24,8 @@
 *
 */
 
-#ifndef _h_schema_priv_
-#define _h_schema_priv_
+#ifndef _h_libs_schema_priv_
+#define _h_libs_schema_priv_
 
 #ifndef _h_vdb_schema_
 #include <vdb/schema.h>
@@ -1631,4 +1631,4 @@ bool VSchemaParse_v2 ( VSchema *self, const char *text, size_t bytes );
 }
 #endif
 
-#endif /* _h_schema_priv_ */
+#endif /* _h_libs_schema_priv_ */

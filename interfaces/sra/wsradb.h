@@ -119,14 +119,18 @@ SRA_EXTERN rc_t CC SRAMgrVUnlock ( SRAMgr *self, const char *path, va_list args 
  *
  *  "tbl" [ OUT ] - return parameter for table
  *
+ *  "schema_file" [ IN ] - schema file containing the definition of 'typespec'
+ * 
  *  "typespec" [ IN ] - type and optionally version of table schema,
  *  e.g. 'MY_NAMESPACE:MyTable' or 'MY_NAMESPACE:MyTable#1.1'
  *
  *  "path" [ IN ] - NUL terminated table name
  */
 SRA_EXTERN rc_t CC SRAMgrCreateTable ( SRAMgr *self, SRATable **tbl,
+    const char * schema_file,
     const char *typespec, const char *path, ... );
 SRA_EXTERN rc_t CC SRAMgrVCreateTable ( SRAMgr *self, SRATable **tbl,
+    const char * schema_file,
     const char *typespec, const char *path, va_list args );
 
 
