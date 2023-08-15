@@ -2,7 +2,7 @@
 #ifndef _bsd_byteswap_h_
 #define _bsd_byteswap_h_
 
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__NetBSD__)
 
 #include <sys/endian.h>
 
