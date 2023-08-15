@@ -111,8 +111,8 @@ FIXTURE_TEST_CASE(HttpRequest_PUT_sra, HttpRequestFixture)
         "Accept: */*\r\n"
         "X-SRA-Release: 3.0.7\r\n"
         "X-VDB-Release: 3.0.7\r\n"
-        "User-Agent: ";
-    // match expected against the start of the actual (stop before OS)
+        "User-Agent: linux64 sra-toolkit Test_KNS_http_request.1";
+    // match expected against the start of the actual (stop before GUID and livc version)
     auto m = mismatch(expected.begin(), expected.end(), TestStream::m_requests.front().begin() );
     if ( m.first != expected.end() )
     {
