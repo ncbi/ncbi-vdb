@@ -44,6 +44,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <algorithm>
+
 #define ALL
 
 static rc_t argsHandler ( int argc, char * argv [] );
