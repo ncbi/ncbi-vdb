@@ -1,6 +1,17 @@
 # NCBI External Developer Release:
 
 
+## NCBI VDB 3.0.7
+**August 29, 2023**
+
+  **abi-load, fastq-load, helicos-load, illumina-load, pacbio-load, sff-load, sra, srf-load**: fixed loaders to work without predefined schema  
+  **align-info, prefetch, vdb, vfs**: stopped printing incorrect 'reference not found' messages; reduced number of calls to resolve WGS references; align-info don't resolve references remotely if found locally  
+  **bam-load, kdb, vdb-validate**: index works correctly with only one key  
+  **cloud, ngs-tools, sra-tools, vdb-config**: fixed use of AWS credentials  
+  **kns, ngs, ngs-tools, sra-tools**: fixed a bug that caused failure during accession resolution while reading HTTP stream  
+  **vdb**: added database-contained view aliases to the schema language  
+
+
 ## NCBI VDB 3.0.6
 **July 10, 2023**
 
