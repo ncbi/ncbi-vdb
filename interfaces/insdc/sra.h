@@ -89,6 +89,7 @@ enum
 #endif
 
 /* platform id
+ * see also sra.vschema
  */
 #define sra_platform_id_t "INSDC:SRA:platform_id"
 typedef uint8_t INSDC_SRA_platform_id;
@@ -113,6 +114,14 @@ enum
     SRA_PLATFORM_BGISEQ            = 16
 };
 
+/*
+ * C string names for the platform enum values
+ *
+ * suggested use:
+ *     static const char *platform_symbolic_names[] = { INSDC_SRA_PLATFORM_SYMBOLS };
+ *     INSDC_SRA_platform_id p = ...;
+ *     const char * platform_str = platform_symbolic_names[ p ];
+ */
 #define INSDC_SRA_PLATFORM_SYMBOLS    \
     "SRA_PLATFORM_UNDEFINED",         \
     "SRA_PLATFORM_454",               \
