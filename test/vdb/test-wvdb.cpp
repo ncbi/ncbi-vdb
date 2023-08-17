@@ -60,7 +60,7 @@ using namespace std;
 
 TEST_SUITE( WVdbTestSuite )
 
-#if MAC && DEBUG
+#if 0 && MAC && DEBUG
 #include <unistd.h>
 #include <sysexits.h>
 #include <vector>
@@ -912,7 +912,7 @@ FIXTURE_TEST_CASE ( PlatformNames, WVDB_Fixture )
 
     static const char *platform_symbolic_names[] = { INSDC_SRA_PLATFORM_SYMBOLS };
     size_t platform_count = sizeof( platform_symbolic_names ) / sizeof( * platform_symbolic_names );
-
+char wd[4096]; realpath(".", wd); cout << wd << endl;
     for ( size_t platformId = 0; platformId < platform_count; ++ platformId )
     {
         char schema[4096];
