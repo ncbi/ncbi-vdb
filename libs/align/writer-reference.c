@@ -2296,6 +2296,7 @@ LIB_EXPORT rc_t CC ReferenceMgr_GetSeq(ReferenceMgr const *const cself,
         rc_t rc = ReferenceMgr_OpenSeq(self, &obj, id, 0, NULL, allowMultiMapping, wasRenamed);
 
         if (rc) return rc;
+        *seq = obj;
         if (obj->type == rst_unmapped) {
             *shouldUnmap = true;
             return 0;
@@ -2304,7 +2305,6 @@ LIB_EXPORT rc_t CC ReferenceMgr_GetSeq(ReferenceMgr const *const cself,
             rc = ReferenceMgr_LoadSeq(self, obj);
             if (rc) return rc;
         }
-        *seq = obj;
     }
     return 0;
 }
