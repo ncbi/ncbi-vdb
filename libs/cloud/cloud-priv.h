@@ -32,10 +32,6 @@
 #include <cloud/impl.h>
 #endif
 
-#ifndef _h_klib_time_
-#include <klib/time.h>
-#endif
-
 #ifndef _h_kfg_config_
 #include <kfg/config.h>
 #endif
@@ -70,7 +66,7 @@ struct CloudMgr
     AWS * aws;
 #endif
 #ifdef _h_cloud_gcp_
-    /* cached GCP */    
+    /* cached GCP */
     GCP * gcp;
 #endif
 #ifdef _h_cloud_azure_
@@ -102,6 +98,8 @@ struct AWS
 
     char * region;
     char * output;
+
+    uint8_t IMDS_version; // 1 or 2; 0 if not on AWS
 };
 
 /* WithinAWS
@@ -125,8 +123,6 @@ struct GCP
     char * project_id;
 
     char * jwt; /* JWT for requesting access tokens (reusable) */
-    char * access_token;
-    KTime_t access_token_expiration;
 };
 
 /* WithinGCP

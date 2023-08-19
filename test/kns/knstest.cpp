@@ -40,6 +40,8 @@
 
 #include <thread>
 
+#include <kns/http.h>
+
 #include "KNSManagerFixture.hpp"
 
 #include "../../libs/kns/kns_manager-singleton.h" // KNSManagerUseSingleton
@@ -102,7 +104,7 @@ FIXTURE_TEST_CASE(KNSManagerGetUserAgent_Default, SessionIdFixture)
 {
     const char * ua = nullptr;
     KNSManagerGetUserAgent(&ua);
-    const string ua_contains = "sra-toolkit test-kns.1 (phid=noc";
+    const string ua_contains = "sra-toolkit Test_KNS.1 (phid=noc";
     //fprintf(stderr,"Got: '%s', expected '%s'\n", ua, ua_contains.data());
     REQUIRE_NE( string::npos, string(ua).find(ua_contains) );
     // VDB-4896: no double quotes inside UA
@@ -170,13 +172,13 @@ FIXTURE_TEST_CASE(KNSManagerSetUserAgentSuffix_Get, SessionIdFixture)
     const char * s;
     REQUIRE_RC(KNSManagerGetUserAgentSuffix( & s ));
     REQUIRE_EQ( suffix, string( s ) );
-    REQUIRE( UserAgent_Contains( "sra-toolkit test-kns.1suffix (phid=noc" ) );
+    REQUIRE( UserAgent_Contains( "sra-toolkit Test_KNS.1suffix (phid=noc" ) );
 }
 
 FIXTURE_TEST_CASE(KNSManagerSetUserAgentSuffix_Restore, SessionIdFixture)
 {
     REQUIRE_RC(KNSManagerSetUserAgentSuffix("suffix1"));
-    REQUIRE( UserAgent_Contains( "sra-toolkit test-kns.1suffix1 (phid=noc" ) );
+    REQUIRE( UserAgent_Contains( "sra-toolkit Test_KNS.1suffix1 (phid=noc" ) );
 
     REQUIRE_RC(KNSManagerSetUserAgentSuffix(""));
     const char * ua = nullptr;
@@ -298,6 +300,28 @@ FIXTURE_TEST_CASE(KNSManagerSet_ThreadLocal, SessionIdFixture)
     REQUIRE_EQ( original_ua, string(ua) );
 }
 
+//
+// HTTP requests to a real (echo) server
+//
+const char * EchoServerUrl = "https://echoserver.dev/";
+FIXTURE_TEST_CASE( POST, KNSManagerFixture )
+{
+    KClientHttpRequest *req = nullptr;
+    REQUIRE_RC( KNSManagerMakeRequest( m_mgr, &req, 0x01010000, nullptr, EchoServerUrl ) );
+    KClientHttpResult * rslt = nullptr;
+    REQUIRE_RC( KClientHttpRequestPOST( req, &rslt ) );
+    uint32_t code = 0;
+    char msg_buff[1024];
+    size_t msg_size = 0;
+    REQUIRE_RC( KClientHttpResultStatus( rslt, & code, msg_buff, sizeof( msg_buff ), & msg_size ) );
+    REQUIRE_EQ( 200u, code );
+    REQUIRE_EQ( string( "OK" ), string(msg_buff, msg_size) );
+
+    REQUIRE_RC( KClientHttpResultRelease( rslt ) );
+    REQUIRE_RC( KClientHttpRequestRelease( req ) );
+}
+//TODO: GET, HEAD, PUT
+
 //////////////////////////////////////////// Main
 
 static rc_t argsHandler(int argc, char * argv[]) {
@@ -323,12 +347,14 @@ rc_t CC Usage ( const Args * args )
 {
     return 0;
 }
-const char UsageDefaultName[] = "test-kns";
+const char UsageDefaultName[] = "Test_KNS.1";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
     // make sure to use singleton, otherwise some tests fail
     KNSManagerUseSingleton(true);
+
+//    assert(!KDbgSetString("KNS"));
 
     KConfigDisableUserSettings();
 

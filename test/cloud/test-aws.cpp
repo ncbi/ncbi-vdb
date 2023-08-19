@@ -27,6 +27,8 @@
 #include <cmath>
 
 #include <cloud/manager.h> /* CloudMgrMake */
+#include <cloud/aws.h>
+
 #include <kapp/args.h> /* ArgsMakeAndHandle */
 #include <kfg/kfg-priv.h> /* KConfigMakeEmpty */
 #include <kfg/properties.h> /* KConfig_Set_Report_Cloud_Instance_Identity */
@@ -41,25 +43,20 @@
 #include <ktst/unit_test.hpp>
 
 #include "../../libs/cloud/aws-priv.h" /* TestBase64IIdentityDocument */
+#include "../../libs/cloud/cloud-priv.h" /* AWS */
 #include "../../libs/cloud/cloud-cmn.h" /* KNSManager_Read */
 
 using std::string;
+using namespace::std;
+
+#define TO_SHOW_RESULTS 0
 
 static rc_t argsHandler(int argc, char* argv[]);
 TEST_SUITE_WITH_ARGS_HANDLER(AwsTestSuite, argsHandler)
 
-TEST_CASE(TryPost) {
-    KNSManager * kns = NULL;
-    REQUIRE_RC(KNSManagerMake(&kns));
-    KClientHttpRequest *req = NULL;
-    REQUIRE_RC(KNSManagerMakeRequest(kns, &req, 0x01010000, NULL,
-        "https://www.nlm.nih.gov"));
-    KClientHttpResult * rslt = NULL;
-    REQUIRE_RC(KClientHttpRequestPOST(req, &rslt));
-    REQUIRE_RC(KClientHttpResultRelease(rslt));
-    REQUIRE_RC(KClientHttpRequestRelease(req));
-    REQUIRE_RC(KNSManagerRelease(kns));
-}
+//
+// Unit tests for functions in cloud/aws-auth.c
+//
 
 TEST_CASE(TestBase64InIdentityDocument) {
     const char src[] =
@@ -200,87 +197,118 @@ TEST_CASE(TestBase64MakeLocation) {
         ));
 }
 
-static KConfig * KFG = NULL;
+//
+// Unit tests for functions in cloud/aws.c
+//
 
-TEST_CASE(GetPkcs7) {
-    KNSManager * kns = NULL;
-    REQUIRE_RC(KNSManagerMake(&kns));
-    char pkcs7[2048] = "";
-    rc_t rc = KNSManager_Read(kns, pkcs7, sizeof pkcs7,
-        "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7",
-        NULL, NULL);
-    if (rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcBusy  ) &&
-        rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcNotAvailable) &&
-        rc != SILENT_RC(rcNS, rcFile, rcCreating, rcError, rcUnknown) &&
-        rc != SILENT_RC(rcNS, rcFile, rcCreating, rcTimeout, rcExhausted) &&
-        rc != SILENT_RC(rcNS, rcFile, rcReading, rcTimeout, rcExhausted))
+static KConfig * KFG = nullptr;
+
+TEST_CASE(Get_IMDS_version)
+{
+    CloudMgr * mgr = nullptr;
+    REQUIRE_RC(CloudMgrMake(&mgr, KFG, nullptr));
+    CloudProviderId cloud_provider = cloud_provider_none;
+    REQUIRE_RC(CloudMgrCurrentProvider(mgr, &cloud_provider));
+    if (cloud_provider == cloud_provider_aws )
     {
-#define rcStream rcFile
-        if (rc == SILENT_RC(rcNS, rcStream, rcReading, rcSelf, rcNull)) {
-            CloudMgr * mgr = NULL;
-            REQUIRE_RC(CloudMgrMake(&mgr, KFG, NULL));
-            CloudProviderId cloud_provider = cloud_provider_none;
-            REQUIRE_RC(CloudMgrCurrentProvider(mgr, &cloud_provider));
-            REQUIRE(cloud_provider == cloud_provider_gcp
-                 || cloud_provider == cloud_provider_none);
-            REQUIRE_RC(CloudMgrRelease(mgr));
-        }
-        else {
-            REQUIRE_RC(rc);
-            uint32_t len = string_measure(pkcs7, NULL);
-            REQUIRE_LT( 1000u, len);
-            REQUIRE_GT( 3000u, len);
-        }
+        Cloud * cloud = nullptr;
+        REQUIRE_RC( CloudMgrGetCurrentCloud ( mgr, & cloud ) );
+        AWS * aws = nullptr;
+        REQUIRE_RC( CloudToAWS ( cloud, & aws ) );
+#ifdef TO_SHOW_RESULTS
+        std::cout << "***IMDSv=" << (unsigned int)aws -> IMDS_version << endl;
+#endif
+        REQUIRE( aws -> IMDS_version == 1 || aws -> IMDS_version == 2);
     }
-    REQUIRE_RC(KNSManagerRelease(kns));
 }
 
-TEST_CASE(PrintLocation) {
+TEST_CASE(Get_Pkcs7)
+{
+    CloudMgr * mgr = nullptr;
+    REQUIRE_RC(CloudMgrMake(&mgr, KFG, nullptr));
+    CloudProviderId cloud_provider = cloud_provider_none;
+    REQUIRE_RC(CloudMgrCurrentProvider(mgr, &cloud_provider));
+    if (cloud_provider == cloud_provider_aws )
+    {
+        Cloud * cloud = nullptr;
+        REQUIRE_RC( CloudMgrGetCurrentCloud ( mgr, & cloud ) );
+        AWS * aws = nullptr;
+        REQUIRE_RC( CloudToAWS ( cloud, & aws ) );
+
+        char pkcs7[4096];
+        REQUIRE_RC( GetPkcs7( aws, pkcs7, sizeof( pkcs7 ) ) );
+
+        uint32_t len = string_measure(pkcs7, nullptr);
+        REQUIRE_LT( 1000u, len);
+        REQUIRE_GT( 3000u, len);
+#ifdef TO_SHOW_RESULTS
+        std::cout << "***Pkcs7=" << string( pkcs7, len ) << endl;
+#endif
+
+        REQUIRE_RC( AWSRelease( aws ) );
+    }
+
+    REQUIRE_RC(CloudMgrRelease(mgr));
+}
+
+TEST_CASE(PrintInstance_NotAllowed) {
     REQUIRE_RC(KConfig_Set_Report_Cloud_Instance_Identity(KFG, false));
 
-    CloudMgr * mgr = NULL;
-    REQUIRE_RC(CloudMgrMake(&mgr, KFG, NULL));
-
-    Cloud * cloud = NULL;
-    rc_t rc = CloudMgrGetCurrentCloud(mgr, &cloud);
-    if (rc == SILENT_RC(
-        rcCloud, rcMgr, rcAccessing, rcCloudProvider, rcNotFound))
+    CloudMgr * mgr = nullptr;
+    REQUIRE_RC(CloudMgrMake(&mgr, KFG, nullptr));
+    CloudProviderId cloud_provider = cloud_provider_none;
+    REQUIRE_RC(CloudMgrCurrentProvider(mgr, &cloud_provider));
+    if (cloud_provider == cloud_provider_aws )
     {
-        rc = CloudMgrMakeCloud(mgr, &cloud, cloud_provider_aws);
+        Cloud * cloud = nullptr;
+        REQUIRE_RC( CloudMgrGetCurrentCloud ( mgr, & cloud ) );
+        AWS * aws = nullptr;
+        REQUIRE_RC( CloudToAWS ( cloud, & aws ) );
+
+        const String * ce_token = nullptr;
+        REQUIRE_RC_FAIL(CloudMakeComputeEnvironmentToken(cloud, &ce_token));
+
+        REQUIRE_RC(CloudRelease(cloud));
     }
-    REQUIRE_RC(rc);
 
-    const String * ce_token = NULL;
-    REQUIRE_RC_FAIL(CloudMakeComputeEnvironmentToken(cloud, &ce_token));
+    REQUIRE_RC(CloudMgrRelease(mgr));
+}
 
-    CloudSetUserAgreesToRevealInstanceIdentity(cloud, true);
+TEST_CASE(PrintInstance_Allowed) {
+    REQUIRE_RC(KConfig_Set_Report_Cloud_Instance_Identity(KFG, false));
 
-    rc = CloudMakeComputeEnvironmentToken(cloud, &ce_token);
-    if (rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcBusy  ) &&
-        rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcNotAvailable) &&
-        rc != SILENT_RC(rcNS, rcFile, rcCreating, rcError     ,rcUnknown) &&
-        rc != SILENT_RC(rcNS, rcFile, rcCreating, rcTimeout, rcExhausted) &&
-        rc != SILENT_RC(rcNS, rcFile, rcReading, rcTimeout, rcExhausted) &&
-        rc != SILENT_RC(rcNS, rcFile, rcReading, rcSelf, rcNull))
+    CloudMgr * mgr = nullptr;
+    REQUIRE_RC(CloudMgrMake(&mgr, KFG, nullptr));
+    CloudProviderId cloud_provider = cloud_provider_none;
+    REQUIRE_RC(CloudMgrCurrentProvider(mgr, &cloud_provider));
+    if (cloud_provider == cloud_provider_aws )
     {
-        REQUIRE_RC(rc);
+        Cloud * cloud = nullptr;
+        REQUIRE_RC( CloudMgrGetCurrentCloud ( mgr, & cloud ) );
+        AWS * aws = nullptr;
+        REQUIRE_RC( CloudToAWS ( cloud, & aws ) );
+
+        CloudSetUserAgreesToRevealInstanceIdentity(cloud, true);
+
+        const String * ce_token = nullptr;
+        REQUIRE_RC( CloudMakeComputeEnvironmentToken(cloud, &ce_token) );
         REQUIRE_NOT_NULL(ce_token);
-#ifdef TO_SHOW_RESULTS
-        std::cout << ce_token->addr;
-#endif
-    }
-    StringWhack(ce_token);
+    #ifdef TO_SHOW_RESULTS
+            std::cout << "***ce_token=" << ce_token->addr << endl;
+    #endif
+        StringWhack(ce_token);
 
-    REQUIRE_RC(CloudRelease(cloud));
+        REQUIRE_RC(CloudRelease(cloud));
+    }
 
     REQUIRE_RC(CloudMgrRelease(mgr));
 }
 
 TEST_CASE(CallCloudAddComputeEnvironmentTokenForSigner) {
-    CloudMgr * mgr = NULL;
-    REQUIRE_RC(CloudMgrMake(&mgr, KFG, NULL));
+    CloudMgr * mgr = nullptr;
+    REQUIRE_RC(CloudMgrMake(&mgr, KFG, nullptr));
 
-    Cloud * cloud = NULL;
+    Cloud * cloud = nullptr;
     rc_t rc = CloudMgrGetCurrentCloud(mgr, &cloud);
     if (rc != 0) {
         if (rc !=
@@ -290,14 +318,15 @@ TEST_CASE(CallCloudAddComputeEnvironmentTokenForSigner) {
         }
     }
     else {
-        KNSManager * kns = NULL;
+        KNSManager * kns = nullptr;
         REQUIRE_RC(KNSManagerMake(&kns));
-        KClientHttpRequest *req = NULL;
-        REQUIRE_RC(KNSManagerMakeRequest(kns, &req, 0x01010000, NULL,
+        KClientHttpRequest *req = nullptr;
+        REQUIRE_RC(KNSManagerMakeRequest(kns, &req, 0x01010000, nullptr,
             "https://www.nih.gov"));
         REQUIRE_RC(KHttpRequestAddPostParam(req, "foo=bar"));
+        CloudSetUserAgreesToRevealInstanceIdentity(cloud, true);
         REQUIRE_RC(CloudAddComputeEnvironmentTokenForSigner(cloud, req));
-        KClientHttpResult * rslt = NULL;
+        KClientHttpResult * rslt = nullptr;
         REQUIRE_RC(KClientHttpRequestPOST(req, &rslt));
         REQUIRE_RC(KClientHttpResultRelease(rslt));
         REQUIRE_RC(KClientHttpRequestRelease(req));
@@ -308,11 +337,40 @@ TEST_CASE(CallCloudAddComputeEnvironmentTokenForSigner) {
     REQUIRE_RC(CloudMgrRelease(mgr));
 }
 
+TEST_CASE(GetLocation) {
+    CloudMgr * mgr = nullptr;
+    REQUIRE_RC( CloudMgrMake(&mgr, KFG, nullptr) );
+
+    Cloud * cloud = nullptr;
+    if ( CloudMgrMakeCloud(mgr, &cloud, cloud_provider_aws) == 0 )
+    {
+        String const * location = nullptr;
+        rc_t rc = CloudGetLocation ( cloud, & location );
+        if ( rc != 0 )
+        {
+            if ( rc != SILENT_RC(rcNS, rcFile, rcCreating, rcTimeout, rcExhausted) )
+            {
+                REQUIRE_RC( rc );
+            }
+        }
+        else
+        {
+            REQUIRE_NOT_NULL( location );
+#ifdef TO_SHOW_RESULTS
+            cout << "***location=" << string( location -> addr, location -> size ) << endl;
+#endif
+        }
+        REQUIRE_RC( CloudRelease(cloud) );
+    }
+
+    REQUIRE_RC( CloudMgrRelease(mgr) );
+}
+
 //////////////////////////////////////////// Main
 
 static rc_t argsHandler(int argc, char * argv[]) {
-    Args * args = NULL;
-    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
+    Args * args = nullptr;
+    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, nullptr, 0);
     ArgsWhack(args);
     return rc;
 }

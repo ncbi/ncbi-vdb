@@ -107,7 +107,7 @@ public:
                     << m_created[i] << ") failed" << endl;
             }
             else break;
-        
+
         if ( CloudMgrRelease ( m_mgr ) != 0 )
         {
             cout << "CloudMgrFixture::~CloudMgrFixture: CloudMgrRelease() failed" << endl;
@@ -229,7 +229,7 @@ public:
         THROW_ON_RC(KConfigRelease(kfg));
     }
 
-    void MakeAWS(const KConfig * kfg)
+    void MakeAWS(const KConfig * kfg = nullptr)
     {
         CloudMgrRelease(m_mgr);
         m_mgr = nullptr;
@@ -244,7 +244,7 @@ public:
 
     AWS * m_aws;
 };
-#if 0
+
 FIXTURE_TEST_CASE(AWS_Make, CloudMgrFixture)
 {
     REQUIRE_RC ( CloudMgrMakeCloud ( m_mgr, & m_cloud, cloud_provider_aws ) );
@@ -267,22 +267,9 @@ FIXTURE_TEST_CASE(AWS_CloudToAws_NullParam, AwsFixture)
 FIXTURE_TEST_CASE(AWS_CloudToAws, AwsFixture)
 {
     REQUIRE_RC ( CloudMgrMakeCloud ( m_mgr, & m_cloud, cloud_provider_aws ) );
-#if 1
     REQUIRE_NOT_NULL(m_cloud);
     REQUIRE_RC(CloudToAWS(m_cloud, &m_aws));
     REQUIRE_NOT_NULL(m_aws);
-#else
-    if (m_cloud != NULL) {
-        REQUIRE_RC(CloudToAWS(m_cloud, &m_aws));
-        REQUIRE_NOT_NULL(m_aws);
-    }
-    else {
-      // ?? this makes no sense to me...
-        CloudProviderId cloud_provider = cloud_provider_none;
-        REQUIRE_RC(CloudMgrCurrentProvider(m_mgr, &cloud_provider));
-        REQUIRE_EQ(cloud_provider, static_cast<uint32_t>(cloud_provider_gcp));
-    }
-#endif
 }
 
 FIXTURE_TEST_CASE(AWS_CloudToAws_Fail, AwsFixture)
@@ -326,7 +313,7 @@ FIXTURE_TEST_CASE(AWS_Credentials_Blank, AwsFixture)
 {
     // block cloud discovery and home directory lookup
     // to make sure the credentials are left blank
-    putenv("HOME=.");
+    setenv("HOME",".", 1);
 
     MakeAWS();
 
@@ -341,45 +328,44 @@ FIXTURE_TEST_CASE(AWS_Credentials_Env, AwsFixture)
 #define TEST_KEY "ABCDEFH"
 #define TEST_SECRET "SECRETSECRET"
 
-    putenv ( "AWS_ACCESS_KEY_ID=" TEST_KEY);
-    putenv ( "AWS_SECRET_ACCESS_KEY=" TEST_SECRET);
+    setenv ( "AWS_ACCESS_KEY_ID", TEST_KEY, 1);
+    setenv ( "AWS_SECRET_ACCESS_KEY", TEST_SECRET, 1);
 
     CheckKeys(TEST_KEY, TEST_SECRET);
-#undef TEST_KEY 
-#undef TEST_SECRET 
+#undef TEST_KEY
+#undef TEST_SECRET
 }
 
 FIXTURE_TEST_CASE(AWS_Credentials_AwsConfigFile_DefaultProfile, AwsFixture)
 {
-    putenv ( (char*)"AWS_CONFIG_FILE=cloud-kfg/aws_other_config" );
+    setenv ( "AWS_CONFIG_FILE", "cloud-kfg/aws_other_config", 1 );
 
     CheckKeys( "ABC123", "SECRET", "reg", "out" );
 }
 
 FIXTURE_TEST_CASE(AWS_Credentials_AwsConfigFile_ProfileFromEnv, AwsFixture)
 {
-    putenv ( (char*)"AWS_PROFILE=other_profile" );
-    putenv ( (char*)"AWS_CONFIG_FILE=cloud-kfg/aws_other_config" );
+    setenv ( "AWS_PROFILE", "another_profile", 1 );
+    setenv ( "AWS_CONFIG_FILE", "cloud-kfg/aws_other_config", 1 );
 
     CheckKeys( "ABC123_OTHER", "SECRET_OTHER", "reg_OTHER", "out_OTHER" );
 }
 
 FIXTURE_TEST_CASE(AWS_Credentials_AwsConfigFile_ProfileFromKfg, AwsFixture)
 {
-    putenv ( (char*)"VDB_CONFIG=cloud-kfg/aws.kfg" );
-    putenv ( (char*)"AWS_CONFIG_FILE=cloud-kfg/aws_other_config" );
+    setenv ( "VDB_CONFIG", "cloud-kfg/aws.kfg", 1 );
+    setenv ( "AWS_CONFIG_FILE", "cloud-kfg/aws_other_config", 1 );
 
     CheckKeys( "ABC123_OTHER", "SECRET_OTHER" );
 }
 
 FIXTURE_TEST_CASE(AWS_Credentials_AwsConfigFile_ProfileFromKfg_IsEmpty, AwsFixture)
 {
-    putenv ( (char*)"VDB_CONFIG=cloud-kfg/empty" );
-    putenv ( (char*)"AWS_CONFIG_FILE=cloud-kfg/aws_other_config" );
+    setenv ( "VDB_CONFIG", "cloud-kfg/empty", 1 );
+    setenv ( "AWS_CONFIG_FILE", "cloud-kfg/aws_other_config", 1 );
 
     CheckKeys( "ABC123", "SECRET" );
 }
-#endif
 
 #define CREDENTIALS_KFG "cloud-kfg/credentialsKfg"
 
@@ -430,7 +416,7 @@ FIXTURE_TEST_CASE(AWS_Credentials_AwsUserHomeCredentials_ConfigOverrides, AwsFix
     // 2) create ~/.aws/config
     // ~/.aws/config overrides if present
     CreateFile("./cloud-kfg/.aws/config",
-        "[other_profile]\n"
+        "[another_profile]\n"
         "aws_access_key_id = ABC123_CFG\n"
         "aws_secret_access_key = SECRET_CFG\n");
 
@@ -442,7 +428,7 @@ FIXTURE_TEST_CASE(AWS_Credentials_AwsUserHomeCredentials_ConfigOverrides, AwsFix
 #endif
 
     CreateFile("./cloud-kfg/.aws/credentials",
-        "[other_profile]\n"
+        "[another_profile]\n"
         "aws_access_key_id = ABC123\n"
         "aws_secret_access_key = SECRET\n");
 
@@ -451,7 +437,7 @@ FIXTURE_TEST_CASE(AWS_Credentials_AwsUserHomeCredentials_ConfigOverrides, AwsFix
     REQUIRE_RC(KDirectoryResolvePath(m_dir, true, credentialsKfg,
         sizeof credentialsKfg, CREDENTIALS_KFG));
     CreateFile(CREDENTIALS_KFG,
-        "[other_profile]\naws_access_key_id = ABC123_KFG\n"
+        "[another_profile]\naws_access_key_id = ABC123_KFG\n"
         "aws_secret_access_key = SECRET_KFG\n");
     CreateFile(CONFIG,
         "/aws/credential_file = \"", credentialsKfg, "\"\n");
@@ -472,7 +458,7 @@ FIXTURE_TEST_CASE(AWS_Credentials_AwsUserHomeCredentials, AwsFixture)
 #endif
 
     CreateFile("./cloud-kfg/.aws/credentials",
-        "[other_profile]\n"
+        "[another_profile]\n"
         "aws_access_key_id = ABC123\n"
         "aws_secret_access_key = SECRET\n");
 
@@ -498,7 +484,7 @@ FIXTURE_TEST_CASE(AWS_Credentials_KfgCredentials, AwsFixture)
     REQUIRE_RC(KDirectoryResolvePath(m_dir, true, credentialsKfg,
         sizeof credentialsKfg, CREDENTIALS_KFG));
     CreateFile(CREDENTIALS_KFG,
-        "[other_profile]\n"
+        "[another_profile]\n"
         "aws_access_key_id = ABC123_KFG\n"
         "aws_secret_access_key = SECRET_KFG\n");
     CreateFile(CONFIG,
@@ -634,7 +620,7 @@ FIXTURE_TEST_CASE(GCP_Credentials, GcpFixture)
 {
     // A) env GOOGLE_APPLICATION_CREDENTIALS
     putenv ( (char*)"GOOGLE_APPLICATION_CREDENTIALS=cloud-kfg/gcp_service.json" );
- 
+
     // B) create configuration
     char credentialsKfg[PATH_MAX] = "";
     REQUIRE_RC(KDirectoryResolvePath(m_dir, true, credentialsKfg,

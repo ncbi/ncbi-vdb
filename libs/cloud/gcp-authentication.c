@@ -255,7 +255,7 @@ rc_t GetAccessTokenAuth(const GCP * self, const char * jwt,
     if (rc == 0) {
         /* 5. Response:
             {
-               "access_token" : "1/8xbJqaOZXSUZbHLl5EOtu1pxz3fmmetKx9W8CV4t79M",
+               "dad.access_token" : "1/8xbJqaOZXSUZbHLl5EOtu1pxz3fmmetKx9W8CV4t79M",
                "token_type" : "Bearer",
                "expires_in" : 3600
             }
@@ -267,7 +267,7 @@ rc_t GetAccessTokenAuth(const GCP * self, const char * jwt,
             const KJsonObject *obj = KJsonValueToObject(root);
             if (rc == 0) {
                 const char * value = NULL;
-                rc = GetJsonStringMember(obj, "access_token", &value);
+                rc = GetJsonStringMember(obj, "dad.access_token", &value);
                 if (rc == 0) {
                     *token = string_dup(value, string_measure(value, NULL));
                     if (*token == NULL)
@@ -305,20 +305,20 @@ rc_t CC GCPAddAuthentication(const GCP * cself,
     }
     else {
         bool new_token = false;
-        /* see if cached access_token has to be generated/refreshed */
-        if ( self->access_token == NULL ||
-             self->access_token_expiration < KTimeStamp() + 60 )
+        /* see if cached dad.access_token has to be generated/refreshed */
+        if ( self->dad.access_token == NULL ||
+             self->dad.access_token_expiration < KTimeStamp() + 60 )
                /* expires in less than a minute */
         {
-            free(self->access_token);
-            self->access_token = NULL;
+            free(self->dad.access_token);
+            self->dad.access_token = NULL;
 
             if (self->jwt == NULL)
                 /* first time here, create the JWT and hold on to it */
                 rc = MakeJWTAuth(self, &self->jwt);
             if (rc == 0)
                 rc = GetAccessTokenAuth(self, self->jwt, self->dad.conn,
-                    &self->access_token, &self->access_token_expiration);
+                    &self->dad.access_token, &self->dad.access_token_expiration);
             new_token = true;
         }
 
@@ -337,7 +337,7 @@ rc_t CC GCPAddAuthentication(const GCP * cself,
 
             if ( rc == 0 && new_token )
                 rc = KClientHttpRequestAddHeader(req, "Authorization",
-                    "Bearer %s", self->access_token);
+                    "Bearer %s", self->dad.access_token);
         }
     }
     return rc;

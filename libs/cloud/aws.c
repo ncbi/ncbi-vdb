@@ -46,6 +46,7 @@ struct AWS;
 #include <kns/endpoint.h>
 #include <kns/socket.h>
 #include <kns/http.h>
+#include <kns/stream.h>
 #include <kfs/directory.h>
 #include <kfs/file.h>
 
@@ -70,12 +71,90 @@ rc_t CC AWSDestroy ( AWS * self )
     return CloudWhack ( & self -> dad );
 }
 
-static rc_t KNSManager_GetAWSLocation(
-    const KNSManager * self, char *buffer, size_t bsize)
+static uint64_t AccessTokenLifetime_sec = 21600; // 6 hours
+
+#define INSTANCE_URL_PREFIX "http://169.254.169.254/latest/"
+
+static
+uint8_t
+IMDS_version( const KNSManager * kns, char *buffer, size_t bsize )
 {
-    return KNSManager_Read(self, buffer, bsize,
-        "http://169.254.169.254/latest/meta-data/placement/availability-zone",
-        NULL, NULL);
+    // try IMDSv1 first
+    if ( KNSManager_Read( kns, buffer, bsize,
+                          INSTANCE_URL_PREFIX "meta-data",  HttpMethod_Get,
+                          NULL, NULL) == 0 )
+    {
+        buffer[ 0 ] = 0;
+        return 1;
+    }
+
+    if ( KNSManager_Read( kns, buffer, bsize,
+                          INSTANCE_URL_PREFIX "api/token", HttpMethod_Put,
+                          "X-aws-ec2-metadata-token-ttl-seconds", "%u", AccessTokenLifetime_sec ) == 0 )
+    {
+        return 2;
+    }
+    return 0;
+}
+
+static
+void
+AWSInitAccess( AWS * self )
+{
+    // try IMDSv1 first
+    char buffer[4096];
+    self -> IMDS_version = IMDS_version( self -> dad . kns, buffer, sizeof( buffer ) );
+    if ( self -> IMDS_version == 2 )
+    {   // save off the session token and its expiration
+        self -> dad . access_token = string_dup ( buffer, string_size ( buffer ) );
+        self -> dad . access_token_expiration = KTimeStamp() + AccessTokenLifetime_sec;
+    }
+}
+
+static
+rc_t
+GetInstanceInfo( const AWS * cself, const char * url, char *buffer, size_t bsize )
+{
+    switch ( cself -> IMDS_version )
+    {
+    case 1:
+        return KNSManager_Read( cself -> dad . kns, buffer, bsize, url, HttpMethod_Get, NULL, NULL );
+    case 2:
+        {
+            /* see if cached access_token has to be generated/refreshed */
+            if ( cself -> dad . access_token_expiration < KTimeStamp() + 60 ) /* expires in less than a minute */
+            {
+                AWS * self = (AWS *)cself;
+                free( self -> dad . access_token );
+                self -> dad . access_token = NULL;
+                char buffer[4096];
+                rc_t rc = KNSManager_Read( self -> dad . kns, buffer, sizeof( buffer ),
+                          INSTANCE_URL_PREFIX "api/token", HttpMethod_Put,
+                          "X-aws-ec2-metadata-token-ttl-seconds", "%u", AccessTokenLifetime_sec );
+                if ( rc != 0 )
+                {
+                    return rc;
+                }
+                self -> dad . access_token = string_dup ( buffer, string_size ( buffer ) );
+                self -> dad . access_token_expiration = KTimeStamp() + AccessTokenLifetime_sec;
+            }
+
+            // curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/availability-zone
+            return KNSManager_Read( cself -> dad . kns, buffer, bsize, url, HttpMethod_Get,
+                                    "X-aws-ec2-metadata-token", "%s", cself -> dad . access_token );
+        }
+    default:
+        // on AWS; the object can still be useful for  testing
+        buffer[ 0 ] = 0;
+        return 0;
+    }
+}
+
+static
+rc_t
+KNSManager_GetAWSLocation( const AWS * self, char *buffer, size_t bsize )
+{
+    return GetInstanceInfo( self, INSTANCE_URL_PREFIX "meta-data/placement/availability-zone", buffer, bsize );
 }
 
 /* envCE
@@ -94,6 +173,13 @@ static char const *envCE()
     return env;
 }
 
+/* Get Pkcs7 signature from provider network
+ */
+rc_t GetPkcs7( const struct AWS * self, char *buffer, size_t bsize )
+{
+    return GetInstanceInfo( self, INSTANCE_URL_PREFIX "dynamic/instance-identity/pkcs7", buffer, bsize );
+}
+
 /* readCE
  * Get Compute Environment Token by reading from provider network
  */
@@ -102,17 +188,13 @@ static rc_t readCE(AWS const *const self, size_t size, char location[])
     char document[4096] = "";
     char pkcs7[4096] = "";
     rc_t rc;
-    
+
     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_CE),
            ("Reading AWS location from provider\n"));
-    rc = KNSManager_Read(self->dad.kns, document, sizeof document,
-                 "http://169.254.169.254/latest/dynamic/instance-identity/document",
-                 NULL, NULL);
+    rc = GetInstanceInfo( self, INSTANCE_URL_PREFIX "dynamic/instance-identity/document", document, sizeof document );
     if (rc) return rc;
 
-    rc = KNSManager_Read(self->dad.kns, pkcs7, sizeof pkcs7,
-                 "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7",
-                 NULL, NULL);
+    rc = GetPkcs7( self, pkcs7, sizeof pkcs7 );
     if (rc) return rc;
 
     return MakeLocation(pkcs7, document, location, size);
@@ -125,7 +207,7 @@ static
 rc_t CC AWSMakeComputeEnvironmentToken ( const AWS * self, const String ** ce_token )
 {
     assert(self);
-    
+
     if (!self->dad.user_agrees_to_reveal_instance_identity)
         return RC(rcCloud, rcProvider, rcIdentifying,
                   rcCondition, rcUnauthorized);
@@ -161,7 +243,7 @@ static rc_t AwsGetLocation(const AWS * self, const String ** location)
 
     assert(self);
 
-    rc = KNSManager_GetAWSLocation(self->dad.kns, zone, sizeof zone);
+    rc = KNSManager_GetAWSLocation( self, zone, sizeof zone );
 
     if (rc == 0)
         rc = string_printf(buffer, sizeof buffer, NULL, "s3.%s", zone);
@@ -261,6 +343,7 @@ LIB_EXPORT rc_t CC CloudMgrMakeAWS ( const CloudMgr * self, AWS ** p_aws )
             rc = PopulateCredentials( aws, (KConfig*)self->kfg );
             if ( rc == 0 )
             {
+                AWSInitAccess( aws );
                 * p_aws = aws;
             }
             else
@@ -272,7 +355,6 @@ LIB_EXPORT rc_t CC CloudMgrMakeAWS ( const CloudMgr * self, AWS ** p_aws )
         {
             free ( aws );
         }
-
     }
 
     return rc;
@@ -330,22 +412,9 @@ LIB_EXPORT rc_t CC AWSToCloud ( const AWS * cself, Cloud ** cloud )
  */
 bool CloudMgrWithinAWS ( const CloudMgr * self )
 {
-#if 0
-    KEndPoint ep;
-    /* describe address 169.254.169.254 on port 80 */
-    KNSManagerInitIPv4Endpoint ( self -> kns, & ep,
-                                 ( ( 169 << 24 ) |
-                                   ( 254 << 16 ) |
-                                   ( 169 <<  8 ) |
-                                   ( 254 <<  0 ) ), 80 );
-
-#endif
-
-    char buffer[999] = "";
-
     assert(self);
-
-    return KNSManager_GetAWSLocation(self->kns, buffer, sizeof buffer) == 0;
+    char buffer[1024];
+    return IMDS_version( self -> kns, buffer, sizeof buffer ) != 0;
 }
 
 /*** Finding/loading credentials  */
@@ -548,13 +617,13 @@ static rc_t LoadCredentials ( AWS * self, KConfig * kfg )
     rc_t rc = KDirectoryNativeDir ( &wd );
     if ( rc ) return rc;
 
-    if ( conf_env && *conf_env != 0 ) 
+    if ( conf_env && *conf_env != 0 )
     {
         const KFile *cred_file = NULL;
         DBGMSG(DBG_CLOUD, DBG_FLAG(DBG_CLOUD_LOAD),
             ("Got AWS_CONFIG_FILE '%s' from environment\n", conf_env));
         rc = KDirectoryOpenFileRead ( wd, &cred_file, "%s", conf_env );
-        if ( rc == 0 ) 
+        if ( rc == 0 )
         {
             aws_parse_file ( self, cred_file );
             KFileRelease ( cred_file );
@@ -563,7 +632,7 @@ static rc_t LoadCredentials ( AWS * self, KConfig * kfg )
         return rc;
     }
 
-    if ( cred_env && *cred_env != 0 ) 
+    if ( cred_env && *cred_env != 0 )
     {
         const KFile *cred_file = NULL;
         PLOGMSG ( klogInfo, ( klogInfo,
@@ -583,7 +652,7 @@ static rc_t LoadCredentials ( AWS * self, KConfig * kfg )
         char home[4096] = "";
         make_home_node ( home, sizeof home, kfg );
 
-        if ( home[0] != 0 ) 
+        if ( home[0] != 0 )
         {
             char aws_path[4096] = "";
             size_t num_writ = 0;
@@ -652,7 +721,7 @@ rc_t PopulateCredentials ( AWS * self, KConfig * aKfg )
 {
     /* Check Environment first */
     const char * profile = NULL;
-    
+
     const char * aws_access_key_id = getenv ( "AWS_ACCESS_KEY_ID" );
     const char * aws_secret_access_key = getenv ( "AWS_SECRET_ACCESS_KEY" );
 
