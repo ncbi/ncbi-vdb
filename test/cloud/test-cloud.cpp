@@ -313,10 +313,7 @@ FIXTURE_TEST_CASE(AWS_Credentials_Blank, AwsFixture)
 {
     // block cloud discovery and home directory lookup
     // to make sure the credentials are left blank
-    std::cerr << "HOME=" << getenv("HOME") << "\n";
-    std::cerr<< "pwd=" << system("pwd") << "\n";
     setenv("HOME",".", 1);
-    std::cerr << "HOME=" << getenv("HOME") << "\n";
 
     MakeAWS();
 
@@ -747,8 +744,8 @@ rc_t CC KMain ( int argc, char *argv [] )
 
     KConfigDisableUserSettings();
 
-  assert(!KDbgSetString("CLOUD"));
-  KLogLevelSet( klogInfo );
+//  assert(!KDbgSetString("CLOUD"));
+//  KLogLevelSet( klogInfo );
 
     // this makes messages from the test code appear
     // (same as running the executable with "-l=message")
