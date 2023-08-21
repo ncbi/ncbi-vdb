@@ -740,6 +740,8 @@ const char UsageDefaultName[] = "test-kns";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
+    setenv("HOME", ".", 1);
+
     KConfigDisableUserSettings();
 
 //  assert(!KDbgSetString("CLOUD"));
