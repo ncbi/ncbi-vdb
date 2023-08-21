@@ -742,7 +742,7 @@ rc_t CC KMain ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
 
-//  assert(!KDbgSetString("CLOUD"));
+  assert(!KDbgSetString("CLOUD"));
 //  KLogLevelSet( klogInfo );
 
     // this makes messages from the test code appear
