@@ -105,13 +105,19 @@ FIXTURE_TEST_CASE(HttpRequest_PUT_sra, HttpRequestFixture)
     REQUIRE_RC ( KClientHttpRequestPUT ( m_req, & rslt, true ) ); // format for SRA
     REQUIRE_EQ( size_t(1), TestStream::m_requests.size() );
 
-    string expected =
-        "PUT /blah HTTP/1.1\r\n"
+    assert(m_req && m_req->http);
+    string expected("PUT ");
+    if (m_req->http->uf == eUFAbsolute)
+        expected += "http://HttpRequest_PUT_sra.com";
+    expected +=
+        "/blah HTTP/1.1\r\n"
         "Host: HttpRequest_PUT_sra.com\r\n"
         "Accept: */*\r\n"
         "X-SRA-Release: 3.0.7\r\n"
         "X-VDB-Release: 3.0.7\r\n"
         "User-Agent: ";
+    assert(!expected.empty());
+
     // match expected against the start of the actual (stop before OS)
     auto m = mismatch(expected.begin(), expected.end(), TestStream::m_requests.front().begin() );
     if ( m.first != expected.end() )
@@ -131,10 +137,17 @@ FIXTURE_TEST_CASE(HttpRequest_PUT_non_sra, HttpRequestFixture)
     TestStream::AddResponse("HTTP/1.1 200 OK\r\n");
     REQUIRE_RC ( KClientHttpRequestPUT ( m_req, & rslt, false ) );  // formas as non-SRA
     REQUIRE_EQ( size_t(1), TestStream::m_requests.size() );
-    const string expected =
-        "PUT /blah HTTP/1.1\r\n"
+
+    assert(m_req && m_req->http);
+    string expected("PUT ");
+    if (m_req->http->uf == eUFAbsolute)
+        expected += "http://HttpRequest_PUT_non_sra.com";
+    expected +=
+        "/blah HTTP/1.1\r\n"
         "Host: HttpRequest_PUT_non_sra.com\r\n"
         "\r\n";
+    assert(!expected.empty());
+
     auto m = mismatch(expected.begin(), expected.end(), TestStream::m_requests.front().begin() );
     if ( m.first != expected.end() )
     {
