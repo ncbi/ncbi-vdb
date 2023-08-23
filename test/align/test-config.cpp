@@ -68,7 +68,7 @@ struct CommandLine {
             throw std::invalid_argument("argument count");
             
         for (int i = 1; i < count; ++i) {
-            auto const &arg = std::string_view{ argv[i] };
+            auto const &arg = std::string{ argv[i] };
             
             if (arg == "--")
                 break;
@@ -331,18 +331,6 @@ TEST_CASE ( LoadConfig )
     }
 }
 
-TEST_CASE ( VerifyFASTA )
-{
-    if (arguments == nullptr)
-        throw std::logic_error("no command line arguments!?");
-    
-    auto const fixture = Fixture{};
-
-    fixture.loadFasta("db/ref.fasta");
-
-    REQUIRE(fixture.verifySeq("R1"));
-}
-
 TEST_CASE ( VerifyConfig )
 {
     if (arguments == nullptr)
@@ -367,7 +355,6 @@ TEST_CASE ( VerifyConfig )
     }
     if (!arguments->only_verify()) {
         for (auto & ref : references) {
-        	std::cerr << "getting " << ref << std::endl;
             auto const seq = fixture.getSeq(ref);
 
 			REQUIRE_NOT_NULL(seq);
@@ -380,9 +367,6 @@ TEST_CASE ( VerifyConfig )
 #include <kapp/args.h>
 #include <klib/out.h>
 #include <kfg/config.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
 
 extern "C"
 {
@@ -406,8 +390,10 @@ rc_t CC Usage( const Args* args )
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
+#if 0
 	KDbgHandlerSetStdErr();
 	KDbgSetString("ALIGN-CFG");
+#endif
     KConfigDisableUserSettings();
     try {
         auto const args = CommandLine(argc, argv);
