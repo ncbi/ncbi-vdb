@@ -51,7 +51,19 @@ static const uint32_t K_1[4] =
     0xca62c1d6U
 };
 
-static const uint32_t H0_2[8] =
+static const uint32_t H0_224[8] =
+{
+    0xc1059ed8U,
+    0x367cd507U,
+    0x3070dd17U,
+    0xf70e5939U,
+    0xffc00b31U,
+    0x68581511U,
+    0x64f98fa7U,
+    0xbefa4fa4U
+};
+
+static const uint32_t H0_256[8] =
 {
     0x6a09e667U,
     0xbb67ae85U,
@@ -182,19 +194,43 @@ static void SHA2_stage(uint32_t Ho[8], const uint32_t Hi[8], uint32_t W[16])
     Ho[7] = Hi[7] + h;
 }
 
-static __inline__ void SHA_32b_Init(struct SHA32bitState *ctx, int which)
-{
-    if (which == 0)
-        memmove(ctx->H, H0_1, sizeof(H0_1));
-    else
-        memmove(ctx->H, H0_2, sizeof(H0_2));
-    ctx->len = 0;
-    ctx->cur = 0;
-}
+#define INIT(CTX, H0) do {                                                      \
+        memmove(CTX->H, H0, sizeof(H0)); CTX->len = 0; CTX->cur = 0;            \
+    } while (0)
+
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+#define SWAP_IF_LITTLE_ENDIAN(W) do {                                           \
+        unsigned j;                                                             \
+        uint32_t *const w = (W);                                                \
+        for (j = 0; j < 16; ++j)                                                \
+            w[j] = bswap_32(w[j]);                                              \
+    } while (0)
+#else
+#define SWAP_IF_LITTLE_ENDIAN(W) do { ((void)(W)); } while (0)
+#endif
+
+#define APPEND(CTX, DATA, LEN, STAGE) do {                                      \
+        struct SHA32bitState *const X__ = (CTX);                                \
+        uint8_t const *const D__ = (DATA);                                      \
+        size_t const N__ = (LEN);                                               \
+        size_t i = 0;                                                           \
+        union UW { uint32_t W[64/4]; uint8_t U[64]; } uw;                       \
+        memmove(uw.U, X__->W, X__->cur);                                        \
+        while (i < N__) {                                                       \
+            uw.U[X__->cur++] = D__[i++];                                        \
+            if (X__->cur == 64) {                                               \
+                SWAP_IF_LITTLE_ENDIAN(uw.W);                                    \
+                STAGE(X__->H, X__->H, uw.W);                                    \
+                X__->cur = 0;                                                   \
+            }                                                                   \
+        }                                                                       \
+        memmove(X__->W, uw.U, X__->cur);                                        \
+        X__->len += N__;                                                        \
+    } while (0)
 
 static __inline__ void SHA_32b_Append(struct SHA32bitState *ctx, int which, const uint8_t data[], size_t length)
 {
-    unsigned i;
+    size_t i = 0;
     unsigned j;
     unsigned n;
     
@@ -257,12 +293,12 @@ static __inline__ void SHA_32b_Finish(const struct SHA32bitState *ctx, int which
 
 void CC SHA1StateInit(SHA1State *ctx)
 {
-    SHA_32b_Init(ctx, 0);
+    INIT(ctx, H0_1);
 }
 
 void CC SHA1StateAppend(SHA1State *ctx, const void *data, size_t length)
 {
-    SHA_32b_Append(ctx, 0, data, length);
+    APPEND(ctx, data, length, SHA1_stage);
 }
 
 void CC SHA1StateFinish(SHA1State *ctx, uint8_t hash[20])
@@ -282,14 +318,24 @@ void CC SHA1StateFinish(SHA1State *ctx, uint8_t hash[20])
     memmove(hash, H, 20);
 }
 
+void CC SHA224StateInit(SHA224State *ctx)
+{
+    INIT(ctx, H0_224);
+}
+
 void CC SHA256StateInit(SHA256State *ctx)
 {
-    SHA_32b_Init(ctx, 1);
+    INIT(ctx, H0_256);
 }
 
 void CC SHA256StateAppend(SHA256State *ctx, const void *data, size_t length)
 {
-    SHA_32b_Append(ctx, 1, data, length);
+    APPEND(ctx, data, length, SHA2_stage);
+}
+
+void CC SHA224StateAppend(SHA224State *ctx, const void *data, size_t length)
+{
+    SHA256StateAppend((SHA256State *)ctx, data, length);
 }
 
 void CC SHA256StateFinish(SHA256State *ctx, uint8_t hash[32])
@@ -310,4 +356,24 @@ void CC SHA256StateFinish(SHA256State *ctx, uint8_t hash[32])
     }
 #endif
     memmove(hash, H, 32);
+}
+
+void CC SHA224StateFinish(SHA224State *ctx, uint8_t hash[28])
+{
+    uint32_t H[8];
+
+    SHA_32b_Finish(ctx, 1, H);
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+    {
+        H[0] = bswap_32(H[0]);
+        H[1] = bswap_32(H[1]);
+        H[2] = bswap_32(H[2]);
+        H[3] = bswap_32(H[3]);
+        H[4] = bswap_32(H[4]);
+        H[5] = bswap_32(H[5]);
+        H[6] = bswap_32(H[6]);
+        H[7] = bswap_32(H[7]);
+    }
+#endif
+    memmove(hash, H, 28);
 }
