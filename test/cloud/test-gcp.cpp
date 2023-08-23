@@ -195,8 +195,8 @@ FIXTURE_TEST_CASE(GCP_AddUserPays_Credentials, GCP_Fixture)
     REQUIRE_NOT_NULL ( gcp -> project_id );
     REQUIRE_EQ ( string("test"), string( gcp -> project_id ) );
     REQUIRE_NULL ( gcp -> jwt );
-    REQUIRE_EQ ( (KTime_t)0, gcp -> access_token_expiration );
-    REQUIRE_NULL ( gcp -> access_token );
+    REQUIRE_EQ ( (KTime_t)0, gcp -> dad . access_token_expiration );
+    REQUIRE_NULL ( gcp -> dad . access_token );
 
     REQUIRE_RC ( GCPRelease ( gcp ) );
 }
@@ -322,10 +322,10 @@ FIXTURE_TEST_CASE(GCP_AddUserPays_AccessTokenRefreshCloseToExpiration, GCP_Fixtu
     REQUIRE_RC ( CloudToGCP ( cloud, & gcp ) );
 
     REQUIRE_RC ( CloudAddUserPaysCredentials ( cloud, req, "GET" ) );
-    REQUIRE_EQ ( string( "bogustokenmadefortesting" ), string ( gcp -> access_token ) );
+    REQUIRE_EQ ( string( "bogustokenmadefortesting" ), string ( gcp -> dad . access_token ) );
     // since the first access token expires immediately, this will refresh it
     REQUIRE_RC ( CloudAddUserPaysCredentials ( cloud, req, "GET" ) );
-    REQUIRE_EQ ( string( "anotherbogustokenmadefortesting" ), string ( gcp -> access_token ) );
+    REQUIRE_EQ ( string( "anotherbogustokenmadefortesting" ), string ( gcp -> dad . access_token ) );
 
     REQUIRE_RC ( GCPRelease ( gcp ) );
 
@@ -340,7 +340,7 @@ TEST_CASE( Parse_Access_Token )
 "YzIJJv0zJJFpIMYzlFQzsQB-0U5Fze_frBWbeXR3Rd5yWO3VIYsywW4VWXadXv_dq_JdveBfqoxl_BQbRsoBoJc-BB29QM_Bl_-MSzdY_gBwYXh3rg9Mucha5SR20OkYQiS02tasxh0Jew0hI-u5rUo7MQB0wMzOyvfgW0x88bXYInB8fhjpZ7b0I4BfXmi3RIxfv4F8dV0"
 "-1SVeU6mlsRkyJ00eeFRn89bMxWuzZbIiUw9jcSlSl53RY_yk8krk9mb9_hSWwn4ft-ialSl0R86xJJfSBa6h0s02I4tvydmRpl3jxogS7bB8_6MjXyh-2We3UJ5Zok59_V0MlXmm4Fxt8OYIkjazhjJFUwIwe4m4MnrXRfmsJekiewaF57FFw77IfeUqt7h0kdBRonbB53"
 "kVJaV16IrSUxYwUhglMuxzljhU\",\"expires_in\":3599,\"token_type\":\"Bearer\"}";
-    char * token; 
+    char * token;
     KTime_t expiration;
     REQUIRE_RC( ParseAccessToken( json, & token, & expiration ) );
 }
@@ -350,7 +350,7 @@ TEST_CASE( Parse_Access_Token_Bad )
 "1NhYFza0O5XtCfAcqngx5-fNrjXWTegjaFzRb9A761zxBkauLws40Q6ch73WSTm53EilbOTweKg2g86_0a8xlbs-_GeVJqO0Crq5EWp92Ou0mz4n5C7Ymuyac0rL0TAxjYI2_kc3RLsGV6SxplE1_xCH337Dy3ZrWQ_0WbOwsSBeIobSx5ljmOtgaBBoze3dq37Y_w-RSkY"
 "Z0X98rdBmF5crqjkwB3bX3a67jw29cfpb8Sxb1n7OdhvRc-2j1VJkVc4ZI6j3JMFxFaY-R7xVXX3-plr22mRmUJBouz-xOIj1kJb6xeqRu-5xU9X8Oj3X87Jjk-gzMmUrl4daFpMvu33zjqZXrQZdjYqOnUMlkQX0iojc8hmdy42gbrzlV2zr5UV4YaFgBV1kw9IrXlVZlq"
 "YzIJJv0zJJFpIMYzlFQzsQB-0U5Fze_f";
-    char * token; 
+    char * token;
     KTime_t expiration;
     REQUIRE_RC_FAIL( ParseAccessToken( json, & token, & expiration ) );
 }

@@ -7,6 +7,7 @@
   **abi-load, fastq-load, helicos-load, illumina-load, pacbio-load, sff-load, sra, srf-load**: fixed loaders to work without predefined schema  
   **align-info, prefetch, vdb, vfs**: stopped printing incorrect 'reference not found' messages; reduced number of calls to resolve WGS references; align-info don't resolve references remotely if found locally  
   **bam-load, kdb, vdb-validate**: index works correctly with only one key  
+  **cloud, kns, ngs-tools, sra-tools**: added support of IMDSv2 to allow to use instance identity on new AWS machines  
   **cloud, ngs-tools, sra-tools, vdb-config**: fixed use of AWS credentials  
   **kns, ngs, ngs-tools, sra-tools**: fixed a bug that caused failure during accession resolution while reading HTTP stream  
   **vdb**: added database-contained view aliases to the schema language  

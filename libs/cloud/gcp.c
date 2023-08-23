@@ -84,7 +84,6 @@ rc_t CC GCPDestroy(GCP * self)
     free(self->private_key_id);
     free(self->client_email);
     free(self->project_id);
-    free(self->access_token);
     free(self->jwt);
     return CloudWhack(&self->dad);
 }
@@ -117,7 +116,7 @@ static rc_t readCE(GCP const *const self, size_t size, char location[])
     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_CE),
         ("Reading GCP location from provider\n"));
     return KNSManager_Read(self->dad.kns, location, size,
-                         identityUrl, "Metadata-Flavor", "Google");
+                         identityUrl, HttpMethod_Get, "Metadata-Flavor", "Google");
 }
 
 /* MakeComputeEnvironmentToken
@@ -169,7 +168,7 @@ static rc_t GCPGetLocation(const GCP * self, const String ** location) {
     assert(self);
 
     rc = KNSManager_Read(self->dad.kns, b, sizeof b,
-        zoneUrl, "Metadata-Flavor", "Google");
+        zoneUrl, HttpMethod_Get, "Metadata-Flavor", "Google");
 
     if (rc == 0)
         slash = string_rchr(b, sizeof b, '/');
@@ -689,11 +688,11 @@ rc_t CC GCPAddUserPaysCredentials(const GCP * cself, KClientHttpRequest * req, c
     {
         bool new_token = false;
         /* see if cached access_token has to be generated/refreshed */
-        if ( self->access_token == NULL ||
-             self->access_token_expiration < KTimeStamp() + 60 ) /* expires in less than a minute */
+        if ( self->dad.access_token == NULL ||
+             self->dad.access_token_expiration < KTimeStamp() + 60 ) /* expires in less than a minute */
         {
-            free(self->access_token);
-            self->access_token = NULL;
+            free(self->dad.access_token);
+            self->dad.access_token = NULL;
 
             if (self->jwt == NULL)
             {   /* first time here, create the JWT and hold on to it */
@@ -701,7 +700,7 @@ rc_t CC GCPAddUserPaysCredentials(const GCP * cself, KClientHttpRequest * req, c
             }
             if (rc == 0)
             {
-                rc = GetAccessToken(self, self->jwt, self->dad.conn, &self->access_token, &self->access_token_expiration);
+                rc = GetAccessToken(self, self->jwt, self->dad.conn, &self->dad.access_token, &self->dad.access_token_expiration);
             }
             new_token = true;
         }
@@ -722,7 +721,7 @@ rc_t CC GCPAddUserPaysCredentials(const GCP * cself, KClientHttpRequest * req, c
 
             if ( rc == 0 && new_token )
             {
-                rc = KClientHttpRequestAddHeader(req, "Authorization", "Bearer %s", self->access_token);
+                rc = KClientHttpRequestAddHeader(req, "Authorization", "Bearer %s", self->dad.access_token);
             }
 
             /* Add alt=media&userProject=<project_id> to the URL if not already there */
@@ -970,7 +969,7 @@ rc_t PopulateCredentials(GCP * self, KConfig * aKfg)
             pathToJsonFile = buffer;
             PLOGMSG ( klogInfo, ( klogInfo, "Got "
                 "GCP credential file '$(F)' from configuration",
-                "F=%s", pathToJsonFile ) ); 
+                "F=%s", pathToJsonFile ) );
         }
         else
             rc = 0;

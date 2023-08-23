@@ -353,6 +353,13 @@ KNS_EXTERN rc_t CC KClientHttpRequestGET ( KClientHttpRequest *self, KClientHttp
  */
 KNS_EXTERN rc_t CC KClientHttpRequestPOST ( KClientHttpRequest *self, KClientHttpResult **rslt );
 
+/* PUT
+ *  send PUT message
+ *  query parameters are sent in URL
+ *  put parameters are sent in body
+ *  "format_sra" [ IN ] - if true, add SRA-specific headers
+ */
+KNS_EXTERN rc_t CC KClientHttpRequestPUT ( KClientHttpRequest *self, KClientHttpResult **rslt, bool format_sra );
 
 /* Status
  *  access the response status code

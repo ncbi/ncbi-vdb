@@ -379,6 +379,7 @@ LIB_EXPORT rc_t CC CloudWhack ( Cloud * self )
         KNSManagerRelease ( self -> kns );
         KStreamRelease( self -> conn );
 
+        free( self -> access_token );
         free ( self );
     }
     return 0;
