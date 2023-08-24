@@ -30,6 +30,7 @@
 
 #include <klib/rc.h>
 #include <klib/debug.h>
+#include <kapp/args.h>
 #include <vdb/manager.h>
 #include <vdb/database.h>
 #include <align/writer-reference.h>
@@ -46,111 +47,109 @@
 #include <set>
 #include <algorithm>
 
-struct CommandLine {
-    static void usage(char const *argv0) {
-        for (auto cp = argv0; *cp; ++cp) {
-            if (cp[0] == '/' && cp[1] != '\0')
-                argv0 = cp + 1;
-        }
-        std::cerr << "usage: " << argv0 << " [--skip-verify] [--only-verify] <config file> [-|<reference file>] [<fasta file>]" << std::endl;
+struct ErrorCode {
+    rc_t rc;
+
+    static inline void throwIf(rc_t const rc) {
+        if (rc) throw ErrorCode{ rc };
     }
+};
+
+class cArgs {
+    Args *args;
+public:
+    ~cArgs() { ArgsWhack(args); }
+    cArgs(int argc, char *argv[], int tableSize, OptDef const table[])
+    : args(nullptr)
+    {
+        ErrorCode::throwIf(ArgsMakeAndHandle(&args, argc, argv, 1, table, tableSize));
+    }
+    #define ARGS(DEFS) cArgs{ argc, argv, sizeof(DEFS)/sizeof(OptDef), DEFS }
+    
+    unsigned countOf(char const *name) const {
+        uint32_t count = 0;
+        ErrorCode::throwIf(ArgsOptionCount(args, name, &count));
+        return count;
+    }
+    unsigned countOf(OptDef const &optDef) const {
+        return countOf(optDef.name);
+    }
+    char const *valueOf(char const *name, int index = 0) const {
+        auto const count = countOf(name);
+        if (index < count) {
+            auto value = (void const *){};
+            ErrorCode::throwIf(ArgsOptionValue(args, name, index, &value));
+            return reinterpret_cast<char const *>(value);
+        }
+        return nullptr;
+    }
+    char const *valueOf(OptDef const &optDef, int index = 0) const {
+        return valueOf(optDef.name, index);
+    }
+};
+
+struct CommandLine {
     CommandLine(int argc, char *argv[])
-    : argument(argv)
-    , count(argc)
-    , skip_verify_index(0)
-    , only_verify_index(0)
-    , config_file_index(0)
-    , fasta_file_index(0)
-    , references_file_index(0)
+    : opt_skip_verify(false)
+    , opt_only_verify(false)
+    , opt_config_file(nullptr)
+    , opt_fasta_file(nullptr)
     , references(nullptr)
     {
-        if (count <= 0)
-            throw std::invalid_argument("argument count");
-            
-        for (int i = 1; i < count; ++i) {
-            auto const &arg = std::string{ argv[i] };
-            
-            if (arg == "--")
-                break;
-            if (arg == "--skip-verify") {
-                skip_verify_index = i;
-                continue;
-            }
-            if (arg == "--only-verify") {
-                only_verify_index = i;
-                continue;
-            }
-            if (arg == "-") {
-                references_file_index = -1;
-                continue;
-            }
-            if (config_file_index == 0) {
-                config_file_index = i;
-                continue;
-            }
-            if (references_file_index == 0) {
-                references_file_index = i;
-                continue;
-            }
-            if (fasta_file_index == 0) {
-                fasta_file_index = i;
-                continue;
-            }
-            usage(argv[0]);
-            throw std::invalid_argument(argv[i]);
+        char const *skip_verify_help[] = { "skip verifying config", NULL };
+        char const *only_verify_help[] = { "don't attempt to lookup references", NULL };
+        char const *config_help[] = { "path to config file", NULL };
+        char const *ref_file_help[] = { "path to fasta file with references", NULL };
+        char const *ref_list_help[] = { "path to file with list of references to lookup (else use stdin)", NULL };
+        OptDef defs[] = {
+            { "skip-verify", NULL, NULL, skip_verify_help, OPT_UNLIM, false, false, NULL },
+            { "only-verify", NULL, NULL, only_verify_help, OPT_UNLIM, false, false, NULL },
+            { "config"     , "k" , NULL, config_help     , 1, true, false, NULL },
+            { "ref-file"   , "r" , NULL, ref_file_help   , 1, true, false, NULL },
+            { "ref-list"   , NULL, NULL, ref_list_help   , 1, true, false, NULL },
+        };
+        auto const args = ARGS(defs);
+        
+        opt_skip_verify = args.countOf(defs[0]) > 0;
+        opt_only_verify = args.countOf(defs[1]) > 0;
+        opt_config_file = args.valueOf(defs[2]);
+        opt_fasta_file  = args.valueOf(defs[3]);
+
+        auto const ref_list_path = args.valueOf(defs[4]);
+        if (ref_list_path) {
+            references = new std::ifstream();
+
+            auto const save = references->exceptions();
+            references->exceptions(std::ios::failbit);
+            references->open(ref_list_path, std::ios::in);
+            references->exceptions(save);
         }
     }
-    ~CommandLine() {
-        delete references;
-    }
-    
-    /// argv[0]
-    char const *progname() const { return argument[0]; }
+    ~CommandLine() { delete references; }
 
     char const *config_file() const {
-        if (config_file_index > 0)
-            return argument[config_file_index];
-        return nullptr;
+        return opt_config_file;
     }
 
     char const *fasta_file() const {
-        if (fasta_file_index > 0)
-            return argument[fasta_file_index];
-        return nullptr;
+        return opt_fasta_file;
     }
 
-    std::istream &references_file(std::ios_base::openmode mode = std::ios::in) const {
-        if (references)
-            return *references;
-
-        if (references_file_index <= 0)
-            return std::cin;
-            
-        references = new std::ifstream();
-
-        auto const save = references->exceptions();
-        references->exceptions(std::ios::failbit);
-        references->open(argument[references_file_index], mode & ~std::ios::out);
-        references->exceptions(save);
-        
-        return *references;
+    std::istream &references_file() const {
+        return references ? *references : std::cin;
     }
     
     /// is `--skip-verify` on   
-    bool skip_verify() const { return skip_verify_index != 0; }
+    bool skip_verify() const { return opt_skip_verify; }
     
     /// is `--only-verify` on   
-    bool only_verify() const { return only_verify_index != 0; }
+    bool only_verify() const { return opt_only_verify; }
 
 private:
-    char **argument;
-    int count;
-
-    int skip_verify_index = 0;
-    int only_verify_index = 0;
-    int config_file_index = 0;
-    int fasta_file_index = 0;
-    int references_file_index = 0;
+    bool opt_skip_verify;
+    bool opt_only_verify;
+    char const *opt_config_file;
+    char const *opt_fasta_file;
 
     mutable std::ifstream *references = nullptr;
 };
@@ -203,20 +202,17 @@ static std::vector<std::string> referenceList(CommandLine const &cmdline)
     auto result = std::vector<std::string>{};
     auto &strm = cmdline.references_file();
 
-    while (strm) {
+    for ( ; ; ) {
         auto word = std::string{};
-        if ((strm >> word))
-            result.emplace_back(word);
+        if (!(strm >> word))
+            break;
+        result.emplace_back(word);
     }
     return result;
 }
 
 using namespace std;
 using ncbi::NK::test_skipped;
-
-struct ErrorCode {
-    rc_t rc;
-};
 
 struct Fixture {
     Fixture()
