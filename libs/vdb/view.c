@@ -33,7 +33,6 @@
 
 #include "database-priv.h"
 #include "table-priv.h"
-#include "column-priv.h"
 #include "schema-parse.h"
 #include "prod-expr.h"
 #include "phys-priv.h"

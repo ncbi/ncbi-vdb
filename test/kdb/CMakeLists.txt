@@ -35,7 +35,11 @@ endif()
 add_compile_definitions( __mod__="test/kdb" )
 
 # AddExecutableTest( Test_KDB_Btree "test-btree" "${COMMON_LIBS_READ}" ) #TODO: revive test-btree
-AddExecutableTest( Test_KDB_Rowset "rowsettest" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" )
+# AddExecutableTest( Test_KDB_Rowset "rowsettest" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" ) # not in use
+
+AddExecutableTest( Test_KDB_KRColumn "test-rcolumn" "${COMMON_LIBS_READ}" )
+AddExecutableTest( Test_KDB_KWColumn "test-wcolumn" "${COMMON_LIBS_WRITE}" )
+
 AddExecutableTest( Test_KDB_Kdb "kdbtest" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_KDB_Wkdb "wkdbtest" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" )
 

@@ -47,6 +47,9 @@
 #include "wcolidx-priv.h"
 #endif
 
+#define KCOLUMN_IMPL KColumn
+#include "column-base.h"
+
 #include <klib/symbol.h>
 #include <kfs/file.h>
 #include <kfs/md5.h>
@@ -70,6 +73,8 @@ struct KMD5SumFmt;
  */
 struct KColumn
 {
+    KColumnBase dad;
+
     struct KTable *tbl;
     struct KDBManager *mgr;
     struct KDirectory *dir;
@@ -79,7 +84,6 @@ struct KColumn
     KColumnIdx idx;
     KColumnData df;
 
-    KRefcount refcount;
     uint32_t opencount;
     uint32_t commit_freq;
     uint32_t csbytes;
@@ -90,6 +94,9 @@ struct KColumn
 
     char path [ 1 ];
 };
+
+rc_t KColumnMake ( KColumn **colp, const KDirectory *dir, const char *path,
+		   KMD5SumFmt * md5, bool read_only );
 
 /* Attach
  * Sever
@@ -106,10 +113,10 @@ int KColumnCmp ( const void *item, struct BSTNode const *n );
 int KColumnSort ( struct BSTNode const *item, struct BSTNode const *n );
 
 
-rc_t KColumnFileCreate ( KFile ** ppf, KMD5File ** ppfmd5, KDirectory * dir, 
+rc_t KColumnFileCreate ( KFile ** ppf, KMD5File ** ppfmd5, KDirectory * dir,
 			 KMD5SumFmt * md5, KCreateMode mode,
 			 bool append, const char * name);
-rc_t KColumnFileOpenUpdate ( KFile ** ppf, KMD5File ** ppfmd5, KDirectory * dir, 
+rc_t KColumnFileOpenUpdate ( KFile ** ppf, KMD5File ** ppfmd5, KDirectory * dir,
 			     KMD5SumFmt * md5, bool append,
 			     const char * name);
 

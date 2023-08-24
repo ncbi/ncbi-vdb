@@ -24,9 +24,10 @@
 
 set( KDB_CMN
     btree
-    rowset
-    rowset-simple
+#    rowset
+#    rowset-simple
     dbmgr-cmn
+    column-base
 )
 
 set( KDB_SRC

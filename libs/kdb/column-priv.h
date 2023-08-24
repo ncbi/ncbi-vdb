@@ -31,14 +31,6 @@
 #include <kdb/column.h>
 #endif
 
-#ifndef _h_klib_container_
-#include <klib/container.h>
-#endif
-
-#ifndef _h_klib_refcount_
-#include <klib/refcount.h>
-#endif
-
 #ifndef _h_coldata_priv_
 #include "coldata-priv.h"
 #endif
@@ -46,6 +38,9 @@
 #ifndef _h_colidx_priv_
 #include "colidx-priv.h"
 #endif
+
+#define KCOLUMN_IMPL KColumn
+#include "column-base.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -65,6 +60,8 @@ struct KDirectory;
  */
 struct KColumn
 {
+    KColumnBase dad;
+
     struct KTable const *tbl;
     struct KDBManager const *mgr;
     struct KDirectory const *dir;
@@ -72,7 +69,6 @@ struct KColumn
     KColumnIdx idx;
     KColumnData df;
 
-    KRefcount refcount;
     uint32_t csbytes;
     int32_t checksum;
     char path [ 1 ];
@@ -86,6 +82,7 @@ struct KColumn
 KColumn *KColumnAttach ( const KColumn *self );
 rc_t KColumnSever ( const KColumn *self );
 
+rc_t KColumnMake ( KColumn **colp, const KDirectory *dir, const char *path );
 
 #ifdef __cplusplus
 }
