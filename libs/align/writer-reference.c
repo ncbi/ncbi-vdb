@@ -490,25 +490,32 @@ SKIP_INSERT_ID:
     addToUsed(self, rs - self->refSeq, ID, 0);
 }
 
-static int findId(ReferenceMgr const *const self, char const id[])
-{
+static bool usedAs(ReferenceSeq const *const rs, char const id[]) {
+    unsigned const m = rs->num_used;
+    unsigned j;
+    
+    for (j = 0; j < m; ++j) {
+        if (strcmp(id, rs->used[j]) == 0)
+            return true;
+    }
+    return false;
+}
+
+static int findIdInTable(ReferenceMgr const *const self, Bucket const *const table, char const id[]) {
     unsigned const hv = hash0(id);
-    Bucket const *const bucket = &self->used[hv];
+    Bucket const *const bucket = &table[hv];
     unsigned const n = bucket->count;
     unsigned i;
 
     for (i = 0; i < n; ++i) {
         unsigned const index = bucket->index[i];
-        ReferenceSeq const *rs = &self->refSeq[index];
-        unsigned const m = rs->num_used;
-        unsigned j;
-
-        if (rs->type == rst_dead)
-            continue;
-        for (j = 0; j < m; ++j) {
-            if (strcmp(id, rs->used[j]) == 0)
-                return index;
-        }
+        ReferenceSeq const *const rs = &self->refSeq[index];
+        
+        if (usedAs(rs, id)
+          || strcmp(id, rs->id) == 0
+          || strcmp(id, rs->seqId) == 0
+          || strcmp(id, rs->fastaSeqId) == 0)
+            return index;
     }
     return -1;
 }
@@ -558,7 +565,6 @@ rc_t ReferenceMgr_ProcessConf(ReferenceMgr *const self, char Data[], unsigned co
 {
     rc_t rc;
     unsigned i;
-    unsigned j;
     struct {
         unsigned id;
         unsigned seqId;
@@ -571,7 +577,7 @@ rc_t ReferenceMgr_ProcessConf(ReferenceMgr *const self, char Data[], unsigned co
     buf.elem_bits = sizeof(data[0]) * 8;
     data=buf.base;
 
-    for (j = i = 0; i < len; ++j) {
+    for (i = 0; i < len; ) {
         unsigned lineEnd;
         unsigned id;
         unsigned acc;
@@ -1566,10 +1572,10 @@ static rc_t findSeq(ReferenceMgr *const self,
     return rc;
 }
 
-static ReferenceSeq *ReferenceMgr_FindSeq(ReferenceMgr const *const self, char const id[])
+static ReferenceSeq *findUsed(ReferenceMgr const *const self, char const id[])
 {
-    int const fnd = findId(self, id);
-    return (fnd >= 0) ? &self->refSeq[fnd] : NULL;
+    int const found = findIdInTable(self, self->used, id);
+    return (found < 0 || self->refSeq[found].type == rst_dead) ? NULL : &self->refSeq[found];
 }
 
 static
@@ -1581,7 +1587,7 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self,
                           bool const allowMultiMapping,
                           bool wasRenamed[])
 {
-    ReferenceSeq *const obj = ReferenceMgr_FindSeq(self, id);
+    ReferenceSeq *const obj = findUsed(self, id);
     if (obj) {
         assert(rslt != NULL);
         *rslt = NULL;
@@ -1606,6 +1612,12 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self,
         return 0;
     }
     return findSeq(self, rslt, id, seq_len, md5, allowMultiMapping, wasRenamed);
+}
+
+LIB_EXPORT ReferenceSeq const *ReferenceMgr_FindSeq(ReferenceMgr const *const self, char const id[]) {
+    int const foundKey = findIdInTable(self, self->keys, id);
+    int const found = foundKey < 0 ? findIdInTable(self, self->used, id) : foundKey;
+    return found < 0 ? NULL : &self->refSeq[found];
 }
 
 LIB_EXPORT rc_t CC ReferenceMgr_SetCache(ReferenceMgr const *const self, size_t cache, uint32_t num_open)
@@ -1637,13 +1649,9 @@ LIB_EXPORT rc_t CC ReferenceMgr_Make(ReferenceMgr const **cself, VDatabase *db,
 {
     rc_t rc;
     ReferenceMgr *self;
-    uint32_t wopt = 0;
 
     if (cself == NULL)
         return RC(rcAlign, rcIndex, rcConstructing, rcParam, rcNull);
-
-    wopt |= (options & ewrefmgr_co_allREADs) ? ewref_co_SaveRead : 0;
-    wopt |= (options & ewrefmgr_co_Coverage) ? ewref_co_Coverage : 0;
 
     if (max_seq_len == 0)
         max_seq_len = TableWriterRefSeq_MAX_SEQ_LEN;
@@ -1692,14 +1700,14 @@ typedef struct TChunk32_struct {
 } TChunk32;
 
 typedef struct AlignId32List_struct {
-	TChunk32* head;
-	TChunk32* tail;
-	uint32_t  tail_qty;  /** number elements in the last chunk **/
-	uint32_t  chunk_qty; /** number of chunks */
+    TChunk32* head;
+    TChunk32* tail;
+    uint32_t  tail_qty;  /** number elements in the last chunk **/
+    uint32_t  chunk_qty; /** number of chunks */
 } AlignId32List;
 typedef struct AlignIdList_struct {
-	AlignId32List **sub_list;
-	uint32_t        sub_list_count;
+    AlignId32List **sub_list;
+    uint32_t        sub_list_count;
 } AlignIdList;
 
 static uint64_t AlignId32ListCount(AlignId32List *l)
@@ -1707,116 +1715,116 @@ static uint64_t AlignId32ListCount(AlignId32List *l)
 
 static uint64_t AlignIdListCount(AlignIdList *l)
 {
-	uint64_t ret=0;
-	if(l){
-		uint32_t i;
-		for(i=0;i<l->sub_list_count;i++){
-			if(l->sub_list[i]){
-				ret += AlignId32ListCount(l->sub_list[i]);
-			}
-		}
-	}
-	return ret;
+    uint64_t ret=0;
+    if(l){
+        uint32_t i;
+        for(i=0;i<l->sub_list_count;i++){
+            if(l->sub_list[i]){
+                ret += AlignId32ListCount(l->sub_list[i]);
+            }
+        }
+    }
+    return ret;
 }
 static uint64_t AlignIdListFlatCopy(AlignIdList *l,int64_t *buf,uint64_t num_elem,bool do_sort)
 {
-	uint64_t res=0;
-	uint32_t i,j;
-	AlignId32List* cl;
-	assert(l!=0);
+    uint64_t res=0;
+    uint32_t i,j;
+    AlignId32List* cl;
+    assert(l!=0);
 
-	if((cl = l->sub_list[0])!=NULL){
-		TChunk32* head  = cl->head;
-		while(head !=  cl->tail){
-			for(i=0;i<ID_CHUNK_SZ && res < num_elem;i++,res++){
-				buf[res] = head->id[i];
-			}
-			head = head->next;
-		}
-		for(i=0;i<cl->tail_qty && res < num_elem;i++,res++){
-			buf[res] = head->id[i];
-		}
-	}
-	for(j = 1; j< l->sub_list_count && res < num_elem;j++){
-		if((cl = l->sub_list[j])!=NULL){
-			TChunk32* head  = cl->head;
-			uint64_t  hi = ((uint64_t)j) << 32;
-			while(head !=  cl->tail){
-				for(i=0;i<ID_CHUNK_SZ && res < num_elem;i++,res++){
-					buf[res] = hi | head->id[i];
-				}
-				head = head->next;
-			}
-			for(i=0;i<cl->tail_qty && res < num_elem;i++,res++){
-				buf[res] = hi | head->id[i];
-			}
-		}
-	}
-	if(do_sort && res > 1)
-		ksort_int64_t(buf,res);
-	return res;
+    if((cl = l->sub_list[0])!=NULL){
+        TChunk32* head  = cl->head;
+        while(head !=  cl->tail){
+            for(i=0;i<ID_CHUNK_SZ && res < num_elem;i++,res++){
+                buf[res] = head->id[i];
+            }
+            head = head->next;
+        }
+        for(i=0;i<cl->tail_qty && res < num_elem;i++,res++){
+            buf[res] = head->id[i];
+        }
+    }
+    for(j = 1; j< l->sub_list_count && res < num_elem;j++){
+        if((cl = l->sub_list[j])!=NULL){
+            TChunk32* head  = cl->head;
+            uint64_t  hi = ((uint64_t)j) << 32;
+            while(head !=  cl->tail){
+                for(i=0;i<ID_CHUNK_SZ && res < num_elem;i++,res++){
+                    buf[res] = hi | head->id[i];
+                }
+                head = head->next;
+            }
+            for(i=0;i<cl->tail_qty && res < num_elem;i++,res++){
+                buf[res] = hi | head->id[i];
+            }
+        }
+    }
+    if(do_sort && res > 1)
+        ksort_int64_t(buf,res);
+    return res;
 }
 
 static rc_t AlignId32ListAddId(AlignId32List *l,const uint32_t id)
 {
-	if(l->tail  == NULL){
-		l->head = l->tail = malloc(sizeof(*l->tail));
-		if(l->tail == NULL) return RC(rcAlign, rcTable, rcCommitting, rcMemory, rcExhausted);
-		l->chunk_qty =1;
-		l->tail_qty = 0;
-	}
-	if(l->tail_qty == ID_CHUNK_SZ){/** chunk is full **/
-		l->tail->next = malloc(sizeof(*l->tail));
-		if(l->tail == NULL) return RC(rcAlign, rcTable, rcCommitting, rcMemory, rcExhausted);
-		l->tail = l->tail->next;
-		l->chunk_qty ++;
-		l->tail_qty = 0;
-	}
-	l->tail->id[l->tail_qty++]=id;
-	return 0;
+    if(l->tail  == NULL){
+        l->head = l->tail = malloc(sizeof(*l->tail));
+        if(l->tail == NULL) return RC(rcAlign, rcTable, rcCommitting, rcMemory, rcExhausted);
+        l->chunk_qty =1;
+        l->tail_qty = 0;
+    }
+    if(l->tail_qty == ID_CHUNK_SZ){/** chunk is full **/
+        l->tail->next = malloc(sizeof(*l->tail));
+        if(l->tail == NULL) return RC(rcAlign, rcTable, rcCommitting, rcMemory, rcExhausted);
+        l->tail = l->tail->next;
+        l->chunk_qty ++;
+        l->tail_qty = 0;
+    }
+    l->tail->id[l->tail_qty++]=id;
+    return 0;
 }
 
 static rc_t AlignIdListAddId(AlignIdList *l,const int64_t id)
 {
-	uint32_t  sub_id,id32;
-	if(id < 0) return RC(rcAlign, rcTable, rcCommitting, rcId, rcOutofrange);
-	id32 = (uint32_t) id;
-	sub_id = id >> 32;
-	if(sub_id >= l->sub_list_count) return RC(rcAlign, rcTable, rcCommitting, rcId, rcOutofrange);
-	if(l->sub_list[sub_id] == NULL){
-		l->sub_list[sub_id] = calloc(1,sizeof(AlignId32List));
-		if(l->sub_list[sub_id] == NULL) return RC(rcAlign, rcTable, rcCommitting, rcMemory, rcExhausted);
-	}
-	return AlignId32ListAddId(l->sub_list[sub_id],id32);
+    uint32_t  sub_id,id32;
+    if(id < 0) return RC(rcAlign, rcTable, rcCommitting, rcId, rcOutofrange);
+    id32 = (uint32_t) id;
+    sub_id = id >> 32;
+    if(sub_id >= l->sub_list_count) return RC(rcAlign, rcTable, rcCommitting, rcId, rcOutofrange);
+    if(l->sub_list[sub_id] == NULL){
+        l->sub_list[sub_id] = calloc(1,sizeof(AlignId32List));
+        if(l->sub_list[sub_id] == NULL) return RC(rcAlign, rcTable, rcCommitting, rcMemory, rcExhausted);
+    }
+    return AlignId32ListAddId(l->sub_list[sub_id],id32);
 }
 
 static void AlignId32ListRelease(AlignId32List *l)
 {
-	if(l){
-		while(l->head != l->tail){
-			TChunk32* head = l->head;
-			l->head = l->head->next;
-			free(head);
-		}
-		free(l->head);
-		free(l);
-	}
+    if(l){
+        while(l->head != l->tail){
+            TChunk32* head = l->head;
+            l->head = l->head->next;
+            free(head);
+        }
+        free(l->head);
+        free(l);
+    }
 }
 static void AlignIdListRelease(AlignIdList *l)
 {
         if(l){
-		uint32_t i;
-		for(i=0;i<l->sub_list_count;i++){
-			AlignId32ListRelease(l->sub_list[i]);
-		}
-		free(l->sub_list);
-		free(l);
+        uint32_t i;
+        for(i=0;i<l->sub_list_count;i++){
+            AlignId32ListRelease(l->sub_list[i]);
+        }
+        free(l->sub_list);
+        free(l);
         }
 }
 
 
 typedef struct {
-    AlignIdList*	idlist;
+    AlignIdList*    idlist;
     ReferenceSeqCoverage cover;
     INSDC_coord_len bin_seq_len;
 } TCover;
@@ -1824,27 +1832,27 @@ typedef struct {
 static
 void ReferenceMgr_TCoverRelease(TCover* c)
 {
-	if(c){
-		AlignIdListRelease(c->idlist);
-		c->idlist = NULL;
-	}
+    if(c){
+        AlignIdListRelease(c->idlist);
+        c->idlist = NULL;
+    }
 }
 static
 rc_t ReferenceMgr_TCoverSetMaxId(TCover* c,int64_t id)
 {
-	uint32_t  sub_id;
-	if(id < 0) return RC(rcAlign, rcTable, rcCommitting, rcId, rcOutofrange);
-	sub_id = id >> 32;
-	if(c->idlist == NULL){
-		c->idlist = calloc(1,sizeof(AlignIdList));
-		if(c->idlist==NULL) return RC(rcAlign, rcTable, rcCommitting, rcMemory, rcExhausted);
-		c->idlist->sub_list_count = sub_id+1;
-		c->idlist->sub_list = calloc(c->idlist->sub_list_count,sizeof(c->idlist->sub_list[0]));
-		if(c->idlist->sub_list == NULL) return RC(rcAlign, rcTable, rcCommitting, rcMemory, rcExhausted);
-	} else {
-		return RC(rcAlign, rcTable, rcCommitting, rcParam, rcUnexpected);
-	}
-	return 0;
+    uint32_t  sub_id;
+    if(id < 0) return RC(rcAlign, rcTable, rcCommitting, rcId, rcOutofrange);
+    sub_id = id >> 32;
+    if(c->idlist == NULL){
+        c->idlist = calloc(1,sizeof(AlignIdList));
+        if(c->idlist==NULL) return RC(rcAlign, rcTable, rcCommitting, rcMemory, rcExhausted);
+        c->idlist->sub_list_count = sub_id+1;
+        c->idlist->sub_list = calloc(c->idlist->sub_list_count,sizeof(c->idlist->sub_list[0]));
+        if(c->idlist->sub_list == NULL) return RC(rcAlign, rcTable, rcCommitting, rcMemory, rcExhausted);
+    } else {
+        return RC(rcAlign, rcTable, rcCommitting, rcParam, rcUnexpected);
+    }
+    return 0;
 }
 
 static
@@ -1899,12 +1907,12 @@ rc_t ReferenceMgr_ReCover(const ReferenceMgr* cself, uint64_t ref_rows, rc_t (*c
     /* order is important see ReferenceSeqCoverage struct */
     struct {
         const char* nm;
-	    const char* col;
+        const char* col;
         bool ids_only;
     } tbls[] = { {"PRIMARY_ALIGNMENT", "PRIMARY_ALIGNMENT_IDS",false},
         {"SECONDARY_ALIGNMENT", "SECONDARY_ALIGNMENT_IDS",false},
         {"EVIDENCE_INTERVAL", "EVIDENCE_INTERVAL_IDS", true} };
-	int tbls_qty=(sizeof(tbls)/sizeof(tbls[0]));
+    int tbls_qty=(sizeof(tbls)/sizeof(tbls[0]));
     rc_t rc1 = 0;
     int64_t rr;
     uint32_t i;
@@ -1913,10 +1921,10 @@ rc_t ReferenceMgr_ReCover(const ReferenceMgr* cself, uint64_t ref_rows, rc_t (*c
 
     /* allocate mem for ref_rows of reference coverage*/
     if((data = calloc(ref_rows, (sizeof(*data) + cself->max_seq_len))) == NULL) {
-		rc = RC(rcAlign, rcTable, rcCommitting, rcMemory, rcExhausted);
+        rc = RC(rcAlign, rcTable, rcCommitting, rcMemory, rcExhausted);
     } else {
-		/** allocation for both data and hilo was done in 1 shot ***/
-		hilo = (uint8_t *)&data[ref_rows];
+        /** allocation for both data and hilo was done in 1 shot ***/
+        hilo = (uint8_t *)&data[ref_rows];
         rc = CoverageGetSeqLen(cself, data, ref_rows);
     }
     /* grep through tables for coverage data */
@@ -2032,28 +2040,28 @@ rc_t ReferenceMgr_ReCover(const ReferenceMgr* cself, uint64_t ref_rows, rc_t (*c
                                 if (  data[min_rr].cover.overlap_ref_pos[i] == 0 /*** NOT SET***/
                                     || overlap_ref_pos < data[min_rr].cover.overlap_ref_pos[i])
                                 {
-									data[min_rr].cover.overlap_ref_pos[i] = (INSDC_coord_zero)overlap_ref_pos;
+                                    data[min_rr].cover.overlap_ref_pos[i] = (INSDC_coord_zero)overlap_ref_pos;
                                 }
                                 data[min_rr].cover.overlap_ref_len[i] = cself->max_seq_len; /*** in between chunks get full length of overlap **/
                             }
                             if (  data[min_rr].cover.overlap_ref_pos[i] == 0
                                 || overlap_ref_pos < data[min_rr].cover.overlap_ref_pos[i])
                             {
-								data[min_rr].cover.overlap_ref_pos[i] = (INSDC_coord_zero)overlap_ref_pos;
+                                data[min_rr].cover.overlap_ref_pos[i] = (INSDC_coord_zero)overlap_ref_pos;
                             }
                             if (overlap_ref_len > data[min_rr].cover.overlap_ref_len[i])
-								data[min_rr].cover.overlap_ref_len[i] = overlap_ref_len;
+                                data[min_rr].cover.overlap_ref_len[i] = overlap_ref_len;
                         }
                     }
                 } /**** DONE WITH WORK ON STATISTICS ***/
                 ALIGN_DBGERR(rc);
                 rc = rc ? rc : quitting();
             }
-		    /*** HAVE TO RELEASE **/
-		    TableReader_Whack(reader);
-		    VTableRelease(table);
-		    /*** NOW SAVE AND RELEASE THE COLUMN ***/
-		    if((rc = TableWriterRefCoverage_MakeIds(&cover_writer, cself->db, tbls[i].col)) == 0) {
+            /*** HAVE TO RELEASE **/
+            TableReader_Whack(reader);
+            VTableRelease(table);
+            /*** NOW SAVE AND RELEASE THE COLUMN ***/
+            if((rc = TableWriterRefCoverage_MakeIds(&cover_writer, cself->db, tbls[i].col)) == 0) {
                 for(rr=0; rc ==0 &&  rr < ref_rows; rr ++){
                     uint64_t num_elem = AlignIdListCount(data[rr].idlist);
                     if(num_elem > 0){
@@ -2087,40 +2095,40 @@ rc_t ReferenceMgr_ReCover(const ReferenceMgr* cself, uint64_t ref_rows, rc_t (*c
                     }
                 }
                 ALIGN_DBGERR(rc);
-		    }
-		} else {
-			TableReader_Whack(reader);
-			VTableRelease(table);
-		}
-	}/* TABLE LOOP ENDS **/
+            }
+        } else {
+            TableReader_Whack(reader);
+            VTableRelease(table);
+        }
+    }/* TABLE LOOP ENDS **/
     /* prep and write coverage data */
-	if(rc == 0) {
+    if(rc == 0) {
         uint64_t k;
 
-		rc = TableWriterRefCoverage_MakeCoverage(&cover_writer, cself->db, 0);
-		for (rr = 0, k = 0; rc == 0 && rr != ref_rows; ++rr, k += cself->max_seq_len) {
+        rc = TableWriterRefCoverage_MakeCoverage(&cover_writer, cself->db, 0);
+        for (rr = 0, k = 0; rc == 0 && rr != ref_rows; ++rr, k += cself->max_seq_len) {
             unsigned hi = 0;
             unsigned lo = 255;
 
-		    for (i = 0; i != data[rr].bin_seq_len; ++i) {
+            for (i = 0; i != data[rr].bin_seq_len; ++i) {
                 unsigned const depth = hilo[k + i];
 
                 if (hi < depth) hi = depth;
                 if (lo > depth) lo = depth;
-		    }
+            }
             data[rr].cover.high = hi;
             data[rr].cover.low  = lo;
-		    rc = TableWriterRefCoverage_WriteCoverage(cover_writer,rr+1, &data[rr].cover);
-		}
-		free(data);
-		rc1 = TableWriterRefCoverage_Whack(cover_writer, rc == 0, &new_rows);
-		rc = rc ? rc : rc1;
-		if(rc == 0 && ref_rows != new_rows) {
-		    rc = RC(rcAlign, rcTable, rcCommitting, rcData, rcInconsistent);
-		}
-	}
+            rc = TableWriterRefCoverage_WriteCoverage(cover_writer,rr+1, &data[rr].cover);
+        }
+        free(data);
+        rc1 = TableWriterRefCoverage_Whack(cover_writer, rc == 0, &new_rows);
+        rc = rc ? rc : rc1;
+        if(rc == 0 && ref_rows != new_rows) {
+            rc = RC(rcAlign, rcTable, rcCommitting, rcData, rcInconsistent);
+        }
+    }
     ALIGN_DBGERR(rc);
-	return rc;
+    return rc;
 }
 
 LIB_EXPORT rc_t CC ReferenceMgr_Release(const ReferenceMgr *cself,
@@ -2296,15 +2304,15 @@ LIB_EXPORT rc_t CC ReferenceMgr_GetSeq(ReferenceMgr const *const cself,
         rc_t rc = ReferenceMgr_OpenSeq(self, &obj, id, 0, NULL, allowMultiMapping, wasRenamed);
 
         if (rc) return rc;
+        *seq = obj;
         if (obj->type == rst_unmapped) {
             *shouldUnmap = true;
             return 0;
         }
-        if (obj->start_rowid == 0) {
+        if (obj->start_rowid == 0 && self->db != NULL) {
             rc = ReferenceMgr_LoadSeq(self, obj);
             if (rc) return rc;
         }
-        *seq = obj;
     }
     return 0;
 }
@@ -2365,7 +2373,7 @@ LIB_EXPORT rc_t CC ReferenceMgr_Get1stRow(const ReferenceMgr* cself, int64_t* ro
     if (cself == NULL || row_id == NULL) {
         rc = RC(rcAlign, rcFile, rcReading, rcParam, rcNull);
     }
-    else if ((seq = ReferenceMgr_FindSeq(cself, id)) == NULL)
+    else if ((seq = findUsed(cself, id)) == NULL)
         rc = RC(rcAlign, rcFile, rcReading, rcId, rcNotFound);
     else {
         *row_id = seq->start_rowid;
@@ -2484,16 +2492,16 @@ rc_t cigar2offset_2(unsigned const cigar_len,
 static char const cigar_op_codes[] = "MIDNSHP=XB";
 
 static NCBI_align_ro_type const cigar_op_types[] = {
-    NCBI_align_ro_normal,			/* M */
-    NCBI_align_ro_normal,			/* I */
-    NCBI_align_ro_normal,			/* D */
-    NCBI_align_ro_intron_unknown,	/* N */
-    NCBI_align_ro_soft_clip,		/* S */
-    NCBI_align_ro_normal,			/* H */
-    NCBI_align_ro_normal,			/* P */
-    NCBI_align_ro_normal,			/* = */
-    NCBI_align_ro_normal,			/* X */
-    NCBI_align_ro_complete_genomics	/* B */
+    NCBI_align_ro_normal,           /* M */
+    NCBI_align_ro_normal,           /* I */
+    NCBI_align_ro_normal,           /* D */
+    NCBI_align_ro_intron_unknown,   /* N */
+    NCBI_align_ro_soft_clip,        /* S */
+    NCBI_align_ro_normal,           /* H */
+    NCBI_align_ro_normal,           /* P */
+    NCBI_align_ro_normal,           /* = */
+    NCBI_align_ro_normal,           /* X */
+    NCBI_align_ro_complete_genomics /* B */
 };
 
 enum {
@@ -2504,16 +2512,16 @@ enum {
 };
 
 static int const cigar_op_gentypes[] = {
-    gen_match_type,			/* M */
-    gen_insert_type,		/* I */
-    gen_delete_type,		/* D */
-    gen_delete_type,		/* N */
-    gen_insert_type,		/* S */
-    gen_ignore_type,		/* H */
-    gen_ignore_type,		/* P */
-    gen_match_type,			/* = */
-    gen_match_type,			/* X */
-    gen_insert_type			/* B */
+    gen_match_type,         /* M */
+    gen_insert_type,        /* I */
+    gen_delete_type,        /* D */
+    gen_delete_type,        /* N */
+    gen_insert_type,        /* S */
+    gen_ignore_type,        /* H */
+    gen_ignore_type,        /* P */
+    gen_match_type,         /* = */
+    gen_match_type,         /* X */
+    gen_insert_type         /* B */
 };
 
 static
