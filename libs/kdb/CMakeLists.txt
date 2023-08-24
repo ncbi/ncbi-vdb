@@ -28,6 +28,7 @@ set( KDB_CMN
 #    rowset-simple
     dbmgr-cmn
     column-base
+    columnblob-base
 )
 
 set( KDB_SRC
@@ -39,6 +40,7 @@ set( KDB_SRC
     database-cc
     table
     table-cc
+    rcolumnblob
     column
     column-cc
     coldata
@@ -66,6 +68,7 @@ set( WKDB_SRC
     wdbmgr
     wdatabase
     wtable
+    wcolumnblob
     wcolumn
     wcoldata
     wcolidx

@@ -25,7 +25,7 @@
 */
 
 /**
-* Unit tests for read-side KColumn
+* Unit tests for read-side KColumn and KColumnBlob
 */
 
 #include <ktst/unit_test.hpp>
@@ -124,6 +124,79 @@ FIXTURE_TEST_CASE(KRColumn_OpenParentRead, KColumn_Fixture)
     const KTable * tbl = nullptr;
     REQUIRE_RC( KColumnOpenParentRead( m_col, & tbl ) );
     REQUIRE_NULL( tbl );
+}
+
+
+// KColumnBlob
+
+TEST_CASE(KRColumnBlob_AddRelease)
+{
+    KColumnBlob * blob = nullptr;
+    REQUIRE_RC( KColumnBlobMake ( & blob, false ) );
+
+    REQUIRE_EQ( 1, (int)atomic32_read( & blob -> dad . refcount ) );
+    REQUIRE_RC( KColumnBlobAddRef( blob ) );
+    REQUIRE_EQ( 2, (int)atomic32_read( & blob -> dad . refcount ) );
+    REQUIRE_RC( KColumnBlobRelease( blob ) );
+    REQUIRE_EQ( 1, (int)atomic32_read( & blob -> dad . refcount ) );
+
+    REQUIRE_RC( KColumnBlobRelease( blob ) );
+    // use valgrind to find any leaks
+}
+
+TEST_CASE(KRColumnBlob_Read)
+{
+    KColumnBlob * blob = nullptr;
+    REQUIRE_RC( KColumnBlobMake ( & blob, false ) );
+
+    char buffer[1024];
+    rc_t rc = SILENT_RC ( rcDB, rcBlob, rcReading, rcParam, rcNull );
+    REQUIRE_EQ( rc, KColumnBlobRead ( blob, 0, buffer, sizeof( buffer ), nullptr, nullptr ) );
+
+    REQUIRE_RC( KColumnBlobRelease( blob ) );
+}
+
+TEST_CASE(KRColumnBlob_ReadAll)
+{
+    KColumnBlob * blob = nullptr;
+    REQUIRE_RC( KColumnBlobMake ( & blob, false ) );
+
+    rc_t rc = SILENT_RC ( rcDB, rcBlob, rcReading, rcParam, rcNull );
+    REQUIRE_EQ( rc, KColumnBlobReadAll ( blob, nullptr, nullptr, 0 ) );
+
+    REQUIRE_RC( KColumnBlobRelease( blob ) );
+}
+
+TEST_CASE(KRColumnBlob_Validate)
+{
+    KColumnBlob * blob = nullptr;
+    REQUIRE_RC( KColumnBlobMake ( & blob, false ) );
+
+    REQUIRE_RC( KColumnBlobValidate ( blob ) );
+
+    REQUIRE_RC( KColumnBlobRelease( blob ) );
+}
+
+TEST_CASE(KRColumnBlob_ValidateBuffer)
+{
+    KColumnBlob * blob = nullptr;
+    REQUIRE_RC( KColumnBlobMake ( & blob, false ) );
+
+    rc_t rc = SILENT_RC ( rcDB, rcBlob, rcValidating, rcParam, rcNull );
+    REQUIRE_EQ( rc, KColumnBlobValidateBuffer ( blob, nullptr, nullptr, 0 ) );
+
+    REQUIRE_RC( KColumnBlobRelease( blob ) );
+}
+
+TEST_CASE(KRColumnBlob_IdRange)
+{
+    KColumnBlob * blob = nullptr;
+    REQUIRE_RC( KColumnBlobMake ( & blob, false ) );
+
+    rc_t rc = SILENT_RC ( rcDB, rcBlob, rcAccessing, rcParam, rcNull );
+    REQUIRE_EQ( rc, KColumnBlobIdRange ( blob, nullptr, nullptr ) );
+
+    REQUIRE_RC( KColumnBlobRelease( blob ) );
 }
 
 

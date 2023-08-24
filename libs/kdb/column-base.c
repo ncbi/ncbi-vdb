@@ -47,28 +47,22 @@ rc_t KColumnBaseWhack ( KColumn *self )
  */
 rc_t CC KColumnBaseAddRef ( const KColumn *self )
 {
-    if ( self != NULL )
+    switch ( KRefcountAdd ( & self -> refcount, "KColumn" ) )
     {
-        switch ( KRefcountAdd ( & self -> refcount, "KColumn" ) )
-        {
-        case krefLimit:
-            return RC ( rcDB, rcColumn, rcAttaching, rcRange, rcExcessive );
-        }
+    case krefLimit:
+        return RC ( rcDB, rcColumn, rcAttaching, rcRange, rcExcessive );
     }
     return 0;
 }
 
 rc_t CC KColumnBaseRelease ( const KColumn *self )
 {
-    if ( self != NULL )
+    switch ( KRefcountDrop ( & self -> refcount, "KColumn" ) )
     {
-        switch ( KRefcountDrop ( & self -> refcount, "KColumn" ) )
-        {
-        case krefWhack:
-            return self -> vt -> whack ( ( KColumn* ) self );
-        case krefNegative:
-            return RC ( rcDB, rcColumn, rcReleasing, rcRange, rcExcessive );
-        }
+    case krefWhack:
+        return self -> vt -> whack ( ( KColumn* ) self );
+    case krefNegative:
+        return RC ( rcDB, rcColumn, rcReleasing, rcRange, rcExcessive );
     }
     return 0;
 }

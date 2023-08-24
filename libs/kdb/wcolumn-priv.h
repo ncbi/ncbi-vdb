@@ -50,6 +50,9 @@
 #define KCOLUMN_IMPL KColumn
 #include "column-base.h"
 
+#define KCOLUMNBLOB_IMPL KColumnBlob
+#include "columnblob-base.h"
+
 #include <klib/symbol.h>
 #include <kfs/file.h>
 #include <kfs/md5.h>
@@ -98,14 +101,6 @@ struct KColumn
 rc_t KColumnMake ( KColumn **colp, const KDirectory *dir, const char *path,
 		   KMD5SumFmt * md5, bool read_only );
 
-/* Attach
- * Sever
- *  like Release, except called internally
- *  indicates that a child object is letting go...
- */
-KColumn *KColumnAttach ( const KColumn *self );
-rc_t KColumnSever ( const KColumn *self );
-
 /* Cmp
  * Sort
  */
@@ -119,6 +114,41 @@ rc_t KColumnFileCreate ( KFile ** ppf, KMD5File ** ppfmd5, KDirectory * dir,
 rc_t KColumnFileOpenUpdate ( KFile ** ppf, KMD5File ** ppfmd5, KDirectory * dir,
 			     KMD5SumFmt * md5, bool append,
 			     const char * name);
+
+/*--------------------------------------------------------------------------
+ * KColumnBlob
+ *  one or more rows of column data
+ */
+struct KColumnBlob
+{
+    KColumnBlobBase dad;
+
+    /* holds either an existing blob loc
+       or new blob index range */
+    KColBlobLoc loc;
+
+    /* holds old and new page maps */
+    KColumnPageMap pmorig;
+    KColumnPageMap pmnew;
+
+    /* owning column */
+    KColumn *col;
+
+    /* number of bytes written to blob */
+    uint32_t num_writ;
+
+    /* checksums */
+    uint32_t crc32;
+    MD5State md5;
+
+    /* open mode */
+    uint8_t read_only;
+
+    /* for validation */
+    bool bswap;
+};
+
+rc_t KColumnBlobMake ( KColumnBlob **blobp, bool bswap );
 
 #ifdef __cplusplus
 }

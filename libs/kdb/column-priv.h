@@ -42,6 +42,9 @@
 #define KCOLUMN_IMPL KColumn
 #include "column-base.h"
 
+#define KCOLUMNBLOB_IMPL KColumnBlob
+#include "columnblob-base.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -56,7 +59,7 @@ struct KDirectory;
 
 
 /*--------------------------------------------------------------------------
- * KColumn
+ * KColumn, read-side
  */
 struct KColumn
 {
@@ -74,15 +77,29 @@ struct KColumn
     char path [ 1 ];
 };
 
-/* Attach
- * Sever
- *  like Release, except called internally
- *  indicates that a child object is letting go...
- */
-KColumn *KColumnAttach ( const KColumn *self );
-rc_t KColumnSever ( const KColumn *self );
-
 rc_t KColumnMake ( KColumn **colp, const KDirectory *dir, const char *path );
+
+/*--------------------------------------------------------------------------
+ * KColumnBlob
+ *  one or more rows of column data
+ */
+
+struct KColumnBlob
+{
+    KColumnBlobBase dad;
+
+    /* holds existing blob loc */
+    KColBlobLoc loc;
+    KColumnPageMap pmorig;
+
+    /* owning column */
+    const KColumn *col;
+
+    /* captured from idx1 for CRC32 validation */
+    bool bswap;
+};
+
+rc_t KColumnBlobMake ( KColumnBlob **blobp, bool bswap );
 
 #ifdef __cplusplus
 }

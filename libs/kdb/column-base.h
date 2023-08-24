@@ -42,7 +42,7 @@ struct KDBManager;
 struct KTable;
 
 /*--------------------------------------------------------------------------
- * KColumnBase, base structure for KCOLUMN_IMPL implementations
+ * KColumnBase, base structure for KColumn implementations
  */
 typedef struct KColumnBase KColumnBase;
 
@@ -92,6 +92,13 @@ struct KColumnBase
     // char path [ 1 ];
 };
 
+/* Attach
+ * Sever
+ *  like Release, except called internally
+ *  indicates that a child object is letting go...
+ */
+extern KCOLUMN_IMPL *KColumnAttach ( const KCOLUMN_IMPL *self );
+extern rc_t KColumnSever ( const KCOLUMN_IMPL *self );
 
 #ifdef __cplusplus
 }
