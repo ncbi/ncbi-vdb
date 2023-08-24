@@ -58,6 +58,11 @@ struct ErrorCode {
 class cArgs {
     Args *args;
 public:
+    Args *take() {
+        Args *p = args;
+        args = nullptr;
+        return p;
+    }
     ~cArgs() { ArgsWhack(args); }
     cArgs(int argc, char *argv[], int tableSize, OptDef const table[])
     : args(nullptr)
@@ -90,7 +95,8 @@ public:
 
 struct CommandLine {
     CommandLine(int argc, char *argv[])
-    : opt_skip_verify(false)
+    : args_p(nullptr)
+    , opt_skip_verify(false)
     , opt_only_verify(false)
     , opt_config_file(nullptr)
     , opt_fasta_file(nullptr)
@@ -108,7 +114,7 @@ struct CommandLine {
             { "ref-file"   , "r" , NULL, ref_file_help   , 1, true, false, NULL },
             { "ref-list"   , NULL, NULL, ref_list_help   , 1, true, false, NULL },
         };
-        auto const args = ARGS(defs);
+        auto args = ARGS(defs);
         
         opt_skip_verify = args.countOf(defs[0]) > 0;
         opt_only_verify = args.countOf(defs[1]) > 0;
@@ -124,8 +130,12 @@ struct CommandLine {
             references->open(ref_list_path, std::ios::in);
             references->exceptions(save);
         }
+        args_p = args.take();
     }
-    ~CommandLine() { delete references; }
+    ~CommandLine() { 
+        delete references; 
+        ArgsWhack(args_p);
+    }
 
     char const *config_file() const {
         return opt_config_file;
@@ -146,6 +156,7 @@ struct CommandLine {
     bool only_verify() const { return opt_only_verify; }
 
 private:
+    Args *args_p;
     bool opt_skip_verify;
     bool opt_only_verify;
     char const *opt_config_file;
