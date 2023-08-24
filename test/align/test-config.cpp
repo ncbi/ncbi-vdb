@@ -185,6 +185,18 @@ struct ConfigFile {
             else
                 throw std::ios_base::failure("unparsable");
         }
+
+        bool circular() const {
+            auto const at = extra.find("circular");
+            if (at != std::string::npos) {
+                if (at == 0 || isspace(extra[at - 1])) {
+                    if (at + 8 <= extra.size() || isspace(extra[at + 8])) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
     };
     std::vector<Entry> entries;
     
@@ -205,6 +217,13 @@ struct ConfigFile {
                 throw std::ios_base::failure("unparsable config file");
             }
         }
+    }
+    Entry const *find(std::string const &id) const {
+        for (auto & e : entries) {
+            if (e.name == id)
+                return &e;
+        }
+        return nullptr;
     }
 };
 
@@ -332,9 +351,13 @@ TEST_CASE ( LoadConfig )
     
     for (auto & entry : config.entries) {
         auto const seq = fixture.findSeq(entry.name);
+        bool circular = false;
 
 		// must be able to find every name that was in the config file
 		REQUIRE_NOT_NULL(seq);
+
+        REQUIRE_RC(ReferenceSeq_IsCircular(seq, &circular));
+        REQUIRE_EQ(entry.circular(), circular);
     }
 }
 
@@ -365,6 +388,13 @@ TEST_CASE ( VerifyConfig )
             auto const seq = fixture.getSeq(ref);
 
 			REQUIRE_NOT_NULL(seq);
+
+            auto const e = config.find(ref);
+            if (e && e->circular()) {
+                bool circular = false;
+                REQUIRE_RC(ReferenceSeq_IsCircular(seq, &circular));
+                REQUIRE(circular);
+            }
         }
     }
 }
