@@ -35,6 +35,6 @@ add_test( NAME Test_Align_Config
 
 add_test( NAME Test_Align_Config_2
 	COMMAND
-		Test_Align_Config_Tool db/valid.config db/valid.references db/ref.fasta
+		Test_Align_Config_Tool --config db/valid.config --ref-list db/valid.references --ref-file db/ref.fasta
 	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
