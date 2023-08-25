@@ -66,12 +66,12 @@ rc_t KDatabaseWhack ( KDatabase *self )
     }
     if ( rc == 0 )
     {
-        /* release dad */
-        if ( self -> dad != NULL )
+        /* release parent */
+        if ( self -> parent != NULL )
         {
-            rc = KDatabaseSever ( self -> dad );
+            rc = KDatabaseSever ( self -> parent );
             if ( rc == 0 )
-                self -> dad = NULL;
+                self -> parent = NULL;
         }
         /* remove from mgr */
         if ( rc == 0 )
@@ -228,7 +228,7 @@ rc_t KDBManagerVOpenDBReadInt ( const KDBManager *self,
             KDirectoryRelease ( dir );
         }
     }
-    
+
     return rc;
 }
 
@@ -295,7 +295,7 @@ rc_t KDatabaseVOpenDBRead ( const KDatabase *self,
         if ( rc == 0 )
         {
             KDatabase *db = ( KDatabase* ) * dbp;
-            db -> dad = KDatabaseAttach ( self );
+            db -> parent = KDatabaseAttach ( self );
         }
     }
 
@@ -424,10 +424,10 @@ rc_t KDatabaseOpenParentRead ( const KDatabase *self, const KDatabase **par )
             rc = RC ( rcDB, rcDatabase, rcAccessing, rcSelf, rcNull );
         else
         {
-            rc = KDatabaseAddRef ( self -> dad );
+            rc = KDatabaseAddRef ( self -> parent );
             if ( rc == 0 )
             {
-                * par = self -> dad;
+                * par = self -> parent;
                 return 0;
             }
         }
@@ -493,4 +493,4 @@ rc_t KDatabaseListIdx ( struct KDatabase const *self, KNamelist **names )
 
     return RC ( rcDB, rcDatabase, rcListing, rcSelf, rcNull );
 }
-   
+

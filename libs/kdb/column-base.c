@@ -104,6 +104,11 @@ rc_t KColumnSever ( const KColumn *self )
         return self -> vt -> call;              \
     else                                        \
         return RC ( rcVDB, rcCursor, rcAccessing, rcSelf, rcNull );
+#define DISPATCH_BOOL(call)  \
+    if ( self != NULL && self -> vt != NULL )   \
+        return self -> vt -> call;              \
+    else                                        \
+        return false;
 
 LIB_EXPORT rc_t CC KColumnAddRef ( const KColumn *self )
 {
@@ -115,7 +120,7 @@ LIB_EXPORT rc_t CC KColumnRelease ( const KColumn *self )
 }
 KDB_EXTERN bool CC KColumnLocked ( const KColumn *self )
 {
-    DISPATCH( locked( self ) );
+    DISPATCH_BOOL( locked( self ) );
 }
 KDB_EXTERN rc_t CC KColumnVersion ( const KColumn *self, uint32_t *version )
 {

@@ -1,0 +1,174 @@
+/*===========================================================================
+*
+*                            PUBLIC DOMAIN NOTICE
+*               National Center for Biotechnology Information
+*
+*  This software/database is a "United States Government Work" under the
+*  terms of the United States Copyright Act.  It was written as part of
+*  the author's official duties as a United States Government employee and
+*  thus cannot be copyrighted.  This software/database is freely available
+*  to the public for use. The National Library of Medicine and the U.S.
+*  Government have not placed any restriction on its use or reproduction.
+*
+*  Although all reasonable efforts have been taken to ensure the accuracy
+*  and reliability of the software and data, the NLM and the U.S.
+*  Government do not and cannot warrant the performance or results that
+*  may be obtained by using this software or data. The NLM and the U.S.
+*  Government disclaim all warranties, express or implied, including
+*  warranties of performance, merchantability or fitness for any particular
+*  purpose.
+*
+*  Please cite the author in any work or product based on this material.
+*
+* ===========================================================================
+*
+*/
+
+/**
+* Unit tests for read-side KDatabase
+*/
+
+#include <ktst/unit_test.hpp>
+
+#include <../libs/kdb/rdatabase.h>
+
+#include <klib/rc.h>
+
+// #include <kdb/manager.h>
+// #include <kdb/kdb-priv.h>
+
+using namespace std;
+
+TEST_SUITE(KRTableTestSuite);
+
+static const string ScratchDir = "./data/";
+
+class KDatabase_Fixture
+{
+public:
+    KDatabase_Fixture()
+    {
+        THROW_ON_RC( KDirectoryNativeDir( & m_dir ) );
+    }
+    ~KDatabase_Fixture()
+    {
+        KDatabaseRelease( m_tbl );
+        KDirectoryRelease( m_dir );
+    }
+    void Setup( const string testName )
+    {
+        const string ColumnName = ScratchDir + testName;
+        THROW_ON_RC( KDatabaseMake( & m_tbl, m_dir, ColumnName.c_str() ) );
+        KDirectoryAddRef( m_dir); // KDatabaseMake does not call AddRef
+    }
+
+    KDirectory * m_dir = nullptr;
+    KDatabase * m_tbl = nullptr;
+};
+
+
+//NB for now make the simplest calls possible, to test the vtable plumbing
+
+FIXTURE_TEST_CASE(KRTable_AddRelease, KDatabase_Fixture)
+{
+    Setup( GetName() );
+
+    REQUIRE_EQ( 1, (int)atomic32_read( & m_tbl -> dad . refcount ) );
+    REQUIRE_RC( KDatabaseAddRef( m_tbl ) );
+    REQUIRE_EQ( 2, (int)atomic32_read( & m_tbl -> dad . refcount ) );
+    REQUIRE_RC( KDatabaseRelease( m_tbl ) );
+    REQUIRE_EQ( 1, (int)atomic32_read( & m_tbl -> dad . refcount ) );
+    // use valgrind to find any leaks
+}
+#if 0
+FIXTURE_TEST_CASE(KRTable_Locked, KDatabase_Fixture)
+{
+    Setup( GetName() );
+
+    REQUIRE( ! KDatabaseLocked( m_tbl ) );
+}
+
+FIXTURE_TEST_CASE(KRTable_Exists, KDatabase_Fixture)
+{
+    Setup( GetName() );
+
+    REQUIRE( ! KDatabaseExists( m_tbl, kptIndex, "%s", GetName() ) );
+}
+
+FIXTURE_TEST_CASE(KRTable_IsAlias, KDatabase_Fixture)
+{
+    Setup( GetName() );
+
+    REQUIRE( ! KDatabaseIsAlias( m_tbl, kptIndex, nullptr, 0, GetName() ) );
+}
+
+FIXTURE_TEST_CASE(KRTable_Writable, KDatabase_Fixture)
+{
+    Setup( GetName() );
+
+    REQUIRE_EQ( -1, (int)KDatabaseWritable( m_tbl, kptIndex, "%s", GetName() ) ); // "TBD" for read side
+}
+
+FIXTURE_TEST_CASE(KDatabase_OpenManagerRead, KDatabase_Fixture)
+{
+    Setup( GetName() );
+
+    struct KDBManager const *mgr;
+    REQUIRE_RC( KDatabaseOpenManagerRead( m_tbl, &mgr ) );
+    REQUIRE_NULL( mgr );
+}
+
+FIXTURE_TEST_CASE(KDatabase_OpenParentRead, KDatabase_Fixture)
+{
+    Setup( GetName() );
+
+    struct KDatabase const *db;
+    REQUIRE_RC( KDatabaseOpenParentRead( m_tbl, &db ) );
+    REQUIRE_NULL( db );
+}
+
+FIXTURE_TEST_CASE(KRTable_HasRemoteData, KDatabase_Fixture)
+{
+    Setup( GetName() );
+
+    REQUIRE( ! KDatabaseHasRemoteData( m_tbl ) );
+}
+
+FIXTURE_TEST_CASE(KRTable_OpenDirectoryRead, KDatabase_Fixture)
+{
+    Setup( GetName() );
+    const KDirectory * dir = nullptr;
+    REQUIRE_RC( KDatabaseOpenDirectoryRead( m_tbl, &dir ) );
+}
+#endif
+//////////////////////////////////////////// Main
+extern "C"
+{
+
+#include <kapp/args.h>
+#include <kfg/config.h>
+
+ver_t CC KAppVersion ( void )
+{
+    return 0x1000000;
+}
+rc_t CC UsageSummary (const char * progname)
+{
+    return 0;
+}
+
+rc_t CC Usage ( const Args * args )
+{
+    return 0;
+}
+
+const char UsageDefaultName[] = "Test_KDB_KRTable";
+
+rc_t CC KMain ( int argc, char *argv [] )
+{
+    KConfigDisableUserSettings();
+    rc_t rc=KRTableTestSuite(argc, argv);
+    return rc;
+}
+
+}

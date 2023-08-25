@@ -104,6 +104,11 @@ rc_t KTableSever ( const KTable *self )
         return self -> vt -> call;              \
     else                                        \
         return RC ( rcVDB, rcCursor, rcAccessing, rcSelf, rcNull );
+#define DISPATCH_BOOL(call)  \
+    if ( self != NULL && self -> vt != NULL )   \
+        return self -> vt -> call;              \
+    else                                        \
+        return false;
 
 LIB_EXPORT rc_t CC KTableAddRef ( const KTable *self )
 {
@@ -115,12 +120,12 @@ LIB_EXPORT rc_t CC KTableRelease ( const KTable *self )
 }
 LIB_EXPORT bool CC KTableLocked ( const KTable *self )
 {
-    DISPATCH( locked( self ) );
+    DISPATCH_BOOL( locked( self ) );
 }
 LIB_EXPORT bool CC KTableVExists ( const KTable *self, uint32_t type,
     const char *name, va_list args )
 {
-    DISPATCH( vExists( self, type, name, args ) );
+    DISPATCH_BOOL( vExists( self, type, name, args ) );
 }
 LIB_EXPORT bool CC KTableExists ( const KTable *self, uint32_t type, const char *name, ... )
 {
@@ -137,7 +142,7 @@ LIB_EXPORT bool CC KTableExists ( const KTable *self, uint32_t type, const char 
 }
 LIB_EXPORT bool CC KTableIsAlias ( const KTable *self, uint32_t type, char *resolved, size_t rsize, const char *name )
 {
-    DISPATCH( isAlias( self, type, resolved, rsize, name ) );
+    DISPATCH_BOOL( isAlias( self, type, resolved, rsize, name ) );
 }
 LIB_EXPORT rc_t CC KTableVWritable ( const KTable *self, uint32_t type,
     const char *name, va_list args )
@@ -167,7 +172,7 @@ LIB_EXPORT rc_t CC KTableOpenParentRead ( const KTable *self, const struct KData
 }
 LIB_EXPORT bool CC KTableHasRemoteData ( const KTable *self )
 {
-    DISPATCH( hasRemoteData( self ) );
+    DISPATCH_BOOL( hasRemoteData( self ) );
 }
 LIB_EXPORT rc_t CC KTableOpenDirectoryRead ( const KTable *self, const KDirectory **dir )
 {

@@ -57,6 +57,16 @@
  *  connection to a database within file system
  */
 
+static rc_t KWDatabaseWhack ( KDatabase *self );
+
+static KDatabase_vt KRDatabase_vt =
+{
+    KWDatabaseWhack,
+    KDatabaseBaseBaseAddRef,
+    KDatabaseBaseBaseRelease
+};
+
+
 /* GetPath
  *  return the absolute path to DB
  */
@@ -74,22 +84,22 @@ LIB_EXPORT rc_t CC KDatabaseGetPath ( struct KDatabase const *self,
 /* Whack
  */
 static
-rc_t KDatabaseWhack ( KDatabase *self )
+rc_t KWDatabaseWhack ( KDatabase *self )
 {
     rc_t rc = 0;
     KDBManager *mgr = self -> mgr;
     KSymbol * symb;
     assert ( mgr != NULL );
 
-    KRefcountWhack ( & self -> refcount, "KDatabase" );
+    KRefcountWhack ( & self -> dad . refcount, "KDatabase" );
 
-    /* release dad */
-    if ( self -> dad != NULL )
+    /* release parent */
+    if ( self -> parent != NULL )
     {
-        rc = KDatabaseSever ( self -> dad );
+        rc = KDatabaseSever ( self -> parent );
         if ( rc != 0 )
             return rc;
-        self -> dad = NULL;
+        self -> parent = NULL;
     }
 
     /* shut down md5 sum file if it is open */
@@ -117,86 +127,10 @@ rc_t KDatabaseWhack ( KDatabase *self )
         }
     }
 
-    KRefcountInit ( & self -> refcount, 1, "KDatabase", "whack", "kdb" );
+    KRefcountInit ( & self -> dad . refcount, 1, "KDatabase", "whack", "kdb" );
 
     return rc;
 }
-
-
-/* AddRef
- * Release
- *  all objects are reference counted
- *  NULL references are ignored
- */
-LIB_EXPORT rc_t CC KDatabaseAddRef ( const KDatabase *cself )
-{
-    KDatabase *self = ( KDatabase* ) cself;
-    if ( cself != NULL )
-    {
-        switch ( KRefcountAdd ( & self -> refcount, "KDatabase" ) )
-        {
-        case krefLimit:
-            return RC ( rcDB, rcDatabase, rcAttaching, rcRange, rcExcessive );
-        }
-        ++ self -> opencount;
-    }
-    return 0;
-}
-
-LIB_EXPORT rc_t CC KDatabaseRelease ( const KDatabase *cself )
-{
-    KDatabase *self = ( KDatabase* ) cself;
-    if ( cself != NULL )
-    {
-        switch ( KRefcountDrop ( & self -> refcount, "KDatabase" ) )
-        {
-        case krefWhack:
-            return KDatabaseWhack ( ( KDatabase* ) self );
-        case krefLimit:
-            return RC ( rcDB, rcDatabase, rcReleasing, rcRange, rcExcessive );
-        }
-        -- self -> opencount;
-    }
-    return 0;
-}
-
-
-/* Attach
- */
-KDatabase *KDatabaseAttach ( const KDatabase *cself )
-{
-    KDatabase *self = ( KDatabase* ) cself;
-    if ( cself != NULL )
-    {
-        switch ( KRefcountAddDep ( & self -> refcount, "KDatabase" ) )
-        {
-        case krefLimit:
-            return NULL;
-        }
-    }
-    return self;
-}
-
-/* Sever
- *  like Release, except called internally
- *  indicates that a child object is letting go...
- */
-rc_t KDatabaseSever ( const KDatabase *cself )
-{
-    KDatabase *self = ( KDatabase* ) cself;
-    if ( cself != NULL )
-    {
-        switch ( KRefcountDropDep ( & self -> refcount, "KDatabase" ) )
-        {
-        case krefWhack:
-            return KDatabaseWhack ( ( KDatabase* ) self );
-        case krefLimit:
-            return RC ( rcDB, rcDatabase, rcReleasing, rcRange, rcExcessive );
-        }
-    }
-    return 0;
-}
-
 
 /* Make
  *  make an initialized structure
@@ -220,6 +154,9 @@ rc_t KDatabaseMake ( KDatabase **dbp, const KDirectory *dir,
     }
 
     memset ( db, 0, sizeof * db );
+    db -> dad . vt = & KRDatabase_vt;
+    KRefcountInit ( & db -> dad . refcount, 1, "KDatabase", "make", path );
+
     db -> dir = ( KDirectory* ) dir;
     db -> md5 = md5;
     rc = KMD5SumFmtAddRef ( md5 );
@@ -229,7 +166,6 @@ rc_t KDatabaseMake ( KDatabase **dbp, const KDirectory *dir,
     if ( md5 != NULL )
         db -> cmode |= kcmMD5;
 
-    KRefcountInit ( & db -> refcount, 1, "KDatabase", "make", path );
     db -> opencount = 1;
     db -> read_only = read_only;
 
@@ -528,8 +464,8 @@ LIB_EXPORT rc_t CC KDatabaseVCreateDB ( KDatabase *self,
             if ( rc == 0 )
             {
                 KDatabase *db = ( KDatabase* ) * dbp;
-                db -> dad = self;
-                atomic32_inc ( & self -> refcount );
+                db -> parent = self;
+                atomic32_inc ( & self -> dad . refcount );
             }
         }
     }
@@ -719,7 +655,7 @@ LIB_EXPORT rc_t CC KDatabaseVOpenDBRead ( const KDatabase *self,
         if ( rc == 0 && ! is_cached )
         {
             KDatabase *db = ( KDatabase* ) * dbp;
-            db -> dad = KDatabaseAttach ( self );
+            db -> parent = KDatabaseAttach ( self );
         }
     }
 
@@ -919,8 +855,8 @@ LIB_EXPORT rc_t CC KDatabaseVOpenDBUpdate ( KDatabase *self,
         if ( rc == 0 )
         {
             KDatabase *db = ( KDatabase* ) * dbp;
-            db -> dad = self;
-            atomic32_inc ( & self -> refcount );
+            db -> parent = self;
+            atomic32_inc ( & self -> dad . refcount );
         }
     }
 
@@ -1388,10 +1324,10 @@ LIB_EXPORT rc_t CC KDatabaseOpenParentRead ( const KDatabase *self, const KDatab
             rc = RC ( rcDB, rcDatabase, rcAccessing, rcSelf, rcNull );
         else
         {
-            rc = KDatabaseAddRef ( self -> dad );
+            rc = KDatabaseAddRef ( self -> parent );
             if ( rc == 0 )
             {
-                * par = self -> dad;
+                * par = self -> parent;
                 return 0;
             }
         }
@@ -1412,14 +1348,14 @@ LIB_EXPORT rc_t CC KDatabaseOpenParentUpdate ( KDatabase *self, KDatabase **par 
     {
         if ( self == NULL )
             rc = RC ( rcDB, rcDatabase, rcAccessing, rcSelf, rcNull );
-        else if ( self -> dad != NULL && self -> dad -> read_only )
+        else if ( self -> parent != NULL && self -> parent -> read_only )
             rc = RC ( rcDB, rcDatabase, rcAccessing, rcDatabase, rcReadonly );
         else
         {
-            rc = KDatabaseAddRef ( self -> dad );
+            rc = KDatabaseAddRef ( self -> parent );
             if ( rc == 0 )
             {
-                * par = self -> dad;
+                * par = self -> parent;
                 return 0;
             }
         }
@@ -1721,7 +1657,7 @@ static rc_t copy_meta_for_all_tables_in_db( KDatabase *self, const KDatabase *sr
             rc = KNamelistCount( tables_1, &count );
             if ( 0 == rc ) {
                 uint32_t idx;
-                for ( idx = 0; 0 == rc && idx < count; ++idx ) { 
+                for ( idx = 0; 0 == rc && idx < count; ++idx ) {
                     const char * tbl_name;
                     rc = KNamelistGet( tables_1, idx, &tbl_name );
                     if ( 0 == rc ) {

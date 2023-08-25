@@ -1020,12 +1020,7 @@ static
 bool CC
 KWTableLocked ( const KTable *self )
 {
-    rc_t rc;
-
-    if ( self == NULL )
-        return false;
-
-    rc = KDBWritable ( self -> dir, "." );
+    rc_t rc = KDBWritable ( self -> dir, "." );
     return GetRCState ( rc ) == rcLocked;
 }
 
@@ -1041,7 +1036,7 @@ static
 bool CC
 KWTableVExists ( const KTable *self, uint32_t type, const char *name, va_list args )
 {
-    if ( self != NULL && name != NULL && name [ 0 ] != 0 )
+    if ( name != NULL && name [ 0 ] != 0 )
     {
         rc_t rc;
         const char *ns;
@@ -1093,7 +1088,7 @@ static
 bool CC
 KWTableIsAlias ( const KTable *self, uint32_t type, char *resolved, size_t rsize, const char *name )
 {
-    if ( self != NULL && name != NULL && name [ 0 ] != 0 )
+    if ( name != NULL && name [ 0 ] != 0 )
     {
         rc_t rc;
         const char *ns;
@@ -1398,16 +1393,11 @@ KWTableOpenManagerRead ( const KTable *self, const KDBManager **mgr )
         rc = RC ( rcDB, rcTable, rcAccessing, rcParam, rcNull );
     else
     {
-        if ( self == NULL )
-            rc = RC ( rcDB, rcTable, rcAccessing, rcSelf, rcNull );
-        else
+        rc = KDBManagerAddRef ( self -> mgr );
+        if ( rc == 0 )
         {
-            rc = KDBManagerAddRef ( self -> mgr );
-            if ( rc == 0 )
-            {
-                * mgr = self -> mgr;
-                return 0;
-            }
+            * mgr = self -> mgr;
+            return 0;
         }
 
         * mgr = NULL;
@@ -1457,16 +1447,11 @@ KWTableOpenParentRead ( const KTable *self, const KDatabase **db )
         rc = RC ( rcDB, rcTable, rcAccessing, rcParam, rcNull );
     else
     {
-        if ( self == NULL )
-            rc = RC ( rcDB, rcTable, rcAccessing, rcSelf, rcNull );
-        else
+        rc = KDatabaseAddRef ( self -> db );
+        if ( rc == 0 )
         {
-            rc = KDatabaseAddRef ( self -> db );
-            if ( rc == 0 )
-            {
-                * db = self -> db;
-                return 0;
-            }
+            * db = self -> db;
+            return 0;
         }
 
         * db = NULL;
@@ -1517,15 +1502,8 @@ KWTableOpenDirectoryRead ( const KTable *self, const KDirectory **dir )
         rc = RC ( rcDB, rcTable, rcAccessing, rcParam, rcNull );
     else
     {
-        if ( self == NULL )
-            rc = RC ( rcDB, rcTable, rcAccessing, rcSelf, rcNull );
-        else
-        {
-            * dir = self -> dir;
-            return KDirectoryAddRef ( * dir );
-        }
-
-        * dir = NULL;
+        * dir = self -> dir;
+        return KDirectoryAddRef ( * dir );
     }
 
     return rc;

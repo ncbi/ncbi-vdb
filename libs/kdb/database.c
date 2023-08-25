@@ -26,7 +26,7 @@
 
 #define KONST const
 #include <kdb/extern.h>
-#include "database-priv.h"
+#include "rdatabase.h"
 #include "dbmgr-priv.h"
 #include "kdb-priv.h"
 #undef KONST
@@ -53,8 +53,18 @@
 
 /*--------------------------------------------------------------------------
  * KDatabase
- *  connection to a database within file system
+ *  connection to a database within file system, read side
  */
+
+static rc_t KRDatabaseWhack ( KDatabase *self );
+
+static KDatabase_vt KRDatabase_vt =
+{
+    KRDatabaseWhack,
+    KDatabaseBaseBaseAddRef,
+    KDatabaseBaseBaseRelease
+};
+
 
 /* GetPath
  *  return the absolute path to DB
@@ -75,18 +85,19 @@ LIB_EXPORT rc_t CC KDatabaseGetPath ( KDatabase const *self,
 /* Whack
  */
 static
-rc_t KDatabaseWhack ( KDatabase *self )
+rc_t
+KRDatabaseWhack ( KDatabase *self )
 {
     rc_t rc = 0;
 
-    KRefcountWhack ( & self -> refcount, "KDatabase" );
+    KRefcountWhack ( & self -> dad . refcount, "KDatabase" );
 
-    /* release dad */
-    if ( self -> dad != NULL )
+    /* release parent */
+    if ( self -> parent != NULL )
     {
-        rc = KDatabaseSever ( self -> dad );
+        rc = KDatabaseSever ( self -> parent );
         if ( rc == 0 )
-            self -> dad = NULL;
+            self -> parent = NULL;
     }
 
     /* remove from mgr */
@@ -101,82 +112,14 @@ rc_t KDatabaseWhack ( KDatabase *self )
         return 0;
     }
 
-    KRefcountInit ( & self -> refcount, 1, "KDatabase", "whack", "kdb" );
+    KRefcountInit ( & self -> dad . refcount, 1, "KDatabase", "whack", "kdb" );
 
     return rc;
 }
 
-
-/* AddRef
- * Release
- *  all objects are reference counted
- *  NULL references are ignored
- */
-LIB_EXPORT rc_t CC KDatabaseAddRef ( const KDatabase *self )
-{
-    if ( self != NULL )
-    {
-        switch ( KRefcountAdd ( & self -> refcount, "KDatabase" ) )
-        {
-        case krefLimit:
-            return RC ( rcDB, rcDatabase, rcAttaching, rcRange, rcExcessive );
-        }
-    }
-    return 0;
-}
-
-LIB_EXPORT rc_t CC KDatabaseRelease ( const KDatabase *self )
-{
-    if ( self != NULL )
-    {
-        switch ( KRefcountDrop ( & self -> refcount, "KDatabase" ) )
-        {
-        case krefWhack:
-            return KDatabaseWhack ( ( KDatabase* ) self );
-        case krefNegative:
-            return RC ( rcDB, rcDatabase, rcReleasing, rcRange, rcExcessive );
-        }
-    }
-    return 0;
-}
-
-/* Sever
- *  like Release, except called internally
- *  indicates that a child object is letting go...
- */
-KDatabase *KDatabaseAttach ( const KDatabase *self )
-{
-    if ( self != NULL )
-    {
-        switch ( KRefcountAddDep ( & self -> refcount, "KDatabase" ) )
-        {
-        case krefLimit:
-            return NULL;
-        }
-    }
-    return ( KDatabase* ) self;
-}
-
-rc_t KDatabaseSever ( const KDatabase *self )
-{
-    if ( self != NULL )
-    {
-        switch ( KRefcountDropDep ( & self -> refcount, "KDatabase" ) )
-        {
-        case krefWhack:
-            return KDatabaseWhack ( ( KDatabase* ) self );
-        case krefNegative:
-            return RC ( rcDB, rcDatabase, rcReleasing, rcRange, rcExcessive );
-        }
-    }
-    return 0;
-}
-
-
 /* Make
  *  make an initialized structure
  */
-static
 rc_t KDatabaseMake ( KDatabase **dbp, const KDirectory *dir, const char *path )
 {
     KDatabase *db;
@@ -191,15 +134,18 @@ rc_t KDatabaseMake ( KDatabase **dbp, const KDirectory *dir, const char *path )
         return RC ( rcDB, rcDatabase, rcConstructing, rcMemory, rcExhausted );
     }
 
+    memset ( db, 0, sizeof * db );
+    db -> dad . vt = & KRDatabase_vt;
+    KRefcountInit ( & db -> dad . refcount, 1, "KDatabase", "make", path );
+
     db -> mgr = NULL;
-    db -> dad = NULL;
+    db -> parent = NULL;
     db -> dir = dir;
 
     /* for open mode we don't care about creation mode or checksum, setting defaults */
     db -> cmode = kcmOpen;
     db -> checksum = kcsNone;
 
-    KRefcountInit ( & db -> refcount, 1, "KDatabase", "make", path );
     strcpy ( db -> path, path );
 
     /* YES,
@@ -356,7 +302,7 @@ LIB_EXPORT rc_t CC KDatabaseVOpenDBRead ( const KDatabase *self,
         if ( rc == 0 )
         {
             KDatabase *db = ( KDatabase* ) * dbp;
-            db -> dad = KDatabaseAttach ( self );
+            db -> parent = KDatabaseAttach ( self );
         }
     }
 
@@ -601,10 +547,10 @@ LIB_EXPORT rc_t CC KDatabaseOpenParentRead ( const KDatabase *self, const KDatab
             rc = RC ( rcDB, rcDatabase, rcAccessing, rcSelf, rcNull );
         else
         {
-            rc = KDatabaseAddRef ( self -> dad );
+            rc = KDatabaseAddRef ( self -> parent );
             if ( rc == 0 )
             {
-                * par = self -> dad;
+                * par = self -> parent;
                 return 0;
             }
         }

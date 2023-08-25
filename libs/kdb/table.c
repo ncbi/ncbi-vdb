@@ -409,12 +409,7 @@ static
 bool CC
 KRTableLocked ( const KTable *self )
 {
-    rc_t rc;
-
-    if ( self == NULL )
-        return false;
-
-    rc = KDBWritable ( self -> dir, "." );
+    rc_t rc = KDBWritable ( self -> dir, "." );
     return GetRCState ( rc ) == rcLocked;
 }
 
@@ -430,7 +425,7 @@ static
 bool CC
 KRTableVExists ( const KTable *self, uint32_t type, const char *name, va_list args )
 {
-    if ( self != NULL && name != NULL && name [ 0 ] != 0 )
+    if ( name != NULL && name [ 0 ] != 0 )
     {
         rc_t rc;
         const char *ns;
@@ -482,7 +477,7 @@ static
 bool CC
 KRTableIsAlias ( const KTable *self, uint32_t type, char *resolved, size_t rsize, const char *name )
 {
-    if ( self != NULL && name != NULL && name [ 0 ] != 0 )
+    if ( name != NULL && name [ 0 ] != 0 )
     {
         rc_t rc;
         const char *ns;
@@ -565,19 +560,12 @@ static rc_t CC KRTableOpenManagerRead ( const KTable *self, const KDBManager **m
         rc = RC ( rcDB, rcTable, rcAccessing, rcParam, rcNull );
     else
     {
-        if ( self == NULL )
-            rc = RC ( rcDB, rcTable, rcAccessing, rcSelf, rcNull );
-        else
+        rc = KDBManagerAddRef ( self -> mgr );
+        if ( rc == 0 )
         {
-            rc = KDBManagerAddRef ( self -> mgr );
-            if ( rc == 0 )
-            {
-                * mgr = self -> mgr;
-                return 0;
-            }
+            * mgr = self -> mgr;
+            return 0;
         }
-
-        * mgr = NULL;
     }
 
     return rc;
@@ -598,19 +586,12 @@ KRTableOpenParentRead ( const KTable *self, const KDatabase **db )
         rc = RC ( rcDB, rcTable, rcAccessing, rcParam, rcNull );
     else
     {
-        if ( self == NULL )
-            rc = RC ( rcDB, rcTable, rcAccessing, rcSelf, rcNull );
-        else
+        rc = KDatabaseAddRef ( self -> db );
+        if ( rc == 0 )
         {
-            rc = KDatabaseAddRef ( self -> db );
-            if ( rc == 0 )
-            {
-                * db = self -> db;
-                return 0;
-            }
+            * db = self -> db;
+            return 0;
         }
-
-        * db = NULL;
     }
 
     return rc;
@@ -630,15 +611,8 @@ KRTableOpenDirectoryRead ( const KTable *self, const KDirectory **dir )
         rc = RC ( rcDB, rcTable, rcAccessing, rcParam, rcNull );
     else
     {
-        if ( self == NULL )
-            rc = RC ( rcDB, rcTable, rcAccessing, rcSelf, rcNull );
-        else
-        {
-            * dir = self -> dir;
-            return KDirectoryAddRef ( * dir );
-        }
-
-        * dir = NULL;
+        * dir = self -> dir;
+        return KDirectoryAddRef ( * dir );
     }
 
     return rc;
@@ -775,7 +749,7 @@ static
 bool CC
 KRTableHasRemoteData ( const KTable *self )
 {
-    bool result = self != NULL && KDirectoryIsKArcDir ( self -> dir ) &&
+    bool result = KDirectoryIsKArcDir ( self -> dir ) &&
             KArcDirIsFromRemote ( (const KArcDir * ) self -> dir );
     return result;
 }
