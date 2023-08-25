@@ -42,6 +42,9 @@
 #include <klib/symbol.h>
 #include <kfs/md5.h>
 
+#define KTABLE_IMPL KTable
+#include "table-base.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -54,7 +57,6 @@ struct KDatabase;
 struct KDBManager;
 struct KDirectory;
 
-
 /*--------------------------------------------------------------------------
  * KTable
  *  represents a table
@@ -64,12 +66,13 @@ struct KDirectory;
  */
 struct KTable
 {
+    KTableBase dad;
+
     struct KDirectory *dir;
     struct KDBManager *mgr;
     struct KDatabase *db;
     struct KMD5SumFmt *md5;
 
-    KRefcount refcount;
     uint32_t opencount;
     bool use_md5;
     bool read_only;
@@ -81,13 +84,7 @@ struct KTable
     char path [ 1 ];
 };
 
-/* Attach
- * Sever
- *  like KTableRelease, except called internally
- *  indicates that a child object is letting go...
- */
-KTable *KTableAttach ( const KTable *self );
-rc_t KTableSever ( const KTable *self );
+rc_t KTableMake ( KTable **tblp, const KDirectory *dir, const char *path, KMD5SumFmt * md5, bool read_only );
 
 /* Cmp
  * Sort

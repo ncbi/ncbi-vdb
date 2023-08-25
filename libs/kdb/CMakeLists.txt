@@ -29,6 +29,7 @@ set( KDB_CMN
     dbmgr-cmn
     column-base
     columnblob-base
+    table-base.c
 )
 
 set( KDB_SRC

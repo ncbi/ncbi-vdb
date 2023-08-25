@@ -55,14 +55,34 @@
 #include <assert.h>
 
 /*--------------------------------------------------------------------------
- * turns ON verbose REFCOUNT tracing
- */
-#define REPORT_KTABLE_REFCOUNT 0
-
-/*--------------------------------------------------------------------------
  * KTable
  *  a collection of columns indexed by row id, metadata, indices
  */
+
+static rc_t KRTableWhack ( KTable *self );
+static bool CC KRTableLocked ( const KTable *self );
+static bool CC KRTableVExists ( const KTable *self, uint32_t type, const char *name, va_list args );
+static bool CC KRTableIsAlias ( const KTable *self, uint32_t type, char *resolved, size_t rsize, const char *name );
+static rc_t CC KRTableVWritable ( const KTable *self, uint32_t type, const char *name, va_list args );
+static rc_t CC KRTableOpenManagerRead ( const KTable *self, const KDBManager **mgr );
+static rc_t CC KRTableOpenParentRead ( const KTable *self, const KDatabase **db );
+static bool CC KRTableHasRemoteData ( const KTable *self );
+static rc_t CC KRTableOpenDirectoryRead ( const KTable *self, const KDirectory **dir );
+
+static KTableBase_vt KRTable_vt =
+{
+    KRTableWhack,
+    KTableBaseAddRef,
+    KTableBaseRelease,
+    KRTableLocked,
+    KRTableVExists,
+    KRTableIsAlias,
+    KRTableVWritable,
+    KRTableOpenManagerRead,
+    KRTableOpenParentRead,
+    KRTableHasRemoteData,
+    KRTableOpenDirectoryRead
+};
 
 /* GetPath
  *  return the absolute path to table
@@ -83,11 +103,10 @@ LIB_EXPORT rc_t CC KTableGetPath ( const KTable *self,
 /* Whack
  */
 static
-rc_t KTableWhack ( KTable *self )
+rc_t
+KRTableWhack ( KTable *self )
 {
     rc_t rc = 0;
-
-    KRefcountWhack ( & self -> refcount, "KTable" );
 
     if ( self -> db != NULL )
     {
@@ -102,128 +121,12 @@ rc_t KTableWhack ( KTable *self )
     if ( rc == 0 )
     {
         KDirectoryRelease ( self -> dir );
-        free ( self );
-        return 0;
+        return KTableBaseWhack( self );
     }
 
-    KRefcountInit ( & self -> refcount, 1, "KTable", "whack", "ktbl" );
+    KRefcountInit ( & self -> dad . refcount, 1, "KTable", "whack", "ktbl" );
 
     return rc;
-}
-
-#if REPORT_KTABLE_REFCOUNT
-void KTableGetName( KTable const *self, char const **rslt );
-#endif
-
-/* AddRef
- * Release
- *  all objects are reference counted
- *  NULL references are ignored
- */
-LIB_EXPORT rc_t CC KTableAddRef ( const KTable *self )
-{
-    if ( self != NULL )
-    {
-#if REPORT_KTABLE_REFCOUNT
-        uint32_t before = atomic32_read( &self -> refcount );
-#endif
-        int ret = KRefcountAdd ( & self -> refcount, "KTable" );
-#if REPORT_KTABLE_REFCOUNT
-        uint32_t after = atomic32_read( &self -> refcount );
-        char const * name;
-        KTableGetName( self, &name );
-        KDbgMsg( "KTableAddRef( %p %s ) %x ---> %x\n", self, name, before, after );
-#endif
-        switch ( ret )
-        {
-        case krefLimit:
-            return RC ( rcDB, rcTable, rcAttaching, rcRange, rcExcessive );
-        }
-    }
-    return 0;
-}
-
-LIB_EXPORT rc_t CC KTableRelease ( const KTable *self )
-{
-    if ( self != NULL )
-    {
-#if REPORT_KTABLE_REFCOUNT
-        uint32_t before = atomic32_read( &self -> refcount );
-#endif
-        int ret = KRefcountDrop ( & self -> refcount, "KTable" );
-#if REPORT_KTABLE_REFCOUNT
-        uint32_t after = atomic32_read( &self -> refcount );
-        char const * name;
-        KTableGetName( self, &name );
-        KDbgMsg( "KTableRelease( %p %s ) %x ---> %x\n", self, name, before, after );
-#endif
-
-        switch ( ret )
-        {
-        case krefWhack:
-            return KTableWhack ( ( KTable* ) self );
-        case krefNegative:
-            return RC ( rcDB, rcTable, rcReleasing, rcRange, rcExcessive );
-        }
-    }
-    return 0;
-}
-
-/* Attach
- * Sever
- */
-KTable *KTableAttach ( const KTable *self )
-{
-    if ( self != NULL )
-    {
-#if REPORT_KTABLE_REFCOUNT
-        uint32_t before = atomic32_read( &self -> refcount );
-#endif
-        int ret = KRefcountAddDep ( & self -> refcount, "KTable" );
-#if REPORT_KTABLE_REFCOUNT
-        uint32_t after = atomic32_read( &self -> refcount );
-        char const * name;
-        KTableGetName( self, &name );
-        KDbgMsg( "KTableAttach( %p %s ) %x ---> %x\n", self, name, before, after );
-#endif
-
-        switch ( ret )
-        {
-        case krefLimit:
-            return NULL;
-        }
-    }
-    return ( KTable* ) self;
-}
-
-/* Sever
- *  like KTableRelease, except called internally
- *  indicates that a child object is letting go...
- */
-rc_t KTableSever ( const KTable *self )
-{
-    if ( self != NULL )
-    {
-#if REPORT_KTABLE_REFCOUNT
-        uint32_t before = atomic32_read( &self -> refcount );
-#endif
-        int ret = KRefcountDropDep ( & self -> refcount, "KTable" );
-#if REPORT_KTABLE_REFCOUNT
-        uint32_t after = atomic32_read( &self -> refcount );
-        char const * name;
-        KTableGetName( self, &name );
-        KDbgMsg( "KTableSever( %p %s ) %x ---> %x\n", self, name, before, after );
-#endif
-
-        switch ( ret )
-        {
-        case krefWhack:
-            return KTableWhack ( ( KTable* ) self );
-        case krefNegative:
-            return RC ( rcDB, rcTable, rcReleasing, rcRange, rcExcessive );
-        }
-    }
-    return 0;
 }
 
 void KTableGetName(KTable const *self, char const **rslt)
@@ -240,7 +143,6 @@ void KTableGetName(KTable const *self, char const **rslt)
  *  make an initialized structure
  *  NB - does NOT attach reference to dir, but steals it
  */
-static
 rc_t KTableMake ( KTable **tblp, const KDirectory *dir, const char *path )
 {
     KTable *tbl;
@@ -256,17 +158,10 @@ rc_t KTableMake ( KTable **tblp, const KDirectory *dir, const char *path )
     }
 
     memset ( tbl, 0, sizeof * tbl );
+    tbl -> dad . vt = & KRTable_vt;
+    KRefcountInit ( & tbl -> dad . refcount, 1, "KTable", "make", path );
     tbl -> dir = dir;
-    KRefcountInit ( & tbl -> refcount, 1, "KTable", "make", path );
     strcpy ( tbl -> path, path );
-#if REPORT_KTABLE_REFCOUNT
-    {
-        uint32_t after = atomic32_read( &tbl -> refcount );
-        char const * name;
-        KTableGetName( tbl, &name );
-        KDbgMsg( "KTableMake( %p %s ) %x\n", self, name, after );
-    }
-#endif
 
     /* YES,
       DBG_VFS should be used here to be printed along with other VFS messages */
@@ -510,7 +405,9 @@ LIB_EXPORT rc_t CC KDatabaseVOpenTableRead ( const KDatabase *self,
 /* Locked
  *  returns non-zero if locked
  */
-LIB_EXPORT bool CC KTableLocked ( const KTable *self )
+static
+bool CC
+KRTableLocked ( const KTable *self )
 {
     rc_t rc;
 
@@ -529,7 +426,9 @@ LIB_EXPORT bool CC KTableLocked ( const KTable *self )
  *
  *  "path" [ IN ] - NUL terminated path
  */
-LIB_EXPORT bool CC KTableVExists ( const KTable *self, uint32_t type, const char *name, va_list args )
+static
+bool CC
+KRTableVExists ( const KTable *self, uint32_t type, const char *name, va_list args )
 {
     if ( self != NULL && name != NULL && name [ 0 ] != 0 )
     {
@@ -567,21 +466,6 @@ LIB_EXPORT bool CC KTableVExists ( const KTable *self, uint32_t type, const char
     return false;
 }
 
-LIB_EXPORT bool CC KTableExists ( const KTable *self, uint32_t type, const char *name, ... )
-{
-    bool exists;
-
-    va_list args;
-    va_start ( args, name );
-
-    exists = KTableVExists ( self, type, name, args );
-
-    va_end ( args );
-
-    return exists;
-}
-
-
 /* IsAlias
  *  returns true if object name is an alias
  *  returns path to fundamental name if it was aliased
@@ -594,8 +478,9 @@ LIB_EXPORT bool CC KTableExists ( const KTable *self, uint32_t type, const char 
  *
  *  "name" [ IN ] - NUL terminated object name
  */
-LIB_EXPORT bool CC KTableIsAlias ( const KTable *self, uint32_t type,
-    char *resolved, size_t rsize, const char *name )
+static
+bool CC
+KRTableIsAlias ( const KTable *self, uint32_t type, char *resolved, size_t rsize, const char *name )
 {
     if ( self != NULL && name != NULL && name [ 0 ] != 0 )
     {
@@ -660,32 +545,19 @@ LIB_EXPORT bool CC KTableIsAlias ( const KTable *self, uint32_t type,
  *
  *  "path" [ IN ] - NUL terminated path
  */
-LIB_EXPORT rc_t CC KTableVWritable ( const KTable *self, uint32_t type, const char *name, va_list args )
+static
+rc_t CC
+KRTableVWritable ( const KTable *self, uint32_t type, const char *name, va_list args )
 {
     /* TBD */
     return -1;
 }
 
-LIB_EXPORT rc_t CC KTableWritable ( const KTable *self, uint32_t type, const char *name, ... )
-{
-    rc_t rc;
-
-    va_list args;
-    va_start ( args, name );
-
-    rc = KTableVWritable ( self, type, name, args );
-
-    va_end ( args );
-
-    return rc;
-}
-
-
 /* OpenManager
  *  duplicate reference to manager
  *  NB - returned reference must be released
  */
-LIB_EXPORT rc_t CC KTableOpenManagerRead ( const KTable *self, const KDBManager **mgr )
+static rc_t CC KRTableOpenManagerRead ( const KTable *self, const KDBManager **mgr )
 {
     rc_t rc;
 
@@ -716,7 +588,9 @@ LIB_EXPORT rc_t CC KTableOpenManagerRead ( const KTable *self, const KDBManager 
  *  duplicate reference to parent database
  *  NB - returned reference must be released
  */
-LIB_EXPORT rc_t CC KTableOpenParentRead ( const KTable *self, const KDatabase **db )
+static
+rc_t CC
+KRTableOpenParentRead ( const KTable *self, const KDatabase **db )
 {
     rc_t rc;
 
@@ -746,7 +620,9 @@ LIB_EXPORT rc_t CC KTableOpenParentRead ( const KTable *self, const KDatabase **
 /* GetDirectory
  *  access the directory in use
  */
-LIB_EXPORT rc_t CC KTableOpenDirectoryRead ( const KTable *self, const KDirectory **dir )
+static
+rc_t CC
+KRTableOpenDirectoryRead ( const KTable *self, const KDirectory **dir )
 {
     rc_t rc;
 
@@ -895,7 +771,9 @@ LIB_EXPORT rc_t CC KTableListIdx ( const KTable *self, KNamelist **names )
  *  indicates whether some/all table data comes from network resource
  *  such as HttpFile or CacheteeFile
  */
-LIB_EXPORT bool CC KTableHasRemoteData ( const KTable *self )
+static
+bool CC
+KRTableHasRemoteData ( const KTable *self )
 {
     bool result = self != NULL && KDirectoryIsKArcDir ( self -> dir ) &&
             KArcDirIsFromRemote ( (const KArcDir * ) self -> dir );

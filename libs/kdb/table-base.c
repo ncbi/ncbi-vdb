@@ -1,0 +1,176 @@
+/*===========================================================================
+*
+*                            PUBLIC DOMAIN NOTICE
+*               National Center for Biotechnology Information
+*
+*  This software/database is a "United States Government Work" under the
+*  terms of the United States Copyright Act.  It was written as part of
+*  the author's official duties as a United States Government employee and
+*  thus cannot be copyrighted.  This software/database is freely available
+*  to the public for use. The National Library of Medicine and the U.S.
+*  Government have not placed any restriction on its use or reproduction.
+*
+*  Although all reasonable efforts have been taken to ensure the accuracy
+*  and reliability of the software and data, the NLM and the U.S.
+*  Government do not and cannot warrant the performance or results that
+*  may be obtained by using this software or data. The NLM and the U.S.
+*  Government disclaim all warranties, express or implied, including
+*  warranties of performance, merchantability or fitness for any particular
+*  purpose.
+*
+*  Please cite the author in any work or product based on this material.
+*
+* ===========================================================================
+*
+*/
+
+#include "table-base.h"
+
+#define KTable KTableBase
+#include <kdb/table.h>
+
+#include <kdb/extern.h>
+
+#include <klib/rc.h>
+
+rc_t KTableBaseWhack ( KTable *self )
+{
+    KRefcountWhack ( & self -> refcount, "KTable" );
+    free ( self );
+    return 0;
+}
+
+/* AddRef
+ * Release
+ *  all objects are reference counted
+ *  NULL references are ignored
+ */
+rc_t CC KTableBaseAddRef ( const KTable *self )
+{
+    switch ( KRefcountAdd ( & self -> refcount, "KTable" ) )
+    {
+    case krefLimit:
+        return RC ( rcDB, rcColumn, rcAttaching, rcRange, rcExcessive );
+    }
+    return 0;
+}
+
+rc_t CC KTableBaseRelease ( const KTable *self )
+{
+    switch ( KRefcountDrop ( & self -> refcount, "KTable" ) )
+    {
+    case krefWhack:
+        return self -> vt -> whack ( ( KTable* ) self );
+    case krefNegative:
+        return RC ( rcDB, rcColumn, rcReleasing, rcRange, rcExcessive );
+    }
+    return 0;
+}
+
+/* Attach
+ * Sever
+ */
+KTable *KTableAttach ( const KTable *self )
+{
+    if ( self != NULL )
+    {
+        switch ( KRefcountAddDep ( & self -> refcount, "KTable" ) )
+        {
+        case krefLimit:
+            return NULL;
+        }
+    }
+    return ( KTable* ) self;
+}
+
+rc_t KTableSever ( const KTable *self )
+{
+    if ( self != NULL )
+    {
+        switch ( KRefcountDropDep ( & self -> refcount, "KTable" ) )
+        {
+        case krefWhack:
+            return self -> vt -> whack ( ( KTable* ) self );
+        case krefNegative:
+            return RC ( rcDB, rcColumn, rcReleasing, rcRange, rcExcessive );
+        }
+    }
+    return 0;
+}
+
+/******************* dispatch functions ***********************/
+#define DISPATCH(call)  \
+    if ( self != NULL && self -> vt != NULL )   \
+        return self -> vt -> call;              \
+    else                                        \
+        return RC ( rcVDB, rcCursor, rcAccessing, rcSelf, rcNull );
+
+LIB_EXPORT rc_t CC KTableAddRef ( const KTable *self )
+{
+    DISPATCH( addRef( self ) );
+}
+LIB_EXPORT rc_t CC KTableRelease ( const KTable *self )
+{
+    DISPATCH( release( self ) );
+}
+LIB_EXPORT bool CC KTableLocked ( const KTable *self )
+{
+    DISPATCH( locked( self ) );
+}
+LIB_EXPORT bool CC KTableVExists ( const KTable *self, uint32_t type,
+    const char *name, va_list args )
+{
+    DISPATCH( vExists( self, type, name, args ) );
+}
+LIB_EXPORT bool CC KTableExists ( const KTable *self, uint32_t type, const char *name, ... )
+{
+    bool exists;
+
+    va_list args;
+    va_start ( args, name );
+
+    exists = self -> vt -> vExists ( self, type, name, args );
+
+    va_end ( args );
+
+    return exists;
+}
+LIB_EXPORT bool CC KTableIsAlias ( const KTable *self, uint32_t type, char *resolved, size_t rsize, const char *name )
+{
+    DISPATCH( isAlias( self, type, resolved, rsize, name ) );
+}
+LIB_EXPORT rc_t CC KTableVWritable ( const KTable *self, uint32_t type,
+    const char *name, va_list args )
+{
+    DISPATCH( vWritable( self, type, name, args ) );
+}
+LIB_EXPORT rc_t CC KTableWritable ( const KTable *self, uint32_t type, const char *name, ... )
+{
+    rc_t rc;
+
+    va_list args;
+    va_start ( args, name );
+
+    rc = self -> vt -> vWritable ( self, type, name, args );
+
+    va_end ( args );
+
+    return rc;
+}
+LIB_EXPORT rc_t CC KTableOpenManagerRead ( const KTable *self, struct KDBManager const **mgr )
+{
+    DISPATCH( openManagerRead( self, mgr ) );
+}
+LIB_EXPORT rc_t CC KTableOpenParentRead ( const KTable *self, const struct KDatabase **db )
+{
+    DISPATCH( openParentRead( self, db ) );
+}
+LIB_EXPORT bool CC KTableHasRemoteData ( const KTable *self )
+{
+    DISPATCH( hasRemoteData( self ) );
+}
+LIB_EXPORT rc_t CC KTableOpenDirectoryRead ( const KTable *self, const KDirectory **dir )
+{
+    DISPATCH( openDirectoryRead( self, dir ) );
+}
+

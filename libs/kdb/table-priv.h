@@ -31,9 +31,8 @@
 #include <kdb/table.h>
 #endif
 
-#ifndef _h_klib_refcount_
-#include <klib/refcount.h>
-#endif
+#define KTABLE_IMPL KTable
+#include "table-base.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -57,13 +56,16 @@ struct KDirectory;
  */
 struct KTable
 {
+    KTableBase dad;
+
     struct KDirectory const *dir;
     struct KDBManager const *mgr;
     struct KDatabase const *db;
-    KRefcount refcount;
     uint8_t prerelease;
     char path [ 1 ];
 };
+
+rc_t KTableMake ( KTable **tblp, const struct KDirectory *dir, const char *path );
 
 /* Attach
  * Sever

@@ -128,7 +128,8 @@ FIXTURE_TEST_CASE(KWColumn_OpenParentRead, KColumn_Fixture)
 {
     Setup( GetName() );
     const KTable * tbl = nullptr;
-    REQUIRE_RC( KColumnOpenParentRead( m_col, & tbl ) );
+    rc_t rc = SILENT_RC ( rcVDB, rcCursor, rcAccessing, rcSelf, rcNull );
+    REQUIRE_EQ( rc, KColumnOpenParentRead( m_col, & tbl ) );
     REQUIRE_NULL( tbl );
 }
 
