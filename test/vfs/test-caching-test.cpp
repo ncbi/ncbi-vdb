@@ -361,10 +361,12 @@ TEST_CASE ( SRR_INCOMPLETE_USER_REPO ) {
     NonCaching ( this );
 }
 #endif
-#ifdef ALL
+#ifndef ALL
 TEST_CASE ( REFSEQ_INCOMPLETE_USER_REPO ) {
     NonCaching ( this, eNone, eRefseq );
 }
+#endif
+#ifdef ALL
 TEST_CASE ( WGS_INCOMPLETE_USER_REPO ) {
     NonCaching ( this, eNone, eWgs );
 }
