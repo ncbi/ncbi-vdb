@@ -133,6 +133,8 @@ ALIGN_EXTERN rc_t CC ReferenceSeq_Get1stRow(const ReferenceSeq* cself, int64_t* 
     
 ALIGN_EXTERN rc_t CC ReferenceSeq_GetID(ReferenceSeq const *self, char const **rslt);
 
+ALIGN_EXTERN rc_t CC ReferenceSeq_IsCircular(ReferenceSeq const *self, bool *rslt);
+
 ALIGN_EXTERN rc_t CC ReferenceSeq_Compress(const ReferenceSeq* cself,
                                            uint32_t options,
                                            INSDC_coord_zero offset,

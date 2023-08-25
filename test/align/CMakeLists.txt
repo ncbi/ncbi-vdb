@@ -42,4 +42,13 @@ if (NOT WIN32)
 				--ref-file db/ref.fasta
 		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 	)
+
+	add_test( NAME Test_Align_Config_3
+	COMMAND
+		Test_Align_Config_Tool 
+			--config db/VDB-3698.config 
+			--ref-list db/VDB-3698.references 
+			--ref-file db/VDB-3698.fasta
+	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+)
 endif()
