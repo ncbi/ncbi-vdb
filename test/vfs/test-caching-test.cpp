@@ -641,6 +641,7 @@ extern "C" {
         return 0;
     }
     rc_t CC KMain ( int argc, char * argv [] ) {
+        setenv("HOME", ".", 1);
         KConfigDisableUserSettings ();
 if (
 0 ) assert ( ! KDbgSetString ( "VFS" ) );
