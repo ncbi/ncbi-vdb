@@ -79,16 +79,16 @@ public:
     unsigned countOf(OptDef const &optDef) const {
         return countOf(optDef.name);
     }
-    char const *valueOf(char const *name, int index = 0) const {
+    char const *valueOf(char const *name, unsigned index = 0) const {
         auto const count = countOf(name);
         if (index < count) {
-            auto value = (void const *){};
+            void const *value = nullptr;
             ErrorCode::throwIf(ArgsOptionValue(args, name, index, &value));
             return reinterpret_cast<char const *>(value);
         }
         return nullptr;
     }
-    char const *valueOf(OptDef const &optDef, int index = 0) const {
+    char const *valueOf(OptDef const &optDef, unsigned index = 0) const {
         return valueOf(optDef.name, index);
     }
 };
