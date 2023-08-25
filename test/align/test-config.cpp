@@ -397,20 +397,12 @@ rc_t CC Usage( const Args* args )
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
-#if 0
-	KDbgHandlerSetStdErr();
-	KDbgSetString("ALIGN-CFG");
-#endif
     KConfigDisableUserSettings();
-    try {
+    {
         auto const args = CommandLine(argc, argv);
         arguments = &args;
         return LoaderTestSuite(argc, argv);
     }
-    catch (std::invalid_argument const &e) {
-        std::cerr << "invalid argument: " << e.what() << std::endl;
-    }
-    return -1;
 }
 
 }
