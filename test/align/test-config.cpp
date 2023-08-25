@@ -79,16 +79,16 @@ public:
     unsigned countOf(OptDef const &optDef) const {
         return countOf(optDef.name);
     }
-    char const *valueOf(char const *name, int index = 0) const {
+    char const *valueOf(char const *name, unsigned index = 0) const {
         auto const count = countOf(name);
         if (index < count) {
-            auto value = (void const *){};
+            void const *value = nullptr;
             ErrorCode::throwIf(ArgsOptionValue(args, name, index, &value));
             return reinterpret_cast<char const *>(value);
         }
         return nullptr;
     }
-    char const *valueOf(OptDef const &optDef, int index = 0) const {
+    char const *valueOf(OptDef const &optDef, unsigned index = 0) const {
         return valueOf(optDef.name, index);
     }
 };
@@ -213,8 +213,9 @@ struct ConfigFile {
                 Entry e(line);
                 entries.emplace_back(e);
             }
-            catch (std::ios_base::failure const &e) {
+            catch (std::ios_base::failure const &ex) {
                 throw std::ios_base::failure("unparsable config file");
+                (void)ex;
             }
         }
     }
@@ -432,15 +433,11 @@ rc_t CC KMain ( int argc, char *argv [] )
 	KDbgSetString("ALIGN-CFG");
 #endif
     KConfigDisableUserSettings();
-    try {
+    {
         auto const args = CommandLine(argc, argv);
         arguments = &args;
         return LoaderTestSuite(argc, argv);
     }
-    catch (std::invalid_argument const &e) {
-        std::cerr << "invalid argument: " << e.what() << std::endl;
-    }
-    return -1;
 }
 
 }
