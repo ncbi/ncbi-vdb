@@ -283,7 +283,7 @@ static void addToKeys(ReferenceMgr *const self, unsigned const objectNo, char co
         void *const tmp = realloc(bucket->index, (1 + bucket->count) * sizeof(bucket->index[0]));
         assert(tmp != NULL);
 
-        ALIGN_CF_DBGF(("(%p) RefSeq object %u: adding key '%s' to bucket %03X[%u]\n", self, objectNo, key, hv, bucket->count));
+        ALIGN_CF_DBGF(("(%p) RefSeq object %u: adding key '%s' to bucket %03X[%u] in keys table\n", self, objectNo, key, hv, bucket->count));
         if (tmp != NULL) {
             bucket->index = tmp;
             bucket->index[bucket->count] = objectNo;
@@ -305,7 +305,7 @@ static void addToUsed(ReferenceMgr *const self, unsigned const objectNo, char co
         void *const tmp = realloc(bucket->index, (1 + bucket->count) * sizeof(bucket->index[0]));
         assert(tmp != NULL);
 
-        ALIGN_CF_DBGF(("(%p) RefSeq object %u: adding key '%s' to bucket %03X[%u]\n", self, objectNo, key, hv, bucket->count));
+        ALIGN_CF_DBGF(("(%p) RefSeq object %u: adding key '%s' to bucket %03X[%u] in used table\n", self, objectNo, key, hv, bucket->count));
         if (tmp != NULL) {
             bucket->index = tmp;
             bucket->index[bucket->count] = objectNo;
@@ -1551,6 +1551,7 @@ static rc_t findSeq(ReferenceMgr *const self,
 
         if (fasta) {
             chosen->type = rst_dead;
+            fasta->circular = chosen->circular;
             chosen = fasta;
         }
     }
@@ -3245,6 +3246,14 @@ LIB_EXPORT rc_t CC ReferenceSeq_GetID(ReferenceSeq const *const self, char const
     assert(self != NULL);
     assert(rslt != NULL);
     *rslt = self->id;
+    return 0;
+}
+
+LIB_EXPORT rc_t CC ReferenceSeq_IsCircular(ReferenceSeq const *const self, bool *rslt)
+{
+    assert(self != NULL);
+    assert(rslt != NULL);
+    *rslt = self->circular;
     return 0;
 }
 
