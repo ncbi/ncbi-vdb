@@ -40,7 +40,7 @@
 #include <vdb/schema.h> /* VSchema */
 #include <kfc/ctx.h> /* HYBRID_FUNC_ENTRY */
 #include <kfc/rsrc-global.h> /* KRsrcGlobalWhack */
-#include <cstdlib> // setenv
+#include <os-native.h> // setenv
 //#define ALL
 
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
