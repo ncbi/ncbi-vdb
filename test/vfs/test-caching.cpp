@@ -40,6 +40,7 @@
 #include <vdb/schema.h> /* VSchema */
 #include <kfc/ctx.h> /* HYBRID_FUNC_ENTRY */
 #include <kfc/rsrc-global.h> /* KRsrcGlobalWhack */
+#include <os-native.h> // setenv
 
 #define ALL
 
@@ -638,6 +639,7 @@ extern "C" {
         return 0;
     }
     rc_t CC KMain ( int argc, char * argv [] ) {
+        setenv("HOME", ".", 1);
         KConfigDisableUserSettings ();
 if (
 0 ) assert ( ! KDbgSetString ( "VFS" ) );
