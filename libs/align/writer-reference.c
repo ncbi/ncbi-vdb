@@ -464,6 +464,10 @@ unsigned str_weight(char const str[], char const qry[], unsigned const qry_len)
     return wt;
 }
 
+static bool idEqual(char const *const a, char const *const b) {
+    return a != NULL && b != NULL && strcmp(a, b) == 0;
+}
+
 static void addToIndex(ReferenceMgr *const self, char const ID[],
                        ReferenceSeq *const rs)
 {
@@ -471,7 +475,7 @@ static void addToIndex(ReferenceMgr *const self, char const ID[],
     unsigned i;
 
     for (i = 0; i < n; ++i) {
-        if (strcmp(ID, rs->used[i]) == 0)
+        if (idEqual(ID, rs->used[i]))
             goto SKIP_INSERT_ID;
     }
     {
@@ -495,7 +499,7 @@ static bool usedAs(ReferenceSeq const *const rs, char const id[]) {
     unsigned j;
     
     for (j = 0; j < m; ++j) {
-        if (strcmp(id, rs->used[j]) == 0)
+        if (idEqual(id, rs->used[j]))
             return true;
     }
     return false;
@@ -512,9 +516,9 @@ static int findIdInTable(ReferenceMgr const *const self, Bucket const *const tab
         ReferenceSeq const *const rs = &self->refSeq[index];
         
         if (usedAs(rs, id)
-          || strcmp(id, rs->id) == 0
-          || strcmp(id, rs->seqId) == 0
-          || strcmp(id, rs->fastaSeqId) == 0)
+          || idEqual(id, rs->id)
+          || idEqual(id, rs->seqId)
+          || idEqual(id, rs->fastaSeqId))
             return index;
     }
     return -1;
