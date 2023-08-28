@@ -29,17 +29,18 @@
 #include <klib/debug.h> /* KDbgSetString */
 #include <ktst/unit_test.hpp> // TEST_SUITE
 #include <sra/sraschema.h> // VDBManagerMakeSRASchema
+
 #include <vdb/cursor.h> /* VCursor */
+#include <vdb/database.h> /* VDatabase */
 #include <vdb/manager.h> /* VDBManager */
+#include <vdb/schema.h> /* VSchema */
 #include <vdb/table.h> /* VTable */
 #include <vdb/vdb-priv.h> /* VDBManagerMakeReadWithVFSManager */
+
 #include <vfs/manager.h> /* VFSManager */
 #include <vfs/manager-priv.h> /* VFSManagerMakeFromKfg */
 #include <vfs/resolver.h> /* VResolverCacheEnable */
-#include <vdb/database.h> /* VDatabase */
-#include <vdb/schema.h> /* VSchema */
-#include <kfc/ctx.h> /* HYBRID_FUNC_ENTRY */
-#include <kfc/rsrc-global.h> /* KRsrcGlobalWhack */
+
 #include <os-native.h> // setenv
 
 #define ALL
@@ -335,11 +336,8 @@ public:
 }
 
   ~Test ( void ) {
-      HYBRID_FUNC_ENTRY ( rcRuntime, rcResources, rcReleasing ); /* recover KFC context */
       assert( _dad );
       _dad->ErrorCounterAdd(GetErrorCounter());
-      /* make sure all references to managed objects from KFC are released, for the next test case to re-initialize them */
-      KRsrcGlobalWhack ( ctx );
     }
 };
 
