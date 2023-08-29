@@ -23,6 +23,11 @@
 * ===========================================================================
 *
 */
+
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE /* memrchr */
+#endif
+
 #include <sra/rd-extern.h>
 
 #include <klib/rc.h>
@@ -169,7 +174,7 @@ LIB_EXPORT rc_t CC IlluminaReaderCurrentSpot(const IlluminaReader* self, spotid_
 
 LIB_EXPORT rc_t CC IlluminaReader_SpotInfo(const IlluminaReader* self,
                                            const char** spotname, size_t* spotname_sz,
-                                           INSDC_coord_val* lane, INSDC_coord_val* tile, 
+                                           INSDC_coord_val* lane, INSDC_coord_val* tile,
                                            INSDC_coord_val* x, INSDC_coord_val* y,
                                            uint32_t* spot_len, uint32_t* num_reads)
 {

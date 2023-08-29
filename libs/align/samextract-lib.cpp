@@ -40,6 +40,7 @@
 #include <klib/defs.h>
 #include <klib/rc.h>
 #include <klib/vector.h>
+#include <klib/text.h>
 #include <kproc/queue.h>
 #include <kproc/thread.hpp>
 #include <kproc/timeout.h>
@@ -540,7 +541,7 @@ LIB_EXPORT rc_t CC SAMExtractorMake( SAMExtractor ** state, const KFile * fin,
     pool_init();
 
     s->infile  = fin;
-    fname_desc = strdup( fname->addr );
+    fname_desc = string_dup_measure( fname->addr, NULL );
 //    s->fname = fname_desc;
 
     VectorInit( &s->headers, 0, 0 );

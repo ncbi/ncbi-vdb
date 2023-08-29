@@ -342,7 +342,8 @@ LIB_EXPORT rc_t CC CloudMgrMake ( CloudMgr ** mgrp,
     return rc;
 }
 
-LIB_EXPORT rc_t CC CloudMgrMakeWithProvider ( CloudMgr ** mgrp, CloudProviderId provider )
+LIB_EXPORT rc_t CC CloudMgrMakeWithProvider ( CloudMgr ** mgrp,
+    CloudProviderId provider, const KConfig * kfg )
 {
     rc_t rc;
 
@@ -353,7 +354,7 @@ LIB_EXPORT rc_t CC CloudMgrMakeWithProvider ( CloudMgr ** mgrp, CloudProviderId 
     {
         CloudMgr * our_mgr;
         TRACE ( "creating new CloudMgr with specific provider" );
-        rc = CloudMgrInit ( & our_mgr, NULL, NULL, provider );
+        rc = CloudMgrInit ( & our_mgr, kfg, NULL, provider );
         if ( rc == 0 )
         {
             TRACE ( "CloudMgr was created - returning CloudMgr" );

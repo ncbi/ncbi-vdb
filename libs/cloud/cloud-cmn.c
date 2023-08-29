@@ -32,6 +32,7 @@
 #include "cloud-cmn.h" /* KNSManager_Read */
 
 #include "../kns/mgr-priv.h" /* KNSManager */
+#include "../kns/http-priv.h" /* KClientHttpVAddHeader */
 
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 && !rc) { rc = rc2; } obj = NULL; } while (false)
@@ -39,7 +40,7 @@
 /******************************************************************************/
 
 rc_t KNSManager_Read(const struct KNSManager *cself, char *buffer, size_t bsize,
-    const char *url, const char * hdrName, const char * hdrValue)
+    const char *url, HttpMethod method, const char * hdrName, const char * hdrValue, ...)
 {
     rc_t rc = 0;
 
@@ -65,11 +66,27 @@ rc_t KNSManager_Read(const struct KNSManager *cself, char *buffer, size_t bsize,
     rc = KNSManagerMakeRequest(self, &req, 0x01010000, NULL, url);
 
     if (rc == 0 && hdrName != NULL)
-        rc = KClientHttpRequestAddHeader(req, hdrName, hdrValue);
+    {
+        va_list args;
+        va_start ( args, hdrValue );
+        rc = KClientHttpVAddHeader( & req -> hdrs, false, hdrName, hdrValue, args );
+        va_end ( args );
+    }
 
     if (rc == 0) {
         KClientHttpResult * rslt = NULL;
-        rc = KClientHttpRequestGET(req, &rslt);
+        if ( method == HttpMethod_Get)
+        {
+            rc = KClientHttpRequestGET(req, &rslt);
+        }
+        else if ( method == HttpMethod_Put)
+        {
+            rc = KClientHttpRequestPUT(req, &rslt, false); // do not format for SRA
+        }
+        else
+        {
+            assert(false);
+        }
 
         if (rc == 0) {
             KStream * s = NULL;

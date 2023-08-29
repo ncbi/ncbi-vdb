@@ -120,7 +120,7 @@ struct KNSProxies *KNSManagerGetProxies ( const KNSManager *self, size_t *cnt )
     return KNSProxiesGetHttpProxy ( self->proxies, cnt );
 }
 
-#ifdef USE_SINGLETON		
+#ifdef USE_SINGLETON
 static bool SINGLETON = true;
 #else
 static bool SINGLETON = false;
@@ -1102,9 +1102,9 @@ LIB_EXPORT rc_t CC KNSManagerSetUserAgent (
 LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
 {
     rc_t rc = 0;
-    
+
     bool telemetry = true;
-    
+
     if ( user_agent == NULL ) {
         rc = RC ( rcNS, rcMgr, rcAccessing, rcParam, rcNull );
         return rc;

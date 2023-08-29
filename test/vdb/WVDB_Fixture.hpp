@@ -27,6 +27,7 @@
 
 #include <string>
 #include <cmath>
+#include <sstream>
 
 #include <kfc/except.h>
 
@@ -38,6 +39,7 @@
 #include <vdb/cursor.h>
 #include <vdb/table.h>
 
+#include "../libs/vdb/schema-priv.h"
 #include "../libs/schema/SchemaParser.hpp"
 #include "../libs/schema/ASTBuilder.hpp"
 
@@ -173,6 +175,40 @@ public:
     {
         return std :: string ( p_str . addr, p_str . len );
     }
+
+    #include <sstream>
+    static std :: string DumpSchema(VSchema & p_schema, bool compact = true)
+    {
+
+        auto FlushSchema = [](void *fd, const void * buffer, size_t size) -> rc_t
+        {
+            std :: ostream & out = *static_cast < std :: ostream * > (fd);
+            out.write(static_cast < const char * > (buffer), size);
+            out.flush();
+            return 0;
+        };
+
+        bool free_intrinsic = false;
+        if ( p_schema . dad == nullptr )
+        {
+            THROW_ON_RC( VSchemaMakeIntrinsic ( (VSchema**) & p_schema . dad ) );
+            free_intrinsic = true;
+        }
+        std :: ostringstream out;
+        bool failed = VSchemaDump( & p_schema, compact ? sdmCompact : sdmPrint, 0, FlushSchema, &out);
+        if ( free_intrinsic )
+        {
+            VSchemaRelease( p_schema.dad );
+            p_schema.dad = nullptr;
+        }
+        if ( failed )
+        {
+            throw std :: runtime_error("DumpSchema failed");
+        }
+
+        return out.str();
+    }
+
 
     std :: string   m_databaseName;
     VDBManager *    m_mgr;

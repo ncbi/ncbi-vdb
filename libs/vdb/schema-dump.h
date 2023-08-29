@@ -62,7 +62,8 @@ enum VSchemaDumpClass
     sdcFunctions,
     sdcColumns,
     sdcTables,
-    sdcDatabases
+    sdcDatabases,
+    sdcViews
 };
 
 typedef struct SDumper SDumper;

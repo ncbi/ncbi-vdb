@@ -37,17 +37,25 @@
 #ifndef YY_SCHEMA_HOME_BOSHKINS_NCBI_DEVEL_NCBI_VDB_LIBS_SCHEMA_ZZ_SCHEMA_GRAMMAR_HPP_INCLUDED
 # define YY_SCHEMA_HOME_BOSHKINS_NCBI_DEVEL_NCBI_VDB_LIBS_SCHEMA_ZZ_SCHEMA_GRAMMAR_HPP_INCLUDED
 /* Debug traces.  */
-#ifndef YYDEBUG
-# define YYDEBUG 0
-#endif
+#ifndef SCHEMA_DEBUG
+# if defined YYDEBUG
 #if YYDEBUG
+#   define SCHEMA_DEBUG 1
+#  else
+#   define SCHEMA_DEBUG 0
+#  endif
+# else /* ! defined YYDEBUG */
+#  define SCHEMA_DEBUG 0
+# endif /* ! defined YYDEBUG */
+#endif  /* ! defined SCHEMA_DEBUG */
+#if SCHEMA_DEBUG
 extern int Schema_debug;
 #endif
 
 /* Token type.  */
-#ifndef YYTOKENTYPE
-# define YYTOKENTYPE
-  enum yytokentype
+#ifndef SCHEMA_TOKENTYPE
+# define SCHEMA_TOKENTYPE
+  enum Schema_tokentype
   {
     END_SOURCE = 0,
     UNRECOGNIZED = 258,
@@ -182,29 +190,31 @@ extern int Schema_debug;
     PT_VIEWPARENTS = 387,
     PT_VIEWPARENT = 388,
     PT_MEMBEREXPR = 389,
-    PT_JOINEXPR = 390
+    PT_JOINEXPR = 390,
+    PT_ALIASMEMBER = 391,
+    PT_VIEWSPEC = 392
   };
 #endif
 
 /* Value type.  */
-#if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
-typedef SchemaToken YYSTYPE;
-# define YYSTYPE_IS_TRIVIAL 1
-# define YYSTYPE_IS_DECLARED 1
+#if ! defined SCHEMA_STYPE && ! defined SCHEMA_STYPE_IS_DECLARED
+typedef SchemaToken SCHEMA_STYPE;
+# define SCHEMA_STYPE_IS_TRIVIAL 1
+# define SCHEMA_STYPE_IS_DECLARED 1
 #endif
 
 /* Location type.  */
-#if ! defined YYLTYPE && ! defined YYLTYPE_IS_DECLARED
-typedef struct YYLTYPE YYLTYPE;
-struct YYLTYPE
+#if ! defined SCHEMA_LTYPE && ! defined SCHEMA_LTYPE_IS_DECLARED
+typedef struct SCHEMA_LTYPE SCHEMA_LTYPE;
+struct SCHEMA_LTYPE
 {
   int first_line;
   int first_column;
   int last_line;
   int last_column;
 };
-# define YYLTYPE_IS_DECLARED 1
-# define YYLTYPE_IS_TRIVIAL 1
+# define SCHEMA_LTYPE_IS_DECLARED 1
+# define SCHEMA_LTYPE_IS_TRIVIAL 1
 #endif
 
 

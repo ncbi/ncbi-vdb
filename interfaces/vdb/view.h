@@ -47,6 +47,7 @@ struct String;
 struct VSchema;
 struct VDBManager;
 struct VTable;
+struct VDatabase;
 struct VSchema;
 struct KNamelist;
 
@@ -64,12 +65,14 @@ typedef struct VView VView;
 VDB_EXTERN rc_t CC VViewAddRef ( const VView *self );
 VDB_EXTERN rc_t CC VViewRelease ( const VView *self );
 
-/* OpenView
+/* VDBManagerOpenView
  *  open a view for read using manager.
  *
  *  "view" [ OUT ] - return parameter for newly opened view
  *
  *  "schema" [ IN ] - schema object with the view schema
+ *
+ *  "name" [ IN ] - name of the view
  *
  *  View's parameters will have to be bound using VViewBindParameterXXX() before View can be used
  */
@@ -77,6 +80,20 @@ VDB_EXTERN rc_t CC VDBManagerOpenView (
     struct VDBManager const *   self,
     const VView **              view,
     const struct VSchema *      schema,
+    const char *                name );
+
+/* VDatabaseOpenView
+ *  open a view alias defined in a database
+ *
+ *  "view" [ OUT ] - return parameter for newly opened view
+ *
+ *  "name" [ IN ] - name of the view alias
+ *
+ *  View's parameters will have to be bound using VViewBindParameterXXX() before View can be used
+ */
+VDB_EXTERN rc_t CC VDatabaseOpenView (
+    struct VDatabase const *    self,
+    const VView **              view,
     const char *                name );
 
 /* ParameterCount

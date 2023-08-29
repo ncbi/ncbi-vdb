@@ -179,19 +179,21 @@ static rc_t KConfig_Set_Repository_String( KConfig *self,
 /* -------------------------------------------------------------------------- */
 
 /* get/set HTTP proxy path */
+#define HTTP_PROXY_PATH "/http/proxy/path"
 LIB_EXPORT rc_t CC KConfig_Get_Http_Proxy_Path( const KConfig *self,
     char *buffer, size_t buffer_size, size_t *written )
 {
     return KConfig_Get_Repository_String
-        (self, buffer, buffer_size, written, "http/proxy/path");
+        (self, buffer, buffer_size, written, HTTP_PROXY_PATH);
 }
 
 LIB_EXPORT rc_t CC KConfig_Set_Http_Proxy_Path
     ( KConfig *self, const char *value )
 {
-    return KConfig_Set_Repository_String(self, value, "http/proxy/path");
+    return KConfig_Set_Repository_String(self, value, HTTP_PROXY_PATH);
 }
 
+#define HTTP_PROXY_ENABLED "/http/proxy/enabled"
 /* get/set enabled-state for HTTP proxy */
 LIB_EXPORT rc_t CC KConfig_Get_Http_Proxy_Enabled
     ( const KConfig *self, bool *enabled, bool dflt )
@@ -206,7 +208,7 @@ LIB_EXPORT rc_t CC KConfig_Get_Http_Proxy_Enabled
     }
     else {
         *enabled = dflt;
-        KConfigReadBool ( self, "http/proxy/enabled", enabled );
+        KConfigReadBool ( self, HTTP_PROXY_ENABLED, enabled );
         /* errors are ignored - then default value is returned */
     }
 
@@ -222,7 +224,7 @@ LIB_EXPORT rc_t CC KConfig_Set_Http_Proxy_Enabled
         rc = RC ( rcKFG, rcNode, rcWriting, rcSelf, rcNull );
     }
     else {
-        rc = KConfigWriteBool( self, "http/proxy/enabled", enabled );
+        rc = KConfigWriteBool( self, HTTP_PROXY_ENABLED, enabled );
     }
 
     return rc;
@@ -230,6 +232,7 @@ LIB_EXPORT rc_t CC KConfig_Set_Http_Proxy_Enabled
 
 /* -------------------------------------------------------------------------- */
 /* get/set priority of environmnet vs. configuration for HTTP proxy */
+#define HTTP_PROXY_USE "/http/proxy/use"
 LIB_EXPORT rc_t CC KConfig_Has_Http_Proxy_Env_Higher_Priority
     ( const KConfig *self, bool *enabled )
 {
@@ -244,7 +247,7 @@ LIB_EXPORT rc_t CC KConfig_Has_Http_Proxy_Env_Higher_Priority
     else {
         String * res = NULL;
         * enabled = false;
-        rc = KConfigReadString ( self, "/http/proxy/use", &res );
+        rc = KConfigReadString ( self, HTTP_PROXY_USE, &res );
         if ( rc == 0 ) {
             String v;
             CONST_STRING ( & v, "env,kfg" );
@@ -269,7 +272,7 @@ LIB_EXPORT rc_t CC KConfig_Set_Http_Proxy_Env_Higher_Priority
     }
     else {
         rc = KConfigWriteString
-            ( self, "/http/proxy/use", enabled ? "env,kfg" : "kfg,env" );
+            ( self, HTTP_PROXY_USE, enabled ? "env,kfg" : "kfg,env" );
     }
 
     return rc;
@@ -317,7 +320,7 @@ LIB_EXPORT rc_t CC KConfig_Get_Remote_Aux_Ncbi_Access_Enabled
     ( const KConfig *self, bool * enabled )
 {
     return KConfig_Get_Repository_State( self, enabled,
-        true, true, PATH_REPOSITORY_REMOTE_DISABLED );
+        true, true, PATH_REPOSITORY_REMOTE_AUX_NCBI_DISABLED);
 }
 
 #define PATH_REPOSITORY_SITE_DISABLED "/repository/site/disabled"
@@ -364,7 +367,7 @@ LIB_EXPORT rc_t CC KConfig_Set_User_Public_Cache_Location( KConfig *self, const 
 {   return KConfig_Set_Repository_String( self, value, PATH_REPOSITORY_USER_PUBLIC_CACHE_LOCATION ); }
 
 /* ---------------------------------------------------------------------------------------------------- */
-
+#define REPOSITORY_USER_PROTECTED "/repository/user/protected"
 LIB_EXPORT rc_t CC KConfigGetProtectedRepositoryCount( const KConfig *self, uint32_t * count )
 {
     rc_t rc = 0;
@@ -375,7 +378,7 @@ LIB_EXPORT rc_t CC KConfigGetProtectedRepositoryCount( const KConfig *self, uint
     else
     {
         const struct KConfigNode * node;
-        rc = KConfigOpenNodeRead ( self, &node, "/repository/user/protected" );
+        rc = KConfigOpenNodeRead ( self, &node, REPOSITORY_USER_PROTECTED);
         if ( rc == 0 )
         {
             struct KNamelist * names;
@@ -403,7 +406,7 @@ LIB_EXPORT rc_t CC KConfigGetProtectedRepositoryName( const KConfig *self,
     else
     {
         const struct KConfigNode * node;
-        rc = KConfigOpenNodeRead ( self, &node, "/repository/user/protected" );
+        rc = KConfigOpenNodeRead ( self, &node, REPOSITORY_USER_PROTECTED);
         if ( rc == 0 )
         {
             struct KNamelist * names;
@@ -474,7 +477,7 @@ LIB_EXPORT rc_t CC KConfigGetProtectedRepositoryPathById( const KConfig *self,
     else
     {
         const struct KConfigNode * node;
-        rc = KConfigOpenNodeRead ( self, &node, "/repository/user/protected" );
+        rc = KConfigOpenNodeRead ( self, &node, REPOSITORY_USER_PROTECTED);
         if ( rc == 0 )
         {
             struct KNamelist * names;
@@ -514,7 +517,7 @@ LIB_EXPORT rc_t CC KConfigGetProtectedRepositoryIdByName
     else {
         const struct KConfigNode *node = NULL;
         rc_t rc
-            = KConfigOpenNodeRead(self, &node, "/repository/user/protected");
+            = KConfigOpenNodeRead(self, &node, REPOSITORY_USER_PROTECTED);
         if (rc == 0) {
             struct KNamelist *names = NULL;
             rc = KConfigNodeListChildren(node, &names);
@@ -569,7 +572,7 @@ LIB_EXPORT rc_t CC KConfigGetProtectedRepositoryPathByName( const KConfig *self,
     else
     {
         const struct KConfigNode * node;
-        rc = KConfigOpenNodeRead ( self, &node, "/repository/user/protected" );
+        rc = KConfigOpenNodeRead ( self, &node, REPOSITORY_USER_PROTECTED);
         if ( rc == 0 )
         {
             struct KNamelist * names;
@@ -630,7 +633,7 @@ LIB_EXPORT rc_t CC KConfigGetProtectedRepositoryDescriptionByName(
     else
     {
         const struct KConfigNode * node;
-        rc = KConfigOpenNodeRead ( self, &node, "/repository/user/protected" );
+        rc = KConfigOpenNodeRead ( self, &node, REPOSITORY_USER_PROTECTED);
         if ( rc == 0 )
         {
             struct KNamelist * names;
@@ -692,7 +695,7 @@ LIB_EXPORT rc_t CC KConfigDoesProtectedRepositoryExist( const KConfig *self, con
     {
         const struct KConfigNode * node;
         *res = false;
-        rc = KConfigOpenNodeRead ( self, &node, "/repository/user/protected" );
+        rc = KConfigOpenNodeRead ( self, &node, REPOSITORY_USER_PROTECTED);
         if ( rc == 0 )
         {
             struct KNamelist * names;

@@ -89,6 +89,7 @@ enum
 #endif
 
 /* platform id
+ * see also sra.vschema
  */
 #define sra_platform_id_t "INSDC:SRA:platform_id"
 typedef uint8_t INSDC_SRA_platform_id;
@@ -103,8 +104,42 @@ enum
     SRA_PLATFORM_PACBIO_SMRT       = 6,
     SRA_PLATFORM_ION_TORRENT       = 7,
     SRA_PLATFORM_CAPILLARY         = 8,
-    SRA_PLATFORM_OXFORD_NANOPORE   = 9
+    SRA_PLATFORM_OXFORD_NANOPORE   = 9,
+    SRA_PLATFORM_ELEMENT_BIO       = 10,
+    SRA_PLATFORM_TAPESTRI          = 11,
+    SRA_PLATFORM_VELA_DIAG         = 12,
+    SRA_PLATFORM_GENAPSYS          = 13,
+    SRA_PLATFORM_ULTIMA            = 14,
+    SRA_PLATFORM_GENEMIND          = 15,
+    SRA_PLATFORM_BGISEQ            = 16
 };
+
+/*
+ * C string names for the platform enum values
+ *
+ * suggested use:
+ *     static const char *platform_symbolic_names[] = { INSDC_SRA_PLATFORM_SYMBOLS };
+ *     INSDC_SRA_platform_id p = ...;
+ *     const char * platform_str = platform_symbolic_names[ p ];
+ */
+#define INSDC_SRA_PLATFORM_SYMBOLS    \
+    "SRA_PLATFORM_UNDEFINED",         \
+    "SRA_PLATFORM_454",               \
+    "SRA_PLATFORM_ILLUMINA",          \
+    "SRA_PLATFORM_ABSOLID",           \
+    "SRA_PLATFORM_COMPLETE_GENOMICS", \
+    "SRA_PLATFORM_HELICOS",           \
+    "SRA_PLATFORM_PACBIO_SMRT",       \
+    "SRA_PLATFORM_ION_TORRENT",       \
+    "SRA_PLATFORM_CAPILLARY",         \
+    "SRA_PLATFORM_OXFORD_NANOPORE",   \
+    "SRA_PLATFORM_ELEMENT_BIO",       \
+    "SRA_PLATFORM_TAPESTRI",          \
+    "SRA_PLATFORM_VELA_DIAG",         \
+    "SRA_PLATFORM_GENAPSYS",          \
+    "SRA_PLATFORM_ULTIMA",            \
+    "SRA_PLATFORM_GENEMIND",          \
+    "SRA_PLATFORM_BGISEQ"
 
 #ifdef __cplusplus
 }

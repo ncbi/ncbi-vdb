@@ -321,7 +321,7 @@ rc_t KPTrieIndexInitFromV1_v2 ( KPTrieIndex_v2 *self, const KMMap *mm, bool byte
         }
 
         if ( rc == 0 )
-        {        
+        {
             if ( i == self -> count )
                 return 0;
             rc = RC ( rcDB, rcIndex, rcConstructing, rcIndex, rcCorrupt );
@@ -392,7 +392,7 @@ rc_t KPTrieIndexInit_v2 ( KPTrieIndex_v2 *self, const KMMap *mm, bool byteswap )
                     if ( ptsize == size )
                         return 0;
 
-                    /* calculate remaining bytes */                     
+                    /* calculate remaining bytes */
                     size -= ptsize;
 
                     /* there must be enough for an array of 4-byte node ids */
@@ -514,7 +514,7 @@ rc_t KPTrieIndexInit_v3_v4 ( KPTrieIndex_v2 *self, const KMMap *mm, bool byteswa
                     if ( ptsize == size )
                         return 0;
 
-                    /* calculate remaining bytes */                     
+                    /* calculate remaining bytes */
                     size -= ptsize;
 
                     /* there must be enough for an array of 4-byte node ids */
@@ -737,25 +737,25 @@ rc_t KPTrieIndexProject_v2 ( const KPTrieIndex_v2 *self,
             * start_id = self -> id2ord . v8 [ ord - 1 ];
             * span = ( uint32_t ) ( ( ( ord == self -> count ) ?
                 ( self -> maxid  - self -> first + 1 ) : self -> id2ord . v8 [ ord ] ) - * start_id );
-            *start_id += self->first; 
+            *start_id += self->first;
             break;
         case 2:
             * start_id = self -> id2ord . v16 [ ord - 1 ];
             * span = ( uint32_t ) ( ( ( ord == self -> count ) ?
                 ( self -> maxid  - self -> first + 1 ) : self -> id2ord . v16 [ ord ] ) - * start_id );
-            *start_id += self->first; 
+            *start_id += self->first;
             break;
         case 3:
             * start_id = self -> id2ord . v32 [ ord - 1 ];
             * span = ( uint32_t ) ( ( ( ord == self -> count ) ?
                 ( self -> maxid  - self -> first + 1 ) : self -> id2ord . v32 [ ord ] ) - * start_id );
-            *start_id += self->first; 
+            *start_id += self->first;
             break;
         case 4:
             * start_id = self -> id2ord . v64 [ ord - 1 ];
             * span = ( uint32_t ) ( ( ( ord == self -> count ) ?
                 ( self -> maxid  - self -> first + 1 ) : self -> id2ord . v64 [ ord ] ) - * start_id );
-            *start_id += self->first; 
+            *start_id += self->first;
             break;
         }
 
@@ -801,7 +801,7 @@ rc_t KPTrieIndexFind_v2 ( const KPTrieIndex_v2 *self,
 #endif
     int ( CC * custom_cmp ) ( const void *item, const PBSTNode *n, void *data ), void *data, bool convertFromV1 )
 {
-    rc_t rc;
+    rc_t rc = 0;
 
     /* detect empty index */
     if ( self -> count == 0 )
@@ -832,13 +832,17 @@ rc_t KPTrieIndexFind_v2 ( const KPTrieIndex_v2 *self,
                 * start_id = id;
                 rc = 0;
             }
-            else
+            else if ( self -> id_bits > 0 )
             {
                 /* should be native v2 */
                 rc = Unpack ( self -> id_bits, sizeof * start_id * 8,
                     pnode . data . addr, 0, self -> id_bits, NULL,
                     start_id, sizeof * start_id, & usize );
                 * start_id += self -> first;
+            }
+            else
+            {
+                * start_id = self -> first;
             }
 
             if ( rc == 0 )
@@ -1217,7 +1221,7 @@ void KTrieIndexPersistHdr_v2 ( KTrieIndex_v2 *self, PersistTrieData *pb )
             if ( span > max_span )
                 max_span = span;
         }
-        
+
         span = ( uint32_t ) ( self -> last - prev );
         if ( span > max_span )
             max_span = span;
@@ -1290,7 +1294,7 @@ void KTrieIndexPersistHdr_v3_v4 ( KTrieIndex_v2 *self, PersistTrieData *pb )
             if ( span > max_span )
                 max_span = span;
         }
-        
+
         span = ( uint32_t ) ( self -> last - prev );
         if ( span > max_span )
             max_span = span;
@@ -1315,7 +1319,7 @@ void KTrieIndexPersistHdr_v3_v4 ( KTrieIndex_v2 *self, PersistTrieData *pb )
     hdr -> align [ 0 ] = hdr -> align [ 1 ] = 0;
 }
 
-#endif 
+#endif
 
 static
 rc_t KTrieIndexPersistTrie_v2 ( const KTrieIndex_v2 *self, PersistTrieData *pb )
@@ -1541,7 +1545,7 @@ rc_t KTrieIndexPersistProj_v2 ( const KTrieIndex_v2 *self, PersistTrieData *pb )
             assert ( self -> count >= PTrieCount ( tt ) );
             ord2node = ( void* ) ( ( char* ) addr + pb -> ptt_size );
             assert ( ( ( size_t ) ord2node & 3 ) == 0 );
-            
+
             /* set count */
             * ord2node ++ = self -> count;
 
@@ -1561,7 +1565,7 @@ rc_t KTrieIndexPersistProj_v2 ( const KTrieIndex_v2 *self, PersistTrieData *pb )
             /* done with pttree */
             PTrieWhack ( tt );
         }
-        rc = KFileWrite ( pb -> f, file_size, 
+        rc = KFileWrite ( pb -> f, file_size,
 			  (uint8_t*)addr + num_to_read,  map_size - num_to_read, & num_writ );
         if ( rc == 0  &&  num_writ != map_size - num_to_read )
             rc = RC ( rcDB, rcIndex, rcPersisting, rcHeader, rcInsufficient );
@@ -1670,7 +1674,7 @@ rc_t KTrieIndexPersistProj_v3 ( const KTrieIndex_v2 *self, PersistTrieData *pb )
             assert ( self -> count >= PTrieCount ( tt ) );
             ord2node = ( void* ) ( ( char* ) addr + pb -> ptt_size );
             assert ( ( ( size_t ) ord2node & 3 ) == 0 );
-            
+
             /* set count */
             * ord2node ++ = self -> count;
 
@@ -1692,7 +1696,7 @@ rc_t KTrieIndexPersistProj_v3 ( const KTrieIndex_v2 *self, PersistTrieData *pb )
 
             if ( rc == 0 )
             {
-                rc = KFileWrite ( pb -> f, file_size, 
+                rc = KFileWrite ( pb -> f, file_size,
                      ( uint8_t* ) addr + num_to_read,  map_size - num_to_read, & num_writ );
 
                 if ( rc == 0  &&  num_writ != map_size - num_to_read )
@@ -1830,7 +1834,7 @@ rc_t KTrieIndexPersist_v2 ( const KTrieIndex_v2 *self,
                         }
                     }
                 }
-                    
+
                 /* close down the file now, success or not */
                 KFileRelease ( pb . f );
                 pb . f = NULL;
@@ -1843,7 +1847,7 @@ rc_t KTrieIndexPersist_v2 ( const KTrieIndex_v2 *self,
                 if ( rc == 0 )
                 {
                     /* works even if "path" is absolute */
-                    rc = KDirectoryRename ( dir, false, tmpname, path );                        
+                    rc = KDirectoryRename ( dir, false, tmpname, path );
                     if ( rc == 0 )
                     {
                         int tmplen;
@@ -1879,7 +1883,7 @@ rc_t KTrieIndexPersist_v2 ( const KTrieIndex_v2 *self,
         /* douse buffer */
         free ( pb . buffer );
     }
-    
+
     return rc;
 }
 
@@ -2513,7 +2517,7 @@ rc_t KTrieIndexProject_v2 ( const KTrieIndex_v2 *self,
             if ( ord != 0 )
             {
                 const KTrieIdxNode_v2_s1 *node = self -> ord2node [ ord - 1 ];
-                
+
                 if (actsize)
                     *actsize = node -> n . key . size;
                 if ( node -> n . key . size >= buff_size )
@@ -2533,7 +2537,7 @@ rc_t KTrieIndexProject_v2 ( const KTrieIndex_v2 *self,
             if ( TrieDoUntil ( & self -> key2id, KTrieIndexProjectScan_v2, & pb ) )
             {
                 const KTrieIdxNode_v2_s2 *node = pb . node;
-                
+
                 if (actsize)
                     *actsize = node -> n . key . size;
                 if ( node -> n . key . size >= buff_size )

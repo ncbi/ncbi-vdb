@@ -84,7 +84,7 @@ rc_t AgrepDPMake( DPParams **self, AgrepFlags mode, const char *pattern )
     } else {
         int32_t i;
         (*self)->mode = mode;
-        (*self)->pattern = strdup(pattern);
+        (*self)->pattern = string_dup_measure(pattern, NULL);
         (*self)->plen = strlen(pattern);
         (*self)->rpattern = malloc((*self)->plen + 1);
         if( (*self)->pattern == NULL || (*self)->rpattern == NULL ) {

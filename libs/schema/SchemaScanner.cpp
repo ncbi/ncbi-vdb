@@ -69,13 +69,13 @@ class ErrorReport;
 #include "schema-grammar.hpp"
 
 extern "C" {
-    extern enum yytokentype SchemaScan_yylex ( YYSTYPE *lvalp, YYLTYPE *llocp, SchemaScanBlock* sb );
+    extern enum Schema_tokentype SchemaScan_yylex ( SCHEMA_STYPE *lvalp, SCHEMA_LTYPE *llocp, SchemaScanBlock* sb );
 }
 
 Token
 SchemaScanner :: NextToken ()
 {
-    YYLTYPE loc;
+    SCHEMA_LTYPE loc;
     SchemaToken t;
     memset ( & t, 0, sizeof t );
     SchemaScan_yylex ( & t, & loc, & m_scanBlock );

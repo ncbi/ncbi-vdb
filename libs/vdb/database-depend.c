@@ -20,7 +20,7 @@
 *
 *  Please cite the author in any work or product based on this material.
 *
-* ===========================================================================
+* =============================================================================$
 *
 */
 
@@ -128,6 +128,38 @@ static rc_t _ResolvedRelease(Resolved *self) {
     return rc;
 }
 
+static rc_t ResolvedCopy(Resolved *cpy, const Resolved *self) {
+    rc_t rc = 0;
+
+    assert(cpy && self);
+
+    cpy->ref[0] = '\0';
+
+    if (rc == 0 && self->cache != NULL)
+        rc = StringCopy(&cpy->cache, self->cache);
+    if (rc == 0 && self->local != NULL)
+        rc = StringCopy(&cpy->local, self->local);
+    if (rc == 0 && self->remote != NULL)
+        rc = StringCopy(&cpy->remote, self->remote);
+    if (rc == 0)
+        rc = VPathAddRef(self->cacheP);
+    if (rc == 0)
+        rc = VPathAddRef(self->localP);
+    if (rc == 0)
+        rc = VPathAddRef(self->remoteP);
+
+    if (rc == 0) {
+        cpy->count = 0;
+        cpy->cacheP = self->cacheP;
+        cpy->cacheRc = self->cacheRc;
+        cpy->localP = self->localP;
+        cpy->remoteP = self->remoteP;
+        cpy->remoteRc = self->remoteRc;
+        cpy->rc = self->rc;
+    }
+
+    return rc;
+}
 
 static void CC bstWhack( BSTNode* n, void* ignore )
 {
@@ -427,7 +459,8 @@ static rc_t FindRef(Ctx* ctx, const char* seqId, Resolved* resolved,
                         rc = VPathSetAccOfParentDb((VPath*)resolved->remoteP,
                             ctx->dbAcc, ctx->dbPath);
                     if (rc == 0)
-                        rc = VPathMakeString(resolved->remoteP, &resolved->remote);
+                        rc = VPathMakeString(
+                            resolved->remoteP, &resolved->remote);
                     if (rc == 0) {
                         char *fragment = string_chr(resolved->remote->addr,
                             resolved->remote->size, '#');
@@ -490,9 +523,16 @@ typedef struct {
 } Row;
 
 /* Add a REFERENCE table Row to BSTree */
-static rc_t AddRow(BSTree* tr, Row* data,
-    Ctx* ctx, int cacheState, bool alwaysResolveRemote, const char* dir)
+static
+rc_t AddRow(BSTree* tr, BSTree* trWgs, Row* data, Ctx* ctx, int cacheState,
+    bool alwaysResolveRemote, const char* dir)
 {
+    static bool reuseWgsResponseInited = false;
+    static bool reuseWgsResponse = false;
+    if (!reuseWgsResponseInited) {
+        reuseWgsResponse = getenv("NCBI_VDB_NO_CACHE_WSG_RESPONSE") == NULL;
+        reuseWgsResponseInited = true;
+    }
     rc_t rc = 0;
     bool newRemote = false;
     RefNode* sn = NULL;
@@ -539,9 +579,58 @@ static rc_t AddRow(BSTree* tr, Row* data,
         sn->readLen += data->readLen;
     }
 
-    if (rc == 0 && newRemote)
-        rc = FindRef(ctx,
-            sn->seqId, &sn->resolved, cacheState, alwaysResolveRemote, dir);
+    if (rc == 0 && newRemote) {
+        RefNode *sw = NULL;
+        char e[256] = "";
+        String acc;
+        StringInitCString(&acc, sn->seqId);
+        /* Verify that refseq is WGS */
+        rc_t r2 = VResolverWgsAccessionToFileName(
+            ctx->resolver, &acc, e, sizeof e);
+        if (r2 == 0 && e[0] != '\0')
+            /* find cached SDL response for WGS refseq */
+            sw = (RefNode*)BSTreeFind(trWgs, e, bstCmpBySeqId);
+
+        if (sw != NULL) { /* found - reuse it */
+            rc = ResolvedCopy(&sn->resolved, &sw->resolved);
+            ctx->hasDuplicates = true;
+/* We need to use VFS logging here to see it together with other VFS messages */
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
+                ("VDatabaseDependencies: reusing for '%s' '%S' of '%s'\n",
+                    sn->seqId, sn->resolved.remote, sw->seqId));
+        }
+        else {
+            /* find refseq - locally and/or remotely */
+            rc = FindRef(ctx,
+                sn->seqId, &sn->resolved, cacheState, alwaysResolveRemote, dir);
+
+            if (reuseWgsResponse && rc == 0 && r2 == 0 && e[0] != '\0') {
+                /* save SDL response for WGS refseqs */
+                sw = calloc(1, sizeof *sw);
+                if (sw == NULL)
+                    return RC(rcVDB,
+                        rcStorage, rcAllocating, rcMemory, rcExhausted);
+
+                sw->seqId = string_dup_measure(e, NULL);
+                if (sw->seqId == NULL) {
+                    bstWhack((BSTNode*)sw, NULL);
+                    sw = NULL;
+                    return RC(rcVDB,
+                        rcStorage, rcAllocating, rcMemory, rcExhausted);
+                }
+
+                rc = ResolvedCopy(&sw->resolved, &sn->resolved);
+                if (rc != 0)
+                    return rc;
+
+                BSTreeInsert(trWgs, (BSTNode*)sw, bstSortBySeqId);
+
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
+                    ("VDatabaseDependencies: saving '%S' for '%s' as '%s'\n",
+                    sw->resolved.remote, sn->seqId, sw->seqId));
+            }
+        }
+    }
 
     return rc;
 }
@@ -551,6 +640,7 @@ struct VDBDependencies {
     RefNode** dependencies;
 
     BSTree* tr;
+    BSTree* trWgs;
 
     /* open references */
     KRefcount refcount;
@@ -617,7 +707,7 @@ static void CC bstProcess(BSTNode* n, void* data) {
 
 /* Read REFERENCE table; fill in BSTree */
 static
-rc_t CC VDatabaseDependencies(const VDatabase *self, BSTree* tr,
+rc_t CC VDatabaseDependencies(const VDatabase *self, BSTree* tr, BSTree* trWgs,
     bool* has_no_REFERENCE, bool* hasDuplicates,
     bool disableCaching, bool alwaysResolveRemote, const char* dir)
 {
@@ -729,7 +819,8 @@ rc_t CC VDatabaseDependencies(const VDatabase *self, BSTree* tr,
             }
         }
         if (rc == 0)
-            rc = AddRow(tr, &data, &ctx, cacheState, alwaysResolveRemote, dir);
+            rc = AddRow(tr, trWgs,
+                &data, &ctx, cacheState, alwaysResolveRemote, dir);
     }
 
     if (rc == 0 && hasDuplicates != NULL)
@@ -1101,6 +1192,9 @@ static rc_t VDBDependenciesWhack(VDBDependencies* self) {
     BSTreeWhack(self->tr, bstWhack, NULL);
     free(self->tr);
 
+    BSTreeWhack(self->trWgs, bstWhack, NULL);
+    free(self->trWgs);
+
     free(self->dependencies);
 
     memset(self, 0, sizeof *self);
@@ -1332,13 +1426,33 @@ static rc_t VDatabaseListDependenciesImpl(const VDatabase* self,
     }
     BSTreeInit(obj->tr);
 
-    /* initialize dependencie tree */
-    rc = VDatabaseDependencies(self, obj->tr, &has_no_REFERENCE, &hasDuplicates,
-        disableCaching, alwaysResolveRemote, dir);
-    if (rc == 0 && has_no_REFERENCE) {
-        KRefcountInit(&obj->refcount, 1, CLSNAME, "make", "nodep");
-        *dep = obj;
-        return rc;
+    obj->trWgs = malloc(sizeof *obj->trWgs);
+    if (obj->trWgs == NULL) {
+        free(obj->tr);
+        free(obj);
+        return RC(rcVDB, rcStorage, rcAllocating, rcMemory, rcExhausted);
+    }
+    BSTreeInit(obj->trWgs);
+
+    if (rc == 0) {
+        bool enabled = true;
+        VFSManagerGetLogNamesServiceErrors(NULL, &enabled);
+        /* Don't log 404 errors for refseqs
+           to disable false alarms for internal references. */
+        VFSManagerLogNamesServiceErrors(NULL, false);
+
+        /* initialize dependencie tree */
+        rc = VDatabaseDependencies(self, obj->tr, obj->trWgs, &has_no_REFERENCE,
+            &hasDuplicates, disableCaching, alwaysResolveRemote, dir);
+
+        /* Restore logging SDL errors. */
+        VFSManagerLogNamesServiceErrors(NULL, enabled);
+
+        if (rc == 0 && has_no_REFERENCE) {
+            KRefcountInit(&obj->refcount, 1, CLSNAME, "make", "nodep");
+            *dep = obj;
+            return rc;
+        }
     }
 
     if (rc == 0) {

@@ -39,6 +39,10 @@
 #include <kfc/refcount-impl.h>
 #endif
 
+#ifndef _h_klib_time_
+#include <klib/time.h>
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -69,7 +73,10 @@ struct Cloud
 
     /* bypass Http connection for testing, normally NULL */
     /*TODO: remove when mocked connection becomes a regular feature of KNS */
-    struct KStream * conn; 
+    struct KStream * conn;
+
+    char * access_token;
+    KTime_t access_token_expiration;
 };
 
 #ifndef CLOUD_IMPL

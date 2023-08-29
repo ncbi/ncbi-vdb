@@ -597,10 +597,16 @@ TEST_CASE ( Database_TableMember_WithTemplate )
     ParseAndVerify ( "database d#1 { template table ns : tbl T; };" );
 }
 
+TEST_CASE ( Database_ViewAliasMember )
+{
+    ParseAndVerify ( "version 2; view v#1 < ns : tbl t> {}; database d#1 { table ns : tbl T; alias v<T> vv; };" );
+}
+
 TEST_CASE ( Database_MultipleMembers )
 {
     ParseAndVerify ( "database d#1 { database ns : db DB; table ns : tbl T; };" );
 }
+
 
 TEST_CASE ( Include )
 {
@@ -706,6 +712,11 @@ TEST_CASE ( VersionOther )
 {
     HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
     REQUIRE ( ! SchemaParser () . ParseString ( ctx, "version 3.14; $" ) );
+}
+
+TEST_CASE ( Version2_Empty )
+{
+    ParseAndVerify ( "version 2;" );
 }
 
 TEST_CASE ( Version2_Decl1 )

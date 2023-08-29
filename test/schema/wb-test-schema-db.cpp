@@ -67,6 +67,12 @@ public:
         return static_cast < const STblMember * > ( VectorGet ( & m_self -> tbl, p_idx ) );
     }
 
+    uint32_t AliasMemberCount () const { return VectorLength ( & m_self -> aliases ); }
+    const SViewAliasMember * GetAliasMember ( uint32_t p_idx ) const
+    {
+        return static_cast < const SViewAliasMember * > ( VectorGet ( & m_self -> aliases, p_idx ) );
+    }
+
     uint32_t OverloadCount () const
     {
         const SNameOverload * ovl = static_cast < const SNameOverload * > ( m_self -> name -> u . obj );
@@ -217,6 +223,101 @@ FIXTURE_TEST_CASE(DB_TableMemberTemplate, AST_Db_Fixture)
     const STblMember * m = db . GetTableMember ( 0 );
     REQUIRE ( m -> tmpl );
 }
+
+FIXTURE_TEST_CASE(DB_ViewAliasMember_NotAView, AST_Db_Fixture)
+{
+    VerifyErrorMessage ( "version 2; table t#1 {}; view v#1 < t t > {}; database d#1 { table t T; alias t<T> vv; };",
+                         "Not a view: 't'" );
+}
+FIXTURE_TEST_CASE(DB_ViewAliasMember_AlreadyExists, AST_Db_Fixture)
+{
+    VerifyErrorMessage ( "version 2; table t#1 {}; view v#1 <t t > {}; database d#1 { table t T; alias v<T> T; };",
+                         "Member already exists: 'T'" );
+}
+FIXTURE_TEST_CASE(DB_ViewAliasMember_UnknownParameter, AST_Db_Fixture)
+{
+    VerifyErrorMessage ( "version 2; table t#1 {}; view v#1 <t t > {}; database d#1 { table t T; alias v<zz> vv; };",
+                         "Undeclared identifier: 'zz'" );
+}
+FIXTURE_TEST_CASE(DB_ViewAliasMember_WrongParameter, AST_Db_Fixture)
+{
+    VerifyErrorMessage ( "version 2; table t#1 {}; view v#1 <t t > {}; database d#1 { table t T; alias v<t> vv; };",
+                         "Not a table/view member: 't'" );
+}
+FIXTURE_TEST_CASE(DB_ViewAliasMember_WrongParameterCount, AST_Db_Fixture)
+{
+    VerifyErrorMessage ( "version 2; table t#1 {}; view v#1 <t t > {}; database d#1 { table t T; alias v<T,T> vv; };",
+                         "Incorrect number of view parameters: 'v'" );
+}
+FIXTURE_TEST_CASE(DB_ViewAliasMember_TableParamTypeMismatch, AST_Db_Fixture)
+{
+    VerifyErrorMessage (
+        "version 2;"
+        "table t1#1 {}; table t2#1 {}; view v#1 < t1 t > {}; "
+        "database d#1 { table t2 T; alias v<T> vv; };",
+        "View parameter type mismatch: 'T'" );
+}
+FIXTURE_TEST_CASE(DB_ViewAliasMember_ViewParamTypeMismatch, AST_Db_Fixture)
+{
+    VerifyErrorMessage (
+        "version 2;"
+        "table t#1 {}; view v1#1 < t t > {}; view v2#1 < t t > {}; view u#1<v1 v>{};"
+        "database d#1 { table t T; alias v2<T> vv; alias u< vv > uu; };",
+        "View parameter type mismatch: 'vv'" );
+}
+
+FIXTURE_TEST_CASE(DB_ViewAliasMember, AST_Db_Fixture)
+{
+    DbAccess db = ParseDatabase ( "version 2; table t#1 {}; view v#1 < t t > {}; database d#1 { table t T; alias v<T> vv; };", "d", 0 );
+    REQUIRE_EQ ( 1u, db . AliasMemberCount () );
+    const SViewAliasMember * m = db . GetAliasMember ( 0 );
+    REQUIRE ( m );
+    // verify the internals
+    REQUIRE_EQ( string("vv"), ToCppString ( m -> name -> name ) );
+    const struct SViewInstance & inst = m -> view;
+    REQUIRE_EQ( string("v"), ToCppString ( inst . dad -> name -> name ) );
+
+    VdbVector<KSymbol> params ( inst . params );
+    REQUIRE_EQ( 1u, params.Count() );
+    const KSymbol* p ( params.Get( 0 ) );
+    REQUIRE_NOT_NULL( p );
+    REQUIRE_EQ( string("T"), ToCppString ( p -> name ) );
+
+    REQUIRE_EQ( 0u, m -> cid . ctx ); // currently not used for view aliases
+    REQUIRE_EQ( 0u, m -> cid . id ); // index into db.aliases
+}
+
+FIXTURE_TEST_CASE(DB_ViewOnAliasMemberOnAnotherViewAliasMember, AST_Db_Fixture)
+{
+    DbAccess db = ParseDatabase (
+        "version 2;"
+        "table t#1 {}; view v1#1 < t t > {}; view v2#1 < v1 v > {};"
+        "database d#1 { table t T; alias v1<T> vv1; alias v2< vv1 > vv2; };",
+        "d", 0 );
+    REQUIRE_EQ ( 2u, db . AliasMemberCount () );
+    const SViewAliasMember * m = db . GetAliasMember ( 1 );
+    REQUIRE ( m );
+    // verify the internals
+    REQUIRE_EQ( string("vv2"), ToCppString ( m -> name -> name ) );
+    const struct SViewInstance & inst = m -> view;
+    REQUIRE_EQ( string("v2"), ToCppString ( inst . dad -> name -> name ) );
+
+    VdbVector<KSymbol> params ( inst . params );
+    REQUIRE_EQ( 1u, params.Count() );
+    const KSymbol* p ( params.Get( 0 ) );
+    REQUIRE_NOT_NULL( p );
+    REQUIRE_EQ( string("vv1"), ToCppString ( p -> name ) );
+
+    REQUIRE_EQ( 0u, m -> cid . ctx );
+    REQUIRE_EQ( 1u, m -> cid . id );
+}
+
+//TODO: DB_ViewOnAliasMemberOnAnotherViewAliasMember
+//TODO: DB_ViewAliasMemberOnTableFromParentDatabase
+
+//TODO: SViewAliasMemberMark
+//TODO: SViewAliasMemberDefDump
+//TODO: SViewAliasMemberDump
 
 //////////////////////////////////////////// Main
 #include <kapp/args.h>

@@ -49,7 +49,11 @@
 #include <klib/printf.h>
 #include <klib/out.h>
 #include <klib/rc.h>
+#include <klib/text.h>
+
+#include <vdb/schema-priv.h> /* KSymbolName */
 #include <vdb/vdb-priv.h>
+
 #include <kfg/properties.h>
 #include <sysalloc.h>
 
@@ -778,7 +782,7 @@ LIB_EXPORT rc_t CC VSchemaVAddIncludePath ( VSchema *self, const char *path, va_
         path=".";
 
     if (strchr(path, '%') == NULL)
-        temp = strdup(path);
+        temp = string_dup_measure(path, NULL);
     else {
         KDataBuffer buffer;
 
@@ -787,7 +791,7 @@ LIB_EXPORT rc_t CC VSchemaVAddIncludePath ( VSchema *self, const char *path, va_
         if (rc)
             return rc;
 
-        temp = strdup(buffer.base);
+        temp = string_dup_measure(buffer.base, NULL);
         KDataBufferWhack(&buffer);
     }
     if (temp == NULL)
@@ -904,6 +908,7 @@ static
 rc_t
 VSchemaParseTextInt_v2 ( VSchema *self, const char *name, const char *text, size_t bytes )
 {
+    //printf("VSchemaParseTextInt_v2:\n%.*s\n", (int)bytes, text);
     if ( VSchemaParse_v2 ( self, text, bytes ) )
     {
         PARSE_DEBUG( ("Parsed schema v2 from %s\n", name) );
@@ -2057,3 +2062,110 @@ LIB_EXPORT rc_t CC VSchemaRuntimeTableAddUnicodeColumn ( VSchemaRuntimeTable *se
 
     return rc;
 }
+
+/*******************************************************************************
+ Private functions
+ to access to internals of VSchema to allow them to be used in other projects.
+*/
+
+rc_t SDatabaseGetDad(const SDatabase * self, const struct SDatabase ** dad) {
+    assert(self && dad); *dad = self->dad; return 0;
+}
+
+rc_t STableGetParents(const STable * self, const struct Vector ** parents) {
+    assert(self && parents); *parents = &self->parents; return 0;
+}
+
+rc_t SViewGetParents(const SView * self, const struct Vector ** parents) {
+    assert(self && parents); *parents = &self->parents; return 0;
+}
+
+rc_t VSchemaGetDb(const VSchema * self, const Vector ** db) {
+    assert(self && db); *db = &self->db; return 0;
+}
+
+rc_t VSchemaGetTbl(const VSchema * self, const Vector ** tbl) {
+    assert(self && tbl); *tbl = &self->tbl; return 0;
+}
+
+rc_t VSchemaGetView(const VSchema * self, const Vector ** view) {
+    assert(self && view); *view = &self->view; return 0;
+}
+
+rc_t KSymbolNameWhack(KSymbolName * self) {
+    if (self != NULL) {
+        KSymbolNameElm *name = self->name;
+        while (name != NULL) {
+            KSymbolNameElm * next = name->next;
+            memset(name, 0, sizeof *name);
+            free(name);
+            name = next;
+        }
+
+        memset(self, 0, sizeof *self);
+        free(self);
+    }
+
+    return 0;
+}
+
+static KSymbolName * KSymbolMakeKSymbolName(const KSymbol * self,
+    uint32_t version)
+{
+    KSymbolName * out = NULL;
+    KSymbolNameElm * head = NULL;
+
+    assert(self);
+
+    for (; self; self = self->dad) {
+        KSymbolNameElm * prev = NULL;
+        const String * n = &self->name;
+        assert(n);
+        prev = calloc(1, sizeof *prev);
+        if (prev == NULL)
+            return NULL;
+
+        prev->name = n;
+        prev->next = head;
+        head = prev;
+    }
+
+    out = calloc(1, sizeof *out);
+    if (out == NULL)
+        return NULL;
+
+    out->name = head;
+    out->version = version;
+    return out;
+}
+
+rc_t SDatabaseMakeKSymbolName(const SDatabase * self,
+    KSymbolName ** out)
+{
+    assert(self && out);
+    *out = KSymbolMakeKSymbolName(self->name, self->version);
+    if (*out == NULL)
+        return RC(rcVDB, rcSchema, rcListing, rcMemory, rcExhausted);
+    else
+        return 0;
+}
+
+rc_t STableMakeKSymbolName(const STable * self, KSymbolName ** out) {
+    assert(self && out);
+    *out = KSymbolMakeKSymbolName(self->name, self->version);
+    if (*out == NULL)
+        return RC(rcVDB, rcSchema, rcListing, rcMemory, rcExhausted);
+    else
+        return 0;
+}
+
+rc_t SViewMakeKSymbolName(const SView * self, KSymbolName ** out) {
+    assert(self && out);
+    *out = KSymbolMakeKSymbolName(self->name, self->version);
+    if (*out == NULL)
+        return RC(rcVDB, rcSchema, rcListing, rcMemory, rcExhausted);
+    else
+        return 0;
+}
+
+/******************************************************************************/

@@ -24,6 +24,7 @@
 *
 */
 
+#include <klib/text.h>
 #include <search/extern.h>
 #include <compiler.h>
 #include <os-native.h>
@@ -108,7 +109,7 @@ rc_t AgrepWuMake( AgrepWuParams **self, AgrepFlags mode, const char *pattern )
     } else if( (*self = malloc(sizeof(**self))) == NULL ) {
         rc = RC(rcText, rcString, rcSearching, rcMemory, rcExhausted);
     } else {
-        (*self)->pattern = (unsigned char*)strdup(pattern);
+        (*self)->pattern = (unsigned char*)string_dup_measure(pattern, NULL);
         (*self)->len = strlen(pattern);
         if( (*self)->pattern == NULL ) {
             rc = RC(rcText, rcString, rcSearching, rcMemory, rcExhausted);

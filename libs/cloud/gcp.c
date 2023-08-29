@@ -38,6 +38,7 @@ struct GCP;
 #include <klib/data-buffer.h>
 #include <klib/debug.h> /* DBGMSG */
 #include <klib/json.h>
+#include <klib/log.h> /* PLOGMSG */
 #include <klib/printf.h> /* string_printf */
 #include <klib/rc.h>
 #include <klib/status.h>
@@ -72,7 +73,7 @@ struct GCP;
 #define PATH_MAX 4096
 #endif
 
-static rc_t PopulateCredentials(GCP * self);
+static rc_t PopulateCredentials(GCP * self, KConfig * kfg);
 
 /* Destroy
 */
@@ -83,7 +84,6 @@ rc_t CC GCPDestroy(GCP * self)
     free(self->private_key_id);
     free(self->client_email);
     free(self->project_id);
-    free(self->access_token);
     free(self->jwt);
     return CloudWhack(&self->dad);
 }
@@ -116,7 +116,7 @@ static rc_t readCE(GCP const *const self, size_t size, char location[])
     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_CE),
         ("Reading GCP location from provider\n"));
     return KNSManager_Read(self->dad.kns, location, size,
-                         identityUrl, "Metadata-Flavor", "Google");
+                         identityUrl, HttpMethod_Get, "Metadata-Flavor", "Google");
 }
 
 /* MakeComputeEnvironmentToken
@@ -168,7 +168,7 @@ static rc_t GCPGetLocation(const GCP * self, const String ** location) {
     assert(self);
 
     rc = KNSManager_Read(self->dad.kns, b, sizeof b,
-        zoneUrl, "Metadata-Flavor", "Google");
+        zoneUrl, HttpMethod_Get, "Metadata-Flavor", "Google");
 
     if (rc == 0)
         slash = string_rchr(b, sizeof b, '/');
@@ -688,11 +688,11 @@ rc_t CC GCPAddUserPaysCredentials(const GCP * cself, KClientHttpRequest * req, c
     {
         bool new_token = false;
         /* see if cached access_token has to be generated/refreshed */
-        if ( self->access_token == NULL ||
-             self->access_token_expiration < KTimeStamp() + 60 ) /* expires in less than a minute */
+        if ( self->dad.access_token == NULL ||
+             self->dad.access_token_expiration < KTimeStamp() + 60 ) /* expires in less than a minute */
         {
-            free(self->access_token);
-            self->access_token = NULL;
+            free(self->dad.access_token);
+            self->dad.access_token = NULL;
 
             if (self->jwt == NULL)
             {   /* first time here, create the JWT and hold on to it */
@@ -700,7 +700,7 @@ rc_t CC GCPAddUserPaysCredentials(const GCP * cself, KClientHttpRequest * req, c
             }
             if (rc == 0)
             {
-                rc = GetAccessToken(self, self->jwt, self->dad.conn, &self->access_token, &self->access_token_expiration);
+                rc = GetAccessToken(self, self->jwt, self->dad.conn, &self->dad.access_token, &self->dad.access_token_expiration);
             }
             new_token = true;
         }
@@ -721,7 +721,7 @@ rc_t CC GCPAddUserPaysCredentials(const GCP * cself, KClientHttpRequest * req, c
 
             if ( rc == 0 && new_token )
             {
-                rc = KClientHttpRequestAddHeader(req, "Authorization", "Bearer %s", self->access_token);
+                rc = KClientHttpRequestAddHeader(req, "Authorization", "Bearer %s", self->dad.access_token);
             }
 
             /* Add alt=media&userProject=<project_id> to the URL if not already there */
@@ -796,7 +796,7 @@ LIB_EXPORT rc_t CC CloudMgrMakeGCP(const CloudMgr * self, GCP ** p_gcp)
             self, user_agrees_to_pay, user_agrees_to_reveal_instance_identity );
         if ( rc == 0 )
         {
-            rc = PopulateCredentials(gcp);
+            rc = PopulateCredentials(gcp, (KConfig*)self->kfg);
             if (rc == 0)
             {
                 *p_gcp = gcp;
@@ -943,7 +943,7 @@ bool CloudMgrWithinGCP(const CloudMgr * self)
 }
 
 static
-rc_t PopulateCredentials(GCP * self)
+rc_t PopulateCredentials(GCP * self, KConfig * aKfg)
 {
     rc_t rc = 0;
 
@@ -957,24 +957,33 @@ rc_t PopulateCredentials(GCP * self)
 
     if (pathToJsonFile == NULL || *pathToJsonFile == 0)
     {
-        KConfig * cfg = NULL;
-        rc = KConfigMake(&cfg, NULL);
+        KConfig * cfg = aKfg;
+        if (cfg == NULL)
+            rc = KConfigMake(&cfg, NULL);
 
         if (rc == 0)
             rc = KConfig_Get_Gcp_Credential_File(
                 cfg, buffer, sizeof buffer, NULL);
 
-        if (rc == 0)
+        if (rc == 0) {
             pathToJsonFile = buffer;
+            PLOGMSG ( klogInfo, ( klogInfo, "Got "
+                "GCP credential file '$(F)' from configuration",
+                "F=%s", pathToJsonFile ) );
+        }
         else
             rc = 0;
 
-        {
+        if (aKfg == NULL) {
             rc_t r2 = KConfigRelease(cfg);
             if (rc == 0 && r2 != 0)
                 rc = r2;
         }
     }
+    else
+        PLOGMSG ( klogInfo, ( klogInfo, "Got "
+            "GOOGLE_APPLICATION_CREDENTIALS file '$(F)' from environment",
+            "F=%s", pathToJsonFile ) );
 
     if (pathToJsonFile != NULL && *pathToJsonFile != 0)
     {   /* read the credentials file */

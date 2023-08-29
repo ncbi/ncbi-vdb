@@ -33,11 +33,12 @@ struct AWS;
 #include <cloud/aws.h>
 
 #include <klib/debug.h> /* DBGMSG */
+#include <klib/log.h> /* PLOGMSG */
+#include <klib/printf.h>
 #include <klib/rc.h>
 #include <klib/status.h>
 #include <klib/strings.h> /* ENV_MAGIC_CE_TOKEN */
 #include <klib/text.h>
-#include <klib/printf.h>
 
 #include <kfg/config.h>
 #include <kfg/kfg-priv.h>
@@ -45,6 +46,7 @@ struct AWS;
 #include <kns/endpoint.h>
 #include <kns/socket.h>
 #include <kns/http.h>
+#include <kns/stream.h>
 #include <kfs/directory.h>
 #include <kfs/file.h>
 
@@ -54,7 +56,7 @@ struct AWS;
 #include "cloud-cmn.h" /* KNSManager_Read */
 #include "cloud-priv.h" /* CloudGetCachedComputeEnvironmentToken */
 
-static rc_t PopulateCredentials ( AWS * self );
+static rc_t PopulateCredentials ( AWS * self, KConfig * kfg );
 
 /* Destroy
  */
@@ -69,12 +71,90 @@ rc_t CC AWSDestroy ( AWS * self )
     return CloudWhack ( & self -> dad );
 }
 
-static rc_t KNSManager_GetAWSLocation(
-    const KNSManager * self, char *buffer, size_t bsize)
+static uint64_t AccessTokenLifetime_sec = 21600; // 6 hours
+
+#define INSTANCE_URL_PREFIX "http://169.254.169.254/latest/"
+
+static
+uint8_t
+IMDS_version( const KNSManager * kns, char *buffer, size_t bsize )
 {
-    return KNSManager_Read(self, buffer, bsize,
-        "http://169.254.169.254/latest/meta-data/placement/availability-zone",
-        NULL, NULL);
+    // try IMDSv1 first
+    if ( KNSManager_Read( kns, buffer, bsize,
+                          INSTANCE_URL_PREFIX "meta-data",  HttpMethod_Get,
+                          NULL, NULL) == 0 )
+    {
+        buffer[ 0 ] = 0;
+        return 1;
+    }
+
+    if ( KNSManager_Read( kns, buffer, bsize,
+                          INSTANCE_URL_PREFIX "api/token", HttpMethod_Put,
+                          "X-aws-ec2-metadata-token-ttl-seconds", "%u", AccessTokenLifetime_sec ) == 0 )
+    {
+        return 2;
+    }
+    return 0;
+}
+
+static
+void
+AWSInitAccess( AWS * self )
+{
+    // try IMDSv1 first
+    char buffer[4096];
+    self -> IMDS_version = IMDS_version( self -> dad . kns, buffer, sizeof( buffer ) );
+    if ( self -> IMDS_version == 2 )
+    {   // save off the session token and its expiration
+        self -> dad . access_token = string_dup ( buffer, string_size ( buffer ) );
+        self -> dad . access_token_expiration = KTimeStamp() + AccessTokenLifetime_sec;
+    }
+}
+
+static
+rc_t
+GetInstanceInfo( const AWS * cself, const char * url, char *buffer, size_t bsize )
+{
+    switch ( cself -> IMDS_version )
+    {
+    case 1:
+        return KNSManager_Read( cself -> dad . kns, buffer, bsize, url, HttpMethod_Get, NULL, NULL );
+    case 2:
+        {
+            /* see if cached access_token has to be generated/refreshed */
+            if ( cself -> dad . access_token_expiration < KTimeStamp() + 60 ) /* expires in less than a minute */
+            {
+                AWS * self = (AWS *)cself;
+                free( self -> dad . access_token );
+                self -> dad . access_token = NULL;
+                char buffer[4096];
+                rc_t rc = KNSManager_Read( self -> dad . kns, buffer, sizeof( buffer ),
+                          INSTANCE_URL_PREFIX "api/token", HttpMethod_Put,
+                          "X-aws-ec2-metadata-token-ttl-seconds", "%u", AccessTokenLifetime_sec );
+                if ( rc != 0 )
+                {
+                    return rc;
+                }
+                self -> dad . access_token = string_dup ( buffer, string_size ( buffer ) );
+                self -> dad . access_token_expiration = KTimeStamp() + AccessTokenLifetime_sec;
+            }
+
+            // curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/availability-zone
+            return KNSManager_Read( cself -> dad . kns, buffer, bsize, url, HttpMethod_Get,
+                                    "X-aws-ec2-metadata-token", "%s", cself -> dad . access_token );
+        }
+    default:
+        // on AWS; the object can still be useful for  testing
+        buffer[ 0 ] = 0;
+        return 0;
+    }
+}
+
+static
+rc_t
+KNSManager_GetAWSLocation( const AWS * self, char *buffer, size_t bsize )
+{
+    return GetInstanceInfo( self, INSTANCE_URL_PREFIX "meta-data/placement/availability-zone", buffer, bsize );
 }
 
 /* envCE
@@ -93,6 +173,13 @@ static char const *envCE()
     return env;
 }
 
+/* Get Pkcs7 signature from provider network
+ */
+rc_t GetPkcs7( const struct AWS * self, char *buffer, size_t bsize )
+{
+    return GetInstanceInfo( self, INSTANCE_URL_PREFIX "dynamic/instance-identity/pkcs7", buffer, bsize );
+}
+
 /* readCE
  * Get Compute Environment Token by reading from provider network
  */
@@ -101,17 +188,13 @@ static rc_t readCE(AWS const *const self, size_t size, char location[])
     char document[4096] = "";
     char pkcs7[4096] = "";
     rc_t rc;
-    
+
     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_CE),
            ("Reading AWS location from provider\n"));
-    rc = KNSManager_Read(self->dad.kns, document, sizeof document,
-                 "http://169.254.169.254/latest/dynamic/instance-identity/document",
-                 NULL, NULL);
+    rc = GetInstanceInfo( self, INSTANCE_URL_PREFIX "dynamic/instance-identity/document", document, sizeof document );
     if (rc) return rc;
 
-    rc = KNSManager_Read(self->dad.kns, pkcs7, sizeof pkcs7,
-                 "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7",
-                 NULL, NULL);
+    rc = GetPkcs7( self, pkcs7, sizeof pkcs7 );
     if (rc) return rc;
 
     return MakeLocation(pkcs7, document, location, size);
@@ -124,7 +207,7 @@ static
 rc_t CC AWSMakeComputeEnvironmentToken ( const AWS * self, const String ** ce_token )
 {
     assert(self);
-    
+
     if (!self->dad.user_agrees_to_reveal_instance_identity)
         return RC(rcCloud, rcProvider, rcIdentifying,
                   rcCondition, rcUnauthorized);
@@ -160,7 +243,7 @@ static rc_t AwsGetLocation(const AWS * self, const String ** location)
 
     assert(self);
 
-    rc = KNSManager_GetAWSLocation(self->dad.kns, zone, sizeof zone);
+    rc = KNSManager_GetAWSLocation( self, zone, sizeof zone );
 
     if (rc == 0)
         rc = string_printf(buffer, sizeof buffer, NULL, "s3.%s", zone);
@@ -257,9 +340,10 @@ LIB_EXPORT rc_t CC CloudMgrMakeAWS ( const CloudMgr * self, AWS ** p_aws )
             self, user_agrees_to_pay, user_agrees_to_reveal_instance_identity );
         if ( rc == 0 )
         {
-            rc = PopulateCredentials( aws );
+            rc = PopulateCredentials( aws, (KConfig*)self->kfg );
             if ( rc == 0 )
             {
+                AWSInitAccess( aws );
                 * p_aws = aws;
             }
             else
@@ -271,7 +355,6 @@ LIB_EXPORT rc_t CC CloudMgrMakeAWS ( const CloudMgr * self, AWS ** p_aws )
         {
             free ( aws );
         }
-
     }
 
     return rc;
@@ -329,22 +412,9 @@ LIB_EXPORT rc_t CC AWSToCloud ( const AWS * cself, Cloud ** cloud )
  */
 bool CloudMgrWithinAWS ( const CloudMgr * self )
 {
-#if 0
-    KEndPoint ep;
-    /* describe address 169.254.169.254 on port 80 */
-    KNSManagerInitIPv4Endpoint ( self -> kns, & ep,
-                                 ( ( 169 << 24 ) |
-                                   ( 254 << 16 ) |
-                                   ( 169 <<  8 ) |
-                                   ( 254 <<  0 ) ), 80 );
-
-#endif
-
-    char buffer[999] = "";
-
     assert(self);
-
-    return KNSManager_GetAWSLocation(self->kns, buffer, sizeof buffer) == 0;
+    char buffer[1024];
+    return IMDS_version( self -> kns, buffer, sizeof buffer ) != 0;
 }
 
 /*** Finding/loading credentials  */
@@ -401,109 +471,111 @@ static void aws_parse_file ( AWS * self, const KFile *cred_file )
     {
         free ( buffer );
     }
-	else
-	{
-		String bracket;
-		String profile;
-		const String *temp1;
-		const String *brack_profile;
+    else
+    {
+        String bracket;
+        String profile;
+        const String *temp1;
+        const String *brack_profile;
 
-		const char *start = buffer;
-		const char *end = start + buf_size;
-		const char *sep = start;
-		bool in_profile = false;
+        const char *start = buffer;
+        const char *end = start + buf_size;
+        const char *sep = start;
+        bool in_profile = false;
 
-		CONST_STRING ( &bracket, "[" );
+        CONST_STRING ( &bracket, "[" );
 
-		StringInitCString( & profile, self -> profile );
+        StringInitCString( & profile, self -> profile );
 
-		StringConcat ( &temp1, &bracket, &profile );
-		CONST_STRING ( &bracket, "]" );
-		StringConcat ( &brack_profile, temp1, &bracket );
+        StringConcat ( &temp1, &bracket, &profile );
+        CONST_STRING ( &bracket, "]" );
+        StringConcat ( &brack_profile, temp1, &bracket );
 
-		--sep;
+        --sep;
 
 
-		for ( ; start < end; start = sep + 1 ) {
-			rc_t rc;
-			String string, trim;
-			String key, value;
-			String access_key_id, secret_access_key;
-			String region, output;
+        for ( ; start < end; start = sep + 1 ) {
+            rc_t rc;
+            String string, trim;
+            String key, value;
+            String access_key_id, secret_access_key;
+            String region, output;
 
-			sep = string_chr ( start, end - start, '\n' );
-			if ( sep == NULL ) sep = (char *)end;
+            sep = string_chr ( start, end - start, '\n' );
+            if ( sep == NULL ) sep = (char *)end;
 
-			StringInit (
-				&string, start, sep - start, string_len ( start, sep - start ) );
+            StringInit (
+                &string, start, sep - start, string_len ( start, sep - start ) );
 
-			StringTrim ( &string, &trim );
-			/* check for empty line and skip */
-			if ( StringLength ( &trim ) == 0 ) continue;
-			/*
-					{
-						char *p = string_dup ( trim.addr, StringLength ( &trim ) );
-						fprintf ( stderr, "line: %s\n", p );
-						free ( p );
-					}
-			*/
-			/* check for comment line and skip */
-			if ( trim.addr[0] == '#' ) continue;
+            StringTrim ( &string, &trim );
+            /* check for empty line and skip */
+            if ( StringLength ( &trim ) == 0 ) continue;
+            /*
+                    {
+                        char *p = string_dup ( trim.addr, StringLength ( &trim ) );
+                        fprintf ( stderr, "line: %s\n", p );
+                        free ( p );
+                    }
+            */
+            /* check for comment line and skip */
+            if ( trim.addr[0] == '#' ) continue;
 
-			/* check for [profile] line */
-			if ( trim.addr[0] == '[' ) {
-				in_profile = StringEqual ( &trim, brack_profile );
-				continue;
-			}
+            /* check for [profile] line */
+            if ( trim.addr[0] == '[' ) {
+                in_profile = StringEqual ( &trim, brack_profile );
+                continue;
+            }
 
-			if ( !in_profile ) continue;
+            if ( !in_profile ) continue;
 
-			/* check for key/value pairs and skip if none found */
-			rc = aws_extract_key_value_pair ( &trim, &key, &value );
-			if ( rc != 0 ) continue;
+            /* check for key/value pairs and skip if none found */
+            rc = aws_extract_key_value_pair ( &trim, &key, &value );
+            if ( rc != 0 ) continue;
 
-			/* now check keys we are looking for and populate the node*/
+            /* now check keys we are looking for and populate the node*/
 
-			CONST_STRING ( &access_key_id, "aws_access_key_id" );
-			CONST_STRING ( &secret_access_key, "aws_secret_access_key" );
+            CONST_STRING ( &access_key_id, "aws_access_key_id" );
+            CONST_STRING ( &secret_access_key, "aws_secret_access_key" );
 
-			if ( StringCaseEqual ( &key, &access_key_id ) ) {
-				free ( self -> access_key_id );
-				self -> access_key_id = string_dup ( value . addr, value . size );
-			}
+            if ( StringCaseEqual ( &key, &access_key_id ) ) {
+                free ( self -> access_key_id );
+                self -> access_key_id = string_dup ( value . addr, value . size );
+            }
 
-			if ( StringCaseEqual ( &key, &secret_access_key ) ) {
-				free ( self -> secret_access_key );
-				self -> secret_access_key = string_dup ( value . addr, value . size );
-			}
+            if ( StringCaseEqual ( &key, &secret_access_key ) ) {
+                free ( self -> secret_access_key );
+                self -> secret_access_key = string_dup ( value . addr, value . size );
+            }
 
-			CONST_STRING ( &region, "region" );
-			CONST_STRING ( &output, "output" );
+            CONST_STRING ( &region, "region" );
+            CONST_STRING ( &output, "output" );
 
-			if ( StringCaseEqual ( &key, &region ) ) {
-				free ( self -> region );
-				self -> region = string_dup ( value . addr, value . size );
-			}
-			if ( StringCaseEqual ( &key, &output ) ) {
-				free ( self -> output );
-				self -> output = string_dup ( value . addr, value . size );
-			}
+            if ( StringCaseEqual ( &key, &region ) ) {
+                free ( self -> region );
+                self -> region = string_dup ( value . addr, value . size );
+            }
+            if ( StringCaseEqual ( &key, &output ) ) {
+                free ( self -> output );
+                self -> output = string_dup ( value . addr, value . size );
+            }
 
-		}
+        }
 
-		StringWhack ( temp1 );
-		StringWhack ( brack_profile );
-		free ( buffer );
-	}
+        StringWhack ( temp1 );
+        StringWhack ( brack_profile );
+        free ( buffer );
+    }
 }
 
-static void make_home_node ( char *path, size_t path_size )
+static void make_home_node ( char *path, size_t path_size, KConfig * aKfg )
 {
     size_t num_read;
     const char *home;
 
-    KConfig * kfg;
-    rc_t rc = KConfigMakeLocal( & kfg, NULL );
+    rc_t rc = 0;
+    KConfig * kfg = aKfg;
+    if (kfg == NULL)
+        rc = KConfigMakeLocal(&kfg, NULL);
     if ( rc == 0 )
     {
         const KConfigNode *home_node;
@@ -531,24 +603,27 @@ static void make_home_node ( char *path, size_t path_size )
             KConfigNodeRelease ( home_node );
         }
 
-        KConfigRelease ( kfg );
+        if (aKfg == NULL)
+            KConfigRelease ( kfg );
     }
 }
 
-static rc_t LoadCredentials ( AWS * self  )
+static rc_t LoadCredentials ( AWS * self, KConfig * kfg )
 {
     const char *conf_env = getenv ( "AWS_CONFIG_FILE" );
     const char *cred_env = getenv ( "AWS_SHARED_CREDENTIAL_FILE" );
 
-	KDirectory *wd = NULL;
+    KDirectory *wd = NULL;
     rc_t rc = KDirectoryNativeDir ( &wd );
     if ( rc ) return rc;
 
-    if ( conf_env && *conf_env != 0 ) 
+    if ( conf_env && *conf_env != 0 )
     {
         const KFile *cred_file = NULL;
+        DBGMSG(DBG_CLOUD, DBG_FLAG(DBG_CLOUD_LOAD),
+            ("Got AWS_CONFIG_FILE '%s' from environment\n", conf_env));
         rc = KDirectoryOpenFileRead ( wd, &cred_file, "%s", conf_env );
-        if ( rc == 0 ) 
+        if ( rc == 0 )
         {
             aws_parse_file ( self, cred_file );
             KFileRelease ( cred_file );
@@ -557,9 +632,12 @@ static rc_t LoadCredentials ( AWS * self  )
         return rc;
     }
 
-    if ( cred_env && *cred_env != 0 ) 
+    if ( cred_env && *cred_env != 0 )
     {
         const KFile *cred_file = NULL;
+        PLOGMSG ( klogInfo, ( klogInfo,
+                    "Got AWS_SHARED_CREDENTIAL_FILE '$(F)' from environment",
+                    "F=%s", cred_env ) );
         rc = KDirectoryOpenFileRead ( wd, &cred_file, "%s", cred_env );
         if ( rc == 0 )
         {
@@ -572,18 +650,49 @@ static rc_t LoadCredentials ( AWS * self  )
 
     {
         char home[4096] = "";
-        make_home_node ( home, sizeof home );
+        make_home_node ( home, sizeof home, kfg );
 
-        if ( home[0] != 0 ) 
+        if ( home[0] != 0 )
         {
             char aws_path[4096] = "";
             size_t num_writ = 0;
-            rc = string_printf ( aws_path, sizeof aws_path, &num_writ, "%s/.aws", home );
+            rc = string_printf (aws_path, sizeof aws_path, &num_writ, "%s/.aws",
+                home );
             if ( rc == 0 && num_writ != 0 )
             {
                 const KFile *cred_file = NULL;
                 rc = KDirectoryOpenFileRead ( wd, &cred_file, "%s%s", aws_path, "/credentials" );
-                if ( rc == 0 ) 
+
+                if (rc == 0)
+                    PLOGMSG ( klogInfo, ( klogInfo,
+                                              "Loading AWS credentials from '$(P)/credentials'",
+                                              "P=%s", aws_path ) );
+                else {
+                    KConfig * cfg = kfg;
+                    rc = 0;
+                    if (cfg == NULL)
+                        rc = KConfigMake(&cfg, NULL);
+
+                    if (rc == 0)
+                        rc = KConfig_Get_Aws_Credential_File(
+                            cfg, aws_path, sizeof aws_path, NULL);
+
+                    if (rc == 0) {
+                        PLOGMSG ( klogInfo, ( klogInfo,
+                                        "Loading AWS credential file '$(F)' from configuration",
+                                        "F=%s", aws_path ) );
+                        rc = KDirectoryOpenFileRead(
+                            wd, &cred_file, "%s", aws_path);
+                    }
+
+                    if (kfg == NULL) {
+                        rc_t r2 = KConfigRelease(cfg);
+                        if (rc == 0 && r2 != 0)
+                            rc = r2;
+                    }
+                }
+
+                if ( rc == 0 )
                 {
                     aws_parse_file ( self, cred_file );
                     KFileRelease ( cred_file );
@@ -591,6 +700,9 @@ static rc_t LoadCredentials ( AWS * self  )
                     rc = KDirectoryOpenFileRead ( wd, &cred_file, "%s%s", aws_path, "/config" );
                     if ( rc == 0 )
                     {
+                        PLOGMSG ( klogInfo, ( klogInfo,
+                                              "Loading AWS credentials from '$(P)/config'",
+                                              "P=%s", aws_path ) );
                         aws_parse_file ( self, cred_file );
                         KFileRelease ( cred_file );
                     }
@@ -605,12 +717,13 @@ static rc_t LoadCredentials ( AWS * self  )
 
 //TODO: check results of strdups and string_dups
 static
-rc_t PopulateCredentials ( AWS * self )
+rc_t PopulateCredentials ( AWS * self, KConfig * aKfg )
 {
     /* Check Environment first */
+    const char * profile = NULL;
+
     const char * aws_access_key_id = getenv ( "AWS_ACCESS_KEY_ID" );
     const char * aws_secret_access_key = getenv ( "AWS_SECRET_ACCESS_KEY" );
-    const char * profile = getenv ( "AWS_PROFILE" );
 
     if ( aws_access_key_id != NULL && aws_secret_access_key != NULL
         && strlen ( aws_access_key_id ) > 0
@@ -618,18 +731,25 @@ rc_t PopulateCredentials ( AWS * self )
     {   /* Use environment variables */
         self -> access_key_id = string_dup( aws_access_key_id, string_size( aws_access_key_id ) );
         self -> secret_access_key = string_dup( aws_secret_access_key, string_size( aws_secret_access_key ) );
+        DBGMSG(DBG_CLOUD, DBG_FLAG(DBG_CLOUD_LOAD), ("Got "
+            "AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY from environment\n"));
         return 0;
     }
 
     /* Get Profile */
+    profile = getenv("AWS_PROFILE");
     if ( profile != NULL && *profile != 0 )
     {
         self -> profile = string_dup ( profile, string_size ( profile ) );
+        PLOGMSG ( klogInfo, ( klogInfo, "Got AWS_PROFILE '$(P)' from environment",
+                                        "P=%s", self->profile ) );
     }
     else
     {
-        KConfig * kfg;
-        rc_t rc = KConfigMakeLocal( & kfg, NULL );
+        KConfig * kfg = aKfg;
+        rc_t rc = 0;
+        if (kfg == NULL)
+            rc = KConfigMakeLocal(&kfg, NULL);
 /*KConfigPrint(kfg,0);*/
         if ( rc == 0 )
         {
@@ -639,18 +759,24 @@ rc_t PopulateCredentials ( AWS * self )
             if ( rc == 0 && num_writ > 0 )
             {
                 self -> profile = string_dup ( buffer, string_size ( buffer ) );
+                PLOGMSG ( klogInfo, ( klogInfo,
+                                           "Got AWS profile '$(P)' from configuration",
+                                           "P=%s", self->profile ) );
             }
-            KConfigRelease( kfg );
+            if (aKfg == NULL)
+                KConfigRelease(kfg);
         }
     }
 
     if ( self -> profile == NULL )
     {
-        self -> profile = strdup ( "default" );
+        self -> profile = string_dup_measure ( "default", NULL );
+        DBGMSG(DBG_CLOUD, DBG_FLAG(DBG_CLOUD_LOAD),
+            ("Set '%s' AWS_PROFILE\n", self->profile));
     }
 
     /* OK if no credentials are found */
-    LoadCredentials ( self );
+    LoadCredentials ( self, aKfg );
     return 0;
 }
 

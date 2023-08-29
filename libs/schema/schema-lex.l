@@ -24,9 +24,27 @@
 *
 */
 
+%option never-interactive nounistd yylineno
+
+%option bison-locations
+
+%option prefix="Schema_"
+
+/* re-entrant scanner */
+%option reentrant
+
+ /* maintain state stack */
+%option stack
+
+ /* let parser handle EOF */
+%option noyywrap
+
 %{
 
 #define YYDEBUG 1
+#define YYSTYPE SCHEMA_STYPE
+#define YYLTYPE SCHEMA_LTYPE
+#define yytokentype Schema_tokentype
 
 #include "schema-lex.h"
 
@@ -54,21 +72,6 @@ static void AddWhitespace ( SchemaScanBlock* p_sb, const char* p_ws, size_t p_le
 #define AddWs() AddWhitespace ( ( SchemaScanBlock * ) yyextra, yytext, yyleng )
 
 %}
-
-%option never-interactive nounistd yylineno
-
-%option bison-locations
-
-%option prefix="schema_yy"
-
-/* re-entrant scanner */
-%option reentrant
-
- /* maintain state stack */
-%option stack
-
- /* let parser handle EOF */
-%option noyywrap
 
  /* start-state for slash-star comments */
 %x CMT_SLASH_STAR

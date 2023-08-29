@@ -68,17 +68,17 @@ rc_t SRATableWhack ( SRATable *self )
  *
  *  "path" [ IN ] - NUL terminated table name
  */
-LIB_EXPORT rc_t CC SRAMgrCreateTable(SRAMgr *self, SRATable **tbl, const char *typespec, const char *path, ...) {
+LIB_EXPORT rc_t CC SRAMgrCreateTable(SRAMgr *self, SRATable **tbl, const char * schema_file, const char *typespec, const char *path, ...) {
     va_list va;
     rc_t rc;
     
     va_start(va, path);
-    rc = SRAMgrVCreateTable(self, tbl, typespec, path, va);
+    rc = SRAMgrVCreateTable(self, tbl, schema_file, typespec, path, va);
     va_end(va);
     return rc;
 }
 
-LIB_EXPORT rc_t CC SRAMgrVCreateTable ( SRAMgr *self, SRATable **rslt,
+LIB_EXPORT rc_t CC SRAMgrVCreateTable ( SRAMgr *self, SRATable **rslt, const char * schema_file,
     const char *typespec, const char *spec, va_list args )
 {
     rc_t rc;
@@ -102,43 +102,47 @@ LIB_EXPORT rc_t CC SRAMgrVCreateTable ( SRAMgr *self, SRATable **rslt,
             path[act_size] = '\0';
             if ( rc == 0 )
             {
-                VTable *vtbl;
-                rc = VDBManagerCreateTable ( self -> vmgr, & vtbl, self -> schema,
-                                             typespec, ( self -> mode & kcmBitMask ) | kcmCreate, "%s", path );
+                rc = VSchemaParseFile( ( VSchema * )self -> schema, "%s", schema_file );
                 if ( rc == 0 )
                 {
-                    rc = VTableColumnCreateParams ( vtbl, kcmCreate, kcsCRC32, 0 );
+                    VTable *vtbl;
+                    rc = VDBManagerCreateTable ( self -> vmgr, & vtbl, self -> schema,
+                                                typespec, ( self -> mode & kcmBitMask ) | kcmCreate, "%s", path );
                     if ( rc == 0 )
                     {
-                        SRATable *tbl = calloc ( 1, sizeof * tbl );
-                        if ( tbl == NULL )
-                            rc = RC ( rcSRA, rcTable, rcConstructing, rcMemory, rcExhausted );
-                        else
+                        rc = VTableColumnCreateParams ( vtbl, kcmCreate, kcsCRC32, 0 );
+                        if ( rc == 0 )
                         {
-                            tbl -> vtbl = vtbl;
-
-                            rc = VTableOpenMetadataUpdate ( vtbl, & tbl -> meta );
-                            if ( rc == 0 )
-                                rc = KMetadataVersion ( tbl -> meta, & tbl -> metavers );
-                            if ( rc == 0 )
-                                rc = VTableCreateCursorWrite ( vtbl, & tbl -> curs, kcmInsert );
-                            if ( rc == 0 )
+                            SRATable *tbl = calloc ( 1, sizeof * tbl );
+                            if ( tbl == NULL )
+                                rc = RC ( rcSRA, rcTable, rcConstructing, rcMemory, rcExhausted );
+                            else
                             {
-                                tbl -> mgr = SRAMgrAttach ( self );
-                                tbl -> mode = self -> mode;
-                                tbl -> read_only = false;
-                                KRefcountInit ( & tbl -> refcount, 1, "SRATable", "OpenTableUpdate", path );
-                                VectorInit ( & tbl -> wcol, 0, 16 );
-                                * rslt = tbl;
-                                return 0;
+                                tbl -> vtbl = vtbl;
+
+                                rc = VTableOpenMetadataUpdate ( vtbl, & tbl -> meta );
+                                if ( rc == 0 )
+                                    rc = KMetadataVersion ( tbl -> meta, & tbl -> metavers );
+                                if ( rc == 0 )
+                                    rc = VTableCreateCursorWrite ( vtbl, & tbl -> curs, kcmInsert );
+                                if ( rc == 0 )
+                                {
+                                    tbl -> mgr = SRAMgrAttach ( self );
+                                    tbl -> mode = self -> mode;
+                                    tbl -> read_only = false;
+                                    KRefcountInit ( & tbl -> refcount, 1, "SRATable", "OpenTableUpdate", path );
+                                    VectorInit ( & tbl -> wcol, 0, 16 );
+                                    * rslt = tbl;
+                                    return 0;
+                                }
+
+                                vtbl = NULL;
+                                SRATableWhack ( tbl );
                             }
-
-                            vtbl = NULL;
-                            SRATableWhack ( tbl );
                         }
-                    }
 
-                    VTableRelease ( vtbl );
+                        VTableRelease ( vtbl );
+                    }
                 }
             }
         }
