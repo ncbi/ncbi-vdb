@@ -30,11 +30,13 @@
 
 #include <ktst/unit_test.hpp>
 
-#include <../libs/kdb/table-priv.h>
+#include <../libs/kdb/wtable-priv.h>
+#include <../libs/kdb/dbmgr-priv.h>
 
 #include <klib/rc.h>
 
 #include <kdb/manager.h>
+#include <kdb/column.h>
 #include <kdb/kdb-priv.h>
 
 using namespace std;
@@ -49,20 +51,26 @@ public:
     KTable_Fixture()
     {
         THROW_ON_RC( KDirectoryNativeDir( & m_dir ) );
+        THROW_ON_RC( KDBManagerMakeUpdate ( & m_mgr, m_dir ) );
     }
     ~KTable_Fixture()
     {
         KTableRelease( m_tbl );
+        KDBManagerRelease( m_mgr );
         KDirectoryRelease( m_dir );
     }
     void Setup( const string testName )
     {
         const string ColumnName = ScratchDir + testName;
-        THROW_ON_RC( KTableMake( & m_tbl, m_dir, ColumnName.c_str() ) );
+        THROW_ON_RC( KTableMake( & m_tbl, m_dir, ColumnName.c_str(), nullptr, true ) );
         KDirectoryAddRef( m_dir); // KTableMake does not call AddRef
+
+        THROW_ON_RC( KDBManagerOpenObjectAdd ( m_mgr, & m_tbl -> sym) );
+        m_tbl -> mgr = KDBManagerAttach ( m_mgr );
     }
 
     KDirectory * m_dir = nullptr;
+    KDBManager * m_mgr = nullptr;
     KTable * m_tbl = nullptr;
 };
 
@@ -113,9 +121,10 @@ FIXTURE_TEST_CASE(KTable_OpenManagerRead, KTable_Fixture)
 {
     Setup( GetName() );
 
-    struct KDBManager const *mgr;
+    const KDBManager *mgr;
     REQUIRE_RC( KTableOpenManagerRead( m_tbl, &mgr ) );
-    REQUIRE_NULL( mgr );
+    REQUIRE_EQ( (const KDBManager *)m_mgr, mgr );
+    REQUIRE_RC( KDBManagerRelease( mgr ) );
 }
 
 FIXTURE_TEST_CASE(KTable_OpenParentRead, KTable_Fixture)
@@ -139,6 +148,17 @@ FIXTURE_TEST_CASE(KWTable_OpenDirectoryRead, KTable_Fixture)
     Setup( GetName() );
     const KDirectory * dir = nullptr;
     REQUIRE_RC( KTableOpenDirectoryRead( m_tbl, &dir ) );
+    REQUIRE_EQ( (const KDirectory *)m_dir, dir );
+    REQUIRE_RC( KDirectoryRelease( dir ) );
+}
+
+FIXTURE_TEST_CASE(KWTable_OpenColumnRead, KTable_Fixture)
+{
+    Setup( GetName() );
+    const KColumn * col = nullptr;
+    rc_t rc = SILENT_RC( rcFS,rcDirectory,rcOpening,rcPath,rcNotFound );
+    REQUIRE_EQ( rc, KTableOpenColumnRead ( m_tbl, &col, "%s", "col" ) );
+    REQUIRE_NULL( col );
 }
 
 //////////////////////////////////////////// Main

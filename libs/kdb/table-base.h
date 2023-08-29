@@ -44,6 +44,7 @@ extern "C" {
 
 struct KDBManager;
 struct KDatabase;
+struct KColumn;
 
 /*--------------------------------------------------------------------------
  * KTableBase, base structure for KTable implementations
@@ -65,6 +66,7 @@ struct KTableBase_vt
     rc_t ( CC * openParentRead )    ( const KTABLE_IMPL *self, struct KDatabase const **db );
     bool ( CC * hasRemoteData )     ( const KTABLE_IMPL *self );
     rc_t ( CC * openDirectoryRead ) ( const KTABLE_IMPL *self, const KDirectory **dir );
+    rc_t ( CC * vOpenColumnRead )   ( const KTABLE_IMPL *self, const struct KColumn **colp, const char *name, va_list args );
 
 //TODO: write-side only; decide how to handle
 #if 0

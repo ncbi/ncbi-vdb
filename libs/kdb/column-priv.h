@@ -78,6 +78,7 @@ struct KColumn
 };
 
 rc_t KColumnMake ( KColumn **colp, const KDirectory *dir, const char *path );
+rc_t KColumnMakeRead ( KColumn **colp, const KDirectory *dir, const char *path );
 
 /*--------------------------------------------------------------------------
  * KColumnBlob

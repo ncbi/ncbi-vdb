@@ -115,6 +115,13 @@ rc_t KColumnFileOpenUpdate ( KFile ** ppf, KMD5File ** ppfmd5, KDirectory * dir,
 			     KMD5SumFmt * md5, bool append,
 			     const char * name);
 
+rc_t KColumnMakeRead ( KColumn **colp, const KDirectory *dir, const char *path, KMD5SumFmt * md5 );
+rc_t KColumnCreate ( KColumn **colp, KDirectory *dir,
+    KCreateMode cmode, KChecksum checksum,
+	size_t pgsize, const char *path, KMD5SumFmt *md5 );
+rc_t KColumnMakeUpdate ( KColumn **colp,
+    KDirectory *dir, const char *path, KMD5SumFmt *md5 );
+
 /*--------------------------------------------------------------------------
  * KColumnBlob
  *  one or more rows of column data

@@ -39,7 +39,7 @@
 
 using namespace std;
 
-TEST_SUITE(KRTableTestSuite);
+TEST_SUITE(KRDatabaseTestSuite);
 
 static const string ScratchDir = "./data/";
 
@@ -69,7 +69,7 @@ public:
 
 //NB for now make the simplest calls possible, to test the vtable plumbing
 
-FIXTURE_TEST_CASE(KRTable_AddRelease, KDatabase_Fixture)
+FIXTURE_TEST_CASE(KRDatabase_AddRelease, KDatabase_Fixture)
 {
     Setup( GetName() );
 
@@ -81,28 +81,28 @@ FIXTURE_TEST_CASE(KRTable_AddRelease, KDatabase_Fixture)
     // use valgrind to find any leaks
 }
 #if 0
-FIXTURE_TEST_CASE(KRTable_Locked, KDatabase_Fixture)
+FIXTURE_TEST_CASE(KRDatabase_Locked, KDatabase_Fixture)
 {
     Setup( GetName() );
 
     REQUIRE( ! KDatabaseLocked( m_tbl ) );
 }
 
-FIXTURE_TEST_CASE(KRTable_Exists, KDatabase_Fixture)
+FIXTURE_TEST_CASE(KRDatabase_Exists, KDatabase_Fixture)
 {
     Setup( GetName() );
 
     REQUIRE( ! KDatabaseExists( m_tbl, kptIndex, "%s", GetName() ) );
 }
 
-FIXTURE_TEST_CASE(KRTable_IsAlias, KDatabase_Fixture)
+FIXTURE_TEST_CASE(KRDatabase_IsAlias, KDatabase_Fixture)
 {
     Setup( GetName() );
 
     REQUIRE( ! KDatabaseIsAlias( m_tbl, kptIndex, nullptr, 0, GetName() ) );
 }
 
-FIXTURE_TEST_CASE(KRTable_Writable, KDatabase_Fixture)
+FIXTURE_TEST_CASE(KRDatabase_Writable, KDatabase_Fixture)
 {
     Setup( GetName() );
 
@@ -127,14 +127,14 @@ FIXTURE_TEST_CASE(KDatabase_OpenParentRead, KDatabase_Fixture)
     REQUIRE_NULL( db );
 }
 
-FIXTURE_TEST_CASE(KRTable_HasRemoteData, KDatabase_Fixture)
+FIXTURE_TEST_CASE(KRDatabase_HasRemoteData, KDatabase_Fixture)
 {
     Setup( GetName() );
 
     REQUIRE( ! KDatabaseHasRemoteData( m_tbl ) );
 }
 
-FIXTURE_TEST_CASE(KRTable_OpenDirectoryRead, KDatabase_Fixture)
+FIXTURE_TEST_CASE(KRDatabase_OpenDirectoryRead, KDatabase_Fixture)
 {
     Setup( GetName() );
     const KDirectory * dir = nullptr;
@@ -162,12 +162,12 @@ rc_t CC Usage ( const Args * args )
     return 0;
 }
 
-const char UsageDefaultName[] = "Test_KDB_KRTable";
+const char UsageDefaultName[] = "Test_KDB_KRDatabase";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=KRTableTestSuite(argc, argv);
+    rc_t rc=KRDatabaseTestSuite(argc, argv);
     return rc;
 }
 

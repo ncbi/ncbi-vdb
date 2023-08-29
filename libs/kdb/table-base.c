@@ -29,7 +29,7 @@
 #define KTable KTableBase
 #include <kdb/table.h>
 
-#include <kdb/extern.h>
+#include <kdb/column.h>
 
 #include <klib/rc.h>
 
@@ -178,4 +178,20 @@ LIB_EXPORT rc_t CC KTableOpenDirectoryRead ( const KTable *self, const KDirector
 {
     DISPATCH( openDirectoryRead( self, dir ) );
 }
+LIB_EXPORT rc_t CC KTableVOpenColumnRead ( const KTable *self,
+    const KColumn **colp, const char *name, va_list args )
+{
+    DISPATCH( vOpenColumnRead( self, colp, name, args ) );
+}
+LIB_EXPORT rc_t CC KTableOpenColumnRead ( const KTable *self,
+    const KColumn **col, const char *path, ... )
+{
+    rc_t rc;
+    va_list args;
 
+    va_start ( args, path );
+    rc = KTableVOpenColumnRead ( self, col, path, args );
+    va_end ( args );
+
+    return rc;
+}

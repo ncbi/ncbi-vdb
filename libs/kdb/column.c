@@ -66,7 +66,7 @@ static KColumnBase_vt KColumn_vt =
     KRColumnIdRange,
     KRColumnFindFirstRowId,
     KRColumnOpenManagerRead,
-    KRColumnOpenParentRead
+    KRColumnOpenParentRead,
 };
 
 /* Whack
@@ -126,7 +126,6 @@ rc_t KColumnMake ( KColumn **colp, const KDirectory *dir, const char *path )
     return 0;
 }
 
-static
 rc_t KColumnMakeRead ( KColumn **colp, const KDirectory *dir, const char *path )
 {
     rc_t rc = KColumnMake ( colp, dir, path );
@@ -168,141 +167,6 @@ rc_t KColumnMakeRead ( KColumn **colp, const KDirectory *dir, const char *path )
     * colp = NULL;
     return rc;
 }
-
-
-/* OpenColumnRead
- * VOpenColumnRead
- *  open a column for read
- *
- *  "col" [ OUT ] - return parameter for newly opened column
- *
- *  "path" [ IN ] - NUL terminated string in UTF-8 giving path to col
- *  where "." acts as a structure name separator, i.e. struct.member
- */
-static
-rc_t KDBManagerVOpenColumnReadInt ( const KDBManager *self,
-    const KColumn **colp, const KDirectory *wd, bool try_srapath,
-    const char *path, va_list args )
-{
-    char colpath [ 4096 ];
-    rc_t rc;
-    size_t z;
-
-/*    rc = KDirectoryVResolvePath ( wd, 1,
-        colpath, sizeof colpath, path, args ); */
-    rc = string_vprintf( colpath, sizeof colpath, &z, path, args );
-    if ( rc == 0 )
-    {
-        KColumn *col;
-        const KDirectory *dir;
-
-        /* open table directory */
-        rc = KDBOpenPathTypeRead ( self, wd, colpath, &dir, kptColumn, NULL,
-            try_srapath, NULL );
-        if ( rc == 0 )
-        {
-            rc = KColumnMakeRead ( & col, dir, colpath );
-            if ( rc == 0 )
-            {
-                col -> mgr = KDBManagerAttach ( self );
-                * colp = col;
-                return 0;
-            }
-
-            KDirectoryRelease ( dir );
-        }
-    }
-
-    return rc;
-}
-
-static
-rc_t KDBManagerVOpenColumnReadInt_noargs ( const KDBManager *self,
-    const KColumn **colp, const KDirectory *wd, bool try_srapath,
-    const char *path, ... )
-{
-    rc_t rc;
-    va_list args;
-
-    va_start ( args, path );
-    rc = KDBManagerVOpenColumnReadInt ( self, colp, wd, try_srapath, path, args );
-    va_end ( args );
-
-    return rc;
-}
-
-LIB_EXPORT rc_t CC KDBManagerOpenColumnRead ( const KDBManager *self,
-    const KColumn **col, const char *path, ... )
-{
-    rc_t rc;
-    va_list args;
-
-    va_start ( args, path );
-    rc = KDBManagerVOpenColumnRead ( self, col, path, args );
-    va_end ( args );
-
-    return rc;
-}
-
-
-LIB_EXPORT rc_t CC KDBManagerVOpenColumnRead ( const KDBManager *self,
-    const KColumn **col, const char *path, va_list args )
-{
-    if ( col == NULL )
-        return RC ( rcDB, rcMgr, rcOpening, rcParam, rcNull );
-
-    * col = NULL;
-
-    if ( self == NULL )
-        return RC ( rcDB, rcMgr, rcOpening, rcSelf, rcNull );
-
-    return KDBManagerVOpenColumnReadInt
-        ( self, col, self -> wd, true, path, args );
-}
-
-
-LIB_EXPORT rc_t CC KTableOpenColumnRead ( const KTable *self,
-    const KColumn **col, const char *path, ... )
-{
-    rc_t rc;
-    va_list args;
-
-    va_start ( args, path );
-    rc = KTableVOpenColumnRead ( self, col, path, args );
-    va_end ( args );
-
-    return rc;
-}
-
-LIB_EXPORT rc_t CC KTableVOpenColumnRead ( const KTable *self,
-    const KColumn **colp, const char *name, va_list args )
-{
-    rc_t rc;
-    char path [ 256 ];
-
-    if ( colp == NULL )
-        return RC ( rcDB, rcTable, rcOpening, rcParam, rcNull );
-
-    * colp = NULL;
-
-    if ( self == NULL )
-        return RC ( rcDB, rcTable, rcOpening, rcSelf, rcNull );
-
-    rc = KDBVMakeSubPath ( self -> dir,
-        path, sizeof path, "col", 3, name, args );
-    if ( rc == 0 )
-    {
-        rc = KDBManagerVOpenColumnReadInt_noargs ( self -> mgr,
-                                           colp, self -> dir, false, path );
-        if ( rc == 0 )
-        {
-            KColumn *col = ( KColumn* ) * colp;
-            col -> tbl = KTableAttach ( self );
-        }
-    }
-    return rc;
-}
-
 
 /* Locked
  *  returns non-zero if locked
