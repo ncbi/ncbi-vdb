@@ -103,7 +103,7 @@ rc_t KTableSever ( const KTable *self )
     if ( self != NULL && self -> vt != NULL )   \
         return self -> vt -> call;              \
     else                                        \
-        return RC ( rcVDB, rcCursor, rcAccessing, rcSelf, rcNull );
+        return RC ( rcVDB, rcTable, rcAccessing, rcSelf, rcNull );
 #define DISPATCH_BOOL(call)  \
     if ( self != NULL && self -> vt != NULL )   \
         return self -> vt -> call;              \
@@ -134,7 +134,7 @@ LIB_EXPORT bool CC KTableExists ( const KTable *self, uint32_t type, const char 
     va_list args;
     va_start ( args, name );
 
-    exists = self -> vt -> vExists ( self, type, name, args );
+    exists = KTableVExists ( self, type, name, args );
 
     va_end ( args );
 
@@ -156,7 +156,7 @@ LIB_EXPORT rc_t CC KTableWritable ( const KTable *self, uint32_t type, const cha
     va_list args;
     va_start ( args, name );
 
-    rc = self -> vt -> vWritable ( self, type, name, args );
+    rc = KTableVWritable ( self, type, name, args );
 
     va_end ( args );
 

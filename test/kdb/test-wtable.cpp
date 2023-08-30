@@ -161,6 +161,8 @@ FIXTURE_TEST_CASE(KWTable_OpenColumnRead, KTable_Fixture)
     REQUIRE_NULL( col );
 }
 
+//TODO: non-virtual write-side only methods
+
 //////////////////////////////////////////// Main
 extern "C"
 {

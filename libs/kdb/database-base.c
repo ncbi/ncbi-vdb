@@ -24,9 +24,10 @@
 *
 */
 
+#define KDatabase KDatabaseBase
+
 #include "database-base.h"
 
-#define KDatabase KDatabaseBase
 #include <kdb/database.h>
 
 #include <kdb/extern.h>
@@ -106,7 +107,7 @@ rc_t KDatabaseSever ( const KDatabase *self )
     if ( self != NULL && self -> vt != NULL )   \
         return self -> vt -> call;              \
     else                                        \
-        return RC ( rcVDB, rcCursor, rcAccessing, rcSelf, rcNull );
+        return RC ( rcVDB, rcDatabase, rcAccessing, rcSelf, rcNull );
 #define DISPATCH_BOOL(call)  \
     if ( self != NULL && self -> vt != NULL )   \
         return self -> vt -> call;              \
@@ -123,3 +124,98 @@ LIB_EXPORT rc_t CC KDatabaseRelease ( const KDatabase *self )
     if ( self == NULL ) return 0;
     DISPATCH( release( self ) );
 }
+LIB_EXPORT bool CC KDatabaseLocked ( const KDatabase *self )
+{
+    DISPATCH( locked( self ) );
+}
+LIB_EXPORT bool CC KDatabaseVExists ( const KDatabase *self, uint32_t type, const char *name, va_list args )
+{
+    DISPATCH( vExists( self, type, name, args ) );
+}
+LIB_EXPORT bool CC KDatabaseExists ( const KDatabase *self, uint32_t type, const char *name, ... )
+{
+    bool exists;
+
+    va_list args;
+    va_start ( args, name );
+
+    exists = KDatabaseVExists ( self, type, name, args );
+
+    va_end ( args );
+
+    return exists;
+}
+LIB_EXPORT bool CC KDatabaseIsAlias ( const KDatabase *self, uint32_t type, char *resolved, size_t rsize, const char *name )
+{
+    DISPATCH( isAlias ( self, type, resolved, rsize, name ) );
+}
+LIB_EXPORT rc_t CC KDatabaseVWritable ( const KDatabase *self, uint32_t type, const char *name, va_list args )
+{
+    DISPATCH(  vWritable( self, type, name, args ) );
+}
+LIB_EXPORT rc_t CC KDatabaseWritable ( const KDatabase *self, uint32_t type, const char *name, ... )
+{
+    rc_t rc;
+
+    va_list args;
+    va_start ( args, name );
+
+    rc = KDatabaseVWritable ( self, type, name, args );
+
+    va_end ( args );
+
+    return rc;
+}
+LIB_EXPORT rc_t CC KDatabaseOpenManagerRead ( const KDatabase *self, const struct KDBManager **mgr )
+{
+    DISPATCH(  openManagerRead( self, mgr ) );
+}
+LIB_EXPORT rc_t CC KDatabaseOpenParentRead ( const KDatabase *self, const KDatabase **par )
+{
+    DISPATCH(  openParentRead( self, par ) );
+}
+LIB_EXPORT rc_t CC KDatabaseOpenDirectoryRead ( const KDatabase *self, const KDirectory **dir )
+{
+    DISPATCH(  openDirectoryRead( self, dir ) );
+}
+LIB_EXPORT rc_t CC KDatabaseVOpenDBRead ( const KDatabase *self, const KDatabase **dbp, const char *name, va_list args )
+{
+    DISPATCH(  vOpenDBRead( self, dbp, name, args ) );
+}
+LIB_EXPORT rc_t CC KDatabaseOpenDBRead ( const KDatabase *self, const KDatabase **db, const char *name, ... )
+{
+    rc_t rc;
+    va_list args;
+
+    va_start ( args, name );
+    rc = KDatabaseVOpenDBRead ( self, db, name, args );
+    va_end ( args );
+
+    return rc;
+}
+
+
+LIB_EXPORT rc_t CC KDatabaseVOpenTableRead ( const KDatabase *self, const struct KTable **tblp, const char *name, va_list args )
+{
+    DISPATCH( vOpenTableRead ( self, tblp, name, args ) );
+}
+
+LIB_EXPORT rc_t CC KDatabaseOpenTableRead ( const KDatabase *self,
+    const struct KTable **tbl, const char *name, ... )
+{
+    if ( self == NULL && self -> vt == NULL )
+        return RC ( rcVDB, rcDatabase, rcAccessing, rcSelf, rcNull );
+
+    rc_t rc;
+    va_list args;
+
+    va_start ( args, name );
+    rc = KDatabaseVOpenTableRead ( self, tbl, name, args );
+    va_end ( args );
+
+    return rc;
+}
+
+
+
+

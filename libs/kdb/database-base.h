@@ -34,6 +34,8 @@
 #define KDATABASE_IMPL KDatabaseBase
 #endif
 
+#include <kfs/directory.h>
+
 #include <stdarg.h>
 
 #ifdef __cplusplus
@@ -45,7 +47,7 @@ extern "C" {
  */
 struct KDatabase;
 struct KDBManager;
-struct KDirectory;
+struct KTable;
 
 /*--------------------------------------------------------------------------
  * KDatabaseBase
@@ -60,13 +62,15 @@ struct KDatabase_vt
     rc_t ( CC * whack )             ( KDATABASE_IMPL *self );
     rc_t ( CC * addRef )            ( const KDATABASE_IMPL *self );
     rc_t ( CC * release )           ( const KDATABASE_IMPL *self );
-    rc_t ( CC * vOpenDBRead )       ( const KDATABASE_IMPL *self, const struct KDatabase **db, const char *name, va_list args );
     bool ( CC * locked )            ( const KDATABASE_IMPL *self );
     bool ( CC * vExists )           ( const KDATABASE_IMPL *self, uint32_t type, const char *name, va_list args );
     bool ( CC * isAlias )           ( const KDATABASE_IMPL *self, uint32_t type, char *resolved, size_t rsize, const char *name );
     rc_t ( CC * vWritable )         ( const KDATABASE_IMPL *self, uint32_t type, const char *name, va_list args );
     rc_t ( CC * openManagerRead )   ( const KDATABASE_IMPL *self, struct KDBManager const **mgr );
     rc_t ( CC * openParentRead )    ( const KDATABASE_IMPL *self, const struct KDatabase **par );
+    rc_t ( CC * openDirectoryRead ) ( struct KDatabase const *self, struct KDirectory const **dir );
+    rc_t ( CC * vOpenDBRead )       ( const KDATABASE_IMPL *self, const struct KDatabase **db, const char *name, va_list args );
+    rc_t ( CC * vOpenTableRead )    ( const KDATABASE_IMPL *self, const struct KTable **tblp, const char *name, va_list args )    ;
 };
 
 struct KDatabaseBase

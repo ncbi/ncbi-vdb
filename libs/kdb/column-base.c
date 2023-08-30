@@ -103,7 +103,7 @@ rc_t KColumnSever ( const KColumn *self )
     if ( self != NULL && self -> vt != NULL )   \
         return self -> vt -> call;              \
     else                                        \
-        return RC ( rcVDB, rcCursor, rcAccessing, rcSelf, rcNull );
+        return RC ( rcVDB, rcColumn, rcAccessing, rcSelf, rcNull );
 #define DISPATCH_BOOL(call)  \
     if ( self != NULL && self -> vt != NULL )   \
         return self -> vt -> call;              \

@@ -30,7 +30,7 @@
 
 #include <ktst/unit_test.hpp>
 
-#include <../libs/kdb/rdatabase.h>
+#include <../libs/kdb/wdatabase.h>
 #include <../libs/kdb/dbmgr-priv.h>
 
 #include <kdb/manager.h>
@@ -54,7 +54,7 @@ public:
     KDatabase_Fixture()
     {
         THROW_ON_RC( KDirectoryNativeDir( & m_dir ) );
-        THROW_ON_RC( KDBManagerMakeRead ( & m_mgr, m_dir ) );
+        THROW_ON_RC( KDBManagerMakeUpdate ( & m_mgr, m_dir ) );
     }
     ~KDatabase_Fixture()
     {
@@ -65,13 +65,14 @@ public:
     void Setup( const string testName )
     {
         const string ColumnName = ScratchDir + testName;
-        THROW_ON_RC( KDatabaseMake( & m_db, m_dir, ColumnName.c_str() ) );
+        THROW_ON_RC( KDatabaseMake( & m_db, m_dir, ColumnName.c_str(), nullptr, false ) );
         m_db -> mgr = KDBManagerAttach ( m_mgr );
+        THROW_ON_RC( KDBManagerOpenObjectAdd ( m_mgr, & m_db -> sym) );
         KDirectoryAddRef( m_dir); // KDatabaseMake does not call AddRef
     }
 
     KDirectory * m_dir = nullptr;
-    const KDBManager * m_mgr = nullptr;
+    KDBManager * m_mgr = nullptr;
     KDatabase * m_db = nullptr;
 };
 
@@ -114,17 +115,17 @@ FIXTURE_TEST_CASE(KRDatabase_IsAlias, KDatabase_Fixture)
 FIXTURE_TEST_CASE(KRDatabase_Writable, KDatabase_Fixture)
 {
     Setup( GetName() );
-
-    REQUIRE_EQ( -1, (int)KDatabaseWritable( m_db, kptIndex, "%s", GetName() ) ); // "TBD" for read side
+    rc_t rc = SILENT_RC (rcDB, rcMgr, rcAccessing, rcParam, rcInvalid);
+    REQUIRE_EQ( rc, KDatabaseWritable( m_db, kptIndex, "%s", GetName() ) );
 }
 
 FIXTURE_TEST_CASE(KDatabase_OpenManagerRead, KDatabase_Fixture)
 {
     Setup( GetName() );
 
-    struct KDBManager const *mgr;
+    const KDBManager *mgr;
     REQUIRE_RC( KDatabaseOpenManagerRead( m_db, &mgr ) );
-    REQUIRE_EQ( m_mgr, mgr );
+    REQUIRE_EQ( (const KDBManager *)m_mgr, mgr );
     KDBManagerRelease( mgr );
 }
 
@@ -161,6 +162,8 @@ FIXTURE_TEST_CASE(KRDatabase_OpenTableRead, KDatabase_Fixture)
     rc_t rc = SILENT_RC( rcFS,rcDirectory,rcOpening,rcPath,rcNotFound );
     REQUIRE_EQ( rc, KDatabaseOpenTableRead( m_db, & t, "%s", "t" ) );
 }
+
+//TODO: non-virtual write-side only methods
 
 //////////////////////////////////////////// Main
 extern "C"
