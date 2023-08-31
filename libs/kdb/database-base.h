@@ -45,13 +45,12 @@ extern "C" {
 /*--------------------------------------------------------------------------
  * forwards
  */
-struct KDatabase;
 struct KDBManager;
 struct KTable;
 
 /*--------------------------------------------------------------------------
  * KDatabaseBase
- *   base structure for KTable implementations
+ *   base structure for KDatabase implementations
  */
 typedef struct KDatabaseBase KDatabaseBase;
 
@@ -100,16 +99,9 @@ rc_t KDatabaseSever ( const KDATABASE_IMPL *self );
 // KChecksum KDatabaseGetChecksum ( const KDATABASE_IMPL *self);
 // KChecksum KDatabaseSetChecksum ( KDATABASE_IMPL *self, KChecksum new_val);
 
-// KDB_EXTERN rc_t CC KDBManagerCreateDB ( struct KDBManager *self, KDATABASE_IMPL **db, KCreateMode cmode, const char *path, ... );
 // KDB_EXTERN rc_t CC KDatabaseCreateDB ( KDATABASE_IMPL *self, KDatabase **db, KCreateMode cmode, const char *name, ... );
-
-// KDB_EXTERN rc_t CC KDBManagerVCreateDB ( struct KDBManager *self, KDATABASE_IMPL **db, KCreateMode cmode, const char *path, va_list args );
 // KDB_EXTERN rc_t CC KDatabaseVCreateDB ( KDATABASE_IMPL *self, KDatabase **db, KCreateMode cmode, const char *name, va_list args );
 
-// KDB_EXTERN rc_t CC KDBManagerOpenDBUpdate ( struct KDBManager *self, KDATABASE_IMPL **db, const char *path, ... );
-// KDB_EXTERN rc_t CC KDatabaseOpenDBUpdate ( KDATABASE_IMPL *self, KDatabase **db, const char *name, ... );
-
-// KDB_EXTERN rc_t CC KDBManagerVOpenDBUpdate ( struct KDBManager *self, KDATABASE_IMPL **db, const char *path, va_list args );
 // KDB_EXTERN rc_t CC KDatabaseVOpenDBUpdate ( KDATABASE_IMPL *self, KDatabase **db, const char *name, va_list args );
 
 // KDB_EXTERN rc_t CC KDatabaseLock ( KDATABASE_IMPL *self, uint32_t type, const char *name, ... );

@@ -45,13 +45,11 @@ extern "C" {
 /*--------------------------------------------------------------------------
  * forwards
  */
-struct KDatabase;
-struct KDBManager;
-struct KTable;
+struct VPath;
 
 /*--------------------------------------------------------------------------
  * KDBManagerBase
- *   base structure for KTable implementations
+ *   base structure for KDBManager implementations
  */
 typedef struct KDBManagerBase KDBManagerBase;
 
@@ -59,30 +57,23 @@ typedef struct KDBManager_vt KDBManager_vt;
 struct KDBManager_vt
 {
     /* Public API */
-    rc_t ( CC * whack )             ( KDBMGR_IMPL *self );
-    rc_t ( CC * addRef )            ( const KDBMGR_IMPL *self );
-    rc_t ( CC * release )           ( const KDBMGR_IMPL *self );
+    rc_t ( CC * whack )                 ( KDBMGR_IMPL *self );
+    rc_t ( CC * addRef )                ( const KDBMGR_IMPL *self );
+    rc_t ( CC * release )               ( const KDBMGR_IMPL *self );
+    rc_t ( CC * version )               ( const KDBMGR_IMPL *self, uint32_t *version );
+    bool ( CC * vExists )               ( const KDBMGR_IMPL *self, uint32_t type, const char *name, va_list args );
+    rc_t ( CC * vWritable )             ( const KDBMGR_IMPL *self, const char *name, va_list args );
+    rc_t ( CC * runPeriodicTasks )      ( const KDBMGR_IMPL *self );
+    int ( CC * pathTypeVP )             ( const KDBMGR_IMPL * self, const struct VPath * path );
+    int ( CC * vPathType )              ( const KDBMGR_IMPL * self, const char *path, va_list args );
+    int ( CC * vPathTypeUnreliable )    ( const KDBManager * self, const char *path, va_list args );
+// LIB_EXPORT rc_t CC KDBManagerOpenDBRead ( const KDBManager *self,
+// LIB_EXPORT rc_t CC KDBManagerOpenTableRead ( const KDBManager *self,
+// LIB_EXPORT rc_t CC KDBManagerOpenTableReadVPath ( const KDBManager *self,
+// LIB_EXPORT rc_t CC KDBManagerOpenColumnRead ( const KDBManager *self,
+// LIB_EXPORT rc_t CC KDBManagerVPathOpenLocalDBRead ( struct KDBManager const * self, struct KDatabase const ** p_db, struct VPath const * vpath )
+// LIB_EXPORT rc_t CC KDBManagerVPathOpenRemoteDBRead ( struct KDBManager const * self, struct KDatabase const ** p_db, struct VPath const * remote, struct VPath const * cache )
 
-//     KDB_EXTERN rc_t CC KDBManagerVersion ( const KDBManager *self, uint32_t *version );
-
-//     bool ( CC * vExists )           ( const KDBMGR_IMPL *self, uint32_t type, const char *name, va_list args );
-// KDB_EXTERN bool CC KDBManagerExists ( const KDBManager *self, uint32_t type,
-//     const char *name, ... );
-// KDB_EXTERN bool CC KDBManagerVExists ( const KDBManager *self, uint32_t type,
-//     const char *name, va_list args );
-
-//     rc_t ( CC * vWritable )         ( const KDBMGR_IMPL *self, uint32_t type, const char *name, va_list args );
-// KDB_EXTERN rc_t CC KDBManagerWritable ( const KDBManager *self,
-//     const char *path, ... );
-// KDB_EXTERN rc_t CC KDBManagerVWritable ( const KDBManager *self,
-//     const char *path, va_list args );
-
-// KDB_EXTERN rc_t CC KDBManagerRunPeriodicTasks ( const KDBManager *self );
-
-// KDB_EXTERN int CC KDBManagerPathTypeVP ( const KDBManager * self, const struct VPath * path );
-// KDB_EXTERN int CC KDBManagerPathType   ( const KDBManager * self, const char *path, ... );
-// KDB_EXTERN int CC KDBManagerVPathType  ( const KDBManager * self, const char *path, va_list args );
-//TODO: factories
 };
 
 // Public write side-only API

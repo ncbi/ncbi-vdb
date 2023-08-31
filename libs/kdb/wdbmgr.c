@@ -56,11 +56,24 @@
  *  handle to library
  */
 
+static rc_t CC KDBWManagerVWritable ( const KDBManager *self, const char * path, va_list args );
+static rc_t CC KDBWManagerRunPeriodicTasks ( const KDBManager *self );
+static int CC KDBWManagerPathTypeVP( const KDBManager * self, const VPath * path );
+static int CC KDBWManagerVPathType ( const KDBManager * self, const char *path, va_list args );
+static int CC KDBWManagerVPathTypeUnreliable ( const KDBManager * self, const char *path, va_list args );
+
 static KDBManager_vt KDBWManager_vt =
 {
     KDBManagerWhack,
     KDBManagerBaseAddRef,
     KDBManagerBaseRelease,
+    KDBManagerCommonVersion,
+    KDBManagerCommonVExists,
+    KDBWManagerVWritable,
+    KDBWManagerRunPeriodicTasks,
+    KDBWManagerPathTypeVP,
+    KDBWManagerVPathType,
+    KDBWManagerVPathTypeUnreliable
 };
 
 /* MakeUpdate
@@ -136,7 +149,9 @@ rc_t KDBManagerWritableInt ( const KDirectory * dir, const char * path )
     return rc;
 }
 
-LIB_EXPORT rc_t CC KDBManagerVWritable ( const KDBManager *self, const char * path, va_list args )
+static
+rc_t CC
+KDBWManagerVWritable ( const KDBManager *self, const char * path, va_list args )
 {
     rc_t rc;
 
@@ -151,20 +166,6 @@ LIB_EXPORT rc_t CC KDBManagerVWritable ( const KDBManager *self, const char * pa
         if ( rc == 0 )
             rc = KDBManagerWritableInt ( self -> wd, dbpath );
     }
-    return rc;
-}
-
-LIB_EXPORT rc_t CC KDBManagerWritable ( const KDBManager *self, const char * path, ... )
-{
-    rc_t rc;
-
-    va_list args;
-    va_start ( args, path );
-
-    rc = KDBManagerVWritable ( self, path, args );
-
-    va_end ( args );
-
     return rc;
 }
 
@@ -332,11 +333,10 @@ LIB_EXPORT rc_t CC KDBManagerDrop ( KDBManager *self, uint32_t obj_type, const c
 /* RunPeriodicTasks
  *  executes periodic tasks, such as cache flushing
  */
-LIB_EXPORT rc_t CC KDBManagerRunPeriodicTasks ( const KDBManager *self )
+static
+rc_t CC
+KDBWManagerRunPeriodicTasks ( const KDBManager *self )
 {
-    if ( self == NULL )
-        return RC ( rcDB, rcMgr, rcExecuting, rcSelf, rcNull );
-
     return 0;
 }
 
@@ -346,8 +346,9 @@ LIB_EXPORT rc_t CC KDBManagerRunPeriodicTasks ( const KDBManager *self )
  * the KDirectory values if a path type is not specifically a
  * kdb object
  */
-static int CC KDBManagerPathTypeVPImpl( const KDBManager * self,
-    const VPath * path, bool reliable )
+static
+int CC
+KDBManagerPathTypeVPImpl( const KDBManager * self, const VPath * path, bool reliable )
 {
     int path_type = kptBadPath;
     if ( self != NULL && path != NULL )
@@ -398,14 +399,16 @@ static int CC KDBManagerPathTypeVPImpl( const KDBManager * self,
     return path_type;
 }
 
-LIB_EXPORT
-int CC KDBManagerPathTypeVP( const KDBManager * self, const VPath * path )
+static
+int CC
+KDBWManagerPathTypeVP( const KDBManager * self, const VPath * path )
 {
     return KDBManagerPathTypeVPImpl ( self, path, true );
 }
 
-LIB_EXPORT int CC KDBManagerVPathTypeImpl ( const KDBManager * self,
-    const char *path, va_list args, bool reliable )
+static
+int CC
+KDBManagerVPathTypeImpl ( const KDBManager * self, const char *path, va_list args, bool reliable )
 {
     int path_type = kptBadPath;
 
@@ -424,27 +427,16 @@ LIB_EXPORT int CC KDBManagerVPathTypeImpl ( const KDBManager * self,
     return path_type;
 }
 
-LIB_EXPORT int CC KDBManagerVPathType ( const KDBManager * self,
-    const char *path, va_list args )
+static
+int CC
+KDBWManagerVPathType ( const KDBManager * self, const char *path, va_list args )
 {
     return KDBManagerVPathTypeImpl ( self, path, args, true );
 }
-LIB_EXPORT int CC KDBManagerVPathTypeUnreliable ( const KDBManager * self,
-    const char *path, va_list args )
+
+static
+int CC
+KDBWManagerVPathTypeUnreliable ( const KDBManager * self, const char *path, va_list args )
 {
     return KDBManagerVPathTypeImpl ( self, path, args, false );
 }
-
-LIB_EXPORT int CC KDBManagerPathType ( const KDBManager * self, const char *path, ... )
-{
-    rc_t rc;
-    va_list args;
-
-    va_start ( args, path );
-
-    rc = KDBManagerVPathType ( self, path, args );
-
-    va_end (args);
-    return rc;
-}
-

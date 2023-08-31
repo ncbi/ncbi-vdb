@@ -593,7 +593,6 @@ rc_t KDBManagerVOpenDBReadInt ( const KDBManager *cself,
     return rc;
 }
 
-static
 rc_t KDBManagerVOpenDBReadInt_noargs ( const KDBManager *cself,
     const KDatabase **dbp, KDirectory *wd,
     const char *path, bool *cached, int try_srapath, ... )
@@ -603,19 +602,6 @@ rc_t KDBManagerVOpenDBReadInt_noargs ( const KDBManager *cself,
 
     va_start ( args, try_srapath );
     rc = KDBManagerVOpenDBReadInt ( cself, dbp, wd, path, args, cached, try_srapath );
-    va_end ( args );
-
-    return rc;
-}
-
-LIB_EXPORT rc_t CC KDBManagerOpenDBRead ( const KDBManager *self,
-    const KDatabase **db, const char *path, ... )
-{
-    rc_t rc;
-    va_list args;
-
-    va_start ( args, path );
-    rc = KDBManagerVOpenDBRead ( self, db, path, args );
     va_end ( args );
 
     return rc;

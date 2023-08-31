@@ -175,12 +175,11 @@ LIB_EXPORT rc_t CC KDBManagerGetVFSManager ( const KDBManager *self,
 /* Version
  *  returns the library version
  */
-LIB_EXPORT rc_t CC KDBManagerVersion ( const KDBManager *self, uint32_t *version )
+rc_t CC
+KDBManagerCommonVersion ( const KDBManager *self, uint32_t *version )
 {
     if ( version == NULL )
         return RC ( rcDB, rcMgr, rcAccessing, rcParam, rcNull );
-    if ( self == NULL )
-        return RC ( rcDB, rcMgr, rcAccessing, rcSelf, rcNull );
 
     * version = LIBKDB_VERS;
     return 0;
@@ -194,7 +193,7 @@ LIB_EXPORT rc_t CC KDBManagerVersion ( const KDBManager *self, uint32_t *version
  *
  *  "path" [ IN ] - NUL terminated path
  */
-LIB_EXPORT bool CC KDBManagerVExists ( const KDBManager *self, uint32_t requested, const char *name, va_list args )
+bool CC KDBManagerCommonVExists ( const KDBManager *self, uint32_t requested, const char *name, va_list args )
 {
     int type;
 
@@ -214,20 +213,6 @@ LIB_EXPORT bool CC KDBManagerVExists ( const KDBManager *self, uint32_t requeste
         return false;
     }
     return requested == ( uint32_t ) type;
-}
-
-bool KDBManagerExists ( const KDBManager *self, uint32_t type, const char *name, ... )
-{
-    bool exists;
-
-    va_list args;
-    va_start ( args, name );
-
-    exists = KDBManagerVExists ( self, type, name, args );
-
-    va_end ( args );
-
-    return exists;
 }
 
 

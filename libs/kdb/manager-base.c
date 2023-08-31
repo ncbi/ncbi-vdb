@@ -29,8 +29,11 @@
 #include "manager-base.h"
 
 #include <kdb/extern.h>
+#include <kdb/database.h>
 
 #include <klib/rc.h>
+
+struct KDatabase;
 
 rc_t KDBManagerBaseWhack ( KDBManager *self )
 {
@@ -122,6 +125,81 @@ LIB_EXPORT rc_t CC KDBManagerRelease ( const KDBManager *self )
     if ( self == NULL ) return 0;
     DISPATCH( release( self ) );
 }
+LIB_EXPORT rc_t CC KDBManagerVersion ( const KDBManager *self, uint32_t *version )
+{
+    DISPATCH( version( self, version ) );
+}
+LIB_EXPORT bool CC KDBManagerVExists ( const KDBManager *self, uint32_t requested, const char *name, va_list args )
+{
+    DISPATCH( vExists( self, requested, name, args ) );
+}
+LIB_EXPORT bool KDBManagerExists ( const KDBManager *self, uint32_t type, const char *name, ... )
+{
+    bool exists;
 
+    va_list args;
+    va_start ( args, name );
 
+    exists = KDBManagerVExists ( self, type, name, args );
+
+    va_end ( args );
+
+    return exists;
+}
+LIB_EXPORT rc_t CC KDBManagerVWritable ( const KDBManager *self, const char * path, va_list args )
+{
+    DISPATCH( vWritable( self, path, args ) );
+}
+LIB_EXPORT rc_t CC KDBManagerWritable ( const KDBManager *self, const char * path, ... )
+{
+    rc_t rc;
+
+    va_list args;
+    va_start ( args, path );
+
+    rc = KDBManagerVWritable ( self, path, args );
+
+    va_end ( args );
+
+    return rc;
+}
+LIB_EXPORT rc_t CC KDBManagerRunPeriodicTasks ( const KDBManager *self )
+{
+    DISPATCH( runPeriodicTasks( self ) );
+}
+LIB_EXPORT int CC KDBManagerPathTypeVP ( const KDBManager * self, const struct VPath * path )
+{
+    DISPATCH( pathTypeVP( self, path ) );
+}
+LIB_EXPORT int CC KDBManagerVPathType ( const KDBManager * self, const char *path, va_list args )
+{
+    DISPATCH( vPathType( self, path, args ) );
+}
+LIB_EXPORT int CC KDBManagerPathType ( const KDBManager * self, const char *path, ... )
+{
+    int res;
+    va_list args;
+
+    va_start ( args, path );
+
+    res = KDBManagerVPathType ( self, path, args );
+
+    va_end (args);
+    return res;
+}
+LIB_EXPORT int CC KDBManagerVPathTypeUnreliable ( const KDBManager * self, const char *path, va_list args )
+{
+    DISPATCH( vPathTypeUnreliable( self, path, args ) );
+}
+LIB_EXPORT rc_t CC KDBManagerOpenDBRead ( const KDBManager *self, const struct KDatabase **db, const char *path, ... )
+{
+    rc_t rc;
+    va_list args;
+
+    va_start ( args, path );
+    rc = KDBManagerVOpenDBRead ( self, db, path, args );
+    va_end ( args );
+
+    return rc;
+}
 

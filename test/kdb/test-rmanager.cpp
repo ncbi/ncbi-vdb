@@ -32,10 +32,14 @@
 
 #include <../libs/kdb/rdatabase.h>
 #include <../libs/kdb/dbmgr-priv.h>
+#include <../libs/kdb/libkdb.vers.h>
 
 #include <kdb/manager.h>
 #include <kdb/kdb-priv.h>
 #include <kdb/table.h>
+
+#include <vfs/manager.h>
+#include <vfs/path.h>
 
 #include <klib/rc.h>
 
@@ -73,6 +77,67 @@ FIXTURE_TEST_CASE(KDBRManager_AddRelease, KDBManager_Fixture)
     REQUIRE_RC( KDBManagerRelease( m_mgr ) );
     REQUIRE_EQ( 1, (int)atomic32_read( & m_mgr -> dad . refcount ) );
     // use valgrind to find any leaks
+}
+
+FIXTURE_TEST_CASE(KDBRManager_Version, KDBManager_Fixture)
+{
+    uint32_t version = 0;
+    REQUIRE_RC( KDBManagerVersion( m_mgr, & version ) );
+    REQUIRE_EQ( (uint32_t)LIBKDB_VERS, version );
+}
+
+FIXTURE_TEST_CASE(KDBRManager_Exists, KDBManager_Fixture)
+{
+    REQUIRE( KDBManagerExists( m_mgr, kptDatabase, "%s", "testdb" ) );
+}
+
+FIXTURE_TEST_CASE(KDBRManager_Writable, KDBManager_Fixture)
+{
+    REQUIRE( KDBManagerWritable( m_mgr, "%s", "testdb" ) );
+}
+
+FIXTURE_TEST_CASE(KDBRManager_RunPeriodicTasks, KDBManager_Fixture)
+{
+    REQUIRE_RC( KDBManagerRunPeriodicTasks( m_mgr ) );
+}
+
+FIXTURE_TEST_CASE(KDBRManager_PathTypeVP, KDBManager_Fixture)
+{
+    VFSManager * vfs;
+    REQUIRE_RC( VFSManagerMake ( & vfs ) );
+
+    struct VPath * path;
+    REQUIRE_RC( VFSManagerMakePath ( vfs, & path, "%s", "testdb" ) );
+    REQUIRE_EQ( (int)kptDatabase, KDBManagerPathTypeVP( m_mgr, path ) );
+
+    REQUIRE_RC( VPathRelease( path ) );
+    REQUIRE_RC( VFSManagerRelease( vfs ) );
+}
+
+FIXTURE_TEST_CASE(KDBRManager_PathType, KDBManager_Fixture)
+{
+    REQUIRE_EQ( (int)kptDatabase, KDBManagerPathType( m_mgr, "%s", "testdb" ) );
+}
+
+FIXTURE_TEST_CASE(KDBRManager_VPathTypeUnreliable, KDBManager_Fixture)
+{
+    auto fn = [] ( const KDBManager * self, const char *path, ... ) -> int
+    {
+        va_list args;
+        va_start ( args, path );
+        int res = KDBManagerVPathTypeUnreliable ( self, path, args );
+        va_end (args);
+        return res;
+    };
+    REQUIRE_EQ( (int)kptDatabase, fn( m_mgr, "%s", "testdb" ) );
+}
+
+FIXTURE_TEST_CASE(KDBRManager_OpenDBRead, KDBManager_Fixture)
+{
+    const KDatabase * db = nullptr;
+    REQUIRE_RC( KDBManagerOpenDBRead( m_mgr, & db, "%s", "testdb" ) );
+    REQUIRE_NOT_NULL( db );
+    REQUIRE_RC( KDatabaseRelease( db ) );
 }
 
 //////////////////////////////////////////// Main

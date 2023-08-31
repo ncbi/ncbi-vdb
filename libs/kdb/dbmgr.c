@@ -28,6 +28,7 @@
 
 #include <kdb/extern.h>
 
+#include <kdb/database.h>
 #include <kdb/kdb-priv.h> /* KDBManagerMakeReadWithVFSManager */
 
 #include "libkdb.vers.h"
@@ -42,6 +43,7 @@
 #define KONST const
 #include "dbmgr-priv.h"
 #include "kdb-priv.h"
+#include "rdatabase.h"
 #include "kdbfmt-priv.h"
 #include <klib/checksum.h>
 #include <klib/rc.h>
@@ -54,19 +56,31 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <assert.h>
-
-
+#include <stdio.h>
 
 /*--------------------------------------------------------------------------
  * KDBManager
  *  handle to library
  */
 
+static rc_t CC KDBRManagerVWritable ( const KDBManager *self, const char * path, va_list args );
+static rc_t CC KDBRManagerRunPeriodicTasks ( const KDBManager *self );
+static int CC KDBRManagerPathTypeVP ( const KDBManager * self, const VPath * path );
+static int CC KDBRManagerVPathType ( const KDBManager * self, const char *path, va_list args );
+static int CC KDBRManagerVPathTypeUnreliable ( const KDBManager * self, const char *path, va_list args );
+
 static KDBManager_vt KDBRManager_vt =
 {
     KDBManagerWhack,
     KDBManagerBaseAddRef,
     KDBManagerBaseRelease,
+    KDBManagerCommonVersion,
+    KDBManagerCommonVExists,
+    KDBRManagerVWritable,
+    KDBRManagerRunPeriodicTasks,
+    KDBRManagerPathTypeVP,
+    KDBRManagerVPathType,
+    KDBRManagerVPathTypeUnreliable,
 };
 
 /* MakeRead
@@ -249,7 +263,9 @@ rc_t KDBHdrValidate ( const KDBHdr *hdr, size_t size,
  *
  *  "path" [ IN ] - NUL terminated path
  */
-LIB_EXPORT rc_t CC KDBManagerVWritable ( const KDBManager *self, const char * path, va_list args )
+static
+rc_t CC
+KDBRManagerVWritable ( const KDBManager *self, const char * path, va_list args )
 {
     rc_t rc;
 
@@ -286,29 +302,11 @@ LIB_EXPORT rc_t CC KDBManagerVWritable ( const KDBManager *self, const char * pa
     return rc;
 }
 
-LIB_EXPORT rc_t CC KDBManagerWritable ( const KDBManager *self, const char * path, ... )
-{
-    rc_t rc;
-
-    va_list args;
-    va_start ( args, path );
-
-    rc = KDBManagerVWritable ( self, path, args );
-
-    va_end ( args );
-
-    return rc;
-}
-
-
 /* RunPeriodicTasks
  *  executes periodic tasks, such as cache flushing
  */
-LIB_EXPORT rc_t CC KDBManagerRunPeriodicTasks ( const KDBManager *self )
+static rc_t CC KDBRManagerRunPeriodicTasks ( const KDBManager *self )
 {
-    if ( self == NULL )
-        return RC ( rcDB, rcMgr, rcExecuting, rcSelf, rcNull );
-
     return 0;
 }
 
@@ -404,14 +402,16 @@ static int CC KDBManagerPathTypeVPImpl ( const KDBManager * self,
     return path_type;
 }
 
-LIB_EXPORT
-int CC KDBManagerPathTypeVP ( const KDBManager * self, const VPath * path )
+static
+int CC
+KDBRManagerPathTypeVP ( const KDBManager * self, const VPath * path )
 {
     return KDBManagerPathTypeVPImpl ( self, path, true );
 }
 
-static int CC KDBManagerVPathTypeImpl ( const KDBManager * self,
-    const char *path, va_list args, bool reliable )
+static
+int CC
+KDBManagerVPathTypeImpl ( const KDBManager * self, const char *path, va_list args, bool reliable )
 {
     int path_type = kptBadPath;
 
@@ -430,27 +430,97 @@ static int CC KDBManagerVPathTypeImpl ( const KDBManager * self,
     return path_type;
 }
 
-LIB_EXPORT int CC KDBManagerVPathType ( const KDBManager * self,
-    const char *path, va_list args )
+static
+int CC
+KDBRManagerVPathType ( const KDBManager * self, const char *path, va_list args )
 {
     return KDBManagerVPathTypeImpl ( self, path, args, true );
 }
 
-LIB_EXPORT int CC KDBManagerVPathTypeUnreliable ( const KDBManager * self,
-    const char *path, va_list args )
+static
+int CC
+KDBRManagerVPathTypeUnreliable ( const KDBManager * self, const char *path, va_list args )
 {
     return KDBManagerVPathTypeImpl ( self, path, args, false );
 }
 
-LIB_EXPORT int CC KDBManagerPathType ( const KDBManager * self, const char *path, ... )
+/* OpenDBRead
+ * VOpenDBRead
+ *  open a database for read
+ *
+ *  "db" [ OUT ] - return parameter for newly opened database
+ *
+ *  "path" [ IN ] - NUL terminated string in
+ *  wd-native character set giving path to database
+ */
+static
+rc_t KDBManagerVOpenDBReadInt ( const KDBManager *self, const KDatabase **dbp,
+                                const KDirectory *wd, bool try_srapath,
+                                const char *path, va_list args )
 {
-    int res;
+    rc_t rc;
+
+    /* MUST use vsnprintf because the documented behavior of "path"
+       is that of stdc library's printf, not vdb printf */
+    char dbpath [ 4096 ];
+    /* VDB-4386: cannot treat va_list as a pointer! */
+    int z = 0;
+    /*( args == NULL ) ?
+        snprintf ( dbpath, sizeof dbpath, "%s", path ):*/
+    if ( path != NULL )
+        z = vsnprintf ( dbpath, sizeof dbpath, path, args );
+    if ( z < 0 || ( size_t ) z >= sizeof dbpath )
+        rc = RC ( rcDB, rcMgr, rcOpening, rcPath, rcExcessive );
+    else
+    {
+        const KDirectory *dir;
+
+        /* open the directory if its a database */
+        rc = KDBOpenPathTypeRead ( self, wd, dbpath, &dir, kptDatabase, NULL,
+            try_srapath, NULL );
+        if ( rc == 0 )
+        {
+            KDatabase *db;
+
+            /* allocate a new guy */
+            rc = KDatabaseMake ( & db, dir, dbpath );
+            if ( rc == 0 )
+            {
+                db -> mgr = KDBManagerAttach ( self );
+                * dbp = db;
+                return 0;
+            }
+
+            KDirectoryRelease ( dir );
+        }
+    }
+    return rc;
+}
+
+rc_t KDBManagerVOpenDBReadInt_noargs ( const KDBManager *self, const KDatabase **dbp,
+                                const KDirectory *wd, bool try_srapath,
+                                const char *path, ... )
+{
+    rc_t rc;
     va_list args;
 
     va_start ( args, path );
+    rc = KDBManagerVOpenDBReadInt ( self, dbp, wd, try_srapath, path, args );
+    va_end ( args );
 
-    res = KDBManagerVPathType ( self, path, args );
+    return rc;
+}
 
-    va_end (args);
-    return res;
+LIB_EXPORT rc_t CC KDBManagerVOpenDBRead ( const KDBManager *self,
+    const KDatabase **db, const char *path, va_list args )
+{
+    if ( db == NULL )
+        return RC ( rcDB, rcMgr, rcOpening, rcParam, rcNull );
+
+    * db = NULL;
+
+    if ( self == NULL )
+        return RC ( rcDB, rcMgr, rcOpening, rcSelf, rcNull );
+
+    return KDBManagerVOpenDBReadInt ( self, db, self -> wd, true, path, args );
 }
