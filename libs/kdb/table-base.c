@@ -50,7 +50,7 @@ rc_t CC KTableBaseAddRef ( const KTable *self )
     switch ( KRefcountAdd ( & self -> refcount, "KTable" ) )
     {
     case krefLimit:
-        return RC ( rcDB, rcColumn, rcAttaching, rcRange, rcExcessive );
+        return RC ( rcDB, rcTable, rcAttaching, rcRange, rcExcessive );
     }
     return 0;
 }
@@ -62,7 +62,7 @@ rc_t CC KTableBaseRelease ( const KTable *self )
     case krefWhack:
         return self -> vt -> whack ( ( KTable* ) self );
     case krefNegative:
-        return RC ( rcDB, rcColumn, rcReleasing, rcRange, rcExcessive );
+        return RC ( rcDB, rcTable, rcReleasing, rcRange, rcExcessive );
     }
     return 0;
 }
@@ -92,7 +92,7 @@ rc_t KTableSever ( const KTable *self )
         case krefWhack:
             return self -> vt -> whack ( ( KTable* ) self );
         case krefNegative:
-            return RC ( rcDB, rcColumn, rcReleasing, rcRange, rcExcessive );
+            return RC ( rcDB, rcTable, rcReleasing, rcRange, rcExcessive );
         }
     }
     return 0;

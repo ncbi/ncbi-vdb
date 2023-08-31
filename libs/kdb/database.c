@@ -71,8 +71,8 @@ static rc_t CC KRDatabaseVOpenTableRead ( const KDatabase *self, const KTable **
 static KDatabase_vt KRDatabase_vt =
 {
     KRDatabaseWhack,
-    KDatabaseBaseBaseAddRef,
-    KDatabaseBaseBaseRelease,
+    KDatabaseBaseAddRef,
+    KDatabaseBaseRelease,
     KRDatabaseLocked,
     KRDatabaseVExists,
     KRDatabaseIsAlias,
@@ -109,8 +109,6 @@ KRDatabaseWhack ( KDatabase *self )
 {
     rc_t rc = 0;
 
-    KRefcountWhack ( & self -> dad . refcount, "KDatabase" );
-
     /* release parent */
     if ( self -> parent != NULL )
     {
@@ -127,8 +125,7 @@ KRDatabaseWhack ( KDatabase *self )
     if ( rc == 0 )
     {
         KDirectoryRelease ( self -> dir );
-        free ( self );
-        return 0;
+        return KDatabaseBaseWhack( self );
     }
 
     KRefcountInit ( & self -> dad . refcount, 1, "KDatabase", "whack", "kdb" );

@@ -81,9 +81,9 @@ struct KDatabaseBase
 };
 
 // default implelentations where exist
-extern rc_t CC KDatabaseBaseBaseWhack ( KDATABASE_IMPL *self );
-extern rc_t CC KDatabaseBaseBaseAddRef ( const KDATABASE_IMPL *self );
-extern rc_t CC KDatabaseBaseBaseRelease ( const KDATABASE_IMPL *self );
+extern rc_t CC KDatabaseBaseWhack ( KDATABASE_IMPL *self );
+extern rc_t CC KDatabaseBaseAddRef ( const KDATABASE_IMPL *self );
+extern rc_t CC KDatabaseBaseRelease ( const KDATABASE_IMPL *self );
 
 /* Attach
  * Sever

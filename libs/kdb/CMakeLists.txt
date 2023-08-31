@@ -31,6 +31,7 @@ set( KDB_CMN
     columnblob-base
     table-base
     database-base
+    manager-base
 )
 
 set( KDB_SRC

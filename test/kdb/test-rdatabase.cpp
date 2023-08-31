@@ -39,9 +39,6 @@
 
 #include <klib/rc.h>
 
-// #include <kdb/manager.h>
-// #include <kdb/kdb-priv.h>
-
 using namespace std;
 
 TEST_SUITE(KRDatabaseTestSuite);

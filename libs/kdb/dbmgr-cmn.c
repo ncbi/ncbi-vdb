@@ -58,12 +58,9 @@
 
 /* Whack
  */
-static
 rc_t KDBManagerWhack ( KDBManager *self )
 {
     rc_t rc;
-
-    KRefcountWhack ( & self -> refcount, "KDBManager" );
 
     /* everything should be closed */
     assert ( self -> open_objs . root == NULL );
@@ -75,80 +72,12 @@ rc_t KDBManagerWhack ( KDBManager *self )
     rc = KDirectoryRelease ( self -> wd );
     if ( rc == 0 )
     {
-        free ( self );
-        return 0;
+        return KDBManagerBaseWhack( self );
     }
 
-    KRefcountInit ( & self -> refcount, 1, "KDBManager", "whack", "kmgr" );
+    KRefcountInit ( & self -> dad . refcount, 1, "KDBManager", "whack", "kmgr" );
     return rc;
 }
-
-
-/* AddRef
- * Release
- *  all objects are reference counted
- *  NULL references are ignored
- */
-LIB_EXPORT rc_t CC KDBManagerAddRef ( const KDBManager *self )
-{
-    if ( self != NULL )
-    {
-        switch ( KRefcountAdd ( & self -> refcount, "KDBManager" ) )
-        {
-        case krefLimit:
-            return RC ( rcDB, rcMgr, rcAttaching, rcRange, rcExcessive );
-        }
-    }
-    return 0;
-}
-
-LIB_EXPORT rc_t CC KDBManagerRelease ( const KDBManager *self )
-{
-    if ( self != NULL )
-    {
-        switch ( KRefcountDrop ( & self -> refcount, "KDBManager" ) )
-        {
-        case krefWhack:
-            return KDBManagerWhack ( ( KDBManager* ) self );
-        case krefNegative:
-            return RC ( rcDB, rcMgr, rcReleasing, rcRange, rcExcessive );
-        }
-    }
-    return 0;
-}
-
-
-/* Attach
- * Sever
- */
-KDBManager* KDBManagerAttach ( const KDBManager *self )
-{
-    if ( self != NULL )
-    {
-        switch ( KRefcountAddDep ( & self -> refcount, "KDBManager" ) )
-        {
-        case krefLimit:
-            return NULL;
-        }
-    }
-    return ( KDBManager* ) self;
-}
-
-rc_t KDBManagerSever ( const KDBManager *self )
-{
-    if ( self != NULL )
-    {
-        switch ( KRefcountDropDep ( & self -> refcount, "KDBManager" ) )
-        {
-        case krefWhack:
-            return KDBManagerWhack ( ( KDBManager* ) self );
-        case krefNegative:
-            return RC ( rcDB, rcMgr, rcReleasing, rcRange, rcExcessive );
-        }
-    }
-    return 0;
-}
-
 
 /* Make - PRIVATE
  *
@@ -156,7 +85,7 @@ rc_t KDBManagerSever ( const KDBManager *self )
  *  accessing the file system. mgr will attach its own reference.
  */
 rc_t KDBManagerMake ( KDBManager **mgrp, const KDirectory *wd, const char *op,
-    VFSManager *vmanager )
+    VFSManager *vmanager, KDBManager_vt * vt )
 {
     rc_t rc;
 
@@ -170,6 +99,7 @@ rc_t KDBManagerMake ( KDBManager **mgrp, const KDirectory *wd, const char *op,
         else
         {
             memset ( mgr, 0, sizeof * mgr );
+            mgr -> dad . vt = vt;
             mgr -> wd = wd;
             if ( wd != NULL )
                 rc = KDirectoryAddRef ( wd );
@@ -195,11 +125,11 @@ rc_t KDBManagerMake ( KDBManager **mgrp, const KDirectory *wd, const char *op,
                     if ( rc == 0 )
                     {
                         CRC32Init ();
-                        
+
                         BSTreeInit ( & mgr -> open_objs );
-                        
-                        KRefcountInit ( & mgr -> refcount, 1, "KDBManager", op, "kmgr" );
-                        
+
+                        KRefcountInit ( & mgr -> dad . refcount, 1, "KDBManager", op, "kmgr" );
+
                         * mgrp = mgr;
                         return 0;
                     }

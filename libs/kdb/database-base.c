@@ -34,7 +34,7 @@
 
 #include <klib/rc.h>
 
-rc_t KDatabaseBaseBaseWhack ( KDatabase *self )
+rc_t KDatabaseBaseWhack ( KDatabase *self )
 {
     KRefcountWhack ( & self -> refcount, "KDatabase" );
     free ( self );
@@ -46,27 +46,27 @@ rc_t KDatabaseBaseBaseWhack ( KDatabase *self )
  *  all objects are reference counted
  *  NULL references are ignored
  */
-rc_t CC KDatabaseBaseBaseAddRef ( const KDatabase *self )
+rc_t CC KDatabaseBaseAddRef ( const KDatabase *self )
 {
     if ( self != NULL )
     {
         switch ( KRefcountAdd ( & self -> refcount, "KDatabase" ) )
         {
         case krefLimit:
-            return RC ( rcDB, rcColumn, rcAttaching, rcRange, rcExcessive );
+            return RC ( rcDB, rcDatabase, rcAttaching, rcRange, rcExcessive );
         }
     }
     return 0;
 }
 
-rc_t CC KDatabaseBaseBaseRelease ( const KDatabase *self )
+rc_t CC KDatabaseBaseRelease ( const KDatabase *self )
 {
     switch ( KRefcountDrop ( & self -> refcount, "KDatabase" ) )
     {
     case krefWhack:
         return self -> vt -> whack ( ( KDatabase* ) self );
     case krefNegative:
-        return RC ( rcDB, rcColumn, rcReleasing, rcRange, rcExcessive );
+        return RC ( rcDB, rcDatabase, rcReleasing, rcRange, rcExcessive );
     }
     return 0;
 }
@@ -96,7 +96,7 @@ rc_t KDatabaseSever ( const KDatabase *self )
         case krefWhack:
             return self -> vt -> whack ( ( KDatabase* ) self );
         case krefNegative:
-            return RC ( rcDB, rcColumn, rcReleasing, rcRange, rcExcessive );
+            return RC ( rcDB, rcDatabase, rcReleasing, rcRange, rcExcessive );
         }
     }
     return 0;

@@ -56,6 +56,12 @@
  *  handle to library
  */
 
+static KDBManager_vt KDBWManager_vt =
+{
+    KDBManagerWhack,
+    KDBManagerBaseAddRef,
+    KDBManagerBaseRelease,
+};
 
 /* MakeUpdate
  *  create library handle
@@ -63,7 +69,7 @@
 LIB_EXPORT rc_t CC KDBManagerMakeUpdate ( KDBManager **mgrp, KDirectory *wd )
 {
     if ( wd == NULL || ! wd -> read_only )
-        return KDBManagerMake ( mgrp, wd, "make-update", NULL );
+        return KDBManagerMake ( mgrp, wd, "make-update", NULL, & KDBWManager_vt );
 
     if ( mgrp != NULL )
         * mgrp = NULL;
@@ -75,7 +81,7 @@ LIB_EXPORT rc_t CC KDBManagerMakeUpdateWithVFSManager (
     KDBManager ** mgrp, KDirectory * wd, struct VFSManager * vfs )
 {
     if ( wd == NULL || ! wd -> read_only )
-        return KDBManagerMake ( mgrp, wd, "make-update", vfs );
+        return KDBManagerMake ( mgrp, wd, "make-update", vfs, & KDBWManager_vt );
 
     if ( mgrp != NULL )
         * mgrp = NULL;
@@ -114,7 +120,7 @@ rc_t KDBManagerWritableInt ( const KDirectory * dir, const char * path )
         break;
 #if 0
         /*TBD - eventually we need to check for an archive here */
-    case kptFile: 
+    case kptFile:
         /* check if this is an archive .tar or .sra and return rcReadonly if it is */
 #endif
     case kptNotFound:
@@ -184,7 +190,7 @@ LIB_EXPORT rc_t CC KDBManagerVLock ( KDBManager *self, const char *path, va_list
            object's control.  That is the last facet in the path
            is the name of the object.  To be valid the facet before
            must not be "col", "tbl", or "db" as in those cases
-           the KDBManager should not be called for this object but 
+           the KDBManager should not be called for this object but
            its containing object
         */
 
@@ -194,7 +200,7 @@ LIB_EXPORT rc_t CC KDBManagerVLock ( KDBManager *self, const char *path, va_list
         if ( rc == 0 )
         {
             /* if the path is not writable because it is already locked
-             * the return from this will contain "rcLocked" and the 
+             * the return from this will contain "rcLocked" and the
              * caller will be forced to check for zero or RCState(rcLocked)
              *
              * a side effect is that if the call does not return 0 it will
@@ -258,16 +264,16 @@ LIB_EXPORT rc_t CC KDBManagerVUnlock ( KDBManager *self, const char *path, va_li
                object's control.  That is the last facet in the path
                is the name of the object.  To be valid the facet before
                must not be "col", "tbl", or "db" as in those cases
-               the KDBManager should not be called for this object but 
+               the KDBManager should not be called for this object but
                its containing object
             */
 
             /* if the path is not writable because it is already locked
              * we attempt to unlock it.
              *
-             * if the return is 0 from Writable than it was already 
+             * if the return is 0 from Writable than it was already
              * unlocked so we say so and thus again the
-             * the return from this will contain "rcLocked" and the 
+             * the return from this will contain "rcLocked" and the
              * caller will be forced to check for zero or RCState(rcUnlocked)
              *
              * a side effect is that if the call does not return 0 it will

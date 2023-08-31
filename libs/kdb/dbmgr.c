@@ -62,6 +62,12 @@
  *  handle to library
  */
 
+static KDBManager_vt KDBRManager_vt =
+{
+    KDBManagerWhack,
+    KDBManagerBaseAddRef,
+    KDBManagerBaseRelease,
+};
 
 /* MakeRead
  * MakeReadWithVFSManager
@@ -79,7 +85,7 @@ LIB_EXPORT rc_t CC KDBManagerMakeRead ( const KDBManager **mgrp, const KDirector
 LIB_EXPORT rc_t CC KDBManagerMakeReadWithVFSManager ( const KDBManager **mgrp,
     const KDirectory *wd, struct VFSManager *vmanager )
 {
-    return KDBManagerMake ( ( KDBManager** ) mgrp, wd, "make-read", vmanager );
+    return KDBManagerMake ( ( KDBManager** ) mgrp, wd, "make-read", vmanager, & KDBRManager_vt );
 }
 
 /*
@@ -89,21 +95,21 @@ LIB_EXPORT rc_t CC KDBManagerMakeReadWithVFSManager ( const KDBManager **mgrp,
 
 
 
- * 1. If naked accession or uri accession resolve to local, 
+ * 1. If naked accession or uri accession resolve to local,
 
 
  * self                         = a kdbmanager
  * disable_accession_resolution = turn off VResolver usage for accessions
- *                                read versus create/upate 
+ *                                read versus create/upate
  * resolved+path                = a vpath created based on text path
  * fmt                          = our scary interface that is 'sprintf'ish
  * args                         = goes with the fmt
  *
  * NOTE: as usual a path with a '%' becomes broken at unsuspected times
  */
-rc_t KDBManagerResolveVPathInt (const KDBManager * self, 
+rc_t KDBManagerResolveVPathInt (const KDBManager * self,
                                 bool disable_accession_resolution,
-                                VPath ** resolved_path, 
+                                VPath ** resolved_path,
                                 const VPath * path)
 {
     uint32_t flags;
@@ -116,15 +122,15 @@ rc_t KDBManagerResolveVPathInt (const KDBManager * self,
         ? vfsmgr_rflag_no_acc
         : vfsmgr_rflag_kdb_acc;
 
-    return VFSManagerResolvePath (self->vfsmgr, 
+    return VFSManagerResolvePath (self->vfsmgr,
                                   flags,
                                   path, resolved_path);
 }
 
 
-rc_t KDBManagerVResolveVPath (const KDBManager * self, 
+rc_t KDBManagerVResolveVPath (const KDBManager * self,
                                 bool disable_accession_resolution,
-                                VPath ** resolved_path, 
+                                VPath ** resolved_path,
                                 const VPath * path)
 {
     return KDBManagerResolveVPathInt (self, disable_accession_resolution,
@@ -132,9 +138,9 @@ rc_t KDBManagerVResolveVPath (const KDBManager * self,
 }
 
 
-rc_t KDBManagerVResolvePath (const KDBManager * self, 
+rc_t KDBManagerVResolvePath (const KDBManager * self,
                              bool disable_accession_resolution,
-                             VPath ** resolved_path, 
+                             VPath ** resolved_path,
                              const char * fmt, va_list args)
 {
     VPath * p;
@@ -163,7 +169,7 @@ rc_t KDBManagerVResolvePath (const KDBManager * self,
 
 rc_t KDBManagerVResolvePathRelativeDir (const KDBManager * self, const KDirectory * dir,
                                         bool disable_accession_resolution,
-                                        VPath ** resolved_path, 
+                                        VPath ** resolved_path,
                                         const char * fmt, va_list args)
 {
     VPath * p;
@@ -201,7 +207,7 @@ rc_t KDBManagerResolvePathRelativeDir (const KDBManager * self,
 
     va_start (args, fmt);
 
-    rc = KDBManagerVResolvePathRelativeDir (self, dir, 
+    rc = KDBManagerVResolvePathRelativeDir (self, dir,
                                             disable_accession_resolution,
                                             resolved_path, fmt, args);
     va_end (args);

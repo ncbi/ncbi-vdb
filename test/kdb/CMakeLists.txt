@@ -46,6 +46,8 @@ AddExecutableTest( Test_KDB_KWTable "test-wtable" "${COMMON_LIBS_WRITE}" )
 AddExecutableTest( Test_KDB_KRDatabase "test-rdatabase" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_KDB_KWDatabase "test-wdatabase" "${COMMON_LIBS_WRITE}" )
 
+AddExecutableTest( Test_KDB_RManager "test-rmanager" "${COMMON_LIBS_READ}" )
+
 AddExecutableTest( Test_KDB_Kdb "kdbtest" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_KDB_Wkdb "wkdbtest" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" )
 

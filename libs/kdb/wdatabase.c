@@ -71,8 +71,8 @@ static rc_t CC KWDatabaseVOpenTableRead ( const KDatabase *self, const KTable **
 static KDatabase_vt KRDatabase_vt =
 {
     KWDatabaseWhack,
-    KDatabaseBaseBaseAddRef,
-    KDatabaseBaseBaseRelease,
+    KDatabaseBaseAddRef,
+    KDatabaseBaseRelease,
     KWDatabaseLocked,
     KWDatabaseVExists,
     KWDatabaseIsAlias,

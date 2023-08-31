@@ -39,6 +39,9 @@
 #include <klib/refcount.h>
 #endif
 
+#define KDBMGR_IMPL KDBManager
+#include "manager-base.h"
+
 #ifndef KONST
 #define KONST
 #endif
@@ -62,6 +65,8 @@ struct VFSManager;
  */
 struct KDBManager
 {
+    KDBManagerBase dad;
+
     /* root directory */
     struct KDirectory KONST *wd;
 
@@ -69,18 +74,16 @@ struct KDBManager
     struct KRWLock *open_objs_lock;
     BSTree open_objs;
 
-    /* open references */
-    KRefcount refcount;
-
     /* other managers needed by the KDB manager */
     struct VFSManager * vfsmgr;
 };
 
+rc_t KDBManagerWhack ( KDBManager *self );
 
 /* Make - PRIVATE
  */
 rc_t KDBManagerMake ( KDBManager **mgrp, struct KDirectory const *wd,
-    const char *op, struct VFSManager *vmanager );
+    const char *op, struct VFSManager *vmanager, KDBManager_vt * vt );
 
 /* Attach
  * Sever
