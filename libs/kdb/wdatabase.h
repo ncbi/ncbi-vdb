@@ -28,11 +28,16 @@
 
 #include "database-priv.h"
 
+#include <kfs/md5.h>
+
+struct VPath;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 rc_t KDatabaseMake ( KDatabase **dbp, const KDirectory *dir, const char *path, KMD5SumFmt *md5, bool read_only );
+rc_t KDatabaseMakeVPath ( KDatabase **dbp, const KDirectory *dir, const struct VPath *path, KMD5SumFmt *md5, bool read_only );
 
 #ifdef __cplusplus
 }

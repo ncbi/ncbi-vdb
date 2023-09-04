@@ -38,6 +38,8 @@
 #include <kdb/kdb-priv.h>
 #include <kdb/table.h>
 
+#include <kfs/file.h>
+
 #include <vfs/manager.h>
 #include <vfs/path.h>
 
@@ -48,6 +50,16 @@ using namespace std;
 TEST_SUITE(KDBRManagerTestSuite);
 
 static const string ScratchDir = "./data/";
+
+static string ToString(const VPath* path)
+{
+    const String * s;
+    if ( VPathMakeString (path, &s) != 0 )
+        throw logic_error ( "ToString(VPath) failed" );
+    string ret = string(s->addr, s->size);
+    free((void*)s);
+    return ret;
+}
 
 class KDBManager_Fixture
 {
@@ -119,6 +131,32 @@ FIXTURE_TEST_CASE(KDBRManager_PathType, KDBManager_Fixture)
     REQUIRE_EQ( (int)kptDatabase, KDBManagerPathType( m_mgr, "%s", "testdb" ) );
 }
 
+FIXTURE_TEST_CASE(KDBManagerVPathType, KDBManager_Fixture)
+{
+    string path;
+    { // convert accession "SRR000123" into a file system path
+        VFSManager* vfsmgr;
+        REQUIRE_RC(VFSManagerMake(&vfsmgr));
+        {
+            VPath * vpath;
+            const struct KFile *dummy1;
+            const struct VPath *dummy2;
+            REQUIRE_RC(VFSManagerResolveSpec ( vfsmgr, "SRR000123", &vpath, &dummy1, &dummy2, true));
+
+            path = ToString(vpath);
+
+            REQUIRE_RC(KFileRelease(dummy1));
+            REQUIRE_RC(VPathRelease(dummy2));
+            REQUIRE_RC(VPathRelease(vpath));
+        }
+        REQUIRE_RC(VFSManagerRelease(vfsmgr));
+    }
+
+//cout << path << endl;
+    REQUIRE_EQ((int)kptTable, KDBManagerPathType(m_mgr, path.c_str()));
+}
+
+
 FIXTURE_TEST_CASE(KDBRManager_VPathTypeUnreliable, KDBManager_Fixture)
 {
     auto fn = [] ( const KDBManager * self, const char *path, ... ) -> int
@@ -139,6 +177,42 @@ FIXTURE_TEST_CASE(KDBRManager_OpenDBRead, KDBManager_Fixture)
     REQUIRE_NOT_NULL( db );
     REQUIRE_RC( KDatabaseRelease( db ) );
 }
+
+FIXTURE_TEST_CASE(KDBRManager_OpenTableRead, KDBManager_Fixture)
+{
+    const KTable * tbl = nullptr;
+    REQUIRE_RC( KDBManagerOpenTableRead( m_mgr, & tbl, "%s", "SRR000123" ) );
+    REQUIRE_NOT_NULL( tbl );
+    REQUIRE_RC( KTableRelease( tbl ) );
+}
+
+FIXTURE_TEST_CASE(KDBRManager_OpenTableReadVPath, KDBManager_Fixture)
+{
+    VFSManager * vfs;
+    REQUIRE_RC( VFSManagerMake ( & vfs ) );
+
+    struct VPath * path;
+    REQUIRE_RC( VFSManagerMakePath ( vfs, & path, "%s", "SRR000123" ) );
+
+    const KTable * tbl = nullptr;
+    REQUIRE_RC( KDBManagerOpenTableReadVPath( m_mgr, & tbl, path ) );
+    REQUIRE_NOT_NULL( tbl );
+    REQUIRE_RC( KTableRelease( tbl ) );
+
+    REQUIRE_RC( VPathRelease( path ) );
+    REQUIRE_RC( VFSManagerRelease( vfs ) );
+}
+
+FIXTURE_TEST_CASE(KDBRManager_OpenColumnRead, KDBManager_Fixture)
+{
+    const KColumn * col = nullptr;
+    rc_t rc = SILENT_RC( rcVFS,rcMgr,rcOpening,rcDirectory,rcNotFound );
+    REQUIRE_EQ( rc, KDBManagerOpenColumnRead( m_mgr, & col, "%s", "testdb/tbl/SEQUENCE/col/qq" ) );
+    REQUIRE_NULL( col );
+}
+
+//KDBManagerVPathOpenLocalDBRead: see remote_open_test.cpp/kdbtest.cpp
+//KDBManagerVPathOpenRemoteDBRead
 
 //////////////////////////////////////////// Main
 extern "C"

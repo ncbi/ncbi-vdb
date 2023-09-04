@@ -32,9 +32,46 @@
 extern "C" {
 #endif
 
+struct KTable;
+
 rc_t KDBManagerVOpenDBReadInt_noargs ( const KDBManager *cself,
     const KDatabase **dbp, KDirectory *wd,
-    const char *path, bool *cached, int try_srapath, ... )
+    const char *path, bool *cached, int try_srapath, ... );
+
+rc_t KDBManagerVOpenDBUpdateInt_noargs ( KDBManager *self,
+    KDatabase **db, KDirectory *wd, const char *path, ... );
+
+rc_t KDBManagerVCreateDBInt_noargs ( KDBManager *self,
+    KDatabase **db, KDirectory *wd, KCreateMode cmode,
+    const char *path, ... );
+
+rc_t KDBManagerInsertDatabase ( KDBManager * self, KDatabase * db );
+
+rc_t KDBManagerVOpenTableReadInt_noargs ( const KDBManager *cself,
+    const struct KTable **tblp, const KDirectory *wd, bool try_srapath,
+    const char *path, const struct VPath *vpath, ... );
+
+rc_t KDBManagerVOpenTableUpdateInt_noargs ( KDBManager *self,
+    struct KTable **tbl, KDirectory *wd, const char *path, ... );
+
+rc_t KDBManagerVCreateTableInt_noargs ( KDBManager *self,
+    struct KTable **tbl, KDirectory *wd, KCreateMode cmode, const char *path, ... );
+
+rc_t KDBManagerInsertTable ( KDBManager * self, struct KTable * tbl );
+
+rc_t KDBManagerVOpenColumnReadInt_noargs ( const KDBManager *cself,
+    const KColumn **colp, const KDirectory *wd,
+    const char *path_fmt, bool *cached, int try_srapath, ... );
+
+rc_t KDBManagerVCreateColumnInt_noargs ( KDBManager *self,
+    KColumn **colp, KDirectory *wd, KCreateMode cmode,
+    KChecksum checksum, size_t pgsize, const char *path, ... );
+
+rc_t KDBManagerVOpenColumnUpdateInt_noargs ( KDBManager *self,
+    KColumn **colp, KDirectory *wd, bool try_srapath,
+    const char *path_fmt, ... );
+
+rc_t KDBManagerInsertColumn ( KDBManager * self, KColumn * col );
 
 #ifdef __cplusplus
 }

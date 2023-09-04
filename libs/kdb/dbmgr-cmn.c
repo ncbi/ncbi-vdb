@@ -399,3 +399,4 @@ LIB_EXPORT rc_t CC KDBManagerGetTableModDate ( const KDBManager *self,
 
     return rc;
 }
+

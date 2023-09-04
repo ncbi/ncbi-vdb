@@ -28,11 +28,14 @@
 
 #include "database-priv.h"
 
+struct VPath;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 rc_t KDatabaseMake ( KDatabase **dbp, const KDirectory *dir, const char *path );
+rc_t KDatabaseMakeVPath ( KDatabase **dbp, const KDirectory *dir, const struct VPath* path );
 
 #ifdef __cplusplus
 }

@@ -191,7 +191,11 @@ LIB_EXPORT int CC KDBManagerVPathTypeUnreliable ( const KDBManager * self, const
 {
     DISPATCH( vPathTypeUnreliable( self, path, args ) );
 }
-LIB_EXPORT rc_t CC KDBManagerOpenDBRead ( const KDBManager *self, const struct KDatabase **db, const char *path, ... )
+LIB_EXPORT rc_t CC KDBManagerVOpenDBRead ( const KDBManager *self, const KDatabase **db, const char *path, va_list args )
+{
+    DISPATCH( vOpenDBRead( self, db, path, args ) );
+}
+LIB_EXPORT rc_t CC KDBManagerOpenDBRead ( const KDBManager *self, const KDatabase **db, const char *path, ... )
 {
     rc_t rc;
     va_list args;
@@ -201,5 +205,48 @@ LIB_EXPORT rc_t CC KDBManagerOpenDBRead ( const KDBManager *self, const struct K
     va_end ( args );
 
     return rc;
+}
+LIB_EXPORT rc_t CC KDBManagerVOpenTableRead ( const KDBManager *self, const struct KTable **tbl, const char *path, va_list args )
+{
+    DISPATCH( vOpenTableRead( self, tbl, path, args ) );
+}
+LIB_EXPORT rc_t CC KDBManagerOpenTableRead ( const KDBManager *self, const struct KTable **tbl, const char *path, ... )
+{
+    rc_t rc;
+    va_list args;
+
+    va_start ( args, path );
+    rc = KDBManagerVOpenTableRead ( self, tbl, path, args );
+    va_end ( args );
+
+    return rc;
+}
+LIB_EXPORT rc_t CC KDBManagerOpenTableReadVPath ( const KDBManager *self, const struct KTable **tbl, const struct VPath *path )
+{
+    DISPATCH( openTableReadVPath( self, tbl, path ) );
+}
+LIB_EXPORT rc_t CC KDBManagerVOpenColumnRead ( const KDBManager *self, const KColumn **col, const char *path, va_list args )
+{
+    DISPATCH( vOpenColumnRead( self, col, path, args ) );
+}
+LIB_EXPORT rc_t CC KDBManagerOpenColumnRead ( const KDBManager *self, const KColumn **col, const char *path, ... )
+{
+    rc_t rc;
+    va_list args;
+
+    va_start ( args, path );
+    rc = KDBManagerVOpenColumnRead ( self, col, path, args );
+    va_end ( args );
+
+    return rc;
+}
+LIB_EXPORT rc_t CC KDBManagerVPathOpenLocalDBRead ( struct KDBManager const * self, struct KDatabase const ** p_db, struct VPath const * vpath )
+{
+    DISPATCH( vPathOpenLocalDBRead( self, p_db, vpath ) );
+}
+LIB_EXPORT rc_t CC KDBManagerVPathOpenRemoteDBRead ( struct KDBManager const * self,
+    struct KDatabase const ** p_db, struct VPath const * remote, struct VPath const * cache )
+{
+    DISPATCH( vPathOpenRemoteDBRead( self, p_db, remote, cache ) );
 }
 

@@ -64,7 +64,6 @@ set( KDB_SRC
     u64idx-v3
 )
 
-
 set( WKDB_SRC
     ${KDB_CMN}
     wkdb

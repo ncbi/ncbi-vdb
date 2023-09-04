@@ -32,9 +32,16 @@
 extern "C" {
 #endif
 
-rc_t KDBManagerVOpenDBReadInt_noargs ( const KDBManager *self, const structKDatabase **dbp,
+rc_t KDBManagerVOpenDBReadInt_noargs ( const KDBManager *self, const struct KDatabase **dbp,
                                 const KDirectory *wd, bool try_srapath,
                                 const char *path, ... );
+rc_t KDBManagerVOpenTableReadInt_noargs ( const KDBManager *self,
+    const KTable **tblp, const KDirectory *wd, bool try_srapath,
+    const char *path, bool tryEnvAndAd, const struct VPath *vpath,
+    ... );
+rc_t KDBManagerVOpenColumnReadInt_noargs ( const KDBManager *self,
+    const struct KColumn **colp, const KDirectory *wd, bool try_srapath,
+    const char *path, ... );
 
 #ifdef __cplusplus
 }
