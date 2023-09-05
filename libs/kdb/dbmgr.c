@@ -290,14 +290,14 @@ KDBRManagerVWritable ( const KDBManager *self, const char * path, va_list args )
     rc_t rc = KDirectoryVResolvePath ( self -> wd, true, dbpath, sizeof dbpath, path, args );
     if ( rc == 0 )
     {
-        int type = KDBPathType ( self -> wd, NULL, path ) & ~ kptAlias;
+        int type = KDBPathType ( self -> wd, NULL, dbpath ) & ~ kptAlias;
         switch ( type )
         {
         case kptDatabase:
         case kptTable:
         case kptColumn:
         case kptIndex:
-            rc = KDBWritable ( self -> wd, path );
+            rc = KDBWritable ( self -> wd, dbpath );
             break;
         case kptNotFound:
             rc = RC ( rcDB, rcMgr, rcAccessing, rcPath, rcNotFound );

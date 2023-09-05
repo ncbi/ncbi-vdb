@@ -47,7 +47,7 @@
 
 using namespace std;
 
-TEST_SUITE(KDBRManagerTestSuite);
+TEST_SUITE(KDBWManagerTestSuite);
 
 static const string ScratchDir = "./data/";
 
@@ -67,7 +67,7 @@ public:
     KDBManager_Fixture()
     {
         THROW_ON_RC( KDirectoryNativeDir( & m_dir ) );
-        THROW_ON_RC( KDBManagerMakeRead ( & m_mgr, m_dir ) );
+        THROW_ON_RC( KDBManagerMakeUpdate( & m_mgr, m_dir ) );
     }
     ~KDBManager_Fixture()
     {
@@ -76,12 +76,12 @@ public:
     }
 
     KDirectory * m_dir = nullptr;
-    const KDBManager * m_mgr = nullptr;
+    KDBManager * m_mgr = nullptr;
 };
 
 //NB for now make the simplest calls possible, to test the vtable plumbing
 
-FIXTURE_TEST_CASE(KDBRManager_AddRelease, KDBManager_Fixture)
+FIXTURE_TEST_CASE(KDBWManager_AddRelease, KDBManager_Fixture)
 {
     REQUIRE_EQ( 1, (int)atomic32_read( & m_mgr -> dad . refcount ) );
     REQUIRE_RC( KDBManagerAddRef( m_mgr ) );
@@ -91,29 +91,29 @@ FIXTURE_TEST_CASE(KDBRManager_AddRelease, KDBManager_Fixture)
     // use valgrind to find any leaks
 }
 
-FIXTURE_TEST_CASE(KDBRManager_Version, KDBManager_Fixture)
+FIXTURE_TEST_CASE(KDBWManager_Version, KDBManager_Fixture)
 {
     uint32_t version = 0;
     REQUIRE_RC( KDBManagerVersion( m_mgr, & version ) );
     REQUIRE_EQ( (uint32_t)LIBKDB_VERS, version );
 }
 
-FIXTURE_TEST_CASE(KDBRManager_Exists, KDBManager_Fixture)
+FIXTURE_TEST_CASE(KDBWManager_Exists, KDBManager_Fixture)
 {
     REQUIRE( KDBManagerExists( m_mgr, kptDatabase, "%s", "testdb" ) );
 }
 
-FIXTURE_TEST_CASE(KDBRManager_Writable, KDBManager_Fixture)
+FIXTURE_TEST_CASE(KDBWManager_Writable, KDBManager_Fixture)
 {
     REQUIRE_RC( KDBManagerWritable( m_mgr, "%s", "testdb" ) );
 }
 
-FIXTURE_TEST_CASE(KDBRManager_RunPeriodicTasks, KDBManager_Fixture)
+FIXTURE_TEST_CASE(KDBWManager_RunPeriodicTasks, KDBManager_Fixture)
 {
     REQUIRE_RC( KDBManagerRunPeriodicTasks( m_mgr ) );
 }
 
-FIXTURE_TEST_CASE(KDBRManager_PathTypeVP, KDBManager_Fixture)
+FIXTURE_TEST_CASE(KDBWManager_PathTypeVP, KDBManager_Fixture)
 {
     VFSManager * vfs;
     REQUIRE_RC( VFSManagerMake ( & vfs ) );
@@ -126,7 +126,7 @@ FIXTURE_TEST_CASE(KDBRManager_PathTypeVP, KDBManager_Fixture)
     REQUIRE_RC( VFSManagerRelease( vfs ) );
 }
 
-FIXTURE_TEST_CASE(KDBRManager_PathType, KDBManager_Fixture)
+FIXTURE_TEST_CASE(KDBWManager_PathType, KDBManager_Fixture)
 {
     REQUIRE_EQ( (int)kptDatabase, KDBManagerPathType( m_mgr, "%s", "testdb" ) );
 }
@@ -157,7 +157,7 @@ FIXTURE_TEST_CASE(KDBManagerVPathType, KDBManager_Fixture)
 }
 
 
-FIXTURE_TEST_CASE(KDBRManager_VPathTypeUnreliable, KDBManager_Fixture)
+FIXTURE_TEST_CASE(KDBWManager_VPathTypeUnreliable, KDBManager_Fixture)
 {
     auto fn = [] ( const KDBManager * self, const char *path, ... ) -> int
     {
@@ -170,7 +170,7 @@ FIXTURE_TEST_CASE(KDBRManager_VPathTypeUnreliable, KDBManager_Fixture)
     REQUIRE_EQ( (int)kptDatabase, fn( m_mgr, "%s", "testdb" ) );
 }
 
-FIXTURE_TEST_CASE(KDBRManager_OpenDBRead, KDBManager_Fixture)
+FIXTURE_TEST_CASE(KDBWManager_OpenDBRead, KDBManager_Fixture)
 {
     const KDatabase * db = nullptr;
     REQUIRE_RC( KDBManagerOpenDBRead( m_mgr, & db, "%s", "testdb" ) );
@@ -178,7 +178,7 @@ FIXTURE_TEST_CASE(KDBRManager_OpenDBRead, KDBManager_Fixture)
     REQUIRE_RC( KDatabaseRelease( db ) );
 }
 
-FIXTURE_TEST_CASE(KDBRManager_OpenTableRead, KDBManager_Fixture)
+FIXTURE_TEST_CASE(KDBWManager_OpenTableRead, KDBManager_Fixture)
 {
     const KTable * tbl = nullptr;
     REQUIRE_RC( KDBManagerOpenTableRead( m_mgr, & tbl, "%s", "SRR000123" ) );
@@ -186,7 +186,7 @@ FIXTURE_TEST_CASE(KDBRManager_OpenTableRead, KDBManager_Fixture)
     REQUIRE_RC( KTableRelease( tbl ) );
 }
 
-FIXTURE_TEST_CASE(KDBRManager_OpenTableReadVPath, KDBManager_Fixture)
+FIXTURE_TEST_CASE(KDBWManager_OpenTableReadVPath, KDBManager_Fixture)
 {
     VFSManager * vfs;
     REQUIRE_RC( VFSManagerMake ( & vfs ) );
@@ -203,7 +203,7 @@ FIXTURE_TEST_CASE(KDBRManager_OpenTableReadVPath, KDBManager_Fixture)
     REQUIRE_RC( VFSManagerRelease( vfs ) );
 }
 
-FIXTURE_TEST_CASE(KDBRManager_OpenColumnRead, KDBManager_Fixture)
+FIXTURE_TEST_CASE(KDBWManager_OpenColumnRead, KDBManager_Fixture)
 {
     const KColumn * col = nullptr;
     rc_t rc = SILENT_RC( rcVFS,rcMgr,rcOpening,rcDirectory,rcNotFound );
@@ -211,7 +211,7 @@ FIXTURE_TEST_CASE(KDBRManager_OpenColumnRead, KDBManager_Fixture)
     REQUIRE_NULL( col );
 }
 
-//KDBManagerVPathOpenLocalDBRead: see remote_open_test.cpp/kdbtest.cpp
+//KDBManagerVPathOpenLocalDBRead: see remote_open_test.cpp/wkdbtest.cpp
 //KDBManagerVPathOpenRemoteDBRead
 
 //////////////////////////////////////////// Main
@@ -240,7 +240,7 @@ const char UsageDefaultName[] = "Test_KDB_RManager";
 rc_t CC KMain ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=KDBRManagerTestSuite(argc, argv);
+    rc_t rc=KDBWManagerTestSuite(argc, argv);
     return rc;
 }
 
