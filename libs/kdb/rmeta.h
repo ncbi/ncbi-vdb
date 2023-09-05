@@ -26,27 +26,46 @@
 
 #pragma once
 
-#include "dbmgr-priv.h"
-
 #include <kdb/meta.h>
+#include <kfs/directory.h>
+
+typedef struct KMetadata KMetadata;
+#define KMETA_IMPL KMetadata
+#include "meta-base.h"
+
+struct KDatabase;
+struct KTable;
+struct KColumn;
+struct KDBManager;
+struct KMDataNode;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-rc_t KDBManagerVOpenDBReadInt_noargs ( const KDBManager *self, const struct KDatabase **dbp,
-                                const KDirectory *wd, bool try_srapath,
-                                const char *path, ... );
-rc_t KDBManagerVOpenTableReadInt_noargs ( const KDBManager *self,
-    const KTable **tblp, const KDirectory *wd, bool try_srapath,
-    const char *path, bool tryEnvAndAd, const struct VPath *vpath,
-    ... );
-rc_t KDBManagerVOpenColumnReadInt_noargs ( const KDBManager *self,
-    const struct KColumn **colp, const KDirectory *wd, bool try_srapath,
-    const char *path, ... );
+typedef struct KMetadata KMetadata;
+struct KMetadata
+{
+    KMetadataBase dad;
 
-rc_t KDBManagerOpenMetadataReadInt ( const KDBManager *self, KMetadata **metap,
-    const KDirectory *wd, uint32_t rev, bool prerelease );
+    const struct KDirectory *dir;
+    const struct KDBManager *mgr;
+
+    /* owner */
+    const struct KDatabase *db;
+    const struct KTable *tbl;
+    const struct KColumn *col;
+
+    /* root node */
+    struct KMDataNode *root;
+
+    uint32_t vers;
+    uint32_t rev;
+    bool byteswap;
+    char path [ 1 ];
+};
+
+rc_t KMetadataMakeRead ( KMetadata **metap, const KDirectory *dir, const char *path, uint32_t rev );
 
 #ifdef __cplusplus
 }

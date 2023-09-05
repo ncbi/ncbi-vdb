@@ -31,13 +31,15 @@
 struct KMDataNodeNamelist;
 #define KNAMELIST_IMPL struct KMDataNodeNamelist
 
+#include "rmeta.h"
+
 #define KONST const
 #include "kdb-priv.h"
-#include "dbmgr-priv.h"
 #include "database-priv.h"
 #include "table-priv.h"
 #include "column-priv.h"
 #include "kdbfmt-priv.h"
+#include "rdbmgr.h"
 #undef KONST
 
 #include <kdb/meta.h>
@@ -85,32 +87,16 @@ struct KMDataNodeInflateData
  * KMetadata
  *  a versioned, hierarchical structure
  */
-struct KMetadata
+
+static rc_t CC KRMetadataVersion ( const KMetadata *self, uint32_t *version );
+
+static KMetadata_vt KRMetadata_vt =
 {
-    const KDirectory *dir;
-    const KDBManager *mgr;
-
-    /* owner */
-    const KDatabase *db;
-    const KTable *tbl;
-    const KColumn *col;
-
-    /* root node */
-    KMDataNode *root;
-
-    KRefcount refcount;
-    uint32_t vers;
-    uint32_t rev;
-    bool byteswap;
-    char path [ 1 ];
+    KMetadataBaseWhack,
+    KMetadataBaseAddRef,
+    KMetadataBaseRelease,
+    KRMetadataVersion
 };
-
-static
-KMetadata *KMetadataAttach ( const KMetadata *self );
-
-static
-rc_t KMetadataSever ( const KMetadata *self );
-
 
 /*--------------------------------------------------------------------------
  * KMAttrNode
@@ -325,7 +311,7 @@ bool CC KMDataNodeInflate_v1 ( PBSTNode *n, void *data )
     BSTreeInit ( & b -> child );
     KRefcountInit ( & b -> refcount, 0, "KMDataNode", "inflate", name );
     strcpy ( b -> name, name );
-     
+
     /* a name with no associated value */
     if ( b -> vsize == 0 )
     {
@@ -360,7 +346,7 @@ rc_t KMDataNodeInflateAttr ( KMDataNode *n, bool byteswap )
     {
         KMDataNodeInflateData pb;
         size_t bst_size = PBSTreeSize ( bst );
-        
+
         pb . meta = n -> meta;
         pb . par = n;
         pb . bst = & n -> attr;
@@ -370,9 +356,9 @@ rc_t KMDataNodeInflateAttr ( KMDataNode *n, bool byteswap )
         pb . byteswap = byteswap;
         PBSTreeDoUntil ( bst, 0, KMAttrNodeInflate, & pb );
         rc = pb . rc;
-        
+
         PBSTreeWhack ( bst );
-        
+
         n -> value = ( char* ) n -> value + bst_size;
         n -> vsize -= bst_size;
     }
@@ -422,7 +408,7 @@ rc_t KMDataNodeInflateChild ( KMDataNode *n,
         {
             KMDataNodeInflateData pb;
             pb . meta = n -> meta;
-            pb . par = n;        
+            pb . par = n;
             pb . bst = & n -> child;
             pb . node_size_limit = node_size_limit;
             pb . node_child_limit = node_child_limit;
@@ -431,9 +417,9 @@ rc_t KMDataNodeInflateChild ( KMDataNode *n,
             PBSTreeDoUntil ( bst, 0, KMDataNodeInflate, & pb );
             rc = pb . rc;
         }
-        
+
         PBSTreeWhack ( bst );
-        
+
         n -> value = ( char* ) n -> value + bst_size;
         n -> vsize -= bst_size;
     }
@@ -1443,8 +1429,6 @@ rc_t KMetadataWhack ( KMetadata *self )
 {
     rc_t rc = 0;
 
-    KRefcountWhack ( & self -> refcount, "KMetadata" );
-
     if ( self -> db != NULL )
     {
         rc = KDatabaseSever ( self -> db );
@@ -1471,76 +1455,11 @@ rc_t KMetadataWhack ( KMetadata *self )
     {
         KDirectoryRelease ( self -> dir );
         KMDataNodeWhack ( ( BSTNode* ) & self -> root -> n, NULL );
-        free ( self );
-        return 0;
+        return KMetadataBaseWhack( self );
     }
 
-    KRefcountInit ( & self -> refcount, 1, "KMetadata", "whack", "kmeta" );
+    KRefcountInit ( & self -> dad . refcount, 1, "KMetadata", "whack", "kmeta" );
     return rc;
-}
-
-
-/* AddRef
- * Release
- *  all objects are reference counted
- *  NULL references are ignored
- */
-LIB_EXPORT rc_t CC KMetadataAddRef ( const KMetadata *self )
-{
-    if ( self != NULL )
-    {
-        switch ( KRefcountAdd ( & self -> refcount, "KMetadata" ) )
-        {
-        case krefLimit:
-            return RC ( rcDB, rcMetadata, rcAttaching, rcRange, rcExcessive );
-        }
-    }
-    return 0;
-}
-
-LIB_EXPORT rc_t CC KMetadataRelease ( const KMetadata *self )
-{
-    if ( self != NULL )
-    {
-        switch ( KRefcountDrop ( & self -> refcount, "KMetadata" ) )
-        {
-        case krefWhack:
-            return KMetadataWhack ( ( KMetadata* ) self );
-        case krefNegative:
-            return RC ( rcDB, rcMetadata, rcReleasing, rcRange, rcExcessive );
-        }
-    }
-    return 0;
-}
-
-static
-KMetadata *KMetadataAttach ( const KMetadata *self )
-{
-    if ( self != NULL )
-    {
-        switch ( KRefcountAddDep ( & self -> refcount, "KMetadata" ) )
-        {
-        case krefLimit:
-            return NULL;
-        }
-    }
-    return ( KMetadata* ) self;
-}
-
-static
-rc_t KMetadataSever ( const KMetadata *self )
-{
-    if ( self != NULL )
-    {
-        switch ( KRefcountDropDep ( & self -> refcount, "KMetadata" ) )
-        {
-        case krefWhack:
-            return KMetadataWhack ( ( KMetadata* ) self );
-        case krefNegative:
-            return RC ( rcDB, rcMetadata, rcReleasing, rcRange, rcExcessive );
-        }
-    }
-    return 0;
 }
 
 /* Make
@@ -1633,9 +1552,7 @@ rc_t KMetadataPopulate ( KMetadata *self, const KDirectory *dir, const char *pat
     return rc;
 }
 
-static
-rc_t KMetadataMakeRead ( KMetadata **metap,
-    const KDirectory *dir, const char *path, uint32_t rev )
+rc_t KMetadataMakeRead ( KMetadata **metap, const KDirectory *dir, const char *path, uint32_t rev )
 {
     rc_t rc;
     KMetadata *meta = malloc ( sizeof * meta + strlen ( path ) );
@@ -1644,6 +1561,7 @@ rc_t KMetadataMakeRead ( KMetadata **metap,
     else
     {
         memset ( meta, 0, sizeof * meta );
+        meta -> dad . vt = & KRMetadata_vt;
         meta -> root = calloc ( 1, sizeof * meta -> root );
         if ( meta -> root == NULL )
             rc = RC ( rcDB, rcMetadata, rcConstructing, rcMemory, rcExhausted );
@@ -1651,7 +1569,7 @@ rc_t KMetadataMakeRead ( KMetadata **metap,
         {
             meta -> root -> meta = meta;
             meta -> dir = dir;
-            KRefcountInit ( & meta -> refcount, 1, "KMetadata", "make-read", path );
+            KRefcountInit ( & meta -> dad . refcount, 1, "KMetadata", "make-read", path );
             meta -> rev = rev;
             meta -> byteswap = false;
             strcpy ( meta -> path, path );
@@ -1672,74 +1590,6 @@ rc_t KMetadataMakeRead ( KMetadata **metap,
         free ( meta );
     }
     * metap = NULL;
-    return rc;
-}
-
-
-/* OpenMetadataRead
- *  opens metadata for read
- *
- *  "meta" [ OUT ] - return parameter for metadata
- */
-static
-rc_t KDBManagerOpenMetadataReadInt ( const KDBManager *self,
-    KMetadata **metap, const KDirectory *wd, uint32_t rev, bool prerelease )
-{
-    char metapath [ 4096 ];
-    rc_t rc = ( prerelease == 1 ) ?
-        KDirectoryResolvePath_v1 ( wd, true, metapath, sizeof metapath, "meta" ):
-        ( ( rev == 0 ) ?
-          KDirectoryResolvePath_v1 ( wd, true, metapath, sizeof metapath, "md/cur" ):
-          KDirectoryResolvePath ( wd, true, metapath, sizeof metapath, "md/r%.3u", rev ) );
-    if ( rc == 0 )
-    {
-        KMetadata *meta;
-
-        switch ( KDirectoryPathType ( wd, "%s", metapath ) )
-        {
-        case kptNotFound:
-            return RC ( rcDB, rcMgr, rcOpening, rcMetadata, rcNotFound );
-        case kptBadPath:
-            return RC ( rcDB, rcMgr, rcOpening, rcPath, rcInvalid );
-        case kptFile:
-        case kptFile | kptAlias:
-            break;
-        default:
-            return RC ( rcDB, rcMgr, rcOpening, rcPath, rcIncorrect );
-        }
-
-        rc = KMetadataMakeRead ( & meta, wd, metapath, rev );
-        if ( rc == 0 )
-        {
-            meta -> mgr = KDBManagerAttach ( self );
-            * metap = meta;
-            return 0;
-        }
-    }
-    
-    return rc;
-}
-
-LIB_EXPORT rc_t CC KDatabaseOpenMetadataRead ( const KDatabase *self, const KMetadata **metap )
-{
-    rc_t rc;
-    KMetadata *meta;
-
-    if ( metap == NULL )
-        return RC ( rcDB, rcDatabase, rcOpening, rcParam, rcNull );
-
-    * metap = NULL;
-
-    if ( self == NULL )
-        return RC ( rcDB, rcDatabase, rcOpening, rcSelf, rcNull );
-
-    rc = KDBManagerOpenMetadataReadInt ( self -> mgr, & meta, self -> dir, 0, false );
-    if ( rc == 0 )
-    {
-        meta -> db = KDatabaseAttach ( self );
-        * metap = meta;
-    }
-
     return rc;
 }
 
@@ -1794,7 +1644,9 @@ LIB_EXPORT rc_t CC KColumnOpenMetadataRead ( const KColumn *self, const KMetadat
 /* Version
  *  returns the metadata format version
  */
-LIB_EXPORT rc_t CC KMetadataVersion ( const KMetadata *self, uint32_t *version )
+static
+rc_t CC
+KRMetadataVersion ( const KMetadata *self, uint32_t *version )
 {
     if ( version == NULL )
         return RC ( rcDB, rcMetadata, rcAccessing, rcParam, rcNull );
@@ -1881,11 +1733,11 @@ LIB_EXPORT rc_t CC KMetadataMaxRevision ( const KMetadata *self, uint32_t *revis
                 for ( rev_max = idx = 0; idx < count; ++ idx )
                 {
                     const char *name;
-                    
+
                     rc = KNamelistGet ( listing, idx, & name );
                     if ( rc != 0 )
                         break;
-                    
+
                     if ( name [ 0 ] == 'r' )
                     {
                         char *end;
@@ -1897,7 +1749,7 @@ LIB_EXPORT rc_t CC KMetadataMaxRevision ( const KMetadata *self, uint32_t *revis
 
                 * revision = rev_max;
             }
-                
+
             KNamelistRelease ( listing );
         }
         else if ( GetRCState ( rc ) == rcNotFound )
@@ -2063,7 +1915,7 @@ rc_t KMDataNodeNamelistMake ( KNamelist **names, uint32_t count )
             * names = & self -> dad;
             return 0;
         }
-        
+
         free ( self );
     }
 
@@ -2161,7 +2013,7 @@ static rc_t KMDataNodeCompareValue( const KMDataNode *self, const KMDataNode *ot
             if ( self_size != other_size ) {
                 *equal = false; /* if the sizes are different - they can't be equal... */
             } else if ( 0 == self_size ) {
-                *equal = true; /* if both nodes have no data... */                
+                *equal = true; /* if both nodes have no data... */
             } else {
                 int cmp = memcmp( self_data, other_data, self_size );
                 *equal = ( 0 == cmp );
@@ -2239,9 +2091,9 @@ static rc_t KMDataNodeCompare_int( const KMDataNode *self, const KMDataNode *oth
 /* >>>>>> !!! any changes here have to be duplicated in wmeta.c !!! <<<<<< */
 LIB_EXPORT rc_t CC KMDataNodeCompare( const KMDataNode *self, KMDataNode const *other, bool *equal ) {
     rc_t rc = 0;
-    if ( self == NULL ) { 
+    if ( self == NULL ) {
         rc = RC( rcDB, rcNode, rcComparing, rcSelf, rcNull );
-    } else if ( other == NULL || equal == NULL ) { 
+    } else if ( other == NULL || equal == NULL ) {
         rc = RC( rcDB, rcNode, rcComparing, rcParam, rcNull );
     } else if ( self -> meta == NULL && other -> meta == NULL ) {
         *equal = true;
@@ -2252,7 +2104,7 @@ LIB_EXPORT rc_t CC KMDataNodeCompare( const KMDataNode *self, KMDataNode const *
         /* 2 way comparison, to make sure that both nodes have the same children... */
         rc =  KMDataNodeCompare_int( self, other, equal );
         if ( 0 == rc && *equal ) {
-            rc =  KMDataNodeCompare_int( other, self, equal );            
+            rc =  KMDataNodeCompare_int( other, self, equal );
         }
     }
     return rc;
@@ -2268,7 +2120,7 @@ LIB_EXPORT rc_t CC KTableMetaCompare( const KTable *self, const KTable *other,
     if ( NULL == self ) {
         rc = RC ( rcDB, rcTable, rcComparing, rcSelf, rcNull );
     } else if ( NULL == other || NULL == path || NULL == equal ) {
-        rc = RC ( rcDB, rcTable, rcComparing, rcParam, rcNull );        
+        rc = RC ( rcDB, rcTable, rcComparing, rcParam, rcNull );
     } else {
         const KMetadata *self_meta;
         rc = KTableOpenMetadataRead( self, &self_meta );
@@ -2287,7 +2139,7 @@ LIB_EXPORT rc_t CC KTableMetaCompare( const KTable *self, const KTable *other,
                     }
                     KMDataNodeRelease( self_node );
                 }
-                KMetadataRelease( other_meta );                
+                KMetadataRelease( other_meta );
             }
             KMetadataRelease( self_meta );
         }

@@ -48,6 +48,8 @@
 #include "kdbfmt-priv.h"
 #include "table-priv.h"
 #include "column-priv.h"
+#include "rdbmgr.h"
+#include "rmeta.h"
 
 #include <klib/checksum.h>
 #include <klib/rc.h>
@@ -848,3 +850,69 @@ KDBRManagerVOpenColumnRead ( const KDBManager *self, const KColumn **col, const 
         ( self, col, self -> wd, true, path, args );
 }
 
+
+
+/* OpenMetadataRead
+ *  opens metadata for read
+ *
+ *  "meta" [ OUT ] - return parameter for metadata
+ */
+rc_t KDBManagerOpenMetadataReadInt ( const KDBManager *self, KMetadata **metap, const KDirectory *wd, uint32_t rev, bool prerelease )
+{
+    char metapath [ 4096 ];
+    rc_t rc = ( prerelease == 1 ) ?
+        KDirectoryResolvePath_v1 ( wd, true, metapath, sizeof metapath, "meta" ):
+        ( ( rev == 0 ) ?
+          KDirectoryResolvePath_v1 ( wd, true, metapath, sizeof metapath, "md/cur" ):
+          KDirectoryResolvePath ( wd, true, metapath, sizeof metapath, "md/r%.3u", rev ) );
+    if ( rc == 0 )
+    {
+        KMetadata *meta;
+
+        switch ( KDirectoryPathType ( wd, "%s", metapath ) )
+        {
+        case kptNotFound:
+            return RC ( rcDB, rcMgr, rcOpening, rcMetadata, rcNotFound );
+        case kptBadPath:
+            return RC ( rcDB, rcMgr, rcOpening, rcPath, rcInvalid );
+        case kptFile:
+        case kptFile | kptAlias:
+            break;
+        default:
+            return RC ( rcDB, rcMgr, rcOpening, rcPath, rcIncorrect );
+        }
+
+        rc = KMetadataMakeRead ( & meta, wd, metapath, rev );
+        if ( rc == 0 )
+        {
+            meta -> mgr = KDBManagerAttach ( self );
+            * metap = meta;
+            return 0;
+        }
+    }
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KDatabaseOpenMetadataRead ( const KDatabase *self, const KMetadata **metap )
+{
+    rc_t rc;
+    KMetadata *meta;
+
+    if ( metap == NULL )
+        return RC ( rcDB, rcDatabase, rcOpening, rcParam, rcNull );
+
+    * metap = NULL;
+
+    if ( self == NULL )
+        return RC ( rcDB, rcDatabase, rcOpening, rcSelf, rcNull );
+
+    rc = KDBManagerOpenMetadataReadInt ( self -> mgr, & meta, self -> dir, 0, false );
+    if ( rc == 0 )
+    {
+        meta -> db = KDatabaseAttach ( self );
+        * metap = meta;
+    }
+
+    return rc;
+}

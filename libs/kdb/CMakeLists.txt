@@ -32,6 +32,7 @@ set( KDB_CMN
     table-base
     database-base
     manager-base
+    meta-base
 )
 
 set( KDB_SRC
