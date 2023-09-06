@@ -33,6 +33,7 @@
 #include "wcolumn-priv.h"
 #include "windex-priv.h"
 #include "wkdb-priv.h"
+#include "wmeta.h"
 
 #include <klib/namelist.h>
 #include <klib/symbol.h>
@@ -71,6 +72,7 @@ static rc_t CC KWTableOpenParentRead ( const KTable *self, const KDatabase **db 
 static bool CC KWTableHasRemoteData ( const KTable *self );
 static rc_t CC KWTableOpenDirectoryRead ( const KTable *self, const KDirectory **dir );
 static rc_t CC KWTableVOpenColumnRead ( const KTable *self, const KColumn **colp, const char *name, va_list args );
+static rc_t CC KWTableOpenMetadataRead ( const KTable *self, const KMetadata **metap );
 
 static KTableBase_vt KWTable_vt =
 {
@@ -85,7 +87,8 @@ static KTableBase_vt KWTable_vt =
     KWTableOpenParentRead,
     KWTableHasRemoteData,
     KWTableOpenDirectoryRead,
-    KWTableVOpenColumnRead
+    KWTableVOpenColumnRead,
+    KWTableOpenMetadataRead
 };
 
 
@@ -1094,5 +1097,28 @@ bool KTableColumnNeedsReindex ( KTable *self, const char *colname )
     }
 
     return false;
+}
+
+static
+rc_t CC
+KWTableOpenMetadataRead ( const KTable *self, const KMetadata **metap )
+{
+    rc_t rc;
+    const KMetadata *meta;
+    bool  meta_is_cached;
+
+    if ( metap == NULL )
+        return RC ( rcDB, rcTable, rcOpening, rcParam, rcNull );
+
+    * metap = NULL;
+
+    rc = KDBManagerOpenMetadataReadInt ( self -> mgr, & meta, self -> dir, 0, self -> prerelease, &meta_is_cached );
+    if ( rc == 0 )
+    {
+        if(!meta_is_cached) ((KMetadata*)meta) -> tbl = KTableAttach ( self );
+        * metap = meta;
+    }
+
+    return rc;
 }
 

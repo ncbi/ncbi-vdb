@@ -34,6 +34,7 @@
 
 #include <kdb/manager.h>
 #include <kdb/table.h>
+#include <kdb/meta.h>
 
 #include <klib/rc.h>
 
@@ -130,6 +131,13 @@ FIXTURE_TEST_CASE(KRColumn_OpenParentRead, KColumn_Fixture)
     REQUIRE_NULL( tbl );
 }
 
+FIXTURE_TEST_CASE(KRColumn_OpenMetadataRead, KColumn_Fixture)
+{
+    Setup( GetName() );
+    const KMetadata * meta = nullptr;
+    rc_t rc = SILENT_RC ( rcDB,rcMgr,rcOpening,rcMetadata,rcNotFound );
+    REQUIRE_EQ( rc, KColumnOpenMetadataRead( m_col, & meta ) );
+}
 
 // KColumnBlob
 

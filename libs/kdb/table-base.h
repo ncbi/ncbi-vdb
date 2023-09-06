@@ -45,6 +45,7 @@ extern "C" {
 struct KDBManager;
 struct KDatabase;
 struct KColumn;
+struct KMetadata;
 
 /*--------------------------------------------------------------------------
  * KTableBase, base structure for KTable implementations
@@ -55,18 +56,19 @@ typedef struct KTableBase_vt KTableBase_vt;
 struct KTableBase_vt
 {
     /* Public API */
-    rc_t ( CC * whack )             ( KTABLE_IMPL *self );
-    rc_t ( CC * addRef )            ( const KTABLE_IMPL *self );
-    rc_t ( CC * release )           ( const KTABLE_IMPL *self );
-    bool ( CC * locked )            ( const KTABLE_IMPL *self );
-    bool ( CC * vExists )           ( const KTABLE_IMPL *self, uint32_t type, const char *name, va_list args );
-    bool ( CC * isAlias )           ( const KTABLE_IMPL *self, uint32_t type, char *resolved, size_t rsize, const char *name );
-    rc_t ( CC * vWritable )         ( const KTABLE_IMPL *self, uint32_t type, const char *name, va_list args );
-    rc_t ( CC * openManagerRead )   ( const KTABLE_IMPL *self, struct KDBManager const **mgr );
-    rc_t ( CC * openParentRead )    ( const KTABLE_IMPL *self, struct KDatabase const **db );
-    bool ( CC * hasRemoteData )     ( const KTABLE_IMPL *self );
-    rc_t ( CC * openDirectoryRead ) ( const KTABLE_IMPL *self, const KDirectory **dir );
-    rc_t ( CC * vOpenColumnRead )   ( const KTABLE_IMPL *self, const struct KColumn **colp, const char *name, va_list args );
+    rc_t ( CC * whack )             ( KTABLE_IMPL * self );
+    rc_t ( CC * addRef )            ( const KTABLE_IMPL * self );
+    rc_t ( CC * release )           ( const KTABLE_IMPL * self );
+    bool ( CC * locked )            ( const KTABLE_IMPL * self );
+    bool ( CC * vExists )           ( const KTABLE_IMPL * self, uint32_t type, const char *name, va_list args );
+    bool ( CC * isAlias )           ( const KTABLE_IMPL * self, uint32_t type, char *resolved, size_t rsize, const char *name );
+    rc_t ( CC * vWritable )         ( const KTABLE_IMPL * self, uint32_t type, const char *name, va_list args );
+    rc_t ( CC * openManagerRead )   ( const KTABLE_IMPL * self, struct KDBManager const **mgr );
+    rc_t ( CC * openParentRead )    ( const KTABLE_IMPL * self, struct KDatabase const **db );
+    bool ( CC * hasRemoteData )     ( const KTABLE_IMPL * self );
+    rc_t ( CC * openDirectoryRead ) ( const KTABLE_IMPL * self, const KDirectory **dir );
+    rc_t ( CC * vOpenColumnRead )   ( const KTABLE_IMPL * self, const struct KColumn **colp, const char *name, va_list args );
+    rc_t ( CC * openMetadataRead )  ( const KTABLE_IMPL * self, const struct KMetadata **meta );
 
 //TODO: write-side only; decide how to handle
 #if 0

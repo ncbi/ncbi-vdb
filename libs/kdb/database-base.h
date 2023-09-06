@@ -47,6 +47,7 @@ extern "C" {
  */
 struct KDBManager;
 struct KTable;
+struct KMetadata;
 
 /*--------------------------------------------------------------------------
  * KDatabaseBase
@@ -70,6 +71,7 @@ struct KDatabase_vt
     rc_t ( CC * openDirectoryRead ) ( struct KDatabase const *self, struct KDirectory const **dir );
     rc_t ( CC * vOpenDBRead )       ( const KDATABASE_IMPL *self, const struct KDatabase **db, const char *name, va_list args );
     rc_t ( CC * vOpenTableRead )    ( const KDATABASE_IMPL *self, const struct KTable **tblp, const char *name, va_list args )    ;
+    rc_t ( CC * openMetadataRead )  ( struct KDATABASE_IMPL const *self, const struct KMetadata **meta );
 };
 
 struct KDatabaseBase

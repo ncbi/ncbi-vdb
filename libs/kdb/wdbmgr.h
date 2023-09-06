@@ -28,6 +28,10 @@
 
 #include "dbmgr-priv.h"
 
+#include <kfs/md5.h>
+#include <kdb/database.h>
+#include <kdb/meta.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -72,6 +76,11 @@ rc_t KDBManagerVOpenColumnUpdateInt_noargs ( KDBManager *self,
     const char *path_fmt, ... );
 
 rc_t KDBManagerInsertColumn ( KDBManager * self, KColumn * col );
+
+rc_t KDBManagerOpenMetadataReadInt ( KDBManager *self, const KMetadata **metap, const KDirectory *wd, uint32_t rev, bool prerelease,bool *cached );
+rc_t KDBManagerOpenMetadataUpdateInt ( KDBManager *self, KMetadata **metap, KDirectory *wd, KMD5SumFmt * md5 );
+
+rc_t KDBManagerInsertMetadata ( KDBManager * self, KMetadata * meta );
 
 #ifdef __cplusplus
 }

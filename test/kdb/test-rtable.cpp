@@ -37,6 +37,7 @@
 
 #include <kdb/manager.h>
 #include <kdb/column.h>
+#include <kdb/meta.h>
 
 #include <kdb/kdb-priv.h>
 
@@ -158,6 +159,14 @@ FIXTURE_TEST_CASE(KRTable_OpenColumnRead, KTable_Fixture)
     rc_t rc = SILENT_RC( rcFS,rcDirectory,rcOpening,rcPath,rcNotFound );
     REQUIRE_EQ( rc, KTableOpenColumnRead ( m_tbl, &col, "%s", "col" ) );
     REQUIRE_NULL( col );
+}
+
+FIXTURE_TEST_CASE(KRTable_OpenMetadataRead, KTable_Fixture)
+{
+    Setup( GetName() );
+    const KMetadata * meta = nullptr;
+    rc_t rc = SILENT_RC( rcDB,rcMgr,rcOpening,rcMetadata,rcNotFound );
+    REQUIRE_EQ( rc, KTableOpenMetadataRead ( m_tbl, & meta ) );
 }
 
 //////////////////////////////////////////// Main

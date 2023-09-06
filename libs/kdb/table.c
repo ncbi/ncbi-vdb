@@ -32,6 +32,7 @@
 #include "database-priv.h"
 #include "kdb-priv.h"
 #include "column-priv.h"
+#include "rmeta.h"
 #undef KONST
 
 #include <kdb/extern.h>
@@ -70,6 +71,7 @@ static rc_t CC KRTableOpenParentRead ( const KTable *self, const KDatabase **db 
 static bool CC KRTableHasRemoteData ( const KTable *self );
 static rc_t CC KRTableOpenDirectoryRead ( const KTable *self, const KDirectory **dir );
 static rc_t CC KRTableVOpenColumnRead ( const KTable *self, const KColumn **colp, const char *name, va_list args );
+static rc_t CC KRTableOpenMetadataRead ( const KTable *self, const KMetadata **metap );
 
 static KTableBase_vt KRTable_vt =
 {
@@ -84,7 +86,8 @@ static KTableBase_vt KRTable_vt =
     KRTableOpenParentRead,
     KRTableHasRemoteData,
     KRTableOpenDirectoryRead,
-    KRTableVOpenColumnRead
+    KRTableVOpenColumnRead,
+    KRTableOpenMetadataRead
 };
 
 /* GetPath
@@ -539,9 +542,6 @@ KRTableVOpenColumnRead ( const KTable *self, const KColumn **colp, const char *n
 
     * colp = NULL;
 
-    if ( self == NULL )
-        return RC ( rcDB, rcTable, rcOpening, rcSelf, rcNull );
-
     rc = KDBVMakeSubPath ( self -> dir,
         path, sizeof path, "col", 3, name, args );
     if ( rc == 0 )
@@ -554,6 +554,29 @@ KRTableVOpenColumnRead ( const KTable *self, const KColumn **colp, const char *n
             col -> tbl = KTableAttach ( self );
         }
     }
+    return rc;
+}
+
+static
+rc_t CC
+KRTableOpenMetadataRead ( const KTable *self, const KMetadata **metap )
+{
+    rc_t rc;
+    KMetadata *meta;
+
+    if ( metap == NULL )
+        return RC ( rcDB, rcTable, rcOpening, rcParam, rcNull );
+
+    * metap = NULL;
+
+    rc = KDBManagerOpenMetadataReadInt ( self -> mgr, & meta,
+        self -> dir, 0, self -> prerelease );
+    if ( rc == 0 )
+    {
+        meta -> tbl = KTableAttach ( self );
+        * metap = meta;
+    }
+
     return rc;
 }
 

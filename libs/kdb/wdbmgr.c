@@ -28,12 +28,13 @@
 
 #include <kdb/extern.h>
 #include "libkdb.vers.h"
-#include "dbmgr-priv.h"
+#include "wdbmgr.h"
 #include "wkdb-priv.h"
 #include "wtable-priv.h"
 #include "wdatabase.h"
 #include "colfmt-priv.h"
 #include "wcolumn-priv.h"
+#include "wmeta.h"
 
 #include <kfs/impl.h>
 
@@ -2183,4 +2184,204 @@ LIB_EXPORT rc_t CC KDBManagerVCreateTable ( KDBManager *self,
         return RC ( rcDB, rcMgr, rcCreating, rcSelf, rcNull );
 
     return KDBManagerVCreateTableInt ( self, tbl, self -> wd, cmode, path, args );
+}
+
+/* OpenMetadataUpdate
+ *  open metadata for read/write
+ *
+ *  "meta" [ OUT ] - return parameter for metadata
+ */
+rc_t
+KDBManagerOpenMetadataUpdateInt ( KDBManager *self, KMetadata **metap, KDirectory *wd, KMD5SumFmt * md5 )
+{
+/* WAK
+ * NEEDS MD5 UPDATE???
+ */
+    char metapath [ 4096 ];
+    rc_t rc = KDirectoryResolvePath ( wd, true,
+        metapath, sizeof metapath, "md/cur" );
+    if ( rc == 0 )
+    {
+        KSymbol * sym;
+        KMetadata *meta;
+        bool populate = true;
+
+        switch ( KDirectoryPathType ( wd, "%s", metapath ) )
+        {
+        case kptNotFound:
+            populate = false;
+            break;
+        case kptBadPath:
+            return RC ( rcDB, rcMgr, rcOpening, rcPath, rcInvalid );
+        case kptFile:
+        case kptFile | kptAlias:
+            break;
+        default:
+            return RC ( rcDB, rcMgr, rcOpening, rcPath, rcIncorrect );
+        }
+
+        /* if already open */
+        sym = KDBManagerOpenObjectFind (self, metapath);
+        if (sym != NULL)
+        {
+            rc_t obj;
+            switch (sym->type)
+            {
+            default:
+                obj = rcPath;
+                break;
+            case kptDatabase:
+                obj = rcDatabase;
+                break;
+            case kptTable:
+                obj = rcTable;
+                break;
+            case kptColumn:
+                obj = rcColumn;
+                break;
+            case kptIndex:
+                obj = rcIndex;
+                break;
+            case kptMetadata:
+                obj = rcMetadata;
+                break;
+            }
+            return RC ( rcDB, rcMgr, rcOpening, obj, rcBusy );
+        }
+
+        rc = KMetadataMake ( & meta, wd, metapath, 0, populate, false );
+        if ( rc == 0 )
+        {
+            rc = KDBManagerInsertMetadata (self, meta);
+            if (rc == 0)
+            {
+                if ( md5 != NULL )
+                {
+                    meta -> md5 = md5;
+                    rc = KMD5SumFmtAddRef ( md5 );
+                }
+
+                if ( rc == 0 )
+                {
+                    * metap = meta;
+                    return 0;
+                }
+            }
+
+            KMetadataRelease ( meta );
+        }
+    }
+
+    return rc;
+}
+
+rc_t KDBManagerInsertMetadata ( KDBManager * self, KMetadata * meta )
+{
+    rc_t rc;
+    rc = KDBManagerOpenObjectAdd (self, &meta->sym);
+    if ( rc == 0 )
+        meta -> mgr = KDBManagerAttach ( self );
+    return rc;
+}
+
+/* OpenMetadataRead
+ *  opens metadata for read
+ *
+ *  "meta" [ OUT ] - return parameter for metadata
+ */
+rc_t KDBManagerOpenMetadataReadInt ( KDBManager *self, const KMetadata **metap, const KDirectory *wd, uint32_t rev, bool prerelease,bool *cached )
+{
+    char metapath [ 4096 ];
+    rc_t rc = ( prerelease == 1 ) ?
+        KDirectoryResolvePath_v1 ( wd, true, metapath, sizeof metapath, "meta" ):
+        ( ( rev == 0 ) ?
+          KDirectoryResolvePath_v1 ( wd, true, metapath, sizeof metapath, "md/cur" ):
+          KDirectoryResolvePath ( wd, true, metapath, sizeof metapath, "md/r%.3u", rev ) );
+    if(cached != NULL ) *cached = false;
+    if ( rc == 0 )
+    {
+        KMetadata * meta;
+        KSymbol * sym;
+
+        /* if already open */
+        sym = KDBManagerOpenObjectFind (self, metapath);
+        if (sym != NULL)
+        {
+            const KMetadata * cmeta;
+            rc_t obj;
+
+	    if(cached != NULL ) *cached = true;
+            switch (sym->type)
+            {
+            case kptMetadata:
+                cmeta = (KMetadata*)sym->u.obj;
+                /* if open for update, refuse */
+                if ( cmeta -> read_only )
+                {
+                    /* attach a new reference and we're gone */
+                    rc = KMetadataAddRef ( cmeta );
+                    if ( rc == 0 )
+                        * metap = cmeta;
+                    return rc;
+                }
+                obj = rcMetadata;
+                break;
+
+            default:
+                obj = rcPath;
+                break;
+            case kptTable:
+                obj = rcTable;
+                break;
+            case kptColumn:
+                obj = rcColumn;
+                break;
+            case kptIndex:
+                obj = rcIndex;
+                break;
+            case kptDatabase:
+                obj = rcDatabase;
+                break;
+            }
+            return  RC (rcDB, rcMgr, rcOpening, obj, rcBusy);
+	}
+
+
+        switch ( KDirectoryPathType ( wd, "%s", metapath ) )
+        {
+        case kptNotFound:
+            rc = RC ( rcDB, rcMgr, rcOpening, rcMetadata, rcNotFound );
+            break;
+        case kptBadPath:
+            rc = RC ( rcDB, rcMgr, rcOpening, rcPath, rcInvalid );
+            break;
+        case kptFile:
+        case kptFile | kptAlias:
+            break;
+        default:
+            rc = RC ( rcDB, rcMgr, rcOpening, rcPath, rcIncorrect );
+            break;
+        }
+
+        if ( rc == 0 )
+        {
+            rc = KMetadataMake ( & meta, ( KDirectory* ) wd, metapath, rev, true, true );
+
+            if ( rc == 0 )
+            {
+                rc = KDBManagerInsertMetadata (self, meta );
+                if ( rc == 0 )
+                {
+                    * metap = meta;
+                    return 0;
+                }
+
+                KMetadataRelease ( meta );
+            }
+
+/*             rc = RC ( rcDB, rcMgr, rcOpening, rcMetadata, rcExists ); */
+        }
+    }
+
+    return rc;
 }

@@ -893,26 +893,3 @@ rc_t KDBManagerOpenMetadataReadInt ( const KDBManager *self, KMetadata **metap, 
 
     return rc;
 }
-
-LIB_EXPORT rc_t CC KDatabaseOpenMetadataRead ( const KDatabase *self, const KMetadata **metap )
-{
-    rc_t rc;
-    KMetadata *meta;
-
-    if ( metap == NULL )
-        return RC ( rcDB, rcDatabase, rcOpening, rcParam, rcNull );
-
-    * metap = NULL;
-
-    if ( self == NULL )
-        return RC ( rcDB, rcDatabase, rcOpening, rcSelf, rcNull );
-
-    rc = KDBManagerOpenMetadataReadInt ( self -> mgr, & meta, self -> dir, 0, false );
-    if ( rc == 0 )
-    {
-        meta -> db = KDatabaseAttach ( self );
-        * metap = meta;
-    }
-
-    return rc;
-}

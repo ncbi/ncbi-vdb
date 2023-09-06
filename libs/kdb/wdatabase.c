@@ -32,6 +32,7 @@
 #include "windex-priv.h"
 #include "wkdb-priv.h"
 #include "wdbmgr.h"
+#include "wmeta.h"
 
 #include <klib/namelist.h>
 #include <klib/symbol.h>
@@ -68,6 +69,7 @@ static rc_t CC KWDatabaseOpenParentRead ( const KDatabase *self, const KDatabase
 static rc_t CC KWDatabaseOpenDirectoryRead ( const KDatabase *self, const KDirectory **dir );
 static rc_t CC KWDatabaseVOpenDBRead ( const KDatabase *self, const KDatabase **dbp, const char *name, va_list args );
 static rc_t CC KWDatabaseVOpenTableRead ( const KDatabase *self, const KTable **tblp, const char *name, va_list args );
+static rc_t CC KWDatabaseOpenMetadataRead ( const KDatabase *self, const KMetadata **metap );
 
 static KDatabase_vt KRDatabase_vt =
 {
@@ -82,7 +84,8 @@ static KDatabase_vt KRDatabase_vt =
     KWDatabaseOpenParentRead,
     KWDatabaseOpenDirectoryRead,
     KWDatabaseVOpenDBRead,
-    KWDatabaseVOpenTableRead
+    KWDatabaseVOpenTableRead,
+    KWDatabaseOpenMetadataRead
 };
 
 
@@ -1245,6 +1248,29 @@ LIB_EXPORT rc_t CC KDatabaseVCreateTableByMask ( KDatabase *self,
                 tbl -> db = KDatabaseAttach ( self );
             }
         }
+    }
+
+    return rc;
+}
+
+static
+rc_t CC
+KWDatabaseOpenMetadataRead ( const KDatabase *self, const KMetadata **metap )
+{
+    rc_t rc;
+    const KMetadata *meta;
+    bool  meta_is_cached;
+
+    if ( metap == NULL )
+        return RC ( rcDB, rcDatabase, rcOpening, rcParam, rcNull );
+
+    * metap = NULL;
+
+    rc = KDBManagerOpenMetadataReadInt ( self -> mgr, & meta, self -> dir, 0, false, &meta_is_cached );
+    if ( rc == 0 )
+    {
+        if(!meta_is_cached) ((KMetadata*)meta) -> db = KDatabaseAttach ( self );
+        * metap = meta;
     }
 
     return rc;

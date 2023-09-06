@@ -27,10 +27,12 @@
 #include <klib/rc.h>
 
 #include "wcolumn-priv.h"
-#include "dbmgr-priv.h"
+#include "wdbmgr.h"
 #include "wtable-priv.h"
 #include "wkdb-priv.h"
 #include "werror-priv.h"
+#include "wmeta.h"
+
 #include <kfs/impl.h>
 #include <klib/data-buffer.h>
 
@@ -55,6 +57,7 @@ static rc_t CC KWColumnIdRange ( const KColumn *self, int64_t *first, uint64_t *
 static rc_t CC KWColumnFindFirstRowId ( const KColumn * self, int64_t * found, int64_t start );
 static rc_t CC KWColumnOpenManagerRead ( const KColumn *self, const KDBManager **mgr );
 static rc_t CC KWColumnOpenParentRead ( const KColumn *self, const KTable **tbl );
+static rc_t CC KWColumnOpenMetadataRead ( const KColumn *self, const KMetadata **metap );
 
 static KColumnBase_vt KColumn_vt =
 {
@@ -68,7 +71,8 @@ static KColumnBase_vt KColumn_vt =
     KWColumnIdRange,
     KWColumnFindFirstRowId,
     KWColumnOpenManagerRead,
-    KWColumnOpenParentRead
+    KWColumnOpenParentRead,
+    KWColumnOpenMetadataRead
 };
 
 /* Whack
@@ -933,3 +937,27 @@ LIB_EXPORT rc_t CC KColumnOpenDirectoryUpdate ( KColumn *self, KDirectory **dir 
 
     return rc;
 }
+
+static
+rc_t CC
+KWColumnOpenMetadataRead ( const KColumn *self, const KMetadata **metap )
+{
+    rc_t rc;
+    const KMetadata *meta;
+    bool  meta_is_cached;
+
+    if ( metap == NULL )
+        return RC ( rcDB, rcColumn, rcOpening, rcParam, rcNull );
+
+    * metap = NULL;
+
+    rc = KDBManagerOpenMetadataReadInt ( self -> mgr, & meta, self -> dir, 0, false, &meta_is_cached );
+    if ( rc == 0 )
+    {
+        if(!meta_is_cached) ((KMetadata*)meta) -> col = KColumnAttach ( self );
+        * metap = meta;
+    }
+
+    return rc;
+}
+

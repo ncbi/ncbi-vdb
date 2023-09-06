@@ -40,6 +40,7 @@ extern "C" {
 
 struct KDBManager;
 struct KTable;
+struct KMetadata;
 
 /*--------------------------------------------------------------------------
  * KColumnBase, base structure for KColumn implementations
@@ -50,16 +51,17 @@ typedef struct KColumnBase_vt KColumnBase_vt;
 struct KColumnBase_vt
 {
     /* Public API */
-    rc_t ( CC * whack )             ( KCOLUMN_IMPL *self );
-    rc_t ( CC * addRef )            ( const KCOLUMN_IMPL *self );
-    rc_t ( CC * release )           ( const KCOLUMN_IMPL *self );
-    bool ( CC * locked )            ( const KCOLUMN_IMPL *self ); // not used
-    rc_t ( CC * version )           ( const KCOLUMN_IMPL *self, uint32_t *version ); // not used
-    rc_t ( CC * byteOrder )         ( const KCOLUMN_IMPL *self, bool *reversed ); // not used
-    rc_t ( CC * idRange )           ( const KCOLUMN_IMPL *self, int64_t *first, uint64_t *count );
+    rc_t ( CC * whack )             ( KCOLUMN_IMPL * self );
+    rc_t ( CC * addRef )            ( const KCOLUMN_IMPL * self );
+    rc_t ( CC * release )           ( const KCOLUMN_IMPL * self );
+    bool ( CC * locked )            ( const KCOLUMN_IMPL * self ); // not used
+    rc_t ( CC * version )           ( const KCOLUMN_IMPL * self, uint32_t * version ); // not used
+    rc_t ( CC * byteOrder )         ( const KCOLUMN_IMPL * self, bool * reversed ); // not used
+    rc_t ( CC * idRange )           ( const KCOLUMN_IMPL * self, int64_t * first, uint64_t * count );
     rc_t ( CC * findFirstRowId )    ( const KCOLUMN_IMPL * self, int64_t * found, int64_t start );
-    rc_t ( CC * openManagerRead )   ( const KCOLUMN_IMPL *self, struct KDBManager const **mgr );
-    rc_t ( CC * openParentRead )    ( const KCOLUMN_IMPL *self, struct KTable const **tbl );
+    rc_t ( CC * openManagerRead )   ( const KCOLUMN_IMPL * self, struct KDBManager const ** mgr );
+    rc_t ( CC * openParentRead )    ( const KCOLUMN_IMPL * self, struct KTable const ** tbl );
+    rc_t ( CC * openMetadataRead )  ( const KCOLUMN_IMPL * self, const struct KMetadata ** meta );
 
     // //TODO: write-side only; decide how to handle
     // rc_t ( CC * reindex )           ( KCOLUMN_IMPL *self );

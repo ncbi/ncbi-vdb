@@ -33,11 +33,13 @@
 #include <../libs/kdb/rdatabase.h>
 #include <../libs/kdb/dbmgr-priv.h>
 
+#include <klib/rc.h>
+
 #include <kdb/manager.h>
 #include <kdb/kdb-priv.h>
 #include <kdb/table.h>
+#include <kdb/meta.h>
 
-#include <klib/rc.h>
 
 using namespace std;
 
@@ -157,6 +159,14 @@ FIXTURE_TEST_CASE(KRDatabase_OpenTableRead, KDatabase_Fixture)
     const KTable * t = nullptr;
     rc_t rc = SILENT_RC( rcFS,rcDirectory,rcOpening,rcPath,rcNotFound );
     REQUIRE_EQ( rc, KDatabaseOpenTableRead( m_db, & t, "%s", "t" ) );
+}
+
+FIXTURE_TEST_CASE(KRDatabase_OpenMetadataRead, KDatabase_Fixture)
+{
+    Setup( GetName() );
+    const KMetadata * meta = nullptr;
+    rc_t rc = SILENT_RC( rcDB,rcMgr,rcOpening,rcMetadata,rcNotFound );
+    REQUIRE_EQ( rc, KDatabaseOpenMetadataRead( m_db, & meta ) );
 }
 
 //////////////////////////////////////////// Main

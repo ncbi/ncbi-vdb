@@ -26,9 +26,11 @@
 
 #define KONST const
 #include "column-priv.h"
-#include "dbmgr-priv.h"
+#include "rdbmgr.h"
 #include "table-priv.h"
 #include "kdb-priv.h"
+#include "rmeta.h"
+
 #include <klib/rc.h>
 #include <klib/printf.h>
 #undef KONST
@@ -53,6 +55,7 @@ static rc_t CC KRColumnIdRange ( const KColumn *self, int64_t *first, uint64_t *
 static rc_t CC KRColumnFindFirstRowId ( const KColumn * self, int64_t * found, int64_t start );
 static rc_t CC KRColumnOpenManagerRead ( const KColumn *self, const KDBManager **mgr );
 static rc_t CC KRColumnOpenParentRead ( const KColumn *self, const KTable **tbl );
+static rc_t CC KRColumnOpenMetadataRead ( const KColumn *self, const KMetadata **metap );
 
 static KColumnBase_vt KColumn_vt =
 {
@@ -67,6 +70,7 @@ static KColumnBase_vt KColumn_vt =
     KRColumnFindFirstRowId,
     KRColumnOpenManagerRead,
     KRColumnOpenParentRead,
+    KRColumnOpenMetadataRead
 };
 
 /* Whack
@@ -354,3 +358,27 @@ LIB_EXPORT rc_t CC KColumnGetDirectoryRead ( const KColumn *self, const KDirecto
 
     return rc;
 }
+
+static
+rc_t CC
+KRColumnOpenMetadataRead ( const KColumn *self, const KMetadata **metap )
+{
+    rc_t rc;
+    KMetadata *meta;
+
+    if ( metap == NULL )
+        return RC ( rcDB, rcColumn, rcOpening, rcParam, rcNull );
+
+    * metap = NULL;
+
+    rc = KDBManagerOpenMetadataReadInt ( self -> mgr, & meta, self -> dir, 0, false );
+    if ( rc == 0 )
+    {
+        meta -> col = KColumnAttach ( self );
+        * metap = meta;
+    }
+
+    return rc;
+}
+
+

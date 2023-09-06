@@ -26,29 +26,63 @@
 
 #pragma once
 
-#include "dbmgr-priv.h"
+#include <klib/symbol.h>
+
+#include <kfs/directory.h>
+#include <kfs/md5.h>
 
 #include <kdb/meta.h>
+#include <kdb/manager.h>
+#include <kdb/database.h>
+#include <kdb/table.h>
 
+typedef struct KMetadata KMetadata;
+#define KMETA_IMPL KMetadata
+#include "meta-base.h"
+
+struct KDatabase;
 struct KTable;
+struct KColumn;
+struct KDBManager;
+struct KMDataNode;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-rc_t KDBManagerVOpenDBReadInt_noargs ( const KDBManager *self, const struct KDatabase **dbp,
-                                const KDirectory *wd, bool try_srapath,
-                                const char *path, ... );
-rc_t KDBManagerVOpenTableReadInt_noargs ( const KDBManager *self,
-    const struct KTable **tblp, const KDirectory *wd, bool try_srapath,
-    const char *path, bool tryEnvAndAd, const struct VPath *vpath,
-    ... );
-rc_t KDBManagerVOpenColumnReadInt_noargs ( const KDBManager *self,
-    const struct KColumn **colp, const KDirectory *wd, bool try_srapath,
-    const char *path, ... );
+typedef struct KMetadata KMetadata;
+struct KMetadata
+{
+    KMetadataBase dad;
 
-rc_t KDBManagerOpenMetadataReadInt ( const KDBManager *self, KMetadata **metap,
-    const KDirectory *wd, uint32_t rev, bool prerelease );
+    // BSTNode nn; ?? is it used? not as far as i could see in this module
+
+    KDirectory *dir;
+    KDBManager *mgr;
+
+    /* owner */
+    KDatabase *db;
+    KTable *tbl;
+    KColumn *col;
+
+    KMD5SumFmt * md5;
+
+    /* root node */
+    KMDataNode *root;
+
+    KSymbol sym;
+
+    uint32_t opencount;
+    uint32_t vers;
+    uint32_t rev;
+    uint8_t read_only;
+    uint8_t dirty;
+    bool byteswap;
+
+    char path [ 1 ];
+};
+
+rc_t KMetadataMake ( KMetadata **metap, KDirectory *dir, const char *path, uint32_t rev, bool populate, bool read_only );
 
 #ifdef __cplusplus
 }

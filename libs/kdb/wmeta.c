@@ -29,13 +29,11 @@
 struct KMDataNodeNamelist;
 #define KNAMELIST_IMPL struct KMDataNodeNamelist
 
-typedef struct KMetadata KMetadata;
-#define KMETA_IMPL KMetadata
-#include "meta-base.h"
+#include "wmeta.h"
 
 #include <kdb/extern.h>
 #include "wkdb-priv.h"
-#include "dbmgr-priv.h"
+#include "wdbmgr.h"
 #include "database-priv.h"
 #include "wtable-priv.h"
 #include "wcolumn-priv.h"
@@ -93,48 +91,29 @@ struct KMDataNodeInflateData
  *  a versioned, hierarchical structure
  */
 
-static rc_t KWMetadataWhack ( KMetadata *self );
+static rc_t CC KWMetadataWhack ( KMetadata *self );
 static rc_t CC KWMetadataAddRef ( const KMetadata *cself );
 static rc_t CC KWMetadataRelease ( const KMetadata *cself );
 static rc_t CC KWMetadataVersion ( const KMetadata *self, uint32_t *version );
+static rc_t CC KWMetadataByteOrder ( const KMetadata *self, bool *reversed );
+static rc_t CC KWMetadataRevision ( const KMetadata *self, uint32_t *revision );
+static rc_t CC KWMetadataMaxRevision ( const KMetadata *self, uint32_t *revision );
+static rc_t CC KWMetadataOpenRevision ( const KMetadata *self, const KMetadata **metap, uint32_t revision );
+static rc_t CC KWMetadataGetSequence ( const KMetadata *self, const char *seq, int64_t *val );
+static rc_t CC KWMetadataVOpenNodeRead ( const KMetadata *self, const KMDataNode **node, const char *path, va_list args );
 
 static KMetadata_vt KWMetadata_vt =
 {
     KWMetadataWhack,
     KWMetadataAddRef,
     KWMetadataRelease,
-    KWMetadataVersion
-};
-
-struct KMetadata
-{
-    KMetadataBase dad;
-
-    // BSTNode nn; ?? is it used? not as far as i could see in this module
-
-    KDirectory *dir;
-    KDBManager *mgr;
-
-    /* owner */
-    KDatabase *db;
-    KTable *tbl;
-    KColumn *col;
-
-    KMD5SumFmt * md5;
-
-    /* root node */
-    KMDataNode *root;
-
-    KSymbol sym;
-
-    uint32_t opencount;
-    uint32_t vers;
-    uint32_t rev;
-    uint8_t read_only;
-    uint8_t dirty;
-    bool byteswap;
-
-    char path [ 1 ];
+    KWMetadataVersion,
+    KWMetadataByteOrder,
+    KWMetadataRevision,
+    KWMetadataMaxRevision,
+    KWMetadataOpenRevision,
+    KWMetadataGetSequence,
+    KWMetadataVOpenNodeRead
 };
 
 /*--------------------------------------------------------------------------
@@ -755,32 +734,9 @@ rc_t KMDataNodeMake ( KMDataNode *self, KMDataNode **np, char *name )
     return 0;
 }
 
-
-/* OpenNodeRead
- * VOpenNodeRead
- *  opens a metadata node
- *
- *  "node" [ OUT ] - return parameter for indicated metadata node
- *
- *  "path" [ IN, NULL OKAY ] - optional path for specifying named
- *  node within metadata hierarchy. when NULL, empty, ".", or "/",
- *  return root node in "node". path separator is "/".
- */
-LIB_EXPORT rc_t CC KMetadataOpenNodeRead ( const KMetadata *self,
-    const KMDataNode **node, const char *path, ... )
-{
-    rc_t rc;
-    va_list args;
-
-    va_start ( args, path );
-    rc = KMetadataVOpenNodeRead ( self, node, path, args );
-    va_end ( args );
-
-    return rc;
-}
-
-LIB_EXPORT rc_t CC KMetadataVOpenNodeRead ( const KMetadata *self,
-    const KMDataNode **node, const char *path, va_list args )
+static
+rc_t CC
+KWMetadataVOpenNodeRead ( const KMetadata *self, const KMDataNode **node, const char *path, va_list args )
 {
     rc_t rc = 0;
 
@@ -2389,7 +2345,8 @@ rc_t KMetadataFlush ( KMetadata *self )
 /* Whack
  */
 static
-rc_t KWMetadataWhack ( KMetadata *self )
+rc_t CC
+KWMetadataWhack ( KMetadata *self )
 {
     rc_t rc = 0;
     KSymbol * symb;
@@ -2592,22 +2549,8 @@ rc_t KMetadataPopulate ( KMetadata *self, const KDirectory *dir, const char *pat
     return rc;
 }
 
-
-static
-rc_t KDBManagerInsertMetadata ( KDBManager * self, KMetadata * meta )
-{
-    rc_t rc;
-    rc = KDBManagerOpenObjectAdd (self, &meta->sym);
-    if ( rc == 0 )
-        meta -> mgr = KDBManagerAttach ( self );
-    return rc;
-}
-
-
-static
-rc_t KMetadataMake ( KMetadata **metap,
-    KDirectory *dir, const char *path, uint32_t rev,
-    bool populate, bool read_only )
+rc_t
+KMetadataMake ( KMetadata **metap, KDirectory *dir, const char *path, uint32_t rev, bool populate, bool read_only )
 {
     rc_t rc;
     KMetadata *meta = malloc ( sizeof * meta + strlen ( path ) );
@@ -2659,272 +2602,6 @@ rc_t KMetadataMake ( KMetadata **metap,
         free ( meta );
     }
     * metap = NULL;
-    return rc;
-}
-
-/* OpenMetadataRead
- *  opens metadata for read
- *
- *  "meta" [ OUT ] - return parameter for metadata
- */
-static
-rc_t KDBManagerOpenMetadataReadInt ( KDBManager *self,
-    const KMetadata **metap, const KDirectory *wd, uint32_t rev, bool prerelease,bool *cached )
-{
-    char metapath [ 4096 ];
-    rc_t rc = ( prerelease == 1 ) ?
-        KDirectoryResolvePath_v1 ( wd, true, metapath, sizeof metapath, "meta" ):
-        ( ( rev == 0 ) ?
-          KDirectoryResolvePath_v1 ( wd, true, metapath, sizeof metapath, "md/cur" ):
-          KDirectoryResolvePath ( wd, true, metapath, sizeof metapath, "md/r%.3u", rev ) );
-    if(cached != NULL ) *cached = false;
-    if ( rc == 0 )
-    {
-        KMetadata * meta;
-        KSymbol * sym;
-
-        /* if already open */
-        sym = KDBManagerOpenObjectFind (self, metapath);
-        if (sym != NULL)
-        {
-            const KMetadata * cmeta;
-            rc_t obj;
-
-	    if(cached != NULL ) *cached = true;
-            switch (sym->type)
-            {
-            case kptMetadata:
-                cmeta = (KMetadata*)sym->u.obj;
-                /* if open for update, refuse */
-                if ( cmeta -> read_only )
-                {
-                    /* attach a new reference and we're gone */
-                    rc = KMetadataAddRef ( cmeta );
-                    if ( rc == 0 )
-                        * metap = cmeta;
-                    return rc;
-                }
-                obj = rcMetadata;
-                break;
-
-            default:
-                obj = rcPath;
-                break;
-            case kptTable:
-                obj = rcTable;
-                break;
-            case kptColumn:
-                obj = rcColumn;
-                break;
-            case kptIndex:
-                obj = rcIndex;
-                break;
-            case kptDatabase:
-                obj = rcDatabase;
-                break;
-            }
-            return  RC (rcDB, rcMgr, rcOpening, obj, rcBusy);
-	}
-
-
-        switch ( KDirectoryPathType ( wd, "%s", metapath ) )
-        {
-        case kptNotFound:
-            rc = RC ( rcDB, rcMgr, rcOpening, rcMetadata, rcNotFound );
-            break;
-        case kptBadPath:
-            rc = RC ( rcDB, rcMgr, rcOpening, rcPath, rcInvalid );
-            break;
-        case kptFile:
-        case kptFile | kptAlias:
-            break;
-        default:
-            rc = RC ( rcDB, rcMgr, rcOpening, rcPath, rcIncorrect );
-            break;
-        }
-
-        if ( rc == 0 )
-        {
-            rc = KMetadataMake ( & meta, ( KDirectory* ) wd, metapath, rev, true, true );
-
-            if ( rc == 0 )
-            {
-                rc = KDBManagerInsertMetadata (self, meta );
-                if ( rc == 0 )
-                {
-                    * metap = meta;
-                    return 0;
-                }
-
-                KMetadataRelease ( meta );
-            }
-
-/*             rc = RC ( rcDB, rcMgr, rcOpening, rcMetadata, rcExists ); */
-        }
-    }
-
-    return rc;
-}
-
-LIB_EXPORT rc_t CC KDatabaseOpenMetadataRead ( const KDatabase *self, const KMetadata **metap )
-{
-    rc_t rc;
-    const KMetadata *meta;
-    bool  meta_is_cached;
-
-    if ( metap == NULL )
-        return RC ( rcDB, rcDatabase, rcOpening, rcParam, rcNull );
-
-    * metap = NULL;
-
-    if ( self == NULL )
-        return RC ( rcDB, rcDatabase, rcOpening, rcSelf, rcNull );
-
-    rc = KDBManagerOpenMetadataReadInt ( self -> mgr, & meta, self -> dir, 0, false, &meta_is_cached );
-    if ( rc == 0 )
-    {
-        if(!meta_is_cached) ((KMetadata*)meta) -> db = KDatabaseAttach ( self );
-        * metap = meta;
-    }
-
-    return rc;
-}
-
-LIB_EXPORT rc_t CC KTableOpenMetadataRead ( const KTable *self, const KMetadata **metap )
-{
-    rc_t rc;
-    const KMetadata *meta;
-    bool  meta_is_cached;
-
-    if ( metap == NULL )
-        return RC ( rcDB, rcTable, rcOpening, rcParam, rcNull );
-
-    * metap = NULL;
-
-    if ( self == NULL )
-        return RC ( rcDB, rcTable, rcOpening, rcSelf, rcNull );
-
-    rc = KDBManagerOpenMetadataReadInt ( self -> mgr, & meta, self -> dir, 0, self -> prerelease, &meta_is_cached );
-    if ( rc == 0 )
-    {
-        if(!meta_is_cached) ((KMetadata*)meta) -> tbl = KTableAttach ( self );
-        * metap = meta;
-    }
-
-    return rc;
-}
-
-LIB_EXPORT rc_t CC KColumnOpenMetadataRead ( const KColumn *self, const KMetadata **metap )
-{
-    rc_t rc;
-    const KMetadata *meta;
-    bool  meta_is_cached;
-
-    if ( metap == NULL )
-        return RC ( rcDB, rcColumn, rcOpening, rcParam, rcNull );
-
-    * metap = NULL;
-
-    if ( self == NULL )
-        return RC ( rcDB, rcColumn, rcOpening, rcSelf, rcNull );
-
-    rc = KDBManagerOpenMetadataReadInt ( self -> mgr, & meta, self -> dir, 0, false, &meta_is_cached );
-    if ( rc == 0 )
-    {
-        if(!meta_is_cached) ((KMetadata*)meta) -> col = KColumnAttach ( self );
-        * metap = meta;
-    }
-
-    return rc;
-}
-
-/* OpenMetadataUpdate
- *  open metadata for read/write
- *
- *  "meta" [ OUT ] - return parameter for metadata
- */
-static
-rc_t KDBManagerOpenMetadataUpdateInt ( KDBManager *self,
-    KMetadata **metap, KDirectory *wd, KMD5SumFmt * md5 )
-{
-/* WAK
- * NEEDS MD5 UPDATE???
- */
-    char metapath [ 4096 ];
-    rc_t rc = KDirectoryResolvePath ( wd, true,
-        metapath, sizeof metapath, "md/cur" );
-    if ( rc == 0 )
-    {
-        KSymbol * sym;
-        KMetadata *meta;
-        bool populate = true;
-
-        switch ( KDirectoryPathType ( wd, "%s", metapath ) )
-        {
-        case kptNotFound:
-            populate = false;
-            break;
-        case kptBadPath:
-            return RC ( rcDB, rcMgr, rcOpening, rcPath, rcInvalid );
-        case kptFile:
-        case kptFile | kptAlias:
-            break;
-        default:
-            return RC ( rcDB, rcMgr, rcOpening, rcPath, rcIncorrect );
-        }
-
-        /* if already open */
-        sym = KDBManagerOpenObjectFind (self, metapath);
-        if (sym != NULL)
-        {
-            rc_t obj;
-            switch (sym->type)
-            {
-            default:
-                obj = rcPath;
-                break;
-            case kptDatabase:
-                obj = rcDatabase;
-                break;
-            case kptTable:
-                obj = rcTable;
-                break;
-            case kptColumn:
-                obj = rcColumn;
-                break;
-            case kptIndex:
-                obj = rcIndex;
-                break;
-            case kptMetadata:
-                obj = rcMetadata;
-                break;
-            }
-            return RC ( rcDB, rcMgr, rcOpening, obj, rcBusy );
-        }
-
-        rc = KMetadataMake ( & meta, wd, metapath, 0, populate, false );
-        if ( rc == 0 )
-        {
-            rc = KDBManagerInsertMetadata (self, meta);
-            if (rc == 0)
-            {
-                if ( md5 != NULL )
-                {
-                    meta -> md5 = md5;
-                    rc = KMD5SumFmtAddRef ( md5 );
-                }
-
-                if ( rc == 0 )
-                {
-                    * metap = meta;
-                    return 0;
-                }
-            }
-
-            KMetadataRelease ( meta );
-        }
-    }
-
     return rc;
 }
 
@@ -3017,12 +2694,6 @@ KWMetadataVersion ( const KMetadata *self, uint32_t *version )
     if ( version == NULL )
         return RC ( rcDB, rcMetadata, rcAccessing, rcParam, rcNull );
 
-    if ( self == NULL )
-    {
-        * version = 0;
-        return RC ( rcDB, rcMetadata, rcAccessing, rcSelf, rcNull );
-    }
-
     * version = self -> vers;
     return 0;
 }
@@ -3038,16 +2709,12 @@ KWMetadataVersion ( const KMetadata *self, uint32_t *version )
  *  "reversed" [ OUT ] - if true, the original byte
  *  order is reversed with regard to host native byte order.
  */
-LIB_EXPORT rc_t CC KMetadataByteOrder ( const KMetadata *self, bool *reversed )
+static
+rc_t CC
+KWMetadataByteOrder ( const KMetadata *self, bool *reversed )
 {
     if ( reversed == NULL )
         return RC ( rcDB, rcMetadata, rcAccessing, rcParam, rcNull );
-
-    if ( self == NULL )
-    {
-        * reversed = false;
-        return RC ( rcDB, rcMetadata, rcAccessing, rcSelf, rcNull );
-    }
 
     * reversed = self -> byteswap;
     return 0;
@@ -3058,16 +2725,12 @@ LIB_EXPORT rc_t CC KMetadataByteOrder ( const KMetadata *self, bool *reversed )
  *  returns current revision number
  *  where 0 ( zero ) means tip
  */
-LIB_EXPORT rc_t CC KMetadataRevision ( const KMetadata *self, uint32_t *revision )
+static
+rc_t CC
+KWMetadataRevision ( const KMetadata *self, uint32_t *revision )
 {
     if ( revision == NULL )
         return RC ( rcDB, rcMetadata, rcAccessing, rcParam, rcNull );
-
-    if ( self == NULL )
-    {
-        * revision = 0;
-        return RC ( rcDB, rcMetadata, rcAccessing, rcSelf, rcNull );
-    }
 
     * revision = self -> rev;
     return 0;
@@ -3077,7 +2740,9 @@ LIB_EXPORT rc_t CC KMetadataRevision ( const KMetadata *self, uint32_t *revision
 /* MaxRevision
  *  returns the maximum revision available
  */
-LIB_EXPORT rc_t CC KMetadataMaxRevision ( const KMetadata *self, uint32_t *revision )
+static
+rc_t CC
+KWMetadataMaxRevision ( const KMetadata *self, uint32_t *revision )
 {
     rc_t rc;
     KNamelist *listing;
@@ -3086,9 +2751,6 @@ LIB_EXPORT rc_t CC KMetadataMaxRevision ( const KMetadata *self, uint32_t *revis
         return RC ( rcDB, rcMetadata, rcAccessing, rcParam, rcNull );
 
     * revision = 0;
-
-    if ( self == NULL )
-        return RC ( rcDB, rcMetadata, rcAccessing, rcSelf, rcNull );
 
     rc = KDirectoryList ( self -> dir,
         & listing, NULL, NULL, "md" );
@@ -3227,8 +2889,9 @@ LIB_EXPORT rc_t CC KMetadataFreeze ( KMetadata *self )
 /* OpenRevision
  *  opens a read-only indexed revision of metadata
  */
-LIB_EXPORT rc_t CC KMetadataOpenRevision ( const KMetadata *self,
-    const KMetadata **metap, uint32_t revision )
+static
+rc_t CC
+KWMetadataOpenRevision ( const KMetadata *self, const KMetadata **metap, uint32_t revision )
 {
     rc_t rc;
     const KMetadata *meta;
@@ -3238,9 +2901,6 @@ LIB_EXPORT rc_t CC KMetadataOpenRevision ( const KMetadata *self,
         return RC ( rcDB, rcMetadata, rcOpening, rcParam, rcNull );
 
     * metap = NULL;
-
-    if ( self == NULL )
-        return RC ( rcDB, rcMetadata, rcOpening, rcSelf, rcNull );
 
     rc = KDBManagerOpenMetadataReadInt ( self -> mgr,
         & meta, self -> dir, revision, false, &meta_is_cached  );
@@ -3273,8 +2933,9 @@ LIB_EXPORT rc_t CC KMetadataOpenRevision ( const KMetadata *self,
  *  "val" [ OUT ] - return parameter for sequence value
  *  "val" [ IN ] - new sequence value
  */
-LIB_EXPORT rc_t CC KMetadataGetSequence ( const KMetadata *self,
-    const char *seq, int64_t *val )
+static
+rc_t CC
+KWMetadataGetSequence ( const KMetadata *self, const char *seq, int64_t *val )
 {
     rc_t rc;
     const KMDataNode *found;
@@ -3283,8 +2944,6 @@ LIB_EXPORT rc_t CC KMetadataGetSequence ( const KMetadata *self,
         return RC ( rcDB, rcMetadata, rcAccessing, rcParam, rcNull );
     * val = 0;
 
-    if ( self == NULL )
-        return RC ( rcDB, rcMetadata, rcAccessing, rcSelf, rcNull );
     if ( seq == NULL )
         return RC ( rcDB, rcMetadata, rcAccessing, rcPath, rcNull );
     if ( seq [ 0 ] == 0 )

@@ -30,6 +30,7 @@
 #include "kdb-priv.h"
 #include "table-priv.h"
 #include "rdbmgr.h"
+#include "rmeta.h"
 #undef KONST
 
 #include <klib/debug.h> /* DBGMSG */
@@ -67,6 +68,7 @@ static rc_t CC KRDatabaseOpenParentRead ( const KDatabase *self, const KDatabase
 static rc_t CC KRDatabaseOpenDirectoryRead ( const KDatabase *self, const KDirectory **dir );
 static rc_t CC KRDatabaseVOpenDBRead ( const KDatabase *self, const KDatabase **dbp, const char *name, va_list args );
 static rc_t CC KRDatabaseVOpenTableRead ( const KDatabase *self, const KTable **tblp, const char *name, va_list args );
+static rc_t CC KRDatabaseOpenMetadataRead ( const KDatabase *self, const KMetadata **metap );
 
 static KDatabase_vt KRDatabase_vt =
 {
@@ -81,7 +83,8 @@ static KDatabase_vt KRDatabase_vt =
     KRDatabaseOpenParentRead,
     KRDatabaseOpenDirectoryRead,
     KRDatabaseVOpenDBRead,
-    KRDatabaseVOpenTableRead
+    KRDatabaseVOpenTableRead,
+    KRDatabaseOpenMetadataRead
 };
 
 
@@ -597,9 +600,6 @@ KRDatabaseVOpenTableRead ( const KDatabase *self,
 
     * tblp = NULL;
 
-    if ( self == NULL )
-        return RC ( rcDB, rcDatabase, rcOpening, rcSelf, rcNull );
-
     if ( name == NULL )
         return RC ( rcDB, rcDatabase, rcOpening, rcParam, rcNull );
 
@@ -619,3 +619,24 @@ KRDatabaseVOpenTableRead ( const KDatabase *self,
     return rc;
 }
 
+static
+rc_t CC
+KRDatabaseOpenMetadataRead ( const KDatabase *self, const KMetadata **metap )
+{
+    rc_t rc;
+    KMetadata *meta;
+
+    if ( metap == NULL )
+        return RC ( rcDB, rcDatabase, rcOpening, rcParam, rcNull );
+
+    * metap = NULL;
+
+    rc = KDBManagerOpenMetadataReadInt ( self -> mgr, & meta, self -> dir, 0, false );
+    if ( rc == 0 )
+    {
+        meta -> db = KDatabaseAttach ( self );
+        * metap = meta;
+    }
+
+    return rc;
+}

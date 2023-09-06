@@ -25,7 +25,7 @@
 */
 
 /**
-* Unit tests for read-side KMetadata
+* Unit tests for write-side KMetadata
 */
 
 #include <ktst/unit_test.hpp>
@@ -33,12 +33,12 @@
 #include <klib/rc.h>
 #include <kdb/manager.h>
 
-#include <../libs/kdb/rmeta.h>
-#include <../libs/kdb/rdbmgr.h>
+#include <../libs/kdb/wmeta.h>
+#include <../libs/kdb/wdbmgr.h>
 
 using namespace std;
 
-TEST_SUITE(KDBRMetadataTestSuite);
+TEST_SUITE(KDBWMetadataTestSuite);
 
 static const string ScratchDir = "./data/";
 
@@ -48,7 +48,7 @@ public:
     KMetadata_Fixture()
     {
         THROW_ON_RC( KDirectoryNativeDir( & m_dir ) );
-        THROW_ON_RC( KDBManagerMakeRead ( & m_mgr, m_dir ) );
+        THROW_ON_RC( KDBManagerMakeUpdate( & m_mgr, m_dir ) );
     }
     ~KMetadata_Fixture()
     {
@@ -59,20 +59,20 @@ public:
 
     void Open( const char * path )
     {
-        const KDirectory *subdir;
-        THROW_ON_RC(  KDirectoryOpenDirRead( m_dir, &subdir, false, "%s", path ) );
-        THROW_ON_RC( KDBManagerOpenMetadataReadInt ( m_mgr, & m_meta, subdir, 0, false ) );
+        KDirectory * subdir;
+        THROW_ON_RC( KDirectoryOpenDirUpdate( m_dir, &subdir, false, "%s", path ) );
+        THROW_ON_RC( KDBManagerOpenMetadataUpdateInt ( m_mgr, & m_meta, subdir, nullptr ) );
         THROW_ON_RC( KDirectoryRelease( subdir ) );
     }
 
     KDirectory * m_dir = nullptr;
-    const KDBManager * m_mgr = nullptr;
+    KDBManager * m_mgr = nullptr;
     KMetadata * m_meta = nullptr;
 };
 
 //NB for now make the simplest calls possible, to test the vtable plumbing
 
-FIXTURE_TEST_CASE(KRMetadata_AddRelease, KMetadata_Fixture)
+FIXTURE_TEST_CASE(KWMetadata_AddRelease, KMetadata_Fixture)
 {
     Open( "testdb/tbl/SEQUENCE" );
     REQUIRE_EQ( 1, (int)atomic32_read( & m_meta -> dad . refcount ) );
@@ -83,7 +83,7 @@ FIXTURE_TEST_CASE(KRMetadata_AddRelease, KMetadata_Fixture)
     // use valgrind to find any leaks
 }
 
-FIXTURE_TEST_CASE(KRMetadata_Version, KMetadata_Fixture)
+FIXTURE_TEST_CASE(KWMetadata_Version, KMetadata_Fixture)
 {
     Open( "testdb/tbl/SEQUENCE" );
     uint32_t version = 0;
@@ -91,7 +91,7 @@ FIXTURE_TEST_CASE(KRMetadata_Version, KMetadata_Fixture)
     REQUIRE_EQ( (uint32_t)2, version );
 }
 
-FIXTURE_TEST_CASE(KRMetadata_ByteORder, KMetadata_Fixture)
+FIXTURE_TEST_CASE(KWMetadata_ByteORder, KMetadata_Fixture)
 {
     Open( "testdb/tbl/SEQUENCE" );
     bool reversed = true;
@@ -99,7 +99,7 @@ FIXTURE_TEST_CASE(KRMetadata_ByteORder, KMetadata_Fixture)
     REQUIRE( ! reversed );
 }
 
-FIXTURE_TEST_CASE(KRMetadata_Revision, KMetadata_Fixture)
+FIXTURE_TEST_CASE(KWMetadata_Revision, KMetadata_Fixture)
 {
     Open( "testdb/tbl/SEQUENCE" );
     uint32_t revision = 1;
@@ -107,7 +107,7 @@ FIXTURE_TEST_CASE(KRMetadata_Revision, KMetadata_Fixture)
     REQUIRE_EQ( (uint32_t)0, revision );
 }
 
-FIXTURE_TEST_CASE(KRMetadata_MaxRevision, KMetadata_Fixture)
+FIXTURE_TEST_CASE(KWMetadata_MaxRevision, KMetadata_Fixture)
 {
     Open( "testdb/tbl/SEQUENCE" );
     uint32_t revision = 1;
@@ -115,7 +115,7 @@ FIXTURE_TEST_CASE(KRMetadata_MaxRevision, KMetadata_Fixture)
     REQUIRE_EQ( (uint32_t)0, revision );
 }
 
-FIXTURE_TEST_CASE(KRMetadata_OpenRevision, KMetadata_Fixture)
+FIXTURE_TEST_CASE(KWMetadata_OpenRevision, KMetadata_Fixture)
 {
     Open( "testdb/tbl/SEQUENCE" );
     const KMetadata *meta = nullptr;
@@ -123,7 +123,7 @@ FIXTURE_TEST_CASE(KRMetadata_OpenRevision, KMetadata_Fixture)
     REQUIRE_EQ( rc, KMetadataOpenRevision ( m_meta, & meta, 1 ) );
 }
 
-FIXTURE_TEST_CASE(KRMetadata_GetSequence, KMetadata_Fixture)
+FIXTURE_TEST_CASE(KWMetadata_GetSequence, KMetadata_Fixture)
 {
     Open( "testdb/tbl/SEQUENCE" );
     int64_t val;
@@ -131,7 +131,7 @@ FIXTURE_TEST_CASE(KRMetadata_GetSequence, KMetadata_Fixture)
     REQUIRE_EQ( rc, KMetadataGetSequence ( m_meta, "zz", & val ) );
 }
 
-FIXTURE_TEST_CASE(KRMetadata_OpenNodeRead, KMetadata_Fixture)
+FIXTURE_TEST_CASE(KWMetadata_OpenNodeRead, KMetadata_Fixture)
 {
     Open( "testdb/tbl/SEQUENCE" );
     const KMDataNode *node;
@@ -166,7 +166,7 @@ const char UsageDefaultName[] = "Test_KDB_RMetadata";
 rc_t CC KMain ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=KDBRMetadataTestSuite(argc, argv);
+    rc_t rc=KDBWMetadataTestSuite(argc, argv);
     return rc;
 }
 

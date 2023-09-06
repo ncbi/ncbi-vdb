@@ -29,6 +29,7 @@
 #include "database-base.h"
 
 #include <kdb/database.h>
+#include <kdb/meta.h>
 
 #include <kdb/extern.h>
 
@@ -193,13 +194,10 @@ LIB_EXPORT rc_t CC KDatabaseOpenDBRead ( const KDatabase *self, const KDatabase 
 
     return rc;
 }
-
-
 LIB_EXPORT rc_t CC KDatabaseVOpenTableRead ( const KDatabase *self, const struct KTable **tblp, const char *name, va_list args )
 {
     DISPATCH( vOpenTableRead ( self, tblp, name, args ) );
 }
-
 LIB_EXPORT rc_t CC KDatabaseOpenTableRead ( const KDatabase *self,
     const struct KTable **tbl, const char *name, ... )
 {
@@ -215,7 +213,7 @@ LIB_EXPORT rc_t CC KDatabaseOpenTableRead ( const KDatabase *self,
 
     return rc;
 }
-
-
-
-
+LIB_EXPORT rc_t CC KDatabaseOpenMetadataRead ( const KDatabase *self, const KMetadata **metap )
+{
+    DISPATCH( openMetadataRead ( self, metap ) );
+}

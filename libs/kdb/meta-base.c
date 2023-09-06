@@ -126,3 +126,43 @@ LIB_EXPORT rc_t CC KMetadataVersion ( const KMetadata *self, uint32_t *version )
 {
     DISPATCH( version( self, version ) );
 }
+LIB_EXPORT rc_t CC KMetadataByteOrder ( const KMetadata *self, bool *reversed )
+{
+    DISPATCH( byteOrder( self, reversed ) );
+}
+LIB_EXPORT rc_t CC KMetadataRevision ( const KMetadata *self, uint32_t *revision )
+{
+    DISPATCH( revision( self, revision ) );
+}
+LIB_EXPORT rc_t CC KMetadataMaxRevision ( const KMetadata *self, uint32_t *revision )
+{
+    DISPATCH( maxRevision( self, revision ) );
+}
+LIB_EXPORT rc_t CC KMetadataOpenRevision ( const KMetadata *self,
+    const KMetadata **metap, uint32_t revision )
+{
+    DISPATCH( openRevision( self, metap, revision ) );
+}
+LIB_EXPORT rc_t CC KMetadataGetSequence ( const KMetadata *self, const char *seq, int64_t *val )
+{
+    DISPATCH( getSequence( self, seq, val ) );
+}
+LIB_EXPORT rc_t CC KMetadataVOpenNodeRead ( const KMetadata *self, const KMDataNode **node, const char *path, va_list args )
+{
+    DISPATCH( vOpenNodeRead( self, node, path, args ) );
+}
+LIB_EXPORT rc_t CC KMetadataOpenNodeRead ( const KMetadata *self, const KMDataNode **node, const char *path, ... )
+{
+    rc_t rc;
+    va_list args;
+
+    va_start ( args, path );
+    rc = KMetadataVOpenNodeRead ( self, node, path, args );
+    va_end ( args );
+
+    return rc;
+}
+
+
+
+

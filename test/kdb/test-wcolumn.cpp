@@ -34,6 +34,7 @@
 
 #include <kdb/manager.h>
 #include <kdb/table.h>
+#include <kdb/meta.h>
 
 #include <klib/rc.h>
 
@@ -132,6 +133,14 @@ FIXTURE_TEST_CASE(KWColumn_OpenParentRead, KColumn_Fixture)
     rc_t rc = SILENT_RC ( rcVDB, rcTable, rcAccessing, rcSelf, rcNull );
     REQUIRE_EQ( rc, KColumnOpenParentRead( m_col, & tbl ) );
     REQUIRE_NULL( tbl );
+}
+
+FIXTURE_TEST_CASE(KWColumn_OpenMetadataRead, KColumn_Fixture)
+{
+    Setup( GetName() );
+    const KMetadata * meta = nullptr;
+    rc_t rc = SILENT_RC ( rcDB,rcMgr,rcOpening,rcMetadata,rcNotFound );
+    REQUIRE_EQ( rc, KColumnOpenMetadataRead( m_col, & meta ) );
 }
 
 //TODO: non-virtual write-side only methods

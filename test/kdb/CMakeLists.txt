@@ -50,6 +50,7 @@ AddExecutableTest( Test_KDB_KRManager "test-rmanager" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_KDB_KWManager "test-wmanager" "${COMMON_LIBS_WRITE}" )
 
 AddExecutableTest( Test_KDB_KRMetadata "test-rmetadata" "${COMMON_LIBS_READ}" )
+AddExecutableTest( Test_KDB_KWMetadata "test-wmetadata" "${COMMON_LIBS_WRITE}" )
 
 AddExecutableTest( Test_KDB_Kdb "kdbtest" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_KDB_Wkdb "wkdbtest" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" )

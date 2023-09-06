@@ -33,15 +33,16 @@
 #include <../libs/kdb/wdatabase.h>
 #include <../libs/kdb/dbmgr-priv.h>
 
+#include <klib/rc.h>
+
 #include <kdb/manager.h>
 #include <kdb/kdb-priv.h>
 #include <kdb/table.h>
-
-#include <klib/rc.h>
+#include <kdb/meta.h>
 
 using namespace std;
 
-TEST_SUITE(KRDatabaseTestSuite);
+TEST_SUITE(KWDatabaseTestSuite);
 
 static const string ScratchDir = "./data/";
 
@@ -76,7 +77,7 @@ public:
 
 //NB for now make the simplest calls possible, to test the vtable plumbing
 
-FIXTURE_TEST_CASE(KRDatabase_AddRelease, KDatabase_Fixture)
+FIXTURE_TEST_CASE(KWDatabase_AddRelease, KDatabase_Fixture)
 {
     Setup( GetName() );
 
@@ -88,28 +89,28 @@ FIXTURE_TEST_CASE(KRDatabase_AddRelease, KDatabase_Fixture)
     // use valgrind to find any leaks
 }
 
-FIXTURE_TEST_CASE(KRDatabase_Locked, KDatabase_Fixture)
+FIXTURE_TEST_CASE(KWDatabase_Locked, KDatabase_Fixture)
 {
     Setup( GetName() );
 
     REQUIRE( ! KDatabaseLocked( m_db ) );
 }
 
-FIXTURE_TEST_CASE(KRDatabase_Exists, KDatabase_Fixture)
+FIXTURE_TEST_CASE(KWDatabase_Exists, KDatabase_Fixture)
 {
     Setup( GetName() );
 
     REQUIRE( ! KDatabaseExists( m_db, kptIndex, "%s", GetName() ) );
 }
 
-FIXTURE_TEST_CASE(KRDatabase_IsAlias, KDatabase_Fixture)
+FIXTURE_TEST_CASE(KWDatabase_IsAlias, KDatabase_Fixture)
 {
     Setup( GetName() );
 
     REQUIRE( ! KDatabaseIsAlias( m_db, kptIndex, nullptr, 0, GetName() ) );
 }
 
-FIXTURE_TEST_CASE(KRDatabase_Writable, KDatabase_Fixture)
+FIXTURE_TEST_CASE(KWDatabase_Writable, KDatabase_Fixture)
 {
     Setup( GetName() );
     rc_t rc = SILENT_RC (rcDB, rcMgr, rcAccessing, rcParam, rcInvalid);
@@ -135,7 +136,7 @@ FIXTURE_TEST_CASE(KDatabase_OpenParentRead, KDatabase_Fixture)
     REQUIRE_NULL( db );
 }
 
-FIXTURE_TEST_CASE(KRDatabase_OpenDirectoryRead, KDatabase_Fixture)
+FIXTURE_TEST_CASE(KWDatabase_OpenDirectoryRead, KDatabase_Fixture)
 {
     Setup( GetName() );
     const KDirectory * dir = nullptr;
@@ -144,7 +145,7 @@ FIXTURE_TEST_CASE(KRDatabase_OpenDirectoryRead, KDatabase_Fixture)
     REQUIRE_RC( KDirectoryRelease( dir ) );
 }
 
-FIXTURE_TEST_CASE(KRDatabase_OpenDBRead, KDatabase_Fixture)
+FIXTURE_TEST_CASE(KWDatabase_OpenDBRead, KDatabase_Fixture)
 {
     Setup( GetName() );
     const KDatabase * subdb = nullptr;
@@ -152,12 +153,20 @@ FIXTURE_TEST_CASE(KRDatabase_OpenDBRead, KDatabase_Fixture)
     REQUIRE_EQ( rc, KDatabaseOpenDBRead( m_db, & subdb, "%s", "subdb" ) );
 }
 
-FIXTURE_TEST_CASE(KRDatabase_OpenTableRead, KDatabase_Fixture)
+FIXTURE_TEST_CASE(KWDatabase_OpenTableRead, KDatabase_Fixture)
 {
     Setup( GetName() );
     const KTable * t = nullptr;
     rc_t rc = SILENT_RC( rcFS,rcDirectory,rcOpening,rcPath,rcNotFound );
     REQUIRE_EQ( rc, KDatabaseOpenTableRead( m_db, & t, "%s", "t" ) );
+}
+
+FIXTURE_TEST_CASE(KWDatabase_OpenMetadataRead, KDatabase_Fixture)
+{
+    Setup( GetName() );
+    const KMetadata * meta = nullptr;
+    rc_t rc = SILENT_RC( rcDB,rcMgr,rcOpening,rcMetadata,rcNotFound );
+    REQUIRE_EQ( rc, KDatabaseOpenMetadataRead( m_db, & meta ) );
 }
 
 //TODO: non-virtual write-side only methods
@@ -183,12 +192,12 @@ rc_t CC Usage ( const Args * args )
     return 0;
 }
 
-const char UsageDefaultName[] = "Test_KDB_KRDatabase";
+const char UsageDefaultName[] = "Test_KDB_KWDatabase";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=KRDatabaseTestSuite(argc, argv);
+    rc_t rc=KWDatabaseTestSuite(argc, argv);
     return rc;
 }
 

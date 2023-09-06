@@ -30,6 +30,7 @@
 #include <kdb/table.h>
 
 #include <kdb/column.h>
+#include <kdb/meta.h>
 
 #include <klib/rc.h>
 
@@ -194,4 +195,8 @@ LIB_EXPORT rc_t CC KTableOpenColumnRead ( const KTable *self,
     va_end ( args );
 
     return rc;
+}
+LIB_EXPORT rc_t CC KTableOpenMetadataRead ( const KTable *self, const KMetadata **metap )
+{
+    DISPATCH( openMetadataRead( self, metap ) );
 }

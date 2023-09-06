@@ -30,6 +30,7 @@
 #include <kdb/column.h>
 
 #include <kdb/extern.h>
+#include <kdb/meta.h>
 
 #include <klib/rc.h>
 
@@ -146,6 +147,11 @@ KDB_EXTERN rc_t CC KColumnOpenParentRead ( const KColumn *self, struct KTable co
 {
     DISPATCH( openParentRead( self, tbl ) );
 }
+LIB_EXPORT rc_t CC KColumnOpenMetadataRead ( const KColumn *self, const KMetadata **metap )
+{
+    DISPATCH( openMetadataRead( self, metap ) );
+}
+
 
 //TODO: write-side only
 

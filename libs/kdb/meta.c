@@ -88,14 +88,27 @@ struct KMDataNodeInflateData
  *  a versioned, hierarchical structure
  */
 
+static rc_t CC KRMetadataWhack ( KMetadata *self );
 static rc_t CC KRMetadataVersion ( const KMetadata *self, uint32_t *version );
+static rc_t CC KRMetadataByteOrder ( const KMetadata *self, bool *reversed );
+static rc_t CC KRMetadataRevision ( const KMetadata *self, uint32_t *revision );
+static rc_t CC KRMetadataMaxRevision ( const KMetadata *self, uint32_t *revision );
+static rc_t CC KRMetadataOpenRevision ( const KMetadata *self, const KMetadata **metap, uint32_t revision );
+static rc_t CC KRMetadataGetSequence ( const KMetadata *self, const char *seq, int64_t *val );
+static rc_t CC KRMetadataVOpenNodeRead ( const KMetadata *self, const KMDataNode **node, const char *path, va_list args );
 
 static KMetadata_vt KRMetadata_vt =
 {
-    KMetadataBaseWhack,
+    KRMetadataWhack,
     KMetadataBaseAddRef,
     KMetadataBaseRelease,
-    KRMetadataVersion
+    KRMetadataVersion,
+    KRMetadataByteOrder,
+    KRMetadataRevision,
+    KRMetadataMaxRevision,
+    KRMetadataOpenRevision,
+    KRMetadataGetSequence,
+    KRMetadataVOpenNodeRead
 };
 
 /*--------------------------------------------------------------------------
@@ -198,7 +211,7 @@ int64_t CC KMDataNodeCmp ( const void *item, const BSTNode *n )
 {
 #define a ( ( const char* ) item )
 #define b ( ( const KMDataNode* ) n )
-
+printf("a=%s,b=%s\n", a, b->name);
     return strcmp ( a, b -> name );
 
 #undef a
@@ -635,8 +648,9 @@ LIB_EXPORT rc_t CC KMDataNodeOpenNodeRead ( const KMDataNode *self,
     return rc;
 }
 
-LIB_EXPORT rc_t CC KMetadataVOpenNodeRead ( const KMetadata *self,
-    const KMDataNode **node, const char *path, va_list args )
+static
+rc_t CC
+KRMetadataVOpenNodeRead ( const KMetadata *self, const KMDataNode **node, const char *path, va_list args )
 {
     rc_t rc = 0;
 
@@ -655,20 +669,6 @@ LIB_EXPORT rc_t CC KMetadataVOpenNodeRead ( const KMetadata *self,
 
     return rc;
 }
-
-LIB_EXPORT rc_t CC KMetadataOpenNodeRead ( const KMetadata *self,
-    const KMDataNode **node, const char *path, ... )
-{
-    rc_t rc;
-    va_list args;
-
-    va_start ( args, path );
-    rc = KMetadataVOpenNodeRead ( self, node, path, args );
-    va_end ( args );
-
-    return rc;
-}
-
 
 /* ByteOrder
  *  indicates whether original byte order is reversed
@@ -1425,7 +1425,8 @@ LIB_EXPORT rc_t CC KMDataNodeReadAttrAsF64 ( const KMDataNode *self, const char 
 /* Whack
  */
 static
-rc_t KMetadataWhack ( KMetadata *self )
+rc_t
+KRMetadataWhack ( KMetadata *self )
 {
     rc_t rc = 0;
 
@@ -1593,54 +1594,6 @@ rc_t KMetadataMakeRead ( KMetadata **metap, const KDirectory *dir, const char *p
     return rc;
 }
 
-LIB_EXPORT rc_t CC KTableOpenMetadataRead ( const KTable *self, const KMetadata **metap )
-{
-    rc_t rc;
-    KMetadata *meta;
-
-    if ( metap == NULL )
-        return RC ( rcDB, rcTable, rcOpening, rcParam, rcNull );
-
-    * metap = NULL;
-
-    if ( self == NULL )
-        return RC ( rcDB, rcTable, rcOpening, rcSelf, rcNull );
-
-    rc = KDBManagerOpenMetadataReadInt ( self -> mgr, & meta,
-        self -> dir, 0, self -> prerelease );
-    if ( rc == 0 )
-    {
-        meta -> tbl = KTableAttach ( self );
-        * metap = meta;
-    }
-
-    return rc;
-}
-
-LIB_EXPORT rc_t CC KColumnOpenMetadataRead ( const KColumn *self, const KMetadata **metap )
-{
-    rc_t rc;
-    KMetadata *meta;
-
-    if ( metap == NULL )
-        return RC ( rcDB, rcColumn, rcOpening, rcParam, rcNull );
-
-    * metap = NULL;
-
-    if ( self == NULL )
-        return RC ( rcDB, rcColumn, rcOpening, rcSelf, rcNull );
-
-    rc = KDBManagerOpenMetadataReadInt ( self -> mgr, & meta, self -> dir, 0, false );
-    if ( rc == 0 )
-    {
-        meta -> col = KColumnAttach ( self );
-        * metap = meta;
-    }
-
-    return rc;
-}
-
-
 /* Version
  *  returns the metadata format version
  */
@@ -1650,12 +1603,6 @@ KRMetadataVersion ( const KMetadata *self, uint32_t *version )
 {
     if ( version == NULL )
         return RC ( rcDB, rcMetadata, rcAccessing, rcParam, rcNull );
-
-    if ( self == NULL )
-    {
-        * version = 0;
-        return RC ( rcDB, rcMetadata, rcAccessing, rcSelf, rcNull );
-    }
 
     * version = self -> vers;
     return 0;
@@ -1672,16 +1619,12 @@ KRMetadataVersion ( const KMetadata *self, uint32_t *version )
  *  "reversed" [ OUT ] - if true, the original byte
  *  order is reversed with regard to host native byte order.
  */
-LIB_EXPORT rc_t CC KMetadataByteOrder ( const KMetadata *self, bool *reversed )
+static
+rc_t CC
+KRMetadataByteOrder ( const KMetadata *self, bool *reversed )
 {
     if ( reversed == NULL )
         return RC ( rcDB, rcMetadata, rcAccessing, rcParam, rcNull );
-
-    if ( self == NULL )
-    {
-        * reversed = false;
-        return RC ( rcDB, rcMetadata, rcAccessing, rcSelf, rcNull );
-    }
 
     * reversed = self -> byteswap;
     return 0;
@@ -1692,16 +1635,12 @@ LIB_EXPORT rc_t CC KMetadataByteOrder ( const KMetadata *self, bool *reversed )
  *  returns current revision number
  *  where 0 ( zero ) means tip
  */
-LIB_EXPORT rc_t CC KMetadataRevision ( const KMetadata *self, uint32_t *revision )
+static
+rc_t CC
+KRMetadataRevision ( const KMetadata *self, uint32_t *revision )
 {
     if ( revision == NULL )
         return RC ( rcDB, rcMetadata, rcAccessing, rcParam, rcNull );
-
-    if ( self == NULL )
-    {
-        * revision = 0;
-        return RC ( rcDB, rcMetadata, rcAccessing, rcSelf, rcNull );
-    }
 
     * revision = self -> rev;
     return 0;
@@ -1711,64 +1650,62 @@ LIB_EXPORT rc_t CC KMetadataRevision ( const KMetadata *self, uint32_t *revision
 /* MaxRevision
  *  returns the maximum revision available
  */
-LIB_EXPORT rc_t CC KMetadataMaxRevision ( const KMetadata *self, uint32_t *revision )
+static
+rc_t CC
+KRMetadataMaxRevision ( const KMetadata *self, uint32_t *revision )
 {
     if ( revision == NULL )
         return RC ( rcDB, rcMetadata, rcAccessing, rcParam, rcNull );
 
     * revision = 0;
 
-    if ( self != NULL )
+    KNamelist *listing;
+    rc_t rc = KDirectoryList ( self -> dir,
+        & listing, NULL, NULL, "md" );
+    if ( rc == 0 )
     {
-        KNamelist *listing;
-        rc_t rc = KDirectoryList ( self -> dir,
-            & listing, NULL, NULL, "md" );
+        uint32_t rev_max, count;
+        rc = KNamelistCount ( listing, & count );
         if ( rc == 0 )
         {
-            uint32_t rev_max, count;
-            rc = KNamelistCount ( listing, & count );
-            if ( rc == 0 )
+            uint32_t idx;
+            for ( rev_max = idx = 0; idx < count; ++ idx )
             {
-                uint32_t idx;
-                for ( rev_max = idx = 0; idx < count; ++ idx )
+                const char *name;
+
+                rc = KNamelistGet ( listing, idx, & name );
+                if ( rc != 0 )
+                    break;
+
+                if ( name [ 0 ] == 'r' )
                 {
-                    const char *name;
-
-                    rc = KNamelistGet ( listing, idx, & name );
-                    if ( rc != 0 )
-                        break;
-
-                    if ( name [ 0 ] == 'r' )
-                    {
-                        char *end;
-                        uint32_t rev = strtou32 ( name + 1, & end, 10 );
-                        if ( end [ 0 ] == 0 && rev > rev_max )
-                            rev_max = rev;
-                    }
+                    char *end;
+                    uint32_t rev = strtou32 ( name + 1, & end, 10 );
+                    if ( end [ 0 ] == 0 && rev > rev_max )
+                        rev_max = rev;
                 }
-
-                * revision = rev_max;
             }
 
-            KNamelistRelease ( listing );
-        }
-        else if ( GetRCState ( rc ) == rcNotFound )
-        {
-            rc = 0;
+            * revision = rev_max;
         }
 
-        return rc;
+        KNamelistRelease ( listing );
+    }
+    else if ( GetRCState ( rc ) == rcNotFound )
+    {
+        rc = 0;
     }
 
-    return RC ( rcDB, rcMetadata, rcAccessing, rcSelf, rcNull );
+    return rc;
 }
 
 
 /* OpenRevision
  *  opens a read-only indexed revision of metadata
  */
-LIB_EXPORT rc_t CC KMetadataOpenRevision ( const KMetadata *self,
-    const KMetadata **metap, uint32_t revision )
+static
+rc_t CC
+KRMetadataOpenRevision ( const KMetadata *self, const KMetadata **metap, uint32_t revision )
 {
     rc_t rc;
     KMetadata *meta;
@@ -1777,9 +1714,6 @@ LIB_EXPORT rc_t CC KMetadataOpenRevision ( const KMetadata *self,
         return RC ( rcDB, rcMetadata, rcOpening, rcParam, rcNull );
 
     * metap = NULL;
-
-    if ( self == NULL )
-        return RC ( rcDB, rcMetadata, rcOpening, rcSelf, rcNull );
 
     rc = KDBManagerOpenMetadataReadInt ( self -> mgr,
         & meta, self -> dir, revision, false );
@@ -1806,8 +1740,7 @@ LIB_EXPORT rc_t CC KMetadataOpenRevision ( const KMetadata *self,
  *
  *  "val" [ OUT ] - return parameter for sequence value
  */
-LIB_EXPORT rc_t CC KMetadataGetSequence ( const KMetadata *self,
-    const char *seq, int64_t *val )
+static rc_t CC KRMetadataGetSequence ( const KMetadata *self, const char *seq, int64_t *val )
 {
     rc_t rc;
     const KMDataNode *found;
@@ -1816,9 +1749,6 @@ LIB_EXPORT rc_t CC KMetadataGetSequence ( const KMetadata *self,
         return RC ( rcDB, rcMetadata, rcAccessing, rcParam, rcNull );
 
     * val = 0;
-
-    if ( self == NULL )
-        return RC ( rcDB, rcMetadata, rcAccessing, rcSelf, rcNull );
 
     if ( seq == NULL )
         return RC ( rcDB, rcMetadata, rcAccessing, rcString, rcNull );
