@@ -30,6 +30,8 @@
 #include <kfg/properties.h> // KConfig_Set_Report_Cloud_Instance_Identity
 
 #include <klib/data-buffer.h>
+#include <klib/printf.h> // string_printf
+#include <klib/vdb_release_version.h> // VDB_RELEASE_VERSION
 
 #include <kns/http.h>
 #include <kns/http-priv.h>
@@ -105,6 +107,9 @@ FIXTURE_TEST_CASE(HttpRequest_PUT_sra, HttpRequestFixture)
     REQUIRE_RC ( KClientHttpRequestPUT ( m_req, & rslt, true ) ); // format for SRA
     REQUIRE_EQ( size_t(1), TestStream::m_requests.size() );
 
+    char version[16] = "";
+    REQUIRE_RC(string_printf(
+        version, sizeof version, NULL, "%V", VDB_RELEASE_VERSION));
     assert(m_req && m_req->http);
     string expected("PUT ");
     if (m_req->http->uf == eUFAbsolute)
@@ -113,8 +118,8 @@ FIXTURE_TEST_CASE(HttpRequest_PUT_sra, HttpRequestFixture)
         "/blah HTTP/1.1\r\n"
         "Host: HttpRequest_PUT_sra.com\r\n"
         "Accept: */*\r\n"
-        "X-SRA-Release: 3.0.7\r\n"
-        "X-VDB-Release: 3.0.7\r\n"
+        "X-SRA-Release: " + string(version) + "\r\n"
+        "X-VDB-Release: " + string(version) + "\r\n"
         "User-Agent: ";
     assert(!expected.empty());
 
