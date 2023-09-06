@@ -4670,15 +4670,15 @@ static rc_t BAMValidateIndex(struct VPath const *bampath,
     int32_t ref = -1;
     int32_t rpos = -1;
 
+    memset(&stats, 0, sizeof(stats));
+    memset(&ctx, 0, sizeof(ctx));
+
     if ((options & bvo_IndexOptions) == 0)
         return callback(callbackContext, 0, &stats);
 
     rc = ReadVPath((void **)&bai, &bai_size, baipath);
     if (rc)
         return rc;
-
-    memset(&stats, 0, sizeof(stats));
-    memset(&ctx, 0, sizeof(ctx));
 
     ctx.bai = bai;
     ctx.stats = &stats;
