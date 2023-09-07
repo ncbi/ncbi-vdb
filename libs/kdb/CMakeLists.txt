@@ -54,6 +54,7 @@ set( KDB_SRC
     colidx2
     idxblk
     meta
+    rmetadatanode
     index
     idstats
     trieidx-v1
@@ -81,6 +82,7 @@ set( WKDB_SRC
     idxblk
     widxblk
     wmeta
+    wmetadatanode
     windex
     wtrieidx-v1
     wtrieidx-v2

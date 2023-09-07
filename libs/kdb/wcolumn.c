@@ -961,3 +961,28 @@ KWColumnOpenMetadataRead ( const KColumn *self, const KMetadata **metap )
     return rc;
 }
 
+LIB_EXPORT rc_t CC KColumnOpenMetadataUpdate ( KColumn *self, KMetadata **metap )
+{
+    rc_t rc;
+    KMetadata *meta;
+
+    if ( metap == NULL )
+        return RC ( rcDB, rcColumn, rcOpening, rcParam, rcNull );
+
+    * metap = NULL;
+
+    if ( self == NULL )
+        return RC ( rcDB, rcColumn, rcOpening, rcSelf, rcNull );
+
+    if ( self -> read_only )
+        return RC ( rcDB, rcColumn, rcOpening, rcColumn, rcReadonly );
+
+    rc = KDBManagerOpenMetadataUpdateInt ( self -> mgr, & meta, self -> dir, self -> md5 );
+    if ( rc == 0 )
+    {
+        meta -> col = KColumnAttach ( self );
+        * metap = meta;
+    }
+
+    return rc;
+}

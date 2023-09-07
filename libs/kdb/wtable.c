@@ -1122,3 +1122,66 @@ KWTableOpenMetadataRead ( const KTable *self, const KMetadata **metap )
     return rc;
 }
 
+/* KTableMetaCompare
+ *  test if 2 tables have the same MetaDataNode ( and content ) for a given path
+ */
+/* >>>>>> !!! any changes here have to be duplicated in table.c !!! <<<<<< */
+LIB_EXPORT rc_t CC KTableMetaCompare( const KTable *self, const KTable *other,
+                                      const char * path, bool * equal ) {
+    rc_t rc = 0;
+    if ( NULL == self ) {
+        rc = RC ( rcDB, rcTable, rcComparing, rcSelf, rcNull );
+    } else if ( NULL == other || NULL == path || NULL == equal ) {
+        rc = RC ( rcDB, rcTable, rcComparing, rcParam, rcNull );
+    } else {
+        const KMetadata *self_meta;
+        rc = KTableOpenMetadataRead( self, &self_meta );
+        if ( 0 == rc ) {
+            const KMetadata *other_meta;
+            rc = KTableOpenMetadataRead( other, &other_meta );
+            if ( 0 == rc ) {
+                const KMDataNode * self_node;
+                rc = KMetadataOpenNodeRead( self_meta, &self_node, path );
+                if ( 0 == rc ) {
+                    const KMDataNode * other_node;
+                    rc = KMetadataOpenNodeRead( other_meta, &other_node, path );
+                    if ( 0 == rc ) {
+                        rc = KMDataNodeCompare( self_node, other_node, equal );
+                        KMDataNodeRelease( other_node );
+                    }
+                    KMDataNodeRelease( self_node );
+                }
+                KMetadataRelease( other_meta );
+            }
+            KMetadataRelease( self_meta );
+        }
+    }
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KTableOpenMetadataUpdate ( KTable *self, KMetadata **metap )
+{
+    rc_t rc;
+    KMetadata *meta;
+
+    if ( metap == NULL )
+        return RC ( rcDB, rcTable, rcOpening, rcParam, rcNull );
+
+    * metap = NULL;
+
+    if ( self == NULL )
+        return RC ( rcDB, rcTable, rcOpening, rcSelf, rcNull );
+
+    if ( self -> read_only )
+        return RC ( rcDB, rcTable, rcOpening, rcTable, rcReadonly );
+
+    rc = KDBManagerOpenMetadataUpdateInt ( self -> mgr, & meta, self -> dir, self -> md5 );
+    if ( rc == 0 )
+    {
+        meta -> tbl = KTableAttach ( self );
+        * metap = meta;
+    }
+
+    return rc;
+}
+
