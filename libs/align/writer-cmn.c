@@ -380,7 +380,11 @@ rc_t CC TableWriter_AddCursor(const TableWriter* cself, TableWriterColumn* cols,
 rc_t CC TableWriter_CloseCursor(const TableWriter* cself, uint8_t cursor_id, uint64_t* rows)
 {
     rc_t rc = 0;
+	uint64_t r = 0;
 
+    if( rows == NULL ) {
+        rows = &r;
+    }
     assert(cself != NULL);
     assert(cursor_id < TW_MAX_CURSORS);
     if (cself == NULL) abort();
@@ -391,11 +395,7 @@ rc_t CC TableWriter_CloseCursor(const TableWriter* cself, uint8_t cursor_id, uin
     else {
         rc_t rc2 = 0;
         TableWriter* self = (TableWriter*)cself;
-        uint64_t r = 0;
 
-        if( rows == NULL ) {
-            rows = &r;
-        }
         self->curr = &self->cursors[cursor_id];
         rc = VCursorCommit(self->curr->cursor);
         *rows = cself->curr->rows;

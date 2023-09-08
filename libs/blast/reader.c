@@ -2181,8 +2181,8 @@ void CC VdbBlastStdaaReaderRelease(VdbBlastStdaaReader *self)
     {   return; }
 
     STSMSG(1, ("Deleting VdbBlastStdaaReader"));
-    free(self);
     memset(self, 0, sizeof *self);
+    free(self);
 }
 
 LIB_EXPORT
