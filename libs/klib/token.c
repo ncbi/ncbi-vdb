@@ -240,7 +240,7 @@ LIB_EXPORT rc_t CC KTokenToF64 ( const KToken *self, double *d )
     }
 
     * d = strtod ( buffer, & end );
-    if ( ( end - buffer ) != self -> str . size )
+    if ( (size_t)( end - buffer ) != self -> str . size )
         return RC ( rcVDB, rcToken, rcConverting, rcToken, rcInvalid );
 
     return 0;
@@ -420,7 +420,7 @@ rc_t CC utf8_utf32_cvt_string_copy ( uint32_t *dst, uint32_t blen, uint32_t *dle
 
     for ( len = 0; src < end; ++ len, src += rslt )
     {
-        if ( len == blen )
+        if ( len == (int)blen )
             return RC ( rcVDB, rcToken, rcConverting, rcBuffer, rcInsufficient );
 
         rslt = utf8_utf32 ( & dst [ len ], src, end );

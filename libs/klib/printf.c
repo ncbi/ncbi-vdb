@@ -97,6 +97,13 @@
 
 #define USE_LIB_FLOAT 1
 
+#ifdef WINDOWS
+#pragma warning(disable:4127)
+/*
+sizeof ( size_t ) == sizeof ( uint64_t ) is a valid C cross-platform condition
+*/
+#endif
+
 static
 size_t string_flush ( char *dst, size_t bsize, const KWrtHandler *flush, rc_t *rc, size_t *total )
 {
@@ -149,7 +156,7 @@ rc_t string_flush_vprintf ( char *dst, size_t bsize, const KWrtHandler *flush,
     char buff [ 256 ];
     char use_sign, padding;
     const char *hex_digits;
-    uint32_t i, j, len, digits, min_field_width, max_field_width, precision;
+    int32_t i, j, len, digits, min_field_width, max_field_width, precision;
     bool left_align, comma_separate, have_precision, byte_size, half_size, long_size;
     bool alternate, date_time_zone;
 #if ! USE_LIB_FLOAT
@@ -711,7 +718,11 @@ rc_t string_flush_vprintf ( char *dst, size_t bsize, const KWrtHandler *flush,
             else if ( precision > 20 )
                 precision = 20;
 
+#ifdef WINDOWS
+            i = _snprintf_s(buff, sizeof buff, sizeof buff - 1, subfmt, min_field_width, precision, f64);
+#else
             i = snprintf (buff, sizeof buff, subfmt, min_field_width, precision, f64);
+#endif
 
             if ( i >= sizeof buff )
             {
@@ -991,7 +1002,7 @@ rc_t string_flush_vprintf ( char *dst, size_t bsize, const KWrtHandler *flush,
                 /* buffer is measured in bytes, while printing
                    widths are measured in characters... */
                 max_field_width = ( uint32_t ) str -> size;
-                if ( str -> len < min_field_width )
+                if ( str -> len < ( uint32_t ) min_field_width )
                     max_field_width += min_field_width - str -> len;
                 if ( didx + max_field_width > bsize )
                 {
@@ -1019,7 +1030,7 @@ rc_t string_flush_vprintf ( char *dst, size_t bsize, const KWrtHandler *flush,
             end = cp + str -> size;
 
             /* copy string */
-            for ( i = 0; i < str -> len && i < precision; ++ i )
+            for ( i = 0; (uint32_t)i < str -> len && i < precision; ++ i )
             {
                 uint32_t ch;
                 int sbytes = utf8_utf32 ( & ch, cp, end );
@@ -2479,7 +2490,7 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
 
         /* string index, from index and text precision */
         bool text_index;
-        uint64_t text_start, text_lim;
+        int64_t text_start, text_lim;
 
         /* END ENGINE PARAMETERS */
 
@@ -2624,7 +2635,7 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
         case sptNulTermString:
 
             /* special initialization to flag size/length unknown */
-            StringInit ( & S, args [ arg_idx ] . s, 0, -1 );
+            StringInit ( & S, args [ arg_idx ] . s, (uint32_t)0, (uint32_t)-1 );
 
             /* IF THE STRING IS INDEXED OR MAY NEED LEFT ALIGNMENT */
             if ( f . u . f . start_idx != 0 || f . u . f . select_len != 0 ||
@@ -2811,7 +2822,7 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
             text [ -- i ] = 0;
 #endif
             /* record if we are comma separating below */
-            comma_sep = f . thousands_separate;
+            comma_sep = (bool) f . thousands_separate;
 
 #if DOUSE_NUM_PREFIX_IF_ZERO
             if ( u64 == 0 && f . add_prefix )
@@ -2868,7 +2879,7 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
             StringInit ( & S, & text [ i ], int_len, int_len );
 
             /* zero-fill amount */
-            if ( f . u . f . precision > ( uint64_t ) int_len )
+            if ( f . u . f . precision > int_len )
                 zero_fill = ( uint32_t ) ( f . u . f . precision - ( uint64_t ) int_len );
             else if ( f . left_fill == '0' )
             {
@@ -2876,7 +2887,7 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
                 dst_len = int_len + prefix_len + ( sign_char != 0 );
                 if ( comma_sep && int_len != 0 )
                     dst_len += ( int_len + prefix_contribution - 1 ) / 3;
-                if ( ( uint64_t ) dst_len < f . u . f . min_field_width )
+                if ( dst_len < f . u . f . min_field_width )
                 {
                     /* determine the numeric width, including zero padding */
                     dst_len = ( uint32_t ) f . u . f . min_field_width -
@@ -2941,16 +2952,24 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
                 ffmt [ ++ i ] = '#';
             if ( f . u . f . precision > 20 )
                 f . u . f . precision = 20;
-            sprintf ( & ffmt [ ++ i ], ".%u%c"
+#ifdef WINDOWS
+            ++i ;
+            sprintf_s ( & ffmt [ i ], sizeof ffmt - i, ".%u%c"
                       , ( uint32_t ) f . u . f . precision
                       , ( char ) c );
-            cvt_len = snprintf ( text, sizeof text, ffmt, f64 );
+            cvt_len = _snprintf_s(text, sizeof text, sizeof text - 1, ffmt, f64);
+#else
+            sprintf(&ffmt[++i], ".%u%c"
+                      , (uint32_t)f.u.f.precision
+                      , (char)c);
+            cvt_len = snprintf(text, sizeof text, ffmt, f64);
+#endif
             assert ( cvt_len >= 0 && ( size_t ) cvt_len < sizeof text );
             StringInit ( & S, text, cvt_len, cvt_len );
 
             /* record if we are comma separating below and capture length of integer portion */
             int_len = 0;
-            comma_sep = f . thousands_separate;
+            comma_sep = (bool) f . thousands_separate;
             /* if ( comma_sep ) */
             {
                 for ( ; isdigit ( text [ int_len ] ); ++ int_len )
@@ -2964,7 +2983,7 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
                 dst_len = cvt_len + ( sign_char != 0 );
                 if ( comma_sep && int_len != 0 )
                     dst_len += ( int_len - 1 ) / 3;
-                if ( ( uint64_t ) dst_len < f . u . f . min_field_width )
+                if ( dst_len < f . u . f . min_field_width )
                 {
                     /* determine the integer width, including zero padding */
                     dst_len = ( uint32_t ) f . u . f . min_field_width -
@@ -3023,7 +3042,11 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
                 cfmt = "%u.%u.%u";
             }
 
+#ifdef WINDOWS
+            dst_len = sprintf_s ( text, sizeof text, cfmt
+#else
             dst_len = sprintf ( text, cfmt
+#endif
                                 , VersionGetMajor ( ( uint32_t ) u64 )
                                 , VersionGetMinor ( ( uint32_t ) u64 )
                                 , VersionGetRelease ( ( uint32_t ) u64 )
@@ -3059,7 +3082,11 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
                 {
                     static char const *weekdays [ 7 ] =
                         { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
+#ifdef WINDOWS
+                    dst_len = sprintf_s ( text, sizeof text, "%s %s %u %u"
+#else
                     dst_len = sprintf ( text, "%s %s %u %u"
+#endif
                                         , weekdays [ tm -> weekday ]
                                         , months [ tm -> month ]
                                         , tm -> day + 1
@@ -3068,7 +3095,11 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
                 }
                 else
                 {
+#ifdef WINDOWS
+                    dst_len = sprintf_s ( text, sizeof text, "%s %u %u"
+#else
                     dst_len = sprintf ( text, "%s %u %u"
+#endif
                                         , months [ tm -> month ]
                                         , tm -> day + 1
                                         , tm -> year
@@ -3083,7 +3114,11 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
 
                 if ( f . hour_24 )
                 {
+#ifdef WINDOWS
+                    dst_len += sprintf_s ( &text[dst_len], sizeof text - dst_len
+#else
                     dst_len += sprintf ( & text [ dst_len ]
+#endif
                                          , f . left_fill == '0' ? "%02u:%02u:%02u" : "%u:%02u:%02u"
                                          , tm -> hour
                                          , tm -> minute
@@ -3092,7 +3127,11 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
                 }
                 else
                 {
+#ifdef WINDOWS
+                    dst_len += sprintf_s ( &text[dst_len], sizeof text - dst_len
+#else
                     dst_len += sprintf ( & text [ dst_len ]
+#endif
                                          , f . left_fill == '0' ? "%02u:%02u:%02u %cM" : "%u:%02u:%02u %cM"
                                          , ( tm -> hour + 11 ) % 12 + 1
                                          , tm -> minute
@@ -3103,7 +3142,11 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
 
                 if ( f . print_timezone )
                 {
+#ifdef WINDOWS
+                    dst_len += sprintf_s ( &text[dst_len], sizeof text - dst_len
+#else
                     dst_len += sprintf ( & text [ dst_len ]
+#endif
                                          , " %+02d"
                                          , tm -> tzoff / 60
                         );

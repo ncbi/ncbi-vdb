@@ -237,7 +237,7 @@ static rc_t leaf_find(Pager *const pager, Pager_vt const *const vt, void const *
     if(cnode->key_prefix_len > 0){
         const size_t key_prefix_len=cnode->key_prefix_len;
         /*** prefix must match ***/
-        assert(key_prefix_len == 0 || compare_keys(key_prefix_len, query, key_prefix_len, ((uint8_t *)cnode )+cnode->key_prefix) == 0);
+        assert(key_prefix_len == 0 || compare_keys((const unsigned int)key_prefix_len, query, (const unsigned int)key_prefix_len, ((uint8_t *)cnode )+cnode->key_prefix) == 0);
         /*************************/
         query_8 += key_prefix_len;
         qsize_8 -= key_prefix_len;
@@ -255,7 +255,7 @@ static rc_t leaf_find(Pager *const pager, Pager_vt const *const vt, void const *
 
         /* perform comparison */
         const uint8_t *key = & ( ( const uint8_t* ) cnode ) [ cnode -> ord [ slot ] . key ];
-        int const diff = compare_keys ( qsize_8, query_8, cnode -> ord [ slot ] . ksize, key );
+        int const diff = compare_keys ((const unsigned int)qsize_8, query_8, cnode -> ord [ slot ] . ksize, key );
         if ( diff == 0 )
         {
             memmove(id, key + cnode->ord[slot].ksize, 4);
@@ -282,7 +282,7 @@ static rc_t branch_find(Pager *const pager, Pager_vt const *const vt, void const
     if(cnode->key_prefix_len > 0){
         const size_t key_prefix_len=cnode->key_prefix_len;
         /*** prefix must match ***/
-        assert(key_prefix_len == 0 || compare_keys(key_prefix_len, query, key_prefix_len, ((uint8_t *)cnode )+cnode->key_prefix) == 0);
+        assert(key_prefix_len == 0 || compare_keys((const unsigned int)key_prefix_len, query, (const unsigned int)key_prefix_len, ((uint8_t *)cnode )+cnode->key_prefix) == 0);
         /*************************/
         query_8 += key_prefix_len;
         qsize_8 -= key_prefix_len;
@@ -300,7 +300,7 @@ static rc_t branch_find(Pager *const pager, Pager_vt const *const vt, void const
 
             /* perform comparison */
             const uint8_t *key = & ( ( const uint8_t* ) cnode ) [ cnode -> ord [ slot ] . key ];
-            int const diff = compare_keys ( qsize_8, query_8, cnode -> ord [ slot ] . ksize, key );
+            int const diff = compare_keys ((const unsigned int)qsize_8, query_8, cnode -> ord [ slot ] . ksize, key );
             if ( diff == 0 )
             {
                 memmove(id, key + cnode->ord[slot].ksize, 4);
@@ -335,8 +335,8 @@ static rc_t branch_find(Pager *const pager, Pager_vt const *const vt, void const
     return rc;
 }
 
-LIB_EXPORT rc_t CC BTreeFind ( uint32_t const root, Pager *const pager, Pager_vt const *const vt, uint32_t *id,
-                              const void *const key, size_t const key_size )
+LIB_EXPORT rc_t CC BTreeFind ( uint32_t root, Pager *pager, Pager_vt const *vt, uint32_t *id,
+                               const void *key, size_t key_size )
 {
     assert (root != 0);
     assert (vt != NULL);
@@ -348,7 +348,7 @@ LIB_EXPORT rc_t CC BTreeFind ( uint32_t const root, Pager *const pager, Pager_vt
         void const *const page = vt->use(pager, root >> 1);
 
         assert(page != NULL);
-        rc = (((root & 1) == 0) ? leaf_find : branch_find)(pager, vt, page, id, (const uint8_t*)key, key_size);
+        rc = (((root & 1) == 0) ? leaf_find : branch_find)(pager, vt, page, id, (const uint8_t*)key, (const unsigned int)key_size);
         vt->unuse(pager, page);
         return rc;
     }
@@ -604,7 +604,7 @@ rc_t split_leaf ( EntryData *pb,
 
     /* each node has half its former count */
     right -> count = ( uint16_t ) i;
-    left -> count = median;
+    left -> count = ( uint16_t ) median;
 
     /* compact the keys */
     LeafEntry_sort_desc_by_offset(ord, median, left);
@@ -729,7 +729,7 @@ rc_t leaf_entry ( EntryData *pb, void const *page, Split *split)
     if(cnode->key_prefix_len > 0){
         const size_t key_prefix_len=cnode->key_prefix_len;
         /*** prefix must match ***/
-        assert(key_prefix_len == 0 || compare_keys(key_prefix_len, query, key_prefix_len, ((uint8_t *)cnode )+cnode->key_prefix) == 0);
+        assert(key_prefix_len == 0 || compare_keys((const unsigned int)key_prefix_len, query, (const unsigned int)key_prefix_len, ((uint8_t *)cnode )+cnode->key_prefix) == 0);
         UNUSED(key_prefix_len);
         /*************************/
         query += cnode->key_prefix_len;
@@ -744,7 +744,7 @@ rc_t leaf_entry ( EntryData *pb, void const *page, Split *split)
 
         /* perform comparison */
         const uint8_t *key = & ( ( const uint8_t* ) cnode ) [ cnode -> ord [ slot ] . key ];
-        int diff = compare_keys(qsize, query, cnode -> ord [ slot ] . ksize, key);
+        int diff = compare_keys((const unsigned int)qsize, query, cnode -> ord [ slot ] . ksize, key);
         if ( diff == 0 )
         {
             uint32_t val_id;
@@ -940,7 +940,7 @@ static rc_t split_branch ( BranchNode *left, BranchNode *right, const Split *val
 
     /* each node has half its former count */
     right -> count = ( uint16_t ) i;
-    left -> count = median;
+    left -> count = ( uint16_t ) median;
 
     /* compact the keys */
     BranchEntry_sort_desc_by_offset(ord, median, left);
@@ -1214,7 +1214,7 @@ rc_t branch_entry ( EntryData *pb, void const *page, Split *rsplit)
     if(cnode->key_prefix_len > 0){
         const size_t key_prefix_len=cnode->key_prefix_len;
         /*** prefix must match ***/
-        assert(key_prefix_len == 0 || compare_keys(key_prefix_len, query,key_prefix_len, ((uint8_t *)cnode )+cnode->key_prefix) == 0);
+        assert(key_prefix_len == 0 || compare_keys((const unsigned int)key_prefix_len, query, (const unsigned int)key_prefix_len, ((uint8_t *)cnode )+cnode->key_prefix) == 0);
         UNUSED(key_prefix_len);
         /*************************/
         query += cnode->key_prefix_len;
@@ -1229,7 +1229,7 @@ rc_t branch_entry ( EntryData *pb, void const *page, Split *rsplit)
 
         /* perform comparison */
         const uint8_t *key = & ( ( const uint8_t* ) cnode ) [ cnode -> ord [ slot ] . key ];
-        int diff = compare_keys(qsize, query, cnode -> ord [ slot ] . ksize, key);
+        int diff = compare_keys((const unsigned int)qsize, query, cnode -> ord [ slot ] . ksize, key);
         if ( diff == 0 )
         {
             memmove(pb->id, &key[cnode->ord[slot].ksize], 4);
@@ -1301,7 +1301,7 @@ rc_t branch_entry ( EntryData *pb, void const *page, Split *rsplit)
                         for(pl=0;pl < split.ksize - node->key_prefix_len && pl < node->ord[upper-1].ksize && a[pl]==b[pl];pl++){}
                         pl+=node->key_prefix_len;
                         if(pl >= MIN_PREFIX_TO_COMPACT){
-                            rc=compact_page(pb,split.left,pl);
+                            rc=compact_page(pb,split.left, (uint16_t)pl);
                         }
                     }
                     if(rc==0 && upper < node->count ){ /*** right side compact is possible ***/
@@ -1312,7 +1312,7 @@ rc_t branch_entry ( EntryData *pb, void const *page, Split *rsplit)
                         for(pl=0;pl < split.ksize - node->key_prefix_len && pl < node->ord[upper].ksize && a[pl]==b[pl];pl++){}
                         pl+=node->key_prefix_len;
                         if(pl >= MIN_PREFIX_TO_COMPACT){
-                            rc=compact_page(pb,split.right,pl);
+                            rc=compact_page(pb,split.right, (uint16_t)pl);
                         }
                     }
                     if(rc == 0 ){
@@ -1708,8 +1708,8 @@ static void validate_branch(uint32_t nodeid, Pager *pager, Pager_vt const *vt )
         }
     }
 
-    for (int i = 0; i < node->count; ++i) {
-        uint32_t const child = node->ord[i].trans;
+    for (int iNode = 0; iNode < node->count; ++iNode) {
+        uint32_t const child = node->ord[iNode].trans;
         assert( child != 0 );
 
         // validate node->win[i]

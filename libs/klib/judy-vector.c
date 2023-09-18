@@ -37,6 +37,13 @@
 #include <string.h>
 #include <assert.h>
 
+#ifdef WINDOWS
+#pragma warning(disable:4127)
+/*
+sizeof key > sizeof ( Word_t ) is a valid condition for
+C cross-platform code
+*/
+#endif
 
 /*--------------------------------------------------------------------------
  * KVector
@@ -1527,7 +1534,7 @@ LIB_EXPORT rc_t CC KVectorVisit ( const KVector *self, bool reverse,
             else
             {
                 Word_t value;
-                PPvoid_t lastp, datap = JudyLFirst ( self -> nancy, & first, & err );
+                PPvoid_t lastp = NULL, datap = JudyLFirst ( self -> nancy, & first, & err );
                 if ( datap != PPJERR )
                     lastp = JudyLLast ( self -> nancy, & last, & err );
                 if ( datap == PPJERR || lastp == PPJERR )
@@ -1668,7 +1675,9 @@ LIB_EXPORT rc_t CC KVectorVisitBool ( const KVector *self, bool reverse,
     rc_t ( CC * f ) ( uint64_t key, bool value, void *user_data ),
     void *user_data )
 {
-    UserDataStoredBitstoBool user_data_adapter = { f, user_data };
+    UserDataStoredBitstoBool user_data_adapter;
+    user_data_adapter.f = f;
+    user_data_adapter.user_data = user_data;
     return KVectorBoolVisitStoredBits ( self, reverse, VisitStoredBitstoBoolAdapter, &user_data_adapter );
 }
 
@@ -1728,7 +1737,7 @@ LIB_EXPORT rc_t CC KVectorVisitU64 ( const KVector *self, bool reverse,
 rc_t CC KVectorVisitU32Func ( uint64_t key, const void *ptr, size_t bytes, void *user_data )
 {
     KVectorVisitTypedData *pb = user_data;
-    return ( * pb -> f . u32 ) ( key, * ( const Word_t* ) ptr, pb -> user_data );
+    return ( * pb -> f . u32 ) ( key, (uint32_t)(* ( const Word_t* ) ptr), pb -> user_data );
 }
 
 LIB_EXPORT rc_t CC KVectorVisitU32 ( const KVector *self, bool reverse,

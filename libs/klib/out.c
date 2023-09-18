@@ -115,7 +115,7 @@ int match_format(const char * format, const char * literal, size_t s)
         ++x;
 
         if (x < s)
-            return x;
+            return (int)x;
         else
             return memcmp(format, literal, s);
     }

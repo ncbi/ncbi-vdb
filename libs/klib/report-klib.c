@@ -276,7 +276,7 @@ static rc_t reportImpl(int indent, bool open, bool close, bool eol,
     OUTMSG(("%s%s", ( ! open && close ) ? "/" : "", name));
 
     for (i = 0; i < count; ++i) {
-        const char* name = va_arg(args, const char*);
+        const char* name_i = va_arg(args, const char*);
         int format = va_arg(args, int);
         union {
             const char* s;
@@ -288,15 +288,15 @@ static rc_t reportImpl(int indent, bool open, bool close, bool eol,
             uint64_t u64;
             ver_t vers;
         } u;
-        OUTMSG((" %s=\"", name));
+        OUTMSG((" %s=\"", name_i));
         u.i64 = 0;
         switch(format) {
             case 'M':
                 u.digest = va_arg(args, const uint8_t*);
                 {
-                    int i = 0;
-                    for (i = 0; i < 16; ++i)
-                    {  OUTMSG(("%02x", *(u.digest + i))); }
+                    int j = 0;
+                    for (j = 0; j < 16; ++j)
+                    {  OUTMSG(("%02x", *(u.digest + j))); }
                 }
                 break;
             case 'l':
@@ -435,9 +435,14 @@ static void CC reportError3Str(uint32_t indent, rc_t rc, const char* function,
     const char* name, const char* v1, const char* v2, const char* v3,
     bool eol)
 {
-    char* buffer = malloc(strlen(v1) + strlen(v2) + strlen(v3) + 1);
+	size_t buffer_size = strlen(v1) + strlen(v2) + strlen(v3) + 1;
+    char* buffer = malloc(buffer_size);
     if (buffer) {
+#ifdef WINDOWS
+        sprintf_s(buffer, buffer_size, "%s%s%s", v1, v2, v3);
+#else
         sprintf(buffer, "%s%s%s", v1, v2, v3);
+#endif
         reportErrorStrImpl(indent, rc, function, name, buffer, eol);
         free(buffer);
     }
@@ -474,15 +479,33 @@ static rc_t ReportRun(int indent, rc_t rc_in) {
 
     {
         KTime kt;
-        const char tag[] = "Date";
-        reportOpen(indent + 1, tag, 0);
+        const char tagd[] = "Date";
+        reportOpen(indent + 1, tagd, 0);
         KTimeLocal(&kt, self->start);
         report(indent + 2, "Start", 1, "value", 'T', &kt);
         KTimeLocal(&kt, KTimeStamp());
         report(indent + 2, "End"  , 1, "value", 'T', &kt);
-        reportClose(indent + 1, tag);
+        reportClose(indent + 1, tagd);
     }
 
+#ifdef WINDOWS
+    {
+        const char* name = "HOME";
+        size_t buf_count = 0;
+        char* val = NULL;
+        errno_t err = _dupenv_s(&val, &buf_count, name);
+        if (err || val == NULL) {
+            name = "USERPROFILE";
+            err = _dupenv_s(&val, &buf_count, name);
+        }
+        if (err || val == NULL)
+        {
+            name = val = "not found";
+        }
+        report(indent + 1, "Home", 2, "name", 's', name, "value", 's', val);
+        free(val);
+    }
+#else
     {
         const char* name = "HOME";
         const char* val = getenv(name);
@@ -494,21 +517,22 @@ static rc_t ReportRun(int indent, rc_t rc_in) {
         {   name = val = "not found"; }
         report(indent + 1, "Home", 2, "name", 's', name, "value", 's', val);
     }
+#endif // WINDOWS
 
     if ( self -> report_cwd != NULL )
         rc = ( * self -> report_cwd ) ( & report_funcs, indent + 1 );
 
     {
-        const char tag[] = "CommandLine";
+        const char tagcl[] = "CommandLine";
         int i = 0;
-        reportOpen(indent + 1, tag, 1, "argc", 'd', self->argc);
+        reportOpen(indent + 1, tagcl, 1, "argc", 'd', self->argc);
         for (i = 0; i < self->argc; ++i) {
             if (self->argv && self->argv[i]) {
                 report(indent + 2, "Arg", 2, "index", 'd', i,
                     "value", 's', self->argv[i]);
             }
         }
-        reportClose(indent + 1, tag);
+        reportClose(indent + 1, tagcl);
     }
 
     report(indent + 1, "Result", 1, "rc", 'R', rc_in);
@@ -542,10 +566,20 @@ static rc_t ReportEnv(int indent) {
     reportOpen(indent, tag, 0);
 
     for (i = 0; i < sizeof env_list / sizeof env_list[0]; ++i) {
+#ifdef WINDOWS
+        char* val = NULL;
+        size_t buf_count = 0;
+        errno_t err = _dupenv_s(&val, &buf_count, env_list[i]);
+        if ( err || val != NULL) {
+            report(indent + 1, env_list[i], 1, "value", 's', val);
+        }
+        free(val);
+#else
         const char *val = getenv(env_list[i]);
         if (val != NULL) {
             report(indent + 1, env_list[i], 1, "value", 's', val);
         }
+#endif
     }
 
     reportClose(indent, tag);
@@ -688,6 +722,21 @@ static rc_t _ReportFinalize
                 else {
                     rc_t rc2 = 0;
                     const char name[] = "ncbi_error_report.txt";
+#ifdef WINDOWS
+                    char* home = NULL;
+                    size_t buf_count = 0;
+                    errno_t err = _dupenv_s(&home, &buf_count, "HOME");
+                    if (err || home == NULL) {
+                        err = _dupenv_s(&home, &buf_count, "USERPROFILE");
+                    }
+                    if (!err && home) {
+                        size_t num_writ = 0;
+                        rc2 = string_printf
+                        (path, sizeof path, &num_writ, "%s/%s", home, name);
+                        assert(num_writ < sizeof path);
+                        free(home);
+                    }
+#else
                     const char* home = getenv("HOME");
                     if (home == NULL) {
                         home = getenv("USERPROFILE");
@@ -698,6 +747,7 @@ static rc_t _ReportFinalize
                             (path, sizeof path, &num_writ, "%s/%s", home, name);
                         assert(num_writ < sizeof path);
                     }
+#endif
                     if (rc2 != 0 || home == NULL) {
                         size_t num_writ = 0;
                         rc2 = string_printf

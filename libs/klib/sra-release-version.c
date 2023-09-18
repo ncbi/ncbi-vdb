@@ -126,9 +126,9 @@ static int32_t getdigit(const char **s, size_t *size, int32_t max) {
     }
 
     while (*size > 0) {
-        char c = **s;
-        if (isdigit(c)) {
-            d = d * 10 + c - '0';
+        char cc = **s;
+        if (isdigit(cc)) {
+            d = d * 10 + cc - '0';
         }
         else {
             break;
@@ -174,12 +174,12 @@ LIB_EXPORT rc_t CC SraReleaseVersionInit ( SraReleaseVersion *self,
 
     /* major: 1. */
     if (size > 0 && rc == 0) {
-        int32_t i = getdigit(&p, &size, 255);
-        if (i >= 0) {
-            major = i;
+        int32_t iDigit = getdigit(&p, &size, 255);
+        if (iDigit >= 0) {
+            major = iDigit;
         }
         else {
-            rc = SET_RC(i);
+            rc = SET_RC(iDigit);
         }
     }
 

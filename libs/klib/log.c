@@ -85,7 +85,7 @@ LIB_EXPORT KLogLevel CC KLogLevelGet(void)
 LIB_EXPORT rc_t CC KLogLevelSet(KLogLevel lvl)
 {
     /* Don't allow an out of range set */
-    if( (lvl < klogLevelMin) || (lvl > klogLevelMax) ) {
+    if( lvl > klogLevelMax ) {
         return RC(rcRuntime, rcLog, rcUpdating, rcRange, rcInvalid);
     }
     G_log_level = lvl;
@@ -135,7 +135,7 @@ LIB_EXPORT rc_t CC KLogLevelExplain ( KLogLevel lvl, char *buffer, size_t bsize,
     assert ((klogInfo + 1) == klogDebug);
     assert ((klogDebug) == klogLevelMax);
 
-    if ((lvl < klogLevelMin) || (lvl > klogLevelMax)) {
+    if (lvl > klogLevelMax) {
         t = undefined;
     } else {
         t = logLevelParamStrings[lvl];

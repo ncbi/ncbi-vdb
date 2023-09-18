@@ -170,7 +170,7 @@ LIB_EXPORT String * CC StringTrim ( const String * str, String * trimmed )
                     break;
             }
 
-            StringInit ( trimmed, & addr [ i ], end - i, len - ( i + sz - end ) );
+            StringInit ( trimmed, & addr [ i ], (uint32_t) (end - i), (uint32_t)(len - ( i + sz - end )) );
         }
     }
 
@@ -734,7 +734,7 @@ LIB_EXPORT uint64_t string_to_U64 ( const char * text, size_t bytes, rc_t * opti
 
                 /* want to bring this digit into number */
                 xdigit = isdigit ( text [ i ] ) ?
-                    text [ i ] - '0' : tolower ( text [ i ] ) - 'a' + 10;
+                    text [ i ] - '0' : (uint8_t)(tolower ( text [ i ] ) - 'a' + 10);
 
                 /* detect overflow */
                 if ( i - start > 16 )

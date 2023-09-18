@@ -89,7 +89,7 @@ rc_t CC KWrt_DefaultWriter( void * self, const char * buffer, size_t bufsize, si
 {
     size_t total;
     DWORD remaining;
-    int num_written;
+    DWORD num_written;
     const char * pbyte;
     HANDLE handle;
     rc_t rc;
@@ -190,11 +190,11 @@ void print_char_fixup ( char * fmt, size_t * len, size_t max )
 size_t CC sys_simple_write( int fd, const void * buf, size_t count )
 {
     /* from <io.h> */
-    return write( fd, buf, count );
+    return _write( fd, buf, (unsigned)count );
 }
 
 int CC sys_is_a_tty( int fd )
 {
     /* from <io.h> */
-    return _isatty( _fileno( fd ) );
+    return _isatty( _fileno( fd ) ); /* TODO: incorrect usage of _fileno but it's not clear how to fix it since is_a_tty function is never used */
 }

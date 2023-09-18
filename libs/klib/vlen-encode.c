@@ -201,55 +201,55 @@ LIB_EXPORT rc_t CC vlen_decode1 ( int64_t *dst, const void *Src, uint64_t ssize,
     y = x & 0x3F;
     i = 1;
     if ((x & 0x80) != 0) {
-        if (i == ssize)
+        if ((uint64_t)i == ssize)
             return RC(rcXF, rcFunction, rcExecuting, rcData, rcInsufficient);
         x = src[i];
         y = (y << 7) | (x & 0x7F);
         ++i;
         if ((x & 0x80) != 0) {
-            if (i == ssize)
+            if ((uint64_t)i == ssize)
                 return RC(rcXF, rcFunction, rcExecuting, rcData, rcInsufficient);
             x = src[i];
             y = (y << 7) | (x & 0x7F);
             ++i;
             if ((x & 0x80) != 0) {
-                if (i == ssize)
+                if ((uint64_t)i == ssize)
                     return RC(rcXF, rcFunction, rcExecuting, rcData, rcInsufficient);
                 x = src[i];
                 y = (y << 7) | (x & 0x7F);
                 ++i;
                 if ((x & 0x80) != 0) {
-                    if (i == ssize)
+                    if ((uint64_t)i == ssize)
                         return RC(rcXF, rcFunction, rcExecuting, rcData, rcInsufficient);
                     x = src[i];
                     y = (y << 7) | (x & 0x7F);
                     ++i;
                     if ((x & 0x80) != 0) {
-                        if (i == ssize)
+                        if ((uint64_t)i == ssize)
                             return RC(rcXF, rcFunction, rcExecuting, rcData, rcInsufficient);
                         x = src[i];
                         y = (y << 7) | (x & 0x7F);
                         ++i;
                         if ((x & 0x80) != 0) {
-                            if (i == ssize)
+                            if ((uint64_t)i == ssize)
                                 return RC(rcXF, rcFunction, rcExecuting, rcData, rcInsufficient);
                             x = src[i];
                             y = (y << 7) | (x & 0x7F);
                             ++i;
                             if ((x & 0x80) != 0) {
-                                if (i == ssize)
+                                if ((uint64_t)i == ssize)
                                     return RC(rcXF, rcFunction, rcExecuting, rcData, rcInsufficient);
                                 x = src[i];
                                 y = (y << 7) | (x & 0x7F);
                                 ++i;
                                 if ((x & 0x80) != 0) {
-                                    if (i == ssize)
+                                    if ((uint64_t)i == ssize)
                                         return RC(rcXF, rcFunction, rcExecuting, rcData, rcInsufficient);
                                     x = src[i];
                                     y = (y << 7) | (x & 0x7F);
                                     ++i;
                                     if ((x & 0x80) != 0) {
-                                        if (i == ssize)
+                                        if ((uint64_t)i == ssize)
                                             return RC(rcXF, rcFunction, rcExecuting, rcData, rcInsufficient);
                                         x = src[i];
                                         y = (y << 7) | (x & 0x7F);

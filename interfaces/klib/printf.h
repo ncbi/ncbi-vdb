@@ -299,10 +299,10 @@ struct PrintFmt
     {
         struct
         {
-            uint64_t min_field_width;           /* minimum field width in characters  */
-            uint64_t precision;                 /* precision in characters            */
-            uint64_t start_idx;                 /* zero-based starting vector index   */
-            uint64_t select_len;                /* length of selection or 0 for inf   */
+            int64_t min_field_width;           /* minimum field width in characters  */
+            int64_t precision;                 /* precision in characters            */
+            int64_t start_idx;                 /* zero-based starting vector index   */
+            int64_t select_len;                /* length of selection or 0 for inf   */
         } f;
         struct
         {
