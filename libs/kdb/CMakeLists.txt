@@ -33,6 +33,7 @@ set( KDB_CMN
     database-base
     manager-base
     meta-base
+    metanode-base
 )
 
 set( KDB_SRC

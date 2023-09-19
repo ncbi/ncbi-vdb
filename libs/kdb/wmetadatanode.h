@@ -26,8 +26,11 @@
 
 #pragma once
 
+typedef struct KMDataNode KMDataNode;
+#define KDBMDNODE_IMPL KMDataNode
+#include "metanode-base.h"
+
 #include <klib/pbstree.h>
-#include <klib/container.h>
 
 struct KMetadata;
 struct KMDataNode;
@@ -79,20 +82,20 @@ rc_t KMAttrNodeRename ( const KMAttrNode *self, KMAttrNode **renamed, const char
  */
 struct KMDataNode
 {
-    BSTNode n;
+    KMDataNodeBase dad;
+
     KMDataNode *par;
     KMetadata *meta;
     void *value;
     size_t vsize;
     BSTree attr;
     BSTree child;
-    KRefcount refcount;
     uint8_t read_only;
     char name [ 1 ];
 };
 
-rc_t KMDataNodeMake ( KMDataNode *self, KMDataNode **np, char *name );
-void CC KMDataNodeWhack ( BSTNode *n, void *data );
+rc_t KMDataNodeMakeRoot( KMDataNode ** node, KMetadata *meta );
+void CC KMDataNodeWhack ( KMDataNode * self );
 rc_t KMDataNodeFind ( const KMDataNode *cself, KMDataNode **np, char **path );
 bool CC KMDataNodeInflate_v1 ( PBSTNode *n, void *data );
 bool CC KMDataNodeInflate ( PBSTNode *n, void *data );

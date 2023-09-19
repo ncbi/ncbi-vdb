@@ -74,6 +74,7 @@ rc_t CC KMetadataBaseRelease ( const KMetadata *self )
  */
 KMetadata *KMetadataAttach ( const KMetadata *self )
 {
+
     if ( self != NULL )
     {
         switch ( KRefcountAddDep ( & self -> refcount, "KMetadata" ) )

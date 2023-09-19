@@ -109,7 +109,7 @@ KRMetadataWhack ( KMetadata *self )
     if ( rc == 0 )
     {
         KDirectoryRelease ( self -> dir );
-        KMDataNodeWhack ( ( BSTNode* ) & self -> root -> n, NULL );
+        KMDataNodeRelease ( self -> root );
         return KMetadataBaseWhack( self );
     }
 
@@ -219,19 +219,13 @@ KMetadataMakeRead ( KMetadata **metap, const KDirectory *dir, const char *path, 
     {
         memset ( meta, 0, sizeof * meta );
         meta -> dad . vt = & KRMetadata_vt;
-        meta -> root = calloc ( 1, sizeof * meta -> root );
-        if ( meta -> root == NULL )
-            rc = RC ( rcDB, rcMetadata, rcConstructing, rcMemory, rcExhausted );
-        else
+        if ( KMDataNodeMakeRoot( & meta -> root, meta ) == 0 )
         {
-            meta -> root -> meta = meta;
             meta -> dir = dir;
             KRefcountInit ( & meta -> dad . refcount, 1, "KMetadata", "make-read", path );
             meta -> rev = rev;
             meta -> byteswap = false;
             strcpy ( meta -> path, path );
-
-            KRefcountInit ( & meta -> root -> refcount, 0, "KMDataNode", "make-read", "/" );
 
             rc = KMetadataPopulate ( meta, dir, path );
             if ( rc == 0 )
@@ -441,9 +435,6 @@ KRMetadataVOpenNodeRead ( const KMetadata *self, const KMDataNode **node, const 
     }
     else
         rc = KMDataNodeVOpenNodeRead ( self -> root, node, path, args );
-
-    DBGMSG(DBG_KDB, DBG_FLAG(DBG_KDB_KDB),
-                ("KMetadataVOpenNodeRead(%s) = %d\n", path, rc));
 
     return rc;
 }

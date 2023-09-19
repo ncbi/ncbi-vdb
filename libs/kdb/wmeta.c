@@ -392,7 +392,7 @@ KWMetadataWhack ( KMetadata *self )
             {
                 /* complete */
                 KDirectoryRelease ( self -> dir );
-                KMDataNodeWhack ( & self -> root -> n, NULL );
+                KMDataNodeRelease ( self -> root );
                 return KMetadataBaseWhack( self );
             }
         }
@@ -425,13 +425,12 @@ static
 rc_t CC
 KWMetadataRelease ( const KMetadata *cself )
 {
-    rc_t rc = KMetadataBaseRelease( cself );
-    if ( rc == 0 )
+    KMetadata *self = ( KMetadata* ) cself;
+    if ( self != NULL )
     {
-        KMetadata *self = ( KMetadata* ) cself;
         -- self -> opencount;
     }
-    return rc;
+    return KMetadataBaseRelease( cself );
 }
 
 /* Make
@@ -534,13 +533,9 @@ KMetadataMake ( KMetadata **metap, KDirectory *dir, const char *path, uint32_t r
     else
     {
         memset ( meta, 0, sizeof * meta );
-        meta -> root = calloc ( 1, sizeof * meta -> root );
         meta -> dad . vt = & KWMetadata_vt;
-        if ( meta -> root == NULL )
-            rc = RC ( rcDB, rcMetadata, rcConstructing, rcMemory, rcExhausted );
-        else
+        if ( KMDataNodeMakeRoot( & meta -> root, meta ) == 0 )
         {
-            meta -> root -> meta = meta;
             meta -> dir = dir;
             KRefcountInit ( & meta -> dad . refcount, 1, "KMetadata", "make-update", path );
             meta -> opencount = 1;
@@ -552,8 +547,6 @@ KMetadataMake ( KMetadata **metap, KDirectory *dir, const char *path, uint32_t r
             meta->sym.u.obj = meta;
             StringInitCString (&meta->sym.name, meta->path);
             meta->sym.type = kptMetadata;
-
-            KRefcountInit ( & meta -> root -> refcount, 0, "KMDataNode", "make-read", "/" );
 
             if ( ! populate )
             {

@@ -67,35 +67,6 @@ struct KMetadata_vt
     rc_t ( CC * vOpenNodeRead ) ( const KMetadata *self,const KMDataNode **node, const char *path, va_list args );
 };
 
-// // KMDataNode
-// KDB_EXTERN rc_t CC KMDataNodeAddRef ( const KMDataNode *self );
-// KDB_EXTERN rc_t CC KMDataNodeRelease ( const KMDataNode *self );
-// KDB_EXTERN rc_t CC KMDataNodeByteOrder ( const KMDataNode *self, bool *reversed );
-// KDB_EXTERN rc_t CC KMDataNodeRead ( const KMDataNode *self,size_t offset, void *buffer, size_t bsize, size_t *num_read, size_t *remaining );
-// KDB_EXTERN rc_t CC KMDataNodeVOpenNodeRead ( const KMDataNode *self,const KMDataNode **node, const char *path, va_list args );
-// KDB_EXTERN rc_t CC KMDataNodeReadB8 ( const KMDataNode *self, void *b8 );
-// KDB_EXTERN rc_t CC KMDataNodeReadB16 ( const KMDataNode *self, void *b16 );
-// KDB_EXTERN rc_t CC KMDataNodeReadB32 ( const KMDataNode *self, void *b32 );
-// KDB_EXTERN rc_t CC KMDataNodeReadB64 ( const KMDataNode *self, void *b64 );
-// KDB_EXTERN rc_t CC KMDataNodeReadB128 ( const KMDataNode *self, void *b128 );
-// KDB_EXTERN rc_t CC KMDataNodeReadAsI16 ( const KMDataNode *self, int16_t *i );
-// KDB_EXTERN rc_t CC KMDataNodeReadAsU16 ( const KMDataNode *self, uint16_t *u );
-// KDB_EXTERN rc_t CC KMDataNodeReadAsI32 ( const KMDataNode *self, int32_t *i );
-// KDB_EXTERN rc_t CC KMDataNodeReadAsU32 ( const KMDataNode *self, uint32_t *u );
-// KDB_EXTERN rc_t CC KMDataNodeReadAsI64 ( const KMDataNode *self, int64_t *i );
-// KDB_EXTERN rc_t CC KMDataNodeReadAsU64 ( const KMDataNode *self, uint64_t *u );
-// KDB_EXTERN rc_t CC KMDataNodeReadAsF64 ( const KMDataNode *self, double *f );
-// KDB_EXTERN rc_t CC KMDataNodeReadCString ( const KMDataNode *self,char *buffer, size_t bsize, size_t *size );
-// KDB_EXTERN rc_t CC KMDataNodeReadAttr ( const KMDataNode *self, const char *name,char *buffer, size_t bsize, size_t *size );
-// KDB_EXTERN rc_t CC KMDataNodeReadAttrAsI16 ( const KMDataNode *self, const char *attr, int16_t *i );
-// KDB_EXTERN rc_t CC KMDataNodeReadAttrAsU16 ( const KMDataNode *self, const char *attr, uint16_t *u );
-// KDB_EXTERN rc_t CC KMDataNodeReadAttrAsI32 ( const KMDataNode *self, const char *attr, int32_t *i );
-// KDB_EXTERN rc_t CC KMDataNodeReadAttrAsU32 ( const KMDataNode *self, const char *attr, uint32_t *u );
-// KDB_EXTERN rc_t CC KMDataNodeReadAttrAsI64 ( const KMDataNode *self, const char *attr, int64_t *i );
-// KDB_EXTERN rc_t CC KMDataNodeReadAttrAsU64 ( const KMDataNode *self, const char *attr, uint64_t *u );
-// KDB_EXTERN rc_t CC KMDataNodeReadAttrAsF64 ( const KMDataNode *self, const char *attr, double *f );
-// KDB_EXTERN rc_t CC KMDataNodeCompare( const KMDataNode *self, KMDataNode const *other, bool *equal );
-
 // // move to KTable
 // KDB_EXTERN rc_t CC KTableMetaCopy( struct KTable *self, const struct KTable *src, const char * path, bool src_node_has_to_exist );
 // KDB_EXTERN rc_t CC KTableMetaCompare ( const struct KTable *self, const struct KTable *other, const char * path, bool * equal );

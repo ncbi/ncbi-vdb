@@ -187,7 +187,7 @@ FIXTURE_TEST_CASE(KDBWManager_OpenTableRead, KDBManager_Fixture)
 }
 
 FIXTURE_TEST_CASE(KDBWManager_OpenTableReadVPath, KDBManager_Fixture)
-{
+{   // TODO: this test leaks a VPath. make a ticket.
     VFSManager * vfs;
     REQUIRE_RC( VFSManagerMake ( & vfs ) );
 

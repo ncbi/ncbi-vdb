@@ -187,6 +187,79 @@ static rc_t KMAttrNodeMakeCopy(KMAttrNode **node, KMAttrNode const *source)
  *  where "/" serves as a path separator.
  */
 
+static rc_t CC KWMDataNodeWhack ( KMDataNode *cself );
+static rc_t CC KWMDataNodeRelease ( const KMDataNode *cself );
+static rc_t CC KWMDataNodeByteOrder ( const KMDataNode *self, bool *reversed );
+static rc_t CC KWMDataNodeRead ( const KMDataNode *self, size_t offset, void *buffer, size_t bsize, size_t *num_read, size_t *remaining );
+static rc_t CC KWMDataNodeVOpenNodeRead ( const KMDataNode *self, const KMDataNode **node, const char *path, va_list args );
+static rc_t CC KWMDataNodeReadB8 ( const KMDataNode *self, void *b8 );
+static rc_t CC KWMDataNodeReadB16 ( const KMDataNode *self, void *b16 );
+static rc_t CC KWMDataNodeReadB32 ( const KMDataNode *self, void *b32 );
+static rc_t CC KWMDataNodeReadB64 ( const KMDataNode *self, void *b64 );
+static rc_t CC KWMDataNodeReadB128 ( const KMDataNode *self, void *b128 );
+static rc_t CC KWMDataNodeReadAsI16 ( const KMDataNode *self, int16_t *i );
+static rc_t CC KWMDataNodeReadAsU16 ( const KMDataNode *self, uint16_t *u );
+static rc_t CC KWMDataNodeReadAsI32 ( const KMDataNode *self, int32_t *i );
+static rc_t CC KWMDataNodeReadAsU32 ( const KMDataNode *self, uint32_t *u );
+static rc_t CC KWMDataNodeReadAsI64 ( const KMDataNode *self, int64_t *i );
+static rc_t CC KWMDataNodeReadAsU64 ( const KMDataNode *self, uint64_t *u );
+static rc_t CC KWMDataNodeReadAsF64 ( const KMDataNode *self, double *f );
+static rc_t CC KWMDataNodeReadCString ( const KMDataNode *self, char *buffer, size_t bsize, size_t *size );
+static rc_t CC KWMDataNodeReadAttr ( const KMDataNode *self, const char *name, char *buffer, size_t bsize, size_t *size );
+static rc_t CC KWMDataNodeReadAttrAsI16 ( const KMDataNode *self, const char *attr, int16_t *i );
+static rc_t CC KWMDataNodeReadAttrAsU16 ( const KMDataNode *self, const char *attr, uint16_t *u );
+static rc_t CC KWMDataNodeReadAttrAsI32 ( const KMDataNode *self, const char *attr, int32_t *i );
+static rc_t CC KWMDataNodeReadAttrAsU32 ( const KMDataNode *self, const char *attr, uint32_t *u );
+static rc_t CC KWMDataNodeReadAttrAsI64 ( const KMDataNode *self, const char *attr, int64_t *i );
+static rc_t CC KWMDataNodeReadAttrAsU64 ( const KMDataNode *self, const char *attr, uint64_t *u );
+static rc_t CC KWMDataNodeReadAttrAsF64 ( const KMDataNode *self, const char *attr, double *f );
+
+static KMDataNode_vt KWMDataNode_vt =
+{
+    KWMDataNodeWhack,
+    KMDataNodeBaseAddRef,
+    KWMDataNodeRelease,
+    KWMDataNodeByteOrder,
+    KWMDataNodeRead,
+    KWMDataNodeVOpenNodeRead,
+    KWMDataNodeReadB8,
+    KWMDataNodeReadB16,
+    KWMDataNodeReadB32,
+    KWMDataNodeReadB64,
+    KWMDataNodeReadB128,
+    KWMDataNodeReadAsI16,
+    KWMDataNodeReadAsU16,
+    KWMDataNodeReadAsI32,
+    KWMDataNodeReadAsU32,
+    KWMDataNodeReadAsI64,
+    KWMDataNodeReadAsU64,
+    KWMDataNodeReadAsF64,
+    KWMDataNodeReadCString,
+    KWMDataNodeReadAttr,
+    KWMDataNodeReadAttrAsI16,
+    KWMDataNodeReadAttrAsU16,
+    KWMDataNodeReadAttrAsI32,
+    KWMDataNodeReadAttrAsU32,
+    KWMDataNodeReadAttrAsI64,
+    KWMDataNodeReadAttrAsU64,
+    KWMDataNodeReadAttrAsF64
+};
+
+rc_t
+KMDataNodeMakeRoot( KMDataNode ** node, KMetadata *meta )
+{
+    assert( node != NULL );
+    KMDataNode * ret = calloc ( 1, sizeof *ret );
+    if ( ret == NULL )
+        return RC ( rcDB, rcMetadata, rcConstructing, rcMemory, rcExhausted );
+    ret -> dad . vt = & KWMDataNode_vt;
+    KRefcountInit ( & ret -> dad . refcount, 1, "KMDataNode", "make-read", "/" );
+    ret -> meta = meta;
+    *node = ret;
+
+    return 0;
+}
+
 static
 int64_t CC KMDataNodeCmp ( const void *item, const BSTNode *n )
 {
@@ -211,60 +284,38 @@ int64_t CC KMDataNodeSort ( const BSTNode *item, const BSTNode *n )
 #undef b
 }
 
-void CC KMDataNodeWhack ( BSTNode *n, void *data )
+static
+void
+DataNodeWhack ( BSTNode *n, void *data )
 {
-    KMDataNode *self = ( KMDataNode* ) n;
-
-    REFMSG ( "KMDataNode", "flush", & self -> refcount );
-
-    self -> meta = NULL;
-    atomic32_inc ( & self -> refcount );
-    KMDataNodeRelease ( self );
+    KMDataNodeRelease( (KMDataNode *)n );
 }
 
-/* AddRef
- * Release
- *  all objects are reference counted
- *  NULL references are ignored
- */
-LIB_EXPORT rc_t CC KMDataNodeAddRef ( const KMDataNode *self )
+static
+rc_t CC
+KWMDataNodeWhack ( KMDataNode *self )
 {
-    if ( self != NULL )
-    {
-        switch ( KRefcountAdd ( & self -> refcount, "KMDataNode" ) )
-        {
-        case krefLimit:
-            return RC ( rcDB, rcMetadata, rcAttaching, rcRange, rcExcessive );
-        }
-    }
-    return 0;
+    BSTreeWhack ( & self -> attr, KMAttrNodeWhack, NULL );
+    BSTreeWhack ( & self -> child, DataNodeWhack, NULL );
+    free ( self -> value );
+    return KMDataNodeBaseWhack ( self );
 }
 
-LIB_EXPORT rc_t CC KMDataNodeRelease ( const KMDataNode *cself )
+static
+rc_t CC
+KWMDataNodeRelease ( const KMDataNode *cself )
 {
     KMDataNode *self = ( KMDataNode* ) cself;
+
     if ( self != NULL )
     {
-        switch ( KRefcountDrop ( & self -> refcount, "KMDataNode" ) )
+        switch ( KRefcountDrop ( & self -> dad . refcount, "KMDataNode" ) )
         {
         case krefOkay:
-            return KMetadataSever ( self -> meta );
-        case krefWhack:
-
-            if ( self -> meta != NULL )
-            {
-                self -> read_only = 0;
-                return KMetadataSever ( self -> meta );
-            }
-
-            KRefcountWhack ( & self -> refcount, "KMDataNode" );
-
-            BSTreeWhack ( & self -> attr, KMAttrNodeWhack, NULL );
-            BSTreeWhack ( & self -> child, KMDataNodeWhack, NULL );
-            free ( self -> value );
-            free ( self );
             break;
-
+        case krefWhack:
+            KMDataNodeWhack( self );
+            break;
         case krefLimit:
             return RC ( rcDB, rcMetadata, rcReleasing, rcRange, rcExcessive );
         }
@@ -297,14 +348,15 @@ bool CC KMDataNodeInflate_v1 ( PBSTNode *n, void *data )
         pb -> rc = RC ( rcDB, rcMetadata, rcConstructing, rcMemory, rcExhausted );
         return true;
     }
-
+    b -> dad . vt = & KWMDataNode_vt;
     b -> par = pb -> par;
     b -> meta = pb -> meta;
     b -> value = ( void* ) ( name + size + 1 );
     b -> vsize = n -> data . size - size - 1;
     BSTreeInit ( & b -> attr );
     BSTreeInit ( & b -> child );
-    KRefcountInit ( & b -> refcount, 0, "KMDataNode", "inflate", name );
+    KRefcountInit ( & b -> dad . refcount, 1, "KMDataNode", "inflate", name );
+
     b -> read_only = 0;
     strcpy ( b -> name, name );
 
@@ -312,7 +364,7 @@ bool CC KMDataNodeInflate_v1 ( PBSTNode *n, void *data )
     if ( b -> vsize == 0 )
     {
         b -> value = NULL;
-        BSTreeInsert ( pb -> bst, & b -> n, KMDataNodeSort );
+        BSTreeInsert ( pb -> bst, & b -> dad . n, KMDataNodeSort );
         return false;
     }
 
@@ -322,7 +374,7 @@ bool CC KMDataNodeInflate_v1 ( PBSTNode *n, void *data )
     {
         memmove ( value, b -> value, b -> vsize );
         b -> value = value;
-        BSTreeInsert ( pb -> bst, & b -> n, KMDataNodeSort );
+        BSTreeInsert ( pb -> bst, & b -> dad . n, KMDataNodeSort );
         return false;
     }
 
@@ -453,6 +505,7 @@ bool CC KMDataNodeInflate ( PBSTNode *n, void *data )
         return true;
     }
 
+    b -> dad . vt = & KWMDataNode_vt;
     b -> par = pb -> par;
     b -> meta = pb -> meta;
     b -> value = ( void* ) ( name + size );
@@ -461,7 +514,7 @@ bool CC KMDataNodeInflate ( PBSTNode *n, void *data )
     BSTreeInit ( & b -> child );
     memmove ( b -> name, name, size );
     b -> name [ size ] = 0;
-    KRefcountInit ( & b -> refcount, 0, "KMDataNode", "inflate", b -> name );
+    KRefcountInit ( & b -> dad . refcount, 1, "KMDataNode", "inflate", b -> name );
     b -> read_only = 0;
 
     pb -> rc = ( bits & 1 ) != 0 ? KMDataNodeInflateAttr ( b, pb -> byteswap ) : 0;
@@ -476,7 +529,7 @@ bool CC KMDataNodeInflate ( PBSTNode *n, void *data )
             if ( b -> vsize == 0 )
             {
                 b -> value = NULL;
-                BSTreeInsert ( pb -> bst, & b -> n, KMDataNodeSort );
+                BSTreeInsert ( pb -> bst, & b -> dad . n, KMDataNodeSort );
                 return false;
             }
 
@@ -485,12 +538,12 @@ bool CC KMDataNodeInflate ( PBSTNode *n, void *data )
             {
                 memmove ( value, b -> value, b -> vsize );
                 b -> value = value;
-                BSTreeInsert ( pb -> bst, & b -> n, KMDataNodeSort );
+                BSTreeInsert ( pb -> bst, & b -> dad . n, KMDataNodeSort );
                 return false;
             }
             pb -> rc = RC ( rcDB, rcMetadata, rcConstructing, rcMemory, rcExhausted );
 
-            BSTreeWhack ( & b -> child, KMDataNodeWhack, NULL );
+            BSTreeWhack ( & b -> child, DataNodeWhack, NULL );
         }
 
         BSTreeWhack ( & b -> attr, KMAttrNodeWhack, NULL );
@@ -626,6 +679,7 @@ rc_t KMDataNodeMake ( KMDataNode *self, KMDataNode **np, char *name )
         n = malloc ( sizeof * n + size );
         if ( n == NULL )
             return RC ( rcDB, rcMetadata, rcInserting, rcMemory, rcExhausted );
+        n -> dad . vt = & KWMDataNode_vt;
         n -> par = self;
         n -> meta = self -> meta;
         n -> value = NULL;
@@ -633,12 +687,12 @@ rc_t KMDataNodeMake ( KMDataNode *self, KMDataNode **np, char *name )
         BSTreeInit ( & n -> attr );
         BSTreeInit ( & n -> child );
         strcpy ( n -> name, name );
-        KRefcountInit ( & n -> refcount, 0, "KMDataNode", "make", n -> name );
+        KRefcountInit ( & n -> dad . refcount, 1, "KMDataNode", "make", n -> name );
         n -> read_only = 0;
 
         /* insert */
         rc = BSTreeInsertUnique ( & self -> child,
-            & n -> n, & x, KMDataNodeSort );
+            & n -> dad . n, & x, KMDataNodeSort );
         if ( rc != 0 )
         {
             free ( n );
@@ -654,21 +708,9 @@ rc_t KMDataNodeMake ( KMDataNode *self, KMDataNode **np, char *name )
     return 0;
 }
 
-LIB_EXPORT rc_t CC KMDataNodeOpenNodeRead ( const KMDataNode *self,
-    const KMDataNode **node, const char *path, ... )
-{
-    rc_t rc;
-    va_list args;
-
-    va_start ( args, path );
-    rc = KMDataNodeVOpenNodeRead ( self, node, path, args );
-    va_end ( args );
-
-    return rc;
-}
-
-LIB_EXPORT rc_t CC KMDataNodeVOpenNodeRead ( const KMDataNode *self,
-    const KMDataNode **node, const char *path, va_list args )
+static
+rc_t CC
+KWMDataNodeVOpenNodeRead ( const KMDataNode *self, const KMDataNode **node, const char *path, va_list args )
 {
     rc_t rc;
     KMDataNode *found;
@@ -703,7 +745,7 @@ LIB_EXPORT rc_t CC KMDataNodeVOpenNodeRead ( const KMDataNode *self,
     if ( rc == 0 )
     {
         /* check if the node is not open */
-        if ( atomic32_read ( & found -> refcount ) == 0 )
+        if ( atomic32_read ( & found -> dad . refcount ) == 1 )
         {
             /* mark as read-only, since we're the first to open */
             found -> read_only = 1;
@@ -714,7 +756,6 @@ LIB_EXPORT rc_t CC KMDataNodeVOpenNodeRead ( const KMDataNode *self,
             return RC ( rcDB, rcNode, rcOpening, rcNode, rcBusy );
         }
 
-        KMetadataAttach ( found -> meta );
         KMDataNodeAddRef ( found );
         * node = found;
     }
@@ -782,7 +823,7 @@ LIB_EXPORT rc_t CC KMDataNodeVOpenNodeUpdate ( KMDataNode *self,
     rc = KMDataNodeFind ( self, & found, & p );
     if ( rc == 0 )
     {
-        if ( atomic32_read ( & found -> refcount ) != 0 )
+        if ( atomic32_read ( & found -> dad . refcount ) != 0 )
             return RC ( rcDB, rcNode, rcOpening, rcNode, rcBusy );
     }
     else if ( GetRCState ( rc ) == rcNotFound )
@@ -796,7 +837,6 @@ LIB_EXPORT rc_t CC KMDataNodeVOpenNodeUpdate ( KMDataNode *self,
         return rc;
     }
 
-    KMetadataAttach ( found -> meta );
     KMDataNodeAddRef ( found );
     found -> read_only = false;
     * node = found;
@@ -818,16 +858,11 @@ LIB_EXPORT rc_t CC KMDataNodeVOpenNodeUpdate ( KMDataNode *self,
  *  "reversed" [ OUT ] - if true, the original byte
  *  order is reversed with regard to host native byte order.
  */
-LIB_EXPORT rc_t CC KMDataNodeByteOrder ( const KMDataNode *self, bool *reversed )
+static
+rc_t CC
+KWMDataNodeByteOrder ( const KMDataNode *self, bool *reversed )
 {
-    if ( self != NULL )
-        return KMetadataByteOrder ( self -> meta, reversed );
-
-    if ( reversed == NULL )
-        return RC ( rcDB, rcMetadata, rcAccessing, rcParam, rcNull );
-
-    * reversed = false;
-    return RC ( rcDB, rcMetadata, rcAccessing, rcSelf, rcNull );
+    return KMetadataByteOrder ( self -> meta, reversed );
 }
 
 
@@ -844,7 +879,9 @@ LIB_EXPORT rc_t CC KMDataNodeByteOrder ( const KMDataNode *self, bool *reversed 
  *  the number of bytes remaining to be read.
  *  specifically, "offset" + "num_read" + "remaining" == sizeof node data
  */
-LIB_EXPORT rc_t CC KMDataNodeRead ( const KMDataNode *self,
+static
+rc_t CC
+KWMDataNodeRead ( const KMDataNode *self,
     size_t offset, void *buffer, size_t bsize,
     size_t *num_read, size_t *remaining )
 {
@@ -858,9 +895,7 @@ LIB_EXPORT rc_t CC KMDataNodeRead ( const KMDataNode *self,
         rc = RC ( rcDB, rcNode, rcReading, rcParam, rcNull );
     else
     {
-        if ( self == NULL )
-            rc = RC ( rcDB, rcNode, rcReading, rcSelf, rcNull );
-        else if ( buffer == NULL && bsize != 0 )
+        if ( buffer == NULL && bsize != 0 )
             rc = RC ( rcDB, rcNode, rcReading, rcBuffer, rcNull );
         else
         {
@@ -1017,11 +1052,12 @@ LIB_EXPORT rc_t CC KMDataNodeAppend ( KMDataNode *self, const void *buffer, size
  *
  *  "bXX" [ OUT ] - return parameter for numeric value
  */
-LIB_EXPORT rc_t CC KMDataNodeReadB8 ( const KMDataNode *self, void *b8 )
+static
+rc_t CC
+KWMDataNodeReadB8 ( const KMDataNode *self, void *b8 )
 {
     size_t num_read, remaining;
-    rc_t rc = KMDataNodeRead ( self, 0, b8, 1,
-        & num_read, & remaining );
+    rc_t rc = KMDataNodeRead ( self, 0, b8, 1, & num_read, & remaining );
     if ( rc == 0 )
     {
         if ( remaining != 0 )
@@ -1032,11 +1068,12 @@ LIB_EXPORT rc_t CC KMDataNodeReadB8 ( const KMDataNode *self, void *b8 )
     return rc;
 }
 
-LIB_EXPORT rc_t CC KMDataNodeReadB16 ( const KMDataNode *self, void *b16 )
+static
+rc_t CC
+KWMDataNodeReadB16 ( const KMDataNode *self, void *b16 )
 {
     size_t num_read, remaining;
-    rc_t rc = KMDataNodeRead ( self, 0, b16, 2,
-        & num_read, & remaining );
+    rc_t rc = KMDataNodeRead ( self, 0, b16, 2, & num_read, & remaining );
     if ( rc == 0 )
     {
         if ( remaining != 0 )
@@ -1050,11 +1087,12 @@ LIB_EXPORT rc_t CC KMDataNodeReadB16 ( const KMDataNode *self, void *b16 )
     return rc;
 }
 
-LIB_EXPORT rc_t CC KMDataNodeReadB32 ( const KMDataNode *self, void *b32 )
+static
+rc_t CC
+KWMDataNodeReadB32 ( const KMDataNode *self, void *b32 )
 {
     size_t num_read, remaining;
-    rc_t rc = KMDataNodeRead ( self, 0, b32, 4,
-        & num_read, & remaining );
+    rc_t rc = KMDataNodeRead ( self, 0, b32, 4, & num_read, & remaining );
     if ( rc == 0 )
     {
         if ( remaining != 0 )
@@ -1068,11 +1106,12 @@ LIB_EXPORT rc_t CC KMDataNodeReadB32 ( const KMDataNode *self, void *b32 )
     return rc;
 }
 
-LIB_EXPORT rc_t CC KMDataNodeReadB64 ( const KMDataNode *self, void *b64 )
+static
+rc_t CC
+KWMDataNodeReadB64 ( const KMDataNode *self, void *b64 )
 {
     size_t num_read, remaining;
-    rc_t rc = KMDataNodeRead ( self, 0, b64, 8,
-        & num_read, & remaining );
+    rc_t rc = KMDataNodeRead ( self, 0, b64, 8, & num_read, & remaining );
     if ( rc == 0 )
     {
         if ( remaining != 0 )
@@ -1086,7 +1125,9 @@ LIB_EXPORT rc_t CC KMDataNodeReadB64 ( const KMDataNode *self, void *b64 )
     return rc;
 }
 
-LIB_EXPORT rc_t CC KMDataNodeReadB128 ( const KMDataNode *self, void *b128 )
+static
+rc_t CC
+KWMDataNodeReadB128 ( const KMDataNode *self, void *b128 )
 {
     size_t num_read, remaining;
     rc_t rc = KMDataNodeRead ( self, 0, b128, 16,
@@ -1119,7 +1160,9 @@ LIB_EXPORT rc_t CC KMDataNodeReadB128 ( const KMDataNode *self, void *b128 )
  *  "u" [ OUT ] - return parameter for unsigned integer
  *  "f" [ OUT ] - return parameter for double float
  */
-LIB_EXPORT rc_t CC KMDataNodeReadAsI16 ( const KMDataNode *self, int16_t *i )
+static
+rc_t CC
+KWMDataNodeReadAsI16 ( const KMDataNode *self, int16_t *i )
 {
     size_t num_read, remaining;
     rc_t rc = KMDataNodeRead ( self, 0, i, sizeof * i,
@@ -1145,7 +1188,9 @@ LIB_EXPORT rc_t CC KMDataNodeReadAsI16 ( const KMDataNode *self, int16_t *i )
     return rc;
 }
 
-LIB_EXPORT rc_t CC KMDataNodeReadAsU16 ( const KMDataNode *self, uint16_t *u )
+static
+rc_t CC
+KWMDataNodeReadAsU16 ( const KMDataNode *self, uint16_t *u )
 {
     size_t num_read, remaining;
     rc_t rc = KMDataNodeRead ( self, 0, u, sizeof * u,
@@ -1171,7 +1216,9 @@ LIB_EXPORT rc_t CC KMDataNodeReadAsU16 ( const KMDataNode *self, uint16_t *u )
     return rc;
 }
 
-LIB_EXPORT rc_t CC KMDataNodeReadAsI32 ( const KMDataNode *self, int32_t *i )
+static
+rc_t CC
+KWMDataNodeReadAsI32 ( const KMDataNode *self, int32_t *i )
 {
     size_t num_read, remaining;
     rc_t rc = KMDataNodeRead ( self, 0, i, sizeof * i,
@@ -1203,7 +1250,9 @@ LIB_EXPORT rc_t CC KMDataNodeReadAsI32 ( const KMDataNode *self, int32_t *i )
     return rc;
 }
 
-LIB_EXPORT rc_t CC KMDataNodeReadAsU32 ( const KMDataNode *self, uint32_t *u )
+static
+rc_t CC
+KWMDataNodeReadAsU32 ( const KMDataNode *self, uint32_t *u )
 {
     size_t num_read, remaining;
     rc_t rc = KMDataNodeRead ( self, 0, u, sizeof * u,
@@ -1235,7 +1284,9 @@ LIB_EXPORT rc_t CC KMDataNodeReadAsU32 ( const KMDataNode *self, uint32_t *u )
     return rc;
 }
 
-LIB_EXPORT rc_t CC KMDataNodeReadAsI64 ( const KMDataNode *self, int64_t *i )
+static
+rc_t CC
+KWMDataNodeReadAsI64 ( const KMDataNode *self, int64_t *i )
 {
     size_t num_read, remaining;
     rc_t rc = KMDataNodeRead ( self, 0, i, sizeof * i,
@@ -1273,7 +1324,9 @@ LIB_EXPORT rc_t CC KMDataNodeReadAsI64 ( const KMDataNode *self, int64_t *i )
     return rc;
 }
 
-LIB_EXPORT rc_t CC KMDataNodeReadAsU64 ( const KMDataNode *self, uint64_t *u )
+static
+rc_t CC
+KWMDataNodeReadAsU64 ( const KMDataNode *self, uint64_t *u )
 {
     size_t num_read, remaining;
     rc_t rc = KMDataNodeRead ( self, 0, u, sizeof * u,
@@ -1311,7 +1364,9 @@ LIB_EXPORT rc_t CC KMDataNodeReadAsU64 ( const KMDataNode *self, uint64_t *u )
     return rc;
 }
 
-LIB_EXPORT rc_t CC KMDataNodeReadAsF64 ( const KMDataNode *self, double *f )
+static
+rc_t CC
+KWMDataNodeReadAsF64 ( const KMDataNode *self, double *f )
 {
     size_t num_read, remaining;
     rc_t rc = KMDataNodeRead ( self, 0, f, sizeof * f,
@@ -1350,8 +1405,9 @@ LIB_EXPORT rc_t CC KMDataNodeReadAsF64 ( const KMDataNode *self, double *f )
  *  not including NUL byte. the size is set both upon success
  *  and insufficient buffer space error.
  */
-LIB_EXPORT rc_t CC KMDataNodeReadCString ( const KMDataNode *self,
-    char *buffer, size_t bsize, size_t *size )
+static
+rc_t CC
+KWMDataNodeReadCString ( const KMDataNode *self, char *buffer, size_t bsize, size_t *size )
 {
     size_t remaining;
     rc_t rc = KMDataNodeRead ( self, 0, buffer, bsize - 1, size, & remaining );
@@ -1431,8 +1487,9 @@ LIB_EXPORT rc_t CC KMDataNodeWriteCString ( KMDataNode *self, const char *str )
  *  not including NUL byte. the size is set both upon success
  *  and insufficient buffer space error.
  */
-LIB_EXPORT rc_t CC KMDataNodeReadAttr ( const KMDataNode *self, const char *name,
-    char *buffer, size_t bsize, size_t *size )
+static
+rc_t CC
+KWMDataNodeReadAttr ( const KMDataNode *self, const char *name, char *buffer, size_t bsize, size_t *size )
 {
     rc_t rc;
 
@@ -1535,7 +1592,9 @@ LIB_EXPORT rc_t CC KMDataNodeWriteAttr ( KMDataNode *self,
  *  "u" [ OUT ] - return parameter for unsigned integer
  *  "f" [ OUT ] - return parameter for double float
  */
-LIB_EXPORT rc_t CC KMDataNodeReadAttrAsI16 ( const KMDataNode *self, const char *attr, int16_t *i )
+static
+rc_t CC
+KWMDataNodeReadAttrAsI16 ( const KMDataNode *self, const char *attr, int16_t *i )
 {
     rc_t rc;
     if ( i == NULL )
@@ -1565,7 +1624,9 @@ LIB_EXPORT rc_t CC KMDataNodeReadAttrAsI16 ( const KMDataNode *self, const char 
     return rc;
 }
 
-LIB_EXPORT rc_t CC KMDataNodeReadAttrAsU16 ( const KMDataNode *self, const char *attr, uint16_t *u )
+static
+rc_t CC
+KWMDataNodeReadAttrAsU16 ( const KMDataNode *self, const char *attr, uint16_t *u )
 {
     rc_t rc;
     if ( u == NULL )
@@ -1595,7 +1656,9 @@ LIB_EXPORT rc_t CC KMDataNodeReadAttrAsU16 ( const KMDataNode *self, const char 
     return rc;
 }
 
-LIB_EXPORT rc_t CC KMDataNodeReadAttrAsI32 ( const KMDataNode *self, const char *attr, int32_t *i )
+static
+rc_t CC
+KWMDataNodeReadAttrAsI32 ( const KMDataNode *self, const char *attr, int32_t *i )
 {
     rc_t rc;
     if ( i == NULL )
@@ -1625,7 +1688,9 @@ LIB_EXPORT rc_t CC KMDataNodeReadAttrAsI32 ( const KMDataNode *self, const char 
     return rc;
 }
 
-LIB_EXPORT rc_t CC KMDataNodeReadAttrAsU32 ( const KMDataNode *self, const char *attr, uint32_t *u )
+static
+rc_t CC
+KWMDataNodeReadAttrAsU32 ( const KMDataNode *self, const char *attr, uint32_t *u )
 {
     rc_t rc;
     if ( u == NULL )
@@ -1655,7 +1720,9 @@ LIB_EXPORT rc_t CC KMDataNodeReadAttrAsU32 ( const KMDataNode *self, const char 
     return rc;
 }
 
-LIB_EXPORT rc_t CC KMDataNodeReadAttrAsI64 ( const KMDataNode *self, const char *attr, int64_t *i )
+static
+rc_t CC
+KWMDataNodeReadAttrAsI64 ( const KMDataNode *self, const char *attr, int64_t *i )
 {
     rc_t rc;
     if ( i == NULL )
@@ -1683,7 +1750,9 @@ LIB_EXPORT rc_t CC KMDataNodeReadAttrAsI64 ( const KMDataNode *self, const char 
     return rc;
 }
 
-LIB_EXPORT rc_t CC KMDataNodeReadAttrAsU64 ( const KMDataNode *self, const char *attr, uint64_t *u )
+static
+rc_t CC
+KWMDataNodeReadAttrAsU64 ( const KMDataNode *self, const char *attr, uint64_t *u )
 {
     rc_t rc;
     if ( u == NULL )
@@ -1711,7 +1780,9 @@ LIB_EXPORT rc_t CC KMDataNodeReadAttrAsU64 ( const KMDataNode *self, const char 
     return rc;
 }
 
-LIB_EXPORT rc_t CC KMDataNodeReadAttrAsF64 ( const KMDataNode *self, const char *attr, double *f )
+static
+rc_t CC
+KWMDataNodeReadAttrAsF64 ( const KMDataNode *self, const char *attr, double *f )
 {
     rc_t rc;
     if ( f == NULL )
@@ -1749,7 +1820,7 @@ rc_t KMDataNodeDropAll_int ( KMDataNode *self )
     BSTreeWhack ( & self -> attr, KMAttrNodeWhack, NULL );
     BSTreeInit ( & self -> attr );
 
-    BSTreeWhack ( & self -> child, KMDataNodeWhack, NULL );
+    BSTreeWhack ( & self -> child, DataNodeWhack, NULL );
     BSTreeInit ( & self -> child );
 
     free ( self -> value );
@@ -1855,13 +1926,13 @@ LIB_EXPORT rc_t CC KMDataNodeVDropChild ( KMDataNode *self, const char *path, va
         if ( p [ 0 ] != '*' || p [ 1 ] != 0 )
             return rc;
 
-        BSTreeWhack ( & found -> child, KMDataNodeWhack, NULL );
+        BSTreeWhack ( & found -> child, DataNodeWhack, NULL );
         BSTreeInit ( & found -> child );
     }
     else
     {
-        BSTreeUnlink ( & self -> child, & found -> n );
-        KMDataNodeWhack ( & found -> n, NULL );
+        BSTreeUnlink ( & self -> child, & found -> dad . n );
+        KMDataNodeRelease ( found );
     }
 
     self -> meta -> dirty = true;
@@ -1956,7 +2027,7 @@ LIB_EXPORT rc_t CC KMDataNodeRenameChild ( KMDataNode *self, const char *from, c
     {
         KMDataNode *renamed;
 
-        if ( atomic32_read ( & found -> refcount ) != 0 )
+        if ( atomic32_read ( & found -> dad . refcount ) != 0 )
             return RC ( rcDB, rcNode, rcRenaming, rcNode, rcBusy );
 
         len = snprintf ( p = full, sizeof full, "%s", to );
@@ -1969,7 +2040,7 @@ LIB_EXPORT rc_t CC KMDataNodeRenameChild ( KMDataNode *self, const char *from, c
             rc = KMDataNodeMake ( renamed, & renamed, p );
             if ( rc == 0 )
             {
-                BSTreeUnlink ( & found -> par -> child, & found -> n );
+                BSTreeUnlink ( & found -> par -> child, & found -> dad . n );
 
                 renamed -> attr = found -> attr;
                 BSTreeInit ( & found -> attr );
@@ -1984,7 +2055,7 @@ LIB_EXPORT rc_t CC KMDataNodeRenameChild ( KMDataNode *self, const char *from, c
                 found -> value = NULL;
                 found -> vsize = 0;
 
-                KMDataNodeWhack ( & found -> n, NULL );
+                KMDataNodeRelease ( found );
                 self -> meta -> dirty = true;
             }
         }
