@@ -111,7 +111,8 @@ enum
     SRA_PLATFORM_GENAPSYS          = 13,
     SRA_PLATFORM_ULTIMA            = 14,
     SRA_PLATFORM_GENEMIND          = 15,
-    SRA_PLATFORM_BGISEQ            = 16
+    SRA_PLATFORM_BGISEQ            = 16,
+    SRA_PLATFORM_DNBSEQ            = 17
 };
 
 /*
@@ -139,7 +140,8 @@ enum
     "SRA_PLATFORM_GENAPSYS",          \
     "SRA_PLATFORM_ULTIMA",            \
     "SRA_PLATFORM_GENEMIND",          \
-    "SRA_PLATFORM_BGISEQ"
+    "SRA_PLATFORM_BGISEQ",            \
+    "SRA_PLATFORM_DNBSEQ"
 
 #ifdef __cplusplus
 }

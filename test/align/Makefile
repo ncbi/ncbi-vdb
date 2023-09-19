@@ -22,5 +22,9 @@
 #
 # ===========================================================================
 
-# NCBI-VDB and library version
-VERSION = 3.0.8
+default: runtests
+
+TOP ?= $(abspath ../..)
+MODULE = test/align
+
+include $(TOP)/build/Makefile.env
