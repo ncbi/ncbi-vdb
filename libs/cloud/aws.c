@@ -82,7 +82,8 @@ IMDS_version( const KNSManager * kns, char *buffer, size_t bsize )
     // try IMDSv1 first
     if ( KNSManager_Read( kns, buffer, bsize,
                           INSTANCE_URL_PREFIX "meta-data",  HttpMethod_Get,
-                          NULL, NULL) == 0 )
+                          NULL, NULL) == 0
+         && buffer[ 0 ] != '\0' )
     {
         buffer[ 0 ] = 0;
         return 1;
