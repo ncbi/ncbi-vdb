@@ -490,8 +490,52 @@ static INSDC_SRA_platform_id _VTableReadPLATFORMoptional
     }
 }
 
-static bool _VTableVarReadNum(const VTable *self, const char *acc) {
-    return _VTableReadPLATFORMoptional(self, acc) == SRA_PLATFORM_PACBIO_SMRT;
+static bool _VarReadNum(INSDC_SRA_platform_id platform, bool *unrecognized) {
+    bool dummy = true;
+    if (unrecognized == NULL)
+        unrecognized = &dummy;
+    *unrecognized = true;
+
+    switch (platform) {
+    case SRA_PLATFORM_PACBIO_SMRT:
+        *unrecognized = false;
+        return true;
+
+    case SRA_PLATFORM_UNDEFINED:
+    case SRA_PLATFORM_454:
+    case SRA_PLATFORM_ILLUMINA:
+    case SRA_PLATFORM_ABSOLID:
+    case SRA_PLATFORM_COMPLETE_GENOMICS:
+    case SRA_PLATFORM_HELICOS:
+    case SRA_PLATFORM_ION_TORRENT:
+    case SRA_PLATFORM_CAPILLARY:
+    case SRA_PLATFORM_OXFORD_NANOPORE:
+        *unrecognized = false;
+        return false;
+
+    default:
+/*       SRA_PLATFORM_ELEMENT_BIO       = 10,
+         SRA_PLATFORM_TAPESTRI          = 11,
+         SRA_PLATFORM_VELA_DIAG         = 12,
+         SRA_PLATFORM_GENAPSYS          = 13,
+         SRA_PLATFORM_ULTIMA            = 14,
+         SRA_PLATFORM_GENEMIND          = 15,
+         SRA_PLATFORM_BGISEQ            = 16,
+         SRA_PLATFORM_DNBSEQ            = 17
+*/
+        *unrecognized = true;
+        if (unrecognized != &dummy)
+            PLOGERR(klogInt, (klogInt,
+                RC(rcSRA, rcCursor, rcReading, rcData, rcUnexpected),
+                "Unrecognized platform $(P)", "P=%d", platform));
+        return false;
+    }
+}
+
+static
+bool _VTableVarReadNum(const VTable *self, const char *acc, bool *unrecognized)
+{
+    return _VarReadNum(_VTableReadPLATFORMoptional(self, acc), unrecognized);
 }
 
 static uint64_t BIG = 10000 /*11*/; 
@@ -1277,7 +1321,7 @@ bool _VdbBlastRunVarReadNum(const VdbBlastRun *self) {
 
     assert(self);
 
-    return self->rd.platform == SRA_PLATFORM_PACBIO_SMRT;
+    return _VarReadNum(self->rd.platform, NULL);
 }
 
 /* _VdbBlastRunGetNumSequences
@@ -1303,7 +1347,8 @@ uint64_t _VdbBlastRunGetNumSequences(VdbBlastRun *self,
             rc_t rc = 0;
             ReadDesc desc;
             memset(&desc, 0, sizeof desc);
-            rc = _VdbBlastDbOpenCursAndGetAllReads(self->obj, &desc, self->acc);
+            rc = _VdbBlastDbOpenCursAndGetAllReads(self->obj, &desc,
+                self->acc);
             if (rc != 0) {
                 *status = eVdbBlastErr;
             }
@@ -1424,7 +1469,6 @@ static uint64_t _VdbBlastSraRunGetLengthApprox(VdbBlastRun *self,
 static uint64_t _VdbBlastRunGetNumSequencesApprox(VdbBlastRun *self,
     VdbBlastStatus *status)
 {
-
     assert(self && status);
 
     *status = eVdbBlastNoErr;
@@ -2618,9 +2662,14 @@ VdbBlastStatus CC VdbBlastRunSetAddRun(VdbBlastRunSet *self,
     }
 
     if (status == eVdbBlastNoErr) {
-        if (_VTableVarReadNum(obj->seqTbl, rundesc)) {
+        bool unrecognized = false;
+        if (_VTableVarReadNum(obj->seqTbl, rundesc, &unrecognized)) {
             self->readIdDesc.varReadN = true;
             self->readIdDesc.idType   = eFactor10;
+        }
+        if (unrecognized) {
+            S
+            return eVdbBlastNotImplemented;
         }
 
         status = _RunSetAddObj(&self->runs, obj, rundesc, type,
