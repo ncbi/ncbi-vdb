@@ -203,23 +203,23 @@ uint32_t _VCursorReadArray(const VCursor *self,
     uint32_t col,
     void **buffer,
     uint8_t elem_size,
-    uint8_t nReads,
+    uint8_t nreads,
     const char *name)
 {
     rc_t rc = 0;
     uint32_t row_len = 0;
 
-    assert(buffer && elem_size && nReads && name);
+    assert(buffer && elem_size && nreads && name);
 
     if (*buffer == NULL) {
-        *buffer = calloc(nReads, elem_size);
+        *buffer = calloc(nreads, elem_size);
         if (*buffer == NULL) {
             return eVdbBlastMemErr;
         }
     }
 
     rc = VCursorReadDirect(self,
-        row_id, col, 8, *buffer, nReads * elem_size * 8, &row_len);
+        row_id, col, 8, *buffer, nreads * elem_size * 8, &row_len);
     if (rc != 0) {
         PLOGERR(klogInt, (klogInt, rc,
             "Error in VCursorReadDirect($(name))", "name=%s", name));
@@ -323,18 +323,18 @@ static uint32_t _VCursorReadReaderCols(const VCursor *self,
     rc_t rc = 0;
     uint32_t row_len = ~0;
     int64_t row_id = 0;
-    uint8_t nReads = 0;
+    uint8_t nreads = 0;
 
     assert(desc && cols && desc->run && empty);
 
     * empty = false;
 
     row_id = desc->spot;
-    nReads = desc->run->rd.nReads;
+    nreads = desc->run->rd.nReads;
     assert(desc->nReads);
-    nReads = desc->nReads;
+    nreads = desc->nReads;
 
-    if (cols->nReadsAllocated != 0 && cols->nReadsAllocated < nReads) {
+    if (cols->nReadsAllocated != 0 && cols->nReadsAllocated < nreads) {
         /* LOG */
 
         /* TODO: find a better way/place to realloc cols data buffers */
@@ -349,23 +349,23 @@ static uint32_t _VCursorReadReaderCols(const VCursor *self,
     }
 
     status = _VCursorReadArray(self, row_id, cols->col_READ_LEN,
-        (void **)&cols->read_len, sizeof *cols->read_len, nReads,
+        (void **)&cols->read_len, sizeof *cols->read_len, nreads,
         "READ_LEN");
     if (status != eVdbBlastNoErr)
         return status;
-    if ( nReads == 1 && cols->read_len[0] == 0 ) {
+    if ( nreads == 1 && cols->read_len[0] == 0 ) {
         * empty = true;
         return status;
     }
 
     status = _VCursorReadArray(self, row_id, cols->col_READ_FILTER,
-        (void **)&cols->read_filter, sizeof *cols->read_filter, nReads,
+        (void **)&cols->read_filter, sizeof *cols->read_filter, nreads,
         "READ_FILTER");
     if (status != eVdbBlastNoErr)
     {   return status; }
 
     status = _VCursorReadArray(self, row_id, cols->col_READ_TYPE,
-        (void **)&cols->read_type, sizeof *cols->read_type, nReads,
+        (void **)&cols->read_type, sizeof *cols->read_type, nreads,
         "READ_TYPE");
     if (status != eVdbBlastNoErr)
         return status;
@@ -373,13 +373,13 @@ static uint32_t _VCursorReadReaderCols(const VCursor *self,
     if (cols->col_PRIMARY_ALIGNMENT_ID != 0) {
         status = _VCursorReadArray(self, row_id, cols->col_PRIMARY_ALIGNMENT_ID,
             (void **)&cols->primary_alignment_id,
-            sizeof *cols->primary_alignment_id, nReads, "PRIMARY_ALIGNMENT_ID");
+            sizeof *cols->primary_alignment_id, nreads, "PRIMARY_ALIGNMENT_ID");
         if (status != eVdbBlastNoErr) {
             return status;
         }
     }
 
-    cols->nReadsAllocated = nReads;
+    cols->nReadsAllocated = nreads;
 
     rc = VCursorReadDirect(self, row_id, cols->col_TRIM_LEN,
         8 * sizeof cols->TRIM_LEN, &cols->TRIM_LEN, sizeof cols->TRIM_LEN,
@@ -420,7 +420,7 @@ bool _ReadDescNextRead(ReadDesc *self, VdbBlastStatus *status)
     uint32_t read = 0;
     int i = 0;
     const RunDesc *rd = NULL;
-    uint8_t nReads = 1;
+    uint8_t nreads = 1;
 
     assert(self && self->run && status);
 
@@ -449,9 +449,9 @@ bool _ReadDescNextRead(ReadDesc *self, VdbBlastStatus *status)
         }
 
         if (self->tableId == VDB_READ_UNALIGNED)
-            nReads = rd->nReads;
+            nreads = rd->nReads;
 
-        for (i = self->read + 1; i <= nReads; ++i) {
+        for (i = self->read + 1; i <= nreads; ++i) {
             if (rd->readType[i - 1] & SRA_READ_TYPE_BIOLOGICAL) {
                 S
                 read = i;
@@ -465,7 +465,7 @@ bool _ReadDescNextRead(ReadDesc *self, VdbBlastStatus *status)
                 return false;
             }
 
-            for (i = 1; i <= nReads; ++i) {
+            for (i = 1; i <= nreads; ++i) {
                 if (rd->readType[i - 1] & SRA_READ_TYPE_BIOLOGICAL) {
                     S
                     read = i;

@@ -915,11 +915,11 @@ uint64_t _VdbBlastRunSetGetAllReads
 }
 
 static rc_t _VdbBlastDbGetNReads
-    (VdbBlastDb *self, uint64_t spot, uint32_t *nReads, const char *acc)
+    (VdbBlastDb *self, uint64_t spot, uint32_t *nreads, const char *acc)
 {
     rc_t rc = _VdbBlastDbOpenSeqCurs(self, acc);
-    assert(self && nReads);
-    *nReads = 0;
+    assert(self && nreads);
+    *nreads = 0;
     if (rc == 0) {
         const void *base = NULL;
         uint32_t elem_bits = 0;
@@ -928,7 +928,7 @@ static rc_t _VdbBlastDbGetNReads
         rc = VCursorCellDataDirect(self->cursSeq, spot, self->col_READ_TYPE,
             &elem_bits, &base, &elem_off, &elem_cnt);
         if (rc == 0) {
-            *nReads = elem_cnt;
+            *nreads = elem_cnt;
         }
         else {
             PLOGERR(klogInt, (klogInt, rc, "Cannot get "
