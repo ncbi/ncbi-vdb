@@ -525,10 +525,12 @@ static bool _VarReadNum(INSDC_SRA_platform_id platform, bool *unrecognized) {
 */
         *unrecognized = true;
         if (unrecognized != &dummy)
-            PLOGERR(klogInt, (klogInt,
+            PLOGERR(klogWarn, (klogWarn,
                 RC(rcSRA, rcCursor, rcReading, rcData, rcUnexpected),
                 "Unrecognized platform $(P)", "P=%d", platform));
-        return false;
+/* Unrecognized platform is treated as PACBIO:
+ * we guess it can have variable number of reads. */
+        return true;
     }
 }
 
@@ -2667,7 +2669,9 @@ VdbBlastStatus CC VdbBlastRunSetAddRun(VdbBlastRunSet *self,
             self->readIdDesc.varReadN = true;
             self->readIdDesc.idType   = eFactor10;
         }
-        if (unrecognized) {
+/* Don't fail on unrecognized platform: treat it as worst case scenario.
+ * _VarReadNum will issue a warning. */
+        if (false && unrecognized) {
             S
             return eVdbBlastNotImplemented;
         }
