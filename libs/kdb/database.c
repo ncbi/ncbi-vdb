@@ -29,6 +29,7 @@
 #include "rdatabase.h"
 #include "kdb-priv.h"
 #include "table-priv.h"
+#include "index-priv.h"
 #include "rdbmgr.h"
 #include "rmeta.h"
 #undef KONST
@@ -69,6 +70,7 @@ static rc_t CC KRDatabaseOpenDirectoryRead ( const KDatabase *self, const KDirec
 static rc_t CC KRDatabaseVOpenDBRead ( const KDatabase *self, const KDatabase **dbp, const char *name, va_list args );
 static rc_t CC KRDatabaseVOpenTableRead ( const KDatabase *self, const KTable **tblp, const char *name, va_list args );
 static rc_t CC KRDatabaseOpenMetadataRead ( const KDatabase *self, const KMetadata **metap );
+static rc_t CC KRDatabaseVOpenIndexRead ( const KDatabase *self, const KIndex **idxp, const char *name, va_list args );
 
 static KDatabase_vt KRDatabase_vt =
 {
@@ -84,7 +86,8 @@ static KDatabase_vt KRDatabase_vt =
     KRDatabaseOpenDirectoryRead,
     KRDatabaseVOpenDBRead,
     KRDatabaseVOpenTableRead,
-    KRDatabaseOpenMetadataRead
+    KRDatabaseOpenMetadataRead,
+    KRDatabaseVOpenIndexRead
 };
 
 
@@ -640,3 +643,35 @@ KRDatabaseOpenMetadataRead ( const KDatabase *self, const KMetadata **metap )
 
     return rc;
 }
+
+static
+rc_t CC
+KRDatabaseVOpenIndexRead ( const KDatabase *self, const KIndex **idxp, const char *name, va_list args )
+{
+    rc_t rc = 0;
+    char path [ 256 ];
+
+    if ( idxp == NULL )
+        return RC ( rcDB, rcDatabase, rcOpening, rcParam, rcNull );
+
+    * idxp = NULL;
+
+    if ( self == NULL )
+        return RC ( rcDB, rcDatabase, rcOpening, rcSelf, rcNull );
+
+    rc = KDBVMakeSubPath ( self -> dir,
+        path, sizeof path, "idx", 3, name, args );
+    if ( rc == 0 )
+    {
+        KIndex *idx;
+        rc = KDBManagerOpenIndexReadInt ( self -> mgr,
+            & idx, self -> dir, path );
+        if ( rc == 0 )
+        {
+            idx -> db = KDatabaseAttach ( self );
+            * idxp = idx;
+        }
+    }
+    return rc;
+}
+

@@ -31,12 +31,13 @@
 #include <ktst/unit_test.hpp>
 
 #include <../libs/kdb/rdatabase.h>
-#include <../libs/kdb/dbmgr-priv.h>
+#include <../libs/kdb/wdbmgr.h>
 #include <../libs/kdb/libkdb.vers.h>
 
 #include <kdb/manager.h>
 #include <kdb/kdb-priv.h>
 #include <kdb/table.h>
+#include <kdb/index.h>
 
 #include <kfs/file.h>
 

@@ -26,11 +26,13 @@
 
 #define TRACK_REFERENCES 0
 
-#include <kdb/extern.h>
+#include <kdb/index.h>
+
 #include "libkdb.vers.h"
 #include "wdbmgr.h"
 #include "wkdb-priv.h"
 #include "wtable-priv.h"
+#include "windex-priv.h"
 #include "wdatabase.h"
 #include "colfmt-priv.h"
 #include "wcolumn-priv.h"
@@ -2383,5 +2385,289 @@ rc_t KDBManagerOpenMetadataReadInt ( KDBManager *self, const KMetadata **metap, 
         }
     }
 
+    return rc;
+}
+
+rc_t KDBManagerInsertIndex ( KDBManager * self, KIndex * idx)
+{
+    rc_t rc;
+    rc = KDBManagerOpenObjectAdd (self, &idx->sym);
+    if (rc == 0)
+        idx->mgr = KDBManagerAttach (self);
+    return rc;
+}
+
+/* OpenIndexRead
+ * VOpenIndexRead
+ *  open an index for read
+ *
+ *  "idx" [ OUT ] - return parameter for newly opened index
+ *
+ *  "name" [ IN ] - NUL terminated string in UTF-8 giving simple name of idx
+ */
+rc_t KDBManagerOpenIndexReadInt ( KDBManager *self,const KIndex **idxp, const KDirectory *wd, const char *path )
+{
+    char idxpath [ 4096 ];
+    rc_t rc = KDirectoryResolvePath ( wd, true,
+                                      idxpath, sizeof idxpath, "%s", path );
+    if ( rc == 0 )
+    {
+        KIndex *idx;
+        KSymbol * sym;
+
+        /* if already open */
+        sym = KDBManagerOpenObjectFind (self, idxpath);
+        if (sym != NULL)
+        {
+            const KIndex * cidx;
+            rc_t obj;
+
+            switch (sym->type)
+            {
+            case kptIndex:
+                cidx = (const KIndex *)sym->u.obj;
+#if 0
+                /* if open for update, refuse */
+                if ( cidx -> read_only )
+#endif
+#if 0
+                if (cidx is coherent)
+#endif
+                {
+                    /* attach a new reference and we're gone */
+                    rc = KIndexAddRef ( cidx );
+                    if ( rc == 0 )
+                        * idxp = cidx;
+                    return rc;
+                }
+                obj = rcDatabase;
+                break;
+
+            default:
+                obj = rcPath;
+                break;
+            case kptTable:
+                obj = rcTable;
+                break;
+            case kptColumn:
+                obj = rcColumn;
+                break;
+            case kptDatabase:
+                obj = rcDatabase;
+                break;
+            case kptMetadata:
+                obj = rcMetadata;
+                break;
+            }
+            return  RC (rcDB, rcMgr, rcOpening, obj, rcBusy);
+        }
+
+        switch ( KDirectoryPathType ( wd, "%s", idxpath ) )
+        {
+        case kptNotFound:
+            return RC ( rcDB, rcMgr, rcOpening, rcIndex, rcNotFound );
+        case kptBadPath:
+            return RC ( rcDB, rcMgr, rcOpening, rcPath, rcInvalid );
+        case kptFile:
+        case kptFile | kptAlias:
+            break;
+        default:
+            return RC ( rcDB, rcMgr, rcOpening, rcPath, rcIncorrect );
+        }
+
+        rc = KIndexMakeRead ( & idx, wd, idxpath );
+        if ( rc == 0 )
+        {
+            //idx -> read_only = true; already done in KIndexMakeRead
+            rc = KDBManagerInsertIndex (self, idx);
+            if ( rc == 0 )
+            {
+                * idxp = idx;
+                return 0;
+            }
+
+            KIndexRelease ( idx );
+        }
+    }
+
+    return rc;
+}
+
+/* CreateIndex
+ * VCreateIndex
+ *  create a new or open an existing index
+ *
+ *  "idx" [ OUT ] - return parameter for newly opened index
+ *
+ *  "cmode" [ IN ] - creation mode
+ *
+ *  "name" [ IN ] - NUL terminated string in UTF-8 giving simple name of idx
+ */
+rc_t
+KDBManagerCreateIndexInt ( KDBManager *self, KIndex **idxp, KDirectory *wd, KIdxType type, KCreateMode cmode, const char *path, bool use_md5 )
+{
+    rc_t rc;
+    int ptype;
+    char idxpath [ 4096 ];
+
+    rc = KDirectoryResolvePath ( wd, true,
+                                  idxpath, sizeof idxpath, "%s", path );
+    if ( rc == 0 )
+    {
+        KIndex *idx;
+        switch ( ptype = KDBPathType ( wd, NULL, idxpath ) )
+        {
+        case kptNotFound:
+            /* first good path */
+            break;
+
+        case kptBadPath:
+            return RC ( rcDB, rcMgr, rcCreating, rcPath, rcInvalid );
+
+        case kptIndex:
+        case kptIndex | kptAlias:
+            /* found so is not good if we want to create new and not
+             * clear/init or open old
+             */
+            if ((cmode & kcmValueMask) == kcmCreate)
+                return RC ( rcDB, rcMgr, rcCreating, rcIndex, rcExists );
+            if (KDBManagerOpenObjectBusy (self, idxpath))
+                return RC ( rcDB, rcMgr, rcCreating, rcIndex, rcBusy );
+
+            /* test now for locked file */
+            rc = KDBWritable ( wd, idxpath );
+            if (rc)
+            {
+                switch (GetRCState(rc))
+                {
+                default:
+                    return rc;
+                case rcLocked:
+                    return RC ( rcDB, rcMgr, rcCreating, rcDatabase, rcLocked );
+                case rcReadonly:
+                    return RC ( rcDB, rcMgr, rcCreating, rcDatabase, rcReadonly );
+                case rcNotFound:
+                    /* not found is good but probably unreachable */
+                    break;
+                case 0:
+                    rc = 0;
+                    break;
+                }
+            }
+            /* second good path */
+            break;
+
+        case kptTable:
+        case kptTable | kptAlias:
+            return RC (rcDB, rcMgr, rcCreating, rcTable, rcExists);
+
+        case kptColumn:
+        case kptColumn | kptAlias:
+            return RC (rcDB, rcMgr, rcCreating, rcColumn, rcExists);
+
+        case kptDatabase:
+        case kptDatabase | kptAlias:
+            return RC (rcDB, rcMgr, rcCreating, rcDatabase, rcExists);
+
+        case kptMetadata:
+        case kptMetadata | kptAlias:
+            return RC (rcDB, rcMgr, rcCreating, rcMetadata, rcExists);
+
+        default:
+            return RC ( rcDB, rcMgr, rcCreating, rcPath, rcIncorrect );
+        }
+
+        rc = KIndexCreate ( & idx, wd, type, cmode, path, ptype );
+        if ( rc == 0 )
+        {
+            rc = KDBManagerInsertIndex (self, idx);
+            if ( rc == 0 )
+            {
+                idx -> use_md5 = use_md5;
+                * idxp = idx;
+                return 0;
+            }
+
+            KIndexRelease ( idx );
+        }
+    }
+    return rc;
+}
+
+/* OpenIndexUpdate
+ * VOpenIndexUpdate
+ *  open an index for read/write
+ *
+ *  "idx" [ OUT ] - return parameter for newly opened index
+ *
+ *  "name" [ IN ] - NUL terminated string in UTF-8 giving simple name of idx
+ */
+rc_t KDBManagerOpenIndexUpdate ( KDBManager *self,
+    KIndex **idxp, KDirectory *wd, const char *path )
+{
+    char idxpath [ 4096 ];
+    rc_t rc = KDirectoryResolvePath ( wd, true,
+                                      idxpath, sizeof idxpath, "%s", path );
+    if ( rc == 0 )
+    {
+        KSymbol * sym;
+        KIndex *idx;
+
+        sym =  KDBManagerOpenObjectFind (self, idxpath);
+        if (sym != NULL)
+        {
+            rc_t obj;
+            switch (sym->type)
+            {
+            default:
+                obj = rcPath;
+                break;
+            case kptDatabase:
+                obj = rcDatabase;
+                break;
+            case kptTable:
+                obj = rcTable;
+                break;
+            case kptColumn:
+                obj = rcColumn;
+                break;
+            case kptIndex:
+                obj = rcIndex;
+                break;
+            case kptMetadata:
+                obj = rcMetadata;
+                break;
+            }
+            return RC ( rcDB, rcMgr, rcOpening, obj, rcBusy );
+        }
+        /* only open existing indices
+         * this seems wrong but its because the KDBPathType seems wrong
+         */
+        switch ( KDirectoryPathType ( wd, "%s", idxpath ) )
+        {
+        case kptNotFound:
+            return RC ( rcDB, rcMgr, rcOpening, rcIndex, rcNotFound );
+        case kptBadPath:
+            return RC ( rcDB, rcMgr, rcOpening, rcPath, rcInvalid );
+        case kptFile:
+        case kptFile | kptAlias:
+            break;
+        default:
+            return RC ( rcDB, rcMgr, rcOpening, rcPath, rcIncorrect );
+        }
+
+        rc = KIndexMakeUpdate ( & idx, wd, path );
+        if ( rc == 0 )
+        {
+            rc = KDBManagerInsertIndex (self, idx);
+            if ( rc == 0 )
+            {
+                * idxp = idx;
+                return 0;
+            }
+
+            KIndexRelease ( idx );
+        }
+    }
     return rc;
 }

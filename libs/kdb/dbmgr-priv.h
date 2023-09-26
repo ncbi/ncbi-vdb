@@ -58,6 +58,7 @@ struct KRWLock;
 struct KSymbol;
 struct KDirectory;
 struct VFSManager;
+struct KIndex;
 
 /*--------------------------------------------------------------------------
  * KDBManager
@@ -125,7 +126,6 @@ rc_t KDBManagerOpenObjectAdd ( KDBManager *self, struct KSymbol *obj );
  *   remove this symbol in the list of open objects
  */
 rc_t KDBManagerOpenObjectDelete ( KDBManager *self, struct KSymbol *obj );
-
 
 #ifdef __cplusplus
 }

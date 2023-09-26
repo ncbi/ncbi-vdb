@@ -217,3 +217,18 @@ LIB_EXPORT rc_t CC KDatabaseOpenMetadataRead ( const KDatabase *self, const KMet
 {
     DISPATCH( openMetadataRead ( self, metap ) );
 }
+LIB_EXPORT rc_t CC KDatabaseVOpenIndexRead ( const KDatabase *self, const struct KIndex **idxp, const char *name, va_list args )
+{
+    DISPATCH( vOpenIndexRead ( self, idxp, name, args ) );
+}
+LIB_EXPORT rc_t CC KDatabaseOpenIndexRead ( struct KDatabase const *self, const struct KIndex **idx, const char *name, ... )
+{
+    rc_t rc = 0;
+    va_list args;
+
+    va_start ( args, name );
+    rc = KDatabaseVOpenIndexRead ( self, idx, name, args );
+    va_end ( args );
+
+    return rc;
+}

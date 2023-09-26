@@ -39,6 +39,7 @@
 #include <kdb/kdb-priv.h>
 #include <kdb/table.h>
 #include <kdb/meta.h>
+#include <kdb/index.h>
 
 using namespace std;
 
@@ -169,7 +170,47 @@ FIXTURE_TEST_CASE(KWDatabase_OpenMetadataRead, KDatabase_Fixture)
     REQUIRE_EQ( rc, KDatabaseOpenMetadataRead( m_db, & meta ) );
 }
 
+FIXTURE_TEST_CASE(KWDatabase_OpenIndexRead, KDatabase_Fixture)
+{
+    Setup( GetName() );
+    const KIndex * idx = nullptr;
+    rc_t rc = SILENT_RC( rcDB,rcMgr,rcOpening,rcIndex,rcNotFound );
+    REQUIRE_EQ( rc, KDatabaseOpenIndexRead( m_db, & idx, "%s", "qq" ) );
+}
+
 //TODO: non-virtual write-side only methods
+
+FIXTURE_TEST_CASE(KWDatabase_CreateIndex, KDatabase_Fixture)
+{
+    KDirectoryRemove(m_dir, true, (ScratchDir + GetName()).c_str() );
+    REQUIRE_RC(KDBManagerCreateDB(m_mgr, &m_db, kcmCreate, (ScratchDir + GetName()).c_str() ));
+
+    {
+        KIndex *idx;
+        REQUIRE_RC(KDatabaseCreateIndex(m_db, &idx, kitText, kcmCreate, "index"));
+
+        REQUIRE_RC(KIndexInsertText(idx, true, "a", 1));
+    //    REQUIRE_RC(KIndexInsertText(idx, true, "b", 2)); causes "offset not supported" error fron klib/pack
+    //    REQUIRE_RC(KIndexInsertText(idx, true, "c", 3));
+
+        REQUIRE_RC(KIndexCommit ( idx ));
+
+        KIndexRelease(idx);
+    }
+
+    // re-open, validate
+    {
+        const KIndex *idx;
+        REQUIRE_RC( KDatabaseOpenIndexRead ( m_db, &idx, "index" ) );
+        int64_t start_id = 0;
+        uint64_t id_count = 0;
+        REQUIRE_RC( KIndexFindText ( idx, "a", &start_id, &id_count, nullptr, nullptr ) );
+        REQUIRE_EQ( (int64_t)1, start_id );
+        REQUIRE_EQ( (uint64_t)1, id_count );
+        KIndexRelease(idx);
+    }
+
+}
 
 //////////////////////////////////////////// Main
 extern "C"

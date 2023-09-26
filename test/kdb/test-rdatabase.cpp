@@ -39,6 +39,7 @@
 #include <kdb/kdb-priv.h>
 #include <kdb/table.h>
 #include <kdb/meta.h>
+#include <kdb/index.h>
 
 
 using namespace std;
@@ -167,6 +168,14 @@ FIXTURE_TEST_CASE(KRDatabase_OpenMetadataRead, KDatabase_Fixture)
     const KMetadata * meta = nullptr;
     rc_t rc = SILENT_RC( rcDB,rcMgr,rcOpening,rcMetadata,rcNotFound );
     REQUIRE_EQ( rc, KDatabaseOpenMetadataRead( m_db, & meta ) );
+}
+
+FIXTURE_TEST_CASE(KRDatabase_OpenIndexRead, KDatabase_Fixture)
+{
+    Setup( GetName() );
+    const KIndex * idx = nullptr;
+    rc_t rc = SILENT_RC( rcDB,rcMgr,rcOpening,rcIndex,rcNotFound );
+    REQUIRE_EQ( rc, KDatabaseOpenIndexRead( m_db, & idx, "%s", "qq" ) );
 }
 
 //////////////////////////////////////////// Main

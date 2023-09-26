@@ -44,6 +44,8 @@ using namespace std;
 
 TEST_SUITE(KdbTestSuite);
 
+static const string ScratchDir = "./data/";
+
 #define KDB_MANAGER_MAKE(m_mgr, m_wd) KDBManagerMakeUpdate((KDBManager **)m_mgr, (struct KDirectory *)m_wd)
 #include "remote_open_test.cpp"
 
@@ -81,9 +83,9 @@ public:
 
 FIXTURE_TEST_CASE ( MissingRows, WKDB_Fixture )
 {   // VDB-177
-    KDirectoryRemove(m_wd, true, GetName());
+    KDirectoryRemove(m_wd, true, (ScratchDir + GetName()).c_str() );
     KDatabase* db;
-    REQUIRE_RC(KDBManagerCreateDB(m_mgr, &db, kcmCreate, GetName()));
+    REQUIRE_RC(KDBManagerCreateDB(m_mgr, &db, kcmCreate, (ScratchDir + GetName()).c_str() ));
 
     KIndex *idx;
     REQUIRE_RC(KDatabaseCreateIndex(db, &idx, kitText, kcmCreate, "index"));
@@ -107,12 +109,11 @@ FIXTURE_TEST_CASE ( MissingRows, WKDB_Fixture )
     KIndexRelease(idx);
 
     REQUIRE_RC(KDatabaseRelease(db));
-    KDirectoryRemove(m_wd, true, GetName());
 }
 
-FIXTURE_TEST_CASE ( ColumnMetadataWKDB_Fixture, WKDB_Fixture )
+FIXTURE_TEST_CASE ( ColumnMetadata, WKDB_Fixture )
 {
-    KDirectoryRemove(m_wd, true, GetName());
+    KDirectoryRemove(m_wd, true, (ScratchDir + GetName()).c_str());
 
     const char* TableName = "tbl";
     const char* ColumnName = "col";
@@ -121,10 +122,10 @@ FIXTURE_TEST_CASE ( ColumnMetadataWKDB_Fixture, WKDB_Fixture )
 
     {
         KDatabase* db;
-        REQUIRE_RC(KDBManagerCreateDB(m_mgr, &db, kcmCreate, GetName()));
+        REQUIRE_RC(KDBManagerCreateDB(m_mgr, &db, kcmCreate, (ScratchDir + GetName()).c_str()));
 
         KTable* tbl;
-        REQUIRE_RC ( KDBManagerCreateTable ( m_mgr, & tbl, kcmInit + kcmMD5, TableName ) );
+        REQUIRE_RC ( KDBManagerCreateTable ( m_mgr, & tbl, kcmInit + kcmMD5, (ScratchDir + TableName).c_str() ) );
 
         KColumn* col;
         REQUIRE_RC ( KTableCreateColumn ( tbl, & col, kcmInit, kcmMD5, 0, ColumnName ) );
@@ -150,10 +151,10 @@ FIXTURE_TEST_CASE ( ColumnMetadataWKDB_Fixture, WKDB_Fixture )
     }
     {   // reopen, verify
         KDatabase* db;
-        REQUIRE_RC ( KDBManagerOpenDBUpdate ( m_mgr, &db, GetName() ) );
+        REQUIRE_RC ( KDBManagerOpenDBUpdate ( m_mgr, &db, (ScratchDir + GetName()).c_str() ) );
 
         const KTable* tbl;
-        REQUIRE_RC ( KDBManagerOpenTableRead ( m_mgr, & tbl, TableName ) );
+        REQUIRE_RC ( KDBManagerOpenTableRead ( m_mgr, & tbl, (ScratchDir + TableName).c_str() ) );
 
         const KColumn* col;
         REQUIRE_RC ( KTableOpenColumnRead ( tbl, & col, ColumnName ) );
@@ -164,9 +165,6 @@ FIXTURE_TEST_CASE ( ColumnMetadataWKDB_Fixture, WKDB_Fixture )
         REQUIRE_RC ( KTableRelease ( tbl ) );
         REQUIRE_RC ( KDatabaseRelease ( db ) );
     }
-
-    KDirectoryRemove(m_wd, true, TableName);
-    KDirectoryRemove(m_wd, true, GetName());
 }
 
 

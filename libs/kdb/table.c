@@ -32,10 +32,12 @@
 #include "database-priv.h"
 #include "kdb-priv.h"
 #include "column-priv.h"
+#include "index-priv.h"
 #include "rmeta.h"
 #undef KONST
 
 #include <kdb/extern.h>
+#include <kdb/index.h>
 
 #include <klib/debug.h> /* DBGMSG */
 #include <klib/log.h>
@@ -612,6 +614,68 @@ LIB_EXPORT rc_t CC KTableMetaCompare( const KTable *self, const KTable *other,
                 KMetadataRelease( other_meta );
             }
             KMetadataRelease( self_meta );
+        }
+    }
+    return rc;
+}
+
+
+LIB_EXPORT rc_t CC KTableOpenIndexRead ( struct KTable const *self,
+    const KIndex **idx, const char *name, ... )
+{
+    rc_t rc = 0;
+    va_list args;
+
+    va_start ( args, name );
+    rc = KTableVOpenIndexRead ( self, idx, name, args );
+    va_end ( args );
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KTableVOpenIndexRead ( const KTable *self,
+    const KIndex **idxp, const char *name, va_list args )
+{
+    rc_t rc = 0;
+    char path [ 256 ];
+
+    if ( idxp == NULL )
+        return RC ( rcDB, rcTable, rcOpening, rcParam, rcNull );
+
+    * idxp = NULL;
+
+    if ( self == NULL )
+        return RC ( rcDB, rcTable, rcOpening, rcSelf, rcNull );
+
+    if ( self -> prerelease )
+    {
+        int len = 0;
+        /* VDB-4386: cannot treat va_list as a pointer! */
+        /*if ( args == 0 )
+            len = snprintf ( path, sizeof path, "%s", name );
+        else*/
+        if ( name != NULL )
+            len = vsnprintf ( path, sizeof path, name, args );
+        else
+            path[0] = '\0';
+        if ( len < 0 || ( size_t ) len >= sizeof path )
+            return RC ( rcDB, rcTable, rcOpening, rcPath, rcExcessive );
+    }
+    else
+    {
+        rc = KDBVMakeSubPath ( self -> dir,
+            path, sizeof path, "idx", 3, name, args );
+    }
+
+    if ( rc == 0 )
+    {
+        KIndex *idx;
+        rc = KDBManagerOpenIndexReadInt ( self -> mgr,
+            & idx, self -> dir, path );
+        if ( rc == 0 )
+        {
+            idx -> tbl = KTableAttach ( self );
+            * idxp = idx;
         }
     }
     return rc;

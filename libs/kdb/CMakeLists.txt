@@ -34,6 +34,7 @@ set( KDB_CMN
     manager-base
     meta-base
     metanode-base
+    index-base
 )
 
 set( KDB_SRC

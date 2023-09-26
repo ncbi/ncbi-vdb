@@ -48,6 +48,7 @@
 #include "kdbfmt-priv.h"
 #include "table-priv.h"
 #include "column-priv.h"
+#include "index-priv.h"
 #include "rdbmgr.h"
 #include "rmeta.h"
 
@@ -887,6 +888,48 @@ rc_t KDBManagerOpenMetadataReadInt ( const KDBManager *self, KMetadata **metap, 
         {
             meta -> mgr = KDBManagerAttach ( self );
             * metap = meta;
+            return 0;
+        }
+    }
+
+    return rc;
+}
+
+/* OpenIndexRead
+ * VOpenIndexRead
+ *  open an index for read
+ *
+ *  "idx" [ OUT ] - return parameter for newly opened index
+ *
+ *  "name" [ IN ] - NUL terminated string in UTF-8 giving simple name of idx
+ */
+rc_t KDBManagerOpenIndexReadInt ( const KDBManager *self, KIndex **idxp, const KDirectory *wd, const char *path )
+{
+    char idxpath [ 4096 ];
+    rc_t rc = KDirectoryResolvePath ( wd, true,
+                                      idxpath, sizeof idxpath, "%s", path );
+    if ( rc == 0 )
+    {
+        KIndex *idx;
+
+        switch ( KDirectoryPathType ( wd, "%s", idxpath ) )
+        {
+        case kptNotFound:
+            return RC ( rcDB, rcMgr, rcOpening, rcIndex, rcNotFound );
+        case kptBadPath:
+            return RC ( rcDB, rcMgr, rcOpening, rcPath, rcInvalid );
+        case kptFile:
+        case kptFile | kptAlias:
+            break;
+        default:
+            return RC ( rcDB, rcMgr, rcOpening, rcPath, rcIncorrect );
+        }
+
+        rc = KIndexMakeRead ( & idx, wd, idxpath );
+        if ( rc == 0 )
+        {
+            idx -> mgr = KDBManagerAttach ( self );
+            * idxp = idx;
             return 0;
         }
     }

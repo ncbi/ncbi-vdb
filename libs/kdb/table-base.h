@@ -46,6 +46,7 @@ struct KDBManager;
 struct KDatabase;
 struct KColumn;
 struct KMetadata;
+struct KIndex;
 
 /*--------------------------------------------------------------------------
  * KTableBase, base structure for KTable implementations
@@ -69,6 +70,10 @@ struct KTableBase_vt
     rc_t ( CC * openDirectoryRead ) ( const KTABLE_IMPL * self, const KDirectory **dir );
     rc_t ( CC * vOpenColumnRead )   ( const KTABLE_IMPL * self, const struct KColumn **colp, const char *name, va_list args );
     rc_t ( CC * openMetadataRead )  ( const KTABLE_IMPL * self, const struct KMetadata **meta );
+    rc_t ( CC * vOpenIndexRead )    ( const KTABLE_IMPL * self, const struct KIndex **idxp, const char *name, va_list args );
+};
+// KDB_EXTERN rc_t CC KTableOpenIndexRead ( struct KTable const *self, const KIndex **idx, const char *name, ... );
+// KDB_EXTERN rc_t CC KTableVOpenIndexRead ( struct KTable const *self, const KIndex **idx, const char *name, va_list args );
 
 //TODO: write-side only; decide how to handle
 #if 0
@@ -107,10 +112,12 @@ KDB_EXTERN rc_t CC KTableOpenManagerUpdate ( KTABLE_IMPL *self, struct KDBManage
 
 KDB_EXTERN rc_t CC KTableOpenParentUpdate ( KTABLE_IMPL *self, struct KDatabase **db );
 
+KDB_EXTERN rc_t CC KTableCreateIndex ( struct KTable *self, KIndex **idx, KIdxType type, KCreateMode cmode, const char *name, ... );
+KDB_EXTERN rc_t CC KTableVCreateIndex ( struct KTable *self, KIndex **idx, KIdxType type, KCreateMode cmode, const char *name, va_list args );
+KDB_EXTERN rc_t CC KTableOpenIndexUpdate ( struct KTable *self, KIndex **idx, const char *name, ... );
+KDB_EXTERN rc_t CC KTableVOpenIndexUpdate ( struct KTable *self, KIndex **idx, const char *name, va_list args );
+
 #endif
-
-
-};
 
 // default implelentations where exist
 extern rc_t KTableBaseWhack ( KTABLE_IMPL *self );

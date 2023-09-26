@@ -31,12 +31,14 @@
 #include <kfs/md5.h>
 #include <kdb/database.h>
 #include <kdb/meta.h>
+#include <kdb/index.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 struct KTable;
+struct KIndex;
 
 rc_t KDBManagerVOpenDBReadInt_noargs ( const KDBManager *cself,
     const KDatabase **dbp, KDirectory *wd,
@@ -81,6 +83,14 @@ rc_t KDBManagerOpenMetadataReadInt ( KDBManager *self, const KMetadata **metap, 
 rc_t KDBManagerOpenMetadataUpdateInt ( KDBManager *self, KMetadata **metap, KDirectory *wd, KMD5SumFmt * md5 );
 
 rc_t KDBManagerInsertMetadata ( KDBManager * self, KMetadata * meta );
+
+rc_t KDBManagerOpenIndexReadInt ( KDBManager *self,const struct KIndex **idxp, const KDirectory *wd, const char *path );
+
+rc_t KDBManagerCreateIndexInt ( KDBManager *self, KIndex **idxp, KDirectory *wd, KIdxType type, KCreateMode cmode, const char *path, bool use_md5 );
+
+rc_t KDBManagerInsertIndex ( KDBManager * self, struct KIndex * idx);
+
+rc_t KDBManagerOpenIndexUpdate ( KDBManager *self, KIndex **idxp, KDirectory *wd, const char *path );
 
 #ifdef __cplusplus
 }

@@ -27,6 +27,8 @@
 #define TRACK_REFERENCES 0
 
 #include <kdb/extern.h>
+#include <kdb/index.h>
+
 #include "database-priv.h"
 #include "wdbmgr.h"
 #include "wtable-priv.h"
@@ -1185,3 +1187,159 @@ LIB_EXPORT rc_t CC KTableOpenMetadataUpdate ( KTable *self, KMetadata **metap )
     return rc;
 }
 
+LIB_EXPORT rc_t CC KTableOpenIndexRead ( struct KTable const *self,
+    const KIndex **idx, const char *name, ... )
+{
+    rc_t rc = 0;
+    va_list args;
+
+    va_start ( args, name );
+    rc = KTableVOpenIndexRead ( self, idx, name, args );
+    va_end ( args );
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KTableVOpenIndexRead ( const KTable *self,
+    const KIndex **idxp, const char *name, va_list args )
+{
+    rc_t rc = 0;
+    char path [ 256 ];
+
+    const char *ns = "idx";
+    uint32_t ns_size = 3;
+
+    if ( idxp == NULL )
+        return RC ( rcDB, rcTable, rcOpening, rcParam, rcNull );
+
+    * idxp = NULL;
+
+    if ( self == NULL )
+        return RC ( rcDB, rcTable, rcOpening, rcSelf, rcNull );
+
+    if ( self -> prerelease )
+    {
+        ns = "";
+        ns_size = 0;
+    }
+
+    rc = KDBVMakeSubPath ( self -> dir,
+        path, sizeof path, ns, ns_size, name, args );
+    if ( rc == 0 )
+    {
+        KIndex *idx;
+        rc = KDBManagerOpenIndexReadInt ( self -> mgr, (const KIndex**)& idx,
+                                          self -> dir, path );
+        if ( rc == 0 )
+        {
+            if (idx->tbl != self)
+                idx -> tbl = KTableAttach ( self );
+            * idxp = idx;
+        }
+    }
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KTableCreateIndex ( struct KTable *self, KIndex **idx,
+    KIdxType type, KCreateMode cmode, const char *name, ... )
+{
+    rc_t rc = 0;
+    va_list args;
+
+    va_start ( args, name );
+    rc = KTableVCreateIndex ( self, idx, type, cmode, name, args );
+    va_end ( args );
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KTableVCreateIndex ( KTable *self, KIndex **idxp,
+    KIdxType type, KCreateMode cmode, const char *name, va_list args )
+{
+    rc_t rc = 0;
+    KDirectory *dir;
+
+    if ( idxp == NULL )
+        return RC ( rcDB, rcTable, rcCreating, rcParam, rcNull );
+
+    * idxp = NULL;
+
+    if ( self == NULL )
+        return RC ( rcDB, rcTable, rcCreating, rcSelf, rcNull );
+
+    if ( self -> read_only )
+        return RC ( rcDB, rcTable, rcCreating, rcTable, rcReadonly );
+
+    rc = KDirectoryCreateDir_v1 ( self -> dir, 0777, kcmOpen, "idx" );
+    if ( rc == 0 )
+        rc = KDirectoryOpenDirUpdate_v1 ( self -> dir, & dir, false, "idx" );
+    if ( rc == 0 )
+    {
+        char path [ 256 ];
+        rc = KDirectoryVResolvePath ( dir, false, path, sizeof path, name, args );
+        if ( rc == 0 )
+        {
+            rc = KDBManagerCreateIndexInt ( self -> mgr, idxp, dir,
+                type, cmode | kcmParents, path, self -> use_md5 );
+            if ( rc == 0 )
+            {
+                KIndex *idx = * idxp;
+                idx -> tbl = KTableAttach ( self );
+            }
+        }
+
+        KDirectoryRelease ( dir );
+    }
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KTableOpenIndexUpdate ( struct KTable *self,
+    KIndex **idx, const char *name, ... )
+{
+    rc_t rc = 0;
+    va_list args;
+
+    va_start ( args, name );
+    rc = KTableVOpenIndexUpdate ( self, idx, name, args );
+    va_end ( args );
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KTableVOpenIndexUpdate ( KTable *self,
+    KIndex **idxp, const char *name, va_list args )
+{
+    rc_t rc = 0;
+    KDirectory *dir;
+
+    if ( idxp == NULL )
+        return RC ( rcDB, rcTable, rcOpening, rcParam, rcNull );
+
+    * idxp = NULL;
+
+    if ( self == NULL )
+        return RC ( rcDB, rcTable, rcOpening, rcSelf, rcNull );
+
+    if ( self -> read_only )
+        return RC ( rcDB, rcTable, rcOpening, rcTable, rcReadonly );
+
+    rc = KDirectoryOpenDirUpdate_v1 ( self -> dir, & dir, false, "idx" );
+    if ( rc == 0 )
+    {
+        char path [ 256 ];
+        rc = KDirectoryVResolvePath ( dir, false, path, sizeof path, name, args );
+        if ( rc == 0 )
+        {
+            rc = KDBManagerOpenIndexUpdate ( self -> mgr, idxp, dir, path );
+            if ( rc == 0 )
+            {
+                KIndex *idx = * idxp;
+                idx -> tbl = KTableAttach ( self );
+            }
+        }
+
+        KDirectoryRelease ( dir );
+    }
+    return rc;
+}

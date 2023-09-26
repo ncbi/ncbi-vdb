@@ -50,6 +50,9 @@ rc_t KDBManagerVOpenColumnReadInt_noargs ( const KDBManager *self,
 rc_t KDBManagerOpenMetadataReadInt ( const KDBManager *self, KMetadata **metap,
     const KDirectory *wd, uint32_t rev, bool prerelease );
 
+rc_t KDBManagerOpenIndexReadInt ( const KDBManager *self, struct KIndex **idxp, const KDirectory *wd, const char *path );
+
+
 #ifdef __cplusplus
 }
 #endif

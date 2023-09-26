@@ -70,6 +70,7 @@ static rc_t CC KWDatabaseOpenDirectoryRead ( const KDatabase *self, const KDirec
 static rc_t CC KWDatabaseVOpenDBRead ( const KDatabase *self, const KDatabase **dbp, const char *name, va_list args );
 static rc_t CC KWDatabaseVOpenTableRead ( const KDatabase *self, const KTable **tblp, const char *name, va_list args );
 static rc_t CC KWDatabaseOpenMetadataRead ( const KDatabase *self, const KMetadata **metap );
+static rc_t CC KWDatabaseVOpenIndexRead ( const KDatabase *cself, const KIndex **idxp, const char *name, va_list args );
 
 static KDatabase_vt KRDatabase_vt =
 {
@@ -85,7 +86,8 @@ static KDatabase_vt KRDatabase_vt =
     KWDatabaseOpenDirectoryRead,
     KWDatabaseVOpenDBRead,
     KWDatabaseVOpenTableRead,
-    KWDatabaseOpenMetadataRead
+    KWDatabaseOpenMetadataRead,
+    KWDatabaseVOpenIndexRead
 };
 
 
@@ -1273,6 +1275,142 @@ KWDatabaseOpenMetadataRead ( const KDatabase *self, const KMetadata **metap )
         * metap = meta;
     }
 
+    return rc;
+}
+
+static
+rc_t CC
+KWDatabaseVOpenIndexRead ( const KDatabase *cself, const KIndex **idxp, const char *name, va_list args )
+{
+    rc_t rc = 0;
+    char path [ 256 ];
+
+    if ( idxp == NULL )
+        return RC ( rcDB, rcDatabase, rcOpening, rcParam, rcNull );
+
+    * idxp = NULL;
+
+    if ( cself == NULL )
+        return RC ( rcDB, rcDatabase, rcOpening, rcSelf, rcNull );
+
+    rc = KDBVMakeSubPath ( cself -> dir,
+        path, sizeof path, "idx", 3, name, args );
+    if ( rc == 0 )
+    {
+        KIndex *idx;
+        rc = KDBManagerOpenIndexReadInt ( cself -> mgr, (const KIndex **)& idx,
+                                          cself -> dir, path );
+        if ( rc == 0 )
+        {
+            KDatabase *self = ( KDatabase* ) cself;
+            idx -> db = KDatabaseAttach ( self );
+            * idxp = idx;
+        }
+    }
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KDatabaseCreateIndex ( struct KDatabase *self, KIndex **idx,
+    KIdxType type, KCreateMode cmode, const char *name, ... )
+{
+    rc_t rc = 0;
+    va_list args;
+
+    va_start ( args, name );
+    rc = KDatabaseVCreateIndex ( self, idx, type, cmode, name, args );
+    va_end ( args );
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KDatabaseVCreateIndex ( KDatabase *self, KIndex **idxp,
+    KIdxType type, KCreateMode cmode, const char *name, va_list args )
+{
+    rc_t rc = 0;
+    KDirectory *dir = NULL;
+
+    if ( idxp == NULL )
+        return RC ( rcDB, rcDatabase, rcCreating, rcParam, rcNull );
+
+    * idxp = NULL;
+
+    if ( self == NULL )
+        return RC ( rcDB, rcDatabase, rcCreating, rcSelf, rcNull );
+
+    if ( self -> read_only )
+        return RC ( rcDB, rcDatabase, rcCreating, rcDatabase, rcReadonly );
+
+    rc = KDirectoryCreateDir_v1 ( self -> dir, 0777, kcmOpen, "idx" );
+    if ( rc == 0 )
+        rc = KDirectoryOpenDirUpdate_v1 ( self -> dir, & dir, false, "idx" );
+    if ( rc == 0 )
+    {
+        char path [ 256 ];
+        rc = KDirectoryVResolvePath ( dir, false, path, sizeof path, name, args );
+        if ( rc == 0 )
+        {
+            rc = KDBManagerCreateIndexInt ( self -> mgr, idxp, dir,
+                type, cmode | kcmParents, path, (self -> cmode & kcmMD5) != 0 );
+            if ( rc == 0 )
+            {
+                KIndex *idx = * idxp;
+                idx -> db = KDatabaseAttach ( self );
+            }
+        }
+
+        KDirectoryRelease ( dir );
+    }
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KDatabaseOpenIndexUpdate ( struct KDatabase *self,
+    KIndex **idx, const char *name, ... )
+{
+    rc_t rc = 0;
+    va_list args;
+
+    va_start ( args, name );
+    rc = KDatabaseVOpenIndexUpdate ( self, idx, name, args );
+    va_end ( args );
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KDatabaseVOpenIndexUpdate ( KDatabase *self,
+    KIndex **idxp, const char *name, va_list args )
+{
+    rc_t rc = 0;
+    KDirectory *dir;
+
+    if ( idxp == NULL )
+        return RC ( rcDB, rcDatabase, rcOpening, rcParam, rcNull );
+
+    * idxp = NULL;
+
+    if ( self == NULL )
+        return RC ( rcDB, rcDatabase, rcOpening, rcSelf, rcNull );
+
+    if ( self -> read_only )
+        return RC ( rcDB, rcDatabase, rcOpening, rcDatabase, rcReadonly );
+
+    rc = KDirectoryOpenDirUpdate_v1 ( self -> dir, & dir, false, "idx" );
+    if ( rc == 0 )
+    {
+        char path [ 256 ];
+        rc = KDirectoryVResolvePath ( dir, false, path, sizeof path, name, args );
+        if ( rc == 0 )
+        {
+            rc = KDBManagerOpenIndexUpdate ( self -> mgr, idxp, dir, path );
+            if ( rc == 0 )
+            {
+                KIndex *idx = * idxp;
+                idx -> db = KDatabaseAttach ( self );
+            }
+        }
+
+        KDirectoryRelease ( dir );
+    }
     return rc;
 }
 

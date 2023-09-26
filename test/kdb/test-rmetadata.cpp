@@ -76,11 +76,11 @@ public:
 FIXTURE_TEST_CASE(KRMetadata_AddRelease, KMetadata_Fixture)
 {
     Open( "testdb/tbl/SEQUENCE" );
-//    REQUIRE_EQ( 1, (int)atomic32_read( & m_meta -> dad . refcount ) );
+    REQUIRE_EQ( 1, (int)atomic32_read( & m_meta -> dad . refcount ) );
     REQUIRE_RC( KMetadataAddRef( m_meta ) );
-//    REQUIRE_EQ( 2, (int)atomic32_read( & m_meta -> dad . refcount ) );
+    REQUIRE_EQ( 2, (int)atomic32_read( & m_meta -> dad . refcount ) );
     REQUIRE_RC( KMetadataRelease( m_meta ) );
-//    REQUIRE_EQ( 1, (int)atomic32_read( & m_meta -> dad . refcount ) );
+    REQUIRE_EQ( 1, (int)atomic32_read( & m_meta -> dad . refcount ) );
     // use valgrind to find any leaks
 }
 

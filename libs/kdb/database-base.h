@@ -48,6 +48,7 @@ extern "C" {
 struct KDBManager;
 struct KTable;
 struct KMetadata;
+struct KIndex;
 
 /*--------------------------------------------------------------------------
  * KDatabaseBase
@@ -72,6 +73,7 @@ struct KDatabase_vt
     rc_t ( CC * vOpenDBRead )       ( const KDATABASE_IMPL *self, const struct KDatabase **db, const char *name, va_list args );
     rc_t ( CC * vOpenTableRead )    ( const KDATABASE_IMPL *self, const struct KTable **tblp, const char *name, va_list args )    ;
     rc_t ( CC * openMetadataRead )  ( struct KDATABASE_IMPL const *self, const struct KMetadata **meta );
+    rc_t ( CC * vOpenIndexRead )    ( struct KDATABASE_IMPL const *self, const struct KIndex **idx, const char *name, va_list args );
 };
 
 struct KDatabaseBase
@@ -134,6 +136,11 @@ rc_t KDatabaseSever ( const KDATABASE_IMPL *self );
 // KDB_EXTERN rc_t CC KDatabaseMetaCopy ( KDATABASE_IMPL *self, const KDatabase *src,
 //                                        const char * node_path, const char * tbl_name,
 //                                        bool src_node_has_to_exist );
+
+// KDB_EXTERN rc_t CC KDatabaseCreateIndex ( struct KDatabase *self, KIndex **idx, KIdxType type, KCreateMode cmode, const char *name, ... );
+// KDB_EXTERN rc_t CC KDatabaseVCreateIndex ( struct KDatabase *self, KIndex **idx, KIdxType type, KCreateMode cmode, const char *name, va_list args );
+// KDB_EXTERN rc_t CC KDatabaseOpenIndexUpdate ( struct KDatabase *self, KIndex **idx, const char *name, ... );
+// KDB_EXTERN rc_t CC KDatabaseVOpenIndexUpdate ( struct KDatabase *self, KIndex **idx, const char *name, va_list args );
 
 #ifdef __cplusplus
 }
