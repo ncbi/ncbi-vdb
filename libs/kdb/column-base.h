@@ -41,6 +41,7 @@ extern "C" {
 struct KDBManager;
 struct KTable;
 struct KMetadata;
+struct KColumnBlob;
 
 /*--------------------------------------------------------------------------
  * KColumnBase, base structure for KColumn implementations
@@ -62,6 +63,7 @@ struct KColumnBase_vt
     rc_t ( CC * openManagerRead )   ( const KCOLUMN_IMPL * self, struct KDBManager const ** mgr );
     rc_t ( CC * openParentRead )    ( const KCOLUMN_IMPL * self, struct KTable const ** tbl );
     rc_t ( CC * openMetadataRead )  ( const KCOLUMN_IMPL * self, const struct KMetadata ** meta );
+    rc_t ( CC * openBlobRead )      ( const KCOLUMN_IMPL * self, const struct KColumnBlob **blobp, int64_t id );
 
     // //TODO: write-side only; decide how to handle
     // rc_t ( CC * reindex )           ( KCOLUMN_IMPL *self );
@@ -70,6 +72,7 @@ struct KColumnBase_vt
     // rc_t ( CC * openManagerUpdate ) ( KCOLUMN_IMPL *self, struct KDBManager **mgr );
     // rc_t ( CC * openParentUpdate )  ( KCOLUMN_IMPL *self, struct KTable **tbl );
 };
+//LIB_EXPORT rc_t CC KColumnOpenBlobRead ( const KColumn *self, const KColumnBlob **blobp, int64_t id )
 
 // default implelentations where exist
 extern rc_t KColumnBaseWhack ( KCOLUMN_IMPL *self );

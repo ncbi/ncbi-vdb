@@ -60,20 +60,24 @@ typedef struct KDatabase_vt KDatabase_vt;
 struct KDatabase_vt
 {
     /* Public API */
-    rc_t ( CC * whack )             ( KDATABASE_IMPL *self );
-    rc_t ( CC * addRef )            ( const KDATABASE_IMPL *self );
-    rc_t ( CC * release )           ( const KDATABASE_IMPL *self );
-    bool ( CC * locked )            ( const KDATABASE_IMPL *self );
-    bool ( CC * vExists )           ( const KDATABASE_IMPL *self, uint32_t type, const char *name, va_list args );
-    bool ( CC * isAlias )           ( const KDATABASE_IMPL *self, uint32_t type, char *resolved, size_t rsize, const char *name );
-    rc_t ( CC * vWritable )         ( const KDATABASE_IMPL *self, uint32_t type, const char *name, va_list args );
-    rc_t ( CC * openManagerRead )   ( const KDATABASE_IMPL *self, struct KDBManager const **mgr );
-    rc_t ( CC * openParentRead )    ( const KDATABASE_IMPL *self, const struct KDatabase **par );
-    rc_t ( CC * openDirectoryRead ) ( struct KDatabase const *self, struct KDirectory const **dir );
-    rc_t ( CC * vOpenDBRead )       ( const KDATABASE_IMPL *self, const struct KDatabase **db, const char *name, va_list args );
-    rc_t ( CC * vOpenTableRead )    ( const KDATABASE_IMPL *self, const struct KTable **tblp, const char *name, va_list args )    ;
-    rc_t ( CC * openMetadataRead )  ( struct KDATABASE_IMPL const *self, const struct KMetadata **meta );
-    rc_t ( CC * vOpenIndexRead )    ( struct KDATABASE_IMPL const *self, const struct KIndex **idx, const char *name, va_list args );
+    rc_t ( CC * whack )             ( KDATABASE_IMPL * self );
+    rc_t ( CC * addRef )            ( const KDATABASE_IMPL * self );
+    rc_t ( CC * release )           ( const KDATABASE_IMPL * self );
+    bool ( CC * locked )            ( const KDATABASE_IMPL * self );
+    bool ( CC * vExists )           ( const KDATABASE_IMPL * self, uint32_t type, const char *name, va_list args );
+    bool ( CC * isAlias )           ( const KDATABASE_IMPL * self, uint32_t type, char *resolved, size_t rsize, const char *name );
+    rc_t ( CC * vWritable )         ( const KDATABASE_IMPL * self, uint32_t type, const char *name, va_list args );
+    rc_t ( CC * openManagerRead )   ( const KDATABASE_IMPL * self, struct KDBManager const **mgr );
+    rc_t ( CC * openParentRead )    ( const KDATABASE_IMPL * self, const struct KDatabase **par );
+    rc_t ( CC * openDirectoryRead ) ( const KDATABASE_IMPL * self, struct KDirectory const **dir );
+    rc_t ( CC * vOpenDBRead )       ( const KDATABASE_IMPL * self, const struct KDatabase **db, const char *name, va_list args );
+    rc_t ( CC * vOpenTableRead )    ( const KDATABASE_IMPL * self, const struct KTable **tblp, const char *name, va_list args )    ;
+    rc_t ( CC * openMetadataRead )  ( const KDATABASE_IMPL * self, const struct KMetadata **meta );
+    rc_t ( CC * vOpenIndexRead )    ( const KDATABASE_IMPL * self, const struct KIndex **idx, const char *name, va_list args );
+    rc_t ( CC * listDB )            ( const KDATABASE_IMPL * self, struct KNamelist **names );
+    rc_t ( CC * listTbl )           ( const KDATABASE_IMPL * self, struct KNamelist **names );
+    rc_t ( CC * listIdx )           ( const KDATABASE_IMPL * self, struct KNamelist **names );
+    rc_t ( CC * getPath )           ( const KDATABASE_IMPL * self, const char **path );
 };
 
 struct KDatabaseBase

@@ -34,8 +34,8 @@ struct VPath;
 extern "C" {
 #endif
 
-rc_t KDatabaseMake ( KDatabase **dbp, const KDirectory *dir, const char *path );
-rc_t KDatabaseMakeVPath ( KDatabase **dbp, const KDirectory *dir, const struct VPath* path );
+rc_t KRDatabaseMake ( const KDatabase **dbp, const KDirectory *dir, const char *path, const struct KDBManager * mgr );
+rc_t KRDatabaseMakeVPath ( const KDatabase **dbp, const KDirectory *dir, const struct VPath* path, const struct KDBManager * mgr );
 
 #ifdef __cplusplus
 }

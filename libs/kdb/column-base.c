@@ -151,7 +151,10 @@ LIB_EXPORT rc_t CC KColumnOpenMetadataRead ( const KColumn *self, const KMetadat
 {
     DISPATCH( openMetadataRead( self, metap ) );
 }
-
+LIB_EXPORT rc_t CC KColumnOpenBlobRead ( const KColumn *self, const KColumnBlob **blobp, int64_t id )
+{
+    DISPATCH( openBlobRead( self, blobp, id ) );
+}
 
 //TODO: write-side only
 

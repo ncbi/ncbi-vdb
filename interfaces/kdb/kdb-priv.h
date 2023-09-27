@@ -54,7 +54,7 @@ struct KMetadata;
 struct KDirectory;
 struct VFSManager;
 struct VPath;
-
+struct KMDataNode;
 
 /*--------------------------------------------------------------------------
  * KDBManager
@@ -125,6 +125,7 @@ KDB_EXTERN rc_t CC KTableOpenDirectoryUpdate ( struct KTable *self, struct KDire
 KDB_EXTERN rc_t CC KTableGetPath ( struct KTable const *self,
     const char **path );
 
+KDB_EXTERN rc_t KTableGetName( struct KTable const *self, char const **rslt);
 
 /*--------------------------------------------------------------------------
  * KColumn
@@ -160,6 +161,11 @@ KDB_EXTERN rc_t CC KIndexMarkModified ( struct KIndex *self );
  */
 KDB_EXTERN void CC KIndexSetMaxRowId ( struct KIndex const *self, int64_t max_row_id );
 
+/*--------------------------------------------------------------------------
+ * KMDataNode
+ */
+
+KDB_EXTERN rc_t CC KMDataNodeAddr ( const struct KMDataNode *self, const void **addr, size_t *size );
 
 #ifdef __cplusplus
 }

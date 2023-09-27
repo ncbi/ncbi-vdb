@@ -34,10 +34,14 @@
 #include <../libs/kdb/dbmgr-priv.h>
 
 #include <klib/rc.h>
+#include <klib/namelist.h>
 
 #include <kdb/manager.h>
 #include <kdb/column.h>
 #include <kdb/meta.h>
+#include <kdb/index.h>
+#include <kdb/database.h>
+#include <kdb/namelist.h>
 
 #include <kdb/kdb-priv.h>
 
@@ -58,20 +62,25 @@ public:
     ~KTable_Fixture()
     {
         KTableRelease( m_tbl );
+        KDatabaseRelease( m_db );
         KDBManagerRelease( m_mgr );
         KDirectoryRelease( m_dir );
     }
     void Setup( const string testName )
     {
-        const string ColumnName = ScratchDir + testName;
-        THROW_ON_RC( KTableMake( & m_tbl, m_dir, ColumnName.c_str() ) );
-        m_tbl -> mgr = KDBManagerAttach ( m_mgr );
-        KDirectoryAddRef( m_dir); // KTableMake does not call AddRef
+        const string TableName = ScratchDir + testName;
+        THROW_ON_RC( KRTableMake( & m_tbl, m_dir, TableName.c_str(), m_mgr, false ) );
+        KDirectoryAddRef( m_dir); // KRTableMake does not call AddRef
     }
-
+    void Open( const char * dbname, const char * tablename )
+    {
+        THROW_ON_RC( KDBManagerOpenDBRead( m_mgr, & m_db, dbname ) );
+        THROW_ON_RC( KDatabaseOpenTableRead( m_db, & m_tbl, tablename ) );
+    }
     KDirectory * m_dir = nullptr;
     const KDBManager * m_mgr = nullptr;
-    KTable * m_tbl = nullptr;
+    const KDatabase * m_db = nullptr;
+    const KTable * m_tbl = nullptr;
 };
 
 
@@ -117,7 +126,7 @@ FIXTURE_TEST_CASE(KRTable_Writable, KTable_Fixture)
     REQUIRE_EQ( -1, (int)KTableWritable( m_tbl, kptIndex, "%s", GetName() ) ); // "TBD" for read side
 }
 
-FIXTURE_TEST_CASE(KTable_OpenManagerRead, KTable_Fixture)
+FIXTURE_TEST_CASE(KRTable_OpenManagerRead, KTable_Fixture)
 {
     Setup( GetName() );
 
@@ -127,7 +136,7 @@ FIXTURE_TEST_CASE(KTable_OpenManagerRead, KTable_Fixture)
     REQUIRE_RC( KDBManagerRelease( mgr ) );
 }
 
-FIXTURE_TEST_CASE(KTable_OpenParentRead, KTable_Fixture)
+FIXTURE_TEST_CASE(KRTable_OpenParentRead, KTable_Fixture)
 {
     Setup( GetName() );
 
@@ -167,6 +176,68 @@ FIXTURE_TEST_CASE(KRTable_OpenMetadataRead, KTable_Fixture)
     const KMetadata * meta = nullptr;
     rc_t rc = SILENT_RC( rcDB,rcMgr,rcOpening,rcMetadata,rcNotFound );
     REQUIRE_EQ( rc, KTableOpenMetadataRead ( m_tbl, & meta ) );
+}
+
+FIXTURE_TEST_CASE(KRTable_OpenIndexRead, KTable_Fixture)
+{
+    Setup( GetName() );
+    const KIndex * idx = nullptr;
+    rc_t rc = SILENT_RC( rcDB,rcMgr,rcOpening,rcIndex,rcNotFound );
+    REQUIRE_EQ( rc, KTableOpenIndexRead ( m_tbl, & idx, "idx" ) );
+}
+
+FIXTURE_TEST_CASE(KRTable_GetPath, KTable_Fixture)
+{
+    Setup( GetName() );
+    const char * path = nullptr;
+    REQUIRE_RC( KTableGetPath ( m_tbl, & path ) );
+    REQUIRE_EQ( ScratchDir + GetName(), string( path ) );
+}
+
+FIXTURE_TEST_CASE(KRTable_GetName, KTable_Fixture)
+{
+    Setup( GetName() );
+    const char * name = nullptr;
+    REQUIRE_RC( KTableGetName ( m_tbl, & name ) );
+    REQUIRE_EQ( string( GetName() ), string( name ) );
+}
+
+FIXTURE_TEST_CASE(KRTable_ListCol, KTable_Fixture)
+{
+    Open( "testdb", "SEQUENCE" );
+
+    struct KNamelist * names;
+    REQUIRE_RC( KTableListCol( m_tbl, & names ) );
+
+    uint32_t count = 1;
+    REQUIRE_RC( KNamelistCount ( names, &count ) );
+    REQUIRE_EQ( (uint32_t)0, count );
+
+    REQUIRE_RC( KNamelistRelease ( names ) );
+}
+
+FIXTURE_TEST_CASE(KRTable_ListIdx, KTable_Fixture)
+{
+    Open( "testdb", "SEQUENCE" );
+
+    struct KNamelist * names;
+    REQUIRE_RC( KTableListIdx( m_tbl, & names ) );
+
+    uint32_t count = 0;
+    REQUIRE_RC( KNamelistCount ( names, &count ) );
+    REQUIRE_EQ( (uint32_t)1, count );
+    REQUIRE( KNamelistContains( names, "dummy" ) );
+
+    REQUIRE_RC( KNamelistRelease ( names ) );
+}
+
+FIXTURE_TEST_CASE(KRTable_MetaCompare, KTable_Fixture)
+{
+    Open( "testdb", "SEQUENCE" );
+
+    bool equal = false;
+    REQUIRE_RC( KTableMetaCompare( m_tbl, m_tbl, "", &equal ) );
+    REQUIRE( equal );
 }
 
 //////////////////////////////////////////// Main

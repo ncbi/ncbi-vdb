@@ -65,7 +65,7 @@ struct KTable
     char path [ 1 ];
 };
 
-rc_t KTableMake ( KTable **tblp, const struct KDirectory *dir, const char *path );
+rc_t KRTableMake ( const KTable **tblp, const struct KDirectory *dir, const char *path, const struct KDBManager * mgr, bool prerelease );
 
 /* Attach
  * Sever
@@ -74,8 +74,6 @@ rc_t KTableMake ( KTable **tblp, const struct KDirectory *dir, const char *path 
  */
 KTable *KTableAttach ( const KTable *self );
 rc_t KTableSever ( const KTable *self );
-
-void KTableGetName(KTable const *self, char const **rslt);
 
 #ifdef __cplusplus
 }

@@ -77,8 +77,8 @@ struct KColumn
     char path [ 1 ];
 };
 
-rc_t KColumnMake ( KColumn **colp, const KDirectory *dir, const char *path );
-rc_t KColumnMakeRead ( KColumn **colp, const KDirectory *dir, const char *path );
+rc_t KRColumnMake ( KColumn **colp, const KDirectory *dir, const char *path );
+rc_t KRColumnMakeRead ( KColumn **colp, const KDirectory *dir, const char *path );
 
 /*--------------------------------------------------------------------------
  * KColumnBlob
@@ -100,7 +100,8 @@ struct KColumnBlob
     bool bswap;
 };
 
-rc_t KColumnBlobMake ( KColumnBlob **blobp, bool bswap );
+rc_t KRColumnBlobMake ( KColumnBlob **blobp, bool bswap );
+rc_t KRColumnBlobOpenRead ( KColumnBlob *self, const KColumn *col, int64_t id );
 
 #ifdef __cplusplus
 }

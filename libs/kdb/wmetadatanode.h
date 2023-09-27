@@ -94,11 +94,11 @@ struct KMDataNode
     char name [ 1 ];
 };
 
-rc_t KMDataNodeMakeRoot( KMDataNode ** node, KMetadata *meta );
+rc_t KWMDataNodeMakeRoot( KMDataNode ** node, KMetadata *meta );
 void CC KMDataNodeWhack ( KMDataNode * self );
 rc_t KMDataNodeFind ( const KMDataNode *cself, KMDataNode **np, char **path );
-bool CC KMDataNodeInflate_v1 ( PBSTNode *n, void *data );
-bool CC KMDataNodeInflate ( PBSTNode *n, void *data );
+bool CC KWMDataNodeInflate_v1 ( PBSTNode *n, void *data );
+bool CC KWMDataNodeInflate ( PBSTNode *n, void *data );
 
 #ifdef __cplusplus
 }

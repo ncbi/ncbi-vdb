@@ -57,8 +57,8 @@ struct KMDataNodeInflateData
     bool byteswap;
 };
 
-bool CC KMDataNodeInflate_v1 ( PBSTNode *n, void *data );
-bool CC KMDataNodeInflate ( PBSTNode *n, void *data );
+bool CC KRMDataNodeInflate_v1 ( PBSTNode *n, void *data );
+bool CC KRMDataNodeInflate ( PBSTNode *n, void *data );
 
 /*--------------------------------------------------------------------------
  * KMAttrNode
@@ -89,7 +89,7 @@ struct KMDataNode
     char name [ 1 ];
 };
 
-rc_t KMDataNodeMakeRoot( KMDataNode ** node, KMetadata *meta );
+rc_t KRMDataNodeMakeRoot( KMDataNode ** node, KMetadata *meta );
 void CC KMDataNodeWhack ( KMDataNode * node );
 
 #ifdef __cplusplus

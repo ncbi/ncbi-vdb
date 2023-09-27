@@ -56,6 +56,7 @@ static rc_t CC KRColumnFindFirstRowId ( const KColumn * self, int64_t * found, i
 static rc_t CC KRColumnOpenManagerRead ( const KColumn *self, const KDBManager **mgr );
 static rc_t CC KRColumnOpenParentRead ( const KColumn *self, const KTable **tbl );
 static rc_t CC KRColumnOpenMetadataRead ( const KColumn *self, const KMetadata **metap );
+static rc_t CC KRColumnOpenBlobRead ( const KColumn *self, const KColumnBlob **blobp, int64_t id );
 
 static KColumnBase_vt KColumn_vt =
 {
@@ -70,7 +71,8 @@ static KColumnBase_vt KColumn_vt =
     KRColumnFindFirstRowId,
     KRColumnOpenManagerRead,
     KRColumnOpenParentRead,
-    KRColumnOpenMetadataRead
+    KRColumnOpenMetadataRead,
+    KRColumnOpenBlobRead
 };
 
 /* Whack
@@ -114,7 +116,7 @@ rc_t KRColumnWhack ( KCOLUMN_IMPL *self )
 
 /* Make
  */
-rc_t KColumnMake ( KColumn **colp, const KDirectory *dir, const char *path )
+rc_t KRColumnMake ( KColumn **colp, const KDirectory *dir, const char *path )
 {
     KColumn *col = malloc ( sizeof * col + strlen ( path ) );
     if ( col == NULL )
@@ -130,9 +132,9 @@ rc_t KColumnMake ( KColumn **colp, const KDirectory *dir, const char *path )
     return 0;
 }
 
-rc_t KColumnMakeRead ( KColumn **colp, const KDirectory *dir, const char *path )
+rc_t KRColumnMakeRead ( KColumn **colp, const KDirectory *dir, const char *path )
 {
-    rc_t rc = KColumnMake ( colp, dir, path );
+    rc_t rc = KRColumnMake ( colp, dir, path );
     if ( rc == 0 )
     {
         size_t pgsize;
@@ -376,6 +378,37 @@ KRColumnOpenMetadataRead ( const KColumn *self, const KMetadata **metap )
     {
         meta -> col = KColumnAttach ( self );
         * metap = meta;
+    }
+
+    return rc;
+}
+
+/* OpenBlobRead
+ *  opens an existing blob containing row data for id
+ */
+static
+rc_t CC
+KRColumnOpenBlobRead ( const KColumn *self, const KColumnBlob **blobp, int64_t id )
+{
+    rc_t rc;
+    KColumnBlob *blob;
+
+    if ( blobp == NULL )
+        return RC ( rcDB, rcColumn, rcOpening, rcParam, rcNull );
+
+    * blobp = NULL;
+
+    rc = KRColumnBlobMake ( & blob, self -> idx . idx1 . bswap );
+    if ( rc == 0 )
+    {
+        rc = KRColumnBlobOpenRead ( blob, self, id );
+        if ( rc == 0 )
+        {
+            * blobp = blob;
+            return 0;
+        }
+
+        free ( blob );
     }
 
     return rc;

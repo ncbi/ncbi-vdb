@@ -26,28 +26,43 @@ set( KDB_CMN
     btree
 #    rowset
 #    rowset-simple
+
     dbmgr-cmn
-    column-base
-    columnblob-base
-    table-base
-    database-base
     manager-base
+
+    database-base
+    database
+    wdatabase
+
+    table-base
+    table
+    wtable
+
+    column-base
+    column
+    wcolumn
+
+    columnblob-base
+    rcolumnblob
+    wcolumnblob
+
     meta-base
+    meta
+    wmeta
+
     metanode-base
     index-base
 )
 
 set( KDB_SRC
     ${KDB_CMN}
-    kdb
     dbmgr
+    rmetadatanode
+
+    kdb
     dbcc-cmn
-    database
     database-cc
-    table
     table-cc
-    rcolumnblob
-    column
     column-cc
     coldata
     colidx
@@ -55,8 +70,6 @@ set( KDB_SRC
     colidx1
     colidx2
     idxblk
-    meta
-    rmetadatanode
     index
     idstats
     trieidx-v1
@@ -70,12 +83,10 @@ set( KDB_SRC
 
 set( WKDB_SRC
     ${KDB_CMN}
-    wkdb
+    wmetadatanode
     wdbmgr
-    wdatabase
-    wtable
-    wcolumnblob
-    wcolumn
+
+    wkdb
     wcoldata
     wcolidx
     wcolidx0
@@ -83,8 +94,6 @@ set( WKDB_SRC
     wcolidx2
     idxblk
     widxblk
-    wmeta
-    wmetadatanode
     windex
     wtrieidx-v1
     wtrieidx-v2

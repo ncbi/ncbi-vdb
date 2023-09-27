@@ -58,8 +58,8 @@ public:
     void Setup( const string testName )
     {
         const string ColumnName = ScratchDir + testName;
-        THROW_ON_RC( KColumnMake( & m_col, m_dir, ColumnName.c_str() ) );
-        KDirectoryAddRef( m_dir); // KColumnMake does not call AddRef
+        THROW_ON_RC( KRColumnMake( & m_col, m_dir, ColumnName.c_str() ) );
+        KDirectoryAddRef( m_dir); // KRColumnMake does not call AddRef
     }
 
     KDirectory * m_dir = nullptr;
@@ -139,12 +139,20 @@ FIXTURE_TEST_CASE(KRColumn_OpenMetadataRead, KColumn_Fixture)
     REQUIRE_EQ( rc, KColumnOpenMetadataRead( m_col, & meta ) );
 }
 
+FIXTURE_TEST_CASE(KRColumn_OpenBlobRead, KColumn_Fixture)
+{
+    Setup( GetName() );
+    const KColumnBlob * blob = nullptr;
+    rc_t rc = SILENT_RC ( rcDB,rcColumn,rcSelecting,rcBlob,rcNotFound );
+    REQUIRE_EQ( rc, KColumnOpenBlobRead( m_col, & blob, 1 ) );
+}
+
 // KColumnBlob
 
 TEST_CASE(KRColumnBlob_AddRelease)
 {
     KColumnBlob * blob = nullptr;
-    REQUIRE_RC( KColumnBlobMake ( & blob, false ) );
+    REQUIRE_RC( KRColumnBlobMake ( & blob, false ) );
 
     REQUIRE_EQ( 1, (int)atomic32_read( & blob -> dad . refcount ) );
     REQUIRE_RC( KColumnBlobAddRef( blob ) );
@@ -159,7 +167,7 @@ TEST_CASE(KRColumnBlob_AddRelease)
 TEST_CASE(KRColumnBlob_Read)
 {
     KColumnBlob * blob = nullptr;
-    REQUIRE_RC( KColumnBlobMake ( & blob, false ) );
+    REQUIRE_RC( KRColumnBlobMake ( & blob, false ) );
 
     char buffer[1024];
     rc_t rc = SILENT_RC ( rcDB, rcBlob, rcReading, rcParam, rcNull );
@@ -171,7 +179,7 @@ TEST_CASE(KRColumnBlob_Read)
 TEST_CASE(KRColumnBlob_ReadAll)
 {
     KColumnBlob * blob = nullptr;
-    REQUIRE_RC( KColumnBlobMake ( & blob, false ) );
+    REQUIRE_RC( KRColumnBlobMake ( & blob, false ) );
 
     rc_t rc = SILENT_RC ( rcDB, rcBlob, rcReading, rcParam, rcNull );
     REQUIRE_EQ( rc, KColumnBlobReadAll ( blob, nullptr, nullptr, 0 ) );
@@ -182,7 +190,7 @@ TEST_CASE(KRColumnBlob_ReadAll)
 TEST_CASE(KRColumnBlob_Validate)
 {
     KColumnBlob * blob = nullptr;
-    REQUIRE_RC( KColumnBlobMake ( & blob, false ) );
+    REQUIRE_RC( KRColumnBlobMake ( & blob, false ) );
 
     REQUIRE_RC( KColumnBlobValidate ( blob ) );
 
@@ -192,7 +200,7 @@ TEST_CASE(KRColumnBlob_Validate)
 TEST_CASE(KRColumnBlob_ValidateBuffer)
 {
     KColumnBlob * blob = nullptr;
-    REQUIRE_RC( KColumnBlobMake ( & blob, false ) );
+    REQUIRE_RC( KRColumnBlobMake ( & blob, false ) );
 
     rc_t rc = SILENT_RC ( rcDB, rcBlob, rcValidating, rcParam, rcNull );
     REQUIRE_EQ( rc, KColumnBlobValidateBuffer ( blob, nullptr, nullptr, 0 ) );
@@ -203,7 +211,7 @@ TEST_CASE(KRColumnBlob_ValidateBuffer)
 TEST_CASE(KRColumnBlob_IdRange)
 {
     KColumnBlob * blob = nullptr;
-    REQUIRE_RC( KColumnBlobMake ( & blob, false ) );
+    REQUIRE_RC( KRColumnBlobMake ( & blob, false ) );
 
     rc_t rc = SILENT_RC ( rcDB, rcBlob, rcAccessing, rcParam, rcNull );
     REQUIRE_EQ( rc, KColumnBlobIdRange ( blob, nullptr, nullptr ) );

@@ -218,3 +218,7 @@ LIB_EXPORT rc_t CC KMDataNodeReadAttrAsF64 ( const KMDataNode *self, const char 
 {
     DISPATCH( readAttrAsF64( self, attr, f ) );
 }
+LIB_EXPORT rc_t CC KMDataNodeCompare( const KMDataNode *self, const KMDataNode *other, bool *equal )
+{
+    DISPATCH( compare( self, other, equal ) );
+}

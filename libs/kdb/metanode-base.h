@@ -84,9 +84,12 @@ struct KMDataNode_vt
     rc_t ( CC * readAttrAsI64 ) ( const KDBMDNODE_IMPL *self, const char *attr, int64_t *i );
     rc_t ( CC * readAttrAsU64 ) ( const KDBMDNODE_IMPL *self, const char *attr, uint64_t *u );
     rc_t ( CC * readAttrAsF64 ) ( const KDBMDNODE_IMPL *self, const char *attr, double *f );
+    rc_t ( CC * compare )       ( const KDBMDNODE_IMPL *self, KDBMDNODE_IMPL const *other, bool *equal );
 };
 
-// KDB_EXTERN rc_t CC KMDataNodeCompare( const KDBMDNODE_IMPL *self, KMDataNodeBase const *other, bool *equal );
+// LIB_EXPORT rc_t CC KMDataNodeAddr ( const KMDataNode *self, const void **addr, size_t *size )
+// KMDataNodeListAttr
+// KMDataNodeListChildren
 
 // Public write side-only API
 

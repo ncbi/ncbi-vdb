@@ -58,6 +58,7 @@ static rc_t CC KWColumnFindFirstRowId ( const KColumn * self, int64_t * found, i
 static rc_t CC KWColumnOpenManagerRead ( const KColumn *self, const KDBManager **mgr );
 static rc_t CC KWColumnOpenParentRead ( const KColumn *self, const KTable **tbl );
 static rc_t CC KWColumnOpenMetadataRead ( const KColumn *self, const KMetadata **metap );
+static rc_t CC KWColumnOpenBlobRead ( const KColumn *self, const KColumnBlob **blobp, int64_t id );
 
 static KColumnBase_vt KColumn_vt =
 {
@@ -72,7 +73,8 @@ static KColumnBase_vt KColumn_vt =
     KWColumnFindFirstRowId,
     KWColumnOpenManagerRead,
     KWColumnOpenParentRead,
-    KWColumnOpenMetadataRead
+    KWColumnOpenMetadataRead,
+    KWColumnOpenBlobRead
 };
 
 /* Whack
@@ -170,7 +172,7 @@ static rc_t CC KWColumnRelease ( const KColumn *cself )
  *  make an initialized structure
  *  NB - does NOT attach reference to dir, but steals it
  */
-rc_t KColumnMake ( KColumn **colp, const KDirectory *dir, const char *path,
+rc_t KWColumnMake ( KColumn **colp, const KDirectory *dir, const char *path,
 		   KMD5SumFmt * md5, bool read_only )
 {
     rc_t rc;
@@ -204,9 +206,9 @@ rc_t KColumnMake ( KColumn **colp, const KDirectory *dir, const char *path,
 }
 
 
-rc_t KColumnMakeRead ( KColumn **colp, const KDirectory *dir, const char *path, KMD5SumFmt * md5 )
+rc_t KWColumnMakeRead ( KColumn **colp, const KDirectory *dir, const char *path, KMD5SumFmt * md5 )
 {
-    rc_t rc = KColumnMake ( colp, dir, path, md5, true );
+    rc_t rc = KWColumnMake ( colp, dir, path, md5, true );
     if ( rc == 0 )
     {
         size_t pgsize;
@@ -251,7 +253,7 @@ rc_t KColumnMakeRead ( KColumn **colp, const KDirectory *dir, const char *path, 
 rc_t KColumnMakeUpdate ( KColumn **colp,
     KDirectory *dir, const char *path, KMD5SumFmt *md5 )
 {
-    rc_t rc = KColumnMake ( colp, dir, path, md5, false );
+    rc_t rc = KWColumnMake ( colp, dir, path, md5, false );
     if ( rc == 0 )
     {
         size_t pgsize;
@@ -319,7 +321,7 @@ rc_t KColumnCreate ( KColumn **colp, KDirectory *dir,
     else if ( pgsize != 1 )
         return RC ( rcDB, rcColumn, rcConstructing, rcParam, rcInvalid );
 
-    rc = KColumnMake ( colp, dir, path, md5, false );
+    rc = KWColumnMake ( colp, dir, path, md5, false );
 
     if ( rc == 0 )
     {
@@ -986,3 +988,37 @@ LIB_EXPORT rc_t CC KColumnOpenMetadataUpdate ( KColumn *self, KMetadata **metap 
 
     return rc;
 }
+
+/* OpenBlobRead
+ * OpenBlobUpdate
+ *  opens an existing blob containing row data for id
+ */
+static
+rc_t CC
+KWColumnOpenBlobRead ( const KColumn *self, const KColumnBlob **blobp, int64_t id )
+{
+    rc_t rc;
+    KColumnBlob *blob;
+
+    if ( blobp == NULL )
+        return RC ( rcDB, rcColumn, rcOpening, rcParam, rcNull );
+    * blobp = NULL;
+
+    rc = KWColumnBlobMake ( & blob, self -> idx . idx1 . bswap );
+    if ( rc == 0 )
+    {
+        rc = KWColumnBlobOpenRead ( blob, self, id );
+        if ( rc == 0 )
+        {
+            blob -> col = KColumnAttach ( self );
+            blob -> read_only = true;
+            * blobp = blob;
+            return 0;
+        }
+
+        free ( blob );
+    }
+
+    return rc;
+}
+

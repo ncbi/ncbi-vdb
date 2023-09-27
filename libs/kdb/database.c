@@ -71,6 +71,10 @@ static rc_t CC KRDatabaseVOpenDBRead ( const KDatabase *self, const KDatabase **
 static rc_t CC KRDatabaseVOpenTableRead ( const KDatabase *self, const KTable **tblp, const char *name, va_list args );
 static rc_t CC KRDatabaseOpenMetadataRead ( const KDatabase *self, const KMetadata **metap );
 static rc_t CC KRDatabaseVOpenIndexRead ( const KDatabase *self, const KIndex **idxp, const char *name, va_list args );
+static rc_t CC KRDatabaseListDB ( const KDatabase *self, KNamelist **names );
+static rc_t CC KRDatabaseListTbl ( struct KDatabase const *self, KNamelist **names );
+static rc_t CC KRDatabaseListIdx ( struct KDatabase const *self, KNamelist **names );
+static rc_t CC KRDatabaseGetPath ( KDatabase const *self, const char **path );
 
 static KDatabase_vt KRDatabase_vt =
 {
@@ -87,18 +91,21 @@ static KDatabase_vt KRDatabase_vt =
     KRDatabaseVOpenDBRead,
     KRDatabaseVOpenTableRead,
     KRDatabaseOpenMetadataRead,
-    KRDatabaseVOpenIndexRead
+    KRDatabaseVOpenIndexRead,
+    KRDatabaseListDB,
+    KRDatabaseListTbl,
+    KRDatabaseListIdx,
+    KRDatabaseGetPath
 };
 
 
 /* GetPath
  *  return the absolute path to DB
  */
-LIB_EXPORT rc_t CC KDatabaseGetPath ( KDatabase const *self,
-    const char **path )
+static
+rc_t CC
+KRDatabaseGetPath ( KDatabase const *self, const char **path )
 {
-    if ( self == NULL )
-        return RC ( rcDB, rcDatabase, rcAccessing, rcSelf, rcNull );
     if ( path == NULL )
         return RC ( rcDB, rcDatabase, rcAccessing, rcParam, rcNull );
 
@@ -142,7 +149,8 @@ KRDatabaseWhack ( KDatabase *self )
 /* Make
  *  make an initialized structure
  */
-rc_t KDatabaseMake ( KDatabase **dbp, const KDirectory *dir, const char *path )
+rc_t
+KRDatabaseMake ( const KDatabase **dbp, const KDirectory *dir, const char *path, const KDBManager * mgr )
 {
     KDatabase *db;
 
@@ -173,19 +181,22 @@ rc_t KDatabaseMake ( KDatabase **dbp, const KDirectory *dir, const char *path )
     /* YES,
      DBG_VFS should be used here to be printed along with other VFS messages */
     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
-        ("KDatabaseMake: Making KDatabase '%s'\n", path));
+        ("KRDatabaseMake: Making KDatabase '%s'\n", path));
+
+    db -> mgr = KDBManagerAttach ( mgr );
 
     * dbp = db;
     return 0;
 }
 
-rc_t KDatabaseMakeVPath ( KDatabase **dbp, const KDirectory *dir, const VPath* path )
+rc_t
+KRDatabaseMakeVPath ( const KDatabase **dbp, const KDirectory *dir, const VPath* path, const KDBManager * mgr )
 {
     const String* dbpathStr;
     rc_t rc = VPathMakeString ( path, &dbpathStr );    /* NUL-terminated */
     if ( rc == 0 )
     {
-        rc = KDatabaseMake ( dbp, dir, dbpathStr->addr );
+        rc = KRDatabaseMake ( dbp, dir, dbpathStr->addr, mgr );
         StringWhack(dbpathStr);
     }
     return rc;
@@ -477,44 +488,6 @@ KRDatabaseOpenDirectoryRead ( const KDatabase *self, const KDirectory **dir )
     return rc;
 }
 
-
-/* ModDate
- *  get modification date
- */
-LIB_EXPORT rc_t CC KDatabaseModDate ( const KDatabase *self, KTime_t *mtime )
-{
-    rc_t rc;
-
-    if ( mtime == NULL )
-        rc = RC ( rcDB, rcDatabase, rcAccessing, rcParam, rcNull );
-    else
-    {
-        if ( self == NULL )
-            rc = RC ( rcDB, rcDatabase, rcAccessing, rcSelf, rcNull );
-        else
-        {
-            /* HACK ALERT - there needs to be a proper way to record modification times */
-            const KDirectory *dir = self -> dir;
-
-            /* this only tells the last time the table was locked,
-               which may be close to the last time it was modified */
-            rc = KDirectoryDate ( dir, mtime, "lock" );
-            if ( rc == 0 )
-                return 0;
-
-            /* get directory timestamp */
-            rc = KDirectoryDate ( dir, mtime, "." );
-            if ( rc == 0 )
-                return 0;
-        }
-
-        * mtime = 0;
-    }
-
-    return rc;
-}
-
-
 /*--------------------------------------------------------------------------
  * KNameList
  */
@@ -536,58 +509,37 @@ bool CC KDatabaseListFilter ( const KDirectory *dir, const char *name, void *dat
         NULL, data->type, NULL, false, NULL ) == 0 );
 }
 
-LIB_EXPORT rc_t CC KDatabaseListDB ( const KDatabase *self, KNamelist **names )
+static
+rc_t CC
+KRDatabaseListDB ( const KDatabase *self, KNamelist **names )
 {
-    if ( self != NULL )
-    {
-        struct FilterData data;
-        data.mgr = self->mgr;
-        data.type = kptDatabase;
+    struct FilterData data;
+    data.mgr = self->mgr;
+    data.type = kptDatabase;
 
-        return KDirectoryList ( self -> dir,
-            names, KDatabaseListFilter, &data, "db" );
-    }
-
-    if ( names != NULL )
-        * names = NULL;
-
-    return RC ( rcDB, rcDatabase, rcListing, rcSelf, rcNull );
+    return KDirectoryList ( self -> dir, names, KDatabaseListFilter, &data, "db" );
 }
 
-LIB_EXPORT rc_t CC KDatabaseListTbl ( struct KDatabase const *self, KNamelist **names )
+static
+rc_t CC
+KRDatabaseListTbl ( struct KDatabase const *self, KNamelist **names )
 {
-    if ( self != NULL )
-    {
-        struct FilterData data;
-        data.mgr = self->mgr;
-        data.type = kptTable;
+    struct FilterData data;
+    data.mgr = self->mgr;
+    data.type = kptTable;
 
-        return KDirectoryList ( self -> dir,
-            names, KDatabaseListFilter, &data, "tbl" );
-    }
-
-    if ( names != NULL )
-        * names = NULL;
-
-    return RC ( rcDB, rcDatabase, rcListing, rcSelf, rcNull );
+    return KDirectoryList ( self -> dir, names, KDatabaseListFilter, &data, "tbl" );
 }
 
-LIB_EXPORT rc_t CC KDatabaseListIdx ( struct KDatabase const *self, KNamelist **names )
+static
+rc_t CC
+KRDatabaseListIdx ( struct KDatabase const *self, KNamelist **names )
 {
-    if ( self != NULL )
-    {
-        struct FilterData data;
-        data.mgr = self->mgr;
-        data.type = kptIndex;
+    struct FilterData data;
+    data.mgr = self->mgr;
+    data.type = kptIndex;
 
-        return KDirectoryList ( self -> dir,
-            names, KDatabaseListFilter, &data, "idx" );
-    }
-
-    if ( names != NULL )
-        * names = NULL;
-
-    return RC ( rcDB, rcDatabase, rcListing, rcSelf, rcNull );
+    return KDirectoryList ( self -> dir, names, KDatabaseListFilter, &data, "idx" );
 }
 
 static

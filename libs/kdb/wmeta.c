@@ -503,9 +503,9 @@ rc_t KMetadataPopulate ( KMetadata *self, const KDirectory *dir, const char *pat
                         pb . byteswap = self -> byteswap;
 
                         if ( hdr -> version == 1 )
-                            PBSTreeDoUntil ( bst, false, KMDataNodeInflate_v1, & pb );
+                            PBSTreeDoUntil ( bst, false, KWMDataNodeInflate_v1, & pb );
                         else
-                            PBSTreeDoUntil ( bst, false, KMDataNodeInflate, & pb );
+                            PBSTreeDoUntil ( bst, false, KWMDataNodeInflate, & pb );
                         rc = pb . rc;
 
                         self -> vers = hdr -> version;
@@ -534,7 +534,7 @@ KMetadataMake ( KMetadata **metap, KDirectory *dir, const char *path, uint32_t r
     {
         memset ( meta, 0, sizeof * meta );
         meta -> dad . vt = & KWMetadata_vt;
-        if ( KMDataNodeMakeRoot( & meta -> root, meta ) == 0 )
+        if ( KWMDataNodeMakeRoot( & meta -> root, meta ) == 0 )
         {
             meta -> dir = dir;
             KRefcountInit ( & meta -> dad . refcount, 1, "KMetadata", "make-update", path );

@@ -143,6 +143,7 @@ static rc_t CC KRMDataNodeReadAttrAsU32 ( const KMDataNode *self, const char *at
 static rc_t CC KRMDataNodeReadAttrAsI64 ( const KMDataNode *self, const char *attr, int64_t *i );
 static rc_t CC KRMDataNodeReadAttrAsU64 ( const KMDataNode *self, const char *attr, uint64_t *u );
 static rc_t CC KRMDataNodeReadAttrAsF64 ( const KMDataNode *self, const char *attr, double *f );
+static rc_t CC KRMDataNodeCompare( const KMDataNode *self, KMDataNode const *other, bool *equal );
 
 static KMDataNode_vt KRMDataNode_vt =
 {
@@ -172,11 +173,12 @@ static KMDataNode_vt KRMDataNode_vt =
     KRMDataNodeReadAttrAsU32,
     KRMDataNodeReadAttrAsI64,
     KRMDataNodeReadAttrAsU64,
-    KRMDataNodeReadAttrAsF64
+    KRMDataNodeReadAttrAsF64,
+    KRMDataNodeCompare
 };
 
 rc_t
-KMDataNodeMakeRoot( KMDataNode ** node, KMetadata *meta )
+KRMDataNodeMakeRoot( KMDataNode ** node, KMetadata *meta )
 {
     assert( node != NULL );
     KMDataNode * ret = calloc ( 1, sizeof *ret );
@@ -255,7 +257,7 @@ KRMDataNodeRelease ( const KMDataNode *cself )
 
 /* Inflate
  */
-bool CC KMDataNodeInflate_v1 ( PBSTNode *n, void *data )
+bool CC KRMDataNodeInflate_v1 ( PBSTNode *n, void *data )
 {
     void *value;
     KMDataNode *b;
@@ -388,7 +390,7 @@ rc_t KMDataNodeInflateChild ( KMDataNode *n,
             pb . node_child_limit = node_child_limit;
             pb . rc = 0;
             pb . byteswap = byteswap;
-            PBSTreeDoUntil ( bst, 0, KMDataNodeInflate, & pb );
+            PBSTreeDoUntil ( bst, 0, KRMDataNodeInflate, & pb );
             rc = pb . rc;
         }
 
@@ -400,7 +402,7 @@ rc_t KMDataNodeInflateChild ( KMDataNode *n,
     return rc;
 }
 
-bool CC KMDataNodeInflate ( PBSTNode *n, void *data )
+bool CC KRMDataNodeInflate ( PBSTNode *n, void *data )
 {
     KMDataNode *b;
     KMDataNodeInflateData *pb = data;
@@ -1625,11 +1627,12 @@ static rc_t KMDataNodeCompare_int( const KMDataNode *self, const KMDataNode *oth
 }
 
 /* >>>>>> !!! any changes here have to be duplicated in wmeta.c !!! <<<<<< */
-LIB_EXPORT rc_t CC KMDataNodeCompare( const KMDataNode *self, KMDataNode const *other, bool *equal ) {
+static
+rc_t CC
+KRMDataNodeCompare( const KMDataNode *self, KMDataNode const *other, bool *equal )
+{
     rc_t rc = 0;
-    if ( self == NULL ) {
-        rc = RC( rcDB, rcNode, rcComparing, rcSelf, rcNull );
-    } else if ( other == NULL || equal == NULL ) {
+    if ( other == NULL || equal == NULL ) {
         rc = RC( rcDB, rcNode, rcComparing, rcParam, rcNull );
     } else if ( self -> meta == NULL && other -> meta == NULL ) {
         *equal = true;

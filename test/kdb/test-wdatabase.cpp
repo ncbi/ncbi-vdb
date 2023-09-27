@@ -34,12 +34,14 @@
 #include <../libs/kdb/dbmgr-priv.h>
 
 #include <klib/rc.h>
+#include <klib/namelist.h>
 
 #include <kdb/manager.h>
 #include <kdb/kdb-priv.h>
 #include <kdb/table.h>
 #include <kdb/meta.h>
 #include <kdb/index.h>
+#include <kdb/namelist.h>
 
 using namespace std;
 
@@ -64,10 +66,10 @@ public:
     void Setup( const string testName )
     {
         const string ColumnName = ScratchDir + testName;
-        THROW_ON_RC( KDatabaseMake( & m_db, m_dir, ColumnName.c_str(), nullptr, false ) );
+        THROW_ON_RC( KWDatabaseMake( & m_db, m_dir, ColumnName.c_str(), nullptr, false ) );
         m_db -> mgr = KDBManagerAttach ( m_mgr );
         THROW_ON_RC( KDBManagerOpenObjectAdd ( m_mgr, & m_db -> sym) );
-        KDirectoryAddRef( m_dir); // KDatabaseMake does not call AddRef
+        KDirectoryAddRef( m_dir); // KWDatabaseMake does not call AddRef
     }
 
     KDirectory * m_dir = nullptr;
@@ -118,7 +120,7 @@ FIXTURE_TEST_CASE(KWDatabase_Writable, KDatabase_Fixture)
     REQUIRE_EQ( rc, KDatabaseWritable( m_db, kptIndex, "%s", GetName() ) );
 }
 
-FIXTURE_TEST_CASE(KDatabase_OpenManagerRead, KDatabase_Fixture)
+FIXTURE_TEST_CASE(KWDatabase_OpenManagerRead, KDatabase_Fixture)
 {
     Setup( GetName() );
 
@@ -128,7 +130,7 @@ FIXTURE_TEST_CASE(KDatabase_OpenManagerRead, KDatabase_Fixture)
     KDBManagerRelease( mgr );
 }
 
-FIXTURE_TEST_CASE(KDatabase_OpenParentRead, KDatabase_Fixture)
+FIXTURE_TEST_CASE(KWDatabase_OpenParentRead, KDatabase_Fixture)
 {
     Setup( GetName() );
 
@@ -176,6 +178,57 @@ FIXTURE_TEST_CASE(KWDatabase_OpenIndexRead, KDatabase_Fixture)
     const KIndex * idx = nullptr;
     rc_t rc = SILENT_RC( rcDB,rcMgr,rcOpening,rcIndex,rcNotFound );
     REQUIRE_EQ( rc, KDatabaseOpenIndexRead( m_db, & idx, "%s", "qq" ) );
+}
+
+FIXTURE_TEST_CASE(KWDatabase_ListDB, KDatabase_Fixture)
+{
+    REQUIRE_RC( KDBManagerOpenDBUpdate( m_mgr, & m_db, "testdb" ) );
+
+    struct KNamelist * names;
+    REQUIRE_RC( KDatabaseListDB( m_db, & names ) );
+
+    uint32_t count = 0;
+    REQUIRE_RC( KNamelistCount ( names, &count ) );
+    REQUIRE_EQ( (uint32_t)0, count );
+
+    REQUIRE_RC( KNamelistRelease ( names ) );
+}
+
+FIXTURE_TEST_CASE(KWDatabase_ListTbl, KDatabase_Fixture)
+{
+    REQUIRE_RC( KDBManagerOpenDBUpdate( m_mgr, & m_db, "testdb" ) );
+
+    struct KNamelist * names;
+    REQUIRE_RC( KDatabaseListTbl( m_db, & names ) );
+
+    uint32_t count = 0;
+    REQUIRE_RC( KNamelistCount ( names, &count ) );
+    REQUIRE_EQ( (uint32_t)1, count );
+    REQUIRE( KNamelistContains( names, "SEQUENCE" ) );
+
+    REQUIRE_RC( KNamelistRelease ( names ) );
+}
+
+FIXTURE_TEST_CASE(KWDatabase_ListIdx, KDatabase_Fixture)
+{
+    REQUIRE_RC( KDBManagerOpenDBUpdate( m_mgr, & m_db, "testdb" ) );
+
+    struct KNamelist * names;
+    REQUIRE_RC( KDatabaseListIdx( m_db, & names ) );
+
+    uint32_t count = 0;
+    REQUIRE_RC( KNamelistCount ( names, &count ) );
+    REQUIRE_EQ( (uint32_t)0, count );
+
+    REQUIRE_RC( KNamelistRelease ( names ) );
+}
+
+FIXTURE_TEST_CASE(KWDatabase_GetPath, KDatabase_Fixture)
+{
+    REQUIRE_RC( KDBManagerOpenDBUpdate( m_mgr, & m_db, "testdb" ) );
+
+    const char * path;
+    REQUIRE_RC( KDatabaseGetPath( m_db, & path ) );
 }
 
 //TODO: non-virtual write-side only methods

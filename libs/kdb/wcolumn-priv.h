@@ -98,7 +98,7 @@ struct KColumn
     char path [ 1 ];
 };
 
-rc_t KColumnMake ( KColumn **colp, const KDirectory *dir, const char *path,
+rc_t KWColumnMake ( KColumn **colp, const KDirectory *dir, const char *path,
 		   KMD5SumFmt * md5, bool read_only );
 
 /* Cmp
@@ -115,7 +115,7 @@ rc_t KColumnFileOpenUpdate ( KFile ** ppf, KMD5File ** ppfmd5, KDirectory * dir,
 			     KMD5SumFmt * md5, bool append,
 			     const char * name);
 
-rc_t KColumnMakeRead ( KColumn **colp, const KDirectory *dir, const char *path, KMD5SumFmt * md5 );
+rc_t KWColumnMakeRead ( KColumn **colp, const KDirectory *dir, const char *path, KMD5SumFmt * md5 );
 rc_t KColumnCreate ( KColumn **colp, KDirectory *dir,
     KCreateMode cmode, KChecksum checksum,
 	size_t pgsize, const char *path, KMD5SumFmt *md5 );
@@ -155,7 +155,8 @@ struct KColumnBlob
     bool bswap;
 };
 
-rc_t KColumnBlobMake ( KColumnBlob **blobp, bool bswap );
+rc_t KWColumnBlobMake ( KColumnBlob **blobp, bool bswap );
+rc_t KWColumnBlobOpenRead ( KColumnBlob *self, const KColumn *col, int64_t id );
 
 #ifdef __cplusplus
 }

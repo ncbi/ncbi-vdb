@@ -41,8 +41,6 @@ using namespace std;
 
 TEST_SUITE(KDBRIndexTestSuite);
 
-static const string ScratchDir = "./data/";
-
 class KIndex_Fixture
 {
 public:

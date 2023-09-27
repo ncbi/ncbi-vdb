@@ -143,6 +143,14 @@ FIXTURE_TEST_CASE(KWColumn_OpenMetadataRead, KColumn_Fixture)
     REQUIRE_EQ( rc, KColumnOpenMetadataRead( m_col, & meta ) );
 }
 
+FIXTURE_TEST_CASE(KWColumn_OpenBlobRead, KColumn_Fixture)
+{
+    Setup( GetName() );
+    const KColumnBlob * blob = nullptr;
+    rc_t rc = SILENT_RC ( rcDB,rcColumn,rcSelecting,rcBlob,rcNotFound );
+    REQUIRE_EQ( rc, KColumnOpenBlobRead( m_col, & blob, 1 ) );
+}
+
 //TODO: non-virtual write-side only methods
 
 // KColumnBlob
@@ -150,7 +158,7 @@ FIXTURE_TEST_CASE(KWColumn_OpenMetadataRead, KColumn_Fixture)
 TEST_CASE(KWColumnBlob_AddRelease)
 {
     KColumnBlob * blob = nullptr;
-    REQUIRE_RC( KColumnBlobMake ( & blob, false ) );
+    REQUIRE_RC( KWColumnBlobMake ( & blob, false ) );
 
     REQUIRE_EQ( 1, (int)atomic32_read( & blob -> dad . refcount ) );
     REQUIRE_RC( KColumnBlobAddRef( blob ) );
@@ -165,7 +173,7 @@ TEST_CASE(KWColumnBlob_AddRelease)
 TEST_CASE(KWColumnBlob_Read)
 {
     KColumnBlob * blob = nullptr;
-    REQUIRE_RC( KColumnBlobMake ( & blob, false ) );
+    REQUIRE_RC( KWColumnBlobMake ( & blob, false ) );
 
     char buffer[1024];
     rc_t rc = SILENT_RC ( rcDB, rcBlob, rcReading, rcParam, rcNull );
@@ -177,7 +185,7 @@ TEST_CASE(KWColumnBlob_Read)
 TEST_CASE(KWColumnBlob_ReadAll)
 {
     KColumnBlob * blob = nullptr;
-    REQUIRE_RC( KColumnBlobMake ( & blob, false ) );
+    REQUIRE_RC( KWColumnBlobMake ( & blob, false ) );
 
     rc_t rc = SILENT_RC ( rcDB, rcBlob, rcReading, rcParam, rcNull );
     REQUIRE_EQ( rc, KColumnBlobReadAll ( blob, nullptr, nullptr, 0 ) );
@@ -188,7 +196,7 @@ TEST_CASE(KWColumnBlob_ReadAll)
 TEST_CASE(KWColumnBlob_Validate)
 {
     KColumnBlob * blob = nullptr;
-    REQUIRE_RC( KColumnBlobMake ( & blob, false ) );
+    REQUIRE_RC( KWColumnBlobMake ( & blob, false ) );
 
     REQUIRE_RC( KColumnBlobValidate ( blob ) );
 
@@ -198,7 +206,7 @@ TEST_CASE(KWColumnBlob_Validate)
 TEST_CASE(KWColumnBlob_ValidateBuffer)
 {
     KColumnBlob * blob = nullptr;
-    REQUIRE_RC( KColumnBlobMake ( & blob, false ) );
+    REQUIRE_RC( KWColumnBlobMake ( & blob, false ) );
 
     rc_t rc = SILENT_RC ( rcDB, rcBlob, rcValidating, rcParam, rcNull );
     REQUIRE_EQ( rc, KColumnBlobValidateBuffer ( blob, nullptr, nullptr, 0 ) );
@@ -209,7 +217,7 @@ TEST_CASE(KWColumnBlob_ValidateBuffer)
 TEST_CASE(KWColumnBlob_IdRange)
 {
     KColumnBlob * blob = nullptr;
-    REQUIRE_RC( KColumnBlobMake ( & blob, false ) );
+    REQUIRE_RC( KWColumnBlobMake ( & blob, false ) );
 
     rc_t rc = SILENT_RC ( rcDB, rcBlob, rcAccessing, rcParam, rcNull );
     REQUIRE_EQ( rc, KColumnBlobIdRange ( blob, nullptr, nullptr ) );

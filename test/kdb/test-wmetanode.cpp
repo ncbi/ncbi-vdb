@@ -31,8 +31,11 @@
 #include <ktst/unit_test.hpp>
 
 #include <klib/rc.h>
+
 #include <kdb/manager.h>
 #include <kdb/table.h>
+#include <kdb/kdb-priv.h>
+
 #include <arch-impl.h>
 
 #include <../libs/kdb/wmetadatanode.h>
@@ -292,6 +295,14 @@ FIXTURE_TEST_CASE(KWMDataNode_Compare, KWMDataNode_Fixture)
     REQUIRE( equal );
 
     KMDataNodeRelease( node );
+}
+
+FIXTURE_TEST_CASE(KWMDataNode_Addr, KWMDataNode_Fixture)
+{
+    Open( "testdb/tbl/SEQUENCE", "col" );
+    const void * addr = nullptr;
+    size_t size = 0;
+    REQUIRE_RC( KMDataNodeAddr ( m_node, & addr, & size ) );
 }
 
 //////////////////////////////////////////// Main

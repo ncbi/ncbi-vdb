@@ -36,8 +36,8 @@ struct VPath;
 extern "C" {
 #endif
 
-rc_t KDatabaseMake ( KDatabase **dbp, const KDirectory *dir, const char *path, KMD5SumFmt *md5, bool read_only );
-rc_t KDatabaseMakeVPath ( KDatabase **dbp, const KDirectory *dir, const struct VPath *path, KMD5SumFmt *md5, bool read_only );
+rc_t KWDatabaseMake ( KDatabase **dbp, const KDirectory *dir, const char *path, KMD5SumFmt *md5, bool read_only );
+rc_t KWDatabaseMakeVPath ( KDatabase **dbp, const KDirectory *dir, const struct VPath *path, KMD5SumFmt *md5, bool read_only );
 
 #ifdef __cplusplus
 }

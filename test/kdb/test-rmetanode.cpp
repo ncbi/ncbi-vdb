@@ -33,6 +33,8 @@
 #include <klib/rc.h>
 #include <kdb/manager.h>
 #include <kdb/table.h>
+#include <kdb/kdb-priv.h>
+
 #include <arch-impl.h>
 
 #include <../libs/kdb/rmetadatanode.h>
@@ -293,6 +295,15 @@ FIXTURE_TEST_CASE(KRMDataNode_Compare, KRMDataNode_Fixture)
 
     KMDataNodeRelease( node );
 }
+
+FIXTURE_TEST_CASE(KRMDataNode_Addr, KRMDataNode_Fixture)
+{
+    Open( "testdb/tbl/SEQUENCE", "col" );
+    const void * addr = nullptr;
+    size_t size = 0;
+    REQUIRE_RC( KMDataNodeAddr ( m_node, & addr, & size ) );
+}
+
 
 //////////////////////////////////////////// Main
 extern "C"

@@ -75,6 +75,12 @@ static bool CC KWTableHasRemoteData ( const KTable *self );
 static rc_t CC KWTableOpenDirectoryRead ( const KTable *self, const KDirectory **dir );
 static rc_t CC KWTableVOpenColumnRead ( const KTable *self, const KColumn **colp, const char *name, va_list args );
 static rc_t CC KWTableOpenMetadataRead ( const KTable *self, const KMetadata **metap );
+static rc_t CC KWTableVOpenIndexRead ( const KTable *self, const KIndex **idxp, const char *name, va_list args );
+static rc_t CC KWTableGetPath ( const KTable *self, const char **path );
+static rc_t CC KWTableGetName(KTable const *self, char const **rslt);
+static rc_t CC KWTableListCol ( const KTable *self, KNamelist **names );
+static rc_t CC KWTableListIdx ( const KTable *self, KNamelist **names );
+static rc_t CC KWTableMetaCompare( const KTable *self, const KTable *other, const char * path, bool * equal );
 
 static KTableBase_vt KWTable_vt =
 {
@@ -90,15 +96,22 @@ static KTableBase_vt KWTable_vt =
     KWTableHasRemoteData,
     KWTableOpenDirectoryRead,
     KWTableVOpenColumnRead,
-    KWTableOpenMetadataRead
+    KWTableOpenMetadataRead,
+    KWTableVOpenIndexRead,
+    KWTableGetPath,
+    KWTableGetName,
+    KWTableListCol,
+    KWTableListIdx,
+    KWTableMetaCompare
 };
 
 
 /* GetPath
  *  return the absolute path to table
  */
-LIB_EXPORT rc_t CC KTableGetPath ( const KTable *self,
-    const char **path )
+static
+rc_t CC
+KWTableGetPath ( const KTable *self, const char **path )
 {
     if ( self == NULL )
         return RC ( rcDB, rcTable, rcAccessing, rcSelf, rcNull );
@@ -158,7 +171,9 @@ KWTableWhack ( KTable *self )
     return rc;
 }
 
-void KTableGetName(KTable const *self, char const **rslt)
+static
+rc_t CC
+KWTableGetName(KTable const *self, char const **rslt)
 {
     char *sep;
 
@@ -166,13 +181,14 @@ void KTableGetName(KTable const *self, char const **rslt)
     sep = strrchr(self->path, '/');
     if (sep != NULL)
         *rslt = sep + 1;
+    return 0;
 }
 
 /* Make
  *  make an initialized structure
  *  NB - does NOT attach reference to dir, but steals it
  */
-rc_t KTableMake ( KTable **tblp, const KDirectory *dir, const char *path,
+rc_t KWTableMake ( KTable **tblp, const KDirectory *dir, const char *path,
 		  KMD5SumFmt * md5, bool read_only )
 {
     KTable *tbl;
@@ -727,28 +743,6 @@ LIB_EXPORT rc_t CC KTableOpenDirectoryUpdate ( KTable *self, KDirectory **dir )
 }
 
 
-/* ModDate
- *  get modification date
- */
-LIB_EXPORT rc_t CC KTableModDate ( const KTable *self, KTime_t *mtime )
-{
-    rc_t rc;
-
-    if ( mtime == NULL )
-        rc = RC ( rcDB, rcTable, rcAccessing, rcParam, rcNull );
-    else
-    {
-        if ( self != NULL )
-            return KDBGetObjModDate ( self -> dir, mtime );
-
-        rc = RC ( rcDB, rcTable, rcAccessing, rcSelf, rcNull );
-        * mtime = 0;
-    }
-
-    return rc;
-}
-
-
 /*--------------------------------------------------------------------------
  * KNamelist
  */
@@ -771,22 +765,16 @@ bool CC KDatabaseListFilter ( const KDirectory *dir, const char *name, void *dat
         NULL ) == 0;
 }
 
-LIB_EXPORT rc_t CC KTableListCol ( const KTable *self, KNamelist **names )
+static
+rc_t CC
+KWTableListCol ( const KTable *self, KNamelist **names )
 {
-    if ( self != NULL )
-    {
-        struct FilterData data;
-        data.mgr = self->mgr;
-        data.type = kptColumn;
+    struct FilterData data;
+    data.mgr = self->mgr;
+    data.type = kptColumn;
 
-        return KDirectoryList ( self -> dir,
-            names, KDatabaseListFilter, &data, "col" );
-    }
-
-    if ( names != NULL )
-        * names = NULL;
-
-    return RC ( rcDB, rcTable, rcListing, rcSelf, rcNull );
+    return KDirectoryList ( self -> dir,
+        names, KDatabaseListFilter, &data, "col" );
 }
 
 static
@@ -807,24 +795,18 @@ bool CC KTableListSkeyFilter ( const KDirectory *dir, const char *name, void *da
     return false;
 }
 
-LIB_EXPORT rc_t CC KTableListIdx ( const KTable *self, KNamelist **names )
+static
+rc_t CC
+KWTableListIdx ( const KTable *self, KNamelist **names )
 {
-    if ( self != NULL )
+    if ( ! self -> prerelease )
     {
-        if ( ! self -> prerelease )
-        {
-            return KDirectoryList ( self -> dir,
-                                    names, KTableListIdxFilter, NULL, "idx" );
-        }
-
         return KDirectoryList ( self -> dir,
-                                names, KTableListSkeyFilter, NULL, "." );
+                                names, KTableListIdxFilter, NULL, "idx" );
     }
 
-    if ( names != NULL )
-        * names = NULL;
-
-    return RC ( rcDB, rcTable, rcListing, rcSelf, rcNull );
+    return KDirectoryList ( self -> dir,
+                            names, KTableListSkeyFilter, NULL, "." );
 }
 
 /* HasRemoteData
@@ -1128,12 +1110,12 @@ KWTableOpenMetadataRead ( const KTable *self, const KMetadata **metap )
  *  test if 2 tables have the same MetaDataNode ( and content ) for a given path
  */
 /* >>>>>> !!! any changes here have to be duplicated in table.c !!! <<<<<< */
-LIB_EXPORT rc_t CC KTableMetaCompare( const KTable *self, const KTable *other,
-                                      const char * path, bool * equal ) {
+static
+rc_t CC
+KWTableMetaCompare( const KTable *self, const KTable *other, const char * path, bool * equal )
+{
     rc_t rc = 0;
-    if ( NULL == self ) {
-        rc = RC ( rcDB, rcTable, rcComparing, rcSelf, rcNull );
-    } else if ( NULL == other || NULL == path || NULL == equal ) {
+    if ( NULL == other || NULL == path || NULL == equal ) {
         rc = RC ( rcDB, rcTable, rcComparing, rcParam, rcNull );
     } else {
         const KMetadata *self_meta;
@@ -1187,21 +1169,9 @@ LIB_EXPORT rc_t CC KTableOpenMetadataUpdate ( KTable *self, KMetadata **metap )
     return rc;
 }
 
-LIB_EXPORT rc_t CC KTableOpenIndexRead ( struct KTable const *self,
-    const KIndex **idx, const char *name, ... )
-{
-    rc_t rc = 0;
-    va_list args;
-
-    va_start ( args, name );
-    rc = KTableVOpenIndexRead ( self, idx, name, args );
-    va_end ( args );
-
-    return rc;
-}
-
-LIB_EXPORT rc_t CC KTableVOpenIndexRead ( const KTable *self,
-    const KIndex **idxp, const char *name, va_list args )
+static
+rc_t CC
+KWTableVOpenIndexRead ( const KTable *self, const KIndex **idxp, const char *name, va_list args )
 {
     rc_t rc = 0;
     char path [ 256 ];
@@ -1213,9 +1183,6 @@ LIB_EXPORT rc_t CC KTableVOpenIndexRead ( const KTable *self,
         return RC ( rcDB, rcTable, rcOpening, rcParam, rcNull );
 
     * idxp = NULL;
-
-    if ( self == NULL )
-        return RC ( rcDB, rcTable, rcOpening, rcSelf, rcNull );
 
     if ( self -> prerelease )
     {

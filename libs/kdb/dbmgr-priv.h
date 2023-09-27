@@ -89,13 +89,8 @@ rc_t KDBManagerMake ( KDBManager **mgrp, struct KDirectory const *wd,
 /* Attach
  * Sever
  */
-#if 1
 KDBManager *KDBManagerAttach ( const KDBManager *self );
 rc_t KDBManagerSever ( const KDBManager *self );
-#else
-KDBManager *KDBManagerAttach ( const KDBManager *self, struct KSymbol *sym );
-rc_t KDBManagerSever ( const KDBManager *self, struct KSymbol *sym );
-#endif
 
 rc_t CC KDBManagerCommonVersion ( const KDBManager *self, uint32_t *version );
 bool CC KDBManagerCommonVExists ( const KDBManager *self, uint32_t requested, const char *name, va_list args );

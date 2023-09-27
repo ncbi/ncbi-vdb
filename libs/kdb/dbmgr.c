@@ -493,13 +493,12 @@ rc_t KDBManagerVOpenDBReadInt ( const KDBManager *self, const KDatabase **dbp,
             try_srapath, NULL );
         if ( rc == 0 )
         {
-            KDatabase *db;
+            const KDatabase *db;
 
             /* allocate a new guy */
-            rc = KDatabaseMake ( & db, dir, dbpath );
+            rc = KRDatabaseMake ( & db, dir, dbpath, self );
             if ( rc == 0 )
             {
-                db -> mgr = KDBManagerAttach ( self );
                 * dbp = db;
                 return 0;
             }
@@ -558,11 +557,10 @@ KDBRManagerVPathOpenLocalDBRead ( struct KDBManager const * self, struct KDataba
             }
             else
             {   /* allocate a new guy */
-                KDatabase *db;
-                rc = KDatabaseMakeVPath ( & db, dir, vpath );
+                const KDatabase *db;
+                rc = KRDatabaseMakeVPath ( & db, dir, vpath, self );
                 if ( rc == 0 )
                 {
-                    db -> mgr = KDBManagerAttach ( self );
                     * p_db = db;
                     return 0;
                 }
@@ -574,7 +572,9 @@ KDBRManagerVPathOpenLocalDBRead ( struct KDBManager const * self, struct KDataba
     }
 }
 
-static rc_t CC KDBRManagerVPathOpenRemoteDBRead ( struct KDBManager const * self, struct KDatabase const ** p_db, struct VPath const * remote, struct VPath const * cache )
+static
+rc_t CC
+KDBRManagerVPathOpenRemoteDBRead ( struct KDBManager const * self, struct KDatabase const ** p_db, struct VPath const * remote, struct VPath const * cache )
 {
     if ( p_db == NULL )
         return RC ( rcDB, rcDatabase, rcAccessing, rcParam, rcNull );
@@ -595,11 +595,10 @@ static rc_t CC KDBRManagerVPathOpenRemoteDBRead ( struct KDBManager const * self
             }
             else
             {   /* allocate a new guy */
-                KDatabase *db;
-                rc = KDatabaseMakeVPath ( & db, dir, remote );
+                const KDatabase *db;
+                rc = KRDatabaseMakeVPath ( & db, dir, remote, self );
                 if ( rc == 0 )
                 {
-                    db -> mgr = KDBManagerAttach ( self );
                     * p_db = db;
                     return 0;
                 }
@@ -642,7 +641,7 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *self,
         rc = RC ( rcDB, rcMgr, rcOpening, rcPath, rcExcessive );
     else
     {
-        KTable *tbl;
+        const KTable *tbl;
         const KDirectory *dir;
         bool prerelease = false;
         const VPath *path2 = NULL;
@@ -713,11 +712,9 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *self,
             VPathRelease(path2);
             path2 = NULL;
 
-            rc = KTableMake ( & tbl, dir, p );
+            rc = KRTableMake ( & tbl, dir, p, self, prerelease );
             if ( rc == 0 )
             {
-                tbl -> mgr = KDBManagerAttach ( self );
-                tbl -> prerelease = prerelease;
                 * tblp = tbl;
 
                 if (aTblpath != tblpath)
@@ -809,7 +806,7 @@ rc_t KDBManagerVOpenColumnReadInt ( const KDBManager *self,
             try_srapath, NULL );
         if ( rc == 0 )
         {
-            rc = KColumnMakeRead ( & col, dir, colpath );
+            rc = KRColumnMakeRead ( & col, dir, colpath );
             if ( rc == 0 )
             {
                 col -> mgr = KDBManagerAttach ( self );

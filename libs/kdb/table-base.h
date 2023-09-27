@@ -44,9 +44,11 @@ extern "C" {
 
 struct KDBManager;
 struct KDatabase;
+struct KTable;
 struct KColumn;
 struct KMetadata;
 struct KIndex;
+struct KNamelist;
 
 /*--------------------------------------------------------------------------
  * KTableBase, base structure for KTable implementations
@@ -71,9 +73,12 @@ struct KTableBase_vt
     rc_t ( CC * vOpenColumnRead )   ( const KTABLE_IMPL * self, const struct KColumn **colp, const char *name, va_list args );
     rc_t ( CC * openMetadataRead )  ( const KTABLE_IMPL * self, const struct KMetadata **meta );
     rc_t ( CC * vOpenIndexRead )    ( const KTABLE_IMPL * self, const struct KIndex **idxp, const char *name, va_list args );
+    rc_t ( CC * getPath )           ( const KTABLE_IMPL * self, const char **path );
+    rc_t ( CC * getName )           ( const KTABLE_IMPL * self, char const **rslt);
+    rc_t ( CC * listCol )           ( const KTABLE_IMPL * self, struct KNamelist **names );
+    rc_t ( CC * listIdx )           ( const KTABLE_IMPL * self, struct KNamelist **names );
+    rc_t ( CC * metaCompare )       ( const KTABLE_IMPL * self, const struct KTable *other, const char * path, bool * equal );
 };
-// KDB_EXTERN rc_t CC KTableOpenIndexRead ( struct KTable const *self, const KIndex **idx, const char *name, ... );
-// KDB_EXTERN rc_t CC KTableVOpenIndexRead ( struct KTable const *self, const KIndex **idx, const char *name, va_list args );
 
 //TODO: write-side only; decide how to handle
 #if 0

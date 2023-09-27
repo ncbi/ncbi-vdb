@@ -84,7 +84,7 @@ struct KTable
     char path [ 1 ];
 };
 
-rc_t KTableMake ( KTable **tblp, const KDirectory *dir, const char *path, KMD5SumFmt * md5, bool read_only );
+rc_t KWTableMake ( KTable **tblp, const KDirectory *dir, const char *path, KMD5SumFmt * md5, bool read_only );
 
 /* Cmp
  * Sort

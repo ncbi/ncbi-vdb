@@ -200,3 +200,38 @@ LIB_EXPORT rc_t CC KTableOpenMetadataRead ( const KTable *self, const KMetadata 
 {
     DISPATCH( openMetadataRead( self, metap ) );
 }
+LIB_EXPORT rc_t CC KTableVOpenIndexRead ( struct KTable const *self, const struct KIndex **idx, const char *name, va_list args )
+{
+    DISPATCH( vOpenIndexRead( self, idx, name, args ) );
+}
+LIB_EXPORT rc_t CC KTableOpenIndexRead ( struct KTable const *self, const struct KIndex **idx, const char *name, ... )
+{
+    rc_t rc = 0;
+    va_list args;
+
+    va_start ( args, name );
+    rc = KTableVOpenIndexRead ( self, idx, name, args );
+    va_end ( args );
+
+    return rc;
+}
+LIB_EXPORT rc_t CC KTableGetPath ( const KTable *self, const char **path )
+{
+    DISPATCH( getPath( self, path ) );
+}
+LIB_EXPORT rc_t KTableGetName( struct KTable const *self, char const **rslt)
+{
+    DISPATCH( getName( self, rslt ) );
+}
+LIB_EXPORT rc_t CC KTableListCol ( const KTable *self, struct KNamelist **names )
+{
+    DISPATCH( listCol( self, names ) );
+}
+LIB_EXPORT rc_t CC KTableListIdx ( const KTable *self, struct KNamelist **names )
+{
+    DISPATCH( listIdx( self, names ) );
+}
+LIB_EXPORT rc_t CC KTableMetaCompare( const KTable *self, const KTable *other, const char * path, bool * equal )
+{
+    DISPATCH( metaCompare( self, other, path, equal ) );
+}

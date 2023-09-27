@@ -232,3 +232,19 @@ LIB_EXPORT rc_t CC KDatabaseOpenIndexRead ( struct KDatabase const *self, const 
 
     return rc;
 }
+LIB_EXPORT rc_t CC KDatabaseListDB ( const KDatabase *self, struct KNamelist **names )
+{
+    DISPATCH( listDB ( self, names ) );
+}
+LIB_EXPORT rc_t CC KDatabaseListTbl ( struct KDatabase const *self, struct KNamelist **names )
+{
+    DISPATCH( listTbl ( self, names ) );
+}
+LIB_EXPORT rc_t CC KDatabaseListIdx ( struct KDatabase const *self, struct KNamelist **names )
+{
+    DISPATCH( listIdx ( self, names ) );
+}
+LIB_EXPORT rc_t CC KDatabaseGetPath ( KDatabase const *self, const char **path )
+{
+    DISPATCH( getPath ( self, path ) );
+}

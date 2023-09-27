@@ -90,8 +90,7 @@ rc_t KRColumnBlobWhack ( KColumnBlob *self )
 /* OpenRead
  * OpenUpdate
  */
-static
-rc_t KColumnBlobOpenRead ( KColumnBlob *self, const KColumn *col, int64_t id )
+rc_t KRColumnBlobOpenRead ( KColumnBlob *self, const KColumn *col, int64_t id )
 {
     /* locate blob */
     rc_t rc = KColumnIdxLocateBlob ( & col -> idx, & self -> loc, id, id );
@@ -122,7 +121,7 @@ rc_t KColumnBlobOpenRead ( KColumnBlob *self, const KColumn *col, int64_t id )
 
 /* Make
  */
-rc_t KColumnBlobMake ( KColumnBlob **blobp, bool bswap )
+rc_t KRColumnBlobMake ( KColumnBlob **blobp, bool bswap )
 {
     KColumnBlob *blob = malloc ( sizeof * blob );
     if ( blob == NULL )
@@ -135,39 +134,6 @@ rc_t KColumnBlobMake ( KColumnBlob **blobp, bool bswap )
 
     * blobp = blob;
     return 0;
-}
-
-/* OpenBlobRead
- *  opens an existing blob containing row data for id
- */
-LIB_EXPORT rc_t CC KColumnOpenBlobRead ( const KColumn *self, const KColumnBlob **blobp, int64_t id )
-{
-    rc_t rc;
-    KColumnBlob *blob;
-
-    if ( blobp == NULL )
-        return RC ( rcDB, rcColumn, rcOpening, rcParam, rcNull );
-
-    * blobp = NULL;
-
-    if ( self == NULL )
-        return RC ( rcDB, rcColumn, rcOpening, rcSelf, rcNull );
-
-
-    rc = KColumnBlobMake ( & blob, self -> idx . idx1 . bswap );
-    if ( rc == 0 )
-    {
-        rc = KColumnBlobOpenRead ( blob, self, id );
-        if ( rc == 0 )
-        {
-            * blobp = blob;
-            return 0;
-        }
-
-        free ( blob );
-    }
-
-    return rc;
 }
 
 /* IdRange

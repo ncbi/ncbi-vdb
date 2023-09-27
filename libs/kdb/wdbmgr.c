@@ -547,7 +547,7 @@ rc_t KDBManagerVOpenDBReadInt ( const KDBManager *cself,
 			{
 				KDatabase *db;
 
-				rc = KDatabaseMake ( &db, dir, key_path, NULL, true );
+				rc = KWDatabaseMake ( &db, dir, key_path, NULL, true );
 				if ( rc == 0 )
 				{
 					KDBManager *self = ( KDBManager* ) cself;
@@ -604,7 +604,7 @@ rc_t KDBManagerMakeDBUpdate ( KDBManager *self,
         KDatabase *db;
 
         /* Make the base object */
-        rc = KDatabaseMake ( & db, dir, path, md5, false );
+        rc = KWDatabaseMake ( & db, dir, path, md5, false );
         if ( rc == 0 )
         {
             rc = KDBManagerInsertDatabase ( self, db );
@@ -1059,7 +1059,7 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *cself,
 			}
 			if ( rc == 0 )
 			{
-				rc = KTableMake ( & tbl, dir, key_path, NULL, true );
+				rc = KWTableMake ( & tbl, dir, key_path, NULL, true );
 				if ( rc == 0 )
 				{
 					KDBManager * self = (KDBManager *)cself;
@@ -1410,7 +1410,7 @@ rc_t KDBManagerVOpenColumnReadInt2 ( const KDBManager *cself,
             {
                 KColumn *col;
 
-                rc = KColumnMakeRead ( & col, dir, colpath, NULL );
+                rc = KWColumnMakeRead ( & col, dir, colpath, NULL );
 
                 if ( rc == 0 )
                 {
@@ -1685,7 +1685,7 @@ KDBWManagerVPathOpenLocalDBRead ( struct KDBManager const * self, struct KDataba
             {
                 KDatabase *db;
 
-                rc = KDatabaseMakeVPath ( & db, dir, vpath, NULL, true );
+                rc = KWDatabaseMakeVPath ( & db, dir, vpath, NULL, true );
                 if ( rc == 0 )
                 {
                     rc = KDBManagerInsertDatabase ( ( KDBManager* ) self, db );
@@ -1730,7 +1730,7 @@ KDBWManagerVPathOpenRemoteDBRead ( struct KDBManager const * self, struct KDatab
                 KDatabase *db;
 
                 /* allocate a new guy */
-                rc = KDatabaseMakeVPath ( & db, dir, remote, NULL, true );
+                rc = KWDatabaseMakeVPath ( & db, dir, remote, NULL, true );
                 if ( rc == 0 )
                 {
                     rc = KDBManagerInsertDatabase ( ( KDBManager* ) self, db );
@@ -1833,7 +1833,7 @@ rc_t KDBManagerMakeTableUpdate ( KDBManager *self,
         }
 
         /* Make the base object */
-        rc = KTableMake ( & tbl, dir, path, md5, false );
+        rc = KWTableMake ( & tbl, dir, path, md5, false );
         if ( rc == 0 )
         {
             rc = KDBManagerInsertTable ( self, tbl );
