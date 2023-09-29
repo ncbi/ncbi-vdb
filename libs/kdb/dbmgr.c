@@ -248,35 +248,6 @@ rc_t KDBManagerResolvePathRelativeDir (const KDBManager * self,
     return rc;
 }
 
-
-
-/* KDBHdrValidate
- *  validates that a header sports a supported byte order
- *  and that the version is within range
- */
-rc_t KDBHdrValidate ( const KDBHdr *hdr, size_t size,
-    uint32_t min_vers, uint32_t max_vers )
-{
-    assert ( hdr != NULL );
-
-    if ( size < sizeof * hdr )
-        return RC ( rcDB, rcHeader, rcValidating, rcData, rcCorrupt );
-
-    if ( hdr -> endian != eByteOrderTag )
-    {
-        if ( hdr -> endian == eByteOrderReverse )
-            return RC ( rcDB, rcHeader, rcValidating, rcByteOrder, rcIncorrect );
-        return RC ( rcDB, rcHeader, rcValidating, rcData, rcCorrupt );
-    }
-
-    if ( hdr -> version < min_vers || hdr -> version > max_vers )
-        return RC ( rcDB, rcHeader, rcValidating, rcHeader, rcBadVersion );
-
-    return 0;
-}
-
-
-
 /* Writable
  *  returns 0 if object is writable
  *  or a reason why if not
@@ -509,7 +480,7 @@ rc_t KDBManagerVOpenDBReadInt ( const KDBManager *self, const KDatabase **dbp,
     return rc;
 }
 
-rc_t KDBManagerVOpenDBReadInt_noargs ( const KDBManager *self, const KDatabase **dbp,
+rc_t KDBRManagerVOpenDBReadInt_noargs ( const KDBManager *self, const KDatabase **dbp,
                                 const KDirectory *wd, bool try_srapath,
                                 const char *path, ... )
 {
@@ -732,7 +703,7 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *self,
     return rc;
 }
 
-rc_t KDBManagerVOpenTableReadInt_noargs ( const KDBManager *self,
+rc_t KDBRManagerVOpenTableReadInt_noargs ( const KDBManager *self,
     const KTable **tblp, const KDirectory *wd, bool try_srapath,
     const char *path, bool tryEnvAndAd, const struct VPath *vpath,
     ... )
@@ -769,7 +740,7 @@ KDBRManagerOpenTableReadVPath ( const KDBManager *self, const KTable **tbl, cons
 
     * tbl = NULL;
 
-    return KDBManagerVOpenTableReadInt_noargs ( self, tbl, self->wd, true, "",
+    return KDBRManagerVOpenTableReadInt_noargs ( self, tbl, self->wd, true, "",
         true, path );
 }
 
@@ -821,7 +792,7 @@ rc_t KDBManagerVOpenColumnReadInt ( const KDBManager *self,
     return rc;
 }
 
-rc_t KDBManagerVOpenColumnReadInt_noargs ( const KDBManager *self,
+rc_t KDBRManagerVOpenColumnReadInt_noargs ( const KDBManager *self,
     const KColumn **colp, const KDirectory *wd, bool try_srapath,
     const char *path, ... )
 {
@@ -855,7 +826,7 @@ KDBRManagerVOpenColumnRead ( const KDBManager *self, const KColumn **col, const 
  *
  *  "meta" [ OUT ] - return parameter for metadata
  */
-rc_t KDBManagerOpenMetadataReadInt ( const KDBManager *self, KMetadata **metap, const KDirectory *wd, uint32_t rev, bool prerelease )
+rc_t KDBRManagerOpenMetadataReadInt ( const KDBManager *self, KMetadata **metap, const KDirectory *wd, uint32_t rev, bool prerelease )
 {
     char metapath [ 4096 ];
     rc_t rc = ( prerelease == 1 ) ?
@@ -900,7 +871,7 @@ rc_t KDBManagerOpenMetadataReadInt ( const KDBManager *self, KMetadata **metap, 
  *
  *  "name" [ IN ] - NUL terminated string in UTF-8 giving simple name of idx
  */
-rc_t KDBManagerOpenIndexReadInt ( const KDBManager *self, KIndex **idxp, const KDirectory *wd, const char *path )
+rc_t KDBRManagerOpenIndexReadInt ( const KDBManager *self, KIndex **idxp, const KDirectory *wd, const char *path )
 {
     char idxpath [ 4096 ];
     rc_t rc = KDirectoryResolvePath ( wd, true,

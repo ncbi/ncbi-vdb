@@ -817,7 +817,7 @@ KWMetadataOpenRevision ( const KMetadata *self, const KMetadata **metap, uint32_
 
     * metap = NULL;
 
-    rc = KDBManagerOpenMetadataReadInt ( self -> mgr,
+    rc = KDBWManagerOpenMetadataReadInt ( self -> mgr,
         & meta, self -> dir, revision, false, &meta_is_cached  );
     if ( rc == 0 )
     {

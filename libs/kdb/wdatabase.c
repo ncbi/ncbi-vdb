@@ -1037,7 +1037,7 @@ KWDatabaseVOpenDBRead ( const KDatabase *self, const KDatabase **dbp, const char
     if ( rc == 0 )
     {
         bool is_cached;
-        rc = KDBManagerVOpenDBReadInt_noargs ( self -> mgr, dbp,
+        rc = KDBWManagerVOpenDBReadInt_noargs ( self -> mgr, dbp,
                                         self -> dir, path, & is_cached, false );
         if ( rc == 0 && ! is_cached )
         {
@@ -1071,7 +1071,7 @@ KWDatabaseVOpenTableRead ( const KDatabase *self, const KTable **tblp, const cha
         path, sizeof path, "tbl", 3, name, args );
     if ( rc == 0 )
     {
-        rc = KDBManagerVOpenTableReadInt_noargs ( self -> mgr, tblp,
+        rc = KDBWManagerVOpenTableReadInt_noargs ( self -> mgr, tblp,
                                            self -> dir, false, path, NULL );
         if ( rc == 0 )
         {
@@ -1235,7 +1235,7 @@ KWDatabaseOpenMetadataRead ( const KDatabase *self, const KMetadata **metap )
 
     * metap = NULL;
 
-    rc = KDBManagerOpenMetadataReadInt ( self -> mgr, & meta, self -> dir, 0, false, &meta_is_cached );
+    rc = KDBWManagerOpenMetadataReadInt ( self -> mgr, & meta, self -> dir, 0, false, &meta_is_cached );
     if ( rc == 0 )
     {
         if(!meta_is_cached) ((KMetadata*)meta) -> db = KDatabaseAttach ( self );
@@ -1265,7 +1265,7 @@ KWDatabaseVOpenIndexRead ( const KDatabase *cself, const KIndex **idxp, const ch
     if ( rc == 0 )
     {
         KIndex *idx;
-        rc = KDBManagerOpenIndexReadInt ( cself -> mgr, (const KIndex **)& idx,
+        rc = KDBWManagerOpenIndexReadInt ( cself -> mgr, (const KIndex **)& idx,
                                           cself -> dir, path );
         if ( rc == 0 )
         {

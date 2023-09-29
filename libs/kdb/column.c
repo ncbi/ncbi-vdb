@@ -373,7 +373,7 @@ KRColumnOpenMetadataRead ( const KColumn *self, const KMetadata **metap )
 
     * metap = NULL;
 
-    rc = KDBManagerOpenMetadataReadInt ( self -> mgr, & meta, self -> dir, 0, false );
+    rc = KDBRManagerOpenMetadataReadInt ( self -> mgr, & meta, self -> dir, 0, false );
     if ( rc == 0 )
     {
         meta -> col = KColumnAttach ( self );

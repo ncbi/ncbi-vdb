@@ -566,7 +566,7 @@ rc_t KDBManagerVOpenDBReadInt ( const KDBManager *cself,
     return rc;
 }
 
-rc_t KDBManagerVOpenDBReadInt_noargs ( const KDBManager *cself,
+rc_t KDBWManagerVOpenDBReadInt_noargs ( const KDBManager *cself,
     const KDatabase **dbp, KDirectory *wd,
     const char *path, bool *cached, int try_srapath, ... )
 {
@@ -1080,7 +1080,7 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *cself,
     return rc;
 }
 
-rc_t KDBManagerVOpenTableReadInt_noargs ( const KDBManager *cself,
+rc_t KDBWManagerVOpenTableReadInt_noargs ( const KDBManager *cself,
     const KTable **tblp, const KDirectory *wd, bool try_srapath,
     const char *path, const struct VPath *vpath, ... )
 {
@@ -1111,7 +1111,7 @@ static rc_t CC KDBWManagerOpenTableReadVPath(const KDBManager *self, const KTabl
 
     *tbl = NULL;
 
-    return KDBManagerVOpenTableReadInt_noargs(self, tbl, self->wd, true, NULL, path);
+    return KDBWManagerVOpenTableReadInt_noargs(self, tbl, self->wd, true, NULL, path);
 }
 
 rc_t KDBManagerInsertColumn ( KDBManager * self, KColumn * col )
@@ -1449,7 +1449,7 @@ rc_t KDBManagerVOpenColumnReadInt ( const KDBManager *cself,
     return rc;
 }
 
-rc_t KDBManagerVOpenColumnReadInt_noargs ( const KDBManager *cself,
+rc_t KDBWManagerVOpenColumnReadInt_noargs ( const KDBManager *cself,
     const KColumn **colp, const KDirectory *wd,
     const char *path_fmt, bool *cached, int try_srapath, ... )
 {
@@ -2279,7 +2279,8 @@ rc_t KDBManagerInsertMetadata ( KDBManager * self, KMetadata * meta )
  *
  *  "meta" [ OUT ] - return parameter for metadata
  */
-rc_t KDBManagerOpenMetadataReadInt ( KDBManager *self, const KMetadata **metap, const KDirectory *wd, uint32_t rev, bool prerelease,bool *cached )
+rc_t
+KDBWManagerOpenMetadataReadInt ( KDBManager *self, const KMetadata **metap, const KDirectory *wd, uint32_t rev, bool prerelease,bool *cached )
 {
     char metapath [ 4096 ];
     rc_t rc = ( prerelease == 1 ) ?
@@ -2393,7 +2394,7 @@ rc_t KDBManagerInsertIndex ( KDBManager * self, KIndex * idx)
  *
  *  "name" [ IN ] - NUL terminated string in UTF-8 giving simple name of idx
  */
-rc_t KDBManagerOpenIndexReadInt ( KDBManager *self,const KIndex **idxp, const KDirectory *wd, const char *path )
+rc_t KDBWManagerOpenIndexReadInt ( KDBManager *self,const KIndex **idxp, const KDirectory *wd, const char *path )
 {
     char idxpath [ 4096 ];
     rc_t rc = KDirectoryResolvePath ( wd, true,

@@ -510,7 +510,7 @@ KRTableVOpenColumnRead ( const KTable *self, const KColumn **colp, const char *n
         path, sizeof path, "col", 3, name, args );
     if ( rc == 0 )
     {
-        rc = KDBManagerVOpenColumnReadInt_noargs ( self -> mgr,
+        rc = KDBRManagerVOpenColumnReadInt_noargs ( self -> mgr,
                                            colp, self -> dir, false, path );
         if ( rc == 0 )
         {
@@ -533,7 +533,7 @@ KRTableOpenMetadataRead ( const KTable *self, const KMetadata **metap )
 
     * metap = NULL;
 
-    rc = KDBManagerOpenMetadataReadInt ( self -> mgr, & meta,
+    rc = KDBRManagerOpenMetadataReadInt ( self -> mgr, & meta,
         self -> dir, 0, self -> prerelease );
     if ( rc == 0 )
     {
@@ -616,7 +616,7 @@ KRTableVOpenIndexRead ( const KTable *self, const KIndex **idxp, const char *nam
     if ( rc == 0 )
     {
         KIndex *idx;
-        rc = KDBManagerOpenIndexReadInt ( self -> mgr,
+        rc = KDBRManagerOpenIndexReadInt ( self -> mgr,
             & idx, self -> dir, path );
         if ( rc == 0 )
         {

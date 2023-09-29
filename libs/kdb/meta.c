@@ -365,7 +365,7 @@ KRMetadataOpenRevision ( const KMetadata *self, const KMetadata **metap, uint32_
 
     * metap = NULL;
 
-    rc = KDBManagerOpenMetadataReadInt ( self -> mgr,
+    rc = KDBRManagerOpenMetadataReadInt ( self -> mgr,
         & meta, self -> dir, revision, false );
     if ( rc == 0 )
     {

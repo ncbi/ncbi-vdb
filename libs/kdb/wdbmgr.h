@@ -40,7 +40,7 @@ extern "C" {
 struct KTable;
 struct KIndex;
 
-rc_t KDBManagerVOpenDBReadInt_noargs ( const KDBManager *cself,
+rc_t KDBWManagerVOpenDBReadInt_noargs ( const KDBManager *cself,
     const KDatabase **dbp, KDirectory *wd,
     const char *path, bool *cached, int try_srapath, ... );
 
@@ -53,7 +53,7 @@ rc_t KDBManagerVCreateDBInt_noargs ( KDBManager *self,
 
 rc_t KDBManagerInsertDatabase ( KDBManager * self, KDatabase * db );
 
-rc_t KDBManagerVOpenTableReadInt_noargs ( const KDBManager *cself,
+rc_t KDBWManagerVOpenTableReadInt_noargs ( const KDBManager *cself,
     const struct KTable **tblp, const KDirectory *wd, bool try_srapath,
     const char *path, const struct VPath *vpath, ... );
 
@@ -65,7 +65,7 @@ rc_t KDBManagerVCreateTableInt_noargs ( KDBManager *self,
 
 rc_t KDBManagerInsertTable ( KDBManager * self, struct KTable * tbl );
 
-rc_t KDBManagerVOpenColumnReadInt_noargs ( const KDBManager *cself,
+rc_t KDBWManagerVOpenColumnReadInt_noargs ( const KDBManager *cself,
     const KColumn **colp, const KDirectory *wd,
     const char *path_fmt, bool *cached, int try_srapath, ... );
 
@@ -79,12 +79,12 @@ rc_t KDBManagerVOpenColumnUpdateInt_noargs ( KDBManager *self,
 
 rc_t KDBManagerInsertColumn ( KDBManager * self, KColumn * col );
 
-rc_t KDBManagerOpenMetadataReadInt ( KDBManager *self, const KMetadata **metap, const KDirectory *wd, uint32_t rev, bool prerelease,bool *cached );
+rc_t KDBWManagerOpenMetadataReadInt ( KDBManager *self, const KMetadata **metap, const KDirectory *wd, uint32_t rev, bool prerelease,bool *cached );
 rc_t KDBManagerOpenMetadataUpdateInt ( KDBManager *self, KMetadata **metap, KDirectory *wd, KMD5SumFmt * md5 );
 
 rc_t KDBManagerInsertMetadata ( KDBManager * self, KMetadata * meta );
 
-rc_t KDBManagerOpenIndexReadInt ( KDBManager *self,const struct KIndex **idxp, const KDirectory *wd, const char *path );
+rc_t KDBWManagerOpenIndexReadInt ( KDBManager *self,const struct KIndex **idxp, const KDirectory *wd, const char *path );
 
 rc_t KDBManagerCreateIndexInt ( KDBManager *self, KIndex **idxp, KDirectory *wd, KIdxType type, KCreateMode cmode, const char *path, bool use_md5 );
 

@@ -62,7 +62,7 @@ public:
     {
         const KDirectory *subdir;
         THROW_ON_RC(  KDirectoryOpenDirRead( m_dir, &subdir, false, "%s", path ) );
-        THROW_ON_RC( KDBManagerOpenMetadataReadInt ( m_mgr, & m_meta, subdir, 0, false ) );
+        THROW_ON_RC( KDBRManagerOpenMetadataReadInt ( m_mgr, & m_meta, subdir, 0, false ) );
         THROW_ON_RC( KDirectoryRelease( subdir ) );
     }
 

@@ -221,7 +221,7 @@ static rc_t CC KRDatabaseVOpenDBRead ( const KDatabase *self, const KDatabase **
         path, sizeof path, "db", 2, name, args );
     if ( rc == 0 )
     {
-        rc = KDBManagerVOpenDBReadInt_noargs ( self -> mgr, dbp,
+        rc = KDBRManagerVOpenDBReadInt_noargs ( self -> mgr, dbp,
                                         self -> dir, false, path );
         if ( rc == 0 )
         {
@@ -564,7 +564,7 @@ KRDatabaseVOpenTableRead ( const KDatabase *self,
         path, sizeof path, "tbl", 3, name, args );
     if ( rc == 0 )
     {
-        rc = KDBManagerVOpenTableReadInt_noargs ( self -> mgr, tblp,
+        rc = KDBRManagerVOpenTableReadInt_noargs ( self -> mgr, tblp,
                                 self -> dir, false, path, false, NULL );
         if ( rc == 0 )
         {
@@ -588,7 +588,7 @@ KRDatabaseOpenMetadataRead ( const KDatabase *self, const KMetadata **metap )
 
     * metap = NULL;
 
-    rc = KDBManagerOpenMetadataReadInt ( self -> mgr, & meta, self -> dir, 0, false );
+    rc = KDBRManagerOpenMetadataReadInt ( self -> mgr, & meta, self -> dir, 0, false );
     if ( rc == 0 )
     {
         meta -> db = KDatabaseAttach ( self );
@@ -618,7 +618,7 @@ KRDatabaseVOpenIndexRead ( const KDatabase *self, const KIndex **idxp, const cha
     if ( rc == 0 )
     {
         KIndex *idx;
-        rc = KDBManagerOpenIndexReadInt ( self -> mgr,
+        rc = KDBRManagerOpenIndexReadInt ( self -> mgr,
             & idx, self -> dir, path );
         if ( rc == 0 )
         {

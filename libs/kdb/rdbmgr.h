@@ -36,21 +36,21 @@ struct KTable;
 extern "C" {
 #endif
 
-rc_t KDBManagerVOpenDBReadInt_noargs ( const KDBManager *self, const struct KDatabase **dbp,
+rc_t KDBRManagerVOpenDBReadInt_noargs ( const KDBManager *self, const struct KDatabase **dbp,
                                 const KDirectory *wd, bool try_srapath,
                                 const char *path, ... );
-rc_t KDBManagerVOpenTableReadInt_noargs ( const KDBManager *self,
+rc_t KDBRManagerVOpenTableReadInt_noargs ( const KDBManager *self,
     const struct KTable **tblp, const KDirectory *wd, bool try_srapath,
     const char *path, bool tryEnvAndAd, const struct VPath *vpath,
     ... );
-rc_t KDBManagerVOpenColumnReadInt_noargs ( const KDBManager *self,
+rc_t KDBRManagerVOpenColumnReadInt_noargs ( const KDBManager *self,
     const struct KColumn **colp, const KDirectory *wd, bool try_srapath,
     const char *path, ... );
 
-rc_t KDBManagerOpenMetadataReadInt ( const KDBManager *self, KMetadata **metap,
+rc_t KDBRManagerOpenMetadataReadInt ( const KDBManager *self, KMetadata **metap,
     const KDirectory *wd, uint32_t rev, bool prerelease );
 
-rc_t KDBManagerOpenIndexReadInt ( const KDBManager *self, struct KIndex **idxp, const KDirectory *wd, const char *path );
+rc_t KDBRManagerOpenIndexReadInt ( const KDBManager *self, struct KIndex **idxp, const KDirectory *wd, const char *path );
 
 
 #ifdef __cplusplus

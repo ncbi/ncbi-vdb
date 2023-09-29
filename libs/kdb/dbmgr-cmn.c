@@ -32,6 +32,7 @@
 #define KONST const
 #include "dbmgr-priv.h"
 #include "kdb-priv.h"
+#include "kdbfmt-priv.h"
 #undef KONST
 
 #include <vfs/manager.h>
@@ -400,3 +401,29 @@ LIB_EXPORT rc_t CC KDBManagerGetTableModDate ( const KDBManager *self,
     return rc;
 }
 
+
+
+/* KDBHdrValidate
+ *  validates that a header sports a supported byte order
+ *  and that the version is within range
+ */
+rc_t KDBHdrValidate ( const KDBHdr *hdr, size_t size,
+    uint32_t min_vers, uint32_t max_vers )
+{
+    assert ( hdr != NULL );
+
+    if ( size < sizeof * hdr )
+        return RC ( rcDB, rcHeader, rcValidating, rcData, rcCorrupt );
+
+    if ( hdr -> endian != eByteOrderTag )
+    {
+        if ( hdr -> endian == eByteOrderReverse )
+            return RC ( rcDB, rcHeader, rcValidating, rcByteOrder, rcIncorrect );
+        return RC ( rcDB, rcHeader, rcValidating, rcData, rcCorrupt );
+    }
+
+    if ( hdr -> version < min_vers || hdr -> version > max_vers )
+        return RC ( rcDB, rcHeader, rcValidating, rcHeader, rcBadVersion );
+
+    return 0;
+}

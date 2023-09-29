@@ -953,7 +953,7 @@ KWColumnOpenMetadataRead ( const KColumn *self, const KMetadata **metap )
 
     * metap = NULL;
 
-    rc = KDBManagerOpenMetadataReadInt ( self -> mgr, & meta, self -> dir, 0, false, &meta_is_cached );
+    rc = KDBWManagerOpenMetadataReadInt ( self -> mgr, & meta, self -> dir, 0, false, &meta_is_cached );
     if ( rc == 0 )
     {
         if(!meta_is_cached) ((KMetadata*)meta) -> col = KColumnAttach ( self );

@@ -953,7 +953,7 @@ KWTableVOpenColumnRead ( const KTable *self, const KColumn **colp, const char *n
     if ( rc == 0 )
     {
 	bool col_is_cached;
-        rc = KDBManagerVOpenColumnReadInt_noargs ( self -> mgr,
+        rc = KDBWManagerVOpenColumnReadInt_noargs ( self -> mgr,
                                             colp, self -> dir, path, &col_is_cached, false );
         if ( rc == 0 )
         {
@@ -1093,7 +1093,7 @@ KWTableOpenMetadataRead ( const KTable *self, const KMetadata **metap )
 
     * metap = NULL;
 
-    rc = KDBManagerOpenMetadataReadInt ( self -> mgr, & meta, self -> dir, 0, self -> prerelease, &meta_is_cached );
+    rc = KDBWManagerOpenMetadataReadInt ( self -> mgr, & meta, self -> dir, 0, self -> prerelease, &meta_is_cached );
     if ( rc == 0 )
     {
         if(!meta_is_cached) ((KMetadata*)meta) -> tbl = KTableAttach ( self );
@@ -1192,7 +1192,7 @@ KWTableVOpenIndexRead ( const KTable *self, const KIndex **idxp, const char *nam
     if ( rc == 0 )
     {
         KIndex *idx;
-        rc = KDBManagerOpenIndexReadInt ( self -> mgr, (const KIndex**)& idx,
+        rc = KDBWManagerOpenIndexReadInt ( self -> mgr, (const KIndex**)& idx,
                                           self -> dir, path );
         if ( rc == 0 )
         {
