@@ -26,6 +26,8 @@
 
 #define KONST const
 #include <kdb/extern.h>
+#include <kdb/kdb-priv.h>
+
 #include "rdatabase.h"
 #include "kdb-priv.h"
 #include "table-priv.h"
@@ -244,7 +246,7 @@ KRDatabaseLocked ( const KDatabase *self )
     if ( self == NULL )
         return false;
 
-    rc = KDBWritable ( self -> dir, "." );
+    rc = KDBRWritable ( self -> dir, "." );
     return GetRCState ( rc ) == rcLocked;
 }
 
@@ -505,7 +507,7 @@ static
 bool CC KDatabaseListFilter ( const KDirectory *dir, const char *name, void *data_ )
 {
     struct FilterData * data = data_;
-    return ( KDBOpenPathTypeRead ( data->mgr, dir, name,
+    return ( KDBManagerOpenPathTypeRead ( data->mgr, dir, name,
         NULL, data->type, NULL, false, NULL ) == 0 );
 }
 

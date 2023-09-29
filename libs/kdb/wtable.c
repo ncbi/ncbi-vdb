@@ -28,6 +28,7 @@
 
 #include <kdb/extern.h>
 #include <kdb/index.h>
+#include <kdb/kdb-priv.h>
 
 #include "database-priv.h"
 #include "wdbmgr.h"
@@ -54,10 +55,6 @@
 #include <string.h>
 #include <assert.h>
 #include <stdio.h>
-
-
-/* keep file system structure compatible with v0 code */
-#define V0_BACKWARD_COMPAT 0
 
 /*--------------------------------------------------------------------------
  * KTable
@@ -229,7 +226,7 @@ static
 bool CC
 KWTableLocked ( const KTable *self )
 {
-    rc_t rc = KDBWritable ( self -> dir, "." );
+    rc_t rc = KDBWWritable ( self -> dir, "." );
     return GetRCState ( rc ) == rcLocked;
 }
 
@@ -402,7 +399,7 @@ KWTableVWritable (const KTable *self, uint32_t type, const char * name, va_list 
 
     rc = KTableLockInt (self, path, sizeof path, type, name, args);
     if (rc == 0)
-        rc = KDBWritable (self->dir, path);
+        rc = KDBWWritable (self->dir, path);
     return rc;
 }
 
@@ -761,7 +758,7 @@ bool CC KDatabaseListFilter ( const KDirectory *dir, const char *name, void *dat
 {
     struct FilterData * data = data_;
 
-    return KDBOpenPathTypeRead(data->mgr, dir, name, NULL, data->type, NULL, false,
+    return KDBManagerOpenPathTypeRead(data->mgr, dir, name, NULL, data->type, NULL, false,
         NULL ) == 0;
 }
 
@@ -856,7 +853,7 @@ static rc_t KTableObjectIsGoodSource(KTable const *self
     if (rc)
         return rc;
 
-    rc = KDBWritable(self->dir, path);
+    rc = KDBWWritable(self->dir, path);
     if (rc == 0) {
         if (KDBManagerOpenObjectBusy(self->mgr, path))
             return RC ( rcDB, rcTable, rcCopying, rcPath, rcBusy );
@@ -878,7 +875,7 @@ static rc_t KTableObjectIsGoodDestination(KTable *self
     if (rc)
         return rc;
 
-    rc = KDBWritable(self->dir, path);
+    rc = KDBWWritable(self->dir, path);
     if (rc == 0)
         return RC(rcDB, rcTable, rcCopying, rcPath, rcExists);
     if (GetRCState(rc) == rcLocked || GetRCState(rc) == rcReadonly)

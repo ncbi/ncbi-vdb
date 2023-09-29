@@ -28,6 +28,8 @@
 #include "rmeta.h"
 #include "rmetadatanode.h"
 
+#include <kdb/kdb-priv.h>
+
 #include <klib/refcount.h>
 #include <klib/debug.h>
 #include <klib/log.h>
@@ -144,6 +146,9 @@ static rc_t CC KRMDataNodeReadAttrAsI64 ( const KMDataNode *self, const char *at
 static rc_t CC KRMDataNodeReadAttrAsU64 ( const KMDataNode *self, const char *attr, uint64_t *u );
 static rc_t CC KRMDataNodeReadAttrAsF64 ( const KMDataNode *self, const char *attr, double *f );
 static rc_t CC KRMDataNodeCompare( const KMDataNode *self, KMDataNode const *other, bool *equal );
+static rc_t CC KRMDataNodeAddr ( const KMDataNode *self, const void **addr, size_t *size );
+static rc_t CC KRMDataNodeListAttr ( const KMDataNode *self, KNamelist **names );
+static rc_t CC KRMDataNodeListChildren ( const KMDataNode *self, KNamelist **names );
 
 static KMDataNode_vt KRMDataNode_vt =
 {
@@ -174,7 +179,10 @@ static KMDataNode_vt KRMDataNode_vt =
     KRMDataNodeReadAttrAsI64,
     KRMDataNodeReadAttrAsU64,
     KRMDataNodeReadAttrAsF64,
-    KRMDataNodeCompare
+    KRMDataNodeCompare,
+    KRMDataNodeAddr,
+    KRMDataNodeListAttr,
+    KRMDataNodeListChildren
 };
 
 rc_t
@@ -678,8 +686,9 @@ KRMDataNodeRead ( const KMDataNode *self,
  *  reach into node and get address
  *  returns raw pointer and node size
  */
-LIB_EXPORT rc_t CC KMDataNodeAddr ( const KMDataNode *self,
-    const void **addr, size_t *size )
+static
+rc_t CC
+KRMDataNodeAddr ( const KMDataNode *self, const void **addr, size_t *size )
 {
     rc_t rc;
 
@@ -691,17 +700,10 @@ LIB_EXPORT rc_t CC KMDataNodeAddr ( const KMDataNode *self,
         rc = RC ( rcDB, rcMetadata, rcReading, rcParam, rcNull );
     else
     {
-        if ( self == NULL )
-            rc = RC ( rcDB, rcMetadata, rcReading, rcSelf, rcNull );
-        else
-        {
-            * addr = self -> value;
-            * size = self -> vsize;
+        * addr = self -> value;
+        * size = self -> vsize;
 
-            return 0;
-        }
-
-        * addr = NULL;
+        return 0;
     }
 
     * size = 0;
@@ -1475,28 +1477,25 @@ void CC KMDataNodeGrabAttr ( BSTNode *n, void *data )
     list -> namelist [ list -> count ++ ] = ( ( const KMAttrNode* ) n ) -> name;
 }
 
-LIB_EXPORT rc_t CC KMDataNodeListAttr ( const KMDataNode *self, KNamelist **names )
+static
+rc_t CC
+KRMDataNodeListAttr ( const KMDataNode *self, KNamelist **names )
 {
     if ( names == NULL )
         return RC ( rcDB, rcMetadata, rcListing, rcParam, rcNull );
 
     * names = NULL;
 
-    if ( self != NULL )
-    {
-        rc_t rc;
+    rc_t rc;
 
-        uint32_t count = 0;
-        BSTreeForEach ( & self -> attr, 0, KMDataNodeListCount, & count );
+    uint32_t count = 0;
+    BSTreeForEach ( & self -> attr, 0, KMDataNodeListCount, & count );
 
-        rc = KMDataNodeNamelistMake ( names, count );
-        if ( rc == 0 )
-            BSTreeForEach ( & self -> attr, 0, KMDataNodeGrabAttr, * names );
+    rc = KMDataNodeNamelistMake ( names, count );
+    if ( rc == 0 )
+        BSTreeForEach ( & self -> attr, 0, KMDataNodeGrabAttr, * names );
 
-        return rc;
-    }
-
-    return RC ( rcDB, rcMetadata, rcListing, rcSelf, rcNull );
+    return rc;
 }
 
 static
@@ -1506,28 +1505,25 @@ void CC KMDataNodeGrabName ( BSTNode *n, void *data )
     list -> namelist [ list -> count ++ ] = ( ( const KMDataNode* ) n ) -> name;
 }
 
-LIB_EXPORT rc_t CC KMDataNodeListChildren ( const KMDataNode *self, KNamelist **names )
+static
+rc_t CC
+KRMDataNodeListChildren ( const KMDataNode *self, KNamelist **names )
 {
     if ( names == NULL )
         return RC ( rcDB, rcMetadata, rcListing, rcParam, rcNull );
 
     * names = NULL;
 
-    if ( self != NULL )
-    {
-        rc_t rc;
+    rc_t rc;
 
-        uint32_t count = 0;
-        BSTreeForEach ( & self -> child, 0, KMDataNodeListCount, & count );
+    uint32_t count = 0;
+    BSTreeForEach ( & self -> child, 0, KMDataNodeListCount, & count );
 
-        rc = KMDataNodeNamelistMake ( names, count );
-        if ( rc == 0 )
-            BSTreeForEach ( & self -> child, 0, KMDataNodeGrabName, * names );
+    rc = KMDataNodeNamelistMake ( names, count );
+    if ( rc == 0 )
+        BSTreeForEach ( & self -> child, 0, KMDataNodeGrabName, * names );
 
-        return rc;
-    }
-
-    return RC ( rcDB, rcMetadata, rcListing, rcSelf, rcNull );
+    return rc;
 }
 
 /*--------------------------------------------------------------------------

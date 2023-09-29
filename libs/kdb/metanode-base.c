@@ -222,3 +222,15 @@ LIB_EXPORT rc_t CC KMDataNodeCompare( const KMDataNode *self, const KMDataNode *
 {
     DISPATCH( compare( self, other, equal ) );
 }
+LIB_EXPORT rc_t CC KMDataNodeAddr ( const KMDataNode *self, const void **addr, size_t *size )
+{
+    DISPATCH( addr( self, addr, size ) );
+}
+LIB_EXPORT rc_t CC KMDataNodeListAttr ( const KMDataNode *self, struct KNamelist **names )
+{
+    DISPATCH( listAttr( self, names ) );
+}
+LIB_EXPORT rc_t CC KMDataNodeListChildren ( const KMDataNode *self, struct KNamelist **names )
+{
+    DISPATCH( listChildren( self, names ) );
+}

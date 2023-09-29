@@ -27,6 +27,7 @@
 #define TRACK_REFERENCES 0
 
 #include <kdb/index.h>
+#include <kdb/kdb-priv.h>
 
 #include "libkdb.vers.h"
 #include "wdbmgr.h"
@@ -58,8 +59,6 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <stdio.h>
-
-
 
 /*--------------------------------------------------------------------------
  * KDBManager
@@ -145,7 +144,7 @@ rc_t KDBManagerWritableInt ( const KDirectory * dir, const char * path )
     case kptTable:
     case kptPrereleaseTbl:
     case kptColumn:
-        rc = KDBWritable ( dir, path );
+        rc = KDBWWritable ( dir, path );
         break;
 
     case kptIndex:
@@ -541,7 +540,7 @@ rc_t KDBManagerVOpenDBReadInt ( const KDBManager *cself,
 				* cached = false;
 
 			/* open the directory if its a database */
-			rc = KDBOpenPathTypeRead ( cself, wd, short_path, &dir, kptDatabase, NULL,
+			rc = KDBManagerOpenPathTypeRead ( cself, wd, short_path, &dir, kptDatabase, NULL,
                 try_srapath, NULL );
 			if ( rc == 0 )
 			{
@@ -685,7 +684,7 @@ rc_t KDBManagerVOpenDBUpdateInt ( KDBManager *self,
 	case kptFile | kptAlias:
 	    /* if we find a file, vary the failure if it is an archive that is a database
 	     * or a non related file */
-	    if ( KDBOpenPathTypeRead ( self, wd, dbpath, NULL, kptDatabase, NULL, false,
+	    if ( KDBManagerOpenPathTypeRead ( self, wd, dbpath, NULL, kptDatabase, NULL, false,
             NULL ) == 0 )
 		return RC ( rcDB, rcMgr, rcOpening, rcDirectory, rcUnauthorized );
 	    /* fall through */
@@ -697,7 +696,7 @@ rc_t KDBManagerVOpenDBUpdateInt ( KDBManager *self,
         }
 
         /* test now for locked directory */
-        rc = KDBWritable (wd, dbpath);
+        rc = KDBWWritable (wd, dbpath);
         switch (GetRCState (rc))
         {
         default:
@@ -819,7 +818,7 @@ rc_t KDBManagerVCreateDBInt ( KDBManager *self,
             if (KDBManagerOpenObjectBusy (self, dbpath))
                 return RC ( rcDB, rcMgr, rcCreating, rcDatabase, rcBusy );
             /* test now for locked directory */
-            rc = KDBWritable ( wd, dbpath );
+            rc = KDBWWritable ( wd, dbpath );
             if (rc)
             {
                 switch (GetRCState(rc))
@@ -861,7 +860,7 @@ rc_t KDBManagerVCreateDBInt ( KDBManager *self,
         case kptFile | kptAlias:
             /* if we find a file, vary the failure if it is an archive that is a database
              * or a non related file */
-            if ( KDBOpenPathTypeRead ( self, wd, dbpath, NULL, kptDatabase, NULL, false,
+            if ( KDBManagerOpenPathTypeRead ( self, wd, dbpath, NULL, kptDatabase, NULL, false,
                                       NULL ) == 0 )
                 return RC ( rcDB, rcMgr, rcCreating, rcDirectory, rcUnauthorized );
             /* fall through */
@@ -1051,11 +1050,11 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *cself,
 			const KDirectory *dir;
 			bool prerelease = false;
 
-			rc = KDBOpenPathTypeRead ( cself, wd, short_path, &dir, kptTable, NULL, try_srapath, vpath );
+			rc = KDBManagerOpenPathTypeRead ( cself, wd, short_path, &dir, kptTable, NULL, try_srapath, vpath );
 			if ( rc != 0 )
 			{
 				prerelease = true;
-				rc = KDBOpenPathTypeRead ( cself, wd, short_path, &dir, kptPrereleaseTbl, NULL, try_srapath, vpath );
+				rc = KDBManagerOpenPathTypeRead ( cself, wd, short_path, &dir, kptPrereleaseTbl, NULL, try_srapath, vpath );
 			}
 			if ( rc == 0 )
 			{
@@ -1169,7 +1168,7 @@ rc_t KDBManagerVCreateColumnInt ( KDBManager *self,
             if (KDBManagerOpenObjectBusy (self, colpath))
                 return RC ( rcDB, rcMgr, rcCreating, rcColumn, rcBusy );
             /* test now for locked directory */
-            rc = KDBWritable (wd, colpath);
+            rc = KDBWWritable (wd, colpath);
             if (rc)
             {
                 switch (GetRCState(rc))
@@ -1211,7 +1210,7 @@ rc_t KDBManagerVCreateColumnInt ( KDBManager *self,
 	case kptFile | kptAlias:
 	    /* if we find a file, vary the failure if it is an archive that is a column
 	     * or a non related file */
-	    if ( KDBOpenPathTypeRead ( self, wd, colpath, NULL, kptColumn, NULL, false,
+	    if ( KDBManagerOpenPathTypeRead ( self, wd, colpath, NULL, kptColumn, NULL, false,
             NULL ) == 0 )
 		return RC ( rcDB, rcMgr, rcCreating, rcDirectory, rcUnauthorized );
 	    /* fall through */
@@ -1392,7 +1391,7 @@ rc_t KDBManagerVOpenColumnReadInt2 ( const KDBManager *cself,
             if ( cached != NULL )
                 *cached = false;
 
-            /* TODO: check if colpath is what we want to pass to KDBOpenPathTypeRead
+            /* TODO: check if colpath is what we want to pass to KDBManagerOpenPathTypeRead
              * in this case we don't need to vprintf to 'path'
             */
             /* VDB-4386: cannot treat va_list as a pointer! */
@@ -1403,7 +1402,7 @@ rc_t KDBManagerVOpenColumnReadInt2 ( const KDBManager *cself,
                 rc = RC ( rcDB, rcMgr, rcOpening, rcPath, rcExcessive );
 
             if (rc == 0)
-                rc = KDBOpenPathTypeRead ( cself, wd, path, &dir, kptColumn, NULL,
+                rc = KDBManagerOpenPathTypeRead ( cself, wd, path, &dir, kptColumn, NULL,
                     try_srapath, NULL );
 
             if ( rc == 0 )
@@ -1551,7 +1550,7 @@ rc_t KDBManagerVOpenColumnUpdateInt ( KDBManager *self,
 	     * this should be changed to a readonly as it is not possible not
 	     * disallowed.  rcReadonly not rcUnauthorized
 	     */
-	    if ( KDBOpenPathTypeRead ( self, wd, colpath, NULL, kptColumn, NULL,
+	    if ( KDBManagerOpenPathTypeRead ( self, wd, colpath, NULL, kptColumn, NULL,
             try_srapath, NULL ) == 0 )
 		return RC ( rcDB, rcMgr, rcOpening, rcDirectory, rcUnauthorized );
 	    /* fall through */
@@ -1563,7 +1562,7 @@ rc_t KDBManagerVOpenColumnUpdateInt ( KDBManager *self,
         }
 
         /* test now for locked directory */
-        rc = KDBWritable (wd, colpath);
+        rc = KDBWWritable (wd, colpath);
         switch (GetRCState(rc))
         {
         default:
@@ -1781,10 +1780,6 @@ rc_t KDBManagerMakeTableUpdate ( KDBManager *self,
                 else if ( rc == 0 )
                 {
                     rc = KDirectoryCreateAlias ( dir, 0777, kcmCreate, "md/r001", "md/cur" );
-#if V0_BACKWARD_COMPAT
-                    if ( rc == 0 )
-                        rc = KDirectoryCreateAlias ( dir, 0777, kcmCreate, "md/r001", "meta" );
-#endif
                     if( rc == 0 ) {
                         KFile* md5_file = NULL;
                         if( (rc = KDirectoryOpenFileWrite(dir, &md5_file, true, "md5")) == 0 ) {
@@ -1811,9 +1806,6 @@ rc_t KDBManagerMakeTableUpdate ( KDBManager *self,
                 else if ( rc == 0 )
                 {
                     KDirectoryRename ( dir, false, "skey.md5", "idx/skey.md5" );
-#if V0_BACKWARD_COMPAT
-                    rc = KDirectoryCreateAlias ( dir, 0777, kcmCreate, "idx/skey", "skey" );
-#endif
                 }
             }
             if ( rc == 0 )
@@ -1821,10 +1813,6 @@ rc_t KDBManagerMakeTableUpdate ( KDBManager *self,
                 if ( KDirectoryPathType_v1 ( dir, "sealed" ) == kptFile )
                 {
                     rc = KDBLockDir ( dir, "." );
-#if ! V0_BACKWARD_COMPAT
-                    if ( rc == 0 )
-                        KDirectoryRemove_v1 ( dir, true, "sealed" );
-#endif
                 }
             }
 
@@ -1918,9 +1906,9 @@ rc_t KDBManagerVOpenTableUpdateInt ( KDBManager *self,
         case kptFile | kptAlias:
             /* if we find a file, vary the failure if it is an archive that is a table
              * or a non related file */
-            if (( KDBOpenPathTypeRead ( self, wd, tblpath, NULL, kptTable, NULL,
+            if (( KDBManagerOpenPathTypeRead ( self, wd, tblpath, NULL, kptTable, NULL,
                                         false, NULL ) == 0 ) ||
-                ( KDBOpenPathTypeRead ( self, wd, tblpath, NULL, kptPrereleaseTbl, NULL,
+                ( KDBManagerOpenPathTypeRead ( self, wd, tblpath, NULL, kptPrereleaseTbl, NULL,
                                         false, NULL ) == 0 ) )
                 return RC ( rcDB, rcMgr, rcCreating, rcTable, rcUnauthorized );
             /* fall through */
@@ -1937,7 +1925,7 @@ rc_t KDBManagerVOpenTableUpdateInt ( KDBManager *self,
         }
 
         /* test now for locked directory */
-        rc = KDBWritable ( wd, tblpath );
+        rc = KDBWWritable ( wd, tblpath );
         switch (GetRCState(rc))
         {
         default:
@@ -2079,9 +2067,9 @@ rc_t KDBManagerVCreateTableInt ( KDBManager *self,
         case kptFile | kptAlias:
             /* if we find a file, vary the failure if it is an archive that is a table
              * or a non related file */
-            if (( KDBOpenPathTypeRead ( self, wd, tblpath, NULL, kptTable, NULL,
+            if (( KDBManagerOpenPathTypeRead ( self, wd, tblpath, NULL, kptTable, NULL,
                                         false, NULL ) == 0 ) ||
-                ( KDBOpenPathTypeRead ( self, wd, tblpath, NULL, kptPrereleaseTbl, NULL,
+                ( KDBManagerOpenPathTypeRead ( self, wd, tblpath, NULL, kptPrereleaseTbl, NULL,
                                         false, NULL ) == 0 ) )
                 return RC ( rcDB, rcMgr, rcCreating, rcTable, rcReadonly );
             /* fall through */
@@ -2099,7 +2087,7 @@ rc_t KDBManagerVCreateTableInt ( KDBManager *self,
             if (KDBManagerOpenObjectBusy (self, tblpath))
                 return RC ( rcDB, rcMgr, rcCreating, rcTable, rcBusy );
             /* test now for locked directory */
-            rc = KDBWritable ( wd, tblpath );
+            rc = KDBWWritable ( wd, tblpath );
             switch (GetRCState(rc))
             {
             default:
@@ -2475,10 +2463,10 @@ rc_t KDBManagerOpenIndexReadInt ( KDBManager *self,const KIndex **idxp, const KD
             return RC ( rcDB, rcMgr, rcOpening, rcPath, rcIncorrect );
         }
 
-        rc = KIndexMakeRead ( & idx, wd, idxpath );
+        rc = KWIndexMakeRead ( & idx, wd, idxpath );
         if ( rc == 0 )
         {
-            //idx -> read_only = true; already done in KIndexMakeRead
+            //idx -> read_only = true; already done in KWIndexMakeRead
             rc = KDBManagerInsertIndex (self, idx);
             if ( rc == 0 )
             {
@@ -2535,7 +2523,7 @@ KDBManagerCreateIndexInt ( KDBManager *self, KIndex **idxp, KDirectory *wd, KIdx
                 return RC ( rcDB, rcMgr, rcCreating, rcIndex, rcBusy );
 
             /* test now for locked file */
-            rc = KDBWritable ( wd, idxpath );
+            rc = KDBWWritable ( wd, idxpath );
             if (rc)
             {
                 switch (GetRCState(rc))

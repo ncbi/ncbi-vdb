@@ -27,6 +27,7 @@
 #include <kdb/extern.h>
 #include <kdb/meta.h>
 #include <kdb/namelist.h>
+#include <kdb/kdb-priv.h>
 
 #include "database-priv.h"
 #include "dbmgr-priv.h"
@@ -343,7 +344,7 @@ KWDatabaseLocked ( const KDatabase *self )
     if ( self == NULL )
         return false;
 
-    rc = KDBWritable ( self -> dir, "." );
+    rc = KDBWWritable ( self -> dir, "." );
     return GetRCState ( rc ) == rcLocked;
 }
 
@@ -534,7 +535,7 @@ KWDatabaseVWritable ( const KDatabase *self, uint32_t type, const char *name, va
 
     rc = KDatabaseLockInt (self, path, sizeof path, type, name, args);
     if (rc == 0)
-        rc = KDBWritable (self->dir, path);
+        rc = KDBWWritable (self->dir, path);
     return rc;
 }
 
@@ -885,7 +886,7 @@ static
 bool CC KDatabaseListFilter ( const KDirectory *dir, const char *name, void *data_ )
 {
     struct FilterData * data = data_;
-    return ( KDBOpenPathTypeRead ( data->mgr, dir, name, NULL, data->type, NULL, false,
+    return ( KDBManagerOpenPathTypeRead ( data->mgr, dir, name, NULL, data->type, NULL, false,
         NULL ) == 0 );
 }
 

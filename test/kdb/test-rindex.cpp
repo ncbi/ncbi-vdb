@@ -33,6 +33,7 @@
 #include <klib/rc.h>
 #include <kdb/index.h>
 #include <kdb/database.h>
+#include <kdb/kdb-priv.h>
 
 #include <../libs/kdb/index-priv.h>
 #include <../libs/kdb/rdbmgr.h>
@@ -205,6 +206,14 @@ FIXTURE_TEST_CASE(KRIndex_FindAllU64, KIndex_Fixture)
 
     rc_t rc = SILENT_RC(rcDB, rcIndex, rcSelecting, rcNoObj, rcUnknown);
     REQUIRE_EQ( rc, KIndexFindAllU64 ( m_idx, 0, f, nullptr ) );
+}
+
+FIXTURE_TEST_CASE(KRIndex_SetMaxRowId, KIndex_Fixture)
+{
+    Open( "testdb", "index" );
+
+    KIndexSetMaxRowId ( m_idx, 100 );
+    // no easy way to check the outcome
 }
 
 //////////////////////////////////////////// Main

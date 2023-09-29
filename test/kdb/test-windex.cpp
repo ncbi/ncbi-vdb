@@ -33,6 +33,7 @@
 #include <klib/rc.h>
 #include <kdb/index.h>
 #include <kdb/database.h>
+#include <kdb/kdb-priv.h>
 
 #include <../libs/kdb/index-priv.h>
 #include <../libs/kdb/rdbmgr.h>
@@ -73,7 +74,7 @@ public:
 
 //NB for now make the simplest calls possible, to test the vtable plumbing
 
-FIXTURE_TEST_CASE(KRIndex_AddRelease, KIndex_Fixture)
+FIXTURE_TEST_CASE(KWIndex_AddRelease, KIndex_Fixture)
 {
     Open( "testdb", "index" );
 
@@ -85,13 +86,13 @@ FIXTURE_TEST_CASE(KRIndex_AddRelease, KIndex_Fixture)
     // use valgrind to find any leaks
 }
 
-FIXTURE_TEST_CASE(KRIndex_Locked, KIndex_Fixture)
+FIXTURE_TEST_CASE(KWIndex_Locked, KIndex_Fixture)
 {
     Open( "testdb", "index" );
     REQUIRE( ! KIndexLocked( m_idx ) );
 }
 
-FIXTURE_TEST_CASE(KRIndex_Version, KIndex_Fixture)
+FIXTURE_TEST_CASE(KWIndex_Version, KIndex_Fixture)
 {
     Open( "testdb", "index" );
 
@@ -100,7 +101,7 @@ FIXTURE_TEST_CASE(KRIndex_Version, KIndex_Fixture)
     REQUIRE_EQ( (uint32_t)4, version );
 }
 
-FIXTURE_TEST_CASE(KRIndex_Type, KIndex_Fixture)
+FIXTURE_TEST_CASE(KWIndex_Type, KIndex_Fixture)
 {
     Open( "testdb", "index" );
 
@@ -109,7 +110,7 @@ FIXTURE_TEST_CASE(KRIndex_Type, KIndex_Fixture)
     REQUIRE_EQ( (KIdxType)0, type );
 }
 
-FIXTURE_TEST_CASE(KRIndex_ConsistencyCheck, KIndex_Fixture)
+FIXTURE_TEST_CASE(KWIndex_ConsistencyCheck, KIndex_Fixture)
 {   // noop on the write side
     Open( "testdb", "index" );
 
@@ -128,7 +129,7 @@ FIXTURE_TEST_CASE(KRIndex_ConsistencyCheck, KIndex_Fixture)
     REQUIRE_EQ( (uint64_t)0, num_holes );
 }
 
-FIXTURE_TEST_CASE(KRIndex_FindText, KIndex_Fixture)
+FIXTURE_TEST_CASE(KWIndex_FindText, KIndex_Fixture)
 {
     Open( "testdb", "index" );
 
@@ -154,7 +155,7 @@ findAllTextCallback (int64_t p_startId, uint64_t p_count, void*)
     return 0;
 }
 
-FIXTURE_TEST_CASE(KRIndex_FindAllText, KIndex_Fixture)
+FIXTURE_TEST_CASE(KWIndex_FindAllText, KIndex_Fixture)
 {
     Open( "testdb", "index" );
 
@@ -164,7 +165,7 @@ FIXTURE_TEST_CASE(KRIndex_FindAllText, KIndex_Fixture)
     REQUIRE_EQ( (uint64_t)1, fat_id_count );
 }
 
-FIXTURE_TEST_CASE(KRIndex_ProjectText, KIndex_Fixture)
+FIXTURE_TEST_CASE(KWIndex_ProjectText, KIndex_Fixture)
 {
     Open( "testdb", "index" );
 
@@ -177,7 +178,7 @@ FIXTURE_TEST_CASE(KRIndex_ProjectText, KIndex_Fixture)
 }
 
 
-FIXTURE_TEST_CASE(KRIndex_ProjectAllText, KIndex_Fixture)
+FIXTURE_TEST_CASE(KWIndex_ProjectAllText, KIndex_Fixture)
 {
     Open( "testdb", "index" );
 
@@ -187,7 +188,7 @@ FIXTURE_TEST_CASE(KRIndex_ProjectAllText, KIndex_Fixture)
     REQUIRE_EQ( rc, KIndexProjectAllText ( m_idx, 1, f, nullptr ) );
 }
 
-FIXTURE_TEST_CASE(KRIndex_FindU64, KIndex_Fixture)
+FIXTURE_TEST_CASE(KWIndex_FindU64, KIndex_Fixture)
 {
     Open( "testdb", "index" );
 
@@ -200,7 +201,7 @@ FIXTURE_TEST_CASE(KRIndex_FindU64, KIndex_Fixture)
     REQUIRE_EQ( rc, KIndexFindU64 ( m_idx, 0, key, & key_size, & start_id, & id_count ) );
 }
 
-FIXTURE_TEST_CASE(KRIndex_FindAllU64, KIndex_Fixture)
+FIXTURE_TEST_CASE(KWIndex_FindAllU64, KIndex_Fixture)
 {
     Open( "testdb", "index" );
 
@@ -208,6 +209,14 @@ FIXTURE_TEST_CASE(KRIndex_FindAllU64, KIndex_Fixture)
 
     rc_t rc = SILENT_RC(rcDB, rcIndex, rcSelecting, rcType, rcUnsupported);
     REQUIRE_EQ( rc, KIndexFindAllU64 ( m_idx, 0, f, nullptr ) );
+}
+
+FIXTURE_TEST_CASE(KWIndex_SetMaxRowId, KIndex_Fixture)
+{
+    Open( "testdb", "index" );
+
+    KIndexSetMaxRowId ( m_idx, 100 );
+    // no easy way to check the outcome
 }
 
 //////////////////////////////////////////// Main

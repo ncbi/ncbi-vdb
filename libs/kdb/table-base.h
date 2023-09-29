@@ -44,7 +44,6 @@ extern "C" {
 
 struct KDBManager;
 struct KDatabase;
-struct KTable;
 struct KColumn;
 struct KMetadata;
 struct KIndex;
@@ -77,7 +76,7 @@ struct KTableBase_vt
     rc_t ( CC * getName )           ( const KTABLE_IMPL * self, char const **rslt);
     rc_t ( CC * listCol )           ( const KTABLE_IMPL * self, struct KNamelist **names );
     rc_t ( CC * listIdx )           ( const KTABLE_IMPL * self, struct KNamelist **names );
-    rc_t ( CC * metaCompare )       ( const KTABLE_IMPL * self, const struct KTable *other, const char * path, bool * equal );
+    rc_t ( CC * metaCompare )       ( const KTABLE_IMPL * self, const KTABLE_IMPL *other, const char * path, bool * equal );
 };
 
 //TODO: write-side only; decide how to handle

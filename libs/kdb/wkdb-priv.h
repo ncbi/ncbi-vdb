@@ -82,7 +82,7 @@ int KDBPathType ( const struct KDirectory *dir, bool *zombies, const char *path 
  * archive that is of the requested type.  An archive will have been opened
  * but reshut if dpdir is NULL.
  */
-rc_t KDBOpenPathTypeRead ( const struct KDBManager * mgr, const struct KDirectory * dir, const char * path,
+rc_t KDBManagerOpenPathTypeRead ( const struct KDBManager * mgr, const struct KDirectory * dir, const char * path,
     const struct KDirectory ** dpdir, int pathtype, int * realpathtype,
     bool try_srapath, const struct VPath * vpath );
 
@@ -91,7 +91,7 @@ rc_t KDBOpenPathTypeRead ( const struct KDBManager * mgr, const struct KDirector
  *  examines a file for ( any ) write permission
  */
 bool KDBIsLocked ( const struct KDirectory *dir, const char *path );
-rc_t KDBWritable ( const struct KDirectory *dir, const char *path );
+rc_t KDBWWritable ( const struct KDirectory *dir, const char *path );
 
 /* Lock
  *  performs directory locking

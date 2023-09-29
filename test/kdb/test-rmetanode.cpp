@@ -31,9 +31,12 @@
 #include <ktst/unit_test.hpp>
 
 #include <klib/rc.h>
+#include <klib/namelist.h>
+
 #include <kdb/manager.h>
 #include <kdb/table.h>
 #include <kdb/kdb-priv.h>
+#include <kdb/namelist.h>
 
 #include <arch-impl.h>
 
@@ -302,6 +305,28 @@ FIXTURE_TEST_CASE(KRMDataNode_Addr, KRMDataNode_Fixture)
     const void * addr = nullptr;
     size_t size = 0;
     REQUIRE_RC( KMDataNodeAddr ( m_node, & addr, & size ) );
+}
+
+FIXTURE_TEST_CASE(KRMDataNode_ListAttr, KRMDataNode_Fixture)
+{
+    Open( "testdb/tbl/SEQUENCE", "col" );
+    struct KNamelist * names = nullptr;
+    REQUIRE_RC( KMDataNodeListAttr ( m_node, & names ) );
+
+    uint32_t count = 0;
+    REQUIRE_RC( KNamelistCount ( names, &count ) );
+    REQUIRE_EQ( (uint32_t)0, count );
+}
+
+FIXTURE_TEST_CASE(KRMDataNode_ListChildren, KRMDataNode_Fixture)
+{
+    Open( "testdb/tbl/SEQUENCE", "col" );
+    struct KNamelist * names = nullptr;
+    REQUIRE_RC( KMDataNodeListChildren ( m_node, & names ) );
+
+    uint32_t count = 0;
+    REQUIRE_RC( KNamelistCount ( names, &count ) );
+    REQUIRE_EQ( (uint32_t)1, count );
 }
 
 

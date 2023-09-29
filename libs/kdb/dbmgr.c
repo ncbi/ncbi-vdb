@@ -300,7 +300,7 @@ KDBRManagerVWritable ( const KDBManager *self, const char * path, va_list args )
         case kptTable:
         case kptColumn:
         case kptIndex:
-            rc = KDBWritable ( self -> wd, dbpath );
+            rc = KDBRWritable ( self -> wd, dbpath );
             break;
         case kptNotFound:
             rc = RC ( rcDB, rcMgr, rcAccessing, rcPath, rcNotFound );
@@ -489,7 +489,7 @@ rc_t KDBManagerVOpenDBReadInt ( const KDBManager *self, const KDatabase **dbp,
         const KDirectory *dir;
 
         /* open the directory if its a database */
-        rc = KDBOpenPathTypeRead ( self, wd, dbpath, &dir, kptDatabase, NULL,
+        rc = KDBManagerOpenPathTypeRead ( self, wd, dbpath, &dir, kptDatabase, NULL,
             try_srapath, NULL );
         if ( rc == 0 )
         {
@@ -682,12 +682,12 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *self,
             }
         }
 
-        rc = KDBOpenPathTypeRead ( self, wd, tblpath, &dir, kptTable, NULL,
+        rc = KDBManagerOpenPathTypeRead ( self, wd, tblpath, &dir, kptTable, NULL,
             try_srapath, path2 != NULL ? path2 : vpath );
         if ( rc != 0 )
         {
             prerelease = true;
-            rc = KDBOpenPathTypeRead ( self, wd, tblpath, &dir,
+            rc = KDBManagerOpenPathTypeRead ( self, wd, tblpath, &dir,
                 kptPrereleaseTbl, NULL,
                 try_srapath, path2 != NULL ? path2 : vpath);
         }
@@ -802,7 +802,7 @@ rc_t KDBManagerVOpenColumnReadInt ( const KDBManager *self,
         const KDirectory *dir;
 
         /* open table directory */
-        rc = KDBOpenPathTypeRead ( self, wd, colpath, &dir, kptColumn, NULL,
+        rc = KDBManagerOpenPathTypeRead ( self, wd, colpath, &dir, kptColumn, NULL,
             try_srapath, NULL );
         if ( rc == 0 )
         {
@@ -922,7 +922,7 @@ rc_t KDBManagerOpenIndexReadInt ( const KDBManager *self, KIndex **idxp, const K
             return RC ( rcDB, rcMgr, rcOpening, rcPath, rcIncorrect );
         }
 
-        rc = KIndexMakeRead ( & idx, wd, idxpath );
+        rc = KRIndexMakeRead ( & idx, wd, idxpath );
         if ( rc == 0 )
         {
             idx -> mgr = KDBManagerAttach ( self );

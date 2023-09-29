@@ -495,7 +495,7 @@ rc_t KColumnFileOpenUpdate ( KFile **ppf, KMD5File **ppfmd5,
  */
 static bool CC KWColumnLocked ( const KColumn *self )
 {
-    rc_t rc = KDBWritable ( self -> dir, "." );
+    rc_t rc = KDBWWritable ( self -> dir, "." );
     return GetRCState ( rc ) == rcLocked;
 }
 
@@ -551,7 +551,7 @@ LIB_EXPORT rc_t CC KColumnVWritable ( const KColumn *self, uint32_t type, const 
 
     rc = KColumnLockInt (self, path, sizeof path, type, name, args);
     if (rc == 0)
-        rc = KDBWritable (self->dir, path);
+        rc = KDBWWritable (self->dir, path);
     return rc;
 }
 

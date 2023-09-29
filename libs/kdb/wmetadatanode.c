@@ -33,6 +33,7 @@ struct KMDataNodeNamelist;
 #include "wmetadatanode.h"
 
 #include <kdb/extern.h>
+
 #include "wkdb-priv.h"
 #include "wdbmgr.h"
 #include "database-priv.h"
@@ -42,6 +43,8 @@ struct KMDataNodeNamelist;
 
 #include <kdb/meta.h>
 #include <kdb/namelist.h>
+#include <kdb/kdb-priv.h>
+
 #include <klib/container.h>
 #include <klib/pbstree.h>
 #include <klib/namelist.h>
@@ -214,6 +217,9 @@ static rc_t CC KWMDataNodeReadAttrAsI64 ( const KMDataNode *self, const char *at
 static rc_t CC KWMDataNodeReadAttrAsU64 ( const KMDataNode *self, const char *attr, uint64_t *u );
 static rc_t CC KWMDataNodeReadAttrAsF64 ( const KMDataNode *self, const char *attr, double *f );
 static rc_t CC KWMDataNodeCompare( const KMDataNode *self, KMDataNode const *other, bool *equal );
+static rc_t CC KWMDataNodeAddr ( const KMDataNode *self, const void **addr, size_t *size );
+static rc_t CC KWMDataNodeListAttr ( const KMDataNode *self, KNamelist **names );
+static rc_t CC KWMDataNodeListChildren ( const KMDataNode *self, KNamelist **names );
 
 static KMDataNode_vt KWMDataNode_vt =
 {
@@ -244,7 +250,10 @@ static KMDataNode_vt KWMDataNode_vt =
     KWMDataNodeReadAttrAsI64,
     KWMDataNodeReadAttrAsU64,
     KWMDataNodeReadAttrAsF64,
-    KWMDataNodeCompare
+    KWMDataNodeCompare,
+    KWMDataNodeAddr,
+    KWMDataNodeListAttr,
+    KWMDataNodeListChildren
 };
 
 rc_t
@@ -930,8 +939,7 @@ KWMDataNodeRead ( const KMDataNode *self,
  *  reach into node and get address
  *  returns raw pointer and node size
  */
-LIB_EXPORT rc_t CC KMDataNodeAddr ( const KMDataNode *self,
-    const void **addr, size_t *size )
+static rc_t CC KWMDataNodeAddr ( const KMDataNode *self, const void **addr, size_t *size )
 {
     rc_t rc;
 
@@ -943,17 +951,10 @@ LIB_EXPORT rc_t CC KMDataNodeAddr ( const KMDataNode *self,
         rc = RC ( rcDB, rcMetadata, rcReading, rcParam, rcNull );
     else
     {
-        if ( self == NULL )
-            rc = RC ( rcDB, rcMetadata, rcReading, rcSelf, rcNull );
-        else
-        {
-            * addr = self -> value;
-            * size = self -> vsize;
+        * addr = self -> value;
+        * size = self -> vsize;
 
-            return 0;
-        }
-
-        * addr = NULL;
+        return 0;
     }
 
     * size = 0;
@@ -2412,7 +2413,9 @@ void CC KMDataNodeGrabAttr ( BSTNode *n, void *data )
     list -> namelist [ list -> count ++ ] = ( ( const KMAttrNode* ) n ) -> name;
 }
 
-LIB_EXPORT rc_t CC KMDataNodeListAttr ( const KMDataNode *self, KNamelist **names )
+static
+rc_t CC
+KWMDataNodeListAttr ( const KMDataNode *self, KNamelist **names )
 {
     rc_t rc;
     unsigned int count;
@@ -2420,9 +2423,6 @@ LIB_EXPORT rc_t CC KMDataNodeListAttr ( const KMDataNode *self, KNamelist **name
     if ( names == NULL )
         return RC ( rcDB, rcNode, rcListing, rcParam, rcNull );
     * names = NULL;
-
-    if ( self == NULL )
-        return RC ( rcDB, rcNode, rcListing, rcSelf, rcNull );
 
     count = 0;
     BSTreeForEach ( & self -> attr, 0, KMDataNodeListCount, & count );
@@ -2441,7 +2441,9 @@ void CC KMDataNodeGrabName ( BSTNode *n, void *data )
     list -> namelist [ list -> count ++ ] = ( ( const KMDataNode* ) n ) -> name;
 }
 
-LIB_EXPORT rc_t CC KMDataNodeListChildren ( const KMDataNode *self, KNamelist **names )
+static
+rc_t CC
+KWMDataNodeListChildren ( const KMDataNode *self, KNamelist **names )
 {
     rc_t rc;
     unsigned int count;
@@ -2449,9 +2451,6 @@ LIB_EXPORT rc_t CC KMDataNodeListChildren ( const KMDataNode *self, KNamelist **
     if ( names == NULL )
         return RC ( rcDB, rcNode, rcListing, rcParam, rcNull );
     * names = NULL;
-
-    if ( self == NULL )
-        return RC ( rcDB, rcNode, rcListing, rcSelf, rcNull );
 
     count = 0;
     BSTreeForEach ( & self -> child, 0, KMDataNodeListCount, & count );

@@ -146,4 +146,4 @@ struct KIndex
     char path [ 1 ];
 };
 
-rc_t KIndexMakeRead ( KIndex **idxp, const struct KDirectory *dir, const char *path );
+rc_t KRIndexMakeRead ( KIndex **idxp, const struct KDirectory *dir, const char *path );

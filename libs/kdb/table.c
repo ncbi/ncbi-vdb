@@ -38,6 +38,7 @@
 
 #include <kdb/extern.h>
 #include <kdb/index.h>
+#include <kdb/kdb-priv.h>
 
 #include <klib/debug.h> /* DBGMSG */
 #include <klib/log.h>
@@ -204,7 +205,7 @@ static
 bool CC
 KRTableLocked ( const KTable *self )
 {
-    rc_t rc = KDBWritable ( self -> dir, "." );
+    rc_t rc = KDBRWritable ( self -> dir, "." );
     return GetRCState ( rc ) == rcLocked;
 }
 
@@ -431,7 +432,7 @@ static
 bool CC KDatabaseListFilter ( const KDirectory *dir, const char *name, void *data_ )
 {
     struct FilterData * data = data_;
-    return ( KDBOpenPathTypeRead ( data->mgr, dir, name,
+    return ( KDBManagerOpenPathTypeRead ( data->mgr, dir, name,
         NULL, data->type, NULL, false, NULL ) == 0 );
 }
 

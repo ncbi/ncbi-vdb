@@ -180,7 +180,7 @@ rc_t KRColumnMakeRead ( KColumn **colp, const KDirectory *dir, const char *path 
 static
 bool CC KRColumnLocked ( const KColumn *self )
 {
-    rc_t rc = KDBWritable ( self -> dir, "" );
+    rc_t rc = KDBRWritable ( self -> dir, "" );
     return GetRCState ( rc ) == rcLocked;
 }
 

@@ -71,6 +71,7 @@ static rc_t CC KRIndexProjectAllText ( const KIndex *self, int64_t id,
 static rc_t CC KRIndexFindU64( const KIndex* self, uint64_t offset, uint64_t* key, uint64_t* key_size, int64_t* id, uint64_t* id_qty );
 static rc_t CC KRIndexFindAllU64( const KIndex* self, uint64_t offset,
     rc_t ( CC * f )(uint64_t key, uint64_t key_size, int64_t id, uint64_t id_qty, void* data ), void* data);
+static void CC KRIndexSetMaxRowId ( const KIndex *cself, int64_t max_row_id );
 
 static KIndex_vt KRIndex_vt =
 {
@@ -86,7 +87,8 @@ static KIndex_vt KRIndex_vt =
     KRIndexProjectText,
     KRIndexProjectAllText,
     KRIndexFindU64,
-    KRIndexFindAllU64
+    KRIndexFindAllU64,
+    KRIndexSetMaxRowId
 };
 
 /* Whack
@@ -282,7 +284,7 @@ rc_t KIndexAttach ( KIndex *self, const KMMap *mm, bool *byteswap )
     return rc;
 }
 
-rc_t KIndexMakeRead ( KIndex **idxp, const KDirectory *dir, const char *path )
+rc_t KRIndexMakeRead ( KIndex **idxp, const KDirectory *dir, const char *path )
 {
     const KFile *f;
     rc_t rc = KDirectoryOpenFileRead ( dir, & f, "%s", path );
@@ -366,7 +368,7 @@ static bool CC KRIndexLocked ( const KIndex *self )
     dir = ( self -> db != NULL ) ?
         self -> db -> dir : self -> tbl -> dir;
 
-    rc = KDBWritable ( dir, self -> path );
+    rc = KDBRWritable ( dir, self -> path );
     return GetRCState ( rc ) == rcLocked;
 }
 
@@ -794,9 +796,11 @@ static rc_t CC KRIndexFindAllU64( const KIndex* self, uint64_t offset,
  *  of the NAME_FMT column, but were never given a maximum id. allow them
  *  to be corrected here.
  */
-LIB_EXPORT void CC KIndexSetMaxRowId ( const KIndex *cself, int64_t max_row_id )
+static
+void CC
+KRIndexSetMaxRowId ( const KIndex *cself, int64_t max_row_id )
 {
-    if ( cself != NULL ) switch ( cself -> type )
+    switch ( cself -> type )
     {
     case kitText:
     case kitText | kitProj:

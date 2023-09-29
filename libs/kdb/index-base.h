@@ -76,6 +76,7 @@ struct KIndex_vt
     rc_t ( CC * findAllU64 )        ( const KINDEX_IMPL *self, uint64_t offset,
                                         rc_t ( CC * f ) ( uint64_t key, uint64_t key_size, int64_t start_id, uint64_t id_count, void *data ),
                                         void *data);
+    void ( CC * setMaxRowId )       ( const KINDEX_IMPL *cself, int64_t max_row_id );
 };
 
 struct KIndexBase

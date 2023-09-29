@@ -252,7 +252,7 @@ struct KIndex
 int KIndexCmp ( const void *item, struct BSTNode const *n );
 int KIndexSort ( struct BSTNode const *item, struct BSTNode const *n );
 
-rc_t KIndexMakeRead ( KIndex **idxp, const struct KDirectory *dir, const char *path );
+rc_t KWIndexMakeRead ( KIndex **idxp, const struct KDirectory *dir, const char *path );
 rc_t KIndexCreate ( KIndex **idxp, KDirectory *dir, KIdxType type, KCreateMode cmode, const char *path, int ptype );
 rc_t KIndexMakeUpdate ( KIndex **idxp, KDirectory *dir, const char *path );
 

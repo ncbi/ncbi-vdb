@@ -80,6 +80,9 @@ rc_t CC KIndexBaseRelease ( const KIndex *self )
         return self -> vt -> call;              \
     else                                        \
         return false;
+#define DISPATCH_VOID(call)  \
+    if ( self != NULL && self -> vt != NULL )   \
+        return self -> vt -> call;
 
 LIB_EXPORT rc_t CC KIndexWhack ( KIndex *self )
 {
@@ -145,4 +148,8 @@ LIB_EXPORT rc_t CC KIndexFindAllU64( const KIndex* self, uint64_t offset,
     rc_t ( CC * f )(uint64_t key, uint64_t key_size, int64_t id, uint64_t id_qty, void* data ), void* data)
 {
     DISPATCH( findAllU64( self, offset, f, data ) );
+}
+LIB_EXPORT void CC KIndexSetMaxRowId ( const KIndex *self, int64_t max_row_id )
+{
+    DISPATCH_VOID( setMaxRowId( self, max_row_id ) );
 }
