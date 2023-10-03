@@ -27,9 +27,14 @@
 #include <kdb/extern.h>
 
 #include <kdb/manager.h>
+#include "dbmgr-priv.h"
 
 #include <kfs/directory.h>
 #include <kfs/sra.h>
+
+#include <vfs/path.h>
+#include <vfs/manager.h>
+#include <vfs/manager-priv.h>
 
 #include <klib/text.h>
 #include <klib/rc.h>
@@ -459,4 +464,119 @@ bool KDBIsPathUri (const char * path)
         return true;
 
     return false;
+}
+
+static rc_t KDBOpenPathTypeReadInt ( const KDBManager * mgr, const KDirectory * dir, const char * path,
+                                     const KDirectory ** pdir, int * type,
+                                     int pathtype, uint32_t rcobj, bool try_srapath,
+                                     const VPath * aVpath )
+{
+    VFSManager * vmgr = mgr->vfsmgr;
+    const KDirectory * ldir = NULL;
+    rc_t rc = 0;
+
+    /* object relative opens can be done using KFS - we hacked in VFS after all */
+    if (! try_srapath)
+    {
+        rc = KDirectoryOpenDirUpdate ((KDirectory*)dir, (KDirectory**)pdir, false, "%s", path);
+        if ((rc) && (GetRCState(rc) != rcNotFound))
+            rc = KDirectoryOpenDirRead (dir, pdir, false, "%s", path);
+    }
+    else
+    {
+        VPath * vpath = ( VPath * ) aVpath;
+
+        /*
+         * We've got to decide if the path coming in is a full or relative
+         * path and if relative make it relative to dir or possibly its a srapath
+         * accession
+         *
+         */
+        rc = VFSManagerMakeDirectoryRelativeVPath (vmgr,
+            &vpath, dir, path, vpath );
+        if ( rc == 0 )
+        {
+            rc = VFSManagerOpenDirectoryReadDirectoryRelativeDecrypt ( vmgr, dir, &ldir, vpath );
+
+            if ( rc == 0 )
+            {
+                *type = (~kptAlias) & KDBPathType ( ldir, NULL, "." );
+
+                /* just a directory, not a kdb type */
+                if ( *type == kptDir )
+                    rc = RC (rcDB, rcMgr, rcOpening, rcPath, rcIncorrect);
+
+                else if ( *type != pathtype )
+                {
+                    KDirectoryRelease( ldir );
+                    rc = RC ( rcDB, rcMgr, rcOpening, rcobj, rcIncorrect );
+                }
+                else
+                {
+                    if ( pdir != NULL )
+                        *pdir = ldir;
+                    else
+                        KDirectoryRelease( ldir );
+                }
+            }
+            if ( aVpath != vpath )
+                VPathRelease ( vpath );
+        }
+    }
+    return rc;
+}
+
+rc_t KDBManagerOpenPathTypeRead ( const KDBManager * mgr, const KDirectory * dir, const char * path,
+    const KDirectory ** pdir, int pathtype, int * ppathtype, bool try_srapath,
+    const VPath * vpath )
+{
+    const KDirectory *ldir;
+    rc_t rc = 0;
+    uint32_t rcobj;
+    int type = kptNotFound; /* bogus? */
+
+/*     KOutMsg ("%s: %s\n", __func__, path); */
+
+    if ( pdir != NULL )
+        *pdir = NULL;
+    if ( ppathtype != NULL )
+        *ppathtype = type;
+
+    switch (pathtype & ~ kptAlias) /* tune the error message based on path type */
+    {
+        /* we'll hit this if we don't track defines in kdb/manager.h */
+    default:
+        rc = RC (rcDB, rcMgr, rcOpening, rcType, rcInvalid);
+        return rc;
+
+    case kptTable:
+    case kptPrereleaseTbl:
+        rcobj = rcTable;
+        break;
+
+    case kptColumn:
+        rcobj = rcColumn;
+        break;
+
+    case kptDatabase:
+    case kptDatabase | kptAlias:
+        rcobj = rcDatabase;
+        break;
+    }
+
+    rc = KDBOpenPathTypeReadInt( mgr, dir, path, &ldir, &type, pathtype, rcobj,
+        try_srapath, vpath );
+
+    if (rc == 0)
+    {
+        if ( ppathtype != NULL )
+            *ppathtype = type;
+
+        if (pdir != NULL)
+            *pdir = ldir;
+        else
+            KDirectoryRelease (ldir);
+    }
+
+    return rc;
 }

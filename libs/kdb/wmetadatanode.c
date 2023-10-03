@@ -834,7 +834,7 @@ LIB_EXPORT rc_t CC KMDataNodeVOpenNodeUpdate ( KMDataNode *self,
     rc = KMDataNodeFind ( self, & found, & p );
     if ( rc == 0 )
     {
-        if ( atomic32_read ( & found -> dad . refcount ) != 0 )
+        if ( atomic32_read ( & found -> dad . refcount ) != 1 )
             return RC ( rcDB, rcNode, rcOpening, rcNode, rcBusy );
     }
     else if ( GetRCState ( rc ) == rcNotFound )
@@ -2030,7 +2030,7 @@ LIB_EXPORT rc_t CC KMDataNodeRenameChild ( KMDataNode *self, const char *from, c
     {
         KMDataNode *renamed;
 
-        if ( atomic32_read ( & found -> dad . refcount ) != 0 )
+        if ( atomic32_read ( & found -> dad . refcount ) != 1 )
             return RC ( rcDB, rcNode, rcRenaming, rcNode, rcBusy );
 
         len = snprintf ( p = full, sizeof full, "%s", to );
