@@ -590,6 +590,7 @@ KWColumnBlobRead ( const KColumnBlob *self,
 
         * remaining = size - offset;
         * num_read = 0;
+        return rc;
     }
 
     * remaining = 0;
