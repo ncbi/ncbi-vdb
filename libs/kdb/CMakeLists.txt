@@ -55,6 +55,11 @@ set( KDB_SRC
     rmetadatanode
     index
 
+    database-cc
+    table-cc
+    column-cc
+    dbcc-cmn
+
     coldata
     colidx
     colidx0
