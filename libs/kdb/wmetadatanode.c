@@ -24,6 +24,8 @@
 *
 */
 
+#include <kdb/extern.h>
+
 #define TRACK_REFERENCES 0
 
 struct KMDataNodeNamelist;
@@ -31,8 +33,6 @@ struct KMDataNodeNamelist;
 
 #include "wmeta.h"
 #include "wmetadatanode.h"
-
-#include <kdb/extern.h>
 
 #include "wkdb-priv.h"
 #include "wdbmgr.h"

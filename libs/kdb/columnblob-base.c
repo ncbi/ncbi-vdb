@@ -24,12 +24,12 @@
 *
 */
 
+#include <kdb/extern.h>
+
 #define KColumnBlob KColumnBlobBase
 #include "columnblob-base.h"
 
 #include <kdb/column.h>
-
-#include <kdb/extern.h>
 
 #include <klib/rc.h>
 

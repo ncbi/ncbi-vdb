@@ -24,6 +24,8 @@
 *
 */
 
+#include <kdb/extern.h>
+
 #include <klib/rc.h>
 
 #include "wcolumn-priv.h"
