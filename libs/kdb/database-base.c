@@ -24,14 +24,14 @@
 *
 */
 
+#include <kdb/extern.h>
+
 #define KDatabase KDatabaseBase
 
 #include "database-base.h"
 
 #include <kdb/database.h>
 #include <kdb/meta.h>
-
-#include <kdb/extern.h>
 
 #include <klib/rc.h>
 

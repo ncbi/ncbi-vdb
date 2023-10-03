@@ -24,6 +24,8 @@
 *
 */
 
+#include <kdb/extern.h>
+
 #include "table-base.h"
 
 #define KTable KTableBase

@@ -24,6 +24,8 @@
 *
 */
 
+#include <kdb/extern.h>
+
 #define KMDataNode KMDataNodeBase
 #include "metanode-base.h"
 
@@ -39,7 +41,7 @@ rc_t KMDataNodeBaseWhack ( KMDataNodeBase *self )
  *  all objects are reference counted
  *  NULL references are ignored
  */
-LIB_EXPORT rc_t CC KMDataNodeBaseAddRef ( const KMDataNodeBase *self )
+rc_t CC KMDataNodeBaseAddRef ( const KMDataNodeBase *self )
 {
     if ( self != NULL )
     {

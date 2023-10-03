@@ -24,6 +24,8 @@
 *
 */
 
+#include <kdb/extern.h>
+
 #include "wmeta.h"
 #include "wmetadatanode.h"
 

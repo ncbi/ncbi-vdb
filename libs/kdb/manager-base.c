@@ -24,11 +24,12 @@
 *
 */
 
+#include <kdb/extern.h>
+
 #define KDBManager KDBManagerBase
 
 #include "manager-base.h"
 
-#include <kdb/extern.h>
 #include <kdb/database.h>
 
 #include <klib/rc.h>

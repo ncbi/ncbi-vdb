@@ -24,11 +24,11 @@
 *
 */
 
+#include <kdb/extern.h>
+
 #define KIndex KIndexBase
 
 #include "index-base.h"
-
-#include <kdb/extern.h>
 
 #include <klib/rc.h>
 
