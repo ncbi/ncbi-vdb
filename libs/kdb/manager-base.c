@@ -131,7 +131,7 @@ LIB_EXPORT rc_t CC KDBManagerVersion ( const KDBManager *self, uint32_t *version
 }
 LIB_EXPORT bool CC KDBManagerVExists ( const KDBManager *self, uint32_t requested, const char *name, va_list args )
 {
-    DISPATCH( vExists( self, requested, name, args ) );
+    DISPATCH_BOOL( vExists( self, requested, name, args ) );
 }
 LIB_EXPORT bool KDBManagerExists ( const KDBManager *self, uint32_t type, const char *name, ... )
 {
