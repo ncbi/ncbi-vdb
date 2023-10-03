@@ -194,12 +194,30 @@ int64_t CC bstSortByAcc(const BSTNode * item, const BSTNode * n)
     return bstCmpByAcc(sn->acc, n);
 }
 
-static
-SdlNode* VFSManagerCached(const VFSManager * self, const char * id)
+static SdlNode* VFSManagerCached
+(const VFSManager * self, const char * id, char * wgs, size_t sWgs)
 {
     rc_t rc = 0;
+    char e[256] = "";
     SdlNode * sn = NULL;
+    String acc;
+    StringInitCString(&acc, id);
+    if (wgs == NULL) {
+        wgs = e;
+        sWgs = sizeof e;
+    }
+    wgs[0] = '\0';
+    /* Verify that refseq is WGS */
     assert(self);
+    rc = VResolverWgsAccessionToFileName(
+             self->resolver, &acc, wgs, sWgs);
+    if (rc == 0 && wgs[0] != '\0') {
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
+               ("VFSManagerCached: %s is WGS; will cache %s\n",
+                id, wgs));
+
+        id = wgs;
+    }
     rc = KLockAcquire(self->trSdlMutex);
     if (rc == 0)
         sn = (SdlNode*)BSTreeFind(&self->trSdl, id, bstCmpByAcc);
@@ -231,7 +249,7 @@ rc_t VFSManagerGetCachedKSrvResponse
 (const VFSManager * self, const char * id, const KSrvResponse ** resp)
 {
     rc_t rc = 0;
-    const SdlNode * sw = VFSManagerCached(self, id);
+    const SdlNode * sw = VFSManagerCached(self, id, NULL, 0);
     assert(self && resp);
     *resp = NULL;
     if (sw != NULL) {
@@ -246,11 +264,14 @@ rc_t VFSManagerSetCachedKSrvResponse
 (VFSManager * self, const char * id, const KSrvResponse * resp)
 {
     rc_t rc = 0;
+    char wgs[256] = "";
     SdlNode * sn = NULL;
     if (id == NULL)
         return 0;
     assert(self);
-    sn = VFSManagerCached(self, id);
+    sn = VFSManagerCached(self, id, wgs, sizeof wgs);
+    if (wgs[0] != '\0')
+        id = wgs;
     rc = KLockAcquire(self->trSdlMutex);
     if (rc != 0)
         return 0;
