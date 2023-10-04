@@ -140,6 +140,7 @@ struct VFSManager
     KNSManager * kns;
 
     /* cached SDL responses */
+    bool notCachingSdlResponse;
     BSTree trSdl;
     KLock * trSdlMutex;
 
@@ -163,6 +164,7 @@ typedef struct {
      BSTNode n;
  
      char * acc;
+     KTime_t expiration;
      const KSrvResponse * resp;
 } SdlNode;
 
@@ -221,12 +223,23 @@ static SdlNode* VFSManagerCached
     rc = KLockAcquire(self->trSdlMutex);
     if (rc == 0)
         sn = (SdlNode*)BSTreeFind(&self->trSdl, id, bstCmpByAcc);
+    if (rc == 0 && sn != NULL && sn->expiration != 0) {
+        /* expires in less than a minute */
+        if (sn->expiration < KTimeStamp() + 60) {
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
+                ("VFSManagerCached: response for %s has expired\n", id));
+            KSrvResponseRelease(sn->resp);
+            sn->resp = NULL;
+            sn->expiration = 0;
+            sn = NULL;
+        }
+    }
     KLockUnlock(self->trSdlMutex);
     return sn;
 }
 
 static rc_t SdlNodeMake(SdlNode ** self,
-    const char * id, const KSrvResponse * resp)
+    const char * id, const KSrvResponse * resp, KTime_t expiration)
 {
     rc_t rc = 0;
     SdlNode *sn = calloc(1, sizeof *sn);
@@ -241,6 +254,7 @@ static rc_t SdlNodeMake(SdlNode ** self,
     if (rc != 0)
         return rc;
     sn->resp = resp;
+    sn->expiration = expiration;
     *self = sn;
     return 0;
 }
@@ -260,6 +274,17 @@ rc_t VFSManagerGetCachedKSrvResponse
     return rc;
 }
 
+static KTime_t _KSrvResponseGetExpiration(const KSrvResponse * self) {
+    KTime_t expiration = 0;
+    const VPath * path = NULL;
+    rc_t rc = KSrvResponseGetPath(self, 0, 0, &path, NULL, NULL);
+    if (rc == 0 && path != NULL) {
+        expiration = path->expiration;
+        VPathRelease(path);
+    }
+    return expiration;
+}
+
 rc_t VFSManagerSetCachedKSrvResponse
 (VFSManager * self, const char * id, const KSrvResponse * resp)
 {
@@ -269,6 +294,8 @@ rc_t VFSManagerSetCachedKSrvResponse
     if (id == NULL)
         return 0;
     assert(self);
+    if (self->notCachingSdlResponse) /* cashing is disabled */
+        return 0;
     sn = VFSManagerCached(self, id, wgs, sizeof wgs);
     if (wgs[0] != '\0')
         id = wgs;
@@ -281,8 +308,10 @@ rc_t VFSManagerSetCachedKSrvResponse
                    ("VFSManagerSetCachedKSrvResponse:CACHING-NOT-NULL %s\n",
                      id));
             rc = KSrvResponseAddRef(resp);
-            if (rc == 0)
+            if (rc == 0) {
                 sn->resp = resp;
+                sn->expiration = _KSrvResponseGetExpiration(resp);
+            }
         }
         else
             DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
@@ -290,9 +319,10 @@ rc_t VFSManagerSetCachedKSrvResponse
                      id));
     }
     else {
+        KTime_t expiration = _KSrvResponseGetExpiration(resp);
         DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
                ("VFSManagerSetCachedKSrvResponse:CACHING-NULL %s\n", id));
-        rc = SdlNodeMake(&sn, id, resp);
+        rc = SdlNodeMake(&sn, id, resp, expiration);
         if (rc == 0)
             BSTreeInsert(&self->trSdl, (BSTNode*)sn, bstSortByAcc);
     }
@@ -3243,6 +3273,8 @@ static rc_t CC VFSManagerMakeFromKfgImpl ( struct VFSManager ** pmanager,
             KRefcountInit (& obj -> refcount, 1,
                 kfsmanager_classname, "init", "singleton" );
 
+            obj->notCachingSdlResponse
+                = getenv("NCBI_VDB_NO_CACHE_SDL_RESPONSE") != NULL;
             BSTreeInit(&obj->trSdl);
             rc = KLockMake(&obj->trSdlMutex);
 
