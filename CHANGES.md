@@ -1,6 +1,13 @@
 # NCBI External Developer Release:
 
 
+## NCBI VDB 3.0.8
+**September 19, 2023**
+
+  **align, bam-load**: 'circular' can be set from configuration for fasta references  
+  **test, vfs**: fixed test crash  
+
+
 ## NCBI VDB 3.0.7
 **August 29, 2023**
 

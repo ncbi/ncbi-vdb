@@ -307,7 +307,8 @@ const char * EchoServerUrl = "https://echoserver.dev/";
 FIXTURE_TEST_CASE( POST, KNSManagerFixture )
 {
     KClientHttpRequest *req = nullptr;
-    REQUIRE_RC( KNSManagerMakeRequest( m_mgr, &req, 0x01010000, nullptr, EchoServerUrl ) );
+    REQUIRE_RC( KNSManagerMakeRequest( m_mgr, &req, 0x01010000, nullptr,
+"https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve") );
     KClientHttpResult * rslt = nullptr;
     REQUIRE_RC( KClientHttpRequestPOST( req, &rslt ) );
     uint32_t code = 0;

@@ -71,6 +71,7 @@ add_subdirectory(vfs)
 add_subdirectory(ncbi-vdb)
 # add_subdirectory(install)
 add_subdirectory(kns) # TODO: EXT_TOOLS - see the kns CMakeLists.txt for the details
+add_subdirectory(align)
 
 # add_subdirectory(loader) VDB-4855 moved to sra-tools/libs
 # add_subdirectory(align) moved to sra-tools

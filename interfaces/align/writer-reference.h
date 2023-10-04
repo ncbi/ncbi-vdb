@@ -77,6 +77,9 @@ ALIGN_EXTERN rc_t CC ReferenceMgr_SetCache(ReferenceMgr const *const self, size_
 typedef struct ReferenceSeq ReferenceSeq;
 
 /* id: chr12 or NC_000001.3 */
+ALIGN_EXTERN ReferenceSeq const * CC ReferenceMgr_FindSeq(ReferenceMgr const *self,
+                                         char const id[]);
+
 ALIGN_EXTERN rc_t CC ReferenceMgr_GetSeq(ReferenceMgr const *self,
                                          ReferenceSeq const **seq,
                                          char const id[],
@@ -129,6 +132,8 @@ ALIGN_EXTERN rc_t CC ReferenceSeq_Read(const ReferenceSeq* cself, INSDC_coord_ze
 ALIGN_EXTERN rc_t CC ReferenceSeq_Get1stRow(const ReferenceSeq* cself, int64_t* row_id);
     
 ALIGN_EXTERN rc_t CC ReferenceSeq_GetID(ReferenceSeq const *self, char const **rslt);
+
+ALIGN_EXTERN rc_t CC ReferenceSeq_IsCircular(ReferenceSeq const *self, bool *rslt);
 
 ALIGN_EXTERN rc_t CC ReferenceSeq_Compress(const ReferenceSeq* cself,
                                            uint32_t options,
