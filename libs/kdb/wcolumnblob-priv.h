@@ -24,87 +24,55 @@
 *
 */
 
-#ifndef _h_column_priv_
-#define _h_column_priv_
-
-#ifndef _h_kdb_column_
-#include <kdb/column.h>
-#endif
-
-#ifndef _h_coldata_priv_
-#include "coldata-priv.h"
-#endif
-
-#ifndef _h_colidx_priv_
-#include "colidx-priv.h"
-#endif
-
-#define KCOLUMN_IMPL KColumn
-#include "column-base.h"
+#pragma once
 
 #define KCOLUMNBLOB_IMPL KColumnBlob
 #include "columnblob-base.h"
+
+#include "colfmt-priv.h"
+#include "wcoldata-priv.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-
-/*--------------------------------------------------------------------------
- * forwards
- */
-struct KTable;
-struct KDBManager;
-struct KDirectory;
-
-
-/*--------------------------------------------------------------------------
- * KColumn, read-side
- */
-struct KColumn
-{
-    KColumnBase dad;
-
-    struct KTable const *tbl;
-    struct KDBManager const *mgr;
-    struct KDirectory const *dir;
-
-    KColumnIdx idx;
-    KColumnData df;
-
-    uint32_t csbytes;
-    int32_t checksum;
-    char path [ 1 ];
-};
-
-rc_t KRColumnMake ( KColumn **colp, const KDirectory *dir, const char *path );
-rc_t KRColumnMakeRead ( KColumn **colp, const KDirectory *dir, const char *path );
-
 /*--------------------------------------------------------------------------
  * KColumnBlob
  *  one or more rows of column data
  */
-
 struct KColumnBlob
 {
     KColumnBlobBase dad;
 
-    /* holds existing blob loc */
+    /* holds either an existing blob loc
+       or new blob index range */
     KColBlobLoc loc;
+
+    /* holds old and new page maps */
     KColumnPageMap pmorig;
+    KColumnPageMap pmnew;
 
     /* owning column */
-    const KColumn *col;
+    KColumn *col;
 
-    /* captured from idx1 for CRC32 validation */
+    /* number of bytes written to blob */
+    uint32_t num_writ;
+
+    /* checksums */
+    uint32_t crc32;
+    MD5State md5;
+
+    /* open mode */
+    uint8_t read_only;
+
+    /* for validation */
     bool bswap;
 };
 
-rc_t KRColumnBlobMake ( KColumnBlob **blobp, bool bswap );
-rc_t KRColumnBlobOpenRead ( KColumnBlob *self, const KColumn *col, int64_t id );
+rc_t KWColumnBlobMake ( KColumnBlob **blobp, bool bswap );
+rc_t KWColumnBlobOpenRead ( KColumnBlob *self, const KColumn *col, int64_t id );
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _h_column_priv_ */

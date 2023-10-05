@@ -24,18 +24,19 @@
 *
 */
 
-#define KONST const
-#include "column-priv.h"
+#define KCOLUMNBLOB_IMPL KColumnBlob
+#include "columnblob-base.h"
+
+#include "rcolumnblob-priv.h"
+
+#include "rcolumn-priv.h"
+
 #include <klib/checksum.h>
 #include <klib/data-buffer.h>
 #include <klib/rc.h>
 #include <klib/debug.h>
-#undef KONST
 
 #include <byteswap.h>
-
-#define KCOLUMNBLOB_IMPL KColumnBlob
-#include "columnblob-base.h"
 
 #ifdef _DEBUGGING
 #define POS_DEBUG(msg) DBGMSG(DBG_KDB,DBG_FLAG(DBG_KDB_POS),msg)

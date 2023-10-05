@@ -29,6 +29,8 @@
 #include <klib/rc.h>
 
 #include "wcolumn-priv.h"
+#include "wcolumnblob-priv.h"
+
 #include "wdbmgr.h"
 #include "wtable-priv.h"
 #include "wkdb-priv.h"

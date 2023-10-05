@@ -41,14 +41,14 @@ extern "C" {
 #include <kdb/column.h>
 
 /*--------------------------------------------------------------------------
- * KColumnBlobBase, base structure for KColumnBlob implementations
+ * KColumnBlobBase, base structure for KColumnBlob read-side implementations
  */
 typedef struct KColumnBlobBase KColumnBlobBase;
 
 typedef struct KColumnBlobBase_vt KColumnBlobBase_vt;
 struct KColumnBlobBase_vt
 {
-    /* Public API */
+    /* Public read-side API */
     rc_t ( CC * whack )             ( KCOLUMNBLOB_IMPL * self );
     rc_t ( CC * addRef )            ( const KCOLUMNBLOB_IMPL * self );
     rc_t ( CC * release )           ( const KCOLUMNBLOB_IMPL * self );
@@ -57,11 +57,6 @@ struct KColumnBlobBase_vt
     rc_t ( CC * validate )          ( const KCOLUMNBLOB_IMPL * self );
     rc_t ( CC * validateBuffer )    ( const KCOLUMNBLOB_IMPL * self, struct KDataBuffer const * buffer, const KColumnBlobCSData * cs_data, size_t cs_data_size );
     rc_t ( CC * idRange )           ( const KCOLUMNBLOB_IMPL * self, int64_t *first, uint32_t *count );
-
-    // //TODO: write-side only; decide how to handle
-    // rc_t ( CC * append ) ( KColumnBlob *self, const void *buffer, size_t size );
-    // rc_t ( CC * assignRange ) ( KColumnBlob *self, int64_t first, uint32_t count );
-    // rc_t ( CC * commit ) ( KColumnBlob *self );
 };
 
 // default implelentations where exist
@@ -74,16 +69,6 @@ struct KColumnBlobBase
     const KColumnBlobBase_vt * vt;
 
     atomic32_t refcount;
-
-    // /* holds existing blob loc */
-    // KColBlobLoc loc;
-    // KColumnPageMap pmorig;
-
-    // /* owning column */
-    // const KColumn *col;
-
-    // /* captured from idx1 for CRC32 validation */
-    // bool bswap;
 };
 
 extern void KColumnBlobBaseInit( KCOLUMNBLOB_IMPL *self, const KColumnBlobBase_vt * vt );

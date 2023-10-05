@@ -32,7 +32,7 @@
 #include "database-priv.h"
 #include "table-priv.h"
 #include "kdb-priv.h"
-#include "column-priv.h"
+#include "rcolumn-priv.h"
 #undef KONST
 
 #include "cc-priv.h"

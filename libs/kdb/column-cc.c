@@ -27,7 +27,7 @@
 #include <kdb/extern.h>
 
 #define KONST const
-#include "column-priv.h"
+#include "rcolumn-priv.h"
 #undef KONST
 
 #include "cc-priv.h"
@@ -48,10 +48,10 @@ static
 rc_t CC col_check_report(const CCReportInfoBlock *nfo, void *Ctx)
 {
     struct col_check_ctx *ctx = Ctx;
-    
+
     if (nfo->type == ccrpt_MD5) {
         const char *fname = nfo->info.MD5.file;
-        
+
         if (strcmp(fname, "data") == 0)
             ctx->found |= 1;
         else if (strcmp(fname, "idx0") == 0)
@@ -60,7 +60,7 @@ rc_t CC col_check_report(const CCReportInfoBlock *nfo, void *Ctx)
             ctx->found |= 4;
         else if (strcmp(fname, "idx2") == 0)
             ctx->found |= 8;
-        
+
         if (nfo->info.MD5.rc != 0 && !ctx->failed) {
             ctx->failed = true;
             ctx->rc = nfo->info.MD5.rc;
@@ -78,7 +78,7 @@ static
 rc_t CC CheckExists(const KDirectory *dir, uint32_t type, const char *name, void *Ctx)
 {
     struct col_check_ctx *ctx = Ctx;
-    
+
     if ((type & ~kptAlias) == kptFile) {
         if (strcmp(name, "data") == 0)
             ctx->found |= 1;
@@ -99,13 +99,13 @@ rc_t KColumnCheckMD5(const KColumn *self,
 {
     struct col_check_ctx local_ctx;
     rc_t rc;
-    
+
     local_ctx.report = report;
     local_ctx.ctx = ctx;
     local_ctx.found = 0;
     local_ctx.failed = false;
     local_ctx.rc = 0;
-    
+
     rc = DirectoryCheckMD5(self->dir, "md5", nfo, col_check_report, &local_ctx);
     if (rc == 0 && !local_ctx.failed && local_ctx.found != 0x0F) {
         local_ctx.found = 0;
@@ -144,7 +144,7 @@ rc_t KColumnCheckBlobs(const KColumn *self,
     uint64_t row;
     uint64_t rows;
     rc_t rc;
-    
+
     rc = KColumnIdRange(self, &start, &rows);
     if (rc) {
         nfo->info.done.rc = rc;
@@ -156,7 +156,7 @@ rc_t KColumnCheckBlobs(const KColumn *self,
         const KColumnBlob *blob;
         int64_t first;
         uint32_t count;
-        
+
         rc = KColumnOpenBlobRead(self, &blob, row + start);
         if (rc) {
             if (GetRCObject(rc) == (enum RCObject)rcBlob && GetRCState(rc) == rcNotFound) {
@@ -216,13 +216,13 @@ rc_t CC KColumnConsistencyCheck(const KColumn *self,
         nfo->type = ccrpt_Done;
         nfo->info.done.mesg = "missing md5 file";
         nfo->info.done.rc = 0; /* RC(rcDB, rcColumn, rcValidating, rcFile, rcNotFound); */
-        
+
         rc = report(nfo, ctx);
-        
+
         if (level == 0)
             level = 1;
     }
-    
+
     if (rc == 0 && level > 0)
         rc = KColumnCheckBlobs(self, nfo, report, ctx);
     return rc;

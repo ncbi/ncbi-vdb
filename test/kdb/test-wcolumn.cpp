@@ -30,6 +30,7 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <../libs/kdb/wcolumnblob-priv.h>
 #include <../libs/kdb/wcolumn-priv.h>
 
 #include <kdb/manager.h>

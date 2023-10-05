@@ -25,7 +25,8 @@
 */
 
 #define KONST const
-#include "column-priv.h"
+#include "rcolumn-priv.h"
+#include "rcolumnblob-priv.h"
 #include "rdbmgr.h"
 #include "table-priv.h"
 #include "kdb-priv.h"

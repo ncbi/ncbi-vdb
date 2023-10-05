@@ -47,7 +47,7 @@
 #include "rdatabase.h"
 #include "kdbfmt-priv.h"
 #include "table-priv.h"
-#include "column-priv.h"
+#include "rcolumn-priv.h"
 #include "index-priv.h"
 #include "rdbmgr.h"
 #include "rmeta.h"

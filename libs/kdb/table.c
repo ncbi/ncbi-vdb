@@ -31,7 +31,7 @@
 #include "rdbmgr.h"
 #include "database-priv.h"
 #include "kdb-priv.h"
-#include "column-priv.h"
+#include "rcolumn-priv.h"
 #include "index-priv.h"
 #include "rmeta.h"
 #undef KONST
