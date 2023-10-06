@@ -24,9 +24,6 @@
 *
 */
 
-#define KCOLUMNBLOB_IMPL KColumnBlob
-#include "columnblob-base.h"
-
 #include "rcolumnblob-priv.h"
 
 #include "rcolumn-priv.h"
@@ -45,7 +42,7 @@
 #endif
 
 /*--------------------------------------------------------------------------
- * KColumnBlob
+ * KRColumnBlob
  *  one or more rows of column data
  */
 
@@ -69,11 +66,14 @@ static KColumnBlobBase_vt KRColumnBlob_vt =
     KRColumnBlobIdRange
 };
 
+#define CAST() assert( bself->vt == &KRColumnBlob_vt ); KRColumnBlob * self = (KRColumnBlob *)bself
+
 /* Whack
  */
 static
-rc_t KRColumnBlobWhack ( KColumnBlob *self )
+rc_t KRColumnBlobWhack ( KColumnBlob *bself )
 {
+    CAST();
     const KColumn *col = self -> col;
     if ( col != NULL )
     {
@@ -85,13 +85,13 @@ rc_t KRColumnBlobWhack ( KColumnBlob *self )
         KColumnSever ( col );
     }
 
-    return KColumnBlobBaseWhack ( self );
+    return KColumnBlobBaseWhack ( bself );
 }
 
 /* OpenRead
  * OpenUpdate
  */
-rc_t KRColumnBlobOpenRead ( KColumnBlob *self, const KColumn *col, int64_t id )
+rc_t KRColumnBlobOpenRead ( KRColumnBlob *self, const KColumn *col, int64_t id )
 {
     /* locate blob */
     rc_t rc = KColumnIdxLocateBlob ( & col -> idx, & self -> loc, id, id );
@@ -122,14 +122,14 @@ rc_t KRColumnBlobOpenRead ( KColumnBlob *self, const KColumn *col, int64_t id )
 
 /* Make
  */
-rc_t KRColumnBlobMake ( KColumnBlob **blobp, bool bswap )
+rc_t KRColumnBlobMake ( KRColumnBlob **blobp, bool bswap )
 {
-    KColumnBlob *blob = malloc ( sizeof * blob );
+    KRColumnBlob *blob = malloc ( sizeof * blob );
     if ( blob == NULL )
         return RC ( rcDB, rcBlob, rcConstructing, rcMemory, rcExhausted );
 
     memset ( blob, 0, sizeof * blob );
-    KColumnBlobBaseInit( blob, & KRColumnBlob_vt );
+    KColumnBlobBaseInit( & blob -> dad, & KRColumnBlob_vt );
 
     blob -> bswap = bswap;
 
@@ -146,8 +146,10 @@ rc_t KRColumnBlobMake ( KColumnBlob **blobp, bool bswap )
  */
 static
 rc_t CC
-KRColumnBlobIdRange ( const KColumnBlob *self, int64_t *first, uint32_t *count )
+KRColumnBlobIdRange ( const KColumnBlob *bself, int64_t *first, uint32_t *count )
 {
+    CAST();
+
     rc_t rc;
 
     if ( first == NULL || count == NULL )
@@ -173,7 +175,7 @@ KRColumnBlobIdRange ( const KColumnBlob *self, int64_t *first, uint32_t *count )
  *  runs checksum validation on unmodified blob
  */
 static
-rc_t KColumnBlobValidateCRC32 ( const KColumnBlob *self )
+rc_t KColumnBlobValidateCRC32 ( const KRColumnBlob *self )
 {
     rc_t rc;
     const KColumn *col = self -> col;
@@ -218,7 +220,7 @@ rc_t KColumnBlobValidateCRC32 ( const KColumnBlob *self )
 }
 
 static
-rc_t KColumnBlobValidateMD5 ( const KColumnBlob *self )
+rc_t KColumnBlobValidateMD5 ( const KRColumnBlob *self )
 {
     rc_t rc;
     const KColumn *col = self -> col;
@@ -267,8 +269,9 @@ rc_t KColumnBlobValidateMD5 ( const KColumnBlob *self )
 
 static
 rc_t CC
-KRColumnBlobValidate ( const KColumnBlob *self )
+KRColumnBlobValidate ( const KColumnBlob *bself )
 {
+    CAST();
     if ( self -> loc . u . blob . size != 0 ) switch ( self -> col -> checksum )
     {
     case kcsCRC32:
@@ -320,9 +323,11 @@ rc_t KColumnBlobValidateBufferMD5 ( const void * buffer, size_t size, const uint
 
 static
 rc_t CC
-KRColumnBlobValidateBuffer ( const KColumnBlob * self,
+KRColumnBlobValidateBuffer ( const KColumnBlob * bself,
     const KDataBuffer * buffer, const KColumnBlobCSData * cs_data, size_t cs_data_size )
 {
+    CAST();
+
     size_t bsize;
 
     if ( buffer == NULL || cs_data == NULL )
@@ -364,10 +369,12 @@ KRColumnBlobValidateBuffer ( const KColumnBlob * self,
  */
 static
 rc_t CC
-KRColumnBlobRead ( const KColumnBlob *self,
+KRColumnBlobRead ( const KColumnBlob *bself,
     size_t offset, void *buffer, size_t bsize,
     size_t *num_read, size_t *remaining )
 {
+    CAST();
+
     rc_t rc;
     size_t ignore;
     if ( remaining == NULL )
@@ -457,9 +464,11 @@ KRColumnBlobRead ( const KColumnBlob *self,
  */
 static
 rc_t CC
-KRColumnBlobReadAll ( const KColumnBlob * self, KDataBuffer * buffer,
+KRColumnBlobReadAll ( const KColumnBlob * bself, KDataBuffer * buffer,
     KColumnBlobCSData * opt_cs_data, size_t cs_data_size )
 {
+    CAST();
+
     rc_t rc = 0;
 
     if ( opt_cs_data != NULL )
@@ -483,7 +492,7 @@ KRColumnBlobReadAll ( const KColumnBlob * self, KDataBuffer * buffer,
             {
                 /* read the blob */
                 size_t num_read, remaining;
-                rc = KColumnBlobRead ( self, 0, buffer -> base, bsize, & num_read, & remaining );
+                rc = KColumnBlobRead ( bself, 0, buffer -> base, bsize, & num_read, & remaining );
                 if ( rc == 0 )
                 {
                     /* test that num_read is everything and we have no remaining */

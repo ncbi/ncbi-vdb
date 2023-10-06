@@ -29,50 +29,32 @@
 #include "columnblob-base.h"
 
 #include "colfmt-priv.h"
-#include "wcoldata-priv.h"
+#include "coldata-priv.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /*--------------------------------------------------------------------------
- * KColumnBlob
+ * KColumnBlob, common base for read and write side
  *  one or more rows of column data
  */
 
-typedef struct KWColumnBlob KWColumnBlob;
-struct KWColumnBlob
+typedef struct KColumnBlobCmn KColumnBlobCmn;
+struct KColumnBlobCmn
 {
     KColumnBlob dad;
 
-    /* holds either an existing blob loc
-       or new blob index range */
+    /* holds existing blob loc */
     KColBlobLoc loc;
-
-    /* holds old and new page maps */
     KColumnPageMap pmorig;
-    KColumnPageMap pmnew;
 
     /* owning column */
-    KColumn *col;
+    const KColumn *col;
 
-    /* number of bytes written to blob */
-    uint32_t num_writ;
-
-    /* checksums */
-    uint32_t crc32;
-    MD5State md5;
-
-    /* open mode */
-    uint8_t read_only;
-
-    /* for validation */
+    /* captured from idx1 for CRC32 validation */
     bool bswap;
 };
-
-rc_t KWColumnBlobMake ( KWColumnBlob **blobp, bool bswap );
-rc_t KWColumnBlobOpenRead ( KWColumnBlob *self, const KColumn *col, int64_t id );
-rc_t KWColumnBlobOpenUpdate ( KWColumnBlob *self, KColumn *col, int64_t id );
 
 #ifdef __cplusplus
 }

@@ -392,7 +392,7 @@ rc_t CC
 KRColumnOpenBlobRead ( const KColumn *self, const KColumnBlob **blobp, int64_t id )
 {
     rc_t rc;
-    KColumnBlob *blob;
+    KRColumnBlob *blob;
 
     if ( blobp == NULL )
         return RC ( rcDB, rcColumn, rcOpening, rcParam, rcNull );
@@ -405,7 +405,7 @@ KRColumnOpenBlobRead ( const KColumn *self, const KColumnBlob **blobp, int64_t i
         rc = KRColumnBlobOpenRead ( blob, self, id );
         if ( rc == 0 )
         {
-            * blobp = blob;
+            * blobp = (const KColumnBlob *) blob;
             return 0;
         }
 

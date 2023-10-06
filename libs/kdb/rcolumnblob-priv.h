@@ -26,40 +26,9 @@
 
 #pragma once
 
-#define KCOLUMNBLOB_IMPL KColumnBlob
-#include "columnblob-base.h"
+#include "columnblob-cmn.h"
 
-#include "colfmt-priv.h"
-#include "coldata-priv.h"
+typedef KColumnBlobCmn KRColumnBlob;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/*--------------------------------------------------------------------------
- * KColumnBlob
- *  one or more rows of column data
- */
-
-struct KColumnBlob
-{
-    KColumnBlobBase dad;
-
-    /* holds existing blob loc */
-    KColBlobLoc loc;
-    KColumnPageMap pmorig;
-
-    /* owning column */
-    const KColumn *col;
-
-    /* captured from idx1 for CRC32 validation */
-    bool bswap;
-};
-
-rc_t KRColumnBlobMake ( KColumnBlob **blobp, bool bswap );
-rc_t KRColumnBlobOpenRead ( KColumnBlob *self, const KColumn *col, int64_t id );
-
-#ifdef __cplusplus
-}
-#endif
-
+rc_t KRColumnBlobMake ( KRColumnBlob **blobp, bool bswap );
+rc_t KRColumnBlobOpenRead ( KRColumnBlob *self, const KColumn *col, int64_t id );

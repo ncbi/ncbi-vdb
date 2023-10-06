@@ -1002,7 +1002,7 @@ rc_t CC
 KWColumnOpenBlobRead ( const KColumn *self, const KColumnBlob **blobp, int64_t id )
 {
     rc_t rc;
-    KColumnBlob *blob;
+    KWColumnBlob *blob;
 
     if ( blobp == NULL )
         return RC ( rcDB, rcColumn, rcOpening, rcParam, rcNull );
@@ -1016,7 +1016,72 @@ KWColumnOpenBlobRead ( const KColumn *self, const KColumnBlob **blobp, int64_t i
         {
             blob -> col = KColumnAttach ( self );
             blob -> read_only = true;
-            * blobp = blob;
+            * blobp = (const KColumnBlob *) blob;
+            return 0;
+        }
+
+        free ( blob );
+    }
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KColumnOpenBlobUpdate ( KColumn *self, KColumnBlob **blobp, int64_t id )
+{
+    rc_t rc;
+
+    if ( blobp == NULL )
+        return RC ( rcDB, rcColumn, rcOpening, rcParam, rcNull );
+    * blobp = NULL;
+
+    if ( self == NULL )
+        return RC ( rcDB, rcColumn, rcOpening, rcSelf, rcNull );
+    if ( self -> read_only )
+        return RC ( rcDB, rcColumn, rcOpening, rcColumn, rcReadonly );
+
+    KWColumnBlob * blob;
+    rc = KWColumnBlobMake ( &blob, self -> idx . idx1 . bswap );
+    if ( rc == 0 )
+    {
+        rc = KWColumnBlobOpenUpdate ( blob, self, id );
+        if ( rc == 0 )
+        {
+            blob -> col = KColumnAttach ( self );
+            * blobp = & blob -> dad;
+            return 0;
+        }
+
+        free ( blob );
+    }
+
+    return rc;
+}
+
+/* CreateBlob
+ *  creates a new, unassigned blob
+ */
+LIB_EXPORT rc_t CC KColumnCreateBlob ( KColumn *self, KColumnBlob **blobp )
+{
+    rc_t rc;
+
+    if ( blobp == NULL )
+        return RC ( rcDB, rcColumn, rcOpening, rcParam, rcNull );
+    * blobp = NULL;
+
+    if ( self == NULL )
+        return RC ( rcDB, rcColumn, rcOpening, rcSelf, rcNull );
+    if ( self -> read_only )
+        return RC ( rcDB, rcColumn, rcOpening, rcColumn, rcReadonly );
+
+    KWColumnBlob * blob;
+    rc = KWColumnBlobMake ( & blob, self -> idx . idx1 . bswap );
+    if ( rc == 0 )
+    {
+        rc = KWColumnBlobCreate ( blob, self );
+        if ( rc == 0 )
+        {
+            blob -> col = KColumnAttach ( self );
+            * blobp = & blob -> dad;
             return 0;
         }
 
