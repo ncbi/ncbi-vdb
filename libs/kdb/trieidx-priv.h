@@ -24,8 +24,7 @@
 *
 */
 
-#ifndef _h_trieidx_priv_
-#define _h_trieidx_priv_
+#pragma once
 
 #include "index-cmn.h"
 
@@ -69,6 +68,3 @@ struct KPTrieIndexHdr_v3
 #ifdef __cplusplus
 }
 #endif
-
-
-#endif /* _h_trieidx_priv_ */

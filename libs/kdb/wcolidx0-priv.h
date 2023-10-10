@@ -24,8 +24,7 @@
 *
 */
 
-#ifndef _h_colidx0_priv_
-#define _h_colidx0_priv_
+#pragma once
 
 #ifndef _h_kfs_directory_
 #include <kfs/directory.h>
@@ -149,5 +148,3 @@ void KColumnIdx0Truncate ( KColumnIdx0 *self );
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* _h_colidx0_priv_ */

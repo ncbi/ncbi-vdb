@@ -29,7 +29,8 @@
 #include "columnblob-base.h"
 
 #include "colfmt-priv.h"
-#include "coldata-priv.h"
+
+#include "rcoldata-priv.h" // TODO: move
 
 #ifdef __cplusplus
 extern "C" {
@@ -45,7 +46,7 @@ struct KColumnBlobCmn
 {
     KColumnBlob dad;
 
-    /* holds existing blob loc */
+    /* holds existing blob loc */ // read side only
     KColBlobLoc loc;
     KColumnPageMap pmorig;
 

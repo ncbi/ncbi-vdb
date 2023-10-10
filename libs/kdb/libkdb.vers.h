@@ -24,4 +24,6 @@
 *
 */
 
+#pragma once
+
 #define LIBKDB_VERS 0x03000009

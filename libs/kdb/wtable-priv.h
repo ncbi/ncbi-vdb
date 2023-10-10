@@ -24,8 +24,7 @@
 *
 */
 
-#ifndef _h_table_priv_
-#define _h_table_priv_
+#pragma once
 
 #ifndef _h_kdb_table_
 #include <kdb/table.h>
@@ -99,5 +98,3 @@ bool KTableColumnNeedsReindex ( KTable *self, const char *colname );
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* _h_table_priv_ */

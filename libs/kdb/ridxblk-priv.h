@@ -24,8 +24,7 @@
 *
 */
 
-#ifndef _h_idxblk_priv_
-#define _h_idxblk_priv_
+#pragma once
 
 #ifndef _h_colfmt_priv_
 #include "colfmt-priv.h"
@@ -133,4 +132,3 @@ void KColIdxBlockGet ( const KColIdxBlock *self,
 }
 #endif
 
-#endif /* _h_idxblk_priv_ */

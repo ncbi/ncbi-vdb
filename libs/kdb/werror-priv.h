@@ -24,8 +24,7 @@
 *
 */
 
-#ifndef _h_werror_priv_
-#define _h_werror_priv_
+#pragma once
 
 #ifndef _h_klib_rc_
 #include <klib/rc.h>
@@ -55,5 +54,3 @@ AK: TODO check the fix is correct
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* _h_werror_priv_ */

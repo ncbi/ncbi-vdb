@@ -25,13 +25,16 @@
 */
 
 #include <kdb/extern.h>
+
 #include "wcolumn-priv.h"
 #include "wcolidx2-priv.h"
-#include "idxblk-priv.h"
+#include "ridxblk-priv.h"
 #include "werror-priv.h"
+
 #include <kfs/file.h>
 #include <kfs/buffile.h>
 #include <kfs/md5.h>
+
 #include <sysalloc.h>
 
 #include <limits.h>

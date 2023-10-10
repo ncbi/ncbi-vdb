@@ -24,8 +24,7 @@
 *
 */
 
-#ifndef _h_colidx2_priv_
-#define _h_colidx2_priv_
+#pragma once
 
 #ifndef _h_kfs_directory_
 #include <kfs/directory.h>
@@ -40,7 +39,7 @@
 #endif
 
 #include <klib/data-buffer.h>
-#include "idxblk-priv.h"
+#include "ridxblk-priv.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -96,4 +95,3 @@ rc_t KColumnIdx2LocateBlob ( const KColumnIdx2 *self,
 }
 #endif
 
-#endif /* _h_colidx2_priv_ */

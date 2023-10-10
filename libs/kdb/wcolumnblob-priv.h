@@ -73,6 +73,7 @@ struct KWColumnBlob
 rc_t KWColumnBlobMake ( KWColumnBlob **blobp, bool bswap );
 rc_t KWColumnBlobOpenRead ( KWColumnBlob *self, const KColumn *col, int64_t id );
 rc_t KWColumnBlobOpenUpdate ( KWColumnBlob *self, KColumn *col, int64_t id );
+rc_t KWColumnBlobCreate ( KWColumnBlob *bself, KColumn *col );
 
 #ifdef __cplusplus
 }

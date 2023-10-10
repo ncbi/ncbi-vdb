@@ -25,9 +25,13 @@
 */
 
 #include <kdb/extern.h>
-#include "colidx0-priv.h"
+
+#include "rcolidx0-priv.h"
+
 #include <kfs/file.h>
+
 #include <klib/rc.h>
+
 #include <sysalloc.h>
 
 #include <limits.h>
@@ -35,7 +39,6 @@
 #include <string.h>
 #include <assert.h>
 #include <byteswap.h>
-
 
 /*--------------------------------------------------------------------------
  * KColumnIdx0Node

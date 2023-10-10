@@ -24,8 +24,7 @@
  *
  */
 
-#ifndef _h_cc_priv_
-#define _h_cc_priv_
+#pragma once
 
 #ifndef _h_kdb_consistency_check_
 #include <kdb/consistency-check.h>
@@ -47,5 +46,3 @@ rc_t DirectoryCheckMD5 ( const KDirectory *dir, const char *name,
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* _h_cc_priv_ */

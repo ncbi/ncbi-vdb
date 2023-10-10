@@ -24,8 +24,7 @@
 *
 */
 
-#ifndef _h_kdb_table_priv_
-#define _h_kdb_table_priv_
+#pragma once
 
 #ifndef _h_kdb_table_
 #include <kdb/table.h>
@@ -78,5 +77,3 @@ rc_t KTableSever ( const KTable *self );
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* _h_kdb_table_priv_ */

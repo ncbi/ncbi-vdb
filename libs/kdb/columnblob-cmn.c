@@ -71,8 +71,7 @@ static KColumnBlob_vt KRColumnBlob_vt =
 /* Whack
  */
 static
-rc_t
-KRColumnBlobWhack ( KColumnBlob *bself )
+rc_t KRColumnBlobWhack ( KColumnBlob *bself )
 {
     CAST();
 

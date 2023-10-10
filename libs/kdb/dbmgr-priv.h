@@ -24,8 +24,7 @@
 *
 */
 
-#ifndef _h_libs_dbmgr_priv_
-#define _h_libs_dbmgr_priv_
+#pragma once
 
 #ifndef _h_kdb_manager_
 #include <kdb/manager.h>
@@ -126,4 +125,3 @@ rc_t KDBManagerOpenObjectDelete ( KDBManager *self, struct KSymbol *obj );
 }
 #endif
 
-#endif /* _h_libs_dbmgr_priv_ */

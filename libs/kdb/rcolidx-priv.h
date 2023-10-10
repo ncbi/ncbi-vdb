@@ -24,28 +24,16 @@
 *
 */
 
-#ifndef _h_colidx_priv_
-#define _h_colidx_priv_
+#pragma once
 
 #ifndef _h_kfs_directory_
 #include <kfs/directory.h>
 #endif
 
-#ifndef _h_colfmt_priv_
 #include "colfmt-priv.h"
-#endif
-
-#ifndef _h_colidx0_priv_
-#include "colidx0-priv.h"
-#endif
-
-#ifndef _h_colidx1_priv_
-#include "colidx1-priv.h"
-#endif
-
-#ifndef _h_colidx2_priv_
-#include "colidx2-priv.h"
-#endif
+#include "rcolidx0-priv.h"
+#include "rcolidx1-priv.h"
+#include "rcolidx2-priv.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -119,4 +107,3 @@ rc_t KColumnIdxLocateBlob ( const KColumnIdx *self,
 }
 #endif
 
-#endif /* _h_colidx_priv_ */

@@ -24,8 +24,7 @@
 *
 */
 
-#ifndef _h_widxblk_priv_
-#define _h_widxblk_priv_
+#pragma once
 
 #ifndef _h_kfs_directory_
 #include <kfs/directory.h>
@@ -191,5 +190,3 @@ const void *KColWIdxBlockPersistPtr ( const KColWIdxBlock *self,
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* _h_colidx2_priv_ */

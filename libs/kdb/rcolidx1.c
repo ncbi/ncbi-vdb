@@ -25,9 +25,13 @@
 */
 
 #include <kdb/extern.h>
-#include "colidx1-priv.h"
+
+#include "rcolidx1-priv.h"
+
 #include <kfs/file.h>
+
 #include <klib/rc.h>
+
 #include <sysalloc.h>
 
 #include <limits.h>
@@ -165,7 +169,7 @@ rc_t KColumnIdx1Init ( KColumnIdx1 *self, uint32_t off, uint32_t count )
                 rc = RC ( rcDB, rcColumn, rcConstructing, rcIndex, rcCorrupt );
                 break;
             }
-            
+
             if ( self -> bswap )
                 KColumnIdx1Swap ( & data [ i ], cnt );
         }
@@ -252,7 +256,7 @@ rc_t KColumnIdx1OpenRead ( KColumnIdx1 *self, const KDirectory *dir,
 #endif
     self -> bswap = false;
     self -> loaded = false;
-            
+
     rc = KDirectoryOpenFileRead_v1 ( dir, & self -> f, "idx1" );
     if ( rc == 0 )
     {
@@ -575,7 +579,7 @@ rc_t KColumnIdx1LocateFirstRowIdBlob ( const KColumnIdx1 * self,
             * bloc = pb . next -> loc;
             return 0;
         }
-        
+
     }
 #else /* USE_BSTREE_IN_COLUMN_IDX1 */
     if ( self -> count != 0 )

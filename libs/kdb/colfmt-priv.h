@@ -24,8 +24,7 @@
 *
 */
 
-#ifndef _h_colfmt_priv_
-#define _h_colfmt_priv_
+#pragma once
 
 #ifndef _h_kdbfmt_priv_
 #include "kdbfmt-priv.h"
@@ -336,4 +335,3 @@ size_t KColBlockLocAllocSize ( const KColBlockLoc *self,
 }
 #endif
 
-#endif /* _h_colfmt_priv_ */

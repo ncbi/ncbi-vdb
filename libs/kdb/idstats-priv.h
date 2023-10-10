@@ -24,8 +24,7 @@
 *
 */
 
-#ifndef _h_idstats_priv_
-#define _h_idstats_priv_
+#pragma once
 
 #ifndef _h_klib_container_
 #include <klib/container.h>
@@ -71,4 +70,3 @@ rc_t KIdStatsInsert ( KIdStats *self, int64_t id, uint64_t count );
 }
 #endif
 
-#endif /* _h_idstats_priv_ */

@@ -24,8 +24,7 @@
 *
 */
 
-#ifndef _h_kdbfmt_priv_
-#define _h_kdbfmt_priv_
+#pragma once
 
 #ifndef _h_klib_defs_
 #include <klib/defs.h>
@@ -73,4 +72,3 @@ rc_t KDBHdrValidate ( const KDBHdr *hdr, size_t size,
 }
 #endif
 
-#endif /* _h_kdbfmt_priv_ */

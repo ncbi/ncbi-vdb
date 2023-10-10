@@ -24,8 +24,7 @@
 *
 */
 
-#ifndef _h_coldata_priv_
-#define _h_coldata_priv_
+#pragma once
 
 #ifndef _h_kfs_directory_
 #include <kfs/directory.h>
@@ -123,4 +122,3 @@ rc_t KColumnPageMapId ( const KColumnPageMap *self,
 }
 #endif
 
-#endif /* _h_coldata_priv_ */

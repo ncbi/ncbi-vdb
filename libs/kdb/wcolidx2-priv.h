@@ -24,8 +24,7 @@
 *
 */
 
-#ifndef _h_colidx2_priv_
-#define _h_colidx2_priv_
+#pragma once
 
 #ifndef _h_kfs_directory_
 #include <kfs/directory.h>
@@ -110,5 +109,3 @@ rc_t KColumnIdx2CommitDone ( KColumnIdx2 *self );
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* _h_colidx2_priv_ */

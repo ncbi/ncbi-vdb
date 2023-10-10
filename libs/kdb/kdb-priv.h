@@ -24,8 +24,7 @@
 *
 */
 
-#ifndef _h_kdb_priv_
-#define _h_kdb_priv_
+#pragma once
 
 #ifndef _h_kdb_manager_
 #include <kdb/manager.h>
@@ -101,4 +100,3 @@ bool KDBIsPathUri (const char * path);
 }
 #endif
 
-#endif /* _h_kdb_priv_ */

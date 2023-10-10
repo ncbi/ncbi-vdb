@@ -28,8 +28,8 @@
 
 #include <kdb/column.h>
 
-#include "coldata-priv.h"
-#include "colidx-priv.h"
+#include "rcoldata-priv.h"
+#include "rcolidx-priv.h"
 
 #define KCOLUMN_IMPL KColumn
 #include "column-base.h"

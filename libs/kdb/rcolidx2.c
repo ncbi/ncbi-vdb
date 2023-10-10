@@ -25,11 +25,15 @@
 */
 
 #include <kdb/extern.h>
-#include "colidx2-priv.h"
-#include "idxblk-priv.h"
+
+#include "rcolidx2-priv.h"
+#include "ridxblk-priv.h"
+
 #include <kfs/file.h>
 #include <kfs/buffile.h>
+
 #include <klib/rc.h>
+
 #include <sysalloc.h>
 
 #include <limits.h>
@@ -70,7 +74,7 @@ rc_t KColumnIdx2Init ( KColumnIdx2 *self, uint64_t idx2_eof )
             return 0;
         }
     }
-    
+
     KFileRelease ( self -> f );
 
     self -> f = NULL;

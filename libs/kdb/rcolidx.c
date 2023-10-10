@@ -25,10 +25,14 @@
 */
 
 #include <kdb/extern.h>
-#include "colidx-priv.h"
-#include "idxblk-priv.h"
+
+#include "rcolidx-priv.h"
+#include "ridxblk-priv.h"
+
 #include <kfs/file.h>
+
 #include <klib/rc.h>
+
 #include <sysalloc.h>
 
 #include <limits.h>

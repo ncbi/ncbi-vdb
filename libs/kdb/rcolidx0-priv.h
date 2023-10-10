@@ -24,8 +24,7 @@
 *
 */
 
-#ifndef _h_colidx0_priv_
-#define _h_colidx0_priv_
+#pragma once
 
 #ifndef _h_kfs_directory_
 #include <kfs/directory.h>
@@ -90,4 +89,3 @@ rc_t KColumnIdx0LocateBlob ( const KColumnIdx0 *self,
 }
 #endif
 
-#endif /* _h_colidx0_priv_ */

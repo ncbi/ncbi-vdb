@@ -24,8 +24,7 @@
 *
 */
 
-#ifndef _h_colidx1_priv_
-#define _h_colidx1_priv_
+#pragma once
 
 #ifndef _h_kfs_directory_
 #include <kfs/directory.h>
@@ -148,5 +147,3 @@ bool KColumnIdx1Revert ( KColumnIdx1 *self, int64_t start_id, uint32_t id_range 
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* _h_colidx1_priv_ */

@@ -39,40 +39,45 @@ set( KDB_CMN
     metanode-base
     index-base
 
-    idxblk
-)
+    ptrieval-v1
+    ptrieval-v2
 
-set( KDB_SRC
-    ${KDB_CMN}
-
-    kdb
-    dbmgr
-    database
-    table
-    column
-    rcolumnblob
-    meta
-    rmetadatanode
-    index
+    idstats
 
     database-cc
     table-cc
     column-cc
     dbcc-cmn
 
-    coldata
-    colidx
-    colidx0
-    colidx1
-    colidx2
-    idstats
-    trieidx-v1
     trieval-v1
-    ptrieval-v1
-    trieidx-v2
     trieval-v2
-    ptrieval-v2
-    u64idx-v3
+
+    ridxblk
+)
+
+set( KDB_SRC
+    ${KDB_CMN}
+
+    rkdb
+    rdbmgr
+    rdatabase
+    rtable
+    rcolumn
+    rcolumnblob
+    rmeta
+    rmetadatanode
+    rindex
+
+    rcoldata
+    rcolidx
+    rcolidx0
+    rcolidx1
+    rcolidx2
+
+    rtrieidx-v1
+    rtrieidx-v2
+
+    ru64idx-v3
 )
 
 set( WKDB_SRC
@@ -93,9 +98,12 @@ set( WKDB_SRC
     wcolidx0
     wcolidx1
     wcolidx2
+
     widxblk
+
     wtrieidx-v1
     wtrieidx-v2
+
     wu64idx-v3
 )
 

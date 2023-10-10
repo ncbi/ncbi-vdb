@@ -25,8 +25,11 @@
 */
 
 #include <kdb/extern.h>
-#include "idxblk-priv.h"
+
+#include "ridxblk-priv.h"
+
 #include <klib/rc.h>
+
 #include <sysalloc.h>
 
 #include <limits.h>
@@ -345,7 +348,7 @@ void KColIdxBlockRewriteColumns ( KColIdxBlock *self, size_t size,
         uint32_t *s = ( uint32_t* ) ( block + size - pg_ssz );
         for ( i = count; -- i >= 0; )
             s [ i ] = self -> pg . s [ i ];
-        
+
         self -> pg . d = ( const uint64_t* ) s;
         self -> pg . s = s;
     }
@@ -519,7 +522,7 @@ rc_t KColIdxBlockInit ( KColIdxBlock *self,
         size_t size = id_hsz + pg_hsz +
             id_dsz + id_ssz + id_adj +
             pg_dsz + pg_ssz + pg_adj;
-        
+
         if ( size > block_size )
             return RC ( rcDB, rcIndex, rcReading, rcBuffer, rcInsufficient );
 

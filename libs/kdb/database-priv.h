@@ -24,8 +24,7 @@
 *
 */
 
-#ifndef _h_database_priv_
-#define _h_database_priv_
+#pragma once
 
 #ifndef _h_kdb_database_
 #include <kdb/database.h>
@@ -154,4 +153,3 @@ rc_t KDatabaseSever ( const KDatabase *self );
 }
 #endif
 
-#endif /* _h_database_priv_ */

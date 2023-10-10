@@ -161,11 +161,8 @@ rc_t KWColumnBlobOpenUpdate ( KWColumnBlob *self, KColumn *col, int64_t id )
 
 /* Create
  */
-static
-rc_t KColumnBlobCreate ( KColumnBlob *bself, KColumn *col )
+rc_t KWColumnBlobCreate ( KWColumnBlob *self, KColumn *col )
 {
-    CAST();
-
     rc_t rc;
 
     if ( col -> md5 != NULL )

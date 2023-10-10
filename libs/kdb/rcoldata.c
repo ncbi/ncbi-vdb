@@ -25,11 +25,15 @@
 */
 
 #include <kdb/extern.h>
-#include "coldata-priv.h"
+
+#include "rcoldata-priv.h"
+
 #include <kfs/file.h>
 #include <kfs/buffile.h>
 #include <kfs/impl.h>
+
 #include <klib/rc.h>
+
 #include <sysalloc.h>
 
 #include <limits.h>

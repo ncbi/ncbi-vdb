@@ -24,8 +24,7 @@
 *
 */
 
-#ifndef _h_colidx_priv_
-#define _h_colidx_priv_
+#pragma once
 
 #ifndef _h_kfs_directory_
 #include <kfs/directory.h>
@@ -99,7 +98,7 @@ rc_t KColumnIdxCreate ( KColumnIdx *self,
 /* Open
  */
 rc_t KColumnIdxOpenRead ( KColumnIdx *self, const KDirectory *dir,
-			  uint64_t *data_eof, size_t *pgsize, 
+			  uint64_t *data_eof, size_t *pgsize,
 			  int32_t *checksum );
 rc_t KColumnIdxOpenUpdate ( KColumnIdx *self, KDirectory *dir,
     KMD5SumFmt *md5, uint64_t *data_eof, size_t *pgsize,
@@ -107,7 +106,7 @@ rc_t KColumnIdxOpenUpdate ( KColumnIdx *self, KDirectory *dir,
 
 /* Whack
  */
-rc_t KColumnIdxWhack ( KColumnIdx *self, 
+rc_t KColumnIdxWhack ( KColumnIdx *self,
     uint64_t data_eof, size_t pgsize, int32_t checksum );
 
 /* Version
@@ -162,5 +161,3 @@ rc_t KColumnIdxReindex ( KColumnIdx *self, struct KMD5SumFmt *md5,
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* _h_colidx_priv_ */
