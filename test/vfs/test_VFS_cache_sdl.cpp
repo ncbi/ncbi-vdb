@@ -155,11 +155,11 @@ protected:
 FIXTURE_TEST_CASE(CountCaching, CachingFixture) {
     const char acc[] = "SRR000001";
     string json(MkSdlJson("http://a1/"));
-    setenv(acc, (char*)json.c_str(), 1);
+    setenv(acc, json.c_str(), 1);
 
     const char acc2[] = "SRR000002";
     json = MkSdlJson("http://a2/");
-    setenv(acc, (char*)json.c_str(), 1);
+    setenv(acc, json.c_str(), 1);
 
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 0);
     REQUIRE_NULL(remote);
@@ -178,11 +178,11 @@ FIXTURE_TEST_CASE(CountCaching, CachingFixture) {
 FIXTURE_TEST_CASE(CountNotCaching, NotCachingFixture) {
     const char acc[] = "SRR000001";
     string json(MkSdlJson("http://a1/"));
-    setenv(acc, (char*)json.c_str(), 1);
+    setenv(acc, json.c_str(), 1);
 
     const char acc2[]("SRR000002");
     json = MkSdlJson("http://a2/");
-    setenv(acc2, (char*)json.c_str(), 1);
+    setenv(acc2, json.c_str(), 1);
 
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 0);
     REQUIRE_NULL(remote);
@@ -200,13 +200,13 @@ FIXTURE_TEST_CASE(NotCaching, NotCachingFixture) {
     const char acc[]("SRR000001");
 
     string json(MkSdlJson("http://a1/"));
-    setenv(acc, (char*)json.c_str(), 1);
+    setenv(acc, json.c_str(), 1);
     REQUIRE_RC(QueryRemote(acc));
     REQUIRE_RC(RemoteEquals("http://a1/"));
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 0);
 
     json = MkSdlJson("http://a2/");
-    setenv(acc, (char*)json.c_str(), 1);
+    setenv(acc, json.c_str(), 1);
     REQUIRE_RC(QueryRemote(acc));
     // not caching
     REQUIRE_RC(RemoteEquals("http://a2/"));
@@ -218,7 +218,7 @@ FIXTURE_TEST_CASE(Caching, CachingFixture) {
     const char acc[] = "SRR000001";
 
     string json(MkSdlJson("http://a1/"));
-    setenv(acc, (char*)json.c_str(), 1);
+    setenv(acc, json.c_str(), 1);
 
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 0);
     REQUIRE_NULL(remote);
@@ -228,7 +228,7 @@ FIXTURE_TEST_CASE(Caching, CachingFixture) {
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 1);
 
     json = MkSdlJson("http://a2/");
-    setenv(acc, (char*)json.c_str(), 1);
+    setenv(acc, json.c_str(), 1);
     REQUIRE_RC(QueryRemote(acc));
     // use cached response
     REQUIRE_RC(RemoteEquals("http://a1/"));
@@ -240,7 +240,7 @@ FIXTURE_TEST_CASE(ExpirationNotCaching, NotCachingFixture) {
     const char acc[] = "SRR000001";
 
     string json(MkSdlJson("http://a1/", 99)); // will expire in 99 seconds
-    setenv(acc, (char*)json.c_str(), 1);
+    setenv(acc, json.c_str(), 1);
     
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 0);
     REQUIRE_NULL(remote);
@@ -250,7 +250,7 @@ FIXTURE_TEST_CASE(ExpirationNotCaching, NotCachingFixture) {
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 0);
 
     json = MkSdlJson("http://a2/", 1); // will expire in 1 second
-    setenv(acc, (char*)json.c_str(), 1);
+    setenv(acc, json.c_str(), 1);
     REQUIRE_RC(QueryRemote(acc));
     // no caching; expiration is ignored
     REQUIRE_RC(RemoteEquals("http://a2/"));
@@ -265,7 +265,7 @@ FIXTURE_TEST_CASE(ExpirationCaching, CachingFixture) {
     // will expire in 61 seconds;
     // removed from cache in 60 seconds before expiration
     string json(MkSdlJson("http://a1/", 61));
-    setenv(acc, (char*)json.c_str(), 1);
+    setenv(acc, json.c_str(), 1);
 
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 0);
     REQUIRE_NULL(remote);
@@ -276,7 +276,7 @@ FIXTURE_TEST_CASE(ExpirationCaching, CachingFixture) {
     
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 1);
     json = MkSdlJson("http://a2/");
-    setenv(acc, (char*)json.c_str(), 1);
+    setenv(acc, json.c_str(), 1);
     REQUIRE_RC(QueryRemote(acc));
     // not expired; still use old result
     REQUIRE_RC(RemoteEquals("http://a1/"));
@@ -294,11 +294,11 @@ FIXTURE_TEST_CASE(ExpirationCaching, CachingFixture) {
 FIXTURE_TEST_CASE(WgsNotCaching, NotCachingFixture) {
     const char acc[] = "AAAB01000001";
     string json(MkSdlJson("http://a1/"));
-    setenv(acc, (char*)json.c_str(), 1);
+    setenv(acc, json.c_str(), 1);
 
     const char acc2[] = "AAAB01000002";
     string json2(MkSdlJson("http://a2/"));
-    setenv(acc2, (char*)json2.c_str(), 1);
+    setenv(acc2, json2.c_str(), 1);
 
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 0);
     REQUIRE_NULL(remote);
@@ -317,11 +317,11 @@ FIXTURE_TEST_CASE(WgsNotCaching, NotCachingFixture) {
 FIXTURE_TEST_CASE(WgsCaching, CachingFixture) {
     const char acc[] = "AAAB01000001";
     string json(MkSdlJson("http://a1/"));
-    setenv(acc, (char*)json.c_str(), 1);
+    setenv(acc, json.c_str(), 1);
 
     const char acc2[] = "AAAB01000002";
     string json2(MkSdlJson("http://a2/"));
-    setenv(acc2, (char*)json2.c_str(), 1);
+    setenv(acc2, json2.c_str(), 1);
 
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 0);
     REQUIRE_NULL(remote);
@@ -369,7 +369,7 @@ static rc_t DefaultWorkerThreadFn(const KThread * self, void * data) {
 FIXTURE_TEST_CASE(ThreadsCaching, CachingFixture) {
     const char acc[] = "SRR000001";
     string json(MkSdlJson("http://a1/"));
-    setenv(acc, (char*)json.c_str(), 1);
+    setenv(acc, json.c_str(), 1);
 
     REQUIRE_RC(ResetQuery(acc));
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 0);
@@ -396,7 +396,7 @@ FIXTURE_TEST_CASE(ThreadsCaching, CachingFixture) {
 FIXTURE_TEST_CASE(ThreadsNotCaching, NotCachingFixture) {
     const char acc[] = "SRR000001";
     string json(MkSdlJson("http://a1/"));
-    setenv(acc, (char*)json.c_str(), 1);
+    setenv(acc, json.c_str(), 1);
 
     REQUIRE_RC(ResetQuery(acc));
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 0);
