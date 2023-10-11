@@ -139,10 +139,13 @@ struct VFSManager
     /* network manager */
     KNSManager * kns;
 
-    /* cached SDL responses */
+    /**************************************************************************/
+    /* Cache of names resolve results / SDL responses */
     bool notCachingSdlResponse;
+    ESdlCacheState trSdlState;
     BSTree trSdl;
     KLock * trSdlMutex;
+    /**************************************************************************/
 
     /* path to a global password file */
     char *pw_env;
@@ -159,6 +162,9 @@ static const char kfsmanager_classname [] = "VFSManager";
 
 static
 VFSManager * singleton = NULL;
+
+/******************************************************************************/
+/* Cache of names resolve results / SDL responses */
 
 typedef struct {
      BSTNode n;
@@ -192,143 +198,240 @@ static
 int64_t CC bstSortByAcc(const BSTNode * item, const BSTNode * n)
 {
     const SdlNode * sn = (const SdlNode*)item;
-
+    assert(sn);
     return bstCmpByAcc(sn->acc, n);
-}
-
-static SdlNode* VFSManagerCached
-(const VFSManager * self, const char * id, char * wgs, size_t sWgs)
-{
-    rc_t rc = 0;
-    char e[256] = "";
-    SdlNode * sn = NULL;
-    String acc;
-    StringInitCString(&acc, id);
-    if (wgs == NULL) {
-        wgs = e;
-        sWgs = sizeof e;
-    }
-    wgs[0] = '\0';
-    /* Verify that refseq is WGS */
-    assert(self);
-    rc = VResolverWgsAccessionToFileName(
-             self->resolver, &acc, wgs, sWgs);
-    if (rc == 0 && wgs[0] != '\0') {
-        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
-               ("VFSManagerCached: %s is WGS; will cache %s\n",
-                id, wgs));
-
-        id = wgs;
-    }
-    rc = KLockAcquire(self->trSdlMutex);
-    if (rc == 0)
-        sn = (SdlNode*)BSTreeFind(&self->trSdl, id, bstCmpByAcc);
-    if (rc == 0 && sn != NULL && sn->expiration != 0) {
-        /* expires in less than a minute */
-        if (sn->expiration < KTimeStamp() + 60) {
-            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
-                ("VFSManagerCached: response for %s has expired\n", id));
-            KSrvResponseRelease(sn->resp);
-            sn->resp = NULL;
-            sn->expiration = 0;
-            sn = NULL;
-        }
-    }
-    KLockUnlock(self->trSdlMutex);
-    return sn;
 }
 
 static rc_t SdlNodeMake(SdlNode ** self,
     const char * id, const KSrvResponse * resp, KTime_t expiration)
 {
     rc_t rc = 0;
-    SdlNode *sn = calloc(1, sizeof *sn);
+    SdlNode *sn = NULL;
+
     assert(self && id);
-    *self = NULL;
-    if (sn == NULL)
-        return RC(rcVFS, rcStorage, rcAllocating, rcMemory, rcExhausted);
-    sn->acc = string_dup_measure(id, NULL);
-    if (sn->acc == NULL)
-        return RC(rcVFS, rcStorage, rcAllocating, rcMemory, rcExhausted);
+
+    if (*self == NULL) {
+        sn = calloc(1, sizeof *sn);
+        if (sn == NULL)
+            return RC(rcVFS, rcStorage, rcAllocating, rcMemory, rcExhausted);
+        sn->acc = string_dup_measure(id, NULL);
+        if (sn->acc == NULL)
+            return RC(rcVFS, rcStorage, rcAllocating, rcMemory, rcExhausted);
+    }
+    else
+        sn = *self;
+
     rc = KSrvResponseAddRef(resp);
     if (rc != 0)
         return rc;
+
     sn->resp = resp;
     sn->expiration = expiration;
-    *self = sn;
+
+    if (*self == NULL)
+        *self = sn;
+
     return 0;
+}
+
+static KTime_t _KSrvResponseGetExpiration(const KSrvResponse * self) {
+    KTime_t expiration = 0;
+
+    const VPath * path = NULL;
+    rc_t rc = KSrvResponseGetPath(self, 0, 0, &path, NULL, NULL);
+
+    if (rc == 0 && path != NULL) {
+        expiration = path->expiration;
+        VPathRelease(path);
+    }
+
+    return expiration;
+}
+
+static rc_t _VFSManagerSdlMutexLockAcquire(VFSManager * self) {
+    assert(self);
+    return KLockAcquire(self->trSdlMutex);
+}
+
+static rc_t VFSManagerCached(const VFSManager * cself,
+    const char * id, char * wgs, size_t sWgs,
+    const KSrvResponse * in, const KSrvResponse ** out)
+{
+    VFSManager * self = (VFSManager*)cself;
+    rc_t rc = 0;
+    char e[256] = "";
+
+    String acc;
+    StringInitCString(&acc, id);
+ 
+    if (wgs == NULL) {
+        wgs = e;
+        sWgs = sizeof e;
+    }
+    wgs[0] = '\0';
+ 
+    assert(self && (in || out));
+    if (out != NULL)
+        *out = NULL;
+
+    /* Verify that refseq is WGS */
+    rc = VResolverWgsAccessionToFileName(
+        self->resolver, &acc, wgs, sWgs);
+    if (rc == 0 && wgs[0] != '\0') {
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
+            ("VFSManagerCached: %s is WGS; will cache %s\n", id, wgs));
+        id = wgs;
+    }
+
+    rc = _VFSManagerSdlMutexLockAcquire(self);
+
+    if (rc == 0) { /*     find id in tree; */
+        SdlNode * sn = (SdlNode*)BSTreeFind(&self->trSdl, id, bstCmpByAcc);
+
+        if (sn != NULL) { /* if (found item) */
+            if (sn->expiration != 0
+                && sn->expiration < KTimeStamp() + 60) /* if (expired) */
+                /* expires in less than a minute */
+            { /*            remove resp from found item; */
+                self->trSdlState = eSCSEmpty;
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
+                    ("VFSManagerCached: response for %s has expired\n", id));
+                KSrvResponseRelease(sn->resp);
+                sn->resp = NULL;
+                sn->expiration = 0;
+            }
+
+            if (out != NULL)
+                if (sn != NULL && sn->resp != NULL) {/*if (resp in found item)*/
+                    rc = KSrvResponseAddRef(sn->resp);
+                    if (rc == 0) {
+                        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
+                            ("VFSManagerCached:FOUND %s\n", id));
+                        if (self->trSdlState < eSCSFound)
+                            self->trSdlState = eSCSFound;
+                        else
+                            ++self->trSdlState;
+                        *out = sn->resp;
+                    }
+                }
+        }
+        else if (in == NULL) {
+            self->trSdlState = eSCSEmpty;
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
+                ("VFSManagerCached:NOT-FOUND %s\n", id));
+        }
+
+        if (in != NULL) {
+            if (sn == NULL) { /* if (not found item) add in to tree; */
+                KTime_t expiration = _KSrvResponseGetExpiration(in);
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
+                    ("VFSManagerCached:CACHING-NULL %s\n", id));
+                rc = SdlNodeMake(&sn, id, in, expiration);
+                if (rc == 0) {
+                    BSTreeInsert(&self->trSdl, (BSTNode*)sn, bstSortByAcc);
+                    self->trSdlState = eSCSCachedWhenNull;
+                }
+            }
+            else if (sn->resp == NULL) {/*if(no resp in found)add in to fn*/
+                KTime_t expiration = _KSrvResponseGetExpiration(in);
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
+                    ("VFSManagerCached:CACHING-NOT-NULL %s\n", id));
+                rc = SdlNodeMake(&sn, id, in, expiration);
+                if (rc == 0)
+                    self->trSdlState = eSCSCachedWhenNotNull;
+            }
+            else { /* ignore in */
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
+                    ("VFSManagerCached:NOT CACHING %s\n", id));
+                if (self->trSdlState < eSCSFound)
+                    self->trSdlState = eSCSFound;
+                else
+                    ++self->trSdlState;
+            }
+        }
+    }
+
+    KLockUnlock(self->trSdlMutex);
+    
+    return rc;
 }
 
 rc_t VFSManagerGetCachedKSrvResponse
 (const VFSManager * self, const char * id, const KSrvResponse ** resp)
 {
-    rc_t rc = 0;
-    const SdlNode * sw = VFSManagerCached(self, id, NULL, 0);
-    assert(self && resp);
-    *resp = NULL;
-    if (sw != NULL) {
-        rc = KSrvResponseAddRef(sw->resp);
-        if (rc == 0)
-            *resp = sw->resp;
-    }
-    return rc;
-}
+    if (resp == NULL)
+        return RC(rcVFS, rcFile, rcAccessing, rcParam, rcNull);
 
-static KTime_t _KSrvResponseGetExpiration(const KSrvResponse * self) {
-    KTime_t expiration = 0;
-    const VPath * path = NULL;
-    rc_t rc = KSrvResponseGetPath(self, 0, 0, &path, NULL, NULL);
-    if (rc == 0 && path != NULL) {
-        expiration = path->expiration;
-        VPathRelease(path);
-    }
-    return expiration;
+    if (self == NULL)
+        return RC(rcVFS, rcFile, rcAccessing, rcSelf, rcNull);
+
+    return VFSManagerCached(self, id, NULL, 0, NULL, resp);
 }
 
 rc_t VFSManagerSetCachedKSrvResponse
 (VFSManager * self, const char * id, const KSrvResponse * resp)
 {
-    rc_t rc = 0;
-    char wgs[256] = "";
-    SdlNode * sn = NULL;
     if (id == NULL)
         return 0;
-    assert(self);
+
+    if (resp == NULL)
+        return RC(rcVFS, rcFile, rcUpdating, rcParam, rcNull);
+
+    if (self == NULL)
+        return RC(rcVFS, rcFile, rcUpdating, rcSelf, rcNull);
+
     if (self->notCachingSdlResponse) /* cashing is disabled */
         return 0;
-    sn = VFSManagerCached(self, id, wgs, sizeof wgs);
-    if (wgs[0] != '\0')
-        id = wgs;
-    rc = KLockAcquire(self->trSdlMutex);
-    if (rc != 0)
-        return 0;
-    if (sn != NULL) {
-        if (sn->resp == NULL) {
-            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
-                   ("VFSManagerSetCachedKSrvResponse:CACHING-NOT-NULL %s\n",
-                     id));
-            rc = KSrvResponseAddRef(resp);
-            if (rc == 0) {
-                sn->resp = resp;
-                sn->expiration = _KSrvResponseGetExpiration(resp);
-            }
-        }
-        else
-            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
-                   ("VFSManagerSetCachedKSrvResponse:NOT-CACHING-NOT-NULL %s\n",
-                     id));
+
+    return VFSManagerCached(self, id, NULL, 0, resp, NULL);
+}
+
+rc_t VFSManagerSdlCacheClear(VFSManager * self) {
+    rc_t rc = 0, r2 = 0;
+  
+    if (self == NULL)
+        return RC(rcVFS, rcFile, rcDestroying, rcSelf, rcNull);
+ 
+    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
+        ("VFSManagerCached: CLEARING SDL CACHE\n"));
+  
+    rc = _VFSManagerSdlMutexLockAcquire(self);
+
+    if (rc == 0) {
+        BSTreeWhack(&self->trSdl, bstWhack, NULL);
+        self->trSdlState = eSCSEmpty;
     }
-    else {
-        KTime_t expiration = _KSrvResponseGetExpiration(resp);
-        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
-               ("VFSManagerSetCachedKSrvResponse:CACHING-NULL %s\n", id));
-        rc = SdlNodeMake(&sn, id, resp, expiration);
-        if (rc == 0)
-            BSTreeInsert(&self->trSdl, (BSTNode*)sn, bstSortByAcc);
-    }
-    KLockUnlock(self->trSdlMutex);
+ 
+    r2 = KLockUnlock(self->trSdlMutex);
+    if (rc == 0 && r2 != 0)
+        rc = r2;
+
     return rc;
 }
+
+static void CC BstCount(BSTNode * n, void * data) {
+    uint32_t * x = (uint32_t*)data;
+    ++*x;
+}
+
+uint32_t
+VFSManagerSdlCacheCount(const VFSManager * self, ESdlCacheState * state)
+{
+    uint32_t count = 0;
+
+    ESdlCacheState dummy = eSCSEmpty;
+    if (state == NULL)
+        state = &dummy;
+
+    if (self == NULL)
+        return RC(rcVFS, rcFile, rcAccessing, rcSelf, rcNull);
+
+    *state = self->trSdlState;
+    BSTreeForEach(&self->trSdl, false, BstCount, &count);
+    return count;
+}
+
+/******************************************************************************/
 
 /* Destroy
  *  destroy file
@@ -347,7 +450,7 @@ static rc_t VFSManagerDestroy ( VFSManager *self )
     KDirectoryRelease ( self -> cwd );
     KRefcountWhack (&self->refcount, kfsmanager_classname);
 
-    BSTreeWhack(&self->trSdl, bstWhack, NULL);
+    VFSManagerSdlCacheClear(self);
     KLockRelease(self->trSdlMutex);
 
     memset(self, 0, sizeof *self);

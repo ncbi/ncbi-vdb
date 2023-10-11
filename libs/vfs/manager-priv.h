@@ -33,17 +33,31 @@
 extern "C" {
 #endif
 
-    struct VFSManager;
+struct VFSManager;
 
-    /* Get ".noqual" extension.
-     *   accepts VFSManager* == NULL */
-    const String * VFSManagerExtNoqual   (const struct VFSManager *);
-    /* Get old ".noqual" extension. */
-    const String * VFSManagerExtNoqualOld(const struct VFSManager *);
-    /* Get ".sra" extension. */
-    const String * VFSManagerExtSra      (const struct VFSManager *);
+/* Get ".noqual" extension.
+    *   accepts VFSManager* == NULL */
+const String * VFSManagerExtNoqual   (const struct VFSManager *);
+/* Get old ".noqual" extension. */
+const String * VFSManagerExtNoqualOld(const struct VFSManager *);
+/* Get ".sra" extension. */
+const String * VFSManagerExtSra      (const struct VFSManager *);
 
-    rc_t VFSManagerCheckRunDir(const KDirectory* dir, const struct VPath* path);
+rc_t VFSManagerCheckRunDir(const KDirectory* dir, const struct VPath* path);
+
+/******************************************************************************/
+/* Cache of names resolve results / SDL responses */
+typedef enum {
+    eSCSEmpty,
+    eSCSCachedWhenNull,
+    eSCSCachedWhenNotNull,
+    eSCSFound,
+} ESdlCacheState;
+uint32_t VFSManagerSdlCacheCount
+(const struct VFSManager * self, ESdlCacheState * state);
+rc_t VFSManagerSdlCacheClear(struct VFSManager * self);
+/******************************************************************************/
+
 #ifdef __cplusplus
 }
 #endif
