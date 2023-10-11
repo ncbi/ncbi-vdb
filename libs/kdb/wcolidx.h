@@ -26,27 +26,15 @@
 
 #pragma once
 
-#ifndef _h_kfs_directory_
 #include <kfs/directory.h>
-#endif
 
 #include <kfs/md5.h>
 
-#ifndef _h_colfmt_priv_
-#include "colfmt-priv.h"
-#endif
+#include "colfmt.h"
 
-#ifndef _h_colidx0_priv_
-#include "wcolidx0-priv.h"
-#endif
-
-#ifndef _h_colidx1_priv_
-#include "wcolidx1-priv.h"
-#endif
-
-#ifndef _h_colidx2_priv_
-#include "wcolidx2-priv.h"
-#endif
+#include "wcolidx0.h"
+#include "wcolidx1.h"
+#include "wcolidx2.h"
 
 #ifdef __cplusplus
 extern "C" {

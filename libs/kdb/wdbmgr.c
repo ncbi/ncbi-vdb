@@ -31,12 +31,13 @@
 
 #include "libkdb.vers.h"
 #include "wdbmgr.h"
-#include "wkdb-priv.h"
-#include "wtable-priv.h"
-#include "windex-priv.h"
+#include "wkdb.h"
+#include "kdb-cmn.h"
+#include "wtable.h"
+#include "windex.h"
 #include "wdatabase.h"
-#include "colfmt-priv.h"
-#include "wcolumn-priv.h"
+#include "colfmt.h"
+#include "wcolumn.h"
 #include "wmeta.h"
 
 #include <kfs/impl.h>

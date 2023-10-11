@@ -26,47 +26,54 @@
 
 #pragma once
 
-#ifndef _h_klib_defs_
-#include <klib/defs.h>
-#endif
+#include "columnblob-base.h"
+
+#include "colfmt.h"
+#include "wcoldata.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-
 /*--------------------------------------------------------------------------
- * KDBHdr
- *  the various file types used:
- *
- *  a) metadata
- *  b) key => id
- *  c) id => key
- *
- * will begin with a standard header to tag format
+ * KColumnBlob
+ *  one or more rows of column data
  */
-#define eByteOrderTag 0x05031988
-#define eByteOrderReverse 0x88190305
 
-typedef struct KDBHdr KDBHdr;
-struct KDBHdr
+typedef struct KWColumnBlob KWColumnBlob;
+struct KWColumnBlob
 {
-    uint32_t endian;
-    uint32_t version;
+    KColumnBlob dad;
+
+    /* holds either an existing blob loc
+       or new blob index range */
+    KColBlobLoc loc;
+
+    /* holds old and new page maps */
+    KColumnPageMap pmorig;
+    KColumnPageMap pmnew;
+
+    /* owning column */
+    KColumn *col;
+
+    /* number of bytes written to blob */
+    uint32_t num_writ;
+
+    /* checksums */
+    uint32_t crc32;
+    MD5State md5;
+
+    /* open mode */
+    uint8_t read_only;
+
+    /* for validation */
+    bool bswap;
 };
 
-/* KDBHdrInit
- *  simple initialization
- */
-#define KDBHdrInit( hdr, vers ) \
-    ( void ) ( ( hdr ) -> endian = eByteOrderTag, ( hdr ) -> version = vers )
-
-/* KDBHdrValidate
- *  validates that a header sports a supported byte order
- *  and that the version is within range
- */
-rc_t KDBHdrValidate ( const KDBHdr *hdr, size_t size,
-    uint32_t min_vers, uint32_t max_vers );
+rc_t KWColumnBlobMake ( KWColumnBlob **blobp, bool bswap );
+rc_t KWColumnBlobOpenRead ( KWColumnBlob *self, const KColumn *col, int64_t id );
+rc_t KWColumnBlobOpenUpdate ( KWColumnBlob *self, KColumn *col, int64_t id );
+rc_t KWColumnBlobCreate ( KWColumnBlob *bself, KColumn *col );
 
 #ifdef __cplusplus
 }

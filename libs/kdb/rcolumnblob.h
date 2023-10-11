@@ -28,7 +28,17 @@
 
 #include "columnblob-cmn.h"
 
-typedef KColumnBlobCmn KRColumnBlob;
+#include "rcoldata.h"
+
+typedef struct KRColumnBlob KRColumnBlob;
+struct KRColumnBlob
+{
+    KColumnBlobCmn cmn;
+
+    /* holds existing blob loc */
+    KColBlobLoc loc;
+    KColumnPageMap pmorig;
+};
 
 rc_t KRColumnBlobMake ( KRColumnBlob **blobp, bool bswap );
 rc_t KRColumnBlobOpenRead ( KRColumnBlob *self, const KColumn *col, int64_t id );

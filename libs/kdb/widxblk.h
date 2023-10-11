@@ -26,17 +26,11 @@
 
 #pragma once
 
-#ifndef _h_kfs_directory_
 #include <kfs/directory.h>
-#endif
 
-#ifndef _h_colfmt_priv_
-#include "colfmt-priv.h"
-#endif
+#include "colfmt.h"
 
-#ifndef _h_klib_container_
 #include <klib/container.h>
-#endif
 
 #ifdef __cplusplus
 extern "C" {

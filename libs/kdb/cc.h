@@ -26,9 +26,7 @@
 
 #pragma once
 
-#ifndef _h_kdb_consistency_check_
 #include <kdb/consistency-check.h>
-#endif
 
 #ifdef __cplusplus
 extern "C" {

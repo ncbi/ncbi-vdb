@@ -26,32 +26,52 @@
 
 #pragma once
 
-#include "columnblob-base.h"
+#include <kdb/table.h>
 
-#include "colfmt.h"
+#define KTABLE_IMPL KTable
+#include "table-base.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+
 /*--------------------------------------------------------------------------
- * KColumnBlob, common base for read and write side
- *  one or more rows of column data
+ * forwards
  */
+struct KDatabase;
+struct KDBManager;
+struct KDirectory;
 
-typedef struct KColumnBlobCmn KColumnBlobCmn;
-struct KColumnBlobCmn
+
+/*--------------------------------------------------------------------------
+ * KTable
+ *  represents a table
+ *  normally implemented as a directory
+ *  but may be a single archive file
+ *  in either executable or streamable format
+ */
+struct KTable
 {
-    KColumnBlob dad;
+    KTableBase dad;
 
-    /* owning column */
-    const KColumn *col;
-
-    /* captured from idx1 for CRC32 validation */
-    bool bswap;
+    struct KDirectory const *dir;
+    struct KDBManager const *mgr;
+    struct KDatabase const *db;
+    uint8_t prerelease;
+    char path [ 1 ];
 };
+
+rc_t KRTableMake ( const KTable **tblp, const struct KDirectory *dir, const char *path, const struct KDBManager * mgr, bool prerelease );
+
+/* Attach
+ * Sever
+ *  like KTableRelease, except called internally
+ *  indicates that a child object is letting go...
+ */
+KTable *KTableAttach ( const KTable *self );
+rc_t KTableSever ( const KTable *self );
 
 #ifdef __cplusplus
 }
 #endif
-

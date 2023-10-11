@@ -27,7 +27,7 @@
 #include <kdb/extern.h>
 
 #include "index-priv.h"
-#include "idstats-priv.h"
+#include "idstats.h"
 
 #include <kdb/index.h>
 #include <klib/ptrie.h>

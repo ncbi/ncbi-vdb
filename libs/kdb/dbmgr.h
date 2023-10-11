@@ -26,17 +26,10 @@
 
 #pragma once
 
-#ifndef _h_kdb_manager_
 #include <kdb/manager.h>
-#endif
 
-#ifndef _h_klib_container_
 #include <klib/container.h>
-#endif
-
-#ifndef _h_klib_refcount_
 #include <klib/refcount.h>
-#endif
 
 #define KDBMGR_IMPL KDBManager
 #include "manager-base.h"

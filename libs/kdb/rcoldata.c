@@ -26,7 +26,7 @@
 
 #include <kdb/extern.h>
 
-#include "rcoldata-priv.h"
+#include "rcoldata.h"
 
 #include <kfs/file.h>
 #include <kfs/buffile.h>

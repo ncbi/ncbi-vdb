@@ -26,54 +26,43 @@
 
 #pragma once
 
-#include "columnblob-base.h"
-
-#include "colfmt-priv.h"
-#include "wcoldata-priv.h"
+#include <klib/container.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+
 /*--------------------------------------------------------------------------
- * KColumnBlob
- *  one or more rows of column data
+ * KIdStats
+ *  maintains statistics about id mappings
  */
-
-typedef struct KWColumnBlob KWColumnBlob;
-struct KWColumnBlob
+typedef struct KIdStats KIdStats;
+struct KIdStats
 {
-    KColumnBlob dad;
-
-    /* holds either an existing blob loc
-       or new blob index range */
-    KColBlobLoc loc;
-
-    /* holds old and new page maps */
-    KColumnPageMap pmorig;
-    KColumnPageMap pmnew;
-
-    /* owning column */
-    KColumn *col;
-
-    /* number of bytes written to blob */
-    uint32_t num_writ;
-
-    /* checksums */
-    uint32_t crc32;
-    MD5State md5;
-
-    /* open mode */
-    uint8_t read_only;
-
-    /* for validation */
-    bool bswap;
+    int64_t i_min_id, x_max_id;
+    uint64_t num_entries;
+    uint64_t num_ids;
+    uint64_t num_holes;
+    BSTree ids;
 };
 
-rc_t KWColumnBlobMake ( KWColumnBlob **blobp, bool bswap );
-rc_t KWColumnBlobOpenRead ( KWColumnBlob *self, const KColumn *col, int64_t id );
-rc_t KWColumnBlobOpenUpdate ( KWColumnBlob *self, KColumn *col, int64_t id );
-rc_t KWColumnBlobCreate ( KWColumnBlob *bself, KColumn *col );
+
+/* Init
+ *  initialize the object
+ */
+void KIdStatsInit ( KIdStats *s );
+
+/* Whack
+ *  tear down the object
+ */
+void KIdStatsWhack ( KIdStats *self );
+
+/* Insert
+ *  add an entry representing 1 or more consecutive ids
+ */
+rc_t KIdStatsInsert ( KIdStats *self, int64_t id, uint64_t count );
+
 
 #ifdef __cplusplus
 }

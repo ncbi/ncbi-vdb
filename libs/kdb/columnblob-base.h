@@ -26,15 +26,14 @@
 
 #pragma once
 
-#ifndef _h_klib_refcount_
 #include <klib/refcount.h>
-#endif
+
+#include <kdb/column.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <kdb/column.h>
 
 /*--------------------------------------------------------------------------
  * KColumnBlobBase, base structure for KColumnBlob read-side implementations

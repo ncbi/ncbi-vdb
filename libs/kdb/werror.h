@@ -26,23 +26,7 @@
 
 #pragma once
 
-#ifndef _h_kdb_table_
-#include <kdb/table.h>
-#endif
-
-#ifndef _h_klib_container_
-#include <klib/container.h>
-#endif
-
-#ifndef _h_klib_refcount_
-#include <klib/refcount.h>
-#endif
-
-#include <klib/symbol.h>
-#include <kfs/md5.h>
-
-#define KTABLE_IMPL KTable
-#include "table-base.h"
+#include <klib/rc.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -50,49 +34,19 @@ extern "C" {
 
 
 /*--------------------------------------------------------------------------
- * forwards
+ * RC
  */
-struct KDatabase;
-struct KDBManager;
-struct KDirectory;
 
-/*--------------------------------------------------------------------------
- * KTable
- *  represents a table
- *  normally implemented as a directory
- *  but may be a single archive file
- *  in either executable or streamable format
- */
-struct KTable
-{
-    KTableBase dad;
+/*
+AK: TODO check the fix is correct
+#define kdbReindex RC ( rcDB, rcNoObj, rcCommitting, rcIndex, rcExcessive )
+*/
 
-    struct KDirectory *dir;
-    struct KDBManager *mgr;
-    struct KDatabase *db;
-    struct KMD5SumFmt *md5;
+#define kdbReindex RC ( rcDB, rcNoTarg, rcCommitting, rcIndex, rcExcessive )
 
-    uint32_t opencount;
-    bool use_md5;
-    bool read_only;
-    bool prerelease;
-    uint8_t align [ 5 ];
-
-    KSymbol sym;
-
-    char path [ 1 ];
-};
-
-rc_t KWTableMake ( KTable **tblp, const KDirectory *dir, const char *path, KMD5SumFmt * md5, bool read_only );
-
-/* Cmp
- * Sort
- */
-int KTableCmp ( const void *item, const BSTNode *n );
-int KTableSort ( const BSTNode *item, const BSTNode *n );
-
-/* check a disk-resident column for needing re-indexing */
-bool KTableColumnNeedsReindex ( KTable *self, const char *colname );
+#if 0
+    kdbBadBlockSize,
+#endif
 
 
 #ifdef __cplusplus

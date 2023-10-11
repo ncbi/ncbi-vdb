@@ -34,12 +34,12 @@ struct KMDataNodeNamelist;
 #include "wmeta.h"
 #include "wmetadatanode.h"
 
-#include "wkdb-priv.h"
+#include "wkdb.h"
 #include "wdbmgr.h"
 #include "database-priv.h"
-#include "wtable-priv.h"
-#include "wcolumn-priv.h"
-#include "kdbfmt-priv.h"
+#include "wtable.h"
+#include "wcolumn.h"
+#include "kdbfmt.h"
 
 #include <kdb/meta.h>
 #include <kdb/namelist.h>
@@ -49,14 +49,16 @@ struct KMDataNodeNamelist;
 #include <klib/pbstree.h>
 #include <klib/namelist.h>
 #include <klib/impl.h>
-#include <kfs/file.h>
-#include <kfs/mmap.h>
-#include <kfs/md5.h>
 #include <klib/symbol.h>
 #include <klib/refcount.h>
 #include <klib/debug.h>
 #include <klib/log.h>
 #include <klib/rc.h>
+
+#include <kfs/file.h>
+#include <kfs/mmap.h>
+#include <kfs/md5.h>
+
 #include <atomic.h>
 #include <os-native.h>
 #include <sysalloc.h>

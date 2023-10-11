@@ -32,8 +32,10 @@
 #include <kfs/file.h>
 #include <kfs/md5.h>
 #include <kfs/mmap.h>
+
 #include <klib/pbstree.h>
 #include <klib/rc.h>
+
 #include <sysalloc.h>
 
 #include <string.h>
@@ -130,7 +132,7 @@ bool CC KU64Index_Grep(PBSTNode *node, void *data)
     return false;
 }
 
-rc_t KU64IndexFind_v3( const KU64Index_v3* self, uint64_t offset, uint64_t* key, 
+rc_t KU64IndexFind_v3( const KU64Index_v3* self, uint64_t offset, uint64_t* key,
     uint64_t* key_size, int64_t* id, uint64_t* id_qty )
 {
     KU64Index_GrepData d;
@@ -148,7 +150,7 @@ rc_t KU64IndexFind_v3( const KU64Index_v3* self, uint64_t offset, uint64_t* key,
 }
 
 
-rc_t KU64IndexFindAll_v3( const KU64Index_v3* self, uint64_t offset, 
+rc_t KU64IndexFindAll_v3( const KU64Index_v3* self, uint64_t offset,
     rc_t (CC*f)(uint64_t key, uint64_t key_size, int64_t id, uint64_t id_qty, void* data), void* data)
 {
     KU64Index_GrepData d;

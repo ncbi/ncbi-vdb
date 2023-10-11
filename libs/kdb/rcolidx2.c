@@ -26,8 +26,8 @@
 
 #include <kdb/extern.h>
 
-#include "rcolidx2-priv.h"
-#include "ridxblk-priv.h"
+#include "rcolidx2.h"
+#include "ridxblk.h"
 
 #include <kfs/file.h>
 #include <kfs/buffile.h>

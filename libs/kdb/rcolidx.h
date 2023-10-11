@@ -26,17 +26,13 @@
 
 #pragma once
 
-#ifndef _h_kfs_directory_
 #include <kfs/directory.h>
-#endif
 
-#ifndef _h_colfmt_priv_
-#include "colfmt-priv.h"
-#endif
+#include "colfmt.h"
 
-#ifndef _h_klib_container_
-#include <klib/container.h>
-#endif
+#include "rcolidx0.h"
+#include "rcolidx1.h"
+#include "rcolidx2.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -44,45 +40,66 @@ extern "C" {
 
 
 /*--------------------------------------------------------------------------
- * KColumnIdx0
- *  level 0 index - event journaling
+ * KColumnIdx
+ *  the index fork
  */
-typedef struct KColumnIdx0 KColumnIdx0;
-struct KColumnIdx0
+typedef struct KColumnIdx KColumnIdx;
+struct KColumnIdx
 {
-    /* the in-core indices */
-    BSTree bst;
-    size_t count;
-};
+    /* first active id within db
+       and first id on upper limit
+       i.e. outside of db such that
+       id_upper - id_first == num_ids */
+    int64_t id_first;
+    int64_t id_upper;
 
+    /* level 0 index */
+    KColumnIdx0 idx0;
+
+    /* level 1 index */
+    KColumnIdx1 idx1;
+
+    /* level 2 index */
+    KColumnIdx2 idx2;
+};
 
 /* Open
  */
-rc_t KColumnIdx0OpenRead_v1 ( KColumnIdx0 *self,
-    const KDirectory *dir, bool bswap );
-rc_t KColumnIdx0OpenRead ( KColumnIdx0 *self,
-    const KDirectory *dir, uint32_t count, bool bswap );
+rc_t KColumnIdxOpenRead ( KColumnIdx *self, const KDirectory *dir,
+    uint64_t *data_eof, size_t *pgsize, int32_t *checksum );
 
 /* Whack
  */
-void KColumnIdx0Whack ( KColumnIdx0 *self );
+rc_t KColumnIdxWhack ( KColumnIdx *self );
+
+/* Version
+ */
+rc_t KColumnIdxVersion ( const KColumnIdx *self, uint32_t *version );
+#define KColumnIdxVersion( self, version ) \
+    KColumnIdx1Version ( & ( self ) -> idx1, version )
+
+/* ByteOrder
+ */
+rc_t KColumnIdxByteOrder ( const KColumnIdx *self, bool *reversed );
+#define KColumnIdxByteOrder( self, reversed ) \
+    KColumnIdx1ByteOrder ( & ( self ) -> idx1, reversed )
 
 /* IdRange
  *  returns range of ids contained within
  */
-bool KColumnIdx0IdRange ( const KColumnIdx0 *self,
-    int64_t *first, int64_t *upper );
+rc_t KColumnIdxIdRange ( const KColumnIdx *self,
+    int64_t *first, int64_t *last );
 
 /* FindFirstRowId
  */
-rc_t KColumnIdx0FindFirstRowId ( const KColumnIdx0 * self,
+rc_t KColumnIdxFindFirstRowId ( const KColumnIdx * self,
     int64_t * found, int64_t start );
 
 /* LocateBlob
  *  locate an existing blob
  */
-rc_t KColumnIdx0LocateBlob ( const KColumnIdx0 *self,
-    KColBlobLoc *loc, int64_t first, int64_t upper );
+rc_t KColumnIdxLocateBlob ( const KColumnIdx *self,
+    KColBlobLoc *loc, int64_t first, int64_t last );
 
 
 #ifdef __cplusplus

@@ -27,10 +27,10 @@
 #include <kdb/extern.h>
 
 #define KONST const
-#include "rcolumn-priv.h"
+#include "rcolumn.h"
 #undef KONST
 
-#include "cc-priv.h"
+#include "cc.h"
 
 #include <klib/rc.h>
 

@@ -25,15 +25,19 @@
 */
 
 #include <kdb/extern.h>
+
 #include "index-priv.h"
-#include "trieidx-priv.h"
+#include "trieidx.h"
+
 #include <klib/ptrie.h>
 #include <klib/text.h>
+#include <klib/pack.h>
+#include <klib/rc.h>
+
 #include <kfs/directory.h>
 #include <kfs/file.h>
 #include <kfs/mmap.h>
-#include <klib/pack.h>
-#include <klib/rc.h>
+
 #include <sysalloc.h>
 
 #include <stdlib.h>

@@ -25,15 +25,19 @@
 */
 
 #include <kdb/extern.h>
-#include "windex-priv.h"
-#include "kdbfmt-priv.h"
+
+#include "windex.h"
+#include "kdbfmt.h"
+
 #include <klib/ptrie.h>
 #include <klib/text.h>
+#include <klib/rc.h>
+
 #include <kfs/directory.h>
 #include <kfs/file.h>
 #include <kfs/md5.h>
 #include <kfs/mmap.h>
-#include <klib/rc.h>
+
 #include <os-native.h>
 #include <sysalloc.h>
 
@@ -91,12 +95,12 @@ rc_t KPTrieIndexInit_v1 ( KPTrieIndex_v1 *self, const KMMap *mm, bool byteswap )
                         self -> first = self -> last = 0;
                         return 0;
                     }
-                            
+
                     /* assume this is projection index */
                     self -> id2node = ( void* )
                         ( ( char* ) ( hdr + 1 ) + ptsize );
                     size -= ptsize;
-                            
+
                     /* it must have at least 4 bytes
                        and be 4 byte aligned */
                     if ( size >= sizeof ( uint32_t ) && ( size & 3 ) == 0 )
@@ -511,14 +515,14 @@ rc_t KTrieIndexPersist_v1 ( const KTrieIndex_v1 *self,
 		else
 		{
 		    tmplen = snprintf ( md5path, sizeof md5path, "%s.md5", path );
-		    
+
 		    if ( tmplen >= sizeof ( md5path ) ) /* can't be == or no NUL */
 		    {
 			rc = RC ( rcDB, rcIndex, rcPersisting, rcName, rcExcessive );
 		    }
 		    else
 		    {
-			rc = KDirectoryCreateFile ( dir, &kf, true, 0664, 
+			rc = KDirectoryCreateFile ( dir, &kf, true, 0664,
                                          kcmInit, "%s", tmpmd5name );
 			if ( rc == 0 )
 			{
@@ -558,22 +562,22 @@ rc_t KTrieIndexPersist_v1 ( const KTrieIndex_v1 *self,
                     if ( proj )
                         rc = KTrieIndexPersistProj_v1 ( self, & pb );
                 }
-                
+
                 KFileRelease ( pb . f );
                 pb . f = NULL;
             }
         }
-        
+
         free ( pb . buffer );
         pb . buffer = NULL;
-        
+
         if ( rc == 0 )
         {
-            rc = KDirectoryRename ( dir, false, tmpname, path );                        
+            rc = KDirectoryRename ( dir, false, tmpname, path );
             if ( rc == 0 )
             {
 		if ( use_md5 )
-		    rc = KDirectoryRename ( dir, false, tmpmd5name, md5path );                        
+		    rc = KDirectoryRename ( dir, false, tmpmd5name, md5path );
 		if ( rc == 0 )
 		{
 		    /* done */
@@ -581,13 +585,13 @@ rc_t KTrieIndexPersist_v1 ( const KTrieIndex_v1 *self,
 		}
             }
         }
-        
+
         /* whack temporary file */
         KDirectoryRemove ( dir, false, "%s", tmpname );
 	if ( use_md5 )
 	    KDirectoryRemove ( dir, false, "%s", tmpmd5name );
     }
-    
+
     return rc;
 }
 
@@ -676,7 +680,7 @@ bool CC KTrieIndexPopulate_v1 ( PTNode *n, void *data )
             if ( pb -> rc == 0 )
             {
                 free ( ( void* ) key );
-    
+
                 /* if copying projection index */
                 if ( self -> id2node != NULL )
                 {
@@ -1066,7 +1070,7 @@ rc_t KTrieIndexProject_v1 ( const KTrieIndex_v1 *self,
                 {
                     if (actsize)
                         *actsize = key -> size;
-                    
+
                     if ( key -> size >= buff_size )
                         rc = RC ( rcDB, rcIndex, rcProjecting, rcBuffer, rcInsufficient );
                     else

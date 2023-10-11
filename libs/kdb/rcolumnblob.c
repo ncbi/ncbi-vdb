@@ -24,9 +24,9 @@
 *
 */
 
-#include "rcolumnblob-priv.h"
+#include "rcolumnblob.h"
 
-#include "rcolumn-priv.h"
+#include "rcolumn.h"
 
 #include <klib/checksum.h>
 #include <klib/data-buffer.h>
@@ -76,7 +76,7 @@ KRColumnBlobWhack ( KColumnBlob *bself )
 {
     CAST();
 
-    const KColumn *col = self -> col;
+    const KColumn *col = self -> cmn . col;
     if ( col != NULL )
     {
         KColumnPageMapWhack ( & self -> pmorig, & col -> df );
@@ -109,7 +109,7 @@ rc_t KRColumnBlobOpenRead ( KRColumnBlob *self, const KColumn *col, int64_t id )
             {
                 /* remove them from apparent blob size */
                 self -> loc . u . blob . size -= col -> csbytes;
-                self -> col = KColumnAttach ( col );
+                self -> cmn . col = KColumnAttach ( col );
                 return 0;
             }
 
@@ -131,9 +131,9 @@ rc_t KRColumnBlobMake ( KRColumnBlob **blobp, bool bswap )
         return RC ( rcDB, rcBlob, rcConstructing, rcMemory, rcExhausted );
 
     memset ( blob, 0, sizeof * blob );
-    KColumnBlobBaseInit( & blob -> dad, & KRColumnBlob_vt );
+    KColumnBlobBaseInit( & blob -> cmn . dad, & KRColumnBlob_vt );
 
-    blob -> bswap = bswap;
+    blob -> cmn . bswap = bswap;
 
     * blobp = blob;
     return 0;
@@ -180,7 +180,7 @@ static
 rc_t KColumnBlobValidateCRC32 ( const KRColumnBlob *self )
 {
     rc_t rc;
-    const KColumn *col = self -> col;
+    const KColumn *col = self -> cmn . col;
 
     uint8_t buffer [ 8 * 1024 ];
     size_t to_read, num_read, total, size;
@@ -212,7 +212,7 @@ rc_t KColumnBlobValidateCRC32 ( const KRColumnBlob *self )
     if ( num_read != sizeof cs )
         return RC ( rcDB, rcBlob, rcValidating, rcTransfer, rcIncomplete );
 
-    if ( self -> bswap )
+    if ( self -> cmn . bswap )
         cs = bswap_32 ( cs );
 
     if ( cs != crc32 )
@@ -225,7 +225,7 @@ static
 rc_t KColumnBlobValidateMD5 ( const KRColumnBlob *self )
 {
     rc_t rc;
-    const KColumn *col = self -> col;
+    const KColumn *col = self -> cmn . col;
 
     uint8_t buffer [ 8 * 1024 ];
     size_t to_read, num_read, total, size;
@@ -274,7 +274,7 @@ rc_t CC
 KRColumnBlobValidate ( const KColumnBlob *bself )
 {
     CAST();
-    if ( self -> loc . u . blob . size != 0 ) switch ( self -> col -> checksum )
+    if ( self -> loc . u . blob . size != 0 ) switch ( self -> cmn . col -> checksum )
     {
     case kcsCRC32:
         return KColumnBlobValidateCRC32 ( self );
@@ -341,13 +341,13 @@ KRColumnBlobValidateBuffer ( const KColumnBlob * bself,
     if ( bsize > self -> loc . u . blob . size )
         return RC ( rcDB, rcBlob, rcValidating, rcData, rcExcessive );
 
-    if ( bsize != 0 ) switch ( self -> col -> checksum )
+    if ( bsize != 0 ) switch ( self -> cmn . col -> checksum )
     {
     case kcsNone:
         break;
     case kcsCRC32:
         return KColumnBlobValidateBufferCRC32 ( buffer -> base, bsize,
-            self -> bswap ? bswap_32 ( cs_data -> crc32 ) : cs_data -> crc32 );
+            self -> cmn . bswap ? bswap_32 ( cs_data -> crc32 ) : cs_data -> crc32 );
     case kcsMD5:
         return KColumnBlobValidateBufferMD5 ( buffer -> base, bsize, cs_data -> md5_digest );
     }
@@ -387,7 +387,7 @@ KRColumnBlobRead ( const KColumnBlob *bself,
     else
     {
         size_t size = self -> loc . u . blob . size;
-        const KColumn *col = self -> col;
+        const KColumn *col = self -> cmn . col;
 
         if ( offset > size )
             offset = size;
@@ -402,13 +402,13 @@ KRColumnBlobRead ( const KColumnBlob *bself,
             if ( to_read > bsize )
                 to_read = bsize;
 
-            POS_DEBUG(( "KDB: %s,%lu,%lu\n", self->col->path, offset, to_read ));
+            POS_DEBUG(( "KDB: %s,%lu,%lu\n", self->cmn.col->path, offset, to_read ));
 
 #ifdef _DEBUGGING
             if ( KDbgTestModConds ( DBG_KFS, DBG_FLAG( DBG_KFS_POS ) ) ||
                     KDbgTestModConds ( DBG_KFS, DBG_FLAG( DBG_KFS_PAGE ) ) )
             {
-                KDbgSetColName( self->col->path );
+                KDbgSetColName( self->cmn.col->path );
             }
 #endif
             *num_read = 0;
@@ -511,7 +511,7 @@ KRColumnBlobReadAll ( const KColumnBlob * bself, KDataBuffer * buffer,
                             return 0;
 
                         /* see what checksumming is in use */
-                        switch ( self -> col -> checksum )
+                        switch ( self -> cmn . col -> checksum )
                         {
                         case kcsNone:
                             return 0;
@@ -530,7 +530,7 @@ KRColumnBlobReadAll ( const KColumnBlob * bself, KDataBuffer * buffer,
                             }
 
                             /* read checksum information */
-                            rc = KColumnDataRead ( & self -> col -> df,
+                            rc = KColumnDataRead ( & self -> cmn . col -> df,
                                 & self -> pmorig, bsize, opt_cs_data, cs_bytes, & num_read );
                             if ( rc == 0 )
                             {

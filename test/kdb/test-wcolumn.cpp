@@ -32,8 +32,8 @@
 
 extern "C"
 {
-    #include <../libs/kdb/wcolumnblob-priv.h>
-    #include <../libs/kdb/wcolumn-priv.h>
+    #include <../libs/kdb/wcolumnblob.h>
+    #include <../libs/kdb/wcolumn.h>
 }
 
 #include <kdb/manager.h>

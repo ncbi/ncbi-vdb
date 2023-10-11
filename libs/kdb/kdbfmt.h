@@ -26,12 +26,7 @@
 
 #pragma once
 
-#ifndef _h_kdb_table_
-#include <kdb/table.h>
-#endif
-
-#define KTABLE_IMPL KTable
-#include "table-base.h"
+#include <klib/defs.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -39,41 +34,39 @@ extern "C" {
 
 
 /*--------------------------------------------------------------------------
- * forwards
+ * KDBHdr
+ *  the various file types used:
+ *
+ *  a) metadata
+ *  b) key => id
+ *  c) id => key
+ *
+ * will begin with a standard header to tag format
  */
-struct KDatabase;
-struct KDBManager;
-struct KDirectory;
+#define eByteOrderTag 0x05031988
+#define eByteOrderReverse 0x88190305
 
-
-/*--------------------------------------------------------------------------
- * KTable
- *  represents a table
- *  normally implemented as a directory
- *  but may be a single archive file
- *  in either executable or streamable format
- */
-struct KTable
+typedef struct KDBHdr KDBHdr;
+struct KDBHdr
 {
-    KTableBase dad;
-
-    struct KDirectory const *dir;
-    struct KDBManager const *mgr;
-    struct KDatabase const *db;
-    uint8_t prerelease;
-    char path [ 1 ];
+    uint32_t endian;
+    uint32_t version;
 };
 
-rc_t KRTableMake ( const KTable **tblp, const struct KDirectory *dir, const char *path, const struct KDBManager * mgr, bool prerelease );
-
-/* Attach
- * Sever
- *  like KTableRelease, except called internally
- *  indicates that a child object is letting go...
+/* KDBHdrInit
+ *  simple initialization
  */
-KTable *KTableAttach ( const KTable *self );
-rc_t KTableSever ( const KTable *self );
+#define KDBHdrInit( hdr, vers ) \
+    ( void ) ( ( hdr ) -> endian = eByteOrderTag, ( hdr ) -> version = vers )
+
+/* KDBHdrValidate
+ *  validates that a header sports a supported byte order
+ *  and that the version is within range
+ */
+rc_t KDBHdrValidate ( const KDBHdr *hdr, size_t size,
+    uint32_t min_vers, uint32_t max_vers );
 
 #ifdef __cplusplus
 }
 #endif
+

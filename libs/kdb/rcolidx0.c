@@ -26,7 +26,7 @@
 
 #include <kdb/extern.h>
 
-#include "rcolidx0-priv.h"
+#include "rcolidx0.h"
 
 #include <kfs/file.h>
 

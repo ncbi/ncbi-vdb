@@ -26,9 +26,11 @@
 
 #pragma once
 
-#ifndef _h_klib_rc_
-#include <klib/rc.h>
-#endif
+#include <kfs/directory.h>
+
+#include "colfmt.h"
+
+#include <klib/container.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -36,21 +38,48 @@ extern "C" {
 
 
 /*--------------------------------------------------------------------------
- * RC
+ * KColumnIdx0
+ *  level 0 index - event journaling
  */
+typedef struct KColumnIdx0 KColumnIdx0;
+struct KColumnIdx0
+{
+    /* the in-core indices */
+    BSTree bst;
+    size_t count;
+};
 
-/*
-AK: TODO check the fix is correct
-#define kdbReindex RC ( rcDB, rcNoObj, rcCommitting, rcIndex, rcExcessive )
-*/
 
-#define kdbReindex RC ( rcDB, rcNoTarg, rcCommitting, rcIndex, rcExcessive )
+/* Open
+ */
+rc_t KColumnIdx0OpenRead_v1 ( KColumnIdx0 *self,
+    const KDirectory *dir, bool bswap );
+rc_t KColumnIdx0OpenRead ( KColumnIdx0 *self,
+    const KDirectory *dir, uint32_t count, bool bswap );
 
-#if 0
-    kdbBadBlockSize,
-#endif
+/* Whack
+ */
+void KColumnIdx0Whack ( KColumnIdx0 *self );
+
+/* IdRange
+ *  returns range of ids contained within
+ */
+bool KColumnIdx0IdRange ( const KColumnIdx0 *self,
+    int64_t *first, int64_t *upper );
+
+/* FindFirstRowId
+ */
+rc_t KColumnIdx0FindFirstRowId ( const KColumnIdx0 * self,
+    int64_t * found, int64_t start );
+
+/* LocateBlob
+ *  locate an existing blob
+ */
+rc_t KColumnIdx0LocateBlob ( const KColumnIdx0 *self,
+    KColBlobLoc *loc, int64_t first, int64_t upper );
 
 
 #ifdef __cplusplus
 }
 #endif
+

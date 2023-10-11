@@ -32,8 +32,8 @@
 
 extern "C"
 {
-    #include <../libs/kdb/rcolumnblob-priv.h>
-    #include <../libs/kdb/rcolumn-priv.h>
+    #include <../libs/kdb/rcolumnblob.h>
+    #include <../libs/kdb/rcolumn.h>
 }
 
 #include <kdb/manager.h>

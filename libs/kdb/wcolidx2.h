@@ -26,20 +26,13 @@
 
 #pragma once
 
-#ifndef _h_kfs_directory_
 #include <kfs/directory.h>
-#endif
 
-#ifndef _h_colfmt_priv_
-#include "colfmt-priv.h"
-#endif
+#include "colfmt.h"
 
-#ifndef _h_klib_container_
 #include <klib/container.h>
-#endif
 
-#include <klib/data-buffer.h>
-#include "ridxblk-priv.h"
+#include <kfs/md5.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -47,19 +40,15 @@ extern "C" {
 
 
 /*--------------------------------------------------------------------------
+ * forwards
+ */
+struct KColIdxBlock;
+
+
+/*--------------------------------------------------------------------------
  * KColumnIdx2
  *  level 2 index
  */
-
-typedef struct KColumnIdx2BlockCache
-{
-    /* single page cache */
-    void *block;
-    int64_t start_id;
-    size_t count;
-    KColIdxBlock iblk;
-} KColumnIdx2BlockCache;
-
 typedef struct KColumnIdx2 KColumnIdx2;
 struct KColumnIdx2
 {
@@ -67,12 +56,14 @@ struct KColumnIdx2
     uint64_t eof;
 
     /* idx2 itself */
-    struct KFile const *f;
-
-    /* full caching mechanism */
-    KDataBuffer cstorage;
-    uint32_t	last;
+    struct KFile *f;
+    struct KMD5File *fmd5;
 };
+
+/* Create
+ */
+rc_t KColumnIdx2Create ( KColumnIdx2 *self,
+    KDirectory *dir, struct KMD5SumFmt *md5, KCreateMode mode, uint64_t eof );
 
 /* Open
  */
@@ -90,8 +81,25 @@ rc_t KColumnIdx2LocateBlob ( const KColumnIdx2 *self,
     KColBlobLoc *loc, const KColBlockLoc *bloc,
     int64_t first, int64_t upper, bool bswap );
 
+/* Write
+ *  writes block to idx2 at end of file
+ *
+ *  "pos" [ OUT ] - location at which block was written
+ *
+ *  "buffer" [ IN ] and "bytes" [ IN ] - describes data buffer
+ *
+ *  return values:
+ */
+rc_t KColumnIdx2Write ( KColumnIdx2 *self,
+    uint64_t *pos, const void *buffer, size_t bytes );
+
+/* Commit
+ *  keeps changes indicated by block size
+ */
+rc_t KColumnIdx2Commit ( KColumnIdx2 *self, size_t bytes );
+rc_t KColumnIdx2CommitDone ( KColumnIdx2 *self );
+
 
 #ifdef __cplusplus
 }
 #endif
-

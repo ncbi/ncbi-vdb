@@ -28,8 +28,8 @@
 #include "rmetadatanode.h"
 
 #include "database-priv.h"
-#include "table-priv.h"
-#include "rcolumn-priv.h"
+#include "rtable.h"
+#include "rcolumn.h"
 #include "rdbmgr.h"
 
 #include <kfs/file.h>

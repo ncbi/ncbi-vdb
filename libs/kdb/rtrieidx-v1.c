@@ -25,14 +25,18 @@
 */
 
 #include <kdb/extern.h>
+
 #include "index-priv.h"
-#include "kdbfmt-priv.h"
+#include "kdbfmt.h"
+
 #include <klib/ptrie.h>
 #include <klib/text.h>
+#include <klib/rc.h>
+
 #include <kfs/directory.h>
 #include <kfs/file.h>
 #include <kfs/mmap.h>
-#include <klib/rc.h>
+
 #include <sysalloc.h>
 
 #include <stdlib.h>
@@ -83,12 +87,12 @@ rc_t KPTrieIndexInit_v1 ( KPTrieIndex_v1 *self, const KMMap *mm, bool byteswap )
                         self -> first = self -> last = 0;
                         return 0;
                     }
-                            
+
                     /* assume this is projection index */
                     self -> id2node = ( void* )
                         ( ( char* ) ( hdr + 1 ) + ptsize );
                     size -= ptsize;
-                            
+
                     /* it must have at least 4 bytes
                        and be 4 byte aligned */
                     if ( size >= sizeof ( uint32_t ) && ( size & 3 ) == 0 )

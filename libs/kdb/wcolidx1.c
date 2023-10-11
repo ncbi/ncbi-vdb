@@ -25,11 +25,14 @@
 */
 
 #include <kdb/extern.h>
-#include "wcolumn-priv.h"
-#include "wcolidx1-priv.h"
-#include "werror-priv.h"
+
+#include "wcolumn.h"
+#include "wcolidx1.h"
+#include "werror.h"
+
 #include <kfs/file.h>
 #include <kfs/md5.h>
+
 #include <sysalloc.h>
 
 #include <limits.h>
@@ -203,9 +206,9 @@ rc_t KColumnIdx1Create ( KColumnIdx1 *self, KDirectory *dir,
     {
         size_t f_pgsize;
         int32_t f_checksum;
-	
+
         /* try to open update first */
-        rc = KColumnIdx1OpenUpdate ( self, dir, md5, data_eof, 
+        rc = KColumnIdx1OpenUpdate ( self, dir, md5, data_eof,
             idx0_count, idx2_eof, &f_pgsize, &f_checksum);
 
         if ( rc == 0 )
@@ -583,7 +586,7 @@ rc_t KColumnIdx1OpenUpdate ( KColumnIdx1 *self, KDirectory *dir,
                 }
             }
         }
-        
+
         KFileRelease ( self -> f );
         self -> f = NULL;
     }
@@ -709,7 +712,7 @@ rc_t KColumnIdx1LocateFirstRowIdBlob ( const KColumnIdx1 * self,
         * bloc = pb . next -> loc;
         return 0;
     }
-        
+
     return SILENT_RC ( rcDB, rcColumn, rcSelecting, rcBlob, rcNotFound );
 }
 
@@ -916,6 +919,6 @@ bool KColumnIdx1Revert ( KColumnIdx1 *self, int64_t start_id, uint32_t id_range 
 
         KMD5FileRevert ( self -> fmd5 );
     }
-    
+
     return false;
 }

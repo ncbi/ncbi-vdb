@@ -25,11 +25,11 @@
 */
 
 #define KONST const
-#include "rcolumn-priv.h"
-#include "rcolumnblob-priv.h"
+#include "rcolumn.h"
+#include "rcolumnblob.h"
 #include "rdbmgr.h"
-#include "table-priv.h"
-#include "kdb-priv.h"
+#include "rtable.h"
+#include "rkdb.h"
 #include "rmeta.h"
 
 #include <klib/rc.h>

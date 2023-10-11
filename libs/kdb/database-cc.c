@@ -28,23 +28,24 @@
 
 #define KONST const
 #include "index-priv.h"
-#include "dbmgr-priv.h"
+#include "dbmgr.h"
 #include "database-priv.h"
-#include "table-priv.h"
-#include "kdb-priv.h"
-#include "rcolumn-priv.h"
+#include "rtable.h"
+#include "rcolumn.h"
 #undef KONST
 
-#include "cc-priv.h"
+#include "cc.h"
 
 #include <kdb/index.h>
+#include <kdb/namelist.h>
 
 #include <kfs/file.h>
 #include <kfs/md5.h>
+
 #include <klib/refcount.h>
 #include <klib/rc.h>
 #include <klib/namelist.h>
-#include <kdb/namelist.h>
+
 #include <os-native.h>
 #include <sysalloc.h>
 

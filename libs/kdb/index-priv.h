@@ -30,9 +30,7 @@ typedef struct KIndex KIndex;
 #define KINDEX_IMPL KIndex
 #include "index-base.h"
 
-#ifndef _h_index_cmn_
 #include "index-cmn.h"
-#endif
 
 /*--------------------------------------------------------------------------
  * forwards

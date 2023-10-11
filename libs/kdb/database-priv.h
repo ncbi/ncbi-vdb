@@ -26,15 +26,10 @@
 
 #pragma once
 
-#ifndef _h_kdb_database_
 #include <kdb/database.h>
-#endif
-
 #include <kdb/column.h>
 
-#ifndef _h_klib_symbol_
 #include <klib/symbol.h>
-#endif
 
 #ifndef KONST
 #define KONST

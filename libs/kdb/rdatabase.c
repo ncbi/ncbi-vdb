@@ -29,8 +29,9 @@
 #include <kdb/kdb-priv.h>
 
 #include "rdatabase.h"
-#include "kdb-priv.h"
-#include "table-priv.h"
+#include "kdb-cmn.h"
+#include "rkdb.h"
+#include "rtable.h"
 #include "index-priv.h"
 #include "rdbmgr.h"
 #include "rmeta.h"

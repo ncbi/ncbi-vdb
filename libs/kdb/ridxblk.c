@@ -26,7 +26,7 @@
 
 #include <kdb/extern.h>
 
-#include "ridxblk-priv.h"
+#include "ridxblk.h"
 
 #include <klib/rc.h>
 

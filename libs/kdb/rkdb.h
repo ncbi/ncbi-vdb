@@ -26,45 +26,32 @@
 
 #pragma once
 
-#ifndef _h_klib_container_
-#include <klib/container.h>
-#endif
+#include <kdb/manager.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+struct KDirectory;
+struct KDBManager;
+
+/*
+ * This symbol is inserted where the KDB is being tweaked to allow
+ * VFS URI syntax in opening KDB database objects initially to support
+ * krypto passwords more fully.  By specifying the password source
+ * individually for opens two KDB objects with different passwords can be opened.
+ */
+#define SUPPORT_VFS_URI 1
 
 /*--------------------------------------------------------------------------
- * KIdStats
- *  maintains statistics about id mappings
+ * KDB utility
  */
-typedef struct KIdStats KIdStats;
-struct KIdStats
-{
-    int64_t i_min_id, x_max_id;
-    uint64_t num_entries;
-    uint64_t num_ids;
-    uint64_t num_holes;
-    BSTree ids;
-};
 
-
-/* Init
- *  initialize the object
+/* Writable
+ *  examines a directory structure for any "lock" files
+ *  examines a file for ( any ) write permission
  */
-void KIdStatsInit ( KIdStats *s );
-
-/* Whack
- *  tear down the object
- */
-void KIdStatsWhack ( KIdStats *self );
-
-/* Insert
- *  add an entry representing 1 or more consecutive ids
- */
-rc_t KIdStatsInsert ( KIdStats *self, int64_t id, uint64_t count );
-
+rc_t KDBRWritable ( const struct KDirectory *dir, const char *path );
 
 #ifdef __cplusplus
 }

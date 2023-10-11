@@ -26,9 +26,11 @@
 
 #pragma once
 
-#ifndef _h_kfs_directory_
 #include <kfs/directory.h>
-#endif
+#include <klib/checksum.h>
+
+#include <kfs/file.h>
+#include <kfs/md5.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -37,6 +39,7 @@ extern "C" {
 /*--------------------------------------------------------------------------
  * forwards
  */
+struct KMD5SumFmt;
 typedef union KColumnPageMap KColumnPageMap;
 
 
@@ -55,10 +58,12 @@ struct KColumnData
     uint64_t eof;
 
     /* data fork itself */
-    struct KFile const *f;
+    KFile *f;
+    KMD5File *fmd5;
 
     /* page size */
     size_t pgsize;
+
 };
 
 /* DefaultPageSize
@@ -67,10 +72,17 @@ struct KColumnData
 #define KColumnDataDefaultPageSize( reuse_pages ) \
     ( ( reuse_pages ) ? 4096 : 1 )
 
+/* Create
+ */
+rc_t KColumnDataCreate ( KColumnData *self, KDirectory *dir,
+    KMD5SumFmt *md5, KCreateMode mode, uint64_t eof, size_t pgsize );
+
 /* Open
  */
 rc_t KColumnDataOpenRead ( KColumnData *self,
     const KDirectory *dir, uint64_t eof, size_t pgsize );
+rc_t KColumnDataOpenUpdate ( KColumnData *self, KDirectory *dir,
+    KMD5SumFmt *md5, uint64_t eof, size_t pgsize );
 
 /* Whack
  */
@@ -81,6 +93,29 @@ rc_t KColumnDataWhack ( KColumnData *self );
  */
 rc_t KColumnDataRead ( const KColumnData *self, const KColumnPageMap *pm,
     size_t offset, void *buffer, size_t bsize, size_t *num_read );
+
+/* Write
+ *  writes to the data fork using a blob map
+ */
+rc_t  KColumnDataWrite ( KColumnData *self, KColumnPageMap *pm,
+    size_t offset, const void *buffer, size_t bytes, size_t *num_writ );
+
+/* Commit
+ *  keeps changes indicated by page map and blob size
+ */
+rc_t KColumnDataCommit ( KColumnData *self,
+    const KColumnPageMap *pm, size_t bytes );
+
+/* CommitDone
+ *  finalizes a commit
+ */
+rc_t KColumnDataCommitDone ( KColumnData * self );
+
+/* Free
+ *  frees pages from a map
+ */
+rc_t KColumnDataFree ( KColumnData *self,
+    const KColumnPageMap *pm, size_t bytes );
 
 
 /*--------------------------------------------------------------------------
@@ -95,8 +130,14 @@ union KColumnPageMap
     uint64_t pg;
 };
 
+/* Create
+ *  creates a new page map using the first available page id
+ *  obtains first free data fork page
+ */
+rc_t KColumnPageMapCreate (  KColumnPageMap *self, KColumnData *cd );
+
 /* Open
- *  opens a page map by raw page id and size
+ *  opens an blob by raw page id and size
  *
  *  "pm" [ OUT ] - modifiable parameter for blob page map
  *

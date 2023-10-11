@@ -26,17 +26,14 @@
 
 #pragma once
 
-#ifndef _h_kdb_manager_
 #include <kdb/manager.h>
-#endif
-
-#ifndef _h_kdb_manager_
-#include <kdb/manager.h>
-#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+struct KDirectory;
+struct KDBManager;
 
 /*
  * This symbol is inserted where the KDB is being tweaked to allow
@@ -46,15 +43,6 @@ extern "C" {
  */
 #define SUPPORT_VFS_URI 1
 
-
-/*--------------------------------------------------------------------------
- * forwards
- */
-struct BSTree;
-struct BSTNode;
-struct KDirectory;
-struct KDBManager;
-
 /*--------------------------------------------------------------------------
  * KDB utility
  */
@@ -62,11 +50,39 @@ struct KDBManager;
 
 /* PathType
  *  checks type of path
- *
- * if mgr != NULL we will try accession and uri resolution on path
  */
 int KDBPathTypeDir ( const struct KDirectory *dir, int type,bool *zombies, const char *path );
 int KDBPathType ( const struct KDirectory *dir, bool *zombies, const char *path );
+
+/* GetObjModDate
+ *  extract mod date from a path
+ */
+rc_t KDBGetObjModDate ( const struct KDirectory *dir, KTime_t *mtime );
+
+/* GetPathModDate
+ *  extract mod date from a path
+ */
+rc_t KDBVGetPathModDate ( const struct KDirectory *dir,
+    KTime_t *mtime, const char *path, va_list args );
+
+/* KDBMakeSubPath
+ *  adds a namespace to path spec
+ */
+rc_t KDBMakeSubPath ( struct KDirectory const *dir,
+    char *subpath, size_t subpath_max, const char *ns,
+    uint32_t ns_size, const char *path, ... );
+/* VMakeSubPath
+ *  adds a namespace to path spec
+ */
+rc_t KDBVMakeSubPath ( const struct KDirectory *dir,
+    char *subpath, size_t subpath_max, const char *ns,
+    uint32_t ns_size, const char *path, va_list args );
+
+
+/* KDBIsPathUri
+ * A hack to get some of VFS into KDB that is too tightly bound to KFS
+ */
+bool KDBIsPathUri (const char * path);
 
 /* OpenPathType
  * Opens a path if it is of the specified type.  Even if it is an archive file
@@ -85,73 +101,6 @@ int KDBPathType ( const struct KDirectory *dir, bool *zombies, const char *path 
 rc_t KDBManagerOpenPathTypeRead ( const struct KDBManager * mgr, const struct KDirectory * dir, const char * path,
     const struct KDirectory ** dpdir, int pathtype, int * realpathtype,
     bool try_srapath, const struct VPath * vpath );
-
-/* Writable
- *  examines a directory structure for any "lock" files
- *  examines a file for ( any ) write permission
- */
-bool KDBIsLocked ( const struct KDirectory *dir, const char *path );
-rc_t KDBWWritable ( const struct KDirectory *dir, const char *path );
-
-/* Lock
- *  performs directory locking
- */
-rc_t KDBLockDir ( struct KDirectory *dir, const char *path );
-rc_t KDBLockFile ( struct KDirectory *dir, const char *path );
-
-/* Unlock
- *  performs directory unlocking
- */
-rc_t KDBUnlockDir ( struct KDirectory *dir, const char *path );
-rc_t KDBUnlockFile ( struct KDirectory *dir, const char *path );
-
-/* GetObjModDate
- *  extract mod date from a path
- */
-rc_t KDBGetObjModDate ( const struct KDirectory *dir, KTime_t *mtime );
-
-/* GetPathModDate
- *  extract mod date from a path
- */
-rc_t KDBVGetPathModDate ( const struct KDirectory *dir,
-    KTime_t *mtime, const char *path, va_list args );
-
-/* GetNamespaceString
- *  return a static const reference to a string representing
- *  a namespace for the given kpt<database> type in namespace
- */
-const char * KDBGetNamespaceString ( int namespace );
-
-/* KDBMakeSubPath
- *  adds a namespace to path spec
- */
-rc_t KDBMakeSubPath ( struct KDirectory const *dir,
-    char *subpath, size_t subpath_max, const char *ns,
-    uint32_t ns_size, const char *path, ... );
-/* VMakeSubPath
- *  adds a namespace to path spec
- */
-rc_t KDBVMakeSubPath ( const struct KDirectory *dir,
-    char *subpath, size_t subpath_max, const char *ns,
-    uint32_t ns_size, const char *path, va_list args );
-
-/* VDrop
- */
-rc_t KDBMgrVDrop ( struct KDirectory * dir, const struct KDBManager * mgr, uint32_t obj_type,
-                   const char * path, va_list args );
-rc_t KDBVDrop ( struct KDirectory *dir, const struct KDBManager * mgr,
-    uint32_t type, const char *name, va_list args );
-
-/* Rename
- */
-rc_t KDBRename ( struct KDirectory *dir, struct KDBManager *mgr,
-                 uint32_t type, bool force, const char *from, const char *to );
-
-/* Alias
- */
-rc_t KDBAlias ( struct KDirectory *dir, uint32_t type,
-    const char *targ, const char *alias );
-
 
 #ifdef __cplusplus
 }

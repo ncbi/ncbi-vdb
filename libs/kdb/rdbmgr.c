@@ -30,7 +30,7 @@
 
 #include <kdb/database.h>
 #include <kdb/table.h>
-#include <kdb/kdb-priv.h> /* KDBManagerMakeReadWithVFSManager */
+#include <kdb/kdb-priv.h>
 
 #include "libkdb.vers.h"
 
@@ -39,24 +39,25 @@
 #include <vfs/resolver.h>
 #include <vfs/path.h>
 #include <vfs/path-priv.h>
+
 #include <kfs/directory.h>
 
 #define KONST const
-#include "dbmgr-priv.h"
-#include "kdb-priv.h"
+#include "dbmgr.h"
+#include "rkdb.h"
+#include "kdb-cmn.h"
 #include "rdatabase.h"
-#include "kdbfmt-priv.h"
-#include "table-priv.h"
-#include "rcolumn-priv.h"
+#include "kdbfmt.h"
+#include "rtable.h"
+#include "rcolumn.h"
 #include "index-priv.h"
 #include "rdbmgr.h"
 #include "rmeta.h"
+#undef KONST
 
 #include <klib/checksum.h>
 #include <klib/rc.h>
 #include <klib/printf.h>
-#undef KONST
-
 #include <klib/text.h>
 
 #include <sysalloc.h>

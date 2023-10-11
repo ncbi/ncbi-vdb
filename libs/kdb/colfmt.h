@@ -26,9 +26,7 @@
 
 #pragma once
 
-#ifndef _h_kdbfmt_priv_
-#include "kdbfmt-priv.h"
-#endif
+#include "kdbfmt.h"
 
 #include <endian.h>
 

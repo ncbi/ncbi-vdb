@@ -28,8 +28,8 @@
 
 #include <kdb/manager.h>
 
-#include "kdb-priv.h"
-#include "dbmgr-priv.h"
+#include "rkdb.h"
+#include "dbmgr.h"
 
 #include <kfs/directory.h>
 

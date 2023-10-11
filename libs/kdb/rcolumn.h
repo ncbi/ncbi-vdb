@@ -26,40 +26,17 @@
 
 #pragma once
 
-#ifndef _h_kdb_column_
 #include <kdb/column.h>
-#endif
 
-#ifndef _h_klib_container_
-#include <klib/container.h>
-#endif
-
-#ifndef _h_klib_refcount_
-#include <klib/refcount.h>
-#endif
-
-#ifndef _h_coldata_priv_
-#include "wcoldata-priv.h"
-#endif
-
-#ifndef _h_colidx_priv_
-#include "wcolidx-priv.h"
-#endif
+#include "rcoldata.h"
+#include "rcolidx.h"
 
 #define KCOLUMN_IMPL KColumn
 #include "column-base.h"
 
-#define KCOLUMNBLOB_IMPL KColumnBlob
-#include "columnblob-base.h"
-
-#include <klib/symbol.h>
-#include <kfs/file.h>
-#include <kfs/md5.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 
 /*--------------------------------------------------------------------------
  * forwards
@@ -67,59 +44,28 @@ extern "C" {
 struct KTable;
 struct KDBManager;
 struct KDirectory;
-struct KMD5SumFmt;
-
 
 /*--------------------------------------------------------------------------
- * KColumn
+ * KColumn, read-side
  */
 struct KColumn
 {
     KColumnBase dad;
 
-    struct KTable *tbl;
-    struct KDBManager *mgr;
-    struct KDirectory *dir;
-
-    KMD5SumFmt *md5;
+    struct KTable const *tbl;
+    struct KDBManager const *mgr;
+    struct KDirectory const *dir;
 
     KColumnIdx idx;
     KColumnData df;
 
-    uint32_t opencount;
-    uint32_t commit_freq;
     uint32_t csbytes;
     int32_t checksum;
-    bool read_only;
-
-    KSymbol sym;
-
     char path [ 1 ];
 };
 
-rc_t KWColumnMake ( KColumn **colp, const KDirectory *dir, const char *path,
-		   KMD5SumFmt * md5, bool read_only );
-
-/* Cmp
- * Sort
- */
-int KColumnCmp ( const void *item, struct BSTNode const *n );
-int KColumnSort ( struct BSTNode const *item, struct BSTNode const *n );
-
-
-rc_t KColumnFileCreate ( KFile ** ppf, KMD5File ** ppfmd5, KDirectory * dir,
-			 KMD5SumFmt * md5, KCreateMode mode,
-			 bool append, const char * name);
-rc_t KColumnFileOpenUpdate ( KFile ** ppf, KMD5File ** ppfmd5, KDirectory * dir,
-			     KMD5SumFmt * md5, bool append,
-			     const char * name);
-
-rc_t KWColumnMakeRead ( KColumn **colp, const KDirectory *dir, const char *path, KMD5SumFmt * md5 );
-rc_t KColumnCreate ( KColumn **colp, KDirectory *dir,
-    KCreateMode cmode, KChecksum checksum,
-	size_t pgsize, const char *path, KMD5SumFmt *md5 );
-rc_t KColumnMakeUpdate ( KColumn **colp,
-    KDirectory *dir, const char *path, KMD5SumFmt *md5 );
+rc_t KRColumnMake ( KColumn **colp, const KDirectory *dir, const char *path );
+rc_t KRColumnMakeRead ( KColumn **colp, const KDirectory *dir, const char *path );
 
 #ifdef __cplusplus
 }

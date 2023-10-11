@@ -26,18 +26,18 @@
 
 #include <kdb/extern.h>
 
-#include <klib/rc.h>
-
-#include "wcolumn-priv.h"
-#include "wcolumnblob-priv.h"
-
+#include "wcolumn.h"
+#include "wcolumnblob.h"
 #include "wdbmgr.h"
-#include "wtable-priv.h"
-#include "wkdb-priv.h"
-#include "werror-priv.h"
+#include "wtable.h"
+#include "wkdb.h"
+#include "kdb-cmn.h"
+#include "werror.h"
 #include "wmeta.h"
 
 #include <kfs/impl.h>
+
+#include <klib/rc.h>
 #include <klib/data-buffer.h>
 
 #include <stdio.h>

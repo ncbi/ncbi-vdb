@@ -26,10 +26,10 @@
 
 #include <kdb/extern.h>
 
-#include "wcolumn-priv.h"
-#include "wcolidx2-priv.h"
-#include "ridxblk-priv.h"
-#include "werror-priv.h"
+#include "wcolumn.h"
+#include "wcolidx2.h"
+#include "ridxblk.h"
+#include "werror.h"
 
 #include <kfs/file.h>
 #include <kfs/buffile.h>

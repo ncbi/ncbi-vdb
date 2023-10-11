@@ -27,11 +27,13 @@
 #define TRACK_REFERENCES 0
 
 #define KONST const
-#include "table-priv.h"
+#include "rtable.h"
+
 #include "rdbmgr.h"
 #include "database-priv.h"
-#include "kdb-priv.h"
-#include "rcolumn-priv.h"
+#include "kdb-cmn.h"
+#include "rkdb.h"
+#include "rcolumn.h"
 #include "index-priv.h"
 #include "rmeta.h"
 #undef KONST
@@ -50,6 +52,7 @@
 #include <vfs/path.h> /* VFSManagerMakePath */
 
 #include <kfs/arc.h>
+
 #include <os-native.h>
 #include <sysalloc.h>
 

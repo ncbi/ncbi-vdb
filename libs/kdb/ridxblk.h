@@ -26,9 +26,7 @@
 
 #pragma once
 
-#ifndef _h_colfmt_priv_
-#include "colfmt-priv.h"
-#endif
+#include "colfmt.h"
 
 #ifdef __cplusplus
 extern "C" {
