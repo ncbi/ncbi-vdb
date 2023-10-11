@@ -706,7 +706,7 @@ static void _RunDescFini(RunDesc *self) {
 }
 
 static
-uint64_t _RunDescMakeReadId(const RunDesc *self, uint64_t spot, uint8_t read,
+uint64_t _RunDescMakeReadId(const RunDesc *self, uint64_t spot, uint32_t read,
     uint64_t read_id, VdbBlastStatus *status)
 {
     bool overflow = false;
@@ -1510,7 +1510,8 @@ static uint64_t _VdbBlastRunGetNumSequencesApprox(VdbBlastRun *self,
             self->bioReadsApprox = r;
         }
         else if (_VdbBlastRunVarReadNum(self)) {
-            self->bioReads = _VdbBlastRunGetNumSequences(self, status);
+            self->bioReadsApprox
+                = self->bioReads = _VdbBlastRunGetNumSequences(self, status);
         }
         else {
             *status = _VdbBlastRunFillRunDesc(self);
