@@ -39,6 +39,8 @@
 #include <vfs/manager.h> /* VFSManager */
 #include <vfs/resolver.h> /* VResolverRelease */
 
+#include <os-native.h> // setenv
+
 #include "../../libs/vdb/dbmgr-priv.h" // VDBManagerWhackStatic
 #include "../../libs/vfs/manager-priv.h" // VFSManagerSdlCacheEmpty
 
