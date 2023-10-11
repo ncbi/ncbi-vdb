@@ -31,6 +31,7 @@ AddExecutableTest( Test_VFS_resolver-with-log "test-resolver-with-log" "${COMMON
 AddExecutableTest( Test_VFS_sdl-response "test-sdl-response" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_VFS_services "test-services" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_VFS_SraDesc "test-SraDesc" "${COMMON_LIBS_READ}" )
+AddExecutableTest( Test_VFS_cache_sdl "test_VFS_cache_sdl" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_VFS_caching "test-caching" "${COMMON_LIBS_READ}" )
 # AddExecutableTest( Test_VFS_names-30 "test-names-30" "${COMMON_LIBS_READ}" )
 AddExecutableTest(Test_VFS_no-nm-cgi "Test_VFS_no-nm-cgi" "${COMMON_LIBS_READ}")
