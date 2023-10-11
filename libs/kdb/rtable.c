@@ -30,7 +30,7 @@
 #include "rtable.h"
 
 #include "rdbmgr.h"
-#include "database-priv.h"
+#include "database-cmn.h"
 #include "kdb-cmn.h"
 #include "rkdb.h"
 #include "rcolumn.h"

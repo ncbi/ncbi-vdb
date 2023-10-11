@@ -30,7 +30,7 @@
 #include "index-priv.h"
 #include "dbmgr.h"
 #include "rdbmgr.h"
-#include "database-priv.h"
+#include "database-cmn.h"
 #include "rtable.h"
 #include "rkdb.h"
 #undef KONST

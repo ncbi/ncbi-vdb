@@ -26,7 +26,7 @@
 
 #pragma once
 
-#include "database-priv.h"
+#include "database-cmn.h"
 
 #include <kfs/md5.h>
 

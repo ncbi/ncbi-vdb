@@ -28,7 +28,7 @@
 
 #include "windex.h"
 #include "wdbmgr.h"
-#include "database-priv.h"
+#include "database-cmn.h"
 #include "wtable.h"
 #include "wkdb.h"
 #include "kdbfmt.h"

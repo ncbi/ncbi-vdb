@@ -25,12 +25,11 @@
 */
 
 #include <kdb/extern.h>
-#include <kdb/meta.h>
-#include <kdb/namelist.h>
-#include <kdb/kdb-priv.h>
 
-#include "database-priv.h"
-#include "dbmgr.h"
+#include <kdb/namelist.h>
+
+#include "wdatabase.h"
+//#include "dbmgr.h"
 #include "wtable.h"
 #include "windex.h"
 #include "wkdb.h"
@@ -39,27 +38,13 @@
 #include "wmeta.h"
 
 #include <klib/namelist.h>
-#include <klib/symbol.h>
 #include <klib/log.h>
-#include <klib/printf.h>
 #include <klib/rc.h>
 
 #include <kfs/directory.h>
-#include <kfs/file.h>
 #include <kfs/impl.h>
-#include <kfs/md5.h>
 
-#include <vfs/manager.h>
-#include <vfs/manager-priv.h>
 #include <vfs/path.h>
-
-#include <sysalloc.h>
-
-#include <limits.h>
-#include <stdlib.h>
-#include <string.h>
-#include <assert.h>
-
 
 /*--------------------------------------------------------------------------
  * KDatabase

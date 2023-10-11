@@ -31,7 +31,7 @@
 #include <kdb/kdb-priv.h>
 #include <kdb/namelist.h>
 
-#include "database-priv.h"
+#include "database-cmn.h"
 #include "wdbmgr.h"
 #include "wtable.h"
 #include "wcolumn.h"

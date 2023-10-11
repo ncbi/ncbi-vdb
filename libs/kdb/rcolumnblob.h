@@ -26,14 +26,21 @@
 
 #pragma once
 
-#include "columnblob-cmn.h"
+#include "columnblob-base.h"
 
 #include "rcoldata.h"
+#include "colfmt.h"
 
 typedef struct KRColumnBlob KRColumnBlob;
 struct KRColumnBlob
 {
-    KColumnBlobCmn cmn;
+    KColumnBlob dad;
+
+    /* owning column */
+    const KColumn *col;
+
+    /* captured from idx1 for CRC32 validation */
+    bool bswap;
 
     /* holds existing blob loc */
     KColBlobLoc loc;

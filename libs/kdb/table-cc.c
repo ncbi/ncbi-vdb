@@ -29,7 +29,7 @@
 #define KONST const
 #include "index-priv.h"
 #include "dbmgr.h"
-#include "database-priv.h"
+#include "database-cmn.h"
 #include "rtable.h"
 #include "kdb-cmn.h"
 #include "rcolumn.h"

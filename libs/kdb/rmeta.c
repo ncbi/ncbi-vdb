@@ -27,7 +27,7 @@
 #include "rmeta.h"
 #include "rmetadatanode.h"
 
-#include "database-priv.h"
+#include "database-cmn.h"
 #include "rtable.h"
 #include "rcolumn.h"
 #include "rdbmgr.h"

@@ -36,7 +36,7 @@ struct KMDataNodeNamelist;
 
 #include "wkdb.h"
 #include "wdbmgr.h"
-#include "database-priv.h"
+#include "database-cmn.h"
 #include "wtable.h"
 #include "wcolumn.h"
 #include "kdbfmt.h"
