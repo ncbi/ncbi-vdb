@@ -153,11 +153,11 @@ protected:
 #ifdef ALL
 // Caching by default
 FIXTURE_TEST_CASE(CountCaching, CachingFixture) {
-    const char acc[]("SRR000001");
+    const char acc[] = "SRR000001";
     string json(MkSdlJson("http://a1/"));
     setenv(acc, (char*)json.c_str(), 1);
 
-    const char acc2[]("SRR000002");
+    const char acc2[] = "SRR000002";
     json = MkSdlJson("http://a2/");
     setenv(acc, (char*)json.c_str(), 1);
 
@@ -176,7 +176,7 @@ FIXTURE_TEST_CASE(CountCaching, CachingFixture) {
 #ifdef ALL
 // Caching can be disabled
 FIXTURE_TEST_CASE(CountNotCaching, NotCachingFixture) {
-    const char acc[]("SRR000001");
+    const char acc[] = "SRR000001";
     string json(MkSdlJson("http://a1/"));
     setenv(acc, (char*)json.c_str(), 1);
 
@@ -215,7 +215,7 @@ FIXTURE_TEST_CASE(NotCaching, NotCachingFixture) {
 
 // Caching
 FIXTURE_TEST_CASE(Caching, CachingFixture) {
-    const char acc[]("SRR000001");
+    const char acc[] = "SRR000001";
 
     string json(MkSdlJson("http://a1/"));
     setenv(acc, (char*)json.c_str(), 1);
@@ -237,7 +237,7 @@ FIXTURE_TEST_CASE(Caching, CachingFixture) {
 
 // test of expiration; not caching
 FIXTURE_TEST_CASE(ExpirationNotCaching, NotCachingFixture) {
-    const char acc[]("SRR000001");
+    const char acc[] = "SRR000001";
 
     string json(MkSdlJson("http://a1/", 99)); // will expire in 99 seconds
     setenv(acc, (char*)json.c_str(), 1);
@@ -260,7 +260,7 @@ FIXTURE_TEST_CASE(ExpirationNotCaching, NotCachingFixture) {
 
 // test of expiration; caching
 FIXTURE_TEST_CASE(ExpirationCaching, CachingFixture) {
-    const char acc[]("SRR000001");
+    const char acc[] = "SRR000001";
 
     // will expire in 61 seconds;
     // removed from cache in 60 seconds before expiration
@@ -292,11 +292,11 @@ FIXTURE_TEST_CASE(ExpirationCaching, CachingFixture) {
 #ifdef ALL
 // cannot reuse WGS file when not caching
 FIXTURE_TEST_CASE(WgsNotCaching, NotCachingFixture) {
-    const char acc[]("AAAB01000001");
+    const char acc[] = "AAAB01000001";
     string json(MkSdlJson("http://a1/"));
     setenv(acc, (char*)json.c_str(), 1);
 
-    const char acc2[]("AAAB01000002");
+    const char acc2[] = "AAAB01000002";
     string json2(MkSdlJson("http://a2/"));
     setenv(acc2, (char*)json2.c_str(), 1);
 
@@ -315,11 +315,11 @@ FIXTURE_TEST_CASE(WgsNotCaching, NotCachingFixture) {
 
 // reuse WGS file when caching
 FIXTURE_TEST_CASE(WgsCaching, CachingFixture) {
-    const char acc[]("AAAB01000001");
+    const char acc[] = "AAAB01000001";
     string json(MkSdlJson("http://a1/"));
     setenv(acc, (char*)json.c_str(), 1);
 
-    const char acc2[]("AAAB01000002");
+    const char acc2[] = "AAAB01000002";
     string json2(MkSdlJson("http://a2/"));
     setenv(acc2, (char*)json2.c_str(), 1);
 
@@ -367,7 +367,7 @@ static rc_t DefaultWorkerThreadFn(const KThread * self, void * data) {
 
 // stress test; calling from multiple threads; caching
 FIXTURE_TEST_CASE(ThreadsCaching, CachingFixture) {
-    const char acc[]("SRR123456");
+    const char acc[] = "SRR000001";
     string json(MkSdlJson("http://a1/"));
     setenv(acc, (char*)json.c_str(), 1);
 
@@ -394,7 +394,7 @@ FIXTURE_TEST_CASE(ThreadsCaching, CachingFixture) {
 
 // stress test; calling from multiple threads; not caching
 FIXTURE_TEST_CASE(ThreadsNotCaching, NotCachingFixture) {
-    const char acc[]("SRR123456");
+    const char acc[] = "SRR000001";
     string json(MkSdlJson("http://a1/"));
     setenv(acc, (char*)json.c_str(), 1);
 
