@@ -44,6 +44,8 @@
 #include "../../libs/vdb/dbmgr-priv.h" // VDBManagerWhackStatic
 #include "../../libs/vfs/manager-priv.h" // VFSManagerSdlCacheEmpty
 
+#include<string>
+
 #define ALL
 
 static rc_t argsHandler(int argc, char * argv[]) {
