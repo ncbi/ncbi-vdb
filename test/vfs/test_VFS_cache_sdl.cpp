@@ -381,16 +381,16 @@ FIXTURE_TEST_CASE(ThreadsCaching, CachingFixture) {
 
     CachingFixture * cf(dynamic_cast<CachingFixture*>(this));
     KThread * t[5];
-    for (uint i = 0; i < sizeof t / sizeof t[0]; ++i)
+    for (unsigned i = 0; i < sizeof t / sizeof t[0]; ++i)
         REQUIRE_RC(KThreadMake(&t[i], DefaultWorkerThreadFn, cf));
 
     rc_t rc(DefaultWorkerThreadFn(0, cf));
     REQUIRE_RC(rc);
 
-    for (uint i = 0; i < sizeof t / sizeof t[0] && rc == 0; ++i)
+    for (unsigned i = 0; i < sizeof t / sizeof t[0] && rc == 0; ++i)
         REQUIRE_RC(KThreadWait(t[i], &rc));
 
-    for (uint i = 0; i < sizeof t / sizeof t[0] && rc == 0; ++i)
+    for (unsigned i = 0; i < sizeof t / sizeof t[0] && rc == 0; ++i)
         REQUIRE_RC(KThreadRelease(t[i]));
 
     REQUIRE_RC(rc);
@@ -408,15 +408,15 @@ FIXTURE_TEST_CASE(ThreadsNotCaching, NotCachingFixture) {
 
     CachingFixture * cf(dynamic_cast<CachingFixture*>(this));
     KThread * t[5];
-    for (uint i = 0; i < sizeof t / sizeof t[0]; ++i)
+    for (unsigned i = 0; i < sizeof t / sizeof t[0]; ++i)
         REQUIRE_RC(KThreadMake(&t[i], DefaultWorkerThreadFn, cf));
     rc_t rc(DefaultWorkerThreadFn(0, cf));
     REQUIRE_RC(rc);
 
-    for (uint i = 0; i < sizeof t / sizeof t[0] && rc == 0; ++i)
+    for (unsigned i = 0; i < sizeof t / sizeof t[0] && rc == 0; ++i)
         REQUIRE_RC(KThreadWait(t[i], &rc));
 
-    for (uint i = 0; i < sizeof t / sizeof t[0] && rc == 0; ++i)
+    for (unsigned i = 0; i < sizeof t / sizeof t[0] && rc == 0; ++i)
         REQUIRE_RC(KThreadRelease(t[i]));
 
     REQUIRE_RC(rc);
