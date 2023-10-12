@@ -39,6 +39,9 @@
 #include <klib/refcount.h>
 #endif
 
+#define KDBMGR_IMPL KDBManager
+#include "manager-base.h"
+
 #ifndef KONST
 #define KONST
 #endif
@@ -55,6 +58,7 @@ struct KRWLock;
 struct KSymbol;
 struct KDirectory;
 struct VFSManager;
+struct KIndex;
 
 /*--------------------------------------------------------------------------
  * KDBManager
@@ -62,6 +66,8 @@ struct VFSManager;
  */
 struct KDBManager
 {
+    KDBManagerBase dad;
+
     /* root directory */
     struct KDirectory KONST *wd;
 
@@ -69,29 +75,25 @@ struct KDBManager
     struct KRWLock *open_objs_lock;
     BSTree open_objs;
 
-    /* open references */
-    KRefcount refcount;
-
     /* other managers needed by the KDB manager */
     struct VFSManager * vfsmgr;
 };
 
+rc_t KDBManagerWhack ( KDBManager *self );
 
 /* Make - PRIVATE
  */
 rc_t KDBManagerMake ( KDBManager **mgrp, struct KDirectory const *wd,
-    const char *op, struct VFSManager *vmanager );
+    const char *op, struct VFSManager *vmanager, KDBManager_vt * vt );
 
 /* Attach
  * Sever
  */
-#if 1
 KDBManager *KDBManagerAttach ( const KDBManager *self );
 rc_t KDBManagerSever ( const KDBManager *self );
-#else
-KDBManager *KDBManagerAttach ( const KDBManager *self, struct KSymbol *sym );
-rc_t KDBManagerSever ( const KDBManager *self, struct KSymbol *sym );
-#endif
+
+rc_t CC KDBManagerCommonVersion ( const KDBManager *self, uint32_t *version );
+bool CC KDBManagerCommonVExists ( const KDBManager *self, uint32_t requested, const char *name, va_list args );
 
 /* CheckOpen
  *  tests if object is open and returns an error code
@@ -119,7 +121,6 @@ rc_t KDBManagerOpenObjectAdd ( KDBManager *self, struct KSymbol *obj );
  *   remove this symbol in the list of open objects
  */
 rc_t KDBManagerOpenObjectDelete ( KDBManager *self, struct KSymbol *obj );
-
 
 #ifdef __cplusplus
 }

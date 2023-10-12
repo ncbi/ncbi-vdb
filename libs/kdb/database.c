@@ -26,9 +26,14 @@
 
 #define KONST const
 #include <kdb/extern.h>
-#include "database-priv.h"
-#include "dbmgr-priv.h"
+#include <kdb/kdb-priv.h>
+
+#include "rdatabase.h"
 #include "kdb-priv.h"
+#include "table-priv.h"
+#include "index-priv.h"
+#include "rdbmgr.h"
+#include "rmeta.h"
 #undef KONST
 
 #include <klib/debug.h> /* DBGMSG */
@@ -53,17 +58,56 @@
 
 /*--------------------------------------------------------------------------
  * KDatabase
- *  connection to a database within file system
+ *  connection to a database within file system, read side
  */
+
+static rc_t CC KRDatabaseWhack ( KDatabase *self );
+static bool CC KRDatabaseLocked ( const KDatabase *self );
+static bool CC KRDatabaseVExists ( const KDatabase *self, uint32_t type, const char *name, va_list args );
+static bool CC KRDatabaseIsAlias ( const KDatabase *self, uint32_t type, char *resolved, size_t rsize, const char *name );
+static rc_t CC KRDatabaseVWritable ( const KDatabase *self, uint32_t type, const char *name, va_list args );
+static rc_t CC KRDatabaseOpenManagerRead ( const KDatabase *self, const KDBManager **mgr );
+static rc_t CC KRDatabaseOpenParentRead ( const KDatabase *self, const KDatabase **par );
+static rc_t CC KRDatabaseOpenDirectoryRead ( const KDatabase *self, const KDirectory **dir );
+static rc_t CC KRDatabaseVOpenDBRead ( const KDatabase *self, const KDatabase **dbp, const char *name, va_list args );
+static rc_t CC KRDatabaseVOpenTableRead ( const KDatabase *self, const KTable **tblp, const char *name, va_list args );
+static rc_t CC KRDatabaseOpenMetadataRead ( const KDatabase *self, const KMetadata **metap );
+static rc_t CC KRDatabaseVOpenIndexRead ( const KDatabase *self, const KIndex **idxp, const char *name, va_list args );
+static rc_t CC KRDatabaseListDB ( const KDatabase *self, KNamelist **names );
+static rc_t CC KRDatabaseListTbl ( struct KDatabase const *self, KNamelist **names );
+static rc_t CC KRDatabaseListIdx ( struct KDatabase const *self, KNamelist **names );
+static rc_t CC KRDatabaseGetPath ( KDatabase const *self, const char **path );
+
+static KDatabase_vt KRDatabase_vt =
+{
+    KRDatabaseWhack,
+    KDatabaseBaseAddRef,
+    KDatabaseBaseRelease,
+    KRDatabaseLocked,
+    KRDatabaseVExists,
+    KRDatabaseIsAlias,
+    KRDatabaseVWritable,
+    KRDatabaseOpenManagerRead,
+    KRDatabaseOpenParentRead,
+    KRDatabaseOpenDirectoryRead,
+    KRDatabaseVOpenDBRead,
+    KRDatabaseVOpenTableRead,
+    KRDatabaseOpenMetadataRead,
+    KRDatabaseVOpenIndexRead,
+    KRDatabaseListDB,
+    KRDatabaseListTbl,
+    KRDatabaseListIdx,
+    KRDatabaseGetPath
+};
+
 
 /* GetPath
  *  return the absolute path to DB
  */
-LIB_EXPORT rc_t CC KDatabaseGetPath ( KDatabase const *self,
-    const char **path )
+static
+rc_t CC
+KRDatabaseGetPath ( KDatabase const *self, const char **path )
 {
-    if ( self == NULL )
-        return RC ( rcDB, rcDatabase, rcAccessing, rcSelf, rcNull );
     if ( path == NULL )
         return RC ( rcDB, rcDatabase, rcAccessing, rcParam, rcNull );
 
@@ -75,18 +119,17 @@ LIB_EXPORT rc_t CC KDatabaseGetPath ( KDatabase const *self,
 /* Whack
  */
 static
-rc_t KDatabaseWhack ( KDatabase *self )
+rc_t CC
+KRDatabaseWhack ( KDatabase *self )
 {
     rc_t rc = 0;
 
-    KRefcountWhack ( & self -> refcount, "KDatabase" );
-
-    /* release dad */
-    if ( self -> dad != NULL )
+    /* release parent */
+    if ( self -> parent != NULL )
     {
-        rc = KDatabaseSever ( self -> dad );
+        rc = KDatabaseSever ( self -> parent );
         if ( rc == 0 )
-            self -> dad = NULL;
+            self -> parent = NULL;
     }
 
     /* remove from mgr */
@@ -97,87 +140,19 @@ rc_t KDatabaseWhack ( KDatabase *self )
     if ( rc == 0 )
     {
         KDirectoryRelease ( self -> dir );
-        free ( self );
-        return 0;
+        return KDatabaseBaseWhack( self );
     }
 
-    KRefcountInit ( & self -> refcount, 1, "KDatabase", "whack", "kdb" );
+    KRefcountInit ( & self -> dad . refcount, 1, "KDatabase", "whack", "kdb" );
 
     return rc;
 }
 
-
-/* AddRef
- * Release
- *  all objects are reference counted
- *  NULL references are ignored
- */
-LIB_EXPORT rc_t CC KDatabaseAddRef ( const KDatabase *self )
-{
-    if ( self != NULL )
-    {
-        switch ( KRefcountAdd ( & self -> refcount, "KDatabase" ) )
-        {
-        case krefLimit:
-            return RC ( rcDB, rcDatabase, rcAttaching, rcRange, rcExcessive );
-        }
-    }
-    return 0;
-}
-
-LIB_EXPORT rc_t CC KDatabaseRelease ( const KDatabase *self )
-{
-    if ( self != NULL )
-    {
-        switch ( KRefcountDrop ( & self -> refcount, "KDatabase" ) )
-        {
-        case krefWhack:
-            return KDatabaseWhack ( ( KDatabase* ) self );
-        case krefNegative:
-            return RC ( rcDB, rcDatabase, rcReleasing, rcRange, rcExcessive );
-        }
-    }
-    return 0;
-}
-
-/* Sever
- *  like Release, except called internally
- *  indicates that a child object is letting go...
- */
-KDatabase *KDatabaseAttach ( const KDatabase *self )
-{
-    if ( self != NULL )
-    {
-        switch ( KRefcountAddDep ( & self -> refcount, "KDatabase" ) )
-        {
-        case krefLimit:
-            return NULL;
-        }
-    }
-    return ( KDatabase* ) self;
-}
-
-rc_t KDatabaseSever ( const KDatabase *self )
-{
-    if ( self != NULL )
-    {
-        switch ( KRefcountDropDep ( & self -> refcount, "KDatabase" ) )
-        {
-        case krefWhack:
-            return KDatabaseWhack ( ( KDatabase* ) self );
-        case krefNegative:
-            return RC ( rcDB, rcDatabase, rcReleasing, rcRange, rcExcessive );
-        }
-    }
-    return 0;
-}
-
-
 /* Make
  *  make an initialized structure
  */
-static
-rc_t KDatabaseMake ( KDatabase **dbp, const KDirectory *dir, const char *path )
+rc_t
+KRDatabaseMake ( const KDatabase **dbp, const KDirectory *dir, const char *path, const KDBManager * mgr )
 {
     KDatabase *db;
 
@@ -191,150 +166,45 @@ rc_t KDatabaseMake ( KDatabase **dbp, const KDirectory *dir, const char *path )
         return RC ( rcDB, rcDatabase, rcConstructing, rcMemory, rcExhausted );
     }
 
+    memset ( db, 0, sizeof * db );
+    db -> dad . vt = & KRDatabase_vt;
+    KRefcountInit ( & db -> dad . refcount, 1, "KDatabase", "make", path );
+
     db -> mgr = NULL;
-    db -> dad = NULL;
+    db -> parent = NULL;
     db -> dir = dir;
 
     /* for open mode we don't care about creation mode or checksum, setting defaults */
     db -> cmode = kcmOpen;
     db -> checksum = kcsNone;
 
-    KRefcountInit ( & db -> refcount, 1, "KDatabase", "make", path );
     strcpy ( db -> path, path );
 
     /* YES,
      DBG_VFS should be used here to be printed along with other VFS messages */
     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
-        ("KDatabaseMake: Making KDatabase '%s'\n", path));
+        ("KRDatabaseMake: Making KDatabase '%s'\n", path));
+
+    db -> mgr = KDBManagerAttach ( mgr );
 
     * dbp = db;
     return 0;
 }
 
-static
-rc_t KDatabaseMakeVPath ( KDatabase **dbp, const KDirectory *dir, const VPath* path )
+rc_t
+KRDatabaseMakeVPath ( const KDatabase **dbp, const KDirectory *dir, const VPath* path, const KDBManager * mgr )
 {
     const String* dbpathStr;
     rc_t rc = VPathMakeString ( path, &dbpathStr );    /* NUL-terminated */
     if ( rc == 0 )
     {
-        rc = KDatabaseMake ( dbp, dir, dbpathStr->addr );
+        rc = KRDatabaseMake ( dbp, dir, dbpathStr->addr, mgr );
         StringWhack(dbpathStr);
     }
     return rc;
 }
 
-
-/* OpenDBRead
- * VOpenDBRead
- *  open a database for read
- *
- *  "db" [ OUT ] - return parameter for newly opened database
- *
- *  "path" [ IN ] - NUL terminated string in
- *  wd-native character set giving path to database
- */
-static
-rc_t KDBManagerVOpenDBReadInt ( const KDBManager *self, const KDatabase **dbp,
-                                const KDirectory *wd, bool try_srapath,
-                                const char *path, va_list args )
-{
-    rc_t rc;
-
-    /* MUST use vsnprintf because the documented behavior of "path"
-       is that of stdc library's printf, not vdb printf */
-    char dbpath [ 4096 ];
-    /* VDB-4386: cannot treat va_list as a pointer! */
-    int z = 0;
-    /*( args == NULL ) ?
-        snprintf ( dbpath, sizeof dbpath, "%s", path ):*/
-    if ( path != NULL )
-        z = vsnprintf ( dbpath, sizeof dbpath, path, args );
-    if ( z < 0 || ( size_t ) z >= sizeof dbpath )
-        rc = RC ( rcDB, rcMgr, rcOpening, rcPath, rcExcessive );
-    else
-    {
-        const KDirectory *dir;
-
-        /* open the directory if its a database */
-        rc = KDBOpenPathTypeRead ( self, wd, dbpath, &dir, kptDatabase, NULL,
-            try_srapath, NULL );
-        if ( rc == 0 )
-        {
-            KDatabase *db;
-
-            /* allocate a new guy */
-            rc = KDatabaseMake ( & db, dir, dbpath );
-            if ( rc == 0 )
-            {
-                db -> mgr = KDBManagerAttach ( self );
-                * dbp = db;
-                return 0;
-            }
-
-            KDirectoryRelease ( dir );
-        }
-    }
-    return rc;
-}
-
-static
-rc_t KDBManagerVOpenDBReadInt_noargs ( const KDBManager *self, const KDatabase **dbp,
-                                const KDirectory *wd, bool try_srapath,
-                                const char *path, ... )
-{
-    rc_t rc;
-    va_list args;
-
-    va_start ( args, path );
-    rc = KDBManagerVOpenDBReadInt ( self, dbp, wd, try_srapath, path, args );
-    va_end ( args );
-
-    return rc;
-}
-
-LIB_EXPORT rc_t CC KDBManagerOpenDBRead ( const KDBManager *self,
-    const KDatabase **db, const char *path, ... )
-{
-    rc_t rc;
-    va_list args;
-
-    va_start ( args, path );
-    rc = KDBManagerVOpenDBRead ( self, db, path, args );
-    va_end ( args );
-
-    return rc;
-}
-
-LIB_EXPORT rc_t CC KDatabaseOpenDBRead ( const KDatabase *self,
-    const KDatabase **db, const char *name, ... )
-{
-    rc_t rc;
-    va_list args;
-
-    va_start ( args, name );
-    rc = KDatabaseVOpenDBRead ( self, db, name, args );
-    va_end ( args );
-
-    return rc;
-}
-
-LIB_EXPORT rc_t CC KDBManagerVOpenDBRead ( const KDBManager *self,
-    const KDatabase **db, const char *path, va_list args )
-{
-    if ( db == NULL )
-        return RC ( rcDB, rcMgr, rcOpening, rcParam, rcNull );
-
-    * db = NULL;
-
-    if ( self == NULL )
-        return RC ( rcDB, rcMgr, rcOpening, rcSelf, rcNull );
-
-    return KDBManagerVOpenDBReadInt ( self, db, self -> wd, true, path, args );
-}
-
-LIB_EXPORT rc_t CC KDatabaseVOpenDBRead ( const KDatabase *self,
-    const KDatabase **dbp, const char *name, va_list args )
+static rc_t CC KRDatabaseVOpenDBRead ( const KDatabase *self, const KDatabase **dbp, const char *name, va_list args )
 {
     rc_t rc;
     char path [ 256 ];
@@ -351,12 +221,12 @@ LIB_EXPORT rc_t CC KDatabaseVOpenDBRead ( const KDatabase *self,
         path, sizeof path, "db", 2, name, args );
     if ( rc == 0 )
     {
-        rc = KDBManagerVOpenDBReadInt_noargs ( self -> mgr, dbp,
+        rc = KDBRManagerVOpenDBReadInt_noargs ( self -> mgr, dbp,
                                         self -> dir, false, path );
         if ( rc == 0 )
         {
             KDatabase *db = ( KDatabase* ) * dbp;
-            db -> dad = KDatabaseAttach ( self );
+            db -> parent = KDatabaseAttach ( self );
         }
     }
 
@@ -367,14 +237,16 @@ LIB_EXPORT rc_t CC KDatabaseVOpenDBRead ( const KDatabase *self,
 /* Locked
  *  returns non-zero if locked
  */
-LIB_EXPORT bool CC KDatabaseLocked ( const KDatabase *self )
+static
+bool CC
+KRDatabaseLocked ( const KDatabase *self )
 {
     rc_t rc;
 
     if ( self == NULL )
         return false;
 
-    rc = KDBWritable ( self -> dir, "." );
+    rc = KDBRWritable ( self -> dir, "." );
     return GetRCState ( rc ) == rcLocked;
 }
 
@@ -386,7 +258,7 @@ LIB_EXPORT bool CC KDatabaseLocked ( const KDatabase *self )
  *
  *  "path" [ IN ] - NUL terminated path
  */
-LIB_EXPORT bool CC KDatabaseVExists ( const KDatabase *self, uint32_t type, const char *name, va_list args )
+static bool CC KRDatabaseVExists ( const KDatabase *self, uint32_t type, const char *name, va_list args )
 {
     if ( self != NULL && name != NULL && name [ 0 ] != 0 )
     {
@@ -432,21 +304,6 @@ LIB_EXPORT bool CC KDatabaseVExists ( const KDatabase *self, uint32_t type, cons
     return false;
 }
 
-LIB_EXPORT bool CC KDatabaseExists ( const KDatabase *self, uint32_t type, const char *name, ... )
-{
-    bool exists;
-
-    va_list args;
-    va_start ( args, name );
-
-    exists = KDatabaseVExists ( self, type, name, args );
-
-    va_end ( args );
-
-    return exists;
-}
-
-
 /* IsAlias
  *  returns true if object name is an alias
  *  returns path to fundamental name if it was aliased
@@ -459,8 +316,7 @@ LIB_EXPORT bool CC KDatabaseExists ( const KDatabase *self, uint32_t type, const
  *
  *  "name" [ IN ] - NUL terminated object name
  */
-LIB_EXPORT bool CC KDatabaseIsAlias ( const KDatabase *self, uint32_t type,
-    char *resolved, size_t rsize, const char *name )
+static bool CC KRDatabaseIsAlias ( const KDatabase *self, uint32_t type, char *resolved, size_t rsize, const char *name )
 {
     if ( self != NULL && name != NULL && name [ 0 ] != 0 )
     {
@@ -533,32 +389,21 @@ LIB_EXPORT bool CC KDatabaseIsAlias ( const KDatabase *self, uint32_t type,
  *
  *  "path" [ IN ] - NUL terminated path
  */
-LIB_EXPORT rc_t CC KDatabaseVWritable ( const KDatabase *self, uint32_t type, const char *name, va_list args )
+static
+rc_t CC
+KRDatabaseVWritable ( const KDatabase *self, uint32_t type, const char *name, va_list args )
 {
     /* TBD */
     return -1;
 }
 
-LIB_EXPORT rc_t CC KDatabaseWritable ( const KDatabase *self, uint32_t type, const char *name, ... )
-{
-    rc_t rc;
-
-    va_list args;
-    va_start ( args, name );
-
-    rc = KDatabaseVWritable ( self, type, name, args );
-
-    va_end ( args );
-
-    return rc;
-}
-
-
 /* OpenManager
  *  duplicate reference to manager
  *  NB - returned reference must be released
  */
-LIB_EXPORT rc_t CC KDatabaseOpenManagerRead ( const KDatabase *self, const KDBManager **mgr )
+static
+rc_t CC
+KRDatabaseOpenManagerRead ( const KDatabase *self, const KDBManager **mgr )
 {
     rc_t rc;
 
@@ -589,7 +434,9 @@ LIB_EXPORT rc_t CC KDatabaseOpenManagerRead ( const KDatabase *self, const KDBMa
  *  duplicate reference to parent database
  *  NB - returned reference must be released
  */
-LIB_EXPORT rc_t CC KDatabaseOpenParentRead ( const KDatabase *self, const KDatabase **par )
+static
+rc_t CC
+KRDatabaseOpenParentRead ( const KDatabase *self, const KDatabase **par )
 {
     rc_t rc;
 
@@ -601,10 +448,10 @@ LIB_EXPORT rc_t CC KDatabaseOpenParentRead ( const KDatabase *self, const KDatab
             rc = RC ( rcDB, rcDatabase, rcAccessing, rcSelf, rcNull );
         else
         {
-            rc = KDatabaseAddRef ( self -> dad );
+            rc = KDatabaseAddRef ( self -> parent );
             if ( rc == 0 )
             {
-                * par = self -> dad;
+                * par = self -> parent;
                 return 0;
             }
         }
@@ -619,7 +466,9 @@ LIB_EXPORT rc_t CC KDatabaseOpenParentRead ( const KDatabase *self, const KDatab
 /* GetDirectory
  *  access the directory in use
  */
-LIB_EXPORT rc_t CC KDatabaseOpenDirectoryRead ( const KDatabase *self, const KDirectory **dir )
+static
+rc_t CC
+KRDatabaseOpenDirectoryRead ( const KDatabase *self, const KDirectory **dir )
 {
     rc_t rc;
 
@@ -641,44 +490,6 @@ LIB_EXPORT rc_t CC KDatabaseOpenDirectoryRead ( const KDatabase *self, const KDi
     return rc;
 }
 
-
-/* ModDate
- *  get modification date
- */
-LIB_EXPORT rc_t CC KDatabaseModDate ( const KDatabase *self, KTime_t *mtime )
-{
-    rc_t rc;
-
-    if ( mtime == NULL )
-        rc = RC ( rcDB, rcDatabase, rcAccessing, rcParam, rcNull );
-    else
-    {
-        if ( self == NULL )
-            rc = RC ( rcDB, rcDatabase, rcAccessing, rcSelf, rcNull );
-        else
-        {
-            /* HACK ALERT - there needs to be a proper way to record modification times */
-            const KDirectory *dir = self -> dir;
-
-            /* this only tells the last time the table was locked,
-               which may be close to the last time it was modified */
-            rc = KDirectoryDate ( dir, mtime, "lock" );
-            if ( rc == 0 )
-                return 0;
-
-            /* get directory timestamp */
-            rc = KDirectoryDate ( dir, mtime, "." );
-            if ( rc == 0 )
-                return 0;
-        }
-
-        * mtime = 0;
-    }
-
-    return rc;
-}
-
-
 /*--------------------------------------------------------------------------
  * KNameList
  */
@@ -696,139 +507,125 @@ static
 bool CC KDatabaseListFilter ( const KDirectory *dir, const char *name, void *data_ )
 {
     struct FilterData * data = data_;
-    return ( KDBOpenPathTypeRead ( data->mgr, dir, name,
+    return ( KDBManagerOpenPathTypeRead ( data->mgr, dir, name,
         NULL, data->type, NULL, false, NULL ) == 0 );
 }
 
-LIB_EXPORT rc_t CC KDatabaseListDB ( const KDatabase *self, KNamelist **names )
+static
+rc_t CC
+KRDatabaseListDB ( const KDatabase *self, KNamelist **names )
 {
-    if ( self != NULL )
-    {
-        struct FilterData data;
-        data.mgr = self->mgr;
-        data.type = kptDatabase;
+    struct FilterData data;
+    data.mgr = self->mgr;
+    data.type = kptDatabase;
 
-        return KDirectoryList ( self -> dir,
-            names, KDatabaseListFilter, &data, "db" );
-    }
-
-    if ( names != NULL )
-        * names = NULL;
-
-    return RC ( rcDB, rcDatabase, rcListing, rcSelf, rcNull );
+    return KDirectoryList ( self -> dir, names, KDatabaseListFilter, &data, "db" );
 }
 
-LIB_EXPORT rc_t CC KDatabaseListTbl ( struct KDatabase const *self, KNamelist **names )
+static
+rc_t CC
+KRDatabaseListTbl ( struct KDatabase const *self, KNamelist **names )
 {
-    if ( self != NULL )
-    {
-        struct FilterData data;
-        data.mgr = self->mgr;
-        data.type = kptTable;
+    struct FilterData data;
+    data.mgr = self->mgr;
+    data.type = kptTable;
 
-        return KDirectoryList ( self -> dir,
-            names, KDatabaseListFilter, &data, "tbl" );
-    }
-
-    if ( names != NULL )
-        * names = NULL;
-
-    return RC ( rcDB, rcDatabase, rcListing, rcSelf, rcNull );
+    return KDirectoryList ( self -> dir, names, KDatabaseListFilter, &data, "tbl" );
 }
 
-LIB_EXPORT rc_t CC KDatabaseListIdx ( struct KDatabase const *self, KNamelist **names )
+static
+rc_t CC
+KRDatabaseListIdx ( struct KDatabase const *self, KNamelist **names )
 {
-    if ( self != NULL )
-    {
-        struct FilterData data;
-        data.mgr = self->mgr;
-        data.type = kptIndex;
+    struct FilterData data;
+    data.mgr = self->mgr;
+    data.type = kptIndex;
 
-        return KDirectoryList ( self -> dir,
-            names, KDatabaseListFilter, &data, "idx" );
-    }
-
-    if ( names != NULL )
-        * names = NULL;
-
-    return RC ( rcDB, rcDatabase, rcListing, rcSelf, rcNull );
+    return KDirectoryList ( self -> dir, names, KDatabaseListFilter, &data, "idx" );
 }
 
-LIB_EXPORT rc_t CC KDBManagerVPathOpenLocalDBRead ( struct KDBManager const * self,
-    struct KDatabase const ** p_db, struct VPath const * vpath )
+static
+rc_t CC
+KRDatabaseVOpenTableRead ( const KDatabase *self,
+    const KTable **tblp, const char *name, va_list args )
 {
-    if ( self == NULL )
-        return RC ( rcDB, rcDatabase, rcAccessing, rcSelf, rcNull );
-    if ( p_db == NULL )
-        return RC ( rcDB, rcDatabase, rcAccessing, rcParam, rcNull );
-    if ( vpath == NULL )
-        return RC ( rcDB, rcDatabase, rcAccessing, rcParam, rcNull );
+    rc_t rc;
+    char path [ 256 ];
 
+    if ( tblp == NULL )
+        return RC ( rcDB, rcDatabase, rcOpening, rcParam, rcNull );
+
+    * tblp = NULL;
+
+    if ( name == NULL )
+        return RC ( rcDB, rcDatabase, rcOpening, rcParam, rcNull );
+
+    rc = KDBVMakeSubPath ( self -> dir,
+        path, sizeof path, "tbl", 3, name, args );
+    if ( rc == 0 )
     {
-        /* vpath has already been resolved and is known to be a local path.
-           open it if it is a database; avoid an additional round of resolution */
-        const KDirectory *dir;
-        rc_t rc = VFSManagerOpenDirectoryReadDirectoryRelativeDecrypt ( self -> vfsmgr, self -> wd, &dir, vpath );
+        rc = KDBRManagerVOpenTableReadInt_noargs ( self -> mgr, tblp,
+                                self -> dir, false, path, false, NULL );
         if ( rc == 0 )
         {
-            if ( ( (~kptAlias) & KDBPathType ( dir, NULL, "." ) ) != kptDatabase )
-            {
-                rc = RC ( rcDB, rcMgr, rcOpening, rcDatabase, rcIncorrect );
-            }
-            else
-            {   /* allocate a new guy */
-                KDatabase *db;
-                rc = KDatabaseMakeVPath ( & db, dir, vpath );
-                if ( rc == 0 )
-                {
-                    db -> mgr = KDBManagerAttach ( self );
-                    * p_db = db;
-                    return 0;
-                }
-            }
-
-            KDirectoryRelease ( dir );
+            KTable *tbl = ( KTable* ) * tblp;
+            tbl -> db = KDatabaseAttach ( self );
         }
-        return rc;
     }
+
+    return rc;
 }
 
-LIB_EXPORT rc_t CC KDBManagerVPathOpenRemoteDBRead ( struct KDBManager const * self,
-    struct KDatabase const ** p_db, struct VPath const * remote, struct VPath const * cache )
+static
+rc_t CC
+KRDatabaseOpenMetadataRead ( const KDatabase *self, const KMetadata **metap )
 {
-    if ( self == NULL )
-        return RC ( rcDB, rcDatabase, rcAccessing, rcSelf, rcNull );
-    if ( p_db == NULL )
-        return RC ( rcDB, rcDatabase, rcAccessing, rcParam, rcNull );
-    if ( remote == NULL )
-        return RC ( rcDB, rcDatabase, rcAccessing, rcParam, rcNull );
-    /* cache == NULL is OK */
+    rc_t rc;
+    KMetadata *meta;
 
+    if ( metap == NULL )
+        return RC ( rcDB, rcDatabase, rcOpening, rcParam, rcNull );
+
+    * metap = NULL;
+
+    rc = KDBRManagerOpenMetadataReadInt ( self -> mgr, & meta, self -> dir, 0, false );
+    if ( rc == 0 )
     {
-        /*  vpath has already been resolved and is known to be a remote URL.
-            Open it if it is a database; use the provided cache; avoid an additional round of resolution */
-        const KDirectory *dir;
-        rc_t rc = VFSManagerOpenDirectoryReadDecryptRemote( self -> vfsmgr, &dir, remote, cache );
+        meta -> db = KDatabaseAttach ( self );
+        * metap = meta;
+    }
+
+    return rc;
+}
+
+static
+rc_t CC
+KRDatabaseVOpenIndexRead ( const KDatabase *self, const KIndex **idxp, const char *name, va_list args )
+{
+    rc_t rc = 0;
+    char path [ 256 ];
+
+    if ( idxp == NULL )
+        return RC ( rcDB, rcDatabase, rcOpening, rcParam, rcNull );
+
+    * idxp = NULL;
+
+    if ( self == NULL )
+        return RC ( rcDB, rcDatabase, rcOpening, rcSelf, rcNull );
+
+    rc = KDBVMakeSubPath ( self -> dir,
+        path, sizeof path, "idx", 3, name, args );
+    if ( rc == 0 )
+    {
+        KIndex *idx;
+        rc = KDBRManagerOpenIndexReadInt ( self -> mgr,
+            & idx, self -> dir, path );
         if ( rc == 0 )
         {
-            if ( ( (~kptAlias) & KDBPathType ( dir, NULL, "." ) ) != kptDatabase )
-            {
-                rc = RC ( rcDB, rcMgr, rcOpening, rcDatabase, rcIncorrect );
-            }
-            else
-            {   /* allocate a new guy */
-                KDatabase *db;
-                rc = KDatabaseMakeVPath ( & db, dir, remote );
-                if ( rc == 0 )
-                {
-                    db -> mgr = KDBManagerAttach ( self );
-                    * p_db = db;
-                    return 0;
-                }
-            }
-
-            KDirectoryRelease ( dir );
+            idx -> db = KDatabaseAttach ( self );
+            * idxp = idx;
         }
-        return rc;
     }
+    return rc;
 }
+

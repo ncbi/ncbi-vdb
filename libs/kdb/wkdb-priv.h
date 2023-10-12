@@ -24,8 +24,7 @@
 *
 */
 
-#ifndef _h_kdb_priv_
-#define _h_kdb_priv_
+#pragma once
 
 #ifndef _h_kdb_manager_
 #include <kdb/manager.h>
@@ -82,8 +81,8 @@ int KDBPathType ( const struct KDirectory *dir, bool *zombies, const char *path 
  * the return will be zero only if the path does point to a directory or
  * archive that is of the requested type.  An archive will have been opened
  * but reshut if dpdir is NULL.
- */ 
-rc_t KDBOpenPathTypeRead ( const struct KDBManager * mgr, const struct KDirectory * dir, const char * path, 
+ */
+rc_t KDBManagerOpenPathTypeRead ( const struct KDBManager * mgr, const struct KDirectory * dir, const char * path,
     const struct KDirectory ** dpdir, int pathtype, int * realpathtype,
     bool try_srapath, const struct VPath * vpath );
 
@@ -92,7 +91,7 @@ rc_t KDBOpenPathTypeRead ( const struct KDBManager * mgr, const struct KDirector
  *  examines a file for ( any ) write permission
  */
 bool KDBIsLocked ( const struct KDirectory *dir, const char *path );
-rc_t KDBWritable ( const struct KDirectory *dir, const char *path );
+rc_t KDBWWritable ( const struct KDirectory *dir, const char *path );
 
 /* Lock
  *  performs directory locking
@@ -118,7 +117,7 @@ rc_t KDBVGetPathModDate ( const struct KDirectory *dir,
     KTime_t *mtime, const char *path, va_list args );
 
 /* GetNamespaceString
- *  return a static const reference to a string representing 
+ *  return a static const reference to a string representing
  *  a namespace for the given kpt<database> type in namespace
  */
 const char * KDBGetNamespaceString ( int namespace );
@@ -158,4 +157,3 @@ rc_t KDBAlias ( struct KDirectory *dir, uint32_t type,
 }
 #endif
 
-#endif /* _h_kdb_priv_ */

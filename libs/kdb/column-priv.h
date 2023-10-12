@@ -31,14 +31,6 @@
 #include <kdb/column.h>
 #endif
 
-#ifndef _h_klib_container_
-#include <klib/container.h>
-#endif
-
-#ifndef _h_klib_refcount_
-#include <klib/refcount.h>
-#endif
-
 #ifndef _h_coldata_priv_
 #include "coldata-priv.h"
 #endif
@@ -46,6 +38,12 @@
 #ifndef _h_colidx_priv_
 #include "colidx-priv.h"
 #endif
+
+#define KCOLUMN_IMPL KColumn
+#include "column-base.h"
+
+#define KCOLUMNBLOB_IMPL KColumnBlob
+#include "columnblob-base.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -61,10 +59,12 @@ struct KDirectory;
 
 
 /*--------------------------------------------------------------------------
- * KColumn
+ * KColumn, read-side
  */
 struct KColumn
 {
+    KColumnBase dad;
+
     struct KTable const *tbl;
     struct KDBManager const *mgr;
     struct KDirectory const *dir;
@@ -72,20 +72,36 @@ struct KColumn
     KColumnIdx idx;
     KColumnData df;
 
-    KRefcount refcount;
     uint32_t csbytes;
     int32_t checksum;
     char path [ 1 ];
 };
 
-/* Attach
- * Sever
- *  like Release, except called internally
- *  indicates that a child object is letting go...
- */
-KColumn *KColumnAttach ( const KColumn *self );
-rc_t KColumnSever ( const KColumn *self );
+rc_t KRColumnMake ( KColumn **colp, const KDirectory *dir, const char *path );
+rc_t KRColumnMakeRead ( KColumn **colp, const KDirectory *dir, const char *path );
 
+/*--------------------------------------------------------------------------
+ * KColumnBlob
+ *  one or more rows of column data
+ */
+
+struct KColumnBlob
+{
+    KColumnBlobBase dad;
+
+    /* holds existing blob loc */
+    KColBlobLoc loc;
+    KColumnPageMap pmorig;
+
+    /* owning column */
+    const KColumn *col;
+
+    /* captured from idx1 for CRC32 validation */
+    bool bswap;
+};
+
+rc_t KRColumnBlobMake ( KColumnBlob **blobp, bool bswap );
+rc_t KRColumnBlobOpenRead ( KColumnBlob *self, const KColumn *col, int64_t id );
 
 #ifdef __cplusplus
 }

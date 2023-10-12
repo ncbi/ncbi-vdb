@@ -27,12 +27,16 @@
 #define TRACK_REFERENCES 0
 
 #include <kdb/extern.h>
-#include "wtable-priv.h"
-#include "dbmgr-priv.h"
+#include <kdb/index.h>
+#include <kdb/kdb-priv.h>
+
 #include "database-priv.h"
+#include "wdbmgr.h"
+#include "wtable-priv.h"
 #include "wcolumn-priv.h"
 #include "windex-priv.h"
 #include "wkdb-priv.h"
+#include "wmeta.h"
 
 #include <klib/namelist.h>
 #include <klib/symbol.h>
@@ -50,26 +54,61 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-
-
-/* keep file system structure compatible with v0 code */
-#define V0_BACKWARD_COMPAT 0
-
-/*--------------------------------------------------------------------------
- * turns ON verbose REFCOUNT tracing
- */
-#define REPORT_KTABLE_REFCOUNT 0
+#include <stdio.h>
 
 /*--------------------------------------------------------------------------
  * KTable
  *  a collection of columns indexed by row id, metadata, indices
  */
 
+static rc_t KWTableWhack ( KTable *self );
+static bool CC KWTableLocked ( const KTable *self );
+static bool CC KWTableVExists ( const KTable *self, uint32_t type, const char *name, va_list args );
+static bool CC KWTableIsAlias ( const KTable *self, uint32_t type, char *resolved, size_t rsize, const char *name );
+static rc_t CC KWTableVWritable ( const KTable *self, uint32_t type, const char *name, va_list args );
+static rc_t CC KWTableOpenManagerRead ( const KTable *self, const KDBManager **mgr );
+static rc_t CC KWTableOpenParentRead ( const KTable *self, const KDatabase **db );
+static bool CC KWTableHasRemoteData ( const KTable *self );
+static rc_t CC KWTableOpenDirectoryRead ( const KTable *self, const KDirectory **dir );
+static rc_t CC KWTableVOpenColumnRead ( const KTable *self, const KColumn **colp, const char *name, va_list args );
+static rc_t CC KWTableOpenMetadataRead ( const KTable *self, const KMetadata **metap );
+static rc_t CC KWTableVOpenIndexRead ( const KTable *self, const KIndex **idxp, const char *name, va_list args );
+static rc_t CC KWTableGetPath ( const KTable *self, const char **path );
+static rc_t CC KWTableGetName(KTable const *self, char const **rslt);
+static rc_t CC KWTableListCol ( const KTable *self, KNamelist **names );
+static rc_t CC KWTableListIdx ( const KTable *self, KNamelist **names );
+static rc_t CC KWTableMetaCompare( const KTable *self, const KTable *other, const char * path, bool * equal );
+
+static KTableBase_vt KWTable_vt =
+{
+    KWTableWhack,
+    KTableBaseAddRef,
+    KTableBaseRelease,
+    KWTableLocked,
+    KWTableVExists,
+    KWTableIsAlias,
+    KWTableVWritable,
+    KWTableOpenManagerRead,
+    KWTableOpenParentRead,
+    KWTableHasRemoteData,
+    KWTableOpenDirectoryRead,
+    KWTableVOpenColumnRead,
+    KWTableOpenMetadataRead,
+    KWTableVOpenIndexRead,
+    KWTableGetPath,
+    KWTableGetName,
+    KWTableListCol,
+    KWTableListIdx,
+    KWTableMetaCompare
+};
+
+
 /* GetPath
  *  return the absolute path to table
  */
-LIB_EXPORT rc_t CC KTableGetPath ( const KTable *self,
-    const char **path )
+static
+rc_t CC
+KWTableGetPath ( const KTable *self, const char **path )
 {
     if ( self == NULL )
         return RC ( rcDB, rcTable, rcAccessing, rcSelf, rcNull );
@@ -84,15 +123,12 @@ LIB_EXPORT rc_t CC KTableGetPath ( const KTable *self,
 /* Whack
  */
 static
-rc_t KTableWhack ( KTable *self )
+rc_t
+KWTableWhack ( KTable *self )
 {
     rc_t rc = 0;
     KDBManager *mgr = self -> mgr;
     KSymbol * symb;
-    assert ( mgr != NULL );
-
-    KRefcountWhack ( & self -> refcount, "KTable" );
-
     if ( self -> db != NULL )
     {
         rc = KDatabaseSever ( self -> db );
@@ -104,170 +140,52 @@ rc_t KTableWhack ( KTable *self )
     /* shut down md5 sum file if it is open */
     KMD5SumFmtRelease ( self -> md5 ), self -> md5 = NULL;
 
-    /* remove from mgr */
-    symb = KDBManagerOpenObjectFind (mgr, self->path);
-    if (symb != NULL)
+    if ( mgr != NULL )
     {
-        rc = KDBManagerOpenObjectDelete (mgr, symb);
-        if (rc == 0)
+        /* remove from mgr */
+        symb = KDBManagerOpenObjectFind (mgr, self->path);
+        if (symb != NULL)
         {
-            rc = KDBManagerSever ( mgr );
-            if ( rc != 0 )
-                rc = KDBManagerOpenObjectAdd (mgr, symb);
-            else
+            rc = KDBManagerOpenObjectDelete (mgr, symb);
+            if (rc == 0)
             {
-                /* complete */
-                KDirectoryRelease ( self -> dir );
-                free ( self );
-                return 0;
+                rc = KDBManagerSever ( mgr );
+                if ( rc != 0 )
+                    rc = KDBManagerOpenObjectAdd (mgr, symb);
             }
         }
     }
 
-    KRefcountInit ( & self -> refcount, 1, "KTable", "whack", "ktbl" );
+    if ( rc == 0 )
+    {
+        /* complete */
+        KDirectoryRelease ( self -> dir );
+        return KTableBaseWhack( self );
+    }
+
+    KRefcountInit ( & self -> dad . refcount, 1, "KTable", "whack", "ktbl" );
 
     return rc;
 }
 
-#if REPORT_KTABLE_REFCOUNT
-void KTableGetName( KTable const *self, char const **rslt );
-#endif
-
-/* AddRef
- * Release
- *  all objects are reference counted
- *  NULL references are ignored
- */
-LIB_EXPORT rc_t CC KTableAddRef ( const KTable *cself )
-{
-    KTable *self = ( KTable* ) cself;
-    if ( self != NULL )
-    {
-#if REPORT_KTABLE_REFCOUNT
-        uint32_t before = atomic32_read( &self -> refcount );
-#endif
-        int ret = KRefcountAdd ( & self -> refcount, "KTable" );
-#if REPORT_KTABLE_REFCOUNT
-        uint32_t after = atomic32_read( &self -> refcount );
-        char const * name;
-        KTableGetName( self, &name );
-        KDbgMsg( "KTableAddRef( %p %s ) %x ---> %x\n", self, name, before, after );
-#endif
-
-        switch ( ret )
-        {
-        case krefLimit:
-            return RC ( rcDB, rcTable, rcAttaching, rcRange, rcExcessive );
-        }
-        ++ self -> opencount;
-    }
-    return 0;
-}
-
-LIB_EXPORT rc_t CC KTableRelease ( const KTable *cself )
-{
-    KTable *self = ( KTable* ) cself;
-    if ( self != NULL )
-    {
-#if REPORT_KTABLE_REFCOUNT
-        uint32_t before = atomic32_read( &self -> refcount );
-#endif
-        int ret = KRefcountDrop ( & self -> refcount, "KTable" );
-#if REPORT_KTABLE_REFCOUNT
-        uint32_t after = atomic32_read( &self -> refcount );
-        char const * name;
-        KTableGetName( self, &name );
-        KDbgMsg( "KTableRelease( %p %s ) %x ---> %x\n", self, name, before, after );
-#endif
-
-        switch ( ret )
-        {
-        case krefWhack:
-            return KTableWhack ( ( KTable* ) self );
-        case krefLimit:
-            return RC ( rcDB, rcTable, rcReleasing, rcRange, rcExcessive );
-        }
-        -- self -> opencount;
-    }
-    return 0;
-}
-
-
-/* Attach
- * Sever
- */
-KTable *KTableAttach ( const KTable *self )
-{
-    if ( self != NULL )
-    {
-#if REPORT_KTABLE_REFCOUNT
-        uint32_t before = atomic32_read( &self -> refcount );
-#endif
-        int ret = KRefcountAddDep ( & self -> refcount, "KTable" );
-#if REPORT_KTABLE_REFCOUNT
-        uint32_t after = atomic32_read( &self -> refcount );
-        char const * name;
-        KTableGetName( self, &name );
-        KDbgMsg( "KTableAttach( %p %s ) %x ---> %x\n", self, name, before, after );
-#endif
-
-        switch ( ret )
-        {
-        case krefLimit:
-            return NULL;
-        }
-    }
-    return ( KTable* ) self;
-}
-
-/* Sever
- *  like KTableRelease, except called internally
- *  indicates that a child object is letting go...
- */
-rc_t KTableSever ( const KTable *self )
-{
-    if ( self != NULL )
-    {
-#if REPORT_KTABLE_REFCOUNT
-        uint32_t before = atomic32_read( &self -> refcount );
-#endif
-        int ret = KRefcountDropDep ( & self -> refcount, "KTable" );
-#if REPORT_KTABLE_REFCOUNT
-        uint32_t after = atomic32_read( &self -> refcount );
-        char const * name;
-        KTableGetName( self, &name );
-        KDbgMsg( "KTableSever( %p %s ) %x ---> %x\n", self, name, before, after );
-#endif
-
-        switch ( ret )
-        {
-        case krefWhack:
-            assert ( self -> opencount == 0 );
-            return KTableWhack ( ( KTable* ) self );
-        case krefLimit:
-            return RC ( rcDB, rcTable, rcReleasing, rcRange, rcExcessive );
-        }
-    }
-    return 0;
-}
-
-
-void KTableGetName(KTable const *self, char const **rslt)
+static
+rc_t CC
+KWTableGetName(KTable const *self, char const **rslt)
 {
     char *sep;
-    
+
     *rslt = self->path;
     sep = strrchr(self->path, '/');
     if (sep != NULL)
         *rslt = sep + 1;
+    return 0;
 }
 
 /* Make
  *  make an initialized structure
  *  NB - does NOT attach reference to dir, but steals it
  */
-static
-rc_t KTableMake ( KTable **tblp, const KDirectory *dir, const char *path,
+rc_t KWTableMake ( KTable **tblp, const KDirectory *dir, const char *path,
 		  KMD5SumFmt * md5, bool read_only )
 {
     KTable *tbl;
@@ -283,23 +201,15 @@ rc_t KTableMake ( KTable **tblp, const KDirectory *dir, const char *path,
     }
 
     memset ( tbl, 0, sizeof * tbl );
+    tbl -> dad . vt = & KWTable_vt;
+    KRefcountInit ( & tbl -> dad . refcount, 1, "KTable", "make", path );
     tbl -> dir = ( KDirectory* ) dir;
-    KRefcountInit ( & tbl -> refcount, 1, "KTable", "make", path );
     tbl -> opencount = 1;
     tbl -> md5 = md5;
     KMD5SumFmtAddRef ( md5 );
     tbl -> use_md5 = ( md5 == NULL ) ? false : true;
     tbl -> read_only = read_only;
     strcpy ( tbl -> path, path );
-
-#if REPORT_KTABLE_REFCOUNT
-    {
-        uint32_t after = atomic32_read( &tbl -> refcount );
-        char const * name;
-        KTableGetName( tbl, &name );
-        KDbgMsg( "KTableMake( %p %s ) %x\n", tbl, name, after );
-    }
-#endif
 
     tbl->sym.u.obj = tbl;
     StringInitCString (&tbl->sym.name, tbl->path);
@@ -309,831 +219,14 @@ rc_t KTableMake ( KTable **tblp, const KDirectory *dir, const char *path,
     return 0;
 }
 
-static
-rc_t KDBManagerInsertTable ( KDBManager * self, KTable * tbl )
-{
-    rc_t rc;
-    rc = KDBManagerOpenObjectAdd (self, &tbl->sym);
-    if ( rc == 0 )
-        tbl -> mgr = KDBManagerAttach ( self );
-    return rc;
-}
-
-
-static
-rc_t KDBManagerMakeTableUpdate ( KDBManager *self,
-    KTable **tblp, KDirectory *wd, const char *path, bool convert, KMD5SumFmt * md5 )
-{
-    rc_t rc;
-    KDirectory *dir;
-
-    rc = KDirectoryOpenDirUpdate ( wd, & dir, false, "%s", path );
-    if ( rc == 0 )
-    {
-        KTable * tbl;
-
-        if ( convert )
-        {
-            /* the old table layout:
-               <tbl>/
-               col/...
-               meta
-               sealed
-               skey
-            */
-            rc = KDirectorySetAccess_v1 ( dir, true, 0220, 0222, "." );
-            if ( rc == 0 )
-                rc = KDirectoryCreateDir_v1 ( dir, 0775, kcmCreate, "md" );
-            if ( rc == 0 )
-            {
-                rc = KDirectoryRename ( dir, false, "meta", "md/r001" );
-                if ( GetRCState ( rc ) == rcNotFound )
-                    rc = 0;
-                else if ( rc == 0 )
-                {
-                    rc = KDirectoryCreateAlias ( dir, 0777, kcmCreate, "md/r001", "md/cur" );
-#if V0_BACKWARD_COMPAT
-                    if ( rc == 0 )
-                        rc = KDirectoryCreateAlias ( dir, 0777, kcmCreate, "md/r001", "meta" );
-#endif
-                    if( rc == 0 ) {
-                        KFile* md5_file = NULL;
-                        if( (rc = KDirectoryOpenFileWrite(dir, &md5_file, true, "md5")) == 0 ) {
-                            KMD5SumFmt* fmd5 = NULL;
-                            if( (rc = KMD5SumFmtMakeUpdate(&fmd5, md5_file)) == 0 ) {
-                                if( (rc = KMD5SumFmtRename(fmd5, "meta", "md/r001")) == 0 ) {
-                                    rc = KMD5SumFmtFlush(fmd5);
-                                }
-                                KMD5SumFmtRelease(fmd5);
-                            } else {
-                                KFileRelease(md5_file);
-                            }
-                        }
-                    }
-                }
-            }
-            if ( rc == 0 )
-                rc = KDirectoryCreateDir_v1 ( dir, 0775, kcmCreate, "idx" );
-            if ( rc == 0 )
-            {
-                rc = KDirectoryRename ( dir, false, "skey", "idx/skey" );
-                if ( GetRCState ( rc ) == rcNotFound )
-                    rc = 0;
-                else if ( rc == 0 )
-                {
-                    KDirectoryRename ( dir, false, "skey.md5", "idx/skey.md5" );
-#if V0_BACKWARD_COMPAT
-                    rc = KDirectoryCreateAlias ( dir, 0777, kcmCreate, "idx/skey", "skey" );
-#endif
-                }
-            }
-            if ( rc == 0 )
-            {
-                if ( KDirectoryPathType_v1 ( dir, "sealed" ) == kptFile )
-                {
-                    rc = KDBLockDir ( dir, "." );
-#if ! V0_BACKWARD_COMPAT
-                    if ( rc == 0 )
-                        KDirectoryRemove_v1 ( dir, true, "sealed" );
-#endif
-                }
-            }
-            
-            if ( rc != 0 )
-                return rc;
-        }
-
-        /* Make the base object */
-        rc = KTableMake ( & tbl, dir, path, md5, false );
-        if ( rc == 0 )
-        {
-            rc = KDBManagerInsertTable ( self, tbl );
-
-            if ( rc == 0 )
-            {
-                * tblp = tbl;
-                return 0;
-            }
-
-            rc = RC ( rcDB, rcMgr, rcOpening, rcTable, rcBusy );
-                
-            free ( tbl );
-        }
-            
-        KDirectoryRelease ( dir );
-    }
-
-    return rc;
-}
-
-
-/* CreateTable
- * VCreateTable
- *  create a new or open an existing table
- *
- *  "tbl" [ OUT ] - return parameter for newly opened table
- *
- *  "cmode" [ IN ] - creation mode
- *
- *  "path" [ IN ] - NUL terminated string in
- *  wd-native character set giving path to table
- */
-static
-rc_t KDBManagerVCreateTableInt ( KDBManager *self,
-    KTable **tbl, KDirectory *wd, KCreateMode cmode, const char *path, va_list args )
-{
-    char tblpath [ 4096 ];
-    rc_t rc = KDirectoryVResolvePath ( wd, true,
-        tblpath, sizeof tblpath, path, args );
-    if ( rc == 0 )
-    {
-        bool convert = false;
-        bool not_found = false;
-
-        switch ( KDBPathType ( /*NULL,*/ wd, NULL, tblpath ) )
-        {
-        case kptNotFound:
-            not_found = true;
-            /* first good path */
-            break;
-
-        case kptBadPath:
-            return RC ( rcDB, rcMgr, rcCreating, rcPath, rcInvalid );
-
-        case kptTable:
-        case kptTable | kptAlias:
-            break;
-
-        case kptPrereleaseTbl:
-        case kptPrereleaseTbl | kptAlias:
-            convert = true;
-            break;
-
-        case kptDatabase:
-        case kptDatabase | kptAlias:
-            return RC (rcDB, rcMgr, rcCreating, rcDatabase, rcExists);
-
-        case kptColumn:
-        case kptColumn | kptAlias:
-            return RC (rcDB, rcMgr, rcCreating, rcColumn, rcExists);
-
-        case kptIndex:
-        case kptIndex | kptAlias:
-            return RC (rcDB, rcMgr, rcCreating, rcIndex, rcExists);
-
-        case kptMetadata:
-        case kptMetadata | kptAlias:
-            return RC (rcDB, rcMgr, rcCreating, rcMetadata, rcExists);
-
-        case kptFile:
-        case kptFile | kptAlias:
-            /* if we find a file, vary the failure if it is an archive that is a table
-             * or a non related file */
-            if (( KDBOpenPathTypeRead ( self, wd, tblpath, NULL, kptTable, NULL,
-                                        false, NULL ) == 0 ) ||
-                ( KDBOpenPathTypeRead ( self, wd, tblpath, NULL, kptPrereleaseTbl, NULL,
-                                        false, NULL ) == 0 ) )
-                return RC ( rcDB, rcMgr, rcCreating, rcTable, rcReadonly );
-            /* fall through */
-        default:
-            return RC ( rcDB, rcMgr, rcCreating, rcPath, rcIncorrect );
-        }
-
-        if (not_found == false)
-        {
-            /* found so is not good if we want to create new and not
-             * clear/init or open old
-             */
-            if ((cmode & kcmValueMask) == kcmCreate)
-                return RC ( rcDB, rcMgr, rcCreating, rcTable, rcExists );
-            if (KDBManagerOpenObjectBusy (self, tblpath))
-                return RC ( rcDB, rcMgr, rcCreating, rcTable, rcBusy );
-            /* test now for locked directory */
-            rc = KDBWritable ( wd, tblpath );
-            switch (GetRCState(rc))
-            {
-            default:
-                return rc;
-            case rcLocked:
-                return RC ( rcDB, rcMgr, rcCreating, rcTable, rcLocked );
-            case rcReadonly:
-                return RC ( rcDB, rcMgr, rcCreating, rcTable, rcReadonly );
-            case rcNotFound:
-                /* not found is good but probably unreachable */
-                break;
-            case 0:
-                break;
-            }
-        }
-
-        /* [re]create directory */
-        rc = KDirectoryCreateDir ( wd, 0775, cmode, "%s", tblpath );
-        if ( rc == 0 )
-        {
-            KMD5SumFmt *md5 = NULL;
-
-            /* create column sub-directory */
-            rc = KDirectoryCreateDir ( wd, 0775, kcmOpen, "%s/col", tblpath );
-            if ( rc == 0 && ( cmode & kcmMD5 ) != 0 )
-            {
-                KFile * f;
-
-                /* create the md5 digest file */
-                rc = KDirectoryCreateFile ( wd, &f, true, 0664, kcmOpen, "%s/md5", tblpath );
-                if ( rc == 0 )
-                {
-                    rc = KMD5SumFmtMakeUpdate ( & md5, f );
-                    if ( rc != 0 )
-                        KFileRelease ( f );
-                }
-            }
-            
-            if ( rc == 0 )
-                rc = KDBManagerMakeTableUpdate ( self, tbl, wd, tblpath, convert, md5 );
-
-            KMD5SumFmtRelease ( md5 );
-        }
-    }
-    return rc;
-}
-
-static
-rc_t KDBManagerVCreateTableInt_noargs ( KDBManager *self,
-    KTable **tbl, KDirectory *wd, KCreateMode cmode, const char *path, ... )
-{
-    rc_t rc;
-    va_list args;
-
-    va_start ( args, path );
-    rc = KDBManagerVCreateTableInt ( self, tbl, wd, cmode, path, args );
-    va_end ( args );
-
-    return rc;
-}
-
-/* Default function is added only to make tools/kqsh build possible since
-   it requires 1 to 1 mapping between K- and V-functions
-*/
-
-LIB_EXPORT rc_t CC KDatabaseCreateTableDefault ( struct KDatabase *self,
-    KTable **tbl, const char *name, ... )
-{
-    rc_t rc;
-    va_list args;
-
-    va_start ( args, name );
-    rc = KDatabaseVCreateTableByMask ( self, tbl, 0, 0, name, args );
-    va_end ( args );
-
-    return rc;
-}
-
-LIB_EXPORT rc_t CC KDBManagerCreateTable ( KDBManager *self,
-    KTable **tbl, KCreateMode cmode, const char *path, ... )
-{
-    rc_t rc;
-    va_list args;
-
-    va_start ( args, path );
-    rc = KDBManagerVCreateTable ( self, tbl, cmode, path, args );
-    va_end ( args );
-
-    return rc;
-}
-
-LIB_EXPORT rc_t CC KDBManagerVCreateTable ( KDBManager *self,
-    KTable **tbl, KCreateMode cmode, const char *path, va_list args )
-{
-    if ( tbl == NULL )
-        return RC ( rcDB, rcMgr, rcCreating, rcParam, rcNull );
-
-    * tbl = NULL;
-
-    if ( self == NULL )
-        return RC ( rcDB, rcMgr, rcCreating, rcSelf, rcNull );
-
-    return KDBManagerVCreateTableInt ( self, tbl, self -> wd, cmode, path, args );
-}
-
-LIB_EXPORT rc_t CC KDatabaseCreateTable ( KDatabase *self,
-    KTable **tbl, KCreateMode cmode, const char *name, ... )
-{
-    rc_t rc;
-    va_list args;
-
-    va_start ( args, name );
-    rc = KDatabaseVCreateTable ( self, tbl, cmode, name, args );
-    va_end ( args );
-
-    return rc;
-}
-LIB_EXPORT rc_t CC KDatabaseVCreateTable ( KDatabase *self,
-    KTable **tblp, KCreateMode cmode, const char *name, va_list args )
-{
-    return KDatabaseVCreateTableByMask ( self, tblp, cmode, -1, name, args );
-}
-
-LIB_EXPORT rc_t CC KDatabaseCreateTableByMask ( KDatabase *self,
-    KTable **tbl, KCreateMode cmode, KCreateMode cmode_mask, const char *name, ... )
-{
-    rc_t rc;
-    va_list args;
-
-    va_start ( args, name );
-    rc = KDatabaseVCreateTableByMask ( self, tbl, cmode, cmode_mask, name, args );
-    va_end ( args );
-
-    return rc;
-}
-
-LIB_EXPORT rc_t CC KDatabaseVCreateTableByMask ( KDatabase *self,
-    KTable **tblp, KCreateMode cmode, KCreateMode cmode_mask,
-    const char *name, va_list args )
-{
-    rc_t rc;
-    char path [ 256 ];
-
-    if ( tblp == NULL )
-        return RC ( rcDB, rcDatabase, rcCreating, rcParam, rcNull );
-
-    * tblp = NULL;
-
-    if ( self == NULL )
-        return RC ( rcDB, rcDatabase, rcCreating, rcSelf, rcNull );
-
-    if ( self -> read_only )
-        return RC ( rcDB, rcDatabase, rcCreating, rcDatabase, rcReadonly );
-
-    rc = KDBVMakeSubPath ( self -> dir,
-        path, sizeof path, "tbl", 3, name, args );
-    if ( rc == 0 )
-    {
-        /* ensure that the "tbl" namespace directory is there */
-        rc = KDirectoryCreateDir ( self -> dir,
-            0775, kcmOpen, "tbl" );
-        if ( rc == 0 )
-        {
-            KCreateMode table_cmode;
-            /* fix mask */
-            if ( (cmode_mask & kcmValueMask) != 0 )
-                cmode_mask |= kcmValueMask;
-            table_cmode = (self->cmode & ~cmode_mask) | (cmode & cmode_mask);
-            rc = KDBManagerVCreateTableInt_noargs ( self -> mgr, tblp,
-                                             self -> dir, table_cmode, path );
-            if ( rc == 0 )
-            {
-                KTable *tbl = ( KTable* ) * tblp;
-                tbl -> db = KDatabaseAttach ( self );
-            }
-        }
-    }
-
-    return rc;
-}
-
-#include <vfs/path.h> /* VPathMakeString */
-/* OpenTableRead
- * VOpenTableRead
- *  open a table for read
- *
- *  "tbl" [ OUT ] - return parameter for newly opened table
- *
- *  "path" [ IN ] - NUL terminated string in
- *  wd-native character set giving path to table
- */
-static
-rc_t KDBManagerVOpenTableReadInt ( const KDBManager *cself,
-    const KTable **tblp, const KDirectory *wd, bool try_srapath,
-    const char *path, va_list args, const struct VPath *vpath )
-{
-    const String * str = NULL;
-    char key_path[ 4096 ];
-    char short_path[ 4096 ];
-    size_t z;
-    rc_t rc = 0;
-
-    if (vpath != NULL) {
-        assert(path == NULL);
-        rc = VPathMakeString(vpath, &str);
-        if (rc == 0)
-            path = str->addr;
-    }
-
-    rc = string_vprintf(short_path, sizeof short_path, &z, path, args);
-
-    if (str != NULL) {
-        StringWhack(str);
-        str = NULL;
-        path = NULL;
-    }
-
-    if ( rc == 0 )
-		rc = KDirectoryResolvePath ( wd, true, key_path, sizeof key_path, short_path );
-    if ( rc == 0 )
-    {
-        KSymbol *sym;
-        
-        /* if already open */
-        sym = KDBManagerOpenObjectFind( cself, key_path );
-        if (sym != NULL)
-        {
-            const KTable * ctbl;
-            rc_t obj;
-
-            switch (sym->type)
-            {
-            case kptTable:
-                ctbl = (KTable*)sym->u.obj;
-                /* if open for update, refuse */
-                if ( ctbl -> read_only )
-                {
-                    /* attach a new reference and we're gone */
-                    rc = KTableAddRef ( ctbl );
-                    if ( rc == 0 )
-                        * tblp = ctbl;
-                    return rc;
-                }
-                obj = rcTable;
-                break;
-                
-            default:
-                obj = rcPath;
-                break;
-            case kptDatabase:
-                obj = rcDatabase;
-                break;
-            case kptColumn:
-                obj = rcColumn;
-                break;
-            case kptIndex:
-                obj = rcIndex;
-                break;
-            case kptMetadata:
-                obj = rcMetadata;
-                break;
-            }
-            rc = RC (rcDB, rcMgr, rcOpening, obj, rcBusy);
-        }
-        else
-        {
-			KTable * tbl;
-			const KDirectory *dir;
-			bool prerelease = false;
-
-			rc = KDBOpenPathTypeRead ( cself, wd, short_path, &dir, kptTable, NULL, try_srapath, vpath );
-			if ( rc != 0 )
-			{
-				prerelease = true;
-				rc = KDBOpenPathTypeRead ( cself, wd, short_path, &dir, kptPrereleaseTbl, NULL, try_srapath, vpath );
-			}        
-			if ( rc == 0 )
-			{
-				rc = KTableMake ( & tbl, dir, key_path, NULL, true );
-				if ( rc == 0 )
-				{
-					KDBManager * self = (KDBManager *)cself;
-
-					rc = KDBManagerInsertTable( self, tbl );
-
-					if (rc == 0)
-					{
-						tbl -> prerelease = prerelease;
-						* tblp = tbl;
-						return 0;
-					}
-					free ( tbl );
-				}
-				KDirectoryRelease ( dir );
-			}
-        }
-    }
-    return rc;
-}
-
-static
-rc_t KDBManagerVOpenTableReadInt_noargs ( const KDBManager *cself,
-    const KTable **tblp, const KDirectory *wd, bool try_srapath,
-    const char *path, const struct VPath *vpath, ... )
-{
-    rc_t rc;
-    va_list args;
-
-    va_start ( args, vpath );
-    rc = KDBManagerVOpenTableReadInt ( cself, tblp, wd, try_srapath, path, args, vpath );
-    va_end ( args );
-
-    return rc;
-}
-
-LIB_EXPORT rc_t CC KDBManagerOpenTableRead ( const KDBManager *self,
-    const KTable **tbl, const char *path, ... )
-{
-    rc_t rc;
-    va_list args;
-
-    va_start ( args, path );
-    rc = KDBManagerVOpenTableRead ( self, tbl, path, args );
-    va_end ( args );
-
-    return rc;
-}
-
-LIB_EXPORT rc_t CC KDBManagerVOpenTableRead ( const KDBManager *self,
-    const KTable **tbl, const char *path, va_list args )
-{
-    if ( tbl == NULL )
-        return RC ( rcDB, rcMgr, rcOpening, rcParam, rcNull );
-
-    * tbl = NULL;
-
-    if ( self == NULL )
-        return RC ( rcDB, rcMgr, rcOpening, rcSelf, rcNull );
-
-    return KDBManagerVOpenTableReadInt ( self, tbl, self -> wd, true, path, args, NULL );
-}
-
-LIB_EXPORT rc_t CC KDBManagerOpenTableReadVPath(const KDBManager *self,
-    const KTable **tbl, const struct VPath *path)
-{
-    if (tbl == NULL)
-        return RC(rcDB, rcMgr, rcOpening, rcParam, rcNull);
-
-    *tbl = NULL;
-
-    if (self == NULL)
-        return RC(rcDB, rcMgr, rcOpening, rcSelf, rcNull);
-
-    return KDBManagerVOpenTableReadInt_noargs(self, tbl, self->wd, true, NULL, path);
-}
-
-LIB_EXPORT rc_t CC KDatabaseOpenTableRead ( const KDatabase *self,
-    const KTable **tbl, const char *name, ... )
-{
-    rc_t rc;
-    va_list args;
-
-    va_start ( args, name );
-    rc = KDatabaseVOpenTableRead ( self, tbl, name, args );
-    va_end ( args );
-
-    return rc;
-}
-
-LIB_EXPORT rc_t CC KDatabaseVOpenTableRead ( const KDatabase *self,
-    const KTable **tblp, const char *name, va_list args )
-{
-    rc_t rc;
-    char path [ 256 ];
-
-    if ( tblp == NULL )
-        return RC ( rcDB, rcDatabase, rcOpening, rcParam, rcNull );
-
-    * tblp = NULL;
-
-    if ( self == NULL )
-        return RC ( rcDB, rcDatabase, rcOpening, rcSelf, rcNull );
-
-    if ( name == NULL )
-        return RC ( rcDB, rcDatabase, rcOpening, rcParam, rcNull );
-
-    rc = KDBVMakeSubPath ( self -> dir,
-        path, sizeof path, "tbl", 3, name, args );
-    if ( rc == 0 )
-    {
-        rc = KDBManagerVOpenTableReadInt_noargs ( self -> mgr, tblp,
-                                           self -> dir, false, path, NULL );
-        if ( rc == 0 )
-        {
-            KTable *tbl = ( KTable* ) * tblp;
-            tbl -> db = KDatabaseAttach ( self );
-        }
-    }
-
-    return rc;
-}
-
-
-/* OpenTableUpdate
- * VOpenTableUpdate
- *  open a table for read/write
- *
- *  "tbl" [ OUT ] - return parameter for newly opened table
- *
- *  "name" [ IN ] - NUL terminated string in UTF-8 giving name of table
- */
-static
-rc_t KDBManagerVOpenTableUpdateInt ( KDBManager *self,
-    KTable **tbl, KDirectory *wd, const char *path, va_list args )
-{
-    char tblpath [ 4096 ];
-    rc_t rc = KDirectoryVResolvePath ( wd, true,
-        tblpath, sizeof tblpath, path, args );
-    if ( rc == 0 )
-    {
-        KSymbol * sym;
-        KFile *f;
-        KMD5SumFmt * md5 = NULL;
-        bool convert = false;
-
-        /* if already open, refuse */
-        sym = KDBManagerOpenObjectFind (self, tblpath);
-        if (sym != NULL)
-        {
-            rc_t obj;
-            switch (sym->type)
-            {
-            default:
-                obj = rcPath;
-                break;
-            case kptDatabase:
-                obj = rcDatabase;
-                break;
-            case kptTable:
-                obj = rcTable;
-                break;
-            case kptColumn:
-                obj = rcColumn;
-                break;
-            case kptIndex:
-                obj = rcIndex;
-                break;
-            case kptMetadata:
-                obj = rcMetadata;
-                break;
-            }
-            return RC ( rcDB, rcMgr, rcOpening, obj, rcBusy );
-        }
-        /* only open existing tbls */
-        switch ( KDBPathType ( /*NULL,*/ wd, NULL, tblpath ) )
-        {
-        case kptNotFound:
-            return RC ( rcDB, rcMgr, rcOpening, rcTable, rcNotFound );
-
-        case kptBadPath:
-            return RC ( rcDB, rcMgr, rcOpening, rcPath, rcInvalid );
-
-        case kptFile:
-        case kptFile | kptAlias:
-            /* if we find a file, vary the failure if it is an archive that is a table
-             * or a non related file */
-            if (( KDBOpenPathTypeRead ( self, wd, tblpath, NULL, kptTable, NULL,
-                                        false, NULL ) == 0 ) ||
-                ( KDBOpenPathTypeRead ( self, wd, tblpath, NULL, kptPrereleaseTbl, NULL,
-                                        false, NULL ) == 0 ) )
-                return RC ( rcDB, rcMgr, rcCreating, rcTable, rcUnauthorized );
-            /* fall through */
-        default:
-            return RC ( rcDB, rcMgr, rcOpening, rcPath, rcIncorrect );
-        case kptTable:
-        case kptTable | kptAlias:
-            break;
-
-        case kptPrereleaseTbl:
-        case kptPrereleaseTbl | kptAlias:
-            convert = true;
-            break;
-        }
-
-        /* test now for locked directory */
-        rc = KDBWritable ( wd, tblpath );
-        switch (GetRCState(rc))
-        {
-        default:
-            return RC ( rcDB, rcMgr, rcOpening, rcTable, rcNoPerm );
-
-        case rcLocked:
-            return RC ( rcDB, rcMgr, rcOpening, rcTable, rcLocked );
-
-        case rcReadonly:
-            return RC ( rcDB, rcMgr, rcOpening, rcTable, rcReadonly );
-
-        case 0:
-            rc = 0;
-            break;
-        }
-
-        rc = KDirectoryOpenFileWrite ( wd, &f, true, "%s/md5", tblpath );
-        if ( rc == 0 )
-        {
-            rc = KMD5SumFmtMakeUpdate ( & md5, f );
-            if ( rc != 0 )
-                KFileRelease ( f );
-        }
-        else if ( GetRCState ( rc ) == rcNotFound )
-            rc = 0;
-#if 0
-        else if ( GetRCState ( rc ) == rcUnauthorized )
-            return RC ( rcDB, rcMgr, rcCreating, rcTable, rUnauthorized );
-#endif
-
-        if ( rc == 0 )
-            rc = KDBManagerMakeTableUpdate ( self, tbl, wd, tblpath, convert, md5 );
-
-        KMD5SumFmtRelease ( md5 );
-    }
-
-    return rc;
-}
-
-static
-rc_t KDBManagerVOpenTableUpdateInt_noargs ( KDBManager *self,
-    KTable **tbl, KDirectory *wd, const char *path, ... )
-{
-    rc_t rc;
-    va_list args;
-
-    va_start ( args, path );
-    rc = KDBManagerVOpenTableUpdateInt ( self, tbl, wd, path, args );
-    va_end ( args );
-
-    return rc;
-}
-
-LIB_EXPORT rc_t CC KDBManagerOpenTableUpdate ( KDBManager *self,
-    KTable **tbl, const char *path, ... )
-{
-    rc_t rc;
-    va_list args;
-
-    va_start ( args, path );
-    rc = KDBManagerVOpenTableUpdate ( self, tbl, path, args );
-    va_end ( args );
-
-    return rc;
-}
-
-LIB_EXPORT rc_t CC KDBManagerVOpenTableUpdate ( KDBManager *self,
-    KTable **tbl, const char *path, va_list args )
-{
-    if ( tbl == NULL )
-        return RC ( rcDB, rcMgr, rcOpening, rcParam, rcNull );
-
-    * tbl = NULL;
-
-    if ( self == NULL )
-        return RC ( rcDB, rcMgr, rcOpening, rcSelf, rcNull );
-
-    return KDBManagerVOpenTableUpdateInt ( self, tbl, self -> wd, path, args );
-}
-
-LIB_EXPORT rc_t CC KDatabaseOpenTableUpdate ( KDatabase *self,
-    KTable **tbl, const char *name, ... )
-{
-    rc_t rc;
-    va_list args;
-
-    va_start ( args, name );
-    rc = KDatabaseVOpenTableUpdate ( self, tbl, name, args );
-    va_end ( args );
-
-    return rc;
-}
-
-LIB_EXPORT rc_t CC KDatabaseVOpenTableUpdate ( KDatabase *self,
-    KTable **tblp, const char *name, va_list args )
-{
-    rc_t rc;
-    char path [ 256 ];
-
-    if ( tblp == NULL )
-        return RC ( rcDB, rcDatabase, rcOpening, rcParam, rcNull );
-
-    * tblp = NULL;
-
-    if ( self == NULL )
-        return RC ( rcDB, rcDatabase, rcOpening, rcSelf, rcNull );
-
-    if ( self -> read_only )
-        return RC ( rcDB, rcDatabase, rcOpening, rcDatabase, rcReadonly );
-
-    rc = KDBVMakeSubPath ( self -> dir,
-        path, sizeof path, "tbl", 3, name, args );
-    if ( rc == 0 )
-    {
-        rc = KDBManagerVOpenTableUpdateInt_noargs ( self -> mgr, tblp,
-                                             self -> dir, path );
-        if ( rc == 0 )
-        {
-            KTable *tbl = ( KTable* ) * tblp;
-            tbl -> db = KDatabaseAttach ( self );
-        }
-    }
-
-    return rc;
-}
-
-
 /* Locked
  *  returns non-zero if locked
  */
-LIB_EXPORT bool CC KTableLocked ( const KTable *self )
+static
+bool CC
+KWTableLocked ( const KTable *self )
 {
-    rc_t rc;
-
-    if ( self == NULL )
-        return false;
-
-    rc = KDBWritable ( self -> dir, "." );
+    rc_t rc = KDBWWritable ( self -> dir, "." );
     return GetRCState ( rc ) == rcLocked;
 }
 
@@ -1145,9 +238,11 @@ LIB_EXPORT bool CC KTableLocked ( const KTable *self )
  *
  *  "path" [ IN ] - NUL terminated path
  */
-LIB_EXPORT bool CC KTableVExists ( const KTable *self, uint32_t type, const char *name, va_list args )
+static
+bool CC
+KWTableVExists ( const KTable *self, uint32_t type, const char *name, va_list args )
 {
-    if ( self != NULL && name != NULL && name [ 0 ] != 0 )
+    if ( name != NULL && name [ 0 ] != 0 )
     {
         rc_t rc;
         const char *ns;
@@ -1183,21 +278,6 @@ LIB_EXPORT bool CC KTableVExists ( const KTable *self, uint32_t type, const char
     return false;
 }
 
-LIB_EXPORT bool CC KTableExists ( const KTable *self, uint32_t type, const char *name, ... )
-{
-    bool exists;
-
-    va_list args;
-    va_start ( args, name );
-
-    exists = KTableVExists ( self, type, name, args );
-
-    va_end ( args );
-
-    return exists;
-}
-
-
 /* IsAlias
  *  returns true if object name is an alias
  *  returns path to fundamental name if it was aliased
@@ -1206,14 +286,15 @@ LIB_EXPORT bool CC KTableExists ( const KTable *self, uint32_t type, const char 
  *  valid values are kptIndex and kptColumn
  *
  *  "resolved" [ OUT ] and "rsize" [ IN ] - optional output buffer
- *  for fundamenta object name if "alias" is not a fundamental name, 
+ *  for fundamenta object name if "alias" is not a fundamental name,
  *
  *  "name" [ IN ] - NUL terminated object name
  */
-LIB_EXPORT bool CC KTableIsAlias ( const KTable *self, uint32_t type,
-    char *resolved, size_t rsize, const char *name )
+static
+bool CC
+KWTableIsAlias ( const KTable *self, uint32_t type, char *resolved, size_t rsize, const char *name )
 {
-    if ( self != NULL && name != NULL && name [ 0 ] != 0 )
+    if ( name != NULL && name [ 0 ] != 0 )
     {
         rc_t rc;
         const char *ns;
@@ -1309,29 +390,18 @@ rc_t KTableLockInt (const KTable  * self, char * path, size_t path_size,
     return rc;
 }
 
-LIB_EXPORT rc_t CC KTableVWritable (const KTable *self, uint32_t type, const char * name, va_list args )
+static
+rc_t CC
+KWTableVWritable (const KTable *self, uint32_t type, const char * name, va_list args )
 {
     rc_t rc;
     char path [ 256 ];
 
     rc = KTableLockInt (self, path, sizeof path, type, name, args);
     if (rc == 0)
-        rc = KDBWritable (self->dir, path);
+        rc = KDBWWritable (self->dir, path);
     return rc;
 }
-
-LIB_EXPORT rc_t CC KTableWritable ( const KTable *self, uint32_t type, const char * name, ... )
-{
-    rc_t rc;
-    va_list args;
-
-    va_start ( args, name );
-    rc = KTableVWritable ( self, type, name, args );
-    va_end ( args );
-
-    return rc;
-}
-
 
 /* Lock
  *  apply lock
@@ -1519,7 +589,9 @@ LIB_EXPORT rc_t CC KTableReindex ( KTable *self )
  *  duplicate reference to manager
  *  NB - returned reference must be released
  */
-LIB_EXPORT rc_t CC KTableOpenManagerRead ( const KTable *self, const KDBManager **mgr )
+static
+rc_t CC
+KWTableOpenManagerRead ( const KTable *self, const KDBManager **mgr )
 {
     rc_t rc;
 
@@ -1527,16 +599,11 @@ LIB_EXPORT rc_t CC KTableOpenManagerRead ( const KTable *self, const KDBManager 
         rc = RC ( rcDB, rcTable, rcAccessing, rcParam, rcNull );
     else
     {
-        if ( self == NULL )
-            rc = RC ( rcDB, rcTable, rcAccessing, rcSelf, rcNull );
-        else
+        rc = KDBManagerAddRef ( self -> mgr );
+        if ( rc == 0 )
         {
-            rc = KDBManagerAddRef ( self -> mgr );
-            if ( rc == 0 )
-            {
-                * mgr = self -> mgr;
-                return 0;
-            }
+            * mgr = self -> mgr;
+            return 0;
         }
 
         * mgr = NULL;
@@ -1576,7 +643,9 @@ LIB_EXPORT rc_t CC KTableOpenManagerUpdate ( KTable *self, KDBManager **mgr )
  *  duplicate reference to parent database
  *  NB - returned reference must be released
  */
-LIB_EXPORT rc_t CC KTableOpenParentRead ( const KTable *self, const KDatabase **db )
+static
+rc_t CC
+KWTableOpenParentRead ( const KTable *self, const KDatabase **db )
 {
     rc_t rc;
 
@@ -1584,16 +653,11 @@ LIB_EXPORT rc_t CC KTableOpenParentRead ( const KTable *self, const KDatabase **
         rc = RC ( rcDB, rcTable, rcAccessing, rcParam, rcNull );
     else
     {
-        if ( self == NULL )
-            rc = RC ( rcDB, rcTable, rcAccessing, rcSelf, rcNull );
-        else
+        rc = KDatabaseAddRef ( self -> db );
+        if ( rc == 0 )
         {
-            rc = KDatabaseAddRef ( self -> db );
-            if ( rc == 0 )
-            {
-                * db = self -> db;
-                return 0;
-            }
+            * db = self -> db;
+            return 0;
         }
 
         * db = NULL;
@@ -1634,7 +698,9 @@ LIB_EXPORT rc_t CC KTableOpenParentUpdate ( KTable *self, KDatabase **db )
 /* OpenDirectory
  *  access the directory in use
  */
-LIB_EXPORT rc_t CC KTableOpenDirectoryRead ( const KTable *self, const KDirectory **dir )
+static
+rc_t CC
+KWTableOpenDirectoryRead ( const KTable *self, const KDirectory **dir )
 {
     rc_t rc;
 
@@ -1642,15 +708,8 @@ LIB_EXPORT rc_t CC KTableOpenDirectoryRead ( const KTable *self, const KDirector
         rc = RC ( rcDB, rcTable, rcAccessing, rcParam, rcNull );
     else
     {
-        if ( self == NULL )
-            rc = RC ( rcDB, rcTable, rcAccessing, rcSelf, rcNull );
-        else
-        {
-            * dir = self -> dir;
-            return KDirectoryAddRef ( * dir );
-        }
-
-        * dir = NULL;
+        * dir = self -> dir;
+        return KDirectoryAddRef ( * dir );
     }
 
     return rc;
@@ -1681,28 +740,6 @@ LIB_EXPORT rc_t CC KTableOpenDirectoryUpdate ( KTable *self, KDirectory **dir )
 }
 
 
-/* ModDate
- *  get modification date
- */
-LIB_EXPORT rc_t CC KTableModDate ( const KTable *self, KTime_t *mtime )
-{
-    rc_t rc;
-
-    if ( mtime == NULL )
-        rc = RC ( rcDB, rcTable, rcAccessing, rcParam, rcNull );
-    else
-    {
-        if ( self != NULL )
-            return KDBGetObjModDate ( self -> dir, mtime );
-
-        rc = RC ( rcDB, rcTable, rcAccessing, rcSelf, rcNull );
-        * mtime = 0;
-    }
-
-    return rc;
-}
-
-
 /*--------------------------------------------------------------------------
  * KNamelist
  */
@@ -1721,33 +758,27 @@ bool CC KDatabaseListFilter ( const KDirectory *dir, const char *name, void *dat
 {
     struct FilterData * data = data_;
 
-    return KDBOpenPathTypeRead(data->mgr, dir, name, NULL, data->type, NULL, false,
+    return KDBManagerOpenPathTypeRead(data->mgr, dir, name, NULL, data->type, NULL, false,
         NULL ) == 0;
 }
 
-LIB_EXPORT rc_t CC KTableListCol ( const KTable *self, KNamelist **names )
+static
+rc_t CC
+KWTableListCol ( const KTable *self, KNamelist **names )
 {
-    if ( self != NULL )
-    {
-        struct FilterData data;
-        data.mgr = self->mgr;
-        data.type = kptColumn;
+    struct FilterData data;
+    data.mgr = self->mgr;
+    data.type = kptColumn;
 
-        return KDirectoryList ( self -> dir,
-            names, KDatabaseListFilter, &data, "col" );
-    }
-    
-    if ( names != NULL )
-        * names = NULL;
-    
-    return RC ( rcDB, rcTable, rcListing, rcSelf, rcNull );
+    return KDirectoryList ( self -> dir,
+        names, KDatabaseListFilter, &data, "col" );
 }
 
 static
 bool CC KTableListIdxFilter ( const KDirectory *dir, const char *name, void *data )
 {
     const size_t sz = strlen(name);
-    
+
     if (sz > 4 && strcmp(&name[sz - 4], ".md5") == 0)
         return false;
     return true;
@@ -1761,31 +792,27 @@ bool CC KTableListSkeyFilter ( const KDirectory *dir, const char *name, void *da
     return false;
 }
 
-LIB_EXPORT rc_t CC KTableListIdx ( const KTable *self, KNamelist **names )
+static
+rc_t CC
+KWTableListIdx ( const KTable *self, KNamelist **names )
 {
-    if ( self != NULL )
+    if ( ! self -> prerelease )
     {
-        if ( ! self -> prerelease )
-        {
-            return KDirectoryList ( self -> dir,
-                                    names, KTableListIdxFilter, NULL, "idx" );
-        }
-        
         return KDirectoryList ( self -> dir,
-                                names, KTableListSkeyFilter, NULL, "." );
+                                names, KTableListIdxFilter, NULL, "idx" );
     }
-    
-    if ( names != NULL )
-        * names = NULL;
-    
-    return RC ( rcDB, rcTable, rcListing, rcSelf, rcNull );
+
+    return KDirectoryList ( self -> dir,
+                            names, KTableListSkeyFilter, NULL, "." );
 }
 
 /* HasRemoteData
  *  indicates whether some/all table data comes from network resource
  *  such as HttpFile or CacheteeFile
  */
-KDB_EXTERN bool CC KTableHasRemoteData ( const KTable *self )
+static
+bool CC
+KWTableHasRemoteData ( const KTable *self )
 {
     return true;
 }
@@ -1826,7 +853,7 @@ static rc_t KTableObjectIsGoodSource(KTable const *self
     if (rc)
         return rc;
 
-    rc = KDBWritable(self->dir, path);
+    rc = KDBWWritable(self->dir, path);
     if (rc == 0) {
         if (KDBManagerOpenObjectBusy(self->mgr, path))
             return RC ( rcDB, rcTable, rcCopying, rcPath, rcBusy );
@@ -1848,7 +875,7 @@ static rc_t KTableObjectIsGoodDestination(KTable *self
     if (rc)
         return rc;
 
-    rc = KDBWritable(self->dir, path);
+    rc = KDBWWritable(self->dir, path);
     if (rc == 0)
         return RC(rcDB, rcTable, rcCopying, rcPath, rcExists);
     if (GetRCState(rc) == rcLocked || GetRCState(rc) == rcReadonly)
@@ -1904,4 +931,379 @@ LIB_EXPORT rc_t CC KTableCopyIndex(  KTable *self
 
     rc = KTableCopyObject(self, source, name, "idx");
     return RC(rcDB, rcTable, rcCopying, rcIndex, GetRCState(rc));
+}
+
+static
+rc_t CC
+KWTableVOpenColumnRead ( const KTable *self, const KColumn **colp, const char *name, va_list args )
+{
+    rc_t rc;
+    char path [ 256 ];
+
+    if ( colp == NULL )
+        return RC ( rcDB, rcTable, rcOpening, rcParam, rcNull );
+
+    * colp = NULL;
+
+    if ( self == NULL )
+        return RC ( rcDB, rcTable, rcOpening, rcSelf, rcNull );
+
+    rc = KDBVMakeSubPath ( self -> dir,
+        path, sizeof path, "col", 3, name, args );
+    if ( rc == 0 )
+    {
+	bool col_is_cached;
+        rc = KDBWManagerVOpenColumnReadInt_noargs ( self -> mgr,
+                                            colp, self -> dir, path, &col_is_cached, false );
+        if ( rc == 0 )
+        {
+            KColumn *col = ( KColumn* ) * colp;
+            if(!col_is_cached) col -> tbl = KTableAttach ( self );
+        }
+    }
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KTableCreateColumn ( KTable *self, KColumn **col,
+    KCreateMode cmode, KChecksum checksum, size_t pgsize, const char *path, ... )
+{
+    rc_t rc;
+    va_list args;
+
+    va_start ( args, path );
+    rc = KTableVCreateColumn ( self, col, cmode, checksum, pgsize, path, args );
+    va_end ( args );
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KTableVCreateColumn ( KTable *self, KColumn **colp,
+    KCreateMode cmode, KChecksum checksum, size_t pgsize,
+    const char *name, va_list args )
+{
+    rc_t rc;
+    char path [ 256 ];
+
+    if ( colp == NULL )
+        return RC ( rcDB, rcTable, rcCreating, rcParam, rcNull );
+
+    * colp = NULL;
+
+    if ( self == NULL )
+        return RC ( rcDB, rcTable, rcCreating, rcSelf, rcNull );
+
+    if ( self -> read_only )
+        return RC ( rcDB, rcTable, rcCreating, rcColumn, rcReadonly );
+
+    rc = KDBVMakeSubPath ( self -> dir,
+        path, sizeof path, "col", 3, name, args );
+    if ( rc == 0 )
+    {
+        /* set MD5 mode according to table */
+        if ( self -> use_md5 )
+            cmode |= kcmMD5;
+        else
+            cmode &= ~ kcmMD5;
+
+        rc = KDBManagerVCreateColumnInt_noargs ( self -> mgr, colp,
+                                          self -> dir, cmode | kcmParents, checksum, pgsize, path );
+        if ( rc == 0 )
+        {
+            KColumn *col = * colp;
+            col -> tbl = KTableAttach ( self );
+        }
+    }
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KTableOpenColumnUpdate ( KTable *self,
+    KColumn **col, const char *path, ... )
+{
+    rc_t rc;
+    va_list args;
+
+    va_start ( args, path );
+    rc = KTableVOpenColumnUpdate ( self, col, path, args );
+    va_end ( args );
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KTableVOpenColumnUpdate ( KTable *self,
+    KColumn **colp, const char *name, va_list args )
+{
+    rc_t rc;
+    char path [ 256 ];
+
+    if ( colp == NULL )
+        return RC ( rcDB, rcTable, rcOpening, rcParam, rcNull );
+
+    * colp = NULL;
+
+    if ( self == NULL )
+        return RC ( rcDB, rcTable, rcOpening, rcSelf, rcNull );
+
+    if ( self -> read_only )
+        return RC ( rcDB, rcTable, rcOpening, rcColumn, rcReadonly );
+
+    rc = KDBVMakeSubPath ( self -> dir,
+        path, sizeof path, "col", 3, name, args );
+    if ( rc == 0 )
+    {
+        rc = KDBManagerVOpenColumnUpdateInt_noargs ( self -> mgr,
+                                              colp, self -> dir, false, path );
+        if ( rc == 0 )
+        {
+            KColumn *col = * colp;
+            col -> tbl = KTableAttach ( self );
+        }
+    }
+    return rc;
+}
+
+bool KTableColumnNeedsReindex ( KTable *self, const char *colname )
+{
+    if ( self != NULL )
+    {
+        char path [ 256 ];
+        rc_t rc = KDBMakeSubPath ( self -> dir,
+            path, sizeof path, "col", 3, colname );
+        if ( rc == 0 )
+        {
+            uint64_t idx0_size;
+            rc = KDirectoryFileSize ( self -> dir, & idx0_size, "%s/idx0", path );
+            if ( rc == 0 && idx0_size > 0 )
+                return true;
+        }
+    }
+
+    return false;
+}
+
+static
+rc_t CC
+KWTableOpenMetadataRead ( const KTable *self, const KMetadata **metap )
+{
+    rc_t rc;
+    const KMetadata *meta;
+    bool  meta_is_cached;
+
+    if ( metap == NULL )
+        return RC ( rcDB, rcTable, rcOpening, rcParam, rcNull );
+
+    * metap = NULL;
+
+    rc = KDBWManagerOpenMetadataReadInt ( self -> mgr, & meta, self -> dir, 0, self -> prerelease, &meta_is_cached );
+    if ( rc == 0 )
+    {
+        if(!meta_is_cached) ((KMetadata*)meta) -> tbl = KTableAttach ( self );
+        * metap = meta;
+    }
+
+    return rc;
+}
+
+/* KTableMetaCompare
+ *  test if 2 tables have the same MetaDataNode ( and content ) for a given path
+ */
+/* >>>>>> !!! any changes here have to be duplicated in table.c !!! <<<<<< */
+static
+rc_t CC
+KWTableMetaCompare( const KTable *self, const KTable *other, const char * path, bool * equal )
+{
+    rc_t rc = 0;
+    if ( NULL == other || NULL == path || NULL == equal ) {
+        rc = RC ( rcDB, rcTable, rcComparing, rcParam, rcNull );
+    } else {
+        const KMetadata *self_meta;
+        rc = KTableOpenMetadataRead( self, &self_meta );
+        if ( 0 == rc ) {
+            const KMetadata *other_meta;
+            rc = KTableOpenMetadataRead( other, &other_meta );
+            if ( 0 == rc ) {
+                const KMDataNode * self_node;
+                rc = KMetadataOpenNodeRead( self_meta, &self_node, path );
+                if ( 0 == rc ) {
+                    const KMDataNode * other_node;
+                    rc = KMetadataOpenNodeRead( other_meta, &other_node, path );
+                    if ( 0 == rc ) {
+                        rc = KMDataNodeCompare( self_node, other_node, equal );
+                        KMDataNodeRelease( other_node );
+                    }
+                    KMDataNodeRelease( self_node );
+                }
+                KMetadataRelease( other_meta );
+            }
+            KMetadataRelease( self_meta );
+        }
+    }
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KTableOpenMetadataUpdate ( KTable *self, KMetadata **metap )
+{
+    rc_t rc;
+    KMetadata *meta;
+
+    if ( metap == NULL )
+        return RC ( rcDB, rcTable, rcOpening, rcParam, rcNull );
+
+    * metap = NULL;
+
+    if ( self == NULL )
+        return RC ( rcDB, rcTable, rcOpening, rcSelf, rcNull );
+
+    if ( self -> read_only )
+        return RC ( rcDB, rcTable, rcOpening, rcTable, rcReadonly );
+
+    rc = KDBManagerOpenMetadataUpdateInt ( self -> mgr, & meta, self -> dir, self -> md5 );
+    if ( rc == 0 )
+    {
+        meta -> tbl = KTableAttach ( self );
+        * metap = meta;
+    }
+
+    return rc;
+}
+
+static
+rc_t CC
+KWTableVOpenIndexRead ( const KTable *self, const KIndex **idxp, const char *name, va_list args )
+{
+    rc_t rc = 0;
+    char path [ 256 ];
+
+    const char *ns = "idx";
+    uint32_t ns_size = 3;
+
+    if ( idxp == NULL )
+        return RC ( rcDB, rcTable, rcOpening, rcParam, rcNull );
+
+    * idxp = NULL;
+
+    if ( self -> prerelease )
+    {
+        ns = "";
+        ns_size = 0;
+    }
+
+    rc = KDBVMakeSubPath ( self -> dir,
+        path, sizeof path, ns, ns_size, name, args );
+    if ( rc == 0 )
+    {
+        KIndex *idx;
+        rc = KDBWManagerOpenIndexReadInt ( self -> mgr, (const KIndex**)& idx,
+                                          self -> dir, path );
+        if ( rc == 0 )
+        {
+            if (idx->tbl != self)
+                idx -> tbl = KTableAttach ( self );
+            * idxp = idx;
+        }
+    }
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KTableCreateIndex ( struct KTable *self, KIndex **idx,
+    KIdxType type, KCreateMode cmode, const char *name, ... )
+{
+    rc_t rc = 0;
+    va_list args;
+
+    va_start ( args, name );
+    rc = KTableVCreateIndex ( self, idx, type, cmode, name, args );
+    va_end ( args );
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KTableVCreateIndex ( KTable *self, KIndex **idxp,
+    KIdxType type, KCreateMode cmode, const char *name, va_list args )
+{
+    rc_t rc = 0;
+    KDirectory *dir;
+
+    if ( idxp == NULL )
+        return RC ( rcDB, rcTable, rcCreating, rcParam, rcNull );
+
+    * idxp = NULL;
+
+    if ( self == NULL )
+        return RC ( rcDB, rcTable, rcCreating, rcSelf, rcNull );
+
+    if ( self -> read_only )
+        return RC ( rcDB, rcTable, rcCreating, rcTable, rcReadonly );
+
+    rc = KDirectoryCreateDir_v1 ( self -> dir, 0777, kcmOpen, "idx" );
+    if ( rc == 0 )
+        rc = KDirectoryOpenDirUpdate_v1 ( self -> dir, & dir, false, "idx" );
+    if ( rc == 0 )
+    {
+        char path [ 256 ];
+        rc = KDirectoryVResolvePath ( dir, false, path, sizeof path, name, args );
+        if ( rc == 0 )
+        {
+            rc = KDBManagerCreateIndexInt ( self -> mgr, idxp, dir,
+                type, cmode | kcmParents, path, self -> use_md5 );
+            if ( rc == 0 )
+            {
+                KIndex *idx = * idxp;
+                idx -> tbl = KTableAttach ( self );
+            }
+        }
+
+        KDirectoryRelease ( dir );
+    }
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KTableOpenIndexUpdate ( struct KTable *self,
+    KIndex **idx, const char *name, ... )
+{
+    rc_t rc = 0;
+    va_list args;
+
+    va_start ( args, name );
+    rc = KTableVOpenIndexUpdate ( self, idx, name, args );
+    va_end ( args );
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KTableVOpenIndexUpdate ( KTable *self,
+    KIndex **idxp, const char *name, va_list args )
+{
+    rc_t rc = 0;
+    KDirectory *dir;
+
+    if ( idxp == NULL )
+        return RC ( rcDB, rcTable, rcOpening, rcParam, rcNull );
+
+    * idxp = NULL;
+
+    if ( self == NULL )
+        return RC ( rcDB, rcTable, rcOpening, rcSelf, rcNull );
+
+    if ( self -> read_only )
+        return RC ( rcDB, rcTable, rcOpening, rcTable, rcReadonly );
+
+    rc = KDirectoryOpenDirUpdate_v1 ( self -> dir, & dir, false, "idx" );
+    if ( rc == 0 )
+    {
+        char path [ 256 ];
+        rc = KDirectoryVResolvePath ( dir, false, path, sizeof path, name, args );
+        if ( rc == 0 )
+        {
+            rc = KDBManagerOpenIndexUpdate ( self -> mgr, idxp, dir, path );
+            if ( rc == 0 )
+            {
+                KIndex *idx = * idxp;
+                idx -> tbl = KTableAttach ( self );
+            }
+        }
+
+        KDirectoryRelease ( dir );
+    }
+    return rc;
 }

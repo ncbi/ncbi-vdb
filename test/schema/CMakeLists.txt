@@ -49,6 +49,9 @@ if( SINGLE_CONFIG )
 endif()
 
 if (Python3_EXECUTABLE)
+    add_custom_target(Build-wso ALL )
+    add_dependencies(Build-wso ncbi-wvdb-shared)
+
     add_test( NAME Test_SCHEMA_454_db
         COMMAND ${Python3_EXECUTABLE} test_VDB-5250.py
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}

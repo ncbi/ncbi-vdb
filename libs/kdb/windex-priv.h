@@ -24,28 +24,29 @@
 *
 */
 
-#ifndef _h_index_priv_
-#define _h_index_priv_
+#pragma once
 
-#ifndef _h_index_cmn_
-#include "index-cmn.h"
-#endif
+#include <kdb/index.h>
 
-#ifndef _h_klib_trie_
 #include <klib/trie.h>
-#endif
+#include <klib/symbol.h>
+
+typedef struct KIndex KIndex;
+#define KINDEX_IMPL KIndex
+#include "index-base.h"
+#include "index-cmn.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 
 /*--------------------------------------------------------------------------
  * forwards
  */
 struct BSTNode;
 struct KDirectory;
-
+struct KDBManager;
+struct KDirectory;
 
 /*--------------------------------------------------------------------------
  * V1
@@ -210,11 +211,40 @@ rc_t KU64IndexDelete_v3(KU64Index_v3* self, uint64_t key);
 rc_t KU64IndexPersist_v3(KU64Index_v3* self, bool proj, struct KDirectory *dir, const char *path, bool use_md5);
 
 
-
-/*--------------------------------------------------------------------------
+ /*--------------------------------------------------------------------------
  * KIndex
- *  represents an index
+ *  an object capable of mapping an object to integer oid
  */
+
+struct KIndex
+{
+    KIndexBase dad;
+
+    BSTNode n;
+
+    struct KDBManager *mgr;
+    struct KDatabase *db;
+    struct KTable *tbl;
+    struct KDirectory *dir;
+
+    uint32_t vers;
+    union
+    {
+        KTrieIndex_v1 txt1;
+        KTrieIndex_v2 txt2;
+        KU64Index_v3  u64_3;
+    } u;
+    bool converted_from_v1;
+    uint8_t type;
+    uint8_t read_only;
+    uint8_t dirty;
+    bool use_md5;
+
+    KSymbol sym;
+
+    char path [ 1 ];
+};
+
 
 /* Cmp
  * Sort
@@ -222,9 +252,11 @@ rc_t KU64IndexPersist_v3(KU64Index_v3* self, bool proj, struct KDirectory *dir, 
 int KIndexCmp ( const void *item, struct BSTNode const *n );
 int KIndexSort ( struct BSTNode const *item, struct BSTNode const *n );
 
+rc_t KWIndexMakeRead ( KIndex **idxp, const struct KDirectory *dir, const char *path );
+rc_t KIndexCreate ( KIndex **idxp, KDirectory *dir, KIdxType type, KCreateMode cmode, const char *path, int ptype );
+rc_t KIndexMakeUpdate ( KIndex **idxp, KDirectory *dir, const char *path );
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _h_index_priv_ */
