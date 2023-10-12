@@ -68,7 +68,7 @@ protected:
         if (caching)
             unsetenv("NCBI_VDB_NO_CACHE_SDL_RESPONSE");
         else
-            setenv("NCBI_VDB_NO_CACHE_SDL_RESPONSE", "", 1);
+            setenv("NCBI_VDB_NO_CACHE_SDL_RESPONSE", "1", 1);
 
         rc_t rc(VFSManagerMake(&mgr));
         if (rc != 0)
