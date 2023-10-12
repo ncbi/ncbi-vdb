@@ -27,7 +27,7 @@
 #ifndef _h_trieidx_priv_
 #define _h_trieidx_priv_
 
-#include "index-priv.h"
+#include "index-cmn.h"
 
 #ifdef __cplusplus
 extern "C" {

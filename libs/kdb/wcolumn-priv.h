@@ -47,6 +47,12 @@
 #include "wcolidx-priv.h"
 #endif
 
+#define KCOLUMN_IMPL KColumn
+#include "column-base.h"
+
+#define KCOLUMNBLOB_IMPL KColumnBlob
+#include "columnblob-base.h"
+
 #include <klib/symbol.h>
 #include <kfs/file.h>
 #include <kfs/md5.h>
@@ -70,6 +76,8 @@ struct KMD5SumFmt;
  */
 struct KColumn
 {
+    KColumnBase dad;
+
     struct KTable *tbl;
     struct KDBManager *mgr;
     struct KDirectory *dir;
@@ -79,7 +87,6 @@ struct KColumn
     KColumnIdx idx;
     KColumnData df;
 
-    KRefcount refcount;
     uint32_t opencount;
     uint32_t commit_freq;
     uint32_t csbytes;
@@ -91,13 +98,8 @@ struct KColumn
     char path [ 1 ];
 };
 
-/* Attach
- * Sever
- *  like Release, except called internally
- *  indicates that a child object is letting go...
- */
-KColumn *KColumnAttach ( const KColumn *self );
-rc_t KColumnSever ( const KColumn *self );
+rc_t KWColumnMake ( KColumn **colp, const KDirectory *dir, const char *path,
+		   KMD5SumFmt * md5, bool read_only );
 
 /* Cmp
  * Sort
@@ -106,12 +108,55 @@ int KColumnCmp ( const void *item, struct BSTNode const *n );
 int KColumnSort ( struct BSTNode const *item, struct BSTNode const *n );
 
 
-rc_t KColumnFileCreate ( KFile ** ppf, KMD5File ** ppfmd5, KDirectory * dir, 
+rc_t KColumnFileCreate ( KFile ** ppf, KMD5File ** ppfmd5, KDirectory * dir,
 			 KMD5SumFmt * md5, KCreateMode mode,
 			 bool append, const char * name);
-rc_t KColumnFileOpenUpdate ( KFile ** ppf, KMD5File ** ppfmd5, KDirectory * dir, 
+rc_t KColumnFileOpenUpdate ( KFile ** ppf, KMD5File ** ppfmd5, KDirectory * dir,
 			     KMD5SumFmt * md5, bool append,
 			     const char * name);
+
+rc_t KWColumnMakeRead ( KColumn **colp, const KDirectory *dir, const char *path, KMD5SumFmt * md5 );
+rc_t KColumnCreate ( KColumn **colp, KDirectory *dir,
+    KCreateMode cmode, KChecksum checksum,
+	size_t pgsize, const char *path, KMD5SumFmt *md5 );
+rc_t KColumnMakeUpdate ( KColumn **colp,
+    KDirectory *dir, const char *path, KMD5SumFmt *md5 );
+
+/*--------------------------------------------------------------------------
+ * KColumnBlob
+ *  one or more rows of column data
+ */
+struct KColumnBlob
+{
+    KColumnBlobBase dad;
+
+    /* holds either an existing blob loc
+       or new blob index range */
+    KColBlobLoc loc;
+
+    /* holds old and new page maps */
+    KColumnPageMap pmorig;
+    KColumnPageMap pmnew;
+
+    /* owning column */
+    KColumn *col;
+
+    /* number of bytes written to blob */
+    uint32_t num_writ;
+
+    /* checksums */
+    uint32_t crc32;
+    MD5State md5;
+
+    /* open mode */
+    uint8_t read_only;
+
+    /* for validation */
+    bool bswap;
+};
+
+rc_t KWColumnBlobMake ( KColumnBlob **blobp, bool bswap );
+rc_t KWColumnBlobOpenRead ( KColumnBlob *self, const KColumn *col, int64_t id );
 
 #ifdef __cplusplus
 }

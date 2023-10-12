@@ -29,6 +29,7 @@
 #define KONST const
 #include "index-priv.h"
 #include "dbmgr-priv.h"
+#include "rdbmgr.h"
 #include "database-priv.h"
 #include "table-priv.h"
 #include "kdb-priv.h"
@@ -49,37 +50,54 @@
 #include <byteswap.h>
 #include <assert.h>
 
-/*--------------------------------------------------------------------------
- * KIndex
- *  an object capable of mapping an object to integer oid
- */
-struct KIndex
-{
-    const KDBManager *mgr;
-    const KDatabase *db;
-    const KTable *tbl;
-    KRefcount refcount;
-    uint32_t vers;
-    union
-    {
-        KTrieIndex_v1 txt1;
-        KTrieIndex_v2 txt234;
-        KU64Index_v3  u64_3;
-    } u;
-    bool converted_from_v1;
-    uint8_t type;
-    char path [ 1 ];
-};
+static rc_t CC KRIndexWhack ( KIndex *self );
+static bool CC KRIndexLocked ( const KIndex *self );
+static rc_t CC KRIndexVersion ( const KIndex *self, uint32_t *version );
+static rc_t CC KRIndexType ( const KIndex *self, KIdxType *type );
+static rc_t CC KRIndexConsistencyCheck ( const KIndex *self, uint32_t level,
+    int64_t *start_id, uint64_t *id_range, uint64_t *num_keys,
+    uint64_t *num_rows, uint64_t *num_holes );
+static rc_t CC KRIndexFindText ( const KIndex *self, const char *key, int64_t *start_id, uint64_t *id_count,
+    int ( CC * custom_cmp ) ( const void *item, struct PBSTNode const *n, void *data ),
+    void *data );
+static rc_t CC KRIndexFindAllText ( const KIndex *self, const char *key,
+    rc_t ( CC * f ) ( int64_t id, uint64_t id_count, void *data ), void *data );
+static rc_t CC KRIndexProjectText ( const KIndex *self,
+    int64_t id, int64_t *start_id, uint64_t *id_count,
+    char *key, size_t kmax, size_t *actsize );
+static rc_t CC KRIndexProjectAllText ( const KIndex *self, int64_t id,
+    rc_t ( CC * f ) ( int64_t start_id, uint64_t id_count, const char *key, void *data ),
+    void *data );
+static rc_t CC KRIndexFindU64( const KIndex* self, uint64_t offset, uint64_t* key, uint64_t* key_size, int64_t* id, uint64_t* id_qty );
+static rc_t CC KRIndexFindAllU64( const KIndex* self, uint64_t offset,
+    rc_t ( CC * f )(uint64_t key, uint64_t key_size, int64_t id, uint64_t id_qty, void* data ), void* data);
+static void CC KRIndexSetMaxRowId ( const KIndex *cself, int64_t max_row_id );
 
+static KIndex_vt KRIndex_vt =
+{
+    KRIndexWhack,
+    KIndexBaseAddRef,
+    KIndexBaseRelease,
+    KRIndexLocked,
+    KRIndexVersion,
+    KRIndexType,
+    KRIndexConsistencyCheck,
+    KRIndexFindText,
+    KRIndexFindAllText,
+    KRIndexProjectText,
+    KRIndexProjectAllText,
+    KRIndexFindU64,
+    KRIndexFindAllU64,
+    KRIndexSetMaxRowId
+};
 
 /* Whack
  */
 static
-rc_t KIndexWhack ( KIndex *self )
+rc_t CC
+KRIndexWhack ( KIndex *self )
 {
     rc_t rc = 0;
-
-    KRefcountWhack ( & self -> refcount, "KIndex" );
 
     /* release owner */
     if ( self -> db != NULL )
@@ -138,49 +156,13 @@ rc_t KIndexWhack ( KIndex *self )
 
         if ( rc == 0 )
         {
-            free ( self );
-            return 0;
+            return KIndexBaseWhack( self );
         }
     }
 
-    KRefcountInit ( & self -> refcount, 1, "KIndex", "whack", "kidx" );
+    KRefcountInit ( & self -> dad . refcount, 1, "KIndex", "whack", "kidx" );
     return rc;
 }
-
-
-/* AddRef
- * Release
- *  all objects are reference counted
- *  NULL references are ignored
- */
-LIB_EXPORT rc_t CC KIndexAddRef ( const KIndex *self )
-{
-    if ( self != NULL )
-    {
-        switch ( KRefcountAdd ( & self -> refcount, "KIndex" ) )
-        {
-        case krefLimit:
-            return RC ( rcDB, rcIndex, rcAttaching, rcRange, rcExcessive );
-        }
-    }
-    return 0;
-}
-
-LIB_EXPORT rc_t CC KIndexRelease ( const KIndex *self )
-{
-    if ( self != NULL )
-    {
-        switch ( KRefcountDrop ( & self -> refcount, "KIndex" ) )
-        {
-        case krefWhack:
-            return KIndexWhack ( ( KIndex* ) self );
-        case krefNegative:
-            return RC ( rcDB, rcIndex, rcReleasing, rcRange, rcExcessive );
-        }
-    }
-    return 0;
-}
-
 
 /* Make
  */
@@ -205,7 +187,9 @@ rc_t KIndexMake ( KIndex **idxp, const char *path )
             else
             {
                 memset ( idx, 0, sizeof * idx );
-                KRefcountInit ( & idx -> refcount, 1, "KIndex", "make", path );
+                idx -> dad . vt = & KRIndex_vt;
+                KRefcountInit ( & idx -> dad . refcount, 1, "KIndex", "make", path );
+
                 strcpy ( idx -> path, path );
                 * idxp = idx;
                 return 0;
@@ -300,9 +284,7 @@ rc_t KIndexAttach ( KIndex *self, const KMMap *mm, bool *byteswap )
     return rc;
 }
 
-static
-rc_t KIndexMakeRead ( KIndex **idxp,
-    const KDirectory *dir, const char *path )
+rc_t KRIndexMakeRead ( KIndex **idxp, const KDirectory *dir, const char *path )
 {
     const KFile *f;
     rc_t rc = KDirectoryOpenFileRead ( dir, & f, "%s", path );
@@ -374,171 +356,19 @@ rc_t KIndexMakeRead ( KIndex **idxp,
 }
 
 
-/* OpenIndexRead
- * VOpenIndexRead
- *  open an index for read
- *
- *  "idx" [ OUT ] - return parameter for newly opened index
- *
- *  "name" [ IN ] - NUL terminated string in UTF-8 giving simple name of idx
- */
-static
-rc_t KDBManagerOpenIndexReadInt ( const KDBManager *self,
-    KIndex **idxp, const KDirectory *wd, const char *path )
-{
-    char idxpath [ 4096 ];
-    rc_t rc = KDirectoryResolvePath ( wd, true,
-                                      idxpath, sizeof idxpath, "%s", path );
-    if ( rc == 0 )
-    {
-        KIndex *idx;
-
-        switch ( KDirectoryPathType ( wd, "%s", idxpath ) )
-        {
-        case kptNotFound:
-            return RC ( rcDB, rcMgr, rcOpening, rcIndex, rcNotFound );
-        case kptBadPath:
-            return RC ( rcDB, rcMgr, rcOpening, rcPath, rcInvalid );
-        case kptFile:
-        case kptFile | kptAlias:
-            break;
-        default:
-            return RC ( rcDB, rcMgr, rcOpening, rcPath, rcIncorrect );
-        }
-
-        rc = KIndexMakeRead ( & idx, wd, idxpath );
-        if ( rc == 0 )
-        {
-            idx -> mgr = KDBManagerAttach ( self );
-            * idxp = idx;
-            return 0;
-        }
-    }
-
-    return rc;
-}
-
-LIB_EXPORT rc_t CC KDatabaseOpenIndexRead ( struct KDatabase const *self,
-    const KIndex **idx, const char *name, ... )
-{
-    rc_t rc = 0;
-    va_list args;
-
-    va_start ( args, name );
-    rc = KDatabaseVOpenIndexRead ( self, idx, name, args );
-    va_end ( args );
-
-    return rc;
-}
-
-LIB_EXPORT rc_t CC KDatabaseVOpenIndexRead ( const KDatabase *self,
-    const KIndex **idxp, const char *name, va_list args )
-{
-    rc_t rc = 0;
-    char path [ 256 ];
-
-    if ( idxp == NULL )
-        return RC ( rcDB, rcDatabase, rcOpening, rcParam, rcNull );
-
-    * idxp = NULL;
-
-    if ( self == NULL )
-        return RC ( rcDB, rcDatabase, rcOpening, rcSelf, rcNull );
-
-    rc = KDBVMakeSubPath ( self -> dir,
-        path, sizeof path, "idx", 3, name, args );
-    if ( rc == 0 )
-    {
-        KIndex *idx;
-        rc = KDBManagerOpenIndexReadInt ( self -> mgr,
-            & idx, self -> dir, path );
-        if ( rc == 0 )
-        {
-            idx -> db = KDatabaseAttach ( self );
-            * idxp = idx;
-        }
-    }
-    return rc;
-}
-
-LIB_EXPORT rc_t CC KTableOpenIndexRead ( struct KTable const *self,
-    const KIndex **idx, const char *name, ... )
-{
-    rc_t rc = 0;
-    va_list args;
-
-    va_start ( args, name );
-    rc = KTableVOpenIndexRead ( self, idx, name, args );
-    va_end ( args );
-
-    return rc;
-}
-
-LIB_EXPORT rc_t CC KTableVOpenIndexRead ( const KTable *self,
-    const KIndex **idxp, const char *name, va_list args )
-{
-    rc_t rc = 0;
-    char path [ 256 ];
-
-    if ( idxp == NULL )
-        return RC ( rcDB, rcTable, rcOpening, rcParam, rcNull );
-
-    * idxp = NULL;
-
-    if ( self == NULL )
-        return RC ( rcDB, rcTable, rcOpening, rcSelf, rcNull );
-
-    if ( self -> prerelease )
-    {
-        int len = 0;
-        /* VDB-4386: cannot treat va_list as a pointer! */
-        /*if ( args == 0 )
-            len = snprintf ( path, sizeof path, "%s", name );
-        else*/
-        if ( name != NULL )
-            len = vsnprintf ( path, sizeof path, name, args );
-        else
-            path[0] = '\0';
-        if ( len < 0 || ( size_t ) len >= sizeof path )
-            return RC ( rcDB, rcTable, rcOpening, rcPath, rcExcessive );
-    }
-    else
-    {
-        rc = KDBVMakeSubPath ( self -> dir,
-            path, sizeof path, "idx", 3, name, args );
-    }
-
-    if ( rc == 0 )
-    {
-        KIndex *idx;
-        rc = KDBManagerOpenIndexReadInt ( self -> mgr,
-            & idx, self -> dir, path );
-        if ( rc == 0 )
-        {
-            idx -> tbl = KTableAttach ( self );
-            * idxp = idx;
-        }
-    }
-    return rc;
-}
-
-
 /* Locked
  *  returns non-zero if locked
  */
-LIB_EXPORT bool CC KIndexLocked ( const KIndex *self )
+static bool CC KRIndexLocked ( const KIndex *self )
 {
     rc_t rc;
     const KDirectory *dir;
-
-    if ( self == NULL )
-        return false;
 
     assert ( self -> db != NULL || self -> tbl != NULL );
     dir = ( self -> db != NULL ) ?
         self -> db -> dir : self -> tbl -> dir;
 
-    rc = KDBWritable ( dir, self -> path );
+    rc = KDBRWritable ( dir, self -> path );
     return GetRCState ( rc ) == rcLocked;
 }
 
@@ -546,16 +376,10 @@ LIB_EXPORT bool CC KIndexLocked ( const KIndex *self )
 /* Version
  *  returns the format version
  */
-LIB_EXPORT rc_t CC KIndexVersion ( const KIndex *self, uint32_t *version )
+static rc_t CC KRIndexVersion ( const KIndex *self, uint32_t *version )
 {
     if ( version == NULL )
         return RC ( rcDB, rcIndex, rcAccessing, rcParam, rcNull );
-
-    if ( self == NULL )
-    {
-        * version = 0;
-        return RC ( rcDB, rcIndex, rcAccessing, rcSelf, rcNull );
-    }
 
     * version = self -> vers;
     return 0;
@@ -565,16 +389,12 @@ LIB_EXPORT rc_t CC KIndexVersion ( const KIndex *self, uint32_t *version )
 /* Type
  *  returns the type of index
  */
-LIB_EXPORT rc_t CC KIndexType ( const KIndex *self, KIdxType *type )
+static
+rc_t CC
+KRIndexType ( const KIndex *self, KIdxType *type )
 {
     if ( type == NULL )
         return RC ( rcDB, rcIndex, rcAccessing, rcParam, rcNull );
-
-    if ( self == NULL )
-    {
-        * type = ( KIdxType ) 0;
-        return RC ( rcDB, rcIndex, rcAccessing, rcSelf, rcNull );
-    }
 
     * type = ( KIdxType ) self -> type;
     return 0;
@@ -600,61 +420,58 @@ LIB_EXPORT rc_t CC KIndexType ( const KIndex *self, KIdxType *type )
  *
  *  "num_holes" [ OUT, NULL OKAY ] - returns the number of holes in the mapped id range
  */
-LIB_EXPORT rc_t CC KIndexConsistencyCheck ( const KIndex *self, uint32_t level,
+static
+rc_t CC
+KRIndexConsistencyCheck ( const KIndex *self, uint32_t level,
     int64_t *start_id, uint64_t *id_range, uint64_t *num_keys,
     uint64_t *num_rows, uint64_t *num_holes )
 {
     rc_t rc;
 
-    if ( self == NULL )
-        rc = RC ( rcDB, rcIndex, rcValidating, rcSelf, rcNull );
-    else
+    bool key2id, id2key, all_ids;
+    switch ( level )
     {
-        bool key2id, id2key, all_ids;
-        switch ( level )
+    case 0:
+        key2id = id2key = all_ids = false;
+        break;
+    case 1:
+        key2id = id2key = false;
+        all_ids = true;
+        break;
+    case 2:
+        key2id = id2key = true;
+        all_ids = false;
+        break;
+    default:
+        key2id = id2key = all_ids = true;
+    }
+
+    switch ( self -> type )
+    {
+    case kitText:
+        id2key = false;
+    case kitText | kitProj:
+        switch ( self -> vers )
         {
-        case 0:
-            key2id = id2key = all_ids = false;
-            break;
         case 1:
-            key2id = id2key = false;
-            all_ids = true;
+            rc = KTrieIndexCheckConsistency_v1 ( & self -> u . txt1,
+                start_id, id_range, num_keys, num_rows, num_holes,
+                self, key2id, id2key );
             break;
         case 2:
-            key2id = id2key = true;
-            all_ids = false;
+        case 3:
+        case 4:
+            rc = KTrieIndexCheckConsistency_v2 ( & self -> u . txt234,
+                start_id, id_range, num_keys, num_rows, num_holes,
+                self, key2id, id2key, all_ids, self -> converted_from_v1 );
             break;
         default:
-            key2id = id2key = all_ids = true;
+            return RC ( rcDB, rcIndex, rcValidating, rcIndex, rcBadVersion );
         }
+        break;
 
-        switch ( self -> type )
-        {
-        case kitText:
-            id2key = false;
-        case kitText | kitProj:
-            switch ( self -> vers )
-            {
-            case 1:
-                rc = KTrieIndexCheckConsistency_v1 ( & self -> u . txt1,
-                    start_id, id_range, num_keys, num_rows, num_holes,
-                    self, key2id, id2key );
-                break;
-            case 2:
-            case 3:
-            case 4:
-                rc = KTrieIndexCheckConsistency_v2 ( & self -> u . txt234,
-                    start_id, id_range, num_keys, num_rows, num_holes,
-                    self, key2id, id2key, all_ids, self -> converted_from_v1 );
-                break;
-            default:
-                return RC ( rcDB, rcIndex, rcValidating, rcIndex, rcBadVersion );
-            }
-            break;
-
-        default:
-            rc = RC ( rcDB, rcIndex, rcValidating, rcFunction, rcUnsupported );
-        }
+    default:
+        rc = RC ( rcDB, rcIndex, rcValidating, rcFunction, rcUnsupported );
     }
 
     return rc;
@@ -664,7 +481,9 @@ LIB_EXPORT rc_t CC KIndexConsistencyCheck ( const KIndex *self, uint32_t level,
 /* Find
  *  finds a single mapping from key
  */
-LIB_EXPORT rc_t CC KIndexFindText ( const KIndex *self, const char *key, int64_t *start_id, uint64_t *id_count,
+static
+rc_t CC
+KRIndexFindText ( const KIndex *self, const char *key, int64_t *start_id, uint64_t *id_count,
     int ( CC * custom_cmp ) ( const void *item, struct PBSTNode const *n, void *data ),
     void *data )
 {
@@ -678,9 +497,6 @@ LIB_EXPORT rc_t CC KIndexFindText ( const KIndex *self, const char *key, int64_t
         return RC ( rcDB, rcIndex, rcSelecting, rcParam, rcNull );
 
     * start_id = 0;
-
-    if ( self == NULL )
-        return RC ( rcDB, rcIndex, rcSelecting, rcSelf, rcNull );
 
     if ( key == NULL )
         return RC ( rcDB, rcIndex, rcSelecting, rcString, rcNull );
@@ -727,15 +543,12 @@ LIB_EXPORT rc_t CC KIndexFindText ( const KIndex *self, const char *key, int64_t
 /* FindAll
  *  finds all mappings from key
  */
-LIB_EXPORT rc_t CC KIndexFindAllText ( const KIndex *self, const char *key,
+static rc_t CC KRIndexFindAllText ( const KIndex *self, const char *key,
     rc_t ( CC * f ) ( int64_t id, uint64_t id_count, void *data ), void *data )
 {
     rc_t rc = 0;
     int64_t id64;
     uint32_t id32, span;
-
-    if ( self == NULL )
-        return RC ( rcDB, rcIndex, rcSelecting, rcSelf, rcNull );
 
     if ( f == NULL )
         return RC ( rcDB, rcIndex, rcSelecting, rcFunction, rcNull );
@@ -784,7 +597,9 @@ LIB_EXPORT rc_t CC KIndexFindAllText ( const KIndex *self, const char *key,
 /* Project
  *  finds key(s) mapping to value/id if supported
  */
-LIB_EXPORT rc_t CC KIndexProjectText ( const KIndex *self,
+static
+rc_t CC
+KRIndexProjectText ( const KIndex *self,
     int64_t id, int64_t *start_id, uint64_t *id_count,
     char *key, size_t kmax, size_t *actsize )
 {
@@ -805,9 +620,6 @@ LIB_EXPORT rc_t CC KIndexProjectText ( const KIndex *self,
 
     if ( kmax != 0 )
         key [ 0 ] = 0;
-
-    if ( self == NULL )
-        return RC ( rcDB, rcIndex, rcProjecting, rcSelf, rcNull );
 
     if ( ( ( KIdxType ) self -> type & kitProj ) == 0 )
         return RC ( rcDB, rcIndex, rcProjecting, rcIndex, rcIncorrect );
@@ -861,7 +673,9 @@ LIB_EXPORT rc_t CC KIndexProjectText ( const KIndex *self,
 /* ProjectAll
  *  finds key(s) mapping to value/id if supported
  */
-LIB_EXPORT rc_t CC KIndexProjectAllText ( const KIndex *self, int64_t id,
+static
+rc_t CC
+KRIndexProjectAllText ( const KIndex *self, int64_t id,
     rc_t ( CC * f ) ( int64_t start_id, uint64_t id_count, const char *key, void *data ),
     void *data )
 {
@@ -870,9 +684,6 @@ LIB_EXPORT rc_t CC KIndexProjectAllText ( const KIndex *self, int64_t id,
 
     uint32_t span;
     int64_t start_id;
-
-    if ( self == NULL )
-        return RC ( rcDB, rcIndex, rcProjecting, rcSelf, rcNull );
 
     if ( ( ( KIdxType ) self -> type & kitProj ) == 0 )
         return RC ( rcDB, rcIndex, rcProjecting, rcIndex, rcIncorrect );
@@ -921,7 +732,9 @@ LIB_EXPORT rc_t CC KIndexProjectAllText ( const KIndex *self, int64_t id,
     return rc;
 }
 
-LIB_EXPORT rc_t CC KIndexFindU64( const KIndex* self, uint64_t offset, uint64_t* key, uint64_t* key_size, int64_t* id, uint64_t* id_qty )
+static
+rc_t CC
+KRIndexFindU64( const KIndex* self, uint64_t offset, uint64_t* key, uint64_t* key_size, int64_t* id, uint64_t* id_qty )
 {
     rc_t rc = 0;
 
@@ -929,9 +742,6 @@ LIB_EXPORT rc_t CC KIndexFindU64( const KIndex* self, uint64_t offset, uint64_t*
         return RC(rcDB, rcIndex, rcSelecting, rcParam, rcNull);
     }
     *key = *key_size = *id = *id_qty = 0;
-    if( self == NULL ) {
-        return RC(rcDB, rcIndex, rcSelecting, rcSelf, rcNull);
-    }
 
     switch( self->type )
     {
@@ -952,13 +762,11 @@ LIB_EXPORT rc_t CC KIndexFindU64( const KIndex* self, uint64_t offset, uint64_t*
     return rc;
 }
 
-LIB_EXPORT rc_t CC KIndexFindAllU64( const KIndex* self, uint64_t offset,
+static rc_t CC KRIndexFindAllU64( const KIndex* self, uint64_t offset,
     rc_t ( CC * f )(uint64_t key, uint64_t key_size, int64_t id, uint64_t id_qty, void* data ), void* data)
 {
     rc_t rc = 0;
 
-    if ( self == NULL )
-        return RC(rcDB, rcIndex, rcSelecting, rcSelf, rcNull);
     if ( f == NULL )
         return RC(rcDB, rcIndex, rcSelecting, rcFunction, rcNull);
 
@@ -988,9 +796,11 @@ LIB_EXPORT rc_t CC KIndexFindAllU64( const KIndex* self, uint64_t offset,
  *  of the NAME_FMT column, but were never given a maximum id. allow them
  *  to be corrected here.
  */
-LIB_EXPORT void CC KIndexSetMaxRowId ( const KIndex *cself, int64_t max_row_id )
+static
+void CC
+KRIndexSetMaxRowId ( const KIndex *cself, int64_t max_row_id )
 {
-    if ( cself != NULL ) switch ( cself -> type )
+    switch ( cself -> type )
     {
     case kitText:
     case kitText | kitProj:

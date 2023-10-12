@@ -24,72 +24,75 @@
 *
 */
 
-#ifndef _h_database_priv_
-#define _h_database_priv_
+#pragma once
 
-#ifndef _h_kdb_manager_
-#include <kdb/manager.h>
-#endif
+typedef struct KMDataNode KMDataNode;
+#define KDBMDNODE_IMPL KMDataNode
+#include "metanode-base.h"
 
-#ifndef _h_kdb_database_
-#include <kdb/database.h>
-#endif
-
-#ifndef _h_klib_container_
+#include <klib/pbstree.h>
 #include <klib/container.h>
-#endif
 
-#ifndef _h_klib_refcount_
-#include <klib/refcount.h>
-#endif
-
-#include <klib/symbol.h>
-#include <kfs/md5.h>
+struct KMetadata;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+#define NODE_SIZE_LIMIT ( 25 * 1024 * 1024 )
+#define NODE_CHILD_LIMIT ( 100 * 1024 )
 
 /*--------------------------------------------------------------------------
- * KDatabase
- *  connection to a database within file system
+ * KMDataNodeInflateData
  */
-struct KDatabase
+typedef struct KMDataNodeInflateData KMDataNodeInflateData;
+struct KMDataNodeInflateData
 {
-    /* manager reference */
-    KDBManager *mgr;
-
-    /* if a sub-directory */
-    KDatabase *dad;
-
-    /* database directory */
-    KDirectory *dir;
-
-    KMD5SumFmt *md5;
-
-    /* open references */
-    KRefcount refcount;
-    uint32_t opencount;
-    bool use_md5;
-    bool read_only;
-
-    KSymbol sym;
-
-    char path [1];
+    const struct KMetadata *meta;
+    const struct KMDataNode *par;
+    BSTree *bst;
+    size_t node_size_limit;
+    uint32_t node_child_limit;
+    rc_t rc;
+    bool byteswap;
 };
 
-/* Attach
- * Sever
- *  like AddRef/Release, except called internally
- *  indicates that a child object is letting go...
- */
-KDatabase *KDatabaseAttach ( const KDatabase *self );
-rc_t KDatabaseSever ( const KDatabase *self );
+bool CC KRMDataNodeInflate_v1 ( PBSTNode *n, void *data );
+bool CC KRMDataNodeInflate ( PBSTNode *n, void *data );
 
+/*--------------------------------------------------------------------------
+ * KMAttrNode
+ */
+typedef struct KMAttrNode KMAttrNode;
+struct KMAttrNode
+{
+    BSTNode n;
+    void *value;
+    size_t vsize;
+    char name [ 1 ];
+};
+
+/*--------------------------------------------------------------------------
+ * KMDataNode
+ */
+typedef struct KMDataNode KMDataNode;
+struct KMDataNode
+{
+    KMDataNodeBase dad;
+
+    const KMDataNode *par;
+    const KMetadata *meta;
+    void *value;
+    size_t vsize;
+    BSTree attr;
+    BSTree child;
+    char name [ 1 ];
+};
+
+rc_t KRMDataNodeMakeRoot( KMDataNode ** node, KMetadata *meta );
+void CC KMDataNodeWhack ( KMDataNode * node );
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _h_database_priv_ */
