@@ -530,7 +530,7 @@ rc_t AddRow(BSTree* tr, BSTree* trWgs, Row* data, Ctx* ctx, int cacheState,
     static bool reuseWgsResponseInited = false;
     static bool reuseWgsResponse = false;
     if (!reuseWgsResponseInited) {
-        reuseWgsResponse = getenv("NCBI_VDB_NO_CACHE_WSG_RESPONSE") == NULL;
+        reuseWgsResponse = getenv("NCBI_VDB_NO_CACHE_SDL_RESPONSE") == NULL;
         reuseWgsResponseInited = true;
     }
     rc_t rc = 0;
