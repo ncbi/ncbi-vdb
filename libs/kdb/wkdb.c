@@ -27,9 +27,10 @@
 #include <kdb/extern.h>
 #include <kdb/kdb-priv.h>
 
-#include "wkdb-priv.h"
-#include "kdbfmt-priv.h"
-#include "dbmgr-priv.h"
+#include "wkdb.h"
+#include "kdb-cmn.h"
+#include "kdbfmt.h"
+#include "dbmgr.h"
 
 #include <vfs/manager.h>
 #include <vfs/path.h>

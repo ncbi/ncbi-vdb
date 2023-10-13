@@ -26,9 +26,7 @@
 
 #pragma once
 
-#ifndef _h_klib_refcount_
 #include <klib/refcount.h>
-#endif
 
 #ifndef KDBMGR_IMPL
 #define KDBMGR_IMPL KDBManagerBase

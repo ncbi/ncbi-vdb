@@ -1,6 +1,6 @@
 /*===========================================================================
 *
-*                            PUBLIC DOMAIN NOTICE
+*                            PUBLIC DOMAIN NOTICEKColumnBlob
 *               National Center for Biotechnology Information
 *
 *  This software/database is a "United States Government Work" under the
@@ -33,7 +33,7 @@
 
 #include <klib/rc.h>
 
-void KColumnBlobBaseInit( KCOLUMNBLOB_IMPL *self, const KColumnBlobBase_vt * vt )
+void KColumnBlobBaseInit( KColumnBlob *self, const KColumnBlob_vt * vt )
 {
     atomic32_set ( & self -> refcount, 1 );
     self -> vt = vt;

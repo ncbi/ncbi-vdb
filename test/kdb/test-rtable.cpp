@@ -30,8 +30,8 @@
 
 #include <ktst/unit_test.hpp>
 
-#include <../libs/kdb/table-priv.h>
-#include <../libs/kdb/dbmgr-priv.h>
+#include <../libs/kdb/rtable.h>
+#include <../libs/kdb/dbmgr.h>
 
 #include <klib/rc.h>
 #include <klib/namelist.h>

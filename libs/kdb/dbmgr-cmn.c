@@ -30,9 +30,9 @@
 #include "libkdb.vers.h"
 
 #define KONST const
-#include "dbmgr-priv.h"
-#include "kdb-priv.h"
-#include "kdbfmt-priv.h"
+#include "dbmgr.h"
+#include "kdb-cmn.h"
+#include "kdbfmt.h"
 #undef KONST
 
 #include <vfs/manager.h>

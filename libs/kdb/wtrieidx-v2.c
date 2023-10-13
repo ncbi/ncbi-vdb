@@ -26,18 +26,21 @@
 
 #include <kdb/extern.h>
 
-#include "windex-priv.h"
-#include "trieidx-priv.h"
+#include "windex.h"
+#include "trieidx.h"
 
 #include <kdb/index.h>
+
 #include <kfs/directory.h>
 #include <kfs/file.h>
 #include <kfs/md5.h>
 #include <kfs/mmap.h>
+
 #include <klib/ptrie.h>
 #include <klib/text.h>
 #include <klib/pack.h>
 #include <klib/rc.h>
+
 #include <os-native.h>
 #include <sysalloc.h>
 

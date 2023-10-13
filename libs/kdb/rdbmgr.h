@@ -26,7 +26,7 @@
 
 #pragma once
 
-#include "dbmgr-priv.h"
+#include "dbmgr.h"
 
 #include <kdb/meta.h>
 

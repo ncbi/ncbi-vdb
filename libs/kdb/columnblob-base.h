@@ -26,67 +26,47 @@
 
 #pragma once
 
-#ifndef _h_klib_refcount_
 #include <klib/refcount.h>
-#endif
+
+#include <kdb/column.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#ifndef KCOLUMNBLOB_IMPL
-#define KCOLUMNBLOB_IMPL KColumnBlobBase
-#endif
-
-#include <kdb/column.h>
 
 /*--------------------------------------------------------------------------
- * KColumnBlobBase, base structure for KColumnBlob implementations
+ * KColumnBlobBase, base structure for KColumnBlob read-side implementations
  */
-typedef struct KColumnBlobBase KColumnBlobBase;
+typedef struct KColumnBlob KColumnBlob;
 
-typedef struct KColumnBlobBase_vt KColumnBlobBase_vt;
-struct KColumnBlobBase_vt
+typedef struct KColumnBlob_vt KColumnBlob_vt;
+struct KColumnBlob_vt
 {
-    /* Public API */
-    rc_t ( CC * whack )             ( KCOLUMNBLOB_IMPL * self );
-    rc_t ( CC * addRef )            ( const KCOLUMNBLOB_IMPL * self );
-    rc_t ( CC * release )           ( const KCOLUMNBLOB_IMPL * self );
-    rc_t ( CC * read )              ( const KCOLUMNBLOB_IMPL * self, size_t offset, void *buffer, size_t bsize, size_t *num_read, size_t *remaining );
-    rc_t ( CC * readAll )           ( const KCOLUMNBLOB_IMPL * self, struct KDataBuffer * buffer, KColumnBlobCSData * opt_cs_data, size_t cs_data_size );
-    rc_t ( CC * validate )          ( const KCOLUMNBLOB_IMPL * self );
-    rc_t ( CC * validateBuffer )    ( const KCOLUMNBLOB_IMPL * self, struct KDataBuffer const * buffer, const KColumnBlobCSData * cs_data, size_t cs_data_size );
-    rc_t ( CC * idRange )           ( const KCOLUMNBLOB_IMPL * self, int64_t *first, uint32_t *count );
-
-    // //TODO: write-side only; decide how to handle
-    // rc_t ( CC * append ) ( KColumnBlob *self, const void *buffer, size_t size );
-    // rc_t ( CC * assignRange ) ( KColumnBlob *self, int64_t first, uint32_t count );
-    // rc_t ( CC * commit ) ( KColumnBlob *self );
+    /* Public read-side API */
+    rc_t ( CC * whack )             ( KColumnBlob * self );
+    rc_t ( CC * addRef )            ( const KColumnBlob * self );
+    rc_t ( CC * release )           ( const KColumnBlob * self );
+    rc_t ( CC * read )              ( const KColumnBlob * self, size_t offset, void *buffer, size_t bsize, size_t *num_read, size_t *remaining );
+    rc_t ( CC * readAll )           ( const KColumnBlob * self, struct KDataBuffer * buffer, KColumnBlobCSData * opt_cs_data, size_t cs_data_size );
+    rc_t ( CC * validate )          ( const KColumnBlob * self );
+    rc_t ( CC * validateBuffer )    ( const KColumnBlob * self, struct KDataBuffer const * buffer, const KColumnBlobCSData * cs_data, size_t cs_data_size );
+    rc_t ( CC * idRange )           ( const KColumnBlob * self, int64_t *first, uint32_t *count );
 };
 
 // default implelentations where exist
-extern rc_t CC KColumnBlobBaseWhack ( KCOLUMNBLOB_IMPL *self );
-extern rc_t CC KColumnBlobBaseAddRef ( const KCOLUMNBLOB_IMPL *self );
-extern rc_t CC KColumnBlobBaseRelease ( const KCOLUMNBLOB_IMPL *self );
+extern rc_t CC KColumnBlobBaseWhack ( KColumnBlob *self );
+extern rc_t CC KColumnBlobBaseAddRef ( const KColumnBlob *self );
+extern rc_t CC KColumnBlobBaseRelease ( const KColumnBlob *self );
 
-struct KColumnBlobBase
+struct KColumnBlob
 {
-    const KColumnBlobBase_vt * vt;
+    const KColumnBlob_vt * vt;
 
     atomic32_t refcount;
-
-    // /* holds existing blob loc */
-    // KColBlobLoc loc;
-    // KColumnPageMap pmorig;
-
-    // /* owning column */
-    // const KColumn *col;
-
-    // /* captured from idx1 for CRC32 validation */
-    // bool bswap;
 };
 
-extern void KColumnBlobBaseInit( KCOLUMNBLOB_IMPL *self, const KColumnBlobBase_vt * vt );
+extern void KColumnBlobBaseInit( KColumnBlob *self, const KColumnBlob_vt * vt );
 
 #ifdef __cplusplus
 }

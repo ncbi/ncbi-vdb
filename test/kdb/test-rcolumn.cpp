@@ -30,7 +30,11 @@
 
 #include <ktst/unit_test.hpp>
 
-#include <../libs/kdb/column-priv.h>
+extern "C"
+{
+    #include <../libs/kdb/rcolumnblob.h>
+    #include <../libs/kdb/rcolumn.h>
+}
 
 #include <kdb/manager.h>
 #include <kdb/table.h>
@@ -149,82 +153,18 @@ FIXTURE_TEST_CASE(KRColumn_OpenBlobRead, KColumn_Fixture)
 
 // KColumnBlob
 
-TEST_CASE(KRColumnBlob_AddRelease)
-{
-    KColumnBlob * blob = nullptr;
-    REQUIRE_RC( KRColumnBlobMake ( & blob, false ) );
-
-    REQUIRE_EQ( 1, (int)atomic32_read( & blob -> dad . refcount ) );
-    REQUIRE_RC( KColumnBlobAddRef( blob ) );
-    REQUIRE_EQ( 2, (int)atomic32_read( & blob -> dad . refcount ) );
-    REQUIRE_RC( KColumnBlobRelease( blob ) );
-    REQUIRE_EQ( 1, (int)atomic32_read( & blob -> dad . refcount ) );
-
-    REQUIRE_RC( KColumnBlobRelease( blob ) );
-    // use valgrind to find any leaks
-}
-
-TEST_CASE(KRColumnBlob_Read)
-{
-    KColumnBlob * blob = nullptr;
-    REQUIRE_RC( KRColumnBlobMake ( & blob, false ) );
-
-    char buffer[1024];
-    rc_t rc = SILENT_RC ( rcDB, rcBlob, rcReading, rcParam, rcNull );
-    REQUIRE_EQ( rc, KColumnBlobRead ( blob, 0, buffer, sizeof( buffer ), nullptr, nullptr ) );
-
-    REQUIRE_RC( KColumnBlobRelease( blob ) );
-}
-
-TEST_CASE(KRColumnBlob_ReadAll)
-{
-    KColumnBlob * blob = nullptr;
-    REQUIRE_RC( KRColumnBlobMake ( & blob, false ) );
-
-    rc_t rc = SILENT_RC ( rcDB, rcBlob, rcReading, rcParam, rcNull );
-    REQUIRE_EQ( rc, KColumnBlobReadAll ( blob, nullptr, nullptr, 0 ) );
-
-    REQUIRE_RC( KColumnBlobRelease( blob ) );
-}
-
-TEST_CASE(KRColumnBlob_Validate)
-{
-    KColumnBlob * blob = nullptr;
-    REQUIRE_RC( KRColumnBlobMake ( & blob, false ) );
-
-    REQUIRE_RC( KColumnBlobValidate ( blob ) );
-
-    REQUIRE_RC( KColumnBlobRelease( blob ) );
-}
-
-TEST_CASE(KRColumnBlob_ValidateBuffer)
-{
-    KColumnBlob * blob = nullptr;
-    REQUIRE_RC( KRColumnBlobMake ( & blob, false ) );
-
-    rc_t rc = SILENT_RC ( rcDB, rcBlob, rcValidating, rcParam, rcNull );
-    REQUIRE_EQ( rc, KColumnBlobValidateBuffer ( blob, nullptr, nullptr, 0 ) );
-
-    REQUIRE_RC( KColumnBlobRelease( blob ) );
-}
-
-TEST_CASE(KRColumnBlob_IdRange)
-{
-    KColumnBlob * blob = nullptr;
-    REQUIRE_RC( KRColumnBlobMake ( & blob, false ) );
-
-    rc_t rc = SILENT_RC ( rcDB, rcBlob, rcAccessing, rcParam, rcNull );
-    REQUIRE_EQ( rc, KColumnBlobIdRange ( blob, nullptr, nullptr ) );
-
-    REQUIRE_RC( KColumnBlobRelease( blob ) );
-}
-
-class ColumnBlobReadFixture
+class RColumnBlobFixture
 {
 public:
-    ColumnBlobReadFixture()
-    :   m_num_read ( 0 ),
-        m_remaining ( 0 )
+    RColumnBlobFixture()
+    {
+    }
+    ~RColumnBlobFixture()
+    {
+        KColumnBlobRelease ( m_blob );
+    }
+
+    void OpenBlob()
     {
         const KDBManager* mgr;
         THROW_ON_RC ( KDBManagerMakeRead ( & mgr, NULL ) );
@@ -241,18 +181,73 @@ public:
         THROW_ON_RC ( KTableRelease ( tbl ) );
         THROW_ON_RC ( KDBManagerRelease ( mgr ) );
     }
-    ~ColumnBlobReadFixture()
+
+    void MakeBlob()
     {
-        KColumnBlobRelease ( m_blob );
+        THROW_ON_RC( KRColumnBlobMake ( (KRColumnBlob**) & m_blob, false ) );
     }
 
-    const KColumnBlob*  m_blob;
-    size_t m_num_read;
-    size_t m_remaining;
+    const KColumnBlob*  m_blob = nullptr;
+    size_t m_num_read = 0;
+    size_t m_remaining = 0;
 };
 
-FIXTURE_TEST_CASE ( ColumnBlobRead_basic, ColumnBlobReadFixture )
+FIXTURE_TEST_CASE(KRColumnBlob_AddRelease, RColumnBlobFixture)
 {
+    MakeBlob();
+
+    REQUIRE_EQ( 1, (int)atomic32_read( & m_blob -> refcount ) );
+    REQUIRE_RC( KColumnBlobAddRef( m_blob ) );
+    REQUIRE_EQ( 2, (int)atomic32_read( & m_blob -> refcount ) );
+    REQUIRE_RC( KColumnBlobRelease( m_blob ) );
+    REQUIRE_EQ( 1, (int)atomic32_read( & m_blob -> refcount ) );
+
+    // use valgrind to find any leaks
+}
+
+FIXTURE_TEST_CASE(KRColumnBlob_Read, RColumnBlobFixture)
+{
+    MakeBlob();
+
+    char buffer[1024];
+    rc_t rc = SILENT_RC ( rcDB, rcBlob, rcReading, rcParam, rcNull );
+    REQUIRE_EQ( rc, KColumnBlobRead ( m_blob, 0, buffer, sizeof( buffer ), nullptr, nullptr ) );
+}
+
+FIXTURE_TEST_CASE(KRColumnBlob_ReadAll, RColumnBlobFixture)
+{
+    MakeBlob();
+
+    rc_t rc = SILENT_RC ( rcDB, rcBlob, rcReading, rcParam, rcNull );
+    REQUIRE_EQ( rc, KColumnBlobReadAll ( m_blob, nullptr, nullptr, 0 ) );
+}
+
+FIXTURE_TEST_CASE(KRColumnBlob_Validate, RColumnBlobFixture)
+{
+    MakeBlob();
+    REQUIRE_RC( KColumnBlobValidate ( m_blob ) );
+}
+
+FIXTURE_TEST_CASE(KRColumnBlob_ValidateBuffer, RColumnBlobFixture)
+{
+    MakeBlob();
+
+    rc_t rc = SILENT_RC ( rcDB, rcBlob, rcValidating, rcParam, rcNull );
+    REQUIRE_EQ( rc, KColumnBlobValidateBuffer ( m_blob, nullptr, nullptr, 0 ) );
+}
+
+FIXTURE_TEST_CASE(KRColumnBlob_IdRange, RColumnBlobFixture)
+{
+    MakeBlob();
+
+    rc_t rc = SILENT_RC ( rcDB, rcBlob, rcAccessing, rcParam, rcNull );
+    REQUIRE_EQ( rc, KColumnBlobIdRange ( m_blob, nullptr, nullptr ) );
+}
+
+FIXTURE_TEST_CASE ( ColumnBlobRead_basic, RColumnBlobFixture )
+{
+    OpenBlob();
+
     const size_t BlobSize = 1882;
     const size_t BufSize = 2024;
     char buffer [ BufSize ];
@@ -261,8 +256,10 @@ FIXTURE_TEST_CASE ( ColumnBlobRead_basic, ColumnBlobReadFixture )
     REQUIRE_EQ ( (size_t)0, m_remaining );
 }
 
-FIXTURE_TEST_CASE ( ColumnBlobRead_insufficient_buffer, ColumnBlobReadFixture )
+FIXTURE_TEST_CASE ( ColumnBlobRead_insufficient_buffer, RColumnBlobFixture )
 {
+    OpenBlob();
+
     const size_t BlobSize = 1882;
     const size_t BufSize = 1024;
     char buffer [ BufSize ];

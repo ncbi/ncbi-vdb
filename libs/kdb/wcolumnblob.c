@@ -26,15 +26,18 @@
 
 #include <kdb/extern.h>
 
-#include <klib/rc.h>
+#include "wcolumnblob.h"
 
-#include "wcolumn-priv.h"
-#include "dbmgr-priv.h"
-#include "wtable-priv.h"
-#include "wkdb-priv.h"
-#include "werror-priv.h"
-#include <kfs/impl.h>
+#include "wcolumn.h"
+#include "dbmgr.h"
+#include "wtable.h"
+#include "wkdb.h"
+#include "werror.h"
+
+#include <klib/rc.h>
 #include <klib/data-buffer.h>
+
+#include <kfs/impl.h>
 
 #include <stdio.h>
 #include <byteswap.h>
@@ -54,7 +57,7 @@ static rc_t CC KWColumnBlobValidate ( const KColumnBlob *self );
 static rc_t CC KWColumnBlobValidateBuffer ( const KColumnBlob * self, const KDataBuffer * buffer, const KColumnBlobCSData * cs_data, size_t cs_data_size );
 static rc_t CC KWColumnBlobIdRange ( const KColumnBlob *self, int64_t *first, uint32_t *count );
 
-static KColumnBlobBase_vt KRColumnBlob_vt =
+static KColumnBlob_vt KWColumnBlob_vt =
 {
     /* Public API */
     KWColumnBlobWhack,
@@ -67,11 +70,15 @@ static KColumnBlobBase_vt KRColumnBlob_vt =
     KWColumnBlobIdRange
 };
 
+#define CAST() assert( bself->vt == &KWColumnBlob_vt ); KWColumnBlob * self = (KWColumnBlob *)bself
+
 /* Whack
  */
 static
-rc_t KWColumnBlobWhack ( KColumnBlob *self )
+rc_t KWColumnBlobWhack ( KColumnBlob *bself )
 {
+    CAST();
+
     KColumn *col = self -> col;
     if ( col != NULL )
     {
@@ -92,7 +99,7 @@ rc_t KWColumnBlobWhack ( KColumnBlob *self )
 /* OpenRead
  * OpenUpdate
  */
-rc_t KWColumnBlobOpenRead ( KColumnBlob *self, const KColumn *col, int64_t id )
+rc_t KWColumnBlobOpenRead ( KWColumnBlob *self, const KColumn *col, int64_t id )
 {
     /* locate blob */
     rc_t rc = KColumnIdxLocateBlob ( & col -> idx, & self -> loc, id, id );
@@ -123,8 +130,7 @@ rc_t KWColumnBlobOpenRead ( KColumnBlob *self, const KColumn *col, int64_t id )
     return rc;
 }
 
-static
-rc_t KColumnBlobOpenUpdate ( KColumnBlob *self, KColumn *col, int64_t id )
+rc_t KWColumnBlobOpenUpdate ( KWColumnBlob *self, KColumn *col, int64_t id )
 {
     /* open existing blob */
     rc_t rc = KWColumnBlobOpenRead ( self, col, id );
@@ -155,8 +161,7 @@ rc_t KColumnBlobOpenUpdate ( KColumnBlob *self, KColumn *col, int64_t id )
 
 /* Create
  */
-static
-rc_t KColumnBlobCreate ( KColumnBlob *self, KColumn *col )
+rc_t KWColumnBlobCreate ( KWColumnBlob *self, KColumn *col )
 {
     rc_t rc;
 
@@ -219,84 +224,19 @@ rc_t KColumnBlobCreate ( KColumnBlob *self, KColumn *col )
 
 /* Make
  */
-rc_t KWColumnBlobMake ( KColumnBlob **blobp, bool bswap )
+rc_t KWColumnBlobMake ( KWColumnBlob **blobp, bool bswap )
 {
-    KColumnBlob *blob = malloc ( sizeof * blob );
+    KWColumnBlob *blob = malloc ( sizeof * blob );
     if ( blob == NULL )
         return RC ( rcDB, rcBlob, rcConstructing, rcMemory, rcExhausted );
 
     memset ( blob, 0, sizeof * blob );
-    KColumnBlobBaseInit( blob, & KRColumnBlob_vt );
+    KColumnBlobBaseInit( & blob -> dad, & KWColumnBlob_vt );
 
     blob -> bswap = bswap;
 
     * blobp = blob;
     return 0;
-}
-
-LIB_EXPORT rc_t CC KColumnOpenBlobUpdate ( KColumn *self, KColumnBlob **blobp, int64_t id )
-{
-    rc_t rc;
-
-    if ( blobp == NULL )
-        return RC ( rcDB, rcColumn, rcOpening, rcParam, rcNull );
-    * blobp = NULL;
-
-    if ( self == NULL )
-        return RC ( rcDB, rcColumn, rcOpening, rcSelf, rcNull );
-    if ( self -> read_only )
-        return RC ( rcDB, rcColumn, rcOpening, rcColumn, rcReadonly );
-
-    rc = KWColumnBlobMake ( blobp, self -> idx . idx1 . bswap );
-    if ( rc == 0 )
-    {
-        KColumnBlob *blob = * blobp;
-        rc = KColumnBlobOpenUpdate ( blob, self, id );
-        if ( rc == 0 )
-        {
-            blob -> col = KColumnAttach ( self );
-            * blobp = blob;
-            return 0;
-        }
-
-        free ( blob );
-    }
-
-    return rc;
-}
-
-/* CreateBlob
- *  creates a new, unassigned blob
- */
-LIB_EXPORT rc_t CC KColumnCreateBlob ( KColumn *self, KColumnBlob **blobp )
-{
-    rc_t rc;
-
-    if ( blobp == NULL )
-        return RC ( rcDB, rcColumn, rcOpening, rcParam, rcNull );
-    * blobp = NULL;
-
-    if ( self == NULL )
-        return RC ( rcDB, rcColumn, rcOpening, rcSelf, rcNull );
-    if ( self -> read_only )
-        return RC ( rcDB, rcColumn, rcOpening, rcColumn, rcReadonly );
-
-    rc = KWColumnBlobMake ( blobp, self -> idx . idx1 . bswap );
-    if ( rc == 0 )
-    {
-        KColumnBlob *blob = * blobp;
-        rc = KColumnBlobCreate ( blob, self );
-        if ( rc == 0 )
-        {
-            blob -> col = KColumnAttach ( self );
-            * blobp = blob;
-            return 0;
-        }
-
-        free ( blob );
-    }
-
-    return rc;
 }
 
 /* IdRange
@@ -308,8 +248,10 @@ LIB_EXPORT rc_t CC KColumnCreateBlob ( KColumn *self, KColumnBlob **blobp )
  */
 static
 rc_t CC
-KWColumnBlobIdRange ( const KColumnBlob *self, int64_t *first, uint32_t *count )
+KWColumnBlobIdRange ( const KColumnBlob *bself, int64_t *first, uint32_t *count )
 {
+    CAST();
+
     rc_t rc;
 
     if ( first == NULL || count == NULL )
@@ -337,7 +279,7 @@ KWColumnBlobIdRange ( const KColumnBlob *self, int64_t *first, uint32_t *count )
  *  runs checksum validation on unmodified blob
  */
 static
-rc_t KColumnBlobValidateCRC32 ( const KColumnBlob *self )
+rc_t KColumnBlobValidateCRC32 ( const KWColumnBlob *self )
 {
     rc_t rc;
     const KColumn *col = self -> col;
@@ -382,7 +324,7 @@ rc_t KColumnBlobValidateCRC32 ( const KColumnBlob *self )
 }
 
 static
-rc_t KColumnBlobValidateMD5 ( const KColumnBlob *self )
+rc_t KColumnBlobValidateMD5 ( const KWColumnBlob *self )
 {
     rc_t rc;
     const KColumn *col = self -> col;
@@ -431,8 +373,10 @@ rc_t KColumnBlobValidateMD5 ( const KColumnBlob *self )
 
 static
 rc_t CC
-KWColumnBlobValidate ( const KColumnBlob *self )
+KWColumnBlobValidate ( const KColumnBlob *bself )
 {
+    CAST();
+
     if ( self -> num_writ != 0 )
         return RC ( rcDB, rcBlob, rcValidating, rcBlob, rcBusy );
 
@@ -487,9 +431,11 @@ rc_t KColumnBlobValidateBufferMD5 ( const void * buffer, size_t size, const uint
 
 static
 rc_t CC
-KWColumnBlobValidateBuffer ( const KColumnBlob * self,
+KWColumnBlobValidateBuffer ( const KColumnBlob * bself,
     const KDataBuffer * buffer, const KColumnBlobCSData * cs_data, size_t cs_data_size )
 {
+    CAST();
+
     size_t bsize;
 
     if ( buffer == NULL || cs_data == NULL )
@@ -530,10 +476,12 @@ KWColumnBlobValidateBuffer ( const KColumnBlob * self,
  */
 static
 rc_t CC
-KWColumnBlobRead ( const KColumnBlob *self,
+KWColumnBlobRead ( const KColumnBlob *bself,
     size_t offset, void *buffer, size_t bsize,
     size_t *num_read, size_t *remaining )
 {
+    CAST();
+
     rc_t rc;
 
     size_t ignore;
@@ -611,9 +559,11 @@ KWColumnBlobRead ( const KColumnBlob *self,
  */
 static
 rc_t CC
-KWColumnBlobReadAll ( const KColumnBlob * self, KDataBuffer * buffer,
+KWColumnBlobReadAll ( const KColumnBlob * bself, KDataBuffer * buffer,
     KColumnBlobCSData * opt_cs_data, size_t cs_data_size )
 {
+    CAST();
+
     rc_t rc = 0;
 
     if ( opt_cs_data != NULL )
@@ -637,7 +587,7 @@ KWColumnBlobReadAll ( const KColumnBlob * self, KDataBuffer * buffer,
             {
                 /* read the blob */
                 size_t num_read, remaining;
-                rc = KColumnBlobRead ( self, 0, buffer -> base, bsize, & num_read, & remaining );
+                rc = KColumnBlobRead ( bself, 0, buffer -> base, bsize, & num_read, & remaining );
                 if ( rc == 0 )
                 {
                     /* test that num_read is everything and we have no remaining */
@@ -705,8 +655,10 @@ KWColumnBlobReadAll ( const KColumnBlob * self, KDataBuffer * buffer,
  *
  *  "buffer" [ IN ] and "size" [ IN ] - blob data
  */
-LIB_EXPORT rc_t CC KColumnBlobAppend ( KColumnBlob *self, const void *buffer, size_t size )
+LIB_EXPORT rc_t CC KColumnBlobAppend ( KColumnBlob *bself, const void *buffer, size_t size )
 {
+    CAST();
+
     KColumn *col;
     size_t total, num_writ;
 
@@ -750,8 +702,10 @@ LIB_EXPORT rc_t CC KColumnBlobAppend ( KColumnBlob *self, const void *buffer, si
  *
  *  "first" [ IN ] and "count" [ IN ] - range parameters for assign
  */
-LIB_EXPORT rc_t CC KColumnBlobAssignRange ( KColumnBlob *self, int64_t first, uint32_t count )
+LIB_EXPORT rc_t CC KColumnBlobAssignRange ( KColumnBlob *bself, int64_t first, uint32_t count )
 {
+    CAST();
+
     rc_t rc;
     const KColumn *col;
 
@@ -814,7 +768,7 @@ static
 char zero [ 4096 ];
 
 static
-rc_t KColumnBlobZeroPad ( KColumnBlob *self )
+rc_t KColumnBlobZeroPad ( KWColumnBlob *self )
 {
     KColumn *col = self -> col;
     size_t pad_bytes = self -> num_writ % col -> df . pgsize;
@@ -844,7 +798,7 @@ rc_t KColumnBlobZeroPad ( KColumnBlob *self )
 }
 
 static
-rc_t KColumnBlobDoCommit ( KColumnBlob *self )
+rc_t KColumnBlobDoCommit ( KWColumnBlob *self )
 {
     rc_t rc;
     KColBlobLoc loc;
@@ -968,8 +922,10 @@ rc_t KColumnBlobDoCommit ( KColumnBlob *self )
     return rc;
 }
 
-LIB_EXPORT rc_t CC KColumnBlobCommit ( KColumnBlob *self )
+LIB_EXPORT rc_t CC KColumnBlobCommit ( KColumnBlob *bself )
 {
+    CAST();
+
     rc_t rc;
 
     if ( self == NULL )

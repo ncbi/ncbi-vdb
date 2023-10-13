@@ -30,7 +30,8 @@
 #include <kfs/file.h>
 #include <kfs/md5.h>
 
-#include "cc-priv.h"
+#include "cc.h"
+
 #include <os-native.h>
 
 #include <stdio.h> /* for sprintf */
@@ -45,7 +46,7 @@ rc_t FileCheckMD5(const KDirectory *dir, const char name[], const uint8_t digest
     uint64_t pos;
     size_t nr;
     char buf[4096];
-    
+
     rc = KDirectoryOpenFileRead(dir, &fp, "%s", name);
     if (rc)
         return rc;
@@ -78,12 +79,12 @@ rc_t DirectoryCheckMD5(const KDirectory *dir, const char name[],
     uint8_t digest[16];
     char pathbuf[4096];
     char mesg[1024];
-    
+
     mesg[0] = '\0';
-    
+
     nfo->type = ccrpt_Done;
     nfo->info.done.mesg = mesg;
-    
+
     rc = KDirectoryOpenFileRead(dir, &kf, "%s", name);
     if (rc) {
         snprintf(mesg, sizeof(mesg), "MD5 file '%s' could not be opened", name);
@@ -127,7 +128,7 @@ rc_t DirectoryCheckMD5(const KDirectory *dir, const char name[],
     KMD5SumFmtRelease(sum);
     if (rc)
         return rc;
-    
+
     nfo->type = ccrpt_Done;
     if (rc2) {
         nfo->info.done.mesg = "failed md5 validation";

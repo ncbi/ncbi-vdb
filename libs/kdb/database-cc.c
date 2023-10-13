@@ -28,23 +28,24 @@
 
 #define KONST const
 #include "index-priv.h"
-#include "dbmgr-priv.h"
-#include "database-priv.h"
-#include "table-priv.h"
-#include "kdb-priv.h"
-#include "column-priv.h"
+#include "dbmgr.h"
+#include "database-cmn.h"
+#include "rtable.h"
+#include "rcolumn.h"
 #undef KONST
 
-#include "cc-priv.h"
+#include "cc.h"
 
 #include <kdb/index.h>
+#include <kdb/namelist.h>
 
 #include <kfs/file.h>
 #include <kfs/md5.h>
+
 #include <klib/refcount.h>
 #include <klib/rc.h>
 #include <klib/namelist.h>
-#include <kdb/namelist.h>
+
 #include <os-native.h>
 #include <sysalloc.h>
 
@@ -60,7 +61,7 @@
 static void KDatabaseGetName(KDatabase const *self, char const **rslt)
 {
     char *sep;
-    
+
     *rslt = self->path;
     sep = strrchr(self->path, '/');
     if (sep != NULL)
@@ -75,7 +76,7 @@ rc_t KDatabaseCheckMD5 (const KDatabase *self, CCReportFunc report, void *ctx)
 
     info.objType = kptDatabase;
     KDatabaseGetName(self, &info.objName);
-    
+
     return DirectoryCheckMD5 (self -> dir, "md5", & info, report, ctx);
 }
 
@@ -83,30 +84,30 @@ static
 rc_t KDatabaseCheckTables (const KDatabase *self, uint32_t depth, int level, CCReportFunc report, void *ctx)
 {
     uint32_t n;
-    
+
     KNamelist *list;
     rc_t rc = KDatabaseListTbl (self, & list);
     if (rc != 0)
         return rc;
-    
+
     rc = KNamelistCount (list, & n);
     if (rc == 0)
     {
         CCReportInfoBlock nfo;
         memset (& nfo, 0, sizeof nfo);
         nfo.objType = kptTable;
-        
+
         for (nfo.objId = 0; rc == 0 && nfo.objId != (int) n; ++ nfo.objId)
         {
             rc = KNamelistGet (list, nfo.objId, &nfo.objName);
             if (rc == 0)
             {
                 const KTable *tbl;
-                
+
                 nfo.type = ccrpt_Visit;
                 nfo.info.visit.depth = depth + 1;
                 rc = report(&nfo, ctx); if (rc) break;
-                
+
                 rc = KDatabaseOpenTableRead (self, & tbl, "%s", nfo.objName);
                 if (rc == 0)
                 {
@@ -117,7 +118,7 @@ rc_t KDatabaseCheckTables (const KDatabase *self, uint32_t depth, int level, CCR
             }
         }
     }
-    
+
     KNamelistRelease (list);
     return rc;
 }
@@ -136,7 +137,7 @@ static
 const KDirectory *KDatabaseFindIndexDir (const KDatabase *self)
 {
     const KDirectory *idxDir;
-    
+
     rc_t rc = KDirectoryOpenDirRead (self -> dir, & idxDir, false, "idx");
     if (rc == 0)
         return idxDir;
@@ -176,11 +177,11 @@ rc_t KDatabaseCheckIndices (const KDatabase *self, uint32_t depth, uint32_t leve
                 rc = KNamelistGet(list, nfo.objId, &nfo.objName);
                 if (rc != 0)
                     break;
-            
+
                 nfo.type = ccrpt_Visit;
                 nfo.info.visit.depth = depth + 1;
                 rc = report(&nfo, ctx); if (rc) break;
-                
+
                 rc = KDatabaseCheckIndexMD5 (idxDir, &nfo, report, ctx);
                 if (rc == 0 && level > 0)
                 {
@@ -242,18 +243,18 @@ rc_t KDatabaseCheckDatabases (const KDatabase *self, uint32_t depth, int level, 
         CCReportInfoBlock nfo;
         memset (& nfo, 0, sizeof nfo);
         nfo.objType = kptDatabase;
-        
+
         for (nfo.objId = 0; rc == 0 && nfo.objId != (int) n; ++ nfo.objId)
         {
             rc = KNamelistGet (list, nfo.objId, &nfo.objName);
             if (rc == 0)
             {
                 const KDatabase *db;
-                
+
                 nfo.type = ccrpt_Visit;
                 nfo.info.visit.depth = depth + 1;
                 rc = report(&nfo, ctx); if (rc) break;
-                
+
                 rc = KDatabaseOpenDBRead (self, & db, "%s", nfo.objName);
                 if (rc == 0)
                 {
@@ -263,7 +264,7 @@ rc_t KDatabaseCheckDatabases (const KDatabase *self, uint32_t depth, int level, 
             }
         }
     }
-    
+
     KNamelistRelease (list);
     return rc;
 }
@@ -283,48 +284,48 @@ rc_t CC KDatabaseConsistencyCheck (const KDatabase *self,
 
     if (self == NULL)
         return RC (rcDB, rcDatabase, rcValidating, rcSelf, rcNull);
-    
+
     if (depth == 0) {
         CCReportInfoBlock info;
-        
+
         KDatabaseGetName(self, &info.objName);
         info.objId = 0;
         info.objType = kptDatabase;
         info.type = ccrpt_Visit;
         info.info.visit.depth = 0;
-        
+
         rc = report(&info, ctx);
         if (rc) return rc;
     }
-    
+
     type = KDirectoryPathType(self->dir, "md5");
     if (type == kptZombieFile) {
         CCReportInfoBlock info;
-        
+
         KDatabaseGetName(self, &info.objName);
         info.objId = 0;
         info.objType = kptTable;
         info.type = ccrpt_Done;
         info.info.done.mesg = "Database may be truncated";
         info.info.done.rc = 0;
-        
+
         rc = report(&info, ctx);
     }
     else if (type != kptNotFound)
         rc = KDatabaseCheckMD5 (self, report, ctx);
     else {
         CCReportInfoBlock info;
-        
+
         KDatabaseGetName(self, &info.objName);
         info.objId = 0;
         info.objType = kptDatabase;
         info.type = ccrpt_Done;
         info.info.done.mesg = "no md5 file";
         info.info.done.rc = 0;
-        
+
         rc = report(&info, ctx);
     }
-    
+
 
     if (rc == 0)
         rc = KDatabaseCheckTables (self, depth, aLevel, report, ctx);

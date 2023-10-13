@@ -26,19 +26,22 @@
 
 #include <kdb/extern.h>
 
-#include "windex-priv.h"
+#include "windex.h"
 #include "wdbmgr.h"
-#include "database-priv.h"
-#include "wtable-priv.h"
-#include "wkdb-priv.h"
-#include "kdbfmt-priv.h"
+#include "database-cmn.h"
+#include "wtable.h"
+#include "wkdb.h"
+#include "kdbfmt.h"
 
 #include <kdb/kdb-priv.h>
 #include <kdb/index.h>
+
 #include <kfs/file.h>
 #include <kfs/mmap.h>
+
 #include <klib/refcount.h>
 #include <klib/rc.h>
+
 #include <sysalloc.h>
 
 #include <limits.h>

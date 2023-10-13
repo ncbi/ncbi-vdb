@@ -27,7 +27,8 @@
 #include <kdb/extern.h>
 
 #include <kdb/manager.h>
-#include "dbmgr-priv.h"
+
+#include "dbmgr.h"
 
 #include <kfs/directory.h>
 #include <kfs/sra.h>

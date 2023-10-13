@@ -26,7 +26,7 @@
 
 #include <kdb/extern.h>
 
-#include "idstats-priv.h"
+#include "idstats.h"
 
 #include <klib/rc.h>
 #include <sysalloc.h>

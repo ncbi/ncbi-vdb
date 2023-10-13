@@ -31,7 +31,7 @@
 #include <ktst/unit_test.hpp>
 
 #include <../libs/kdb/rdatabase.h>
-#include <../libs/kdb/dbmgr-priv.h>
+#include <../libs/kdb/dbmgr.h>
 
 #include <kdb/manager.h>
 #include <kdb/kdb-priv.h>

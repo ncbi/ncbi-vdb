@@ -31,8 +31,8 @@
 
 #include "wdbmgr.h"
 #include "wdatabase.h"
-#include "wtable-priv.h"
-#include "wcolumn-priv.h"
+#include "wtable.h"
+#include "wcolumn.h"
 
 #include <kfs/file.h>
 #include <kfs/mmap.h>
