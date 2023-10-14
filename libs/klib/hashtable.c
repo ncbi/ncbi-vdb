@@ -38,6 +38,8 @@
 
 #undef memcpy
 
+#define DEBUG_OUTPUT 0
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -251,7 +253,7 @@ LIB_EXPORT bool KHashTableFind(const KHashTable* self, const void* key,
     const size_t key_size = self->key_size;
     const size_t value_size = self->value_size;
     size_t triangle = 0;
-#ifdef DEBUG
+#if DEBUG_OUTPUT
     const size_t init_bucket = bucket & mask;
 #endif
     while (1) {
@@ -305,7 +307,7 @@ LIB_EXPORT bool KHashTableFind(const KHashTable* self, const void* key,
          */
         ++triangle;
         bucket += (triangle * (triangle + 1) / 2);
-#ifdef DEBUG
+#if DEBUG_OUTPUT
 if ( (bucket & mask) == init_bucket ) printf("bucket=%" PRIu64 " mask=%" PRIu64 " bucket & mask = %" PRIu64 " init_bucket=%lu\n", bucket, mask, bucket & mask, (unsigned long)init_bucket);
         //assert((bucket & mask) != init_bucket);
 #endif

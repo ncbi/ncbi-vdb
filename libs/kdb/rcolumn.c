@@ -48,18 +48,18 @@
  *  a read-only collection of blobs indexed by oid; file system-based
  */
 
-static rc_t CC KRColumnWhack ( KColumn *self );
-static bool CC KRColumnLocked ( const KColumn *self );
-static rc_t CC KRColumnVersion ( const KColumn *self, uint32_t *version );
-static rc_t CC KRColumnByteOrder ( const KColumn *self, bool *reversed );
-static rc_t CC KRColumnIdRange ( const KColumn *self, int64_t *first, uint64_t *count );
-static rc_t CC KRColumnFindFirstRowId ( const KColumn * self, int64_t * found, int64_t start );
-static rc_t CC KRColumnOpenManagerRead ( const KColumn *self, const KDBManager **mgr );
-static rc_t CC KRColumnOpenParentRead ( const KColumn *self, const KTable **tbl );
-static rc_t CC KRColumnOpenMetadataRead ( const KColumn *self, const KMetadata **metap );
-static rc_t CC KRColumnOpenBlobRead ( const KColumn *self, const KColumnBlob **blobp, int64_t id );
+static rc_t CC KRColumnWhack ( KRColumn *self );
+static bool CC KRColumnLocked ( const KRColumn *self );
+static rc_t CC KRColumnVersion ( const KRColumn *self, uint32_t *version );
+static rc_t CC KRColumnByteOrder ( const KRColumn *self, bool *reversed );
+static rc_t CC KRColumnIdRange ( const KRColumn *self, int64_t *first, uint64_t *count );
+static rc_t CC KRColumnFindFirstRowId ( const KRColumn * self, int64_t * found, int64_t start );
+static rc_t CC KRColumnOpenManagerRead ( const KRColumn *self, const KDBManager **mgr );
+static rc_t CC KRColumnOpenParentRead ( const KRColumn *self, const KTable **tbl );
+static rc_t CC KRColumnOpenMetadataRead ( const KRColumn *self, const KMetadata **metap );
+static rc_t CC KRColumnOpenBlobRead ( const KRColumn *self, const KColumnBlob **blobp, int64_t id );
 
-static KColumnBase_vt KColumn_vt =
+static KColumn_vt KRColumn_vt =
 {
     /* Public API */
     KRColumnWhack,
@@ -76,6 +76,8 @@ static KColumnBase_vt KColumn_vt =
     KRColumnOpenBlobRead
 };
 
+#define CAST() assert( bself->vt == &KRColumn_vt ); KRColumn * self = (KRColumn *)bself
+
 /* Whack
  */
 static
@@ -84,11 +86,11 @@ rc_t KRColumnWhack ( KCOLUMN_IMPL *self )
     rc_t rc;
 
     /* shut down index */
-    rc = KColumnIdxWhack ( & self -> idx );
+    rc = KRColumnIdxWhack ( & self -> idx );
     if ( rc == 0 )
     {
         /* shut down data fork */
-        KColumnDataWhack ( & self -> df );
+        KRColumnDataWhack ( & self -> df );
 
         /* release owning table
            should never fail, and our recovery is flawed */
@@ -111,42 +113,42 @@ rc_t KRColumnWhack ( KCOLUMN_IMPL *self )
         }
     }
 
-    KRefcountInit ( & self -> dad . refcount, 1, "KColumn", "whack", "kcol" );
+    KRefcountInit ( & self -> dad . refcount, 1, "KRColumn", "whack", "kcol" );
     return rc;
 }
 
 /* Make
  */
-rc_t KRColumnMake ( KColumn **colp, const KDirectory *dir, const char *path )
+rc_t KRColumnMake ( KRColumn **colp, const KDirectory *dir, const char *path )
 {
-    KColumn *col = malloc ( sizeof * col + strlen ( path ) );
+    KRColumn *col = malloc ( sizeof * col + strlen ( path ) );
     if ( col == NULL )
         return RC ( rcDB, rcColumn, rcConstructing, rcMemory, rcExhausted );
 
     memset ( col, 0, sizeof * col );
-    col -> dad . vt = & KColumn_vt;
+    col -> dad . vt = & KRColumn_vt;
     col -> dir = dir;
-    KRefcountInit ( & col -> dad . refcount, 1, "KColumn", "make", path );
+    KRefcountInit ( & col -> dad . refcount, 1, "KRColumn", "make", path );
     strcpy ( col -> path, path );
 
     * colp = col;
     return 0;
 }
 
-rc_t KRColumnMakeRead ( KColumn **colp, const KDirectory *dir, const char *path )
+rc_t KRColumnMakeRead ( KRColumn **colp, const KDirectory *dir, const char *path )
 {
     rc_t rc = KRColumnMake ( colp, dir, path );
     if ( rc == 0 )
     {
         size_t pgsize;
         uint64_t data_eof;
-        KColumn *self = * colp;
+        KRColumn *self = * colp;
 
-        rc = KColumnIdxOpenRead ( & self -> idx,
+        rc = KRColumnIdxOpenRead ( & self -> idx,
             dir, & data_eof, & pgsize, & self -> checksum );
         if ( rc == 0 )
         {
-            rc = KColumnDataOpenRead ( & self -> df,
+            rc = KRColumnDataOpenRead ( & self -> df,
                 dir, data_eof, pgsize );
             if ( rc == 0 )
             {
@@ -165,7 +167,7 @@ rc_t KRColumnMakeRead ( KColumn **colp, const KDirectory *dir, const char *path 
                 return 0;
             }
 
-            KColumnIdxWhack ( & self -> idx );
+            KRColumnIdxWhack ( & self -> idx );
         }
 
         free ( self );
@@ -179,7 +181,7 @@ rc_t KRColumnMakeRead ( KColumn **colp, const KDirectory *dir, const char *path 
  *  returns non-zero if locked
  */
 static
-bool CC KRColumnLocked ( const KColumn *self )
+bool CC KRColumnLocked ( const KRColumn *self )
 {
     rc_t rc = KDBRWritable ( self -> dir, "" );
     return GetRCState ( rc ) == rcLocked;
@@ -189,14 +191,14 @@ bool CC KRColumnLocked ( const KColumn *self )
  *  returns the column format version
  */
 static
-rc_t CC KRColumnVersion ( const KColumn *self, uint32_t *version )
+rc_t CC KRColumnVersion ( const KRColumn *self, uint32_t *version )
 {
     if ( version == NULL )
         return RC ( rcDB, rcColumn, rcAccessing, rcParam, rcNull );
 
     * version = 0;
 
-    return KColumnIdxVersion ( & self -> idx, version );
+    return KRColumnIdxVersion ( & self -> idx, version );
 }
 
 /* ByteOrder
@@ -210,21 +212,21 @@ rc_t CC KRColumnVersion ( const KColumn *self, uint32_t *version )
  *  order is reversed with regard to host native byte order.
  */
 static
-rc_t CC KRColumnByteOrder ( const KColumn *self, bool *reversed )
+rc_t CC KRColumnByteOrder ( const KRColumn *self, bool *reversed )
 {
     if ( reversed == NULL )
         return RC ( rcDB, rcColumn, rcAccessing, rcParam, rcNull );
 
     * reversed = false;
 
-    return KColumnIdxByteOrder ( & self -> idx, reversed );
+    return KRColumnIdxByteOrder ( & self -> idx, reversed );
 }
 
 /* IdRange
  *  returns id range for column
  */
 static
-rc_t CC KRColumnIdRange ( const KColumn *self, int64_t *first, uint64_t *count )
+rc_t CC KRColumnIdRange ( const KRColumn *self, int64_t *first, uint64_t *count )
 {
     rc_t rc;
     int64_t dummy, last;
@@ -240,7 +242,7 @@ rc_t CC KRColumnIdRange ( const KColumn *self, int64_t *first, uint64_t *count )
     * first = 0;
     * count = 0;
 
-    rc = KColumnIdxIdRange ( & self -> idx, first, & last );
+    rc = KRColumnIdxIdRange ( & self -> idx, first, & last );
     if ( rc != 0 )
         * count = 0;
     else
@@ -265,7 +267,7 @@ rc_t CC KRColumnIdRange ( const KColumn *self, int64_t *first, uint64_t *count )
  *  may return other codes upon error.
  */
 static
-rc_t CC KRColumnFindFirstRowId ( const KColumn * self, int64_t * found, int64_t start )
+rc_t CC KRColumnFindFirstRowId ( const KRColumn * self, int64_t * found, int64_t start )
 {
     rc_t rc;
 
@@ -273,7 +275,7 @@ rc_t CC KRColumnFindFirstRowId ( const KColumn * self, int64_t * found, int64_t 
         rc = RC ( rcDB, rcColumn, rcAccessing, rcParam, rcNull );
     else
     {
-        rc = KColumnIdxFindFirstRowId ( & self -> idx, found, start );
+        rc = KRColumnIdxFindFirstRowId ( & self -> idx, found, start );
         if ( rc == 0 )
             return 0;
 
@@ -289,7 +291,7 @@ rc_t CC KRColumnFindFirstRowId ( const KColumn * self, int64_t * found, int64_t 
  *  NB - returned reference must be released
  */
 static
-rc_t CC KRColumnOpenManagerRead ( const KColumn *self, const KDBManager **mgr )
+rc_t CC KRColumnOpenManagerRead ( const KRColumn *self, const KDBManager **mgr )
 {
     rc_t rc;
 
@@ -317,7 +319,7 @@ rc_t CC KRColumnOpenManagerRead ( const KColumn *self, const KDBManager **mgr )
  *  NB - returned reference must be released
  */
 static
-rc_t CC KRColumnOpenParentRead ( const KColumn *self, const KTable **tbl )
+rc_t CC KRColumnOpenParentRead ( const KRColumn *self, const KTable **tbl )
 {
     rc_t rc;
 
@@ -340,8 +342,10 @@ rc_t CC KRColumnOpenParentRead ( const KColumn *self, const KTable **tbl )
 
 /* GetDirectory
  */
-LIB_EXPORT rc_t CC KColumnGetDirectoryRead ( const KColumn *self, const KDirectory **dir )
+LIB_EXPORT rc_t CC KColumnGetDirectoryRead ( const KColumn *bself, const KDirectory **dir )
 {
+    CAST();
+
     rc_t rc;
 
     if ( dir == NULL )
@@ -364,7 +368,7 @@ LIB_EXPORT rc_t CC KColumnGetDirectoryRead ( const KColumn *self, const KDirecto
 
 static
 rc_t CC
-KRColumnOpenMetadataRead ( const KColumn *self, const KMetadata **metap )
+KRColumnOpenMetadataRead ( const KRColumn *self, const KMetadata **metap )
 {
     rc_t rc;
     KMetadata *meta;
@@ -389,7 +393,7 @@ KRColumnOpenMetadataRead ( const KColumn *self, const KMetadata **metap )
  */
 static
 rc_t CC
-KRColumnOpenBlobRead ( const KColumn *self, const KColumnBlob **blobp, int64_t id )
+KRColumnOpenBlobRead ( const KRColumn *self, const KColumnBlob **blobp, int64_t id )
 {
     rc_t rc;
     KRColumnBlob *blob;

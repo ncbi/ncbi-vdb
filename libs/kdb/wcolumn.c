@@ -47,24 +47,24 @@
 #include "columnblob-base.h"
 
 /*--------------------------------------------------------------------------
- * KWColumn (formerly KColumn)
+ * KWColumn (formerly KWColumn)
  *  a read-write collection of blobs indexed by oid; file system-based
  */
 
-static rc_t CC KWColumnWhack ( KColumn *self );
-static rc_t CC KWColumnAddRef ( const KColumn *cself );
-static rc_t CC KWColumnRelease ( const KColumn *cself );
-static bool CC KWColumnLocked ( const KColumn *self );
-static rc_t CC KWColumnVersion ( const KColumn *self, uint32_t *version );
-static rc_t CC KWColumnByteOrder ( const KColumn *self, bool *reversed );
-static rc_t CC KWColumnIdRange ( const KColumn *self, int64_t *first, uint64_t *count );
-static rc_t CC KWColumnFindFirstRowId ( const KColumn * self, int64_t * found, int64_t start );
-static rc_t CC KWColumnOpenManagerRead ( const KColumn *self, const KDBManager **mgr );
-static rc_t CC KWColumnOpenParentRead ( const KColumn *self, const KTable **tbl );
-static rc_t CC KWColumnOpenMetadataRead ( const KColumn *self, const KMetadata **metap );
-static rc_t CC KWColumnOpenBlobRead ( const KColumn *self, const KColumnBlob **blobp, int64_t id );
+static rc_t CC KWColumnWhack ( KWColumn *self );
+static rc_t CC KWColumnAddRef ( const KWColumn *cself );
+static rc_t CC KWColumnRelease ( const KWColumn *cself );
+static bool CC KWColumnLocked ( const KWColumn *self );
+static rc_t CC KWColumnVersion ( const KWColumn *self, uint32_t *version );
+static rc_t CC KWColumnByteOrder ( const KWColumn *self, bool *reversed );
+static rc_t CC KWColumnIdRange ( const KWColumn *self, int64_t *first, uint64_t *count );
+static rc_t CC KWColumnFindFirstRowId ( const KWColumn * self, int64_t * found, int64_t start );
+static rc_t CC KWColumnOpenManagerRead ( const KWColumn *self, const KDBManager **mgr );
+static rc_t CC KWColumnOpenParentRead ( const KWColumn *self, const KTable **tbl );
+static rc_t CC KWColumnOpenMetadataRead ( const KWColumn *self, const KMetadata **metap );
+static rc_t CC KWColumnOpenBlobRead ( const KWColumn *self, const KColumnBlob **blobp, int64_t id );
 
-static KColumnBase_vt KColumn_vt =
+static KColumn_vt KWColumn_vt =
 {
     /* Public API */
     KWColumnWhack,
@@ -81,26 +81,28 @@ static KColumnBase_vt KColumn_vt =
     KWColumnOpenBlobRead
 };
 
+#define CAST() assert( bself->vt == &KWColumn_vt ); KWColumn * self = (KWColumn *)bself
+
 /* Whack
  */
 static
-rc_t KWColumnWhack ( KColumn *self )
+rc_t KWColumnWhack ( KWColumn *self )
 {
     rc_t rc;
     KDBManager *mgr = self -> mgr;
     KSymbol * symb;
     assert ( mgr != NULL );
 
-    KRefcountWhack ( & self -> dad . refcount, "KColumn" );
+    KRefcountWhack ( & self -> dad . refcount, "KWColumn" );
 
     /* shut down and checkpoint index */
-    rc = KColumnIdxWhack ( & self -> idx,
+    rc = KWColumnIdxWhack ( & self -> idx,
         self -> df . eof, self -> df . pgsize, self -> checksum );
     if ( rc )
         return rc;
 
     /* shut down data fork */
-    KColumnDataWhack ( & self -> df );
+    KWColumnDataWhack ( & self -> df );
 
     /* shut down md5 sum file if it is open */
     KMD5SumFmtRelease ( self -> md5 ), self -> md5 = NULL;
@@ -135,7 +137,7 @@ rc_t KWColumnWhack ( KColumn *self )
         }
     }
 
-    KRefcountInit ( & self -> dad . refcount, 1, "KColumn", "whack", "kcol" );
+    KRefcountInit ( & self -> dad . refcount, 1, "KWColumn", "whack", "kcol" );
     return rc;
 }
 
@@ -145,10 +147,10 @@ rc_t KWColumnWhack ( KColumn *self )
  *  all objects are reference counted
  *  NULL references are ignored
  */
-static rc_t CC KWColumnAddRef ( const KColumn *cself )
+static rc_t CC KWColumnAddRef ( const KWColumn *cself )
 {
-    KColumn *self = ( KColumn* ) cself;
-    switch ( KRefcountAdd ( & self -> dad . refcount, "KColumn" ) )
+    KWColumn *self = ( KWColumn* ) cself;
+    switch ( KRefcountAdd ( & self -> dad . refcount, "KWColumn" ) )
     {
     case krefLimit:
         return RC ( rcDB, rcColumn, rcAttaching, rcRange, rcExcessive );
@@ -157,13 +159,13 @@ static rc_t CC KWColumnAddRef ( const KColumn *cself )
     return 0;
 }
 
-static rc_t CC KWColumnRelease ( const KColumn *cself )
+static rc_t CC KWColumnRelease ( const KWColumn *cself )
 {
-    KColumn *self = ( KColumn* ) cself;
-    switch ( KRefcountDrop ( & self -> dad . refcount, "KColumn" ) )
+    KWColumn *self = ( KWColumn* ) cself;
+    switch ( KRefcountDrop ( & self -> dad . refcount, "KWColumn" ) )
     {
     case krefWhack:
-        return KWColumnWhack ( ( KColumn* ) self );
+        return KWColumnWhack ( ( KWColumn* ) self );
     case krefLimit:
         return RC ( rcDB, rcColumn, rcReleasing, rcRange, rcExcessive );
     }
@@ -176,11 +178,11 @@ static rc_t CC KWColumnRelease ( const KColumn *cself )
  *  make an initialized structure
  *  NB - does NOT attach reference to dir, but steals it
  */
-rc_t KWColumnMake ( KColumn **colp, const KDirectory *dir, const char *path,
+rc_t KWColumnMake ( KWColumn **colp, const KDirectory *dir, const char *path,
 		   KMD5SumFmt * md5, bool read_only )
 {
     rc_t rc;
-    KColumn *col = malloc ( sizeof * col + strlen ( path ) );
+    KWColumn *col = malloc ( sizeof * col + strlen ( path ) );
     if ( col == NULL )
     {
 	* colp = NULL;
@@ -189,12 +191,12 @@ rc_t KWColumnMake ( KColumn **colp, const KDirectory *dir, const char *path,
 
     memset ( col, 0, sizeof * col );
 
-    col -> dad . vt = & KColumn_vt;
+    col -> dad . vt = & KWColumn_vt;
 
     col -> dir = ( KDirectory* ) dir;
     col -> md5 = md5;
     rc = KMD5SumFmtAddRef ( md5 );
-    KRefcountInit ( & col -> dad . refcount, 1, "KColumn", "make", path );
+    KRefcountInit ( & col -> dad . refcount, 1, "KWColumn", "make", path );
     col -> opencount = 1;
     col -> commit_freq = 1;
     col -> read_only = read_only;
@@ -210,20 +212,20 @@ rc_t KWColumnMake ( KColumn **colp, const KDirectory *dir, const char *path,
 }
 
 
-rc_t KWColumnMakeRead ( KColumn **colp, const KDirectory *dir, const char *path, KMD5SumFmt * md5 )
+rc_t KWColumnMakeRead ( KWColumn **colp, const KDirectory *dir, const char *path, KMD5SumFmt * md5 )
 {
     rc_t rc = KWColumnMake ( colp, dir, path, md5, true );
     if ( rc == 0 )
     {
         size_t pgsize;
         uint64_t data_eof;
-        KColumn *self = * colp;
+        KWColumn *self = * colp;
 
-        rc = KColumnIdxOpenRead ( & self -> idx,
+        rc = KWColumnIdxOpenRead ( & self -> idx,
             dir, & data_eof, & pgsize, & self -> checksum );
         if ( rc == 0 )
         {
-            rc = KColumnDataOpenRead ( & self -> df,
+            rc = KWColumnDataOpenRead ( & self -> df,
 				       dir, data_eof, pgsize );
             if ( rc == 0 )
             {
@@ -243,7 +245,7 @@ rc_t KWColumnMakeRead ( KColumn **colp, const KDirectory *dir, const char *path,
                 return 0;
             }
 
-            KColumnIdxWhack ( & self -> idx,
+            KWColumnIdxWhack ( & self -> idx,
                 data_eof, pgsize, self -> checksum );
         }
 
@@ -254,7 +256,7 @@ rc_t KWColumnMakeRead ( KColumn **colp, const KDirectory *dir, const char *path,
     return rc;
 }
 
-rc_t KColumnMakeUpdate ( KColumn **colp,
+rc_t KWColumnMakeUpdate ( KWColumn **colp,
     KDirectory *dir, const char *path, KMD5SumFmt *md5 )
 {
     rc_t rc = KWColumnMake ( colp, dir, path, md5, false );
@@ -262,13 +264,13 @@ rc_t KColumnMakeUpdate ( KColumn **colp,
     {
         size_t pgsize;
         uint64_t data_eof;
-        KColumn *self = * colp;
+        KWColumn *self = * colp;
 
-        rc = KColumnIdxOpenUpdate ( & self -> idx, dir,
+        rc = KWColumnIdxOpenUpdate ( & self -> idx, dir,
             md5, & data_eof, & pgsize, & self -> checksum );
         if ( rc == 0 )
         {
-            rc = KColumnDataOpenUpdate ( & self -> df, dir,
+            rc = KWColumnDataOpenUpdate ( & self -> df, dir,
                 md5, data_eof, pgsize );
             if ( rc == 0 )
             {
@@ -288,9 +290,9 @@ rc_t KColumnMakeUpdate ( KColumn **colp,
             }
 
             /* why is this here? */
-            KColumnDataWhack ( & self -> df );
+            KWColumnDataWhack ( & self -> df );
 
-            KColumnIdxWhack ( & self -> idx,
+            KWColumnIdxWhack ( & self -> idx,
                 data_eof, pgsize, self -> checksum );
         }
 
@@ -313,7 +315,7 @@ rc_t KColumnMakeUpdate ( KColumn **colp,
  *  "path" [ IN ] - NUL terminated string in
  *  wd-native character set giving path to database
  */
-rc_t KColumnCreate ( KColumn **colp, KDirectory *dir,
+rc_t KWColumnCreate ( KWColumn **colp, KDirectory *dir,
     KCreateMode cmode, KChecksum checksum,
 	size_t pgsize, const char *path, KMD5SumFmt *md5 )
 {
@@ -330,15 +332,15 @@ rc_t KColumnCreate ( KColumn **colp, KDirectory *dir,
     if ( rc == 0 )
     {
         uint64_t data_eof;
-        KColumn *self = * colp;
+        KWColumn *self = * colp;
 
         self -> checksum = ( int32_t ) checksum;
 
-        rc = KColumnIdxCreate ( & self -> idx,
+        rc = KWColumnIdxCreate ( & self -> idx,
             dir, md5, cmode, & data_eof, pgsize, ( int32_t ) checksum );
         if ( rc == 0 )
         {
-            rc = KColumnDataCreate ( & self -> df,
+            rc = KWColumnDataCreate ( & self -> df,
                 dir, md5, cmode, data_eof, pgsize );
             if ( rc == 0 )
             {
@@ -359,9 +361,9 @@ rc_t KColumnCreate ( KColumn **colp, KDirectory *dir,
             }
 
             /* close data ? redundant? my thoughts exactly */
-            KColumnDataWhack ( & self -> df );
+            KWColumnDataWhack ( & self -> df );
 
-            KColumnIdxWhack ( & self -> idx,
+            KWColumnIdxWhack ( & self -> idx,
                 data_eof, pgsize, self -> checksum );
         }
 
@@ -372,11 +374,10 @@ rc_t KColumnCreate ( KColumn **colp, KDirectory *dir,
     return rc;
 }
 
-rc_t KColumnFileCreate ( KFile **ppf,
+rc_t KWColumnFileCreate ( KFile **ppf,
     KMD5File **ppfmd5, KDirectory *dir, KMD5SumFmt *md5,
     KCreateMode mode, bool append, const char *name )
 {
-#if 1
     rc_t rc;
 
     KFile *pf = NULL;
@@ -412,58 +413,9 @@ rc_t KColumnFileCreate ( KFile **ppf,
     * ppf = pf;
 
     return rc;
-#else
-
-    /* this looks like it needs some rethinking */
-    rc_t rc = 0;
-    KFile * pf;
-
-    *ppfmd5 = NULL;
-    *ppf = NULL;
-    /* -----
-     * This is used even when opening for update on some files
-     * so we have extra work
-     *
-     * If mode is kcmOpen try to open with normal open functions
-     * so the MD5 part gets handled correctly
-     */
-    rc = KColumnFileOpenUpdate (ppf, ppfmd5, dir, md5, append, name);
-    if (rc == 0)
-        return 0;
-
-    else if (GetRCState (rc) == rcNotFound)
-        rc = 0; /* this is not a true failure here so go on to create it */
-    if (rc == 0)
-    {
-        rc = KDirectoryVCreateFile (dir, &pf, true, 0664, mode, "%s", name);
-        if ((rc == 0) && (md5 != NULL))
-        {
-            rc = KMD5SumFmtDelete (md5, name);
-            if ((rc == 0) || (GetRCState (rc) == rcNotFound))
-            {
-                KMD5File * md5file;
-
-                rc = (append ? KMD5FileMakeAppend : KMD5FileMakeWrite)
-                    (&md5file, pf, md5, name);
-                if (rc == 0)
-                {
-                    *ppfmd5 = md5file;
-                    pf = KMD5FileToKFile (md5file);
-                }
-                else
-                {
-                    KFileRelease (pf);
-                    pf = NULL;
-                }
-            }
-        }
-    }
-    *ppf = pf;
-    return rc;
-#endif
 }
 
-rc_t KColumnFileOpenUpdate ( KFile **ppf, KMD5File **ppfmd5,
+rc_t KWColumnFileOpenUpdate ( KFile **ppf, KMD5File **ppfmd5,
     KDirectory *dir, KMD5SumFmt *md5, bool append, const char *name )
 {
     rc_t rc;
@@ -497,7 +449,7 @@ rc_t KColumnFileOpenUpdate ( KFile **ppf, KMD5File **ppfmd5,
 /* Locked
  *  returns non-zero if locked
  */
-static bool CC KWColumnLocked ( const KColumn *self )
+static bool CC KWColumnLocked ( const KWColumn *self )
 {
     rc_t rc = KDBWWritable ( self -> dir, "." );
     return GetRCState ( rc ) == rcLocked;
@@ -514,7 +466,7 @@ static bool CC KWColumnLocked ( const KColumn *self )
  *  "path" [ IN ] - NUL terminated path
  */
 static
-rc_t KColumnLockInt (const KColumn  * self, char * path, size_t path_size,
+rc_t KColumnLockInt (const KWColumn  * self, char * path, size_t path_size,
                         int type, const char * name, va_list args )
 {
     rc_t rc;
@@ -548,7 +500,7 @@ rc_t KColumnLockInt (const KColumn  * self, char * path, size_t path_size,
     return rc;
 }
 
-LIB_EXPORT rc_t CC KColumnVWritable ( const KColumn *self, uint32_t type, const char *name, va_list args )
+LIB_EXPORT rc_t CC KColumnVWritable ( const KWColumn *self, uint32_t type, const char *name, va_list args )
 {
     rc_t rc;
     char path [ 256 ];
@@ -559,7 +511,7 @@ LIB_EXPORT rc_t CC KColumnVWritable ( const KColumn *self, uint32_t type, const 
     return rc;
 }
 
-LIB_EXPORT rc_t CC KColumnWritable ( const KColumn *self, uint32_t type, const char *name, ... )
+LIB_EXPORT rc_t CC KColumnWritable ( const KWColumn *self, uint32_t type, const char *name, ... )
 {
     rc_t rc;
     va_list args;
@@ -583,7 +535,7 @@ LIB_EXPORT rc_t CC KColumnWritable ( const KColumn *self, uint32_t type, const c
  *
  *  "path" [ IN ] - NUL terminated path
  */
-LIB_EXPORT rc_t CC KColumnVLock ( KColumn *self, uint32_t type, const char *name, va_list args )
+LIB_EXPORT rc_t CC KColumnVLock ( KWColumn *self, uint32_t type, const char *name, va_list args )
 {
     rc_t rc = 0;
     char path [ 256 ];
@@ -594,7 +546,7 @@ LIB_EXPORT rc_t CC KColumnVLock ( KColumn *self, uint32_t type, const char *name
     return rc;
 }
 
-LIB_EXPORT rc_t CC KColumnLock ( KColumn *self, uint32_t type, const char *name, ... )
+LIB_EXPORT rc_t CC KColumnLock ( KWColumn *self, uint32_t type, const char *name, ... )
 {
     rc_t rc;
     va_list args;
@@ -617,7 +569,7 @@ LIB_EXPORT rc_t CC KColumnLock ( KColumn *self, uint32_t type, const char *name,
  *
  *  "path" [ IN ] - NUL terminated path
  */
-LIB_EXPORT rc_t CC KColumnVUnlock ( KColumn *self, uint32_t type, const char *name, va_list args )
+LIB_EXPORT rc_t CC KColumnVUnlock ( KWColumn *self, uint32_t type, const char *name, va_list args )
 {
     rc_t rc = 0;
     char path [ 256 ];
@@ -628,7 +580,7 @@ LIB_EXPORT rc_t CC KColumnVUnlock ( KColumn *self, uint32_t type, const char *na
     return rc;
 }
 
-LIB_EXPORT rc_t CC KColumnUnlock ( KColumn *self, uint32_t type, const char *name, ... )
+LIB_EXPORT rc_t CC KColumnUnlock ( KWColumn *self, uint32_t type, const char *name, ... )
 {
     rc_t rc;
     va_list args;
@@ -642,11 +594,11 @@ LIB_EXPORT rc_t CC KColumnUnlock ( KColumn *self, uint32_t type, const char *nam
 /* Version
  *  returns the column format version
  */
-static rc_t CC KWColumnVersion ( const KColumn *self, uint32_t *version )
+static rc_t CC KWColumnVersion ( const KWColumn *self, uint32_t *version )
 {
     if ( version == NULL )
         return RC ( rcDB, rcColumn, rcAccessing, rcParam, rcNull );
-    return KColumnIdxVersion ( & self -> idx, version );
+    return KWColumnIdxVersion ( & self -> idx, version );
 }
 
 /* ByteOrder
@@ -660,20 +612,20 @@ static rc_t CC KWColumnVersion ( const KColumn *self, uint32_t *version )
  *  order is reversed with regard to host native byte order.
  */
 static
-rc_t CC KWColumnByteOrder ( const KColumn *self, bool *reversed )
+rc_t CC KWColumnByteOrder ( const KWColumn *self, bool *reversed )
 {
     if ( reversed == NULL )
         return RC ( rcDB, rcColumn, rcAccessing, rcParam, rcNull );
 
     * reversed = false;
-    return KColumnIdxByteOrder ( & self -> idx, reversed );
+    return KWColumnIdxByteOrder ( & self -> idx, reversed );
 }
 
 /* IdRange
  *  returns id range for column
  */
 static
-rc_t CC KWColumnIdRange ( const KColumn *self, int64_t *first, uint64_t *count )
+rc_t CC KWColumnIdRange ( const KWColumn *self, int64_t *first, uint64_t *count )
 {
     rc_t rc;
     int64_t dummy, last;
@@ -689,7 +641,7 @@ rc_t CC KWColumnIdRange ( const KColumn *self, int64_t *first, uint64_t *count )
     * first = 0;
     * count = 0;
 
-    rc = KColumnIdxIdRange ( & self -> idx, first, & last );
+    rc = KWColumnIdxIdRange ( & self -> idx, first, & last );
     if ( rc != 0 )
         * count = 0;
     else
@@ -714,7 +666,7 @@ rc_t CC KWColumnIdRange ( const KColumn *self, int64_t *first, uint64_t *count )
  *  may return other codes upon error.
  */
 static
-rc_t CC KWColumnFindFirstRowId ( const KColumn * self, int64_t * found, int64_t start )
+rc_t CC KWColumnFindFirstRowId ( const KWColumn * self, int64_t * found, int64_t start )
 {
     rc_t rc;
 
@@ -722,7 +674,7 @@ rc_t CC KWColumnFindFirstRowId ( const KColumn * self, int64_t * found, int64_t 
         rc = RC ( rcDB, rcColumn, rcAccessing, rcParam, rcNull );
     else
     {
-        rc = KColumnIdxFindFirstRowId ( & self -> idx, found, start );
+        rc = KWColumnIdxFindFirstRowId ( & self -> idx, found, start );
         if ( rc == 0 )
             return 0;
 
@@ -736,13 +688,15 @@ rc_t CC KWColumnFindFirstRowId ( const KColumn * self, int64_t * found, int64_t 
 /* Reindex
  *  optimize indices
  */
-LIB_EXPORT rc_t CC KColumnReindex ( KColumn *self )
+LIB_EXPORT rc_t CC KColumnReindex ( KColumn *bself )
 {
+    CAST();
+
     if ( self == NULL )
         return RC ( rcDB, rcColumn, rcReindexing, rcSelf, rcNull );
     if ( self -> read_only )
         return RC ( rcDB, rcColumn, rcReindexing, rcColumn, rcReadonly );
-    return KColumnIdxReindex ( & self -> idx, self -> md5, self -> commit_freq,
+    return KWColumnIdxReindex ( & self -> idx, self -> md5, self -> commit_freq,
         self -> df . eof, self -> df . pgsize, self -> checksum );
 }
 
@@ -751,8 +705,10 @@ LIB_EXPORT rc_t CC KColumnReindex ( KColumn *self )
  * SetCommitFreq
  *  manage frequency of commits
  */
-LIB_EXPORT rc_t CC KColumnCommitFreq ( KColumn *self, uint32_t *freq )
+LIB_EXPORT rc_t CC KColumnCommitFreq ( KColumn *bself, uint32_t *freq )
 {
+    CAST();
+
     if ( freq == NULL )
         return RC ( rcDB, rcColumn, rcAccessing, rcParam, rcNull );
 
@@ -766,8 +722,10 @@ LIB_EXPORT rc_t CC KColumnCommitFreq ( KColumn *self, uint32_t *freq )
     return 0;
 }
 
-LIB_EXPORT rc_t CC KColumnSetCommitFreq ( KColumn *self, uint32_t freq )
+LIB_EXPORT rc_t CC KColumnSetCommitFreq ( KColumn *bself, uint32_t freq )
 {
+    CAST();
+
     if ( self == NULL )
         return RC ( rcDB, rcColumn, rcUpdating, rcSelf, rcNull );
 
@@ -784,7 +742,7 @@ LIB_EXPORT rc_t CC KColumnSetCommitFreq ( KColumn *self, uint32_t freq )
  *  NB - returned reference must be released
  */
 static
-rc_t CC KWColumnOpenManagerRead ( const KColumn *self, const KDBManager **mgr )
+rc_t CC KWColumnOpenManagerRead ( const KWColumn *self, const KDBManager **mgr )
 {
     rc_t rc;
 
@@ -805,8 +763,10 @@ rc_t CC KWColumnOpenManagerRead ( const KColumn *self, const KDBManager **mgr )
     return rc;
 }
 
-LIB_EXPORT rc_t CC KColumnOpenManagerUpdate ( KColumn *self, KDBManager **mgr )
+LIB_EXPORT rc_t CC KColumnOpenManagerUpdate ( KColumn *bself, KDBManager **mgr )
 {
+    CAST();
+
     rc_t rc;
 
     if ( mgr == NULL )
@@ -837,7 +797,7 @@ LIB_EXPORT rc_t CC KColumnOpenManagerUpdate ( KColumn *self, KDBManager **mgr )
  *  NB - returned reference must be released
  */
 static
-rc_t CC KWColumnOpenParentRead ( const KColumn *self, const KTable **tbl )
+rc_t CC KWColumnOpenParentRead ( const KWColumn *self, const KTable **tbl )
 {
     rc_t rc;
 
@@ -858,8 +818,10 @@ rc_t CC KWColumnOpenParentRead ( const KColumn *self, const KTable **tbl )
     return rc;
 }
 
-LIB_EXPORT rc_t CC KColumnOpenParentUpdate ( KColumn *self, KTable **tbl )
+LIB_EXPORT rc_t CC KColumnOpenParentUpdate ( KColumn *bself, KTable **tbl )
 {
+    CAST();
+
     rc_t rc;
 
     if ( tbl == NULL )
@@ -890,8 +852,10 @@ LIB_EXPORT rc_t CC KColumnOpenParentUpdate ( KColumn *self, KTable **tbl )
  *  duplicate reference to the directory in use
  *  NB - returned reference must be released
  */
-LIB_EXPORT rc_t CC KColumnOpenDirectoryRead ( const KColumn *self, const KDirectory **dir )
+LIB_EXPORT rc_t CC KColumnOpenDirectoryRead ( const KColumn *bself, const KDirectory **dir )
 {
+    CAST();
+
     rc_t rc;
 
     if ( dir == NULL )
@@ -916,8 +880,10 @@ LIB_EXPORT rc_t CC KColumnOpenDirectoryRead ( const KColumn *self, const KDirect
     return rc;
 }
 
-LIB_EXPORT rc_t CC KColumnOpenDirectoryUpdate ( KColumn *self, KDirectory **dir )
+LIB_EXPORT rc_t CC KColumnOpenDirectoryUpdate ( KColumn *bself, KDirectory **dir )
 {
+    CAST();
+
     rc_t rc;
 
     if ( dir == NULL )
@@ -946,7 +912,7 @@ LIB_EXPORT rc_t CC KColumnOpenDirectoryUpdate ( KColumn *self, KDirectory **dir 
 
 static
 rc_t CC
-KWColumnOpenMetadataRead ( const KColumn *self, const KMetadata **metap )
+KWColumnOpenMetadataRead ( const KWColumn *self, const KMetadata **metap )
 {
     rc_t rc;
     const KMetadata *meta;
@@ -967,8 +933,10 @@ KWColumnOpenMetadataRead ( const KColumn *self, const KMetadata **metap )
     return rc;
 }
 
-LIB_EXPORT rc_t CC KColumnOpenMetadataUpdate ( KColumn *self, KMetadata **metap )
+LIB_EXPORT rc_t CC KColumnOpenMetadataUpdate ( KColumn *bself, KMetadata **metap )
 {
+    CAST();
+
     rc_t rc;
     KMetadata *meta;
 
@@ -999,7 +967,7 @@ LIB_EXPORT rc_t CC KColumnOpenMetadataUpdate ( KColumn *self, KMetadata **metap 
  */
 static
 rc_t CC
-KWColumnOpenBlobRead ( const KColumn *self, const KColumnBlob **blobp, int64_t id )
+KWColumnOpenBlobRead ( const KWColumn *self, const KColumnBlob **blobp, int64_t id )
 {
     rc_t rc;
     KWColumnBlob *blob;
@@ -1026,8 +994,10 @@ KWColumnOpenBlobRead ( const KColumn *self, const KColumnBlob **blobp, int64_t i
     return rc;
 }
 
-LIB_EXPORT rc_t CC KColumnOpenBlobUpdate ( KColumn *self, KColumnBlob **blobp, int64_t id )
+LIB_EXPORT rc_t CC KColumnOpenBlobUpdate ( KColumn *bself, KColumnBlob **blobp, int64_t id )
 {
+    CAST();
+
     rc_t rc;
 
     if ( blobp == NULL )
@@ -1060,8 +1030,10 @@ LIB_EXPORT rc_t CC KColumnOpenBlobUpdate ( KColumn *self, KColumnBlob **blobp, i
 /* CreateBlob
  *  creates a new, unassigned blob
  */
-LIB_EXPORT rc_t CC KColumnCreateBlob ( KColumn *self, KColumnBlob **blobp )
+LIB_EXPORT rc_t CC KColumnCreateBlob ( KColumn *bself, KColumnBlob **blobp )
 {
+    CAST();
+
     rc_t rc;
 
     if ( blobp == NULL )

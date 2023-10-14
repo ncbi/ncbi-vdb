@@ -31,6 +31,8 @@
 #include "colfmt.h"
 #include "wcoldata.h"
 
+typedef struct KWColumn KWColumn;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -54,7 +56,7 @@ struct KWColumnBlob
     KColumnPageMap pmnew;
 
     /* owning column */
-    KColumn *col;
+    KWColumn *col;
 
     /* number of bytes written to blob */
     uint32_t num_writ;
@@ -71,9 +73,9 @@ struct KWColumnBlob
 };
 
 rc_t KWColumnBlobMake ( KWColumnBlob **blobp, bool bswap );
-rc_t KWColumnBlobOpenRead ( KWColumnBlob *self, const KColumn *col, int64_t id );
-rc_t KWColumnBlobOpenUpdate ( KWColumnBlob *self, KColumn *col, int64_t id );
-rc_t KWColumnBlobCreate ( KWColumnBlob *bself, KColumn *col );
+rc_t KWColumnBlobOpenRead ( KWColumnBlob *self, const KWColumn *col, int64_t id );
+rc_t KWColumnBlobOpenUpdate ( KWColumnBlob *self, KWColumn *col, int64_t id );
+rc_t KWColumnBlobCreate ( KWColumnBlob *bself, KWColumn *col );
 
 #ifdef __cplusplus
 }

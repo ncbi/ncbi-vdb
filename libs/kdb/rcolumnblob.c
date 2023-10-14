@@ -76,7 +76,7 @@ KRColumnBlobWhack ( KColumnBlob *bself )
 {
     CAST();
 
-    const KColumn *col = self -> col;
+    const KRColumn *col = self -> col;
     if ( col != NULL )
     {
         KColumnPageMapWhack ( & self -> pmorig, & col -> df );
@@ -93,15 +93,15 @@ KRColumnBlobWhack ( KColumnBlob *bself )
 /* OpenRead
  * OpenUpdate
  */
-rc_t KRColumnBlobOpenRead ( KRColumnBlob *self, const KColumn *col, int64_t id )
+rc_t KRColumnBlobOpenRead ( KRColumnBlob *self, const KRColumn *col, int64_t id )
 {
     /* locate blob */
-    rc_t rc = KColumnIdxLocateBlob ( & col -> idx, & self -> loc, id, id );
+    rc_t rc = KRColumnIdxLocateBlob ( & col -> idx, & self -> loc, id, id );
     if ( rc == 0 )
     {
         /* open page map to blob */
         rc = KColumnPageMapOpen ( & self -> pmorig,
-            ( KColumnData* ) & col -> df, self -> loc . pg, self -> loc . u . blob . size );
+            ( KRColumnData* ) & col -> df, self -> loc . pg, self -> loc . u . blob . size );
         if ( rc == 0 )
         {
             /* existing blob must have proper checksum bytes */
@@ -180,7 +180,7 @@ static
 rc_t KColumnBlobValidateCRC32 ( const KRColumnBlob *self )
 {
     rc_t rc;
-    const KColumn *col = self -> col;
+    const KRColumn *col = self -> col;
 
     uint8_t buffer [ 8 * 1024 ];
     size_t to_read, num_read, total, size;
@@ -194,7 +194,7 @@ rc_t KColumnBlobValidateCRC32 ( const KRColumnBlob *self )
         if ( to_read > sizeof buffer )
             to_read = sizeof buffer;
 
-        rc = KColumnDataRead ( & col -> df,
+        rc = KRColumnDataRead ( & col -> df,
             & self -> pmorig, total, buffer, to_read, & num_read );
         if ( rc != 0 )
             return rc;
@@ -205,7 +205,7 @@ rc_t KColumnBlobValidateCRC32 ( const KRColumnBlob *self )
     }
 
     /* read stored checksum */
-    rc = KColumnDataRead ( & col -> df,
+    rc = KRColumnDataRead ( & col -> df,
         & self -> pmorig, size, & cs, sizeof cs, & num_read );
     if ( rc != 0 )
         return rc;
@@ -225,7 +225,7 @@ static
 rc_t KColumnBlobValidateMD5 ( const KRColumnBlob *self )
 {
     rc_t rc;
-    const KColumn *col = self -> col;
+    const KRColumn *col = self -> col;
 
     uint8_t buffer [ 8 * 1024 ];
     size_t to_read, num_read, total, size;
@@ -242,7 +242,7 @@ rc_t KColumnBlobValidateMD5 ( const KRColumnBlob *self )
         if ( to_read > sizeof buffer )
             to_read = sizeof buffer;
 
-        rc = KColumnDataRead ( & col -> df,
+        rc = KRColumnDataRead ( & col -> df,
             & self -> pmorig, total, buffer, to_read, & num_read );
         if ( rc != 0 )
             return rc;
@@ -253,7 +253,7 @@ rc_t KColumnBlobValidateMD5 ( const KRColumnBlob *self )
     }
 
     /* read stored checksum */
-    rc = KColumnDataRead ( & col -> df,
+    rc = KRColumnDataRead ( & col -> df,
         & self -> pmorig, size, buffer, sizeof digest, & num_read );
     if ( rc != 0 )
         return rc;
@@ -387,7 +387,7 @@ KRColumnBlobRead ( const KColumnBlob *bself,
     else
     {
         size_t size = self -> loc . u . blob . size;
-        const KColumn *col = self -> col;
+        const KRColumn *col = self -> col;
 
         if ( offset > size )
             offset = size;
@@ -416,7 +416,7 @@ KRColumnBlobRead ( const KColumnBlob *bself,
             {
                 size_t nread = 0;
 
-                rc = KColumnDataRead ( & col -> df, & self -> pmorig, offset + *num_read,
+                rc = KRColumnDataRead ( & col -> df, & self -> pmorig, offset + *num_read,
                     & ( ( char * ) buffer ) [ * num_read ], to_read - * num_read, & nread );
                 if ( rc != 0 )
                     break;
@@ -530,7 +530,7 @@ KRColumnBlobReadAll ( const KColumnBlob * bself, KDataBuffer * buffer,
                             }
 
                             /* read checksum information */
-                            rc = KColumnDataRead ( & self -> col -> df,
+                            rc = KRColumnDataRead ( & self -> col -> df,
                                 & self -> pmorig, bsize, opt_cs_data, cs_bytes, & num_read );
                             if ( rc == 0 )
                             {

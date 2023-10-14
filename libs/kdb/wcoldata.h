@@ -44,15 +44,15 @@ typedef union KColumnPageMap KColumnPageMap;
 
 
 /*--------------------------------------------------------------------------
- * KColumnData
+ * KWColumnData
  *  data fork
  *
  *  only handling append-mode today
  *
  *  kept 64-bit aligned
  */
-typedef struct KColumnData KColumnData;
-struct KColumnData
+typedef struct KWColumnData KWColumnData;
+struct KWColumnData
 {
     /* cached end of data fork */
     uint64_t eof;
@@ -69,52 +69,52 @@ struct KColumnData
 /* DefaultPageSize
  *  static method
  */
-#define KColumnDataDefaultPageSize( reuse_pages ) \
+#define KWColumnDataDefaultPageSize( reuse_pages ) \
     ( ( reuse_pages ) ? 4096 : 1 )
 
 /* Create
  */
-rc_t KColumnDataCreate ( KColumnData *self, KDirectory *dir,
+rc_t KWColumnDataCreate ( KWColumnData *self, KDirectory *dir,
     KMD5SumFmt *md5, KCreateMode mode, uint64_t eof, size_t pgsize );
 
 /* Open
  */
-rc_t KColumnDataOpenRead ( KColumnData *self,
+rc_t KWColumnDataOpenRead ( KWColumnData *self,
     const KDirectory *dir, uint64_t eof, size_t pgsize );
-rc_t KColumnDataOpenUpdate ( KColumnData *self, KDirectory *dir,
+rc_t KWColumnDataOpenUpdate ( KWColumnData *self, KDirectory *dir,
     KMD5SumFmt *md5, uint64_t eof, size_t pgsize );
 
 /* Whack
  */
-rc_t KColumnDataWhack ( KColumnData *self );
+rc_t KWColumnDataWhack ( KWColumnData *self );
 
 /* Read
  *  reads from the data fork using a blob map
  */
-rc_t KColumnDataRead ( const KColumnData *self, const KColumnPageMap *pm,
+rc_t KWColumnDataRead ( const KWColumnData *self, const KColumnPageMap *pm,
     size_t offset, void *buffer, size_t bsize, size_t *num_read );
 
 /* Write
  *  writes to the data fork using a blob map
  */
-rc_t  KColumnDataWrite ( KColumnData *self, KColumnPageMap *pm,
+rc_t  KWColumnDataWrite ( KWColumnData *self, KColumnPageMap *pm,
     size_t offset, const void *buffer, size_t bytes, size_t *num_writ );
 
 /* Commit
  *  keeps changes indicated by page map and blob size
  */
-rc_t KColumnDataCommit ( KColumnData *self,
+rc_t KWColumnDataCommit ( KWColumnData *self,
     const KColumnPageMap *pm, size_t bytes );
 
 /* CommitDone
  *  finalizes a commit
  */
-rc_t KColumnDataCommitDone ( KColumnData * self );
+rc_t KWColumnDataCommitDone ( KWColumnData * self );
 
 /* Free
  *  frees pages from a map
  */
-rc_t KColumnDataFree ( KColumnData *self,
+rc_t KWColumnDataFree ( KWColumnData *self,
     const KColumnPageMap *pm, size_t bytes );
 
 
@@ -134,7 +134,7 @@ union KColumnPageMap
  *  creates a new page map using the first available page id
  *  obtains first free data fork page
  */
-rc_t KColumnPageMapCreate (  KColumnPageMap *self, KColumnData *cd );
+rc_t KColumnPageMapCreate (  KColumnPageMap *self, KWColumnData *cd );
 
 /* Open
  *  opens an blob by raw page id and size
@@ -145,18 +145,18 @@ rc_t KColumnPageMapCreate (  KColumnPageMap *self, KColumnData *cd );
  *  within the blob.
  */
 rc_t KColumnPageMapOpen ( KColumnPageMap *pm,
-    KColumnData *cd, uint64_t pg, size_t sz );
+    KWColumnData *cd, uint64_t pg, size_t sz );
 
 /* Whack
  *  disposes of memory in the case of a page array
  */
-void KColumnPageMapWhack ( KColumnPageMap *self, const KColumnData *cd );
+void KColumnPageMapWhack ( KColumnPageMap *self, const KWColumnData *cd );
 
 /* Id
  *  captures id of initial page
  */
 rc_t KColumnPageMapId ( const KColumnPageMap *self,
-    const KColumnData *cd, uint64_t *pg );
+    const KWColumnData *cd, uint64_t *pg );
 
 
 #ifdef __cplusplus

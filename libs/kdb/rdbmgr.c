@@ -770,7 +770,7 @@ rc_t KDBManagerVOpenColumnReadInt ( const KDBManager *self,
     rc = string_vprintf( colpath, sizeof colpath, &z, path, args );
     if ( rc == 0 )
     {
-        KColumn *col;
+        KRColumn *col;
         const KDirectory *dir;
 
         /* open table directory */
@@ -782,7 +782,7 @@ rc_t KDBManagerVOpenColumnReadInt ( const KDBManager *self,
             if ( rc == 0 )
             {
                 col -> mgr = KDBManagerAttach ( self );
-                * colp = col;
+                * colp = & col -> dad;
                 return 0;
             }
 

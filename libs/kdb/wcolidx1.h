@@ -46,11 +46,11 @@ struct KColBlockLocInfo;
 
 
 /*--------------------------------------------------------------------------
- * KColumnIdx1
+ * KWColumnIdx1
  *  level 1 index
  */
-typedef struct KColumnIdx1 KColumnIdx1;
-struct KColumnIdx1
+typedef struct KWColumnIdx1 KWColumnIdx1;
+struct KWColumnIdx1
 {
     /* tree of level-2 block locators */
     BSTree bst;
@@ -72,69 +72,69 @@ struct KColumnIdx1
 
 /* Create
  */
-rc_t KColumnIdx1Create ( KColumnIdx1 *self,
+rc_t KWColumnIdx1Create ( KWColumnIdx1 *self,
     KDirectory *dir, KMD5SumFmt *md5, KCreateMode mode,
     uint64_t *data_eof, uint32_t *idx0_count, uint64_t *idx2_eof,
     size_t pgsize, int32_t checksum );
 
 /* Open
  */
-rc_t KColumnIdx1OpenRead ( KColumnIdx1 *self, const KDirectory *dir,
+rc_t KWColumnIdx1OpenRead ( KWColumnIdx1 *self, const KDirectory *dir,
     uint64_t *data_eof, uint32_t *idx0_count, uint64_t *idx2_eof,
     size_t *pgsize, int32_t *checksum );
-rc_t KColumnIdx1OpenUpdate ( KColumnIdx1 *self, KDirectory *dir,
+rc_t KWColumnIdx1OpenUpdate ( KWColumnIdx1 *self, KDirectory *dir,
     KMD5SumFmt *md5, uint64_t *data_eof, uint32_t *idx0_count,
     uint64_t *idx2_eof, size_t *pgsize, int32_t *checksum );
 
 /* Whack
  */
-rc_t KColumnIdx1Whack ( KColumnIdx1 *self );
+rc_t KWColumnIdx1Whack ( KWColumnIdx1 *self );
 
 /* Version
  */
-rc_t KColumnIdx1Version ( const KColumnIdx1 *self, uint32_t *version );
-#define KColumnIdx1Version( self, version ) \
+rc_t KWColumnIdx1Version ( const KWColumnIdx1 *self, uint32_t *version );
+#define KWColumnIdx1Version( self, version ) \
     ( * ( version ) = ( uint32_t ) ( self ) -> vers, 0 )
 
 /* ByteOrder
  */
-rc_t KColumnIdx1ByteOrder ( const KColumnIdx1 *self, bool *reversed );
-#define KColumnIdx1ByteOrder( self, reversed ) \
+rc_t KWColumnIdx1ByteOrder ( const KWColumnIdx1 *self, bool *reversed );
+#define KWColumnIdx1ByteOrder( self, reversed ) \
     ( * ( reversed ) = ( self ) -> bswap, 0 )
 
 /* IdRange
  *  returns range of ids contained within
  */
-bool KColumnIdx1IdRange ( const KColumnIdx1 *self,
+bool KWColumnIdx1IdRange ( const KWColumnIdx1 *self,
     int64_t *first, int64_t *upper );
 
 /* LocateFirstRowIdBlob
  */
-rc_t KColumnIdx1LocateFirstRowIdBlob ( const KColumnIdx1 * self,
+rc_t KWColumnIdx1LocateFirstRowIdBlob ( const KWColumnIdx1 * self,
     KColBlockLoc * bloc, int64_t start );
 
 /* LocateBlock
  *  locates an idx2 block by range
  */
-rc_t KColumnIdx1LocateBlock ( const KColumnIdx1 *self,
+rc_t KWColumnIdx1LocateBlock ( const KWColumnIdx1 *self,
     KColBlockLoc *bloc, int64_t first, int64_t upper );
 
 /* WriteHeader
  */
-rc_t KColumnIdx1WriteHeader ( KColumnIdx1 *self,
+rc_t KWColumnIdx1WriteHeader ( KWColumnIdx1 *self,
     uint64_t data_eof, uint32_t idx0_count, uint64_t idx2_eof,
     size_t pgsize, int32_t checksum );
 
 /* Commit
  *  records a block location
  */
-rc_t KColumnIdx1Commit ( KColumnIdx1 *self, const KColBlockLoc *bloc );
-rc_t KColumnIdx1CommitDone ( KColumnIdx1 *self );
+rc_t KWColumnIdx1Commit ( KWColumnIdx1 *self, const KColBlockLoc *bloc );
+rc_t KWColumnIdx1CommitDone ( KWColumnIdx1 *self );
 
 /* Revert
  *  reverses effect of commit
  */
-bool KColumnIdx1Revert ( KColumnIdx1 *self, int64_t start_id, uint32_t id_range );
+bool KWColumnIdx1Revert ( KWColumnIdx1 *self, int64_t start_id, uint32_t id_range );
 
 
 #ifdef __cplusplus
