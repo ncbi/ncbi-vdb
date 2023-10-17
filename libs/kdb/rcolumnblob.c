@@ -79,7 +79,7 @@ KRColumnBlobWhack ( KColumnBlob *bself )
     const KRColumn *col = self -> col;
     if ( col != NULL )
     {
-        KColumnPageMapWhack ( & self -> pmorig, & col -> df );
+        KRColumnPageMapWhack ( & self -> pmorig, & col -> df );
 
         /* cannot recover from errors here,
         since the page maps needed whacking first,
@@ -100,7 +100,7 @@ rc_t KRColumnBlobOpenRead ( KRColumnBlob *self, const KRColumn *col, int64_t id 
     if ( rc == 0 )
     {
         /* open page map to blob */
-        rc = KColumnPageMapOpen ( & self -> pmorig,
+        rc = KRColumnPageMapOpen ( & self -> pmorig,
             ( KRColumnData* ) & col -> df, self -> loc . pg, self -> loc . u . blob . size );
         if ( rc == 0 )
         {
@@ -114,7 +114,7 @@ rc_t KRColumnBlobOpenRead ( KRColumnBlob *self, const KRColumn *col, int64_t id 
             }
 
             /* the blob is corrupt */
-            KColumnPageMapWhack ( & self -> pmorig, & col -> df );
+            KRColumnPageMapWhack ( & self -> pmorig, & col -> df );
             rc = RC ( rcDB, rcColumn, rcOpening, rcBlob, rcCorrupt );
         }
     }

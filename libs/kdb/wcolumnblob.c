@@ -82,9 +82,9 @@ rc_t KWColumnBlobWhack ( KColumnBlob *bself )
     KWColumn *col = self -> col;
     if ( col != NULL )
     {
-        KColumnPageMapWhack ( & self -> pmorig, & col -> df );
+        KWColumnPageMapWhack ( & self -> pmorig, & col -> df );
         if ( ! self -> read_only )
-            KColumnPageMapWhack ( & self -> pmnew, & col -> df );
+            KWColumnPageMapWhack ( & self -> pmnew, & col -> df );
 
         /* cannot recover from errors here,
         since the page maps needed whacking first,
@@ -109,7 +109,7 @@ rc_t KWColumnBlobOpenRead ( KWColumnBlob *self, const KWColumn *col, int64_t id 
         /*assert ( self -> num_writ == 0 );*/
 
         /* open page map to blob */
-        rc = KColumnPageMapOpen ( & self -> pmorig,
+        rc = KWColumnPageMapOpen ( & self -> pmorig,
             ( KWColumnData* ) & col -> df, self -> loc . pg, self -> loc . u . blob . size );
         if ( rc == 0 )
         {
@@ -122,7 +122,7 @@ rc_t KWColumnBlobOpenRead ( KWColumnBlob *self, const KWColumn *col, int64_t id 
             }
 
             /* the blob is corrupt */
-            KColumnPageMapWhack ( & self -> pmorig, & col -> df );
+            KWColumnPageMapWhack ( & self -> pmorig, & col -> df );
             rc = RC ( rcDB, rcBlob, rcOpening, rcBlob, rcCorrupt );
         }
     }
@@ -137,7 +137,7 @@ rc_t KWColumnBlobOpenUpdate ( KWColumnBlob *self, KWColumn *col, int64_t id )
     if ( rc == 0 )
     {
         /* create a new page map for replacement */
-        rc = KColumnPageMapCreate ( & self -> pmnew, & col -> df );
+        rc = KWColumnPageMapCreate ( & self -> pmnew, & col -> df );
         if ( rc == 0 )
         {
             /* initialize for writing checksums */
@@ -153,7 +153,7 @@ rc_t KWColumnBlobOpenUpdate ( KWColumnBlob *self, KWColumn *col, int64_t id )
         }
 
         /* tear down results of opening for read */
-        KColumnPageMapWhack ( & self -> pmorig, & col -> df );
+        KWColumnPageMapWhack ( & self -> pmorig, & col -> df );
     }
 
     return rc;
@@ -204,7 +204,7 @@ rc_t KWColumnBlobCreate ( KWColumnBlob *self, KWColumn *col )
     memset ( & self -> pmorig, 0, sizeof self -> pmorig );
 
     /* create a new page map */
-    rc = KColumnPageMapCreate ( & self -> pmnew, & col -> df );
+    rc = KWColumnPageMapCreate ( & self -> pmnew, & col -> df );
     if ( rc == 0 )
     {
         /* initialize for writing checksums */
@@ -742,7 +742,7 @@ LIB_EXPORT rc_t CC KColumnBlobAssignRange ( KColumnBlob *bself, int64_t first, u
             return 0;
 
         /* conflicting assignment */
-        KColumnPageMapWhack ( & self -> pmorig, & col -> df );
+        KWColumnPageMapWhack ( & self -> pmorig, & col -> df );
         memset ( & self -> loc, 0, sizeof self -> loc );
         memset ( & self -> pmorig, 0, sizeof self -> pmorig );
         return RC ( rcDB, rcBlob, rcUpdating, rcRange, rcIncorrect );
@@ -843,7 +843,7 @@ rc_t KColumnBlobDoCommit ( KWColumnBlob *self )
     }
 
     /* extract index information */
-    rc = KColumnPageMapId ( & self -> pmnew, & col -> df, & loc . pg );
+    rc = KWColumnPageMapId ( & self -> pmnew, & col -> df, & loc . pg );
     if ( rc == 0 )
     {
         loc . u . blob . size = ( uint32_t ) self -> num_writ;

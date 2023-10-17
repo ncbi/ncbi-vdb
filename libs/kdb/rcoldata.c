@@ -115,7 +115,7 @@ rc_t KRColumnDataWhack ( KRColumnData *self )
 /* Read
  *  reads from the data fork using a blob map
  */
-rc_t KRColumnDataRead ( const KRColumnData *self, const KColumnPageMap *pm,
+rc_t KRColumnDataRead ( const KRColumnData *self, const KRColumnPageMap *pm,
     size_t offset, void *buffer, size_t bsize, size_t *num_read )
 {
     uint64_t pos;
@@ -136,7 +136,7 @@ rc_t KRColumnDataRead ( const KRColumnData *self, const KColumnPageMap *pm,
 
 
 /*--------------------------------------------------------------------------
- * KColumnPageMap
+ * KRColumnPageMap
  *  map of pages involved in column blob
  */
 
@@ -148,7 +148,7 @@ rc_t KRColumnDataRead ( const KRColumnData *self, const KColumnPageMap *pm,
  *  "pg" [ IN ] and "sz" [ IN ] - identifies pages of data fork included
  *  within the blob.
  */
-rc_t KColumnPageMapOpen ( KColumnPageMap *self,
+rc_t KRColumnPageMapOpen ( KRColumnPageMap *self,
     KRColumnData *cd, uint64_t pg, size_t sz )
 {
     uint64_t pos;
@@ -171,7 +171,7 @@ rc_t KColumnPageMapOpen ( KColumnPageMap *self,
 /* Whack
  *  disposes of memory in the case of a page array
  */
-void KColumnPageMapWhack ( KColumnPageMap *self, const KRColumnData *cd )
+void KRColumnPageMapWhack ( KRColumnPageMap *self, const KRColumnData *cd )
 {
     assert ( self != NULL );
     assert ( cd != NULL );
@@ -180,7 +180,7 @@ void KColumnPageMapWhack ( KColumnPageMap *self, const KRColumnData *cd )
 /* Id
  *  captures id of initial page
  */
-rc_t KColumnPageMapId ( const KColumnPageMap *self,
+rc_t KRColumnPageMapId ( const KRColumnPageMap *self,
     const KRColumnData *cd, uint64_t *pg )
 {
     assert ( self != NULL );

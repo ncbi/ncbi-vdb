@@ -52,8 +52,8 @@ struct KWColumnBlob
     KColBlobLoc loc;
 
     /* holds old and new page maps */
-    KColumnPageMap pmorig;
-    KColumnPageMap pmnew;
+    KWColumnPageMap pmorig;
+    KWColumnPageMap pmnew;
 
     /* owning column */
     KWColumn *col;

@@ -46,7 +46,7 @@ struct KRColumnBlob
 
     /* holds existing blob loc */
     KColBlobLoc loc;
-    KColumnPageMap pmorig;
+    KRColumnPageMap pmorig;
 };
 
 rc_t KRColumnBlobMake ( KRColumnBlob **blobp, bool bswap );

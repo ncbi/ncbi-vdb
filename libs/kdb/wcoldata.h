@@ -40,7 +40,7 @@ extern "C" {
  * forwards
  */
 struct KMD5SumFmt;
-typedef union KColumnPageMap KColumnPageMap;
+typedef union KWColumnPageMap KWColumnPageMap;
 
 
 /*--------------------------------------------------------------------------
@@ -91,20 +91,20 @@ rc_t KWColumnDataWhack ( KWColumnData *self );
 /* Read
  *  reads from the data fork using a blob map
  */
-rc_t KWColumnDataRead ( const KWColumnData *self, const KColumnPageMap *pm,
+rc_t KWColumnDataRead ( const KWColumnData *self, const KWColumnPageMap *pm,
     size_t offset, void *buffer, size_t bsize, size_t *num_read );
 
 /* Write
  *  writes to the data fork using a blob map
  */
-rc_t  KWColumnDataWrite ( KWColumnData *self, KColumnPageMap *pm,
+rc_t  KWColumnDataWrite ( KWColumnData *self, KWColumnPageMap *pm,
     size_t offset, const void *buffer, size_t bytes, size_t *num_writ );
 
 /* Commit
  *  keeps changes indicated by page map and blob size
  */
 rc_t KWColumnDataCommit ( KWColumnData *self,
-    const KColumnPageMap *pm, size_t bytes );
+    const KWColumnPageMap *pm, size_t bytes );
 
 /* CommitDone
  *  finalizes a commit
@@ -115,14 +115,14 @@ rc_t KWColumnDataCommitDone ( KWColumnData * self );
  *  frees pages from a map
  */
 rc_t KWColumnDataFree ( KWColumnData *self,
-    const KColumnPageMap *pm, size_t bytes );
+    const KWColumnPageMap *pm, size_t bytes );
 
 
 /*--------------------------------------------------------------------------
- * KColumnPageMap
+ * KWColumnPageMap
  *  map of pages involved in column blob
  */
-union KColumnPageMap
+union KWColumnPageMap
 {
     /* for non-paged data forks, a single page id
        describes the start of the blob, where the
@@ -134,7 +134,7 @@ union KColumnPageMap
  *  creates a new page map using the first available page id
  *  obtains first free data fork page
  */
-rc_t KColumnPageMapCreate (  KColumnPageMap *self, KWColumnData *cd );
+rc_t KWColumnPageMapCreate (  KWColumnPageMap *self, KWColumnData *cd );
 
 /* Open
  *  opens an blob by raw page id and size
@@ -144,18 +144,18 @@ rc_t KColumnPageMapCreate (  KColumnPageMap *self, KWColumnData *cd );
  *  "pg" [ IN ] and "sz" [ IN ] - identifies pages of data fork included
  *  within the blob.
  */
-rc_t KColumnPageMapOpen ( KColumnPageMap *pm,
+rc_t KWColumnPageMapOpen ( KWColumnPageMap *pm,
     KWColumnData *cd, uint64_t pg, size_t sz );
 
 /* Whack
  *  disposes of memory in the case of a page array
  */
-void KColumnPageMapWhack ( KColumnPageMap *self, const KWColumnData *cd );
+void KWColumnPageMapWhack ( KWColumnPageMap *self, const KWColumnData *cd );
 
 /* Id
  *  captures id of initial page
  */
-rc_t KColumnPageMapId ( const KColumnPageMap *self,
+rc_t KWColumnPageMapId ( const KWColumnPageMap *self,
     const KWColumnData *cd, uint64_t *pg );
 
 
