@@ -79,6 +79,11 @@ static String * s_LoadedQuality = NULL; /* default or from configuration*/
  *  opaque handle to library
  */
 
+void VDBManagerWhackStatic ( void ) {
+    StringWhack ( s_LoadedQuality );
+    s_LoadedQuality = NULL;
+}
+
 /* Whack
  */
 static
@@ -102,9 +107,8 @@ rc_t VDBManagerWhack ( VDBManager *self )
         VSchemaRelease ( self -> schema );
         VLinkerRelease ( self -> linker );
 	
-        StringWhack ( s_LoadedQuality );
-        s_LoadedQuality = NULL;
-	
+        VDBManagerWhackStatic ();
+
         free ( self );
         return 0;
     }

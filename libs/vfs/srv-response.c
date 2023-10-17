@@ -637,8 +637,8 @@ rc_t KSrvResponseAddLocalAndCacheToTree(
             PLOGERR(klogFatal, (klogFatal,
                 RC(rcVFS, rcQuery, rcExecuting, rcString, rcUnexpected),
                 "duplicate names in the same bundle: "
-                "'$acc'/'$(name)'/$(type)",
-                "acc=%s,name=%s,name=%s", acc, name, type));
+                "'$(acc)'/'$(name)'/$(type)",
+                "acc=%s,name=%s,type=%s", acc, name, type));
             RELEASE(LocalAndCache, lnc);
         }
         else {

@@ -165,8 +165,7 @@ rc_t KServiceInitNamesRequestWithVersion(KService * self,
     bool aProtected, bool adjustVersion, int idx);
 rc_t KServiceGetResponse(const KService * self, const KSrvResponse ** response);
 rc_t KServiceGetConfig ( struct KService * self, const struct KConfig ** kfg);
-rc_t KServiceGetVFSManager ( const KService * self,
-    const struct VFSManager ** mgr );
+rc_t KServiceGetVFSManager ( const KService * self, struct VFSManager ** mgr );
 rc_t KServiceGetResolver ( struct KService * self, const String * ticket,
                            VResolver ** resolver );
 rc_t KServiceGetResolverForProject(struct KService * self, uint32_t project,
@@ -236,13 +235,14 @@ rc_t KServiceSearchTest1
     ( const struct KNSManager * mgr, const char * cgi, const char * acc );
 rc_t KServiceSearchTest (
     const struct KNSManager * mgr, const char * cgi, const char * acc, ... );
+
 /******************************************************************************/
 
-/* THE FOLLOWING DEFINE TURNS ON COMPARING OLD/NEW RESOLVING CALLS AND
-   ASSERTING WHEN THE RESULTS DO NOT MATCH.
-   REMOVE IT WHEN MERGING THE BRANCH 
-#define TESTING_SERVICES_VS_OLD_RESOLVING 1 */
-
+/* cache SDL response */
+rc_t VFSManagerSetCachedKSrvResponse
+(struct VFSManager * self, const char * id, const KSrvResponse * resp);
+rc_t VFSManagerGetCachedKSrvResponse
+(const struct VFSManager * self, const char * id, const KSrvResponse ** resp);
 
 #ifdef __cplusplus
 }

@@ -116,7 +116,7 @@ void CC BSTreeMbrWhack ( BSTNode *n, void *ignore );
 
 /*----------------------------------------------------------------------------*/
 rc_t CC VDBManagerSetQualityString(VDBManager * self, const char * quality);
-
+void VDBManagerWhackStatic(void);
 
 #ifdef __cplusplus
 }
