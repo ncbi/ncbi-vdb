@@ -266,6 +266,9 @@ rc_t AWSDoAuthentication(const struct AWS * self, KClientHttpRequest * req,
         case eCCIncomplete:
             LOGERR(klogErr, rc, "cloud credentials file is incomplete");
             break;
+        case eCCProfileNotFound:
+            LOGERR(klogErr, rc, "profile not found in cloud credentials file");
+            break;
         default:
             LOGERR(klogErr, rc, "cannot find cloud credentials");
             break;

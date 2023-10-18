@@ -88,6 +88,7 @@ typedef enum {
     eCCEmpty,
     eCCUnrecognized,
     eCCIncomplete,
+    eCCProfileNotFound,
 } ECCState;
 
 /*--------------------------------------------------------------------------

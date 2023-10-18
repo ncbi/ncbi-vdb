@@ -504,7 +504,27 @@ FIXTURE_TEST_CASE(AWS_Credentials_AwsUserHomeCredentials, AwsFixture)
 
     CheckKeys( "ABC123", "SECRET" );
 }
+#endif
 
+#ifdef ALL
+FIXTURE_TEST_CASE(AWS_Credentials_KfgCredentialsIncomplete, AwsFixture)
+{
+    // 4) create configuration
+    char credentialsKfg[PATH_MAX] = "";
+    REQUIRE_RC(KDirectoryResolvePath(m_dir, true, credentialsKfg,
+        sizeof credentialsKfg, CREDENTIALS_KFG));
+    CreateFile(CREDENTIALS_KFG,
+        "[");
+    CreateFile(CONFIG,
+        "/aws/credential_file = \"", credentialsKfg, "\"\n");
+    putenv((char*)"VDB_CONFIG=cloud-kfg");
+
+    cerr << "Expect error message: profile is not found in credentials file \n";
+    CheckKeys();
+}
+#endif
+
+#ifdef ALL
 FIXTURE_TEST_CASE(AWS_Credentials_KfgCredentials, AwsFixture)
 {
     // 4) create configuration
@@ -711,13 +731,12 @@ FIXTURE_TEST_CASE(AWS_Credentials_ErrorIncompleteCsvData, AwsFixture) {
     putenv((char*)"VDB_CONFIG=cloud-kfg");
 
     cerr << "==== Expect error message: credentials file 'XXX' is incomplete\n";
-
     CheckKeys();
 }
 #endif
 
 #ifdef ALL
-FIXTURE_TEST_CASE(AWS_Credentials_NoWarnExtraData, AwsFixture) {
+FIXTURE_TEST_CASE(AWS_CredentialsCsv_NoWarnExtraData, AwsFixture) {
     // 4.3) create configuration
     char credentialsKfg[PATH_MAX] = "";
     REQUIRE_RC(KDirectoryResolvePath(m_dir, true, credentialsKfg,
@@ -735,7 +754,7 @@ FIXTURE_TEST_CASE(AWS_Credentials_NoWarnExtraData, AwsFixture) {
 #endif
 
 #ifdef ALL
-FIXTURE_TEST_CASE(AWS_Credentials_WarnExtraData, AwsFixture) {
+FIXTURE_TEST_CASE(AWS_CredentialsCsv_WarnExtraData, AwsFixture) {
     // 4.3) create configuration
         char credentialsKfg[PATH_MAX] = "";
     REQUIRE_RC(KDirectoryResolvePath(m_dir, true, credentialsKfg,

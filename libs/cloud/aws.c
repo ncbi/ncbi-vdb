@@ -579,8 +579,8 @@ rc_t aws_parse_csv_file(AWS * self, const char * buffer, size_t buf_size,
 }
 
 /*TODO: improve error handling (at least report) */
-static void aws_parse_file ( AWS * self, const KFile *cred_file,
-    const char *path )
+static void aws_parse_file ( AWS * self, const KFile * cred_file,
+    const char * path )
 {
     rc_t rc;
     size_t buf_size;
@@ -627,6 +627,7 @@ static void aws_parse_file ( AWS * self, const KFile *cred_file,
         const char *end = start + buf_size;
         const char *sep = start;
         bool in_profile = false;
+        bool found = false;
 
         CONST_STRING ( &bracket, "[" );
 
@@ -687,11 +688,13 @@ static void aws_parse_file ( AWS * self, const KFile *cred_file,
             if ( StringCaseEqual ( &key, &access_key_id ) ) {
                 free ( self -> access_key_id );
                 self -> access_key_id = string_dup ( value . addr, value . size );
+                found = true;
             }
 
             if ( StringCaseEqual ( &key, &secret_access_key ) ) {
                 free ( self -> secret_access_key );
                 self -> secret_access_key = string_dup ( value . addr, value . size );
+                found = true;
             }
 
             CONST_STRING ( &region, "region" );
@@ -706,6 +709,14 @@ static void aws_parse_file ( AWS * self, const KFile *cred_file,
                 self -> output = string_dup ( value . addr, value . size );
             }
           }
+
+        if (!found) {
+            rc = RC(rcCloud, rcFile, rcReading, rcString, rcNotFound);
+            self->credentials_state = eCCProfileNotFound;
+            PLOGERR(klogErr, (klogErr, rc,
+                "profile '$(p) is not found in credentials file '$(path)'",
+                "p=%s,path=%s", profile.addr, path));
+        }
 
         StringWhack ( temp1 );
         StringWhack ( brack_profile );
