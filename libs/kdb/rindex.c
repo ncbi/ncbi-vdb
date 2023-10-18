@@ -27,7 +27,7 @@
 #include <kdb/extern.h>
 
 #define KONST const
-#include "index-priv.h"
+#include "rindex.h"
 #include "dbmgr.h"
 #include "rdbmgr.h"
 #include "database-cmn.h"
@@ -53,28 +53,28 @@
 #include <byteswap.h>
 #include <assert.h>
 
-static rc_t CC KRIndexWhack ( KIndex *self );
-static bool CC KRIndexLocked ( const KIndex *self );
-static rc_t CC KRIndexVersion ( const KIndex *self, uint32_t *version );
-static rc_t CC KRIndexType ( const KIndex *self, KIdxType *type );
-static rc_t CC KRIndexConsistencyCheck ( const KIndex *self, uint32_t level,
+static rc_t CC KRIndexWhack ( KRIndex *self );
+static bool CC KRIndexLocked ( const KRIndex *self );
+static rc_t CC KRIndexVersion ( const KRIndex *self, uint32_t *version );
+static rc_t CC KRIndexType ( const KRIndex *self, KIdxType *type );
+static rc_t CC KRIndexConsistencyCheck ( const KRIndex *self, uint32_t level,
     int64_t *start_id, uint64_t *id_range, uint64_t *num_keys,
     uint64_t *num_rows, uint64_t *num_holes );
-static rc_t CC KRIndexFindText ( const KIndex *self, const char *key, int64_t *start_id, uint64_t *id_count,
+static rc_t CC KRIndexFindText ( const KRIndex *self, const char *key, int64_t *start_id, uint64_t *id_count,
     int ( CC * custom_cmp ) ( const void *item, struct PBSTNode const *n, void *data ),
     void *data );
-static rc_t CC KRIndexFindAllText ( const KIndex *self, const char *key,
+static rc_t CC KRIndexFindAllText ( const KRIndex *self, const char *key,
     rc_t ( CC * f ) ( int64_t id, uint64_t id_count, void *data ), void *data );
-static rc_t CC KRIndexProjectText ( const KIndex *self,
+static rc_t CC KRIndexProjectText ( const KRIndex *self,
     int64_t id, int64_t *start_id, uint64_t *id_count,
     char *key, size_t kmax, size_t *actsize );
-static rc_t CC KRIndexProjectAllText ( const KIndex *self, int64_t id,
+static rc_t CC KRIndexProjectAllText ( const KRIndex *self, int64_t id,
     rc_t ( CC * f ) ( int64_t start_id, uint64_t id_count, const char *key, void *data ),
     void *data );
-static rc_t CC KRIndexFindU64( const KIndex* self, uint64_t offset, uint64_t* key, uint64_t* key_size, int64_t* id, uint64_t* id_qty );
-static rc_t CC KRIndexFindAllU64( const KIndex* self, uint64_t offset,
+static rc_t CC KRIndexFindU64( const KRIndex* self, uint64_t offset, uint64_t* key, uint64_t* key_size, int64_t* id, uint64_t* id_qty );
+static rc_t CC KRIndexFindAllU64( const KRIndex* self, uint64_t offset,
     rc_t ( CC * f )(uint64_t key, uint64_t key_size, int64_t id, uint64_t id_qty, void* data ), void* data);
-static void CC KRIndexSetMaxRowId ( const KIndex *cself, int64_t max_row_id );
+static void CC KRIndexSetMaxRowId ( const KRIndex *cself, int64_t max_row_id );
 
 static KIndex_vt KRIndex_vt =
 {
@@ -98,7 +98,7 @@ static KIndex_vt KRIndex_vt =
  */
 static
 rc_t CC
-KRIndexWhack ( KIndex *self )
+KRIndexWhack ( KRIndex *self )
 {
     rc_t rc = 0;
 
@@ -133,13 +133,13 @@ KRIndexWhack ( KIndex *self )
             switch ( self -> vers )
             {
             case 1:
-                KTrieIndexWhack_v1 ( & self -> u . txt1 );
+                KRTrieIndexWhack_v1 ( & self -> u . txt1 );
                 rc = 0;
                 break;
             case 2:
             case 3:
             case 4:
-                KTrieIndexWhack_v2 ( & self -> u . txt234 );
+                KRTrieIndexWhack_v2 ( & self -> u . txt234 );
                 rc = 0;
                 break;
             }
@@ -150,7 +150,7 @@ KRIndexWhack ( KIndex *self )
             {
             case 3:
             case 4:
-                rc = KU64IndexWhack_v3 ( & self -> u . u64_3 );
+                rc = KRU64IndexWhack_v3 ( & self -> u . u64_3 );
                 break;
             }
             break;
@@ -163,14 +163,14 @@ KRIndexWhack ( KIndex *self )
         }
     }
 
-    KRefcountInit ( & self -> dad . refcount, 1, "KIndex", "whack", "kidx" );
+    KRefcountInit ( & self -> dad . refcount, 1, "KRIndex", "whack", "kidx" );
     return rc;
 }
 
 /* Make
  */
 static
-rc_t KIndexMake ( KIndex **idxp, const char *path )
+rc_t KIndexMake ( KRIndex **idxp, const char *path )
 {
     rc_t rc;
 
@@ -184,14 +184,14 @@ rc_t KIndexMake ( KIndex **idxp, const char *path )
             rc = RC ( rcDB, rcIndex, rcCreating, rcPath, rcEmpty );
         else
         {
-            KIndex* idx = malloc ( sizeof *idx + strlen ( path ) );
+            KRIndex* idx = malloc ( sizeof *idx + strlen ( path ) );
             if ( idx == NULL )
                 rc = RC ( rcDB, rcIndex, rcConstructing, rcMemory, rcExhausted );
             else
             {
                 memset ( idx, 0, sizeof * idx );
                 idx -> dad . vt = & KRIndex_vt;
-                KRefcountInit ( & idx -> dad . refcount, 1, "KIndex", "make", path );
+                KRefcountInit ( & idx -> dad . refcount, 1, "KRIndex", "make", path );
 
                 strcpy ( idx -> path, path );
                 * idxp = idx;
@@ -204,7 +204,7 @@ rc_t KIndexMake ( KIndex **idxp, const char *path )
 }
 
 static
-rc_t KIndexAttach ( KIndex *self, const KMMap *mm, bool *byteswap )
+rc_t KIndexAttach ( KRIndex *self, const KMMap *mm, bool *byteswap )
 {
     size_t size;
     rc_t rc = KMMapSize ( mm, & size );
@@ -287,7 +287,7 @@ rc_t KIndexAttach ( KIndex *self, const KMMap *mm, bool *byteswap )
     return rc;
 }
 
-rc_t KRIndexMakeRead ( KIndex **idxp, const KDirectory *dir, const char *path )
+rc_t KRIndexMakeRead ( KRIndex **idxp, const KDirectory *dir, const char *path )
 {
     const KFile *f;
     rc_t rc = KDirectoryOpenFileRead ( dir, & f, "%s", path );
@@ -301,7 +301,7 @@ rc_t KRIndexMakeRead ( KIndex **idxp, const KDirectory *dir, const char *path )
             if ( rc == 0 )
             {
                 bool byteswap;
-                KIndex *idx = * idxp;
+                KRIndex *idx = * idxp;
                 rc = KIndexAttach ( idx, mm, & byteswap );
                 if ( rc == 0 )
                 {
@@ -313,7 +313,7 @@ rc_t KRIndexMakeRead ( KIndex **idxp, const KDirectory *dir, const char *path )
                         /* open using v1 code only if KDBINDEXVERS is 1
                            if 2 or later, open as a v2 index */
 #if KDBINDEXVERS == 1
-                        rc = KTrieIndexOpen_v1 ( & idx -> u . txt1, mm );
+                        rc = KRTrieIndexOpen_v1 ( & idx -> u . txt1, mm );
                         if ( rc == 0 )
                         {
                             if ( idx -> u . txt1 . pt . id2node != NULL )
@@ -332,13 +332,13 @@ rc_t KRIndexMakeRead ( KIndex **idxp, const KDirectory *dir, const char *path )
                             case kitText:
                             case kitText | kitProj:
                                 /* will guess version in open */
-                                rc = KTrieIndexOpen_v2 ( & idx -> u . txt234, mm, byteswap );
+                                rc = KRTrieIndexOpen_v2 ( & idx -> u . txt234, mm, byteswap );
                                 if( rc == 0 && idx -> u . txt234 . pt . ord2node != NULL )
                                     idx -> type |= kitProj;
                                 break;
 
                             case kitU64:
-                                rc = KU64IndexOpen_v3 ( & idx -> u . u64_3, mm, byteswap );
+                                rc = KRU64IndexOpen_v3 ( & idx -> u . u64_3, mm, byteswap );
                                 break;
                         }
                         break;
@@ -347,7 +347,7 @@ rc_t KRIndexMakeRead ( KIndex **idxp, const KDirectory *dir, const char *path )
                 }
 
                 if ( rc != 0 )
-                    KIndexWhack ( idx );
+                    KIndexWhack ( & idx -> dad );
             }
 
             KMMapRelease ( mm );
@@ -362,7 +362,7 @@ rc_t KRIndexMakeRead ( KIndex **idxp, const KDirectory *dir, const char *path )
 /* Locked
  *  returns non-zero if locked
  */
-static bool CC KRIndexLocked ( const KIndex *self )
+static bool CC KRIndexLocked ( const KRIndex *self )
 {
     rc_t rc;
     const KDirectory *dir;
@@ -379,7 +379,7 @@ static bool CC KRIndexLocked ( const KIndex *self )
 /* Version
  *  returns the format version
  */
-static rc_t CC KRIndexVersion ( const KIndex *self, uint32_t *version )
+static rc_t CC KRIndexVersion ( const KRIndex *self, uint32_t *version )
 {
     if ( version == NULL )
         return RC ( rcDB, rcIndex, rcAccessing, rcParam, rcNull );
@@ -394,7 +394,7 @@ static rc_t CC KRIndexVersion ( const KIndex *self, uint32_t *version )
  */
 static
 rc_t CC
-KRIndexType ( const KIndex *self, KIdxType *type )
+KRIndexType ( const KRIndex *self, KIdxType *type )
 {
     if ( type == NULL )
         return RC ( rcDB, rcIndex, rcAccessing, rcParam, rcNull );
@@ -425,7 +425,7 @@ KRIndexType ( const KIndex *self, KIdxType *type )
  */
 static
 rc_t CC
-KRIndexConsistencyCheck ( const KIndex *self, uint32_t level,
+KRIndexConsistencyCheck ( const KRIndex *self, uint32_t level,
     int64_t *start_id, uint64_t *id_range, uint64_t *num_keys,
     uint64_t *num_rows, uint64_t *num_holes )
 {
@@ -457,14 +457,14 @@ KRIndexConsistencyCheck ( const KIndex *self, uint32_t level,
         switch ( self -> vers )
         {
         case 1:
-            rc = KTrieIndexCheckConsistency_v1 ( & self -> u . txt1,
+            rc = KRTrieIndexCheckConsistency_v1 ( & self -> u . txt1,
                 start_id, id_range, num_keys, num_rows, num_holes,
                 self, key2id, id2key );
             break;
         case 2:
         case 3:
         case 4:
-            rc = KTrieIndexCheckConsistency_v2 ( & self -> u . txt234,
+            rc = KRTrieIndexCheckConsistency_v2 ( & self -> u . txt234,
                 start_id, id_range, num_keys, num_rows, num_holes,
                 self, key2id, id2key, all_ids, self -> converted_from_v1 );
             break;
@@ -486,7 +486,7 @@ KRIndexConsistencyCheck ( const KIndex *self, uint32_t level,
  */
 static
 rc_t CC
-KRIndexFindText ( const KIndex *self, const char *key, int64_t *start_id, uint64_t *id_count,
+KRIndexFindText ( const KRIndex *self, const char *key, int64_t *start_id, uint64_t *id_count,
     int ( CC * custom_cmp ) ( const void *item, struct PBSTNode const *n, void *data ),
     void *data )
 {
@@ -515,7 +515,7 @@ KRIndexFindText ( const KIndex *self, const char *key, int64_t *start_id, uint64
         switch ( self -> vers )
         {
         case 1:
-            rc = KTrieIndexFind_v1 ( & self -> u . txt1, key, & id32, custom_cmp, data );
+            rc = KRTrieIndexFind_v1 ( & self -> u . txt1, key, & id32, custom_cmp, data );
             if ( rc == 0 )
                 * start_id = id32;
             break;
@@ -523,9 +523,9 @@ KRIndexFindText ( const KIndex *self, const char *key, int64_t *start_id, uint64
         case 3:
         case 4:
 #if V2FIND_RETURNS_SPAN
-            rc = KTrieIndexFind_v2 ( & self -> u . txt234, key, start_id, & span, custom_cmp, data, self -> converted_from_v1 );
+            rc = KRTrieIndexFind_v2 ( & self -> u . txt234, key, start_id, & span, custom_cmp, data, self -> converted_from_v1 );
 #else
-            rc = KTrieIndexFind_v2 ( & self -> u . txt234, key, start_id, custom_cmp, data, self -> converted_from_v1 );
+            rc = KRTrieIndexFind_v2 ( & self -> u . txt234, key, start_id, custom_cmp, data, self -> converted_from_v1 );
 #endif
             break;
         default:
@@ -546,7 +546,7 @@ KRIndexFindText ( const KIndex *self, const char *key, int64_t *start_id, uint64
 /* FindAll
  *  finds all mappings from key
  */
-static rc_t CC KRIndexFindAllText ( const KIndex *self, const char *key,
+static rc_t CC KRIndexFindAllText ( const KRIndex *self, const char *key,
     rc_t ( CC * f ) ( int64_t id, uint64_t id_count, void *data ), void *data )
 {
     rc_t rc = 0;
@@ -570,7 +570,7 @@ static rc_t CC KRIndexFindAllText ( const KIndex *self, const char *key,
         switch ( self -> vers )
         {
         case 1:
-            rc = KTrieIndexFind_v1 ( & self -> u . txt1, key, & id32, NULL, NULL );
+            rc = KRTrieIndexFind_v1 ( & self -> u . txt1, key, & id32, NULL, NULL );
             if ( rc == 0 )
                 rc = ( * f ) ( id32, 1, data );
             break;
@@ -578,9 +578,9 @@ static rc_t CC KRIndexFindAllText ( const KIndex *self, const char *key,
         case 3:
         case 4:
 #if V2FIND_RETURNS_SPAN
-            rc = KTrieIndexFind_v2 ( & self -> u . txt234, key, & id64, & span, NULL, NULL, self -> converted_from_v1 );
+            rc = KRTrieIndexFind_v2 ( & self -> u . txt234, key, & id64, & span, NULL, NULL, self -> converted_from_v1 );
 #else
-            rc = KTrieIndexFind_v2 ( & self -> u . txt234, key, & id64, NULL, NULL, self -> converted_from_v1 );
+            rc = KRTrieIndexFind_v2 ( & self -> u . txt234, key, & id64, NULL, NULL, self -> converted_from_v1 );
 #endif
             if ( rc == 0 )
                 rc = ( * f ) ( id64, span, data );
@@ -602,7 +602,7 @@ static rc_t CC KRIndexFindAllText ( const KIndex *self, const char *key,
  */
 static
 rc_t CC
-KRIndexProjectText ( const KIndex *self,
+KRIndexProjectText ( const KRIndex *self,
     int64_t id, int64_t *start_id, uint64_t *id_count,
     char *key, size_t kmax, size_t *actsize )
 {
@@ -642,7 +642,7 @@ KRIndexProjectText ( const KIndex *self,
             if ( id <= 0 || ( id >> 32 ) != 0 )
                 return RC ( rcDB, rcIndex, rcProjecting, rcId, rcNotFound );
 
-            rc = KTrieIndexProject_v1 ( & self -> u . txt1,
+            rc = KRTrieIndexProject_v1 ( & self -> u . txt1,
                 ( uint32_t ) id, key, kmax, actsize );
             if ( rc == 0 )
                 * start_id = id;
@@ -651,9 +651,9 @@ KRIndexProjectText ( const KIndex *self,
         case 3:
         case 4:
 #if V2FIND_RETURNS_SPAN
-            rc = KTrieIndexProject_v2 ( & self -> u . txt234, id, start_id, & span, key, kmax, actsize );
+            rc = KRTrieIndexProject_v2 ( & self -> u . txt234, id, start_id, & span, key, kmax, actsize );
 #else
-            rc = KTrieIndexProject_v2 ( & self -> u . txt234, id, key, kmax, actsize );
+            rc = KRTrieIndexProject_v2 ( & self -> u . txt234, id, key, kmax, actsize );
             if ( rc == 0 )
                 * start_id = id;
 #endif
@@ -678,7 +678,7 @@ KRIndexProjectText ( const KIndex *self,
  */
 static
 rc_t CC
-KRIndexProjectAllText ( const KIndex *self, int64_t id,
+KRIndexProjectAllText ( const KRIndex *self, int64_t id,
     rc_t ( CC * f ) ( int64_t start_id, uint64_t id_count, const char *key, void *data ),
     void *data )
 {
@@ -706,7 +706,7 @@ KRIndexProjectAllText ( const KIndex *self, int64_t id,
             if ( id <= 0 || ( id >> 32 ) != 0 )
                 return RC ( rcDB, rcIndex, rcProjecting, rcId, rcNotFound );
 
-            rc = KTrieIndexProject_v1 ( & self -> u . txt1,
+            rc = KRTrieIndexProject_v1 ( & self -> u . txt1,
                 ( uint32_t ) id, key, sizeof key, NULL );
             if ( rc == 0 )
                 rc = ( * f ) ( id, 1, key, data );
@@ -716,9 +716,9 @@ KRIndexProjectAllText ( const KIndex *self, int64_t id,
         case 3:
         case 4:
 #if V2FIND_RETURNS_SPAN
-            rc = KTrieIndexProject_v2 ( & self -> u . txt234, id, & start_id, & span, key, sizeof key, NULL );
+            rc = KRTrieIndexProject_v2 ( & self -> u . txt234, id, & start_id, & span, key, sizeof key, NULL );
 #else
-            rc = KTrieIndexProject_v2 ( & self -> u . txt234, start_id = id, key, sizeof key );
+            rc = KRTrieIndexProject_v2 ( & self -> u . txt234, start_id = id, key, sizeof key );
 #endif
             if ( rc == 0 )
                 rc = ( * f ) ( start_id, span, key, data );
@@ -737,7 +737,7 @@ KRIndexProjectAllText ( const KIndex *self, int64_t id,
 
 static
 rc_t CC
-KRIndexFindU64( const KIndex* self, uint64_t offset, uint64_t* key, uint64_t* key_size, int64_t* id, uint64_t* id_qty )
+KRIndexFindU64( const KRIndex* self, uint64_t offset, uint64_t* key, uint64_t* key_size, int64_t* id, uint64_t* id_qty )
 {
     rc_t rc = 0;
 
@@ -753,7 +753,7 @@ KRIndexFindU64( const KIndex* self, uint64_t offset, uint64_t* key, uint64_t* ke
         {
         case 3:
         case 4:
-            rc = KU64IndexFind_v3(&self->u.u64_3, offset, key, key_size, id, id_qty);
+            rc = KRU64IndexFind_v3(&self->u.u64_3, offset, key, key_size, id, id_qty);
             break;
         default:
             return RC(rcDB, rcIndex, rcSelecting, rcIndex, rcBadVersion);
@@ -765,7 +765,7 @@ KRIndexFindU64( const KIndex* self, uint64_t offset, uint64_t* key, uint64_t* ke
     return rc;
 }
 
-static rc_t CC KRIndexFindAllU64( const KIndex* self, uint64_t offset,
+static rc_t CC KRIndexFindAllU64( const KRIndex* self, uint64_t offset,
     rc_t ( CC * f )(uint64_t key, uint64_t key_size, int64_t id, uint64_t id_qty, void* data ), void* data)
 {
     rc_t rc = 0;
@@ -780,7 +780,7 @@ static rc_t CC KRIndexFindAllU64( const KIndex* self, uint64_t offset,
         {
         case 3:
         case 4:
-            rc = KU64IndexFindAll_v3(&self->u.u64_3, offset, f, data);
+            rc = KRU64IndexFindAll_v3(&self->u.u64_3, offset, f, data);
             break;
         default:
             return RC(rcDB, rcIndex, rcSelecting, rcIndex, rcBadVersion);
@@ -801,7 +801,7 @@ static rc_t CC KRIndexFindAllU64( const KIndex* self, uint64_t offset,
  */
 static
 void CC
-KRIndexSetMaxRowId ( const KIndex *cself, int64_t max_row_id )
+KRIndexSetMaxRowId ( const KRIndex *cself, int64_t max_row_id )
 {
     switch ( cself -> type )
     {
@@ -814,7 +814,7 @@ KRIndexSetMaxRowId ( const KIndex *cself, int64_t max_row_id )
         case 4:
             /* here we can repair the max row id */
             if ( cself -> u . txt234 . pt . maxid < max_row_id )
-                ( ( KIndex* ) cself ) -> u . txt234 . pt . maxid = max_row_id;
+                ( ( KRIndex* ) cself ) -> u . txt234 . pt . maxid = max_row_id;
             break;
         }
         break;

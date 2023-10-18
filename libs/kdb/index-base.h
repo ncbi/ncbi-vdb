@@ -33,7 +33,7 @@
 #include <stdarg.h>
 
 #ifndef KINDEX_IMPL
-#define KINDEX_IMPL KIndexBase
+#define KINDEX_IMPL KIndex
 #endif
 
 #ifdef __cplusplus
@@ -46,10 +46,10 @@ extern "C" {
 typedef struct KMDataNode KMDataNode;
 
 /*--------------------------------------------------------------------------
- * KIndexBase
+ * KIndex
  *   base structure for KIndex implementations
  */
-typedef struct KIndexBase KIndexBase;
+typedef struct KIndex KIndex;
 
 typedef struct KIndex_vt KIndex_vt;
 struct KIndex_vt
@@ -77,7 +77,7 @@ struct KIndex_vt
     void ( CC * setMaxRowId )       ( const KINDEX_IMPL *cself, int64_t max_row_id );
 };
 
-struct KIndexBase
+struct KIndex
 {
     KIndex_vt * vt;
 

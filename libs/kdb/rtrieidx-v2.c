@@ -26,7 +26,7 @@
 
 #include <kdb/extern.h>
 
-#include "index-priv.h"
+#include "rindex.h"
 #include "trieidx.h"
 
 #include <klib/ptrie.h>
@@ -935,18 +935,18 @@ rc_t KPTrieIndexFind_v2 ( const KPTrieIndex_v2 *self,
 
 
 /*--------------------------------------------------------------------------
- * KTrieIndex_v2
+ * KRTrieIndex_v2
  */
 
 
 /* whack whack */
-void KTrieIndexWhack_v2 ( KTrieIndex_v2 *self )
+void KRTrieIndexWhack_v2 ( KRTrieIndex_v2 *self )
 {
     KPTrieIndexWhack_v2 ( & self -> pt );
 }
 
 /* initialize an index from file */
-rc_t KTrieIndexOpen_v2 ( KTrieIndex_v2 *self, const KMMap *mm, bool byteswap )
+rc_t KRTrieIndexOpen_v2 ( KRTrieIndex_v2 *self, const KMMap *mm, bool byteswap )
 {
     rc_t rc;
     uint32_t version;
@@ -1004,13 +1004,13 @@ rc_t KTrieIndexOpen_v2 ( KTrieIndex_v2 *self, const KMMap *mm, bool byteswap )
         /* self -> pt gets whacked below */
     }
 
-    KTrieIndexWhack_v2 ( self );
+    KRTrieIndexWhack_v2 ( self );
     return rc;
 }
 
 
 /* map key to id range */
-rc_t KTrieIndexFind_v2 ( const KTrieIndex_v2 *self,
+rc_t KRTrieIndexFind_v2 ( const KRTrieIndex_v2 *self,
     const char *str, int64_t *start_id,
 #if V2FIND_RETURNS_SPAN
     uint32_t *span,
@@ -1030,7 +1030,7 @@ rc_t KTrieIndexFind_v2 ( const KTrieIndex_v2 *self,
     return RC ( rcDB, rcIndex, rcSelecting, rcString, rcNotFound );
 }
 
-rc_t KTrieIndexProject_v2 ( const KTrieIndex_v2 *self,
+rc_t KRTrieIndexProject_v2 ( const KRTrieIndex_v2 *self,
     int64_t id,
 #if V2FIND_RETURNS_SPAN
      int64_t *start_id, uint32_t *span,

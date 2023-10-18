@@ -26,7 +26,7 @@
 
 #include <kdb/extern.h>
 
-#include "index-priv.h"
+#include "rindex.h"
 #include "kdbfmt.h"
 
 #include <klib/ptrie.h>
@@ -47,107 +47,18 @@
 #include <byteswap.h>
 #include <assert.h>
 
-
 /*--------------------------------------------------------------------------
- * KPTrieIndex_v1
- *  persisted keymap
- */
-
-/* KPTrieIndexInit
- *  opens and initializes persisted keymap structure
- */
-rc_t KPTrieIndexInit_v1 ( KPTrieIndex_v1 *self, const KMMap *mm, bool byteswap )
-{
-    size_t size;
-    rc_t rc = KMMapSize ( mm, & size );
-    if ( rc == 0 )
-    {
-        const KDBHdr *hdr;
-        rc = KMMapAddrRead ( mm, ( const void** ) & hdr );
-        if ( rc == 0 )
-        {
-            /* try to create the pttree */
-            rc = PTrieMakeOrig ( & self -> key2id,
-                hdr + 1, size -= sizeof * hdr, byteswap );
-            if ( rc == 0 )
-            {
-                size_t ptsize = PTrieSize ( self -> key2id );
-                if ( ptsize <= size )
-                {
-                    /* just in case */
-                    self -> mm = NULL;
-
-                    /* record for projection */
-                    self -> byteswap = byteswap;
-
-                    /* it could be stored without projection */
-                    if ( ptsize == size )
-                    {
-                        self -> id2node = NULL;
-                        self -> first = self -> last = 0;
-                        return 0;
-                    }
-
-                    /* assume this is projection index */
-                    self -> id2node = ( void* )
-                        ( ( char* ) ( hdr + 1 ) + ptsize );
-                    size -= ptsize;
-
-                    /* it must have at least 4 bytes
-                       and be 4 byte aligned */
-                    if ( size >= sizeof ( uint32_t ) && ( size & 3 ) == 0 )
-                    {
-                        /* first entry is starting key
-                           remaining entries are node ids */
-                        self -> first = * self -> id2node ++;
-                        size -= sizeof self -> id2node [ 0 ];
-                        if ( size == 0 )
-                        {
-                            /* forget if empty */
-                            self -> id2node = NULL;
-                            self -> first = self -> last = 0;
-                            return 0;
-                        }
-                        /* remaining entries */
-                        self -> last = self -> first + ( size >> 2 ) - 1;
-                        return 0;
-                    }
-                }
-
-                PTrieWhack ( self -> key2id );
-                self -> key2id = NULL;
-
-                rc = RC ( rcDB, rcIndex, rcConstructing, rcTrie, rcCorrupt );
-            }
-        }
-    }
-
-    return rc;
-}
-
-/* KPTrieIndexWhack_v1
- *  closes down keymap
- */
-void KPTrieIndexWhack_v1 ( KPTrieIndex_v1 *self )
-{
-    PTrieWhack ( self -> key2id );
-    KMMapRelease ( self -> mm );
-    memset ( self, 0, sizeof * self );
-}
-
-
-/*--------------------------------------------------------------------------
- * KTrieIndex_v1
+ * KRTrieIndex_v1
  */
 
 /* whack whack */
-void KTrieIndexWhack_v1 ( KTrieIndex_v1 *self )
+void KRTrieIndexWhack_v1 ( KRTrieIndex_v1 *self )
 {
     KPTrieIndexWhack_v1 ( & self -> pt );
 }
 
 /* initialize an index from file */
-rc_t KTrieIndexOpen_v1 ( KTrieIndex_v1 *self, const KMMap *mm, bool byteswap )
+rc_t KRTrieIndexOpen_v1 ( KRTrieIndex_v1 *self, const KMMap *mm, bool byteswap )
 {
     rc_t rc;
 
@@ -164,12 +75,12 @@ rc_t KTrieIndexOpen_v1 ( KTrieIndex_v1 *self, const KMMap *mm, bool byteswap )
         }
     }
 
-    KTrieIndexWhack_v1 ( self );
+    KRTrieIndexWhack_v1 ( self );
     return rc;
 }
 
 /* map key to id ( was Key2Id ) */
-rc_t KTrieIndexFind_v1 ( const KTrieIndex_v1 *self, const char *str, uint32_t *id,
+rc_t KRTrieIndexFind_v1 ( const KRTrieIndex_v1 *self, const char *str, uint32_t *id,
     int ( CC * custom_cmp ) ( const void *item, const PBSTNode *n, void *data ), void * data )
 {
     if ( self -> pt . key2id != NULL )
@@ -192,7 +103,7 @@ rc_t KTrieIndexFind_v1 ( const KTrieIndex_v1 *self, const char *str, uint32_t *i
 }
 
 /* projection index id to key-string ( was Id2Key ) */
-rc_t KTrieIndexProject_v1 ( const KTrieIndex_v1 *self,
+rc_t KRTrieIndexProject_v1 ( const KRTrieIndex_v1 *self,
     uint32_t id, char *key_buff, size_t buff_size, size_t *actsize)
 {
     if ( self -> pt . id2node != NULL &&

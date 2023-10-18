@@ -1253,14 +1253,14 @@ KWDatabaseVOpenIndexRead ( const KDatabase *cself, const KIndex **idxp, const ch
         path, sizeof path, "idx", 3, name, args );
     if ( rc == 0 )
     {
-        KIndex *idx;
-        rc = KDBWManagerOpenIndexReadInt ( cself -> mgr, (const KIndex **)& idx,
+        KWIndex *idx;
+        rc = KDBWManagerOpenIndexReadInt ( cself -> mgr, (const KWIndex **)& idx,
                                           cself -> dir, path );
         if ( rc == 0 )
         {
             KDatabase *self = ( KDatabase* ) cself;
             idx -> db = KDatabaseAttach ( self );
-            * idxp = idx;
+            * idxp = & idx -> dad;
         }
     }
     return rc;
@@ -1305,12 +1305,13 @@ LIB_EXPORT rc_t CC KDatabaseVCreateIndex ( KDatabase *self, KIndex **idxp,
         rc = KDirectoryVResolvePath ( dir, false, path, sizeof path, name, args );
         if ( rc == 0 )
         {
-            rc = KDBManagerCreateIndexInt ( self -> mgr, idxp, dir,
+            KWIndex * idx;
+            rc = KDBManagerCreateIndexInt ( self -> mgr, & idx, dir,
                 type, cmode | kcmParents, path, (self -> cmode & kcmMD5) != 0 );
             if ( rc == 0 )
             {
-                KIndex *idx = * idxp;
                 idx -> db = KDatabaseAttach ( self );
+                * idxp = & idx -> dad;
             }
         }
 
@@ -1357,11 +1358,12 @@ LIB_EXPORT rc_t CC KDatabaseVOpenIndexUpdate ( KDatabase *self,
         rc = KDirectoryVResolvePath ( dir, false, path, sizeof path, name, args );
         if ( rc == 0 )
         {
-            rc = KDBManagerOpenIndexUpdate ( self -> mgr, idxp, dir, path );
+            KWIndex *idx;
+            rc = KDBManagerOpenIndexUpdate ( self -> mgr, & idx, dir, path );
             if ( rc == 0 )
             {
-                KIndex *idx = * idxp;
                 idx -> db = KDatabaseAttach ( self );
+                * idxp = & idx -> dad;
             }
         }
 

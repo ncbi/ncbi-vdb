@@ -31,6 +31,7 @@
 #include <kdb/meta.h>
 
 struct KTable;
+struct KRIndex;
 
 #ifdef __cplusplus
 extern "C" {
@@ -50,7 +51,7 @@ rc_t KDBRManagerVOpenColumnReadInt_noargs ( const KDBManager *self,
 rc_t KDBRManagerOpenMetadataReadInt ( const KDBManager *self, KMetadata **metap,
     const KDirectory *wd, uint32_t rev, bool prerelease );
 
-rc_t KDBRManagerOpenIndexReadInt ( const KDBManager *self, struct KIndex **idxp, const KDirectory *wd, const char *path );
+rc_t KDBRManagerOpenIndexReadInt ( const KDBManager *self, struct KRIndex **idxp, const KDirectory *wd, const char *path );
 
 
 #ifdef __cplusplus
