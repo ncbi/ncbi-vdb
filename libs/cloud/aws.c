@@ -1,4 +1,4 @@
-/*===========================================================================
+/*==============================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
 *               National Center for Biotechnology Information
@@ -341,7 +341,8 @@ LIB_EXPORT rc_t CC CloudMgrMakeAWS ( const CloudMgr * self, AWS ** p_aws )
             self, user_agrees_to_pay, user_agrees_to_reveal_instance_identity );
         if ( rc == 0 )
         {
-            rc = PopulateCredentials( aws, (KConfig*)self->kfg );
+            if ( user_agrees_to_pay )
+                rc = PopulateCredentials( aws, (KConfig*)self->kfg );
             if ( rc == 0 )
             {
                 AWSInitAccess( aws );
@@ -444,8 +445,142 @@ static rc_t aws_extract_key_value_pair (
     return 0;
 }
 
+static
+rc_t aws_parse_csv_file(AWS * self, const char * buffer, size_t buf_size,
+    const char * path)
+{
+    int i = 0;
+
+    const char *comma = NULL;
+    const char *start = buffer;
+    const char *end = start + buf_size;
+    const char *sep = start;
+
+    int idxID = -1, idxSecret = -1;
+
+    String ID, Secret, string, id, secret;
+    CONST_STRING(&ID, "Access key ID");
+    CONST_STRING(&Secret, "Secret access key");
+
+    assert(self);
+
+    /* Header line */
+    {
+        sep = string_chr(start, end - start, '\n');
+        if (sep == NULL)
+            sep = (char *)end;
+
+        comma = string_chr(start, sep - start, ',');
+        if (comma == NULL) {
+            rc_t rc
+                = RC(rcCloud, rcFile, rcReading, rcFile, rcUnrecognized);
+            self->credentials_state = eCCUnrecognized;
+            PLOGERR(klogErr, (klogErr, rc,
+                "unrecognized format of credentials file '$(path)'",
+                "path=%s", path));
+            return rc;
+        }
+
+        for (i = 0; start < sep; ++i, start = comma + 1) {
+            String key;
+
+            comma = string_chr(start, sep - start, ',');
+            if (comma == NULL)
+                comma = (char *)sep;
+
+            StringInit(&string,
+                start, comma - start, string_len(start, comma - start));
+
+            StringTrim(&string, &key);
+            if (StringEqual(&key, &ID))
+                idxID = i;
+            else if (StringEqual(&key, &Secret))
+                idxSecret = i;
+        }
+
+        if (idxID < 0 || idxSecret < 0) { /* incomplete header */
+            rc_t rc
+                = RC(rcCloud, rcFile, rcReading, rcFile, rcInsufficient);
+            self->credentials_state = eCCIncomplete;
+            PLOGERR(klogErr, (klogErr, rc,
+                "credentials file '$(path)' has incomplete header",
+                "path=%s", path));
+            return rc;
+        }
+    }
+
+    /* Data line */
+    {
+        bool idFound = false, secretFound = false;
+
+        if (end > start) {
+            sep = string_chr(start, end - start, '\n');
+            if (sep == NULL)
+                sep = (char *)end;
+        } else
+            sep = (char *)end;
+
+        for (i = 0; start < sep; ++i, start = comma + 1) {
+            comma = string_chr(start, sep - start, ',');
+            if (comma == NULL)
+                comma = (char *)sep;
+
+            if (i != idxID && i != idxSecret)
+                continue;
+
+            StringInit(&string,
+                start, comma - start, string_len(start, comma - start));
+
+            if (i == idxID) {
+                StringTrim(&string, &id);
+                idFound = true;
+            }
+            else if (i == idxSecret) {
+                StringTrim(&string, &secret);
+                secretFound = true;
+            }
+        }
+
+        if (!idFound || !secretFound) { /* no data */
+            rc_t rc
+                = RC(rcCloud, rcFile, rcReading, rcFile, rcInsufficient);
+            self->credentials_state = eCCIncomplete;
+            PLOGERR(klogErr, (klogErr, rc,
+                "credentials file '$(path)' is incomplete", "path=%s", path));
+            return rc;
+        }
+    }
+
+    /* Check extra lines */
+    {
+        sep = string_chr(start, end - start, '\n');
+        if (sep == NULL)
+            sep = (char *)end;
+
+        for (i = 0; start < sep; ++i, start = comma + 1) {
+            comma = string_chr(start, sep - start, ',');
+            if (comma != NULL) {
+                rc_t rc
+                    = RC(rcCloud, rcFile, rcReading, rcFile, rcExcessive);
+                PLOGERR(klogWarn, (klogWarn, rc, "credentials file '$(path)' "
+                                        "has extra lines", "path=%s", path));
+            }
+            break;
+        }
+    }
+
+    free(self->access_key_id);
+    self->access_key_id = string_dup(id.addr, id.size);
+
+    free(self->secret_access_key);
+    self->secret_access_key = string_dup(secret.addr, secret.size);
+
+    return 0;
+}
+
 /*TODO: improve error handling (at least report) */
-static void aws_parse_file ( AWS * self, const KFile *cred_file )
+static void aws_parse_file ( AWS * self, const KFile *cred_file,
+    const char *path )
 {
     rc_t rc;
     size_t buf_size;
@@ -464,6 +599,15 @@ static void aws_parse_file ( AWS * self, const KFile *cred_file )
     buf_size = ( size_t ) file_size;
     if ( sizeof buf_size < sizeof file_size && ( uint64_t ) buf_size != file_size )
         return;
+
+    if (file_size == 0) {
+        rc = RC(rcCloud, rcFile, rcReading, rcFile, rcEmpty);
+        self->credentials_state = eCCEmpty;
+        PLOGERR(klogErr, (klogErr, rc,
+            "credentials file '$(path)' is empty", "path=%s", path));
+        return;
+    }
+
 
     buffer = malloc ( buf_size );
     rc = KFileReadAll ( cred_file, 0, buffer, buf_size, &num_read );
@@ -494,8 +638,10 @@ static void aws_parse_file ( AWS * self, const KFile *cred_file )
 
         --sep;
 
-
-        for ( ; start < end; start = sep + 1 ) {
+        if (buf_size > 0 && buffer[0] != '[')
+            aws_parse_csv_file(self, buffer, buf_size, path);
+        else
+          for ( ; start < end; start = sep + 1 ) {
             rc_t rc;
             String string, trim;
             String key, value;
@@ -559,8 +705,7 @@ static void aws_parse_file ( AWS * self, const KFile *cred_file )
                 free ( self -> output );
                 self -> output = string_dup ( value . addr, value . size );
             }
-
-        }
+          }
 
         StringWhack ( temp1 );
         StringWhack ( brack_profile );
@@ -626,7 +771,7 @@ static rc_t LoadCredentials ( AWS * self, KConfig * kfg )
         rc = KDirectoryOpenFileRead ( wd, &cred_file, "%s", conf_env );
         if ( rc == 0 )
         {
-            aws_parse_file ( self, cred_file );
+            aws_parse_file ( self, cred_file, conf_env );
             KFileRelease ( cred_file );
         }
         KDirectoryRelease ( wd );
@@ -642,7 +787,7 @@ static rc_t LoadCredentials ( AWS * self, KConfig * kfg )
         rc = KDirectoryOpenFileRead ( wd, &cred_file, "%s", cred_env );
         if ( rc == 0 )
         {
-            aws_parse_file ( self, cred_file );
+            aws_parse_file ( self, cred_file, cred_env );
             KFileRelease ( cred_file );
         }
         KDirectoryRelease ( wd );
@@ -695,7 +840,7 @@ static rc_t LoadCredentials ( AWS * self, KConfig * kfg )
 
                 if ( rc == 0 )
                 {
-                    aws_parse_file ( self, cred_file );
+                    aws_parse_file ( self, cred_file, aws_path );
                     KFileRelease ( cred_file );
 
                     rc = KDirectoryOpenFileRead ( wd, &cred_file, "%s%s", aws_path, "/config" );
@@ -704,7 +849,7 @@ static rc_t LoadCredentials ( AWS * self, KConfig * kfg )
                         PLOGMSG ( klogInfo, ( klogInfo,
                                               "Loading AWS credentials from '$(P)/config'",
                                               "P=%s", aws_path ) );
-                        aws_parse_file ( self, cred_file );
+                        aws_parse_file ( self, cred_file, aws_path );
                         KFileRelease ( cred_file );
                     }
                 }
