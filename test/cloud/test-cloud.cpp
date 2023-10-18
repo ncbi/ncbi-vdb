@@ -507,19 +507,19 @@ FIXTURE_TEST_CASE(AWS_Credentials_AwsUserHomeCredentials, AwsFixture)
 #endif
 
 #ifdef ALL
-FIXTURE_TEST_CASE(AWS_Credentials_KfgCredentialsIncomplete, AwsFixture)
+FIXTURE_TEST_CASE(AWS_Credentials_KfgCredentialsProfileNotComplete, AwsFixture)
 {
     // 4) create configuration
     char credentialsKfg[PATH_MAX] = "";
     REQUIRE_RC(KDirectoryResolvePath(m_dir, true, credentialsKfg,
         sizeof credentialsKfg, CREDENTIALS_KFG));
     CreateFile(CREDENTIALS_KFG,
-        "[");
+        "[another_profile]");
     CreateFile(CONFIG,
         "/aws/credential_file = \"", credentialsKfg, "\"\n");
     putenv((char*)"VDB_CONFIG=cloud-kfg");
 
-    cerr << "Expect error message: profile is not found in credentials file \n";
+    cerr << "Expect error message: profile is not complete in credentials...\n";
     CheckKeys();
 }
 #endif
@@ -557,6 +557,7 @@ FIXTURE_TEST_CASE(AWS_Credentials_KfgCredentialsNoProfile, AwsFixture) {
         "/aws/credential_file = \"", credentialsKfg, "\"\n");
     putenv((char*)"VDB_CONFIG=cloud-kfg");
 
+    cerr << "Expect error message: profile is not found in credentials file \n";
     CheckKeys();
 }
 #endif
@@ -692,6 +693,7 @@ FIXTURE_TEST_CASE(AWS_Credentials_ErrorIncompleteIni, AwsFixture) {
         "/aws/credential_file = \"", credentialsKfg, "\"\n");
     putenv((char*)"VDB_CONFIG=cloud-kfg");
 
+    cerr << "Expect error message: profile is not found in credentials file\n";
     CheckKeys();
 }
 #endif

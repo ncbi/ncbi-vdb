@@ -626,7 +626,7 @@ static void aws_parse_file ( AWS * self, const KFile * cred_file,
         const char *start = buffer;
         const char *end = start + buf_size;
         const char *sep = start;
-        bool in_profile = false;
+        bool in_profile = false, in_profile_found = false;
         bool found = false;
 
         CONST_STRING ( &bracket, "[" );
@@ -671,6 +671,8 @@ static void aws_parse_file ( AWS * self, const KFile * cred_file,
             /* check for [profile] line */
             if ( trim.addr[0] == '[' ) {
                 in_profile = StringEqual ( &trim, brack_profile );
+                if (in_profile)
+                    in_profile_found = true;
                 continue;
             }
 
@@ -712,10 +714,18 @@ static void aws_parse_file ( AWS * self, const KFile * cred_file,
 
         if (!found) {
             rc = RC(rcCloud, rcFile, rcReading, rcString, rcNotFound);
-            self->credentials_state = eCCProfileNotFound;
-            PLOGERR(klogErr, (klogErr, rc,
-                "profile '$(p) is not found in credentials file '$(path)'",
-                "p=%s,path=%s", profile.addr, path));
+            if (!in_profile_found) {
+                self->credentials_state = eCCProfileNotFound;
+                PLOGERR(klogErr, (klogErr, rc,
+                    "profile '$(p)' is not found in credentials file '$(path)'",
+                    "p=%s,path=%s", profile.addr, path));
+            }
+            else {
+                self->credentials_state = eCCProfileNotComplete;
+                PLOGERR(klogErr, (klogErr, rc, "profile '$(p)' is not complete "
+                    "in credentials file '$(path)'",
+                    "p=%s,path=%s", profile.addr, path));
+            }
         }
 
         StringWhack ( temp1 );
