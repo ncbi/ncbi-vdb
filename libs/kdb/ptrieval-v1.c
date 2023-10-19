@@ -26,7 +26,7 @@
 
 #include <kdb/extern.h>
 
-#include "index-priv.h"
+#include "rindex.h"
 #include "idstats.h"
 
 #include <kdb/index.h>

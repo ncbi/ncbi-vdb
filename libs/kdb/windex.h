@@ -73,9 +73,10 @@ struct KTrieIdxNode_v1
 };
 
 /*--------------------------------------------------------------------------
- * KTrieIndex_v1
+ * KWTrieIndex_v1
  */
-struct KTrieIndex_v1
+typedef struct KWTrieIndex_v1 KWTrieIndex_v1;
+struct KWTrieIndex_v1
 {
     KPTrieIndex_v1 pt;
     Trie key2id;
@@ -85,16 +86,32 @@ struct KTrieIndex_v1
     uint32_t len;
 };
 
+/* initialize an index from file - can be NULL */
+rc_t KWTrieIndexOpen_v1 ( KWTrieIndex_v1 *self, struct KMMap const *mm, bool byteswap );
+
+/* whack whack */
+void KWTrieIndexWhack_v1 ( KWTrieIndex_v1 *self );
+
+/* map key to id ( was Key2Id ) */
+rc_t KWTrieIndexFind_v1 ( const KWTrieIndex_v1 *self,
+    const char *key, uint32_t *id,
+    int ( CC * custom_cmp ) ( const void *item, struct PBSTNode const *n, void *data ),
+    void *data );
+
+/* projection index id to key-string ( was Id2Key ) */
+rc_t KWTrieIndexProject_v1 ( const KWTrieIndex_v1 *self,
+    uint32_t id, char *key_buff, size_t buff_size, size_t *actsize );
+
 /* insert string into trie, mapping to 32 bit id */
-rc_t KTrieIndexInsert_v1 ( KTrieIndex_v1 *self,
+rc_t KWTrieIndexInsert_v1 ( KWTrieIndex_v1 *self,
     bool proj, const char *key, uint32_t id );
 
 /* drop string from trie and all mappings */
-rc_t KTrieIndexDelete_v1 ( KTrieIndex_v1 *self,
+rc_t KWTrieIndexDelete_v1 ( KWTrieIndex_v1 *self,
     bool proj, const char *key );
 
 /* persist index to file */
-rc_t KTrieIndexPersist_v1 ( const KTrieIndex_v1 *self,
+rc_t KWTrieIndexPersist_v1 ( const KWTrieIndex_v1 *self,
     bool proj, struct KDirectory *dir, const char *path, bool use_md5 );
 
 
@@ -230,7 +247,7 @@ struct KIndex
     uint32_t vers;
     union
     {
-        KTrieIndex_v1 txt1;
+        KWTrieIndex_v1 txt1;
         KTrieIndex_v2 txt2;
         KU64Index_v3  u64_3;
     } u;

@@ -34,7 +34,7 @@
 #include "kdb-cmn.h"
 #include "rkdb.h"
 #include "rcolumn.h"
-#include "index-priv.h"
+#include "rindex.h"
 #include "rmeta.h"
 #undef KONST
 

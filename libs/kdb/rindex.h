@@ -53,13 +53,39 @@ struct KDirectory;
 
 
 /*--------------------------------------------------------------------------
- * KTrieIndex_v1
+ * KRTrieIndex_v1
  */
-struct KTrieIndex_v1
+struct KRTrieIndex_v1
 {
     KPTrieIndex_v1 pt;
 };
 
+/*--------------------------------------------------------------------------
+ * KRTrieIndex_v1
+ */
+typedef struct KRTrieIndex_v1 KRTrieIndex_v1;
+
+/* initialize an index from file - can be NULL */
+rc_t KRTrieIndexOpen_v1 ( KRTrieIndex_v1 *self, struct KMMap const *mm, bool byteswap );
+
+/* whack whack */
+void KRTrieIndexWhack_v1 ( KRTrieIndex_v1 *self );
+
+/* map key to id ( was Key2Id ) */
+rc_t KRTrieIndexFind_v1 ( const KRTrieIndex_v1 *self,
+    const char *key, uint32_t *id,
+    int ( CC * custom_cmp ) ( const void *item, struct PBSTNode const *n, void *data ),
+    void *data );
+
+/* projection index id to key-string ( was Id2Key ) */
+rc_t KRTrieIndexProject_v1 ( const KRTrieIndex_v1 *self,
+    uint32_t id, char *key_buff, size_t buff_size, size_t *actsize );
+
+/* consistency check */
+rc_t KRTrieIndexCheckConsistency_v1 ( const KRTrieIndex_v1 *self,
+    int64_t *start_id, uint64_t *id_range, uint64_t *num_keys,
+    uint64_t *num_rows, uint64_t *num_holes,
+    struct KIndex const *outer, bool key2id, bool id2key );
 
 /*--------------------------------------------------------------------------
  * V2
@@ -135,7 +161,7 @@ struct KIndex
     uint32_t vers;
     union
     {
-        KTrieIndex_v1 txt1;
+        KRTrieIndex_v1 txt1;
         KTrieIndex_v2 txt234;
         KU64Index_v3  u64_3;
     } u;

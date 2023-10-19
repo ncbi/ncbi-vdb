@@ -27,7 +27,7 @@
 #include <kdb/extern.h>
 
 #define KONST const
-#include "index-priv.h"
+#include "rindex.h"
 #include "dbmgr.h"
 #include "rdbmgr.h"
 #include "database-cmn.h"
@@ -133,7 +133,7 @@ KRIndexWhack ( KIndex *self )
             switch ( self -> vers )
             {
             case 1:
-                KTrieIndexWhack_v1 ( & self -> u . txt1 );
+                KRTrieIndexWhack_v1 ( & self -> u . txt1 );
                 rc = 0;
                 break;
             case 2:
@@ -313,7 +313,7 @@ rc_t KRIndexMakeRead ( KIndex **idxp, const KDirectory *dir, const char *path )
                         /* open using v1 code only if KDBINDEXVERS is 1
                            if 2 or later, open as a v2 index */
 #if KDBINDEXVERS == 1
-                        rc = KTrieIndexOpen_v1 ( & idx -> u . txt1, mm );
+                        rc = KRTrieIndexOpen_v1 ( & idx -> u . txt1, mm );
                         if ( rc == 0 )
                         {
                             if ( idx -> u . txt1 . pt . id2node != NULL )
@@ -457,7 +457,7 @@ KRIndexConsistencyCheck ( const KIndex *self, uint32_t level,
         switch ( self -> vers )
         {
         case 1:
-            rc = KTrieIndexCheckConsistency_v1 ( & self -> u . txt1,
+            rc = KRTrieIndexCheckConsistency_v1 ( & self -> u . txt1,
                 start_id, id_range, num_keys, num_rows, num_holes,
                 self, key2id, id2key );
             break;
@@ -515,7 +515,7 @@ KRIndexFindText ( const KIndex *self, const char *key, int64_t *start_id, uint64
         switch ( self -> vers )
         {
         case 1:
-            rc = KTrieIndexFind_v1 ( & self -> u . txt1, key, & id32, custom_cmp, data );
+            rc = KRTrieIndexFind_v1 ( & self -> u . txt1, key, & id32, custom_cmp, data );
             if ( rc == 0 )
                 * start_id = id32;
             break;
@@ -570,7 +570,7 @@ static rc_t CC KRIndexFindAllText ( const KIndex *self, const char *key,
         switch ( self -> vers )
         {
         case 1:
-            rc = KTrieIndexFind_v1 ( & self -> u . txt1, key, & id32, NULL, NULL );
+            rc = KRTrieIndexFind_v1 ( & self -> u . txt1, key, & id32, NULL, NULL );
             if ( rc == 0 )
                 rc = ( * f ) ( id32, 1, data );
             break;
@@ -642,7 +642,7 @@ KRIndexProjectText ( const KIndex *self,
             if ( id <= 0 || ( id >> 32 ) != 0 )
                 return RC ( rcDB, rcIndex, rcProjecting, rcId, rcNotFound );
 
-            rc = KTrieIndexProject_v1 ( & self -> u . txt1,
+            rc = KRTrieIndexProject_v1 ( & self -> u . txt1,
                 ( uint32_t ) id, key, kmax, actsize );
             if ( rc == 0 )
                 * start_id = id;
@@ -706,7 +706,7 @@ KRIndexProjectAllText ( const KIndex *self, int64_t id,
             if ( id <= 0 || ( id >> 32 ) != 0 )
                 return RC ( rcDB, rcIndex, rcProjecting, rcId, rcNotFound );
 
-            rc = KTrieIndexProject_v1 ( & self -> u . txt1,
+            rc = KRTrieIndexProject_v1 ( & self -> u . txt1,
                 ( uint32_t ) id, key, sizeof key, NULL );
             if ( rc == 0 )
                 rc = ( * f ) ( id, 1, key, data );

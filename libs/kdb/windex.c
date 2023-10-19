@@ -144,7 +144,7 @@ KWIndexWhack ( KIndex *self )
                     switch ( self -> vers )
                     {
                     case 1:
-                        KTrieIndexWhack_v1 ( & self -> u . txt1 );
+                        KWTrieIndexWhack_v1 ( & self -> u . txt1 );
                         rc2 = 0;
                         break;
                     case 2:
@@ -361,7 +361,7 @@ rc_t KWIndexMakeRead ( KIndex **idxp, const KDirectory *dir, const char *path )
                         /* open using v1 code only if KDBINDEXVERS is 1
                            if 2 or later, open as a v2 index */
 #if KDBINDEXVERS == 1
-                        rc = KTrieIndexOpen_v1 ( & idx -> u . txt1, mm );
+                        rc = KWTrieIndexOpen_v1 ( & idx -> u . txt1, mm );
                         if ( rc == 0 )
                         {
                             if ( idx -> u . txt1 . pt . id2node != NULL )
@@ -431,7 +431,7 @@ rc_t KIndexMakeUpdate ( KIndex **idxp, KDirectory *dir, const char *path )
                         /* open using v1 code only if KDBINDEXVERS is 1
                            if 2 or later, open as a v2 index */
 #if KDBINDEXVERS == 1
-                        rc = KTrieIndexOpen_v1 ( & idx -> u . txt1, mm, byteswap );
+                        rc = KWTrieIndexOpen_v1 ( & idx -> u . txt1, mm, byteswap );
                         if ( rc == 0 )
                         {
                             if ( idx -> u . txt1 . pt . id2node != NULL )
@@ -582,7 +582,7 @@ rc_t KIndexCreate ( KIndex **idxp, KDirectory *dir, KIdxType type, KCreateMode c
         case kitText:
         case kitText | kitProj:
 #if KDBINDEXVERS == 1
-            rc = KTrieIndexOpen_v1 ( & idx -> u . txt1, NULL, false );
+            rc = KWTrieIndexOpen_v1 ( & idx -> u . txt1, NULL, false );
 #else
             rc = KTrieIndexOpen_v2 ( & idx -> u . txt2, NULL, false );
 #endif
@@ -677,7 +677,7 @@ LIB_EXPORT rc_t CC KIndexCommit ( KIndex *self )
             switch ( self -> vers )
             {
             case 1:
-                rc = KTrieIndexPersist_v1 ( & self -> u . txt1,
+                rc = KWTrieIndexPersist_v1 ( & self -> u . txt1,
                     proj, self -> dir, self -> path, self -> use_md5 );
                 break;
             case 2:
@@ -744,7 +744,7 @@ LIB_EXPORT rc_t CC KIndexInsertText ( KIndex *self, bool unique,
             if ( id <= 0 || ( id >> 32 ) != 0 )
                 return RC ( rcDB, rcIndex, rcInserting, rcId, rcExcessive );
 
-            rc = KTrieIndexInsert_v1 ( & self -> u . txt1,
+            rc = KWTrieIndexInsert_v1 ( & self -> u . txt1,
                 proj, key, ( uint32_t ) id );
             break;
         case 2:
@@ -803,7 +803,7 @@ LIB_EXPORT rc_t CC KIndexDeleteText ( KIndex *self, const char *key )
         switch ( self -> vers )
         {
         case 1:
-            rc = KTrieIndexDelete_v1 ( & self -> u . txt1, proj, key );
+            rc = KWTrieIndexDelete_v1 ( & self -> u . txt1, proj, key );
             break;
         case 2:
         case 3:
@@ -859,7 +859,7 @@ KWIndexFindText ( const KIndex *self, const char *key, int64_t *start_id, uint64
         switch ( self -> vers )
         {
         case 1:
-            rc = KTrieIndexFind_v1 ( & self -> u . txt1, key, & id32, custom_cmp, data );
+            rc = KWTrieIndexFind_v1 ( & self -> u . txt1, key, & id32, custom_cmp, data );
             if ( rc == 0 )
                 * start_id = id32;
             break;
@@ -916,7 +916,7 @@ KWIndexFindAllText ( const KIndex *self, const char *key,
         switch ( self -> vers )
         {
         case 1:
-            rc = KTrieIndexFind_v1 ( & self -> u . txt1, key, & id32, NULL, NULL );
+            rc = KWTrieIndexFind_v1 ( & self -> u . txt1, key, & id32, NULL, NULL );
             if ( rc == 0 )
                 rc = ( * f ) ( id32, 1, data );
             break;
@@ -986,7 +986,7 @@ KWIndexProjectText ( const KIndex *self,
             if ( id <= 0 || ( id >> 32 ) != 0 )
                 return RC ( rcDB, rcIndex, rcProjecting, rcId, rcNotFound );
 
-            rc = KTrieIndexProject_v1 ( & self -> u . txt1,
+            rc = KWTrieIndexProject_v1 ( & self -> u . txt1,
                     ( uint32_t ) id, key, kmax, actsize );
             if ( rc == 0 )
                 * start_id = id;
@@ -1050,7 +1050,7 @@ KWIndexProjectAllText ( const KIndex *self, int64_t id,
             if ( id <= 0 || ( id >> 32 ) != 0 )
                 return RC ( rcDB, rcIndex, rcProjecting, rcId, rcNotFound );
 
-            rc = KTrieIndexProject_v1 ( & self -> u . txt1,
+            rc = KWTrieIndexProject_v1 ( & self -> u . txt1,
                 ( uint32_t ) id, key, sizeof key, NULL );
             if ( rc == 0 )
                 rc = ( * f ) ( id, 1, key, data );

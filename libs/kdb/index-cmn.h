@@ -109,34 +109,6 @@ rc_t KPTrieIndexCheckConsistency_v1 ( const KPTrieIndex_v1 *self,
 
 
 /*--------------------------------------------------------------------------
- * KTrieIndex_v1
- */
-typedef struct KTrieIndex_v1 KTrieIndex_v1;
-
-/* initialize an index from file - can be NULL */
-rc_t KTrieIndexOpen_v1 ( KTrieIndex_v1 *self, struct KMMap const *mm, bool byteswap );
-
-/* whack whack */
-void KTrieIndexWhack_v1 ( KTrieIndex_v1 *self );
-
-/* map key to id ( was Key2Id ) */
-rc_t KTrieIndexFind_v1 ( const KTrieIndex_v1 *self,
-    const char *key, uint32_t *id,
-    int ( CC * custom_cmp ) ( const void *item, struct PBSTNode const *n, void *data ),
-    void *data );
-
-/* projection index id to key-string ( was Id2Key ) */
-rc_t KTrieIndexProject_v1 ( const KTrieIndex_v1 *self,
-    uint32_t id, char *key_buff, size_t buff_size, size_t *actsize );
-
-/* consistency check */
-rc_t KTrieIndexCheckConsistency_v1 ( const KTrieIndex_v1 *self,
-    int64_t *start_id, uint64_t *id_range, uint64_t *num_keys,
-    uint64_t *num_rows, uint64_t *num_holes,
-    struct KIndex const *outer, bool key2id, bool id2key );
-
-
-/*--------------------------------------------------------------------------
  * V2
  *  version 2 of the trie index was introduced to handle sparse ids,
  *  and to recognize that ids may be 64 bits and/or negative.

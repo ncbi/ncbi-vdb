@@ -53,6 +53,7 @@ set( KDB_CMN
     trieval-v2
 
     ridxblk
+    index-cmn
 )
 
 set( KDB_SRC

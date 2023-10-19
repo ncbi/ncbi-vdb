@@ -50,7 +50,7 @@
 #include "kdbfmt.h"
 #include "rtable.h"
 #include "rcolumn.h"
-#include "index-priv.h"
+#include "rindex.h"
 #include "rdbmgr.h"
 #include "rmeta.h"
 #undef KONST

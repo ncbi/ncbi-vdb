@@ -35,7 +35,7 @@
 #include <kdb/database.h>
 #include <kdb/kdb-priv.h>
 
-#include <../libs/kdb/index-priv.h>
+#include <../libs/kdb/rindex.h>
 #include <../libs/kdb/rdbmgr.h>
 
 using namespace std;
