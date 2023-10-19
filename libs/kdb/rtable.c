@@ -517,7 +517,7 @@ KRTableVOpenColumnRead ( const KTable *self, const KColumn **colp, const char *n
                                            colp, self -> dir, false, path );
         if ( rc == 0 )
         {
-            KColumn *col = ( KColumn* ) * colp;
+            KRColumn *col = ( KRColumn* ) * colp;
             col -> tbl = KTableAttach ( self );
         }
     }

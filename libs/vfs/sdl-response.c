@@ -63,6 +63,7 @@ static void DataClone(const Data * self, Data * clone) {
     clone->code = self->code;
     clone->encryptedForProjectId = self->encryptedForProjectId;
     clone->exp = self->exp; /* expDate */
+    clone->expirationDate = self->expirationDate;
     clone->fmt = self->fmt; /* format */
     clone->id = self->id; /* oldCartObjId */
     clone->link = self->link; /* ???????????????????????????????????????? */
@@ -111,6 +112,10 @@ static rc_t DataUpdate(const Data * self,
         name, path);
     if (next->sEncryptedForProjectId != NULL)
         next->encryptedForProjectId = atoi(next->sEncryptedForProjectId);
+
+    name = "expirationDate";
+    StrSet(&next->expirationDate,
+        KJsonObjectGetMember(node, name), name, path);
 
     name = "link";
     StrSet(&next->link, KJsonObjectGetMember(node, name), name, path);
@@ -203,6 +208,7 @@ rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
             bool ceRequired = false;
             bool payRequired = false;
 
+            int64_t exp = 0;  /* expirationDate */
             int64_t mod = 0;  /* modDate */
 
             int64_t projectId = -1;
@@ -225,6 +231,16 @@ rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
             memset(&acc, 0, sizeof acc);
             memset(&objectType, 0, sizeof objectType);
             memset(&type, 0, sizeof type);
+
+            if (ldata.expirationDate != NULL) {
+                KTime        kt;
+                const KTime* t = KTimeFromIso8601(&kt, ldata.expirationDate,
+                    string_measure(ldata.expirationDate, NULL));
+                if (t == NULL)
+                    return RC(rcVFS, rcQuery, rcExecuting, rcItem, rcIncorrect);
+                else
+                    exp = KTimeMakeTime(&kt);
+            }
 
             if (ldata.modificationDate != NULL) {
                 KTime        modT; /* modificationDate */
@@ -300,7 +316,7 @@ rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
             }
 
             rc = VPathMakeFromUrl(&path, &url, NULL, true, &id, ldata.sz,
-                mod, hasMd5 ? md5 : NULL, 0, ldata.srv, &objectType, &type,
+                mod, hasMd5 ? md5 : NULL, exp, ldata.srv, &objectType, &type,
                 ceRequired, payRequired, ldata.name, projectId, 128, &acc);
 
             if (rc == 0)

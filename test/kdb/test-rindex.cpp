@@ -190,7 +190,7 @@ FIXTURE_TEST_CASE(KRIndex_FindU64, KIndex_Fixture)
     Open( "testdb", "index" );
 
     uint64_t key[1024];
-    size_t key_size = sizeof( key );
+    uint64_t key_size = sizeof( key );
     int64_t start_id = 0;
     uint64_t id_count = 0;
 

@@ -35,19 +35,19 @@ extern "C" {
 /*--------------------------------------------------------------------------
  * forwards
  */
-typedef union KColumnPageMap KColumnPageMap;
+typedef union KRColumnPageMap KRColumnPageMap;
 
 
 /*--------------------------------------------------------------------------
- * KColumnData
+ * KRColumnData
  *  data fork
  *
  *  only handling append-mode today
  *
  *  kept 64-bit aligned
  */
-typedef struct KColumnData KColumnData;
-struct KColumnData
+typedef struct KRColumnData KRColumnData;
+struct KRColumnData
 {
     /* cached end of data fork */
     uint64_t eof;
@@ -62,30 +62,30 @@ struct KColumnData
 /* DefaultPageSize
  *  static method
  */
-#define KColumnDataDefaultPageSize( reuse_pages ) \
+#define KRColumnDataDefaultPageSize( reuse_pages ) \
     ( ( reuse_pages ) ? 4096 : 1 )
 
 /* Open
  */
-rc_t KColumnDataOpenRead ( KColumnData *self,
+rc_t KRColumnDataOpenRead ( KRColumnData *self,
     const KDirectory *dir, uint64_t eof, size_t pgsize );
 
 /* Whack
  */
-rc_t KColumnDataWhack ( KColumnData *self );
+rc_t KRColumnDataWhack ( KRColumnData *self );
 
 /* Read
  *  reads from the data fork using a blob map
  */
-rc_t KColumnDataRead ( const KColumnData *self, const KColumnPageMap *pm,
+rc_t KRColumnDataRead ( const KRColumnData *self, const KRColumnPageMap *pm,
     size_t offset, void *buffer, size_t bsize, size_t *num_read );
 
 
 /*--------------------------------------------------------------------------
- * KColumnPageMap
+ * KRColumnPageMap
  *  map of pages involved in column blob
  */
-union KColumnPageMap
+union KRColumnPageMap
 {
     /* for non-paged data forks, a single page id
        describes the start of the blob, where the
@@ -101,19 +101,19 @@ union KColumnPageMap
  *  "pg" [ IN ] and "sz" [ IN ] - identifies pages of data fork included
  *  within the blob.
  */
-rc_t KColumnPageMapOpen ( KColumnPageMap *pm,
-    KColumnData *cd, uint64_t pg, size_t sz );
+rc_t KRColumnPageMapOpen ( KRColumnPageMap *pm,
+    KRColumnData *cd, uint64_t pg, size_t sz );
 
 /* Whack
  *  disposes of memory in the case of a page array
  */
-void KColumnPageMapWhack ( KColumnPageMap *self, const KColumnData *cd );
+void KRColumnPageMapWhack ( KRColumnPageMap *self, const KRColumnData *cd );
 
 /* Id
  *  captures id of initial page
  */
-rc_t KColumnPageMapId ( const KColumnPageMap *self,
-    const KColumnData *cd, uint64_t *pg );
+rc_t KRColumnPageMapId ( const KRColumnPageMap *self,
+    const KRColumnData *cd, uint64_t *pg );
 
 
 #ifdef __cplusplus

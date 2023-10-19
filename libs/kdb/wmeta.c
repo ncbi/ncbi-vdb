@@ -276,7 +276,7 @@ rc_t KMetadataFlush ( KMetadata *self )
     else
     {
         /* open output file */
-        rc = KColumnFileCreate ( & pb . f, & pb . fmd5, self -> dir, self -> md5,
+        rc = KWColumnFileCreate ( & pb . f, & pb . fmd5, self -> dir, self -> md5,
                                  kcmInit | kcmParents, false, "md/cur.tmp" );
         /* ZZZZ do we need a "KMD5FileReset ( pb -> fmd5 )" ? I don't think so */
         if ( rc == 0 )

@@ -42,7 +42,7 @@ typedef struct KMetadata KMetadata;
 
 struct KDatabase;
 struct KTable;
-struct KColumn;
+struct KWColumn;
 struct KDBManager;
 struct KMDataNode;
 
@@ -63,7 +63,7 @@ struct KMetadata
     /* owner */
     KDatabase *db;
     KTable *tbl;
-    KColumn *col;
+    struct KWColumn *col;
 
     KMD5SumFmt * md5;
 

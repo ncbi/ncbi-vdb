@@ -48,11 +48,11 @@ struct KMD5SumFmt;
 
 
 /*--------------------------------------------------------------------------
- * KColumnIdx
+ * KWColumnIdx
  *  the index fork
  */
-typedef struct KColumnIdx KColumnIdx;
-struct KColumnIdx
+typedef struct KWColumnIdx KWColumnIdx;
+struct KWColumnIdx
 {
     /* first active id within db
        and first id on upper limit
@@ -65,13 +65,13 @@ struct KColumnIdx
     uint32_t vers;
 
     /* level 0 index */
-    KColumnIdx0 idx0;
+    KWColumnIdx0 idx0;
 
     /* level 1 index */
-    KColumnIdx1 idx1;
+    KWColumnIdx1 idx1;
 
     /* level 2 index */
-    KColumnIdx2 idx2;
+    KWColumnIdx2 idx2;
 
     /* commit counter */
     uint32_t commit_count;
@@ -79,51 +79,51 @@ struct KColumnIdx
 
 /* Create
  */
-rc_t KColumnIdxCreate ( KColumnIdx *self,
+rc_t KWColumnIdxCreate ( KWColumnIdx *self,
     KDirectory *dir, struct KMD5SumFmt *md5, KCreateMode mode,
     uint64_t *data_eof, size_t pgsize, int32_t checksum );
 
 /* Open
  */
-rc_t KColumnIdxOpenRead ( KColumnIdx *self, const KDirectory *dir,
+rc_t KWColumnIdxOpenRead ( KWColumnIdx *self, const KDirectory *dir,
 			  uint64_t *data_eof, size_t *pgsize,
 			  int32_t *checksum );
-rc_t KColumnIdxOpenUpdate ( KColumnIdx *self, KDirectory *dir,
+rc_t KWColumnIdxOpenUpdate ( KWColumnIdx *self, KDirectory *dir,
     KMD5SumFmt *md5, uint64_t *data_eof, size_t *pgsize,
     int32_t *checksum );
 
 /* Whack
  */
-rc_t KColumnIdxWhack ( KColumnIdx *self,
+rc_t KWColumnIdxWhack ( KWColumnIdx *self,
     uint64_t data_eof, size_t pgsize, int32_t checksum );
 
 /* Version
  */
-rc_t KColumnIdxVersion ( const KColumnIdx *self, uint32_t *version );
-#define KColumnIdxVersion( self, version ) \
-    KColumnIdx1Version ( & ( self ) -> idx1, version )
+rc_t KWColumnIdxVersion ( const KWColumnIdx *self, uint32_t *version );
+#define KWColumnIdxVersion( self, version ) \
+    KWColumnIdx1Version ( & ( self ) -> idx1, version )
 
 /* ByteOrder
  */
-rc_t KColumnIdxByteOrder ( const KColumnIdx *self, bool *reversed );
-#define KColumnIdxByteOrder( self, reversed ) \
-    KColumnIdx1ByteOrder ( & ( self ) -> idx1, reversed )
+rc_t KWColumnIdxByteOrder ( const KWColumnIdx *self, bool *reversed );
+#define KWColumnIdxByteOrder( self, reversed ) \
+    KWColumnIdx1ByteOrder ( & ( self ) -> idx1, reversed )
 
 /* IdRange
  *  returns range of ids contained within
  */
-rc_t KColumnIdxIdRange ( const KColumnIdx *self,
+rc_t KWColumnIdxIdRange ( const KWColumnIdx *self,
     int64_t *first, int64_t *last );
 
 /* FindFirstRowId
  */
-rc_t KColumnIdxFindFirstRowId ( const KColumnIdx * self,
+rc_t KWColumnIdxFindFirstRowId ( const KWColumnIdx * self,
     int64_t * found, int64_t start );
 
 /* LocateBlob
  *  locate an existing blob
  */
-rc_t KColumnIdxLocateBlob ( const KColumnIdx *self,
+rc_t KWColumnIdxLocateBlob ( const KWColumnIdx *self,
     KColBlobLoc *loc, int64_t first, int64_t last );
 
 /* Commit
@@ -131,18 +131,18 @@ rc_t KColumnIdxLocateBlob ( const KColumnIdx *self,
  *  updates idx1 with header information
  *  this should be the final step in committing a write operation
  */
-rc_t KColumnIdxCommit ( KColumnIdx *self, struct KMD5SumFmt *md5,
+rc_t KWColumnIdxCommit ( KWColumnIdx *self, struct KMD5SumFmt *md5,
     const KColBlobLoc *loc, uint32_t commit_freq,
     uint64_t data_eof, size_t pgsize, int32_t checksum );
 
 /* CommitDone
  *  finalizes a commit
  */
-rc_t KColumnIdxCommitDone ( KColumnIdx * self );
+rc_t KWColumnIdxCommitDone ( KWColumnIdx * self );
 
 /* Reindex
  */
-rc_t KColumnIdxReindex ( KColumnIdx *self, struct KMD5SumFmt *md5,
+rc_t KWColumnIdxReindex ( KWColumnIdx *self, struct KMD5SumFmt *md5,
     uint32_t commit_freq, uint64_t data_eof, size_t pgsize, int32_t checksum );
 
 

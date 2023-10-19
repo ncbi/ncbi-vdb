@@ -69,6 +69,7 @@ typedef struct Data {
     int64_t      encryptedForProjectId;
     const char * sEncryptedForProjectId;
     int64_t      exp;  /* expDate */
+    const char * expirationDate;
     const char * fmt;  /* format */
     EState       qual; /* hasOrigQuality */
     const char * cls;  /* itemClass */

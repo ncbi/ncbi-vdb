@@ -957,10 +957,10 @@ KWTableVOpenColumnRead ( const KTable *self, const KColumn **colp, const char *n
     {
 	bool col_is_cached;
         rc = KDBWManagerVOpenColumnReadInt_noargs ( self -> mgr,
-                                            colp, self -> dir, path, &col_is_cached, false );
+                                            (const KWColumn **)colp, self -> dir, path, &col_is_cached, false );
         if ( rc == 0 )
         {
-            KColumn *col = ( KColumn* ) * colp;
+            KWColumn *col = ( KWColumn* ) * colp;
             if(!col_is_cached) col -> tbl = KTableAttach ( self );
         }
     }
@@ -1008,11 +1008,11 @@ LIB_EXPORT rc_t CC KTableVCreateColumn ( KTable *self, KColumn **colp,
         else
             cmode &= ~ kcmMD5;
 
-        rc = KDBManagerVCreateColumnInt_noargs ( self -> mgr, colp,
+        rc = KDBManagerVCreateColumnInt_noargs ( self -> mgr, (KWColumn **)colp,
                                           self -> dir, cmode | kcmParents, checksum, pgsize, path );
         if ( rc == 0 )
         {
-            KColumn *col = * colp;
+            KWColumn *col = (KWColumn*)* colp;
             col -> tbl = KTableAttach ( self );
         }
     }
@@ -1054,10 +1054,10 @@ LIB_EXPORT rc_t CC KTableVOpenColumnUpdate ( KTable *self,
     if ( rc == 0 )
     {
         rc = KDBManagerVOpenColumnUpdateInt_noargs ( self -> mgr,
-                                              colp, self -> dir, false, path );
+                                              (KWColumn **)colp, self -> dir, false, path );
         if ( rc == 0 )
         {
-            KColumn *col = * colp;
+            KWColumn *col = (KWColumn *)* colp;
             col -> tbl = KTableAttach ( self );
         }
     }

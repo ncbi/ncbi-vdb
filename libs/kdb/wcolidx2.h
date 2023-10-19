@@ -46,11 +46,11 @@ struct KColIdxBlock;
 
 
 /*--------------------------------------------------------------------------
- * KColumnIdx2
+ * KWColumnIdx2
  *  level 2 index
  */
-typedef struct KColumnIdx2 KColumnIdx2;
-struct KColumnIdx2
+typedef struct KWColumnIdx2 KWColumnIdx2;
+struct KWColumnIdx2
 {
     /* for adding new blocks */
     uint64_t eof;
@@ -62,22 +62,22 @@ struct KColumnIdx2
 
 /* Create
  */
-rc_t KColumnIdx2Create ( KColumnIdx2 *self,
+rc_t KWColumnIdx2Create ( KWColumnIdx2 *self,
     KDirectory *dir, struct KMD5SumFmt *md5, KCreateMode mode, uint64_t eof );
 
 /* Open
  */
-rc_t KColumnIdx2OpenRead ( KColumnIdx2 *self,
+rc_t KWColumnIdx2OpenRead ( KWColumnIdx2 *self,
     const KDirectory *dir, uint64_t eof );
 
 /* Whack
  */
-rc_t KColumnIdx2Whack ( KColumnIdx2 *self );
+rc_t KWColumnIdx2Whack ( KWColumnIdx2 *self );
 
 /* LocateBlob
  *  locate an existing blob
  */
-rc_t KColumnIdx2LocateBlob ( const KColumnIdx2 *self,
+rc_t KWColumnIdx2LocateBlob ( const KWColumnIdx2 *self,
     KColBlobLoc *loc, const KColBlockLoc *bloc,
     int64_t first, int64_t upper, bool bswap );
 
@@ -90,14 +90,14 @@ rc_t KColumnIdx2LocateBlob ( const KColumnIdx2 *self,
  *
  *  return values:
  */
-rc_t KColumnIdx2Write ( KColumnIdx2 *self,
+rc_t KWColumnIdx2Write ( KWColumnIdx2 *self,
     uint64_t *pos, const void *buffer, size_t bytes );
 
 /* Commit
  *  keeps changes indicated by block size
  */
-rc_t KColumnIdx2Commit ( KColumnIdx2 *self, size_t bytes );
-rc_t KColumnIdx2CommitDone ( KColumnIdx2 *self );
+rc_t KWColumnIdx2Commit ( KWColumnIdx2 *self, size_t bytes );
+rc_t KWColumnIdx2CommitDone ( KWColumnIdx2 *self );
 
 
 #ifdef __cplusplus

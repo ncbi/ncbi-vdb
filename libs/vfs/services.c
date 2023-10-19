@@ -102,7 +102,7 @@ int64_t CC BSTreeSort ( const BSTNode * item, const BSTNode * n )
 
 typedef struct {
     KService * service; /* DO NOT RELEASE */
-    const VFSManager * mgr;
+    VFSManager * mgr;
     ServicesCache * cache;
     const KConfig * kfg;
     VResolver * resolver;
@@ -833,6 +833,7 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
 
     {   /* call External Services */
         const KSrvResponse * r = NULL;
+
 #ifdef DBGNG
         STSMSG(STS_FIN, ("%s: entering KServiceNamesExecuteExtImpl...",
             __func__));
@@ -881,7 +882,8 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
                     "VVVVVVVVVVVVVVVVVVVVVVVVVV KServiceNamesQueryExtImpl:\n"));
 
                 StringInitCString(&id, acc);
-                rc = VPathMake(&path, acc);
+                if (rc == 0)
+                    rc = VPathMake(&path, acc);
                 if (rc == 0 && !VPathFromUri(path))
                     RELEASE(VPath, path);
 

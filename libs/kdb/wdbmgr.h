@@ -39,6 +39,7 @@ extern "C" {
 
 struct KTable;
 struct KIndex;
+struct KWColumn;
 
 rc_t KDBWManagerVOpenDBReadInt_noargs ( const KDBManager *cself,
     const KDatabase **dbp, KDirectory *wd,
@@ -66,18 +67,18 @@ rc_t KDBManagerVCreateTableInt_noargs ( KDBManager *self,
 rc_t KDBManagerInsertTable ( KDBManager * self, struct KTable * tbl );
 
 rc_t KDBWManagerVOpenColumnReadInt_noargs ( const KDBManager *cself,
-    const KColumn **colp, const KDirectory *wd,
+    const struct KWColumn **colp, const KDirectory *wd,
     const char *path_fmt, bool *cached, int try_srapath, ... );
 
 rc_t KDBManagerVCreateColumnInt_noargs ( KDBManager *self,
-    KColumn **colp, KDirectory *wd, KCreateMode cmode,
+    struct KWColumn **colp, KDirectory *wd, KCreateMode cmode,
     KChecksum checksum, size_t pgsize, const char *path, ... );
 
 rc_t KDBManagerVOpenColumnUpdateInt_noargs ( KDBManager *self,
-    KColumn **colp, KDirectory *wd, bool try_srapath,
+    struct KWColumn **colp, KDirectory *wd, bool try_srapath,
     const char *path_fmt, ... );
 
-rc_t KDBManagerInsertColumn ( KDBManager * self, KColumn * col );
+rc_t KDBManagerInsertColumn ( KDBManager * self, struct KWColumn * col );
 
 rc_t KDBWManagerOpenMetadataReadInt ( KDBManager *self, const KMetadata **metap, const KDirectory *wd, uint32_t rev, bool prerelease,bool *cached );
 rc_t KDBManagerOpenMetadataUpdateInt ( KDBManager *self, KMetadata **metap, KDirectory *wd, KMD5SumFmt * md5 );

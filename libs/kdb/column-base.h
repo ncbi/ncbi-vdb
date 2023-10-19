@@ -33,7 +33,7 @@ extern "C" {
 #endif
 
 #ifndef KCOLUMN_IMPL
-#define KCOLUMN_IMPL KColumnBase
+#define KCOLUMN_IMPL KColumn
 #endif
 
 struct KDBManager;
@@ -44,10 +44,10 @@ struct KColumnBlob;
 /*--------------------------------------------------------------------------
  * KColumnBase, base structure for KColumn implementations
  */
-typedef struct KColumnBase KColumnBase;
+typedef struct KColumn KColumn;
 
-typedef struct KColumnBase_vt KColumnBase_vt;
-struct KColumnBase_vt
+typedef struct KColumn_vt KColumn_vt;
+struct KColumn_vt
 {
     /* Public API */
     rc_t ( CC * whack )             ( KCOLUMN_IMPL * self );
@@ -69,9 +69,9 @@ extern rc_t KColumnBaseWhack ( KCOLUMN_IMPL *self );
 extern rc_t CC KColumnBaseAddRef ( const KCOLUMN_IMPL *self );
 extern rc_t CC KColumnBaseRelease ( const KCOLUMN_IMPL *self );
 
-struct KColumnBase
+struct KColumn
 {
-    const KColumnBase_vt * vt;
+    const KColumn_vt * vt;
 
     KRefcount refcount;
 };

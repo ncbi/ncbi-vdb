@@ -93,10 +93,11 @@ rc_t CC CheckExists(const KDirectory *dir, uint32_t type, const char *name, void
 }
 
 static
-rc_t KColumnCheckMD5(const KColumn *self,
+rc_t KColumnCheckMD5(const KRColumn *bself,
                      CCReportInfoBlock *nfo,
                      CCReportFunc report, void *ctx)
 {
+    const KRColumn * self = (const KRColumn *)bself;
     struct col_check_ctx local_ctx;
     rc_t rc;
 
@@ -200,9 +201,10 @@ rc_t KColumnCheckBlobs(const KColumn *self,
 }
 
 LIB_EXPORT
-rc_t CC KColumnConsistencyCheck(const KColumn *self,
+rc_t CC KColumnConsistencyCheck(const KColumn *bself,
     uint32_t level, CCReportInfoBlock *nfo, CCReportFunc report, void *ctx )
 {
+    const KRColumn * self = (const KRColumn *)bself;
     rc_t rc = 0;
 
     bool indexOnly = level & CC_INDEX_ONLY;
@@ -224,6 +226,6 @@ rc_t CC KColumnConsistencyCheck(const KColumn *self,
     }
 
     if (rc == 0 && level > 0)
-        rc = KColumnCheckBlobs(self, nfo, report, ctx);
+        rc = KColumnCheckBlobs(bself, nfo, report, ctx);
     return rc;
 }

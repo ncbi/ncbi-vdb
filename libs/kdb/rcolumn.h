@@ -31,7 +31,8 @@
 #include "rcoldata.h"
 #include "rcolidx.h"
 
-#define KCOLUMN_IMPL KColumn
+typedef struct KRColumn KRColumn;
+#define KCOLUMN_IMPL KRColumn
 #include "column-base.h"
 
 #ifdef __cplusplus
@@ -48,24 +49,24 @@ struct KDirectory;
 /*--------------------------------------------------------------------------
  * KColumn, read-side
  */
-struct KColumn
+struct KRColumn
 {
-    KColumnBase dad;
+    KColumn dad;
 
     struct KTable const *tbl;
     struct KDBManager const *mgr;
     struct KDirectory const *dir;
 
-    KColumnIdx idx;
-    KColumnData df;
+    KRColumnIdx idx;
+    KRColumnData df;
 
     uint32_t csbytes;
     int32_t checksum;
     char path [ 1 ];
 };
 
-rc_t KRColumnMake ( KColumn **colp, const KDirectory *dir, const char *path );
-rc_t KRColumnMakeRead ( KColumn **colp, const KDirectory *dir, const char *path );
+rc_t KRColumnMake ( KRColumn **colp, const KDirectory *dir, const char *path );
+rc_t KRColumnMakeRead ( KRColumn **colp, const KDirectory *dir, const char *path );
 
 #ifdef __cplusplus
 }

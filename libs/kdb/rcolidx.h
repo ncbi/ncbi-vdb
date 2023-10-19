@@ -40,11 +40,11 @@ extern "C" {
 
 
 /*--------------------------------------------------------------------------
- * KColumnIdx
+ * KRColumnIdx
  *  the index fork
  */
-typedef struct KColumnIdx KColumnIdx;
-struct KColumnIdx
+typedef struct KRColumnIdx KRColumnIdx;
+struct KRColumnIdx
 {
     /* first active id within db
        and first id on upper limit
@@ -54,51 +54,51 @@ struct KColumnIdx
     int64_t id_upper;
 
     /* level 0 index */
-    KColumnIdx0 idx0;
+    KRColumnIdx0 idx0;
 
     /* level 1 index */
-    KColumnIdx1 idx1;
+    KRColumnIdx1 idx1;
 
     /* level 2 index */
-    KColumnIdx2 idx2;
+    KRColumnIdx2 idx2;
 };
 
 /* Open
  */
-rc_t KColumnIdxOpenRead ( KColumnIdx *self, const KDirectory *dir,
+rc_t KRColumnIdxOpenRead ( KRColumnIdx *self, const KDirectory *dir,
     uint64_t *data_eof, size_t *pgsize, int32_t *checksum );
 
 /* Whack
  */
-rc_t KColumnIdxWhack ( KColumnIdx *self );
+rc_t KRColumnIdxWhack ( KRColumnIdx *self );
 
 /* Version
  */
-rc_t KColumnIdxVersion ( const KColumnIdx *self, uint32_t *version );
-#define KColumnIdxVersion( self, version ) \
-    KColumnIdx1Version ( & ( self ) -> idx1, version )
+rc_t KRColumnIdxVersion ( const KRColumnIdx *self, uint32_t *version );
+#define KRColumnIdxVersion( self, version ) \
+    KRColumnIdx1Version ( & ( self ) -> idx1, version )
 
 /* ByteOrder
  */
-rc_t KColumnIdxByteOrder ( const KColumnIdx *self, bool *reversed );
-#define KColumnIdxByteOrder( self, reversed ) \
-    KColumnIdx1ByteOrder ( & ( self ) -> idx1, reversed )
+rc_t KRColumnIdxByteOrder ( const KRColumnIdx *self, bool *reversed );
+#define KRColumnIdxByteOrder( self, reversed ) \
+    KRColumnIdx1ByteOrder ( & ( self ) -> idx1, reversed )
 
 /* IdRange
  *  returns range of ids contained within
  */
-rc_t KColumnIdxIdRange ( const KColumnIdx *self,
+rc_t KRColumnIdxIdRange ( const KRColumnIdx *self,
     int64_t *first, int64_t *last );
 
 /* FindFirstRowId
  */
-rc_t KColumnIdxFindFirstRowId ( const KColumnIdx * self,
+rc_t KRColumnIdxFindFirstRowId ( const KRColumnIdx * self,
     int64_t * found, int64_t start );
 
 /* LocateBlob
  *  locate an existing blob
  */
-rc_t KColumnIdxLocateBlob ( const KColumnIdx *self,
+rc_t KRColumnIdxLocateBlob ( const KRColumnIdx *self,
     KColBlobLoc *loc, int64_t first, int64_t last );
 
 

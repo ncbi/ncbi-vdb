@@ -47,20 +47,20 @@
 
 
 /*--------------------------------------------------------------------------
- * KColumnIdx2
+ * KRColumnIdx2
  *  level 2 index
  */
 
 /* Init
  */
 static
-rc_t KColumnIdx2Init ( KColumnIdx2 *self, uint64_t idx2_eof )
+rc_t KRColumnIdx2Init ( KRColumnIdx2 *self, uint64_t idx2_eof )
 {
     rc_t rc;
 
 #if 0
     memset(&self->cstorage,0,sizeof(self->cstorage));
-    self->cstorage.elem_bits = sizeof(KColumnIdx2BlockCache)*8;
+    self->cstorage.elem_bits = sizeof(KRColumnIdx2BlockCache)*8;
     self->last = 0;
 #endif
     rc = KFileSize ( self -> f, & self -> eof );
@@ -83,12 +83,12 @@ rc_t KColumnIdx2Init ( KColumnIdx2 *self, uint64_t idx2_eof )
 
 /* Open
  */
-rc_t KColumnIdx2OpenRead ( KColumnIdx2 *self,
+rc_t KRColumnIdx2OpenRead ( KRColumnIdx2 *self,
     const KDirectory *dir, uint64_t eof )
 {
     rc_t rc;
 
-    rc = KDataBufferMake ( & self -> cstorage, sizeof ( KColumnIdx2BlockCache ) * 8, 0 );
+    rc = KDataBufferMake ( & self -> cstorage, sizeof ( KRColumnIdx2BlockCache ) * 8, 0 );
     if ( rc != 0 )
     {
         memset ( self, 0, sizeof * self );
@@ -128,19 +128,19 @@ rc_t KColumnIdx2OpenRead ( KColumnIdx2 *self,
     }
 #endif
     if ( rc == 0 )
-        rc = KColumnIdx2Init ( self, eof );
+        rc = KRColumnIdx2Init ( self, eof );
     return rc;
 }
 
 /* Whack
  */
-rc_t KColumnIdx2Whack ( KColumnIdx2 *self )
+rc_t KRColumnIdx2Whack ( KRColumnIdx2 *self )
 {
     rc_t rc = KFileRelease ( self -> f );
     if ( rc == 0 )
     {
         int i;
-        KColumnIdx2BlockCache * cache=(KColumnIdx2BlockCache *)self -> cstorage.base;
+        KRColumnIdx2BlockCache * cache=(KRColumnIdx2BlockCache *)self -> cstorage.base;
         self -> f = NULL;
         for(i=0;i<self->cstorage.elem_count;i++){
             free(cache[i].block);
@@ -153,7 +153,7 @@ rc_t KColumnIdx2Whack ( KColumnIdx2 *self )
 /* LocateBlob
  *  locate an existing blob
  */
-rc_t KColumnIdx2LocateBlob ( const KColumnIdx2 *self,
+rc_t KRColumnIdx2LocateBlob ( const KRColumnIdx2 *self,
     KColBlobLoc *loc, const KColBlockLoc *bloc,
     int64_t first, int64_t upper, bool bswap )
 {
