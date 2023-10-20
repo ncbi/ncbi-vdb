@@ -91,7 +91,7 @@ int64_t CC KU64Index_NodeSortUnique( const BSTNode *item, const BSTNode *node )
 static
 bool CC KU64Index_UnrollPersisted( PBSTNode *n, void *data )
 {
-    KU64Index_v3* self = data;
+    KWU64Index_v3* self = data;
     const KU64Index_PNode* pn = n->data.addr;
 
     KU64Index_Node* node = calloc(1, sizeof(KU64Index_Node));
@@ -110,7 +110,7 @@ bool CC KU64Index_UnrollPersisted( PBSTNode *n, void *data )
     return self->rc == 0 ? false : true;
 }
 
-rc_t KU64IndexOpen_v3(KU64Index_v3* self, struct KMMap const *mm, bool byteswap)
+rc_t KWU64IndexOpen_v3(KWU64Index_v3* self, struct KMMap const *mm, bool byteswap)
 {
     rc_t rc = 0;
     const char* maddr;
@@ -150,7 +150,7 @@ rc_t KU64IndexOpen_v3(KU64Index_v3* self, struct KMMap const *mm, bool byteswap)
     PBSTreeWhack(ptree);
 
     if( rc != 0 ) {
-        KU64IndexWhack_v3(self);
+        KWU64IndexWhack_v3(self);
     }
     return rc;
 }
@@ -161,14 +161,14 @@ void CC KU64Index_WhackBSTree( BSTNode *n, void *data )
     free((KU64Index_Node*)n);
 }
 
-rc_t KU64IndexWhack_v3(KU64Index_v3* self)
+rc_t KWU64IndexWhack_v3(KWU64Index_v3* self)
 {
     self->rc = 0;
     BSTreeWhack(&self->tree, KU64Index_WhackBSTree, NULL);
     return 0;
 }
 
-rc_t KU64IndexInsert_v3(KU64Index_v3* self, bool unique, uint64_t key, uint64_t key_size, int64_t id, uint64_t id_qty)
+rc_t KU64IndexInsert_v3(KWU64Index_v3* self, bool unique, uint64_t key, uint64_t key_size, int64_t id, uint64_t id_qty)
 {
     KU64Index_Node* node = calloc(1, sizeof(KU64Index_Node));
     self->rc = 0;
@@ -206,7 +206,7 @@ int64_t CC KU64Index_Cmp4Delete( const void *item, const BSTNode *node )
     return 0;
 }
 
-rc_t KU64IndexDelete_v3(KU64Index_v3* self, uint64_t key)
+rc_t KU64IndexDelete_v3(KWU64Index_v3* self, uint64_t key)
 {
     KU64Index_Node node;
     BSTNode* n = NULL;
@@ -255,7 +255,7 @@ rc_t CC KU64Index_AuxFunc(void *param, const void *node, size_t *num_writ, PTWri
     return rc;
 }
 
-rc_t KU64IndexPersist_v3(KU64Index_v3* self, bool proj, KDirectory *dir, const char *path, bool use_md5)
+rc_t KU64IndexPersist_v3(KWU64Index_v3* self, bool proj, KDirectory *dir, const char *path, bool use_md5)
 {
     KU64Index_PersistData pd;
     char tmpname[256];
@@ -388,7 +388,7 @@ bool CC KU64Index_Grep(BSTNode *node, void *data)
     return false;
 }
 
-rc_t KU64IndexFind_v3( const KU64Index_v3* self, uint64_t offset, uint64_t* key, uint64_t* key_size, int64_t* id, uint64_t* id_qty )
+rc_t KWU64IndexFind_v3( const KWU64Index_v3* self, uint64_t offset, uint64_t* key, uint64_t* key_size, int64_t* id, uint64_t* id_qty )
 {
     KU64Index_GrepData d;
 
@@ -405,7 +405,7 @@ rc_t KU64IndexFind_v3( const KU64Index_v3* self, uint64_t offset, uint64_t* key,
 }
 
 
-rc_t KU64IndexFindAll_v3( const KU64Index_v3* self, uint64_t offset,
+rc_t KWU64IndexFindAll_v3( const KWU64Index_v3* self, uint64_t offset,
     rc_t (CC*f)(uint64_t key, uint64_t key_size, int64_t id, uint64_t id_qty, void* data), void* data)
 {
     KU64Index_GrepData d;

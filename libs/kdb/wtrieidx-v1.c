@@ -57,7 +57,7 @@
 #endif
 
 /*--------------------------------------------------------------------------
- * KTrieIdxNode_v1
+ * KWTrieIdxNode_v1
  */
 
 static
@@ -77,7 +77,7 @@ static
 void CC KTrieIdxNodeCaptureID_v1 ( TNode *n, void *data )
 {
     KWTrieIndex_v1 *self = data;
-    KTrieIdxNode_v1 *node = ( KTrieIdxNode_v1* ) n;
+    KWTrieIdxNode_v1 *node = ( KWTrieIdxNode_v1* ) n;
     self -> id2node [ node -> id - self -> first ] = node;
 }
 
@@ -86,7 +86,7 @@ void CC KTrieIdxNodeCaptureID_v1 ( TNode *n, void *data )
  * KWTrieIndex_v1
  */
 
-/* KTrieIndexWrite_v1
+/* KWTrieIndexWrite_v1
  */
 typedef struct PersistTrieData PersistTrieData;
 struct PersistTrieData
@@ -104,7 +104,7 @@ struct PersistTrieData
 };
 
 static
-rc_t CC KTrieIndexWrite_v1 ( void *param,
+rc_t CC KWTrieIndexWrite_v1 ( void *param,
     const void *buffer, size_t size, size_t *num_writ )
 {
     PersistTrieData *pb = param;
@@ -152,13 +152,13 @@ rc_t CC KTrieIndexWrite_v1 ( void *param,
     return 0;
 }
 
-/* KTrieIndexAux_v1
+/* KWTrieIndexAux_v1
  */
 static
-rc_t CC KTrieIndexAux_v1 ( void *param, const void *node, size_t *num_writ,
+rc_t CC KWTrieIndexAux_v1 ( void *param, const void *node, size_t *num_writ,
     PTWriteFunc write, void *write_param )
 {
-    const KTrieIdxNode_v1 *n = node;
+    const KWTrieIdxNode_v1 *n = node;
 
     if ( write != NULL )
     {
@@ -179,7 +179,7 @@ rc_t CC KTrieIndexAux_v1 ( void *param, const void *node, size_t *num_writ,
  *  write keymap to indicated location
  */
 static
-rc_t KTrieIndexPersistTrie_v1 ( const KWTrieIndex_v1 *self, PersistTrieData *pb )
+rc_t KWTrieIndexPersistTrie_v1 ( const KWTrieIndex_v1 *self, PersistTrieData *pb )
 {
     rc_t rc;
     KDBHdr *hdr;
@@ -194,7 +194,7 @@ rc_t KTrieIndexPersistTrie_v1 ( const KWTrieIndex_v1 *self, PersistTrieData *pb 
        using tree-internal key storage,
        capture the image size in pb */
     rc = TriePersist ( & self -> key2id, & pb -> ptt_size,
-        false, KTrieIndexWrite_v1, pb, KTrieIndexAux_v1, pb );
+        false, KWTrieIndexWrite_v1, pb, KWTrieIndexAux_v1, pb );
     if ( rc == 0 && pb -> marker != 0 )
     {
         size_t num_writ;
@@ -219,11 +219,11 @@ struct PersistReverseData
 };
 
 static
-void CC KTrieIndexRecordNodeId_v1 ( TNode *node, void *data )
+void CC KWTrieIndexRecordNodeId_v1 ( TNode *node, void *data )
 {
     PTNode pn;
     PersistReverseData *pb = data;
-    const KTrieIdxNode_v1 *n = ( const KTrieIdxNode_v1* ) node;
+    const KWTrieIdxNode_v1 *n = ( const KWTrieIdxNode_v1* ) node;
 
     /* lookup up the persisted node within image */
     uint32_t id = PTrieFind ( pb -> tt, & n -> n . key, & pn, NULL, NULL );
@@ -238,7 +238,7 @@ void CC KTrieIndexRecordNodeId_v1 ( TNode *node, void *data )
 }
 
 static
-rc_t KTrieIndexPersistProj_v1 ( const KWTrieIndex_v1 *self, PersistTrieData *pb )
+rc_t KWTrieIndexPersistProj_v1 ( const KWTrieIndex_v1 *self, PersistTrieData *pb )
 {
 #if 0
     rc_t rc;
@@ -279,7 +279,7 @@ rc_t KTrieIndexPersistProj_v1 ( const KWTrieIndex_v1 *self, PersistTrieData *pb 
                 pb2 . count = pb2 . notfound = 0;
 
                 /* record all id to node mappings */
-                TrieForEach ( & self -> key2id, KTrieIndexRecordNodeId_v1, & pb2 );
+                TrieForEach ( & self -> key2id, KWTrieIndexRecordNodeId_v1, & pb2 );
 
                 /* check for having written ids */
                 assert ( pb2 . count == PTrieCount ( pb2 . tt ) );
@@ -360,7 +360,7 @@ rc_t KTrieIndexPersistProj_v1 ( const KWTrieIndex_v1 *self, PersistTrieData *pb 
             pb2 . count = pb2 . notfound = 0;
 
             /* record all id to node mappings */
-            TrieForEach ( & self -> key2id, KTrieIndexRecordNodeId_v1, & pb2 );
+            TrieForEach ( & self -> key2id, KWTrieIndexRecordNodeId_v1, & pb2 );
 
             /* check for having written ids */
             assert ( pb2 . count == PTrieCount ( pb2 . tt ) );
@@ -468,11 +468,11 @@ rc_t KWTrieIndexPersist_v1 ( const KWTrieIndex_v1 *self,
                 pb . first = ~ 0;
                 pb . last = 0;
 
-                rc = KTrieIndexPersistTrie_v1 ( self, & pb );
+                rc = KWTrieIndexPersistTrie_v1 ( self, & pb );
                 if ( rc == 0 )
                 {
                     if ( proj )
-                        rc = KTrieIndexPersistProj_v1 ( self, & pb );
+                        rc = KWTrieIndexPersistProj_v1 ( self, & pb );
                 }
 
                 KFileRelease ( pb . f );
@@ -545,10 +545,10 @@ rc_t KWTrieIndexOpen_v1 ( KWTrieIndex_v1 *self, const KMMap *mm, bool byteswap )
     return rc;
 }
 
-/* KTrieIndexPopulate_v1
+/* KWTrieIndexPopulate_v1
  */
-typedef struct KTrieIndexPopulateData_v1 KTrieIndexPopulateData_v1;
-struct KTrieIndexPopulateData_v1
+typedef struct KWTrieIndexPopulateData_v1 KWTrieIndexPopulateData_v1;
+struct KWTrieIndexPopulateData_v1
 {
     KWTrieIndex_v1 *idx;
     uint32_t id;
@@ -556,10 +556,10 @@ struct KTrieIndexPopulateData_v1
 };
 
 static
-bool CC KTrieIndexPopulate_v1 ( PTNode *n, void *data )
+bool CC KWTrieIndexPopulate_v1 ( PTNode *n, void *data )
 {
     const String *key;
-    KTrieIndexPopulateData_v1 *pb = data;
+    KWTrieIndexPopulateData_v1 *pb = data;
 
     /* capture node id */
     uint32_t id;
@@ -576,7 +576,7 @@ bool CC KTrieIndexPopulate_v1 ( PTNode *n, void *data )
     pb -> rc = PTNodeMakeKey ( n, & key );
     if ( pb -> rc == 0 )
     {
-        KTrieIdxNode_v1 *node;
+        KWTrieIdxNode_v1 *node;
         pb -> rc = TNodeMake ( ( TNode** ) & node,
             sizeof * node + key -> size );
         if ( pb -> rc == 0 )
@@ -618,16 +618,16 @@ bool CC KTrieIndexPopulate_v1 ( PTNode *n, void *data )
     return true;
 }
 
-/* KTrieIndexAttach_v1
+/* KWTrieIndexAttach_v1
  *  attach a keymap to an existing table
  *
  *  "pkm" [ IN ] - a persisted keymap
  */
 static
-rc_t KTrieIndexAttach_v1 ( KWTrieIndex_v1 *self, bool proj, uint32_t id )
+rc_t KWTrieIndexAttach_v1 ( KWTrieIndex_v1 *self, bool proj, uint32_t id )
 {
     uint32_t proj_len;
-    KTrieIndexPopulateData_v1 pb;
+    KWTrieIndexPopulateData_v1 pb;
 
 #if LIMIT_INSERTS
     proj_len = self -> pt . last - self -> pt . first + 1;
@@ -672,7 +672,7 @@ rc_t KTrieIndexAttach_v1 ( KWTrieIndex_v1 *self, bool proj, uint32_t id )
     pb . idx = self;
     pb . id = id;
     pb . rc = 0;
-    PTrieDoUntil ( self -> pt . key2id, KTrieIndexPopulate_v1, & pb );
+    PTrieDoUntil ( self -> pt . key2id, KWTrieIndexPopulate_v1, & pb );
 
     /* if successful but needing to add projection index */
     if ( pb . rc == 0 && proj && self -> id2node == NULL )
@@ -706,9 +706,9 @@ rc_t KTrieIndexAttach_v1 ( KWTrieIndex_v1 *self, bool proj, uint32_t id )
 
 /* insert string into trie, mapping to 32 bit id */
 static
-rc_t KTrieIndexExpandId2Node_v1 ( KWTrieIndex_v1 *self, uint32_t range )
+rc_t KWTrieIndexExpandId2Node_v1 ( KWTrieIndex_v1 *self, uint32_t range )
 {
-    KTrieIdxNode_v1 **id2node;
+    KWTrieIdxNode_v1 **id2node;
     range = ( range + 4095 ) & - 4096;
     id2node = realloc ( self -> id2node, range * sizeof id2node [ 0 ] );
     if ( id2node == NULL )
@@ -733,7 +733,7 @@ rc_t KWTrieIndexInsert_v1 ( KWTrieIndex_v1 *self,
     rc_t rc;
 
     String key;
-    KTrieIdxNode_v1 *node;
+    KWTrieIdxNode_v1 *node;
 
 #if DISABLE_PROJ
     proj = false;
@@ -745,7 +745,7 @@ rc_t KWTrieIndexInsert_v1 ( KWTrieIndex_v1 *self,
         /* detect persisted data */
         if ( self -> pt . key2id != NULL )
         {
-            rc = KTrieIndexAttach_v1 ( self, proj, id );
+            rc = KWTrieIndexAttach_v1 ( self, proj, id );
             if ( rc != 0 )
                 return rc;
         }
@@ -798,7 +798,7 @@ rc_t KWTrieIndexInsert_v1 ( KWTrieIndex_v1 *self,
                 range = self -> last - id + 1;
                 if ( range > self -> len )
                 {
-                    rc = KTrieIndexExpandId2Node_v1 ( self, range );
+                    rc = KWTrieIndexExpandId2Node_v1 ( self, range );
                     if ( rc != 0 )
                     {
                         TrieUnlink ( & self -> key2id, & node -> n );
@@ -820,7 +820,7 @@ rc_t KWTrieIndexInsert_v1 ( KWTrieIndex_v1 *self,
                 range = id - self -> first + 1;
                 if ( range > self -> len )
                 {
-                    rc = KTrieIndexExpandId2Node_v1 ( self, range );
+                    rc = KWTrieIndexExpandId2Node_v1 ( self, range );
                     if ( rc != 0 )
                     {
                         TrieUnlink ( & self -> key2id, & node -> n );
@@ -853,7 +853,7 @@ rc_t KWTrieIndexDelete_v1 ( KWTrieIndex_v1 *self, bool proj, const char *str )
     rc_t rc;
 
     String key;
-    KTrieIdxNode_v1 *node;
+    KWTrieIdxNode_v1 *node;
 
 #if DISABLE_PROJ
     proj = 0;
@@ -865,7 +865,7 @@ rc_t KWTrieIndexDelete_v1 ( KWTrieIndex_v1 *self, bool proj, const char *str )
         /* detect persisted data */
         if ( self -> pt . key2id != NULL )
         {
-            rc = KTrieIndexAttach_v1 ( self, proj, 0 );
+            rc = KWTrieIndexAttach_v1 ( self, proj, 0 );
             if ( rc != 0 )
                 return rc;
         }
@@ -885,7 +885,7 @@ rc_t KWTrieIndexDelete_v1 ( KWTrieIndex_v1 *self, bool proj, const char *str )
        however, this implementation only allows unique
        mappings, so a simple find is sufficient */
     StringInitCString ( & key, str );
-    node = ( KTrieIdxNode_v1* ) TrieFind ( & self -> key2id, & key );
+    node = ( KWTrieIdxNode_v1* ) TrieFind ( & self -> key2id, & key );
     if ( node == NULL )
         return RC ( rcDB, rcIndex, rcRemoving, rcString, rcNotFound );
 
@@ -946,10 +946,10 @@ rc_t KWTrieIndexFind_v1 ( const KWTrieIndex_v1 *self, const char *str, uint32_t 
     }
     else
     {
-        const KTrieIdxNode_v1 *n;
+        const KWTrieIdxNode_v1 *n;
 
         StringInitCString ( & key, str );
-        n = ( const KTrieIdxNode_v1* ) TrieFind ( & self -> key2id, & key );
+        n = ( const KWTrieIdxNode_v1* ) TrieFind ( & self -> key2id, & key );
         if ( n != NULL )
         {
             * id = n -> id;
@@ -1000,7 +1000,7 @@ rc_t KWTrieIndexProject_v1 ( const KWTrieIndex_v1 *self,
              id >= self -> first &&
              id <= self -> last )
         {
-            const KTrieIdxNode_v1 *n = self -> id2node [ id - self -> first ];
+            const KWTrieIdxNode_v1 *n = self -> id2node [ id - self -> first ];
             if ( n != NULL )
             {
                 if ( n -> n . key . size >= buff_size )
