@@ -446,13 +446,12 @@ static rc_t aws_extract_key_value_pair (
 }
 
 static
-rc_t aws_parse_csv_file(AWS * self, const char * buffer, size_t buf_size,
+rc_t aws_parse_csv_file(AWS * self, const char * start, size_t buf_size,
     const char * path)
 {
     int i = 0;
 
     const char *comma = NULL;
-    const char *start = buffer;
     const char *end = start + buf_size;
     const char *sep = start;
 
@@ -623,11 +622,24 @@ static void aws_parse_file ( AWS * self, const KFile * cred_file,
         const String *temp1;
         const String *brack_profile;
 
-        const char *start = buffer;
-        const char *end = start + buf_size;
-        const char *sep = start;
         bool in_profile = false, in_profile_found = false;
         bool found = false;
+
+        const char *start = buffer;
+        const char *end = NULL;
+        const char *sep = NULL;
+
+        end = start + buf_size;
+
+        if (buf_size > 3 &&
+            start[0] == '\xEF' && start[1] == '\xBB' && start[2] == '\xBF')
+        {   /* skip BOM */
+            start += 3;
+            buf_size -= 3;
+        }
+
+        end = start + buf_size;
+        sep = start;
 
         CONST_STRING ( &bracket, "[" );
 
@@ -639,8 +651,10 @@ static void aws_parse_file ( AWS * self, const KFile * cred_file,
 
         --sep;
 
-        if (buf_size > 0 && buffer[0] != '[')
-            aws_parse_csv_file(self, buffer, buf_size, path);
+        if (buf_size > 0 && *start != '[') {
+            aws_parse_csv_file(self, start, buf_size, path);
+            found = true; /* don't print error message - it was done already */
+        }
         else
           for ( ; start < end; start = sep + 1 ) {
             rc_t rc;
