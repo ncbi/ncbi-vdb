@@ -125,9 +125,12 @@ public:
     }
 
     void CreateFile(const string& p_name, const string& p_content,
-        const string& p_content2 = "", const string& p_content3 = "")
+        const string& p_content2 = "", const string& p_content3 = "",
+        bool bom = false)
     {
         ofstream out(p_name.c_str());
+        if (bom)
+            out << "\xEF\xBB\xBF";
         out << p_content << p_content2 << p_content3;
         for (unsigned i = 0; i < sizeof m_created / sizeof m_created[0]; ++i) {
             if (m_created[i].empty()) {
@@ -138,6 +141,12 @@ public:
         throw "cannot save file name";
     }
 
+    void CreateFileBom(const string& p_name, const string& p_content,
+        const string& p_content2 = "", const string& p_content3 = "")
+    {
+        CreateFile(p_name, p_content, p_content2, p_content3, true);
+    }
+    
     CloudMgr * m_mgr;
     CloudProviderId m_id;
     Cloud * m_cloud;
@@ -211,12 +220,9 @@ public:
     {
         KConfig * kfg = NULL;
         THROW_ON_RC(KConfigMakeLocal(&kfg, NULL));
-        if (accept_charges) {
+        if (accept_charges)
             THROW_ON_RC(KConfigWriteBool(
                 kfg, "/libs/cloud/accept_aws_charges", true));
-            THROW_ON_RC(KConfigWriteBool(
-                kfg, "/libs/cloud/accept_gcp_charges", true));
-        }
 
         MakeAWS(kfg);
 
@@ -531,7 +537,7 @@ FIXTURE_TEST_CASE(AWS_Credentials_KfgCredentials, AwsFixture)
     char credentialsKfg[PATH_MAX] = "";
     REQUIRE_RC(KDirectoryResolvePath(m_dir, true, credentialsKfg,
         sizeof credentialsKfg, CREDENTIALS_KFG));
-    CreateFile(CREDENTIALS_KFG,
+    CreateFileBom(CREDENTIALS_KFG,
         "[another_profile]\r\n"
         "aws_access_key_id = ABC123_KFG\r\n"
         "aws_secret_access_key = SECRET_KFG\r\n");
@@ -549,7 +555,7 @@ FIXTURE_TEST_CASE(AWS_Credentials_KfgCredentialsNoProfile, AwsFixture) {
    char credentialsKfg[PATH_MAX] = "";
     REQUIRE_RC(KDirectoryResolvePath(m_dir, true, credentialsKfg,
         sizeof credentialsKfg, CREDENTIALS_KFG));
-    CreateFile(CREDENTIALS_KFG,
+    CreateFileBom(CREDENTIALS_KFG,
         "[profile]\r\n"
         "aws_access_key_id = ABC123_KFG\r\n"
         "aws_secret_access_key = SECRET_KFG\r\n");
@@ -568,7 +574,7 @@ FIXTURE_TEST_CASE(AWS_Credentials_KfgCredentialsEmpty, AwsFixture) {
         char credentialsKfg[PATH_MAX] = "";
     REQUIRE_RC(KDirectoryResolvePath(m_dir, true, credentialsKfg,
         sizeof credentialsKfg, CREDENTIALS_KFG));
-    CreateFile(CREDENTIALS_KFG,
+    CreateFileBom(CREDENTIALS_KFG,
         "[another_profile]\r\n"
         "aws_access_key_id = \r\n"
         "aws_secret_access_key = \r\n");
@@ -587,7 +593,7 @@ FIXTURE_TEST_CASE(AWS_Credentials_KfgCvsCredentials, AwsFixture) {
     REQUIRE_RC(KDirectoryResolvePath(m_dir, true, credentialsKfg,
         sizeof credentialsKfg, CREDENTIALS_KFG));
     // CSV credentials file
-    CreateFile(CREDENTIALS_KFG,
+    CreateFileBom(CREDENTIALS_KFG,
         "One,Secret access key,Two,Access key ID,three\r\n"
         "111,SECRET_ACCESS_KEY,222,ACCESS_KEY_ID,33333\r\n");
     CreateFile(CONFIG,
@@ -605,7 +611,7 @@ FIXTURE_TEST_CASE(AWS_Credentials_KfgCvsCredentialsEmpty, AwsFixture) {
     REQUIRE_RC(KDirectoryResolvePath(m_dir, true, credentialsKfg,
         sizeof credentialsKfg, CREDENTIALS_KFG));
     // CSV credentials file
-    CreateFile(CREDENTIALS_KFG,
+    CreateFileBom(CREDENTIALS_KFG,
         "Secret access key,Access key ID\r\n"
         ",\r\n");
     CreateFile(CONFIG,
@@ -744,7 +750,7 @@ FIXTURE_TEST_CASE(AWS_CredentialsCsv_NoWarnExtraData, AwsFixture) {
     REQUIRE_RC(KDirectoryResolvePath(m_dir, true, credentialsKfg,
                                   sizeof credentialsKfg, CREDENTIALS_KFG));
     // no comma in extra line is ignored
-    CreateFile(CREDENTIALS_KFG, "Access key ID,Secret access key\r\n"
+    CreateFileBom(CREDENTIALS_KFG, "Access key ID,Secret access key\r\n"
                                 "1,2\r\n"
                                 "3");
     CreateFile(CONFIG,
@@ -803,6 +809,8 @@ public:
     {
         KConfig * kfg = NULL;
         THROW_ON_RC(KConfigMakeLocal(&kfg, NULL));
+        THROW_ON_RC(KConfigWriteBool(
+            kfg, "/libs/cloud/accept_gcp_charges", true));
 
         CloudMgrRelease(m_mgr);
         m_mgr = nullptr;
@@ -946,7 +954,7 @@ FIXTURE_TEST_CASE(GCP_Credentials_KfgCredentials, GcpFixture) {
     char credentialsKfg[PATH_MAX] = "";
     REQUIRE_RC(KDirectoryResolvePath(m_dir, true, credentialsKfg,
         sizeof credentialsKfg, CREDENTIALS_KFG));
-    CreateFile(CREDENTIALS_KFG,
+    CreateFileBom(CREDENTIALS_KFG,
         "{\n"
         "  \"type\": \"service_account\",\n"
         "  \"project_id\": \"prid\",\n"
