@@ -43,6 +43,8 @@
 #include <assert.h>
 #include <va_copy.h>
 
+#include "int_checks-priv.h"
+
 /* the number of PrintFmt, PrintArg and String
    elements to allocate in function-local storage */
 #define LOCAL_FMT_COUNT 64
@@ -1001,8 +1003,9 @@ rc_t string_flush_vprintf ( char *dst, size_t bsize, const KWrtHandler *flush,
             {
                 /* buffer is measured in bytes, while printing
                    widths are measured in characters... */
+                assert( FITS_INTO_INT32(str->size) );
                 max_field_width = ( uint32_t ) str -> size;
-                assert( 0 == (str->len & (~((~(uint32_t)0) >> 1))) ); /* this var can have bits set only for int32_t [0, 0x7f..ff] */
+                assert ( (int32_t)str->len >= 0 );
                 if ( (int32_t)str -> len < min_field_width )
                     max_field_width += min_field_width - str -> len;
                 if ( didx + max_field_width > bsize )
@@ -1031,7 +1034,7 @@ rc_t string_flush_vprintf ( char *dst, size_t bsize, const KWrtHandler *flush,
             end = cp + str -> size;
 
             /* copy string */
-            assert(0 == (str->len & (~((~(uint32_t)0) >> 1)))); /* this var can have bits set only for int32_t [0, 0x7f..ff] */
+            assert( FITS_INTO_INT32 ( str->len ) );
             for ( i = 0; i < (int32_t)str -> len && i < precision; ++ i )
             {
                 uint32_t ch;
@@ -2558,8 +2561,8 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
                 assert(f.u.f.precision == -1 || f . u . f . precision >= 0);
                 if ( f . u . f . precision < S . len )
 #if STDC_COMPATIBILITY  &&  !defined(__GLIBC__)
-                    assert(0 == (f.u.f.precision & (~((int64_t)((~(size_t)0) >> 1))))); /* this var can have bits set only for signed size_t [0, 0x7f..ff] */
-                    assert(0 == (f.u.f.precision & (~((int64_t)((~(uint32_t)0) >> 1))))); /* this var can have bits set only for int32_t [0, 0x7f..ff] */
+                    assert( FITS_INTO_SIZE_T ( f.u.f.precision ) );
+                    assert( FITS_INTO_INT32 ( f.u.f.precision ) );
                     S . size = (size_t) f . u . f . precision;
                     S . len = (uint32_t) f . u . f . precision;
 #else
@@ -2742,7 +2745,7 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
             if (n != NULL)
             {
                 temp_size_t = out->cur + out->flushed;
-                assert(0 == (temp_size_t & (~((size_t)((~(uint32_t)0) >> 1))))); /* temp_size_t can have bits set only for int32_t [0, 0x7f..ff] */
+                assert ( FITS_INTO_INT32 ( temp_size_t ) );
                 *n = (uint32_t)(out->cur + out->flushed);
             }
             ++ arg_idx;
@@ -2906,7 +2909,7 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
             if (f.u.f.precision > int_len)
             {
                 i64 = f.u.f.precision - int_len;
-                assert(0 == (i64 & (~((int64_t)((~(uint32_t)0) >> 1))))); /* this var can have bits set only for int32_t [0, 0x7f..ff] */
+                assert ( FITS_INTO_INT32 ( i64 ) );
                 zero_fill = (int32_t)i64;
             }
             else if ( f . left_fill == '0' )
@@ -2920,7 +2923,7 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
                     /* determine the numeric width, including zero padding */
                     i64 = f . u . f . min_field_width -
                         prefix_len + prefix_contribution - ( sign_char != 0 );
-                    assert(0 == (i64 & (~((int64_t)((~(uint32_t)0) >> 1))))); /* this var can have bits set only for int32_t [0, 0x7f..ff] */
+                    assert ( FITS_INTO_INT32 ( i64 ) );
                     dst_len = (int32_t)i64;
                     if ( comma_sep && int_len != 0 )
                     {
@@ -2983,7 +2986,7 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
                 ffmt [ ++ i ] = '#';
             if ( f . u . f . precision > 20 )
                 f . u . f . precision = 20;
-            assert(0 == (f.u.f.precision & (~((int64_t)((~(uint32_t)0) >> 1))))); /* this var can have bits set only for int32_t [0, 0x7f..ff] */
+            assert ( FITS_INTO_INT32 ( f.u.f.precision ) );
 #ifdef WINDOWS
             ++i;
             sprintf_s ( & ffmt [ i ], sizeof ffmt - i, ".%u%c"
@@ -3020,7 +3023,7 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
                     /* determine the integer width, including zero padding */
                     i64 = f . u . f . min_field_width -
                         cvt_len + int_len - ( sign_char != 0 );
-                    assert( 0 == (i64 & (~((int64_t)((~(uint32_t)0) >> 1)))) ); /* this var can have bits set only for int32_t [0, 0x7f..ff] */
+                    assert ( FITS_INTO_INT32 ( i64 ) );
                     dst_len = (int32_t)i64;
                     if ( comma_sep && int_len != 0 )
                     {
@@ -3222,7 +3225,7 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
 
         case spfRC:
             temp_size_t = KWrtFmt_rc_t ( text, sizeof text, f . explain_rc ? "#" : "", ( rc_t ) u64);
-            assert( 0 == (((~((~(uint32_t)0) >> 1)) & ~((size_t)0)) & temp_size_t) ); /* temp_size_t can have bits set only for int32_t [0, 0x7f..ff] */
+            assert ( FITS_INTO_INT32 ( temp_size_t ) );
             dst_len = (int32_t)temp_size_t;
             assert(dst_len >= 0);
             StringInit ( & S, text, (uint32_t)dst_len, (uint32_t)dst_len );
@@ -3230,7 +3233,7 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
 
         case spfOSErr:
             temp_size_t = KWrtFmt_error_code ( text, sizeof text, ( int ) i64 );
-            assert(0 == (((~((~(uint32_t)0) >> 1)) & ~((size_t)0)) & temp_size_t)); /* temp_size_t can have bits set only for int32_t [0, 0x7f..ff] */
+            assert ( FITS_INTO_INT32 ( temp_size_t ) );
             dst_len = (uint32_t)temp_size_t;
             assert(dst_len >= 0);
             StringInit ( & S, text, (uint32_t)dst_len, (uint32_t)dst_len );
@@ -3250,8 +3253,8 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
         {
             assert ( S . addr != NULL );
             assert ( S . size != 0 || S . len == 0 );
-            assert ( text_lim == -1 || 0 == (text_lim & (~((int64_t)((~(uint32_t)0) >> 1)))) ); /* text_lim must not exceed 0x7ff..ff for uint32_t */
-            assert ( 0 == (text_start & (~((int64_t)((~(uint32_t)0) >> 1)))) ); /* text_start must not exceed 0x7ff..ff for uint32_t */
+            assert ( text_lim == -1 || FITS_INTO_INT32 ( text_lim ) );
+            assert ( FITS_INTO_INT32 ( text_start ) );
             if ( StringSubstr ( & S, & S, ( uint32_t ) text_start, ( uint32_t ) text_lim ) == NULL )
                 StringInit ( & S, "", 0, 0 );
         }
@@ -3359,7 +3362,7 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
             rc = print_padding ( out, zero_fill, '0' );
             if (rc == 0)
             {
-                assert(text_lim == -1 || 0 == (text_lim & (~((int64_t)((~(size_t)0) >> 1))))); /* text_lim must not exceed 0x7ff..ff for size_t */
+                assert ( text_lim == -1 || FITS_INTO_SIZE_T ( text_lim ) );
                 rc = print_string(out, &S, (size_t)text_lim);
             }
         }
@@ -3368,7 +3371,7 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
         else if ( S . size == 0 && S . len != 0 )
         {
             assert ( f . left_fill == 0 || f . u . f . min_field_width == 0 );
-            assert(text_lim == -1 || 0 == (text_lim & (~((int64_t)((~(size_t)0) >> 1))))); /* text_lim must not exceed 0x7ff..ff for size_t */
+            assert ( text_lim == -1 || FITS_INTO_SIZE_T ( text_lim ) );
             rc = print_nul_term_string ( out, & S, (size_t)text_lim );
             dst_len = S . len;
         }
@@ -3382,7 +3385,7 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
         /* output anything else in a String */
         else
         {
-            assert(text_lim == -1 || 0 == (text_lim & (~((int64_t)((~(size_t)0) >> 1))))); /* text_lim must not exceed 0x7ff..ff for size_t */
+            assert ( text_lim == -1 || FITS_INTO_SIZE_T ( text_lim ) );
             rc = print_string ( out, & S, (size_t)text_lim );
         }
 

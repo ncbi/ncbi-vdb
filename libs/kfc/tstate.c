@@ -213,49 +213,6 @@ void KThreadEventDump ( ctx_t ctx, KTime_t timestamp, const KFuncLoc * loc,
                     , tm . second
         );
 
-#if _DEBUGGING
-    string_printf ( & pre [ pre_size ], sizeof pre - pre_size, & sz
-                    , "%.*s/%s/%s.%s:%u:"
-                    , sizeof __FILE__ -
-                      sizeof __mod__  -
-                      sizeof __file__ -
-                      sizeof __fext__ -
-                      1
-                    , __FILE__
-                    , loc -> src -> mod
-                    , loc -> src -> file
-                    , loc -> src -> ext
-                    , lineno
-                    , loc -> func
-        );
-    pre_size += sz;
-
-    /* function name */
-    fname = loc -> func;
-
-    /* remove leading "Java_" from jni names */
-    if ( memcmp ( loc -> func, "Java_", sizeof "Java_" - 1 ) == 0 )
-        fname += sizeof "Java_" - 1;
-
-    /* print it into buffer */
-    string_printf ( & pre [ pre_size ], sizeof pre - pre_size, & sz
-                    , "%s - "
-                    , fname
-        );
-
-    /* convert jni names into Java fqn */
-    if ( fname != loc -> func )
-    {
-        size_t i;
-        for ( i = 0; i < sz; ++ i )
-        {
-            if ( pre [ pre_size + i ] == '_' )
-                pre [ pre_size + i ] = '.';
-        }
-    }
-    pre_size += sz;
-#endif
-
     string_printf ( & pre [ pre_size ], sizeof pre - pre_size, & sz
                     , "%s: "
                     , err_strings [ origin ] [ severity ]
