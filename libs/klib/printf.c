@@ -1600,6 +1600,7 @@ rc_t parse_format_string ( const char *fmt_str, va_list vargs,
             {
                 /* external - again populate directly */
                 fmt [ fmt_idx ] . u . f . precision = va_arg ( vargs, uint32_t );
+                assert ( fmt [ fmt_idx ] . u . f . precision >= 0 );
                 ++ i;
             }
             else if ( fmt_str [ i ] == '-' )
