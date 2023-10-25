@@ -26,7 +26,7 @@
 
 #include <kdb/extern.h>
 
-#include "index-priv.h"
+#include "rindex.h"
 
 #include <kfs/directory.h>
 #include <kfs/file.h>
@@ -49,7 +49,7 @@ struct KU64Index_PNode
     uint64_t id_qty;
 };
 
-rc_t KU64IndexOpen_v3( KU64Index_v3* self, const KMMap *mm, bool byteswap )
+rc_t KRU64IndexOpen_v3( KRU64Index_v3* self, const KMMap *mm, bool byteswap )
 {
     rc_t rc;
     const KIndexFileHeader_v3 *hdr;
@@ -83,11 +83,11 @@ rc_t KU64IndexOpen_v3( KU64Index_v3* self, const KMMap *mm, bool byteswap )
         }
     }
 
-    KU64IndexWhack_v3(self);
+    KRU64IndexWhack_v3(self);
     return rc;
 }
 
-rc_t KU64IndexWhack_v3(KU64Index_v3* self)
+rc_t KRU64IndexWhack_v3(KRU64Index_v3* self)
 {
     PBSTreeWhack(self->tree);
     KMMapRelease(self->mm);
@@ -132,7 +132,7 @@ bool CC KU64Index_Grep(PBSTNode *node, void *data)
     return false;
 }
 
-rc_t KU64IndexFind_v3( const KU64Index_v3* self, uint64_t offset, uint64_t* key,
+rc_t KRU64IndexFind_v3( const KRU64Index_v3* self, uint64_t offset, uint64_t* key,
     uint64_t* key_size, int64_t* id, uint64_t* id_qty )
 {
     KU64Index_GrepData d;
@@ -150,7 +150,7 @@ rc_t KU64IndexFind_v3( const KU64Index_v3* self, uint64_t offset, uint64_t* key,
 }
 
 
-rc_t KU64IndexFindAll_v3( const KU64Index_v3* self, uint64_t offset,
+rc_t KRU64IndexFindAll_v3( const KRU64Index_v3* self, uint64_t offset,
     rc_t (CC*f)(uint64_t key, uint64_t key_size, int64_t id, uint64_t id_qty, void* data), void* data)
 {
     KU64Index_GrepData d;

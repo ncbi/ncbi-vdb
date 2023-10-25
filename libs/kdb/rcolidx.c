@@ -43,7 +43,7 @@
 
 
 /*--------------------------------------------------------------------------
- * KColumnIdx
+ * KRColumnIdx
  *  the index fork
  */
 
@@ -51,16 +51,16 @@
 /* EstablishIdRange
  */
 static
-void KColumnIdxEstablishIdRange ( KColumnIdx *self )
+void KRColumnIdxEstablishIdRange ( KRColumnIdx *self )
 {
     int64_t first, upper;
 
-    if ( ! KColumnIdx0IdRange ( & self -> idx0, & self -> id_first, & self -> id_upper ) )
+    if ( ! KRColumnIdx0IdRange ( & self -> idx0, & self -> id_first, & self -> id_upper ) )
     {
-        if ( ! KColumnIdx1IdRange ( & self -> idx1, & self -> id_first, & self -> id_upper ) )
+        if ( ! KRColumnIdx1IdRange ( & self -> idx1, & self -> id_first, & self -> id_upper ) )
             self -> id_first = self -> id_upper = 1;
     }
-    else if ( KColumnIdx1IdRange ( & self -> idx1, & first, & upper ) )
+    else if ( KRColumnIdx1IdRange ( & self -> idx1, & first, & upper ) )
     {
         if ( self -> id_first > first )
             self -> id_first = first;
@@ -71,7 +71,7 @@ void KColumnIdxEstablishIdRange ( KColumnIdx *self )
 
 /* Open
  */
-rc_t KColumnIdxOpenRead ( KColumnIdx *self, const KDirectory *dir,
+rc_t KRColumnIdxOpenRead ( KRColumnIdx *self, const KDirectory *dir,
     uint64_t *data_eof, size_t *pgsize, int32_t *checksum )
 {
     rc_t rc;
@@ -80,26 +80,26 @@ rc_t KColumnIdxOpenRead ( KColumnIdx *self, const KDirectory *dir,
 
     assert ( self != NULL );
 
-    rc = KColumnIdx1OpenRead ( & self -> idx1,
+    rc = KRColumnIdx1OpenRead ( & self -> idx1,
         dir, data_eof, & idx0_count, & idx2_eof, pgsize, checksum );
     if ( rc == 0 )
     {
         rc = ( self -> idx1 . vers < 3 ) ?
-            KColumnIdx0OpenRead_v1 ( & self -> idx0, dir, self -> idx1 . bswap ):
-            KColumnIdx0OpenRead ( & self -> idx0, dir, idx0_count, self -> idx1 . bswap );
+            KRColumnIdx0OpenRead_v1 ( & self -> idx0, dir, self -> idx1 . bswap ):
+            KRColumnIdx0OpenRead ( & self -> idx0, dir, idx0_count, self -> idx1 . bswap );
         if ( rc == 0 )
         {
-            rc = KColumnIdx2OpenRead ( & self -> idx2, dir, idx2_eof );
+            rc = KRColumnIdx2OpenRead ( & self -> idx2, dir, idx2_eof );
             if ( rc == 0 || GetRCState ( rc ) == rcNotFound )
             {
-                KColumnIdxEstablishIdRange ( self );
+                KRColumnIdxEstablishIdRange ( self );
                 return 0;
             }
 
-            KColumnIdx0Whack ( & self -> idx0 );
+            KRColumnIdx0Whack ( & self -> idx0 );
         }
 
-        KColumnIdx1Whack ( & self -> idx1 );
+        KRColumnIdx1Whack ( & self -> idx1 );
     }
 
     return 0;
@@ -107,17 +107,17 @@ rc_t KColumnIdxOpenRead ( KColumnIdx *self, const KDirectory *dir,
 
 /* Whack
  */
-rc_t KColumnIdxWhack ( KColumnIdx *self )
+rc_t KRColumnIdxWhack ( KRColumnIdx *self )
 {
     rc_t rc;
 
     assert ( self != NULL );
 
-    rc = KColumnIdx1Whack ( & self -> idx1 );
+    rc = KRColumnIdx1Whack ( & self -> idx1 );
     if ( rc == 0 )
     {
-        KColumnIdx0Whack ( & self -> idx0 );
-        KColumnIdx2Whack ( & self -> idx2 );
+        KRColumnIdx0Whack ( & self -> idx0 );
+        KRColumnIdx2Whack ( & self -> idx2 );
     }
 
     return rc;
@@ -125,17 +125,17 @@ rc_t KColumnIdxWhack ( KColumnIdx *self )
 
 /* Version
  */
-#ifndef KColumnIdxVersion
-rc_t KColumnIdxVersion ( const KColumnIdx *self, uint32_t *version )
+#ifndef KRColumnIdxVersion
+rc_t KRColumnIdxVersion ( const KRColumnIdx *self, uint32_t *version )
 {
-    return KColumnIdx1Version ( & self -> idx1, version );
+    return KRColumnIdx1Version ( & self -> idx1, version );
 }
 #endif
 
 /* IdRange
  *  returns range of ids contained within
  */
-rc_t KColumnIdxIdRange ( const KColumnIdx *self,
+rc_t KRColumnIdxIdRange ( const KRColumnIdx *self,
     int64_t *first, int64_t *last )
 {
     assert ( self != NULL );
@@ -152,7 +152,7 @@ rc_t KColumnIdxIdRange ( const KColumnIdx *self,
 
 /* FindFirstRowId
  */
-rc_t KColumnIdxFindFirstRowId ( const KColumnIdx * self,
+rc_t KRColumnIdxFindFirstRowId ( const KRColumnIdx * self,
     int64_t * found, int64_t start )
 {
     rc_t rc0, rc1;
@@ -167,7 +167,7 @@ rc_t KColumnIdxFindFirstRowId ( const KColumnIdx * self,
         return RC ( rcDB, rcColumn, rcSelecting, rcRow, rcNotFound );
 
     /* look in idx0 */
-    rc0 = KColumnIdx0FindFirstRowId ( & self -> idx0, found, start );
+    rc0 = KRColumnIdx0FindFirstRowId ( & self -> idx0, found, start );
     if ( rc0 == 0 )
     {
         if ( * found == start )
@@ -178,8 +178,8 @@ rc_t KColumnIdxFindFirstRowId ( const KColumnIdx * self,
     }
 
     /* look in main index */
-    /* KColumnIdx1LocateFirstRowIdBlob returns the blob containing 'start', if such blob exists, otherwise the next blob (or RC if there's no next) */
-    rc1 = KColumnIdx1LocateFirstRowIdBlob ( & self -> idx1, & bloc, start );
+    /* KRColumnIdx1LocateFirstRowIdBlob returns the blob containing 'start', if such blob exists, otherwise the next blob (or RC if there's no next) */
+    rc1 = KRColumnIdx1LocateFirstRowIdBlob ( & self -> idx1, & bloc, start );
     if ( rc1 != 0 )
     {
         return rc0;
@@ -212,7 +212,7 @@ rc_t KColumnIdxFindFirstRowId ( const KColumnIdx * self,
 /* LocateBlob
  *  locate an existing blob
  */
-rc_t KColumnIdxLocateBlob ( const KColumnIdx *self,
+rc_t KRColumnIdxLocateBlob ( const KRColumnIdx *self,
     KColBlobLoc *loc, int64_t first, int64_t upper )
 {
     rc_t rc;
@@ -228,17 +228,17 @@ rc_t KColumnIdxLocateBlob ( const KColumnIdx *self,
         return RC ( rcDB, rcColumn, rcSelecting, rcBlob, rcNotFound );
 
     /* look in idx0 */
-    rc = KColumnIdx0LocateBlob ( & self -> idx0, loc, first, upper );
+    rc = KRColumnIdx0LocateBlob ( & self -> idx0, loc, first, upper );
     if ( GetRCState ( rc ) == rcNotFound )
     {
         KColBlockLoc bloc;
 
         /* find block containing range */
-        rc = KColumnIdx1LocateBlock ( & self -> idx1, & bloc, first, upper );
+        rc = KRColumnIdx1LocateBlock ( & self -> idx1, & bloc, first, upper );
         if ( rc == 0 )
         {
             /* find location in idx2 */
-            rc = KColumnIdx2LocateBlob ( & self -> idx2,
+            rc = KRColumnIdx2LocateBlob ( & self -> idx2,
                 loc, & bloc, first, upper, self -> idx1 . bswap );
         }
     }

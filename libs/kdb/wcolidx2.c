@@ -46,14 +46,14 @@
 
 
 /*--------------------------------------------------------------------------
- * KColumnIdx2
+ * KWColumnIdx2
  *  level 2 index
  */
 
 /* Init
  */
 static
-rc_t KColumnIdx2Init ( KColumnIdx2 *self, uint64_t idx2_eof )
+rc_t KWColumnIdx2Init ( KWColumnIdx2 *self, uint64_t idx2_eof )
 {
     rc_t rc = KFileSize ( self -> f, & self -> eof );
     if ( rc == 0 )
@@ -74,18 +74,18 @@ rc_t KColumnIdx2Init ( KColumnIdx2 *self, uint64_t idx2_eof )
 
 /* Create
  */
-rc_t KColumnIdx2Create ( KColumnIdx2 *self,
+rc_t KWColumnIdx2Create ( KWColumnIdx2 *self,
     KDirectory *dir, KMD5SumFmt *md5, KCreateMode mode, uint64_t eof )
 {
-    rc_t rc = KColumnFileCreate (&self->f, &self->fmd5, dir, md5, mode, true, "idx2");
+    rc_t rc = KWColumnFileCreate (&self->f, &self->fmd5, dir, md5, mode, true, "idx2");
     if ( rc == 0 )
-        rc = KColumnIdx2Init ( self, eof );
+        rc = KWColumnIdx2Init ( self, eof );
     return rc;
 }
 
 /* Open
  */
-rc_t KColumnIdx2OpenRead ( KColumnIdx2 *self,
+rc_t KWColumnIdx2OpenRead ( KWColumnIdx2 *self,
     const KDirectory *dir, uint64_t eof )
 {
     rc_t rc = KDirectoryOpenFileRead ( dir,
@@ -107,13 +107,13 @@ rc_t KColumnIdx2OpenRead ( KColumnIdx2 *self,
     }
 #endif
     if ( rc == 0 )
-        rc = KColumnIdx2Init ( self, eof );
+        rc = KWColumnIdx2Init ( self, eof );
     return rc;
 }
 
 /* Whack
  */
-rc_t KColumnIdx2Whack ( KColumnIdx2 *self )
+rc_t KWColumnIdx2Whack ( KWColumnIdx2 *self )
 {
     rc_t rc = KFileRelease ( self -> f );
     if ( rc == 0 )
@@ -127,7 +127,7 @@ rc_t KColumnIdx2Whack ( KColumnIdx2 *self )
 /* LocateBlob
  *  locate an existing blob
  */
-rc_t KColumnIdx2LocateBlob ( const KColumnIdx2 *self,
+rc_t KWColumnIdx2LocateBlob ( const KWColumnIdx2 *self,
     KColBlobLoc *loc, const KColBlockLoc *bloc,
     int64_t first, int64_t upper, bool bswap )
 {
@@ -205,7 +205,7 @@ rc_t KColumnIdx2LocateBlob ( const KColumnIdx2 *self,
  *
  *  return values:
  */
-rc_t KColumnIdx2Write ( KColumnIdx2 *self,
+rc_t KWColumnIdx2Write ( KWColumnIdx2 *self,
     uint64_t *pos, const void *buffer, size_t bytes )
 {
     rc_t rc;
@@ -227,13 +227,13 @@ rc_t KColumnIdx2Write ( KColumnIdx2 *self,
 /* Commit
  *  keeps changes indicated by block size
  */
-rc_t KColumnIdx2Commit ( KColumnIdx2 *self, size_t bytes )
+rc_t KWColumnIdx2Commit ( KWColumnIdx2 *self, size_t bytes )
 {
     self -> eof += bytes;
     return 0;
 }
 
-rc_t KColumnIdx2CommitDone ( KColumnIdx2 *self )
+rc_t KWColumnIdx2CommitDone ( KWColumnIdx2 *self )
 {
     assert ( self != NULL );
 

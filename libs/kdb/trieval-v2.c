@@ -26,7 +26,7 @@
 
 #include <kdb/extern.h>
 
-#include "index-priv.h"
+#include "rindex.h"
 
 #include <klib/rc.h>
 #include <sysalloc.h>
@@ -35,7 +35,7 @@
 #include <assert.h>
 
 
-rc_t KTrieIndexCheckConsistency_v2 ( const KTrieIndex_v2 *self,
+rc_t KRTrieIndexCheckConsistency_v2 ( const KRTrieIndex_v2 *self,
     int64_t *start_id, uint64_t *id_range, uint64_t *num_keys,
     uint64_t *num_rows, uint64_t *num_holes,
     struct KIndex const *outer, bool key2id, bool id2key, bool all_ids, bool convertFromV1  )
@@ -43,7 +43,7 @@ rc_t KTrieIndexCheckConsistency_v2 ( const KTrieIndex_v2 *self,
     if ( self == NULL )
         return RC ( rcDB, rcIndex, rcValidating, rcParam, rcNull );
 
-    return KPTrieIndexCheckConsistency_v2 ( & self -> pt,
+    return KRPTrieIndexCheckConsistency_v2 ( & self -> pt,
         start_id, id_range, num_keys, num_rows, num_holes,
         outer, key2id, id2key, all_ids, convertFromV1 );
 }

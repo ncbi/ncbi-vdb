@@ -43,23 +43,23 @@
 
 
 /*--------------------------------------------------------------------------
- * KColumnIdx1Node
+ * KWColumnIdx1Node
  *  a binary search tree node
  */
-typedef struct KColumnIdx1Node KColumnIdx1Node;
-struct KColumnIdx1Node
+typedef struct KWColumnIdx1Node KWColumnIdx1Node;
+struct KWColumnIdx1Node
 {
     BSTNode n;
     KColBlockLoc loc;
 };
 
-/* KColumnIdx1NodeFind
+/* KWColumnIdx1NodeFind
  */
 static
-int64_t CC KColumnIdx1NodeFind ( const void *item, const BSTNode *n )
+int64_t CC KWColumnIdx1NodeFind ( const void *item, const BSTNode *n )
 {
 #define a ( * ( const int64_t* ) item )
-#define b ( ( const KColumnIdx1Node* ) n )
+#define b ( ( const KWColumnIdx1Node* ) n )
 
     if ( a < b -> loc . start_id )
         return -1;
@@ -69,13 +69,13 @@ int64_t CC KColumnIdx1NodeFind ( const void *item, const BSTNode *n )
 #undef b
 }
 
-/* KColumnIdx1NodeSort
+/* KWColumnIdx1NodeSort
  */
 static
-int64_t CC KColumnIdx1NodeSort ( const BSTNode *item, const BSTNode *n )
+int64_t CC KWColumnIdx1NodeSort ( const BSTNode *item, const BSTNode *n )
 {
-#define a ( ( const KColumnIdx1Node* ) item )
-#define b ( ( const KColumnIdx1Node* ) n )
+#define a ( ( const KWColumnIdx1Node* ) item )
+#define b ( ( const KWColumnIdx1Node* ) n )
 
     if ( ( a -> loc . start_id + a -> loc . id_range ) <= b -> loc . start_id )
         return -1;
@@ -85,35 +85,35 @@ int64_t CC KColumnIdx1NodeSort ( const BSTNode *item, const BSTNode *n )
 #undef b
 }
 
-/* KColumnIdx1NodeWhack
+/* KWColumnIdx1NodeWhack
  */
 static
-void CC KColumnIdx1NodeWhack ( BSTNode *n, void *ignore )
+void CC KWColumnIdx1NodeWhack ( BSTNode *n, void *ignore )
 {
     free ( n );
 }
 
 /*--------------------------------------------------------------------------
- * KColumnIdx1
+ * KWColumnIdx1
  *  level 1 index
  */
 
 /* Init
  */
 static
-rc_t KColumnIdx1Inflate ( KColumnIdx1 *self,
+rc_t KWColumnIdx1Inflate ( KWColumnIdx1 *self,
     const KColBlockLoc *buffer, uint32_t count )
 {
     uint32_t i;
     for ( i = 0; i < count; ++ i )
     {
-        KColumnIdx1Node *exist, *n = malloc ( sizeof * n );
+        KWColumnIdx1Node *exist, *n = malloc ( sizeof * n );
         if ( n == NULL )
             return RC ( rcDB, rcIndex, rcConstructing, rcMemory, rcExhausted );
 
         n -> loc = buffer [ i ];
         if ( BSTreeInsertUnique ( & self -> bst,
-             & n -> n, ( BSTNode** ) & exist, KColumnIdx1NodeSort ) )
+             & n -> n, ( BSTNode** ) & exist, KWColumnIdx1NodeSort ) )
         {
             free ( n );
             return RC ( rcDB, rcIndex, rcConstructing, rcData, rcCorrupt );
@@ -126,7 +126,7 @@ rc_t KColumnIdx1Inflate ( KColumnIdx1 *self,
 }
 
 static
-void KColumnIdx1Swap ( KColBlockLoc *buffer, uint32_t count )
+void KWColumnIdx1Swap ( KColBlockLoc *buffer, uint32_t count )
 {
     uint32_t i;
     for ( i = 0; i < count; ++ i )
@@ -139,7 +139,7 @@ void KColumnIdx1Swap ( KColBlockLoc *buffer, uint32_t count )
 }
 
 static
-rc_t KColumnIdx1Init ( KColumnIdx1 *self, uint32_t off, uint32_t count )
+rc_t KWColumnIdx1Init ( KWColumnIdx1 *self, uint32_t off, uint32_t count )
 {
     rc_t rc;
     KColBlockLoc *buffer = malloc ( 2048 * sizeof * buffer );
@@ -180,10 +180,10 @@ rc_t KColumnIdx1Init ( KColumnIdx1 *self, uint32_t off, uint32_t count )
 
             /* byte-swap entire buffer */
             if ( self -> bswap )
-                KColumnIdx1Swap ( buffer, cnt );
+                KWColumnIdx1Swap ( buffer, cnt );
 
             /* create master index blocks */
-            rc = KColumnIdx1Inflate ( self, buffer, cnt );
+            rc = KWColumnIdx1Inflate ( self, buffer, cnt );
             if ( rc != 0 )
                 break;
         }
@@ -195,7 +195,7 @@ rc_t KColumnIdx1Init ( KColumnIdx1 *self, uint32_t off, uint32_t count )
 
 /* Create
  */
-rc_t KColumnIdx1Create ( KColumnIdx1 *self, KDirectory *dir,
+rc_t KWColumnIdx1Create ( KWColumnIdx1 *self, KDirectory *dir,
     struct KMD5SumFmt *md5, KCreateMode mode,
 	uint64_t *data_eof, uint32_t *idx0_count, uint64_t *idx2_eof,
 	size_t pgsize, int32_t checksum )
@@ -208,7 +208,7 @@ rc_t KColumnIdx1Create ( KColumnIdx1 *self, KDirectory *dir,
         int32_t f_checksum;
 
         /* try to open update first */
-        rc = KColumnIdx1OpenUpdate ( self, dir, md5, data_eof,
+        rc = KWColumnIdx1OpenUpdate ( self, dir, md5, data_eof,
             idx0_count, idx2_eof, &f_pgsize, &f_checksum);
 
         if ( rc == 0 )
@@ -232,11 +232,11 @@ rc_t KColumnIdx1Create ( KColumnIdx1 *self, KDirectory *dir,
     self -> vers = 0;
     self -> bswap = false;
 
-    rc = KColumnFileCreate ( & self -> f, & self -> fmd5, dir, md5, mode, true, "idx1" );
+    rc = KWColumnFileCreate ( & self -> f, & self -> fmd5, dir, md5, mode, true, "idx1" );
     if ( rc == 0 )
     {
 #if KCOL_CURRENT_VERSION != 1
-        rc = KColumnFileCreate ( & self -> fidx, & self -> fidxmd5, dir, md5, mode, false, "idx" );
+        rc = KWColumnFileCreate ( & self -> fidx, & self -> fidxmd5, dir, md5, mode, false, "idx" );
         if ( rc == 0 )
         {
 #endif
@@ -300,7 +300,7 @@ rc_t KColumnIdx1Create ( KColumnIdx1 *self, KDirectory *dir,
 
 /* Open
  */
-rc_t KColumnIdx1OpenRead ( KColumnIdx1 *self, const KDirectory *dir,
+rc_t KWColumnIdx1OpenRead ( KWColumnIdx1 *self, const KDirectory *dir,
     uint64_t *data_eof, uint32_t *idx0_count, uint64_t *idx2_eof,
     size_t *pgsize, int32_t *checksum )
 {
@@ -441,7 +441,7 @@ rc_t KColumnIdx1OpenRead ( KColumnIdx1 *self, const KDirectory *dir,
                     if ( rc == 0 )
                     {
                         self -> vers = hdr . dad . version;
-                        rc = KColumnIdx1Init ( self, off, count );
+                        rc = KWColumnIdx1Init ( self, off, count );
                         if ( rc == 0 )
                             return rc;
                     }
@@ -459,7 +459,7 @@ rc_t KColumnIdx1OpenRead ( KColumnIdx1 *self, const KDirectory *dir,
     return rc;
 }
 
-rc_t KColumnIdx1OpenUpdate ( KColumnIdx1 *self, KDirectory *dir,
+rc_t KWColumnIdx1OpenUpdate ( KWColumnIdx1 *self, KDirectory *dir,
     struct KMD5SumFmt *md5, uint64_t *data_eof, uint32_t *idx0_count,
     uint64_t *idx2_eof, size_t *pgsize, int32_t *checksum )
 {
@@ -470,7 +470,7 @@ rc_t KColumnIdx1OpenUpdate ( KColumnIdx1 *self, KDirectory *dir,
     self -> vers = 0;
     self -> bswap = false;
 
-    rc = KColumnFileOpenUpdate ( & self -> f, & self -> fmd5, dir, md5, true, "idx1" );
+    rc = KWColumnFileOpenUpdate ( & self -> f, & self -> fmd5, dir, md5, true, "idx1" );
 #if 0
     /* why open a transaction? */
     if ( rc == 0 && md5 != NULL )
@@ -508,7 +508,7 @@ rc_t KColumnIdx1OpenUpdate ( KColumnIdx1 *self, KDirectory *dir,
                         {
 #if KCOL_CURRENT_VERSION != 1
                             /* convert to current version */
-                            rc = KColumnFileCreate ( & self -> fidx, & self -> fidxmd5,
+                            rc = KWColumnFileCreate ( & self -> fidx, & self -> fidxmd5,
                                 dir, md5, kcmOpen, false, "idx" );
                             if ( rc == 0 )
                             {
@@ -531,7 +531,7 @@ rc_t KColumnIdx1OpenUpdate ( KColumnIdx1 *self, KDirectory *dir,
 
                     default:
                         /* hdr should be incomplete - instead open "idx" */
-                        rc = KColumnFileOpenUpdate ( & self -> fidx, & self -> fidxmd5, dir, md5, false, "idx" );
+                        rc = KWColumnFileOpenUpdate ( & self -> fidx, & self -> fidxmd5, dir, md5, false, "idx" );
                         if ( rc == 0 )
                         {
                             self -> convert = CONVERT_ON_SAVE_NONE;
@@ -576,7 +576,7 @@ rc_t KColumnIdx1OpenUpdate ( KColumnIdx1 *self, KDirectory *dir,
                     if ( rc == 0 ) /* initialize and return */
                     {
                         self -> vers = hdr . dad . version;
-                        rc = KColumnIdx1Init ( self, off, count );
+                        rc = KWColumnIdx1Init ( self, off, count );
                         if ( rc == 0 )
                             return rc;
                     }
@@ -597,7 +597,7 @@ rc_t KColumnIdx1OpenUpdate ( KColumnIdx1 *self, KDirectory *dir,
 
 /* Whack
  */
-rc_t KColumnIdx1Whack ( KColumnIdx1 *self )
+rc_t KWColumnIdx1Whack ( KWColumnIdx1 *self )
 {
     rc_t rc = KFileRelease ( self -> fidx );
     if ( rc == 0 )
@@ -609,7 +609,7 @@ rc_t KColumnIdx1Whack ( KColumnIdx1 *self )
         {
             self -> f = NULL;
             self -> fmd5 = NULL;
-            BSTreeWhack ( & self -> bst, KColumnIdx1NodeWhack, NULL );
+            BSTreeWhack ( & self -> bst, KWColumnIdx1NodeWhack, NULL );
             BSTreeInit ( & self -> bst );
         }
     }
@@ -618,8 +618,8 @@ rc_t KColumnIdx1Whack ( KColumnIdx1 *self )
 
 /* Version
  */
-#ifndef KColumnIdx1Version
-rc_t KColumnIdx1Version ( const KColumnIdx1 *self, uint32_t *version )
+#ifndef KWColumnIdx1Version
+rc_t KWColumnIdx1Version ( const KWColumnIdx1 *self, uint32_t *version )
 {
     * version = ( uint32_t ) self -> vers;
     return 0;
@@ -629,20 +629,20 @@ rc_t KColumnIdx1Version ( const KColumnIdx1 *self, uint32_t *version )
 /* IdRange
  *  returns range of ids contained within
  */
-bool KColumnIdx1IdRange ( const KColumnIdx1 *self,
+bool KWColumnIdx1IdRange ( const KWColumnIdx1 *self,
     int64_t *first, int64_t *upper )
 {
-    const KColumnIdx1Node *a, *z;
+    const KWColumnIdx1Node *a, *z;
 
     assert ( self != NULL );
     assert ( first != NULL );
     assert ( upper != NULL );
 
-    a = ( const KColumnIdx1Node* ) BSTreeFirst ( & self -> bst );
+    a = ( const KWColumnIdx1Node* ) BSTreeFirst ( & self -> bst );
     if ( a == NULL )
         return false;
 
-    z = ( const KColumnIdx1Node* ) BSTreeLast ( & self -> bst );
+    z = ( const KWColumnIdx1Node* ) BSTreeLast ( & self -> bst );
     assert ( z != NULL );
 
     * first = a -> loc . start_id;
@@ -658,16 +658,16 @@ typedef struct FindFirstRowIdData FindFirstRowIdData;
 struct FindFirstRowIdData
 {
     int64_t start;
-    const KColumnIdx1Node * next;
+    const KWColumnIdx1Node * next;
 };
 
 static
-int64_t CC KColumnIdx1NodeFindFirstRowId ( const void * item, const BSTNode * n )
+int64_t CC KWColumnIdx1NodeFindFirstRowId ( const void * item, const BSTNode * n )
 {
     FindFirstRowIdData * pb = ( FindFirstRowIdData * ) item;
 
 #define a ( pb -> start )
-#define b ( ( const KColumnIdx1Node * ) n )
+#define b ( ( const KWColumnIdx1Node * ) n )
 
     if ( a < b -> loc . start_id )
     {
@@ -684,11 +684,11 @@ int64_t CC KColumnIdx1NodeFindFirstRowId ( const void * item, const BSTNode * n 
 #undef b
 }
 
-rc_t KColumnIdx1LocateFirstRowIdBlob ( const KColumnIdx1 * self,
+rc_t KWColumnIdx1LocateFirstRowIdBlob ( const KWColumnIdx1 * self,
     KColBlockLoc * bloc, int64_t start )
 {
     FindFirstRowIdData pb;
-    const KColumnIdx1Node * n;
+    const KWColumnIdx1Node * n;
 
     assert ( self != NULL );
     assert ( bloc != NULL );
@@ -696,8 +696,8 @@ rc_t KColumnIdx1LocateFirstRowIdBlob ( const KColumnIdx1 * self,
     pb . start = start;
     pb . next = NULL;
 
-    n = ( const KColumnIdx1Node* )
-        BSTreeFind ( & self -> bst, & pb, KColumnIdx1NodeFindFirstRowId );
+    n = ( const KWColumnIdx1Node* )
+        BSTreeFind ( & self -> bst, & pb, KWColumnIdx1NodeFindFirstRowId );
 
     if ( n != NULL )
     {
@@ -720,17 +720,17 @@ rc_t KColumnIdx1LocateFirstRowIdBlob ( const KColumnIdx1 * self,
  *  locates an idx2 block by range
  *  return values:
  */
-rc_t KColumnIdx1LocateBlock ( const KColumnIdx1 *self,
+rc_t KWColumnIdx1LocateBlock ( const KWColumnIdx1 *self,
     KColBlockLoc *bloc, int64_t first, int64_t upper )
 {
-    const KColumnIdx1Node *n;
+    const KWColumnIdx1Node *n;
 
     assert ( self != NULL );
     assert ( bloc != NULL );
     assert ( first < upper );
 
-    n = ( const KColumnIdx1Node* )
-        BSTreeFind ( & self -> bst, & first, KColumnIdx1NodeFind );
+    n = ( const KWColumnIdx1Node* )
+        BSTreeFind ( & self -> bst, & first, KWColumnIdx1NodeFind );
 
     if ( n == NULL )
         return RC ( rcDB, rcIndex, rcSelecting, rcRange, rcNotFound );
@@ -747,7 +747,7 @@ rc_t KColumnIdx1LocateBlock ( const KColumnIdx1 *self,
 
 /* WriteHeader
  */
-rc_t KColumnIdx1WriteHeader ( KColumnIdx1 *self,
+rc_t KWColumnIdx1WriteHeader ( KWColumnIdx1 *self,
     uint64_t data_eof, uint32_t idx0_count, uint64_t idx2_eof,
     size_t pgsize, int32_t checksum )
 {
@@ -835,7 +835,7 @@ rc_t KColumnIdx1WriteHeader ( KColumnIdx1 *self,
 /* Commit
  *  records a block location
  */
-rc_t KColumnIdx1Commit ( KColumnIdx1 *self, const KColBlockLoc *bloc )
+rc_t KWColumnIdx1Commit ( KWColumnIdx1 *self, const KColBlockLoc *bloc )
 {
     rc_t rc;
     uint64_t pos;
@@ -858,7 +858,7 @@ rc_t KColumnIdx1Commit ( KColumnIdx1 *self, const KColBlockLoc *bloc )
             rc = RC ( rcDB, rcIndex, rcCommitting, rcTransfer, rcIncomplete );
         else
         {
-            KColumnIdx1Node *n, *exist;
+            KWColumnIdx1Node *n, *exist;
             n = malloc ( sizeof * n );
             if ( n == NULL )
                 rc = RC ( rcDB, rcIndex, rcCommitting, rcMemory, rcExhausted );
@@ -866,7 +866,7 @@ rc_t KColumnIdx1Commit ( KColumnIdx1 *self, const KColBlockLoc *bloc )
             {
                 n -> loc = * bloc;
                 if ( BSTreeInsertUnique ( & self -> bst,
-                     & n -> n, ( BSTNode** ) & exist, KColumnIdx1NodeSort ) )
+                     & n -> n, ( BSTNode** ) & exist, KWColumnIdx1NodeSort ) )
                 {
                     free ( n );
                     rc = RC ( rcDB, rcIndex, rcCommitting, rcRange, rcExists );
@@ -882,7 +882,7 @@ rc_t KColumnIdx1Commit ( KColumnIdx1 *self, const KColBlockLoc *bloc )
     return rc;
 }
 
-rc_t KColumnIdx1CommitDone ( KColumnIdx1 *self )
+rc_t KWColumnIdx1CommitDone ( KWColumnIdx1 *self )
 {
     rc_t rc = 0;
     if ( self -> fmd5 != NULL )
@@ -898,10 +898,10 @@ rc_t KColumnIdx1CommitDone ( KColumnIdx1 *self )
  *  reverses effect of commit
  *  return value is used to trigger DLListDoUntil exit
  */
-bool KColumnIdx1Revert ( KColumnIdx1 *self, int64_t start_id, uint32_t id_range )
+bool KWColumnIdx1Revert ( KWColumnIdx1 *self, int64_t start_id, uint32_t id_range )
 {
-    KColumnIdx1Node *n = ( KColumnIdx1Node* )
-        BSTreeFind ( & self -> bst, & start_id, KColumnIdx1NodeFind );
+    KWColumnIdx1Node *n = ( KWColumnIdx1Node* )
+        BSTreeFind ( & self -> bst, & start_id, KWColumnIdx1NodeFind );
     if ( n == NULL )
         return true;
 

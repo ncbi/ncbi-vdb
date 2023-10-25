@@ -38,11 +38,11 @@ extern "C" {
 
 
 /*--------------------------------------------------------------------------
- * KColumnIdx0
+ * KRColumnIdx0
  *  level 0 index - event journaling
  */
-typedef struct KColumnIdx0 KColumnIdx0;
-struct KColumnIdx0
+typedef struct KRColumnIdx0 KRColumnIdx0;
+struct KRColumnIdx0
 {
     /* the in-core indices */
     BSTree bst;
@@ -52,30 +52,30 @@ struct KColumnIdx0
 
 /* Open
  */
-rc_t KColumnIdx0OpenRead_v1 ( KColumnIdx0 *self,
+rc_t KRColumnIdx0OpenRead_v1 ( KRColumnIdx0 *self,
     const KDirectory *dir, bool bswap );
-rc_t KColumnIdx0OpenRead ( KColumnIdx0 *self,
+rc_t KRColumnIdx0OpenRead ( KRColumnIdx0 *self,
     const KDirectory *dir, uint32_t count, bool bswap );
 
 /* Whack
  */
-void KColumnIdx0Whack ( KColumnIdx0 *self );
+void KRColumnIdx0Whack ( KRColumnIdx0 *self );
 
 /* IdRange
  *  returns range of ids contained within
  */
-bool KColumnIdx0IdRange ( const KColumnIdx0 *self,
+bool KRColumnIdx0IdRange ( const KRColumnIdx0 *self,
     int64_t *first, int64_t *upper );
 
 /* FindFirstRowId
  */
-rc_t KColumnIdx0FindFirstRowId ( const KColumnIdx0 * self,
+rc_t KRColumnIdx0FindFirstRowId ( const KRColumnIdx0 * self,
     int64_t * found, int64_t start );
 
 /* LocateBlob
  *  locate an existing blob
  */
-rc_t KColumnIdx0LocateBlob ( const KColumnIdx0 *self,
+rc_t KRColumnIdx0LocateBlob ( const KRColumnIdx0 *self,
     KColBlobLoc *loc, int64_t first, int64_t upper );
 
 

@@ -41,21 +41,21 @@ extern "C" {
 
 
 /*--------------------------------------------------------------------------
- * KColumnIdx2
+ * KRColumnIdx2
  *  level 2 index
  */
 
-typedef struct KColumnIdx2BlockCache
+typedef struct KRColumnIdx2BlockCache
 {
     /* single page cache */
     void *block;
     int64_t start_id;
     size_t count;
     KColIdxBlock iblk;
-} KColumnIdx2BlockCache;
+} KRColumnIdx2BlockCache;
 
-typedef struct KColumnIdx2 KColumnIdx2;
-struct KColumnIdx2
+typedef struct KRColumnIdx2 KRColumnIdx2;
+struct KRColumnIdx2
 {
     /* for adding new blocks */
     uint64_t eof;
@@ -70,17 +70,17 @@ struct KColumnIdx2
 
 /* Open
  */
-rc_t KColumnIdx2OpenRead ( KColumnIdx2 *self,
+rc_t KRColumnIdx2OpenRead ( KRColumnIdx2 *self,
     const KDirectory *dir, uint64_t eof );
 
 /* Whack
  */
-rc_t KColumnIdx2Whack ( KColumnIdx2 *self );
+rc_t KRColumnIdx2Whack ( KRColumnIdx2 *self );
 
 /* LocateBlob
  *  locate an existing blob
  */
-rc_t KColumnIdx2LocateBlob ( const KColumnIdx2 *self,
+rc_t KRColumnIdx2LocateBlob ( const KRColumnIdx2 *self,
     KColBlobLoc *loc, const KColBlockLoc *bloc,
     int64_t first, int64_t upper, bool bswap );
 

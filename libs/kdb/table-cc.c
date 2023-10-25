@@ -27,7 +27,7 @@
 #include <kdb/extern.h>
 
 #define KONST const
-#include "index-priv.h"
+#include "rindex.h"
 #include "dbmgr.h"
 #include "database-cmn.h"
 #include "rtable.h"

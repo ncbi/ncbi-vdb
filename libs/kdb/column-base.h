@@ -33,7 +33,7 @@ extern "C" {
 #endif
 
 #ifndef KCOLUMN_IMPL
-#define KCOLUMN_IMPL KColumnBase
+#define KCOLUMN_IMPL KColumn
 #endif
 
 struct KDBManager;
@@ -44,10 +44,10 @@ struct KColumnBlob;
 /*--------------------------------------------------------------------------
  * KColumnBase, base structure for KColumn implementations
  */
-typedef struct KColumnBase KColumnBase;
+typedef struct KColumn KColumn;
 
-typedef struct KColumnBase_vt KColumnBase_vt;
-struct KColumnBase_vt
+typedef struct KColumn_vt KColumn_vt;
+struct KColumn_vt
 {
     /* Public API */
     rc_t ( CC * whack )             ( KCOLUMN_IMPL * self );
@@ -62,37 +62,18 @@ struct KColumnBase_vt
     rc_t ( CC * openParentRead )    ( const KCOLUMN_IMPL * self, struct KTable const ** tbl );
     rc_t ( CC * openMetadataRead )  ( const KCOLUMN_IMPL * self, const struct KMetadata ** meta );
     rc_t ( CC * openBlobRead )      ( const KCOLUMN_IMPL * self, const struct KColumnBlob **blobp, int64_t id );
-
-    // //TODO: write-side only; decide how to handle
-    // rc_t ( CC * reindex )           ( KCOLUMN_IMPL *self );
-    // rc_t ( CC * commitFreq )        ( KCOLUMN_IMPL *self, uint32_t *freq );
-    // rc_t ( CC * setCommitFreq )     ( KCOLUMN_IMPL *self, uint32_t freq );
-    // rc_t ( CC * openManagerUpdate ) ( KCOLUMN_IMPL *self, struct KDBManager **mgr );
-    // rc_t ( CC * openParentUpdate )  ( KCOLUMN_IMPL *self, struct KTable **tbl );
 };
-//LIB_EXPORT rc_t CC KColumnOpenBlobRead ( const KColumn *self, const KColumnBlob **blobp, int64_t id )
 
 // default implelentations where exist
 extern rc_t KColumnBaseWhack ( KCOLUMN_IMPL *self );
 extern rc_t CC KColumnBaseAddRef ( const KCOLUMN_IMPL *self );
 extern rc_t CC KColumnBaseRelease ( const KCOLUMN_IMPL *self );
 
-struct KColumnBase
+struct KColumn
 {
-    const KColumnBase_vt * vt;
+    const KColumn_vt * vt;
 
     KRefcount refcount;
-
-    // struct KTable const *tbl;
-    // struct KDBManager const *mgr;
-    // struct KDirectory const *dir;
-
-    // KColumnIdx idx;
-    // KColumnData df;
-
-    // uint32_t csbytes;
-    // int32_t checksum;
-    // char path [ 1 ];
 };
 
 /* Attach

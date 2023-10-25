@@ -27,7 +27,7 @@
 #include <kdb/extern.h>
 
 #define KONST const
-#include "index-priv.h"
+#include "rindex.h"
 #include "dbmgr.h"
 #include "rdbmgr.h"
 #include "database-cmn.h"
@@ -133,13 +133,13 @@ KRIndexWhack ( KIndex *self )
             switch ( self -> vers )
             {
             case 1:
-                KTrieIndexWhack_v1 ( & self -> u . txt1 );
+                KRTrieIndexWhack_v1 ( & self -> u . txt1 );
                 rc = 0;
                 break;
             case 2:
             case 3:
             case 4:
-                KTrieIndexWhack_v2 ( & self -> u . txt234 );
+                KRTrieIndexWhack_v2 ( & self -> u . txt234 );
                 rc = 0;
                 break;
             }
@@ -150,7 +150,7 @@ KRIndexWhack ( KIndex *self )
             {
             case 3:
             case 4:
-                rc = KU64IndexWhack_v3 ( & self -> u . u64_3 );
+                rc = KRU64IndexWhack_v3 ( & self -> u . u64_3 );
                 break;
             }
             break;
@@ -313,7 +313,7 @@ rc_t KRIndexMakeRead ( KIndex **idxp, const KDirectory *dir, const char *path )
                         /* open using v1 code only if KDBINDEXVERS is 1
                            if 2 or later, open as a v2 index */
 #if KDBINDEXVERS == 1
-                        rc = KTrieIndexOpen_v1 ( & idx -> u . txt1, mm );
+                        rc = KRTrieIndexOpen_v1 ( & idx -> u . txt1, mm );
                         if ( rc == 0 )
                         {
                             if ( idx -> u . txt1 . pt . id2node != NULL )
@@ -332,13 +332,13 @@ rc_t KRIndexMakeRead ( KIndex **idxp, const KDirectory *dir, const char *path )
                             case kitText:
                             case kitText | kitProj:
                                 /* will guess version in open */
-                                rc = KTrieIndexOpen_v2 ( & idx -> u . txt234, mm, byteswap );
+                                rc = KRTrieIndexOpen_v2 ( & idx -> u . txt234, mm, byteswap );
                                 if( rc == 0 && idx -> u . txt234 . pt . ord2node != NULL )
                                     idx -> type |= kitProj;
                                 break;
 
                             case kitU64:
-                                rc = KU64IndexOpen_v3 ( & idx -> u . u64_3, mm, byteswap );
+                                rc = KRU64IndexOpen_v3 ( & idx -> u . u64_3, mm, byteswap );
                                 break;
                         }
                         break;
@@ -457,14 +457,14 @@ KRIndexConsistencyCheck ( const KIndex *self, uint32_t level,
         switch ( self -> vers )
         {
         case 1:
-            rc = KTrieIndexCheckConsistency_v1 ( & self -> u . txt1,
+            rc = KRTrieIndexCheckConsistency_v1 ( & self -> u . txt1,
                 start_id, id_range, num_keys, num_rows, num_holes,
                 self, key2id, id2key );
             break;
         case 2:
         case 3:
         case 4:
-            rc = KTrieIndexCheckConsistency_v2 ( & self -> u . txt234,
+            rc = KRTrieIndexCheckConsistency_v2 ( & self -> u . txt234,
                 start_id, id_range, num_keys, num_rows, num_holes,
                 self, key2id, id2key, all_ids, self -> converted_from_v1 );
             break;
@@ -515,7 +515,7 @@ KRIndexFindText ( const KIndex *self, const char *key, int64_t *start_id, uint64
         switch ( self -> vers )
         {
         case 1:
-            rc = KTrieIndexFind_v1 ( & self -> u . txt1, key, & id32, custom_cmp, data );
+            rc = KRTrieIndexFind_v1 ( & self -> u . txt1, key, & id32, custom_cmp, data );
             if ( rc == 0 )
                 * start_id = id32;
             break;
@@ -523,9 +523,9 @@ KRIndexFindText ( const KIndex *self, const char *key, int64_t *start_id, uint64
         case 3:
         case 4:
 #if V2FIND_RETURNS_SPAN
-            rc = KTrieIndexFind_v2 ( & self -> u . txt234, key, start_id, & span, custom_cmp, data, self -> converted_from_v1 );
+            rc = KRTrieIndexFind_v2 ( & self -> u . txt234, key, start_id, & span, custom_cmp, data, self -> converted_from_v1 );
 #else
-            rc = KTrieIndexFind_v2 ( & self -> u . txt234, key, start_id, custom_cmp, data, self -> converted_from_v1 );
+            rc = KRTrieIndexFind_v2 ( & self -> u . txt234, key, start_id, custom_cmp, data, self -> converted_from_v1 );
 #endif
             break;
         default:
@@ -570,7 +570,7 @@ static rc_t CC KRIndexFindAllText ( const KIndex *self, const char *key,
         switch ( self -> vers )
         {
         case 1:
-            rc = KTrieIndexFind_v1 ( & self -> u . txt1, key, & id32, NULL, NULL );
+            rc = KRTrieIndexFind_v1 ( & self -> u . txt1, key, & id32, NULL, NULL );
             if ( rc == 0 )
                 rc = ( * f ) ( id32, 1, data );
             break;
@@ -578,9 +578,9 @@ static rc_t CC KRIndexFindAllText ( const KIndex *self, const char *key,
         case 3:
         case 4:
 #if V2FIND_RETURNS_SPAN
-            rc = KTrieIndexFind_v2 ( & self -> u . txt234, key, & id64, & span, NULL, NULL, self -> converted_from_v1 );
+            rc = KRTrieIndexFind_v2 ( & self -> u . txt234, key, & id64, & span, NULL, NULL, self -> converted_from_v1 );
 #else
-            rc = KTrieIndexFind_v2 ( & self -> u . txt234, key, & id64, NULL, NULL, self -> converted_from_v1 );
+            rc = KRTrieIndexFind_v2 ( & self -> u . txt234, key, & id64, NULL, NULL, self -> converted_from_v1 );
 #endif
             if ( rc == 0 )
                 rc = ( * f ) ( id64, span, data );
@@ -642,7 +642,7 @@ KRIndexProjectText ( const KIndex *self,
             if ( id <= 0 || ( id >> 32 ) != 0 )
                 return RC ( rcDB, rcIndex, rcProjecting, rcId, rcNotFound );
 
-            rc = KTrieIndexProject_v1 ( & self -> u . txt1,
+            rc = KRTrieIndexProject_v1 ( & self -> u . txt1,
                 ( uint32_t ) id, key, kmax, actsize );
             if ( rc == 0 )
                 * start_id = id;
@@ -651,9 +651,9 @@ KRIndexProjectText ( const KIndex *self,
         case 3:
         case 4:
 #if V2FIND_RETURNS_SPAN
-            rc = KTrieIndexProject_v2 ( & self -> u . txt234, id, start_id, & span, key, kmax, actsize );
+            rc = KRTrieIndexProject_v2 ( & self -> u . txt234, id, start_id, & span, key, kmax, actsize );
 #else
-            rc = KTrieIndexProject_v2 ( & self -> u . txt234, id, key, kmax, actsize );
+            rc = KRTrieIndexProject_v2 ( & self -> u . txt234, id, key, kmax, actsize );
             if ( rc == 0 )
                 * start_id = id;
 #endif
@@ -706,7 +706,7 @@ KRIndexProjectAllText ( const KIndex *self, int64_t id,
             if ( id <= 0 || ( id >> 32 ) != 0 )
                 return RC ( rcDB, rcIndex, rcProjecting, rcId, rcNotFound );
 
-            rc = KTrieIndexProject_v1 ( & self -> u . txt1,
+            rc = KRTrieIndexProject_v1 ( & self -> u . txt1,
                 ( uint32_t ) id, key, sizeof key, NULL );
             if ( rc == 0 )
                 rc = ( * f ) ( id, 1, key, data );
@@ -716,9 +716,9 @@ KRIndexProjectAllText ( const KIndex *self, int64_t id,
         case 3:
         case 4:
 #if V2FIND_RETURNS_SPAN
-            rc = KTrieIndexProject_v2 ( & self -> u . txt234, id, & start_id, & span, key, sizeof key, NULL );
+            rc = KRTrieIndexProject_v2 ( & self -> u . txt234, id, & start_id, & span, key, sizeof key, NULL );
 #else
-            rc = KTrieIndexProject_v2 ( & self -> u . txt234, start_id = id, key, sizeof key );
+            rc = KRTrieIndexProject_v2 ( & self -> u . txt234, start_id = id, key, sizeof key );
 #endif
             if ( rc == 0 )
                 rc = ( * f ) ( start_id, span, key, data );
@@ -753,7 +753,7 @@ KRIndexFindU64( const KIndex* self, uint64_t offset, uint64_t* key, uint64_t* ke
         {
         case 3:
         case 4:
-            rc = KU64IndexFind_v3(&self->u.u64_3, offset, key, key_size, id, id_qty);
+            rc = KRU64IndexFind_v3(&self->u.u64_3, offset, key, key_size, id, id_qty);
             break;
         default:
             return RC(rcDB, rcIndex, rcSelecting, rcIndex, rcBadVersion);
@@ -780,7 +780,7 @@ static rc_t CC KRIndexFindAllU64( const KIndex* self, uint64_t offset,
         {
         case 3:
         case 4:
-            rc = KU64IndexFindAll_v3(&self->u.u64_3, offset, f, data);
+            rc = KRU64IndexFindAll_v3(&self->u.u64_3, offset, f, data);
             break;
         default:
             return RC(rcDB, rcIndex, rcSelecting, rcIndex, rcBadVersion);

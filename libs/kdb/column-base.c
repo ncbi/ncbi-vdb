@@ -29,7 +29,6 @@
 
 #include "column-base.h"
 
-#define KColumn KColumnBase
 #include <kdb/column.h>
 
 #include <kdb/meta.h>

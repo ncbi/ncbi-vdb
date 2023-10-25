@@ -35,7 +35,7 @@ typedef struct KMetadata KMetadata;
 
 struct KDatabase;
 struct KTable;
-struct KColumn;
+struct KRColumn;
 struct KDBManager;
 struct KMDataNode;
 
@@ -54,7 +54,7 @@ struct KMetadata
     /* owner */
     const struct KDatabase *db;
     const struct KTable *tbl;
-    const struct KColumn *col;
+    const struct KRColumn *col;
 
     /* root node */
     struct KMDataNode *root;

@@ -56,7 +56,7 @@ public:
     }
     ~KColumn_Fixture()
     {
-        if ( m_col ) KColumnRelease( m_col );
+        if ( m_col ) KColumnRelease( & m_col -> dad );
         KDirectoryRelease( m_dir );
         KDBManagerRelease ( m_mgr );
     }
@@ -64,11 +64,11 @@ public:
     {
         THROW_ON_RC( KDBManagerMakeUpdate ( & m_mgr, m_dir ) );
         const string ColumnName = ScratchDir + testName;
-        THROW_ON_RC( KDBManagerCreateColumn ( m_mgr, & m_col, kcmOpen, kcsNone, 0, "%s", ColumnName.c_str() ) );
+        THROW_ON_RC( KDBManagerCreateColumn ( m_mgr, (KColumn **)& m_col, kcmOpen, kcsNone, 0, "%s", ColumnName.c_str() ) );
     }
 
     KDirectory * m_dir = nullptr;
-    KColumn * m_col = nullptr;
+    KWColumn * m_col = nullptr;
     KDBManager * m_mgr = nullptr;
 };
 
@@ -78,9 +78,9 @@ FIXTURE_TEST_CASE(KWColumn_AddRelease, KColumn_Fixture)
 {
     Setup( GetName() );
     REQUIRE_EQ( 1, (int)atomic32_read( & m_col -> dad . refcount ) );
-    REQUIRE_RC( KColumnAddRef( m_col ) );
+    REQUIRE_RC( KColumnAddRef( & m_col -> dad ) );
     REQUIRE_EQ( 2, (int)atomic32_read( & m_col -> dad . refcount ) );
-    REQUIRE_RC( KColumnRelease( m_col ) );
+    REQUIRE_RC( KColumnRelease( & m_col -> dad ) );
     REQUIRE_EQ( 1, (int)atomic32_read( & m_col -> dad . refcount ) );
     // use valgrind to find any leaks
 }
@@ -88,7 +88,7 @@ FIXTURE_TEST_CASE(KWColumn_AddRelease, KColumn_Fixture)
 FIXTURE_TEST_CASE(KWColumn_Locked, KColumn_Fixture)
 {
     Setup( GetName() );
-    REQUIRE( ! KColumnLocked( m_col ) );
+    REQUIRE( ! KColumnLocked( & m_col -> dad ) );
 }
 
 FIXTURE_TEST_CASE(KWColumn_ByteOrder, KColumn_Fixture)
@@ -96,7 +96,7 @@ FIXTURE_TEST_CASE(KWColumn_ByteOrder, KColumn_Fixture)
     Setup( GetName() );
 
     bool reversed = true;
-    REQUIRE_RC( KColumnByteOrder( m_col, & reversed ) );
+    REQUIRE_RC( KColumnByteOrder( & m_col -> dad, & reversed ) );
     REQUIRE( ! reversed );
 }
 
@@ -107,7 +107,7 @@ FIXTURE_TEST_CASE(KWColumn_IdRange, KColumn_Fixture)
     int64_t first = 0;
     uint64_t count = 1;
     rc_t rc = SILENT_RC ( rcDB, rcColumn, rcAccessing, rcRange, rcInvalid );
-    REQUIRE_EQ( rc, KColumnIdRange( m_col, & first, & count ) );
+    REQUIRE_EQ( rc, KColumnIdRange( & m_col -> dad, & first, & count ) );
 }
 
 FIXTURE_TEST_CASE(KWColumn_FindFirstRowId, KColumn_Fixture)
@@ -117,14 +117,14 @@ FIXTURE_TEST_CASE(KWColumn_FindFirstRowId, KColumn_Fixture)
     int64_t found;
     int64_t start = 0;
     rc_t rc = SILENT_RC ( rcDB, rcColumn, rcSelecting,rcRow,rcNotFound );
-    REQUIRE_EQ( rc, KColumnFindFirstRowId( m_col, & found, start ) );
+    REQUIRE_EQ( rc, KColumnFindFirstRowId( & m_col -> dad, & found, start ) );
 }
 
 FIXTURE_TEST_CASE(KWColumn_OpenManagerRead, KColumn_Fixture)
 {
     Setup( GetName() );
     const KDBManager * mgr = nullptr;
-    REQUIRE_RC( KColumnOpenManagerRead( m_col, & mgr ) );
+    REQUIRE_RC( KColumnOpenManagerRead( & m_col -> dad, & mgr ) );
     REQUIRE_EQ( (const KDBManager *)m_mgr, mgr );
 
     REQUIRE_RC( KDBManagerRelease( mgr ) );
@@ -135,7 +135,7 @@ FIXTURE_TEST_CASE(KWColumn_OpenParentRead, KColumn_Fixture)
     Setup( GetName() );
     const KTable * tbl = nullptr;
     rc_t rc = SILENT_RC ( rcVDB, rcTable, rcAccessing, rcSelf, rcNull );
-    REQUIRE_EQ( rc, KColumnOpenParentRead( m_col, & tbl ) );
+    REQUIRE_EQ( rc, KColumnOpenParentRead( & m_col -> dad, & tbl ) );
     REQUIRE_NULL( tbl );
 }
 
@@ -144,7 +144,7 @@ FIXTURE_TEST_CASE(KWColumn_OpenMetadataRead, KColumn_Fixture)
     Setup( GetName() );
     const KMetadata * meta = nullptr;
     rc_t rc = SILENT_RC ( rcDB,rcMgr,rcOpening,rcMetadata,rcNotFound );
-    REQUIRE_EQ( rc, KColumnOpenMetadataRead( m_col, & meta ) );
+    REQUIRE_EQ( rc, KColumnOpenMetadataRead( & m_col -> dad, & meta ) );
 }
 
 FIXTURE_TEST_CASE(KWColumn_OpenBlobRead, KColumn_Fixture)
@@ -152,7 +152,7 @@ FIXTURE_TEST_CASE(KWColumn_OpenBlobRead, KColumn_Fixture)
     Setup( GetName() );
     const KColumnBlob * blob = nullptr;
     rc_t rc = SILENT_RC ( rcDB,rcColumn,rcSelecting,rcBlob,rcNotFound );
-    REQUIRE_EQ( rc, KColumnOpenBlobRead( m_col, & blob, 1 ) );
+    REQUIRE_EQ( rc, KColumnOpenBlobRead( & m_col -> dad, & blob, 1 ) );
 }
 
 //TODO: non-virtual write-side only methods

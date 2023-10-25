@@ -47,11 +47,11 @@ struct KColBlockLocInfo;
 
 
 /*--------------------------------------------------------------------------
- * KColumnIdx0
+ * KWColumnIdx0
  *  level 0 index - event journaling
  */
-typedef struct KColumnIdx0 KColumnIdx0;
-struct KColumnIdx0
+typedef struct KWColumnIdx0 KWColumnIdx0;
+struct KWColumnIdx0
 {
     /* always append */
     uint64_t eof;
@@ -68,71 +68,71 @@ struct KColumnIdx0
 
 /* Create
  */
-rc_t KColumnIdx0Create_v1 ( KColumnIdx0 *self, KDirectory *dir,
+rc_t KWColumnIdx0Create_v1 ( KWColumnIdx0 *self, KDirectory *dir,
     struct KMD5SumFmt *md5, KCreateMode mode, bool bswap );
-rc_t KColumnIdx0Create ( KColumnIdx0 *self, KDirectory *dir,
+rc_t KWColumnIdx0Create ( KWColumnIdx0 *self, KDirectory *dir,
     uint32_t count, struct KMD5SumFmt *md5, KCreateMode mode, bool bswap );
 
 /* Open
  */
-rc_t KColumnIdx0OpenRead_v1 ( KColumnIdx0 *self,
+rc_t KWColumnIdx0OpenRead_v1 ( KWColumnIdx0 *self,
     const KDirectory *dir, bool bswap );
-rc_t KColumnIdx0OpenRead ( KColumnIdx0 *self,
+rc_t KWColumnIdx0OpenRead ( KWColumnIdx0 *self,
     const KDirectory *dir, uint32_t count, bool bswap );
 
 /* Whack
  */
-void KColumnIdx0Whack ( KColumnIdx0 *self );
+void KWColumnIdx0Whack ( KWColumnIdx0 *self );
 
 /* IdRange
  *  returns range of ids contained within
  */
-bool KColumnIdx0IdRange ( const KColumnIdx0 *self,
+bool KWColumnIdx0IdRange ( const KWColumnIdx0 *self,
     int64_t *first, int64_t *upper );
 
 /* FindFirstRowId
  */
-rc_t KColumnIdx0FindFirstRowId ( const KColumnIdx0 * self,
+rc_t KWColumnIdx0FindFirstRowId ( const KWColumnIdx0 * self,
     int64_t * found, int64_t start );
 
 /* LocateBlob
  *  locate an existing blob
  */
-rc_t KColumnIdx0LocateBlob ( const KColumnIdx0 *self,
+rc_t KWColumnIdx0LocateBlob ( const KWColumnIdx0 *self,
     KColBlobLoc *loc, int64_t first, int64_t upper );
 
 /* Commit
  *  records an index location for addition or removal
  *  returns any prior value for rollback
  */
-rc_t KColumnIdx0Commit ( KColumnIdx0 *self,
+rc_t KWColumnIdx0Commit ( KWColumnIdx0 *self,
     const KColBlobLoc *loc, KColBlobLoc *prior, bool bswap );
-rc_t KColumnIdx0CommitDone ( KColumnIdx0 *self );
+rc_t KWColumnIdx0CommitDone ( KWColumnIdx0 *self );
 
 /* Revert
  *  reverses effect of commit
  */
-void KColumnIdx0Revert ( KColumnIdx0 *self,
+void KWColumnIdx0Revert ( KWColumnIdx0 *self,
     const KColBlobLoc *loc, const KColBlobLoc *prior );
 
 /* DefineBlocks
  *  scans existing blob locators
  *  invokes handler with ranges of ids from similar blob entries
  */
-rc_t KColumnIdx0DefineBlocks ( const KColumnIdx0 *self,
+rc_t KWColumnIdx0DefineBlocks ( const KWColumnIdx0 *self,
     rc_t ( * handle_range ) ( struct KColBlockLocInfo const *info, void *data ),
     void *data, size_t pgsize );
 
 /* TranscribeBlocks
  *  writes all blocks within a range
  */
-void KColumnIdx0TranscribeBlocks ( const KColumnIdx0 *self,
+void KWColumnIdx0TranscribeBlocks ( const KWColumnIdx0 *self,
     int64_t first, int64_t upper, struct KColWIdxBlock *iblk );
 
 /* Truncate
  *  whacks bt contents and truncates file
  */
-void KColumnIdx0Truncate ( KColumnIdx0 *self );
+void KWColumnIdx0Truncate ( KWColumnIdx0 *self );
 
 
 #ifdef __cplusplus
