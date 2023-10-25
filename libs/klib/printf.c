@@ -2560,7 +2560,8 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
                 f . type_cast = 0;
                 f . type = sptString;
                 assert(f.u.f.precision == -1 || f . u . f . precision >= 0);
-                if ( f . u . f . precision < S . len )
+                if ( f.u.f.precision != -1 && f . u . f . precision < S . len )
+                {
 #if STDC_COMPATIBILITY  &&  !defined(__GLIBC__)
                     assert( FITS_INTO_SIZE_T ( f.u.f.precision ) );
                     assert( FITS_INTO_INT32 ( f.u.f.precision ) );
@@ -2568,7 +2569,8 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
                     S . len = (uint32_t) f . u . f . precision;
 #else
                     StringInit ( & S, "", 0, 0 );
-#endif                    
+#endif
+                }
             }
             else
             {
