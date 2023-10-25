@@ -25,11 +25,14 @@
 */
 
 #include <kdb/extern.h>
-#include "wcolumn-priv.h"
-#include "wcolidx0-priv.h"
-#include "widxblk-priv.h"
-#include "werror-priv.h"
+
+#include "wcolumn.h"
+#include "wcolidx0.h"
+#include "widxblk.h"
+#include "werror.h"
+
 #include <kfs/file.h>
+
 #include <sysalloc.h>
 
 #include <limits.h>
@@ -786,7 +789,7 @@ rc_t KColumnIdx0DefineBlocks ( const KColumnIdx0 *self,
         /* the next block becomes our start */
         start = next;
     }
-    
+
     return rc;
 }
 

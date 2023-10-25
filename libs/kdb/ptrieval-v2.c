@@ -27,7 +27,7 @@
 #include <kdb/extern.h>
 
 #include "index-priv.h"
-#include "idstats-priv.h"
+#include "idstats.h"
 
 #include <kdb/index.h>
 #include <klib/ptrie.h>
@@ -119,7 +119,7 @@ bool CC KPTrieIndexCCVisit_v2 ( PTNode *n, void *data )
     rc_t rc;
     int64_t id;
     size_t usize;
-    uint64_t span;
+    uint64_t span = 0;
     uint32_t i, ord;
 
     /* detect conversion from v1 */

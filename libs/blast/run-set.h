@@ -81,7 +81,7 @@ typedef struct {
     uint64_t spotCount;
     uint32_t spotBits;
 
-    uint8_t nReads;
+    uint32_t nReads;
     uint8_t nBioReads; /* knowing filtering (if static) and min_read_len info */
     uint64_t bioLen; /* per read. is assigned just when allStatic */
     INSDC_SRA_platform_id platform;
@@ -206,7 +206,7 @@ typedef struct {
     INSDC_coord_len TRIM_LEN;
     INSDC_coord_val TRIM_START;
 
-    uint8_t nReadsAllocated;
+    uint32_t nReadsAllocated;
 } ReaderCols;
 
 /* cSRA READ mode : is ignored for non-cSRA runs */

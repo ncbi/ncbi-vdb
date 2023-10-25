@@ -2462,7 +2462,7 @@ LIB_EXPORT rc_t CC VFSManagerExtractAccessionOrOID ( const VFSManager * self,
                     break;
                 case 3:
                     /* remove digits just for run accessions */
-                    if ( isRun && isdigit ( *( sep + 1) ) 
+                    if ( isRun && isdigit ( *( sep + 1) )
                                && isdigit ( *( sep + 2) ))
                     {
                         end = sep;
@@ -4373,7 +4373,7 @@ rc_t VPathMakeFmtExt ( VPath ** new_path, bool ext, const String * id,
     int64_t projectId, uint32_t version, const String * acc,
     const char * fmt, ... )
 {
-    EVPathType t = ext ? eVPext : eVPWithId; 
+    EVPathType t = ext ? eVPext : eVPWithId;
     rc_t rc;
 
     va_list args;

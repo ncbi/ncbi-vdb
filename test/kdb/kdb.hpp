@@ -417,9 +417,6 @@ namespace KFS {
 using auto_c_string = std::unique_ptr<char, decltype(&free)>;
 #define AUTO_C_STRING(PTR) auto_c_string(PTR, free)
 
-extern "C" { rc_t KMDataNodeAddr(const KMDataNode *self,
-                            const void **addr, size_t *size ); }
-
 RETAIN_RELEASE(KDBManager);
 RETAIN_RELEASE(KTable);
 RETAIN_RELEASE(KColumn);

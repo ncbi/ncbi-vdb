@@ -25,13 +25,17 @@
 */
 
 #include <kdb/extern.h>
-#include "wcoldata-priv.h"
-#include "wcolumn-priv.h"
+
+#include "wcoldata.h"
+#include "wcolumn.h"
+
 #include <kfs/file.h>
 #include <kfs/buffile.h>
 #include <kfs/md5.h>
 #include <kfs/impl.h>
+
 #include <klib/rc.h>
+
 #include <sysalloc.h>
 
 #include <limits.h>

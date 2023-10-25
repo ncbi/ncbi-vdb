@@ -490,8 +490,54 @@ static INSDC_SRA_platform_id _VTableReadPLATFORMoptional
     }
 }
 
-static bool _VTableVarReadNum(const VTable *self, const char *acc) {
-    return _VTableReadPLATFORMoptional(self, acc) == SRA_PLATFORM_PACBIO_SMRT;
+static bool _VarReadNum(INSDC_SRA_platform_id platform, bool *unrecognized) {
+    bool dummy = true;
+    if (unrecognized == NULL)
+        unrecognized = &dummy;
+    *unrecognized = true;
+
+    switch (platform) {
+    case SRA_PLATFORM_PACBIO_SMRT:
+        *unrecognized = false;
+        return true;
+
+    case SRA_PLATFORM_UNDEFINED:
+    case SRA_PLATFORM_454:
+    case SRA_PLATFORM_ILLUMINA:
+    case SRA_PLATFORM_ABSOLID:
+    case SRA_PLATFORM_COMPLETE_GENOMICS:
+    case SRA_PLATFORM_HELICOS:
+    case SRA_PLATFORM_ION_TORRENT:
+    case SRA_PLATFORM_CAPILLARY:
+    case SRA_PLATFORM_OXFORD_NANOPORE:
+        *unrecognized = false;
+        return false;
+
+    default:
+/*       SRA_PLATFORM_ELEMENT_BIO       = 10,
+         SRA_PLATFORM_TAPESTRI          = 11,
+         SRA_PLATFORM_VELA_DIAG         = 12,
+         SRA_PLATFORM_GENAPSYS          = 13,
+         SRA_PLATFORM_ULTIMA            = 14,
+         SRA_PLATFORM_GENEMIND          = 15,
+         SRA_PLATFORM_BGISEQ            = 16,
+         SRA_PLATFORM_DNBSEQ            = 17
+*/
+        *unrecognized = true;
+        if (unrecognized != &dummy)
+            PLOGERR(klogWarn, (klogWarn,
+                RC(rcSRA, rcCursor, rcReading, rcData, rcUnexpected),
+                "Unrecognized platform $(P)", "P=%d", platform));
+/* Unrecognized platform is treated as PACBIO:
+ * we guess it can have variable number of reads. */
+        return true;
+    }
+}
+
+static
+bool _VTableVarReadNum(const VTable *self, const char *acc, bool *unrecognized)
+{
+    return _VarReadNum(_VTableReadPLATFORMoptional(self, acc), unrecognized);
 }
 
 static uint64_t BIG = 10000 /*11*/; 
@@ -660,7 +706,7 @@ static void _RunDescFini(RunDesc *self) {
 }
 
 static
-uint64_t _RunDescMakeReadId(const RunDesc *self, uint64_t spot, uint8_t read,
+uint64_t _RunDescMakeReadId(const RunDesc *self, uint64_t spot, uint32_t read,
     uint64_t read_id, VdbBlastStatus *status)
 {
     bool overflow = false;
@@ -915,11 +961,11 @@ uint64_t _VdbBlastRunSetGetAllReads
 }
 
 static rc_t _VdbBlastDbGetNReads
-    (VdbBlastDb *self, uint64_t spot, uint32_t *nReads, const char *acc)
+    (VdbBlastDb *self, uint64_t spot, uint32_t *nreads, const char *acc)
 {
     rc_t rc = _VdbBlastDbOpenSeqCurs(self, acc);
-    assert(self && nReads);
-    *nReads = 0;
+    assert(self && nreads);
+    *nreads = 0;
     if (rc == 0) {
         const void *base = NULL;
         uint32_t elem_bits = 0;
@@ -928,7 +974,7 @@ static rc_t _VdbBlastDbGetNReads
         rc = VCursorCellDataDirect(self->cursSeq, spot, self->col_READ_TYPE,
             &elem_bits, &base, &elem_off, &elem_cnt);
         if (rc == 0) {
-            *nReads = elem_cnt;
+            *nreads = elem_cnt;
         }
         else {
             PLOGERR(klogInt, (klogInt, rc, "Cannot get "
@@ -1277,7 +1323,7 @@ bool _VdbBlastRunVarReadNum(const VdbBlastRun *self) {
 
     assert(self);
 
-    return self->rd.platform == SRA_PLATFORM_PACBIO_SMRT;
+    return _VarReadNum(self->rd.platform, NULL);
 }
 
 /* _VdbBlastRunGetNumSequences
@@ -1303,7 +1349,8 @@ uint64_t _VdbBlastRunGetNumSequences(VdbBlastRun *self,
             rc_t rc = 0;
             ReadDesc desc;
             memset(&desc, 0, sizeof desc);
-            rc = _VdbBlastDbOpenCursAndGetAllReads(self->obj, &desc, self->acc);
+            rc = _VdbBlastDbOpenCursAndGetAllReads(self->obj, &desc,
+                self->acc);
             if (rc != 0) {
                 *status = eVdbBlastErr;
             }
@@ -1424,7 +1471,6 @@ static uint64_t _VdbBlastSraRunGetLengthApprox(VdbBlastRun *self,
 static uint64_t _VdbBlastRunGetNumSequencesApprox(VdbBlastRun *self,
     VdbBlastStatus *status)
 {
-
     assert(self && status);
 
     *status = eVdbBlastNoErr;
@@ -1464,7 +1510,8 @@ static uint64_t _VdbBlastRunGetNumSequencesApprox(VdbBlastRun *self,
             self->bioReadsApprox = r;
         }
         else if (_VdbBlastRunVarReadNum(self)) {
-            self->bioReads = _VdbBlastRunGetNumSequences(self, status);
+            self->bioReadsApprox
+                = self->bioReads = _VdbBlastRunGetNumSequences(self, status);
         }
         else {
             *status = _VdbBlastRunFillRunDesc(self);
@@ -2618,9 +2665,16 @@ VdbBlastStatus CC VdbBlastRunSetAddRun(VdbBlastRunSet *self,
     }
 
     if (status == eVdbBlastNoErr) {
-        if (_VTableVarReadNum(obj->seqTbl, rundesc)) {
+        bool unrecognized = false;
+        if (_VTableVarReadNum(obj->seqTbl, rundesc, &unrecognized)) {
             self->readIdDesc.varReadN = true;
             self->readIdDesc.idType   = eFactor10;
+        }
+/* Don't fail on unrecognized platform: treat it as worst case scenario.
+ * _VarReadNum will issue a warning. */
+        if (false && unrecognized) {
+            S
+            return eVdbBlastNotImplemented;
         }
 
         status = _RunSetAddObj(&self->runs, obj, rundesc, type,

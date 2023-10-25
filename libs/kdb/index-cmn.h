@@ -24,12 +24,9 @@
 *
 */
 
-#ifndef _h_index_cmn_
-#define _h_index_cmn_
+#pragma once
 
-#ifndef _h_kdbfmt_priv_
-#include "kdbfmt-priv.h"
-#endif
+#include "kdbfmt.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -275,7 +272,7 @@ rc_t KU64IndexWhack_v3 ( KU64Index_v3 *self );
 rc_t KU64IndexFind_v3 ( const KU64Index_v3 *self, uint64_t offset,
     uint64_t *key, uint64_t *key_size, int64_t *id, uint64_t *id_qty );
 
-rc_t KU64IndexFindAll_v3 ( const KU64Index_v3 *self, uint64_t offset, 
+rc_t KU64IndexFindAll_v3 ( const KU64Index_v3 *self, uint64_t offset,
     rc_t ( CC * f ) ( uint64_t key, uint64_t key_size, int64_t id, uint64_t id_qty, void* data ),
     void* data );
 
@@ -283,4 +280,3 @@ rc_t KU64IndexFindAll_v3 ( const KU64Index_v3 *self, uint64_t offset,
 }
 #endif
 
-#endif /* _h_index_priv_ */

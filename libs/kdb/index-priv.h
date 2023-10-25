@@ -24,24 +24,20 @@
 *
 */
 
-#ifndef _h_index_priv_
-#define _h_index_priv_
+#pragma once
 
-#ifndef _h_index_cmn_
+typedef struct KIndex KIndex;
+#define KINDEX_IMPL KIndex
+#include "index-base.h"
+
 #include "index-cmn.h"
-#endif
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 
 /*--------------------------------------------------------------------------
  * forwards
  */
 struct KMMap;
 struct PBSTree;
-
+struct KDirectory;
 
 /*--------------------------------------------------------------------------
  * V1
@@ -108,7 +104,6 @@ struct KTrieIndex_v1
  *  32-bit entities.
  */
 
-
 /*--------------------------------------------------------------------------
  * KTrieIndex_v2
  */
@@ -116,7 +111,6 @@ struct KTrieIndex_v2
 {
     KPTrieIndex_v2 pt;
 };
-
 
 /*--------------------------------------------------------------------------
  * KU64Index_v3
@@ -127,8 +121,27 @@ struct KU64Index_v3
     struct KMMap const *mm;
 };
 
-#ifdef __cplusplus
-}
-#endif
+/*--------------------------------------------------------------------------
+ * KIndex
+ *  an object capable of mapping an object to integer oid
+ */
+struct KIndex
+{
+    KIndexBase dad;
 
-#endif /* _h_index_priv_ */
+    const struct KDBManager *mgr;
+    const struct KDatabase *db;
+    const struct KTable *tbl;
+    uint32_t vers;
+    union
+    {
+        KTrieIndex_v1 txt1;
+        KTrieIndex_v2 txt234;
+        KU64Index_v3  u64_3;
+    } u;
+    bool converted_from_v1;
+    uint8_t type;
+    char path [ 1 ];
+};
+
+rc_t KRIndexMakeRead ( KIndex **idxp, const struct KDirectory *dir, const char *path );

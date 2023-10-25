@@ -54,7 +54,7 @@ struct KMetadata;
 struct KDirectory;
 struct VFSManager;
 struct VPath;
-
+struct KMDataNode;
 
 /*--------------------------------------------------------------------------
  * KDBManager
@@ -88,6 +88,24 @@ KDB_EXTERN rc_t CC KDBManagerVPathOpenRemoteDBRead ( struct KDBManager const * s
 /** Unreliable object: do not report occured erros */
 KDB_EXTERN int CC KDBManagerVPathTypeUnreliable (
     const struct KDBManager * self, const char *object, va_list args );
+
+/* OpenPathType
+ * Opens a path if it is of the specified type.  Even if it is an archive file
+ * instead of a directory.
+ *
+ * if dpdir is NULL it will not return with an open Directory but it will have
+ * checked that the type requested is the type present even if in an archive.
+ *
+ * if realpathtype is not NULL the found type will be returned regardless
+ * of a match to request path type.
+ *
+ * the return will be zero only if the path does point to a directory or
+ * archive that is of the requested type.  An archive will have been opened
+ * but reshut if dpdir is NULL.
+ */
+rc_t KDBManagerOpenPathTypeRead ( const struct KDBManager * mgr, const struct KDirectory * dir, const char * path,
+    const struct KDirectory ** dpdir, int pathtype, int * realpathtype,
+    bool try_srapath, const struct VPath * vpath );
 
 /*--------------------------------------------------------------------------
  * KDatabase
@@ -125,6 +143,7 @@ KDB_EXTERN rc_t CC KTableOpenDirectoryUpdate ( struct KTable *self, struct KDire
 KDB_EXTERN rc_t CC KTableGetPath ( struct KTable const *self,
     const char **path );
 
+KDB_EXTERN rc_t KTableGetName( struct KTable const *self, char const **rslt);
 
 /*--------------------------------------------------------------------------
  * KColumn
@@ -160,6 +179,11 @@ KDB_EXTERN rc_t CC KIndexMarkModified ( struct KIndex *self );
  */
 KDB_EXTERN void CC KIndexSetMaxRowId ( struct KIndex const *self, int64_t max_row_id );
 
+/*--------------------------------------------------------------------------
+ * KMDataNode
+ */
+
+KDB_EXTERN rc_t CC KMDataNodeAddr ( const struct KMDataNode *self, const void **addr, size_t *size );
 
 #ifdef __cplusplus
 }

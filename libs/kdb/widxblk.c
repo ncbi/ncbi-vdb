@@ -25,8 +25,10 @@
 */
 
 #include <kdb/extern.h>
-#include "widxblk-priv.h"
-#include "werror-priv.h"
+
+#include "widxblk.h"
+#include "werror.h"
+
 #include <sysalloc.h>
 
 #include <limits.h>

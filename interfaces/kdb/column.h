@@ -254,7 +254,6 @@ union KColumnBlobCSData
  */
 typedef struct KColumnBlob KColumnBlob;
 
-
 /* AddRef
  * Release
  *  all objects are reference counted

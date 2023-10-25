@@ -25,11 +25,15 @@
 */
 
 #include <kdb/extern.h>
-#include "wcolidx-priv.h"
-#include "widxblk-priv.h"
-#include "werror-priv.h"
+
+#include "wcolidx.h"
+#include "widxblk.h"
+
+#include "werror.h"
+
 #include <kfs/file.h>
 #include <kfs/md5.h>
+
 #include <sysalloc.h>
 
 #include <limits.h>

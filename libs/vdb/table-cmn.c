@@ -56,8 +56,6 @@
 #include <klib/debug.h>
 #include <klib/rc.h>
 
-#include "../kdb/table-priv.h" /* KTableGetName */
-
 #include <sysalloc.h>
 
 #include <stdlib.h>
