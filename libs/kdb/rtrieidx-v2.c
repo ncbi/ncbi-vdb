@@ -342,7 +342,7 @@ rc_t KPTrieIndexInitFromV1_v2 ( KPTrieIndex_v2 *self, const KMMap *mm, bool byte
     return rc;
 }
 
-rc_t KPTrieIndexInit_v2 ( KPTrieIndex_v2 *self, const KMMap *mm, bool byteswap )
+rc_t KRPTrieIndexInit_v2 ( KPTrieIndex_v2 *self, const KMMap *mm, bool byteswap )
 {
     /* get size of map, assumed to be size of file */
     size_t size;
@@ -479,7 +479,7 @@ rc_t KPTrieIndexInit_v2 ( KPTrieIndex_v2 *self, const KMMap *mm, bool byteswap )
     return rc;
 }
 
-rc_t KPTrieIndexInit_v3_v4 ( KPTrieIndex_v2 *self, const KMMap *mm, bool byteswap, bool ptorig )
+rc_t KRPTrieIndexInit_v3_v4 ( KPTrieIndex_v2 *self, const KMMap *mm, bool byteswap, bool ptorig )
 {
     /* get size of map, assumed to be size of file */
     size_t size;
@@ -619,7 +619,7 @@ rc_t KPTrieIndexInit_v3_v4 ( KPTrieIndex_v2 *self, const KMMap *mm, bool byteswa
 /* Whack
  *  closes down keymap
  */
-void KPTrieIndexWhack_v2 ( KPTrieIndex_v2 *self )
+void KRPTrieIndexWhack_v2 ( KPTrieIndex_v2 *self )
 {
     free ( ( void* ) self -> id2ord . v8 );
     PTrieWhack ( self -> key2id );
@@ -627,7 +627,7 @@ void KPTrieIndexWhack_v2 ( KPTrieIndex_v2 *self )
     memset ( self, 0, sizeof * self );
 }
 
-uint32_t KPTrieIndexID2Ord_v2 ( const KPTrieIndex_v2 *self, int64_t id )
+uint32_t KRPTrieIndexID2Ord_v2 ( const KPTrieIndex_v2 *self, int64_t id )
 {
     if ( id >= self -> first && id <= self -> maxid )
     {
@@ -753,7 +753,7 @@ rc_t KPTrieIndexProject_v2 ( const KPTrieIndex_v2 *self,
 #endif
     char *key_buff, size_t buff_size, size_t *actsize )
 {
-    uint32_t nid, ord = KPTrieIndexID2Ord_v2 ( self, id );
+    uint32_t nid, ord = KRPTrieIndexID2Ord_v2 ( self, id );
     if ( ord != 0 )
     {
         assert ( start_id != NULL );
@@ -888,7 +888,7 @@ rc_t KPTrieIndexFind_v2 ( const KPTrieIndex_v2 *self,
 #if V2FIND_RETURNS_SPAN
                 if ( self -> ord2node != NULL )
                 {
-                    uint32_t ord = KPTrieIndexID2Ord_v2 ( self, * start_id );
+                    uint32_t ord = KRPTrieIndexID2Ord_v2 ( self, * start_id );
                     if ( ord == 0 )
                         rc = RC ( rcDB, rcIndex, rcSelecting, rcId, rcNotFound );
                     else if ( ord == self -> count )
@@ -942,7 +942,7 @@ rc_t KPTrieIndexFind_v2 ( const KPTrieIndex_v2 *self,
 /* whack whack */
 void KRTrieIndexWhack_v2 ( KRTrieIndex_v2 *self )
 {
-    KPTrieIndexWhack_v2 ( & self -> pt );
+    KRPTrieIndexWhack_v2 ( & self -> pt );
 }
 
 /* initialize an index from file */
@@ -973,12 +973,12 @@ rc_t KRTrieIndexOpen_v2 ( KRTrieIndex_v2 *self, const KMMap *mm, bool byteswap )
         rc = KPTrieIndexInitFromV1_v2 ( & self -> pt, mm, byteswap );
         break;
     case 2:
-        rc = KPTrieIndexInit_v2 ( & self -> pt, mm, byteswap );
+        rc = KRPTrieIndexInit_v2 ( & self -> pt, mm, byteswap );
         break;
     case 3:
         ptorig = true;
     case 4:
-        rc = KPTrieIndexInit_v3_v4 ( & self -> pt, mm, byteswap, ptorig );
+        rc = KRPTrieIndexInit_v3_v4 ( & self -> pt, mm, byteswap, ptorig );
         break;
     default:
         rc = RC(rcDB, rcIndex, rcConstructing, rcIndex, rcBadVersion);

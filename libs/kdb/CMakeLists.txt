@@ -28,6 +28,8 @@ set( KDB_CMN
 #    rowset-simple
 
     kdb-cmn
+    rkdb
+    wkdb
 
     dbmgr-cmn
     manager-base
@@ -52,14 +54,24 @@ set( KDB_CMN
     trieval-v1
     trieval-v2
 
-    ridxblk
     index-cmn
+
+    rindex
+    ridxblk
+    rtrieidx-v1
+    rtrieidx-v2
+    ru64idx-v3
+
+    windex
+    widxblk
+    wtrieidx-v1
+    wtrieidx-v2
+    wu64idx-v3
 )
 
 set( KDB_SRC
     ${KDB_CMN}
 
-    rkdb
     rdbmgr
     rdatabase
     rtable
@@ -67,7 +79,6 @@ set( KDB_SRC
     rcolumnblob
     rmeta
     rmetadatanode
-    rindex
 
     rcoldata
     rcolidx
@@ -75,16 +86,11 @@ set( KDB_SRC
     rcolidx1
     rcolidx2
 
-    rtrieidx-v1
-    rtrieidx-v2
-
-    ru64idx-v3
 )
 
 set( WKDB_SRC
     ${KDB_CMN}
 
-    wkdb
     wdbmgr
     wdatabase
     wtable
@@ -92,7 +98,6 @@ set( WKDB_SRC
     wcolumnblob
     wmeta
     wmetadatanode
-    windex
 
     wcoldata
     wcolidx
@@ -100,12 +105,6 @@ set( WKDB_SRC
     wcolidx1
     wcolidx2
 
-    widxblk
-
-    wtrieidx-v1
-    wtrieidx-v2
-
-    wu64idx-v3
 )
 
 

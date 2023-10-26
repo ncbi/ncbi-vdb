@@ -43,7 +43,7 @@ rc_t KRTrieIndexCheckConsistency_v2 ( const KRTrieIndex_v2 *self,
     if ( self == NULL )
         return RC ( rcDB, rcIndex, rcValidating, rcParam, rcNull );
 
-    return KPTrieIndexCheckConsistency_v2 ( & self -> pt,
+    return KRPTrieIndexCheckConsistency_v2 ( & self -> pt,
         start_id, id_range, num_keys, num_rows, num_holes,
         outer, key2id, id2key, all_ids, convertFromV1 );
 }

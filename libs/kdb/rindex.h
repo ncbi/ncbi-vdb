@@ -83,7 +83,6 @@ rc_t KRTrieIndexCheckConsistency_v1 ( const KRTrieIndex_v1 *self,
     uint64_t *num_rows, uint64_t *num_holes,
     struct KRIndex const *outer, bool key2id, bool id2key );
 
-
 /*--------------------------------------------------------------------------
  * V2
  *  version 2 of the trie index was introduced to handle sparse ids,
@@ -128,14 +127,35 @@ rc_t KRTrieIndexCheckConsistency_v1 ( const KRTrieIndex_v1 *self,
  */
 
 /*--------------------------------------------------------------------------
+ * KPTrieIndex_v2
+ *  persisted keymap
+ *  declared in index-cmn.h
+ */
+
+/* initialize an index from file */
+rc_t KRPTrieIndexInit_v2 ( KPTrieIndex_v2 *self, struct KMMap const *mm, bool byteswap );
+rc_t KRPTrieIndexInit_v3_v4 ( KPTrieIndex_v2 *self, struct KMMap const *mm, bool byteswap, bool ptorig );
+
+/* whackitywhack */
+void KRPTrieIndexWhack_v2 ( KPTrieIndex_v2 *self );
+
+/* map a row id to ord */
+uint32_t KRPTrieIndexID2Ord_v2 ( const KPTrieIndex_v2 *self, int64_t id );
+
+/* consistency check */
+rc_t KRPTrieIndexCheckConsistency_v2 ( const KPTrieIndex_v2 *self,
+    int64_t *start_id, uint64_t *id_range, uint64_t *num_keys,
+    uint64_t *num_rows, uint64_t *num_holes,
+    struct KRIndex const *outer, bool key2id, bool id2key, bool all_ids, bool convertFromV1 );
+
+/*--------------------------------------------------------------------------
  * KRTrieIndex_v2
  */
+typedef struct KRTrieIndex_v2 KRTrieIndex_v2;
 struct KRTrieIndex_v2
 {
     KPTrieIndex_v2 pt;
 };
-
-typedef struct KRTrieIndex_v2 KRTrieIndex_v2;
 
 /* initialize an index from file */
 rc_t KRTrieIndexOpen_v2 ( KRTrieIndex_v2 *self, struct KMMap const *mm, bool byteswap );

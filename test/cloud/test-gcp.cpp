@@ -36,7 +36,8 @@
 #include <klib/data-buffer.h>
 
 #include <kapp/args.h> /* ArgsMakeAndHandle */
-#include <kfg/config.h> /* KConfigDisableUserSettings */
+
+#include <kfg/kfg-priv.h> /* KConfigMakeLocal */
 
 #include <ktst/unit_test.hpp>
 
@@ -135,8 +136,13 @@ public:
         THROW_ON_RC ( string_printf ( env, sizeof( env ), &num_writ, "GOOGLE_APPLICATION_CREDENTIALS=%s", credFile ) );
         THROW_ON_FALSE ( 0 == putenv ( env ) );
 
+        KConfig * kfg = NULL;
+        THROW_ON_RC(KConfigMakeLocal(&kfg, NULL));
+        THROW_ON_RC(KConfigWriteBool(
+            kfg, "/libs/cloud/accept_gcp_charges", true));
         THROW_ON_RC ( CloudMgrMakeWithProvider ( & mgr, cloud_provider_gcp,
-            NULL) );
+            kfg ) );
+        THROW_ON_RC(KConfigRelease(kfg));
 
         THROW_ON_RC ( CloudMgrMakeCloud ( mgr, & cloud, cloud_provider_gcp ) );
         putenv ( (char *) "GOOGLE_APPLICATION_CREDENTIALS=" );

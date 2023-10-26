@@ -158,7 +158,7 @@ bool CC KPTrieIndexCCVisit_v2 ( PTNode *n, void *data )
     }
 
     /* convert from row-id to 1-based ordinal index */
-    ord = KPTrieIndexID2Ord_v2 ( self, id );
+    ord = KRPTrieIndexID2Ord_v2 ( self, id );
     if ( ord == 0 )
     {
         /* 0 means not found */
@@ -360,7 +360,7 @@ bool CC KPTrieIndexCCVisit_v2 ( PTNode *n, void *data )
     return false;
 }
 
-rc_t KPTrieIndexCheckConsistency_v2 ( const KPTrieIndex_v2 *self,
+rc_t KRPTrieIndexCheckConsistency_v2 ( const KPTrieIndex_v2 *self,
     int64_t *start_id, uint64_t *id_range, uint64_t *num_keys,
     uint64_t *num_rows, uint64_t *num_holes,
     const KRIndex *outer, bool key2id, bool id2key, bool all_ids, bool convertFromV1 )

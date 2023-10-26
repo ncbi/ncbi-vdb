@@ -1,4 +1,4 @@
-/*=====================================================================================
+/*==============================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
 *               National Center for Biotechnology Information
@@ -20,7 +20,7 @@
 *
 *  Please cite the author in any work or product based on this material.
 *
-* ================================================================================== */
+* =========================================================================== */
 
 #pragma once
 
@@ -83,6 +83,15 @@ struct CloudMgr
     CloudProviderId cur_id;
 };
 
+typedef enum {
+    eCCOK,
+    eCCEmpty,
+    eCCUnrecognized,
+    eCCIncomplete,
+    eCCProfileNotFound,
+    eCCProfileNotComplete,
+} ECCState;
+
 /*--------------------------------------------------------------------------
  * AWS
  */
@@ -90,6 +99,8 @@ struct CloudMgr
 struct AWS
 {
     Cloud dad;
+
+    ECCState credentials_state;
 
     char * profile;
 
@@ -116,6 +127,8 @@ bool CloudMgrWithinAWS ( const CloudMgr * self );
 struct GCP
 {
     Cloud dad;
+
+    ECCState credentials_state;
 
     char * privateKey;
     char * private_key_id;

@@ -336,6 +336,7 @@ typedef struct {
     KSrvResponse * list;
     Kart * kart;
     SServerTimestamp timestamp;
+    char * phid;
     rc_t rc;
 } SResponse;
 
@@ -2296,6 +2297,8 @@ static rc_t SResponseFini ( SResponse * self ) {
     if ( r2 != 0 && rc == 0 )
         rc = r2;
 
+    free ( self -> phid );
+
     memset ( self, 0, sizeof * self );
 
     return rc;
@@ -2647,8 +2650,10 @@ static rc_t SCgiRequestPerform ( const SCgiRequest * self,
                                 service->req.sdl))
 #endif
                             {
+                                rc = KHttpResultGetPhid(rslt, &service->resp.phid);
                                 service->resp.rc = rx;
-                                rc = KHttpResultGetInputStream(rslt, stream);
+                                if (rc == 0)
+                                    rc = KHttpResultGetInputStream(rslt, stream);
                             }
 #ifdef NAMESCGI
                             else {
@@ -2658,8 +2663,11 @@ static rc_t SCgiRequestPerform ( const SCgiRequest * self,
                             }
 #endif
                         }
-                        else
-                            rc = KHttpResultGetInputStream(rslt, stream);
+                        else {
+                            rc = KHttpResultGetPhid(rslt, &service->resp.phid);
+                            if (rc == 0)
+                                rc = KHttpResultGetInputStream(rslt, stream);
+                        }
                     }
                 }
                 RELEASE ( KHttpResult, rslt );
@@ -4240,8 +4248,8 @@ static rc_t KServiceProcessJson ( KService * self ) {
             }
             if (rc == 0)
                 rc = Response4MakeSdlExt(&r, self->helper.vMgr, self->helper.kMgr,
-                    self->helper.kfg, self->helper.input,
-                    sLogNamesServiceErrors, projectId, self->quality);
+                    self->helper.kfg, self->helper.input, sLogNamesServiceErrors,
+                    projectId, self->quality, self->resp.phid);
         }
         else
             rc = Response4Make4(&r, self->helper.input);

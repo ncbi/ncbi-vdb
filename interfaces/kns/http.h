@@ -437,6 +437,16 @@ KNS_EXTERN bool CC KClientHttpResultTestHeaderValue ( const KClientHttpResult *s
 KNS_EXTERN rc_t CC KClientHttpResultGetInputStream ( KClientHttpResult *self,
     struct KStream  ** s );
 
+
+/* GetPhid
+ * get the value of NCBI_PHID header from response
+ *
+ * "phid" [ OUT ] - return parameter for phid header
+ * must be freed
+ */
+KNS_EXTERN rc_t CC KClientHttpResultGetPhid ( KClientHttpResult *self,
+    char ** phid );
+
 KNS_EXTERN bool CC KFileIsKHttpFile ( const struct KFile * self );
 
     /* compatibility defines */
@@ -452,7 +462,7 @@ KNS_EXTERN bool CC KFileIsKHttpFile ( const struct KFile * self );
 #define KHttpResultAddHeader KClientHttpResultAddHeader
 #define KHttpResultGetHeader KClientHttpResultGetHeader
 #define KHttpResultGetInputStream KClientHttpResultGetInputStream
-
+#define KHttpResultGetPhid KClientHttpResultGetPhid
 
 #ifdef __cplusplus
 }

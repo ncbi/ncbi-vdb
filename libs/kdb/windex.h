@@ -155,13 +155,28 @@ rc_t KWTrieIndexPersist_v1 ( const KWTrieIndex_v1 *self,
  *  32-bit entities.
  */
 
+/*--------------------------------------------------------------------------
+ * KPTrieIndex_v2
+ *  persisted keymap
+ *  declared in index-cmn.h
+ */
+
+/* initialize an index from file */
+rc_t KWPTrieIndexInit_v2 ( KPTrieIndex_v2 *self, struct KMMap const *mm, bool byteswap );
+rc_t KWPTrieIndexInit_v3_v4 ( KPTrieIndex_v2 *self, struct KMMap const *mm, bool byteswap, bool ptorig );
+
+/* whackitywhack */
+void KWPTrieIndexWhack_v2 ( KPTrieIndex_v2 *self );
+
+/* map a row id to ord */
+uint32_t KWPTrieIndexID2Ord_v2 ( const KPTrieIndex_v2 *self, int64_t id );
 
 /*--------------------------------------------------------------------------
- * KTrieIdxNode_v2_s1
+ * KWTrieIdxNode_v2_s1
  *  strategy 1 - store only start id, derive range from proj index
  */
-typedef struct KTrieIdxNode_v2_s1 KTrieIdxNode_v2_s1;
-struct KTrieIdxNode_v2_s1
+typedef struct KWTrieIdxNode_v2_s1 KWTrieIdxNode_v2_s1;
+struct KWTrieIdxNode_v2_s1
 {
     TNode n;
     int64_t start_id;
@@ -169,11 +184,11 @@ struct KTrieIdxNode_v2_s1
 };
 
 /*--------------------------------------------------------------------------
- * KTrieIdxNode_v2_s2
+ * KWTrieIdxNode_v2_s2
  *  strategy 2 - store complete range when not using proj index
  */
-typedef struct KTrieIdxNode_v2_s2 KTrieIdxNode_v2_s2;
-struct KTrieIdxNode_v2_s2
+typedef struct KWTrieIdxNode_v2_s2 KWTrieIdxNode_v2_s2;
+struct KWTrieIdxNode_v2_s2
 {
     TNode n;
     int64_t start_id;
@@ -184,17 +199,16 @@ struct KTrieIdxNode_v2_s2
 /*--------------------------------------------------------------------------
  * KWTrieIndex_v2
  */
+typedef struct KWTrieIndex_v2 KWTrieIndex_v2;
 struct KWTrieIndex_v2
 {
     int64_t first, last;
     KPTrieIndex_v2 pt;
     Trie key2id;
-    KTrieIdxNode_v2_s1 **ord2node;
+    KWTrieIdxNode_v2_s1 **ord2node;
     uint32_t count;
     uint32_t max_span;
 };
-
-typedef struct KWTrieIndex_v2 KWTrieIndex_v2;
 
 /* initialize an index from file */
 rc_t KWTrieIndexOpen_v2 ( KWTrieIndex_v2 *self, struct KMMap const *mm, bool byteswap );

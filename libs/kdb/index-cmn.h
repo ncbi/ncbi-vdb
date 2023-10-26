@@ -174,23 +174,6 @@ struct KPTrieIndex_v2
     uint8_t byteswap;
 };
 
-
-/* initialize an index from file */
-rc_t KPTrieIndexInit_v2 ( KPTrieIndex_v2 *self, struct KMMap const *mm, bool byteswap );
-rc_t KPTrieIndexInit_v3_v4 ( KPTrieIndex_v2 *self, struct KMMap const *mm, bool byteswap, bool ptorig );
-
-/* whackitywhack */
-void KPTrieIndexWhack_v2 ( KPTrieIndex_v2 *self );
-
-/* map a row id to ord */
-uint32_t KPTrieIndexID2Ord_v2 ( const KPTrieIndex_v2 *self, int64_t id );
-
-/* consistency check */
-rc_t KPTrieIndexCheckConsistency_v2 ( const KPTrieIndex_v2 *self,
-    int64_t *start_id, uint64_t *id_range, uint64_t *num_keys,
-    uint64_t *num_rows, uint64_t *num_holes,
-    struct KRIndex const *outer, bool key2id, bool id2key, bool all_ids, bool convertFromV1 );
-
 #ifdef __cplusplus
 }
 #endif
