@@ -38,7 +38,7 @@ extern "C" {
 #endif
 
 struct KTable;
-struct KIndex;
+struct KWIndex;
 struct KWColumn;
 
 rc_t KDBWManagerVOpenDBReadInt_noargs ( const KDBManager *cself,
@@ -85,13 +85,13 @@ rc_t KDBManagerOpenMetadataUpdateInt ( KDBManager *self, KMetadata **metap, KDir
 
 rc_t KDBManagerInsertMetadata ( KDBManager * self, KMetadata * meta );
 
-rc_t KDBWManagerOpenIndexReadInt ( KDBManager *self,const struct KIndex **idxp, const KDirectory *wd, const char *path );
+rc_t KDBWManagerOpenIndexReadInt ( KDBManager *self,const struct KWIndex **idxp, const KDirectory *wd, const char *path );
 
-rc_t KDBManagerCreateIndexInt ( KDBManager *self, KIndex **idxp, KDirectory *wd, KIdxType type, KCreateMode cmode, const char *path, bool use_md5 );
+rc_t KDBManagerCreateIndexInt ( KDBManager *self, struct KWIndex **idxp, KDirectory *wd, KIdxType type, KCreateMode cmode, const char *path, bool use_md5 );
 
-rc_t KDBManagerInsertIndex ( KDBManager * self, struct KIndex * idx);
+rc_t KDBManagerInsertIndex ( KDBManager * self, struct KWIndex * idx);
 
-rc_t KDBManagerOpenIndexUpdate ( KDBManager *self, KIndex **idxp, KDirectory *wd, const char *path );
+rc_t KDBManagerOpenIndexUpdate ( KDBManager *self, struct KWIndex **idxp, KDirectory *wd, const char *path );
 
 #ifdef __cplusplus
 }

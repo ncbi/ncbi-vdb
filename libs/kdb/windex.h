@@ -26,13 +26,11 @@
 
 #pragma once
 
-#include <kdb/index.h>
-
 #include <klib/trie.h>
 #include <klib/symbol.h>
 
-typedef struct KIndex KIndex;
-#define KINDEX_IMPL KIndex
+typedef struct KWIndex KWIndex;
+#define KINDEX_IMPL KWIndex
 #include "index-base.h"
 #include "index-cmn.h"
 
@@ -46,7 +44,6 @@ extern "C" {
 struct BSTNode;
 struct KDirectory;
 struct KDBManager;
-struct KDirectory;
 
 /*--------------------------------------------------------------------------
  * V1
@@ -275,20 +272,20 @@ rc_t KWU64IndexFindAll_v3 ( const KWU64Index_v3 *self, uint64_t offset,
     rc_t ( CC * f ) ( uint64_t key, uint64_t key_size, int64_t id, uint64_t id_qty, void* data ),
     void* data );
 
-rc_t KU64IndexInsert_v3(KWU64Index_v3* self, bool unique, uint64_t key, uint64_t key_size, int64_t id, uint64_t id_qty);
-rc_t KU64IndexDelete_v3(KWU64Index_v3* self, uint64_t key);
+rc_t KWU64IndexInsert_v3(KWU64Index_v3* self, bool unique, uint64_t key, uint64_t key_size, int64_t id, uint64_t id_qty);
+rc_t KWU64IndexDelete_v3(KWU64Index_v3* self, uint64_t key);
 
-rc_t KU64IndexPersist_v3(KWU64Index_v3* self, bool proj, struct KDirectory *dir, const char *path, bool use_md5);
+rc_t KWU64IndexPersist_v3(KWU64Index_v3* self, bool proj, struct KDirectory *dir, const char *path, bool use_md5);
 
 
  /*--------------------------------------------------------------------------
- * KIndex
+ * KWIndex
  *  an object capable of mapping an object to integer oid
  */
 
-struct KIndex
+struct KWIndex
 {
-    KIndexBase dad;
+    KIndex dad;
 
     BSTNode n;
 
@@ -315,16 +312,9 @@ struct KIndex
     char path [ 1 ];
 };
 
-
-/* Cmp
- * Sort
- */
-int KIndexCmp ( const void *item, struct BSTNode const *n );
-int KIndexSort ( struct BSTNode const *item, struct BSTNode const *n );
-
-rc_t KWIndexMakeRead ( KIndex **idxp, const struct KDirectory *dir, const char *path );
-rc_t KIndexCreate ( KIndex **idxp, KDirectory *dir, KIdxType type, KCreateMode cmode, const char *path, int ptype );
-rc_t KIndexMakeUpdate ( KIndex **idxp, KDirectory *dir, const char *path );
+rc_t KWIndexMakeRead ( KWIndex **idxp, const struct KDirectory *dir, const char *path );
+rc_t KWIndexCreate ( KWIndex **idxp, KDirectory *dir, KIdxType type, KCreateMode cmode, const char *path, int ptype );
+rc_t KWIndexMakeUpdate ( KWIndex **idxp, KDirectory *dir, const char *path );
 
 #ifdef __cplusplus
 }

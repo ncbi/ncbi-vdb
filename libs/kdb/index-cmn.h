@@ -42,8 +42,7 @@ struct KMMap;
 struct PTrie;
 struct BSTNode;
 struct PBSTNode;
-struct KIndex;
-
+struct KRIndex;
 
 /*--------------------------------------------------------------------------
  * KIndexFileHeader
@@ -104,8 +103,7 @@ void KPTrieIndexWhack_v1 ( KPTrieIndex_v1 *self );
 rc_t KPTrieIndexCheckConsistency_v1 ( const KPTrieIndex_v1 *self,
     int64_t *start_id, uint64_t *id_range, uint64_t *num_keys,
     uint64_t *num_rows, uint64_t *num_holes,
-    struct KIndex const *outer, bool key2id, bool id2key );
-
+    struct KRIndex const *outer, bool key2id, bool id2key );
 
 /*--------------------------------------------------------------------------
  * V2

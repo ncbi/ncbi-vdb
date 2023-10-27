@@ -618,13 +618,12 @@ KRDatabaseVOpenIndexRead ( const KDatabase *self, const KIndex **idxp, const cha
         path, sizeof path, "idx", 3, name, args );
     if ( rc == 0 )
     {
-        KIndex *idx;
-        rc = KDBRManagerOpenIndexReadInt ( self -> mgr,
-            & idx, self -> dir, path );
+        KRIndex *idx;
+        rc = KDBRManagerOpenIndexReadInt ( self -> mgr, & idx, self -> dir, path );
         if ( rc == 0 )
         {
             idx -> db = KDatabaseAttach ( self );
-            * idxp = idx;
+            * idxp = & idx -> dad;
         }
     }
     return rc;

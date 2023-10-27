@@ -25,7 +25,7 @@
 */
 
 /**
-* Unit tests for read-side KIndex
+* Unit tests for read-side KWIndex
 */
 
 #include <ktst/unit_test.hpp>
@@ -78,11 +78,11 @@ FIXTURE_TEST_CASE(KWIndex_AddRelease, KIndex_Fixture)
 {
     Open( "testdb", "index" );
 
-    REQUIRE_EQ( 1, (int)atomic32_read( & m_idx -> dad . refcount ) );
+    REQUIRE_EQ( 1, (int)atomic32_read( & m_idx -> refcount ) );
     REQUIRE_RC( KIndexAddRef( m_idx ) );
-    REQUIRE_EQ( 2, (int)atomic32_read( & m_idx -> dad . refcount ) );
+    REQUIRE_EQ( 2, (int)atomic32_read( & m_idx -> refcount ) );
     REQUIRE_RC( KIndexRelease( m_idx ) );
-    REQUIRE_EQ( 1, (int)atomic32_read( & m_idx -> dad . refcount ) );
+    REQUIRE_EQ( 1, (int)atomic32_read( & m_idx -> refcount ) );
     // use valgrind to find any leaks
 }
 

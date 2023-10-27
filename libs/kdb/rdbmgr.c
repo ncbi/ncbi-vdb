@@ -872,14 +872,14 @@ rc_t KDBRManagerOpenMetadataReadInt ( const KDBManager *self, KMetadata **metap,
  *
  *  "name" [ IN ] - NUL terminated string in UTF-8 giving simple name of idx
  */
-rc_t KDBRManagerOpenIndexReadInt ( const KDBManager *self, KIndex **idxp, const KDirectory *wd, const char *path )
+rc_t KDBRManagerOpenIndexReadInt ( const KDBManager *self, KRIndex **idxp, const KDirectory *wd, const char *path )
 {
     char idxpath [ 4096 ];
     rc_t rc = KDirectoryResolvePath ( wd, true,
                                       idxpath, sizeof idxpath, "%s", path );
     if ( rc == 0 )
     {
-        KIndex *idx;
+        KRIndex *idx;
 
         switch ( KDirectoryPathType ( wd, "%s", idxpath ) )
         {

@@ -2378,7 +2378,7 @@ KDBWManagerOpenMetadataReadInt ( KDBManager *self, const KMetadata **metap, cons
     return rc;
 }
 
-rc_t KDBManagerInsertIndex ( KDBManager * self, KIndex * idx)
+rc_t KDBManagerInsertIndex ( KDBManager * self, KWIndex * idx)
 {
     rc_t rc;
     rc = KDBManagerOpenObjectAdd (self, &idx->sym);
@@ -2395,27 +2395,27 @@ rc_t KDBManagerInsertIndex ( KDBManager * self, KIndex * idx)
  *
  *  "name" [ IN ] - NUL terminated string in UTF-8 giving simple name of idx
  */
-rc_t KDBWManagerOpenIndexReadInt ( KDBManager *self,const KIndex **idxp, const KDirectory *wd, const char *path )
+rc_t KDBWManagerOpenIndexReadInt ( KDBManager *self,const KWIndex **idxp, const KDirectory *wd, const char *path )
 {
     char idxpath [ 4096 ];
     rc_t rc = KDirectoryResolvePath ( wd, true,
                                       idxpath, sizeof idxpath, "%s", path );
     if ( rc == 0 )
     {
-        KIndex *idx;
+        KWIndex *idx;
         KSymbol * sym;
 
         /* if already open */
         sym = KDBManagerOpenObjectFind (self, idxpath);
         if (sym != NULL)
         {
-            const KIndex * cidx;
+            const KWIndex * cidx;
             rc_t obj;
 
             switch (sym->type)
             {
             case kptIndex:
-                cidx = (const KIndex *)sym->u.obj;
+                cidx = (const KWIndex *)sym->u.obj;
 #if 0
                 /* if open for update, refuse */
                 if ( cidx -> read_only )
@@ -2425,7 +2425,7 @@ rc_t KDBWManagerOpenIndexReadInt ( KDBManager *self,const KIndex **idxp, const K
 #endif
                 {
                     /* attach a new reference and we're gone */
-                    rc = KIndexAddRef ( cidx );
+                    rc = KIndexAddRef ( & cidx -> dad );
                     if ( rc == 0 )
                         * idxp = cidx;
                     return rc;
@@ -2476,7 +2476,7 @@ rc_t KDBWManagerOpenIndexReadInt ( KDBManager *self,const KIndex **idxp, const K
                 return 0;
             }
 
-            KIndexRelease ( idx );
+            KIndexRelease ( & idx -> dad );
         }
     }
 
@@ -2494,7 +2494,7 @@ rc_t KDBWManagerOpenIndexReadInt ( KDBManager *self,const KIndex **idxp, const K
  *  "name" [ IN ] - NUL terminated string in UTF-8 giving simple name of idx
  */
 rc_t
-KDBManagerCreateIndexInt ( KDBManager *self, KIndex **idxp, KDirectory *wd, KIdxType type, KCreateMode cmode, const char *path, bool use_md5 )
+KDBManagerCreateIndexInt ( KDBManager *self, KWIndex **idxp, KDirectory *wd, KIdxType type, KCreateMode cmode, const char *path, bool use_md5 )
 {
     rc_t rc;
     int ptype;
@@ -2504,7 +2504,7 @@ KDBManagerCreateIndexInt ( KDBManager *self, KIndex **idxp, KDirectory *wd, KIdx
                                   idxpath, sizeof idxpath, "%s", path );
     if ( rc == 0 )
     {
-        KIndex *idx;
+        KWIndex *idx;
         switch ( ptype = KDBPathType ( wd, NULL, idxpath ) )
         {
         case kptNotFound:
@@ -2567,7 +2567,7 @@ KDBManagerCreateIndexInt ( KDBManager *self, KIndex **idxp, KDirectory *wd, KIdx
             return RC ( rcDB, rcMgr, rcCreating, rcPath, rcIncorrect );
         }
 
-        rc = KIndexCreate ( & idx, wd, type, cmode, path, ptype );
+        rc = KWIndexCreate ( & idx, wd, type, cmode, path, ptype );
         if ( rc == 0 )
         {
             rc = KDBManagerInsertIndex (self, idx);
@@ -2578,7 +2578,7 @@ KDBManagerCreateIndexInt ( KDBManager *self, KIndex **idxp, KDirectory *wd, KIdx
                 return 0;
             }
 
-            KIndexRelease ( idx );
+            KIndexRelease ( & idx -> dad );
         }
     }
     return rc;
@@ -2593,7 +2593,7 @@ KDBManagerCreateIndexInt ( KDBManager *self, KIndex **idxp, KDirectory *wd, KIdx
  *  "name" [ IN ] - NUL terminated string in UTF-8 giving simple name of idx
  */
 rc_t KDBManagerOpenIndexUpdate ( KDBManager *self,
-    KIndex **idxp, KDirectory *wd, const char *path )
+    KWIndex **idxp, KDirectory *wd, const char *path )
 {
     char idxpath [ 4096 ];
     rc_t rc = KDirectoryResolvePath ( wd, true,
@@ -2601,7 +2601,7 @@ rc_t KDBManagerOpenIndexUpdate ( KDBManager *self,
     if ( rc == 0 )
     {
         KSymbol * sym;
-        KIndex *idx;
+        KWIndex *idx;
 
         sym =  KDBManagerOpenObjectFind (self, idxpath);
         if (sym != NULL)
@@ -2646,7 +2646,7 @@ rc_t KDBManagerOpenIndexUpdate ( KDBManager *self,
             return RC ( rcDB, rcMgr, rcOpening, rcPath, rcIncorrect );
         }
 
-        rc = KIndexMakeUpdate ( & idx, wd, path );
+        rc = KWIndexMakeUpdate ( & idx, wd, path );
         if ( rc == 0 )
         {
             rc = KDBManagerInsertIndex (self, idx);
@@ -2656,7 +2656,7 @@ rc_t KDBManagerOpenIndexUpdate ( KDBManager *self,
                 return 0;
             }
 
-            KIndexRelease ( idx );
+            KIndexRelease ( & idx -> dad );
         }
     }
     return rc;

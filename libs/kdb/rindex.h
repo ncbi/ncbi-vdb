@@ -26,8 +26,8 @@
 
 #pragma once
 
-typedef struct KIndex KIndex;
-#define KINDEX_IMPL KIndex
+typedef struct KRIndex KRIndex;
+#define KINDEX_IMPL KRIndex
 #include "index-base.h"
 
 #include "index-cmn.h"
@@ -55,15 +55,11 @@ struct KDirectory;
 /*--------------------------------------------------------------------------
  * KRTrieIndex_v1
  */
+typedef struct KRTrieIndex_v1 KRTrieIndex_v1;
 struct KRTrieIndex_v1
 {
     KPTrieIndex_v1 pt;
 };
-
-/*--------------------------------------------------------------------------
- * KRTrieIndex_v1
- */
-typedef struct KRTrieIndex_v1 KRTrieIndex_v1;
 
 /* initialize an index from file - can be NULL */
 rc_t KRTrieIndexOpen_v1 ( KRTrieIndex_v1 *self, struct KMMap const *mm, bool byteswap );
@@ -85,7 +81,7 @@ rc_t KRTrieIndexProject_v1 ( const KRTrieIndex_v1 *self,
 rc_t KRTrieIndexCheckConsistency_v1 ( const KRTrieIndex_v1 *self,
     int64_t *start_id, uint64_t *id_range, uint64_t *num_keys,
     uint64_t *num_rows, uint64_t *num_holes,
-    struct KIndex const *outer, bool key2id, bool id2key );
+    struct KRIndex const *outer, bool key2id, bool id2key );
 
 /*--------------------------------------------------------------------------
  * V2
@@ -150,7 +146,7 @@ uint32_t KRPTrieIndexID2Ord_v2 ( const KPTrieIndex_v2 *self, int64_t id );
 rc_t KRPTrieIndexCheckConsistency_v2 ( const KPTrieIndex_v2 *self,
     int64_t *start_id, uint64_t *id_range, uint64_t *num_keys,
     uint64_t *num_rows, uint64_t *num_holes,
-    struct KIndex const *outer, bool key2id, bool id2key, bool all_ids, bool convertFromV1 );
+    struct KRIndex const *outer, bool key2id, bool id2key, bool all_ids, bool convertFromV1 );
 
 /*--------------------------------------------------------------------------
  * KRTrieIndex_v2
@@ -191,22 +187,17 @@ rc_t KRTrieIndexProject_v2 ( const KRTrieIndex_v2 *self,
 rc_t KRTrieIndexCheckConsistency_v2 ( const KRTrieIndex_v2 *self,
     int64_t *start_id, uint64_t *id_range, uint64_t *num_keys,
     uint64_t *num_rows, uint64_t *num_holes,
-    struct KIndex const *outer, bool key2id, bool id2key, bool all_ids, bool convertFromV1 );
-
-
-/*--------------------------------------------------------------------------
- * KRU64Index_v3
- */
-struct KRU64Index_v3
-{
-    struct PBSTree *tree;
-    struct KMMap const *mm;
-};
+    struct KRIndex const *outer, bool key2id, bool id2key, bool all_ids, bool convertFromV1 );
 
 /*--------------------------------------------------------------------------
  * KRU64Index_v3
  */
 typedef struct KRU64Index_v3 KRU64Index_v3;
+struct KRU64Index_v3
+{
+    struct PBSTree *tree;
+    struct KMMap const *mm;
+};
 
 rc_t KRU64IndexOpen_v3 ( KRU64Index_v3 *self, struct KMMap const *mm, bool byteswap );
 rc_t KRU64IndexWhack_v3 ( KRU64Index_v3 *self );
@@ -219,12 +210,12 @@ rc_t KRU64IndexFindAll_v3 ( const KRU64Index_v3 *self, uint64_t offset,
     void* data );
 
 /*--------------------------------------------------------------------------
- * KIndex
+ * KRIndex
  *  an object capable of mapping an object to integer oid
  */
-struct KIndex
+struct KRIndex
 {
-    KIndexBase dad;
+    KIndex dad;
 
     const struct KDBManager *mgr;
     const struct KDatabase *db;
@@ -241,4 +232,4 @@ struct KIndex
     char path [ 1 ];
 };
 
-rc_t KRIndexMakeRead ( KIndex **idxp, const struct KDirectory *dir, const char *path );
+rc_t KRIndexMakeRead ( KRIndex **idxp, const struct KDirectory *dir, const char *path );

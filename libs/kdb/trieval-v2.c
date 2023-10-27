@@ -38,7 +38,7 @@
 rc_t KRTrieIndexCheckConsistency_v2 ( const KRTrieIndex_v2 *self,
     int64_t *start_id, uint64_t *id_range, uint64_t *num_keys,
     uint64_t *num_rows, uint64_t *num_holes,
-    struct KIndex const *outer, bool key2id, bool id2key, bool all_ids, bool convertFromV1  )
+    struct KRIndex const *outer, bool key2id, bool id2key, bool all_ids, bool convertFromV1  )
 {
     if ( self == NULL )
         return RC ( rcDB, rcIndex, rcValidating, rcParam, rcNull );
