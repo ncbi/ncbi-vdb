@@ -44,7 +44,7 @@ struct KDatabase;
 struct KTable;
 struct KWColumn;
 struct KDBManager;
-struct KMDataNode;
+struct KWMDataNode;
 
 #ifdef __cplusplus
 extern "C" {
@@ -68,7 +68,7 @@ struct KMetadata
     KMD5SumFmt * md5;
 
     /* root node */
-    KMDataNode *root;
+    struct KWMDataNode *root;
 
     KSymbol sym;
 

@@ -28,8 +28,8 @@
 
 #define TRACK_REFERENCES 0
 
-struct KMDataNodeNamelist;
-#define KNAMELIST_IMPL struct KMDataNodeNamelist
+struct KWMDataNodeNamelist;
+#define KNAMELIST_IMPL struct KWMDataNodeNamelist
 
 #include "wmeta.h"
 #include "wmetadatanode.h"
@@ -76,13 +76,13 @@ struct KMDataNodeNamelist;
 #include <assert.h>
 
 /*--------------------------------------------------------------------------
- * KMAttrNode
+ * KWMAttrNode
  */
 
-int64_t CC KMAttrNodeCmp ( const void *item, const BSTNode *n )
+int64_t CC KWMAttrNodeCmp ( const void *item, const BSTNode *n )
 {
 #define a ( ( const char* ) item )
-#define b ( ( const KMAttrNode* ) n )
+#define b ( ( const KWMAttrNode* ) n )
 
     return strcmp ( a, b -> name );
 
@@ -90,10 +90,10 @@ int64_t CC KMAttrNodeCmp ( const void *item, const BSTNode *n )
 #undef b
 }
 
-int64_t CC KMAttrNodeSort ( const BSTNode *item, const BSTNode *n )
+int64_t CC KWMAttrNodeSort ( const BSTNode *item, const BSTNode *n )
 {
-#define a ( ( const KMAttrNode* ) item )
-#define b ( ( const KMAttrNode* ) n )
+#define a ( ( const KWMAttrNode* ) item )
+#define b ( ( const KWMAttrNode* ) n )
 
     return strcmp ( a -> name, b -> name );
 
@@ -101,16 +101,16 @@ int64_t CC KMAttrNodeSort ( const BSTNode *item, const BSTNode *n )
 #undef b
 }
 
-void CC KMAttrNodeWhack ( BSTNode *n, void *data )
+void CC KWMAttrNodeWhack ( BSTNode *n, void *data )
 {
     free ( n );
 }
 
 static
-bool CC KMAttrNodeInflate ( PBSTNode *n, void *data )
+bool CC KWMAttrNodeInflate ( PBSTNode *n, void *data )
 {
-    KMAttrNode *b;
-    KMDataNodeInflateData *pb = data;
+    KWMAttrNode *b;
+    KWMDataNodeInflateData *pb = data;
 
     const char *name = n -> data . addr;
     size_t size = strlen ( name );
@@ -133,15 +133,15 @@ bool CC KMAttrNodeInflate ( PBSTNode *n, void *data )
     b -> value = & b -> name [ 1 + size ];
     b -> vsize = n -> data . size - size - 1;
     memmove ( b -> name, name, n -> data . size );
-    BSTreeInsert ( pb -> bst, & b -> n, KMAttrNodeSort );
+    BSTreeInsert ( pb -> bst, & b -> n, KWMAttrNodeSort );
     return false;
 }
 
-rc_t KMAttrNodeRename ( const KMAttrNode *self,
-    KMAttrNode **renamed, const char *name )
+rc_t KWMAttrNodeRename ( const KWMAttrNode *self,
+    KWMAttrNode **renamed, const char *name )
 {
     size_t size = strlen ( name );
-    KMAttrNode *b = malloc ( sizeof * b + self -> vsize + size );
+    KWMAttrNode *b = malloc ( sizeof * b + self -> vsize + size );
     if ( b == NULL )
         return RC ( rcDB, rcNode, rcRenaming, rcMemory, rcExhausted );
 
@@ -153,11 +153,11 @@ rc_t KMAttrNodeRename ( const KMAttrNode *self,
     return 0;
 }
 
-rc_t KMAttrNodeMake ( KMAttrNode **np,
+rc_t KWMAttrNodeMake ( KWMAttrNode **np,
     const char *name, const void *value, size_t vsize )
 {
     size_t size = strlen ( name );
-    KMAttrNode *n = malloc ( sizeof * n + vsize + size );
+    KWMAttrNode *n = malloc ( sizeof * n + vsize + size );
     if ( n == NULL )
         return RC ( rcDB, rcNode, rcConstructing, rcMemory, rcExhausted );
 
@@ -170,10 +170,10 @@ rc_t KMAttrNodeMake ( KMAttrNode **np,
     return 0;
 }
 
-static rc_t KMAttrNodeMakeCopy(KMAttrNode **node, KMAttrNode const *source)
+static rc_t KWMAttrNodeMakeCopy(KWMAttrNode **node, KWMAttrNode const *source)
 {
     size_t const size = &((uint8_t const *)source->value)[source->vsize] - ((uint8_t const *)source);
-    KMAttrNode *result = malloc(size);
+    KWMAttrNode *result = malloc(size);
     if (result == NULL)
         return RC ( rcDB, rcNode, rcConstructing, rcMemory, rcExhausted );
 
@@ -258,15 +258,17 @@ static KMDataNode_vt KWMDataNode_vt =
     KWMDataNodeListChildren
 };
 
+#define CAST() assert( bself->vt == &KWMDataNode_vt ); KWMDataNode * self = (KWMDataNode *)bself
+
 rc_t
-KWMDataNodeMakeRoot( KMDataNode ** node, KMetadata *meta )
+KWMDataNodeMakeRoot( KWMDataNode ** node, KMetadata *meta )
 {
     assert( node != NULL );
-    KMDataNode * ret = calloc ( 1, sizeof *ret );
+    KWMDataNode * ret = calloc ( 1, sizeof *ret );
     if ( ret == NULL )
         return RC ( rcDB, rcMetadata, rcConstructing, rcMemory, rcExhausted );
     ret -> dad . vt = & KWMDataNode_vt;
-    KRefcountInit ( & ret -> dad . refcount, 1, "KMDataNode", "make-read", "/" );
+    KRefcountInit ( & ret -> dad . refcount, 1, "KWMDataNode", "make-read", "/" );
     ret -> meta = meta;
     *node = ret;
 
@@ -274,10 +276,10 @@ KWMDataNodeMakeRoot( KMDataNode ** node, KMetadata *meta )
 }
 
 static
-int64_t CC KMDataNodeCmp ( const void *item, const BSTNode *n )
+int64_t CC KWMDataNodeCmp ( const void *item, const BSTNode *n )
 {
 #define a ( ( const char* ) item )
-#define b ( ( const KMDataNode* ) n )
+#define b ( ( const KWMDataNode* ) n )
 
     return strcmp ( a, b -> name );
 
@@ -286,10 +288,10 @@ int64_t CC KMDataNodeCmp ( const void *item, const BSTNode *n )
 }
 
 static
-int64_t CC KMDataNodeSort ( const BSTNode *item, const BSTNode *n )
+int64_t CC KWMDataNodeSort ( const BSTNode *item, const BSTNode *n )
 {
-#define a ( ( const KMDataNode* ) item )
-#define b ( ( const KMDataNode* ) n )
+#define a ( ( const KWMDataNode* ) item )
+#define b ( ( const KWMDataNode* ) n )
 
     return strcmp ( a -> name, b -> name );
 
@@ -306,19 +308,21 @@ DataNodeWhack ( BSTNode *n, void *data )
 
 static
 rc_t CC
-KWMDataNodeWhack ( KMDataNode *self )
+KWMDataNodeWhack ( KMDataNode *bself )
 {
-    BSTreeWhack ( & self -> attr, KMAttrNodeWhack, NULL );
+    CAST();
+
+    BSTreeWhack ( & self -> attr, KWMAttrNodeWhack, NULL );
     BSTreeWhack ( & self -> child, DataNodeWhack, NULL );
     free ( self -> value );
-    return KMDataNodeBaseWhack ( self );
+    return KMDataNodeBaseWhack ( bself );
 }
 
 static
 rc_t CC
-KWMDataNodeRelease ( const KMDataNode *cself )
+KWMDataNodeRelease ( const KMDataNode *bself )
 {
-    KMDataNode *self = ( KMDataNode* ) cself;
+    CAST();
 
     if ( self != NULL )
     {
@@ -327,7 +331,7 @@ KWMDataNodeRelease ( const KMDataNode *cself )
         case krefOkay:
             break;
         case krefWhack:
-            KMDataNodeWhack( self );
+            KMDataNodeWhack( & self -> dad );
             break;
         case krefLimit:
             return RC ( rcDB, rcMetadata, rcReleasing, rcRange, rcExcessive );
@@ -341,8 +345,8 @@ KWMDataNodeRelease ( const KMDataNode *cself )
 bool CC KWMDataNodeInflate_v1 ( PBSTNode *n, void *data )
 {
     void *value;
-    KMDataNode *b;
-    KMDataNodeInflateData *pb = data;
+    KWMDataNode *b;
+    KWMDataNodeInflateData *pb = data;
 
     /* v1 metadata are flat, with the name
        stored as a NUL terminated string
@@ -377,7 +381,7 @@ bool CC KWMDataNodeInflate_v1 ( PBSTNode *n, void *data )
     if ( b -> vsize == 0 )
     {
         b -> value = NULL;
-        BSTreeInsert ( pb -> bst, & b -> dad . n, KMDataNodeSort );
+        BSTreeInsert ( pb -> bst, & b -> dad . n, KWMDataNodeSort );
         return false;
     }
 
@@ -387,7 +391,7 @@ bool CC KWMDataNodeInflate_v1 ( PBSTNode *n, void *data )
     {
         memmove ( value, b -> value, b -> vsize );
         b -> value = value;
-        BSTreeInsert ( pb -> bst, & b -> dad . n, KMDataNodeSort );
+        BSTreeInsert ( pb -> bst, & b -> dad . n, KWMDataNodeSort );
         return false;
     }
 
@@ -397,7 +401,7 @@ bool CC KWMDataNodeInflate_v1 ( PBSTNode *n, void *data )
 }
 
 static
-rc_t KMDataNodeInflateAttr ( KMDataNode *n, bool byteswap )
+rc_t KWMDataNodeInflateAttr ( KWMDataNode *n, bool byteswap )
 {
     PBSTree *bst;
     rc_t rc = PBSTreeMake ( & bst, n -> value, n -> vsize, byteswap );
@@ -405,7 +409,7 @@ rc_t KMDataNodeInflateAttr ( KMDataNode *n, bool byteswap )
         rc = RC ( rcDB, rcMetadata, rcConstructing, rcData, rcCorrupt );
     else
     {
-        KMDataNodeInflateData pb;
+        KWMDataNodeInflateData pb;
         size_t bst_size = PBSTreeSize ( bst );
 
         pb . meta = n -> meta;
@@ -415,7 +419,7 @@ rc_t KMDataNodeInflateAttr ( KMDataNode *n, bool byteswap )
         pb . node_child_limit = 0;
         pb . rc = 0;
         pb . byteswap = byteswap;
-        PBSTreeDoUntil ( bst, 0, KMAttrNodeInflate, & pb );
+        PBSTreeDoUntil ( bst, 0, KWMAttrNodeInflate, & pb );
         rc = pb . rc;
 
         PBSTreeWhack ( bst );
@@ -427,7 +431,7 @@ rc_t KMDataNodeInflateAttr ( KMDataNode *n, bool byteswap )
 }
 
 static
-rc_t KMDataNodeInflateChild ( KMDataNode *n,
+rc_t KWMDataNodeInflateChild ( KWMDataNode *n,
     size_t node_size_limit, uint32_t node_child_limit, bool byteswap )
 {
     PBSTree *bst;
@@ -473,7 +477,7 @@ rc_t KMDataNodeInflateChild ( KMDataNode *n,
         }
 
         if ( inflate ) {
-            KMDataNodeInflateData pb;
+            KWMDataNodeInflateData pb;
 
             pb . meta = n -> meta;
             pb . par = n;
@@ -494,10 +498,11 @@ rc_t KMDataNodeInflateChild ( KMDataNode *n,
     return rc;
 }
 
-bool CC KWMDataNodeInflate ( PBSTNode *n, void *data )
+bool CC
+KWMDataNodeInflate ( PBSTNode *n, void *data )
 {
-    KMDataNode *b;
-    KMDataNodeInflateData *pb = data;
+    KWMDataNode *b;
+    KWMDataNodeInflateData *pb = data;
 
     /* v2 names are preceded by a decremented length byte
        that has its upper two bits dedicated to
@@ -530,11 +535,11 @@ bool CC KWMDataNodeInflate ( PBSTNode *n, void *data )
     KRefcountInit ( & b -> dad . refcount, 1, "KMDataNode", "inflate", b -> name );
     b -> read_only = 0;
 
-    pb -> rc = ( bits & 1 ) != 0 ? KMDataNodeInflateAttr ( b, pb -> byteswap ) : 0;
+    pb -> rc = ( bits & 1 ) != 0 ? KWMDataNodeInflateAttr ( b, pb -> byteswap ) : 0;
     if ( pb -> rc == 0 )
     {
         pb -> rc = ( bits & 2 ) != 0 ?
-            KMDataNodeInflateChild ( b, pb -> node_size_limit, pb -> node_child_limit, pb -> byteswap ) : 0;
+            KWMDataNodeInflateChild ( b, pb -> node_size_limit, pb -> node_child_limit, pb -> byteswap ) : 0;
         if ( pb -> rc == 0 )
         {
             void *value;
@@ -542,7 +547,7 @@ bool CC KWMDataNodeInflate ( PBSTNode *n, void *data )
             if ( b -> vsize == 0 )
             {
                 b -> value = NULL;
-                BSTreeInsert ( pb -> bst, & b -> dad . n, KMDataNodeSort );
+                BSTreeInsert ( pb -> bst, & b -> dad . n, KWMDataNodeSort );
                 return false;
             }
 
@@ -551,7 +556,7 @@ bool CC KWMDataNodeInflate ( PBSTNode *n, void *data )
             {
                 memmove ( value, b -> value, b -> vsize );
                 b -> value = value;
-                BSTreeInsert ( pb -> bst, & b -> dad . n, KMDataNodeSort );
+                BSTreeInsert ( pb -> bst, & b -> dad . n, KWMDataNodeSort );
                 return false;
             }
             pb -> rc = RC ( rcDB, rcMetadata, rcConstructing, rcMemory, rcExhausted );
@@ -559,7 +564,7 @@ bool CC KWMDataNodeInflate ( PBSTNode *n, void *data )
             BSTreeWhack ( & b -> child, DataNodeWhack, NULL );
         }
 
-        BSTreeWhack ( & b -> attr, KMAttrNodeWhack, NULL );
+        BSTreeWhack ( & b -> attr, KWMAttrNodeWhack, NULL );
     }
 
     free ( b );
@@ -569,9 +574,9 @@ bool CC KWMDataNodeInflate ( PBSTNode *n, void *data )
 
 /* Find
  */
-rc_t KMDataNodeFind ( const KMDataNode *cself, KMDataNode **np, char **path )
+rc_t KWMDataNodeFind ( const KWMDataNode *cself, KWMDataNode **np, char **path )
 {
-    KMDataNode *found, *self= ( KMDataNode* ) cself;
+    KWMDataNode *found, *self= ( KWMDataNode* ) cself;
 
     char *end, *name = * path;
 
@@ -618,7 +623,7 @@ rc_t KMDataNodeFind ( const KMDataNode *cself, KMDataNode **np, char **path )
         }
 
         /* find actual path */
-        found = ( KMDataNode* ) BSTreeFind ( & self -> child, name, KMDataNodeCmp );
+        found = ( KWMDataNode* ) BSTreeFind ( & self -> child, name, KWMDataNodeCmp );
         if ( found == NULL )
         {
             /* not found also gets partially found state */
@@ -637,7 +642,7 @@ rc_t KMDataNodeFind ( const KMDataNode *cself, KMDataNode **np, char **path )
 
 /* Make
  */
-rc_t KMDataNodeMake ( KMDataNode *self, KMDataNode **np, char *name )
+rc_t KWMDataNodeMake ( KWMDataNode *self, KWMDataNode **np, char *name )
 {
     rc_t rc;
     char *end;
@@ -647,7 +652,7 @@ rc_t KMDataNodeMake ( KMDataNode *self, KMDataNode **np, char *name )
     {
         BSTNode *x;
         size_t size;
-        KMDataNode *n;
+        KWMDataNode *n;
 
         /* segment path */
         end = strchr ( name, '/' );
@@ -700,16 +705,16 @@ rc_t KMDataNodeMake ( KMDataNode *self, KMDataNode **np, char *name )
         BSTreeInit ( & n -> attr );
         BSTreeInit ( & n -> child );
         strcpy ( n -> name, name );
-        KRefcountInit ( & n -> dad . refcount, 1, "KMDataNode", "make", n -> name );
+        KRefcountInit ( & n -> dad . refcount, 1, "KWMDataNode", "make", n -> name );
         n -> read_only = 0;
 
         /* insert */
         rc = BSTreeInsertUnique ( & self -> child,
-            & n -> dad . n, & x, KMDataNodeSort );
+            & n -> dad . n, & x, KWMDataNodeSort );
         if ( rc != 0 )
         {
             free ( n );
-            n = ( KMDataNode* ) x;
+            n = ( KWMDataNode* ) x;
         }
 
         /* transition */
@@ -723,10 +728,12 @@ rc_t KMDataNodeMake ( KMDataNode *self, KMDataNode **np, char *name )
 
 static
 rc_t CC
-KWMDataNodeVOpenNodeRead ( const KMDataNode *self, const KMDataNode **node, const char *path, va_list args )
+KWMDataNodeVOpenNodeRead ( const KMDataNode *bself, const KMDataNode **node, const char *path, va_list args )
 {
+    CAST();
+
     rc_t rc;
-    KMDataNode *found;
+    KWMDataNode *found;
     char full [ 4096 ], *p = full;
 
     if ( node == NULL )
@@ -754,7 +761,7 @@ KWMDataNodeVOpenNodeRead ( const KMDataNode *self, const KMDataNode **node, cons
             return RC ( rcDB, rcNode, rcOpening, rcPath, rcExcessive );
     }
 
-    rc = KMDataNodeFind ( self, & found, & p );
+    rc = KWMDataNodeFind ( self, & found, & p );
     if ( rc == 0 )
     {
         /* check if the node is not open */
@@ -769,8 +776,8 @@ KWMDataNodeVOpenNodeRead ( const KMDataNode *self, const KMDataNode **node, cons
             return RC ( rcDB, rcNode, rcOpening, rcNode, rcBusy );
         }
 
-        KMDataNodeAddRef ( found );
-        * node = found;
+        KMDataNodeAddRef ( & found -> dad );
+        * node = & found -> dad;
     }
 
     DBGMSG(DBG_KDB, DBG_FLAG(DBG_KDB_KDB),
@@ -792,11 +799,15 @@ LIB_EXPORT rc_t CC KMDataNodeOpenNodeUpdate ( KMDataNode *self,
     return rc;
 }
 
-LIB_EXPORT rc_t CC KMDataNodeVOpenNodeUpdate ( KMDataNode *self,
+LIB_EXPORT
+rc_t CC
+KMDataNodeVOpenNodeUpdate ( KMDataNode *bself,
     KMDataNode **node, const char *path, va_list args )
 {
+    CAST();
+
     rc_t rc = 0;
-    KMDataNode *found;
+    KWMDataNode *found;
     char full [ 4096 ], *p = full;
 
     if ( node == NULL )
@@ -833,7 +844,7 @@ LIB_EXPORT rc_t CC KMDataNodeVOpenNodeUpdate ( KMDataNode *self,
     }
 
     /* find an existing one */
-    rc = KMDataNodeFind ( self, & found, & p );
+    rc = KWMDataNodeFind ( self, & found, & p );
     if ( rc == 0 )
     {
         if ( atomic32_read ( & found -> dad . refcount ) != 1 )
@@ -841,7 +852,7 @@ LIB_EXPORT rc_t CC KMDataNodeVOpenNodeUpdate ( KMDataNode *self,
     }
     else if ( GetRCState ( rc ) == rcNotFound )
     {
-        rc = KMDataNodeMake ( found, & found, p );
+        rc = KWMDataNodeMake ( found, & found, p );
         if ( rc != 0 )
             return rc;
     }
@@ -850,9 +861,9 @@ LIB_EXPORT rc_t CC KMDataNodeVOpenNodeUpdate ( KMDataNode *self,
         return rc;
     }
 
-    KMDataNodeAddRef ( found );
+    KMDataNodeAddRef ( & found -> dad );
     found -> read_only = false;
-    * node = found;
+    * node = & found -> dad;
 
     DBGMSG(DBG_KDB, DBG_FLAG(DBG_KDB_KDB),
                 ("KMDataNodeVOpenNodeUpdate(%s) = %d\n", full, rc));
@@ -873,8 +884,9 @@ LIB_EXPORT rc_t CC KMDataNodeVOpenNodeUpdate ( KMDataNode *self,
  */
 static
 rc_t CC
-KWMDataNodeByteOrder ( const KMDataNode *self, bool *reversed )
+KWMDataNodeByteOrder ( const KMDataNode *bself, bool *reversed )
 {
+    CAST();
     return KMetadataByteOrder ( self -> meta, reversed );
 }
 
@@ -894,10 +906,12 @@ KWMDataNodeByteOrder ( const KMDataNode *self, bool *reversed )
  */
 static
 rc_t CC
-KWMDataNodeRead ( const KMDataNode *self,
+KWMDataNodeRead ( const KMDataNode *bself,
     size_t offset, void *buffer, size_t bsize,
     size_t *num_read, size_t *remaining )
 {
+    CAST();
+
     rc_t rc;
 
     size_t dummy;
@@ -941,8 +955,12 @@ KWMDataNodeRead ( const KMDataNode *self,
  *  reach into node and get address
  *  returns raw pointer and node size
  */
-static rc_t CC KWMDataNodeAddr ( const KMDataNode *self, const void **addr, size_t *size )
+static
+rc_t CC
+KWMDataNodeAddr ( const KMDataNode *bself, const void **addr, size_t *size )
 {
+    CAST();
+
     rc_t rc;
 
     size_t dummy;
@@ -970,8 +988,12 @@ static rc_t CC KWMDataNodeAddr ( const KMDataNode *self, const void **addr, size
  *
  *  "buffer" [ IN ] and "size" [ IN ] - new value data
  */
-LIB_EXPORT rc_t CC KMDataNodeWrite ( KMDataNode *self, const void *buffer, size_t size )
+LIB_EXPORT
+rc_t CC
+KMDataNodeWrite ( KMDataNode *bself, const void *buffer, size_t size )
 {
+    CAST();
+
     if ( self == NULL )
         return RC ( rcDB, rcNode, rcWriting, rcSelf, rcNull );
     if ( self -> meta == NULL )
@@ -1025,8 +1047,12 @@ LIB_EXPORT rc_t CC KMDataNodeWrite ( KMDataNode *self, const void *buffer, size_
  *
  *  "buffer" [ IN ] and "size" [ IN ] - value data to be appended
  */
-LIB_EXPORT rc_t CC KMDataNodeAppend ( KMDataNode *self, const void *buffer, size_t size )
+LIB_EXPORT
+rc_t CC
+KMDataNodeAppend ( KMDataNode *bself, const void *buffer, size_t size )
 {
+    CAST();
+
     if ( self == NULL )
         return RC ( rcDB, rcNode, rcWriting, rcSelf, rcNull );
     if ( self -> meta == NULL )
@@ -1075,10 +1101,12 @@ KWMDataNodeReadB8 ( const KMDataNode *self, void *b8 )
 
 static
 rc_t CC
-KWMDataNodeReadB16 ( const KMDataNode *self, void *b16 )
+KWMDataNodeReadB16 ( const KMDataNode *bself, void *b16 )
 {
+    CAST();
+
     size_t num_read, remaining;
-    rc_t rc = KMDataNodeRead ( self, 0, b16, 2, & num_read, & remaining );
+    rc_t rc = KMDataNodeRead ( bself, 0, b16, 2, & num_read, & remaining );
     if ( rc == 0 )
     {
         if ( remaining != 0 )
@@ -1094,10 +1122,12 @@ KWMDataNodeReadB16 ( const KMDataNode *self, void *b16 )
 
 static
 rc_t CC
-KWMDataNodeReadB32 ( const KMDataNode *self, void *b32 )
+KWMDataNodeReadB32 ( const KMDataNode *bself, void *b32 )
 {
+    CAST();
+
     size_t num_read, remaining;
-    rc_t rc = KMDataNodeRead ( self, 0, b32, 4, & num_read, & remaining );
+    rc_t rc = KMDataNodeRead ( bself, 0, b32, 4, & num_read, & remaining );
     if ( rc == 0 )
     {
         if ( remaining != 0 )
@@ -1113,10 +1143,12 @@ KWMDataNodeReadB32 ( const KMDataNode *self, void *b32 )
 
 static
 rc_t CC
-KWMDataNodeReadB64 ( const KMDataNode *self, void *b64 )
+KWMDataNodeReadB64 ( const KMDataNode *bself, void *b64 )
 {
+    CAST();
+
     size_t num_read, remaining;
-    rc_t rc = KMDataNodeRead ( self, 0, b64, 8, & num_read, & remaining );
+    rc_t rc = KMDataNodeRead ( bself, 0, b64, 8, & num_read, & remaining );
     if ( rc == 0 )
     {
         if ( remaining != 0 )
@@ -1132,10 +1164,12 @@ KWMDataNodeReadB64 ( const KMDataNode *self, void *b64 )
 
 static
 rc_t CC
-KWMDataNodeReadB128 ( const KMDataNode *self, void *b128 )
+KWMDataNodeReadB128 ( const KMDataNode *bself, void *b128 )
 {
+    CAST();
+
     size_t num_read, remaining;
-    rc_t rc = KMDataNodeRead ( self, 0, b128, 16,
+    rc_t rc = KMDataNodeRead ( bself, 0, b128, 16,
         & num_read, & remaining );
     if ( rc == 0 )
     {
@@ -1167,10 +1201,12 @@ KWMDataNodeReadB128 ( const KMDataNode *self, void *b128 )
  */
 static
 rc_t CC
-KWMDataNodeReadAsI16 ( const KMDataNode *self, int16_t *i )
+KWMDataNodeReadAsI16 ( const KMDataNode *bself, int16_t *i )
 {
+    CAST();
+
     size_t num_read, remaining;
-    rc_t rc = KMDataNodeRead ( self, 0, i, sizeof * i,
+    rc_t rc = KMDataNodeRead ( bself, 0, i, sizeof * i,
         & num_read, & remaining );
     if ( rc == 0 )
     {
@@ -1195,10 +1231,12 @@ KWMDataNodeReadAsI16 ( const KMDataNode *self, int16_t *i )
 
 static
 rc_t CC
-KWMDataNodeReadAsU16 ( const KMDataNode *self, uint16_t *u )
+KWMDataNodeReadAsU16 ( const KMDataNode *bself, uint16_t *u )
 {
+    CAST();
+
     size_t num_read, remaining;
-    rc_t rc = KMDataNodeRead ( self, 0, u, sizeof * u,
+    rc_t rc = KMDataNodeRead ( bself, 0, u, sizeof * u,
         & num_read, & remaining );
     if ( rc == 0 )
     {
@@ -1223,10 +1261,12 @@ KWMDataNodeReadAsU16 ( const KMDataNode *self, uint16_t *u )
 
 static
 rc_t CC
-KWMDataNodeReadAsI32 ( const KMDataNode *self, int32_t *i )
+KWMDataNodeReadAsI32 ( const KMDataNode *bself, int32_t *i )
 {
+    CAST();
+
     size_t num_read, remaining;
-    rc_t rc = KMDataNodeRead ( self, 0, i, sizeof * i,
+    rc_t rc = KMDataNodeRead ( bself, 0, i, sizeof * i,
         & num_read, & remaining );
     if ( rc == 0 )
     {
@@ -1257,10 +1297,12 @@ KWMDataNodeReadAsI32 ( const KMDataNode *self, int32_t *i )
 
 static
 rc_t CC
-KWMDataNodeReadAsU32 ( const KMDataNode *self, uint32_t *u )
+KWMDataNodeReadAsU32 ( const KMDataNode *bself, uint32_t *u )
 {
+    CAST();
+
     size_t num_read, remaining;
-    rc_t rc = KMDataNodeRead ( self, 0, u, sizeof * u,
+    rc_t rc = KMDataNodeRead ( bself, 0, u, sizeof * u,
         & num_read, & remaining );
     if ( rc == 0 )
     {
@@ -1291,10 +1333,12 @@ KWMDataNodeReadAsU32 ( const KMDataNode *self, uint32_t *u )
 
 static
 rc_t CC
-KWMDataNodeReadAsI64 ( const KMDataNode *self, int64_t *i )
+KWMDataNodeReadAsI64 ( const KMDataNode *bself, int64_t *i )
 {
+    CAST();
+
     size_t num_read, remaining;
-    rc_t rc = KMDataNodeRead ( self, 0, i, sizeof * i,
+    rc_t rc = KMDataNodeRead ( bself, 0, i, sizeof * i,
         & num_read, & remaining );
     if ( rc == 0 )
     {
@@ -1331,10 +1375,12 @@ KWMDataNodeReadAsI64 ( const KMDataNode *self, int64_t *i )
 
 static
 rc_t CC
-KWMDataNodeReadAsU64 ( const KMDataNode *self, uint64_t *u )
+KWMDataNodeReadAsU64 ( const KMDataNode *bself, uint64_t *u )
 {
+    CAST();
+
     size_t num_read, remaining;
-    rc_t rc = KMDataNodeRead ( self, 0, u, sizeof * u,
+    rc_t rc = KMDataNodeRead ( bself, 0, u, sizeof * u,
         & num_read, & remaining );
     if ( rc == 0 )
     {
@@ -1371,10 +1417,12 @@ KWMDataNodeReadAsU64 ( const KMDataNode *self, uint64_t *u )
 
 static
 rc_t CC
-KWMDataNodeReadAsF64 ( const KMDataNode *self, double *f )
+KWMDataNodeReadAsF64 ( const KMDataNode *bself, double *f )
 {
+    CAST();
+
     size_t num_read, remaining;
-    rc_t rc = KMDataNodeRead ( self, 0, f, sizeof * f,
+    rc_t rc = KMDataNodeRead ( bself, 0, f, sizeof * f,
         & num_read, & remaining );
     if ( rc == 0 )
     {
@@ -1494,8 +1542,10 @@ LIB_EXPORT rc_t CC KMDataNodeWriteCString ( KMDataNode *self, const char *str )
  */
 static
 rc_t CC
-KWMDataNodeReadAttr ( const KMDataNode *self, const char *name, char *buffer, size_t bsize, size_t *size )
+KWMDataNodeReadAttr ( const KMDataNode *bself, const char *name, char *buffer, size_t bsize, size_t *size )
 {
+    CAST();
+
     rc_t rc;
 
     if ( size == NULL )
@@ -1512,8 +1562,8 @@ KWMDataNodeReadAttr ( const KMDataNode *self, const char *name, char *buffer, si
             rc = RC ( rcDB, rcMetadata, rcReading, rcBuffer, rcNull );
         else
         {
-            const KMAttrNode *n = ( const KMAttrNode* )
-                BSTreeFind ( & self -> attr, name, KMAttrNodeCmp );
+            const KWMAttrNode *n = ( const KWMAttrNode* )
+                BSTreeFind ( & self -> attr, name, KWMAttrNodeCmp );
             if ( n == NULL )
             {
                 * size = 0;
@@ -1549,12 +1599,15 @@ KWMDataNodeReadAttr ( const KMDataNode *self, const char *name, char *buffer, si
  *
  *  "value" [ IN ] - NUL terminated attribute value
  */
-LIB_EXPORT rc_t CC KMDataNodeWriteAttr ( KMDataNode *self,
-    const char *name, const char *value )
+LIB_EXPORT
+rc_t CC
+KMDataNodeWriteAttr ( KMDataNode *bself, const char *name, const char *value )
 {
+    CAST();
+
     rc_t rc;
     size_t size;
-    KMAttrNode *n;
+    KWMAttrNode *n;
 
     if ( self == NULL )
         return RC ( rcDB, rcNode, rcWriting, rcSelf, rcNull );
@@ -1570,16 +1623,16 @@ LIB_EXPORT rc_t CC KMDataNodeWriteAttr ( KMDataNode *self,
         return RC ( rcDB, rcNode, rcWriting, rcNode, rcReadonly );
 
     size = ( value == NULL ) ? 0 : strlen ( value );
-    rc = KMAttrNodeMake ( & n, name, value, size );
+    rc = KWMAttrNodeMake ( & n, name, value, size );
     if ( rc == 0 )
     {
         BSTNode *x;
         if ( BSTreeInsertUnique ( & self -> attr,
-             & n -> n, & x, KMAttrNodeSort ) != 0 )
+             & n -> n, & x, KWMAttrNodeSort ) != 0 )
         {
             BSTreeUnlink ( & self -> attr, x );
-            KMAttrNodeWhack ( x, NULL );
-            BSTreeInsert ( & self -> attr, & n -> n, KMAttrNodeSort );
+            KWMAttrNodeWhack ( x, NULL );
+            BSTreeInsert ( & self -> attr, & n -> n, KWMAttrNodeSort );
         }
 
         self -> meta -> dirty = true;
@@ -1820,9 +1873,9 @@ KWMDataNodeReadAttrAsF64 ( const KMDataNode *self, const char *attr, double *f )
  * VDrop
  *  drop some or all node content
  */
-rc_t KMDataNodeDropAll_int ( KMDataNode *self )
+rc_t KWMDataNodeDropAll_int ( KWMDataNode *self )
 {
-    BSTreeWhack ( & self -> attr, KMAttrNodeWhack, NULL );
+    BSTreeWhack ( & self -> attr, KWMAttrNodeWhack, NULL );
     BSTreeInit ( & self -> attr );
 
     BSTreeWhack ( & self -> child, DataNodeWhack, NULL );
@@ -1836,8 +1889,12 @@ rc_t KMDataNodeDropAll_int ( KMDataNode *self )
     return 0;
 }
 
-LIB_EXPORT rc_t CC KMDataNodeDropAll ( KMDataNode *self )
+LIB_EXPORT
+rc_t CC
+KMDataNodeDropAll ( KMDataNode *bself )
 {
+    CAST();
+
     if ( self == NULL )
         return RC ( rcDB, rcNode, rcClearing, rcSelf, rcNull );
     if ( self -> meta == NULL )
@@ -1845,11 +1902,15 @@ LIB_EXPORT rc_t CC KMDataNodeDropAll ( KMDataNode *self )
     if ( self -> read_only )
         return RC ( rcDB, rcNode, rcClearing, rcNode, rcReadonly );
 
-    return KMDataNodeDropAll_int(self);
+    return KWMDataNodeDropAll_int(self);
 }
 
-LIB_EXPORT rc_t CC KMDataNodeDropAttr ( KMDataNode *self, const char *attr )
+LIB_EXPORT
+rc_t CC
+KMDataNodeDropAttr ( KMDataNode *bself, const char *attr )
 {
+    CAST();
+
     if ( self == NULL )
         return RC ( rcDB, rcNode, rcUpdating, rcSelf, rcNull );
     if ( self -> meta == NULL )
@@ -1864,18 +1925,18 @@ LIB_EXPORT rc_t CC KMDataNodeDropAttr ( KMDataNode *self, const char *attr )
     /* recognize wildcard */
     if ( attr [ 0 ] == '*' && attr [ 1 ] == 0 )
     {
-        BSTreeWhack ( & self -> attr, KMAttrNodeWhack, NULL );
+        BSTreeWhack ( & self -> attr, KWMAttrNodeWhack, NULL );
         BSTreeInit ( & self -> attr );
     }
     else
     {
-        KMAttrNode *found = ( KMAttrNode* )
-            BSTreeFind ( & self -> attr, attr, KMAttrNodeCmp );
+        KWMAttrNode *found = ( KWMAttrNode* )
+            BSTreeFind ( & self -> attr, attr, KWMAttrNodeCmp );
         if ( found == NULL )
             return RC ( rcDB, rcNode, rcUpdating, rcAttr, rcNotFound );
 
         BSTreeUnlink ( & self -> attr, & found -> n );
-        KMAttrNodeWhack ( & found -> n, NULL );
+        KWMAttrNodeWhack ( & found -> n, NULL );
     }
 
     self -> meta -> dirty = true;
@@ -1895,11 +1956,15 @@ LIB_EXPORT rc_t CC KMDataNodeDropChild ( KMDataNode *self, const char *path, ...
     return rc;
 }
 
-LIB_EXPORT rc_t CC KMDataNodeVDropChild ( KMDataNode *self, const char *path, va_list args )
+LIB_EXPORT
+rc_t CC
+KMDataNodeVDropChild ( KMDataNode *bself, const char *path, va_list args )
 {
+    CAST();
+
     int len = 0;
     rc_t rc;
-    KMDataNode *found;
+    KWMDataNode *found;
     char full [ 4096 ], *p = full;
 
     if ( self == NULL )
@@ -1925,7 +1990,7 @@ LIB_EXPORT rc_t CC KMDataNodeVDropChild ( KMDataNode *self, const char *path, va
     if ( self -> read_only )
         return RC ( rcDB, rcNode, rcUpdating, rcNode, rcReadonly );
 
-    rc = KMDataNodeFind ( self, & found, & p );
+    rc = KWMDataNodeFind ( self, & found, & p );
     if ( GetRCState ( rc ) == rcNotFound )
     {
         if ( p [ 0 ] != '*' || p [ 1 ] != 0 )
@@ -1937,7 +2002,7 @@ LIB_EXPORT rc_t CC KMDataNodeVDropChild ( KMDataNode *self, const char *path, va
     else
     {
         BSTreeUnlink ( & self -> child, & found -> dad . n );
-        KMDataNodeRelease ( found );
+        KMDataNodeRelease ( & found -> dad );
     }
 
     self -> meta -> dirty = true;
@@ -1955,10 +2020,14 @@ LIB_EXPORT rc_t CC KMDataNodeVDropChild ( KMDataNode *self, const char *path, va
  *  "to" [ IN ] - NUL terminated string in UTF-8
  *  giving new simple attr name
  */
-LIB_EXPORT rc_t CC KMDataNodeRenameAttr ( KMDataNode *self, const char *from, const char *to )
+LIB_EXPORT
+rc_t CC
+KMDataNodeRenameAttr ( KMDataNode *bself, const char *from, const char *to )
 {
+    CAST();
+
     rc_t rc;
-    KMAttrNode *found, *renamed;
+    KWMAttrNode *found, *renamed;
 
     if ( self == NULL )
         return RC ( rcDB, rcNode, rcRenaming, rcSelf, rcNull );
@@ -1971,27 +2040,27 @@ LIB_EXPORT rc_t CC KMDataNodeRenameAttr ( KMDataNode *self, const char *from, co
     if ( self -> read_only )
         return RC ( rcDB, rcNode, rcRenaming, rcNode, rcReadonly );
 
-    found = ( KMAttrNode* )
-        BSTreeFind ( & self -> attr, from, KMAttrNodeCmp );
+    found = ( KWMAttrNode* )
+        BSTreeFind ( & self -> attr, from, KWMAttrNodeCmp );
     if ( found == NULL )
         return RC ( rcDB, rcNode, rcRenaming, rcAttr, rcNotFound );
 
-    rc = KMAttrNodeRename ( found, & renamed, to );
+    rc = KWMAttrNodeRename ( found, & renamed, to );
     if ( rc == 0 )
     {
         BSTNode *x;
         rc = BSTreeInsertUnique ( & self -> attr,
-            & renamed -> n, & x, KMAttrNodeSort );
+            & renamed -> n, & x, KWMAttrNodeSort );
         if ( rc != 0 )
         {
-            KMAttrNodeWhack ( & renamed -> n, NULL );
+            KWMAttrNodeWhack ( & renamed -> n, NULL );
             if ( x == & found -> n )
                 return 0;
             return RC ( rcDB, rcNode, rcRenaming, rcAttr, rcExists );
         }
 
         BSTreeUnlink ( & self -> attr, & found -> n );
-        KMAttrNodeWhack ( & found -> n, NULL );
+        KWMAttrNodeWhack ( & found -> n, NULL );
         self -> meta -> dirty = true;
     }
 
@@ -1999,16 +2068,20 @@ LIB_EXPORT rc_t CC KMDataNodeRenameAttr ( KMDataNode *self, const char *from, co
 }
 
 static
-void CC KMDataNodeRelinkParent ( BSTNode *n, void *data )
+void CC KWMDataNodeRelinkParent ( BSTNode *n, void *data )
 {
-    ( ( KMDataNode* ) n ) -> par = data;
+    ( ( KWMDataNode* ) n ) -> par = data;
 }
 
-LIB_EXPORT rc_t CC KMDataNodeRenameChild ( KMDataNode *self, const char *from, const char *to )
+LIB_EXPORT
+rc_t CC
+KMDataNodeRenameChild ( KMDataNode *bself, const char *from, const char *to )
 {
+    CAST();
+
     int len;
     rc_t rc;
-    KMDataNode *found;
+    KWMDataNode *found;
     char full [ 4096 ], *p = full;
 
     if ( self == NULL )
@@ -2027,10 +2100,10 @@ LIB_EXPORT rc_t CC KMDataNodeRenameChild ( KMDataNode *self, const char *from, c
     if ( len < 0 || len >= sizeof full )
         return RC ( rcDB, rcNode, rcRenaming, rcPath, rcExcessive );
 
-    rc = KMDataNodeFind ( self, & found, & p );
+    rc = KWMDataNodeFind ( self, & found, & p );
     if ( rc == 0 )
     {
-        KMDataNode *renamed;
+        KWMDataNode *renamed;
 
         if ( atomic32_read ( & found -> dad . refcount ) != 1 )
             return RC ( rcDB, rcNode, rcRenaming, rcNode, rcBusy );
@@ -2039,10 +2112,10 @@ LIB_EXPORT rc_t CC KMDataNodeRenameChild ( KMDataNode *self, const char *from, c
         if ( len < 0 || len >= sizeof full )
             return RC ( rcDB, rcNode, rcRenaming, rcPath, rcExcessive );
 
-        rc = KMDataNodeFind ( self, & renamed, & p );
+        rc = KWMDataNodeFind ( self, & renamed, & p );
         if ( GetRCState ( rc ) == rcNotFound )
         {
-            rc = KMDataNodeMake ( renamed, & renamed, p );
+            rc = KWMDataNodeMake ( renamed, & renamed, p );
             if ( rc == 0 )
             {
                 BSTreeUnlink ( & found -> par -> child, & found -> dad . n );
@@ -2053,14 +2126,14 @@ LIB_EXPORT rc_t CC KMDataNodeRenameChild ( KMDataNode *self, const char *from, c
                 renamed -> child = found -> child;
                 BSTreeInit ( & found -> child );
                 BSTreeForEach ( & renamed -> child,
-                    false, KMDataNodeRelinkParent, renamed );
+                    false, KWMDataNodeRelinkParent, renamed );
 
                 renamed -> value = found -> value;
                 renamed -> vsize = found -> vsize;
                 found -> value = NULL;
                 found -> vsize = 0;
 
-                KMDataNodeRelease ( found );
+                KMDataNodeRelease ( & found -> dad );
                 self -> meta -> dirty = true;
             }
         }
@@ -2076,69 +2149,72 @@ LIB_EXPORT rc_t CC KMDataNodeRenameChild ( KMDataNode *self, const char *from, c
  */
 
 struct CopyContext {
-    KMDataNode *dest;
-    KMDataNode const *source;
+    KWMDataNode *dest;
+    KWMDataNode const *source;
     rc_t rc;
 };
-static void KMDataNodeCopy_int(struct CopyContext *ctx);
+static void KWMDataNodeCopy_int(struct CopyContext *ctx);
 
-static void KMDataNodeCopyValue(struct CopyContext *ctx)
+static void KWMDataNodeCopyValue(struct CopyContext *ctx)
 {
     if (ctx->rc == 0) {
         void const *data = NULL;
         size_t size = 0;
 
-        ctx->rc = KMDataNodeAddr(ctx->source, &data, &size);
+        ctx->rc = KMDataNodeAddr( &ctx->source->dad, &data, &size );
         if (ctx->rc == 0)
-            ctx->rc = KMDataNodeWrite(ctx->dest, data, size);
+            ctx->rc = KMDataNodeWrite( &ctx->dest->dad, data, size);
     }
 }
 
-static void CC KMDataNodeCopyAttribute_cb(BSTNode *n, void *data)
+static void CC KWMDataNodeCopyAttribute_cb(BSTNode *n, void *data)
 {
     struct CopyContext *const ctx = data;
     if (ctx->rc == 0) {
-        KMAttrNode *newAttr = NULL;
-        ctx->rc = KMAttrNodeMakeCopy(&newAttr, (KMAttrNode const *)n);
+        KWMAttrNode *newAttr = NULL;
+        ctx->rc = KWMAttrNodeMakeCopy(&newAttr, (KWMAttrNode const *)n);
         if (ctx->rc == 0)
-            BSTreeInsert(&ctx->dest->attr, &newAttr->n, KMAttrNodeSort);
+            BSTreeInsert(&ctx->dest->attr, &newAttr->n, KWMAttrNodeSort);
     }
 }
 
-static void CC KMDataNodeCopy_cb(BSTNode *n, void *data)
+static void CC KWMDataNodeCopy_cb(BSTNode *n, void *data)
 {
     struct CopyContext *const ctx = data;
     if (ctx->rc == 0) {
-        char const *const nodeName = ((KMDataNode const *)n)->name;
-        KMDataNode *const dest = ctx->dest;
-        KMDataNode const *const source = ctx->source;
+        char const *const nodeName = ((KWMDataNode const *)n)->name;
+        KWMDataNode *const dest = ctx->dest;
+        KWMDataNode const *const source = ctx->source;
 
-        ctx->rc = KMDataNodeOpenNodeRead(source, &ctx->source, nodeName);
+        ctx->rc = KMDataNodeOpenNodeRead( & source -> dad, (const KMDataNode**)&ctx->source, nodeName);
         assert(ctx->rc == 0);
         if (ctx->rc == 0) {
-            ctx->rc = KMDataNodeOpenNodeUpdate(dest, &ctx->dest, nodeName);
+            ctx->rc = KMDataNodeOpenNodeUpdate( & dest -> dad, (KMDataNode**)&ctx->dest, nodeName);
             if (ctx->rc == 0) {
-                KMDataNodeCopy_int(ctx);
-                KMDataNodeRelease(ctx->dest);
+                KWMDataNodeCopy_int(ctx);
+                KMDataNodeRelease( & ctx->dest->dad );
             }
-            KMDataNodeRelease(ctx->source);
+            KMDataNodeRelease( & ctx->source->dad );
         }
         ctx->source = source;
         ctx->dest = dest;
     }
 }
 
-static void KMDataNodeCopy_int(struct CopyContext *ctx)
+static void KWMDataNodeCopy_int(struct CopyContext *ctx)
 {
-    KMDataNodeCopyValue(ctx);
-    BSTreeForEach(&ctx->source->attr, false, KMDataNodeCopyAttribute_cb, ctx);
-    BSTreeForEach(&ctx->source->child, false, KMDataNodeCopy_cb, ctx);
+    KWMDataNodeCopyValue(ctx);
+    BSTreeForEach(&ctx->source->attr, false, KWMDataNodeCopyAttribute_cb, ctx);
+    BSTreeForEach(&ctx->source->child, false, KWMDataNodeCopy_cb, ctx);
     ctx->dest->meta->dirty = (ctx->rc == 0);
 }
 
-LIB_EXPORT rc_t CC KMDataNodeCopy(  KMDataNode *self
-                                  , KMDataNode const *source)
+LIB_EXPORT rc_t CC KMDataNodeCopy(  KMDataNode *bself
+                                  , KMDataNode const *bsource)
 {
+    CAST();
+    const KWMDataNode *source = (const KWMDataNode *)bsource;
+
     struct CopyContext ctx;
 
     if (self == NULL)
@@ -2150,11 +2226,11 @@ LIB_EXPORT rc_t CC KMDataNodeCopy(  KMDataNode *self
     if (self->meta == NULL || source->meta == NULL)
         return RC(rcDB, rcNode, rcCopying, rcMetadata, rcNull);
 
-    ctx.rc = KMDataNodeDropAll_int(self);
+    ctx.rc = KWMDataNodeDropAll_int(self);
     ctx.dest = self;
     ctx.source = source;
 
-    KMDataNodeCopy_int(&ctx);
+    KWMDataNodeCopy_int(&ctx);
 
     return ctx.rc;
 }
@@ -2202,17 +2278,17 @@ LIB_EXPORT rc_t CC KTableMetaCopy( KTable *self, const KTable *src, const char *
  */
 
 /* >>>>>> !!! any changes here have to be duplicated in meta.c !!! <<<<<< */
-static rc_t KMDataNodeCompare_int( const KMDataNode *self, const KMDataNode *other, bool *equal );
+static rc_t KWMDataNodeCompare_int( const KWMDataNode *self, const KWMDataNode *other, bool *equal );
 
 /* >>>>>> !!! any changes here have to be duplicated in meta.c !!! <<<<<< */
-static rc_t KMDataNodeCompareValue( const KMDataNode *self, const KMDataNode *other, bool *equal ) {
+static rc_t KWMDataNodeCompareValue( const KWMDataNode *self, const KWMDataNode *other, bool *equal ) {
     void const *self_data = NULL;
     size_t self_size = 0;
-    rc_t rc = KMDataNodeAddr( self, &self_data, &self_size );
+    rc_t rc = KMDataNodeAddr( & self -> dad, &self_data, &self_size );
     if ( 0 == rc ) {
         void const *other_data = NULL;
         size_t other_size = 0;
-        rc = KMDataNodeAddr( other, &other_data, &other_size );
+        rc = KMDataNodeAddr( & other -> dad, &other_data, &other_size );
         if ( 0 == rc ) {
             if ( self_size != other_size ) {
                 *equal = false; /* if the sizes are different - they can't be equal... */
@@ -2229,23 +2305,23 @@ static rc_t KMDataNodeCompareValue( const KMDataNode *self, const KMDataNode *ot
 
 /* >>>>>> !!! any changes here have to be duplicated in meta.c !!! <<<<<< */
 struct CompareContext {
-    KMDataNode const *other;
+    KWMDataNode const *other;
     bool *equal;
     rc_t rc;
 };
 
 /* >>>>>> !!! any changes here have to be duplicated in meta.c !!! <<<<<< */
-static void CC KMDataNodeCompareChildren_cb( BSTNode *n, void *data ) {
+static void CC KWMDataNodeCompareChildren_cb( BSTNode *n, void *data ) {
     struct CompareContext *const ctx = data;
     if ( 0 == ctx -> rc && *( ctx -> equal ) ) {
-        const KMDataNode *child = ( const KMDataNode * )n;
+        const KWMDataNode *child = ( const KWMDataNode * )n;
         const char * childName = child -> name;
         // find the corresponding child-node in ctx -> other
-        const KMDataNode *other_child;
-        ctx -> rc = KMDataNodeOpenNodeRead( ctx -> other, &other_child, childName );
+        const KWMDataNode *other_child;
+        ctx -> rc = KMDataNodeOpenNodeRead( & ctx -> other -> dad, (const KMDataNode**)&other_child, childName );
         if ( 0 == ctx -> rc ) {
-            ctx -> rc = KMDataNodeCompare_int( child, other_child, ctx -> equal ); /* recursion here! */
-            KMDataNodeRelease( other_child );
+            ctx -> rc = KWMDataNodeCompare_int( child, other_child, ctx -> equal ); /* recursion here! */
+            KMDataNodeRelease( & other_child -> dad );
         } else {
             *( ctx -> equal ) = false;
         }
@@ -2253,14 +2329,14 @@ static void CC KMDataNodeCompareChildren_cb( BSTNode *n, void *data ) {
 }
 
 /* >>>>>> !!! any changes here have to be duplicated in meta.c !!! <<<<<< */
-static void CC KMDataNodeCompareAttr_cb( BSTNode *n, void *data ) {
+static void CC KWMDataNodeCompareAttr_cb( BSTNode *n, void *data ) {
     struct CompareContext *const ctx = data;
     if ( 0 == ctx -> rc && *( ctx -> equal ) ) {
-        const KMAttrNode *attr = ( const KMAttrNode * )n;
+        const KWMAttrNode *attr = ( const KWMAttrNode * )n;
         if ( NULL != attr ) {
             const char * attrName = attr -> name;
-            const KMAttrNode *other_attr = ( const KMAttrNode* )BSTreeFind( &( ctx -> other -> attr ),
-                                                                            attrName, KMAttrNodeCmp );
+            const KWMAttrNode *other_attr = ( const KWMAttrNode* )BSTreeFind( &( ctx -> other -> attr ),
+                                                                            attrName, KWMAttrNodeCmp );
             if ( NULL == other_attr ) {
                 *( ctx -> equal ) = false; /* not found in other... */
             } else if ( attr -> vsize != other_attr -> vsize ) {
@@ -2276,17 +2352,17 @@ static void CC KMDataNodeCompareAttr_cb( BSTNode *n, void *data ) {
 }
 
 /* >>>>>> !!! any changes here have to be duplicated in meta.c !!! <<<<<< */
-static rc_t KMDataNodeCompare_int( const KMDataNode *self, const KMDataNode *other, bool *equal ) {
+static rc_t KWMDataNodeCompare_int( const KWMDataNode *self, const KWMDataNode *other, bool *equal ) {
     /* first we compare the value of these 2 nodes */
-    rc_t rc = KMDataNodeCompareValue( self, other, equal );
+    rc_t rc = KWMDataNodeCompareValue( self, other, equal );
     if ( 0 == rc && *equal ) {
         /* if they are equal, we compare all of the children of self with the children of other */
         struct CompareContext ctx = { other, equal, 0 };
-        BSTreeForEach( &( self -> child ), false, KMDataNodeCompareChildren_cb, &ctx );
+        BSTreeForEach( &( self -> child ), false, KWMDataNodeCompareChildren_cb, &ctx );
         rc = ctx . rc;
         if ( 0 == rc && *equal ) {
             /* if they are equal we compare all attributes... */
-            BSTreeForEach( &( self -> attr ), false, KMDataNodeCompareAttr_cb, &ctx );
+            BSTreeForEach( &( self -> attr ), false, KWMDataNodeCompareAttr_cb, &ctx );
             rc = ctx .rc;
         }
     }
@@ -2296,8 +2372,12 @@ static rc_t KMDataNodeCompare_int( const KMDataNode *self, const KMDataNode *oth
 /* >>>>>> !!! any changes here have to be duplicated in meta.c !!! <<<<<< */
 static
 rc_t CC
-KWMDataNodeCompare( const KMDataNode *self, KMDataNode const *other, bool *equal )
+KWMDataNodeCompare( const KMDataNode *bself, KMDataNode const *bother, bool *equal )
 {
+    CAST();
+    assert( bother->vt == &KWMDataNode_vt );
+    const KWMDataNode * other = (const KWMDataNode *)bother;
+
     rc_t rc = 0;
     if ( other == NULL || equal == NULL ) {
         rc = RC( rcDB, rcNode, rcComparing, rcParam, rcNull );
@@ -2308,9 +2388,9 @@ KWMDataNodeCompare( const KMDataNode *self, KMDataNode const *other, bool *equal
         rc = RC( rcDB, rcNode, rcComparing, rcMetadata, rcNull );
     } else {
         /* 2 way comparison, to make sure that both nodes have the same children... */
-        rc =  KMDataNodeCompare_int( self, other, equal );
+        rc =  KWMDataNodeCompare_int( self, other, equal );
         if ( 0 == rc && *equal ) {
-            rc =  KMDataNodeCompare_int( other, self, equal );
+            rc =  KWMDataNodeCompare_int( other, self, equal );
         }
     }
     return rc;
@@ -2320,11 +2400,11 @@ KWMDataNodeCompare( const KMDataNode *self, KMDataNode const *other, bool *equal
 /*--------------------------------------------------------------------------
  * KNamelist
  */
-typedef struct KMDataNodeNamelist KMDataNodeNamelist;
-struct KMDataNodeNamelist
+typedef struct KWMDataNodeNamelist KWMDataNodeNamelist;
+struct KWMDataNodeNamelist
 {
     KNamelist dad;
-    const KMDataNode *node;
+    const KWMDataNode *node;
     size_t count;
     const char *namelist [ 1 ];
 };
@@ -2332,9 +2412,9 @@ struct KMDataNodeNamelist
 /* Whack
  */
 static
-rc_t CC KMDataNodeNamelistWhack ( KMDataNodeNamelist *self )
+rc_t CC KMDataNodeNamelistWhack ( KWMDataNodeNamelist *self )
 {
-    rc_t rc = KMDataNodeRelease ( self -> node );
+    rc_t rc = KMDataNodeRelease ( & self -> node -> dad );
     if ( rc == 0 )
         free ( self );
     return rc;
@@ -2343,7 +2423,7 @@ rc_t CC KMDataNodeNamelistWhack ( KMDataNodeNamelist *self )
 /* Count
  */
 static
-rc_t CC KMDataNodeNamelistCount ( const KMDataNodeNamelist *self, uint32_t *count )
+rc_t CC KMDataNodeNamelistCount ( const KWMDataNodeNamelist *self, uint32_t *count )
 {
     * count = ( uint32_t ) self -> count;
     return 0;
@@ -2352,7 +2432,7 @@ rc_t CC KMDataNodeNamelistCount ( const KMDataNodeNamelist *self, uint32_t *coun
 /* Get
  */
 static
-rc_t CC KMDataNodeNamelistGet ( const KMDataNodeNamelist *self,
+rc_t CC KMDataNodeNamelistGet ( const KWMDataNodeNamelist *self,
     uint32_t idx, const char **name )
 {
     if ( ( size_t ) idx >= self -> count )
@@ -2379,7 +2459,7 @@ static
 rc_t KMDataNodeNamelistMake ( KNamelist **names, unsigned int count )
 {
     rc_t rc;
-    KMDataNodeNamelist *self = calloc ( 1, sizeof * self -
+    KWMDataNodeNamelist *self = calloc ( 1, sizeof * self -
         sizeof self -> namelist + count * sizeof self -> namelist [ 0 ] );
     if ( self == NULL )
         rc = RC ( rcDB, rcNamelist, rcConstructing, rcMemory, rcExhausted );
@@ -2411,14 +2491,16 @@ void CC KMDataNodeListCount ( BSTNode *n, void *data )
 static
 void CC KMDataNodeGrabAttr ( BSTNode *n, void *data )
 {
-    KMDataNodeNamelist *list = data;
-    list -> namelist [ list -> count ++ ] = ( ( const KMAttrNode* ) n ) -> name;
+    KWMDataNodeNamelist *list = data;
+    list -> namelist [ list -> count ++ ] = ( ( const KWMAttrNode* ) n ) -> name;
 }
 
 static
 rc_t CC
-KWMDataNodeListAttr ( const KMDataNode *self, KNamelist **names )
+KWMDataNodeListAttr ( const KMDataNode *bself, KNamelist **names )
 {
+    CAST();
+
     rc_t rc;
     unsigned int count;
 
@@ -2439,14 +2521,16 @@ KWMDataNodeListAttr ( const KMDataNode *self, KNamelist **names )
 static
 void CC KMDataNodeGrabName ( BSTNode *n, void *data )
 {
-    KMDataNodeNamelist *list = data;
-    list -> namelist [ list -> count ++ ] = ( ( const KMDataNode* ) n ) -> name;
+    KWMDataNodeNamelist *list = data;
+    list -> namelist [ list -> count ++ ] = ( ( const KWMDataNode* ) n ) -> name;
 }
 
 static
 rc_t CC
-KWMDataNodeListChildren ( const KMDataNode *self, KNamelist **names )
+KWMDataNodeListChildren ( const KMDataNode *bself, KNamelist **names )
 {
+    CAST();
+
     rc_t rc;
     unsigned int count;
 

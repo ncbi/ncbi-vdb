@@ -57,7 +57,7 @@ struct KMetadata
     const struct KRColumn *col;
 
     /* root node */
-    struct KMDataNode *root;
+    struct KRMDataNode *root;
 
     uint32_t vers;
     uint32_t rev;

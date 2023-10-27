@@ -26,10 +26,9 @@
 
 #include <kdb/extern.h>
 
-#define KMDataNode KMDataNodeBase
 #include "metanode-base.h"
 
-rc_t KMDataNodeBaseWhack ( KMDataNodeBase *self )
+rc_t KMDataNodeBaseWhack ( KMDataNode *self )
 {
     KRefcountWhack ( & self -> refcount, "KMDataNode" );
     free ( self );
@@ -41,7 +40,7 @@ rc_t KMDataNodeBaseWhack ( KMDataNodeBase *self )
  *  all objects are reference counted
  *  NULL references are ignored
  */
-rc_t CC KMDataNodeBaseAddRef ( const KMDataNodeBase *self )
+rc_t CC KMDataNodeBaseAddRef ( const KMDataNode *self )
 {
     if ( self != NULL )
     {
@@ -57,7 +56,7 @@ rc_t CC KMDataNodeBaseAddRef ( const KMDataNodeBase *self )
 /* Attach
  * Sever
  */
-KMDataNodeBase *KMDataNodeAttach ( const KMDataNodeBase *self )
+KMDataNode *KMDataNodeAttach ( const KMDataNode *self )
 {
     if ( self != NULL )
     {
@@ -67,17 +66,17 @@ KMDataNodeBase *KMDataNodeAttach ( const KMDataNodeBase *self )
             return NULL;
         }
     }
-    return ( KMDataNodeBase* ) self;
+    return ( KMDataNode* ) self;
 }
 
-rc_t KMDataNodeSever ( const KMDataNodeBase *self )
+rc_t KMDataNodeSever ( const KMDataNode *self )
 {
     if ( self != NULL )
     {
         switch ( KRefcountDropDep ( & self -> refcount, "KMDataNode" ) )
         {
         case krefWhack:
-            return self -> vt -> whack ( (KMDataNodeBase *)self );
+            return self -> vt -> whack ( (KMDataNode *)self );
         case krefNegative:
             return RC ( rcDB, rcMgr, rcReleasing, rcRange, rcExcessive );
         }

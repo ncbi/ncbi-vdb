@@ -87,11 +87,11 @@ FIXTURE_TEST_CASE(KRMDataNode_AddRelease, KRMDataNode_Fixture)
 {
     Open( "testdb/tbl/SEQUENCE", "col" );
     REQUIRE_NOT_NULL( m_node );
-    REQUIRE_EQ( 2, (int)atomic32_read( & m_node -> dad . refcount ) );
+    REQUIRE_EQ( 2, (int)atomic32_read( & m_node -> refcount ) );
     REQUIRE_RC( KMDataNodeAddRef( m_node ) );
-    REQUIRE_EQ( 3, (int)atomic32_read( & m_node -> dad . refcount ) );
+    REQUIRE_EQ( 3, (int)atomic32_read( & m_node -> refcount ) );
     REQUIRE_RC( KMDataNodeRelease( m_node ) );
-    REQUIRE_EQ( 2, (int)atomic32_read( & m_node -> dad . refcount ) );
+    REQUIRE_EQ( 2, (int)atomic32_read( & m_node -> refcount ) );
     // use valgrind to find any leaks
 }
 
