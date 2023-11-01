@@ -190,10 +190,6 @@ void KThreadEventDump ( ctx_t ctx, KTime_t timestamp, const KFuncLoc * loc,
     size_t pre_size, sz;
     char pre [ 4096 ];
 
-#if _DEBUGGING
-    const char *fname;
-#endif
-
     static const char * err_strings [ 3 ] [ 4 ] =
     {
         { "NOTE", "WARNING", "SYSTEM ERROR", "FATAL SYSTEM ERROR" },
