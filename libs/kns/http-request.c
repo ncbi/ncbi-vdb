@@ -2080,6 +2080,17 @@ LIB_EXPORT rc_t CC KClientHttpRequestPOST ( KClientHttpRequest *self, KClientHtt
         }
 
         {
+            String s;
+            CONST_STRING ( & s, "NCBI-PHID" );
+            KHttpHeader *node = ( KHttpHeader* ) BSTreeFind (
+                & ( * _rslt ) -> hdrs, & s, KHttpHeaderCmp );
+            if ( node != NULL ) {
+                free(( * _rslt ) -> phid);
+                ( * _rslt ) -> phid
+                    = string_dup( node -> value . addr, node -> value . size );
+            }
+        }
+        {
             rc_t rc2 = KHttpRetrierDestroy ( & retrier );
             if ( rc == 0 ) rc = rc2;
         }

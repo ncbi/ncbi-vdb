@@ -1115,7 +1115,7 @@ static rc_t CC KDBWManagerOpenTableReadVPath(const KDBManager *self, const KTabl
     return KDBWManagerVOpenTableReadInt_noargs(self, tbl, self->wd, true, NULL, path);
 }
 
-rc_t KDBManagerInsertColumn ( KDBManager * self, KColumn * col )
+rc_t KDBManagerInsertColumn ( KDBManager * self, KWColumn * col )
 {
     rc_t rc;
     rc = KDBManagerOpenObjectAdd (self, &col->sym);
@@ -1141,7 +1141,7 @@ rc_t KDBManagerInsertColumn ( KDBManager * self, KColumn * col )
  */
 static
 rc_t KDBManagerVCreateColumnInt ( KDBManager *self,
-    KColumn **colp, KDirectory *wd, KCreateMode cmode,
+    KWColumn **colp, KDirectory *wd, KCreateMode cmode,
     KChecksum checksum, size_t pgsize, const char *path, va_list args )
 {
     char colpath [ 4096 ];
@@ -1228,7 +1228,7 @@ rc_t KDBManagerVCreateColumnInt ( KDBManager *self,
         rc = KDirectoryOpenDirUpdate ( wd, & dir, false, "%s", colpath );
         if ( rc == 0 )
         {
-            KColumn *col = NULL;
+            KWColumn *col = NULL;
             KMD5SumFmt *md5 = NULL;
 
             /* create an MD5 digest file for column */
@@ -1253,7 +1253,7 @@ rc_t KDBManagerVCreateColumnInt ( KDBManager *self,
 
             /* create column - will attach several references to "md5" */
             if ( rc == 0 )
-                rc = KColumnCreate ( & col, dir, cmode, checksum, pgsize, colpath, md5 );
+                rc = KWColumnCreate ( & col, dir, cmode, checksum, pgsize, colpath, md5 );
 
             /* release our reference to "md5" if NULL then no problem */
             if (md5)
@@ -1268,7 +1268,7 @@ rc_t KDBManagerVCreateColumnInt ( KDBManager *self,
                     return 0;
                 }
 
-                KColumnRelease ( col );
+                KColumnRelease ( & col -> dad );
             }
             KDirectoryRelease ( dir );
         }
@@ -1277,7 +1277,7 @@ rc_t KDBManagerVCreateColumnInt ( KDBManager *self,
 }
 
 rc_t KDBManagerVCreateColumnInt_noargs ( KDBManager *self,
-    KColumn **colp, KDirectory *wd, KCreateMode cmode,
+    KWColumn **colp, KDirectory *wd, KCreateMode cmode,
     KChecksum checksum, size_t pgsize, const char *path, ... )
 {
     rc_t rc;
@@ -1303,7 +1303,7 @@ LIB_EXPORT rc_t CC KDBManagerVCreateColumn ( KDBManager *self, KColumn **col,
         return RC ( rcDB, rcMgr, rcCreating, rcSelf, rcNull );
 
     return KDBManagerVCreateColumnInt
-        ( self, col, self -> wd, cmode, checksum, pgsize, path, args );
+        ( self, (KWColumn **)col, self -> wd, cmode, checksum, pgsize, path, args );
 }
 
 LIB_EXPORT rc_t CC KDBManagerCreateColumn ( KDBManager *self, KColumn **col,
@@ -1331,7 +1331,7 @@ LIB_EXPORT rc_t CC KDBManagerCreateColumn ( KDBManager *self, KColumn **col,
  */
 static
 rc_t KDBManagerVOpenColumnReadInt2 ( const KDBManager *cself,
-    const KColumn **colp, const KDirectory *wd,
+    const KWColumn **colp, const KDirectory *wd,
     const char *path_fmt, va_list args, bool *cached, bool try_srapath, va_list args2 )
 {
     char colpath [ 4096 ];
@@ -1345,7 +1345,7 @@ rc_t KDBManagerVOpenColumnReadInt2 ( const KDBManager *cself,
         sym = KDBManagerOpenObjectFind (cself, colpath);
         if (sym != NULL)
         {
-            const KColumn *ccol;
+            const KWColumn *ccol;
             rc_t obj;
 
             if(cached != NULL ) *cached = true;
@@ -1353,12 +1353,12 @@ rc_t KDBManagerVOpenColumnReadInt2 ( const KDBManager *cself,
             switch (sym->type)
             {
             case kptColumn:
-                ccol = (const KColumn*)sym->u.obj;
+                ccol = (const KWColumn*)sym->u.obj;
                 /* if open for update, refuse */
                 if ( ccol -> read_only )
                 {
                     /* attach a new reference and we're gone */
-                    rc = KColumnAddRef ( ccol );
+                    rc = KColumnAddRef ( & ccol -> dad );
                     if ( rc == 0 )
                         * colp = ccol;
                     return rc;
@@ -1408,9 +1408,9 @@ rc_t KDBManagerVOpenColumnReadInt2 ( const KDBManager *cself,
 
             if ( rc == 0 )
             {
-                KColumn *col;
+                KWColumn *col;
 
-                rc = KWColumnMakeRead ( & col, dir, colpath, NULL );
+                rc = KWColumnMakeRead ( (KWColumn **)& col, dir, colpath, NULL );
 
                 if ( rc == 0 )
                 {
@@ -1421,7 +1421,7 @@ rc_t KDBManagerVOpenColumnReadInt2 ( const KDBManager *cself,
                         return 0;
                     }
 
-                    KColumnRelease ( col );
+                    KColumnRelease ( & col -> dad );
                 }
 
                 KDirectoryRelease ( dir );
@@ -1433,7 +1433,7 @@ rc_t KDBManagerVOpenColumnReadInt2 ( const KDBManager *cself,
 
 static
 rc_t KDBManagerVOpenColumnReadInt ( const KDBManager *cself,
-    const KColumn **colp, const KDirectory *wd,
+    const KWColumn **colp, const KDirectory *wd,
     const char *path_fmt, va_list args, bool *cached, bool try_srapath )
 {
     rc_t rc;
@@ -1451,7 +1451,7 @@ rc_t KDBManagerVOpenColumnReadInt ( const KDBManager *cself,
 }
 
 rc_t KDBWManagerVOpenColumnReadInt_noargs ( const KDBManager *cself,
-    const KColumn **colp, const KDirectory *wd,
+    const KWColumn **colp, const KDirectory *wd,
     const char *path_fmt, bool *cached, int try_srapath, ... )
 {
     rc_t rc;
@@ -1473,7 +1473,7 @@ KDBWManagerVOpenColumnRead ( const KDBManager *self, const KColumn **col, const 
 
     * col = NULL;
 
-    return KDBManagerVOpenColumnReadInt ( self, col, self -> wd, path, args , NULL, true);
+    return KDBManagerVOpenColumnReadInt ( self, (const KWColumn **)col, self -> wd, path, args , NULL, true);
 }
 
 /* OpenColumnUpdate
@@ -1487,7 +1487,7 @@ KDBWManagerVOpenColumnRead ( const KDBManager *self, const KColumn **col, const 
  */
 static
 rc_t KDBManagerVOpenColumnUpdateInt ( KDBManager *self,
-    KColumn **colp, KDirectory *wd, bool try_srapath,
+    KWColumn **colp, KDirectory *wd, bool try_srapath,
     const char *path_fmt, va_list args )
 {
     char colpath [ 4096 ];
@@ -1581,7 +1581,7 @@ rc_t KDBManagerVOpenColumnUpdateInt ( KDBManager *self,
         rc = KDirectoryOpenDirUpdate ( wd, & dir, 0, "%s", colpath );
         if ( rc == 0 )
         {
-            KColumn *col;
+            KWColumn *col;
             KMD5SumFmt *md5 = NULL;
             /* open existing md5 digest file */
             KFile * f;
@@ -1597,7 +1597,7 @@ rc_t KDBManagerVOpenColumnUpdateInt ( KDBManager *self,
 
             /* make column - will attach several references to "md5" */
             if ( rc == 0 )
-                rc = KColumnMakeUpdate ( & col, dir, colpath, md5 );
+                rc = KWColumnMakeUpdate ( & col, dir, colpath, md5 );
 
             /* release our reference to "md5" */
             KMD5SumFmtRelease ( md5 );
@@ -1611,7 +1611,7 @@ rc_t KDBManagerVOpenColumnUpdateInt ( KDBManager *self,
                     return 0;
                 }
 
-                KColumnRelease ( col );
+                KColumnRelease ( & col -> dad );
             }
             KDirectoryRelease ( dir );
         }
@@ -1620,7 +1620,7 @@ rc_t KDBManagerVOpenColumnUpdateInt ( KDBManager *self,
 }
 
 rc_t KDBManagerVOpenColumnUpdateInt_noargs ( KDBManager *self,
-    KColumn **colp, KDirectory *wd, bool try_srapath,
+    KWColumn **colp, KDirectory *wd, bool try_srapath,
     const char *path_fmt, ... )
 {
     rc_t rc;
@@ -1658,7 +1658,7 @@ LIB_EXPORT rc_t CC KDBManagerVOpenColumnUpdate ( KDBManager *self,
         return RC ( rcDB, rcMgr, rcOpening, rcSelf, rcNull );
 
     return KDBManagerVOpenColumnUpdateInt
-        ( self, col, self -> wd, true, path, args );
+        ( self, (KWColumn **)col, self -> wd, true, path, args );
 }
 
 static
@@ -2378,7 +2378,7 @@ KDBWManagerOpenMetadataReadInt ( KDBManager *self, const KMetadata **metap, cons
     return rc;
 }
 
-rc_t KDBManagerInsertIndex ( KDBManager * self, KIndex * idx)
+rc_t KDBManagerInsertIndex ( KDBManager * self, KWIndex * idx)
 {
     rc_t rc;
     rc = KDBManagerOpenObjectAdd (self, &idx->sym);
@@ -2395,27 +2395,27 @@ rc_t KDBManagerInsertIndex ( KDBManager * self, KIndex * idx)
  *
  *  "name" [ IN ] - NUL terminated string in UTF-8 giving simple name of idx
  */
-rc_t KDBWManagerOpenIndexReadInt ( KDBManager *self,const KIndex **idxp, const KDirectory *wd, const char *path )
+rc_t KDBWManagerOpenIndexReadInt ( KDBManager *self,const KWIndex **idxp, const KDirectory *wd, const char *path )
 {
     char idxpath [ 4096 ];
     rc_t rc = KDirectoryResolvePath ( wd, true,
                                       idxpath, sizeof idxpath, "%s", path );
     if ( rc == 0 )
     {
-        KIndex *idx;
+        KWIndex *idx;
         KSymbol * sym;
 
         /* if already open */
         sym = KDBManagerOpenObjectFind (self, idxpath);
         if (sym != NULL)
         {
-            const KIndex * cidx;
+            const KWIndex * cidx;
             rc_t obj;
 
             switch (sym->type)
             {
             case kptIndex:
-                cidx = (const KIndex *)sym->u.obj;
+                cidx = (const KWIndex *)sym->u.obj;
 #if 0
                 /* if open for update, refuse */
                 if ( cidx -> read_only )
@@ -2425,7 +2425,7 @@ rc_t KDBWManagerOpenIndexReadInt ( KDBManager *self,const KIndex **idxp, const K
 #endif
                 {
                     /* attach a new reference and we're gone */
-                    rc = KIndexAddRef ( cidx );
+                    rc = KIndexAddRef ( & cidx -> dad );
                     if ( rc == 0 )
                         * idxp = cidx;
                     return rc;
@@ -2476,7 +2476,7 @@ rc_t KDBWManagerOpenIndexReadInt ( KDBManager *self,const KIndex **idxp, const K
                 return 0;
             }
 
-            KIndexRelease ( idx );
+            KIndexRelease ( & idx -> dad );
         }
     }
 
@@ -2494,7 +2494,7 @@ rc_t KDBWManagerOpenIndexReadInt ( KDBManager *self,const KIndex **idxp, const K
  *  "name" [ IN ] - NUL terminated string in UTF-8 giving simple name of idx
  */
 rc_t
-KDBManagerCreateIndexInt ( KDBManager *self, KIndex **idxp, KDirectory *wd, KIdxType type, KCreateMode cmode, const char *path, bool use_md5 )
+KDBManagerCreateIndexInt ( KDBManager *self, KWIndex **idxp, KDirectory *wd, KIdxType type, KCreateMode cmode, const char *path, bool use_md5 )
 {
     rc_t rc;
     int ptype;
@@ -2504,7 +2504,7 @@ KDBManagerCreateIndexInt ( KDBManager *self, KIndex **idxp, KDirectory *wd, KIdx
                                   idxpath, sizeof idxpath, "%s", path );
     if ( rc == 0 )
     {
-        KIndex *idx;
+        KWIndex *idx;
         switch ( ptype = KDBPathType ( wd, NULL, idxpath ) )
         {
         case kptNotFound:
@@ -2567,7 +2567,7 @@ KDBManagerCreateIndexInt ( KDBManager *self, KIndex **idxp, KDirectory *wd, KIdx
             return RC ( rcDB, rcMgr, rcCreating, rcPath, rcIncorrect );
         }
 
-        rc = KIndexCreate ( & idx, wd, type, cmode, path, ptype );
+        rc = KWIndexCreate ( & idx, wd, type, cmode, path, ptype );
         if ( rc == 0 )
         {
             rc = KDBManagerInsertIndex (self, idx);
@@ -2578,7 +2578,7 @@ KDBManagerCreateIndexInt ( KDBManager *self, KIndex **idxp, KDirectory *wd, KIdx
                 return 0;
             }
 
-            KIndexRelease ( idx );
+            KIndexRelease ( & idx -> dad );
         }
     }
     return rc;
@@ -2593,7 +2593,7 @@ KDBManagerCreateIndexInt ( KDBManager *self, KIndex **idxp, KDirectory *wd, KIdx
  *  "name" [ IN ] - NUL terminated string in UTF-8 giving simple name of idx
  */
 rc_t KDBManagerOpenIndexUpdate ( KDBManager *self,
-    KIndex **idxp, KDirectory *wd, const char *path )
+    KWIndex **idxp, KDirectory *wd, const char *path )
 {
     char idxpath [ 4096 ];
     rc_t rc = KDirectoryResolvePath ( wd, true,
@@ -2601,7 +2601,7 @@ rc_t KDBManagerOpenIndexUpdate ( KDBManager *self,
     if ( rc == 0 )
     {
         KSymbol * sym;
-        KIndex *idx;
+        KWIndex *idx;
 
         sym =  KDBManagerOpenObjectFind (self, idxpath);
         if (sym != NULL)
@@ -2646,7 +2646,7 @@ rc_t KDBManagerOpenIndexUpdate ( KDBManager *self,
             return RC ( rcDB, rcMgr, rcOpening, rcPath, rcIncorrect );
         }
 
-        rc = KIndexMakeUpdate ( & idx, wd, path );
+        rc = KWIndexMakeUpdate ( & idx, wd, path );
         if ( rc == 0 )
         {
             rc = KDBManagerInsertIndex (self, idx);
@@ -2656,7 +2656,7 @@ rc_t KDBManagerOpenIndexUpdate ( KDBManager *self,
                 return 0;
             }
 
-            KIndexRelease ( idx );
+            KIndexRelease ( & idx -> dad );
         }
     }
     return rc;

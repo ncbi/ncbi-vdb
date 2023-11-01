@@ -35,7 +35,7 @@
 #include <kdb/database.h>
 #include <kdb/kdb-priv.h>
 
-#include <../libs/kdb/index-priv.h>
+#include <../libs/kdb/rindex.h>
 #include <../libs/kdb/rdbmgr.h>
 
 using namespace std;
@@ -76,11 +76,11 @@ FIXTURE_TEST_CASE(KRIndex_AddRelease, KIndex_Fixture)
 {
     Open( "testdb", "index" );
 
-    REQUIRE_EQ( 1, (int)atomic32_read( & m_idx -> dad . refcount ) );
+    REQUIRE_EQ( 1, (int)atomic32_read( & m_idx -> refcount ) );
     REQUIRE_RC( KIndexAddRef( m_idx ) );
-    REQUIRE_EQ( 2, (int)atomic32_read( & m_idx -> dad . refcount ) );
+    REQUIRE_EQ( 2, (int)atomic32_read( & m_idx -> refcount ) );
     REQUIRE_RC( KIndexRelease( m_idx ) );
-    REQUIRE_EQ( 1, (int)atomic32_read( & m_idx -> dad . refcount ) );
+    REQUIRE_EQ( 1, (int)atomic32_read( & m_idx -> refcount ) );
     // use valgrind to find any leaks
 }
 

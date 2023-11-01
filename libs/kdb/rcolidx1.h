@@ -49,11 +49,11 @@ struct KColBlockLocInfo;
 
 
 /*--------------------------------------------------------------------------
- * KColumnIdx1
+ * KRColumnIdx1
  *  level 1 index
  */
-typedef struct KColumnIdx1 KColumnIdx1;
-struct KColumnIdx1
+typedef struct KRColumnIdx1 KRColumnIdx1;
+struct KRColumnIdx1
 {
 #if USE_BSTREE_IN_COLUMN_IDX1
     /* tree of level-2 block locators */
@@ -78,41 +78,41 @@ struct KColumnIdx1
 
 /* Open
  */
-rc_t KColumnIdx1OpenRead ( KColumnIdx1 *self, const KDirectory *dir,
+rc_t KRColumnIdx1OpenRead ( KRColumnIdx1 *self, const KDirectory *dir,
     uint64_t *data_eof, uint32_t *idx0_count, uint64_t *idx2_eof,
     size_t *pgsize, int32_t *checksum );
 
 /* Whack
  */
-rc_t KColumnIdx1Whack ( KColumnIdx1 *self );
+rc_t KRColumnIdx1Whack ( KRColumnIdx1 *self );
 
 /* Version
  */
-rc_t KColumnIdx1Version ( const KColumnIdx1 *self, uint32_t *version );
-#define KColumnIdx1Version( self, version ) \
+rc_t KRColumnIdx1Version ( const KRColumnIdx1 *self, uint32_t *version );
+#define KRColumnIdx1Version( self, version ) \
     ( * ( version ) = ( self ) -> vers, 0 )
 
 /* ByteOrder
  */
-rc_t KColumnIdx1ByteOrder ( const KColumnIdx1 *self, bool *reversed );
-#define KColumnIdx1ByteOrder( self, reversed ) \
+rc_t KRColumnIdx1ByteOrder ( const KRColumnIdx1 *self, bool *reversed );
+#define KRColumnIdx1ByteOrder( self, reversed ) \
     ( * ( reversed ) = ( self ) -> bswap, 0 )
 
 /* IdRange
  *  returns range of ids contained within
  */
-bool KColumnIdx1IdRange ( const KColumnIdx1 *self,
+bool KRColumnIdx1IdRange ( const KRColumnIdx1 *self,
     int64_t *first, int64_t *upper );
 
 /* LocateFirstRowIdBlob
  */
-rc_t KColumnIdx1LocateFirstRowIdBlob ( const KColumnIdx1 * self,
+rc_t KRColumnIdx1LocateFirstRowIdBlob ( const KRColumnIdx1 * self,
     KColBlockLoc * bloc, int64_t start );
 
 /* LocateBlock
  *  locates an idx2 block by range
  */
-rc_t KColumnIdx1LocateBlock ( const KColumnIdx1 *self,
+rc_t KRColumnIdx1LocateBlock ( const KRColumnIdx1 *self,
     KColBlockLoc *bloc, int64_t first, int64_t upper );
 
 

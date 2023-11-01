@@ -31,21 +31,23 @@
 #include "rcoldata.h"
 #include "colfmt.h"
 
+struct KRColumn;
+
 typedef struct KRColumnBlob KRColumnBlob;
 struct KRColumnBlob
 {
     KColumnBlob dad;
 
     /* owning column */
-    const KColumn *col;
+    const struct KRColumn *col;
 
     /* captured from idx1 for CRC32 validation */
     bool bswap;
 
     /* holds existing blob loc */
     KColBlobLoc loc;
-    KColumnPageMap pmorig;
+    KRColumnPageMap pmorig;
 };
 
 rc_t KRColumnBlobMake ( KRColumnBlob **blobp, bool bswap );
-rc_t KRColumnBlobOpenRead ( KRColumnBlob *self, const KColumn *col, int64_t id );
+rc_t KRColumnBlobOpenRead ( KRColumnBlob *self, const struct KRColumn *col, int64_t id );

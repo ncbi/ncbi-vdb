@@ -1894,6 +1894,7 @@ rc_t KClientHttpResultWhack ( KClientHttpResult * self )
     KRefcountWhack ( & self -> refcount, "KClientHttpResult" );
 
     free ( self -> expiration );
+    free ( self -> phid );
 
     free ( self );
 
@@ -2623,6 +2624,21 @@ LIB_EXPORT bool CC KClientHttpResultTestHeaderValue ( const KClientHttpResult *s
     return false;
 }
 
+LIB_EXPORT
+rc_t CC KClientHttpResultGetPhid ( KClientHttpResult *self, char ** phid )
+{
+    if ( phid == NULL )
+        return RC ( rcNS, rcNoTarg, rcValidating, rcParam, rcNull );
+    else if ( self == NULL )
+        return RC ( rcNS, rcNoTarg, rcValidating, rcSelf, rcNull );
+    * phid = NULL;
+    if ( self -> phid != NULL ) {
+        * phid = string_dup_measure ( self -> phid, NULL );
+        if ( * phid == NULL )
+            return RC ( rcNS, rcNoTarg, rcValidating, rcMemory, rcExhausted );
+    }
+    return 0;
+}
 
 /* GetInputStream
  *  access the body of response as a stream

@@ -26,13 +26,11 @@
 
 #pragma once
 
-#include <kdb/index.h>
-
 #include <klib/trie.h>
 #include <klib/symbol.h>
 
-typedef struct KIndex KIndex;
-#define KINDEX_IMPL KIndex
+typedef struct KWIndex KWIndex;
+#define KINDEX_IMPL KWIndex
 #include "index-base.h"
 #include "index-cmn.h"
 
@@ -46,7 +44,6 @@ extern "C" {
 struct BSTNode;
 struct KDirectory;
 struct KDBManager;
-struct KDirectory;
 
 /*--------------------------------------------------------------------------
  * V1
@@ -62,10 +59,10 @@ struct KDirectory;
 
 
 /*--------------------------------------------------------------------------
- * KTrieIdxNode_v1
+ * KWTrieIdxNode_v1
  */
-typedef struct KTrieIdxNode_v1 KTrieIdxNode_v1;
-struct KTrieIdxNode_v1
+typedef struct KWTrieIdxNode_v1 KWTrieIdxNode_v1;
+struct KWTrieIdxNode_v1
 {
     TNode n;
     uint32_t id;
@@ -73,28 +70,45 @@ struct KTrieIdxNode_v1
 };
 
 /*--------------------------------------------------------------------------
- * KTrieIndex_v1
+ * KWTrieIndex_v1
  */
-struct KTrieIndex_v1
+typedef struct KWTrieIndex_v1 KWTrieIndex_v1;
+struct KWTrieIndex_v1
 {
     KPTrieIndex_v1 pt;
     Trie key2id;
-    KTrieIdxNode_v1 **id2node;
+    KWTrieIdxNode_v1 **id2node;
     uint32_t first;
     uint32_t last;
     uint32_t len;
 };
 
+/* initialize an index from file - can be NULL */
+rc_t KWTrieIndexOpen_v1 ( KWTrieIndex_v1 *self, struct KMMap const *mm, bool byteswap );
+
+/* whack whack */
+void KWTrieIndexWhack_v1 ( KWTrieIndex_v1 *self );
+
+/* map key to id ( was Key2Id ) */
+rc_t KWTrieIndexFind_v1 ( const KWTrieIndex_v1 *self,
+    const char *key, uint32_t *id,
+    int ( CC * custom_cmp ) ( const void *item, struct PBSTNode const *n, void *data ),
+    void *data );
+
+/* projection index id to key-string ( was Id2Key ) */
+rc_t KWTrieIndexProject_v1 ( const KWTrieIndex_v1 *self,
+    uint32_t id, char *key_buff, size_t buff_size, size_t *actsize );
+
 /* insert string into trie, mapping to 32 bit id */
-rc_t KTrieIndexInsert_v1 ( KTrieIndex_v1 *self,
+rc_t KWTrieIndexInsert_v1 ( KWTrieIndex_v1 *self,
     bool proj, const char *key, uint32_t id );
 
 /* drop string from trie and all mappings */
-rc_t KTrieIndexDelete_v1 ( KTrieIndex_v1 *self,
+rc_t KWTrieIndexDelete_v1 ( KWTrieIndex_v1 *self,
     bool proj, const char *key );
 
 /* persist index to file */
-rc_t KTrieIndexPersist_v1 ( const KTrieIndex_v1 *self,
+rc_t KWTrieIndexPersist_v1 ( const KWTrieIndex_v1 *self,
     bool proj, struct KDirectory *dir, const char *path, bool use_md5 );
 
 
@@ -141,13 +155,28 @@ rc_t KTrieIndexPersist_v1 ( const KTrieIndex_v1 *self,
  *  32-bit entities.
  */
 
+/*--------------------------------------------------------------------------
+ * KPTrieIndex_v2
+ *  persisted keymap
+ *  declared in index-cmn.h
+ */
+
+/* initialize an index from file */
+rc_t KWPTrieIndexInit_v2 ( KPTrieIndex_v2 *self, struct KMMap const *mm, bool byteswap );
+rc_t KWPTrieIndexInit_v3_v4 ( KPTrieIndex_v2 *self, struct KMMap const *mm, bool byteswap, bool ptorig );
+
+/* whackitywhack */
+void KWPTrieIndexWhack_v2 ( KPTrieIndex_v2 *self );
+
+/* map a row id to ord */
+uint32_t KWPTrieIndexID2Ord_v2 ( const KPTrieIndex_v2 *self, int64_t id );
 
 /*--------------------------------------------------------------------------
- * KTrieIdxNode_v2_s1
+ * KWTrieIdxNode_v2_s1
  *  strategy 1 - store only start id, derive range from proj index
  */
-typedef struct KTrieIdxNode_v2_s1 KTrieIdxNode_v2_s1;
-struct KTrieIdxNode_v2_s1
+typedef struct KWTrieIdxNode_v2_s1 KWTrieIdxNode_v2_s1;
+struct KWTrieIdxNode_v2_s1
 {
     TNode n;
     int64_t start_id;
@@ -155,11 +184,11 @@ struct KTrieIdxNode_v2_s1
 };
 
 /*--------------------------------------------------------------------------
- * KTrieIdxNode_v2_s2
+ * KWTrieIdxNode_v2_s2
  *  strategy 2 - store complete range when not using proj index
  */
-typedef struct KTrieIdxNode_v2_s2 KTrieIdxNode_v2_s2;
-struct KTrieIdxNode_v2_s2
+typedef struct KWTrieIdxNode_v2_s2 KWTrieIdxNode_v2_s2;
+struct KWTrieIdxNode_v2_s2
 {
     TNode n;
     int64_t start_id;
@@ -168,57 +197,95 @@ struct KTrieIdxNode_v2_s2
 };
 
 /*--------------------------------------------------------------------------
- * KTrieIndex_v2
+ * KWTrieIndex_v2
  */
-struct KTrieIndex_v2
+typedef struct KWTrieIndex_v2 KWTrieIndex_v2;
+struct KWTrieIndex_v2
 {
     int64_t first, last;
     KPTrieIndex_v2 pt;
     Trie key2id;
-    KTrieIdxNode_v2_s1 **ord2node;
+    KWTrieIdxNode_v2_s1 **ord2node;
     uint32_t count;
     uint32_t max_span;
 };
 
+/* initialize an index from file */
+rc_t KWTrieIndexOpen_v2 ( KWTrieIndex_v2 *self, struct KMMap const *mm, bool byteswap );
+
+/* whack whack */
+void KWTrieIndexWhack_v2 ( KWTrieIndex_v2 *self );
+
+/* map key to id range */
+rc_t KWTrieIndexFind_v2 ( const KWTrieIndex_v2 *self,
+    const char *key, int64_t *start_id,
+#if V2FIND_RETURNS_SPAN
+    uint32_t *span,
+#endif
+    int ( CC * custom_cmp ) ( const void *item, struct PBSTNode const *n, void *data ),
+    void * data,
+    bool convertFromV1);
+
+/* projection index id to key-string */
+#if V2FIND_RETURNS_SPAN
+rc_t KWTrieIndexProject_v2 ( const KWTrieIndex_v2 *self,
+    int64_t id, int64_t *start_id, uint32_t *span,
+    char *key_buff, size_t buff_size, size_t *actsize );
+#else
+rc_t KWTrieIndexProject_v2 ( const KWTrieIndex_v2 *self,
+    int64_t id, char *key_buff, size_t buff_size, size_t *actsize );
+#endif
+
 /* cause persisted tree to be loaded into trie */
-rc_t KTrieIndexAttach_v2 ( KTrieIndex_v2 *self, bool proj );
+rc_t KWTrieIndexAttach_v2 ( KWTrieIndex_v2 *self, bool proj );
 
 /* insert string into trie, mapping to 64 bit id */
-rc_t KTrieIndexInsert_v2 ( KTrieIndex_v2 *self,
+rc_t KWTrieIndexInsert_v2 ( KWTrieIndex_v2 *self,
     bool proj, const char *key, int64_t id );
 
 /* drop string from trie and all mappings */
-rc_t KTrieIndexDelete_v2 ( KTrieIndex_v2 *self,
+rc_t KWTrieIndexDelete_v2 ( KWTrieIndex_v2 *self,
     bool proj, const char *key );
 
 /* persist index to file */
-rc_t KTrieIndexPersist_v2 ( const KTrieIndex_v2 *self,
+rc_t KWTrieIndexPersist_v2 ( const KWTrieIndex_v2 *self,
     bool proj, struct KDirectory *dir, const char *path, bool use_md5 );
 
 
 /*--------------------------------------------------------------------------
- * KU64Index_v3
+ * KWU64Index_v3
  */
-struct KU64Index_v3
+typedef struct KWU64Index_v3 KWU64Index_v3;
+struct KWU64Index_v3
 {
     BSTree tree;
     rc_t rc;
 };
 
-rc_t KU64IndexInsert_v3(KU64Index_v3* self, bool unique, uint64_t key, uint64_t key_size, int64_t id, uint64_t id_qty);
-rc_t KU64IndexDelete_v3(KU64Index_v3* self, uint64_t key);
+rc_t KWU64IndexOpen_v3 ( KWU64Index_v3 *self, struct KMMap const *mm, bool byteswap );
+rc_t KWU64IndexWhack_v3 ( KWU64Index_v3 *self );
 
-rc_t KU64IndexPersist_v3(KU64Index_v3* self, bool proj, struct KDirectory *dir, const char *path, bool use_md5);
+rc_t KWU64IndexFind_v3 ( const KWU64Index_v3 *self, uint64_t offset,
+    uint64_t *key, uint64_t *key_size, int64_t *id, uint64_t *id_qty );
+
+rc_t KWU64IndexFindAll_v3 ( const KWU64Index_v3 *self, uint64_t offset,
+    rc_t ( CC * f ) ( uint64_t key, uint64_t key_size, int64_t id, uint64_t id_qty, void* data ),
+    void* data );
+
+rc_t KWU64IndexInsert_v3(KWU64Index_v3* self, bool unique, uint64_t key, uint64_t key_size, int64_t id, uint64_t id_qty);
+rc_t KWU64IndexDelete_v3(KWU64Index_v3* self, uint64_t key);
+
+rc_t KWU64IndexPersist_v3(KWU64Index_v3* self, bool proj, struct KDirectory *dir, const char *path, bool use_md5);
 
 
  /*--------------------------------------------------------------------------
- * KIndex
+ * KWIndex
  *  an object capable of mapping an object to integer oid
  */
 
-struct KIndex
+struct KWIndex
 {
-    KIndexBase dad;
+    KIndex dad;
 
     BSTNode n;
 
@@ -230,9 +297,9 @@ struct KIndex
     uint32_t vers;
     union
     {
-        KTrieIndex_v1 txt1;
-        KTrieIndex_v2 txt2;
-        KU64Index_v3  u64_3;
+        KWTrieIndex_v1 txt1;
+        KWTrieIndex_v2 txt2;
+        KWU64Index_v3  u64_3;
     } u;
     bool converted_from_v1;
     uint8_t type;
@@ -245,16 +312,9 @@ struct KIndex
     char path [ 1 ];
 };
 
-
-/* Cmp
- * Sort
- */
-int KIndexCmp ( const void *item, struct BSTNode const *n );
-int KIndexSort ( struct BSTNode const *item, struct BSTNode const *n );
-
-rc_t KWIndexMakeRead ( KIndex **idxp, const struct KDirectory *dir, const char *path );
-rc_t KIndexCreate ( KIndex **idxp, KDirectory *dir, KIdxType type, KCreateMode cmode, const char *path, int ptype );
-rc_t KIndexMakeUpdate ( KIndex **idxp, KDirectory *dir, const char *path );
+rc_t KWIndexMakeRead ( KWIndex **idxp, const struct KDirectory *dir, const char *path );
+rc_t KWIndexCreate ( KWIndex **idxp, KDirectory *dir, KIdxType type, KCreateMode cmode, const char *path, int ptype );
+rc_t KWIndexMakeUpdate ( KWIndex **idxp, KDirectory *dir, const char *path );
 
 #ifdef __cplusplus
 }

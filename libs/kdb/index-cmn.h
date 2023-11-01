@@ -42,9 +42,7 @@ struct KMMap;
 struct PTrie;
 struct BSTNode;
 struct PBSTNode;
-struct KIndex;
-
-
+struct KRIndex;
 
 /*--------------------------------------------------------------------------
  * KIndexFileHeader
@@ -105,36 +103,7 @@ void KPTrieIndexWhack_v1 ( KPTrieIndex_v1 *self );
 rc_t KPTrieIndexCheckConsistency_v1 ( const KPTrieIndex_v1 *self,
     int64_t *start_id, uint64_t *id_range, uint64_t *num_keys,
     uint64_t *num_rows, uint64_t *num_holes,
-    struct KIndex const *outer, bool key2id, bool id2key );
-
-
-/*--------------------------------------------------------------------------
- * KTrieIndex_v1
- */
-typedef struct KTrieIndex_v1 KTrieIndex_v1;
-
-/* initialize an index from file - can be NULL */
-rc_t KTrieIndexOpen_v1 ( KTrieIndex_v1 *self, struct KMMap const *mm, bool byteswap );
-
-/* whack whack */
-void KTrieIndexWhack_v1 ( KTrieIndex_v1 *self );
-
-/* map key to id ( was Key2Id ) */
-rc_t KTrieIndexFind_v1 ( const KTrieIndex_v1 *self,
-    const char *key, uint32_t *id,
-    int ( CC * custom_cmp ) ( const void *item, struct PBSTNode const *n, void *data ),
-    void *data );
-
-/* projection index id to key-string ( was Id2Key ) */
-rc_t KTrieIndexProject_v1 ( const KTrieIndex_v1 *self,
-    uint32_t id, char *key_buff, size_t buff_size, size_t *actsize );
-
-/* consistency check */
-rc_t KTrieIndexCheckConsistency_v1 ( const KTrieIndex_v1 *self,
-    int64_t *start_id, uint64_t *id_range, uint64_t *num_keys,
-    uint64_t *num_rows, uint64_t *num_holes,
-    struct KIndex const *outer, bool key2id, bool id2key );
-
+    struct KRIndex const *outer, bool key2id, bool id2key );
 
 /*--------------------------------------------------------------------------
  * V2
@@ -204,77 +173,6 @@ struct KPTrieIndex_v2
     uint8_t span_bits;
     uint8_t byteswap;
 };
-
-
-/* initialize an index from file */
-rc_t KPTrieIndexInit_v2 ( KPTrieIndex_v2 *self, struct KMMap const *mm, bool byteswap );
-rc_t KPTrieIndexInit_v3_v4 ( KPTrieIndex_v2 *self, struct KMMap const *mm, bool byteswap, bool ptorig );
-
-/* whackitywhack */
-void KPTrieIndexWhack_v2 ( KPTrieIndex_v2 *self );
-
-/* map a row id to ord */
-uint32_t KPTrieIndexID2Ord_v2 ( const KPTrieIndex_v2 *self, int64_t id );
-
-/* consistency check */
-rc_t KPTrieIndexCheckConsistency_v2 ( const KPTrieIndex_v2 *self,
-    int64_t *start_id, uint64_t *id_range, uint64_t *num_keys,
-    uint64_t *num_rows, uint64_t *num_holes,
-    struct KIndex const *outer, bool key2id, bool id2key, bool all_ids, bool convertFromV1 );
-
-
-/*--------------------------------------------------------------------------
- * KTrieIndex_v2
- */
-typedef struct KTrieIndex_v2 KTrieIndex_v2;
-
-/* initialize an index from file */
-rc_t KTrieIndexOpen_v2 ( KTrieIndex_v2 *self, struct KMMap const *mm, bool byteswap );
-
-/* whack whack */
-void KTrieIndexWhack_v2 ( KTrieIndex_v2 *self );
-
-/* map key to id range */
-rc_t KTrieIndexFind_v2 ( const KTrieIndex_v2 *self,
-    const char *key, int64_t *start_id,
-#if V2FIND_RETURNS_SPAN
-    uint32_t *span,
-#endif
-    int ( CC * custom_cmp ) ( const void *item, struct PBSTNode const *n, void *data ),
-    void * data,
-    bool convertFromV1);
-
-/* projection index id to key-string */
-#if V2FIND_RETURNS_SPAN
-rc_t KTrieIndexProject_v2 ( const KTrieIndex_v2 *self,
-    int64_t id, int64_t *start_id, uint32_t *span,
-    char *key_buff, size_t buff_size, size_t *actsize );
-#else
-rc_t KTrieIndexProject_v2 ( const KTrieIndex_v2 *self,
-    int64_t id, char *key_buff, size_t buff_size, size_t *actsize );
-#endif
-
-/* consistency check */
-rc_t KTrieIndexCheckConsistency_v2 ( const KTrieIndex_v2 *self,
-    int64_t *start_id, uint64_t *id_range, uint64_t *num_keys,
-    uint64_t *num_rows, uint64_t *num_holes,
-    struct KIndex const *outer, bool key2id, bool id2key, bool all_ids, bool convertFromV1 );
-
-
-/*--------------------------------------------------------------------------
- * KU64Index_v3
- */
-typedef struct KU64Index_v3 KU64Index_v3;
-
-rc_t KU64IndexOpen_v3 ( KU64Index_v3 *self, struct KMMap const *mm, bool byteswap );
-rc_t KU64IndexWhack_v3 ( KU64Index_v3 *self );
-
-rc_t KU64IndexFind_v3 ( const KU64Index_v3 *self, uint64_t offset,
-    uint64_t *key, uint64_t *key_size, int64_t *id, uint64_t *id_qty );
-
-rc_t KU64IndexFindAll_v3 ( const KU64Index_v3 *self, uint64_t offset,
-    rc_t ( CC * f ) ( uint64_t key, uint64_t key_size, int64_t id, uint64_t id_qty, void* data ),
-    void* data );
 
 #ifdef __cplusplus
 }

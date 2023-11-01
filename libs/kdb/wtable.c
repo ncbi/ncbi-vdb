@@ -957,10 +957,10 @@ KWTableVOpenColumnRead ( const KTable *self, const KColumn **colp, const char *n
     {
 	bool col_is_cached;
         rc = KDBWManagerVOpenColumnReadInt_noargs ( self -> mgr,
-                                            colp, self -> dir, path, &col_is_cached, false );
+                                            (const KWColumn **)colp, self -> dir, path, &col_is_cached, false );
         if ( rc == 0 )
         {
-            KColumn *col = ( KColumn* ) * colp;
+            KWColumn *col = ( KWColumn* ) * colp;
             if(!col_is_cached) col -> tbl = KTableAttach ( self );
         }
     }
@@ -1008,11 +1008,11 @@ LIB_EXPORT rc_t CC KTableVCreateColumn ( KTable *self, KColumn **colp,
         else
             cmode &= ~ kcmMD5;
 
-        rc = KDBManagerVCreateColumnInt_noargs ( self -> mgr, colp,
+        rc = KDBManagerVCreateColumnInt_noargs ( self -> mgr, (KWColumn **)colp,
                                           self -> dir, cmode | kcmParents, checksum, pgsize, path );
         if ( rc == 0 )
         {
-            KColumn *col = * colp;
+            KWColumn *col = (KWColumn*)* colp;
             col -> tbl = KTableAttach ( self );
         }
     }
@@ -1054,10 +1054,10 @@ LIB_EXPORT rc_t CC KTableVOpenColumnUpdate ( KTable *self,
     if ( rc == 0 )
     {
         rc = KDBManagerVOpenColumnUpdateInt_noargs ( self -> mgr,
-                                              colp, self -> dir, false, path );
+                                              (KWColumn **)colp, self -> dir, false, path );
         if ( rc == 0 )
         {
-            KColumn *col = * colp;
+            KWColumn *col = (KWColumn *)* colp;
             col -> tbl = KTableAttach ( self );
         }
     }
@@ -1194,14 +1194,14 @@ KWTableVOpenIndexRead ( const KTable *self, const KIndex **idxp, const char *nam
         path, sizeof path, ns, ns_size, name, args );
     if ( rc == 0 )
     {
-        KIndex *idx;
-        rc = KDBWManagerOpenIndexReadInt ( self -> mgr, (const KIndex**)& idx,
+        KWIndex *idx;
+        rc = KDBWManagerOpenIndexReadInt ( self -> mgr, (const KWIndex**)& idx,
                                           self -> dir, path );
         if ( rc == 0 )
         {
             if (idx->tbl != self)
                 idx -> tbl = KTableAttach ( self );
-            * idxp = idx;
+            * idxp = & idx -> dad;
         }
     }
     return rc;
@@ -1246,12 +1246,13 @@ LIB_EXPORT rc_t CC KTableVCreateIndex ( KTable *self, KIndex **idxp,
         rc = KDirectoryVResolvePath ( dir, false, path, sizeof path, name, args );
         if ( rc == 0 )
         {
-            rc = KDBManagerCreateIndexInt ( self -> mgr, idxp, dir,
+            KWIndex *idx;
+            rc = KDBManagerCreateIndexInt ( self -> mgr, & idx, dir,
                 type, cmode | kcmParents, path, self -> use_md5 );
             if ( rc == 0 )
             {
-                KIndex *idx = * idxp;
                 idx -> tbl = KTableAttach ( self );
+                * idxp = & idx -> dad;
             }
         }
 
@@ -1298,11 +1299,12 @@ LIB_EXPORT rc_t CC KTableVOpenIndexUpdate ( KTable *self,
         rc = KDirectoryVResolvePath ( dir, false, path, sizeof path, name, args );
         if ( rc == 0 )
         {
-            rc = KDBManagerOpenIndexUpdate ( self -> mgr, idxp, dir, path );
+            KWIndex *idx;
+            rc = KDBManagerOpenIndexUpdate ( self -> mgr, & idx, dir, path );
             if ( rc == 0 )
             {
-                KIndex *idx = * idxp;
                 idx -> tbl = KTableAttach ( self );
+                * idxp = & idx -> dad;
             }
         }
 

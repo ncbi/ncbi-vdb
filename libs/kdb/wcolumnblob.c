@@ -79,12 +79,12 @@ rc_t KWColumnBlobWhack ( KColumnBlob *bself )
 {
     CAST();
 
-    KColumn *col = self -> col;
+    KWColumn *col = self -> col;
     if ( col != NULL )
     {
-        KColumnPageMapWhack ( & self -> pmorig, & col -> df );
+        KWColumnPageMapWhack ( & self -> pmorig, & col -> df );
         if ( ! self -> read_only )
-            KColumnPageMapWhack ( & self -> pmnew, & col -> df );
+            KWColumnPageMapWhack ( & self -> pmnew, & col -> df );
 
         /* cannot recover from errors here,
         since the page maps needed whacking first,
@@ -99,18 +99,18 @@ rc_t KWColumnBlobWhack ( KColumnBlob *bself )
 /* OpenRead
  * OpenUpdate
  */
-rc_t KWColumnBlobOpenRead ( KWColumnBlob *self, const KColumn *col, int64_t id )
+rc_t KWColumnBlobOpenRead ( KWColumnBlob *self, const KWColumn *col, int64_t id )
 {
     /* locate blob */
-    rc_t rc = KColumnIdxLocateBlob ( & col -> idx, & self -> loc, id, id );
+    rc_t rc = KWColumnIdxLocateBlob ( & col -> idx, & self -> loc, id, id );
     if ( rc == 0 )
     {
         /* indicates not written */
         /*assert ( self -> num_writ == 0 );*/
 
         /* open page map to blob */
-        rc = KColumnPageMapOpen ( & self -> pmorig,
-            ( KColumnData* ) & col -> df, self -> loc . pg, self -> loc . u . blob . size );
+        rc = KWColumnPageMapOpen ( & self -> pmorig,
+            ( KWColumnData* ) & col -> df, self -> loc . pg, self -> loc . u . blob . size );
         if ( rc == 0 )
         {
             /* existing blob must have proper checksum bytes */
@@ -122,7 +122,7 @@ rc_t KWColumnBlobOpenRead ( KWColumnBlob *self, const KColumn *col, int64_t id )
             }
 
             /* the blob is corrupt */
-            KColumnPageMapWhack ( & self -> pmorig, & col -> df );
+            KWColumnPageMapWhack ( & self -> pmorig, & col -> df );
             rc = RC ( rcDB, rcBlob, rcOpening, rcBlob, rcCorrupt );
         }
     }
@@ -130,14 +130,14 @@ rc_t KWColumnBlobOpenRead ( KWColumnBlob *self, const KColumn *col, int64_t id )
     return rc;
 }
 
-rc_t KWColumnBlobOpenUpdate ( KWColumnBlob *self, KColumn *col, int64_t id )
+rc_t KWColumnBlobOpenUpdate ( KWColumnBlob *self, KWColumn *col, int64_t id )
 {
     /* open existing blob */
     rc_t rc = KWColumnBlobOpenRead ( self, col, id );
     if ( rc == 0 )
     {
         /* create a new page map for replacement */
-        rc = KColumnPageMapCreate ( & self -> pmnew, & col -> df );
+        rc = KWColumnPageMapCreate ( & self -> pmnew, & col -> df );
         if ( rc == 0 )
         {
             /* initialize for writing checksums */
@@ -153,7 +153,7 @@ rc_t KWColumnBlobOpenUpdate ( KWColumnBlob *self, KColumn *col, int64_t id )
         }
 
         /* tear down results of opening for read */
-        KColumnPageMapWhack ( & self -> pmorig, & col -> df );
+        KWColumnPageMapWhack ( & self -> pmorig, & col -> df );
     }
 
     return rc;
@@ -161,7 +161,7 @@ rc_t KWColumnBlobOpenUpdate ( KWColumnBlob *self, KColumn *col, int64_t id )
 
 /* Create
  */
-rc_t KWColumnBlobCreate ( KWColumnBlob *self, KColumn *col )
+rc_t KWColumnBlobCreate ( KWColumnBlob *self, KWColumn *col )
 {
     rc_t rc;
 
@@ -204,7 +204,7 @@ rc_t KWColumnBlobCreate ( KWColumnBlob *self, KColumn *col )
     memset ( & self -> pmorig, 0, sizeof self -> pmorig );
 
     /* create a new page map */
-    rc = KColumnPageMapCreate ( & self -> pmnew, & col -> df );
+    rc = KWColumnPageMapCreate ( & self -> pmnew, & col -> df );
     if ( rc == 0 )
     {
         /* initialize for writing checksums */
@@ -282,7 +282,7 @@ static
 rc_t KColumnBlobValidateCRC32 ( const KWColumnBlob *self )
 {
     rc_t rc;
-    const KColumn *col = self -> col;
+    const KWColumn *col = self -> col;
 
     uint8_t buffer [ 8 * 1024 ];
     size_t to_read, num_read, total, size;
@@ -296,7 +296,7 @@ rc_t KColumnBlobValidateCRC32 ( const KWColumnBlob *self )
         if ( to_read > sizeof buffer )
             to_read = sizeof buffer;
 
-        rc = KColumnDataRead ( & col -> df,
+        rc = KWColumnDataRead ( & col -> df,
             & self -> pmorig, total, buffer, to_read, & num_read );
         if ( rc != 0 )
             return rc;
@@ -307,7 +307,7 @@ rc_t KColumnBlobValidateCRC32 ( const KWColumnBlob *self )
     }
 
     /* read stored checksum */
-    rc = KColumnDataRead ( & col -> df,
+    rc = KWColumnDataRead ( & col -> df,
         & self -> pmorig, size, & cs, sizeof cs, & num_read );
     if ( rc != 0 )
         return rc;
@@ -327,7 +327,7 @@ static
 rc_t KColumnBlobValidateMD5 ( const KWColumnBlob *self )
 {
     rc_t rc;
-    const KColumn *col = self -> col;
+    const KWColumn *col = self -> col;
 
     uint8_t buffer [ 8 * 1024 ];
     size_t to_read, num_read, total, size;
@@ -344,7 +344,7 @@ rc_t KColumnBlobValidateMD5 ( const KWColumnBlob *self )
         if ( to_read > sizeof buffer )
             to_read = sizeof buffer;
 
-        rc = KColumnDataRead ( & col -> df,
+        rc = KWColumnDataRead ( & col -> df,
             & self -> pmorig, total, buffer, to_read, & num_read );
         if ( rc != 0 )
             return rc;
@@ -355,7 +355,7 @@ rc_t KColumnBlobValidateMD5 ( const KWColumnBlob *self )
     }
 
     /* read stored checksum */
-    rc = KColumnDataRead ( & col -> df,
+    rc = KWColumnDataRead ( & col -> df,
         & self -> pmorig, size, buffer, sizeof digest, & num_read );
     if ( rc != 0 )
         return rc;
@@ -493,7 +493,7 @@ KWColumnBlobRead ( const KColumnBlob *bself,
     else
     {
         size_t size = self -> num_writ;
-        const KColumn *col = self -> col;
+        const KWColumn *col = self -> col;
 
         if ( size == 0 )
             size = self -> loc . u . blob . size;
@@ -516,7 +516,7 @@ KWColumnBlobRead ( const KColumnBlob *bself,
 		    {
                 size_t nread = 0;
 
-                rc = KColumnDataRead ( & col -> df, & self -> pmorig, offset + *num_read,
+                rc = KWColumnDataRead ( & col -> df, & self -> pmorig, offset + *num_read,
                     & ( ( char * ) buffer ) [ * num_read ], to_read - * num_read, & nread );
                 if ( rc != 0 )
                     break;
@@ -623,7 +623,7 @@ KWColumnBlobReadAll ( const KColumnBlob * bself, KDataBuffer * buffer,
                             }
 
                             /* read checksum information */
-                            rc = KColumnDataRead ( & self -> col -> df,
+                            rc = KWColumnDataRead ( & self -> col -> df,
                                 & self -> pmorig, bsize, opt_cs_data, cs_bytes, & num_read );
                             if ( rc == 0 )
                             {
@@ -659,7 +659,7 @@ LIB_EXPORT rc_t CC KColumnBlobAppend ( KColumnBlob *bself, const void *buffer, s
 {
     CAST();
 
-    KColumn *col;
+    KWColumn *col;
     size_t total, num_writ;
 
     if ( self == NULL )
@@ -673,7 +673,7 @@ LIB_EXPORT rc_t CC KColumnBlobAppend ( KColumnBlob *bself, const void *buffer, s
 
     for ( total = 0; total < size; total += num_writ )
     {
-        rc_t rc = KColumnDataWrite ( & col -> df,
+        rc_t rc = KWColumnDataWrite ( & col -> df,
             & self -> pmnew, self -> num_writ + total,
             ( const char* ) buffer + total, size - total, & num_writ );
         if ( rc != 0 )
@@ -707,7 +707,7 @@ LIB_EXPORT rc_t CC KColumnBlobAssignRange ( KColumnBlob *bself, int64_t first, u
     CAST();
 
     rc_t rc;
-    const KColumn *col;
+    const KWColumn *col;
 
     if ( self == NULL )
         return RC ( rcDB, rcBlob, rcUpdating, rcSelf, rcNull );
@@ -742,7 +742,7 @@ LIB_EXPORT rc_t CC KColumnBlobAssignRange ( KColumnBlob *bself, int64_t first, u
             return 0;
 
         /* conflicting assignment */
-        KColumnPageMapWhack ( & self -> pmorig, & col -> df );
+        KWColumnPageMapWhack ( & self -> pmorig, & col -> df );
         memset ( & self -> loc, 0, sizeof self -> loc );
         memset ( & self -> pmorig, 0, sizeof self -> pmorig );
         return RC ( rcDB, rcBlob, rcUpdating, rcRange, rcIncorrect );
@@ -770,7 +770,7 @@ char zero [ 4096 ];
 static
 rc_t KColumnBlobZeroPad ( KWColumnBlob *self )
 {
-    KColumn *col = self -> col;
+    KWColumn *col = self -> col;
     size_t pad_bytes = self -> num_writ % col -> df . pgsize;
     if ( pad_bytes != 0 )
     {
@@ -785,7 +785,7 @@ rc_t KColumnBlobZeroPad ( KWColumnBlob *self )
             if ( to_write > sizeof zero )
                 to_write = sizeof zero;
 
-            rc = KColumnDataWrite ( & col -> df,
+            rc = KWColumnDataWrite ( & col -> df,
                 & self -> pmnew, self -> num_writ + total,
                 zero, to_write, & num_writ );
             if ( rc != 0 )
@@ -802,7 +802,7 @@ rc_t KColumnBlobDoCommit ( KWColumnBlob *self )
 {
     rc_t rc;
     KColBlobLoc loc;
-    KColumn *col = self -> col;
+    KWColumn *col = self -> col;
 
     /* finish checksum */
     if ( col -> csbytes != 0 )
@@ -831,7 +831,7 @@ rc_t KColumnBlobDoCommit ( KWColumnBlob *self )
             break;
         }
 
-        rc = KColumnDataWrite ( & col -> df,
+        rc = KWColumnDataWrite ( & col -> df,
             & self -> pmnew, self -> num_writ,
             cs, col -> csbytes, & num_writ );
         if ( rc != 0 )
@@ -843,7 +843,7 @@ rc_t KColumnBlobDoCommit ( KWColumnBlob *self )
     }
 
     /* extract index information */
-    rc = KColumnPageMapId ( & self -> pmnew, & col -> df, & loc . pg );
+    rc = KWColumnPageMapId ( & self -> pmnew, & col -> df, & loc . pg );
     if ( rc == 0 )
     {
         loc . u . blob . size = ( uint32_t ) self -> num_writ;
@@ -857,12 +857,12 @@ rc_t KColumnBlobDoCommit ( KWColumnBlob *self )
         if ( rc == 0 )
         {
             /* commit data fork */
-            rc = KColumnDataCommit ( & col -> df,
+            rc = KWColumnDataCommit ( & col -> df,
                 & self -> pmnew, self -> num_writ );
             if ( rc == 0 )
             {
                 /* commit index fork */
-                rc = KColumnIdxCommit ( & col -> idx, col -> md5,
+                rc = KWColumnIdxCommit ( & col -> idx, col -> md5,
                     & loc, col -> commit_freq, col -> df . eof,
                     col -> df . pgsize, col -> checksum );
                 if ( rc == 0 || rc == kdbReindex )
@@ -874,7 +874,7 @@ rc_t KColumnBlobDoCommit ( KWColumnBlob *self )
                         rc = 0;
                     else
                     {
-                        rc = KColumnDataFree ( & col -> df,
+                        rc = KWColumnDataFree ( & col -> df,
                             & self -> pmorig, self -> loc . u . blob . size + col -> csbytes );
                         if ( GetRCState ( rc ) == rcInvalid )
                             rc = 0;
@@ -901,16 +901,16 @@ rc_t KColumnBlobDoCommit ( KWColumnBlob *self )
 			/* these must not be a point of failure
 			   The only failure from the KMD5FileCommit
 			   behind these is on NULL parameter */
-			rc = KColumnDataCommitDone ( & col -> df );
+			rc = KWColumnDataCommitDone ( & col -> df );
 			if ( rc == 0 )
-			    rc = KColumnIdxCommitDone ( & col -> idx );
+			    rc = KWColumnIdxCommitDone ( & col -> idx );
 
                         return status;
                     }
                 }
 
                 /* revert data fork */
-                KColumnDataFree ( & col -> df,
+                KWColumnDataFree ( & col -> df,
                     & self -> pmnew, self -> num_writ );
 		KMD5FileRevert ( self -> col -> df . fmd5 );
             }
@@ -942,7 +942,7 @@ LIB_EXPORT rc_t CC KColumnBlobCommit ( KColumnBlob *bself )
     rc = KColumnBlobDoCommit ( self );
 
     if ( rc == kdbReindex )
-        rc = KColumnReindex ( self -> col );
+        rc = KColumnReindex ( & self -> col -> dad );
 
     return rc;
 }

@@ -45,26 +45,26 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef struct KU64Index_PNode_struct {
+typedef struct KWU64Index_PNode_struct {
     uint64_t key;
     uint64_t key_size;
     int64_t id;
     uint64_t id_qty;
-} KU64Index_PNode;
+} KWU64Index_PNode;
 
-typedef struct KU64Index_Node_struct {
+typedef struct KWU64Index_Node_struct {
     BSTNode node;
     uint64_t key;
     uint64_t key_size;
     int64_t id;
     uint64_t id_qty;
-} KU64Index_Node;
+} KWU64Index_Node;
 
 static
-int64_t CC KU64Index_NodeSort( const BSTNode *item, const BSTNode *node )
+int64_t CC KWU64Index_NodeSort( const BSTNode *item, const BSTNode *node )
 {
-    const KU64Index_Node* i = (const KU64Index_Node*)item;
-    const KU64Index_Node* n = (const KU64Index_Node*)node;
+    const KWU64Index_Node* i = (const KWU64Index_Node*)item;
+    const KWU64Index_Node* n = (const KWU64Index_Node*)node;
 
     if( i->key < n->key ) {
         return -1;
@@ -75,10 +75,10 @@ int64_t CC KU64Index_NodeSort( const BSTNode *item, const BSTNode *node )
 }
 
 static
-int64_t CC KU64Index_NodeSortUnique( const BSTNode *item, const BSTNode *node )
+int64_t CC KWU64Index_NodeSortUnique( const BSTNode *item, const BSTNode *node )
 {
-    const KU64Index_Node* i = (const KU64Index_Node*)item;
-    const KU64Index_Node* n = (const KU64Index_Node*)node;
+    const KWU64Index_Node* i = (const KWU64Index_Node*)item;
+    const KWU64Index_Node* n = (const KWU64Index_Node*)node;
 
     if( (i->key + i->key_size - 1) < n->key ) {
         return -1;
@@ -89,12 +89,12 @@ int64_t CC KU64Index_NodeSortUnique( const BSTNode *item, const BSTNode *node )
 }
 
 static
-bool CC KU64Index_UnrollPersisted( PBSTNode *n, void *data )
+bool CC KWU64Index_UnrollPersisted( PBSTNode *n, void *data )
 {
-    KU64Index_v3* self = data;
-    const KU64Index_PNode* pn = n->data.addr;
+    KWU64Index_v3* self = data;
+    const KWU64Index_PNode* pn = n->data.addr;
 
-    KU64Index_Node* node = calloc(1, sizeof(KU64Index_Node));
+    KWU64Index_Node* node = calloc(1, sizeof(KWU64Index_Node));
     if( node == NULL ) {
         self->rc = RC(rcExe, rcNode, rcConstructing, rcMemory, rcInsufficient);
     } else {
@@ -102,7 +102,7 @@ bool CC KU64Index_UnrollPersisted( PBSTNode *n, void *data )
         node->key_size = pn->key_size;
         node->id = pn->id;
         node->id_qty = pn->id_qty;
-        self->rc = BSTreeInsert(&self->tree, &node->node, KU64Index_NodeSort);
+        self->rc = BSTreeInsert(&self->tree, &node->node, KWU64Index_NodeSort);
     }
     if( self->rc != 0 ) {
         free(node);
@@ -110,7 +110,7 @@ bool CC KU64Index_UnrollPersisted( PBSTNode *n, void *data )
     return self->rc == 0 ? false : true;
 }
 
-rc_t KU64IndexOpen_v3(KU64Index_v3* self, struct KMMap const *mm, bool byteswap)
+rc_t KWU64IndexOpen_v3(KWU64Index_v3* self, struct KMMap const *mm, bool byteswap)
 {
     rc_t rc = 0;
     const char* maddr;
@@ -144,33 +144,33 @@ rc_t KU64IndexOpen_v3(KU64Index_v3* self, struct KMMap const *mm, bool byteswap)
         return rc;
     }
 
-    PBSTreeDoUntil(ptree, false, KU64Index_UnrollPersisted, self);
+    PBSTreeDoUntil(ptree, false, KWU64Index_UnrollPersisted, self);
     rc = self->rc;
 
     PBSTreeWhack(ptree);
 
     if( rc != 0 ) {
-        KU64IndexWhack_v3(self);
+        KWU64IndexWhack_v3(self);
     }
     return rc;
 }
 
 static
-void CC KU64Index_WhackBSTree( BSTNode *n, void *data )
+void CC KWU64Index_WhackBSTree( BSTNode *n, void *data )
 {
-    free((KU64Index_Node*)n);
+    free((KWU64Index_Node*)n);
 }
 
-rc_t KU64IndexWhack_v3(KU64Index_v3* self)
+rc_t KWU64IndexWhack_v3(KWU64Index_v3* self)
 {
     self->rc = 0;
-    BSTreeWhack(&self->tree, KU64Index_WhackBSTree, NULL);
+    BSTreeWhack(&self->tree, KWU64Index_WhackBSTree, NULL);
     return 0;
 }
 
-rc_t KU64IndexInsert_v3(KU64Index_v3* self, bool unique, uint64_t key, uint64_t key_size, int64_t id, uint64_t id_qty)
+rc_t KWU64IndexInsert_v3(KWU64Index_v3* self, bool unique, uint64_t key, uint64_t key_size, int64_t id, uint64_t id_qty)
 {
-    KU64Index_Node* node = calloc(1, sizeof(KU64Index_Node));
+    KWU64Index_Node* node = calloc(1, sizeof(KWU64Index_Node));
     self->rc = 0;
 
     if( node == NULL ) {
@@ -181,9 +181,9 @@ rc_t KU64IndexInsert_v3(KU64Index_v3* self, bool unique, uint64_t key, uint64_t 
         node->id = id;
         node->id_qty = id_qty;
         if( unique ) {
-            self->rc = BSTreeInsertUnique(&self->tree, &node->node, NULL, KU64Index_NodeSortUnique);
+            self->rc = BSTreeInsertUnique(&self->tree, &node->node, NULL, KWU64Index_NodeSortUnique);
         } else {
-            self->rc = BSTreeInsert(&self->tree, &node->node, KU64Index_NodeSort);
+            self->rc = BSTreeInsert(&self->tree, &node->node, KWU64Index_NodeSort);
         }
     }
     if( self->rc != 0 ) {
@@ -193,10 +193,10 @@ rc_t KU64IndexInsert_v3(KU64Index_v3* self, bool unique, uint64_t key, uint64_t 
 }
 
 static
-int64_t CC KU64Index_Cmp4Delete( const void *item, const BSTNode *node )
+int64_t CC KWU64Index_Cmp4Delete( const void *item, const BSTNode *node )
 {
-    const KU64Index_Node* i = (const KU64Index_Node*)item;
-    const KU64Index_Node* n = (const KU64Index_Node*)node;
+    const KWU64Index_Node* i = (const KWU64Index_Node*)item;
+    const KWU64Index_Node* n = (const KWU64Index_Node*)node;
 
     if( i->key < n->key ) {
         return -1;
@@ -206,14 +206,14 @@ int64_t CC KU64Index_Cmp4Delete( const void *item, const BSTNode *node )
     return 0;
 }
 
-rc_t KU64IndexDelete_v3(KU64Index_v3* self, uint64_t key)
+rc_t KWU64IndexDelete_v3(KWU64Index_v3* self, uint64_t key)
 {
-    KU64Index_Node node;
+    KWU64Index_Node node;
     BSTNode* n = NULL;
 
     self->rc = 0;
     node.key = key;
-    n = BSTreeFind(&self->tree, &node, KU64Index_Cmp4Delete);
+    n = BSTreeFind(&self->tree, &node, KWU64Index_Cmp4Delete);
     if( n != NULL ) {
         if( !BSTreeUnlink(&self->tree, n) ) {
             self->rc = RC(rcDB, rcIndex, rcDestroying, rcId, rcCorrupt);
@@ -224,28 +224,28 @@ rc_t KU64IndexDelete_v3(KU64Index_v3* self, uint64_t key)
     return self->rc;
 }
 
-typedef struct KU64Index_PersistData_struct
+typedef struct KWU64Index_PersistData_struct
 {
     uint64_t pos;
     KFile *file;
     KMD5File *file_md5;
-} KU64Index_PersistData;
+} KWU64Index_PersistData;
 
 static
-rc_t CC KU64Index_WriteFunc( void *param, const void *buffer, size_t size, size_t *num_writ )
+rc_t CC KWU64Index_WriteFunc( void *param, const void *buffer, size_t size, size_t *num_writ )
 {
-    KU64Index_PersistData* pd = param;
+    KWU64Index_PersistData* pd = param;
     rc_t rc = KFileWrite(pd->file, pd->pos, buffer, size, num_writ);
     pd->pos += *num_writ;
     return rc;
 }
 
 static
-rc_t CC KU64Index_AuxFunc(void *param, const void *node, size_t *num_writ, PTWriteFunc write, void *write_param )
+rc_t CC KWU64Index_AuxFunc(void *param, const void *node, size_t *num_writ, PTWriteFunc write, void *write_param )
 {
     rc_t rc = 0;
-    const KU64Index_Node* n = (const KU64Index_Node*)node;
-    int sz = sizeof(KU64Index_Node) - sizeof(BSTNode);
+    const KWU64Index_Node* n = (const KWU64Index_Node*)node;
+    int sz = sizeof(KWU64Index_Node) - sizeof(BSTNode);
 
     if( write != NULL ) {
         rc = (*write)(write_param, &n->key, sz, num_writ);
@@ -255,15 +255,15 @@ rc_t CC KU64Index_AuxFunc(void *param, const void *node, size_t *num_writ, PTWri
     return rc;
 }
 
-rc_t KU64IndexPersist_v3(KU64Index_v3* self, bool proj, KDirectory *dir, const char *path, bool use_md5)
+rc_t KWU64IndexPersist_v3(KWU64Index_v3* self, bool proj, KDirectory *dir, const char *path, bool use_md5)
 {
-    KU64Index_PersistData pd;
+    KWU64Index_PersistData pd;
     char tmpname[256];
     char tmpmd5name[256];
     char md5path[256];
 
     self->rc = 0;
-    memset(&pd, 0, sizeof(KU64Index_PersistData));
+    memset(&pd, 0, sizeof(KWU64Index_PersistData));
 
     self->rc = KDirectoryResolvePath(dir, false, tmpname, sizeof(tmpname), "%s.tmp", path);
 
@@ -323,7 +323,7 @@ rc_t KU64IndexPersist_v3(KU64Index_v3* self, bool proj, KDirectory *dir, const c
                 if( use_md5 ) {
                     KMD5FileBeginTransaction(pd.file_md5);
                 }
-                self->rc = BSTreePersist(&self->tree, NULL, KU64Index_WriteFunc, &pd, KU64Index_AuxFunc, &pd);
+                self->rc = BSTreePersist(&self->tree, NULL, KWU64Index_WriteFunc, &pd, KWU64Index_AuxFunc, &pd);
             }
             KFileRelease(pd.file);
             pd.file = NULL;
@@ -351,25 +351,25 @@ rc_t KU64IndexPersist_v3(KU64Index_v3* self, bool proj, KDirectory *dir, const c
     return self->rc;
 }
 
-typedef struct KU64Index_GrepData_struct {
+typedef struct KWU64Index_GrepData_struct {
     rc_t rc;
     rc_t (CC*func)(uint64_t key, uint64_t key_size, int64_t id, uint64_t id_qty, void* data);
     void* data;
-    KU64Index_Node search;
+    KWU64Index_Node search;
     uint64_t* key;
     uint64_t* key_size;
     int64_t* id;
     uint64_t* id_qty;
-} KU64Index_GrepData;
+} KWU64Index_GrepData;
 
 /*
  * return true: if found or break DoUntil for FindAll
  */
 static
-bool CC KU64Index_Grep(BSTNode *node, void *data)
+bool CC KWU64Index_Grep(BSTNode *node, void *data)
 {
-    KU64Index_Node* n = (KU64Index_Node*)node;
-    KU64Index_GrepData* d = data;
+    KWU64Index_Node* n = (KWU64Index_Node*)node;
+    KWU64Index_GrepData* d = data;
 
     if( d->search.key >= n->key && (d->search.key - n->key) < n->key_size ) {
         if( d->func ) {
@@ -388,32 +388,32 @@ bool CC KU64Index_Grep(BSTNode *node, void *data)
     return false;
 }
 
-rc_t KU64IndexFind_v3( const KU64Index_v3* self, uint64_t offset, uint64_t* key, uint64_t* key_size, int64_t* id, uint64_t* id_qty )
+rc_t KWU64IndexFind_v3( const KWU64Index_v3* self, uint64_t offset, uint64_t* key, uint64_t* key_size, int64_t* id, uint64_t* id_qty )
 {
-    KU64Index_GrepData d;
+    KWU64Index_GrepData d;
 
-    memset(&d, 0, sizeof(KU64Index_GrepData));
+    memset(&d, 0, sizeof(KWU64Index_GrepData));
     d.search.key = offset;
     d.key = key;
     d.key_size = key_size;
     d.id = id;
     d.id_qty = id_qty;
-    if( !BSTreeDoUntil(&self->tree, false, KU64Index_Grep, &d) ) {
+    if( !BSTreeDoUntil(&self->tree, false, KWU64Index_Grep, &d) ) {
         d.rc = RC(rcDB, rcIndex, rcSelecting, rcId, rcNotFound);
     }
     return d.rc;
 }
 
 
-rc_t KU64IndexFindAll_v3( const KU64Index_v3* self, uint64_t offset,
+rc_t KWU64IndexFindAll_v3( const KWU64Index_v3* self, uint64_t offset,
     rc_t (CC*f)(uint64_t key, uint64_t key_size, int64_t id, uint64_t id_qty, void* data), void* data)
 {
-    KU64Index_GrepData d;
+    KWU64Index_GrepData d;
 
-    memset(&d, 0, sizeof(KU64Index_GrepData));
+    memset(&d, 0, sizeof(KWU64Index_GrepData));
     d.func = f;
     d.data = data;
     d.search.key = offset;
-    BSTreeDoUntil(&self->tree, false, KU64Index_Grep, &d);
+    BSTreeDoUntil(&self->tree, false, KWU64Index_Grep, &d);
     return d.rc;
 }

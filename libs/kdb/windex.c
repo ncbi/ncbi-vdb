@@ -50,29 +50,29 @@
 #include <byteswap.h>
 #include <assert.h>
 
-static rc_t CC KWIndexWhack ( KIndex *self );
-static bool CC KWIndexLocked ( const KIndex *self );
-static rc_t CC KWIndexVersion ( const KIndex *self, uint32_t *version );
-static rc_t CC KWIndexType ( const KIndex *self, KIdxType *type );
-static rc_t CC KWRIndexConsistencyCheck ( const KIndex *self, uint32_t level,
+static rc_t CC KWIndexWhack ( KWIndex *self );
+static bool CC KWIndexLocked ( const KWIndex *self );
+static rc_t CC KWIndexVersion ( const KWIndex *self, uint32_t *version );
+static rc_t CC KWIndexType ( const KWIndex *self, KIdxType *type );
+static rc_t CC KWRIndexConsistencyCheck ( const KWIndex *self, uint32_t level,
     int64_t *start_id, uint64_t *id_range, uint64_t *num_keys,
     uint64_t *num_rows, uint64_t *num_holes );
-static rc_t CC KWIndexFindText ( const KIndex *self, const char *key, int64_t *start_id, uint64_t *id_count,
+static rc_t CC KWIndexFindText ( const KWIndex *self, const char *key, int64_t *start_id, uint64_t *id_count,
     int ( CC * custom_cmp ) ( const void *item, struct PBSTNode const *n, void *data ),
     void *data );
-static rc_t CC KWIndexFindAllText ( const KIndex *self, const char *key,
+static rc_t CC KWIndexFindAllText ( const KWIndex *self, const char *key,
     rc_t ( CC * f ) ( int64_t id, uint64_t id_count, void *data ), void *data );
-static rc_t CC KWIndexProjectText ( const KIndex *self,
+static rc_t CC KWIndexProjectText ( const KWIndex *self,
     int64_t id, int64_t *start_id, uint64_t *id_count,
     char *key, size_t kmax, size_t *actsize );
-static rc_t CC KWIndexProjectAllText ( const KIndex *self, int64_t id,
+static rc_t CC KWIndexProjectAllText ( const KWIndex *self, int64_t id,
     rc_t ( CC * f ) ( int64_t start_id, uint64_t id_count, const char *key, void *data ),
     void *data );
-static rc_t CC KWIndexFindU64( const KIndex* self, uint64_t offset, uint64_t* key,
+static rc_t CC KWIndexFindU64( const KWIndex* self, uint64_t offset, uint64_t* key,
     uint64_t* key_size, int64_t* id, uint64_t* id_qty );
-static rc_t CC KWIndexFindAllU64( const KIndex* self, uint64_t offset,
+static rc_t CC KWIndexFindAllU64( const KWIndex* self, uint64_t offset,
     rc_t ( CC * f )(uint64_t key, uint64_t key_size, int64_t id, uint64_t id_qty, void* data ), void* data);
-static void CC KWIndexSetMaxRowId ( const KIndex *cself, int64_t max_row_id );
+static void CC KWIndexSetMaxRowId ( const KWIndex *cself, int64_t max_row_id );
 
 static KIndex_vt KWIndex_vt =
 {
@@ -92,17 +92,19 @@ static KIndex_vt KWIndex_vt =
     KWIndexSetMaxRowId
 };
 
+#define CAST() assert( bself->vt == &KWIndex_vt ); KWIndex * self = (KWIndex *)bself
+
 /* Whack
  */
 static
 rc_t CC
-KWIndexWhack ( KIndex *self )
+KWIndexWhack ( KWIndex *self )
 {
     rc_t rc, rc2 = 0;
     KDBManager *mgr = self -> mgr;
     KSymbol * symb;
 
-    rc = KIndexCommit( self );
+    rc = KIndexCommit( & self -> dad );
 
     /* release owner */
     if ( self -> db != NULL )
@@ -144,13 +146,13 @@ KWIndexWhack ( KIndex *self )
                     switch ( self -> vers )
                     {
                     case 1:
-                        KTrieIndexWhack_v1 ( & self -> u . txt1 );
+                        KWTrieIndexWhack_v1 ( & self -> u . txt1 );
                         rc2 = 0;
                         break;
                     case 2:
                     case 3:
                     case 4:
-                        KTrieIndexWhack_v2 ( & self -> u . txt2 );
+                        KWTrieIndexWhack_v2 ( & self -> u . txt2 );
                         rc2 = 0;
                         break;
                     }
@@ -161,7 +163,7 @@ KWIndexWhack ( KIndex *self )
                     {
                     case 3:
                     case 4:
-                        rc2 = KU64IndexWhack_v3 ( & self -> u . u64_3 );
+                        rc2 = KWU64IndexWhack_v3 ( & self -> u . u64_3 );
                         break;
                     }
                     break;
@@ -188,7 +190,7 @@ KWIndexWhack ( KIndex *self )
 /* Attach
  */
 static
-rc_t KIndexAttach ( KIndex *self, const KMMap *mm, bool *byteswap )
+rc_t KIndexAttach ( KWIndex *self, const KMMap *mm, bool *byteswap )
 {
     size_t size;
     rc_t rc = KMMapSize ( mm, & size );
@@ -280,7 +282,7 @@ rc_t KIndexAttach ( KIndex *self, const KMMap *mm, bool *byteswap )
  *  NB - does NOT attach reference to dir, but steals it
  */
 static
-rc_t KIndexMake ( KIndex **idxp, KDirectory *dir, const char *path )
+rc_t KIndexMake ( KWIndex **idxp, KDirectory *dir, const char *path )
 {
     rc_t rc;
     char fullpath[4096];
@@ -300,7 +302,7 @@ rc_t KIndexMake ( KIndex **idxp, KDirectory *dir, const char *path )
             rc = KDirectoryResolvePath(dir, true, fullpath, sizeof(fullpath), "%s", path);
             if (rc == 0)
             {
-                KIndex* idx = malloc ( sizeof *idx + strlen ( fullpath ) );
+                KWIndex* idx = malloc ( sizeof *idx + strlen ( fullpath ) );
                 if ( idx == NULL )
                     rc = RC ( rcDB, rcIndex, rcConstructing, rcMemory, rcExhausted );
                 else
@@ -310,7 +312,7 @@ rc_t KIndexMake ( KIndex **idxp, KDirectory *dir, const char *path )
                     if ( rc == 0 )
                     {
                         idx -> dad . vt = & KWIndex_vt;
-                        KRefcountInit ( & idx -> dad . refcount, 1, "KIndex", "make", fullpath );
+                        KRefcountInit ( & idx -> dad . refcount, 1, "KWIndex", "make", fullpath );
 
                         idx -> dir = dir;
                         strcpy ( idx -> path, fullpath );
@@ -335,7 +337,7 @@ rc_t KIndexMake ( KIndex **idxp, KDirectory *dir, const char *path )
     return rc;
 }
 
-rc_t KWIndexMakeRead ( KIndex **idxp, const KDirectory *dir, const char *path )
+rc_t KWIndexMakeRead ( KWIndex **idxp, const KDirectory *dir, const char *path )
 {
     const KFile *f;
     rc_t rc = KDirectoryOpenFileRead ( dir, & f, "%s", path );
@@ -349,7 +351,7 @@ rc_t KWIndexMakeRead ( KIndex **idxp, const KDirectory *dir, const char *path )
             if ( rc == 0 )
             {
                 bool byteswap;
-                KIndex *idx = * idxp;
+                KWIndex *idx = * idxp;
                 rc = KIndexAttach ( idx, mm, & byteswap );
                 if ( rc == 0 )
                 {
@@ -361,7 +363,7 @@ rc_t KWIndexMakeRead ( KIndex **idxp, const KDirectory *dir, const char *path )
                         /* open using v1 code only if KDBINDEXVERS is 1
                            if 2 or later, open as a v2 index */
 #if KDBINDEXVERS == 1
-                        rc = KTrieIndexOpen_v1 ( & idx -> u . txt1, mm );
+                        rc = KWTrieIndexOpen_v1 ( & idx -> u . txt1, mm );
                         if ( rc == 0 )
                         {
                             if ( idx -> u . txt1 . pt . id2node != NULL )
@@ -378,7 +380,7 @@ rc_t KWIndexMakeRead ( KIndex **idxp, const KDirectory *dir, const char *path )
                             case kitText:
                             case kitText | kitProj:
                                 /* will guess version in open */
-                                rc = KTrieIndexOpen_v2 ( & idx -> u . txt2, mm, byteswap );
+                                rc = KWTrieIndexOpen_v2 ( & idx -> u . txt2, mm, byteswap );
                                 if( rc == 0 && idx -> u.txt2.pt.ord2node != NULL ) {
                                     idx -> type |= kitProj;
                                 }
@@ -386,7 +388,7 @@ rc_t KWIndexMakeRead ( KIndex **idxp, const KDirectory *dir, const char *path )
                                 break;
 
                             case kitU64:
-                                rc = KU64IndexOpen_v3(&idx->u.u64_3, mm, byteswap);
+                                rc = KWU64IndexOpen_v3(&idx->u.u64_3, mm, byteswap);
                                 break;
                         }
                         break;
@@ -406,7 +408,7 @@ rc_t KWIndexMakeRead ( KIndex **idxp, const KDirectory *dir, const char *path )
     return rc;
 }
 
-rc_t KIndexMakeUpdate ( KIndex **idxp, KDirectory *dir, const char *path )
+rc_t KWIndexMakeUpdate ( KWIndex **idxp, KDirectory *dir, const char *path )
 {
     const KFile *f;
     rc_t rc = KDirectoryOpenFileRead ( dir, & f, "%s", path );
@@ -421,7 +423,7 @@ rc_t KIndexMakeUpdate ( KIndex **idxp, KDirectory *dir, const char *path )
             if ( rc == 0 )
             {
                 bool byteswap;
-                KIndex *idx = * idxp;
+                KWIndex *idx = * idxp;
                 rc = KIndexAttach ( idx, mm, & byteswap );
                 if ( rc == 0 )
                 {
@@ -431,7 +433,7 @@ rc_t KIndexMakeUpdate ( KIndex **idxp, KDirectory *dir, const char *path )
                         /* open using v1 code only if KDBINDEXVERS is 1
                            if 2 or later, open as a v2 index */
 #if KDBINDEXVERS == 1
-                        rc = KTrieIndexOpen_v1 ( & idx -> u . txt1, mm, byteswap );
+                        rc = KWTrieIndexOpen_v1 ( & idx -> u . txt1, mm, byteswap );
                         if ( rc == 0 )
                         {
                             if ( idx -> u . txt1 . pt . id2node != NULL )
@@ -448,7 +450,7 @@ rc_t KIndexMakeUpdate ( KIndex **idxp, KDirectory *dir, const char *path )
                             case kitText:
                             case kitText | kitProj:
                                 /* will guess version in open */
-                                rc = KTrieIndexOpen_v2 ( & idx -> u . txt2, mm, byteswap );
+                                rc = KWTrieIndexOpen_v2 ( & idx -> u . txt2, mm, byteswap );
                                 if ( rc == 0 )
                                 {
                                     if( idx -> u . txt2 . pt . ord2node != NULL ) {
@@ -460,7 +462,7 @@ rc_t KIndexMakeUpdate ( KIndex **idxp, KDirectory *dir, const char *path )
                                         /* check for a sparse id space */
                                         if( idx -> u . txt2 . pt . variant != 0 ) {
                                             /* try to load existing guy */
-                                            rc = KTrieIndexAttach_v2 ( & idx -> u . txt2,
+                                            rc = KWTrieIndexAttach_v2 ( & idx -> u . txt2,
                                                           idx -> type != ( uint8_t ) kitText );
                                             if ( rc == 0 )
                                                 idx -> dirty = true;
@@ -470,7 +472,7 @@ rc_t KIndexMakeUpdate ( KIndex **idxp, KDirectory *dir, const char *path )
                                 break;
 
                             case kitU64:
-                                rc = KU64IndexOpen_v3(&idx->u.u64_3, mm, byteswap);
+                                rc = KWU64IndexOpen_v3(&idx->u.u64_3, mm, byteswap);
                                 break;
                         }
                         break;
@@ -481,7 +483,7 @@ rc_t KIndexMakeUpdate ( KIndex **idxp, KDirectory *dir, const char *path )
                 }
 
                 if ( rc != 0 )
-                    KIndexWhack ( idx );
+                    KIndexWhack ( & idx -> dad );
             }
 
             KMMapRelease ( mm );
@@ -497,8 +499,10 @@ rc_t KIndexMakeUpdate ( KIndex **idxp, KDirectory *dir, const char *path )
  *  useful when forcing conversion from an older version
  */
 #if KDBINDEXVERS > 1
-LIB_EXPORT rc_t CC KIndexMarkModified ( KIndex *self )
+LIB_EXPORT rc_t CC KIndexMarkModified ( KIndex *bself )
 {
+    CAST();
+
     rc_t rc;
 
     if ( self == NULL )
@@ -520,7 +524,7 @@ LIB_EXPORT rc_t CC KIndexMarkModified ( KIndex *self )
         case 2:
         case 3:
         case 4:
-            rc = KTrieIndexAttach_v2 ( & self -> u . txt2,
+            rc = KWTrieIndexAttach_v2 ( & self -> u . txt2,
                 self -> type != ( uint8_t ) kitText );
             if ( rc == 0 )
                 self -> dirty = true;
@@ -534,24 +538,24 @@ LIB_EXPORT rc_t CC KIndexMarkModified ( KIndex *self )
 }
 #endif
 
-rc_t KIndexCreate ( KIndex **idxp, KDirectory *dir, KIdxType type, KCreateMode cmode, const char *path, int ptype )
+rc_t KWIndexCreate ( KWIndex **idxp, KDirectory *dir, KIdxType type, KCreateMode cmode, const char *path, int ptype )
 {
     rc_t rc = 0;
-    KIndex *idx;
+    KWIndex *idx;
 
     if ( ptype != kptNotFound )
     {
         switch ( cmode & kcmValueMask )
         {
         case kcmOpen:
-            rc = KIndexMakeUpdate ( idxp, dir, path );
+            rc = KWIndexMakeUpdate ( idxp, dir, path );
             if ( rc == 0 )
             {
                 idx = * idxp;
                 if ( ( KIdxType ) idx -> type != type )
                 {
                     * idxp = NULL;
-                    KIndexWhack ( idx );
+                    KIndexWhack ( & idx -> dad );
                     rc = RC ( rcDB, rcIndex, rcConstructing, rcType, rcIncorrect );
                 }
             }
@@ -582,14 +586,14 @@ rc_t KIndexCreate ( KIndex **idxp, KDirectory *dir, KIdxType type, KCreateMode c
         case kitText:
         case kitText | kitProj:
 #if KDBINDEXVERS == 1
-            rc = KTrieIndexOpen_v1 ( & idx -> u . txt1, NULL, false );
+            rc = KWTrieIndexOpen_v1 ( & idx -> u . txt1, NULL, false );
 #else
-            rc = KTrieIndexOpen_v2 ( & idx -> u . txt2, NULL, false );
+            rc = KWTrieIndexOpen_v2 ( & idx -> u . txt2, NULL, false );
 #endif
             break;
 
         case kitU64:
-            rc = KU64IndexOpen_v3 ( & idx->u.u64_3, NULL, false );
+            rc = KWU64IndexOpen_v3 ( & idx->u.u64_3, NULL, false );
             break;
 
         default:
@@ -599,7 +603,7 @@ rc_t KIndexCreate ( KIndex **idxp, KDirectory *dir, KIdxType type, KCreateMode c
         if ( rc != 0 )
         {
             * idxp = NULL;
-            KIndexWhack ( idx );
+            KIndexWhack ( & idx -> dad );
         }
         else
         {
@@ -616,7 +620,7 @@ rc_t KIndexCreate ( KIndex **idxp, KDirectory *dir, KIdxType type, KCreateMode c
  */
 static
 bool CC
-KWIndexLocked ( const KIndex *self )
+KWIndexLocked ( const KWIndex *self )
 {
     rc_t rc = KDBWWritable ( self -> dir, "" );
     return GetRCState ( rc ) == rcLocked;
@@ -628,7 +632,7 @@ KWIndexLocked ( const KIndex *self )
  */
 static
 rc_t CC
-KWIndexVersion ( const KIndex *self, uint32_t *version )
+KWIndexVersion ( const KWIndex *self, uint32_t *version )
 {
     if ( version == NULL )
         return RC ( rcDB, rcIndex, rcAccessing, rcParam, rcNull );
@@ -643,7 +647,7 @@ KWIndexVersion ( const KIndex *self, uint32_t *version )
  */
 static
 rc_t CC
-KWIndexType ( const KIndex *self, KIdxType *type )
+KWIndexType ( const KWIndex *self, KIdxType *type )
 {
     if ( type == NULL )
         return RC ( rcDB, rcIndex, rcAccessing, rcParam, rcNull );
@@ -655,8 +659,10 @@ KWIndexType ( const KIndex *self, KIdxType *type )
 /* Commit
  *  ensure any changes are committed to disk
  */
-LIB_EXPORT rc_t CC KIndexCommit ( KIndex *self )
+LIB_EXPORT rc_t CC KIndexCommit ( KIndex *bself )
 {
+    CAST();
+
     rc_t rc = 0;
     bool proj;
 
@@ -677,13 +683,13 @@ LIB_EXPORT rc_t CC KIndexCommit ( KIndex *self )
             switch ( self -> vers )
             {
             case 1:
-                rc = KTrieIndexPersist_v1 ( & self -> u . txt1,
+                rc = KWTrieIndexPersist_v1 ( & self -> u . txt1,
                     proj, self -> dir, self -> path, self -> use_md5 );
                 break;
             case 2:
             case 3:
             case 4:
-                rc = KTrieIndexPersist_v2 ( & self -> u . txt2,
+                rc = KWTrieIndexPersist_v2 ( & self -> u . txt2,
                     proj, self -> dir, self -> path, self -> use_md5 );
                 break;
             }
@@ -693,7 +699,7 @@ LIB_EXPORT rc_t CC KIndexCommit ( KIndex *self )
             switch(self -> vers) {
             case 3:
             case 4:
-                rc = KU64IndexPersist_v3(&self->u.u64_3, proj, self->dir,
+                rc = KWU64IndexPersist_v3(&self->u.u64_3, proj, self->dir,
                                          self->path, self->use_md5);
                 break;
             }
@@ -716,9 +722,11 @@ LIB_EXPORT rc_t CC KIndexCommit ( KIndex *self )
  *
  *  "id" [ IN ] - id
  */
-LIB_EXPORT rc_t CC KIndexInsertText ( KIndex *self, bool unique,
+LIB_EXPORT rc_t CC KIndexInsertText ( KIndex *bself, bool unique,
     const char *key, int64_t id )
 {
+    CAST();
+
     rc_t rc = 0;
     bool proj;
 
@@ -744,13 +752,13 @@ LIB_EXPORT rc_t CC KIndexInsertText ( KIndex *self, bool unique,
             if ( id <= 0 || ( id >> 32 ) != 0 )
                 return RC ( rcDB, rcIndex, rcInserting, rcId, rcExcessive );
 
-            rc = KTrieIndexInsert_v1 ( & self -> u . txt1,
+            rc = KWTrieIndexInsert_v1 ( & self -> u . txt1,
                 proj, key, ( uint32_t ) id );
             break;
         case 2:
         case 3:
         case 4:
-            rc = KTrieIndexInsert_v2 ( & self -> u . txt2,
+            rc = KWTrieIndexInsert_v2 ( & self -> u . txt2,
                 proj, key, id );
             break;
         default:
@@ -780,8 +788,10 @@ LIB_EXPORT rc_t CC KIndexInsertText ( KIndex *self, bool unique,
 /* Delete
  *  deletes all mappings from key
  */
-LIB_EXPORT rc_t CC KIndexDeleteText ( KIndex *self, const char *key )
+LIB_EXPORT rc_t CC KIndexDeleteText ( KIndex *bself, const char *key )
 {
+    CAST();
+
     rc_t rc;
     bool proj;
 
@@ -803,12 +813,12 @@ LIB_EXPORT rc_t CC KIndexDeleteText ( KIndex *self, const char *key )
         switch ( self -> vers )
         {
         case 1:
-            rc = KTrieIndexDelete_v1 ( & self -> u . txt1, proj, key );
+            rc = KWTrieIndexDelete_v1 ( & self -> u . txt1, proj, key );
             break;
         case 2:
         case 3:
         case 4:
-            rc = KTrieIndexDelete_v2 ( & self -> u . txt2, proj, key );
+            rc = KWTrieIndexDelete_v2 ( & self -> u . txt2, proj, key );
             break;
         default:
             return RC ( rcDB, rcIndex, rcRemoving, rcIndex, rcBadVersion );
@@ -830,7 +840,7 @@ LIB_EXPORT rc_t CC KIndexDeleteText ( KIndex *self, const char *key )
  */
 static
 rc_t CC
-KWIndexFindText ( const KIndex *self, const char *key, int64_t *start_id, uint64_t *id_count,
+KWIndexFindText ( const KWIndex *self, const char *key, int64_t *start_id, uint64_t *id_count,
     int ( CC * custom_cmp ) ( const void *item, struct PBSTNode const *n, void *data ),
     void *data )
 {
@@ -859,7 +869,7 @@ KWIndexFindText ( const KIndex *self, const char *key, int64_t *start_id, uint64
         switch ( self -> vers )
         {
         case 1:
-            rc = KTrieIndexFind_v1 ( & self -> u . txt1, key, & id32, custom_cmp, data );
+            rc = KWTrieIndexFind_v1 ( & self -> u . txt1, key, & id32, custom_cmp, data );
             if ( rc == 0 )
                 * start_id = id32;
             break;
@@ -867,10 +877,10 @@ KWIndexFindText ( const KIndex *self, const char *key, int64_t *start_id, uint64
         case 3:
         case 4:
 #if V2FIND_RETURNS_SPAN
-            rc = KTrieIndexFind_v2 ( & self -> u . txt2, key, start_id, & span, custom_cmp, data, self -> converted_from_v1 );
+            rc = KWTrieIndexFind_v2 ( & self -> u . txt2, key, start_id, & span, custom_cmp, data, self -> converted_from_v1 );
 #else
             ( void ) ( span = 0 );
-            rc = KTrieIndexFind_v2 ( & self -> u . txt2, key, start_id, custom_cmp, data, self -> converted_from_v1  );
+            rc = KWTrieIndexFind_v2 ( & self -> u . txt2, key, start_id, custom_cmp, data, self -> converted_from_v1  );
 #endif
             break;
         default:
@@ -893,7 +903,7 @@ KWIndexFindText ( const KIndex *self, const char *key, int64_t *start_id, uint64
  */
 static
 rc_t CC
-KWIndexFindAllText ( const KIndex *self, const char *key,
+KWIndexFindAllText ( const KWIndex *self, const char *key,
     rc_t ( CC * f ) ( int64_t id, uint64_t id_count, void *data ), void *data )
 {
     rc_t rc = 0;
@@ -916,7 +926,7 @@ KWIndexFindAllText ( const KIndex *self, const char *key,
         switch ( self -> vers )
         {
         case 1:
-            rc = KTrieIndexFind_v1 ( & self -> u . txt1, key, & id32, NULL, NULL );
+            rc = KWTrieIndexFind_v1 ( & self -> u . txt1, key, & id32, NULL, NULL );
             if ( rc == 0 )
                 rc = ( * f ) ( id32, 1, data );
             break;
@@ -924,9 +934,9 @@ KWIndexFindAllText ( const KIndex *self, const char *key,
         case 3:
         case 4:
 #if V2FIND_RETURNS_SPAN
-            rc = KTrieIndexFind_v2 ( & self -> u . txt2, key, & id64, & span, NULL, NULL, self -> converted_from_v1 );
+            rc = KWTrieIndexFind_v2 ( & self -> u . txt2, key, & id64, & span, NULL, NULL, self -> converted_from_v1 );
 #else
-            rc = KTrieIndexFind_v2 ( & self -> u . txt2, key, & id64, NULL, NULL, self -> converted_from_v1 );
+            rc = KWTrieIndexFind_v2 ( & self -> u . txt2, key, & id64, NULL, NULL, self -> converted_from_v1 );
 #endif
             if ( rc == 0 )
                 rc = ( * f ) ( id64, span, data );
@@ -948,7 +958,7 @@ KWIndexFindAllText ( const KIndex *self, const char *key,
  */
 static
 rc_t CC
-KWIndexProjectText ( const KIndex *self,
+KWIndexProjectText ( const KWIndex *self,
     int64_t id, int64_t *start_id, uint64_t *id_count,
     char *key, size_t kmax, size_t *actsize )
 {
@@ -986,7 +996,7 @@ KWIndexProjectText ( const KIndex *self,
             if ( id <= 0 || ( id >> 32 ) != 0 )
                 return RC ( rcDB, rcIndex, rcProjecting, rcId, rcNotFound );
 
-            rc = KTrieIndexProject_v1 ( & self -> u . txt1,
+            rc = KWTrieIndexProject_v1 ( & self -> u . txt1,
                     ( uint32_t ) id, key, kmax, actsize );
             if ( rc == 0 )
                 * start_id = id;
@@ -995,9 +1005,9 @@ KWIndexProjectText ( const KIndex *self,
         case 3:
         case 4:
 #if V2FIND_RETURNS_SPAN
-            rc = KTrieIndexProject_v2 ( & self -> u . txt2, id, start_id, & span, key, kmax, actsize );
+            rc = KWTrieIndexProject_v2 ( & self -> u . txt2, id, start_id, & span, key, kmax, actsize );
 #else
-            rc = KTrieIndexProject_v2 ( & self -> u . txt2, id, key, kmax, actsize );
+            rc = KWTrieIndexProject_v2 ( & self -> u . txt2, id, key, kmax, actsize );
             if ( rc == 0 )
                 * start_id = id;
 #endif
@@ -1022,7 +1032,7 @@ KWIndexProjectText ( const KIndex *self,
  */
 static
 rc_t CC
-KWIndexProjectAllText ( const KIndex *self, int64_t id,
+KWIndexProjectAllText ( const KWIndex *self, int64_t id,
     rc_t ( CC * f ) ( int64_t start_id, uint64_t id_count, const char *key, void *data ),
     void *data )
 {
@@ -1050,7 +1060,7 @@ KWIndexProjectAllText ( const KIndex *self, int64_t id,
             if ( id <= 0 || ( id >> 32 ) != 0 )
                 return RC ( rcDB, rcIndex, rcProjecting, rcId, rcNotFound );
 
-            rc = KTrieIndexProject_v1 ( & self -> u . txt1,
+            rc = KWTrieIndexProject_v1 ( & self -> u . txt1,
                 ( uint32_t ) id, key, sizeof key, NULL );
             if ( rc == 0 )
                 rc = ( * f ) ( id, 1, key, data );
@@ -1060,9 +1070,9 @@ KWIndexProjectAllText ( const KIndex *self, int64_t id,
         case 3:
         case 4:
 #if V2FIND_RETURNS_SPAN
-            rc = KTrieIndexProject_v2 ( & self -> u . txt2, id, & start_id, & span, key, sizeof key, NULL );
+            rc = KWTrieIndexProject_v2 ( & self -> u . txt2, id, & start_id, & span, key, sizeof key, NULL );
 #else
-            rc = KTrieIndexProject_v2 ( & self -> u . txt2, id, key, sizeof key, NULL );
+            rc = KWTrieIndexProject_v2 ( & self -> u . txt2, id, key, sizeof key, NULL );
 #endif
             if ( rc == 0 )
                 rc = ( * f ) ( start_id, span, key, data );
@@ -1079,9 +1089,11 @@ KWIndexProjectAllText ( const KIndex *self, int64_t id,
     return rc;
 }
 
-LIB_EXPORT rc_t CC KIndexInsertU64( KIndex *self, bool unique, uint64_t key,
+LIB_EXPORT rc_t CC KIndexInsertU64( KIndex *bself, bool unique, uint64_t key,
     uint64_t key_size, int64_t id, uint64_t id_qty )
 {
+    CAST();
+
     rc_t rc = 0;
 
     if( self == NULL ) {
@@ -1098,7 +1110,7 @@ LIB_EXPORT rc_t CC KIndexInsertU64( KIndex *self, bool unique, uint64_t key,
         {
         case 3:
         case 4:
-            rc = KU64IndexInsert_v3(&self->u.u64_3, unique, key, key_size, id, id_qty );
+            rc = KWU64IndexInsert_v3(&self->u.u64_3, unique, key, key_size, id, id_qty );
             break;
         default:
             return RC(rcDB, rcIndex, rcInserting, rcIndex, rcBadVersion);
@@ -1123,8 +1135,10 @@ LIB_EXPORT rc_t CC KIndexInsertU64( KIndex *self, bool unique, uint64_t key,
     return rc;
 }
 
-LIB_EXPORT rc_t CC KIndexDeleteU64( KIndex *self, uint64_t key )
+LIB_EXPORT rc_t CC KIndexDeleteU64( KIndex *bself, uint64_t key )
 {
+    CAST();
+
     rc_t rc = 0;
 
     if( self == NULL ) {
@@ -1141,7 +1155,7 @@ LIB_EXPORT rc_t CC KIndexDeleteU64( KIndex *self, uint64_t key )
         {
         case 3:
         case 4:
-            rc = KU64IndexDelete_v3(&self->u.u64_3, key);
+            rc = KWU64IndexDelete_v3(&self->u.u64_3, key);
             break;
         default:
             return RC(rcDB, rcIndex, rcRemoving, rcIndex, rcBadVersion);
@@ -1159,7 +1173,7 @@ LIB_EXPORT rc_t CC KIndexDeleteU64( KIndex *self, uint64_t key )
 
 static
 rc_t CC
-KWIndexFindU64( const KIndex* self, uint64_t offset, uint64_t* key,
+KWIndexFindU64( const KWIndex* self, uint64_t offset, uint64_t* key,
     uint64_t* key_size, int64_t* id, uint64_t* id_qty )
 {
     rc_t rc = 0;
@@ -1176,7 +1190,7 @@ KWIndexFindU64( const KIndex* self, uint64_t offset, uint64_t* key,
         {
         case 3:
         case 4:
-            rc = KU64IndexFind_v3(&self->u.u64_3, offset, key, key_size, id, id_qty);
+            rc = KWU64IndexFind_v3(&self->u.u64_3, offset, key, key_size, id, id_qty);
             break;
         default:
             return RC(rcDB, rcIndex, rcSelecting, rcIndex, rcBadVersion);
@@ -1188,7 +1202,7 @@ KWIndexFindU64( const KIndex* self, uint64_t offset, uint64_t* key,
     return rc;
 }
 
-static rc_t CC KWIndexFindAllU64( const KIndex* self, uint64_t offset,
+static rc_t CC KWIndexFindAllU64( const KWIndex* self, uint64_t offset,
     rc_t ( CC * f )(uint64_t key, uint64_t key_size, int64_t id, uint64_t id_qty, void* data ), void* data)
 {
     rc_t rc = 0;
@@ -1204,7 +1218,7 @@ static rc_t CC KWIndexFindAllU64( const KIndex* self, uint64_t offset,
         {
         case 3:
         case 4:
-            rc = KU64IndexFindAll_v3(&self->u.u64_3, offset, f, data);
+            rc = KWU64IndexFindAll_v3(&self->u.u64_3, offset, f, data);
             break;
         default:
             return RC(rcDB, rcIndex, rcSelecting, rcIndex, rcBadVersion);
@@ -1224,7 +1238,7 @@ static rc_t CC KWIndexFindAllU64( const KIndex* self, uint64_t offset,
  */
 static
 void CC
-KWIndexSetMaxRowId ( const KIndex *cself, int64_t max_row_id )
+KWIndexSetMaxRowId ( const KWIndex *cself, int64_t max_row_id )
 {
     switch ( cself -> type )
     {
@@ -1237,7 +1251,7 @@ KWIndexSetMaxRowId ( const KIndex *cself, int64_t max_row_id )
         case 4:
             /* here we can repair the max row id */
             if ( cself -> u . txt2 . pt . maxid < max_row_id )
-                ( ( KIndex* ) cself ) -> u . txt2 . pt . maxid = max_row_id;
+                ( ( KWIndex* ) cself ) -> u . txt2 . pt . maxid = max_row_id;
             break;
         }
         break;
@@ -1246,7 +1260,7 @@ KWIndexSetMaxRowId ( const KIndex *cself, int64_t max_row_id )
 
 static
 rc_t CC
-KWRIndexConsistencyCheck ( const KIndex *self, uint32_t level,
+KWRIndexConsistencyCheck ( const KWIndex *self, uint32_t level,
     int64_t *start_id, uint64_t *id_range, uint64_t *num_keys,
     uint64_t *num_rows, uint64_t *num_holes )
 {   // not used on the write side

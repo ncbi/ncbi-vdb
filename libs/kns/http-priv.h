@@ -292,6 +292,7 @@ struct KClientHttpResult
     bool len_zero;
 
     char * expiration;
+    char * phid;
 
     bool rangeRequested;
 };

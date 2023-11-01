@@ -518,7 +518,7 @@ rc_t ItemAddSdlFile(Item * self, const KJsonObject * node,
 /* We are inside or above of a Container
    and are looking for Items(runs, gdGaP files) to add */
 static rc_t Response4AddItemsSdl(Response4 * self,
-    const KJsonObject * node, JsonStack * path)
+    const KJsonObject * node, JsonStack * path, const char * phid)
 {
     rc_t rc = 0;
 
@@ -542,6 +542,8 @@ static rc_t Response4AddItemsSdl(Response4 * self,
         }
 
         rc = ContainerStatusInit(box, data.code, data.msg);
+
+        data.phid = phid;
 
         if (rc == 0)
             ContainerProcessStatus(box, &data);
@@ -596,7 +598,9 @@ static rc_t Response4AddItemsSdl(Response4 * self,
 }
 
 /* Add response document */
-static rc_t Response4InitSdl(Response4 * self, const char * input) {
+static
+rc_t Response4InitSdl(Response4 * self, const char * input, const char * phid)
+{
     rc_t rc = 0;
 
     JsonStack path;
@@ -731,7 +735,7 @@ static rc_t Response4InitSdl(Response4 * self, const char * input) {
                     rc_t r2 = 0;
                     value = KJsonArrayGetElement(array, i);
                     const KJsonObject * object = KJsonValueToObject(value);
-                    r2 = Response4AddItemsSdl(self, object, &path);
+                    r2 = Response4AddItemsSdl(self, object, &path, phid);
                     if (r2 != 0 && rc == 0)
                         rc = r2;
                     if (i + 1 < n)
@@ -769,8 +773,8 @@ static rc_t Response4InitSdl(Response4 * self, const char * input) {
 
 rc_t Response4MakeSdlExt(Response4 ** self, const struct VFSManager * vfs,
     const struct KNSManager * kns, const struct KConfig * kfg,
-    const char * input,
-    bool logNamesServiceErrors, int64_t projectId, const char * quality)
+    const char * input, bool logNamesServiceErrors,
+    int64_t projectId, const char * quality, const char * phid)
 {
     rc_t rc = 0;
 
@@ -787,7 +791,7 @@ rc_t Response4MakeSdlExt(Response4 ** self, const struct VFSManager * vfs,
     else
         r = *self;
 
-    rc = Response4InitSdl(r, input);
+    rc = Response4InitSdl(r, input, phid);
 
     if (*self == NULL) {
         if (rc != 0)
@@ -801,5 +805,5 @@ rc_t Response4MakeSdlExt(Response4 ** self, const struct VFSManager * vfs,
 
 rc_t Response4MakeSdl(Response4 ** self, const char * input) {
     return Response4MakeSdlExt(self, NULL, NULL, NULL,
-        input, false, -1, 0);
+        input, false, -1, 0, NULL);
 }

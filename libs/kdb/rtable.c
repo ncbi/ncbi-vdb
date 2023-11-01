@@ -34,7 +34,7 @@
 #include "kdb-cmn.h"
 #include "rkdb.h"
 #include "rcolumn.h"
-#include "index-priv.h"
+#include "rindex.h"
 #include "rmeta.h"
 #undef KONST
 
@@ -517,7 +517,7 @@ KRTableVOpenColumnRead ( const KTable *self, const KColumn **colp, const char *n
                                            colp, self -> dir, false, path );
         if ( rc == 0 )
         {
-            KColumn *col = ( KColumn* ) * colp;
+            KRColumn *col = ( KRColumn* ) * colp;
             col -> tbl = KTableAttach ( self );
         }
     }
@@ -618,13 +618,12 @@ KRTableVOpenIndexRead ( const KTable *self, const KIndex **idxp, const char *nam
 
     if ( rc == 0 )
     {
-        KIndex *idx;
-        rc = KDBRManagerOpenIndexReadInt ( self -> mgr,
-            & idx, self -> dir, path );
+        KRIndex *idx;
+        rc = KDBRManagerOpenIndexReadInt ( self -> mgr, & idx, self -> dir, path );
         if ( rc == 0 )
         {
             idx -> tbl = KTableAttach ( self );
-            * idxp = idx;
+            * idxp = & idx -> dad;
         }
     }
     return rc;
