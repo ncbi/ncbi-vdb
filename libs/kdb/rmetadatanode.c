@@ -731,37 +731,14 @@ static
 rc_t CC
 KRMDataNodeReadB8 ( const KMDataNode *self, void *b8 )
 {
-    size_t num_read, remaining;
-    rc_t rc = KMDataNodeRead ( self, 0, b8, 1, & num_read, & remaining );
-    if ( rc == 0 )
-    {
-        if ( remaining != 0 )
-            return RC ( rcDB, rcMetadata, rcReading, rcNode, rcIncorrect );
-        if ( num_read < 1 )
-            return RC ( rcDB, rcMetadata, rcReading, rcTransfer, rcIncomplete );
-    }
-    return rc;
+return 0;
 }
 
 static
 rc_t CC
 KRMDataNodeReadB16 ( const KMDataNode *bself, void *b16 )
 {
-    CAST();
-
-    size_t num_read, remaining;
-    rc_t rc = KMDataNodeRead ( bself, 0, b16, 2, & num_read, & remaining );
-    if ( rc == 0 )
-    {
-        if ( remaining != 0 )
-            return RC ( rcDB, rcMetadata, rcReading, rcNode, rcIncorrect );
-        if ( num_read < 2 )
-            return RC ( rcDB, rcMetadata, rcReading, rcTransfer, rcIncomplete );
-
-        if ( self -> meta -> byteswap )
-            * ( uint16_t* ) b16 = bswap_16 ( * ( const uint16_t* ) b16 );
-    }
-    return rc;
+return 0;
 }
 
 static

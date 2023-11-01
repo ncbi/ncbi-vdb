@@ -65,10 +65,10 @@ public:
         KDirectoryRelease( m_dir );
     }
 
-    void Open( const char * path, const char * node )
+    void Open( const string & path, const char * node )
     {
         const KDirectory *subdir;
-        THROW_ON_RC( KDirectoryOpenDirRead( m_dir, &subdir, false, "%s", path ) );
+        THROW_ON_RC( KDirectoryOpenDirRead( m_dir, &subdir, false, "%s", path.c_str() ) );
         THROW_ON_RC( KDBRManagerOpenMetadataReadInt ( m_mgr, (KMetadata **)& m_meta, subdir, 0, false ) );
         THROW_ON_RC( KMetadataOpenNodeRead ( m_meta, & m_node, "%s", node ) );
 
@@ -123,20 +123,34 @@ FIXTURE_TEST_CASE(KRMDataNode_OpenRead, KRMDataNode_Fixture)
     KMDataNodeRelease( node );
 }
 
-FIXTURE_TEST_CASE(KRMDataNode_ReadB8, KRMDataNode_Fixture)
+FIXTURE_TEST_CASE(KRMDataNode_ReadB8_Fail, KRMDataNode_Fixture)
 {
     Open( "testdb/tbl/SEQUENCE", "col" );
     int8_t b;
     rc_t rc = SILENT_RC( rcDB,rcMetadata,rcReading,rcTransfer,rcIncomplete );
     REQUIRE_EQ( rc, KMDataNodeReadB8 ( m_node,  &b ) );
 }
+FIXTURE_TEST_CASE(KRMDataNode_ReadB8, KRMDataNode_Fixture)
+{
+    Open( "testdb/tbl/SEQUENCE", "col/COL1/row_count" );
+    int8_t b;
+    REQUIRE_RC( KMDataNodeReadB8 ( m_node,  &b ) );
+    REQUIRE_EQ( (int8_t)4, b );
+}
 
-FIXTURE_TEST_CASE(KRMDataNode_ReadB16, KRMDataNode_Fixture)
+FIXTURE_TEST_CASE(KRMDataNode_ReadB16_Fail, KRMDataNode_Fixture)
 {
     Open( "testdb/tbl/SEQUENCE", "col" );
     int16_t b;
     rc_t rc = SILENT_RC( rcDB,rcMetadata,rcReading,rcTransfer,rcIncomplete );
     REQUIRE_EQ( rc, KMDataNodeReadB16 ( m_node,  &b ) );
+}
+FIXTURE_TEST_CASE(KRMDataNode_ReadB16, KRMDataNode_Fixture)
+{
+    Open( ScratchDir + "TestDB", "b16" );
+    int16_t b;
+    REQUIRE_RC( KMDataNodeReadB16 ( m_node,  &b ) );
+    REQUIRE_EQ( (int16_t)0x0102, b );
 }
 
 FIXTURE_TEST_CASE(KRMDataNode_ReadB32, KRMDataNode_Fixture)
@@ -316,6 +330,8 @@ FIXTURE_TEST_CASE(KRMDataNode_ListAttr, KRMDataNode_Fixture)
     uint32_t count = 0;
     REQUIRE_RC( KNamelistCount ( names, &count ) );
     REQUIRE_EQ( (uint32_t)0, count );
+
+    REQUIRE_RC( KNamelistRelease ( names ) );
 }
 
 FIXTURE_TEST_CASE(KRMDataNode_ListChildren, KRMDataNode_Fixture)
@@ -327,6 +343,8 @@ FIXTURE_TEST_CASE(KRMDataNode_ListChildren, KRMDataNode_Fixture)
     uint32_t count = 0;
     REQUIRE_RC( KNamelistCount ( names, &count ) );
     REQUIRE_EQ( (uint32_t)1, count );
+
+    REQUIRE_RC( KNamelistRelease ( names ) );
 }
 
 
