@@ -29,6 +29,8 @@
 #include "metanode-base.h"
 
 #include <byteswap.h>
+#include <strtol.h>
+#include <limits.h>
 
 rc_t KMDataNodeBaseWhack ( KMDataNode *self )
 {
@@ -516,43 +518,245 @@ LIB_EXPORT rc_t CC KMDataNodeReadAsF64 ( const KMDataNode *self, double *f )
         }
     }
     return rc;
-
 }
+
+/* Read ( formatted )
+ *  reads as C-string
+ *
+ *  "buffer" [ OUT ] and "bsize" [ IN ] - output buffer for
+ *  NUL terminated string.
+ *
+ *  "size" [ OUT ] - return parameter giving size of string
+ *  not including NUL byte. the size is set both upon success
+ *  and insufficient buffer space error.
+ */
 LIB_EXPORT rc_t CC KMDataNodeReadCString ( const KMDataNode *self, char *buffer, size_t bsize, size_t *size )
 {
-    DISPATCH( readCString( self, buffer, bsize, size ) );
+    size_t remaining;
+    rc_t rc = KMDataNodeRead ( self, 0, buffer, bsize - 1, size, & remaining );
+    if ( rc == 0 )
+    {
+        if ( remaining != 0 )
+        {
+            * size += remaining;
+            return RC ( rcDB, rcMetadata, rcReading, rcBuffer, rcInsufficient );
+        }
+
+        buffer [ * size ] = 0;
+    }
+    return rc;
 }
+
 LIB_EXPORT rc_t CC KMDataNodeReadAttr ( const KMDataNode *self, const char *name, char *buffer, size_t bsize, size_t *size )
 {
     DISPATCH( readAttr( self, name, buffer, bsize, size ) );
 }
+/* ReadAttrAs ( formatted )
+ *  reads as integer or float value in native byte order
+ *  casts smaller-sized values to desired size, e.g.
+ *    uint32_t to uint64_t
+ *
+ *  "i" [ OUT ] - return parameter for signed integer
+ *  "u" [ OUT ] - return parameter for unsigned integer
+ *  "f" [ OUT ] - return parameter for double float
+ */
+
 LIB_EXPORT rc_t CC KMDataNodeReadAttrAsI16 ( const KMDataNode *self, const char *attr, int16_t *i )
 {
-    DISPATCH( readAttrAsI16( self, attr, i ) );
+    rc_t rc;
+    if ( i == NULL )
+        rc = RC ( rcDB, rcMetadata, rcReading, rcParam, rcNull );
+    else
+    {
+        size_t size;
+        char buffer [ 256 ];
+        rc = KMDataNodeReadAttr ( self, attr, buffer, sizeof buffer, & size );
+        if ( rc == 0 )
+        {
+            char *end;
+            int64_t val = strtoi64 ( buffer, & end, 0 );
+            if ( end [ 0 ] != 0 )
+                rc = RC ( rcDB, rcMetadata, rcReading, rcNode, rcIncorrect );
+            else if ( val < SHRT_MIN || val > SHRT_MAX )
+                rc = RC ( rcDB, rcMetadata, rcReading, rcRange, rcExcessive );
+            else
+            {
+                * i = ( int16_t ) val;
+                return 0;
+            }
+        }
+
+        * i = 0;
+    }
+    return rc;
 }
 LIB_EXPORT rc_t CC KMDataNodeReadAttrAsU16 ( const KMDataNode *self, const char *attr, uint16_t *u )
 {
-    DISPATCH( readAttrAsU16( self, attr, u ) );
+    rc_t rc;
+    if ( u == NULL )
+        rc = RC ( rcDB, rcMetadata, rcReading, rcParam, rcNull );
+    else
+    {
+        size_t size;
+        char buffer [ 256 ];
+        rc = KMDataNodeReadAttr ( self, attr, buffer, sizeof buffer, & size );
+        if ( rc == 0 )
+        {
+            char *end;
+            uint64_t val = strtou64 ( buffer, & end, 0 );
+            if ( end [ 0 ] != 0 )
+                rc = RC ( rcDB, rcMetadata, rcReading, rcNode, rcIncorrect );
+            else if ( val > USHRT_MAX )
+                rc = RC ( rcDB, rcMetadata, rcReading, rcRange, rcExcessive );
+            else
+            {
+                * u = ( uint16_t ) val;
+                return 0;
+            }
+        }
+
+        * u = 0;
+    }
+    return rc;
 }
 LIB_EXPORT rc_t CC KMDataNodeReadAttrAsI32 ( const KMDataNode *self, const char *attr, int32_t *i )
 {
-    DISPATCH( readAttrAsI32( self, attr, i ) );
+    rc_t rc;
+    if ( i == NULL )
+        rc = RC ( rcDB, rcMetadata, rcReading, rcParam, rcNull );
+    else
+    {
+        size_t size;
+        char buffer [ 256 ];
+        rc = KMDataNodeReadAttr ( self, attr, buffer, sizeof buffer, & size );
+        if ( rc == 0 )
+        {
+            char *end;
+            int64_t val = strtoi64 ( buffer, & end, 0 );
+            if ( end [ 0 ] != 0 )
+                rc = RC ( rcDB, rcMetadata, rcReading, rcNode, rcIncorrect );
+            else if ( val < INT_MIN || val > INT_MAX )
+                rc = RC ( rcDB, rcMetadata, rcReading, rcRange, rcExcessive );
+            else
+            {
+                * i = ( int32_t ) val;
+                return 0;
+            }
+        }
+
+        * i = 0;
+    }
+    return rc;
 }
 LIB_EXPORT rc_t CC KMDataNodeReadAttrAsU32 ( const KMDataNode *self, const char *attr, uint32_t *u )
 {
-    DISPATCH( readAttrAsU32( self, attr, u ) );
+    rc_t rc;
+    if ( u == NULL )
+        rc = RC ( rcDB, rcMetadata, rcReading, rcParam, rcNull );
+    else
+    {
+        size_t size;
+        char buffer [ 256 ];
+        rc = KMDataNodeReadAttr ( self, attr, buffer, sizeof buffer, & size );
+        if ( rc == 0 )
+        {
+            char *end;
+            uint64_t val = strtou64 ( buffer, & end, 0 );
+            if ( end [ 0 ] != 0 )
+                rc = RC ( rcDB, rcMetadata, rcReading, rcNode, rcIncorrect );
+            else if ( val > UINT_MAX )
+                rc = RC ( rcDB, rcMetadata, rcReading, rcRange, rcExcessive );
+            else
+            {
+                * u = ( uint32_t ) val;
+                return 0;
+            }
+        }
+
+        * u = 0;
+    }
+    return rc;
 }
 LIB_EXPORT rc_t CC KMDataNodeReadAttrAsI64 ( const KMDataNode *self, const char *attr, int64_t *i )
 {
-    DISPATCH( readAttrAsI64( self, attr, i ) );
+    rc_t rc;
+    if ( i == NULL )
+        rc = RC ( rcDB, rcMetadata, rcReading, rcParam, rcNull );
+    else
+    {
+        size_t size;
+        char buffer [ 256 ];
+        rc = KMDataNodeReadAttr ( self, attr, buffer, sizeof buffer, & size );
+        if ( rc == 0 )
+        {
+            char *end;
+            int64_t val =  strtoi64 ( buffer, & end, 0 );
+            if ( end [ 0 ] != 0 )
+                rc = RC ( rcDB, rcMetadata, rcReading, rcNode, rcIncorrect );
+            else
+            {
+                * i = val;
+                return 0;
+            }
+        }
+
+        * i = 0;
+    }
+    return rc;
 }
 LIB_EXPORT rc_t CC KMDataNodeReadAttrAsU64 ( const KMDataNode *self, const char *attr, uint64_t *u )
 {
-    DISPATCH( readAttrAsU64( self, attr, u ) );
+    rc_t rc;
+    if ( u == NULL )
+        rc = RC ( rcDB, rcMetadata, rcReading, rcParam, rcNull );
+    else
+    {
+        size_t size;
+        char buffer [ 256 ];
+        rc = KMDataNodeReadAttr ( self, attr, buffer, sizeof buffer, & size );
+        if ( rc == 0 )
+        {
+            char *end;
+            uint64_t val =  strtou64 ( buffer, & end, 0 );
+            if ( end [ 0 ] != 0 )
+                rc = RC ( rcDB, rcMetadata, rcReading, rcNode, rcIncorrect );
+            else
+            {
+                * u = val;
+                return 0;
+            }
+        }
+
+        * u = 0;
+    }
+    return rc;
 }
 LIB_EXPORT rc_t CC KMDataNodeReadAttrAsF64 ( const KMDataNode *self, const char *attr, double *f )
 {
-    DISPATCH( readAttrAsF64( self, attr, f ) );
+    rc_t rc;
+    if ( f == NULL )
+        rc = RC ( rcDB, rcMetadata, rcReading, rcParam, rcNull );
+    else
+    {
+        size_t size;
+        char buffer [ 256 ];
+        rc = KMDataNodeReadAttr ( self, attr, buffer, sizeof buffer, & size );
+        if ( rc == 0 )
+        {
+            char *end;
+            double val = strtod ( buffer, & end );
+            if ( end [ 0 ] != 0 )
+                rc = RC ( rcDB, rcMetadata, rcReading, rcNode, rcIncorrect );
+            else
+            {
+                * f = val;
+                return 0;
+            }
+        }
+
+        * f = 0.0;
+    }
+    return rc;
 }
 LIB_EXPORT rc_t CC KMDataNodeCompare( const KMDataNode *self, const KMDataNode *other, bool *equal )
 {

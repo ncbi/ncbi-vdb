@@ -59,15 +59,7 @@ struct KMDataNode_vt
     rc_t ( CC * byteOrder )     ( const KMDataNode * self, bool * reversed );
     rc_t ( CC * read )          ( const KMDataNode * self,size_t offset, void * buffer, size_t bsize, size_t * num_read, size_t * remaining );
     rc_t ( CC * openNodeRead )  ( const KMDataNode * self, const KMDataNode **node, const char *path, va_list args );
-    rc_t ( CC * readCString )   ( const KMDataNode * self,char * buffer, size_t bsize, size_t *size );
     rc_t ( CC * readAttr )      ( const KMDataNode * self, const char * name,char * buffer, size_t bsize, size_t *size );
-    rc_t ( CC * readAttrAsI16 ) ( const KMDataNode * self, const char *attr, int16_t *i );
-    rc_t ( CC * readAttrAsU16 ) ( const KMDataNode * self, const char *attr, uint16_t *u );
-    rc_t ( CC * readAttrAsI32 ) ( const KMDataNode * self, const char *attr, int32_t *i );
-    rc_t ( CC * readAttrAsU32 ) ( const KMDataNode * self, const char *attr, uint32_t *u );
-    rc_t ( CC * readAttrAsI64 ) ( const KMDataNode * self, const char *attr, int64_t *i );
-    rc_t ( CC * readAttrAsU64 ) ( const KMDataNode * self, const char *attr, uint64_t *u );
-    rc_t ( CC * readAttrAsF64 ) ( const KMDataNode * self, const char *attr, double *f );
     rc_t ( CC * compare )       ( const KMDataNode * self, KMDataNode const *other, bool *equal );
     rc_t ( CC * addr )          ( const KMDataNode * self, const void **addr, size_t *size );
     rc_t ( CC * listAttr )      ( const KMDataNode * self, struct KNamelist **names );

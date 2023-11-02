@@ -94,6 +94,7 @@ MakeDatabase()
         CHECK_RC( KMetadataOpenNodeUpdate ( meta, & node, "b16") );
         uint16_t b16 = 0x0102;
         CHECK_RC( KMDataNodeWriteB16 ( node, & b16 ) );
+        CHECK_RC( KMDataNodeWriteAttr ( node, "bits", "16" ) );
         CHECK_RC( KMDataNodeRelease( node ) );
 
         CHECK_RC( KMetadataOpenNodeUpdate ( meta, & node, "b32") );
