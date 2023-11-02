@@ -38,6 +38,8 @@
 #include <errno.h>
 #include <assert.h>
 
+#include "int_checks-priv.h"
+
 #if _DEBUGGING
 #define DEBUGPRINT 0
 #endif
@@ -407,6 +409,7 @@ bool CC TTransPersist1 ( const TTrans *trans, PTriePersistData *pb,
                     return true;
                 n -> trans = trans -> child [ pb -> idx_map [ i ] . idx ];
                 n -> dad = tid;
+                assert ( FITS_INTO_INT16 ( i ) );
                 n -> idx = (uint16_t)i;
                 SLListPushTail ( sl, & n -> n );
 
@@ -430,6 +433,7 @@ bool CC TTransPersist1 ( const TTrans *trans, PTriePersistData *pb,
                         return true;
                     n -> trans = trans -> child [ pb -> idx_map [ i ] . idx ];
                     n -> dad = tid;
+                    assert ( FITS_INTO_INT16 ( i ) );
                     n -> idx = (uint16_t)i;
                     SLListPushTail ( sl, & n -> n );
 
@@ -445,6 +449,7 @@ bool CC TTransPersist1 ( const TTrans *trans, PTriePersistData *pb,
                             return true;
                         n -> trans = trans -> child [ pb -> idx_map [ i ] . idx ];
                         n -> dad = tid;
+                        assert ( FITS_INTO_INT16 ( i ) );
                         n -> idx = (uint16_t)i;
                         SLListPushTail ( sl, & n -> n );
                     }
@@ -909,6 +914,7 @@ rc_t CC TriePersist3 ( const Trie *tt, PTriePersistData *pb, int ext_keys,
         pt -> keys = 0;
         P_TrieSetExtKeys ( pt -> keys, ext_keys );
         P_TrieSetBacktrace ( pt -> keys, ! ext_keys );
+        assert ( FITS_INTO_INT16 ( pb -> min_width ) );
         pt -> width = (uint16_t) pb -> min_width;
 
         /* decide upon id encoding type:

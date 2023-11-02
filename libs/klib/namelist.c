@@ -29,6 +29,8 @@
 #include <klib/impl.h>
 #include <sysalloc.h>
 
+#include "int_checks-priv.h"
+
 #define KNAMELIST_LATEST 1
 
 /*--------------------------------------------------------------------------
@@ -163,6 +165,7 @@ LIB_EXPORT bool KNamelistContains( const KNamelist * self, const char * to_find 
             if ( 0 == rc ) {
                 size_t entry_size = string_size( entry );
                 if ( to_find_size == entry_size ) {
+                    assert ( FITS_INTO_INT32 ( entry_size ) );
                     int cmp = string_cmp( to_find, to_find_size, entry, entry_size, (uint32_t)entry_size );
                     res = ( 0 == cmp );
                 }

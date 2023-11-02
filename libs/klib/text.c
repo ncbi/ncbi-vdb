@@ -39,6 +39,8 @@
 #include <errno.h>
 #include <assert.h>
 
+#include "int_checks-priv.h"
+
 /*--------------------------------------------------------------------------
  * String
  *  pseudo-intrinsic string
@@ -170,6 +172,8 @@ LIB_EXPORT String * CC StringTrim ( const String * str, String * trimmed )
                     break;
             }
 
+            assert ( FITS_INTO_INT32 ( end - i ) );
+            assert ( FITS_INTO_INT32 ( len - ( i + sz - end ) ) );
             StringInit ( trimmed, & addr [ i ], (uint32_t) (end - i), (uint32_t)(len - ( i + sz - end )) );
         }
     }
@@ -733,6 +737,8 @@ LIB_EXPORT uint64_t string_to_U64 ( const char * text, size_t bytes, rc_t * opti
                     break;
 
                 /* want to bring this digit into number */
+                assert ( FITS_INTO_INT8 ( text [ i ] - '0' ) );
+                assert ( FITS_INTO_INT8 ( tolower(text[i]) - 'a' + 10 ) );
                 xdigit = isdigit ( text [ i ] ) ?
                     text [ i ] - '0' : (uint8_t)(tolower ( text [ i ] ) - 'a' + 10);
 

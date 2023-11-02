@@ -45,6 +45,8 @@
 #include "json-grammar.h"
 #include "json-priv.h"
 
+#include "int_checks-priv.h"
+
 /* copy, convert the escapes and NUL-terminate */
 static rc_t CopyAndUnescape ( const char * p_value, size_t p_size, char * p_target, size_t p_targetSize );
 
@@ -98,6 +100,8 @@ int StringCmp( const char * a, const char * b )
 {
     size_t sizeA = string_size ( a );
     size_t sizeB = string_size ( b );
+    assert ( FITS_INTO_INT32 ( sizeA ) );
+    assert ( FITS_INTO_INT32 ( sizeB ) );
     return string_cmp ( a, sizeA,
                         b, sizeB,
                         (uint32_t) (sizeA < sizeB ? sizeB : sizeA) );

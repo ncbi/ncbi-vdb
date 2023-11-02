@@ -37,6 +37,8 @@
 #include <string.h>
 #include <assert.h>
 
+#include "int_checks-priv.h"
+
 #ifdef WINDOWS
 #pragma warning(disable:4127)
 /*
@@ -1737,6 +1739,7 @@ LIB_EXPORT rc_t CC KVectorVisitU64 ( const KVector *self, bool reverse,
 rc_t CC KVectorVisitU32Func ( uint64_t key, const void *ptr, size_t bytes, void *user_data )
 {
     KVectorVisitTypedData *pb = user_data;
+    assert ( FITS_INTO_INT32 ( (*(const Word_t*)ptr) ) );
     return ( * pb -> f . u32 ) ( key, (uint32_t)(* ( const Word_t* ) ptr), pb -> user_data );
 }
 

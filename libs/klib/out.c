@@ -33,6 +33,8 @@
 #include <stdarg.h>
 #include <string.h>
 
+#include "int_checks-priv.h"
+
 LIB_EXPORT KWrtHandler G_out_handler;
 
 LIB_EXPORT rc_t CC KOutInit ( void )
@@ -114,6 +116,7 @@ int match_format(const char * format, const char * literal, size_t s)
                 break;
         ++x;
 
+        assert ( FITS_INTO_INT ( x ) );
         if (x < s)
             return (int)x;
         else

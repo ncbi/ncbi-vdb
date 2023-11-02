@@ -31,6 +31,7 @@
 #define MASK_PROHIBITED_BITS_INT  ( ~((uint64_t)( (unsigned int)~0 >> 1 )) )
 #define MASK_PROHIBITED_BITS_INT32  ( ~((uint64_t)( (uint32_t)~0 >> 1 )) )
 #define MASK_PROHIBITED_BITS_INT16  ( ~((uint64_t)( (uint16_t)~0 >> 1 )) )
+#define MASK_PROHIBITED_BITS_INT8  ( ~((uint64_t)( (uint8_t)~0 >> 1 )) )
 
 /* works in an assumption that size_t is always unsigned, which, it seems, is not explicitly guaranteed by the standard */
 #define MASK_PROHIBITED_BITS_SIZE_T  ( ~((uint64_t)( (size_t)~0 >> 1 )) )
@@ -39,6 +40,7 @@
 #define FITS_INTO_INT(v) ( 0 == ((v) & MASK_PROHIBITED_BITS_INT ) )
 #define FITS_INTO_INT32(v) ( 0 == ((v) & MASK_PROHIBITED_BITS_INT32 ) )
 #define FITS_INTO_INT16(v) ( 0 == ((v) & MASK_PROHIBITED_BITS_INT16 ) )
-#define FITS_INTO_SIZE_T(v) ( 0 == ((v) & MASK_PROHIBITED_BITS_INT32 ) )
+#define FITS_INTO_INT8(v) ( 0 == ((v) & MASK_PROHIBITED_BITS_INT8 ) )
+#define FITS_INTO_SIZE_T(v) ( 0 == ((v) & MASK_PROHIBITED_BITS_SIZE_T ) )
 
 #endif /* _lib_int_checks_h_ */

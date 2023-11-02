@@ -33,6 +33,8 @@
 #include <endian.h>
 #include <string.h>
 
+#include "int_checks-priv.h"
+
 LIB_EXPORT rc_t CC vlen_encode1(void *Dst, uint64_t dsize, uint64_t *psize, int64_t X) {
     int sgn = 0;
     uint64_t x;
@@ -182,12 +184,14 @@ LIB_EXPORT rc_t CC vlen_encode1(void *Dst, uint64_t dsize, uint64_t *psize, int6
     return 0;
 }
 
-LIB_EXPORT rc_t CC vlen_decode1 ( int64_t *dst, const void *Src, uint64_t ssize, uint64_t *consumed ) {
+LIB_EXPORT rc_t CC vlen_decode1 ( int64_t *dst, const void *Src, uint64_t ssize_u, uint64_t *consumed ) {
     const uint8_t *src = Src;
     int x;
     int i;
     int sgn;
     int64_t y;
+    int64_t ssize = ( int64_t ) ssize_u;
+    assert ( ssize >= 0 );
 
     if (dst == NULL || src == NULL)
         return RC(rcXF, rcFunction, rcExecuting, rcParam, rcNull);
@@ -201,55 +205,55 @@ LIB_EXPORT rc_t CC vlen_decode1 ( int64_t *dst, const void *Src, uint64_t ssize,
     y = x & 0x3F;
     i = 1;
     if ((x & 0x80) != 0) {
-        if ((uint64_t)i == ssize)
+        if (i == ssize)
             return RC(rcXF, rcFunction, rcExecuting, rcData, rcInsufficient);
         x = src[i];
         y = (y << 7) | (x & 0x7F);
         ++i;
         if ((x & 0x80) != 0) {
-            if ((uint64_t)i == ssize)
+            if (i == ssize)
                 return RC(rcXF, rcFunction, rcExecuting, rcData, rcInsufficient);
             x = src[i];
             y = (y << 7) | (x & 0x7F);
             ++i;
             if ((x & 0x80) != 0) {
-                if ((uint64_t)i == ssize)
+                if (i == ssize)
                     return RC(rcXF, rcFunction, rcExecuting, rcData, rcInsufficient);
                 x = src[i];
                 y = (y << 7) | (x & 0x7F);
                 ++i;
                 if ((x & 0x80) != 0) {
-                    if ((uint64_t)i == ssize)
+                    if (i == ssize)
                         return RC(rcXF, rcFunction, rcExecuting, rcData, rcInsufficient);
                     x = src[i];
                     y = (y << 7) | (x & 0x7F);
                     ++i;
                     if ((x & 0x80) != 0) {
-                        if ((uint64_t)i == ssize)
+                        if (i == ssize)
                             return RC(rcXF, rcFunction, rcExecuting, rcData, rcInsufficient);
                         x = src[i];
                         y = (y << 7) | (x & 0x7F);
                         ++i;
                         if ((x & 0x80) != 0) {
-                            if ((uint64_t)i == ssize)
+                            if (i == ssize)
                                 return RC(rcXF, rcFunction, rcExecuting, rcData, rcInsufficient);
                             x = src[i];
                             y = (y << 7) | (x & 0x7F);
                             ++i;
                             if ((x & 0x80) != 0) {
-                                if ((uint64_t)i == ssize)
+                                if (i == ssize)
                                     return RC(rcXF, rcFunction, rcExecuting, rcData, rcInsufficient);
                                 x = src[i];
                                 y = (y << 7) | (x & 0x7F);
                                 ++i;
                                 if ((x & 0x80) != 0) {
-                                    if ((uint64_t)i == ssize)
+                                    if (i == ssize)
                                         return RC(rcXF, rcFunction, rcExecuting, rcData, rcInsufficient);
                                     x = src[i];
                                     y = (y << 7) | (x & 0x7F);
                                     ++i;
                                     if ((x & 0x80) != 0) {
-                                        if ((uint64_t)i == ssize)
+                                        if (i == ssize)
                                             return RC(rcXF, rcFunction, rcExecuting, rcData, rcInsufficient);
                                         x = src[i];
                                         y = (y << 7) | (x & 0x7F);

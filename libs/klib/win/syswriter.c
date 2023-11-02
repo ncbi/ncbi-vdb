@@ -38,6 +38,8 @@
 
 #include <os-native.h>
 
+#include "int_checks-priv.h"
+
 static HANDLE win_stdout;
 static HANDLE win_stderr;
 
@@ -190,6 +192,7 @@ void print_char_fixup ( char * fmt, size_t * len, size_t max )
 size_t CC sys_simple_write( int fd, const void * buf, size_t count )
 {
     /* from <io.h> */
+    assert ( FITS_INTO_INT ( count ) );
     return _write( fd, buf, (unsigned)count );
 }
 

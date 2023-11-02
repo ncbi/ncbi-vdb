@@ -270,6 +270,7 @@
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <assert.h>
 /* %endif */
 
 /* %if-tables-serialization */
@@ -2780,6 +2781,7 @@ void
 JsonScan_yylex_init ( JsonScanBlock* sb, const char *str, size_t len )
 {
     yylex_init ( & sb -> scanner );
+    assert ( 0 == ( len & (~((size_t)((unsigned int)~0 >> 1))) ) );
     sb -> buffer = yy_scan_bytes ( ( yyconst char * ) str, (int) len, sb -> scanner );
     ( ( struct yyguts_t * ) sb -> scanner ) -> yyextra_r = sb; /* back pointer to the scan block */
     sb -> error = NULL;

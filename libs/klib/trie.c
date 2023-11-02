@@ -35,6 +35,7 @@
 #include <errno.h>
 #include <assert.h>
 
+#include "int_checks-priv.h"
 
 
 /*--------------------------------------------------------------------------
@@ -387,7 +388,11 @@ LIB_EXPORT rc_t CC TrieInit ( Trie *tt, const char *accept,
     for ( width = 0, ch = first; ch <= last; ++ ch )
     {
         if ( map [ ch - first ] != 0 )
-            map [ ch - first ] = (uint16_t)(++ width);
+        {
+            ++ width;
+            assert ( FITS_INTO_INT16 ( width ) );
+            map [ ch - first ] = (uint16_t)width;
+        }
     }
 
     /* enforce maximum width */
@@ -821,6 +826,7 @@ rc_t CC TrieExplodeTrans ( const Trie *tt, TTrans *trans, size_t tsize )
     assert ( pb . cnt == trans -> tcnt );
 
     assert ( pb . tcnt <= tt -> width );
+    assert ( FITS_INTO_INT16 ( pb . tcnt ) );
     trans -> tcnt = (uint16_t) pb . tcnt;
 
     /* handle over-limit kids */
