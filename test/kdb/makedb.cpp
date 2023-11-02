@@ -36,6 +36,8 @@
 #include <vdb/table.h>
 #include <vdb/cursor.h>
 
+#include <arch-impl.h>
+
 #include <kdb/meta.h>
 
 using namespace std;
@@ -86,11 +88,31 @@ MakeDatabase()
     {
         KMetadata *meta;
         CHECK_RC( VDatabaseOpenMetadataUpdate ( db, & meta ) );
+
         KMDataNode *node;
+
         CHECK_RC( KMetadataOpenNodeUpdate ( meta, & node, "b16") );
         uint16_t b16 = 0x0102;
         CHECK_RC( KMDataNodeWriteB16 ( node, & b16 ) );
         CHECK_RC( KMDataNodeRelease( node ) );
+
+        CHECK_RC( KMetadataOpenNodeUpdate ( meta, & node, "b32") );
+        uint32_t b32 = 0x01020304;
+        CHECK_RC( KMDataNodeWriteB32 ( node, & b32 ) );
+        CHECK_RC( KMDataNodeRelease( node ) );
+
+        CHECK_RC( KMetadataOpenNodeUpdate ( meta, & node, "b64") );
+        uint64_t b64 = 0x0102030405060708;
+        CHECK_RC( KMDataNodeWriteB64 ( node, & b64 ) );
+        CHECK_RC( KMDataNodeRelease( node ) );
+
+        CHECK_RC( KMetadataOpenNodeUpdate ( meta, & node, "b128") );
+        uint128_t b128;
+        uint128_sethi( & b128, 0x0102030405060708 );
+        uint128_setlo( & b128, 0x1112131415161718 );
+        CHECK_RC( KMDataNodeWriteB128 ( node, & b128 ) );
+        CHECK_RC( KMDataNodeRelease( node ) );
+
         CHECK_RC( KMetadataRelease( meta ) );
     }
 

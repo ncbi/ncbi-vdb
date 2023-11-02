@@ -1,0 +1,3 @@
+repository/remote/main/SDL.2/resolver-cgi = "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve"
+repository/user/main/public/root="./root"
+repository/user/main/public/apps/sra/volumes/sraFlat="sra"

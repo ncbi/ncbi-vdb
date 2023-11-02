@@ -137,6 +137,12 @@ LIB_EXPORT rc_t CC KMDataNodeOpenNodeRead ( const KMDataNode *self, const KMData
 
     return rc;
 }
+
+/* Read ( formatted )
+ *  reads as integer or float value in native byte order
+ *
+ *  "bXX" [ OUT ] - return parameter for numeric value
+ */
 LIB_EXPORT rc_t CC KMDataNodeReadB8 ( const KMDataNode *self, void *b8 )
 {
     size_t num_read, remaining;
@@ -170,15 +176,64 @@ LIB_EXPORT rc_t CC KMDataNodeReadB16 ( const KMDataNode *self, void *b16 )
 }
 LIB_EXPORT rc_t CC KMDataNodeReadB32 ( const KMDataNode *self, void *b32 )
 {
-    DISPATCH( readB32( self, b32 ) );
+    size_t num_read, remaining;
+    rc_t rc = KMDataNodeRead ( self, 0, b32, 4, & num_read, & remaining );
+    if ( rc == 0 )
+    {
+        if ( remaining != 0 )
+            return RC ( rcDB, rcMetadata, rcReading, rcNode, rcIncorrect );
+        if ( num_read < 4 )
+            return RC ( rcDB, rcMetadata, rcReading, rcTransfer, rcIncomplete );
+
+        bool reversed;
+        KMDataNodeByteOrder ( self, & reversed );
+        if ( reversed )
+            * ( uint32_t* ) b32 = bswap_32 ( * ( const uint32_t* ) b32 );
+    }
+    return rc;
 }
 LIB_EXPORT rc_t CC KMDataNodeReadB64 ( const KMDataNode *self, void *b64 )
 {
-    DISPATCH( readB64( self, b64 ) );
+    size_t num_read, remaining;
+    rc_t rc = KMDataNodeRead ( self, 0, b64, 8, & num_read, & remaining );
+    if ( rc == 0 )
+    {
+        if ( remaining != 0 )
+            return RC ( rcDB, rcMetadata, rcReading, rcNode, rcIncorrect );
+        if ( num_read < 8 )
+            return RC ( rcDB, rcMetadata, rcReading, rcTransfer, rcIncomplete );
+
+        bool reversed;
+        KMDataNodeByteOrder ( self, & reversed );
+        if ( reversed )
+            * ( uint64_t* ) b64 = bswap_64 ( * ( const uint64_t* ) b64 );
+    }
+    return rc;
+
 }
 LIB_EXPORT rc_t CC KMDataNodeReadB128 ( const KMDataNode *self, void *b128 )
 {
-    DISPATCH( readB128( self, b128 ) );
+    size_t num_read, remaining;
+    rc_t rc = KMDataNodeRead ( self, 0, b128, 16,
+        & num_read, & remaining );
+    if ( rc == 0 )
+    {
+        if ( remaining != 0 )
+            return RC ( rcDB, rcMetadata, rcReading, rcNode, rcIncorrect );
+        if ( num_read < 16 )
+            return RC ( rcDB, rcMetadata, rcReading, rcTransfer, rcIncomplete );
+
+        bool reversed;
+        KMDataNodeByteOrder ( self, & reversed );
+        if ( reversed )
+        {
+            uint64_t *b64 = b128;
+            uint64_t tmp = bswap_64 ( b64 [ 0 ] );
+            b64 [ 0 ] = bswap_64 ( b64 [ 1 ] );
+            b64 [ 1 ] = tmp;
+        }
+    }
+    return rc;
 }
 LIB_EXPORT rc_t CC KMDataNodeReadAsI16 ( const KMDataNode *self, int16_t *i )
 {

@@ -197,11 +197,6 @@ static rc_t CC KWMDataNodeRelease ( const KMDataNode *cself );
 static rc_t CC KWMDataNodeByteOrder ( const KMDataNode *self, bool *reversed );
 static rc_t CC KWMDataNodeRead ( const KMDataNode *self, size_t offset, void *buffer, size_t bsize, size_t *num_read, size_t *remaining );
 static rc_t CC KWMDataNodeVOpenNodeRead ( const KMDataNode *self, const KMDataNode **node, const char *path, va_list args );
-static rc_t CC KWMDataNodeReadB8 ( const KMDataNode *self, void *b8 );
-static rc_t CC KWMDataNodeReadB16 ( const KMDataNode *self, void *b16 );
-static rc_t CC KWMDataNodeReadB32 ( const KMDataNode *self, void *b32 );
-static rc_t CC KWMDataNodeReadB64 ( const KMDataNode *self, void *b64 );
-static rc_t CC KWMDataNodeReadB128 ( const KMDataNode *self, void *b128 );
 static rc_t CC KWMDataNodeReadAsI16 ( const KMDataNode *self, int16_t *i );
 static rc_t CC KWMDataNodeReadAsU16 ( const KMDataNode *self, uint16_t *u );
 static rc_t CC KWMDataNodeReadAsI32 ( const KMDataNode *self, int32_t *i );
@@ -231,11 +226,6 @@ static KMDataNode_vt KWMDataNode_vt =
     KWMDataNodeByteOrder,
     KWMDataNodeRead,
     KWMDataNodeVOpenNodeRead,
-    KWMDataNodeReadB8,
-    KWMDataNodeReadB16,
-    KWMDataNodeReadB32,
-    KWMDataNodeReadB64,
-    KWMDataNodeReadB128,
     KWMDataNodeReadAsI16,
     KWMDataNodeReadAsU16,
     KWMDataNodeReadAsI32,
@@ -1075,118 +1065,6 @@ KMDataNodeAppend ( KMDataNode *bself, const void *buffer, size_t size )
         self -> meta -> dirty = true;
     }
     return 0;
-}
-
-
-/* Read ( formatted )
- *  reads as integer or float value in native byte order
- *
- *  "bXX" [ OUT ] - return parameter for numeric value
- */
-static
-rc_t CC
-KWMDataNodeReadB8 ( const KMDataNode *self, void *b8 )
-{
-    size_t num_read, remaining;
-    rc_t rc = KMDataNodeRead ( self, 0, b8, 1, & num_read, & remaining );
-    if ( rc == 0 )
-    {
-        if ( remaining != 0 )
-            return RC ( rcDB, rcMetadata, rcReading, rcNode, rcIncorrect );
-        if ( num_read < 1 )
-            return RC ( rcDB, rcMetadata, rcReading, rcTransfer, rcIncomplete );
-    }
-    return rc;
-}
-
-static
-rc_t CC
-KWMDataNodeReadB16 ( const KMDataNode *bself, void *b16 )
-{
-    CAST();
-
-    size_t num_read, remaining;
-    rc_t rc = KMDataNodeRead ( bself, 0, b16, 2, & num_read, & remaining );
-    if ( rc == 0 )
-    {
-        if ( remaining != 0 )
-            return RC ( rcDB, rcMetadata, rcReading, rcNode, rcIncorrect );
-        if ( num_read < 2 )
-            return RC ( rcDB, rcMetadata, rcReading, rcTransfer, rcIncomplete );
-
-        if ( self -> meta -> byteswap )
-            * ( uint16_t* ) b16 = bswap_16 ( * ( const uint16_t* ) b16 );
-    }
-    return rc;
-}
-
-static
-rc_t CC
-KWMDataNodeReadB32 ( const KMDataNode *bself, void *b32 )
-{
-    CAST();
-
-    size_t num_read, remaining;
-    rc_t rc = KMDataNodeRead ( bself, 0, b32, 4, & num_read, & remaining );
-    if ( rc == 0 )
-    {
-        if ( remaining != 0 )
-            return RC ( rcDB, rcMetadata, rcReading, rcNode, rcIncorrect );
-        if ( num_read < 4 )
-            return RC ( rcDB, rcMetadata, rcReading, rcTransfer, rcIncomplete );
-
-        if ( self -> meta -> byteswap )
-            * ( uint32_t* ) b32 = bswap_32 ( * ( const uint32_t* ) b32 );
-    }
-    return rc;
-}
-
-static
-rc_t CC
-KWMDataNodeReadB64 ( const KMDataNode *bself, void *b64 )
-{
-    CAST();
-
-    size_t num_read, remaining;
-    rc_t rc = KMDataNodeRead ( bself, 0, b64, 8, & num_read, & remaining );
-    if ( rc == 0 )
-    {
-        if ( remaining != 0 )
-            return RC ( rcDB, rcMetadata, rcReading, rcNode, rcIncorrect );
-        if ( num_read < 8 )
-            return RC ( rcDB, rcMetadata, rcReading, rcTransfer, rcIncomplete );
-
-        if ( self -> meta -> byteswap )
-            * ( uint64_t* ) b64 = bswap_64 ( * ( const uint64_t* ) b64 );
-    }
-    return rc;
-}
-
-static
-rc_t CC
-KWMDataNodeReadB128 ( const KMDataNode *bself, void *b128 )
-{
-    CAST();
-
-    size_t num_read, remaining;
-    rc_t rc = KMDataNodeRead ( bself, 0, b128, 16,
-        & num_read, & remaining );
-    if ( rc == 0 )
-    {
-        if ( remaining != 0 )
-            return RC ( rcDB, rcMetadata, rcReading, rcNode, rcIncorrect );
-        if ( num_read < 16 )
-            return RC ( rcDB, rcMetadata, rcReading, rcTransfer, rcIncomplete );
-
-        if ( self -> meta -> byteswap )
-        {
-            uint64_t *b64 = b128;
-            uint64_t tmp = bswap_64 ( b64 [ 0 ] );
-            b64 [ 0 ] = bswap_64 ( b64 [ 1 ] );
-            b64 [ 1 ] = tmp;
-        }
-    }
-    return rc;
 }
 
 

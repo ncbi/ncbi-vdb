@@ -59,11 +59,6 @@ struct KMDataNode_vt
     rc_t ( CC * byteOrder )     ( const KMDataNode * self, bool * reversed );
     rc_t ( CC * read )          ( const KMDataNode * self,size_t offset, void * buffer, size_t bsize, size_t * num_read, size_t * remaining );
     rc_t ( CC * openNodeRead )  ( const KMDataNode * self, const KMDataNode **node, const char *path, va_list args );
-    rc_t ( CC * readB8 )        ( const KMDataNode * self, void * b8 );
-    rc_t ( CC * readB16 )       ( const KMDataNode * self, void * b16 );
-    rc_t ( CC * readB32 )       ( const KMDataNode * self, void * b32 );
-    rc_t ( CC * readB64 )       ( const KMDataNode * self, void * b64 );
-    rc_t ( CC * readB128 )      ( const KMDataNode * self, void * b128 );
     rc_t ( CC * readAsI16 )     ( const KMDataNode * self, int16_t * i );
     rc_t ( CC * readAsU16 )     ( const KMDataNode * self, uint16_t * u );
     rc_t ( CC * readAsI32 )     ( const KMDataNode * self, int32_t * i );

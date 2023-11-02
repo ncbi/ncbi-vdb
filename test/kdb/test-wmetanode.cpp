@@ -65,10 +65,10 @@ public:
         KDirectoryRelease( m_dir );
     }
 
-    void Open( const char * path, const char * node )
+    void Open( const string & path, const char * node )
     {
         KDirectory *subdir;
-        THROW_ON_RC( KDirectoryOpenDirUpdate( m_dir, &subdir, false, "%s", path ) );
+        THROW_ON_RC( KDirectoryOpenDirUpdate( m_dir, &subdir, false, "%s", path.c_str() ) );
         THROW_ON_RC( KDBManagerOpenMetadataUpdateInt ( m_mgr, (KMetadata **)& m_meta, subdir, nullptr) );
         THROW_ON_RC( KMetadataOpenNodeRead ( m_meta, & m_node, "%s", node ) );
 
@@ -123,44 +123,80 @@ FIXTURE_TEST_CASE(KWMDataNode_OpenRead, KWMDataNode_Fixture)
     KMDataNodeRelease( node );
 }
 
-FIXTURE_TEST_CASE(KWMDataNode_ReadB8, KWMDataNode_Fixture)
+FIXTURE_TEST_CASE(KWMDataNode_ReadB8_Fail, KWMDataNode_Fixture)
 {
     Open( "testdb/tbl/SEQUENCE", "col" );
     int8_t b;
     rc_t rc = SILENT_RC( rcDB,rcMetadata,rcReading,rcTransfer,rcIncomplete );
     REQUIRE_EQ( rc, KMDataNodeReadB8 ( m_node,  &b ) );
 }
+FIXTURE_TEST_CASE(KWMDataNode_ReadB8, KWMDataNode_Fixture)
+{
+    Open( "testdb/tbl/SEQUENCE", "col/COL1/row_count" );
+    int8_t b;
+    REQUIRE_RC( KMDataNodeReadB8 ( m_node,  &b ) );
+    REQUIRE_EQ( (int8_t)4, b );
+}
 
-FIXTURE_TEST_CASE(KWMDataNode_ReadB16, KWMDataNode_Fixture)
+FIXTURE_TEST_CASE(KWMDataNode_ReadB16_Fail, KWMDataNode_Fixture)
 {
     Open( "testdb/tbl/SEQUENCE", "col" );
     int16_t b;
     rc_t rc = SILENT_RC( rcDB,rcMetadata,rcReading,rcTransfer,rcIncomplete );
     REQUIRE_EQ( rc, KMDataNodeReadB16 ( m_node,  &b ) );
 }
+FIXTURE_TEST_CASE(KWMDataNode_ReadB16, KWMDataNode_Fixture)
+{
+    Open( ScratchDir + "TestDB", "b16" );
+    int16_t b;
+    REQUIRE_RC( KMDataNodeReadB16 ( m_node,  &b ) );
+    REQUIRE_EQ( (int16_t)0x0102, b );
+}
 
-FIXTURE_TEST_CASE(KWMDataNode_ReadB32, KWMDataNode_Fixture)
+FIXTURE_TEST_CASE(KWMDataNode_ReadB32_Fail, KWMDataNode_Fixture)
 {
     Open( "testdb/tbl/SEQUENCE", "col" );
     int32_t b;
     rc_t rc = SILENT_RC( rcDB,rcMetadata,rcReading,rcTransfer,rcIncomplete );
     REQUIRE_EQ( rc, KMDataNodeReadB32 ( m_node,  &b ) );
 }
+FIXTURE_TEST_CASE(KWMDataNode_ReadB32, KWMDataNode_Fixture)
+{
+    Open( ScratchDir + "TestDB", "b32" );
+    int32_t b;
+    REQUIRE_RC( KMDataNodeReadB32 ( m_node,  &b ) );
+    REQUIRE_EQ( (int32_t)0x01020304, b );
+}
 
-FIXTURE_TEST_CASE(KWMDataNode_ReadB64, KWMDataNode_Fixture)
+FIXTURE_TEST_CASE(KWMDataNode_ReadB64_Fail, KWMDataNode_Fixture)
 {
     Open( "testdb/tbl/SEQUENCE", "col" );
     int64_t b;
     rc_t rc = SILENT_RC( rcDB,rcMetadata,rcReading,rcTransfer,rcIncomplete );
     REQUIRE_EQ( rc, KMDataNodeReadB64 ( m_node,  &b ) );
 }
+FIXTURE_TEST_CASE(KWMDataNode_ReadB64, KWMDataNode_Fixture)
+{
+    Open( ScratchDir + "TestDB", "b64" );
+    int64_t b;
+    REQUIRE_RC( KMDataNodeReadB64 ( m_node,  &b ) );
+    REQUIRE_EQ( (int64_t)0x0102030405060708, b );
+}
 
-FIXTURE_TEST_CASE(KWMDataNode_ReadB128, KWMDataNode_Fixture)
+FIXTURE_TEST_CASE(KWMDataNode_ReadB128_Fail, KWMDataNode_Fixture)
 {
     Open( "testdb/tbl/SEQUENCE", "col" );
     int128_t b;
     rc_t rc = SILENT_RC( rcDB,rcMetadata,rcReading,rcTransfer,rcIncomplete );
     REQUIRE_EQ( rc, KMDataNodeReadB128 ( m_node,  &b ) );
+}
+FIXTURE_TEST_CASE(KWMDataNode_ReadB128, KWMDataNode_Fixture)
+{
+    Open( ScratchDir + "TestDB", "b128" );
+    uint128_t b;
+    REQUIRE_RC( KMDataNodeReadB128 ( m_node,  & b ) );
+    REQUIRE_EQ( (uint64_t)0x0102030405060708, uint128_hi( & b ) );
+    REQUIRE_EQ( (uint64_t)0x1112131415161718, uint128_lo( & b ) );
 }
 
 FIXTURE_TEST_CASE(KWMDataNode_ReadAsI16, KWMDataNode_Fixture)
