@@ -991,7 +991,7 @@ LIB_EXPORT int CC utf32_utf8 ( char *_begin, char *_end, uint32_t ch )
     while ( -- dst > begin )
     {
         /* 10xxxxxx */ /* too many casts to suit different compilers */
-        dst [ 0 ] = ( char ) (( char ) 0x80 | ( ( char ) ch & ( char ) 0x3F ));
+        dst [ 0 ] = ( char ) (( unsigned char ) 0x80 | ( ( char ) ch & ( char ) 0x3F ));
         ch >>= 6;
     }
 
