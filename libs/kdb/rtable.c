@@ -108,6 +108,8 @@ static KTableBase_vt KRTable_vt =
     KRTableMetaCompare
 };
 
+#define CAST() assert( bself->vt == &KRTable_vt ); KRTable * self = (KRTable *)bself
+
 /* GetPath
  *  return the absolute path to table
  */

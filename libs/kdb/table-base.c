@@ -28,7 +28,6 @@
 
 #include "table-base.h"
 
-#define KTable KTableBase
 #include <kdb/table.h>
 
 #include <kdb/column.h>
