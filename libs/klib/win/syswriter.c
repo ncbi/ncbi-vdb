@@ -195,9 +195,3 @@ size_t CC sys_simple_write( int fd, const void * buf, size_t count )
     assert ( FITS_INTO_INT ( count ) );
     return _write( fd, buf, (unsigned)count );
 }
-
-int CC sys_is_a_tty( int fd )
-{
-    /* from <io.h> */
-    return _isatty( _fileno( fd ) ); /* TODO: incorrect usage of _fileno but it's not clear how to fix it since is_a_tty function is never used */
-}

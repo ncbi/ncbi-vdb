@@ -151,12 +151,6 @@ LIB_EXPORT size_t CC simple_write( int fd, const void * buf, size_t count )
     return sys_simple_write( fd, buf, count );
 }
 
-LIB_EXPORT int CC is_a_tty( int fd )
-{
-    /* calls the platform-specific implementation ( $PLATFORM/syswriter.c ) */
-    return sys_is_a_tty( fd );
-}
-
 /*--------------------------------------------------------------------------
  * nvp - name/value pair
  */
