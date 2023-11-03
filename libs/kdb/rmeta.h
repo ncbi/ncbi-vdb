@@ -29,8 +29,8 @@
 #include <kdb/meta.h>
 #include <kfs/directory.h>
 
-typedef struct KMetadata KMetadata;
-#define KMETA_IMPL KMetadata
+typedef struct KRMetadata KRMetadata;
+#define KMETA_IMPL KRMetadata
 #include "meta-base.h"
 
 struct KDatabase;
@@ -43,10 +43,10 @@ struct KMDataNode;
 extern "C" {
 #endif
 
-typedef struct KMetadata KMetadata;
-struct KMetadata
+typedef struct KRMetadata KRMetadata;
+struct KRMetadata
 {
-    KMetadataBase dad;
+    KMetadata dad;
 
     const struct KDirectory *dir;
     const struct KDBManager *mgr;
@@ -65,7 +65,7 @@ struct KMetadata
     char path [ 1 ];
 };
 
-rc_t KMetadataMakeRead ( KMetadata **metap, const KDirectory *dir, const char *path, uint32_t rev );
+rc_t KRMetadataMakeRead ( KRMetadata **metap, const KDirectory *dir, const char *path, uint32_t rev );
 
 #ifdef __cplusplus
 }

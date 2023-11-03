@@ -30,7 +30,7 @@
 
 #include <klib/pbstree.h>
 
-struct KMetadata;
+struct KWMetadata;
 
 typedef struct KWMDataNode KWMDataNode;
 
@@ -44,7 +44,7 @@ extern "C" {
 typedef struct KWMDataNodeInflateData KWMDataNodeInflateData;
 struct KWMDataNodeInflateData
 {
-    KMetadata *meta;
+    KWMetadata *meta;
     struct KWMDataNode *par;
     BSTree *bst;
     size_t node_size_limit;
@@ -84,7 +84,7 @@ struct KWMDataNode
     KMDataNode dad;
 
     KWMDataNode *par;
-    KMetadata *meta;
+    KWMetadata *meta;
     void *value;
     size_t vsize;
     BSTree attr;
@@ -93,7 +93,7 @@ struct KWMDataNode
     char name [ 1 ];
 };
 
-rc_t KWMDataNodeMakeRoot( KWMDataNode ** node, KMetadata *meta );
+rc_t KWMDataNodeMakeRoot( KWMDataNode ** node, KWMetadata *meta );
 rc_t KWMDataNodeFind ( const KWMDataNode *cself, KWMDataNode **np, char **path );
 bool CC KWMDataNodeInflate_v1 ( PBSTNode *n, void *data );
 bool CC KWMDataNodeInflate ( PBSTNode *n, void *data );

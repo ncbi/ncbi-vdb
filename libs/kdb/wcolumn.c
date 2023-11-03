@@ -915,7 +915,7 @@ rc_t CC
 KWColumnOpenMetadataRead ( const KWColumn *self, const KMetadata **metap )
 {
     rc_t rc;
-    const KMetadata *meta;
+    const KWMetadata *meta;
     bool  meta_is_cached;
 
     if ( metap == NULL )
@@ -926,8 +926,8 @@ KWColumnOpenMetadataRead ( const KWColumn *self, const KMetadata **metap )
     rc = KDBWManagerOpenMetadataReadInt ( self -> mgr, & meta, self -> dir, 0, false, &meta_is_cached );
     if ( rc == 0 )
     {
-        if(!meta_is_cached) ((KMetadata*)meta) -> col = KColumnAttach ( self );
-        * metap = meta;
+        if(!meta_is_cached) ((KWMetadata*)meta) -> col = KColumnAttach ( self );
+        * metap = & meta -> dad;
     }
 
     return rc;
@@ -938,7 +938,7 @@ LIB_EXPORT rc_t CC KColumnOpenMetadataUpdate ( KColumn *bself, KMetadata **metap
     CAST();
 
     rc_t rc;
-    KMetadata *meta;
+    KWMetadata *meta;
 
     if ( metap == NULL )
         return RC ( rcDB, rcColumn, rcOpening, rcParam, rcNull );
@@ -955,7 +955,7 @@ LIB_EXPORT rc_t CC KColumnOpenMetadataUpdate ( KColumn *bself, KMetadata **metap
     if ( rc == 0 )
     {
         meta -> col = KColumnAttach ( self );
-        * metap = meta;
+        * metap = & meta -> dad;
     }
 
     return rc;

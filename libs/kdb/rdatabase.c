@@ -582,7 +582,7 @@ rc_t CC
 KRDatabaseOpenMetadataRead ( const KDatabase *self, const KMetadata **metap )
 {
     rc_t rc;
-    KMetadata *meta;
+    KRMetadata *meta;
 
     if ( metap == NULL )
         return RC ( rcDB, rcDatabase, rcOpening, rcParam, rcNull );
@@ -593,7 +593,7 @@ KRDatabaseOpenMetadataRead ( const KDatabase *self, const KMetadata **metap )
     if ( rc == 0 )
     {
         meta -> db = KDatabaseAttach ( self );
-        * metap = meta;
+        * metap = & meta -> dad;
     }
 
     return rc;

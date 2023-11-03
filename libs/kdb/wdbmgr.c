@@ -2183,7 +2183,7 @@ LIB_EXPORT rc_t CC KDBManagerVCreateTable ( KDBManager *self,
  *  "meta" [ OUT ] - return parameter for metadata
  */
 rc_t
-KDBManagerOpenMetadataUpdateInt ( KDBManager *self, KMetadata **metap, KDirectory *wd, KMD5SumFmt * md5 )
+KDBManagerOpenMetadataUpdateInt ( KDBManager *self, KWMetadata **metap, KDirectory *wd, KMD5SumFmt * md5 )
 {
 /* WAK
  * NEEDS MD5 UPDATE???
@@ -2194,7 +2194,7 @@ KDBManagerOpenMetadataUpdateInt ( KDBManager *self, KMetadata **metap, KDirector
     if ( rc == 0 )
     {
         KSymbol * sym;
-        KMetadata *meta;
+        KWMetadata *meta;
         bool populate = true;
 
         switch ( KDirectoryPathType ( wd, "%s", metapath ) )
@@ -2240,7 +2240,7 @@ KDBManagerOpenMetadataUpdateInt ( KDBManager *self, KMetadata **metap, KDirector
             return RC ( rcDB, rcMgr, rcOpening, obj, rcBusy );
         }
 
-        rc = KMetadataMake ( & meta, wd, metapath, 0, populate, false );
+        rc = KWMetadataMake ( & meta, wd, metapath, 0, populate, false );
         if ( rc == 0 )
         {
             rc = KDBManagerInsertMetadata (self, meta);
@@ -2259,14 +2259,14 @@ KDBManagerOpenMetadataUpdateInt ( KDBManager *self, KMetadata **metap, KDirector
                 }
             }
 
-            KMetadataRelease ( meta );
+            KMetadataRelease ( & meta -> dad );
         }
     }
 
     return rc;
 }
 
-rc_t KDBManagerInsertMetadata ( KDBManager * self, KMetadata * meta )
+rc_t KDBManagerInsertMetadata ( KDBManager * self, KWMetadata * meta )
 {
     rc_t rc;
     rc = KDBManagerOpenObjectAdd (self, &meta->sym);
@@ -2281,7 +2281,7 @@ rc_t KDBManagerInsertMetadata ( KDBManager * self, KMetadata * meta )
  *  "meta" [ OUT ] - return parameter for metadata
  */
 rc_t
-KDBWManagerOpenMetadataReadInt ( KDBManager *self, const KMetadata **metap, const KDirectory *wd, uint32_t rev, bool prerelease,bool *cached )
+KDBWManagerOpenMetadataReadInt ( KDBManager *self, const KWMetadata **metap, const KDirectory *wd, uint32_t rev, bool prerelease,bool *cached )
 {
     char metapath [ 4096 ];
     rc_t rc = ( prerelease == 1 ) ?
@@ -2292,26 +2292,26 @@ KDBWManagerOpenMetadataReadInt ( KDBManager *self, const KMetadata **metap, cons
     if(cached != NULL ) *cached = false;
     if ( rc == 0 )
     {
-        KMetadata * meta;
+        KWMetadata * meta;
         KSymbol * sym;
 
         /* if already open */
         sym = KDBManagerOpenObjectFind (self, metapath);
         if (sym != NULL)
         {
-            const KMetadata * cmeta;
+            const KWMetadata * cmeta;
             rc_t obj;
 
 	    if(cached != NULL ) *cached = true;
             switch (sym->type)
             {
             case kptMetadata:
-                cmeta = (KMetadata*)sym->u.obj;
+                cmeta = (KWMetadata*)sym->u.obj;
                 /* if open for update, refuse */
                 if ( cmeta -> read_only )
                 {
                     /* attach a new reference and we're gone */
-                    rc = KMetadataAddRef ( cmeta );
+                    rc = KMetadataAddRef ( & cmeta -> dad );
                     if ( rc == 0 )
                         * metap = cmeta;
                     return rc;
@@ -2357,7 +2357,7 @@ KDBWManagerOpenMetadataReadInt ( KDBManager *self, const KMetadata **metap, cons
 
         if ( rc == 0 )
         {
-            rc = KMetadataMake ( & meta, ( KDirectory* ) wd, metapath, rev, true, true );
+            rc = KWMetadataMake ( & meta, ( KDirectory* ) wd, metapath, rev, true, true );
 
             if ( rc == 0 )
             {
@@ -2368,7 +2368,7 @@ KDBWManagerOpenMetadataReadInt ( KDBManager *self, const KMetadata **metap, cons
                     return 0;
                 }
 
-                KMetadataRelease ( meta );
+                KMetadataRelease ( & meta -> dad );
             }
 
 /*             rc = RC ( rcDB, rcMgr, rcOpening, rcMetadata, rcExists ); */

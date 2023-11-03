@@ -62,7 +62,9 @@ public:
     {
         const KDirectory *subdir;
         THROW_ON_RC(  KDirectoryOpenDirRead( m_dir, &subdir, false, "%s", path ) );
-        THROW_ON_RC( KDBRManagerOpenMetadataReadInt ( m_mgr, & m_meta, subdir, 0, false ) );
+        KRMetadata * rmeta;
+        THROW_ON_RC( KDBRManagerOpenMetadataReadInt ( m_mgr, &rmeta, subdir, 0, false ) );
+        m_meta = & rmeta -> dad;
         THROW_ON_RC( KDirectoryRelease( subdir ) );
     }
 
@@ -76,11 +78,11 @@ public:
 FIXTURE_TEST_CASE(KRMetadata_AddRelease, KMetadata_Fixture)
 {
     Open( "testdb/tbl/SEQUENCE" );
-    REQUIRE_EQ( 1, (int)atomic32_read( & m_meta -> dad . refcount ) );
+    REQUIRE_EQ( 1, (int)atomic32_read( & m_meta -> refcount ) );
     REQUIRE_RC( KMetadataAddRef( m_meta ) );
-    REQUIRE_EQ( 2, (int)atomic32_read( & m_meta -> dad . refcount ) );
+    REQUIRE_EQ( 2, (int)atomic32_read( & m_meta -> refcount ) );
     REQUIRE_RC( KMetadataRelease( m_meta ) );
-    REQUIRE_EQ( 1, (int)atomic32_read( & m_meta -> dad . refcount ) );
+    REQUIRE_EQ( 1, (int)atomic32_read( & m_meta -> refcount ) );
     // use valgrind to find any leaks
 }
 

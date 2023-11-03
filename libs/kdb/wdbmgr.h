@@ -40,6 +40,7 @@ extern "C" {
 struct KTable;
 struct KWIndex;
 struct KWColumn;
+struct KWMetadata;
 
 rc_t KDBWManagerVOpenDBReadInt_noargs ( const KDBManager *cself,
     const KDatabase **dbp, KDirectory *wd,
@@ -80,10 +81,10 @@ rc_t KDBManagerVOpenColumnUpdateInt_noargs ( KDBManager *self,
 
 rc_t KDBManagerInsertColumn ( KDBManager * self, struct KWColumn * col );
 
-rc_t KDBWManagerOpenMetadataReadInt ( KDBManager *self, const KMetadata **metap, const KDirectory *wd, uint32_t rev, bool prerelease,bool *cached );
-rc_t KDBManagerOpenMetadataUpdateInt ( KDBManager *self, KMetadata **metap, KDirectory *wd, KMD5SumFmt * md5 );
+rc_t KDBWManagerOpenMetadataReadInt ( KDBManager *self, const struct KWMetadata **metap, const KDirectory *wd, uint32_t rev, bool prerelease,bool *cached );
+rc_t KDBManagerOpenMetadataUpdateInt ( KDBManager *self, struct KWMetadata **metap, KDirectory *wd, KMD5SumFmt * md5 );
 
-rc_t KDBManagerInsertMetadata ( KDBManager * self, KMetadata * meta );
+rc_t KDBManagerInsertMetadata ( KDBManager * self, struct KWMetadata * meta );
 
 rc_t KDBWManagerOpenIndexReadInt ( KDBManager *self,const struct KWIndex **idxp, const KDirectory *wd, const char *path );
 

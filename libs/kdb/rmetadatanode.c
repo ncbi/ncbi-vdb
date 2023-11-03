@@ -148,7 +148,7 @@ static KMDataNode_vt KRMDataNode_vt =
 #define CAST() assert( bself->vt == &KRMDataNode_vt ); KRMDataNode * self = (KRMDataNode *)bself
 
 rc_t
-KRMDataNodeMakeRoot( KRMDataNode ** node, KMetadata *meta )
+KRMDataNodeMakeRoot( KRMDataNode ** node, KRMetadata *meta )
 {
     assert( node != NULL );
     KRMDataNode * ret = calloc ( 1, sizeof *ret );
@@ -587,7 +587,7 @@ rc_t CC
 KRMDataNodeByteOrder ( const KMDataNode *bself, bool *reversed )
 {
     CAST();
-    return KMetadataByteOrder ( self -> meta, reversed );
+    return KMetadataByteOrder ( & self -> meta -> dad, reversed );
 }
 
 

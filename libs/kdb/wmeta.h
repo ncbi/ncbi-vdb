@@ -50,10 +50,10 @@ struct KWMDataNode;
 extern "C" {
 #endif
 
-typedef struct KMetadata KMetadata;
-struct KMetadata
+typedef struct KWMetadata KWMetadata;
+struct KWMetadata
 {
-    KMetadataBase dad;
+    KMetadata dad;
 
     // BSTNode nn; ?? is it used? not as far as i could see in this module
 
@@ -82,7 +82,7 @@ struct KMetadata
     char path [ 1 ];
 };
 
-rc_t KMetadataMake ( KMetadata **metap, KDirectory *dir, const char *path, uint32_t rev, bool populate, bool read_only );
+rc_t KWMetadataMake ( KWMetadata **metap, KDirectory *dir, const char *path, uint32_t rev, bool populate, bool read_only );
 
 #ifdef __cplusplus
 }

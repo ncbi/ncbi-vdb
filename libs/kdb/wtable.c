@@ -1088,7 +1088,7 @@ rc_t CC
 KWTableOpenMetadataRead ( const KTable *self, const KMetadata **metap )
 {
     rc_t rc;
-    const KMetadata *meta;
+    const KWMetadata *meta;
     bool  meta_is_cached;
 
     if ( metap == NULL )
@@ -1099,8 +1099,8 @@ KWTableOpenMetadataRead ( const KTable *self, const KMetadata **metap )
     rc = KDBWManagerOpenMetadataReadInt ( self -> mgr, & meta, self -> dir, 0, self -> prerelease, &meta_is_cached );
     if ( rc == 0 )
     {
-        if(!meta_is_cached) ((KMetadata*)meta) -> tbl = KTableAttach ( self );
-        * metap = meta;
+        if(!meta_is_cached) ((KWMetadata*)meta) -> tbl = KTableAttach ( self );
+        * metap = & meta -> dad;
     }
 
     return rc;
@@ -1146,7 +1146,7 @@ KWTableMetaCompare( const KTable *self, const KTable *other, const char * path, 
 LIB_EXPORT rc_t CC KTableOpenMetadataUpdate ( KTable *self, KMetadata **metap )
 {
     rc_t rc;
-    KMetadata *meta;
+    KWMetadata *meta;
 
     if ( metap == NULL )
         return RC ( rcDB, rcTable, rcOpening, rcParam, rcNull );
@@ -1163,9 +1163,47 @@ LIB_EXPORT rc_t CC KTableOpenMetadataUpdate ( KTable *self, KMetadata **metap )
     if ( rc == 0 )
     {
         meta -> tbl = KTableAttach ( self );
-        * metap = meta;
+        * metap = & meta -> dad;
     }
 
+    return rc;
+}
+
+/* KTableMetaCopy
+ *  copies node ( at given path ) from src to self
+ */
+LIB_EXPORT rc_t CC KTableMetaCopy( KTable *self, const KTable *src, const char * path,
+                                   bool src_node_has_to_exist ) {
+    rc_t rc = 0;
+    if ( NULL == self ) {
+        rc = RC ( rcDB, rcTable, rcComparing, rcSelf, rcNull );
+    } else if ( NULL == src || NULL == path ) {
+        rc = RC ( rcDB, rcTable, rcComparing, rcParam, rcNull );
+    } else {
+        KMetadata *self_meta;
+        rc = KTableOpenMetadataUpdate( self, &self_meta );
+        if ( 0 == rc ) {
+            const KMetadata *src_meta;
+            rc = KTableOpenMetadataRead( src, &src_meta );
+            if ( 0 == rc ) {
+                KMDataNode * self_node;
+                rc = KMetadataOpenNodeUpdate( self_meta, &self_node, path );
+                if ( 0 == rc ) {
+                    const KMDataNode * src_node;
+                    rc = KMetadataOpenNodeRead( src_meta, &src_node, path );
+                    if ( 0 == rc ) {
+                        rc = KMDataNodeCopy( self_node, src_node );
+                        KMDataNodeRelease( src_node );
+                    } else {
+                        if ( !src_node_has_to_exist ) { rc = 0; }
+                    }
+                    KMDataNodeRelease( self_node );
+                }
+                KMetadataRelease( src_meta );
+            }
+            KMetadataRelease( self_meta );
+        }
+    }
     return rc;
 }
 

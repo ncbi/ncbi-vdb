@@ -221,7 +221,7 @@ static KMDataNode_vt KWMDataNode_vt =
 #define CAST() assert( bself->vt == &KWMDataNode_vt ); KWMDataNode * self = (KWMDataNode *)bself
 
 rc_t
-KWMDataNodeMakeRoot( KWMDataNode ** node, KMetadata *meta )
+KWMDataNodeMakeRoot( KWMDataNode ** node, KWMetadata *meta )
 {
     assert( node != NULL );
     KWMDataNode * ret = calloc ( 1, sizeof *ret );
@@ -847,7 +847,7 @@ rc_t CC
 KWMDataNodeByteOrder ( const KMDataNode *bself, bool *reversed )
 {
     CAST();
-    return KMetadataByteOrder ( self -> meta, reversed );
+    return KMetadataByteOrder ( & self -> meta -> dad, reversed );
 }
 
 
@@ -1563,44 +1563,6 @@ LIB_EXPORT rc_t CC KMDataNodeCopy(  KMDataNode *bself
     KWMDataNodeCopy_int(&ctx);
 
     return ctx.rc;
-}
-
-/* KTableMetaCopy
- *  copies node ( at given path ) from src to self
- */
-LIB_EXPORT rc_t CC KTableMetaCopy( KTable *self, const KTable *src, const char * path,
-                                   bool src_node_has_to_exist ) {
-    rc_t rc = 0;
-    if ( NULL == self ) {
-        rc = RC ( rcDB, rcTable, rcComparing, rcSelf, rcNull );
-    } else if ( NULL == src || NULL == path ) {
-        rc = RC ( rcDB, rcTable, rcComparing, rcParam, rcNull );
-    } else {
-        KMetadata *self_meta;
-        rc = KTableOpenMetadataUpdate( self, &self_meta );
-        if ( 0 == rc ) {
-            const KMetadata *src_meta;
-            rc = KTableOpenMetadataRead( src, &src_meta );
-            if ( 0 == rc ) {
-                KMDataNode * self_node;
-                rc = KMetadataOpenNodeUpdate( self_meta, &self_node, path );
-                if ( 0 == rc ) {
-                    const KMDataNode * src_node;
-                    rc = KMetadataOpenNodeRead( src_meta, &src_node, path );
-                    if ( 0 == rc ) {
-                        rc = KMDataNodeCopy( self_node, src_node );
-                        KMDataNodeRelease( src_node );
-                    } else {
-                        if ( !src_node_has_to_exist ) { rc = 0; }
-                    }
-                    KMDataNodeRelease( self_node );
-                }
-                KMetadataRelease( src_meta );
-            }
-            KMetadataRelease( self_meta );
-        }
-    }
-    return rc;
 }
 
 /*--------------------------------------------------------------------------

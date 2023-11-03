@@ -1216,7 +1216,7 @@ rc_t CC
 KWDatabaseOpenMetadataRead ( const KDatabase *self, const KMetadata **metap )
 {
     rc_t rc;
-    const KMetadata *meta;
+    const KWMetadata *meta;
     bool  meta_is_cached;
 
     if ( metap == NULL )
@@ -1227,8 +1227,8 @@ KWDatabaseOpenMetadataRead ( const KDatabase *self, const KMetadata **metap )
     rc = KDBWManagerOpenMetadataReadInt ( self -> mgr, & meta, self -> dir, 0, false, &meta_is_cached );
     if ( rc == 0 )
     {
-        if(!meta_is_cached) ((KMetadata*)meta) -> db = KDatabaseAttach ( self );
-        * metap = meta;
+        if(!meta_is_cached) ((KWMetadata*)meta) -> db = KDatabaseAttach ( self );
+        * metap = & meta -> dad;
     }
 
     return rc;
@@ -1372,3 +1372,28 @@ LIB_EXPORT rc_t CC KDatabaseVOpenIndexUpdate ( KDatabase *self,
     return rc;
 }
 
+LIB_EXPORT rc_t CC KDatabaseOpenMetadataUpdate ( KDatabase *self, KMetadata **metap )
+{
+    rc_t rc;
+    KWMetadata *meta;
+
+    if ( metap == NULL )
+        return RC ( rcDB, rcDatabase, rcOpening, rcParam, rcNull );
+
+    * metap = NULL;
+
+    if ( self == NULL )
+        return RC ( rcDB, rcDatabase, rcOpening, rcSelf, rcNull );
+
+    if ( self -> read_only )
+        return RC ( rcDB, rcDatabase, rcOpening, rcDatabase, rcReadonly );
+
+    rc = KDBManagerOpenMetadataUpdateInt ( self -> mgr, & meta, self -> dir, self -> md5 );
+    if ( rc == 0 )
+    {
+        meta -> db = KDatabaseAttach ( self );
+        * metap = & meta -> dad;
+    }
+
+    return rc;
+}

@@ -41,6 +41,7 @@
 #include <arch-impl.h>
 
 #include <../libs/kdb/rmetadatanode.h>
+#include <../libs/kdb/rmeta.h>
 #include <../libs/kdb/rdbmgr.h>
 
 using namespace std;
@@ -69,7 +70,9 @@ public:
     {
         const KDirectory *subdir;
         THROW_ON_RC( KDirectoryOpenDirRead( m_dir, &subdir, false, "%s", path.c_str() ) );
-        THROW_ON_RC( KDBRManagerOpenMetadataReadInt ( m_mgr, (KMetadata **)& m_meta, subdir, 0, false ) );
+        KRMetadata * rmeta;
+        THROW_ON_RC( KDBRManagerOpenMetadataReadInt ( m_mgr, & rmeta, subdir, 0, false ) );
+        m_meta = & rmeta -> dad;
         THROW_ON_RC( KMetadataOpenNodeRead ( m_meta, & m_node, "%s", node ) );
 
         THROW_ON_RC( KDirectoryRelease( subdir ) );
