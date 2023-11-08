@@ -26,10 +26,10 @@
 
 #include <kdb/extern.h>
 
+#include "wdatabase.h"
+
 #include <kdb/namelist.h>
 
-#include "wdatabase.h"
-//#include "dbmgr.h"
 #include "wtable.h"
 #include "windex.h"
 #include "wkdb.h"
@@ -41,7 +41,6 @@
 #include <klib/log.h>
 #include <klib/rc.h>
 
-#include <kfs/directory.h>
 #include <kfs/impl.h>
 
 #include <vfs/path.h>
@@ -872,7 +871,8 @@ struct FilterData
 };
 
 static
-bool CC KDatabaseListFilter ( const KDirectory *dir, const char *name, void *data_ )
+bool CC
+KDatabaseListFilter ( const KDirectory *dir, const char *name, void *data_ )
 {
     struct FilterData * data = data_;
     return ( KDBManagerOpenPathTypeRead ( data->mgr, dir, name, NULL, data->type, NULL, false,
@@ -912,22 +912,26 @@ KWDatabaseListIdx ( struct KDatabase const *self, KNamelist **names )
     return KDirectoryList ( self -> dir, names, KDatabaseListFilter, &data, "idx" );
 }
 
-KCreateMode KDatabaseGetCmode ( const KDatabase *self)
+KCreateMode
+KDatabaseGetCmode ( const KDatabase *self)
 {
     return self -> cmode;
 }
-KCreateMode KDatabaseSetCmode ( KDatabase *self, KCreateMode new_val)
+KCreateMode
+KDatabaseSetCmode ( KDatabase *self, KCreateMode new_val)
 {
     KCreateMode old_val = self -> cmode;
     self -> cmode = new_val;
     return old_val;
 }
 
-KChecksum KDatabaseGetChecksum ( const KDatabase *self)
+KChecksum
+KDatabaseGetChecksum ( const KDatabase *self)
 {
     return self -> checksum;
 }
-KChecksum KDatabaseSetChecksum ( KDatabase *self, KChecksum new_val)
+KChecksum
+KDatabaseSetChecksum ( KDatabase *self, KChecksum new_val)
 {
     KCreateMode old_val = self -> checksum;
     self -> checksum = new_val;
@@ -936,9 +940,11 @@ KChecksum KDatabaseSetChecksum ( KDatabase *self, KChecksum new_val)
 
 /* ------------------------------------------------------------------------------------ */
 
-static rc_t copy_meta_for_one_table_in_db ( KDatabase *self, const KDatabase *src,
-                                      const char * node_path, const char * tbl_name,
-                                      bool src_node_has_to_exist ) {
+static
+rc_t
+copy_meta_for_one_table_in_db ( KDatabase *self, const KDatabase *src,
+                                const char * node_path, const char * tbl_name,
+                                bool src_node_has_to_exist ) {
     KTable * dst_tbl;
     rc_t rc = KDatabaseOpenTableUpdate( self, &dst_tbl, tbl_name );
     if ( 0 == rc ) {
@@ -953,8 +959,10 @@ static rc_t copy_meta_for_one_table_in_db ( KDatabase *self, const KDatabase *sr
     return rc;
 }
 
-static rc_t copy_meta_for_all_tables_in_db( KDatabase *self, const KDatabase *src,
-                                            const char * node_path, bool src_node_has_to_exist ) {
+static
+rc_t
+copy_meta_for_all_tables_in_db( KDatabase *self, const KDatabase *src,
+                                const char * node_path, bool src_node_has_to_exist ) {
     KNamelist * tables_1;
     rc_t rc = KDatabaseListTbl( self, &tables_1 );
     if ( 0 == rc ) {
@@ -982,7 +990,9 @@ static rc_t copy_meta_for_all_tables_in_db( KDatabase *self, const KDatabase *sr
     return rc;
 }
 
-static bool is_empty( const char * s ) {
+static
+bool
+is_empty( const char * s ) {
     bool res = ( NULL == s );
     if ( !res ) { res = ( 0 == s[ 0 ] ); }
     return res;
