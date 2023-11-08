@@ -569,7 +569,7 @@ KRDatabaseVOpenTableRead ( const KDatabase *self,
                                 self -> dir, false, path, false, NULL );
         if ( rc == 0 )
         {
-            KTable *tbl = ( KTable* ) * tblp;
+            KRTable *tbl = ( KRTable* ) * tblp;
             tbl -> db = KDatabaseAttach ( self );
         }
     }

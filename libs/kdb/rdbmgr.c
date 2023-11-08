@@ -613,7 +613,7 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *self,
         rc = RC ( rcDB, rcMgr, rcOpening, rcPath, rcExcessive );
     else
     {
-        const KTable *tbl;
+        const KRTable *tbl;
         const KDirectory *dir;
         bool prerelease = false;
         const VPath *path2 = NULL;
@@ -687,7 +687,7 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *self,
             rc = KRTableMake ( & tbl, dir, p, self, prerelease );
             if ( rc == 0 )
             {
-                * tblp = tbl;
+                * tblp = & tbl -> dad;
 
                 if (aTblpath != tblpath)
                     free(tblpath);

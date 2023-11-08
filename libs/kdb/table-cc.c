@@ -64,13 +64,13 @@
 #undef index
 
 static
-rc_t KTableCheckMD5 ( const KTable *self, CCReportFunc report, void *ctx )
+rc_t KTableCheckMD5 ( const KRTable *self, CCReportFunc report, void *ctx )
 {
     CCReportInfoBlock info;
     memset ( & info, 0, sizeof info );
 
     info.objType = kptTable;
-    rc_t rc = KTableGetName(self, &info.objName);
+    rc_t rc = KTableGetName( & self->dad, &info.objName);
     if ( rc == 0 )
     {
         rc = DirectoryCheckMD5 ( self->dir, "md5", & info, report, ctx );
@@ -164,12 +164,12 @@ static rc_t CC KTableCheckColumn(const KDirectory *dir, uint32_t type, const cha
 }
 
 static
-rc_t KTableCheckColumns ( const KTable *self, uint32_t depth, int level,
+rc_t KTableCheckColumns ( const KRTable *self, uint32_t depth, int level,
     CCReportFunc report, void *ctx )
 {
     KTableCheckColumn_pb_t pb;
 
-    pb.self = self;
+    pb.self = & self -> dad;
     pb.report = report;
     pb.rpt_ctx = ctx;
     pb.n = 0;
@@ -191,7 +191,7 @@ rc_t KTableCheckIndexMD5(const KDirectory *dir,
     return 0;
 }
 
-static const KDirectory *KTableFindIndexDir(const KTable *self)
+static const KDirectory *KTableFindIndexDir(const KRTable *self)
 {
     const KDirectory *idxDir;
 
@@ -205,14 +205,14 @@ static const KDirectory *KTableFindIndexDir(const KTable *self)
 }
 
 static
-rc_t KTableCheckIndices(const KTable *self, uint32_t depth, int level, CCReportFunc report, void *ctx)
+rc_t KTableCheckIndices(const KRTable *self, uint32_t depth, int level, CCReportFunc report, void *ctx)
 {
     uint32_t n;
     const KMetadata *meta;
     int64_t max_row_id = 0;
 
     KNamelist *list;
-    rc_t rc = KTableListIdx(self, &list);
+    rc_t rc = KTableListIdx( & self->dad, &list);
     if ( rc != 0 )
     {
         if ( GetRCState ( rc ) == rcNotFound )
@@ -220,7 +220,7 @@ rc_t KTableCheckIndices(const KTable *self, uint32_t depth, int level, CCReportF
         return rc;
     }
 
-    rc = KTableOpenMetadataRead ( self, & meta );
+    rc = KTableOpenMetadataRead ( & self->dad, & meta );
     if ( rc == 0 )
     {
         const KMDataNode *seq;
@@ -239,7 +239,7 @@ rc_t KTableCheckIndices(const KTable *self, uint32_t depth, int level, CCReportF
     rc = KNamelistCount(list, &n);
     if ( rc == 0 )
     {
-        const KDirectory *idxDir = KTableFindIndexDir ( self );
+        const KDirectory *idxDir = KTableFindIndexDir (self);
         if ( idxDir == NULL )
             rc = RC ( rcDB, rcTable, rcValidating, rcDirectory, rcNull );
         else
@@ -262,7 +262,7 @@ rc_t KTableCheckIndices(const KTable *self, uint32_t depth, int level, CCReportF
                 if (rc == 0 && level > 0)
                 {
                     const KIndex *idx;
-                    rc = KTableOpenIndexRead(self, &idx, "%s", nfo.objName);
+                    rc = KTableOpenIndexRead(& self->dad, &idx, "%s", nfo.objName);
 
                     if ( rc != 0 )
                     {
@@ -304,9 +304,10 @@ rc_t KTableCheckIndices(const KTable *self, uint32_t depth, int level, CCReportF
 }
 
 LIB_EXPORT
-rc_t CC KTableConsistencyCheck(const KTable *self, uint32_t depth, uint32_t level,
+rc_t CC KTableConsistencyCheck(const KTable *bself, uint32_t depth, uint32_t level,
     CCReportFunc report, void *ctx)
 {
+    const KRTable *self = (const KRTable *)bself;
     rc_t rc = 0;
     uint32_t type;
 
@@ -321,7 +322,7 @@ rc_t CC KTableConsistencyCheck(const KTable *self, uint32_t depth, uint32_t leve
     if (depth == 0) {
         CCReportInfoBlock info;
 
-        rc = KTableGetName(self, &info.objName);
+        rc = KTableGetName(bself, &info.objName);
         if ( rc == 0 )
         {
             info.objId = 0;
@@ -338,7 +339,7 @@ rc_t CC KTableConsistencyCheck(const KTable *self, uint32_t depth, uint32_t leve
     if (type == kptZombieFile) {
         CCReportInfoBlock info;
 
-        rc = KTableGetName(self, &info.objName);
+        rc = KTableGetName(bself, &info.objName);
         if ( rc == 0 )
         {
             info.objId = 0;
@@ -358,7 +359,7 @@ rc_t CC KTableConsistencyCheck(const KTable *self, uint32_t depth, uint32_t leve
     else {
         CCReportInfoBlock info;
 
-        rc = KTableGetName(self, &info.objName);
+        rc = KTableGetName(bself, &info.objName);
         if ( rc == 0 )
         {
             info.objId = 0;

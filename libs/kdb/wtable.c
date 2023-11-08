@@ -24,40 +24,24 @@
 *
 */
 
-#define TRACK_REFERENCES 0
-
 #include <kdb/extern.h>
-#include <kdb/index.h>
-#include <kdb/kdb-priv.h>
+
+#include "wtable.h"
+
 #include <kdb/namelist.h>
 
 #include "database-cmn.h"
 #include "wdbmgr.h"
-#include "wtable.h"
 #include "wcolumn.h"
 #include "windex.h"
 #include "wkdb.h"
 #include "kdb-cmn.h"
 #include "wmeta.h"
 
-#include <klib/namelist.h>
-#include <klib/symbol.h>
 #include <klib/log.h>
-#include <klib/printf.h>
 #include <klib/rc.h>
 
-#include <kfs/directory.h>
-#include <kfs/file.h>
-#include <kfs/md5.h>
 #include <kfs/impl.h>
-
-#include <sysalloc.h>
-
-#include <limits.h>
-#include <stdlib.h>
-#include <string.h>
-#include <assert.h>
-#include <stdio.h>
 
 /*--------------------------------------------------------------------------
  * KTable
@@ -105,14 +89,17 @@ static KTableBase_vt KWTable_vt =
     KWTableMetaCompare
 };
 
+#define CAST() assert( bself->vt == &KWTable_vt ); KWTable * self = (KWTable *)bself
 
 /* GetPath
  *  return the absolute path to table
  */
 static
 rc_t CC
-KWTableGetPath ( const KTable *self, const char **path )
+KWTableGetPath ( const KTable *bself, const char **path )
 {
+    CAST();
+
     if ( self == NULL )
         return RC ( rcDB, rcTable, rcAccessing, rcSelf, rcNull );
     if ( path == NULL )
@@ -127,8 +114,10 @@ KWTableGetPath ( const KTable *self, const char **path )
  */
 static
 rc_t
-KWTableWhack ( KTable *self )
+KWTableWhack ( KTable *bself )
 {
+    CAST();
+
     rc_t rc = 0;
     KDBManager *mgr = self -> mgr;
     KSymbol * symb;
@@ -163,7 +152,7 @@ KWTableWhack ( KTable *self )
     {
         /* complete */
         KDirectoryRelease ( self -> dir );
-        return KTableBaseWhack( self );
+        return KTableBaseWhack( & self -> dad );
     }
 
     KRefcountInit ( & self -> dad . refcount, 1, "KTable", "whack", "ktbl" );
@@ -173,8 +162,10 @@ KWTableWhack ( KTable *self )
 
 static
 rc_t CC
-KWTableGetName(KTable const *self, char const **rslt)
+KWTableGetName(KTable const *bself, char const **rslt)
 {
+    CAST();
+
     char *sep;
 
     *rslt = self->path;
@@ -188,10 +179,10 @@ KWTableGetName(KTable const *self, char const **rslt)
  *  make an initialized structure
  *  NB - does NOT attach reference to dir, but steals it
  */
-rc_t KWTableMake ( KTable **tblp, const KDirectory *dir, const char *path,
+rc_t KWTableMake ( KWTable **tblp, const KDirectory *dir, const char *path,
 		  KMD5SumFmt * md5, bool read_only )
 {
-    KTable *tbl;
+    KWTable *tbl;
 
     assert ( tblp != NULL );
     assert ( path != NULL );
@@ -205,7 +196,7 @@ rc_t KWTableMake ( KTable **tblp, const KDirectory *dir, const char *path,
 
     memset ( tbl, 0, sizeof * tbl );
     tbl -> dad . vt = & KWTable_vt;
-    KRefcountInit ( & tbl -> dad . refcount, 1, "KTable", "make", path );
+    KRefcountInit ( & tbl -> dad . refcount, 1, "KWTable", "make", path );
     tbl -> dir = ( KDirectory* ) dir;
     tbl -> opencount = 1;
     tbl -> md5 = md5;
@@ -227,8 +218,10 @@ rc_t KWTableMake ( KTable **tblp, const KDirectory *dir, const char *path,
  */
 static
 bool CC
-KWTableLocked ( const KTable *self )
+KWTableLocked ( const KTable *bself )
 {
+    CAST();
+
     rc_t rc = KDBWWritable ( self -> dir, "." );
     return GetRCState ( rc ) == rcLocked;
 }
@@ -243,8 +236,10 @@ KWTableLocked ( const KTable *self )
  */
 static
 bool CC
-KWTableVExists ( const KTable *self, uint32_t type, const char *name, va_list args )
+KWTableVExists ( const KTable *bself, uint32_t type, const char *name, va_list args )
 {
+    CAST();
+
     if ( name != NULL && name [ 0 ] != 0 )
     {
         rc_t rc;
@@ -295,8 +290,10 @@ KWTableVExists ( const KTable *self, uint32_t type, const char *name, va_list ar
  */
 static
 bool CC
-KWTableIsAlias ( const KTable *self, uint32_t type, char *resolved, size_t rsize, const char *name )
+KWTableIsAlias ( const KTable *bself, uint32_t type, char *resolved, size_t rsize, const char *name )
 {
+    CAST();
+
     if ( name != NULL && name [ 0 ] != 0 )
     {
         rc_t rc;
@@ -361,7 +358,7 @@ KWTableIsAlias ( const KTable *self, uint32_t type, char *resolved, size_t rsize
  *  "path" [ IN ] - NUL terminated path
  */
 static
-rc_t KTableLockInt (const KTable  * self, char * path, size_t path_size,
+rc_t KTableLockInt (const KWTable  * self, char * path, size_t path_size,
                         int type, const char * name, va_list args )
 {
     rc_t rc;
@@ -395,8 +392,10 @@ rc_t KTableLockInt (const KTable  * self, char * path, size_t path_size,
 
 static
 rc_t CC
-KWTableVWritable (const KTable *self, uint32_t type, const char * name, va_list args )
+KWTableVWritable (const KTable *bself, uint32_t type, const char * name, va_list args )
 {
+    CAST();
+
     rc_t rc;
     char path [ 256 ];
 
@@ -417,8 +416,10 @@ KWTableVWritable (const KTable *self, uint32_t type, const char * name, va_list 
  *
  *  "path" [ IN ] - NUL terminated path
  */
-LIB_EXPORT rc_t CC KTableVLock ( KTable *self, uint32_t type, const char * name, va_list args )
+LIB_EXPORT rc_t CC KTableVLock ( KTable *bself, uint32_t type, const char * name, va_list args )
 {
+    CAST();
+
     rc_t rc = 0;
     char path [ 256 ];
 
@@ -451,8 +452,10 @@ LIB_EXPORT rc_t CC KTableLock ( KTable *self, uint32_t type, const char *name, .
  *
  *  "path" [ IN ] - NUL terminated path
  */
-LIB_EXPORT rc_t CC KTableVUnlock ( KTable *self, uint32_t type, const char * name, va_list args )
+LIB_EXPORT rc_t CC KTableVUnlock ( KTable *bself, uint32_t type, const char * name, va_list args )
 {
+    CAST();
+
     rc_t rc = 0;
     char path [ 256 ];
 
@@ -475,25 +478,29 @@ LIB_EXPORT rc_t CC KTableUnlock ( KTable *self, uint32_t type, const char *name,
 
 /* Rename
  */
-LIB_EXPORT rc_t CC KTableRenameColumn ( KTable *self, bool force, const char *from, const char *to )
+LIB_EXPORT rc_t CC KTableRenameColumn ( KTable *bself, bool force, const char *from, const char *to )
 {
+    CAST();
     return KDBRename ( self -> dir, self -> mgr, kptColumn, force, from, to );
 }
 
-LIB_EXPORT rc_t CC KTableRenameIndex ( KTable *self, bool force, const char *from, const char *to )
+LIB_EXPORT rc_t CC KTableRenameIndex ( KTable *bself, bool force, const char *from, const char *to )
 {
+    CAST();
     return KDBRename ( self -> dir, self -> mgr, kptIndex, force, from, to );
 }
 
 /* Alias
  */
-LIB_EXPORT rc_t CC KTableAliasColumn ( KTable *self, const char *col, const char *alias )
+LIB_EXPORT rc_t CC KTableAliasColumn ( KTable *bself, const char *col, const char *alias )
 {
+    CAST();
     return KDBAlias ( self -> dir, kptColumn, col, alias );
 }
 
-LIB_EXPORT rc_t CC KTableAliasIndex ( KTable *self, const char *idx, const char *alias )
+LIB_EXPORT rc_t CC KTableAliasIndex ( KTable *bself, const char *idx, const char *alias )
 {
+    CAST();
     return KDBAlias ( self -> dir, kptIndex, idx, alias );
 }
 
@@ -511,8 +518,9 @@ LIB_EXPORT rc_t CC KTableDropColumn ( KTable *self, const char *path, ... )
     return rc;
 }
 
-LIB_EXPORT rc_t CC KTableVDropColumn ( KTable *self, const char *name, va_list args )
+LIB_EXPORT rc_t CC KTableVDropColumn ( KTable *bself, const char *name, va_list args )
 {
+    CAST();
     return KDBVDrop ( self -> dir, self -> mgr, kptColumn, name, args );
 }
 
@@ -528,8 +536,9 @@ LIB_EXPORT rc_t CC KTableDropIndex ( KTable *self, const char *name, ... )
     return rc;
 }
 
-LIB_EXPORT rc_t CC KTableVDropIndex ( KTable *self, const char *name, va_list args )
+LIB_EXPORT rc_t CC KTableVDropIndex ( KTable *bself, const char *name, va_list args )
 {
+    CAST();
     return KDBVDrop ( self -> dir, self -> mgr, kptIndex, name, args );
 }
 
@@ -537,12 +546,14 @@ LIB_EXPORT rc_t CC KTableVDropIndex ( KTable *self, const char *name, va_list ar
 /* Reindex
  *  optimize column indices
  */
-LIB_EXPORT rc_t CC KTableReindex ( KTable *self )
+LIB_EXPORT rc_t CC KTableReindex ( KTable *bself )
 {
-    if ( self != NULL )
+    if ( bself != NULL )
     {
+        CAST();
+
         KNamelist *names;
-        rc_t rc = KTableListCol ( self, & names );
+        rc_t rc = KTableListCol ( bself, & names );
         if ( rc == 0 )
         {
             uint32_t count;
@@ -562,9 +573,9 @@ LIB_EXPORT rc_t CC KTableReindex ( KTable *self )
                     /* check it the column has idx0 data
                        TBD - this whole operation goes away when
                        idx0 is used for cursor sessions */
-                    if ( KTableColumnNeedsReindex ( self, name ) )
+                    if ( KWTableColumnNeedsReindex ( self, name ) )
                     {
-                        rc = KTableOpenColumnUpdate ( self, & col, "%s", name );
+                        rc = KTableOpenColumnUpdate ( bself, & col, "%s", name );
                         if ( rc != 0 )
                         {
                             if ( GetRCState ( rc ) == rcBusy )
@@ -594,8 +605,10 @@ LIB_EXPORT rc_t CC KTableReindex ( KTable *self )
  */
 static
 rc_t CC
-KWTableOpenManagerRead ( const KTable *self, const KDBManager **mgr )
+KWTableOpenManagerRead ( const KTable *bself, const KDBManager **mgr )
 {
+    CAST();
+
     rc_t rc;
 
     if ( mgr == NULL )
@@ -615,8 +628,10 @@ KWTableOpenManagerRead ( const KTable *self, const KDBManager **mgr )
     return rc;
 }
 
-LIB_EXPORT rc_t CC KTableOpenManagerUpdate ( KTable *self, KDBManager **mgr )
+LIB_EXPORT rc_t CC KTableOpenManagerUpdate ( KTable *bself, KDBManager **mgr )
 {
+    CAST();
+
     rc_t rc;
 
     if ( mgr == NULL )
@@ -648,8 +663,10 @@ LIB_EXPORT rc_t CC KTableOpenManagerUpdate ( KTable *self, KDBManager **mgr )
  */
 static
 rc_t CC
-KWTableOpenParentRead ( const KTable *self, const KDatabase **db )
+KWTableOpenParentRead ( const KTable *bself, const KDatabase **db )
 {
+    CAST();
+
     rc_t rc;
 
     if ( db == NULL )
@@ -669,8 +686,10 @@ KWTableOpenParentRead ( const KTable *self, const KDatabase **db )
     return rc;
 }
 
-LIB_EXPORT rc_t CC KTableOpenParentUpdate ( KTable *self, KDatabase **db )
+LIB_EXPORT rc_t CC KTableOpenParentUpdate ( KTable *bself, KDatabase **db )
 {
+    CAST();
+
     rc_t rc;
 
     if ( db == NULL )
@@ -703,8 +722,10 @@ LIB_EXPORT rc_t CC KTableOpenParentUpdate ( KTable *self, KDatabase **db )
  */
 static
 rc_t CC
-KWTableOpenDirectoryRead ( const KTable *self, const KDirectory **dir )
+KWTableOpenDirectoryRead ( const KTable *bself, const KDirectory **dir )
 {
+    CAST();
+
     rc_t rc;
 
     if ( dir == NULL )
@@ -718,8 +739,10 @@ KWTableOpenDirectoryRead ( const KTable *self, const KDirectory **dir )
     return rc;
 }
 
-LIB_EXPORT rc_t CC KTableOpenDirectoryUpdate ( KTable *self, KDirectory **dir )
+LIB_EXPORT rc_t CC KTableOpenDirectoryUpdate ( KTable *bself, KDirectory **dir )
 {
+    CAST();
+
     rc_t rc;
 
     if ( dir == NULL )
@@ -767,8 +790,10 @@ bool CC KDatabaseListFilter ( const KDirectory *dir, const char *name, void *dat
 
 static
 rc_t CC
-KWTableListCol ( const KTable *self, KNamelist **names )
+KWTableListCol ( const KTable *bself, KNamelist **names )
 {
+    CAST();
+
     struct FilterData data;
     data.mgr = self->mgr;
     data.type = kptColumn;
@@ -797,8 +822,10 @@ bool CC KTableListSkeyFilter ( const KDirectory *dir, const char *name, void *da
 
 static
 rc_t CC
-KWTableListIdx ( const KTable *self, KNamelist **names )
+KWTableListIdx ( const KTable *bself, KNamelist **names )
 {
+    CAST();
+
     if ( ! self -> prerelease )
     {
         return KDirectoryList ( self -> dir,
@@ -822,8 +849,8 @@ KWTableHasRemoteData ( const KTable *self )
 
 /** @brief Copy a column using directory operations
  */
-static rc_t KTableCopyObject_int(  KTable *self
-                                 , KTable const *source
+static rc_t KTableCopyObject_int(  KWTable *self
+                                 , KWTable const *source
                                  , const char *name
                                  , char const *type)
 {
@@ -846,7 +873,7 @@ static rc_t KTableCopyObject_int(  KTable *self
 
 /** @brief A good source exists and is not being written to.
  */
-static rc_t KTableObjectIsGoodSource(KTable const *self
+static rc_t KTableObjectIsGoodSource(KWTable const *self
                                      , char const *name
                                      , char const *type)
 {
@@ -868,7 +895,7 @@ static rc_t KTableObjectIsGoodSource(KTable const *self
 
 /** @brief A good destination does not exist.
  */
-static rc_t KTableObjectIsGoodDestination(KTable *self
+static rc_t KTableObjectIsGoodDestination(KWTable *self
                                           , char const *name
                                           , char const *type)
 {
@@ -886,8 +913,8 @@ static rc_t KTableObjectIsGoodDestination(KTable *self
     return 0;
 }
 
-static rc_t KTableCopyObject(  KTable *self
-                             , KTable const *source
+static rc_t KTableCopyObject(  KWTable *self
+                             , KWTable const *source
                              , char const *name
                              , char const *type)
 {
@@ -902,10 +929,14 @@ static rc_t KTableCopyObject(  KTable *self
     return KTableCopyObject_int(self, source, name, type);
 }
 
-LIB_EXPORT rc_t CC KTableCopyColumn(  KTable *self
-                                    , KTable const *source
+LIB_EXPORT rc_t CC KTableCopyColumn(  KTable *bself
+                                    , KTable const *bsource
                                     , const char *name)
 {
+    CAST();
+    assert( bsource->vt == &KWTable_vt );
+    const KWTable * source = (const KWTable *)bsource;
+
     rc_t rc = 0;
 
     if (self == NULL)
@@ -920,10 +951,14 @@ LIB_EXPORT rc_t CC KTableCopyColumn(  KTable *self
     return rc;
 }
 
-LIB_EXPORT rc_t CC KTableCopyIndex(  KTable *self
-                                    , KTable const *source
+LIB_EXPORT rc_t CC KTableCopyIndex(  KTable *bself
+                                    , KTable const *bsource
                                     , const char *name)
 {
+    CAST();
+    assert( bsource->vt == &KWTable_vt );
+    const KWTable * source = (const KWTable *)bsource;
+
     rc_t rc = 0;
 
     if (self == NULL)
@@ -938,8 +973,10 @@ LIB_EXPORT rc_t CC KTableCopyIndex(  KTable *self
 
 static
 rc_t CC
-KWTableVOpenColumnRead ( const KTable *self, const KColumn **colp, const char *name, va_list args )
+KWTableVOpenColumnRead ( const KTable *bself, const KColumn **colp, const char *name, va_list args )
 {
+    CAST();
+
     rc_t rc;
     char path [ 256 ];
 
@@ -961,7 +998,7 @@ KWTableVOpenColumnRead ( const KTable *self, const KColumn **colp, const char *n
         if ( rc == 0 )
         {
             KWColumn *col = ( KWColumn* ) * colp;
-            if(!col_is_cached) col -> tbl = KTableAttach ( self );
+            if(!col_is_cached) col -> tbl = ( KWTable* ) KTableAttach ( bself);
         }
     }
     return rc;
@@ -980,10 +1017,12 @@ LIB_EXPORT rc_t CC KTableCreateColumn ( KTable *self, KColumn **col,
     return rc;
 }
 
-LIB_EXPORT rc_t CC KTableVCreateColumn ( KTable *self, KColumn **colp,
+LIB_EXPORT rc_t CC KTableVCreateColumn ( KTable *bself, KColumn **colp,
     KCreateMode cmode, KChecksum checksum, size_t pgsize,
     const char *name, va_list args )
 {
+    CAST();
+
     rc_t rc;
     char path [ 256 ];
 
@@ -1013,7 +1052,7 @@ LIB_EXPORT rc_t CC KTableVCreateColumn ( KTable *self, KColumn **colp,
         if ( rc == 0 )
         {
             KWColumn *col = (KWColumn*)* colp;
-            col -> tbl = KTableAttach ( self );
+            col -> tbl = ( KWTable* ) KTableAttach ( bself );
         }
     }
     return rc;
@@ -1032,9 +1071,11 @@ LIB_EXPORT rc_t CC KTableOpenColumnUpdate ( KTable *self,
     return rc;
 }
 
-LIB_EXPORT rc_t CC KTableVOpenColumnUpdate ( KTable *self,
+LIB_EXPORT rc_t CC KTableVOpenColumnUpdate ( KTable *bself,
     KColumn **colp, const char *name, va_list args )
 {
+    CAST();
+
     rc_t rc;
     char path [ 256 ];
 
@@ -1058,13 +1099,13 @@ LIB_EXPORT rc_t CC KTableVOpenColumnUpdate ( KTable *self,
         if ( rc == 0 )
         {
             KWColumn *col = (KWColumn *)* colp;
-            col -> tbl = KTableAttach ( self );
+            col -> tbl = ( KWTable* ) KTableAttach ( bself );
         }
     }
     return rc;
 }
 
-bool KTableColumnNeedsReindex ( KTable *self, const char *colname )
+bool KWTableColumnNeedsReindex ( KWTable *self, const char *colname )
 {
     if ( self != NULL )
     {
@@ -1085,8 +1126,10 @@ bool KTableColumnNeedsReindex ( KTable *self, const char *colname )
 
 static
 rc_t CC
-KWTableOpenMetadataRead ( const KTable *self, const KMetadata **metap )
+KWTableOpenMetadataRead ( const KTable *bself, const KMetadata **metap )
 {
+    CAST();
+
     rc_t rc;
     const KWMetadata *meta;
     bool  meta_is_cached;
@@ -1099,7 +1142,7 @@ KWTableOpenMetadataRead ( const KTable *self, const KMetadata **metap )
     rc = KDBWManagerOpenMetadataReadInt ( self -> mgr, & meta, self -> dir, 0, self -> prerelease, &meta_is_cached );
     if ( rc == 0 )
     {
-        if(!meta_is_cached) ((KWMetadata*)meta) -> tbl = KTableAttach ( self );
+        if(!meta_is_cached) ((KWMetadata*)meta) -> tbl = (KWTable*) KTableAttach ( bself );
         * metap = & meta -> dad;
     }
 
@@ -1143,8 +1186,10 @@ KWTableMetaCompare( const KTable *self, const KTable *other, const char * path, 
     return rc;
 }
 
-LIB_EXPORT rc_t CC KTableOpenMetadataUpdate ( KTable *self, KMetadata **metap )
+LIB_EXPORT rc_t CC KTableOpenMetadataUpdate ( KTable *bself, KMetadata **metap )
 {
+    CAST();
+
     rc_t rc;
     KWMetadata *meta;
 
@@ -1162,7 +1207,7 @@ LIB_EXPORT rc_t CC KTableOpenMetadataUpdate ( KTable *self, KMetadata **metap )
     rc = KDBManagerOpenMetadataUpdateInt ( self -> mgr, & meta, self -> dir, self -> md5 );
     if ( rc == 0 )
     {
-        meta -> tbl = KTableAttach ( self );
+        meta -> tbl = (KWTable*) KTableAttach ( bself );
         * metap = & meta -> dad;
     }
 
@@ -1209,8 +1254,10 @@ LIB_EXPORT rc_t CC KTableMetaCopy( KTable *self, const KTable *src, const char *
 
 static
 rc_t CC
-KWTableVOpenIndexRead ( const KTable *self, const KIndex **idxp, const char *name, va_list args )
+KWTableVOpenIndexRead ( const KTable *bself, const KIndex **idxp, const char *name, va_list args )
 {
+    CAST();
+
     rc_t rc = 0;
     char path [ 256 ];
 
@@ -1238,7 +1285,7 @@ KWTableVOpenIndexRead ( const KTable *self, const KIndex **idxp, const char *nam
         if ( rc == 0 )
         {
             if (idx->tbl != self)
-                idx -> tbl = KTableAttach ( self );
+                idx -> tbl = (KWTable*) KTableAttach ( bself );
             * idxp = & idx -> dad;
         }
     }
@@ -1258,9 +1305,11 @@ LIB_EXPORT rc_t CC KTableCreateIndex ( struct KTable *self, KIndex **idx,
     return rc;
 }
 
-LIB_EXPORT rc_t CC KTableVCreateIndex ( KTable *self, KIndex **idxp,
+LIB_EXPORT rc_t CC KTableVCreateIndex ( KTable *bself, KIndex **idxp,
     KIdxType type, KCreateMode cmode, const char *name, va_list args )
 {
+    CAST();
+
     rc_t rc = 0;
     KDirectory *dir;
 
@@ -1289,7 +1338,7 @@ LIB_EXPORT rc_t CC KTableVCreateIndex ( KTable *self, KIndex **idxp,
                 type, cmode | kcmParents, path, self -> use_md5 );
             if ( rc == 0 )
             {
-                idx -> tbl = KTableAttach ( self );
+                idx -> tbl = (KWTable*) KTableAttach ( bself );
                 * idxp = & idx -> dad;
             }
         }
@@ -1313,9 +1362,11 @@ LIB_EXPORT rc_t CC KTableOpenIndexUpdate ( struct KTable *self,
     return rc;
 }
 
-LIB_EXPORT rc_t CC KTableVOpenIndexUpdate ( KTable *self,
+LIB_EXPORT rc_t CC KTableVOpenIndexUpdate ( KTable *bself,
     KIndex **idxp, const char *name, va_list args )
 {
+    CAST();
+
     rc_t rc = 0;
     KDirectory *dir;
 
@@ -1341,7 +1392,7 @@ LIB_EXPORT rc_t CC KTableVOpenIndexUpdate ( KTable *self,
             rc = KDBManagerOpenIndexUpdate ( self -> mgr, & idx, dir, path );
             if ( rc == 0 )
             {
-                idx -> tbl = KTableAttach ( self );
+                idx -> tbl = (KWTable*) KTableAttach ( bself );
                 * idxp = & idx -> dad;
             }
         }

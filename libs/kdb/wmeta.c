@@ -358,7 +358,7 @@ KWMetadataWhack ( KMetadata *bself )
     }
     else if ( self -> tbl != NULL )
     {
-        rc = KTableSever ( self -> tbl );
+        rc = KTableSever ( & self -> tbl -> dad );
         if ( rc != 0 )
             return rc;
         self -> tbl = NULL;
@@ -826,7 +826,7 @@ KWMetadataOpenRevision ( const KMetadata *bself, const KMetadata **metap, uint32
 	    if ( self -> db != NULL )
                 ((KWMetadata*)meta) -> db = KDatabaseAttach ( self -> db );
             else if ( self -> tbl != NULL )
-                ((KWMetadata*)meta) -> tbl = KTableAttach ( self -> tbl );
+                ((KWMetadata*)meta) -> tbl = (KWTable*) KTableAttach ( & self -> tbl -> dad );
             else if ( self -> col != NULL )
                 ((KWMetadata*)meta) -> col = KColumnAttach ( self -> col );
 	}

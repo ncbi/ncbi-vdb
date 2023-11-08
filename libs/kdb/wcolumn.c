@@ -111,7 +111,7 @@ rc_t KWColumnWhack ( KWColumn *self )
        should never fail, and our recovery is flawed */
     if ( self -> tbl != NULL )
     {
-        rc = KTableSever ( self -> tbl );
+        rc = KTableSever ( & self -> tbl -> dad );
         if ( rc != 0 )
             return rc;
         self -> tbl = NULL;
@@ -805,10 +805,10 @@ rc_t CC KWColumnOpenParentRead ( const KWColumn *self, const KTable **tbl )
         rc = RC ( rcDB, rcColumn, rcAccessing, rcParam, rcNull );
     else
     {
-        rc = KTableAddRef ( self -> tbl );
+        rc = KTableAddRef ( & self -> tbl -> dad );
         if ( rc == 0 )
         {
-            * tbl = self -> tbl;
+            * tbl = & self -> tbl -> dad;
             return 0;
         }
 
@@ -834,10 +834,10 @@ LIB_EXPORT rc_t CC KColumnOpenParentUpdate ( KColumn *bself, KTable **tbl )
             rc = RC ( rcDB, rcColumn, rcAccessing, rcTable, rcReadonly );
         else
         {
-            rc = KTableAddRef ( self -> tbl );
+            rc = KTableAddRef ( & self -> tbl -> dad );
             if ( rc == 0 )
             {
-                * tbl = self -> tbl;
+                * tbl = & self -> tbl -> dad;
                 return 0;
             }
         }
