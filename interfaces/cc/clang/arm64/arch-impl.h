@@ -236,7 +236,7 @@ void uint128_shr ( uint128_t *self, uint32_t i )
         self -> lo = ( self -> hi << ( 64 - i ) ) |  ( self -> lo >> i );
         self -> hi >>= i;
     }
-    else
+    else if ( i > 0 )
     {
         self -> lo = self -> hi >> ( i - 64 );
         self -> hi >>= 63;

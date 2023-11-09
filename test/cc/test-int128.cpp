@@ -43,16 +43,32 @@ TEST_SUITE(Int128TestSuite);
 
 // 128 bit operations
 
-TEST_CASE(shr_64)
+// special case, shift by 0
+TEST_CASE(shr_0)
 {
+    uint64_t HI = 0x90109da2e0000;
+    uint64_t LO = 0xc0e6b00000ce76e;
     uint128_t acc;
-    uint128_sethi( & acc, 0x90109da2e0000);
-    uint128_setlo( & acc, 0xc0e6b00000ce76e);
-    uint128_shr ( & acc, 64 );
+    uint128_sethi( & acc, HI );
+    uint128_setlo( & acc, LO);
 
-cout << hex << uint128_hi ( & acc ) << endl;
-cout << hex << uint128_lo ( & acc ) << endl;
-//    REQUIRE_EQ ( (uint64_t), uint128_lo ( & acc ) );
+    uint128_shr ( & acc, 0 );
+
+    REQUIRE_EQ ( HI, uint128_hi ( & acc ) );
+    REQUIRE_EQ ( LO, uint128_lo ( & acc ) );
+}
+TEST_CASE(shl_0)
+{
+    uint64_t HI = 0x90109da2e0000;
+    uint64_t LO = 0xc0e6b00000ce76e;
+    uint128_t acc;
+    uint128_sethi( & acc, HI );
+    uint128_setlo( & acc, LO);
+
+    uint128_shl ( & acc, 0 );
+
+    REQUIRE_EQ ( HI, uint128_hi ( & acc ) );
+    REQUIRE_EQ ( LO, uint128_lo ( & acc ) );
 }
 
 //////////////////////////////////////////// Main
