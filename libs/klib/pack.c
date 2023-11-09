@@ -344,7 +344,7 @@ void Pack64a ( uint32_t packed, void *dst, const void *src, uint32_t count )
             ( ( uint8_t* ) dst ) [ d ] = ( uint8_t ) out;
     }
 }
-#include <stdio.h>
+
 /* Pack64b
  *  source is 64 bits, packed > 32 bits
  */
@@ -366,16 +366,13 @@ void Pack64b ( uint32_t packed, void *dst, const void *src, uint32_t count )
     {
         /* get 8 bytes in native order */
         uint64_t in = READ_UNPACKED64 ( src, s );
-printf("in[%u]=%lx, MASK64(in)=%lx\n", s, in, MASK64 ( in ));
+
         /* pack the bytes into our accumulator */
         uint128_shl ( & acc, packed );
         uint128_orlo ( & acc, MASK64 ( in ) );
 
-printf("   acc=%lx %lx\n", uint128_hi( &acc ), uint128_lo( &acc ) );
-
         /* account for activity */
         abits += packed;
-printf("   abits=%u\n", abits );
 
         /* detect need to dump accumulator */
         if ( abits >= 64 )
@@ -383,12 +380,10 @@ printf("   abits=%u\n", abits );
             uint64_t save = uint128_lo ( & acc );
             abits -= 64;
             uint128_shr ( & acc, abits );
-printf("   acc=%lx %lx\n", uint128_hi( &acc ), uint128_lo( &acc ) );
             WRITE_PACKED64 ( uint128_lo ( & acc ), dst, d ++ );
             uint128_setlo ( & acc, save );
         }
     }
-printf("abits=%u\n", abits);
 
     /* handle remaining accumulator bits */
     if ( abits != 0 )

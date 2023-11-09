@@ -231,6 +231,8 @@ void uint128_not ( uint128_t *self )
 static __inline
 void uint128_shr ( uint128_t *self, uint32_t i )
 {
+    if ( i == 0 ) return;
+
     if ( i < 64 )
     {
         self -> lo = ( self -> hi << ( 64 - i ) ) |  ( self -> lo >> i );
@@ -246,6 +248,8 @@ void uint128_shr ( uint128_t *self, uint32_t i )
 static __inline
 void uint128_shl ( uint128_t *self, uint32_t i )
 {
+    if ( i == 0 ) return;
+
     if ( i < 64 )
     {
         self -> hi = ( self -> hi << i ) | ( self -> lo >> ( 64 - i ) );
