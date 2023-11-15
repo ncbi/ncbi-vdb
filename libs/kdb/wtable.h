@@ -33,7 +33,6 @@
 #include <klib/symbol.h>
 #include <kfs/md5.h>
 
-#define KTABLE_IMPL KTable
 #include "table-base.h"
 
 #ifdef __cplusplus
@@ -55,9 +54,10 @@ struct KDirectory;
  *  but may be a single archive file
  *  in either executable or streamable format
  */
-struct KTable
+typedef struct KWTable KWTable;
+struct KWTable
 {
-    KTableBase dad;
+    KTable dad;
 
     struct KDirectory *dir;
     struct KDBManager *mgr;
@@ -75,16 +75,10 @@ struct KTable
     char path [ 1 ];
 };
 
-rc_t KWTableMake ( KTable **tblp, const KDirectory *dir, const char *path, KMD5SumFmt * md5, bool read_only );
-
-/* Cmp
- * Sort
- */
-int KTableCmp ( const void *item, const BSTNode *n );
-int KTableSort ( const BSTNode *item, const BSTNode *n );
+rc_t KWTableMake ( KWTable **tblp, const KDirectory *dir, const char *path, KMD5SumFmt * md5, bool read_only );
 
 /* check a disk-resident column for needing re-indexing */
-bool KTableColumnNeedsReindex ( KTable *self, const char *colname );
+bool KWTableColumnNeedsReindex ( KWTable *self, const char *colname );
 
 
 #ifdef __cplusplus

@@ -28,7 +28,6 @@
 
 #include <kdb/table.h>
 
-#define KTABLE_IMPL KTable
 #include "table-base.h"
 
 #ifdef __cplusplus
@@ -45,15 +44,16 @@ struct KDirectory;
 
 
 /*--------------------------------------------------------------------------
- * KTable
- *  represents a table
+ * KRTable
+ *  represents a read side table
  *  normally implemented as a directory
  *  but may be a single archive file
  *  in either executable or streamable format
  */
-struct KTable
+typedef struct KRTable KRTable;
+struct KRTable
 {
-    KTableBase dad;
+    KTable dad;
 
     struct KDirectory const *dir;
     struct KDBManager const *mgr;
@@ -62,15 +62,7 @@ struct KTable
     char path [ 1 ];
 };
 
-rc_t KRTableMake ( const KTable **tblp, const struct KDirectory *dir, const char *path, const struct KDBManager * mgr, bool prerelease );
-
-/* Attach
- * Sever
- *  like KTableRelease, except called internally
- *  indicates that a child object is letting go...
- */
-KTable *KTableAttach ( const KTable *self );
-rc_t KTableSever ( const KTable *self );
+rc_t KRTableMake ( const KRTable **tblp, const struct KDirectory *dir, const char *path, const struct KDBManager * mgr, bool prerelease );
 
 #ifdef __cplusplus
 }

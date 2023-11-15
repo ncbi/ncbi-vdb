@@ -24,9 +24,6 @@
 *
 */
 
-#define TRACK_REFERENCES 0
-
-#define KONST const
 #include "rtable.h"
 
 #include "rdbmgr.h"
@@ -36,31 +33,15 @@
 #include "rcolumn.h"
 #include "rindex.h"
 #include "rmeta.h"
-#undef KONST
-
-#include <kdb/extern.h>
-#include <kdb/index.h>
-#include <kdb/kdb-priv.h>
 
 #include <klib/debug.h> /* DBGMSG */
 #include <klib/log.h>
 #include <klib/namelist.h>
-#include <klib/printf.h>
 #include <klib/rc.h>
-
-#include <vfs/manager.h> /* VFSManagerCheckEnvAndAd */
-#include <vfs/path.h> /* VFSManagerMakePath */
 
 #include <kfs/arc.h>
 
-#include <os-native.h>
-#include <sysalloc.h>
-
-#include <limits.h>
-#include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
-#include <assert.h>
 
 /*--------------------------------------------------------------------------
  * KTable
@@ -108,13 +89,17 @@ static KTableBase_vt KRTable_vt =
     KRTableMetaCompare
 };
 
+#define CAST() assert( bself->vt == &KRTable_vt ); KRTable * self = (KRTable *)bself
+
 /* GetPath
  *  return the absolute path to table
  */
 static
 rc_t CC
-KRTableGetPath ( const KTable *self, const char **path )
+KRTableGetPath ( const KTable *bself, const char **path )
 {
+    CAST();
+
     if ( path == NULL )
         return RC ( rcDB, rcTable, rcAccessing, rcParam, rcNull );
 
@@ -127,8 +112,10 @@ KRTableGetPath ( const KTable *self, const char **path )
  */
 static
 rc_t
-KRTableWhack ( KTable *self )
+KRTableWhack ( KTable *bself )
 {
+    CAST();
+
     rc_t rc = 0;
 
     if ( self -> db != NULL )
@@ -144,18 +131,20 @@ KRTableWhack ( KTable *self )
     if ( rc == 0 )
     {
         KDirectoryRelease ( self -> dir );
-        return KTableBaseWhack( self );
+        return KTableBaseWhack( bself );
     }
 
-    KRefcountInit ( & self -> dad . refcount, 1, "KTable", "whack", "ktbl" );
+    KRefcountInit ( & bself -> refcount, 1, "KTable", "whack", "ktbl" );
 
     return rc;
 }
 
 static
 rc_t CC
-KRTableGetName(KTable const *self, char const **rslt)
+KRTableGetName(KTable const *bself, char const **rslt)
 {
+    CAST();
+
     char *sep;
 
     *rslt = self->path;
@@ -169,9 +158,9 @@ KRTableGetName(KTable const *self, char const **rslt)
  *  make an initialized structure
  *  NB - does NOT attach reference to dir, but steals it
  */
-rc_t KRTableMake ( const KTable **tblp, const KDirectory *dir, const char *path, const KDBManager * mgr, bool prerelease  )
+rc_t KRTableMake ( const KRTable **tblp, const KDirectory *dir, const char *path, const KDBManager * mgr, bool prerelease  )
 {
-    KTable *tbl;
+    KRTable *tbl;
 
     assert ( tblp != NULL );
     assert ( path != NULL );
@@ -206,8 +195,10 @@ rc_t KRTableMake ( const KTable **tblp, const KDirectory *dir, const char *path,
  */
 static
 bool CC
-KRTableLocked ( const KTable *self )
+KRTableLocked ( const KTable *bself )
 {
+    CAST();
+
     rc_t rc = KDBRWritable ( self -> dir, "." );
     return GetRCState ( rc ) == rcLocked;
 }
@@ -222,8 +213,10 @@ KRTableLocked ( const KTable *self )
  */
 static
 bool CC
-KRTableVExists ( const KTable *self, uint32_t type, const char *name, va_list args )
+KRTableVExists ( const KTable *bself, uint32_t type, const char *name, va_list args )
 {
+    CAST();
+
     if ( name != NULL && name [ 0 ] != 0 )
     {
         rc_t rc;
@@ -274,8 +267,10 @@ KRTableVExists ( const KTable *self, uint32_t type, const char *name, va_list ar
  */
 static
 bool CC
-KRTableIsAlias ( const KTable *self, uint32_t type, char *resolved, size_t rsize, const char *name )
+KRTableIsAlias ( const KTable *bself, uint32_t type, char *resolved, size_t rsize, const char *name )
 {
+    CAST();
+
     if ( name != NULL && name [ 0 ] != 0 )
     {
         rc_t rc;
@@ -351,8 +346,12 @@ KRTableVWritable ( const KTable *self, uint32_t type, const char *name, va_list 
  *  duplicate reference to manager
  *  NB - returned reference must be released
  */
-static rc_t CC KRTableOpenManagerRead ( const KTable *self, const KDBManager **mgr )
+static
+rc_t CC
+KRTableOpenManagerRead ( const KTable *bself, const KDBManager **mgr )
 {
+    CAST();
+
     rc_t rc;
 
     if ( mgr == NULL )
@@ -377,8 +376,10 @@ static rc_t CC KRTableOpenManagerRead ( const KTable *self, const KDBManager **m
  */
 static
 rc_t CC
-KRTableOpenParentRead ( const KTable *self, const KDatabase **db )
+KRTableOpenParentRead ( const KTable *bself, const KDatabase **db )
 {
+    CAST();
+
     rc_t rc;
 
     if ( db == NULL )
@@ -402,8 +403,10 @@ KRTableOpenParentRead ( const KTable *self, const KDatabase **db )
  */
 static
 rc_t CC
-KRTableOpenDirectoryRead ( const KTable *self, const KDirectory **dir )
+KRTableOpenDirectoryRead ( const KTable *bself, const KDirectory **dir )
 {
+    CAST();
+
     rc_t rc;
 
     if ( dir == NULL )
@@ -441,8 +444,10 @@ bool CC KDatabaseListFilter ( const KDirectory *dir, const char *name, void *dat
 
 static
 rc_t CC
-KRTableListCol ( const KTable *self, KNamelist **names )
+KRTableListCol ( const KTable *bself, KNamelist **names )
 {
+    CAST();
+
     struct FilterData data;
 
     data.mgr = self->mgr;
@@ -453,7 +458,8 @@ KRTableListCol ( const KTable *self, KNamelist **names )
 }
 
 static
-bool CC KTableListIdxFilter ( const KDirectory *dir, const char *name, void *data )
+bool CC
+KTableListIdxFilter ( const KDirectory *dir, const char *name, void *data )
 {
     const size_t sz = strlen(name);
 
@@ -463,7 +469,8 @@ bool CC KTableListIdxFilter ( const KDirectory *dir, const char *name, void *dat
 }
 
 static
-bool CC KTableListSkeyFilter ( const KDirectory *dir, const char *name, void *data )
+bool CC
+KTableListSkeyFilter ( const KDirectory *dir, const char *name, void *data )
 {
     if ( strcmp ( name, "skey" ) == 0 )
         return true;
@@ -472,8 +479,10 @@ bool CC KTableListSkeyFilter ( const KDirectory *dir, const char *name, void *da
 
 static
 rc_t CC
-KRTableListIdx ( const KTable *self, KNamelist **names )
+KRTableListIdx ( const KTable *bself, KNamelist **names )
 {
+    CAST();
+
     if ( ! self -> prerelease )
     {
         return KDirectoryList ( self -> dir,
@@ -490,8 +499,10 @@ KRTableListIdx ( const KTable *self, KNamelist **names )
  */
 static
 bool CC
-KRTableHasRemoteData ( const KTable *self )
+KRTableHasRemoteData ( const KTable *bself )
 {
+    CAST();
+
     bool result = KDirectoryIsKArcDir ( self -> dir ) &&
             KArcDirIsFromRemote ( (const KArcDir * ) self -> dir );
     return result;
@@ -499,8 +510,10 @@ KRTableHasRemoteData ( const KTable *self )
 
 static
 rc_t CC
-KRTableVOpenColumnRead ( const KTable *self, const KColumn **colp, const char *name, va_list args )
+KRTableVOpenColumnRead ( const KTable *bself, const KColumn **colp, const char *name, va_list args )
 {
+    CAST();
+
     rc_t rc;
     char path [ 256 ];
 
@@ -518,7 +531,7 @@ KRTableVOpenColumnRead ( const KTable *self, const KColumn **colp, const char *n
         if ( rc == 0 )
         {
             KRColumn *col = ( KRColumn* ) * colp;
-            col -> tbl = KTableAttach ( self );
+            col -> tbl = KTableAttach ( bself );
         }
     }
     return rc;
@@ -526,8 +539,10 @@ KRTableVOpenColumnRead ( const KTable *self, const KColumn **colp, const char *n
 
 static
 rc_t CC
-KRTableOpenMetadataRead ( const KTable *self, const KMetadata **metap )
+KRTableOpenMetadataRead ( const KTable *bself, const KMetadata **metap )
 {
+    CAST();
+
     rc_t rc;
     KRMetadata *meta;
 
@@ -540,7 +555,7 @@ KRTableOpenMetadataRead ( const KTable *self, const KMetadata **metap )
         self -> dir, 0, self -> prerelease );
     if ( rc == 0 )
     {
-        meta -> tbl = KTableAttach ( self );
+        meta -> tbl = KTableAttach ( bself );
         * metap = & meta -> dad;
     }
 
@@ -586,8 +601,10 @@ KRTableMetaCompare( const KTable *self, const KTable *other, const char * path, 
 
 static
 rc_t CC
-KRTableVOpenIndexRead ( const KTable *self, const KIndex **idxp, const char *name, va_list args )
+KRTableVOpenIndexRead ( const KTable *bself, const KIndex **idxp, const char *name, va_list args )
 {
+    CAST();
+
     rc_t rc = 0;
     char path [ 256 ];
 
@@ -622,7 +639,7 @@ KRTableVOpenIndexRead ( const KTable *self, const KIndex **idxp, const char *nam
         rc = KDBRManagerOpenIndexReadInt ( self -> mgr, & idx, self -> dir, path );
         if ( rc == 0 )
         {
-            idx -> tbl = KTableAttach ( self );
+            idx -> tbl = ( const KRTable * ) KTableAttach ( bself );
             * idxp = & idx -> dad;
         }
     }

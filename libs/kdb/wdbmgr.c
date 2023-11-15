@@ -954,7 +954,7 @@ LIB_EXPORT rc_t CC KDBManagerCreateDB ( KDBManager *self,
     return rc;
 }
 
-rc_t KDBManagerInsertTable ( KDBManager * self, KTable * tbl )
+rc_t KDBManagerInsertTable ( KDBManager * self, KWTable * tbl )
 {
     rc_t rc;
     rc = KDBManagerOpenObjectAdd (self, &tbl->sym);
@@ -974,7 +974,7 @@ rc_t KDBManagerInsertTable ( KDBManager * self, KTable * tbl )
  */
 static
 rc_t KDBManagerVOpenTableReadInt ( const KDBManager *cself,
-    const KTable **tblp, const KDirectory *wd, bool try_srapath,
+    const KWTable **tblp, const KDirectory *wd, bool try_srapath,
     const char *path, va_list args, const struct VPath *vpath )
 {
     const String * str = NULL;
@@ -1008,18 +1008,18 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *cself,
         sym = KDBManagerOpenObjectFind( cself, key_path );
         if (sym != NULL)
         {
-            const KTable * ctbl;
+            const KWTable * ctbl;
             rc_t obj;
 
             switch (sym->type)
             {
             case kptTable:
-                ctbl = (KTable*)sym->u.obj;
+                ctbl = (KWTable*)sym->u.obj;
                 /* if open for update, refuse */
                 if ( ctbl -> read_only )
                 {
                     /* attach a new reference and we're gone */
-                    rc = KTableAddRef ( ctbl );
+                    rc = KTableAddRef ( & ctbl -> dad );
                     if ( rc == 0 )
                         * tblp = ctbl;
                     return rc;
@@ -1047,7 +1047,7 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *cself,
         }
         else
         {
-			KTable * tbl;
+			KWTable * tbl;
 			const KDirectory *dir;
 			bool prerelease = false;
 
@@ -1082,7 +1082,7 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *cself,
 }
 
 rc_t KDBWManagerVOpenTableReadInt_noargs ( const KDBManager *cself,
-    const KTable **tblp, const KDirectory *wd, bool try_srapath,
+    const KWTable **tblp, const KDirectory *wd, bool try_srapath,
     const char *path, const struct VPath *vpath, ... )
 {
     rc_t rc;
@@ -1102,7 +1102,7 @@ static rc_t CC KDBWManagerVOpenTableRead ( const KDBManager *self, const KTable 
 
     * tbl = NULL;
 
-    return KDBManagerVOpenTableReadInt ( self, tbl, self -> wd, true, path, args, NULL );
+    return KDBManagerVOpenTableReadInt ( self, (const KWTable **)tbl, self -> wd, true, path, args, NULL );
 }
 
 static rc_t CC KDBWManagerOpenTableReadVPath(const KDBManager *self, const KTable **tbl, const struct VPath *path)
@@ -1112,7 +1112,7 @@ static rc_t CC KDBWManagerOpenTableReadVPath(const KDBManager *self, const KTabl
 
     *tbl = NULL;
 
-    return KDBWManagerVOpenTableReadInt_noargs(self, tbl, self->wd, true, NULL, path);
+    return KDBWManagerVOpenTableReadInt_noargs(self, (const KWTable **)tbl, self->wd, true, NULL, path);
 }
 
 rc_t KDBManagerInsertColumn ( KDBManager * self, KWColumn * col )
@@ -1751,7 +1751,7 @@ KDBWManagerVPathOpenRemoteDBRead ( struct KDBManager const * self, struct KDatab
 
 static
 rc_t KDBManagerMakeTableUpdate ( KDBManager *self,
-    KTable **tblp, KDirectory *wd, const char *path, bool convert, KMD5SumFmt * md5 )
+    KWTable **tblp, KDirectory *wd, const char *path, bool convert, KMD5SumFmt * md5 )
 {
     rc_t rc;
     KDirectory *dir;
@@ -1759,7 +1759,7 @@ rc_t KDBManagerMakeTableUpdate ( KDBManager *self,
     rc = KDirectoryOpenDirUpdate ( wd, & dir, false, "%s", path );
     if ( rc == 0 )
     {
-        KTable * tbl;
+        KWTable * tbl;
 
         if ( convert )
         {
@@ -1854,7 +1854,7 @@ rc_t KDBManagerMakeTableUpdate ( KDBManager *self,
  */
 static
 rc_t KDBManagerVOpenTableUpdateInt ( KDBManager *self,
-    KTable **tbl, KDirectory *wd, const char *path, va_list args )
+    KWTable **tbl, KDirectory *wd, const char *path, va_list args )
 {
     char tblpath [ 4096 ];
     rc_t rc = KDirectoryVResolvePath ( wd, true,
@@ -1967,7 +1967,7 @@ rc_t KDBManagerVOpenTableUpdateInt ( KDBManager *self,
 }
 
 rc_t KDBManagerVOpenTableUpdateInt_noargs ( KDBManager *self,
-    KTable **tbl, KDirectory *wd, const char *path, ... )
+    KWTable **tbl, KDirectory *wd, const char *path, ... )
 {
     rc_t rc;
     va_list args;
@@ -2003,7 +2003,7 @@ LIB_EXPORT rc_t CC KDBManagerVOpenTableUpdate ( KDBManager *self,
     if ( self == NULL )
         return RC ( rcDB, rcMgr, rcOpening, rcSelf, rcNull );
 
-    return KDBManagerVOpenTableUpdateInt ( self, tbl, self -> wd, path, args );
+    return KDBManagerVOpenTableUpdateInt ( self, (KWTable**)tbl, self -> wd, path, args );
 }
 
 /* CreateTable
@@ -2019,7 +2019,7 @@ LIB_EXPORT rc_t CC KDBManagerVOpenTableUpdate ( KDBManager *self,
  */
 static
 rc_t KDBManagerVCreateTableInt ( KDBManager *self,
-    KTable **tbl, KDirectory *wd, KCreateMode cmode, const char *path, va_list args )
+    KWTable **tbl, KDirectory *wd, KCreateMode cmode, const char *path, va_list args )
 {
     char tblpath [ 4096 ];
     rc_t rc = KDirectoryVResolvePath ( wd, true,
@@ -2137,7 +2137,7 @@ rc_t KDBManagerVCreateTableInt ( KDBManager *self,
 }
 
 rc_t KDBManagerVCreateTableInt_noargs ( KDBManager *self,
-    KTable **tbl, KDirectory *wd, KCreateMode cmode, const char *path, ... )
+    KWTable **tbl, KDirectory *wd, KCreateMode cmode, const char *path, ... )
 {
     rc_t rc;
     va_list args;
@@ -2174,7 +2174,7 @@ LIB_EXPORT rc_t CC KDBManagerVCreateTable ( KDBManager *self,
     if ( self == NULL )
         return RC ( rcDB, rcMgr, rcCreating, rcSelf, rcNull );
 
-    return KDBManagerVCreateTableInt ( self, tbl, self -> wd, cmode, path, args );
+    return KDBManagerVCreateTableInt ( self, (KWTable**)tbl, self -> wd, cmode, path, args );
 }
 
 /* OpenMetadataUpdate

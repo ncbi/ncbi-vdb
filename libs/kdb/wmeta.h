@@ -41,7 +41,7 @@ typedef struct KMetadata KMetadata;
 #include "meta-base.h"
 
 struct KDatabase;
-struct KTable;
+struct KWTable;
 struct KWColumn;
 struct KDBManager;
 struct KWMDataNode;
@@ -62,7 +62,7 @@ struct KWMetadata
 
     /* owner */
     KDatabase *db;
-    KTable *tbl;
+    struct KWTable *tbl;
     struct KWColumn *col;
 
     KMD5SumFmt * md5;

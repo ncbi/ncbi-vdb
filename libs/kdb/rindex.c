@@ -111,7 +111,7 @@ KRIndexWhack ( KRIndex *self )
     }
     else if ( self -> tbl != NULL )
     {
-        rc = KTableSever ( self -> tbl );
+        rc = KTableSever ( & self -> tbl -> dad );
         if ( rc == 0 )
             self -> tbl = NULL;
     }

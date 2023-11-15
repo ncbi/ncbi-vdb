@@ -1060,11 +1060,11 @@ KWDatabaseVOpenTableRead ( const KDatabase *self, const KTable **tblp, const cha
         path, sizeof path, "tbl", 3, name, args );
     if ( rc == 0 )
     {
-        rc = KDBWManagerVOpenTableReadInt_noargs ( self -> mgr, tblp,
+        rc = KDBWManagerVOpenTableReadInt_noargs ( self -> mgr, (const KWTable**)tblp,
                                            self -> dir, false, path, NULL );
         if ( rc == 0 )
         {
-            KTable *tbl = ( KTable* ) * tblp;
+            KWTable *tbl = ( KWTable* ) * tblp;
             tbl -> db = KDatabaseAttach ( self );
         }
     }
@@ -1106,11 +1106,11 @@ LIB_EXPORT rc_t CC KDatabaseVOpenTableUpdate ( KDatabase *self,
         path, sizeof path, "tbl", 3, name, args );
     if ( rc == 0 )
     {
-        rc = KDBManagerVOpenTableUpdateInt_noargs ( self -> mgr, tblp,
+        rc = KDBManagerVOpenTableUpdateInt_noargs ( self -> mgr, (KWTable **)tblp,
                                              self -> dir, path );
         if ( rc == 0 )
         {
-            KTable *tbl = ( KTable* ) * tblp;
+            KWTable *tbl = ( KWTable* ) * tblp;
             tbl -> db = KDatabaseAttach ( self );
         }
     }
@@ -1198,11 +1198,11 @@ LIB_EXPORT rc_t CC KDatabaseVCreateTableByMask ( KDatabase *self,
             if ( (cmode_mask & kcmValueMask) != 0 )
                 cmode_mask |= kcmValueMask;
             table_cmode = (self->cmode & ~cmode_mask) | (cmode & cmode_mask);
-            rc = KDBManagerVCreateTableInt_noargs ( self -> mgr, tblp,
+            rc = KDBManagerVCreateTableInt_noargs ( self -> mgr, (KWTable **)tblp,
                                              self -> dir, table_cmode, path );
             if ( rc == 0 )
             {
-                KTable *tbl = ( KTable* ) * tblp;
+                KWTable *tbl = ( KWTable* ) * tblp;
                 tbl -> db = KDatabaseAttach ( self );
             }
         }
