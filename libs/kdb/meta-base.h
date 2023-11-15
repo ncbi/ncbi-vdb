@@ -32,10 +32,6 @@
 
 #include <stdarg.h>
 
-#ifndef KMETA_IMPL
-#define KMETA_IMPL KMetadataBase
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -46,32 +42,28 @@ extern "C" {
 typedef struct KMDataNode KMDataNode;
 
 /*--------------------------------------------------------------------------
- * KMetadataBase
+ * KMetadata
  *   base structure for KMetadata implementations
  */
-typedef struct KMetadataBase KMetadataBase;
+typedef struct KMetadata KMetadata;
 
 typedef struct KMetadata_vt KMetadata_vt;
 struct KMetadata_vt
 {
     /* Public API */
-    rc_t ( CC * whack )         ( KMETA_IMPL *self );
-    rc_t ( CC * addRef )        ( const KMETA_IMPL *self );
-    rc_t ( CC * release )       ( const KMETA_IMPL *self );
-    rc_t ( CC * version )       ( const KMETA_IMPL *self, uint32_t *version );
-    rc_t ( CC * byteOrder )     ( const KMETA_IMPL *self, bool *reversed );
-    rc_t ( CC * revision )      ( const KMETA_IMPL *self, uint32_t *revision );
-    rc_t ( CC * maxRevision )   ( const KMETA_IMPL *self, uint32_t *revision );
+    rc_t ( CC * whack )         ( KMetadata *self );
+    rc_t ( CC * addRef )        ( const KMetadata *self );
+    rc_t ( CC * release )       ( const KMetadata *self );
+    rc_t ( CC * version )       ( const KMetadata *self, uint32_t *version );
+    rc_t ( CC * byteOrder )     ( const KMetadata *self, bool *reversed );
+    rc_t ( CC * revision )      ( const KMetadata *self, uint32_t *revision );
+    rc_t ( CC * maxRevision )   ( const KMetadata *self, uint32_t *revision );
     rc_t ( CC * openRevision )  ( const KMetadata *self, const KMetadata **meta, uint32_t revision );
     rc_t ( CC * getSequence )   ( const KMetadata *self,const char *seq, int64_t *val );
     rc_t ( CC * vOpenNodeRead ) ( const KMetadata *self,const KMDataNode **node, const char *path, va_list args );
 };
 
-// // move to KTable
-// KDB_EXTERN rc_t CC KTableMetaCopy( struct KTable *self, const struct KTable *src, const char * path, bool src_node_has_to_exist );
-// KDB_EXTERN rc_t CC KTableMetaCompare ( const struct KTable *self, const struct KTable *other, const char * path, bool * equal );
-
-struct KMetadataBase
+struct KMetadata
 {
     KMetadata_vt * vt;
 
@@ -79,17 +71,17 @@ struct KMetadataBase
 };
 
 // default implelentations where exist
-extern rc_t CC KMetadataBaseWhack ( KMETA_IMPL *self );
-extern rc_t CC KMetadataBaseAddRef ( const KMETA_IMPL *self );
-extern rc_t CC KMetadataBaseRelease ( const KMETA_IMPL *self );
+extern rc_t CC KMetadataBaseWhack ( KMetadata *self );
+extern rc_t CC KMetadataBaseAddRef ( const KMetadata *self );
+extern rc_t CC KMetadataBaseRelease ( const KMetadata *self );
 
 /* Attach
  * Sever
  *  like AddRef/Release, except called internally
  *  indicates that a child object is letting go...
  */
-KMETA_IMPL *KMetadataAttach ( const KMETA_IMPL *self );
-rc_t KMetadataSever ( const KMETA_IMPL *self );
+KMetadata *KMetadataAttach ( const KMetadata *self );
+rc_t KMetadataSever ( const KMetadata *self );
 
 #ifdef __cplusplus
 }

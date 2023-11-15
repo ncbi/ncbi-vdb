@@ -31,7 +31,7 @@
 #include <klib/pbstree.h>
 #include <klib/container.h>
 
-struct KMetadata;
+struct KRMetadata;
 
 #ifdef __cplusplus
 extern "C" {
@@ -46,7 +46,7 @@ extern "C" {
 typedef struct KRMDataNodeInflateData KRMDataNodeInflateData;
 struct KRMDataNodeInflateData
 {
-    const struct KMetadata *meta;
+    const struct KRMetadata *meta;
     const struct KRMDataNode *par;
     BSTree *bst;
     size_t node_size_limit;
@@ -79,7 +79,7 @@ struct KRMDataNode
     KMDataNode dad;
 
     const KRMDataNode *par;
-    const KMetadata *meta;
+    const KRMetadata *meta;
     void *value;
     size_t vsize;
     BSTree attr;
@@ -87,7 +87,7 @@ struct KRMDataNode
     char name [ 1 ];
 };
 
-rc_t KRMDataNodeMakeRoot( KRMDataNode ** node, KMetadata *meta );
+rc_t KRMDataNodeMakeRoot( KRMDataNode ** node, KRMetadata *meta );
 
 #ifdef __cplusplus
 }

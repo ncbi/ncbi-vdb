@@ -44,7 +44,7 @@
 #define KMETADATAVERS 2
 
 /*--------------------------------------------------------------------------
- * KMetadata
+ * KRMetadata
  *  a versioned, hierarchical structure
  */
 
@@ -71,6 +71,8 @@ static KMetadata_vt KRMetadata_vt =
     KRMetadataVOpenNodeRead
 };
 
+#define CAST() assert( bself->vt == &KRMetadata_vt ); KRMetadata * self = (KRMetadata *)bself
+
 /*--------------------------------------------------------------------------
  * KMetadata
  *  a versioned, hierarchical structure
@@ -80,8 +82,10 @@ static KMetadata_vt KRMetadata_vt =
  */
 static
 rc_t
-KRMetadataWhack ( KMetadata *self )
+KRMetadataWhack ( KMetadata *bself )
 {
+    CAST();
+
     rc_t rc = 0;
 
     if ( self -> db != NULL )
@@ -110,10 +114,10 @@ KRMetadataWhack ( KMetadata *self )
     {
         KDirectoryRelease ( self -> dir );
         KMDataNodeRelease ( & self -> root -> dad );
-        return KMetadataBaseWhack( self );
+        return KMetadataBaseWhack( bself );
     }
 
-    KRefcountInit ( & self -> dad . refcount, 1, "KMetadata", "whack", "kmeta" );
+    KRefcountInit ( & self -> dad . refcount, 1, "KRMetadata", "whack", "kmeta" );
     return rc;
 }
 
@@ -122,7 +126,7 @@ KRMetadataWhack ( KMetadata *self )
 
 static
 rc_t
-KMetadataPopulate ( KMetadata *self, const KDirectory *dir, const char *path )
+KRMetadataPopulate ( KRMetadata *self, const KDirectory *dir, const char *path )
 {
     const KFile *f;
     rc_t rc = KDirectoryOpenFileRead ( dir, & f, "%s", path );
@@ -209,10 +213,10 @@ KMetadataPopulate ( KMetadata *self, const KDirectory *dir, const char *path )
 }
 
 rc_t
-KMetadataMakeRead ( KMetadata **metap, const KDirectory *dir, const char *path, uint32_t rev )
+KRMetadataMakeRead ( KRMetadata **metap, const KDirectory *dir, const char *path, uint32_t rev )
 {
     rc_t rc;
-    KMetadata *meta = malloc ( sizeof * meta + strlen ( path ) );
+    KRMetadata *meta = malloc ( sizeof * meta + strlen ( path ) );
     if ( meta == NULL )
         rc = RC ( rcDB, rcMetadata, rcConstructing, rcMemory, rcExhausted );
     else
@@ -222,12 +226,12 @@ KMetadataMakeRead ( KMetadata **metap, const KDirectory *dir, const char *path, 
         if ( KRMDataNodeMakeRoot( & meta -> root, meta ) == 0 )
         {
             meta -> dir = dir;
-            KRefcountInit ( & meta -> dad . refcount, 1, "KMetadata", "make-read", path );
+            KRefcountInit ( & meta -> dad . refcount, 1, "KRMetadata", "make-read", path );
             meta -> rev = rev;
             meta -> byteswap = false;
             strcpy ( meta -> path, path );
 
-            rc = KMetadataPopulate ( meta, dir, path );
+            rc = KRMetadataPopulate ( meta, dir, path );
             if ( rc == 0 )
             {
                 KDirectoryAddRef ( dir );
@@ -249,8 +253,10 @@ KMetadataMakeRead ( KMetadata **metap, const KDirectory *dir, const char *path, 
  */
 static
 rc_t CC
-KRMetadataVersion ( const KMetadata *self, uint32_t *version )
+KRMetadataVersion ( const KMetadata *bself, uint32_t *version )
 {
+    CAST();
+
     if ( version == NULL )
         return RC ( rcDB, rcMetadata, rcAccessing, rcParam, rcNull );
 
@@ -271,8 +277,10 @@ KRMetadataVersion ( const KMetadata *self, uint32_t *version )
  */
 static
 rc_t CC
-KRMetadataByteOrder ( const KMetadata *self, bool *reversed )
+KRMetadataByteOrder ( const KMetadata *bself, bool *reversed )
 {
+    CAST();
+
     if ( reversed == NULL )
         return RC ( rcDB, rcMetadata, rcAccessing, rcParam, rcNull );
 
@@ -287,8 +295,10 @@ KRMetadataByteOrder ( const KMetadata *self, bool *reversed )
  */
 static
 rc_t CC
-KRMetadataRevision ( const KMetadata *self, uint32_t *revision )
+KRMetadataRevision ( const KMetadata *bself, uint32_t *revision )
 {
+    CAST();
+
     if ( revision == NULL )
         return RC ( rcDB, rcMetadata, rcAccessing, rcParam, rcNull );
 
@@ -302,8 +312,10 @@ KRMetadataRevision ( const KMetadata *self, uint32_t *revision )
  */
 static
 rc_t CC
-KRMetadataMaxRevision ( const KMetadata *self, uint32_t *revision )
+KRMetadataMaxRevision ( const KMetadata *bself, uint32_t *revision )
 {
+    CAST();
+
     if ( revision == NULL )
         return RC ( rcDB, rcMetadata, rcAccessing, rcParam, rcNull );
 
@@ -355,10 +367,12 @@ KRMetadataMaxRevision ( const KMetadata *self, uint32_t *revision )
  */
 static
 rc_t CC
-KRMetadataOpenRevision ( const KMetadata *self, const KMetadata **metap, uint32_t revision )
+KRMetadataOpenRevision ( const KMetadata *bself, const KMetadata **metap, uint32_t revision )
 {
+    CAST();
+
     rc_t rc;
-    KMetadata *meta;
+    KRMetadata *meta;
 
     if ( metap == NULL )
         return RC ( rcDB, rcMetadata, rcOpening, rcParam, rcNull );
@@ -376,7 +390,7 @@ KRMetadataOpenRevision ( const KMetadata *self, const KMetadata **metap, uint32_
         else if ( self -> col != NULL )
             meta -> col = KColumnAttach ( self -> col );
 
-        * metap = meta;
+        * metap = & meta -> dad;
     }
 
     return rc;
@@ -392,8 +406,10 @@ KRMetadataOpenRevision ( const KMetadata *self, const KMetadata **metap, uint32_
  */
 static
 rc_t CC
-KRMetadataGetSequence ( const KMetadata *self, const char *seq, int64_t *val )
+KRMetadataGetSequence ( const KMetadata *bself, const char *seq, int64_t *val )
 {
+    CAST();
+
     rc_t rc;
     const KMDataNode *found;
 
@@ -422,8 +438,10 @@ KRMetadataGetSequence ( const KMetadata *self, const char *seq, int64_t *val )
 
 static
 rc_t CC
-KRMetadataVOpenNodeRead ( const KMetadata *self, const KMDataNode **node, const char *path, va_list args )
+KRMetadataVOpenNodeRead ( const KMetadata *bself, const KMDataNode **node, const char *path, va_list args )
 {
+    CAST();
+
     rc_t rc = 0;
 
     if ( node == NULL )

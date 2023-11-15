@@ -47,7 +47,7 @@
 #define KMETADATAVERS 2
 
 /*--------------------------------------------------------------------------
- * KMetadata
+ * KWMetadata
  *  a versioned, hierarchical structure
  */
 
@@ -76,6 +76,8 @@ static KMetadata_vt KWMetadata_vt =
     KWMetadataVOpenNodeRead
 };
 
+#define CAST() assert( bself->vt == &KWMetadata_vt ); KWMetadata * self = (KWMetadata *)bself
+
 /* OpenNodeUpdate
  * VOpenNodeUpdate
  *  opens a metadata node
@@ -99,9 +101,11 @@ LIB_EXPORT rc_t CC KMetadataOpenNodeUpdate ( KMetadata *self,
     return rc;
 }
 
-LIB_EXPORT rc_t CC KMetadataVOpenNodeUpdate ( KMetadata *self,
+LIB_EXPORT rc_t CC KMetadataVOpenNodeUpdate ( KMetadata *bself,
     KMDataNode **node, const char *path, va_list args )
 {
+    CAST();
+
     rc_t rc;
 
     if ( node == NULL )
@@ -124,11 +128,6 @@ LIB_EXPORT rc_t CC KMetadataVOpenNodeUpdate ( KMetadata *self,
 
     return rc;
 }
-
-/*--------------------------------------------------------------------------
- * KMetadata
- *  a versioned, hierarchical structure
- */
 
 /* Flush
  */
@@ -263,7 +262,7 @@ rc_t CC KWMDataNodeAuxFunc ( void *param, const void *node, size_t *num_writ,
 }
 
 static
-rc_t KMetadataFlush ( KMetadata *self )
+rc_t KWMetadataFlush ( KWMetadata *self )
 {
     rc_t rc;
     KMDFlushData pb;
@@ -323,8 +322,10 @@ rc_t KMetadataFlush ( KMetadata *self )
  */
 static
 rc_t CC
-KWMetadataWhack ( KMetadata *self )
+KWMetadataWhack ( KMetadata *bself )
 {
+    CAST();
+
     rc_t rc = 0;
     KSymbol * symb;
     KDBManager *mgr = self -> mgr;
@@ -336,13 +337,13 @@ KWMetadataWhack ( KMetadata *self )
            first freeze it */
         if ( self -> vers == 1 )
         {
-            rc = KMetadataFreeze ( self );
+            rc = KMetadataFreeze ( bself );
             if ( rc != 0 )
                 return rc;
         }
 
         /* flush it */
-        rc = KMetadataFlush ( self );
+        rc = KWMetadataFlush ( self );
         if ( rc != 0 )
             return rc;
         self -> dirty = false;
@@ -395,7 +396,7 @@ KWMetadataWhack ( KMetadata *self )
                 /* complete */
                 KDirectoryRelease ( self -> dir );
                 KMDataNodeRelease ( & self -> root -> dad );
-                return KMetadataBaseWhack( self );
+                return KMetadataBaseWhack( bself );
             }
         }
     }
@@ -412,12 +413,13 @@ KWMetadataWhack ( KMetadata *self )
  */
 static
 rc_t CC
-KWMetadataAddRef ( const KMetadata *cself )
+KWMetadataAddRef ( const KMetadata *bself )
 {
-    rc_t rc = KMetadataBaseAddRef( cself );
+    CAST();
+
+    rc_t rc = KMetadataBaseAddRef( bself );
     if ( rc == 0 )
     {
-        KMetadata *self = ( KMetadata* ) cself;
         ++ self -> opencount;
     }
     return rc;
@@ -425,22 +427,26 @@ KWMetadataAddRef ( const KMetadata *cself )
 
 static
 rc_t CC
-KWMetadataRelease ( const KMetadata *cself )
+KWMetadataRelease ( const KMetadata *bself )
 {
-    KMetadata *self = ( KMetadata* ) cself;
+    CAST();
+
     if ( self != NULL )
     {
         -- self -> opencount;
     }
-    return KMetadataBaseRelease( cself );
+    return KMetadataBaseRelease( bself );
 }
 
 /* Make
  */
 
 static
-rc_t KMetadataPopulate ( KMetadata *self, const KDirectory *dir, const char *path, bool read_only )
+rc_t
+KMetadataPopulate ( KMetadata *bself, const KDirectory *dir, const char *path, bool read_only )
 {
+    CAST();
+
     const KFile *f;
     rc_t rc = KDirectoryOpenFileRead ( dir, & f, "%s", path );
     if ( rc == 0 )
@@ -526,10 +532,10 @@ rc_t KMetadataPopulate ( KMetadata *self, const KDirectory *dir, const char *pat
 }
 
 rc_t
-KMetadataMake ( KMetadata **metap, KDirectory *dir, const char *path, uint32_t rev, bool populate, bool read_only )
+KWMetadataMake ( KWMetadata **metap, KDirectory *dir, const char *path, uint32_t rev, bool populate, bool read_only )
 {
     rc_t rc;
-    KMetadata *meta = malloc ( sizeof * meta + strlen ( path ) );
+    KWMetadata *meta = malloc ( sizeof * meta + strlen ( path ) );
     if ( meta == NULL )
         rc = RC ( rcDB, rcMetadata, rcConstructing, rcMemory, rcExhausted );
     else
@@ -539,7 +545,7 @@ KMetadataMake ( KMetadata **metap, KDirectory *dir, const char *path, uint32_t r
         if ( KWMDataNodeMakeRoot( & meta -> root, meta ) == 0 )
         {
             meta -> dir = dir;
-            KRefcountInit ( & meta -> dad . refcount, 1, "KMetadata", "make-update", path );
+            KRefcountInit ( & meta -> dad . refcount, 1, "KWMetadata", "make-update", path );
             meta -> opencount = 1;
             meta -> rev = rev;
             meta -> read_only = read_only;
@@ -558,7 +564,7 @@ KMetadataMake ( KMetadata **metap, KDirectory *dir, const char *path, uint32_t r
                 return 0;
             }
 
-            rc = KMetadataPopulate ( meta, dir, path, read_only );
+            rc = KMetadataPopulate ( & meta -> dad, dir, path, read_only );
             if ( rc == 0 )
             {
                 KDirectoryAddRef ( dir );
@@ -575,39 +581,15 @@ KMetadataMake ( KMetadata **metap, KDirectory *dir, const char *path, uint32_t r
     return rc;
 }
 
-LIB_EXPORT rc_t CC KDatabaseOpenMetadataUpdate ( KDatabase *self, KMetadata **metap )
-{
-    rc_t rc;
-    KMetadata *meta;
-
-    if ( metap == NULL )
-        return RC ( rcDB, rcDatabase, rcOpening, rcParam, rcNull );
-
-    * metap = NULL;
-
-    if ( self == NULL )
-        return RC ( rcDB, rcDatabase, rcOpening, rcSelf, rcNull );
-
-    if ( self -> read_only )
-        return RC ( rcDB, rcDatabase, rcOpening, rcDatabase, rcReadonly );
-
-    rc = KDBManagerOpenMetadataUpdateInt ( self -> mgr, & meta, self -> dir, self -> md5 );
-    if ( rc == 0 )
-    {
-        meta -> db = KDatabaseAttach ( self );
-        * metap = meta;
-    }
-
-    return rc;
-}
-
 /* Version
  *  returns the metadata format version
  */
 static
 rc_t CC
-KWMetadataVersion ( const KMetadata *self, uint32_t *version )
+KWMetadataVersion ( const KMetadata *bself, uint32_t *version )
 {
+    CAST();
+
     if ( version == NULL )
         return RC ( rcDB, rcMetadata, rcAccessing, rcParam, rcNull );
 
@@ -628,8 +610,10 @@ KWMetadataVersion ( const KMetadata *self, uint32_t *version )
  */
 static
 rc_t CC
-KWMetadataByteOrder ( const KMetadata *self, bool *reversed )
+KWMetadataByteOrder ( const KMetadata *bself, bool *reversed )
 {
+    CAST();
+
     if ( reversed == NULL )
         return RC ( rcDB, rcMetadata, rcAccessing, rcParam, rcNull );
 
@@ -644,8 +628,10 @@ KWMetadataByteOrder ( const KMetadata *self, bool *reversed )
  */
 static
 rc_t CC
-KWMetadataRevision ( const KMetadata *self, uint32_t *revision )
+KWMetadataRevision ( const KMetadata *bself, uint32_t *revision )
 {
+    CAST();
+
     if ( revision == NULL )
         return RC ( rcDB, rcMetadata, rcAccessing, rcParam, rcNull );
 
@@ -659,8 +645,10 @@ KWMetadataRevision ( const KMetadata *self, uint32_t *revision )
  */
 static
 rc_t CC
-KWMetadataMaxRevision ( const KMetadata *self, uint32_t *revision )
+KWMetadataMaxRevision ( const KMetadata *bself, uint32_t *revision )
 {
+    CAST();
+
     rc_t rc;
     KNamelist *listing;
 
@@ -712,8 +700,12 @@ KWMetadataMaxRevision ( const KMetadata *self, uint32_t *revision )
 /* Commit
  *  ensure any changes are committed to disk
  */
-LIB_EXPORT rc_t CC KMetadataCommit ( KMetadata *self )
+LIB_EXPORT
+rc_t CC
+KMetadataCommit ( KMetadata *bself )
 {
+    CAST();
+
     rc_t rc;
 
     if ( self == NULL )
@@ -727,13 +719,13 @@ LIB_EXPORT rc_t CC KMetadataCommit ( KMetadata *self )
        first freeze it */
     if ( self -> vers == 1 )
     {
-        rc = KMetadataFreeze ( self );
+        rc = KMetadataFreeze ( bself );
         if ( rc != 0 )
             return rc;
     }
 
     /* flush it */
-    rc = KMetadataFlush ( self );
+    rc = KWMetadataFlush ( self );
     if ( rc == 0 )
         self -> dirty = false;
 
@@ -745,8 +737,12 @@ LIB_EXPORT rc_t CC KMetadataCommit ( KMetadata *self )
  *  freezes current metadata revision
  *  further modification will begin on a copy
  */
-LIB_EXPORT rc_t CC KMetadataFreeze ( KMetadata *self )
+LIB_EXPORT
+rc_t CC
+KMetadataFreeze ( KMetadata *bself )
 {
+    CAST();
+
     rc_t rc;
     uint32_t rev_max;
 
@@ -767,7 +763,7 @@ LIB_EXPORT rc_t CC KMetadataFreeze ( KMetadata *self )
     }
 
     /* find max revision */
-    rc = KMetadataMaxRevision ( self, & rev_max );
+    rc = KMetadataMaxRevision ( bself, & rev_max );
     if ( rc == 0 )
     {
         int len;
@@ -808,10 +804,12 @@ LIB_EXPORT rc_t CC KMetadataFreeze ( KMetadata *self )
  */
 static
 rc_t CC
-KWMetadataOpenRevision ( const KMetadata *self, const KMetadata **metap, uint32_t revision )
+KWMetadataOpenRevision ( const KMetadata *bself, const KMetadata **metap, uint32_t revision )
 {
+    CAST();
+
     rc_t rc;
-    const KMetadata *meta;
+    const KWMetadata *meta;
     bool  meta_is_cached;
 
     if ( metap == NULL )
@@ -826,14 +824,14 @@ KWMetadataOpenRevision ( const KMetadata *self, const KMetadata **metap, uint32_
         if(!meta_is_cached)
 	{
 	    if ( self -> db != NULL )
-                ((KMetadata*)meta) -> db = KDatabaseAttach ( self -> db );
+                ((KWMetadata*)meta) -> db = KDatabaseAttach ( self -> db );
             else if ( self -> tbl != NULL )
-                ((KMetadata*)meta) -> tbl = KTableAttach ( self -> tbl );
+                ((KWMetadata*)meta) -> tbl = KTableAttach ( self -> tbl );
             else if ( self -> col != NULL )
-                ((KMetadata*)meta) -> col = KColumnAttach ( self -> col );
+                ((KWMetadata*)meta) -> col = KColumnAttach ( self -> col );
 	}
 
-        * metap = meta;
+        * metap = & meta -> dad;
     }
 
     return rc;
@@ -852,8 +850,10 @@ KWMetadataOpenRevision ( const KMetadata *self, const KMetadata **metap, uint32_
  */
 static
 rc_t CC
-KWMetadataGetSequence ( const KMetadata *self, const char *seq, int64_t *val )
+KWMetadataGetSequence ( const KMetadata *bself, const char *seq, int64_t *val )
 {
+    CAST();
+
     rc_t rc;
     const KMDataNode *found;
 
@@ -876,9 +876,12 @@ KWMetadataGetSequence ( const KMetadata *self, const char *seq, int64_t *val )
     return rc;
 }
 
-LIB_EXPORT rc_t CC KMetadataSetSequence ( KMetadata *self,
-    const char *seq, int64_t val )
+LIB_EXPORT
+rc_t CC
+KMetadataSetSequence ( KMetadata *bself, const char *seq, int64_t val )
 {
+    CAST();
+
     rc_t rc;
     KMDataNode *found;
 
@@ -899,9 +902,12 @@ LIB_EXPORT rc_t CC KMetadataSetSequence ( KMetadata *self,
     return rc;
 }
 
-LIB_EXPORT rc_t CC KMetadataNextSequence ( KMetadata *self,
-    const char *seq, int64_t *val )
+LIB_EXPORT
+rc_t CC
+KMetadataNextSequence ( KMetadata *bself, const char *seq, int64_t *val )
 {
+    CAST();
+
     rc_t rc;
     KMDataNode *found;
 
@@ -934,8 +940,10 @@ LIB_EXPORT rc_t CC KMetadataNextSequence ( KMetadata *self,
 
 static
 rc_t CC
-KWMetadataVOpenNodeRead ( const KMetadata *self, const KMDataNode **node, const char *path, va_list args )
+KWMetadataVOpenNodeRead ( const KMetadata *bself, const KMDataNode **node, const char *path, va_list args )
 {
+    CAST();
+
     rc_t rc = 0;
 
     if ( node == NULL )

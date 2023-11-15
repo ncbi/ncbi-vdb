@@ -529,7 +529,7 @@ rc_t CC
 KRTableOpenMetadataRead ( const KTable *self, const KMetadata **metap )
 {
     rc_t rc;
-    KMetadata *meta;
+    KRMetadata *meta;
 
     if ( metap == NULL )
         return RC ( rcDB, rcTable, rcOpening, rcParam, rcNull );
@@ -541,7 +541,7 @@ KRTableOpenMetadataRead ( const KTable *self, const KMetadata **metap )
     if ( rc == 0 )
     {
         meta -> tbl = KTableAttach ( self );
-        * metap = meta;
+        * metap = & meta -> dad;
     }
 
     return rc;
