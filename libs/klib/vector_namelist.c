@@ -41,6 +41,8 @@
 #include <ctype.h>
 #include <assert.h>
 
+#include "int_checks-priv.h"
+
 /*--------------------------------------------------------------------------
  * KVectorNamelist ... a generic Namelist based on a Vector
  */
@@ -372,7 +374,8 @@ LIB_EXPORT rc_t CC foreach_String_part( const String * src, const uint32_t delim
         if ( cptr != NULL ) last_cptr_char = cptr[ 0 ];
         while ( rc == 0 && cptr != NULL && tmp.len > 0 )
         {
-            uint32_t l = ( cptr - tmp.addr );
+            assert ( FITS_INTO_INT32 ( cptr - tmp.addr ) );
+            uint32_t l = (uint32_t)( cptr - tmp.addr );
             StringInit( &part, tmp.addr, l, l );
             rc = f( &part, data );
             if ( rc == 0 )
@@ -388,7 +391,7 @@ LIB_EXPORT rc_t CC foreach_String_part( const String * src, const uint32_t delim
         {
             if ( tmp.len > 0 )
                 rc = f( &tmp, data );
-            else if ( last_cptr_char == delim )
+            else if ( (uint32_t)last_cptr_char == delim )
             {
                 part.addr = &last_cptr_char;
                 part.size = 0;
@@ -599,10 +602,12 @@ LIB_EXPORT rc_t CC VNamelistJoin( const VNamelist * list, const uint32_t delim, 
                                 {
                                     size_t item_size = string_size ( item );
                                     string_copy ( &buffer[ dst ], dst_size, item, item_size );
-                                    dst += item_size;
+                                    assert ( FITS_INTO_INT32 ( item_size ) );
+                                    dst += (uint32_t)item_size;
                                     if ( idx < ( count - 1 ) )
                                     {
-                                        buffer[ dst++ ] = delim;
+                                        assert ( FITS_INTO_INT8 ( delim ) );
+                                        buffer[ dst++ ] = (char)delim;
                                         dst_size -= ( item_size + 1 );
                                     }
                                 }

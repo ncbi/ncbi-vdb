@@ -37,6 +37,8 @@
 #include <byteswap.h>
 #include <assert.h>
 
+#include "int_checks-priv.h"
+
 
 /*--------------------------------------------------------------------------
  * PTNode
@@ -918,7 +920,9 @@ uint32_t PTrieEncodeNodeId7 ( const PTrie *self,
     uint32_t tid, uint32_t btid )
 {
     /* first get the byte offset to trans */
-    uint32_t id = PTrieGetNodeOff ( self, tid - 1 );
+    size_t sz_t = PTrieGetNodeOff ( self, tid - 1 );
+    assert ( FITS_INTO_INT32 ( sz_t ) );
+    uint32_t id = (uint32_t) sz_t;
 
     /* the trans node is supposed to have at least btid
        nodes underneath, taking > 1 byte each, so by adding
@@ -943,7 +947,9 @@ rc_t PTrieDecodeNodeId7 ( const PTrie *self, uint32_t id,
     while ( left < right )
     {
         uint32_t i = ( left + right ) >> 1;
-        uint32_t off = PTrieGetNodeOff ( self, i ) << 2;
+        size_t sz_t = PTrieGetNodeOff ( self, i );
+        assert ( FITS_INTO_INT32 ( sz_t << 2 ) );
+        uint32_t off = (uint32_t) sz_t << 2;
         if ( off > id )
             right = i;
         else
@@ -1099,7 +1105,7 @@ rc_t PTrieMakeInt ( PTrie **ttp, const void *addr, size_t size, bool byteswap, b
                        first determine the range of accept characters
                        while at the same time capturing the one-based
                        character code of wildcards */
-                    for ( last = 0, first = ~ 0, unmapped = i = 0;
+                    for ( last = 0, first = (uint32_t)~ 0, unmapped = i = 0;
                           i < get_U16 ( ptt -> width ); ++ i )
                     {
                         ch = get_32 ( ptt -> rmap [ i ] );

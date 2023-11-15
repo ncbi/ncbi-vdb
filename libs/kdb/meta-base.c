@@ -24,8 +24,6 @@
 *
 */
 
-#define KMetadata KMetadataBase
-
 #include "meta-base.h"
 
 #include <kdb/extern.h>

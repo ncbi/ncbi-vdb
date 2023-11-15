@@ -69,7 +69,7 @@ public:
     void Setup( const string testName )
     {
         const string TableName = ScratchDir + testName;
-        THROW_ON_RC( KRTableMake( & m_tbl, m_dir, TableName.c_str(), m_mgr, false ) );
+        THROW_ON_RC( KRTableMake( (const KRTable**)& m_tbl, m_dir, TableName.c_str(), m_mgr, false ) );
         KDirectoryAddRef( m_dir); // KRTableMake does not call AddRef
     }
     void Open( const char * dbname, const char * tablename )
@@ -90,11 +90,11 @@ FIXTURE_TEST_CASE(KRTable_AddRelease, KTable_Fixture)
 {
     Setup( GetName() );
 
-    REQUIRE_EQ( 1, (int)atomic32_read( & m_tbl -> dad . refcount ) );
+    REQUIRE_EQ( 1, (int)atomic32_read( & m_tbl -> refcount ) );
     REQUIRE_RC( KTableAddRef( m_tbl ) );
-    REQUIRE_EQ( 2, (int)atomic32_read( & m_tbl -> dad . refcount ) );
+    REQUIRE_EQ( 2, (int)atomic32_read( & m_tbl -> refcount ) );
     REQUIRE_RC( KTableRelease( m_tbl ) );
-    REQUIRE_EQ( 1, (int)atomic32_read( & m_tbl -> dad . refcount ) );
+    REQUIRE_EQ( 1, (int)atomic32_read( & m_tbl -> refcount ) );
     // use valgrind to find any leaks
 }
 

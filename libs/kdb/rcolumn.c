@@ -371,7 +371,7 @@ rc_t CC
 KRColumnOpenMetadataRead ( const KRColumn *self, const KMetadata **metap )
 {
     rc_t rc;
-    KMetadata *meta;
+    KRMetadata *meta;
 
     if ( metap == NULL )
         return RC ( rcDB, rcColumn, rcOpening, rcParam, rcNull );
@@ -382,7 +382,7 @@ KRColumnOpenMetadataRead ( const KRColumn *self, const KMetadata **metap )
     if ( rc == 0 )
     {
         meta -> col = KColumnAttach ( self );
-        * metap = meta;
+        * metap = & meta -> dad;
     }
 
     return rc;

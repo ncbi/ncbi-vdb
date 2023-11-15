@@ -41,11 +41,6 @@ extern "C" {
 #endif
 
 /*--------------------------------------------------------------------------
- * forwards
- */
-typedef struct KMDataNode KMDataNode;
-
-/*--------------------------------------------------------------------------
  * KIndex
  *   base structure for KIndex implementations
  */

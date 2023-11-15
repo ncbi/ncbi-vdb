@@ -29,5 +29,5 @@
 #include <Shlobj.h> /* IsUserAnAdmin */
 
 LIB_EXPORT bool CC is_iser_an_admin(void) {
-    return IsUserAnAdmin();
+    return (bool)IsUserAnAdmin();
 }

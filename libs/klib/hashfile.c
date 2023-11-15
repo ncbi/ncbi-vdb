@@ -584,7 +584,7 @@ LIB_EXPORT bool KHashFileFind( const KHashFile * self, const void * key,
                                void * value, size_t * value_size )
 {
     if ( self == NULL )
-        return RC( rcCont, rcTrie, rcInserting, rcParam, rcInvalid );
+        return (bool) RC( rcCont, rcTrie, rcInserting, rcParam, rcInvalid );
 
     size_t            triangle  = 0;
     uint64_t          bucket    = keyhash;
@@ -775,7 +775,7 @@ LIB_EXPORT bool KHashFileDelete( KHashFile * self, const void * key,
                                  const size_t key_size, uint64_t keyhash )
 {
     if ( self == NULL )
-        return RC( rcCont, rcTrie, rcInserting, rcParam, rcInvalid );
+        return (bool) RC( rcCont, rcTrie, rcInserting, rcParam, rcInvalid );
 
     size_t    triangle = 0;
     uint64_t  bucket   = keyhash;

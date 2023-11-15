@@ -39,6 +39,8 @@
 #include <errno.h>
 #include <assert.h>
 
+#include "int_checks-priv.h"
+
 /*--------------------------------------------------------------------------
  * String
  *  pseudo-intrinsic string
@@ -170,7 +172,9 @@ LIB_EXPORT String * CC StringTrim ( const String * str, String * trimmed )
                     break;
             }
 
-            StringInit ( trimmed, & addr [ i ], end - i, len - ( i + sz - end ) );
+            assert ( FITS_INTO_INT32 ( end - i ) );
+            assert ( FITS_INTO_INT32 ( len - ( i + sz - end ) ) );
+            StringInit ( trimmed, & addr [ i ], (uint32_t) (end - i), (uint32_t)(len - ( i + sz - end )) );
         }
     }
 
@@ -733,8 +737,10 @@ LIB_EXPORT uint64_t string_to_U64 ( const char * text, size_t bytes, rc_t * opti
                     break;
 
                 /* want to bring this digit into number */
+                assert ( FITS_INTO_INT8 ( text [ i ] - '0' ) );
+                assert ( FITS_INTO_INT8 ( tolower(text[i]) - 'a' + 10 ) );
                 xdigit = isdigit ( text [ i ] ) ?
-                    text [ i ] - '0' : tolower ( text [ i ] ) - 'a' + 10;
+                    text [ i ] - '0' : (uint8_t)(tolower ( text [ i ] ) - 'a' + 10);
 
                 /* detect overflow */
                 if ( i - start > 16 )
@@ -985,7 +991,7 @@ LIB_EXPORT int CC utf32_utf8 ( char *_begin, char *_end, uint32_t ch )
     while ( -- dst > begin )
     {
         /* 10xxxxxx */ /* too many casts to suit different compilers */
-        dst [ 0 ] = ( char ) (( char ) 0x80 | ( ( char ) ch & ( char ) 0x3F ));
+        dst [ 0 ] = ( char ) (( unsigned char ) 0x80 | ( ( char ) ch & ( char ) 0x3F ));
         ch >>= 6;
     }
 

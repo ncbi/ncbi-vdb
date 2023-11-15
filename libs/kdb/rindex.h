@@ -219,7 +219,7 @@ struct KRIndex
 
     const struct KDBManager *mgr;
     const struct KDatabase *db;
-    const struct KTable *tbl;
+    const struct KRTable *tbl;
     uint32_t vers;
     union
     {

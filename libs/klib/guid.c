@@ -42,7 +42,7 @@ LIB_EXPORT rc_t CC KGUIDMake( char * buf, size_t bufSize )
         return RC ( rcRuntime, rcString, rcCreating, rcParam, rcTooShort );
     }
 
-    srand ( time ( NULL ) );
+    srand ( (unsigned int) time ( NULL ) );
 
     for (unsigned int i=0; i < GuidSize + 1; ++i)
     {

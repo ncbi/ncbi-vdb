@@ -35,6 +35,8 @@
 #include <errno.h>
 #include <assert.h>
 
+#include "int_checks-priv.h"
+
 
 /*--------------------------------------------------------------------------
  * PBSTreeImpl
@@ -419,7 +421,8 @@ void CC PBSTreeImplForEach16 ( const PBSTree *self, bool reverse,
 	if ( ! reverse )
 	  {
 	    GET16 ( off, pt -> data_idx . v16 [ 0 ] );
-	    for ( id = 1; id < num_nodes; off = end, ++ id )
+		assert ( FITS_INTO_INT16 ( end ) );
+	    for ( id = 1; id < num_nodes; off = (uint16_t)end, ++ id )
 	      {
 		uint16_t end16;
 		GET16 ( end16, pt -> data_idx . v16 [ id ] );
@@ -600,11 +603,12 @@ bool CC PBSTreeImplDoUntil16 ( const PBSTree *self, bool reverse,
         if ( ! reverse )
         {
             GET16 ( off, pt -> data_idx . v16 [ 0 ] );
-            for ( id = 1; id < num_nodes; off = end, ++ id )
+            for ( id = 1; id < num_nodes; off = (uint16_t)end, ++ id )
             {
                 uint16_t end16;
                 GET16 ( end16, pt -> data_idx . v16 [ id ] );
                 end = end16;
+                /* assert ( FITS_INTO_INT16 ( end ) ); /* Test_FastqLoader_15.0 triggers this */
                 n . internal = pt;
                 n . id = id;
                 n . data . addr = & data_start [ off ];

@@ -26,14 +26,12 @@
 
 #pragma once
 
-typedef struct KMDataNode KMDataNode;
-#define KDBMDNODE_IMPL KMDataNode
 #include "metanode-base.h"
 
 #include <klib/pbstree.h>
 #include <klib/container.h>
 
-struct KMetadata;
+struct KRMetadata;
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,13 +41,13 @@ extern "C" {
 #define NODE_CHILD_LIMIT ( 100 * 1024 )
 
 /*--------------------------------------------------------------------------
- * KMDataNodeInflateData
+ * KRMDataNodeInflateData
  */
-typedef struct KMDataNodeInflateData KMDataNodeInflateData;
-struct KMDataNodeInflateData
+typedef struct KRMDataNodeInflateData KRMDataNodeInflateData;
+struct KRMDataNodeInflateData
 {
-    const struct KMetadata *meta;
-    const struct KMDataNode *par;
+    const struct KRMetadata *meta;
+    const struct KRMDataNode *par;
     BSTree *bst;
     size_t node_size_limit;
     uint32_t node_child_limit;
@@ -61,10 +59,10 @@ bool CC KRMDataNodeInflate_v1 ( PBSTNode *n, void *data );
 bool CC KRMDataNodeInflate ( PBSTNode *n, void *data );
 
 /*--------------------------------------------------------------------------
- * KMAttrNode
+ * KRMAttrNode
  */
-typedef struct KMAttrNode KMAttrNode;
-struct KMAttrNode
+typedef struct KRMAttrNode KRMAttrNode;
+struct KRMAttrNode
 {
     BSTNode n;
     void *value;
@@ -73,15 +71,15 @@ struct KMAttrNode
 };
 
 /*--------------------------------------------------------------------------
- * KMDataNode
+ * KRMDataNode
  */
-typedef struct KMDataNode KMDataNode;
-struct KMDataNode
+typedef struct KRMDataNode KRMDataNode;
+struct KRMDataNode
 {
-    KMDataNodeBase dad;
+    KMDataNode dad;
 
-    const KMDataNode *par;
-    const KMetadata *meta;
+    const KRMDataNode *par;
+    const KRMetadata *meta;
     void *value;
     size_t vsize;
     BSTree attr;
@@ -89,8 +87,7 @@ struct KMDataNode
     char name [ 1 ];
 };
 
-rc_t KRMDataNodeMakeRoot( KMDataNode ** node, KMetadata *meta );
-void CC KMDataNodeWhack ( KMDataNode * node );
+rc_t KRMDataNodeMakeRoot( KRMDataNode ** node, KRMetadata *meta );
 
 #ifdef __cplusplus
 }

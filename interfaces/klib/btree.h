@@ -45,7 +45,7 @@ extern "C" {
  */
 
 #define PGBITS 15
-#define PGSIZE ( 1U << PGBITS )
+#define PGSIZE ( 1 << PGBITS )
     
 
 /* A pager must allocate pages of exactly 32k

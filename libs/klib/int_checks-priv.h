@@ -24,63 +24,23 @@
 *
 */
 
-#pragma once
+#ifndef _h_lib_int_checks_
 
-#include <kdb/table.h>
-#include <klib/container.h>
-#include <klib/refcount.h>
+#include <stdint.h>
 
-#include <klib/symbol.h>
-#include <kfs/md5.h>
+#define MASK_PROHIBITED_BITS_INT  ( ~((uint64_t)( (unsigned int)~0 >> 1 )) )
+#define MASK_PROHIBITED_BITS_INT32  ( ~((uint64_t)( (uint32_t)~0 >> 1 )) )
+#define MASK_PROHIBITED_BITS_INT16  ( ~((uint64_t)( (uint16_t)~0 >> 1 )) )
+#define MASK_PROHIBITED_BITS_INT8  ( ~((uint64_t)( (uint8_t)~0 >> 1 )) )
 
-#include "table-base.h"
+/* works in an assumption that size_t is always unsigned, which, it seems, is not explicitly guaranteed by the standard */
+#define MASK_PROHIBITED_BITS_SIZE_T  ( ~((uint64_t)( (size_t)~0 >> 1 )) )
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+/* v can have bits set only for int32_t/size_t [0, 0x7f..ff] */
+#define FITS_INTO_INT(v) ( 0 == ((v) & MASK_PROHIBITED_BITS_INT ) )
+#define FITS_INTO_INT32(v) ( 0 == ((v) & MASK_PROHIBITED_BITS_INT32 ) )
+#define FITS_INTO_INT16(v) ( 0 == ((v) & MASK_PROHIBITED_BITS_INT16 ) )
+#define FITS_INTO_INT8(v) ( 0 == ((v) & MASK_PROHIBITED_BITS_INT8 ) )
+#define FITS_INTO_SIZE_T(v) ( 0 == ((v) & MASK_PROHIBITED_BITS_SIZE_T ) )
 
-
-/*--------------------------------------------------------------------------
- * forwards
- */
-struct KDatabase;
-struct KDBManager;
-struct KDirectory;
-
-/*--------------------------------------------------------------------------
- * KTable
- *  represents a table
- *  normally implemented as a directory
- *  but may be a single archive file
- *  in either executable or streamable format
- */
-typedef struct KWTable KWTable;
-struct KWTable
-{
-    KTable dad;
-
-    struct KDirectory *dir;
-    struct KDBManager *mgr;
-    struct KDatabase *db;
-    struct KMD5SumFmt *md5;
-
-    uint32_t opencount;
-    bool use_md5;
-    bool read_only;
-    bool prerelease;
-    uint8_t align [ 5 ];
-
-    KSymbol sym;
-
-    char path [ 1 ];
-};
-
-rc_t KWTableMake ( KWTable **tblp, const KDirectory *dir, const char *path, KMD5SumFmt * md5, bool read_only );
-
-/* check a disk-resident column for needing re-indexing */
-bool KWTableColumnNeedsReindex ( KWTable *self, const char *colname );
-
-
-#ifdef __cplusplus
-}
-#endif
+#endif /* _lib_int_checks_h_ */

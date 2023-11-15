@@ -223,12 +223,12 @@ public:
 
     bool CheckCount( const LeafNode & node, unsigned int count, unsigned int key_length = 1 )
     { // for testing, assume all keys have teh same length
-        if ( node.count != count )
+        if ( (unsigned int)node.count != count )
         {
             cerr << "CheckCount/count: expected " << count << ", actual " << node.count << endl;
             return false;
         }
-        if ( count * ( key_length + sizeof(uint32_t) ) != node.key_bytes )
+        if ( count * ( key_length + sizeof(uint32_t) ) != (unsigned int)node.key_bytes )
         {
             cerr << "CheckCount/key_length: expected " << key_length << ", actual " << count * ( key_length + sizeof(uint32_t) ) << endl;
             return false;
@@ -238,7 +238,7 @@ public:
 
     bool CheckPrefix( const LeafNode & node, const string & prefix = string() )
     {
-        if ( node.key_prefix_len != prefix.size() )
+        if ( (size_t)node.key_prefix_len != prefix.size() )
         {
             return false;
         }

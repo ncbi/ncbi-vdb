@@ -35,6 +35,8 @@
 #include <os-native.h>
 #include <assert.h>
 
+#include "int_checks-priv.h"
+
 
 /* for parser simplicity before the days of expressions,
    signed numerals were recognized as single tokens, i.e.
@@ -240,7 +242,8 @@ LIB_EXPORT rc_t CC KTokenToF64 ( const KToken *self, double *d )
     }
 
     * d = strtod ( buffer, & end );
-    if ( ( end - buffer ) != self -> str . size )
+    assert ( FITS_INTO_SIZE_T ( end - buffer ) );
+    if ( (size_t)( end - buffer ) != self -> str . size )
         return RC ( rcVDB, rcToken, rcConverting, rcToken, rcInvalid );
 
     return 0;
@@ -413,13 +416,14 @@ LIB_EXPORT rc_t CC KTokenToString ( const KToken *self, char *buffer, size_t bsi
 }
 
 static
-rc_t CC utf8_utf32_cvt_string_copy ( uint32_t *dst, uint32_t blen, uint32_t *dlen, const char *src, size_t ssize )
+rc_t CC utf8_utf32_cvt_string_copy ( uint32_t *dst, int32_t blen, int32_t *dlen, const char *src, size_t ssize )
 {
     int rslt, len;
     const char *end = src + ssize;
 
     for ( len = 0; src < end; ++ len, src += rslt )
     {
+        assert(blen >= 0);
         if ( len == blen )
             return RC ( rcVDB, rcToken, rcConverting, rcBuffer, rcInsufficient );
 
@@ -438,11 +442,14 @@ rc_t CC utf8_utf32_cvt_string_copy ( uint32_t *dst, uint32_t blen, uint32_t *dle
     return 0;
 }
 
-LIB_EXPORT rc_t CC KTokenToWideString ( const KToken *self, uint32_t *buffer, uint32_t blen, uint32_t *len )
+LIB_EXPORT rc_t CC KTokenToWideString ( const KToken *self, uint32_t *buffer, uint32_t blen_u, uint32_t *len_u )
 {
     int rslt;
     const char *start, *end;
-    size_t i, sz = self -> str . size;
+    size_t sz = self -> str . size;
+    int32_t i = 0, blen = ( int32_t ) blen_u;
+    int32_t* len = ( int32_t* ) len_u;
+    assert ( blen >= 0 );
 
     switch ( self -> id )
     {
@@ -469,6 +476,7 @@ LIB_EXPORT rc_t CC KTokenToWideString ( const KToken *self, uint32_t *buffer, ui
     start = self -> str . addr + 1;
     end = start + sz;
 
+    assert ( FITS_INTO_INT32 ( sz ) );
     for ( i = 0; start < end; ++ i, start += rslt )
     {
         if ( i == blen )
@@ -558,7 +566,7 @@ LIB_EXPORT rc_t CC KTokenToWideString ( const KToken *self, uint32_t *buffer, ui
         }
     }
 
-    * len = (uint32_t)i;
+    * len = i;
     return 0;
 }
 
