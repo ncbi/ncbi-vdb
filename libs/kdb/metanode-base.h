@@ -28,10 +28,6 @@
 
 #include <klib/refcount.h>
 
-#ifndef KDBMDNODE_IMPL
-#define KDBMDNODE_IMPL KMDataNodeBase
-#endif
-
 #include <klib/container.h>
 #include <klib/rc.h>
 
@@ -48,53 +44,33 @@ extern "C" {
 struct KNamelist;
 
 /*--------------------------------------------------------------------------
- * KMDataNodeBase
+ * KMDataNode
  *   base structure for KMDataNode implementations
  */
-typedef struct KMDataNodeBase KMDataNodeBase;
+typedef struct KMDataNode KMDataNode;
 
 typedef struct KMDataNode_vt KMDataNode_vt;
 struct KMDataNode_vt
 {
     /* Public API */
-    rc_t ( CC * whack )         ( KDBMDNODE_IMPL * self  );
-    rc_t ( CC * addRef )        ( const KDBMDNODE_IMPL * self );
-    rc_t ( CC * release )       ( const KDBMDNODE_IMPL * self );
-    rc_t ( CC * byteOrder )     ( const KDBMDNODE_IMPL * self, bool * reversed );
-    rc_t ( CC * read )          ( const KDBMDNODE_IMPL * self,size_t offset, void * buffer, size_t bsize, size_t * num_read, size_t * remaining );
-    rc_t ( CC * openNodeRead )  ( const KDBMDNODE_IMPL * self, const KDBMDNODE_IMPL **node, const char *path, va_list args );
-    rc_t ( CC * readB8 )        ( const KDBMDNODE_IMPL * self, void * b8 );
-    rc_t ( CC * readB16 )       ( const KDBMDNODE_IMPL * self, void * b16 );
-    rc_t ( CC * readB32 )       ( const KDBMDNODE_IMPL * self, void * b32 );
-    rc_t ( CC * readB64 )       ( const KDBMDNODE_IMPL * self, void * b64 );
-    rc_t ( CC * readB128 )      ( const KDBMDNODE_IMPL * self, void * b128 );
-    rc_t ( CC * readAsI16 )     ( const KDBMDNODE_IMPL * self, int16_t * i );
-    rc_t ( CC * readAsU16 )     ( const KDBMDNODE_IMPL * self, uint16_t * u );
-    rc_t ( CC * readAsI32 )     ( const KDBMDNODE_IMPL * self, int32_t * i );
-    rc_t ( CC * readAsU32 )     ( const KDBMDNODE_IMPL * self, uint32_t * u );
-    rc_t ( CC * readAsI64 )     ( const KDBMDNODE_IMPL * self, int64_t * i );
-    rc_t ( CC * readAsU64 )     ( const KDBMDNODE_IMPL * self, uint64_t * u );
-    rc_t ( CC * readAsF64 )     ( const KDBMDNODE_IMPL * self, double * f );
-    rc_t ( CC * readCString )   ( const KDBMDNODE_IMPL * self,char * buffer, size_t bsize, size_t *size );
-    rc_t ( CC * readAttr )      ( const KDBMDNODE_IMPL * self, const char * name,char * buffer, size_t bsize, size_t *size );
-    rc_t ( CC * readAttrAsI16 ) ( const KDBMDNODE_IMPL * self, const char *attr, int16_t *i );
-    rc_t ( CC * readAttrAsU16 ) ( const KDBMDNODE_IMPL * self, const char *attr, uint16_t *u );
-    rc_t ( CC * readAttrAsI32 ) ( const KDBMDNODE_IMPL * self, const char *attr, int32_t *i );
-    rc_t ( CC * readAttrAsU32 ) ( const KDBMDNODE_IMPL * self, const char *attr, uint32_t *u );
-    rc_t ( CC * readAttrAsI64 ) ( const KDBMDNODE_IMPL * self, const char *attr, int64_t *i );
-    rc_t ( CC * readAttrAsU64 ) ( const KDBMDNODE_IMPL * self, const char *attr, uint64_t *u );
-    rc_t ( CC * readAttrAsF64 ) ( const KDBMDNODE_IMPL * self, const char *attr, double *f );
-    rc_t ( CC * compare )       ( const KDBMDNODE_IMPL * self, KDBMDNODE_IMPL const *other, bool *equal );
-    rc_t ( CC * addr )          ( const KDBMDNODE_IMPL * self, const void **addr, size_t *size );
-    rc_t ( CC * listAttr )      ( const KDBMDNODE_IMPL * self, struct KNamelist **names );
-    rc_t ( CC * listChildren )  ( const KDBMDNODE_IMPL * self, struct KNamelist **names );
+    rc_t ( CC * whack )         ( KMDataNode * self  );
+    rc_t ( CC * addRef )        ( const KMDataNode * self );
+    rc_t ( CC * release )       ( const KMDataNode * self );
+    rc_t ( CC * byteOrder )     ( const KMDataNode * self, bool * reversed );
+    rc_t ( CC * read )          ( const KMDataNode * self,size_t offset, void * buffer, size_t bsize, size_t * num_read, size_t * remaining );
+    rc_t ( CC * openNodeRead )  ( const KMDataNode * self, const KMDataNode **node, const char *path, va_list args );
+    rc_t ( CC * readAttr )      ( const KMDataNode * self, const char * name,char * buffer, size_t bsize, size_t *size );
+    rc_t ( CC * compare )       ( const KMDataNode * self, KMDataNode const *other, bool *equal );
+    rc_t ( CC * addr )          ( const KMDataNode * self, const void **addr, size_t *size );
+    rc_t ( CC * listAttr )      ( const KMDataNode * self, struct KNamelist **names );
+    rc_t ( CC * listChildren )  ( const KMDataNode * self, struct KNamelist **names );
 };
 
 // KMDataNodeListChildren
 
 // Public write side-only API
 
-struct KMDataNodeBase
+struct KMDataNode
 {
     BSTNode n;
 
@@ -103,17 +79,19 @@ struct KMDataNodeBase
     KRefcount refcount;
 };
 
+rc_t CC KMDataNodeWhack ( KMDataNode * node );
+
 // default implelentations where exist
-extern rc_t CC KMDataNodeBaseAddRef ( const KDBMDNODE_IMPL *self );
-extern rc_t CC KMDataNodeBaseWhack ( KDBMDNODE_IMPL *self );
+extern rc_t CC KMDataNodeBaseAddRef ( const KMDataNode *self );
+extern rc_t CC KMDataNodeBaseWhack ( KMDataNode *self );
 
 /* Attach
  * Sever
  *  like AddRef/Release, except called internally
  *  indicates that a child object is letting go...
  */
-KDBMDNODE_IMPL *KMDataNodeAttach ( const KDBMDNODE_IMPL *self );
-rc_t KMDataNodeSever ( const KDBMDNODE_IMPL *self );
+KMDataNode *KMDataNodeAttach ( const KMDataNode *self );
+rc_t KMDataNodeSever ( const KMDataNode *self );
 
 // write side only public API
 // ...

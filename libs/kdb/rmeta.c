@@ -109,7 +109,7 @@ KRMetadataWhack ( KMetadata *self )
     if ( rc == 0 )
     {
         KDirectoryRelease ( self -> dir );
-        KMDataNodeRelease ( self -> root );
+        KMDataNodeRelease ( & self -> root -> dad );
         return KMetadataBaseWhack( self );
     }
 
@@ -177,7 +177,7 @@ KMetadataPopulate ( KMetadata *self, const KDirectory *dir, const char *path )
                         rc = RC ( rcDB, rcMetadata, rcConstructing, rcData, rcCorrupt );
                     else
                     {
-                        KMDataNodeInflateData pb;
+                        KRMDataNodeInflateData pb;
 
                         pb . meta = self;
                         pb . par = self -> root;
@@ -408,7 +408,7 @@ KRMetadataGetSequence ( const KMetadata *self, const char *seq, int64_t *val )
         return RC ( rcDB, rcMetadata, rcAccessing, rcString, rcInvalid );
 
     rc = KMDataNodeOpenNodeRead
-        ( self -> root, & found, ".seq/%s", seq );
+        ( & self -> root -> dad, & found, ".seq/%s", seq );
     if ( rc == 0 )
     {
         size_t num_read, remaining;
@@ -434,7 +434,7 @@ KRMetadataVOpenNodeRead ( const KMetadata *self, const KMDataNode **node, const 
         rc = RC ( rcDB, rcMetadata, rcOpening, rcSelf, rcNull );
     }
     else
-        rc = KMDataNodeVOpenNodeRead ( self -> root, node, path, args );
+        rc = KMDataNodeVOpenNodeRead ( & self -> root -> dad, node, path, args );
 
     return rc;
 }

@@ -113,7 +113,7 @@ LIB_EXPORT rc_t CC KMetadataVOpenNodeUpdate ( KMetadata *self,
         else if ( self -> read_only )
             rc = RC ( rcDB, rcMetadata, rcOpening, rcNode, rcReadonly );
         else {
-            rc = KMDataNodeVOpenNodeUpdate ( self -> root, node, path, args );
+            rc = KMDataNodeVOpenNodeUpdate ( & self -> root -> dad, node, path, args );
             DBGMSG(DBG_KDB, DBG_FLAG(DBG_KDB_KDB),
                         ("KMetadataVOpenNodeUpdate(%s) = %d\n", path, rc));
             return rc;
@@ -193,10 +193,10 @@ rc_t CC KMDWriteFunc ( void *param, const void *buffer, size_t size, size_t *num
 }
 
 static
-rc_t CC KMAttrNodeAuxFunc ( void *param, const void *node, size_t *num_writ,
+rc_t CC KWMAttrNodeAuxFunc ( void *param, const void *node, size_t *num_writ,
     PTWriteFunc write, void *write_param )
 {
-    const KMAttrNode *n = node;
+    const KWMAttrNode *n = node;
     size_t nsize = strlen ( n -> name );
 
     if ( write != NULL )
@@ -207,11 +207,11 @@ rc_t CC KMAttrNodeAuxFunc ( void *param, const void *node, size_t *num_writ,
 }
 
 static
-rc_t CC KMDataNodeAuxFunc ( void *param, const void *node, size_t *num_writ,
+rc_t CC KWMDataNodeAuxFunc ( void *param, const void *node, size_t *num_writ,
     PTWriteFunc write, void *write_param )
 {
     rc_t rc;
-    const KMDataNode *n = node;
+    const KWMDataNode *n = node;
     size_t nsize = strlen ( n -> name );
     size_t auxsize = 0;
 
@@ -234,7 +234,7 @@ rc_t CC KMDataNodeAuxFunc ( void *param, const void *node, size_t *num_writ,
     if ( n -> attr . root != NULL )
     {
         rc = BSTreePersist ( & n -> attr, num_writ,
-            write, write_param, KMAttrNodeAuxFunc, NULL );
+            write, write_param, KWMAttrNodeAuxFunc, NULL );
         if ( rc != 0 )
             return rc;
         auxsize += * num_writ;
@@ -244,7 +244,7 @@ rc_t CC KMDataNodeAuxFunc ( void *param, const void *node, size_t *num_writ,
     if ( n -> child . root != NULL )
     {
         rc = BSTreePersist ( & n -> child, num_writ,
-            write, write_param, KMDataNodeAuxFunc, NULL );
+            write, write_param, KWMDataNodeAuxFunc, NULL );
         if ( rc != 0 )
             return rc;
         auxsize += * num_writ;
@@ -289,7 +289,7 @@ rc_t KMetadataFlush ( KMetadata *self )
 
             /* persist root node */
             rc = BSTreePersist ( & self -> root -> child, NULL,
-                KMDWriteFunc, & pb, KMDataNodeAuxFunc, NULL );
+                KMDWriteFunc, & pb, KWMDataNodeAuxFunc, NULL );
             if ( rc == 0 && pb . marker != 0 )
             {
                 size_t num_flushed;
@@ -394,7 +394,7 @@ KWMetadataWhack ( KMetadata *self )
             {
                 /* complete */
                 KDirectoryRelease ( self -> dir );
-                KMDataNodeRelease ( self -> root );
+                KMDataNodeRelease ( & self -> root -> dad );
                 return KMetadataBaseWhack( self );
             }
         }
@@ -494,7 +494,7 @@ rc_t KMetadataPopulate ( KMetadata *self, const KDirectory *dir, const char *pat
                         rc = RC ( rcDB, rcMetadata, rcConstructing, rcData, rcCorrupt );
                     else
                     {
-                        KMDataNodeInflateData pb;
+                        KWMDataNodeInflateData pb;
 
                         pb . meta = self;
                         pb . par = self -> root;
@@ -866,7 +866,7 @@ KWMetadataGetSequence ( const KMetadata *self, const char *seq, int64_t *val )
     if ( seq [ 0 ] == 0 )
         return RC ( rcDB, rcMetadata, rcAccessing, rcPath, rcInvalid );
 
-    rc = KMDataNodeOpenNodeRead ( self -> root, & found, ".seq/%s", seq );
+    rc = KMDataNodeOpenNodeRead ( & self -> root -> dad, & found, ".seq/%s", seq );
     if ( rc == 0 )
     {
         rc = KMDataNodeReadB64 ( found, val );
@@ -889,7 +889,7 @@ LIB_EXPORT rc_t CC KMetadataSetSequence ( KMetadata *self,
     if ( seq [ 0 ] == 0 )
         return RC ( rcDB, rcMetadata, rcUpdating, rcPath, rcInvalid );
 
-    rc = KMDataNodeOpenNodeUpdate ( self -> root, & found, ".seq/%s", seq );
+    rc = KMDataNodeOpenNodeUpdate ( & self -> root -> dad, & found, ".seq/%s", seq );
     if ( rc == 0 )
     {
         rc = KMDataNodeWriteB64 ( found, & val );
@@ -916,7 +916,7 @@ LIB_EXPORT rc_t CC KMetadataNextSequence ( KMetadata *self,
     if ( seq [ 0 ] == 0 )
         return RC ( rcDB, rcMetadata, rcUpdating, rcPath, rcInvalid );
 
-    rc = KMDataNodeOpenNodeUpdate ( self -> root, & found, ".seq/%s", seq );
+    rc = KMDataNodeOpenNodeUpdate ( & self -> root -> dad, & found, ".seq/%s", seq );
     if ( rc == 0 )
     {
         rc = KMDataNodeReadB64 ( found, val );
@@ -946,7 +946,7 @@ KWMetadataVOpenNodeRead ( const KMetadata *self, const KMDataNode **node, const 
         rc = RC ( rcDB, rcMetadata, rcOpening, rcSelf, rcNull );
     }
     else
-        rc = KMDataNodeVOpenNodeRead ( self -> root, node, path, args );
+        rc = KMDataNodeVOpenNodeRead ( & self -> root -> dad, node, path, args );
 
     DBGMSG(DBG_KDB, DBG_FLAG(DBG_KDB_KDB),
             ("KMetadataVOpenNodeRead(%s) = %d\n", path, rc));
