@@ -100,7 +100,7 @@ rc_t KMDataNodeSever ( const KMDataNode *self )
     else                                        \
         return false;
 
-LIB_EXPORT rc_t KMDataNodeWhack ( KMDataNode *self )
+rc_t CC KMDataNodeWhack ( KMDataNode *self )
 {
     if ( self == NULL ) return 0;
     DISPATCH( whack( self ) );
