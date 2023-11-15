@@ -105,7 +105,7 @@ rc_t KTableSever ( const KTable *self )
     if ( self != NULL && self -> vt != NULL )   \
         return self -> vt -> call;              \
     else                                        \
-        return RC ( rcVDB, rcTable, rcAccessing, rcSelf, rcNull );
+        return RC ( rcDB, rcTable, rcAccessing, rcSelf, rcNull );
 #define DISPATCH_BOOL(call)  \
     if ( self != NULL && self -> vt != NULL )   \
         return self -> vt -> call;              \

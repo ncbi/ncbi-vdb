@@ -109,7 +109,7 @@ rc_t KDBManagerSever ( const KDBManager *self )
     if ( self != NULL && self -> vt != NULL )   \
         return self -> vt -> call;              \
     else                                        \
-        return RC ( rcVDB, rcMgr, rcAccessing, rcSelf, rcNull );
+        return RC ( rcDB, rcMgr, rcAccessing, rcSelf, rcNull );
 #define DISPATCH_BOOL(call)  \
     if ( self != NULL && self -> vt != NULL )   \
         return self -> vt -> call;              \

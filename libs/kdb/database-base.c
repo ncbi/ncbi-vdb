@@ -108,7 +108,7 @@ rc_t KDatabaseSever ( const KDatabase *self )
     if ( self != NULL && self -> vt != NULL )   \
         return self -> vt -> call;              \
     else                                        \
-        return RC ( rcVDB, rcDatabase, rcAccessing, rcSelf, rcNull );
+        return RC ( rcDB, rcDatabase, rcAccessing, rcSelf, rcNull );
 #define DISPATCH_BOOL(call)  \
     if ( self != NULL && self -> vt != NULL )   \
         return self -> vt -> call;              \
@@ -202,7 +202,7 @@ LIB_EXPORT rc_t CC KDatabaseOpenTableRead ( const KDatabase *self,
     const struct KTable **tbl, const char *name, ... )
 {
     if ( self == NULL && self -> vt == NULL )
-        return RC ( rcVDB, rcDatabase, rcAccessing, rcSelf, rcNull );
+        return RC ( rcDB, rcDatabase, rcAccessing, rcSelf, rcNull );
 
     rc_t rc;
     va_list args;

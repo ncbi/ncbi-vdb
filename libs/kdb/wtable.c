@@ -699,7 +699,7 @@ LIB_EXPORT rc_t CC KTableOpenParentUpdate ( KTable *bself, KDatabase **db )
         if ( self == NULL )
             rc = RC ( rcDB, rcTable, rcAccessing, rcSelf, rcNull );
         else if ( self -> db != NULL && self -> db -> read_only )
-            rc = RC ( rcVDB, rcTable, rcAccessing, rcDatabase, rcReadonly );
+            rc = RC ( rcDB, rcTable, rcAccessing, rcDatabase, rcReadonly );
         else
         {
             rc = KDatabaseAddRef ( self -> db );
