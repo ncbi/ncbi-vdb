@@ -83,7 +83,7 @@ KDB_EXTERN rc_t CC KDBManagerRelease ( const KDBManager *self );
 
 /* MakeRead
  * MakeUpdate
- * MakeText (reads data from a character string)
+ * MakeText (reads data from a Json string)
  *
  *  create library handle for specific use
  *
@@ -92,7 +92,7 @@ KDB_EXTERN rc_t CC KDBManagerRelease ( const KDBManager *self );
  */
 KDB_EXTERN rc_t CC KDBManagerMakeRead ( const KDBManager **mgr, struct KDirectory const *wd );
 KDB_EXTERN rc_t CC KDBManagerMakeUpdate ( KDBManager **mgr, struct KDirectory *wd );
-KDB_EXTERN rc_t CC KDBManagerMakeText ( const KDBManager **mgr, const char * data );
+KDB_EXTERN rc_t CC KDBManagerMakeText ( const KDBManager **mgr, const char * input, char * error, size_t error_size );
 
 /* Version
  *  returns the library version

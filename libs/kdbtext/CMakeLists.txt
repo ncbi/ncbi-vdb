@@ -22,26 +22,9 @@
 #
 # ===========================================================================
 
-if( FLEX_FOUND AND BISON_FOUND )
-    FLEX_TARGET( KDBTextFlex kdbtext-lex.l ${CMAKE_CURRENT_SOURCE_DIR}/zz_kdbtext-lex.c
-        COMPILE_FLAGS "--debug --noline" )
-    set( KDBTextScanner ${FLEX_KDBTextFlex_OUTPUTS} )
-    BISON_TARGET( KDBTextGrammar kdbtext-grammar.y ${CMAKE_CURRENT_SOURCE_DIR}/zz_kdbtext-grammar.cpp
-        COMPILE_FLAGS "-Wno-other --no-lines -r state -v"
-        DEFINES_FILE ${CMAKE_CURRENT_SOURCE_DIR}/zz_kdbtext-grammar.hpp
-        )
-   set( KDBTextParser ${BISON_KDBTextGrammar_OUTPUT_SOURCE} )
-   ADD_FLEX_BISON_DEPENDENCY(KDBTextFlex KDBTextGrammar)
-   SET_DIRECTORY_PROPERTIES(PROPERTIES CLEAN_NO_CUSTOM 1)
-else()
-    set( KDBTextScanner zz_kdbtext-lex.c )
-    set( KDBTextParser zz_kdbtext-grammar.cpp )
-endif()
-
 set( KDBTEXT_SRC
     manager.cpp
-    ${KDBTextScanner}
-#    ${KDBTextParser}
+    database.cpp
 )
 
 GenerateStaticLibs( kdbtext "${KDBTEXT_SRC}" )

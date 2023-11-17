@@ -22,16 +22,14 @@
 #
 # ===========================================================================
 
-if( WIN32 )
-    set( ADDITIONAL_LIBS Crypt32 )
-	set( TMPDIR ./data)
-else()
-    set( ADDITIONAL_LIBS "" )
-	set( TMPDIR /tmp )
-endif()
+# if( WIN32 )
+#     set( ADDITIONAL_LIBS Crypt32 )
+# 	set( TMPDIR ./data)
+# else()
+#     set( ADDITIONAL_LIBS "" )
+# 	set( TMPDIR /tmp )
+# endif()
 
 add_compile_definitions( __mod__="test/kdbtext" )
-
-AddExecutableTest( Test_KDBText_Scanner "wb-test-kdbtext-lex" "${COMMON_LIBS_READ};kdbtext" )
 
 AddExecutableTest( Test_KDBText_Manager "test-manager" "${COMMON_LIBS_READ};kdbtext" )

@@ -24,33 +24,34 @@
 *
 */
 
-%{
-#include "kdbtext-lex.h"
-%}
+typedef struct KTextDatabase KTextDatabase;
+#define KDATABASE_IMPL KTextDatabase
+#include "../libs/kdb/database-base.h"
 
-%option prefix="KDBText_"
+#include <klib/json.h>
+#include <klib/rc.h>
 
- /* let parser handle EOF */
-%option noyywrap
+#include <string>
 
-alpha       [a-zA-Z_]
-alphanum    [a-zA-Z_0-9]
+struct KTextDatabase
+{
+    KDatabaseBase dad;
+};
 
-%%
+namespace KDBText
+{
+    class Database : public KTextDatabase
+    {
+    public:
+        Database( const KJsonObject * p_json );
+        ~Database();
 
- /* literals */
+        rc_t inflate( char * error, size_t error_size );
 
-"{" { return yytext [ 0 ]; }
-"}" { return yytext [ 0 ]; }
+        const std::string & getName() const { return m_name; }
 
- /* keywords */
-"database"        { return KW_database; }
-
-{alpha}{alphanum}*         { return IDENTIFIER; }
-
- /* ignored tokens */
-<*>[ \t\f\v\r\n]
-
- /* unrecognized input */
-<*>.                                       { return UNRECOGNIZED; }
-
+    private:
+        const KJsonObject * m_json = nullptr;
+        std::string m_name;
+    };
+}
