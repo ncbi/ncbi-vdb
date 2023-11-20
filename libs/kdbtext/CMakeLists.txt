@@ -25,6 +25,7 @@
 set( KDBTEXT_SRC
     manager.cpp
     database.cpp
+    table.cpp
 )
 
 GenerateStaticLibs( kdbtext "${KDBTEXT_SRC}" )

@@ -96,9 +96,6 @@ extern rc_t CC KDBManagerBaseRelease ( const KDBMGR_IMPL *self );
 KDBMGR_IMPL *KDBManagerAttach ( const KDBMGR_IMPL *self );
 rc_t KDBManagerSever ( const KDBMGR_IMPL *self );
 
-// write side only public API
-// ...
-
 #ifdef __cplusplus
 }
 #endif

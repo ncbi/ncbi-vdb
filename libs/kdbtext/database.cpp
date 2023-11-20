@@ -28,51 +28,54 @@
 
 using namespace KDBText;
 
-// static rc_t CC KRDatabaseWhack ( KDatabase *self );
-// static bool CC KRDatabaseLocked ( const KDatabase *self );
-// static bool CC KRDatabaseVExists ( const KDatabase *self, uint32_t type, const char *name, va_list args );
-// static bool CC KRDatabaseIsAlias ( const KDatabase *self, uint32_t type, char *resolved, size_t rsize, const char *name );
-// static rc_t CC KRDatabaseVWritable ( const KDatabase *self, uint32_t type, const char *name, va_list args );
-// static rc_t CC KRDatabaseOpenManagerRead ( const KDatabase *self, const KDBManager **mgr );
-// static rc_t CC KRDatabaseOpenParentRead ( const KDatabase *self, const KDatabase **par );
-// static rc_t CC KRDatabaseOpenDirectoryRead ( const KDatabase *self, const KDirectory **dir );
-// static rc_t CC KRDatabaseVOpenDBRead ( const KDatabase *self, const KDatabase **dbp, const char *name, va_list args );
-// static rc_t CC KRDatabaseVOpenTableRead ( const KDatabase *self, const KTable **tblp, const char *name, va_list args );
-// static rc_t CC KRDatabaseOpenMetadataRead ( const KDatabase *self, const KMetadata **metap );
-// static rc_t CC KRDatabaseVOpenIndexRead ( const KDatabase *self, const KIndex **idxp, const char *name, va_list args );
-// static rc_t CC KRDatabaseListDB ( const KDatabase *self, KNamelist **names );
-// static rc_t CC KRDatabaseListTbl ( struct KDatabase const *self, KNamelist **names );
-// static rc_t CC KRDatabaseListIdx ( struct KDatabase const *self, KNamelist **names );
-// static rc_t CC KRDatabaseGetPath ( KDatabase const *self, const char **path );
+static rc_t CC KTextDatabaseWhack ( KTextDatabase *self );
+// static bool CC KTextDatabaseLocked ( const KTextDatabase *self );
+// static bool CC KTextDatabaseVExists ( const KTextDatabase *self, uint32_t type, const char *name, va_list args );
+// static bool CC KTextDatabaseIsAlias ( const KTextDatabase *self, uint32_t type, char *resolved, size_t rsize, const char *name );
+// static rc_t CC KTextDatabaseVWritable ( const KTextDatabase *self, uint32_t type, const char *name, va_list args );
+// static rc_t CC KTextDatabaseOpenManagerRead ( const KTextDatabase *self, const KDBManager **mgr );
+// static rc_t CC KTextDatabaseOpenParentRead ( const KTextDatabase *self, const KTextDatabase **par );
+// static rc_t CC KTextDatabaseOpenDirectoryRead ( const KTextDatabase *self, const KDirectory **dir );
+// static rc_t CC KTextDatabaseVOpenDBRead ( const KTextDatabase *self, const KTextDatabase **dbp, const char *name, va_list args );
+// static rc_t CC KTextDatabaseVOpenTableRead ( const KTextDatabase *self, const KTable **tblp, const char *name, va_list args );
+// static rc_t CC KTextDatabaseOpenMetadataRead ( const KTextDatabase *self, const KMetadata **metap );
+// static rc_t CC KTextDatabaseVOpenIndexRead ( const KTextDatabase *self, const KIndex **idxp, const char *name, va_list args );
+// static rc_t CC KTextDatabaseListDB ( const KTextDatabase *self, KNamelist **names );
+// static rc_t CC KTextDatabaseListTbl ( struct KTextDatabase const *self, KNamelist **names );
+// static rc_t CC KTextDatabaseListIdx ( struct KTextDatabase const *self, KNamelist **names );
+// static rc_t CC KTextDatabaseGetPath ( KTextDatabase const *self, const char **path );
 
-static KDatabase_vt KRTextDatabase_vt =
+static KDatabase_vt KTextDatabase_vt =
 {
-    // KRDatabaseWhack,
-    // KDatabaseBaseAddRef,
-    // KDatabaseBaseRelease,
-    // KRDatabaseLocked,
-    // KRDatabaseVExists,
-    // KRDatabaseIsAlias,
-    // KRDatabaseVWritable,
-    // KRDatabaseOpenManagerRead,
-    // KRDatabaseOpenParentRead,
-    // KRDatabaseOpenDirectoryRead,
-    // KRDatabaseVOpenDBRead,
-    // KRDatabaseVOpenTableRead,
-    // KRDatabaseOpenMetadataRead,
-    // KRDatabaseVOpenIndexRead,
-    // KRDatabaseListDB,
-    // KRDatabaseListTbl,
-    // KRDatabaseListIdx,
-    // KRDatabaseGetPath
+    KTextDatabaseWhack,
+    KDatabaseBaseAddRef,
+    KDatabaseBaseRelease,
+    // KTextDatabaseLocked,
+    // KTextDatabaseVExists,
+    // KTextDatabaseIsAlias,
+    // KTextDatabaseVWritable,
+    // KTextDatabaseOpenManagerRead,
+    // KTextDatabaseOpenParentRead,
+    // KTextDatabaseOpenDirectoryRead,
+    // KTextDatabaseVOpenDBRead,
+    // KTextDatabaseVOpenTableRead,
+    // KTextDatabaseOpenMetadataRead,
+    // KTextDatabaseVOpenIndexRead,
+    // KTextDatabaseListDB,
+    // KTextDatabaseListTbl,
+    // KTextDatabaseListIdx,
+    // KTextDatabaseGetPath
 };
 
 Database::Database( const KJsonObject * p_json ) : m_json ( p_json )
 {
+    dad . vt = & KTextDatabase_vt;
+    KRefcountInit ( & dad . refcount, 1, "KDBText::Database", "ctor", "db" );
 }
 
 Database::~Database()
 {
+    KRefcountWhack ( & dad . refcount, "KDBText::Database" );
 }
 
 rc_t
@@ -94,3 +97,11 @@ Database::inflate( char * error, size_t error_size )
     return rc;
 }
 
+static
+rc_t CC
+KTextDatabaseWhack ( KTextDatabase *self )
+{
+    assert( self -> dad . vt == & KTextDatabase_vt );
+    delete reinterpret_cast<Database*>( self );
+    return 0;
+}

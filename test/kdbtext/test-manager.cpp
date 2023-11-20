@@ -32,6 +32,7 @@
 
 #include <kdb/manager.h>
 #include <kdb/database.h>
+#include <kdb/table.h>
 #include <kdb/kdb-priv.h>
 
 #include <klib/rc.h>
@@ -193,15 +194,17 @@ FIXTURE_TEST_CASE(KDBTextManager_OpenDBRead, KDBTextManager_Fixture)
     REQUIRE_RC( KDatabaseRelease( db ) );
 }
 
-#if 0
 FIXTURE_TEST_CASE(KDBTextManager_OpenTableRead, KDBTextManager_Fixture)
-{
+{   // root table
+    Setup( R"({"type": "table", "name": "tbl"})" );
     const KTable * tbl = nullptr;
-    REQUIRE_RC( KDBManagerOpenTableRead( m_mgr, & tbl, "%s", "SRR000123" ) );
+    REQUIRE_RC( KDBManagerOpenTableRead( m_mgr, & tbl, "%s", "tbl" ) );
     REQUIRE_NOT_NULL( tbl );
     REQUIRE_RC( KTableRelease( tbl ) );
 }
+//TODO: non-root tables
 
+#if 0
 FIXTURE_TEST_CASE(KDBTextManager_OpenTableReadVPath, KDBTextManager_Fixture)
 {
     VFSManager * vfs;

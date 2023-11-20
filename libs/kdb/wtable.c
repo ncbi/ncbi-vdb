@@ -66,7 +66,7 @@ static rc_t CC KWTableListCol ( const KTable *self, KNamelist **names );
 static rc_t CC KWTableListIdx ( const KTable *self, KNamelist **names );
 static rc_t CC KWTableMetaCompare( const KTable *self, const KTable *other, const char * path, bool * equal );
 
-static KTableBase_vt KWTable_vt =
+static KTable_vt KWTable_vt =
 {
     KWTableWhack,
     KTableBaseAddRef,

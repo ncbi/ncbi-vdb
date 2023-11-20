@@ -27,6 +27,10 @@
 #include <kdb/manager.h>
 
 #include "database.hpp"
+#include "table.hpp"
+
+#include <kdb/database.h>
+#include <kdb/table.h>
 
 #include <klib/rc.h>
 #include <klib/json.h>
@@ -51,40 +55,40 @@ struct KDBManager
 
 const uint32_t LIBKDBTEXT_VERS = 0;
 
-static rc_t CC KDBTextManagerWhack ( KDBManager *self );
-static rc_t CC KDBTextManagerVersion ( const KDBManager *self, uint32_t *version );
-static bool CC KDBTextManagerVExists ( const KDBManager *self, uint32_t requested, const char *name, va_list args );
-static rc_t CC KDBTextManagerVWritable ( const KDBManager *self, const char * path, va_list args );
-static rc_t CC KDBTextManagerRunPeriodicTasks ( const KDBManager *self );
-static int CC KDBTextManagerPathTypeVP( const KDBManager * self, const VPath * path );
-static int CC KDBTextManagerVPathType ( const KDBManager * self, const char *path, va_list args );
-static int CC KDBTextManagerVPathTypeUnreliable ( const KDBManager * self, const char *path, va_list args );
-static rc_t CC KDBTextManagerVOpenDBRead ( const KDBManager *self, const KDatabase **db, const char *path, va_list args );
+static rc_t CC KTextManagerWhack ( KDBManager *self );
+static rc_t CC KTextManagerVersion ( const KDBManager *self, uint32_t *version );
+static bool CC KTextManagerVExists ( const KDBManager *self, uint32_t requested, const char *name, va_list args );
+static rc_t CC KTextManagerVWritable ( const KDBManager *self, const char * path, va_list args );
+static rc_t CC KTextManagerRunPeriodicTasks ( const KDBManager *self );
+static int CC KTextManagerPathTypeVP( const KDBManager * self, const VPath * path );
+static int CC KTextManagerVPathType ( const KDBManager * self, const char *path, va_list args );
+static int CC KTextManagerVPathTypeUnreliable ( const KDBManager * self, const char *path, va_list args );
+static rc_t CC KTextManagerVOpenDBRead ( const KDBManager *self, const KDatabase **db, const char *path, va_list args );
+static rc_t CC KTextManagerVOpenTableRead ( const KDBManager *self, const KTable **tbl, const char *path, va_list args );
 
-// static rc_t CC KDBTextManagerVOpenTableRead ( const KDBManager *self, const KTable **tbl, const char *path, va_list args );
-// static rc_t CC KDBTextManagerOpenTableReadVPath(const KDBManager *self, const KTable **tbl, const struct VPath *path);
-// static rc_t CC KDBTextManagerVOpenColumnRead ( const KDBManager *self, const KColumn **col, const char *path, va_list args );
-// static rc_t CC KDBTextManagerVPathOpenLocalDBRead ( struct KDBManager const * self, struct KDatabase const ** p_db, struct VPath const * vpath );
-// static rc_t CC KDBTextManagerVPathOpenRemoteDBRead ( struct KDBManager const * self, struct KDatabase const ** p_db, struct VPath const * remote, struct VPath const * cache );
+// static rc_t CC KTextManagerOpenTableReadVPath(const KDBManager *self, const KTable **tbl, const struct VPath *path);
+// static rc_t CC KTextManagerVOpenColumnRead ( const KDBManager *self, const KColumn **col, const char *path, va_list args );
+// static rc_t CC KTextManagerVPathOpenLocalDBRead ( struct KDBManager const * self, struct KDatabase const ** p_db, struct VPath const * vpath );
+// static rc_t CC KTextManagerVPathOpenRemoteDBRead ( struct KDBManager const * self, struct KDatabase const ** p_db, struct VPath const * remote, struct VPath const * cache );
 
-static KDBManager_vt KDBTextManager_vt =
+static KDBManager_vt KTextManager_vt =
 {
-    KDBTextManagerWhack,
+    KTextManagerWhack,
     KDBManagerBaseAddRef,
     KDBManagerBaseRelease,
-    KDBTextManagerVersion,
-    KDBTextManagerVExists,
-    KDBTextManagerVWritable,
-    KDBTextManagerRunPeriodicTasks,
-    KDBTextManagerPathTypeVP,
-    KDBTextManagerVPathType,
-    KDBTextManagerVPathTypeUnreliable,
-    KDBTextManagerVOpenDBRead,
-    // KDBTextManagerVOpenTableRead,
-    // KDBTextManagerOpenTableReadVPath,
-    // KDBTextManagerVOpenColumnRead,
-    // KDBTextManagerVPathOpenLocalDBRead,
-    // KDBTextManagerVPathOpenRemoteDBRead
+    KTextManagerVersion,
+    KTextManagerVExists,
+    KTextManagerVWritable,
+    KTextManagerRunPeriodicTasks,
+    KTextManagerPathTypeVP,
+    KTextManagerVPathType,
+    KTextManagerVPathTypeUnreliable,
+    KTextManagerVOpenDBRead,
+    KTextManagerVOpenTableRead,
+    // KTextManagerOpenTableReadVPath,
+    // KTextManagerVOpenColumnRead,
+    // KTextManagerVPathOpenLocalDBRead,
+    // KTextManagerVPathOpenRemoteDBRead
 };
 
 namespace KDBText
@@ -94,14 +98,15 @@ namespace KDBText
     public:
         Manager()
         {
-            dad . vt = & KDBTextManager_vt;
-            KRefcountInit ( & dad . refcount, 1, "KDBManager", "make-read-text", "kmgr" );
+            dad . vt = & KTextManager_vt;
+            KRefcountInit ( & dad . refcount, 1, "KDBText::Manager", "ctor", "kmgr" );
         }
         ~Manager()
         {
+            delete m_tbl;
             delete m_db;
             KJsonValueWhack( m_root );
-            KRefcountWhack ( & dad . refcount, "KDBManager" );
+            KRefcountWhack ( & dad . refcount, "KDBText::Manager" );
         }
 
         rc_t parse( const char * input, char * error, size_t error_size )
@@ -133,6 +138,11 @@ namespace KDBText
                         m_db = new Database( rootObj );
                         rc = m_db -> inflate( error, error_size );
                     }
+                    else if ( strcmp( typeStr, "table") == 0 )
+                    {
+                        m_tbl = new Table( rootObj );
+                        rc = m_tbl -> inflate( error, error_size );
+                    }
                 }
             }
 
@@ -140,6 +150,7 @@ namespace KDBText
         }
 
         const Database * getRootDatabase() const { return m_db; }
+        const Table * getRootTable() const { return m_tbl; }
 
         int pathType( const string & path ) const
         {
@@ -157,25 +168,26 @@ namespace KDBText
     private:
         KJsonValue * m_root = nullptr;
         Database * m_db = nullptr;
+        Table * m_tbl = nullptr;
     };
 
 }
 
 using namespace KDBText;
-#define CAST() assert( bself -> dad . vt == & KDBTextManager_vt ); const Manager *self = static_cast<const Manager *>(bself);
+#define CAST() assert( bself -> dad . vt == & KTextManager_vt ); const Manager *self = static_cast<const Manager *>(bself);
 
 static
 rc_t CC
-KDBTextManagerWhack ( KDBManager *self )
+KTextManagerWhack ( KDBManager *self )
 {
-    assert( self -> dad . vt == & KDBTextManager_vt );
+    assert( self -> dad . vt == & KTextManager_vt );
     delete reinterpret_cast<Manager*>( self );
     return 0;
 }
 
 static
 rc_t CC
-KDBTextManagerVersion ( const KDBManager *self, uint32_t * version )
+KTextManagerVersion ( const KDBManager *self, uint32_t * version )
 {
     if ( version == nullptr )
     {
@@ -217,7 +229,7 @@ PrintToString( const char *fmt, va_list args, string & out )
 
 static
 bool CC
-KDBTextManagerVExists ( const KDBManager *bself, uint32_t requested, const char *fmt, va_list args )
+KTextManagerVExists ( const KDBManager *bself, uint32_t requested, const char *fmt, va_list args )
 {
     CAST();
 
@@ -257,7 +269,7 @@ KDBTextManagerVExists ( const KDBManager *bself, uint32_t requested, const char 
 
 static
 rc_t CC
-KDBTextManagerVWritable ( const KDBManager *self, const char * path, va_list args )
+KTextManagerVWritable ( const KDBManager *self, const char * path, va_list args )
 {
     //TODO: parse and resolve the path, if the object is valid return rcReadOnly, otherwise rcNotFound
     return SILENT_RC ( rcDB, rcPath, rcAccessing, rcPath, rcReadonly );
@@ -265,14 +277,14 @@ KDBTextManagerVWritable ( const KDBManager *self, const char * path, va_list arg
 
 static
 rc_t CC
-KDBTextManagerRunPeriodicTasks ( const KDBManager *self )
+KTextManagerRunPeriodicTasks ( const KDBManager *self )
 {
     return 0;
 }
 
 static
 int CC
-KDBTextManagerPathTypeVP( const KDBManager * bself, const VPath * path )
+KTextManagerPathTypeVP( const KDBManager * bself, const VPath * path )
 {
     CAST();
 
@@ -291,7 +303,7 @@ KDBTextManagerPathTypeVP( const KDBManager * bself, const VPath * path )
 
 static
 int CC
-KDBTextManagerVPathType ( const KDBManager * bself, const char *fmt, va_list args )
+KTextManagerVPathType ( const KDBManager * bself, const char *fmt, va_list args )
 {
     CAST();
 
@@ -303,14 +315,14 @@ KDBTextManagerVPathType ( const KDBManager * bself, const char *fmt, va_list arg
 
 static
 int CC
-KDBTextManagerVPathTypeUnreliable ( const KDBManager * self, const char *path, va_list args )
+KTextManagerVPathTypeUnreliable ( const KDBManager * self, const char *path, va_list args )
 {
-    return KDBTextManagerVPathType( self, path, args );
+    return KTextManagerVPathType( self, path, args );
 }
 
 static
 rc_t CC
-KDBTextManagerVOpenDBRead ( const KDBManager *bself, const KDatabase **p_db, const char *fmt, va_list args )
+KTextManagerVOpenDBRead ( const KDBManager *bself, const KDatabase **p_db, const char *fmt, va_list args )
 {
     CAST();
 
@@ -321,11 +333,41 @@ KDBTextManagerVOpenDBRead ( const KDBManager *bself, const KDatabase **p_db, con
     const Database * db = self -> getRootDatabase();
     if (db && db -> getName() == path )
     {
+        rc_t rc = KDatabaseAddRef( (const KDatabase *)db );
+        if ( rc != 0 )
+        {
+            return rc;
+        }
         *p_db = (const KDatabase *)db;
         return 0;
     }
     return SILENT_RC (rcDB, rcMgr, rcOpening, rcType, rcInvalid);
 }
+
+static
+rc_t CC
+KTextManagerVOpenTableRead ( const KDBManager *bself, const KTable **p_tbl, const char *fmt, va_list args )
+{
+    CAST();
+
+    string path;
+    PrintToString( fmt, args, path );
+
+    // TODO: non-root tables?
+    const Table * tbl= self -> getRootTable();
+    if (tbl && tbl -> getName() == path )
+    {
+        rc_t rc = KTableAddRef( (const KTable *)tbl );
+        if ( rc != 0 )
+        {
+            return rc;
+        }
+        *p_tbl = (const KTable *)tbl;
+        return 0;
+    }
+    return SILENT_RC (rcDB, rcMgr, rcOpening, rcType, rcInvalid);
+}
+
 
 LIB_EXPORT
 rc_t CC
