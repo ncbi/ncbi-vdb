@@ -24,39 +24,62 @@
 *
 */
 
-typedef struct KTextDatabase KTextDatabase;
-#define KDATABASE_IMPL KTextDatabase
-#include "../libs/kdb/database-base.h"
+#include "path.hpp"
 
-#include <klib/json.h>
 #include <klib/rc.h>
+#include <klib/printf.h>
+#include <klib/data-buffer.h>
 
-#include <string>
-#include <map>
+#include <sstream>
 
-struct KTextDatabase
+using namespace std;
+using namespace KDBText;
+
+static
+rc_t
+PrintToString( const char *fmt, va_list args, string & out )
 {
-    KDatabaseBase dad;
-};
-
-namespace KDBText
-{
-    class Database : public KTextDatabase
+    KDataBuffer buf;
+    rc_t rc = KDataBufferMake ( & buf, 8, 0 );
+    if ( rc != 0 )
     {
-    public:
-        Database() {}
-        Database( const KJsonObject * p_json );
-        ~Database();
+        return false;
+    }
 
-        rc_t inflate( char * error, size_t error_size );
+    rc = KDataBufferVPrintf ( & buf, fmt, args );
+    if ( rc != 0 )
+    {
+        return rc;
+    }
 
-        const std::string & getName() const { return m_name; }
+    out = string((const char *) (buf . base)); // will be 0-terminated
 
-        const Database * getDatabase( const std::string & name ) const;
+    rc = KDataBufferWhack ( & buf );
+    if ( rc != 0 )
+    {
+        return rc;
+    }
 
-    private:
-        const KJsonObject * m_json = nullptr;
-        std::string m_name;
-        std::map<std::string, Database> m_subdbs;
-    };
+    return rc;
+}
+
+Path::Path( const std::string & p_source )
+{
+}
+
+Path::Path( const char *fmt, va_list args )
+{
+    string p;
+    PrintToString( fmt, args, p );
+
+    string word;
+    istringstream in( p );
+    while( getline(in, word, '/') )
+    {
+        push( word );
+    }
+}
+
+Path::Path( const struct VPath * path )
+{
 }

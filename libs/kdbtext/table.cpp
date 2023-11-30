@@ -26,8 +26,9 @@
 
 #include "table.hpp"
 
-using namespace KDBText;
+#include <klib/printf.h>
 
+using namespace KDBText;
 
 static rc_t KTextTableWhack ( KTable *self );
 // static bool CC KTextTableLocked ( const KTable *self );
@@ -97,6 +98,36 @@ Table::inflate( char * error, size_t error_size )
         {
             m_name = nameStr;
         }
+    }
+    else
+    {
+        string_printf ( error, error_size, nullptr, "Table name is missing" );
+        return SILENT_RC( rcDB, rcDatabase, rcCreating, rcParam, rcInvalid );
+    }
+
+    const KJsonValue * type = KJsonObjectGetMember ( m_json, "type" );
+    if ( type != nullptr )
+    {
+        const char * typeStr = nullptr;
+        rc = KJsonGetString ( type, & typeStr );
+        if ( rc == 0 )
+        {
+            if ( strcmp( "table", typeStr ) != 0 )
+            {
+                string_printf ( error, error_size, nullptr, "%s.type is not 'table'('%s')", m_name.c_str(), typeStr );
+                return SILENT_RC( rcDB, rcDatabase, rcCreating, rcParam, rcInvalid );
+            }
+        }
+        else
+        {
+            string_printf ( error, error_size, nullptr, "%s.type is invalid", m_name.c_str() );
+            return SILENT_RC( rcDB, rcDatabase, rcCreating, rcParam, rcInvalid );
+        }
+    }
+    else
+    {
+        string_printf ( error, error_size, nullptr, "%s.type is missing", m_name.c_str() );
+        return SILENT_RC( rcDB, rcDatabase, rcCreating, rcParam, rcInvalid );
     }
 
     return rc;

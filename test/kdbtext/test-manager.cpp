@@ -52,13 +52,23 @@ public:
     }
     ~KDBTextManager_Fixture()
     {
+        VPathRelease( m_path );
         KDBManagerRelease( m_mgr );
     }
     void Setup( const char * input = "{}" )
     {
         THROW_ON_RC( KDBManagerMakeText ( & m_mgr, input, m_error, sizeof m_error ) );
     }
+    void MakeVPath( const char * path )
+    {
+        VFSManager * vfs;
+        THROW_ON_RC( VFSManagerMake ( & vfs ) );
+        THROW_ON_RC( VFSManagerMakePath ( vfs, & m_path, "%s", path ) );
+        THROW_ON_RC( VFSManagerRelease( vfs ) );
+    }
+
     const KDBManager * m_mgr = nullptr;
+    VPath * m_path = nullptr;
     char m_error[1024];
 };
 
@@ -112,6 +122,12 @@ FIXTURE_TEST_CASE(KDBTextManager_Db_Exists, KDBTextManager_Fixture)
     Setup( R"({"type": "database", "name": "testdb"})" );
     REQUIRE( KDBManagerExists( m_mgr, kptDatabase, "%s", "testdb" ) );
 }
+FIXTURE_TEST_CASE(KDBTextManager_SubDb_Exists, KDBTextManager_Fixture)
+{
+    Setup( R"({"type": "database", "name": "testdb","databases":[ {"type": "database","name":"subdb1"} , {"type": "database","name":"subdb2"} ]})" );
+    REQUIRE( KDBManagerExists( m_mgr, kptDatabase, "%s", "testdb/db/subdb1" ) );
+    REQUIRE( KDBManagerExists( m_mgr, kptDatabase, "%s", "testdb/db/subdb2" ) );
+}
 
 FIXTURE_TEST_CASE(KDBTextManager_Writable_Found, KDBTextManager_Fixture)
 {   // for now, any path will be reported as readonly
@@ -119,15 +135,12 @@ FIXTURE_TEST_CASE(KDBTextManager_Writable_Found, KDBTextManager_Fixture)
     rc_t rc = KDBManagerWritable( m_mgr, "%s", "testdb" );
     REQUIRE_EQ( SILENT_RC( rcDB, rcPath, rcAccessing, rcPath, rcReadonly ), rc );
 }
-//TODO
-// FIXTURE_TEST_CASE(KDBTextManager_Writable_NotFound, KDBTextManager_Fixture)
-// {
-//     Setup( R"({"type": "database", "name": "testdb"})" );
-//     rc_t rc = KDBManagerWritable( m_mgr, "%s", "proddb" );
-//     REQUIRE_EQ( SILENT_RC( rcDB, rcPath, rcAccessing, rcPath, rcNotFound ), rc );
-// }
-
-//TODO: KDBManagerWritable on internal objects, to test interpretation of the path
+FIXTURE_TEST_CASE(KDBTextManager_Writable_NotFound, KDBTextManager_Fixture)
+{
+    Setup( R"({"type": "database", "name": "testdb"})" );
+    rc_t rc = KDBManagerWritable( m_mgr, "%s", "proddb" );
+    REQUIRE_EQ( SILENT_RC( rcDB, rcPath, rcAccessing, rcPath, rcNotFound ), rc );
+}
 
 FIXTURE_TEST_CASE(KDBTextManager_RunPeriodicTasks, KDBTextManager_Fixture)
 {
@@ -138,30 +151,14 @@ FIXTURE_TEST_CASE(KDBTextManager_RunPeriodicTasks, KDBTextManager_Fixture)
 FIXTURE_TEST_CASE(KDBTextManager_PathTypeVP_Db, KDBTextManager_Fixture)
 {
     Setup( R"({"type": "database", "name": "testdb"})" );
-
-    VFSManager * vfs;
-    REQUIRE_RC( VFSManagerMake ( & vfs ) );
-
-    struct VPath * path;
-    REQUIRE_RC( VFSManagerMakePath ( vfs, & path, "%s", "testdb" ) );
-    REQUIRE_EQ( (int)kptDatabase, KDBManagerPathTypeVP( m_mgr, path ) );
-
-    REQUIRE_RC( VPathRelease( path ) );
-    REQUIRE_RC( VFSManagerRelease( vfs ) );
+    MakeVPath( "testdb");
+    REQUIRE_EQ( (int)kptDatabase, KDBManagerPathTypeVP( m_mgr, m_path ) );
 }
 FIXTURE_TEST_CASE(KDBTextManager_PathTypeVP_NotFound, KDBTextManager_Fixture)
 {
     Setup( R"({"type": "database", "name": "testdb"})" );
-
-    VFSManager * vfs;
-    REQUIRE_RC( VFSManagerMake ( & vfs ) );
-
-    struct VPath * path;
-    REQUIRE_RC( VFSManagerMakePath ( vfs, & path, "%s", "proddb" ) );
-    REQUIRE_EQ( (int)kptNotFound, KDBManagerPathTypeVP( m_mgr, path ) );
-
-    REQUIRE_RC( VPathRelease( path ) );
-    REQUIRE_RC( VFSManagerRelease( vfs ) );
+    MakeVPath( "proddb");
+    REQUIRE_EQ( (int)kptNotFound, KDBManagerPathTypeVP( m_mgr, m_path ) );
 }
 //TODO: KDBManagerPathTypeVP on internal objects, to test interpretation of the path
 
@@ -204,35 +201,44 @@ FIXTURE_TEST_CASE(KDBTextManager_OpenTableRead, KDBTextManager_Fixture)
 }
 //TODO: non-root tables
 
-#if 0
 FIXTURE_TEST_CASE(KDBTextManager_OpenTableReadVPath, KDBTextManager_Fixture)
 {
-    VFSManager * vfs;
-    REQUIRE_RC( VFSManagerMake ( & vfs ) );
-
-    struct VPath * path;
-    REQUIRE_RC( VFSManagerMakePath ( vfs, & path, "%s", "SRR000123" ) );
-
+    Setup( R"({"type": "table", "name": "tbl"})" );
+    MakeVPath( "tbl");
     const KTable * tbl = nullptr;
-    REQUIRE_RC( KDBManagerOpenTableReadVPath( m_mgr, & tbl, path ) );
+    REQUIRE_RC( KDBManagerOpenTableReadVPath( m_mgr, & tbl, m_path ) );
     REQUIRE_NOT_NULL( tbl );
     REQUIRE_RC( KTableRelease( tbl ) );
-
-    REQUIRE_RC( VPathRelease( path ) );
-    REQUIRE_RC( VFSManagerRelease( vfs ) );
 }
 
 FIXTURE_TEST_CASE(KDBTextManager_OpenColumnRead, KDBTextManager_Fixture)
 {
+    Setup( R"({"type": "table", "name": "SEQUENCE", "columns":[{"name":"qq"}]})" );
+
     const KColumn * col = nullptr;
-    rc_t rc = SILENT_RC( rcVFS,rcMgr,rcOpening,rcDirectory,rcNotFound );
-    REQUIRE_EQ( rc, KDBManagerOpenColumnRead( m_mgr, & col, "%s", "testdb/tbl/SEQUENCE/col/qq" ) );
-    REQUIRE_NULL( col );
+    REQUIRE_RC( KDBManagerOpenColumnRead( m_mgr, & col, "%s", "SEQUENCE/col/qq" ) );
+    REQUIRE_NOT_NULL( col );
+    REQUIRE_RC( KColumnRelease( col ) );
 }
 
-//KDBManagerVPathOpenLocalDBRead: see remote_open_test.cpp/kdbtest.cpp
-//KDBManagerVPathOpenRemoteDBRead
-#endif
+FIXTURE_TEST_CASE(KDBManager_VPathOpenLocalDBRead, KDBTextManager_Fixture)
+{
+    Setup( R"({"type": "database", "name": "testdb"})" );
+    MakeVPath( "testdb");
+    const KDatabase * db = nullptr;
+    REQUIRE_RC( KDBManagerVPathOpenLocalDBRead( m_mgr, & db, m_path ) );
+    REQUIRE_NOT_NULL( db );
+    REQUIRE_RC( KDatabaseRelease( db ) );
+}
+
+FIXTURE_TEST_CASE(KDBManager_VPathOpenRemoteDBRead, KDBTextManager_Fixture)
+{
+    Setup( R"({"type": "database", "name": "testdb"})" );
+    MakeVPath( "testdb");
+    const KDatabase * db = nullptr;
+    rc_t rc = KDBManagerVPathOpenRemoteDBRead( m_mgr, & db, m_path, nullptr );
+    REQUIRE_EQ( SILENT_RC( rcDB, rcMgr, rcOpening, rcType, rcInvalid ), rc );
+}
 
 //////////////////////////////////////////// Main
 extern "C"

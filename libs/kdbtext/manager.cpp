@@ -28,6 +28,7 @@
 
 #include "database.hpp"
 #include "table.hpp"
+#include "path.hpp"
 
 #include <kdb/database.h>
 #include <kdb/table.h>
@@ -65,11 +66,10 @@ static int CC KTextManagerVPathType ( const KDBManager * self, const char *path,
 static int CC KTextManagerVPathTypeUnreliable ( const KDBManager * self, const char *path, va_list args );
 static rc_t CC KTextManagerVOpenDBRead ( const KDBManager *self, const KDatabase **db, const char *path, va_list args );
 static rc_t CC KTextManagerVOpenTableRead ( const KDBManager *self, const KTable **tbl, const char *path, va_list args );
-
-// static rc_t CC KTextManagerOpenTableReadVPath(const KDBManager *self, const KTable **tbl, const struct VPath *path);
-// static rc_t CC KTextManagerVOpenColumnRead ( const KDBManager *self, const KColumn **col, const char *path, va_list args );
-// static rc_t CC KTextManagerVPathOpenLocalDBRead ( struct KDBManager const * self, struct KDatabase const ** p_db, struct VPath const * vpath );
-// static rc_t CC KTextManagerVPathOpenRemoteDBRead ( struct KDBManager const * self, struct KDatabase const ** p_db, struct VPath const * remote, struct VPath const * cache );
+static rc_t CC KTextManagerOpenTableReadVPath(const KDBManager *self, const KTable **tbl, const struct VPath *path);
+static rc_t CC KTextManagerVOpenColumnRead ( const KDBManager *self, const KColumn **col, const char *path, va_list args );
+static rc_t CC KTextManagerVPathOpenLocalDBRead ( struct KDBManager const * self, struct KDatabase const ** p_db, struct VPath const * vpath );
+static rc_t CC KTextManagerVPathOpenRemoteDBRead ( struct KDBManager const * self, struct KDatabase const ** p_db, struct VPath const * remote, struct VPath const * cache );
 
 static KDBManager_vt KTextManager_vt =
 {
@@ -85,10 +85,10 @@ static KDBManager_vt KTextManager_vt =
     KTextManagerVPathTypeUnreliable,
     KTextManagerVOpenDBRead,
     KTextManagerVOpenTableRead,
-    // KTextManagerOpenTableReadVPath,
-    // KTextManagerVOpenColumnRead,
-    // KTextManagerVPathOpenLocalDBRead,
-    // KTextManagerVPathOpenRemoteDBRead
+    KTextManagerOpenTableReadVPath,
+    KTextManagerVOpenColumnRead,
+    KTextManagerVPathOpenLocalDBRead,
+    KTextManagerVPathOpenRemoteDBRead
 };
 
 namespace KDBText
@@ -227,14 +227,14 @@ PrintToString( const char *fmt, va_list args, string & out )
 }
 
 
+
 static
 bool CC
 KTextManagerVExists ( const KDBManager *bself, uint32_t requested, const char *fmt, va_list args )
 {
     CAST();
 
-    string path;
-    PrintToString( fmt, args, path );
+    Path path( fmt, args );
 
     // TODO: non-root dbs and other objects (incl root tables)
     switch ( requested )
@@ -242,7 +242,40 @@ KTextManagerVExists ( const KDBManager *bself, uint32_t requested, const char *f
     case kptDatabase:
         {
             const Database * db = self -> getRootDatabase();
-            return db && db -> getName() == path;
+            do
+            {
+                if ( db && path.size() > 0 && db -> getName() == path.front() )
+                {
+                    path.pop();
+                    if ( path.empty() )
+                    {
+                        return true;
+                    }
+
+                    if ( string("db") == path.front() )
+                    {
+                        path.pop();
+                        if (  path.size() > 0 )
+                        {
+                            db = db -> getDatabase( path.front() );
+                        }
+                        else
+                        {
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            while ( path . size () > 0 );
+            return true;
         }
     default:
         return false;
@@ -259,8 +292,6 @@ KTextManagerVExists ( const KDBManager *bself, uint32_t requested, const char *f
     // case kptMetadata:
     //     break;
     // case kptPrereleaseTbl:
-    //     type = kptTable;
-    //     break;
     // default:
     //     return false;
     // }
@@ -269,10 +300,27 @@ KTextManagerVExists ( const KDBManager *bself, uint32_t requested, const char *f
 
 static
 rc_t CC
-KTextManagerVWritable ( const KDBManager *self, const char * path, va_list args )
+KTextManagerVWritable ( const KDBManager *bself, const char * fmt, va_list args )
 {
+    CAST();
+
+    string path;
+    PrintToString( fmt, args, path );
+
     //TODO: parse and resolve the path, if the object is valid return rcReadOnly, otherwise rcNotFound
-    return SILENT_RC ( rcDB, rcPath, rcAccessing, rcPath, rcReadonly );
+
+    const Database * db = self -> getRootDatabase();
+    if (db && db -> getName() == path )
+    {
+        return SILENT_RC ( rcDB, rcPath, rcAccessing, rcPath, rcReadonly );
+    }
+    const Table * tbl= self -> getRootTable();
+    if (tbl && tbl -> getName() == path )
+    {
+        return SILENT_RC ( rcDB, rcPath, rcAccessing, rcPath, rcReadonly );
+    }
+
+    return SILENT_RC ( rcDB, rcPath, rcAccessing, rcPath, rcNotFound );
 }
 
 static
@@ -368,6 +416,80 @@ KTextManagerVOpenTableRead ( const KDBManager *bself, const KTable **p_tbl, cons
     return SILENT_RC (rcDB, rcMgr, rcOpening, rcType, rcInvalid);
 }
 
+static
+rc_t CC
+KTextManagerOpenTableReadVPath(const KDBManager *bself, const KTable **p_tbl, const struct VPath *path)
+{
+    CAST();
+
+    // parse and resolve the path
+    const String * p;
+    rc_t rc = VPathMakeString ( path, &p );
+    if ( rc == 0 )
+    {
+        // TODO: non-root tables?
+        const Table * tbl= self -> getRootTable();
+        if (tbl && tbl -> getName() == string ( p -> addr, p -> size ) )
+        {
+            StringWhack ( p );
+            rc_t rc = KTableAddRef( (const KTable *)tbl );
+            if ( rc != 0 )
+            {
+                return rc;
+            }
+            *p_tbl = (const KTable *)tbl;
+            return 0;
+        }
+        StringWhack ( p );
+        return SILENT_RC (rcDB, rcMgr, rcOpening, rcType, rcInvalid);
+    }
+
+    return rc;
+}
+
+static
+rc_t CC
+KTextManagerVOpenColumnRead ( const KDBManager *self, const KColumn **col, const char *path, va_list args )
+{
+    return SILENT_RC (rcDB, rcMgr, rcOpening, rcType, rcInvalid);
+}
+
+static
+rc_t CC
+KTextManagerVPathOpenLocalDBRead ( const struct KDBManager * bself, struct KDatabase const ** p_db, struct VPath const * path )
+{
+    CAST();
+
+    // parse and resolve the path
+    const String * p;
+    rc_t rc = VPathMakeString ( path, &p );
+    if ( rc == 0 )
+    {
+        // TODO: non-root dbs
+        const Database * db = self -> getRootDatabase();
+        if ( db && db -> getName() == string( p -> addr, p -> size ) )
+        {
+            rc_t rc = KDatabaseAddRef( (const KDatabase *)db );
+            StringWhack ( p );
+            if ( rc != 0 )
+            {
+                return rc;
+            }
+            *p_db = (const KDatabase *)db;
+            return 0;
+        }
+        StringWhack ( p );
+        return SILENT_RC (rcDB, rcMgr, rcOpening, rcType, rcInvalid);
+    }
+    return rc;
+}
+
+static
+rc_t CC
+KTextManagerVPathOpenRemoteDBRead ( struct KDBManager const * self, struct KDatabase const ** p_db, struct VPath const * remote, struct VPath const * cache )
+{
+    return SILENT_RC (rcDB, rcMgr, rcOpening, rcType, rcInvalid);
+}
 
 LIB_EXPORT
 rc_t CC

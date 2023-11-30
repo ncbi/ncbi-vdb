@@ -26,6 +26,8 @@
 
 #include "database.hpp"
 
+#include <klib/printf.h>
+
 using namespace KDBText;
 
 static rc_t CC KTextDatabaseWhack ( KTextDatabase *self );
@@ -78,6 +80,13 @@ Database::~Database()
     KRefcountWhack ( & dad . refcount, "KDBText::Database" );
 }
 
+const Database *
+Database::getDatabase( const std::string & name ) const
+{
+    auto v = m_subdbs.find( name );
+    return v == m_subdbs.end() ? nullptr : & v->second;
+}
+
 rc_t
 Database::inflate( char * error, size_t error_size )
 {
@@ -91,6 +100,71 @@ Database::inflate( char * error, size_t error_size )
         if ( rc == 0 )
         {
             m_name = nameStr;
+        }
+    }
+    else
+    {
+        string_printf ( error, error_size, nullptr, "Database name is missing" );
+        return SILENT_RC( rcDB, rcDatabase, rcCreating, rcParam, rcInvalid );
+    }
+
+    const KJsonValue * type = KJsonObjectGetMember ( m_json, "type" );
+    if ( type != nullptr )
+    {
+        const char * typeStr = nullptr;
+        rc = KJsonGetString ( type, & typeStr );
+        if ( rc == 0 )
+        {
+            if ( strcmp( "database", typeStr ) != 0 )
+            {
+                string_printf ( error, error_size, nullptr, "%s.type is not 'database'('%s')", m_name.c_str(), typeStr );
+                return SILENT_RC( rcDB, rcDatabase, rcCreating, rcParam, rcInvalid );
+            }
+        }
+        else
+        {
+            string_printf ( error, error_size, nullptr, "%s.type is invalid", m_name.c_str() );
+            return SILENT_RC( rcDB, rcDatabase, rcCreating, rcParam, rcInvalid );
+        }
+    }
+    else
+    {
+        string_printf ( error, error_size, nullptr, "%s.type is missing", m_name.c_str() );
+        return SILENT_RC( rcDB, rcDatabase, rcCreating, rcParam, rcInvalid );
+    }
+
+    // nested DBs
+    const KJsonValue * dbs = KJsonObjectGetMember ( m_json, "databases" );
+    if ( dbs != nullptr )
+    {
+        const KJsonArray * dbarr = KJsonValueToArray ( dbs );
+        if ( dbarr == nullptr )
+        {
+            string_printf ( error, error_size, nullptr, "%s.databases is not an array", m_name.c_str() );
+            return SILENT_RC( rcDB, rcDatabase, rcCreating, rcParam, rcInvalid );
+        }
+
+        uint32_t len = KJsonArrayGetLength ( dbarr );
+        for ( uint32_t i = 0; i < len; ++i )
+        {
+            const KJsonValue * v = KJsonArrayGetElement ( dbarr, i );
+            assert( v != nullptr );
+            const KJsonObject * obj = KJsonValueToObject ( v );
+            if( obj != nullptr )
+            {
+                Database subdb( obj );
+                rc = subdb . inflate ( error, error_size );
+                if ( rc != 0 )
+                {
+                    return rc;
+                }
+                m_subdbs [ subdb.getName() ] = subdb;
+            }
+            else
+            {   // not an object
+                string_printf ( error, error_size, nullptr, "%s.databases[%i] is not an object", m_name.c_str(), i );
+                return SILENT_RC( rcDB, rcDatabase, rcCreating, rcParam, rcInvalid );
+            }
         }
     }
 

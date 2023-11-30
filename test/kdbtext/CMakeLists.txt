@@ -32,4 +32,6 @@
 
 add_compile_definitions( __mod__="test/kdbtext" )
 
+AddExecutableTest( Test_KDBText_Table "test-table" "${COMMON_LIBS_READ};kdbtext" )
+AddExecutableTest( Test_KDBText_Database "test-database" "${COMMON_LIBS_READ};kdbtext" )
 AddExecutableTest( Test_KDBText_Manager "test-manager" "${COMMON_LIBS_READ};kdbtext" )

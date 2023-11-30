@@ -24,39 +24,19 @@
 *
 */
 
-typedef struct KTextDatabase KTextDatabase;
-#define KDATABASE_IMPL KTextDatabase
-#include "../libs/kdb/database-base.h"
-
-#include <klib/json.h>
-#include <klib/rc.h>
-
 #include <string>
-#include <map>
+#include <queue>
 
-struct KTextDatabase
-{
-    KDatabaseBase dad;
-};
+struct VPath;
 
 namespace KDBText
 {
-    class Database : public KTextDatabase
+    // converts a string path with '/' as the separator into a vector of individual elements
+    class Path : public std::queue< std::string >
     {
     public:
-        Database() {}
-        Database( const KJsonObject * p_json );
-        ~Database();
-
-        rc_t inflate( char * error, size_t error_size );
-
-        const std::string & getName() const { return m_name; }
-
-        const Database * getDatabase( const std::string & name ) const;
-
-    private:
-        const KJsonObject * m_json = nullptr;
-        std::string m_name;
-        std::map<std::string, Database> m_subdbs;
+        Path( const std::string & p_source );
+        Path( const char *fmt, va_list args );
+        Path( const struct VPath * path );
     };
 }
