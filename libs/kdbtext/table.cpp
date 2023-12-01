@@ -84,6 +84,19 @@ Table::~Table()
     KRefcountWhack ( & dad . refcount, "KDBText::Table" );
 }
 
+const Column *
+Table::getColumn( const std::string & name ) const
+{
+    for( auto & c : m_columns )
+    {
+        if ( name == c.getName() )
+        {
+            return & c;
+        }
+    }
+    return nullptr;
+}
+
 rc_t
 Table::inflate( char * error, size_t error_size )
 {
@@ -102,7 +115,7 @@ Table::inflate( char * error, size_t error_size )
     else
     {
         string_printf ( error, error_size, nullptr, "Table name is missing" );
-        return SILENT_RC( rcDB, rcDatabase, rcCreating, rcParam, rcInvalid );
+        return SILENT_RC( rcDB, rcTable, rcCreating, rcParam, rcInvalid );
     }
 
     const KJsonValue * type = KJsonObjectGetMember ( m_json, "type" );
@@ -115,21 +128,64 @@ Table::inflate( char * error, size_t error_size )
             if ( strcmp( "table", typeStr ) != 0 )
             {
                 string_printf ( error, error_size, nullptr, "%s.type is not 'table'('%s')", m_name.c_str(), typeStr );
-                return SILENT_RC( rcDB, rcDatabase, rcCreating, rcParam, rcInvalid );
+                return SILENT_RC( rcDB, rcTable, rcCreating, rcParam, rcInvalid );
             }
         }
         else
         {
             string_printf ( error, error_size, nullptr, "%s.type is invalid", m_name.c_str() );
-            return SILENT_RC( rcDB, rcDatabase, rcCreating, rcParam, rcInvalid );
+            return SILENT_RC( rcDB, rcTable, rcCreating, rcParam, rcInvalid );
         }
     }
     else
     {
         string_printf ( error, error_size, nullptr, "%s.type is missing", m_name.c_str() );
-        return SILENT_RC( rcDB, rcDatabase, rcCreating, rcParam, rcInvalid );
+        return SILENT_RC( rcDB, rcTable, rcCreating, rcParam, rcInvalid );
     }
 
+    // Columns
+    const KJsonValue * dbs = KJsonObjectGetMember ( m_json, "columns" );
+    if ( dbs != nullptr )
+    {
+        const KJsonArray * colarr = KJsonValueToArray ( dbs );
+        if ( colarr == nullptr )
+        {
+            string_printf ( error, error_size, nullptr, "%s.columns is not an array", m_name.c_str() );
+            return SILENT_RC( rcDB, rcTable, rcCreating, rcParam, rcInvalid );
+        }
+
+        uint32_t len = KJsonArrayGetLength ( colarr );
+        for ( uint32_t i = 0; i < len; ++i )
+        {
+            const KJsonValue * v = KJsonArrayGetElement ( colarr, i );
+            assert( v != nullptr );
+            const KJsonObject * obj = KJsonValueToObject ( v );
+            if( obj != nullptr )
+            {
+                Column col( obj );
+                rc = col . inflate ( error, error_size );
+                if ( rc != 0 )
+                {
+                    return rc;
+                }
+
+                for( auto & d : m_columns )
+                {
+                    if ( col.getName() == d.getName() )
+                    {
+                        string_printf ( error, error_size, nullptr, "Duplicate column: %s", col.getName().c_str() );
+                        return SILENT_RC( rcDB, rcTable, rcCreating, rcParam, rcInvalid );
+                    }
+                }
+                m_columns .push_back( col );
+            }
+            else
+            {   // not an object
+                string_printf ( error, error_size, nullptr, "%s.columns[%i] is not an object", m_name.c_str(), i );
+                return SILENT_RC( rcDB, rcTable, rcCreating, rcParam, rcInvalid );
+            }
+        }
+    }
     return rc;
 }
 

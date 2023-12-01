@@ -26,10 +26,13 @@
 
 #include "../libs/kdb/table-base.h"
 
+#include "column.hpp"
+
 #include <klib/json.h>
 #include <klib/rc.h>
 
 #include <string>
+#include <vector>
 
 typedef struct KTextTable KTextTable;
 struct KTextTable
@@ -49,8 +52,11 @@ namespace KDBText
 
         const std::string & getName() const { return m_name; }
 
+        const Column * getColumn( const std::string& name ) const;
+
     private:
         const KJsonObject * m_json = nullptr;
         std::string m_name;
+        std::vector<Column> m_columns;
     };
 }

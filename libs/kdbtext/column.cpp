@@ -24,39 +24,66 @@
 *
 */
 
-typedef struct KTextDatabase KTextDatabase;
-#define KDATABASE_IMPL KTextDatabase
-#include "../libs/kdb/database-base.h"
+#include "column.hpp"
 
-#include <klib/json.h>
-#include <klib/rc.h>
+#include <klib/printf.h>
 
-#include <string>
-#include <vector>
+using namespace KDBText;
 
-struct KTextDatabase
+static rc_t KTextColumnWhack ( KColumn *self );
+
+static KColumn_vt KTextColumn_vt =
 {
-    KDatabaseBase dad;
+    KTextColumnWhack,
+    KColumnBaseAddRef,
+    KColumnBaseRelease,
 };
 
-namespace KDBText
+#define CAST() assert( bself->vt == &KTextColumn_vt ); Column * self = (Column *)bself
+
+Column::Column( const KJsonObject * p_json ) : m_json ( p_json )
 {
-    class Database : public KTextDatabase
+    dad . vt = & KTextColumn_vt;
+    KRefcountInit ( & dad . refcount, 1, "KDBText::Column", "ctor", "db" );
+}
+
+Column::~Column()
+{
+    KRefcountWhack ( & dad . refcount, "KDBText::Column" );
+}
+
+rc_t
+Column::inflate( char * error, size_t error_size )
+{
+    rc_t rc = 0;
+
+    const KJsonValue * name = KJsonObjectGetMember ( m_json, "name" );
+    if ( name != nullptr )
     {
-    public:
-        Database() {}
-        Database( const KJsonObject * p_json );
-        ~Database();
+        const char * nameStr = nullptr;
+        rc = KJsonGetString ( name, & nameStr );
+        if ( rc == 0 )
+        {
+            m_name = nameStr;
+        }
+    }
+    else
+    {
+        string_printf ( error, error_size, nullptr, "Column name is missing" );
+        return SILENT_RC( rcDB, rcDatabase, rcCreating, rcParam, rcInvalid );
+    }
 
-        rc_t inflate( char * error, size_t error_size );
+    //TBD
 
-        const std::string & getName() const { return m_name; }
+    return rc;
+}
 
-        const Database * getDatabase( const std::string & name ) const;
+static
+rc_t CC
+KTextColumnWhack ( KColumn *bself )
+{
+    CAST();
 
-    private:
-        const KJsonObject * m_json = nullptr;
-        std::string m_name;
-        std::vector<Database> m_subdbs;
-    };
+    delete reinterpret_cast<Column*>( self );
+    return 0;
 }

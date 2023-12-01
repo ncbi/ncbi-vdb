@@ -108,6 +108,36 @@ FIXTURE_TEST_CASE(KDBTextTable_Make_Flat, KDBTextTable_Fixture)
     REQUIRE_EQ( string("testtbl"), m_tbl -> getName() );
 }
 
+FIXTURE_TEST_CASE(KDBTextTable_Make_ColumnsNoArray, KDBTextTable_Fixture)
+{
+    Setup(R"({"type": "table", "name": "testtbl","columns":{"name":"col1"}})");
+    REQUIRE_RC_FAIL( m_tbl -> inflate( m_error, sizeof m_error ) );
+    //cout << m_error << endl;
+}
+FIXTURE_TEST_CASE(KDBTextTable_Make_ColumnDuplicate, KDBTextTable_Fixture)
+{
+    Setup(R"({"type": "table", "name": "testtbl","columns":[{"name":"col1"},{"name":"col1"}]})");
+    REQUIRE_RC_FAIL( m_tbl -> inflate( m_error, sizeof m_error ) );
+    //cout << m_error << endl;
+}
+FIXTURE_TEST_CASE(KDBTextTable_Make_ColumnNotObject, KDBTextTable_Fixture)
+{
+    Setup(R"({"type": "table", "name": "testtbl","columns":["1"]})");
+    REQUIRE_RC_FAIL( m_tbl -> inflate( m_error, sizeof m_error ) );
+    //cout << m_error << endl;
+}
+
+FIXTURE_TEST_CASE(KDBTextTable_Make_WithColumns, KDBTextTable_Fixture)
+{
+    Setup(R"({"type": "table", "name": "testtbl","columns":[{"name":"col1"},{"name":"col2"}]})");
+
+    REQUIRE_RC( m_tbl -> inflate( m_error, sizeof m_error ) );
+
+    REQUIRE_NULL( m_tbl -> getColumn( "nocol" ) );
+    REQUIRE_NOT_NULL( m_tbl -> getColumn( "col1" ) );
+    REQUIRE_NOT_NULL( m_tbl -> getColumn( "col2" ) );
+}
+
 //TODO: columns, metadata, indexes
 
 //////////////////////////////////////////// Main

@@ -28,6 +28,8 @@
 
 #include <klib/printf.h>
 
+#include <algorithm>
+
 using namespace KDBText;
 
 static rc_t CC KTextDatabaseWhack ( KTextDatabase *self );
@@ -83,8 +85,14 @@ Database::~Database()
 const Database *
 Database::getDatabase( const std::string & name ) const
 {
-    auto v = m_subdbs.find( name );
-    return v == m_subdbs.end() ? nullptr : & v->second;
+    for( auto & d : m_subdbs )
+    {
+        if ( name == d.getName() )
+        {
+            return & d;
+        }
+    }
+    return nullptr;
 }
 
 rc_t
@@ -158,7 +166,16 @@ Database::inflate( char * error, size_t error_size )
                 {
                     return rc;
                 }
-                m_subdbs [ subdb.getName() ] = subdb;
+
+                for( auto & d : m_subdbs )
+                {
+                    if ( subdb.getName() == d.getName() )
+                    {
+                        string_printf ( error, error_size, nullptr, "Duplicate nested db: %s", subdb.getName().c_str() );
+                        return SILENT_RC( rcDB, rcDatabase, rcCreating, rcParam, rcInvalid );
+                    }
+                }
+                m_subdbs .push_back( subdb );
             }
             else
             {   // not an object

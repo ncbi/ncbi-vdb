@@ -24,39 +24,33 @@
 *
 */
 
-typedef struct KTextDatabase KTextDatabase;
-#define KDATABASE_IMPL KTextDatabase
-#include "../libs/kdb/database-base.h"
+#include "../libs/kdb/column-base.h"
 
 #include <klib/json.h>
 #include <klib/rc.h>
 
 #include <string>
-#include <vector>
 
-struct KTextDatabase
+typedef struct KTextColumn KTextColumn;
+struct KTextColumn
 {
-    KDatabaseBase dad;
+    KColumn dad;
 };
 
 namespace KDBText
 {
-    class Database : public KTextDatabase
+    class Column : public KTextColumn
     {
     public:
-        Database() {}
-        Database( const KJsonObject * p_json );
-        ~Database();
+        Column( const KJsonObject * p_json );
+        ~Column();
 
         rc_t inflate( char * error, size_t error_size );
 
         const std::string & getName() const { return m_name; }
 
-        const Database * getDatabase( const std::string & name ) const;
-
     private:
         const KJsonObject * m_json = nullptr;
         std::string m_name;
-        std::vector<Database> m_subdbs;
     };
 }

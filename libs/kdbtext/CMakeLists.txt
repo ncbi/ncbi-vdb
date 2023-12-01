@@ -26,6 +26,7 @@ set( KDBTEXT_SRC
     manager.cpp
     database.cpp
     table.cpp
+    column.cpp
     path.cpp
 )
 

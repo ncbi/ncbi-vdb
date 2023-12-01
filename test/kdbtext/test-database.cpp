@@ -129,6 +129,13 @@ FIXTURE_TEST_CASE(KDBTextDatabase_Make_Nested_ElementBad, KDBTextDatabase_Fixtur
     REQUIRE_RC_FAIL( m_db -> inflate( m_error, sizeof m_error ) );
     //cout << m_error << endl;
 }
+FIXTURE_TEST_CASE(KDBTextDatabase_Make_Nested_Duplicate, KDBTextDatabase_Fixture)
+{
+    Setup( R"({"type": "database", "name": "testdb","databases":[ {"type": "database", "name":"subdb1"} , {"type": "database", "name":"subdb1"} ]})" );
+
+    REQUIRE_RC_FAIL( m_db -> inflate( m_error, sizeof m_error ) );
+    //cout << m_error << endl;
+}
 
 FIXTURE_TEST_CASE(KDBTextDatabase_Make_Nested, KDBTextDatabase_Fixture)
 {
