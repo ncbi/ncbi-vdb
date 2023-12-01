@@ -40,6 +40,7 @@ set( VDB_LIB_CMN_TARGETS
     kq
     kfc
     schema
+    kdb
 )
 if ( HAVE_MBEDTLS_F )
     message("Using mbedtls installed in the system")
@@ -59,7 +60,6 @@ set( VDB_LIB_RD_TARGETS
     sradb
     vdb-blast
     vdb
-    kdb
     axf
     sraxf
     wgsxf
@@ -71,7 +71,6 @@ set( VDB_LIB_RDWR_TARGETS
     align-writer
     wsradb
     wvdb
-    wkdb
     waxf
     wsraxf
     wwgsxf

@@ -22,7 +22,7 @@
 #
 # ===========================================================================
 
-set( KDB_CMN
+set( KDB_SRC
     btree
 #    rowset
 #    rowset-simple
@@ -101,16 +101,6 @@ set( KDB_CMN
     wtable
 )
 
-set( KDB_SRC
-    ${KDB_CMN}
-)
-
-set( WKDB_SRC
-    ${KDB_CMN}
-)
-
-
 GenerateStaticLibs( kdb "${KDB_SRC}" )
-GenerateStaticLibs( wkdb "${WKDB_SRC}" )
 
 add_compile_definitions (__mod__="libs/kdb")
