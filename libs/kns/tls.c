@@ -68,6 +68,8 @@ struct KTLSStream;
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/error.h>
 
+#include "../klib/int_checks-priv.h"
+
 #if WINDOWS
 #define IGNORE_ALL_CERTS_ALLOWED 1
 #endif
@@ -607,12 +609,27 @@ static int set_threshold ( const KConfig * kfg ) {
     int64_t threshold = 0;
 
     const char * env = NULL;
+#ifdef WINDOWS
+    char env_buf[64];
+#endif
 
     rc_t rc = KConfigReadI64 ( kfg, "/tls/NCBI_VDB_TLS", & threshold );
     if ( rc == 0 )
         set = true;
 
+#ifdef WINDOWS
+    {
+        size_t buf_count = 0;
+        errno_t err = getenv_s ( & buf_count, env_buf, sizeof(env_buf), "NCBI_VDB_TLS" );
+        if ( !err && buf_count > 0 )
+        {
+            assert ( buf_count < sizeof(env_buf) );
+            env = env_buf;
+        }
+    }
+#else
     env = getenv ( "NCBI_VDB_TLS" );
+#endif
 
     if ( env != NULL ) {
         int NCBI_VDB_TLS = 0;
@@ -803,10 +820,21 @@ rc_t CC KTLSStreamRead ( const KTLSStream * cself,
     KTLSStream * self = ( KTLSStream * ) cself;
 
     if (SILENCE_READING_MSG < 0) {
+#ifdef WINDOWS
+        {
+            size_t buf_count = 0;
+            errno_t err = getenv_s ( & buf_count, NULL, 0, "NCBI_VDB_SILENCE_MBEDTLS_READ" );
+            if ( !err && buf_count > 0 )
+                SILENCE_READING_MSG = 1;
+            else
+                SILENCE_READING_MSG = 0;
+        }
+#else
         if (getenv("NCBI_VDB_SILENCE_MBEDTLS_READ") != NULL)
             SILENCE_READING_MSG = 1;
         else
             SILENCE_READING_MSG = 0;
+#endif
     }
 
     assert(self);
@@ -832,7 +860,19 @@ rc_t CC KTLSStreamRead ( const KTLSStream * cself,
         ret = mbedtls_ssl_read( &self -> ssl, buffer, bsize );
 
         if (!inited) { /* simulate mbedtls read timeout */
+#ifdef WINDOWS
+            const char * v = NULL;
+            char v_buf[64];
+            size_t buf_count = 0;
+            errno_t err = getenv_s ( & buf_count, v_buf, sizeof(v_buf), "NCBI_VDB_ERR_MBEDTLS_READ" );
+            if ( ! err && buf_count > 0 )
+            {
+                assert ( buf_count < sizeof (v_buf) );
+                v = v_buf;
+            }
+#else
             const char * v = getenv("NCBI_VDB_ERR_MBEDTLS_READ");
+#endif
             if (v != NULL) {
                 m = atoi(v);
                 if (m < 0)
@@ -1163,7 +1203,8 @@ rc_t KTLSGlobalsSetupOwnCert(KTLSGlobals * tlsg,
         else {
             size_t len = tlsg->clicert.subject.val.len;
             String subject;
-            StringInit(&subject, (char*)tlsg->clicert.subject.val.p, len, len);
+            assert ( FITS_INTO_INT32 ( len ) );
+            StringInit(&subject, (char*)tlsg->clicert.subject.val.p, len, (uint32_t)len);
             STATUS(STAT_QA, "Setting '%S' client certificate", &subject);
             tlsg->clicert_was_set = true;
         }
@@ -1264,7 +1305,19 @@ rc_t ktls_handshake ( KTLSStream *self )
     ret = mbedtls_ssl_handshake( &self -> ssl );
 
     if (!inited) { /* simulate mbedtls handshake timeout */
+#ifdef WINDOWS
+        const char * v = NULL;
+        char v_buf[64];
+        size_t buf_count = 0;
+        errno_t err = getenv_s ( & buf_count, v_buf, sizeof(v_buf), "NCBI_VDB_ERR_MBEDTLS_HANDSHAKE" );
+        if ( ! err && buf_count > 0 )
+        {
+            assert ( buf_count < sizeof(v_buf) );
+            v = v_buf;
+        }
+#else
         const char * v = getenv("NCBI_VDB_ERR_MBEDTLS_HANDSHAKE");
+#endif
         if (v != NULL) {
             m = atoi(v);
             if (m < 0)
@@ -1519,17 +1572,17 @@ LIB_EXPORT rc_t CC KTLSStreamVerifyCACert ( const KTLSStream * self )
        if ( flags != 0 )
        {
            char buf [ 4096 ];
-           rc_t rc = RC ( rcKrypto, rcToken, rcValidating, rcEncryption, rcFailed );
+           rc_t rc2 = RC ( rcKrypto, rcToken, rcValidating, rcEncryption, rcFailed );
 
            mbedtls_x509_crt_verify_info ( buf, sizeof( buf ), "  ! ", flags );
 
-           PLOGERR ( klogSys, ( klogSys, rc
+           PLOGERR ( klogSys, ( klogSys, rc2
                                 , "mbedtls_ssl_get_verify_result returned $(flags) ( $(info) )"
                                 , "flags=0x%X,info=%s"
                                 , flags
                                 , buf
                          ) );
-           return rc;
+           return rc2;
        }
    }
 

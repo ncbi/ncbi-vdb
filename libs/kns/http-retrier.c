@@ -43,6 +43,7 @@ typedef struct KHttpFile KHttpFile;
 #include <os-native.h>
 
 #include "mgr-priv.h"
+#include "../klib/int_checks-priv.h"
 
 struct HttpRetrySchedule
 {
@@ -116,7 +117,8 @@ rc_t HttpRetryCodesConfig( HttpRetrySchedule** self, uint16_t code, const String
         return RC ( rcNS, rcData, rcCreating, rcMemory, rcExhausted );
     }
     (*self) -> code = code;
-    (*self) -> max_retries = retryCount;
+    assert ( FITS_INTO_INT8 ( retryCount ) );
+    (*self) -> max_retries = (uint8_t)retryCount;
     (*self) -> open_ended = false;
     
     {   /* populate sleep_before_retry and open_ended */
@@ -145,11 +147,13 @@ rc_t HttpRetryCodesConfig( HttpRetrySchedule** self, uint16_t code, const String
             {
                 if ( ! in_number ) 
                 {   /* first digit of a new number */
-                    cur_value = ch - '0';
+                    assert ( FITS_INTO_INT16 ( ch - '0' ) );
+                    cur_value = (uint16_t)(ch - '0');
                 }
                 else
                 {
-                    cur_value = cur_value * 10 + ch - '0';
+                    assert ( FITS_INTO_INT16 ( cur_value * 10 + ch - '0' ) );
+                    cur_value = (uint16_t)(cur_value * 10 + ch - '0');
                 }
                 in_number = true;
             }
@@ -206,7 +210,7 @@ rc_t HttpRetrySpecsFromConfig ( HttpRetrySpecs* self, const KConfigNode* node )
     bool has4xx = false;
     bool has5xx = false;
     KNamelist * names;
-    uint32_t nameCount;
+    uint32_t nameCount = 0;
     rc_t rc = KConfigNodeListChildren ( node, & names );
     if ( rc == 0 )
     {   /* count 4xx and 5xx */
@@ -260,7 +264,8 @@ rc_t HttpRetrySpecsFromConfig ( HttpRetrySpecs* self, const KConfigNode* node )
         rc_t rc2;
         uint32_t i;
         uint32_t cur = 0;
-        self -> count = total;
+        assert ( FITS_INTO_INT8 ( total ) );
+        self -> count = (uint8_t)total;
         self -> codes = (HttpRetrySchedule**) calloc ( self -> count, sizeof * self -> codes );
         for ( i = 0; i < nameCount; ++ i )
         {
@@ -461,7 +466,8 @@ bool KHttpRetrierWait ( KHttpRetrier * self, uint32_t status )
         uint8_t max_retries;
         const uint16_t * sleep_before_retry;
         bool open_ended;
-        if ( ! HttpGetRetryCodes ( & self -> kns -> retry_specs, status, & max_retries, & sleep_before_retry, & open_ended ) )
+        assert ( FITS_INTO_INT16 ( status ) );
+        if ( ! HttpGetRetryCodes ( & self -> kns -> retry_specs, (uint16_t)status, & max_retries, & sleep_before_retry, & open_ended ) )
         {
             return false;
         }

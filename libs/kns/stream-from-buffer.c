@@ -37,6 +37,8 @@ typedef struct KBufferStream KBufferStream;
     #define rcStream rcFile
 #endif
 
+#include "../klib/int_checks-priv.h"
+
 struct KBufferStream {
     KStream dad;
     String buffer;
@@ -80,9 +82,11 @@ rc_t CC KBufferStreamRead ( const KBufferStream * self, void * buffer,
 
     * num_read = string_copy ( buffer, bsize, src -> addr, src -> size );
 
+    assert ( FITS_INTO_INT32 ( * num_read ) );
+
     src -> addr += * num_read;
     src -> size -= * num_read;
-    src -> len  -= * num_read;
+    src -> len  -= (uint32_t) (* num_read);
 
     return 0;
 }
@@ -144,7 +148,8 @@ LIB_EXPORT rc_t CC KStreamMakeFromBuffer ( KStream ** self, const char * buffer,
     rc = KStreamInit ( & obj -> dad, ( const KStream_vt* ) & vtKBufferStream,
         "KBufferStream", "KBufferStream", true, false );
     if ( rc == 0 ) {
-        StringInit ( & obj -> buffer, buffer, size, size );
+        assert ( FITS_INTO_INT32 ( size ) );
+        StringInit ( & obj -> buffer, buffer, size, (uint32_t)size );
         * self = & obj -> dad;
     }
     else {

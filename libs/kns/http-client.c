@@ -55,6 +55,8 @@ typedef struct KClientHttpStream KClientHttpStream;
 
 #include <ctype.h>
 
+#include "../klib/int_checks-priv.h"
+
 #if _DEBUGGING && 0
 #include <stdio.h>
 #define TRACE( x, ... ) \
@@ -326,7 +328,8 @@ struct KEndPointArgsIterator * KNSManagerMakeKEndPointArgsIterator (
 {
     struct KEndPointArgsIterator * i = calloc ( 1, sizeof * i );
 
-    KEndPointArgsIteratorMake ( i, self, hostname, port, cnt );
+    assert(FITS_INTO_INT16(port));
+    KEndPointArgsIteratorMake ( i, self, hostname, (uint16_t)port, cnt );
 
     return i;
 }
@@ -478,7 +481,15 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
     static bool INITED = false;
     static bool PRINT_STAT = false;
     if (!INITED) {
+#ifdef WINDOWS
+    {
+        size_t buf_size;
+        errno_t err = getenv_s ( & buf_size, NULL, 0, "NCBI_VDB_STS_SILENT" );
+        PRINT_STAT = ( err != 0 || buf_size == 0 );
+    }
+#else
         PRINT_STAT = getenv("NCBI_VDB_STS_SILENT") == NULL;
+#endif
         INITED = true;
     }
 
@@ -488,7 +499,8 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
     mgr = self -> mgr;
     assert ( mgr );
 
-    KEndPointArgsIteratorMake ( & it, mgr, aHostname, aPort, NULL );
+    assert ( FITS_INTO_INT16 ( aPort ) );
+    KEndPointArgsIteratorMake ( & it, mgr, aHostname, (uint16_t)aPort, NULL );
     while ( KEndPointArgsIteratorNext ( & it, & hostname, & port,
         & proxy_default_port, & proxy_ep, NULL, NULL ) )
     {
@@ -702,7 +714,7 @@ rc_t KClientHttpInit ( KClientHttp * http, const KDataBuffer *hostname_buffer, v
 
     if ( rc == 0 )
     {
-        const char * s;
+        const char * s = NULL;
         const char * ua = NULL;
         rc = KNSManagerGetUserAgent(&ua);
         if (rc == 0)
@@ -1506,7 +1518,7 @@ rc_t KClientHttpGetStatusLine ( KClientHttp *self, timeout_t *tm, String *msg, u
                     else
                     {
                         /* which version was returned? */
-                        * version = string_cmp ( "1.0", 3, buffer, sep - buffer, -1 ) == 0 ? 0x01000000 : 0x01010000;
+                        * version = string_cmp ( "1.0", 3, buffer, sep - buffer, (uint32_t)-1 ) == 0 ? 0x01000000 : 0x01010000;
 
                         /* move up to status code */
                         buffer = sep + 1;
@@ -1915,7 +1927,7 @@ rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
     const char *buffer, size_t len, const KDataBuffer *body, const char *url )
 {
     rc_t rc = 0;
-    size_t sent;
+    size_t sent = 0;
     timeout_t tm;
     timeout_t * ptm = NULL;
     uint32_t status;
@@ -2601,7 +2613,7 @@ LIB_EXPORT bool CC KClientHttpResultTestHeaderValue ( const KClientHttpResult *s
                     sep = end;
 
                 /* test for case-insensitive match of value */
-                if ( strcase_cmp ( start, sep - start, value, val_size, -1 ) == 0 )
+                if ( strcase_cmp ( start, sep - start, value, val_size, (uint32_t)-1 ) == 0 )
                 {
                     /* found it - delete p if malloc'd */
                     if ( p != buffer && p != NULL )

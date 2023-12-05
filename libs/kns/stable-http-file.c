@@ -57,9 +57,22 @@ void RetrierReset(const KStableHttpFile * cself, const char * func)
     static int logLevel = -1;
     if (logLevel == -1) {
         logLevel = 0;
+#ifdef WINDOWS
+        {
+            char * e = NULL;
+            size_t buf_count = 0;
+            errno_t err = _dupenv_s ( & e, & buf_count, ENV_VAR_LOG_HTTP_RETRY );
+            if ( !err && e != NULL )
+            {
+                logLevel = atoi(e);
+                free ( e );
+            }
+        }
+#else
         const char * e = getenv(ENV_VAR_LOG_HTTP_RETRY);
         if (e != NULL)
             logLevel = atoi(e);
+#endif
     }
 
     self->live = true;
@@ -91,9 +104,22 @@ rc_t RetrierReopenRemote(KStableHttpFile * self, bool neverBefore)
     int logLevel = -1;
     if (logLevel == -1) {
         logLevel = 0;
+#ifdef WINDOWS
+        {
+            char * e = NULL;
+            size_t buf_count = 0;
+            errno_t err = _dupenv_s ( & e, & buf_count, ENV_VAR_LOG_HTTP_RETRY );
+            if ( !err && e != NULL )
+            {
+                logLevel = atoi(e);
+                free ( e );
+            }
+        }
+#else
         const char * e = getenv(ENV_VAR_LOG_HTTP_RETRY);
         if (e != NULL)
             logLevel = atoi(e);
+#endif
     }
 
     KFileRelease(self->file);
@@ -257,9 +283,22 @@ rc_t RetrierAgain(const KStableHttpFile * cself,
         static int logLevel = -1;
         if (logLevel == -1) {
             logLevel = 0;
+#ifdef WINDOWS
+            {
+                char * e = NULL;
+                size_t buf_count = 0;
+                errno_t err = _dupenv_s ( & e, & buf_count, ENV_VAR_LOG_HTTP_RETRY );
+                if ( !err && e != NULL )
+                {
+                    logLevel = atoi(e);
+                    free ( e );
+                }
+            }
+#else
             const char * e = getenv(ENV_VAR_LOG_HTTP_RETRY);
             if (e != NULL)
                 logLevel = atoi(e);
+#endif
         }
         if (logLevel > 1 || lvl > 0) {
             switch (self->_state) {
@@ -609,6 +648,22 @@ rc_t KNSManagerVMakeHttpFileInt(const KNSManager *self,
                 if (rc == 0) {
                     static int sReliable = eUninitialized;
                     if (sReliable == eUninitialized) {
+#ifdef WINDOWS
+                    {
+                        char * e = NULL;
+                        size_t buf_count = 0;
+                        errno_t err = _dupenv_s ( & e, & buf_count, "NCBI_VDB_RELIABLE" );
+                        if (err || e == NULL)
+                            sReliable = eNotSet;
+                        else if (e != NULL && e[0] == '\0')
+                            sReliable = eUnreliable;
+                        else
+                            sReliable = eReliable;
+
+                        if (!err && e != NULL)
+                            free(e);
+                    }
+#else
                         const char * e = getenv("NCBI_VDB_RELIABLE");
                         if (e == NULL)
                             sReliable = eNotSet;
@@ -616,6 +671,7 @@ rc_t KNSManagerVMakeHttpFileInt(const KNSManager *self,
                             sReliable = eUnreliable;
                         else
                             sReliable = eReliable;
+#endif
                     }
                     if (sReliable == eUnreliable)
                         reliable = false;

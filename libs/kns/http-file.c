@@ -73,6 +73,8 @@
 #include <kfs/chunk-reader.h>
 #endif
 
+#include "../klib/int_checks-priv.h"
+
 #if _DEBUGGING && 0
 #include <stdio.h>
 #define TRACE( x, ... ) \
@@ -793,12 +795,12 @@ rc_t CC KHttpFileTimedRead ( const KHttpFile *self,
             rc = KHttpFileTimedReadLocked ( self, pos, buffer, bsize, num_read, tm, & http_status );
             if ( rc != 0 )
             {
-                rc_t rc2=KClientHttpReopen ( self -> http );
+                rc_t rc3=KClientHttpReopen ( self -> http );
                 DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ), ( "KHttpFileTimedRead: KHttpFileTimedReadLocked failed, reopening\n" ) );
-                if ( rc2 == 0 )
+                if ( rc3 == 0 )
                 {
-                    rc2 = KHttpFileTimedReadLocked ( self, pos, buffer, bsize, num_read, tm, & http_status );
-                    if ( rc2 == 0 )
+                    rc3 = KHttpFileTimedReadLocked ( self, pos, buffer, bsize, num_read, tm, & http_status );
+                    if ( rc3 == 0 )
                     {
                         DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ), ( "KHttpFileTimedRead: reopened successfully\n" ) );
                         rc= 0;
@@ -1332,15 +1334,15 @@ static rc_t KNSManagerVMakeHttpFileIntUnstableImpl( const KNSManager *self,
 
             if ( rc == 0 )
             {
-                KDataBuffer * buf = & f -> orig_url_buffer;
+                KDataBuffer * buf_f = & f -> orig_url_buffer;
                 KClientHttp *http;
-                rc = KNSManagerMakeClientHttpInt ( self, & http, buf, conn, vers,
+                rc = KNSManagerMakeClientHttpInt ( self, & http, buf_f, conn, vers,
                     self -> http_read_timeout, self -> http_write_timeout, & f -> block . host, f -> block . port, reliable, f -> block . tls );
                 if ( rc == 0 )
                 {
                     KClientHttpRequest *req;
 
-                    rc = KClientHttpMakeRequestInt ( http, & req, & f -> block, buf );
+                    rc = KClientHttpMakeRequestInt ( http, & req, & f -> block, buf_f );
                     if ( rc == 0 )
                     {
                         KClientHttpResult *rslt;
@@ -1377,7 +1379,7 @@ static rc_t KNSManagerVMakeHttpFileIntUnstableImpl( const KNSManager *self,
                                     "Failed to KClientHttpRequestHEAD("
                                     "'$(path)' ($(ip))) from '$(local)'",
                                     "path=%.*s,ip=%s,local=%s",
-                                    buf -> elem_count - 1, buf -> base,
+                                    buf_f -> elem_count - 1, buf_f -> base,
                                     ep . ip_address, local_ep . ip_address ) );
                             }
                         }
@@ -1452,15 +1454,15 @@ static rc_t KNSManagerVMakeHttpFileIntUnstableImpl( const KNSManager *self,
                                     KClientHttpGetLocalEndpoint  ( http, & local_ep );
                                     KClientHttpGetRemoteEndpoint ( http, & ep );
                                     if ( KNSManagerLogNcbiVdbNetError ( self ) ) {
-                                        char * base = buf -> base;
+                                        char * base = buf_f -> base;
                                         bool print = true;
-                                        char * query = string_chr ( base, buf -> elem_count, '?' );
+                                        char * query = string_chr ( base, buf_f -> elem_count, '?' );
                                         String vdbcache;
                                         CONST_STRING ( & vdbcache, ".vdbcache" );
-                                        if ( buf -> elem_count > vdbcache . size ) {
+                                        if ( buf_f -> elem_count > vdbcache . size ) {
                                             String ext;
                                             StringInit ( & ext,
-                                                    base + buf -> elem_count - vdbcache . size - 1,
+                                                    base + buf_f -> elem_count - vdbcache . size - 1,
                                                     vdbcache . size, vdbcache . len );
                                             if ( ext . addr [ ext . size ] == '\0' &&
                                                 StringEqual ( & vdbcache, & ext ) )
@@ -1468,9 +1470,10 @@ static rc_t KNSManagerVMakeHttpFileIntUnstableImpl( const KNSManager *self,
                                                 print = false;
                                             }
                                             else if ( query != NULL ) {
-                                                size_t size = query - base;
+                                                assert ( FITS_INTO_SIZE_T ( query - base ) );
+                                                size_t size2 = (size_t)(query - base);
                                                 StringInit ( & ext,
-                                                    base + size - vdbcache . size,
+                                                    base + size2 - vdbcache . size,
                                                     vdbcache . size, vdbcache . len );
                                                 if ( ext . addr [ ext . size ] == '?' &&
                                                     StringEqual ( & vdbcache, & ext ) )
@@ -1482,12 +1485,12 @@ static rc_t KNSManagerVMakeHttpFileIntUnstableImpl( const KNSManager *self,
                                         if ( ! reliable )
                                             print = false;
                                         if ( print ) {
-                                           assert ( buf );
+                                           assert ( buf_f );
                                            PLOGERR ( klogErr,
                                             ( klogErr, rc,
                                             "Failed to KNSManagerVMakeHttpFileInt('$(path)' ($(ip)))"
                                             " from '$(local)'", "path=%.*s,ip=%s,local=%s",
-                                            ( int ) buf -> elem_count, buf -> base,
+                                            ( int ) buf_f -> elem_count, buf_f -> base,
                                             ep . ip_address, local_ep . ip_address
                                             ) );
                                         }
@@ -1495,7 +1498,7 @@ static rc_t KNSManagerVMakeHttpFileIntUnstableImpl( const KNSManager *self,
                                     else
                                         DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ),
                                             ( "Failed to KNSManagerVMakeHttpFileInt('%.*s' (%s))\n",
-                                            ( int ) buf -> elem_count, buf -> base,
+                                            ( int ) buf_f -> elem_count, buf_f -> base,
                                             ep . ip_address ) );
                                 }
                             }

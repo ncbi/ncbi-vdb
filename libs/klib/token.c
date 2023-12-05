@@ -266,7 +266,7 @@ LIB_EXPORT rc_t CC KTokenToVersion ( const KToken *self, uint32_t *vp )
     case eMajMinRel:
         dot = string_rchr ( start, end - start, '.' ) + 1;
         assert ( dot > start && dot < end );
-        StringInit ( & str, dot, (size_t)( end - dot ), (uint32_t)( end - dot ) );
+        StringInit ( & str, dot, end - dot, (uint32_t)( end - dot ) );
         rc = StringConvertDecimal ( & str, & i, 16 );
         if ( rc != 0 )
             break;
@@ -281,7 +281,7 @@ LIB_EXPORT rc_t CC KTokenToVersion ( const KToken *self, uint32_t *vp )
             return RC ( rcVDB, rcToken, rcConverting, rcType, rcIncorrect );
         if ( ++ dot == end )
             return RC ( rcVDB, rcToken, rcConverting, rcType, rcIncorrect );
-        StringInit ( & str, dot, (size_t)( end - dot ), (uint32_t)( end - dot ) );
+        StringInit ( & str, dot, end - dot, (uint32_t)( end - dot ) );
         rc = StringConvertDecimal ( & str, & i, 8 );
         if ( rc != 0 )
             break;
@@ -292,7 +292,7 @@ LIB_EXPORT rc_t CC KTokenToVersion ( const KToken *self, uint32_t *vp )
         /* single-part versions */
     case eOctal:
     case eDecimal:
-        StringInit ( & str, start, (size_t)( end - start ), (uint32_t)( end - start ) );
+        StringInit ( & str, start, end - start, (uint32_t)( end - start ) );
         rc = StringConvertDecimal ( & str, & i, 8 );
         if ( rc != 0 )
             break;
