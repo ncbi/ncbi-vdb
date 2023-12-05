@@ -26,7 +26,6 @@
 
 #define KONST const
 #include <kdb/extern.h>
-#include <kdb/kdb-priv.h>
 
 #include "rdatabase.h"
 #include "kdb-cmn.h"
@@ -40,22 +39,9 @@
 #include <klib/debug.h> /* DBGMSG */
 #include <klib/log.h>
 #include <klib/namelist.h>
-#include <klib/printf.h>
 #include <klib/rc.h>
 
-#include <os-native.h>
-#include <sysalloc.h>
-
 #include <vfs/path.h>
-#include <vfs/manager.h>
-#include <vfs/manager-priv.h>
-
-#include <limits.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <assert.h>
-
 
 /*--------------------------------------------------------------------------
  * KDatabase
@@ -95,7 +81,7 @@ static KDatabase_vt KRDatabase_vt =
     KRDatabaseVOpenTableRead,
     KRDatabaseOpenMetadataRead,
     KRDatabaseVOpenIndexRead,
-    KRDatabaseListDB,
+   KRDatabaseListDB,
     KRDatabaseListTbl,
     KRDatabaseListIdx,
     KRDatabaseGetPath
@@ -205,7 +191,9 @@ KRDatabaseMakeVPath ( const KDatabase **dbp, const KDirectory *dir, const VPath*
     return rc;
 }
 
-static rc_t CC KRDatabaseVOpenDBRead ( const KDatabase *self, const KDatabase **dbp, const char *name, va_list args )
+static
+rc_t CC
+KRDatabaseVOpenDBRead ( const KDatabase *self, const KDatabase **dbp, const char *name, va_list args )
 {
     rc_t rc;
     char path [ 256 ];
@@ -259,7 +247,9 @@ KRDatabaseLocked ( const KDatabase *self )
  *
  *  "path" [ IN ] - NUL terminated path
  */
-static bool CC KRDatabaseVExists ( const KDatabase *self, uint32_t type, const char *name, va_list args )
+static
+bool CC
+KRDatabaseVExists ( const KDatabase *self, uint32_t type, const char *name, va_list args )
 {
     if ( self != NULL && name != NULL && name [ 0 ] != 0 )
     {
@@ -317,7 +307,9 @@ static bool CC KRDatabaseVExists ( const KDatabase *self, uint32_t type, const c
  *
  *  "name" [ IN ] - NUL terminated object name
  */
-static bool CC KRDatabaseIsAlias ( const KDatabase *self, uint32_t type, char *resolved, size_t rsize, const char *name )
+static
+bool CC
+KRDatabaseIsAlias ( const KDatabase *self, uint32_t type, char *resolved, size_t rsize, const char *name )
 {
     if ( self != NULL && name != NULL && name [ 0 ] != 0 )
     {
@@ -569,7 +561,7 @@ KRDatabaseVOpenTableRead ( const KDatabase *self,
                                 self -> dir, false, path, false, NULL );
         if ( rc == 0 )
         {
-            KTable *tbl = ( KTable* ) * tblp;
+            KRTable *tbl = ( KRTable* ) * tblp;
             tbl -> db = KDatabaseAttach ( self );
         }
     }
@@ -582,7 +574,7 @@ rc_t CC
 KRDatabaseOpenMetadataRead ( const KDatabase *self, const KMetadata **metap )
 {
     rc_t rc;
-    KMetadata *meta;
+    KRMetadata *meta;
 
     if ( metap == NULL )
         return RC ( rcDB, rcDatabase, rcOpening, rcParam, rcNull );
@@ -593,7 +585,7 @@ KRDatabaseOpenMetadataRead ( const KDatabase *self, const KMetadata **metap )
     if ( rc == 0 )
     {
         meta -> db = KDatabaseAttach ( self );
-        * metap = meta;
+        * metap = & meta -> dad;
     }
 
     return rc;

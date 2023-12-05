@@ -22,7 +22,7 @@
 #
 # ===========================================================================
 
-set( KDB_CMN
+set( KDB_SRC
     btree
 #    rowset
 #    rowset-simple
@@ -67,18 +67,18 @@ set( KDB_CMN
     wtrieidx-v1
     wtrieidx-v2
     wu64idx-v3
-)
 
-set( KDB_SRC
-    ${KDB_CMN}
-
-    rdbmgr
-    rdatabase
-    rtable
     rcolumn
     rcolumnblob
+
+    wcolumn
+    wcolumnblob
+
     rmeta
     rmetadatanode
+
+    wmeta
+    wmetadatanode
 
     rcoldata
     rcolidx
@@ -86,29 +86,21 @@ set( KDB_SRC
     rcolidx1
     rcolidx2
 
-)
-
-set( WKDB_SRC
-    ${KDB_CMN}
-
-    wdbmgr
-    wdatabase
-    wtable
-    wcolumn
-    wcolumnblob
-    wmeta
-    wmetadatanode
-
     wcoldata
     wcolidx
     wcolidx0
     wcolidx1
     wcolidx2
 
+    rdbmgr
+    rtable
+    rdatabase
+
+    wdbmgr
+    wdatabase
+    wtable
 )
 
-
 GenerateStaticLibs( kdb "${KDB_SRC}" )
-GenerateStaticLibs( wkdb "${WKDB_SRC}" )
 
 add_compile_definitions (__mod__="libs/kdb")

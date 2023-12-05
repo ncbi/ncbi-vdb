@@ -114,7 +114,7 @@ KWIndexWhack ( KWIndex *self )
     }
     else if ( self -> tbl != NULL )
     {
-        rc2 = KTableSever ( self -> tbl );
+        rc2 = KTableSever ( & self -> tbl -> dad );
         self -> tbl = NULL;
     }
     if ( rc == 0 )

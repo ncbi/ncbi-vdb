@@ -613,7 +613,7 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *self,
         rc = RC ( rcDB, rcMgr, rcOpening, rcPath, rcExcessive );
     else
     {
-        const KTable *tbl;
+        const KRTable *tbl;
         const KDirectory *dir;
         bool prerelease = false;
         const VPath *path2 = NULL;
@@ -687,7 +687,7 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *self,
             rc = KRTableMake ( & tbl, dir, p, self, prerelease );
             if ( rc == 0 )
             {
-                * tblp = tbl;
+                * tblp = & tbl -> dad;
 
                 if (aTblpath != tblpath)
                     free(tblpath);
@@ -827,7 +827,7 @@ KDBRManagerVOpenColumnRead ( const KDBManager *self, const KColumn **col, const 
  *
  *  "meta" [ OUT ] - return parameter for metadata
  */
-rc_t KDBRManagerOpenMetadataReadInt ( const KDBManager *self, KMetadata **metap, const KDirectory *wd, uint32_t rev, bool prerelease )
+rc_t KDBRManagerOpenMetadataReadInt ( const KDBManager *self, KRMetadata **metap, const KDirectory *wd, uint32_t rev, bool prerelease )
 {
     char metapath [ 4096 ];
     rc_t rc = ( prerelease == 1 ) ?
@@ -837,7 +837,7 @@ rc_t KDBRManagerOpenMetadataReadInt ( const KDBManager *self, KMetadata **metap,
           KDirectoryResolvePath ( wd, true, metapath, sizeof metapath, "md/r%.3u", rev ) );
     if ( rc == 0 )
     {
-        KMetadata *meta;
+        KRMetadata *meta;
 
         switch ( KDirectoryPathType ( wd, "%s", metapath ) )
         {
@@ -852,7 +852,7 @@ rc_t KDBRManagerOpenMetadataReadInt ( const KDBManager *self, KMetadata **metap,
             return RC ( rcDB, rcMgr, rcOpening, rcPath, rcIncorrect );
         }
 
-        rc = KMetadataMakeRead ( & meta, wd, metapath, rev );
+        rc = KRMetadataMakeRead ( & meta, wd, metapath, rev );
         if ( rc == 0 )
         {
             meta -> mgr = KDBManagerAttach ( self );

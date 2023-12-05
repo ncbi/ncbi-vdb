@@ -56,7 +56,7 @@ struct KWColumn
 {
     KColumn dad;
 
-    struct KTable *tbl;
+    struct KWTable *tbl;
     struct KDBManager *mgr;
     struct KDirectory *dir;
 

@@ -26,10 +26,10 @@
 
 #include <kdb/extern.h>
 
+#include "wdatabase.h"
+
 #include <kdb/namelist.h>
 
-#include "wdatabase.h"
-//#include "dbmgr.h"
 #include "wtable.h"
 #include "windex.h"
 #include "wkdb.h"
@@ -41,7 +41,6 @@
 #include <klib/log.h>
 #include <klib/rc.h>
 
-#include <kfs/directory.h>
 #include <kfs/impl.h>
 
 #include <vfs/path.h>
@@ -872,7 +871,8 @@ struct FilterData
 };
 
 static
-bool CC KDatabaseListFilter ( const KDirectory *dir, const char *name, void *data_ )
+bool CC
+KDatabaseListFilter ( const KDirectory *dir, const char *name, void *data_ )
 {
     struct FilterData * data = data_;
     return ( KDBManagerOpenPathTypeRead ( data->mgr, dir, name, NULL, data->type, NULL, false,
@@ -912,22 +912,26 @@ KWDatabaseListIdx ( struct KDatabase const *self, KNamelist **names )
     return KDirectoryList ( self -> dir, names, KDatabaseListFilter, &data, "idx" );
 }
 
-KCreateMode KDatabaseGetCmode ( const KDatabase *self)
+KCreateMode
+KDatabaseGetCmode ( const KDatabase *self)
 {
     return self -> cmode;
 }
-KCreateMode KDatabaseSetCmode ( KDatabase *self, KCreateMode new_val)
+KCreateMode
+KDatabaseSetCmode ( KDatabase *self, KCreateMode new_val)
 {
     KCreateMode old_val = self -> cmode;
     self -> cmode = new_val;
     return old_val;
 }
 
-KChecksum KDatabaseGetChecksum ( const KDatabase *self)
+KChecksum
+KDatabaseGetChecksum ( const KDatabase *self)
 {
     return self -> checksum;
 }
-KChecksum KDatabaseSetChecksum ( KDatabase *self, KChecksum new_val)
+KChecksum
+KDatabaseSetChecksum ( KDatabase *self, KChecksum new_val)
 {
     KCreateMode old_val = self -> checksum;
     self -> checksum = new_val;
@@ -936,9 +940,11 @@ KChecksum KDatabaseSetChecksum ( KDatabase *self, KChecksum new_val)
 
 /* ------------------------------------------------------------------------------------ */
 
-static rc_t copy_meta_for_one_table_in_db ( KDatabase *self, const KDatabase *src,
-                                      const char * node_path, const char * tbl_name,
-                                      bool src_node_has_to_exist ) {
+static
+rc_t
+copy_meta_for_one_table_in_db ( KDatabase *self, const KDatabase *src,
+                                const char * node_path, const char * tbl_name,
+                                bool src_node_has_to_exist ) {
     KTable * dst_tbl;
     rc_t rc = KDatabaseOpenTableUpdate( self, &dst_tbl, tbl_name );
     if ( 0 == rc ) {
@@ -953,8 +959,10 @@ static rc_t copy_meta_for_one_table_in_db ( KDatabase *self, const KDatabase *sr
     return rc;
 }
 
-static rc_t copy_meta_for_all_tables_in_db( KDatabase *self, const KDatabase *src,
-                                            const char * node_path, bool src_node_has_to_exist ) {
+static
+rc_t
+copy_meta_for_all_tables_in_db( KDatabase *self, const KDatabase *src,
+                                const char * node_path, bool src_node_has_to_exist ) {
     KNamelist * tables_1;
     rc_t rc = KDatabaseListTbl( self, &tables_1 );
     if ( 0 == rc ) {
@@ -982,7 +990,9 @@ static rc_t copy_meta_for_all_tables_in_db( KDatabase *self, const KDatabase *sr
     return rc;
 }
 
-static bool is_empty( const char * s ) {
+static
+bool
+is_empty( const char * s ) {
     bool res = ( NULL == s );
     if ( !res ) { res = ( 0 == s[ 0 ] ); }
     return res;
@@ -1060,11 +1070,11 @@ KWDatabaseVOpenTableRead ( const KDatabase *self, const KTable **tblp, const cha
         path, sizeof path, "tbl", 3, name, args );
     if ( rc == 0 )
     {
-        rc = KDBWManagerVOpenTableReadInt_noargs ( self -> mgr, tblp,
+        rc = KDBWManagerVOpenTableReadInt_noargs ( self -> mgr, (const KWTable**)tblp,
                                            self -> dir, false, path, NULL );
         if ( rc == 0 )
         {
-            KTable *tbl = ( KTable* ) * tblp;
+            KWTable *tbl = ( KWTable* ) * tblp;
             tbl -> db = KDatabaseAttach ( self );
         }
     }
@@ -1106,11 +1116,11 @@ LIB_EXPORT rc_t CC KDatabaseVOpenTableUpdate ( KDatabase *self,
         path, sizeof path, "tbl", 3, name, args );
     if ( rc == 0 )
     {
-        rc = KDBManagerVOpenTableUpdateInt_noargs ( self -> mgr, tblp,
+        rc = KDBManagerVOpenTableUpdateInt_noargs ( self -> mgr, (KWTable **)tblp,
                                              self -> dir, path );
         if ( rc == 0 )
         {
-            KTable *tbl = ( KTable* ) * tblp;
+            KWTable *tbl = ( KWTable* ) * tblp;
             tbl -> db = KDatabaseAttach ( self );
         }
     }
@@ -1198,11 +1208,11 @@ LIB_EXPORT rc_t CC KDatabaseVCreateTableByMask ( KDatabase *self,
             if ( (cmode_mask & kcmValueMask) != 0 )
                 cmode_mask |= kcmValueMask;
             table_cmode = (self->cmode & ~cmode_mask) | (cmode & cmode_mask);
-            rc = KDBManagerVCreateTableInt_noargs ( self -> mgr, tblp,
+            rc = KDBManagerVCreateTableInt_noargs ( self -> mgr, (KWTable **)tblp,
                                              self -> dir, table_cmode, path );
             if ( rc == 0 )
             {
-                KTable *tbl = ( KTable* ) * tblp;
+                KWTable *tbl = ( KWTable* ) * tblp;
                 tbl -> db = KDatabaseAttach ( self );
             }
         }
@@ -1216,7 +1226,7 @@ rc_t CC
 KWDatabaseOpenMetadataRead ( const KDatabase *self, const KMetadata **metap )
 {
     rc_t rc;
-    const KMetadata *meta;
+    const KWMetadata *meta;
     bool  meta_is_cached;
 
     if ( metap == NULL )
@@ -1227,8 +1237,8 @@ KWDatabaseOpenMetadataRead ( const KDatabase *self, const KMetadata **metap )
     rc = KDBWManagerOpenMetadataReadInt ( self -> mgr, & meta, self -> dir, 0, false, &meta_is_cached );
     if ( rc == 0 )
     {
-        if(!meta_is_cached) ((KMetadata*)meta) -> db = KDatabaseAttach ( self );
-        * metap = meta;
+        if(!meta_is_cached) ((KWMetadata*)meta) -> db = KDatabaseAttach ( self );
+        * metap = & meta -> dad;
     }
 
     return rc;
@@ -1372,3 +1382,28 @@ LIB_EXPORT rc_t CC KDatabaseVOpenIndexUpdate ( KDatabase *self,
     return rc;
 }
 
+LIB_EXPORT rc_t CC KDatabaseOpenMetadataUpdate ( KDatabase *self, KMetadata **metap )
+{
+    rc_t rc;
+    KWMetadata *meta;
+
+    if ( metap == NULL )
+        return RC ( rcDB, rcDatabase, rcOpening, rcParam, rcNull );
+
+    * metap = NULL;
+
+    if ( self == NULL )
+        return RC ( rcDB, rcDatabase, rcOpening, rcSelf, rcNull );
+
+    if ( self -> read_only )
+        return RC ( rcDB, rcDatabase, rcOpening, rcDatabase, rcReadonly );
+
+    rc = KDBManagerOpenMetadataUpdateInt ( self -> mgr, & meta, self -> dir, self -> md5 );
+    if ( rc == 0 )
+    {
+        meta -> db = KDatabaseAttach ( self );
+        * metap = & meta -> dad;
+    }
+
+    return rc;
+}

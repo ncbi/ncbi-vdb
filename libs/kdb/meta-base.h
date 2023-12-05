@@ -32,10 +32,6 @@
 
 #include <stdarg.h>
 
-#ifndef KMETA_IMPL
-#define KMETA_IMPL KMetadataBase
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -46,32 +42,28 @@ extern "C" {
 typedef struct KMDataNode KMDataNode;
 
 /*--------------------------------------------------------------------------
- * KMetadataBase
+ * KMetadata
  *   base structure for KMetadata implementations
  */
-typedef struct KMetadataBase KMetadataBase;
+typedef struct KMetadata KMetadata;
 
 typedef struct KMetadata_vt KMetadata_vt;
 struct KMetadata_vt
 {
     /* Public API */
-    rc_t ( CC * whack )         ( KMETA_IMPL *self );
-    rc_t ( CC * addRef )        ( const KMETA_IMPL *self );
-    rc_t ( CC * release )       ( const KMETA_IMPL *self );
-    rc_t ( CC * version )       ( const KMETA_IMPL *self, uint32_t *version );
-    rc_t ( CC * byteOrder )     ( const KMETA_IMPL *self, bool *reversed );
-    rc_t ( CC * revision )      ( const KMETA_IMPL *self, uint32_t *revision );
-    rc_t ( CC * maxRevision )   ( const KMETA_IMPL *self, uint32_t *revision );
+    rc_t ( CC * whack )         ( KMetadata *self );
+    rc_t ( CC * addRef )        ( const KMetadata *self );
+    rc_t ( CC * release )       ( const KMetadata *self );
+    rc_t ( CC * version )       ( const KMetadata *self, uint32_t *version );
+    rc_t ( CC * byteOrder )     ( const KMetadata *self, bool *reversed );
+    rc_t ( CC * revision )      ( const KMetadata *self, uint32_t *revision );
+    rc_t ( CC * maxRevision )   ( const KMetadata *self, uint32_t *revision );
     rc_t ( CC * openRevision )  ( const KMetadata *self, const KMetadata **meta, uint32_t revision );
     rc_t ( CC * getSequence )   ( const KMetadata *self,const char *seq, int64_t *val );
     rc_t ( CC * vOpenNodeRead ) ( const KMetadata *self,const KMDataNode **node, const char *path, va_list args );
 };
 
-// // move to KTable
-// KDB_EXTERN rc_t CC KTableMetaCopy( struct KTable *self, const struct KTable *src, const char * path, bool src_node_has_to_exist );
-// KDB_EXTERN rc_t CC KTableMetaCompare ( const struct KTable *self, const struct KTable *other, const char * path, bool * equal );
-
-struct KMetadataBase
+struct KMetadata
 {
     KMetadata_vt * vt;
 
@@ -79,61 +71,17 @@ struct KMetadataBase
 };
 
 // default implelentations where exist
-extern rc_t CC KMetadataBaseWhack ( KMETA_IMPL *self );
-extern rc_t CC KMetadataBaseAddRef ( const KMETA_IMPL *self );
-extern rc_t CC KMetadataBaseRelease ( const KMETA_IMPL *self );
+extern rc_t CC KMetadataBaseWhack ( KMetadata *self );
+extern rc_t CC KMetadataBaseAddRef ( const KMetadata *self );
+extern rc_t CC KMetadataBaseRelease ( const KMetadata *self );
 
 /* Attach
  * Sever
  *  like AddRef/Release, except called internally
  *  indicates that a child object is letting go...
  */
-KMETA_IMPL *KMetadataAttach ( const KMETA_IMPL *self );
-rc_t KMetadataSever ( const KMETA_IMPL *self );
-
-// write side only public API
-
-// KDB_EXTERN rc_t CC KMetadataSetSequence ( KMetadata *self,const char *seq, int64_t val );
-// KDB_EXTERN rc_t CC KMetadataNextSequence ( KMetadata *self,const char *seq, int64_t *val );
-
-// KDB_EXTERN rc_t CC KDatabaseOpenMetadataUpdate ( struct KDatabase *self, KMetadata **meta );
-// KDB_EXTERN rc_t CC KTableOpenMetadataUpdate ( struct KTable *self, KMetadata **meta );
-// KDB_EXTERN rc_t CC KColumnOpenMetadataUpdate ( struct KColumn *self, KMetadata **meta );
-
-// KDB_EXTERN rc_t CC KMetadataCommit ( KMetadata *self );
-// KDB_EXTERN rc_t CC KMetadataFreeze ( KMetadata *self );
-
-// KDB_EXTERN rc_t CC KMetadataOpenNodeUpdate ( KMetadata *self,KMDataNode **node, const char *path, ... );
-// KDB_EXTERN rc_t CC KMDataNodeOpenNodeUpdate ( KMDataNode *self,KMDataNode **node, const char *path, ... );
-
-// KDB_EXTERN rc_t CC KMetadataVOpenNodeUpdate ( KMetadata *self,KMDataNode **node, const char *path, va_list args );
-// KDB_EXTERN rc_t CC KMDataNodeVOpenNodeUpdate ( KMDataNode *self,KMDataNode **node, const char *path, va_list args );
-
-
-// KDB_EXTERN rc_t CC KMDataNodeWrite ( KMDataNode *self, const void *buffer, size_t size );
-// KDB_EXTERN rc_t CC KMDataNodeAppend ( KMDataNode *self, const void *buffer, size_t size );
-
-// KDB_EXTERN rc_t CC KMDataNodeWriteB8 ( KMDataNode *self, const void *b8 );
-// KDB_EXTERN rc_t CC KMDataNodeWriteB16 ( KMDataNode *self, const void *b16 );
-// KDB_EXTERN rc_t CC KMDataNodeWriteB32 ( KMDataNode *self, const void *b32 );
-// KDB_EXTERN rc_t CC KMDataNodeWriteB64 ( KMDataNode *self, const void *b64 );
-// KDB_EXTERN rc_t CC KMDataNodeWriteB128 ( KMDataNode *self, const void *b128 );
-
-// KDB_EXTERN rc_t CC KMDataNodeWriteCString ( KMDataNode *self, const char *str );
-
-// KDB_EXTERN rc_t CC KMDataNodeWriteAttr ( KMDataNode *self,
-//     const char *name, const char *value );
-
-// KDB_EXTERN rc_t CC KMDataNodeDropAll ( KMDataNode *self );
-// KDB_EXTERN rc_t CC KMDataNodeDropAttr ( KMDataNode *self, const char *attr );
-// KDB_EXTERN rc_t CC KMDataNodeDropChild ( KMDataNode *self, const char *path, ... );
-// KDB_EXTERN rc_t CC KMDataNodeVDropChild ( KMDataNode *self, const char *path, va_list args );
-
-// KDB_EXTERN rc_t CC KMDataNodeRenameAttr ( KMDataNode *self, const char *from, const char *to );
-// KDB_EXTERN rc_t CC KMDataNodeRenameChild ( KMDataNode *self, const char *from, const char *to );
-
-// KDB_EXTERN rc_t CC KMDataNodeCopy( KMDataNode *self, KMDataNode const *source );
-
+KMetadata *KMetadataAttach ( const KMetadata *self );
+rc_t KMetadataSever ( const KMetadata *self );
 
 #ifdef __cplusplus
 }

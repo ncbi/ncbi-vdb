@@ -98,52 +98,6 @@ extern rc_t CC KDatabaseBaseRelease ( const KDATABASE_IMPL *self );
 KDATABASE_IMPL *KDatabaseAttach ( const KDATABASE_IMPL *self );
 rc_t KDatabaseSever ( const KDATABASE_IMPL *self );
 
-// write side only public API
-// KCreateMode KDatabaseGetCmode ( const KDATABASE_IMPL *self);
-// KCreateMode KDatabaseSetCmode ( KDATABASE_IMPL *self, KCreateMode new_val);
-
-// KChecksum KDatabaseGetChecksum ( const KDATABASE_IMPL *self);
-// KChecksum KDatabaseSetChecksum ( KDATABASE_IMPL *self, KChecksum new_val);
-
-// KDB_EXTERN rc_t CC KDatabaseCreateDB ( KDATABASE_IMPL *self, KDatabase **db, KCreateMode cmode, const char *name, ... );
-// KDB_EXTERN rc_t CC KDatabaseVCreateDB ( KDATABASE_IMPL *self, KDatabase **db, KCreateMode cmode, const char *name, va_list args );
-
-// KDB_EXTERN rc_t CC KDatabaseVOpenDBUpdate ( KDATABASE_IMPL *self, KDatabase **db, const char *name, va_list args );
-
-// KDB_EXTERN rc_t CC KDatabaseLock ( KDATABASE_IMPL *self, uint32_t type, const char *name, ... );
-// KDB_EXTERN rc_t CC KDatabaseVLock ( KDATABASE_IMPL *self, uint32_t type, const char *name, va_list args );
-// KDB_EXTERN rc_t CC KDatabaseUnlock ( KDATABASE_IMPL *self, uint32_t type, const char *name, ... );
-// KDB_EXTERN rc_t CC KDatabaseVUnlock ( KDATABASE_IMPL *self, uint32_t type, const char *name, va_list args );
-
-// KDB_EXTERN rc_t CC KDatabaseRenameDB ( KDATABASE_IMPL *self, bool force, const char *from, const char *to );
-// KDB_EXTERN rc_t CC KDatabaseRenameTable ( KDATABASE_IMPL *self, bool force, const char *from, const char *to );
-// KDB_EXTERN rc_t CC KDatabaseRenameIndex ( KDATABASE_IMPL *self, bool force, const char *from, const char *to );
-
-// KDB_EXTERN rc_t CC KDatabaseAliasDB ( KDATABASE_IMPL *self, const char *obj, const char *alias );
-// KDB_EXTERN rc_t CC KDatabaseAliasTable ( KDATABASE_IMPL *self, const char *obj, const char *alias );
-// KDB_EXTERN rc_t CC KDatabaseAliasIndex ( KDATABASE_IMPL *self, const char *obj, const char *alias );
-
-// KDB_EXTERN rc_t CC KDatabaseDropDB ( KDATABASE_IMPL *self, const char *name, ... );
-// KDB_EXTERN rc_t CC KDatabaseDropTable ( KDATABASE_IMPL *self, const char *name, ... );
-// KDB_EXTERN rc_t CC KDatabaseDropIndex ( KDATABASE_IMPL *self, const char *name, ... );
-
-// KDB_EXTERN rc_t CC KDatabaseVDropDB ( KDATABASE_IMPL *self, const char *name, va_list args );
-// KDB_EXTERN rc_t CC KDatabaseVDropTable ( KDATABASE_IMPL *self, const char *name, va_list args );
-// KDB_EXTERN rc_t CC KDatabaseVDropIndex ( KDATABASE_IMPL *self, const char *name, va_list args );
-
-// KDB_EXTERN rc_t CC KDatabaseOpenManagerUpdate ( KDATABASE_IMPL *self, struct KDBManager **mgr );
-
-// KDB_EXTERN rc_t CC KDatabaseOpenParentUpdate ( KDATABASE_IMPL *self, KDatabase **par );
-
-// KDB_EXTERN rc_t CC KDatabaseMetaCopy ( KDATABASE_IMPL *self, const KDatabase *src,
-//                                        const char * node_path, const char * tbl_name,
-//                                        bool src_node_has_to_exist );
-
-// KDB_EXTERN rc_t CC KDatabaseCreateIndex ( struct KDatabase *self, KIndex **idx, KIdxType type, KCreateMode cmode, const char *name, ... );
-// KDB_EXTERN rc_t CC KDatabaseVCreateIndex ( struct KDatabase *self, KIndex **idx, KIdxType type, KCreateMode cmode, const char *name, va_list args );
-// KDB_EXTERN rc_t CC KDatabaseOpenIndexUpdate ( struct KDatabase *self, KIndex **idx, const char *name, ... );
-// KDB_EXTERN rc_t CC KDatabaseVOpenIndexUpdate ( struct KDatabase *self, KIndex **idx, const char *name, va_list args );
-
 #ifdef __cplusplus
 }
 #endif

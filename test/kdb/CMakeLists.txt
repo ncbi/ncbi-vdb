@@ -34,6 +34,10 @@ endif()
 
 add_compile_definitions( __mod__="test/kdb" )
 
+AddExecutableTest( Test_KDB_Setup "makedb" "${COMMON_LIBS_WRITE}" )
+
+set_tests_properties(Test_KDB_Setup PROPERTIES FIXTURES_SETUP Kdb)
+
 # AddExecutableTest( Test_KDB_Btree "test-btree" "${COMMON_LIBS_READ}" ) #TODO: revive test-btree
 # AddExecutableTest( Test_KDB_Rowset "rowsettest" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" ) # not in use
 
@@ -53,6 +57,8 @@ AddExecutableTest( Test_KDB_KRMetadata "test-rmetadata" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_KDB_KWMetadata "test-wmetadata" "${COMMON_LIBS_WRITE}" )
 
 AddExecutableTest( Test_KDB_KRMDataNode "test-rmetanode" "${COMMON_LIBS_READ}" )
+set_tests_properties(Test_KDB_KRMDataNode PROPERTIES FIXTURES_REQUIRED Kdb)
+
 AddExecutableTest( Test_KDB_KWMDataNode "test-wmetanode" "${COMMON_LIBS_WRITE}" )
 
 AddExecutableTest( Test_KDB_KRIndex "test-rindex" "${COMMON_LIBS_READ}" )

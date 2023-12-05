@@ -26,14 +26,13 @@
 
 #pragma once
 
-typedef struct KMDataNode KMDataNode;
-#define KDBMDNODE_IMPL KMDataNode
 #include "metanode-base.h"
 
 #include <klib/pbstree.h>
 
-struct KMetadata;
-struct KMDataNode;
+struct KWMetadata;
+
+typedef struct KWMDataNode KWMDataNode;
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,11 +41,11 @@ extern "C" {
 #define NODE_SIZE_LIMIT ( 25 * 1024 * 1024 )
 #define NODE_CHILD_LIMIT ( 100 * 1024 )
 
-typedef struct KMDataNodeInflateData KMDataNodeInflateData;
-struct KMDataNodeInflateData
+typedef struct KWMDataNodeInflateData KWMDataNodeInflateData;
+struct KWMDataNodeInflateData
 {
-    KMetadata *meta;
-    KMDataNode *par;
+    KWMetadata *meta;
+    struct KWMDataNode *par;
     BSTree *bst;
     size_t node_size_limit;
     uint32_t node_child_limit;
@@ -55,10 +54,10 @@ struct KMDataNodeInflateData
 };
 
 /*--------------------------------------------------------------------------
- * KMAttrNode
+ * KWMAttrNode
  */
-typedef struct KMAttrNode KMAttrNode;
-struct KMAttrNode
+typedef struct KWMAttrNode KWMAttrNode;
+struct KWMAttrNode
 {
     BSTNode n;
     void *value;
@@ -66,11 +65,11 @@ struct KMAttrNode
     char name [ 1 ];
 };
 
-rc_t KMAttrNodeMake ( KMAttrNode **np, const char *name, const void *value, size_t vsize );
-void CC KMAttrNodeWhack ( BSTNode *n, void *data );
-int64_t CC KMAttrNodeCmp ( const void *item, const BSTNode *n );
-int64_t CC KMAttrNodeSort ( const BSTNode *item, const BSTNode *n );
-rc_t KMAttrNodeRename ( const KMAttrNode *self, KMAttrNode **renamed, const char *name );
+rc_t KWMAttrNodeMake ( KWMAttrNode **np, const char *name, const void *value, size_t vsize );
+void CC KWMAttrNodeWhack ( BSTNode *n, void *data );
+int64_t CC KWMAttrNodeCmp ( const void *item, const BSTNode *n );
+int64_t CC KWMAttrNodeSort ( const BSTNode *item, const BSTNode *n );
+rc_t KWMAttrNodeRename ( const KWMAttrNode *self, KWMAttrNode **renamed, const char *name );
 
 /*--------------------------------------------------------------------------
  * KMDataNode
@@ -80,12 +79,12 @@ rc_t KMAttrNodeRename ( const KMAttrNode *self, KMAttrNode **renamed, const char
  *  nodes are identified by path, relative to a starting node,
  *  where "/" serves as a path separator.
  */
-struct KMDataNode
+struct KWMDataNode
 {
-    KMDataNodeBase dad;
+    KMDataNode dad;
 
-    KMDataNode *par;
-    KMetadata *meta;
+    KWMDataNode *par;
+    KWMetadata *meta;
     void *value;
     size_t vsize;
     BSTree attr;
@@ -94,9 +93,8 @@ struct KMDataNode
     char name [ 1 ];
 };
 
-rc_t KWMDataNodeMakeRoot( KMDataNode ** node, KMetadata *meta );
-void CC KMDataNodeWhack ( KMDataNode * self );
-rc_t KMDataNodeFind ( const KMDataNode *cself, KMDataNode **np, char **path );
+rc_t KWMDataNodeMakeRoot( KWMDataNode ** node, KWMetadata *meta );
+rc_t KWMDataNodeFind ( const KWMDataNode *cself, KWMDataNode **np, char **path );
 bool CC KWMDataNodeInflate_v1 ( PBSTNode *n, void *data );
 bool CC KWMDataNodeInflate ( PBSTNode *n, void *data );
 

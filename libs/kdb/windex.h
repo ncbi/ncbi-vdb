@@ -291,7 +291,7 @@ struct KWIndex
 
     struct KDBManager *mgr;
     struct KDatabase *db;
-    struct KTable *tbl;
+    struct KWTable *tbl;
     struct KDirectory *dir;
 
     uint32_t vers;
