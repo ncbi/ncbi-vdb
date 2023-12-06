@@ -24,6 +24,8 @@
 *
 */
 
+#pragma once
+
 #include "../libs/kdb/column-base.h"
 
 #include <klib/json.h>

@@ -29,6 +29,9 @@
 #include <klib/rc.h>
 #include <klib/printf.h>
 #include <klib/data-buffer.h>
+#include <klib/text.h>
+
+#include <vfs/path.h>
 
 #include <sstream>
 
@@ -63,23 +66,36 @@ PrintToString( const char *fmt, va_list args, string & out )
     return rc;
 }
 
-Path::Path( const std::string & p_source )
+void
+Path::fromString( const string & p_source )
 {
-}
-
-Path::Path( const char *fmt, va_list args )
-{
-    string p;
-    PrintToString( fmt, args, p );
-
     string word;
-    istringstream in( p );
+    istringstream in( p_source );
     while( getline(in, word, '/') )
     {
         push( word );
     }
 }
 
-Path::Path( const struct VPath * path )
+Path::Path( const std::string & p_source )
 {
+    fromString( p_source );
+}
+
+Path::Path( const char *fmt, va_list args )
+{
+    string p;
+    PrintToString( fmt, args, p );
+    fromString( p );
+}
+
+Path::Path( const struct VPath * p_path )
+{
+    const String * str;
+    rc_t rc = VPathMakeString ( p_path, &str );
+    if ( rc == 0 )
+    {
+        fromString( string( str -> addr, str -> size ) );
+        StringWhack( str );
+    }
 }

@@ -52,6 +52,8 @@ public:
     }
     ~KDBTextManager_Fixture()
     {
+        KColumnRelease( m_col );
+
         VPathRelease( m_path );
         KDBManagerRelease( m_mgr );
     }
@@ -69,6 +71,7 @@ public:
 
     const KDBManager * m_mgr = nullptr;
     VPath * m_path = nullptr;
+    const KColumn * m_col = nullptr;
     char m_error[1024];
 };
 
@@ -148,19 +151,37 @@ FIXTURE_TEST_CASE(KDBTextManager_RunPeriodicTasks, KDBTextManager_Fixture)
     REQUIRE_RC( KDBManagerRunPeriodicTasks( m_mgr ) );
 }
 
-FIXTURE_TEST_CASE(KDBTextManager_PathTypeVP_Db, KDBTextManager_Fixture)
-{
-    Setup( R"({"type": "database", "name": "testdb"})" );
-    MakeVPath( "testdb");
-    REQUIRE_EQ( (int)kptDatabase, KDBManagerPathTypeVP( m_mgr, m_path ) );
-}
 FIXTURE_TEST_CASE(KDBTextManager_PathTypeVP_NotFound, KDBTextManager_Fixture)
 {
     Setup( R"({"type": "database", "name": "testdb"})" );
     MakeVPath( "proddb");
     REQUIRE_EQ( (int)kptNotFound, KDBManagerPathTypeVP( m_mgr, m_path ) );
 }
+FIXTURE_TEST_CASE(KDBTextManager_PathTypeVP_Db, KDBTextManager_Fixture)
+{
+    Setup( R"({"type": "database", "name": "testdb"})" );
+    MakeVPath( "testdb");
+    REQUIRE_EQ( (int)kptDatabase, KDBManagerPathTypeVP( m_mgr, m_path ) );
+}
+FIXTURE_TEST_CASE(KDBTextManager_PathTypeVP_Db_Nested, KDBTextManager_Fixture)
+{
+    Setup( R"({"type": "database", "name": "testdb","databases":[ {"type": "database","name":"subdb1"} , {"type": "database","name":"subdb2"} ]})" );
+    REQUIRE( KDBManagerExists( m_mgr, kptDatabase, "%s", "testdb/db/subdb1" ) );
+    MakeVPath( "testdb/db/subdb2");
+    REQUIRE_EQ( (int)kptDatabase, KDBManagerPathTypeVP( m_mgr, m_path ) );
+}
+FIXTURE_TEST_CASE(KDBTextManager_PathTypeVP_Table_Root, KDBTextManager_Fixture)
+{
+    Setup( R"({"type": "table", "name": "tbl"})" );
+    REQUIRE( KDBManagerExists( m_mgr, kptDatabase, "%s", "tbl" ) );
+    MakeVPath( "tbl");
+    REQUIRE_EQ( (int)kptTable, KDBManagerPathTypeVP( m_mgr, m_path ) );
+}
 //TODO: KDBManagerPathTypeVP on internal objects, to test interpretation of the path
+    // kptTable - internal
+    // kptColumn,
+    // kptIndex,
+    // kptMetadata,
 
 FIXTURE_TEST_CASE(KDBTextManager_PathType, KDBTextManager_Fixture)
 {
@@ -211,15 +232,35 @@ FIXTURE_TEST_CASE(KDBTextManager_OpenTableReadVPath, KDBTextManager_Fixture)
     REQUIRE_RC( KTableRelease( tbl ) );
 }
 
-FIXTURE_TEST_CASE(KDBTextManager_OpenColumnRead, KDBTextManager_Fixture)
+const char * TableWithColumnQQ = R"({"type": "table", "name": "SEQUENCE", "columns":[{"name":"qq"}]})";
+FIXTURE_TEST_CASE(KDBTextManager_OpenColumnRead_BadPath1, KDBTextManager_Fixture)
 {
-    Setup( R"({"type": "table", "name": "SEQUENCE", "columns":[{"name":"qq"}]})" );
-
-    const KColumn * col = nullptr;
-    REQUIRE_RC( KDBManagerOpenColumnRead( m_mgr, & col, "%s", "SEQUENCE/col/qq" ) );
-    REQUIRE_NOT_NULL( col );
-    REQUIRE_RC( KColumnRelease( col ) );
+    Setup( TableWithColumnQQ );
+    REQUIRE_RC_FAIL( KDBManagerOpenColumnRead( m_mgr, & m_col, "%s", "SHMEQUENCE/col/qq" ) ); // bad table name
 }
+FIXTURE_TEST_CASE(KDBTextManager_OpenColumnRead_BadPath2, KDBTextManager_Fixture)
+{
+    Setup( TableWithColumnQQ );
+    REQUIRE_RC_FAIL( KDBManagerOpenColumnRead( m_mgr, & m_col, "%s", "SEQUENCE/shmol/qq" ) ); // bad "col"
+}
+FIXTURE_TEST_CASE(KDBTextManager_OpenColumnRead_BadPath3, KDBTextManager_Fixture)
+{
+    Setup( TableWithColumnQQ );
+    REQUIRE_RC_FAIL( KDBManagerOpenColumnRead( m_mgr, & m_col, "%s", "SEQUENCE/col" ) ); // col name missing
+}
+FIXTURE_TEST_CASE(KDBTextManager_OpenColumnRead_BadPath4, KDBTextManager_Fixture)
+{
+    Setup( TableWithColumnQQ );
+    REQUIRE_RC_FAIL( KDBManagerOpenColumnRead( m_mgr, & m_col, "%s", "SEQUENCE/col/shmol" ) ); // no such column
+}
+FIXTURE_TEST_CASE(KDBTextManager_OpenColumnRead, KDBTextManager_Fixture)
+{ // root table
+    Setup( TableWithColumnQQ );
+
+    REQUIRE_RC( KDBManagerOpenColumnRead( m_mgr, & m_col, "%s", "SEQUENCE/col/qq" ) );
+    REQUIRE_NOT_NULL( m_col );
+}
+//TODO: non-root tables
 
 FIXTURE_TEST_CASE(KDBManager_VPathOpenLocalDBRead, KDBTextManager_Fixture)
 {

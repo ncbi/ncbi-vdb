@@ -24,6 +24,8 @@
 *
 */
 
+#pragma once
+
 #include "../libs/kdb/table-base.h"
 
 #include "column.hpp"

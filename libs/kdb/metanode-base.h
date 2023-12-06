@@ -74,7 +74,7 @@ struct KMDataNode
 {
     BSTNode n;
 
-    KMDataNode_vt * vt;
+    const KMDataNode_vt * vt;
 
     KRefcount refcount;
 };

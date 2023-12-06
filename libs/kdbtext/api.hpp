@@ -26,39 +26,11 @@
 
 #pragma once
 
-typedef struct KTextDatabase KTextDatabase;
-#define KDATABASE_IMPL KTextDatabase
-#include "../libs/kdb/database-base.h"
+typedef struct KDBManager KDBManager;
+#define KDBMGR_IMPL KDBManager
+#include "../libs/kdb/manager-base.h"
 
-#include <klib/json.h>
-#include <klib/rc.h>
-
-#include <string>
-#include <vector>
-
-struct KTextDatabase
+struct KDBManager
 {
-    KDatabaseBase dad;
+    KDBManagerBase dad;
 };
-
-namespace KDBText
-{
-    class Database : public KTextDatabase
-    {
-    public:
-        Database() {}
-        Database( const KJsonObject * p_json );
-        ~Database();
-
-        rc_t inflate( char * error, size_t error_size );
-
-        const std::string & getName() const { return m_name; }
-
-        const Database * getDatabase( const std::string & name ) const;
-
-    private:
-        const KJsonObject * m_json = nullptr;
-        std::string m_name;
-        std::vector<Database> m_subdbs;
-    };
-}

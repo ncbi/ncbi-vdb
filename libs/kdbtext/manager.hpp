@@ -26,39 +26,41 @@
 
 #pragma once
 
-typedef struct KTextDatabase KTextDatabase;
-#define KDATABASE_IMPL KTextDatabase
-#include "../libs/kdb/database-base.h"
-
-#include <klib/json.h>
-#include <klib/rc.h>
+#include "api.hpp"
 
 #include <string>
-#include <vector>
 
-struct KTextDatabase
-{
-    KDatabaseBase dad;
-};
+#include "database.hpp"
+#include "table.hpp"
+#include "path.hpp"
 
 namespace KDBText
 {
-    class Database : public KTextDatabase
+    class Manager : public KDBManager
     {
     public:
-        Database() {}
-        Database( const KJsonObject * p_json );
-        ~Database();
+        Manager( const KDBManager_vt& );
+        ~Manager();
 
-        rc_t inflate( char * error, size_t error_size );
+        rc_t parse( const char * input, char * error, size_t error_size );
 
-        const std::string & getName() const { return m_name; }
+        const Database * getRootDatabase() const { return m_db; }
+        const Table * getRootTable() const { return m_tbl; }
 
-        const Database * getDatabase( const std::string & name ) const;
+        int pathType( const std::string & path ) const;
+
+        bool exists( uint32_t requested, const Path & ) const;
+
+        rc_t writable( const Path & )  const;
+
+        rc_t openDatabase( const Path &, const Database *& ) const;
+        rc_t openTable( const Path &, const Table *& ) const;
+        rc_t openColumn( const Path &, const Column *& ) const;
 
     private:
-        const KJsonObject * m_json = nullptr;
-        std::string m_name;
-        std::vector<Database> m_subdbs;
+        KJsonValue * m_root = nullptr;
+        Database * m_db = nullptr;
+        Table * m_tbl = nullptr;
     };
 }
+

@@ -78,7 +78,7 @@ struct KDBManager_vt
 
 struct KDBManagerBase
 {
-    KDBManager_vt * vt;
+    const KDBManager_vt * vt;
 
     KRefcount refcount;
 };

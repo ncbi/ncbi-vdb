@@ -24,6 +24,8 @@
 *
 */
 
+#pragma once
+
 #include <string>
 #include <queue>
 
@@ -38,5 +40,8 @@ namespace KDBText
         Path( const std::string & p_source );
         Path( const char *fmt, va_list args );
         Path( const struct VPath * path );
+
+    private:
+        void fromString( const std::string & p_source );
     };
 }
