@@ -173,12 +173,19 @@ FIXTURE_TEST_CASE(KDBTextManager_PathTypeVP_Db_Nested, KDBTextManager_Fixture)
 FIXTURE_TEST_CASE(KDBTextManager_PathTypeVP_Table_Root, KDBTextManager_Fixture)
 {
     Setup( R"({"type": "table", "name": "tbl"})" );
-    REQUIRE( KDBManagerExists( m_mgr, kptDatabase, "%s", "tbl" ) );
+    REQUIRE( KDBManagerExists( m_mgr, kptTable, "%s", "tbl" ) );
     MakeVPath( "tbl");
     REQUIRE_EQ( (int)kptTable, KDBManagerPathTypeVP( m_mgr, m_path ) );
 }
+FIXTURE_TEST_CASE(KDBTextManager_PathTypeVP_Table_Nested, KDBTextManager_Fixture)
+{
+    Setup( R"({"type": "database", "name": "testdb","databases":[ {"type": "database","name":"subdb1"} , {"type": "database","name":"subdb2","tables":[{"type": "table", "name": "tbl1"},{"type": "table", "name": "tbl2"}]} ]})" );
+    REQUIRE( KDBManagerExists( m_mgr, kptDatabase, "%s", "testdb/db/subdb1" ) );
+    MakeVPath( "testdb/db/subdb2/tbl/tbl2");
+    REQUIRE_EQ( (int)kptTable, KDBManagerPathTypeVP( m_mgr, m_path ) );
+}
+
 //TODO: KDBManagerPathTypeVP on internal objects, to test interpretation of the path
-    // kptTable - internal
     // kptColumn,
     // kptIndex,
     // kptMetadata,

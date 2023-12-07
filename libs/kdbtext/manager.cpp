@@ -98,16 +98,18 @@ Manager::parse( const char * input, char * error, size_t error_size )
 }
 
 int
-Manager::pathType( const string & path ) const
+Manager::pathType( const string & p_path ) const
 {
-    if ( m_db )
-    {   //TODO: implement proper parsing (allow "db/table/col" etc.)
-        if ( m_db -> getName () == path )
-        {
-            return kptDatabase;
-        }
+//TODO: allow db/table/col etc.
+    Path path( p_path );
+    if ( m_db != nullptr )
+    {
+        return m_db -> pathType( path );
     }
-    //TODO: else root table
+    if ( m_tbl != nullptr )
+    {
+        return m_tbl -> pathType( path );
+    }
     return kptNotFound;
 }
 
@@ -120,10 +122,10 @@ Manager::exists( uint32_t requested, const Path & p_path ) const
     {
     case kptDatabase:
         {
-            const Database * db = getRootDatabase();
+            const Database * db = m_db;
             do
             {
-                if ( db && path.size() > 0 && db -> getName() == path.front() )
+                if ( db && ! path.empty() && db -> getName() == path.front() )
                 {
                     path.pop();
                     if ( path.empty() )
@@ -134,7 +136,7 @@ Manager::exists( uint32_t requested, const Path & p_path ) const
                     if ( string("db") == path.front() )
                     {
                         path.pop();
-                        if (  path.size() > 0 )
+                        if (  ! path.empty() )
                         {
                             db = db -> getDatabase( path.front() );
                         }
@@ -156,6 +158,10 @@ Manager::exists( uint32_t requested, const Path & p_path ) const
             while ( path . size () > 0 );
             return true;
         }
+
+    case kptTable:
+        return m_tbl != nullptr && path.size() == 1 && m_tbl -> getName() == path.front();
+
     default:
         return false;
     }
@@ -183,13 +189,11 @@ Manager::writable( const Path & p_path ) const
     if ( ! p_path.empty() )
     {
         //TODO: parse and resolve the path, if the object is valid return rcReadOnly, otherwise rcNotFound
-        const Database * db = getRootDatabase();
-        if (db && db -> getName() == p_path.front() )
+        if ( m_db && m_db -> getName() == p_path.front() )
         {
             return SILENT_RC ( rcDB, rcPath, rcAccessing, rcPath, rcReadonly );
         }
-        const Table * tbl= getRootTable();
-        if (tbl && tbl -> getName() == p_path.front() )
+        if ( m_tbl && m_tbl -> getName() == p_path.front() )
         {
             return SILENT_RC ( rcDB, rcPath, rcAccessing, rcPath, rcReadonly );
         }
@@ -204,15 +208,14 @@ Manager::openDatabase( const Path & p_path, const Database *& p_db ) const
     if ( ! p_path.empty() )
     {
         // TODO: non-root dbs
-        const Database * db = getRootDatabase();
-        if ( db && db -> getName() == p_path.front() )
+        if ( m_db && m_db -> getName() == p_path.front() )
         {
-            rc_t rc = KDatabaseAddRef( (const KDatabase *)db );
+            rc_t rc = KDatabaseAddRef( (const KDatabase *)m_db );
             if ( rc != 0 )
             {
                 return rc;
             }
-            p_db = db;
+            p_db = m_db;
             return 0;
         }
     }
@@ -225,15 +228,14 @@ Manager::openTable( const Path & p_path, const Table *& p_tbl ) const
     if ( ! p_path.empty() )
     {
         // TODO: non-root tables
-        const Table * tbl= getRootTable();
-        if (tbl && tbl -> getName() == p_path.front() )
+        if ( m_tbl && m_tbl -> getName() == p_path.front() )
         {
-            rc_t rc = KTableAddRef( (const KTable *)tbl );
+            rc_t rc = KTableAddRef( (const KTable *)m_tbl );
             if ( rc != 0 )
             {
                 return rc;
             }
-            p_tbl = tbl;
+            p_tbl = m_tbl;
             return 0;
         }
     }
@@ -246,8 +248,7 @@ Manager::openColumn( const Path & p_path, const Column *& p_col) const
     if ( ! p_path.empty() )
     {
         // TODO: non-root tables
-        const Table * tbl= getRootTable();
-        if ( ! p_path.empty() && tbl && tbl -> getName() == p_path.front() )
+        if ( ! p_path.empty() && m_tbl && m_tbl -> getName() == p_path.front() )
         {
             Path path = p_path;
             path.pop();
@@ -256,7 +257,7 @@ Manager::openColumn( const Path & p_path, const Column *& p_col) const
                 path.pop();
                 if ( ! path.empty() )
                 {
-                    const Column* col = tbl -> getColumn( path.front() );
+                    const Column* col = m_tbl -> getColumn( path.front() );
                     if ( col != nullptr )
                     {
                         rc_t rc = KColumnAddRef( (const KColumn *)col );

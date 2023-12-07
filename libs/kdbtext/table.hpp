@@ -28,6 +28,7 @@
 
 #include "../libs/kdb/table-base.h"
 
+#include "path.hpp"
 #include "column.hpp"
 
 #include <klib/json.h>
@@ -55,6 +56,8 @@ namespace KDBText
         const std::string & getName() const { return m_name; }
 
         const Column * getColumn( const std::string& name ) const;
+
+        int pathType( Path & ) const;
 
     private:
         const KJsonObject * m_json = nullptr;

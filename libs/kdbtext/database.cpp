@@ -26,6 +26,7 @@
 
 #include "database.hpp"
 
+#include <kdb/manager.h>
 #include <klib/printf.h>
 
 #include <algorithm>
@@ -86,6 +87,19 @@ const Database *
 Database::getDatabase( const std::string & name ) const
 {
     for( auto & d : m_subdbs )
+    {
+        if ( name == d.getName() )
+        {
+            return & d;
+        }
+    }
+    return nullptr;
+}
+
+const Table *
+Database::getTable( const std::string & name ) const
+{
+    for( auto & d : m_tables )
     {
         if ( name == d.getName() )
         {
@@ -185,7 +199,91 @@ Database::inflate( char * error, size_t error_size )
         }
     }
 
+    // tables
+    const KJsonValue * tables = KJsonObjectGetMember ( m_json, "tables" );
+    if ( tables != nullptr )
+    {
+        const KJsonArray * tblarr = KJsonValueToArray ( tables );
+        if ( tblarr == nullptr )
+        {
+            string_printf ( error, error_size, nullptr, "%s.tables is not an array", m_name.c_str() );
+            return SILENT_RC( rcDB, rcDatabase, rcCreating, rcParam, rcInvalid );
+        }
+        uint32_t len = KJsonArrayGetLength ( tblarr );
+        for ( uint32_t i = 0; i < len; ++i )
+        {
+            const KJsonValue * v = KJsonArrayGetElement ( tblarr, i );
+            assert( v != nullptr );
+            const KJsonObject * obj = KJsonValueToObject ( v );
+            if( obj != nullptr )
+            {
+                Table tbl ( obj );
+                rc = tbl . inflate ( error, error_size );
+                if ( rc != 0 )
+                {
+                    return rc;
+                }
+
+                for( auto & t : m_tables )
+                {
+                    if ( tbl.getName() == t.getName() )
+                    {
+                        string_printf ( error, error_size, nullptr, "Duplicate table: %s", tbl.getName().c_str() );
+                        return SILENT_RC( rcDB, rcDatabase, rcCreating, rcParam, rcInvalid );
+                    }
+                }
+                m_tables .push_back( tbl );
+            }
+            else
+            {   // not an object
+                string_printf ( error, error_size, nullptr, "%s.tables[%i] is not an object", m_name.c_str(), i );
+                return SILENT_RC( rcDB, rcDatabase, rcCreating, rcParam, rcInvalid );
+            }
+        }
+    }
+
     return rc;
+}
+
+int
+Database::pathType( Path & p ) const
+{
+    if ( ! p.empty() )
+    {
+        if ( p.front() == m_name )
+        {
+            p.pop();
+            if ( p.empty() )
+            {
+                return kptDatabase;
+            }
+            if ( p.front() == "db" )
+            {
+                p.pop();
+                if ( ! p.empty() )
+                {
+                    const Database * db = getDatabase( p.front() );
+                    if ( db != nullptr )
+                    {
+                        return db->pathType( p );
+                    }
+                }
+            }
+            else if ( p.front() == "tbl" )
+            {
+                p.pop();
+                if ( ! p.empty() )
+                {
+                    const Table * t = getTable( p.front() );
+                    if ( t != nullptr  )
+                    {
+                        return t -> pathType( p );
+                    }
+                }
+            }
+        }
+    }
+    return kptNotFound;
 }
 
 static
@@ -196,3 +294,4 @@ KTextDatabaseWhack ( KTextDatabase *self )
     delete reinterpret_cast<Database*>( self );
     return 0;
 }
+

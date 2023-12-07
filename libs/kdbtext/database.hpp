@@ -30,6 +30,9 @@ typedef struct KTextDatabase KTextDatabase;
 #define KDATABASE_IMPL KTextDatabase
 #include "../libs/kdb/database-base.h"
 
+#include "path.hpp"
+#include "table.hpp"
+
 #include <klib/json.h>
 #include <klib/rc.h>
 
@@ -55,10 +58,14 @@ namespace KDBText
         const std::string & getName() const { return m_name; }
 
         const Database * getDatabase( const std::string & name ) const;
+        const Table * getTable( const std::string & name ) const;
+
+        int pathType( Path & ) const;
 
     private:
         const KJsonObject * m_json = nullptr;
         std::string m_name;
         std::vector<Database> m_subdbs;
+        std::vector<Table> m_tables;
     };
 }

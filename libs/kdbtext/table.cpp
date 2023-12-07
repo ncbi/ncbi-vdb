@@ -26,6 +26,8 @@
 
 #include "table.hpp"
 
+#include <kdb/manager.h>
+
 #include <klib/printf.h>
 
 using namespace KDBText;
@@ -187,6 +189,23 @@ Table::inflate( char * error, size_t error_size )
         }
     }
     return rc;
+}
+
+int
+Table::pathType( Path & p ) const
+{
+    if ( ! p.empty() )
+    {
+        if ( p.front() == m_name )
+        {
+            p.pop();
+            if ( p.empty() )
+            {
+                return kptTable;
+            }
+        }
+    }
+    return kptNotFound;
 }
 
 static

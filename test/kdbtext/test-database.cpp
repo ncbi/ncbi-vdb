@@ -32,6 +32,8 @@
 
 #include "../../libs/kdbtext/database.hpp"
 
+#include <kdb/manager.h>
+
 #include <klib/rc.h>
 #include <klib/json.h>
 
@@ -124,7 +126,7 @@ FIXTURE_TEST_CASE(KDBTextDatabase_Make_Nested_ElementNull, KDBTextDatabase_Fixtu
 }
 FIXTURE_TEST_CASE(KDBTextDatabase_Make_Nested_ElementBad, KDBTextDatabase_Fixture)
 {
-    Setup( R"({"type": "database", "name": "testdb","databases":[ {"type": "notadatabase", "name":"subdb1"} ]})" );
+    Setup( R"({"type": "database", "name": "testdb","databases":[ {"type": "NOTAdatabase", "name":"subdb1"} ]})" );
 
     REQUIRE_RC_FAIL( m_db -> inflate( m_error, sizeof m_error ) );
     //cout << m_error << endl;
@@ -137,18 +139,93 @@ FIXTURE_TEST_CASE(KDBTextDatabase_Make_Nested_Duplicate, KDBTextDatabase_Fixture
     //cout << m_error << endl;
 }
 
+FIXTURE_TEST_CASE(KDBTextDatabase_Make_Tables_NotArray, KDBTextDatabase_Fixture)
+{
+    Setup( R"({"type": "database", "name": "testdb", "tables":{"type":"table","name":"tbl"} })" );
+
+    REQUIRE_RC_FAIL( m_db -> inflate( m_error, sizeof m_error ) );
+    //cout << m_error << endl;
+}
+FIXTURE_TEST_CASE(KDBTextDatabase_Make_Tables_ElementNull, KDBTextDatabase_Fixture)
+{
+    Setup( R"({"type": "database", "name": "testdb", "tables":[null] })" );
+
+    REQUIRE_RC_FAIL( m_db -> inflate( m_error, sizeof m_error ) );
+    //cout << m_error << endl;
+}
+FIXTURE_TEST_CASE(KDBTextDatabase_Make_Tables_ElementBad, KDBTextDatabase_Fixture)
+{
+    Setup( R"({"type": "database", "name": "testdb", "tables":[{"type":"NOTAtable","name":"tbl"}] })" );
+
+    REQUIRE_RC_FAIL( m_db -> inflate( m_error, sizeof m_error ) );
+    //cout << m_error << endl;
+}
+FIXTURE_TEST_CASE(KDBTextDatabase_Make_Tables_ElementDuplicate, KDBTextDatabase_Fixture)
+{
+    Setup( R"({"type": "database", "name": "testdb", "tables":[{"type":"table","name":"tbl"},{"type":"table","name":"tbl"}] })" );
+
+    REQUIRE_RC_FAIL( m_db -> inflate( m_error, sizeof m_error ) );
+    //cout << m_error << endl;
+}
+
+const char * NestedDb = R"({"type": "database", "name": "testdb","databases":[ {"type": "database", "name":"subdb1"} , {"type": "database", "name":"subdb2","tables":[{"type": "table", "name": "tbl2-1"},{"type": "table", "name": "tbl2-2"}]} ], "tables":[{"type": "table", "name": "tbl0-1"},{"type": "table", "name": "tbl0-2"}]})";
+
 FIXTURE_TEST_CASE(KDBTextDatabase_Make_Nested, KDBTextDatabase_Fixture)
 {
-    Setup( R"({"type": "database", "name": "testdb","databases":[ {"type": "database", "name":"subdb1"} , {"type": "database", "name":"subdb2"} ]})" );
-
+    Setup( NestedDb );
     REQUIRE_RC( m_db -> inflate( m_error, sizeof m_error ) );
 
     REQUIRE_NULL( m_db -> getDatabase( "notthere") );
     REQUIRE_NOT_NULL( m_db -> getDatabase( "subdb1") );
     REQUIRE_NOT_NULL( m_db -> getDatabase( "subdb2") );
+
+    REQUIRE_NULL( m_db -> getTable( "notthere") );
+    REQUIRE_NOT_NULL( m_db -> getTable( "tbl0-1") );
+    REQUIRE_NOT_NULL( m_db -> getTable( "tbl0-2") );
 }
 
-//TODO: tables, metadata, indexes
+FIXTURE_TEST_CASE(KDBTextDatabase_pathType_empty, KDBTextDatabase_Fixture)
+{
+    Setup( NestedDb );
+    REQUIRE_RC( m_db -> inflate( m_error, sizeof m_error ) );
+
+    Path p( "" );
+    REQUIRE_EQ( (int)kptNotFound, m_db -> pathType( p ) );
+}
+FIXTURE_TEST_CASE(KDBTextDatabase_pathType_miss, KDBTextDatabase_Fixture)
+{
+    Setup( NestedDb );
+    REQUIRE_RC( m_db -> inflate( m_error, sizeof m_error ) );
+
+    Path p( "qq" );
+    REQUIRE_EQ( (int)kptNotFound, m_db -> pathType( p ) );
+}
+FIXTURE_TEST_CASE(KDBTextDatabase_pathType_self, KDBTextDatabase_Fixture)
+{
+    Setup( NestedDb );
+    REQUIRE_RC( m_db -> inflate( m_error, sizeof m_error ) );
+
+    Path p( "testdb" );
+    REQUIRE_EQ( (int)kptDatabase, m_db -> pathType( p ) );
+}
+FIXTURE_TEST_CASE(KDBTextDatabase_pathType_nestedDb, KDBTextDatabase_Fixture)
+{
+    Setup( NestedDb );
+    REQUIRE_RC( m_db -> inflate( m_error, sizeof m_error ) );
+
+    Path p( "testdb/db/subdb2" );
+    REQUIRE_EQ( (int)kptDatabase, m_db -> pathType( p ) );
+}
+FIXTURE_TEST_CASE(KDBTextDatabase_pathType_nestedTable, KDBTextDatabase_Fixture)
+{
+    Setup( NestedDb );
+    REQUIRE_RC( m_db -> inflate( m_error, sizeof m_error ) );
+
+    Path p( "testdb/db/subdb2/tbl/tbl2-2" );
+    REQUIRE_EQ( (int)kptTable, m_db -> pathType( p ) );
+}
+
+//TODO: metadata, indexes
 
 //////////////////////////////////////////// Main
 extern "C"
