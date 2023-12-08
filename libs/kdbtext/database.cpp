@@ -32,6 +32,7 @@
 #include <algorithm>
 
 using namespace KDBText;
+using namespace std;
 
 static rc_t CC KTextDatabaseWhack ( KTextDatabase *self );
 // static bool CC KTextDatabaseLocked ( const KTextDatabase *self );
@@ -248,42 +249,82 @@ Database::inflate( char * error, size_t error_size )
 int
 Database::pathType( Path & p ) const
 {
-    if ( ! p.empty() )
+    if ( ! p.empty() && p.front() == m_name )
     {
-        if ( p.front() == m_name )
+        p.pop();
+        if ( p.empty() )
+        {
+            return kptDatabase;
+        }
+        if ( p.front() == "db" )
         {
             p.pop();
-            if ( p.empty() )
+            if ( ! p.empty() )
             {
-                return kptDatabase;
-            }
-            if ( p.front() == "db" )
-            {
-                p.pop();
-                if ( ! p.empty() )
+                const Database * db = getDatabase( p.front() );
+                if ( db != nullptr )
                 {
-                    const Database * db = getDatabase( p.front() );
-                    if ( db != nullptr )
-                    {
-                        return db->pathType( p );
-                    }
+                    return db->pathType( p );
                 }
             }
-            else if ( p.front() == "tbl" )
+        }
+        else if ( p.front() == "tbl" )
+        {
+            p.pop();
+            if ( ! p.empty() )
             {
-                p.pop();
-                if ( ! p.empty() )
+                const Table * t = getTable( p.front() );
+                if ( t != nullptr  )
                 {
-                    const Table * t = getTable( p.front() );
-                    if ( t != nullptr  )
-                    {
-                        return t -> pathType( p );
-                    }
+                    return t -> pathType( p );
                 }
             }
         }
     }
     return kptNotFound;
+}
+
+bool
+Database::exists( uint32_t requested, Path & path ) const
+{
+    if ( ! path.empty() && m_name == path.front() )
+    {
+        path.pop();
+        if ( path.empty() )
+        {
+            return requested == kptDatabase;
+        }
+
+        if ( string("db") == path.front() )
+        {
+            path.pop();
+            if (  ! path.empty() )
+            {
+                const Database * db = getDatabase( path.front() );
+                if ( db != nullptr )
+                {
+                    return db->exists( requested, path );
+                }
+            }
+        }
+        else if ( string("tbl") == path.front() )
+        {
+            path.pop();
+            if ( ! path.empty() )
+            {
+                const Table * tbl= getTable( path.front() );
+                if ( tbl != nullptr )
+                {
+                    return tbl -> exists( requested, path );
+                }
+            }
+        }
+    // case kptIndex:
+    // case kptColumn:
+    // case kptMetadata:
+    }
+
+    return false;
 }
 
 static

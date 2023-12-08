@@ -125,12 +125,41 @@ FIXTURE_TEST_CASE(KDBTextManager_Db_Exists, KDBTextManager_Fixture)
     Setup( R"({"type": "database", "name": "testdb"})" );
     REQUIRE( KDBManagerExists( m_mgr, kptDatabase, "%s", "testdb" ) );
 }
+
+FIXTURE_TEST_CASE(KDBTextManager_SubDb_Exists_Not, KDBTextManager_Fixture)
+{
+    Setup( R"({"type": "database", "name": "testdb"})" );
+    REQUIRE( ! KDBManagerExists( m_mgr, kptDatabase, "%s", "testdb/db/subdb1" ) );
+}
 FIXTURE_TEST_CASE(KDBTextManager_SubDb_Exists, KDBTextManager_Fixture)
 {
-    Setup( R"({"type": "database", "name": "testdb","databases":[ {"type": "database","name":"subdb1"} , {"type": "database","name":"subdb2"} ]})" );
+    Setup( R"({"type": "database","name": "testdb",
+            "databases":[
+                {"type": "database","name":"subdb1"} ,
+                {"type": "database","name":"subdb2"}
+            ]
+    })");
     REQUIRE( KDBManagerExists( m_mgr, kptDatabase, "%s", "testdb/db/subdb1" ) );
     REQUIRE( KDBManagerExists( m_mgr, kptDatabase, "%s", "testdb/db/subdb2" ) );
 }
+
+FIXTURE_TEST_CASE(KDBTextManager_Table_Exists_Not, KDBTextManager_Fixture)
+{
+    Setup( R"({"type": "database", "name": "testdb"})" );
+    REQUIRE( ! KDBManagerExists( m_mgr, kptDatabase, "%s", "testdb/tbl/tbl1" ) );
+}
+FIXTURE_TEST_CASE(KDBTextManager_Table_Exists, KDBTextManager_Fixture)
+{
+    Setup( R"({"type": "database","name": "testdb",
+        "tables":[
+                    {"type": "table", "name": "tbl1"},
+                    {"type": "table", "name": "tbl2"}
+        ]
+    })" );
+    REQUIRE( KDBManagerExists( m_mgr, kptTable, "%s", "testdb/tbl/tbl1" ) );
+}
+
+//TODO: table, index, column, metadata
 
 FIXTURE_TEST_CASE(KDBTextManager_Writable_Found, KDBTextManager_Fixture)
 {   // for now, any path will be reported as readonly
@@ -165,24 +194,51 @@ FIXTURE_TEST_CASE(KDBTextManager_PathTypeVP_Db, KDBTextManager_Fixture)
 }
 FIXTURE_TEST_CASE(KDBTextManager_PathTypeVP_Db_Nested, KDBTextManager_Fixture)
 {
-    Setup( R"({"type": "database", "name": "testdb","databases":[ {"type": "database","name":"subdb1"} , {"type": "database","name":"subdb2"} ]})" );
-    REQUIRE( KDBManagerExists( m_mgr, kptDatabase, "%s", "testdb/db/subdb1" ) );
+    Setup( R"({
+            "type": "database",
+            "name": "testdb",
+            "databases":[
+                {"type": "database","name":"subdb1"},
+                {"type": "database","name":"subdb2"}
+            ]
+    })" );
     MakeVPath( "testdb/db/subdb2");
     REQUIRE_EQ( (int)kptDatabase, KDBManagerPathTypeVP( m_mgr, m_path ) );
 }
 FIXTURE_TEST_CASE(KDBTextManager_PathTypeVP_Table_Root, KDBTextManager_Fixture)
 {
     Setup( R"({"type": "table", "name": "tbl"})" );
-    REQUIRE( KDBManagerExists( m_mgr, kptTable, "%s", "tbl" ) );
     MakeVPath( "tbl");
     REQUIRE_EQ( (int)kptTable, KDBManagerPathTypeVP( m_mgr, m_path ) );
 }
 FIXTURE_TEST_CASE(KDBTextManager_PathTypeVP_Table_Nested, KDBTextManager_Fixture)
 {
-    Setup( R"({"type": "database", "name": "testdb","databases":[ {"type": "database","name":"subdb1"} , {"type": "database","name":"subdb2","tables":[{"type": "table", "name": "tbl1"},{"type": "table", "name": "tbl2"}]} ]})" );
-    REQUIRE( KDBManagerExists( m_mgr, kptDatabase, "%s", "testdb/db/subdb1" ) );
+    Setup( R"({
+        "type": "database",
+        "name": "testdb",
+        "databases": [
+                {"type": "database","name":"subdb1"},
+                {"type": "database","name":"subdb2","tables":[
+                    {"type": "table", "name": "tbl1"},
+                    {"type": "table", "name": "tbl2"}
+                ]}
+        ]
+    })" );
     MakeVPath( "testdb/db/subdb2/tbl/tbl2");
     REQUIRE_EQ( (int)kptTable, KDBManagerPathTypeVP( m_mgr, m_path ) );
+}
+
+FIXTURE_TEST_CASE(KDBTextManager_PathTypeVP_Column_NotFound, KDBTextManager_Fixture)
+{
+    Setup( R"({ "type": "table", "name": "tbl1", "columns":[{"name":"col"}] })" );
+    MakeVPath( "testdb/db/subdb2/tbl/tbl2");
+    REQUIRE_EQ( (int)kptNotFound, KDBManagerPathTypeVP( m_mgr, m_path ) );
+}
+FIXTURE_TEST_CASE(KDBTextManager_PathTypeVP_Column_RootTable, KDBTextManager_Fixture)
+{
+}
+FIXTURE_TEST_CASE(KDBTextManager_PathTypeVP_Column_Db, KDBTextManager_Fixture)
+{
 }
 
 //TODO: KDBManagerPathTypeVP on internal objects, to test interpretation of the path
@@ -267,7 +323,7 @@ FIXTURE_TEST_CASE(KDBTextManager_OpenColumnRead, KDBTextManager_Fixture)
     REQUIRE_RC( KDBManagerOpenColumnRead( m_mgr, & m_col, "%s", "SEQUENCE/col/qq" ) );
     REQUIRE_NOT_NULL( m_col );
 }
-//TODO: non-root tables
+//TODO: columns in non-root tables
 
 FIXTURE_TEST_CASE(KDBManager_VPathOpenLocalDBRead, KDBTextManager_Fixture)
 {

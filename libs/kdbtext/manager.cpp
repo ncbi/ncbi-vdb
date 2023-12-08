@@ -100,7 +100,6 @@ Manager::parse( const char * input, char * error, size_t error_size )
 int
 Manager::pathType( const string & p_path ) const
 {
-//TODO: allow db/table/col etc.
     Path path( p_path );
     if ( m_db != nullptr )
     {
@@ -116,71 +115,19 @@ Manager::pathType( const string & p_path ) const
 bool
 Manager::exists( uint32_t requested, const Path & p_path ) const
 {
-    // TODO: non-root dbs and other objects (incl root tables)
     Path path = p_path;
-    switch ( requested )
+    if ( m_db != nullptr )
     {
-    case kptDatabase:
-        {
-            const Database * db = m_db;
-            do
-            {
-                if ( db && ! path.empty() && db -> getName() == path.front() )
-                {
-                    path.pop();
-                    if ( path.empty() )
-                    {
-                        return true;
-                    }
-
-                    if ( string("db") == path.front() )
-                    {
-                        path.pop();
-                        if (  ! path.empty() )
-                        {
-                            db = db -> getDatabase( path.front() );
-                        }
-                        else
-                        {
-                            return false;
-                        }
-                    }
-                    else
-                    {
-                        return false;
-                    }
-                }
-                else
-                {
-                    return false;
-                }
-            }
-            while ( path . size () > 0 );
-            return true;
-        }
-
-    case kptTable:
-        return m_tbl != nullptr && path.size() == 1 && m_tbl -> getName() == path.front();
-
-    default:
-        return false;
+        return m_db -> exists( requested, path );
     }
-    // int type;
-
-    // type = KDBManagerVPathType (self, name, args);
-    // switch ( type )
-    // {
-    // case kptDatabase:
-    // case kptTable:
+    if ( m_tbl != nullptr )
+    {
+        return m_tbl -> exists( requested, path );
+    }
     // case kptIndex:
     // case kptColumn:
     // case kptMetadata:
-    //     break;
-    // case kptPrereleaseTbl:
-    // default:
-    //     return false;
-    // }
-    // return requested == ( uint32_t ) type;
+    return false;
 }
 
 rc_t

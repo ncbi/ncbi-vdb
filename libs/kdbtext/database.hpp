@@ -61,6 +61,7 @@ namespace KDBText
         const Table * getTable( const std::string & name ) const;
 
         int pathType( Path & ) const;
+        bool exists( uint32_t requested, Path & p_path ) const;
 
     private:
         const KJsonObject * m_json = nullptr;

@@ -208,6 +208,24 @@ Table::pathType( Path & p ) const
     return kptNotFound;
 }
 
+bool
+Table::exists( uint32_t requested, Path & path ) const
+{
+    if ( ! path.empty() && m_name == path.front() )
+    {
+        path.pop();
+        if ( path.empty() )
+        {
+            return requested == kptTable;
+        }
+    // case kptIndex:
+    // case kptColumn:
+    // case kptMetadata:
+    }
+
+    return false;
+}
+
 static
 rc_t CC
 KTextTableWhack ( KTable *bself )

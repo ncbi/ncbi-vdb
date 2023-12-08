@@ -32,6 +32,8 @@
 
 #include "../../libs/kdbtext/table.hpp"
 
+#include <kdb/manager.h>
+
 #include <klib/rc.h>
 #include <klib/json.h>
 
@@ -138,6 +140,32 @@ FIXTURE_TEST_CASE(KDBTextTable_Make_WithColumns, KDBTextTable_Fixture)
     REQUIRE_NOT_NULL( m_tbl -> getColumn( "col2" ) );
 }
 
+//TODO: columns, metadata, indexes
+
+FIXTURE_TEST_CASE(KDBTextTable_exists_empty, KDBTextTable_Fixture)
+{
+    Setup(R"({"type": "table", "name": "testtbl"})");
+    REQUIRE_RC( m_tbl-> inflate( m_error, sizeof m_error ) );
+
+    Path p( "" );
+    REQUIRE( ! m_tbl -> exists( kptTable, p ) );
+}
+FIXTURE_TEST_CASE(KDBTextTable_exists_WrongType, KDBTextTable_Fixture)
+{
+    Setup(R"({"type": "table", "name": "testtbl"})");
+    REQUIRE_RC( m_tbl-> inflate( m_error, sizeof m_error ) );
+
+    Path p( "testtbl" );
+    REQUIRE( ! m_tbl -> exists( kptDatabase, p ) );
+}
+FIXTURE_TEST_CASE(KDBTextTable_exists, KDBTextTable_Fixture)
+{
+    Setup(R"({"type": "table", "name": "testtbl"})");
+    REQUIRE_RC( m_tbl-> inflate( m_error, sizeof m_error ) );
+
+    Path p( "testtbl" );
+    REQUIRE( m_tbl -> exists( kptTable, p ) );
+}
 //TODO: columns, metadata, indexes
 
 //////////////////////////////////////////// Main
