@@ -418,7 +418,7 @@ LIB_EXPORT rc_t CC KStreamReadExactly ( const KStream *self,
 LIB_EXPORT rc_t CC KStreamTimedReadExactly ( const KStream *self,
     void *buffer, size_t bytes, struct timeout_t *tm )
 {
-    rc_t rc;
+    rc_t rc = 0;
     uint8_t *b;
     size_t total, count;
 
@@ -487,7 +487,7 @@ LIB_EXPORT rc_t CC KStreamTimedReadExactly ( const KStream *self,
         return RC ( rcNS, rcStream, rcReading, rcInterface, rcBadVersion );
     }
 
-    return rc = 0;
+    return rc;
 }
 
 /* Write
