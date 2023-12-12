@@ -24,6 +24,12 @@
 *
 */
 
+#ifdef _WINSOCK_DEPRECATED_NO_WARNINGS
+#define WINSOCK_DEP_NO_WARN_WAS_DEFINED 1
+#else
+#define _WINSOCK_DEPRECATED_NO_WARNINGS
+#endif
+
 #include <kns/impl.h>
 #include <kns/endpoint.h>
 #include <klib/text.h>
@@ -154,3 +160,9 @@ rc_t CC KNSManagerInitDNSEndpoint ( struct KNSManager const *self,
 
     return rc;
 }
+
+#ifdef WINSOCK_DEP_NO_WARN_WAS_DEFINED
+#undef WINSOCK_DEP_NO_WARN_WAS_DEFINED
+#else
+#undef _WINSOCK_DEPRECATED_NO_WARNINGS
+#endif

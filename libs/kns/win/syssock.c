@@ -24,6 +24,11 @@
 *
 */
 
+#ifdef _WINSOCK_DEPRECATED_NO_WARNINGS
+#define WINSOCK_DEP_NO_WARN_WAS_DEFINED 1
+#else
+#define _WINSOCK_DEPRECATED_NO_WARNINGS
+#endif
 
 /*--------------------------------------------------------------------------
  * forwards
@@ -2446,3 +2451,8 @@ static rc_t HandleErrnoEx ( const char *func_name, unsigned int lineno, rc_t rc_
     return rc;
 }
 
+#ifdef WINSOCK_DEP_NO_WARN_WAS_DEFINED
+#undef WINSOCK_DEP_NO_WARN_WAS_DEFINED
+#else
+#undef _WINSOCK_DEPRECATED_NO_WARNINGS
+#endif
