@@ -32,8 +32,11 @@
 
 add_compile_definitions( __mod__="test/kdbtext" )
 
-AddExecutableTest( Test_KDBText_Path "test-path" "${COMMON_LIBS_READ};kdbtext" )
-AddExecutableTest( Test_KDBText_Column "test-column" "${COMMON_LIBS_READ};kdbtext" )
-AddExecutableTest( Test_KDBText_Table "test-table" "${COMMON_LIBS_READ};kdbtext" )
-AddExecutableTest( Test_KDBText_Database "test-database" "${COMMON_LIBS_READ};kdbtext" )
-AddExecutableTest( Test_KDBText_Manager "test-manager" "${COMMON_LIBS_READ};kdbtext" )
+set( LIBS ${COMMON_LIBS_READ};kdbtext )
+AddExecutableTest( Test_KDBText_Path        "test-path"     "${LIBS}" )
+AddExecutableTest( Test_KDBText_Metadata    "test-metadata" "${LIBS}" )
+AddExecutableTest( Test_KDBText_Index       "test-index"    "${LIBS}" )
+AddExecutableTest( Test_KDBText_Column      "test-column"   "${LIBS}" )
+AddExecutableTest( Test_KDBText_Table       "test-table"    "${LIBS}" )
+AddExecutableTest( Test_KDBText_Database    "test-database" "${LIBS}" )
+AddExecutableTest( Test_KDBText_Manager     "test-manager"  "${LIBS}" )

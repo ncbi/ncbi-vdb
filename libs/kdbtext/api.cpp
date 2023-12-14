@@ -248,14 +248,8 @@ KTextManagerOpenTableReadVPath(const KDBManager *bself, const KTable **p_tbl, co
 static
 rc_t CC
 KTextManagerVOpenColumnRead ( const KDBManager *bself, const KColumn **p_col, const char *fmt, va_list args )
-{
-    CAST();
-
-    const Column * col = nullptr;
-    rc_t rc = self -> openColumn( Path( fmt, args ), col );
-    *p_col = (const KColumn *)col;
-
-    return rc;
+{   // not supported here
+    return SILENT_RC ( rcDB, rcMgr, rcAccessing, rcColumn, rcUnsupported );
 }
 
 static

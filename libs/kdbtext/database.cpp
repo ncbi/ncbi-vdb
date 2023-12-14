@@ -85,9 +85,22 @@ Database::~Database()
 }
 
 const Database *
-Database::getDatabase( const std::string & name ) const
-{
+Database::findDatabase( const string & p_name ) const
+{   // shallow search for a db
     for( auto & d : m_subdbs )
+    {
+        if ( p_name == d.getName() )
+        {
+            return & d;
+        }
+    }
+    return nullptr;
+}
+
+const Table *
+Database::findTable( const std::string & name ) const
+{   // shallow search for a table
+    for( auto & d : m_tables )
     {
         if ( name == d.getName() )
         {
@@ -97,14 +110,60 @@ Database::getDatabase( const std::string & name ) const
     return nullptr;
 }
 
-const Table *
-Database::getTable( const std::string & name ) const
+const Database *
+Database::getDatabase( Path & p_path ) const
 {
-    for( auto & d : m_tables )
+    if ( ! p_path.empty() && p_path.front() == m_name )
     {
-        if ( name == d.getName() )
+        p_path.pop();
+        if ( p_path.empty() )
         {
-            return & d;
+            return this;
+        }
+        if ( p_path.front() == "db" )
+        {
+            p_path.pop();
+            if ( ! p_path.empty() )
+            {
+                const Database * db = findDatabase( p_path.front() );
+                if ( db != nullptr )
+                {
+                    return db -> getDatabase( p_path );
+                }
+            }
+        }
+    }
+    return nullptr;
+}
+
+const Table *
+Database::getTable( Path & p_path ) const
+{
+    if ( ! p_path.empty() && p_path.front() == m_name )
+    {
+        p_path.pop();
+        if ( ! p_path.empty() )
+        {
+            if ( p_path.front() == "tbl" )
+            {
+                p_path.pop();
+                if ( ! p_path.empty() )
+                {
+                    return findTable( p_path.front() );
+                }
+            }
+            else if ( p_path.front() == "db" )
+            {
+                p_path.pop();
+                if ( ! p_path.empty() )
+                {
+                    const Database * db = findDatabase( p_path.front() );
+                    if ( db != nullptr )
+                    {
+                        return db -> getTable( p_path );
+                    }
+                }
+            }
         }
     }
     return nullptr;
@@ -190,7 +249,7 @@ Database::inflate( char * error, size_t error_size )
                         return SILENT_RC( rcDB, rcDatabase, rcCreating, rcParam, rcInvalid );
                     }
                 }
-                m_subdbs .push_back( subdb );
+                m_subdbs . push_back( subdb );
             }
             else
             {   // not an object
@@ -261,7 +320,7 @@ Database::pathType( Path & p ) const
             p.pop();
             if ( ! p.empty() )
             {
-                const Database * db = getDatabase( p.front() );
+                const Database * db = findDatabase( p.front() );
                 if ( db != nullptr )
                 {
                     return db->pathType( p );
@@ -273,7 +332,7 @@ Database::pathType( Path & p ) const
             p.pop();
             if ( ! p.empty() )
             {
-                const Table * t = getTable( p.front() );
+                const Table * t = findTable( p.front() );
                 if ( t != nullptr  )
                 {
                     return t -> pathType( p );
@@ -300,7 +359,7 @@ Database::exists( uint32_t requested, Path & path ) const
             path.pop();
             if (  ! path.empty() )
             {
-                const Database * db = getDatabase( path.front() );
+                const Database * db = findDatabase( path.front() );
                 if ( db != nullptr )
                 {
                     return db->exists( requested, path );
@@ -312,15 +371,13 @@ Database::exists( uint32_t requested, Path & path ) const
             path.pop();
             if ( ! path.empty() )
             {
-                const Table * tbl= getTable( path.front() );
+                const Table * tbl= findTable( path.front() );
                 if ( tbl != nullptr )
                 {
                     return tbl -> exists( requested, path );
                 }
             }
         }
-    // case kptIndex:
-    // case kptColumn:
     // case kptMetadata:
     }
 

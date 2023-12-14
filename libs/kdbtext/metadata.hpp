@@ -26,46 +26,33 @@
 
 #pragma once
 
-#include "../libs/kdb/table-base.h"
-
-#include "path.hpp"
-#include "column.hpp"
-#include "index.hpp"
+#include "../libs/kdb/meta-base.h"
 
 #include <klib/json.h>
 #include <klib/rc.h>
 
 #include <string>
-#include <vector>
 
-typedef struct KTextTable KTextTable;
-struct KTextTable
+typedef struct KTextMetadata KTextMetadata;
+struct KTextMetadata
 {
-    KTable dad;
+    KMetadata dad;
 };
 
 namespace KDBText
 {
-    class Table : public KTextTable
+    class Metadata : public KTextMetadata
     {
     public:
-        Table( const KJsonObject * p_json );
-        ~Table();
+        Metadata( const KJsonObject * p_json );
+        ~Metadata();
 
         rc_t inflate( char * error, size_t error_size );
 
         const std::string & getName() const { return m_name; }
 
-        const Column * getColumn( const std::string& name ) const;
-        const Index * getIndex( const std::string& name ) const;
-
-        int pathType( Path & ) const;
-        bool exists( uint32_t requested, Path & p_path ) const;
-
     private:
         const KJsonObject * m_json = nullptr;
         std::string m_name;
-        std::vector<Column> m_columns;
-        std::vector<Index> m_indexes;
     };
 }

@@ -47,7 +47,7 @@ namespace KDBText
         const Database * getRootDatabase() const { return m_db; }
         const Table * getRootTable() const { return m_tbl; }
 
-        int pathType( const std::string & path ) const;
+        int pathType( const Path & path ) const;
 
         bool exists( uint32_t requested, const Path & ) const;
 
@@ -55,7 +55,6 @@ namespace KDBText
 
         rc_t openDatabase( const Path &, const Database *& ) const;
         rc_t openTable( const Path &, const Table *& ) const;
-        rc_t openColumn( const Path &, const Column *& ) const;
 
     private:
         KJsonValue * m_root = nullptr;

@@ -64,6 +64,11 @@ public:
 
         m_db = new Database( json );
     }
+    void SetupAndInflate( const char * input )
+    {
+        Setup( input );
+        THROW_ON_RC( m_db -> inflate( m_error, sizeof m_error ) );
+    }
 
     KJsonValue * m_json = nullptr;
     Database * m_db = nullptr;
@@ -103,10 +108,7 @@ FIXTURE_TEST_CASE(KDBTextDatabase_Make_WrongType, KDBTextDatabase_Fixture)
 
 FIXTURE_TEST_CASE(KDBTextDatabase_Make_Flat, KDBTextDatabase_Fixture)
 {
-    Setup(R"({"type": "database", "name": "testdb"})");
-
-    REQUIRE_RC( m_db -> inflate( m_error, sizeof m_error ) );
-
+    SetupAndInflate(R"({"type": "database", "name": "testdb"})");
     REQUIRE_EQ( string("testdb"), m_db -> getName() );
 }
 
@@ -201,110 +203,118 @@ const char * NestedDb = R"({
 
 FIXTURE_TEST_CASE(KDBTextDatabase_Make_Nested, KDBTextDatabase_Fixture)
 {
-    Setup( NestedDb );
-    REQUIRE_RC( m_db -> inflate( m_error, sizeof m_error ) );
+    SetupAndInflate( NestedDb );
 
-    REQUIRE_NULL( m_db -> getDatabase( "notthere") );
-    REQUIRE_NOT_NULL( m_db -> getDatabase( "subdb1") );
-    REQUIRE_NOT_NULL( m_db -> getDatabase( "subdb2") );
+    REQUIRE_NULL( m_db -> findDatabase( "notthere") );
+    REQUIRE_NOT_NULL( m_db -> findDatabase( "subdb1") );
+    REQUIRE_NOT_NULL( m_db -> findDatabase( "subdb2") );
 
-    REQUIRE_NULL( m_db -> getTable( "notthere") );
-    REQUIRE_NOT_NULL( m_db -> getTable( "tbl0-1") );
-    REQUIRE_NOT_NULL( m_db -> getTable( "tbl0-2") );
+    REQUIRE_NULL( m_db -> findTable( "notthere") );
+    REQUIRE_NOT_NULL( m_db -> findTable( "tbl0-1") );
+    REQUIRE_NOT_NULL( m_db -> findTable( "tbl0-2") );
+}
+FIXTURE_TEST_CASE(KDBTextDatabase_getDatabase, KDBTextDatabase_Fixture)
+{
+    SetupAndInflate( NestedDb );
+    Path p( "testdb" );
+    const Database * db = m_db -> getDatabase( p );
+    REQUIRE_NOT_NULL( db );
+    REQUIRE_EQ( string("testdb"), db->getName() );
+}
+FIXTURE_TEST_CASE(KDBTextDatabase_getDatabase_Nested, KDBTextDatabase_Fixture)
+{
+    SetupAndInflate( NestedDb );
+    Path p( "testdb/db/subdb2" );
+    const Database * db = m_db -> getDatabase( p );
+    REQUIRE_NOT_NULL( db );
+    REQUIRE_EQ( string("subdb2"), db->getName() );
+}
+FIXTURE_TEST_CASE(KDBTextDatabase_getTable, KDBTextDatabase_Fixture)
+{
+    SetupAndInflate( NestedDb );
+    Path p( "testdb/tbl/tbl0-1" );
+    const Table * tbl = m_db -> getTable( p );
+    REQUIRE_NOT_NULL( tbl );
+    REQUIRE_EQ( string("tbl0-1"), tbl->getName() );
+}
+FIXTURE_TEST_CASE(KDBTextDatabase_getTable_Nested, KDBTextDatabase_Fixture)
+{
+    SetupAndInflate( NestedDb );
+    Path p( "testdb/db/subdb2/tbl/tbl2-2" );
+    const Table * tbl = m_db -> getTable( p );
+    REQUIRE_NOT_NULL( tbl );
+    REQUIRE_EQ( string("tbl2-2"), tbl->getName() );
 }
 
 FIXTURE_TEST_CASE(KDBTextDatabase_pathType_empty, KDBTextDatabase_Fixture)
 {
-    Setup( NestedDb );
-    REQUIRE_RC( m_db -> inflate( m_error, sizeof m_error ) );
-
+    SetupAndInflate( NestedDb );
     Path p( "" );
     REQUIRE_EQ( (int)kptNotFound, m_db -> pathType( p ) );
 }
 FIXTURE_TEST_CASE(KDBTextDatabase_pathType_miss, KDBTextDatabase_Fixture)
 {
-    Setup( NestedDb );
-    REQUIRE_RC( m_db -> inflate( m_error, sizeof m_error ) );
-
+    SetupAndInflate( NestedDb );
     Path p( "qq" );
     REQUIRE_EQ( (int)kptNotFound, m_db -> pathType( p ) );
 }
 FIXTURE_TEST_CASE(KDBTextDatabase_pathType_self, KDBTextDatabase_Fixture)
 {
-    Setup( NestedDb );
-    REQUIRE_RC( m_db -> inflate( m_error, sizeof m_error ) );
-
+    SetupAndInflate( NestedDb );
     Path p( "testdb" );
     REQUIRE_EQ( (int)kptDatabase, m_db -> pathType( p ) );
 }
 FIXTURE_TEST_CASE(KDBTextDatabase_pathType_nestedDb, KDBTextDatabase_Fixture)
 {
-    Setup( NestedDb );
-    REQUIRE_RC( m_db -> inflate( m_error, sizeof m_error ) );
-
+    SetupAndInflate( NestedDb );
     Path p( "testdb/db/subdb2" );
     REQUIRE_EQ( (int)kptDatabase, m_db -> pathType( p ) );
 }
 FIXTURE_TEST_CASE(KDBTextDatabase_pathType_nestedTable, KDBTextDatabase_Fixture)
 {
-    Setup( NestedDb );
-    REQUIRE_RC( m_db -> inflate( m_error, sizeof m_error ) );
-
+    SetupAndInflate( NestedDb );
     Path p( "testdb/db/subdb2/tbl/tbl2-2" );
     REQUIRE_EQ( (int)kptTable, m_db -> pathType( p ) );
 }
-
-//TODO: metadata, indexes
+//TODO: metadata (db/table), index (db/table)
 
 FIXTURE_TEST_CASE(KDBTextDatabase_exists_empty, KDBTextDatabase_Fixture)
 {
-    Setup( NestedDb );
-    REQUIRE_RC( m_db -> inflate( m_error, sizeof m_error ) );
-
+    SetupAndInflate( NestedDb );
     Path p( "" );
     REQUIRE( ! m_db -> exists( kptDatabase, p ) );
 }
 FIXTURE_TEST_CASE(KDBTextDatabase_exists_Database_Not, KDBTextDatabase_Fixture)
 {
-    Setup( NestedDb );
-    REQUIRE_RC( m_db -> inflate( m_error, sizeof m_error ) );
-
+    SetupAndInflate( NestedDb );
     Path p( "notadb" );
     REQUIRE( ! m_db -> exists( kptDatabase, p ) );
 }
 FIXTURE_TEST_CASE(KDBTextDatabase_exists_Database_WrongType, KDBTextDatabase_Fixture)
 {
-    Setup( NestedDb );
-    REQUIRE_RC( m_db -> inflate( m_error, sizeof m_error ) );
-
+    SetupAndInflate( NestedDb );
     Path p( "testdb" );
     REQUIRE( ! m_db -> exists( kptTable, p ) );
 }
 FIXTURE_TEST_CASE(KDBTextDatabase_exists_Database_Root, KDBTextDatabase_Fixture)
 {
-    Setup( NestedDb );
-    REQUIRE_RC( m_db -> inflate( m_error, sizeof m_error ) );
-
+    SetupAndInflate( NestedDb );
     Path p( "testdb" );
     REQUIRE( m_db -> exists( kptDatabase, p ) );
 }
 FIXTURE_TEST_CASE(KDBTextDatabase_exists_Database_Nested, KDBTextDatabase_Fixture)
 {
-    Setup( NestedDb );
-    REQUIRE_RC( m_db -> inflate( m_error, sizeof m_error ) );
-
+    SetupAndInflate( NestedDb );
     Path p( "testdb/db/subdb2" );
     REQUIRE( m_db -> exists( kptDatabase, p ) );
 }
 FIXTURE_TEST_CASE(KDBTextDatabase_exists_Table, KDBTextDatabase_Fixture)
 {
-    Setup( NestedDb );
-    REQUIRE_RC( m_db -> inflate( m_error, sizeof m_error ) );
-
+    SetupAndInflate( NestedDb );
     Path p( "testdb/db/subdb2/tbl/tbl2-1" );
     REQUIRE( m_db -> exists( kptTable, p ) );
 }
-//TODO: metadata, indexes (?)
+//TODO: KDBTextDatabase_exists_Metadata (db/table)
 
 //////////////////////////////////////////// Main
 extern "C"

@@ -33,7 +33,7 @@
 #include <kdb/manager.h>
 #include <kdb/database.h>
 #include <kdb/table.h>
-#include <kdb/kdb-priv.h>
+#include <kdb/kdb-priv.h> //KDBManagerVPathTypeUnreliable
 
 #include <klib/rc.h>
 
@@ -126,6 +126,18 @@ FIXTURE_TEST_CASE(KDBTextManager_Db_Exists, KDBTextManager_Fixture)
     REQUIRE( KDBManagerExists( m_mgr, kptDatabase, "%s", "testdb" ) );
 }
 
+const char * NestedDatabases = R"({
+        "type": "database",
+        "name": "testdb",
+        "databases": [
+                {"type": "database","name":"subdb1"},
+                {"type": "database","name":"subdb2","tables":[
+                    {"type": "table", "name": "tbl1"},
+                    {"type": "table", "name": "tbl2"}
+                ]}
+        ]
+})";
+
 FIXTURE_TEST_CASE(KDBTextManager_SubDb_Exists_Not, KDBTextManager_Fixture)
 {
     Setup( R"({"type": "database", "name": "testdb"})" );
@@ -133,12 +145,7 @@ FIXTURE_TEST_CASE(KDBTextManager_SubDb_Exists_Not, KDBTextManager_Fixture)
 }
 FIXTURE_TEST_CASE(KDBTextManager_SubDb_Exists, KDBTextManager_Fixture)
 {
-    Setup( R"({"type": "database","name": "testdb",
-            "databases":[
-                {"type": "database","name":"subdb1"} ,
-                {"type": "database","name":"subdb2"}
-            ]
-    })");
+    Setup( NestedDatabases );
     REQUIRE( KDBManagerExists( m_mgr, kptDatabase, "%s", "testdb/db/subdb1" ) );
     REQUIRE( KDBManagerExists( m_mgr, kptDatabase, "%s", "testdb/db/subdb2" ) );
 }
@@ -151,27 +158,37 @@ FIXTURE_TEST_CASE(KDBTextManager_Table_Exists_Not, KDBTextManager_Fixture)
 FIXTURE_TEST_CASE(KDBTextManager_Table_Exists, KDBTextManager_Fixture)
 {
     Setup( R"({"type": "database","name": "testdb",
-        "tables":[
-                    {"type": "table", "name": "tbl1"},
-                    {"type": "table", "name": "tbl2"}
-        ]
+            "tables":[
+                {"type": "table", "name": "tbl1"},
+                {"type": "table", "name": "tbl2"}
+            ]
     })" );
     REQUIRE( KDBManagerExists( m_mgr, kptTable, "%s", "testdb/tbl/tbl1" ) );
 }
-
-//TODO: table, index, column, metadata
-
-FIXTURE_TEST_CASE(KDBTextManager_Writable_Found, KDBTextManager_Fixture)
-{   // for now, any path will be reported as readonly
-    Setup( R"({"type": "database", "name": "testdb"})" );
-    rc_t rc = KDBManagerWritable( m_mgr, "%s", "testdb" );
-    REQUIRE_EQ( SILENT_RC( rcDB, rcPath, rcAccessing, rcPath, rcReadonly ), rc );
+FIXTURE_TEST_CASE(KDBTextManager_Index_Exists, KDBTextManager_Fixture)
+{
+    Setup( R"({"type": "database","name": "testdb",
+               "tables":[
+                   {"type": "table", "name": "tbl1",
+                    "indexes":[
+                        {"name":"qwer","text":[]}
+                    ]}
+                ]
+    })" );
+    REQUIRE( KDBManagerExists( m_mgr, kptIndex, "%s", "testdb/tbl/tbl1/idx/qwer" ) );
 }
+
 FIXTURE_TEST_CASE(KDBTextManager_Writable_NotFound, KDBTextManager_Fixture)
 {
     Setup( R"({"type": "database", "name": "testdb"})" );
     rc_t rc = KDBManagerWritable( m_mgr, "%s", "proddb" );
     REQUIRE_EQ( SILENT_RC( rcDB, rcPath, rcAccessing, rcPath, rcNotFound ), rc );
+}
+FIXTURE_TEST_CASE(KDBTextManager_Writable_Found, KDBTextManager_Fixture)
+{   // for now, any existing object will be reported as readonly
+    Setup( R"({"type": "database", "name": "testdb"})" );
+    rc_t rc = KDBManagerWritable( m_mgr, "%s", "testdb" );
+    REQUIRE_EQ( SILENT_RC( rcDB, rcPath, rcAccessing, rcPath, rcReadonly ), rc );
 }
 
 FIXTURE_TEST_CASE(KDBTextManager_RunPeriodicTasks, KDBTextManager_Fixture)
@@ -194,14 +211,7 @@ FIXTURE_TEST_CASE(KDBTextManager_PathTypeVP_Db, KDBTextManager_Fixture)
 }
 FIXTURE_TEST_CASE(KDBTextManager_PathTypeVP_Db_Nested, KDBTextManager_Fixture)
 {
-    Setup( R"({
-            "type": "database",
-            "name": "testdb",
-            "databases":[
-                {"type": "database","name":"subdb1"},
-                {"type": "database","name":"subdb2"}
-            ]
-    })" );
+    Setup( NestedDatabases );
     MakeVPath( "testdb/db/subdb2");
     REQUIRE_EQ( (int)kptDatabase, KDBManagerPathTypeVP( m_mgr, m_path ) );
 }
@@ -213,38 +223,35 @@ FIXTURE_TEST_CASE(KDBTextManager_PathTypeVP_Table_Root, KDBTextManager_Fixture)
 }
 FIXTURE_TEST_CASE(KDBTextManager_PathTypeVP_Table_Nested, KDBTextManager_Fixture)
 {
-    Setup( R"({
-        "type": "database",
-        "name": "testdb",
-        "databases": [
-                {"type": "database","name":"subdb1"},
-                {"type": "database","name":"subdb2","tables":[
-                    {"type": "table", "name": "tbl1"},
-                    {"type": "table", "name": "tbl2"}
-                ]}
-        ]
-    })" );
+    Setup( NestedDatabases );
     MakeVPath( "testdb/db/subdb2/tbl/tbl2");
     REQUIRE_EQ( (int)kptTable, KDBManagerPathTypeVP( m_mgr, m_path ) );
 }
 
 FIXTURE_TEST_CASE(KDBTextManager_PathTypeVP_Column_NotFound, KDBTextManager_Fixture)
 {
-    Setup( R"({ "type": "table", "name": "tbl1", "columns":[{"name":"col"}] })" );
-    MakeVPath( "testdb/db/subdb2/tbl/tbl2");
+    Setup( R"({ "type": "table", "name": "tbl1", "columns":[{"name":"col1"}] })" );
+    MakeVPath( "tbl1/col/notcol");
     REQUIRE_EQ( (int)kptNotFound, KDBManagerPathTypeVP( m_mgr, m_path ) );
 }
 FIXTURE_TEST_CASE(KDBTextManager_PathTypeVP_Column_RootTable, KDBTextManager_Fixture)
 {
+    Setup( R"({ "type": "table", "name": "tbl1", "columns":[{"name":"col1"}] })" );
+    MakeVPath( "tbl1/col/col1");
+    REQUIRE_EQ( (int)kptColumn, KDBManagerPathTypeVP( m_mgr, m_path ) );
 }
 FIXTURE_TEST_CASE(KDBTextManager_PathTypeVP_Column_Db, KDBTextManager_Fixture)
 {
+    Setup( R"({"type": "database","name": "testdb",
+        "tables":[
+            { "type": "table", "name": "tbl1",
+              "columns":[{"name":"col1"}]
+            }
+        ]
+    })" );
+    MakeVPath( "testdb/tbl/tbl1/col/col1");
+    REQUIRE_EQ( (int)kptColumn, KDBManagerPathTypeVP( m_mgr, m_path ) );
 }
-
-//TODO: KDBManagerPathTypeVP on internal objects, to test interpretation of the path
-    // kptColumn,
-    // kptIndex,
-    // kptMetadata,
 
 FIXTURE_TEST_CASE(KDBTextManager_PathType, KDBTextManager_Fixture)
 {
@@ -274,6 +281,14 @@ FIXTURE_TEST_CASE(KDBTextManager_OpenDBRead, KDBTextManager_Fixture)
     REQUIRE_NOT_NULL( db );
     REQUIRE_RC( KDatabaseRelease( db ) );
 }
+FIXTURE_TEST_CASE(KDBTextManager_OpenDBRead_Nested, KDBTextManager_Fixture)
+{
+    Setup( NestedDatabases );
+    const KDatabase * db = nullptr;
+    REQUIRE_RC( KDBManagerOpenDBRead( m_mgr, & db, "%s", "testdb/db/subdb2" ) );
+    REQUIRE_NOT_NULL( db );
+    REQUIRE_RC( KDatabaseRelease( db ) );
+}
 
 FIXTURE_TEST_CASE(KDBTextManager_OpenTableRead, KDBTextManager_Fixture)
 {   // root table
@@ -283,7 +298,14 @@ FIXTURE_TEST_CASE(KDBTextManager_OpenTableRead, KDBTextManager_Fixture)
     REQUIRE_NOT_NULL( tbl );
     REQUIRE_RC( KTableRelease( tbl ) );
 }
-//TODO: non-root tables
+FIXTURE_TEST_CASE(KDBTextManager_OpenTableRead_NonRoot, KDBTextManager_Fixture)
+{
+    Setup( NestedDatabases );
+    const KTable * tbl = nullptr;
+    REQUIRE_RC( KDBManagerOpenTableRead( m_mgr, & tbl, "%s", "testdb/db/subdb2/tbl/tbl2" ) );
+    REQUIRE_NOT_NULL( tbl );
+    REQUIRE_RC( KTableRelease( tbl ) );
+}
 
 FIXTURE_TEST_CASE(KDBTextManager_OpenTableReadVPath, KDBTextManager_Fixture)
 {
@@ -294,36 +316,6 @@ FIXTURE_TEST_CASE(KDBTextManager_OpenTableReadVPath, KDBTextManager_Fixture)
     REQUIRE_NOT_NULL( tbl );
     REQUIRE_RC( KTableRelease( tbl ) );
 }
-
-const char * TableWithColumnQQ = R"({"type": "table", "name": "SEQUENCE", "columns":[{"name":"qq"}]})";
-FIXTURE_TEST_CASE(KDBTextManager_OpenColumnRead_BadPath1, KDBTextManager_Fixture)
-{
-    Setup( TableWithColumnQQ );
-    REQUIRE_RC_FAIL( KDBManagerOpenColumnRead( m_mgr, & m_col, "%s", "SHMEQUENCE/col/qq" ) ); // bad table name
-}
-FIXTURE_TEST_CASE(KDBTextManager_OpenColumnRead_BadPath2, KDBTextManager_Fixture)
-{
-    Setup( TableWithColumnQQ );
-    REQUIRE_RC_FAIL( KDBManagerOpenColumnRead( m_mgr, & m_col, "%s", "SEQUENCE/shmol/qq" ) ); // bad "col"
-}
-FIXTURE_TEST_CASE(KDBTextManager_OpenColumnRead_BadPath3, KDBTextManager_Fixture)
-{
-    Setup( TableWithColumnQQ );
-    REQUIRE_RC_FAIL( KDBManagerOpenColumnRead( m_mgr, & m_col, "%s", "SEQUENCE/col" ) ); // col name missing
-}
-FIXTURE_TEST_CASE(KDBTextManager_OpenColumnRead_BadPath4, KDBTextManager_Fixture)
-{
-    Setup( TableWithColumnQQ );
-    REQUIRE_RC_FAIL( KDBManagerOpenColumnRead( m_mgr, & m_col, "%s", "SEQUENCE/col/shmol" ) ); // no such column
-}
-FIXTURE_TEST_CASE(KDBTextManager_OpenColumnRead, KDBTextManager_Fixture)
-{ // root table
-    Setup( TableWithColumnQQ );
-
-    REQUIRE_RC( KDBManagerOpenColumnRead( m_mgr, & m_col, "%s", "SEQUENCE/col/qq" ) );
-    REQUIRE_NOT_NULL( m_col );
-}
-//TODO: columns in non-root tables
 
 FIXTURE_TEST_CASE(KDBManager_VPathOpenLocalDBRead, KDBTextManager_Fixture)
 {
@@ -342,6 +334,14 @@ FIXTURE_TEST_CASE(KDBManager_VPathOpenRemoteDBRead, KDBTextManager_Fixture)
     const KDatabase * db = nullptr;
     rc_t rc = KDBManagerVPathOpenRemoteDBRead( m_mgr, & db, m_path, nullptr );
     REQUIRE_EQ( SILENT_RC( rcDB, rcMgr, rcOpening, rcType, rcInvalid ), rc );
+}
+
+FIXTURE_TEST_CASE(KDBManager_OpenColumnRead, KDBTextManager_Fixture)
+{
+    Setup( R"({"type": "database", "name": "testdb"})" );
+    const KColumn *col = nullptr;
+    rc_t rc = KDBManagerOpenColumnRead( m_mgr, & col, "%s", "testdb/col/col1" );
+    REQUIRE_EQ( SILENT_RC( rcDB, rcMgr, rcAccessing, rcColumn, rcUnsupported ), rc );
 }
 
 //////////////////////////////////////////// Main
@@ -382,7 +382,6 @@ rc_t CC KMain ( int argc, char *argv [] )
         let metadata: Metadata
 
         let tables: [Table]
-        let indices: [Index]
         let databases: [Database]
     }
         struct Node {

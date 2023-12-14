@@ -99,6 +99,19 @@ Table::getColumn( const std::string & name ) const
     return nullptr;
 }
 
+const Index *
+Table::getIndex( const std::string & name ) const
+{
+    for( auto & c : m_indexes )
+    {
+        if ( name == c.getName() )
+        {
+            return & c;
+        }
+    }
+    return nullptr;
+}
+
 rc_t
 Table::inflate( char * error, size_t error_size )
 {
@@ -146,10 +159,10 @@ Table::inflate( char * error, size_t error_size )
     }
 
     // Columns
-    const KJsonValue * dbs = KJsonObjectGetMember ( m_json, "columns" );
-    if ( dbs != nullptr )
+    const KJsonValue * columns = KJsonObjectGetMember ( m_json, "columns" );
+    if ( columns != nullptr )
     {
-        const KJsonArray * colarr = KJsonValueToArray ( dbs );
+        const KJsonArray * colarr = KJsonValueToArray ( columns );
         if ( colarr == nullptr )
         {
             string_printf ( error, error_size, nullptr, "%s.columns is not an array", m_name.c_str() );
@@ -188,6 +201,51 @@ Table::inflate( char * error, size_t error_size )
             }
         }
     }
+
+    // Indexes
+    const KJsonValue * indexes = KJsonObjectGetMember ( m_json, "indexes" );
+    if ( indexes != nullptr )
+    {
+        const KJsonArray * idxarr = KJsonValueToArray ( indexes );
+        if ( idxarr == nullptr )
+        {
+            string_printf ( error, error_size, nullptr, "%s.indexes is not an array", m_name.c_str() );
+            return SILENT_RC( rcDB, rcTable, rcCreating, rcParam, rcInvalid );
+        }
+
+        uint32_t len = KJsonArrayGetLength ( idxarr );
+        for ( uint32_t i = 0; i < len; ++i )
+        {
+            const KJsonValue * v = KJsonArrayGetElement ( idxarr, i );
+            assert( v != nullptr );
+            const KJsonObject * obj = KJsonValueToObject ( v );
+            if( obj != nullptr )
+            {
+                Index idx( obj );
+                rc = idx . inflate ( error, error_size );
+                if ( rc != 0 )
+                {
+                    return rc;
+                }
+
+                for( auto & d : m_indexes )
+                {
+                    if ( idx.getName() == d.getName() )
+                    {
+                        string_printf ( error, error_size, nullptr, "Duplicate index: %s", idx.getName().c_str() );
+                        return SILENT_RC( rcDB, rcTable, rcCreating, rcParam, rcInvalid );
+                    }
+                }
+                m_indexes .push_back( idx );
+            }
+            else
+            {   // not an object
+                string_printf ( error, error_size, nullptr, "%s.indexes[%i] is not an object", m_name.c_str(), i );
+                return SILENT_RC( rcDB, rcTable, rcCreating, rcParam, rcInvalid );
+            }
+        }
+    }
+
     return rc;
 }
 
@@ -203,6 +261,15 @@ Table::pathType( Path & p ) const
             {
                 return kptTable;
             }
+            if ( p.front() == "col" )
+            {
+                p.pop();
+                if ( ! p.empty() && getColumn( p.front() ) != nullptr )
+                {
+                    return kptColumn;
+                }
+            }
+            //else TODO: index, metadata
         }
     }
     return kptNotFound;
@@ -218,7 +285,15 @@ Table::exists( uint32_t requested, Path & path ) const
         {
             return requested == kptTable;
         }
-    // case kptIndex:
+        if ( path.front() == "idx" )
+        {
+            path.pop();
+            if ( ! path.empty() )
+            {
+                return getIndex( path.front() ) != nullptr;
+            }
+
+        }
     // case kptColumn:
     // case kptMetadata:
     }

@@ -64,6 +64,11 @@ public:
 
         m_tbl = new Table( json );
     }
+    void SetupAndInflate( const char * input )
+    {
+        Setup( input );
+        THROW_ON_RC( m_tbl -> inflate( m_error, sizeof m_error ) );
+    }
 
     KJsonValue * m_json = nullptr;
     Table * m_tbl = nullptr;
@@ -103,10 +108,7 @@ FIXTURE_TEST_CASE(KDBTextTable_Make_WrongType, KDBTextTable_Fixture)
 
 FIXTURE_TEST_CASE(KDBTextTable_Make_Flat, KDBTextTable_Fixture)
 {
-    Setup(R"({"type": "table", "name": "testtbl"})");
-
-    REQUIRE_RC( m_tbl -> inflate( m_error, sizeof m_error ) );
-
+    SetupAndInflate(R"({"type": "table", "name": "testtbl"})");
     REQUIRE_EQ( string("testtbl"), m_tbl -> getName() );
 }
 
@@ -131,42 +133,63 @@ FIXTURE_TEST_CASE(KDBTextTable_Make_ColumnNotObject, KDBTextTable_Fixture)
 
 FIXTURE_TEST_CASE(KDBTextTable_Make_WithColumns, KDBTextTable_Fixture)
 {
-    Setup(R"({"type": "table", "name": "testtbl","columns":[{"name":"col1"},{"name":"col2"}]})");
-
-    REQUIRE_RC( m_tbl -> inflate( m_error, sizeof m_error ) );
+    SetupAndInflate(R"({"type": "table", "name": "testtbl","columns":[{"name":"col1"},{"name":"col2"}]})");
 
     REQUIRE_NULL( m_tbl -> getColumn( "nocol" ) );
     REQUIRE_NOT_NULL( m_tbl -> getColumn( "col1" ) );
     REQUIRE_NOT_NULL( m_tbl -> getColumn( "col2" ) );
 }
 
-//TODO: columns, metadata, indexes
+FIXTURE_TEST_CASE(KDBTextTable_Make_WithIndex, KDBTextTable_Fixture)
+{
+    SetupAndInflate(R"({"type": "table", "name": "testtbl",
+                        "indexes":[ {"name":"i1","text":[]}, {"name":"i2","text":[]}]
+                    })");
+
+    REQUIRE_NULL( m_tbl -> getIndex( "noidx" ) );
+    REQUIRE_NOT_NULL( m_tbl -> getIndex( "i1" ) );
+    REQUIRE_NOT_NULL( m_tbl -> getIndex( "i2" ) );
+}
+
+//TODO: metadata, index
 
 FIXTURE_TEST_CASE(KDBTextTable_exists_empty, KDBTextTable_Fixture)
 {
-    Setup(R"({"type": "table", "name": "testtbl"})");
-    REQUIRE_RC( m_tbl-> inflate( m_error, sizeof m_error ) );
-
+    SetupAndInflate(R"({"type": "table", "name": "testtbl"})");
     Path p( "" );
     REQUIRE( ! m_tbl -> exists( kptTable, p ) );
 }
 FIXTURE_TEST_CASE(KDBTextTable_exists_WrongType, KDBTextTable_Fixture)
 {
-    Setup(R"({"type": "table", "name": "testtbl"})");
-    REQUIRE_RC( m_tbl-> inflate( m_error, sizeof m_error ) );
-
+    SetupAndInflate(R"({"type": "table", "name": "testtbl"})");
     Path p( "testtbl" );
     REQUIRE( ! m_tbl -> exists( kptDatabase, p ) );
 }
 FIXTURE_TEST_CASE(KDBTextTable_exists, KDBTextTable_Fixture)
 {
-    Setup(R"({"type": "table", "name": "testtbl"})");
-    REQUIRE_RC( m_tbl-> inflate( m_error, sizeof m_error ) );
-
+    SetupAndInflate(R"({"type": "table", "name": "testtbl"})");
     Path p( "testtbl" );
     REQUIRE( m_tbl -> exists( kptTable, p ) );
 }
-//TODO: columns, metadata, indexes
+FIXTURE_TEST_CASE(KDBTextTable_exists_Index, KDBTextTable_Fixture)
+{
+    SetupAndInflate(R"({"type": "table", "name": "testtbl",
+                    "indexes":[
+                        {"name":"qwer","text":[]}
+                    ]})");
+    Path p( "testtbl/idx/qwer" );
+    REQUIRE( m_tbl -> exists( kptIndex, p ) );
+}
+//TODO: column, metadata, index
+
+//pathType
+FIXTURE_TEST_CASE(KDBTextTable_pathType_Column, KDBTextTable_Fixture)
+{
+    SetupAndInflate(R"({"type": "table", "name": "testtbl","columns":[{"name":"col1"},{"name":"col2"}]})");
+    Path p( "testtbl/col/col2" );
+    REQUIRE_EQ( (int)kptColumn, m_tbl -> pathType( p ) );
+}
+//TODO: empty, wrong type, table, metadata, index
 
 //////////////////////////////////////////// Main
 extern "C"

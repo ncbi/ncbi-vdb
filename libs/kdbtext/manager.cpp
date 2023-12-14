@@ -98,7 +98,7 @@ Manager::parse( const char * input, char * error, size_t error_size )
 }
 
 int
-Manager::pathType( const string & p_path ) const
+Manager::pathType( const Path & p_path ) const
 {
     Path path( p_path );
     if ( m_db != nullptr )
@@ -124,8 +124,6 @@ Manager::exists( uint32_t requested, const Path & p_path ) const
     {
         return m_tbl -> exists( requested, path );
     }
-    // case kptIndex:
-    // case kptColumn:
     // case kptMetadata:
     return false;
 }
@@ -133,20 +131,8 @@ Manager::exists( uint32_t requested, const Path & p_path ) const
 rc_t
 Manager::writable( const Path & p_path ) const
 {
-    if ( ! p_path.empty() )
-    {
-        //TODO: parse and resolve the path, if the object is valid return rcReadOnly, otherwise rcNotFound
-        if ( m_db && m_db -> getName() == p_path.front() )
-        {
-            return SILENT_RC ( rcDB, rcPath, rcAccessing, rcPath, rcReadonly );
-        }
-        if ( m_tbl && m_tbl -> getName() == p_path.front() )
-        {
-            return SILENT_RC ( rcDB, rcPath, rcAccessing, rcPath, rcReadonly );
-        }
-    }
-
-    return SILENT_RC ( rcDB, rcPath, rcAccessing, rcPath, rcNotFound );
+    //if the object is valid return rcReadOnly, otherwise rcNotFound
+    return SILENT_RC ( rcDB, rcPath, rcAccessing, rcPath, pathType( p_path ) != kptNotFound ? rcReadonly : rcNotFound );
 }
 
 rc_t
@@ -154,16 +140,20 @@ Manager::openDatabase( const Path & p_path, const Database *& p_db ) const
 {
     if ( ! p_path.empty() )
     {
-        // TODO: non-root dbs
-        if ( m_db && m_db -> getName() == p_path.front() )
+        if ( m_db )
         {
-            rc_t rc = KDatabaseAddRef( (const KDatabase *)m_db );
-            if ( rc != 0 )
+            Path path ( p_path );
+            const Database * db = m_db -> getDatabase( path );
+            if ( db != nullptr )
             {
-                return rc;
+                rc_t rc = KDatabaseAddRef( (const KDatabase *)db );
+                if ( rc != 0 )
+                {
+                    return rc;
+                }
+                p_db = db;
+                return 0;
             }
-            p_db = m_db;
-            return 0;
         }
     }
     return SILENT_RC (rcDB, rcMgr, rcOpening, rcType, rcInvalid);
@@ -174,7 +164,6 @@ Manager::openTable( const Path & p_path, const Table *& p_tbl ) const
 {
     if ( ! p_path.empty() )
     {
-        // TODO: non-root tables
         if ( m_tbl && m_tbl -> getName() == p_path.front() )
         {
             rc_t rc = KTableAddRef( (const KTable *)m_tbl );
@@ -185,37 +174,19 @@ Manager::openTable( const Path & p_path, const Table *& p_tbl ) const
             p_tbl = m_tbl;
             return 0;
         }
-    }
-    return SILENT_RC (rcDB, rcMgr, rcOpening, rcType, rcInvalid);
-}
-
-rc_t
-Manager::openColumn( const Path & p_path, const Column *& p_col) const
-{
-    if ( ! p_path.empty() )
-    {
-        // TODO: non-root tables
-        if ( ! p_path.empty() && m_tbl && m_tbl -> getName() == p_path.front() )
+        if ( m_db )
         {
-            Path path = p_path;
-            path.pop();
-            if ( ! path.empty() && path.front() == "col" )
+            Path path ( p_path );
+            const Table * tbl = m_db -> getTable( path );
+            if ( tbl != nullptr )
             {
-                path.pop();
-                if ( ! path.empty() )
+                rc_t rc = KTableAddRef( (const KTable *)tbl );
+                if ( rc != 0 )
                 {
-                    const Column* col = m_tbl -> getColumn( path.front() );
-                    if ( col != nullptr )
-                    {
-                        rc_t rc = KColumnAddRef( (const KColumn *)col );
-                        if ( rc != 0 )
-                        {
-                            return rc;
-                        }
-                        p_col = col;
-                        return 0;
-                    }
+                    return rc;
                 }
+                p_tbl = tbl;
+                return 0;
             }
         }
     }

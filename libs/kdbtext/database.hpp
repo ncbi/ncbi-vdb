@@ -57,13 +57,17 @@ namespace KDBText
 
         const std::string & getName() const { return m_name; }
 
-        const Database * getDatabase( const std::string & name ) const;
-        const Table * getTable( const std::string & name ) const;
+        const Database * getDatabase( Path & path ) const;
+        const Database * findDatabase( const std::string & name ) const;
+
+        const Table * getTable( Path & path ) const;
+        const Table * findTable( const std::string & name ) const;
 
         int pathType( Path & ) const;
         bool exists( uint32_t requested, Path & p_path ) const;
 
     private:
+
         const KJsonObject * m_json = nullptr;
         std::string m_name;
         std::vector<Database> m_subdbs;
