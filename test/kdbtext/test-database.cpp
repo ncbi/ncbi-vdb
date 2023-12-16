@@ -33,6 +33,7 @@
 #include "../../libs/kdbtext/database.hpp"
 
 #include <kdb/manager.h>
+#include <kdb/database.h>
 
 #include <klib/rc.h>
 #include <klib/json.h>
@@ -315,6 +316,40 @@ FIXTURE_TEST_CASE(KDBTextDatabase_exists_Table, KDBTextDatabase_Fixture)
     REQUIRE( m_db -> exists( kptTable, p ) );
 }
 //TODO: KDBTextDatabase_exists_Metadata (db/table)
+
+// API
+
+class KDBTextDatabase_ApiFixture
+{
+public:
+    KDBTextDatabase_ApiFixture()
+    {
+    }
+    ~KDBTextDatabase_ApiFixture()
+    {
+        KDatabaseRelease( m_db );
+    }
+    void Setup( const char * input )
+    {
+        const KDBManager * mgr = nullptr;
+        THROW_ON_RC( KDBManagerMakeText ( & mgr, input, m_error, sizeof m_error ) );
+        THROW_ON_RC( KDBManagerOpenDBRead( mgr, & m_db, "%s", "testdb" ) );
+        KDBManagerRelease( mgr );
+    }
+
+    const KDatabase * m_db = nullptr;
+    char m_error[1024];
+};
+
+FIXTURE_TEST_CASE(KDBTextDatabase_AddRelease, KDBTextDatabase_ApiFixture)
+{
+    Setup( R"({"type": "database", "name": "testdb"})" );
+
+    REQUIRE_NOT_NULL( m_db ) ;
+    REQUIRE_RC( KDatabaseAddRef( m_db ) );
+    REQUIRE_RC( KDatabaseRelease( m_db ) );
+    // use valgrind to find any leaks
+}
 
 //////////////////////////////////////////// Main
 extern "C"
