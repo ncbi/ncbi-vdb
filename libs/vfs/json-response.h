@@ -61,6 +61,8 @@ typedef enum {
 } EState;
 
 typedef struct Data {
+    const char * phid;
+
     const char * acc; /* from object or accession or bundle */
     const char * accession;
     const char * bundle;
@@ -69,6 +71,7 @@ typedef struct Data {
     int64_t      encryptedForProjectId;
     const char * sEncryptedForProjectId;
     int64_t      exp;  /* expDate */
+    const char * expirationDate;
     const char * fmt;  /* format */
     EState       qual; /* hasOrigQuality */
     const char * cls;  /* itemClass */
@@ -102,8 +105,8 @@ rc_t Response4Make4      (       Response4 ** self, const char * input );
 rc_t Response4MakeSdl(Response4 ** self, const char * input);
 rc_t Response4MakeSdlExt(Response4 ** self, const struct VFSManager * vfs,
     const struct KNSManager * kns, const struct KConfig * kfg,
-    const char * input,
-    bool logNamesServiceErrors, int64_t projectId, const char * quality);
+    const char * input, bool logNamesServiceErrors,
+    int64_t projectId, const char * quality, const char * phid );
 rc_t Response4AddRef     ( const Response4  * self );
 rc_t Response4Release    ( const Response4  * self );
 rc_t Response4AppendUrl  (       Response4  * self, const char * url );

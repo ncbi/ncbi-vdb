@@ -27,29 +27,31 @@
 #include <kdb/extern.h>
 
 #define KONST const
-#include "index-priv.h"
-#include "dbmgr-priv.h"
-#include "database-priv.h"
-#include "table-priv.h"
-#include "kdb-priv.h"
-#include "column-priv.h"
+#include "rindex.h"
+#include "dbmgr.h"
+#include "database-cmn.h"
+#include "rtable.h"
+#include "kdb-cmn.h"
+#include "rcolumn.h"
 #undef KONST
 
-#include "cc-priv.h"
+#include "cc.h"
 
 #include <kdb/index.h>
 #include <kdb/meta.h>
 #include <kdb/kdb-priv.h>
+#include <kdb/namelist.h>
 
 #include <kfs/file.h>
 #include <kfs/md5.h>
+
 #include <klib/refcount.h>
 #include <klib/log.h> /* PLOGMSG */
 #include <klib/rc.h>
 #include <klib/namelist.h>
-#include <kdb/namelist.h>
 
 #include <os-native.h>
+
 #include <sysalloc.h>
 
 #include <limits.h>
@@ -62,15 +64,18 @@
 #undef index
 
 static
-rc_t KTableCheckMD5 ( const KTable *self, CCReportFunc report, void *ctx )
+rc_t KTableCheckMD5 ( const KRTable *self, CCReportFunc report, void *ctx )
 {
     CCReportInfoBlock info;
     memset ( & info, 0, sizeof info );
 
     info.objType = kptTable;
-    KTableGetName(self, &info.objName);
-    
-    return DirectoryCheckMD5 ( self->dir, "md5", & info, report, ctx );
+    rc_t rc = KTableGetName( & self->dad, &info.objName);
+    if ( rc == 0 )
+    {
+        rc = DirectoryCheckMD5 ( self->dir, "md5", & info, report, ctx );
+    }
+    return rc;
 }
 
 #if 0
@@ -93,26 +98,30 @@ static rc_t CC KTableCheckColumn(const KDirectory *dir, uint32_t type, const cha
 {
     KTableCheckColumn_pb_t *pb = (KTableCheckColumn_pb_t *)data;
     CCReportInfoBlock info;
-    
+
     memset(&info, 0, sizeof(info));
-    
+
     if ((type & ~kptAlias) != kptDir) {
         char mesg[4096];
-        
+
         snprintf(mesg, sizeof(mesg), "unexpected object '%s'", name);
-        KTableGetName(pb->self, &info.objName);
-        info.objId = 0;
-        info.objType = kptTable;
-        info.type = ccrpt_Done;
-        info.info.done.mesg = mesg;
-        info.info.done.rc = 0;
-        return pb->report(&info, pb->rpt_ctx);
+        rc_t rc = KTableGetName(pb->self, &info.objName);
+        if ( rc == 0 )
+        {
+            info.objId = 0;
+            info.objType = kptTable;
+            info.type = ccrpt_Done;
+            info.info.done.mesg = mesg;
+            info.info.done.rc = 0;
+            rc = pb->report(&info, pb->rpt_ctx);
+        }
+        return rc;
     }
     else {
         bool hasZombies;
         uint32_t ktype = KDBPathType(dir, &hasZombies, name);
         rc_t rc;
-        
+
         info.objType = kptColumn;
         info.objId = pb->n++;
         info.objName = name;
@@ -120,9 +129,9 @@ static rc_t CC KTableCheckColumn(const KDirectory *dir, uint32_t type, const cha
         info.info.visit.depth = pb->depth + 1;
         rc = pb->report(&info, pb->rpt_ctx);
         if (rc) return rc;
-        
+
         info.type = ccrpt_Done;
-        
+
         if (hasZombies) {
             info.info.done.rc = 0;
             info.info.done.mesg = "Column may be truncated";
@@ -132,7 +141,7 @@ static rc_t CC KTableCheckColumn(const KDirectory *dir, uint32_t type, const cha
         info.info.done.rc = SILENT_RC(rcDB, rcTable, rcValidating, rcType, rcIncorrect);
         if ((ktype & ~kptAlias) == kptColumn) {
             const KColumn *col;
-            
+
             info.info.done.rc = KTableOpenColumnRead(pb->self, &col, "%s", name);
             if (info.info.done.rc == 0) {
                 info.info.done.rc = KColumnConsistencyCheck(col, pb->level, &info, pb->report, pb->rpt_ctx);
@@ -155,12 +164,12 @@ static rc_t CC KTableCheckColumn(const KDirectory *dir, uint32_t type, const cha
 }
 
 static
-rc_t KTableCheckColumns ( const KTable *self, uint32_t depth, int level,
+rc_t KTableCheckColumns ( const KRTable *self, uint32_t depth, int level,
     CCReportFunc report, void *ctx )
 {
     KTableCheckColumn_pb_t pb;
-    
-    pb.self = self;
+
+    pb.self = & self -> dad;
     pb.report = report;
     pb.rpt_ctx = ctx;
     pb.n = 0;
@@ -182,10 +191,10 @@ rc_t KTableCheckIndexMD5(const KDirectory *dir,
     return 0;
 }
 
-static const KDirectory *KTableFindIndexDir(const KTable *self)
+static const KDirectory *KTableFindIndexDir(const KRTable *self)
 {
     const KDirectory *idxDir;
-    
+
     rc_t rc = KDirectoryOpenDirRead ( self -> dir, & idxDir, false, "idx" );
     if ( rc == 0 )
         return idxDir;
@@ -196,14 +205,14 @@ static const KDirectory *KTableFindIndexDir(const KTable *self)
 }
 
 static
-rc_t KTableCheckIndices(const KTable *self, uint32_t depth, int level, CCReportFunc report, void *ctx)
+rc_t KTableCheckIndices(const KRTable *self, uint32_t depth, int level, CCReportFunc report, void *ctx)
 {
     uint32_t n;
     const KMetadata *meta;
     int64_t max_row_id = 0;
 
     KNamelist *list;
-    rc_t rc = KTableListIdx(self, &list);
+    rc_t rc = KTableListIdx( & self->dad, &list);
     if ( rc != 0 )
     {
         if ( GetRCState ( rc ) == rcNotFound )
@@ -211,7 +220,7 @@ rc_t KTableCheckIndices(const KTable *self, uint32_t depth, int level, CCReportF
         return rc;
     }
 
-    rc = KTableOpenMetadataRead ( self, & meta );
+    rc = KTableOpenMetadataRead ( & self->dad, & meta );
     if ( rc == 0 )
     {
         const KMDataNode *seq;
@@ -230,7 +239,7 @@ rc_t KTableCheckIndices(const KTable *self, uint32_t depth, int level, CCReportF
     rc = KNamelistCount(list, &n);
     if ( rc == 0 )
     {
-        const KDirectory *idxDir = KTableFindIndexDir ( self );
+        const KDirectory *idxDir = KTableFindIndexDir (self);
         if ( idxDir == NULL )
             rc = RC ( rcDB, rcTable, rcValidating, rcDirectory, rcNull );
         else
@@ -244,16 +253,16 @@ rc_t KTableCheckIndices(const KTable *self, uint32_t depth, int level, CCReportF
                 rc = KNamelistGet(list, nfo.objId, &nfo.objName);
                 if ( rc != 0 )
                     break;
-                
+
                 nfo.type = ccrpt_Visit;
                 nfo.info.visit.depth = depth + 1;
                 rc = report(&nfo, ctx); if (rc) break;
-                
+
                 rc = KTableCheckIndexMD5(idxDir, &nfo, report, ctx);
                 if (rc == 0 && level > 0)
                 {
                     const KIndex *idx;
-                    rc = KTableOpenIndexRead(self, &idx, "%s", nfo.objName);
+                    rc = KTableOpenIndexRead(& self->dad, &idx, "%s", nfo.objName);
 
                     if ( rc != 0 )
                     {
@@ -295,12 +304,13 @@ rc_t KTableCheckIndices(const KTable *self, uint32_t depth, int level, CCReportF
 }
 
 LIB_EXPORT
-rc_t CC KTableConsistencyCheck(const KTable *self, uint32_t depth, uint32_t level,
+rc_t CC KTableConsistencyCheck(const KTable *bself, uint32_t depth, uint32_t level,
     CCReportFunc report, void *ctx)
 {
+    const KRTable *self = (const KRTable *)bself;
     rc_t rc = 0;
     uint32_t type;
-    
+
     bool indexOnly = level & CC_INDEX_ONLY;
     if (indexOnly) {
         level &= ~CC_INDEX_ONLY;
@@ -308,32 +318,38 @@ rc_t CC KTableConsistencyCheck(const KTable *self, uint32_t depth, uint32_t leve
 
     if (self == NULL)
         return RC(rcDB, rcTable, rcValidating, rcSelf, rcNull);
-    
+
     if (depth == 0) {
         CCReportInfoBlock info;
-        
-        KTableGetName(self, &info.objName);
-        info.objId = 0;
-        info.objType = kptTable;
-        info.type = ccrpt_Visit;
-        info.info.visit.depth = 0;
-        
-        rc = report(&info, ctx);
+
+        rc = KTableGetName(bself, &info.objName);
+        if ( rc == 0 )
+        {
+            info.objId = 0;
+            info.objType = kptTable;
+            info.type = ccrpt_Visit;
+            info.info.visit.depth = 0;
+
+            rc = report(&info, ctx);
+        }
         if (rc) return rc;
     }
-    
+
     type = KDirectoryPathType(self->dir, "md5");
     if (type == kptZombieFile) {
         CCReportInfoBlock info;
-        
-        KTableGetName(self, &info.objName);
-        info.objId = 0;
-        info.objType = kptTable;
-        info.type = ccrpt_Done;
-        info.info.done.mesg = "Table may be truncated";
-        info.info.done.rc = 0;
-        
-        rc = report(&info, ctx);
+
+        rc = KTableGetName(bself, &info.objName);
+        if ( rc == 0 )
+        {
+            info.objId = 0;
+            info.objType = kptTable;
+            info.type = ccrpt_Done;
+            info.info.done.mesg = "Table may be truncated";
+            info.info.done.rc = 0;
+
+            rc = report(&info, ctx);
+        }
     }
     else if (type != kptNotFound) {
         if (!indexOnly) {
@@ -342,22 +358,25 @@ rc_t CC KTableConsistencyCheck(const KTable *self, uint32_t depth, uint32_t leve
     }
     else {
         CCReportInfoBlock info;
-        
-        KTableGetName(self, &info.objName);
-        info.objId = 0;
-        info.objType = kptTable;
-        info.type = ccrpt_Done;
-        info.info.done.mesg = "missing md5 file";
-        info.info.done.rc = 0;
-        
-        rc = report(&info, ctx);
+
+        rc = KTableGetName(bself, &info.objName);
+        if ( rc == 0 )
+        {
+            info.objId = 0;
+            info.objType = kptTable;
+            info.type = ccrpt_Done;
+            info.info.done.mesg = "missing md5 file";
+            info.info.done.rc = 0;
+
+            rc = report(&info, ctx);
+        }
     }
 
     if ( rc == 0 && ! indexOnly )
         rc = KTableCheckColumns(self, depth, level, report, ctx);
 
-    if ( rc == 0 )    
+    if ( rc == 0 )
         rc = KTableCheckIndices(self, depth, level, report, ctx);
-        
+
     return rc;
 }

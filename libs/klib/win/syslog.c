@@ -109,7 +109,7 @@ LIB_EXPORT rc_t CC LogSimpleTimestamp ( char *buffer, size_t bsize, size_t *num_
 LIB_EXPORT rc_t CC LogPID ( char *buffer, size_t bsize, size_t *num_writ )
 {
     DWORD my_process_id = GetCurrentProcessId();
-    int len = snprintf ( buffer, bsize, "%u", my_process_id );
+    int len = snprintf ( buffer, bsize, "%lu", my_process_id );
     * num_writ = len;
     if ( len < 0 || ( size_t ) len >= bsize )
     {

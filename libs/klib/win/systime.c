@@ -360,9 +360,6 @@ LIB_EXPORT size_t CC KTimeIso8601 ( KTime_t ts, char * s, size_t size )
     const KTime * r = NULL;
     KTime ktime;
 
-    time_t unix_time = ( time_t ) ts;
-    struct tm t;
-
     if ( ts == 0 || s == NULL || size < 19 )
         return 0;
 
@@ -431,9 +428,6 @@ KLIB_EXTERN size_t CC KTimeRfc2616(KTime_t ts, char * s, size_t size) {
     const KTime * r = NULL;
     KTime ktime;
 
-    time_t unix_time = (time_t)ts;
-    struct tm t;
-
     if (ts == 0 || s == NULL || size < 19)
         return 0;
 
@@ -470,10 +464,10 @@ LIB_EXPORT const KTime* CC KTimeFromIso8601 ( KTime *kt, const char * s,
     memset ( kt, 0, sizeof * kt );
 
     for ( i = 0, tmp = 0; i < 4; ++ i ) {
-        char c = s [ i ];
-        if ( ! isdigit ( c ) )
+        char cc = s [ i ];
+        if ( ! isdigit ( cc ) )
             return NULL;
-        tmp = tmp * 10 + c - '0';
+        tmp = tmp * 10 + cc - '0';
     }
     kt -> year = tmp;
 
@@ -490,7 +484,7 @@ LIB_EXPORT const KTime* CC KTimeFromIso8601 ( KTime *kt, const char * s,
     tmp = tmp * 10 + c - '0';
     if ( tmp == 0 || tmp > 12 )
         return NULL;
-    kt -> month = tmp - 1;
+    kt -> month = (uint16_t)(tmp - 1);
 
     c = s [ ++ i ];
     if ( c != '-' )
@@ -506,7 +500,7 @@ LIB_EXPORT const KTime* CC KTimeFromIso8601 ( KTime *kt, const char * s,
     tmp = tmp * 10 + c - '0';
     if ( tmp == 0 || tmp > 31 )
         return NULL;
-    kt -> day = tmp - 1;
+    kt -> day = (uint16_t)(tmp - 1);
 
     c = s [ ++ i ];
     if ( c != 'T' )
@@ -522,7 +516,7 @@ LIB_EXPORT const KTime* CC KTimeFromIso8601 ( KTime *kt, const char * s,
     tmp = tmp * 10 + c - '0';
     if ( tmp > 23 )
         return NULL;
-    kt -> hour = tmp;
+    kt -> hour = (uint8_t)tmp;
 
     c = s [ ++ i ];
     if ( c != ':' )
@@ -538,7 +532,7 @@ LIB_EXPORT const KTime* CC KTimeFromIso8601 ( KTime *kt, const char * s,
     tmp = tmp * 10 + c - '0';
     if ( tmp > 59 )
         return NULL;
-    kt -> minute = tmp;
+    kt -> minute = (uint8_t)tmp;
 
     c = s [ ++ i ];
     if ( c != ':' )
@@ -554,7 +548,7 @@ LIB_EXPORT const KTime* CC KTimeFromIso8601 ( KTime *kt, const char * s,
     tmp = tmp * 10 + c - '0';
     if ( tmp > 59 )
         return NULL;
-    kt -> second = tmp;
+    kt -> second = (uint8_t)tmp;
 
     if ( size > 19 ) {
         c = s [ ++ i ];

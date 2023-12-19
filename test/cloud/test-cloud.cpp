@@ -1,4 +1,4 @@
-/*===========================================================================
+/*==============================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
 *               National Center for Biotechnology Information
@@ -21,10 +21,6 @@
 *  Please cite the author in any work or product based on this material.
 *
 * ===========================================================================
-*
-*/
-
-/**
 * Unit tests for the Cloud interface
 */
 
@@ -51,8 +47,11 @@ TEST_SUITE_WITH_ARGS_HANDLER(CloudTestSuite, argsHandler);
 using namespace std;
 using namespace ncbi::NK;
 
+#define ALL
+
 //////////////////////////////////////////// CloudMgr
 
+#ifdef ALL
 TEST_CASE(MgrMake_NullParam)
 {
     REQUIRE_RC_FAIL ( CloudMgrMake ( NULL, NULL, NULL ) );
@@ -82,6 +81,7 @@ TEST_CASE(MgrCurrentProvider_NullSelf)
     CloudProviderId id;
     REQUIRE_RC_FAIL ( CloudMgrCurrentProvider ( NULL, & id ) );
 }
+#endif
 
 #define CONFIG "./cloud-kfg/tmp.kfg"
 
@@ -103,7 +103,7 @@ public:
         for (unsigned i = 0; i < sizeof m_created / sizeof m_created[0]; ++i)
             if (!m_created[i].empty()) {
                 if (KDirectoryRemove(m_dir, false, m_created[i].c_str()) != 0)
-                    cout << "AwsFixture::~AwsFixture: KDirectoryRemove("
+                  cout << "CloudMgrFixture::~CloudMgrFixture: KDirectoryRemove("
                     << m_created[i] << ") failed" << endl;
             }
             else break;
@@ -125,9 +125,12 @@ public:
     }
 
     void CreateFile(const string& p_name, const string& p_content,
-        const string& p_content2 = "", const string& p_content3 = "")
+        const string& p_content2 = "", const string& p_content3 = "",
+        bool bom = false)
     {
         ofstream out(p_name.c_str());
+        if (bom)
+            out << "\xEF\xBB\xBF";
         out << p_content << p_content2 << p_content3;
         for (unsigned i = 0; i < sizeof m_created / sizeof m_created[0]; ++i) {
             if (m_created[i].empty()) {
@@ -138,12 +141,19 @@ public:
         throw "cannot save file name";
     }
 
+    void CreateFileBom(const string& p_name, const string& p_content,
+        const string& p_content2 = "", const string& p_content3 = "")
+    {
+        CreateFile(p_name, p_content, p_content2, p_content3, true);
+    }
+    
     CloudMgr * m_mgr;
     CloudProviderId m_id;
     Cloud * m_cloud;
     KDirectory * m_dir;
 };
 
+#ifdef ALL
 FIXTURE_TEST_CASE(MgrCurrentProvider_NullParam, CloudMgrFixture)
 {
     REQUIRE_RC_FAIL ( CloudMgrCurrentProvider ( m_mgr, NULL ) );
@@ -178,6 +188,7 @@ FIXTURE_TEST_CASE(MgrCurrentProvider_MakeCurrentCloud_NullParam, CloudMgrFixture
 {
     REQUIRE_RC_FAIL ( CloudMgrGetCurrentCloud ( m_mgr, NULL ) );
 }
+#endif
 
 //////////////////////////////////////////// AWS
 
@@ -202,32 +213,47 @@ public:
         }
     }
 
-    void CheckKeys(const char * key, const char * secret_key, const char * region = nullptr, const char * output = nullptr)
+    void CheckKeys(
+        const char * key = nullptr, const char * secret_key = nullptr,
+        const char * region = nullptr, const char * output = nullptr,
+        bool accept_charges = true)
     {
         KConfig * kfg = NULL;
         THROW_ON_RC(KConfigMakeLocal(&kfg, NULL));
+        if (accept_charges)
+            THROW_ON_RC(KConfigWriteBool(
+                kfg, "/libs/cloud/accept_aws_charges", true));
 
         MakeAWS(kfg);
 
-        THROW_ON_FALSE(m_aws->access_key_id != NULL);
-        THROW_ON_FALSE(m_aws->secret_access_key != NULL);
-
-        THROW_ON_FALSE(string(key) == string(m_aws->access_key_id));
-        THROW_ON_FALSE(string(secret_key) == string(m_aws->secret_access_key));
-
-        if (region != nullptr)
-        {
-            THROW_ON_FALSE(m_aws->region != NULL);
-            THROW_ON_FALSE(string(region) == string(m_aws->region));
+        if (key == nullptr && secret_key == nullptr) {
+            THROW_ON_FALSE(m_aws->access_key_id == NULL);
+            THROW_ON_FALSE(m_aws->secret_access_key == NULL);
         }
-        if (output != nullptr)
-        {
-            THROW_ON_FALSE(m_aws->output != NULL);
-            THROW_ON_FALSE(string(output) == string(m_aws->output));
+        else {
+            THROW_ON_FALSE(m_aws->access_key_id != NULL);
+            THROW_ON_FALSE(m_aws->secret_access_key != NULL);
+
+            THROW_ON_FALSE(string(key) == string(m_aws->access_key_id));
+            THROW_ON_FALSE
+            (string(secret_key) == string(m_aws->secret_access_key));
+
+            if (region != nullptr)
+            {
+                THROW_ON_FALSE(m_aws->region != NULL);
+                THROW_ON_FALSE(string(region) == string(m_aws->region));
+            }
+            if (output != nullptr)
+            {
+                THROW_ON_FALSE(m_aws->output != NULL);
+                THROW_ON_FALSE(string(output) == string(m_aws->output));
+            }
         }
 
         THROW_ON_RC(KConfigRelease(kfg));
     }
+
+    void CheckKeysNoPay(void) { CheckKeys(0, 0, 0, 0, false); }
 
     void MakeAWS(const KConfig * kfg = nullptr)
     {
@@ -245,6 +271,7 @@ public:
     AWS * m_aws;
 };
 
+#ifdef ALL
 FIXTURE_TEST_CASE(AWS_Make, CloudMgrFixture)
 {
     REQUIRE_RC ( CloudMgrMakeCloud ( m_mgr, & m_cloud, cloud_provider_aws ) );
@@ -342,7 +369,13 @@ FIXTURE_TEST_CASE(AWS_Credentials_AwsConfigFile_DefaultProfile, AwsFixture)
 
     CheckKeys( "ABC123", "SECRET", "reg", "out" );
 }
+FIXTURE_TEST_CASE
+(AWS_Credentials_AwsConfigFile_DefaultProfileNoPay, AwsFixture)
+{
+    setenv("AWS_CONFIG_FILE", "cloud-kfg/aws_other_config", 1);
 
+    CheckKeysNoPay();
+}
 FIXTURE_TEST_CASE(AWS_Credentials_AwsConfigFile_ProfileFromEnv, AwsFixture)
 {
     setenv ( "AWS_PROFILE", "another_profile", 1 );
@@ -366,9 +399,11 @@ FIXTURE_TEST_CASE(AWS_Credentials_AwsConfigFile_ProfileFromKfg_IsEmpty, AwsFixtu
 
     CheckKeys( "ABC123", "SECRET" );
 }
+#endif
 
 #define CREDENTIALS_KFG "cloud-kfg/credentialsKfg"
 
+#ifdef ALL
 /* AWS_SHARED_CREDENTIAL_FILE overrides configuration and .aws/c[or]*
    AWS_PROFILE overrides profile from configuration */
 FIXTURE_TEST_CASE(AWS_Credentials_AwsSharedCredentialFile, AwsFixture)
@@ -379,9 +414,9 @@ FIXTURE_TEST_CASE(AWS_Credentials_AwsSharedCredentialFile, AwsFixture)
 
     // 2) create ~/.aws/config
     CreateFile("./cloud-kfg/.aws/config",
-        "[other_profile]\n"
-        "aws_access_key_id = ABC123_CFG\n"
-        "aws_secret_access_key = SECRET_CFG\n");
+        "[other_profile]\r\n"
+        "aws_access_key_id = ABC123_CFG\r\n"
+        "aws_secret_access_key = SECRET_CFG\r\n");
 
     // 3) create ~/.aws/credentials
 #if WINDOWS
@@ -391,18 +426,18 @@ FIXTURE_TEST_CASE(AWS_Credentials_AwsSharedCredentialFile, AwsFixture)
 #endif
 
     CreateFile("./cloud-kfg/.aws/credentials",
-        "[other_profile]\n"
-        "aws_access_key_id = ABC123\n"
-        "aws_secret_access_key = SECRET\n");
+        "[other_profile]\r\n"
+        "aws_access_key_id = ABC123\r\n"
+        "aws_secret_access_key = SECRET\r\n");
 
     // 4) create configuration
     char credentialsKfg[PATH_MAX] = "";
     REQUIRE_RC(KDirectoryResolvePath(m_dir, true, credentialsKfg,
         sizeof credentialsKfg, CREDENTIALS_KFG));
     CreateFile(CREDENTIALS_KFG,
-        "[other_profile]\n"
-        "aws_access_key_id = ABC123_KFG\n"
-        "aws_secret_access_key = SECRET_KFG\n");
+        "[other_profile]\r\n"
+        "aws_access_key_id = ABC123_KFG\r\n"
+        "aws_secret_access_key = SECRET_KFG\r\n");
     CreateFile(CONFIG,
         "/aws/credential_file = \"", credentialsKfg, "\"\n");
     putenv((char*)"VDB_CONFIG=cloud-kfg");
@@ -416,9 +451,9 @@ FIXTURE_TEST_CASE(AWS_Credentials_AwsUserHomeCredentials_ConfigOverrides, AwsFix
     // 2) create ~/.aws/config
     // ~/.aws/config overrides if present
     CreateFile("./cloud-kfg/.aws/config",
-        "[another_profile]\n"
-        "aws_access_key_id = ABC123_CFG\n"
-        "aws_secret_access_key = SECRET_CFG\n");
+        "[another_profile]\r\n"
+        "aws_access_key_id = ABC123_CFG\r\n"
+        "aws_secret_access_key = SECRET_CFG\r\n");
 
     // 3) create ~/.aws/credentials
 #if WINDOWS
@@ -428,24 +463,23 @@ FIXTURE_TEST_CASE(AWS_Credentials_AwsUserHomeCredentials_ConfigOverrides, AwsFix
 #endif
 
     CreateFile("./cloud-kfg/.aws/credentials",
-        "[another_profile]\n"
-        "aws_access_key_id = ABC123\n"
-        "aws_secret_access_key = SECRET\n");
+        "[another_profile]\r\n"
+        "aws_access_key_id = ABC123\r\n"
+        "aws_secret_access_key = SECRET\r\n");
 
     // 4) create configuration
     char credentialsKfg[PATH_MAX] = "";
     REQUIRE_RC(KDirectoryResolvePath(m_dir, true, credentialsKfg,
         sizeof credentialsKfg, CREDENTIALS_KFG));
     CreateFile(CREDENTIALS_KFG,
-        "[another_profile]\naws_access_key_id = ABC123_KFG\n"
-        "aws_secret_access_key = SECRET_KFG\n");
+        "[another_profile]\r\naws_access_key_id = ABC123_KFG\r\n"
+        "aws_secret_access_key = SECRET_KFG\r\n");
     CreateFile(CONFIG,
         "/aws/credential_file = \"", credentialsKfg, "\"\n");
     putenv((char*)"VDB_CONFIG=cloud-kfg");
 
     CheckKeys("ABC123_CFG", "SECRET_CFG");
 }
-
 
 // ~/.aws/credentials overrides configuration
 FIXTURE_TEST_CASE(AWS_Credentials_AwsUserHomeCredentials, AwsFixture)
@@ -458,41 +492,293 @@ FIXTURE_TEST_CASE(AWS_Credentials_AwsUserHomeCredentials, AwsFixture)
 #endif
 
     CreateFile("./cloud-kfg/.aws/credentials",
-        "[another_profile]\n"
-        "aws_access_key_id = ABC123\n"
-        "aws_secret_access_key = SECRET\n");
+        "[another_profile]\r\n"
+        "aws_access_key_id = ABC123\r\n"
+        "aws_secret_access_key = SECRET\r\n");
 
     // 4) create configuration
     char credentialsKfg[PATH_MAX] = "";
     REQUIRE_RC(KDirectoryResolvePath(m_dir, true, credentialsKfg,
         sizeof credentialsKfg, CREDENTIALS_KFG));
     CreateFile(CREDENTIALS_KFG,
-        "[other_profile]\n"
-        "aws_access_key_id = ABC123_KFG\n"
-        "aws_secret_access_key = SECRET_KFG\n");
+        "[other_profile]\r\n"
+        "aws_access_key_id = ABC123_KFG\r\n"
+        "aws_secret_access_key = SECRET_KFG\r\n");
     CreateFile(CONFIG,
         "/aws/credential_file = \"", credentialsKfg, "\"\n");
     putenv((char*)"VDB_CONFIG=cloud-kfg");
 
     CheckKeys( "ABC123", "SECRET" );
 }
+#endif
 
-FIXTURE_TEST_CASE(AWS_Credentials_KfgCredentials, AwsFixture)
+#ifdef ALL
+FIXTURE_TEST_CASE(AWS_Credentials_KfgCredentialsProfileNotComplete, AwsFixture)
 {
     // 4) create configuration
     char credentialsKfg[PATH_MAX] = "";
     REQUIRE_RC(KDirectoryResolvePath(m_dir, true, credentialsKfg,
         sizeof credentialsKfg, CREDENTIALS_KFG));
     CreateFile(CREDENTIALS_KFG,
-        "[another_profile]\n"
-        "aws_access_key_id = ABC123_KFG\n"
-        "aws_secret_access_key = SECRET_KFG\n");
+        "[another_profile]");
+    CreateFile(CONFIG,
+        "/aws/credential_file = \"", credentialsKfg, "\"\n");
+    putenv((char*)"VDB_CONFIG=cloud-kfg");
+
+    cerr << "Expect error message: profile is not complete in credentials...\n";
+    CheckKeys();
+}
+#endif
+
+#ifdef ALL
+FIXTURE_TEST_CASE(AWS_Credentials_KfgCredentials, AwsFixture)
+{
+    // 4) create configuration
+    char credentialsKfg[PATH_MAX] = "";
+    REQUIRE_RC(KDirectoryResolvePath(m_dir, true, credentialsKfg,
+        sizeof credentialsKfg, CREDENTIALS_KFG));
+    CreateFileBom(CREDENTIALS_KFG,
+        "[another_profile]\r\n"
+        "aws_access_key_id = ABC123_KFG\r\n"
+        "aws_secret_access_key = SECRET_KFG\r\n");
     CreateFile(CONFIG,
         "/aws/credential_file = \"", credentialsKfg, "\"\n");
     putenv((char*)"VDB_CONFIG=cloud-kfg");
 
     CheckKeys("ABC123_KFG", "SECRET_KFG");
 }
+#endif
+
+#ifdef ALL
+FIXTURE_TEST_CASE(AWS_Credentials_KfgCredentialsNoProfile, AwsFixture) {
+   // 4) create configuration
+   char credentialsKfg[PATH_MAX] = "";
+    REQUIRE_RC(KDirectoryResolvePath(m_dir, true, credentialsKfg,
+        sizeof credentialsKfg, CREDENTIALS_KFG));
+    CreateFileBom(CREDENTIALS_KFG,
+        "[profile]\r\n"
+        "aws_access_key_id = ABC123_KFG\r\n"
+        "aws_secret_access_key = SECRET_KFG\r\n");
+    CreateFile(CONFIG,
+        "/aws/credential_file = \"", credentialsKfg, "\"\n");
+    putenv((char*)"VDB_CONFIG=cloud-kfg");
+
+    cerr << "Expect error message: profile is not found in credentials file \n";
+    CheckKeys();
+}
+#endif
+
+#ifdef ALL
+FIXTURE_TEST_CASE(AWS_Credentials_KfgCredentialsEmpty, AwsFixture) {
+    // 4) create configuration
+        char credentialsKfg[PATH_MAX] = "";
+    REQUIRE_RC(KDirectoryResolvePath(m_dir, true, credentialsKfg,
+        sizeof credentialsKfg, CREDENTIALS_KFG));
+    CreateFileBom(CREDENTIALS_KFG,
+        "[another_profile]\r\n"
+        "aws_access_key_id = \r\n"
+        "aws_secret_access_key = \r\n");
+    CreateFile(CONFIG,
+        "/aws/credential_file = \"", credentialsKfg, "\"\n");
+    putenv((char*)"VDB_CONFIG=cloud-kfg");
+
+    CheckKeys("", "");
+}
+#endif
+
+#ifdef ALL
+FIXTURE_TEST_CASE(AWS_Credentials_KfgCvsCredentials, AwsFixture) {
+    // 4.1) create configuration
+    char credentialsKfg[PATH_MAX] = "";
+    REQUIRE_RC(KDirectoryResolvePath(m_dir, true, credentialsKfg,
+        sizeof credentialsKfg, CREDENTIALS_KFG));
+    // CSV credentials file
+    CreateFileBom(CREDENTIALS_KFG,
+        "One,Secret access key,Two,Access key ID,three\r\n"
+        "111,SECRET_ACCESS_KEY,222,ACCESS_KEY_ID,33333\r\n");
+    CreateFile(CONFIG,
+        "/aws/credential_file = \"", credentialsKfg, "\"\n");
+    putenv((char*)"VDB_CONFIG=cloud-kfg");
+
+    CheckKeys("ACCESS_KEY_ID", "SECRET_ACCESS_KEY");
+}
+#endif
+
+#ifdef ALL
+FIXTURE_TEST_CASE(AWS_Credentials_KfgCvsCredentialsEmpty, AwsFixture) {
+    // 4.3) create configuration
+    char credentialsKfg[PATH_MAX] = "";
+    REQUIRE_RC(KDirectoryResolvePath(m_dir, true, credentialsKfg,
+        sizeof credentialsKfg, CREDENTIALS_KFG));
+    // CSV credentials file
+    CreateFileBom(CREDENTIALS_KFG,
+        "Secret access key,Access key ID\r\n"
+        ",\r\n");
+    CreateFile(CONFIG,
+        "/aws/credential_file = \"", credentialsKfg, "\"\n");
+    putenv((char*)"VDB_CONFIG=cloud-kfg");
+
+    CheckKeys("", "");
+}
+#endif
+
+#ifdef ALL
+FIXTURE_TEST_CASE(AWS_Credentials_NotFound, AwsFixture) {
+    // 4.3) create configuration
+    char credentialsKfg[PATH_MAX]("");
+    REQUIRE_RC(KDirectoryResolvePath(m_dir, true, credentialsKfg,
+        sizeof credentialsKfg, CREDENTIALS_KFG));
+    // no credentials file
+    CreateFile(CONFIG, "/aws/credential_file = \"", credentialsKfg, "\"\n");
+    putenv((char*)"VDB_CONFIG=cloud-kfg");
+
+    CheckKeys();
+}
+#endif
+
+#ifdef ALL
+FIXTURE_TEST_CASE(AWS_Credentials_ErrorEmpty, AwsFixture) {
+    // 4.3) create configuration
+    char credentialsKfg[PATH_MAX] = "";
+    REQUIRE_RC(KDirectoryResolvePath(m_dir, true, credentialsKfg,
+                     sizeof credentialsKfg, CREDENTIALS_KFG));
+    // empty credentials file
+    CreateFile(CREDENTIALS_KFG, "");
+    CreateFile(CONFIG,
+        "/aws/credential_file = \"", credentialsKfg, "\"\n");
+    putenv((char*)"VDB_CONFIG=cloud-kfg");
+
+    cerr << "========= Expect error message: credentials file 'XXX' is empty\n";
+    CheckKeys();
+}
+#endif
+
+#ifdef ALL
+FIXTURE_TEST_CASE(AWS_Credentials_ErrorUnrecognized, AwsFixture) {
+    // 4.3) create configuration
+    char credentialsKfg[PATH_MAX] = "";
+    REQUIRE_RC(KDirectoryResolvePath(m_dir, true, credentialsKfg,
+                                  sizeof credentialsKfg, CREDENTIALS_KFG));
+    // unrecognized credentials file
+    CreateFile(CREDENTIALS_KFG, " ");
+    CreateFile(CONFIG,
+        "/aws/credential_file = \"", credentialsKfg, "\"\n");
+    putenv((char*)"VDB_CONFIG=cloud-kfg");
+
+    cerr << "= Expect error message: unrecognized format of credentials file\n";
+    CheckKeys();
+}
+#endif
+
+#ifdef ALL
+FIXTURE_TEST_CASE(AWS_Credentials_ErrorNoUnrecognized, AwsFixture) {
+    // 4.3) create configuration
+    char credentialsKfg[PATH_MAX] = "";
+    REQUIRE_RC(KDirectoryResolvePath(m_dir, true, credentialsKfg,
+        sizeof credentialsKfg, CREDENTIALS_KFG));
+    // unrecognized credentials file is ignored when user don't accest charges
+    CreateFile(CREDENTIALS_KFG, " ");
+    CreateFile(CONFIG,
+        "/aws/credential_file = \"", credentialsKfg, "\"\n");
+    putenv((char*)"VDB_CONFIG=cloud-kfg");
+
+    cerr << "== No error message: unrecognized format of credentials file ==\n";
+    CheckKeysNoPay();
+}
+#endif
+
+#ifdef ALL
+FIXTURE_TEST_CASE(AWS_Credentials_ErrorIncompleteIni, AwsFixture) {
+    // 4.3) create configuration
+    char credentialsKfg[PATH_MAX] = "";
+    REQUIRE_RC(KDirectoryResolvePath(m_dir, true, credentialsKfg,
+                                  sizeof credentialsKfg, CREDENTIALS_KFG));
+    // incomplete credentials ini file
+    CreateFile(CREDENTIALS_KFG, "[");
+    CreateFile(CONFIG,
+        "/aws/credential_file = \"", credentialsKfg, "\"\n");
+    putenv((char*)"VDB_CONFIG=cloud-kfg");
+
+    cerr << "Expect error message: profile is not found in credentials file\n";
+    CheckKeys();
+}
+#endif
+
+#ifdef ALL
+FIXTURE_TEST_CASE(AWS_Credentials_ErrorIncompleteCsvHeader, AwsFixture) {
+    // 4.3) create configuration
+    char credentialsKfg[PATH_MAX] = "";
+    REQUIRE_RC(KDirectoryResolvePath(m_dir, true, credentialsKfg,
+                                  sizeof credentialsKfg, CREDENTIALS_KFG));
+    // incomplete header in credentials cvs file
+    CreateFile(CREDENTIALS_KFG,
+        "One,Secret access key,Two,three\r\n"
+        "111,SECRET_ACCESS_KEY,222,33333");
+    CreateFile(CONFIG,
+        "/aws/credential_file = \"", credentialsKfg, "\"\n");
+    putenv((char*)"VDB_CONFIG=cloud-kfg");
+
+    cerr << "== Expect error message: credentials file has incomplete header\n";
+
+    CheckKeys();
+}
+#endif
+
+#ifdef ALL
+FIXTURE_TEST_CASE(AWS_Credentials_ErrorIncompleteCsvData, AwsFixture) {
+    // 4.3) create configuration
+    char credentialsKfg[PATH_MAX] = "";
+    REQUIRE_RC(KDirectoryResolvePath(m_dir, true, credentialsKfg,
+                                  sizeof credentialsKfg, CREDENTIALS_KFG));
+    // incomplete data in credentials cvs file
+    CreateFile(CREDENTIALS_KFG,
+        "One,Secret access key,Two,Access key ID,three\r\n"
+        "111,SECRET_ACCESS_KEY,222");
+    CreateFile(CONFIG,
+        "/aws/credential_file = \"", credentialsKfg, "\"\n");
+    putenv((char*)"VDB_CONFIG=cloud-kfg");
+
+    cerr << "==== Expect error message: credentials file 'XXX' is incomplete\n";
+    CheckKeys();
+}
+#endif
+
+#ifdef ALL
+FIXTURE_TEST_CASE(AWS_CredentialsCsv_NoWarnExtraData, AwsFixture) {
+    // 4.3) create configuration
+    char credentialsKfg[PATH_MAX] = "";
+    REQUIRE_RC(KDirectoryResolvePath(m_dir, true, credentialsKfg,
+                                  sizeof credentialsKfg, CREDENTIALS_KFG));
+    // no comma in extra line is ignored
+    CreateFileBom(CREDENTIALS_KFG, "Access key ID,Secret access key\r\n"
+                                "1,2\r\n"
+                                "3");
+    CreateFile(CONFIG,
+        "/aws/credential_file = \"", credentialsKfg, "\"\n");
+    putenv((char*)"VDB_CONFIG=cloud-kfg");
+
+    CheckKeys("1", "2");
+}
+#endif
+
+#ifdef ALL
+FIXTURE_TEST_CASE(AWS_CredentialsCsv_WarnExtraData, AwsFixture) {
+    // 4.3) create configuration
+        char credentialsKfg[PATH_MAX] = "";
+    REQUIRE_RC(KDirectoryResolvePath(m_dir, true, credentialsKfg,
+                                  sizeof credentialsKfg, CREDENTIALS_KFG));
+    // extra data in credentials cvs file
+    CreateFile(CREDENTIALS_KFG, "Access key ID,Secret access key\r\n"
+                                "1,2\r\n"
+                                ",");
+    CreateFile(CONFIG,
+        "/aws/credential_file = \"", credentialsKfg, "\"\n");
+    putenv((char*)"VDB_CONFIG=cloud-kfg");
+
+    cerr << "Expect warning message: credentials file 'XXX' has extra lines\n";
+    CheckKeys("1", "2");
+}
+#endif
 
 //TODO: add region, output
 
@@ -523,6 +809,8 @@ public:
     {
         KConfig * kfg = NULL;
         THROW_ON_RC(KConfigMakeLocal(&kfg, NULL));
+        THROW_ON_RC(KConfigWriteBool(
+            kfg, "/libs/cloud/accept_gcp_charges", true));
 
         CloudMgrRelease(m_mgr);
         m_mgr = nullptr;
@@ -539,6 +827,7 @@ public:
     GCP * m_gcp;
 };
 
+#ifdef ALL
 FIXTURE_TEST_CASE(GCP_Make, GcpFixture)
 {
     rc_t rc = CloudMgrMakeCloud ( m_mgr, & m_cloud, cloud_provider_gcp );
@@ -665,7 +954,7 @@ FIXTURE_TEST_CASE(GCP_Credentials_KfgCredentials, GcpFixture) {
     char credentialsKfg[PATH_MAX] = "";
     REQUIRE_RC(KDirectoryResolvePath(m_dir, true, credentialsKfg,
         sizeof credentialsKfg, CREDENTIALS_KFG));
-    CreateFile(CREDENTIALS_KFG,
+    CreateFileBom(CREDENTIALS_KFG,
         "{\n"
         "  \"type\": \"service_account\",\n"
         "  \"project_id\": \"prid\",\n"
@@ -701,6 +990,7 @@ FIXTURE_TEST_CASE(GCP_Credentials_KfgCredentials, GcpFixture) {
     const string client_email("ncbi@gserviceaccount.com");
     REQUIRE_EQ(client_email, string(m_gcp->client_email));
 }
+#endif
 
 // CLOUD_EXTERN rc_t CC CloudMakeComputeEnvironmentToken ( const Cloud * self, struct String const ** ce_token );
 // CLOUD_EXTERN rc_t CC CloudAddComputeEnvironmentTokenForSigner ( const Cloud * self, struct KClientHttpRequest * req );
@@ -721,38 +1011,34 @@ static rc_t argsHandler(int argc, char * argv[]) {
 #include <klib/debug.h>
 #include <klib/log.h> /* KLogLevelSet */
 
-extern "C"
-{
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
-}
+extern "C" {
+    ver_t CC KAppVersion ( void )
+    {
+        return 0x1000000;
+    }
+    rc_t CC UsageSummary (const char * progname)
+    {
+        return 0;
+    }
+    rc_t CC Usage ( const Args * args )
+    {
+        return 0;
+    }
+    const char UsageDefaultName[] = "test-kns";
+    rc_t CC KMain ( int argc, char *argv [] )
+    {
+        setenv("HOME", ".", 1);
 
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-const char UsageDefaultName[] = "test-kns";
+        KConfigDisableUserSettings();
 
-rc_t CC KMain ( int argc, char *argv [] )
-{
-    setenv("HOME", ".", 1);
+     // assert(!KDbgSetString("CLOUD"));
+     // KLogLevelSet( klogInfo );
 
-    KConfigDisableUserSettings();
+     // this makes messages from the test code appear
+     // (same as running the executable with "-l=message")
+     // TestEnv::verbosity = LogLevel::e_message;
 
-//  assert(!KDbgSetString("CLOUD"));
-//  KLogLevelSet( klogInfo );
-
-    // this makes messages from the test code appear
-    // (same as running the executable with "-l=message")
-    //TestEnv::verbosity = LogLevel::e_message;
-
-    rc_t rc=CloudTestSuite(argc, argv);
-    return rc;
-}
-
+        rc_t rc=CloudTestSuite(argc, argv);
+        return rc;
+    }
 }

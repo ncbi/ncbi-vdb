@@ -34,8 +34,36 @@ endif()
 
 add_compile_definitions( __mod__="test/kdb" )
 
+AddExecutableTest( Test_KDB_Setup "makedb" "${COMMON_LIBS_WRITE}" )
+
+set_tests_properties(Test_KDB_Setup PROPERTIES FIXTURES_SETUP Kdb)
+
 # AddExecutableTest( Test_KDB_Btree "test-btree" "${COMMON_LIBS_READ}" ) #TODO: revive test-btree
-AddExecutableTest( Test_KDB_Rowset "rowsettest" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" )
+# AddExecutableTest( Test_KDB_Rowset "rowsettest" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" ) # not in use
+
+AddExecutableTest( Test_KDB_KRColumn "test-rcolumn" "${COMMON_LIBS_READ}" )
+AddExecutableTest( Test_KDB_KWColumn "test-wcolumn" "${COMMON_LIBS_WRITE}" )
+
+AddExecutableTest( Test_KDB_KRTable "test-rtable" "${COMMON_LIBS_READ}" )
+AddExecutableTest( Test_KDB_KWTable "test-wtable" "${COMMON_LIBS_WRITE}" )
+
+AddExecutableTest( Test_KDB_KRDatabase "test-rdatabase" "${COMMON_LIBS_READ}" )
+AddExecutableTest( Test_KDB_KWDatabase "test-wdatabase" "${COMMON_LIBS_WRITE}" )
+
+AddExecutableTest( Test_KDB_KRManager "test-rmanager" "${COMMON_LIBS_READ}" )
+AddExecutableTest( Test_KDB_KWManager "test-wmanager" "${COMMON_LIBS_WRITE}" )
+
+AddExecutableTest( Test_KDB_KRMetadata "test-rmetadata" "${COMMON_LIBS_READ}" )
+AddExecutableTest( Test_KDB_KWMetadata "test-wmetadata" "${COMMON_LIBS_WRITE}" )
+
+AddExecutableTest( Test_KDB_KRMDataNode "test-rmetanode" "${COMMON_LIBS_READ}" )
+set_tests_properties(Test_KDB_KRMDataNode PROPERTIES FIXTURES_REQUIRED Kdb)
+
+AddExecutableTest( Test_KDB_KWMDataNode "test-wmetanode" "${COMMON_LIBS_WRITE}" )
+
+AddExecutableTest( Test_KDB_KRIndex "test-rindex" "${COMMON_LIBS_READ}" )
+AddExecutableTest( Test_KDB_KWIndex "test-windex" "${COMMON_LIBS_WRITE}" )
+
 AddExecutableTest( Test_KDB_Kdb "kdbtest" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_KDB_Wkdb "wkdbtest" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" )
 

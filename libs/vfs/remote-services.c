@@ -129,7 +129,7 @@ typedef struct {
     const KRepositoryMgr * repoMgr;
        /* KRepositoryMgrGetProtectedRepository */
 
-    const VFSManager     * vMgr;
+    VFSManager     * vMgr;
 
     CloudMgr * cloudMgr;
     Cloud    * cloud;
@@ -336,6 +336,7 @@ typedef struct {
     KSrvResponse * list;
     Kart * kart;
     SServerTimestamp timestamp;
+    char * phid;
     rc_t rc;
 } SResponse;
 
@@ -452,7 +453,7 @@ struct KService {
 
 /* SHelper ********************************************************************/
 static rc_t SHelperInit ( SHelper * self,
-    const VFSManager * vMgr, const KNSManager * kMgr, const KConfig * kfg )
+    VFSManager * vMgr, const KNSManager * kMgr, const KConfig * kfg )
 {
     rc_t rc = 0;
 
@@ -2296,6 +2297,8 @@ static rc_t SResponseFini ( SResponse * self ) {
     if ( r2 != 0 && rc == 0 )
         rc = r2;
 
+    free ( self -> phid );
+
     memset ( self, 0, sizeof * self );
 
     return rc;
@@ -2647,8 +2650,10 @@ static rc_t SCgiRequestPerform ( const SCgiRequest * self,
                                 service->req.sdl))
 #endif
                             {
+                                rc = KHttpResultGetPhid(rslt, &service->resp.phid);
                                 service->resp.rc = rx;
-                                rc = KHttpResultGetInputStream(rslt, stream);
+                                if (rc == 0)
+                                    rc = KHttpResultGetInputStream(rslt, stream);
                             }
 #ifdef NAMESCGI
                             else {
@@ -2658,8 +2663,11 @@ static rc_t SCgiRequestPerform ( const SCgiRequest * self,
                             }
 #endif
                         }
-                        else
-                            rc = KHttpResultGetInputStream(rslt, stream);
+                        else {
+                            rc = KHttpResultGetPhid(rslt, &service->resp.phid);
+                            if (rc == 0)
+                                rc = KHttpResultGetInputStream(rslt, stream);
+                        }
                     }
                 }
                 RELEASE ( KHttpResult, rslt );
@@ -4075,7 +4083,7 @@ rc_t KServiceInitSearchRequestWithVersion ( KService * self, const char * cgi,
 
 
 static rc_t KServiceInit ( KService * self,
-    const VFSManager * vMgr, const KNSManager * mgr, const KConfig * kfg )
+    VFSManager * vMgr, const KNSManager * mgr, const KConfig * kfg )
 {
     rc_t rc = 0;
 
@@ -4150,7 +4158,7 @@ rc_t KServiceMakeWithMgr ( KService ** self,
     if ( p == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
 
-    rc = KServiceInit ( p, vMgr, mgr, kfg );
+    rc = KServiceInit ( p, (VFSManager*)vMgr, mgr, kfg );
     if ( rc == 0)
         * self = p;
     else
@@ -4240,8 +4248,8 @@ static rc_t KServiceProcessJson ( KService * self ) {
             }
             if (rc == 0)
                 rc = Response4MakeSdlExt(&r, self->helper.vMgr, self->helper.kMgr,
-                    self->helper.kfg, self->helper.input,
-                    sLogNamesServiceErrors, projectId, self->quality);
+                    self->helper.kfg, self->helper.input, sLogNamesServiceErrors,
+                    projectId, self->quality, self->resp.phid);
         }
         else
             rc = Response4Make4(&r, self->helper.input);
@@ -5172,7 +5180,7 @@ rc_t KServiceAddLocalAndCacheToResponse(KService * self,
             self->helper.kfg, sLogNamesServiceErrors, -1, self->quality);
 
     if (rc == 0) {
-        const VFSManager * mgr = NULL;
+        VFSManager * mgr = NULL;
         rc = KServiceGetVFSManager(self, &mgr);
         if (rc == 0)
             rc = Response4AppendLocalAndCache(r4, acc, vps, mgr);
@@ -5234,9 +5242,7 @@ rc_t KServiceGetResolverForProject(KService * self, uint32_t project,
     return rc;
 }
 
-rc_t KServiceGetVFSManager(const KService * self,
-    const VFSManager ** mgr)
-{
+rc_t KServiceGetVFSManager(const KService * self, VFSManager ** mgr) {
     rc_t rc = 0;
 
     if (self == NULL)
@@ -5325,7 +5331,9 @@ rc_t KServiceNamesExecuteExtImpl ( KService * self, VRemoteProtocols protocols,
 {
     rc_t rc = 0;
 
+    VFSManager * vMgr = NULL;
     KStream * stream = NULL;
+    const char * acc = NULL;
 
     if ( self == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
@@ -5335,27 +5343,48 @@ rc_t KServiceNamesExecuteExtImpl ( KService * self, VRemoteProtocols protocols,
 
     if ( version == NULL )
         version = "130";
-    /*
-    rc = KServiceInitNamesRequestWithVersion ( self, protocols, cgi, version,
-        false, expected == NULL, idx );
-    */
-    if (rc == 0 && self->req.disabled) {
-        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE), (
-            "XXXXXXXXXXXX NOT sending HTTP request XXXXXXXXXXXXXXXXXXXXX\n"));
-        return RC(rcVFS, rcQuery, rcResolving, rcName, rcNotFound);
+
+    /* get request acc/id */
+    acc = KServiceGetId(self, 0);
+    /* make sure request has a single item */
+    if (KServiceGetId(self, 1) != NULL)
+        acc = NULL;
+
+    rc = KServiceGetVFSManager(self, &vMgr);
+    if (rc == 0 && acc != NULL)
+        rc = VFSManagerGetCachedKSrvResponse(vMgr, acc, response);
+
+    if (acc != NULL && *response != NULL)
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+            "XXXXXXXXXXXXXXXXXXXXXXXX:"
+            " reusing cached response for '%s'\n"
+            "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n",
+            acc));
+    /*           &cached->r4->items->files->elm->path[0]->scheme));*/
+    else {
+        if (rc == 0 && self->req.disabled) {
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE), (
+                "XXXXXXXXXXXX NOT sending HTTP request XXXXXXXXXXXXXXXXXXX\n"));
+            return RC(rcVFS, rcQuery, rcResolving, rcName, rcNotFound);
+        }
+
+        if (rc == 0 && self->req.hasQuery)
+            rc = SCgiRequestPerform(&self->req.cgiReq, &self->helper,
+                &stream, expected, self);
+
+        if (rc == 0)
+            rc = KServiceProcessStream(self, stream);
+
+        if (rc == 0)
+            rc = KServiceGetResponse(self, response);
+
+        RELEASE(KStream, stream);
+
+        if (rc == 0)
+            VFSManagerSetCachedKSrvResponse(vMgr, acc, *response);
     }
 
-    if (rc == 0 && self->req.hasQuery)
-        rc = SCgiRequestPerform(&self->req.cgiReq, &self->helper,
-            &stream, expected, self);
-
-    if ( rc == 0 )
-        rc = KServiceProcessStream ( self, stream );
-
-    if ( rc == 0 )
-        rc = KServiceGetResponse ( self, response );
-
-    RELEASE ( KStream, stream );
+    RELEASE(VFSManager, vMgr);
 
     return rc;
 }
@@ -5421,8 +5450,9 @@ static rc_t KService1NameWithVersionAndType ( const KNSManager * mgr,
     bool aProtected, const char * quality )
 {
     rc_t rc = 0;
-
+    VFSManager * vMgr = NULL;
     KStream * stream = NULL;
+    const KSrvResponse * response = NULL;
 
     KService service;
     memset(&service, 0, sizeof service);
@@ -5430,192 +5460,111 @@ static rc_t KService1NameWithVersionAndType ( const KNSManager * mgr,
     if ( acc == NULL || remote == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
 
-    rc = KServiceInitNames1 ( & service, mgr, url, version, acc, acc_sz,
-        ticket, protocols, objectType, refseq_ctx, aProtected, quality );
+    rc = VFSManagerMake(&vMgr);
 
-    protocols = service . req . protocols;
+    if (rc == 0)
+        rc = VFSManagerGetCachedKSrvResponse(vMgr, acc, &response);
 
-    if (rc == 0) {
-        rc_t rx = 0;
-        rc = SCgiRequestPerform(&service.req.cgiReq, &service.helper,
-            &stream, NULL, &service);
+    if (rc == 0 && response == NULL)
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE), (
+            "VVVVVVVVVVVVVVVVVVVVVVVVVV KService1NameWithVersionAndType:\n"));
+
+    if (response == NULL) {
         if (rc == 0)
-            service.resp.rc = rx;
+            rc = KServiceInitNames1(&service, mgr, url, version, acc, acc_sz,
+                ticket, protocols, objectType, refseq_ctx, aProtected, quality);
+
+        protocols = service.req.protocols;
+
+        if (rc == 0) {
+            rc_t rx = 0;
+            rc = SCgiRequestPerform(&service.req.cgiReq, &service.helper,
+                &stream, NULL, &service);
+            if (rc == 0)
+                service.resp.rc = rx;
+        }
+
+        if (rc == 0)
+            rc = KServiceProcessStream(&service, stream);
     }
 
-    if ( rc == 0 )
-        rc = KServiceProcessStream ( & service, stream );
-
     if ( rc == 0 ) {
-#ifdef NAMESCGI
-        if ( SVersionResponseInJson ( service . req . version,
-            service . req . sdl ) )
-#endif
-        {
-            uint32_t n = 0;
-            const KSrvResponse * response = NULL;
-            const KSrvRespObj * obj = NULL;
-            KSrvRespObjIterator * it = NULL;
-            KSrvRespFile * file = NULL;
-            KSrvRespFileIterator * fi = NULL;
-            bool ok = false;
-            String vdbcache;
-            CONST_STRING(&vdbcache, "vdbcache");
-            assert(remote);
-            *remote = NULL;
-            rc = KServiceGetResponse ( & service, & response );
-            if ( rc == 0 ) {
-                n = KSrvResponseLength  ( response );
-                if ( n != 1 )
-                    rc = RC ( rcVFS, rcQuery, rcExecuting, rcRow, rcIncorrect );
-            }
-            if ( rc == 0 )
-                rc = KSrvResponseGetObjByIdx ( response, 0, & obj );
-            if ( rc == 0 )
-                rc = KSrvRespObjMakeIterator ( obj, & it );
-            while (rc == 0 && !ok) {
-                RELEASE ( KSrvRespFile, file );
-                rc = KSrvRespObjIteratorNextFile(it, &file);
-                if (rc == 0) {
-                    if (file != NULL)
-                        rc = KSrvRespFileMakeIterator(file, &fi);
-                    else {
-                        assert(service.req.filetypeIsRun);
-                        assert(*remote == NULL);
-                        rc = RC(rcVFS, rcQuery, rcResolving, rcName, rcNotFound);
-                        break;
-                    }
+        uint32_t n = 0;
+        const KSrvRespObj * obj = NULL;
+        KSrvRespObjIterator * it = NULL;
+        KSrvRespFile * file = NULL;
+        KSrvRespFileIterator * fi = NULL;
+        bool ok = false;
+        String vdbcache;
+        CONST_STRING(&vdbcache, "vdbcache");
+        assert(remote);
+        *remote = NULL;
+        if (response == NULL) {
+            rc = KServiceGetResponse(&service, &response);
+            if (rc == 0)
+                rc = VFSManagerSetCachedKSrvResponse(vMgr, acc, response);
+        }
+        else
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
+            ("VVVVVVVVVVVVVVVVVVVVVVVVVV KService1NameWithVersionAndType:"
+                " reusing cached response for '%s'\n", acc));
+/*              &cached->r4->items->files->elm->path[0]->scheme));*/
+        if ( rc == 0 ) {
+            n = KSrvResponseLength  ( response );
+            if ( n != 1 )
+                rc = RC ( rcVFS, rcQuery, rcExecuting, rcRow, rcIncorrect );
+        }
+        if ( rc == 0 )
+            rc = KSrvResponseGetObjByIdx ( response, 0, & obj );
+        if ( rc == 0 )
+            rc = KSrvRespObjMakeIterator ( obj, & it );
+        while (rc == 0 && !ok) {
+            RELEASE ( KSrvRespFile, file );
+            rc = KSrvRespObjIteratorNextFile(it, &file);
+            if (rc == 0) {
+                if (file != NULL)
+                    rc = KSrvRespFileMakeIterator(file, &fi);
+                else {
+                    assert(service.req.filetypeIsRun);
+                    assert(*remote == NULL);
+                    rc = RC(
+                        rcVFS, rcQuery, rcResolving, rcName, rcNotFound);
+                    break;
                 }
-                if (rc == 0) {
-                    const VPath * tmp = NULL;
-                    String type;
-                    rc = KSrvRespFileIteratorNextPath(fi, &tmp);
-                    if (rc == 0 && tmp != NULL) {
-                        rc = VPathGetType(tmp, &type);
-                        if (rc == 0)
-                            if (!StringEqual(&type, &vdbcache))
-                                ok = true;
-                    }
-                    if (*remote == NULL) {
-                        if (ok || !service.req.filetypeIsRun)
-                            *remote = tmp;
-                        else
-                            RELEASE(VPath, tmp);
-                    }
-                    else if (ok) {
-                        if (*remote != tmp)
-                            RELEASE(VPath, *remote);
+            }
+            if (rc == 0) {
+                const VPath * tmp = NULL;
+                String type;
+                rc = KSrvRespFileIteratorNextPath(fi, &tmp);
+                if (rc == 0 && tmp != NULL) {
+                    rc = VPathGetType(tmp, &type);
+                    if (rc == 0)
+                        if (!StringEqual(&type, &vdbcache))
+                            ok = true;
+                }
+                if (*remote == NULL) {
+                    if (ok || !service.req.filetypeIsRun)
                         *remote = tmp;
-                    }
                     else
                         RELEASE(VPath, tmp);
                 }
-            }
-            if ( rc == 0 && mapping != NULL )
-                rc = KSrvRespFileGetMapping ( file, mapping );
-            RELEASE ( KSrvRespFileIterator, fi );
-            RELEASE ( KSrvRespFile, file );
-            RELEASE ( KSrvRespObjIterator, it );
-            RELEASE ( KSrvRespObj, obj );
-            RELEASE ( KSrvResponse, response );
-        }
-#ifdef NAMESCGI
-        else if ( VectorLength ( & service . resp . rows ) != 1 )
-            rc = RC ( rcVFS, rcQuery, rcExecuting, rcRow, rcIncorrect );
-        else {
-            uint32_t l = KSrvResponseLength ( service . resp . list );
-            if ( rc == 0 ) {
-                if ( l != 1 )
-                    rc = RC ( rcVFS, rcQuery, rcExecuting, rcRow, rcIncorrect );
-                else {
-                    const KSrvError * error = NULL;
-                    rc = KSrvResponseGetPath ( service . resp . list, 0,
-                        protocols, NULL, NULL, & error );
-                    if ( rc == 0 && error != NULL ) {
-                        KSrvErrorRc ( error, & rc );
-                        KSrvErrorRelease ( error );
-                    }
-                    else {
-                        const SRow * r =
-                            ( SRow * ) VectorGet ( & service . resp . rows, 0 );
-                        if ( r == NULL)
-                            rc = RC
-                                ( rcVFS, rcQuery, rcExecuting, rcRow, rcNull );
-                        else {
-                            const VPath * path = NULL;
-                            VRemoteProtocols protos = protocols;
-                            int i = 0;
-                            for ( i = 0; protos != 0 && i < eProtocolMaxPref;
-                                  protos >>= 3, ++ i )
-                            {
-                                switch ( protos & eProtocolMask ) {
-                                    case eProtocolHttp:
-                                        path = r -> path . http;
-                                        break;
-                                    case eProtocolFasp:
-                                        path = r -> path . fasp;
-                                        break;
-                                    case eProtocolHttps:
-                                        path = r -> path . https;
-                                        break;
-                                }
-                                if ( path != NULL )
-                                    break;
-                            }
-
-              /* in early versions of protocol only http path was initialized */
-                            if ( path == NULL )
-                                path = r -> path . http;
-
-                            rc = VPathAddRef ( path );
-                            if ( rc == 0 )
-                                * remote = path;
-                            if ( mapping ) {
-                                path = r -> path . mapping;
-                                rc = VPathAddRef ( path );
-                                if ( rc == 0 )
-                                    * mapping = path;
-                            }
-                        }
-                    }
+                else if (ok) {
+                    if (*remote != tmp)
+                        RELEASE(VPath, *remote);
+                    *remote = tmp;
                 }
+                else
+                    RELEASE(VPath, tmp);
             }
         }
-#endif
+        if ( rc == 0 && mapping != NULL )
+            rc = KSrvRespFileGetMapping ( file, mapping );
+        RELEASE ( KSrvRespFileIterator, fi );
+        RELEASE ( KSrvRespFile, file );
+        RELEASE ( KSrvRespObjIterator, it );
+        RELEASE ( KSrvRespObj, obj );
+        RELEASE ( KSrvResponse, response );
     }
-
-#ifdef NAMESCGI
-    if ( rc == 0 &&
-        ! SVersionResponseInJson(service . req . version, service . req . sdl) )
-    {
-        uint32_t l = KSrvResponseLength ( service . resp . list );
-        if ( l != 1)
-            rc = RC ( rcVFS, rcQuery, rcResolving, rcQuery, rcUnauthorized );
-        else {
-            const VPathSet * s = NULL;
-            rc = KSrvResponseGet ( service . resp . list, 0, & s );
-            if ( rc != 0 ) {
-            }
-            else if ( s == NULL )
-                rc = RC ( rcVFS, rcQuery, rcExecuting, rcRow, rcIncorrect );
-            else {
-                const VPath * path = NULL;
-                const VPath * cache = NULL;
-                rc = VPathSetGet ( s, protocols, & path, & cache );
-                if ( rc == 0 ) {
-                    int notequal = ~ 0;
-                    assert ( remote );
-                    rc = VPathEqual ( * remote, path, & notequal );
-                    if ( rc == 0 )
-                        rc = notequal;
-                    RELEASE ( VPath, cache );
-                    RELEASE ( VPath, path );
-                }
-            }
-            RELEASE ( VPathSet, s );
-        }
-    }
-#endif
 
     {
         rc_t r2 = KServiceFini ( & service );
@@ -5624,7 +5573,8 @@ static rc_t KService1NameWithVersionAndType ( const KNSManager * mgr,
     }
 
     RELEASE ( KStream, stream );
-
+    RELEASE(VFSManager, vMgr);
+    
     return rc;
 }
 

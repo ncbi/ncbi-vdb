@@ -22,66 +22,85 @@
 #
 # ===========================================================================
 
-set( KDB_CMN
-    btree
-    rowset
-    rowset-simple
-    dbmgr-cmn
-)
-
 set( KDB_SRC
-    ${KDB_CMN}
-    kdb
-    dbmgr
-    dbcc-cmn
-    database
-    database-cc
-    table
-    table-cc
-    column
-    column-cc
-    coldata
-    colidx
-    colidx0
-    colidx1
-    colidx2
-    idxblk
-    meta
-    index
-    idstats
-    trieidx-v1
-    trieval-v1
-    ptrieval-v1
-    trieidx-v2
-    trieval-v2
-    ptrieval-v2
-    u64idx-v3
-)
+    btree
+#    rowset
+#    rowset-simple
 
-
-set( WKDB_SRC
-    ${KDB_CMN}
+    kdb-cmn
+    rkdb
     wkdb
-    wdbmgr
-    wdatabase
-    wtable
+
+    dbmgr-cmn
+    manager-base
+    database-base
+    table-base
+    column-base
+    columnblob-base
+    meta-base
+    metanode-base
+    index-base
+
+    ptrieval-v1
+    ptrieval-v2
+
+    idstats
+
+    database-cc
+    table-cc
+    column-cc
+    dbcc-cmn
+
+    trieval-v1
+    trieval-v2
+
+    index-cmn
+
+    rindex
+    ridxblk
+    rtrieidx-v1
+    rtrieidx-v2
+    ru64idx-v3
+
+    windex
+    widxblk
+    wtrieidx-v1
+    wtrieidx-v2
+    wu64idx-v3
+
+    rcolumn
+    rcolumnblob
+
     wcolumn
+    wcolumnblob
+
+    rmeta
+    rmetadatanode
+
+    wmeta
+    wmetadatanode
+
+    rcoldata
+    rcolidx
+    rcolidx0
+    rcolidx1
+    rcolidx2
+
     wcoldata
     wcolidx
     wcolidx0
     wcolidx1
     wcolidx2
-    idxblk
-    widxblk
-    wmeta
-    windex
-    wtrieidx-v1
-    wtrieidx-v2
-    wu64idx-v3
+
+    rdbmgr
+    rtable
+    rdatabase
+
+    wdbmgr
+    wdatabase
+    wtable
 )
 
-
 GenerateStaticLibs( kdb "${KDB_SRC}" )
-GenerateStaticLibs( wkdb "${WKDB_SRC}" )
 
 add_compile_definitions (__mod__="libs/kdb")

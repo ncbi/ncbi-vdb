@@ -25,13 +25,17 @@
 */
 
 #include <kdb/extern.h>
-#include "wcoldata-priv.h"
-#include "wcolumn-priv.h"
+
+#include "wcoldata.h"
+#include "wcolumn.h"
+
 #include <kfs/file.h>
 #include <kfs/buffile.h>
 #include <kfs/md5.h>
 #include <kfs/impl.h>
+
 #include <klib/rc.h>
+
 #include <sysalloc.h>
 
 #include <limits.h>
@@ -45,14 +49,14 @@
 
 
 /*--------------------------------------------------------------------------
- * KColumnData
+ * KWColumnData
  */
 
 
 /* Init
  */
 static
-rc_t KColumnDataInit ( KColumnData *self, uint64_t pos, size_t pgsize )
+rc_t KWColumnDataInit ( KWColumnData *self, uint64_t pos, size_t pgsize )
 {
     rc_t rc = KFileSize ( self -> f, & self -> eof );
     if ( rc == 0 )
@@ -74,18 +78,18 @@ rc_t KColumnDataInit ( KColumnData *self, uint64_t pos, size_t pgsize )
 
 /* Create
  */
-rc_t KColumnDataCreate ( KColumnData *self, KDirectory *dir,
+rc_t KWColumnDataCreate ( KWColumnData *self, KDirectory *dir,
     KMD5SumFmt *md5, KCreateMode mode, uint64_t eof, size_t pgsize )
 {
-    rc_t rc = KColumnFileCreate ( & self -> f, & self -> fmd5, dir, md5, mode, true, "data" );
+    rc_t rc = KWColumnFileCreate ( & self -> f, & self -> fmd5, dir, md5, mode, true, "data" );
     if ( rc == 0 )
-        rc = KColumnDataInit ( self, eof, pgsize );
+        rc = KWColumnDataInit ( self, eof, pgsize );
     return rc;
 }
 
 /* Open
  */
-rc_t KColumnDataOpenRead ( KColumnData *self,
+rc_t KWColumnDataOpenRead ( KWColumnData *self,
     const KDirectory *dir, uint64_t eof, size_t pgsize )
 {
     rc_t rc = KDirectoryOpenFileRead ( dir,
@@ -107,22 +111,22 @@ rc_t KColumnDataOpenRead ( KColumnData *self,
     }
 #endif
     if ( rc == 0 )
-        rc = KColumnDataInit ( self, eof, pgsize );
+        rc = KWColumnDataInit ( self, eof, pgsize );
     return rc;
 }
 
-rc_t KColumnDataOpenUpdate ( KColumnData *self, KDirectory *dir,
+rc_t KWColumnDataOpenUpdate ( KWColumnData *self, KDirectory *dir,
     KMD5SumFmt *md5, uint64_t eof, size_t pgsize )
 {
-    rc_t rc = KColumnFileOpenUpdate ( & self -> f, & self -> fmd5, dir, md5, true, "data" );
+    rc_t rc = KWColumnFileOpenUpdate ( & self -> f, & self -> fmd5, dir, md5, true, "data" );
     if ( rc == 0 )
-        rc = KColumnDataInit ( self, eof, pgsize );
+        rc = KWColumnDataInit ( self, eof, pgsize );
     return rc;
 }
 
 /* Whack
  */
-rc_t KColumnDataWhack ( KColumnData *self )
+rc_t KWColumnDataWhack ( KWColumnData *self )
 {
     rc_t rc = KFileRelease ( self -> f );
     if ( rc == 0 )
@@ -136,7 +140,7 @@ rc_t KColumnDataWhack ( KColumnData *self )
 /* Read
  *  reads from the data fork using a blob map
  */
-rc_t KColumnDataRead ( const KColumnData *self, const KColumnPageMap *pm,
+rc_t KWColumnDataRead ( const KWColumnData *self, const KWColumnPageMap *pm,
     size_t offset, void *buffer, size_t bsize, size_t *num_read )
 {
     uint64_t pos;
@@ -158,7 +162,7 @@ rc_t KColumnDataRead ( const KColumnData *self, const KColumnPageMap *pm,
 /* Write
  *  writes to the data fork using a blob map
  */
-rc_t KColumnDataWrite ( KColumnData *self, KColumnPageMap *pm,
+rc_t KWColumnDataWrite ( KWColumnData *self, KWColumnPageMap *pm,
     size_t offset, const void *buffer, size_t bytes, size_t *num_writ )
 {
     uint64_t pos;
@@ -180,8 +184,8 @@ rc_t KColumnDataWrite ( KColumnData *self, KColumnPageMap *pm,
 /* Commit
  *  keeps changes indicated by page map and blob size
  */
-rc_t KColumnDataCommit ( KColumnData *self,
-    const KColumnPageMap *pm, size_t bytes )
+rc_t KWColumnDataCommit ( KWColumnData *self,
+    const KWColumnPageMap *pm, size_t bytes )
 {
     uint64_t pos;
     size_t remainder;
@@ -224,7 +228,7 @@ rc_t KColumnDataCommit ( KColumnData *self,
     return 0;
 }
 
-rc_t KColumnDataCommitDone ( KColumnData * self )
+rc_t KWColumnDataCommitDone ( KWColumnData * self )
 {
     rc_t rc = 0;
 
@@ -241,8 +245,8 @@ rc_t KColumnDataCommitDone ( KColumnData * self )
 /* Free
  *  frees pages from a map
  */
-rc_t KColumnDataFree ( KColumnData *self,
-    const KColumnPageMap *pm, size_t bytes )
+rc_t KWColumnDataFree ( KWColumnData *self,
+    const KWColumnPageMap *pm, size_t bytes )
 {
     uint64_t pos;
     size_t remainder;
@@ -269,7 +273,7 @@ rc_t KColumnDataFree ( KColumnData *self,
 
 
 /*--------------------------------------------------------------------------
- * KColumnPageMap
+ * KWColumnPageMap
  *  map of pages involved in column blob
  */
 
@@ -277,7 +281,7 @@ rc_t KColumnDataFree ( KColumnData *self,
  *  creates a new page map using the first available page id
  *  obtains first free data fork page
  */
-rc_t KColumnPageMapCreate (  KColumnPageMap *self, KColumnData *cd )
+rc_t KWColumnPageMapCreate (  KWColumnPageMap *self, KWColumnData *cd )
 {
     assert ( cd != NULL );
     if ( ! cd -> f -> write_enabled )
@@ -298,8 +302,8 @@ rc_t KColumnPageMapCreate (  KColumnPageMap *self, KColumnData *cd )
  *  "pg" [ IN ] and "sz" [ IN ] - identifies pages of data fork included
  *  within the blob.
  */
-rc_t KColumnPageMapOpen ( KColumnPageMap *self,
-    KColumnData *cd, uint64_t pg, size_t sz )
+rc_t KWColumnPageMapOpen ( KWColumnPageMap *self,
+    KWColumnData *cd, uint64_t pg, size_t sz )
 {
     uint64_t pos;
 
@@ -321,7 +325,7 @@ rc_t KColumnPageMapOpen ( KColumnPageMap *self,
 /* Whack
  *  disposes of memory in the case of a page array
  */
-void KColumnPageMapWhack ( KColumnPageMap *self, const KColumnData *cd )
+void KWColumnPageMapWhack ( KWColumnPageMap *self, const KWColumnData *cd )
 {
     assert ( self != NULL );
     assert ( cd != NULL );
@@ -330,8 +334,8 @@ void KColumnPageMapWhack ( KColumnPageMap *self, const KColumnData *cd )
 /* Id
  *  captures id of initial page
  */
-rc_t KColumnPageMapId ( const KColumnPageMap *self,
-    const KColumnData *cd, uint64_t *pg )
+rc_t KWColumnPageMapId ( const KWColumnPageMap *self,
+    const KWColumnData *cd, uint64_t *pg )
 {
     assert ( self != NULL );
     assert ( cd != NULL );

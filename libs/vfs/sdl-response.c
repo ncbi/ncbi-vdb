@@ -63,6 +63,7 @@ static void DataClone(const Data * self, Data * clone) {
     clone->code = self->code;
     clone->encryptedForProjectId = self->encryptedForProjectId;
     clone->exp = self->exp; /* expDate */
+    clone->expirationDate = self->expirationDate;
     clone->fmt = self->fmt; /* format */
     clone->id = self->id; /* oldCartObjId */
     clone->link = self->link; /* ???????????????????????????????????????? */
@@ -111,6 +112,10 @@ static rc_t DataUpdate(const Data * self,
         name, path);
     if (next->sEncryptedForProjectId != NULL)
         next->encryptedForProjectId = atoi(next->sEncryptedForProjectId);
+
+    name = "expirationDate";
+    StrSet(&next->expirationDate,
+        KJsonObjectGetMember(node, name), name, path);
 
     name = "link";
     StrSet(&next->link, KJsonObjectGetMember(node, name), name, path);
@@ -203,6 +208,7 @@ rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
             bool ceRequired = false;
             bool payRequired = false;
 
+            int64_t exp = 0;  /* expirationDate */
             int64_t mod = 0;  /* modDate */
 
             int64_t projectId = -1;
@@ -225,6 +231,16 @@ rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
             memset(&acc, 0, sizeof acc);
             memset(&objectType, 0, sizeof objectType);
             memset(&type, 0, sizeof type);
+
+            if (ldata.expirationDate != NULL) {
+                KTime        kt;
+                const KTime* t = KTimeFromIso8601(&kt, ldata.expirationDate,
+                    string_measure(ldata.expirationDate, NULL));
+                if (t == NULL)
+                    return RC(rcVFS, rcQuery, rcExecuting, rcItem, rcIncorrect);
+                else
+                    exp = KTimeMakeTime(&kt);
+            }
 
             if (ldata.modificationDate != NULL) {
                 KTime        modT; /* modificationDate */
@@ -300,7 +316,7 @@ rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
             }
 
             rc = VPathMakeFromUrl(&path, &url, NULL, true, &id, ldata.sz,
-                mod, hasMd5 ? md5 : NULL, 0, ldata.srv, &objectType, &type,
+                mod, hasMd5 ? md5 : NULL, exp, ldata.srv, &objectType, &type,
                 ceRequired, payRequired, ldata.name, projectId, 128, &acc);
 
             if (rc == 0)
@@ -502,7 +518,7 @@ rc_t ItemAddSdlFile(Item * self, const KJsonObject * node,
 /* We are inside or above of a Container
    and are looking for Items(runs, gdGaP files) to add */
 static rc_t Response4AddItemsSdl(Response4 * self,
-    const KJsonObject * node, JsonStack * path)
+    const KJsonObject * node, JsonStack * path, const char * phid)
 {
     rc_t rc = 0;
 
@@ -526,6 +542,8 @@ static rc_t Response4AddItemsSdl(Response4 * self,
         }
 
         rc = ContainerStatusInit(box, data.code, data.msg);
+
+        data.phid = phid;
 
         if (rc == 0)
             ContainerProcessStatus(box, &data);
@@ -580,7 +598,9 @@ static rc_t Response4AddItemsSdl(Response4 * self,
 }
 
 /* Add response document */
-static rc_t Response4InitSdl(Response4 * self, const char * input) {
+static
+rc_t Response4InitSdl(Response4 * self, const char * input, const char * phid)
+{
     rc_t rc = 0;
 
     JsonStack path;
@@ -715,7 +735,7 @@ static rc_t Response4InitSdl(Response4 * self, const char * input) {
                     rc_t r2 = 0;
                     value = KJsonArrayGetElement(array, i);
                     const KJsonObject * object = KJsonValueToObject(value);
-                    r2 = Response4AddItemsSdl(self, object, &path);
+                    r2 = Response4AddItemsSdl(self, object, &path, phid);
                     if (r2 != 0 && rc == 0)
                         rc = r2;
                     if (i + 1 < n)
@@ -753,8 +773,8 @@ static rc_t Response4InitSdl(Response4 * self, const char * input) {
 
 rc_t Response4MakeSdlExt(Response4 ** self, const struct VFSManager * vfs,
     const struct KNSManager * kns, const struct KConfig * kfg,
-    const char * input,
-    bool logNamesServiceErrors, int64_t projectId, const char * quality)
+    const char * input, bool logNamesServiceErrors,
+    int64_t projectId, const char * quality, const char * phid)
 {
     rc_t rc = 0;
 
@@ -771,7 +791,7 @@ rc_t Response4MakeSdlExt(Response4 ** self, const struct VFSManager * vfs,
     else
         r = *self;
 
-    rc = Response4InitSdl(r, input);
+    rc = Response4InitSdl(r, input, phid);
 
     if (*self == NULL) {
         if (rc != 0)
@@ -785,5 +805,5 @@ rc_t Response4MakeSdlExt(Response4 ** self, const struct VFSManager * vfs,
 
 rc_t Response4MakeSdl(Response4 ** self, const char * input) {
     return Response4MakeSdlExt(self, NULL, NULL, NULL,
-        input, false, -1, 0);
+        input, false, -1, 0, NULL);
 }

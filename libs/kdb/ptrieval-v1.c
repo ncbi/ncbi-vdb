@@ -26,8 +26,8 @@
 
 #include <kdb/extern.h>
 
-#include "index-priv.h"
-#include "idstats-priv.h"
+#include "rindex.h"
+#include "idstats.h"
 
 #include <kdb/index.h>
 #include <klib/ptrie.h>
@@ -55,7 +55,7 @@ struct KPTrieIndexCCParms_v1
     KIdStats stats;
     rc_t rc;
     const KPTrieIndex_v1 *self;
-    const KIndex *outer;
+    const KRIndex *outer;
     bool key2id;
     bool id2key;
     bool failed;
@@ -65,7 +65,7 @@ struct KPTrieIndexCCParms_v1
  */
 static
 void KPTrieIndexCCParmsInit_v1 ( KPTrieIndexCCParms_v1 *pb,
-    const KPTrieIndex_v1 *self, const KIndex *outer, bool key2id, bool id2key )
+    const KPTrieIndex_v1 *self, const KRIndex *outer, bool key2id, bool id2key )
 {
     KIdStatsInit ( & pb -> stats );
     pb -> rc = 0;
@@ -98,11 +98,11 @@ void KPTrieIndexCCParmsWhack_v1 ( KPTrieIndexCCParms_v1 *pb )
  *  overlapping ids into existing nodes.
  *
  *  if running a deep "key->id" test, then the key is first regenerated
- *  from the node, and then used to retrieve the id via the KIndex.
+ *  from the node, and then used to retrieve the id via the KRIndex.
  *
  *  if the projection index exists, the id is tested against the node
  *  to ensure that projection works. if "id->key" is true, then use
- *  the KIndex to produce a key and compare it against the node.
+ *  the KRIndex to produce a key and compare it against the node.
  */
 static
 bool CC KPTrieIndexCCVisit_v1 ( PTNode *n, void *data )
@@ -165,7 +165,7 @@ bool CC KPTrieIndexCCVisit_v1 ( PTNode *n, void *data )
         /* key->id test */
         if ( pb -> key2id )
         {
-            rc = KIndexFindText ( pb -> outer, orig -> addr, & start_id, & id_count, NULL, NULL );
+            rc = KIndexFindText ( & pb -> outer -> dad, orig -> addr, & start_id, & id_count, NULL, NULL );
             if ( rc != 0 )
             {
                 PLOGERR ( klogWarn, ( klogWarn, rc, "failed to retrieve start id and count for key '$(key)', row id $(rid)",
@@ -196,7 +196,7 @@ bool CC KPTrieIndexCCVisit_v1 ( PTNode *n, void *data )
                 }
             }
 
-            rc = KIndexProjectText ( pb -> outer, id, & start_id, & id_count, key, bsize, & key_size );
+            rc = KIndexProjectText ( & pb -> outer -> dad, id, & start_id, & id_count, key, bsize, & key_size );
             if ( rc != 0 )
             {
                 PLOGERR ( klogWarn, ( klogWarn, rc, "failed to retrieve key, start id and count for row id $(rid)",
@@ -232,7 +232,7 @@ bool CC KPTrieIndexCCVisit_v1 ( PTNode *n, void *data )
 rc_t KPTrieIndexCheckConsistency_v1 ( const KPTrieIndex_v1 *self,
     int64_t *start_id, uint64_t *id_range, uint64_t *num_keys,
     uint64_t *num_rows, uint64_t *num_holes,
-    const KIndex *outer, bool key2id, bool id2key )
+    const KRIndex *outer, bool key2id, bool id2key )
 {
     rc_t rc = 0;
     KPTrieIndexCCParms_v1 pb;

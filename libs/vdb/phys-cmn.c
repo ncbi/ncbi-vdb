@@ -38,8 +38,11 @@
 #undef KONST
 
 #include <vdb/cursor.h>
+
 #include <kdb/column.h>
 #include <kdb/meta.h>
+#include <kdb/kdb-priv.h>
+
 #include <klib/symbol.h>
 #include <klib/log.h>
 #include <klib/rc.h>
@@ -52,19 +55,6 @@
 
 
 #define BLOB_VALIDATION 1
-
-/*--------------------------------------------------------------------------
- * KMDataNode
- */
-
-
-/* Addr
- *  reach into node and get address
- *  returns raw pointer and node size
- */
-rc_t CC KMDataNodeAddr ( const KMDataNode *self,
-    const void **addr, size_t *size );
-
 
 /*--------------------------------------------------------------------------
  * VPhysical

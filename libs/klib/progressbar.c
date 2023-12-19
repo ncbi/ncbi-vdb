@@ -28,7 +28,7 @@
 #include <klib/rc.h>
 #include <klib/printf.h>
 #include <klib/progressbar.h>
-#include "writer-priv.h"    /* for sys_simple_write() and sys_is_a_tty() */
+#include "writer-priv.h"    /* for sys_simple_write() */
 
 #include <sysalloc.h>
 #include <stdlib.h>

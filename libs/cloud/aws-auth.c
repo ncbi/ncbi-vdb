@@ -24,10 +24,11 @@
 * AWS Authentication
 */
 
+#include <klib/log.h> /* LOGERR */
+#include <klib/printf.h> /* string_printf */
 #include <klib/rc.h>
 #include <klib/text.h> /* String */
 #include <klib/time.h> /* KTimeStamp */
-#include <klib/printf.h> /* string_printf */
 
 #include <kns/http.h> /* KClientHttpRequest */
 
@@ -251,9 +252,33 @@ rc_t AWSDoAuthentication(const struct AWS * self, KClientHttpRequest * req,
     char stringToSign[4096] = "";
     char authorization[4096] = "";
 
-    if (self->access_key_id == NULL && self->secret_access_key == NULL)
-        return RC(
-            rcCloud, rcMessage, rcIdentifying, rcEncryptionKey, rcNotFound);
+    if (self->access_key_id == NULL && self->secret_access_key == NULL) {
+        rc = RC(rcCloud, rcEncryptionKey, rcIdentifying,
+            rcEncryptionKey, rcNotFound);
+        switch (self->credentials_state) {
+        case eCCEmpty:
+            LOGERR(klogErr, rc, "cloud credentials file is empty");
+            break;
+        case eCCUnrecognized:
+            LOGERR(klogErr, rc,
+                "unrecognized format of cloud credentials file");
+            break;
+        case eCCIncomplete:
+            LOGERR(klogErr, rc, "cloud credentials file is incomplete");
+            break;
+        case eCCProfileNotFound:
+            LOGERR(klogErr, rc, "profile not found in cloud credentials file");
+            break;
+        case eCCProfileNotComplete:
+            LOGERR(
+                klogErr, rc, "profile not complete in cloud credentials file");
+            break;
+        default:
+            LOGERR(klogErr, rc, "cannot find cloud credentials");
+            break;
+        }
+        return rc;
+    }
 
     rc = KClientHttpRequestGetHeader(req, "Authorization",
         buf, sizeof buf, NULL);

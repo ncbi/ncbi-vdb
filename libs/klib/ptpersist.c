@@ -38,8 +38,14 @@
 #include <errno.h>
 #include <assert.h>
 
+#include "int_checks-priv.h"
+
 #if _DEBUGGING
 #define DEBUGPRINT 0
+#endif
+
+#ifdef WINDOWS
+#pragma warning(disable:4127)
 #endif
 
 /*--------------------------------------------------------------------------
@@ -240,7 +246,7 @@ rc_t CC TNodeWrite ( void *param, const void *n, size_t *num_writ,
         {
             * num_writ += writ;
             if ( writ != 1 )
-                return -1; /*AK: TODO is it correct?*/
+                return (rc_t)-1; /*AK: TODO is it correct?*/
 
             writ = 0;
             rc = ( * pb -> aux ) ( pb -> aux_param, n, & writ, write, write_param );
@@ -403,7 +409,8 @@ bool CC TTransPersist1 ( const TTrans *trans, PTriePersistData *pb,
                     return true;
                 n -> trans = trans -> child [ pb -> idx_map [ i ] . idx ];
                 n -> dad = tid;
-                n -> idx = i;
+                assert ( FITS_INTO_INT16 ( i ) );
+                n -> idx = (uint16_t)i;
                 SLListPushTail ( sl, & n -> n );
 
                 /* determine type
@@ -426,7 +433,8 @@ bool CC TTransPersist1 ( const TTrans *trans, PTriePersistData *pb,
                         return true;
                     n -> trans = trans -> child [ pb -> idx_map [ i ] . idx ];
                     n -> dad = tid;
-                    n -> idx = i;
+                    assert ( FITS_INTO_INT16 ( i ) );
+                    n -> idx = (uint16_t)i;
                     SLListPushTail ( sl, & n -> n );
 
                     /* continue until end */
@@ -441,7 +449,8 @@ bool CC TTransPersist1 ( const TTrans *trans, PTriePersistData *pb,
                             return true;
                         n -> trans = trans -> child [ pb -> idx_map [ i ] . idx ];
                         n -> dad = tid;
-                        n -> idx = i;
+                        assert ( FITS_INTO_INT16 ( i ) );
+                        n -> idx = (uint16_t)i;
                         SLListPushTail ( sl, & n -> n );
                     }
 
@@ -905,7 +914,8 @@ rc_t CC TriePersist3 ( const Trie *tt, PTriePersistData *pb, int ext_keys,
         pt -> keys = 0;
         P_TrieSetExtKeys ( pt -> keys, ext_keys );
         P_TrieSetBacktrace ( pt -> keys, ! ext_keys );
-        pt -> width = pb -> min_width;
+        assert ( FITS_INTO_INT16 ( pb -> min_width ) );
+        pt -> width = (uint16_t) pb -> min_width;
 
         /* decide upon id encoding type:
            0 => 24 : 8, i.e. 24 bits for trans id, 8 bits for local btree id

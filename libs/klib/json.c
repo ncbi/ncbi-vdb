@@ -45,6 +45,8 @@
 #include "json-grammar.h"
 #include "json-priv.h"
 
+#include "int_checks-priv.h"
+
 /* copy, convert the escapes and NUL-terminate */
 static rc_t CopyAndUnescape ( const char * p_value, size_t p_size, char * p_target, size_t p_targetSize );
 
@@ -98,9 +100,11 @@ int StringCmp( const char * a, const char * b )
 {
     size_t sizeA = string_size ( a );
     size_t sizeB = string_size ( b );
+    assert ( FITS_INTO_INT32 ( sizeA ) );
+    assert ( FITS_INTO_INT32 ( sizeB ) );
     return string_cmp ( a, sizeA,
                         b, sizeB,
-                        sizeA < sizeB ? sizeB : sizeA );
+                        (uint32_t) (sizeA < sizeB ? sizeB : sizeA) );
 }
 
 int64_t CC NameValueSort ( const BSTNode * p_item, const BSTNode * p_n )
@@ -866,7 +870,8 @@ PrintString ( PrintData * p_pd, const char * p_str )
                 break;
             default:
                 {
-                    const char to_hex[16] = "0123456789abcdef";
+                    const char to_hex[16] = { '0', '1', '2', '3', '4', '5', '6', '7',
+                                              '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
                     char hex [7] = { '\\', '\\', 'u' };
                     hex [3] = to_hex [ ( ch >> 24 ) & 0xff ];
                     hex [4] = to_hex [ ( ch >> 16 ) & 0xff ];

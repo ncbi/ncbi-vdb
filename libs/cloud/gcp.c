@@ -796,7 +796,8 @@ LIB_EXPORT rc_t CC CloudMgrMakeGCP(const CloudMgr * self, GCP ** p_gcp)
             self, user_agrees_to_pay, user_agrees_to_reveal_instance_identity );
         if ( rc == 0 )
         {
-            rc = PopulateCredentials(gcp, (KConfig*)self->kfg);
+            if (user_agrees_to_pay)
+                rc = PopulateCredentials(gcp, (KConfig*)self->kfg);
             if (rc == 0)
             {
                 *p_gcp = gcp;
@@ -949,7 +950,7 @@ rc_t PopulateCredentials(GCP * self, KConfig * aKfg)
 
     char buffer[PATH_MAX] = "";
 
-    char *jsonCredentials = NULL;
+    char *jsonCredentials = NULL, *jsonCredentialsOrig = NULL;;
 
     const char *pathToJsonFile = getenv("GOOGLE_APPLICATION_CREDENTIALS");
 
@@ -1004,7 +1005,8 @@ rc_t PopulateCredentials(GCP * self, KConfig * aKfg)
 
         if (rc == 0)
         {
-            jsonCredentials = (char *)calloc(json_size + 1, 1);
+            jsonCredentialsOrig =
+                jsonCredentials = (char *)calloc(json_size + 1, 1);
             if (jsonCredentials == NULL)
             {
                 rc = RC(rcNS, rcMgr, rcAllocating, rcMemory, rcExhausted);
@@ -1022,6 +1024,15 @@ rc_t PopulateCredentials(GCP * self, KConfig * aKfg)
         if (rc == 0)
         {   /*extract the credentials */
             KJsonValue *root = NULL;
+
+            if (json_size > 3 &&
+                jsonCredentials[0] == '\xEF' &&
+                jsonCredentials[1] == '\xBB' &&
+                jsonCredentials[2] == '\xBF')
+            {   /* skip BOM */
+                jsonCredentials += 3;
+            }
+
             rc = KJsonValueMake(&root, jsonCredentials, NULL, 0);
             if (rc == 0)
             {
@@ -1083,7 +1094,7 @@ rc_t PopulateCredentials(GCP * self, KConfig * aKfg)
             }
         }
 
-        free(jsonCredentials);
+        free(jsonCredentialsOrig);
     }
 
     return rc;

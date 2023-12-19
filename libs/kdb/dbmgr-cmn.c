@@ -30,8 +30,9 @@
 #include "libkdb.vers.h"
 
 #define KONST const
-#include "dbmgr-priv.h"
-#include "kdb-priv.h"
+#include "dbmgr.h"
+#include "kdb-cmn.h"
+#include "kdbfmt.h"
 #undef KONST
 
 #include <vfs/manager.h>
@@ -58,12 +59,9 @@
 
 /* Whack
  */
-static
 rc_t KDBManagerWhack ( KDBManager *self )
 {
     rc_t rc;
-
-    KRefcountWhack ( & self -> refcount, "KDBManager" );
 
     /* everything should be closed */
     assert ( self -> open_objs . root == NULL );
@@ -75,80 +73,12 @@ rc_t KDBManagerWhack ( KDBManager *self )
     rc = KDirectoryRelease ( self -> wd );
     if ( rc == 0 )
     {
-        free ( self );
-        return 0;
+        return KDBManagerBaseWhack( self );
     }
 
-    KRefcountInit ( & self -> refcount, 1, "KDBManager", "whack", "kmgr" );
+    KRefcountInit ( & self -> dad . refcount, 1, "KDBManager", "whack", "kmgr" );
     return rc;
 }
-
-
-/* AddRef
- * Release
- *  all objects are reference counted
- *  NULL references are ignored
- */
-LIB_EXPORT rc_t CC KDBManagerAddRef ( const KDBManager *self )
-{
-    if ( self != NULL )
-    {
-        switch ( KRefcountAdd ( & self -> refcount, "KDBManager" ) )
-        {
-        case krefLimit:
-            return RC ( rcDB, rcMgr, rcAttaching, rcRange, rcExcessive );
-        }
-    }
-    return 0;
-}
-
-LIB_EXPORT rc_t CC KDBManagerRelease ( const KDBManager *self )
-{
-    if ( self != NULL )
-    {
-        switch ( KRefcountDrop ( & self -> refcount, "KDBManager" ) )
-        {
-        case krefWhack:
-            return KDBManagerWhack ( ( KDBManager* ) self );
-        case krefNegative:
-            return RC ( rcDB, rcMgr, rcReleasing, rcRange, rcExcessive );
-        }
-    }
-    return 0;
-}
-
-
-/* Attach
- * Sever
- */
-KDBManager* KDBManagerAttach ( const KDBManager *self )
-{
-    if ( self != NULL )
-    {
-        switch ( KRefcountAddDep ( & self -> refcount, "KDBManager" ) )
-        {
-        case krefLimit:
-            return NULL;
-        }
-    }
-    return ( KDBManager* ) self;
-}
-
-rc_t KDBManagerSever ( const KDBManager *self )
-{
-    if ( self != NULL )
-    {
-        switch ( KRefcountDropDep ( & self -> refcount, "KDBManager" ) )
-        {
-        case krefWhack:
-            return KDBManagerWhack ( ( KDBManager* ) self );
-        case krefNegative:
-            return RC ( rcDB, rcMgr, rcReleasing, rcRange, rcExcessive );
-        }
-    }
-    return 0;
-}
-
 
 /* Make - PRIVATE
  *
@@ -156,7 +86,7 @@ rc_t KDBManagerSever ( const KDBManager *self )
  *  accessing the file system. mgr will attach its own reference.
  */
 rc_t KDBManagerMake ( KDBManager **mgrp, const KDirectory *wd, const char *op,
-    VFSManager *vmanager )
+    VFSManager *vmanager, KDBManager_vt * vt )
 {
     rc_t rc;
 
@@ -170,6 +100,7 @@ rc_t KDBManagerMake ( KDBManager **mgrp, const KDirectory *wd, const char *op,
         else
         {
             memset ( mgr, 0, sizeof * mgr );
+            mgr -> dad . vt = vt;
             mgr -> wd = wd;
             if ( wd != NULL )
                 rc = KDirectoryAddRef ( wd );
@@ -195,11 +126,11 @@ rc_t KDBManagerMake ( KDBManager **mgrp, const KDirectory *wd, const char *op,
                     if ( rc == 0 )
                     {
                         CRC32Init ();
-                        
+
                         BSTreeInit ( & mgr -> open_objs );
-                        
-                        KRefcountInit ( & mgr -> refcount, 1, "KDBManager", op, "kmgr" );
-                        
+
+                        KRefcountInit ( & mgr -> dad . refcount, 1, "KDBManager", op, "kmgr" );
+
                         * mgrp = mgr;
                         return 0;
                     }
@@ -245,12 +176,11 @@ LIB_EXPORT rc_t CC KDBManagerGetVFSManager ( const KDBManager *self,
 /* Version
  *  returns the library version
  */
-LIB_EXPORT rc_t CC KDBManagerVersion ( const KDBManager *self, uint32_t *version )
+rc_t CC
+KDBManagerCommonVersion ( const KDBManager *self, uint32_t *version )
 {
     if ( version == NULL )
         return RC ( rcDB, rcMgr, rcAccessing, rcParam, rcNull );
-    if ( self == NULL )
-        return RC ( rcDB, rcMgr, rcAccessing, rcSelf, rcNull );
 
     * version = LIBKDB_VERS;
     return 0;
@@ -264,7 +194,7 @@ LIB_EXPORT rc_t CC KDBManagerVersion ( const KDBManager *self, uint32_t *version
  *
  *  "path" [ IN ] - NUL terminated path
  */
-LIB_EXPORT bool CC KDBManagerVExists ( const KDBManager *self, uint32_t requested, const char *name, va_list args )
+bool CC KDBManagerCommonVExists ( const KDBManager *self, uint32_t requested, const char *name, va_list args )
 {
     int type;
 
@@ -284,20 +214,6 @@ LIB_EXPORT bool CC KDBManagerVExists ( const KDBManager *self, uint32_t requeste
         return false;
     }
     return requested == ( uint32_t ) type;
-}
-
-bool KDBManagerExists ( const KDBManager *self, uint32_t type, const char *name, ... )
-{
-    bool exists;
-
-    va_list args;
-    va_start ( args, name );
-
-    exists = KDBManagerVExists ( self, type, name, args );
-
-    va_end ( args );
-
-    return exists;
 }
 
 
@@ -483,4 +399,31 @@ LIB_EXPORT rc_t CC KDBManagerGetTableModDate ( const KDBManager *self,
     va_end ( args );
 
     return rc;
+}
+
+
+
+/* KDBHdrValidate
+ *  validates that a header sports a supported byte order
+ *  and that the version is within range
+ */
+rc_t KDBHdrValidate ( const KDBHdr *hdr, size_t size,
+    uint32_t min_vers, uint32_t max_vers )
+{
+    assert ( hdr != NULL );
+
+    if ( size < sizeof * hdr )
+        return RC ( rcDB, rcHeader, rcValidating, rcData, rcCorrupt );
+
+    if ( hdr -> endian != eByteOrderTag )
+    {
+        if ( hdr -> endian == eByteOrderReverse )
+            return RC ( rcDB, rcHeader, rcValidating, rcByteOrder, rcIncorrect );
+        return RC ( rcDB, rcHeader, rcValidating, rcData, rcCorrupt );
+    }
+
+    if ( hdr -> version < min_vers || hdr -> version > max_vers )
+        return RC ( rcDB, rcHeader, rcValidating, rcHeader, rcBadVersion );
+
+    return 0;
 }
