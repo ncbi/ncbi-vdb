@@ -31,6 +31,7 @@
 #include <ktst/unit_test.hpp>
 
 #include "../../libs/kdbtext/database.hpp"
+#include "../../libs/kdbtext/table.hpp"
 
 #include <kdb/manager.h>
 #include <kdb/database.h>
@@ -328,15 +329,17 @@ public:
     ~KDBTextDatabase_ApiFixture()
     {
         KDatabaseRelease( m_db );
+        KDBManagerRelease( m_mgr );
     }
     void Setup( const char * input )
     {
-        const KDBManager * mgr = nullptr;
-        THROW_ON_RC( KDBManagerMakeText ( & mgr, input, m_error, sizeof m_error ) );
-        THROW_ON_RC( KDBManagerOpenDBRead( mgr, & m_db, "%s", "testdb" ) );
-        KDBManagerRelease( mgr );
+//    const KDBManager * mgr = nullptr;
+        THROW_ON_RC( KDBManagerMakeText ( & m_mgr, input, m_error, sizeof m_error ) );
+        THROW_ON_RC( KDBManagerOpenDBRead( m_mgr, & m_db, "%s", "testdb" ) );
+//    Release(mgr); hold on to the parsed Json, not the top level db/table
     }
 
+    const KDBManager * m_mgr = nullptr;
     const KDatabase * m_db = nullptr;
     char m_error[1024];
 };
@@ -349,6 +352,52 @@ FIXTURE_TEST_CASE(KDBTextDatabase_AddRelease, KDBTextDatabase_ApiFixture)
     REQUIRE_RC( KDatabaseAddRef( m_db ) );
     REQUIRE_RC( KDatabaseRelease( m_db ) );
     // use valgrind to find any leaks
+}
+
+FIXTURE_TEST_CASE(KDBTextDatabase_Locked, KDBTextDatabase_ApiFixture)
+{
+    Setup( R"({"type": "database", "name": "testdb"})" );
+    REQUIRE( ! KDatabaseLocked( m_db ) );
+}
+
+FIXTURE_TEST_CASE(KDBTextDatabase_Exists, KDBTextDatabase_ApiFixture)
+{
+    Setup( NestedDb );
+    REQUIRE( KDatabaseExists( m_db, kptTable, "%s", "testdb/db/subdb2/tbl/tbl2-2" ) );
+}
+
+FIXTURE_TEST_CASE(KDBTextDatabase_Alias, KDBTextDatabase_ApiFixture)
+{
+    Setup( R"({"type": "database", "name": "testdb"})" );
+    REQUIRE( ! KDatabaseIsAlias( m_db, kptDatabase, nullptr, 0, "testdb" ) );
+}
+
+FIXTURE_TEST_CASE(KDBTextDatabase_Writable, KDBTextDatabase_ApiFixture)
+{
+    Setup( R"({"type": "database", "name": "testdb"})" );
+    REQUIRE( ! KDatabaseWritable( m_db, kptDatabase, 0, "testdb" ) );
+}
+
+FIXTURE_TEST_CASE(KDBTextDatabase_OpenManagerRead, KDBTextDatabase_ApiFixture)
+{
+    Setup( R"({"type": "database", "name": "testdb"})" );
+    const KDBManager * mgr;
+    REQUIRE_RC( KDatabaseOpenManagerRead( m_db, & mgr ) );
+    REQUIRE_EQ( m_mgr, mgr );
+    KDBManagerRelease( mgr );
+}
+
+FIXTURE_TEST_CASE(KDBTextDatabase_OpenParentRead, KDBTextDatabase_ApiFixture)
+{
+    Setup( NestedDb );
+    const KDatabase * subdb = nullptr;
+    REQUIRE_RC( KDBManagerOpenDBRead( m_mgr, & subdb, "testdb/db/subdb1" ) );
+    REQUIRE_NOT_NULL( subdb );
+    const KDatabase * parent = nullptr;
+    REQUIRE_RC( KDatabaseOpenParentRead( subdb, & parent ) );
+    REQUIRE_EQ( m_db, parent );
+    KDatabaseRelease( parent );
+    KDatabaseRelease( subdb );
 }
 
 //////////////////////////////////////////// Main

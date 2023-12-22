@@ -50,10 +50,22 @@ Manager::Manager( const KDBManager_vt & vt)
 
 Manager::~Manager()
 {
-    delete m_tbl;
-    delete m_db;
+    KTableRelease( (KTable*) m_tbl);
+    KDatabaseRelease( (KDatabase*) m_db );
     KJsonValueWhack( m_root );
     KRefcountWhack ( & dad . refcount, "KDBText::Manager" );
+}
+
+void
+Manager::attach() const
+{
+    KRefcountAdd( & dad . refcount, "KDBText::Manager" );
+}
+
+void
+Manager::sever() const
+{
+    KRefcountDrop( & dad . refcount, "KDBText::Manager" );
 }
 
 rc_t
@@ -83,7 +95,7 @@ Manager::parse( const char * input, char * error, size_t error_size )
         {
             if ( strcmp( typeStr, "database") == 0 )
             {
-                m_db = new Database( rootObj );
+                m_db = new Database( rootObj, this );
                 rc = m_db -> inflate( error, error_size );
             }
             else if ( strcmp( typeStr, "table") == 0 )

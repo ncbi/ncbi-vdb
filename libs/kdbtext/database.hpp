@@ -36,7 +36,6 @@ struct KTextDatabase
 };
 
 #include "path.hpp"
-#include "table.hpp"
 
 #include <klib/json.h>
 #include <klib/rc.h>
@@ -46,13 +45,24 @@ struct KTextDatabase
 
 namespace KDBText
 {
+    class Manager;
+    class Table;
+
     class Database : public KTextDatabase
     {
     public:
-        Database( const KJsonObject * p_json );
+        Database( const KJsonObject * p_json, const Manager * = nullptr, const Database * = nullptr );
         ~Database();
 
+        void attach() const;
+        void sever() const;
+
         rc_t inflate( char * error, size_t error_size );
+
+        const Manager * getManager() const { return m_mgr; }
+        void setManager( const Manager * mgr ) { m_mgr = mgr; }
+
+        const Database * getParent() const { return m_parent; }
 
         const std::string & getName() const { return m_name; }
 
@@ -66,9 +76,12 @@ namespace KDBText
         bool exists( uint32_t requested, Path & p_path ) const;
 
     private:
+        const Manager * m_mgr = nullptr;
+        const Database * m_parent = nullptr;
+
         const KJsonObject * m_json = nullptr;
         std::string m_name;
-        std::vector<Database> m_subdbs;
-        std::vector<Table> m_tables;
+        std::vector< const Database* > m_subdbs;
+        std::vector< const Table* >m_tables;
     };
 }

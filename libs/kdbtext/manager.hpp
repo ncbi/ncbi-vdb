@@ -42,6 +42,9 @@ namespace KDBText
         Manager( const KDBManager_vt& );
         ~Manager();
 
+        void attach() const;
+        void sever() const;
+
         rc_t parse( const char * input, char * error, size_t error_size );
 
         const Database * getRootDatabase() const { return m_db; }

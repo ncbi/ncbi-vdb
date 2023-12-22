@@ -85,6 +85,7 @@ static KDBManager_vt KTextManager_vt =
 };
 
 using namespace KDBText;
+
 #define CAST() assert( bself -> dad . vt == & KTextManager_vt ); const Manager *self = static_cast<const Manager *>(bself);
 
 static
