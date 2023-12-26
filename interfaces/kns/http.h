@@ -209,8 +209,8 @@ typedef struct KClientHttpRequest KClientHttpRequest, KHttpRequest;
  *
  *  "vers" [ IN ] - http version
  *
- *  "readMillis, writeMillis" [ IN ] - read, write timeouts
- *  to supply to sockets - when negative, infinite timeout;
+ *  "connectMillis", "readMillis, writeMillis" [ IN ] - connect/read/write
+ *  timeouts to supply to sockets - when negative, infinite timeout;
  *  when 0, return immediately; positive gives maximum wait time in sec/mS
  *  for reads and writes respectively.
  *
@@ -229,8 +229,8 @@ KNS_EXTERN rc_t CC KNSManagerMakeClientRequest ( struct KNSManager const *self,
 
 /* Timeouts are specified */
 KNS_EXTERN rc_t CC KNSManagerMakeTimedClientRequest (
-    struct KNSManager const *self,
-    KClientHttpRequest **req, ver_t version, int32_t readMillis,
+    struct KNSManager const *self, KClientHttpRequest **req,
+    ver_t version, int32_t connMillis, int32_t readMillis,
     int32_t writeMillis, struct KStream *conn, const char *url, ... );
 
 /* AddRef
