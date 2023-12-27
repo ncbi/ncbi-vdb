@@ -351,6 +351,8 @@ LIB_EXPORT rc_t CC KNSManagerMakeClientRequest ( const KNSManager *self,
 {
     rc_t rc;
     va_list args;
+    if (self == NULL)
+        return RC(rcNS, rcNoTarg, rcValidating, rcSelf, rcNull);
     va_start ( args, url );
     rc = KNSManagerMakeClientRequestInt ( self, req, vers,
         self->conn_timeout, self->http_read_timeout, self->http_write_timeout,
@@ -364,6 +366,8 @@ LIB_EXPORT rc_t CC KNSManagerMakeReliableClientRequest ( const KNSManager *self,
 {
     rc_t rc;
     va_list args;
+    if (self == NULL)
+        return RC(rcNS, rcNoTarg, rcValidating, rcSelf, rcNull);
     va_start ( args, url );
     rc = KNSManagerMakeClientRequestInt ( self, req, vers,
         self->conn_timeout, self->http_read_timeout, self->http_write_timeout,
