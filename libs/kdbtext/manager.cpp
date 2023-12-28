@@ -43,6 +43,7 @@ using namespace std;
 using namespace KDBText;
 
 Manager::Manager( const KDBManager_vt & vt)
+: m_isDb( false )
 {
     dad . vt = & vt;
     KRefcountInit ( & dad . refcount, 1, "KDBText::Manager", "ctor", "kmgr" );
@@ -50,22 +51,20 @@ Manager::Manager( const KDBManager_vt & vt)
 
 Manager::~Manager()
 {
-    KTableRelease( (KTable*) m_tbl);
-    KDatabaseRelease( (KDatabase*) m_db );
     KJsonValueWhack( m_root );
     KRefcountWhack ( & dad . refcount, "KDBText::Manager" );
 }
 
 void
-Manager::attach() const
+Manager::addRef( const Manager * mgr )
 {
-    KRefcountAdd( & dad . refcount, "KDBText::Manager" );
+    KDBManagerAddRef( (const KDBManager*) mgr );
 }
 
 void
-Manager::sever() const
+Manager::release( const Manager * mgr )
 {
-    KRefcountDrop( & dad . refcount, "KDBText::Manager" );
+    KDBManagerRelease( (const KDBManager*) mgr );
 }
 
 rc_t
@@ -92,16 +91,22 @@ Manager::parse( const char * input, char * error, size_t error_size )
         const char * typeStr = nullptr;
         rc = KJsonGetString ( type, & typeStr );
         if ( rc == 0 )
-        {
+        {   // determine the type of the root object (which is then discarded)
             if ( strcmp( typeStr, "database") == 0 )
             {
-                m_db = new Database( rootObj, this );
-                rc = m_db -> inflate( error, error_size );
+                rc = Database( rootObj, this ) . inflate( error, error_size );
+                if ( rc == 0 )
+                {
+                    m_isDb = true;
+                }
             }
             else if ( strcmp( typeStr, "table") == 0 )
             {
-                m_tbl = new Table( rootObj );
-                rc = m_tbl -> inflate( error, error_size );
+                rc = Table( rootObj ) . inflate( error, error_size );
+                if ( rc == 0 )
+                {
+                    m_isDb = false;
+                }
             }
         }
     }
@@ -109,35 +114,88 @@ Manager::parse( const char * input, char * error, size_t error_size )
     return rc;
 }
 
+const Database *
+Manager::getRootDatabase() const
+{
+    Database * db = new Database( KJsonValueToObject ( m_root ), this );
+    char error[1024];
+    if ( db -> inflate( error, sizeof error ) == 0 )
+    {
+        return db;
+    }
+    delete db;
+    return nullptr;
+}
+
+const Table *
+Manager::getRootTable() const
+{
+    Table * tbl = new Table( KJsonValueToObject ( m_root ) );
+    char error[1024];
+    if ( tbl -> inflate( error, sizeof error ) == 0 )
+    {
+        return tbl;
+    }
+    delete tbl;
+    return nullptr;
+}
+
+
 int
 Manager::pathType( const Path & p_path ) const
 {
     Path path( p_path );
-    if ( m_db != nullptr )
+    int ret = kptNotFound;
+
+    //TODO: do it without creating a DB/Tbl, by walking the Json
+
+    if ( m_isDb )
     {
-        return m_db -> pathType( path );
+        const Database * db = getRootDatabase();
+        if ( db != nullptr )
+        {
+            ret = db -> pathType( path );
+        }
+        delete db;
     }
-    if ( m_tbl != nullptr )
+    else
     {
-        return m_tbl -> pathType( path );
+        const Table * tbl = getRootTable();
+        if ( tbl != nullptr )
+        {
+            ret = tbl -> pathType( path );
+        }
+        delete tbl;
     }
-    return kptNotFound;
+    return ret;
 }
 
 bool
 Manager::exists( uint32_t requested, const Path & p_path ) const
 {
-    Path path = p_path;
-    if ( m_db != nullptr )
+    Path path( p_path );
+    bool ret = false;
+
+    //TODO: do it without creating a DB/Tbl, by walking the Json
+    if ( m_isDb )
     {
-        return m_db -> exists( requested, path );
+        const Database * db = getRootDatabase();
+        if ( db != nullptr )
+        {
+            ret = db -> exists( requested, path );
+        }
+        delete db;
     }
-    if ( m_tbl != nullptr )
+    else
     {
-        return m_tbl -> exists( requested, path );
+        const Table * tbl = getRootTable();
+        if ( tbl )
+        {
+            ret = tbl -> exists( requested, path );
+        }
+        delete tbl;
     }
-    // case kptMetadata:
-    return false;
+    return ret;
 }
 
 rc_t
@@ -152,19 +210,24 @@ Manager::openDatabase( const Path & p_path, const Database *& p_db ) const
 {
     if ( ! p_path.empty() )
     {
-        if ( m_db )
+        if ( m_isDb )
         {
             Path path ( p_path );
-            const Database * db = m_db -> getDatabase( path );
-            if ( db != nullptr )
+            const Database * root = getRootDatabase();
+            if ( root != nullptr )
             {
-                rc_t rc = KDatabaseAddRef( (const KDatabase *)db );
-                if ( rc != 0 )
+                const Database * db = root -> openDatabase( path ); // could be same as root
+                if ( db != root )
                 {
-                    return rc;
+                    KDatabaseRelease( (const KDatabase *)root );
+                    p_db = db;
+                    return 0;
                 }
-                p_db = db;
-                return 0;
+                else
+                {
+                    p_db = root;
+                    return 0;
+                }
             }
         }
     }
@@ -176,30 +239,34 @@ Manager::openTable( const Path & p_path, const Table *& p_tbl ) const
 {
     if ( ! p_path.empty() )
     {
-        if ( m_tbl && m_tbl -> getName() == p_path.front() )
-        {
-            rc_t rc = KTableAddRef( (const KTable *)m_tbl );
-            if ( rc != 0 )
-            {
-                return rc;
-            }
-            p_tbl = m_tbl;
-            return 0;
-        }
-        if ( m_db )
+        if ( m_isDb )
         {
             Path path ( p_path );
-            const Table * tbl = m_db -> getTable( path );
+            const Database * root = getRootDatabase();
+            if ( root != nullptr )
+            {
+                const Table * tbl = root -> openTable( path );
+                KDatabaseRelease( (const KDatabase *)root );
+                if ( tbl != nullptr )
+                {
+                    p_tbl = tbl;
+                    return 0;
+                }
+            }
+        }
+        else
+        {
+            Path path ( p_path );
+            const Table * tbl = getRootTable();
             if ( tbl != nullptr )
             {
-                rc_t rc = KTableAddRef( (const KTable *)tbl );
-                if ( rc != 0 )
+                if ( tbl -> getName() == p_path.front() )
                 {
-                    return rc;
+                    p_tbl = tbl;
+                    return 0;
                 }
-                p_tbl = tbl;
-                return 0;
             }
+            KTableRelease( (const KTable*)tbl );
         }
     }
     return SILENT_RC (rcDB, rcMgr, rcOpening, rcType, rcInvalid);

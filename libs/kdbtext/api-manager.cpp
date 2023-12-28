@@ -213,7 +213,10 @@ KTextManagerVOpenDBRead ( const KDBManager *bself, const KDatabase **p_db, const
     PrintToString( fmt, args, path );
     const Database * db = nullptr;
     rc_t rc = self -> openDatabase( Path( path ), db );
-    *p_db = (const KDatabase *)db;
+    if ( rc == 0 )
+    {
+        *p_db = (const KDatabase *)db;
+    }
 
     return rc;
 }
@@ -228,7 +231,10 @@ KTextManagerVOpenTableRead ( const KDBManager *bself, const KTable **p_tbl, cons
     PrintToString( fmt, args, path );
     const Table * tbl = nullptr;
     rc_t rc = self -> openTable( Path( path ), tbl );
-    *p_tbl = (const KTable *)tbl;
+    if ( rc == 0 )
+    {
+        *p_tbl = (const KTable *)tbl;
+    }
 
     return rc;
 }
@@ -241,7 +247,10 @@ KTextManagerOpenTableReadVPath(const KDBManager *bself, const KTable **p_tbl, co
 
     const Table * tbl = nullptr;
     rc_t rc = self -> openTable( Path( p_path ), tbl );
-    *p_tbl = (const KTable *)tbl;
+    if ( rc == 0 )
+    {
+        *p_tbl = (const KTable *)tbl;
+    }
 
     return rc;
 }
@@ -261,7 +270,10 @@ KTextManagerVPathOpenLocalDBRead ( const KDBManager * bself, struct KDatabase co
 
     const Database * db = nullptr;
     rc_t rc = self -> openDatabase( Path( vpath ), db );
-    *p_db = (const KDatabase *)db;
+    if ( rc == 0 )
+    {
+        *p_db = (const KDatabase *)db;
+    }
 
     return rc;
 }

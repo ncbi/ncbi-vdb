@@ -42,6 +42,7 @@ struct KTextDatabase
 
 #include <string>
 #include <vector>
+#include <map>
 
 namespace KDBText
 {
@@ -51,11 +52,12 @@ namespace KDBText
     class Database : public KTextDatabase
     {
     public:
-        Database( const KJsonObject * p_json, const Manager * = nullptr, const Database * = nullptr );
-        ~Database();
+        static void addRef( const Database* );
+        static void release( const Database *);
 
-        void attach() const;
-        void sever() const;
+    public:
+        Database( const KJsonObject * json, const Manager * mgr = nullptr, const Database * parent = nullptr );
+        ~Database();
 
         rc_t inflate( char * error, size_t error_size );
 
@@ -66,11 +68,10 @@ namespace KDBText
 
         const std::string & getName() const { return m_name; }
 
-        const Database * getDatabase( Path & path ) const;
-        const Database * findDatabase( const std::string & name ) const;
+        const Database * openDatabase( Path & path ) const;
+        const Database * openSubDatabase( std::string & name ) const;
 
-        const Table * getTable( Path & path ) const;
-        const Table * findTable( const std::string & name ) const;
+        const Table *openTable( Path & path ) const;
 
         int pathType( Path & ) const;
         bool exists( uint32_t requested, Path & p_path ) const;
@@ -81,7 +82,8 @@ namespace KDBText
 
         const KJsonObject * m_json = nullptr;
         std::string m_name;
-        std::vector< const Database* > m_subdbs;
-        std::vector< const Table* >m_tables;
+        // verified Jsons:
+        std::map< std::string, const KJsonObject * > m_subdbs;
+        std::map< std::string, const KJsonObject * > m_tables;
     };
 }

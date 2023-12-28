@@ -47,8 +47,8 @@ static bool CC KTextDatabaseIsAlias ( const KTextDatabase *self, uint32_t type, 
 static rc_t CC KTextDatabaseVWritable ( const KTextDatabase *self, uint32_t type, const char *name, va_list args );
 static rc_t CC KTextDatabaseOpenManagerRead ( const KTextDatabase *self, const KDBManager **mgr );
 static rc_t CC KTextDatabaseOpenParentRead ( const KTextDatabase *self, const KDatabase **par );
-// static rc_t CC KTextDatabaseOpenDirectoryRead ( const KTextDatabase *self, const KDirectory **dir );
-// static rc_t CC KTextDatabaseVOpenDBRead ( const KTextDatabase *self, const KDatabase **dbp, const char *name, va_list args );
+static rc_t CC KTextDatabaseOpenDirectoryRead ( const KTextDatabase *self, const KDirectory **dir );
+static rc_t CC KTextDatabaseVOpenDBRead ( const KTextDatabase *self, const KDatabase **dbp, const char *name, va_list args );
 // static rc_t CC KTextDatabaseVOpenTableRead ( const KTextDatabase *self, const KTable **tblp, const char *name, va_list args );
 // static rc_t CC KTextDatabaseOpenMetadataRead ( const KTextDatabase *self, const KMetadata **metap );
 // static rc_t CC KTextDatabaseVOpenIndexRead ( const KTextDatabase *self, const KIndex **idxp, const char *name, va_list args );
@@ -68,8 +68,8 @@ static KDatabase_vt KTextDatabase_vt =
     KTextDatabaseVWritable,
     KTextDatabaseOpenManagerRead,
     KTextDatabaseOpenParentRead,
-    // KTextDatabaseOpenDirectoryRead,
-    // KTextDatabaseVOpenDBRead,
+    KTextDatabaseOpenDirectoryRead,
+    KTextDatabaseVOpenDBRead,
     // KTextDatabaseVOpenTableRead,
     // KTextDatabaseOpenMetadataRead,
     // KTextDatabaseVOpenIndexRead,
@@ -79,91 +79,64 @@ static KDatabase_vt KTextDatabase_vt =
     // KTextDatabaseGetPath
 };
 
+static char error[1024];
+
 Database::Database( const KJsonObject * p_json, const Manager * p_mgr, const Database * p_parent )
 : m_mgr( p_mgr ), m_parent( p_parent ), m_json ( p_json )
 {
     dad . vt = & KTextDatabase_vt;
     KRefcountInit ( & dad . refcount, 1, "KDBText::Database", "ctor", "db" );
+
+    if ( m_mgr != nullptr )
+    {
+        Manager::addRef( m_mgr );
+    }
 }
 
 Database::~Database()
 {
-    for( auto & d : m_tables )
-    {
-        KTableRelease( (const KTable*) d );
-    }
-    for( auto & d : m_subdbs )
-    {
-        KDatabaseRelease( (const KDatabase*) d );
-    }
-    KRefcountWhack ( & dad . refcount, "KDBText::Database" );
     if ( m_mgr != nullptr )
     {
-        m_mgr -> sever();
+        Manager::release( m_mgr );
     }
-    if ( m_parent != nullptr )
-    {
-        m_parent -> sever();
-    }
+    KRefcountWhack ( & dad . refcount, "KDBText::Database" );
 }
 
 void
-Database::attach() const
+Database::addRef( const Database * mgr )
 {
-    KRefcountAdd( & dad . refcount, "KDBText::Database" );
+    KDatabaseAddRef( (const KDatabase*) mgr );
 }
 
 void
-Database::sever() const
+Database::release( const Database * mgr )
 {
-    KRefcountDrop( & dad . refcount, "KDBText::Database" );
+    KDatabaseRelease( (const KDatabase*) mgr );
 }
 
 const Database *
-Database::findDatabase( const string & p_name ) const
-{   // shallow search for a db
-    for( auto & d : m_subdbs )
-    {
-        if ( p_name == d -> getName() )
-        {
-            return d;
-        }
-    }
-    return nullptr;
-}
-
-const Table *
-Database::findTable( const std::string & name ) const
-{   // shallow search for a table
-    for( auto & d : m_tables )
-    {
-        if ( name == d -> getName() )
-        {
-            return d;
-        }
-    }
-    return nullptr;
-}
-
-const Database *
-Database::getDatabase( Path & p_path ) const
+Database::openDatabase( Path & p_path ) const
 {
     if ( ! p_path.empty() && p_path.front() == m_name )
     {
         p_path.pop();
         if ( p_path.empty() )
-        {
-            return this;
+        {   // return a new copy of this db
+            Database * ret = new Database( m_json, m_mgr, this );
+            ret -> inflate( error, sizeof error );
+            return ret;
         }
         if ( p_path.front() == "db" )
         {
             p_path.pop();
             if ( ! p_path.empty() )
             {
-                const Database * db = findDatabase( p_path.front() );
-                if ( db != nullptr )
+                auto j = m_subdbs.find( p_path.front() );
+                if ( j != m_subdbs.end() )
                 {
-                    return db -> getDatabase( p_path );
+                    Database * ret = new Database( j -> second, m_mgr, this );
+                    ret -> inflate( error, sizeof error );
+                    return ret;
                 }
             }
         }
@@ -171,31 +144,58 @@ Database::getDatabase( Path & p_path ) const
     return nullptr;
 }
 
+const Database *
+Database::openSubDatabase( std::string & name ) const
+{
+    auto j = m_subdbs.find( name );
+    if ( j != m_subdbs.end() )
+    {
+        Database * ret = new Database( j -> second, m_mgr, this );
+        ret -> inflate( error, sizeof error );
+        return ret;
+    }
+    return nullptr;
+}
+
+
 const Table *
-Database::getTable( Path & p_path ) const
+Database::openTable( Path & p_path ) const
 {
     if ( ! p_path.empty() && p_path.front() == m_name )
     {
         p_path.pop();
-        if ( ! p_path.empty() )
+    }
+    if ( ! p_path.empty() )
+    {
+        if ( p_path.front() == "tbl" )
         {
-            if ( p_path.front() == "tbl" )
+            p_path.pop();
+            if ( ! p_path.empty() )
             {
-                p_path.pop();
-                if ( ! p_path.empty() )
+                auto j = m_tables.find( p_path.front() );
+                if ( j != m_tables.end() )
                 {
-                    return findTable( p_path.front() );
+                    Table * ret = new Table( j -> second );
+                    ret -> inflate( error, sizeof error );
+                    return ret;
                 }
             }
-            else if ( p_path.front() == "db" )
+        }
+        else if ( p_path.front() == "db" )
+        {
+            p_path.pop();
+            if ( ! p_path.empty() )
             {
-                p_path.pop();
-                if ( ! p_path.empty() )
+                auto j = m_subdbs.find( p_path.front() );
+                if ( j != m_subdbs.end() )
                 {
-                    const Database * db = findDatabase( p_path.front() );
+                    Database * db = new Database( j -> second, m_mgr, this );
                     if ( db != nullptr )
                     {
-                        return db -> getTable( p_path );
+                        db -> inflate( error, sizeof error);
+                        const Table * ret = db -> openTable( p_path );
+                        delete db;
+                        return ret;
                     }
                 }
             }
@@ -205,7 +205,7 @@ Database::getTable( Path & p_path ) const
 }
 
 rc_t
-Database::inflate( char * error, size_t error_size )
+Database::inflate( char * p_error, size_t error_size )
 {
     rc_t rc = 0;
 
@@ -221,7 +221,7 @@ Database::inflate( char * error, size_t error_size )
     }
     else
     {
-        string_printf ( error, error_size, nullptr, "Database name is missing" );
+        string_printf ( p_error, error_size, nullptr, "Database name is missing" );
         return SILENT_RC( rcDB, rcDatabase, rcCreating, rcParam, rcInvalid );
     }
 
@@ -234,19 +234,19 @@ Database::inflate( char * error, size_t error_size )
         {
             if ( strcmp( "database", typeStr ) != 0 )
             {
-                string_printf ( error, error_size, nullptr, "%s.type is not 'database'('%s')", m_name.c_str(), typeStr );
+                string_printf ( p_error, error_size, nullptr, "%s.type is not 'database'('%s')", m_name.c_str(), typeStr );
                 return SILENT_RC( rcDB, rcDatabase, rcCreating, rcParam, rcInvalid );
             }
         }
         else
         {
-            string_printf ( error, error_size, nullptr, "%s.type is invalid", m_name.c_str() );
+            string_printf ( p_error, error_size, nullptr, "%s.type is invalid", m_name.c_str() );
             return SILENT_RC( rcDB, rcDatabase, rcCreating, rcParam, rcInvalid );
         }
     }
     else
     {
-        string_printf ( error, error_size, nullptr, "%s.type is missing", m_name.c_str() );
+        string_printf ( p_error, error_size, nullptr, "%s.type is missing", m_name.c_str() );
         return SILENT_RC( rcDB, rcDatabase, rcCreating, rcParam, rcInvalid );
     }
 
@@ -257,7 +257,7 @@ Database::inflate( char * error, size_t error_size )
         const KJsonArray * dbarr = KJsonValueToArray ( dbs );
         if ( dbarr == nullptr )
         {
-            string_printf ( error, error_size, nullptr, "%s.databases is not an array", m_name.c_str() );
+            string_printf ( p_error, error_size, nullptr, "%s.databases is not an array", m_name.c_str() );
             return SILENT_RC( rcDB, rcDatabase, rcCreating, rcParam, rcInvalid );
         }
 
@@ -269,28 +269,23 @@ Database::inflate( char * error, size_t error_size )
             const KJsonObject * obj = KJsonValueToObject ( v );
             if( obj != nullptr )
             {
-                Database * subdb = new Database ( obj, m_mgr, this );
-                rc = subdb -> inflate ( error, error_size );
+                Database subdb ( obj, m_mgr, this ); // temporary, for Json verification
+                rc = subdb . inflate ( p_error, error_size );
                 if ( rc != 0 )
                 {
-                    delete subdb;
                     return rc;
                 }
 
-                for( auto & d : m_subdbs )
+                if ( m_subdbs.find( subdb . getName() ) != m_subdbs . end() )
                 {
-                    if ( subdb -> getName() == d -> getName() )
-                    {
-                        string_printf ( error, error_size, nullptr, "Duplicate nested db: %s", subdb -> getName().c_str() );
-                        delete subdb;
-                        return SILENT_RC( rcDB, rcDatabase, rcCreating, rcParam, rcInvalid );
-                    }
+                    string_printf ( p_error, error_size, nullptr, "Duplicate nested db: %s", subdb.getName().c_str() );
+                    return SILENT_RC( rcDB, rcDatabase, rcCreating, rcParam, rcInvalid );
                 }
-                m_subdbs . push_back( subdb );
+                m_subdbs [ subdb . getName() ] = obj;
             }
             else
             {   // not an object
-                string_printf ( error, error_size, nullptr, "%s.databases[%i] is not an object", m_name.c_str(), i );
+                string_printf ( p_error, error_size, nullptr, "%s.databases[%i] is not an object", m_name.c_str(), i );
                 return SILENT_RC( rcDB, rcDatabase, rcCreating, rcParam, rcInvalid );
             }
         }
@@ -303,7 +298,7 @@ Database::inflate( char * error, size_t error_size )
         const KJsonArray * tblarr = KJsonValueToArray ( tables );
         if ( tblarr == nullptr )
         {
-            string_printf ( error, error_size, nullptr, "%s.tables is not an array", m_name.c_str() );
+            string_printf ( p_error, error_size, nullptr, "%s.tables is not an array", m_name.c_str() );
             return SILENT_RC( rcDB, rcDatabase, rcCreating, rcParam, rcInvalid );
         }
         uint32_t len = KJsonArrayGetLength ( tblarr );
@@ -314,28 +309,23 @@ Database::inflate( char * error, size_t error_size )
             const KJsonObject * obj = KJsonValueToObject ( v );
             if( obj != nullptr )
             {
-                Table * tbl = new Table( obj );
-                rc = tbl -> inflate ( error, error_size );
+                Table tbl ( obj );
+                rc = tbl . inflate ( p_error, error_size );
                 if ( rc != 0 )
                 {
-                    delete tbl;
                     return rc;
                 }
 
-                for( auto & t : m_tables )
+                if ( m_tables.find( tbl . getName() ) != m_tables . end() )
                 {
-                    if ( tbl -> getName() == t -> getName() )
-                    {
-                        string_printf ( error, error_size, nullptr, "Duplicate table: %s", tbl -> getName().c_str() );
-                        delete tbl;
-                        return SILENT_RC( rcDB, rcDatabase, rcCreating, rcParam, rcInvalid );
-                    }
+                    string_printf ( p_error, error_size, nullptr, "Duplicate table: %s", tbl.getName().c_str() );
+                    return SILENT_RC( rcDB, rcDatabase, rcCreating, rcParam, rcInvalid );
                 }
-                m_tables . push_back( tbl );
+                m_tables [ tbl . getName() ] = obj;
             }
             else
             {   // not an object
-                string_printf ( error, error_size, nullptr, "%s.tables[%i] is not an object", m_name.c_str(), i );
+                string_printf ( p_error, error_size, nullptr, "%s.tables[%i] is not an object", m_name.c_str(), i );
                 return SILENT_RC( rcDB, rcDatabase, rcCreating, rcParam, rcInvalid );
             }
         }
@@ -345,46 +335,50 @@ Database::inflate( char * error, size_t error_size )
 }
 
 int
-Database::pathType( Path & p ) const
-{
-    if ( ! p.empty() && p.front() == m_name )
+Database::pathType( Path & path ) const
+{   //TODO: use only Json?
+    int ret = kptNotFound;
+    if ( path.size() == 1 && m_name == path.front() )
     {
-        p.pop();
-        if ( p.empty() )
+        ret = kptDatabase;
+    }
+    else if ( ! path.empty() )
+    {
+        if ( m_name == path.front() )
         {
-            return kptDatabase;
-        }
-        if ( p.front() == "db" )
-        {
-            p.pop();
-            if ( ! p.empty() )
+            path.pop();
+            if ( path.size() > 1 )
             {
-                const Database * db = findDatabase( p.front() );
-                if ( db != nullptr )
+                if ( path.front() == "db" )
                 {
-                    return db->pathType( p );
+                    path.pop();
+                    const Database * db = openSubDatabase( path.front() );
+                    if ( db != nullptr )
+                    {
+                        ret = db->pathType( path );
+                        delete db;
+                    }
                 }
-            }
-        }
-        else if ( p.front() == "tbl" )
-        {
-            p.pop();
-            if ( ! p.empty() )
-            {
-                const Table * t = findTable( p.front() );
-                if ( t != nullptr  )
+                else if ( path.front() == "tbl" )
                 {
-                    return t -> pathType( p );
+                    const Table * tbl = openTable( path );
+                    if ( tbl != nullptr )
+                    {
+                        ret = tbl -> pathType( path );
+                        delete tbl;
+                    }
                 }
+                //TODO: index, metadata, etc
             }
         }
     }
-    return kptNotFound;
+
+    return ret;
 }
 
 bool
 Database::exists( uint32_t requested, Path & path ) const
-{
+{   //TODO: use only Json?
     if ( ! path.empty() && m_name == path.front() )
     {
         path.pop();
@@ -396,25 +390,22 @@ Database::exists( uint32_t requested, Path & path ) const
         if ( string("db") == path.front() )
         {
             path.pop();
-            if (  ! path.empty() )
+            const Database * db = openSubDatabase( path.front() );
+            if ( db != nullptr )
             {
-                const Database * db = findDatabase( path.front() );
-                if ( db != nullptr )
-                {
-                    return db->exists( requested, path );
-                }
+                bool ret = db->exists( requested, path );
+                delete db;
+                return ret;
             }
         }
         else if ( string("tbl") == path.front() )
         {
-            path.pop();
-            if ( ! path.empty() )
+            const Table * tbl = openTable( path );
+            if ( tbl != nullptr )
             {
-                const Table * tbl= findTable( path.front() );
-                if ( tbl != nullptr )
-                {
-                    return tbl -> exists( requested, path );
-                }
+                bool ret = tbl -> exists( requested, path );
+                delete tbl;
+                return ret;
             }
         }
     // case kptMetadata:
@@ -474,13 +465,12 @@ KTextDatabaseOpenManagerRead ( const KTextDatabase *bself, const KDBManager **mg
     CAST();
 
     const KDBManager * m = (const KDBManager*) self -> getManager();
-    if ( m != nullptr )
+    rc_t rc = KDBManagerAddRef( m );
+    if ( rc == 0 )
     {
-        self -> getManager() -> attach();
+        *mgr = m;
     }
-
-    *mgr = m;
-    return 0;
+    return rc;
 }
 
 static
@@ -489,13 +479,46 @@ KTextDatabaseOpenParentRead ( const KTextDatabase *bself, const KDatabase **par 
 {
     CAST();
 
-    const KDatabase * p = (const KDatabase*) self -> getParent();
+    const Database * p = self -> getParent();
     if ( p != nullptr )
     {
-        self -> getParent() -> attach();
+        Database::addRef( p );
     }
 
-    *par = p;
+    *par = (const KDatabase*) p;
 
     return 0;
+}
+
+static
+rc_t CC
+KTextDatabaseOpenDirectoryRead ( const KTextDatabase *self, const KDirectory **dir )
+{
+    return SILENT_RC ( rcDB, rcDatabase, rcAccessing, rcColumn, rcUnsupported );
+}
+
+static
+rc_t CC
+KTextDatabaseVOpenDBRead ( const KTextDatabase *bself, const KDatabase **dbp, const char *name, va_list args )
+{
+    CAST();
+
+    Path p( name, args );
+    if ( p.size() > 0 )
+    {
+        const Database * db = self -> openSubDatabase( p.front() );
+        if ( p.size() > 1 )
+        {
+            p.pop();
+            db = self -> openDatabase( p );
+        }
+
+        if ( db != nullptr )
+        {
+            * dbp = (const KDatabase *)db;
+            return 0;
+        }
+    }
+
+    return SILENT_RC( rcDB, rcDatabase, rcOpening, rcParam, rcInvalid );
 }

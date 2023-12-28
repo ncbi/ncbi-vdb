@@ -35,6 +35,7 @@
 
 #include <kdb/manager.h>
 #include <kdb/database.h>
+#include <kdb/kdb-priv.h>
 
 #include <klib/rc.h>
 #include <klib/json.h>
@@ -207,45 +208,69 @@ FIXTURE_TEST_CASE(KDBTextDatabase_Make_Nested, KDBTextDatabase_Fixture)
 {
     SetupAndInflate( NestedDb );
 
-    REQUIRE_NULL( m_db -> findDatabase( "notthere") );
-    REQUIRE_NOT_NULL( m_db -> findDatabase( "subdb1") );
-    REQUIRE_NOT_NULL( m_db -> findDatabase( "subdb2") );
+    { Path p( "notthere" ); REQUIRE_NULL( m_db -> openDatabase( p ) ); }
+    {
+        Path p( "testdb/db/subdb1" );
+        const Database * d = m_db -> openDatabase( p );
+        REQUIRE_NOT_NULL( d );
+        delete d;
+    }
+    {
+        Path p( "testdb/db/subdb2" );
+        const Database * d = m_db -> openDatabase( p );
+        REQUIRE_NOT_NULL( d );
+        delete d;
+    }
 
-    REQUIRE_NULL( m_db -> findTable( "notthere") );
-    REQUIRE_NOT_NULL( m_db -> findTable( "tbl0-1") );
-    REQUIRE_NOT_NULL( m_db -> findTable( "tbl0-2") );
+    { Path p( "notthere"); REQUIRE_NULL( m_db -> openTable( p ) ); }
+    {
+        Path p( "testdb/tbl/tbl0-1");
+        const Table * t = m_db -> openTable( p );
+        REQUIRE_NOT_NULL( t );
+        delete t;
+    }
+    {
+        Path p( "testdb/tbl/tbl0-2");
+        const Table * t = m_db -> openTable( p );
+        REQUIRE_NOT_NULL( t );
+        delete t;
+    }
 }
-FIXTURE_TEST_CASE(KDBTextDatabase_getDatabase, KDBTextDatabase_Fixture)
+FIXTURE_TEST_CASE(KDBTextDatabase_openDatabase, KDBTextDatabase_Fixture)
 {
     SetupAndInflate( NestedDb );
     Path p( "testdb" );
-    const Database * db = m_db -> getDatabase( p );
+    const Database * db = m_db -> openDatabase( p );
     REQUIRE_NOT_NULL( db );
     REQUIRE_EQ( string("testdb"), db->getName() );
+    Database::release( db );
 }
-FIXTURE_TEST_CASE(KDBTextDatabase_getDatabase_Nested, KDBTextDatabase_Fixture)
+FIXTURE_TEST_CASE(KDBTextDatabase_openDatabase_Nested, KDBTextDatabase_Fixture)
 {
     SetupAndInflate( NestedDb );
     Path p( "testdb/db/subdb2" );
-    const Database * db = m_db -> getDatabase( p );
+    const Database * db = m_db -> openDatabase( p );
     REQUIRE_NOT_NULL( db );
     REQUIRE_EQ( string("subdb2"), db->getName() );
+    Database::release( db );
 }
 FIXTURE_TEST_CASE(KDBTextDatabase_getTable, KDBTextDatabase_Fixture)
 {
     SetupAndInflate( NestedDb );
     Path p( "testdb/tbl/tbl0-1" );
-    const Table * tbl = m_db -> getTable( p );
+    const Table * tbl = m_db -> openTable( p );
     REQUIRE_NOT_NULL( tbl );
     REQUIRE_EQ( string("tbl0-1"), tbl->getName() );
+    delete tbl;
 }
 FIXTURE_TEST_CASE(KDBTextDatabase_getTable_Nested, KDBTextDatabase_Fixture)
 {
     SetupAndInflate( NestedDb );
     Path p( "testdb/db/subdb2/tbl/tbl2-2" );
-    const Table * tbl = m_db -> getTable( p );
+    const Table * tbl = m_db -> openTable( p );
     REQUIRE_NOT_NULL( tbl );
     REQUIRE_EQ( string("tbl2-2"), tbl->getName() );
+    delete tbl;
 }
 
 FIXTURE_TEST_CASE(KDBTextDatabase_pathType_empty, KDBTextDatabase_Fixture)
@@ -329,17 +354,15 @@ public:
     ~KDBTextDatabase_ApiFixture()
     {
         KDatabaseRelease( m_db );
-        KDBManagerRelease( m_mgr );
     }
     void Setup( const char * input )
     {
-//    const KDBManager * mgr = nullptr;
-        THROW_ON_RC( KDBManagerMakeText ( & m_mgr, input, m_error, sizeof m_error ) );
-        THROW_ON_RC( KDBManagerOpenDBRead( m_mgr, & m_db, "%s", "testdb" ) );
-//    Release(mgr); hold on to the parsed Json, not the top level db/table
+        const KDBManager * mgr = nullptr;
+        THROW_ON_RC( KDBManagerMakeText ( & mgr, input, m_error, sizeof m_error ) );
+        THROW_ON_RC( KDBManagerOpenDBRead( mgr, & m_db, "%s", "testdb" ) );
+        KDBManagerRelease( mgr );
     }
 
-    const KDBManager * m_mgr = nullptr;
     const KDatabase * m_db = nullptr;
     char m_error[1024];
 };
@@ -383,21 +406,39 @@ FIXTURE_TEST_CASE(KDBTextDatabase_OpenManagerRead, KDBTextDatabase_ApiFixture)
     Setup( R"({"type": "database", "name": "testdb"})" );
     const KDBManager * mgr;
     REQUIRE_RC( KDatabaseOpenManagerRead( m_db, & mgr ) );
-    REQUIRE_EQ( m_mgr, mgr );
+    REQUIRE_NOT_NULL( mgr );
     KDBManagerRelease( mgr );
+}
+
+FIXTURE_TEST_CASE(KDBTextDatabase_OpenDbRead, KDBTextDatabase_ApiFixture)
+{
+    Setup( NestedDb );
+    const KDatabase * subdb = nullptr;
+    REQUIRE_RC( KDatabaseOpenDBRead( m_db, & subdb, "subdb1" ) );
+    REQUIRE_NOT_NULL( subdb );
+    KDatabaseRelease( subdb );
 }
 
 FIXTURE_TEST_CASE(KDBTextDatabase_OpenParentRead, KDBTextDatabase_ApiFixture)
 {
     Setup( NestedDb );
     const KDatabase * subdb = nullptr;
-    REQUIRE_RC( KDBManagerOpenDBRead( m_mgr, & subdb, "testdb/db/subdb1" ) );
+    REQUIRE_RC( KDatabaseOpenDBRead( m_db, & subdb, "subdb1" ) );
     REQUIRE_NOT_NULL( subdb );
+
     const KDatabase * parent = nullptr;
     REQUIRE_RC( KDatabaseOpenParentRead( subdb, & parent ) );
     REQUIRE_EQ( m_db, parent );
     KDatabaseRelease( parent );
     KDatabaseRelease( subdb );
+}
+
+FIXTURE_TEST_CASE(KTextDatabase_OpenDirectoryRead, KDBTextDatabase_ApiFixture)
+{
+    Setup( NestedDb );
+    const KDirectory * dir;
+    rc_t rc = KDatabaseOpenDirectoryRead( m_db, & dir );
+    REQUIRE_EQ( SILENT_RC( rcDB, rcDatabase, rcAccessing, rcColumn, rcUnsupported ), rc );
 }
 
 //////////////////////////////////////////// Main
