@@ -58,13 +58,19 @@ Manager::~Manager()
 void
 Manager::addRef( const Manager * mgr )
 {
-    KDBManagerAddRef( (const KDBManager*) mgr );
+    if ( mgr != nullptr )
+    {
+        KDBManagerAddRef( (const KDBManager*) mgr );
+    }
 }
 
 void
 Manager::release( const Manager * mgr )
 {
-    KDBManagerRelease( (const KDBManager*) mgr );
+    if ( mgr != nullptr )
+    {
+        KDBManagerRelease( (const KDBManager*) mgr );
+    }
 }
 
 rc_t

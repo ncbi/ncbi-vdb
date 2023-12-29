@@ -48,6 +48,7 @@ namespace KDBText
 {
     class Manager;
     class Table;
+    class Metadata;
 
     class Database : public KTextDatabase
     {
@@ -69,12 +70,15 @@ namespace KDBText
         const std::string & getName() const { return m_name; }
 
         const Database * openDatabase( Path & path ) const;
-        const Database * openSubDatabase( std::string & name ) const;
+        const Database * openSubDatabase( const std::string & name ) const;
 
         const Table *openTable( Path & path ) const;
+        const Table *openTable( const std::string & name ) const;
 
         int pathType( Path & ) const;
         bool exists( uint32_t requested, Path & p_path ) const;
+
+        const Metadata * openMetadata() const;
 
     private:
         const Manager * m_mgr = nullptr;
@@ -85,5 +89,6 @@ namespace KDBText
         // verified Jsons:
         std::map< std::string, const KJsonObject * > m_subdbs;
         std::map< std::string, const KJsonObject * > m_tables;
+        const Metadata * m_meta = nullptr;
     };
 }

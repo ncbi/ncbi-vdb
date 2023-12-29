@@ -28,6 +28,7 @@
 
 #include "table.hpp"
 #include "manager.hpp"
+#include "metadata.hpp"
 
 #include <kdb/manager.h>
 #include <kdb/table.h>
@@ -49,8 +50,8 @@ static rc_t CC KTextDatabaseOpenManagerRead ( const KTextDatabase *self, const K
 static rc_t CC KTextDatabaseOpenParentRead ( const KTextDatabase *self, const KDatabase **par );
 static rc_t CC KTextDatabaseOpenDirectoryRead ( const KTextDatabase *self, const KDirectory **dir );
 static rc_t CC KTextDatabaseVOpenDBRead ( const KTextDatabase *self, const KDatabase **dbp, const char *name, va_list args );
-// static rc_t CC KTextDatabaseVOpenTableRead ( const KTextDatabase *self, const KTable **tblp, const char *name, va_list args );
-// static rc_t CC KTextDatabaseOpenMetadataRead ( const KTextDatabase *self, const KMetadata **metap );
+static rc_t CC KTextDatabaseVOpenTableRead ( const KTextDatabase *self, const KTable **tblp, const char *name, va_list args );
+static rc_t CC KTextDatabaseOpenMetadataRead ( const KTextDatabase *self, const KMetadata **metap );
 // static rc_t CC KTextDatabaseVOpenIndexRead ( const KTextDatabase *self, const KIndex **idxp, const char *name, va_list args );
 // static rc_t CC KTextDatabaseListDB ( const KTextDatabase *self, KNamelist **names );
 // static rc_t CC KTextDatabaseListTbl ( struct KTextDatabase const *self, KNamelist **names );
@@ -70,8 +71,8 @@ static KDatabase_vt KTextDatabase_vt =
     KTextDatabaseOpenParentRead,
     KTextDatabaseOpenDirectoryRead,
     KTextDatabaseVOpenDBRead,
-    // KTextDatabaseVOpenTableRead,
-    // KTextDatabaseOpenMetadataRead,
+    KTextDatabaseVOpenTableRead,
+    KTextDatabaseOpenMetadataRead,
     // KTextDatabaseVOpenIndexRead,
     // KTextDatabaseListDB,
     // KTextDatabaseListTbl,
@@ -86,32 +87,32 @@ Database::Database( const KJsonObject * p_json, const Manager * p_mgr, const Dat
 {
     dad . vt = & KTextDatabase_vt;
     KRefcountInit ( & dad . refcount, 1, "KDBText::Database", "ctor", "db" );
-
-    if ( m_mgr != nullptr )
-    {
-        Manager::addRef( m_mgr );
-    }
+    Manager::addRef( m_mgr );
 }
 
 Database::~Database()
 {
-    if ( m_mgr != nullptr )
-    {
-        Manager::release( m_mgr );
-    }
+    Metadata::release( m_meta );
+    Manager::release( m_mgr );
     KRefcountWhack ( & dad . refcount, "KDBText::Database" );
 }
 
 void
-Database::addRef( const Database * mgr )
+Database::addRef( const Database * db )
 {
-    KDatabaseAddRef( (const KDatabase*) mgr );
+    if ( db != nullptr )
+    {
+        KDatabaseAddRef( (const KDatabase*) db );
+    }
 }
 
 void
-Database::release( const Database * mgr )
+Database::release( const Database * db )
 {
-    KDatabaseRelease( (const KDatabase*) mgr );
+    if ( db != nullptr )
+    {
+        KDatabaseRelease( (const KDatabase*) db );
+    }
 }
 
 const Database *
@@ -145,7 +146,7 @@ Database::openDatabase( Path & p_path ) const
 }
 
 const Database *
-Database::openSubDatabase( std::string & name ) const
+Database::openSubDatabase( const std::string & name ) const
 {
     auto j = m_subdbs.find( name );
     if ( j != m_subdbs.end() )
@@ -156,7 +157,6 @@ Database::openSubDatabase( std::string & name ) const
     }
     return nullptr;
 }
-
 
 const Table *
 Database::openTable( Path & p_path ) const
@@ -170,7 +170,7 @@ Database::openTable( Path & p_path ) const
         if ( p_path.front() == "tbl" )
         {
             p_path.pop();
-            if ( ! p_path.empty() )
+            if ( p_path.size() == 1 )
             {
                 auto j = m_tables.find( p_path.front() );
                 if ( j != m_tables.end() )
@@ -200,6 +200,19 @@ Database::openTable( Path & p_path ) const
                 }
             }
         }
+    }
+    return nullptr;
+}
+
+const Table *
+Database::openTable( const string & name ) const
+{
+    auto j = m_tables.find( name );
+    if ( j != m_tables.end() )
+    {
+        Table * ret = new Table( j -> second );
+        ret -> inflate( error, sizeof error );
+        return ret;
     }
     return nullptr;
 }
@@ -331,6 +344,28 @@ Database::inflate( char * p_error, size_t error_size )
         }
     }
 
+    const KJsonValue * meta = KJsonObjectGetMember ( m_json, "metadata" );
+    if ( meta != nullptr )
+    {
+        const KJsonObject * obj = KJsonValueToObject ( meta );
+        if( obj != nullptr )
+        {
+            Metadata * m  = new Metadata( obj );
+            rc = m -> inflate( p_error, error_size );
+            if ( rc != 0 )
+            {
+                delete m;
+                return rc;
+            }
+            m_meta = m;
+        }
+        else
+        {   // not an object
+            string_printf ( p_error, error_size, nullptr, "%s.metadata is not an object", m_name.c_str() );
+            return SILENT_RC( rcDB, rcDatabase, rcCreating, rcParam, rcInvalid );
+        }
+    }
+
     return rc;
 }
 
@@ -412,6 +447,12 @@ Database::exists( uint32_t requested, Path & path ) const
     }
 
     return false;
+}
+
+const Metadata *
+Database::openMetadata() const
+{
+    return m_meta;
 }
 
 
@@ -510,7 +551,9 @@ KTextDatabaseVOpenDBRead ( const KTextDatabase *bself, const KDatabase **dbp, co
         if ( p.size() > 1 )
         {
             p.pop();
+            const Database * topdb = db;
             db = self -> openDatabase( p );
+            Database::release( topdb );
         }
 
         if ( db != nullptr )
@@ -522,3 +565,43 @@ KTextDatabaseVOpenDBRead ( const KTextDatabase *bself, const KDatabase **dbp, co
 
     return SILENT_RC( rcDB, rcDatabase, rcOpening, rcParam, rcInvalid );
 }
+
+static
+rc_t CC
+KTextDatabaseVOpenTableRead ( const KTextDatabase *bself, const KTable **tblp, const char * fmt, va_list args )
+{
+    CAST();
+
+    string name;
+    rc_t rc = Path::PrintToString( fmt, args, name );
+    if ( rc == 0 )
+    {
+        const Table * t = self -> openTable( name );
+        if ( t != nullptr )
+        {
+            *tblp = (const KTable *) t;
+        }
+        else
+        {
+            rc =  SILENT_RC( rcDB, rcTable, rcOpening, rcParam, rcInvalid );
+        }
+    }
+
+    return rc;
+}
+
+static
+rc_t CC
+KTextDatabaseOpenMetadataRead ( const KTextDatabase *bself, const KMetadata **metap )
+{
+    CAST();
+    const Metadata * m = self->openMetadata();
+    if ( m != nullptr )
+    {
+        Metadata::addRef( m );
+        *metap = (const KMetadata*)m;
+        return 0;
+    }
+    return SILENT_RC( rcDB, rcMetadata, rcOpening, rcParam, rcInvalid );;
+}
+

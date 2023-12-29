@@ -32,9 +32,12 @@
 
 #include "../../libs/kdbtext/database.hpp"
 #include "../../libs/kdbtext/table.hpp"
+#include "../../libs/kdbtext/metadata.hpp"
 
 #include <kdb/manager.h>
 #include <kdb/database.h>
+#include <kdb/table.h>
+#include <kdb/meta.h>
 #include <kdb/kdb-priv.h>
 
 #include <klib/rc.h>
@@ -44,6 +47,29 @@ using namespace std;
 using namespace KDBText;
 
 TEST_SUITE(KDBTextDatabaseTestSuite);
+
+const char * NestedDb = R"({
+    "type": "database",
+    "name": "testdb",
+    "databases":[
+        {"type": "database", "name":"subdb1"},
+        {"type": "database", "name":"subdb2","tables":[
+                {"type": "table", "name": "tbl2-1"},
+                {"type": "table", "name": "tbl2-2"}
+            ]
+        }
+    ],
+    "tables":[
+        {"type": "table", "name": "tbl0-1"},
+        {"type": "table", "name": "tbl0-2"}
+    ]
+})";
+
+const char * DbWithMeta = R"({
+    "type": "database",
+    "name": "testdb",
+    "metadata": { "name":"root", "value":"blah" }
+})";
 
 class KDBTextDatabase_Fixture
 {
@@ -187,23 +213,6 @@ FIXTURE_TEST_CASE(KDBTextDatabase_Make_Tables_ElementDuplicate, KDBTextDatabase_
     //cout << m_error << endl;
 }
 
-const char * NestedDb = R"({
-    "type": "database",
-    "name": "testdb",
-    "databases":[
-        {"type": "database", "name":"subdb1"},
-        {"type": "database", "name":"subdb2","tables":[
-                {"type": "table", "name": "tbl2-1"},
-                {"type": "table", "name": "tbl2-2"}
-            ]
-        }
-    ],
-    "tables":[
-        {"type": "table", "name": "tbl0-1"},
-        {"type": "table", "name": "tbl0-2"}
-    ]
-})";
-
 FIXTURE_TEST_CASE(KDBTextDatabase_Make_Nested, KDBTextDatabase_Fixture)
 {
     SetupAndInflate( NestedDb );
@@ -254,7 +263,16 @@ FIXTURE_TEST_CASE(KDBTextDatabase_openDatabase_Nested, KDBTextDatabase_Fixture)
     REQUIRE_EQ( string("subdb2"), db->getName() );
     Database::release( db );
 }
-FIXTURE_TEST_CASE(KDBTextDatabase_getTable, KDBTextDatabase_Fixture)
+FIXTURE_TEST_CASE(KDBTextDatabase_openSubDatabase, KDBTextDatabase_Fixture)
+{
+    SetupAndInflate( NestedDb );
+    const Database * db = m_db -> openSubDatabase( "subdb2" );
+    REQUIRE_NOT_NULL( db );
+    REQUIRE_EQ( string("subdb2"), db->getName() );
+    Database::release( db );
+}
+
+FIXTURE_TEST_CASE(KDBTextDatabase_openTable, KDBTextDatabase_Fixture)
 {
     SetupAndInflate( NestedDb );
     Path p( "testdb/tbl/tbl0-1" );
@@ -263,7 +281,7 @@ FIXTURE_TEST_CASE(KDBTextDatabase_getTable, KDBTextDatabase_Fixture)
     REQUIRE_EQ( string("tbl0-1"), tbl->getName() );
     delete tbl;
 }
-FIXTURE_TEST_CASE(KDBTextDatabase_getTable_Nested, KDBTextDatabase_Fixture)
+FIXTURE_TEST_CASE(KDBTextDatabase_openTable_Nested, KDBTextDatabase_Fixture)
 {
     SetupAndInflate( NestedDb );
     Path p( "testdb/db/subdb2/tbl/tbl2-2" );
@@ -342,6 +360,14 @@ FIXTURE_TEST_CASE(KDBTextDatabase_exists_Table, KDBTextDatabase_Fixture)
     REQUIRE( m_db -> exists( kptTable, p ) );
 }
 //TODO: KDBTextDatabase_exists_Metadata (db/table)
+
+FIXTURE_TEST_CASE(KDBTextDatabase_openMetadata, KDBTextDatabase_Fixture)
+{
+    SetupAndInflate( DbWithMeta );
+    const Metadata * m = m_db -> openMetadata();
+    REQUIRE_NOT_NULL( m );
+    REQUIRE_EQ( string("root"), m -> getName() );
+}
 
 // API
 
@@ -439,6 +465,24 @@ FIXTURE_TEST_CASE(KTextDatabase_OpenDirectoryRead, KDBTextDatabase_ApiFixture)
     const KDirectory * dir;
     rc_t rc = KDatabaseOpenDirectoryRead( m_db, & dir );
     REQUIRE_EQ( SILENT_RC( rcDB, rcDatabase, rcAccessing, rcColumn, rcUnsupported ), rc );
+}
+
+FIXTURE_TEST_CASE(KDBTextDatabase_OpenTableRead, KDBTextDatabase_ApiFixture)
+{
+    Setup( NestedDb );
+    const KTable * tbl = nullptr;
+    REQUIRE_RC( KDatabaseOpenTableRead ( m_db, &tbl, "%s", "tbl0-2" ) );
+    REQUIRE_NOT_NULL( tbl );
+    KTableRelease( tbl );
+}
+
+FIXTURE_TEST_CASE(KDBTextDatabase_OpenMetadataRead, KDBTextDatabase_ApiFixture)
+{
+    Setup( DbWithMeta );
+    const KMetadata * m = nullptr;
+    REQUIRE_RC( KDatabaseOpenMetadataRead ( m_db, &m ) );
+    REQUIRE_NOT_NULL( m );
+    KMetadataRelease( m );
 }
 
 //////////////////////////////////////////// Main

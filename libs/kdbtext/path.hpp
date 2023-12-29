@@ -29,6 +29,8 @@
 #include <string>
 #include <queue>
 
+#include <klib/rc.h>
+
 struct VPath;
 
 namespace KDBText
@@ -36,6 +38,9 @@ namespace KDBText
     // converts a string path with '/' as the separator into a vector of individual elements
     class Path : public std::queue< std::string >
     {
+    public:
+        static rc_t PrintToString( const char *fmt, va_list args, std::string & out );
+
     public:
         Path( const std::string & p_source );
         Path( const char *fmt, va_list args );

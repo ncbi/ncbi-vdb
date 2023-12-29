@@ -27,6 +27,7 @@
 #include "metadata.hpp"
 
 #include <kdb/manager.h>
+#include <kdb/meta.h>
 
 #include <klib/printf.h>
 
@@ -84,6 +85,24 @@ Metadata::Metadata( const KJsonObject * p_json ) : m_json ( p_json )
 Metadata::~Metadata()
 {
     KRefcountWhack ( & dad . refcount, "KDBText::Metadata" );
+}
+
+void
+Metadata::addRef( const Metadata * meta )
+{
+    if ( meta != nullptr )
+    {
+        KMetadataAddRef( (const KMetadata*) meta );
+    }
+}
+
+void
+Metadata::release( const Metadata * meta )
+{
+    if ( meta != nullptr )
+    {
+        KMetadataRelease( (const KMetadata*) meta );
+    }
 }
 
 rc_t
