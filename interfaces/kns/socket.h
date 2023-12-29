@@ -68,8 +68,9 @@ typedef struct KSocket KSocket;
  *  "retryTimeout" [ IN ] - the connect request should be repeated upon failure
  *   until this timeout expires.
  *
- *  "readMillis" [ IN ] and "writeMillis" - when negative, infinite timeout
- *   when 0, return immediately, positive gives maximum wait time in mS
+ *  "connectMillis", "readMillis" and "writeMillis" [ IN ] - when negative,
+ *   infinite timeout;
+ *   when 0, return immediately; positive gives maximum wait time in mS
  *   for reads and writes respectively.
  *
  *  "from" [ IN ] - client endpoint
@@ -78,11 +79,16 @@ typedef struct KSocket KSocket;
  *
  *  both endpoints have to be of type epIP; creates a TCP connection
  */
+ /* Use connectMillis from KNSManager */
 KNS_EXTERN rc_t CC KNSManagerMakeConnection ( struct KNSManager const * self,
     struct KSocket ** conn, struct KEndPoint const * from, struct KEndPoint const * to );
-
 KNS_EXTERN rc_t CC KNSManagerMakeTimedConnection ( struct KNSManager const * self,
     struct KSocket ** conn, int32_t readMillis, int32_t writeMillis,
+    struct KEndPoint const * from, struct KEndPoint const * to );
+/* connectMillis is specified */
+KNS_EXTERN rc_t CC KNSManagerMakeTimedConnectionExt (
+    struct KNSManager const * self, struct KSocket ** conn,
+    int32_t connectMillis, int32_t readMillis, int32_t writeMillis,
     struct KEndPoint const * from, struct KEndPoint const * to );
 
 KNS_EXTERN rc_t CC KNSManagerMakeRetryConnection ( struct KNSManager const * self,

@@ -334,27 +334,9 @@ LIB_EXPORT rc_t CC KNSManagerMakeConnection ( const KNSManager *self,
     return KNSManagerMakeRetryTimedConnection ( self, conn, ptm,
         self->conn_read_timeout, self->conn_write_timeout, from, to );
 }
-/* MakeTimedConnection
- *  create a connection-oriented stream
- *
- *  "conn" [ OUT ] - a stream for communication with the server
- *
- *  "retryTimeout" [ IN ] - if connection is refused, retry with 1ms intervals:
- * when negative, retry infinitely, when 0, do not retry, positive gives maximum
- * wait time in seconds
- *
- *  "readMillis" [ IN ] and "writeMillis" - when negative, infinite timeout
- *   when 0, return immediately, positive gives maximum wait time in mS
- *   for reads and writes respectively.
- *
- *  "from" [ IN ] - client endpoint
- *
- *  "to" [ IN ] - server endpoint
- *
- *  both endpoints have to be of type epIP; creates a TCP connection
- */
-LIB_EXPORT rc_t CC KNSManagerMakeTimedConnection (
-    struct KNSManager const *self, struct KSocket **conn, int32_t readMillis,
+
+static rc_t KNSManagerMakeTimedConnectionInt ( struct KNSManager const *self,
+    struct KSocket **conn, int32_t connectMillis, int32_t readMillis,
     int32_t writeMillis, struct KEndPoint const *from,
     struct KEndPoint const *to )
 {
@@ -371,14 +353,56 @@ LIB_EXPORT rc_t CC KNSManagerMakeTimedConnection (
         return RC ( rcNS, rcStream, rcConstructing, rcSelf, rcNull );
     }
 
-    if (self->conn_timeout >=0 ) {
-        TimeoutInit ( &tm, self->conn_timeout );
+    if (connectMillis >=0 ) {
+        TimeoutInit ( &tm, connectMillis );
         ptm = &tm;
     }
 
     return KNSManagerMakeRetryTimedConnection (
         self, conn, ptm, readMillis, writeMillis, from, to );
 }
+
+/* MakeTimedConnection, MakeTimedConnectionExt
+ *  create a connection-oriented stream
+ *
+ *  "conn" [ OUT ] - a stream for communication with the server
+ *
+ *  "retryTimeout" [ IN ] - if connection is refused, retry with 1ms intervals:
+ * when negative, retry infinitely, when 0, do not retry, positive gives maximum
+ * wait time in seconds
+ *
+ *  "connectMillis", "readMillis" and "writeMillis" [ IN ] - when negative,
+ *   infinite timeout;
+ *   when 0, return immediately; positive gives maximum wait time in mS
+ *   for connection, reads and writes respectively.
+ *
+ *  "from" [ IN ] - client endpoint
+ *
+ *  "to" [ IN ] - server endpoint
+ *
+ *  both endpoints have to be of type epIP; creates a TCP connection
+ */
+/* Use connectMillis from KNSManager */
+LIB_EXPORT rc_t CC KNSManagerMakeTimedConnection(
+    struct KNSManager const *self, struct KSocket **conn, int32_t readMillis,
+    int32_t writeMillis, struct KEndPoint const *from,
+    struct KEndPoint const *to)
+{
+    if (self == NULL)
+        return RC(rcNS, rcStream, rcConstructing, rcSelf, rcNull);
+
+    return KNSManagerMakeTimedConnectionInt(
+        self, conn, self->conn_timeout, readMillis, writeMillis, from, to);
+}
+/* connectMillis is specified */
+LIB_EXPORT rc_t CC KNSManagerMakeTimedConnectionExt (
+    struct KNSManager const *self, struct KSocket **conn, int32_t connectMillis,
+    int32_t readMillis, int32_t writeMillis, struct KEndPoint const *from,
+    struct KEndPoint const *to )
+{
+    return KNSManagerMakeTimedConnectionInt(
+        self, conn, connectMillis, readMillis, writeMillis, from, to);
+ }
 
 /* MakeRetryConnection
  *  create a connection-oriented stream

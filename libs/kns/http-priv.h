@@ -175,6 +175,7 @@ struct KClientHttp
 
     KRefcount refcount;
 
+    int32_t conn_timeout;
     int32_t read_timeout;
     int32_t write_timeout;
 
@@ -202,7 +203,7 @@ rc_t KClientHttpReopen ( struct KClientHttp * self );
 
 rc_t KNSManagerMakeClientHttpInt ( struct KNSManager const *self, struct KClientHttp **_http,
     const KDataBuffer *hostname_buffer,  struct KStream *opt_conn,
-    ver_t vers, int32_t readMillis, int32_t writeMillis,
+    ver_t vers, int32_t connMillis, int32_t readMillis, int32_t writeMillis,
     const String *host, uint32_t port, bool reliable, bool tls );
 
 rc_t KClientHttpVAddHeader ( BSTree *hdrs, bool add, const char *_name, const char *_val, va_list args );
