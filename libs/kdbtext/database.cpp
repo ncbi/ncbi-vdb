@@ -35,6 +35,7 @@
 #include <kdb/database.h>
 
 #include <klib/printf.h>
+#include <klib/namelist.h>
 
 #include <algorithm>
 
@@ -52,11 +53,11 @@ static rc_t CC KTextDatabaseOpenDirectoryRead ( const KTextDatabase *self, const
 static rc_t CC KTextDatabaseVOpenDBRead ( const KTextDatabase *self, const KDatabase **dbp, const char *name, va_list args );
 static rc_t CC KTextDatabaseVOpenTableRead ( const KTextDatabase *self, const KTable **tblp, const char *name, va_list args );
 static rc_t CC KTextDatabaseOpenMetadataRead ( const KTextDatabase *self, const KMetadata **metap );
-// static rc_t CC KTextDatabaseVOpenIndexRead ( const KTextDatabase *self, const KIndex **idxp, const char *name, va_list args );
-// static rc_t CC KTextDatabaseListDB ( const KTextDatabase *self, KNamelist **names );
-// static rc_t CC KTextDatabaseListTbl ( struct KTextDatabase const *self, KNamelist **names );
-// static rc_t CC KTextDatabaseListIdx ( struct KTextDatabase const *self, KNamelist **names );
-// static rc_t CC KTextDatabaseGetPath ( KTextDatabase const *self, const char **path );
+static rc_t CC KTextDatabaseVOpenIndexRead ( const KTextDatabase *self, const KIndex **idxp, const char *name, va_list args );
+static rc_t CC KTextDatabaseListDB ( const KTextDatabase *self, KNamelist **names );
+static rc_t CC KTextDatabaseListTbl ( struct KTextDatabase const *self, KNamelist **names );
+static rc_t CC KTextDatabaseListIdx ( struct KTextDatabase const *self, KNamelist **names );
+static rc_t CC KTextDatabaseGetPath ( KTextDatabase const *self, const char **path );
 
 static KDatabase_vt KTextDatabase_vt =
 {
@@ -73,11 +74,11 @@ static KDatabase_vt KTextDatabase_vt =
     KTextDatabaseVOpenDBRead,
     KTextDatabaseVOpenTableRead,
     KTextDatabaseOpenMetadataRead,
-    // KTextDatabaseVOpenIndexRead,
-    // KTextDatabaseListDB,
-    // KTextDatabaseListTbl,
-    // KTextDatabaseListIdx,
-    // KTextDatabaseGetPath
+    KTextDatabaseVOpenIndexRead,
+    KTextDatabaseListDB,
+    KTextDatabaseListTbl,
+    KTextDatabaseListIdx,
+    KTextDatabaseGetPath
 };
 
 static char error[1024];
@@ -162,7 +163,7 @@ const Table *
 Database::openTable( Path & p_path ) const
 {
     if ( ! p_path.empty() && p_path.front() == m_name )
-    {
+    {   // remove a possible db name from the front
         p_path.pop();
     }
     if ( ! p_path.empty() )
@@ -170,7 +171,7 @@ Database::openTable( Path & p_path ) const
         if ( p_path.front() == "tbl" )
         {
             p_path.pop();
-            if ( p_path.size() == 1 )
+            if ( ! p_path.empty() )
             {
                 auto j = m_tables.find( p_path.front() );
                 if ( j != m_tables.end() )
@@ -382,7 +383,7 @@ Database::pathType( Path & path ) const
         if ( m_name == path.front() )
         {
             path.pop();
-            if ( path.size() > 1 )
+            if ( path.size() >= 1 )
             {
                 if ( path.front() == "db" )
                 {
@@ -403,7 +404,13 @@ Database::pathType( Path & path ) const
                         delete tbl;
                     }
                 }
-                //TODO: index, metadata, etc
+                else if ( path.front() == "md" )
+                {
+                    if ( m_meta != nullptr )
+                    {
+                        return kptMetadata;
+                    }
+                }
             }
         }
     }
@@ -443,7 +450,10 @@ Database::exists( uint32_t requested, Path & path ) const
                 return ret;
             }
         }
-    // case kptMetadata:
+        else if ( string("md") == path.front() )
+        {
+            return m_meta != nullptr;
+        }
     }
 
     return false;
@@ -605,3 +615,71 @@ KTextDatabaseOpenMetadataRead ( const KTextDatabase *bself, const KMetadata **me
     return SILENT_RC( rcDB, rcMetadata, rcOpening, rcParam, rcInvalid );;
 }
 
+static
+rc_t CC
+KTextDatabaseVOpenIndexRead ( const KTextDatabase *bself, const KIndex **idxp, const char *name, va_list args )
+{   // no database-level indices here
+    return SILENT_RC( rcDB, rcDatabase, rcAccessing, rcIndex, rcUnsupported );
+}
+
+static
+rc_t CC
+KTextDatabaseListDB ( const KTextDatabase *bself, KNamelist **names )
+{
+    CAST();
+
+    VNamelist * ret;
+    const Database::Subobjects & dbs = self -> getDatabases();
+    rc_t rc = VNamelistMake( & ret, dbs.size() );
+    if (rc == 0 )
+    {
+        for (auto & key_val : dbs )
+        {
+            VNamelistAppend ( ret, key_val . first . c_str() );
+        }
+        *names = (KNamelist*) ret;
+    }
+
+    return rc;
+}
+
+static
+rc_t CC
+KTextDatabaseListTbl ( struct KTextDatabase const *bself, KNamelist **names )
+{
+    CAST();
+
+    VNamelist * ret;
+    const Database::Subobjects & dbs = self -> getTables();
+    rc_t rc = VNamelistMake( & ret, dbs.size() );
+    if (rc == 0 )
+    {
+        for (auto & key_val : dbs )
+        {
+            VNamelistAppend ( ret, key_val . first . c_str() );
+        }
+        *names = (KNamelist*) ret;
+    }
+
+    return rc;
+}
+
+static
+rc_t CC
+KTextDatabaseListIdx ( struct KTextDatabase const *self, KNamelist **names )
+{   // an empty list
+    VNamelist * ret;
+    rc_t rc = VNamelistMake( & ret, 0 );
+    if (rc == 0 )
+    {
+        *names = (KNamelist*) ret;
+    }
+    return rc;
+}
+
+static
+rc_t CC
+KTextDatabaseGetPath ( KTextDatabase const *self, const char **path )
+{
+    return SILENT_RC( rcDB, rcDatabase, rcAccessing, rcPath, rcUnsupported );
+}

@@ -80,15 +80,21 @@ namespace KDBText
 
         const Metadata * openMetadata() const;
 
+        // verified Jsons:
+        typedef std::map< std::string, const KJsonObject * > Subobjects;
+
+        const Subobjects& getDatabases() const { return m_subdbs; }
+        const Subobjects& getTables() const { return m_tables; }
+
     private:
         const Manager * m_mgr = nullptr;
         const Database * m_parent = nullptr;
 
         const KJsonObject * m_json = nullptr;
         std::string m_name;
-        // verified Jsons:
-        std::map< std::string, const KJsonObject * > m_subdbs;
-        std::map< std::string, const KJsonObject * > m_tables;
+
+        Subobjects m_subdbs;
+        Subobjects m_tables;
         const Metadata * m_meta = nullptr;
     };
 }

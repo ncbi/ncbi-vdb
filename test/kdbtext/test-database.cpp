@@ -38,10 +38,13 @@
 #include <kdb/database.h>
 #include <kdb/table.h>
 #include <kdb/meta.h>
+#include <kdb/index.h>
+#include <kdb/namelist.h>
 #include <kdb/kdb-priv.h>
 
 #include <klib/rc.h>
 #include <klib/json.h>
+#include <klib/namelist.h>
 
 using namespace std;
 using namespace KDBText;
@@ -321,7 +324,12 @@ FIXTURE_TEST_CASE(KDBTextDatabase_pathType_nestedTable, KDBTextDatabase_Fixture)
     Path p( "testdb/db/subdb2/tbl/tbl2-2" );
     REQUIRE_EQ( (int)kptTable, m_db -> pathType( p ) );
 }
-//TODO: metadata (db/table), index (db/table)
+FIXTURE_TEST_CASE(KDBTextDatabase_pathType_metadata, KDBTextDatabase_Fixture)
+{
+    SetupAndInflate( DbWithMeta );
+    Path p( "testdb/md" );
+    REQUIRE_EQ( (int)kptMetadata, m_db -> pathType( p ) );
+}
 
 FIXTURE_TEST_CASE(KDBTextDatabase_exists_empty, KDBTextDatabase_Fixture)
 {
@@ -359,7 +367,12 @@ FIXTURE_TEST_CASE(KDBTextDatabase_exists_Table, KDBTextDatabase_Fixture)
     Path p( "testdb/db/subdb2/tbl/tbl2-1" );
     REQUIRE( m_db -> exists( kptTable, p ) );
 }
-//TODO: KDBTextDatabase_exists_Metadata (db/table)
+FIXTURE_TEST_CASE(KDBTextDatabase_exists_metadata, KDBTextDatabase_Fixture)
+{
+    SetupAndInflate( DbWithMeta );
+    Path p( "testdb/md" );
+    REQUIRE( m_db -> exists( kptMetadata, p ) );
+}
 
 FIXTURE_TEST_CASE(KDBTextDatabase_openMetadata, KDBTextDatabase_Fixture)
 {
@@ -383,10 +396,18 @@ public:
     }
     void Setup( const char * input )
     {
-        const KDBManager * mgr = nullptr;
-        THROW_ON_RC( KDBManagerMakeText ( & mgr, input, m_error, sizeof m_error ) );
-        THROW_ON_RC( KDBManagerOpenDBRead( mgr, & m_db, "%s", "testdb" ) );
-        KDBManagerRelease( mgr );
+        try
+        {
+            const KDBManager * mgr = nullptr;
+            THROW_ON_RC( KDBManagerMakeText ( & mgr, input, m_error, sizeof m_error ) );
+            THROW_ON_RC( KDBManagerOpenDBRead( mgr, & m_db, "%s", "testdb" ) );
+            KDBManagerRelease( mgr );
+        }
+        catch(const std::exception& e)
+        {
+            std::cerr << e.what() << " with '" << m_error << "'" << endl;
+        }
+
     }
 
     const KDatabase * m_db = nullptr;
@@ -483,6 +504,64 @@ FIXTURE_TEST_CASE(KDBTextDatabase_OpenMetadataRead, KDBTextDatabase_ApiFixture)
     REQUIRE_RC( KDatabaseOpenMetadataRead ( m_db, &m ) );
     REQUIRE_NOT_NULL( m );
     KMetadataRelease( m );
+}
+
+FIXTURE_TEST_CASE(KDBTextDatabase_OpenIndexRead, KDBTextDatabase_ApiFixture)
+{
+    Setup( NestedDb );
+    const KIndex * idx;
+    rc_t rc = KDatabaseOpenIndexRead( m_db, & idx, "idx" );
+    REQUIRE_EQ( SILENT_RC( rcDB, rcDatabase, rcAccessing, rcIndex, rcUnsupported ), rc );
+}
+
+FIXTURE_TEST_CASE(KDBTextDatabase_ListDB, KDBTextDatabase_ApiFixture)
+{
+    Setup( NestedDb );
+    KNamelist * names;
+    REQUIRE_RC( KDatabaseListDB( m_db, & names ) );
+    REQUIRE_NOT_NULL( names );
+    uint32_t count = 0;
+    REQUIRE_RC( KNamelistCount ( names, & count ) );
+    REQUIRE_EQ( (uint32_t)2, count );
+    REQUIRE( KNamelistContains( names, "subdb1" ) );
+    REQUIRE( KNamelistContains( names, "subdb2" ) );
+    KNamelistRelease( names );
+}
+
+FIXTURE_TEST_CASE(KDBTextDatabase_ListTbl, KDBTextDatabase_ApiFixture)
+{
+    Setup( NestedDb );
+    KNamelist * names;
+    REQUIRE_RC( KDatabaseListTbl( m_db, & names ) );
+    REQUIRE_NOT_NULL( names );
+    uint32_t count = 0;
+    REQUIRE_RC( KNamelistCount ( names, & count ) );
+    REQUIRE_EQ( (uint32_t)2, count );
+    REQUIRE( KNamelistContains( names, "tbl0-1" ) );
+    REQUIRE( KNamelistContains( names, "tbl0-2" ) );
+    KNamelistRelease( names );
+}
+
+FIXTURE_TEST_CASE(KDBTextDatabase_ListIdx, KDBTextDatabase_ApiFixture)
+{
+    Setup( NestedDb );
+    KNamelist * names;
+
+    REQUIRE_RC( KDatabaseListIdx( m_db, & names ) );
+    REQUIRE_NOT_NULL( names );
+    uint32_t count = 1;
+    REQUIRE_RC( KNamelistCount ( names, & count ) );
+    REQUIRE_EQ( (uint32_t)0, count );
+
+    KNamelistRelease( names );
+}
+
+FIXTURE_TEST_CASE(KDBTextDatabase_GetPath, KDBTextDatabase_ApiFixture)
+{
+    Setup( NestedDb );
+    const char * path;
+    rc_t rc = KDatabaseGetPath( m_db, & path );
+    REQUIRE_EQ( SILENT_RC( rcDB, rcDatabase, rcAccessing, rcPath, rcUnsupported ), rc );
 }
 
 //////////////////////////////////////////// Main
