@@ -1336,7 +1336,8 @@ static rc_t KNSManagerVMakeHttpFileIntUnstableImpl( const KNSManager *self,
             {
                 KDataBuffer * buf_f = & f -> orig_url_buffer;
                 KClientHttp *http;
-                rc = KNSManagerMakeClientHttpInt ( self, & http, buf_f, conn, vers,
+                rc = KNSManagerMakeClientHttpInt ( self, & http, buf_f, conn,
+                    vers, self -> conn_timeout,
                     self -> http_read_timeout, self -> http_write_timeout, & f -> block . host, f -> block . port, reliable, f -> block . tls );
                 if ( rc == 0 )
                 {

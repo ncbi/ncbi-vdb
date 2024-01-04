@@ -530,8 +530,9 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
             /* try to establish a connection */
             /*  "read_timeout", "write_timeout"
                     - when negative,  infinite timeout */
-            rc = KNSManagerMakeTimedConnection(mgr, &sock,
-                self->read_timeout, self->write_timeout, NULL, &self->ep);
+            rc = KNSManagerMakeTimedConnectionExt(mgr, &sock,
+                self->conn_timeout, self->read_timeout, self->write_timeout,
+                NULL, &self->ep);
 
             /* if we connected to a proxy, try to follow-through to server */
             if (proxy_ep && self->tls && rc == 0)
@@ -783,7 +784,7 @@ rc_t KClientHttpInit ( KClientHttp * http, const KDataBuffer *hostname_buffer, v
  */
 rc_t KNSManagerMakeClientHttpInt ( const KNSManager *self, KClientHttp **_http,
     const KDataBuffer *hostname_buffer,  KStream *opt_conn,
-    ver_t vers, int32_t readMillis, int32_t writeMillis,
+    ver_t vers, int32_t connMillis, int32_t readMillis, int32_t writeMillis,
     const String *host, uint32_t port, bool reliable, bool tls )
 {
     rc_t rc;
@@ -799,6 +800,7 @@ rc_t KNSManagerMakeClientHttpInt ( const KNSManager *self, KClientHttp **_http,
             char save, *text;
 
             http -> mgr = self;
+            http -> conn_timeout = connMillis;
             http -> read_timeout = readMillis;
             http -> write_timeout = writeMillis;
 
@@ -908,8 +910,9 @@ rc_t KNSManagerMakeTimedClientHttpInt ( const KNSManager *self,
                     port = dflt_port;
 
                 /* initialize http object - will create a new reference to hostname buffer */
-                rc = KNSManagerMakeClientHttpInt ( self, _http, & hostname_buffer,
-                    opt_conn, vers, readMillis, writeMillis, &_host, port, false, tls );
+                rc = KNSManagerMakeClientHttpInt ( self, _http,
+                    & hostname_buffer, opt_conn, vers, self->conn_timeout,
+                    readMillis, writeMillis, &_host, port, false, tls );
 
                 /* release our reference to buffer */
                 KDataBufferWhack ( & hostname_buffer );
