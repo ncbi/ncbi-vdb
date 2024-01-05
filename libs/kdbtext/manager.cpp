@@ -136,7 +136,7 @@ Manager::getRootDatabase() const
 const Table *
 Manager::getRootTable() const
 {
-    Table * tbl = new Table( KJsonValueToObject ( m_root ) );
+    Table * tbl = new Table( KJsonValueToObject ( m_root ), this, nullptr );
     char error[1024];
     if ( tbl -> inflate( error, sizeof error ) == 0 )
     {

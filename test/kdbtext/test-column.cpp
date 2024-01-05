@@ -60,7 +60,7 @@ public:
         const KJsonObject * json = KJsonValueToObject ( m_json );
         THROW_ON_FALSE( json != nullptr );
 
-        m_col = new Column( json );
+        m_col = new Column( json, nullptr );
     }
 
     KJsonValue * m_json = nullptr;

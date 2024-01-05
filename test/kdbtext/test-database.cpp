@@ -49,7 +49,7 @@
 using namespace std;
 using namespace KDBText;
 
-TEST_SUITE(KDBTextDatabaseTestSuite);
+TEST_SUITE(KTextDatabaseTestSuite);
 
 const char * NestedDb = R"({
     "type": "database",
@@ -74,13 +74,13 @@ const char * DbWithMeta = R"({
     "metadata": { "name":"root", "value":"blah" }
 })";
 
-class KDBTextDatabase_Fixture
+class KTextDatabase_Fixture
 {
 public:
-    KDBTextDatabase_Fixture()
+    KTextDatabase_Fixture()
     {
     }
-    ~KDBTextDatabase_Fixture()
+    ~KTextDatabase_Fixture()
     {
         delete m_db;
         KJsonValueWhack( m_json );
@@ -107,44 +107,44 @@ public:
     char m_error[1024] = {0};
 };
 
-FIXTURE_TEST_CASE(KDBTextDatabase_Make_Empty, KDBTextDatabase_Fixture)
+FIXTURE_TEST_CASE(KTextDatabase_Make_Empty, KTextDatabase_Fixture)
 {
     Setup(R"({})");
     REQUIRE_RC_FAIL( m_db -> inflate( m_error, sizeof m_error ) );
     //cout << m_error << endl;
 }
-FIXTURE_TEST_CASE(KDBTextDatabase_Make_NoName, KDBTextDatabase_Fixture)
+FIXTURE_TEST_CASE(KTextDatabase_Make_NoName, KTextDatabase_Fixture)
 {
     Setup(R"({"type": "database"})");
     REQUIRE_RC_FAIL( m_db -> inflate( m_error, sizeof m_error ) );
     //cout << m_error << endl;
 }
-FIXTURE_TEST_CASE(KDBTextDatabase_Make_NoType, KDBTextDatabase_Fixture)
+FIXTURE_TEST_CASE(KTextDatabase_Make_NoType, KTextDatabase_Fixture)
 {
     Setup(R"({"name": "testdb"})");
     REQUIRE_RC_FAIL( m_db -> inflate( m_error, sizeof m_error ) );
     //cout << m_error << endl;
 }
-FIXTURE_TEST_CASE(KDBTextDatabase_Make_InvalidType, KDBTextDatabase_Fixture)
+FIXTURE_TEST_CASE(KTextDatabase_Make_InvalidType, KTextDatabase_Fixture)
 {
     Setup(R"({"type": [], "name": "testdb"})");
     REQUIRE_RC_FAIL( m_db -> inflate( m_error, sizeof m_error ) );
     //cout << m_error << endl;
 }
-FIXTURE_TEST_CASE(KDBTextDatabase_Make_WrongType, KDBTextDatabase_Fixture)
+FIXTURE_TEST_CASE(KTextDatabase_Make_WrongType, KTextDatabase_Fixture)
 {
     Setup(R"({"type": "table", "name": "testdb"})");
     REQUIRE_RC_FAIL( m_db -> inflate( m_error, sizeof m_error ) );
     //cout << m_error << endl;
 }
 
-FIXTURE_TEST_CASE(KDBTextDatabase_Make_Flat, KDBTextDatabase_Fixture)
+FIXTURE_TEST_CASE(KTextDatabase_Make_Flat, KTextDatabase_Fixture)
 {
     SetupAndInflate(R"({"type": "database", "name": "testdb"})");
     REQUIRE_EQ( string("testdb"), m_db -> getName() );
 }
 
-FIXTURE_TEST_CASE(KDBTextDatabase_Make_Nested_NotArray, KDBTextDatabase_Fixture)
+FIXTURE_TEST_CASE(KTextDatabase_Make_Nested_NotArray, KTextDatabase_Fixture)
 {
     Setup(R"({"type": "database", "name": "testdb",
         "databases":{"type": "database", "name":"subdb1"}
@@ -153,14 +153,14 @@ FIXTURE_TEST_CASE(KDBTextDatabase_Make_Nested_NotArray, KDBTextDatabase_Fixture)
     REQUIRE_RC_FAIL( m_db -> inflate( m_error, sizeof m_error ) );
     //cout << m_error << endl;
 }
-FIXTURE_TEST_CASE(KDBTextDatabase_Make_Nested_ElementNull, KDBTextDatabase_Fixture)
+FIXTURE_TEST_CASE(KTextDatabase_Make_Nested_ElementNull, KTextDatabase_Fixture)
 {
     Setup( R"({"type": "database", "name": "testdb","databases":[ null ]})" );
 
     REQUIRE_RC_FAIL( m_db -> inflate( m_error, sizeof m_error ) );
     //cout << m_error << endl;
 }
-FIXTURE_TEST_CASE(KDBTextDatabase_Make_Nested_ElementBad, KDBTextDatabase_Fixture)
+FIXTURE_TEST_CASE(KTextDatabase_Make_Nested_ElementBad, KTextDatabase_Fixture)
 {
     Setup( R"({"type": "database", "name": "testdb",
         "databases":[ {"type": "NOTAdatabase", "name":"subdb1"} ]
@@ -169,7 +169,7 @@ FIXTURE_TEST_CASE(KDBTextDatabase_Make_Nested_ElementBad, KDBTextDatabase_Fixtur
     REQUIRE_RC_FAIL( m_db -> inflate( m_error, sizeof m_error ) );
     //cout << m_error << endl;
 }
-FIXTURE_TEST_CASE(KDBTextDatabase_Make_Nested_Duplicate, KDBTextDatabase_Fixture)
+FIXTURE_TEST_CASE(KTextDatabase_Make_Nested_Duplicate, KTextDatabase_Fixture)
 {
     Setup( R"({"type": "database", "name": "testdb",
         "databases":[
@@ -182,28 +182,28 @@ FIXTURE_TEST_CASE(KDBTextDatabase_Make_Nested_Duplicate, KDBTextDatabase_Fixture
     //cout << m_error << endl;
 }
 
-FIXTURE_TEST_CASE(KDBTextDatabase_Make_Tables_NotArray, KDBTextDatabase_Fixture)
+FIXTURE_TEST_CASE(KTextDatabase_Make_Tables_NotArray, KTextDatabase_Fixture)
 {
     Setup( R"({"type": "database", "name": "testdb", "tables":{"type":"table","name":"tbl"} })" );
 
     REQUIRE_RC_FAIL( m_db -> inflate( m_error, sizeof m_error ) );
     //cout << m_error << endl;
 }
-FIXTURE_TEST_CASE(KDBTextDatabase_Make_Tables_ElementNull, KDBTextDatabase_Fixture)
+FIXTURE_TEST_CASE(KTextDatabase_Make_Tables_ElementNull, KTextDatabase_Fixture)
 {
     Setup( R"({"type": "database", "name": "testdb", "tables":[null] })" );
 
     REQUIRE_RC_FAIL( m_db -> inflate( m_error, sizeof m_error ) );
     //cout << m_error << endl;
 }
-FIXTURE_TEST_CASE(KDBTextDatabase_Make_Tables_ElementBad, KDBTextDatabase_Fixture)
+FIXTURE_TEST_CASE(KTextDatabase_Make_Tables_ElementBad, KTextDatabase_Fixture)
 {
     Setup( R"({"type": "database", "name": "testdb", "tables":[{"type":"NOTAtable","name":"tbl"}] })" );
 
     REQUIRE_RC_FAIL( m_db -> inflate( m_error, sizeof m_error ) );
     //cout << m_error << endl;
 }
-FIXTURE_TEST_CASE(KDBTextDatabase_Make_Tables_ElementDuplicate, KDBTextDatabase_Fixture)
+FIXTURE_TEST_CASE(KTextDatabase_Make_Tables_ElementDuplicate, KTextDatabase_Fixture)
 {
     Setup( R"({"type": "database", "name": "testdb",
         "tables":[
@@ -216,7 +216,7 @@ FIXTURE_TEST_CASE(KDBTextDatabase_Make_Tables_ElementDuplicate, KDBTextDatabase_
     //cout << m_error << endl;
 }
 
-FIXTURE_TEST_CASE(KDBTextDatabase_Make_Nested, KDBTextDatabase_Fixture)
+FIXTURE_TEST_CASE(KTextDatabase_Make_Nested, KTextDatabase_Fixture)
 {
     SetupAndInflate( NestedDb );
 
@@ -248,7 +248,7 @@ FIXTURE_TEST_CASE(KDBTextDatabase_Make_Nested, KDBTextDatabase_Fixture)
         delete t;
     }
 }
-FIXTURE_TEST_CASE(KDBTextDatabase_openDatabase, KDBTextDatabase_Fixture)
+FIXTURE_TEST_CASE(KTextDatabase_openDatabase, KTextDatabase_Fixture)
 {
     SetupAndInflate( NestedDb );
     Path p( "testdb" );
@@ -257,7 +257,7 @@ FIXTURE_TEST_CASE(KDBTextDatabase_openDatabase, KDBTextDatabase_Fixture)
     REQUIRE_EQ( string("testdb"), db->getName() );
     Database::release( db );
 }
-FIXTURE_TEST_CASE(KDBTextDatabase_openDatabase_Nested, KDBTextDatabase_Fixture)
+FIXTURE_TEST_CASE(KTextDatabase_openDatabase_Nested, KTextDatabase_Fixture)
 {
     SetupAndInflate( NestedDb );
     Path p( "testdb/db/subdb2" );
@@ -266,7 +266,7 @@ FIXTURE_TEST_CASE(KDBTextDatabase_openDatabase_Nested, KDBTextDatabase_Fixture)
     REQUIRE_EQ( string("subdb2"), db->getName() );
     Database::release( db );
 }
-FIXTURE_TEST_CASE(KDBTextDatabase_openSubDatabase, KDBTextDatabase_Fixture)
+FIXTURE_TEST_CASE(KTextDatabase_openSubDatabase, KTextDatabase_Fixture)
 {
     SetupAndInflate( NestedDb );
     const Database * db = m_db -> openSubDatabase( "subdb2" );
@@ -275,7 +275,7 @@ FIXTURE_TEST_CASE(KDBTextDatabase_openSubDatabase, KDBTextDatabase_Fixture)
     Database::release( db );
 }
 
-FIXTURE_TEST_CASE(KDBTextDatabase_openTable, KDBTextDatabase_Fixture)
+FIXTURE_TEST_CASE(KTextDatabase_openTable, KTextDatabase_Fixture)
 {
     SetupAndInflate( NestedDb );
     Path p( "testdb/tbl/tbl0-1" );
@@ -284,7 +284,7 @@ FIXTURE_TEST_CASE(KDBTextDatabase_openTable, KDBTextDatabase_Fixture)
     REQUIRE_EQ( string("tbl0-1"), tbl->getName() );
     delete tbl;
 }
-FIXTURE_TEST_CASE(KDBTextDatabase_openTable_Nested, KDBTextDatabase_Fixture)
+FIXTURE_TEST_CASE(KTextDatabase_openTable_Nested, KTextDatabase_Fixture)
 {
     SetupAndInflate( NestedDb );
     Path p( "testdb/db/subdb2/tbl/tbl2-2" );
@@ -294,87 +294,87 @@ FIXTURE_TEST_CASE(KDBTextDatabase_openTable_Nested, KDBTextDatabase_Fixture)
     delete tbl;
 }
 
-FIXTURE_TEST_CASE(KDBTextDatabase_pathType_empty, KDBTextDatabase_Fixture)
+FIXTURE_TEST_CASE(KTextDatabase_pathType_empty, KTextDatabase_Fixture)
 {
     SetupAndInflate( NestedDb );
     Path p( "" );
     REQUIRE_EQ( (int)kptNotFound, m_db -> pathType( p ) );
 }
-FIXTURE_TEST_CASE(KDBTextDatabase_pathType_miss, KDBTextDatabase_Fixture)
+FIXTURE_TEST_CASE(KTextDatabase_pathType_miss, KTextDatabase_Fixture)
 {
     SetupAndInflate( NestedDb );
     Path p( "qq" );
     REQUIRE_EQ( (int)kptNotFound, m_db -> pathType( p ) );
 }
-FIXTURE_TEST_CASE(KDBTextDatabase_pathType_self, KDBTextDatabase_Fixture)
+FIXTURE_TEST_CASE(KTextDatabase_pathType_self, KTextDatabase_Fixture)
 {
     SetupAndInflate( NestedDb );
     Path p( "testdb" );
     REQUIRE_EQ( (int)kptDatabase, m_db -> pathType( p ) );
 }
-FIXTURE_TEST_CASE(KDBTextDatabase_pathType_nestedDb, KDBTextDatabase_Fixture)
+FIXTURE_TEST_CASE(KTextDatabase_pathType_nestedDb, KTextDatabase_Fixture)
 {
     SetupAndInflate( NestedDb );
     Path p( "testdb/db/subdb2" );
     REQUIRE_EQ( (int)kptDatabase, m_db -> pathType( p ) );
 }
-FIXTURE_TEST_CASE(KDBTextDatabase_pathType_nestedTable, KDBTextDatabase_Fixture)
+FIXTURE_TEST_CASE(KTextDatabase_pathType_nestedTable, KTextDatabase_Fixture)
 {
     SetupAndInflate( NestedDb );
     Path p( "testdb/db/subdb2/tbl/tbl2-2" );
     REQUIRE_EQ( (int)kptTable, m_db -> pathType( p ) );
 }
-FIXTURE_TEST_CASE(KDBTextDatabase_pathType_metadata, KDBTextDatabase_Fixture)
+FIXTURE_TEST_CASE(KTextDatabase_pathType_metadata, KTextDatabase_Fixture)
 {
     SetupAndInflate( DbWithMeta );
     Path p( "testdb/md" );
     REQUIRE_EQ( (int)kptMetadata, m_db -> pathType( p ) );
 }
 
-FIXTURE_TEST_CASE(KDBTextDatabase_exists_empty, KDBTextDatabase_Fixture)
+FIXTURE_TEST_CASE(KTextDatabase_exists_empty, KTextDatabase_Fixture)
 {
     SetupAndInflate( NestedDb );
     Path p( "" );
     REQUIRE( ! m_db -> exists( kptDatabase, p ) );
 }
-FIXTURE_TEST_CASE(KDBTextDatabase_exists_Database_Not, KDBTextDatabase_Fixture)
+FIXTURE_TEST_CASE(KTextDatabase_exists_Database_Not, KTextDatabase_Fixture)
 {
     SetupAndInflate( NestedDb );
     Path p( "notadb" );
     REQUIRE( ! m_db -> exists( kptDatabase, p ) );
 }
-FIXTURE_TEST_CASE(KDBTextDatabase_exists_Database_WrongType, KDBTextDatabase_Fixture)
+FIXTURE_TEST_CASE(KTextDatabase_exists_Database_WrongType, KTextDatabase_Fixture)
 {
     SetupAndInflate( NestedDb );
     Path p( "testdb" );
     REQUIRE( ! m_db -> exists( kptTable, p ) );
 }
-FIXTURE_TEST_CASE(KDBTextDatabase_exists_Database_Root, KDBTextDatabase_Fixture)
+FIXTURE_TEST_CASE(KTextDatabase_exists_Database_Root, KTextDatabase_Fixture)
 {
     SetupAndInflate( NestedDb );
     Path p( "testdb" );
     REQUIRE( m_db -> exists( kptDatabase, p ) );
 }
-FIXTURE_TEST_CASE(KDBTextDatabase_exists_Database_Nested, KDBTextDatabase_Fixture)
+FIXTURE_TEST_CASE(KTextDatabase_exists_Database_Nested, KTextDatabase_Fixture)
 {
     SetupAndInflate( NestedDb );
     Path p( "testdb/db/subdb2" );
     REQUIRE( m_db -> exists( kptDatabase, p ) );
 }
-FIXTURE_TEST_CASE(KDBTextDatabase_exists_Table, KDBTextDatabase_Fixture)
+FIXTURE_TEST_CASE(KTextDatabase_exists_Table, KTextDatabase_Fixture)
 {
     SetupAndInflate( NestedDb );
     Path p( "testdb/db/subdb2/tbl/tbl2-1" );
     REQUIRE( m_db -> exists( kptTable, p ) );
 }
-FIXTURE_TEST_CASE(KDBTextDatabase_exists_metadata, KDBTextDatabase_Fixture)
+FIXTURE_TEST_CASE(KTextDatabase_exists_metadata, KTextDatabase_Fixture)
 {
     SetupAndInflate( DbWithMeta );
     Path p( "testdb/md" );
     REQUIRE( m_db -> exists( kptMetadata, p ) );
 }
 
-FIXTURE_TEST_CASE(KDBTextDatabase_openMetadata, KDBTextDatabase_Fixture)
+FIXTURE_TEST_CASE(KTextDatabase_openMetadata, KTextDatabase_Fixture)
 {
     SetupAndInflate( DbWithMeta );
     const Metadata * m = m_db -> openMetadata();
@@ -384,13 +384,13 @@ FIXTURE_TEST_CASE(KDBTextDatabase_openMetadata, KDBTextDatabase_Fixture)
 
 // API
 
-class KDBTextDatabase_ApiFixture
+class KTextDatabase_ApiFixture
 {
 public:
-    KDBTextDatabase_ApiFixture()
+    KTextDatabase_ApiFixture()
     {
     }
-    ~KDBTextDatabase_ApiFixture()
+    ~KTextDatabase_ApiFixture()
     {
         KDatabaseRelease( m_db );
     }
@@ -414,7 +414,7 @@ public:
     char m_error[1024];
 };
 
-FIXTURE_TEST_CASE(KDBTextDatabase_AddRelease, KDBTextDatabase_ApiFixture)
+FIXTURE_TEST_CASE(KTextDatabase_AddRelease, KTextDatabase_ApiFixture)
 {
     Setup( R"({"type": "database", "name": "testdb"})" );
 
@@ -424,31 +424,31 @@ FIXTURE_TEST_CASE(KDBTextDatabase_AddRelease, KDBTextDatabase_ApiFixture)
     // use valgrind to find any leaks
 }
 
-FIXTURE_TEST_CASE(KDBTextDatabase_Locked, KDBTextDatabase_ApiFixture)
+FIXTURE_TEST_CASE(KTextDatabase_Locked, KTextDatabase_ApiFixture)
 {
     Setup( R"({"type": "database", "name": "testdb"})" );
     REQUIRE( ! KDatabaseLocked( m_db ) );
 }
 
-FIXTURE_TEST_CASE(KDBTextDatabase_Exists, KDBTextDatabase_ApiFixture)
+FIXTURE_TEST_CASE(KTextDatabase_Exists, KTextDatabase_ApiFixture)
 {
     Setup( NestedDb );
     REQUIRE( KDatabaseExists( m_db, kptTable, "%s", "testdb/db/subdb2/tbl/tbl2-2" ) );
 }
 
-FIXTURE_TEST_CASE(KDBTextDatabase_Alias, KDBTextDatabase_ApiFixture)
+FIXTURE_TEST_CASE(KTextDatabase_Alias, KTextDatabase_ApiFixture)
 {
     Setup( R"({"type": "database", "name": "testdb"})" );
     REQUIRE( ! KDatabaseIsAlias( m_db, kptDatabase, nullptr, 0, "testdb" ) );
 }
 
-FIXTURE_TEST_CASE(KDBTextDatabase_Writable, KDBTextDatabase_ApiFixture)
+FIXTURE_TEST_CASE(KTextDatabase_Writable, KTextDatabase_ApiFixture)
 {
     Setup( R"({"type": "database", "name": "testdb"})" );
     REQUIRE( ! KDatabaseWritable( m_db, kptDatabase, 0, "testdb" ) );
 }
 
-FIXTURE_TEST_CASE(KDBTextDatabase_OpenManagerRead, KDBTextDatabase_ApiFixture)
+FIXTURE_TEST_CASE(KTextDatabase_OpenManagerRead, KTextDatabase_ApiFixture)
 {
     Setup( R"({"type": "database", "name": "testdb"})" );
     const KDBManager * mgr;
@@ -457,7 +457,7 @@ FIXTURE_TEST_CASE(KDBTextDatabase_OpenManagerRead, KDBTextDatabase_ApiFixture)
     KDBManagerRelease( mgr );
 }
 
-FIXTURE_TEST_CASE(KDBTextDatabase_OpenDbRead, KDBTextDatabase_ApiFixture)
+FIXTURE_TEST_CASE(KTextDatabase_OpenDbRead, KTextDatabase_ApiFixture)
 {
     Setup( NestedDb );
     const KDatabase * subdb = nullptr;
@@ -466,7 +466,7 @@ FIXTURE_TEST_CASE(KDBTextDatabase_OpenDbRead, KDBTextDatabase_ApiFixture)
     KDatabaseRelease( subdb );
 }
 
-FIXTURE_TEST_CASE(KDBTextDatabase_OpenParentRead, KDBTextDatabase_ApiFixture)
+FIXTURE_TEST_CASE(KTextDatabase_OpenParentRead, KTextDatabase_ApiFixture)
 {
     Setup( NestedDb );
     const KDatabase * subdb = nullptr;
@@ -480,15 +480,15 @@ FIXTURE_TEST_CASE(KDBTextDatabase_OpenParentRead, KDBTextDatabase_ApiFixture)
     KDatabaseRelease( subdb );
 }
 
-FIXTURE_TEST_CASE(KTextDatabase_OpenDirectoryRead, KDBTextDatabase_ApiFixture)
+FIXTURE_TEST_CASE(KTextDatabase_OpenDirectoryRead, KTextDatabase_ApiFixture)
 {
     Setup( NestedDb );
     const KDirectory * dir;
     rc_t rc = KDatabaseOpenDirectoryRead( m_db, & dir );
-    REQUIRE_EQ( SILENT_RC( rcDB, rcDatabase, rcAccessing, rcColumn, rcUnsupported ), rc );
+    REQUIRE_EQ( SILENT_RC( rcDB, rcDatabase, rcAccessing, rcDirectory, rcUnsupported ), rc );
 }
 
-FIXTURE_TEST_CASE(KDBTextDatabase_OpenTableRead, KDBTextDatabase_ApiFixture)
+FIXTURE_TEST_CASE(KTextDatabase_OpenTableRead, KTextDatabase_ApiFixture)
 {
     Setup( NestedDb );
     const KTable * tbl = nullptr;
@@ -497,7 +497,7 @@ FIXTURE_TEST_CASE(KDBTextDatabase_OpenTableRead, KDBTextDatabase_ApiFixture)
     KTableRelease( tbl );
 }
 
-FIXTURE_TEST_CASE(KDBTextDatabase_OpenMetadataRead, KDBTextDatabase_ApiFixture)
+FIXTURE_TEST_CASE(KTextDatabase_OpenMetadataRead, KTextDatabase_ApiFixture)
 {
     Setup( DbWithMeta );
     const KMetadata * m = nullptr;
@@ -506,7 +506,7 @@ FIXTURE_TEST_CASE(KDBTextDatabase_OpenMetadataRead, KDBTextDatabase_ApiFixture)
     KMetadataRelease( m );
 }
 
-FIXTURE_TEST_CASE(KDBTextDatabase_OpenIndexRead, KDBTextDatabase_ApiFixture)
+FIXTURE_TEST_CASE(KTextDatabase_OpenIndexRead, KTextDatabase_ApiFixture)
 {
     Setup( NestedDb );
     const KIndex * idx;
@@ -514,7 +514,7 @@ FIXTURE_TEST_CASE(KDBTextDatabase_OpenIndexRead, KDBTextDatabase_ApiFixture)
     REQUIRE_EQ( SILENT_RC( rcDB, rcDatabase, rcAccessing, rcIndex, rcUnsupported ), rc );
 }
 
-FIXTURE_TEST_CASE(KDBTextDatabase_ListDB, KDBTextDatabase_ApiFixture)
+FIXTURE_TEST_CASE(KTextDatabase_ListDB, KTextDatabase_ApiFixture)
 {
     Setup( NestedDb );
     KNamelist * names;
@@ -528,7 +528,7 @@ FIXTURE_TEST_CASE(KDBTextDatabase_ListDB, KDBTextDatabase_ApiFixture)
     KNamelistRelease( names );
 }
 
-FIXTURE_TEST_CASE(KDBTextDatabase_ListTbl, KDBTextDatabase_ApiFixture)
+FIXTURE_TEST_CASE(KTextDatabase_ListTbl, KTextDatabase_ApiFixture)
 {
     Setup( NestedDb );
     KNamelist * names;
@@ -542,7 +542,7 @@ FIXTURE_TEST_CASE(KDBTextDatabase_ListTbl, KDBTextDatabase_ApiFixture)
     KNamelistRelease( names );
 }
 
-FIXTURE_TEST_CASE(KDBTextDatabase_ListIdx, KDBTextDatabase_ApiFixture)
+FIXTURE_TEST_CASE(KTextDatabase_ListIdx, KTextDatabase_ApiFixture)
 {
     Setup( NestedDb );
     KNamelist * names;
@@ -556,7 +556,7 @@ FIXTURE_TEST_CASE(KDBTextDatabase_ListIdx, KDBTextDatabase_ApiFixture)
     KNamelistRelease( names );
 }
 
-FIXTURE_TEST_CASE(KDBTextDatabase_GetPath, KDBTextDatabase_ApiFixture)
+FIXTURE_TEST_CASE(KTextDatabase_GetPath, KTextDatabase_ApiFixture)
 {
     Setup( NestedDb );
     const char * path;
@@ -590,7 +590,7 @@ const char UsageDefaultName[] = "Test_KDBText_Database";
 rc_t CC KMain ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=KDBTextDatabaseTestSuite(argc, argv);
+    rc_t rc=KTextDatabaseTestSuite(argc, argv);
     return rc;
 }
 

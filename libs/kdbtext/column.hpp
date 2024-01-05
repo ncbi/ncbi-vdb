@@ -41,10 +41,16 @@ struct KTextColumn
 
 namespace KDBText
 {
+    class Table;
+
     class Column : public KTextColumn
     {
     public:
-        Column( const KJsonObject * p_json );
+        static void addRef( const Column* );
+        static void release( const Column *);
+
+    public:
+        Column( const KJsonObject * p_json, const Table * parent = nullptr );
         ~Column();
 
         rc_t inflate( char * error, size_t error_size );
@@ -53,6 +59,7 @@ namespace KDBText
 
     private:
         const KJsonObject * m_json = nullptr;
+        const Table * m_parent = nullptr;
         std::string m_name;
     };
 }

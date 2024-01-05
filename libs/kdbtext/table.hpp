@@ -29,14 +29,13 @@
 #include "../libs/kdb/table-base.h"
 
 #include "path.hpp"
-#include "column.hpp"
 #include "index.hpp"
 
 #include <klib/json.h>
 #include <klib/rc.h>
 
 #include <string>
-#include <vector>
+#include <map>
 
 typedef struct KTextTable KTextTable;
 struct KTextTable
@@ -46,26 +45,55 @@ struct KTextTable
 
 namespace KDBText
 {
+    class Metadata;
+    class Manager;
+    class Database;
+    class Column;
+
     class Table : public KTextTable
     {
     public:
-        Table( const KJsonObject * p_json );
+        static void addRef( const Table* );
+        static void release( const Table *);
+
+    public:
+        Table( const KJsonObject * p_json, const Manager * mgr = nullptr, const Database * parent = nullptr );
         ~Table();
 
         rc_t inflate( char * error, size_t error_size );
 
+        const Manager * getManager() const { return m_mgr; }
+        const Database * getParent() const { return m_parent; }
         const std::string & getName() const { return m_name; }
 
-        const Column * getColumn( const std::string& name ) const;
-        const Index * getIndex( const std::string& name ) const;
+        bool hasColumn( const std::string& name ) const { return m_columns.find(name) != m_columns.end(); }
+        const Column * openColumn( const std::string& name ) const;
+
+        bool hasIndex( const std::string& name ) const { return m_indexes.find(name) != m_indexes.end(); }
+        const Index * openIndex( const std::string& name ) const;
 
         int pathType( Path & ) const;
         bool exists( uint32_t requested, Path & p_path ) const;
 
+        const Metadata * openMetadata() const { return m_meta; }
+
+        // verified Jsons:
+        typedef std::map< std::string, const KJsonObject * > Subobjects;
+
+        const Subobjects& getColumns() const { return m_columns; }
+        const Subobjects& getIndexes() const { return m_indexes; }
+
     private:
+        const Manager * m_mgr = nullptr;
+        const Database * m_parent = nullptr;
+
         const KJsonObject * m_json = nullptr;
         std::string m_name;
-        std::vector<Column> m_columns;
-        std::vector<Index> m_indexes;
+
+        // verified Jsons
+        Subobjects m_columns;
+        Subobjects m_indexes;
+
+        const Metadata * m_meta = nullptr;
     };
 }
