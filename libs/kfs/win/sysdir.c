@@ -563,10 +563,11 @@ uint32_t KSysDirFullFSPathType ( const wchar_t * path )
         DWORD status = GetLastError ();
         switch( status )
         {
-        case ERROR_FILE_NOT_FOUND:
-        case ERROR_PATH_NOT_FOUND:
         case ERROR_BAD_NETPATH:
         case ERROR_BAD_NET_NAME:
+        case ERROR_DIRECTORY:
+        case ERROR_FILE_NOT_FOUND:
+        case ERROR_PATH_NOT_FOUND:
             /* try to follow the path, section by section
                if a section cannot be found try to resolve it as
                MS-shell-link ( .lnk file ) */
@@ -2426,6 +2427,9 @@ rc_t CC KSysDirOpenFileWrite ( KSysDir *self,
 
         if ( file_handle == INVALID_HANDLE_VALUE )
         {
+            if(path[0] != '%' && path[1] != 's' && path[2] != '/' && path[3] != 'm'
+                && path[4] != 'd' && path[5] != '5' && path[6] != '\0')
+                /* don't print error when kdbmeta tries to open md5 file */
             rc = print_error_for( GetLastError(), file_name, "CreateFileW", rcAccessing, klogErr );
 
         }
