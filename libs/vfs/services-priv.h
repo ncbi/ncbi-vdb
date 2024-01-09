@@ -135,9 +135,6 @@ const KSrvResponse * KSrvRunIteratorGetResponse(
    2: don't resolve */
 rc_t KServiceResolveName ( struct KService * service, int resolve );
 
-/* Set quality type in service request */
-rc_t KServiceSetQuality(KService * self, const char * quality);
-
 bool KServiceSkipLocal(const KService * self);
 bool KServiceSkipRemote(const KService * self);
 
