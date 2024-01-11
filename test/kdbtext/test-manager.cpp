@@ -443,6 +443,7 @@ rc_t CC KMain ( int argc, char *argv [] )
             "columns":[
                 {
                     "name":"READ",
+                    "type":"ascii",
                     "metadata":null,
                     "data":
                     [

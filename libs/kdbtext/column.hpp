@@ -30,8 +30,10 @@
 
 #include <klib/json.h>
 #include <klib/rc.h>
+#include <klib/data-buffer.h>
 
 #include <string>
+#include <map>
 
 typedef struct KTextColumn KTextColumn;
 struct KTextColumn
@@ -57,9 +59,13 @@ namespace KDBText
 
         const std::string & getName() const { return m_name; }
 
+        std::pair< int64_t, uint64_t > idRange() const; // { first, last - first + 1 }
+
     private:
         const KJsonObject * m_json = nullptr;
         const Table * m_parent = nullptr;
         std::string m_name;
+
+        std::map< uint64_t, KDataBuffer > m_data;
     };
 }

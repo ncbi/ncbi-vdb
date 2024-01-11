@@ -32,21 +32,32 @@
 
 #include "../../libs/kdbtext/column.hpp"
 
+#include <kdb/column.h>
+#include <kdb/manager.h>
+#include <kdb/table.h>
+
 #include <klib/rc.h>
 #include <klib/json.h>
 
 using namespace std;
 using namespace KDBText;
 
-TEST_SUITE(KDBTextColumnTestSuite);
+TEST_SUITE(KTextColumnTestSuite);
 
-class KDBTextColumn_Fixture
+const char * TestColumn = R"({"name":"col",
+            "data":
+                [
+                    {"row":1,"value":"AGCT"},
+                    {"row":2,"value":"AGCT"}
+                ]})";
+
+class KTextColumn_Fixture
 {
 public:
-    KDBTextColumn_Fixture()
+    KTextColumn_Fixture()
     {
     }
-    ~KDBTextColumn_Fixture()
+    ~KTextColumn_Fixture()
     {
         delete m_col;
         KJsonValueWhack( m_json );
@@ -68,21 +79,141 @@ public:
     char m_error[1024] = {0};
 };
 
-FIXTURE_TEST_CASE(KDBTextColumn_Make_Empty, KDBTextColumn_Fixture)
+FIXTURE_TEST_CASE(KTextColumn_Make_Empty, KTextColumn_Fixture)
 {
     Setup(R"({})");
     REQUIRE_RC_FAIL( m_col -> inflate( m_error, sizeof m_error ) );
     //cout << m_error << endl;
 }
 
-FIXTURE_TEST_CASE(KDBTextColumn_Make, KDBTextColumn_Fixture)
+FIXTURE_TEST_CASE(KTextColumn_Make, KTextColumn_Fixture)
 {
-    Setup(R"({"name":"col"})");
+    Setup(TestColumn);
     REQUIRE_RC( m_col -> inflate( m_error, sizeof m_error ) );
     REQUIRE_EQ( string("col"), m_col->getName() );
 }
 
-//TODO: the rest
+FIXTURE_TEST_CASE(KTextColumn_Make_DataNotArray, KTextColumn_Fixture)
+{
+    Setup(R"({"name":"col","data":{}})");
+    REQUIRE_RC_FAIL( m_col -> inflate( m_error, sizeof m_error ) );
+    //cout << m_error << endl;
+}
+
+FIXTURE_TEST_CASE(KTextColumn_Make_CellNotObject, KTextColumn_Fixture)
+{
+    Setup(R"({"name":"col","data":[1]})");
+    REQUIRE_RC_FAIL( m_col -> inflate( m_error, sizeof m_error ) );
+    //cout << m_error << endl;
+}
+FIXTURE_TEST_CASE(KTextColumn_CellMake_RowMissing, KTextColumn_Fixture)
+{
+    Setup(R"({"name":"col","data":[{}]})");
+    REQUIRE_RC_FAIL( m_col -> inflate( m_error, sizeof m_error ) );
+    //cout << m_error << endl;
+}
+FIXTURE_TEST_CASE(KTextColumn_CellMake_ValueMissing, KTextColumn_Fixture)
+{
+    Setup(R"({"name":"col","data": [ {"row":"1"} ] })");
+    REQUIRE_RC_FAIL( m_col -> inflate( m_error, sizeof m_error ) );
+    //cout << m_error << endl;
+}
+
+FIXTURE_TEST_CASE(KTextColumn_IdRange, KTextColumn_Fixture)
+{
+    Setup(TestColumn);
+    auto r = m_col->idRange();
+    REQUIRE_EQ( (int64_t)1, r . first );
+    REQUIRE_EQ( (uint64_t)2, r . second );
+}
+
+// API
+
+const char * FullTable = R"({"type": "table", "name": "testtbl",
+    "columns":[
+        {
+            "name":"col",
+            "data":
+                [
+                    {"row":1,"value":"AGCT"},
+                    {"row":2,"value":"AGCT"}
+                ]
+        }
+    ]
+})";
+
+class KTextColumn_ApiFixture
+{
+public:
+    KTextColumn_ApiFixture()
+    {
+    }
+    ~KTextColumn_ApiFixture()
+    {
+        KColumnRelease( m_col );
+    }
+    void Setup( const char * input, const char * col )
+    {
+        try
+        {
+            const KDBManager * mgr = nullptr;
+            THROW_ON_RC( KDBManagerMakeText ( & mgr, input, m_error, sizeof m_error ) );
+            const KTable * tbl;
+            THROW_ON_RC( KDBManagerOpenTableRead( mgr, & tbl, "%s", "testtbl" ) );
+            THROW_ON_RC( KTableOpenColumnRead( tbl, & m_col, "%s", col ) );
+            KTableRelease( tbl );
+            KDBManagerRelease( mgr );
+        }
+        catch(const std::exception& e)
+        {
+            std::cerr << e.what() << " with '" << m_error << "'" << endl;
+            throw;
+        }
+
+    }
+
+    const KColumn * m_col = nullptr;
+    char m_error[1024] = {0};
+};
+
+FIXTURE_TEST_CASE(KColumn_AddRelease, KTextColumn_ApiFixture)
+{
+    Setup(FullTable, "col");
+
+    REQUIRE_RC( KColumnAddRef( m_col ) );
+    REQUIRE_RC( KColumnRelease( m_col ) );
+    // use valgrind to find any leaks
+}
+
+FIXTURE_TEST_CASE(KColumn_Locked, KTextColumn_ApiFixture)
+{   // always false for this library
+    Setup(FullTable, "col");
+    REQUIRE( ! KColumnLocked( m_col ) );
+}
+FIXTURE_TEST_CASE(KColumn_Version, KTextColumn_ApiFixture)
+{   // always 0 for this library
+    Setup(FullTable, "col");
+    uint32_t version = 99;
+    REQUIRE_RC( KColumnVersion( m_col, &version ) );
+    REQUIRE_EQ( (uint32_t)0, version );
+}
+FIXTURE_TEST_CASE(KColumn_ByteOrder, KTextColumn_ApiFixture)
+{   // always false for this library
+    Setup(FullTable, "col");
+    bool reversed = true;
+    REQUIRE_RC( KColumnByteOrder( m_col, &reversed ) );
+    REQUIRE( ! reversed );
+}
+
+FIXTURE_TEST_CASE(KColumn_IdRange, KTextColumn_ApiFixture)
+{
+    Setup(FullTable, "col");
+    int64_t first = 0;
+    uint64_t count = 0;
+    REQUIRE_RC( KColumnIdRange ( m_col, & first, & count ) );
+    REQUIRE_EQ( (int64_t)1, first );
+    REQUIRE_EQ( (uint64_t)2, count );
+}
 
 //////////////////////////////////////////// Main
 extern "C"
@@ -110,7 +241,7 @@ const char UsageDefaultName[] = "Test_KDBText_Column";
 rc_t CC KMain ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=KDBTextColumnTestSuite(argc, argv);
+    rc_t rc=KTextColumnTestSuite(argc, argv);
     return rc;
 }
 
