@@ -26,61 +26,32 @@
 
 #pragma once
 
-#include "../libs/kdb/column-base.h"
+#include "../libs/kdb/columnblob-base.h"
 
 #include <klib/json.h>
 #include <klib/rc.h>
-#include <klib/data-buffer.h>
 
-#include <string>
-#include <map>
-
-typedef struct KTextColumn KTextColumn;
-struct KTextColumn
+typedef struct KTextBlob KTextBlob;
+struct KTextBlob
 {
-    KColumn dad;
+    KColumnBlob dad;
 };
 
 namespace KDBText
 {
-    class Table;
-    class Manager;
-    class Metadata;
-    class ColumnBlob;
-
-    class Column : public KTextColumn
+    class ColumnBlob : public KTextBlob
     {
     public:
-        static void addRef( const Column* );
-        static void release( const Column *);
+        static void addRef( const ColumnBlob* );
+        static void release( const ColumnBlob *);
 
     public:
-        Column( const KJsonObject * p_json, const Manager * mgr = nullptr, const Table * parent = nullptr );
-        ~Column();
+        ColumnBlob( const KJsonObject * p_json );
+        ~ColumnBlob();
 
         rc_t inflate( char * error, size_t error_size );
 
-        const Manager * getManager() const { return m_mgr; }
-        const Table * getParent() const { return m_parent; }
-        const std::string & getName() const { return m_name; }
-
-        std::pair< int64_t, uint64_t > idRange() const; // { first, last - first + 1 }; { 0, 0 } if empty
-
-        int64_t findFirst( int64_t row ) const;
-
-        const Metadata * openMetadata() const { return m_meta; }
-
-        const ColumnBlob * openBlob( int64_t id ) const;
-
     private:
-        const Manager * m_mgr = nullptr;
-        const Table * m_parent = nullptr;
-
         const KJsonObject * m_json = nullptr;
-        std::string m_name;
-        std::string m_type;
-
-        std::map< uint64_t, KDataBuffer > m_data;
-        const Metadata * m_meta = nullptr;
     };
 }

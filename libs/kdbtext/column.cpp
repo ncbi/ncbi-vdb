@@ -26,6 +26,10 @@
 
 #include "column.hpp"
 
+#include "manager.hpp"
+#include "metadata.hpp"
+#include "columnblob.hpp"
+
 #include <kdb/column.h>
 
 #include <klib/printf.h>
@@ -43,11 +47,11 @@ static bool CC KTextColumnLocked ( const KColumn *self );
 static rc_t CC KTextColumnVersion ( const KColumn *self, uint32_t *version );
 static rc_t CC KTextColumnByteOrder ( const KColumn *self, bool *reversed );
 static rc_t CC KTextColumnIdRange ( const KColumn *self, int64_t *first, uint64_t *count );
-// static rc_t CC KTextColumnFindFirstRowId ( const KColumn * self, int64_t * found, int64_t start );
-// static rc_t CC KTextColumnOpenManagerRead ( const KColumn *self, const KDBManager **mgr );
-// static rc_t CC KTextColumnOpenParentRead ( const KColumn *self, const KTable **tbl );
-// static rc_t CC KTextColumnOpenMetadataRead ( const KColumn *self, const KMetadata **metap );
-// static rc_t CC KTextColumnOpenBlobRead ( const KColumn *self, const KColumnBlob **blobp, int64_t id );
+static rc_t CC KTextColumnFindFirstRowId ( const KColumn * self, int64_t * found, int64_t start );
+static rc_t CC KTextColumnOpenManagerRead ( const KColumn *self, const KDBManager **mgr );
+static rc_t CC KTextColumnOpenParentRead ( const KColumn *self, const KTable **tbl );
+static rc_t CC KTextColumnOpenMetadataRead ( const KColumn *self, const KMetadata **metap );
+static rc_t CC KTextColumnOpenBlobRead ( const KColumn *self, const KColumnBlob **blobp, int64_t id );
 
 static KColumn_vt KTextColumn_vt =
 {
@@ -59,24 +63,32 @@ static KColumn_vt KTextColumn_vt =
     KTextColumnVersion,
     KTextColumnByteOrder,
     KTextColumnIdRange,
-    // KTextColumnFindFirstRowId,
-    // KTextColumnOpenManagerRead,
-    // KTextColumnOpenParentRead,
-    // KTextColumnOpenMetadataRead,
-    // KTextColumnOpenBlobRead
+    KTextColumnFindFirstRowId,
+    KTextColumnOpenManagerRead,
+    KTextColumnOpenParentRead,
+    KTextColumnOpenMetadataRead,
+    KTextColumnOpenBlobRead
 };
 
 #define CAST() assert( bself->vt == &KTextColumn_vt ); Column * self = (Column *)bself
 
-Column::Column( const KJsonObject * p_json, const Table * p_parent )
-: m_json ( p_json ), m_parent( p_parent )
+Column::Column( const KJsonObject * p_json, const Manager * p_mgr, const Table * p_parent )
+: m_mgr( p_mgr ), m_parent( p_parent ), m_json ( p_json )
 {
     dad . vt = & KTextColumn_vt;
     KRefcountInit ( & dad . refcount, 1, "KDBText::Column", "ctor", "db" );
+    Manager::addRef( m_mgr );
 }
 
 Column::~Column()
 {
+    Metadata::release( m_meta );
+    Manager::release( m_mgr );
+
+    for( auto d : m_data )
+    {
+        KDataBufferWhack( & d.second );
+    }
     KRefcountWhack ( & dad . refcount, "KDBText::Column" );
 }
 
@@ -119,6 +131,22 @@ Column::inflate( char * p_error, size_t p_error_size )
         return SILENT_RC( rcDB, rcDatabase, rcCreating, rcParam, rcInvalid );
     }
 
+    const KJsonValue * type = KJsonObjectGetMember ( m_json, "type" );
+    if ( type != nullptr )
+    {
+        const char * typeStr = nullptr;
+        rc = KJsonGetString ( type, & typeStr );
+        if ( rc == 0 )
+        {
+            m_type = typeStr;
+        }
+    }
+    else
+    {
+        string_printf ( p_error, p_error_size, nullptr, "Column type is missing" );
+        return SILENT_RC( rcDB, rcDatabase, rcCreating, rcParam, rcInvalid );
+    }
+
     // data
     const KJsonValue * data = KJsonObjectGetMember ( m_json, "data" );
     if ( data != nullptr )
@@ -151,12 +179,31 @@ Column::inflate( char * p_error, size_t p_error_size )
                     return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
                 }
 
-                if ( m_data.find( id ) != m_data . end() )
+                int64_t rowId;
+                rc = KJsonGetNumber ( id, &rowId );
+                if ( rc == 0 )
                 {
-                    string_printf ( p_error, p_error_size, nullptr, "Duplicate row id: %s", id.c_str() );
-                    return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
+                    if ( m_data.find( rowId ) != m_data . end() )
+                    {
+                        string_printf ( p_error, p_error_size, nullptr, "Duplicate row id: %s", rowId );
+                        return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
+                    }
+
+                    const char * valueStr = nullptr;
+                    rc = KJsonGetString ( value, & valueStr );
+                    if ( rc == 0 )
+                    {
+                        KDataBuffer b;
+                        KDataBufferMakeBytes( & b, strlen( valueStr ) + 1 );
+                        strcpy( (char*)b.base, valueStr );
+                        m_data [ rowId ] = b;
+                    }
                 }
-                // m_data [ id ] = value;
+                else
+                {   // not an object
+                    string_printf ( p_error, p_error_size, nullptr, "%s.data[%i].row is not an integer", m_name.c_str(), i );
+                    return rc;
+                }
             }
             else
             {   // not an object
@@ -164,10 +211,30 @@ Column::inflate( char * p_error, size_t p_error_size )
                 return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
             }
         }
-
     }
 
-    //TBD
+    // metadata
+    const KJsonValue * meta = KJsonObjectGetMember ( m_json, "metadata" );
+    if ( meta != nullptr )
+    {
+        const KJsonObject * obj = KJsonValueToObject ( meta );
+        if( obj != nullptr )
+        {
+            Metadata * m  = new Metadata( obj );
+            rc = m -> inflate( p_error, p_error_size );
+            if ( rc != 0 )
+            {
+                delete m;
+                return rc;
+            }
+            m_meta = m;
+        }
+        else
+        {   // not an object
+            string_printf ( p_error, p_error_size, nullptr, "%s.metadata is not an object", m_name.c_str() );
+            return SILENT_RC( rcDB, rcDatabase, rcCreating, rcParam, rcInvalid );
+        }
+    }
 
     return rc;
 }
@@ -182,6 +249,25 @@ Column::idRange() const
     }
     return make_pair( m_data.begin()->first, m_data.rbegin()->first - m_data.begin()->first + 1 );
 }
+
+int64_t
+Column::findFirst( int64_t row ) const
+{
+    auto it = m_data . lower_bound( row );
+    if ( it == m_data.end() )
+    {
+        return 0;
+    }
+    return it -> first;
+}
+
+const ColumnBlob *
+Column::openBlob( int64_t id ) const
+{
+    return nullptr;
+}
+
+// API
 
 static
 rc_t CC
@@ -218,10 +304,91 @@ KTextColumnByteOrder ( const KColumn *self, bool *reversed )
 
 static
 rc_t CC
-KTextColumnIdRange ( const KColumn *self, int64_t *first, uint64_t *count )
+KTextColumnIdRange ( const KColumn * bself, int64_t *first, uint64_t *count )
 {
-    *first = 0;
-    *count = 0;
+    CAST();
+
+    auto p = self->idRange();
+
+    *first = p.first;
+    *count = p.second;
     return 0;
 }
 
+static
+rc_t CC
+KTextColumnFindFirstRowId ( const KColumn * bself, int64_t * found, int64_t start )
+{
+    CAST();
+
+    *found = self -> findFirst( start );
+    if ( *found == 0 )
+    {
+        return SILENT_RC ( rcDB, rcColumn, rcSelecting, rcRow, rcNotFound );
+    }
+    return 0;
+}
+
+static
+rc_t CC
+KTextColumnOpenManagerRead ( const KColumn *bself, const KDBManager **mgr )
+{
+    CAST();
+
+    const Manager * m = self -> getManager();
+    if ( m != nullptr )
+    {
+        Manager::addRef( m );
+    }
+
+    *mgr = (const KDBManager*)m;
+
+    return 0;
+}
+
+static
+rc_t CC
+KTextColumnOpenParentRead ( const KColumn *bself, const KTable **tbl )
+{
+    CAST();
+
+    const Table * p = self -> getParent();
+    if ( p != nullptr )
+    {
+        Table::addRef( p );
+    }
+
+    *tbl = (const KTable*) p;
+
+    return 0;
+}
+
+static
+rc_t CC
+KTextColumnOpenMetadataRead ( const KColumn *bself, const KMetadata **metap )
+{
+    CAST();
+    const Metadata * m = self->openMetadata();
+    if ( m != nullptr )
+    {
+        Metadata::addRef( m );
+        *metap = (const KMetadata*)m;
+        return 0;
+    }
+    return SILENT_RC( rcDB, rcColumn, rcOpening, rcMetadata, rcNotFound );
+}
+
+static
+rc_t CC
+KTextColumnOpenBlobRead ( const KColumn *bself, const KColumnBlob **blobp, int64_t id )
+{
+    CAST();
+    const ColumnBlob * b = self->openBlob( id );
+    if ( b != nullptr )
+    {
+        ColumnBlob::addRef( b );
+        *blobp = (const KColumnBlob*)b;
+        return 0;
+    }
+    return SILENT_RC( rcDB, rcColumn, rcOpening, rcBlob, rcNotFound );
+}
