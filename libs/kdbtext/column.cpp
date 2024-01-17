@@ -264,6 +264,11 @@ Column::findFirst( int64_t row ) const
 const ColumnBlob *
 Column::openBlob( int64_t id ) const
 {
+    auto it = m_data.find( id );
+    if ( it != m_data.end() )
+    {
+        return new ColumnBlob( it -> second . base, it -> second . elem_count, this, id, 1 );
+    }
     return nullptr;
 }
 
@@ -386,7 +391,6 @@ KTextColumnOpenBlobRead ( const KColumn *bself, const KColumnBlob **blobp, int64
     const ColumnBlob * b = self->openBlob( id );
     if ( b != nullptr )
     {
-        ColumnBlob::addRef( b );
         *blobp = (const KColumnBlob*)b;
         return 0;
     }

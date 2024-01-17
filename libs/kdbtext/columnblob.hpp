@@ -28,9 +28,6 @@
 
 #include "../libs/kdb/columnblob-base.h"
 
-#include <klib/json.h>
-#include <klib/rc.h>
-
 typedef struct KTextBlob KTextBlob;
 struct KTextBlob
 {
@@ -39,6 +36,8 @@ struct KTextBlob
 
 namespace KDBText
 {
+    class Column;
+
     class ColumnBlob : public KTextBlob
     {
     public:
@@ -46,12 +45,13 @@ namespace KDBText
         static void release( const ColumnBlob *);
 
     public:
-        ColumnBlob( const KJsonObject * p_json );
+        ColumnBlob( const void * data, size_t size, const Column * col, int64_t id, uint64_t count );
         ~ColumnBlob();
 
-        rc_t inflate( char * error, size_t error_size );
-
     private:
-        const KJsonObject * m_json = nullptr;
+        const void * data = nullptr;
+        const Column * m_parent = nullptr;
+        int64_t m_firstRow = 0;
+        uint64_t m_count = 0;
     };
 }
