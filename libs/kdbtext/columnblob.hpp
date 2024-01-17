@@ -48,8 +48,12 @@ namespace KDBText
         ColumnBlob( const void * data, size_t size, const Column * col, int64_t id, uint64_t count );
         ~ColumnBlob();
 
+        const void * getData() const { return m_data; }
+        const size_t getSize() const { return m_size; }
+
     private:
-        const void * data = nullptr;
+        const void * m_data = nullptr;
+        size_t m_size = 0;
         const Column * m_parent = nullptr;
         int64_t m_firstRow = 0;
         uint64_t m_count = 0;

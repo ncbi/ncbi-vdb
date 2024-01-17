@@ -37,13 +37,7 @@ using namespace KDBText;
 
 TEST_SUITE(KTextColumnBlobTestSuite);
 
-const char * TestColumn = R"({"name":"col",
-            "type":"ascii",
-            "data":
-                [
-                    {"row":1,"value":"AGCT"},
-                    {"row":2,"value":"AGCT"}
-                ]})";
+const string Data = "0123456789";
 
 class KTextColumnBlob_Fixture
 {
@@ -56,7 +50,7 @@ public:
         delete m_blob;
     }
 
-    void Setup( const string & data = "abcdef" )
+    void Setup( const string & data = Data )
     {
         m_blob = new ColumnBlob( data.c_str(), data.size(), nullptr, 1, 1 );
     }
@@ -66,8 +60,96 @@ public:
 
 FIXTURE_TEST_CASE(KTextColumnBlob_Make_Empty, KTextColumnBlob_Fixture)
 {
-    Setup();
+    Setup("");
+    REQUIRE_EQ( string(), string( (const char*) (m_blob -> getData()), m_blob -> getSize() ) );
 }
+
+FIXTURE_TEST_CASE(KTextColumnBlob_Make_Data, KTextColumnBlob_Fixture)
+{
+    Setup( Data );
+    REQUIRE_EQ( Data, string( (const char*) (m_blob -> getData()), m_blob -> getSize() ) );
+}
+
+class KTextColumnBlob_ApiFixture
+{
+public:
+    KTextColumnBlob_ApiFixture()
+    {
+    }
+    ~KTextColumnBlob_ApiFixture()
+    {
+        KColumnBlobRelease( m_blob );
+    }
+    void Setup( const string & data = "abcdef" )
+    {
+        m_blob = (const KColumnBlob*)new ColumnBlob( data.c_str(), data.size(), nullptr, 1, 1 );
+    }
+
+    const KColumnBlob * m_blob = nullptr;
+};
+
+FIXTURE_TEST_CASE(KTextColumnBlob_AddRelease, KTextColumnBlob_ApiFixture)
+{
+    Setup();
+
+    REQUIRE_RC( KColumnBlobAddRef( m_blob ) );
+    REQUIRE_RC( KColumnBlobRelease( m_blob ) );
+    // use valgrind to find any leaks
+}
+
+FIXTURE_TEST_CASE(KTextColumnBlob_BufferNull, KTextColumnBlob_ApiFixture)
+{
+    Setup( Data );
+
+    size_t num_read = 0;
+    size_t remaining = 0;
+    REQUIRE_RC_FAIL( KColumnBlobRead ( m_blob, 0, nullptr, 0, &num_read, &remaining ) );
+}
+FIXTURE_TEST_CASE(KTextColumnBlob_NumReadNull, KTextColumnBlob_ApiFixture)
+{
+    Setup( Data );
+
+    char buffer[1024] = {0};
+    size_t remaining = 0;
+    REQUIRE_RC_FAIL( KColumnBlobRead ( m_blob, 0, buffer, sizeof buffer, nullptr, &remaining ) );
+}
+
+FIXTURE_TEST_CASE(KTextColumnBlob_Read_From_0, KTextColumnBlob_ApiFixture)
+{
+    Setup( Data );
+
+    char buffer[1024] = {0};
+    size_t num_read = 0;
+    size_t remaining = 0;
+    REQUIRE_RC( KColumnBlobRead ( m_blob, 0, buffer, sizeof buffer, &num_read, &remaining ) );
+    REQUIRE_EQ( Data, string(buffer, num_read ) );
+    REQUIRE_EQ( (size_t)0, remaining );
+}
+
+FIXTURE_TEST_CASE(KTextColumnBlob_Read_From_Offset, KTextColumnBlob_ApiFixture)
+{
+    Setup( Data );
+
+    char buffer[1024] = {0};
+    size_t num_read = 0;
+    size_t remaining = 0;
+    const size_t Offset = 3;
+    REQUIRE_RC( KColumnBlobRead ( m_blob, Offset, buffer, sizeof buffer, &num_read, &remaining ) );
+    REQUIRE_EQ( Data.substr( Offset ), string(buffer, num_read ) );
+    REQUIRE_EQ( (size_t)0, remaining );
+}
+
+FIXTURE_TEST_CASE(KTextColumnBlob_Read_Offset_BeyondData, KTextColumnBlob_ApiFixture)
+{
+    Setup( Data );
+
+    char buffer[1024] = {0};
+    size_t num_read = 0;
+    REQUIRE_RC_FAIL( KColumnBlobRead ( m_blob, Data.size() + 1, buffer, sizeof buffer, &num_read, nullptr ) );
+}
+
+//FIXTURE_TEST_CASE(KTextColumnBlob_Read_BufferTooShort, KTextColumnBlob_ApiFixture)
+
 
 //////////////////////////////////////////// Main
 extern "C"
