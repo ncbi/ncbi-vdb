@@ -28,6 +28,8 @@
 
 #include "../libs/kdb/columnblob-base.h"
 
+#include <utility>
+
 typedef struct KTextBlob KTextBlob;
 struct KTextBlob
 {
@@ -50,6 +52,8 @@ namespace KDBText
 
         const void * getData() const { return m_data; }
         const size_t getSize() const { return m_size; }
+
+        std::pair< int64_t, uint32_t > getIdRange() const{ return std::make_pair( m_firstRow, m_count ); }
 
     private:
         const void * m_data = nullptr;
