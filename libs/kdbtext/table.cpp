@@ -294,6 +294,7 @@ Table::exists( uint32_t requested, Path & path ) const
             }
 
         }
+    //TODO:
     // case kptColumn:
     // case kptMetadata:
     }

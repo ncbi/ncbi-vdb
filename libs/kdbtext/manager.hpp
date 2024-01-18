@@ -26,7 +26,7 @@
 
 #pragma once
 
-#include "api.hpp"
+#include "api-manager.hpp"
 
 #include <string>
 
@@ -39,13 +39,17 @@ namespace KDBText
     class Manager : public KDBManager
     {
     public:
+        static void addRef( const Manager* );
+        static void release( const Manager *);
+
+    public:
         Manager( const KDBManager_vt& );
         ~Manager();
 
         rc_t parse( const char * input, char * error, size_t error_size );
 
-        const Database * getRootDatabase() const { return m_db; }
-        const Table * getRootTable() const { return m_tbl; }
+        const Database * getRootDatabase() const;
+        const Table * getRootTable() const;
 
         int pathType( const Path & path ) const;
 
@@ -57,9 +61,8 @@ namespace KDBText
         rc_t openTable( const Path &, const Table *& ) const;
 
     private:
-        KJsonValue * m_root = nullptr;
-        Database * m_db = nullptr;
-        Table * m_tbl = nullptr;
+        KJsonValue * m_root = nullptr; //TODO: convert to KJsonObject
+        bool m_isDb;
     };
 }
 

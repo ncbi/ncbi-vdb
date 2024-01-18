@@ -44,6 +44,10 @@ namespace KDBText
     class Metadata : public KTextMetadata
     {
     public:
+        static void addRef( const Metadata* );
+        static void release( const Metadata *);
+
+    public:
         Metadata( const KJsonObject * p_json );
         ~Metadata();
 

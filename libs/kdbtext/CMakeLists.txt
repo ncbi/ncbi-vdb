@@ -23,7 +23,7 @@
 # ===========================================================================
 
 set( KDBTEXT_SRC
-    api.cpp
+    api-manager.cpp
     manager.cpp
     database.cpp
     table.cpp

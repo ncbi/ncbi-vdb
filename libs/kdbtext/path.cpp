@@ -26,7 +26,6 @@
 
 #include "path.hpp"
 
-#include <klib/rc.h>
 #include <klib/printf.h>
 #include <klib/data-buffer.h>
 #include <klib/text.h>
@@ -38,9 +37,8 @@
 using namespace std;
 using namespace KDBText;
 
-static
 rc_t
-PrintToString( const char *fmt, va_list args, string & out )
+Path::PrintToString( const char *fmt, va_list args, string & out )
 {
     KDataBuffer buf;
     rc_t rc = KDataBufferMake ( & buf, 8, 0 );

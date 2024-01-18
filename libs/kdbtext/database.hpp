@@ -30,47 +30,71 @@ typedef struct KTextDatabase KTextDatabase;
 #define KDATABASE_IMPL KTextDatabase
 #include "../libs/kdb/database-base.h"
 
+struct KTextDatabase
+{
+    KDatabaseBase dad;
+};
+
 #include "path.hpp"
-#include "table.hpp"
 
 #include <klib/json.h>
 #include <klib/rc.h>
 
 #include <string>
 #include <vector>
-
-struct KTextDatabase
-{
-    KDatabaseBase dad;
-};
+#include <map>
 
 namespace KDBText
 {
+    class Manager;
+    class Table;
+    class Metadata;
+
     class Database : public KTextDatabase
     {
     public:
-        Database() {}
-        Database( const KJsonObject * p_json );
+        static void addRef( const Database* );
+        static void release( const Database *);
+
+    public:
+        Database( const KJsonObject * json, const Manager * mgr = nullptr, const Database * parent = nullptr );
         ~Database();
 
         rc_t inflate( char * error, size_t error_size );
 
+        const Manager * getManager() const { return m_mgr; }
+        void setManager( const Manager * mgr ) { m_mgr = mgr; }
+
+        const Database * getParent() const { return m_parent; }
+
         const std::string & getName() const { return m_name; }
 
-        const Database * getDatabase( Path & path ) const;
-        const Database * findDatabase( const std::string & name ) const;
+        const Database * openDatabase( Path & path ) const;
+        const Database * openSubDatabase( const std::string & name ) const;
 
-        const Table * getTable( Path & path ) const;
-        const Table * findTable( const std::string & name ) const;
+        const Table *openTable( Path & path ) const;
+        const Table *openTable( const std::string & name ) const;
 
         int pathType( Path & ) const;
         bool exists( uint32_t requested, Path & p_path ) const;
 
+        const Metadata * openMetadata() const;
+
+        // verified Jsons:
+        typedef std::map< std::string, const KJsonObject * > Subobjects;
+
+        const Subobjects& getDatabases() const { return m_subdbs; }
+        const Subobjects& getTables() const { return m_tables; }
+
     private:
+        const Manager * m_mgr = nullptr;
+        const Database * m_parent = nullptr;
 
         const KJsonObject * m_json = nullptr;
         std::string m_name;
-        std::vector<Database> m_subdbs;
-        std::vector<Table> m_tables;
+
+        Subobjects m_subdbs;
+        Subobjects m_tables;
+        const Metadata * m_meta = nullptr;
     };
 }
