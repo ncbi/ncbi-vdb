@@ -176,7 +176,7 @@ Database::openTable( Path & p_path ) const
                 auto j = m_tables.find( p_path.front() );
                 if ( j != m_tables.end() )
                 {
-                    Table * ret = new Table( j -> second );
+                    Table * ret = new Table( j -> second, m_mgr, this );
                     ret -> inflate( error, sizeof error );
                     return ret;
                 }
@@ -211,7 +211,7 @@ Database::openTable( const string & name ) const
     auto j = m_tables.find( name );
     if ( j != m_tables.end() )
     {
-        Table * ret = new Table( j -> second );
+        Table * ret = new Table( j -> second, m_mgr, this );
         ret -> inflate( error, sizeof error );
         return ret;
     }
@@ -515,13 +515,15 @@ KTextDatabaseOpenManagerRead ( const KTextDatabase *bself, const KDBManager **mg
 {
     CAST();
 
-    const KDBManager * m = (const KDBManager*) self -> getManager();
-    rc_t rc = KDBManagerAddRef( m );
-    if ( rc == 0 )
+    const Manager * m = self -> getManager();
+    if ( m != nullptr )
     {
-        *mgr = m;
+        Manager::addRef( m );
     }
-    return rc;
+
+    *mgr = (const KDBManager*)m;
+
+    return 0;
 }
 
 static
@@ -545,7 +547,7 @@ static
 rc_t CC
 KTextDatabaseOpenDirectoryRead ( const KTextDatabase *self, const KDirectory **dir )
 {
-    return SILENT_RC ( rcDB, rcDatabase, rcAccessing, rcColumn, rcUnsupported );
+    return SILENT_RC ( rcDB, rcDatabase, rcAccessing, rcDirectory, rcUnsupported );
 }
 
 static
@@ -593,7 +595,7 @@ KTextDatabaseVOpenTableRead ( const KTextDatabase *bself, const KTable **tblp, c
         }
         else
         {
-            rc =  SILENT_RC( rcDB, rcTable, rcOpening, rcParam, rcInvalid );
+            rc =  SILENT_RC( rcDB, rcDatabase, rcOpening, rcTable, rcNotFound );
         }
     }
 

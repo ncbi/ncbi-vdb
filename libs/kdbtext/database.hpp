@@ -63,10 +63,7 @@ namespace KDBText
         rc_t inflate( char * error, size_t error_size );
 
         const Manager * getManager() const { return m_mgr; }
-        void setManager( const Manager * mgr ) { m_mgr = mgr; }
-
         const Database * getParent() const { return m_parent; }
-
         const std::string & getName() const { return m_name; }
 
         const Database * openDatabase( Path & path ) const;

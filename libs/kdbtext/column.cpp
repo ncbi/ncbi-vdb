@@ -26,6 +26,8 @@
 
 #include "column.hpp"
 
+#include <kdb/column.h>
+
 #include <klib/printf.h>
 
 using namespace KDBText;
@@ -41,7 +43,8 @@ static KColumn_vt KTextColumn_vt =
 
 #define CAST() assert( bself->vt == &KTextColumn_vt ); Column * self = (Column *)bself
 
-Column::Column( const KJsonObject * p_json ) : m_json ( p_json )
+Column::Column( const KJsonObject * p_json, const Table * p_parent )
+: m_json ( p_json ), m_parent( p_parent )
 {
     dad . vt = & KTextColumn_vt;
     KRefcountInit ( & dad . refcount, 1, "KDBText::Column", "ctor", "db" );
@@ -50,6 +53,24 @@ Column::Column( const KJsonObject * p_json ) : m_json ( p_json )
 Column::~Column()
 {
     KRefcountWhack ( & dad . refcount, "KDBText::Column" );
+}
+
+void
+Column::addRef( const Column * col )
+{
+    if ( col != nullptr )
+    {
+        KColumnAddRef( (const KColumn*) col );
+    }
+}
+
+void
+Column::release( const Column * col )
+{
+    if ( col != nullptr )
+    {
+        KColumnRelease( (const KColumn*) col );
+    }
 }
 
 rc_t

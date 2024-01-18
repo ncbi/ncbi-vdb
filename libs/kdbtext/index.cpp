@@ -75,7 +75,8 @@ static KIndex_vt KTextIndex_vt =
 
 #define CAST() assert( bself->vt == &KTextIndex_vt ); Index * self = (Index *)bself
 
-Index::Index( const KJsonObject * p_json ) : m_json ( p_json )
+Index::Index( const KJsonObject * p_json, const Table * p_parent )
+: m_json ( p_json ), m_parent( p_parent )
 {
     dad . vt = & KTextIndex_vt;
     KRefcountInit ( & dad . refcount, 1, "KDBText::Index", "ctor", "db" );
@@ -84,6 +85,24 @@ Index::Index( const KJsonObject * p_json ) : m_json ( p_json )
 Index::~Index()
 {
     KRefcountWhack ( & dad . refcount, "KDBText::Index" );
+}
+
+void
+Index::addRef( const Index * idx )
+{
+    if ( idx != nullptr )
+    {
+        KIndexAddRef( (const KIndex*) idx );
+    }
+}
+
+void
+Index::release( const Index * idx )
+{
+    if ( idx != nullptr )
+    {
+        KIndexRelease( (const KIndex*) idx );
+    }
 }
 
 rc_t

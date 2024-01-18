@@ -134,7 +134,7 @@ FIXTURE_TEST_CASE(KWColumn_OpenParentRead, KColumn_Fixture)
 {
     Setup( GetName() );
     const KTable * tbl = nullptr;
-    rc_t rc = SILENT_RC ( rcVDB, rcTable, rcAccessing, rcSelf, rcNull );
+    rc_t rc = SILENT_RC ( rcDB, rcTable, rcAccessing, rcSelf, rcNull ); // no parent set
     REQUIRE_EQ( rc, KColumnOpenParentRead( & m_col -> dad, & tbl ) );
     REQUIRE_NULL( tbl );
 }
@@ -143,7 +143,7 @@ FIXTURE_TEST_CASE(KWColumn_OpenMetadataRead, KColumn_Fixture)
 {
     Setup( GetName() );
     const KMetadata * meta = nullptr;
-    rc_t rc = SILENT_RC ( rcDB,rcMgr,rcOpening,rcMetadata,rcNotFound );
+    rc_t rc = SILENT_RC ( rcDB, rcMgr, rcOpening, rcMetadata, rcNotFound );
     REQUIRE_EQ( rc, KColumnOpenMetadataRead( & m_col -> dad, & meta ) );
 }
 
@@ -151,7 +151,7 @@ FIXTURE_TEST_CASE(KWColumn_OpenBlobRead, KColumn_Fixture)
 {
     Setup( GetName() );
     const KColumnBlob * blob = nullptr;
-    rc_t rc = SILENT_RC ( rcDB,rcColumn,rcSelecting,rcBlob,rcNotFound );
+    rc_t rc = SILENT_RC ( rcDB, rcColumn, rcSelecting,rcBlob,rcNotFound );
     REQUIRE_EQ( rc, KColumnOpenBlobRead( & m_col -> dad, & blob, 1 ) );
 }
 

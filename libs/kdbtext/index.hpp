@@ -41,10 +41,16 @@ struct KTextIndex
 
 namespace KDBText
 {
+    class Table;
+
     class Index : public KTextIndex
     {
     public:
-        Index( const KJsonObject * p_json );
+        static void addRef( const Index* );
+        static void release( const Index *);
+
+    public:
+        Index( const KJsonObject * p_json, const Table * parent = nullptr );
         ~Index();
 
         rc_t inflate( char * error, size_t error_size );
@@ -54,5 +60,7 @@ namespace KDBText
     private:
         const KJsonObject * m_json = nullptr;
         std::string m_name;
+
+        const Table * m_parent = nullptr;
     };
 }
