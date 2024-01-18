@@ -81,7 +81,7 @@ static KDatabase_vt KRDatabase_vt =
     KRDatabaseVOpenTableRead,
     KRDatabaseOpenMetadataRead,
     KRDatabaseVOpenIndexRead,
-   KRDatabaseListDB,
+    KRDatabaseListDB,
     KRDatabaseListTbl,
     KRDatabaseListIdx,
     KRDatabaseGetPath

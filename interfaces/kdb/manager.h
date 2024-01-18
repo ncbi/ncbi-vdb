@@ -51,7 +51,7 @@ struct KDirectory;
  */
 enum
 {
-    /* must be handled carefully and can not go back to KDirectory 
+    /* must be handled carefully and can not go back to KDirectory
      * as this value has a different meaning in KDirectory */
     kptAny = 0,
     kptDatabase = kptLastDefined,
@@ -83,15 +83,16 @@ KDB_EXTERN rc_t CC KDBManagerRelease ( const KDBManager *self );
 
 /* MakeRead
  * MakeUpdate
+ * MakeText (reads data from a Json string)
+ *
  *  create library handle for specific use
- *  NB - only one of the functions will be implemented
  *
  *  "wd" [ IN, NULL OKAY ] - optional working directory for
  *  accessing the file system. mgr will attach its own reference.
  */
 KDB_EXTERN rc_t CC KDBManagerMakeRead ( const KDBManager **mgr, struct KDirectory const *wd );
 KDB_EXTERN rc_t CC KDBManagerMakeUpdate ( KDBManager **mgr, struct KDirectory *wd );
-
+KDB_EXTERN rc_t CC KDBManagerMakeText ( const KDBManager **mgr, const char * input, char * error, size_t error_size );
 
 /* Version
  *  returns the library version

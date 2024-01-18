@@ -74,7 +74,7 @@ struct KIndex_vt
 
 struct KIndex
 {
-    KIndex_vt * vt;
+    const KIndex_vt * vt;
 
     KRefcount refcount;
 };
