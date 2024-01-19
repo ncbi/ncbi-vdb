@@ -33,44 +33,44 @@
 using namespace KDBText;
 
 static rc_t KTextIndexWhack ( KIndex *self );
-// static bool CC KTextIndexLocked ( const KIndex *self );
-// static bool CC KTextIndexVExists ( const KIndex *self, uint32_t type, const char *name, va_list args );
-// static bool CC KTextIndexIsAlias ( const KIndex *self, uint32_t type, char *resolved, size_t rsize, const char *name );
-// static rc_t CC KTextIndexVWritable ( const KIndex *self, uint32_t type, const char *name, va_list args );
-// static rc_t CC KTextIndexOpenManagerRead ( const KIndex *self, const KDBManager **mgr );
-// static rc_t CC KTextIndexOpenParentRead ( const KIndex *self, const KDatabase **db );
-// static bool CC KTextIndexHasRemoteData ( const KIndex *self );
-// static rc_t CC KTextIndexOpenDirectoryRead ( const KIndex *self, const KDirectory **dir );
-// static rc_t CC KTextIndexVOpenColumnRead ( const KIndex *self, const KColumn **colp, const char *name, va_list args );
-// static rc_t CC KTextIndexOpenMetadataRead ( const KIndex *self, const KMetadata **metap );
-// static rc_t CC KTextIndexVOpenIndexRead ( const KIndex *self, const KIndex **idxp, const char *name, va_list args );
-// static rc_t CC KTextIndexGetPath ( const KIndex *self, const char **path );
-// static rc_t CC KTextIndexGetName (KIndex const *self, char const **rslt);
-// static rc_t CC KTextIndexListCol ( const KIndex *self, KNamelist **names );
-// static rc_t CC KTextIndexListIdx ( const KIndex *self, KNamelist **names );
-// static rc_t CC KTextIndexMetaCompare( const KIndex *self, const KIndex *other, const char * path, bool * equal );
+static bool CC KTextIndexLocked ( const KIndex *self );
+static rc_t CC KTextIndexVersion ( const KIndex *self, uint32_t *version );
+static rc_t CC KTextIndexType ( const KIndex *self, KIdxType *type );
+static rc_t CC KTextIndexConsistencyCheck ( const KIndex *self, uint32_t level,
+     int64_t *start_id, uint64_t *id_range, uint64_t *num_keys,
+     uint64_t *num_rows, uint64_t *num_holes );
+// static rc_t CC KTextIndexFindText ( const KIndex *self, const char *key, int64_t *start_id, uint64_t *id_count,
+//     int ( CC * custom_cmp ) ( const void *item, struct PBSTNode const *n, void *data ),
+//     void *data );
+// static rc_t CC KTextIndexFindAllText ( const KIndex *self, const char *key,
+//     rc_t ( CC * f ) ( int64_t id, uint64_t id_count, void *data ), void *data );
+// static rc_t CC KTextIndexProjectText ( const KIndex *self,
+//     int64_t id, int64_t *start_id, uint64_t *id_count,
+//     char *key, size_t kmax, size_t *actsize );
+// static rc_t CC KTextIndexProjectAllText ( const KIndex *self, int64_t id,
+//     rc_t ( CC * f ) ( int64_t start_id, uint64_t id_count, const char *key, void *data ),
+//     void *data );
+// static rc_t CC KTextIndexFindU64( const KIndex* self, uint64_t offset, uint64_t* key, uint64_t* key_size, int64_t* id, uint64_t* id_qty );
+// static rc_t CC KTextIndexFindAllU64( const KIndex* self, uint64_t offset,
+//     rc_t ( CC * f )(uint64_t key, uint64_t key_size, int64_t id, uint64_t id_qty, void* data ), void* data);
+// static void CC KTextIndexSetMaxRowId ( const KIndex *cself, int64_t max_row_id );
 
 static KIndex_vt KTextIndex_vt =
 {
     KTextIndexWhack,
     KIndexBaseAddRef,
     KIndexBaseRelease,
-    // KTextIndexLocked,
-    // KTextIndexVExists,
-    // KTextIndexIsAlias,
-    // KTextIndexVWritable,
-    // KTextIndexOpenManagerRead,
-    // KTextIndexOpenParentRead,
-    // KTextIndexHasRemoteData,
-    // KTextIndexOpenDirectoryRead,
-    // KTextIndexVOpenColumnRead,
-    // KTextIndexOpenMetadataRead,
-    // KTextIndexVOpenIndexRead,
-    // KTextIndexGetPath,
-    // KTextIndexGetName,
-    // KTextIndexListCol,
-    // KTextIndexListIdx,
-    // KTextIndexMetaCompare
+    KTextIndexLocked,
+    KTextIndexVersion,
+    KTextIndexType,
+    KTextIndexConsistencyCheck,
+    // KTextIndexFindText,
+    // KTextIndexFindAllText,
+    // KTextIndexProjectText,
+    // KTextIndexProjectAllText,
+    // KTextIndexFindU64,
+    // KTextIndexFindAllU64,
+    // KTextIndexSetMaxRowId
 };
 
 #define CAST() assert( bself->vt == &KTextIndex_vt ); Index * self = (Index *)bself
@@ -149,5 +149,49 @@ KTextIndexWhack ( KIndex *bself )
     CAST();
 
     delete reinterpret_cast<Index*>( self );
+    return 0;
+}
+
+static
+bool CC
+KTextIndexLocked ( const KIndex *self )
+{
+    return false;
+}
+
+static
+rc_t CC
+KTextIndexVersion ( const KIndex *self, uint32_t *version )
+{
+    if ( version == NULL )
+    {
+        return SILENT_RC ( rcVDB, rcIndex, rcReading, rcParam, rcNull );
+    }
+
+    *version = 0;
+
+    return 0;
+}
+
+static
+rc_t CC
+KTextIndexType ( const KIndex *self, KIdxType *type )
+{
+    if ( type == NULL )
+    {
+        return SILENT_RC ( rcVDB, rcIndex, rcReading, rcParam, rcNull );
+    }
+
+    *type = kitText;
+
+    return 0;
+}
+
+static
+rc_t CC
+KTextIndexConsistencyCheck ( const KIndex *self, uint32_t level,
+     int64_t *start_id, uint64_t *id_range, uint64_t *num_keys,
+     uint64_t *num_rows, uint64_t *num_holes )
+{   // no op
     return 0;
 }
