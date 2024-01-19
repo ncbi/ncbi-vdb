@@ -230,13 +230,13 @@ FIXTURE_TEST_CASE(KDBTextManager_PathTypeVP_Table_Nested, KDBTextManager_Fixture
 
 FIXTURE_TEST_CASE(KDBTextManager_PathTypeVP_Column_NotFound, KDBTextManager_Fixture)
 {
-    Setup( R"({ "type": "table", "name": "tbl1", "columns":[{"name":"col1"}] })" );
+    Setup( R"({ "type": "table", "name": "tbl1", "columns":[{"name":"col1","type":"ascii"}] })" );
     MakeVPath( "tbl1/col/notcol");
     REQUIRE_EQ( (int)kptNotFound, KDBManagerPathTypeVP( m_mgr, m_path ) );
 }
 FIXTURE_TEST_CASE(KDBTextManager_PathTypeVP_Column_RootTable, KDBTextManager_Fixture)
 {
-    Setup( R"({ "type": "table", "name": "tbl1", "columns":[{"name":"col1"}] })" );
+    Setup( R"({ "type": "table", "name": "tbl1", "columns":[{"name":"col1","type":"ascii"}] })" );
     MakeVPath( "tbl1/col/col1");
     REQUIRE_EQ( (int)kptColumn, KDBManagerPathTypeVP( m_mgr, m_path ) );
 }
@@ -245,7 +245,7 @@ FIXTURE_TEST_CASE(KDBTextManager_PathTypeVP_Column_Db, KDBTextManager_Fixture)
     Setup( R"({"type": "database","name": "testdb",
         "tables":[
             { "type": "table", "name": "tbl1",
-              "columns":[{"name":"col1"}]
+              "columns":[{"name":"col1","type":"ascii"}]
             }
         ]
     })" );
@@ -443,6 +443,7 @@ rc_t CC KMain ( int argc, char *argv [] )
             "columns":[
                 {
                     "name":"READ",
+                    "type":"ascii",
                     "metadata":null,
                     "data":
                     [

@@ -124,7 +124,7 @@ Table::openColumn( const string & name ) const
     auto j = m_columns.find( name );
     if ( j != m_columns.end() )
     {
-        Column * ret = new Column( j -> second, this );
+        Column * ret = new Column( j -> second, m_mgr, this );
         ret -> inflate( error, sizeof error );
         return ret;
     }

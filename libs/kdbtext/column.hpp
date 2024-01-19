@@ -30,8 +30,10 @@
 
 #include <klib/json.h>
 #include <klib/rc.h>
+#include <klib/data-buffer.h>
 
 #include <string>
+#include <map>
 
 typedef struct KTextColumn KTextColumn;
 struct KTextColumn
@@ -42,6 +44,9 @@ struct KTextColumn
 namespace KDBText
 {
     class Table;
+    class Manager;
+    class Metadata;
+    class ColumnBlob;
 
     class Column : public KTextColumn
     {
@@ -50,16 +55,32 @@ namespace KDBText
         static void release( const Column *);
 
     public:
-        Column( const KJsonObject * p_json, const Table * parent = nullptr );
+        Column( const KJsonObject * p_json, const Manager * mgr = nullptr, const Table * parent = nullptr );
         ~Column();
 
         rc_t inflate( char * error, size_t error_size );
 
+        const Manager * getManager() const { return m_mgr; }
+        const Table * getParent() const { return m_parent; }
         const std::string & getName() const { return m_name; }
 
+        std::pair< int64_t, uint64_t > idRange() const; // { first, last - first + 1 }; { 0, 0 } if empty
+
+        int64_t findFirst( int64_t row ) const;
+
+        const Metadata * openMetadata() const { return m_meta; }
+
+        const ColumnBlob * openBlob( int64_t id ) const;
+
     private:
-        const KJsonObject * m_json = nullptr;
+        const Manager * m_mgr = nullptr;
         const Table * m_parent = nullptr;
+
+        const KJsonObject * m_json = nullptr;
         std::string m_name;
+        std::string m_type;
+
+        std::map< uint64_t, KDataBuffer > m_data;
+        const Metadata * m_meta = nullptr;
     };
 }

@@ -31,6 +31,7 @@ set( KDBTEXT_SRC
     index.cpp
     path.cpp
     metadata.cpp
+    columnblob.cpp
 )
 
 GenerateStaticLibs( kdbtext "${KDBTEXT_SRC}" )
