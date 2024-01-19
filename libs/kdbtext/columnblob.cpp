@@ -147,7 +147,7 @@ KTextColumnBlobReadAll ( const KColumnBlob * bself, KDataBuffer * buffer, KColum
         rc = KDataBufferMakeBytes ( buffer, self->getSize() );
         if ( rc == 0 && self->getSize() > 0 )
         {
-            memcpy( buffer -> base, self -> getData(), self->getSize() );
+            memmove( buffer -> base, self -> getData(), self->getSize() );
         }
     }
 
