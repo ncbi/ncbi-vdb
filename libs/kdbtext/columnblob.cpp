@@ -119,7 +119,7 @@ KTextColumnBlobRead ( const KColumnBlob *bself, size_t offset, void *buffer, siz
         {
             * remaining = 0;
         }
-        memcpy( buffer, (const char*)(self -> getData()) + offset, toRead );
+        memmove( buffer, (const char*)(self -> getData()) + offset, toRead );
         *num_read = toRead;
     }
 
