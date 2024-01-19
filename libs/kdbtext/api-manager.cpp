@@ -285,7 +285,6 @@ KTextManagerVPathOpenRemoteDBRead ( struct KDBManager const * self, struct KData
     return SILENT_RC (rcDB, rcMgr, rcOpening, rcType, rcInvalid);
 }
 
-LIB_EXPORT
 rc_t CC
 KDBManagerMakeText ( const KDBManager ** p_mgr, const char * input, char * error, size_t error_size )
 {
