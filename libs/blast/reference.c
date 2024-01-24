@@ -1193,6 +1193,9 @@ static uint32_t _ReferencesData2na(References *self,
             ++self->read_id;
         }
         ++num_read;
+
+        if (*status == eVdbBlastNoErr || *status == eVdbBlastCircularSequence)
+            break;
     }
     return num_read;
 }
