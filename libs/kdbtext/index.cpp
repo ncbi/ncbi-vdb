@@ -43,11 +43,11 @@ static rc_t CC KTextIndexConsistencyCheck ( const KIndex *self, uint32_t level,
 static rc_t CC KTextIndexFindText ( const KIndex *self, const char *key, int64_t *start_id, uint64_t *id_count,
     int ( CC * custom_cmp ) ( const void *item, struct PBSTNode const *n, void *data ),
     void *data );
-// static rc_t CC KTextIndexFindAllText ( const KIndex *self, const char *key,
-//     rc_t ( CC * f ) ( int64_t id, uint64_t id_count, void *data ), void *data );
-// static rc_t CC KTextIndexProjectText ( const KIndex *self,
-//     int64_t id, int64_t *start_id, uint64_t *id_count,
-//     char *key, size_t kmax, size_t *actsize );
+static rc_t CC KTextIndexFindAllText ( const KIndex *self, const char *key,
+    rc_t ( CC * f ) ( int64_t id, uint64_t id_count, void *data ), void *data );
+static rc_t CC KTextIndexProjectText ( const KIndex *self,
+    int64_t id, int64_t *start_id, uint64_t *id_count,
+    char *key, size_t kmax, size_t *actsize );
 // static rc_t CC KTextIndexProjectAllText ( const KIndex *self, int64_t id,
 //     rc_t ( CC * f ) ( int64_t start_id, uint64_t id_count, const char *key, void *data ),
 //     void *data );
@@ -66,8 +66,8 @@ static KIndex_vt KTextIndex_vt =
     KTextIndexType,
     KTextIndexConsistencyCheck,
     KTextIndexFindText,
-    // KTextIndexFindAllText,
-    // KTextIndexProjectText,
+    KTextIndexFindAllText,
+    KTextIndexProjectText,
     // KTextIndexProjectAllText,
     // KTextIndexFindU64,
     // KTextIndexFindAllU64,
@@ -285,7 +285,7 @@ KTextIndexFindText ( const KIndex *bself,
 
     if ( start_id == NULL )
     {
-        return SILENT_RC ( rcDB, rcIndex, rcSelecting, rcFunction, rcNull );
+        return SILENT_RC ( rcDB, rcIndex, rcSelecting, rcParam, rcNull );
     }
     if ( key == NULL )
     {
@@ -296,6 +296,11 @@ KTextIndexFindText ( const KIndex *bself,
         return SILENT_RC ( rcDB, rcIndex, rcSelecting, rcString, rcEmpty );
     }
 
+    if ( custom_cmp != NULL )
+    {
+        return SILENT_RC ( rcDB, rcIndex, rcSelecting, rcFunction, rcUnsupported );
+    }
+
     auto it = self -> getData() . find( key );
     if ( it == self->getData().end() )
     {
@@ -304,6 +309,49 @@ KTextIndexFindText ( const KIndex *bself,
 
     *start_id = it->second.first;
     *id_count = it->second.second;
+
+    return 0;
+}
+
+static
+rc_t CC
+KTextIndexFindAllText ( const KIndex * bself, const char *key,
+    rc_t ( CC * f ) ( int64_t id, uint64_t id_count, void *data ), void *data )
+{
+    CAST();
+
+    if ( key == NULL )
+    {
+        return SILENT_RC ( rcDB, rcIndex, rcSelecting, rcString, rcNull );
+    }
+    if ( key [ 0 ] == 0 )
+    {
+        return SILENT_RC ( rcDB, rcIndex, rcSelecting, rcString, rcEmpty );
+    }
+    if ( f == NULL )
+    {
+        return RC ( rcDB, rcIndex, rcSelecting, rcFunction, rcNull );
+    }
+
+    auto it = self -> getData() . find( key );
+    if ( it == self->getData().end() )
+    {
+        return SILENT_RC ( rcDB, rcIndex, rcSelecting, rcString, rcNotFound );
+    }
+
+    return f( it->second.first, it->second.second, data );
+}
+
+static
+rc_t CC
+KTextIndexProjectText ( const KIndex *self,
+    int64_t id, int64_t *start_id, uint64_t *id_count,
+    char *key, size_t kmax, size_t *actsize )
+{
+    if ( key == NULL )
+    {
+        return RC ( rcDB, rcIndex, rcProjecting, rcBuffer, rcNull );
+    }
 
     return 0;
 }

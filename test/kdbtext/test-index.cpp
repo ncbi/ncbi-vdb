@@ -258,6 +258,8 @@ FIXTURE_TEST_CASE(KIndex_ConsistencyCheck, KTextIndex_ApiFixture)
     REQUIRE_RC( KIndexConsistencyCheck( m_idx, 1, &m_start_id, &m_id_count, &num_keys, &num_rows, &num_holes ) );
 }
 
+// KIndexFindText
+
 FIXTURE_TEST_CASE(KIndex_FindText_StartNull, KTextIndex_ApiFixture)
 {
     Setup(TextIndex);
@@ -291,13 +293,77 @@ int CC Compare ( const void *item, struct PBSTNode const *n, void *data )
     return 0;
 }
 FIXTURE_TEST_CASE(KIndex_FindText_CustomCompare, KTextIndex_ApiFixture)
-{
+{   // not supported
     Setup(TextIndex);
-    REQUIRE_RC( KIndexFindText ( m_idx, "AT", &m_start_id, &m_id_count, Compare, nullptr ) );
-    REQUIRE_EQ( (int64_t)11, m_start_id );
-    REQUIRE_EQ( (uint64_t)2, m_id_count );
+    REQUIRE_RC_FAIL( KIndexFindText( m_idx, "AT", &m_start_id, &m_id_count, Compare, nullptr ) );
 }
 
+// KIndexFindAllText
+
+int64_t cb_id = 0;
+uint64_t cb_id_count = 0;
+void * cb_data = nullptr;
+rc_t cb_rc = 0;
+rc_t CC FindAllTextCallback ( int64_t id, uint64_t id_count, void *data )
+{
+    cb_id = id;
+    cb_id_count = id_count;
+    cb_data = data;
+    return cb_rc;
+}
+FIXTURE_TEST_CASE(KIndex_FindAllText_KeyNull, KTextIndex_ApiFixture)
+{
+    Setup(TextIndex);
+    REQUIRE_RC_FAIL( KIndexFindAllText ( m_idx, nullptr, FindAllTextCallback, nullptr ) );
+}
+FIXTURE_TEST_CASE(KIndex_FindAllText_KeyEmpty, KTextIndex_ApiFixture)
+{
+    Setup(TextIndex);
+    REQUIRE_RC_FAIL( KIndexFindAllText ( m_idx, "", FindAllTextCallback, nullptr ) );
+}
+FIXTURE_TEST_CASE(KIndex_FindAllText_NoCallback, KTextIndex_ApiFixture)
+{
+    Setup(TextIndex);
+    REQUIRE_RC_FAIL( KIndexFindAllText ( m_idx, "qq", nullptr, nullptr ) );
+}
+
+FIXTURE_TEST_CASE(KIndex_FindAllText, KTextIndex_ApiFixture)
+{
+    Setup(TextIndex);
+    char Data = 0;
+    REQUIRE_RC( KIndexFindAllText ( m_idx, "AT", FindAllTextCallback, &Data ) );
+    REQUIRE_EQ( (int64_t)11, cb_id );
+    REQUIRE_EQ( (uint64_t)2, cb_id_count );
+    REQUIRE_EQ( (void*)&Data, cb_data );
+}
+FIXTURE_TEST_CASE(KIndex_FindAllText_NotFound, KTextIndex_ApiFixture)
+{
+    Setup(TextIndex);
+    char Data = 0;
+    REQUIRE_RC_FAIL( KIndexFindAllText ( m_idx, "ATT", FindAllTextCallback, &Data ) );
+}
+FIXTURE_TEST_CASE(KIndex_FindAllText_CallbackFails, KTextIndex_ApiFixture)
+{
+    Setup(TextIndex);
+    char Data = 0;
+    cb_rc = SILENT_RC ( rcDB, rcIndex, rcSelecting, rcBlob, rcAmbiguous );
+    REQUIRE_EQ( cb_rc, KIndexFindAllText ( m_idx, "AT", FindAllTextCallback, &Data ) );
+    cb_rc = 0; // restore
+}
+
+// KTextIndexProjectText
+
+FIXTURE_TEST_CASE(KIndex_ProjectText_KeyNull, KTextIndex_ApiFixture)
+{
+    Setup(TextIndex);
+
+    int64_t id;
+    int64_t start_id;
+    uint64_t id_count;
+    char key[1024];
+    size_t actsize;
+    REQUIRE_RC_FAIL( KIndexProjectText ( m_idx, id, &start_id, &id_count, nullptr, 0, &actsize ) );
+}
 
 //////////////////////////////////////////// Main
 extern "C"
