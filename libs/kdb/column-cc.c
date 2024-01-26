@@ -145,6 +145,7 @@ rc_t KColumnCheckBlobs(const KColumn *self,
     uint64_t row;
     uint64_t rows;
     rc_t rc;
+    uint64_t nMissingChecksum = 0;
 
     rc = KColumnIdRange(self, &start, &rows);
     if (rc) {
@@ -157,6 +158,7 @@ rc_t KColumnCheckBlobs(const KColumn *self,
         const KColumnBlob *blob;
         int64_t first;
         uint32_t count;
+        bool missingChecksum = false;
 
         rc = KColumnOpenBlobRead(self, &blob, row + start);
         if (rc) {
@@ -181,20 +183,27 @@ rc_t KColumnCheckBlobs(const KColumn *self,
         rc = KColumnBlobValidate(blob);
         KColumnBlobRelease(blob);
         if (rc) {
-            nfo->info.done.rc = rc;
-            nfo->info.done.mesg = "contains bad data";
-            nfo->type = ccrpt_Done;
-            return report(nfo, ctx);
+            if (GetRCState(rc) == (int)rcNotFound && GetRCObject(rc) == (int)rcChecksum) {
+                missingChecksum = true;
+                nMissingChecksum += 1;
+            }
+            else {
+                nfo->type = ccrpt_Done;
+                nfo->info.done.rc = rc;
+                nfo->info.done.mesg = "contains bad data";
+                return report(nfo, ctx);
+            }
         }
         nfo->type = ccrpt_Blob;
         nfo->info.blob.start = first;
         nfo->info.blob.count = count;
+        nfo->info.blob.missingChecksum = missingChecksum;
         rc = report(nfo, ctx);
 
         row += count;
     }
     nfo->info.done.rc = 0;
-    nfo->info.done.mesg = "checksums ok";
+    nfo->info.done.mesg = nMissingChecksum == 0 ? "checksums ok" : "checksums missing";
     nfo->type = ccrpt_Done;
     rc = report(nfo, ctx);
     return rc;

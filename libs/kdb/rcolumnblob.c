@@ -177,7 +177,7 @@ KRColumnBlobIdRange ( const KColumnBlob *bself, int64_t *first, uint32_t *count 
  *  runs checksum validation on unmodified blob
  */
 static
-rc_t KColumnBlobValidateCRC32 ( const KRColumnBlob *self )
+rc_t validateCRC32 ( const KRColumnBlob *self )
 {
     rc_t rc;
     const KRColumn *col = self -> col;
@@ -222,7 +222,7 @@ rc_t KColumnBlobValidateCRC32 ( const KRColumnBlob *self )
 }
 
 static
-rc_t KColumnBlobValidateMD5 ( const KRColumnBlob *self )
+rc_t validateMD5 ( const KRColumnBlob *self )
 {
     rc_t rc;
     const KRColumn *col = self -> col;
@@ -274,15 +274,21 @@ rc_t CC
 KRColumnBlobValidate ( const KColumnBlob *bself )
 {
     CAST();
-    if ( self -> loc . u . blob . size != 0 ) switch ( self -> col -> checksum )
+
+    if ( self -> loc . u . blob . size == 0 )
+        return 0;
+
+    switch ( self -> col -> checksum )
     {
     case kcsCRC32:
-        return KColumnBlobValidateCRC32 ( self );
+        return validateCRC32 ( self );
     case kcsMD5:
-        return KColumnBlobValidateMD5 ( self );
+        return validateMD5 ( self );
+    case kcsNone:
+        return SILENT_RC ( rcDB, rcBlob, rcValidating, rcChecksum, rcNotFound );
+    default:
+        return RC ( rcDB, rcBlob, rcValidating, rcType, rcUnexpected );
     }
-
-    return 0;
 }
 
 /* ValidateBuffer
@@ -293,34 +299,24 @@ KRColumnBlobValidate ( const KColumnBlob *bself )
  *  "cs_data" [ IN ] and "cs_data_size" [ IN ] - returned checksum data from ReadAll
  */
 static
-rc_t KColumnBlobValidateBufferCRC32 ( const void * buffer, size_t size, uint32_t cs )
+rc_t validateBufferCRC32 ( const void * buffer, size_t size, uint32_t cs )
 {
-    uint32_t crc32 = CRC32 ( 0, buffer, size );
-
-    if ( cs != crc32 )
-        return RC ( rcDB, rcBlob, rcValidating, rcBlob, rcCorrupt );
-
-    return 0;
+    uint32_t const crc32 = CRC32 ( 0, buffer, size );
+    
+    return cs == crc32 ? 0 : RC ( rcDB, rcBlob, rcValidating, rcBlob, rcCorrupt );
 }
 
 static
-rc_t KColumnBlobValidateBufferMD5 ( const void * buffer, size_t size, const uint8_t cs [ 16 ] )
+rc_t validateBufferMD5 ( const void * buffer, size_t size, const uint8_t cs [ 16 ] )
 {
-    MD5State md5;
     uint8_t digest [ 16 ];
+    MD5State md5;
 
     MD5StateInit ( & md5 );
-
-    /* calculate checksum */
     MD5StateAppend ( & md5, buffer, size );
-
-    /* finish MD5 digest */
     MD5StateFinish ( & md5, digest );
 
-    if ( memcmp ( cs, digest, sizeof digest ) != 0 )
-        return RC ( rcDB, rcBlob, rcValidating, rcBlob, rcCorrupt );
-
-    return 0;
+    return memcmp ( cs, digest, sizeof digest ) == 0 ? 0 : RC ( rcDB, rcBlob, rcValidating, rcBlob, rcCorrupt );
 }
 
 static
@@ -340,19 +336,21 @@ KRColumnBlobValidateBuffer ( const KColumnBlob * bself,
         return RC ( rcDB, rcBlob, rcValidating, rcData, rcInsufficient );
     if ( bsize > self -> loc . u . blob . size )
         return RC ( rcDB, rcBlob, rcValidating, rcData, rcExcessive );
+    if ( bsize == 0 )
+        return 0;
 
-    if ( bsize != 0 ) switch ( self -> col -> checksum )
+    switch ( self -> col -> checksum )
     {
-    case kcsNone:
-        break;
     case kcsCRC32:
-        return KColumnBlobValidateBufferCRC32 ( buffer -> base, bsize,
+        return validateBufferCRC32 ( buffer -> base, bsize,
             self -> bswap ? bswap_32 ( cs_data -> crc32 ) : cs_data -> crc32 );
     case kcsMD5:
-        return KColumnBlobValidateBufferMD5 ( buffer -> base, bsize, cs_data -> md5_digest );
+        return validateBufferMD5 ( buffer -> base, bsize, cs_data -> md5_digest );
+    case kcsNone:
+        return SILENT_RC ( rcDB, rcBlob, rcValidating, rcChecksum, rcNotFound );
+    default:
+        return RC ( rcDB, rcBlob, rcValidating, rcType, rcUnexpected );
     }
-
-    return 0;
 }
 
 

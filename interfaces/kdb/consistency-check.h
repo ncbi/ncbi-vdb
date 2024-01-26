@@ -89,7 +89,7 @@ struct CCReportInfoBlock
         {
             uint64_t start;
             uint64_t count;
-
+            bool missingChecksum;
         } blob;
 
         struct ccrb_index_s
@@ -99,7 +99,6 @@ struct CCReportInfoBlock
             uint64_t num_keys;
             uint64_t num_rows;
             uint64_t num_holes;
-
         } index;
         
         struct ccrb_visit_s {
