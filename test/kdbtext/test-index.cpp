@@ -40,6 +40,14 @@ using namespace KDBText;
 
 TEST_SUITE(KDBTextIndexTestSuite);
 
+const char * TextIndex =
+R"({"name":"idx",
+    "text":[
+        {"key":"CG", "startId":1, "count":10},
+        {"key":"AT", "startId":11, "count":2}
+    ]
+})";
+
 class KDBTextIndex_Fixture
 {
 public:
@@ -75,11 +83,84 @@ FIXTURE_TEST_CASE(KDBTextIndex_Make_Empty, KDBTextIndex_Fixture)
     //cout << m_error << endl;
 }
 
+FIXTURE_TEST_CASE(KDBTextIndex_Make_NameBad, KDBTextIndex_Fixture)
+{
+    Setup(R"({"name":null})");
+    REQUIRE_RC_FAIL( m_idx -> inflate( m_error, sizeof m_error ) );
+    //cout << m_error << endl;
+}
+
 FIXTURE_TEST_CASE(KDBTextIndex_Make, KDBTextIndex_Fixture)
 {
     Setup(R"({"name":"idx"})");
     REQUIRE_RC( m_idx -> inflate( m_error, sizeof m_error ) );
     REQUIRE_EQ( string("idx"), m_idx->getName() );
+}
+
+FIXTURE_TEST_CASE(KDBTextIndex_Make_DataBad, KDBTextIndex_Fixture)
+{
+    Setup(R"({"name":"n","text":1})");
+    REQUIRE_RC_FAIL( m_idx -> inflate( m_error, sizeof m_error ) );
+    //cout << m_error << endl;
+}
+FIXTURE_TEST_CASE(KDBTextIndex_Make_DataElementNotObject, KDBTextIndex_Fixture)
+{
+    Setup(R"({"name":"n","text":[1]})");
+    REQUIRE_RC_FAIL( m_idx -> inflate( m_error, sizeof m_error ) );
+    //cout << m_error << endl;
+}
+FIXTURE_TEST_CASE(KDBTextIndex_Make_DataElementNoKey, KDBTextIndex_Fixture)
+{
+    Setup(R"({"name":"n","text":[{"startId":1, "count":10}]})");
+    REQUIRE_RC_FAIL( m_idx -> inflate( m_error, sizeof m_error ) );
+    //cout << m_error << endl;
+}
+FIXTURE_TEST_CASE(KDBTextIndex_Make_DataElementKeyBad, KDBTextIndex_Fixture)
+{
+    Setup(R"({"name":"n","text":[{"key":null,"startId":1, "count":10}]})");
+    REQUIRE_RC_FAIL( m_idx -> inflate( m_error, sizeof m_error ) );
+    //cout << m_error << endl;
+}
+FIXTURE_TEST_CASE(KDBTextIndex_Make_DataElementNoStart, KDBTextIndex_Fixture)
+{
+    Setup(R"({"name":"n","text":[{"key":"A","count":10}]})");
+    REQUIRE_RC_FAIL( m_idx -> inflate( m_error, sizeof m_error ) );
+    //cout << m_error << endl;
+}
+FIXTURE_TEST_CASE(KDBTextIndex_Make_DataElementStartBad, KDBTextIndex_Fixture)
+{
+    Setup(R"({"name":"n","text":[{"key":"A","startId":"qq","count":10}]})");
+    REQUIRE_RC_FAIL( m_idx -> inflate( m_error, sizeof m_error ) );
+    //cout << m_error << endl;
+}
+FIXTURE_TEST_CASE(KDBTextIndex_Make_DataElementNoCount, KDBTextIndex_Fixture)
+{
+    Setup(R"({"name":"n","text":[{"key":"A","startId":10}]})");
+    REQUIRE_RC_FAIL( m_idx -> inflate( m_error, sizeof m_error ) );
+    //cout << m_error << endl;
+}
+FIXTURE_TEST_CASE(KDBTextIndex_Make_DataElementCountBad, KDBTextIndex_Fixture)
+{
+    Setup(R"({"name":"n","text":[{"key":"A","startId":10,"count":"qq"}]})");
+    REQUIRE_RC_FAIL( m_idx -> inflate( m_error, sizeof m_error ) );
+    //cout << m_error << endl;
+}
+FIXTURE_TEST_CASE(KDBTextIndex_Make_DataElementKeyDuplicate, KDBTextIndex_Fixture)
+{
+    Setup(R"({"name":"n","text":[{"key":"a","startId":1, "count":10}, {"key":"a","startId":1, "count":10}]})");
+    REQUIRE_RC_FAIL( m_idx -> inflate( m_error, sizeof m_error ) );
+    //cout << m_error << endl;
+}
+
+
+FIXTURE_TEST_CASE(KDBTextIndex_Find, KDBTextIndex_Fixture)
+{
+    Setup(TextIndex);
+    REQUIRE_RC( m_idx -> inflate( m_error, sizeof m_error ) );
+    REQUIRE_EQ( (int64_t)1, m_idx->getData().find("CG")->second.first );
+    REQUIRE_EQ( (uint64_t)10, m_idx->getData().find("CG")->second.second );
+    REQUIRE_EQ( (int64_t)11, m_idx->getData().find("AT")->second.first );
+    REQUIRE_EQ( (uint64_t)2, m_idx->getData().find("AT")->second.second );
 }
 
 // API
@@ -120,6 +201,9 @@ public:
     KJsonValue * m_json = nullptr;
     const KIndex * m_idx = nullptr;
     char m_error[1024] = {0};
+
+    int64_t m_start_id = 0;
+    uint64_t m_id_count = 0;
 };
 
 FIXTURE_TEST_CASE(KIndex_AddRelease, KTextIndex_ApiFixture)
@@ -152,13 +236,13 @@ FIXTURE_TEST_CASE(KIndex_Version, KTextIndex_ApiFixture)
 }
 
 FIXTURE_TEST_CASE(KIndex_Type_Null, KTextIndex_ApiFixture)
-{   // always titText for now
+{
     Setup(R"({"name":"idx"})");
     REQUIRE_RC_FAIL( KIndexType( m_idx, nullptr ) );
 }
 
 FIXTURE_TEST_CASE(KIndex_Type, KTextIndex_ApiFixture)
-{   // always titText for now
+{   // always kitText for now
     Setup(R"({"name":"idx"})");
     KIdxType type = 99;
     REQUIRE_RC( KIndexType( m_idx, & type ) );
@@ -166,15 +250,54 @@ FIXTURE_TEST_CASE(KIndex_Type, KTextIndex_ApiFixture)
 }
 
 FIXTURE_TEST_CASE(KIndex_ConsistencyCheck, KTextIndex_ApiFixture)
-{   // no op
+{   // no op, for now
     Setup(R"({"name":"idx"})");
-    int64_t start_id;
-    uint64_t id_range;
-    uint64_t num_keys;
-    uint64_t num_rows;
-    uint64_t num_holes;
-    REQUIRE_RC( KIndexConsistencyCheck( m_idx, 1, &start_id, &id_range, &num_keys, &num_rows, &num_holes ) );
+    uint64_t num_keys = 0;
+    uint64_t num_rows = 0;
+    uint64_t num_holes = 0;
+    REQUIRE_RC( KIndexConsistencyCheck( m_idx, 1, &m_start_id, &m_id_count, &num_keys, &num_rows, &num_holes ) );
 }
+
+FIXTURE_TEST_CASE(KIndex_FindText_StartNull, KTextIndex_ApiFixture)
+{
+    Setup(TextIndex);
+    REQUIRE_RC_FAIL( KIndexFindText ( m_idx, "CG", nullptr, &m_id_count, nullptr, nullptr ) );
+}
+FIXTURE_TEST_CASE(KIndex_FindText_KeyNull, KTextIndex_ApiFixture)
+{
+    Setup(TextIndex);
+    REQUIRE_RC_FAIL( KIndexFindText ( m_idx, nullptr, &m_start_id, &m_id_count, nullptr, nullptr ) );
+}
+FIXTURE_TEST_CASE(KIndex_FindText_KeyEmpty, KTextIndex_ApiFixture)
+{
+    Setup(TextIndex);
+    REQUIRE_RC_FAIL( KIndexFindText ( m_idx, "", &m_start_id, &m_id_count, nullptr, nullptr ) );
+}
+FIXTURE_TEST_CASE(KIndex_FindText_NotFound, KTextIndex_ApiFixture)
+{
+    Setup(TextIndex);
+    REQUIRE_RC_FAIL( KIndexFindText ( m_idx, "TT", &m_start_id, &m_id_count, nullptr, nullptr ) );
+}
+FIXTURE_TEST_CASE(KIndex_FindText_Found, KTextIndex_ApiFixture)
+{
+    Setup(TextIndex);
+    REQUIRE_RC( KIndexFindText ( m_idx, "AT", &m_start_id, &m_id_count, nullptr, nullptr ) );
+    REQUIRE_EQ( (int64_t)11, m_start_id );
+    REQUIRE_EQ( (uint64_t)2, m_id_count );
+}
+
+int CC Compare ( const void *item, struct PBSTNode const *n, void *data )
+{
+    return 0;
+}
+FIXTURE_TEST_CASE(KIndex_FindText_CustomCompare, KTextIndex_ApiFixture)
+{
+    Setup(TextIndex);
+    REQUIRE_RC( KIndexFindText ( m_idx, "AT", &m_start_id, &m_id_count, Compare, nullptr ) );
+    REQUIRE_EQ( (int64_t)11, m_start_id );
+    REQUIRE_EQ( (uint64_t)2, m_id_count );
+}
+
 
 //////////////////////////////////////////// Main
 extern "C"

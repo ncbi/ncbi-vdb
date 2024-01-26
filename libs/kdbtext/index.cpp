@@ -31,6 +31,7 @@
 #include <klib/printf.h>
 
 using namespace KDBText;
+using namespace std;
 
 static rc_t KTextIndexWhack ( KIndex *self );
 static bool CC KTextIndexLocked ( const KIndex *self );
@@ -39,9 +40,9 @@ static rc_t CC KTextIndexType ( const KIndex *self, KIdxType *type );
 static rc_t CC KTextIndexConsistencyCheck ( const KIndex *self, uint32_t level,
      int64_t *start_id, uint64_t *id_range, uint64_t *num_keys,
      uint64_t *num_rows, uint64_t *num_holes );
-// static rc_t CC KTextIndexFindText ( const KIndex *self, const char *key, int64_t *start_id, uint64_t *id_count,
-//     int ( CC * custom_cmp ) ( const void *item, struct PBSTNode const *n, void *data ),
-//     void *data );
+static rc_t CC KTextIndexFindText ( const KIndex *self, const char *key, int64_t *start_id, uint64_t *id_count,
+    int ( CC * custom_cmp ) ( const void *item, struct PBSTNode const *n, void *data ),
+    void *data );
 // static rc_t CC KTextIndexFindAllText ( const KIndex *self, const char *key,
 //     rc_t ( CC * f ) ( int64_t id, uint64_t id_count, void *data ), void *data );
 // static rc_t CC KTextIndexProjectText ( const KIndex *self,
@@ -64,7 +65,7 @@ static KIndex_vt KTextIndex_vt =
     KTextIndexVersion,
     KTextIndexType,
     KTextIndexConsistencyCheck,
-    // KTextIndexFindText,
+    KTextIndexFindText,
     // KTextIndexFindAllText,
     // KTextIndexProjectText,
     // KTextIndexProjectAllText,
@@ -106,7 +107,7 @@ Index::release( const Index * idx )
 }
 
 rc_t
-Index::inflate( char * error, size_t error_size )
+Index::inflate( char * p_error, size_t p_error_size )
 {
     rc_t rc = 0;
 
@@ -119,25 +120,100 @@ Index::inflate( char * error, size_t error_size )
         {
             m_name = nameStr;
         }
+        else
+        {
+            string_printf ( p_error, p_error_size, nullptr, "Index name is invalid" );
+            return SILENT_RC( rcDB, rcIndex, rcCreating, rcParam, rcInvalid );
+        }
     }
     else
     {
-        string_printf ( error, error_size, nullptr, "Index name is missing" );
+        string_printf ( p_error, p_error_size, nullptr, "Index name is missing" );
         return SILENT_RC( rcDB, rcIndex, rcCreating, rcParam, rcInvalid );
     }
 
-    // const KJsonValue * type = KJsonObjectGetMember ( m_json, "type" );
-    // if ( type != nullptr )
-    // {
-    //     const char * typeStr = nullptr;
-    //     rc = KJsonGetString ( type, & typeStr );
-    //     //TBD
-    // }
-    // else
-    // {
-    //     string_printf ( error, error_size, nullptr, "%s.type is missing", m_name.c_str() );
-    //     return SILENT_RC( rcDB, rcIndex, rcCreating, rcParam, rcInvalid );
-    // }
+    const KJsonValue * text = KJsonObjectGetMember ( m_json, "text" );
+    if ( text != nullptr )
+    {
+        const KJsonArray * textarr = KJsonValueToArray ( text );
+        if ( textarr == nullptr )
+        {
+            string_printf ( p_error, p_error_size, nullptr, "%s.text is not an array", m_name.c_str() );
+            return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
+        }
+
+        uint32_t len = KJsonArrayGetLength ( textarr );
+        for ( uint32_t i = 0; i < len; ++i )
+        {
+            const KJsonValue * v = KJsonArrayGetElement ( textarr, i );
+            assert( v != nullptr );
+            const KJsonObject * obj = KJsonValueToObject ( v );
+            if( obj != nullptr )
+            {
+                // key
+                const KJsonValue * key = KJsonObjectGetMember ( obj, "key" );
+                if ( key == nullptr )
+                {
+                    string_printf ( p_error, p_error_size, nullptr, "%s.data[%i].key is missing", m_name.c_str(), i );
+                    return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
+                }
+
+                const char * keyStr = nullptr;
+                rc = KJsonGetString ( key, & keyStr );
+                if ( rc != 0 )
+                {   // invalid value (NULL?)
+                    string_printf ( p_error, p_error_size, nullptr, "%s.data[%i].key is invalid", m_name.c_str(), i );
+                    return rc;
+                }
+
+                // start
+                const KJsonValue * start = KJsonObjectGetMember ( obj, "startId" );
+                if ( start == nullptr )
+                {
+                    string_printf ( p_error, p_error_size, nullptr, "%s.data[%i].startId is missing", m_name.c_str(), i );
+                    return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
+                }
+
+                int64_t startId;
+                rc = KJsonGetNumber ( start, &startId );
+                if ( rc != 0 )
+                {   // invalid value
+                    string_printf ( p_error, p_error_size, nullptr, "%s.data[%i].startId is invalid", m_name.c_str(), i );
+                    return rc;
+                }
+
+                // count
+                const KJsonValue * count = KJsonObjectGetMember ( obj, "count" );
+                if ( count == nullptr )
+                {
+                    string_printf ( p_error, p_error_size, nullptr, "%s.data[%i].count is missing", m_name.c_str(), i );
+                    return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
+                }
+
+                int64_t countValue;
+                rc = KJsonGetNumber ( count, &countValue );
+                if ( rc != 0 )
+                {   // invalid value
+                    string_printf ( p_error, p_error_size, nullptr, "%s.data[%i].count is invalid", m_name.c_str(), i );
+                    return rc;
+                }
+
+                if ( m_data.find( keyStr ) != m_data . end() )
+                {
+                    string_printf ( p_error, p_error_size, nullptr, "Duplicate key: %s", keyStr );
+                    return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
+                }
+
+                m_data[ keyStr ] = make_pair( startId, (uint32_t)countValue );
+
+            }
+            else
+            {   // not an object
+                string_printf ( p_error, p_error_size, nullptr, "%s.text[%i] is not an object", m_name.c_str(), i );
+                return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
+            }
+        }
+    }
 
     return rc;
 }
@@ -193,5 +269,41 @@ KTextIndexConsistencyCheck ( const KIndex *self, uint32_t level,
      int64_t *start_id, uint64_t *id_range, uint64_t *num_keys,
      uint64_t *num_rows, uint64_t *num_holes )
 {   // no op
+    return 0;
+}
+
+static
+rc_t CC
+KTextIndexFindText ( const KIndex *bself,
+    const char *key,
+    int64_t *start_id,
+    uint64_t *id_count,
+    int ( CC * custom_cmp ) ( const void *item, struct PBSTNode const *n, void *data ),
+    void *data )
+{
+    CAST();
+
+    if ( start_id == NULL )
+    {
+        return SILENT_RC ( rcDB, rcIndex, rcSelecting, rcFunction, rcNull );
+    }
+    if ( key == NULL )
+    {
+        return SILENT_RC ( rcDB, rcIndex, rcSelecting, rcString, rcNull );
+    }
+    if ( key [ 0 ] == 0 )
+    {
+        return SILENT_RC ( rcDB, rcIndex, rcSelecting, rcString, rcEmpty );
+    }
+
+    auto it = self -> getData() . find( key );
+    if ( it == self->getData().end() )
+    {
+        return SILENT_RC ( rcDB, rcIndex, rcSelecting, rcString, rcNotFound );
+    }
+
+    *start_id = it->second.first;
+    *id_count = it->second.second;
+
     return 0;
 }

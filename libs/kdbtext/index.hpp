@@ -32,6 +32,7 @@
 #include <klib/rc.h>
 
 #include <string>
+#include <map>
 
 typedef struct KTextIndex KTextIndex;
 struct KTextIndex
@@ -57,10 +58,16 @@ namespace KDBText
 
         const std::string & getName() const { return m_name; }
 
+        typedef std::map< std::string, std::pair<int64_t,uint64_t> > Data;
+
+        const Data & getData() const { return m_data; }
+
     private:
         const KJsonObject * m_json = nullptr;
         std::string m_name;
 
         const Table * m_parent = nullptr;
+
+        Data m_data;
     };
 }
