@@ -24,6 +24,8 @@
 *
 */
 
+#include <time.h>
+
 /*#ifndef _XOPEN_SOURCE
 #endif*/
 #define _XOPEN_SOURCE /* strptime */

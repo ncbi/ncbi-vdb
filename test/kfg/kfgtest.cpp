@@ -284,7 +284,7 @@ FIXTURE_TEST_CASE(predef_OS, KfgFixture)
     CreateAndLoad(GetName(), "var=$(OS)\n");
     #if BSD
         #define OS "bsd"
-    #if LINUX
+    #elif LINUX
         #define OS "linux"
     #elif SUN
         #define OS "sun"
