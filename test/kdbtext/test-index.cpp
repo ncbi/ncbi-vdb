@@ -48,6 +48,14 @@ R"({"name":"idx",
     ]
 })";
 
+const char * NumIndex =
+R"({"name":"idx",
+    "int":[
+        {"key":1, "startId":1, "count":10},
+        {"key":2, "startId":11, "count":2}
+    ]
+})";
+
 class KDBTextIndex_Fixture
 {
 public:
@@ -96,6 +104,8 @@ FIXTURE_TEST_CASE(KDBTextIndex_Make, KDBTextIndex_Fixture)
     REQUIRE_RC( m_idx -> inflate( m_error, sizeof m_error ) );
     REQUIRE_EQ( string("idx"), m_idx->getName() );
 }
+
+// Text index (string -> { id, count })
 
 FIXTURE_TEST_CASE(KDBTextIndex_Make_DataBad, KDBTextIndex_Fixture)
 {
@@ -152,6 +162,64 @@ FIXTURE_TEST_CASE(KDBTextIndex_Make_DataElementKeyDuplicate, KDBTextIndex_Fixtur
     //cout << m_error << endl;
 }
 
+// Integer index (offset -> { id, count })
+
+FIXTURE_TEST_CASE(KDBTextIndex_Int_Make_DataBad, KDBTextIndex_Fixture)
+{
+    Setup(R"({"name":"n","int":1})");
+    REQUIRE_RC_FAIL( m_idx -> inflate( m_error, sizeof m_error ) );
+    //cout << m_error << endl;
+}
+FIXTURE_TEST_CASE(KDBTextIndex_Int_Make_DataElementNotObject, KDBTextIndex_Fixture)
+{
+    Setup(R"({"name":"n","int":[1]})");
+    REQUIRE_RC_FAIL( m_idx -> inflate( m_error, sizeof m_error ) );
+    //cout << m_error << endl;
+}
+FIXTURE_TEST_CASE(KDBTextIndex_Int_Make_DataElementNoKey, KDBTextIndex_Fixture)
+{
+    Setup(R"({"name":"n","int":[{"startId":1, "count":10}]})");
+    REQUIRE_RC_FAIL( m_idx -> inflate( m_error, sizeof m_error ) );
+    //cout << m_error << endl;
+}
+FIXTURE_TEST_CASE(KDBTextIndex_Int_Make_DataElementKeyBad, KDBTextIndex_Fixture)
+{
+    Setup(R"({"name":"n","int":[{"key":"qq","startId":1, "count":10}]})");
+    REQUIRE_RC_FAIL( m_idx -> inflate( m_error, sizeof m_error ) );
+    //cout << m_error << endl;
+}
+FIXTURE_TEST_CASE(KDBTextIndex_Int_Make_DataElementNoStart, KDBTextIndex_Fixture)
+{
+    Setup(R"({"name":"n","int":[{"key":1,"count":10}]})");
+    REQUIRE_RC_FAIL( m_idx -> inflate( m_error, sizeof m_error ) );
+    //cout << m_error << endl;
+}
+FIXTURE_TEST_CASE(KDBTextIndex_Int_Make_DataElementStartBad, KDBTextIndex_Fixture)
+{
+    Setup(R"({"name":"n","int":[{"key":1,"startId":"qq","count":10}]})");
+    REQUIRE_RC_FAIL( m_idx -> inflate( m_error, sizeof m_error ) );
+    cout << m_error << endl;
+}
+#if 0
+FIXTURE_TEST_CASE(KDBTextIndex_Int_Make_DataElementNoCount, KDBTextIndex_Fixture)
+{
+    Setup(R"({"name":"n","int":[{"key":"A","startId":10}]})");
+    REQUIRE_RC_FAIL( m_idx -> inflate( m_error, sizeof m_error ) );
+    //cout << m_error << endl;
+}
+FIXTURE_TEST_CASE(KDBTextIndex_Int_Make_DataElementCountBad, KDBTextIndex_Fixture)
+{
+    Setup(R"({"name":"n","int":[{"key":"A","startId":10,"count":"qq"}]})");
+    REQUIRE_RC_FAIL( m_idx -> inflate( m_error, sizeof m_error ) );
+    //cout << m_error << endl;
+}
+FIXTURE_TEST_CASE(KDBTextIndex_Int_Make_DataElementKeyDuplicate, KDBTextIndex_Fixture)
+{
+    Setup(R"({"name":"n","int":[{"key":"a","startId":1, "count":10}, {"key":"a","startId":1, "count":10}]})");
+    REQUIRE_RC_FAIL( m_idx -> inflate( m_error, sizeof m_error ) );
+    //cout << m_error << endl;
+}
+#endif
 
 FIXTURE_TEST_CASE(KDBTextIndex_Find, KDBTextIndex_Fixture)
 {
@@ -407,6 +475,68 @@ FIXTURE_TEST_CASE(KIndex_ProjectText_BufferShort, KTextIndex_ApiFixture)
     REQUIRE_RC_FAIL( KIndexProjectText ( m_idx, 7, nullptr, nullptr, key, sizeof key, &actsize ) );
     REQUIRE_EQ( (size_t)2, actsize );
 }
+
+// KTextIndexProjectAllText
+
+FIXTURE_TEST_CASE(KIndex_ProjectAllText_CallbackNull, KTextIndex_ApiFixture)
+{
+    Setup(TextIndex);
+    REQUIRE_RC_FAIL( KIndexProjectAllText ( m_idx, 7, nullptr, nullptr ) );
+}
+
+int64_t pcb_id = 0;
+uint64_t pcb_id_count = 0;
+string pcb_key;
+void * pcb_data = nullptr;
+rc_t pcb_rc = 0;
+rc_t CC ProjectAllTextCallback ( int64_t start_id, uint64_t id_count, const char *key, void *data )
+{
+    pcb_id = start_id;
+    pcb_id_count = id_count;
+    pcb_key = key;
+    pcb_data = data;
+    return pcb_rc;
+}
+FIXTURE_TEST_CASE(KIndex_ProjectAllText_Found, KTextIndex_ApiFixture)
+{
+    Setup(TextIndex);
+    char data;
+    REQUIRE_RC( KIndexProjectAllText ( m_idx, 7, ProjectAllTextCallback, & data ) );
+
+    REQUIRE_EQ( (int64_t)1, pcb_id );
+    REQUIRE_EQ( (uint64_t)10, pcb_id_count );
+    REQUIRE_EQ( string("CG"), pcb_key );
+    REQUIRE_EQ( (void*)&data, pcb_data );
+}
+FIXTURE_TEST_CASE(KIndex_ProjectAllText_CallbackRc, KTextIndex_ApiFixture)
+{
+    Setup(TextIndex);
+    char data;
+    pcb_rc = 1;
+    REQUIRE_RC_FAIL( KIndexProjectAllText ( m_idx, 7, ProjectAllTextCallback, & data ) );
+    pcb_rc = 0;
+}
+FIXTURE_TEST_CASE(KIndex_ProjectAllText_NotFound, KTextIndex_ApiFixture)
+{
+    Setup(TextIndex);
+    char data;
+    REQUIRE_RC_FAIL( KIndexProjectAllText ( m_idx, 77, ProjectAllTextCallback, & data ) );
+}
+
+// KTextIndexFindU64
+
+FIXTURE_TEST_CASE(KIndex_FindU64, KTextIndex_ApiFixture)
+{
+    Setup(NumIndex);
+    uint64_t key;
+    uint64_t key_size;
+    int64_t id;
+    uint64_t id_qty;
+    REQUIRE_RC( KIndexFindU64 ( m_idx, 2, &key, &key_size, &id, &id_qty ) );
+}
+
+// static rc_t CC KTextIndexFindU64( const KIndex* self, uint64_t offset, uint64_t* key, uint64_t* key_size, int64_t* id, uint64_t* id_qty );
+
 
 //////////////////////////////////////////// Main
 extern "C"
