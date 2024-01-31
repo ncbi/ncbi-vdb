@@ -357,12 +357,55 @@ FIXTURE_TEST_CASE(KIndex_ProjectText_KeyNull, KTextIndex_ApiFixture)
 {
     Setup(TextIndex);
 
-    int64_t id;
+    int64_t start_id;
+    uint64_t id_count;
+    size_t actsize;
+    REQUIRE_RC_FAIL( KIndexProjectText ( m_idx, 1, &start_id, &id_count, nullptr, 0, &actsize ) );
+}
+
+FIXTURE_TEST_CASE(KIndex_ProjectText_Found, KTextIndex_ApiFixture)
+{
+    Setup(TextIndex);
+
     int64_t start_id;
     uint64_t id_count;
     char key[1024];
     size_t actsize;
-    REQUIRE_RC_FAIL( KIndexProjectText ( m_idx, id, &start_id, &id_count, nullptr, 0, &actsize ) );
+    REQUIRE_RC( KIndexProjectText ( m_idx, 7, &start_id, &id_count, key, sizeof key, &actsize ) );
+
+    REQUIRE_EQ( (int64_t)1, start_id );
+    REQUIRE_EQ( (uint64_t)10, id_count );
+    REQUIRE_EQ( string("CG"), string(key, actsize) );
+}
+
+FIXTURE_TEST_CASE(KIndex_ProjectText_NotFound, KTextIndex_ApiFixture)
+{
+    Setup(TextIndex);
+
+    int64_t start_id;
+    uint64_t id_count;
+    char key[1024];
+    size_t actsize;
+    REQUIRE_RC_FAIL( KIndexProjectText ( m_idx, 77, &start_id, &id_count, key, sizeof key, &actsize ) );
+}
+
+FIXTURE_TEST_CASE(KIndex_ProjectText_NoOutputs, KTextIndex_ApiFixture)
+{
+    Setup(TextIndex);
+
+    char key[1024];
+    REQUIRE_RC( KIndexProjectText ( m_idx, 7, nullptr, nullptr, key, sizeof key, nullptr ) );
+    REQUIRE_EQ( string("CG"), string(key) );
+}
+
+FIXTURE_TEST_CASE(KIndex_ProjectText_BufferShort, KTextIndex_ApiFixture)
+{
+    Setup(TextIndex);
+
+    char key[1];
+    size_t actsize;
+    REQUIRE_RC_FAIL( KIndexProjectText ( m_idx, 7, nullptr, nullptr, key, sizeof key, &actsize ) );
+    REQUIRE_EQ( (size_t)2, actsize );
 }
 
 //////////////////////////////////////////// Main

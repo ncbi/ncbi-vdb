@@ -29,6 +29,7 @@
 #include <kdb/manager.h>
 
 #include <klib/printf.h>
+#include <klib/text.h>
 
 using namespace KDBText;
 using namespace std;
@@ -344,14 +345,43 @@ KTextIndexFindAllText ( const KIndex * bself, const char *key,
 
 static
 rc_t CC
-KTextIndexProjectText ( const KIndex *self,
+KTextIndexProjectText ( const KIndex * bself,
     int64_t id, int64_t *start_id, uint64_t *id_count,
     char *key, size_t kmax, size_t *actsize )
 {
+    CAST();
+
     if ( key == NULL )
     {
-        return RC ( rcDB, rcIndex, rcProjecting, rcBuffer, rcNull );
+        return SILENT_RC ( rcDB, rcIndex, rcProjecting, rcBuffer, rcNull );
     }
 
-    return 0;
+    // linear search
+    for ( auto i: self->getData() )
+    {
+        if ( id >= i.second.first && id < i.second.first + (int64_t)i.second.second )
+        {
+            if ( start_id != nullptr )
+            {
+                *start_id = i.second.first;
+            }
+            if ( id_count != nullptr )
+            {
+                *id_count = i.second.second;
+            }
+
+            if ( actsize != nullptr )
+            {
+                *actsize = i.first.size();
+            }
+            if ( kmax < i.first.size() )
+            {
+                return SILENT_RC( rcDB, rcIndex, rcProjecting, rcBuffer, rcInsufficient );
+            }
+            string_copy( key, kmax, i.first.c_str(), i.first.size() );
+            return 0;
+        }
+    }
+
+    return SILENT_RC ( rcDB, rcIndex, rcProjecting, rcId, rcNotFound );
 }
