@@ -37,6 +37,7 @@
 #include <vfs/manager.h>
 #include <vfs/manager-priv.h>
 
+#include <klib/log.h>//LOGERR
 #include <klib/text.h>
 #include <klib/rc.h>
 
@@ -497,7 +498,11 @@ static rc_t KDBOpenPathTypeReadInt ( const KDBManager * mgr, const KDirectory * 
             &vpath, dir, path, vpath );
         if ( rc == 0 )
         {
+            LOGERR(klogInt, rc,
+                "vvvvvvvvvVFSManagerOpenDirectoryReadDirectoryRelativeDecrypt");
             rc = VFSManagerOpenDirectoryReadDirectoryRelativeDecrypt ( vmgr, dir, &ldir, vpath );
+            LOGERR(klogInt, rc, 
+                "^^^^^^^^^VFSManagerOpenDirectoryReadDirectoryRelativeDecrypt");
 
             if ( rc == 0 )
             {
