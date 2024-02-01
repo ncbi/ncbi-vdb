@@ -61,6 +61,7 @@ struct KStream
     uint8_t read_enabled;
     uint8_t write_enabled;
     uint8_t align [ 2 ];
+    bool DEBUGGING;
 };
 
 #ifndef KSTREAM_IMPL

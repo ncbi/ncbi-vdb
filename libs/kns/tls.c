@@ -1483,7 +1483,14 @@ LIB_EXPORT rc_t CC KNSManagerMakeTLSStream ( const KNSManager * self,
                 rc = ktls_ssl_setup ( ktls, host );
                 if ( rc == 0 )
                 {
+                    ktls->ciphertext->DEBUGGING = true;
+                    LOGERR(klogInt, 0, "VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV");
+                    LOGERR(klogInt, 0, "ktls_handshake>>>>>>>>>>>>>>>>>>>>>>>");
                     rc = ktls_handshake ( ktls );
+                    LOGERR(klogInt, rc, "<<<<<<<<<<<<<<<<<<<<<<ktls_handshake");
+                    LOGERR(klogInt, 0, "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^");
+                    ktls->ciphertext->DEBUGGING = false;
+
                     if ( rc == 0 )
                     {
                         ktls -> mgr = self;

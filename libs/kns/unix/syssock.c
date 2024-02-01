@@ -767,7 +767,14 @@ rc_t CC KSocketWrite ( KSocket *self,
         return KSocketTimedWrite ( self, buffer, bsize, num_writ, NULL );
 
     TimeoutInit ( & tm, self -> write_timeout );
-    return KSocketTimedWrite ( self, buffer, bsize, num_writ, & tm );
+    if(self->dad.DEBUGGING)
+    PLOGERR(klogInt, (klogInt, 0, "KSocketTimedWrite($(T))>>>>>>>>>>>>>>>>>>>>>"
+        ,"T=%d", self->write_timeout));
+    rc_t rc= KSocketTimedWrite ( self, buffer, bsize, num_writ, & tm );
+    if(self->dad.DEBUGGING)
+    PLOGERR(klogInt, (klogInt, rc, "<<<<<<<<<<<<<<<<<<<<KSocketTimedWrite($(T))"
+        , "T=%d", self->write_timeout));
+    return rc;
 }
 
 static KStream_vt_v1 vtKSocket =
