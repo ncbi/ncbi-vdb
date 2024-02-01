@@ -1398,6 +1398,8 @@ rc_t ktls_handshake ( KTLSStream *self )
         ret = mbedtls_ssl_handshake( &self -> ssl );
         PLOGERR(klogInt, (klogInt, 0,
             "<<<<<<<<<<<<<<<<<<<<<<<<mbedtls_ssl_handshake=$(r)", "r=%d", ret));
+        if(ret== MBEDTLS_ERR_SSL_WANT_WRITE)
+            LOGERR(klogInt, 0, "ret== MBEDTLS_ERR_SSL_WANT_WRITE");
     }
 
     return 0;
