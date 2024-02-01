@@ -26,6 +26,7 @@
 
 #include <kns/extern.h>
 #include <kns/impl.h>
+#include <klib/log.h>//LOGERR
 #include <klib/rc.h>
 #include <kproc/timeout.h>
 
@@ -613,7 +614,11 @@ LIB_EXPORT rc_t CC KStreamWriteAll ( KStream *self,
     {
     case 1:
         count = 0;
+        if (self->DEBUGGING)
+            LOGERR(klogInt, 0, "write>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
         rc = ( * self -> vt -> v1 . write ) ( self, buffer, size, & count );
+        if (self->DEBUGGING)
+            LOGERR(klogInt, rc, ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>write");
         total = count;
 
         if ( rc == 0 && count != 0 && count < size )
@@ -626,7 +631,11 @@ LIB_EXPORT rc_t CC KStreamWriteAll ( KStream *self,
                 for ( b = buffer; total < size; total += count )
                 {
                     count = 0;
+                    if (self->DEBUGGING)
+                        LOGERR(klogInt, 0, "timed_write1>>>>>>>>>>>>>>>>>>>>>");
                     rc = ( * self -> vt -> v1 . timed_write ) ( self, b + total, size - total, & count, & no_block );
+                    if (self->DEBUGGING)
+                        LOGERR(klogInt, rc, ">>>>>>>>>>>>>>>>>>>>timed_write1");
                     if ( rc != 0 )
                         break;
                     if ( count == 0 )
@@ -638,7 +647,11 @@ LIB_EXPORT rc_t CC KStreamWriteAll ( KStream *self,
                 for ( b = buffer; total < size; total += count )
                 {
                     count = 0;
+                    if (self->DEBUGGING)
+                        LOGERR(klogInt, 0, "write2>>>>>>>>>>>>>>>>>>>>>>>>>>>");
                     rc = ( * self -> vt -> v1 . write ) ( self, b + total, size - total, & count );
+                    if (self->DEBUGGING)
+                        LOGERR(klogInt, rc, ">>>>>>>>>>>>>>>>>>>>>>>>>>write2");
                     if ( rc != 0 )
                         break;
                     if ( count == 0 )
