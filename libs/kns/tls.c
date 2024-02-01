@@ -1305,7 +1305,7 @@ rc_t ktls_handshake ( KTLSStream *self )
     LOGERR(klogInt, 0,">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>mbedtls_ssl_handshake");
     ret = mbedtls_ssl_handshake( &self -> ssl );
     PLOGERR(klogInt, (klogInt, 0,
-        "<<<<<<<<<<<<<<<<<<<<<<<<<<<<mbedtls_ssl_handshake=$(r)", "r=%d", ret));
+        "<<<<<<<<<<<<<<<<<<<<<<<<<<<mbedtls_ssl_handshake=$(r)", "r=%d", -ret));
 
     if (!inited) { /* simulate mbedtls handshake timeout */
 #ifdef WINDOWS
@@ -1341,7 +1341,7 @@ rc_t ktls_handshake ( KTLSStream *self )
         --e;
     }
 
-    while ( ret != 0 )
+    for ( int i = 0; ret != 0; )
     {
         if ( ret != MBEDTLS_ERR_SSL_WANT_READ &&
              ret != MBEDTLS_ERR_SSL_WANT_WRITE )
@@ -1394,12 +1394,14 @@ rc_t ktls_handshake ( KTLSStream *self )
             return rc;
         }
         PLOGERR(klogInt, (klogInt, 0,
-            ">>>>>>>>>>>>>>>>>>>>>>>>mbedtls_ssl_handshake=$(r)", "r=%d", ret));
+            ">>>>>>>>>>>>>>>>>>>>>>>mbedtls_ssl_handshake=$(r)", "r=%d", -ret));
         ret = mbedtls_ssl_handshake( &self -> ssl );
         PLOGERR(klogInt, (klogInt, 0,
-            "<<<<<<<<<<<<<<<<<<<<<<<<mbedtls_ssl_handshake=$(r)", "r=%d", ret));
-        if(ret== MBEDTLS_ERR_SSL_WANT_WRITE)
+            "<<<<<<<<<<<<<<<<<<<<<<<mbedtls_ssl_handshake=$(r)", "r=%d", -ret));
+        if (ret == MBEDTLS_ERR_SSL_WANT_WRITE&&i++>99) {
             LOGERR(klogInt, 0, "ret== MBEDTLS_ERR_SSL_WANT_WRITE");
+            return RC(rcKrypto, rcSocket, rcOpening, rcConnection, rcFailed);
+        }
     }
 
     return 0;
