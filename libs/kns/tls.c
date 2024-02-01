@@ -1302,7 +1302,10 @@ rc_t ktls_handshake ( KTLSStream *self )
 
     assert(self && self->mgr);
 
+    LOGERR(klogInt, 0,">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>mbedtls_ssl_handshake");
     ret = mbedtls_ssl_handshake( &self -> ssl );
+    PLOGERR(klogInt, (klogInt, 0,
+        "<<<<<<<<<<<<<<<<<<<<<<<<<<<<mbedtls_ssl_handshake=$(r)", "r=%d", ret));
 
     if (!inited) { /* simulate mbedtls handshake timeout */
 #ifdef WINDOWS
@@ -1390,7 +1393,11 @@ rc_t ktls_handshake ( KTLSStream *self )
 
             return rc;
         }
+        PLOGERR(klogInt, (klogInt, 0,
+            ">>>>>>>>>>>>>>>>>>>>>>>>mbedtls_ssl_handshake=$(r)", "r=%d", ret));
         ret = mbedtls_ssl_handshake( &self -> ssl );
+        PLOGERR(klogInt, (klogInt, 0,
+            "<<<<<<<<<<<<<<<<<<<<<<<<mbedtls_ssl_handshake=$(r)", "r=%d", ret));
     }
 
     return 0;

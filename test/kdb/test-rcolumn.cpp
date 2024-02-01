@@ -256,21 +256,28 @@ FIXTURE_TEST_CASE ( ColumnBlobRead_basic, RColumnBlobFixture )
     REQUIRE_EQ ( (size_t)0, m_remaining );
 }
 #endif
+#include <unistd.h>//sleep
 FIXTURE_TEST_CASE ( ColumnBlobRead_insufficient_buffer, RColumnBlobFixture )
 {
-    OpenBlob();
+    for (int i = 0; i < 9; ++i) {
+        OpenBlob();
 
-    const size_t BlobSize = 1882;
-    const size_t BufSize = 1024;
-    char buffer [ BufSize ];
-    // first read incomplete
-    REQUIRE_RC ( KColumnBlobRead ( m_blob, 0, buffer, BufSize, & m_num_read, & m_remaining ) );
-    REQUIRE_EQ ( BufSize, m_num_read );
-    REQUIRE_EQ ( BlobSize - BufSize, m_remaining );
-    // the rest comes in on the second read
-    REQUIRE_RC ( KColumnBlobRead ( m_blob, BufSize, buffer, BufSize, & m_num_read, & m_remaining ) );
-    REQUIRE_EQ ( BlobSize - BufSize, m_num_read );
-    REQUIRE_EQ ( (size_t)0, m_remaining );
+        const size_t BlobSize = 1882;
+        const size_t BufSize = 1024;
+        char buffer[BufSize];
+        // first read incomplete
+        REQUIRE_RC(KColumnBlobRead(m_blob, 0, buffer, BufSize, &m_num_read, &m_remaining));
+        REQUIRE_EQ(BufSize, m_num_read);
+        REQUIRE_EQ(BlobSize - BufSize, m_remaining);
+        // the rest comes in on the second read
+        REQUIRE_RC(KColumnBlobRead(m_blob, BufSize, buffer, BufSize, &m_num_read, &m_remaining));
+        REQUIRE_EQ(BlobSize - BufSize, m_num_read);
+        REQUIRE_EQ((size_t)0, m_remaining);
+        KColumnBlobRelease(m_blob);
+        m_blob = NULL;
+        std::cerr << "\n\n" << i << "\n\n";
+        sleep(1);
+    }
 }
 
 //////////////////////////////////////////// Main
