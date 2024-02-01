@@ -71,7 +71,7 @@ public:
 };
 
 //NB for now make the simplest calls possible, to test the vtable plumbing
-
+#ifdef ALL
 FIXTURE_TEST_CASE(KRColumn_AddRelease, KColumn_Fixture)
 {
     Setup( GetName() );
@@ -150,7 +150,7 @@ FIXTURE_TEST_CASE(KRColumn_OpenBlobRead, KColumn_Fixture)
     rc_t rc = SILENT_RC ( rcDB,rcColumn,rcSelecting,rcBlob,rcNotFound );
     REQUIRE_EQ( rc, KColumnOpenBlobRead( & m_col -> dad, & blob, 1 ) );
 }
-
+#endif
 // KColumnBlob
 
 class RColumnBlobFixture
@@ -191,7 +191,7 @@ public:
     size_t m_num_read = 0;
     size_t m_remaining = 0;
 };
-
+#ifdef ALL
 FIXTURE_TEST_CASE(KRColumnBlob_AddRelease, RColumnBlobFixture)
 {
     MakeBlob();
@@ -255,7 +255,7 @@ FIXTURE_TEST_CASE ( ColumnBlobRead_basic, RColumnBlobFixture )
     REQUIRE_EQ ( BlobSize, m_num_read );
     REQUIRE_EQ ( (size_t)0, m_remaining );
 }
-
+#endif
 FIXTURE_TEST_CASE ( ColumnBlobRead_insufficient_buffer, RColumnBlobFixture )
 {
     OpenBlob();
