@@ -1397,7 +1397,8 @@ rc_t ktls_handshake ( KTLSStream *self )
             ">>>>>>>>>>>>>>>>>>>>>>>mbedtls_ssl_handshake=$(r)", "r=%d", -ret));
         ret = mbedtls_ssl_handshake( &self -> ssl );
         PLOGERR(klogInt, (klogInt, 0,
-            "<<<<<<<<<<<<<<<<<<<<<<<mbedtls_ssl_handshake=$(r)", "r=%d", -ret));
+            "<<<<<<<<<<<<<<<<<<<<<<<mbedtls_ssl_handshake=$(r):$(I)",
+            "r=%d,I=%d", -ret,i));
         if (ret == MBEDTLS_ERR_SSL_WANT_WRITE&&i++>99) {
             LOGERR(klogInt, 0, "ret== MBEDTLS_ERR_SSL_WANT_WRITE");
             return RC(rcKrypto, rcSocket, rcOpening, rcConnection, rcFailed);
