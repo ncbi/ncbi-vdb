@@ -34,44 +34,26 @@
 using namespace KDBText;
 
 static rc_t KTextMetadataWhack ( KMetadata *self );
-// static bool CC KTextMetadataLocked ( const KMetadata *self );
-// static bool CC KTextMetadataVExists ( const KMetadata *self, uint32_t type, const char *name, va_list args );
-// static bool CC KTextMetadataIsAlias ( const KMetadata *self, uint32_t type, char *resolved, size_t rsize, const char *name );
-// static rc_t CC KTextMetadataVWritable ( const KMetadata *self, uint32_t type, const char *name, va_list args );
-// static rc_t CC KTextMetadataOpenManagerRead ( const KMetadata *self, const KDBManager **mgr );
-// static rc_t CC KTextMetadataOpenParentRead ( const KMetadata *self, const KDatabase **db );
-// static bool CC KTextMetadataHasRemoteData ( const KMetadata *self );
-// static rc_t CC KTextMetadataOpenDirectoryRead ( const KMetadata *self, const KDirectory **dir );
-// static rc_t CC KTextMetadataVOpenColumnRead ( const KMetadata *self, const KColumn **colp, const char *name, va_list args );
-// static rc_t CC KTextMetadataOpenMetadataRead ( const KMetadata *self, const KMetadata **metap );
-// static rc_t CC KTextMetadataVOpenMetadataRead ( const KMetadata *self, const KMetadata **idxp, const char *name, va_list args );
-// static rc_t CC KTextMetadataGetPath ( const KMetadata *self, const char **path );
-// static rc_t CC KTextMetadataGetName (KMetadata const *self, char const **rslt);
-// static rc_t CC KTextMetadataListCol ( const KMetadata *self, KNamelist **names );
-// static rc_t CC KTextMetadataListIdx ( const KMetadata *self, KNamelist **names );
-// static rc_t CC KTextMetadataMetaCompare( const KMetadata *self, const KMetadata *other, const char * path, bool * equal );
+static rc_t CC KTextMetadataVersion ( const KMetadata *self, uint32_t *version );
+// static rc_t CC KTextMetadataByteOrder ( const KMetadata *self, bool *reversed );
+// static rc_t CC KTextMetadataRevision ( const KMetadata *self, uint32_t *revision );
+// static rc_t CC KTextMetadataMaxRevision ( const KMetadata *self, uint32_t *revision );
+// static rc_t CC KTextMetadataOpenRevision ( const KMetadata *self, const KMetadata **metap, uint32_t revision );
+// static rc_t CC KTextMetadataGetSequence ( const KMetadata *self, const char *seq, int64_t *val );
+// static rc_t CC KTextMetadataVOpenNodeRead ( const KMetadata *self, const KMDataNode **node, const char *path, va_list args );
 
 static KMetadata_vt KTextMetadata_vt =
 {
     KTextMetadataWhack,
     KMetadataBaseAddRef,
     KMetadataBaseRelease,
-    // KTextMetadataLocked,
-    // KTextMetadataVExists,
-    // KTextMetadataIsAlias,
-    // KTextMetadataVWritable,
-    // KTextMetadataOpenManagerRead,
-    // KTextMetadataOpenParentRead,
-    // KTextMetadataHasRemoteData,
-    // KTextMetadataOpenDirectoryRead,
-    // KTextMetadataVOpenColumnRead,
-    // KTextMetadataOpenMetadataRead,
-    // KTextMetadataVOpenMetadataRead,
-    // KTextMetadataGetPath,
-    // KTextMetadataGetName,
-    // KTextMetadataListCol,
-    // KTextMetadataListIdx,
-    // KTextMetadataMetaCompare
+    KTextMetadataVersion,
+    // KTextMetadataByteOrder,
+    // KTextMetadataRevision,
+    // KTextMetadataMaxRevision,
+    // KTextMetadataOpenRevision,
+    // KTextMetadataGetSequence,
+    // KTextMetadataVOpenNodeRead
 };
 
 #define CAST() assert( bself->vt == &KTextMetadata_vt ); Metadata * self = (Metadata *)bself
@@ -149,5 +131,18 @@ KTextMetadataWhack ( KMetadata *bself )
     CAST();
 
     delete reinterpret_cast<Metadata*>( self );
+    return 0;
+}
+
+static
+rc_t CC
+KTextMetadataVersion ( const KMetadata *self, uint32_t *version )
+{
+    if ( version == nullptr )
+    {
+        return RC ( rcDB, rcMetadata, rcAccessing, rcParam, rcNull );
+    }
+
+    *version = 0;
     return 0;
 }

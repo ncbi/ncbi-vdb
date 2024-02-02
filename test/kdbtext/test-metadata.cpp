@@ -32,6 +32,8 @@
 
 #include "../../libs/kdbtext/metadata.hpp"
 
+#include <kdb/meta.h>
+
 #include <klib/rc.h>
 #include <klib/json.h>
 
@@ -83,6 +85,69 @@ FIXTURE_TEST_CASE(KDBTextMetadata_Make, KDBTextMetadata_Fixture)
 }
 
 //TODO: the rest
+
+// API
+
+class KTextMetadata_ApiFixture
+{
+public:
+    KTextMetadata_ApiFixture()
+    {
+    }
+    ~KTextMetadata_ApiFixture()
+    {
+        KMetadataRelease( m_md );
+        KJsonValueWhack( m_json );
+    }
+    void Setup( const char * input )
+    {
+        try
+        {
+            THROW_ON_RC( KJsonValueMake ( & m_json, input, m_error, sizeof m_error ) );
+            THROW_ON_FALSE( jsObject == KJsonGetValueType ( m_json ) );
+
+            const KJsonObject * json = KJsonValueToObject ( m_json );
+            THROW_ON_FALSE( json != nullptr );
+
+            Metadata * md = new Metadata( json );
+            THROW_ON_RC( md -> inflate( m_error, sizeof m_error ) );
+            m_md = (const KMetadata*)md;
+        }
+        catch(const std::exception& e)
+        {
+            std::cerr << e.what() << " with '" << m_error << "'" << endl;
+            throw;
+        }
+
+    }
+
+    KJsonValue * m_json = nullptr;
+    const KMetadata * m_md = nullptr;
+    char m_error[1024] = {0};
+};
+
+FIXTURE_TEST_CASE(KMetadata_AddRelease, KTextMetadata_ApiFixture)
+{
+    Setup(R"({"name":"md"})");
+
+    REQUIRE_RC( KMetadataAddRef( m_md ) );
+    REQUIRE_RC( KMetadataRelease( m_md ) );
+    // use valgrind to find any leaks
+}
+
+FIXTURE_TEST_CASE(KMetadata_Version_Null, KTextMetadata_ApiFixture)
+{
+    Setup(R"({"name":"md"})");
+    REQUIRE_RC_FAIL( KMetadataVersion( m_md, nullptr ) );
+}
+
+FIXTURE_TEST_CASE(KMetadata_Version, KTextMetadata_ApiFixture)
+{
+    Setup(R"({"name":"md"})");
+    uint32_t version = 99;
+    REQUIRE_RC( KMetadataVersion( m_md, &version ) );
+    REQUIRE_EQ( (uint32_t)0, version );
+}
 
 //////////////////////////////////////////// Main
 extern "C"
