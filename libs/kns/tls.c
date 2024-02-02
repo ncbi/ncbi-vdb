@@ -20,7 +20,7 @@
 *
 *  Please cite the author in any work or product based on this material.
 *
-* ===========================================================================
+* =============================================================================$
 *
 */
 
@@ -1338,7 +1338,7 @@ rc_t ktls_handshake ( KTLSStream *self )
         --e;
     }
 
-    while ( ret != 0 )
+    for ( int i = 0; ret != 0; )
     {
         if ( ret != MBEDTLS_ERR_SSL_WANT_READ &&
              ret != MBEDTLS_ERR_SSL_WANT_WRITE )
@@ -1391,6 +1391,11 @@ rc_t ktls_handshake ( KTLSStream *self )
             return rc;
         }
         ret = mbedtls_ssl_handshake( &self -> ssl );
+        if (ret == MBEDTLS_ERR_SSL_WANT_WRITE && i++ > 99) {
+            // possible infinite loop on Mac and Bsd
+            //LOGERR(klogInt, 0, "ret== MBEDTLS_ERR_SSL_WANT_WRITE");
+            return RC(rcKrypto, rcSocket, rcOpening, rcConnection, rcFailed);
+        }
     }
 
     return 0;
