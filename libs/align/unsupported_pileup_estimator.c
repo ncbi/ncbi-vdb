@@ -45,7 +45,7 @@ typedef struct PileupEstimator
     const VCursor * align_cursor;
 
 	uint32_t * coverage;
-	size_t coverage_len;
+	int64_t coverage_len;
 	
     Vector reftable;
     
@@ -297,7 +297,7 @@ static rc_t ScanRefTable( PileupEstimator *self )
     uint64_t row_idx, count;
     RefEntry * ref_entry = NULL;
     String rname;
-    uint32_t * ptr;
+    uint32_t * ptr = NULL;
     uint32_t elem_bits, boff, row_len;
     
     rc_t rc = VCursorIdRange( self->ref_cursor, self->ref_cursor_idx_SEQ_ID, &row, &count );
@@ -387,9 +387,9 @@ static rc_t FindRefEntry( PileupEstimator *self, RefEntry ** entry, const String
 
 static rc_t PerformEstimation( PileupEstimator *self,
                                RefEntry * entry,
-                               uint64_t slice_start,
-                               uint32_t slice_len,
-                               uint64_t slice_end,
+                               int64_t slice_start,
+                               int32_t slice_len,
+                               int64_t slice_end,
                                uint64_t * result )
 {
     rc_t rc = 0;
@@ -416,17 +416,18 @@ static rc_t PerformEstimation( PileupEstimator *self,
     {
 		uint64_t cutoff_sum = 0;
         int64_t ref_row_id = entry->start_row_id;
-        uint32_t ref_row_count, prim_id_count, prim_id_idx, ref_pos_count, ref_len_count, read_filter_len, elem_bits, boff;
+        int64_t ref_row_count;
+        uint32_t prim_id_count, prim_id_idx, ref_pos_count, ref_len_count, read_filter_len, elem_bits, boff;
         int64_t * prim_ids;
-        uint32_t * ref_pos_ptr;
-        uint32_t * ref_len_ptr;
-        uint8_t * read_filter_ptr;
+        int32_t * ref_pos_ptr = NULL;
+        int32_t * ref_len_ptr = NULL;
+        uint8_t * read_filter_ptr = NULL;
         bool done = false;
 		bool filtered_out;
         
         /* adjust start_ref_row and ref_row_count to the given slice... */
         {
-            int64_t start_offset = slice_start / self->max_seq_len;
+            int64_t start_offset = (int64_t) (slice_start / self->max_seq_len);
             int64_t end_offset = slice_end / self->max_seq_len;
             if ( start_offset > 0 ) start_offset--;
             ref_row_id += start_offset;
@@ -484,8 +485,8 @@ static rc_t PerformEstimation( PileupEstimator *self,
                 /* enter the coverage */
                 if ( rc == 0 && !filtered_out )
                 {
-                    uint32_t ref_pos = ref_pos_ptr[ 0 ];
-                    uint32_t ref_len = ref_len_ptr[ 0 ];
+                    int32_t ref_pos = ref_pos_ptr[ 0 ];
+                    int32_t ref_len = ref_len_ptr[ 0 ];
                     if ( ( ( ref_pos + ref_len - 1 ) >= slice_start ) && ( ref_pos <= slice_end ) )
                     {
                         int32_t rel_start = ( ref_pos - ( uint32_t )slice_start );
@@ -506,7 +507,7 @@ static rc_t PerformEstimation( PileupEstimator *self,
         /* sum up the bases in the slice */
         if ( rc == 0 && !done )
         {
-            uint32_t idx;
+            int32_t idx;
             uint64_t sum = 0;
             for ( idx = 0; idx < slice_len; ++idx ) sum += self->coverage[ idx ];
             *result = sum;
@@ -544,7 +545,12 @@ LIB_EXPORT rc_t CC RunPileupEstimator( struct PileupEstimator *self,
                 if ( slice_start >= ref_entry->reflen || slice_end >= ref_entry->reflen )
                     rc = RC( rcAlign, rcQuery, rcAccessing, rcItem, rcInvalid );
                 else
+                {
+                    assert ( (int64_t)slice_start > 0 );
+                    assert ( (int64_t)slice_len > 0 );
+                    assert ( (int64_t)slice_end > 0 );
                     rc = PerformEstimation( self, ref_entry, slice_start, slice_len, slice_end, result );
+                }
             }
         }
     }
@@ -554,19 +560,19 @@ LIB_EXPORT rc_t CC RunPileupEstimator( struct PileupEstimator *self,
 
 static rc_t PerformCoverage( PileupEstimator *self,
                              RefEntry * entry,
-                             uint64_t slice_start,
-                             uint32_t slice_len,
-                             uint64_t slice_end,
+                             int64_t slice_start,
+                             int32_t slice_len,
+                             int64_t slice_end,
                              uint32_t * coverage )
 {
     rc_t rc = 0;
 
-    int64_t ref_row_id = entry->start_row_id;
-    uint32_t ref_row_count, prim_id_count, prim_id_idx, ref_pos_count, ref_len_count, read_filter_len, elem_bits, boff;
-    int64_t * prim_ids;
-    uint32_t * ref_pos_ptr;
-    uint32_t * ref_len_ptr;
-    uint8_t * read_filter_ptr;
+    int64_t ref_row_id = entry->start_row_id, ref_row_count;
+    uint32_t prim_id_count, prim_id_idx, ref_pos_count, ref_len_count, read_filter_len, elem_bits, boff;
+    int64_t * prim_ids = NULL;
+    int32_t * ref_pos_ptr = NULL;
+    int32_t * ref_len_ptr = NULL;
+    uint8_t * read_filter_ptr = NULL;
     bool filtered_out;
     
     /* adjust start_ref_row and ref_row_count to the given slice... */
@@ -618,8 +624,8 @@ static rc_t PerformCoverage( PileupEstimator *self,
             /* enter the coverage */
             if ( rc == 0 && !filtered_out )
             {
-                uint64_t ref_pos = ref_pos_ptr[ 0 ];
-                uint64_t ref_len = ref_len_ptr[ 0 ];
+                int64_t ref_pos = ref_pos_ptr[ 0 ];
+                int64_t ref_len = ref_len_ptr[ 0 ];
                 if ( ( ( ref_pos + ref_len - 1 ) >= slice_start ) && ( ref_pos <= slice_end ) )
                 {
                     int64_t j;

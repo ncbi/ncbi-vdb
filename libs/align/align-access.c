@@ -306,8 +306,8 @@ struct AlignAccessAlignmentEnumerator {
     const AlignAccessDB *parent;
     const BAMAlignment *innerSelf;
     BAMFileSlice *slice;
-    uint64_t endpos;
-    uint64_t startpos;
+    int64_t endpos;
+    int64_t startpos;
     atomic32_t refcount;
     int atend;
     int refSeqID;
@@ -350,7 +350,7 @@ rc_t CC AlignAccessDBWindowedAlignments(const AlignAccessDB *self,
 {
     AlignAccessAlignmentEnumerator *lhs;
     unsigned i, n;
-    const BAMRefSeq *rs;
+    const BAMRefSeq *rs = NULL;
     uint64_t endpos = pos + wsize;
     rc_t rc;
     BAMFileSlice *slice;
@@ -633,8 +633,8 @@ LIB_EXPORT rc_t CC AlignAccessAlignmentEnumeratorGetCIGAR(
     const AlignAccessAlignmentEnumerator *self,
     uint64_t *start_pos, char *cigar_buffer, size_t buffer_size, size_t *cigar_size
 ) {
-    int i;
-    unsigned n;
+    uint32_t i;
+    uint32_t n;
     rc_t rc;
     uint32_t sp = 0;
     char *cigbuf = cigar_buffer;
@@ -672,7 +672,11 @@ LIB_EXPORT rc_t CC AlignAccessAlignmentEnumeratorGetCIGAR(
         if (i == n - 1 && (op == ct_SoftClip || op == ct_HardClip))
             continue;
         
+#ifdef WINDOWS
+        cig1len = sprintf_s(cig1, sizeof(cig1), "%c%u", op, len);
+#else
         cig1len = sprintf(cig1, "%c%u", op, len);
+#endif
         if (cigbuf + cig1len < endp) {
             if (cigar_buffer != NULL) {
                 memmove(cigbuf, cig1, cig1len);

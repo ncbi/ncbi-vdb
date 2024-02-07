@@ -46,6 +46,8 @@
 #include <ctype.h>
 #include <assert.h>
 
+#include "../klib/int_checks-priv.h"
+
 static const TableReaderColumn TableReaderWGS_cols[] =
 {
     /* order important, see code below! */
@@ -60,11 +62,10 @@ struct TableReaderWGS {
     TableReaderColumn const *read;
 };
 
-rc_t TableReaderWGS_MakeTable(TableReaderWGS const **const pself,
-                              VDBManager const *vmgr,
-                              VTable const *const table,
-                              uint32_t const options,
-                              size_t const cache)
+rc_t TableReaderWGS_MakeTable(const TableReaderWGS ** pself,
+                              const struct VDBManager* vmgr,
+                              const struct VTable* table,
+                              uint32_t options, size_t cache)
 {
     assert(pself != NULL);
     assert(table != NULL);
@@ -152,7 +153,8 @@ rc_t TableReaderWGS_Read(TableReaderWGS const *const self, int64_t const row,
         if (rc == 0) {
             INSDC_coord_len const max = self->read->len;
 
-            if (offset >= max)
+            assert ( FITS_INTO_INT32 ( max ) );
+            if (offset >= (int32_t)max)
                 return 0;
             {
                 uint8_t const *const src = self->read->base.u8 + offset;

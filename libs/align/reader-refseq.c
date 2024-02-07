@@ -46,6 +46,8 @@
 #include <ctype.h>
 #include <assert.h>
 
+#include "../klib/int_checks-priv.h"
+
 static const TableReaderColumn TableReaderRefSeq_cols[] =
 {
     /* order important, see code below! */
@@ -93,7 +95,8 @@ LIB_EXPORT rc_t CC TableReaderRefSeq_MakeTable(const TableReaderRefSeq** cself, 
         if( (rc = TableReader_Make(&tmp, table, static_cols, 0)) == 0 ) {
             if( (rc = TableReader_ReadRow(tmp, 1)) == 0 ) {
                 self->max_seq_len = static_cols[0].base.u32[0];
-                self->total_seq_len = static_cols[2].base.u64[0];
+                assert ( FITS_INTO_INT32 ( static_cols[2].base.u64[0] ) );
+                self->total_seq_len = (uint32_t) static_cols[2].base.u64[0];
                 if( self->total_seq_len != static_cols[2].base.u64[0] ) {
                     rc = RC(rcAlign, rcType, rcConstructing, rcData, rcOutofrange);
                 }
@@ -173,8 +176,10 @@ LIB_EXPORT rc_t CC TableReaderRefSeq_SeqId(const TableReaderRefSeq* cself, const
     if( cself == NULL || id == NULL || id_sz == NULL ) {
         rc = RC(rcAlign, rcType, rcReading, rcParam, rcNull);
     } else {
+        size_t t = string_size(cself->seq_id);
+        assert ( FITS_INTO_INT32 ( t ) );
         *id = cself->seq_id;
-        *id_sz = string_size(cself->seq_id);
+        *id_sz = (uint32_t) t;
     }
     ALIGN_DBGERR(rc);
     return rc;

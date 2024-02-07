@@ -51,7 +51,7 @@
 
 typedef struct pos_offset
 {
-    uint32_t pos;
+    int32_t pos;
     int32_t offset;
 } pos_offset;
 
@@ -63,8 +63,8 @@ struct AlignmentIterator
     /* data to walk */
     bool * has_mismatch;    /* copy of HAS_MISMATCH */
     INSDC_4na_bin * read;   /* copy of READ */
-    uint32_t read_len;      /* length of READ */
-    uint32_t ref_len;       /* length of projection on reference */
+    int32_t read_len;       /* length of READ */
+    int32_t ref_len;        /* length of projection on reference */
 
     INSDC_coord_zero ref_window_start;  /* where the requested window on the reference starts */
     INSDC_coord_len  ref_window_len;    /* how long the requested window on the reference is */
@@ -75,7 +75,7 @@ struct AlignmentIterator
 
     int32_t abs_ref_start;  /* absolute reference-related start-position   */
     int32_t rel_ref_pos;    /* relative reference-related position ( relative to start of sequence )  */
-    uint32_t seq_pos;       /* position on the sequence, as the reference sees it */
+    int32_t seq_pos;        /* position on the sequence, as the reference sees it */
     uint32_t skip;          /* how many bases to skip if we are in DELETE */
     uint32_t flags;         /* flags it, when we are in INSERT/DELETE */
     uint32_t inserts;       /* how many inserts */
@@ -135,12 +135,12 @@ LIB_EXPORT rc_t CC AlignIteratorRecordPopulate ( void *obj,
 {
     /* read the data required to build a Alignment-Iterator,
        then create the Alignment-Iterator into the already allocated memory */
-    const void * base;
-    const void * base_has_ref_offset;
-    const void * base_ref_offset;
+    const void * base = NULL;
+    const void * base_has_ref_offset = NULL;
+    const void * base_ref_offset = NULL;
 
     INSDC_coord_len data_len;
-    uint32_t ref_offset_len;
+    uint32_t ref_offset_len = 0;
     rc_t rc;
 
     AlignmentIterator *iter = ( AlignmentIterator * ) obj;
@@ -222,7 +222,7 @@ LIB_EXPORT rc_t CC AlignIteratorRecordPopulate ( void *obj,
 
 LIB_EXPORT rc_t CC AlignIteratorRecordSize ( struct VCursor const *curs, int64_t row_id, size_t *size, void *data )
 {
-    uint32_t ref_offset_len, read_len;
+    uint32_t ref_offset_len = 0, read_len = 0;
 
     rc_t rc = get_idx_and_read( curs, COL_REF_OFFSET, row_id, NULL, &ref_offset_len );
     if ( rc == 0 )
@@ -391,7 +391,7 @@ LIB_EXPORT rc_t CC AlignmentIteratorNext ( AlignmentIterator *self )
 LIB_EXPORT int32_t CC AlignmentIteratorState ( const AlignmentIterator *self,
                                                INSDC_coord_zero *seq_pos )
 {
-    uint32_t res = align_iter_invalid;
+    int32_t res = align_iter_invalid;
     if ( self != NULL )
     {
         INSDC_coord_zero pos = self->seq_pos;
@@ -474,7 +474,7 @@ static rc_t compute_posofs(  AlignmentIterator * self,
     if ( ref_offset_len > 0 )
     {
         int32_t shift = 0;
-        uint32_t seq_position;
+        int32_t seq_position;
         uint32_t src = 0;
         uint32_t dst = 0;
 

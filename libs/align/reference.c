@@ -54,6 +54,8 @@
 #include <ctype.h>
 #include <assert.h>
 
+#include "../klib/int_checks-priv.h"
+
 /* This is a temporary define, used to test code to deal with
    circular references and new means of tracking window end */
 
@@ -205,7 +207,9 @@ static rc_t ReferenceList_handle_filter( const KIndex* iname, const char * filt_
             if( rc == 0 && bin_size > 0 )
             {
                 /** change start to the beginning of the bin **/
-                *bin_num = ( *start - tbl_start ) / bin_size;
+                int64_t t = ( *start - tbl_start ) / bin_size;
+                assert ( FITS_INTO_INT ( t ) );
+                *bin_num = (int) t;
             }
         }
         else
