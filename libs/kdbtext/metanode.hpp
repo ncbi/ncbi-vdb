@@ -26,40 +26,49 @@
 
 #pragma once
 
-#include "../libs/kdb/meta-base.h"
+#include "../libs/kdb/metanode-base.h"
 
 #include <klib/json.h>
 #include <klib/rc.h>
 
 #include <string>
+#include <map>
+#include <vector>
 
-typedef struct KTextMetadata KTextMetadata;
-struct KTextMetadata
+typedef struct KTextMetanode KTextMetanode;
+struct KTextMetanode
 {
-    KMetadata dad;
+    KMDataNode dad;
 };
 
 namespace KDBText
 {
-    class Metadata : public KTextMetadata
+    class Metanode : public KTextMetanode
     {
     public:
-        static void addRef( const Metadata* );
-        static void release( const Metadata *);
+        static void addRef( const Metanode* );
+        static void release( const Metanode *);
 
     public:
-        Metadata( const KJsonObject * p_json );
-        ~Metadata();
+        Metanode( const KJsonObject * p_json );
+        ~Metanode();
 
         rc_t inflate( char * error, size_t error_size );
 
         const std::string & getName() const { return m_name; }
+        const std::string & getValue() const { return m_value; }
 
-        uint32_t getRevision() const { return m_revision; }
+        typedef std::map<std::string, std::string> Attributes;
+        const Attributes& getAttributes() const { return m_attrs; }
+
+        typedef std::vector<Metanode> Children;
+        const Children& getChildren() const { return m_children; }
 
     private:
         const KJsonObject * m_json = nullptr;
         std::string m_name;
-        uint32_t m_revision = 0;
+        std::string m_value;
+        Attributes m_attrs;
+        Children m_children;
     };
 }

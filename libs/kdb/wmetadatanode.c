@@ -193,7 +193,6 @@ static rc_t KWMAttrNodeMakeCopy(KWMAttrNode **node, KWMAttrNode const *source)
  */
 
 static rc_t CC KWMDataNodeWhack ( KMDataNode *cself );
-static rc_t CC KWMDataNodeRelease ( const KMDataNode *cself );
 static rc_t CC KWMDataNodeByteOrder ( const KMDataNode *self, bool *reversed );
 static rc_t CC KWMDataNodeRead ( const KMDataNode *self, size_t offset, void *buffer, size_t bsize, size_t *num_read, size_t *remaining );
 static rc_t CC KWMDataNodeVOpenNodeRead ( const KMDataNode *self, const KMDataNode **node, const char *path, va_list args );
@@ -207,7 +206,7 @@ static KMDataNode_vt KWMDataNode_vt =
 {
     KWMDataNodeWhack,
     KMDataNodeBaseAddRef,
-    KWMDataNodeRelease,
+    KMDataNodeBaseRelease,
     KWMDataNodeByteOrder,
     KWMDataNodeRead,
     KWMDataNodeVOpenNodeRead,
@@ -276,28 +275,6 @@ KWMDataNodeWhack ( KMDataNode *bself )
     BSTreeWhack ( & self -> child, DataNodeWhack, NULL );
     free ( self -> value );
     return KMDataNodeBaseWhack ( bself );
-}
-
-static
-rc_t CC
-KWMDataNodeRelease ( const KMDataNode *bself )
-{
-    CAST();
-
-    if ( self != NULL )
-    {
-        switch ( KRefcountDrop ( & self -> dad . refcount, "KMDataNode" ) )
-        {
-        case krefOkay:
-            break;
-        case krefWhack:
-            KMDataNodeWhack( & self -> dad );
-            break;
-        case krefLimit:
-            return RC ( rcDB, rcMetadata, rcReleasing, rcRange, rcExcessive );
-        }
-    }
-    return 0;
 }
 
 /* Inflate

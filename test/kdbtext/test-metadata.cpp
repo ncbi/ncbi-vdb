@@ -84,6 +84,19 @@ FIXTURE_TEST_CASE(KDBTextMetadata_Make, KDBTextMetadata_Fixture)
     REQUIRE_EQ( string("md"), m_meta->getName() );
 }
 
+FIXTURE_TEST_CASE(KDBTextMetadata_RevisionBad, KDBTextMetadata_Fixture)
+{
+    Setup(R"({"name":"md","revision":"blah"})");
+    REQUIRE_RC_FAIL( m_meta -> inflate( m_error, sizeof m_error ) );
+    cout << m_error << endl;
+}
+FIXTURE_TEST_CASE(KDBTextMetadata_RevisionNegative, KDBTextMetadata_Fixture)
+{
+    Setup(R"({"name":"md","revision":-1})");
+    REQUIRE_RC_FAIL( m_meta -> inflate( m_error, sizeof m_error ) );
+    cout << m_error << endl;
+}
+
 //TODO: the rest
 
 // API
@@ -140,7 +153,6 @@ FIXTURE_TEST_CASE(KMetadata_Version_Null, KTextMetadata_ApiFixture)
     Setup(R"({"name":"md"})");
     REQUIRE_RC_FAIL( KMetadataVersion( m_md, nullptr ) );
 }
-
 FIXTURE_TEST_CASE(KMetadata_Version, KTextMetadata_ApiFixture)
 {
     Setup(R"({"name":"md"})");
@@ -148,6 +160,74 @@ FIXTURE_TEST_CASE(KMetadata_Version, KTextMetadata_ApiFixture)
     REQUIRE_RC( KMetadataVersion( m_md, &version ) );
     REQUIRE_EQ( (uint32_t)0, version );
 }
+
+FIXTURE_TEST_CASE(KMetadata_ByteOrder_Null, KTextMetadata_ApiFixture)
+{
+    Setup(R"({"name":"md"})");
+    REQUIRE_RC_FAIL( KMetadataByteOrder( m_md, nullptr ) );
+}
+FIXTURE_TEST_CASE(KMetadata_ByteOrder, KTextMetadata_ApiFixture)
+{
+    Setup(R"({"name":"md"})");
+    bool reversed = true;
+    REQUIRE_RC( KMetadataByteOrder( m_md, &reversed ) );
+    REQUIRE( ! reversed );
+}
+
+FIXTURE_TEST_CASE(KMetadata_Revision_Null, KTextMetadata_ApiFixture)
+{
+    Setup(R"({"name":"md"})");
+    REQUIRE_RC_FAIL( KMetadataRevision( m_md, nullptr ) );
+}
+FIXTURE_TEST_CASE(KMetadata_Revision_Default, KTextMetadata_ApiFixture)
+{
+    Setup(R"({"name":"md"})");
+    uint32_t revision = 100;
+    REQUIRE_RC( KMetadataRevision( m_md, &revision ) );
+    REQUIRE_EQ( (uint32_t)0, revision );
+}
+FIXTURE_TEST_CASE(KMetadata_Revision, KTextMetadata_ApiFixture)
+{
+    Setup(R"({"name":"md","revision":1})");
+    uint32_t revision = 0;
+    REQUIRE_RC( KMetadataRevision( m_md, &revision ) );
+    REQUIRE_EQ( (uint32_t)1, revision );
+}
+
+FIXTURE_TEST_CASE(KMetadata_MaxRevision_Null, KTextMetadata_ApiFixture)
+{
+    Setup(R"({"name":"md"})");
+    REQUIRE_RC_FAIL( KMetadataMaxRevision( m_md, nullptr ) );
+}
+FIXTURE_TEST_CASE(KMetadata_MaxRevision, KTextMetadata_ApiFixture)
+{   // we only expect one revision in Json; reported as the max
+    Setup(R"({"name":"md","revision":1})");
+    uint32_t revision = 0;
+    REQUIRE_RC( KMetadataMaxRevision( m_md, &revision ) );
+    REQUIRE_EQ( (uint32_t)1, revision );
+}
+
+FIXTURE_TEST_CASE(KMetadata_OpenRevision_Null, KTextMetadata_ApiFixture)
+{
+    Setup(R"({"name":"md","revision":1})");
+    REQUIRE_RC_FAIL( KMetadataOpenRevision( m_md, nullptr, 1 ) );
+}
+FIXTURE_TEST_CASE(KMetadata_OpenRevision, KTextMetadata_ApiFixture)
+{
+    Setup(R"({"name":"md","revision":1})");
+    const KMetadata * metap = nullptr;
+    REQUIRE_RC( KMetadataOpenRevision( m_md, & metap, 0 ) ); // 0 means the current revision
+    REQUIRE_NOT_NULL( metap );
+    REQUIRE_RC( KMetadataRelease( metap ) );
+}
+FIXTURE_TEST_CASE(KMetadata_OpenRevision_NotFound, KTextMetadata_ApiFixture)
+{
+    Setup(R"({"name":"md","revision":1})");
+    const KMetadata * metap = nullptr;
+    REQUIRE_RC_FAIL( KMetadataOpenRevision( m_md, & metap, 11 ) ); // no such revision
+}
+
+//static rc_t CC KMetadataGetSequence ( const KMetadata *self, const char *seq, int64_t *val );
 
 //////////////////////////////////////////// Main
 extern "C"

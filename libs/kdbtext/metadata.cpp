@@ -31,14 +31,17 @@
 
 #include <klib/printf.h>
 
+#include <limits>
+
 using namespace KDBText;
+using namespace std;
 
 static rc_t KTextMetadataWhack ( KMetadata *self );
 static rc_t CC KTextMetadataVersion ( const KMetadata *self, uint32_t *version );
-// static rc_t CC KTextMetadataByteOrder ( const KMetadata *self, bool *reversed );
-// static rc_t CC KTextMetadataRevision ( const KMetadata *self, uint32_t *revision );
-// static rc_t CC KTextMetadataMaxRevision ( const KMetadata *self, uint32_t *revision );
-// static rc_t CC KTextMetadataOpenRevision ( const KMetadata *self, const KMetadata **metap, uint32_t revision );
+static rc_t CC KTextMetadataByteOrder ( const KMetadata *self, bool *reversed );
+static rc_t CC KTextMetadataRevision ( const KMetadata *self, uint32_t *revision );
+static rc_t CC KTextMetadataMaxRevision ( const KMetadata *self, uint32_t *revision );
+static rc_t CC KTextMetadataOpenRevision ( const KMetadata *self, const KMetadata **metap, uint32_t revision );
 // static rc_t CC KTextMetadataGetSequence ( const KMetadata *self, const char *seq, int64_t *val );
 // static rc_t CC KTextMetadataVOpenNodeRead ( const KMetadata *self, const KMDataNode **node, const char *path, va_list args );
 
@@ -48,10 +51,10 @@ static KMetadata_vt KTextMetadata_vt =
     KMetadataBaseAddRef,
     KMetadataBaseRelease,
     KTextMetadataVersion,
-    // KTextMetadataByteOrder,
-    // KTextMetadataRevision,
-    // KTextMetadataMaxRevision,
-    // KTextMetadataOpenRevision,
+    KTextMetadataByteOrder,
+    KTextMetadataRevision,
+    KTextMetadataMaxRevision,
+    KTextMetadataOpenRevision,
     // KTextMetadataGetSequence,
     // KTextMetadataVOpenNodeRead
 };
@@ -88,7 +91,7 @@ Metadata::release( const Metadata * meta )
 }
 
 rc_t
-Metadata::inflate( char * error, size_t error_size )
+Metadata::inflate( char * p_error, size_t p_error_size )
 {
     rc_t rc = 0;
 
@@ -104,22 +107,22 @@ Metadata::inflate( char * error, size_t error_size )
     }
     else
     {
-        string_printf ( error, error_size, nullptr, "Metadata name is missing" );
+        string_printf ( p_error, p_error_size, nullptr, "Metadata name is missing" );
         return SILENT_RC( rcDB, rcMetadata, rcCreating, rcParam, rcInvalid );
     }
 
-    // const KJsonValue * type = KJsonObjectGetMember ( m_json, "type" );
-    // if ( type != nullptr )
-    // {
-    //     const char * typeStr = nullptr;
-    //     rc = KJsonGetString ( type, & typeStr );
-    //     //TBD
-    // }
-    // else
-    // {
-    //     string_printf ( error, error_size, nullptr, "%s.type is missing", m_name.c_str() );
-    //     return SILENT_RC( rcDB, rcMetadata, rcCreating, rcParam, rcInvalid );
-    // }
+    const KJsonValue * rev = KJsonObjectGetMember ( m_json, "revision" );
+    if ( rev != nullptr )
+    {
+        int64_t r = 0;
+        rc = KJsonGetNumber ( rev, & r );
+        if ( rc != 0 || r < 0 || r > numeric_limits<int64_t>::max())
+        {
+            string_printf ( p_error, p_error_size, nullptr, "metadata.revision is invalid" );
+            return SILENT_RC( rcDB, rcMetadata, rcCreating, rcParam, rcInvalid );
+        }
+        m_revision = (uint32_t)r;
+    }
 
     return rc;
 }
@@ -140,9 +143,73 @@ KTextMetadataVersion ( const KMetadata *self, uint32_t *version )
 {
     if ( version == nullptr )
     {
-        return RC ( rcDB, rcMetadata, rcAccessing, rcParam, rcNull );
+        return SILENT_RC ( rcDB, rcMetadata, rcAccessing, rcParam, rcNull );
     }
 
     *version = 0;
     return 0;
+}
+
+static
+rc_t CC
+KTextMetadataByteOrder ( const KMetadata *self, bool *reversed )
+{
+    if ( reversed == nullptr )
+    {
+        return SILENT_RC ( rcDB, rcMetadata, rcAccessing, rcParam, rcNull );
+    }
+
+    *reversed = false;
+    return 0;
+}
+
+static
+rc_t CC
+KTextMetadataRevision ( const KMetadata * bself, uint32_t *revision )
+{
+    CAST();
+
+    if ( revision == nullptr )
+    {
+        return SILENT_RC ( rcDB, rcMetadata, rcAccessing, rcParam, rcNull );
+    }
+
+    *revision = self->getRevision();
+    return 0;
+}
+
+static
+rc_t CC
+KTextMetadataMaxRevision ( const KMetadata * bself, uint32_t *revision )
+{
+    CAST();
+
+    if ( revision == nullptr )
+    {
+        return SILENT_RC ( rcDB, rcMetadata, rcAccessing, rcParam, rcNull );
+    }
+
+    // we only expect one revision in Json; report as the max
+    *revision = self->getRevision();
+    return 0;
+}
+
+static
+rc_t CC
+KTextMetadataOpenRevision ( const KMetadata *bself, const KMetadata **metap, uint32_t revision )
+{
+    CAST();
+
+    if ( metap == NULL )
+    {
+        return SILENT_RC ( rcDB, rcMetadata, rcOpening, rcParam, rcNull );
+    }
+
+    if ( revision != 0 && revision != self->getRevision() )
+    {
+        return SILENT_RC ( rcDB, rcMgr, rcOpening, rcMetadata, rcNotFound  );
+    }
+
+    *metap = bself;
+    return KMetadataAddRef( bself );
 }

@@ -429,12 +429,13 @@ rc_t CC KMain ( int argc, char *argv [] )
         "name":"",
         "value":"blah",
         "attributes":{"attr0":"value", "attr1":"attr1value"},
-        "children":{
+        "revision":1,
+        "children":[{
             "name":"schema",
             "value":"version 1;....",
             "attributes":{},
-            "children":{}
-        }
+            "children":[]
+        }]
     }
     "tables":[
         {
