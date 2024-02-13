@@ -49,7 +49,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if LINUX
+#if BSD || LINUX
 #include <unistd.h>
 #define DFL_THREAD_COUNT ((int)sysconf( _SC_NPROCESSORS_ONLN ) - 1)
 #else
