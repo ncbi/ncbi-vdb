@@ -20,15 +20,13 @@
 *
 *  Please cite the author in any work or product based on this material.
 *
-* ===========================================================================
+* =============================================================================$
 *
 */
 
-/*#ifndef _XOPEN_SOURCE
-#endif*/
 #define _XOPEN_SOURCE /* strptime */
 
-#if _POSIX_C_SOURCE < 199309L
+#if _POSIX_C_SOURCE < 199309L && ! defined __FreeBSD__
 #define _POSIX_C_SOURCE 199309L
 #endif
 
@@ -124,6 +122,10 @@ LIB_EXPORT const KTime* CC KTimeGlobal ( KTime *kt, KTime_t ts )
         struct tm t;
         time_t unix_time = ( time_t ) ts;
         gmtime_r ( & unix_time, & t );
+#ifdef __FreeBSD__
+        /* gmtime doesn't set tzoff on BSD; mktime fixes it */
+        mktime(&t);
+#endif
         KTimeMake ( kt, & t );
     }
     return kt;
@@ -140,6 +142,7 @@ LIB_EXPORT KTime_t CC KTimeMakeTime ( const KTime *self )
     if ( self != NULL )
     {
         struct tm t;
+        memset ( &t, 0, sizeof t );
 
         assert ( self -> year >= 1900 ); // TODO
         t . tm_year = self -> year - 1900;
@@ -157,7 +160,11 @@ LIB_EXPORT KTime_t CC KTimeMakeTime ( const KTime *self )
         ts = mktime ( &t );
 #ifdef __FreeBSD__
 	// This might be portable to all platforms
-	ts += localtime(&ts)->tm_gmtoff;
+        struct tm * tmp = localtime(&ts);
+        assert(tmp);
+        ts += tmp->tm_gmtoff;
+        if (tmp->tm_isdst)
+            ts -= 3600;
 #else
 	// extern global in sys/time.h on Linux and some other platforms
         ts -= timezone;
@@ -183,12 +190,17 @@ LIB_EXPORT const KTime* CC KTimeFromIso8601 ( KTime *kt, const char * s,
     if ( size == 19 )
         c = strptime ( s, "%Y-%m-%dT%H:%M:%S", & t );
     else if ( size == 20 )
-        c = strptime ( s, "%Y-%m-%dT%H:%M:%S%z", & t );
+        c = strptime ( s, "%Y-%m-%dT%H:%M:%SZ", & t );
     else
         return NULL;
 
-    if ( c != NULL && c - s != size )
+    if ( c == NULL || ( c != NULL && c - s != size ) )
         return NULL;
+
+#ifdef __FreeBSD__
+     /* strptime sets weekday incorectly on BSD; mktime fixes it */
+     mktime(&t);
+#endif
 
     memset ( kt, 0, sizeof * kt );
     KTimeMake ( kt, & t );
@@ -253,7 +265,7 @@ LIB_EXPORT rc_t CC KSleepMs(uint32_t milliseconds) {
 
     time.tv_sec = (milliseconds / 1000);
     time.tv_nsec = (milliseconds % 1000) * 1000 * 1000;
-#if _POSIX_C_SOURCE >= 199309L
+#if _POSIX_C_SOURCE >= 199309L || defined __FreeBSD__
     if ( nanosleep ( & time, NULL ) != 0 )
 #else
     #error "nanosleep is not guaranteed here"
