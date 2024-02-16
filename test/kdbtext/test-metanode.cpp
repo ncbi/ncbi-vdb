@@ -36,6 +36,7 @@
 
 #include <klib/rc.h>
 #include <klib/json.h>
+#include <arch-impl.h>
 
 using namespace std;
 using namespace KDBText;
@@ -99,13 +100,25 @@ FIXTURE_TEST_CASE(KDBTextMetanode_Make_Value_Numeric, KDBTextMetanode_Fixture)
 {
     Setup(R"({"name":"mn","value":1})");
     REQUIRE_RC( m_node -> inflate( m_error, sizeof m_error ) );
-    REQUIRE_EQ( string("1"), m_node->getValue() );
+    REQUIRE_EQ( (int64_t)1, *(int64_t*)m_node->getValue().data() );
 }
 FIXTURE_TEST_CASE(KDBTextMetanode_Make_Value_String, KDBTextMetanode_Fixture)
 {
     Setup(R"({"name":"mn","value":"qq"})");
     REQUIRE_RC( m_node -> inflate( m_error, sizeof m_error ) );
     REQUIRE_EQ( string("qq"), m_node->getValue() );
+}
+FIXTURE_TEST_CASE(KDBTextMetanode_Make_Value_Boolean, KDBTextMetanode_Fixture)
+{
+    Setup(R"({"name":"mn","value":true})");
+    REQUIRE_RC( m_node -> inflate( m_error, sizeof m_error ) );
+    REQUIRE_EQ( string("\x01"), m_node->getValue() );
+}
+FIXTURE_TEST_CASE(KDBTextMetanode_Make_Value_Double, KDBTextMetanode_Fixture)
+{
+    Setup(R"({"name":"mn","value":3.14E+2})");
+    REQUIRE_RC( m_node -> inflate( m_error, sizeof m_error ) );
+    REQUIRE_EQ( (double)3.14E+2, *(double*)m_node->getValue().data() );
 }
 
 FIXTURE_TEST_CASE(KDBTextMetanode_Make_Attributes_Bad, KDBTextMetanode_Fixture)
@@ -158,9 +171,6 @@ FIXTURE_TEST_CASE(KDBTextMetanode_Make_Children, KDBTextMetanode_Fixture)
     REQUIRE_EQ( string("ch2"), c[1].getName() );
 }
 
-#if 0
-//TODO: the rest
-
 // API
 
 class KTextMetanode_ApiFixture
@@ -171,7 +181,7 @@ public:
     }
     ~KTextMetanode_ApiFixture()
     {
-        KMetanodeRelease( m_md );
+        KMDataNodeRelease( m_node );
         KJsonValueWhack( m_json );
     }
     void Setup( const char * input )
@@ -186,44 +196,125 @@ public:
 
             Metanode * md = new Metanode( json );
             THROW_ON_RC( md -> inflate( m_error, sizeof m_error ) );
-            m_md = (const KMetanode*)md;
+            m_node = (const KMDataNode*)md;
         }
         catch(const std::exception& e)
         {
             std::cerr << e.what() << " with '" << m_error << "'" << endl;
             throw;
         }
-
     }
 
     KJsonValue * m_json = nullptr;
-    const KMetanode * m_md = nullptr;
+    const KMDataNode * m_node = nullptr;
     char m_error[1024] = {0};
+
+    char m_buffer[1024];
+    size_t m_num_read = 0;
+    size_t m_remaining = 0;
 };
 
 FIXTURE_TEST_CASE(KMetanode_AddRelease, KTextMetanode_ApiFixture)
 {
     Setup(R"({"name":"md"})");
 
-    REQUIRE_RC( KMetanodeAddRef( m_md ) );
-    REQUIRE_RC( KMetanodeRelease( m_md ) );
+    REQUIRE_RC( KMDataNodeAddRef( m_node ) );
+    REQUIRE_RC( KMDataNodeRelease( m_node ) );
     // use valgrind to find any leaks
 }
+
 
 FIXTURE_TEST_CASE(KMetanode_ByteOrder_Null, KTextMetanode_ApiFixture)
 {
     Setup(R"({"name":"md"})");
-    REQUIRE_RC_FAIL( KMetanodeByteOrder( m_md, nullptr ) );
+    REQUIRE_RC_FAIL( KMDataNodeByteOrder( m_node, nullptr ) );
 }
 FIXTURE_TEST_CASE(KMetanode_ByteOrder, KTextMetanode_ApiFixture)
 {
     Setup(R"({"name":"md"})");
     bool reversed = true;
-    REQUIRE_RC( KMetanodeByteOrder( m_md, &reversed ) );
+    REQUIRE_RC( KMDataNodeByteOrder( m_node, &reversed ) );
     REQUIRE( ! reversed );
 }
 
-#endif
+
+FIXTURE_TEST_CASE(KMetanode_Read_numRead_Null, KTextMetanode_ApiFixture)
+{
+    Setup(R"({"name":"md"})");
+    REQUIRE_RC_FAIL( KMDataNodeRead ( m_node, 0, m_buffer, sizeof m_buffer, nullptr, &m_remaining ) );
+}
+FIXTURE_TEST_CASE(KMetanode_Read_buffer_Null, KTextMetanode_ApiFixture)
+{
+    Setup(R"({"name":"md"})");
+    REQUIRE_RC_FAIL( KMDataNodeRead ( m_node, 0, nullptr, 1, &m_num_read, &m_remaining ) );
+}
+
+FIXTURE_TEST_CASE(KMetanode_Read_text, KTextMetanode_ApiFixture)
+{
+    Setup(R"({"name":"md","value":"qwerty"})");
+    REQUIRE_RC( KMDataNodeRead ( m_node, 0, m_buffer, sizeof m_buffer, &m_num_read, &m_remaining ) );
+    REQUIRE_EQ( string("qwerty"), string(m_buffer, m_num_read) );
+    REQUIRE_EQ( (size_t)0, m_remaining );
+}
+FIXTURE_TEST_CASE(KMetanode_Read_text_offset, KTextMetanode_ApiFixture)
+{
+    Setup(R"({"name":"md","value":"qwerty"})");
+    REQUIRE_RC( KMDataNodeRead ( m_node, 2, m_buffer, sizeof m_buffer, &m_num_read, &m_remaining ) );
+    REQUIRE_EQ( string("erty"), string(m_buffer, m_num_read) );
+    REQUIRE_EQ( (size_t)0, m_remaining );
+}
+FIXTURE_TEST_CASE(KMetanode_Read_text_offset_tooLarge, KTextMetanode_ApiFixture)
+{
+    Setup(R"({"name":"md","value":"qwerty"})");
+    REQUIRE_RC( KMDataNodeRead ( m_node, 22, m_buffer, sizeof m_buffer, &m_num_read, &m_remaining ) );
+    REQUIRE_EQ( string(), string(m_buffer, m_num_read) );
+    REQUIRE_EQ( (size_t)0, m_remaining );
+}
+FIXTURE_TEST_CASE(KMetanode_Read_text_buffer_short, KTextMetanode_ApiFixture)
+{
+    Setup(R"({"name":"md","value":"qwerty"})");
+    REQUIRE_RC( KMDataNodeRead ( m_node, 0, m_buffer, 4, &m_num_read, &m_remaining ) );
+    REQUIRE_EQ( string("qwer"), string(m_buffer, m_num_read) );
+    REQUIRE_EQ( (size_t)2, m_remaining );
+}
+FIXTURE_TEST_CASE(KMetanode_Read_text_buffer_short_with_offset, KTextMetanode_ApiFixture)
+{
+    Setup(R"({"name":"md","value":"qwerty"})");
+    REQUIRE_RC( KMDataNodeRead ( m_node, 2, m_buffer, 3, &m_num_read, &m_remaining ) );
+    REQUIRE_EQ( string("ert"), string(m_buffer, m_num_read) );
+    REQUIRE_EQ( (size_t)1, m_remaining );
+}
+
+FIXTURE_TEST_CASE(KMetanode_Read_bool, KTextMetanode_ApiFixture)
+{
+    Setup(R"({"name":"md","value":true})");
+    bool v = false;
+    REQUIRE_RC( KMDataNodeReadB8 ( m_node, &v ) );
+    REQUIRE( v );
+    REQUIRE_RC_FAIL( KMDataNodeReadB16 ( m_node, &v ) ); // trying to read too much
+}
+FIXTURE_TEST_CASE(KMetanode_Read_int, KTextMetanode_ApiFixture)
+{   // is bit size is not specified, represented with a 64 bit int in native byte order
+    Setup(R"({"name":"md","value":1})");
+    int64_t v64 = 0;
+    REQUIRE_RC( KMDataNodeReadB64 ( m_node, &v64 ) );
+    REQUIRE_EQ( (int64_t)1, v64 );
+
+    REQUIRE_RC_FAIL( KMDataNodeReadB8 ( m_node, &v64 ) ); // trying to read too little
+    uint128_t v128;
+    REQUIRE_RC_FAIL( KMDataNodeReadB128 ( m_node, &v128 ) );// trying to read too much
+
+    v64=0;
+    REQUIRE_RC( KMDataNodeReadAsI64 ( m_node, &v64 ) );
+    REQUIRE_EQ( (int64_t)1, v64 );
+
+    uint16_t v16 = 0;
+    REQUIRE_RC_FAIL( KMDataNodeReadAsU16 ( m_node, &v16 ) );
+
+    uint64_t vu64 = 0;
+    REQUIRE_RC( KMDataNodeReadAsU64 ( m_node, &vu64 ) );
+    REQUIRE_EQ( (uint64_t)1, vu64 );
+}
 
 //////////////////////////////////////////// Main
 extern "C"
