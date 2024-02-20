@@ -204,6 +204,7 @@ static rc_t ReferenceList_handle_filter( const KIndex* iname, const char * filt_
         if ( bin_size == 0 || strncmp( filt_name, "BIN_NUM:", 8 ) )
         {
             rc = KIndexFindText( iname, filt_name, start, (uint64_t*)count, NULL, NULL );
+            assert ( count >= 0 );
             if( rc == 0 && bin_size > 0 )
             {
                 /** change start to the beginning of the bin **/
@@ -229,6 +230,7 @@ static rc_t ReferenceList_handle_filter( const KIndex* iname, const char * filt_
                     memmove( name, h[ 0 ].base.str, h[ 0 ].len );
                     name[ h[ 0 ].len ] = '\0';
                     rc = KIndexFindText( iname, name, &r_start, (uint64_t*)count, NULL, NULL );
+                    assert ( count >= 0 );
                     if ( rc == 0 && *start > r_start )
                     { /*** move start to the beginning of the fully contained sequence **/
                         *start = r_start + *count;
@@ -313,6 +315,7 @@ LIB_EXPORT rc_t CC ReferenceList_MakeCursor( const ReferenceList** cself, const 
 
                 rc = TableReader_IdRange( tmp, &start, (uint64_t*)&count );
                 assert( rc == 0 );
+                assert( count >= 0 );
                 tbl_start = start;
                 tbl_stop  = start + count -1;
                 if ( numbins > 0 )
@@ -431,14 +434,16 @@ LIB_EXPORT rc_t CC ReferenceList_MakeCursor( const ReferenceList** cself, const 
                                     if ( KIndexFindText( iname, node->name, &r_start, (uint64_t*)&r_count, NULL, NULL ) == 0 )
                                     {
                                         assert( node->start_rowid == r_start );
+                                        assert( r_count >= 0 );
                                         /* not last ref row */
                                         if ( start != r_start + r_count - 1 )
                                         {
                                             /* we need to pickup last row SEQ_LEN for this reference
                                             so we step back 2 rows in table from this ref end row
                                             and also skip rows already scanned for read presence */
-                                            int64_t t = cur_seq_len * r_count;
+                                            int64_t t;
                                             r_count -= ( start - r_start ) + 2;
+                                            t = cur_seq_len * r_count;
                                             assert ( FITS_INTO_INT32 ( t ) );
                                             node->seq_len += (uint32_t) t;
                                             start += r_count;
