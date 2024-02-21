@@ -78,6 +78,8 @@ TestStream :: TimedRead ( const KSTREAM_IMPL *self, void *buffer, size_t bsize, 
     }
     else
     {
+        if (m_fail)
+            return 1;
         throw logic_error ( "TestStream: TimedRead is out of responses" );
     }
 
@@ -96,7 +98,7 @@ TestStream :: TimedRead ( const KSTREAM_IMPL *self, void *buffer, size_t bsize, 
     if ( TestEnv::verbosity == LogLevel::e_message )
         cout << "TestStream::TimedRead returned \"" << string((const char*)buffer, * num_read) << "\"" << endl;
 
-    return 0;
+    return m_fail ? 1 : 0;
 }
 
 rc_t CC
@@ -120,6 +122,7 @@ TestStream :: AddResponse ( const string& p_str, bool end_binary )
 
 list<string> TestStream :: m_requests;
 list<string> TestStream :: m_responses;
+bool TestStream :: m_fail;
 
 KStream_vt_v1 TestStream::vt =
 {
