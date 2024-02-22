@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 test_schema_parse=$1
 TOP=$2

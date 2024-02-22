@@ -82,7 +82,7 @@ int return_val = 0;
 int set_errno = 0;
 uint32_t tries = 0;
 
-#ifdef MAC
+#if defined MAC || defined __FreeBSD__
     extern "C"
     int kevent(int kq, const struct kevent *changelist, int nchanges, struct kevent *eventlist, int nevents,
          const struct timespec *timeout)

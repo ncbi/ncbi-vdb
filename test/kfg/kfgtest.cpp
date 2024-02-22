@@ -282,7 +282,9 @@ FIXTURE_TEST_CASE(predef_ARCHBITS, KfgFixture)
 FIXTURE_TEST_CASE(predef_OS, KfgFixture)
 {
     CreateAndLoad(GetName(), "var=$(OS)\n");
-    #if LINUX
+    #if BSD
+        #define OS "bsd"
+    #elif LINUX
         #define OS "linux"
     #elif SUN
         #define OS "sun"
