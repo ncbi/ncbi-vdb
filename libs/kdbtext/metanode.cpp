@@ -31,16 +31,18 @@
 #include <klib/printf.h>
 #include <klib/namelist.h>
 
+#include "path.hpp"
+
 using namespace KDBText;
 using namespace std;
 
 static rc_t CC KTextMetanodeWhack ( KMDataNode *cself );
 static rc_t CC KTextMetanodeByteOrder ( const KMDataNode *self, bool *reversed );
 static rc_t CC KTextMetanodeRead ( const KMDataNode *self, size_t offset, void *buffer, size_t bsize, size_t *num_read, size_t *remaining );
-// static rc_t CC KTextMetanodeVOpenNodeRead ( const KMDataNode *self, const KMDataNode **node, const char *path, va_list args );
-// static rc_t CC KTextMetanodeReadAttr ( const KMDataNode *self, const char *name, char *buffer, size_t bsize, size_t *size );
-// static rc_t CC KTextMetanodeCompare( const KMDataNode *self, KMDataNode const *other, bool *equal );
-// static rc_t CC KTextMetanodeAddr ( const KMDataNode *self, const void **addr, size_t *size );
+static rc_t CC KTextMetanodeVOpenNodeRead ( const KMDataNode *self, const KMDataNode **node, const char *path, va_list args );
+static rc_t CC KTextMetanodeReadAttr ( const KMDataNode *self, const char *name, char *buffer, size_t bsize, size_t *size );
+static rc_t CC KTextMetanodeCompare( const KMDataNode *self, KMDataNode const *other, bool *equal );
+static rc_t CC KTextMetanodeAddr ( const KMDataNode *self, const void **addr, size_t *size );
 // static rc_t CC KTextMetanodeListAttr ( const KMDataNode *self, KNamelist **names );
 // static rc_t CC KTextMetanodeListChildren ( const KMDataNode *self, KNamelist **names );
 
@@ -51,10 +53,10 @@ static KMDataNode_vt KTextMetanode_vt =
     KMDataNodeBaseRelease,
     KTextMetanodeByteOrder,
     KTextMetanodeRead,
-    // KTextMetanodeVOpenNodeRead,
-    // KTextMetanodeReadAttr,
-    // KTextMetanodeCompare,
-    // KTextMetanodeAddr,
+    KTextMetanodeVOpenNodeRead,
+    KTextMetanodeReadAttr,
+    KTextMetanodeCompare,
+    KTextMetanodeAddr,
     // KTextMetanodeListAttr,
     // KTextMetanodeListChildren
 };;
@@ -90,6 +92,109 @@ Metanode::release( const Metanode * meta )
     }
 }
 
+static
+rc_t
+ParseValue( const KJsonValue * value, string & out_value, char * p_error, size_t p_error_size )
+{
+    rc_t rc = 0;
+
+    switch( KJsonGetValueType ( value ) )
+    {
+    case jsString:
+    case jsNumber:
+    {
+        // first, see if it is a number
+        int64_t i;
+        rc = KJsonGetNumber ( value, &i );
+        if ( rc == 0 )
+        {
+            out_value = string( (const char*)&i, sizeof(i) );
+        }
+        else
+        {   // a double?
+            double d;
+            rc = KJsonGetDouble ( value, &d );
+            if ( rc == 0 )
+            {
+                out_value = string( (const char*)&d, sizeof(d) );
+            }
+            else
+            {
+                const char * valStr = nullptr;
+                rc = KJsonGetString ( value, & valStr );
+                if ( rc == 0 )
+                {
+                    out_value = valStr;
+                }
+            }
+        }
+        break;
+    }
+
+    case jsBool:
+    {
+        bool b;
+        rc = KJsonGetBool ( value, & b );
+        if ( rc == 0 )
+        {   // represent as 1 byte binary
+            out_value = string( b ? "\x01" : "\x00", 1 );
+        }
+        break;
+    }
+    case jsNull:
+        break;
+    case jsObject: // expect a sized integer
+    {
+        const KJsonObject * obj = KJsonValueToObject ( value );
+        const KJsonValue * sizeVal = KJsonObjectGetMember ( obj, "size" );
+        if ( sizeVal != nullptr )
+        {
+            int64_t size;
+            rc = KJsonGetNumber ( sizeVal, &size );
+            if ( rc == 0 )
+            {
+                const KJsonValue * intVal = KJsonObjectGetMember ( obj, "int" );
+                if ( intVal != nullptr )
+                {
+                    int64_t num;
+                    rc = KJsonGetNumber ( intVal, &num );
+                    if ( rc == 0 )
+                    {
+                        switch (size)
+                        {
+                        case 1: { uint8_t  v = (uint8_t)num;  out_value = string( (const char*)&v, size ); break; }
+                        case 2: { uint16_t v = (uint16_t)num; out_value = string( (const char*)&v, size ); break; }
+                        case 4: { uint32_t v = (uint32_t)num; out_value = string( (const char*)&v, size ); break; }
+                        case 8: { uint64_t v = (uint64_t)num; out_value = string( (const char*)&v, size ); break; }
+                        default:
+                            string_printf ( p_error, p_error_size, nullptr, "Invalid integer size(only 1,2,4,8 are supported)" );
+                            rc = SILENT_RC( rcDB, rcMetadata, rcCreating, rcParam, rcInvalid );;
+                        }
+                    }
+                }
+                else
+                {
+                    string_printf ( p_error, p_error_size, nullptr, "Sized integer is missing \"int\":" );
+                    rc = SILENT_RC( rcDB, rcMetadata, rcCreating, rcParam, rcInvalid );;
+                }
+            }
+        }
+        else
+        {
+            string_printf ( p_error, p_error_size, nullptr, "Sized integer is missing \"size\":" );
+            rc = SILENT_RC( rcDB, rcMetadata, rcCreating, rcParam, rcInvalid );;
+        }
+
+        break;
+    }
+    default:
+        rc = SILENT_RC( rcDB, rcMetadata, rcCreating, rcParam, rcInvalid );
+        break;
+    }
+
+    return rc;
+}
+
 rc_t
 Metanode::inflate( char * p_error, size_t p_error_size )
 {
@@ -113,47 +218,12 @@ Metanode::inflate( char * p_error, size_t p_error_size )
     if ( rc == 0 )
     {
         const KJsonValue * value = KJsonObjectGetMember ( m_json, "value" );
-        if ( value != nullptr && KJsonGetValueType ( value ) != jsNull )
+        if ( value != nullptr )
         {
-            // first, see if it is a number
-            int64_t i;
-            rc = KJsonGetNumber ( value, &i );
-            if ( rc == 0 )
-            {
-                m_value = string( (const char*)&i, sizeof(i) );
-            }
-            else
-            {   // a double?
-                double d;
-                rc = KJsonGetDouble ( value, &d );
-                if ( rc == 0 )
-                {
-                    m_value = string( (const char*)&d, sizeof(d) );
-                }
-                else
-                {
-                    const char * valStr = nullptr;
-                    rc = KJsonGetString ( value, & valStr );
-                    if ( rc == 0 )
-                    {
-                        m_value = valStr;
-                    }
-                    else if ( rc == SILENT_RC( rcCont, rcNode, rcAccessing, rcType, rcIncorrect ) )
-                    {   // try as boolen
-                        bool b;
-                        rc = KJsonGetBool ( value, & b );
-                        if ( rc == 0 )
-                        {   // represent as 1 byte binary
-                            m_value = string( b ? "\x01" : "\x00", 1 );
-                        }
-                    }
-                }
-            }
-
+            rc = ParseValue( value, m_value, p_error, p_error_size );
             if ( rc != 0 )
             {
-                string_printf ( p_error, p_error_size, nullptr, "Metanode value is invalid" );
-                return SILENT_RC( rcDB, rcMetadata, rcCreating, rcParam, rcInvalid );
+                return rc;
             }
         }
 
@@ -255,6 +325,33 @@ Metanode::inflate( char * p_error, size_t p_error_size )
     return rc;
 }
 
+const Metanode *
+Metanode::getNode( Path & p ) const
+{
+    if ( p.empty() ||
+         ( p.size() == 1 && p.front() == "." ) )
+    {
+        return this;
+    }
+    if ( p.front() == "." )
+    {
+        p.pop();
+    }
+
+    for( auto const & c : m_children )
+    {
+        if ( c.getName() == p.front() )
+        {
+            p.pop();
+            return c.getNode( p );
+        }
+    }
+
+    return nullptr;
+}
+
+// API
+
 static
 rc_t CC
 KTextMetanodeWhack ( KMDataNode *bself )
@@ -284,11 +381,11 @@ KTextMetanodeRead ( const KMDataNode * bself, size_t offset, void *buffer, size_
 {
     CAST();
 
-    if ( num_read == NULL )
+    if ( num_read == nullptr )
     {
         return SILENT_RC ( rcDB, rcNode, rcReading, rcParam, rcNull );
     }
-    if ( buffer == NULL && bsize != 0 )
+    if ( buffer == nullptr && bsize != 0 )
     {
         return SILENT_RC ( rcDB, rcNode, rcReading, rcBuffer, rcNull );
     }
@@ -321,5 +418,110 @@ KTextMetanodeRead ( const KMDataNode * bself, size_t offset, void *buffer, size_
         }
     }
 
+    return 0;
+}
+
+static
+rc_t CC
+KTextMetanodeVOpenNodeRead ( const KMDataNode * bself, const KMDataNode **node, const char *path, va_list args )
+{
+    CAST();
+
+    if ( node == nullptr )
+    {
+        return SILENT_RC ( rcDB, rcNode, rcOpening, rcParam, rcNull );
+    }
+
+    Path p ( path, args );
+    const Metanode * n = self -> getNode( p );
+    if ( n == nullptr )
+    {
+        *node = nullptr;
+        return SILENT_RC ( rcDB, rcMetadata, rcSelecting, rcPath, rcNotFound );
+    }
+
+    Metanode::addRef( n );
+    *node = (const KMDataNode *)n;
+    return 0;
+}
+
+static
+rc_t CC
+KTextMetanodeReadAttr ( const KMDataNode * bself, const char *name, char *buffer, size_t bsize, size_t *size )
+{
+    CAST();
+
+    if ( size == nullptr )
+    {
+        return SILENT_RC ( rcDB, rcMetadata, rcReading, rcParam, rcNull );
+    }
+    if ( name == nullptr )
+    {
+        return SILENT_RC ( rcDB, rcMetadata, rcReading, rcString, rcNull );
+    }
+    if ( name [ 0 ] == 0 )
+    {
+        return SILENT_RC ( rcDB, rcMetadata, rcReading, rcString, rcEmpty );
+    }
+    if ( buffer == NULL && bsize != 0 )
+    {
+        return SILENT_RC ( rcDB, rcMetadata, rcReading, rcBuffer, rcNull );
+    }
+
+    auto attr = self->getAttributes().find(name);
+    if ( attr == self->getAttributes().end() )
+    {
+        * size = 0;
+        if ( bsize != 0 )
+        {
+            buffer [ 0 ] = 0;
+        }
+        return SILENT_RC ( rcDB, rcMetadata, rcReading, rcAttr, rcNotFound );
+    }
+
+    * size = attr->second.size();
+    if ( * size >= bsize )
+    {
+        return SILENT_RC ( rcDB, rcMetadata, rcReading, rcBuffer, rcInsufficient );
+    }
+    memmove ( buffer, attr->second.data(), *size);
+    buffer [ *size ] = 0;
+
+    return 0;
+}
+
+static
+rc_t CC
+KTextMetanodeCompare( const KMDataNode *bself, KMDataNode const *bother, bool *equal )
+{
+    CAST();
+    assert( bself->vt == &KTextMetanode_vt );
+    Metanode * other = (Metanode *)bother;
+
+    if ( other == nullptr || equal == nullptr )
+    {
+        return SILENT_RC( rcDB, rcNode, rcComparing, rcParam, rcNull );
+    }
+
+    *equal = *self == *other;
+    return 0;
+}
+
+static
+rc_t CC
+KTextMetanodeAddr ( const KMDataNode *bself, const void **addr, size_t *size )
+{
+    CAST();
+
+    if ( addr == nullptr )
+    {
+        return SILENT_RC ( rcDB, rcMetadata, rcReading, rcParam, rcNull );
+    }
+
+    * addr = self->getValue().data();
+    if ( size != nullptr )
+    {
+        * size = self->getValue().size();
+    }
     return 0;
 }

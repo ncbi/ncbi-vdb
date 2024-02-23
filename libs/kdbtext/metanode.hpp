@@ -43,6 +43,8 @@ struct KTextMetanode
 
 namespace KDBText
 {
+    class Path;
+
     class Metanode : public KTextMetanode
     {
     public:
@@ -63,6 +65,16 @@ namespace KDBText
 
         typedef std::vector<Metanode> Children;
         const Children& getChildren() const { return m_children; }
+
+        const Metanode * getNode( Path & ) const; // destroys path
+
+        bool operator == ( const Metanode& other ) const
+        {
+            return m_name == other.m_name &&
+                   m_value == other.m_value &&
+                   m_attrs == other.m_attrs &&
+                   m_children == other.m_children;
+        }
 
     private:
         const KJsonObject * m_json = nullptr;

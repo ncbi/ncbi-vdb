@@ -31,8 +31,10 @@
 #include <ktst/unit_test.hpp>
 
 #include "../../libs/kdbtext/metanode.hpp"
+#include "../../libs/kdbtext/path.hpp"
 
 #include <kdb/meta.h>
+#include <kdb/kdb-priv.h>
 
 #include <klib/rc.h>
 #include <klib/json.h>
@@ -120,6 +122,40 @@ FIXTURE_TEST_CASE(KDBTextMetanode_Make_Value_Double, KDBTextMetanode_Fixture)
     REQUIRE_RC( m_node -> inflate( m_error, sizeof m_error ) );
     REQUIRE_EQ( (double)3.14E+2, *(double*)m_node->getValue().data() );
 }
+FIXTURE_TEST_CASE(KDBTextMetanode_Make_Value_SizedNumeric8, KDBTextMetanode_Fixture)
+{
+    Setup(R"({ "name":"mn","value":{"size":1,"int":255} })");
+    REQUIRE_RC( m_node -> inflate( m_error, sizeof m_error ) );
+    REQUIRE_EQ( (size_t)1, m_node->getValue().size() );
+    REQUIRE_EQ( (uint8_t)255, *(uint8_t*)m_node->getValue().data() );
+}
+FIXTURE_TEST_CASE(KDBTextMetanode_Make_Value_SizedNumeric16, KDBTextMetanode_Fixture)
+{
+    Setup(R"({ "name":"mn","value":{"size":2,"int":321} })");
+    REQUIRE_RC( m_node -> inflate( m_error, sizeof m_error ) );
+    REQUIRE_EQ( (size_t)2, m_node->getValue().size() );
+    REQUIRE_EQ( (uint16_t)321, *(uint16_t*)m_node->getValue().data() );
+}
+FIXTURE_TEST_CASE(KDBTextMetanode_Make_Value_SizedNumeric32, KDBTextMetanode_Fixture)
+{
+    Setup(R"({ "name":"mn","value":{"size":4,"int":321} })");
+    REQUIRE_RC( m_node -> inflate( m_error, sizeof m_error ) );
+    REQUIRE_EQ( (size_t)4, m_node->getValue().size() );
+    REQUIRE_EQ( (uint32_t)321, *(uint32_t*)m_node->getValue().data() );
+}
+FIXTURE_TEST_CASE(KDBTextMetanode_Make_Value_SizedNumeric64, KDBTextMetanode_Fixture)
+{
+    Setup(R"({ "name":"mn","value":{"size":8,"int":321} })");
+    REQUIRE_RC( m_node -> inflate( m_error, sizeof m_error ) );
+    REQUIRE_EQ( (size_t)8, m_node->getValue().size() );
+    REQUIRE_EQ( (uint64_t)321, *(uint64_t*)m_node->getValue().data() );
+}
+FIXTURE_TEST_CASE(KDBTextMetanode_Make_Value_SizedNumeric_BadSize, KDBTextMetanode_Fixture)
+{
+    Setup(R"({ "name":"mn","value":{"size":3,"int":321} })");
+    REQUIRE_RC_FAIL( m_node -> inflate( m_error, sizeof m_error ) );
+    //cout << m_error << endl;
+}
 
 FIXTURE_TEST_CASE(KDBTextMetanode_Make_Attributes_Bad, KDBTextMetanode_Fixture)
 {   // has to be a json object {...}
@@ -141,6 +177,13 @@ FIXTURE_TEST_CASE(KDBTextMetanode_Make_Attributes, KDBTextMetanode_Fixture)
     REQUIRE_EQ( (size_t)2, a.size() );
     REQUIRE_EQ( string("v1"), a["a1"] );
     REQUIRE_EQ( string("v2"), a["a2"] );
+}
+FIXTURE_TEST_CASE(KDBTextMetanode_Make_Attributes_Numeric, KDBTextMetanode_Fixture)
+{   // numeric attribute values are always stored as strings
+    Setup(R"({"name":"mn","attributes":{"a1":1}})");
+    REQUIRE_RC( m_node -> inflate( m_error, sizeof m_error ) );
+    auto const & a = m_node->getAttributes().find( "a1" );
+    REQUIRE_EQ( string("1"), a->second );
 }
 
 FIXTURE_TEST_CASE(KDBTextMetanode_Make_Children_Bad, KDBTextMetanode_Fixture)
@@ -169,6 +212,32 @@ FIXTURE_TEST_CASE(KDBTextMetanode_Make_Children, KDBTextMetanode_Fixture)
     REQUIRE_EQ( (size_t)2, c.size() );
     REQUIRE_EQ( string("ch1"), c[0].getName() );
     REQUIRE_EQ( string("ch2"), c[1].getName() );
+}
+
+FIXTURE_TEST_CASE(KDBTextMetanode_GetNode_Self, KDBTextMetanode_Fixture)
+{
+    Setup(R"({"name":"mn","children":[ {"name":"ch1"}, {"name":"ch2"} ]})");
+    REQUIRE_RC( m_node -> inflate( m_error, sizeof m_error ) );
+    { Path p (""); REQUIRE_EQ( (const Metanode*)m_node, m_node->getNode( p ) ); }
+    { Path p ("."); REQUIRE_EQ( (const Metanode*)m_node, m_node->getNode( p ) ); }
+}
+
+FIXTURE_TEST_CASE(KDBTextMetanode_GetNode_Child, KDBTextMetanode_Fixture)
+{
+    Setup(R"({"name":"mn","children":[ {"name":"ch1"}, {"name":"ch2"} ]})");
+    REQUIRE_RC( m_node -> inflate( m_error, sizeof m_error ) );
+    {
+        Path p ("ch1");
+        const Metanode * n = m_node->getNode( p );
+        REQUIRE_NOT_NULL( n );
+        REQUIRE_EQ( string("ch1"), n->getName() );
+    }
+    {
+        Path p ("./ch2");
+        const Metanode * n = m_node->getNode( p );
+        REQUIRE_NOT_NULL( n );
+        REQUIRE_EQ( string("ch2"), n->getName() );
+    }
 }
 
 // API
@@ -293,7 +362,8 @@ FIXTURE_TEST_CASE(KMetanode_Read_bool, KTextMetanode_ApiFixture)
     REQUIRE( v );
     REQUIRE_RC_FAIL( KMDataNodeReadB16 ( m_node, &v ) ); // trying to read too much
 }
-FIXTURE_TEST_CASE(KMetanode_Read_int, KTextMetanode_ApiFixture)
+
+FIXTURE_TEST_CASE(KMetanode_ReadAs_int, KTextMetanode_ApiFixture)
 {   // is bit size is not specified, represented with a 64 bit int in native byte order
     Setup(R"({"name":"md","value":1})");
     int64_t v64 = 0;
@@ -314,6 +384,238 @@ FIXTURE_TEST_CASE(KMetanode_Read_int, KTextMetanode_ApiFixture)
     uint64_t vu64 = 0;
     REQUIRE_RC( KMDataNodeReadAsU64 ( m_node, &vu64 ) );
     REQUIRE_EQ( (uint64_t)1, vu64 );
+}
+
+FIXTURE_TEST_CASE(KMetanode_Read_SizedInt, KTextMetanode_ApiFixture)
+{
+    Setup(R"({"name":"md","value":{"size":4,"int":1}})");
+
+    uint8_t u8 = 0;
+    REQUIRE_RC_FAIL( KMDataNodeReadB8 ( m_node, &u8 ) );
+
+    uint16_t u16 = 0;
+    REQUIRE_RC_FAIL( KMDataNodeReadB16 ( m_node, &u16 ) );
+
+    uint32_t u32 = 0;
+    REQUIRE_RC( KMDataNodeReadB32 ( m_node, &u32 ) );
+    REQUIRE_EQ( (uint32_t)1, u32 );
+
+    uint64_t u64 = 0;
+    REQUIRE_RC_FAIL( KMDataNodeReadB64 ( m_node, &u64 ) );
+
+    uint128_t u128 = {0,0};
+    REQUIRE_RC_FAIL( KMDataNodeReadB8 ( m_node, &u128 ) );
+}
+
+FIXTURE_TEST_CASE(KMetanode_ReadAs_SizedInt, KTextMetanode_ApiFixture)
+{
+    Setup(R"({"name":"md","value":{"size":4,"int":1}})");
+
+    int16_t i16 = 0;
+    REQUIRE_RC_FAIL( KMDataNodeReadAsI16 ( m_node, &i16 ) );
+
+    uint16_t u16 = 0;
+    REQUIRE_RC_FAIL( KMDataNodeReadAsU16 ( m_node, &u16 ) );
+
+    int32_t i32 = 0;
+    REQUIRE_RC( KMDataNodeReadAsI32 ( m_node, &i32 ) );
+    REQUIRE_EQ( (int32_t)1, i32 );
+
+    uint32_t u32 = 0;
+    REQUIRE_RC( KMDataNodeReadAsU32 ( m_node, &u32 ) );
+    REQUIRE_EQ( (uint32_t)1, u32 );
+
+    int64_t i64 = 0;
+    REQUIRE_RC( KMDataNodeReadAsI64 ( m_node, &i64 ) );
+    REQUIRE_EQ( (int64_t)1, i64 );
+
+    uint64_t u64 = 0;
+    REQUIRE_RC( KMDataNodeReadAsU64 ( m_node, &u64 ) );
+    REQUIRE_EQ( (uint64_t)1, u64 );
+
+    double f64 = 0;
+    REQUIRE_RC( KMDataNodeReadAsF64 ( m_node, &f64 ) );
+    uint64_t One = 1;
+    float fl = *(float*)&One; // internally, 4-byte values are converted into float and then to double (see KMDataNodeReadAsF64 in kdb/metanode-base.c)
+    REQUIRE_EQ( (double)fl, f64 );
+}
+
+FIXTURE_TEST_CASE(KMetanode_OpenRead_NodeNull, KTextMetanode_ApiFixture)
+{
+    Setup(R"({"name":"mn","children":[ {"name":"ch1"}, {"name":"ch2"} ]})");
+    REQUIRE_RC_FAIL( KMDataNodeOpenNodeRead ( m_node, nullptr, "" ) );
+}
+
+FIXTURE_TEST_CASE(KMetanode_OpenRead_Node_NotFound, KTextMetanode_ApiFixture)
+{
+    Setup(R"({"name":"mn","children":[ {"name":"ch1"}, {"name":"ch2"} ]})");
+    const KMDataNode * node = (const KMDataNode *)1;
+    REQUIRE_RC_FAIL( KMDataNodeOpenNodeRead ( m_node, &node, "/notthere" ) );
+    REQUIRE_NULL( node );
+}
+
+FIXTURE_TEST_CASE(KMetanode_OpenRead_Node_Self_NULL, KTextMetanode_ApiFixture)
+{
+    Setup(R"({"name":"mn","children":[ {"name":"ch1"}, {"name":"ch2"} ]})");
+    const KMDataNode * node = nullptr;
+    REQUIRE_RC( KMDataNodeOpenNodeRead ( m_node, &node, nullptr ) );
+    REQUIRE_EQ( m_node, node );
+    REQUIRE_RC( KMDataNodeRelease( node ) );
+}
+FIXTURE_TEST_CASE(KMetanode_OpenRead_Node_Self_Dot, KTextMetanode_ApiFixture)
+{
+    Setup(R"({"name":"mn","children":[ {"name":"ch1"}, {"name":"ch2"} ]})");
+    const KMDataNode * node = nullptr;
+    REQUIRE_RC( KMDataNodeOpenNodeRead ( m_node, &node, "." ) );
+    REQUIRE_EQ( m_node, node );
+    REQUIRE_RC( KMDataNodeRelease( node ) );
+}
+
+FIXTURE_TEST_CASE(KMetanode_OpenRead_Node_Self_Child, KTextMetanode_ApiFixture)
+{
+    Setup(R"({"name":"mn","children":[ {"name":"ch1"}, {"name":"ch2","value":2} ]})");
+    const KMDataNode * node = nullptr;
+    REQUIRE_RC( KMDataNodeOpenNodeRead ( m_node, &node, "./ch2" ) );
+
+    uint64_t vu64 = 0;
+    REQUIRE_RC( KMDataNodeReadAsU64 ( node, &vu64 ) );
+    REQUIRE_EQ( (uint64_t)2, vu64 );
+
+    REQUIRE_RC( KMDataNodeRelease( node ) );
+}
+
+FIXTURE_TEST_CASE(KMetanode_ReadAttr_Size_NULL, KTextMetanode_ApiFixture)
+{
+    Setup(R"({"name":"mn","attributes":{"a1":"v1","a2":"v2"}})");
+    REQUIRE_RC_FAIL( KMDataNodeReadAttr ( m_node, "a1", m_buffer, sizeof( m_buffer ), nullptr ) );
+}
+FIXTURE_TEST_CASE(KMetanode_ReadAttr_Name_NULL, KTextMetanode_ApiFixture)
+{
+    Setup(R"({"name":"mn","attributes":{"a1":"v1","a2":"v2"}})");
+    size_t size;
+    REQUIRE_RC_FAIL( KMDataNodeReadAttr ( m_node, nullptr, m_buffer, sizeof( m_buffer ), &size ) );
+}
+FIXTURE_TEST_CASE(KMetanode_ReadAttr_Name_Empty, KTextMetanode_ApiFixture)
+{
+    Setup(R"({"name":"mn","attributes":{"a1":"v1","a2":"v2"}})");
+    size_t size;
+    REQUIRE_RC_FAIL( KMDataNodeReadAttr ( m_node, "", m_buffer, sizeof( m_buffer ), &size ) );
+}
+FIXTURE_TEST_CASE(KMetanode_ReadAttr_Buffer_NULL, KTextMetanode_ApiFixture)
+{   // error if bsize > 0
+    Setup(R"({"name":"mn","attributes":{"a1":"v1","a2":"v2"}})");
+    size_t size;
+    REQUIRE_RC_FAIL( KMDataNodeReadAttr ( m_node, "a1", nullptr, sizeof( m_buffer ), &size ) );
+}
+FIXTURE_TEST_CASE(KMetanode_ReadAttr_NotFound, KTextMetanode_ApiFixture)
+{   // error if bsize > 0
+    Setup(R"({"name":"mn","attributes":{"a1":"v1","a2":"v2"}})");
+    size_t size = 1;
+    m_buffer[0]='a';
+    REQUIRE_RC_FAIL( KMDataNodeReadAttr ( m_node, "a3", m_buffer, sizeof( m_buffer ), &size ) );
+    REQUIRE_EQ( (size_t)0, size );
+    REQUIRE_EQ( (char)0, m_buffer[0] );
+}
+
+FIXTURE_TEST_CASE(KMetanode_ReadAttr, KTextMetanode_ApiFixture)
+{   // error if bsize > 0
+    Setup(R"({"name":"mn","attributes":{"a1":"v1","a2":"v2"}})");
+    size_t size = 1;
+    m_buffer[0]='a';
+    REQUIRE_RC( KMDataNodeReadAttr ( m_node, "a2", m_buffer, sizeof( m_buffer ), &size ) );
+    REQUIRE_EQ( string("v2"), string( m_buffer, size ) );
+}
+FIXTURE_TEST_CASE(KMetanode_ReadAttr_BufShort, KTextMetanode_ApiFixture)
+{   // error if bsize > 0
+    Setup(R"({"name":"mn","attributes":{"a1":"v1","a2":"v2"}})");
+    size_t size = 1;
+    m_buffer[0]='a';
+    REQUIRE_RC_FAIL( KMDataNodeReadAttr ( m_node, "a2", m_buffer, 1, &size ) );
+    REQUIRE_EQ( (size_t)2, size );
+}
+
+FIXTURE_TEST_CASE(KMetanode_ReadAttrAs_SizedInt, KTextMetanode_ApiFixture)
+{   // numeric attribute values are always stored as strings and converted on read as needed
+    Setup(R"({"name":"md","attributes":{"a1":1}})");
+
+    int16_t i16 = 0;
+    REQUIRE_RC( KMDataNodeReadAttrAsI16 ( m_node, "a1", &i16 ) );
+    REQUIRE_EQ( (int16_t)1, i16 );
+
+    uint16_t u16 = 0;
+    REQUIRE_RC( KMDataNodeReadAttrAsU16 ( m_node, "a1", &u16 ) );
+    REQUIRE_EQ( (uint16_t)1, u16 );
+
+    int32_t i32 = 0;
+    REQUIRE_RC( KMDataNodeReadAttrAsI32 ( m_node, "a1", &i32 ) );
+    REQUIRE_EQ( (int32_t)1, i32 );
+
+    uint32_t u32 = 0;
+    REQUIRE_RC( KMDataNodeReadAttrAsU32 ( m_node, "a1", &u32 ) );
+    REQUIRE_EQ( (uint32_t)1, u32 );
+
+    int64_t i64 = 0;
+    REQUIRE_RC( KMDataNodeReadAttrAsI64 ( m_node, "a1", &i64 ) );
+    REQUIRE_EQ( (int64_t)1, i64 );
+
+    uint64_t u64 = 0;
+    REQUIRE_RC( KMDataNodeReadAttrAsU64 ( m_node, "a1", &u64 ) );
+    REQUIRE_EQ( (uint64_t)1, u64 );
+
+    double f64 = 0;
+    REQUIRE_RC( KMDataNodeReadAttrAsF64 ( m_node, "a1", &f64 ) );
+    REQUIRE_EQ( (double)1, f64 );
+}
+
+FIXTURE_TEST_CASE(KMetanode_Compare_Param_NULL, KTextMetanode_ApiFixture)
+{
+    Setup(R"({"name":"md","attributes":{"a1":1}})");
+    bool equal;
+    REQUIRE_RC_FAIL( KMDataNodeCompare( m_node, nullptr, &equal ) );
+    REQUIRE_RC_FAIL( KMDataNodeCompare( m_node, m_node, nullptr ) );
+}
+
+FIXTURE_TEST_CASE(KMetanode_Compare_Different, KTextMetanode_ApiFixture)
+{
+    Setup(R"({"name":"md","attributes":{"a1":1}})");
+    KTextMetanode_ApiFixture other;
+    other.Setup(R"({"name":"md","attributes":{"a1":2}})");
+    bool equal = true;
+    REQUIRE_RC( KMDataNodeCompare( m_node, other.m_node, &equal ) );
+    REQUIRE( ! equal );
+}
+FIXTURE_TEST_CASE(KMetanode_Compare_Same, KTextMetanode_ApiFixture)
+{
+    Setup(R"({"name":"md","attributes":{"a1":1}})");
+    KTextMetanode_ApiFixture other;
+    other.Setup(R"({"name":"md","attributes":{"a1":1}})");
+    bool equal = false;
+    REQUIRE_RC( KMDataNodeCompare( m_node, other.m_node, &equal ) );
+    REQUIRE( equal );
+}
+
+FIXTURE_TEST_CASE(KMetanode_Addr_Null, KTextMetanode_ApiFixture)
+{
+    Setup(R"({"name":"md","attributes":{"a1":1}})");
+    size_t size;
+    REQUIRE_RC_FAIL( KMDataNodeAddr( m_node, nullptr, &size ) );
+}
+
+FIXTURE_TEST_CASE(KMetanode_Addr, KTextMetanode_ApiFixture)
+{
+    Setup(R"({"name":"md","value":{"size":4,"int":1}})");
+    const void * addr;
+    size_t size;
+    REQUIRE_RC( KMDataNodeAddr( m_node, &addr, &size ) );
+    REQUIRE_EQ( (size_t)4, size );
+    REQUIRE_EQ( (uint32_t)1, *(uint32_t*)addr );
+}
+FIXTURE_TEST_CASE(KMetanode_Addr_SizeNull, KTextMetanode_ApiFixture)
+{
+    Setup(R"({"name":"md","value":{"size":4,"int":1}})");
+    const void * addr;
+    REQUIRE_RC( KMDataNodeAddr( m_node, &addr, nullptr ) );
+    REQUIRE_EQ( (uint32_t)1, *(uint32_t*)addr );
 }
 
 //////////////////////////////////////////// Main
