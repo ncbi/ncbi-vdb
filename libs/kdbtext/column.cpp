@@ -198,6 +198,11 @@ Column::inflate( char * p_error, size_t p_error_size )
                         strcpy( (char*)b.base, valueStr );
                         m_data [ rowId ] = b;
                     }
+                    else
+                    {   // invalid value
+                        string_printf ( p_error, p_error_size, nullptr, "%s.data[%i].value is invalid", m_name.c_str(), i );
+                        return rc;
+                    }
                 }
                 else
                 {   // not an object
