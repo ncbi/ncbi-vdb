@@ -1798,6 +1798,7 @@ sub check_compiler {
             }
 
             unlink 'a.out';
+            unlink '-.o';
 
             return if ( ! $ok && ( $i == $#l ) );
 
