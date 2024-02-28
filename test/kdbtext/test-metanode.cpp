@@ -213,8 +213,8 @@ FIXTURE_TEST_CASE(KDBTextMetanode_Make_Children, KDBTextMetanode_Fixture)
     REQUIRE_RC( m_node -> inflate( m_error, sizeof m_error ) );
     auto c = m_node->getChildren();
     REQUIRE_EQ( (size_t)2, c.size() );
-    REQUIRE_EQ( string("ch1"), c[0].getName() );
-    REQUIRE_EQ( string("ch2"), c[1].getName() );
+    REQUIRE_EQ( string("ch1"), c[0] -> getName() );
+    REQUIRE_EQ( string("ch2"), c[1] -> getName() );
 }
 
 FIXTURE_TEST_CASE(KDBTextMetanode_GetNode_Self, KDBTextMetanode_Fixture)
@@ -589,9 +589,9 @@ FIXTURE_TEST_CASE(KMetanode_Compare_Different, KTextMetanode_ApiFixture)
 }
 FIXTURE_TEST_CASE(KMetanode_Compare_Same, KTextMetanode_ApiFixture)
 {
-    Setup(R"({"name":"md","attributes":{"a1":1}})");
+          Setup(R"({"name":"md","attributes":{"a1":1},"children":[{"name":"child"}]})");
     KTextMetanode_ApiFixture other;
-    other.Setup(R"({"name":"md","attributes":{"a1":1}})");
+    other.Setup(R"({"name":"md","attributes":{"a1":1},"children":[{"name":"child"}]})");
     bool equal = false;
     REQUIRE_RC( KMDataNodeCompare( m_node, other.m_node, &equal ) );
     REQUIRE( equal );

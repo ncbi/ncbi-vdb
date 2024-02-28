@@ -61,7 +61,7 @@ namespace KDBText
         rc_t openTable( const Path &, const Table *& ) const;
 
     private:
-        KJsonValue * m_root = nullptr; //TODO: convert to KJsonObject
+        KJsonValue * m_root = nullptr;
         bool m_isDb;
     };
 }

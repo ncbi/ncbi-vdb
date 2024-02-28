@@ -26,6 +26,9 @@
 
 #include "metadata.hpp"
 
+#include "metanode.hpp"
+#include "path.hpp"
+
 #include <kdb/manager.h>
 #include <kdb/meta.h>
 
@@ -42,8 +45,8 @@ static rc_t CC KTextMetadataByteOrder ( const KMetadata *self, bool *reversed );
 static rc_t CC KTextMetadataRevision ( const KMetadata *self, uint32_t *revision );
 static rc_t CC KTextMetadataMaxRevision ( const KMetadata *self, uint32_t *revision );
 static rc_t CC KTextMetadataOpenRevision ( const KMetadata *self, const KMetadata **metap, uint32_t revision );
-// static rc_t CC KTextMetadataGetSequence ( const KMetadata *self, const char *seq, int64_t *val );
-// static rc_t CC KTextMetadataVOpenNodeRead ( const KMetadata *self, const KMDataNode **node, const char *path, va_list args );
+static rc_t CC KTextMetadataGetSequence ( const KMetadata *self, const char *seq, int64_t *val );
+static rc_t CC KTextMetadataVOpenNodeRead ( const KMetadata *self, const KMDataNode **node, const char *path, va_list args );
 
 static KMetadata_vt KTextMetadata_vt =
 {
@@ -55,8 +58,8 @@ static KMetadata_vt KTextMetadata_vt =
     KTextMetadataRevision,
     KTextMetadataMaxRevision,
     KTextMetadataOpenRevision,
-    // KTextMetadataGetSequence,
-    // KTextMetadataVOpenNodeRead
+    KTextMetadataGetSequence,
+    KTextMetadataVOpenNodeRead
 };
 
 #define CAST() assert( bself->vt == &KTextMetadata_vt ); Metadata * self = (Metadata *)bself
@@ -69,6 +72,7 @@ Metadata::Metadata( const KJsonObject * p_json ) : m_json ( p_json )
 
 Metadata::~Metadata()
 {
+    Metanode::release( m_root );
     KRefcountWhack ( & dad . refcount, "KDBText::Metadata" );
 }
 
@@ -122,6 +126,22 @@ Metadata::inflate( char * p_error, size_t p_error_size )
             return SILENT_RC( rcDB, rcMetadata, rcCreating, rcParam, rcInvalid );
         }
         m_revision = (uint32_t)r;
+    }
+
+    const KJsonValue * rootVal = KJsonObjectGetMember ( m_json, "root" );
+    if ( rootVal != nullptr )
+    {
+        const KJsonObject * rootObj = KJsonValueToObject ( rootVal );
+        if ( rootObj != nullptr )
+        {
+            m_root = new Metanode( rootObj );
+            rc = m_root -> inflate( p_error, p_error_size );
+        }
+        else
+        {
+            string_printf ( p_error, p_error_size, nullptr, "metadata.root is invalid" );
+            return SILENT_RC( rcDB, rcMetadata, rcCreating, rcParam, rcInvalid );
+        }
     }
 
     return rc;
@@ -200,7 +220,7 @@ KTextMetadataOpenRevision ( const KMetadata *bself, const KMetadata **metap, uin
 {
     CAST();
 
-    if ( metap == NULL )
+    if ( metap == nullptr )
     {
         return SILENT_RC ( rcDB, rcMetadata, rcOpening, rcParam, rcNull );
     }
@@ -212,4 +232,66 @@ KTextMetadataOpenRevision ( const KMetadata *bself, const KMetadata **metap, uin
 
     *metap = bself;
     return KMetadataAddRef( bself );
+}
+
+static
+rc_t CC
+KTextMetadataGetSequence ( const KMetadata * bself, const char *seq, int64_t *val )
+{
+    CAST();
+
+    if ( val == nullptr )
+    {
+        return SILENT_RC ( rcDB, rcMetadata, rcAccessing, rcParam, rcNull );
+    }
+    if ( seq == nullptr )
+    {
+        return SILENT_RC ( rcDB, rcMetadata, rcAccessing, rcString, rcNull );
+    }
+    if ( seq [ 0 ] == 0 )
+    {
+        return SILENT_RC ( rcDB, rcMetadata, rcAccessing, rcString, rcInvalid );
+    }
+
+    const KMDataNode *found;
+    rc_t rc = KMDataNodeOpenNodeRead( & self -> getRoot() -> dad, & found, ".seq/%s", seq );
+    if ( rc == 0 )
+    {
+        size_t num_read, remaining;
+        rc = KMDataNodeRead ( found, 0, val, sizeof * val, & num_read, & remaining );
+        assert ( rc != 0 || ( num_read == sizeof * val && remaining == 0 ) );
+        KMDataNodeRelease ( found );
+    }
+
+    return rc;
+}
+
+static
+rc_t CC
+KTextMetadataVOpenNodeRead ( const KMetadata *bself, const KMDataNode **node, const char *path, va_list args )
+{
+    CAST();
+
+    if ( node == nullptr )
+    {
+        return SILENT_RC ( rcDB, rcMetadata, rcOpening, rcParam, rcNull );
+    }
+
+    const Metanode * r = self->getRoot();
+    if ( r == nullptr )
+    {
+        return SILENT_RC ( rcDB, rcMetadata, rcOpening, rcData, rcNull );
+    }
+
+    Path p(path, args);
+    const Metanode * ret = r->getNode( p );
+    if ( ret == nullptr )
+    {
+        return SILENT_RC ( rcDB, rcMetadata, rcSelecting, rcPath, rcNotFound );
+    }
+
+    *node = & ret -> dad;
+    Metanode::addRef( ret );
+
+    return 0;
 }

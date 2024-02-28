@@ -63,18 +63,12 @@ namespace KDBText
         typedef std::map<std::string, std::string> Attributes;
         const Attributes& getAttributes() const { return m_attrs; }
 
-        typedef std::vector<Metanode> Children;
+        typedef std::vector<const Metanode*> Children;
         const Children& getChildren() const { return m_children; }
 
         const Metanode * getNode( Path & ) const; // destroys path
 
-        bool operator == ( const Metanode& other ) const
-        {
-            return m_name == other.m_name &&
-                   m_value == other.m_value &&
-                   m_attrs == other.m_attrs &&
-                   m_children == other.m_children;
-        }
+        bool operator == ( const Metanode& other ) const;
 
     private:
         const KJsonObject * m_json = nullptr;

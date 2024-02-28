@@ -427,15 +427,18 @@ rc_t CC KMain ( int argc, char *argv [] )
     "metadata":
     {
         "name":"",
-        "value":"blah",
-        "attributes":{"attr0":"value", "attr1":{"size":4,"int":123456}},
         "revision":1,
-        "children":[{
-            "name":"schema",
-            "value":"version 1;....",
-            "attributes":{},
-            "children":[]
+        "root":{
+            "value":"blah",
+            "attributes":{"attr0":"value", "attr1":{"size":4,"int":123456}},
+            "children":[{
+                "name":"schema",
+                "value":"version 1;....",
+                "attributes":{},
+                "children":[]
         }]
+        }
+
     }
     "tables":[
         {

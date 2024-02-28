@@ -41,6 +41,8 @@ struct KTextMetadata
 
 namespace KDBText
 {
+    class Metanode;
+
     class Metadata : public KTextMetadata
     {
     public:
@@ -57,9 +59,12 @@ namespace KDBText
 
         uint32_t getRevision() const { return m_revision; }
 
+        const Metanode * getRoot() const { return m_root; }
+
     private:
         const KJsonObject * m_json = nullptr;
         std::string m_name;
         uint32_t m_revision = 0;
+        Metanode * m_root = nullptr;
     };
 }

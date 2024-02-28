@@ -31,6 +31,7 @@
 #include <ktst/unit_test.hpp>
 
 #include "../../libs/kdbtext/metadata.hpp"
+#include "../../libs/kdbtext/metanode.hpp"
 
 #include <kdb/meta.h>
 
@@ -88,16 +89,31 @@ FIXTURE_TEST_CASE(KDBTextMetadata_RevisionBad, KDBTextMetadata_Fixture)
 {
     Setup(R"({"name":"md","revision":"blah"})");
     REQUIRE_RC_FAIL( m_meta -> inflate( m_error, sizeof m_error ) );
-    cout << m_error << endl;
+    //cout << m_error << endl;
 }
 FIXTURE_TEST_CASE(KDBTextMetadata_RevisionNegative, KDBTextMetadata_Fixture)
 {
     Setup(R"({"name":"md","revision":-1})");
     REQUIRE_RC_FAIL( m_meta -> inflate( m_error, sizeof m_error ) );
-    cout << m_error << endl;
+    //cout << m_error << endl;
 }
 
-//TODO: the rest
+FIXTURE_TEST_CASE(KDBTextMetadata_RootBad, KDBTextMetadata_Fixture)
+{
+    Setup(R"({"name":"md","root":"blah"})");
+    REQUIRE_RC_FAIL( m_meta -> inflate( m_error, sizeof m_error ) );
+    //cout << m_error << endl;
+}
+FIXTURE_TEST_CASE(KDBTextMetadata_Root, KDBTextMetadata_Fixture)
+{
+    Setup(R"({"name":"","root":{ "name":"r", "children":[ {"name":"seq1","value":11},{"name":"seq2","value":22} ] } })");
+    REQUIRE_RC( m_meta -> inflate( m_error, sizeof m_error ) );
+
+    const Metanode * root = m_meta->getRoot();
+    REQUIRE_EQ( string("r"), root->getName() );
+    REQUIRE_EQ( string("seq1"), root->getChildren()[0]->getName() );
+    REQUIRE_EQ( string("seq2"), root->getChildren()[1]->getName() );
+}
 
 // API
 
@@ -227,7 +243,71 @@ FIXTURE_TEST_CASE(KMetadata_OpenRevision_NotFound, KTextMetadata_ApiFixture)
     REQUIRE_RC_FAIL( KMetadataOpenRevision( m_md, & metap, 11 ) ); // no such revision
 }
 
-//static rc_t CC KMetadataGetSequence ( const KMetadata *self, const char *seq, int64_t *val );
+FIXTURE_TEST_CASE(KMetadata_GetSequence_SeqNull, KTextMetadata_ApiFixture)
+{
+    Setup(R"({"name":"md","revision":1})");
+    int64_t val;
+    REQUIRE_RC_FAIL( KMetadataGetSequence( m_md, nullptr, &val ) );
+    const char * seq = "";
+    REQUIRE_RC_FAIL( KMetadataGetSequence( m_md, seq, &val ) );
+}
+FIXTURE_TEST_CASE(KMetadata_GetSequence_ValNull, KTextMetadata_ApiFixture)
+{
+    Setup(R"({"name":"md","revision":1})");
+    const char * seq;
+    REQUIRE_RC_FAIL( KMetadataGetSequence( m_md, seq, nullptr ) );
+}
+
+const char * MultiLevelMetadata =
+R"({"name":"",
+              "root":{
+                "name":"",
+                "children":[
+                    {"name":"other"},
+                    {"name":".seq","value":2,"children":[{"name":"seq1","value":11},{"name":"seq2","value":22}]}
+                ]
+              }
+        })";
+
+FIXTURE_TEST_CASE(KMetadata_GetSequence, KTextMetadata_ApiFixture)
+{
+    Setup(MultiLevelMetadata);
+    int64_t val = 0;
+    REQUIRE_RC( KMetadataGetSequence( m_md, "seq1", &val ) );
+    REQUIRE_EQ( (int64_t)11, val );
+    val = 0;
+    REQUIRE_RC( KMetadataGetSequence( m_md, "seq2", &val ) );
+    REQUIRE_EQ( (int64_t)22, val );
+}
+
+FIXTURE_TEST_CASE(KMetadata_OpenNodeRead_NodeNull, KTextMetadata_ApiFixture)
+{
+    Setup(MultiLevelMetadata);
+    REQUIRE_RC_FAIL( KMetadataOpenNodeRead( m_md, nullptr, "path" ) );
+}
+FIXTURE_TEST_CASE(KMetadata_OpenNodeRead_NoRoot, KTextMetadata_ApiFixture)
+{
+    Setup(R"({"name":""})");
+    const KMDataNode *node;
+    REQUIRE_RC_FAIL( KMetadataOpenNodeRead( m_md, &node, "path" ) );
+}
+FIXTURE_TEST_CASE(KMetadata_OpenNodeRead_PathNotFound, KTextMetadata_ApiFixture)
+{
+    Setup(MultiLevelMetadata);
+    const KMDataNode *node;
+    REQUIRE_RC_FAIL( KMetadataOpenNodeRead( m_md, &node, "path" ) );
+}
+FIXTURE_TEST_CASE(KMetadata_OpenNodeRead, KTextMetadata_ApiFixture)
+{
+    Setup(MultiLevelMetadata);
+    const KMDataNode *node = nullptr;
+    REQUIRE_RC( KMetadataOpenNodeRead( m_md, &node, ".seq/seq1" ) );
+    REQUIRE_NOT_NULL( node );
+    uint64_t u;
+    REQUIRE_RC( KMDataNodeReadAsU64 ( node, & u ) );
+    REQUIRE_EQ( (uint64_t)11, u );
+    REQUIRE_RC( KMDataNodeRelease( node ) );
+}
 
 //////////////////////////////////////////// Main
 extern "C"

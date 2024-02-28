@@ -71,26 +71,51 @@ Metanode::Metanode( const KJsonObject * p_json ) : m_json ( p_json )
 
 Metanode::~Metanode()
 {
+    for (auto & ch : m_children )
+    {
+        Metanode::release( ch );
+    }
     KRefcountWhack ( & dad . refcount, "KDBText::Metanode" );
 }
 
 void
-Metanode::addRef( const Metanode * meta )
+Metanode::addRef( const Metanode * node )
 {
-    if ( meta != nullptr )
+    if ( node != nullptr )
     {
-        KMDataNodeAddRef( (const KMDataNode*) meta );
+        KMDataNodeAddRef( (const KMDataNode*) node );
     }
 }
 
 void
-Metanode::release( const Metanode * meta )
+Metanode::release( const Metanode * node )
 {
-    if ( meta != nullptr )
+    if ( node != nullptr )
     {
-        KMDataNodeRelease( (const KMDataNode*) meta );
+        KMDataNodeRelease( (const KMDataNode*) node );
     }
 }
+
+bool
+Metanode::operator == ( const Metanode& other ) const
+{
+    if ( m_name == other.m_name &&
+         m_value == other.m_value &&
+         m_attrs == other.m_attrs &&
+         m_children.size() == other.m_children.size() )
+    {   // deep compare of children
+        for ( size_t i = 0; i < m_children.size(); ++i )
+        {
+            if ( ! (*m_children[0] == *other.m_children[0]) )
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+    return false;
+}
+
 
 static
 rc_t
@@ -296,14 +321,15 @@ Metanode::inflate( char * p_error, size_t p_error_size )
                     const KJsonObject * obj = KJsonValueToObject ( v );
                     if( obj != nullptr )
                     {
-                        Metanode ch( obj );
-                        rc = ch.inflate( p_error, p_error_size );
+                        Metanode * ch = new Metanode( obj );
+                        rc = ch -> inflate( p_error, p_error_size );
                         if ( rc == 0 )
                         {
                             m_children.push_back( ch );
                         }
                         else
                         {
+                            delete ch;
                             break;
                         }
                     }
@@ -340,10 +366,10 @@ Metanode::getNode( Path & p ) const
 
     for( auto const & c : m_children )
     {
-        if ( c.getName() == p.front() )
+        if ( c -> getName() == p.front() )
         {
             p.pop();
-            return c.getNode( p );
+            return c -> getNode( p );
         }
     }
 
@@ -570,7 +596,7 @@ KTextMetanodeListChildren ( const KMDataNode *bself, KNamelist **names )
     {
         for (auto & ch : children )
         {
-            VNamelistAppend ( ret, ch.getName().c_str() );
+            VNamelistAppend ( ret, ch -> getName().c_str() );
         }
         *names = (KNamelist*) ret;
     }
