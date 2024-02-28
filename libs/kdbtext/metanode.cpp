@@ -43,8 +43,8 @@ static rc_t CC KTextMetanodeVOpenNodeRead ( const KMDataNode *self, const KMData
 static rc_t CC KTextMetanodeReadAttr ( const KMDataNode *self, const char *name, char *buffer, size_t bsize, size_t *size );
 static rc_t CC KTextMetanodeCompare( const KMDataNode *self, KMDataNode const *other, bool *equal );
 static rc_t CC KTextMetanodeAddr ( const KMDataNode *self, const void **addr, size_t *size );
-// static rc_t CC KTextMetanodeListAttr ( const KMDataNode *self, KNamelist **names );
-// static rc_t CC KTextMetanodeListChildren ( const KMDataNode *self, KNamelist **names );
+static rc_t CC KTextMetanodeListAttr ( const KMDataNode *self, KNamelist **names );
+static rc_t CC KTextMetanodeListChildren ( const KMDataNode *self, KNamelist **names );
 
 static KMDataNode_vt KTextMetanode_vt =
 {
@@ -57,8 +57,8 @@ static KMDataNode_vt KTextMetanode_vt =
     KTextMetanodeReadAttr,
     KTextMetanodeCompare,
     KTextMetanodeAddr,
-    // KTextMetanodeListAttr,
-    // KTextMetanodeListChildren
+    KTextMetanodeListAttr,
+    KTextMetanodeListChildren
 };;
 
 #define CAST() assert( bself->vt == &KTextMetanode_vt ); Metanode * self = (Metanode *)bself
@@ -523,5 +523,57 @@ KTextMetanodeAddr ( const KMDataNode *bself, const void **addr, size_t *size )
     {
         * size = self->getValue().size();
     }
+    return 0;
+}
+
+static
+rc_t CC
+KTextMetanodeListAttr ( const KMDataNode *bself, KNamelist **names )
+{
+    CAST();
+
+    if ( names == nullptr )
+    {
+        return SILENT_RC ( rcDB, rcMetadata, rcListing, rcParam, rcNull );
+    }
+
+    VNamelist * ret;
+    const Metanode::Attributes & attrs = self -> getAttributes();
+    rc_t rc = VNamelistMake( & ret, attrs.size() );
+    if (rc == 0 )
+    {
+        for (auto & key_val : attrs )
+        {
+            VNamelistAppend ( ret, key_val . first . c_str() );
+        }
+        *names = (KNamelist*) ret;
+    }
+
+    return 0;
+}
+
+static
+rc_t CC
+KTextMetanodeListChildren ( const KMDataNode *bself, KNamelist **names )
+{
+    CAST();
+
+    if ( names == nullptr )
+    {
+        return SILENT_RC ( rcDB, rcMetadata, rcListing, rcParam, rcNull );
+    }
+
+    VNamelist * ret;
+    const Metanode::Children & children = self -> getChildren();
+    rc_t rc = VNamelistMake( & ret, children.size() );
+    if (rc == 0 )
+    {
+        for (auto & ch : children )
+        {
+            VNamelistAppend ( ret, ch.getName().c_str() );
+        }
+        *names = (KNamelist*) ret;
+    }
+
     return 0;
 }

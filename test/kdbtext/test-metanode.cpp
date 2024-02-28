@@ -35,9 +35,12 @@
 
 #include <kdb/meta.h>
 #include <kdb/kdb-priv.h>
+#include <kdb/namelist.h>
 
 #include <klib/rc.h>
 #include <klib/json.h>
+#include <klib/namelist.h>
+
 #include <arch-impl.h>
 
 using namespace std;
@@ -616,6 +619,46 @@ FIXTURE_TEST_CASE(KMetanode_Addr_SizeNull, KTextMetanode_ApiFixture)
     const void * addr;
     REQUIRE_RC( KMDataNodeAddr( m_node, &addr, nullptr ) );
     REQUIRE_EQ( (uint32_t)1, *(uint32_t*)addr );
+}
+
+FIXTURE_TEST_CASE(KMetanode_ListAttr_Null, KTextMetanode_ApiFixture)
+{
+    Setup(R"({"name":"mn","attributes":{"a1":"v1","a2":"v2"}})");
+    REQUIRE_RC_FAIL( KMDataNodeListAttr( m_node, nullptr ) );
+}
+
+FIXTURE_TEST_CASE(KMetanode_ListAttr, KTextMetanode_ApiFixture)
+{
+    Setup(R"({"name":"mn","attributes":{"a1":"v1","a2":"v2"}})");
+    KNamelist * names;
+    REQUIRE_RC( KMDataNodeListAttr( m_node, &names ) );
+
+    uint32_t count = 0;
+    REQUIRE_RC( KNamelistCount ( names, & count ) );
+    REQUIRE_EQ( (uint32_t)2, count );
+    REQUIRE( KNamelistContains( names, "a1" ) );
+    REQUIRE( KNamelistContains( names, "a2" ) );
+    KNamelistRelease( names );
+}
+
+FIXTURE_TEST_CASE(KMetanode_ListChildren_Null, KTextMetanode_ApiFixture)
+{
+    Setup(R"({"name":"mn","children":[ {"name":"ch1"}, {"name":"ch2","value":2} ]})");
+    REQUIRE_RC_FAIL( KMDataNodeListChildren( m_node, nullptr ) );
+}
+
+FIXTURE_TEST_CASE(KMetanode_ListChildren, KTextMetanode_ApiFixture)
+{
+    Setup(R"({"name":"mn","children":[ {"name":"ch1"}, {"name":"ch2","value":2} ]})");
+    KNamelist * names;
+    REQUIRE_RC( KMDataNodeListChildren( m_node, &names ) );
+
+    uint32_t count = 0;
+    REQUIRE_RC( KNamelistCount ( names, & count ) );
+    REQUIRE_EQ( (uint32_t)2, count );
+    REQUIRE( KNamelistContains( names, "ch1" ) );
+    REQUIRE( KNamelistContains( names, "ch2" ) );
+    KNamelistRelease( names );
 }
 
 //////////////////////////////////////////// Main
