@@ -70,6 +70,7 @@ AddExecutableTest( Test_VDB_VDB-4156 "test-VDB-4156" "${COMMON_LIBS_WRITE};${ADD
 AddExecutableTest( Test_VDB_META_CMP_COPY "test-vdb-meta-cmp-copy" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" )
 AddExecutableTest( Test_VDB_schema_priv "Test-VDB_schema_priv" "${COMMON_LIBS_READ};${ADDITIONAL_LIBS}" )
 AddExecutableTest( Test_VDB_link "test-link" "${COMMON_LIBS_READ}" )
+AddExecutableTest( Test_VDB_text "test-textvdb" "${COMMON_LIBS_READ}" )
 
 # Slow tests
 AddExecutableTest( SlowTest_VDB_tablecursor "test-tablecursor" "${COMMON_LIBS_READ}" )
