@@ -45,6 +45,7 @@
 
 #include "http-priv.h"
 #include "mgr-priv.h"
+#include "../klib/int_checks-priv.h"
 
 #if _DEBUGGING && 0
 #include <stdio.h>
@@ -291,7 +292,9 @@ LIB_EXPORT rc_t CC KClientHttpMakeRequest ( const KClientHttp *self,
  */
 static
 rc_t CC KNSManagerMakeClientRequestInt ( const KNSManager *self,
-    KClientHttpRequest **req, ver_t vers, KStream *conn, bool reliable, const char *url, va_list args )
+    KClientHttpRequest **req,
+    ver_t vers, int32_t connMillis, int32_t readMillis, int32_t writeMillis,
+    KStream *conn, bool reliable, const char *url, va_list args )
 {
     rc_t rc;
 
@@ -326,8 +329,10 @@ rc_t CC KNSManagerMakeClientRequestInt ( const KNSManager *self,
                     {
                         KClientHttp * http;
 
-                        rc = KNSManagerMakeClientHttpInt ( self, & http, & buf, conn, vers,
-                            self -> http_read_timeout, self -> http_write_timeout, & block . host, block . port, reliable, block . tls );
+                        rc = KNSManagerMakeClientHttpInt ( self, & http, & buf,
+                            conn, vers, connMillis,
+                            readMillis, writeMillis, & block . host,
+                            block . port, reliable, block . tls );
                         if ( rc == 0 )
                         {
                             rc = KClientHttpMakeRequestInt ( http, req, & block, & buf );
@@ -347,8 +352,12 @@ LIB_EXPORT rc_t CC KNSManagerMakeClientRequest ( const KNSManager *self,
 {
     rc_t rc;
     va_list args;
+    if (self == NULL)
+        return RC(rcNS, rcNoTarg, rcValidating, rcSelf, rcNull);
     va_start ( args, url );
-    rc = KNSManagerMakeClientRequestInt ( self, req, vers, conn, false, url, args );
+    rc = KNSManagerMakeClientRequestInt ( self, req, vers,
+        self->conn_timeout, self->http_read_timeout, self->http_write_timeout,
+        conn, false, url, args );
     va_end ( args );
     return rc;
 }
@@ -358,9 +367,27 @@ LIB_EXPORT rc_t CC KNSManagerMakeReliableClientRequest ( const KNSManager *self,
 {
     rc_t rc;
     va_list args;
+    if (self == NULL)
+        return RC(rcNS, rcNoTarg, rcValidating, rcSelf, rcNull);
     va_start ( args, url );
-    rc = KNSManagerMakeClientRequestInt ( self, req, vers, conn, true, url, args );
+    rc = KNSManagerMakeClientRequestInt ( self, req, vers,
+        self->conn_timeout, self->http_read_timeout, self->http_write_timeout,
+        conn, true, url, args );
     va_end ( args );
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KNSManagerMakeTimedClientRequest(const KNSManager *self,
+    KClientHttpRequest **req,
+    ver_t vers, int32_t connMillis, int32_t readMillis,
+    int32_t writeMillis, KStream *conn, const char *url, ...)
+{
+    rc_t rc;
+    va_list args;
+    va_start(args, url);
+    rc = KNSManagerMakeClientRequestInt(self, req,
+        vers, connMillis, readMillis, writeMillis, conn, false, url, args);
+    va_end(args);
     return rc;
 }
 
@@ -901,7 +928,8 @@ rc_t KClientHttpRequestUrlEncodeBase64(const String ** encoding) {
         size_t iFrom = 0, iTo = 0;
         const char *from = (*encoding)->addr;
         char *to = NULL;
-        uint32_t len = (*encoding)->size + n + n;
+        assert ( FITS_INTO_INT32 ((*encoding)->size + n + n ) );
+        uint32_t len = (uint32_t)((*encoding)->size + n + n);
 
         String * encoded = (String *) calloc(1, sizeof * encoded + len + 1);
         if (encoded == NULL)
@@ -1044,11 +1072,12 @@ static EUriForm EUriFormGuess ( const String * hostname,
                 else {
                     String amazonaws;
                     CONST_STRING ( & amazonaws, "amazonaws.com" );
+                    assert ( FITS_INTO_INT32 ( amazonaws.size ) );
                     if ( hostname -> size > amazonaws . size &&
                       string_cmp ( amazonaws . addr, amazonaws . size,
                         hostname -> addr +  hostname -> size - amazonaws . size,
                         amazonaws . size,
-                        amazonaws . size ) == 0 )
+                        (uint32_t) amazonaws . size ) == 0 )
                     {
                         return eUFOriginNoPort;
                     }
@@ -1237,6 +1266,22 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
         CloudMgrCurrentProvider ( cloudMgr, & cpId );
 
     {
+#ifdef WINDOWS
+        char * e = NULL;
+        size_t buf_count = 0;
+        errno_t err = _dupenv_s ( & e, &buf_count, "NCBI_VDB_PROVIDER" );
+        if ( ! err && e != NULL )
+        {
+            if (e[0] != '\0')
+            {
+                CloudProviderId i = cloud_provider_none;
+                i = atoi(e);
+                if (i != cloud_provider_none)
+                    cpId = i;
+            }
+            free ( e );
+        }
+#else
         const char * e = getenv("NCBI_VDB_PROVIDER");
         if (e != NULL && e[0] != '\0') {
             CloudProviderId i = cloud_provider_none;
@@ -1244,6 +1289,7 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
             if (i != cloud_provider_none)
                 cpId = i;
         }
+#endif
     }
 
     if ( cpId != cloud_provider_none && ( cself->ceRequired || cself->payRequired ) )
@@ -1689,7 +1735,16 @@ LIB_EXPORT rc_t CC KClientHttpRequestHEAD ( KClientHttpRequest *self, KClientHtt
 
     static int HEADLESS = -1;
     if ( HEADLESS < 0 ) {
+#ifdef WINDOWS
+        const char * s = NULL;
+        char s_buf[16];
+        size_t buf_count = 0;
+        errno_t err = getenv_s ( & buf_count, s_buf, sizeof(s_buf), "NCBI_VDB_GET_AS_HEAD" );
+        if ( ! err && buf_count > 0 )
+            s = s_buf;
+#else
         char * s = getenv ( "NCBI_VDB_GET_AS_HEAD" );
+#endif
         if ( s == NULL )
             HEADLESS = 0;
         else if ( s [ 0 ] != '\0' )
@@ -2015,12 +2070,12 @@ static bool GovSiteByHttp ( const char * path ) {
                 return false;
             }
             else {
-                size_t size = 0;
+                size_t size2 = 0;
                 String gov;
                 CONST_STRING ( & gov, ".gov" );
-                size = gov . size;
+                size2 = gov . size;
                 if ( strcase_cmp
-                    ( path + i - 5, size, gov . addr, size, gov.len ) == 0 )
+                    ( path + i - 5, size2, gov . addr, size2, gov.len ) == 0 )
                 {
                     return true;
                 }

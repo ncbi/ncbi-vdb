@@ -45,6 +45,7 @@
 #include <assert.h>
 #include <time.h> /* time */
 
+#include "../klib/int_checks-priv.h"
 
 #define RELEASE( type, obj ) do { rc_t rc2 = type##Release ( obj ); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while ( false )
@@ -326,7 +327,10 @@ static rc_t KNSProxiesAddHttpProxyPath ( KNSProxies * self,
     HttpProxy * new_proxy = NULL;
     BSTItem * node = NULL;
 
-    HttpProxy add = { proxy_host, proxy_port, 0 };
+    HttpProxy add;
+    add.proxy_host = proxy_host;
+    add.proxy_port = proxy_port;
+    add.next = 0;
 
     assert ( self );
 
@@ -396,7 +400,17 @@ static rc_t CC KNSProxiesAddHTTPProxyPath ( KNSProxies * self,
 static bool KNSProxiesHttpProxyInitFromEnvVar ( KNSProxies * self,
                                                 const char * name )
 {
+    bool ret = 0;
+#ifdef WINDOWS
+    errno_t err = 0;
+    char* path = NULL;
+    {
+        size_t buf_count = 0;
+        err = _dupenv_s ( & path, & buf_count, name );
+    }
+#else
     const char * path = getenv ( name );
+#endif
 
     if ( path != NULL ) {
         assert ( self );
@@ -405,13 +419,21 @@ static bool KNSProxiesHttpProxyInitFromEnvVar ( KNSProxies * self,
             ( "Loading proxy env.var. %s='%s'\n", name, path ) );
 
         if ( KNSProxiesAddHTTPProxyPath ( self, path ) != 0 )
-            return false;
-        assert ( self -> http_proxy_enabled );
-
-        return true;
+            ret = false;
+        else
+        {
+            assert ( self -> http_proxy_enabled );
+            ret = true;
+        }
+#ifdef WINDOWS
+        assert ( ! err );
+        free ( path );
+#endif
     }
+    else
+        ret = false;
 
-    return false;
+    return ret;
 }
 
 static bool KNSProxiesHttpProxyInitFromEnv ( KNSProxies * self ) {
@@ -509,8 +531,10 @@ rc_t KNSProxiesVSetHTTPProxyPath ( KNSProxies * self,
                     const char * port_spec = NULL;
                     long port_num = 0;
 
-                    int have = colon - p;
-                    int remains = s - have;
+                    int have = (int)(colon - p);
+                    int remains = (int)(s - have);
+                    assert ( FITS_INTO_INT ( colon - p ) );
+                    assert ( FITS_INTO_INT ( s - have ) );
                     if ( remains > 2 ) {
                         assert ( colon [ 0 ] == ':' );
                         if ( colon [ 1 ] == '/' && colon [ 2 ] == '/' ) {
@@ -629,8 +653,8 @@ KNSProxies * KNSManagerKNSProxiesMake ( struct KNSManager * mgr,
 
     {
         bool proxy_only = false;
-        rc_t rc = KConfigReadBool ( kfg, "/http/proxy/only",  & proxy_only );
-        if ( rc == 0 && proxy_only )
+        rc_t rc2 = KConfigReadBool ( kfg, "/http/proxy/only",  & proxy_only );
+        if ( rc2 == 0 && proxy_only )
             self-> http_proxy_only = true;
     }
 
@@ -688,8 +712,9 @@ KNSProxies * KNSManagerKNSProxiesMake ( struct KNSManager * mgr,
     }
 
     self -> tmpS = 0;
-    n = self -> http_proxies_cnt;
-    srand ( time ( NULL ) );
+    n = (int)(self -> http_proxies_cnt);
+    assert ( FITS_INTO_INT (self->http_proxies_cnt) );
+    srand ( (unsigned int)time ( NULL ) );
     while ( n > 0 ) {
         self -> rand = rand () % n;
         self -> tmpI = 0;

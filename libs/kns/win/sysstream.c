@@ -72,7 +72,7 @@ rc_t CC KStdIOStreamRead ( const KStdIOStream *self,
 
     to_read = ( DWORD ) bsize;
     if ( ( size_t ) to_read < bsize )
-        to_read = -1;
+        to_read = ( DWORD ) -1;
 
     while ( 1 )
     {
@@ -116,7 +116,7 @@ rc_t CC KStdIOStreamWrite ( KStdIOStream *self,
 
     to_write = ( DWORD ) size;
     if ( ( size_t ) to_write < size )
-        to_write = -1;
+        to_write = ( DWORD ) -1;
 
     * num_writ = 0;
 

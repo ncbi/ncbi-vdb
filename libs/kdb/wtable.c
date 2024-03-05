@@ -66,7 +66,7 @@ static rc_t CC KWTableListCol ( const KTable *self, KNamelist **names );
 static rc_t CC KWTableListIdx ( const KTable *self, KNamelist **names );
 static rc_t CC KWTableMetaCompare( const KTable *self, const KTable *other, const char * path, bool * equal );
 
-static KTableBase_vt KWTable_vt =
+static KTable_vt KWTable_vt =
 {
     KWTableWhack,
     KTableBaseAddRef,
@@ -699,7 +699,7 @@ LIB_EXPORT rc_t CC KTableOpenParentUpdate ( KTable *bself, KDatabase **db )
         if ( self == NULL )
             rc = RC ( rcDB, rcTable, rcAccessing, rcSelf, rcNull );
         else if ( self -> db != NULL && self -> db -> read_only )
-            rc = RC ( rcVDB, rcTable, rcAccessing, rcDatabase, rcReadonly );
+            rc = RC ( rcDB, rcTable, rcAccessing, rcDatabase, rcReadonly );
         else
         {
             rc = KDatabaseAddRef ( self -> db );

@@ -37,8 +37,8 @@
 
 #define KDATABASE_IMPL KDatabase
 #include "database-base.h"
-#ifdef __cplusplus
 
+#ifdef __cplusplus
 extern "C" {
 #endif
 

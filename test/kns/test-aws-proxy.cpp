@@ -31,8 +31,7 @@
 #include <ktst/unit_test.hpp> // TEST_SUITE
 #include <vfs/path.h> /* VPathRelease */
 #include <vfs/services.h> /* KServiceRelease */
-
-#include "../../libs/vfs/services-priv.h" /* KServiceSetQuality */
+#include <vfs/services-priv.h> /* KServiceSetQuality */
 
 #include <climits> /* PATH_MAX */
 #ifndef PATH_MAX

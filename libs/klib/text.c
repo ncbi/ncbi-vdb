@@ -174,7 +174,7 @@ LIB_EXPORT String * CC StringTrim ( const String * str, String * trimmed )
 
             assert ( FITS_INTO_INT32 ( end - i ) );
             assert ( FITS_INTO_INT32 ( len - ( i + sz - end ) ) );
-            StringInit ( trimmed, & addr [ i ], (uint32_t) (end - i), (uint32_t)(len - ( i + sz - end )) );
+            StringInit ( trimmed, & addr [ i ], end - i, (uint32_t)(len - ( i + sz - end )) );
         }
     }
 

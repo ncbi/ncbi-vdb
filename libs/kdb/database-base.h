@@ -80,7 +80,7 @@ struct KDatabase_vt
 
 struct KDatabaseBase
 {
-    KDatabase_vt * vt;
+    const KDatabase_vt * vt;
 
     KRefcount refcount;
 };

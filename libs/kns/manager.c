@@ -55,6 +55,8 @@
 
 #include <assert.h>
 
+#include "../klib/int_checks-priv.h"
+
 #if HAVE_GNU_LIBC_VERSION_H
 #include <gnu/libc-version.h>
 #endif
@@ -334,27 +336,9 @@ LIB_EXPORT rc_t CC KNSManagerMakeConnection ( const KNSManager *self,
     return KNSManagerMakeRetryTimedConnection ( self, conn, ptm,
         self->conn_read_timeout, self->conn_write_timeout, from, to );
 }
-/* MakeTimedConnection
- *  create a connection-oriented stream
- *
- *  "conn" [ OUT ] - a stream for communication with the server
- *
- *  "retryTimeout" [ IN ] - if connection is refused, retry with 1ms intervals:
- * when negative, retry infinitely, when 0, do not retry, positive gives maximum
- * wait time in seconds
- *
- *  "readMillis" [ IN ] and "writeMillis" - when negative, infinite timeout
- *   when 0, return immediately, positive gives maximum wait time in mS
- *   for reads and writes respectively.
- *
- *  "from" [ IN ] - client endpoint
- *
- *  "to" [ IN ] - server endpoint
- *
- *  both endpoints have to be of type epIP; creates a TCP connection
- */
-LIB_EXPORT rc_t CC KNSManagerMakeTimedConnection (
-    struct KNSManager const *self, struct KSocket **conn, int32_t readMillis,
+
+static rc_t KNSManagerMakeTimedConnectionInt ( struct KNSManager const *self,
+    struct KSocket **conn, int32_t connectMillis, int32_t readMillis,
     int32_t writeMillis, struct KEndPoint const *from,
     struct KEndPoint const *to )
 {
@@ -371,14 +355,56 @@ LIB_EXPORT rc_t CC KNSManagerMakeTimedConnection (
         return RC ( rcNS, rcStream, rcConstructing, rcSelf, rcNull );
     }
 
-    if (self->conn_timeout >=0 ) {
-        TimeoutInit ( &tm, self->conn_timeout );
+    if (connectMillis >=0 ) {
+        TimeoutInit ( &tm, connectMillis );
         ptm = &tm;
     }
 
     return KNSManagerMakeRetryTimedConnection (
         self, conn, ptm, readMillis, writeMillis, from, to );
 }
+
+/* MakeTimedConnection, MakeTimedConnectionExt
+ *  create a connection-oriented stream
+ *
+ *  "conn" [ OUT ] - a stream for communication with the server
+ *
+ *  "retryTimeout" [ IN ] - if connection is refused, retry with 1ms intervals:
+ * when negative, retry infinitely, when 0, do not retry, positive gives maximum
+ * wait time in seconds
+ *
+ *  "connectMillis", "readMillis" and "writeMillis" [ IN ] - when negative,
+ *   infinite timeout;
+ *   when 0, return immediately; positive gives maximum wait time in mS
+ *   for connection, reads and writes respectively.
+ *
+ *  "from" [ IN ] - client endpoint
+ *
+ *  "to" [ IN ] - server endpoint
+ *
+ *  both endpoints have to be of type epIP; creates a TCP connection
+ */
+/* Use connectMillis from KNSManager */
+LIB_EXPORT rc_t CC KNSManagerMakeTimedConnection(
+    struct KNSManager const *self, struct KSocket **conn, int32_t readMillis,
+    int32_t writeMillis, struct KEndPoint const *from,
+    struct KEndPoint const *to)
+{
+    if (self == NULL)
+        return RC(rcNS, rcStream, rcConstructing, rcSelf, rcNull);
+
+    return KNSManagerMakeTimedConnectionInt(
+        self, conn, self->conn_timeout, readMillis, writeMillis, from, to);
+}
+/* connectMillis is specified */
+LIB_EXPORT rc_t CC KNSManagerMakeTimedConnectionExt (
+    struct KNSManager const *self, struct KSocket **conn, int32_t connectMillis,
+    int32_t readMillis, int32_t writeMillis, struct KEndPoint const *from,
+    struct KEndPoint const *to )
+{
+    return KNSManagerMakeTimedConnectionInt(
+        self, conn, connectMillis, readMillis, writeMillis, from, to);
+ }
 
 /* MakeRetryConnection
  *  create a connection-oriented stream
@@ -528,9 +554,21 @@ bool OwnCertfromEnv(const char ** own_cert, const char ** pk_key) {
     char ** key = (char**)pk_key;
     assert(cert && key);
 
+#ifdef WINDOWS
+    char* e = NULL;
+    {
+        size_t buf_count = 0;
+        errno_t err = _dupenv_s ( & e, & buf_count, "VCBI_VDB_OWN_CERT" );
+        if ( err || e == NULL )
+            return false;
+    }
+#else
     char * e = getenv("VCBI_VDB_OWN_CERT");
     if (e == NULL)
         return false;
+#endif /* WINDOWS */
+
+    /* CAUTION: free( e ) must be called before exiting the function on WINDOWS */
 
     KDirectory * dir = NULL;
     rc_t rc = KDirectoryNativeDir(&dir);
@@ -546,7 +584,13 @@ bool OwnCertfromEnv(const char ** own_cert, const char ** pk_key) {
         if (rc == 0)
             *cert = calloc(1, size + 1);
         if (rc == 0 && *cert == NULL)
+        {
+#ifdef WINDOWS
+            free ( e );
+            e = NULL;
+#endif
             return false;
+        }
         if (rc == 0)
             rc = KFileRead(file, 0, *cert, size + 1, &num_read);
         if (rc == 0)
@@ -560,7 +604,13 @@ bool OwnCertfromEnv(const char ** own_cert, const char ** pk_key) {
         if (rc == 0)
             *key = calloc(1, size + 1);
         if (rc == 0 && *key == NULL)
+        {
+#ifdef WINDOWS
+            free ( e );
+            e = NULL;
+#endif
             return false;
+        }
         if (rc == 0)
             rc = KFileRead(file, 0, *key, size + 1, &num_read);
         if (rc == 0)
@@ -568,6 +618,9 @@ bool OwnCertfromEnv(const char ** own_cert, const char ** pk_key) {
     }
 
     KDirectoryRelease(dir);
+#ifdef WINDOWS
+    free ( e );
+#endif
 
     return rc == 0;
 }
@@ -734,7 +787,8 @@ static int32_t KNSManagerLoadConnTimeout ( KConfig *kfg )
     if ( rc != 0 )
         result = MAX_CONN_LIMIT;
 
-    return result;
+    assert ( FITS_INTO_INT32 ( result ) );
+    return (int32_t)result;
 }
 static int32_t KNSManagerLoadConnReadTimeout ( KConfig *kfg )
 {
@@ -744,7 +798,8 @@ static int32_t KNSManagerLoadConnReadTimeout ( KConfig *kfg )
     if ( rc != 0 )
         result = MAX_CONN_READ_LIMIT;
 
-    return result;
+    assert ( FITS_INTO_INT32 ( result ) );
+    return (int32_t)result;
 }
 static int32_t KNSManagerLoadConnWriteTimeout ( KConfig *kfg )
 {
@@ -755,7 +810,8 @@ static int32_t KNSManagerLoadConnWriteTimeout ( KConfig *kfg )
     if ( rc != 0 )
         result = MAX_CONN_WRITE_LIMIT;
 
-    return result;
+    assert ( FITS_INTO_INT32 ( result ) );
+    return (int32_t)result;
 }
 
 static int32_t KNSManagerLoadHttpReadTimeout ( KConfig *kfg )
@@ -766,7 +822,8 @@ static int32_t KNSManagerLoadHttpReadTimeout ( KConfig *kfg )
     if ( rc != 0 )
         result = MAX_HTTP_READ_LIMIT;
 
-    return result;
+    assert ( FITS_INTO_INT32 ( result ) );
+    return (int32_t)result;
 }
 static int32_t KNSManagerLoadHttpWriteTimeout ( KConfig *kfg )
 {
@@ -776,7 +833,8 @@ static int32_t KNSManagerLoadHttpWriteTimeout ( KConfig *kfg )
     if ( rc != 0 )
         result = MAX_HTTP_WRITE_LIMIT;
 
-    return result;
+    assert ( FITS_INTO_INT32 ( result ) );
+    return (int32_t)result;
 }
 
 static
@@ -786,13 +844,35 @@ int32_t KNSManagerLoadTotalWaitForReliableURLs(const KConfig *kfg)
 
     int64_t result = 0;
 
+#ifdef WINDOWS
+    {
+        char * str = NULL;
+        size_t buf_count = 0;
+        errno_t err = _dupenv_s ( & str, & buf_count, "NCBI_VDB_RELIABLE_WAIT" );
+        if (!err && str != NULL) {
+            char *end = NULL;
+            result = strtou64(str, &end, 0);
+            char chend = end[0];
+            free(str);
+            if (chend == 0)
+            {
+                assert ( FITS_INTO_INT32 ( result ) );
+                return (int32_t)result;
+            }
+        }
+    }
+#else
     const char * str = getenv("NCBI_VDB_RELIABLE_WAIT");
     if (str != NULL) {
         char *end = NULL;
         result = strtou64(str, &end, 0);
         if (end[0] == 0)
-            return result;
+        {
+            assert ( FITS_INTO_INT32 ( result ) );
+            return (int32_t)result;
+        }
     }
+#endif /* WINDOWS */
 
     rc = KConfigReadI64(kfg, "/http/reliable/wait", &result);
     if (rc != 0
@@ -801,7 +881,8 @@ int32_t KNSManagerLoadTotalWaitForReliableURLs(const KConfig *kfg)
         result = MAX_HTTP_TOTAL_READ_LIMIT;
     }
 
-    return result;
+    assert ( FITS_INTO_INT32 ( result ) );
+    return (int32_t)result;
 }
 
 static int32_t KNSManagerLoadTotalConnectWaitForReliableURLs(
@@ -811,19 +892,42 @@ static int32_t KNSManagerLoadTotalConnectWaitForReliableURLs(
 
     int64_t result = 0;
 
+#ifdef WINDOWS
+    {
+        char * str = NULL;
+        size_t buf_count = 0;
+        errno_t err = _dupenv_s ( & str, & buf_count, "NCBI_VDB_RELIABLE_CONNECT_WAIT" );
+        if (!err && str != NULL) {
+            char *end = NULL;
+            result = strtou64(str, &end, 0);
+            char chend = end[0];
+            free(str);
+            if (chend == 0)
+            {
+                assert ( FITS_INTO_INT32 ( result ) );
+                return (int32_t)result;
+            }
+        }
+    }
+#else
     const char * str = getenv("NCBI_VDB_RELIABLE_CONNECT_WAIT");
     if (str != NULL) {
         char *end = NULL;
         result = strtou64(str, &end, 0);
         if (end[0] == 0)
-            return result;
+        {
+            assert ( FITS_INTO_INT32 ( result ) );
+            return (int32_t)result;
+        }
     }
+#endif
 
     rc = KConfigReadI64(kfg, "/http/reliable/connect/wait", &result);
     if (rc != 0)
         result = MAX_HTTP_TOTAL_CONNECT_LIMIT;
 
-    return result;
+    assert ( FITS_INTO_INT32 ( result ) );
+    return (int32_t)result;
 }
 
 static bool KNSManagerLoadRetryFirstRead(const KConfig *kfg) {
@@ -831,6 +935,28 @@ static bool KNSManagerLoadRetryFirstRead(const KConfig *kfg) {
 
     bool result = 0;
 
+#ifdef WINDOWS
+    {
+        char * str = NULL;
+        size_t buf_count = 0;
+        errno_t err = _dupenv_s ( & str, & buf_count, "NCBI_VDB_RELIABLE_RETRY_FIRST_READ" );
+        if (!err && str != NULL)
+        {
+            char ch = str[0];
+            free(str);
+            if (ch != '\0') {
+                switch (ch) {
+                case 'f':
+                    return false;
+                case 't':
+                    return true;
+                default:
+                    break;
+                }
+            }
+        }
+    }
+#else
     const char * str = getenv("NCBI_VDB_RELIABLE_RETRY_FIRST_READ");
     if (str != NULL && str[0] != '\0') {
         switch (str[0]) {
@@ -842,6 +968,7 @@ static bool KNSManagerLoadRetryFirstRead(const KConfig *kfg) {
             break;
         }
     }
+#endif
 
     rc = KConfigReadBool(kfg, "/http/reliable/retryFirstRead", &result);
     if (rc != 0)
@@ -855,6 +982,28 @@ static bool KNSManagerLoadRetryFile(const KConfig *kfg) {
 
     bool result = 0;
 
+#ifdef WINDOWS
+    {
+        char * str = NULL;
+        size_t buf_count = 0;
+        errno_t err = _dupenv_s ( & str, & buf_count, "NCBI_VDB_RELIABLE_RETRY_FILE" );
+        if (!err && str != NULL)
+        {
+            char ch = str[0];
+            free(str);
+            if (ch != '\0') {
+                switch (ch) {
+                case 'f':
+                    return false;
+                case 't':
+                    return true;
+                default:
+                    break;
+                }
+            }
+        }
+    }
+#else
     const char * str = getenv("NCBI_VDB_RELIABLE_RETRY_FILE");
     if (str != NULL && str[0] != '\0') {
         switch (str[0]) {
@@ -866,6 +1015,7 @@ static bool KNSManagerLoadRetryFile(const KConfig *kfg) {
             break;
         }
     }
+#endif
 
     rc = KConfigReadBool(kfg, "/http/reliable/retryFile", &result);
     if (rc != 0)
@@ -882,11 +1032,39 @@ static uint8_t KNSManagerLoadMaxNumberOfRetriesOnFailureForReliableURLs
     if (rc != 0 || result < 0)
         result = 10;
 
-    return result;
+    assert ( FITS_INTO_INT8 ( result ) );
+    return (uint8_t)result;
 }
 
 #if 1
 static uint64_t KNSManagerLoadLogTlsErrors(KConfig* kfg) {
+#ifdef WINDOWS
+    char * e = NULL;
+    size_t buf_count = 0;
+    errno_t err = _dupenv_s ( & e, & buf_count, "NCBI_VDB_TLS_LOG_ERR" );
+    uint64_t ret = 0;
+    if (!err && e != NULL)
+    {
+        if (e[0] == '\0')
+            ret = 0;
+        else {
+            if (e[0] == '0' ||
+                e[0] == 'f') /* false */
+            {
+                ret = 0;
+            }
+            else
+            {
+                int n = atoi(e);
+                assert( n >= 0 );
+                ret = (uint64_t)n;
+            }
+        }
+        free(e);
+        return ret;
+    }
+
+#else
     const char * e = getenv("NCBI_VDB_TLS_LOG_ERR");
     if (e != NULL)
         if (e[0] == '\0')
@@ -900,6 +1078,7 @@ static uint64_t KNSManagerLoadLogTlsErrors(KConfig* kfg) {
             else
                 return atoi(e);
         }
+#endif
     else {
         uint64_t log = 0;
         rc_t rc = KConfigReadU64(kfg, "/tls/NCBI_VDB_TLS_LOG_ERR", &log);
@@ -1111,6 +1290,25 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
     }
 
     char cloudtrunc[64];
+
+#ifdef WINDOWS
+    {
+        char *cloudid = NULL;
+        size_t buf_count = 0;
+        errno_t err = _dupenv_s ( & cloudid, & buf_count, ENV_MAGIC_CE_TOKEN );
+        if ( !err && cloudid && strlen ( cloudid ) > 8 ) {
+            /* AWS access keys should always begin with AKIA,
+             * suffixes seems non-random */
+            assert ( strlen ( cloudid ) - 4 < sizeof cloudtrunc );
+            strncpy_s ( cloudtrunc, sizeof cloudtrunc, cloudid + 4, strlen ( cloudid ) - 4 );
+            cloudtrunc[3] = '\0';
+        } else {
+            strncpy_s ( cloudtrunc, sizeof cloudtrunc, "noc", 3 );
+        }
+        if ( !err && cloudid )
+            free ( cloudid );
+    }
+#else
     const char *cloudid = getenv ( ENV_MAGIC_CE_TOKEN );
     if ( cloudid && strlen ( cloudid ) > 8 ) {
         /* AWS access keys should always begin with AKIA,
@@ -1121,17 +1319,62 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
     } else {
         strcpy ( cloudtrunc, "noc" );
     }
+#endif
 
+#ifdef WINDOWS
+    char sessid_buf[64];
+    const char * sessid = NULL;
+    {
+        char *str = NULL;
+        size_t buf_count = 0;
+        errno_t err = _dupenv_s ( & str, & buf_count, ENV_VAR_SESSION_ID);
+        if ( err || str == NULL )
+        {
+            sessid = "nos";
+        }
+        else
+        {
+            size_t len = strlen(str);
+            assert ( len < sizeof sessid_buf );
+            strncpy_s ( sessid_buf, sizeof sessid_buf, str, len );
+            sessid = sessid_buf;
+            free ( str );
+        }
+    }
+#else
     const char *sessid = getenv ( ENV_VAR_SESSION_ID );
     if ( sessid == NULL ) { sessid = "nos"; }
+#endif
 
     const char *libc_version = "";
 #if HAVE_GNU_GET_LIBC_VERSION_F
     libc_version = gnu_get_libc_version ();
 #endif
 
+#ifdef WINDOWS
+    char opt_bitmap_buf[64];
+    const char * opt_bitmap = NULL;
+    {
+        char *str = NULL;
+        size_t buf_count = 0;
+        errno_t err = _dupenv_s ( & str, & buf_count, ENV_MAGIC_OPT_BITMAP);
+        if ( err || str == NULL )
+        {
+            opt_bitmap = "nob";
+        }
+        else
+        {
+            size_t len = strlen(str);
+            assert ( len < sizeof opt_bitmap_buf );
+            strncpy_s (opt_bitmap_buf, sizeof opt_bitmap_buf, str, len );
+            opt_bitmap = opt_bitmap_buf;
+            free ( str );
+        }
+    }
+#else
     const char *opt_bitmap=getenv(ENV_MAGIC_OPT_BITMAP); // VDB_OPT_BITMAP
     if (!opt_bitmap) opt_bitmap="nob";
+#endif
 
     const char *guid = "nog";
 
@@ -1182,10 +1425,10 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
     if ( rc ) { return rc; }
 
     if ( kns_manager_lock ) {
-        rc_t rc = KLockAcquire ( kns_manager_lock );
-        if ( rc ) {
+        rc_t rc2 = KLockAcquire ( kns_manager_lock );
+        if ( rc2 ) {
             KDataBufferWhack ( &phid );
-            return rc;
+            return rc2;
         }
     }
 
@@ -1214,14 +1457,47 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
     }
 
     KDataBuffer platform;
-    KDataBufferMakeBytes(&platform, 0);
-    if (getenv(ENV_MAGIC_PLATFORM_NAME))
+    const char* env_platform_name = NULL;
+    const char* env_platform_version = NULL;
+#ifdef WINDOWS
+    char env_platform_name_buf[64], env_platform_version_buf[64];
     {
-        if (getenv(ENV_MAGIC_PLATFORM_VERSION))
+        char * str = NULL;
+        size_t buf_count = 0;
+        errno_t err = _dupenv_s ( & str, & buf_count, ENV_MAGIC_PLATFORM_NAME );
+        if ( !err && str != NULL )
+        {
+            assert ( strlen(str) < sizeof(env_platform_name_buf) );
+            strncpy_s ( env_platform_name_buf, sizeof env_platform_name_buf, str, strlen(str) );
+            env_platform_name = env_platform_name_buf;
+            free ( str );
+        }
+    }
+    {
+        char * str = NULL;
+        size_t buf_count = 0;
+        errno_t err = _dupenv_s ( & str, & buf_count, ENV_MAGIC_PLATFORM_VERSION );
+        if ( !err && str != NULL )
+        {
+            assert ( strlen(str) < sizeof(env_platform_version_buf) );
+            strncpy_s ( env_platform_version_buf, sizeof env_platform_version_buf, str, strlen(str) );
+            env_platform_version = env_platform_version_buf;
+            free ( str );
+        }
+    }
+#else
+    env_platform_name = getenv(ENV_MAGIC_PLATFORM_NAME);
+    env_platform_version = getenv(ENV_MAGIC_PLATFORM_VERSION);
+#endif
+
+    KDataBufferMakeBytes(&platform, 0);
+    if (env_platform_name)
+    {
+        if (env_platform_version)
         {
             rc=KDataBufferPrintf(&platform," via %s %s",
-                                 getenv(ENV_MAGIC_PLATFORM_NAME),
-                                 getenv(ENV_MAGIC_PLATFORM_VERSION));
+                                 env_platform_name,
+                                 env_platform_version);
             if (rc)
             {
                 KDataBufferWhack ( &phid );
@@ -1231,7 +1507,7 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
             }
         }
         else{
-            rc=KDataBufferPrintf(&platform," via %s", getenv(ENV_MAGIC_PLATFORM_NAME));
+            rc=KDataBufferPrintf(&platform," via %s", env_platform_name);
             if (rc)
             {
                 KDataBufferWhack ( &phid );
@@ -1301,6 +1577,24 @@ uint64_t KNSManagerLogNcbiVdbNetError ( const KNSManager *self )
         return 0;
 
     if ( self->NCBI_VDB_NETnoLogError ) { return 0; }
+
+#ifdef WINDOWS
+    {
+        char * e = NULL;
+        size_t buf_count = 0;
+        errno_t err = _dupenv_s ( & e, & buf_count, "NCBI_VDB_NET" );
+        if ( !err && e != NULL )
+        {
+            char ch = e[0];
+            free ( e );
+            if (ch == '\0' || ch == '0' || ch == 'f') /* false */
+            {
+                return 0;
+            }
+            return 1;
+        }
+    }
+#else
     const char *e = getenv ( "NCBI_VDB_NET" );
     if ( e != NULL ) {
         if ( e[0] == '\0' || e[0] == '0' || e[0] == 'f' ) /* false */
@@ -1310,6 +1604,7 @@ uint64_t KNSManagerLogNcbiVdbNetError ( const KNSManager *self )
 
         return 1;
     }
+#endif
     if ( self->NCBI_VDB_NETkfgValueSet ) { return self->NCBI_VDB_NETkfgValue; }
 
     return self->logTlsErrors;

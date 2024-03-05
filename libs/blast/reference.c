@@ -928,7 +928,7 @@ static uint32_t _ReferencesData2na(References *self,
                     self->eos = true;
                     *status = eVdbBlastNoErr; /* end of set */
                     S
-                    return 0;
+                    return num_read;
                 }
                 rfd1 = rfd;
                 rfd = &self->refs->rfd[self->rfdi];
@@ -1193,7 +1193,9 @@ static uint32_t _ReferencesData2na(References *self,
             ++self->read_id;
         }
         ++num_read;
-        break;
+
+        if (*status == eVdbBlastNoErr || *status == eVdbBlastCircularSequence)
+            break;
     }
     return num_read;
 }
@@ -1271,6 +1273,9 @@ uint32_t _Core2naDataRef(struct Core2na *self,
     if (r->rfdi > r->refs->rfdk) {
         self->eos = true;
     }
+
+    if (r->eos)
+        self->eos = true;
 
     if (self->eos) {
         return 0;

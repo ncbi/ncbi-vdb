@@ -76,20 +76,9 @@ struct KDBManager_vt
     rc_t ( CC * vPathOpenRemoteDBRead ) ( struct KDBMGR_IMPL const * self, struct KDatabase const ** p_db, struct VPath const * remote, struct VPath const * cache );
 };
 
-// Public write side-only API
-
-// KDB_EXTERN rc_t CC KDBManagerLock ( KDBManager *self, const char *path, ... );
-// KDB_EXTERN rc_t CC KDBManagerVLock ( KDBManager *self, const char *path, va_list args );
-
-// KDB_EXTERN rc_t CC KDBManagerUnlock ( KDBManager *self, const char *path, ... );
-// KDB_EXTERN rc_t CC KDBManagerVUnlock ( KDBManager *self, const char *path, va_list args );
-
-// KDB_EXTERN rc_t CC KDBManagerDrop ( KDBManager *self, uint32_t obj_type, const char *path, ... );
-// KDB_EXTERN rc_t CC KDBManagerVDrop ( KDBManager *self, uint32_t obj_type, const char *path, va_list args );
-
 struct KDBManagerBase
 {
-    KDBManager_vt * vt;
+    const KDBManager_vt * vt;
 
     KRefcount refcount;
 };
@@ -106,9 +95,6 @@ extern rc_t CC KDBManagerBaseRelease ( const KDBMGR_IMPL *self );
  */
 KDBMGR_IMPL *KDBManagerAttach ( const KDBMGR_IMPL *self );
 rc_t KDBManagerSever ( const KDBMGR_IMPL *self );
-
-// write side only public API
-// ...
 
 #ifdef __cplusplus
 }

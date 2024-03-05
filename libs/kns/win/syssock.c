@@ -24,6 +24,11 @@
 *
 */
 
+#ifdef _WINSOCK_DEPRECATED_NO_WARNINGS
+#define WINSOCK_DEP_NO_WARN_WAS_DEFINED 1
+#else
+#define _WINSOCK_DEPRECATED_NO_WARNINGS
+#endif
 
 /*--------------------------------------------------------------------------
  * forwards
@@ -237,7 +242,7 @@ static rc_t CC KIpv4SocketWhack ( KSocket * self )
 
     data = &( self -> type_data.ipv4_data );
 
-    if ( shutdown ( data -> fd, SHUT_WR ) == -1 )
+    if ( shutdown ( data -> fd, SHUT_WR ) == SOCKET_ERROR )
         rc = KSocketHandleShutdownCallWin ();
     else
     {
@@ -256,7 +261,7 @@ static rc_t CC KIpv4SocketWhack ( KSocket * self )
             }
         }
 
-        if ( shutdown ( data -> fd, SHUT_RD ) == -1 )
+        if ( shutdown ( data -> fd, SHUT_RD ) == SOCKET_ERROR)
             rc = KSocketHandleShutdownCallWin ();
         else if ( closesocket ( data -> fd ) == SOCKET_ERROR )
             rc = RC ( rcNS, rcSocket, rcClosing, rcError, rcUnknown );  /* maybe report */
@@ -264,7 +269,7 @@ static rc_t CC KIpv4SocketWhack ( KSocket * self )
 
 #if 0
     RC_CTX ( rcSocket, rcClosing );
-    if ( shutdown ( data -> fd, SHUT_WR ) != -1 )
+    if ( shutdown ( data -> fd, SHUT_WR ) != SOCKET_ERROR)
     {
         while ( 1 )
         {
@@ -274,7 +279,7 @@ static rc_t CC KIpv4SocketWhack ( KSocket * self )
                 break;
         }
 
-        if ( shutdown ( data -> fd, SHUT_RD ) != -1 )
+        if ( shutdown ( data -> fd, SHUT_RD ) != SOCKET_ERROR)
         {
             if ( closesocket ( data -> fd ) == SOCKET_ERROR )
                 rc = RC ( rcNS, rcSocket, rcClosing, rcError, rcUnknown );
@@ -319,7 +324,7 @@ static rc_t CC KIpv4SocketTimedRead ( const KSocket * self, void * buffer, size_
     selectRes = select( 0, &readFds, NULL, NULL, ( tm == NULL ) ? NULL : &ts );
 
     /* check for error */
-    if ( selectRes == -1 )
+    if ( selectRes == SOCKET_ERROR )
         rc = KSocketHandleSelectCallWin ( rcReading );
     else if ( selectRes == 0 )
         rc = RC ( rcNS, rcSocket, rcReading, rcTimeout, rcExhausted ); /* timeout */
@@ -435,7 +440,7 @@ static rc_t CC KIpv4SocketTimedWrite ( KSocket * self, const void * buffer, size
     selectRes = select( 0, NULL, &writeFds, NULL, ( tm == NULL ) ? NULL : &ts );
 
     /* check for error */
-    if ( selectRes == -1 )
+    if ( selectRes == SOCKET_ERROR )
         rc = KSocketHandleSelectCallWin ( rcWriting );
     else if ( selectRes == 0 )
         rc = RC ( rcNS, rcSocket, rcWriting, rcTimeout, rcExhausted ); /* timeout */
@@ -805,7 +810,7 @@ connect_wait(int sock, int32_t timeoutMs)
                     FD_SET(sock, &writeFds);
 
                     selectRes = select(0, NULL, &writeFds, NULL, &ts);
-                    if (selectRes == -1)
+                    if (selectRes == SOCKET_ERROR)
                         rc = KSocketHandleSelectCallWin(rcCreating);
                     else if (selectRes == 0)
                         rc = RC(rcNS, rcSocket, rcCreating, rcTimeout, rcExhausted); /* timeout */
@@ -860,7 +865,6 @@ rc_t KSocketConnectIPv4 ( KSocket * self, const KEndPoint * from, const KEndPoin
 
 		if (rc == 0)
 		{
-			int res;
             SOCKET sock = self->type_data.ipv4_data.fd;
 			ss.sin_port = htons(to->u.ipv4.port);
 			ss.sin_addr.s_addr = htonl(to->u.ipv4.addr);
@@ -914,7 +918,7 @@ static rc_t KNSManagerMakeIPv4Listener ( const KNSManager *self, KSocket **out, 
         {
             KSocketIPv4 * data = &( listener -> type_data . ipv4_data );
             data -> fd = socket ( AF_INET, SOCK_STREAM, 0 );
-            if ( data -> fd < 0 )
+            if ( data -> fd == INVALID_SOCKET )
                 rc = KSocketHandleSocketCallWin ();
             else
             {
@@ -939,7 +943,7 @@ static rc_t KNSManagerMakeIPv4Listener ( const KNSManager *self, KSocket **out, 
                 }
 
                 closesocket ( data -> fd );
-                data -> fd = -1;
+                data -> fd = INVALID_SOCKET;
             }
         }
 
@@ -974,14 +978,14 @@ static rc_t KListenerIPv4Accept ( KSocket * self, struct KSocket ** out )
             len = sizeof new_data -> remote_addr;
 
             new_data -> fd = accept ( self_data -> fd, ( struct sockaddr * ) & new_data -> remote_addr, & len );
-            if ( new_data -> fd < 0 )
+            if ( new_data -> fd == INVALID_SOCKET )
                 rc = KSocketHandleAcceptCallWin ();
             else if ( len <= sizeof new_data -> remote_addr )
                 new_data -> remote_addr_valid = true;
             else
             {
                 closesocket ( new_data -> fd );
-                new_data -> fd = -1;
+                new_data -> fd = INVALID_SOCKET;
                 rc = RC ( rcNS, rcConnection, rcWaiting, rcBuffer, rcInsufficient );
             }
 
@@ -1073,7 +1077,7 @@ static rc_t KNSManagerMakeIPv6Listener ( const KNSManager *self, KSocket **out, 
             KSocketIPv6 * data = &( listener -> type_data.ipv6_data );
 
             data -> fd = socket ( AF_INET6, SOCK_STREAM, 0 );
-            if ( data -> fd < 0 )
+            if ( data -> fd == INVALID_SOCKET )
                 rc = KSocketHandleSocketCallWin ();
             else
             {
@@ -1100,7 +1104,7 @@ static rc_t KNSManagerMakeIPv6Listener ( const KNSManager *self, KSocket **out, 
                 }
 
                 closesocket ( data -> fd );
-                data -> fd = -1;
+                data -> fd = INVALID_SOCKET;
             }
         }
     }
@@ -1134,14 +1138,14 @@ static rc_t KListenerIPv6Accept ( KSocket * self, struct KSocket ** out )
             len = sizeof new_data -> remote_addr;
 
             new_data -> fd = accept ( self_data -> fd, ( struct sockaddr * ) & new_data -> remote_addr, & len );
-            if ( new_data -> fd < 0 )
+            if ( new_data -> fd == INVALID_SOCKET )
                 rc = KSocketHandleAcceptCallWin ();
             else if ( len <= sizeof new_data -> remote_addr )
                 new_data -> remote_addr_valid = true;
             else
             {
                 closesocket ( new_data -> fd );
-                new_data -> fd = -1;
+                new_data -> fd = INVALID_SOCKET;
                 rc = RC ( rcNS, rcConnection, rcWaiting, rcBuffer, rcInsufficient );
             }
 
@@ -1465,7 +1469,6 @@ static rc_t CC KIPCSocketTimedRead ( const KSocket * self, void * buffer, size_t
 
                 case WAIT_OBJECT_0 :
                 {
-                    DWORD count;
                     DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: successful\n", self ) );
                     /* wait to complete if necessary */
                     if ( GetOverlappedResult( data->pipe, &overlap, &count, TRUE ) )
@@ -1985,7 +1988,7 @@ KNS_EXTERN rc_t CC KNSManagerMakeRetryTimedConnection ( struct KNSManager const 
                 rc = RC ( rcNS, rcStream, rcConstructing, rcMemory, rcExhausted );
             else
             {
-                const KStream_vt * vt;
+                const KStream_vt * vt = NULL;
 
                 conn -> read_timeout = readMillis;
                 conn -> write_timeout = writeMillis;
@@ -2294,7 +2297,7 @@ LIB_EXPORT rc_t CC KListenerRelease( const KListener *self )
 
 LIB_EXPORT rc_t CC KListenerAccept ( KListener * self, struct KSocket ** out )
 {
-    rc_t rc;
+    rc_t rc = 0;
 
     if ( out == NULL )
         rc = RC ( rcNS, rcSocket, rcConstructing, rcParam, rcNull );
@@ -2448,3 +2451,8 @@ static rc_t HandleErrnoEx ( const char *func_name, unsigned int lineno, rc_t rc_
     return rc;
 }
 
+#ifdef WINSOCK_DEP_NO_WARN_WAS_DEFINED
+#undef WINSOCK_DEP_NO_WARN_WAS_DEFINED
+#else
+#undef _WINSOCK_DEPRECATED_NO_WARNINGS
+#endif

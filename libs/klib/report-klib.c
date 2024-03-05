@@ -517,7 +517,7 @@ static rc_t ReportRun(int indent, rc_t rc_in) {
         {   name = val = "not found"; }
         report(indent + 1, "Home", 2, "name", 's', name, "value", 's', val);
     }
-#endif // WINDOWS
+#endif /* WINDOWS */
 
     if ( self -> report_cwd != NULL )
         rc = ( * self -> report_cwd ) ( & report_funcs, indent + 1 );

@@ -1,6 +1,15 @@
 # NCBI External Developer Release:
 
 
+## NCBI VDB 3.1.0
+**March 5, 2024**
+
+  **blast**: fixed VdbBlast2naReaderData() for ReferenceSet fills entire output array  
+  **cloud, kns, ngs-tools, sra-tools**: don't change global network timeouts when checking cloud location  
+  **kdb, kdbmeta, sra-tools**: removed confusing warning in Windows debug build   
+  **kns, ngs-tools, sra-tools**: fixed hanging on Mac and BSD when data access is unreliable  
+
+
 ## NCBI VDB 3.0.10
 **December 19, 2023**
 

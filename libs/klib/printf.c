@@ -2650,7 +2650,7 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
         case sptNulTermString:
 
             /* special initialization to flag size/length unknown */
-            StringInit ( & S, args [ arg_idx ] . s, (uint32_t)0, (uint32_t)-1 );
+            StringInit ( & S, args [ arg_idx ] . s, 0, (uint32_t)-1 );
 
             /* IF THE STRING IS INDEXED OR MAY NEED LEFT ALIGNMENT */
             if ( f . u . f . start_idx != 0 || f . u . f . select_len != 0 ||
@@ -2904,7 +2904,7 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
 #endif
             /* create text string */
             assert(int_len >= 0);
-            StringInit ( & S, & text [ i ], (uint32_t)int_len, (uint32_t)int_len );
+            StringInit ( & S, & text [ i ], int_len, (uint32_t)int_len );
 
             /* zero-fill amount */
             assert(f.u.f.precision == -1 || f . u . f . precision >= 0);
@@ -3097,7 +3097,7 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
                 );
 #endif
             assert(dst_len >= 0);
-            StringInit ( & S, text, (uint32_t)dst_len, (uint32_t)dst_len );
+            StringInit ( & S, text, dst_len, (uint32_t)dst_len );
             f.u.f.precision = dst_len;
             break;
 
@@ -3223,7 +3223,7 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
             }
 
             assert(dst_len >= 0);
-            StringInit ( & S, text, (uint32_t)dst_len, (uint32_t)dst_len );
+            StringInit ( & S, text, dst_len, (uint32_t)dst_len );
             break;
 
         case spfRC:
@@ -3231,7 +3231,7 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
             assert ( FITS_INTO_INT32 ( temp_size_t ) );
             dst_len = (int32_t)temp_size_t;
             assert(dst_len >= 0);
-            StringInit ( & S, text, (uint32_t)dst_len, (uint32_t)dst_len );
+            StringInit ( & S, text, dst_len, (uint32_t)dst_len );
             break;
 
         case spfOSErr:
@@ -3239,7 +3239,7 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
             assert ( FITS_INTO_INT32 ( temp_size_t ) );
             dst_len = (uint32_t)temp_size_t;
             assert(dst_len >= 0);
-            StringInit ( & S, text, (uint32_t)dst_len, (uint32_t)dst_len );
+            StringInit ( & S, text, dst_len, (uint32_t)dst_len );
             break;
 
         default:

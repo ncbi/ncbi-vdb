@@ -48,8 +48,8 @@ struct KNamelist;
  */
 typedef struct KTable KTable;
 
-typedef struct KTableBase_vt KTableBase_vt;
-struct KTableBase_vt
+typedef struct KTable_vt KTable_vt;
+struct KTable_vt
 {
     /* Public API */
     rc_t ( CC * whack )             ( KTable * self );
@@ -80,7 +80,7 @@ extern rc_t CC KTableBaseRelease ( const KTable *self );
 
 struct KTable
 {
-    const KTableBase_vt * vt;
+    const KTable_vt * vt;
 
     KRefcount refcount;
 };

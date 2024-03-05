@@ -65,7 +65,7 @@ struct KMetadata_vt
 
 struct KMetadata
 {
-    KMetadata_vt * vt;
+    const KMetadata_vt * vt;
 
     KRefcount refcount;
 };

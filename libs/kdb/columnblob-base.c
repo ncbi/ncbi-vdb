@@ -71,7 +71,7 @@ rc_t CC KColumnBlobBaseRelease ( const KColumnBlob *cself )
     if ( self != NULL && self -> vt != NULL )   \
         return self -> vt -> call;              \
     else                                        \
-        return RC ( rcVDB, rcCursor, rcAccessing, rcSelf, rcNull );
+        return RC ( rcDB, rcCursor, rcAccessing, rcSelf, rcNull );
 
 LIB_EXPORT rc_t CC KColumnBlobAddRef ( const KColumnBlob *self )
 {
