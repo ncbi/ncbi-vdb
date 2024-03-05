@@ -64,6 +64,8 @@
 #include <ctype.h>
 #include <assert.h>
 
+#include "../klib/int_checks-priv.h"
+
 /*
  * ReferenceSeq objects:
  *  ReferenceSeq objects may be unattached, i.e. they might not yet represent an
@@ -276,7 +278,8 @@ static bool bucketHasObject(Bucket const *const bucket, unsigned const objectNo)
 
 static void addToKeys(ReferenceMgr *const self, unsigned const objectNo, char const *const key, size_t length)
 {
-    unsigned const hv = length == 0 ? hash0(key) : hash(length, key);
+    assert ( FITS_INTO_INT32 (length) );
+    unsigned const hv = length == 0 ? hash0(key) : hash((int32_t)length, key);
     Bucket *const bucket = &self->keys[hv];
 
     if (!bucketHasObject(bucket, objectNo)) {
@@ -298,7 +301,8 @@ static void addToKeys(ReferenceMgr *const self, unsigned const objectNo, char co
 
 static void addToUsed(ReferenceMgr *const self, unsigned const objectNo, char const *const key, size_t length)
 {
-    unsigned const hv = length == 0 ? hash0(key) : hash(length, key);
+    assert ( FITS_INTO_INT32 (length) );
+    unsigned const hv = length == 0 ? hash0(key) : hash((int32_t)length, key);
     Bucket *const bucket = &self->used[hv];
 
     if (!bucketHasObject(bucket, objectNo)) {
@@ -320,12 +324,13 @@ static void addToUsed(ReferenceMgr *const self, unsigned const objectNo, char co
 
 static void addToKeysTable(ReferenceMgr *const self, ReferenceSeq const *const rs)
 {
-    unsigned const index = rs - self->refSeq;
+    uint64_t const index = rs - self->refSeq;
+    assert ( FITS_INTO_INT (index) );
 
     if (rs->id)
-        addToKeys(self, index, rs->id, 0);
+        addToKeys(self, (int)index, rs->id, 0);
     if (rs->seqId)
-        addToKeys(self, index, rs->seqId, 0);
+        addToKeys(self, (int)index, rs->seqId, 0);
 }
 
 static void freeHashTableEntries(ReferenceMgr *const self)
@@ -491,7 +496,8 @@ static void addToIndex(ReferenceMgr *const self, char const ID[],
         rs->used[n] = id;
     }
 SKIP_INSERT_ID:
-    addToUsed(self, rs - self->refSeq, ID, 0);
+    assert ( FITS_INTO_INT(rs - self->refSeq) );
+    addToUsed(self, (int)(rs - self->refSeq), ID, 0);
 }
 
 static bool usedAs(ReferenceSeq const *const rs, char const id[]) {
@@ -759,10 +765,12 @@ rc_t ImportFasta(ReferenceSeq *const obj, KDataBuffer const *const buf)
     unsigned dst;
     unsigned start=0;
     char *const data = buf->base;
-    unsigned const len = buf->elem_count;
+    unsigned const len = (unsigned)buf->elem_count;
     char *fastaSeqId = NULL;
     rc_t rc;
     MD5State mds;
+
+    assert ( FITS_INTO_INT (buf->elem_count) );
 
     if (len == 0)
         return 0;
@@ -805,7 +813,7 @@ rc_t ImportFasta(ReferenceSeq *const obj, KDataBuffer const *const buf)
         if (strchr(INSDC_4na_map_CHARSET, ch) == NULL && ch != 'X')
             return RC(rcAlign, rcFile, rcReading, rcData, rcInvalid);
 
-        data[dst] = ch == 'X' ? 'N' : ch;
+        data[dst] = ch == 'X' ? 'N' : (char)ch;
         MD5StateAppend(&mds, data + dst, 1);
         ++dst;
     }

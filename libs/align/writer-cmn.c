@@ -42,6 +42,8 @@
 #include <string.h>
 #include <time.h>
 
+#include "../klib/int_checks-priv.h"
+
 #define TW_MAX_CURSORS 8
 
 struct TableWriter {
@@ -58,7 +60,7 @@ struct TableWriter {
         uint32_t col_qty; /* != 0 cursor is used */
         const TableWriterColumn* cols;
         VCursor* cursor; /* != NULL cursor is opened */
-        uint64_t rows;
+        int64_t rows;
     } *curr, cursors[TW_MAX_CURSORS];
 };
 
@@ -361,7 +363,8 @@ rc_t CC TableWriter_AddCursor(const TableWriter* cself, TableWriterColumn* cols,
                 self->cursors[i].cols = cols;
                 self->cursors[i].cursor = NULL;
                 self->cursors[i].rows = 0;
-                *cursor_id = i;
+                assert ( FITS_INTO_INT8(i) );
+                *cursor_id = (uint8_t)i;
                 break;
             }
         }

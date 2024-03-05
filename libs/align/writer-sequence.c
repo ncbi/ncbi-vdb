@@ -373,7 +373,7 @@ static rc_t MakeSequenceTable(TableWriterSeq *self, VDatabase* db,
 }
 
 LIB_EXPORT rc_t CC TableWriterSeq_Make(const TableWriterSeq** cself, VDatabase* db,
-                                       uint32_t options, char const qual_quantization[])
+                                       const uint32_t options, char const qual_quantization[])
 {
     rc_t rc = 0;
     TableWriterSeq* self = NULL;
@@ -635,7 +635,7 @@ static void Commit(TableWriterSeq *const self)
     SaveMetadata(self, rows);
 }
 
-LIB_EXPORT rc_t CC TableWriterSeq_Whack(TableWriterSeq const *const cself, bool const commit, uint64_t *const rows )
+LIB_EXPORT rc_t CC TableWriterSeq_Whack(const TableWriterSeq* cself, bool commit, uint64_t* rows )
 {
     TableWriterSeq *const self = (TableWriterSeq *)cself;
 
