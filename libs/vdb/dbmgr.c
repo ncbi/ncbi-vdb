@@ -56,29 +56,11 @@
  *  opaque handle to library
  */
 
-LIB_EXPORT rc_t CC VDBManagerMakeWithVFSManager(const VDBManager ** mgrp,
-    const KDirectory *wd, struct VFSManager *vmgr)
+static
+rc_t
+VDBManagerMakeRead_Int ( const VDBManager ** mgrp, const struct KDBManager *kdbmgr )
 {
-    return VDBManagerMakeReadWithVFSManager(mgrp, wd, NULL);
-}
-
-/* MakeRead
- * MakeReadWithVFSManager
- *  create library handle for specific use
- *  NB - only one of the functions will be implemented
- *
- *  "wd" [ IN, NULL OKAY ] - optional working directory for
- *  accessing the file system. mgr will attach its own reference.
- */
-LIB_EXPORT rc_t CC VDBManagerMakeRead ( const VDBManager **mgrp, const KDirectory *wd )
-{
-    return VDBManagerMakeReadWithVFSManager(mgrp, wd, NULL);
-}
-
-LIB_EXPORT rc_t CC VDBManagerMakeReadWithVFSManager ( const VDBManager ** mgrp,
-    const KDirectory *wd, struct VFSManager *vmgr )
-{
-    rc_t rc;
+   rc_t rc;
 
     if ( mgrp == NULL )
         rc = RC ( rcVDB, rcMgr, rcConstructing, rcParam, rcNull );
@@ -89,9 +71,11 @@ LIB_EXPORT rc_t CC VDBManagerMakeReadWithVFSManager ( const VDBManager ** mgrp,
             rc = RC ( rcVDB, rcMgr, rcConstructing, rcMemory, rcExhausted );
         else
         {
-            rc = KDBManagerMakeReadWithVFSManager ( & mgr -> kmgr, wd, vmgr );
+            rc = KDBManagerAddRef( kdbmgr );
             if ( rc == 0 )
             {
+                mgr -> kmgr = kdbmgr;
+
                 rc = VSchemaMakeIntrinsic ( & mgr -> schema );
                 if ( rc == 0 )
                 {
@@ -121,6 +105,57 @@ LIB_EXPORT rc_t CC VDBManagerMakeReadWithVFSManager ( const VDBManager ** mgrp,
         }
 
         * mgrp = NULL;
+    }
+    return rc;
+}
+
+LIB_EXPORT rc_t CC VDBManagerMakeWithVFSManager(const VDBManager ** mgrp,
+    const KDirectory *wd, struct VFSManager *vmgr)
+{
+    return VDBManagerMakeReadWithVFSManager(mgrp, wd, NULL);
+}
+
+LIB_EXPORT rc_t CC VDBManagerMakeReadWithKDBManager (
+    struct VDBManager const **mgr, const struct KDBManager *kdbmgr )
+{
+    if ( mgr == NULL )
+    {
+        return SILENT_RC ( rcVDB, rcMgr, rcConstructing, rcParam, rcNull );
+    }
+    if ( kdbmgr == NULL )
+    {
+        return SILENT_RC ( rcVDB, rcMgr, rcConstructing, rcParam, rcNull );
+    }
+
+    return VDBManagerMakeRead_Int( mgr, kdbmgr );
+}
+
+/* MakeRead
+ * MakeReadWithVFSManager
+ *  create library handle for specific use
+ *  NB - only one of the functions will be implemented
+ *
+ *  "wd" [ IN, NULL OKAY ] - optional working directory for
+ *  accessing the file system. mgr will attach its own reference.
+ */
+
+LIB_EXPORT rc_t CC VDBManagerMakeRead ( const VDBManager **mgrp, const KDirectory *wd )
+{
+    return VDBManagerMakeReadWithVFSManager(mgrp, wd, NULL);
+}
+
+LIB_EXPORT rc_t CC VDBManagerMakeReadWithVFSManager ( const VDBManager ** mgrp,
+    const KDirectory *wd, struct VFSManager *vmgr )
+{
+    const KDBManager * kdbmgr;
+    rc_t rc = KDBManagerMakeReadWithVFSManager ( & kdbmgr, wd, vmgr );
+    if ( rc == 0 )
+    {
+        rc = VDBManagerMakeRead_Int( mgrp, kdbmgr );
+        if ( rc != 0 )
+        {
+            KDBManagerRelease( kdbmgr );
+        }
     }
     return rc;
 }

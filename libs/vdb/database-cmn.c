@@ -602,103 +602,99 @@ static rc_t VDBManagerOpenDBReadVPathImpl ( const VDBManager *self,
                 VResolver * resolver;
                 rc = VFSManagerGetResolver ( vfs, & resolver );
                 if ( rc == 0 )
-                {
-                    /* turn spec in "path_fmt" + "args" into VPath "orig" */
-                    const VPath * aOrig = path;
-                    if ( rc == 0 )
+                {   /* turn spec in "path_fmt" + "args" into VPath "orig" */
+
+                    /* the original VPath may get resolved into other paths */
+                    const VPath * plocal = NULL, * premote = NULL, * pcache = NULL;
+
+                    const VPath * orig = path;
+                    bool is_accession;
+
+                    VFSManagerCheckEnvAndAd(vfs, path, &orig);
+
+                    /* check whether we were given a path or accession */
+                    is_accession = VPathIsAccessionOrOID ( orig );
+
+                    /* if the original is not an accession */
+                    if ( ! is_accession )
                     {
-                        /* the original VPath may get resolved into other paths */
-                        const VPath * plocal = NULL, * premote = NULL, * pcache = NULL;
-
-                        const VPath * orig = aOrig;
-                        bool is_accession;
-
-                        VFSManagerCheckEnvAndAd(vfs, aOrig, &orig);
-
-                        /* check whether we were given a path or accession */
-                        is_accession = VPathIsAccessionOrOID ( orig );
-
-                        /* if the original is not an accession */
-                        if ( ! is_accession )
+                        /* just create a new reference to original */
+                        rc = VPathAddRef ( orig );
+                        if ( rc == 0 )
+                            plocal = orig;
+                    }
+                    else
+                    {
+                        /* otherwise, ask resolver to find a local path,
+                            or get a remote path and optional place to cache data */
+                        rc = VResolverQuery ( resolver, 0, orig, & plocal, & premote, & pcache );
+                        if ( rc != 0 && GetRCState ( rc ) == rcNotFound )
                         {
-                            /* just create a new reference to original */
                             rc = VPathAddRef ( orig );
                             if ( rc == 0 )
+                            {
                                 plocal = orig;
+                            }
+
                         }
+                    }
+                    if ( rc == 0 )
+                    {
+                        /* now open the principal database */
+                        if ( plocal != NULL )
+                            rc = VDBManagerVPathOpenLocalDBRead ( self, dbp, schema, plocal );
+                        else if ( premote != NULL )
+                            rc = VDBManagerVPathOpenRemoteDBRead ( self, dbp, schema, premote, pcache );
                         else
                         {
-                            /* otherwise, ask resolver to find a local path,
-                               or get a remote path and optional place to cache data */
-                            rc = VResolverQuery ( resolver, 0, orig, & plocal, & premote, & pcache );
-                            if ( rc != 0 && GetRCState ( rc ) == rcNotFound )
+                            /* resolver was unable to resolve this, so perhaps it was
+                                not an accession or OID, but a simple file name */
+                            rc = VPathAddRef ( orig );
+                            if ( rc == 0 )
                             {
-                                rc = VPathAddRef ( orig );
-                                if ( rc == 0 )
+                                plocal = orig;
+#define VDB_3531_FIX 1
+#if VDB_3531_FIX
+                                if ( pcache != NULL )
                                 {
-                                    plocal = orig;
+                                    VPathRelease(pcache);
+                                    pcache = NULL;
                                 }
-
+#endif
+                                rc = VDBManagerVPathOpenLocalDBRead ( self, dbp, schema, plocal );
                             }
                         }
                         if ( rc == 0 )
                         {
-                            /* now open the principal database */
-                            if ( plocal != NULL )
-                                rc = VDBManagerVPathOpenLocalDBRead ( self, dbp, schema, plocal );
-                            else if ( premote != NULL )
-                                rc = VDBManagerVPathOpenRemoteDBRead ( self, dbp, schema, premote, pcache );
+                            const VDatabase * db = * dbp;
+                            if ( VDatabaseIsCSRA ( db ) )
+                            {
+                                if ( openVdbcache ) {
+                                    DBGMSG(DBG_VFS,
+                                        DBG_FLAG(DBG_VFS_SERVICE),
+                        ("VDBManagerOpenDBReadVPathImpl: VDatabase is CSRA: "
+                                            "searching vdbcache...\n"));
+                                    DBManagerOpenVdbcache(self, vfs, db,
+                                        schema, orig, is_accession,
+                                        resolver,
+                                        &pcache, plocal, &premote);
+                                }
+                                else {
+                                    DBGMSG(DBG_VFS,
+                                        DBG_FLAG(DBG_VFS_SERVICE),
+                        ("VDBManagerOpenDBReadVPathImpl: VDatabase is CSRA: "
+                                            "skip searching vdbcache\n"));
+                                }
+                            }
                             else
-                            {
-                                /* resolver was unable to resolve this, so perhaps it was
-                                   not an accession or OID, but a simple file name */
-                                rc = VPathAddRef ( orig );
-                                if ( rc == 0 )
-                                {
-                                    plocal = orig;
-#define VDB_3531_FIX 1
-#if VDB_3531_FIX
-                                    if ( pcache != NULL )
-                                    {
-                                        VPathRelease(pcache);
-                                        pcache = NULL;
-                                    }
-#endif
-                                    rc = VDBManagerVPathOpenLocalDBRead ( self, dbp, schema, plocal );
-                                }
-                            }
-                            if ( rc == 0 )
-                            {
-                                const VDatabase * db = * dbp;
-                                if ( VDatabaseIsCSRA ( db ) )
-                                {
-                                    if ( openVdbcache ) {
-                                        DBGMSG(DBG_VFS,
-                                            DBG_FLAG(DBG_VFS_SERVICE),
-                           ("VDBManagerOpenDBReadVPathImpl: VDatabase is CSRA: "
-                                                "searching vdbcache...\n"));
-                                        DBManagerOpenVdbcache(self, vfs, db,
-                                            schema, orig, is_accession,
-                                            resolver,
-                                            &pcache, plocal, &premote);
-                                    }
-                                    else {
-                                        DBGMSG(DBG_VFS,
-                                            DBG_FLAG(DBG_VFS_SERVICE),
-                           ("VDBManagerOpenDBReadVPathImpl: VDatabase is CSRA: "
-                                                "skip searching vdbcache\n"));
-                                    }
-                                }
-                                else
-                                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
-                                        ("VDatabase is not CSRA: "
-                                            "don't use vdbcache\n"));
-                            }
-
-                            VPathRelease ( plocal );
-                            VPathRelease ( premote );
-                            VPathRelease ( pcache );
+                                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
+                                    ("VDatabase is not CSRA: "
+                                        "don't use vdbcache\n"));
                         }
+
+                        VPathRelease ( plocal );
+                        VPathRelease ( premote );
+                        VPathRelease ( pcache );
                     }
 
                     VResolverRelease ( resolver );

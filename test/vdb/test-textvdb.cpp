@@ -24,20 +24,63 @@
 
 #include "VDB_Fixture.hpp"
 
-#include <vdb/manager.h> // VDBManager
+#include <vdb/vdb-priv.h>
+#include <kdb/manager.h>
+
+#include <ktst/unit_test.hpp>
 
 using namespace std;
 
-TEST_SUITE( VdbTextSuite )
+TEST_SUITE( VdbTextSuite );
 
-TEST_CASE( VdbMgr )
+class TextVdbFicture
 {
-KDB_EXTERN rc_t CC KDBManagerMakeText ( const KDBManager **mgr, const char * input, char * error, size_t error_size );
+public:
+    TextVdbFicture() {}
+    ~TextVdbFicture()
+    {
+        VDBManagerRelease( m_mgr );
+    }
 
-    const VDBManager *mgr = NULL;
-    rc_t rc = VDBManagerMakeRead(NULL, NULL);
-    if (rc == 0)
-        FAIL( "FAIL: VDBManagerMakeRead(NULL) succeed" );
+    void Setup( const char * input )
+    {
+        const KDBManager * kdb = nullptr;
+        THROW_ON_RC( KDBManagerMakeText( & kdb, input, m_error, sizeof( m_error ) ) );
+        THROW_ON_RC( VDBManagerMakeReadWithKDBManager( & m_mgr, kdb ));
+        THROW_ON_RC( KDBManagerRelease( kdb ));
+    }
+
+    char m_error[1024];
+    const VDBManager * m_mgr = nullptr;
+};
+
+FIXTURE_TEST_CASE( VdbMgr_NullSelf, TextVdbFicture )
+{
+    const char * input = "{}";
+    const KDBManager * kdb = nullptr;
+    REQUIRE_RC( KDBManagerMakeText( & kdb, input, m_error, sizeof( m_error ) ) );
+    REQUIRE_RC_FAIL( VDBManagerMakeReadWithKDBManager( nullptr, kdb ));
+    REQUIRE_RC( KDBManagerRelease( kdb ));
+}
+FIXTURE_TEST_CASE( VdbMgr_NullKdb, TextVdbFicture )
+{
+    REQUIRE_RC_FAIL( VDBManagerMakeReadWithKDBManager( & m_mgr, nullptr ));
+}
+
+FIXTURE_TEST_CASE( VdbMgr, TextVdbFicture )
+{
+    const KDBManager * kdb = nullptr;
+    const char * input = "{}";
+    REQUIRE_RC( KDBManagerMakeText( & kdb, input, m_error, sizeof( m_error ) ) );
+    REQUIRE_RC( VDBManagerMakeReadWithKDBManager( & m_mgr, kdb ));
+    REQUIRE_NOT_NULL( m_mgr );
+}
+
+FIXTURE_TEST_CASE( VdbMgr_OpenDB_Empty, TextVdbFicture )
+{
+    Setup("{}");
+    const VDatabase * db = nullptr;
+    REQUIRE_RC_FAIL( VDBManagerOpenDBRead ( m_mgr, &db, nullptr, "db" ) );
 }
 
 //////////////////////////////////////////// Main
@@ -64,7 +107,6 @@ const char UsageDefaultName[] = "test-vdb";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     rc_t rc=VdbTextSuite(argc, argv);
     return rc;
 }
