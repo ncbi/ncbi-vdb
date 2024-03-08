@@ -84,7 +84,7 @@ public:
 };
 
 const char * FullTable = R"({"type": "table", "name": "testtbl",
-    "columns":[ {"name":"col1","type":"ascii"},{"name":"col2","type":"ascii"} ],
+    "columns":[ {"name":"col1","type":"text"},{"name":"col2","type":"text"} ],
     "indexes":[ {"name":"i1","text":[]}, {"name":"i2","text":[]} ],
     "metadata":{"name":"", "value":"blah"}
 })";
@@ -128,13 +128,13 @@ FIXTURE_TEST_CASE(KTextTable_Make_Flat, KTextTable_Fixture)
 
 FIXTURE_TEST_CASE(KTextTable_Make_ColumnsNoArray, KTextTable_Fixture)
 {
-    Setup(R"({"type": "table", "name": "testtbl","columns":{"name":"col1","type":"ascii"}})");
+    Setup(R"({"type": "table", "name": "testtbl","columns":{"name":"col1","type":"text"}})");
     REQUIRE_RC_FAIL( m_tbl -> inflate( m_error, sizeof m_error ) );
     //cout << m_error << endl;
 }
 FIXTURE_TEST_CASE(KTextTable_Make_ColumnDuplicate, KTextTable_Fixture)
 {
-    Setup(R"({"type": "table", "name": "testtbl","columns":[{"name":"col1","type":"ascii"},{"name":"col1","type":"ascii"}]})");
+    Setup(R"({"type": "table", "name": "testtbl","columns":[{"name":"col1","type":"text"},{"name":"col1","type":"text"}]})");
     REQUIRE_RC_FAIL( m_tbl -> inflate( m_error, sizeof m_error ) );
     //cout << m_error << endl;
 }

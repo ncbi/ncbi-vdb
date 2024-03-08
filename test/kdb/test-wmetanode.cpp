@@ -564,6 +564,8 @@ FIXTURE_TEST_CASE(KWMDataNode_ListAttr, KWMDataNode_Fixture)
     uint32_t count = 0;
     REQUIRE_RC( KNamelistCount ( names, &count ) );
     REQUIRE_EQ( (uint32_t)0, count );
+
+    REQUIRE_RC( KNamelistRelease( names) );
 }
 
 FIXTURE_TEST_CASE(KWRMDataNode_ListChildren, KWMDataNode_Fixture)
@@ -575,6 +577,8 @@ FIXTURE_TEST_CASE(KWRMDataNode_ListChildren, KWMDataNode_Fixture)
     uint32_t count = 0;
     REQUIRE_RC( KNamelistCount ( names, &count ) );
     REQUIRE_EQ( (uint32_t)1, count );
+
+    REQUIRE_RC( KNamelistRelease( names) );
 }
 
 //////////////////////////////////////////// Main
