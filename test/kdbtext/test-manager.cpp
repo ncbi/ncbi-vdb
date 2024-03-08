@@ -463,6 +463,7 @@ rc_t CC KMain ( int argc, char *argv [] )
     }
     "tables":[
         {
+            "type":"table",
             "name":"SEQUENCE",
             "metadata":null,
             "columns":[

@@ -83,17 +83,62 @@ FIXTURE_TEST_CASE( VdbMgr_OpenDB_Empty, TextVdbFicture )
     REQUIRE_RC_FAIL( VDBManagerOpenDBRead ( m_mgr, &db, nullptr, "db" ) );
 }
 
-FIXTURE_TEST_CASE( VdbMgr_OpenDB, TextVdbFicture )
-{
-    Setup(R"({
+const char * TestDB =
+    R"({
         "type": "database",
         "name": "testdb",
-        "metadata": {"name":""}
-    })");
+        "metadata": {
+            "name":"",
+            "root":{
+                "name":"",
+                "children":[{
+                    "name":"schema",
+                    "value":"table table1 #1.0.0 { column ascii column1; };
+                             database root_database #1 { table table1 #1 TABLE1; } ;",
+                    "attributes":{"name":"root_database#1"}
+                }]
+            }
+        },
+        "tables":[
+            {
+                "type":"table",
+                "name":"TABLE1",
+                "metadata": {
+                    "name":"",
+                    "root":{
+                        "name":"",
+                        "children":[{
+                            "name":"schema",
+                            "value":"table table1 #1.0.0 { column ascii column1; };",
+                            "attributes":{"name":"table1#1"}
+                        }]
+                    }
+                }
+            }
+        ]
+    })";
+
+FIXTURE_TEST_CASE( VdbMgr_OpenDB, TextVdbFicture )
+{
+    Setup(TestDB);
 
     const VDatabase * db = nullptr;
     REQUIRE_RC( VDBManagerOpenDBRead ( m_mgr, &db, nullptr, "testdb" ) );
     REQUIRE_NOT_NULL( db );
+    REQUIRE_RC( VDatabaseRelease( db ) );
+}
+
+FIXTURE_TEST_CASE( VdbMgr_OpenTable, TextVdbFicture )
+{
+    Setup(TestDB);
+    const VDatabase * db = nullptr;
+    REQUIRE_RC( VDBManagerOpenDBRead ( m_mgr, &db, nullptr, "testdb" ) );
+
+    const VTable * tbl;
+    REQUIRE_RC( VDatabaseOpenTableRead( db, &tbl, "TABLE1" ) );
+    REQUIRE_NOT_NULL( tbl );
+
+    REQUIRE_RC( VTableRelease( tbl ) );
     REQUIRE_RC( VDatabaseRelease( db ) );
 }
 
