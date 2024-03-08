@@ -150,29 +150,6 @@ rc_t KDBManagerMake ( KDBManager **mgrp, const KDirectory *wd, const char *op,
     return rc;
 }
 
-
-LIB_EXPORT rc_t CC KDBManagerGetVFSManager ( const KDBManager *self,
-    const struct VFSManager **vmanager )
-{
-    if (self == NULL) {
-        return RC ( rcDB, rcMgr, rcAccessing, rcSelf, rcNull );
-    }
-    else if (vmanager == NULL) {
-        return RC ( rcDB, rcMgr, rcAccessing, rcParam, rcNull );
-    }
-    else {
-        rc_t rc = VFSManagerAddRef(self -> vfsmgr);
-        if (rc == 0) {
-            * vmanager = self -> vfsmgr;
-        }
-        else {
-            * vmanager = NULL;
-        }
-        return rc;
-    }
-}
-
-
 /* Version
  *  returns the library version
  */
@@ -427,3 +404,24 @@ rc_t KDBHdrValidate ( const KDBHdr *hdr, size_t size,
 
     return 0;
 }
+
+rc_t CC KDBCmnManagerGetVFSManager ( const KDBManager *self, const struct VFSManager **vmanager )
+{
+    if (self == NULL) {
+        return RC ( rcDB, rcMgr, rcAccessing, rcSelf, rcNull );
+    }
+    else if (vmanager == NULL) {
+        return RC ( rcDB, rcMgr, rcAccessing, rcParam, rcNull );
+    }
+    else {
+        rc_t rc = VFSManagerAddRef(self -> vfsmgr);
+        if (rc == 0) {
+            * vmanager = self -> vfsmgr;
+        }
+        else {
+            * vmanager = NULL;
+        }
+        return rc;
+    }
+}
+

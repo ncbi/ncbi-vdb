@@ -251,3 +251,8 @@ LIB_EXPORT rc_t CC KDBManagerVPathOpenRemoteDBRead ( struct KDBManager const * s
     DISPATCH( vPathOpenRemoteDBRead( self, p_db, remote, cache ) );
 }
 
+LIB_EXPORT rc_t CC KDBManagerGetVFSManager ( struct KDBManager const *self, const struct VFSManager ** vfs )
+{
+    DISPATCH( getVFSManager( self, vfs ) );
+}
+

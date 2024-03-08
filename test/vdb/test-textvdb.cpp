@@ -83,6 +83,20 @@ FIXTURE_TEST_CASE( VdbMgr_OpenDB_Empty, TextVdbFicture )
     REQUIRE_RC_FAIL( VDBManagerOpenDBRead ( m_mgr, &db, nullptr, "db" ) );
 }
 
+FIXTURE_TEST_CASE( VdbMgr_OpenDB, TextVdbFicture )
+{
+    Setup(R"({
+        "type": "database",
+        "name": "testdb",
+        "metadata": {"name":""}
+    })");
+
+    const VDatabase * db = nullptr;
+    REQUIRE_RC( VDBManagerOpenDBRead ( m_mgr, &db, nullptr, "testdb" ) );
+    REQUIRE_NOT_NULL( db );
+    REQUIRE_RC( VDatabaseRelease( db ) );
+}
+
 //////////////////////////////////////////// Main
 extern "C"
 {

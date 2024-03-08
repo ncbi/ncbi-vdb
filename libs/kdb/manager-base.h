@@ -47,6 +47,7 @@ struct VPath;
 struct KDatabase;
 struct KTable;
 struct KColumn;
+struct VFSManager;
 
 /*--------------------------------------------------------------------------
  * KDBManagerBase
@@ -58,22 +59,23 @@ typedef struct KDBManager_vt KDBManager_vt;
 struct KDBManager_vt
 {
     /* Public API */
-    rc_t ( CC * whack )                 ( KDBMGR_IMPL *self );
-    rc_t ( CC * addRef )                ( const KDBMGR_IMPL *self );
-    rc_t ( CC * release )               ( const KDBMGR_IMPL *self );
-    rc_t ( CC * version )               ( const KDBMGR_IMPL *self, uint32_t *version );
-    bool ( CC * vExists )               ( const KDBMGR_IMPL *self, uint32_t type, const char *name, va_list args );
-    rc_t ( CC * vWritable )             ( const KDBMGR_IMPL *self, const char *name, va_list args );
-    rc_t ( CC * runPeriodicTasks )      ( const KDBMGR_IMPL *self );
+    rc_t ( CC * whack )                 ( KDBMGR_IMPL * self );
+    rc_t ( CC * addRef )                ( const KDBMGR_IMPL * self );
+    rc_t ( CC * release )               ( const KDBMGR_IMPL * self );
+    rc_t ( CC * version )               ( const KDBMGR_IMPL * self, uint32_t *version );
+    bool ( CC * vExists )               ( const KDBMGR_IMPL * self, uint32_t type, const char *name, va_list args );
+    rc_t ( CC * vWritable )             ( const KDBMGR_IMPL * self, const char *name, va_list args );
+    rc_t ( CC * runPeriodicTasks )      ( const KDBMGR_IMPL * self );
     int ( CC * pathTypeVP )             ( const KDBMGR_IMPL * self, const struct VPath * path );
     int ( CC * vPathType )              ( const KDBMGR_IMPL * self, const char *path, va_list args );
     int ( CC * vPathTypeUnreliable )    ( const KDBMGR_IMPL * self, const char *path, va_list args );
-    rc_t ( CC * vOpenDBRead )           ( const KDBMGR_IMPL *self, const struct KDatabase **db, const char *path, va_list args );
-    rc_t ( CC * vOpenTableRead )        ( const KDBMGR_IMPL *self, const struct KTable **tbl, const char *path, va_list args );
-    rc_t ( CC * openTableReadVPath )    ( struct KDBMGR_IMPL const *self, const struct KTable **tbl, const struct VPath *path );
-    rc_t ( CC * vOpenColumnRead )       ( struct KDBMGR_IMPL const *self, const struct KColumn **col, const char *path, va_list args );
+    rc_t ( CC * vOpenDBRead )           ( const KDBMGR_IMPL * self, const struct KDatabase **db, const char *path, va_list args );
+    rc_t ( CC * vOpenTableRead )        ( const KDBMGR_IMPL * self, const struct KTable **tbl, const char *path, va_list args );
+    rc_t ( CC * openTableReadVPath )    ( struct KDBMGR_IMPL const * self, const struct KTable **tbl, const struct VPath *path );
+    rc_t ( CC * vOpenColumnRead )       ( struct KDBMGR_IMPL const * self, const struct KColumn **col, const char *path, va_list args );
     rc_t ( CC * vPathOpenLocalDBRead )  ( struct KDBMGR_IMPL const * self, struct KDatabase const ** p_db, struct VPath const * vpath );
     rc_t ( CC * vPathOpenRemoteDBRead ) ( struct KDBMGR_IMPL const * self, struct KDatabase const ** p_db, struct VPath const * remote, struct VPath const * cache );
+    rc_t ( CC * getVFSManager )         ( struct KDBMGR_IMPL const * self, const struct VFSManager ** vfs );
 };
 
 struct KDBManagerBase

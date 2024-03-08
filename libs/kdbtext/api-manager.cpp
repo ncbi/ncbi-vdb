@@ -42,6 +42,7 @@
 #include <klib/data-buffer.h>
 
 #include <vfs/path.h>
+#include <vfs/manager.h>
 
 #include <string>
 
@@ -63,6 +64,7 @@ static rc_t CC KTextManagerOpenTableReadVPath(const KDBManager *self, const KTab
 static rc_t CC KTextManagerVOpenColumnRead ( const KDBManager *self, const KColumn **col, const char *path, va_list args );
 static rc_t CC KTextManagerVPathOpenLocalDBRead ( struct KDBManager const * self, struct KDatabase const ** p_db, struct VPath const * vpath );
 static rc_t CC KTextManagerVPathOpenRemoteDBRead ( struct KDBManager const * self, struct KDatabase const ** p_db, struct VPath const * remote, struct VPath const * cache );
+static rc_t CC KTextManagerGetVFSManager ( const KDBManager *self, const struct VFSManager **vmanager );
 
 static KDBManager_vt KTextManager_vt =
 {
@@ -81,7 +83,8 @@ static KDBManager_vt KTextManager_vt =
     KTextManagerOpenTableReadVPath,
     KTextManagerVOpenColumnRead,
     KTextManagerVPathOpenLocalDBRead,
-    KTextManagerVPathOpenRemoteDBRead
+    KTextManagerVPathOpenRemoteDBRead,
+    KTextManagerGetVFSManager
 };
 
 using namespace KDBText;
@@ -298,6 +301,11 @@ KDBManagerMakeText ( const KDBManager ** p_mgr, const char * input, char * error
     rc_t rc = mgr -> parse( input, error, error_size );
     if ( rc == 0 )
     {
+        // if (vmanager == NULL)
+        // {
+        //     rc = VFSManagerMake ( & mgr -> vfsmgr );
+        // }
+
         *p_mgr = mgr;
     }
     else
@@ -308,3 +316,26 @@ KDBManagerMakeText ( const KDBManager ** p_mgr, const char * input, char * error
     return rc;
 }
 
+static
+rc_t CC
+KTextManagerGetVFSManager ( const KDBManager *self, const struct VFSManager **vmanager )
+{
+    if (vmanager == nullptr)
+    {
+        return SILENT_RC ( rcDB, rcMgr, rcAccessing, rcParam, rcNull );
+    }
+    else
+    {
+        VFSManager * ret;
+        rc_t rc = VFSManagerMake( & ret );
+        if (rc == 0)
+        {
+            * vmanager = ret;
+        }
+        else
+        {
+            * vmanager = nullptr;
+        }
+        return rc;
+    }
+}
