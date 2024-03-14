@@ -74,6 +74,7 @@ FIXTURE_TEST_CASE( VdbMgr, TextVdbFicture )
     REQUIRE_RC( KDBManagerMakeText( & kdb, input, m_error, sizeof( m_error ) ) );
     REQUIRE_RC( VDBManagerMakeReadWithKDBManager( & m_mgr, kdb ));
     REQUIRE_NOT_NULL( m_mgr );
+    REQUIRE_RC( KDBManagerRelease( kdb ));
 }
 
 FIXTURE_TEST_CASE( VdbMgr_OpenDB_Empty, TextVdbFicture )
@@ -113,7 +114,18 @@ const char * TestDB =
                             "attributes":{"name":"table1#1"}
                         }]
                     }
-                }
+                },
+                "columns":[
+                    {
+                        "name":"column1",
+                        "type":"ascii",
+                        "data":
+                        [
+                            {"row":1,"value":"AGCT"},
+                            {"row":2,"value":"AGCT"}
+                        ]
+                    }
+                ]
             }
         ]
     })";
@@ -138,6 +150,15 @@ FIXTURE_TEST_CASE( VdbMgr_OpenTable, TextVdbFicture )
     REQUIRE_RC( VDatabaseOpenTableRead( db, &tbl, "TABLE1" ) );
     REQUIRE_NOT_NULL( tbl );
 
+    const VCursor * curs;
+    REQUIRE_RC( VTableCreateCursorRead(tbl, &curs) );
+
+    uint32_t cid = 0;
+    REQUIRE_RC( VCursorAddColumn(curs, &cid, "column1") );
+
+    REQUIRE_RC( VCursorOpen(curs) );
+
+    REQUIRE_RC( VCursorRelease( curs ) );
     REQUIRE_RC( VTableRelease( tbl ) );
     REQUIRE_RC( VDatabaseRelease( db ) );
 }
