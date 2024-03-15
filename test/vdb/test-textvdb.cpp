@@ -27,6 +27,7 @@
 #include <vdb/vdb-priv.h>
 #include <kdb/manager.h>
 
+#include <klib/debug.h>
 #include <ktst/unit_test.hpp>
 
 using namespace std;
@@ -94,7 +95,7 @@ const char * TestDB =
                 "name":"",
                 "children":[{
                     "name":"schema",
-                    "value":"table table1 #1.0.0 { column ascii column1; };
+                    "value":"version 2.0; table table1 #1.0.0 { column ascii column1; };
                              database root_database #1 { table table1 #1 TABLE1; } ;",
                     "attributes":{"name":"root_database#1"}
                 }]
@@ -110,7 +111,8 @@ const char * TestDB =
                         "name":"",
                         "children":[{
                             "name":"schema",
-                            "value":"table table1 #1.0.0 { column ascii column1; };",
+                    "value":"version 2.0; table table1 #1.0.0 { column ascii column1; };
+                             database root_database #1 { table table1 #1 TABLE1; } ;",
                             "attributes":{"name":"table1#1"}
                         }]
                     }
@@ -142,6 +144,7 @@ FIXTURE_TEST_CASE( VdbMgr_OpenDB, TextVdbFicture )
 
 FIXTURE_TEST_CASE( VdbMgr_OpenTable, TextVdbFicture )
 {
+KDbgSetString("VDB");
     Setup(TestDB);
     const VDatabase * db = nullptr;
     REQUIRE_RC( VDBManagerOpenDBRead ( m_mgr, &db, nullptr, "testdb" ) );
@@ -157,6 +160,12 @@ FIXTURE_TEST_CASE( VdbMgr_OpenTable, TextVdbFicture )
     REQUIRE_RC( VCursorAddColumn(curs, &cid, "column1") );
 
     REQUIRE_RC( VCursorOpen(curs) );
+    REQUIRE_RC( VCursorOpenRow ( curs ) );
+
+    uint32_t rowLen = 0;
+    char buf[1024];
+    REQUIRE_RC( VCursorReadDirect ( curs, 1, cid, 8, buf, sizeof ( buf ), & rowLen ) );
+    REQUIRE_EQ( string("ACGT"), string( buf, rowLen ) );
 
     REQUIRE_RC( VCursorRelease( curs ) );
     REQUIRE_RC( VTableRelease( tbl ) );

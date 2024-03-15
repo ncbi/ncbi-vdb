@@ -88,6 +88,74 @@ KTextColumnBlobWhack ( KColumnBlob *bself )
     return 0;
 }
 
+// copied from interfaces/vdb/xform.h
+typedef uint8_t VByteOrder;
+enum
+{
+    vboNone,
+    vboNative,
+    vboLittleEndian,
+    vboBigEndian
+};
+
+// copied from vdb/blob.c
+static
+rc_t encode_header_v1(uint8_t *dst,
+                      uint64_t dsize,
+                      uint64_t *used,
+                      uint32_t row_length,
+                      bitsz_t data_size)
+{
+    /* byte-order goes in bits 0..1 */
+    uint8_t header_byte;
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+        header_byte = ( uint8_t) vboLittleEndian;
+#else
+        header_byte = ( uint8_t) vboBigEndian;
+#endif
+
+    /* blob size adjust goes in bits 2..4 */
+    header_byte |= ( ( 8 - ( data_size & 7 ) ) & 7 ) << 2;
+
+    /* row-length code goes in bits 5..6 */
+    if ( row_length == 1 ) {
+        header_byte |= 3 << 5;
+        * used = 1;
+        if ( dsize < * used )
+            return RC(rcVDB, rcBlob, rcConstructing, rcBuffer, rcInsufficient);
+        dst[0] = header_byte;
+    }
+    else if (row_length < 0x100) {
+        *used = 2;
+        if (dsize < *used)
+            return RC(rcVDB, rcBlob, rcConstructing, rcBuffer, rcInsufficient);
+        dst[0] = header_byte;
+        dst[1] = ( uint8_t ) row_length;
+    }
+    else if (row_length < 0x10000) {
+        header_byte |= 1 << 5;
+        *used = 3;
+        if (dsize < *used)
+            return RC(rcVDB, rcBlob, rcConstructing, rcBuffer, rcInsufficient);
+        dst[0] = header_byte;
+        dst[1] = ( uint8_t ) row_length;
+        dst[2] = ( uint8_t ) ( row_length >> 8 );
+    }
+    else {
+        header_byte |= 2 << 5;
+        *used = 5;
+        if (dsize < *used)
+            return RC(rcVDB, rcBlob, rcConstructing, rcBuffer, rcInsufficient);
+        dst[0] = header_byte;
+        dst[1] = ( uint8_t ) row_length;
+        dst[2] = ( uint8_t ) ( row_length >> 8 );
+        dst[3] = ( uint8_t ) ( row_length >> 16 );
+        dst[4] = ( uint8_t ) ( row_length >> 24 );
+    }
+    return 0;
+}
+
+
 static
 rc_t CC
 KTextColumnBlobRead ( const KColumnBlob *bself, size_t offset, void *buffer, size_t bsize, size_t *num_read, size_t *remaining )
@@ -95,7 +163,7 @@ KTextColumnBlobRead ( const KColumnBlob *bself, size_t offset, void *buffer, siz
     CAST();
 
     rc_t rc = 0;
-    if ( buffer == NULL )
+    if ( buffer == nullptr && bsize != 0 )
     {
         rc = SILENT_RC ( rcDB, rcBlob, rcReading, rcBuffer, rcNull );
     }
@@ -109,18 +177,30 @@ KTextColumnBlobRead ( const KColumnBlob *bself, size_t offset, void *buffer, siz
     }
     else
     {
-        size_t toRead = self -> getSize() - offset;
-        if ( toRead > bsize )
+        // encode header
+        uint64_t header_size;
+        uint8_t header[5];
+        rc = encode_header_v1( header, sizeof(header), &header_size, ?, ? );
+        if ( rc == 0 )
         {
-            * remaining = toRead - bsize;
-            toRead -= *remaining;
+            size_t toRead = header_size + self -> getSize() - offset;
+            if ( toRead > bsize )
+            {
+                * remaining = toRead - bsize;
+                toRead -= *remaining;
+            }
+            else
+            {
+                * remaining = 0;
+            }
+
+            if ( toRead > 0 )
+            {
+                memmove( buffer, header, header_size );
+                memmove( (uint8_t*)buffer + header_size, (const char*)(self -> getData()) + header_size + offset, toRead - header_size);
+            }
+            *num_read = header_size;
         }
-        else
-        {
-            * remaining = 0;
-        }
-        memmove( buffer, (const char*)(self -> getData()) + offset, toRead );
-        *num_read = toRead;
     }
 
     return rc;
@@ -128,7 +208,7 @@ KTextColumnBlobRead ( const KColumnBlob *bself, size_t offset, void *buffer, siz
 
 static
 rc_t CC
-KTextColumnBlobReadAll ( const KColumnBlob * bself, KDataBuffer * buffer, KColumnBlobCSData * opt_cs_data, size_t cs_data_size )
+KTextColumnBlobReadAll ( const KColumnBlob * bself, KDataBuffer * dbuffer, KColumnBlobCSData * opt_cs_data, size_t cs_data_size )
 {
     CAST();
 
@@ -138,16 +218,16 @@ KTextColumnBlobReadAll ( const KColumnBlob * bself, KDataBuffer * buffer, KColum
     }
 
     rc_t rc = 0;
-    if ( buffer == NULL )
+    if ( dbuffer == NULL )
     {
         rc = SILENT_RC ( rcDB, rcBlob, rcReading, rcParam, rcNull );
     }
     else
     {
-        rc = KDataBufferMakeBytes ( buffer, self->getSize() );
+        rc = KDataBufferMakeBytes ( dbuffer, self->getSize() );
         if ( rc == 0 && self->getSize() > 0 )
         {
-            memmove( buffer -> base, self -> getData(), self->getSize() );
+            memmove( dbuffer -> base, self -> getData(), self->getSize() );
         }
     }
 
@@ -163,11 +243,11 @@ KTextColumnBlobValidate ( const KColumnBlob *self )
 
 static
 rc_t CC
-KTextColumnBlobValidateBuffer ( const KColumnBlob * bself, const KDataBuffer * buffer, const KColumnBlobCSData * cs_data, size_t cs_data_size )
+KTextColumnBlobValidateBuffer ( const KColumnBlob * bself, const KDataBuffer * dbuffer, const KColumnBlobCSData * cs_data, size_t cs_data_size )
 {
     CAST();
 
-    if ( buffer == NULL )
+    if ( dbuffer == NULL )
     {
         return SILENT_RC ( rcDB, rcBlob, rcValidating, rcParam, rcNull );
     }
@@ -177,7 +257,7 @@ KTextColumnBlobValidateBuffer ( const KColumnBlob * bself, const KDataBuffer * b
     }
 
     // check the buffer's size
-    size_t bsize = KDataBufferBytes ( buffer );
+    size_t bsize = KDataBufferBytes ( dbuffer );
     if ( bsize < self -> getSize() )
     {
         return SILENT_RC ( rcDB, rcBlob, rcValidating, rcData, rcInsufficient );

@@ -34,6 +34,7 @@
 
 #include <kdb/column.h>
 #include <klib/data-buffer.h>
+#include <klib/rc.h>
 
 using namespace std;
 using namespace KDBText;
@@ -118,7 +119,17 @@ FIXTURE_TEST_CASE(KTextColumnBlob_BufferNull, KTextColumnBlob_ApiFixture)
 
     size_t num_read = 0;
     size_t remaining = 0;
-    REQUIRE_RC_FAIL( KColumnBlobRead ( m_blob, 0, nullptr, 0, &num_read, &remaining ) );
+    REQUIRE_RC_FAIL( KColumnBlobRead ( m_blob, 0, nullptr, 1, &num_read, &remaining ) );
+}
+FIXTURE_TEST_CASE(KTextColumnBlob_BufferNull_SizeNull, KTextColumnBlob_ApiFixture)
+{
+    Setup( Data );
+
+    size_t num_read = 0;
+    size_t remaining = 0;
+    REQUIRE_RC( KColumnBlobRead ( m_blob, 0, nullptr, 0, &num_read, &remaining ) );
+    REQUIRE_EQ( (size_t)0, num_read );
+    REQUIRE_EQ( Data.size(), remaining );
 }
 FIXTURE_TEST_CASE(KTextColumnBlob_NumReadNull, KTextColumnBlob_ApiFixture)
 {
@@ -126,7 +137,8 @@ FIXTURE_TEST_CASE(KTextColumnBlob_NumReadNull, KTextColumnBlob_ApiFixture)
 
     char data[1024] = {0};
     size_t remaining = 0;
-    REQUIRE_RC_FAIL( KColumnBlobRead ( m_blob, 0, data, sizeof data, nullptr, &remaining ) );
+    rc_t rc = KColumnBlobRead ( m_blob, 0, data, sizeof data, nullptr, &remaining );
+    REQUIRE_EQ( SILENT_RC( rcDB, rcBlob, rcReading, rcBuffer, rcNull ), rc );
 }
 
 FIXTURE_TEST_CASE(KTextColumnBlob_Read_From_0, KTextColumnBlob_ApiFixture)

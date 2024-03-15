@@ -489,7 +489,7 @@ KTextMetanodeReadAttr ( const KMDataNode * bself, const char *name, char *buffer
     {
         return SILENT_RC ( rcDB, rcMetadata, rcReading, rcString, rcEmpty );
     }
-    if ( buffer == NULL && bsize != 0 )
+    if ( buffer == nullptr && bsize != 0 )
     {
         return SILENT_RC ( rcDB, rcMetadata, rcReading, rcBuffer, rcNull );
     }
