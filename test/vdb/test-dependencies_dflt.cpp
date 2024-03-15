@@ -139,6 +139,9 @@ public:
 
 class RefseqFixture : public DepFixture {
 
+  #if BSD
+    // FIXME: Should there be a separate kfg/freebsd?
+    #define PATH "kfg/linux"
   #if LINUX
     #define PATH "kfg/linux"
   #elif MAC

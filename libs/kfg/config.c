@@ -2839,7 +2839,9 @@ void add_predefined_nodes ( KConfig * self, const char * appname )
     update_node ( self, "kfg/arch/bits", buf, true );
 
     /* *OS */
-#if LINUX
+#if BSD
+    #define OS "bsd"
+#elif LINUX
     #define OS "linux"
 #elif MAC
     #define OS "mac"

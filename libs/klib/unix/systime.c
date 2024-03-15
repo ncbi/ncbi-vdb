@@ -155,7 +155,13 @@ LIB_EXPORT KTime_t CC KTimeMakeTime ( const KTime *self )
         t . tm_isdst = self -> dst;
 
         ts = mktime ( &t );
+#ifdef __FreeBSD__
+	// This might be portable to all platforms
+	ts += localtime(&ts)->tm_gmtoff;
+#else
+	// extern global in sys/time.h on Linux and some other platforms
         ts -= timezone;
+#endif
     }
 
     return ts;

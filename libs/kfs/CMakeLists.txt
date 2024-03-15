@@ -23,6 +23,7 @@
 # ===========================================================================
 
 set ( UNIX_SRC unix/sysdir.c unix/sysdll.c unix/sysfile.c unix/syslockfile.c unix/sysmmap.c )
+set ( BSD_SRC ${UNIX_SRC} )
 set ( LINUX_SRC ${UNIX_SRC} )
 set ( MAC_SRC ${UNIX_SRC} )
 set ( WIN_SRC win/directory-path.c win/sysdir.c win/sysdll.c win/sysfile.c win/syslockfile.c win/sysmmap.c
@@ -30,19 +31,23 @@ set ( WIN_SRC win/directory-path.c win/sysdir.c win/sysdll.c win/sysfile.c win/s
 )
 
 set ( UNIX_SRC_V2 unix/sysfile-v2.c )
+set ( BSD_SRC_V2 ${UNIX_SRC_V2} )
 set ( LINUX_SRC_V2 ${UNIX_SRC_V2} )
 set ( MAC_SRC_V2 ${UNIX_SRC_V2} )
 set ( WIN_SRC_V2 win/sysfile-v2.c )
 
-if ( "windows" STREQUAL ${OS} )
-    set ( OS_SPECIFIC_SRC ${WIN_SRC} )
-    include_directories( win )
+if( "bsd" STREQUAL ${OS} )
+    set ( OS_SPECIFIC_SRC ${BSD_SRC} )
+    include_directories( unix )
 elseif( "linux" STREQUAL ${OS} )
     set ( OS_SPECIFIC_SRC ${LINUX_SRC} )
     include_directories( unix )
 elseif( "mac" STREQUAL ${OS} )
     set ( OS_SPECIFIC_SRC ${MAC_SRC} )
     include_directories( unix )
+elseif ( "windows" STREQUAL ${OS} )
+    set ( OS_SPECIFIC_SRC ${WIN_SRC} )
+    include_directories( win )
 endif()
 
 set( KFS_CMN
