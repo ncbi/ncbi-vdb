@@ -446,11 +446,6 @@ KRMetadataVOpenNodeRead ( const KMetadata *bself, const KMDataNode **node, const
 
     if ( node == NULL )
         rc = RC ( rcDB, rcMetadata, rcOpening, rcParam, rcNull );
-    else if ( self == NULL )
-    {
-        * node = NULL;
-        rc = RC ( rcDB, rcMetadata, rcOpening, rcSelf, rcNull );
-    }
     else
         rc = KMDataNodeVOpenNodeRead ( & self -> root -> dad, node, path, args );
 
