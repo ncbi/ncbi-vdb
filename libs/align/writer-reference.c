@@ -2480,7 +2480,7 @@ rc_t cigar2offset_2(unsigned const cigar_len,
             case 'S':
             case 'I':
                 if (seq_len < out_sz) {
-                    out_offset[seq_len].length = -op_len;
+                    out_offset[seq_len].length = -op_len; /* TODO: unary minus is not applicable to unsigned int */
                     out_offset[seq_len].type   = type;
                     ALIGN_C_DBGF(("%s:%u: seq_pos: %u, ref_pos: %u, offset: %i\n", __func__, __LINE__, seq_len, ref_len, -op_len));
                     if (op == 'B') ref_len -= op_len;
