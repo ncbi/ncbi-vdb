@@ -93,7 +93,7 @@ rc_t CC
 KTextManagerWhack ( KDBManager *self )
 {
     assert( self -> dad . vt == & KTextManager_vt );
-    delete reinterpret_cast<Manager*>( self );
+    delete self;
     return 0;
 }
 
