@@ -138,7 +138,7 @@ FIXTURE_TEST_CASE(KTextColumnBlob_NumReadNull, KTextColumnBlob_ApiFixture)
     char data[1024] = {0};
     size_t remaining = 0;
     rc_t rc = KColumnBlobRead ( m_blob, 0, data, sizeof data, nullptr, &remaining );
-    REQUIRE_EQ( SILENT_RC( rcDB, rcBlob, rcReading, rcBuffer, rcNull ), rc );
+    REQUIRE_EQ( SILENT_RC( rcDB, rcBlob, rcReading, rcParam, rcNull ), rc );
 }
 
 FIXTURE_TEST_CASE(KTextColumnBlob_Read_From_0, KTextColumnBlob_ApiFixture)

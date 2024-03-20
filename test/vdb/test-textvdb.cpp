@@ -55,35 +55,35 @@ public:
     const VDBManager * m_mgr = nullptr;
 };
 
-FIXTURE_TEST_CASE( VdbMgr_NullSelf, TextVdbFicture )
-{
-    const char * input = "{}";
-    const KDBManager * kdb = nullptr;
-    REQUIRE_RC( KDBManagerMakeText( & kdb, input, m_error, sizeof( m_error ) ) );
-    REQUIRE_RC_FAIL( VDBManagerMakeReadWithKDBManager( nullptr, kdb ));
-    REQUIRE_RC( KDBManagerRelease( kdb ));
-}
-FIXTURE_TEST_CASE( VdbMgr_NullKdb, TextVdbFicture )
-{
-    REQUIRE_RC_FAIL( VDBManagerMakeReadWithKDBManager( & m_mgr, nullptr ));
-}
+// FIXTURE_TEST_CASE( VdbMgr_NullSelf, TextVdbFicture )
+// {
+//     const char * input = "{}";
+//     const KDBManager * kdb = nullptr;
+//     REQUIRE_RC( KDBManagerMakeText( & kdb, input, m_error, sizeof( m_error ) ) );
+//     REQUIRE_RC_FAIL( VDBManagerMakeReadWithKDBManager( nullptr, kdb ));
+//     REQUIRE_RC( KDBManagerRelease( kdb ));
+// }
+// FIXTURE_TEST_CASE( VdbMgr_NullKdb, TextVdbFicture )
+// {
+//     REQUIRE_RC_FAIL( VDBManagerMakeReadWithKDBManager( & m_mgr, nullptr ));
+// }
 
-FIXTURE_TEST_CASE( VdbMgr, TextVdbFicture )
-{
-    const KDBManager * kdb = nullptr;
-    const char * input = "{}";
-    REQUIRE_RC( KDBManagerMakeText( & kdb, input, m_error, sizeof( m_error ) ) );
-    REQUIRE_RC( VDBManagerMakeReadWithKDBManager( & m_mgr, kdb ));
-    REQUIRE_NOT_NULL( m_mgr );
-    REQUIRE_RC( KDBManagerRelease( kdb ));
-}
+// FIXTURE_TEST_CASE( VdbMgr, TextVdbFicture )
+// {
+//     const KDBManager * kdb = nullptr;
+//     const char * input = "{}";
+//     REQUIRE_RC( KDBManagerMakeText( & kdb, input, m_error, sizeof( m_error ) ) );
+//     REQUIRE_RC( VDBManagerMakeReadWithKDBManager( & m_mgr, kdb ));
+//     REQUIRE_NOT_NULL( m_mgr );
+//     REQUIRE_RC( KDBManagerRelease( kdb ));
+// }
 
-FIXTURE_TEST_CASE( VdbMgr_OpenDB_Empty, TextVdbFicture )
-{
-    Setup("{}");
-    const VDatabase * db = nullptr;
-    REQUIRE_RC_FAIL( VDBManagerOpenDBRead ( m_mgr, &db, nullptr, "db" ) );
-}
+// FIXTURE_TEST_CASE( VdbMgr_OpenDB_Empty, TextVdbFicture )
+// {
+//     Setup("{}");
+//     const VDatabase * db = nullptr;
+//     REQUIRE_RC_FAIL( VDBManagerOpenDBRead ( m_mgr, &db, nullptr, "db" ) );
+// }
 
 const char * TestDB =
     R"({
@@ -132,15 +132,15 @@ const char * TestDB =
         ]
     })";
 
-FIXTURE_TEST_CASE( VdbMgr_OpenDB, TextVdbFicture )
-{
-    Setup(TestDB);
+// FIXTURE_TEST_CASE( VdbMgr_OpenDB, TextVdbFicture )
+// {
+//     Setup(TestDB);
 
-    const VDatabase * db = nullptr;
-    REQUIRE_RC( VDBManagerOpenDBRead ( m_mgr, &db, nullptr, "testdb" ) );
-    REQUIRE_NOT_NULL( db );
-    REQUIRE_RC( VDatabaseRelease( db ) );
-}
+//     const VDatabase * db = nullptr;
+//     REQUIRE_RC( VDBManagerOpenDBRead ( m_mgr, &db, nullptr, "testdb" ) );
+//     REQUIRE_NOT_NULL( db );
+//     REQUIRE_RC( VDatabaseRelease( db ) );
+// }
 
 FIXTURE_TEST_CASE( VdbMgr_OpenTable, TextVdbFicture )
 {

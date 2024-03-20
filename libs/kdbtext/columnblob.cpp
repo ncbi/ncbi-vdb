@@ -180,26 +180,34 @@ KTextColumnBlobRead ( const KColumnBlob *bself, size_t offset, void *buffer, siz
         // encode header
         uint64_t header_size;
         uint8_t header[5];
-        rc = encode_header_v1( header, sizeof(header), &header_size, ?, ? );
+        rc = encode_header_v1( header, sizeof(header), &header_size, 1, self -> getSize() );
         if ( rc == 0 )
         {
             size_t toRead = header_size + self -> getSize() - offset;
-            if ( toRead > bsize )
+            if ( bsize == 0 )
             {
-                * remaining = toRead - bsize;
-                toRead -= *remaining;
+                * remaining = toRead;
+                * num_read = 0;
             }
             else
             {
-                * remaining = 0;
-            }
+                if ( toRead > bsize )
+                {
+                    * remaining = toRead - bsize;
+                    toRead -= *remaining;
+                }
+                else
+                {
+                    * remaining = 0;
+                }
 
-            if ( toRead > 0 )
-            {
-                memmove( buffer, header, header_size );
-                memmove( (uint8_t*)buffer + header_size, (const char*)(self -> getData()) + header_size + offset, toRead - header_size);
+                if ( toRead > 0 )
+                {
+                    memmove( buffer, header, header_size );
+                    memmove( (uint8_t*)buffer + header_size, (const char*)(self -> getData()) + offset, toRead - header_size);
+                }
+                *num_read = header_size;
             }
-            *num_read = header_size;
         }
     }
 
