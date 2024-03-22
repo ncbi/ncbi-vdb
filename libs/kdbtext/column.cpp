@@ -194,7 +194,7 @@ Column::inflate( char * p_error, size_t p_error_size )
                     if ( rc == 0 )
                     {
                         KDataBuffer b;
-                        KDataBufferMakeBytes( & b, strlen( valueStr ) + 1 );
+                        KDataBufferMakeBytes( & b, strlen( valueStr ) ); // teminator excluded
                         strcpy( (char*)b.base, valueStr );
                         m_data [ rowId ] = b;
                     }

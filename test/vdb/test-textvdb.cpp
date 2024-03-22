@@ -55,35 +55,35 @@ public:
     const VDBManager * m_mgr = nullptr;
 };
 
-// FIXTURE_TEST_CASE( VdbMgr_NullSelf, TextVdbFicture )
-// {
-//     const char * input = "{}";
-//     const KDBManager * kdb = nullptr;
-//     REQUIRE_RC( KDBManagerMakeText( & kdb, input, m_error, sizeof( m_error ) ) );
-//     REQUIRE_RC_FAIL( VDBManagerMakeReadWithKDBManager( nullptr, kdb ));
-//     REQUIRE_RC( KDBManagerRelease( kdb ));
-// }
-// FIXTURE_TEST_CASE( VdbMgr_NullKdb, TextVdbFicture )
-// {
-//     REQUIRE_RC_FAIL( VDBManagerMakeReadWithKDBManager( & m_mgr, nullptr ));
-// }
+FIXTURE_TEST_CASE( VdbMgr_NullSelf, TextVdbFicture )
+{
+    const char * input = "{}";
+    const KDBManager * kdb = nullptr;
+    REQUIRE_RC( KDBManagerMakeText( & kdb, input, m_error, sizeof( m_error ) ) );
+    REQUIRE_RC_FAIL( VDBManagerMakeReadWithKDBManager( nullptr, kdb ));
+    REQUIRE_RC( KDBManagerRelease( kdb ));
+}
+FIXTURE_TEST_CASE( VdbMgr_NullKdb, TextVdbFicture )
+{
+    REQUIRE_RC_FAIL( VDBManagerMakeReadWithKDBManager( & m_mgr, nullptr ));
+}
 
-// FIXTURE_TEST_CASE( VdbMgr, TextVdbFicture )
-// {
-//     const KDBManager * kdb = nullptr;
-//     const char * input = "{}";
-//     REQUIRE_RC( KDBManagerMakeText( & kdb, input, m_error, sizeof( m_error ) ) );
-//     REQUIRE_RC( VDBManagerMakeReadWithKDBManager( & m_mgr, kdb ));
-//     REQUIRE_NOT_NULL( m_mgr );
-//     REQUIRE_RC( KDBManagerRelease( kdb ));
-// }
+FIXTURE_TEST_CASE( VdbMgr, TextVdbFicture )
+{
+    const KDBManager * kdb = nullptr;
+    const char * input = "{}";
+    REQUIRE_RC( KDBManagerMakeText( & kdb, input, m_error, sizeof( m_error ) ) );
+    REQUIRE_RC( VDBManagerMakeReadWithKDBManager( & m_mgr, kdb ));
+    REQUIRE_NOT_NULL( m_mgr );
+    REQUIRE_RC( KDBManagerRelease( kdb ));
+}
 
-// FIXTURE_TEST_CASE( VdbMgr_OpenDB_Empty, TextVdbFicture )
-// {
-//     Setup("{}");
-//     const VDatabase * db = nullptr;
-//     REQUIRE_RC_FAIL( VDBManagerOpenDBRead ( m_mgr, &db, nullptr, "db" ) );
-// }
+FIXTURE_TEST_CASE( VdbMgr_OpenDB_Empty, TextVdbFicture )
+{
+    Setup("{}");
+    const VDatabase * db = nullptr;
+    REQUIRE_RC_FAIL( VDBManagerOpenDBRead ( m_mgr, &db, nullptr, "db" ) );
+}
 
 const char * TestDB =
     R"({
@@ -123,28 +123,35 @@ const char * TestDB =
                         "type":"ascii",
                         "data":
                         [
-                            {"row":1,"value":"AGCT"},
-                            {"row":2,"value":"AGCT"}
+                            {"row":1,"value":"\u0002\u0004AGCT"},
+                            {"row":2,"value":"\u0002\u0005TCGAT"}
                         ]
                     }
                 ]
             }
         ]
     })";
+//TODO:
+// {"start":1,"data":"AGCT"}, // count = 1 by default
+// {"start":1, "count":2, "data":"\u0000AGCTAGCT" }
 
-// FIXTURE_TEST_CASE( VdbMgr_OpenDB, TextVdbFicture )
-// {
-//     Setup(TestDB);
+// when KDB is able to generate a row map:
+// "columns":[ ... { "name":"column1", ... "elem_size":1, ... } ]
+// {"start":1, "data":[ [ 65, 72 , 67, 80 ], "AGCT" ] } - row map + blob created out of rows by KDB
 
-//     const VDatabase * db = nullptr;
-//     REQUIRE_RC( VDBManagerOpenDBRead ( m_mgr, &db, nullptr, "testdb" ) );
-//     REQUIRE_NOT_NULL( db );
-//     REQUIRE_RC( VDatabaseRelease( db ) );
-// }
+FIXTURE_TEST_CASE( VdbMgr_OpenDB, TextVdbFicture )
+{
+    Setup(TestDB);
+
+    const VDatabase * db = nullptr;
+    REQUIRE_RC( VDBManagerOpenDBRead ( m_mgr, &db, nullptr, "testdb" ) );
+    REQUIRE_NOT_NULL( db );
+    REQUIRE_RC( VDatabaseRelease( db ) );
+}
 
 FIXTURE_TEST_CASE( VdbMgr_OpenTable, TextVdbFicture )
 {
-KDbgSetString("VDB");
+//KDbgSetString("VDB");
     Setup(TestDB);
     const VDatabase * db = nullptr;
     REQUIRE_RC( VDBManagerOpenDBRead ( m_mgr, &db, nullptr, "testdb" ) );
@@ -165,7 +172,9 @@ KDbgSetString("VDB");
     uint32_t rowLen = 0;
     char buf[1024];
     REQUIRE_RC( VCursorReadDirect ( curs, 1, cid, 8, buf, sizeof ( buf ), & rowLen ) );
-    REQUIRE_EQ( string("ACGT"), string( buf, rowLen ) );
+    REQUIRE_EQ( string("AGCT"), string( buf, rowLen ) );
+    REQUIRE_RC( VCursorReadDirect ( curs, 2, cid, 8, buf, sizeof ( buf ), & rowLen ) );
+    REQUIRE_EQ( string("TCGAT"), string( buf, rowLen ) );
 
     REQUIRE_RC( VCursorRelease( curs ) );
     REQUIRE_RC( VTableRelease( tbl ) );

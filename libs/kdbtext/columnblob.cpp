@@ -98,64 +98,6 @@ enum
     vboBigEndian
 };
 
-// copied from vdb/blob.c
-static
-rc_t encode_header_v1(uint8_t *dst,
-                      uint64_t dsize,
-                      uint64_t *used,
-                      uint32_t row_length,
-                      bitsz_t data_size)
-{
-    /* byte-order goes in bits 0..1 */
-    uint8_t header_byte;
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-        header_byte = ( uint8_t) vboLittleEndian;
-#else
-        header_byte = ( uint8_t) vboBigEndian;
-#endif
-
-    /* blob size adjust goes in bits 2..4 */
-    header_byte |= ( ( 8 - ( data_size & 7 ) ) & 7 ) << 2;
-
-    /* row-length code goes in bits 5..6 */
-    if ( row_length == 1 ) {
-        header_byte |= 3 << 5;
-        * used = 1;
-        if ( dsize < * used )
-            return RC(rcVDB, rcBlob, rcConstructing, rcBuffer, rcInsufficient);
-        dst[0] = header_byte;
-    }
-    else if (row_length < 0x100) {
-        *used = 2;
-        if (dsize < *used)
-            return RC(rcVDB, rcBlob, rcConstructing, rcBuffer, rcInsufficient);
-        dst[0] = header_byte;
-        dst[1] = ( uint8_t ) row_length;
-    }
-    else if (row_length < 0x10000) {
-        header_byte |= 1 << 5;
-        *used = 3;
-        if (dsize < *used)
-            return RC(rcVDB, rcBlob, rcConstructing, rcBuffer, rcInsufficient);
-        dst[0] = header_byte;
-        dst[1] = ( uint8_t ) row_length;
-        dst[2] = ( uint8_t ) ( row_length >> 8 );
-    }
-    else {
-        header_byte |= 2 << 5;
-        *used = 5;
-        if (dsize < *used)
-            return RC(rcVDB, rcBlob, rcConstructing, rcBuffer, rcInsufficient);
-        dst[0] = header_byte;
-        dst[1] = ( uint8_t ) row_length;
-        dst[2] = ( uint8_t ) ( row_length >> 8 );
-        dst[3] = ( uint8_t ) ( row_length >> 16 );
-        dst[4] = ( uint8_t ) ( row_length >> 24 );
-    }
-    return 0;
-}
-
-
 static
 rc_t CC
 KTextColumnBlobRead ( const KColumnBlob *bself, size_t offset, void *buffer, size_t bsize, size_t *num_read, size_t *remaining )
@@ -177,37 +119,29 @@ KTextColumnBlobRead ( const KColumnBlob *bself, size_t offset, void *buffer, siz
     }
     else
     {
-        // encode header
-        uint64_t header_size;
-        uint8_t header[5];
-        rc = encode_header_v1( header, sizeof(header), &header_size, 1, self -> getSize() );
-        if ( rc == 0 )
+        size_t toRead = self -> getSize() - offset;
+        if ( bsize == 0 )
         {
-            size_t toRead = header_size + self -> getSize() - offset;
-            if ( bsize == 0 )
+            * remaining = toRead;
+            * num_read = 0;
+        }
+        else
+        {
+            if ( toRead > bsize )
             {
-                * remaining = toRead;
-                * num_read = 0;
+                * remaining = toRead - bsize;
+                toRead -= *remaining;
             }
             else
             {
-                if ( toRead > bsize )
-                {
-                    * remaining = toRead - bsize;
-                    toRead -= *remaining;
-                }
-                else
-                {
-                    * remaining = 0;
-                }
-
-                if ( toRead > 0 )
-                {
-                    memmove( buffer, header, header_size );
-                    memmove( (uint8_t*)buffer + header_size, (const char*)(self -> getData()) + offset, toRead - header_size);
-                }
-                *num_read = header_size;
+                * remaining = 0;
             }
+
+            if ( toRead > 0 )
+            {
+                memmove( buffer, (const char*)(self -> getData()) + offset, toRead );
+            }
+            *num_read = toRead;
         }
     }
 
