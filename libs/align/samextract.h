@@ -37,6 +37,12 @@
 
 #define READBUF_SZ 65536
 
+#if WINDOWS
+#ifndef strcasecmp
+#define strcasecmp _stricmp
+#endif
+#endif
+
 typedef struct bamalign
 {
     i32 block_size;
