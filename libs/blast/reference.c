@@ -20,7 +20,7 @@
  *
  *  Please cite the author in any work or product based on this material.
  *
- * ===========================================================================
+ * ============================================================================$
  *
  */
 
@@ -61,7 +61,7 @@ uint64_t _clear_read_id_reference_bit(uint64_t read_id, bool *bad)
 
     if (! _is_set_read_id_reference_bit(read_id)) {
         *bad = true;
-        S
+        TRACE();
         return read_id;
     }
 
@@ -75,7 +75,7 @@ static uint64_t _set_read_id_reference_bit
 
     if (_is_set_read_id_reference_bit(read_id)) {
         *status = eVdbBlastErr;
-        S
+        TRACE();
         return read_id;
     }
 
@@ -752,7 +752,7 @@ static uint64_t _ReferencesRead2na(References *self,
             if (self->rfdi != self->read_id) {/* switching to a next reference*/
                 if (self->rfdi + 1 != self->read_id) { /* should never happen */
                     *status = eVdbBlastErr;
-                    S
+                    TRACE();
                     return 0;
                 }
                 *starting_base = 0;
@@ -760,20 +760,20 @@ static uint64_t _ReferencesRead2na(References *self,
                 if (self->rfdi >= self->refs->rfdk) {
                     self->eos = true;
                     *status = eVdbBlastNoErr; /* end of set */
-                    S
+                    TRACE();
                     return 0;
                 }
                 rfd1 = rfd;
                 rfd = &self->refs->rfd[self->rfdi];
             }
             if (rfd->iRun >= self->rs->krun) {
-                S
+                TRACE();
                 return 0;
             }
             if (self->rs->run == NULL || self->rs->run[rfd->iRun].obj == NULL ||
                 self->rs->run[rfd->iRun].obj->refTbl == NULL)
             {
-                S
+                TRACE();
                 return 0;
             }
             if (self->rfdi == 0 || rfd1->iRun != rfd->iRun) {
@@ -806,7 +806,7 @@ static uint64_t _ReferencesRead2na(References *self,
             else {
                 if (self->curs == NULL || self->idxREAD == 0) {
                     *status = eVdbBlastErr;
-                    S /* should never happen */
+                    TRACE(); /* should never happen */
                     return 0;
                 }
             }
@@ -829,10 +829,10 @@ static uint64_t _ReferencesRead2na(References *self,
             if (rc == SILENT_RC
                 (rcVDB, rcCursor, rcReading, rcBuffer, rcInsufficient))
             {
-                S
+                TRACE();
                 if (num_read == 0) {
                     *status = eVdbBlastErr;
-                    S /* should never happen */
+                    TRACE(); /* should never happen */
                 }
                 else {
                     rc = 0;
@@ -851,7 +851,7 @@ static uint64_t _ReferencesRead2na(References *self,
         }
         else {
             if (remaining != 0) { /* The buffer is filled. */
-                S     /* There remains more data to read in the current spot. */
+                TRACE(); // There remains more data to read in the current spot.
                 *starting_base += num_read;
                 break;
             }
@@ -872,7 +872,7 @@ static uint64_t _ReferencesRead2na(References *self,
             }
             begin += num_read / 4;
             if ((num_read % 4) != 0) {
-                S
+                TRACE();
                 *status = eVdbBlastErr;
                 break; /* should never happen */
             }
@@ -920,27 +920,27 @@ static uint32_t _ReferencesData2na(References *self,
             const VTable *t = NULL;
             if (self->rfdi != self->read_id) {/* switching to a next reference*/
                 if (self->rfdi + 1 != self->read_id) { /* should never happen */
-                    S
+                    TRACE();
                     return 0;
                 }
                 ++self->rfdi;
                 if (self->rfdi >= self->refs->rfdk) {
                     self->eos = true;
                     *status = eVdbBlastNoErr; /* end of set */
-                    S
+                    TRACE();
                     return num_read;
                 }
                 rfd1 = rfd;
                 rfd = &self->refs->rfd[self->rfdi];
             }
             if (rfd->iRun >= self->rs->krun) {
-                S
+                TRACE();
                 return 0;
             }
             if (self->rs->run == NULL || self->rs->run[rfd->iRun].obj == NULL ||
                 self->rs->run[rfd->iRun].obj->refTbl == NULL)
             {
-                S
+                TRACE();
                 return 0;
             }
             if (self->rfdi == 0 || rfd1->iRun != rfd->iRun) {
@@ -972,7 +972,7 @@ static uint32_t _ReferencesData2na(References *self,
             }
             else {
                 if (self->curs == NULL || self->idxREAD == 0) {
-                    S /* should never happen */
+                    TRACE(); /* should never happen */
                     return 0;
                 }
             }
@@ -991,7 +991,7 @@ static uint32_t _ReferencesData2na(References *self,
             return 0;
         }
         if (data->blob == NULL) {
-            S
+            TRACE();
             return 0;
         }
         rc = VBlobIdRange(data->blob, &first, &count);
@@ -1004,11 +1004,11 @@ static uint32_t _ReferencesData2na(References *self,
         if (self->spot < first || self->spot >= first + count) {
             /* requested blob b(spot) but spot < b.first || spot > b.last:
                should never happen */
-            S /* PLOGERR */
+            TRACE(); /* PLOGERR */
             return 0;
         }
         if (first > rfd->first + rfd->count) { /* should never happen */
-            S /* PLOGERR */
+            TRACE(); /* PLOGERR */
             return 0;
         }
         last_spot = first + count;
@@ -1386,7 +1386,7 @@ size_t _Core4naReadRef(Core4na *self, const RunSet *runs,
         uint32_t remaining = 0;
         uint32_t to_read = (uint32_t)(buffer_length - total);
         if (to_read == 0) {
-            S
+            TRACE();
             break;
         }
         rc = VCursorReadBitsDirect(self->curs, spot, self->col_READ,
@@ -1516,7 +1516,7 @@ const uint8_t* _Core4naDataRef(Core4na *self, const RunSet *runs,
         return 0;
     }
     if (self->blob == NULL) {
-        S
+        TRACE();
         return 0;
     }
     rc = VBlobIdRange(self->blob, &first, &count);
@@ -1529,11 +1529,11 @@ const uint8_t* _Core4naDataRef(Core4na *self, const RunSet *runs,
     if (self->desc.spot < first || self->desc.spot >= first + count) {
         /* requested blob b(spot) but spot < b.first || spot > b.last:
            should never happen */
-        S /* PLOGERR */
+        TRACE(); /* PLOGERR */
         return 0;
     }
     if (first > rfd->first + rfd->count) { /* should never happen */
-        S /* PLOGERR */
+        TRACE(); /* PLOGERR */
         return 0;
     }
     last_spot = first + count;

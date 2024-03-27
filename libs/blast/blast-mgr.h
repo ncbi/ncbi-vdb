@@ -23,7 +23,7 @@
  *
  *  Please cite the author in any work or product based on this material.
  *
- * ===========================================================================
+ * ============================================================================$
  *
  */
 
@@ -40,9 +40,9 @@ extern "C" {
 #endif
 
 #if _DEBUGGING
-#define S STSMSG(9,(""));
+#define TRACE() STSMSG(8,(""))
 #else
-#define S
+#define TRACE() ((void)0)
 #endif
 
 #define RELEASE(type, thing) do { rc_t rc2 = type##Release(thing); \
