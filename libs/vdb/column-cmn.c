@@ -36,11 +36,11 @@
 #include "schema-priv.h"
 #include "prod-priv.h"
 #include "blob-priv.h"
-#include "page-map.h"
 #undef KONST
 
 #include <vdb/manager.h>
 #include <kdb/column.h>
+#include <kdb/page-map.h>
 #include <klib/log.h>
 #include <klib/rc.h>
 #include <sysalloc.h>

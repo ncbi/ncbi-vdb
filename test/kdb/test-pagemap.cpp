@@ -25,9 +25,7 @@
 
 #include <ktst/unit_test.hpp>
 
-extern "C" {
-    #include <../libs/vdb/page-map.h>
-}
+#include <kdb/page-map.h>
 
 using namespace std;
 

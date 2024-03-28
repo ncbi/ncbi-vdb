@@ -38,7 +38,6 @@
 #include "prod-priv.h"
 #include "prod-expr.h"
 #include "blob-priv.h"
-#include "page-map.h"
 #undef KONST
 #undef SKONST
 
@@ -48,6 +47,7 @@
 #include <kdb/table.h>
 #include <kdb/column.h>
 #include <kdb/meta.h>
+#include <kdb/page-map.h>
 #include <klib/symbol.h>
 #include <klib/log.h>
 #include <klib/rc.h>

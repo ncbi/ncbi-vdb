@@ -34,7 +34,8 @@
 /********************************************************************************/
 /* temporary copies of some static functions from prod-cmn.c */
 #include "cursor-priv.h"
-#include "page-map.h"
+
+#include <kdb/page-map.h>
 
 static
 void CC vblob_release ( void *item, void *ignore )

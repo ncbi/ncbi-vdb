@@ -32,10 +32,10 @@
 #include <vdb/blob.h>
 #include <vdb/vdb-priv.h>
 #include <vdb/blob.h>
+#include <kdb/page-map.h>
 
 extern "C" {
     #include <../libs/vdb/blob-priv.h>
-    #include <../libs/vdb/page-map.h>
 }
 
 #include <ktst/unit_test.hpp> // TEST_CASE
