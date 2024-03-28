@@ -24,6 +24,8 @@
 *
 */
 
+#define NOMINMAX 
+
 #include "metadata.hpp"
 
 #include "metanode.hpp"
