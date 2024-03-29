@@ -282,7 +282,7 @@ KTextMetadataVOpenNodeRead ( const KMetadata *bself, const KMDataNode **node, co
     const Metanode * r = self->getRoot();
     if ( r == nullptr )
     {
-        return SILENT_RC ( rcDB, rcMetadata, rcOpening, rcData, rcNull );
+        return SILENT_RC ( rcDB, rcMetadata, rcSelecting, rcPath, rcNotFound );
     }
 
     Path p(path, args);

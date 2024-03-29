@@ -273,6 +273,13 @@ FIXTURE_TEST_CASE(KDBTextManager_VPathTypeUnreliable, KDBTextManager_Fixture)
     REQUIRE_EQ( (int)kptDatabase, fn( m_mgr, "%s", "testdb" ) );
 }
 
+FIXTURE_TEST_CASE(KDBTextManager_OpenDBRead_NotFound, KDBTextManager_Fixture)
+{
+    Setup( R"({"type": "database", "name": "testdb"})" );
+    const KDatabase * db = nullptr;
+    REQUIRE_RC_FAIL( KDBManagerOpenDBRead( m_mgr, & db, "%s", "testshmdb" ) );
+}
+
 FIXTURE_TEST_CASE(KDBTextManager_OpenDBRead, KDBTextManager_Fixture)
 {
     Setup( R"({"type": "database", "name": "testdb"})" );
@@ -342,6 +349,20 @@ FIXTURE_TEST_CASE(KDBManager_OpenColumnRead, KDBTextManager_Fixture)
     const KColumn *col = nullptr;
     rc_t rc = KDBManagerOpenColumnRead( m_mgr, & col, "%s", "testdb/col/col1" );
     REQUIRE_EQ( SILENT_RC( rcDB, rcMgr, rcAccessing, rcColumn, rcUnsupported ), rc );
+}
+
+FIXTURE_TEST_CASE(KDBManager_getVFSManager_Null, KDBTextManager_Fixture)
+{
+    Setup( R"({"type": "database", "name": "testdb"})" );
+    REQUIRE_RC_FAIL( KDBManagerGetVFSManager( m_mgr, nullptr ) );
+}
+
+FIXTURE_TEST_CASE(KDBManager_getVFSManager, KDBTextManager_Fixture)
+{
+    Setup( R"({"type": "database", "name": "testdb"})" );
+    VFSManager * vfs = nullptr;
+    REQUIRE_RC( KDBManagerGetVFSManager( m_mgr, &vfs ) );
+    REQUIRE_RC( VFSManagerRelease( vfs ) );
 }
 
 //////////////////////////////////////////// Main
@@ -442,6 +463,7 @@ rc_t CC KMain ( int argc, char *argv [] )
     }
     "tables":[
         {
+            "type":"table",
             "name":"SEQUENCE",
             "metadata":null,
             "columns":[

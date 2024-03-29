@@ -101,7 +101,8 @@ static KDBManager_vt KDBRManager_vt =
     KDBRManagerOpenTableReadVPath,
     KDBRManagerVOpenColumnRead,
     KDBRManagerVPathOpenLocalDBRead,
-    KDBRManagerVPathOpenRemoteDBRead
+    KDBRManagerVPathOpenRemoteDBRead,
+    KDBCmnManagerGetVFSManager
 };
 
 /* MakeRead

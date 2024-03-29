@@ -106,7 +106,7 @@ rc_t VDBManagerWhack ( VDBManager *self )
 
         VSchemaRelease ( self -> schema );
         VLinkerRelease ( self -> linker );
-	
+
         VDBManagerWhackStatic ();
 
         free ( self );

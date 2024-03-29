@@ -112,6 +112,9 @@ VDB_EXTERN rc_t CC VDBManagerDisablePagemapThread ( struct VDBManager const *sel
  */
 VDB_EXTERN rc_t CC VDBManagerDisableFlushThread ( struct VDBManager *self );
 
+/* Make with custom KDBManager */
+VDB_EXTERN rc_t CC VDBManagerMakeReadWithKDBManager (
+    struct VDBManager const **mgr, const struct KDBManager *kdbmgr );
 
 /* Make with custom VFSManager */
 VDB_EXTERN rc_t CC VDBManagerMakeReadWithVFSManager (
