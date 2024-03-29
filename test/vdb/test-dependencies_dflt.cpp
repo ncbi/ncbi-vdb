@@ -77,7 +77,7 @@ protected:
         KConfig *cfg = NULL;
 
         if (KDirectoryOpenDirRead(wd, &dir, false, path)) {
-            FAIL("failed to KDirectoryOpenDirRead()");
+            FAIL("failed to KDirectoryOpenDirRead(" + std::string(path) + ")");
         }
         if (KConfigMakeLocal(&cfg, dir)) {
             FAIL("failed to KConfigMake()");
@@ -482,8 +482,13 @@ extern "C" {
     rc_t CC Usage(const Args *args) { return 0; }
     rc_t CC KMain(int argc, char *argv[]) {
         KConfigDisableUserSettings();
+
+if (
+1)      assert(!KDbgSetString("KFS-FILE"));
+
 if(
 1)      assert(!KDbgSetString("VFS"));
-        return TestDependenciesSuite(argc, argv);
+
+        return rc_t(TestDependenciesSuite(argc, argv));
     }
 }
