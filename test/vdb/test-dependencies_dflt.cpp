@@ -484,10 +484,10 @@ extern "C" {
         KConfigDisableUserSettings();
 
 if (
-1)      assert(!KDbgSetString("KFS-FILE"));
+0)      assert(!KDbgSetString("KFS-FILE"));
 
 if(
-1)      assert(!KDbgSetString("VFS"));
+0)      assert(!KDbgSetString("VFS"));
 
         return rc_t(TestDependenciesSuite(argc, argv));
     }
