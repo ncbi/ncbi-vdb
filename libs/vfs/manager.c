@@ -72,14 +72,12 @@
 
 #include <kproc/lock.h> /* KLock */
 
-#include <klib/container.h> /* BSTreeInit */
 #include <klib/debug.h>
 #include <klib/log.h>
 #include <klib/namelist.h>
 #include <klib/out.h>
 #include <klib/printf.h>
 #include <klib/rc.h>
-#include <klib/refcount.h>
 #include <klib/strings.h> /* ENV_VDB_REMOTE_NEED_CE */
 #include <klib/time.h>
 #include <klib/vector.h>
@@ -120,44 +118,6 @@
  * VFSManager
  */
 
-/* currently expected to be a singleton and not use a vtable but
- * be fully fleshed out here */
-struct VFSManager
-{
-    /* the current directory in the eyes of the O/S when created */
-    KDirectory * cwd;
-
-    /* configuration manager */
-    KConfig * cfg;
-
-    /* krypto's cipher manager */
-    KCipherManager * cipher;
-
-    /* SRAPath will be replaced with a VResolver */
-    struct VResolver * resolver;
-
-    /* network manager */
-    KNSManager * kns;
-
-    /**************************************************************************/
-    /* Cache of names resolve results / SDL responses */
-    bool notCachingSdlResponse;
-    ESdlCacheState trSdlState;
-    BSTree trSdl;
-    KLock * trSdlMutex;
-    /**************************************************************************/
-
-    /* path to a global password file */
-    char *pw_env;
-
-    /* encryption key storage */
-    struct KKeyStore* keystore;
-
-    KRefcount refcount;
-
-    VRemoteProtocols protocols;
-};
-
 static const char kfsmanager_classname [] = "VFSManager";
 
 static
@@ -168,7 +128,7 @@ VFSManager * singleton = NULL;
 
 typedef struct {
      BSTNode n;
- 
+
      char * acc;
      KTime_t expiration;
      const KSrvResponse * resp;
@@ -263,13 +223,13 @@ static rc_t VFSManagerCached(const VFSManager * cself,
 
     String acc;
     StringInitCString(&acc, id);
- 
+
     if (wgs == NULL) {
         wgs = e;
         sWgs = sizeof e;
     }
     wgs[0] = '\0';
- 
+
     assert(self && (in || out));
     if (out != NULL)
         *out = NULL;
@@ -352,7 +312,7 @@ static rc_t VFSManagerCached(const VFSManager * cself,
     }
 
     KLockUnlock(self->trSdlMutex);
-    
+
     return rc;
 }
 
@@ -388,20 +348,20 @@ rc_t VFSManagerSetCachedKSrvResponse
 
 rc_t VFSManagerSdlCacheClear(VFSManager * self) {
     rc_t rc = 0, r2 = 0;
-  
+
     if (self == NULL)
         return RC(rcVFS, rcFile, rcDestroying, rcSelf, rcNull);
- 
+
     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
         ("VFSManagerCached: CLEARING SDL CACHE\n"));
-  
+
     rc = _VFSManagerSdlMutexLockAcquire(self);
 
     if (rc == 0) {
         BSTreeWhack(&self->trSdl, bstWhack, NULL);
         self->trSdlState = eSCSEmpty;
     }
- 
+
     r2 = KLockUnlock(self->trSdlMutex);
     if (rc == 0 && r2 != 0)
         rc = r2;
