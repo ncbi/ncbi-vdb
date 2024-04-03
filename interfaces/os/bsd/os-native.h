@@ -24,47 +24,20 @@
 *
 */
 
-#pragma once
+#ifndef _h_os_native_
+#define _h_os_native_
 
-#include "../libs/kdb/meta-base.h"
+#ifndef _h_unix_native_
+#include "../unix/unix-native.h"
+#endif
 
-#include <klib/json.h>
-#include <klib/rc.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#include <string>
 
-typedef struct KTextMetadata KTextMetadata;
-struct KTextMetadata
-{
-    KMetadata dad;
-};
-
-namespace KDBText
-{
-    class Metanode;
-
-    class Metadata : public KTextMetadata
-    {
-    public:
-        static void addRef( const Metadata* );
-        static void release( const Metadata *);
-
-    public:
-        Metadata( const KJsonObject * p_json );
-        ~Metadata();
-
-        rc_t inflate( char * error, size_t error_size );
-
-        const std::string & getName() const { return m_name; }
-
-        uint32_t getRevision() const { return m_revision; }
-
-        const Metanode * getRoot() const { return m_root; }
-
-    private:
-        const KJsonObject * m_json = nullptr;
-        std::string m_name;
-        uint32_t m_revision = 0;
-        Metanode * m_root = nullptr;
-    };
+#ifdef __cplusplus
 }
+#endif
+
+#endif /* _h_os_native_ */

@@ -84,6 +84,7 @@ rc_t CC KMDataNodeWhack ( KMDataNode * node );
 // default implelentations where exist
 extern rc_t CC KMDataNodeBaseAddRef ( const KMDataNode *self );
 extern rc_t CC KMDataNodeBaseWhack ( KMDataNode *self );
+extern rc_t CC KMDataNodeBaseRelease ( const KMDataNode *self );
 
 /* Attach
  * Sever

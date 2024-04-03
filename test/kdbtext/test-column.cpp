@@ -46,7 +46,7 @@ using namespace KDBText;
 TEST_SUITE(KTextColumnTestSuite);
 
 const char * TestColumn = R"({"name":"col",
-            "type":"ascii",
+            "type":"text",
             "data":
                 [
                     {"row":1,"value":"AGCT"},
@@ -103,33 +103,38 @@ FIXTURE_TEST_CASE(KTextColumn_Make, KTextColumn_Fixture)
 
 FIXTURE_TEST_CASE(KTextColumn_Make_DataNotArray, KTextColumn_Fixture)
 {
-    Setup(R"({"name":"col","data":{}})");
+    Setup(R"({"name":"col","type":"text","data":{}})");
     REQUIRE_RC_FAIL( m_col -> inflate( m_error, sizeof m_error ) );
-    //cout << m_error << endl;
+    // cout << m_error << endl;
 }
 
 FIXTURE_TEST_CASE(KTextColumn_Make_CellNotObject, KTextColumn_Fixture)
 {
-    Setup(R"({"name":"col","data":[1]})");
+    Setup(R"({"name":"col","type":"text","data":[1]})");
     REQUIRE_RC_FAIL( m_col -> inflate( m_error, sizeof m_error ) );
-    //cout << m_error << endl;
+    // cout << m_error << endl;
 }
 FIXTURE_TEST_CASE(KTextColumn_CellMake_RowMissing, KTextColumn_Fixture)
 {
-    Setup(R"({"name":"col","data":[{}]})");
+    Setup(R"({"name":"col","type":"text","data":[{}]})");
     REQUIRE_RC_FAIL( m_col -> inflate( m_error, sizeof m_error ) );
-    //cout << m_error << endl;
+    // cout << m_error << endl;
 }
 FIXTURE_TEST_CASE(KTextColumn_CellMake_RowBad, KTextColumn_Fixture)
 {
-    Setup(R"({"name":"col","data": [ {"row":"a","value":"q"} ] })");
+    Setup(R"({"name":"col","type":"text","data": [ {"row":"a","value":"q"} ] })");
     REQUIRE_RC_FAIL( m_col -> inflate( m_error, sizeof m_error ) );
     //cout << m_error << endl;
 }
-
+FIXTURE_TEST_CASE(KTextColumn_CellMake_ValueBad, KTextColumn_Fixture)
+{
+    Setup(R"({"name":"col","type":"text","data": [ {"row":1,"value":null} ] })");
+    REQUIRE_RC_FAIL( m_col -> inflate( m_error, sizeof m_error ) );
+    //cout << m_error << endl;
+}
 FIXTURE_TEST_CASE(KTextColumn_CellMake_ValueMissing, KTextColumn_Fixture)
 {
-    Setup(R"({"name":"col","data": [ {"row":"1"} ] })");
+    Setup(R"({"name":"col","type":"text","data": [ {"row":"1"} ] })");
     REQUIRE_RC_FAIL( m_col -> inflate( m_error, sizeof m_error ) );
     //cout << m_error << endl;
 }
@@ -149,7 +154,7 @@ const char * FullTable = R"({"type": "table", "name": "testtbl",
     "columns":[
         {
             "name":"col",
-            "type":"ascii",
+            "type":"text",
             "data":
                 [
                     {"row":1,"value":"AGCT"},

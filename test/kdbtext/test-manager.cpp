@@ -230,13 +230,13 @@ FIXTURE_TEST_CASE(KDBTextManager_PathTypeVP_Table_Nested, KDBTextManager_Fixture
 
 FIXTURE_TEST_CASE(KDBTextManager_PathTypeVP_Column_NotFound, KDBTextManager_Fixture)
 {
-    Setup( R"({ "type": "table", "name": "tbl1", "columns":[{"name":"col1","type":"ascii"}] })" );
+    Setup( R"({ "type": "table", "name": "tbl1", "columns":[{"name":"col1","type":"text"}] })" );
     MakeVPath( "tbl1/col/notcol");
     REQUIRE_EQ( (int)kptNotFound, KDBManagerPathTypeVP( m_mgr, m_path ) );
 }
 FIXTURE_TEST_CASE(KDBTextManager_PathTypeVP_Column_RootTable, KDBTextManager_Fixture)
 {
-    Setup( R"({ "type": "table", "name": "tbl1", "columns":[{"name":"col1","type":"ascii"}] })" );
+    Setup( R"({ "type": "table", "name": "tbl1", "columns":[{"name":"col1","type":"text"}] })" );
     MakeVPath( "tbl1/col/col1");
     REQUIRE_EQ( (int)kptColumn, KDBManagerPathTypeVP( m_mgr, m_path ) );
 }
@@ -245,7 +245,7 @@ FIXTURE_TEST_CASE(KDBTextManager_PathTypeVP_Column_Db, KDBTextManager_Fixture)
     Setup( R"({"type": "database","name": "testdb",
         "tables":[
             { "type": "table", "name": "tbl1",
-              "columns":[{"name":"col1","type":"ascii"}]
+              "columns":[{"name":"col1","type":"text"}]
             }
         ]
     })" );
@@ -271,6 +271,13 @@ FIXTURE_TEST_CASE(KDBTextManager_VPathTypeUnreliable, KDBTextManager_Fixture)
         return res;
     };
     REQUIRE_EQ( (int)kptDatabase, fn( m_mgr, "%s", "testdb" ) );
+}
+
+FIXTURE_TEST_CASE(KDBTextManager_OpenDBRead_NotFound, KDBTextManager_Fixture)
+{
+    Setup( R"({"type": "database", "name": "testdb"})" );
+    const KDatabase * db = nullptr;
+    REQUIRE_RC_FAIL( KDBManagerOpenDBRead( m_mgr, & db, "%s", "testshmdb" ) );
 }
 
 FIXTURE_TEST_CASE(KDBTextManager_OpenDBRead, KDBTextManager_Fixture)
@@ -342,6 +349,20 @@ FIXTURE_TEST_CASE(KDBManager_OpenColumnRead, KDBTextManager_Fixture)
     const KColumn *col = nullptr;
     rc_t rc = KDBManagerOpenColumnRead( m_mgr, & col, "%s", "testdb/col/col1" );
     REQUIRE_EQ( SILENT_RC( rcDB, rcMgr, rcAccessing, rcColumn, rcUnsupported ), rc );
+}
+
+FIXTURE_TEST_CASE(KDBManager_getVFSManager_Null, KDBTextManager_Fixture)
+{
+    Setup( R"({"type": "database", "name": "testdb"})" );
+    REQUIRE_RC_FAIL( KDBManagerGetVFSManager( m_mgr, nullptr ) );
+}
+
+FIXTURE_TEST_CASE(KDBManager_getVFSManager, KDBTextManager_Fixture)
+{
+    Setup( R"({"type": "database", "name": "testdb"})" );
+    VFSManager * vfs = nullptr;
+    REQUIRE_RC( KDBManagerGetVFSManager( m_mgr, &vfs ) );
+    REQUIRE_RC( VFSManagerRelease( vfs ) );
 }
 
 //////////////////////////////////////////// Main
@@ -427,23 +448,28 @@ rc_t CC KMain ( int argc, char *argv [] )
     "metadata":
     {
         "name":"",
-        "value":"blah",
-        "attributes":{"attr0":"value", "attr1":"attr1value"},
-        "children":{
-            "name":"schema",
-            "value":"version 1;....",
-            "attributes":{},
-            "children":{}
+        "revision":1,
+        "root":{
+            "value":"blah",
+            "attributes":{"attr0":"value", "attr1":{"size":4,"int":123456}},
+            "children":[{
+                "name":"schema",
+                "value":"version 1;....",
+                "attributes":{},
+                "children":[]
+        }]
         }
+
     }
     "tables":[
         {
+            "type":"table",
             "name":"SEQUENCE",
             "metadata":null,
             "columns":[
                 {
                     "name":"READ",
-                    "type":"ascii",
+                    "type":"text",
                     "metadata":null,
                     "data":
                     [

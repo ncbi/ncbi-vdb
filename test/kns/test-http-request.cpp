@@ -86,6 +86,17 @@ public:
     string m_url;
 };
 
+FIXTURE_TEST_CASE(HttpRequest_POST_Failure, HttpRequestFixture) {
+    // Bug: KClientHttpRequestPOST crashed if KStreamRead returned rc
+    MakeRequest(GetName());
+
+    KClientHttpResult *rslt = (KClientHttpResult*)1;
+    TestStream::ForceFailure();
+    REQUIRE_RC_FAIL(KClientHttpRequestPOST(m_req, &rslt));
+    REQUIRE_NULL(rslt);
+    TestStream::ForceFailure(false);
+}
+
 #ifdef ALL
 FIXTURE_TEST_CASE(HttpRequest_POST_NoParams, HttpRequestFixture)
 {   // Bug: KClientHttpRequestPOST crashed if request had no parameters

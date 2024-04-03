@@ -32,7 +32,8 @@
 #include <strtol.h>
 #include <limits.h>
 
-rc_t KMDataNodeBaseWhack ( KMDataNode *self )
+rc_t
+KMDataNodeBaseWhack ( KMDataNode *self )
 {
     KRefcountWhack ( & self -> refcount, "KMDataNode" );
     free ( self );
@@ -44,7 +45,8 @@ rc_t KMDataNodeBaseWhack ( KMDataNode *self )
  *  all objects are reference counted
  *  NULL references are ignored
  */
-rc_t CC KMDataNodeBaseAddRef ( const KMDataNode *self )
+rc_t CC
+KMDataNodeBaseAddRef ( const KMDataNode *self )
 {
     if ( self != NULL )
     {
@@ -52,6 +54,25 @@ rc_t CC KMDataNodeBaseAddRef ( const KMDataNode *self )
         {
         case krefLimit:
             return RC ( rcDB, rcMetadata, rcAttaching, rcRange, rcExcessive );
+        }
+    }
+    return 0;
+}
+
+rc_t CC
+KMDataNodeBaseRelease ( const KMDataNode *self )
+{
+    if ( self != NULL )
+    {
+        switch ( KRefcountDrop ( & self -> refcount, "KMDataNode" ) )
+        {
+        case krefOkay:
+            break;
+        case krefWhack:
+            KMDataNodeWhack( (KMDataNode*)self );
+            break;
+        case krefNegative:
+            return RC ( rcDB, rcMetadata, rcReleasing, rcRange, rcExcessive );
         }
     }
     return 0;

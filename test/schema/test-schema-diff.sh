@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 test_schema_diff=$1
 TOP=$2

@@ -23,16 +23,21 @@
 # ===========================================================================
 
 set ( UNIX_SRC unix/args-conv-os.c unix/sysmain.c )
+# FIXME: Maybe mac/ram.c should be moved to bsd/ram.c. FreeBSD, mac, and
+# NetBSD are the same, except for the specific sysctl variable.
+set ( BSD_SRC ${UNIX_SRC} mac/ram.c )
 set ( LINUX_SRC ${UNIX_SRC} linux/ram.c )
 set ( MAC_SRC ${UNIX_SRC} mac/ram.c )
 set ( WIN_SRC win/args-conv-os.c win/ram.c win/sysmain.c )
 
-if ( "windows" STREQUAL ${OS} )
-    set ( OS_SPECIFIC_SRC ${WIN_SRC} )
+if( "bsd" STREQUAL ${OS} )
+    set ( OS_SPECIFIC_SRC ${BSD_SRC} )
 elseif( "linux" STREQUAL ${OS} )
     set ( OS_SPECIFIC_SRC ${LINUX_SRC} )
 elseif( "mac" STREQUAL ${OS} )
     set ( OS_SPECIFIC_SRC ${MAC_SRC} )
+elseif ( "windows" STREQUAL ${OS} )
+    set ( OS_SPECIFIC_SRC ${WIN_SRC} )
 endif()
 
 set( KAPP_CMN

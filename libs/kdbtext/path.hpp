@@ -28,6 +28,7 @@
 
 #include <string>
 #include <queue>
+#include <cstdarg>
 
 #include <klib/rc.h>
 

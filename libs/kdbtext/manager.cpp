@@ -223,16 +223,23 @@ Manager::openDatabase( const Path & p_path, const Database *& p_db ) const
             if ( root != nullptr )
             {
                 const Database * db = root -> openDatabase( path ); // could be same as root
-                if ( db != root )
+                if ( db != nullptr )
                 {
-                    KDatabaseRelease( (const KDatabase *)root );
-                    p_db = db;
-                    return 0;
+                    if ( db != root )
+                    {
+                        KDatabaseRelease( (const KDatabase *)root );
+                        p_db = db;
+                        return 0;
+                    }
+                    else
+                    {
+                        p_db = root;
+                        return 0;
+                    }
                 }
                 else
                 {
-                    p_db = root;
-                    return 0;
+                    return SILENT_RC (rcDB, rcMgr, rcOpening, rcDirectory, rcNotFound );
                 }
             }
         }

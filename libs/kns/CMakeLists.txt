@@ -23,19 +23,23 @@
 # ===========================================================================
 
 set ( UNIX_SRC unix/sysmgr.c unix/syssock.c unix/sysstream.c )
+set ( BSD_SRC ${UNIX_SRC} mac/sysendpoint.c mac/syspoll.c )
 set ( LINUX_SRC ${UNIX_SRC} linux/sysendpoint.c linux/syspoll.c )
 set ( MAC_SRC ${UNIX_SRC} mac/sysendpoint.c mac/syspoll.c )
 set ( WIN_SRC win/sysendpoint.c win/sysmgr.c win/syssock.c win/sysstream.c )
 
-if ( "windows" STREQUAL ${OS} )
-    set ( OS_SPECIFIC_SRC ${WIN_SRC} )
-    include_directories( win )
+if( "bsd" STREQUAL ${OS} )
+    set ( OS_SPECIFIC_SRC ${BSD_SRC} )
+    include_directories( unix )
 elseif( "linux" STREQUAL ${OS} )
     set ( OS_SPECIFIC_SRC ${LINUX_SRC} )
     include_directories( unix )
 elseif( "mac" STREQUAL ${OS} )
     set ( OS_SPECIFIC_SRC ${MAC_SRC} )
     include_directories( unix )
+elseif ( "windows" STREQUAL ${OS} )
+    set ( OS_SPECIFIC_SRC ${WIN_SRC} )
+    include_directories( win )
 endif()
 
 set( KNS_NO_HTTP_SRC

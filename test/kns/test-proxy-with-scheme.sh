@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 test_proxy_with_scheme=$1
 

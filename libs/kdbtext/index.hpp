@@ -32,6 +32,8 @@
 #include <klib/rc.h>
 
 #include <string>
+#include <map>
+#include <set>
 
 typedef struct KTextIndex KTextIndex;
 struct KTextIndex
@@ -57,10 +59,31 @@ namespace KDBText
 
         const std::string & getName() const { return m_name; }
 
+        typedef std::map< std::string, std::pair<int64_t,uint64_t> > TextData;
+        const TextData & getTextData() const { return m_textData; }
+
+        struct IntDataNode
+        {
+            uint64_t key;
+            uint64_t key_size;
+            int64_t id_start;
+            uint64_t id_count;
+            bool operator < ( const IntDataNode& that ) const
+            {
+                return this->key < that.key || ( this->key == that.key && this->key_size < that.key_size );
+            };
+        };
+
+        typedef std::set< IntDataNode > IntData;
+        const IntData & getIntData() const { return m_intData; }
+
     private:
         const KJsonObject * m_json = nullptr;
         std::string m_name;
 
         const Table * m_parent = nullptr;
+
+        TextData m_textData;
+        IntData m_intData;
     };
 }
