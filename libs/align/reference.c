@@ -204,7 +204,7 @@ static rc_t ReferenceList_handle_filter( const KIndex* iname, const char * filt_
         if ( bin_size == 0 || strncmp( filt_name, "BIN_NUM:", 8 ) )
         {
             rc = KIndexFindText( iname, filt_name, start, (uint64_t*)count, NULL, NULL );
-            assert ( count >= 0 );
+            assert ( *count >= 0 );
             if( rc == 0 && bin_size > 0 )
             {
                 /** change start to the beginning of the bin **/
@@ -230,7 +230,7 @@ static rc_t ReferenceList_handle_filter( const KIndex* iname, const char * filt_
                     memmove( name, h[ 0 ].base.str, h[ 0 ].len );
                     name[ h[ 0 ].len ] = '\0';
                     rc = KIndexFindText( iname, name, &r_start, (uint64_t*)count, NULL, NULL );
-                    assert ( count >= 0 );
+                    assert ( *count >= 0 );
                     if ( rc == 0 && *start > r_start )
                     { /*** move start to the beginning of the fully contained sequence **/
                         *start = r_start + *count;
