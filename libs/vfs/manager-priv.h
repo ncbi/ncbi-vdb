@@ -27,13 +27,18 @@
 
 
 #include <klib/text.h> /* String */
-
+#include <klib/container.h> /* BSTreeInit */
+#include <klib/refcount.h>
+#include <vfs/resolver.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 struct VFSManager;
+struct KConfig;
+struct KCipherManager;
+struct KLock;
 
 /* Get ".noqual" extension.
     *   accepts VFSManager* == NULL */
@@ -57,6 +62,48 @@ uint32_t VFSManagerSdlCacheCount
 (const struct VFSManager * self, ESdlCacheState * state);
 rc_t VFSManagerSdlCacheClear(struct VFSManager * self);
 /******************************************************************************/
+
+/*--------------------------------------------------------------------------
+ * VFSManager
+ */
+
+/* currently expected to be a singleton and not use a vtable but
+ * be fully fleshed out here */
+struct VFSManager
+{
+    /* the current directory in the eyes of the O/S when created */
+    KDirectory * cwd;
+
+    /* configuration manager */
+    struct KConfig * cfg;
+
+    /* krypto's cipher manager */
+    struct KCipherManager * cipher;
+
+    /* SRAPath will be replaced with a VResolver */
+    struct VResolver * resolver;
+
+    /* network manager */
+    struct KNSManager * kns;
+
+    /**************************************************************************/
+    /* Cache of names resolve results / SDL responses */
+    bool notCachingSdlResponse;
+    ESdlCacheState trSdlState;
+    BSTree trSdl;
+    struct KLock * trSdlMutex;
+    /**************************************************************************/
+
+    /* path to a global password file */
+    char *pw_env;
+
+    /* encryption key storage */
+    struct KKeyStore* keystore;
+
+    KRefcount refcount;
+
+    VRemoteProtocols protocols;
+};
 
 #ifdef __cplusplus
 }
