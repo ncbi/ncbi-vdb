@@ -93,8 +93,9 @@ using namespace KDBText;
 
 static
 rc_t CC
-KTextManagerWhack ( KDBManager *self )
+KTextManagerWhack ( KDBManager *bself )
 {
+    CAST();
     assert( self -> dad . vt == & KTextManager_vt );
     delete self;
     return 0;

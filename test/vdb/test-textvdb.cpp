@@ -133,9 +133,9 @@ const char * TestDB =
     })";
 //TODO:
 // {"start":1,"data":"AGCT"}, // count = 1 by default
-// {"start":1, "count":2, "data":"\u0000AGCTAGCT" }
 
 // when KDB is able to generate a row map:
+// {"start":1, "count":2, "data":["AGCT", "CGTA"] }
 // "columns":[ ... { "name":"column1", ... "elem_size":1, ... } ]
 // {"start":1, "data":[ [ 65, 72 , 67, 80 ], "AGCT" ] } - row map + blob created out of rows by KDB
 

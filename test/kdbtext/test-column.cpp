@@ -50,7 +50,7 @@ const char * TestColumn = R"({"name":"col",
             "data":
                 [
                     {"row":1,"value":"AGCT"},
-                    {"row":2,"value":"AGCT"}
+                    {"start":2,"count":3,"value":["A", "AG", "AGCT"] }
                 ]})";
 
 class KTextColumn_Fixture
@@ -126,6 +126,24 @@ FIXTURE_TEST_CASE(KTextColumn_CellMake_RowBad, KTextColumn_Fixture)
     REQUIRE_RC_FAIL( m_col -> inflate( m_error, sizeof m_error ) );
     //cout << m_error << endl;
 }
+FIXTURE_TEST_CASE(KTextColumn_CellMake_StartBad, KTextColumn_Fixture)
+{
+    Setup(R"({"name":"col","type":"text","data": [ {"start":"a","value":"q"} ] })");
+    REQUIRE_RC_FAIL( m_col -> inflate( m_error, sizeof m_error ) );
+    //cout << m_error << endl;
+}
+FIXTURE_TEST_CASE(KTextColumn_CellMake_CountBad, KTextColumn_Fixture)
+{
+    Setup(R"({"name":"col","type":"text","data": [ {"start":1,"count":"a","value":"q"} ] })");
+    REQUIRE_RC_FAIL( m_col -> inflate( m_error, sizeof m_error ) );
+    //cout << m_error << endl;
+}
+FIXTURE_TEST_CASE(KTextColumn_CellMake_CountLessThan1, KTextColumn_Fixture)
+{
+    Setup(R"({"name":"col","type":"text","data": [ {"start":1,"count":0,"value":"q"} ] })");
+    REQUIRE_RC_FAIL( m_col -> inflate( m_error, sizeof m_error ) );
+    //cout << m_error << endl;
+}
 FIXTURE_TEST_CASE(KTextColumn_CellMake_ValueBad, KTextColumn_Fixture)
 {
     Setup(R"({"name":"col","type":"text","data": [ {"row":1,"value":null} ] })");
@@ -145,7 +163,7 @@ FIXTURE_TEST_CASE(KTextColumn_IdRange, KTextColumn_Fixture)
     REQUIRE_RC( m_col -> inflate( m_error, sizeof m_error ) );
     auto r = m_col->idRange();
     REQUIRE_EQ( (int64_t)1, r . first );
-    REQUIRE_EQ( (uint64_t)2, r . second );
+    REQUIRE_EQ( (uint64_t)4, r . second );
 }
 
 // API
@@ -159,8 +177,8 @@ const char * FullTable = R"({"type": "table", "name": "testtbl",
                 [
                     {"row":1,"value":"AGCT"},
                     {"row":2,"value":"AGCT"},
-                    {"row":11,"value":"AGCT"},
-                    {"row":22,"value":"AGCT"}
+                    {"start":11,"count":2,"value":["AGCT", [1, 2, 3] ]},
+                    {"start":22,"value":"AGCT"}
                 ],
             "metadata":{"name":"", "value":"blah"}
         }
@@ -240,12 +258,25 @@ FIXTURE_TEST_CASE(KColumn_IdRange, KTextColumn_ApiFixture)
     REQUIRE_EQ( (uint64_t)22, count );
 }
 
-FIXTURE_TEST_CASE(KColumn_FindFirstRowId, KTextColumn_ApiFixture)
+FIXTURE_TEST_CASE(KColumn_FindFirstRowId_NextBlob, KTextColumn_ApiFixture)
 {
     Setup(FullTable, "col");
     int64_t found = 0;
     REQUIRE_RC( KColumnFindFirstRowId ( m_col, & found, 4 ) );
     REQUIRE_EQ( (int64_t)11, found );
+}
+FIXTURE_TEST_CASE(KColumn_FindFirstRowId_Same, KTextColumn_ApiFixture)
+{
+    Setup(FullTable, "col");
+    int64_t found = 0;
+    REQUIRE_RC( KColumnFindFirstRowId ( m_col, & found, 12 ) );
+    REQUIRE_EQ( (int64_t)12, found );
+}
+FIXTURE_TEST_CASE(KColumn_FindFirstRowId_NotFound, KTextColumn_ApiFixture)
+{
+    Setup(FullTable, "col");
+    int64_t found = 0;
+    REQUIRE_RC_FAIL( KColumnFindFirstRowId ( m_col, & found, 23 ) );
 }
 
 FIXTURE_TEST_CASE(KColumn_OpenManagerRead, KTextColumn_ApiFixture)
