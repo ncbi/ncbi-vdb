@@ -112,15 +112,15 @@ rc_t CC ref_restore_read_impl ( void *data, const VXformInfo *info, int64_t row_
                 }
                 else
                 {
-                    unsigned read = 0;
+                    unsigned read2 = 0;
 
                     SUB_DEBUG( ( "SUB.Rd in 'ref_restore_read.c' at: %.*s at %u.%u\n", seqid_len, seqid, seq_start, seq_len ) );
-                    rc = RestoreReadGetSequence(self, seq_start - 1, seq_len, dst, seqid_len, seqid, &read, info->tbl);
+                    rc = RestoreReadGetSequence(self, seq_start - 1, seq_len, dst, seqid_len, seqid, &read2, info->tbl);
                     if ( rc == 0 )
                     {
-                        if ( read != seq_len )
+                        if ( read2 != seq_len )
                         {
-                            rc = RC( rcXF, rcFunction, rcExecuting, rcData, read < seq_len ? rcTooShort : rcTooLong );
+                            rc = RC( rcXF, rcFunction, rcExecuting, rcData, read2 < seq_len ? rcTooShort : rcTooLong );
                         }
                     }
                 }
