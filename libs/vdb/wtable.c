@@ -273,6 +273,7 @@ LIB_EXPORT rc_t CC VDBManagerVCreateTable ( VDBManager *self, VTable **tblp,
                     rc = VTableOpenUpdate ( tbl, typespec );
                     if ( rc == 0 )
                     {
+                        tbl -> checksum = kcsCRC32; ///< VDB-5582: initialize checksum to ON
 #if LAZY_OPEN_COL_NODE
                         KMDataNodeRelease ( tbl -> col_node );
                         tbl -> col_node = NULL;
@@ -357,7 +358,10 @@ LIB_EXPORT rc_t CC VDatabaseVCreateTableByMask ( VDatabase *self, VTable **tblp,
                     {
                         tbl -> pgsize = self -> pgsize;
                         tbl -> cmode = KDatabaseGetCmode ( self->kdb ); /* TODO: do we really want to inherit open mode from db? */
+                        /* VDB-5582: KDatabaseVCreateTableByMask doesn't set the checksum
                         tbl -> checksum = KDatabaseGetChecksum ( self->kdb );
+                        */
+                        tbl -> checksum = kcsCRC32; ///< VDB-5582: initialize checksum to ON
 #if LAZY_OPEN_COL_NODE
                         KMDataNodeRelease ( tbl -> col_node );
                         tbl -> col_node = NULL;
