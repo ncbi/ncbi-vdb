@@ -39,6 +39,11 @@
 #include <vdb/cursor.h>
 #include <vdb/table.h>
 
+#include <kdb/database.h>
+#include <kdb/table.h>
+#include <kdb/column.h>
+#include <vdb/vdb-priv.h>
+
 #include "../libs/vdb/schema-priv.h"
 #include "../libs/schema/SchemaParser.hpp"
 #include "../libs/schema/ASTBuilder.hpp"
@@ -129,6 +134,7 @@ public:
         THROW_ON_RC ( VSchemaParseText ( p_schema, NULL, p_schemaText . c_str(), p_schemaText . size () ) );
     }
 
+    /// Create table, use default column parameters
     VCursor * CreateTable ( const char * p_tableName ) // returns write cursor
     {
         VTable* table;
@@ -136,6 +142,20 @@ public:
         VCursor * ret;
         THROW_ON_RC ( VTableCreateCursorWrite ( table, & ret, kcmInsert ) );
         THROW_ON_RC ( VTableRelease ( table ) );
+        return ret;
+    }
+
+    /// Create table, specifying blob checksum
+    VCursor * CreateTable ( const char * p_tableName, KChecksum checksum ) // returns write cursor
+    {
+        VTable * table = nullptr;
+        THROW_ON_RC ( VDatabaseCreateTable ( m_db, & table, p_tableName, kcmCreate | kcmMD5, "%s", p_tableName ) );
+        THROW_ON_RC ( VTableColumnCreateParams ( table, kcmCreate, checksum, 0) );
+
+        VCursor * ret = nullptr;
+        THROW_ON_RC ( VTableCreateCursorWrite ( table, & ret, kcmInsert ) );
+        THROW_ON_RC ( VTableRelease ( table ) );
+
         return ret;
     }
 
@@ -153,6 +173,13 @@ public:
     {
         THROW_ON_RC ( VCursorOpenRow ( p_cursor ) );
         THROW_ON_RC ( VCursorWrite ( p_cursor, p_colIdx, 8, p_value . c_str (), 0, p_value . length () ) );
+        THROW_ON_RC ( VCursorCommitRow ( p_cursor ) );
+        THROW_ON_RC ( VCursorCloseRow ( p_cursor ) );
+    }
+    void WriteRow ( VCursor * p_cursor, uint32_t p_colIdx, int32_t p_value )
+    {
+        THROW_ON_RC ( VCursorOpenRow ( p_cursor ) );
+        THROW_ON_RC ( VCursorWrite ( p_cursor, p_colIdx, sizeof(p_value)*8, & p_value, 0, 1 ) );
         THROW_ON_RC ( VCursorCommitRow ( p_cursor ) );
         THROW_ON_RC ( VCursorCloseRow ( p_cursor ) );
     }
@@ -209,6 +236,27 @@ public:
         return out.str();
     }
 
+    rc_t ValidateBlob(char const *p_tableName, char const *p_columnName, int64_t p_rowId = 1) const
+    {
+        KDatabase const *kdb = nullptr;
+        THROW_ON_RC(VDatabaseOpenKDatabaseRead(m_db, &kdb));
+        
+        KTable const *ktbl = nullptr;
+        THROW_ON_RC(KDatabaseOpenTableRead(kdb, &ktbl, "%s", p_tableName));
+        THROW_ON_RC ( KDatabaseRelease(kdb) );
+
+        KColumn const *kcol = nullptr;
+        THROW_ON_RC(KTableOpenColumnRead(ktbl, &kcol, "%s", p_columnName));
+        THROW_ON_RC ( KTableRelease(ktbl) );
+
+        KColumnBlob const *blob = nullptr;
+        THROW_ON_RC(KColumnOpenBlobRead(kcol, &blob, p_rowId));
+        auto const rc = KColumnBlobValidate(blob);
+        THROW_ON_RC ( KColumnBlobRelease(blob) );
+        THROW_ON_RC ( KColumnRelease(kcol) );
+
+        return rc;
+    }
 
     std :: string   m_databaseName;
     VDBManager *    m_mgr;
