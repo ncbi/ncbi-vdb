@@ -279,7 +279,7 @@ KWColumnBlobIdRange ( const KColumnBlob *bself, int64_t *first, uint32_t *count 
  *  runs checksum validation on unmodified blob
  */
 static
-rc_t KColumnBlobValidateCRC32 ( const KWColumnBlob *self )
+rc_t validateCRC32 ( const KWColumnBlob *self )
 {
     rc_t rc;
     const KWColumn *col = self -> col;
@@ -324,7 +324,7 @@ rc_t KColumnBlobValidateCRC32 ( const KWColumnBlob *self )
 }
 
 static
-rc_t KColumnBlobValidateMD5 ( const KWColumnBlob *self )
+rc_t validateMD5 ( const KWColumnBlob *self )
 {
     rc_t rc;
     const KWColumn *col = self -> col;
@@ -380,15 +380,22 @@ KWColumnBlobValidate ( const KColumnBlob *bself )
     if ( self -> num_writ != 0 )
         return RC ( rcDB, rcBlob, rcValidating, rcBlob, rcBusy );
 
-    if ( self -> loc . u . blob . size != 0 ) switch ( self -> col -> checksum )
+    //NB: very similar to KRColumnBlobValidate
+    if ( self -> loc . u . blob . size == 0 )
+        return 0;
+
+    switch ( self -> col -> checksum )
     {
     case kcsCRC32:
-        return KColumnBlobValidateCRC32 ( self );
+        return validateCRC32 ( self );
     case kcsMD5:
-        return KColumnBlobValidateMD5 ( self );
+        return validateMD5 ( self );
+    case kcsNone:
+        return SILENT_RC ( rcDB, rcBlob, rcValidating, rcChecksum, rcNotFound );
+    default:
+        return RC ( rcDB, rcBlob, rcValidating, rcType, rcUnexpected );
     }
 
-    return 0;
 }
 
 /* ValidateBuffer
