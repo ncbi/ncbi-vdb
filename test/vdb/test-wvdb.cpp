@@ -977,38 +977,6 @@ FIXTURE_TEST_CASE ( PlatformNames, WVDB_Fixture )
     }
 }
 
-FIXTURE_TEST_CASE ( BlobChecksumOFF, WVDB_Fixture)
-{
-    string const schemaText = "table table1 #1.0.0 { column I32 column1; };"
-                              "database root_database #1 { table table1 #1 TABLE1; } ;";
-    const char* TableName = "TABLE1";
-    const char* ColumnName = "column1";
-
-    MakeDatabase ( GetName(), schemaText, "root_database" );
-    {
-        uint32_t column_idx = 0;
-        VCursor* cursor = CreateTable ( TableName, kcsNone );
-
-        REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx, ColumnName ) );
-        REQUIRE_RC ( VCursorOpen ( cursor ) );
-        // insert some rows
-        for ( int i = 0; i < 4096; ++i)
-        {
-            WriteRow ( cursor, column_idx, int32_t(rand()) );
-        }
-        REQUIRE_RC ( VCursorCommit ( cursor ) );
-        REQUIRE_RC ( VCursorRelease ( cursor ) );
-    }
-    
-    auto const valid = ValidateBlob(TableName, ColumnName, 1);
-    auto const rcCks = (enum RCObject)GetRCObject(valid);
-    auto const rcNF = (enum RCState)GetRCState(valid);
-    REQUIRE_EQ(rcCks, rcChecksum);
-    REQUIRE_EQ(rcNF, rcNotFound);
-
-    REQUIRE_RC ( VDatabaseRelease ( m_db ) );
-}
-
 FIXTURE_TEST_CASE ( BlobChecksumON, WVDB_Fixture)
 {
     string const schemaText = "table table1 #1.0.0 { column I32 column1; };"
@@ -1056,6 +1024,38 @@ FIXTURE_TEST_CASE ( BlobChecksum_ON_ByDefault, WVDB_Fixture)
         REQUIRE_RC ( VCursorRelease ( cursor ) );
     }
     REQUIRE_RC ( ValidateBlob(TableName, ColumnName, 1) );
+    REQUIRE_RC ( VDatabaseRelease ( m_db ) );
+}
+
+FIXTURE_TEST_CASE ( BlobChecksumOFF, WVDB_Fixture)
+{
+    string const schemaText = "table table1 #1.0.0 { column I32 column1; };"
+                              "database root_database #1 { table table1 #1 TABLE1; } ;";
+    const char* TableName = "TABLE1";
+    const char* ColumnName = "column1";
+
+    MakeDatabase ( GetName(), schemaText, "root_database" );
+    {
+        uint32_t column_idx = 0;
+        VCursor* cursor = CreateTable ( TableName, kcsNone );
+
+        REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx, ColumnName ) );
+        REQUIRE_RC ( VCursorOpen ( cursor ) );
+        // insert some rows
+        for ( int i = 0; i < 4096; ++i)
+        {
+            WriteRow ( cursor, column_idx, int32_t(rand()) );
+        }
+        REQUIRE_RC ( VCursorCommit ( cursor ) );
+        REQUIRE_RC ( VCursorRelease ( cursor ) );
+    }
+    
+    auto const valid = ValidateBlob(TableName, ColumnName, 1);
+    auto const rcCks = (enum RCObject)GetRCObject(valid);
+    auto const rcNF = (enum RCState)GetRCState(valid);
+    REQUIRE_EQ(rcCks, rcChecksum);
+    REQUIRE_EQ(rcNF, rcNotFound);
+
     REQUIRE_RC ( VDatabaseRelease ( m_db ) );
 }
 
