@@ -134,7 +134,9 @@ public:
         THROW_ON_RC ( VSchemaParseText ( p_schema, NULL, p_schemaText . c_str(), p_schemaText . size () ) );
     }
 
-    /// Create table, use default column parameters
+    /// @brief Create table, use default column parameters
+    /// @param p_tableName name of the table to create.
+    /// @return write cursor.
     VCursor * CreateTable ( const char * p_tableName ) // returns write cursor
     {
         VTable* table;
@@ -145,12 +147,17 @@ public:
         return ret;
     }
 
-    /// Create table, specifying blob checksum
-    VCursor * CreateTable ( const char * p_tableName, KChecksum checksum ) // returns write cursor
+    /// @brief Create table, specifying column parameters
+    /// @param p_tableName name of the table to create.
+    /// @param checksum type of blob checksums.
+    /// @param create create mode for columns.
+    /// @param pgsize size of pages.
+    /// @return write cursor.
+    VCursor * CreateTable ( const char * p_tableName, KChecksum checksum, KCreateMode create = kcmCreate, size_t pgsize = 0 ) // returns write cursor
     {
         VTable * table = nullptr;
         THROW_ON_RC ( VDatabaseCreateTable ( m_db, & table, p_tableName, kcmCreate | kcmMD5, "%s", p_tableName ) );
-        THROW_ON_RC ( VTableColumnCreateParams ( table, kcmCreate, checksum, 0) );
+        THROW_ON_RC ( VTableColumnCreateParams ( table, create, checksum, pgsize ) );
 
         VCursor * ret = nullptr;
         THROW_ON_RC ( VTableCreateCursorWrite ( table, & ret, kcmInsert ) );
