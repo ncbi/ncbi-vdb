@@ -1037,7 +1037,7 @@ FIXTURE_TEST_CASE ( BlobChecksumOFF, WVDB_Fixture)
     MakeDatabase ( GetName(), schemaText, "root_database" );
     {
         uint32_t column_idx = 0;
-        VCursor* cursor = CreateTable ( TableName, kcsNone );
+        auto const cursor = CreateTable ( TableName, kcsNone );
 
         REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx, ColumnName ) );
         REQUIRE_RC ( VCursorOpen ( cursor ) );
@@ -1051,10 +1051,10 @@ FIXTURE_TEST_CASE ( BlobChecksumOFF, WVDB_Fixture)
     }
     
     auto const valid = ValidateBlob(TableName, ColumnName, 1);
-    auto const rcCks = (enum RCObject)GetRCObject(valid);
-    auto const rcNF = (enum RCState)GetRCState(valid);
-    REQUIRE_EQ(rcCks, rcChecksum);
-    REQUIRE_EQ(rcNF, rcNotFound);
+    auto const object = (enum RCObject)GetRCObject(valid);
+    auto const state = (enum RCState)GetRCState(valid);
+    REQUIRE_EQ(object, rcChecksum);
+    REQUIRE_EQ(state, rcNotFound);
 
     REQUIRE_RC ( VDatabaseRelease ( m_db ) );
 }
