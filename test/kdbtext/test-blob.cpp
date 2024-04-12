@@ -56,7 +56,13 @@ public:
 
     void Setup( const string & data = Data )
     {
-        m_blob = new ColumnBlob( data.c_str(), data.size(), nullptr, 1, 2 );
+        m_blob = new ColumnBlob( 1 );
+        m_blob -> appendRow( data.data(), data.size(), 1 );
+    }
+
+    static string ToString( const KDataBuffer & b )
+    {
+        return string( (const char*)(b.base), b.elem_count );
     }
 
     ColumnBlob * m_blob = nullptr;
@@ -65,21 +71,29 @@ public:
 FIXTURE_TEST_CASE(KTextColumnBlob_Make_Empty, KTextColumnBlob_Fixture)
 {
     Setup("");
-    REQUIRE_EQ( string(), string( (const char*) (m_blob -> getData()), m_blob -> getSize() ) );
+    REQUIRE_EQ( string(), ToString( m_blob -> getData() ) );
 }
 
 FIXTURE_TEST_CASE(KTextColumnBlob_Make_Data, KTextColumnBlob_Fixture)
 {
     Setup( Data );
-    REQUIRE_EQ( Data, string( (const char*) (m_blob -> getData()), m_blob -> getSize() ) );
+    REQUIRE_EQ( string(), ToString( m_blob -> getData() ) );
 }
 
 FIXTURE_TEST_CASE(KTextColumnBlob_GetIdRange, KTextColumnBlob_Fixture)
 {
     Setup( Data );
-    REQUIRE_EQ( Data, string( (const char*) (m_blob -> getData()), m_blob -> getSize() ) );
+    REQUIRE_EQ( string(), ToString( m_blob -> getData() ) );
     REQUIRE_EQ( (int64_t)1, m_blob -> getIdRange().first );
-    REQUIRE_EQ( (uint32_t)2, m_blob -> getIdRange().second );
+    REQUIRE_EQ( (uint32_t)1, m_blob -> getIdRange().second );
+}
+
+FIXTURE_TEST_CASE(KTextColumnBlob_AppendRow, KTextColumnBlob_Fixture)
+{
+    Setup( Data );
+    REQUIRE_EQ( string(), ToString( m_blob -> getData() ) );
+    REQUIRE_EQ( (int64_t)1, m_blob -> getIdRange().first );
+    REQUIRE_EQ( (uint32_t)1, m_blob -> getIdRange().second );
 }
 
 class KTextColumnBlob_ApiFixture
@@ -96,7 +110,9 @@ public:
     }
     void Setup( const string & data = "abcdef" )
     {
-        m_blob = (const KColumnBlob*)new ColumnBlob( data.c_str(), data.size(), nullptr, 1, 2 );
+        ColumnBlob * cb = new ColumnBlob( 1 );
+        cb -> appendRow( data.data(), data.size(), 1 );
+        m_blob = (const KColumnBlob*)cb;
     }
 
     const KColumnBlob * m_blob = nullptr;

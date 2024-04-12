@@ -26,6 +26,8 @@
 
 #include "columnblob.hpp"
 
+#include <kdb/page-map.h>
+
 #include <klib/printf.h>
 #include <klib/rc.h>
 #include <klib/data-buffer.h>
@@ -60,20 +62,52 @@ static KColumnBlob_vt KTextColumnBlob_vt =
 
 #define CAST() assert( bself->vt == &KTextColumnBlob_vt ); ColumnBlob * self = (ColumnBlob *)bself
 
-ColumnBlob::ColumnBlob( const void * data, size_t size, const Column * col, int64_t id, uint64_t count )
-:   m_data ( data ),
-    m_size( size ),
-    m_parent( col ),
-    m_firstRow( id ),
-    m_count( count )
+ColumnBlob::ColumnBlob( int64_t startId )
+: m_startId( startId )
 {
     dad . vt = & KTextColumnBlob_vt;
     KRefcountInit ( & dad . refcount, 1, "KDBText::ColumnBlob", "ctor", "db" );
+
+    KDataBufferMake ( & m_data, 8, 0 );
 }
 
 ColumnBlob::~ColumnBlob()
 {
+    //TODO: whack m_rows, m_data, m_pm
     KRefcountWhack ( & dad . refcount, "KDBText::ColumnBlob" );
+}
+
+void
+ColumnBlob::addRef( const ColumnBlob * b )
+{
+    if ( b != nullptr )
+    {
+        KColumnBlobAddRef( (const KColumnBlob*) b );
+    }
+}
+
+void
+ColumnBlob::release( const ColumnBlob * b )
+{
+    if ( b != nullptr )
+    {
+        KColumnBlobRelease( (const KColumnBlob*) b );
+    }
+}
+
+rc_t
+ColumnBlob::appendRow( const void * data, size_t size, uint32_t count )
+{
+    KDataBuffer b;
+    rc_t rc = KDataBufferMake ( &b, 8, size );
+    if ( rc != 0 )
+    {
+        return rc;
+    }
+    m_rows.push_back( b );
+    m_count += count;
+    bool same_data = false; //TODO: calculate for real
+    return PageMapAppendRows( m_pm, size, count, same_data );
 }
 
 // API
@@ -113,13 +147,13 @@ KTextColumnBlobRead ( const KColumnBlob *bself, size_t offset, void *buffer, siz
     {
         rc = SILENT_RC ( rcDB, rcBlob, rcReading, rcParam, rcNull );
     }
-    else if ( offset > self -> getSize() )
+    else if ( offset > self -> getDataSize() )
     {
         rc = SILENT_RC ( rcDB, rcBlob, rcReading, rcParam, rcExcessive );
     }
     else
     {
-        size_t toRead = self -> getSize() - offset;
+        size_t toRead = self -> getDataSize() - offset;
         if ( bsize == 0 )
         {
             * remaining = toRead;
@@ -139,7 +173,7 @@ KTextColumnBlobRead ( const KColumnBlob *bself, size_t offset, void *buffer, siz
 
             if ( toRead > 0 )
             {
-                memmove( buffer, (const char*)(self -> getData()) + offset, toRead );
+                memmove( buffer, (const char*)(self -> getData() . base) + offset, toRead );
             }
             *num_read = toRead;
         }
@@ -166,10 +200,10 @@ KTextColumnBlobReadAll ( const KColumnBlob * bself, KDataBuffer * dbuffer, KColu
     }
     else
     {
-        rc = KDataBufferMakeBytes ( dbuffer, self->getSize() );
-        if ( rc == 0 && self->getSize() > 0 )
+        rc = KDataBufferMakeBytes ( dbuffer, self->getDataSize() );
+        if ( rc == 0 && self->getDataSize() > 0 )
         {
-            memmove( dbuffer -> base, self -> getData(), self->getSize() );
+            memmove( dbuffer -> base, self -> getData() . base, self->getDataSize() );
         }
     }
 
@@ -200,11 +234,11 @@ KTextColumnBlobValidateBuffer ( const KColumnBlob * bself, const KDataBuffer * d
 
     // check the buffer's size
     size_t bsize = KDataBufferBytes ( dbuffer );
-    if ( bsize < self -> getSize() )
+    if ( bsize < self -> getDataSize() )
     {
         return SILENT_RC ( rcDB, rcBlob, rcValidating, rcData, rcInsufficient );
     }
-    if ( bsize > self -> getSize() )
+    if ( bsize > self -> getDataSize() )
     {
         return SILENT_RC ( rcDB, rcBlob, rcValidating, rcData, rcExcessive );
     }

@@ -85,10 +85,6 @@ Column::~Column()
     Metadata::release( m_meta );
     Manager::release( m_mgr );
 
-    for( auto d : m_data )
-    {
-        KDataBufferWhack( & d.second );
-    }
     KRefcountWhack ( & dad . refcount, "KDBText::Column" );
 }
 
@@ -166,6 +162,7 @@ Column::inflate( char * p_error, size_t p_error_size )
             const KJsonObject * obj = KJsonValueToObject ( v );
             if( obj != nullptr )
             {
+                // row / start
                 const KJsonValue * id = KJsonObjectGetMember ( obj, "row" );
                 if ( id == nullptr )
                 {   // "start" is an alternative
@@ -176,12 +173,7 @@ Column::inflate( char * p_error, size_t p_error_size )
                         return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
                     }
                 }
-                const KJsonValue * value = KJsonObjectGetMember ( obj, "value" );
-                if ( value == nullptr )
-                {
-                    string_printf ( p_error, p_error_size, nullptr, "%s.data[%i].value is missing", m_name.c_str(), i );
-                    return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
-                }
+
                 int64_t rowId;
                 rc = KJsonGetNumber ( id, &rowId );
                 if ( rc == 0 )
@@ -203,19 +195,34 @@ Column::inflate( char * p_error, size_t p_error_size )
                         return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
                     }
 
-                    const char * valueStr = nullptr;
-                    rc = KJsonGetString ( value, & valueStr );
-                    if ( rc == 0 )
+                    // value
+                    const KJsonValue * value = KJsonObjectGetMember ( obj, "value" );
+                    if ( value == nullptr )
                     {
-                        KDataBuffer b;
-                        KDataBufferMakeBytes( & b, strlen( valueStr ) ); // teminator excluded
-                        strcpy( (char*)b.base, valueStr );
-                        m_data [ IdRange( rowId, (uint64_t)countVal ) ] = b;
+                        string_printf ( p_error, p_error_size, nullptr, "%s.data[%i].value is missing", m_name.c_str(), i );
+                        return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
+                    }
+
+                    const char * valueStr = nullptr;
+                    if ( countVal == 1 && KJsonGetString ( value, & valueStr ) == 0 )
+                    {   // may omit []; a repetition if countVal > 1
+                        ColumnBlob b(rowId);
+                        b.appendRow( valueStr, strlen( valueStr ), countVal );
+                        m_data [ IdRange( rowId, countVal ) ] = b;
                     }
                     else
-                    {   // invalid value
-                        string_printf ( p_error, p_error_size, nullptr, "%s.data[%i].value is invalid", m_name.c_str(), i );
-                        return rc;
+                    {
+                        const KJsonArray * valueArr;
+                        if ( KJsonValueToArray( value ) == 0)
+                        {
+
+                        }
+                        else
+                        {   // invalid value
+                            string_printf ( p_error, p_error_size, nullptr, "%s.data[%i].value is not an array", m_name.c_str(), i );
+                            return rc;
+                        }
+
                     }
                 }
                 else
@@ -308,7 +315,8 @@ Column::openBlob( int64_t id ) const
     auto it = findBlob( id );
     if ( it != m_data.end() )
     {
-        return new ColumnBlob( it -> second . base, it -> second . elem_count, this, it->first.first, it->first.second );
+        ColumnBlob::addRef( & it->second );
+        return & it->second;
     }
     return nullptr;
 }

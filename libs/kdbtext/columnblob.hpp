@@ -28,7 +28,12 @@
 
 #include "../libs/kdb/columnblob-base.h"
 
+#include <klib/data-buffer.h>
+
 #include <utility>
+#include <vector>
+
+struct PageMap;
 
 typedef struct KTextBlob KTextBlob;
 struct KTextBlob
@@ -38,8 +43,6 @@ struct KTextBlob
 
 namespace KDBText
 {
-    class Column;
-
     class ColumnBlob : public KTextBlob
     {
     public:
@@ -47,19 +50,20 @@ namespace KDBText
         static void release( const ColumnBlob *);
 
     public:
-        ColumnBlob( const void * data, size_t size, const Column * col, int64_t id, uint64_t count );
+        ColumnBlob(){}
+        ColumnBlob( int64_t startId );
         ~ColumnBlob();
 
-        const void * getData() const { return m_data; }
-        const size_t getSize() const { return m_size; }
+        rc_t appendRow( const void * data, size_t size, uint32_t count = 1 );
+        rc_t serialize( KDataBuffer & buf ) const;
 
-        std::pair< int64_t, uint32_t > getIdRange() const{ return std::make_pair( m_firstRow, m_count ); }
+        std::pair< int64_t, uint32_t > getIdRange() const{ return std::make_pair( m_startId, m_count ); }
 
     private:
-        const void * m_data = nullptr;
-        size_t m_size = 0;
-        const Column * m_parent = nullptr;
-        int64_t m_firstRow = 0;
-        uint64_t m_count = 0;
+        int64_t m_startId = 0;
+        uint32_t m_count = 0;
+        std::vector<KDataBuffer> m_rows;
+        struct PageMap * m_pm = nullptr;
+        KDataBuffer m_data;
     };
 }

@@ -50,7 +50,8 @@ const char * TestColumn = R"({"name":"col",
             "data":
                 [
                     {"row":1,"value":"AGCT"},
-                    {"start":2,"count":3,"value":["A", "AG", "AGCT"] }
+                    {"row":3,"count":2, "value":"TAGC"},
+                    {"start":7,"count":3,"value":["A", "AG", "AGCT"] }
                 ]})";
 
 class KTextColumn_Fixture
