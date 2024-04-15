@@ -94,13 +94,13 @@ rc_t op2b( KDataBuffer *dst, unsigned const offset, unsigned *const count, int c
         {
             char *const base = &( ( char * )dst->base )[ offset ];
 
-            base[ digits ] = opcode;
+            base[ digits ] = (char)opcode;
             do
             {
                 unsigned const digit = oplen % 10;
 
                 oplen /= 10;
-                base[ --digits ] = digit + '0';
+                base[ --digits ] = (char)(digit + '0');
             } while ( digits );
         }
     }
@@ -124,11 +124,11 @@ rc_t cigar_string(KDataBuffer *dst, size_t boff,
 #define BUF_WRITE(OP, LEN) if ((rc = op2b(dst, (unsigned const)(bsz + boff), &nwrit, (int const)(OP), (unsigned)(LEN))) != 0) return rc; bsz += nwrit;
 
 #define MACRO_FLUSH_MATCH    { BUF_WRITE('=', m); m = 0; }
-#define MACRO_FLUSH_MISMATCH { BUF_WRITE(i == read_end ? 'S' : 'X', mm); mm = 0; }
+#define MACRO_FLUSH_MISMATCH { BUF_WRITE((int32_t)i == read_end ? 'S' : 'X', mm); mm = 0; }
 
 #define MACRO_FLUSH_BOTH \
 if(m+mm > 0) { \
-    if(i==read_end && has_ref_offset[i]) { \
+    if((int32_t)i==read_end && has_ref_offset[i]) { \
         BUF_WRITE('M', m); BUF_WRITE('S', mm); \
     } else { \
         BUF_WRITE('M', m + mm) \
@@ -330,7 +330,7 @@ rc_t cigar_string_2_0(KDataBuffer *dst,
     {
         if ( cur_off + 1 < ro_len )
         {
-            assert( read_end + ref_offset[ cur_off ] == si );
+            assert( read_end + ref_offset[ cur_off ] == (int32_t)si );
             cur_off++;
             BUF_WRITE( 'I', read_end - si );
         }
@@ -355,11 +355,10 @@ rc_t cigar_string_2(KDataBuffer *dst, size_t boff,
                     int32_t const ref_offset[], unsigned const ro_len, unsigned * ro_offset,
                     unsigned const reflen, bool use_S)
 {
-    cigar_opcode_options_t const ops = {
-        version == 1 ? '=' : 'M',
-        version == 1 ? 'X' : 'M',
-        use_S ? 'S' : 'I'
-    };
+    cigar_opcode_options_t ops;
+    ops.opcode_M = version == 1 ? '=' : 'M';
+    ops.opcode_X = version == 1 ? 'X' : 'M';
+    ops.opcode_X = use_S ? 'S' : 'I';
     return cigar_string_2_0(dst, boff, bsize, has_mismatch, has_ref_offset, read_start, read_end, ref_offset, ro_len, ro_offset, reflen, &ops);
 }
 
@@ -408,7 +407,7 @@ rc_t cigar_string_2_1(KDataBuffer *dst, size_t boff,
 
             if (offs < 0) {
 		unsigned const ins = -offs;
-		if( (version & 1) /*CIGAR_LONG*/ && type == 5 /** complete genomics **/ && ri >= ins /** safety **/){
+		if( (version & 1) /*CIGAR_LONG*/ && type == 5 /** complete genomics **/ && ri >= (int)ins /** safety **/){
 			BUF_WRITE('B', ins);
 			ri -= ins;
 		} else {
@@ -557,7 +556,7 @@ rc_t CC cigar_impl_2 ( void *data, const VXformInfo *info, int64_t row_id,
     }
 
     for (n = 0, start = 0, ro_offset = 0; n < nreads; start += read_len[n], ++n) {
-        INSDC_coord_len cnt;
+        INSDC_coord_len cnt = 0;
         INSDC_coord_len *const count = (self->version & 0x04) ? cigar_len + n : &cnt;
 
         if (argc == 4) {
@@ -1581,7 +1580,7 @@ rc_t CC right_soft_clip_5_impl ( void *data, const VXformInfo *info, int64_t row
                                 VRowResult *rslt, uint32_t argc, const VRowData argv [] )
 {
     rc_t rc;
-    unsigned const nreads = argv[3].u.data.elem_count;
+    uint64_t const nreads = argv[3].u.data.elem_count;
     ARG_ALIAS(              bool,  has_ref_offset, 0);
     ARG_ALIAS(           int32_t,      ref_offset, 1);
     ARG_ALIAS(NCBI_align_ro_type, ref_offset_type, 2);
@@ -1649,7 +1648,7 @@ rc_t CC clipped_cigar_impl ( void *data, const VXformInfo *info, int64_t row_id,
     assert( argv[ 0 ].u.data.elem_bits == sizeof( cigar[ 0 ] ) * 8 );
     cigar += argv[ 0 ].u.data.first_elem;
 
-    for ( n = 0; n != ciglen; ++n )
+    for ( n = 0; n != (int)ciglen; ++n )
     {
         if ( !isdigit( cigar[ n ] ) )
             break;
@@ -2096,7 +2095,7 @@ rc_t CC clip_impl_2 ( void *data, const VXformInfo *info, int64_t row_id,
     {
         uint64_t x = left[n] + right[n];
 
-        if ( argv[ 0 ].u.data.elem_count < start ||
+        if ( argv[ 0 ].u.data.elem_count < (uint64_t)start ||
              argv[ 0 ].u.data.elem_count < start + read_len[ n ] )
         {
             rc = RC( rcXF, rcFunction, rcExecuting, rcData, rcInvalid );
