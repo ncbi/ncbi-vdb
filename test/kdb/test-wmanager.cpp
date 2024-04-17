@@ -127,9 +127,22 @@ FIXTURE_TEST_CASE(KDBWManager_PathTypeVP, KDBManager_Fixture)
     REQUIRE_RC( VFSManagerRelease( vfs ) );
 }
 
-FIXTURE_TEST_CASE(KDBWManager_PathType, KDBManager_Fixture)
+FIXTURE_TEST_CASE(KDBWManager_PathType_Column, KDBManager_Fixture)
 {
-    REQUIRE_EQ( (int)kptDatabase, KDBManagerPathType( m_mgr, "%s", "testdb" ) );
+    auto const pathType = KDBManagerPathType( m_mgr, "%s/tbl/%s/col/%s", "testdb", "SEQUENCE", "READ" );
+    REQUIRE_EQ( (int)kptColumn, pathType );
+}
+
+FIXTURE_TEST_CASE(KDBWManager_PathType_Table, KDBManager_Fixture)
+{
+    auto const pathType = KDBManagerPathType( m_mgr, "%s/tbl/%s", "testdb", "SEQUENCE" );
+    REQUIRE_EQ( (int)kptTable, pathType );
+}
+
+FIXTURE_TEST_CASE(KDBWManager_PathType_Database, KDBManager_Fixture)
+{
+    auto const pathType = KDBManagerPathType( m_mgr, "%s", "testdb" );
+    REQUIRE_EQ( (int)kptDatabase, pathType );
 }
 
 FIXTURE_TEST_CASE(KDBManagerVPathType, KDBManager_Fixture)
