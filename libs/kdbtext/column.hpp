@@ -34,6 +34,7 @@
 
 #include <string>
 #include <map>
+#include <memory>
 
 typedef struct KTextColumn KTextColumn;
 struct KTextColumn
@@ -81,7 +82,7 @@ namespace KDBText
         std::string m_name;
         std::string m_type;
 
-        typedef std::map< IdRange, ColumnBlob > BlobMap;
+        typedef std::map< IdRange, std::shared_ptr<ColumnBlob> > BlobMap;
         BlobMap::const_iterator findBlob( int64_t row ) const;
         BlobMap m_data;
 

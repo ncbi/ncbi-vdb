@@ -34,6 +34,7 @@
 #include <vector>
 
 struct PageMap;
+struct KJsonValue;
 
 typedef struct KTextBlob KTextBlob;
 struct KTextBlob
@@ -50,20 +51,24 @@ namespace KDBText
         static void release( const ColumnBlob *);
 
     public:
-        ColumnBlob(){}
-        ColumnBlob( int64_t startId );
+        ColumnBlob( const KJsonValue * );
         ~ColumnBlob();
 
-        rc_t appendRow( const void * data, size_t size, uint32_t count = 1 );
-        rc_t serialize( KDataBuffer & buf ) const;
+        rc_t inflate( char * p_error, size_t p_error_size );
+
+        const KDataBuffer & getData() const { return m_data; }
+        const PageMap & getPageMap() const { return * m_pm; }
 
         std::pair< int64_t, uint32_t > getIdRange() const{ return std::make_pair( m_startId, m_count ); }
 
     private:
+        rc_t appendRow( const void * data, size_t sizeBits, uint32_t count = 1 );
+
+        const KJsonValue * m_json = nullptr;
+
         int64_t m_startId = 0;
         uint32_t m_count = 0;
-        std::vector<KDataBuffer> m_rows;
-        struct PageMap * m_pm = nullptr;
+        PageMap * m_pm = nullptr;
         KDataBuffer m_data;
     };
 }

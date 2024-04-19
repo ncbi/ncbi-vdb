@@ -120,6 +120,7 @@ Column::inflate( char * p_error, size_t p_error_size )
         {
             m_name = nameStr;
         }
+        //TODO: error
     }
     else
     {
@@ -136,6 +137,7 @@ Column::inflate( char * p_error, size_t p_error_size )
         {
             m_type = typeStr;
         }
+        //TODO: error
     }
     else
     {
@@ -159,82 +161,12 @@ Column::inflate( char * p_error, size_t p_error_size )
         {
             const KJsonValue * v = KJsonArrayGetElement ( dataarr, i );
             assert( v != nullptr );
-            const KJsonObject * obj = KJsonValueToObject ( v );
-            if( obj != nullptr )
+
+            shared_ptr<ColumnBlob> b ( new ColumnBlob( v ) );
+            rc = b->inflate( p_error, p_error_size );
+            if ( rc == 0 )
             {
-                // row / start
-                const KJsonValue * id = KJsonObjectGetMember ( obj, "row" );
-                if ( id == nullptr )
-                {   // "start" is an alternative
-                    id = KJsonObjectGetMember ( obj, "start" );
-                    if ( id == nullptr )
-                    {
-                        string_printf ( p_error, p_error_size, nullptr, "%s.data[%i].row/start is missing", m_name.c_str(), i );
-                        return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
-                    }
-                }
-
-                int64_t rowId;
-                rc = KJsonGetNumber ( id, &rowId );
-                if ( rc == 0 )
-                {
-                    if ( findBlob( rowId ) != m_data.end() )
-                    {
-                        string_printf ( p_error, p_error_size, nullptr, "Duplicate row id: %s", rowId );
-                        return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
-                    }
-
-                    // count
-                    int64_t countVal = 1;
-                    const KJsonValue * count = KJsonObjectGetMember ( obj, "count" );
-                    if ( count != nullptr &&
-                        ( KJsonGetNumber ( count, &countVal ) != 0 ||
-                          countVal < 1 ) )
-                    {
-                        string_printf ( p_error, p_error_size, nullptr, "%s.data[%i].count is not a positive number", m_name.c_str(), i );
-                        return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
-                    }
-
-                    // value
-                    const KJsonValue * value = KJsonObjectGetMember ( obj, "value" );
-                    if ( value == nullptr )
-                    {
-                        string_printf ( p_error, p_error_size, nullptr, "%s.data[%i].value is missing", m_name.c_str(), i );
-                        return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
-                    }
-
-                    const char * valueStr = nullptr;
-                    if ( countVal == 1 && KJsonGetString ( value, & valueStr ) == 0 )
-                    {   // may omit []; a repetition if countVal > 1
-                        ColumnBlob b(rowId);
-                        b.appendRow( valueStr, strlen( valueStr ), countVal );
-                        m_data [ IdRange( rowId, countVal ) ] = b;
-                    }
-                    else
-                    {
-                        const KJsonArray * valueArr;
-                        if ( KJsonValueToArray( value ) == 0)
-                        {
-
-                        }
-                        else
-                        {   // invalid value
-                            string_printf ( p_error, p_error_size, nullptr, "%s.data[%i].value is not an array", m_name.c_str(), i );
-                            return rc;
-                        }
-
-                    }
-                }
-                else
-                {   // not an object
-                    string_printf ( p_error, p_error_size, nullptr, "%s.data[%i].row/start is not an integer", m_name.c_str(), i );
-                    return rc;
-                }
-            }
-            else
-            {   // not an object
-                string_printf ( p_error, p_error_size, nullptr, "%s.data[%i] is not an object", m_name.c_str(), i );
-                return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
+                m_data [ b->getIdRange() ] = b;
             }
         }
     }
@@ -315,8 +247,8 @@ Column::openBlob( int64_t id ) const
     auto it = findBlob( id );
     if ( it != m_data.end() )
     {
-        ColumnBlob::addRef( & it->second );
-        return & it->second;
+        ColumnBlob::addRef( it->second.get() );
+        return it->second.get();
     }
     return nullptr;
 }
