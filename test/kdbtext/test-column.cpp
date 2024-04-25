@@ -115,7 +115,7 @@ FIXTURE_TEST_CASE(KTextColumn_IdRange, KTextColumn_Fixture)
     REQUIRE_RC( m_col -> inflate( m_error, sizeof m_error ) );
     auto r = m_col->idRange();
     REQUIRE_EQ( (int64_t)1, r . first );
-    REQUIRE_EQ( (uint64_t)4, r . second );
+    REQUIRE_EQ( (uint64_t)9, r . second );
 }
 
 // API
@@ -222,7 +222,7 @@ FIXTURE_TEST_CASE(KColumn_FindFirstRowId_Same, KTextColumn_ApiFixture)
     Setup(FullTable, "col");
     int64_t found = 0;
     REQUIRE_RC( KColumnFindFirstRowId ( m_col, & found, 12 ) );
-    REQUIRE_EQ( (int64_t)12, found );
+    REQUIRE_EQ( (int64_t)22, found );
 }
 FIXTURE_TEST_CASE(KColumn_FindFirstRowId_NotFound, KTextColumn_ApiFixture)
 {

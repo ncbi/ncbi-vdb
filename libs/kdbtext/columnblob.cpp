@@ -169,16 +169,25 @@ ColumnBlob::inflate( char * p_error, size_t p_error_size )
                 if ( valueArr != nullptr )
                 {
                     uint32_t len = KJsonArrayGetLength ( valueArr );
-                    for ( uint32_t i = 0; i < len; ++i )
+                    // if count is given, should match the length of the array
+                    if ( count == nullptr || len == countVal )
                     {
-                        const KJsonValue * v = KJsonArrayGetElement ( valueArr, i );
-                        assert( v != nullptr );
-                        const char * valueStr = nullptr;
-                        if ( KJsonGetString ( value, & valueStr ) == 0 )
-                        {   // may omit []; a repetition if countVal > 1
-                            appendRow( valueStr, strlen( valueStr ) * 8, countVal );
+                        for ( uint32_t i = 0; i < len; ++i )
+                        {
+                            const KJsonValue * v = KJsonArrayGetElement ( valueArr, i );
+                            assert( v != nullptr );
+                            const char * valueStr = nullptr;
+                            if ( KJsonGetString ( v, & valueStr ) == 0 )
+                            {
+                                appendRow( valueStr, strlen( valueStr ) * 8, 1 );
+                            }
+                            //TODO: non-strings
                         }
-                        //TODO: non-strings
+                    }
+                    else
+                    {
+                        string_printf ( p_error, p_error_size, nullptr, "blob: count does not match the length of the value arrary" );
+                        return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
                     }
                 }
                 else
@@ -227,7 +236,6 @@ ColumnBlob::appendRow( const void * data, size_t sizeBits, uint32_t count )
     }
 }
 
-#if 0
 // copied from interfaces/vdb/xform.h
 typedef uint8_t VByteOrder;
 enum
@@ -243,10 +251,11 @@ static rc_t encode_header_v1(
                              uint8_t *dst,
                              uint64_t dsize,
                              uint64_t *used,
-                             uint32_t row_length,
+                             uint32_t row_length_bits,
                              bitsz_t data_size,
                              VByteOrder byte_order
-) {
+)
+{
     /* byte-order goes in bits 0..1 */
     uint8_t header_byte = byte_order & 3;
     if ( header_byte == vboNative )
@@ -262,28 +271,28 @@ static rc_t encode_header_v1(
     header_byte |= ( ( 8 - ( data_size & 7 ) ) & 7 ) << 2;
 
     /* row-length code goes in bits 5..6 */
-    if ( row_length == 1 ) {
+    if ( row_length_bits == 1 ) {
         header_byte |= 3 << 5;
         * used = 1;
         if ( dsize < * used )
             return RC(rcVDB, rcBlob, rcConstructing, rcBuffer, rcInsufficient);
         dst[0] = header_byte;
     }
-    else if (row_length < 0x100) {
+    else if (row_length_bits < 0x100) {
         *used = 2;
         if (dsize < *used)
             return RC(rcVDB, rcBlob, rcConstructing, rcBuffer, rcInsufficient);
         dst[0] = header_byte;
-        dst[1] = ( uint8_t ) row_length;
+        dst[1] = ( uint8_t ) row_length_bits;
     }
-    else if (row_length < 0x10000) {
+    else if (row_length_bits < 0x10000) {
         header_byte |= 1 << 5;
         *used = 3;
         if (dsize < *used)
             return RC(rcVDB, rcBlob, rcConstructing, rcBuffer, rcInsufficient);
         dst[0] = header_byte;
-        dst[1] = ( uint8_t ) row_length;
-        dst[2] = ( uint8_t ) ( row_length >> 8 );
+        dst[1] = ( uint8_t ) row_length_bits;
+        dst[2] = ( uint8_t ) ( row_length_bits >> 8 );
     }
     else {
         header_byte |= 2 << 5;
@@ -291,14 +300,86 @@ static rc_t encode_header_v1(
         if (dsize < *used)
             return RC(rcVDB, rcBlob, rcConstructing, rcBuffer, rcInsufficient);
         dst[0] = header_byte;
-        dst[1] = ( uint8_t ) row_length;
-        dst[2] = ( uint8_t ) ( row_length >> 8 );
-        dst[3] = ( uint8_t ) ( row_length >> 16 );
-        dst[4] = ( uint8_t ) ( row_length >> 24 );
+        dst[1] = ( uint8_t ) row_length_bits;
+        dst[2] = ( uint8_t ) ( row_length_bits >> 8 );
+        dst[3] = ( uint8_t ) ( row_length_bits >> 16 );
+        dst[4] = ( uint8_t ) ( row_length_bits >> 24 );
     }
     return 0;
 }
 
+static rc_t encode_header_v2(
+                             uint8_t *dst,
+                             uint64_t dsize,
+                             uint64_t *used,
+                             uint64_t hdr_size,
+                             uint64_t map_size,
+                             bitsz_t data_size
+)
+{
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+    uint8_t header_byte = 0x80 | ( (uint8_t)data_size & 7 );
+#else
+    uint8_t header_byte = 0x88 | ( (uint8_t)data_size & 7 );
+#endif
+
+    assert(hdr_size >> 32 == 0);
+    assert(map_size >> 32 == 0);
+
+    if ((hdr_size >> 8) == 0) {
+        if ((map_size >> 8) == 0) {
+            *used = 3;
+            if (dsize < *used)
+                return RC(rcVDB, rcBlob, rcConstructing, rcBuffer, rcInsufficient);
+
+            dst[0] = header_byte;
+            dst[1] = hdr_size;
+            dst[2] = map_size;
+        }
+        else if ((map_size >> 16) == 0) {
+            *used = 4;
+            if (dsize < *used)
+                return RC(rcVDB, rcBlob, rcConstructing, rcBuffer, rcInsufficient);
+
+            dst[0] = header_byte | 0x10;
+            dst[1] = hdr_size;
+            dst[2] = map_size;
+            dst[3] = map_size >> 8;
+        }
+        else {
+            *used = 6;
+            if (dsize < *used)
+                return RC(rcVDB, rcBlob, rcConstructing, rcBuffer, rcInsufficient);
+
+            dst[0] = header_byte | 0x20;
+            dst[1] = hdr_size;
+            dst[2] = map_size;
+            dst[3] = map_size >> 8;
+            dst[4] = map_size >> 16;
+            dst[5] = map_size >> 24;
+        }
+    }
+    else {
+        *used = 9;
+        if (dsize < *used)
+            return RC(rcVDB, rcBlob, rcConstructing, rcBuffer, rcInsufficient);
+
+        dst[0] = header_byte | 0x30;
+
+        dst[1] = hdr_size;
+        dst[2] = hdr_size >> 8;
+        dst[3] = hdr_size >> 16;
+        dst[4] = hdr_size >> 24;
+
+        dst[5] = map_size;
+        dst[6] = map_size >> 8;
+        dst[7] = map_size >> 16;
+        dst[8] = map_size >> 24;
+    }
+    return 0;
+}
+
+#if 0
 // logic copied from vdb/blob.c, VBlobSerialize()
 rc_t
 ColumnBlob::serialize( KDataBuffer & buf ) const
@@ -365,47 +446,98 @@ KTextColumnBlobRead ( const KColumnBlob *bself, size_t offset, void *buffer, siz
     {
         rc = SILENT_RC ( rcDB, rcBlob, rcReading, rcParam, rcNull );
     }
+    else if ( offset != 0 )
+    {
+        rc = SILENT_RC ( rcDB, rcBlob, rcReading, rcParam, rcUnsupported );
+    }
     else
     {
+        const uint64_t MaxHeaderSize = 9;
         KDataBuffer buf;
-        rc = KDataBufferMakeBytes( &buf, bsize );
+        rc = KDataBufferMakeBytes( &buf, MaxHeaderSize );
         if ( rc == 0 )
         {
-            // rc = self -> serialize( buf ); // will increase size if needed
-            // if ( rc == 0 )
-            // {
-            //     if ( offset > KDataBufferBytes( & buf ) )
-            //     {
-            //         rc = SILENT_RC ( rcDB, rcBlob, rcReading, rcParam, rcExcessive );
-            //     }
-            //     else
-            //     {
-            //         size_t toRead = KDataBufferBytes( & buf ) - offset;
-            //         if ( bsize == 0 )
-            //         {
-            //             * remaining = toRead;
-            //             * num_read = 0;
-            //         }
-            //         else
-            //         {
-            //             if ( toRead > bsize )
-            //             {
-            //                 * remaining = toRead - bsize;
-            //                 toRead -= *remaining;
-            //             }
-            //             else
-            //             {
-            //                 * remaining = 0;
-            //             }
+            const KDataBuffer & data = self->getData();
+            const size_t data_bytes = KDataBufferBytes( & data );
+            const size_t data_bits = KDataBufferBits( & data );
+            const PageMap & pageMap = self -> getPageMap();
 
-            //             if ( toRead > 0 )
-            //             {
-            //                 memmove( buffer, (const char*)(buf . base) + offset, toRead );
-            //             }
-            //             *num_read = toRead;
-            //         }
-            //     }
-            // }
+            uint32_t row_length = PageMapHasSimpleStructure( & pageMap );
+            if ( row_length != 0 )
+            {   // fixed row length
+                uint64_t header_size = 0;
+                rc = encode_header_v1( (uint8_t *) buf.base,
+                                        buf.elem_count,
+                                        & header_size,
+                                        row_length,
+                                        KDataBufferBits( &data ),
+                                        vboNative );
+                if ( rc == 0 )
+                {   // append data
+                    rc = KDataBufferResize ( &buf, header_size + data_bytes );
+                    if ( rc == 0 )
+                    {
+                        memmove( (uint8_t*)buf.base + header_size , data . base, data_bytes );
+                    }
+                }
+            }
+            else
+            {   // include page map
+                //TODO: headers if any
+                KDataBuffer pm;
+                rc = KDataBufferMakeBytes(&pm, 0);
+                if (rc == 0)
+                {
+                    uint64_t pm_size;
+                    rc = PageMapSerialize( & pageMap, &pm, 0, &pm_size);
+                    if ( rc == 0 )
+                    {
+                        uint64_t header_size;
+                        rc = encode_header_v2( (uint8_t *) buf.base, buf.elem_count, &header_size, 0 /*headers.elem_count*/, pm.elem_count, data_bits );
+                        if ( rc == 0 )
+                        {
+                            rc = KDataBufferResize( &buf, header_size + /*headers.elem_count +*/ pm_size + data_bytes);
+                            if (rc == 0) {
+                                size_t offset = header_size;
+                                //memmove((uint8_t *)buf.base + offset, headers.base, headers.elem_count);
+                                // offset += headers.elem_count
+                                memmove((uint8_t *)buf.base + offset, pm.base, pm_size);
+                                offset += pm.elem_count;
+                                memmove( (uint8_t*)buf.base + offset , data.base, data_bytes );
+                            }
+                        }
+                    }
+                    KDataBufferWhack( &pm );
+                }
+            }
+
+            if ( rc == 0 )
+            {
+                size_t toRead = KDataBufferBytes( & buf );
+                if ( bsize == 0 )
+                {
+                    * remaining = toRead;
+                    * num_read = 0;
+                }
+                else
+                {
+                    if ( toRead > bsize )
+                    {
+                        * remaining = toRead - bsize;
+                        toRead -= *remaining;
+                    }
+                    else
+                    {
+                        * remaining = 0;
+                    }
+
+                    if ( toRead > 0 )
+                    {
+                        memmove( buffer, buf . base, toRead );
+                    }
+                    *num_read = toRead;
+                }
+            }
 
             rc_t rc2 = KDataBufferWhack( &buf );
             if ( rc == 0 ) rc = rc2;

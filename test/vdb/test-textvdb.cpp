@@ -123,8 +123,8 @@ const char * TestDB =
                         "type":"ascii",
                         "data":
                         [
-                            {"row":1,"value":"\u0002\u0004AGCT"},
-                            {"row":2,"value":"\u0002\u0005TCGAT"}
+                            {"row":1,"value":"AGCT"},
+                            {"row":2,"value":"TCGAT"}
                         ]
                     }
                 ]
@@ -172,6 +172,7 @@ FIXTURE_TEST_CASE( VdbMgr_OpenTable, TextVdbFicture )
     uint32_t rowLen = 0;
     char buf[1024];
     REQUIRE_RC( VCursorReadDirect ( curs, 1, cid, 8, buf, sizeof ( buf ), & rowLen ) );
+    REQUIRE_EQ( 4, (int)rowLen );
     REQUIRE_EQ( string("AGCT"), string( buf, rowLen ) );
     REQUIRE_RC( VCursorReadDirect ( curs, 2, cid, 8, buf, sizeof ( buf ), & rowLen ) );
     REQUIRE_EQ( string("TCGAT"), string( buf, rowLen ) );

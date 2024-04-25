@@ -43,8 +43,6 @@ using namespace KDBText;
 
 TEST_SUITE(KTextColumnBlobTestSuite);
 
-const string Data = "0123456789";
-
 class KTextColumnBlob_Fixture
 {
 public:
@@ -62,22 +60,6 @@ public:
         THROW_ON_RC( KJsonValueMake ( & m_json, p_json.c_str(), m_error, sizeof( m_error ) ) );
         m_blob = new ColumnBlob( m_json );
     }
-
-    // void Setup( const string & data = Data )
-    // {
-    //     m_blob = new ColumnBlob( 1 );
-    //     THROW_ON_RC( m_blob -> appendRow( data.data(), data.size() * 8, 1 ) );
-    // }
-
-    // static string ToString( const ColumnBlob & b, size_t offset = 0 )
-    // {
-    //     KDataBuffer buf;
-    //     THROW_ON_RC( KDataBufferMakeBytes( &buf, 1 ) );
-    //     THROW_ON_RC( b.serialize( buf ) );
-    //     string ret = string( (const char*)buf.base + offset, buf.elem_count - offset );
-    //     THROW_ON_RC( KDataBufferWhack( &buf ) );
-    //     return ret;
-    // }
 
     char m_error[1024];
     KJsonValue * m_json = nullptr;
@@ -160,60 +142,33 @@ FIXTURE_TEST_CASE(KTextColumnBlob_inflate_Repeat, KTextColumnBlob_Fixture)
 }
 
 FIXTURE_TEST_CASE(KTextColumnBlob_inflate_FromArray, KTextColumnBlob_Fixture)
-{
-    Setup(R"( {"row":1,"value":["q","q"]} )");
+{   // count, if specified, has to match the length of the array
+    Setup(R"( {"row":1,"count":2,"value":["q","r"]} )");
     REQUIRE_RC( m_blob -> inflate( m_error, sizeof m_error ) );
-    REQUIRE_EQ( 1, (int)m_blob->getIdRange().first );
-    REQUIRE_EQ( 1, (int)m_blob->getIdRange().second );
-    REQUIRE_EQ( 1, (int)m_blob->getPageMap().row_count );
-
-    const KDataBuffer & buf = m_blob->getData();
-    REQUIRE_EQ( 16, (int)buf.elem_count );
-    REQUIRE_EQ( string("qq"), string( (const char*)buf.base, 2 ) );
-}
-
-
-#if 0
-
-FIXTURE_TEST_CASE(KTextColumnBlob_AppendRow_Empty, KTextColumnBlob_Fixture)
-{
-    m_blob = new ColumnBlob( 1 );
-    REQUIRE_RC_FAIL( m_blob -> appendRow( "", 0, 1 ) );
-}
-
-FIXTURE_TEST_CASE(KTextColumnBlob_AppendRow_OneByte, KTextColumnBlob_Fixture)
-{
-    m_blob = new ColumnBlob( 1 );
-    REQUIRE_RC( m_blob -> appendRow( "A", 8, 1 ) );
-    REQUIRE_EQ( 1, (int)m_blob->getIdRange().first );
-    REQUIRE_EQ( 1, (int)m_blob->getIdRange().second );
-    REQUIRE_EQ( 1, (int)m_blob->getPageMap().row_count );
-    REQUIRE_EQ( 'A', ((char*)m_blob->getData().base)[0] );
-}
-
-FIXTURE_TEST_CASE(KTextColumnBlob_AppendRow_Repeat, KTextColumnBlob_Fixture)
-{
-    m_blob = new ColumnBlob( 1 );
-    REQUIRE_RC( m_blob -> appendRow( "A", 8, 3 ) ); // same 8-bit value repeated 3 times
-    REQUIRE_EQ( 1, (int)m_blob->getIdRange().first );
-    REQUIRE_EQ( 3, (int)m_blob->getIdRange().second );
-    REQUIRE_EQ( 3, (int)m_blob->getPageMap().row_count );
-    REQUIRE_EQ( 'A', ((char*)m_blob->getData().base)[0] );
-    REQUIRE_EQ( 8, (int)m_blob->getData().elem_count ); // only one instance stored
-}
-
-FIXTURE_TEST_CASE(KTextColumnBlob_AppendRow_TwoBytes, KTextColumnBlob_Fixture)
-{
-    m_blob = new ColumnBlob( 1 );
-    REQUIRE_RC( m_blob -> appendRow( "A", 8, 1 ) );
-    REQUIRE_RC( m_blob -> appendRow( "B", 8, 1 ) );
     REQUIRE_EQ( 1, (int)m_blob->getIdRange().first );
     REQUIRE_EQ( 2, (int)m_blob->getIdRange().second );
     REQUIRE_EQ( 2, (int)m_blob->getPageMap().row_count );
-    REQUIRE_EQ( 'A', ((char*)m_blob->getData().base)[0] );
-    REQUIRE_EQ( 'B', ((char*)m_blob->getData().base)[1] );
+
+    const KDataBuffer & buf = m_blob->getData();
+    REQUIRE_EQ( 16, (int)buf.elem_count );
+    REQUIRE_EQ( string("qr"), string( (const char*)buf.base, 2 ) );
+}
+FIXTURE_TEST_CASE(KTextColumnBlob_inflate_FromArray_NoCount, KTextColumnBlob_Fixture)
+{   // count can be omitted
+    Setup(R"( {"row":1,"value":["q","r"]} )");
+    REQUIRE_RC( m_blob -> inflate( m_error, sizeof m_error ) );
+    REQUIRE_EQ( 1, (int)m_blob->getIdRange().first );
 }
 
+FIXTURE_TEST_CASE(KTextColumnBlob_inflate_FromArray_CountMismatch, KTextColumnBlob_Fixture)
+{
+    Setup(R"( {"row":1,"count":3,"value":["q","r"]} )");
+    REQUIRE_RC_FAIL( m_blob -> inflate( m_error, sizeof m_error ) );
+    //cout << m_error << endl;
+}
+
+#if 0
+//TODO
 FIXTURE_TEST_CASE(KTextColumnBlob_AppendRow_TwoUnderbytes, KTextColumnBlob_Fixture)
 {
     m_blob = new ColumnBlob( 1 );
@@ -228,86 +183,123 @@ FIXTURE_TEST_CASE(KTextColumnBlob_AppendRow_TwoUnderbytes, KTextColumnBlob_Fixtu
     REQUIRE_EQ( (int)(uint8_t)0b10101010, (int)((uint8_t*)m_blob->getData().base)[0] );
     REQUIRE_EQ( (int)(uint8_t)0b10000000, (int)((uint8_t*)m_blob->getData().base)[1] & 0b10000000 );
 }
-
-FIXTURE_TEST_CASE(KTextColumnBlob_Serialize_NoAppend, KTextColumnBlob_Fixture)
-{
-    m_blob = new ColumnBlob( 1 );
-    KDataBuffer & buf = m_blob->getData();
-    REQUIRE_EQ( 0, (int) KDataBufferBits( &buf ) );
-}
-
-FIXTURE_TEST_CASE(KTextColumnBlob_Make_Data_Simple, KTextColumnBlob_Fixture)
-{
-    Setup( Data );
-    string buf = ToString( *m_blob );
-    REQUIRE_EQ( Data, buf.substr( 2 ) );
-    uint8_t header = ToString( *m_blob )[0];
-    // fixed row length header:
-    // High 7 bits of the 1st byte: little endian (00), no extra bits (000), length <0x100 (10)
-    REQUIRE_EQ( (int)0x02, (int)header );
-    // 2nd byte: row length
-    uint8_t row_length = ToString( *m_blob )[1];
-    REQUIRE_EQ( Data.size() * 8, (size_t)row_length );
-}
-
-FIXTURE_TEST_CASE(KTextColumnBlob_GetIdRange, KTextColumnBlob_Fixture)
-{
-    Setup( Data );
-    REQUIRE_EQ( (int64_t)1, m_blob -> getIdRange().first );
-    REQUIRE_EQ( (uint32_t)1, m_blob -> getIdRange().second );
-}
+#endif
 
 class KTextColumnBlob_ApiFixture
 {
 public:
     KTextColumnBlob_ApiFixture()
     {
-        KDataBufferMakeBytes( & m_buffer, 0 );
     }
     ~KTextColumnBlob_ApiFixture()
     {
-        KDataBufferWhack( & m_buffer );
         KColumnBlobRelease( m_blob );
+        KJsonValueWhack( m_json );
     }
-    void Setup( const string & data = "abcdef" )
+    void Setup( const string & data )
     {
-        ColumnBlob * cb = new ColumnBlob( 1 );
-        cb -> appendRow( data.data(), data.size() * 8, 1 );
+        THROW_ON_RC( KJsonValueMake ( & m_json, data.c_str(), m_error, sizeof( m_error ) ) );
+        ColumnBlob * cb = new ColumnBlob( m_json );
+        THROW_ON_RC( cb -> inflate( m_error, sizeof m_error ) );
         m_blob = (const KColumnBlob*)cb;
     }
 
     const KColumnBlob * m_blob = nullptr;
+    char m_error[1024];
 
-    KDataBuffer m_buffer;
+    KJsonValue * m_json = nullptr;
+    uint8_t m_buffer[1024];
+
+    size_t num_read = 0;
+    size_t remaining = 0;
 };
 
 FIXTURE_TEST_CASE(KTextColumnBlob_AddRelease, KTextColumnBlob_ApiFixture)
 {
-    Setup();
+    Setup(R"( {"row":1,"value":"q"} )");
 
     REQUIRE_RC( KColumnBlobAddRef( m_blob ) );
     REQUIRE_RC( KColumnBlobRelease( m_blob ) );
     // use valgrind to find any leaks
 }
 
-FIXTURE_TEST_CASE(KTextColumnBlob_BufferNull, KTextColumnBlob_ApiFixture)
+FIXTURE_TEST_CASE(KTextColumnBlob_Read_BufferNull, KTextColumnBlob_ApiFixture)
 {
-    Setup( Data );
+    Setup(R"( {"row":1,"value":"q"} )");
 
-    size_t num_read = 0;
-    size_t remaining = 0;
     REQUIRE_RC_FAIL( KColumnBlobRead ( m_blob, 0, nullptr, 1, &num_read, &remaining ) );
 }
+
+FIXTURE_TEST_CASE(KTextColumnBlob_Read_Offset, KTextColumnBlob_ApiFixture)
+{   // non-0 offsets are not supported
+    Setup(R"( {"row":1,"value":"q"} )");
+    REQUIRE_RC_FAIL( KColumnBlobRead ( m_blob, 1, m_buffer, sizeof( m_buffer ), &num_read, &remaining ) );
+}
+
+#if 0
+//TODO: can we have a 0-length blob?
 FIXTURE_TEST_CASE(KTextColumnBlob_BufferNull_SizeNull, KTextColumnBlob_ApiFixture)
 {
     Setup( Data );
 
-    size_t num_read = 0;
-    size_t remaining = 0;
     REQUIRE_RC( KColumnBlobRead ( m_blob, 0, nullptr, 0, &num_read, &remaining ) );
     REQUIRE_EQ( (size_t)0, num_read );
     REQUIRE_EQ( 2 + Data.size(), remaining );
 }
+#endif
+
+FIXTURE_TEST_CASE(KTextColumnBlob_Make_Data_RowLength_8bits, KTextColumnBlob_ApiFixture)
+{
+    Setup(R"( {"row":1,"value":"q"} )");
+    REQUIRE_RC( KColumnBlobRead ( m_blob, 0, m_buffer, sizeof( m_buffer ), &num_read, &remaining ) );
+    REQUIRE_EQ( 3, (int)num_read );
+    REQUIRE_EQ( 0, (int)remaining );
+
+    // fixed row length header:
+    // High 7 bits of the 1st byte: length < 0x100 bits (000), no extra bits (000), little endian (10)
+    REQUIRE_EQ( 0b00000010, (int)m_buffer[0] );
+    // 2nd byte: row length in bits
+    REQUIRE_EQ( 0x08, (int)m_buffer[1] );
+    // 3d byte: data
+    REQUIRE_EQ( (int)'q', (int)m_buffer[2] );
+}
+
+FIXTURE_TEST_CASE(KTextColumnBlob_Make_Data_RowLength_4bytes, KTextColumnBlob_ApiFixture)
+{
+    Setup(R"( {"row":1,"value":"qwer"} )");
+    REQUIRE_RC( KColumnBlobRead ( m_blob, 0, m_buffer, sizeof( m_buffer ), &num_read, &remaining ) );
+    REQUIRE_EQ( 6, (int)num_read );
+    REQUIRE_EQ( 0, (int)remaining );
+
+    // fixed row length header:
+    // High 7 bits of the 1st byte: length < 0x100 bits (000), no extra bits (000), little endian (10)
+    REQUIRE_EQ( 0b00000010, (int)m_buffer[0] );
+    // 2nd byte: row length in bits
+    REQUIRE_EQ( 32, (int)m_buffer[1] );
+    // bytes 3-6: data
+    REQUIRE_EQ( string("qwer"), string( (char*)m_buffer + 2, 4 ) );
+}
+
+FIXTURE_TEST_CASE(KTextColumnBlob_Make_Data_RowLength_variable, KTextColumnBlob_ApiFixture)
+{
+    Setup(R"( {"row":1,"value":["qwer", "qwerty"] } )");
+    REQUIRE_RC( KColumnBlobRead ( m_blob, 0, m_buffer, sizeof( m_buffer ), &num_read, &remaining ) );
+    REQUIRE_EQ( 21, (int)num_read );
+    REQUIRE_EQ( 0, (int)remaining );
+
+    // fixed row length header:
+    // High 7 bits of the 0 byte: little endian (1000), no extra bits (0000)
+    REQUIRE_EQ( 0b10000000, (int)m_buffer[0] );
+    // byte 1: header_size (0)
+    REQUIRE_EQ( 0, (int)m_buffer[1] );
+    // byte 2: pagemap size (8)
+    REQUIRE_EQ( 8, (int)m_buffer[2] );
+    // bytes 3-10: pagemap
+    // bytes 11-20: data
+    REQUIRE_EQ( string("qwerqwerty"), string( (char*)m_buffer + 11, 10 ) );
+}
+
+#if 0
 FIXTURE_TEST_CASE(KTextColumnBlob_NumReadNull, KTextColumnBlob_ApiFixture)
 {
     Setup( Data );
