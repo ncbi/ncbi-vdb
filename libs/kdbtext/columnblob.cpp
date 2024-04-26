@@ -72,7 +72,7 @@ ColumnBlob::ColumnBlob( const KJsonValue * p_json )
     KRefcountInit ( & dad . refcount, 1, "KDBText::ColumnBlob", "ctor", "db" );
 
 //** move to inflate() to return rc?
-    KDataBufferMake ( & m_data, 1, 1 );
+    memset( &m_data, 0, sizeof( m_data ) );
     m_data.elem_count = 0;
     PageMapNew( &m_pm,  0);
 //**
@@ -123,23 +123,10 @@ ColumnBlob::inflate( char * p_error, size_t p_error_size )
                 return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
             }
         }
-
-        int64_t rowId;
-        rc = KJsonGetNumber ( id, &rowId );
+        rc = KJsonGetNumber ( id, &m_startId );
         if ( rc == 0 )
         {
-//             if ( findBlob( rowId ) != m_data.end() )
-//             {
-//                 string_printf ( p_error, p_error_size, nullptr, "Duplicate row id: %s", rowId );
-//                 return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
-//             }
-
-            if ( m_startId == 0 )
-            {
-                m_startId = rowId;
-            }
-
-            // count
+            // count if present
             int64_t countVal = 1;
             const KJsonValue * count = KJsonObjectGetMember ( obj, "count" );
             if ( count != nullptr &&
@@ -161,7 +148,12 @@ ColumnBlob::inflate( char * p_error, size_t p_error_size )
             const char * valueStr = nullptr;
             if ( KJsonGetString ( value, & valueStr ) == 0 )
             {   // may omit []; a repetition if countVal > 1
-                appendRow( valueStr, strlen( valueStr ) * 8, countVal );
+                rc = KDataBufferMake ( & m_data, 8, 0 );
+                if ( rc == 0 )
+                {
+                    appendRow( valueStr, strlen( valueStr ), countVal );
+                }
+                //TODO: non-strings
             }
             else
             {
@@ -179,7 +171,15 @@ ColumnBlob::inflate( char * p_error, size_t p_error_size )
                             const char * valueStr = nullptr;
                             if ( KJsonGetString ( v, & valueStr ) == 0 )
                             {
-                                appendRow( valueStr, strlen( valueStr ) * 8, 1 );
+                                if ( i == 0 )
+                                {
+                                    rc = KDataBufferMake ( & m_data, 8, 0 );
+                                    if ( rc != 0 )
+                                    {
+                                        break;
+                                    }
+                                }
+                                appendRow( valueStr, strlen( valueStr ), 1 );
                             }
                             //TODO: non-strings
                         }
@@ -213,24 +213,23 @@ ColumnBlob::inflate( char * p_error, size_t p_error_size )
 }
 
 rc_t
-ColumnBlob::appendRow( const void * data, size_t sizeBits, uint32_t count )
+ColumnBlob::appendRow( const void * data, size_t sizeElems, uint32_t count )
 {
-    if ( sizeBits == 0 )
+    if ( sizeElems == 0 )
     {
         return SILENT_RC ( rcDB, rcBlob, rcAppending, rcData, rcEmpty );
     }
-
-    rc_t rc = PageMapAppendRows( m_pm, sizeBits, count, false ); // no "same data as on previous call", for now
+    rc_t rc = PageMapAppendRows( m_pm, sizeElems, count, false ); // no "same data as on previous call", for now
     if ( rc == 0 )
     {
         m_count += count;
 
         // apend data to m_data
-        size_t old_size = KDataBufferBits( & m_data );
-        rc = KDataBufferResize( &m_data, old_size + sizeBits );
+        size_t old_size_bits = KDataBufferBits( & m_data );
+        rc = KDataBufferResize( &m_data, m_data.elem_count + sizeElems );
         if ( rc == 0 )
         {
-            bitcpy( m_data.base, old_size, data, 0, sizeBits );
+            bitcpy( m_data.base, old_size_bits, data, 0, sizeElems * m_data.elem_bits );
         }
         return rc;
     }

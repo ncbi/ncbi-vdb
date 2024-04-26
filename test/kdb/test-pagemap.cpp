@@ -32,7 +32,7 @@ using namespace std;
 const uint32_t MaxReserve = 1UL<<30;
 
 
-TEST_SUITE( VdbPageMapTestSuite );
+TEST_SUITE( KdbPageMapTestSuite );
 
 TEST_CASE ( MakeRelease )
 {
@@ -134,7 +134,7 @@ const char UsageDefaultName[] = "test-pagemap";
 rc_t CC KMain ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=VdbPageMapTestSuite(argc, argv);
+    rc_t rc=KdbPageMapTestSuite(argc, argv);
     return rc;
 }
 
