@@ -352,7 +352,7 @@ static int CC KDBManagerPathTypeVPImpl ( const KDBManager * self,
                     char buffer [ 4096 ];
                     rc = VPathReadPath ( rpath, buffer, sizeof buffer, NULL );
                     if ( rc == 0 )
-                        path_type = KDBPathType ( self -> wd, false, buffer );
+                        path_type = KDBPathType ( self -> wd, NULL, buffer );
                 }
 #else
                 VPUri_t t;
