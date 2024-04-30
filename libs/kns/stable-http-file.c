@@ -340,7 +340,7 @@ rc_t RetrierAgain(const KStableHttpFile * cself,
         PLOGERR(klogErr, (klogErr, rc,
             "Cannot $(f): to=$(to)", "f=%s,to=%u", func, self->_sleepTO));
     else
-        PLOGERR(klogErr, (klogErr, rc, "Cannot $(f)", "f=%s", func));
+        LOGERR(klogInt, rc, "failed to read HTTP file");
 
     if (rc == 0) {
         if (self->_sleepTO > 0) {
