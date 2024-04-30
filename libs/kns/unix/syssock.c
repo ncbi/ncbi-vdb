@@ -463,13 +463,36 @@ static
 rc_t CC KSocketTimedRead ( const KSocket *self,
     void *buffer, size_t bsize, size_t *num_read, timeout_t *tm )
 {
+    static int SILENCE_READING_MSG = -1;
+
     rc_t rc;
     int revents;
 
     assert ( self != NULL );
     assert ( num_read != NULL );
 
-    DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedRead(%d, %d)...\n", self, bsize, tm == NULL ? -1 : tm -> mS ) );
+    if (SILENCE_READING_MSG < 0) {
+#ifdef WINDOWS
+        {
+            size_t buf_count = 0;
+            errno_t err = getenv_s(&buf_count, NULL, 0, "NCBI_VDB_SILENCE_MBEDTLS_READ");
+            if (!err && buf_count > 0)
+                SILENCE_READING_MSG = 1;
+            else
+                SILENCE_READING_MSG = 0;
+        }
+#else
+        if (getenv("NCBI_VDB_SILENCE_MBEDTLS_READ") != NULL)
+            SILENCE_READING_MSG = 1;
+        else
+            SILENCE_READING_MSG = 0;
+#endif
+    }
+
+    if (!SILENCE_READING_MSG)
+        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET),
+        ( "%p: KSocketTimedRead(%d, %d)...\n",
+            self, bsize, tm == NULL ? -1 : tm -> mS ) );
 
     /* wait for socket to become readable */
     revents = socket_wait ( self -> fd
@@ -625,6 +648,8 @@ static
 rc_t CC KSocketTimedWrite ( KSocket *self,
     const void *buffer, size_t bsize, size_t *num_writ, timeout_t *tm )
 {
+    static int SILENCE_READING_MSG = -1;
+
     rc_t rc;
     int revents;
     ssize_t count;
@@ -634,7 +659,28 @@ rc_t CC KSocketTimedWrite ( KSocket *self,
     assert ( bsize != 0 );
     assert ( num_writ != NULL );
 
-    DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedWrite(%d, %d)...\n", self, bsize, tm == NULL ? -1 : tm -> mS ) );
+    if (SILENCE_READING_MSG < 0) {
+#ifdef WINDOWS
+        {
+            size_t buf_count = 0;
+            errno_t err = getenv_s(&buf_count, NULL, 0, "NCBI_VDB_SILENCE_MBEDTLS_READ");
+            if (!err && buf_count > 0)
+                SILENCE_READING_MSG = 1;
+            else
+                SILENCE_READING_MSG = 0;
+        }
+#else
+        if (getenv("NCBI_VDB_SILENCE_MBEDTLS_READ") != NULL)
+            SILENCE_READING_MSG = 1;
+        else
+            SILENCE_READING_MSG = 0;
+#endif
+    }
+
+    if (!SILENCE_READING_MSG)
+        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET),
+        ( "%p: KSocketTimedWrite(%d, %d)...\n",
+            self, bsize, tm == NULL ? -1 : tm -> mS ) );
 
     /* wait for socket to become writable */
     revents = socket_wait ( self -> fd
