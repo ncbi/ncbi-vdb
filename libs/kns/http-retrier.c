@@ -391,7 +391,8 @@ bool HttpGetRetryCodes ( const HttpRetrySpecs* self,
     
     for ( i = 0; i < self -> count; ++i )
     {
-        if ( self -> codes [ i ] -> code == code / 100 ) 
+        /* Here we check for exact match */
+        if ( self -> codes [ i ] -> code == code ) 
         {
             * max_retries = self -> codes [ i ] -> max_retries;
             * sleep_before_retry = self -> codes [ i ] -> sleep_before_retry;
