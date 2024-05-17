@@ -37,6 +37,8 @@
 #include "blob-priv.h"
 #include "page-map.h"
 
+#include "../../libs/klib/mem-track.h"
+
 #include <vdb/manager.h>
 #include <vdb/cursor.h>
 #include <kdb/column.h>
@@ -383,6 +385,7 @@ rc_t WColumnWrite ( VColumn *cself,
             rc = KDataBufferMakeBytes ( & self -> data, new_size );
             if ( rc != 0 )
                 return rc;
+            MemTrackName( self -> data.ignore, "WColumnWrite" );
         }
         else
         {
@@ -901,6 +904,7 @@ bool WColumnSplitBuffer ( WColumn *self, int64_t end_id, size_t rm_idx )
                 );
             return true;
         }
+        MemTrackName( data.ignore, "WColumnSplitBuffer" );
 
         /* copy data */
         boff = ( rm_idx > 0 ) ?

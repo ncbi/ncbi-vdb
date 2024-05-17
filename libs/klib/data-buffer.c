@@ -35,6 +35,8 @@
 #include <string.h>
 #include <assert.h>
 
+#include "mem-track.h"
+
 #if _ARCH_BITS == 32
 #define BASE_PTR_ALIGNMENT 8
 #else
@@ -132,7 +134,7 @@ rc_t allocate ( buffer_impl_t ** target, size_t capacity, bool clear )
 {
     size_t bytes;
     buffer_impl_t * y;
-    
+
     bytes = capacity + sizeof * y;
     y = clear ? calloc ( bytes, 1 ) : malloc ( bytes );
     if ( y == NULL )
@@ -140,7 +142,7 @@ rc_t allocate ( buffer_impl_t ** target, size_t capacity, bool clear )
 
     y -> allocated = capacity;
     atomic32_set ( & y -> refcount, 1 );
-    
+
 #if DEBUG_MALLOC_FREE
     y -> foo = 0;
 #endif
@@ -162,7 +164,7 @@ static buffer_impl_t *test_add_ref(buffer_impl_t *self) {
 static void release ( buffer_impl_t * self, bool wipe )
 {
     int32_t refcount = atomic32_read_and_add ( & self -> refcount, -1 );
-    
+
     if ( refcount == 1 )
     {
 #if DEBUG_MALLOC_FREE
@@ -173,7 +175,7 @@ static void release ( buffer_impl_t * self, bool wipe )
 #endif
         if ( wipe )
             memset ( self, 0, sizeof * self + self -> allocated );
-        
+
         free ( self );
     }
 #if DEBUG_MALLOC_FREE
@@ -252,7 +254,7 @@ static rc_t reallocate ( buffer_impl_t ** target, size_t capacity, bool clear, b
     self = temp;
     self -> allocated = capacity;
     atomic32_set ( & self->refcount, 1 );
-    
+
     * target = self;
 
     return 0;
@@ -279,14 +281,14 @@ static rc_t shrink ( buffer_impl_t ** target, size_t capacity, bool wipe )
                 free ( self );
             }
         }
-        
+
         if ( temp == NULL )
             return RC ( rcRuntime, rcBuffer, rcResizing, rcMemory, rcExhausted );
 
         temp -> allocated = capacity;
         * target = temp;
     }
-    
+
     return 0;
 }
 
@@ -358,16 +360,16 @@ LIB_EXPORT rc_t CC KDataBufferMake(KDataBuffer *target, uint64_t elem_bits, uint
     rc_t rc = 0;
     size_t bytes;
     buffer_impl_t **impp;
-    
+
     if (target == NULL)
     	return RC(rcRuntime, rcBuffer, rcConstructing, rcParam, rcNull);
 
     impp = (buffer_impl_t **)&target->ignore;
-    
+
     bytes = roundup((elem_bits * elem_count + 7) / 8, 12);
     if (8 * (uint64_t)bytes < elem_bits * elem_count)
     	return RC(rcRuntime, rcBuffer, rcConstructing, rcParam, rcTooBig);
-    
+
     memset (target, 0, sizeof(*target));
     target->elem_bits = elem_bits;
 
@@ -378,6 +380,11 @@ LIB_EXPORT rc_t CC KDataBufferMake(KDataBuffer *target, uint64_t elem_bits, uint
             target->base = (void *)get_data(*impp);
             target->elem_count = elem_count;
         }
+    }
+
+    if ( rc == 0 )
+    {
+        MemTrackAlloc( target->ignore, bytes );
     }
 
     cc ( target );
@@ -396,7 +403,7 @@ static rc_t KDataBufferResizeInt ( KDataBuffer * self,
     const uint8_t *new_end;
     const uint8_t *cur_end;
     const KDataBuffer * cself = self;
-    
+
     if ( self == NULL )
     	return RC ( rcRuntime, rcBuffer, rcResizing, rcParam, rcNull );
 
@@ -437,7 +444,7 @@ static rc_t KDataBufferResizeInt ( KDataBuffer * self,
     bits = cself -> elem_bits * new_count;
     if ( ( ( bits + 7 ) >> MAX_BUFFER_BITS ) != 0 )
     	return RC ( rcRuntime, rcBuffer, rcConstructing, rcParam, rcTooBig );
-    
+
     /* at this point, we intend to modify */
     if ( ! KDataBufferWritable ( cself ) )
         return RC ( rcRuntime, rcBuffer, rcResizing, rcSelf, rcReadonly );
@@ -452,6 +459,7 @@ static rc_t KDataBufferResizeInt ( KDataBuffer * self,
             self->ignore = imp;
             self->base = (void *)get_data(imp);
             self->elem_count = new_count;
+            MemTrackAlloc( self->ignore, KDataBufferBytes( self ) );
         }
         return rc;
     }
@@ -463,11 +471,12 @@ static rc_t KDataBufferResizeInt ( KDataBuffer * self,
         self->elem_count = new_count;
         return 0;
     }
-    
+
     new_size = roundup((bits + 7) / 8, 12);
     if (self->base == get_data(imp) && self->bit_offset == 0) {
         rc = reallocate(&imp, new_size, clear, wipe);
         if (rc == 0) {
+            MemTrackRealloc( self->ignore, new_size, imp );
             self->ignore = imp;
             self->base = (void *)get_data(imp);
             self->elem_count = new_count;
@@ -480,10 +489,12 @@ static rc_t KDataBufferResizeInt ( KDataBuffer * self,
     if (rc == 0) {
         memmove((void *)get_data(new_imp), self->base, new_size);
         release(imp, wipe);
+        MemTrackRealloc( self->ignore, roundup(new_size, 12), new_imp );
         self->base = (void *)get_data(new_imp);
         self->ignore = new_imp;
         self->elem_count = new_count;
     }
+
     return rc;
 }
 
@@ -499,7 +510,7 @@ static rc_t KDataBufferSubInt (const KDataBuffer *self,
 {
     if (self == NULL || target == NULL)
     	return RC(rcRuntime, rcBuffer, rcConstructing, rcParam, rcNull);
-    
+
     if (self->ignore == NULL) {
         if (start > 0 || ( count != 0 && count < UINT64_MAX) )
             return RC(rcRuntime, rcBuffer, rcConstructing, rcParam, rcNull);
@@ -513,7 +524,7 @@ static rc_t KDataBufferSubInt (const KDataBuffer *self,
     {
         buffer_impl_t *imp = (buffer_impl_t *)self->ignore;
         bitsz_t offset = self->bit_offset + (((bitsz_t)((uint8_t const *)self->base - (uint8_t const *)get_data(imp))) << 3);
-        
+
         if (start > self->elem_count){
             start = self->elem_count;
             count = 0;
@@ -553,11 +564,11 @@ rc_t KDataBufferCastInt(const KDataBuffer *self, KDataBuffer *target, uint64_t n
     	return RC (rcRuntime, rcBuffer, rcCasting, rcParam, rcNull);
     if (new_elem_bits == 0)
     	return RC (rcRuntime, rcBuffer, rcCasting, rcParam, rcInvalid);
-    
+
     bits = KDataBufferBits(self);
     new_elem_count = bits / new_elem_bits;
     new_bits = new_elem_bits * new_elem_count;
-    
+
     if (new_bits != bits && ! (can_shrink && new_bits < bits))
         return RC(rcRuntime, rcBuffer, rcCasting, rcParam, rcInvalid);
 
@@ -640,30 +651,30 @@ static rc_t KDataBufferMakeWritableInt (const KDataBuffer *cself, KDataBuffer *t
 {
     if (cself == NULL)
     	return RC(rcRuntime, rcBuffer, rcConstructing, rcParam, rcNull);
-    
+
     if (target == NULL)
     	return RC(rcRuntime, rcBuffer, rcConstructing, rcParam, rcNull);
 
     if ((KDataBuffer const *)target != cself)
         memset(target, 0, sizeof(*target));
-    
+
     if (cself->ignore == NULL)
         return KDataBufferMake(target, cself->elem_bits, cself->elem_count);
     else {
         buffer_impl_t *self = (buffer_impl_t *)cself->ignore;
         buffer_impl_t *copy;
-        
+
         if (cself->base == get_data(self) && cself->bit_offset == 0) {
             /* not a sub-buffer */
             copy = make_copy(self);
             if (copy) {
                 if ((KDataBuffer const *)target == cself)
                     release(self, false);
-                else 
+                else
                     *target = *cself;
                 target->ignore = copy;
                 target->base = (uint8_t *)get_data(copy);
-                
+
                 return 0;
             }
             return RC(rcRuntime, rcBuffer, rcAllocating, rcMemory, rcExhausted);
@@ -679,7 +690,7 @@ static rc_t KDataBufferMakeWritableInt (const KDataBuffer *cself, KDataBuffer *t
         else {
             /* sub-buffer so make new and copy */
             rc_t rc;
-            
+
             rc = allocate(&copy, roundup(KDataBufferBytes(cself), 12), false);
             if (rc == 0) {
                 if (cself->bit_offset == 0)
@@ -689,7 +700,7 @@ static rc_t KDataBufferMakeWritableInt (const KDataBuffer *cself, KDataBuffer *t
 
                 if ((const KDataBuffer *)target == cself)
                     release(self, false);
-                else 
+                else
                     *target = *cself;
                 target->ignore = copy;
                 target->base = (uint8_t *)get_data(copy);
@@ -713,9 +724,12 @@ LIB_EXPORT rc_t CC KDataBufferWhack (KDataBuffer *self)
     cc ( self );
     if (self)
     {
-        if (self->ignore)
-            release((buffer_impl_t *)self->ignore, false);
 
+        if (self->ignore)
+        {
+            release((buffer_impl_t *)self->ignore, false);
+            MemTrackFree( self->ignore );
+        }
         memset(self, 0, sizeof(*self));
     }
     return 0;
@@ -724,7 +738,7 @@ LIB_EXPORT rc_t CC KDataBufferWhack (KDataBuffer *self)
 LIB_EXPORT bool CC KDataBufferWritable(const KDataBuffer *cself)
 {
     cc ( cself );
-    return (cself != NULL && 
+    return (cself != NULL &&
             ( cself->ignore == NULL ||
               atomic32_read(&((buffer_impl_t *)cself->ignore)->refcount) == 1 ) )
         ? true : false;
@@ -788,7 +802,7 @@ LIB_EXPORT rc_t CC KDataBufferCheckIntegrity (const KDataBuffer *self)
 LIB_EXPORT rc_t CC KDataBufferWipe ( KDataBuffer * self )
 {
     cc ( self );
-    
+
     if ( self == NULL )
         return RC ( rcRuntime, rcBuffer, rcValidating, rcSelf, rcNull );
 
@@ -796,7 +810,7 @@ LIB_EXPORT rc_t CC KDataBufferWipe ( KDataBuffer * self )
         buffer_impl_wipe ( ( buffer_impl_t * ) self -> ignore );
 
     cc ( self );
-    
+
     return 0;
 }
 
@@ -807,7 +821,7 @@ LIB_EXPORT rc_t CC KDataBufferWipe ( KDataBuffer * self )
 LIB_EXPORT rc_t CC KDataBufferWipeNWhack ( KDataBuffer * self )
 {
     cc ( self );
-    
+
     if ( self != NULL )
     {
         if ( self -> ignore )

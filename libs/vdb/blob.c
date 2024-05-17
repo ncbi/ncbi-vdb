@@ -25,7 +25,7 @@
  */
 
 #include <vdb/extern.h>
- 
+
 #define TRACK_REFERENCES 0
 
 #include "page-map.h"
@@ -55,6 +55,8 @@
 #include <string.h>
 #include <os-native.h>
 
+#include "../../libs/klib/mem-track.h"
+
 #include <stdio.h> /* temp for debugging */
 #define PHYSPROD_INDEX_OFFSET 1000000000
 #if _DEBUGGING
@@ -73,7 +75,7 @@ void VBlobCheckIntegrity ( const VBlob *self )
 
 rc_t VBlobNew ( VBlob **lhs, int64_t start_id, int64_t stop_id, const char *name ) {
     VBlob *y;
-    
+
     if ( name == NULL )
         name = "";
 #if VBLOG_HAS_NAME
@@ -95,7 +97,7 @@ rc_t VBlobNew ( VBlob **lhs, int64_t start_id, int64_t stop_id, const char *name
         y->no_cache = 0;
         strcpy(&(((char *)y->name)[0]), name);
 #endif
-        
+
         return 0;
     }
     return RC(rcVDB, rcBlob, rcConstructing, rcMemory, rcExhausted);
@@ -107,6 +109,7 @@ rc_t VBlobNewAsArray(struct VBlob **lhs, int64_t start_id, int64_t stop_id, uint
 	if(rc == 0){
 		rc = KDataBufferMake(&y->data,elem_bits,rowlen*(stop_id-start_id+1));
 		if(rc == 0){
+            MemTrackName( y->data.ignore, "VBlobNewAsArray" );
 			rc=PageMapNewFixedRowLength(&y->pm,stop_id-start_id+1,rowlen);
 			if(rc == 0){
 				*lhs = y;
@@ -122,7 +125,7 @@ rc_t VBlobNewAsArray(struct VBlob **lhs, int64_t start_id, int64_t stop_id, uint
 static rc_t VBlobDestroy( VBlob *that ) {
     if (that->spmc) {
         int i;
-        
+
         for (i = 0; i != that->spmc->n; ++i)
             PageMapRelease(that->spmc->pm[i]);
         free(that->spmc);
@@ -158,7 +161,7 @@ static rc_t decode_header_v2_0(
     *offset = 3;
     if (ssize < *offset)
         return RC(rcVDB, rcBlob, rcConstructing, rcData, rcInsufficient);
-    
+
     *hdr_size = src[1];
     *map_size = src[2];
     return 0;
@@ -174,7 +177,7 @@ static rc_t decode_header_v2_1(
     *offset = 4;
     if (ssize < *offset)
         return RC(rcVDB, rcBlob, rcConstructing, rcData, rcInsufficient);
-    
+
     *hdr_size = src[1];
     *map_size = (uint32_t)src[2] | ((uint32_t)src[3] << 8);
     return 0;
@@ -190,7 +193,7 @@ static rc_t decode_header_v2_2(
     *offset = 6;
     if (ssize < *offset)
         return RC(rcVDB, rcBlob, rcConstructing, rcData, rcInsufficient);
-    
+
     *hdr_size = src[1];
     *map_size = (uint32_t)src[2] | ((uint32_t)src[3] << 8) | ((uint32_t)src[4] << 16) | ((uint32_t)src[5] << 24);
     return 0;
@@ -206,7 +209,7 @@ static rc_t decode_header_v2_3(
     *offset = 9;
     if (ssize < *offset)
         return RC(rcVDB, rcBlob, rcConstructing, rcData, rcInsufficient);
-    
+
     *hdr_size = (uint32_t)src[1] | ((uint32_t)src[2] << 8) | ((uint32_t)src[3] << 16) | ((uint32_t)src[4] << 24);
     *map_size = (uint32_t)src[5] | ((uint32_t)src[6] << 8) | ((uint32_t)src[7] << 16) | ((uint32_t)src[8] << 24);
     return 0;
@@ -223,7 +226,7 @@ static rc_t decode_header_v2(
 ) {
     rc_t rc;
     uint8_t variant;
-    
+
     if (ssize == 0)
         return RC(rcVDB, rcBlob, rcConstructing, rcData, rcInsufficient);
 
@@ -266,7 +269,7 @@ static rc_t encode_header_v1(
 
     /* blob size adjust goes in bits 2..4 */
     header_byte |= ( ( 8 - ( data_size & 7 ) ) & 7 ) << 2;
-    
+
     /* row-length code goes in bits 5..6 */
     if ( row_length == 1 ) {
         header_byte |= 3 << 5;
@@ -318,16 +321,16 @@ static rc_t encode_header_v2(
 #else
     uint8_t header_byte = 0x88 | ( (uint8_t)data_size & 7 );
 #endif
-    
+
     assert(hdr_size >> 32 == 0);
     assert(map_size >> 32 == 0);
-    
+
     if ((hdr_size >> 8) == 0) {
         if ((map_size >> 8) == 0) {
             *used = 3;
             if (dsize < *used)
                 return RC(rcVDB, rcBlob, rcConstructing, rcBuffer, rcInsufficient);
-            
+
             dst[0] = header_byte;
             dst[1] = hdr_size;
             dst[2] = map_size;
@@ -336,7 +339,7 @@ static rc_t encode_header_v2(
             *used = 4;
             if (dsize < *used)
                 return RC(rcVDB, rcBlob, rcConstructing, rcBuffer, rcInsufficient);
-            
+
             dst[0] = header_byte | 0x10;
             dst[1] = hdr_size;
             dst[2] = map_size;
@@ -467,14 +470,14 @@ rc_t VBlobCreateFromData_v2(
     uint32_t elem_count;
     uint8_t *src = data->base;
     rc_t rc;
-    
+
     rc = decode_header_v2(src, ssize, &hsize, &msize, &offset, &adjust, &byte_order);
     if (rc)
         return rc;
 
     if (ssize < offset + hsize + msize)
         return RC(rcVDB, rcBlob, rcConstructing, rcData, rcInsufficient);
-    
+
     pagemap_offset = offset + hsize;
     data_offset = pagemap_offset + msize;
     assert(data_offset <= ssize);
@@ -537,16 +540,16 @@ rc_t VBlobCreateFromData_v1(
     int rls; /* row length size */
     uint64_t row_len;
     bitsz_t databits;
-    
+
     if (ssize == 0)
         return RC(rcVDB, rcBlob, rcConstructing, rcData, rcInsufficient);
-    
+
     header = *src;
     byte_order = header & 3; header >>= 2;
     adjust = header & 7;
     header >>= 3;
     rls = header & 3;
-    
+
     /* convert rls from a code to an actual length */
     rls = "\x01\x02\x04\x00" [ rls ];
 
@@ -606,7 +609,7 @@ rc_t VBlobCreateFromData_v1(
             y->data.elem_bits = elem_bits;
             y->data.elem_count = (uint32_t)( databits / elem_bits );
             y->byte_order = byte_order;
-			
+
             *lhs = y;
             return 0;
         }
@@ -720,7 +723,7 @@ void VBlobPageMapOptimize ( VBlob **vblobp)
 		    &&  pm->data_recs < pm->row_count       /** rle was used ***/
 		    &&  pm->data_recs * 6 > pm->row_count){ /** but not super efficiently **/
 			/*printf("OPTIMIZATION: UnRLE(8)\n");*/
-			VBlobOptimize_UnRLE_uint8_t(vblobp); 
+			VBlobOptimize_UnRLE_uint8_t(vblobp);
 			return;
 		}
 		if( pm->length[0] * sblob->data.elem_bits == 16 /** 2 byte data ***/
@@ -752,7 +755,7 @@ void VBlobPageMapOptimize ( VBlob **vblobp)
 		elem_count_t	minlen,maxlen;
 		elem_count_t	elem_sz = sblob->data.elem_bits/8;
 		rc_t rc = PageMapRowLengthRange(pm, &minlen,&maxlen);
-		if( rc == 0  && maxlen*elem_sz > 2 && maxlen*elem_sz <= 2048 /* do not optimize super large entries */){ 
+		if( rc == 0  && maxlen*elem_sz > 2 && maxlen*elem_sz <= 2048 /* do not optimize super large entries */){
 		/******* TRY dictionary **/
 			int64_t		limit_vocab_size;
 			uint32_t	vocab_cnt=0;
@@ -763,6 +766,8 @@ void VBlobPageMapOptimize ( VBlob **vblobp)
 
 			rc=KDataBufferMake(&new_data,sblob->data.elem_bits,0); /** no allocation - shoulf not fail at all **/
 			assert(rc==0);
+            MemTrackName( new_data.ignore, "VBlobPageMapOptimize" );
+
 /*******************
 * another formula
 * the savings should not be less than the waste on pointers into data vocabulary
@@ -772,7 +777,7 @@ void VBlobPageMapOptimize ( VBlob **vblobp)
 ****************/
 			limit_vocab_size = ((int64_t)sblob->data.elem_count*elem_sz +(valid_data_run?pm->data_recs*2:0) -  2*pm->row_count)
 					   * pm->data_recs / (int64_t)sblob->data.elem_count / elem_sz;
-			
+
 
 			if(limit_vocab_size <=1 ){
 				rc = RC(rcVDB, rcBlob, rcConstructing, rcId, rcOutofrange);
@@ -837,7 +842,7 @@ void VBlobPageMapOptimize ( VBlob **vblobp)
 				if(rc == 0 ){
 					PageMap *new_pm;
 					/*printf("OPTIMIZATION LEVEL REACHED: vocab:%d,rows:%d,data_recs:%d\n",vocab_cnt ,pm->row_count,pm->data_recs);*/
-					rc=PageMapToRandomAccess(&new_pm,pm,data_offset); 
+					rc=PageMapToRandomAccess(&new_pm,pm,data_offset);
 					if(rc == 0){
 						/** DONE ***/
 						VBlob *vblob;
@@ -853,7 +858,7 @@ void VBlobPageMapOptimize ( VBlob **vblobp)
 							return;
 						}
 						PageMapRelease(new_pm);
-						
+
 					}
 				} else {
 					/*printf("NO OPTIMIZATION: vocab:%d,rows:%d,data_recs:%d\n",vocab_cnt ,pm->row_count,pm->data_recs);*/
@@ -874,7 +879,7 @@ rc_t VBlobSerialize ( const VBlob *self, KDataBuffer *result ) {
     bitsz_t data_bits = KDataBufferBits(&self->data);
     uint64_t data_bytes = KDataBufferBytes(&self->data);
     uint32_t row_length;
-    
+
     if (self->headers == NULL && (row_length = PageMapHasSimpleStructure(self->pm)) != 0) {
         rc = KDataBufferResize(result, 5 + data_bytes);
         if (rc == 0) {
@@ -899,22 +904,30 @@ rc_t VBlobSerialize ( const VBlob *self, KDataBuffer *result ) {
     else {
         KDataBuffer headers;
         KDataBuffer pagemap;
-        
+
         rc = KDataBufferMakeBytes(&headers, 0);
         if (rc == 0) {
+
             if (self->headers)
+            {
                 rc = BlobHeadersSerialize(self->headers, &headers, 0, &sz);
+                MemTrackName( headers.ignore, "VBlobSerialize/headers" );
+            }
             else
                 sz = 0;
             if (rc == 0) {
                 headers.elem_count = sz;
                 rc = KDataBufferMakeBytes(&pagemap, 0);
                 if (rc == 0) {
+
                     if (self->pm)
+                    {
                         rc = PageMapSerialize(self->pm, &pagemap, 0, &sz);
+                    }
                     else
                         sz = 0;
                     if (rc == 0) {
+                        MemTrackName( pagemap.ignore, "VBlobSerialize/pagemap" );
                         pagemap.elem_count = sz;
                         rc = KDataBufferResize(result, 9 + data_bytes + headers.elem_count + pagemap.elem_count);
                         if (rc == 0) {
@@ -935,7 +948,7 @@ rc_t VBlobSerialize ( const VBlob *self, KDataBuffer *result ) {
         }
         KDataBufferWhack(&headers);
     }
-    
+
     return rc;
 }
 
@@ -946,7 +959,7 @@ rc_t VBlobCreateFromData ( struct VBlob **lhs,
 {
     VBlob *y = NULL;
     rc_t rc;
-    
+
     assert(lhs);
     assert(src);
     assert(src->elem_bits == 8);
@@ -973,7 +986,7 @@ rc_t VBlobCreateFromSingleRow (
 {
     VBlob *y;
     rc_t rc;
-    
+
     rc = VBlobNew(&y, start_id, stop_id, NULL);
     TRACK_BLOB (VBlobNew, y);
     if (rc == 0) {
@@ -1024,7 +1037,7 @@ rc_t VBlobAppendRow(VBlob *self,
                     )
 {
     rc_t rc;
-    
+
     if (!PageMapHasRows(self->pm) || length != *last_length ||
         COMPARE(self->data.bit_offset, self->data.elem_bits,
                 self->data.base, *last_offset,
@@ -1044,12 +1057,12 @@ rc_t VBlobAppendRow(VBlob *self,
     }
     else
         rc = PageMapAppendRows(self->pm, length, repeat_count, true);
-    
+
     return rc;
 }
 
 static rc_t VBlobGetLastRow(VBlob *self, elem_count_t *offset, elem_count_t *length) {
-    
+
     *length = PageMapLastLength(self->pm);
     *offset = self->data.elem_count - *length;
 
@@ -1060,7 +1073,7 @@ rc_t VBlobAppend(VBlob *self, const VBlob *other) {
     rc_t rc;
     row_count_t offset;
     row_count_t length;
-    
+
     if (self->headers)
         return RC(rcVDB, rcBlob, rcConcatenating, rcSelf, rcInconsistent);
     if (other->headers)
@@ -1080,15 +1093,15 @@ rc_t VBlobAppend(VBlob *self, const VBlob *other) {
             (unsigned)self->data.elem_count,
             self->name);
 #endif
-    
+
     rc = VBlobGetLastRow(self, &offset, &length);
     if (rc == 0) {
         PageMapIterator iter;
-        
+
         rc = PageMapNewIterator(other->pm, &iter, 0, -1);
         if (rc == 0) {
             KDataBuffer orig;
-            
+
             rc = KDataBufferMakeWritable(&self->data , &orig);
             if (rc == 0) {
                 row_count_t row_count;
@@ -1116,17 +1129,17 @@ rc_t VBlobSubblob( const struct VBlob *self,struct VBlob **sub, int64_t start_id
     rc_t rc;
     KDataBuffer  kd;
     PageMapIterator pmi;
-    
+
     if (start_id < self->start_id || start_id > self->stop_id)
         return RC(rcVDB, rcBlob, rcConverting, rcId, rcOutofrange);
-    
+
     rc=PageMapNewIterator(self->pm,&pmi, 0, -1);
     if(rc == 0){
         if(PageMapIteratorAdvance(&pmi,start_id-self->start_id)){
             row_count_t numrep = PageMapIteratorRepeatCount(&pmi);
             elem_count_t offset = PageMapIteratorDataOffset(&pmi);
             elem_count_t length = PageMapIteratorDataLength(&pmi);
-            
+
 #if 0
             fprintf(stderr, "splitting %u(%u) (offset: %u, length: %u) from %s\n",
                     (unsigned)start_id, (unsigned)numrep,
@@ -1136,7 +1149,7 @@ rc_t VBlobSubblob( const struct VBlob *self,struct VBlob **sub, int64_t start_id
             if (numrep == 0){
                 return RC(rcVDB, rcBlob, rcConverting, rcRow, rcEmpty);
             }
-            
+
             rc = KDataBufferSub(&self->data, &kd, offset, length);
             if(rc == 0){
                 int64_t	stop_id;
@@ -1409,7 +1422,7 @@ static
 rc_t VBlobCacheWhack (uint64_t start_id, const void *n, void *ignore )
 {
     VBlobCache *self = ( VBlobCache* ) n;
-    assert(start_id == self->blob->start_id); 
+    assert(start_id == self->blob->start_id);
     VBlobRelease ( ( VBlob* ) self -> blob );
     free ( self );
     return 0;
@@ -1504,7 +1517,7 @@ static VBlobCache * find_in_kvector(const KVector *cself,int64_t id)
 		if( id >= bc->blob->start_id && id <= bc->blob->stop_id){
 			return bc;
 		}
-	} 
+	}
 	return NULL;
 }
 
@@ -1523,7 +1536,7 @@ const VBlob* VBlobMRUCacheFind(const VBlobMRUCache *cself, uint32_t col_idx, int
     } else {
 	is_phys=false;
 	last_blobs = self->v_last;
-    } 
+    }
 
     if(col_idx <= LAST_BLOB_CACHE_SIZE){
 	blob = last_blobs[col_idx-1].b1;
@@ -1589,7 +1602,7 @@ rc_t VBlobMRUCacheSave(const VBlobMRUCache *cself, uint32_t col_idx, const VBlob
 
     blob_size  += KDataBufferBytes(&blob->data);
     if (blob->pm != NULL) {
-        blob_size += 
+        blob_size +=
                   KDataBufferBytes(&blob->pm->cstorage)
                 + KDataBufferBytes(&blob->pm->dstorage)
                 + KDataBufferBytes(&blob->pm->istorage);
@@ -1597,7 +1610,7 @@ rc_t VBlobMRUCacheSave(const VBlobMRUCache *cself, uint32_t col_idx, const VBlob
     /** auto-raise capacity for large blob **/
     if(blob_size > self -> capacity) self -> capacity = blob_size;
 
-    
+
 
     /* now cache the blob */
     rc = VBlobCacheMake ( & bc, blob, col_idx, blob_size );
@@ -1623,7 +1636,7 @@ rc_t VBlobMRUCacheSave(const VBlobMRUCache *cself, uint32_t col_idx, const VBlob
 			VectorSet(&self->v_cache,col_idx,cache);
 		}
 	}
-	
+
         rc = insert_unique_into_kvector(self,cache,bc->blob->start_id,bc,&existing);
         if ( rc != 0 ){
             VBlobCacheWhack (bc->blob->start_id, bc, NULL );
@@ -1658,7 +1671,7 @@ rc_t VBlobMRUCacheSave(const VBlobMRUCache *cself, uint32_t col_idx, const VBlob
 				VBlobCacheWhack (existing->blob->start_id,existing,NULL);
 			}
 			/* insert at head of list */
-			DLListPushHead ( & self -> lru, & bc -> ln ); 
+			DLListPushHead ( & self -> lru, & bc -> ln );
 		}
     }
     return 0;
@@ -1684,7 +1697,7 @@ void VBlobMRUCacheSuspendFlush(VBlobMRUCache *self)
 {
 	self->suspend_flush=true;
 }
-	
+
 void VBlobMRUCacheResumeFlush(VBlobMRUCache *self)
 {
 	self->suspend_flush=false;

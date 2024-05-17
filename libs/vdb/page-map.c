@@ -44,6 +44,8 @@
 
 #include <zlib.h>
 
+#include "../klib/mem-track.h"
+
 /* Page maps describe the layout of rows within a blob.
  * The data within a page map is run-length encoded.
  * I.e. if two identical rows are stored sequentially
@@ -1252,7 +1254,9 @@ rc_t PageMapSerialize (const PageMap *self, KDataBuffer *buffer, uint64_t offset
         if (rc == 0) {
             rc = KDataBufferResize(buffer, offset + sz);
             if (rc == 0)
+            {
                 memmove(&((char *)buffer->base)[offset], temp.base, sz);
+            }
             *size = sz;
         }
         KDataBufferWhack(&temp);

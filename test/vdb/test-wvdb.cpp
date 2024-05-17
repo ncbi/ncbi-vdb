@@ -1049,7 +1049,7 @@ FIXTURE_TEST_CASE ( BlobChecksumOFF, WVDB_Fixture)
         REQUIRE_RC ( VCursorCommit ( cursor ) );
         REQUIRE_RC ( VCursorRelease ( cursor ) );
     }
-    
+
     auto const valid = ValidateBlob(TableName, ColumnName, 1);
     auto const object = (enum RCObject)GetRCObject(valid);
     auto const state = (enum RCState)GetRCState(valid);
@@ -1060,6 +1060,8 @@ FIXTURE_TEST_CASE ( BlobChecksumOFF, WVDB_Fixture)
 }
 
 //////////////////////////////////////////// Main
+#include "../../libs/klib/mem-track.h"
+
 extern "C"
 {
 
@@ -1086,6 +1088,9 @@ rc_t CC KMain ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
     rc_t rc=WVdbTestSuite(argc, argv);
+
+MemTrackDigest( cout );
+
     return rc;
 }
 

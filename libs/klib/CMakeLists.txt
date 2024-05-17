@@ -124,6 +124,8 @@ set( SRC
     writer
     ${BUILD_SPECIFIC_SRC}
     ${OS_SPECIFIC_SRC}
+
+    mem-track
 )
 
 # suppress certain compiler warnings
