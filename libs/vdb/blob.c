@@ -766,7 +766,6 @@ void VBlobPageMapOptimize ( VBlob **vblobp)
 
 			rc=KDataBufferMake(&new_data,sblob->data.elem_bits,0); /** no allocation - shoulf not fail at all **/
 			assert(rc==0);
-            MemTrackName( new_data.ignore, "VBlobPageMapOptimize" );
 
 /*******************
 * another formula
@@ -824,8 +823,10 @@ void VBlobPageMapOptimize ( VBlob **vblobp)
 								} else {
 									vocab_arr[tmp_id] = dst_offset; /** save offset */
 									data_offset[j]    = dst_offset;
+bool empty = new_data.ignore == NULL;                                    
 									rc = KDataBufferResize(&new_data,dst_offset+pm->length[i]);
 									if(rc == 0){
+if (empty) MemTrackName( new_data.ignore, "VBlobPageMapOptimize" );
 										memmove((uint8_t*)new_data.base+dst_offset*elem_sz,src,pm->length[i]*elem_sz);
 										dst_offset += pm->length[i];
 									}
