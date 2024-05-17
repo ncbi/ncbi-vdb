@@ -1104,6 +1104,7 @@ rc_t VBlobAppend(VBlob *self, const VBlob *other) {
 
             rc = KDataBufferMakeWritable(&self->data , &orig);
             if (rc == 0) {
+                MemTrackName( orig.ignore, "VBlobAppend" );
                 row_count_t row_count;
                 KDataBufferWhack(&self->data);
                 self->data = orig;

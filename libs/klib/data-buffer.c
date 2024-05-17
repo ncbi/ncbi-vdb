@@ -148,6 +148,8 @@ rc_t allocate ( buffer_impl_t ** target, size_t capacity, bool clear )
 #endif
 
     * target = y;
+MemTrackAlloc( y, bytes );
+
     return 0;
 }
 
@@ -175,6 +177,8 @@ static void release ( buffer_impl_t * self, bool wipe )
 #endif
         if ( wipe )
             memset ( self, 0, sizeof * self + self -> allocated );
+
+MemTrackFree( self );
 
         free ( self );
     }
@@ -255,6 +259,8 @@ static rc_t reallocate ( buffer_impl_t ** target, size_t capacity, bool clear, b
     self -> allocated = capacity;
     atomic32_set ( & self->refcount, 1 );
 
+MemTrackRealloc( *target, capacity, self );
+
     * target = self;
 
     return 0;
@@ -309,6 +315,7 @@ static buffer_impl_t * make_copy ( buffer_impl_t * self )
         copy = malloc ( self -> allocated + sizeof * copy );
         if ( copy != NULL )
         {
+MemTrackAlloc( copy, self -> allocated + sizeof * copy );
             memmove ( copy, self, self -> allocated + sizeof * copy );
             atomic32_set ( & copy -> refcount, 1 );
         }
@@ -380,11 +387,6 @@ LIB_EXPORT rc_t CC KDataBufferMake(KDataBuffer *target, uint64_t elem_bits, uint
             target->base = (void *)get_data(*impp);
             target->elem_count = elem_count;
         }
-    }
-
-    if ( rc == 0 )
-    {
-        MemTrackAlloc( target->ignore, bytes );
     }
 
     cc ( target );
@@ -459,7 +461,6 @@ static rc_t KDataBufferResizeInt ( KDataBuffer * self,
             self->ignore = imp;
             self->base = (void *)get_data(imp);
             self->elem_count = new_count;
-            MemTrackAlloc( self->ignore, KDataBufferBytes( self ) );
         }
         return rc;
     }
@@ -476,7 +477,6 @@ static rc_t KDataBufferResizeInt ( KDataBuffer * self,
     if (self->base == get_data(imp) && self->bit_offset == 0) {
         rc = reallocate(&imp, new_size, clear, wipe);
         if (rc == 0) {
-            MemTrackRealloc( self->ignore, new_size, imp );
             self->ignore = imp;
             self->base = (void *)get_data(imp);
             self->elem_count = new_count;
@@ -489,7 +489,6 @@ static rc_t KDataBufferResizeInt ( KDataBuffer * self,
     if (rc == 0) {
         memmove((void *)get_data(new_imp), self->base, new_size);
         release(imp, wipe);
-        MemTrackRealloc( self->ignore, roundup(new_size, 12), new_imp );
         self->base = (void *)get_data(new_imp);
         self->ignore = new_imp;
         self->elem_count = new_count;
@@ -728,7 +727,6 @@ LIB_EXPORT rc_t CC KDataBufferWhack (KDataBuffer *self)
         if (self->ignore)
         {
             release((buffer_impl_t *)self->ignore, false);
-            MemTrackFree( self->ignore );
         }
         memset(self, 0, sizeof(*self));
     }
