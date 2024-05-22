@@ -578,6 +578,7 @@ bool WColumnCommitRowData ( WColumn *self, int64_t *end_id )
                 );
             return true;
         }
+        MemTrackName( self -> rowmap . ignore, "WColumnCommitRowData");
     }
 
     rm = self -> rowmap . base;

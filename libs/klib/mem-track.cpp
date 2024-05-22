@@ -25,32 +25,72 @@
 #include "mem-track.h"
 
 #include <map>
-#include <vector>
+#include <set>
 #include <fstream>
 #include <cassert>
 #include <mutex>
+#include <iostream>
 
 using namespace std;
 
 mutex guard;
 
 typedef map< const void *, MemTrackBlockData > Blocks;
-typedef map< string, vector<const void*> > Names;
-typedef multimap< const void *, MemTrackBlockData > FreedBlocks;
+typedef map< string, set<const void*> > Names;
 
 static Blocks blocks;
-static FreedBlocks freed_blocks;
 static Names names;
+
+static uint64_t peak_memory = 0;
+static uint64_t current_memory = 0;
+//const uint64_t MemoryThreshold = 100000000; //100M
+const uint64_t MemoryThreshold = 150000;
+
+void Snapshot( std::ostream& out = cout )
+{
+    out << "peak_memory = " << peak_memory << endl;
+//    out << "names.size = " << names.size() << endl;
+    out << "source | blocks | total size | % " << endl;
+    for (auto& b : names )
+    {
+        out << b.first << " | " << b.second.size() << " | ";
+        size_t total = 0;
+        for( auto& p : b.second )
+        {
+            total += blocks.find(p)->second.max_size;
+        }
+        out << total << " | " << ( total * 100 / peak_memory ) << endl;
+    }
+    out << "==================================" << endl;
+}
+
+void UpdatePeak( uint64_t add, uint64_t subtract = 0 )
+{
+//cout << "UpdatePeak(" << current_memory << ") +" << add << " -" << subtract << endl;
+    current_memory += add;
+    current_memory -= subtract;
+
+    if ( current_memory > peak_memory )
+    {
+        peak_memory = current_memory;
+        //cout << "peak_memory= " << current_memory << endl;
+        if ( peak_memory > MemoryThreshold )
+        {
+            Snapshot();
+        }
+    }
+}
 
 void MemTrackInit()
 {
     guard.lock();
 
     blocks.clear();
-    freed_blocks.clear();
     names.clear();
     guard.unlock();
 
+    peak_memory = 0;
+    current_memory = 0;
 }
 
 MemTrackBlockData::MemTrackBlockData( size_t orig_size = 0 )
@@ -66,6 +106,7 @@ void MemTrackAlloc( const void * ptr, size_t size )
     if ( b == blocks.end() )
     {
         blocks[ ptr ] = MemTrackBlockData( size );
+        UpdatePeak( size );
     }
 
     guard.unlock();
@@ -80,6 +121,7 @@ void MemTrackRealloc( const void * ptr, size_t size, const void * new_ptr )
     {
         if ( size != b -> second . max_size )
         {
+            UpdatePeak( size, b -> second . max_size );
             b -> second . max_size = size;
         }
         if ( new_ptr != ptr )
@@ -95,7 +137,7 @@ void MemTrackRealloc( const void * ptr, size_t size, const void * new_ptr )
 void MemTrackName( const void * ptr, const char * name )
 {
     guard.lock();
- 
+//cout << "MemTrackName=" << name << endl;
     Blocks::iterator b = blocks.find( ptr );
     if ( b == blocks.end() )
     {
@@ -112,7 +154,7 @@ void MemTrackName( const void * ptr, const char * name )
     else
     {
         b -> second . name = name;
-        names[ name ].push_back( ptr );
+        names[ name ].insert( ptr );
     }
 
     guard.unlock();
@@ -126,7 +168,12 @@ void MemTrackFree( const void * ptr )
     if ( b != blocks.end() )
     {
         b -> second . freed = clock();
-        freed_blocks . insert( *b );
+        UpdatePeak( 0, b -> second . max_size );
+        auto n = names.find( b -> second . name );
+        if ( n != names.end() )
+        {
+            n -> second.erase( ptr );
+        }
         blocks . erase( ptr );
     }
 
@@ -139,40 +186,6 @@ const MemTrackBlockData * MemTrackGetBlock( const void * ptr )
     return ( b == blocks.end() ) ? nullptr : & ( b -> second );
 }
 
-uint64_t
-GetTotalSize( const void * ptr )
-{   // sum up sizes of all allocations on this address
-    auto range = freed_blocks.equal_range( ptr );
-    uint64_t sum = 0;
-    for( auto & b = range.first; b != range.second; ++b )
-    {
-        sum += b->second.max_size;
-    }
-    return sum;
-}
-
 void MemTrackDigest( std::ostream& out )
 {
-    guard.lock();
-
-    out << "Memory Tracker Digest:" << endl;
-    out << "source | blocks | total size" << endl;
-    for (auto& b : names )
-    {
-        out << b.first << " | " << b.second.size() << " | ";
-        size_t total = 0;
-        for( auto& p : b.second )
-        {
-            total += GetTotalSize( p );
-        }
-        out << total << endl;
-    }
-    out << "==================================" << endl;
-    out << "Unfreed blocks: :" << blocks.size() << endl;
-    for (auto& b : blocks )
-    {
-        out << b.first << ": " << b.second.name << " " << b.second.max_size << endl;
-    }
-
-    guard.unlock();
 }
