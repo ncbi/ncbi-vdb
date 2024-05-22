@@ -139,7 +139,10 @@ rc_t VPhysicalFinishKColumn ( VPhysical *self, VSchema *schema, const SPhysMembe
     if ( self -> meta == NULL )
     {
         /* bring over "no_hdr" from SPhysical */
-        self -> no_hdr = ( ( const SPhysEncExpr* ) smbr -> type ) -> phys -> no_hdr;
+        if ( smbr -> type )
+        {
+            self -> no_hdr = ( ( const SPhysEncExpr* ) smbr -> type ) -> phys -> no_hdr;
+        }
     }
     else
     {

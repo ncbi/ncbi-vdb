@@ -2692,6 +2692,14 @@ rc_t CC KSysDirOpenDirRead ( const KSysDir *self,
         size_t dir_size;
         uint32_t dir_length = utf16_string_measure( dir_name, &dir_size );
         uint32_t length_org = dir_length;
+
+#if _DEBUGGING
+        char output[4096] = "";
+        sprintf(output, "%ws", dir_name);
+        DBGMSG(DBG_KFS, DBG_FLAG(DBG_KFS_FILE), ("'%s' resolved to '%s'\n",
+            path, output));
+#endif
+
         while ( dir_length > 0 && dir_name [ dir_length - 1 ] == '/' )
             dir_name [ -- dir_length ] = 0;
         if ( dir_length != length_org )

@@ -24,4 +24,20 @@
 *
 */
 
-#define LIBVDB_VERS 0x03010001
+#ifndef _h_os_native_
+#define _h_os_native_
+
+#ifndef _h_unix_native_
+#include "../unix/unix-native.h"
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* _h_os_native_ */

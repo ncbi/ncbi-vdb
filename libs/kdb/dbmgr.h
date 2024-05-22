@@ -114,6 +114,8 @@ rc_t KDBManagerOpenObjectAdd ( KDBManager *self, struct KSymbol *obj );
  */
 rc_t KDBManagerOpenObjectDelete ( KDBManager *self, struct KSymbol *obj );
 
+rc_t CC KDBCmnManagerGetVFSManager ( const KDBManager *self, const struct VFSManager **vmanager );
+
 #ifdef __cplusplus
 }
 #endif

@@ -38,21 +38,23 @@ rc_t TableReaderWGS_MakeTable(const TableReaderWGS ** cself,
                               const struct VTable* table,
                               uint32_t options, size_t cache);
 
-void TableReaderWGS_Whack(const TableReaderWGS* cself);
+void TableReaderWGS_Whack(TableReaderWGS const *const self);
 
-rc_t TableReaderWGS_SeqLength(const TableReaderWGS* cself, int64_t row, INSDC_coord_len* len);
+rc_t TableReaderWGS_SeqLength(TableReaderWGS const *const self, int64_t row, INSDC_coord_len *const result);
 
-rc_t TableReaderWGS_Circular(const TableReaderWGS* cself, int64_t row, bool* circular);
+rc_t TableReaderWGS_Circular(TableReaderWGS const *const self, int64_t row, bool *const result);
 
 /* *md5 is NULL if not present */
-rc_t CC TableReaderWGS_MD5(const TableReaderWGS* cself, int64_t row, const uint8_t** md5);
+rc_t CC TableReaderWGS_MD5(TableReaderWGS const *const self, int64_t row, uint8_t const **const result);
 
 /* read a chunk of refseq into buffer from offset up to offset + len
    if offset is beyond non-circular refseq size error is returned
  */
-rc_t CC TableReaderWGS_Read(const TableReaderWGS* cself, int64_t row,
-                            INSDC_coord_zero offset, INSDC_coord_len len,
-                            uint8_t* buffer, INSDC_coord_len* written);
+rc_t CC TableReaderWGS_Read( TableReaderWGS const *const self, int64_t const row,
+                             INSDC_coord_zero const offset,
+                             INSDC_coord_len const len,
+                             uint8_t *const buffer,
+                             INSDC_coord_len *const written);
 #ifdef __cplusplus
 }
 #endif

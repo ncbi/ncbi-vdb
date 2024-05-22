@@ -120,7 +120,6 @@ bool CC KRMAttrNodeInflate ( PBSTNode *n, void *data )
  */
 
 static rc_t CC KRMDataNodeWhack ( KMDataNode *cself );
-static rc_t CC KRMDataNodeRelease ( const KMDataNode *cself );
 static rc_t CC KRMDataNodeByteOrder ( const KMDataNode *self, bool *reversed );
 static rc_t CC KRMDataNodeRead ( const KMDataNode *self, size_t offset, void *buffer, size_t bsize, size_t *num_read, size_t *remaining );
 static rc_t CC KRMDataNodeVOpenNodeRead ( const KMDataNode *self, const KMDataNode **node, const char *path, va_list args );
@@ -134,7 +133,7 @@ static KMDataNode_vt KRMDataNode_vt =
 {
     KRMDataNodeWhack,
     KMDataNodeBaseAddRef,
-    KRMDataNodeRelease,
+    KMDataNodeBaseRelease,
     KRMDataNodeByteOrder,
     KRMDataNodeRead,
     KRMDataNodeVOpenNodeRead,
@@ -203,28 +202,6 @@ KRMDataNodeWhack ( KMDataNode *bself )
     BSTreeWhack ( & self -> child, DataNodeWhack, NULL );
     free ( self -> value );
     return KMDataNodeBaseWhack ( & self -> dad );
-}
-
-static
-rc_t CC
-KRMDataNodeRelease ( const KMDataNode *bself )
-{
-    CAST();
-
-    if ( self != NULL )
-    {
-        switch ( KRefcountDrop ( & self -> dad . refcount, "KRMDataNode" ) )
-        {
-        case krefOkay:
-            break;
-        case krefWhack:
-            KMDataNodeWhack( & self -> dad );
-            break;
-        case krefNegative:
-            return RC ( rcDB, rcMetadata, rcReleasing, rcRange, rcExcessive );
-        }
-    }
-    return 0;
 }
 
 /* Inflate

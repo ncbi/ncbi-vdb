@@ -49,7 +49,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if LINUX
+#include "../klib/int_checks-priv.h"
+
+#if BSD || LINUX
 #include <unistd.h>
 #define DFL_THREAD_COUNT ((int)sysconf( _SC_NPROCESSORS_ONLN ) - 1)
 #else
@@ -448,12 +450,20 @@ rc_t process_alignment( SAMExtractor * state, const char * qname,
     align->qname = qname;
     align->flags = (uint16_t)fast_strtoi64( flag );
     align->rname = rname;
-    align->pos   = ipos;
+    assert ( FITS_INTO_INT32 ( ipos ) );
+    align->pos   = (int32_t)ipos;
     align->mapq  = (uint8_t)fast_strtoi64( mapq );
     align->cigar = cigar;
     align->rnext = rnext;
-    align->pnext = (uint32_t)fast_strtoi64( pnext );
-    align->tlen  = (uint32_t)fast_strtoi64( tlen );
+
+    i64 tmp64 = fast_strtoi64( pnext );
+    assert ( FITS_INTO_INT32 ( tmp64 ) );
+    align->pnext = (int32_t)tmp64;
+
+    tmp64 = fast_strtoi64( tlen );
+    assert ( FITS_INTO_INT32 ( tmp64 ) );
+    align->tlen  = (int32_t)tmp64;
+
     align->read  = seq;
     align->qual  = qual;
     VectorAppend( &state->alignments, NULL, align );
@@ -482,7 +492,8 @@ static bool readline( SAMExtractor * state )
         memmove( line, state->readbuf + state->readbuf_pos, len );
         curline_len += len;
         state->readbuf_pos += len;
-        if ( memchr( line, 0, curline_len - 1 ) )
+        assert ( curline_len > 0 );
+        if ( memchr( line, 0, (size_t)curline_len - 1 ) )
         {
             ERR( "NULLZ found in line: '%s'", line );
             rc_t rc   = RC( rcAlign, rcRow, rcParsing, rcData, rcInvalid );
@@ -522,7 +533,8 @@ static bool readline( SAMExtractor * state )
     state->readbuf_pos += len;
     curline[curline_len + 1] = '\0';
 
-    if ( memchr( curline, 0, curline_len - 1 ) )
+    assert ( curline_len > 0 );
+    if ( memchr( curline, 0, (size_t)curline_len - 1 ) )
     {
         ERR( "NULLZ found in line: '%s' %d", curline, curline_len );
         rc_t rc   = RC( rcAlign, rcRow, rcParsing, rcData, rcInvalid );
@@ -786,7 +798,7 @@ LIB_EXPORT rc_t CC SAMExtractorGetAlignments( SAMExtractor * s,
             if ( curline[0] == '@' )
             {
                 ERR( "header restarted" );
-                rc_t rc = RC( rcAlign, rcRow, rcParsing, rcData, rcInvalid );
+                rc = RC( rcAlign, rcRow, rcParsing, rcData, rcInvalid );
                 return rc;
             }
 

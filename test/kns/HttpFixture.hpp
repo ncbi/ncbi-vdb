@@ -50,9 +50,11 @@ public:
     static rc_t CC TimedRead ( const KSTREAM_IMPL *self, void *buffer, size_t bsize, size_t *num_read, struct timeout_t *tm );
     static rc_t CC TimedWrite ( KSTREAM_IMPL *self, const void *buffer, size_t size, size_t *num_writ, struct timeout_t *tm );
     static void AddResponse ( const std :: string& p_str, bool end_binary = false );
+    static void ForceFailure ( bool force = true ) { m_fail = force; }
 
     static std :: list < std :: string > m_requests;
     static std :: list < std :: string > m_responses;
+    static bool m_fail;
 };
 
 class HttpFixture : public KNSManagerFixture

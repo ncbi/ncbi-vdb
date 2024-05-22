@@ -948,7 +948,7 @@ rc_t PTrieDecodeNodeId7 ( const PTrie *self, uint32_t id,
     {
         uint32_t i = ( left + right ) >> 1;
         size_t sz_t = PTrieGetNodeOff ( self, i );
-        assert ( FITS_INTO_INT32 ( sz_t << 2 ) );
+        //assert ( FITS_INTO_INT32 ( sz_t << 2 ) );
         uint32_t off = (uint32_t) sz_t << 2;
         if ( off > id )
             right = i;

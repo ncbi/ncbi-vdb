@@ -48,6 +48,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "../klib/int_checks-priv.h"
+
 // All memmoves in this file are not overlapping and performance
 // is measurably improved by memcpy.
 #undef memcpy
@@ -179,7 +181,8 @@ class BGZFview
 
             memmove(dest, cur, howmany);
             len -= howmany;
-            bgzf->outsize -= howmany;
+            assert ( howmany <= bgzf->outsize );
+            bgzf->outsize -= (uInt)howmany;
             dest += howmany;
             cur += howmany;
         }
@@ -310,7 +313,7 @@ static rc_t seeker(const KThread* kt, void* in) noexcept
             KLockMake(&bgzf->lock);
             KLockAcquire(bgzf->lock); // Not ready for parsing
             bgzf->state = compressed;
-            bgzf->insize = bsize + 1;
+            bgzf->insize = bsize + (uInt)1;
             memmove(bgzf->in, state->readbuf, block_size + 1);
             bgzf->outsize = sizeof(bgzf->out);
 
@@ -318,15 +321,15 @@ static rc_t seeker(const KThread* kt, void* in) noexcept
             while (true) {
                 // Add to Inflate queue
                 TimeoutInit(&tm, 10); // 10 milliseconds
-                rc_t rc = KQueuePush(state->inflatequeue, (void*)bgzf, &tm);
-                if ((int)GetRCObject(rc) == rcTimeout) {
+                rc_t rc2 = KQueuePush(state->inflatequeue, (void*)bgzf, &tm);
+                if ((int)GetRCObject(rc2) == rcTimeout) {
                     DBG("inflate queue full");
-                } else if (rc == 0) {
+                } else if (rc2 == 0) {
                     DBG("inflate queued: %p %d %d %d", bgzf->in, bgzf->insize,
-                        rc, rcTimeout);
+                        rc2, rcTimeout);
                     break;
                 } else {
-                    ERR("inflate queue %d", rc);
+                    ERR("inflate queue %d", rc2);
                 }
             }
 
@@ -335,15 +338,15 @@ static rc_t seeker(const KThread* kt, void* in) noexcept
                 // lock will prevent parsing until inflater
                 // thread finished with this chunk.
                 TimeoutInit(&tm, 1000); // 1 second
-                rc_t rc = KQueuePush(state->parsequeue, (void*)bgzf, &tm);
-                if ((int)GetRCObject(rc) == rcTimeout) {
+                rc_t rc2 = KQueuePush(state->parsequeue, (void*)bgzf, &tm);
+                if ((int)GetRCObject(rc2) == rcTimeout) {
                     DBG("parse queue full");
-                } else if (rc == 0) {
+                } else if (rc2 == 0) {
                     DBG("parse queued: %p %d %d %d", bgzf->in, bgzf->insize,
-                        rc, rcTimeout);
+                        rc2, rcTimeout);
                     break;
                 } else {
-                    DBG("parse queued%d", rc);
+                    DBG("parse queued%d", rc2);
                 }
             }
         } else {
@@ -355,13 +358,13 @@ static rc_t seeker(const KThread* kt, void* in) noexcept
 
         DBG("reading in at %d", state->file_pos);
         size_t sz = state->readbuf_sz;
-        rc_t rc = KFileReadAll(state->infile, state->file_pos, state->readbuf,
+        rc_t rc2 = KFileReadAll(state->infile, state->file_pos, state->readbuf,
                                sz, &sz);
         state->readbuf_sz = (u32)sz;
-        if (rc) {
+        if (rc2) {
             ERR("readfile error");
-            state->rc = rc;
-            return rc;
+            state->rc = rc2;
+            return rc2;
         }
         DBG("Read in %d", state->readbuf_sz);
         state->readbuf_pos = 0;
@@ -543,7 +546,7 @@ rc_t BAMGetHeaders(SAMExtractor* state)
                 curline[linelen + 2] = '\0';
                 t += linelen;
             } else {
-                size_t linelen = 1 + nl - t;
+                size_t linelen = (size_t)(1 + nl - t);
                 DBG("ln linelen %d", linelen);
                 memmove(curline, t, linelen);
                 curline[linelen] = '\0';
@@ -554,7 +557,9 @@ rc_t BAMGetHeaders(SAMExtractor* state)
                 ERR("Not a SAM header line: '%s'", curline);
                 return RC(rcAlign, rcFile, rcParsing, rcData, rcInvalid);
             }
-            curline_len = strlen(curline);
+            size_t sz_tmp = strlen(curline);
+            assert( FITS_INTO_INT ( sz_tmp ) );
+            curline_len = (int)sz_tmp;
             SAMparse(state);
             if (state->rc) {
                 ERR("Parser returned error in BAMGetHeaders");
@@ -588,8 +593,8 @@ rc_t BAMGetHeaders(SAMExtractor* state)
             return RC(rcAlign, rcFile, rcParsing, rcData, rcInvalid);
         }
         char* name
-            = (char*)malloc(l_name + 1); // These need to persist across pools
-        if (!bview.getbytes(state->parsequeue, name, l_name))
+            = (char*)malloc((size_t)(l_name + 1)); // These need to persist across pools
+        if (!bview.getbytes(state->parsequeue, name, (size_t)l_name))
             return RC(rcAlign, rcFile, rcParsing, rcData, rcInvalid);
         DBG("ref #%d: name='%s'", i, name);
         VectorAppend(&state->bam_references, NULL, name);
@@ -614,7 +619,7 @@ static void init_decode_seq_map(u16* seqbytemap)
     for (size_t i = 0; i != 256; ++i) {
         u16 p;
         p = seqmap[i >> 4];
-        p = p << 8;
+        p = (u16)(p << 8);
         p |= seqmap[i & 0xf];
         seqbytemap[i] = bswap_16(p);
     }
@@ -704,7 +709,7 @@ void decode_qual(const u8* qualbytes, size_t l_seq, char* qual)
     for (u32 i = 0; i != l_seq / 8; ++i)
         out[i] = in[i] + 0x2121212121212121u; // 33 33 33...
 
-    for (u32 i = 8 * (l_seq / 8); i != l_seq; ++i)
+    for (size_t i = 8 * (l_seq / 8); i != l_seq; ++i)
         qual[i] = qualbytes[i] + 33;
 
     qual[l_seq] = '\0';
@@ -717,7 +722,7 @@ size_t fast_u32toa(char* buf, u32 val)
 
     // fast path:
     if (val <= 9) {
-        buf[0] = val + '0';
+        buf[0] = (char)(val + '0');
         buf[1] = '\0';
         return 1;
     }
@@ -727,8 +732,8 @@ size_t fast_u32toa(char* buf, u32 val)
         // gcc double unrolls these, clang once
         for (int i = 0; i != 10; ++i)
             for (int j = 0; j != 10; ++j) {
-                map10[10 * i + j][0] = i + '0';
-                map10[10 * i + j][1] = j + '0';
+                map10[10 * i + j][0] = (char)(i + '0');
+                map10[10 * i + j][1] = (char)(j + '0');
             }
         u64 v = 1;
         for (int i = 0; i != 20; ++i) {
@@ -747,7 +752,7 @@ size_t fast_u32toa(char* buf, u32 val)
 #else
     u32 lg2 = (64 - __builtin_clzll(val | 1));
 #endif
-    u32 lg10 = lg2 * 1233 >> 12;
+    u32 lg10 = (u32)(lg2 * 1233 >> 12);
     lg10 = lg10 - (val < pow10[lg10]) + 1;
 
     buf += lg10;
@@ -759,7 +764,7 @@ size_t fast_u32toa(char* buf, u32 val)
         val /= 100;
     }
 
-    if (val) *--buf = val + '0';
+    if (val) *--buf = (char)(val + '0');
 
     return lg10;
 }
@@ -780,13 +785,14 @@ char* decode_cigar(u32* cigar, u16 n_cigar_op)
     // Worst case:
     //   9 digits (28 bits of oplen) + 1 byte opcode
     //   Likely 1/5 that, but pool allocation cheaper than computing.
-    char* scigar = (char*)pool_alloc(n_cigar_op * 10 + 1);
+    char* scigar = (char*)pool_alloc((size_t)(n_cigar_op * 10 + 1));
     char* p = scigar;
     for (int i = 0; i != n_cigar_op; ++i) {
-        i32 oplen = cigar[i] >> 4;
-        i32 op = cigar[i] & 0xf;
+        i32 oplen = (i32)(cigar[i] >> 4);
+        i32 op = (i32)(cigar[i] & 0xf);
 
-        size_t sz = fast_u32toa(p, oplen);
+        assert ( oplen >= 0 );
+        size_t sz = fast_u32toa(p, (u32)oplen);
         p += sz;
 
         static const char opmap[] = "MIDNSHP=X???????";
@@ -828,7 +834,7 @@ rc_t BAMGetAlignments(SAMExtractor* state)
             return RC(rcAlign, rcFile, rcParsing, rcData, rcInvalid);
         }
         if (align.refID >= 0) {
-            ref_name = (char*)VectorGet(&state->bam_references, align.refID);
+            ref_name = (char*)VectorGet(&state->bam_references, (uint32_t)align.refID);
             if (!ref_name) {
                 WARN("Bad refID %d", align.refID);
                 ref_name = "";
@@ -838,7 +844,7 @@ rc_t BAMGetAlignments(SAMExtractor* state)
         DBG("next_ref_ID=%d", align.next_refID);
         if (align.next_refID >= 0) {
             next_ref_id
-                = (char*)VectorGet(&state->bam_references, align.next_refID);
+                = (char*)VectorGet(&state->bam_references, (uint32_t)align.next_refID);
             if (!next_ref_id) {
                 WARN("Bad next_ref_ID %d", align.next_refID);
                 next_ref_id = "";
@@ -876,7 +882,7 @@ rc_t BAMGetAlignments(SAMExtractor* state)
             u32* cigar = (u32*)pool_alloc(n_cigar_op * sizeof(u32));
 
             if (!bview.getbytes(state->parsequeue, (char*)cigar,
-                                n_cigar_op * 4))
+                                (size_t)(n_cigar_op * 4)))
                 return RC(rcAlign, rcFile, rcParsing, rcData, rcInvalid);
             // Worst case:
             //   9 digits (28 bits of oplen) + 1 byte opcode
@@ -894,25 +900,25 @@ rc_t BAMGetAlignments(SAMExtractor* state)
         char* seq = NULL;
         char* qual = NULL;
         if (align.l_seq) {
-            bytesofseq = (align.l_seq + 1) / 2;
+            bytesofseq = (u64)((align.l_seq + 1) / 2);
             u8* seqbytes
                 = (u8*)pool_alloc(bytesofseq); // Must be 8 byte aligned
             if (!bview.getbytes(state->parsequeue, (char*)seqbytes,
                                 bytesofseq))
                 return RC(rcAlign, rcFile, rcParsing, rcData, rcInvalid);
 
-            u8* qualbytes = (u8*)pool_alloc(align.l_seq);
+            u8* qualbytes = (u8*)pool_alloc((size_t)align.l_seq);
             if (!bview.getbytes(state->parsequeue, (char*)qualbytes,
-                                align.l_seq))
+                                (size_t)align.l_seq))
                 return RC(rcAlign, rcFile, rcParsing, rcData, rcInvalid);
 
-            seq = (char*)pool_alloc(align.l_seq + 1);
-            decode_seq(seqbytes, align.l_seq, seq);
+            seq = (char*)pool_alloc((size_t)(align.l_seq + 1));
+            decode_seq(seqbytes, (size_t)align.l_seq, seq);
             DBG("seq is '%s'", seq);
 
             // TODO: Make optional, most users don't care about quality
-            qual = (char*)pool_alloc(align.l_seq + 1);
-            decode_qual(qualbytes, align.l_seq, qual);
+            qual = (char*)pool_alloc((size_t)(align.l_seq + 1));
+            decode_qual(qualbytes, (size_t)align.l_seq, qual);
 
             DBG("%d pairs in sequence", align.l_seq);
             DBG("seq='%s'", seq);
@@ -924,15 +930,15 @@ rc_t BAMGetAlignments(SAMExtractor* state)
             qual = seq;
         }
 
-        int remain = align.block_size
+        int remain = (int)(align.block_size
             - (sizeof(align) + l_read_name + n_cigar_op * 4 + bytesofseq
                + align.l_seq)
-            + 4; // TODO, why 4?
+            + 4); // TODO, why 4?
         DBG("%d bytes remaining for ttvs", remain);
         char* ttvs = NULL;
         if (remain > 0) {
-            ttvs = (char*)pool_alloc(remain);
-            if (!bview.getbytes(state->parsequeue, ttvs, remain))
+            ttvs = (char*)pool_alloc((size_t)remain);
+            if (!bview.getbytes(state->parsequeue, ttvs, (size_t)remain))
                 return RC(rcAlign, rcFile, rcParsing, rcData, rcInvalid);
             char* cur = ttvs;
             DBG("Skipping TTVs");
@@ -961,7 +967,7 @@ rc_t BAMGetAlignments(SAMExtractor* state)
                         DBG("val=%d", i8);
                         break;
                     case 'C':
-                        u8 = *cur++;
+                        u8 = (uint8_t)(*cur++);
                         DBG("val=%d", u8);
                         break;
                     case 's':
@@ -1083,7 +1089,7 @@ rc_t threadinflate(SAMExtractor* state)
     // file can't utilize more than 12 inflater threads.
     // ~8 seems to be the sweet spot.
     // This may change if quality parsing is made optional.
-    size_t num_inflaters = MAX(1, MIN(state->num_threads - 1, 9));
+    size_t num_inflaters = (size_t)MAX(1, MIN(state->num_threads - 1, 9));
     DBG("num_inflaters is %u", num_inflaters);
     // Inflater threads
     for (u32 i = 0; i != num_inflaters; ++i) {

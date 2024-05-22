@@ -24,16 +24,19 @@
 
 set ( UNIX_BASE_SRC unix/misc.c unix/syslog.c unix/systime.c unix/syswriter.c )
 set ( UNIX_SRC ${UNIX_BASE_SRC} unix/syserrcode.c )
+set ( BSD_SRC ${UNIX_SRC} )
 set ( LINUX_SRC ${UNIX_BASE_SRC} linux/syserrcode.c )
 set ( MAC_SRC ${UNIX_SRC} )
 set ( WIN_SRC win/misc.c win/sysalloc.c win/syserrcode.c win/syslog.c win/systime.c win/syswriter.c )
 
-if ( "windows" STREQUAL ${OS} )
-    set ( OS_SPECIFIC_SRC ${WIN_SRC} )
+if( "bsd" STREQUAL ${OS} )
+    set ( OS_SPECIFIC_SRC ${BSD_SRC} )
 elseif( "linux" STREQUAL ${OS} )
     set ( OS_SPECIFIC_SRC ${LINUX_SRC} )
 elseif( "mac" STREQUAL ${OS} )
     set ( OS_SPECIFIC_SRC ${MAC_SRC} )
+elseif ( "windows" STREQUAL ${OS} )
+    set ( OS_SPECIFIC_SRC ${WIN_SRC} )
 endif()
 
 if( FLEX_FOUND AND BISON_FOUND )

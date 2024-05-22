@@ -64,6 +64,16 @@
 
 #include <os-native.h>
 
+#include "../klib/int_checks-priv.h"
+
+#ifdef WINDOWS
+#pragma warning(disable:4127)
+/*
+sizeof(size_t) < sizeof(u64) && (size_t)u64 != u64 is a valid C cross-platform condition
+*/
+#endif
+
+
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 static uint16_t LE2HUI16(void const *X) { uint16_t y; memmove(&y, X, sizeof(y)); return y; }
 static uint32_t LE2HUI32(void const *X) { uint32_t y; memmove(&y, X, sizeof(y)); return y; }
@@ -260,7 +270,7 @@ static uint64_t BGZFileGetPos(const BGZFile *self)
 /* returns the position as proportion of the whole file */
 static float BGZFileProPos(BGZFile const *const self)
 {
-    return BGZFileGetPos(self) / (double)self->fsize;
+    return (float)(BGZFileGetPos(self) / (double)self->fsize);
 }
 
 static rc_t BGZFileSetPos(BGZFile *const self, uint64_t const pos)
@@ -1200,8 +1210,8 @@ static rc_t ParseSQ(BAMFile *self, char hdata[], size_t hlen, unsigned *used, un
 
                             if (isxdigit(ch1) && isxdigit(ch2)) {
                                 rs.checksum_array[j] =
-                                    ((ch1 > '9' ? (ch1 - ('A' - 10)) : (ch1 - '0')) << 4) +
-                                     (ch2 > '9' ? (ch2 - ('A' - 10)) : (ch2 - '0'));
+                                    (uint8_t)((ch1 > '9' ? (ch1 - ('A' - 10)) : (ch1 - '0')) << 4) +
+                                     (uint8_t)(ch2 > '9' ? (ch2 - ('A' - 10)) : (ch2 - '0'));
                             }
                             else {
                                 rs.checksum = NULL;
@@ -1364,7 +1374,7 @@ DONE:
 static rc_t ParseHeader(BAMFile *self, char hdata[], size_t hlen, unsigned const rs_by_name[]) {
     unsigned rg = 0;
     unsigned i;
-    unsigned tag;
+    unsigned tag = 0;
     int st = 0;
     int ws = 1;
     unsigned used;
@@ -1490,7 +1500,7 @@ static rc_t ReadHeaders(BAMFile *self,
     char *htxt = NULL;
     unsigned nrefs;
     uint8_t *rdat = NULL;
-    unsigned rdsz;
+    unsigned rdsz = 0;
     unsigned rdms;
     unsigned i;
     int32_t i32;
@@ -1904,7 +1914,8 @@ LIB_EXPORT rc_t CC BAMFileSetPosition(const BAMFile *cself, const BAMFilePositio
 
 LIB_EXPORT rc_t CC BAMFileRewind(const BAMFile *cself)
 {
-    return BAMFileSetPositionInt(cself, cself->fpos_first, cself->ucfirst);
+    assert ( FITS_INTO_INT16 ( cself->ucfirst ) );
+    return BAMFileSetPositionInt(cself, cself->fpos_first, (uint16_t)cself->ucfirst);
 }
 
 static void BAMFileAdvance(BAMFile *const self, unsigned distance)
@@ -2476,7 +2487,8 @@ LIB_EXPORT rc_t CC BAMFileRead(const BAMFile *cself, const BAMAlignment **rhs)
 LIB_EXPORT rc_t CC BAMFileGetRefSeqById(const BAMFile *cself, int32_t id, const BAMRefSeq **rhs)
 {
     *rhs = NULL;
-    if (id >= 0 && id < cself->refSeqs)
+    assert ( FITS_INTO_INT32 ( cself->refSeqs ) );
+    if (id >= 0 && id < (int32_t)cself->refSeqs)
         *rhs = &cself->refSeq[id];
     return 0;
 }
@@ -2697,7 +2709,8 @@ LIB_EXPORT rc_t CC BAMAlignmentGetAlignmentDetail(
             break;
         }
 
-        if (rslt[i].read_pos > rlen)
+        assert ( FITS_INTO_INT32 ( rlen ) );
+        if (rslt[i].read_pos > (int32_t)rlen)
             return RC(rcAlign, rcFile, rcReading, rcData, rcInvalid);
     }
     if (pfirst)
@@ -2860,7 +2873,7 @@ LIB_EXPORT rc_t CC BAMAlignmentGetSequence2(const BAMAlignment *cself, char *rhs
      * 1111 1000 0100 1100 0010 1010 0110 1110 0001 1001 0101 1101 0011 1011 0111 0000
      *   N    T    G    K    C    Y    S    B    A    W    R    D    M    H    V    =
      */
-    static const char  tr[16] = "=ACMGRSVTWYHKDBN";
+    static const char  tr[16] = {'=','A','C','M','G','R','S','V','T','W','Y','H','K','D','B','N'};
  /* static const char ctr[16] = "=TGKCYSBAWRDMHVN"; */
     unsigned const n = getReadLen(cself);
     const uint8_t * const seq = &cself->data->raw[cself->seq];
@@ -3088,7 +3101,7 @@ static int FormatOptData(BAMAlignment const *const self,
                 buffer[cur++] = type == dt_CSTRING ? 'Z' : 'H';
                 buffer[cur++] = ':';
                 for ( ; ; ) {
-                    int const ch = base[offset++];
+                    char const ch = base[offset++];
 
                     if (ch == '\0')
                         break;
@@ -3102,7 +3115,7 @@ static int FormatOptData(BAMAlignment const *const self,
                 buffer[cur++] = 'B';
                 buffer[cur++] = ':';
                 {
-                    int const elemtype = base[offset++];
+                    char const elemtype = base[offset++];
                     unsigned const elemcount = LE2HUI32(base + offset);
                     unsigned k;
 
@@ -3290,9 +3303,9 @@ static rc_t FormatSAMBuffer(BAMAlignment const *self,
 }
 
 LIB_EXPORT rc_t CC BAMAlignmentFormatSAM(BAMAlignment const *self,
-                                         size_t *const actSize,
-                                         size_t const maxsize,
-                                         char *const buffer)
+                                         size_t *actSize,
+                                         size_t maxsize,
+                                         char *buffer)
 {
     if (self == NULL)
         return RC(rcAlign, rcReading, rcRow, rcSelf, rcNull);
@@ -3833,6 +3846,10 @@ rc_t CC BAMAlignmentGetCGCigar(BAMAlignment const *self,
 
 /* MARK: end CG stuff */
 
+#ifdef WINDOWS
+#pragma warning( push )
+#pragma warning( disable : 4996) /*sscanf is not different from sscanf_s for %llu */
+#endif
 LIB_EXPORT rc_t BAMAlignmentGetTI(BAMAlignment const *self, uint64_t *ti)
 {
     char const *const TI = get_XT(self);
@@ -3844,8 +3861,11 @@ LIB_EXPORT rc_t BAMAlignmentGetTI(BAMAlignment const *self, uint64_t *ti)
     }
     return RC(rcAlign, rcRow, rcReading, rcData, rcNotFound);
 }
+#ifdef WINDOWS
+#pragma warning( pop )
+#endif
 
-LIB_EXPORT rc_t BAMAlignmentGetRNAStrand(BAMAlignment const *const self, uint8_t *const rslt)
+LIB_EXPORT rc_t BAMAlignmentGetRNAStrand(BAMAlignment const *self, uint8_t *rslt)
 {
     if (rslt) {
         uint8_t const *const XS = get_XS(self);
@@ -3933,7 +3953,7 @@ rc_t WalkIndexStructure(uint8_t const buf[], size_t const blen,
     unsigned cp = 0;
     int32_t nrefs;
     unsigned i;
-    rc_t rc;
+    rc_t rc = 0;
 
     DBGMSG(DBG_ALIGN, DBG_FLAG(DBG_ALIGN_BAM), ("Index data length: %u", blen));
 
@@ -3954,11 +3974,11 @@ rc_t WalkIndexStructure(uint8_t const buf[], size_t const blen,
     if (nrefs == 0)
         return RC(rcAlign, rcIndex, rcReading, rcData, rcEmpty);
 
-    for (i = 0; i < nrefs; ++i) {
+    for (i = 0; (int32_t)i < nrefs; ++i) {
         int32_t bins;
         int32_t chunks;
         int32_t intervals;
-        unsigned di;
+        int32_t di;
 
         DBGMSG(DBG_ALIGN, DBG_FLAG(DBG_ALIGN_BAM), ("Index reference %u: starts at %u", i, cp));
         if (cp + 4 > blen)
@@ -4051,7 +4071,8 @@ rc_t LoadIndex2(const uint8_t data[], size_t dlen, unsigned refNo,
             if (self->bin == NULL)
                 self->bin = dst;
             self->binSize[binNo] = elements;
-            self->binStart[binNo] = dst - self->bin;
+            assert ( FITS_INTO_INT ( dst - self->bin ) );
+            self->binStart[binNo] = (int)(dst - self->bin);
             for (i = 0; i < elements; ++i) {
                 dst[i].start = get_pos(data + 16 * i + 0);
                 dst[i].end   = get_pos(data + 16 * i + 8);
@@ -4193,7 +4214,8 @@ LIB_EXPORT bool CC BAMFileIsIndexed(const BAMFile *self)
 
 LIB_EXPORT bool CC BAMFileIndexHasRefSeqId(const BAMFile *self, uint32_t refSeqId)
 {
-	if (self && self->ndx && refSeqId < self->ndx->numRefs)
+	assert ( FITS_INTO_INT ( refSeqId ) );
+	if (self && self->ndx && (int)refSeqId < self->ndx->numRefs)
 		return true;
 	return false;
 }
@@ -4224,8 +4246,10 @@ BinList calcBinList(unsigned const refBeg, unsigned const refEnd)
     unsigned i;
 
     for (i = 0; i < 6; ++i) {
-        rslt.range[i].beg = offset + refBeg / size;
-        rslt.range[i].end = offset + (refEnd - 1) / size;
+        assert ( FITS_INTO_INT16 ( offset + refBeg / size ) );
+        assert ( FITS_INTO_INT16 (offset + (refEnd - 1) / size) );
+        rslt.range[i].beg = (uint16_t)(offset + refBeg / size);
+        rslt.range[i].end = (uint16_t)(offset + (refEnd - 1) / size);
         offset += 1 << (3 * i);
         size >>= 3;
     }
@@ -4327,9 +4351,11 @@ static BAMFileSlice *makeSlice(BAMFile const *const self,
     unsigned const startBin = alignStart >> 14;
     unsigned const endBin = ((alignEnd - 1) >> 14) + 1;
     BAMFilePosition const minPos = refIndex->interval[startBin];
-    BAMFilePosition const maxPos = endBin < refIndex->intervals ? refIndex->interval[endBin] : refIndex->end;
+    BAMFilePosition const maxPos = (int)endBin < refIndex->intervals ? refIndex->interval[endBin] : refIndex->end;
     unsigned const ranges = countRanges(refIndex, minPos, maxPos, bins.range);
     BAMFileSlice *slice;
+
+    assert ( FITS_INTO_INT ( endBin ) ); /* for the initialization above */
 
     if (ranges > 0) {
         slice = malloc(sizeof(*slice) + (ranges - 1) * sizeof(slice->range[0]));
@@ -4361,7 +4387,8 @@ LIB_EXPORT rc_t CC BAMFileMakeSlice(const BAMFile *self, BAMFileSlice **rslt, ui
         return RC(rcAlign, rcFile, rcPositioning, rcIndex, rcNotFound);
     if (refSeqId >= self->refSeqs)
         return RC(rcAlign, rcFile, rcPositioning, rcData, rcNotFound);
-    if (self->ndx->numRefs <= refSeqId)
+    assert ( FITS_INTO_INT ( refSeqId ) );
+    if (self->ndx->numRefs <= (int)refSeqId)
         return RC(rcAlign, rcFile, rcPositioning, rcData, rcNotFound);
     if (alignStart >= self->refSeq[refSeqId].length)
         return RC(rcAlign, rcFile, rcPositioning, rcData, rcNotFound);
@@ -4369,7 +4396,9 @@ LIB_EXPORT rc_t CC BAMFileMakeSlice(const BAMFile *self, BAMFileSlice **rslt, ui
     if (alignEnd > self->refSeq[refSeqId].length)
         alignEnd = self->refSeq[refSeqId].length;
 
-    *rslt = makeSlice(self, refSeqId, alignStart, alignEnd);
+    assert ( FITS_INTO_INT ( alignStart ) );
+    assert ( FITS_INTO_INT ( alignEnd ) );
+    *rslt = makeSlice(self, refSeqId, (unsigned int)alignStart, (unsigned int)alignEnd);
     return 0;
 }
 
@@ -4608,7 +4637,7 @@ rc_t BAMValidateHeader(const uint8_t data[],
 {
     int32_t hlen;
     int32_t refs;
-    unsigned i;
+    int32_t i;
     unsigned cp;
 
     if (dsize < 8)
@@ -4621,7 +4650,8 @@ rc_t BAMValidateHeader(const uint8_t data[],
     if (hlen < 0)
         return RC(rcAlign, rcFile, rcValidating, rcData, rcInvalid);
 
-    if (dsize < hlen + 12)
+    assert ( FITS_INTO_INT32 ( dsize ) );
+    if ((int32_t)dsize < hlen + 12)
         return RC(rcAlign, rcFile, rcValidating, rcData, rcIncomplete);
 
     refs = LE2HI32(&data[hlen + 8]);
@@ -4760,7 +4790,8 @@ static rc_t BAMValidateIndex(struct VPath const *bampath,
                             goto BAD_BLOCK_OFFSET;
                         }
                         dsize += temp;
-                        if (dsize - bpos < 4 || dsize - bpos < rsize)
+                        assert ( FITS_INTO_INT32 ( dsize - bpos ) );
+                        if (dsize - bpos < 4 || (int32_t)(dsize - bpos) < rsize)
                             goto BAD_BLOCK_OFFSET;
                     }
                     rsize = LE2HI32(data + bpos);
@@ -4771,7 +4802,8 @@ static rc_t BAMValidateIndex(struct VPath const *bampath,
                         ++i;
                         continue;
                     }
-                    if (dsize - bpos < rsize)
+                    assert ( FITS_INTO_INT32 ( dsize - bpos ) );
+                    if ((int32_t)(dsize - bpos) < rsize)
                         goto READ_MORE;
 /*                    rc = BAMAlignmentParse(&algn, data + bpos + 4, rsize); */
                     if (rc)
@@ -4782,12 +4814,14 @@ static rc_t BAMValidateIndex(struct VPath const *bampath,
                         uint16_t const binNo = getBin(&algn);
                         int32_t const position = getPosition(&algn);
 
-                        if (ctx.position[i].refNo == refSeqId &&
-                            (ctx.position[i].binNo == binNo ||
+                        assert ( FITS_INTO_INT ( refSeqId ) );
+                        assert ( FITS_INTO_INT16 ( ctx.position[i].binNo ) );
+                        if (ctx.position[i].refNo == (unsigned int)refSeqId &&
+                            ((uint16_t)ctx.position[i].binNo == binNo ||
                              ctx.position[i].binNo == ~((unsigned)0)
                         ))
                             ++stats.indexBin.good;
-                        else if (ctx.position[i].refNo == refSeqId)
+                        else if (ctx.position[i].refNo == (unsigned int)refSeqId)
                             ++stats.indexBin.warning;
                         else
                             ++stats.indexBin.error;
@@ -4825,14 +4859,17 @@ static rc_t BAMValidate3(BAMValidate_ctx_t *ctx,
     unsigned const mapQ = getMapQual(algn);
     bool const aligned =
         ((flags & BAMFlags_SelfIsUnmapped) == 0) &&
-        (refSeqId >= 0) && (refSeqId < ctx->nrefs) &&
+        (refSeqId >= 0) && (refSeqId < (int32_t)ctx->nrefs) &&
         (refPos >= 0) && (refPos < ctx->refLen[refSeqId]) && (mapQ > 0);
+    assert ( FITS_INTO_INT32 ( ctx->nrefs ) ); /* for the check above */
 
     if (ctx->options & bvo_ExtraFields) {
     }
     if (aligned) {
         if ((ctx->options & bvo_Sorted) != 0) {
-            if (ctx->lastRefId < refSeqId || (ctx->lastRefId == refSeqId && ctx->lastRefPos <= refPos))
+            assert ( FITS_INTO_INT32 ( ctx->lastRefId ) );
+            assert ( FITS_INTO_INT32 ( ctx->lastRefPos ) );
+            if ((int32_t)ctx->lastRefId < refSeqId || ((int32_t)ctx->lastRefId == refSeqId && (int32_t)ctx->lastRefPos <= refPos))
                 ++ctx->stats->inOrder.good;
             else
                 ++ctx->stats->inOrder.error;
@@ -4887,7 +4924,8 @@ static rc_t BAMValidate2(void *Ctx, const BGZFile *file,
             unsigned nrefs;
             unsigned data_start;
 
-            rc2 = BAMValidateHeader(ctx->buf, ctx->bsize,
+            assert ( FITS_INTO_INT ( ctx->bsize ) );
+            rc2 = BAMValidateHeader(ctx->buf, (unsigned int)ctx->bsize,
                                        &header_len, &refs_start,
                                        &nrefs, &data_start);
 
@@ -4926,7 +4964,8 @@ static rc_t BAMValidate2(void *Ctx, const BGZFile *file,
         }
         if (rc == 0) {
             if (ctx->stats->bamHeaderIsGood) {
-                unsigned cp = ctx->dnext;
+                unsigned cp = (unsigned int)(ctx->dnext);
+                assert ( FITS_INTO_INT ( ctx->dnext ) );
 
                 while (cp + 4 < ctx->bsize) {
                     int32_t rsize;
@@ -4937,10 +4976,11 @@ static rc_t BAMValidate2(void *Ctx, const BGZFile *file,
                         ctx->options = bvo_BlockStructure;
 
                         /* throw away the rest of the current buffer */
+                        assert ( FITS_INTO_INT ( ctx->bsize ) );
                         if (cp >= ctx->bsize - dsize)
-                            cp = ctx->bsize;
+                            cp = (unsigned int)ctx->bsize;
                         else
-                            cp = ctx->bsize - dsize;
+                            cp = (unsigned int)(ctx->bsize - dsize);
 
                         rc = RC(rcAlign, rcFile, rcValidating, rcData, rcInvalid);
                         break;
@@ -4969,14 +5009,15 @@ static rc_t BAMValidate2(void *Ctx, const BGZFile *file,
                         break;
                 }
                 if (&ctx->buf[cp] >= data) {
+                    assert ( FITS_INTO_INT ( ctx->bsize ) );
                     if (cp < ctx->bsize) {
                         ctx->bsize -= cp;
                         memmove(ctx->buf, &ctx->buf[cp], ctx->bsize);
-                        cp = ctx->bsize;
+                        cp = (unsigned int)ctx->bsize;
                     }
                     else {
                         assert(cp == ctx->bsize);
-                        cp = ctx->bsize = 0;
+                        cp = (unsigned int)(ctx->bsize = 0);
                     }
                 }
                 ctx->dnext = cp;

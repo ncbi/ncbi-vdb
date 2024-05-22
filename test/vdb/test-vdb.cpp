@@ -33,9 +33,13 @@
 #include <vdb/vdb-priv.h>
 #include <vdb/blob.h>
 
+#include <vfs/manager.h>
+#include <vfs/manager-priv.h>
+
 extern "C" {
     #include <../libs/vdb/blob-priv.h>
     #include <../libs/vdb/page-map.h>
+    #include <../libs/vfs/manager-priv.h>
 }
 
 #include <ktst/unit_test.hpp> // TEST_CASE
@@ -544,6 +548,21 @@ TEST_CASE(View_On_An_Existing_Schema)
     REQUIRE_RC(VDatabaseRelease(db));
     REQUIRE_RC(VDBManagerRelease(mgr));
 }
+
+TEST_CASE(KDBRManager_MakeReadWithVFSManager)
+{   // make sure VFSManager does not leak
+    VFSManager *v = 0;
+    VFSManagerMakeLocal(&v, nullptr); // v->refcount=1
+    REQUIRE_EQ( 1, (int)atomic32_read( & v->refcount ) );
+
+    const VDBManager *d = 0;
+    REQUIRE_RC( VDBManagerMakeReadWithVFSManager(&d, NULL, v) );
+    REQUIRE_EQ( 2, (int)atomic32_read( & v->refcount ) );
+    REQUIRE_RC( VDBManagerRelease(d) );
+    REQUIRE_EQ( 1, (int)atomic32_read( & v->refcount ) );
+
+    REQUIRE_RC( VFSManagerRelease(v) );
+};
 
 //////////////////////////////////////////// Main
 extern "C"

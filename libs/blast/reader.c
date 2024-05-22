@@ -256,7 +256,7 @@ uint32_t _VCursorReadArray(const VCursor *self,
         /* TODO: needs to be verified what row_len is expected
             if (row_len != 1) return eVdbBlastErr; */
 
-        S
+        TRACE();
 
         return rc == 0 ? eVdbBlastNoErr : eVdbBlastErr;
     }
@@ -460,22 +460,22 @@ bool _ReadDescNextRead(ReadDesc *self, VdbBlastStatus *status)
     if (_VdbBlastRunVarReadNum(self->run)) {
         bool found = false;
         if (_ReadDescFindNextRead(self, &found)) {
-            S
+            TRACE();
             return false;
         }
         else if (found) {
             *status = _ReadDescFixReadId(self);
-            S
+            TRACE();
             return true;
         }
         else {
-            S
+            TRACE();
             return false;
         }
     }
     else /* fixed spot descriptor */ {
         if (rd->nBioReads == 0) {
-            S
+            TRACE();
             return false;
         }
 
@@ -484,7 +484,7 @@ bool _ReadDescNextRead(ReadDesc *self, VdbBlastStatus *status)
 
         for (i = self->read + 1; i <= nreads; ++i) {
             if (rd->readType[i - 1] & SRA_READ_TYPE_BIOLOGICAL) {
-                S
+                TRACE();
                 read = i;
                 break;
             }
@@ -492,13 +492,13 @@ bool _ReadDescNextRead(ReadDesc *self, VdbBlastStatus *status)
 
         if (read == 0) {
             if (++self->spot > rd->spotCount) {
-                S
+                TRACE();
                 return false;
             }
 
             for (i = 1; i <= nreads; ++i) {
                 if (rd->readType[i - 1] & SRA_READ_TYPE_BIOLOGICAL) {
-                    S
+                    TRACE();
                     read = i;
                     break;
                 }
@@ -506,14 +506,14 @@ bool _ReadDescNextRead(ReadDesc *self, VdbBlastStatus *status)
         }
 
         if (read > 0) {
-            S
+            TRACE();
             self->read = read;
             ++self->read_id;
             *status = _ReadDescFixReadId(self);
             return true;
         }
         else
-            S
+            TRACE();
 
             return read;
         }
@@ -525,11 +525,11 @@ bool _ReadDescSameRun(const ReadDesc *self)
     assert(self);
 
     if (self->prev == NULL && self->run == NULL) {
-        S
+        TRACE();
         return false;
     }
 
-    S
+    TRACE();
     return self->prev == self->run;
 }
 
@@ -575,7 +575,7 @@ static
 bool _Reader2naEor(const Reader2na *self)
 {
     assert(self);
-    S
+    TRACE();
     return self->eor;
 }
 
@@ -657,12 +657,12 @@ uint32_t _Reader2naGetBlob(Reader2na *self,
 
         if ((int64_t)desc->spot >= *first &&
             desc->spot < *first + *count) {
-            S
+            TRACE();
             return eVdbBlastNoErr;
         }
 
         if (fresh) {
-            S
+            TRACE();
             return eVdbBlastErr;
         }
 
@@ -675,7 +675,7 @@ uint32_t _Reader2naGetBlob(Reader2na *self,
         }
     }
 
-    S
+    TRACE();
     return eVdbBlastErr;
 }
 
@@ -705,10 +705,10 @@ uint32_t _Reader2naCalcReadReaderColsParams(const ReadDesc *desc,
             *start += cols->read_len[i - 1];
         }
     }
-    S
+    TRACE();
 
     if (cols->read_len[desc->read - 1] == 0) {
-        S
+        TRACE();
         DBGMSG(DBG_BLAST, DBG_FLAG(DBG_BLAST_BLAST),
             ("%s: %s:%d:%d(%d): READ_LEN=0\n",
             __func__, desc->run->path, desc->spot, desc->read, desc->read_id));
@@ -717,7 +717,7 @@ uint32_t _Reader2naCalcReadReaderColsParams(const ReadDesc *desc,
     else if (!ignoreReadFilter
         && cols->read_filter[desc->read - 1] != READ_FILTER_PASS)
     {
-        S
+        TRACE();
         DBGMSG(DBG_BLAST, DBG_FLAG(DBG_BLAST_BLAST),
             ("%s: %s:%d:%d(%d): READ_FILTER != READ_FILTER_PASS\n",
             __func__, desc->run->path, desc->spot, desc->read, desc->read_id));
@@ -735,7 +735,7 @@ uint32_t _Reader2naCalcReadReaderColsParams(const ReadDesc *desc,
            as are not stored in CMP_READ) */
         if (ReaderColsIsReadCompressed(cols, desc->read - 1)) {
             to_read = 0;
-            S
+            TRACE();
             DBGMSG(DBG_BLAST, DBG_FLAG(DBG_BLAST_BLAST),
                 ("%s: %s:%d:%d(%d): PRIMARY_ALIGNMENT_ID != 0\n", __func__,
                  desc->run->path, desc->spot, desc->read, desc->read_id));
@@ -764,7 +764,7 @@ uint32_t _Reader2naCalcReadReaderColsParams(const ReadDesc *desc,
                 to_read -= delta;
             }
             if (to_read < min_read_length) {
-                S
+                TRACE();
                 DBGMSG(DBG_BLAST, DBG_FLAG(DBG_BLAST_BLAST),
                     ("%s: %s:%d:%d(%d): READ_LEN=%d: TOO SHORT (<%d)\n",
                     __func__, desc->run->path, desc->spot, desc->read,
@@ -802,13 +802,13 @@ bool _Reader2naNextData(Reader2na *self,
 
     *status = _Reader2naReadReaderCols(self, &empty);
     if (*status != eVdbBlastNoErr) {
-        S
+        TRACE();
         return false;
     }
     if (empty)
         return true;
     if (!self->curs || !desc->run) {
-        S
+        TRACE();
         *status = eVdbBlastErr;
         return false;
     }
@@ -827,7 +827,7 @@ bool _Reader2naNextData(Reader2na *self,
         uint32_t elem_bits = 0;
         rc_t rc = 0;
 
-        S
+        TRACE();
         DBGMSG(DBG_BLAST, DBG_FLAG(DBG_BLAST_BLAST),
             ("%s: %s:%ld:%d(%ld): READ_LEN=%d\n", __func__,
             self->desc.run->path, self->desc.spot, self->desc.read,
@@ -851,19 +851,19 @@ bool _Reader2naNextData(Reader2na *self,
         }
 
         if (elem_bits != 2) {
-            S
+            TRACE();
             *status = eVdbBlastErr;
             return false;
         }
 
         if (out->length_in_bases < start) {
-            S
+            TRACE();
             *status = eVdbBlastErr;
             return false;
         }
 
         out->offset_to_first_bit += start * 2;
-        S
+        TRACE();
 
         out->length_in_bases = to_read;
         while (out->offset_to_first_bit >= 8) {
@@ -871,7 +871,7 @@ bool _Reader2naNextData(Reader2na *self,
             out->offset_to_first_bit -= 8;
         }
         out->read_id = desc->read_id;
-        S
+        TRACE();
         return true;
     }
 }
@@ -894,7 +894,7 @@ uint32_t _Reader2naData(Reader2na *self,
     {   status = &dummy; }
     *status = eVdbBlastErr;
     if (buffer_length && buffer == NULL) {
-        S
+        TRACE();
         return 0;
     }
 
@@ -902,7 +902,7 @@ uint32_t _Reader2naData(Reader2na *self,
     desc = &self->desc;
     *status = _Reader2naGetBlob(self, &data->blob, desc, &first, &count);
     if (*status == eVdbBlastErr) {
-        S
+        TRACE();
         return 0;
     }
 
@@ -914,14 +914,14 @@ uint32_t _Reader2naData(Reader2na *self,
             if (ignorable) {
                 /* special case */
                 if (n > 0) { /* let's retry during next call */
-                    S
+                    TRACE();
                     *status = eVdbBlastNoErr;
                 }
                 else
-                {   S }
+                    TRACE();
                 return n;
             }
-            S
+            TRACE();
             return 0;
         }
         if (p->length_in_bases > 0)
@@ -930,12 +930,12 @@ uint32_t _Reader2naData(Reader2na *self,
             if (*status != eVdbBlastNoErr) {
                 return 0;
             }
-            S
+            TRACE();
             self->eor = true;
             break;
         }
         if (desc->spot >= first + count) {
-            S
+            TRACE();
             break;
         }
     }
@@ -972,36 +972,37 @@ uint64_t _Reader2naRead(Reader2na *self,
     *starting_base = self->starting_base;
 
     if (_Reader2naEor(self)) {
-        S
+        TRACE();
         *status = eVdbBlastNoErr;
         return 0;
     }
 
     *status = _Reader2naReadReaderCols(self, &empty);
     if (*status != eVdbBlastNoErr) {
-        S
+        TRACE();
         return 0;
     }
 
     if (!empty) {
         *status = eVdbBlastErr;
         if (!self->curs || !desc->run) {
-            S
+            TRACE();
             return 0;
         }
 
         assert(desc->run->path);
 
         *status = eVdbBlastNoErr;
-        if (!_VdbBlastRunVarReadNum(desc->run) && desc->run->rd.nBioReads == 0) {
-            S
+        if (!_VdbBlastRunVarReadNum(desc->run) && desc->run->rd.nBioReads == 0)
+        {
+            TRACE();
             return 0;
         }
 
         to_read = _Reader2naCalcReadReaderColsParams(&self->desc, &self->cols,
             &start, min_read_length, ignoreReadFilter);
         if (to_read <= self->starting_base) {
-            S
+            TRACE();
             DBGMSG(DBG_BLAST, DBG_FLAG(DBG_BLAST_BLAST), (
                 "%s: %s:%d:%d(%d): READ_LEN=%d: TOO SHORT (starting_base=%d)\n",
                 __func__, desc->run->path, desc->spot, desc->read,
@@ -1016,14 +1017,14 @@ uint64_t _Reader2naRead(Reader2na *self,
     }
 
     if (to_read > 0) {
-        S
+        TRACE();
         rc = VCursorReadBitsDirect(self->curs, desc->spot, self->col_READ, 2,
             start, buffer, 0, (uint32_t)buffer_size * 4, &num_read, &remaining);
         if (rc) {
             if (rc == SILENT_RC
                 (rcVDB, rcCursor, rcReading, rcBuffer, rcInsufficient))
             {
-                S
+                TRACE();
                 rc = 0;
                 num_read = (uint32_t)buffer_size * 4;
             }
@@ -1038,7 +1039,7 @@ uint64_t _Reader2naRead(Reader2na *self,
         }
         *status
             = (num_read == 0 && remaining == 0) ? eVdbBlastErr : eVdbBlastNoErr;
-        S
+        TRACE();
     }
 
     if (num_read >= to_read) {
@@ -1046,11 +1047,11 @@ uint64_t _Reader2naRead(Reader2na *self,
         num_read = to_read;
         if (!_ReadDescNextRead(desc, status))
         {   self->eor = true; }
-        S
+        TRACE();
     }
     else {
         self->starting_base += num_read;
-        S
+        TRACE();
     }
 
     return num_read;
@@ -1143,12 +1144,12 @@ uint32_t _Core2naOpen1stRun(Core2na *self,
                 status = _Reader2naOpenCursor(reader);
                 if (status != eVdbBlastNoErr) {
                     bool keep = true;
-                    S
+                    TRACE();
                     _Reader2naReset(reader, &keep, &status);
                 }
             }
             else
-            {   S }
+                TRACE();
         }
         else if (reader->refs == NULL) {
             reader->refs = _RunSetMakeReferences(runs, &status);
@@ -1158,7 +1159,7 @@ uint32_t _Core2naOpen1stRun(Core2na *self,
         }
     }
     else {
-        S
+        TRACE();
         self->eos = true;
     }
 
@@ -1188,7 +1189,7 @@ static VdbBlastStatus _Core2naOpenNextRunOrTbl
 
     if (!keep) {
         if (core->irun >= runs->krun - 1) { /* No more runs to read */
-            S
+            TRACE();
             core->eos = true;
             return eVdbBlastNoErr;
         }
@@ -1200,13 +1201,13 @@ static VdbBlastStatus _Core2naOpenNextRunOrTbl
 
         VdbBlastRun *run = &runs->run[core->irun];
         if (run == NULL) {
-            S
+            TRACE();
             return eVdbBlastErr;
         }
 
         status = _VdbBlastRunFillReadDesc(run, 0, desc);
         if (status != eVdbBlastNoErr) {
-            S
+            TRACE();
             return status;
         }
 
@@ -1217,16 +1218,16 @@ static VdbBlastStatus _Core2naOpenNextRunOrTbl
         }
         status = _Reader2naOpenCursor(reader);
         if (status == eVdbBlastNoErr) {
-            S
+            TRACE();
         }
         else {
-            S
+            TRACE();
         }
 
         return status;
     }
 
-    S
+    TRACE();
     return eVdbBlastNoErr;
 }
 
@@ -1247,12 +1248,12 @@ uint32_t _Core2naDataSeq(Core2na *self,
 
     while (*status == eVdbBlastNoErr && num_read == 0) {
         if (_Reader2naEor(&self->reader) || data->irun != self->irun) {
-            S
+            TRACE();
             VBlobRelease(data->blob);
             data->blob = NULL;
         }
         if (_Reader2naEor(&self->reader)) {
-            S
+            TRACE();
             *status = _Core2naOpenNextRunOrTbl(self, runs);
             if (*status != eVdbBlastNoErr) {
                 STSMSG(1, ("Error: "
@@ -1317,7 +1318,7 @@ uint64_t _Core2naReadSeq(Core2na *self,
     assert(self && status && runs);
 
     if (buffer_size == 0) {
-        S
+        TRACE();
         *status = eVdbBlastErr;
         return 0;
     }
@@ -1326,22 +1327,22 @@ uint64_t _Core2naReadSeq(Core2na *self,
 
     while (*status == eVdbBlastNoErr && num_read == 0) {
         if (_Reader2naEor(&self->reader)) {
-            S
+            TRACE();
             *status = _Core2naOpenNextRunOrTbl(self, runs);
             if (*status != eVdbBlastNoErr) {
-                S
+                TRACE();
                 return 0;
             }
         }
 
         if (self->eos) {
-            S
+            TRACE();
             return 0;
         }
 
         num_read = _Reader2naRead(&self->reader, status, read_id, starting_base,
             buffer, buffer_size, self->min_read_length, ignoreReadFilter);
-        S
+        TRACE();
     }
 
     return num_read;
@@ -1384,12 +1385,12 @@ static size_t _Core4naReadSeq(Core4na *self, const RunSet *runs,
 
     *status = _RunSetFindReadDesc(runs, read_id, desc);
     if (*status != eVdbBlastNoErr) {
-        S
+        TRACE();
     }
     else {
         rc_t rc = 0;
         if (!_ReadDescSameRun(desc)) {
-            S
+            TRACE();
             ReaderColsReset(&self->cols);
             VCursorRelease(self->curs);
             ((Core4na*)self)->curs = NULL;
@@ -1397,7 +1398,7 @@ static size_t _Core4naReadSeq(Core4na *self, const RunSet *runs,
             *status = _VdbBlastRunMakeReaderColsCursor(desc->run,
                 &((Core4na*)self)->curs, &((Core4na*)self)->col_READ, false,
                 &(((Core4na*)self)->cols), desc);
-            S
+            TRACE();
         }
 
         if (*status == eVdbBlastNoErr && rc == 0) {
@@ -1421,7 +1422,7 @@ static size_t _Core4naReadSeq(Core4na *self, const RunSet *runs,
                     then this read is skipped by 2na reader (usually filtered)
                     and should not be accessed by 4na reader */
                     *status = eVdbBlastInvalidId;
-                    S
+                    TRACE();
                 }
                 else {
                     if (to_read >= starting_base) {
@@ -1430,7 +1431,7 @@ static size_t _Core4naReadSeq(Core4na *self, const RunSet *runs,
                         if (buffer_length < to_read) {
                             to_read = (uint32_t)buffer_length;
                         }
-                        S
+                        TRACE();
                         rc = VCursorReadBitsDirect(self->curs,
                             desc->spot, self->col_READ, 8,
                             start, buffer, 0, to_read, &num_read, &remaining);
@@ -1443,7 +1444,7 @@ static size_t _Core4naReadSeq(Core4na *self, const RunSet *runs,
                         }
                     }
                     else {
-                        S
+                        TRACE();
                         *status = eVdbBlastErr;
                     }
                 }
@@ -1454,7 +1455,7 @@ static size_t _Core4naReadSeq(Core4na *self, const RunSet *runs,
         {   *status = rc ? eVdbBlastErr : eVdbBlastNoErr; }
     }
 
-    S
+    TRACE();
     return num_read;
 }
 
@@ -1486,25 +1487,25 @@ static const uint8_t* _Core4naDataSeq(Core4na *self, const RunSet *runs,
 
     *status = _RunSetFindReadDesc(runs, read_id, desc);
     if (*status != eVdbBlastNoErr)
-    {   S }
+        TRACE();
     else {
         rc_t rc = 0;
         bool empty = false;
         const uint8_t *base = NULL;
         if (!_ReadDescSameRun(desc)) {
-            S
+            TRACE();
             ReaderColsReset(&self->cols);
             VCursorRelease(self->curs);
             self->curs = NULL;
             assert(desc->run && desc->run->obj);
             *status = _VdbBlastRunMakeReaderColsCursor(desc->run, &self->curs,
                 &self->col_READ, false, &self->cols, desc);
-            S
+            TRACE();
         }
 
         if (*status == eVdbBlastNoErr) {
             *status = _VCursorReadReaderCols(self->curs, desc, &self->cols, &empty);
-            S
+            TRACE();
         }
 
         if (rc == 0 && *status == eVdbBlastNoErr) {
@@ -1523,13 +1524,13 @@ static const uint8_t* _Core4naDataSeq(Core4na *self, const RunSet *runs,
             {   /* FILTERed reads are not returned by 2na reader:
                    4na readed should not ask for them */
                 *status = eVdbBlastInvalidId;
-                S
+                TRACE();
             }
             else if (ReaderColsIsReadCompressed(&self->cols, desc->read - 1)) {
                 /* Compressed CMP_READs are not returned by 2na reader:
                    4na readed should not ask for them */
                 *status = eVdbBlastInvalidId; /*  */
-                S
+                TRACE();
             }
             else {
                 if (self->blob) {
@@ -1562,7 +1563,7 @@ static const uint8_t* _Core4naDataSeq(Core4na *self, const RunSet *runs,
                     }
                     else {
                         if (elem_bits != 8) {
-                            S
+                            TRACE();
                             *status = eVdbBlastErr;
                             base = NULL;
                         }
@@ -1573,7 +1574,7 @@ static const uint8_t* _Core4naDataSeq(Core4na *self, const RunSet *runs,
                             if (to_read < self->min_read_length) {
                         /* Read with read_len < min is not returned by 2naReader
                            - it should not be accessed by 4na reader */
-                                S
+                                TRACE();
                                 * status = eVdbBlastInvalidId;
                                 base = NULL;
                             }
@@ -1586,11 +1587,11 @@ static const uint8_t* _Core4naDataSeq(Core4na *self, const RunSet *runs,
                                 if (row_len >= start) {
                                     row_len -= start;
                                     if (to_read > row_len) {
-                                        S
+                                        TRACE();
                                         *status = eVdbBlastErr;
                                     }
                                     else {
-                                        S
+                                        TRACE();
                                         *length = to_read;
                                         if (to_read > 0)
                                             *status = eVdbBlastNoErr;
@@ -1604,7 +1605,7 @@ static const uint8_t* _Core4naDataSeq(Core4na *self, const RunSet *runs,
                                     }
                                 }
                                 else {
-                                    S
+                                    TRACE();
                                     *status = eVdbBlastErr;
                                 }
                             }
@@ -1906,7 +1907,7 @@ uint32_t CC VdbBlast2naReaderData(VdbBlast2naReader *self,
     if (rc == 0) {
         n = _Core2naData((Core2na*)core2na, &self->data, &self->set->runs,
             status, buffer, buffer_length, self->set->ignoreReadFilter);
-        S
+        TRACE();
         if (n > 0 && verbose)
         {   _Packed2naReadPrint(buffer, self->data.blob); }
         if (0 && verbose) {
@@ -1924,7 +1925,7 @@ uint32_t CC VdbBlast2naReaderData(VdbBlast2naReader *self,
     if (rc)
     {   *status = eVdbBlastErr; }
 
-    S
+    TRACE();
     return n;
 }
 
@@ -2050,7 +2051,7 @@ size_t CC VdbBlast4naReaderRead(const VdbBlast4naReader *self,
     {   status = &dummy; }
 
     if (self == NULL) {
-        S
+        TRACE();
         *status = eVdbBlastErr;
         return 0;
     }
