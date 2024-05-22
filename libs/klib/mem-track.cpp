@@ -43,8 +43,8 @@ static Names names;
 
 static uint64_t peak_memory = 0;
 static uint64_t current_memory = 0;
-//const uint64_t MemoryThreshold = 100000000; //100M
-const uint64_t MemoryThreshold = 150000;
+const uint64_t MemoryThreshold = 100000000; //100M
+//const uint64_t MemoryThreshold = 150000;
 
 void Snapshot( std::ostream& out = cout )
 {
@@ -60,20 +60,25 @@ void Snapshot( std::ostream& out = cout )
             total += blocks.find(p)->second.max_size;
         }
         out << total << " | " << ( total * 100 / peak_memory ) << endl;
+        for( auto& p : b.second )
+        {
+            auto& b = blocks.find(p)->second;
+            cout << "   " << b.name << " max_size=" << b.max_size << " created = " << b.created  << " freed = " << b.freed << endl;
+        }
     }
     out << "==================================" << endl;
 }
 
 void UpdatePeak( uint64_t add, uint64_t subtract = 0 )
 {
-//cout << "UpdatePeak(" << current_memory << ") +" << add << " -" << subtract << endl;
+cout << "UpdatePeak(" << current_memory << ") +" << add << " -" << subtract << endl;
     current_memory += add;
     current_memory -= subtract;
 
     if ( current_memory > peak_memory )
     {
         peak_memory = current_memory;
-        //cout << "peak_memory= " << current_memory << endl;
+        cout << "peak_memory= " << current_memory << endl;
         if ( peak_memory > MemoryThreshold )
         {
             Snapshot();
@@ -137,7 +142,7 @@ void MemTrackRealloc( const void * ptr, size_t size, const void * new_ptr )
 void MemTrackName( const void * ptr, const char * name )
 {
     guard.lock();
-//cout << "MemTrackName=" << name << endl;
+cout << "MemTrackName=" << name << endl;
     Blocks::iterator b = blocks.find( ptr );
     if ( b == blocks.end() )
     {
