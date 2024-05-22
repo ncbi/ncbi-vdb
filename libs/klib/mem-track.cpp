@@ -28,8 +28,11 @@
 #include <vector>
 #include <fstream>
 #include <cassert>
+#include <mutex>
 
 using namespace std;
+
+mutex guard;
 
 typedef map< const void *, MemTrackBlockData > Blocks;
 typedef map< string, vector<const void*> > Names;
@@ -41,9 +44,13 @@ static Names names;
 
 void MemTrackInit()
 {
+    guard.lock();
+
     blocks.clear();
     freed_blocks.clear();
     names.clear();
+    guard.unlock();
+
 }
 
 MemTrackBlockData::MemTrackBlockData( size_t orig_size = 0 )
@@ -53,15 +60,21 @@ MemTrackBlockData::MemTrackBlockData( size_t orig_size = 0 )
 
 void MemTrackAlloc( const void * ptr, size_t size )
 {
+    guard.lock();
+
     Blocks::iterator b = blocks.find( ptr );
     if ( b == blocks.end() )
     {
         blocks[ ptr ] = MemTrackBlockData( size );
     }
+
+    guard.unlock();
 }
 
 void MemTrackRealloc( const void * ptr, size_t size, const void * new_ptr )
 {
+    guard.lock();
+
     Blocks::iterator b = blocks.find( ptr );
     if ( b != blocks.end() )
     {
@@ -75,10 +88,14 @@ void MemTrackRealloc( const void * ptr, size_t size, const void * new_ptr )
             blocks.erase( ptr );
         }
     }
+
+    guard.unlock();
 }
 
 void MemTrackName( const void * ptr, const char * name )
 {
+    guard.lock();
+ 
     Blocks::iterator b = blocks.find( ptr );
     if ( b == blocks.end() )
     {
@@ -86,14 +103,25 @@ void MemTrackName( const void * ptr, const char * name )
     }
     if ( b -> second . name . size() != 0 )
     {
-        assert(false);
+        if ( b -> second . name != string(name) )
+        {
+            assert(false);
+        }
+        // same name, do nothing
     }
-    b -> second . name = name;
-    names[ name ].push_back( ptr );
+    else
+    {
+        b -> second . name = name;
+        names[ name ].push_back( ptr );
+    }
+
+    guard.unlock();
 }
 
 void MemTrackFree( const void * ptr )
 {
+    guard.lock();
+
     Blocks::iterator b = blocks.find( ptr );
     if ( b != blocks.end() )
     {
@@ -101,6 +129,8 @@ void MemTrackFree( const void * ptr )
         freed_blocks . insert( *b );
         blocks . erase( ptr );
     }
+
+    guard.unlock();
 }
 
 const MemTrackBlockData * MemTrackGetBlock( const void * ptr )
@@ -123,6 +153,8 @@ GetTotalSize( const void * ptr )
 
 void MemTrackDigest( std::ostream& out )
 {
+    guard.lock();
+
     out << "Memory Tracker Digest:" << endl;
     out << "source | blocks | total size" << endl;
     for (auto& b : names )
@@ -141,4 +173,6 @@ void MemTrackDigest( std::ostream& out )
     {
         out << b.first << ": " << b.second.name << " " << b.second.max_size << endl;
     }
+
+    guard.unlock();
 }

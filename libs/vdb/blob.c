@@ -1049,6 +1049,8 @@ rc_t VBlobAppendRow(VBlob *self,
         *last_offset = self->data.elem_count;
         rc = KDataBufferResize(&self->data, *last_offset + length);
         if (rc == 0) {
+MemTrackName( self->data.ignore, "VBlobAppendRow" );
+
             COPY(self->data.bit_offset, self->data.elem_bits,
                  self->data.base, *last_offset,
                  src->base, offset, length);
@@ -1105,7 +1107,6 @@ rc_t VBlobAppend(VBlob *self, const VBlob *other) {
 
             rc = KDataBufferMakeWritable(&self->data , &orig);
             if (rc == 0) {
-                MemTrackName( orig.ignore, "VBlobAppend" );
                 row_count_t row_count;
                 KDataBufferWhack(&self->data);
                 self->data = orig;
