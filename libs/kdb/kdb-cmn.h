@@ -79,11 +79,6 @@ rc_t KDBVMakeSubPath ( const struct KDirectory *dir,
     uint32_t ns_size, const char *path, va_list args );
 
 
-/* KDBIsPathUri
- * A hack to get some of VFS into KDB that is too tightly bound to KFS
- */
-bool KDBIsPathUri (const char * path);
-
 /* OpenPathType
  * Opens a path if it is of the specified type.  Even if it is an archive file
  * instead of a directory.
