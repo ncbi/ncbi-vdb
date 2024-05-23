@@ -86,14 +86,13 @@ FIXTURE_TEST_CASE ( KMemTrack_ReallocIncrease, MemTrackSuiteFixture )
     REQUIRE_EQ( (size_t)200, bd->max_size );
 
     MemTrackFree( new_ptr );
-    //MemTrackDigest( cout );
 }
 
 FIXTURE_TEST_CASE ( KMemTrack_ReallocDecrease, MemTrackSuiteFixture )
 {
     const void * ptr = (const void*)1;
     MemTrackAlloc( ptr, 100 );
-    MemTrackAlloc( ptr, 10 );
+    MemTrackRealloc( ptr, 10, ptr );
     bd = MemTrackGetBlock( ptr );
     REQUIRE_EQ( (size_t)100, bd->max_size );
 }
@@ -123,15 +122,25 @@ FIXTURE_TEST_CASE ( KMemTrack_Named, MemTrackSuiteFixture )
     REQUIRE_EQ( (size_t)100, bd->max_size );
 }
 
-FIXTURE_TEST_CASE ( KMemTrack_Digest, MemTrackSuiteFixture )
+FIXTURE_TEST_CASE ( KMemTrack_ReallocNamed, MemTrackSuiteFixture )
 {
     const void * ptr = (const void*)1;
     MemTrackAlloc( ptr, 100 );
     const string name = "name";
     MemTrackName( ptr, name.c_str() );
-    MemTrackFree( ptr );
-    MemTrackDigest( cout );
+    const void * new_ptr = (const void*)2;
+    MemTrackRealloc( ptr, 200, new_ptr );
+
+    REQUIRE_NULL( MemTrackGetBlock( ptr ) );
+
+    bd = MemTrackGetBlock( new_ptr, "name" );
+    REQUIRE_NOT_NULL( bd );
+    REQUIRE_EQ( name, bd->name );
+    REQUIRE_NE( (clock_t)0, bd->created );
+    REQUIRE_EQ( (clock_t)0, bd->freed );
+    REQUIRE_EQ( (size_t)200, bd->max_size );
 }
+
 //////////////////////////////////////////////////// Main
 extern "C" {
 

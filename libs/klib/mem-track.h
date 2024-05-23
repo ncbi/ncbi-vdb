@@ -52,11 +52,9 @@ struct MemTrackBlockData
     clock_t freed;
     size_t max_size;
 
-    MemTrackBlockData( size_t orig_size);
+    MemTrackBlockData( size_t orig_size );
 };
 
-const MemTrackBlockData * MemTrackGetBlock( const void * ptr );
-
-void MemTrackDigest( std::ostream& out);
+const MemTrackBlockData * MemTrackGetBlock( const void * ptr, const std::string& name = std::string() );
 
 #endif

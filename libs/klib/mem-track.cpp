@@ -128,7 +128,7 @@ void MemTrackRealloc( const void * ptr, size_t size, const void * new_ptr )
     Blocks::iterator b = blocks.find( ptr );
     if ( b != blocks.end() )
     {
-        if ( size != b -> second . max_size )
+        if ( size > b -> second . max_size )
         {
             UpdatePeak( size, b -> second . max_size );
             b -> second . max_size = size;
@@ -136,7 +136,6 @@ void MemTrackRealloc( const void * ptr, size_t size, const void * new_ptr )
         if ( new_ptr != ptr )
         {
 cout << "MemTrackRealloc(" << ptr << ", size=" << size << ")=" << new_ptr << endl;
-            blocks.erase( ptr );
             blocks[ new_ptr ] = b -> second;
 
             // update the name map if necessary
@@ -146,6 +145,7 @@ cout << "MemTrackRealloc(" << ptr << ", size=" << size << ")=" << new_ptr << end
                 names[ b -> second . name ].insert( new_ptr );
             }
 
+            blocks.erase( ptr );
         }
     }
     else
@@ -202,20 +202,25 @@ cout << "MemTrackFree(" << ptr << ")=" << bb.name << " max_size=" << bb.max_size
         }
         blocks . erase( ptr );
     }
-    else
-    {
-        assert(false);
-    }
 
     guard.unlock();
 }
 
-const MemTrackBlockData * MemTrackGetBlock( const void * ptr )
+const MemTrackBlockData * MemTrackGetBlock( const void * ptr, const string& name )
 {
-    Blocks::const_iterator b = blocks.find( ptr );
-    return ( b == blocks.end() ) ? nullptr : & ( b -> second );
-}
-
-void MemTrackDigest( std::ostream& out )
-{
+    if ( name.empty() )
+    {
+        Blocks::const_iterator b = blocks.find( ptr );
+        return ( b == blocks.end() ) ? nullptr : & ( b -> second );
+    }
+    else
+    {
+        Names::const_iterator n = names.find( name );
+        if ( n == names.end() )
+        {
+            return nullptr;
+        }
+        auto p = n->second.find( ptr );
+        return ( p == n->second.end() ) ? nullptr : MemTrackGetBlock( *p );
+    }
 }
