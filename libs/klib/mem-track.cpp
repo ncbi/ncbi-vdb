@@ -71,14 +71,14 @@ void Snapshot( std::ostream& out = cout )
 
 void UpdatePeak( uint64_t add, uint64_t subtract = 0 )
 {
-cout << "UpdatePeak(" << current_memory << ") +" << add << " -" << subtract << endl;
+//cout << "UpdatePeak(" << current_memory << ") +" << add << " -" << subtract << endl;
     current_memory += add;
     current_memory -= subtract;
 
     if ( current_memory > peak_memory )
     {
         peak_memory = current_memory;
-        cout << "peak_memory= " << current_memory << endl;
+//        cout << "peak_memory= " << current_memory << endl;
         if ( peak_memory > MemoryThreshold )
         {
             Snapshot();
@@ -113,6 +113,10 @@ void MemTrackAlloc( const void * ptr, size_t size )
         blocks[ ptr ] = MemTrackBlockData( size );
         UpdatePeak( size );
     }
+    else
+    {
+        assert(false);
+    }
 
     guard.unlock();
 }
@@ -131,9 +135,22 @@ void MemTrackRealloc( const void * ptr, size_t size, const void * new_ptr )
         }
         if ( new_ptr != ptr )
         {
-            blocks[ new_ptr ] = b -> second;
+cout << "MemTrackRealloc(" << ptr << ", size=" << size << ")=" << new_ptr << endl;
             blocks.erase( ptr );
+            blocks[ new_ptr ] = b -> second;
+
+            // update the name map if necessary
+            if ( b -> second . name . size() != 0 )
+            {
+                names[ b -> second . name ].erase( ptr );
+                names[ b -> second . name ].insert( new_ptr );
+            }
+
         }
+    }
+    else
+    {
+        assert(false);
     }
 
     guard.unlock();
@@ -142,7 +159,6 @@ void MemTrackRealloc( const void * ptr, size_t size, const void * new_ptr )
 void MemTrackName( const void * ptr, const char * name )
 {
     guard.lock();
-cout << "MemTrackName=" << name << endl;
     Blocks::iterator b = blocks.find( ptr );
     if ( b == blocks.end() )
     {
@@ -160,6 +176,9 @@ cout << "MemTrackName=" << name << endl;
     {
         b -> second . name = name;
         names[ name ].insert( ptr );
+
+        auto& bb = b->second;
+cout << "MemTrackName(" << ptr << ")=" << bb.name << " max_size=" << bb.max_size << " created = " << bb.created  << " freed = " << bb.freed << endl;
     }
 
     guard.unlock();
@@ -178,8 +197,14 @@ void MemTrackFree( const void * ptr )
         if ( n != names.end() )
         {
             n -> second.erase( ptr );
+auto& bb = b->second;
+cout << "MemTrackFree(" << ptr << ")=" << bb.name << " max_size=" << bb.max_size << " created = " << bb.created  << " freed = " << bb.freed << endl;
         }
         blocks . erase( ptr );
+    }
+    else
+    {
+        assert(false);
     }
 
     guard.unlock();
