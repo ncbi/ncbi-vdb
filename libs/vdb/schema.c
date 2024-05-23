@@ -63,7 +63,7 @@
 #include <ctype.h>
 #include <os-native.h>
 #include <assert.h>
-
+#include "../klib/mem-track.h"
 
 /*--------------------------------------------------------------------------
  * generic
@@ -1659,6 +1659,7 @@ LIB_EXPORT rc_t CC VSchemaMakeRuntimeTable ( VSchema *self,
                 rc = KDataBufferMakeBytes ( & tbl -> text, 4096 * 2 );
                 if ( rc == 0 )
                 {
+MemTrackName( tbl -> text.ignore, "VSchemaMakeRuntimeTable" );
                     rc = VSchemaAddRef ( self );
                     if ( rc == 0 )
                     {

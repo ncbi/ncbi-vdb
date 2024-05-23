@@ -1060,7 +1060,6 @@ FIXTURE_TEST_CASE ( BlobChecksumOFF, WVDB_Fixture)
 }
 
 //////////////////////////////////////////// Main
-#include "../../libs/klib/mem-track.h"
 
 extern "C"
 {
@@ -1088,8 +1087,6 @@ rc_t CC KMain ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
     rc_t rc=WVdbTestSuite(argc, argv);
-
-MemTrackDigest( cout );
 
     return rc;
 }

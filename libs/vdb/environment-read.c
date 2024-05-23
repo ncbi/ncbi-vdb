@@ -42,6 +42,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include "../../libs/klib/mem-track.h"
 
 static
 rc_t CC environment_read_func(void *Self,
@@ -69,8 +70,8 @@ static rc_t CC getEnvToDataBuffer(KDataBuffer *const rslt, size_t const name_len
     char *x = NULL;
     char const *env_val = NULL;
     rc_t rc = KDataBufferMakeBytes(rslt, name_len + 1);
-
     if (rc) return rc;
+MemTrackName( blob -> data.ignore, "getEnvToDataBuffer" );
 
     x = rslt->base;
     memmove(x, name, name_len);
@@ -92,7 +93,7 @@ static rc_t CC getEnvToDataBuffer(KDataBuffer *const rslt, size_t const name_len
     return rc;
 }
 
-/* 
+/*
  function utf8 environment:read #1.0 < ascii name > ();
  */
 VTRANSFACT_BUILTIN_IMPL(environment_read, 1, 0, 0)

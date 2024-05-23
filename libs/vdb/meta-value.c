@@ -41,7 +41,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
-
+#include "../../libs/klib/mem-track.h"
 typedef struct self_t {
     const KMDataNode *node;
     KDataBuffer value;
@@ -49,7 +49,7 @@ typedef struct self_t {
 
 static void CC self_whack( void *vp ) {
     self_t *self = vp;
-    
+
     KMDataNodeRelease( self->node );
     KDataBufferWhack( &self->value );
     free( vp );
@@ -67,7 +67,7 @@ rc_t CC meta_value_U8(
     self_t *self = Self;
     uint64_t value;
     rc_t rc = 0;
-    
+
     rc = KMDataNodeReadAsU64(self->node, &value);
     if (rc == 0) {
         ((uint8_t *)self->value.base)[0] = (uint8_t)value;
@@ -91,7 +91,7 @@ rc_t CC meta_value_U16(
     self_t *self = Self;
     uint64_t value;
     rc_t rc = 0;
-    
+
     rc = KMDataNodeReadAsU64(self->node, &value);
     if (rc == 0) {
         ((uint16_t *)self->value.base)[0] = (uint16_t)value;
@@ -115,7 +115,7 @@ rc_t CC meta_value_U32(
     self_t *self = Self;
     uint64_t value;
     rc_t rc = 0;
-    
+
     rc = KMDataNodeReadAsU64(self->node, &value);
     if (rc == 0) {
         ((uint32_t *)self->value.base)[0] = (uint32_t)value;
@@ -138,7 +138,7 @@ rc_t CC meta_value_U64(
 ) {
     self_t *self = Self;
     rc_t rc = 0;
-    
+
     rc = KMDataNodeReadAsU64(self->node, (uint64_t *)self->value.base);
     if (rc == 0) {
         rslt->elem_bits = 64;
@@ -162,7 +162,7 @@ rc_t CC meta_value_I8(
     self_t *self = Self;
     int64_t value;
     rc_t rc = 0;
-    
+
     rc = KMDataNodeReadAsI64(self->node, &value);
     if (rc == 0) {
         ((int8_t *)self->value.base)[0] = (int8_t)value;
@@ -186,7 +186,7 @@ rc_t CC meta_value_I16(
     self_t *self = Self;
     int64_t value;
     rc_t rc = 0;
-    
+
     rc = KMDataNodeReadAsI64(self->node, &value);
     if (rc == 0) {
         ((int16_t *)self->value.base)[0] = (int16_t)value;
@@ -210,7 +210,7 @@ rc_t CC meta_value_I32(
     self_t *self = Self;
     int64_t value;
     rc_t rc = 0;
-    
+
     rc = KMDataNodeReadAsI64(self->node, &value);
     if (rc == 0) {
         ((int32_t *)self->value.base)[0] = (int32_t)value;
@@ -233,7 +233,7 @@ rc_t CC meta_value_I64(
 ) {
     self_t *self = Self;
     rc_t rc = 0;
-    
+
     rc = KMDataNodeReadAsI64(self->node, (int64_t *)self->value.base);
     if (rc == 0) {
         rslt->elem_bits = 64;
@@ -256,7 +256,7 @@ rc_t CC meta_value_F32(
     self_t *self = Self;
     double value;
     rc_t rc = 0;
-    
+
     rc = KMDataNodeReadAsF64(self->node, &value);
     if (rc == 0) {
         ((float *)self->value.base)[0] = (float)value;
@@ -279,7 +279,7 @@ rc_t CC meta_value_F64(
 ) {
     self_t *self = Self;
     rc_t rc = 0;
-    
+
     rc = KMDataNodeReadAsF64(self->node, (double *)self->value.base);
     if (rc == 0) {
         rslt->elem_bits = 64;
@@ -290,7 +290,7 @@ rc_t CC meta_value_F64(
     return rc;
 }
 
-/* 
+/*
  function < type T > T meta:value #1.0 < ascii node, * bool deterministic > ();
  */
 VTRANSFACT_BUILTIN_IMPL(meta_value, 1, 0, 0) (const void *Self, const VXfactInfo *info, VFuncDesc *rslt, const VFactoryParams *cp, const VFunctionParams *dp )
@@ -298,7 +298,7 @@ VTRANSFACT_BUILTIN_IMPL(meta_value, 1, 0, 0) (const void *Self, const VXfactInfo
     rc_t rc = 0;
     self_t *self;
     bool deterministic = true;
-    
+
     if (cp->argc > 1)
         deterministic = cp->argv[1].data.b[0];
 
@@ -307,7 +307,7 @@ VTRANSFACT_BUILTIN_IMPL(meta_value, 1, 0, 0) (const void *Self, const VXfactInfo
         rc = KDataBufferMake(&self->value, info->fdesc.desc.intrinsic_bits, 1);
         if (rc == 0) {
             const KMetadata *meta;
-            
+MemTrackName( self->value.ignore, "meta_value" );
             rc = VTableOpenMetadataRead(info->tbl, &meta);
             if (rc == 0) {
                 rc = KMetadataOpenNodeRead(meta, &self->node, "%.*s", cp->argv[0].count, cp->argv[0].data.ascii);
@@ -315,7 +315,7 @@ VTRANSFACT_BUILTIN_IMPL(meta_value, 1, 0, 0) (const void *Self, const VXfactInfo
                 if (rc == 0) {
                     rslt->self = self;
                     rslt->whack = self_whack;
-                    
+
                     rslt->variant = deterministic ? vftRow : vftNonDetRow;
                     switch (info->fdesc.desc.domain) {
                     case vtdFloat:

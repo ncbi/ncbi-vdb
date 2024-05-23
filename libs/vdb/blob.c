@@ -823,7 +823,7 @@ void VBlobPageMapOptimize ( VBlob **vblobp)
 								} else {
 									vocab_arr[tmp_id] = dst_offset; /** save offset */
 									data_offset[j]    = dst_offset;
-bool empty = new_data.ignore == NULL;                                    
+bool empty = new_data.ignore == NULL;
 									rc = KDataBufferResize(&new_data,dst_offset+pm->length[i]);
 									if(rc == 0){
 if (empty) MemTrackName( new_data.ignore, "VBlobPageMapOptimize" );
@@ -912,7 +912,7 @@ rc_t VBlobSerialize ( const VBlob *self, KDataBuffer *result ) {
             if (self->headers)
             {
                 rc = BlobHeadersSerialize(self->headers, &headers, 0, &sz);
-                MemTrackName( headers.ignore, "VBlobSerialize/headers" );
+MemTrackName( headers.ignore, "VBlobSerialize/headers" );
             }
             else
                 sz = 0;

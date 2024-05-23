@@ -58,7 +58,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
-
+#include "../klib/mem-track.h"
 
 #if VCURSOR_WRITE_MODES_SUPPORTED
 #error "only kcmInsert and kcmReplace modes supported"
@@ -454,6 +454,7 @@ rc_t VPhysicalCreateStatic ( VPhysical *self, const VBlob *vblob )
                                 {
                                     ( * dt -> byte_swap ) ( data . base,
                                         vblob -> data . base, ( uint32_t ) ( row_bits / dt -> size ) );
+MemTrackName( data.ignore, "VPhysicalCreateStatic" );
                                 }
                             }
                         }

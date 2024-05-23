@@ -46,6 +46,7 @@
 #include <string.h>
 
 #include <assert.h>
+#include "../../libs/klib/mem-track.h"
 
 typedef struct tag_self_t {
     const KIndex *ndx;
@@ -56,7 +57,7 @@ typedef struct tag_self_t {
 static void CC self_whack( void *Self )
 {
     self_t *self = Self;
-    
+
     KIndexRelease( self->ndx );
     free( self );
 }
@@ -80,7 +81,7 @@ rc_t CC index_project_impl(
     int64_t empty_row_id_count = -1;
     size_t sz = 1023;
     bool attached_to_col = argc > 0 && argv[0] != NULL;
-    
+
     /* first try to load value from the column. if returned blob is empty or row is not found, go to index */
     if ( attached_to_col ) {
         /*** this types of blobs may have holes in them ***/
@@ -100,7 +101,7 @@ rc_t CC index_project_impl(
         else {
             empty_row_id_start = (*rslt)->start_id;
             empty_row_id_count = (*rslt)->stop_id - (*rslt)->start_id + 1;
-            
+
             TRACK_BLOB( VBlobRelease, *rslt );
             (void)VBlobRelease( *rslt );
         }
@@ -111,6 +112,7 @@ rc_t CC index_project_impl(
     rc = KDataBufferMakeBytes( &temp_buff, sz + 1 );
     if ( rc != 0 )
         return rc;
+MemTrackName( temp_buff.ignore, "index_project_impl" );
 
     for ( ; ; ) {
         rc = KIndexProjectText(self->ndx, row_id, &start_id, &id_count, temp_buff.base, temp_buff.elem_count, &sz);
@@ -136,7 +138,7 @@ rc_t CC index_project_impl(
                 continue;
             }
         }
-        
+
         // When in case_sensitivity mode is case insensitive, index does not accurately represent actual values,
         // as we still store key in a column when it differs from what we inserted into index
         if (self->case_sensitivity != CASE_SENSITIVE && attached_to_col)
@@ -186,7 +188,7 @@ VTRANSFACT_BUILTIN_IMPL(idx_text_project, 1, 1, 1) (
     rc_t rc;
     const KIndex *ndx;
     KIdxType type;
-    
+
     rc = VTableOpenIndexRead(info->tbl, &ndx, "%.*s", (int)cp->argv[0].count, cp->argv[0].data.ascii);
     if ( rc != 0 )
     {
@@ -194,12 +196,12 @@ VTRANSFACT_BUILTIN_IMPL(idx_text_project, 1, 1, 1) (
             PLOGERR (klogErr, (klogErr, rc, "Failed to open index '$(index)'", "index=%.*s", (int)cp->argv[0].count, cp->argv[0].data.ascii));
         return rc;
     }
-    
+
     rc = KIndexType(ndx, &type);
     if (rc == 0) {
         if (type == kitProj + kitText) {
             self_t *self;
-            
+
             self = malloc(sizeof(*self));
             if (self) {
                 self->ndx = ndx;

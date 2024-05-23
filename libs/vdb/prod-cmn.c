@@ -68,6 +68,7 @@
 #include <limits.h>
 
 #include "bytecode.h"
+#include "../klib/mem-track.h"
 
 #if !defined(WINDOWS)  &&  !defined(_WIN32)  &&  !defined(NCBI_WITHOUT_MT)
 #define LAUNCH_PAGEMAP_THREAD 1
@@ -282,7 +283,10 @@ rc_t VSimpleProdBlob2Serial( VSimpleProd *self, VBlob **rslt, int64_t id, uint32
 
                 rc = VBlobSerialize(sblob, &y->data);
                 if (rc == 0)
+                {
                     * rslt = y;
+MemTrackName( y->data.ignore, "VSimpleProdBlob2Serial" );
+                }
             }
             if (rc)
 	      vblob_release(y, NULL);
@@ -896,6 +900,7 @@ rc_t VFunctionProdCallArrayFunc( VFunctionProd *self, VBlob **prslt,
         if (rc == 0) {
 	    rc = KDataBufferMake(&rslt->data, VTypedescSizeof(&self->dad.desc), sblob->data.elem_count);
             if (rc == 0) {
+
                 rc = self->u.af(
                                 self->fself,
                                 info,
@@ -904,6 +909,7 @@ rc_t VFunctionProdCallArrayFunc( VFunctionProd *self, VBlob **prslt,
                                 sblob->data.elem_count
                                 );
                 if (rc == 0) {
+if ( rslt->data.ignore ) MemTrackName( rslt->data.ignore, "VFunctionProdCallArrayFunc" );
                     *prslt = rslt;
                     return 0;
                 }
@@ -1033,6 +1039,7 @@ rc_t VFunctionProdCallPageFunc( VFunctionProd *self, VBlob **rslt, int64_t id,
 
             rc = KDataBufferMake(&blob->data, VTypedescSizeof(&self->dad.desc), row_element_count);
             if (rc) break;
+MemTrackName( blob->data.ignore, "VFunctionProdCallPageFunc 1" );
 
             for (i = 0; i != argc; ++i) {
                 if (param[i].variant == vrdControl)
@@ -1067,6 +1074,7 @@ rc_t VFunctionProdCallPageFunc( VFunctionProd *self, VBlob **rslt, int64_t id,
             if (rc) break;
             rc = KDataBufferMake(&blob->data, VTypedescSizeof(&self->dad.desc), elem_count);
             if (rc) break;
+MemTrackName( blob->data.ignore, "VFunctionProdCallPageFunc 1" );
 
             for (first_write = 0, row_id = start_id; row_id <= stop_id; ++row_id) {
                 VFixedRowResult rslt;
@@ -1152,6 +1160,7 @@ rc_t VFunctionProdCallBlobFuncEncoding( VFunctionProd *self, VBlob *rslt, int64_
     }
     if (rc)
         return rc;
+MemTrackName( rslt->data.ignore, "VFunctionProdCallBlobFuncEncoding" );
 
     dst.header = NULL;
 
@@ -1247,6 +1256,8 @@ rc_t VFunctionProdCallBlobFuncDecoding( VFunctionProd *self, VBlob *rslt,
     {
         rc = KDataBufferMakeBytes(&rslt->data, VBlobHeaderSourceSize(hdr));
         if (rc == 0) {
+MemTrackName( rslt->data.ignore, "VFunctionProdCallBlobFuncDecoding" );
+
             VBlobData src;
             VBlobResult dst;
 
@@ -1376,6 +1387,8 @@ rc_t VFunctionProdCallLegacyBlobFunc( VFunctionProd *self, VBlob **prslt,
     if (rc == 0) {
         rc = KDataBufferMakeBytes(&rslt->data, 0);
         if (rc == 0) {
+MemTrackName( rslt->data.ignore, "VFunctionProdCallLegacyBlobFunc" );
+
             VLegacyBlobResult dst;
             dst.dst = & rslt -> data;
             dst.byte_order = vboLittleEndian;
@@ -2093,7 +2106,7 @@ static uint32_t VScriptProdFixedRowLength ( const VScriptProd *self, int64_t row
 /*--------------------------------------------------------------------------
  * VPivotProd
  *  potentially pivots to a new row-id space
- *  member with a pivot: tbl [ row_id ] . member  
+ *  member with a pivot: tbl [ row_id ] . member
  */
 
 rc_t VPivotProdMake ( VPivotProd ** p_prodp,
@@ -2156,7 +2169,7 @@ rc_t VPivotProdRead ( VPivotProd * p_self, struct VBlob ** p_vblob, int64_t * p_
             }
         }
         else
-        {   
+        {
             vblob_release ( rowIdBlob, NULL );
         }
     }

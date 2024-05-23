@@ -41,6 +41,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include "../../libs/klib/mem-track.h"
 
 typedef struct self_t {
     const KMDataNode *node;
@@ -50,7 +51,7 @@ typedef struct self_t {
 
 static void CC self_whack( void *vp ) {
     self_t *self = vp;
-    
+
     KDataBufferWhack( &self->value );
     free( self->name );
     KMDataNodeRelease( self->node );
@@ -69,7 +70,7 @@ rc_t CC meta_attr_read_cstring(
     self_t *self = Self;
     size_t length;
     rc_t rc = 0;
-    
+
     rc = KMDataNodeReadAttr(self->node, self->name, 0, 0, &length);
     if (rc)
         return rc;
@@ -97,7 +98,7 @@ rc_t CC meta_attr_read_bool(
     const self_t *self = Self;
     int16_t value;
     rc_t rc = 0;
-    
+
     rc = KMDataNodeReadAttrAsI16(self->node, self->name, &value);
     if (rc)
         return rc;
@@ -120,7 +121,7 @@ rc_t CC meta_attr_read_I8(
     const self_t *self = Self;
     int16_t value;
     rc_t rc = 0;
-    
+
     rc = KMDataNodeReadAttrAsI16(self->node, self->name, &value);
     if (rc)
         return rc;
@@ -143,7 +144,7 @@ rc_t CC meta_attr_read_U8(
     const self_t *self = Self;
     uint16_t value;
     rc_t rc = 0;
-    
+
     rc = KMDataNodeReadAttrAsU16(self->node, self->name, &value);
     if (rc)
         return rc;
@@ -166,7 +167,7 @@ rc_t CC meta_attr_read_I16(
     const self_t *self = Self;
     int16_t *value = self->value.base;
     rc_t rc = 0;
-    
+
     rc = KMDataNodeReadAttrAsI16(self->node, self->name, value);
     if (rc)
         return rc;
@@ -188,7 +189,7 @@ rc_t CC meta_attr_read_U16(
     const self_t *self = Self;
     uint16_t *value = self->value.base;
     rc_t rc = 0;
-    
+
     rc = KMDataNodeReadAttrAsU16(self->node, self->name, value);
     if (rc)
         return rc;
@@ -210,7 +211,7 @@ rc_t CC meta_attr_read_I32(
     const self_t *self = Self;
     int32_t *value = self->value.base;
     rc_t rc = 0;
-    
+
     rc = KMDataNodeReadAttrAsI32(self->node, self->name, value);
     if (rc)
         return rc;
@@ -232,7 +233,7 @@ rc_t CC meta_attr_read_U32(
     const self_t *self = Self;
     uint32_t *value = self->value.base;
     rc_t rc = 0;
-    
+
     rc = KMDataNodeReadAttrAsU32(self->node, self->name, value);
     if (rc)
         return rc;
@@ -254,7 +255,7 @@ rc_t CC meta_attr_read_I64(
     const self_t *self = Self;
     int64_t *value = self->value.base;
     rc_t rc = 0;
-    
+
     rc = KMDataNodeReadAttrAsI64(self->node, self->name, value);
     if (rc)
         return rc;
@@ -276,7 +277,7 @@ rc_t CC meta_attr_read_U64(
     const self_t *self = Self;
     uint64_t *value = self->value.base;
     rc_t rc = 0;
-    
+
     rc = KMDataNodeReadAttrAsU64(self->node, self->name, value);
     if (rc)
         return rc;
@@ -298,7 +299,7 @@ rc_t CC meta_attr_read_F32(
     const self_t *self = Self;
     double value;
     rc_t rc = 0;
-    
+
     rc = KMDataNodeReadAttrAsF64(self->node, self->name, &value);
     if (rc)
         return rc;
@@ -321,7 +322,7 @@ rc_t CC meta_attr_read_F64(
     const self_t *self = Self;
     double *value = self->value.base;
     rc_t rc = 0;
-    
+
     rc = KMDataNodeReadAttrAsF64(self->node, self->name, value);
     if (rc)
         return rc;
@@ -331,7 +332,7 @@ rc_t CC meta_attr_read_F64(
 	return 0;
 }
 
-/* 
+/*
  function ascii meta:attr:read #1.0 < ascii node, ascii attr, * bool deterministic > ();
  */
 VTRANSFACT_BUILTIN_IMPL(meta_attr_read, 1, 0, 0) (const void *Self, const VXfactInfo *info, VFuncDesc *rslt, const VFactoryParams *cp, const VFunctionParams *dp )
@@ -348,10 +349,10 @@ VTRANSFACT_BUILTIN_IMPL(meta_attr_read, 1, 0, 0) (const void *Self, const VXfact
                          const VRowData argv[]
                          );
     bool deterministic = true;
-    
+
     if (cp->argc > 2)
         deterministic = cp->argv[2].data.b[0];
-    
+
     switch (info->fdesc.desc.domain) {
     case vtdBool:
         var_row_func = meta_attr_read_bool;
@@ -411,7 +412,7 @@ VTRANSFACT_BUILTIN_IMPL(meta_attr_read, 1, 0, 0) (const void *Self, const VXfact
     default:
         return RC(rcVDB, rcFunction, rcConstructing, rcType, rcInvalid);
     }
-    
+
 	self = calloc(1, sizeof(self_t));
 	if (self) {
         self->name = malloc(cp->argv[1].count + 1);
@@ -423,7 +424,8 @@ VTRANSFACT_BUILTIN_IMPL(meta_attr_read, 1, 0, 0) (const void *Self, const VXfact
                 self->value.elem_bits = 8;
             if (rc == 0) {
                 const KMetadata *meta;
-                
+MemTrackName( self->value.ignore, "meta_attr_read" );
+
                 rc = VTableOpenMetadataRead(info->tbl, &meta);
                 if (rc == 0) {
                     rc = KMetadataOpenNodeRead(meta, &self->node, "*.*s", cp->argv[0].count, cp->argv[0].data.ascii);
@@ -431,10 +433,10 @@ VTRANSFACT_BUILTIN_IMPL(meta_attr_read, 1, 0, 0) (const void *Self, const VXfact
                     if (rc == 0) {
                         rslt->self = self;
                         rslt->whack = self_whack;
-                        
+
                         rslt->variant = deterministic ? vftRow : vftNonDetRow;
                         rslt->u.ndf = var_row_func;
-                        
+
                         return 0;
                     }
                 }

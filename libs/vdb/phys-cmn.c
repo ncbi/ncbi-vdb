@@ -52,7 +52,7 @@
 #include <string.h>
 #include <assert.h>
 #include <endian.h>
-
+#include "../klib/mem-track.h"
 
 #define BLOB_VALIDATION 1
 
@@ -460,6 +460,8 @@ rc_t VPhysicalReadKColumn ( VPhysical *self, VBlob **vblob, int64_t id, uint32_t
                 rc = KDataBufferMakeBytes ( & buffer, num_read + remaining );
                 if ( rc == 0 )
                 {
+MemTrackName( buffer.ignore, "VPhysicalReadKColumn" );
+
                     /* read entire blob */
                     uint8_t *p = buffer . base;
 #if BLOB_VALIDATION
@@ -571,6 +573,9 @@ rc_t VPhysicalReadStatic ( VPhysical *self, VBlob **vblob, int64_t id, uint32_t 
                     rc = KDataBufferMake ( & buffer, elem_bits, ( uint32_t ) ( row_bits / elem_bits ) );
                     if ( rc == 0 )
                     {
+if ( bytes > 0 )
+    MemTrackName( buffer.ignore, "VPhysicalReadStatic" );
+
                         int64_t sstart_id = self -> sstart_id;
                         int64_t sstop_id = self -> sstop_id;
 

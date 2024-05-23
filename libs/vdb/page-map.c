@@ -652,6 +652,7 @@ rc_t PageMapGrow(PageMap *self, uint32_t new_reserve_leng, uint32_t new_reserve_
         rc = KDataBufferMake(&new_buffer, 8 * sizeof(uint32_t), sz);
         if (rc)
             return rc;
+MemTrackName( new_buffer.ignore, "PageMapGrow" );
 #if PAGEMAP_STATISTICS
         pm_stats.currentFootprint += KDataBufferMemorySize(&self->estorage);
         if (pm_stats.maxFootprint < pm_stats.currentFootprint)
@@ -725,6 +726,7 @@ rc_t PageMapToRandomAccess(PageMap **rslt, PageMap * src,uint32_t *data_offset) 
 		dst->row_count=src->row_count;
 		rc = KDataBufferMake(&dst->cstorage, 8 * sizeof(uint32_t), 2*dst->leng_recs+(data_offset?dst->row_count:0));
 		if(rc == 0){
+MemTrackName( dst->cstorage.ignore, "PageMapToRandomAccess" );
 			dst->length = dst->cstorage.base;
 			dst->leng_run    = dst->length   + dst->leng_recs;
 			dst->data_recs = src->row_count;
@@ -1110,6 +1112,7 @@ rc_t serialize(const PageMap *self, KDataBuffer *buffer, uint64_t *size) {
 		rc = KDataBufferMakeBytes(&compress, 5*self->row_count);
 		if(rc == 0){
 			rc = serialize_lengths(&compress, 0, self->data_offset, self->row_count, &sz);
+MemTrackName( compress.ignore, "serialize 1" );
 			compress.elem_count = sz;
 		}
 	    }
@@ -1128,6 +1131,7 @@ rc_t serialize(const PageMap *self, KDataBuffer *buffer, uint64_t *size) {
 
                 rc = serialize_lengths(&compress, 0, self->data_run, self->data_recs, &sz);
                 compress.elem_count = sz;
+MemTrackName( compress.ignore, "serialize 2" );
             }
         }
         break;
@@ -1145,11 +1149,12 @@ rc_t serialize(const PageMap *self, KDataBuffer *buffer, uint64_t *size) {
                 if (rc == 0) {
                     rc = serialize_lengths(&compress, compress.elem_count, self->leng_run, self->leng_recs, &sz);
                     compress.elem_count += sz;
-		    if(self->random_access && rc == 0) {
-                        rc = serialize_lengths(&compress, compress.elem_count, self->data_offset, self->row_count, &sz);
-                        compress.elem_count += sz;
-		    }
+                    if(self->random_access && rc == 0) {
+                                rc = serialize_lengths(&compress, compress.elem_count, self->data_offset, self->row_count, &sz);
+                                compress.elem_count += sz;
+                    }
                 }
+MemTrackName( compress.ignore, "serialize 3" );
             }
         }
 	break;
@@ -1174,6 +1179,7 @@ rc_t serialize(const PageMap *self, KDataBuffer *buffer, uint64_t *size) {
                         compress.elem_count += sz;
                     }
                 }
+MemTrackName( compress.ignore, "serialize 4" );
             }
         }
         break;
@@ -1252,6 +1258,7 @@ rc_t PageMapSerialize (const PageMap *self, KDataBuffer *buffer, uint64_t offset
 
         rc = serialize(self, &temp, &sz);
         if (rc == 0) {
+MemTrackName( temp.ignore, "PageMapSerialize" );
             rc = KDataBufferResize(buffer, offset + sz);
             if (rc == 0)
             {
@@ -1477,6 +1484,7 @@ rc_t PageMapDeserialize_v1(PageMap **lhs, const uint8_t *Src, uint64_t ssize, ui
     rc = KDataBufferMakeBytes(&decompress, hsize + bsize);
     if (rc)
         return rc;
+MemTrackName( decompress.ignore, "PageMapDeserialize_v1" );
 
     memmove(decompress.base, Src, hsize);
     memset(&zs, 0, sizeof(zs));
@@ -1691,6 +1699,8 @@ rc_t PageMapAppend(PageMap *self, const PageMap *other) {
 
     rc = KDataBufferMake(&cstorage, sizeof(self->length[0]) * 8, (self->leng_recs + other->leng_recs) * 2 + self->data_recs + other->data_recs);
     if (rc == 0) {
+MemTrackName( cstorage.ignore, "PageMapAppend" );
+
         uint32_t *const length = cstorage.base;
         uint32_t *const leng_run = length + self->leng_recs + other->leng_recs;
         uint32_t *const data_run = leng_run + self->leng_recs + other->leng_recs;

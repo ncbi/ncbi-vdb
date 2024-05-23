@@ -35,7 +35,7 @@
 #include "page-map.h"
 
 #include <assert.h>
-
+#include "../klib/mem-track.h"
 
 /* Create
  *
@@ -59,6 +59,7 @@ rc_t VBlobCreate ( VBlob **blobp, const VBlob *in )
         }
         else
         {
+MemTrackName( blob -> data.ignore, "VBlobCreate" );
             blob -> byte_order = in -> byte_order;
         }
     }
