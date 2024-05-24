@@ -275,6 +275,7 @@ KRColumnBlobValidate ( const KColumnBlob *bself )
 {
     CAST();
 
+    //NB: very similar to KWColumnBlobValidate
     if ( self -> loc . u . blob . size == 0 )
         return 0;
 
@@ -302,7 +303,7 @@ static
 rc_t validateBufferCRC32 ( const void * buffer, size_t size, uint32_t cs )
 {
     uint32_t const crc32 = CRC32 ( 0, buffer, size );
-    
+
     return cs == crc32 ? 0 : RC ( rcDB, rcBlob, rcValidating, rcBlob, rcCorrupt );
 }
 

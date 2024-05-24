@@ -398,7 +398,12 @@ rc_t KHttpFileTimedReadInt ( const KHttpFile * self,
                 /* NO BREAK */
 
             default:
-                rc = RC ( rcNS, rcFile, rcReading, rcData, rcUnexpected );
+                if ( * http_status == 403 )
+                    rc = RC ( rcNS, rcFile, rcReading, rcData, rcUnauthorized );
+                else if ( * http_status == 500 )
+                    rc = RC ( rcNS, rcFile, rcReading, rcError, rcExists );
+                else
+                    rc = RC ( rcNS, rcFile, rcReading, rcData, rcUnexpected );
                 TRACE ( "KClientHttpResultStatus ( rslt, & http_status, NULL, 0, NULL ); "
                         "unexpected status=%d\n", * http_status );
                 break;

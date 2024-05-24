@@ -26,4 +26,4 @@
 
 #pragma once
 
-#define LIBKDB_VERS 0x03010000
+#define LIBKDB_VERS 0x03010001
