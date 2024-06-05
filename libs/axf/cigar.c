@@ -358,7 +358,7 @@ rc_t cigar_string_2(KDataBuffer *dst, size_t boff,
     cigar_opcode_options_t ops;
     ops.opcode_M = version == 1 ? '=' : 'M';
     ops.opcode_X = version == 1 ? 'X' : 'M';
-    ops.opcode_X = use_S ? 'S' : 'I';
+    ops.opcode_S = use_S ? 'S' : 'I';
     return cigar_string_2_0(dst, boff, bsize, has_mismatch, has_ref_offset, read_start, read_end, ref_offset, ro_len, ro_offset, reflen, &ops);
 }
 
