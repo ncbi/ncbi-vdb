@@ -173,23 +173,23 @@ static unsigned getBases_4na(Object const *self, uint8_t *const dst, unsigned co
     unsigned j = start % length;
 
     if (j % 2 == 1 && i < len) {
-        int const b4na_2 = bases[j >> 1];
-        int const b4na2 = b4na_2 & 0x0F;
+        uint8_t const b4na_2 = bases[j >> 1];
+        uint8_t const b4na2 = b4na_2 & 0x0F;
         dst[i++] = b4na2;
         j = (j + 1) % length;
     }
     while ((i + 2) <= len) {
-        int const b4na_2 = bases[j >> 1];
-        int const b4na1 = b4na_2 >> 4;
-        int const b4na2 = b4na_2 & 0x0F;
+        uint8_t const b4na_2 = bases[j >> 1];
+        uint8_t const b4na1 = b4na_2 >> 4;
+        uint8_t const b4na2 = b4na_2 & 0x0F;
         dst[i++] = b4na1;
         dst[i++] = b4na2;
         j = (j + 2) % length;
     }
     if (i < len) {
-        int const b4na_2 = bases[j >> 1];
-        int const b4na1 = b4na_2 >> 4;
-        int const b4na2 = b4na_2 & 0x0F;
+        uint8_t const b4na_2 = bases[j >> 1];
+        uint8_t const b4na1 = b4na_2 >> 4;
+        uint8_t const b4na2 = b4na_2 & 0x0F;
         dst[i++] = (j % 2) == 0 ? b4na1 : b4na2;
     }
     assert(i == len);
@@ -355,7 +355,7 @@ static rc_t runLoadThread(Object *self)
                 accum = (accum << 2) | base;
                 ++n;
                 if (n == 4) {
-                    self->bases[j++] = accum;
+                    self->bases[j++] = (uint8_t)accum;
                     accum = 0;
                     n = 0;
                 }
@@ -371,7 +371,7 @@ static rc_t runLoadThread(Object *self)
                 accum = accum << 2;
                 ++n;
                 if (n == 4) {
-                    self->bases[j++] = accum;
+                    self->bases[j++] = (uint8_t)accum;
                     accum = 0;
                     n = 0;
                 }
@@ -390,7 +390,7 @@ static rc_t runLoadThread(Object *self)
             accum <<= 2;
             ++n;
         }
-        self->bases[j++] = accum;
+        self->bases[j++] = (uint8_t)accum;
     }
     free(buffer);
     LOGMSG(klogDebug, "Done background loading of reference");
@@ -424,7 +424,7 @@ char const *RefSeq_Scheme(void) {
     return "NCBI:refseq:tbl:reference";
 }
 
-unsigned RefSeq_getBases(Object const *const self, uint8_t *const dst, unsigned const start, unsigned const len)
+unsigned RefSeq_getBases(Object const * self, uint8_t *const dst, unsigned const start, unsigned const len)
 {
     atomic_t *const rwl = &((Object *)self)->rwl;
 
@@ -477,7 +477,7 @@ static rc_t loadCircular_1(  uint8_t *result
             accum = (accum << 4) | base;
             ++n;
             if (n == 2) {
-                result[j++] = accum;
+                result[j++] = (uint8_t)accum;
                 accum = 0;
                 n = 0;
             }
@@ -485,7 +485,7 @@ static rc_t loadCircular_1(  uint8_t *result
     }
     if (n != 0) {
         accum = accum << 4;
-        result[j++] = accum;
+        result[j++] = (uint8_t)accum;
     }
     return 0;
 }
