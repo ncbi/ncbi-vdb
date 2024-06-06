@@ -360,10 +360,10 @@ rc_t CC generate_preserve_qual_impl( void *Self, VXformInfo const *info,
                                      int64_t row_id, VRowResult *rslt,
                                      uint32_t argc, VRowData const argv[] )
 {
-    BSTree *tree = Self;
-    Node *map;
+    /*BSTree *tree = Self;*/
+    /*Node *map;*/
     rc_t rc;
-    String refName;
+    /*String refName;*/
     uint32_t const max_seq_len = ( ( uint32_t const * )argv[ 2 ].u.data.base )[ argv[ 2 ].u.data.first_elem ];
     INSDC_coord_len const seq_len = ( ( INSDC_coord_len const * )argv[ 1 ].u.data.base )[ argv[ 1 ].u.data.first_elem ];
 
@@ -379,6 +379,7 @@ rc_t CC generate_preserve_qual_impl( void *Self, VXformInfo const *info,
     return 0;
 
     /* ??? this code cannot be reached !!! */
+#if 0
     StringInit( &refName,
                 &( ( char const * )argv[ 0 ].u.data.base )[ argv[ 0 ].u.data.first_elem ],
                 ( size_t )argv[ 0 ].u.data.elem_count,
@@ -402,6 +403,7 @@ rc_t CC generate_preserve_qual_impl( void *Self, VXformInfo const *info,
     }}
     
     return 0;
+#endif
 }
 
 static
