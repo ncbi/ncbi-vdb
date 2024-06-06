@@ -219,7 +219,7 @@ ColumnBlob::appendRow( const void * data, size_t sizeElems, uint32_t count )
     {
         return SILENT_RC ( rcDB, rcBlob, rcAppending, rcData, rcEmpty );
     }
-    rc_t rc = PageMapAppendRows( m_pm, sizeElems, count, false ); // no "same data as on previous call", for now
+    rc_t rc = PageMapAppendRows( m_pm, sizeElems * m_data.elem_bits, count, false ); // no "same data as on previous call", for now
     if ( rc == 0 )
     {
         m_count += count;
@@ -231,8 +231,8 @@ ColumnBlob::appendRow( const void * data, size_t sizeElems, uint32_t count )
         {
             bitcpy( m_data.base, old_size_bits, data, 0, sizeElems * m_data.elem_bits );
         }
-        return rc;
     }
+    return rc;
 }
 
 // copied from interfaces/vdb/xform.h
@@ -378,46 +378,6 @@ static rc_t encode_header_v2(
     return 0;
 }
 
-#if 0
-// logic copied from vdb/blob.c, VBlobSerialize()
-rc_t
-ColumnBlob::serialize( KDataBuffer & buf ) const
-{
-    if ( m_pm == nullptr )
-    {   // no rows have been added
-        return SILENT_RC ( rcDB, rcBlob, rcCreating, rcData, rcEmpty );
-    }
-
-    uint32_t row_length_bits = PageMapHasSimpleStructure( m_pm );
-    if ( row_length_bits != 0)
-    {   // fixed length rows. header, data
-        uint64_t data_bytes = KDataBufferBytes( & m_data );
-        rc_t rc = KDataBufferResize( &buf, 5 + data_bytes );
-        if (rc == 0) {
-            bitsz_t data_bits = KDataBufferBits( & m_data );
-            uint64_t sz;
-            VByteOrder bo;
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-            bo = vboLittleEndian;
-#else
-            bo = vboBigEndian;
-#endif
-            rc = encode_header_v1( (uint8_t*)buf.base, buf.elem_count, &sz, row_length_bits, data_bits, bo );
-            if (rc == 0) {
-                memmove(&((uint8_t *)buf.base)[sz], m_data.base, data_bytes );
-                buf.elem_count = sz + data_bytes;
-            }
-        }
-    }
-    else
-    {
-        //TODO: header, page map, data
-    }
-
-    return 0;
-}
-#endif
-
 // API
 
 static
@@ -428,6 +388,70 @@ KTextColumnBlobWhack ( KColumnBlob *bself )
 
     delete reinterpret_cast<ColumnBlob*>( self );
     return 0;
+}
+
+const uint64_t MaxHeaderSizeBytes = 9;
+
+rc_t
+ColumnBlob::serialize( KDataBuffer & p_buf ) const
+{
+    rc_t rc = 0;
+
+    const KDataBuffer & data = getData();
+    const size_t data_bytes = KDataBufferBytes( & data );
+    const size_t data_bits = KDataBufferBits( & data );
+    const PageMap & pageMap = getPageMap();
+
+    uint32_t row_length_bits = PageMapHasSimpleStructure( & pageMap );
+    if ( row_length_bits != 0 )
+    {   // fixed row length
+        uint64_t header_size = 0;
+        rc = encode_header_v1( (uint8_t *) p_buf.base,
+                                p_buf.elem_count,
+                                & header_size,
+                                row_length_bits,
+                                KDataBufferBits( &data ),
+                                vboNative );
+        if ( rc == 0 )
+        {   // append data
+            rc = KDataBufferResize ( &p_buf, header_size + data_bytes );
+            if ( rc == 0 )
+            {
+                memmove( (uint8_t*)p_buf.base + header_size , data . base, data_bytes );
+            }
+        }
+    }
+    else
+    {   // include page map
+        //TODO: headers if any
+        KDataBuffer pm;
+        rc = KDataBufferMakeBytes(&pm, 0);
+        if (rc == 0)
+        {
+            uint64_t pm_size;
+            rc = PageMapSerialize( & pageMap, &pm, 0, &pm_size);
+            if ( rc == 0 )
+            {
+                uint64_t header_size;
+                rc = encode_header_v2( (uint8_t *) p_buf.base, p_buf.elem_count, &header_size, 0 /*headers.elem_count*/, pm.elem_count, data_bits );
+                if ( rc == 0 )
+                {
+                    rc = KDataBufferResize( &p_buf, header_size + /*headers.elem_count +*/ pm_size + data_bytes);
+                    if (rc == 0) {
+                        size_t offset = header_size;
+                        //memmove((uint8_t *)p_buf.base + offset, headers.base, headers.elem_count);
+                        // offset += headers.elem_count
+                        memmove((uint8_t *)p_buf.base + offset, pm.base, pm_size);
+                        offset += pm.elem_count;
+                        memmove( (uint8_t*)p_buf.base + offset , data.base, data_bytes );
+                    }
+                }
+            }
+            KDataBufferWhack( &pm );
+        }
+    }
+
+    return rc;
 }
 
 static
@@ -451,65 +475,11 @@ KTextColumnBlobRead ( const KColumnBlob *bself, size_t offset, void *buffer, siz
     }
     else
     {
-        const uint64_t MaxHeaderSize = 9;
         KDataBuffer buf;
-        rc = KDataBufferMakeBytes( &buf, MaxHeaderSize );
+        rc = KDataBufferMakeBytes( &buf, MaxHeaderSizeBytes );
         if ( rc == 0 )
         {
-            const KDataBuffer & data = self->getData();
-            const size_t data_bytes = KDataBufferBytes( & data );
-            const size_t data_bits = KDataBufferBits( & data );
-            const PageMap & pageMap = self -> getPageMap();
-
-            uint32_t row_length = PageMapHasSimpleStructure( & pageMap );
-            if ( row_length != 0 )
-            {   // fixed row length
-                uint64_t header_size = 0;
-                rc = encode_header_v1( (uint8_t *) buf.base,
-                                        buf.elem_count,
-                                        & header_size,
-                                        row_length,
-                                        KDataBufferBits( &data ),
-                                        vboNative );
-                if ( rc == 0 )
-                {   // append data
-                    rc = KDataBufferResize ( &buf, header_size + data_bytes );
-                    if ( rc == 0 )
-                    {
-                        memmove( (uint8_t*)buf.base + header_size , data . base, data_bytes );
-                    }
-                }
-            }
-            else
-            {   // include page map
-                //TODO: headers if any
-                KDataBuffer pm;
-                rc = KDataBufferMakeBytes(&pm, 0);
-                if (rc == 0)
-                {
-                    uint64_t pm_size;
-                    rc = PageMapSerialize( & pageMap, &pm, 0, &pm_size);
-                    if ( rc == 0 )
-                    {
-                        uint64_t header_size;
-                        rc = encode_header_v2( (uint8_t *) buf.base, buf.elem_count, &header_size, 0 /*headers.elem_count*/, pm.elem_count, data_bits );
-                        if ( rc == 0 )
-                        {
-                            rc = KDataBufferResize( &buf, header_size + /*headers.elem_count +*/ pm_size + data_bytes);
-                            if (rc == 0) {
-                                size_t offset = header_size;
-                                //memmove((uint8_t *)buf.base + offset, headers.base, headers.elem_count);
-                                // offset += headers.elem_count
-                                memmove((uint8_t *)buf.base + offset, pm.base, pm_size);
-                                offset += pm.elem_count;
-                                memmove( (uint8_t*)buf.base + offset , data.base, data_bytes );
-                            }
-                        }
-                    }
-                    KDataBufferWhack( &pm );
-                }
-            }
-
+            rc = self -> serialize( buf );
             if ( rc == 0 )
             {
                 size_t toRead = KDataBufferBytes( & buf );
@@ -564,7 +534,11 @@ KTextColumnBlobReadAll ( const KColumnBlob * bself, KDataBuffer * dbuffer, KColu
     }
     else
     {
-//        rc = self -> serialize( *dbuffer ); // will increase size if needed
+        rc = KDataBufferMakeBytes( dbuffer, MaxHeaderSizeBytes );
+        if ( rc == 0 )
+        {
+            rc = self -> serialize( *dbuffer );
+        }
     }
 
     return rc;
@@ -593,28 +567,28 @@ KTextColumnBlobValidateBuffer ( const KColumnBlob * bself, const KDataBuffer * d
     }
 
     KDataBuffer buf;
-    rc_t rc = KDataBufferMakeBytes( &buf, 1 );
+    rc_t rc = KDataBufferMakeBytes( &buf, MaxHeaderSizeBytes );
     if ( rc == 0 )
     {
-        // rc = self -> serialize( buf ); // will increase size if needed
-        // if ( rc == 0 )
-        // {
-        //     // check the buffer's size
-        //     size_t bsize = KDataBufferBytes ( dbuffer );
-        //     if ( bsize < KDataBufferBytes ( &buf ) )
-        //     {
-        //         return SILENT_RC ( rcDB, rcBlob, rcValidating, rcData, rcInsufficient );
-        //     }
-        //     if ( bsize > KDataBufferBytes ( &buf ) )
-        //     {
-        //         return SILENT_RC ( rcDB, rcBlob, rcValidating, rcData, rcExcessive );
-        //     }
-        // }
+        rc = self -> serialize( buf );
+        if ( rc == 0 )
+        {
+            // check the buffer's size
+            size_t bsize = KDataBufferBytes ( dbuffer );
+            if ( bsize < KDataBufferBytes ( &buf ) )
+            {
+                rc = SILENT_RC ( rcDB, rcBlob, rcValidating, rcData, rcInsufficient );
+            }
+            if ( rc == 0 && bsize > KDataBufferBytes ( &buf ) )
+            {
+                rc = SILENT_RC ( rcDB, rcBlob, rcValidating, rcData, rcExcessive );
+            }
+        }
 
         rc_t rc2 = KDataBufferWhack( &buf );
         if ( rc == 0 ) rc = rc2;
     }
-    return 0;
+    return rc;
 }
 
 static

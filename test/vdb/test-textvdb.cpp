@@ -172,10 +172,10 @@ FIXTURE_TEST_CASE( VdbMgr_OpenTable, TextVdbFicture )
     uint32_t rowLen = 0;
     char buf[1024];
     REQUIRE_RC( VCursorReadDirect ( curs, 1, cid, 8, buf, sizeof ( buf ), & rowLen ) );
-    REQUIRE_EQ( 4, (int)rowLen );
-    REQUIRE_EQ( string("AGCT"), string( buf, rowLen ) );
+    REQUIRE_EQ( 32, (int)rowLen );
+    REQUIRE_EQ( string("AGCT"), string( buf, rowLen / 8 ) );
     REQUIRE_RC( VCursorReadDirect ( curs, 2, cid, 8, buf, sizeof ( buf ), & rowLen ) );
-    REQUIRE_EQ( string("TCGAT"), string( buf, rowLen ) );
+    REQUIRE_EQ( string("TCGAT"), string( buf, rowLen / 8 ) );
 
     REQUIRE_RC( VCursorRelease( curs ) );
     REQUIRE_RC( VTableRelease( tbl ) );

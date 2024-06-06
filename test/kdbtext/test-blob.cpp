@@ -124,7 +124,7 @@ FIXTURE_TEST_CASE(KTextColumnBlob_inflate_FromString, KTextColumnBlob_Fixture)
     REQUIRE_EQ( 1, (int)m_blob->getPageMap().row_count );
 
     const KDataBuffer & buf = m_blob->getData();
-    REQUIRE_EQ( 16, (int)buf.elem_count );
+    REQUIRE_EQ( 2, (int)buf.elem_count );
     REQUIRE_EQ( string("qq"), string( (const char*)buf.base, 2 ) );
 }
 
@@ -137,7 +137,7 @@ FIXTURE_TEST_CASE(KTextColumnBlob_inflate_Repeat, KTextColumnBlob_Fixture)
     REQUIRE_EQ( 3, (int)m_blob->getPageMap().row_count );
 
     const KDataBuffer & buf = m_blob->getData();
-    REQUIRE_EQ( 16, (int)buf.elem_count );
+    REQUIRE_EQ( 2, (int)buf.elem_count );
     REQUIRE_EQ( string("qq"), string( (const char*)buf.base, 2 ) );
 }
 
@@ -150,7 +150,7 @@ FIXTURE_TEST_CASE(KTextColumnBlob_inflate_FromArray, KTextColumnBlob_Fixture)
     REQUIRE_EQ( 2, (int)m_blob->getPageMap().row_count );
 
     const KDataBuffer & buf = m_blob->getData();
-    REQUIRE_EQ( 16, (int)buf.elem_count );
+    REQUIRE_EQ( 2, (int)buf.elem_count );
     REQUIRE_EQ( string("qr"), string( (const char*)buf.base, 2 ) );
 }
 FIXTURE_TEST_CASE(KTextColumnBlob_inflate_FromArray_NoCount, KTextColumnBlob_Fixture)
@@ -299,160 +299,151 @@ FIXTURE_TEST_CASE(KTextColumnBlob_Make_Data_RowLength_variable, KTextColumnBlob_
     REQUIRE_EQ( string("qwerqwerty"), string( (char*)m_buffer + 11, 10 ) );
 }
 
-#if 0
 FIXTURE_TEST_CASE(KTextColumnBlob_NumReadNull, KTextColumnBlob_ApiFixture)
 {
-    Setup( Data );
-
-    char data[1024] = {0};
-    size_t remaining = 0;
-    rc_t rc = KColumnBlobRead ( m_blob, 0, data, sizeof data, nullptr, &remaining );
+    Setup(R"( {"row":1,"value":["qwer"] } )");
+    rc_t rc = KColumnBlobRead ( m_blob, 0, m_buffer, sizeof m_buffer, nullptr, &remaining );
     REQUIRE_EQ( SILENT_RC( rcDB, rcBlob, rcReading, rcParam, rcNull ), rc );
 }
 
-FIXTURE_TEST_CASE(KTextColumnBlob_Read_From_0, KTextColumnBlob_ApiFixture)
-{
-    Setup( Data );
-
-    char data[1024] = {0};
-    size_t num_read = 0;
-    size_t remaining = 0;
-    REQUIRE_RC( KColumnBlobRead ( m_blob, 0, data, sizeof data, &num_read, &remaining ) );
-    REQUIRE_EQ( Data, string(data+2, num_read - 2 ) );
-    REQUIRE_EQ( (size_t)0, remaining );
-}
-
 FIXTURE_TEST_CASE(KTextColumnBlob_Read_From_Offset, KTextColumnBlob_ApiFixture)
-{   //TODO
-    Setup( Data );
-
-    char data[1024] = {0};
-    size_t num_read = 0;
-    size_t remaining = 0;
-    const size_t Offset = 3;
-    REQUIRE_RC( KColumnBlobRead ( m_blob, Offset*8, data, sizeof data, &num_read, &remaining ) );
-    REQUIRE_EQ( Data.substr( Offset ), string(data+2+Offset, num_read-2-Offset ) );
-    REQUIRE_EQ( (size_t)0, remaining );
-}
-
-FIXTURE_TEST_CASE(KTextColumnBlob_Read_Offset_BeyondData, KTextColumnBlob_ApiFixture)
 {
-    Setup( Data );
-
-    char data[1024] = {0};
-    size_t num_read = 0;
-    REQUIRE_RC_FAIL( KColumnBlobRead ( m_blob, Data.size() + 1, data, sizeof data, &num_read, nullptr ) );
+    Setup(R"( {"row":1,"value":["qwer", "qwerty"] } )");
+    REQUIRE_RC_FAIL( KColumnBlobRead ( m_blob, 1, m_buffer, sizeof m_buffer, &num_read, &remaining ) );
 }
 
 FIXTURE_TEST_CASE(KTextColumnBlob_Read_BufferTooShort, KTextColumnBlob_ApiFixture)
 {
-    Setup( Data );
-    char data[4] = {0};
-    size_t num_read = 0;
-    size_t remaining = 0;
-    REQUIRE_RC( KColumnBlobRead ( m_blob, 0, data, sizeof data, &num_read, &remaining ) );
-    REQUIRE_EQ( sizeof data, num_read );
-    REQUIRE_EQ( Data.size() + 2 - num_read, remaining );
-    REQUIRE_EQ( Data.substr( 0, num_read ), string(data, num_read ) );
+    Setup(R"( {"row":1,"value":["qwer", "qwerty"] } )");
+    // read the first few bytes
+    const size_t ToRead = 3;
+    REQUIRE_RC( KColumnBlobRead ( m_blob, 0, m_buffer, ToRead, &num_read, &remaining ) );
+    REQUIRE_EQ( ToRead, num_read );
+    REQUIRE_EQ( (int)(21 - ToRead), (int)remaining );
+    REQUIRE_EQ( 0b10000000, (int)m_buffer[0] );
+    REQUIRE_EQ( 0, (int)m_buffer[1] );
+    REQUIRE_EQ( 8, (int)m_buffer[2] );
 }
 
 FIXTURE_TEST_CASE(KTextColumnBlob_ReadAll_BufferNull, KTextColumnBlob_ApiFixture)
 {
-    Setup( Data );
+    Setup(R"( {"row":1,"value":["qwer"] } )");
     REQUIRE_RC_FAIL( KColumnBlobReadAll ( m_blob, nullptr, nullptr, 0 ) );
 }
 
 FIXTURE_TEST_CASE(KTextColumnBlob_ReadAll_NoCS, KTextColumnBlob_ApiFixture)
 {
-    Setup( Data );
-    REQUIRE_RC( KColumnBlobReadAll ( m_blob, & m_buffer, nullptr, 0 ) );
-    REQUIRE_EQ( Data, string( (const char*)m_buffer.base, m_buffer.elem_count ) );
+    Setup(R"( {"row":1,"value":["qwer", "qwerty"] } )");
+    KDataBuffer b;
+    REQUIRE_RC( KColumnBlobReadAll ( m_blob, & b, nullptr, 0 ) );
+    REQUIRE_EQ( string("qwerqwerty"), string( (char*)b.base + 11, 10 ) );
+    KDataBufferWhack( &b );
 }
 
 FIXTURE_TEST_CASE(KTextColumnBlob_ReadAll_WithCS, KTextColumnBlob_ApiFixture)
 {   // checksum data is set to all 0s
-    Setup( Data );
+    Setup(R"( {"row":1,"value":["qwer", "qwerty"] } )");
+    KDataBuffer b;
     KColumnBlobCSData cs0;
     memset ( & cs0, 0, sizeof( KColumnBlobCSData ) );
     KColumnBlobCSData cs;
     memset ( & cs, 1, sizeof( KColumnBlobCSData ) );
 
-    REQUIRE_RC( KColumnBlobReadAll ( m_blob, & m_buffer, & cs, sizeof( KColumnBlobCSData ) ) );
-    REQUIRE_EQ( Data, string( (const char*)m_buffer.base, m_buffer.elem_count ) );
+    REQUIRE_RC( KColumnBlobReadAll ( m_blob, & b, & cs, sizeof( KColumnBlobCSData ) ) );
+    REQUIRE_EQ( string("qwerqwerty"), string( (char*)b.base + 11, 10 ) );
     REQUIRE_EQ( 0, memcmp( & cs0, & cs, sizeof( KColumnBlobCSData ) ) );
+    KDataBufferWhack( &b );
 }
 
 // always succeeds
 FIXTURE_TEST_CASE(KTextColumnBlob_Validate, KTextColumnBlob_ApiFixture)
 {
-    Setup( Data );
+    Setup(R"( {"row":1,"value":["qwer", "qwerty"] } )");
     REQUIRE_RC( KColumnBlobValidate ( m_blob ) );
 }
 
 // only checks size
 FIXTURE_TEST_CASE(KTextColumnBlob_ValidateBuffer_BufferNull, KTextColumnBlob_ApiFixture)
 {
-    Setup( Data );
+    Setup(R"( {"row":1,"value":["qwer", "qwerty"] } )");
 
     KColumnBlobCSData cs;
     REQUIRE_RC_FAIL( KColumnBlobValidateBuffer ( m_blob, nullptr, &cs, 0 ) );
 }
 FIXTURE_TEST_CASE(KTextColumnBlob_ValidateBuffer_CsNull, KTextColumnBlob_ApiFixture)
 {
-    Setup( Data );
-    REQUIRE_RC_FAIL( KColumnBlobValidateBuffer ( m_blob, &m_buffer, nullptr, 0 ) );
+    Setup(R"( {"row":1,"value":["qwer", "qwerty"] } )");
+    KDataBuffer b;
+    REQUIRE_RC_FAIL( KColumnBlobValidateBuffer ( m_blob, &b, nullptr, 0 ) );
 }
 
 FIXTURE_TEST_CASE(KTextColumnBlob_ValidateBuffer_SizeUnder, KTextColumnBlob_ApiFixture)
 {
-    Setup( Data );
-    KDataBufferMakeBytes( & m_buffer, Data.size() - 1 ) ;
+    Setup(R"( {"row":1,"value":["qwer", "qwerty"] } )");
+    KDataBuffer b;
     KColumnBlobCSData cs;
+    memset ( & cs, 1, sizeof( KColumnBlobCSData ) );
 
-    REQUIRE_RC_FAIL( KColumnBlobValidateBuffer ( m_blob, &m_buffer, &cs, 0 ) );
+    REQUIRE_RC( KColumnBlobReadAll ( m_blob, & b, & cs, sizeof( KColumnBlobCSData ) ) );
+
+    REQUIRE_RC( KDataBufferResize( & b, KDataBufferBytes( &b ) - 1 ) );
+
+    REQUIRE_RC_FAIL( KColumnBlobValidateBuffer ( m_blob, &b, &cs, 0 ) );
+
+    KDataBufferWhack( &b );
 }
 FIXTURE_TEST_CASE(KTextColumnBlob_ValidateBuffer_SizeOver, KTextColumnBlob_ApiFixture)
 {
-    Setup( Data );
-    KDataBufferMakeBytes( & m_buffer, Data.size() + 1 ) ;
+    Setup(R"( {"row":1,"value":["qwer", "qwerty"] } )");
+    KDataBuffer b;
     KColumnBlobCSData cs;
+    memset ( & cs, 1, sizeof( KColumnBlobCSData ) );
 
-    REQUIRE_RC_FAIL( KColumnBlobValidateBuffer ( m_blob, &m_buffer, &cs, 0 ) );
+    REQUIRE_RC( KColumnBlobReadAll ( m_blob, & b, & cs, sizeof( KColumnBlobCSData ) ) );
+
+    REQUIRE_RC( KDataBufferResize( & b, KDataBufferBytes( &b ) + 1 ) );
+
+    REQUIRE_RC_FAIL( KColumnBlobValidateBuffer ( m_blob, &b, &cs, 0 ) );
+
+    KDataBufferWhack( &b );
 }
 
 FIXTURE_TEST_CASE(KTextColumnBlob_ValidateBuffer, KTextColumnBlob_ApiFixture)
 {
-    Setup( Data );
-    KDataBufferMakeBytes( & m_buffer, Data.size() ) ;
+    Setup(R"( {"row":1,"value":["qwer", "qwerty"] } )");
+    KDataBuffer b;
     KColumnBlobCSData cs;
+    memset ( & cs, 1, sizeof( KColumnBlobCSData ) );
 
-    REQUIRE_RC( KColumnBlobValidateBuffer ( m_blob, &m_buffer, &cs, 0 ) );
+    REQUIRE_RC( KColumnBlobReadAll ( m_blob, & b, & cs, sizeof( KColumnBlobCSData ) ) );
+
+    REQUIRE_RC( KColumnBlobValidateBuffer ( m_blob, &b, &cs, 0 ) );
+
+    KDataBufferWhack( &b );
 }
 
 FIXTURE_TEST_CASE(KTextColumnBlob_IdRange_FirstNull, KTextColumnBlob_ApiFixture)
 {
-    Setup( Data );
+    Setup(R"( {"row":1,"value":["qwer", "qwerty"] } )");
     uint32_t count;
     REQUIRE_RC_FAIL( KColumnBlobIdRange ( m_blob, nullptr, &count ) );
 }
 FIXTURE_TEST_CASE(KTextColumnBlob_IdRange_CountNull, KTextColumnBlob_ApiFixture)
 {
-    Setup( Data );
+    Setup(R"( {"row":1,"value":["qwer", "qwerty"] } )");
     int64_t first;
     REQUIRE_RC_FAIL( KColumnBlobIdRange ( m_blob, &first, nullptr ) );
 }
+
 FIXTURE_TEST_CASE(KTextColumnBlob_IdRange, KTextColumnBlob_ApiFixture)
 {
-    Setup( Data );
+    Setup(R"( {"row":1,"count":2,"value":["q","r"]} )");
     int64_t first = 0;
     uint32_t count = 0;
     REQUIRE_RC( KColumnBlobIdRange ( m_blob, &first, &count ) );
     REQUIRE_EQ( (int64_t)1, first );
     REQUIRE_EQ( (uint32_t)2, count );
 }
-
-//KTextColumnBlobIdRange ( const KColumnBlob *self, int64_t *first, uint32_t *count );
-#endif
 
 //////////////////////////////////////////// Main
 extern "C"

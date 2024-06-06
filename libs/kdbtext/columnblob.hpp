@@ -61,6 +61,8 @@ namespace KDBText
 
         std::pair< int64_t, uint32_t > getIdRange() const{ return std::make_pair( m_startId, m_count ); }
 
+        rc_t serialize( KDataBuffer & buf ) const;
+
     private:
         rc_t appendRow( const void * data, size_t sizeBits, uint32_t count = 1 );
 
