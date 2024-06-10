@@ -314,6 +314,9 @@ rc_t KNSManagerVMakeHttpFileIntUnstable(const struct KNSManager *self,
 
 bool KUnstableFileIsKHttpFile(const struct KFile * self);
 
+rc_t VdbVersionPrint( ver_t self, char *buffer, size_t size,
+    const char *prefix, const char *suffix );
+
 #ifdef __cplusplus
 }
 #endif
