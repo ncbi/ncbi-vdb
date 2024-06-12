@@ -105,7 +105,7 @@ ColumnBlob::release( const ColumnBlob * b )
 }
 
 rc_t
-ColumnBlob::inflate( char * p_error, size_t p_error_size )
+ColumnBlob::inflate( char * p_error, size_t p_error_size, int8_t p_intSizeBits )
 {
     rc_t rc = 0;
 
@@ -145,55 +145,91 @@ ColumnBlob::inflate( char * p_error, size_t p_error_size )
                 return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
             }
 
-            const char * valueStr = nullptr;
-            if ( KJsonGetString ( value, & valueStr ) == 0 )
-            {   // may omit []; a repetition if countVal > 1
-                rc = KDataBufferMake ( & m_data, 8, 0 );
+            if ( p_intSizeBits != 0 )
+            {   // integers
+                rc = KDataBufferMake ( & m_data, p_intSizeBits, 0 );
                 if ( rc == 0 )
                 {
-                    appendRow( valueStr, strlen( valueStr ), countVal );
-                }
-                //TODO: non-strings
-            }
-            else
-            {
-                const KJsonArray * valueArr = KJsonValueToArray( value );
-                if ( valueArr != nullptr )
-                {
-                    uint32_t len = KJsonArrayGetLength ( valueArr );
-                    // if count is given, should match the length of the array
-                    if ( count == nullptr || len == countVal )
-                    {
-                        for ( uint32_t i = 0; i < len; ++i )
-                        {
-                            const KJsonValue * v = KJsonArrayGetElement ( valueArr, i );
-                            assert( v != nullptr );
-                            const char * valueStr = nullptr;
-                            if ( KJsonGetString ( v, & valueStr ) == 0 )
-                            {
-                                if ( i == 0 )
-                                {
-                                    rc = KDataBufferMake ( & m_data, 8, 0 );
-                                    if ( rc != 0 )
-                                    {
-                                        break;
-                                    }
-                                }
-                                appendRow( valueStr, strlen( valueStr ), 1 );
-                            }
-                            //TODO: non-strings
-                        }
+                    int64_t valueInt;
+                    if ( KJsonGetNumber ( value, & valueInt ) == 0 )
+                    {   // may omit []; a repetition if countVal > 1
+                        appendRow( & valueInt, 1, countVal );
                     }
                     else
                     {
-                        string_printf ( p_error, p_error_size, nullptr, "blob: count does not match the length of the value arrary" );
-                        return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
+                        const KJsonArray * valueArr = KJsonValueToArray( value );
+                        if ( valueArr != nullptr )
+                        {
+                            uint32_t len = KJsonArrayGetLength ( valueArr );
+                            // if count is given, should match the length of the array
+                            if ( count == nullptr || len == countVal )
+                            {
+                                for ( uint32_t i = 0; i < len; ++i )
+                                {
+                                    const KJsonValue * v = KJsonArrayGetElement ( valueArr, i );
+                                    assert( v != nullptr );
+                                    if ( KJsonGetNumber ( v, & valueInt ) == 0 )
+                                    {
+                                        appendRow( & valueInt, 1 );
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                string_printf ( p_error, p_error_size, nullptr, "blob: count does not match the length of the value array" );
+                                return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
+                            }
+                        }
+                        else
+                        {   // invalid value
+                            string_printf ( p_error, p_error_size, nullptr, "blob: value is not a integer or an array of integers" );
+                            return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
+                        }
                     }
                 }
-                else
-                {   // invalid value
-                    string_printf ( p_error, p_error_size, nullptr, "blob: value is not a string/array" );
-                    return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
+            }
+            else
+            {   // strings
+                rc = KDataBufferMake ( & m_data, 8, 0 );
+                if ( rc == 0 )
+                {
+                    const char * valueStr = nullptr;
+                    if ( KJsonGetString ( value, & valueStr ) == 0 )
+                    {   // may omit []; a repetition if countVal > 1
+                        appendRow( valueStr, strlen( valueStr ), countVal );
+                    }
+                    else
+                    {
+                        const KJsonArray * valueArr = KJsonValueToArray( value );
+                        if ( valueArr != nullptr )
+                        {
+                            uint32_t len = KJsonArrayGetLength ( valueArr );
+                            // if count is given, should match the length of the array
+                            if ( count == nullptr || len == countVal )
+                            {
+                                for ( uint32_t i = 0; i < len; ++i )
+                                {
+                                    const KJsonValue * v = KJsonArrayGetElement ( valueArr, i );
+                                    assert( v != nullptr );
+                                    const char * valueStr = nullptr;
+                                    if ( KJsonGetString ( v, & valueStr ) == 0 )
+                                    {
+                                        appendRow( valueStr, strlen( valueStr ), 1 );
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                string_printf ( p_error, p_error_size, nullptr, "blob: count does not match the length of the value array" );
+                                return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
+                            }
+                        }
+                        else
+                        {   // invalid value
+                            string_printf ( p_error, p_error_size, nullptr, "blob: value is not a string or an array of strings" );
+                            return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
+                        }
+                    }
                 }
             }
         }
@@ -213,23 +249,23 @@ ColumnBlob::inflate( char * p_error, size_t p_error_size )
 }
 
 rc_t
-ColumnBlob::appendRow( const void * data, size_t sizeElems, uint32_t count )
+ColumnBlob::appendRow( const void * p_data, size_t p_sizeInElems, uint32_t p_repeatCount )
 {
-    if ( sizeElems == 0 )
+    if ( p_sizeInElems == 0 )
     {
         return SILENT_RC ( rcDB, rcBlob, rcAppending, rcData, rcEmpty );
     }
-    rc_t rc = PageMapAppendRows( m_pm, sizeElems * m_data.elem_bits, count, false ); // no "same data as on previous call", for now
+    rc_t rc = PageMapAppendRows( m_pm, p_sizeInElems * m_data.elem_bits, p_repeatCount, false ); // no "same data as on previous call", for now
     if ( rc == 0 )
     {
-        m_count += count;
+        m_count += p_repeatCount;
 
         // apend data to m_data
         size_t old_size_bits = KDataBufferBits( & m_data );
-        rc = KDataBufferResize( &m_data, m_data.elem_count + sizeElems );
+        rc = KDataBufferResize( &m_data, m_data.elem_count + p_sizeInElems );
         if ( rc == 0 )
         {
-            bitcpy( m_data.base, old_size_bits, data, 0, sizeElems * m_data.elem_bits );
+            bitcpy( m_data.base, old_size_bits, p_data, 0, p_sizeInElems * m_data.elem_bits );
         }
     }
     return rc;

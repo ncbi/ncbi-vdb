@@ -127,6 +127,14 @@ FIXTURE_TEST_CASE(KTextColumnBlob_inflate_FromString, KTextColumnBlob_Fixture)
     REQUIRE_EQ( 2, (int)buf.elem_count );
     REQUIRE_EQ( string("qq"), string( (const char*)buf.base, 2 ) );
 }
+FIXTURE_TEST_CASE(KTextColumnBlob_inflate_FromNumber, KTextColumnBlob_Fixture)
+{   // converts numbers to ascii if inflating as a text column
+    Setup(R"( {"row":1,"value":1} )");
+    REQUIRE_RC( m_blob -> inflate( m_error, sizeof m_error ) );
+    const KDataBuffer & buf = m_blob->getData();
+    REQUIRE_EQ( 1, (int)buf.elem_count );
+    REQUIRE_EQ( string("1"), string( (const char*)buf.base, 1 ) );
+}
 
 FIXTURE_TEST_CASE(KTextColumnBlob_inflate_Repeat, KTextColumnBlob_Fixture)
 {
@@ -167,23 +175,73 @@ FIXTURE_TEST_CASE(KTextColumnBlob_inflate_FromArray_CountMismatch, KTextColumnBl
     //cout << m_error << endl;
 }
 
-#if 0
-//TODO
-FIXTURE_TEST_CASE(KTextColumnBlob_AppendRow_TwoUnderbytes, KTextColumnBlob_Fixture)
+// integer columns
+
+FIXTURE_TEST_CASE(KTextColumnBlob_NotAnInt, KTextColumnBlob_Fixture)
 {
-    m_blob = new ColumnBlob( 1 );
-    uint8_t b0= 0b10101000; // 5 high bits used
-    uint8_t b1= 0b01010000; // 4 high bits used
-    REQUIRE_RC( m_blob -> appendRow( &b0, 5, 1 ) );
-    REQUIRE_RC( m_blob -> appendRow( &b1, 4, 1 ) );
-    REQUIRE_EQ( 1, (int)m_blob->getIdRange().first );
-    REQUIRE_EQ( 2, (int)m_blob->getIdRange().second );
-    REQUIRE_EQ( 2, (int)m_blob->getPageMap().row_count );
-    REQUIRE_EQ( 9, (int)m_blob->getData().elem_count ); // total size in bits
-    REQUIRE_EQ( (int)(uint8_t)0b10101010, (int)((uint8_t*)m_blob->getData().base)[0] );
-    REQUIRE_EQ( (int)(uint8_t)0b10000000, (int)((uint8_t*)m_blob->getData().base)[1] & 0b10000000 );
+    Setup(R"( {"row":1,"value":"qq"} )");
+    REQUIRE_RC_FAIL( m_blob -> inflate( m_error, sizeof m_error, 64 ) );
 }
-#endif
+
+FIXTURE_TEST_CASE(KTextColumnBlob_Int64, KTextColumnBlob_Fixture)
+{
+    Setup(R"( {"row":1,"value":12345} )");
+    REQUIRE_RC( m_blob -> inflate( m_error, sizeof m_error, 64 ) );
+
+    const KDataBuffer & buf = m_blob->getData();
+    REQUIRE_EQ( 1, (int)buf.elem_count );
+    REQUIRE_EQ( (uint64_t)12345, *(uint64_t*)buf.base );
+}
+
+FIXTURE_TEST_CASE(KTextColumnBlob_Int32, KTextColumnBlob_Fixture)
+{
+    Setup(R"( {"row":1,"value":12345} )");
+    REQUIRE_RC( m_blob -> inflate( m_error, sizeof m_error, 32 ) );
+
+    const KDataBuffer & buf = m_blob->getData();
+    REQUIRE_EQ( 1, (int)buf.elem_count );
+    REQUIRE_EQ( (uint32_t)12345, *(uint32_t*)buf.base );
+}
+FIXTURE_TEST_CASE(KTextColumnBlob_Int8, KTextColumnBlob_Fixture)
+{
+    Setup(R"( {"row":1,"value":254} )");
+    REQUIRE_RC( m_blob -> inflate( m_error, sizeof m_error, 8 ) );
+
+    const KDataBuffer & buf = m_blob->getData();
+    REQUIRE_EQ( 1, (int)buf.elem_count );
+    REQUIRE_EQ( (uint8_t)254, *(uint8_t*)buf.base );
+}
+FIXTURE_TEST_CASE(KTextColumnBlob_Int8_Array, KTextColumnBlob_Fixture)
+{
+    Setup(R"( {"row":1,"value":[1, 2, 3, 254] } )");
+    REQUIRE_RC( m_blob -> inflate( m_error, sizeof m_error, 8 ) );
+
+    const KDataBuffer & buf = m_blob->getData();
+    REQUIRE_EQ( 4, (int)buf.elem_count );
+    REQUIRE_EQ( (uint8_t)1,     ((uint8_t*)buf.base)[0] );
+    REQUIRE_EQ( (uint8_t)2,     ((uint8_t*)buf.base)[1] );
+    REQUIRE_EQ( (uint8_t)3,     ((uint8_t*)buf.base)[2] );
+    REQUIRE_EQ( (uint8_t)254,   ((uint8_t*)buf.base)[3] );
+}
+FIXTURE_TEST_CASE(KTextColumnBlob_Int_FromArray_CountMismatch, KTextColumnBlob_Fixture)
+{
+    Setup(R"( {"row":1,"count":3,"value":[1, 2, 3, 254]} )");
+    REQUIRE_RC_FAIL( m_blob -> inflate( m_error, sizeof m_error, 8 ) );
+    //cout << m_error << endl;
+}
+FIXTURE_TEST_CASE(KTextColumnBlob_Int_Repeat, KTextColumnBlob_Fixture)
+{
+    Setup(R"( {"row":2,"value":12,"count":3} )");
+    REQUIRE_RC( m_blob -> inflate( m_error, sizeof m_error, 8 ) );
+    REQUIRE_EQ( 2, (int)m_blob->getIdRange().first );
+    REQUIRE_EQ( 3, (int)m_blob->getIdRange().second );
+    REQUIRE_EQ( 3, (int)m_blob->getPageMap().row_count );
+
+    const KDataBuffer & buf = m_blob->getData();
+    REQUIRE_EQ( 1, (int)buf.elem_count );
+    REQUIRE_EQ( (uint8_t)12,     ((uint8_t*)buf.base)[0] );
+}
+
 
 class KTextColumnBlob_ApiFixture
 {

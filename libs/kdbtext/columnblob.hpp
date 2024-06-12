@@ -51,10 +51,11 @@ namespace KDBText
         static void release( const ColumnBlob *);
 
     public:
-        ColumnBlob( const KJsonValue * );
+        ColumnBlob( const KJsonValue * ); // ascii values
+        ColumnBlob( const KJsonValue *, uint8_t intSizeBits ); // fixed size integer values
         ~ColumnBlob();
 
-        rc_t inflate( char * p_error, size_t p_error_size );
+        rc_t inflate( char * p_error, size_t p_error_size, int8_t intSizeBits = 0 );
 
         const KDataBuffer & getData() const { return m_data; }
         const PageMap & getPageMap() const { return * m_pm; }
@@ -64,7 +65,7 @@ namespace KDBText
         rc_t serialize( KDataBuffer & buf ) const;
 
     private:
-        rc_t appendRow( const void * data, size_t sizeBits, uint32_t count = 1 );
+        rc_t appendRow( const void * data, size_t sizeInElems, uint32_t repeatCount = 1 );
 
         const KJsonValue * m_json = nullptr;
 
