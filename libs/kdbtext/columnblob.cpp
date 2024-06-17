@@ -255,7 +255,7 @@ ColumnBlob::appendRow( const void * p_data, size_t p_sizeInElems, uint32_t p_rep
     {
         return SILENT_RC ( rcDB, rcBlob, rcAppending, rcData, rcEmpty );
     }
-    rc_t rc = PageMapAppendRows( m_pm, p_sizeInElems * m_data.elem_bits, p_repeatCount, false ); // no "same data as on previous call", for now
+    rc_t rc = PageMapAppendRows( m_pm, p_sizeInElems, p_repeatCount, false ); // no "same data as on previous call", for now
     if ( rc == 0 )
     {
         m_count += p_repeatCount;
@@ -286,7 +286,7 @@ static rc_t encode_header_v1(
                              uint8_t *dst,
                              uint64_t dsize,
                              uint64_t *used,
-                             uint32_t row_length_bits,
+                             uint32_t row_length_elems,
                              bitsz_t data_size,
                              VByteOrder byte_order
 )
@@ -306,28 +306,28 @@ static rc_t encode_header_v1(
     header_byte |= ( ( 8 - ( data_size & 7 ) ) & 7 ) << 2;
 
     /* row-length code goes in bits 5..6 */
-    if ( row_length_bits == 1 ) {
+    if ( row_length_elems == 1 ) {
         header_byte |= 3 << 5;
         * used = 1;
         if ( dsize < * used )
             return RC(rcVDB, rcBlob, rcConstructing, rcBuffer, rcInsufficient);
         dst[0] = header_byte;
     }
-    else if (row_length_bits < 0x100) {
+    else if (row_length_elems < 0x100) {
         *used = 2;
         if (dsize < *used)
             return RC(rcVDB, rcBlob, rcConstructing, rcBuffer, rcInsufficient);
         dst[0] = header_byte;
-        dst[1] = ( uint8_t ) row_length_bits;
+        dst[1] = ( uint8_t ) row_length_elems;
     }
-    else if (row_length_bits < 0x10000) {
+    else if (row_length_elems < 0x10000) {
         header_byte |= 1 << 5;
         *used = 3;
         if (dsize < *used)
             return RC(rcVDB, rcBlob, rcConstructing, rcBuffer, rcInsufficient);
         dst[0] = header_byte;
-        dst[1] = ( uint8_t ) row_length_bits;
-        dst[2] = ( uint8_t ) ( row_length_bits >> 8 );
+        dst[1] = ( uint8_t ) row_length_elems;
+        dst[2] = ( uint8_t ) ( row_length_elems >> 8 );
     }
     else {
         header_byte |= 2 << 5;
@@ -335,10 +335,10 @@ static rc_t encode_header_v1(
         if (dsize < *used)
             return RC(rcVDB, rcBlob, rcConstructing, rcBuffer, rcInsufficient);
         dst[0] = header_byte;
-        dst[1] = ( uint8_t ) row_length_bits;
-        dst[2] = ( uint8_t ) ( row_length_bits >> 8 );
-        dst[3] = ( uint8_t ) ( row_length_bits >> 16 );
-        dst[4] = ( uint8_t ) ( row_length_bits >> 24 );
+        dst[1] = ( uint8_t ) row_length_elems;
+        dst[2] = ( uint8_t ) ( row_length_elems >> 8 );
+        dst[3] = ( uint8_t ) ( row_length_elems >> 16 );
+        dst[4] = ( uint8_t ) ( row_length_elems >> 24 );
     }
     return 0;
 }
@@ -438,14 +438,14 @@ ColumnBlob::serialize( KDataBuffer & p_buf ) const
     const size_t data_bits = KDataBufferBits( & data );
     const PageMap & pageMap = getPageMap();
 
-    uint32_t row_length_bits = PageMapHasSimpleStructure( & pageMap );
-    if ( row_length_bits != 0 )
+    uint32_t row_length_elems = PageMapHasSimpleStructure( & pageMap );
+    if ( row_length_elems != 0 )
     {   // fixed row length
         uint64_t header_size = 0;
         rc = encode_header_v1( (uint8_t *) p_buf.base,
                                 p_buf.elem_count,
                                 & header_size,
-                                row_length_bits,
+                                row_length_elems,
                                 KDataBufferBits( &data ),
                                 vboNative );
         if ( rc == 0 )

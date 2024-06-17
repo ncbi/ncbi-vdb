@@ -106,6 +106,55 @@ Column::release( const Column * col )
     }
 }
 
+//
+// map of type sizes. Size 0 will only accept string values
+// any other size wil only accept unsigned integer value, encoded in 'size' bits
+// (will error out if the value does not fit)
+//
+// based on dt[] in vdb/schema-int.c:179
+//
+static const map< string, size_t > TypeSizes = {
+    { "any", 0 },
+    { "void", 0 },
+    { "opaque", 0 },
+
+    /* bundles of bits in machine native order */
+    { "B1", 1 },
+    { "B8", 8 },
+    { "B16", 16 },
+    { "B32", 32 },
+    { "B64", 64 },
+
+    /* the basic unsigned integer types */
+    { "U1", 1 },
+    { "U8", 8 },
+    { "U16", 16 },
+    { "U32", 32 },
+    { "U64", 64 },
+
+    /* the basic signed integer types */
+    /*TODO: support negative */
+    { "I8", 8 },
+    { "I16", 16 },
+    { "I32", 32 },
+    { "I64", 64 },
+
+    // /*TODO: floating point */
+    // { "F32", 32 },
+    // { "F64", 64 },
+
+    /* bool is typed to reflect C/C++ */
+    { "bool", 8 }, // for now, 0 or 1 only; TODO: support true/false
+
+    { "utf8", 8 },
+    { "utf16", 16 },
+    { "utf32", 32 },
+
+    { "ascii", 0 },
+    { "text", 0 },
+};
+
+
 rc_t
 Column::inflate( char * p_error, size_t p_error_size )
 {
@@ -129,13 +178,24 @@ Column::inflate( char * p_error, size_t p_error_size )
     }
 
     const KJsonValue * type = KJsonObjectGetMember ( m_json, "type" );
+    size_t typeSize = 0;
     if ( type != nullptr )
     {
         const char * typeStr = nullptr;
         rc = KJsonGetString ( type, & typeStr );
         if ( rc == 0 )
-        {
-            m_type = typeStr;
+        {   // look up intrinsic types, extract value size
+            auto i = TypeSizes.find( typeStr );
+            if ( i == TypeSizes.end() )
+            {
+                string_printf ( p_error, p_error_size, nullptr, "Unknown column type" );
+                return SILENT_RC( rcDB, rcDatabase, rcCreating, rcParam, rcInvalid );
+            }
+            else
+            {
+                typeSize = i -> second;
+                m_type = typeStr;
+            }
         }
         //TODO: error
     }
@@ -163,7 +223,7 @@ Column::inflate( char * p_error, size_t p_error_size )
             assert( v != nullptr );
 
             shared_ptr<ColumnBlob> b ( new ColumnBlob( v ) );
-            rc = b->inflate( p_error, p_error_size );
+            rc = b->inflate( p_error, p_error_size, typeSize );
             if ( rc == 0 )
             {
                 m_data [ b->getIdRange() ] = b;

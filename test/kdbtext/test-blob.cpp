@@ -294,35 +294,21 @@ FIXTURE_TEST_CASE(KTextColumnBlob_Read_Offset, KTextColumnBlob_ApiFixture)
     REQUIRE_RC_FAIL( KColumnBlobRead ( m_blob, 1, m_buffer, sizeof( m_buffer ), &num_read, &remaining ) );
 }
 
-#if 0
-//TODO: can we have a 0-length blob?
-FIXTURE_TEST_CASE(KTextColumnBlob_BufferNull_SizeNull, KTextColumnBlob_ApiFixture)
-{
-    Setup( Data );
-
-    REQUIRE_RC( KColumnBlobRead ( m_blob, 0, nullptr, 0, &num_read, &remaining ) );
-    REQUIRE_EQ( (size_t)0, num_read );
-    REQUIRE_EQ( 2 + Data.size(), remaining );
-}
-#endif
-
-FIXTURE_TEST_CASE(KTextColumnBlob_Make_Data_RowLength_8bits, KTextColumnBlob_ApiFixture)
+FIXTURE_TEST_CASE(KTextColumnBlob_Make_Data_RowLength_1, KTextColumnBlob_ApiFixture)
 {
     Setup(R"( {"row":1,"value":"q"} )");
     REQUIRE_RC( KColumnBlobRead ( m_blob, 0, m_buffer, sizeof( m_buffer ), &num_read, &remaining ) );
-    REQUIRE_EQ( 3, (int)num_read );
+    REQUIRE_EQ( 2, (int)num_read );
     REQUIRE_EQ( 0, (int)remaining );
 
-    // fixed row length header:
-    // High 7 bits of the 1st byte: length < 0x100 bits (000), no extra bits (000), little endian (10)
-    REQUIRE_EQ( 0b00000010, (int)m_buffer[0] );
-    // 2nd byte: row length in bits
-    REQUIRE_EQ( 0x08, (int)m_buffer[1] );
-    // 3d byte: data
-    REQUIRE_EQ( (int)'q', (int)m_buffer[2] );
+    // 1-element header:
+    // 1st byte: length = 1 element (011), no extra bits (000), little endian (10)
+    REQUIRE_EQ( 0b01100010, (int)m_buffer[0] );
+    // 2d byte: data
+    REQUIRE_EQ( (int)'q', (int)m_buffer[1] );
 }
 
-FIXTURE_TEST_CASE(KTextColumnBlob_Make_Data_RowLength_4bytes, KTextColumnBlob_ApiFixture)
+FIXTURE_TEST_CASE(KTextColumnBlob_Make_Data_RowLength_fixed, KTextColumnBlob_ApiFixture)
 {
     Setup(R"( {"row":1,"value":"qwer"} )");
     REQUIRE_RC( KColumnBlobRead ( m_blob, 0, m_buffer, sizeof( m_buffer ), &num_read, &remaining ) );
@@ -330,10 +316,10 @@ FIXTURE_TEST_CASE(KTextColumnBlob_Make_Data_RowLength_4bytes, KTextColumnBlob_Ap
     REQUIRE_EQ( 0, (int)remaining );
 
     // fixed row length header:
-    // High 7 bits of the 1st byte: length < 0x100 bits (000), no extra bits (000), little endian (10)
+    // 1st byte: length < 0x100 elements (000), no extra bits (000), little endian (10)
     REQUIRE_EQ( 0b00000010, (int)m_buffer[0] );
-    // 2nd byte: row length in bits
-    REQUIRE_EQ( 32, (int)m_buffer[1] );
+    // 2nd byte: row length in elements
+    REQUIRE_EQ( 4, (int)m_buffer[1] );
     // bytes 3-6: data
     REQUIRE_EQ( string("qwer"), string( (char*)m_buffer + 2, 4 ) );
 }
@@ -346,7 +332,7 @@ FIXTURE_TEST_CASE(KTextColumnBlob_Make_Data_RowLength_variable, KTextColumnBlob_
     REQUIRE_EQ( 0, (int)remaining );
 
     // fixed row length header:
-    // High 7 bits of the 0 byte: little endian (1000), no extra bits (0000)
+    // byte 0: little endian (1000), no extra bits (0000)
     REQUIRE_EQ( 0b10000000, (int)m_buffer[0] );
     // byte 1: header_size (0)
     REQUIRE_EQ( 0, (int)m_buffer[1] );

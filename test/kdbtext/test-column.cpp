@@ -269,6 +269,45 @@ FIXTURE_TEST_CASE(KColumn_OpenBlobRead, KTextColumn_ApiFixture)
     REQUIRE_RC( KColumnBlobRelease( blob ) );
 }
 
+const char * FullTableInt = R"({"type": "table", "name": "testtbl",
+    "columns":[
+        {
+            "name":"col",
+            "type":"U32",
+            "data":
+                [
+                    {"row":1,"value":12345}
+                ],
+            "metadata":{"name":"", "value":"blah"}
+        }
+    ]
+})";
+
+FIXTURE_TEST_CASE(KColumn_OpenBlobRead_Int, KTextColumn_ApiFixture)
+{
+    Setup(FullTableInt, "col");
+    const KColumnBlob * blob = nullptr;
+    REQUIRE_RC( KColumnOpenBlobRead ( m_col, & blob, 1 ) );
+    REQUIRE_NOT_NULL( blob );
+
+    uint8_t buffer[1024];
+    size_t num_read = 0;
+    size_t remaining = 0;
+
+    REQUIRE_RC( KColumnBlobRead ( blob, 0, buffer, sizeof( buffer ), &num_read, &remaining ) );
+    REQUIRE_EQ( 5, (int)num_read );
+    REQUIRE_EQ( 0, (int)remaining );
+
+    // 1-element header:
+    // 1st byte: length = 1element (011), no extra bits (000), little endian (10)
+    REQUIRE_EQ( 0b01100010, (int)buffer[0] );
+    // bytes 3-5: data
+    REQUIRE_EQ( (uint32_t)12345, ((uint32_t*)(buffer + 1))[0] );
+
+    REQUIRE_RC( KColumnBlobRelease( blob ) );
+}
+
+
 //////////////////////////////////////////// Main
 extern "C"
 {

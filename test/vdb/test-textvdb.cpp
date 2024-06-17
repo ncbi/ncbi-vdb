@@ -95,7 +95,8 @@ const char * TestDB =
                 "name":"",
                 "children":[{
                     "name":"schema",
-                    "value":"version 2.0; table table1 #1.0.0 { column ascii column1; };
+                    "value":"version 2.0;
+                             table table1 #1.0.0 { column ascii column1;  column U64 column2; };
                              database root_database #1 { table table1 #1 TABLE1; } ;",
                     "attributes":{"name":"root_database#1"}
                 }]
@@ -111,7 +112,8 @@ const char * TestDB =
                         "name":"",
                         "children":[{
                             "name":"schema",
-                    "value":"version 2.0; table table1 #1.0.0 { column ascii column1; };
+                    "value":"version 2.0;
+                             table table1 #1.0.0 { column ascii column1; column U64 column2; };
                              database root_database #1 { table table1 #1 TABLE1; } ;",
                             "attributes":{"name":"table1#1"}
                         }]
@@ -125,6 +127,15 @@ const char * TestDB =
                         [
                             {"row":1,"value":"AGCT"},
                             {"row":2,"value":"TCGAT"}
+                        ]
+                    },
+                    {
+                        "name":"column2",
+                        "type":"U64",
+                        "data":
+                        [
+                            {"row":1,"value":1},
+                            {"row":2,"value":2}
                         ]
                     }
                 ]
@@ -163,19 +174,29 @@ FIXTURE_TEST_CASE( VdbMgr_OpenTable, TextVdbFicture )
     const VCursor * curs;
     REQUIRE_RC( VTableCreateCursorRead(tbl, &curs) );
 
-    uint32_t cid = 0;
-    REQUIRE_RC( VCursorAddColumn(curs, &cid, "column1") );
+    uint32_t cid1 = 0;
+    uint32_t cid2 = 0;
+    REQUIRE_RC( VCursorAddColumn(curs, &cid1, "column1") );
+    REQUIRE_RC( VCursorAddColumn(curs, &cid2, "column2") );
 
     REQUIRE_RC( VCursorOpen(curs) );
     REQUIRE_RC( VCursorOpenRow ( curs ) );
 
     uint32_t rowLen = 0;
     char buf[1024];
-    REQUIRE_RC( VCursorReadDirect ( curs, 1, cid, 8, buf, sizeof ( buf ), & rowLen ) );
-    REQUIRE_EQ( 32, (int)rowLen );
-    REQUIRE_EQ( string("AGCT"), string( buf, rowLen / 8 ) );
-    REQUIRE_RC( VCursorReadDirect ( curs, 2, cid, 8, buf, sizeof ( buf ), & rowLen ) );
-    REQUIRE_EQ( string("TCGAT"), string( buf, rowLen / 8 ) );
+    REQUIRE_RC( VCursorReadDirect ( curs, 1, cid1, 8, buf, sizeof ( buf ), & rowLen ) );
+    REQUIRE_EQ( 4, (int)rowLen );
+    REQUIRE_EQ( string("AGCT"), string( buf, rowLen ) );
+    REQUIRE_RC( VCursorReadDirect ( curs, 2, cid1, 8, buf, sizeof ( buf ), & rowLen ) );
+    REQUIRE_EQ( 5, (int)rowLen );
+    REQUIRE_EQ( string("TCGAT"), string( buf, rowLen ) );
+
+    REQUIRE_RC( VCursorReadDirect ( curs, 1, cid2, 64, buf, sizeof ( buf ), & rowLen ) );
+    REQUIRE_EQ( 1, (int)rowLen );
+    REQUIRE_EQ( (uint64_t)1, ((uint64_t*)buf)[0] );
+    REQUIRE_RC( VCursorReadDirect ( curs, 2, cid2, 64, buf, sizeof ( buf ), & rowLen ) );
+    REQUIRE_EQ( 1, (int)rowLen );
+    REQUIRE_EQ( (uint64_t)2, ((uint64_t*)buf)[0] );
 
     REQUIRE_RC( VCursorRelease( curs ) );
     REQUIRE_RC( VTableRelease( tbl ) );
