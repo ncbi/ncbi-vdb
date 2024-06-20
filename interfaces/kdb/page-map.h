@@ -27,17 +27,21 @@
 #ifndef _h_page_map_
 #define _h_page_map_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <assert.h>
 
-#ifndef _h_vdb_extern_
-#include <vdb/extern.h>
+#ifndef _h_kdb_extern_
+#include <kdb/extern.h>
 #endif
 
 #ifndef _h_klib_defs_
 #include <klib/defs.h>
 #endif
 
-#include <vdb/page-map-priv.h>
+#include <kdb/page-map-priv.h>
 #include <klib/data-buffer.h>
 #include <klib/refcount.h>
 
@@ -339,4 +343,10 @@ rc_t PageMapExpand(const PageMap *cself, row_count_t upto);
 rc_t PageMapExpandFull(const PageMap *cself);
 rc_t PageMapPreExpandFull(const PageMap *cself, row_count_t upto);
 
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* _h_page_map_ */
+

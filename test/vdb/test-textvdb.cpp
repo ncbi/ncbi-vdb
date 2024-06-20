@@ -34,19 +34,20 @@ using namespace std;
 
 TEST_SUITE( VdbTextSuite );
 
-class TextVdbFicture
+class TextVdbFixture
 {
 public:
-    TextVdbFicture() {}
-    ~TextVdbFicture()
+    TextVdbFixture() {}
+    ~TextVdbFixture()
     {
         VDBManagerRelease( m_mgr );
     }
 
-    void Setup( const char * input )
+    void Setup( const string & input )
     {
+//cout << input<<endl;
         const KDBManager * kdb = nullptr;
-        THROW_ON_RC( KDBManagerMakeText( & kdb, input, m_error, sizeof( m_error ) ) );
+        THROW_ON_RC( KDBManagerMakeText( & kdb, input.c_str(), m_error, sizeof( m_error ) ) );
         THROW_ON_RC( VDBManagerMakeReadWithKDBManager( & m_mgr, kdb ));
         THROW_ON_RC( KDBManagerRelease( kdb ));
     }
@@ -55,7 +56,7 @@ public:
     const VDBManager * m_mgr = nullptr;
 };
 
-FIXTURE_TEST_CASE( VdbMgr_NullSelf, TextVdbFicture )
+FIXTURE_TEST_CASE( VdbMgr_NullSelf, TextVdbFixture )
 {
     const char * input = "{}";
     const KDBManager * kdb = nullptr;
@@ -63,12 +64,12 @@ FIXTURE_TEST_CASE( VdbMgr_NullSelf, TextVdbFicture )
     REQUIRE_RC_FAIL( VDBManagerMakeReadWithKDBManager( nullptr, kdb ));
     REQUIRE_RC( KDBManagerRelease( kdb ));
 }
-FIXTURE_TEST_CASE( VdbMgr_NullKdb, TextVdbFicture )
+FIXTURE_TEST_CASE( VdbMgr_NullKdb, TextVdbFixture )
 {
     REQUIRE_RC_FAIL( VDBManagerMakeReadWithKDBManager( & m_mgr, nullptr ));
 }
 
-FIXTURE_TEST_CASE( VdbMgr, TextVdbFicture )
+FIXTURE_TEST_CASE( VdbMgr, TextVdbFixture )
 {
     const KDBManager * kdb = nullptr;
     const char * input = "{}";
@@ -78,13 +79,16 @@ FIXTURE_TEST_CASE( VdbMgr, TextVdbFicture )
     REQUIRE_RC( KDBManagerRelease( kdb ));
 }
 
-FIXTURE_TEST_CASE( VdbMgr_OpenDB_Empty, TextVdbFicture )
+FIXTURE_TEST_CASE( VdbMgr_OpenDB_Empty, TextVdbFixture )
 {
     Setup("{}");
     const VDatabase * db = nullptr;
     REQUIRE_RC_FAIL( VDBManagerOpenDBRead ( m_mgr, &db, nullptr, "db" ) );
 }
 
+class TextVdbReadFixture : public TextVdbFixture
+{
+public:
 const char * TestDB =
     R"({
         "type": "database",
@@ -95,7 +99,8 @@ const char * TestDB =
                 "name":"",
                 "children":[{
                     "name":"schema",
-                    "value":"version 2.0; table table1 #1.0.0 { column ascii column1; };
+                    "value":"version 2.0;
+                             table table1 #1.0.0 { column %t column1; };
                              database root_database #1 { table table1 #1 TABLE1; } ;",
                     "attributes":{"name":"root_database#1"}
                 }]
@@ -111,8 +116,9 @@ const char * TestDB =
                         "name":"",
                         "children":[{
                             "name":"schema",
-                    "value":"version 2.0; table table1 #1.0.0 { column ascii column1; };
-                             database root_database #1 { table table1 #1 TABLE1; } ;",
+                            "value":"version 2.0;
+                                 table table1 #1.0.0 { column %t column1; };
+                                database root_database #1 { table table1 #1 TABLE1; } ;",
                             "attributes":{"name":"table1#1"}
                         }]
                     }
@@ -120,65 +126,124 @@ const char * TestDB =
                 "columns":[
                     {
                         "name":"column1",
-                        "type":"ascii",
+                        "type":"%t",
                         "data":
                         [
-                            {"row":1,"value":"\u0002\u0004AGCT"},
-                            {"row":2,"value":"\u0002\u0005TCGAT"}
+                            {"row":1,"value":%v1},
+                            {"row":2,"value":%v2}
                         ]
                     }
                 ]
             }
         ]
     })";
-//TODO:
-// {"start":1,"data":"AGCT"}, // count = 1 by default
-// {"start":1, "count":2, "data":"\u0000AGCTAGCT" }
 
-// when KDB is able to generate a row map:
-// "columns":[ ... { "name":"column1", ... "elem_size":1, ... } ]
-// {"start":1, "data":[ [ 65, 72 , 67, 80 ], "AGCT" ] } - row map + blob created out of rows by KDB
+    string
+    FormatSchema( const char * type, const char * value1, const char * value2 )
+    {
+        string schema = TestDB;
+        while ( true )
+        {
+            auto p = schema.find("%t");
+            if ( p == schema.npos )
+            {
+                break;
+            }
+            schema.replace(p, 2, type);
+        }
+        schema.replace(schema.find("%v1"), 3, value1);
+        schema.replace(schema.find("%v2"), 3, value2);
+        return schema;
+    }
 
-FIXTURE_TEST_CASE( VdbMgr_OpenDB, TextVdbFicture )
-{
-    Setup(TestDB);
+    ~TextVdbReadFixture()
+    {
+        VCursorRelease( curs );
+        VDatabaseRelease( db );
+    }
+
+    void Setup( const char * type, const char * value1, const char * value2 )
+    {
+        TextVdbFixture::Setup( FormatSchema( type, value1, value2 ) );
+        THROW_ON_RC( VDBManagerOpenDBRead ( m_mgr, &db, nullptr, "testdb" ) );
+
+        const VTable * tbl;
+        THROW_ON_RC( VDatabaseOpenTableRead( db, &tbl, "TABLE1" ) );
+        THROW_ON_FALSE( tbl != nullptr );
+
+        THROW_ON_RC( VTableCreateCursorRead(tbl, &curs) );
+        THROW_ON_RC( VCursorAddColumn(curs, &colId, "column1") );
+
+        THROW_ON_RC( VCursorOpen(curs) );
+        THROW_ON_RC( VCursorOpenRow ( curs ) );
+
+        THROW_ON_RC( VTableRelease( tbl ) );
+    }
 
     const VDatabase * db = nullptr;
+    const VCursor * curs = nullptr;
+    uint32_t colId = 0;
+    uint32_t rowLen = 0;
+};
+
+FIXTURE_TEST_CASE( VdbMgr_OpenDB, TextVdbReadFixture )
+{
+    TextVdbFixture::Setup(FormatSchema( "ascii", "\"AGCT\"", "\"TCGAT\""));
+
     REQUIRE_RC( VDBManagerOpenDBRead ( m_mgr, &db, nullptr, "testdb" ) );
     REQUIRE_NOT_NULL( db );
-    REQUIRE_RC( VDatabaseRelease( db ) );
 }
 
-FIXTURE_TEST_CASE( VdbMgr_OpenTable, TextVdbFicture )
+FIXTURE_TEST_CASE( VdbMgr_Read_Ascii, TextVdbReadFixture )
 {
-//KDbgSetString("VDB");
-    Setup(TestDB);
-    const VDatabase * db = nullptr;
-    REQUIRE_RC( VDBManagerOpenDBRead ( m_mgr, &db, nullptr, "testdb" ) );
+    Setup( "ascii", "\"AGCT\"", "\"TCGAT\"" );
 
-    const VTable * tbl;
-    REQUIRE_RC( VDatabaseOpenTableRead( db, &tbl, "TABLE1" ) );
-    REQUIRE_NOT_NULL( tbl );
-
-    const VCursor * curs;
-    REQUIRE_RC( VTableCreateCursorRead(tbl, &curs) );
-
-    uint32_t cid = 0;
-    REQUIRE_RC( VCursorAddColumn(curs, &cid, "column1") );
-
-    REQUIRE_RC( VCursorOpen(curs) );
-    REQUIRE_RC( VCursorOpenRow ( curs ) );
-
-    uint32_t rowLen = 0;
     char buf[1024];
-    REQUIRE_RC( VCursorReadDirect ( curs, 1, cid, 8, buf, sizeof ( buf ), & rowLen ) );
+    REQUIRE_RC( VCursorReadDirect ( curs, 1, colId, 8, buf, sizeof ( buf ), & rowLen ) );
+    REQUIRE_EQ( 4, (int)rowLen );
     REQUIRE_EQ( string("AGCT"), string( buf, rowLen ) );
-    REQUIRE_RC( VCursorReadDirect ( curs, 2, cid, 8, buf, sizeof ( buf ), & rowLen ) );
+    REQUIRE_RC( VCursorReadDirect ( curs, 2, colId, 8, buf, sizeof ( buf ), & rowLen ) );
+    REQUIRE_EQ( 5, (int)rowLen );
     REQUIRE_EQ( string("TCGAT"), string( buf, rowLen ) );
+}
 
-    REQUIRE_RC( VCursorRelease( curs ) );
-    REQUIRE_RC( VTableRelease( tbl ) );
-    REQUIRE_RC( VDatabaseRelease( db ) );
+FIXTURE_TEST_CASE( VdbMgr_Read_U32, TextVdbReadFixture )
+{
+    Setup( "U32", "12345", "54321" );
+
+    uint32_t v = 0;
+    REQUIRE_RC( VCursorReadDirect ( curs, 1, colId, sizeof( v )*8, &v, 1, & rowLen ) );
+    REQUIRE_EQ( 1, (int)rowLen );
+    REQUIRE_EQ( (uint32_t)12345, v );
+    REQUIRE_RC( VCursorReadDirect ( curs, 2, colId, sizeof( v )*8, &v, 1, & rowLen ) );
+    REQUIRE_EQ( 1, (int)rowLen );
+    REQUIRE_EQ( (uint32_t)54321, v );
+}
+
+FIXTURE_TEST_CASE( VdbMgr_Read_B16, TextVdbReadFixture )
+{
+    Setup( "B16", "1234", "4321" );
+
+    uint16_t v = 0;
+    REQUIRE_RC( VCursorReadDirect ( curs, 1, colId, sizeof( v )*8, &v, 1, & rowLen ) );
+    REQUIRE_EQ( 1, (int)rowLen );
+    REQUIRE_EQ( (uint16_t)1234, v );
+    REQUIRE_RC( VCursorReadDirect ( curs, 2, colId, sizeof( v )*8, &v, 1, & rowLen ) );
+    REQUIRE_EQ( 1, (int)rowLen );
+    REQUIRE_EQ( (uint16_t)4321, v );
+}
+
+FIXTURE_TEST_CASE( VdbMgr_Read_I8, TextVdbReadFixture )
+{
+    Setup( "I8", "12", "21" );
+
+    int8_t v = 0;
+    REQUIRE_RC( VCursorReadDirect ( curs, 1, colId, sizeof( v )*8, &v, 1, & rowLen ) );
+    REQUIRE_EQ( 1, (int)rowLen );
+    REQUIRE_EQ( (int8_t)12, v );
+    REQUIRE_RC( VCursorReadDirect ( curs, 2, colId, sizeof( v )*8, &v, 1, & rowLen ) );
+    REQUIRE_EQ( 1, (int)rowLen );
+    REQUIRE_EQ( (int8_t)21, v );
 }
 
 //////////////////////////////////////////// Main

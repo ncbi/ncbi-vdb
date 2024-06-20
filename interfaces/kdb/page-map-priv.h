@@ -27,8 +27,8 @@
 #ifndef _h_page_map_priv_
 #define _h_page_map_priv_
 
-#ifndef _h_vdb_extern_
-#include <vdb/extern.h>
+#ifndef _h_kdb_extern_
+#include <kdb/extern.h>
 #endif
 
 #ifndef _h_klib_defs_
@@ -78,13 +78,13 @@ struct PageMapIterator {
 };
 
 
-VDB_EXTERN rc_t PageMapNewIterator(const struct PageMap *self, PageMapIterator *lhs, uint64_t first_row, uint64_t num_rows);
+KDB_EXTERN rc_t PageMapNewIterator(const struct PageMap *self, PageMapIterator *lhs, uint64_t first_row, uint64_t num_rows);
 
 // these functions are defined as static __inline__ in page-map.h
-VDB_EXTERN elem_count_t CC PageMapIteratorDataLength_Ext(const PageMapIterator *self);
-VDB_EXTERN elem_count_t CC PageMapIteratorDataOffset_Ext(const PageMapIterator *self);
-VDB_EXTERN row_count_t CC PageMapIteratorRepeatCount_Ext(const PageMapIterator *cself);
-VDB_EXTERN bool CC PageMapIteratorAdvance_Ext(PageMapIterator *self, row_count_t rows);
-VDB_EXTERN bool CC PageMapIteratorNext_Ext(PageMapIterator *self);
+KDB_EXTERN elem_count_t CC PageMapIteratorDataLength_Ext(const PageMapIterator *self);
+KDB_EXTERN elem_count_t CC PageMapIteratorDataOffset_Ext(const PageMapIterator *self);
+KDB_EXTERN row_count_t CC PageMapIteratorRepeatCount_Ext(const PageMapIterator *cself);
+KDB_EXTERN bool CC PageMapIteratorAdvance_Ext(PageMapIterator *self, row_count_t rows);
+KDB_EXTERN bool CC PageMapIteratorNext_Ext(PageMapIterator *self);
 
 #endif /* _h_page_map_ */

@@ -32,13 +32,13 @@
 #include <vdb/blob.h>
 #include <vdb/vdb-priv.h>
 #include <vdb/blob.h>
+#include <kdb/page-map.h>
 
 #include <vfs/manager.h>
 #include <vfs/manager-priv.h>
 
 extern "C" {
     #include <../libs/vdb/blob-priv.h>
-    #include <../libs/vdb/page-map.h>
     #include <../libs/vfs/manager-priv.h>
 }
 

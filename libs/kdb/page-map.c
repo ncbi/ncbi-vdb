@@ -26,16 +26,15 @@
 
 #define TRACK_REFERENCES 0
 
-#include <vdb/extern.h>
+#include <kdb/page-map.h>
+
 #include <klib/rc.h>
-#include <atomic.h>
-
-#include <bitstr.h>
-
 #include <klib/pack.h>
 #include <klib/vlen-encode.h>
+
+#include <atomic.h>
+#include <bitstr.h>
 #include <sysalloc.h>
-#include "page-map.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -334,7 +333,7 @@ static rc_t PageMapFindRegion(const PageMap *cself,uint64_t row,PageMapRegion **
 	rc_t	rc;
 	pm_size_t left,right,i_rgn;
 	if(row >= cself->row_count )
-		return  RC (rcVDB, rcPagemap, rcSearching, rcRow, rcNotFound );
+		return  RC (rcDB, rcPagemap, rcSearching, rcRow, rcNotFound );
 	if(cself -> exp_row_last <= row){
 		rc=PageMapExpand(cself,row);
 		if(rc) return rc;
@@ -376,7 +375,7 @@ static rc_t PageMapFindRegion(const PageMap *cself,uint64_t row,PageMapRegion **
 static rc_t PageMapRegionGetData(const PageMapRegion *cself,const elem_count_t *exp_base,uint64_t row,uint32_t * data_offset,uint32_t * data_length,uint32_t * repeat_count)
 {
 	if(row < cself->start_row || row >= cself->start_row + cself->numrows)
-		return  RC (rcVDB, rcPagemap, rcSearching, rcRow, rcNotFound );
+		return  RC (rcDB, rcPagemap, rcSearching, rcRow, rcNotFound );
 
 	if(data_offset != NULL || data_length != NULL || repeat_count != NULL){
 		if(!cself->expanded){
@@ -421,7 +420,7 @@ static rc_t PageMapRegionGetData(const PageMapRegion *cself,const elem_count_t *
 				}
 				break;
 			default: /*** should not happen to anything but 2 above **/
-				return RC (rcVDB, rcPagemap, rcSearching, rcData, rcInconsistent );
+				return RC (rcDB, rcPagemap, rcSearching, rcData, rcInconsistent );
 		}
 	}
 	return 0;
@@ -432,7 +431,7 @@ static rc_t PageMapRegionGetData(const PageMapRegion *cself,const elem_count_t *
 static rc_t PageMapGetData_HW(const PageMap *cself,uint64_t row,uint32_t * data_offset,uint32_t * data_length,uint32_t * repeat_count)
 {
 	if(row >= cself->row_count)
-		return  RC (rcVDB, rcPagemap, rcSearching, rcRow, rcNotFound );
+		return  RC (rcDB, rcPagemap, rcSearching, rcRow, rcNotFound );
 	if(data_offset != NULL || data_length != NULL || repeat_count != NULL){
 		uint64_t i,j,r;
 		uint32_t dto,dtl,dtr;
@@ -489,7 +488,7 @@ rc_t PageMapFindRow(const PageMap *cself,uint64_t row,uint32_t * data_offset,uin
         }
 	if(cself->random_access && cself->leng_recs == 1){
 		if(row >= cself->data_recs)
-			return RC(rcVDB, rcPagemap, rcAccessing, rcRow, rcOutofrange);
+			return RC(rcDB, rcPagemap, rcAccessing, rcRow, rcOutofrange);
 		if(data_length)  *data_length = cself->length[0];
 		if(data_offset)  *data_offset =  cself->data_offset[row];
 		if(repeat_count){
@@ -626,7 +625,7 @@ rc_t PageMapGrow(PageMap *self, uint32_t new_reserve_leng, uint32_t new_reserve_
     ++pm_stats.grows;
 #endif
     if (new_reserve_leng >= (1UL << 31) || new_reserve_data >= (1UL << 31))
-        return RC(rcVDB, rcPagemap, rcAllocating, rcParam, rcExcessive);
+        return RC(rcDB, rcPagemap, rcAllocating, rcParam, rcExcessive);
 
     if (reserve_leng == 0)
         reserve_leng = 1;
@@ -686,7 +685,7 @@ rc_t PageMapNew(PageMap **lhs, uint32_t reserve) {
     PageMap *y = new_PageMap();
 
     if (y == NULL)
-        return RC(rcVDB, rcPagemap, rcConstructing, rcMemory, rcExhausted);
+        return RC(rcDB, rcPagemap, rcConstructing, rcMemory, rcExhausted);
 
     if (reserve > 0) {
         rc_t rc = PageMapGrow(y, reserve, reserve);
@@ -762,7 +761,7 @@ rc_t PageMapNewFixedRowLength(PageMap **lhs, uint64_t row_count, uint64_t row_le
     rc_t rc;
 
     if (row_count >> 32 != 0 || row_len >> 32 != 0)
-        return RC(rcVDB, rcPagemap, rcConstructing, rcParam, rcTooBig);
+        return RC(rcDB, rcPagemap, rcConstructing, rcParam, rcTooBig);
 
     rc = PageMapNew(&y, 0);
 #if PAGEMAP_STATISTICS
@@ -798,7 +797,7 @@ rc_t PageMapNewSingle(PageMap **lhs, uint64_t row_count, uint64_t row_len) {
     rc_t rc;
 
     if (row_count >> 32 != 0)
-        return RC(rcVDB, rcPagemap, rcConstructing, rcParam, rcTooBig);
+        return RC(rcDB, rcPagemap, rcConstructing, rcParam, rcTooBig);
 
     rc = PageMapNewFixedRowLength(&y, 1, row_len);
     if (rc == 0) {
@@ -871,10 +870,10 @@ rc_t PageMapAppendRows(PageMap *self, uint64_t row_length, uint64_t run_length, 
     uint32_t data_cur = self->data_recs - 1;
 
     if ((uint32_t)row_length != row_length)
-        return RC(rcVDB, rcPagemap, rcConstructing, rcParam, rcTooBig);
+        return RC(rcDB, rcPagemap, rcConstructing, rcParam, rcTooBig);
 
     if ((uint32_t)run_length != run_length)
-        return RC(rcVDB, rcPagemap, rcConstructing, rcParam, rcTooBig);
+        return RC(rcDB, rcPagemap, rcConstructing, rcParam, rcTooBig);
 
     if (self->leng_recs && row_length == self->length[leng_cur])
         self->leng_run[leng_cur] += run_length;
@@ -1215,17 +1214,17 @@ rc_t serialize(const PageMap *self, KDataBuffer *buffer, uint64_t *size) {
                             break;
                         }
                         else {
-                            rc = RC(rcVDB, rcPagemap, rcWriting, rcParam, rcInvalid);
+                            rc = RC(rcDB, rcPagemap, rcWriting, rcParam, rcInvalid);
                             break;
                         }
                     }
                     deflateEnd(&zs);
                     break;
                 case Z_MEM_ERROR:
-                    rc = RC(rcVDB, rcPagemap, rcWriting, rcMemory, rcExhausted);
+                    rc = RC(rcDB, rcPagemap, rcWriting, rcMemory, rcExhausted);
                     break;
                 default:
-                    rc = RC(rcVDB, rcPagemap, rcWriting, rcParam, rcInvalid);
+                    rc = RC(rcDB, rcPagemap, rcWriting, rcParam, rcInvalid);
                 }
             }
         }
@@ -1283,7 +1282,7 @@ rc_t PageMapDeserialize_v0(PageMap **lhs, uint8_t const src[], unsigned ssize, r
 
         *lhs = new_StaticPageMap(1, random_access?row_count:1);
         if (*lhs == NULL)
-            return RC(rcVDB, rcPagemap, rcConstructing, rcMemory, rcExhausted);
+            return RC(rcDB, rcPagemap, rcConstructing, rcMemory, rcExhausted);
 
         (**lhs).data_recs = row_count;
         (**lhs).leng_recs = 1;
@@ -1312,7 +1311,7 @@ rc_t PageMapDeserialize_v0(PageMap **lhs, uint8_t const src[], unsigned ssize, r
 
         *lhs = new_StaticPageMap(1, data_recs);
         if (*lhs == NULL)
-            return RC(rcVDB, rcPagemap, rcConstructing, rcMemory, rcExhausted);
+            return RC(rcDB, rcPagemap, rcConstructing, rcMemory, rcExhausted);
 
         (**lhs).data_recs = data_recs;
         (**lhs).leng_recs = 1;
@@ -1334,7 +1333,7 @@ rc_t PageMapDeserialize_v0(PageMap **lhs, uint8_t const src[], unsigned ssize, r
 
         *lhs = new_StaticPageMap((unsigned)leng_recs, random_access?row_count:1);
         if (*lhs == NULL)
-            return RC(rcVDB, rcPagemap, rcConstructing, rcMemory, rcExhausted);
+            return RC(rcDB, rcPagemap, rcConstructing, rcMemory, rcExhausted);
 
         (**lhs).data_recs = row_count;
         (**lhs).leng_recs = leng_recs;
@@ -1373,7 +1372,7 @@ rc_t PageMapDeserialize_v0(PageMap **lhs, uint8_t const src[], unsigned ssize, r
 
         *lhs = new_StaticPageMap(leng_recs, data_recs);
         if (*lhs == NULL)
-            return RC(rcVDB, rcPagemap, rcConstructing, rcMemory, rcExhausted);
+            return RC(rcDB, rcPagemap, rcConstructing, rcMemory, rcExhausted);
 
         (**lhs).data_recs = data_recs;
         (**lhs).leng_recs = leng_recs;
@@ -1392,7 +1391,7 @@ rc_t PageMapDeserialize_v0(PageMap **lhs, uint8_t const src[], unsigned ssize, r
 #endif
         break;
      default:
-	rc = RC(rcVDB, rcPagemap, rcConstructing, rcFormat, rcUnrecognized);
+	rc = RC(rcDB, rcPagemap, rcConstructing, rcFormat, rcUnrecognized);
     }
     (**lhs).random_access = random_access;
     return rc;
@@ -1465,7 +1464,7 @@ rc_t PageMapDeserialize_v1(PageMap **lhs, const uint8_t *Src, uint64_t ssize, ui
         }
         break;
     default:
-        return RC(rcVDB, rcPagemap, rcConstructing, rcData, rcInvalid);
+        return RC(rcDB, rcPagemap, rcConstructing, rcData, rcInvalid);
     }
     if (rc)
         return rc;
@@ -1489,11 +1488,11 @@ rc_t PageMapDeserialize_v1(PageMap **lhs, const uint8_t *Src, uint64_t ssize, ui
     if (zr == Z_OK) {
         zr = inflate(&zs, Z_FINISH);
         if (zr != Z_STREAM_END)
-            rc = RC(rcVDB, rcPagemap, rcConstructing, rcData, rcInvalid);
+            rc = RC(rcDB, rcPagemap, rcConstructing, rcData, rcInvalid);
         inflateEnd(&zs);
     }
     else
-        rc = RC(rcVDB, rcPagemap, rcConstructing, rcMemory, rcExhausted);
+        rc = RC(rcDB, rcPagemap, rcConstructing, rcMemory, rcExhausted);
 
     if (rc == 0)
         rc = PageMapDeserialize_v0(lhs, decompress.base, hsize + zs.total_out, row_count);
@@ -1505,10 +1504,10 @@ rc_t PageMapDeserialize (PageMap **lhs, const void *src, uint64_t ssize, uint64_
     rc_t rc;
 
     if ((uint32_t)row_count != row_count)
-        return RC(rcVDB, rcPagemap, rcConstructing, rcParam, rcTooBig);
+        return RC(rcDB, rcPagemap, rcConstructing, rcParam, rcTooBig);
 
     if (lhs == NULL)
-        return RC(rcVDB, rcPagemap, rcConstructing, rcParam, rcNull);
+        return RC(rcDB, rcPagemap, rcConstructing, rcParam, rcNull);
 
     *lhs = NULL;
     if (src == NULL || ssize == 0)
@@ -1523,7 +1522,7 @@ rc_t PageMapDeserialize (PageMap **lhs, const void *src, uint64_t ssize, uint64_
         rc = PageMapDeserialize_v1(lhs, src, ssize, (uint32_t)row_count);
         break;
     default:
-        return RC(rcVDB, rcPagemap, rcConstructing, rcData, rcBadVersion);
+        return RC(rcDB, rcPagemap, rcConstructing, rcData, rcBadVersion);
     }
     if (rc == 0)
         (**lhs).row_count = (uint32_t)row_count;
