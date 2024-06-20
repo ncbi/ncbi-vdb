@@ -54,6 +54,8 @@
 #include <ctype.h>
 #include <assert.h>
 
+#include "../klib/int_checks-priv.h"
+
 /* This is a temporary define, used to test code to deal with
    circular references and new means of tracking window end */
 
@@ -193,7 +195,7 @@ static rc_t ReferenceObj_Alloc( ReferenceObj** self, const char* seqid, size_t s
 
 /* helper function for ReferenceList_MakeCursor() */
 static rc_t ReferenceList_handle_filter( const KIndex* iname, const char * filt_name, uint32_t bin_size,
-                                         int64_t *start, int64_t tbl_start, uint64_t *count, int *bin_num,
+                                         int64_t *start, int64_t tbl_start, int64_t *count, int *bin_num,
                                          TableReaderColumn *h, const TableReader* tmp )
 {
     rc_t rc = 0;
@@ -201,11 +203,14 @@ static rc_t ReferenceList_handle_filter( const KIndex* iname, const char * filt_
     {
         if ( bin_size == 0 || strncmp( filt_name, "BIN_NUM:", 8 ) )
         {
-            rc = KIndexFindText( iname, filt_name, start, count, NULL, NULL );
+            rc = KIndexFindText( iname, filt_name, start, (uint64_t*)count, NULL, NULL );
+            assert ( *count >= 0 );
             if( rc == 0 && bin_size > 0 )
             {
                 /** change start to the beginning of the bin **/
-                *bin_num = ( *start - tbl_start ) / bin_size;
+                int64_t t = ( *start - tbl_start ) / bin_size;
+                assert ( FITS_INTO_INT ( t ) );
+                *bin_num = (int) t;
             }
         }
         else
@@ -224,7 +229,8 @@ static rc_t ReferenceList_handle_filter( const KIndex* iname, const char * filt_
                 {
                     memmove( name, h[ 0 ].base.str, h[ 0 ].len );
                     name[ h[ 0 ].len ] = '\0';
-                    rc = KIndexFindText( iname, name, &r_start, count, NULL, NULL );
+                    rc = KIndexFindText( iname, name, &r_start, (uint64_t*)count, NULL, NULL );
+                    assert ( *count >= 0 );
                     if ( rc == 0 && *start > r_start )
                     { /*** move start to the beginning of the fully contained sequence **/
                         *start = r_start + *count;
@@ -298,7 +304,7 @@ LIB_EXPORT rc_t CC ReferenceList_MakeCursor( const ReferenceList** cself, const 
             if ( rc == 0 )
             {
                 int64_t start, tbl_start, tbl_stop;
-                uint64_t count;
+                int64_t count;
                 const KIndex* iname = NULL;
                 bool only_one = false;
 
@@ -307,13 +313,16 @@ LIB_EXPORT rc_t CC ReferenceList_MakeCursor( const ReferenceList** cself, const 
                 ALIGN_DBGERRP( "index '%s' was not found", rctmp, "i_name" );
                 UNUSED(rctmp);
 
-                rc = TableReader_IdRange( tmp, &start, &count );
+                rc = TableReader_IdRange( tmp, &start, (uint64_t*)&count );
                 assert( rc == 0 );
+                assert( count >= 0 );
                 tbl_start = start;
                 tbl_stop  = start + count -1;
                 if ( numbins > 0 )
                 {
-                    bin_size = ( count + numbins -1 ) / numbins;
+                    int64_t t = (count + numbins - 1) / numbins;
+                    assert ( FITS_INTO_INT32 ( t ) );
+                    bin_size = (uint32_t) t;
                 }
                 else
                 {
@@ -349,7 +358,7 @@ LIB_EXPORT rc_t CC ReferenceList_MakeCursor( const ReferenceList** cself, const 
                             if ( node == NULL || last_name_len != h[0].len ||
                                  strncmp( h[ 0 ].base.str, node->name, h[ 0 ].len) != 0 )
                             {
-                                uint32_t cur_bin = ( bin_size > 0 ) ? ( start-tbl_start ) / bin_size : 0;
+                                int64_t cur_bin = ( bin_size > 0 ) ? ( start-tbl_start ) / bin_size : 0;
                                 if ( only_one && self->nodes_qty == 1 )
                                 {
                                     break;
@@ -364,14 +373,14 @@ LIB_EXPORT rc_t CC ReferenceList_MakeCursor( const ReferenceList** cself, const 
                                 }
                                 if ( self->nodes_qty == self->nodes_max_qty )
                                 {
-                                    ReferenceList* tmp = realloc( self, sizeof( *self ) + sizeof( node ) * self->nodes_max_qty );
-                                    if ( tmp == NULL )
+                                    ReferenceList* tmp_rl = realloc( self, sizeof( *self ) + sizeof( node ) * self->nodes_max_qty );
+                                    if ( tmp_rl == NULL )
                                     {
                                         rc = RC(rcAlign, rcType, rcConstructing, rcMemory, rcExhausted);
                                     }
                                     else
                                     {
-                                        self = tmp;
+                                        self = tmp_rl;
                                         self->nodes_max_qty += sizeof( self->nodes ) / sizeof( self->nodes[ 0 ] );
                                     }
                                 }
@@ -386,7 +395,8 @@ LIB_EXPORT rc_t CC ReferenceList_MakeCursor( const ReferenceList** cself, const 
                                         node->circular = h[ 3 ].len ? h[ 3 ].base.buul[ 0 ] : false;
                                         node->start_rowid = start;
                                         node->seq_len = 0;
-                                        node->bin = cur_bin;
+                                        assert ( FITS_INTO_INT32 ( cur_bin ) );
+                                        node->bin = (uint32_t)cur_bin;
                                         read_determination_done = false;
                                         rc = BSTreeInsertUnique( &self->seqid_tree, &node->by_seqid, NULL, ReferenceObj_SortSeqId );
                                         if ( rc == 0 )
@@ -420,18 +430,22 @@ LIB_EXPORT rc_t CC ReferenceList_MakeCursor( const ReferenceList** cself, const 
                                 {
                                     /* scroll to last row for this reference projecting the seq_len */
                                     int64_t r_start;
-                                    uint64_t r_count;
-                                    if ( KIndexFindText( iname, node->name, &r_start, &r_count, NULL, NULL ) == 0 )
+                                    int64_t r_count;
+                                    if ( KIndexFindText( iname, node->name, &r_start, (uint64_t*)&r_count, NULL, NULL ) == 0 )
                                     {
                                         assert( node->start_rowid == r_start );
+                                        assert( r_count >= 0 );
                                         /* not last ref row */
                                         if ( start != r_start + r_count - 1 )
                                         {
                                             /* we need to pickup last row SEQ_LEN for this reference
                                             so we step back 2 rows in table from this ref end row
                                             and also skip rows already scanned for read presence */
+                                            int64_t t;
                                             r_count -= ( start - r_start ) + 2;
-                                            node->seq_len += cur_seq_len * r_count;
+                                            t = cur_seq_len * r_count;
+                                            assert ( FITS_INTO_INT32 ( t ) );
+                                            node->seq_len += (uint32_t) t;
                                             start += r_count;
                                             count -= r_count;
                                         }
@@ -963,8 +977,10 @@ LIB_EXPORT rc_t CC ReferenceObj_External( const ReferenceObj* cself, bool* exter
             rc = ReferenceList_RefSeqMgr( cself->mgr, &rmgr );
             if ( rc == 0 )
             {
+                size_t t = string_size( cself->seqid );
+                assert ( FITS_INTO_INT32 ( t ) );
                 *path = NULL;
-                rc = RefSeqMgr_Exists( rmgr, cself->seqid, string_size( cself->seqid ), NULL );
+                rc = RefSeqMgr_Exists( rmgr, cself->seqid, (uint32_t)t, NULL );
                 if ( GetRCObject( rc ) == (enum RCObject)rcTable && GetRCState( rc ) == rcNotFound )
                 {
                     rc = 0;
@@ -1619,7 +1635,8 @@ static rc_t allocate_populate_rec( const PlacementIterator *cself,
             pr->mapq = cself->align_cols[eplacementiter_cn_MAPQ].base.i32[ 0 ]; /* mapq */
 
             /* populate the spot-group : (with the values discovered at the "size-phase" ) */
-            pr->spot_group_len = spot_group_len;
+            assert ( FITS_INTO_INT32 ( spot_group_len ) );
+            pr->spot_group_len = (uint32_t)spot_group_len;
             if ( cself->spot_group_len > 0 )
             {
                 /* we make a copy of the spot-group-override commin from the iterator */
@@ -1654,8 +1671,8 @@ static rc_t allocate_populate_rec( const PlacementIterator *cself,
                                             cself->placement_ctx );
                 if ( rc != 0 && cself->ext_0.destroy != NULL )
                 {
-                    void *obj = PlacementRecordCast ( pr, placementRecordExtension0 );
-                    cself->ext_0.destroy( obj, cself->ext_0.data );
+                    void *obj_prc = PlacementRecordCast ( pr, placementRecordExtension0 );
+                    cself->ext_0.destroy( obj_prc, cself->ext_0.data );
                 }
             }
 
@@ -1671,13 +1688,13 @@ static rc_t allocate_populate_rec( const PlacementIterator *cself,
                 {
                     if ( cself->ext_1.destroy != NULL )
                     {
-                        void *obj = PlacementRecordCast ( pr, placementRecordExtension1 );
-                        cself->ext_1.destroy( obj, cself->ext_1.data );
+                        void *obj_prc = PlacementRecordCast ( pr, placementRecordExtension1 );
+                        cself->ext_1.destroy( obj_prc, cself->ext_1.data );
                     }
                     if ( cself->ext_0.destroy != NULL )
                     {
-                        void *obj = PlacementRecordCast ( pr, placementRecordExtension0 );
-                        cself->ext_0.destroy( obj, cself->ext_0.data );
+                        void *obj_prc = PlacementRecordCast ( pr, placementRecordExtension0 );
+                        cself->ext_0.destroy( obj_prc, cself->ext_0.data );
                     }
 
                 }
@@ -1758,7 +1775,8 @@ static rc_t read_alignments( PlacementIterator *self )
             }
 
             /* case 2: alignment is to the right of window */
-            if ( apos >= ( self -> ref_window_start + self -> ref_window_len ) )
+            /* assert ( FITS_INTO_INT32 ( self -> ref_window_len ) ); TODO asm-trace/test/sra-pileup fails on this legitimate assert */
+            if ( apos >= ( self -> ref_window_start + (int32_t) self -> ref_window_len ) )
             {
                 /* if not circular, it cannot intersect */
                 if ( ! self -> obj -> circular )
@@ -1861,7 +1879,8 @@ LIB_EXPORT rc_t CC PlacementIteratorNextAvailPos( const PlacementIterator *cself
                 ALIGN_DBG( "PlacementIteratorNextAvailPos( id=%,li, pos=%,d, len=%,u, n=%,u )", r->id, r->pos, r->len, count );
 #endif
 
-                if ( !( cself->obj->circular ) && ( r->pos >= ( cself->ref_window_start + cself->ref_window_len ) ) )
+                assert ( FITS_INTO_INT32 ( cself->ref_window_len ) );
+                if ( !( cself->obj->circular ) && ( r->pos >= ( cself->ref_window_start + (int32_t) cself->ref_window_len ) ) )
                 {
                     /* the alignment !starts! after the end of the of the requested window! */
                     rc = SILENT_RC( rcAlign, rcType, rcSelecting, rcRange, rcDone );

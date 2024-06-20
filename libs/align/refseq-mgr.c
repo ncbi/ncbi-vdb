@@ -124,27 +124,24 @@ struct RefSeq_VT {
     int (*compare)(RefSeq const *self, unsigned qlen, char const qry[]);
 };
 
-static RefSeq *RefSeq_RefSeq_init(RefSeq *self,
-                                   RefSeqMgr const *mgr,
-                                   unsigned namelen,
+static RefSeq *RefSeq_RefSeq_init(RefSeq *const super,
+                                   RefSeqMgr const *const mgr,
+                                   unsigned const namelen,
                                    char const name[]);
 static char const *RefSeq_RefSeq_name(RefSeq const *self);
-static bool RefSeq_RefSeq_isopen(RefSeq const *self);
-static rc_t RefSeq_RefSeq_open(RefSeq *self, RefSeqMgr const *mgr);
-static rc_t RefSeq_RefSeq_odd_open(RefSeq *self, RefSeqMgr const *mgr);
-static void RefSeq_RefSeq_close(RefSeq *self);
-static rc_t RefSeq_RefSeq_setRow(RefSeq *self, unsigned N, char const name[]);
-static rc_t RefSeq_RefSeq_read(RefSeq const *self,
-                               INSDC_coord_zero offset,
-                               INSDC_coord_len len,
-                               uint8_t *buffer,
-                               INSDC_coord_len *written);
-static rc_t RefSeq_RefSeq_circular(RefSeq const *self,
-                                   bool *result);
-static rc_t RefSeq_RefSeq_length(RefSeq const *self,
-                                INSDC_coord_len *result);
-static rc_t RefSeq_RefSeq_checksum(RefSeq const *self,
-                                   uint8_t const **result);
+static bool RefSeq_RefSeq_isopen(RefSeq const *const super);
+static rc_t RefSeq_RefSeq_open(RefSeq *const super, RefSeqMgr const *const mgr);
+static rc_t RefSeq_RefSeq_odd_open(RefSeq *const super, RefSeqMgr const *const mgr);
+static void RefSeq_RefSeq_close(RefSeq *const super);
+static rc_t RefSeq_RefSeq_setRow(RefSeq *const super, unsigned const N, char const name[]);
+static rc_t RefSeq_RefSeq_read(RefSeq const *const super,
+                               INSDC_coord_zero const offset,
+                               INSDC_coord_len const length,
+                               uint8_t *const buffer,
+                               INSDC_coord_len *const written);
+static rc_t RefSeq_RefSeq_circular(RefSeq const *const super, bool *const result);
+static rc_t RefSeq_RefSeq_length(RefSeq const *const super, INSDC_coord_len *const result);
+static rc_t RefSeq_RefSeq_checksum(RefSeq const *const super, uint8_t const **const result);
 static int RefSeq_RefSeq_compare(RefSeq const *self, unsigned const qlen,
                                  char const qry[]);
 
@@ -176,15 +173,15 @@ static RefSeq_VT const RefSeq_RefSeq_odd_VT = {
     RefSeq_RefSeq_compare
 };
 
-static RefSeq *RefSeq_WGS_init(RefSeq *self,
-                                RefSeqMgr const *mgr,
+static RefSeq *RefSeq_WGS_init(RefSeq *const super,
+                                RefSeqMgr const *const mgr,
                                 unsigned const namelen,
                                 char const name[]);
 static char const *RefSeq_WGS_name(RefSeq const *self);
-static bool RefSeq_WGS_isopen(RefSeq const *self);
-static rc_t RefSeq_WGS_open(RefSeq *self, RefSeqMgr const *mgr);
-static void RefSeq_WGS_close(RefSeq *self);
-static rc_t RefSeq_WGS_setRow(RefSeq *self, unsigned N, char const name[]);
+static bool RefSeq_WGS_isopen(RefSeq const *const super);
+static rc_t RefSeq_WGS_open(RefSeq *const super, RefSeqMgr const *const mgr);
+static void RefSeq_WGS_close(RefSeq *const super);
+static rc_t RefSeq_WGS_setRow(RefSeq *const super, unsigned const N, char const name[]);
 static rc_t RefSeq_WGS_read(RefSeq const *const self,
                             INSDC_coord_zero const offset,
                             INSDC_coord_len const len,
@@ -520,7 +517,7 @@ static rc_t RefSeq_RefSeq_open(RefSeq *const super, RefSeqMgr const *const mgr)
 
     VTable const *tbl = NULL;
     const KDBManager * kmgr = NULL;
-    VFSManager * vfs;
+    VFSManager * vfs = NULL;
     VPath * aOrig = NULL;
 
     rc = VDBManagerGetKDBManagerRead(mgr->vmgr, &kmgr);
@@ -621,7 +618,7 @@ static int AccessionType(VDBManager const *const mgr,
         {
             const KDBManager * kmgr = NULL;
             /* need VFS manager to make a path */
-            VFSManager * vfs;
+            VFSManager * vfs = NULL;
             VDatabase const *db = NULL;
             VPath * aOrig = NULL;
             *rc = VDBManagerGetKDBManagerRead(mgr, &kmgr);
@@ -1046,7 +1043,7 @@ static rc_t RefSeqMgr_GetSeqForDb  (RefSeqMgr const *const cmgr,
     return rc;
 }
 
-LIB_EXPORT rc_t CC RefSeqMgr_GetSeq(RefSeqMgr const *const cmgr,
+LIB_EXPORT rc_t CC RefSeqMgr_GetSeq(const RefSeqMgr* cmgr,
                                     RefSeq const **result,
                                     char const *seq_id,
                                     uint32_t seq_id_sz)

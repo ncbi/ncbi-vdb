@@ -43,6 +43,8 @@
 #include <string.h>
 #include <assert.h>
 
+#include "../klib/int_checks-priv.h"
+
 
 typedef struct window
 {
@@ -141,7 +143,9 @@ static int cmp_pchar( const char * a, const char * b )
     {
         size_t len_a = string_size( a );
         size_t len_b = string_size( b );
-        res = string_cmp ( a, len_a, b, len_b, ( len_a < len_b ) ? len_b : len_a );
+        size_t len = len_a < len_b ? len_b : len_a;
+        assert ( FITS_INTO_INT32 ( len ) );
+        res = string_cmp ( a, len_a, b, len_b, (uint32_t)len );
     }
     return res;
 }

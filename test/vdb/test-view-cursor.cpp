@@ -581,7 +581,7 @@ FIXTURE_TEST_CASE( ViewCursor_Join_NullKey, ViewOnTableCursorFixture )
 
         // CreateTablePopulate( "t", "c", 2, NULL );
         VCursor * cur = CreateTableOpenWriteCursor( "t", "c" );
-        WriteRow ( cur, m_columnIdx, 2 );
+        WriteRow ( cur, m_columnIdx, (int64_t)2 );
 
         // WriteRow ( cur, m_columnIdx, NULL );
         REQUIRE_RC ( VCursorOpenRow ( cur ) );

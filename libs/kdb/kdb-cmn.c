@@ -444,29 +444,6 @@ rc_t KDBMakeSubPath ( struct KDirectory const *dir,
 }
 
 
-/* KDBIsPathUri
- * A hack to get some of VFS into KDB that is too tightly bound to KFS
- */
-
-bool KDBIsPathUri (const char * path)
-{
-    const char * pc;
-    size_t z;
-
-    z = string_size (path);
-
-    if (NULL != (pc = string_chr (path, z, ':')))
-        return true;
-
-    if (NULL != (pc = string_chr (path, z, '?')))
-        return true;
-
-    if (NULL != (pc = string_chr (path, z, '#')))
-        return true;
-
-    return false;
-}
-
 static rc_t KDBOpenPathTypeReadInt ( const KDBManager * mgr, const KDirectory * dir, const char * path,
                                      const KDirectory ** pdir, int * type,
                                      int pathtype, uint32_t rcobj, bool try_srapath,

@@ -42,6 +42,8 @@
 #include <ctype.h>
 #include <assert.h>
 
+#include "../klib/int_checks-priv.h"
+
 static const TableWriterColumn TableWriterRefData_cols[ewrefd_cn_Last + 1] =
 {
     /* order is important, see enum in .h !!! */
@@ -241,7 +243,8 @@ rc_t CC TableWriterRef_Write(const TableWriterRef* cself, const TableWriterRefDa
         ALIGN_DBGERRP("%s is longer than %s", rc, cself->cols_data[ewrefd_cn_READ].name, cself->cols_data[ewrefd_cn_MAX_SEQ_LEN].name);
     } else if( (rc = TableWriter_OpenRow(cself->base, rowid, cself->cursor_id)) == 0 ) {
         const INSDC_dna_text* b = data->read.buffer;
-        INSDC_coord_len const len = data->read.elements;
+        assert ( FITS_INTO_INT32 ( data->read.elements ) );
+        INSDC_coord_len const len = (int32_t)data->read.elements;
         bool write_read = data->seq_id.elements < 1 || data->force_READ_write;
         INSDC_coord_len trim_len = len;
         
@@ -285,7 +288,8 @@ rc_t CC TableWriterRef_Write(const TableWriterRef* cself, const TableWriterRefDa
                 self->last_cs_key = 'T';
                 break;
             }
-            self->seq_start_last += data->read.elements;
+            assert ( FITS_INTO_INT32 ( data->read.elements ) );
+            self->seq_start_last += (int32_t)data->read.elements;
         }
     }
     return rc;

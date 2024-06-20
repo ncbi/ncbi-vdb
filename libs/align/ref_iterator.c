@@ -44,6 +44,8 @@
 #include <string.h>
 #include <assert.h>
 
+#include "../klib/int_checks-priv.h"
+
 #define COL_READ "(INSDC:4na:bin)READ"
 #define COL_HAS_MISMATCH "(bool)HAS_MISMATCH"
 #define COL_HAS_REF_OFFSET "(bool)HAS_REF_OFFSET"
@@ -124,9 +126,11 @@ static bool CC find_spot_group_callback( DLNode *n, void *data )
     }
     else
     {
+        size_t max_chars = sg->len < ctx->len ? ctx->len : sg->len;
+        assert ( FITS_INTO_INT32 (max_chars) );
         res = ( string_cmp ( sg->name, sg->len, 
                              ctx->name, ctx->len, 
-                             ( sg->len < ctx->len ) ? ctx->len : sg->len ) == 0 );
+                             (uint32_t) max_chars ) == 0 );
     }
 
     if ( res )
@@ -807,7 +811,10 @@ LIB_EXPORT int32_t CC ReferenceIteratorState ( const ReferenceIterator *self,
 LIB_EXPORT uint32_t CC ReferenceIteratorBasesInserted ( const ReferenceIterator *self,
     const INSDC_4na_bin **bases )
 {
-    uint32_t res = align_iter_invalid;
+    /* TODO: uint32 is used for an arithmetic type (i.e. it must be signed),
+       and it's assigned an intentionally negative value (for a special case) -
+       this can cause some bugs in the future. Fixing will involve an interface change */
+    uint32_t res = (uint32_t) align_iter_invalid;
     if ( bases != NULL )
     {
         *bases = NULL;
@@ -826,7 +833,10 @@ LIB_EXPORT uint32_t CC ReferenceIteratorBasesInserted ( const ReferenceIterator 
 LIB_EXPORT uint32_t CC ReferenceIteratorBasesDeleted ( const ReferenceIterator *self,
     INSDC_coord_zero *pos, const INSDC_4na_bin **bases )
 {
-    uint32_t res = align_iter_invalid;
+    /* TODO: uint32 is used for an arithmetic type (i.e. it must be signed),
+       and it's assigned an intentionally negative value (for a special case) -
+       this can cause some bugs in the future. Fixing will involve an interface change */
+    uint32_t res = (uint32_t) align_iter_invalid;
     if ( bases != NULL )
     {
         *bases = NULL;

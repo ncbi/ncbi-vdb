@@ -30,13 +30,19 @@
 #include "reference-cmn.h"
 #include <sysalloc.h>
 
+#include "../klib/int_checks-priv.h"
+
 rc_t CC ReferenceSeq_ReOffset(bool circular, INSDC_coord_len seq_len, INSDC_coord_zero* offset)
 {
-    if( !circular && (*offset < 0 || *offset >= seq_len) ) {
+    /* TODO: INSDC_coord_len - unsigned is used for an arithmetic type,
+       consider changing it in the interfaces */
+    assert ( FITS_INTO_INT32 ( *offset ) );
+    assert ( FITS_INTO_INT32 ( seq_len ) );
+    if( !circular && (*offset < 0 || *offset >= (int32_t)seq_len) ) {
         return RC(rcAlign, rcType, rcReading, rcOffset, rcOutofrange);
     } else if( *offset < 0 ) {
-        *offset = seq_len - ((-(*offset)) % seq_len);
-    } else if( circular && *offset > seq_len ) {
+        *offset = (int32_t)seq_len - ((-(*offset)) % seq_len);
+    } else if( circular && *offset > (int32_t)seq_len ) {
         *offset %= seq_len;
     }
     return 0;

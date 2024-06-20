@@ -71,34 +71,28 @@ VDBManagerMakeRead_Int ( const VDBManager ** mgrp, const struct KDBManager *kdbm
             rc = RC ( rcVDB, rcMgr, rcConstructing, rcMemory, rcExhausted );
         else
         {
-            rc = KDBManagerAddRef( kdbmgr );
+            mgr -> kmgr = kdbmgr;
+
+            rc = VSchemaMakeIntrinsic ( & mgr -> schema );
             if ( rc == 0 )
             {
-                mgr -> kmgr = kdbmgr;
-
-                rc = VSchemaMakeIntrinsic ( & mgr -> schema );
+                rc = VLinkerMakeIntrinsic ( & mgr -> linker );
                 if ( rc == 0 )
                 {
-                    rc = VLinkerMakeIntrinsic ( & mgr -> linker );
+                    rc = VDBManagerConfigPaths ( mgr, false );
                     if ( rc == 0 )
                     {
-                        rc = VDBManagerConfigPaths ( mgr, false );
-                        if ( rc == 0 )
-                        {
-                            mgr -> user = NULL;
-                            mgr -> user_whack = NULL;
-                            KRefcountInit ( & mgr -> refcount, 1, "VDBManager", "make-read", "vmgr" );
-                            * mgrp = mgr;
-                            return 0;
-                        }
-
-                        VLinkerRelease ( mgr -> linker );
+                        mgr -> user = NULL;
+                        mgr -> user_whack = NULL;
+                        KRefcountInit ( & mgr -> refcount, 1, "VDBManager", "make-read", "vmgr" );
+                        * mgrp = mgr;
+                        return 0;
                     }
 
-                    VSchemaRelease ( mgr -> schema );
+                    VLinkerRelease ( mgr -> linker );
                 }
 
-                KDBManagerRelease ( mgr -> kmgr );
+                VSchemaRelease ( mgr -> schema );
             }
 
             free ( mgr );
@@ -127,7 +121,12 @@ LIB_EXPORT rc_t CC VDBManagerMakeReadWithKDBManager (
         return SILENT_RC ( rcVDB, rcMgr, rcConstructing, rcParam, rcNull );
     }
 
-    return VDBManagerMakeRead_Int( mgr, kdbmgr );
+    rc_t rc = VDBManagerMakeRead_Int( mgr, kdbmgr );
+    if ( rc == 0 )
+    {
+        rc = KDBManagerAddRef( kdbmgr );
+    }
+    return rc;
 }
 
 /* MakeRead

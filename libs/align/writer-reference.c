@@ -64,6 +64,8 @@
 #include <ctype.h>
 #include <assert.h>
 
+#include "../klib/int_checks-priv.h"
+
 /*
  * ReferenceSeq objects:
  *  ReferenceSeq objects may be unattached, i.e. they might not yet represent an
@@ -276,7 +278,8 @@ static bool bucketHasObject(Bucket const *const bucket, unsigned const objectNo)
 
 static void addToKeys(ReferenceMgr *const self, unsigned const objectNo, char const *const key, size_t length)
 {
-    unsigned const hv = length == 0 ? hash0(key) : hash(length, key);
+    assert ( FITS_INTO_INT32 (length) );
+    unsigned const hv = length == 0 ? hash0(key) : hash((int32_t)length, key);
     Bucket *const bucket = &self->keys[hv];
 
     if (!bucketHasObject(bucket, objectNo)) {
@@ -298,7 +301,8 @@ static void addToKeys(ReferenceMgr *const self, unsigned const objectNo, char co
 
 static void addToUsed(ReferenceMgr *const self, unsigned const objectNo, char const *const key, size_t length)
 {
-    unsigned const hv = length == 0 ? hash0(key) : hash(length, key);
+    assert ( FITS_INTO_INT32 (length) );
+    unsigned const hv = length == 0 ? hash0(key) : hash((int32_t)length, key);
     Bucket *const bucket = &self->used[hv];
 
     if (!bucketHasObject(bucket, objectNo)) {
@@ -320,12 +324,13 @@ static void addToUsed(ReferenceMgr *const self, unsigned const objectNo, char co
 
 static void addToKeysTable(ReferenceMgr *const self, ReferenceSeq const *const rs)
 {
-    unsigned const index = rs - self->refSeq;
+    uint64_t const index = rs - self->refSeq;
+    assert ( FITS_INTO_INT (index) );
 
     if (rs->id)
-        addToKeys(self, index, rs->id, 0);
+        addToKeys(self, (int)index, rs->id, 0);
     if (rs->seqId)
-        addToKeys(self, index, rs->seqId, 0);
+        addToKeys(self, (int)index, rs->seqId, 0);
 }
 
 static void freeHashTableEntries(ReferenceMgr *const self)
@@ -491,7 +496,8 @@ static void addToIndex(ReferenceMgr *const self, char const ID[],
         rs->used[n] = id;
     }
 SKIP_INSERT_ID:
-    addToUsed(self, rs - self->refSeq, ID, 0);
+    assert ( FITS_INTO_INT(rs - self->refSeq) );
+    addToUsed(self, (int)(rs - self->refSeq), ID, 0);
 }
 
 static bool usedAs(ReferenceSeq const *const rs, char const id[]) {
@@ -759,10 +765,12 @@ rc_t ImportFasta(ReferenceSeq *const obj, KDataBuffer const *const buf)
     unsigned dst;
     unsigned start=0;
     char *const data = buf->base;
-    unsigned const len = buf->elem_count;
+    unsigned const len = (unsigned)buf->elem_count;
     char *fastaSeqId = NULL;
     rc_t rc;
     MD5State mds;
+
+    assert ( FITS_INTO_INT (buf->elem_count) );
 
     if (len == 0)
         return 0;
@@ -805,7 +813,7 @@ rc_t ImportFasta(ReferenceSeq *const obj, KDataBuffer const *const buf)
         if (strchr(INSDC_4na_map_CHARSET, ch) == NULL && ch != 'X')
             return RC(rcAlign, rcFile, rcReading, rcData, rcInvalid);
 
-        data[dst] = ch == 'X' ? 'N' : ch;
+        data[dst] = ch == 'X' ? 'N' : (char)ch;
         MD5StateAppend(&mds, data + dst, 1);
         ++dst;
     }
@@ -899,7 +907,7 @@ static rc_t ImportFastaFileMany(ReferenceMgr *const self,
                                 unsigned const seqIds, uint64_t const seqIdOffset[],
                                 KDataBuffer const *const buf)
 {
-    unsigned const datalen = buf->elem_count;
+    uint64_t const datalen = buf->elem_count;
     char *const data = buf->base;
     seqIdField_t *found = NULL;
     seqIdField_t *ignore = NULL;
@@ -927,9 +935,9 @@ static rc_t ImportFastaFileMany(ReferenceMgr *const self,
 
             if (ch == '|' || isspace(ch)) {
                 char const *const str = &data[ofs + j];
-                unsigned const len = k - j;
+                unsigned const len2 = k - j;
 
-                if (len > 0 && (isspace(ch) || !isInKnownSet(len, str))) {
+                if (len2 > 0 && (isspace(ch) || !isInKnownSet(len2, str))) {
                     if (found_entries == found_entries_max) {
                         unsigned const new_max = found_entries_max * 2;
                         void *const tmp = realloc(found, new_max * sizeof(found[0]));
@@ -941,7 +949,7 @@ static rc_t ImportFastaFileMany(ReferenceMgr *const self,
                         found = tmp;
                         found_entries_max = new_max;
                     }
-                    found[found_entries].length = len;
+                    found[found_entries].length = len2;
                     found[found_entries].offset = ofs + j;
                     ++found_entries;
                 }
@@ -1005,7 +1013,9 @@ static rc_t ImportFastaFileMany(ReferenceMgr *const self,
             }
             else {
                 ReferenceSeq *const p = newReferenceSeq(self, &new_seq);
-                index = p - self->refSeq;
+                int64_t index64 = p - self->refSeq;
+                assert ( FITS_INTO_INT ( index64 ) );
+                index = (unsigned int) index64;
                 addToKeys(self, index, seqId, 0);
             }
         }
@@ -1380,8 +1390,9 @@ static rc_t tryFastaOrRefSeq(ReferenceMgr *const self,
         if (rc == 0) {
             seq->id = string_dup(id, idLen);
             seq->type = rst_refSeqById;
+            assert ( FITS_INTO_INT (seq - self->refSeq) );
 
-            addToKeys(self, seq - self->refSeq, id, idLen);
+            addToKeys(self, (unsigned int)(seq - self->refSeq), id, idLen);
 
             ReferenceSeq_GetRefSeqInfo(seq);
             *rslt = seq;
@@ -1472,9 +1483,11 @@ static ReferenceSeq *tryFasta(ReferenceMgr *const self,
         if (qry != seq && qry->fastaSeqId != NULL) {
             char const *const substr = strcasestr(qry->fastaSeqId, seqId);
             if (substr != NULL) {
-                unsigned const at = substr - qry->fastaSeqId;
+                unsigned at;
                 unsigned const slen = (unsigned)string_size(seqId);
                 unsigned const qlen = (unsigned)string_size(qry->fastaSeqId);
+                assert ( FITS_INTO_INT ( substr - qry->fastaSeqId ) );
+                at = (unsigned)(substr - qry->fastaSeqId);
                 if (at == 0 && slen == qlen)
                     score |= exact_match;
                 else {
@@ -1519,10 +1532,10 @@ static rc_t findSeq(ReferenceMgr *const self,
     if (num_possible == 0) {
         /* nothing was found; try a fasta file */
         bool tryAgain = false;
-        rc_t const rc = tryFastaOrRefSeq(self, rslt, idLen, id, &tryAgain);
+        rc_t const rc2 = tryFastaOrRefSeq(self, rslt, idLen, id, &tryAgain);
 
-        if (rc != 0 && !tryAgain)
-            return rc;
+        if (rc2 != 0 && !tryAgain)
+            return rc2;
 
         return findSeq(self, rslt, id, seq_len, md5, allowMultiMapping, wasRenamed);
     }
@@ -1619,7 +1632,7 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self,
     return findSeq(self, rslt, id, seq_len, md5, allowMultiMapping, wasRenamed);
 }
 
-LIB_EXPORT ReferenceSeq const *ReferenceMgr_FindSeq(ReferenceMgr const *const self, char const id[]) {
+LIB_EXPORT ReferenceSeq const *ReferenceMgr_FindSeq(ReferenceMgr const * self, char const id[]) {
     int const foundKey = findIdInTable(self, self->keys, id);
     int const found = foundKey < 0 ? findIdInTable(self, self->used, id) : foundKey;
     return found < 0 ? NULL : &self->refSeq[found];
@@ -1920,7 +1933,7 @@ rc_t ReferenceMgr_ReCover(const ReferenceMgr* cself, uint64_t ref_rows, rc_t (*c
     int tbls_qty=(sizeof(tbls)/sizeof(tbls[0]));
     rc_t rc1 = 0;
     int64_t rr;
-    uint32_t i;
+    int i;
     uint8_t* hilo=NULL;
     TCover* data = NULL;
 
@@ -1954,7 +1967,8 @@ rc_t ReferenceMgr_ReCover(const ReferenceMgr* cself, uint64_t ref_rows, rc_t (*c
            (rc = TableReader_IdRange(reader, &al_from, &al_qty)) == 0) {
             int64_t al_rowid;
 
-            for(al_rowid = al_from; rc == 0 && al_rowid < al_from + al_qty; al_rowid++) {
+            assert ( (int64_t)al_qty >= 0 );
+            for(al_rowid = al_from; rc == 0 && al_rowid < al_from + (int64_t)al_qty; al_rowid++) {
                 if((rc = TableReader_ReadRow(reader, al_rowid)) != 0) {
                     break;
                 }
@@ -2018,7 +2032,7 @@ rc_t ReferenceMgr_ReCover(const ReferenceMgr* cself, uint64_t ref_rows, rc_t (*c
                         unsigned const hl = cov[j];
 
                         if (hl < UINT8_MAX)
-                            cov[j] = hl + 1;
+                            cov[j] = (uint8_t)hl + 1;
                     }
                     /*** check if OVERLAPS are needed ***/
                     {
@@ -2026,7 +2040,8 @@ rc_t ReferenceMgr_ReCover(const ReferenceMgr* cself, uint64_t ref_rows, rc_t (*c
                         int64_t max_rr = (global_ref_pos + max_ref_offset)/cself->max_seq_len;
 
                         if(min_rr < 0) min_rr = 0;
-                        if(max_rr >= ref_rows) max_rr = ref_rows -1;
+                        assert ( (int64_t)ref_rows >= 0 );
+                        if(max_rr >= (int64_t)ref_rows) max_rr = (int64_t)ref_rows -1;
 
                         assert(min_rr<= max_rr);
 
@@ -2067,7 +2082,7 @@ rc_t ReferenceMgr_ReCover(const ReferenceMgr* cself, uint64_t ref_rows, rc_t (*c
             VTableRelease(table);
             /*** NOW SAVE AND RELEASE THE COLUMN ***/
             if((rc = TableWriterRefCoverage_MakeIds(&cover_writer, cself->db, tbls[i].col)) == 0) {
-                for(rr=0; rc ==0 &&  rr < ref_rows; rr ++){
+                for(rr=0; rc ==0 &&  rr < (int64_t)ref_rows; rr ++){
                     uint64_t num_elem = AlignIdListCount(data[rr].idlist);
                     if(num_elem > 0){
 #define BUF_STACK_COUNT 128 * 1024
@@ -2111,18 +2126,21 @@ rc_t ReferenceMgr_ReCover(const ReferenceMgr* cself, uint64_t ref_rows, rc_t (*c
         uint64_t k;
 
         rc = TableWriterRefCoverage_MakeCoverage(&cover_writer, cself->db, 0);
-        for (rr = 0, k = 0; rc == 0 && rr != ref_rows; ++rr, k += cself->max_seq_len) {
+        for (rr = 0, k = 0; rc == 0 && rr != (int64_t)ref_rows; ++rr, k += cself->max_seq_len) {
             unsigned hi = 0;
             unsigned lo = 255;
 
-            for (i = 0; i != data[rr].bin_seq_len; ++i) {
+            assert ( FITS_INTO_INT ( data[rr].bin_seq_len ) );
+            for (i = 0; i != (int)data[rr].bin_seq_len; ++i) {
                 unsigned const depth = hilo[k + i];
 
                 if (hi < depth) hi = depth;
                 if (lo > depth) lo = depth;
             }
-            data[rr].cover.high = hi;
-            data[rr].cover.low  = lo;
+            assert ( FITS_INTO_INT8 ( hi ) );
+            assert ( FITS_INTO_INT8 ( lo ) );
+            data[rr].cover.high = (uint8_t)hi;
+            data[rr].cover.low  = (uint8_t)lo;
             rc = TableWriterRefCoverage_WriteCoverage(cover_writer,rr+1, &data[rr].cover);
         }
         free(data);
@@ -2196,15 +2214,16 @@ rc_t ReferenceSeq_ReadDirect(ReferenceSeq *self,
     if (len == 0)
         return 0;
 
+    assert ( FITS_INTO_INT (self->seq_len) );
     if (read_circular || self->circular) {
         if (offset < 0) {
             unsigned const n = (-offset) / self->seq_len;
             offset = (self->seq_len * (n + 1) + offset) % self->seq_len;
         }
-        else if (offset > self->seq_len)
+        else if (offset > (int)self->seq_len)
             offset %= self->seq_len;
     }
-    else if (offset >= self->seq_len)
+    else if (offset >= (int)self->seq_len)
         return RC(rcAlign, rcType, rcReading, rcOffset, rcOutofrange);
 
     if (self->type == rst_local) {
@@ -2273,7 +2292,9 @@ rc_t ReferenceMgr_LoadSeq(ReferenceMgr *const self, ReferenceSeq *obj)
                 rc = TableWriterRef_WriteDefaultData(self->writer, ewrefd_cn_MAX_SEQ_LEN, &mlen);
             }
         }
-        while (rc == 0 && offset < obj->seq_len) {
+        assert ( FITS_INTO_INT32 (offset) );
+        assert ( FITS_INTO_INT32 (obj->seq_len) );
+        while (rc == 0 && offset < (int32_t)obj->seq_len) {
             unsigned row_len;
 
             rc = ReferenceSeq_ReadDirect(obj, offset, self->max_seq_len, false,
@@ -2290,11 +2311,11 @@ rc_t ReferenceMgr_LoadSeq(ReferenceMgr *const self, ReferenceSeq *obj)
     return rc;
 }
 
-LIB_EXPORT rc_t CC ReferenceMgr_GetSeq(ReferenceMgr const *const cself,
-                                       ReferenceSeq const **const seq,
-                                       const char *const id,
-                                       bool *const shouldUnmap,
-                                       bool const allowMultiMapping,
+LIB_EXPORT rc_t CC ReferenceMgr_GetSeq(ReferenceMgr const * cself,
+                                       ReferenceSeq const ** seq,
+                                       char const id[],
+                                       bool * shouldUnmap,
+                                       bool allowMultiMapping,
                                        bool wasRenamed[])
 {
     ReferenceMgr *const self = (ReferenceMgr *)cself;
@@ -2322,11 +2343,11 @@ LIB_EXPORT rc_t CC ReferenceMgr_GetSeq(ReferenceMgr const *const cself,
     return 0;
 }
 
-LIB_EXPORT rc_t CC ReferenceMgr_Verify(ReferenceMgr const *const cself,
+LIB_EXPORT rc_t CC ReferenceMgr_Verify(ReferenceMgr const * cself,
                                        char const id[],
-                                       INSDC_coord_len const length,
+                                       INSDC_coord_len length,
                                        uint8_t const md5[16],
-                                       bool const allowMultiMapping,
+                                       bool allowMultiMapping,
                                        bool wasRenamed[])
 {
     if (cself == NULL || id == NULL)
@@ -2434,8 +2455,11 @@ rc_t cigar2offset_2(unsigned const cigar_len,
 
     for (i = 0; i < cigar_len; ++i) {
         unsigned const op_len = cigar[i].length;
-        char const op = cigar[i].code;
-        uint8_t const type = cigar[i].type;
+        char const op = (char)cigar[i].code;
+        uint8_t const type = (uint8_t)cigar[i].type;
+
+        assert ( cigar[i].code <= 0xff );
+        assert ( cigar[i].type <= 0xff );
 
         switch(op) {
             case 'M':
@@ -2456,9 +2480,9 @@ rc_t cigar2offset_2(unsigned const cigar_len,
             case 'S':
             case 'I':
                 if (seq_len < out_sz) {
-                    out_offset[seq_len].length = -op_len;
+                    out_offset[seq_len].length = -(int)op_len; /* TODO: unary minus is not applicable to unsigned int */
                     out_offset[seq_len].type   = type;
-                    ALIGN_C_DBGF(("%s:%u: seq_pos: %u, ref_pos: %u, offset: %i\n", __func__, __LINE__, seq_len, ref_len, -op_len));
+                    ALIGN_C_DBGF(("%s:%u: seq_pos: %u, ref_pos: %u, offset: %i\n", __func__, __LINE__, seq_len, ref_len, -(int)op_len));
                     if (op == 'B') ref_len -= op_len;
                     else           seq_len += op_len;
                 }
@@ -2691,7 +2715,7 @@ rc_t cigar2offset(int const options,
         }
         /* check for hard clipping if not accepted */
         if ((options & ewrefmgr_co_AcceptHardClip) == 0) {
-            unsigned i;
+            int i;
 
             for (i = 0; i < maxopcount; ++i) {
                 if (cigar[i].code == 'H') {
@@ -2875,7 +2899,7 @@ LIB_EXPORT rc_t CC ReferenceMgr_Compress(const ReferenceMgr* cself,
                                          INSDC_coord_zero offset_in_allele,
                                          const void* allele_cigar,
                                          uint32_t allele_cigar_len,
-                                         uint8_t const rna_orient,
+                                         uint8_t rna_orient,
                                          TableWriterAlgnData* data)
 {
     rc_t rc = 0;
@@ -2903,7 +2927,7 @@ static bool isMatchingBase(int const refBase, int const seqBase)
     return (refBase == seqBase || seqBase == '=' || (refBase == 'T' && seqBase == 'U'));
 }
 
-LIB_EXPORT rc_t CC ReferenceSeq_Compress(ReferenceSeq const *const cself,
+LIB_EXPORT rc_t CC ReferenceSeq_Compress(ReferenceSeq const * cself,
                                          uint32_t options,
                                          INSDC_coord_zero offset,
                                          const char* seq, INSDC_coord_len seq_len,
@@ -2912,7 +2936,7 @@ LIB_EXPORT rc_t CC ReferenceSeq_Compress(ReferenceSeq const *const cself,
                                          INSDC_coord_len allele_len,
                                          INSDC_coord_zero offset_in_allele,
                                          const void* allele_cigar, uint32_t allele_cigar_len,
-                                         uint8_t const rna_orient,
+                                         uint8_t rna_orient,
                                          TableWriterAlgnData* data)
 {
     rc_t rc = 0;
@@ -3003,7 +3027,9 @@ LIB_EXPORT rc_t CC ReferenceSeq_Compress(ReferenceSeq const *const cself,
             offset += position_adjust;
         }
         if (allele != NULL) {
-            if (allele_ref_end < offset || offset + rl < allele_offset) {
+            assert ( FITS_INTO_INT32 ( allele_ref_end ) );
+            assert ( FITS_INTO_INT32 ( rl ) );
+            if ((int32_t)allele_ref_end < offset || offset + (int32_t)rl < allele_offset) {
                 /* allele and alignment don't intersect             */
                 /* TODO: [VDB-1585] try to make this recoverable    */
                 rc = RC(rcAlign, rcFile, rcProcessing, rcData, rcInvalid);
@@ -3094,11 +3120,13 @@ LIB_EXPORT rc_t CC ReferenceSeq_Compress(ReferenceSeq const *const cself,
                         else {
                             has_ref_offset[seq_pos] = 1;
                             ref_offset[ro] = length;
-                            ref_offset_type[ro] = type;
+                            assert ( type <= 0xff && type >= 0 );
+                            ref_offset_type[ro] = (uint8_t)type;
                             ref_pos += length;
                             ++ro;
                         }
-                        if (ref_pos < 0 || ref_pos >= max_rl
+                        assert ( FITS_INTO_INT32 ( max_rl ) );
+                        if (ref_pos < 0 || ref_pos >= (int32_t)max_rl
                             || !isMatchingBase(toupper(ref_buf[ref_pos]), toupper(seq[seq_pos])))
                         {
                             has_mismatch[seq_pos] = 1;
@@ -3130,7 +3158,8 @@ LIB_EXPORT rc_t CC ReferenceSeq_Compress(ReferenceSeq const *const cself,
                     j += ref_offset[i_ref_offset_elements + rl];
                     rl++;
                 }
-                ALIGN_C_DBGF(("%c", (j < 0 || j >= max_rl) ? '-' : (i > 0) ? tolower(ref_buf[j]) : ref_buf[j]));
+                assert ( FITS_INTO_INT32 ( max_rl ) );
+                ALIGN_C_DBGF(("%c", (j < 0 || j >= (int32_t)max_rl) ? '-' : (i > 0) ? tolower(ref_buf[j]) : ref_buf[j]));
                 if(i > 0 ) {
                     i--;
                 }
@@ -3151,7 +3180,8 @@ LIB_EXPORT rc_t CC ReferenceSeq_Compress(ReferenceSeq const *const cself,
                 ALIGN_C_DBGF(("%c", has_ref_offset[i] + '0'));
             }
             ALIGN_C_DBGF((", ro:"));
-            for(i = i_ref_offset_elements; i < data->ref_offset.elements; i++) {
+            assert ( FITS_INTO_INT32 ( i_ref_offset_elements ) );
+            for(i = (uint32_t)i_ref_offset_elements; i < data->ref_offset.elements; i++) {
                 ALIGN_C_DBGF((" %i,", ref_offset[i]));
             }
             ALIGN_C_DBGF(("[%u]\n", data->ref_offset.elements - i_ref_offset_elements));
@@ -3245,7 +3275,7 @@ LIB_EXPORT rc_t CC ReferenceSeq_Get1stRow(const ReferenceSeq* cself, int64_t* ro
     return rc;
 }
 
-LIB_EXPORT rc_t CC ReferenceSeq_GetID(ReferenceSeq const *const self, char const **const rslt)
+LIB_EXPORT rc_t CC ReferenceSeq_GetID(ReferenceSeq const * self, char const ** rslt)
 {
     assert(self != NULL);
     assert(rslt != NULL);
@@ -3253,7 +3283,7 @@ LIB_EXPORT rc_t CC ReferenceSeq_GetID(ReferenceSeq const *const self, char const
     return 0;
 }
 
-LIB_EXPORT rc_t CC ReferenceSeq_IsCircular(ReferenceSeq const *const self, bool *rslt)
+LIB_EXPORT rc_t CC ReferenceSeq_IsCircular(ReferenceSeq const * self, bool *rslt)
 {
     assert(self != NULL);
     assert(rslt != NULL);
