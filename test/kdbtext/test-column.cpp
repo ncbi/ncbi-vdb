@@ -149,11 +149,11 @@ public:
         KTableRelease( m_tbl );
         KDBManagerRelease( m_mgr );
     }
-    void Setup( const char * input, const char * col )
+    void Setup( const string & input, const char * col )
     {
         try
         {
-            THROW_ON_RC( KDBManagerMakeText ( & m_mgr, input, m_error, sizeof m_error ) );
+            THROW_ON_RC( KDBManagerMakeText ( & m_mgr, input.c_str(), m_error, sizeof m_error ) );
             THROW_ON_RC( KDBManagerOpenTableRead( m_mgr, & m_tbl, "%s", "testtbl" ) );
             THROW_ON_RC( KTableOpenColumnRead( m_tbl, & m_col, "%s", col ) );
         }
@@ -269,23 +269,32 @@ FIXTURE_TEST_CASE(KColumn_OpenBlobRead, KTextColumn_ApiFixture)
     REQUIRE_RC( KColumnBlobRelease( blob ) );
 }
 
-const char * FullTableInt = R"({"type": "table", "name": "testtbl",
+const char * FullTableFmt = R"({"type": "table", "name": "testtbl",
     "columns":[
         {
             "name":"col",
-            "type":"U32",
+            "type":"%t",
             "data":
                 [
-                    {"row":1,"value":12345}
+                    {"row":1,"value":%v}
                 ],
             "metadata":{"name":"", "value":"blah"}
         }
     ]
 })";
+static
+string
+FormatSchema( const char * type, const char * value )
+{
+    string schema = FullTableFmt;
+    schema.replace(schema.find("%t"), 2, type);
+    schema.replace(schema.find("%v"), 2, value);
+    return schema;
+}
 
 FIXTURE_TEST_CASE(KColumn_OpenBlobRead_Int, KTextColumn_ApiFixture)
 {
-    Setup(FullTableInt, "col");
+    Setup( FormatSchema( "U32", "12345" ), "col" );
     const KColumnBlob * blob = nullptr;
     REQUIRE_RC( KColumnOpenBlobRead ( m_col, & blob, 1 ) );
     REQUIRE_NOT_NULL( blob );

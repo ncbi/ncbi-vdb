@@ -105,6 +105,13 @@ ColumnBlob::release( const ColumnBlob * b )
 }
 
 rc_t
+Error( char * p_error, size_t p_error_size, const char * text )
+{
+    string_printf ( p_error, p_error_size, nullptr, text );
+    return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
+}
+
+rc_t
 ColumnBlob::inflate( char * p_error, size_t p_error_size, int8_t p_intSizeBits )
 {
     rc_t rc = 0;
@@ -119,8 +126,7 @@ ColumnBlob::inflate( char * p_error, size_t p_error_size, int8_t p_intSizeBits )
             id = KJsonObjectGetMember ( obj, "start" );
             if ( id == nullptr )
             {
-                string_printf ( p_error, p_error_size, nullptr, "blob: row/start is missing" );
-                return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
+                return Error( p_error, p_error_size, "blob: row/start is missing" );
             }
         }
         rc = KJsonGetNumber ( id, &m_startId );
@@ -133,16 +139,14 @@ ColumnBlob::inflate( char * p_error, size_t p_error_size, int8_t p_intSizeBits )
                 ( KJsonGetNumber ( count, &countVal ) != 0 ||
                     countVal < 1 ) )
             {
-                string_printf ( p_error, p_error_size, nullptr, "blob: count is not a positive number" );
-                return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
+                return Error( p_error, p_error_size, "blob: count is not a positive number" );
             }
 
             // value
             const KJsonValue * value = KJsonObjectGetMember ( obj, "value" );
             if ( value == nullptr )
             {
-                string_printf ( p_error, p_error_size, nullptr, "blob: value is missing" );
-                return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
+                return Error( p_error, p_error_size, "blob: value is missing" );
             }
 
             if ( p_intSizeBits != 0 )
@@ -176,14 +180,12 @@ ColumnBlob::inflate( char * p_error, size_t p_error_size, int8_t p_intSizeBits )
                             }
                             else
                             {
-                                string_printf ( p_error, p_error_size, nullptr, "blob: count does not match the length of the value array" );
-                                return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
+                                return Error( p_error, p_error_size, "blob: count does not match the length of the value array" );
                             }
                         }
                         else
                         {   // invalid value
-                            string_printf ( p_error, p_error_size, nullptr, "blob: value is not a integer or an array of integers" );
-                            return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
+                            return Error( p_error, p_error_size, "blob: value is not a integer or an array of integers" );
                         }
                     }
                 }
@@ -220,14 +222,12 @@ ColumnBlob::inflate( char * p_error, size_t p_error_size, int8_t p_intSizeBits )
                             }
                             else
                             {
-                                string_printf ( p_error, p_error_size, nullptr, "blob: count does not match the length of the value array" );
-                                return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
+                                return Error( p_error, p_error_size, "blob: count does not match the length of the value array" );
                             }
                         }
                         else
                         {   // invalid value
-                            string_printf ( p_error, p_error_size, nullptr, "blob: value is not a string or an array of strings" );
-                            return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
+                            return Error( p_error, p_error_size, "blob: value is not a string or an array of strings" );
                         }
                     }
                 }
@@ -235,14 +235,12 @@ ColumnBlob::inflate( char * p_error, size_t p_error_size, int8_t p_intSizeBits )
         }
         else
         {   // not an integer
-            string_printf ( p_error, p_error_size, nullptr, "blob: row/start is not an integer" );
-            return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
+            return Error( p_error, p_error_size, "blob: row/start is not an integer" );
         }
     }
     else
     {   // not an object
-        string_printf ( p_error, p_error_size, nullptr, "blob: not a Json object" );
-        return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
+        return Error( p_error, p_error_size, "blob: not a Json object" );
     }
 
     return rc;
