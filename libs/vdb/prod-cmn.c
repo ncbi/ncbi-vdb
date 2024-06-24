@@ -1837,8 +1837,13 @@ static rc_t VFunctionProdReadNormal ( VFunctionProd *self, VBlob **vblob, int64_
     if (self->dad.sub == prodFuncBuiltInCompare) {
         rc = VFunctionProdCallCompare(self, vblob, id, cnt);
 #if _DEBUGGING
-        if (rc != 0)
-            rc = VFunctionProdCallCompare1(self, vblob, id, cnt);
+        if (rc != 0) {
+            rc_t r1 = VFunctionProdCallCompare1(self, vblob, id, cnt);
+            PLOGERR(klogInt, (klogInt, rc,
+                 "VFunctionProdCallCompare() returned '$(rc)'; then "
+                "VFunctionProdCallCompare1() returned '$(r1)'",
+                "rc=%R,r1=%R", rc, r1));
+        }
 #endif
         return rc;
     }
