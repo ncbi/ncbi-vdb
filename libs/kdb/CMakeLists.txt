@@ -80,6 +80,7 @@ set( KDB_SRC
     wmeta
     wmetadatanode
 
+    coldata
     rcoldata
     rcolidx
     rcolidx0

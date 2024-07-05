@@ -77,3 +77,6 @@ AddExecutableTest( Test_KDB_Index "VDB-5323" "${COMMON_LIBS_WRITE};${ADDITIONAL_
 set_property(TEST Test_KDB_Index PROPERTY ENVIRONMENT "TMPDIR=${TMPDIR}")
 
 AddExecutableTest( Test_KDB_pagemap "test-pagemap" "${COMMON_LIBS_WRITE}" )
+
+AddExecutableTest( Test_KDB_rblob "test-rblob" "${COMMON_LIBS_READ}" )
+AddExecutableTest( Test_KDB_wblob "test-wblob" "${COMMON_LIBS_WRITE}" )

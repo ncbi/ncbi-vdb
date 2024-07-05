@@ -76,22 +76,12 @@ KRColumnBlobWhack ( KColumnBlob *bself )
 {
     CAST();
 
-    const KRColumn *col = self -> col;
-    if ( col != NULL )
-    {
-        KRColumnPageMapWhack ( & self -> pmorig, & col -> df );
-
-        /* cannot recover from errors here,
-        since the page maps needed whacking first,
-        and the column is needed for that. */
-        KColumnSever ( col );
-    }
+    KColumnSever ( self -> col );
 
     return KColumnBlobBaseWhack ( bself );
 }
 
 /* OpenRead
- * OpenUpdate
  */
 rc_t KRColumnBlobOpenRead ( KRColumnBlob *self, const KRColumn *col, int64_t id )
 {
@@ -114,7 +104,6 @@ rc_t KRColumnBlobOpenRead ( KRColumnBlob *self, const KRColumn *col, int64_t id 
             }
 
             /* the blob is corrupt */
-            KRColumnPageMapWhack ( & self -> pmorig, & col -> df );
             rc = RC ( rcDB, rcColumn, rcOpening, rcBlob, rcCorrupt );
         }
     }
@@ -194,8 +183,8 @@ rc_t validateCRC32 ( const KRColumnBlob *self )
         if ( to_read > sizeof buffer )
             to_read = sizeof buffer;
 
-        rc = KRColumnDataRead ( & col -> df,
-            & self -> pmorig, total, buffer, to_read, & num_read );
+        rc = KColumnDataRead ( col -> df . pgsize, col -> df . f,
+            self -> pmorig . pg, total, buffer, to_read, & num_read );
         if ( rc != 0 )
             return rc;
         if ( num_read == 0 )
@@ -205,8 +194,8 @@ rc_t validateCRC32 ( const KRColumnBlob *self )
     }
 
     /* read stored checksum */
-    rc = KRColumnDataRead ( & col -> df,
-        & self -> pmorig, size, & cs, sizeof cs, & num_read );
+    rc = KColumnDataRead ( col -> df . pgsize, col->df . f,
+            self -> pmorig . pg, size, & cs, sizeof cs, & num_read );
     if ( rc != 0 )
         return rc;
     if ( num_read != sizeof cs )
@@ -242,8 +231,8 @@ rc_t validateMD5 ( const KRColumnBlob *self )
         if ( to_read > sizeof buffer )
             to_read = sizeof buffer;
 
-        rc = KRColumnDataRead ( & col -> df,
-            & self -> pmorig, total, buffer, to_read, & num_read );
+        rc = KColumnDataRead ( col -> df . pgsize, col->df . f,
+            self -> pmorig . pg, total, buffer, to_read, & num_read );
         if ( rc != 0 )
             return rc;
         if ( num_read == 0 )
@@ -253,8 +242,8 @@ rc_t validateMD5 ( const KRColumnBlob *self )
     }
 
     /* read stored checksum */
-    rc = KRColumnDataRead ( & col -> df,
-        & self -> pmorig, size, buffer, sizeof digest, & num_read );
+    rc = KColumnDataRead ( col -> df . pgsize, col->df . f,
+            self -> pmorig . pg, size, buffer, sizeof digest, & num_read );
     if ( rc != 0 )
         return rc;
     if ( num_read != sizeof digest )
@@ -415,8 +404,10 @@ KRColumnBlobRead ( const KColumnBlob *bself,
             {
                 size_t nread = 0;
 
-                rc = KRColumnDataRead ( & col -> df, & self -> pmorig, offset + *num_read,
-                    & ( ( char * ) buffer ) [ * num_read ], to_read - * num_read, & nread );
+                rc = KColumnDataRead ( col -> df . pgsize, col->df . f,
+                                        self -> pmorig . pg, offset + *num_read,
+                                        & ( ( char * ) buffer ) [ * num_read ], to_read - * num_read,
+                                        & nread );
                 if ( rc != 0 )
                     break;
                 if (nread == 0)
@@ -529,8 +520,8 @@ KRColumnBlobReadAll ( const KColumnBlob * bself, KDataBuffer * buffer,
                             }
 
                             /* read checksum information */
-                            rc = KRColumnDataRead ( & self -> col -> df,
-                                & self -> pmorig, bsize, opt_cs_data, cs_bytes, & num_read );
+                            rc = KColumnDataRead ( self -> col -> df . pgsize, self -> col -> df . f,
+                                                    self -> pmorig . pg, bsize, opt_cs_data, cs_bytes, & num_read );
                             if ( rc == 0 )
                             {
                                 if ( num_read != cs_bytes )
