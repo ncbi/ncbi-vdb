@@ -50,7 +50,9 @@ class WColumnBlobFixture
 public:
     WColumnBlobFixture()
     {
-        THROW_ON_RC( KWColumnBlobMake ( (KWColumnBlob**)& b, false) );
+        KColumnBlob * bb;
+        THROW_ON_RC( KWColumnBlobMake ( & bb, false) );
+        b = reinterpret_cast<KColumnBlobBase *>( bb );
     }
     ~WColumnBlobFixture()
     {
@@ -123,7 +125,7 @@ public:
         const KColumn* col;
         THROW_ON_RC ( KTableOpenColumnRead ( tbl, & col, "X" ) );
 
-        THROW_ON_RC ( KColumnOpenBlobRead ( col, & m_blob, 1 ) );
+        THROW_ON_RC ( KColumnOpenBlobRead ( col, (const KColumnBlob **) & m_blob, 1 ) );
 
         THROW_ON_RC ( KColumnRelease ( col ) );
         THROW_ON_RC ( KTableRelease ( tbl ) );
@@ -132,11 +134,11 @@ public:
 
     void MakeBlob()
     {
-        THROW_ON_RC( KWColumnBlobMake ( (KWColumnBlob**) & m_blob, false ) );
+        THROW_ON_RC( KWColumnBlobMake ( & m_blob, false ) );
     }
     const KColumnBlobBase * getBlob() const { return (const KColumnBlobBase *)m_blob; };
 
-    const KColumnBlob*  m_blob = nullptr;
+    KColumnBlob* m_blob = nullptr;
     size_t m_num_read = 0;
     size_t m_remaining = 0;
 };

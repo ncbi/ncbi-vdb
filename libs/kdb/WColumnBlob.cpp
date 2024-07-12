@@ -35,7 +35,7 @@ extern "C"
     #include "werror.h"
 }
 
-struct KWColumnBlob
+struct KColumnBlob
 {
     /* holds either an existing blob loc
        or new blob index range */
@@ -62,7 +62,7 @@ struct KWColumnBlob
     bool bswap;
 };
 
-class W_ColumnBlob: public TColumnBlob<KWColumnBlob>
+class W_ColumnBlob: public TColumnBlob<KColumnBlob>
 {
 public:
     W_ColumnBlob()  {}
@@ -70,7 +70,7 @@ public:
 
     rc_t Init(bool bswap)
     {
-        m_blob = (KWColumnBlob*)malloc ( sizeof * m_blob );
+        m_blob = (KColumnBlob*)malloc ( sizeof * m_blob );
         if ( m_blob == nullptr )
             return RC ( rcDB, rcBlob, rcConstructing, rcMemory, rcExhausted );
 
@@ -80,6 +80,8 @@ public:
         return 0;
     }
 
+    // cf. R_ColumnBlob::openRead
+    // depends on KRColumn, cannot be easily moved to TColumnBlob
     rc_t openRead ( const KWColumn *col, int64_t id )
     {
         /* locate blob */
@@ -97,7 +99,7 @@ public:
                     /* remove them from apparent blob size */
                     m_blob -> loc . u . blob . size -= col -> csbytes;
                     m_blob -> col = KColumnAttach ( col );
-                    m_blob -> read_only = true;
+                    m_blob -> read_only = true; // only on the write side
                     return 0;
                 }
 
@@ -113,29 +115,29 @@ public:
     {
         if ( m_blob -> num_writ != 0 )
             return RC ( rcDB, rcBlob, rcValidating, rcBlob, rcBusy );
-        return TColumnBlob<KWColumnBlob>::validate();
+        return TColumnBlob<KColumnBlob>::validate();
     }
 };
 
 /* Make
  */
-rc_t KWColumnBlobMake ( KWColumnBlob **blobp, bool bswap )
+rc_t KWColumnBlobMake ( KColumnBlob **blobp, bool bswap )
 {
     W_ColumnBlob *blob = new W_ColumnBlob;
-    * blobp = (KWColumnBlob *)blob;
+    * blobp = (KColumnBlob *)blob;
     return blob -> Init( bswap );
 }
 
 /* OpenRead
  */
-rc_t KWColumnBlobOpenRead ( KWColumnBlob *self, const KWColumn *col, int64_t id )
+rc_t KWColumnBlobOpenRead ( KColumnBlob *self, const KWColumn *col, int64_t id )
 {
     return ((W_ColumnBlob*)self) -> openRead( col, id );
 }
 
-rc_t KWColumnBlobOpenUpdate ( KWColumnBlob *bself, KWColumn *col, int64_t id )
+rc_t KWColumnBlobOpenUpdate ( KColumnBlob *bself, KWColumn *col, int64_t id )
 {
-    KWColumnBlob *self = ((W_ColumnBlob*)bself) -> getBlob();
+    KColumnBlob *self = ((W_ColumnBlob*)bself) -> getBlob();
     /* open existing blob */
     rc_t rc = KWColumnBlobOpenRead ( self, col, id );
     if ( rc == 0 )
@@ -164,9 +166,9 @@ rc_t KWColumnBlobOpenUpdate ( KWColumnBlob *bself, KWColumn *col, int64_t id )
 
 /* Create
  */
-rc_t KWColumnBlobCreate ( KWColumnBlob *bself, KWColumn *col )
+rc_t KWColumnBlobCreate ( KColumnBlob *bself, KWColumn *col )
 {
-    KWColumnBlob *self = ((W_ColumnBlob*)bself) -> getBlob();
+    KColumnBlob *self = ((W_ColumnBlob*)bself) -> getBlob();
 
     rc_t rc;
 
@@ -229,7 +231,7 @@ rc_t KWColumnBlobCreate ( KWColumnBlob *bself, KWColumn *col )
     return rc;
 }
 
-#define CAST() KWColumnBlob * self = (KWColumnBlob *)bself
+#define CAST() KColumnBlob * self = (KColumnBlob *)bself
 
 /* KColumnBlobAppend
  *  append data to open blob
@@ -238,7 +240,7 @@ rc_t KWColumnBlobCreate ( KWColumnBlob *bself, KWColumn *col )
  */
 LIB_EXPORT rc_t CC KColumnBlobAppend ( KColumnBlob *bself, const void *buffer, size_t size )
 {
-    KWColumnBlob *self = ((W_ColumnBlob*)bself) -> getBlob();
+    KColumnBlob *self = ((W_ColumnBlob*)bself) -> getBlob();
 
     KWColumn *col;
     size_t total, num_writ;
@@ -285,7 +287,7 @@ LIB_EXPORT rc_t CC KColumnBlobAppend ( KColumnBlob *bself, const void *buffer, s
  */
 LIB_EXPORT rc_t CC KColumnBlobAssignRange ( KColumnBlob *bself, int64_t first, uint32_t count )
 {
-    KWColumnBlob *self = ((W_ColumnBlob*)bself) -> getBlob();
+    KColumnBlob *self = ((W_ColumnBlob*)bself) -> getBlob();
 
     rc_t rc;
     const KWColumn *col;
@@ -348,7 +350,7 @@ static
 char zero [ 4096 ];
 
 static
-rc_t KColumnBlobZeroPad ( KWColumnBlob *self )
+rc_t KColumnBlobZeroPad ( KColumnBlob *self )
 {
     KWColumn *col = self -> col;
     size_t pad_bytes = self -> num_writ % col -> df . pgsize;
@@ -378,7 +380,7 @@ rc_t KColumnBlobZeroPad ( KWColumnBlob *self )
 }
 
 static
-rc_t KColumnBlobDoCommit ( KWColumnBlob *self )
+rc_t KColumnBlobDoCommit ( KColumnBlob *self )
 {
     rc_t rc;
     KColBlobLoc loc;
@@ -504,7 +506,7 @@ rc_t KColumnBlobDoCommit ( KWColumnBlob *self )
 
 LIB_EXPORT rc_t CC KColumnBlobCommit ( KColumnBlob *bself )
 {
-    KWColumnBlob *self = ((W_ColumnBlob*)bself) -> getBlob();
+    KColumnBlob *self = ((W_ColumnBlob*)bself) -> getBlob();
 
     rc_t rc;
 

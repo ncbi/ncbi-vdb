@@ -50,7 +50,7 @@ class RColumnBlobFixture
 public:
     RColumnBlobFixture()
     {
-        THROW_ON_RC( KRColumnBlobMake ( (KRColumnBlob**)& b, false) );
+        THROW_ON_RC( KRColumnBlobMake ( (const KColumnBlob**)& b, false) );
     }
     ~RColumnBlobFixture()
     {
@@ -132,7 +132,7 @@ public:
 
     void MakeBlob()
     {
-        THROW_ON_RC( KRColumnBlobMake ( (KRColumnBlob**) & m_blob, false ) );
+        THROW_ON_RC( KRColumnBlobMake ( & m_blob, false ) );
     }
     const KColumnBlobBase * getBlob() const { return (const KColumnBlobBase *)m_blob; };
 

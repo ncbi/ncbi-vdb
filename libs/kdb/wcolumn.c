@@ -43,9 +43,6 @@
 #include <stdio.h>
 #include <byteswap.h>
 
-#define KCOLUMNBLOB_IMPL KColumnBlob
-#include "columnblob-base.h"
-
 /*--------------------------------------------------------------------------
  * KWColumn (formerly KWColumn)
  *  a read-write collection of blobs indexed by oid; file system-based
@@ -970,7 +967,7 @@ rc_t CC
 KWColumnOpenBlobRead ( const KWColumn *self, const KColumnBlob **blobp, int64_t id )
 {
     rc_t rc;
-    KWColumnBlob *blob;
+    KColumnBlob *blob;
 
     if ( blobp == NULL )
         return RC ( rcDB, rcColumn, rcOpening, rcParam, rcNull );
@@ -1007,7 +1004,7 @@ LIB_EXPORT rc_t CC KColumnOpenBlobUpdate ( KColumn *bself, KColumnBlob **blobp, 
     if ( self -> read_only )
         return RC ( rcDB, rcColumn, rcOpening, rcColumn, rcReadonly );
 
-    KWColumnBlob * blob;
+    KColumnBlob * blob;
     rc = KWColumnBlobMake ( &blob, self -> idx . idx1 . bswap );
     if ( rc == 0 )
     {
@@ -1042,7 +1039,7 @@ LIB_EXPORT rc_t CC KColumnCreateBlob ( KColumn *bself, KColumnBlob **blobp )
     if ( self -> read_only )
         return RC ( rcDB, rcColumn, rcOpening, rcColumn, rcReadonly );
 
-    KWColumnBlob * blob;
+    KColumnBlob * blob;
     rc = KWColumnBlobMake ( & blob, self -> idx . idx1 . bswap );
     if ( rc == 0 )
     {

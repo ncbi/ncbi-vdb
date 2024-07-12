@@ -26,7 +26,6 @@
 
 #include <kdb/extern.h>
 
-#include "columnblob-base.h"
 #include "ColumnBlob.hpp"
 
 #include <kdb/column.h>

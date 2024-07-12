@@ -32,7 +32,7 @@ extern "C"
     #include "rcolumn.h"
 }
 
-struct KRColumnBlob
+struct KColumnBlob
 {
     /* owning column */
     const struct KRColumn *col;
@@ -45,7 +45,7 @@ struct KRColumnBlob
     KRColumnPageMap pmorig;
 };
 
-class R_ColumnBlob: public TColumnBlob<KRColumnBlob>
+class R_ColumnBlob: public TColumnBlob<KColumnBlob>
 {
 public:
     R_ColumnBlob()  {}
@@ -53,7 +53,7 @@ public:
 
     rc_t Init(bool bswap)
     {
-        m_blob = (KRColumnBlob*)malloc ( sizeof * m_blob );
+        m_blob = (KColumnBlob*)malloc ( sizeof * m_blob );
         if ( m_blob == nullptr )
             return RC ( rcDB, rcBlob, rcConstructing, rcMemory, rcExhausted );
 
@@ -63,6 +63,8 @@ public:
         return 0;
     }
 
+    // cf. W_ColumnBlob::openRead
+    // depends on KRColumn, cannot be easily moved to TColumnBlob
     rc_t openRead ( const KRColumn *col, int64_t id )
     {
         /* locate blob */
@@ -94,16 +96,16 @@ public:
 
 /* Make
  */
-rc_t KRColumnBlobMake ( KRColumnBlob **blobp, bool bswap )
+rc_t KRColumnBlobMake ( const KColumnBlob **blobp, bool bswap )
 {
     R_ColumnBlob *blob = new R_ColumnBlob;
-    * blobp = (KRColumnBlob *)blob;
+    * blobp = (const KColumnBlob *)blob;
     return blob -> Init( bswap );
 }
 
 /* OpenRead
  */
-rc_t KRColumnBlobOpenRead ( KRColumnBlob *self, const KRColumn *col, int64_t id )
+rc_t KRColumnBlobOpenRead ( const KColumnBlob *self, const KRColumn *col, int64_t id )
 {
     return ((R_ColumnBlob*)self) -> openRead( col, id );
 }

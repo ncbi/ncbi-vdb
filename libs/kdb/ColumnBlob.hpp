@@ -30,17 +30,15 @@
 * Common code for read- and write side column blobs
 */
 
-#include <ktst/unit_test.hpp>
+typedef struct KColumnBlob KColumnBlob;
 
-extern "C"
-{
-    #include "columnblob-base.h"
-}
-
+#include <klib/refcount.h>
 #include <klib/rc.h>
 #include <klib/debug.h>
 #include <klib/checksum.h>
 #include <klib/data-buffer.h>
+
+#include <kdb/column.h>
 
 #include <byteswap.h>
 
@@ -103,6 +101,7 @@ public:
             return whack();
         return 0;
     }
+
     virtual rc_t read ( size_t offset, void *buffer, size_t bsize, size_t *num_read, size_t *remaining ) const
     {
         rc_t rc;
