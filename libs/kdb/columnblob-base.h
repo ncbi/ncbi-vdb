@@ -34,7 +34,6 @@
 extern "C" {
 #endif
 
-
 /*--------------------------------------------------------------------------
  * KColumnBlobBase, base structure for KColumnBlob read-side implementations
  */
@@ -53,20 +52,6 @@ struct KColumnBlob_vt
     rc_t ( CC * validateBuffer )    ( const KColumnBlob * self, struct KDataBuffer const * buffer, const KColumnBlobCSData * cs_data, size_t cs_data_size );
     rc_t ( CC * idRange )           ( const KColumnBlob * self, int64_t *first, uint32_t *count );
 };
-
-// default implelentations where exist
-extern rc_t CC KColumnBlobBaseWhack ( KColumnBlob *self );
-extern rc_t CC KColumnBlobBaseAddRef ( const KColumnBlob *self );
-extern rc_t CC KColumnBlobBaseRelease ( const KColumnBlob *self );
-
-struct KColumnBlob
-{
-    const KColumnBlob_vt * vt;
-
-    atomic32_t refcount;
-};
-
-extern void KColumnBlobBaseInit( KColumnBlob *self, const KColumnBlob_vt * vt );
 
 #ifdef __cplusplus
 }

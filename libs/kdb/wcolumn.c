@@ -982,13 +982,11 @@ KWColumnOpenBlobRead ( const KWColumn *self, const KColumnBlob **blobp, int64_t 
         rc = KWColumnBlobOpenRead ( blob, self, id );
         if ( rc == 0 )
         {
-            blob -> col = KColumnAttach ( self );
-            blob -> read_only = true;
             * blobp = (const KColumnBlob *) blob;
             return 0;
         }
 
-        free ( blob );
+        KColumnBlobRelease ( (const KColumnBlob *)blob );
     }
 
     return rc;
@@ -1016,12 +1014,11 @@ LIB_EXPORT rc_t CC KColumnOpenBlobUpdate ( KColumn *bself, KColumnBlob **blobp, 
         rc = KWColumnBlobOpenUpdate ( blob, self, id );
         if ( rc == 0 )
         {
-            blob -> col = KColumnAttach ( self );
-            * blobp = & blob -> dad;
+            * blobp = (KColumnBlob *) blob;
             return 0;
         }
 
-        free ( blob );
+        KColumnBlobRelease ( (const KColumnBlob *)blob );
     }
 
     return rc;
@@ -1052,12 +1049,11 @@ LIB_EXPORT rc_t CC KColumnCreateBlob ( KColumn *bself, KColumnBlob **blobp )
         rc = KWColumnBlobCreate ( blob, self );
         if ( rc == 0 )
         {
-            blob -> col = KColumnAttach ( self );
-            * blobp = & blob -> dad;
+            * blobp = (KColumnBlob *) blob;
             return 0;
         }
 
-        free ( blob );
+        KColumnBlobRelease ( (const KColumnBlob *)blob );
     }
 
     return rc;

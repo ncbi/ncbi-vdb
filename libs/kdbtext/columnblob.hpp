@@ -26,7 +26,7 @@
 
 #pragma once
 
-#include "../libs/kdb/columnblob-base.h"
+#include "../libs/kdb/ColumnBlob.hpp"
 
 #include <klib/data-buffer.h>
 
@@ -36,24 +36,27 @@
 struct PageMap;
 struct KJsonValue;
 
-typedef struct KTextBlob KTextBlob;
-struct KTextBlob
-{
-    KColumnBlob dad;
-};
-
 namespace KDBText
 {
-    class ColumnBlob : public KTextBlob
+    class ColumnBlob : public KColumnBlobBase
     {
+    protected:
+        virtual rc_t whack();
+
     public:
-        static void addRef( const ColumnBlob* );
-        static void release( const ColumnBlob *);
+        /* Public read-side API */
+        virtual rc_t addRef();
+        virtual rc_t release();
+        virtual rc_t read ( size_t offset, void *buffer, size_t bsize, size_t *num_read, size_t *remaining ) const;
+        virtual rc_t readAll ( struct KDataBuffer * buffer, KColumnBlobCSData * opt_cs_data, size_t cs_data_size ) const;
+        virtual rc_t validate() const;
+        virtual rc_t validateBuffer ( struct KDataBuffer const * buffer, const KColumnBlobCSData * cs_data, size_t cs_data_size ) const;
+        virtual rc_t idRange ( int64_t *first, uint32_t *count ) const;
 
     public:
         ColumnBlob( const KJsonValue * ); // ascii values
         ColumnBlob( const KJsonValue *, uint8_t intSizeBits ); // fixed size integer values
-        ~ColumnBlob();
+        virtual ~ColumnBlob();
 
         rc_t inflate( char * p_error, size_t p_error_size, int8_t intSizeBits = 0 );
 

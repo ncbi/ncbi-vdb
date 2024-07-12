@@ -44,10 +44,10 @@ extern "C"
 
 #include <byteswap.h>
 
-class ColumnBlobBase
+class KColumnBlobBase
 {
 protected:
-    virtual ~ColumnBlobBase() = 0;
+    virtual ~KColumnBlobBase() = 0;
     virtual rc_t whack() = 0;
 
 public:
@@ -63,24 +63,30 @@ public:
     atomic32_t refcount;
 };
 
-ColumnBlobBase::~ColumnBlobBase() {}
-
-template<typename T> class ColumnBlob : public ColumnBlobBase
+template<typename T> class TColumnBlob : public KColumnBlobBase
 {
+public:
+    const T * getBlob() const { return m_blob; }
+    T * getBlob() { return m_blob; }
+
+protected:
+    T * m_blob = nullptr;
+
 protected: // only created trough a factory, destroyed through release()
-    ColumnBlob()
+    TColumnBlob()
     {
         atomic32_set ( & refcount, 1 );
     }
-    virtual ~ColumnBlob()
-    {
-    }
-
-    virtual rc_t whack()
+    virtual ~TColumnBlob()
     {
         KColumnSever ( m_blob -> col );
         KRefcountWhack ( & refcount, "KColumnBlob" );
         free( m_blob );
+    }
+
+    virtual rc_t whack()
+    {
+        delete this;
         return 0;
     }
 
@@ -331,11 +337,6 @@ public:
 
         return rc;
     }
-
-    const T& getBlob() const { return * m_blob; }
-
-protected:
-    T * m_blob = nullptr;
 
 private:
 

@@ -307,7 +307,7 @@ Column::openBlob( int64_t id ) const
     auto it = findBlob( id );
     if ( it != m_data.end() )
     {
-        ColumnBlob::addRef( it->second.get() );
+        it->second.get()->addRef();
         return it->second.get();
     }
     return nullptr;

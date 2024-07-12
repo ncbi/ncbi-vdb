@@ -34,20 +34,6 @@
 struct KRColumn;
 
 typedef struct KRColumnBlob KRColumnBlob;
-struct KRColumnBlob
-{
-    KColumnBlob dad;
-
-    /* owning column */
-    const struct KRColumn *col;
-
-    /* captured from idx1 for CRC32 validation */
-    bool bswap;
-
-    /* holds existing blob loc */
-    KColBlobLoc loc;
-    KRColumnPageMap pmorig;
-};
 
 rc_t KRColumnBlobMake ( KRColumnBlob **blobp, bool bswap );
 rc_t KRColumnBlobOpenRead ( KRColumnBlob *self, const struct KRColumn *col, int64_t id );

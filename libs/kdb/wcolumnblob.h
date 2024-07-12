@@ -43,34 +43,6 @@ extern "C" {
  */
 
 typedef struct KWColumnBlob KWColumnBlob;
-struct KWColumnBlob
-{
-    KColumnBlob dad;
-
-    /* holds either an existing blob loc
-       or new blob index range */
-    KColBlobLoc loc;
-
-    /* holds old and new page maps */
-    KWColumnPageMap pmorig;
-    KWColumnPageMap pmnew;
-
-    /* owning column */
-    KWColumn *col;
-
-    /* number of bytes written to blob */
-    uint32_t num_writ;
-
-    /* checksums */
-    uint32_t crc32;
-    MD5State md5;
-
-    /* open mode */
-    uint8_t read_only;
-
-    /* for validation */
-    bool bswap;
-};
 
 rc_t KWColumnBlobMake ( KWColumnBlob **blobp, bool bswap );
 rc_t KWColumnBlobOpenRead ( KWColumnBlob *self, const KWColumn *col, int64_t id );
