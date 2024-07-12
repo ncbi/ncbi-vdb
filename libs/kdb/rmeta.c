@@ -223,7 +223,7 @@ KRMetadataMakeRead ( KRMetadata **metap, const KDirectory *dir, const char *path
     {
         memset ( meta, 0, sizeof * meta );
         meta -> dad . vt = & KRMetadata_vt;
-        if ( KRMDataNodeMakeRoot( & meta -> root, meta ) == 0 )
+        if ( (rc = KRMDataNodeMakeRoot( & meta -> root, meta )) == 0 )
         {
             meta -> dir = dir;
             KRefcountInit ( & meta -> dad . refcount, 1, "KRMetadata", "make-read", path );
