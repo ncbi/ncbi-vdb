@@ -24,6 +24,8 @@
 *
 */
 
+#include <kdb/extern.h>
+
 #include "ColumnBlob.hpp"
 
 extern "C"
