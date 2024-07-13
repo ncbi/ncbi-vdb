@@ -61,6 +61,9 @@ static
 rc_t VPathWhack ( VPath * self )
 {
     rc_t rc = VPathRelease(self->vdbcache);
+    rc_t r2 = KDirectoryRelease(self->dir);
+    if (r2 != 0 && rc == 0)
+        rc = r2;
 
     StringWhack(self->accOfParentDb);
     StringWhack(self->dirOfParentDb);
@@ -4367,8 +4370,8 @@ rc_t VPathSetMagic(VPath * self, bool magic) {
 
 static
 rc_t VPathMakeFmtExt ( VPath ** new_path, bool ext, const String * id,
-	const String * tick, uint64_t osize, KTime_t date, const uint8_t md5 [ 16 ],
-	KTime_t exp_date, const char * service, const String * objectType,
+    const String * tick, uint64_t osize, KTime_t date, const uint8_t md5 [ 16 ],
+    KTime_t exp_date, const char * service, const String * objectType,
     const String * type, bool ceRequired, bool payRequired, const char * name,
     int64_t projectId, uint32_t version, const String * acc,
     const char * fmt, ... )
@@ -4419,7 +4422,7 @@ rc_t VPathMakeFromUrl ( VPath ** new_path, const String * url,
     }
     else
         return VPathMakeFmtExt ( new_path, ext, id, tick, osize, date, md5,
-		    exp_date, service, objectType, type, ceRequired, payRequired, name,
+            exp_date, service, objectType, type, ceRequired, payRequired, name,
             projectId, version, acc, "%S", url );
 }
 
@@ -4729,4 +4732,50 @@ LIB_EXPORT VQuality CC VPathGetQuality(const VPath * self) {
         return eQualLast;
     else
         return self->quality;
+}
+
+rc_t VPathGetDirectory(const VPath * self, const KDirectory ** dir) {
+    rc_t rc = 0;
+
+    if (dir == 0)
+        return RC(rcVFS, rcPath, rcReading, rcParam, rcNull);
+
+    if (self == 0)
+        return RC(rcVFS, rcPath, rcReading, rcSelf, rcNull);
+
+    rc = KDirectoryAddRef(self->dir);
+    if (rc != 0)
+        return rc;
+
+    *dir = self->dir;
+
+    return rc;
+}
+
+rc_t VPathSetDirectory(VPath * self, const KDirectory * dir) {
+    rc_t rc = 0;
+
+    if (self == NULL)
+        return rc;
+
+    if (self->dir == dir)
+        return rc;
+
+    rc = KDirectoryAddRef(dir);
+    if (rc != 0)
+        return rc;
+
+    rc = KDirectoryRelease(self->dir);
+    self->dir = dir;
+
+    return rc;
+}
+
+rc_t VPathCopyDirectoryIfEmpty(VPath * self, const VPath * rhs) {
+    assert(self && rhs);
+    if (self == rhs)
+        return 0;
+    if (self->dir != NULL)
+        return 0;
+    return VPathSetDirectory(self, rhs->dir);
 }
