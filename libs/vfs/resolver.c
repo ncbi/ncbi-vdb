@@ -5356,7 +5356,9 @@ rc_t CC VResolverQueryDo ( const VResolver * self, VRemoteProtocols protocols,
             if (run != NULL) { /* SRR accessions go here */
                 bool found = false;
                 bool hasLocal = false;
-                KSrvRunQuery(run, &local, &remote, &cache, NULL);
+#ifdef HAS_SERVICE_CACHE
+             // KSrvRunQuery(run, &local, &remote, &cache, NULL);
+#endif
                 if (rc == 0) {
                     if (aLocal != NULL) {
                         *aLocal = local;
