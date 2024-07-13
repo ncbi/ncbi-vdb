@@ -189,10 +189,13 @@ VDB_EXTERN rc_t CC VDBManagerGetObjModDate ( const VDBManager *self,
  *  and will return the KDirectory values if a path type is not specifically
  *  a VDB or KDB object.
  */
+VDB_EXTERN int CC VDBManagerPathTypeVP ( const VDBManager * self,
+    const struct VPath * path );
 VDB_EXTERN int CC VDBManagerPathType ( const VDBManager * self,
     const char *path, ... );
 VDB_EXTERN int CC VDBManagerVPathType ( const VDBManager * self,
     const char *path, va_list args );
+#define VDBManagerPathTypeVPath VDBManagerPathTypeVP
 
 
 /* GetCacheRoot

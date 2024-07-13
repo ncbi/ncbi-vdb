@@ -829,6 +829,15 @@ LIB_EXPORT int CC VDBManagerVPathType ( const VDBManager * self,
     return kptBadPath;
 }
 
+LIB_EXPORT int CC VDBManagerPathTypeVP ( const VDBManager * self,
+    const struct VPath * path )
+{
+    if ( self != NULL )
+        return KDBManagerPathTypeVP ( self -> kmgr, path );
+
+    return kptBadPath;
+}
+
 static int CC VDBManagerVPathTypeUnreliable ( const VDBManager * self,
     const char *path, va_list args )
 {
