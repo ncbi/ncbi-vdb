@@ -167,7 +167,7 @@ KWDatabaseMake ( KDatabase **dbp, const KDirectory *dir, const char *path, KMD5S
     assert ( dbp != NULL );
     assert ( path != NULL );
 
-    db = malloc ( sizeof * db + strlen ( path ) );
+    db = calloc ( 1, sizeof * db + strlen ( path ) );
     if ( db == NULL )
     {
         * dbp = NULL;
