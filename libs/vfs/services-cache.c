@@ -191,6 +191,7 @@ struct ServicesCache {
 
 /******************************************************************************/
 
+#ifdef HAS_SERVICE_CACHE
 static rc_t VPath_DetectQuality(VPath * self, ServicesCache * sc) {
     /* Try to load sra description file... */
     rc_t rc = VPathLoadQuality(self);
@@ -206,7 +207,7 @@ static rc_t VPath_DetectQuality(VPath * self, ServicesCache * sc) {
             rc = VDBManagerMakeWithVFSManager(&sc->vdb,
                 sc->dir, (VFSManager*)sc->vfs);
         if (rc == 0)
-            type = VDBManagerPathType(sc->vdb, "%.*s", path.size, path.addr);
+         // type = VDBManagerPathType(sc->vdb, "%.*s", path.size, path.addr);
         if (rc == 0) switch (type) {
         case kptDatabase: {
             const VDatabase * db = NULL;
@@ -256,6 +257,7 @@ static rc_t VPath_SetQuality(const VPath * cself, VQuality q,
     default: assert(0); return 1;
     }
 }
+#endif
 
 /******************************************************************************/
 
@@ -578,6 +580,7 @@ static rc_t LocalResolve(Local * self, Local * vc) {
     return VPathAttachVdbcache((VPath*)self->path, vc->path);
 }
 
+#ifdef HAS_SERVICE_CACHE
 static rc_t LocalSetQuality(Local * self, VQuality quality,
     ServicesCache * sc)
 {
@@ -603,6 +606,7 @@ static rc_t LocalSetQuality(Local * self, VQuality quality,
         rc = r2;
     return rc;
 }
+#endif
 
 /******************************************************************************/
 static rc_t CacheFini(Cache * self) {
@@ -1612,6 +1616,7 @@ static void KRunFindLocal(KRun * self,
 #endif
 }
 
+#ifdef HAS_SERVICE_CACHE
 /* set qualities to local[-s]  */
 static rc_t KRunSetQualities(KRun * self) {
     static int transate[] = {
@@ -1631,7 +1636,9 @@ static rc_t KRunSetQualities(KRun * self) {
     }
     return rc;
 }
+#endif
 
+#ifdef HAS_SERVICE_CACHE
 /* resolve local[-s] */
 static rc_t KRunResolveLocals(KRun * self,
     int64_t projectId, const char * outDir, const char * outFile)
@@ -1639,6 +1646,7 @@ static rc_t KRunResolveLocals(KRun * self,
     KRunFindLocal(self, projectId, outDir, outFile);
     return KRunSetQualities(self);
 }
+#endif
 
 /* attach vdbcaches to local[-s] and remote[-s] */
 static rc_t KRunAttachVdbcaches(KRun * self) {
@@ -2914,6 +2922,7 @@ static void CC BSTNodePrepareQuery(BSTNode *n, void *data) {
         p->rc = rc;
 }
 
+#ifdef HAS_SERVICE_CACHE
 /* resolve local[-s] */
 static void CC BSTNodeFindLocal(BSTNode *n, void *data) {
     rc_t rc = 0;
@@ -2926,6 +2935,7 @@ static void CC BSTNodeFindLocal(BSTNode *n, void *data) {
     if (rc != 0 && p->rc == 0)
         p->rc = rc;
 }
+#endif
 
 /* attach vdbcaches to local[-s] and remote[-s] */
 static void CC BSTNodeAttachVdbcaches(BSTNode *n, void *data) {
@@ -3141,6 +3151,7 @@ static rc_t ServicesCacheFindRun(ServicesCache * self,
     return ServicesCacheAddRun(self, &acc, run, notFound);
 }
 
+#ifdef HAS_SERVICE_CACHE
 /* Add a remote location to ServicesCache.
 We'll resolve its cache/local locations in ServicesCacheComplete */
 rc_t ServicesCacheAddRemote(ServicesCache * self, const VPath * path) {
@@ -3158,6 +3169,7 @@ rc_t ServicesCacheAddRemote(ServicesCache * self, const VPath * path) {
 
     return rc;
 }
+#endif
 
 /* add an accession to find its local location */
 rc_t ServicesCacheAddId(ServicesCache * self, const char * acc) {
@@ -3198,6 +3210,7 @@ static rc_t ServicesCacheResolveMagic(ServicesCache * self) {
     return KRunResolveMagic(self->run);
 }
 
+#ifdef HAS_SERVICE_CACHE
 /* resolve local[-s] */
 static rc_t ServicesCacheFindLocal(ServicesCache * self,
     const char * outDir, const char * outFile)
@@ -3261,6 +3274,7 @@ static rc_t ServicesCacheFindLocal(ServicesCache * self,
 #endif
     return rc;
 }
+#endif
 
 /* attach vdbcaches to local[-s] and remote[-s] */
 static rc_t ServicesCacheAttachVdbcaches(ServicesCache * self) {
@@ -3296,6 +3310,7 @@ static rc_t ServicesCacheLinkLocalToRemote(ServicesCache * self) {
     return rc;
 }
 
+#ifdef HAS_SERVICE_CACHE
 /* The cache has all remote[-s]; now resolve all cache[-s] and local[-s]
    Prepare results for KSrvRunQuery() */
 rc_t ServicesCacheComplete(ServicesCache * self,
@@ -3390,6 +3405,7 @@ rc_t ServicesCacheComplete(ServicesCache * self,
 #endif
     return rc;
 }
+#endif
 
 /* return local and cache locations for remote (to be used by file iterator) */
 rc_t ServicesCacheResolve(ServicesCache * self, const VPath * remote,
@@ -3443,6 +3459,7 @@ rc_t ServicesCacheGetRun(const ServicesCache * cself, bool tree,
 }
 
 /******************************************************************************/
+#ifdef HAS_SERVICE_CACHE
 rc_t ServicesCacheGetResponse(const ServicesCache * self,
     const char * acc, const struct KSrvResponse ** response)
 {
@@ -3457,9 +3474,13 @@ static rc_t ServicesCacheAddResponse4(
 {
     return 0;
 }
+#endif
 void f() { /* these functions might be unneeded */
     CacheInit(0, 0); CacheSet(0, 0);
-    ServicesCacheAddResponse4(0, 0); ServicesCacheGetResponse(0, 0, 0);
+#ifdef HAS_SERVICE_CACHE
+    ServicesCacheAddResponse4(0, 0);
+    ServicesCacheGetResponse(0, 0, 0);
+    /* TODO: detect unpacked run dir in cwd
+    ServicesCacheComplete */
+#endif
 }
-/* TODO: detect unpacked run dir in cwd
-ServicesCacheComplete */
