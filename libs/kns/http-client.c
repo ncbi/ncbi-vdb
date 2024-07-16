@@ -76,7 +76,7 @@ typedef struct KClientHttpStream KClientHttpStream;
 
 enum
 {
-    _STAT_USR = 2,       /* normal user verbosity  */
+    _STAT_USR = 3,       /* normal user verbosity  */
     _STAT_PWR,           /* power-user verbosity   */
     _STAT_QA,            /* qa-level description   */
     _STAT_PRG,           /* programmer description */

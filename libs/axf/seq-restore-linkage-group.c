@@ -108,20 +108,20 @@ rc_t CC seqRestoreLinkageGroup(void *const Self,
         return rc;
     }
     else {
-        void const *linkageGroup = NULL;
-        uint32_t linkageGroupLen = 0;
+        void const *linkageGroup2 = NULL;
+        uint32_t linkageGroupLen2 = 0;
         uint32_t elem_size = 0;
         uint32_t offset = 0;
-        rc_t const rc = VCursorCellDataDirect(self->curs, foreignKey, self->colId, &elem_size, &linkageGroup, &offset, &linkageGroupLen);
+        rc_t const rc = VCursorCellDataDirect(self->curs, foreignKey, self->colId, &elem_size, &linkageGroup2, &offset, &linkageGroupLen2);
 
         if (rc == 0) {
-            rc_t const rc = KDataBufferResize(rslt->data, linkageGroupLen);
+            rc_t const rc2 = KDataBufferResize(rslt->data, linkageGroupLen2);
             assert(elem_size == rslt->data->elem_bits);
             assert(offset == 0);
-            rslt->elem_count = linkageGroupLen;
-            if (rc == 0)
-                memmove(rslt->data->base, linkageGroup, linkageGroupLen);
-            return rc;
+            rslt->elem_count = linkageGroupLen2;
+            if (rc2 == 0)
+                memmove(rslt->data->base, linkageGroup2, linkageGroupLen2);
+            return rc2;
         }
         return rc;
     }

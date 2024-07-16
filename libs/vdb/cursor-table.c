@@ -43,7 +43,6 @@
 #undef KONST
 #undef SKONST
 #include "blob-priv.h"
-#include "page-map.h"
 
 #include <vdb/cursor.h>
 #include <vdb/table.h>
@@ -52,6 +51,7 @@
 #include <kdb/column.h>
 #include <kdb/meta.h>
 #include <kdb/namelist.h>
+#include <kdb/page-map.h>
 #include <kfs/dyload.h>
 #include <klib/symbol.h>
 #include <klib/symtab.h>

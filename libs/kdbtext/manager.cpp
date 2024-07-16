@@ -239,6 +239,7 @@ Manager::openDatabase( const Path & p_path, const Database *& p_db ) const
                 }
                 else
                 {
+                    delete root;
                     return SILENT_RC (rcDB, rcMgr, rcOpening, rcDirectory, rcNotFound );
                 }
             }

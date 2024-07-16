@@ -28,12 +28,12 @@
 #include "blob.h"
 
 #include "blob-headers.h"
-#include "page-map.h"
 #include "blob-priv.h"
 #include "xform-priv.h"
 
 #include <vdb/xform.h>
 #include <vdb/schema.h>
+#include <kdb/page-map.h>
 #include <klib/rc.h>
 #include <sysalloc.h>
 #include <atomic32.h>
@@ -60,18 +60,18 @@ rc_t CC redimension_drvr(
     const self_t *self = (const self_t *)Self;
     const VBlob *src = argv[0];
     VBlob *y;
-    
+
     rc = VBlobNew(&y, src->start_id, src->stop_id, "redimension");
     if (rc)
         return rc;
-    
+
     rc = KDataBufferCast(&src->data, &y->data, self->elem_bits, false);
     if (rc == 0) {
         y->byte_order = src->byte_order;
         PageMapAddRef(y->pm = src->pm);
 	y->pm->optimized = eBlobPageMapOptimizedFailed; /** pagemap is no longer valid; prevent optimization ***/
         BlobHeadersAddRef(y->headers = src->headers);
-        
+
         *rslt = y;
         return 0;
     }
@@ -93,11 +93,11 @@ VTRANSFACT_BUILTIN_IMPL(vdb_redimension, 1, 0, 0) (
                                            const VFunctionParams *dp
 ) {
     self_t *self;
-    
+
     self = malloc(sizeof(*self));
     if (self) {
         self->elem_bits = VTypedescSizeof(&info->fdesc.desc);
-        
+
         rslt->self = self;
         rslt->whack = vfunc_free;
         rslt->variant = vftBlobN;

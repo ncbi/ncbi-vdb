@@ -45,13 +45,13 @@
 #include "phys-priv.h"
 #include "blob-priv.h"
 #include "blob.h"
-#include "page-map.h"
 #include "blob-headers.h"
 #undef KONST
 
 #include <vdb/schema.h>
 #include <vdb/cursor.h>
 #include <vdb/xform.h>
+#include <kdb/page-map.h>
 #include <klib/symbol.h>
 #include <klib/log.h>
 #include <klib/debug.h>
@@ -1837,8 +1837,13 @@ static rc_t VFunctionProdReadNormal ( VFunctionProd *self, VBlob **vblob, int64_
     if (self->dad.sub == prodFuncBuiltInCompare) {
         rc = VFunctionProdCallCompare(self, vblob, id, cnt);
 #if _DEBUGGING
-        if (rc != 0)
-            rc = VFunctionProdCallCompare1(self, vblob, id, cnt);
+        if (rc != 0) {
+            rc_t r1 = VFunctionProdCallCompare1(self, vblob, id, cnt);
+            PLOGERR(klogInt, (klogInt, rc,
+                 "VFunctionProdCallCompare() returned '$(rc)'; then "
+                "VFunctionProdCallCompare1() returned '$(r1)'",
+                "rc=%R,r1=%R", rc, r1));
+        }
 #endif
         return rc;
     }
@@ -2093,7 +2098,7 @@ static uint32_t VScriptProdFixedRowLength ( const VScriptProd *self, int64_t row
 /*--------------------------------------------------------------------------
  * VPivotProd
  *  potentially pivots to a new row-id space
- *  member with a pivot: tbl [ row_id ] . member  
+ *  member with a pivot: tbl [ row_id ] . member
  */
 
 rc_t VPivotProdMake ( VPivotProd ** p_prodp,
@@ -2156,7 +2161,7 @@ rc_t VPivotProdRead ( VPivotProd * p_self, struct VBlob ** p_vblob, int64_t * p_
             }
         }
         else
-        {   
+        {
             vblob_release ( rowIdBlob, NULL );
         }
     }

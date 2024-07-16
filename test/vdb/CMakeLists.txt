@@ -35,9 +35,6 @@ AddExecutableTest( SlowTest_VDB_vdb "test-vdb" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_VDB_wvdb "test-wvdb" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" )
 set_tests_properties(Test_VDB_wvdb PROPERTIES ENVIRONMENT VDB_CONFIG=${CMAKE_CURRENT_SOURCE_DIR}/kfg/empty)
 
-# temp disable test
-AddExecutableTest( Test_VDB_pagemap "test-pagemap" "${COMMON_LIBS_WRITE}" )
-
 AddExecutableTest(
          SlowTest_VDB_dependencies_dflt "test-dependencies_dflt" "${COMMON_LIBS_READ}" )
 AddExecutableTest(

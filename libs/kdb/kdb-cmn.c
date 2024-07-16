@@ -324,7 +324,7 @@ void KDBContentsWhack(KDBContents const *const self)
 {
     if (self) {
         KDBContentsWhack(self->firstChild);
-        KDBContentsWhack(self->nextSibling);        
+        KDBContentsWhack(self->nextSibling);
         free((void *)self);
     }
 }
@@ -386,7 +386,7 @@ static KDBContents *KDBContentsVMake(KPathType const fstype
     rc_t rc = 0;
     KDBContents *result = NULL;
     KDataBuffer buffer;
-    
+
     KDataBufferMakeBytes(&buffer, 0);
     rc = KDataBufferVPrintf(&buffer, name, args);
     if (rc == 0) {
@@ -402,7 +402,7 @@ struct KDBGetPathContents_Gather_context {
     KDBContents **target;
 };
 
-static 
+static
 struct KDBGetPathContents_Gather_context makeContext(KDBContents *const contents)
 {
     struct KDBGetPathContents_Gather_context result = {
@@ -500,11 +500,11 @@ static void KDBGetPathContents_Column(KDBContents *node, const struct KDirectory
         rc_t rc = KRColumnMakeRead((struct KRColumn **)&colp, dir, node->name);
         if (rc == 0) {
             bool reversed = false;
-            
+
             KColumnByteOrder((KColumn const *)colp, &reversed);
             if (reversed)
                 node->attributes |= cca_ReversedByteOrder;
-            
+
             switch (colp->checksum) {
             case kcsCRC32:
                 node->attributes |= cca_HasChecksum_CRC;
@@ -589,7 +589,7 @@ static void KDBGetPathContents_GatherIndices(KDBContents *result, const struct K
                     rc = KIndexValidateHeader(&reversed, &type, buffer, nread);
                     if (rc)
                         goto HAS_ERRORS;
-                    
+
                     if (type == kitText)
                         node->attributes |= cia_IsTextIndex;
                     else
@@ -623,7 +623,7 @@ static void KDBGetPathContents_Tables(KDBContents *result, const struct KDirecto
 {
     rc_t rc = 0;
     KDBContents *added = NULL, *save = (KDBContents *)result->firstChild;
-    
+
     result->firstChild = NULL;
     rc = KDBGetPathContents_GatherChildren(result, dir, "tbl");
 
@@ -659,7 +659,7 @@ static void KDBGetPathContents_Databases(KDBContents *result, const struct KDire
 {
     rc_t rc = 0;
     KDBContents *added = NULL, *save = (KDBContents *)result->firstChild;
-        
+
     result->firstChild = NULL;
     rc = KDBGetPathContents_GatherChildren(result, dir, "db");
 
@@ -734,7 +734,7 @@ rc_t KDBVGetPathContents(KDBContents const **presult, const struct KDirectory *c
 {
     if (presult == NULL || dir == NULL || path == NULL)
         return RC(rcDB, rcDirectory, rcVisiting, rcParam, rcNull);
-    
+
     return KDBVGetPathContents_1(presult, dir, type, path, args);
 }
 

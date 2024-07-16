@@ -1010,9 +1010,11 @@ rc_t CC run_flush_thread ( const KThread *t, void *data )
             if ( failed )
             {
                 self -> flush_state = vfBgErr;
-                LOGERR ( klogInt, pb . rc, "run_flush_thread: run_trigger_prods failed - exit" );
+                LOGERR ( klogInt, pb . rc,
+					"run_flush_thread: run_trigger_prods failed - exit/abort" );
                 KConditionSignal ( self -> flush_cond );
                 rc = pb . rc;
+				abort ();
             }
 
             /* no longer busy */

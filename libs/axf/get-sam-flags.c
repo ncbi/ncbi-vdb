@@ -51,7 +51,7 @@
 static
 rc_t CC get_sam_flags_impl(void *data, const VXformInfo *info,
                            int64_t row_id, VRowResult *rslt,
-                           uint32_t nreads,
+                           int32_t nreads,
                            uint32_t argc, const VRowData argv [] ) 
 {
     rc_t 	rc;
@@ -150,7 +150,7 @@ static
 rc_t CC get_sam_flags_impl_v1(  void  *data, const VXformInfo * info, int64_t row_id,
                                 VRowResult * rslt, uint32_t argc, const VRowData argv [] ) 
 {
-	uint32_t nreads = 0;
+	int32_t nreads = 0;
     INSDC_coord_len const *read_len = argv[ 0 ].u.data.base;
     unsigned i;
     
@@ -175,7 +175,7 @@ static
 rc_t CC get_sam_flags_impl_v2( void * data,const VXformInfo * info, int64_t row_id,
                                VRowResult * rslt, uint32_t argc, const VRowData argv [] ) 
 {
-	uint32_t nreads = 1;
+	int32_t nreads = 1;
     int64_t const *mate_id = argv[ 0 ].u.data.base;
     unsigned i;
     

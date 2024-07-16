@@ -47,9 +47,9 @@ struct KDBManager;
  * KDB utility
  */
 
-struct KDBPathContents;
-rc_t KDBVGetPathContents(struct KDBPathContents const **result, const struct KDirectory *dir, KPathType type, char const *path, va_list args);
-rc_t KDBGetPathContents(struct KDBPathContents const **result, const struct KDirectory *dir, KPathType type, char const *path, ...);
+struct KDBContents;
+rc_t KDBVGetPathContents(KDBContents const **result, const struct KDirectory *dir, KPathType type, char const *path, va_list args);
+rc_t KDBGetPathContents(KDBContents const **result, const struct KDirectory *dir, KPathType type, char const *path, ...);
 
 /* PathType
  *  checks type of path
@@ -81,11 +81,6 @@ rc_t KDBVMakeSubPath ( const struct KDirectory *dir,
     char *subpath, size_t subpath_max, const char *ns,
     uint32_t ns_size, const char *path, va_list args );
 
-
-/* KDBIsPathUri
- * A hack to get some of VFS into KDB that is too tightly bound to KFS
- */
-bool KDBIsPathUri (const char * path);
 
 /* OpenPathType
  * Opens a path if it is of the specified type.  Even if it is an archive file

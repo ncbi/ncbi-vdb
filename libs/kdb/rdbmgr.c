@@ -431,7 +431,7 @@ KDBRManagerVPathTypeUnreliable ( const KDBManager * self, const char *path, va_l
 }
 
 /// @brief Get Path Contents, from VPath
-static rc_t KDBRManagerPathContentsVP_1(const KDBManager *self, struct KDBPathContents const **result, const VPath *vpath, KPathType type, const char *path, va_list args)
+static rc_t KDBRManagerPathContentsVP_1(const KDBManager *self, KDBContents const **result, const VPath *vpath, KPathType type, const char *path, va_list args)
 {
     KDirectory const *dir = NULL;
     rc_t rc = VFSManagerOpenDirectoryReadDecryptUnreliable(self->vfsmgr, &dir, vpath);
@@ -446,7 +446,7 @@ static rc_t KDBRManagerPathContentsVP_1(const KDBManager *self, struct KDBPathCo
 static VPath *makeResolvedVPath(const KDBManager *self, const char *path, va_list args, rc_t *prc)
 {
     VPath *result = NULL;
-    
+
     va_list copy;
     va_copy(copy, args);
     *prc = VFSManagerVMakePath(self->vfsmgr, &result, path, copy);
@@ -481,7 +481,7 @@ static KPathType VGetPathType(const KDBManager *self, const char *path, va_list 
 }
 
 /// @brief Get Path Contents, from va_list, unchecked
-static rc_t KDBRManagerVPathContents_1(const KDBManager *self, struct KDBPathContents const **result, const char *path, va_list args)
+static rc_t KDBRManagerVPathContents_1(const KDBManager *self, KDBContents const **result, const char *path, va_list args)
 {
     rc_t rc = 0;
     VPath const *const vp = makeResolvedVPath(self, path, args, &rc); ///< NB. makes its own copy of args
@@ -494,7 +494,7 @@ static rc_t KDBRManagerVPathContents_1(const KDBManager *self, struct KDBPathCon
 }
 
 /// @brief Get Path Contents, from va_list
-rc_t KDBRManagerVPathContents(const KDBManager *self, struct KDBPathContents const **result, const char *path, va_list args)
+rc_t KDBRManagerVPathContents(const KDBManager *self, KDBContents const **result, const char *path, va_list args)
 {
     if (self == NULL)
         return RC(rcDB, rcMgr, rcAccessing, rcSelf, rcNull);
@@ -504,7 +504,7 @@ rc_t KDBRManagerVPathContents(const KDBManager *self, struct KDBPathContents con
 }
 
 /// @brief Get Path Contents, from var_args
-rc_t KDBRManagerPathContents(const KDBManager *self, struct KDBPathContents const **result, const char *path, ...)
+rc_t KDBRManagerPathContents(const KDBManager *self, KDBContents const **result, const char *path, ...)
 {
     rc_t rc = 0;
     va_list ap;

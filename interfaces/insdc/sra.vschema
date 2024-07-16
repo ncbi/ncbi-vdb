@@ -420,6 +420,7 @@ const INSDC:SRA:platform_id SRA_PLATFORM_ULTIMA             = 14;
 const INSDC:SRA:platform_id SRA_PLATFORM_GENEMIND           = 15;
 const INSDC:SRA:platform_id SRA_PLATFORM_BGISEQ             = 16;
 const INSDC:SRA:platform_id SRA_PLATFORM_DNBSEQ             = 17;
+const INSDC:SRA:platform_id SRA_PLATFORM_SINGULAR_GENOMICS  = 18;
 
 table INSDC:SRA:tbl:sra #1.0.4 =
     INSDC:tbl:sequence #1.0.1,

@@ -99,6 +99,8 @@ set( KDB_SRC
     wdbmgr
     wdatabase
     wtable
+
+    page-map
 )
 
 GenerateStaticLibs( kdb "${KDB_SRC}" )

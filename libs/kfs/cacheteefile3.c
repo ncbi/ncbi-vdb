@@ -150,6 +150,7 @@ struct KCacheTeeFile_v3
     bool remove_on_close;           /* fg thread use */
     bool whole_file;                /* constant      */
     char path [ 4098 ];             /* constant      */
+    rc_t rc;             /* rc returned by BG thread */
 };
 
 struct KCacheTeeFileTail
@@ -1150,6 +1151,9 @@ rc_t CC KCacheTeeFileTimedReadImpl ( const KCacheTeeFile_v3 *cself,
             STATUS ( STAT_PRG, "%lu: %s - unlink msg from msg queue if still there\n", cur_thread_id, __func__ );
             DLListUnlink ( & self -> msgq, & msg . dad );
 
+            if (self->rc != 0) /* BG thread failed to read */
+                rc = self->rc;
+
             STATUS ( STAT_PRG, "%lu: %s - releasing queue lock\n", cur_thread_id, __func__ );
             KLockUnlock ( self -> qlock );
 
@@ -1558,6 +1562,11 @@ memset ( & tm, -1, sizeof tm );
                         rc = KFileTimedReadChunked ( self -> source, msg . pos,
                             self -> chunks, msg . size, & num_read, & msg . tm );
                         STATUS ( STAT_PRG, "BG: %s - rc=%R, num_read=%zu\n", __func__, rc, num_read );
+                        if (rc != 0) {
+                            self->rc = rc; /* set rc for FB thread */
+                            /* notify about failure */
+                            KConditionBroadcast(self->fgcond);
+                        }
                     }
                 }
                 else
@@ -2272,7 +2281,7 @@ rc_t KDirectoryVMakeKCacheTeeFileInt ( KDirectory * self,
 
     /* allocate space for the object */
     STATUS ( STAT_PRG, "%s - allocating %u byte object\n", __func__, sizeof * obj );
-    obj = malloc ( sizeof * obj );
+    obj = calloc ( 1, sizeof * obj );
     if ( obj == NULL )
     {
         rc = RC ( rcFS, rcFile, rcAllocating, rcMemory, rcExhausted );

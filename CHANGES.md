@@ -1,6 +1,17 @@
 # NCBI External Developer Release:
 
 
+## NCBI VDB 3.1.1
+**May 21, 2024**
+
+  **blast, ncbi-vdb**: fixed build on VS2022  
+  **kns**: fixed segfault when SDL is not available  
+  **kns, prefetch**: improved reaction to problems with data  
+  **ncbi-vdb**: fixed warnings in Windows build process  
+  **ncbi-vdb, sra-tools**: added build rules for BSD  
+  **vdb**: generates blob CRC checksums by default  
+
+
 ## NCBI VDB 3.1.0
 **March 5, 2024**
 

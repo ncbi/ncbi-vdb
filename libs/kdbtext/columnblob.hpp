@@ -28,7 +28,13 @@
 
 #include "../libs/kdb/columnblob-base.h"
 
+#include <klib/data-buffer.h>
+
 #include <utility>
+#include <vector>
+
+struct PageMap;
+struct KJsonValue;
 
 typedef struct KTextBlob KTextBlob;
 struct KTextBlob
@@ -38,8 +44,6 @@ struct KTextBlob
 
 namespace KDBText
 {
-    class Column;
-
     class ColumnBlob : public KTextBlob
     {
     public:
@@ -47,19 +51,27 @@ namespace KDBText
         static void release( const ColumnBlob *);
 
     public:
-        ColumnBlob( const void * data, size_t size, const Column * col, int64_t id, uint64_t count );
+        ColumnBlob( const KJsonValue * ); // ascii values
+        ColumnBlob( const KJsonValue *, uint8_t intSizeBits ); // fixed size integer values
         ~ColumnBlob();
 
-        const void * getData() const { return m_data; }
-        const size_t getSize() const { return m_size; }
+        rc_t inflate( char * p_error, size_t p_error_size, int8_t intSizeBits = 0 );
 
-        std::pair< int64_t, uint32_t > getIdRange() const{ return std::make_pair( m_firstRow, m_count ); }
+        const KDataBuffer & getData() const { return m_data; }
+        const PageMap & getPageMap() const { return * m_pm; }
+
+        std::pair< int64_t, uint32_t > getIdRange() const{ return std::make_pair( m_startId, m_count ); }
+
+        rc_t serialize( KDataBuffer & buf ) const;
 
     private:
-        const void * m_data = nullptr;
-        size_t m_size = 0;
-        const Column * m_parent = nullptr;
-        int64_t m_firstRow = 0;
-        uint64_t m_count = 0;
+        rc_t appendRow( const void * data, size_t sizeInElems, uint32_t repeatCount = 1 );
+
+        const KJsonValue * m_json = nullptr;
+
+        int64_t m_startId = 0;
+        uint32_t m_count = 0;
+        PageMap * m_pm = nullptr;
+        KDataBuffer m_data;
     };
 }
