@@ -83,6 +83,8 @@ struct Common {
     Common()
         : vdb(0), vfs(0), kdb(0)
     {
+        KConfigDisableUserSettings();
+
         rc_t rc(VDBManagerMake_FUNC(&vdb, 0));
         if (rc != 0)
             throw rc;
@@ -609,7 +611,10 @@ FIXTURE_TEST_CASE(TestKDBManagerPathTypeVP, Fixture) {
     REQUIRE_RC(Compare(pathR, dbRPath));
 
 /* N.B. Directory is not saved for change of path from table to DB
-and use of VDBManagerOpenDBReadVPath */
+and use of VDBManagerOpenDBReadVPath.
+   Here - first, pathR (remote table accession) is resolved.
+       It (remote VPath) is found in SDL cache.
+       It already has corresponding directory set (of table remote location). */
     REQUIRE_RC_FAIL(VDBManagerOpenDB_FUNC_VPath(vdb, &d, 0, pathR));
 
     REQUIRE_RC(Compare(pathR, dbRPath));
