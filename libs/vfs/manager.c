@@ -1479,7 +1479,8 @@ static rc_t VFSManagerResolvePathInt (const VFSManager * self,
             case vpuri_file:
                 rc = KDirectoryResolvePath ( base_dir, true, u, sizeof u,
                     "%.*s", ( int ) in_path -> path . size, in_path -> path . addr );
-                rc = VPathMake (&v, u);
+                if (rc == 0)
+                    rc = VPathMake (&v, u);
                 break;
             }
             if (rc == 0)
