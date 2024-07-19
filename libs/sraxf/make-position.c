@@ -53,7 +53,7 @@ rc_t CC make_position ( void *self, const VXformInfo *info, int64_t row_id,
 
     if ( argv [ 0 ] . u . data . elem_count > dst -> elem_count )
     {
-        uint32_t old = dst -> elem_count;
+        uint32_t old = (uint32_t) dst -> elem_count;
         rc = KDataBufferResize ( dst, argv [ 0 ] . u . data . elem_count );
         if ( rc != 0 )
             return rc;
@@ -61,7 +61,7 @@ rc_t CC make_position ( void *self, const VXformInfo *info, int64_t row_id,
         {
             uint16_t i, *p = dst -> base;
             uint16_t offset = p [ 0 ];
-            for ( i = old; i < dst -> elem_count; ++ i )
+            for ( i = (uint16_t)old; i < dst -> elem_count; ++ i )
                 p [ i ] = i + offset;
         }
         else
