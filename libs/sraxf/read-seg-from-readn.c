@@ -333,7 +333,7 @@ rc_t CC fix_read_seg ( void *data, const VXformInfo *info, int64_t row_id,
     rc_t rc;
 
     const uint16_t *rs_src = argv [ 0 ] . u . data . base;
-    const uint32_t nreads = argv [ 0 ] . u . data . elem_count;
+    const uint32_t nreads = (uint32_t) argv [ 0 ] . u . data . elem_count;
     const uint32_t *spot_lenp = argv [ 1 ] . u . data . base;
     const uint32_t spot_len = spot_lenp [ argv [ 1 ] . u . data . first_elem ];
 
