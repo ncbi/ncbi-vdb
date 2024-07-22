@@ -35,6 +35,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#if NOT_DEFERRED
+#include <time.h>
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
