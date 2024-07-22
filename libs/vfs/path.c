@@ -4753,7 +4753,16 @@ rc_t VPathGetDirectory(const VPath * self, const KDirectory ** dir) {
 }
 
 rc_t VPathSetDirectory(VPath * self, const KDirectory * dir) {
+    static int DISABLE_DIRECTORY_CACHING = -1;
+    
     rc_t rc = 0;
+
+    if (DISABLE_DIRECTORY_CACHING < 0)
+        DISABLE_DIRECTORY_CACHING = getenv(
+            "NCBI_VDB_NO_CACHE_DIR_IN_VPATH") != NULL;
+
+    if (DISABLE_DIRECTORY_CACHING > 0)
+        return rc;
 
     if (self == NULL)
         return rc;
