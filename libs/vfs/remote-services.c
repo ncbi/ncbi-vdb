@@ -5447,7 +5447,7 @@ static rc_t KService1NameWithVersionAndType ( const KNSManager * mgr,
     const char * url, const char * acc, size_t acc_sz, const char * ticket,
     VRemoteProtocols protocols, const VPath ** remote,  const VPath ** mapping,
     bool refseq_ctx, const char * version, EObjectType objectType,
-    bool aProtected, const char * quality )
+    bool aProtected, const char * quality, const VPath * query )
 {
     rc_t rc = 0;
     VFSManager * vMgr = NULL;
@@ -5465,9 +5465,11 @@ static rc_t KService1NameWithVersionAndType ( const KNSManager * mgr,
     if (rc == 0)
         rc = VFSManagerGetCachedKSrvResponse(vMgr, acc, &response);
 
-    if (rc == 0 && response == NULL)
+    if (rc == 0 && response == NULL) {
         DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE), (
             "VVVVVVVVVVVVVVVVVVVVVVVVVV KService1NameWithVersionAndType:\n"));
+        rc = VPathSetDirectory(query, NULL);
+    }
 
     if (response == NULL) {
         if (rc == 0)
@@ -5585,14 +5587,14 @@ rc_t KService1NameWithQuality ( const KNSManager * mgr, const char * url,
     const char * acc, size_t acc_sz, const char * ticket,
     VRemoteProtocols protocols, const VPath ** remote, const VPath ** mapping,
     bool refseq_ctx, const char * version, bool aProtected,
-    const char * quality )
+    const char * quality, const VPath * query )
 {
     if ( version == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
 
     return KService1NameWithVersionAndType ( mgr, url, acc, acc_sz, ticket,
         protocols, remote, mapping, refseq_ctx, version, eOT_undefined,
-        aProtected, quality );
+        aProtected, quality, query );
 }
 LIB_EXPORT
 rc_t CC KService1NameWithVersion ( const KNSManager * mgr, const char * url,
@@ -5600,8 +5602,8 @@ rc_t CC KService1NameWithVersion ( const KNSManager * mgr, const char * url,
     VRemoteProtocols protocols, const VPath ** remote, const VPath ** mapping,
     bool refseq_ctx, const char * version, bool aProtected )
 {
-    return KService1NameWithQuality(mgr, url, acc, acc_sz, ticket,
-        protocols, remote, mapping, refseq_ctx, version, aProtected, NULL);
+    return KService1NameWithQuality(mgr, url, acc, acc_sz, ticket, protocols,
+        remote, mapping, refseq_ctx, version, aProtected, NULL, NULL);
 }
 
 /* Execute Search Service Call : extended version */
@@ -5987,7 +5989,7 @@ rc_t KServiceCgiTest1 ( const KNSManager * mgr, const char * cgi,
     const VPath * path = NULL;
     rc_t rc = KService1NameWithVersionAndType ( mgr, cgi, acc,
         string_measure ( acc, NULL ), ticket, protocols,
-        & path, NULL, false, version, objectType, false, NULL );
+        & path, NULL, false, version, objectType, false, NULL, NULL );
     if ( rc == 0 ) {
         if ( exp != NULL && rc == 0 ) {
             int notequal = ~ 0;

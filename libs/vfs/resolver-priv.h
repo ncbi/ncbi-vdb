@@ -232,7 +232,7 @@ rc_t VResolverAlgRemoteProtectedResolve( const struct VResolverAlg *self,
     const struct KNSManager *kns, VRemoteProtocols protocols,
     const struct String *acc, const struct VPath **path,
     const struct VPath **mapping, bool legacy_wgs_refseq,
-    const char * version, const char * quality);
+    const char * version, const char * quality, const struct VPath *query);
 
 /** get projectId ( valid for protected user repository ) */
 rc_t VResolverGetProjectId ( const VResolver * self, uint32_t * projectId );
@@ -251,7 +251,8 @@ bool VResolverIsProtected ( const VResolver * self );
 rc_t VResolverRemoteResolve ( const VResolver *self,
     VRemoteProtocols protocols, const struct String * accession,
     const struct VPath ** path, const struct VPath **mapping,
-    const struct KFile ** opt_file_rtn, bool refseq_ctx, bool is_oid, const char * version );
+    const struct KFile ** opt_file_rtn, bool refseq_ctx, bool is_oid,
+    const char * versionl, const struct VPath * query );
 
 rc_t VResolverLocalForCache(const VResolver * self,
     const VPath * accession, const VPath ** path);
