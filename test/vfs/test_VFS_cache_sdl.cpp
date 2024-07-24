@@ -176,7 +176,7 @@ protected:
 // Caching by default
 FIXTURE_TEST_CASE(CountCaching, CachingFixture) {
     const char acc[] = "SRR000001";
-    string json(MkSdlJson(acc, "http://a1/"));
+    string json(MkSdlJson(acc, "https://sra-download-internal.ncbi.nlm.nih.gov/sos5/sra-pub-zq-11/SRR000/000/SRR000001/SRR000001.lite.1"));
     putenv((char*)json.c_str());
 
     const char acc2[] = "SRR000002";
