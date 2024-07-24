@@ -37,13 +37,13 @@ KColumnBlobBase::~KColumnBlobBase() {}
 /******************* dispatch functions ***********************/
 #define DISPATCH(call)  \
     if ( self != NULL )   \
-        return ((KColumnBlobBase*)self) -> call; \
+        return reinterpret_cast<KColumnBlobBase*>(const_cast<KColumnBlob *>(self)) -> call; \
     else                                        \
         return RC ( rcDB, rcCursor, rcAccessing, rcSelf, rcNull );
 
 #define CONST_DISPATCH(call)  \
     if ( self != NULL )   \
-        return ((const KColumnBlobBase*)self) -> call; \
+        return reinterpret_cast<const KColumnBlobBase*>(self) -> call; \
     else                                        \
         return RC ( rcDB, rcCursor, rcAccessing, rcSelf, rcNull );
 
