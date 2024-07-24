@@ -26,82 +26,56 @@
 
 #include <kdb/extern.h>
 
-#define KColumnBlob KColumnBlobBase
-#include "columnblob-base.h"
+#include "ColumnBlob.hpp"
 
 #include <kdb/column.h>
 
 #include <klib/rc.h>
 
-void KColumnBlobBaseInit( KColumnBlob *self, const KColumnBlob_vt * vt )
-{
-    atomic32_set ( & self -> refcount, 1 );
-    self -> vt = vt;
-}
-
-rc_t CC KColumnBlobBaseWhack ( KColumnBlob *self )
-{
-    KRefcountWhack ( & self -> refcount, "KColumnBlob" );
-    free ( self );
-    return 0;
-}
-
-/* AddRef
- * Release
- *  all objects are reference counted
- *  NULL references are ignored
- */
-rc_t CC KColumnBlobBaseAddRef ( const KColumnBlob *cself )
-{
-    KColumnBlob *self = ( KColumnBlob* ) cself;
-    atomic32_inc ( & self -> refcount );
-    return 0;
-}
-
-rc_t CC KColumnBlobBaseRelease ( const KColumnBlob *cself )
-{
-    KColumnBlob *self = ( KColumnBlob* ) cself;
-    if ( atomic32_dec_and_test ( & self -> refcount ) )
-        return self -> vt -> whack ( self );
-    return 0;
-}
+KColumnBlobBase::~KColumnBlobBase() {}
 
 /******************* dispatch functions ***********************/
 #define DISPATCH(call)  \
-    if ( self != NULL && self -> vt != NULL )   \
-        return self -> vt -> call;              \
+    if ( self != NULL )   \
+        return reinterpret_cast<KColumnBlobBase*>(const_cast<KColumnBlob *>(self)) -> call; \
+    else                                        \
+        return RC ( rcDB, rcCursor, rcAccessing, rcSelf, rcNull );
+
+#define CONST_DISPATCH(call)  \
+    if ( self != NULL )   \
+        return reinterpret_cast<const KColumnBlobBase*>(self) -> call; \
     else                                        \
         return RC ( rcDB, rcCursor, rcAccessing, rcSelf, rcNull );
 
 LIB_EXPORT rc_t CC KColumnBlobAddRef ( const KColumnBlob *self )
 {
-    DISPATCH( addRef( self ) );
+    DISPATCH( addRef() );
 }
 LIB_EXPORT rc_t CC KColumnBlobRelease ( const KColumnBlob *self )
 {
-    DISPATCH( release( self ) );
+    DISPATCH( release() );
 }
 LIB_EXPORT rc_t CC KColumnBlobRead ( const KColumnBlob *self,
     size_t offset, void *buffer, size_t bsize,
     size_t *num_read, size_t *remaining )
 {
-    DISPATCH( read( self, offset, buffer, bsize, num_read, remaining ) );
+    CONST_DISPATCH( read( offset, buffer, bsize, num_read, remaining ) );
 }
 LIB_EXPORT rc_t CC KColumnBlobReadAll ( const KColumnBlob * self, struct KDataBuffer * buffer,
     KColumnBlobCSData * opt_cs_data, size_t cs_data_size )
 {
-    DISPATCH( readAll( self, buffer, opt_cs_data, cs_data_size ) );
+    CONST_DISPATCH( readAll( buffer, opt_cs_data, cs_data_size ) );
 }
 LIB_EXPORT rc_t CC KColumnBlobValidate ( const KColumnBlob *self )
 {
-    DISPATCH( validate( self ) );
+    CONST_DISPATCH( validate() );
 }
 LIB_EXPORT rc_t CC KColumnBlobValidateBuffer ( const KColumnBlob * self,
     struct KDataBuffer const * buffer, const KColumnBlobCSData * cs_data, size_t cs_data_size )
 {
-    DISPATCH( validateBuffer( self, buffer, cs_data, cs_data_size ) );
+    CONST_DISPATCH( validateBuffer( buffer, cs_data, cs_data_size ) );
 }
 LIB_EXPORT rc_t CC KColumnBlobIdRange ( const KColumnBlob *self, int64_t *first, uint32_t *count )
 {
-    DISPATCH( idRange( self, first, count ) );
+    CONST_DISPATCH( idRange( first, count ) );
 }
