@@ -28,6 +28,8 @@
 
 #include <kfs/directory.h>
 
+#include "coldata.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -74,13 +76,6 @@ rc_t KRColumnDataOpenRead ( KRColumnData *self,
  */
 rc_t KRColumnDataWhack ( KRColumnData *self );
 
-/* Read
- *  reads from the data fork using a blob map
- */
-rc_t KRColumnDataRead ( const KRColumnData *self, const KRColumnPageMap *pm,
-    size_t offset, void *buffer, size_t bsize, size_t *num_read );
-
-
 /*--------------------------------------------------------------------------
  * KRColumnPageMap
  *  map of pages involved in column blob
@@ -103,11 +98,6 @@ union KRColumnPageMap
  */
 rc_t KRColumnPageMapOpen ( KRColumnPageMap *pm,
     KRColumnData *cd, uint64_t pg, size_t sz );
-
-/* Whack
- *  disposes of memory in the case of a page array
- */
-void KRColumnPageMapWhack ( KRColumnPageMap *self, const KRColumnData *cd );
 
 /* Id
  *  captures id of initial page

@@ -26,9 +26,20 @@
 
 #pragma once
 
-#include <kdb/column.h>
+#include <kfs/directory.h>
 
-struct KRColumn;
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-rc_t KRColumnBlobMake ( const KColumnBlob **blobp, bool bswap );
-rc_t KRColumnBlobOpenRead ( const KColumnBlob *self, const struct KRColumn *col, int64_t id );
+
+/* Read
+ *  reads from the file using a blob map
+ */
+rc_t KColumnDataRead ( size_t pgsize, struct KFile const * f, uint64_t pg,
+    size_t offset, void *buffer, size_t bsize, size_t *num_read );
+
+#ifdef __cplusplus
+}
+#endif
+

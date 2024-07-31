@@ -38,38 +38,10 @@
 using namespace KDBText;
 using namespace std;
 
-/*--------------------------------------------------------------------------
- * KTextColumnBlob
- *  one or more rows of column data
- */
-
-static rc_t KTextColumnBlobWhack ( KColumnBlob *self );
-static rc_t CC KTextColumnBlobRead ( const KColumnBlob *self, size_t offset, void *buffer, size_t bsize, size_t *num_read, size_t *remaining );
-static rc_t CC KTextColumnBlobReadAll ( const KColumnBlob * self, KDataBuffer * buffer, KColumnBlobCSData * opt_cs_data, size_t cs_data_size );
-static rc_t CC KTextColumnBlobValidate ( const KColumnBlob *self );
-static rc_t CC KTextColumnBlobValidateBuffer ( const KColumnBlob * self, const KDataBuffer * buffer, const KColumnBlobCSData * cs_data, size_t cs_data_size );
-static rc_t CC KTextColumnBlobIdRange ( const KColumnBlob *self, int64_t *first, uint32_t *count );
-
-static KColumnBlob_vt KTextColumnBlob_vt =
-{
-    /* Public API */
-    KTextColumnBlobWhack,
-    KColumnBlobBaseAddRef,
-    KColumnBlobBaseRelease,
-    KTextColumnBlobRead,
-    KTextColumnBlobReadAll,
-    KTextColumnBlobValidate,
-    KTextColumnBlobValidateBuffer,
-    KTextColumnBlobIdRange
-};
-
-#define CAST() assert( bself->vt == &KTextColumnBlob_vt ); ColumnBlob * self = (ColumnBlob *)bself
-
 ColumnBlob::ColumnBlob( const KJsonValue * p_json )
 : m_json( p_json )
 {
-    dad . vt = & KTextColumnBlob_vt;
-    KRefcountInit ( & dad . refcount, 1, "KDBText::ColumnBlob", "ctor", "db" );
+    KRefcountInit ( & refcount, 1, "KDBText::ColumnBlob", "ctor", "db" );
 
 //** move to inflate() to return rc?
     memset( &m_data, 0, sizeof( m_data ) );
@@ -81,27 +53,166 @@ ColumnBlob::ColumnBlob( const KJsonValue * p_json )
 ColumnBlob::~ColumnBlob()
 {
     PageMapRelease( m_pm );
-
     KDataBufferWhack ( & m_data );
-    KRefcountWhack ( & dad . refcount, "KDBText::ColumnBlob" );
 }
 
-void
-ColumnBlob::addRef( const ColumnBlob * b )
+rc_t
+ColumnBlob::whack()
 {
-    if ( b != nullptr )
-    {
-        KColumnBlobAddRef( (const KColumnBlob*) b );
-    }
+    delete this;
+    return 0;
 }
 
-void
-ColumnBlob::release( const ColumnBlob * b )
+rc_t
+ColumnBlob::addRef()
 {
-    if ( b != nullptr )
+    return 0;
+}
+
+rc_t ColumnBlob::release()
+{
+    return 0;
+}
+
+const uint64_t MaxHeaderSizeBytes = 9;
+
+rc_t ColumnBlob::read ( size_t offset, void *buffer, size_t bsize, size_t *num_read, size_t *remaining ) const
+{
+    rc_t rc = 0;
+    if ( buffer == nullptr && bsize != 0 )
     {
-        KColumnBlobRelease( (const KColumnBlob*) b );
+        rc = SILENT_RC ( rcDB, rcBlob, rcReading, rcBuffer, rcNull );
     }
+    else if ( num_read == nullptr )
+    {
+        rc = SILENT_RC ( rcDB, rcBlob, rcReading, rcParam, rcNull );
+    }
+    else if ( offset != 0 )
+    {
+        rc = SILENT_RC ( rcDB, rcBlob, rcReading, rcParam, rcUnsupported );
+    }
+    else
+    {
+        KDataBuffer buf;
+        rc = KDataBufferMakeBytes( &buf, MaxHeaderSizeBytes );
+        if ( rc == 0 )
+        {
+            rc = serialize( buf );
+            if ( rc == 0 )
+            {
+                size_t toRead = KDataBufferBytes( & buf );
+                if ( bsize == 0 )
+                {
+                    * remaining = toRead;
+                    * num_read = 0;
+                }
+                else
+                {
+                    if ( toRead > bsize )
+                    {
+                        * remaining = toRead - bsize;
+                        toRead -= *remaining;
+                    }
+                    else
+                    {
+                        * remaining = 0;
+                    }
+
+                    if ( toRead > 0 )
+                    {
+                        memmove( buffer, buf . base, toRead );
+                    }
+                    *num_read = toRead;
+                }
+            }
+
+            rc_t rc2 = KDataBufferWhack( &buf );
+            if ( rc == 0 ) rc = rc2;
+        }
+    }
+
+    return rc;
+}
+
+rc_t ColumnBlob::readAll ( struct KDataBuffer * buffer, KColumnBlobCSData * opt_cs_data, size_t cs_data_size ) const
+{
+    if ( opt_cs_data != NULL )
+    {
+        memset ( opt_cs_data, 0, cs_data_size ); // we do not populate checksum here
+    }
+
+    rc_t rc = 0;
+    if ( buffer == NULL )
+    {
+        rc = SILENT_RC ( rcDB, rcBlob, rcReading, rcParam, rcNull );
+    }
+    else
+    {
+        rc = KDataBufferMakeBytes( buffer, MaxHeaderSizeBytes );
+        if ( rc == 0 )
+        {
+            rc = serialize( *buffer );
+        }
+    }
+
+    return rc;
+}
+
+rc_t ColumnBlob::validate() const
+{
+    return 0;
+}
+
+rc_t ColumnBlob::validateBuffer ( struct KDataBuffer const * buffer, const KColumnBlobCSData * cs_data, size_t cs_data_size ) const
+{
+    if ( buffer == NULL )
+    {
+        return SILENT_RC ( rcDB, rcBlob, rcValidating, rcParam, rcNull );
+    }
+    if ( cs_data == NULL )
+    {
+        return SILENT_RC ( rcDB, rcBlob, rcValidating, rcParam, rcNull );
+    }
+
+    KDataBuffer buf;
+    rc_t rc = KDataBufferMakeBytes( &buf, MaxHeaderSizeBytes );
+    if ( rc == 0 )
+    {
+        rc = serialize( buf );
+        if ( rc == 0 )
+        {
+            // check the buffer's size
+            size_t bsize = KDataBufferBytes ( buffer );
+            if ( bsize < KDataBufferBytes ( &buf ) )
+            {
+                rc = SILENT_RC ( rcDB, rcBlob, rcValidating, rcData, rcInsufficient );
+            }
+            if ( rc == 0 && bsize > KDataBufferBytes ( &buf ) )
+            {
+                rc = SILENT_RC ( rcDB, rcBlob, rcValidating, rcData, rcExcessive );
+            }
+        }
+
+        rc_t rc2 = KDataBufferWhack( &buf );
+        if ( rc == 0 ) rc = rc2;
+    }
+    return rc;
+}
+
+rc_t ColumnBlob::idRange ( int64_t *first, uint32_t *count ) const
+{
+    if ( first == NULL )
+    {
+        return SILENT_RC ( rcDB, rcBlob, rcAccessing, rcParam, rcNull );
+    }
+    if ( count == NULL )
+    {
+        return SILENT_RC ( rcDB, rcBlob, rcAccessing, rcParam, rcNull );
+    }
+
+    *first = getIdRange().first;
+    *count = getIdRange().second;
+    return 0;
 }
 
 rc_t
@@ -414,18 +525,6 @@ static rc_t encode_header_v2(
 
 // API
 
-static
-rc_t
-KTextColumnBlobWhack ( KColumnBlob *bself )
-{
-    CAST();
-
-    delete reinterpret_cast<ColumnBlob*>( self );
-    return 0;
-}
-
-const uint64_t MaxHeaderSizeBytes = 9;
-
 rc_t
 ColumnBlob::serialize( KDataBuffer & p_buf ) const
 {
@@ -488,159 +587,4 @@ ColumnBlob::serialize( KDataBuffer & p_buf ) const
     return rc;
 }
 
-static
-rc_t CC
-KTextColumnBlobRead ( const KColumnBlob *bself, size_t offset, void *buffer, size_t bsize, size_t *num_read, size_t *remaining )
-{
-    CAST();
 
-    rc_t rc = 0;
-    if ( buffer == nullptr && bsize != 0 )
-    {
-        rc = SILENT_RC ( rcDB, rcBlob, rcReading, rcBuffer, rcNull );
-    }
-    else if ( num_read == nullptr )
-    {
-        rc = SILENT_RC ( rcDB, rcBlob, rcReading, rcParam, rcNull );
-    }
-    else if ( offset != 0 )
-    {
-        rc = SILENT_RC ( rcDB, rcBlob, rcReading, rcParam, rcUnsupported );
-    }
-    else
-    {
-        KDataBuffer buf;
-        rc = KDataBufferMakeBytes( &buf, MaxHeaderSizeBytes );
-        if ( rc == 0 )
-        {
-            rc = self -> serialize( buf );
-            if ( rc == 0 )
-            {
-                size_t toRead = KDataBufferBytes( & buf );
-                if ( bsize == 0 )
-                {
-                    * remaining = toRead;
-                    * num_read = 0;
-                }
-                else
-                {
-                    if ( toRead > bsize )
-                    {
-                        * remaining = toRead - bsize;
-                        toRead -= *remaining;
-                    }
-                    else
-                    {
-                        * remaining = 0;
-                    }
-
-                    if ( toRead > 0 )
-                    {
-                        memmove( buffer, buf . base, toRead );
-                    }
-                    *num_read = toRead;
-                }
-            }
-
-            rc_t rc2 = KDataBufferWhack( &buf );
-            if ( rc == 0 ) rc = rc2;
-        }
-    }
-
-    return rc;
-}
-
-static
-rc_t CC
-KTextColumnBlobReadAll ( const KColumnBlob * bself, KDataBuffer * dbuffer, KColumnBlobCSData * opt_cs_data, size_t cs_data_size )
-{
-    CAST();
-
-    if ( opt_cs_data != NULL )
-    {
-        memset ( opt_cs_data, 0, cs_data_size ); // we do not populate checksum here
-    }
-
-    rc_t rc = 0;
-    if ( dbuffer == NULL )
-    {
-        rc = SILENT_RC ( rcDB, rcBlob, rcReading, rcParam, rcNull );
-    }
-    else
-    {
-        rc = KDataBufferMakeBytes( dbuffer, MaxHeaderSizeBytes );
-        if ( rc == 0 )
-        {
-            rc = self -> serialize( *dbuffer );
-        }
-    }
-
-    return rc;
-}
-
-static
-rc_t CC
-KTextColumnBlobValidate ( const KColumnBlob *self )
-{
-    return 0;
-}
-
-static
-rc_t CC
-KTextColumnBlobValidateBuffer ( const KColumnBlob * bself, const KDataBuffer * dbuffer, const KColumnBlobCSData * cs_data, size_t cs_data_size )
-{
-    CAST();
-
-    if ( dbuffer == NULL )
-    {
-        return SILENT_RC ( rcDB, rcBlob, rcValidating, rcParam, rcNull );
-    }
-    if ( cs_data == NULL )
-    {
-        return SILENT_RC ( rcDB, rcBlob, rcValidating, rcParam, rcNull );
-    }
-
-    KDataBuffer buf;
-    rc_t rc = KDataBufferMakeBytes( &buf, MaxHeaderSizeBytes );
-    if ( rc == 0 )
-    {
-        rc = self -> serialize( buf );
-        if ( rc == 0 )
-        {
-            // check the buffer's size
-            size_t bsize = KDataBufferBytes ( dbuffer );
-            if ( bsize < KDataBufferBytes ( &buf ) )
-            {
-                rc = SILENT_RC ( rcDB, rcBlob, rcValidating, rcData, rcInsufficient );
-            }
-            if ( rc == 0 && bsize > KDataBufferBytes ( &buf ) )
-            {
-                rc = SILENT_RC ( rcDB, rcBlob, rcValidating, rcData, rcExcessive );
-            }
-        }
-
-        rc_t rc2 = KDataBufferWhack( &buf );
-        if ( rc == 0 ) rc = rc2;
-    }
-    return rc;
-}
-
-static
-rc_t CC
-KTextColumnBlobIdRange ( const KColumnBlob * bself, int64_t *first, uint32_t *count )
-{
-    CAST();
-
-    if ( first == NULL )
-    {
-        return SILENT_RC ( rcDB, rcBlob, rcAccessing, rcParam, rcNull );
-    }
-    if ( count == NULL )
-    {
-        return SILENT_RC ( rcDB, rcBlob, rcAccessing, rcParam, rcNull );
-    }
-
-    *first = self->getIdRange().first;
-    *count = self->getIdRange().second;
-    return 0;
-}
