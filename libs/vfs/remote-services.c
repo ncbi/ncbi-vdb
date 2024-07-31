@@ -5468,7 +5468,7 @@ static rc_t KService1NameWithVersionAndType ( const KNSManager * mgr,
     if (rc == 0 && response == NULL) {
         DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE), (
             "VVVVVVVVVVVVVVVVVVVVVVVVVV KService1NameWithVersionAndType:\n"));
-        rc = VPathSetDirectory(query, NULL);
+        rc = VPathSetDirectory((VPath*)query, NULL);
     }
 
     if (response == NULL) {
