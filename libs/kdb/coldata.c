@@ -24,11 +24,27 @@
 *
 */
 
-#pragma once
+#include "coldata.h"
 
-#include <kdb/column.h>
+#include <kfs/file.h>
 
-struct KRColumn;
+/* Read
+ *  reads from the file using a blob map
+ */
+rc_t KColumnDataRead ( size_t pgsize, struct KFile const * f, uint64_t pg,
+    size_t offset, void *buffer, size_t bsize, size_t *num_read )
+{
+    uint64_t pos;
 
-rc_t KRColumnBlobMake ( const KColumnBlob **blobp, bool bswap );
-rc_t KRColumnBlobOpenRead ( const KColumnBlob *self, const struct KRColumn *col, int64_t id );
+    if ( bsize == 0 )
+    {
+        assert ( num_read != NULL );
+        * num_read = 0;
+        return 0;
+    }
+
+    pos = pg * pgsize;
+    return KFileRead ( f, pos + offset, buffer, bsize, num_read );
+}
+
+

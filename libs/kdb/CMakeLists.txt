@@ -36,7 +36,7 @@ set( KDB_SRC
     database-base
     table-base
     column-base
-    columnblob-base
+    columnblob-base.cpp
     meta-base
     metanode-base
     index-base
@@ -69,10 +69,12 @@ set( KDB_SRC
     wu64idx-v3
 
     rcolumn
-    rcolumnblob
+#    rcolumnblob
+    RColumnBlob.cpp
 
     wcolumn
-    wcolumnblob
+#    wcolumnblob
+    WColumnBlob.cpp
 
     rmeta
     rmetadatanode
@@ -80,6 +82,7 @@ set( KDB_SRC
     wmeta
     wmetadatanode
 
+    coldata
     rcoldata
     rcolidx
     rcolidx0
