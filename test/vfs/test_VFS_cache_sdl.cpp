@@ -176,7 +176,7 @@ protected:
 // Caching by default
 FIXTURE_TEST_CASE(CountCaching, CachingFixture) {
     const char acc[] = "SRR000001";
-    string json(MkSdlJson(acc, "https://sra-download-internal.ncbi.nlm.nih.gov/sos5/sra-pub-zq-11/SRR000/000/SRR000001/SRR000001.lite.1"));
+    string json(MkSdlJson(acc, "https://sra-pub-run-odp.s3.amazonaws.com/sra/SRR053325/SRR053325"));
     putenv((char*)json.c_str());
 
     const char acc2[] = "SRR000002";
@@ -211,7 +211,7 @@ FIXTURE_TEST_CASE(CountCaching, CachingFixture) {
 // Caching can be disabled
 FIXTURE_TEST_CASE(CountNotCaching, NotCachingFixture) {
     const char acc[] = "SRR000001";
-    string json(MkSdlJson(acc, "https://sra-download-internal.ncbi.nlm.nih.gov/sos5/sra-pub-zq-11/SRR000/000/SRR000001/SRR000001.lite.1"));
+    string json(MkSdlJson(acc, "https://sra-pub-run-odp.s3.amazonaws.com/sra/SRR053325/SRR053325"));
     putenv((char*)json.c_str());
 
     const char acc2[]("SRR000002");
@@ -298,7 +298,7 @@ FIXTURE_TEST_CASE(ExpirationCaching, CachingFixture) {
 
     // will expire in 61 seconds;
     // removed from cache in 60 seconds before expiration
-    string json(MkSdlJson(acc, "https://sra-download-internal.ncbi.nlm.nih.gov/sos5/sra-pub-zq-11/SRR000/000/SRR000001/SRR000001.lite.1", 61));
+    string json(MkSdlJson(acc, "https://sra-pub-run-odp.s3.amazonaws.com/sra/SRR053325/SRR053325", 61));
     putenv((char*)json.c_str());
 
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 0);
@@ -306,14 +306,14 @@ FIXTURE_TEST_CASE(ExpirationCaching, CachingFixture) {
     
     REQUIRE_RC(QueryRemote(acc));
     // not expired
-    REQUIRE_RC(RemoteEquals("https://sra-download-internal.ncbi.nlm.nih.gov/sos5/sra-pub-zq-11/SRR000/000/SRR000001/SRR000001.lite.1"));
+    REQUIRE_RC(RemoteEquals("https://sra-pub-run-odp.s3.amazonaws.com/sra/SRR053325/SRR053325"));
     
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 1);
-    json = MkSdlJson(acc, "https://sra-download-internal.ncbi.nlm.nih.gov/sos5/sra-pub-zq-11/SRR000/000/SRR000002/SRR000002.lite.1");
+    json = MkSdlJson(acc, "https://ncbi.nlm.nih.gov/sos5/sra/SRR000/SRR000002");
     putenv((char*)json.c_str());
     REQUIRE_RC(QueryRemote(acc));
     // not expired; still use old result
-    REQUIRE_RC(RemoteEquals("https://sra-download-internal.ncbi.nlm.nih.gov/sos5/sra-pub-zq-11/SRR000/000/SRR000001/SRR000001.lite.1"));
+    REQUIRE_RC(RemoteEquals("https://sra-pub-run-odp.s3.amazonaws.com/sra/SRR053325/SRR053325"));
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 1);
     const KDirectory * dir(0);
     REQUIRE_RC(VPathGetDirectory(query, &dir));
@@ -328,7 +328,7 @@ FIXTURE_TEST_CASE(ExpirationCaching, CachingFixture) {
     KSleep(2);
     REQUIRE_RC(QueryRemote(acc));
     // expired; use new result
-    REQUIRE_RC(RemoteEquals("https://sra-download-internal.ncbi.nlm.nih.gov/sos5/sra-pub-zq-11/SRR000/000/SRR000002/SRR000002.lite.1"));
+    REQUIRE_RC(RemoteEquals("https://ncbi.nlm.nih.gov/sos5/sra/SRR000/SRR000002"));
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 1);
     REQUIRE_RC(VPathGetDirectory(query, &dir));
     REQUIRE_NULL(dir);
