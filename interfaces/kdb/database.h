@@ -46,6 +46,7 @@ extern "C" {
  * forwards
  */
 struct KDBManager;
+struct VPath;
 
 
 /*--------------------------------------------------------------------------
@@ -105,6 +106,8 @@ KDB_EXTERN rc_t CC KDBManagerOpenDBRead ( struct KDBManager const *self,
     const KDatabase **db, const char *path, ... );
 KDB_EXTERN rc_t CC KDatabaseOpenDBRead ( const KDatabase *self,
     const KDatabase **db, const char *name, ... );
+KDB_EXTERN rc_t CC KDBManagerOpenDBReadVPath ( struct KDBManager const *self,
+    const KDatabase **db, const struct VPath *path );
 
 KDB_EXTERN rc_t CC KDBManagerVOpenDBRead ( struct KDBManager const *self,
     const KDatabase **db, const char *path, va_list args );

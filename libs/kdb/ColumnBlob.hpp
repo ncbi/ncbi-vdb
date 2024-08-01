@@ -77,7 +77,6 @@ protected: // only created trough a factory, destroyed through release()
     }
     virtual ~TColumnBlob()
     {
-        KColumnSever ( m_blob -> col );
         KRefcountWhack ( & refcount, "KColumnBlob" );
         free( m_blob );
     }

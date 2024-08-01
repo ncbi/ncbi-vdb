@@ -40,6 +40,8 @@
 #include "wcolumn.h"
 #include "wmeta.h"
 
+#include "../vfs/path-priv.h" /* VPathSetDirectory */
+
 #include <kfs/impl.h>
 
 #include <vfs/manager.h>
@@ -71,9 +73,10 @@ static rc_t CC KDBWManagerRunPeriodicTasks ( const KDBManager *self );
 static int CC KDBWManagerPathTypeVP( const KDBManager * self, const VPath * path );
 static int CC KDBWManagerVPathType ( const KDBManager * self, const char *path, va_list args );
 static int CC KDBWManagerVPathTypeUnreliable ( const KDBManager * self, const char *path, va_list args );
-static rc_t CC KDBWManagerVOpenDBRead ( const KDBManager *self, const KDatabase **db, const char *path, va_list args );
+static rc_t CC KDBWManagerVOpenDBRead ( const KDBManager *self,
+    const KDatabase **db, const char *path, va_list args, const VPath *vpath );
 static rc_t CC KDBWManagerVOpenTableRead ( const KDBManager *self, const KTable **tbl, const char *path, va_list args );
-static rc_t CC KDBWManagerOpenTableReadVPath(const KDBManager *self, const KTable **tbl, const struct VPath *path);
+static rc_t CC KDBWManagerOpenTableReadVPath(const KDBManager *self, const KTable **tbl, const struct VPath *path );
 static rc_t CC KDBWManagerVOpenColumnRead ( const KDBManager *self, const KColumn **col, const char *path, va_list args );
 static rc_t CC KDBWManagerVPathOpenLocalDBRead ( struct KDBManager const * self, struct KDatabase const ** p_db, struct VPath const * vpath );
 static rc_t CC KDBWManagerVPathOpenRemoteDBRead ( struct KDBManager const * self, struct KDatabase const ** p_db, struct VPath const * remote, struct VPath const * cache );
@@ -369,16 +372,17 @@ KDBManagerPathTypeVPImpl( const KDBManager * self, const VPath * path, bool reli
     int path_type = kptBadPath;
     if ( self != NULL && path != NULL )
     {
-        /*
-         * resolve the possible relative path or accession into
-         * a final path we can open directly
-         */
-		VPath * rpath;
-		rc_t rc = VFSManagerResolvePath( self->vfsmgr, vfsmgr_rflag_kdb_acc, path, &rpath );
-        if ( rc == 0 )
-        {
-            const KDirectory * dir;
-
+        VPath * rpath = NULL;
+        const KDirectory * dir = NULL;
+        rc_t rc = VPathGetDirectory(path, &dir);
+        if (rc != 0 || dir == NULL) {
+          /*
+           * resolve the possible relative path or accession into
+           * a final path we can open directly
+           */
+          rc = VFSManagerResolvePath( self->vfsmgr, vfsmgr_rflag_kdb_acc,
+              path, &rpath );
+          if ( rc == 0 ) {
             /*
              * Most KDBPathType values are based on 'directories'
              * so try to open the resolved path as a directory
@@ -389,18 +393,19 @@ KDBManagerPathTypeVPImpl( const KDBManager * self, const VPath * path, bool reli
             else
                 rc = VFSManagerOpenDirectoryReadDecryptUnreliable( self->vfsmgr,
                     &dir, rpath );
-            if ( rc == 0 )
-            {
+          }
+        }
+        if ( rc == 0 ) {
                 path_type = KDBPathTypeDir( dir, kptDir, NULL, "." );
+                VPathSetDirectory((VPath*)path, dir);
                 KDirectoryRelease( dir );
-            }
-            /*
-             * If we couldn't open the path as a directory we 'might'
-             * have a KDB idx but we will only try that for a limited
-             * set of uri schemes.
-             */
-            else
-            {
+        }
+        /*
+         * If we couldn't open the path as a directory we 'might'
+         * have a KDB idx but we will only try that for a limited
+         * set of uri schemes.
+         */
+        else {
                 if ( VPathIsFSCompatible( rpath ) )
                 {
                     char buffer [ 4096 ];
@@ -408,9 +413,8 @@ KDBManagerPathTypeVPImpl( const KDBManager * self, const VPath * path, bool reli
                     if ( rc == 0 )
                         path_type = KDBPathType( self -> wd, false, buffer );
                 }
-            }
-            VPathRelease( rpath );
         }
+        VPathRelease( rpath );
     }
     return path_type;
 }
@@ -476,20 +480,23 @@ rc_t KDBManagerInsertDatabase ( KDBManager * self, KDatabase * db )
  *  wd-native character set giving path to database
  */
 static
-rc_t KDBManagerVOpenDBReadInt ( const KDBManager *cself,
-    const KDatabase **dbp, KDirectory *wd,
-    const char *path, va_list args, bool *cached, bool try_srapath )
+rc_t KDBManagerVOpenDBReadInt ( const KDBManager *cself, const KDatabase **dbp,
+    KDirectory *wd,
+    const char *path, va_list args, bool *cached, bool try_srapath,
+    const VPath *vpath )
 {
-    char key_path[ 4096 ];
-	char short_path[ 4096 ];
-	size_t z;
-	rc_t rc = string_vprintf( short_path, sizeof short_path, &z, path, args );
-	if ( rc == 0 )
-		rc = KDirectoryResolvePath ( wd, true, key_path, sizeof key_path, short_path );
-    if ( rc == 0 )
-    {
-        KSymbol *sym;
-
+    char key_path[ 4096 ] = "";
+    char short_path[ 4096 ] = "";
+    size_t z;
+    rc_t rc = 0;
+    KSymbol *sym = NULL;
+    if (vpath == NULL) {
+      rc = string_vprintf(short_path, sizeof short_path, &z, path, args);
+      if ( rc == 0 )
+        rc = KDirectoryResolvePath ( wd, true, key_path, sizeof key_path,
+            short_path );
+      if ( rc == 0 )
+      {
         /* if already open */
         sym = KDBManagerOpenObjectFind( cself, key_path );
         if ( sym != NULL )
@@ -534,36 +541,36 @@ rc_t KDBManagerVOpenDBReadInt ( const KDBManager *cself,
             }
             rc = RC (rcDB, rcMgr, rcOpening, obj, rcBusy);
         }
-        else
-        {
-			const KDirectory *dir;
+      }
+    }
+    if ( sym == NULL ) {
+            const KDirectory *dir;
 
-			if ( cached != NULL )
-				* cached = false;
+            if ( cached != NULL )
+                * cached = false;
 
-			/* open the directory if its a database */
-			rc = KDBManagerOpenPathTypeRead ( cself, wd, short_path, &dir, kptDatabase, NULL,
-                try_srapath, NULL );
-			if ( rc == 0 )
-			{
-				KDatabase *db;
+            /* open the directory if its a database */
+            rc = KDBManagerOpenPathTypeRead ( cself, wd, short_path, &dir, kptDatabase, NULL,
+                try_srapath, vpath );
+            if ( rc == 0 )
+            {
+                KDatabase *db;
 
-				rc = KWDatabaseMake ( &db, dir, key_path, NULL, true );
-				if ( rc == 0 )
-				{
-					KDBManager *self = ( KDBManager* ) cself;
+                rc = KWDatabaseMake ( &db, dir, key_path, NULL, true );
+                if ( rc == 0 )
+                {
+                    KDBManager *self = ( KDBManager* ) cself;
 
-					rc = KDBManagerInsertDatabase ( self, db );
-					if ( rc == 0 )
-					{
-						* dbp = db;
-						return 0;
-					}
-					free (db);
-				}
-				KDirectoryRelease (dir);
-			}
-        }
+                    rc = KDBManagerInsertDatabase ( self, db );
+                    if ( rc == 0 )
+                    {
+                        * dbp = db;
+                        return 0;
+                    }
+                    free (db);
+                }
+                KDirectoryRelease (dir);
+            }
     }
     return rc;
 }
@@ -576,20 +583,21 @@ rc_t KDBWManagerVOpenDBReadInt_noargs ( const KDBManager *cself,
     va_list args;
 
     va_start ( args, try_srapath );
-    rc = KDBManagerVOpenDBReadInt ( cself, dbp, wd, path, args, cached, try_srapath );
+    rc = KDBManagerVOpenDBReadInt ( cself, dbp, wd, path, args, cached, try_srapath, NULL );
     va_end ( args );
 
     return rc;
 }
 
-static rc_t CC KDBWManagerVOpenDBRead ( const KDBManager *self, const KDatabase **db, const char *path, va_list args )
+static rc_t CC KDBWManagerVOpenDBRead ( const KDBManager *self, const KDatabase **db, const char *path, va_list args, const VPath *vpath )
 {
     if ( db == NULL )
         return RC ( rcDB, rcMgr, rcOpening, rcParam, rcNull );
 
     * db = NULL;
 
-    return KDBManagerVOpenDBReadInt ( self, db, self -> wd, path, args, NULL, true );
+    return KDBManagerVOpenDBReadInt ( self, db, self -> wd, path, args, NULL,
+        true, vpath );
 }
 
 static

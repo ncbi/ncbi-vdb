@@ -69,7 +69,9 @@ struct KDBManager_vt
     int ( CC * pathTypeVP )             ( const KDBMGR_IMPL * self, const struct VPath * path );
     int ( CC * vPathType )              ( const KDBMGR_IMPL * self, const char *path, va_list args );
     int ( CC * vPathTypeUnreliable )    ( const KDBMGR_IMPL * self, const char *path, va_list args );
-    rc_t ( CC * vOpenDBRead )           ( const KDBMGR_IMPL * self, const struct KDatabase **db, const char *path, va_list args );
+    rc_t ( CC * vOpenDBRead )           ( const KDBMGR_IMPL * self,
+        const struct KDatabase **db, const char *path, va_list args,
+        const struct VPath *vpath );
     rc_t ( CC * vOpenTableRead )        ( const KDBMGR_IMPL * self, const struct KTable **tbl, const char *path, va_list args );
     rc_t ( CC * openTableReadVPath )    ( struct KDBMGR_IMPL const * self, const struct KTable **tbl, const struct VPath *path );
     rc_t ( CC * vOpenColumnRead )       ( struct KDBMGR_IMPL const * self, const struct KColumn **col, const char *path, va_list args );

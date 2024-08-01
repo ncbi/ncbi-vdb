@@ -1900,7 +1900,7 @@ rc_t oldVResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
 rc_t VResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
     const KNSManager *kns, VRemoteProtocols protocols, const String *acc,
     const VPath ** path, const VPath ** mapping, bool legacy_wgs_refseq,
-    const char * version, const char * quality )
+    const char * version, const char * quality, const VPath * query )
 {
     rc_t rc = 0;
     const char * ticket = NULL;
@@ -1935,7 +1935,7 @@ rc_t VResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
     if (rc == 0) {
         rc = KService1NameWithQuality(kns, self->root->addr,
             acc->addr, acc->len, ticket, protocols, path, mapping,
-            legacy_wgs_refseq, version, self -> protected, quality);
+            legacy_wgs_refseq, version, self -> protected, quality, query);
 
         assert(*path != NULL || rc != 0);
 
@@ -2044,7 +2044,7 @@ static
 rc_t VResolverAlgRemoteResolve ( const VResolverAlg *self,
     const KNSManager *kns, VRemoteProtocols protocols, const VResolverAccToken *tok,
     const VPath ** path, const VPath ** mapping, const KFile ** opt_file_rtn, bool legacy_wgs_refseq,
-    const char * version, const char * quality )
+    const char * version, const char * quality, const VPath * query )
 {
     rc_t rc = 0;
     uint32_t i, count;
@@ -2077,7 +2077,8 @@ rc_t VResolverAlgRemoteResolve ( const VResolverAlg *self,
 #endif
             else
               rc = VResolverAlgRemoteProtectedResolve ( self, kns,
-                protocols, & tok -> acc, path, mapping, legacy_wgs_refseq, version, quality );
+                protocols, & tok -> acc, path, mapping, legacy_wgs_refseq,
+                  version, quality, query );
             if ( rc == SILENT_RC (
                 rcVFS, rcResolver, rcResolving, rcConnection, rcUnauthorized )
                 ||  rc == SILENT_RC (
@@ -3576,7 +3577,8 @@ rc_t VResolverResolveName ( VResolver * self, int resolve ) {
 rc_t VResolverRemoteResolve ( const VResolver *self,
     VRemoteProtocols protocols, const String * accession,
     const VPath ** path, const VPath **mapping,
-    const KFile ** opt_file_rtn, bool refseq_ctx, bool is_oid, const char * version )
+    const KFile ** opt_file_rtn, bool refseq_ctx, bool is_oid,
+    const char * version, const VPath * query )
 {
     rc_t rc, try_rc;
     uint32_t i, count;
@@ -3650,7 +3652,7 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
                 if (ok) {
                     try_rc = VResolverAlgRemoteResolve(alg, self->kns,
                         protocols, &tok, path, mapping, opt_file_rtn,
-                        legacy_wgs_refseq, version, self->quality);
+                        legacy_wgs_refseq, version, self->quality, query);
                     if (try_rc == 0)
                         return 0;
                     if (rc == 0)
@@ -4325,7 +4327,7 @@ rc_t VResolverQueryOID ( const VResolver * self, VRemoteProtocols protocols,
 /* call CGI with version 1.2 */
                             rc = VResolverRemoteResolve ( self, protocols,
                                 & accession, & remote2, & remote_mapping, NULL,
-                                refseq_ctx, true, "#1.2" );
+                                refseq_ctx, true, "#1.2", query );
                             if ( rc == 0 )
                             {
                                 /* got it. now enter into VFS manager's table */
@@ -4414,7 +4416,7 @@ rc_t VResolverQueryOID ( const VResolver * self, VRemoteProtocols protocols,
                         rc = VResolverRemoteResolve ( self, protocols,
             & accession, remote,
             ( mapped_query == NULL && cache != NULL ) ? & remote_mapping : NULL,
-            NULL, refseq_ctx, true, "#1.2" );
+            NULL, refseq_ctx, true, "#1.2", query );
 
                         if ( rc == 0 && mapped_query == NULL && cache != NULL && remote_mapping == NULL )
                         {
@@ -4532,7 +4534,8 @@ rc_t VResolverQueryAcc ( const VResolver * self, VRemoteProtocols protocols,
                 /* request remote resolution
                    this does not need to map the query to an accession */
                 rc = VResolverRemoteResolve ( self, protocols, accession,
-                    & remote2, mapped_ptr, NULL, refseq_ctx, false, version );
+                    & remote2, mapped_ptr, NULL, refseq_ctx, false, version,
+                    query );
 
                 if ( rc == 0 ) {
                     if ( remote2 -> fragment . size != 0 )
@@ -5361,7 +5364,9 @@ rc_t CC VResolverQueryDo ( const VResolver * self, VRemoteProtocols protocols,
             if (run != NULL) { /* SRR accessions go here */
                 bool found = false;
                 bool hasLocal = false;
-                KSrvRunQuery(run, &local, &remote, &cache, NULL);
+#ifdef HAS_SERVICE_CACHE
+             // KSrvRunQuery(run, &local, &remote, &cache, NULL);
+#endif
                 if (rc == 0) {
                     if (aLocal != NULL) {
                         *aLocal = local;

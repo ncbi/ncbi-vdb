@@ -68,6 +68,12 @@ public:
     W_ColumnBlob()  {}
     virtual ~W_ColumnBlob() { release(); }
 
+    virtual rc_t whack()
+    {
+        KColumnSever ( m_blob -> col );
+        return TColumnBlob<KColumnBlob>::whack();
+    }
+
     rc_t Init(bool bswap)
     {
         m_blob = (KColumnBlob*)malloc ( sizeof * m_blob );
@@ -116,6 +122,16 @@ public:
         if ( m_blob -> num_writ != 0 )
             return RC ( rcDB, rcBlob, rcValidating, rcBlob, rcBusy );
         return TColumnBlob<KColumnBlob>::validate();
+    }
+
+    virtual rc_t validateBuffer ( struct KDataBuffer const * buffer, const KColumnBlobCSData * cs_data, size_t cs_data_size ) const
+    {
+        rc_t rc = TColumnBlob<KColumnBlob>::validateBuffer( buffer, cs_data, cs_data_size );
+        if ( rc == SILENT_RC ( rcDB, rcBlob, rcValidating, rcChecksum, rcNotFound ) ) // this is allowed on the write side
+        {
+            rc = 0;
+        }
+        return rc;
     }
 };
 

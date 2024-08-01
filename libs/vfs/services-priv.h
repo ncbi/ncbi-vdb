@@ -72,7 +72,7 @@ rc_t CC KService1NameWithQuality(const struct KNSManager * mgr,
     const char * ticket, VRemoteProtocols protocols,
     const struct VPath ** remote, const struct VPath ** mapping,
     bool refseq_ctx, const char * names_version, bool aProtected,
-    const char * quality);
+    const char * quality, const struct VPath * query);
 
 
 /******************************** KSrvResponse ********************************/

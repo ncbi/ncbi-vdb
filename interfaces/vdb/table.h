@@ -156,7 +156,7 @@ VDB_EXTERN rc_t CC VDBManagerOpenTableRead ( struct VDBManager const *self,
 VDB_EXTERN rc_t CC VDBManagerVOpenTableRead ( struct VDBManager const *self,
     const VTable **tbl, struct VSchema const *schema,
     const char *path, va_list args );
-VDB_EXTERN rc_t CC VDBManagerOpenTableReadVPath( struct VDBManager const *self,
+VDB_EXTERN rc_t CC VDBManagerOpenTableReadVPath ( struct VDBManager const *self,
     const VTable **tbl, struct VSchema const *schema,
     const struct VPath *path );
 

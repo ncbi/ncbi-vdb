@@ -974,6 +974,9 @@ FIXTURE_TEST_CASE ( PlatformNames, WVDB_Fixture )
             REQUIRE_RC ( VTableRelease ( table ) );
             REQUIRE_RC ( VDBManagerRelease ( mgr ) );
         }
+
+        REQUIRE_RC ( VSchemaRelease ( m_schema ) ); m_schema = nullptr;
+        REQUIRE_RC ( VDBManagerRelease ( m_mgr ) ); m_mgr = nullptr;
     }
 }
 
@@ -999,7 +1002,6 @@ FIXTURE_TEST_CASE ( BlobChecksumON, WVDB_Fixture)
         REQUIRE_RC ( VCursorRelease ( cursor ) );
     }
     REQUIRE_RC ( ValidateBlob(TableName, ColumnName, 1) );
-    REQUIRE_RC ( VDatabaseRelease ( m_db ) );
 }
 
 FIXTURE_TEST_CASE ( BlobChecksum_ON_ByDefault, WVDB_Fixture)
@@ -1024,7 +1026,6 @@ FIXTURE_TEST_CASE ( BlobChecksum_ON_ByDefault, WVDB_Fixture)
         REQUIRE_RC ( VCursorRelease ( cursor ) );
     }
     REQUIRE_RC ( ValidateBlob(TableName, ColumnName, 1) );
-    REQUIRE_RC ( VDatabaseRelease ( m_db ) );
 }
 
 FIXTURE_TEST_CASE ( BlobChecksumOFF, WVDB_Fixture)
@@ -1049,14 +1050,35 @@ FIXTURE_TEST_CASE ( BlobChecksumOFF, WVDB_Fixture)
         REQUIRE_RC ( VCursorCommit ( cursor ) );
         REQUIRE_RC ( VCursorRelease ( cursor ) );
     }
-    
+
     auto const valid = ValidateBlob(TableName, ColumnName, 1);
     auto const object = (enum RCObject)GetRCObject(valid);
     auto const state = (enum RCState)GetRCState(valid);
     REQUIRE_EQ(object, rcChecksum);
     REQUIRE_EQ(state, rcNotFound);
+}
 
-    REQUIRE_RC ( VDatabaseRelease ( m_db ) );
+FIXTURE_TEST_CASE ( ProductionSchema, WVDB_Fixture)
+{
+    string const schemaText = R"(include "sra/generic-fastq.vschema";)";
+    m_keepDb = true;
+    MakeDatabase ( GetName(), schemaText, "NCBI:SRA:GenericFastq:db", "../../interfaces" );
+    const char* TableName = "SEQUENCE";
+    const char* ColumnName = "(INSDC:dna:text)READ";
+    {
+        uint32_t column_idx = 0;
+        auto const cursor = CreateTable ( TableName, kcsNone );
+
+        REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx, ColumnName ) );
+        REQUIRE_RC ( VCursorOpen ( cursor ) );
+        // insert some rows
+        WriteRow ( cursor, column_idx, string("AAAAA") );
+        WriteRow ( cursor, column_idx, string("CCCCCC") );
+        WriteRow ( cursor, column_idx, string("GGGG") );
+        WriteRow ( cursor, column_idx, string("TT") );
+        REQUIRE_RC ( VCursorCommit ( cursor ) );
+        REQUIRE_RC ( VCursorRelease ( cursor ) );
+    }
 }
 
 //////////////////////////////////////////// Main

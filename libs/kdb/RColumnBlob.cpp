@@ -51,6 +51,12 @@ public:
     R_ColumnBlob()  {}
     virtual ~R_ColumnBlob() { release(); }
 
+    virtual rc_t whack()
+    {
+        KColumnSever ( m_blob -> col );
+        return TColumnBlob<KColumnBlob>::whack();
+    }
+
     rc_t Init(bool bswap)
     {
         m_blob = (KColumnBlob*)malloc ( sizeof * m_blob );
