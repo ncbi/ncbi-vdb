@@ -47,6 +47,9 @@ struct KColumnBlob
 
 class R_ColumnBlob: public TColumnBlob<KColumnBlob>
 {
+private:
+    using Super = TColumnBlob<KColumnBlob>;
+
 public:
     R_ColumnBlob()  {}
     virtual ~R_ColumnBlob() { release(); }
@@ -54,7 +57,7 @@ public:
     virtual rc_t whack()
     {
         KColumnSever ( m_blob -> col );
-        return TColumnBlob<KColumnBlob>::whack();
+        return Super::whack();
     }
 
     rc_t Init(bool bswap)
