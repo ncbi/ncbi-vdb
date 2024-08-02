@@ -216,10 +216,10 @@ static rc_t StringToSign(
     skip = hostname->size - s3.size;
     if (skip > 0 && hostname->size >= s3.size &&
         string_cmp(s3.addr, s3.size, hostname->addr + skip,
-            hostname->size - skip, s3.size) == 0)
+            hostname->size - skip, (uint32_t)s3.size) == 0)
     { /* CanonicalizedResource = [ "/" + Bucket ] */
         String Bucket;
-        StringInit(&Bucket, hostname->addr, skip, skip);
+        StringInit(&Bucket, hostname->addr, skip, (uint32_t)skip);
         p_bsize = bsize >= total ? bsize - total : 0;
         r2 = string_printf(&buffer[total], p_bsize, len, "/%S", &Bucket);
         total += *len;
