@@ -174,7 +174,7 @@ KDB_EXTERN rc_t CC KDBManagerRunPeriodicTasks ( const KDBManager *self );
 KDB_EXTERN int CC KDBManagerPathTypeVP ( const KDBManager * self, const struct VPath * path );
 KDB_EXTERN int CC KDBManagerPathType   ( const KDBManager * self, const char *path, ... );
 KDB_EXTERN int CC KDBManagerVPathType  ( const KDBManager * self, const char *path, va_list args );
-
+#define KDBManagerPathTypeVPath KDBManagerPathTypeVP
 
 #ifdef __cplusplus
 }

@@ -194,7 +194,7 @@ LIB_EXPORT int CC KDBManagerVPathTypeUnreliable ( const KDBManager * self, const
 }
 LIB_EXPORT rc_t CC KDBManagerVOpenDBRead ( const KDBManager *self, const KDatabase **db, const char *path, va_list args )
 {
-    DISPATCH( vOpenDBRead( self, db, path, args ) );
+    DISPATCH( vOpenDBRead( self, db, path, args, NULL ) );
 }
 LIB_EXPORT rc_t CC KDBManagerOpenDBRead ( const KDBManager *self, const KDatabase **db, const char *path, ... )
 {
@@ -206,6 +206,12 @@ LIB_EXPORT rc_t CC KDBManagerOpenDBRead ( const KDBManager *self, const KDatabas
     va_end ( args );
 
     return rc;
+}
+LIB_EXPORT rc_t CC KDBManagerOpenDBReadVPath ( const KDBManager *self,
+    const KDatabase **db, const struct VPath *path )
+{
+    va_list args;
+    DISPATCH( vOpenDBRead( self, db, NULL, args, path ) );
 }
 LIB_EXPORT rc_t CC KDBManagerVOpenTableRead ( const KDBManager *self, const struct KTable **tbl, const char *path, va_list args )
 {

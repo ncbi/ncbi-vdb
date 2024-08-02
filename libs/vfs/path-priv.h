@@ -59,6 +59,7 @@
 extern "C" {
 #endif
 
+struct KDirectory;
 struct KSrvError;
 
 /* VPath Type: -----------------------------------------------------------------
@@ -154,6 +155,7 @@ struct VPath
     uint32_t version; 
 
     VQuality quality;
+    const struct KDirectory * dir;
 };
 
 enum VPathVariant
@@ -259,6 +261,8 @@ rc_t VPathGetAccession(const VPath * self, String * acc);
 rc_t VPathSetQuality(VPath * self, VQuality quality);
 rc_t VPathLoadQuality(VPath * self);
 
+rc_t VPathSetDirectory(VPath * self, const struct KDirectory * dir);
+rc_t VPathCopyDirectoryIfEmpty(VPath * self, const VPath * rhs);
 
 /***** VPathSet - set of VPath's - genetated from name resolver response ******/
 
