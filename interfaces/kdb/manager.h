@@ -214,9 +214,10 @@ enum KDBContents_Database_Attributes {
 };
 
 enum KDBContents_Index_Attributes {
-    cia_IsTextIndex = 16,
-    cia_IsIdIndex = 32,
-    cia_ReversedByteOrder = 64,
+    cia_HasChecksum_MD5 = 16,
+    cia_IsTextIndex = 32,
+    cia_IsIdIndex = 64,
+    cia_ReversedByteOrder = 128,
 };
 
 void KDBContentsWhack(KDBContents const *self);

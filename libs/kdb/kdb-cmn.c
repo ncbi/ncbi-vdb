@@ -637,7 +637,7 @@ static void KDBGetPathContents_GatherIndices(KDBContents *result, const struct K
                     KDBContents *idx;
                     for (idx = added; idx; idx = (KDBContents *)node->nextSibling) {
                         if (idx->fstype == kptFile && strncmp(idx->name, node->name, dot - node->name) == 0) {
-                            idx->attributes |= cca_HasChecksum_MD5;
+                            idx->attributes |= cia_HasChecksum_MD5;
                             node->dbtype = 0; // mark node as dead
                             break;
                         }
