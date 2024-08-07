@@ -435,9 +435,26 @@ static rc_t KDBGetPathContents_GatherChildren(KDBContents *result, const KDirect
     return KDirectoryVisit(dir, false, KDBGetPathContents_Gather_cb, &context, sub);
 }
 
+static KDBContents *KDBContents_UnlinkDeadNode(KDBContents *node)
+{
+    while (node && node->dbtype == 0) {
+        KDBContents *prev = (KDBContents *)node->prevSibling;
+        KDBContents *next = (KDBContents *)node->nextSibling;
+        if (next)
+            next->prevSibling = node->prevSibling;
+        if (prev)
+            prev->nextSibling = node->nextSibling;
+        node->nextSibling = NULL;
+        KDBContentsWhack(node);
+        node = next;
+    }
+    return node;
+}
+
 // NB: Ownership is transferred to `result`
 static void KDBContents_appendChildren(KDBContents *result, KDBContents *node)
 {
+    node = KDBContents_UnlinkDeadNode(node);
     if (result->firstChild) {
         KDBContents *dst = (KDBContents *)result->firstChild;
         while (dst->nextSibling)
@@ -450,7 +467,7 @@ static void KDBContents_appendChildren(KDBContents *result, KDBContents *node)
 
     while (node) {
         node->parent = result;
-        node = (KDBContents *)node->nextSibling;
+        node = KDBContents_UnlinkDeadNode((KDBContents *)node->nextSibling);
     }
 }
 
@@ -529,6 +546,39 @@ static void KDBGetPathContents_Column(KDBContents *node, const struct KDirectory
     }
 }
 
+static void KDBGetPathContents_Index(KDBContents *result, KDBContents *node, const struct KDirectory *const dir, char const *fmt)
+{
+    struct KFile const *fh = NULL;
+    rc_t rc = KDirectoryOpenFileRead(dir, &fh, fmt, node->name);
+    if (rc == 0) {
+        char buffer[sizeof(KIndexFileHeader_v3_v4)];
+        size_t nread = 0;
+        bool reversed = false;
+        uint32_t type = 0;
+
+        rc = KFileRead(fh, 0, buffer, sizeof(buffer), &nread);
+        KFileRelease(fh);
+
+        rc = KIndexValidateHeader(&reversed, &type, buffer, nread);
+        if (rc)
+            goto HAS_ERRORS;
+
+        if (type == kitText)
+            node->attributes |= cia_IsTextIndex;
+        else
+            node->attributes |= cia_IsIdIndex;
+
+        if (reversed)
+            node->attributes |= cia_ReversedByteOrder;
+    }
+    else {
+HAS_ERRORS:
+        result->attributes |= cca_HasErrors;
+    }
+    node->dbtype = kptIndex;
+    result->attributes |= cta_HasIndices;
+}
+
 /// @brief Traverse a table hierarchy and gather the columns found.
 static void KDBGetPathContents_GatherColumns(KDBContents *result, const struct KDirectory *const dir)
 {
@@ -572,40 +622,32 @@ static void KDBGetPathContents_GatherIndices(KDBContents *result, const struct K
     added = (KDBContents *)result->firstChild;
     result->firstChild = save;
     if (rc == 0) {
-        KDBContents *node = (KDBContents *)result->firstChild;
-        while (node) {
+        KDBContents *node;
+
+        // find checksum files
+        for (node = added; node; node = (KDBContents *)node->nextSibling) {
             if (node->fstype == kptFile) {
-                struct KFile const *fh = NULL;
-                rc = KDirectoryOpenFileRead(dir, &fh, "idx/%s", node->name);
-                if (rc == 0) {
-                    char buffer[sizeof(KIndexFileHeader_v3_v4)];
-                    size_t nread = 0;
-                    bool reversed = false;
-                    uint32_t type = 0;
-
-                    rc = KFileRead(fh, 0, buffer, sizeof(buffer), &nread);
-                    KFileRelease(fh);
-
-                    rc = KIndexValidateHeader(&reversed, &type, buffer, nread);
-                    if (rc)
-                        goto HAS_ERRORS;
-
-                    if (type == kitText)
-                        node->attributes |= cia_IsTextIndex;
-                    else
-                        node->attributes |= cia_IsIdIndex;
-
-                    if (reversed)
-                        node->attributes |= cia_ReversedByteOrder;
+                char const *dot = NULL;
+                char const *cp;
+                for (cp = node->name; *cp; ++cp) {
+                    if (*cp == '.')
+                        dot = cp;
                 }
-                else {
-HAS_ERRORS:
-                    result->attributes |= cca_HasErrors;
+                if (dot && strcmp(dot, ".md5") == 0) {
+                    KDBContents *idx;
+                    for (idx = added; idx; idx = (KDBContents *)node->nextSibling) {
+                        if (idx->fstype == kptFile && strncmp(idx->name, node->name, dot - node->name) == 0) {
+                            idx->attributes |= cca_HasChecksum_MD5;
+                            node->dbtype = 0; // mark node as dead
+                            break;
+                        }
+                    }
                 }
-                node->dbtype = kptIndex;
-                result->attributes |= cta_HasIndices;
             }
-            node = (KDBContents *)node->nextSibling;
+        }
+        for (node = added; node; node = (KDBContents *)node->nextSibling) {
+            if (node->fstype == kptFile && node->dbtype != 0)
+                KDBGetPathContents_Index(result, node, dir, "idx/%s");
         }
         KDBContents_appendChildren(result, added);
     }
