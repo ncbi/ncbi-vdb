@@ -38,6 +38,7 @@ set ( ALIGN_READER_SRC
     reference
     refseq-mgr
     quality-quantizer
+    reference-fasta
 )
 
 set ( ALIGN_WRITER_SRC
@@ -53,6 +54,7 @@ set ( ALIGN_WRITER_SRC
     writer-sequence
     writer-ref
     writer-reference
+    reference-fasta
 )
 
 if( FLEX_FOUND AND BISON_FOUND )

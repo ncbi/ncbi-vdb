@@ -31,6 +31,7 @@
 #include <klib/text.h>
 #include <klib/printf.h>
 #include <klib/log.h>
+#include <klib/data-buffer.h>
 
 #include <kdb/kdb-priv.h> /* KDBManagerGetVFSManager */
 #include <kdb/manager.h>
@@ -52,6 +53,7 @@
 #include "refseq-mgr-priv.h"
 #include "reader-wgs.h"
 #include "debug.h"
+#include "reference-fasta.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -81,6 +83,7 @@ enum {
     refSeqType_RefSeq = 1,
     refSeqType_RefSeq_odd, /* for some weirdos, like hs37d5, that aren't accessioned */
     refSeqType_WGS,
+    refSeqType_FastaFile,
     refSeqType_MAX
 };
 
@@ -96,6 +99,13 @@ struct RefSeq_WGS {
     char name[1];
 };
 
+struct RefSeq_FastaFile {
+    KDataBuffer sequence;
+    char const *defline;
+    uint8_t md5[16];
+    char name[1];
+};
+
 struct RefSeq {
     RefSeq_VT const *vt;
     RefSeqMgr const *mgr;
@@ -105,6 +115,7 @@ struct RefSeq {
     union {
         struct RefSeq_RefSeq refSeq;
         struct RefSeq_WGS wgs;
+        struct RefSeq_FastaFile fasta;
     } u;
 };
 
@@ -211,6 +222,40 @@ static RefSeq_VT const RefSeq_WGS_VT = {
     RefSeq_WGS_compare
 };
 
+static RefSeq *RefSeq_FastaFile_init(RefSeq *const super,
+                                     RefSeqMgr const *const mgr,
+                                     unsigned const namelen,
+                                     char const name[]);
+static char const *RefSeq_FastaFile_name(RefSeq const *self);
+static bool RefSeq_FastaFile_isopen(RefSeq const *const super);
+static rc_t RefSeq_FastaFile_open(RefSeq *const super, RefSeqMgr const *const mgr);
+static void RefSeq_FastaFile_close(RefSeq *const super);
+static rc_t RefSeq_FastaFile_setRow(RefSeq *const super, unsigned const N, char const name[]);
+static rc_t RefSeq_FastaFile_read(RefSeq const *const super,
+                                  INSDC_coord_zero const offset,
+                                  INSDC_coord_len const length,
+                                  uint8_t *const buffer,
+                                  INSDC_coord_len *const written);
+static rc_t RefSeq_FastaFile_circular(RefSeq const *const super, bool *const result);
+static rc_t RefSeq_FastaFile_length(RefSeq const *const super, INSDC_coord_len *const result);
+static rc_t RefSeq_FastaFile_checksum(RefSeq const *const super, uint8_t const **const result);
+static int RefSeq_FastaFile_compare(RefSeq const *self, unsigned const qlen,
+                                    char const qry[]);
+
+static RefSeq_VT const RefSeq_FastaFile_VT = {
+    RefSeq_FastaFile_init,
+    RefSeq_FastaFile_name,
+    RefSeq_FastaFile_isopen,
+    RefSeq_FastaFile_open,
+    RefSeq_FastaFile_close,
+    RefSeq_FastaFile_setRow,
+    RefSeq_FastaFile_read,
+    RefSeq_FastaFile_circular,
+    RefSeq_FastaFile_length,
+    RefSeq_FastaFile_checksum,
+    RefSeq_FastaFile_compare
+};
+
 static RefSeq *RefSeq_RefSeq_alloc(unsigned const namelen)
 {
     RefSeq *const self = calloc(1, sizeof(RefSeq) + namelen);
@@ -232,6 +277,14 @@ static RefSeq *RefSeq_WGS_alloc(unsigned const namelen)
     RefSeq *const self = calloc(1, sizeof(RefSeq) + namelen);
     if (self)
         self->vt = &RefSeq_WGS_VT;
+    return self;
+}
+
+static RefSeq *RefSeq_FastaFile_alloc(unsigned const namelen)
+{
+    RefSeq *const self = calloc(1, sizeof(RefSeq) + namelen);
+    if (self)
+        self->vt = &RefSeq_FastaFile_VT;
     return self;
 }
 
@@ -278,6 +331,20 @@ static RefSeq *RefSeq_WGS_init(RefSeq *const super,
     return super;
 }
 
+static RefSeq *RefSeq_FastaFile_init(RefSeq *const super,
+                                     RefSeqMgr const *const mgr,
+                                     unsigned const namelen,
+                                     char const name[])
+{
+    struct RefSeq_FastaFile *const self = &super->u.fasta;
+
+    memmove(self->name, name, namelen);
+    self->name[namelen] = '\0';
+    super->mgr = mgr;
+
+    return super;
+}
+
 static char const *RefSeq_RefSeq_name(RefSeq const *super)
 {
     return super->u.refSeq.name;
@@ -288,6 +355,11 @@ static char const *RefSeq_WGS_name(RefSeq const *super)
     return super->u.wgs.name;
 }
 
+static char const *RefSeq_FastaFile_name(RefSeq const *super)
+{
+    return super->u.fasta.name;
+}
+
 static bool RefSeq_RefSeq_isopen(RefSeq const *const super)
 {
     return (super->u.refSeq.reader == NULL) ? false : true;
@@ -296,6 +368,11 @@ static bool RefSeq_RefSeq_isopen(RefSeq const *const super)
 static bool RefSeq_WGS_isopen(RefSeq const *const super)
 {
     return (super->u.wgs.reader == NULL) ? false : true;
+}
+
+static bool RefSeq_FastaFile_isopen(RefSeq const *const super)
+{
+    return (super->u.fasta.sequence.base == NULL) ? false : true;
 }
 
 static void RefSeq_RefSeq_close(RefSeq *const super)
@@ -312,6 +389,14 @@ static void RefSeq_WGS_close(RefSeq *const super)
 
     super->u.wgs.reader = NULL;
     TableReaderWGS_Whack(reader);
+}
+
+static void RefSeq_FastaFile_close(RefSeq *const super)
+{
+    if (super->u.fasta.sequence.base) {
+        KDataBufferWhack(&super->u.fasta.sequence);
+        super->u.fasta.sequence.base = NULL;
+    }
 }
 
 static rc_t RefSeq_RefSeq_setRow(RefSeq *const super,
@@ -347,6 +432,11 @@ static rc_t RefSeq_WGS_setRow(RefSeq *const super,
     return RC(rcAlign, rcTable, rcAccessing, rcRow, rcInvalid);
 }
 
+static rc_t RefSeq_FastaFile_setRow(RefSeq *const super, unsigned const N, char const name[])
+{
+    return 0;
+}
+
 static rc_t RefSeq_RefSeq_read(RefSeq const *const super,
                                INSDC_coord_zero const offset,
                                INSDC_coord_len const length,
@@ -365,6 +455,22 @@ static rc_t RefSeq_WGS_read(RefSeq const *const super,
     return TableReaderWGS_Read(super->u.wgs.reader, super->u.wgs.row, offset, length, buffer, written);
 }
 
+static rc_t RefSeq_FastaFile_read(RefSeq const *const super,
+                                  INSDC_coord_zero const offset,
+                                  INSDC_coord_len const length,
+                                  uint8_t *const buffer,
+                                  INSDC_coord_len *const written)
+{
+    uint8_t const *const src = (uint8_t const *)super->u.fasta.sequence.base;
+    INSDC_coord_len const seqlen = super->u.fasta.sequence.elem_count;
+    assert((uint64_t)seqlen == super->u.fasta.sequence.elem_count);
+
+    for (*written = 0; *written < length; ++*written) {
+        buffer[*written] = src[(offset + *written) % seqlen];
+    }
+    return 0;
+}
+
 static rc_t RefSeq_RefSeq_circular(RefSeq const *const super, bool *const result)
 {
     return TableReaderRefSeq_Circular(super->u.refSeq.reader, result);
@@ -373,6 +479,12 @@ static rc_t RefSeq_RefSeq_circular(RefSeq const *const super, bool *const result
 static rc_t RefSeq_WGS_circular(RefSeq const *const super, bool *const result)
 {
     return TableReaderWGS_Circular(super->u.wgs.reader, super->u.wgs.row, result);
+}
+
+static rc_t RefSeq_FastaFile_circular(RefSeq const *const super, bool *const result)
+{
+    *result = true;
+    return 0;
 }
 
 static rc_t RefSeq_RefSeq_length(RefSeq const *const super, INSDC_coord_len *const result)
@@ -385,6 +497,12 @@ static rc_t RefSeq_WGS_length(RefSeq const *const super, INSDC_coord_len *const 
     return TableReaderWGS_SeqLength(super->u.wgs.reader, super->u.wgs.row, result);
 }
 
+static rc_t RefSeq_FastaFile_length(RefSeq const *const super, INSDC_coord_len *const result)
+{
+    *result = super->u.fasta.sequence.elem_count;
+    return 0;
+}
+
 static rc_t RefSeq_RefSeq_checksum(RefSeq const *const super, uint8_t const **const result)
 {
     return TableReaderRefSeq_MD5(super->u.refSeq.reader, result);
@@ -395,10 +513,14 @@ static rc_t RefSeq_WGS_checksum(RefSeq const *const super, uint8_t const **const
     return TableReaderWGS_MD5(super->u.wgs.reader, super->u.wgs.row, result);
 }
 
-static int RefSeq_RefSeq_compare(RefSeq const *super,
-                                 unsigned const qlen, char const qry[])
+static rc_t RefSeq_FastaFile_checksum(RefSeq const *const super, uint8_t const **const result)
 {
-    char const *const fnd = super->u.refSeq.name;
+    *result = super->u.fasta.md5;
+    return 0;
+}
+
+static int RefSeq_compare(char const *const fnd, unsigned const qlen, char const qry[])
+{
     unsigned i;
 
     for (i = 0; ; ++i) {
@@ -417,6 +539,12 @@ static int RefSeq_RefSeq_compare(RefSeq const *super,
     return 0;
 }
 
+static int RefSeq_RefSeq_compare(RefSeq const *const super,
+                                 unsigned const qlen, char const qry[])
+{
+    return RefSeq_compare(super->u.refSeq.name, qlen, qry);
+}
+
 static int RefSeq_WGS_compare(RefSeq const *super, unsigned const qlen, char const qry[])
 {
     struct RefSeq_WGS const *const self = &super->u.wgs;
@@ -433,6 +561,12 @@ static int RefSeq_WGS_compare(RefSeq const *super, unsigned const qlen, char con
             return diff;
     }
     return i == prefixLen ? 0 : qry[i];
+}
+
+static int RefSeq_FastaFile_compare(RefSeq const *const super, unsigned const qlen,
+                                    char const qry[])
+{
+    return RefSeq_compare(super->u.fasta.name, qlen, qry);
 }
 
 static unsigned FindAccession(unsigned const N,
@@ -599,6 +733,12 @@ static rc_t RefSeq_WGS_open(RefSeq *const super, RefSeqMgr const *const mgr)
         VDatabaseRelease(db);
     }
     return rc;
+}
+
+static rc_t RefSeq_FastaFile_open(RefSeq *const super, RefSeqMgr const *const mgr)
+{
+    struct RefSeq_FastaFile *const self = &super->u.fasta;
+    return ImportFastaCheckEnv(&self->sequence, &self->defline, self->md5, strlen(self->name), self->name);
 }
 
 static int AccessionType(VDBManager const *const mgr,

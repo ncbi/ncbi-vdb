@@ -64,6 +64,8 @@
 #include <ctype.h>
 #include <assert.h>
 
+#include "reference-fasta.h"
+
 #include "../klib/int_checks-priv.h"
 
 /*
@@ -162,13 +164,14 @@
 #define UNMAPPED_SEQID_VALUE "*UNMAPPED"
 
 enum ReferenceSeqType {
-    rst_unattached,
-    rst_local,
-    rst_refSeqById,
-    rst_refSeqBySeqId,
-    rst_unmapped,
-    rst_renamed,
-    rst_dead
+    rst_unattached,     ///< from config, but still unused
+    rst_local,          ///< fasta, saved locally in cSRA
+    rst_nonlocal,       ///< fasta, not saved
+    rst_refSeqById,     ///< from RefSeq service
+    rst_refSeqBySeqId,  ///< from RefSeq service
+    rst_unmapped,       ///< explicitly unmapped in config file
+    rst_renamed,        ///< explicitly renamed in config file
+    rst_dead            ///< tried and failed already
 };
 
 struct ReferenceSeq {
@@ -188,10 +191,7 @@ struct ReferenceSeq {
     bool circular;
     uint8_t md5[16];
     union {
-        struct {
-            KDataBuffer buf;
-            uint8_t const *data;
-        } local;
+        KDataBuffer fasta;
         RefSeq const *refseq;
     } u;
 };
@@ -352,8 +352,8 @@ void CC ReferenceSeq_Whack(ReferenceSeq *self)
     for (i = 0; i < self->num_used; ++i)
         free(self->used[i]);
 
-    if (self->type == rst_local) {
-        KDataBufferWhack(&self->u.local.buf);
+    if (self->type == rst_local || self->type == rst_nonlocal) {
+        KDataBufferWhack(&self->u.fasta);
     }
     else if (self->type == rst_refSeqById || self->type == rst_refSeqBySeqId) {
         RefSeq_Release(self->u.refseq);
@@ -758,71 +758,10 @@ rc_t FastaFile_GetSeqIds(KDataBuffer *const buf, char const data[], uint64_t con
 static
 rc_t ImportFasta(ReferenceSeq *const obj, KDataBuffer const *const buf)
 {
-    unsigned seqId;
-    unsigned seqIdLen;
-    unsigned ln;
-    unsigned src;
-    unsigned dst;
-    unsigned start=0;
-    char *const data = buf->base;
-    unsigned const len = (unsigned)buf->elem_count;
-    char *fastaSeqId = NULL;
-    rc_t rc;
-    MD5State mds;
-
-    assert ( FITS_INTO_INT (buf->elem_count) );
-
-    if (len == 0)
-        return 0;
-    assert(data[0] == '>');
-
-    for (ln = 1; ln != len; ++ln) {
-        int const ch = data[ln];
-
-        if (ch == '\r' || ch == '\n') {
-            data[ln] = '\0';
-            start = ln + 1;
-            break;
-        }
-    }
-    for (seqId = 1; seqId != ln; ++seqId) {
-        if (!isspace(data[seqId]))
-            break;
-    }
-    for (seqIdLen = 0; seqId + seqIdLen < ln; ++seqIdLen) {
-        if (isspace(data[seqId + seqIdLen])) {
-            ln = seqId + seqIdLen;
-            data[ln] = '\0';
-            break;
-        }
-    }
-    if (seqIdLen == 0)
-        return RC(rcAlign, rcFile, rcReading, rcData, rcInvalid);
-
-    fastaSeqId = string_dup(&data[seqId], string_size(&data[seqId]));
-    if (fastaSeqId == NULL)
-        return RC(rcAlign, rcFile, rcReading, rcMemory, rcExhausted);
-
-    MD5StateInit(&mds);
-    for (dst = src = start; src != len; ++src) {
-        int const ch = toupper(data[src]);
-
-        if (isspace(ch))
-            continue;
-
-        if (strchr(INSDC_4na_map_CHARSET, ch) == NULL && ch != 'X')
-            return RC(rcAlign, rcFile, rcReading, rcData, rcInvalid);
-
-        data[dst] = ch == 'X' ? 'N' : (char)ch;
-        MD5StateAppend(&mds, data + dst, 1);
-        ++dst;
-    }
-    MD5StateFinish(&mds, obj->md5);
-    rc = KDataBufferSub(buf, &obj->u.local.buf, start, dst - start);
+    rc_t rc = ImportFastaBuffer(&obj->u.fasta, &obj->fastaSeqId, obj->md5, buf);
     if (rc == 0) {
-        obj->fastaSeqId = fastaSeqId;
         obj->type = rst_local;
-        obj->seq_len = dst - start;
+        obj->seq_len = obj->u.fasta.elem_count;
     }
     else
         obj->type = rst_dead;
@@ -877,6 +816,10 @@ static int64_t cmpSeqIdField(void const *A, void const *B, void *Ctx)
     return diff != 0 ? diff : a->offset < b->offset ? -1 : 1;
 }
 
+/// @brief Is `id` a Sequence ID namespace
+/// @param len length of `id`
+/// @param id the query
+/// @return `id` =~ /^dbj|emb|gb|gi|gpp|ref|tp[deg]$/
 static bool isInKnownSet(unsigned const len, char const id[])
 {
     if (len == 2 || len == 3) {
@@ -2226,8 +2169,8 @@ rc_t ReferenceSeq_ReadDirect(ReferenceSeq *self,
     else if (offset >= (int)self->seq_len)
         return RC(rcAlign, rcType, rcReading, rcOffset, rcOutofrange);
 
-    if (self->type == rst_local) {
-        uint8_t const *const src = self->u.local.buf.base;
+    if (self->type == rst_local || self->type == rst_nonlocal) {
+        uint8_t const *const src = self->u.fasta.base;
         unsigned dst_off = 0;
 
         while (dst_off < len) {
