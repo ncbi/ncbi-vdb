@@ -302,7 +302,7 @@ static rc_t CloudInitCE ( Cloud * self, const CloudMgr * mgr ) {
     if ( rc != 0 )
         ceAge = 0;/*sec - default; 0 - don't cache */
 
-    self -> max_ce_cache_age = ceAge;
+    self -> max_ce_cache_age = (uint32_t) ceAge;
 
     return rc;
 }
