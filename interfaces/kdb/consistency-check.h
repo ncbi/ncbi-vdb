@@ -52,6 +52,7 @@ struct KColumn;
  */
 enum
 {
+    ccrpt_Raw,
     ccrpt_Done,
     ccrpt_MD5,
     ccrpt_Blob,
