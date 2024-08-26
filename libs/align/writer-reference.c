@@ -183,10 +183,13 @@ struct ReferenceSeq {
     char **used;
     unsigned num_used;
 
-    /* ref table position */
+    /* starting row id in REFERENCE table */
     int64_t start_rowid;
+
     /* total reference length */
     INSDC_coord_len seq_len;
+
+    /* ReferenceSeqType */
     int type;
     bool circular;
     uint8_t md5[16];
@@ -359,8 +362,10 @@ void CC ReferenceSeq_Whack(ReferenceSeq *self)
         RefSeq_Release(self->u.refseq);
     }
     free(self->id);
-    free(self->seqId);
-    free(self->fastaSeqId);
+    if (self->seqId != self->id)
+        free(self->seqId);
+    if (self->fastaSeqId != self->seqId && self->fastaSeqId != self->id)
+        free(self->fastaSeqId);
     free(self->used);
 }
 
@@ -1103,6 +1108,7 @@ void ReferenceSeq_Dump(ReferenceSeq const *const rs)
     static char const *types[] = {
         "'unattached'",
         "'fasta'",
+        "'fasta-not-saved'"
         "'RefSeq-by-id'",
         "'RefSeq-by-seqid'",
         "'unmapped'",
@@ -1315,6 +1321,27 @@ static rc_t tryFastaOrRefSeq(ReferenceMgr *const self,
 {
     KFile const *kf = NULL;
     rc_t rc = 0;
+    KDataBuffer seqBuf;
+    char *fastaSeqId;
+    uint8_t md5[16];
+
+    rc = ImportFastaCheckEnv(&seqBuf, &fastaSeqId, md5, idLen, id);
+    if (rc == 0) {
+        ReferenceSeq *const seq = newReferenceSeq(self, NULL);
+
+        seq->id = string_dup(id, idLen);
+        seq->seqId = fastaSeqId;
+        seq->fastaSeqId = fastaSeqId;
+        seq->seq_len = seqBuf.elem_count;
+        seq->type = rst_nonlocal;
+        seq->circular = true; /** it's the safest choice **/
+        memmove(seq->md5, md5, 16);
+        seq->u.fasta = seqBuf;
+
+        addToKeys(self, (unsigned int)(seq - self->refSeq), id, idLen);
+
+        return 0;
+    }
 
     if (OpenFastaFile(&kf, self->dir, id, idLen) == 0) {
         /* found a fasta file; load it and try again */
@@ -2211,7 +2238,7 @@ rc_t ReferenceMgr_LoadSeq(ReferenceMgr *const self, ReferenceSeq *obj)
         char const *const id = obj->id;
         char const *const seqId = obj->seqId ? obj->seqId : id;
         TableWriterRefData data;
-        INSDC_coord_zero offset = 0;
+        size_t offset = 0;
 
         obj->start_rowid = self->ref_rowid + 1;
         data.name.buffer = id;
@@ -2219,7 +2246,7 @@ rc_t ReferenceMgr_LoadSeq(ReferenceMgr *const self, ReferenceSeq *obj)
         data.read.buffer = readBuf.base;
         data.seq_id.buffer = seqId;
         data.seq_id.elements = string_size(seqId);
-        data.force_READ_write = obj->type == rst_local || (self->options & ewrefmgr_co_allREADs);
+        data.force_READ_write = obj->type == rst_local || ((self->options & ewrefmgr_co_allREADs) && obj->type != rst_nonlocal);
         data.circular = obj->circular;
 
         if (self->writer == NULL) {
@@ -2235,10 +2262,8 @@ rc_t ReferenceMgr_LoadSeq(ReferenceMgr *const self, ReferenceSeq *obj)
                 rc = TableWriterRef_WriteDefaultData(self->writer, ewrefd_cn_MAX_SEQ_LEN, &mlen);
             }
         }
-        assert ( FITS_INTO_INT32 (offset) );
-        assert ( FITS_INTO_INT32 (obj->seq_len) );
-        while (rc == 0 && offset < (int32_t)obj->seq_len) {
-            unsigned row_len;
+        while (rc == 0 && offset < (size_t)obj->seq_len) {
+            unsigned row_len = 0;
 
             rc = ReferenceSeq_ReadDirect(obj, offset, self->max_seq_len, false,
                                          readBuf.base, &row_len, true);

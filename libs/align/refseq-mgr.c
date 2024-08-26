@@ -753,6 +753,9 @@ static int AccessionType(VDBManager const *const mgr,
 
     scheme[0] = '\0';
 
+    *rc = ImportFastaCheckEnv(NULL, NULL, NULL, N, accession);
+    if (*rc == 0)
+        return refSeqType_FastaFile;
     {
         KMetadata const *meta = NULL;
         {
@@ -920,11 +923,11 @@ LIB_EXPORT rc_t CC RefSeqMgr_Release(const RefSeqMgr* cself)
 }
 
 static rc_t NewRefSeq(RefSeqMgr *const self,
-                                int const type,
-                                unsigned const at,
-                                unsigned const N,
-                                char const accession[],
-                                const String * accOfParentDb)
+                        int const type,
+                        unsigned const at,
+                        unsigned const N,
+                        char const accession[],
+                        const String * accOfParentDb)
 {
     rc_t rc = 0;
 
@@ -953,6 +956,9 @@ static rc_t NewRefSeq(RefSeqMgr *const self,
             break;
         case refSeqType_WGS:
             rs = RefSeq_WGS_alloc(N);
+            break;
+        case refSeqType_FastaFile:
+            rs = RefSeq_FastaFile_alloc(N);
             break;
         default:
             assert("unknown type of RefSeq object");
