@@ -39,7 +39,7 @@
 #include <map>
 #include <algorithm>
 #include <set>
-#include <array>
+#include <atomic>
 
 #include <klib/rc.h>
 #include <klib/data-buffer.h>   /* KDatabuffer */
@@ -63,12 +63,12 @@ public:
     explicit cDataBufferBase(size_t elem_bits, size_t count = 0) {
         throw_if(KDataBufferMake(this, elem_bits, count));
     }
-    cDataBufferBase subBuffer(size_t first, size_t count) {
+    cDataBufferBase subBuffer(size_t first, size_t count) const {
         KDataBuffer sub;
         throw_if(KDataBufferSub(this, &sub, first, count));
         return sub;
     }
-    cDataBufferBase subBuffer(size_t first = 0) {
+    cDataBufferBase subBuffer(size_t first = 0) const {
         KDataBuffer sub;
         throw_if(KDataBufferSub(this, &sub, first, elem_count - first));
         return sub;
@@ -88,15 +88,22 @@ public:
     explicit cDataBuffer(size_t count = 0)
     : cDataBufferBase(sizeof(T) * 8, count)
     {}
+    explicit cDataBuffer(cDataBufferBase const &base)
+    : cDataBufferBase(base)
+    {
+        assert(base.elem_bits == sizeof(T) * 8);
+    }
     cDataBuffer subBuffer(size_t offset = 0) const {
-        return cDataBufferBase::subBuffer(offset);
+        return cDataBuffer{ cDataBufferBase::subBuffer(offset) };
     }
     cDataBuffer subBuffer(T const *begp, T const *endp = nullptr) const {
-        if (beg < begin() || beg >= end())
-            throw std::out_of_range("beg");
         if (endp == nullptr || endp > end())
             endp = end();
-        return cDataBufferBase::subBuffer(begin() - begp, endp - begp);
+        if (begp < begin() || begp >= end() || begp >= endp)
+            throw std::out_of_range("beg");
+        size_t const offset = begin() - begp;
+        size_t const count = endp - begp;
+        return cDataBuffer{ cDataBufferBase::subBuffer(offset, count) };
     }
 
     T const *cbegin() const { return reinterpret_cast<T const *>(base); }
@@ -132,95 +139,31 @@ public:
     }
 };
 
-template <typename T>
-static std::vector< T > split(T const &string, char separator)
-{
-    std::vector< T > result;
-    auto at = std::string::size_type{0};
-    do {
-        auto const sep = string.find(separator, at);
-        if (sep == string.npos) {
-            result.emplace_back(string.substr(at));
-            break;
-        }
-        result.emplace_back(string.substr(at, sep - at));
-        at = sep + 1;
-    } while (at < string.length());
-    return result;
-}
-
-/// @brief Find `a` in `b`, using case-insensitive comparison
-/// @tparam T 
-/// @param a the query string
-/// @param b the string to search
-/// @return the offset of `a` in `b`, or `b.npos`
-template <typename T, typename S = typename T::size_type>
-static S findCaseInsensitive(T const &a, T const &b) {
-    if (b.length() == a.length()) {
-        auto i = a.begin();
-        auto j = b.begin();
-        auto const ii = a.end();
-        auto const jj = b.end();
-
-        while (i != ii && j != jj) {
-            if (std::toupper(*i++) != std::toupper(*j++))
-                return b.npos;
-        }
-        return 0;
-    }
-    if (b.length() < a.length())
-        return b.npos;
-    S const over = b.length() - a.length();
-    for (S i = 0; i != over; ++i) {
-        if (findCaseInsensitive(a, b.substr(i, a.length())) == 0)
-            return i;
-    }
-    return b.npos;
-}
-
-template <typename T1, typename T2, typename S = typename T1::size_type>
-static S SeqId_commonPrefixLength(T1 const &seqId, T2 const &qry)
-{
-    auto const ends = seqId.end();
-    auto const endq = qry.end();
-    auto s = seqId.begin();
-    auto q = qry.begin();
-    auto m = &(*s);
-    auto const m0 = m;
-    auto wild = 0;
-
-    while (s != ends && q != endq) {
-        if (*q == '|')
-            ++wild;
-        else
-            wild = 0;
-        
-        if (wild < 2) {
-            if (std::toupper(*s) != std::toupper(*q))
-                break;
-            if (*s != '.' && *s != '|')
-                m = &(*s);
-            ++s; ++q;
-        }
-        else {
-            if (*s == '|')
-                wild = 0;
-            m = &(*s);
-            ++s;
-        }
-    }
-    return (S)(m - m0);
-}
-
 struct SeqIdNamespace {
     char const *name;
-    unsigned minParts;
     unsigned maxParts;
+    unsigned minParts;
+    unsigned rank;
 
-    constexpr SeqIdNamespace(char const *name_, unsigned minParts_, unsigned maxParts_)
+    constexpr SeqIdNamespace(char const *name_, unsigned maxParts_, unsigned minParts_, unsigned rank_)
     : name(name_)
-    , minParts(minParts_)
     , maxParts(maxParts_)
+    , minParts(minParts_)
+    , rank(rank_)
+    {}
+
+    constexpr SeqIdNamespace(char const *name_, unsigned maxParts_, unsigned minParts_)
+    : name(name_)
+    , maxParts(maxParts_)
+    , minParts(minParts_)
+    , rank(60)
+    {}
+
+    constexpr SeqIdNamespace(char const *name_)
+    : name(name_)
+    , maxParts(0)
+    , minParts(0)
+    , rank(99)
     {}
 
     int compare(SeqIdNamespace const &rhs) const { return strcmp(name, rhs.name); }
@@ -241,29 +184,33 @@ struct SeqIdNamespace {
         return *cp == '\0' ? 0 : -1;
     }
 
-    static constexpr unsigned unknownID = 22;
-    static constexpr unsigned patentID = 12;
-    static constexpr unsigned patPendID = 14; ///< canonically same namespace as patentID
-    static constexpr unsigned referenceID = 17;
-    static constexpr unsigned otherID = 11; ///< canonically same namespace as referenceID
+    static constexpr unsigned unknownID = 0;
+    static constexpr unsigned patentID = 13;
+    static constexpr unsigned patPendID = 15; ///< canonically same namespace as patentID
+    static constexpr unsigned referenceID = 18;
+    static constexpr unsigned otherID = 12; ///< canonically became referenceID
+    static constexpr unsigned tremblID = 23;
+    static constexpr unsigned swissprotID = 19;
+    static constexpr unsigned lastID = 23;
 
     static unsigned canonicalID(unsigned id) {
-        if (id > unknownID) return unknownID;
-        if (id == patentID) return patentID;
-        if (id == otherID)  return referenceID;
+        if (id > unknownID)  return unknownID;
+        if (id == patPendID) return patentID;
+        if (id == otherID)   return referenceID;
+        if (id == tremblID)  return swissprotID;
         return id;
     }
 
-    static SeqIdNamespace const all[unknownID + 1];
+    static SeqIdNamespace const all[lastID + 1];
 
     static unsigned find(char const *qry_cs) {
-        auto const qry = SeqIdNamespace{qry_cs, 0, 0};
-        auto f = 0;
-        auto e = unknownID;
+        auto const qry = SeqIdNamespace{qry_cs};
+        auto f = 1;
+        auto e = lastID + 1;
 
         while (f < e) {
             auto const step = e - f;
-            if (step < 5) {
+            if (step <= 8) {
                 if (all[f] == qry)
                     return f;
                 ++f;
@@ -281,32 +228,46 @@ struct SeqIdNamespace {
         }
         return unknownID;
     }
+
+    bool operator !() const {
+        return this < all || this > all + lastID;
+    }
+    operator bool() const {
+        return !(operator !());
+    }
+    unsigned ID() const {
+        return *this ? (this - all) : unknownID;
+    }
+    unsigned canonicalID() const {
+        return SeqIdNamespace::canonicalID(ID());
+    }
 };
 
-SeqIdNamespace const SeqIdNamespace::all[SeqIdNamespace::unknownID + 1] = {
-    { "bbm", 1, 1 }, // 0
-    { "bbs", 1, 1 }, // 1
-    { "dbj", 1, 2 }, // 2
-    { "emb", 1, 2 }, // 3
-    { "gb", 1, 2 },  // 4
-    { "gi", 1, 1 },  // 5
-    { "gim", 1, 1 }, // 6
-    { "gnl", 2, 2 }, // 7
-    { "gpp", 1, 2 }, // 8
-    { "lcl", 1, 1 }, // 9
-    { "nat", 1, 2 }, // 10
-    { "oth", 1, 3 }, // 11
-    { "pat", 3, 3 }, // 12
-    { "pdb", 2, 2 }, // 13
-    { "pgp", 3, 3 }, // 14
-    { "pir", 2, 2 }, // 15
-    { "prf", 2, 2 }, // 16
-    { "ref", 1, 3 }, // 17
-    { "sp", 2, 2 },  // 18
-    { "tpd", 1, 2 }, // 19
-    { "tpe", 1, 2 }, // 20
-    { "tpg", 1, 2 }, // 21
-    { "???", 0, 0 }  // 22
+SeqIdNamespace const SeqIdNamespace::all[SeqIdNamespace::lastID + 1] = {
+    { "???" },              // 0
+    { "bbm", 1, 1, 70 },    // 1
+    { "bbs", 1, 1, 70 },    // 2
+    { "dbj", 2, 1 },        // 3
+    { "emb", 2, 1 },        // 4
+    { "gb" , 2, 1 },        // 5
+    { "gi" , 1, 1, 51 },    // 6
+    { "gim", 1, 1, 70 },    // 7
+    { "gnl", 2, 2, 80 },    // 8
+    { "gpp", 2, 1, 68 },    // 9
+    { "lcl", 1, 1, 80 },    // 10
+    { "nat", 2, 1, 69 },    // 11
+    { "oth", 3, 1, 66 },    // 12
+    { "pat", 3, 3, 67 },    // 13
+    { "pdb", 2, 2 },        // 14
+    { "pgp", 3, 3, 68 },    // 15
+    { "pir", 2, 2 },        // 16
+    { "prf", 2, 2 },        // 17
+    { "ref", 3, 1, 65 },    // 18
+    { "sp" , 2, 2, 60 },    // 19
+    { "tpd", 2, 1 },        // 20
+    { "tpe", 2, 1 },        // 21
+    { "tpg", 2, 1 },        // 22
+    { "tr" , 2, 2, 61 },    // 23
 };
 
 struct Defline {
@@ -316,13 +277,10 @@ struct Defline {
     
     enum Match {
         match_none,
-        match_substring,
-        match_prefix_part,
-        match_prefix,
-        match_no_version_part,
         match_no_version,
         match_part,
         match,
+        match_namespace = 8
     };
 
     /// @returns first word
@@ -331,15 +289,6 @@ struct Defline {
         while (value[len] != '\0' && !isspace(value[len]))
             ++len;
         return std::string_view{value, len};
-    }
-
-    template< typename T, typename F >
-    void match_1(T const &qry, F && func) const {
-        for (auto && part : Parts{ seqId() }) {
-            auto && n = part.commonPrefixLength(qry);
-            if (n > 0)
-                func(n, part);
-        }
     }
 
     struct Part 
@@ -370,7 +319,47 @@ struct Defline {
         int seqIdNamespace() const
         {
             auto const id = length() ? SeqIdNamespace::find(data()) : SeqIdNamespace::unknownID;
-            return id == SeqIdNamespace::unknownID ? -1 : int{id};
+            return id == SeqIdNamespace::unknownID ? -1 : (int)id;
+        }
+
+        /// @brief Split into parts using the namespace rules.
+        /// @param[out] nsId the namespace, or -1 if none.
+        /// @param[out] count the number of parts found.
+        /// @param[out] parts the parts found.
+        /// @return the remainder.
+        Part splitParts(int *nsId, unsigned *count, Part parts[4]) const {
+            auto p = split();
+            auto const realId = p.second ? p.first.seqIdNamespace() : -1;
+
+            nsId[0] = p.second ? realId : -1;
+            count[0] = 0;
+            if (realId < 0) {
+        CAN_NOT_SPLIT:
+                nsId[0] = -1;
+                parts[0] = p.first;
+                count[0] = 1;
+            }
+            else {
+                auto const &ns = SeqIdNamespace::all[realId];
+                auto const save = p;
+
+                while (count[0] < ns.minParts && p.second) {
+                    p = p.second.split();
+                    parts[count[0]++] = p.first;
+                }
+                while (count[0] < ns.maxParts && p.second) {
+                    p = p.second.split();
+                    if (p.first.seqIdNamespace() < 0)
+                        parts[count[0]++] = p.first;
+                    else
+                        break;
+                }
+                if (count[0] < ns.minParts) {
+                    p = save;
+                    goto CAN_NOT_SPLIT;
+                }
+            }
+            return p.second;
         }
 
         bool operator ==(Part const &rhs) const
@@ -410,18 +399,86 @@ struct Defline {
             return vers ? Part{ substr(0, dot) } : *this;
         }
 
+        /// @brief How well do two match?
+        /// @param rhs the other.
+        /// @return 2 if equal, 1 if matches up-to version, else 0.
+        int match(Part const &rhs) const
+        {
+            if (*this == rhs)
+                return 2;
+            if (this->withoutVersion() == rhs || rhs.withoutVersion() == *this)
+                return 1;
+            return 0;
+        }
+
         template< typename FUNC >
-        static void forEach(Super const &sv, FUNC && func)
+        static void forEachPart(Super const &sv, FUNC && func)
         {
             auto part = Part{ sv };
             while (part) {
-                auto p = part.split();
+                auto const &p = part.split();
                 func(p.first, bool{ p.second });
                 part = p.second;
             }
         }
+
+        template< typename FUNC >
+        static void forEachParts(Super const &sv, FUNC && func)
+        {
+            auto part = Part{ sv };
+
+            while (part) {
+                int nsId = -1;
+                unsigned n = 0;
+                Part parts[4];
+
+                part = part.splitParts(&nsId, &n, parts);
+
+                auto const &ns = SeqIdNamespace::all[nsId < 0 ? SeqIdNamespace::unknownID : nsId];
+                func(ns, n, parts);
+            }
+        }
     };
 
+    enum Match matches(Part const &seqId) const
+    {
+        int best_match = 0;
+        int best_rank = 99;
+
+        Part::forEachParts(this->seqId(), [&](SeqIdNamespace const &my_ns, unsigned n, Part const my_parts[]) {
+            for (unsigned i = 0; i < n; ++i) {
+                auto const this_match = my_parts[i].match(seqId);
+                if (best_match < this_match || (best_match == this_match && my_ns.rank < best_match)) {
+                    best_match = this_match;
+                    best_rank = my_ns.rank;
+                }
+            }
+        });
+        return best_match == 0 ? match_none : best_match == 1 ? match_no_version : match;
+    }
+    enum Match matches(unsigned nsId, unsigned count, Part const parts[4]) const
+    {
+        if (count < 1) return match_none;
+        if (nsId == SeqIdNamespace::unknownID)
+            return matches(parts[0]);
+
+        int best_match = 0;
+
+        Part::forEachParts(seqId(), [&](SeqIdNamespace const &my_ns, unsigned n, Part const my_parts[]) {
+            if (my_ns.canonicalID() == SeqIdNamespace::canonicalID(nsId)) {
+                for (unsigned i = 0; i < n; ++i) {
+                    for (unsigned j = 0; j < count; ++j) {
+                        auto const this_match = my_parts[i].match(parts[j]);
+                        if (best_match < this_match)
+                            best_match = this_match;
+                    }
+                }
+            }
+        });
+        if (best_match)
+            return (enum Match)((best_match == 1 ? match_no_version : match) | match_namespace);
+        return match_none;
+    }
 };
 
 struct FastaFileEntry {
@@ -433,6 +490,13 @@ struct FastaFileEntry {
 struct FastaFile {
 private:
     struct Entry : public FastaFileEntry {
+        Entry(FastaFileEntry const &base)
+        : FastaFileEntry(base)
+        {}
+        Entry(FastaFileEntry && base)
+        : FastaFileEntry(std::move(base))
+        {}
+
         /// @brief `s/^>\s*//; s/\s+/ /;`.
         void cleanupDefline() {
             auto dst = const_cast<char *>(defline);
@@ -487,9 +551,9 @@ private:
                     for (int i = 0; i < 256; ++i)
                         table[i] = isspace(i) ? ignored : disallowed;
                     for (auto cp = INSDC_4na_map_CHARSET; *cp; ++cp)
-                        table[*cp] = table[tolower(*cp)] = *cp;
-                    table['X'] = table['x'] = 'N';
-                    table['U'] = table['u'] = 'T';
+                        table[(int)*cp] = table[tolower(*cp)] = *cp;
+                    table[(int)'X'] = table[(int)'x'] = 'N';
+                    table[(int)'U'] = table[(int)'u'] = 'T';
                 }
             private:
                 int8_t table[256];
@@ -520,6 +584,28 @@ private:
         void cleanup(char const *const endp) {
             cleanupDefline();
             cleanupSequence(endp);
+        }
+
+        cDataBuffer< char > copySequence(cDataBuffer< char > const &source) const
+        {
+            auto const endp = std::find(sequence, source.end(), '\0');
+            assert(endp != source.end());
+
+            return source.subBuffer(sequence, endp);
+        }
+        char *idCopy() const
+        {
+            auto const id = Defline{ defline }.seqId();
+            auto result = reinterpret_cast<char *>(malloc(id.size() + 1));
+            if (result) {
+                std::copy(id.begin(), id.end(), result);
+                result[id.length()] = '\0';
+                return result;
+            }
+            throw std::bad_alloc();
+        }
+        void md5copy(uint8_t *out) const {
+            std::copy(md5sum, md5sum + 16, out);
         }
     };
 
@@ -575,12 +661,12 @@ private:
             ws = false;
 
             if (nl && ch == '>')
-                result.emplace_back(FastaFileEntry{const_cast<char const *>(&ch), nullptr});
+                result.emplace_back(FastaFileEntry{ &ch });
             
             nl = (ch == '\n' || ch == '\r');
             if (nl) ws = true;
         }
-        result.emplace_back(FastaFileEntry{buffer.cend(), nullptr});
+        result.emplace_back(FastaFileEntry{ buffer.cend() });
 
         return result;
     }
@@ -640,7 +726,7 @@ private:
             std::set< unsigned > u_ns;
             std::set< Defline::Part > u_kw;
 
-            Defline::Part::forEach(defline.seqId(), [&](Defline::Part const &part, bool last) {
+            Defline::Part::forEachPart(defline.seqId(), [&](Defline::Part const &part, bool last) {
                 auto ns = part.seqIdNamespace();
                 if (ns < 0 || last)
                     u_kw.insert(part.withoutVersion());
@@ -683,111 +769,115 @@ public:
     }
 
     unsigned count() const { return entries.size(); }
-    char const *defline(unsigned index) const {
-        return (index < count()) 
-            ? entries[index].defline
-            : nullptr;
-    }
-    std::string_view id(unsigned index) const {
-        return (index < count())
-            ? Defline{entries[index].defline}.seqId()
-            : std::string_view{};
-    }
-    void md5sum(uint8_t *out, unsigned index) const {
-        if (index < count())
-            std::copy(entries[index].md5sum, entries[index].md5sum + 16, out);
-    }
-    Buffer sequence(unsigned index) const {
+    void copyInfo(unsigned index, KDataBuffer *out, char **fastaSeqId, uint8_t md5[]) const
+    {
         if (index >= count())
             throw std::out_of_range("index");
-        
-        auto const endp = std::find(entries[index].sequence, buffer.end(), '\0');
-        assert(endp != buffer.end());
 
-        return buffer.subBuffer(entries[index].sequence, endp);
+        auto const &entry = entries[index];
+        if (out)
+            *out = entry.copySequence(buffer);
+        if (fastaSeqId)
+            *fastaSeqId = entry.idCopy();
+        if (md5)
+            entry.md5copy(md5);
     }
     unsigned bestMatch(std::string_view const &qry_sv) const {
         using IndexEntry = std::pair< int, unsigned >;
         std::vector< IndexEntry > index;
+        std::set< unsigned > candidate;
+        auto ignoreNs = false;
 
-        for (auto qry = Defline::Part(qry_sv); qry; ) {
-            auto [part, rest] = qry.split();
-            auto nsId = part.seqIdNamespace();
-            
-            qry = rest;
-            if (nsId < 0 || qry.empty()) {
-                auto const kw = part.withoutVersion();
-                auto const range = keywordIndex.equal_range(kw);
-                for (auto i = range.first; i != range.second; ++i) {
-                    auto const &entry = entries[i->second];
-                    Defline::Part::forEach(Defline{ entry.defline }.seqId(), [&](Defline::Part const &fnd, bool last) {
-                        if (fnd == part)
-                            index.emplace_back(Defline::match, i->second);
-                        else if (fnd.withoutVersion() == kw)
-                            index.emplace_back(Defline::match_no_version, i->second);
-                    });
+        /// Matching proceedes in three phases. 
+        /// The first phase populates a list of candidate entries
+        /// by querying the indices for potential matching entries.
+        /// The second phase visits each candidate and assignes a 
+        /// score to each matching entry.
+        /// The final phase sorts and picks the best entry.
+
+        // Filter requiring search terms to match within namespaces.
+        for (auto qry = Defline::Part{ qry_sv }; qry; ) {
+            unsigned nq = 0;
+            int ns = -1;
+            Defline::Part qparts[4];
+            std::set< unsigned > nsSet;
+
+            qry = qry.splitParts(&ns, &nq, qparts);
+
+            if (ns < 0 || ns == SeqIdNamespace::unknownID) 
+                ;
+            else {
+                auto const range = namespaceIndex.equal_range(SeqIdNamespace::canonicalID(ns));
+                for (auto j = range.first; j != range.second; ++j)
+                    nsSet.emplace(j->second);
+                if (nsSet.empty())
+                    continue;
+            }
+
+            for (auto i = 0; i < nq; ++i) {
+                if (qparts[i].empty()) continue;
+                auto const kw = keywordIndex.equal_range(qparts[i].withoutVersion());
+                for (auto j = kw.first; j != kw.second; ++j) {
+                    if (nsSet.empty() || nsSet.find(j->second) != nsSet.end())
+                        candidate.emplace(j->second);
                 }
             }
-            else {
-                auto const cId = SeqIdNamespace::canonicalID(nsId);
-                auto const nsr = namespaceIndex.equal_range(cId);
-                auto const &ns = SeqIdNamespace::all[cId];
-                Defline::Part parts[4];
-                int n = 0;
-                auto rest = qry;
+        }
+        if (candidate.empty()) {
+            // no candidates yet, relax the namespace requirement and match on keyworks only.
+            // This still parses the deflines using the namespace rules.
+            ignoreNs = true;
+            for (auto qry = Defline::Part{ qry_sv }; qry; ) {
+                unsigned nq = 0;
+                int ns = -1;
+                Defline::Part qparts[4];
 
-                while (n < ns.minParts && !rest.empty()) {
-                    auto const && p = rest.split();
-                    parts[n++] = p.first;
-                    rest = p.second;
+                qry = qry.splitParts(&ns, &nq, qparts);
+
+                for (auto i = 0; i < nq; ++i) {
+                    if (qparts[i].empty()) continue;
+                    auto const kw = keywordIndex.equal_range(qparts[i].withoutVersion());
+                    for (auto j = kw.first; j != kw.second; ++j)
+                        candidate.emplace(j->second);
                 }
-                while (n < ns.maxParts && !rest.empty()) {
-                    auto const && p = rest.split();
-                    if (p.first.seqIdNamespace() < 0) {
-                        parts[n++] = p.first;
-                        rest = p.second;
-                    }
-                    else
-                        break;
+            }
+        }
+        if (candidate.empty()) {
+            // no candidates yet, relax parsing rules and match on keyworks only.
+            // this is the logic in writer-reference.c
+            // of matching on anything that isn't a namespace.
+            ignoreNs = true;
+            Defline::Part::forEachPart(qry_sv, [&](Defline::Part const &part, bool last){
+                if (part.empty())
+                    return;
+                auto const ns = part.seqIdNamespace();
+                if (ns < 0 || ns == SeqIdNamespace::unknownID) {
+                    auto const kw = keywordIndex.equal_range(part.withoutVersion());
+                    for (auto j = kw.first; j != kw.second; ++j)
+                        candidate.emplace(j->second);
                 }
-                if (n >= ns.minParts) {
-                    qry = rest;
+            });
+        }
 
-                    /// will contain the intersection of the keyword index and the namespace index
-                    auto candidates = std::set< unsigned >{};
-                    for (auto i = 0; i < n; ++i) {
-                        if (parts[i].empty()) continue;
-                        auto const range = keywordIndex.equal_range(parts[i].withoutVersion());
-                        std::set_intersection(range.first, range.second, nsr.first, nsr.second, std::back_inserter(candidates));
-                    }
+        /// Assign a score to each candidate entry.
+        for (auto qry = Defline::Part{ qry_sv }; qry; ) {
+            unsigned nq = 0;
+            int ns = -1;
+            Defline::Part qparts[4];
 
-                    for (auto i : candidates) {
-                        auto const &entry = entries[i];
-                        auto const seqId = Defline{ entry.defline }.seqId();
-                        Defline::Part const *p = nullptr;
-                        Defline::Part const *const e = parts + n;
+            qry = qry.splitParts(&ns, &nq, qparts);
 
-                        Defline::Part::forEach(seqId, [&](Defline::Part const &fnd, bool last) {
-                            if (p == nullptr) {
-                                if (SeqIdNamespace::canonicalID(fnd.seqIdNamespace()) == cId)
-                                    p = parts;
-                            }
-                            else if (p < e) {
-                                auto const &part = *p++;
-                                if (part.empty() || fnd.empty())
-                                    return;
-                                if (part == fnd) {
-                                    index.emplace_back(Defline::match, i);
-                                    return;
-                                }
-                                if (part.withoutVersion() == fnd.withoutVersion()) {
-                                    index.emplace_back(Defline::match_no_version, i);
-                                    return;
-                                }
-                                p = &parts[3];
-                            }
-                        });
-                    }
+            for (auto i : candidate) {
+                auto const &entry = entries[i];
+                auto const defline = Defline{ entry.defline };
+                if (ignoreNs) {
+                    for (unsigned j = 0; j < nq; ++j)
+                        index.emplace_back(std::make_pair(defline.matches(qparts[j]), i));
+                }
+                else {
+                    auto const score = defline.matches(ns, nq, qparts);
+
+                    index.emplace_back(std::make_pair((int)score, i));
                 }
             }
         }
@@ -854,38 +944,6 @@ public:
     }
 };
 
-rc_t ImportFastaBuffer(KDataBuffer *out, char **fastaSeqId, uint8_t md5[], KDataBuffer *const buf)
-{
-    try {
-        auto const p_out = static_cast<cDataBuffer<char> *>(out);
-        auto const imported = FastaFile(*static_cast<cDataBuffer<char> *>(buf));
-        auto const id = imported.id(0);
-
-        *fastaSeqId = reinterpret_cast<char *>(malloc(id.length() + 1));
-        if (*fastaSeqId == NULL)
-            return RC(rcAlign, rcFile, rcReading, rcMemory, rcExhausted);
-
-        std::copy(id.begin(), id.end(), *fastaSeqId);
-        (*fastaSeqId)[id.length()] = '\0';
-
-        imported.md5sum(md5, 0);
-
-        *p_out = imported.sequence(0);
-
-        return 0;
-    }
-    catch (rc_t rc) {
-        return rc;
-    }
-    catch (std::bad_alloc const &e) {
-        return RC(rcAlign, rcFile, rcReading, rcMemory, rcExhausted);
-        ((void)(e));
-    }
-    catch (...) {
-        return RC(rcAlign, rcFile, rcReading, rcNoTarg, rcUnexpected);
-    }
-}
-
 static KDirectory *nativeDir() {
     KDirectory *ndir{};
     throw_if( KDirectoryNativeDir(&ndir) );
@@ -916,24 +974,60 @@ static FastaFile *ImportFastaCheckEnv_1()
     return temp;
 }
 
-rc_t ImportFastaCheckEnv(KDataBuffer *out, char const **fastaSeqId, uint8_t md5[], unsigned length, char const *const qry)
+rc_t ImportFastaBuffer(KDataBuffer *out, char **fastaSeqId, uint8_t md5[], KDataBuffer *const buf)
 {
-    static FastaFile *envFastaFile = nullptr;
-    if (envFastaFile == nullptr) {
-        try { envFastaFile = ImportFastaCheckEnv_1(); }
-        catch (rc_t rc) { return rc; }
+    try {
+        auto && imported = FastaFile{ *static_cast< cDataBuffer<char> * >(buf) };
+        imported.copyInfo(0, out, fastaSeqId, md5);
+        return 0;
     }
-    if (envFastaFile) {
-        auto const entry = envFastaFile->bestMatch(std::string_view{ qry, length });
-        if (entry < envFastaFile->count()) {
-            if (out)
-                *out = envFastaFile->sequence(entry);
-            if (fastaSeqId)
-                *fastaSeqId = envFastaFile->defline(entry);
-            if (md5)
-                envFastaFile->md5sum(md5, entry);
-            return 0;
+    catch (rc_t rc) {
+        return rc;
+    }
+    catch (std::bad_alloc const &e) {
+        return RC(rcAlign, rcFile, rcReading, rcMemory, rcExhausted);
+        ((void)(e));
+    }
+    catch (...) {
+        return RC(rcAlign, rcFile, rcReading, rcNoTarg, rcUnexpected);
+    }
+}
+
+rc_t ImportFastaCheckEnv(KDataBuffer *out, char **fastaSeqId, uint8_t md5[], unsigned length, char const *const qry)
+{
+    static std::atomic< FastaFile * >envFastaFile = {nullptr};
+    static std::atomic_bool loadedOrFailed = {false};
+
+    try {
+        if (envFastaFile) {
+            auto const &fastaFile = *envFastaFile;
+            auto const entry = fastaFile.bestMatch(std::string_view{ qry, length });
+            if (entry < fastaFile.count()) {
+                fastaFile.copyInfo(entry, out, fastaSeqId, md5);
+                return 0;
+            }
+            return RC(rcAlign, rcFile, rcReading, rcData, rcNotFound);
         }
+        else if (!loadedOrFailed) {
+            auto temp = ImportFastaCheckEnv_1();
+            auto dummyNull = decltype(temp){ nullptr };
+            if (envFastaFile.compare_exchange_weak(dummyNull, temp))
+                ;
+            else if (temp)
+                delete temp;
+            loadedOrFailed.store(true);
+            return ImportFastaCheckEnv(out, fastaSeqId, md5, length, qry);
+        }
+        return SILENT_RC(rcAlign, rcFile, rcReading, rcData, rcNotFound);
     }
-    return RC(rcAlign, rcFile, rcReading, rcData, rcNotFound);
+    catch (rc_t rc) {
+        return rc;
+    }
+    catch (std::bad_alloc const &e) {
+        return RC(rcAlign, rcFile, rcReading, rcMemory, rcExhausted);
+        ((void)(e));
+    }
+    catch (...) {
+        return RC(rcAlign, rcFile, rcReading, rcNoTarg, rcUnexpected);
+    }
 }
