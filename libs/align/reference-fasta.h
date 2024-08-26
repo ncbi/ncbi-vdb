@@ -26,13 +26,13 @@
 #include <klib/rc.h>
 #include <klib/data-buffer.h>
 
-#if __cplusplus__
+#if __cplusplus
 extern "C" {
 #endif
 
 extern rc_t ImportFastaBuffer(KDataBuffer *out, char **fastaSeqId, uint8_t md5[], KDataBuffer *const buf);
-extern rc_t ImportFastaCheckEnv(KDataBuffer *out, char const **fastaSeqId, uint8_t md5[], unsigned length, char const *const qry);
+extern rc_t ImportFastaCheckEnv(KDataBuffer *out, char **fastaSeqId, uint8_t md5[], unsigned length, char const *const qry);
 
-#if __cplusplus__
+#if __cplusplus
 }
 #endif
