@@ -761,7 +761,7 @@ rc_t FastaFile_GetSeqIds(KDataBuffer *const buf, char const data[], uint64_t con
 }
 
 static
-rc_t ImportFasta(ReferenceSeq *const obj, KDataBuffer const *const buf)
+rc_t ImportFasta(ReferenceSeq *const obj, KDataBuffer *const buf)
 {
     rc_t rc = ImportFastaBuffer(&obj->u.fasta, &obj->fastaSeqId, obj->md5, buf);
     if (rc == 0) {
