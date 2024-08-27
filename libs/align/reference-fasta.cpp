@@ -40,6 +40,8 @@
 #include <algorithm>
 #include <set>
 #include <atomic>
+#include <stdexcept>
+#include <string_view>
 
 #include <klib/rc.h>
 #include <klib/data-buffer.h>   /* KDatabuffer */
@@ -205,8 +207,8 @@ struct SeqIdNamespace {
 
     static unsigned find(char const *qry_cs) {
         auto const qry = SeqIdNamespace{qry_cs};
-        auto f = 1;
         auto e = lastID + 1;
+        auto f = decltype(e){ 1 };
 
         while (f < e) {
             auto const step = e - f;
