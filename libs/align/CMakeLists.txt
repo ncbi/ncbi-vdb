@@ -80,12 +80,15 @@ set ( SAM_EXTRACT_SRC
 )
 
 GenerateStaticLibs( ncbi-bam "${BAM_SRC}" )
-GenerateStaticLibs( align-writer "${ALIGN_WRITER_SRC}" )
 GenerateStaticLibs( align-access "${ALIGN_ACCESS_SRC}" )
 
 GenerateStaticLibs( sam-extract "${SAM_EXTRACT_SRC}" )
 ExportStatic( sam-extract true )
 
 GenerateStaticLibs( align-reader "${ALIGN_READER_SRC}" )
+set_property(TARGET align-reader PROPERTY CXX_STANDARD 17)
+
+GenerateStaticLibs( align-writer "${ALIGN_WRITER_SRC}" )
+set_property(TARGET align-writer PROPERTY CXX_STANDARD 17)
 
 add_compile_definitions( __mod__="libs/align" )
