@@ -29,13 +29,14 @@
 #include <kdb/manager.h>
 
 #include "dbmgr.h"
+#include "../vfs/path-priv.h" /* VPathSetDirectory */
 
 #include <kfs/directory.h>
 #include <kfs/sra.h>
 
-#include <vfs/path.h>
 #include <vfs/manager.h>
 #include <vfs/manager-priv.h>
+#include <vfs/path-priv.h> /* VPathGetDirectory */
 
 #include <kdb/column.h>
 #include <kdb/index.h>
@@ -947,17 +948,25 @@ static rc_t KDBOpenPathTypeReadInt ( const KDBManager * mgr, const KDirectory * 
     {
         VPath * vpath = ( VPath * ) aVpath;
 
-        /*
-         * We've got to decide if the path coming in is a full or relative
-         * path and if relative make it relative to dir or possibly its a srapath
-         * accession
-         *
-         */
-        rc = VFSManagerMakeDirectoryRelativeVPath (vmgr,
+        rc = VPathGetDirectory(vpath, &ldir);
+        if (rc != 0 || ldir == NULL)
+          /*
+           * We've got to decide if the path coming in is a full or relative
+           * path and if relative make it relative to dir or possibly its
+           * a srapath accession
+           *
+           */
+          rc = VFSManagerMakeDirectoryRelativeVPath (vmgr,
             &vpath, dir, path, vpath );
         if ( rc == 0 )
         {
-            rc = VFSManagerOpenDirectoryReadDirectoryRelativeDecrypt ( vmgr, dir, &ldir, vpath );
+            if (ldir == NULL)
+            {
+                rc = VFSManagerOpenDirectoryReadDirectoryRelativeDecrypt ( vmgr,
+                    dir, &ldir, vpath );
+                if (rc == 0)
+                    VPathSetDirectory((VPath*)aVpath, ldir);
+            }
 
             if ( rc == 0 )
             {
@@ -984,6 +993,7 @@ static rc_t KDBOpenPathTypeReadInt ( const KDBManager * mgr, const KDirectory * 
                 VPathRelease ( vpath );
         }
     }
+
     return rc;
 }
 

@@ -118,6 +118,8 @@ LIB_EXPORT rc_t CC KTableAddRef ( const KTable *self )
 }
 LIB_EXPORT rc_t CC KTableRelease ( const KTable *self )
 {
+    if ( self == NULL )
+        return 0;
     DISPATCH( release( self ) );
 }
 LIB_EXPORT bool CC KTableLocked ( const KTable *self )

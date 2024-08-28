@@ -19,16 +19,11 @@
 *  purpose.
 *
 *  Please cite the author in any work or product based on this material.
-*
-* ===========================================================================
-*
+* ==============================================================================
 */
 
-#pragma once
+#define KKONST const
+#define KDBManagerMake_FUNC_WithVFSManager KDBManagerMakeReadWithVFSManager
 
-#include <kdb/column.h>
-
-struct KRColumn;
-
-rc_t KRColumnBlobMake ( const KColumnBlob **blobp, bool bswap );
-rc_t KRColumnBlobOpenRead ( const KColumnBlob *self, const struct KRColumn *col, int64_t id );
+#define VKONST
+#define VDBManagerMake_FUNC                VDBManagerMakeUpdate

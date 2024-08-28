@@ -120,6 +120,8 @@ rc_t VPathSetAccOfParentDb(VPath * self, const struct String * acc,
 
 rc_t VPathSaveQuality(const VPath * self);
 
+rc_t VPathGetDirectory(const VPath * self, const struct KDirectory ** dir);
+
 #ifdef __cplusplus
 }
 #endif

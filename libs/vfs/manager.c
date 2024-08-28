@@ -1479,7 +1479,8 @@ static rc_t VFSManagerResolvePathInt (const VFSManager * self,
             case vpuri_file:
                 rc = KDirectoryResolvePath ( base_dir, true, u, sizeof u,
                     "%.*s", ( int ) in_path -> path . size, in_path -> path . addr );
-                rc = VPathMake (&v, u);
+                if (rc == 0)
+                    rc = VPathMake (&v, u);
                 break;
             }
             if (rc == 0)
@@ -2673,15 +2674,16 @@ rc_t VFSManagerOpenDirectoryReadDirectoryRelativeInt (const VFSManager *self,
                                                       bool reliable,
                                                       bool promote)
 {
-    rc_t rc;
+    rc_t rc = VPathGetDirectory(path_, d);
+
+    if ( d == NULL )
+        return RC ( rcVFS, rcDirectory, rcOpening, rcParam, rcNull );
+
+    if (rc == 0 && *d != NULL)
+        return 0;
+
     do
     {
-        if (d == NULL)
-        {
-            rc =  RC (rcVFS, rcDirectory, rcOpening, rcParam, rcNull);
-            break;
-        }
-
         *d = NULL;
 
         if (self == NULL)
@@ -2754,6 +2756,10 @@ rc_t VFSManagerOpenDirectoryReadDirectoryRelativeInt (const VFSManager *self,
             VPathRelease ( path ); /* same as path_ if not uri */
         }
     } while (0);
+    
+    if (rc == 0)
+        VPathSetDirectory((VPath*)path_, *d);
+
     return rc;
 }
 
@@ -2826,7 +2832,7 @@ rc_t CC VFSManagerOpenDirectoryReadDecryptRemote (const VFSManager *self,
                                                   const VPath * path,
                                                   const VPath * cache)
 {
-    rc_t rc;
+    rc_t rc = 0;
     if ( self == NULL )
         return RC (rcVFS, rcDirectory, rcOpening, rcSelf, rcNull);
     if ( path == NULL )
@@ -2841,10 +2847,16 @@ rc_t CC VFSManagerOpenDirectoryReadDecryptRemote (const VFSManager *self,
     case vpuri_http:
     case vpuri_https:
     case vpuri_ftp:
+        rc = VPathGetDirectory(path, d);
         /* HACK - this function should not be exported.
            in order to not change the signature, we are synthesizing
            a "promote" parameter as "true" to mimic old behavior */
-        rc = VFSManagerOpenDirectoryReadHttpResolved ( self, d, path, cache, true, true );
+        if (rc != 0 || *d == NULL) {
+            rc = VFSManagerOpenDirectoryReadHttpResolved ( self, d, path, cache,
+                true, true );
+            if (rc == 0)
+                VPathSetDirectory((VPath*)path, *d);
+        }
         break;
 
     default:
@@ -4682,17 +4694,19 @@ static bool VFSManagerCheckEnvAndAdImplNoqual(const VFSManager * self,
     }
     /* TODO: add processing of eQualFullOnly and eQualDblOnly */
 
-    if (found) {
+    if (found && rc == 0) {
         VPath * vdbcache = NULL;
         const String * thePath = NULL;
 
         assert(outPath && *outPath);
+        rc = VPathCopyDirectoryIfEmpty((VPath*)*outPath, inPath);
         thePath = &((*outPath)->path);
 
         DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (
             "VFSManagerCheckEnvAndAd: '%s' found in '%S'\n", slash, thePath));
 
-        if (KDirectoryPathType(self->cwd, "%.*s.vdbcache",
+        if (rc == 0 &&
+            KDirectoryPathType(self->cwd, "%.*s.vdbcache",
             (int)thePath->size, thePath->addr) == kptFile)
         {
             rc = VPathMakeFmt(&vdbcache, "%S.vdbcache", thePath);

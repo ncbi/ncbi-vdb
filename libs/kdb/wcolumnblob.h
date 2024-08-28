@@ -26,10 +26,7 @@
 
 #pragma once
 
-#include "columnblob-base.h"
-
-#include "colfmt.h"
-#include "wcoldata.h"
+#include <kdb/column.h>
 
 typedef struct KWColumn KWColumn;
 
@@ -42,40 +39,10 @@ extern "C" {
  *  one or more rows of column data
  */
 
-typedef struct KWColumnBlob KWColumnBlob;
-struct KWColumnBlob
-{
-    KColumnBlob dad;
-
-    /* holds either an existing blob loc
-       or new blob index range */
-    KColBlobLoc loc;
-
-    /* holds old and new page maps */
-    KWColumnPageMap pmorig;
-    KWColumnPageMap pmnew;
-
-    /* owning column */
-    KWColumn *col;
-
-    /* number of bytes written to blob */
-    uint32_t num_writ;
-
-    /* checksums */
-    uint32_t crc32;
-    MD5State md5;
-
-    /* open mode */
-    uint8_t read_only;
-
-    /* for validation */
-    bool bswap;
-};
-
-rc_t KWColumnBlobMake ( KWColumnBlob **blobp, bool bswap );
-rc_t KWColumnBlobOpenRead ( KWColumnBlob *self, const KWColumn *col, int64_t id );
-rc_t KWColumnBlobOpenUpdate ( KWColumnBlob *self, KWColumn *col, int64_t id );
-rc_t KWColumnBlobCreate ( KWColumnBlob *bself, KWColumn *col );
+rc_t KWColumnBlobMake ( KColumnBlob **blobp, bool bswap );
+rc_t KWColumnBlobOpenRead ( KColumnBlob *self, const KWColumn *col, int64_t id );
+rc_t KWColumnBlobOpenUpdate ( KColumnBlob *self, KWColumn *col, int64_t id );
+rc_t KWColumnBlobCreate ( KColumnBlob *bself, KWColumn *col );
 
 #ifdef __cplusplus
 }
