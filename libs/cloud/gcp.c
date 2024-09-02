@@ -104,9 +104,8 @@ static char const *envCE(char* buf, size_t buf_size)
         errno_t err = getenv_s ( & buf_count, buf, buf_size, ENV_MAGIC_CE_TOKEN);
         assert ( buf_count <= buf_size );
         assert ( err != ERANGE );
-        if ( err || buf_count == 0 )
-            return NULL;
-        env = buf;
+        if ( !err && buf_count != 0 )
+            env = buf;
     }
 #else
     char const *const env = firstTime ? getenv(ENV_MAGIC_CE_TOKEN) : NULL;
