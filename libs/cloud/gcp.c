@@ -965,12 +965,16 @@ rc_t PopulateCredentials(GCP * self, KConfig * aKfg)
     char buffer[PATH_MAX] = "";
 
     char *jsonCredentials = NULL, *jsonCredentialsOrig = NULL;;
+
 #ifdef WINDOWS
+    char pathToJsonFileBuf[4096];
     size_t buf_count = 0;
     char* pathToJsonFile = NULL;
-    errno_t err = _dupenv_s ( & pathToJsonFile, & buf_count, "GOOGLE_APPLICATION_CREDENTIALS" );
-    if ( err )
-        pathToJsonFile = NULL;
+    errno_t err = getenv_s ( & buf_count, pathToJsonFileBuf, sizeof(pathToJsonFileBuf), "GOOGLE_APPLICATION_CREDENTIALS" );
+    assert ( buf_count <= sizeof(pathToJsonFileBuf));
+    assert ( err != ERANGE );
+    if ( !err && buf_count != 0 )
+        pathToJsonFile = pathToJsonFileBuf;
 #else
     const char *pathToJsonFile = getenv("GOOGLE_APPLICATION_CREDENTIALS");
 #endif
@@ -1018,13 +1022,6 @@ rc_t PopulateCredentials(GCP * self, KConfig * aKfg)
         {
             rc = KDirectoryOpenFileRead(dir, &cred_file, "%s", pathToJsonFile);
         }
-#ifdef WINDOWS
-        if ( pathToJsonFile )
-        {
-            free ( pathToJsonFile );
-            pathToJsonFile = NULL;
-        }
-#endif
 
         if (rc == 0)
         {
