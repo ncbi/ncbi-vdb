@@ -205,7 +205,7 @@ rc_t KWTableMake ( KWTable **tblp, const KDirectory *dir, const char *path,
     KMD5SumFmtAddRef ( md5 );
     tbl -> use_md5 = ( md5 == NULL ) ? false : true;
     tbl -> read_only = read_only;
-    string_copy ( tbl -> path, path_size, path, path_size );
+    string_copy ( tbl -> path, path_size + 1, path, path_size );
 
     tbl->sym.u.obj = tbl;
     StringInitCString (&tbl->sym.name, tbl->path);

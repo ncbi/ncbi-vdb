@@ -301,7 +301,7 @@ rc_t KIndexMake ( KWIndex **idxp, KDirectory *dir, const char *path )
         {
             rc = KDirectoryResolvePath(dir, true, fullpath, sizeof(fullpath), "%s", path);
             if (rc == 0)
-            {                              
+            {
                 size_t fullpath_size = strlen(fullpath);
                 KWIndex* idx = malloc ( sizeof *idx + fullpath_size);
                 if ( idx == NULL )
@@ -316,7 +316,7 @@ rc_t KIndexMake ( KWIndex **idxp, KDirectory *dir, const char *path )
                         KRefcountInit ( & idx -> dad . refcount, 1, "KWIndex", "make", fullpath );
 
                         idx -> dir = dir;
-                        string_copy ( idx -> path, fullpath_size, fullpath, fullpath_size );
+                        string_copy ( idx -> path, fullpath_size + 1, fullpath, fullpath_size );
 
                         idx->sym.u.obj = idx;
                         idx->sym.dad = NULL;   /* not strictly needed */

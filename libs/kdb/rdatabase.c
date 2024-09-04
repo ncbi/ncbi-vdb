@@ -169,7 +169,7 @@ KRDatabaseMake ( const KDatabase **dbp, const KDirectory *dir, const char *path,
     db -> cmode = kcmOpen;
     db -> checksum = kcsNone;
 
-    string_copy ( db -> path, path_size, path, path_size );
+    string_copy ( db -> path, path_size + 1, path, path_size );
 
     /* YES,
      DBG_VFS should be used here to be printed along with other VFS messages */

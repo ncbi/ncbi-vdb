@@ -192,7 +192,7 @@ KWDatabaseMake ( KDatabase **dbp, const KDirectory *dir, const char *path, KMD5S
     db -> opencount = 1;
     db -> read_only = read_only;
 
-    string_copy ( db -> path, path_size, path, path_size );
+    string_copy ( db -> path, path_size + 1, path, path_size );
 
     db->sym.u.obj = db;
     StringInitCString (&db->sym.name, db->path);

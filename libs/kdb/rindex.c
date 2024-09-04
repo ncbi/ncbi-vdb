@@ -194,7 +194,7 @@ rc_t KIndexMake ( KRIndex **idxp, const char *path )
                 idx -> dad . vt = & KRIndex_vt;
                 KRefcountInit ( & idx -> dad . refcount, 1, "KRIndex", "make", path );
 
-                string_copy ( idx -> path, path_size, path, path_size);
+                string_copy ( idx -> path, path_size + 1, path, path_size);
                 * idxp = idx;
                 return 0;
             }

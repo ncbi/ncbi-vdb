@@ -179,7 +179,7 @@ rc_t KRTableMake ( const KRTable **tblp, const KDirectory *dir, const char *path
     tbl -> dad . vt = & KRTable_vt;
     KRefcountInit ( & tbl -> dad . refcount, 1, "KTable", "make", path );
     tbl -> dir = dir;
-    string_copy ( tbl -> path, path_size, path, path_size );
+    string_copy ( tbl -> path, path_size + 1, path, path_size );
 
     /* YES,
       DBG_VFS should be used here to be printed along with other VFS messages */

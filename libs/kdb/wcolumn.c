@@ -199,7 +199,7 @@ rc_t KWColumnMake ( KWColumn **colp, const KDirectory *dir, const char *path,
     col -> commit_freq = 1;
     col -> read_only = read_only;
 
-    string_copy ( col -> path, path_size, path, path_size );
+    string_copy ( col -> path, path_size + 1, path, path_size );
 
     col->sym.u.obj = col;
     StringInitCString (&col->sym.name, col->path);

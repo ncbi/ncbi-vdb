@@ -784,7 +784,7 @@ rc_t KWTrieIndexInsert_v1 ( KWTrieIndex_v1 *self,
     {
         StringInit ( & node -> n . key, node -> key, key . size, key . len );
         node -> id = id;
-        string_copy ( node -> key, key.size, str, key.size );
+        string_copy ( node -> key, key.size + 1, str, key.size );
 
         rc = TrieInsertUnique ( & self -> key2id, & node -> n, NULL );
         if ( rc != 0 )
