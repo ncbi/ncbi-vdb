@@ -128,15 +128,15 @@ GetInstanceInfo( const AWS * cself, const char * url, char *buffer, size_t bsize
                 AWS * self = (AWS *)cself;
                 free( self -> dad . access_token );
                 self -> dad . access_token = NULL;
-                char buffer[4096];
-                rc_t rc = KNSManager_Read( self -> dad . kns, buffer, sizeof( buffer ),
+                char buf[4096];
+                rc_t rc = KNSManager_Read( self -> dad . kns, buf, sizeof( buf),
                           INSTANCE_URL_PREFIX "api/token", HttpMethod_Put,
                           "X-aws-ec2-metadata-token-ttl-seconds", "%u", AccessTokenLifetime_sec );
                 if ( rc != 0 )
                 {
                     return rc;
                 }
-                self -> dad . access_token = string_dup ( buffer, string_size ( buffer ) );
+                self -> dad . access_token = string_dup ( buf, string_size ( buf) );
                 self -> dad . access_token_expiration = KTimeStamp() + AccessTokenLifetime_sec;
             }
 
@@ -657,7 +657,6 @@ static void aws_parse_file ( AWS * self, const KFile * cred_file,
         }
         else
           for ( ; start < end; start = sep + 1 ) {
-            rc_t rc;
             String string, trim;
             String key, value;
             String access_key_id, secret_access_key;

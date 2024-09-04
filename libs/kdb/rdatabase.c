@@ -27,6 +27,8 @@
 #define KONST const
 #include <kdb/extern.h>
 
+#include <kdb/kdb-priv.h>
+
 #include "rdatabase.h"
 #include "kdb-cmn.h"
 #include "rkdb.h"
@@ -146,7 +148,9 @@ KRDatabaseMake ( const KDatabase **dbp, const KDirectory *dir, const char *path,
     assert ( dbp != NULL );
     assert ( path != NULL );
 
-    db = malloc ( sizeof * db + strlen ( path ) );
+    size_t path_size = strlen(path);
+
+    db = malloc ( sizeof * db + path_size);
     if ( db == NULL )
     {
         * dbp = NULL;
@@ -165,7 +169,7 @@ KRDatabaseMake ( const KDatabase **dbp, const KDirectory *dir, const char *path,
     db -> cmode = kcmOpen;
     db -> checksum = kcsNone;
 
-    strcpy ( db -> path, path );
+    string_copy ( db -> path, path_size, path, path_size );
 
     /* YES,
      DBG_VFS should be used here to be printed along with other VFS messages */
@@ -387,7 +391,7 @@ rc_t CC
 KRDatabaseVWritable ( const KDatabase *self, uint32_t type, const char *name, va_list args )
 {
     /* TBD */
-    return -1;
+    return (rc_t) - 1;
 }
 
 /* OpenManager

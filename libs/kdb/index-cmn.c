@@ -94,7 +94,7 @@ rc_t KPTrieIndexInit_v1 ( KPTrieIndex_v1 *self, const KMMap *mm, bool byteswap )
                             return 0;
                         }
                         /* remaining entries */
-                        self -> last = self -> first + ( size >> 2 ) - 1;
+                        self -> last = self -> first + (uint32_t)( size >> 2 ) - 1;
                         return 0;
                     }
                 }

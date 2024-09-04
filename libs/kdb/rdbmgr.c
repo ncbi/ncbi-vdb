@@ -692,7 +692,7 @@ KDBRManagerVPathOpenRemoteDBRead ( struct KDBManager const * self, struct KDatab
 static
 rc_t KDBManagerVOpenTableReadInt ( const KDBManager *self,
     const KTable **tblp, const KDirectory *wd, bool try_srapath,
-    const char *path, va_list args, const struct VPath *vpath,
+    const char *p_path, va_list args, const struct VPath *vpath,
     bool tryEnvAndAd )
 {
     rc_t rc;
@@ -705,8 +705,8 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *self,
             z = snprintf(aTblpath, sizeof aTblpath, "%s", path);
     }
     else*/
-    if (path != NULL)
-        z = vsnprintf ( aTblpath, sizeof aTblpath, path, args );
+    if (p_path != NULL)
+        z = vsnprintf ( aTblpath, sizeof aTblpath, p_path, args );
     if ( z < 0 || ( size_t ) z >= sizeof aTblpath )
         rc = RC ( rcDB, rcMgr, rcOpening, rcPath, rcExcessive );
     else
@@ -717,7 +717,6 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *self,
         const VPath *path2 = NULL;
 
         {
-            rc_t rc = 0;
             VPath *path = NULL;
             if (vpath == NULL)
                 rc = VFSManagerMakePath(self->vfsmgr, &path, "%s", aTblpath);
@@ -781,12 +780,12 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *self,
             const char * p = tblpath;
             if (p == NULL) {
                 if (path2 != NULL) {
-                    rc_t rc = VPathGetPath(vpath, &str);
+                    rc = VPathGetPath(vpath, &str);
                     if (rc == 0)
                         p = str.addr;
                 }
                 else if (vpath != NULL) {
-                    rc_t rc = VPathGetPath(vpath, &str);
+                    rc = VPathGetPath(vpath, &str);
                     if (rc == 0)
                         p = str.addr;
                 }

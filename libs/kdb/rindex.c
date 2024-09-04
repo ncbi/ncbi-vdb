@@ -184,7 +184,8 @@ rc_t KIndexMake ( KRIndex **idxp, const char *path )
             rc = RC ( rcDB, rcIndex, rcCreating, rcPath, rcEmpty );
         else
         {
-            KRIndex* idx = malloc ( sizeof *idx + strlen ( path ) );
+            size_t path_size = strlen(path);
+            KRIndex* idx = malloc ( sizeof *idx + path_size);
             if ( idx == NULL )
                 rc = RC ( rcDB, rcIndex, rcConstructing, rcMemory, rcExhausted );
             else
@@ -193,7 +194,7 @@ rc_t KIndexMake ( KRIndex **idxp, const char *path )
                 idx -> dad . vt = & KRIndex_vt;
                 KRefcountInit ( & idx -> dad . refcount, 1, "KRIndex", "make", path );
 
-                strcpy ( idx -> path, path );
+                string_copy ( idx -> path, path_size, path, path_size);
                 * idxp = idx;
                 return 0;
             }
@@ -267,7 +268,7 @@ rc_t KIndexAttach ( KRIndex *self, const KMMap *mm, bool *byteswap )
                 case 3:
                 case 4:
                 {
-                    self -> type = fh -> index_type;
+                    self -> type = (uint8_t) fh -> index_type;
                     switch ( self -> type )
                     {
                     case kitText:

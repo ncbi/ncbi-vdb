@@ -99,7 +99,7 @@ rc_t KPTrieIndexInitID2Ord ( KPTrieIndex_v2 *self, size_t in_size,
             uint32_t i;
 
             self -> id2ord . v8 = dst . v8;
-            self -> variant = variant;
+            self -> variant = (uint8_t) variant;
 
             /* integrate to simple translation */
             switch ( variant )
@@ -165,7 +165,7 @@ rc_t KPTrieIndexInitFromV1_v2 ( KPTrieIndex_v2 *self, const KMMap *mm, bool byte
     {
         uint32_t *ord2node;
         uint32_t total_id, test_id;
-        uint32_t i, id, id_bits, num_ids;
+        uint32_t i = 0, id, id_bits, num_ids;
 
         /* hopefully we got a projection index */
         if ( v1 . id2node == NULL )
@@ -734,7 +734,7 @@ rc_t KPTrieIndexProject_v2 ( const KPTrieIndex_v2 *self,
                 if ( nid != self -> ord2node [ ord ] )
                     break;
             }
-            * span = self -> first + ord - * start_id;
+            * span = (uint32_t) ( self -> first + (uint64_t) ord - * start_id );
             break;
         case 1:
             * start_id = self -> id2ord . v8 [ ord - 1 ];
@@ -857,7 +857,7 @@ rc_t KPTrieIndexFind_v2 ( const KPTrieIndex_v2 *self,
                     if ( ord == 0 )
                         rc = RC ( rcDB, rcIndex, rcSelecting, rcId, rcNotFound );
                     else if ( ord == self -> count )
-                        * span = self -> maxid - * start_id + 1;
+                        * span = (uint32_t) ( self -> maxid - * start_id + 1 );
                     else switch ( self -> variant )
                     {
                     case 0:
@@ -866,19 +866,19 @@ rc_t KPTrieIndexFind_v2 ( const KPTrieIndex_v2 *self,
                             if ( nid != self -> ord2node [ ord ] )
                                 break;
                         }
-                        * span = self -> first + ord - * start_id;
+                        * span = (uint32_t) ( self -> first + ord - * start_id );
                         break;
                     case 1:
-                        * span = self -> first + self -> id2ord . v8 [ ord ] - * start_id;
+                        * span = (uint32_t) ( self -> first + self -> id2ord . v8 [ ord ] - * start_id );
                         break;
                     case 2:
-                        * span = self -> first + self -> id2ord . v16 [ ord ] - * start_id;
+                        * span = (uint32_t) ( self -> first + self -> id2ord . v16 [ ord ] - * start_id );
                         break;
                     case 3:
-                        * span = self -> first + self -> id2ord . v32 [ ord ] - * start_id;
+                        * span = (uint32_t) ( self -> first + self -> id2ord . v32 [ ord ] - * start_id );
                         break;
                     case 4:
-                        * span = self -> first + self -> id2ord . v64 [ ord ] - * start_id;
+                        * span = (uint32_t) ( self -> first + self -> id2ord . v64 [ ord ] - * start_id );
                         break;
                     }
                 }
@@ -1587,7 +1587,7 @@ rc_t KWTrieIndexPersistProj_v3 ( const KWTrieIndex_v2 *self, PersistTrieData *pb
     void * addr = NULL;
     size_t map_size;
     uint64_t file_size;
-    size_t num_to_read;
+    size_t num_to_read = 0;
     uint64_t num_ids;
     bool is_sparse;
 
@@ -1740,7 +1740,7 @@ rc_t KWTrieIndexCreateMD5Wrapper ( KDirectory *dir, KFile ** fp, KMD5File ** wra
             /* trim off ".tmp" from "leaf"
                so that the format string reflects final name
                without the need to rename later */
-            dot_pos = strlen ( leaf ) - 4;
+            dot_pos = (int)strlen ( leaf ) - 4;
             assert ( dot_pos > 0 );
             assert ( strcmp ( & leaf [ dot_pos ], ".tmp" ) == 0 );
             leaf [ dot_pos ] = 0;
@@ -1853,7 +1853,7 @@ rc_t KWTrieIndexPersist_v2 ( const KWTrieIndex_v2 *self,
                     rc = KDirectoryRename ( dir, false, tmpname, path );
                     if ( rc == 0 )
                     {
-                        int tmplen;
+                        size_t tmplen;
 
                         /* done if this was the only file to rename */
                         if ( ! use_md5 )
@@ -1994,7 +1994,7 @@ bool CC KWTrieIndexPopulate_v2_s2 ( PTNode *n, void *data )
 
     int64_t id;
     size_t usize;
-    uint32_t span;
+    uint32_t span = 0;
 
     /* capture node data */
     assert ( n -> data . size == sizeof id );
@@ -2528,8 +2528,8 @@ rc_t KWTrieIndexProject_v2 ( const KWTrieIndex_v2 *self,
                 string_copy ( key_buff, buff_size,
                     node -> n . key . addr, node -> n . key . size );
                 * start_id = node -> start_id;
-                * span = ( ( ord == self -> count ) ?
-                    ( self -> last + 1 ) : ( self -> ord2node [ ord ] -> start_id ) ) - node -> start_id;
+                * span = (uint32_t) ( ( ( ord == self -> count ) ?
+                    ( self -> last + 1 ) : ( self -> ord2node [ ord ] -> start_id ) ) - node -> start_id );
                 return 0;
             }
         }

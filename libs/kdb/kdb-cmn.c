@@ -25,6 +25,7 @@
 */
 
 #include <kdb/extern.h>
+#include <kdb/kdb-priv.h>
 
 #include <kdb/manager.h>
 
@@ -714,7 +715,7 @@ static void KDBGetPathContents_Databases(KDBContents *result, const struct KDire
         while (node) {
             if (node->fstype == kptDir) {
                 struct KDirectory const *node_dir = NULL;
-                rc_t rc = KDirectoryOpenDirRead(dir, &node_dir, false, "db/%s", node->name);
+                rc = KDirectoryOpenDirRead(dir, &node_dir, false, "db/%s", node->name);
                 assert(rc == 0);
 
                 KDBGetPathContents_ScanBitsAndSubtype(node, node_dir, NULL);
@@ -997,7 +998,7 @@ static rc_t KDBOpenPathTypeReadInt ( const KDBManager * mgr, const KDirectory * 
     return rc;
 }
 
-rc_t KDBManagerOpenPathTypeRead ( const KDBManager * mgr, const KDirectory * dir, const char * path,
+LIB_EXPORT rc_t KDBManagerOpenPathTypeRead ( const KDBManager * mgr, const KDirectory * dir, const char * path,
     const KDirectory ** pdir, int pathtype, int * ppathtype, bool try_srapath,
     const VPath * vpath )
 {

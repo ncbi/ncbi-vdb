@@ -253,7 +253,7 @@ rc_t KIndexAttach ( KWIndex *self, const KMMap *mm, bool *byteswap )
                 case 3:
                 case 4:
                 {
-                    self -> type = fh -> index_type;
+                    self -> type = (uint8_t) fh -> index_type;
                     switch( self->type )
                     {
                     case kitText:
@@ -301,8 +301,9 @@ rc_t KIndexMake ( KWIndex **idxp, KDirectory *dir, const char *path )
         {
             rc = KDirectoryResolvePath(dir, true, fullpath, sizeof(fullpath), "%s", path);
             if (rc == 0)
-            {
-                KWIndex* idx = malloc ( sizeof *idx + strlen ( fullpath ) );
+            {                              
+                size_t fullpath_size = strlen(fullpath);
+                KWIndex* idx = malloc ( sizeof *idx + fullpath_size);
                 if ( idx == NULL )
                     rc = RC ( rcDB, rcIndex, rcConstructing, rcMemory, rcExhausted );
                 else
@@ -315,7 +316,7 @@ rc_t KIndexMake ( KWIndex **idxp, KDirectory *dir, const char *path )
                         KRefcountInit ( & idx -> dad . refcount, 1, "KWIndex", "make", fullpath );
 
                         idx -> dir = dir;
-                        strcpy ( idx -> path, fullpath );
+                        string_copy ( idx -> path, fullpath_size, fullpath, fullpath_size );
 
                         idx->sym.u.obj = idx;
                         idx->sym.dad = NULL;   /* not strictly needed */

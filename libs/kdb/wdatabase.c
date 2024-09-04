@@ -29,6 +29,7 @@
 #include "wdatabase.h"
 
 #include <kdb/namelist.h>
+#include <kdb/kdb-priv.h>
 
 #include "wtable.h"
 #include "windex.h"
@@ -167,7 +168,8 @@ KWDatabaseMake ( KDatabase **dbp, const KDirectory *dir, const char *path, KMD5S
     assert ( dbp != NULL );
     assert ( path != NULL );
 
-    db = calloc ( 1, sizeof * db + strlen ( path ) );
+    size_t path_size = strlen(path);
+    db = calloc ( 1, sizeof * db + path_size);
     if ( db == NULL )
     {
         * dbp = NULL;
@@ -190,7 +192,7 @@ KWDatabaseMake ( KDatabase **dbp, const KDirectory *dir, const char *path, KMD5S
     db -> opencount = 1;
     db -> read_only = read_only;
 
-    strcpy ( db -> path, path );
+    string_copy ( db -> path, path_size, path, path_size );
 
     db->sym.u.obj = db;
     StringInitCString (&db->sym.name, db->path);
@@ -351,7 +353,7 @@ KWDatabaseVExists ( const KDatabase *self, uint32_t type, const char *name, va_l
     if ( self != NULL && name != NULL && name [ 0 ] != 0 )
     {
         rc_t rc;
-        size_t len;
+        uint32_t len;
         const char *ns;
         char path [ 256 ];
 
@@ -411,7 +413,7 @@ KWDatabaseIsAlias ( const KDatabase *self, uint32_t type, char *resolved, size_t
     if ( self != NULL && name != NULL && name [ 0 ] != 0 )
     {
         rc_t rc;
-        size_t len;
+        uint32_t len;
         const char *ns;
         char path [ 256 ];
 
@@ -480,7 +482,7 @@ KWDatabaseIsAlias ( const KDatabase *self, uint32_t type, char *resolved, size_t
  *  "path" [ IN ] - NUL terminated path
  */
 static
-rc_t KDatabaseLockInt (const KDatabase  * self, char * path, size_t path_size,
+rc_t KDatabaseLockInt (const KDatabase  * self, char * unused, size_t path_size,
                         int type, const char * name, va_list args )
 {
     rc_t rc;
@@ -506,7 +508,7 @@ rc_t KDatabaseLockInt (const KDatabase  * self, char * path, size_t path_size,
         case kptDatabase:
         case kptTable:
 /*         case kptIndex: */
-            rc = KDBVMakeSubPath (self->dir, path, sizeof path, ns, strlen (ns),
+            rc = KDBVMakeSubPath (self->dir, path, sizeof path, ns, (uint32_t) strlen (ns),
                                   name, args);
             break;
         }
@@ -933,7 +935,7 @@ KDatabaseGetChecksum ( const KDatabase *self)
 KChecksum
 KDatabaseSetChecksum ( KDatabase *self, KChecksum new_val)
 {
-    KCreateMode old_val = self -> checksum;
+    KChecksum old_val = self -> checksum;
     self -> checksum = new_val;
     return old_val;
 }
@@ -1160,7 +1162,7 @@ LIB_EXPORT rc_t CC KDatabaseCreateTable ( KDatabase *self,
 LIB_EXPORT rc_t CC KDatabaseVCreateTable ( KDatabase *self,
     KTable **tblp, KCreateMode cmode, const char *name, va_list args )
 {
-    return KDatabaseVCreateTableByMask ( self, tblp, cmode, -1, name, args );
+    return KDatabaseVCreateTableByMask ( self, tblp, cmode, (KCreateMode) -1, name, args);
 }
 
 LIB_EXPORT rc_t CC KDatabaseCreateTableByMask ( KDatabase *self,

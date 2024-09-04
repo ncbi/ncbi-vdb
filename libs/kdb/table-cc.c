@@ -311,7 +311,7 @@ rc_t CC KTableConsistencyCheck(const KTable *bself, uint32_t depth, uint32_t lev
     rc_t rc = 0;
     uint32_t type;
 
-    bool indexOnly = level & CC_INDEX_ONLY;
+    bool indexOnly = (bool)( level & CC_INDEX_ONLY );
     if (indexOnly) {
         level &= ~CC_INDEX_ONLY;
     }
