@@ -229,6 +229,157 @@ FIXTURE_TEST_CASE(KRDatabase_GetPath, KDatabase_Fixture)
     REQUIRE_RC( KDatabaseGetPath( m_db, & path ) );
 }
 
+extern "C" rc_t KDBRManagerPathContents(const KDBManager *self, KDBContents const **result, const char *path, ...);
+
+static KDBContents const *findChildNamed(KDBContents const *node, std::string const &name)
+{
+    auto n = node->firstChild;
+    while (n != nullptr) {
+        if (name == n->name)
+            return n;
+        n = n->nextSibling;
+    }
+    return nullptr;
+}
+
+FIXTURE_TEST_CASE(KDBRManager_PathContents_dir, KDatabase_Fixture)
+{
+    auto const name = std::string("testdb");
+    KDBContents const *contents = NULL;
+    REQUIRE_RC(KDBRManagerPathContents(m_mgr, &contents, "%s", name.c_str()));
+    REQUIRE_NOT_NULL(contents);
+    REQUIRE_EQ(name, string(contents->name));
+    
+    // REQUIRE_EQ((int)(contents->fstype | kptAlias), (int)(kptDir | kptAlias));
+    
+    REQUIRE_EQ((int)contents->dbtype, (int)kptDatabase);
+    REQUIRE_EQ((int)(contents->attributes & cca_HasErrors), (int)cca_HasErrors);
+
+    auto const db_dummy = findChildNamed(contents, "dummy");
+    REQUIRE_NOT_NULL(db_dummy);
+
+    auto const tbl_SEQUENCE = findChildNamed(contents, "SEQUENCE");
+    REQUIRE_NOT_NULL(tbl_SEQUENCE);
+
+    auto const col_dummy = findChildNamed(tbl_SEQUENCE, "dummy");
+    REQUIRE_NOT_NULL(col_dummy);
+
+    auto const col_READ = findChildNamed(tbl_SEQUENCE, "READ");
+    REQUIRE_NOT_NULL(col_READ);
+
+    // check parent/child and sibling pointers
+    REQUIRE_EQ(db_dummy->parent, contents);
+    REQUIRE_EQ(tbl_SEQUENCE->parent, contents);
+
+    REQUIRE(tbl_SEQUENCE->nextSibling == db_dummy || db_dummy->nextSibling == tbl_SEQUENCE);
+    REQUIRE(tbl_SEQUENCE->prevSibling == db_dummy || db_dummy->prevSibling == tbl_SEQUENCE);
+
+    REQUIRE_EQ(col_dummy->parent, tbl_SEQUENCE);
+    REQUIRE_EQ(col_READ->parent, tbl_SEQUENCE);
+    REQUIRE(col_dummy->nextSibling == col_READ || col_READ->nextSibling == col_dummy);
+    REQUIRE(col_dummy->prevSibling == col_READ || col_READ->prevSibling == col_dummy);
+
+    // check file system types
+    REQUIRE_EQ((int)(db_dummy->fstype | kptAlias), (int)(kptFile | kptAlias));
+    REQUIRE_EQ((int)(col_dummy->fstype | kptAlias), (int)(kptFile | kptAlias));
+    REQUIRE_EQ((int)(tbl_SEQUENCE->fstype | kptAlias), (int)(kptDir | kptAlias));
+    REQUIRE_EQ((int)(col_READ->fstype | kptAlias), (int)(kptDir | kptAlias));
+
+    // check KDB types
+    REQUIRE_EQ((int)tbl_SEQUENCE->dbtype, (int)kptTable);
+    REQUIRE_EQ((int)col_READ->dbtype, (int)kptColumn);
+    // REQUIRE_EQ((int)col_dummy->dbtype, (int)kptFile);
+    // REQUIRE_EQ((int)db_dummy->dbtype, (int)kptFile);
+
+    // check error bit
+    REQUIRE_EQ((int)(col_READ->attributes & cca_HasErrors), (int)cca_HasErrors);
+    REQUIRE_EQ((int)(tbl_SEQUENCE->attributes & cca_HasErrors), (int)cca_HasErrors);
+
+    KDBContentsWhack(contents);
+}
+
+FIXTURE_TEST_CASE(KDBRManager_PathContents_kar, KDatabase_Fixture)
+{
+    auto const name = std::string("testdb.kar");
+    KDBContents const *contents = NULL;
+    REQUIRE_RC(KDBRManagerPathContents(m_mgr, &contents, "%s", name.c_str()));
+    REQUIRE_NOT_NULL(contents);
+    REQUIRE_EQ(name, string(contents->name));
+    
+    REQUIRE_EQ((int)(contents->fstype | kptAlias), (int)(kptFile | kptAlias));
+    
+    REQUIRE_EQ((int)contents->dbtype, (int)kptDatabase);
+    REQUIRE_EQ((int)(contents->attributes & cca_HasErrors), (int)cca_HasErrors);
+
+    auto const db_dummy = findChildNamed(contents, "dummy");
+    REQUIRE_NOT_NULL(db_dummy);
+
+    auto const tbl_SEQUENCE = findChildNamed(contents, "SEQUENCE");
+    REQUIRE_NOT_NULL(tbl_SEQUENCE);
+
+    auto const col_dummy = findChildNamed(tbl_SEQUENCE, "dummy");
+    REQUIRE_NOT_NULL(col_dummy);
+
+    auto const col_READ = findChildNamed(tbl_SEQUENCE, "READ");
+    REQUIRE_NOT_NULL(col_READ);
+
+    // check parent/child and sibling pointers
+    REQUIRE_EQ(db_dummy->parent, contents);
+    REQUIRE_EQ(tbl_SEQUENCE->parent, contents);
+
+    REQUIRE(tbl_SEQUENCE->nextSibling == db_dummy || db_dummy->nextSibling == tbl_SEQUENCE);
+    REQUIRE(tbl_SEQUENCE->prevSibling == db_dummy || db_dummy->prevSibling == tbl_SEQUENCE);
+
+    REQUIRE_EQ(col_dummy->parent, tbl_SEQUENCE);
+    REQUIRE_EQ(col_READ->parent, tbl_SEQUENCE);
+    REQUIRE(col_dummy->nextSibling == col_READ || col_READ->nextSibling == col_dummy);
+    REQUIRE(col_dummy->prevSibling == col_READ || col_READ->prevSibling == col_dummy);
+
+    // check file system types
+    REQUIRE_EQ((int)(db_dummy->fstype | kptAlias), (int)(kptFile | kptAlias));
+    REQUIRE_EQ((int)(col_dummy->fstype | kptAlias), (int)(kptFile | kptAlias));
+    REQUIRE_EQ((int)(tbl_SEQUENCE->fstype | kptAlias), (int)(kptDir | kptAlias));
+    REQUIRE_EQ((int)(col_READ->fstype | kptAlias), (int)(kptDir | kptAlias));
+
+    // check KDB types
+    REQUIRE_EQ((int)tbl_SEQUENCE->dbtype, (int)kptTable);
+    REQUIRE_EQ((int)col_READ->dbtype, (int)kptColumn);
+    // REQUIRE_EQ((int)col_dummy->dbtype, (int)kptFile);
+    // REQUIRE_EQ((int)db_dummy->dbtype, (int)kptFile);
+
+    // check error bit
+    REQUIRE_EQ((int)(col_READ->attributes & cca_HasErrors), (int)cca_HasErrors);
+    REQUIRE_EQ((int)(tbl_SEQUENCE->attributes & cca_HasErrors), (int)cca_HasErrors);
+
+    KDBContentsWhack(contents);
+}
+/*
+FIXTURE_TEST_CASE(KDBRManager_PathContents_SRR, KDatabase_Fixture)
+{
+    KDBContents const *contents = NULL;
+    REQUIRE_RC(KDBRManagerPathContents(m_mgr, &contents, "SRR000001"));
+    REQUIRE_NOT_NULL(contents);
+    
+    REQUIRE_EQ((int)(contents->fstype), 0); ///< fstype is unknown
+    
+    REQUIRE_EQ((int)contents->dbtype, (int)kptTable); ///< SRR000001 is a table
+    REQUIRE_EQ((int)(contents->attributes & cca_HasMetadata), (int)cca_HasMetadata);
+    REQUIRE_EQ((int)(contents->attributes & cca_HasMD5_File), (int)cca_HasMD5_File);
+    REQUIRE_EQ((int)(contents->attributes & cca_HasLock), (int)cca_HasLock);
+    REQUIRE_EQ((int)(contents->attributes & cca_HasSealed), 0);
+    REQUIRE_EQ((int)(contents->attributes & cca_HasErrors), 0);
+    REQUIRE_EQ((int)(contents->attributes & cta_HasColumns), (int)cta_HasColumns);
+
+    auto const col_READ = findChildNamed(contents, "READ");
+    REQUIRE_NOT_NULL(col_READ);
+    REQUIRE_EQ((int)col_READ->dbtype, (int)kptColumn);
+    REQUIRE_EQ((int)(col_READ->attributes & cca_HasMetadata), (int)cca_HasMetadata);
+    REQUIRE_EQ((int)(col_READ->attributes & cca_HasChecksum_CRC), (int)cca_HasChecksum_CRC);
+
+    KDBContentsWhack(contents);
+}
+*/
+
 //KDB_EXTERN rc_t CC KDatabaseGetPath ( struct KDatabase const *self, const char **path );
 
 //////////////////////////////////////////// Main

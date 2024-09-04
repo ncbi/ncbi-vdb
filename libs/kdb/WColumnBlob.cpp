@@ -37,16 +37,25 @@ extern "C"
 
 struct KColumnBlob
 {
+    /* this part is shared with the read-side structure, consider inheritance */
+
     /* holds either an existing blob loc
        or new blob index range */
     KColBlobLoc loc;
 
+    /* owning column */
+    KWColumn *col;
+
+    /* for validation */
+    bool bswap;
+
+    /*************************************************************************/
+
+    /* write-side only fields: */
+
     /* holds old and new page maps */
     KWColumnPageMap pmorig;
     KWColumnPageMap pmnew;
-
-    /* owning column */
-    KWColumn *col;
 
     /* number of bytes written to blob */
     uint32_t num_writ;
@@ -57,9 +66,6 @@ struct KColumnBlob
 
     /* open mode */
     uint8_t read_only;
-
-    /* for validation */
-    bool bswap;
 };
 
 class W_ColumnBlob: public TColumnBlob<KColumnBlob>
@@ -136,6 +142,19 @@ public:
         }
         return rc;
     }
+
+    virtual rc_t dataRead( size_t offset, void *buffer, size_t bsize, size_t *num_read ) const
+    {
+        return KColumnDataRead (
+                m_blob -> col -> df . pgsize,
+                m_blob -> col -> df . f,
+                m_blob -> pmorig . pg,
+                offset,
+                buffer,
+                bsize,
+                num_read );
+    }
+
 };
 
 /* Make
@@ -183,11 +202,13 @@ rc_t KWColumnBlobOpenUpdate ( KColumnBlob *bself, KWColumn *col, int64_t id )
     return rc;
 }
 
+#define CAST() KColumnBlob * self = ((W_ColumnBlob*)bself) -> getBlob();
+
 /* Create
  */
 rc_t KWColumnBlobCreate ( KColumnBlob *bself, KWColumn *col )
 {
-    KColumnBlob *self = ((W_ColumnBlob*)bself) -> getBlob();
+    CAST();
 
     rc_t rc;
 
@@ -249,8 +270,6 @@ rc_t KWColumnBlobCreate ( KColumnBlob *bself, KWColumn *col )
 
     return rc;
 }
-
-#define CAST() KColumnBlob * self = (KColumnBlob *)bself
 
 /* KColumnBlobAppend
  *  append data to open blob
