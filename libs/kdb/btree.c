@@ -549,7 +549,7 @@ LIB_EXPORT rc_t CC KBTreeEntry ( KBTree *self, uint64_t *id,
             rc = RC ( rcDB, rcTree, rcUpdating, rcParam, rcNull );
         else
         {
-            uint32_t id32 = *id;
+            uint32_t id32 = (uint32_t )*id;
             rc = BTreeEntry(&self->hdr.root, (Pager *)&self->pgfile, &KPageFile_vt, &id32, was_inserted, key, key_size);
             if (self->pgfile.rc)
                 rc = self->pgfile.rc;

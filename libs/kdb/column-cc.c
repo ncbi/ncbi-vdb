@@ -220,7 +220,7 @@ rc_t CC KColumnConsistencyCheck(const KColumn *bself,
     const KRColumn * self = (const KRColumn *)bself;
     rc_t rc = 0;
 
-    bool indexOnly = level & CC_INDEX_ONLY;
+    bool indexOnly = (bool)( level & CC_INDEX_ONLY );
     if (indexOnly) {
         level &= ~CC_INDEX_ONLY;
     }

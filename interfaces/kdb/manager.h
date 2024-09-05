@@ -176,6 +176,53 @@ KDB_EXTERN int CC KDBManagerPathType   ( const KDBManager * self, const char *pa
 KDB_EXTERN int CC KDBManagerVPathType  ( const KDBManager * self, const char *path, va_list args );
 #define KDBManagerPathTypeVPath KDBManagerPathTypeVP
 
+typedef struct KDBContents_struct KDBContents;
+
+struct KDBContents_struct {
+    char const *name;
+    KDBContents const *parent;
+    KDBContents const *firstChild;  ///< owning reference
+    KDBContents const *nextSibling; ///< owning reference
+    KDBContents const *prevSibling;
+    KPathType dbtype;               ///< apparent type from KDB's PoV, like KDBPathType would give
+    KPathType fstype;               ///< from KFS's PoV, like KDirectoryPathType would give
+    int attributes;
+};
+
+enum KDBContents_Common_Attributes {
+    cca_HasMetadata = 1,
+    cca_HasMD5_File = 2,
+    cca_HasLock = 4,
+    cca_HasSealed = 8,
+    cca_HasErrors = (1 << 30),
+};
+
+enum KDBContents_Column_Attributes {
+    cca_HasChecksum_CRC = 16,
+    cca_HasChecksum_MD5 = 32,
+    cca_ReversedByteOrder = 64,
+    cca_IsStatic = 128,
+};
+
+enum KDBContents_Table_Attributes {
+    cta_HasColumns = 16,
+    cta_HasIndices = 32,
+};
+
+enum KDBContents_Database_Attributes {
+    cda_HasTables = 16,
+    cda_HasDatabases = 32,
+};
+
+enum KDBContents_Index_Attributes {
+    cia_HasChecksum_MD5 = 16,
+    cia_IsTextIndex = 32,
+    cia_IsIdIndex = 64,
+    cia_ReversedByteOrder = 128,
+};
+
+void KDBContentsWhack(KDBContents const *self);
+
 #ifdef __cplusplus
 }
 #endif

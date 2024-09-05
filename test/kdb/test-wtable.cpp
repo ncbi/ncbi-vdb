@@ -214,9 +214,9 @@ FIXTURE_TEST_CASE(KWTable_ListCol, KTable_Fixture)
     struct KNamelist * names;
     REQUIRE_RC( KTableListCol( m_tbl, & names ) );
 
-    uint32_t count = 1;
+    uint32_t count = 0;
     REQUIRE_RC( KNamelistCount ( names, &count ) );
-    REQUIRE_EQ( (uint32_t)0, count );
+    REQUIRE_EQ( (uint32_t)1, count );
 
     REQUIRE_RC( KNamelistRelease ( names ) );
 }

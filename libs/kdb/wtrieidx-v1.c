@@ -304,9 +304,9 @@ rc_t KWTrieIndexPersistProj_v1 ( const KWTrieIndex_v1 *self, PersistTrieData *pb
     return rc;
 #else
     rc_t rc;
-    void * addr;
+    void * addr = NULL;
     uint64_t file_size;
-    size_t num_to_read;
+    size_t num_to_read = 0;
     size_t map_size;
 
     /* there must be something to do */
@@ -465,7 +465,7 @@ rc_t KWTrieIndexPersist_v1 ( const KWTrieIndex_v1 *self,
             if ( rc == 0 )
             {
                 pb . ptt_size = 0;
-                pb . first = ~ 0;
+                pb . first = ~ 0u;
                 pb . last = 0;
 
                 rc = KWTrieIndexPersistTrie_v1 ( self, & pb );
@@ -525,7 +525,7 @@ rc_t KWTrieIndexOpen_v1 ( KWTrieIndex_v1 *self, const KMMap *mm, bool byteswap )
     if ( rc != 0 )
         return rc;
 
-    self -> first = ~ 0;
+    self -> first = ~ 0u;
 
     if ( mm == NULL )
         return 0;
@@ -697,7 +697,7 @@ rc_t KWTrieIndexAttach_v1 ( KWTrieIndex_v1 *self, bool proj, uint32_t id )
             KTrieIdxNodeUnlink_v1, & self -> key2id );
         free ( self -> id2node );
         self -> id2node = NULL;
-        self -> first = ~0;
+        self -> first = ~0u;
         self -> last = 0;
         self -> len = 0;
     }
@@ -784,7 +784,7 @@ rc_t KWTrieIndexInsert_v1 ( KWTrieIndex_v1 *self,
     {
         StringInit ( & node -> n . key, node -> key, key . size, key . len );
         node -> id = id;
-        strcpy ( node -> key, str );
+        string_copy ( node -> key, key.size + 1, str, key.size );
 
         rc = TrieInsertUnique ( & self -> key2id, & node -> n, NULL );
         if ( rc != 0 )
