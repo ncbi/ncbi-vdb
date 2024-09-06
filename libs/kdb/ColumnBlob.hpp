@@ -42,6 +42,8 @@ typedef struct KColumnBlob KColumnBlob;
 
 #include <byteswap.h>
 
+#include "colfmt.h"
+
 class KColumnBlobBase
 {
 protected:
@@ -89,6 +91,7 @@ protected: // only created trough a factory, destroyed through release()
 
     virtual rc_t dataRead( size_t offset, void *buffer, size_t bsize, size_t *num_read ) const = 0;
     virtual int32_t checksumType() const = 0;
+    virtual const KColBlobLoc& getLoc() const = 0;
 
 public:
     /* Public read-side API */
@@ -115,7 +118,7 @@ public:
             rc = RC ( rcDB, rcBlob, rcReading, rcParam, rcNull );
         else
         {
-            size_t size = m_blob -> loc . u . blob . size;
+            size_t size = getLoc() . u . blob . size;
 
             if ( offset > size )
                 offset = size;
@@ -190,7 +193,7 @@ public:
         else
         {
             /* determine blob size */
-            size_t bsize = m_blob -> loc . u . blob . size;
+            size_t bsize = getLoc() . u . blob . size;
 
             /* ignore blobs of size 0 */
             if ( bsize == 0 )
@@ -267,7 +270,7 @@ public:
 
     virtual rc_t validate() const
     {
-        if ( m_blob -> loc . u . blob . size == 0 )
+        if ( getLoc() . u . blob . size == 0 )
             return 0;
 
         switch ( checksumType() )
@@ -291,9 +294,9 @@ public:
             return RC ( rcDB, rcBlob, rcValidating, rcParam, rcNull );
 
         bsize = KDataBufferBytes ( buffer );
-        if ( bsize < m_blob -> loc . u . blob . size )
+        if ( bsize < getLoc() . u . blob . size )
             return RC ( rcDB, rcBlob, rcValidating, rcData, rcInsufficient );
-        if ( bsize > m_blob -> loc . u . blob . size )
+        if ( bsize > getLoc() . u . blob . size )
             return RC ( rcDB, rcBlob, rcValidating, rcData, rcExcessive );
         if ( bsize == 0 )
             return 0;
@@ -318,12 +321,12 @@ public:
 
         if ( first == NULL || count == NULL )
             rc = RC ( rcDB, rcBlob, rcAccessing, rcParam, rcNull );
-        else if ( m_blob -> loc . id_range == 0 )
+        else if ( getLoc() . id_range == 0 )
             rc = RC ( rcDB, rcBlob, rcAccessing, rcRange, rcEmpty );
         else
         {
-            * first = m_blob -> loc . start_id;
-            * count = m_blob -> loc . id_range;
+            * first = getLoc() . start_id;
+            * count = getLoc() . id_range;
             return 0;
         }
 

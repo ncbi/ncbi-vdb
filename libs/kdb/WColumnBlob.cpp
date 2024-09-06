@@ -159,6 +159,11 @@ public:
     {
         return m_blob -> col -> checksum;
     }
+
+    virtual const KColBlobLoc& getLoc() const
+    {
+        return m_blob -> loc;
+    }
 };
 
 /* Make
