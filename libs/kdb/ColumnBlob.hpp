@@ -88,6 +88,7 @@ protected: // only created trough a factory, destroyed through release()
     }
 
     virtual rc_t dataRead( size_t offset, void *buffer, size_t bsize, size_t *num_read ) const = 0;
+    virtual int32_t checksumType() const = 0;
 
 public:
     /* Public read-side API */
@@ -219,7 +220,7 @@ public:
                                 return 0;
 
                             /* see what checksumming is in use */
-                            switch ( m_blob -> col -> checksum )
+                            switch ( checksumType() )
                             {
                             case kcsNone:
                                 return 0;
@@ -269,7 +270,7 @@ public:
         if ( m_blob -> loc . u . blob . size == 0 )
             return 0;
 
-        switch ( m_blob -> col -> checksum )
+        switch ( checksumType() )
         {
         case kcsCRC32:
             return validateCRC32();
@@ -297,7 +298,7 @@ public:
         if ( bsize == 0 )
             return 0;
 
-        switch ( m_blob -> col -> checksum )
+        switch ( checksumType() )
         {
         case kcsCRC32:
             return validateBufferCRC32 ( buffer -> base, bsize,

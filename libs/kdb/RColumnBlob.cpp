@@ -115,6 +115,11 @@ public:
                 num_read );
     }
 
+    virtual int32_t checksumType() const
+    {
+        return m_blob -> col -> checksum;
+    }
+
 };
 
 /* Make
