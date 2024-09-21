@@ -885,7 +885,7 @@ FIXTURE_TEST_CASE ( OpenViewAlias_ListColumns, ViewFixture )
     ;
     CreateDb ( GetName() );
 
-    REQUIRE_RC( VDatabaseRelease ( m_db ) );
+    REQUIRE_RC( VDatabaseRelease ( m_db ) ); m_db = nullptr;
 
     const VDatabase *rdb;
     REQUIRE_RC( VDBManagerOpenDBRead ( m_mgr, &rdb, NULL, m_databaseName.c_str() ) );

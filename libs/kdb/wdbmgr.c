@@ -583,7 +583,7 @@ rc_t KDBWManagerVOpenDBReadInt_noargs ( const KDBManager *cself,
     va_list args;
 
     va_start ( args, try_srapath );
-    rc = KDBManagerVOpenDBReadInt ( cself, dbp, wd, path, args, cached, try_srapath, NULL );
+    rc = KDBManagerVOpenDBReadInt ( cself, dbp, wd, path, args, cached, (bool)try_srapath, NULL );
     va_end ( args );
 
     return rc;
@@ -1467,7 +1467,7 @@ rc_t KDBWManagerVOpenColumnReadInt_noargs ( const KDBManager *cself,
     va_list args;
 
     va_start ( args, try_srapath );
-    rc = KDBManagerVOpenColumnReadInt ( cself, colp, wd, path_fmt, args, cached, try_srapath );
+    rc = KDBManagerVOpenColumnReadInt ( cself, colp, wd, path_fmt, args, cached, (bool)try_srapath );
     va_end ( args );
 
     return rc;

@@ -34,14 +34,15 @@ extern "C"
 
 struct KColumnBlob
 {
+    /* holds existing blob loc */
+    KColBlobLoc loc;
+
     /* owning column */
     const struct KRColumn *col;
 
     /* captured from idx1 for CRC32 validation */
     bool bswap;
 
-    /* holds existing blob loc */
-    KColBlobLoc loc;
     KRColumnPageMap pmorig;
 };
 
@@ -101,6 +102,29 @@ public:
 
         return rc;
     }
+
+    virtual rc_t dataRead( size_t offset, void *buffer, size_t bsize, size_t *num_read ) const
+    {
+        return KColumnDataRead (
+                m_blob -> col -> df . pgsize,
+                m_blob -> col -> df . f,
+                m_blob -> pmorig . pg,
+                offset,
+                buffer,
+                bsize,
+                num_read );
+    }
+
+    virtual int32_t checksumType() const
+    {
+        return m_blob -> col -> checksum;
+    }
+
+    virtual const KColBlobLoc& getLoc() const
+    {
+        return m_blob -> loc;
+    }
+
 };
 
 /* Make

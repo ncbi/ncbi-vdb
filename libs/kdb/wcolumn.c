@@ -179,7 +179,8 @@ rc_t KWColumnMake ( KWColumn **colp, const KDirectory *dir, const char *path,
 		   KMD5SumFmt * md5, bool read_only )
 {
     rc_t rc;
-    KWColumn *col = malloc ( sizeof * col + strlen ( path ) );
+    size_t path_size = strlen(path);
+    KWColumn *col = malloc ( sizeof * col + path_size);
     if ( col == NULL )
     {
 	* colp = NULL;
@@ -198,7 +199,7 @@ rc_t KWColumnMake ( KWColumn **colp, const KDirectory *dir, const char *path,
     col -> commit_freq = 1;
     col -> read_only = read_only;
 
-    strcpy ( col -> path, path );
+    string_copy ( col -> path, path_size + 1, path, path_size );
 
     col->sym.u.obj = col;
     StringInitCString (&col->sym.name, col->path);
@@ -463,7 +464,7 @@ static bool CC KWColumnLocked ( const KWColumn *self )
  *  "path" [ IN ] - NUL terminated path
  */
 static
-rc_t KColumnLockInt (const KWColumn  * self, char * path, size_t path_size,
+rc_t KColumnLockInt (const KWColumn  * self, char * unused, size_t path_size,
                         int type, const char * name, va_list args )
 {
     rc_t rc;
@@ -489,7 +490,7 @@ rc_t KColumnLockInt (const KWColumn  * self, char * path, size_t path_size,
         case kptIndex:
         case kptMetadata:
 /*         case kptIndex: */
-            rc = KDBVMakeSubPath (self->dir, path, sizeof path, ns, strlen (ns),
+            rc = KDBVMakeSubPath (self->dir, path, sizeof path, ns, (uint32_t) strlen (ns),
                                   name, args);
             break;
         }

@@ -456,7 +456,7 @@ KMetadataPopulate ( KMetadata *bself, const KDirectory *dir, const char *path, b
         if ( rc == 0 )
         {
             size_t size;
-            const void *addr;
+            const void *addr = NULL;
             rc = KMMapSize ( mm, & size );
             if ( rc == 0 )
                 rc = KMMapAddrRead ( mm, & addr );
@@ -534,7 +534,7 @@ KMetadataPopulate ( KMetadata *bself, const KDirectory *dir, const char *path, b
 rc_t
 KWMetadataMake ( KWMetadata **metap, KDirectory *dir, const char *path, uint32_t rev, bool populate, bool read_only )
 {
-    rc_t rc;
+    rc_t rc = 0;
     KWMetadata *meta = malloc ( sizeof * meta + strlen ( path ) );
     if ( meta == NULL )
         rc = RC ( rcDB, rcMetadata, rcConstructing, rcMemory, rcExhausted );

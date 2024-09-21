@@ -94,7 +94,7 @@ rc_t KPTrieIndexInitID2Ord ( KPTrieIndex_v2 *self, size_t in_size,
             uint32_t i;
 
             self -> id2ord . v8 = dst . v8;
-            self -> variant = variant;
+            self -> variant = (uint8_t) variant;
 
             /* integrate to simple translation */
             switch ( variant )
@@ -160,7 +160,7 @@ rc_t KPTrieIndexInitFromV1_v2 ( KPTrieIndex_v2 *self, const KMMap *mm, bool byte
     {
         uint32_t *ord2node;
         uint32_t total_id, test_id;
-        uint32_t i, id, id_bits, num_ids;
+        uint32_t i = 0, id, id_bits, num_ids;
 
         /* assume preservation of persisted projection index */
         self -> byteswap = byteswap;

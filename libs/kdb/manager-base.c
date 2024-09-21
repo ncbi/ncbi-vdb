@@ -210,8 +210,7 @@ LIB_EXPORT rc_t CC KDBManagerOpenDBRead ( const KDBManager *self, const KDatabas
 LIB_EXPORT rc_t CC KDBManagerOpenDBReadVPath ( const KDBManager *self,
     const KDatabase **db, const struct VPath *path )
 {
-    va_list args;
-    DISPATCH( vOpenDBRead( self, db, NULL, args, path ) );
+    DISPATCH( vOpenDBRead( self, db, NULL, NULL, path ) );
 }
 LIB_EXPORT rc_t CC KDBManagerVOpenTableRead ( const KDBManager *self, const struct KTable **tbl, const char *path, va_list args )
 {

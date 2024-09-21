@@ -42,6 +42,8 @@ typedef struct KColumnBlob KColumnBlob;
 
 #include <byteswap.h>
 
+#include "colfmt.h"
+
 class KColumnBlobBase
 {
 protected:
@@ -87,6 +89,10 @@ protected: // only created trough a factory, destroyed through release()
         return 0;
     }
 
+    virtual rc_t dataRead( size_t offset, void *buffer, size_t bsize, size_t *num_read ) const = 0;
+    virtual int32_t checksumType() const = 0;
+    virtual const KColBlobLoc& getLoc() const = 0;
+
 public:
     /* Public read-side API */
     virtual rc_t addRef()
@@ -112,8 +118,7 @@ public:
             rc = RC ( rcDB, rcBlob, rcReading, rcParam, rcNull );
         else
         {
-            size_t size = m_blob -> loc . u . blob . size;
-            auto col = m_blob -> col;
+            size_t size = getLoc() . u . blob . size;
 
             if ( offset > size )
                 offset = size;
@@ -140,8 +145,7 @@ public:
                 {
                     size_t nread = 0;
 
-                    rc = KColumnDataRead ( col -> df . pgsize, col -> df . f,
-                                          m_blob -> pmorig . pg, offset + *num_read,
+                    rc = dataRead ( offset + *num_read,
                         & ( ( char * ) buffer ) [ * num_read ], to_read - * num_read, & nread );
                     if ( rc != 0 )
                         break;
@@ -189,7 +193,7 @@ public:
         else
         {
             /* determine blob size */
-            size_t bsize = m_blob -> loc . u . blob . size;
+            size_t bsize = getLoc() . u . blob . size;
 
             /* ignore blobs of size 0 */
             if ( bsize == 0 )
@@ -219,7 +223,7 @@ public:
                                 return 0;
 
                             /* see what checksumming is in use */
-                            switch ( m_blob -> col -> checksum )
+                            switch ( checksumType() )
                             {
                             case kcsNone:
                                 return 0;
@@ -238,9 +242,7 @@ public:
                                 }
 
                                 /* read checksum information */
-                                rc = KColumnDataRead ( m_blob -> col -> df . pgsize,
-                                    m_blob -> col -> df . f,
-                                    m_blob -> pmorig . pg, bsize, opt_cs_data, cs_bytes, & num_read );
+                                rc = dataRead (bsize, opt_cs_data, cs_bytes, & num_read );
                                 if ( rc == 0 )
                                 {
                                     if ( num_read != cs_bytes )
@@ -268,10 +270,10 @@ public:
 
     virtual rc_t validate() const
     {
-        if ( m_blob -> loc . u . blob . size == 0 )
+        if ( getLoc() . u . blob . size == 0 )
             return 0;
 
-        switch ( m_blob -> col -> checksum )
+        switch ( checksumType() )
         {
         case kcsCRC32:
             return validateCRC32();
@@ -292,14 +294,14 @@ public:
             return RC ( rcDB, rcBlob, rcValidating, rcParam, rcNull );
 
         bsize = KDataBufferBytes ( buffer );
-        if ( bsize < m_blob -> loc . u . blob . size )
+        if ( bsize < getLoc() . u . blob . size )
             return RC ( rcDB, rcBlob, rcValidating, rcData, rcInsufficient );
-        if ( bsize > m_blob -> loc . u . blob . size )
+        if ( bsize > getLoc() . u . blob . size )
             return RC ( rcDB, rcBlob, rcValidating, rcData, rcExcessive );
         if ( bsize == 0 )
             return 0;
 
-        switch ( m_blob -> col -> checksum )
+        switch ( checksumType() )
         {
         case kcsCRC32:
             return validateBufferCRC32 ( buffer -> base, bsize,
@@ -319,12 +321,12 @@ public:
 
         if ( first == NULL || count == NULL )
             rc = RC ( rcDB, rcBlob, rcAccessing, rcParam, rcNull );
-        else if ( m_blob -> loc . id_range == 0 )
+        else if ( getLoc() . id_range == 0 )
             rc = RC ( rcDB, rcBlob, rcAccessing, rcRange, rcEmpty );
         else
         {
-            * first = m_blob -> loc . start_id;
-            * count = m_blob -> loc . id_range;
+            * first = getLoc() . start_id;
+            * count = getLoc() . id_range;
             return 0;
         }
 
@@ -341,8 +343,6 @@ private:
     rc_t validateCRC32 () const
     {
         rc_t rc;
-        const auto col = m_blob -> col;
-
         uint8_t buffer [ 8 * 1024 ];
         size_t to_read, num_read, total, size;
 
@@ -355,8 +355,7 @@ private:
             if ( to_read > sizeof buffer )
                 to_read = sizeof buffer;
 
-            rc = KColumnDataRead ( col -> df . pgsize, col -> df . f,
-                m_blob -> pmorig . pg, total, buffer, to_read, & num_read );
+            rc = dataRead ( total, buffer, to_read, & num_read );
             if ( rc != 0 )
                 return rc;
             if ( num_read == 0 )
@@ -366,8 +365,7 @@ private:
         }
 
         /* read stored checksum */
-        rc = KColumnDataRead ( col -> df . pgsize, col -> df . f,
-                m_blob -> pmorig . pg, size, & cs, sizeof cs, & num_read );
+        rc = dataRead ( size, & cs, sizeof cs, & num_read );
         if ( rc != 0 )
             return rc;
         if ( num_read != sizeof cs )
@@ -385,8 +383,6 @@ private:
     rc_t validateMD5 () const
     {
         rc_t rc;
-        const auto *col = m_blob -> col;
-
         uint8_t buffer [ 8 * 1024 ];
         size_t to_read, num_read, total, size;
 
@@ -402,8 +398,7 @@ private:
             if ( to_read > sizeof buffer )
                 to_read = sizeof buffer;
 
-            rc = KColumnDataRead ( col -> df . pgsize, col -> df . f,
-                m_blob -> pmorig . pg, total, buffer, to_read, & num_read );
+            rc = dataRead ( total, buffer, to_read, & num_read );
             if ( rc != 0 )
                 return rc;
             if ( num_read == 0 )
@@ -413,8 +408,7 @@ private:
         }
 
         /* read stored checksum */
-        rc = KColumnDataRead ( col -> df . pgsize, col -> df . f,
-                m_blob -> pmorig . pg, size, buffer, sizeof digest, & num_read );
+        rc = dataRead ( size, buffer, sizeof digest, & num_read );
         if ( rc != 0 )
             return rc;
         if ( num_read != sizeof digest )

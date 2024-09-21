@@ -2306,7 +2306,7 @@ rc_t CC KArcDirVisit (const KArcDir *self,
 	rc = KArcDirResolvePathNode(self, rcListing, full_path, true, &pnode, &type);
 	if (rc != 0)
 	{
-	    PLOGERR (klogInt, (klogInt, rc, "failed to resolve path $(P) in Visit", "P=%s", full_path));
+	    PLOGERR (klogInfo, (klogInfo, rc, "failed to resolve path $(P) in Visit", "P=%s", full_path));
 	}
 	else
 	{

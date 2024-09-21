@@ -139,7 +139,7 @@ rc_t KRColumnIdx2Whack ( KRColumnIdx2 *self )
     rc_t rc = KFileRelease ( self -> f );
     if ( rc == 0 )
     {
-        int i;
+        uint64_t i;
         KRColumnIdx2BlockCache * cache=(KRColumnIdx2BlockCache *)self -> cstorage.base;
         self -> f = NULL;
         for(i=0;i<self->cstorage.elem_count;i++){
