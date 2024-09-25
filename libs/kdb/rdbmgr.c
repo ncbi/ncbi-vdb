@@ -695,7 +695,7 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *self,
     const char *p_path, va_list args, const struct VPath *vpath,
     bool tryEnvAndAd )
 {
-    rc_t rc;
+    rc_t rc = 0;
     char aTblpath[4096] = "";
     char * tblpath = aTblpath;
     int z = 0;
