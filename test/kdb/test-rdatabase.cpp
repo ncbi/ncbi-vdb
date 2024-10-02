@@ -229,7 +229,7 @@ FIXTURE_TEST_CASE(KRDatabase_GetPath, KDatabase_Fixture)
     REQUIRE_RC( KDatabaseGetPath( m_db, & path ) );
 }
 
-extern "C" rc_t KDBRManagerPathContents(const KDBManager *self, KDBContents const **result, const char *path, ...);
+extern "C" rc_t KDBRManagerPathContents(const KDBManager *self, KDBContents const **result, int, const char *path, ...);
 
 static KDBContents const *findChildNamed(KDBContents const *node, std::string const &name)
 {
@@ -246,7 +246,7 @@ FIXTURE_TEST_CASE(KDBRManager_PathContents_dir, KDatabase_Fixture)
 {
     auto const name = std::string("testdb");
     KDBContents const *contents = NULL;
-    REQUIRE_RC(KDBRManagerPathContents(m_mgr, &contents, "%s", name.c_str()));
+    REQUIRE_RC(KDBRManagerPathContents(m_mgr, &contents, 0, "%s", name.c_str()));
     REQUIRE_NOT_NULL(contents);
     REQUIRE_EQ(name, string(contents->name));
     
@@ -302,7 +302,7 @@ FIXTURE_TEST_CASE(KDBRManager_PathContents_kar, KDatabase_Fixture)
 {
     auto const name = std::string("testdb.kar");
     KDBContents const *contents = NULL;
-    REQUIRE_RC(KDBRManagerPathContents(m_mgr, &contents, "%s", name.c_str()));
+    REQUIRE_RC(KDBRManagerPathContents(m_mgr, &contents, 0, "%s", name.c_str()));
     REQUIRE_NOT_NULL(contents);
     REQUIRE_EQ(name, string(contents->name));
     
