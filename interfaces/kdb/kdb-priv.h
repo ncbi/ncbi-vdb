@@ -112,7 +112,7 @@ KDB_EXTERN rc_t KDBManagerOpenPathTypeRead ( const struct KDBManager * mgr, cons
 /*--------------------------------------------------------------------------
  * KDBManagerPathContents
  */
-KDB_EXTERN rc_t CC KDBManagerPathContents(const KDBManager *self, KDBContents const **result, const char *path, ...);
+KDB_EXTERN rc_t CC KDBManagerPathContents(const KDBManager *self, KDBContents const **result, int levelOfDetail, const char *path, ...);
 
 /*--------------------------------------------------------------------------
  * KDatabase
