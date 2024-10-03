@@ -134,7 +134,7 @@ KCtx ctx_init ( KCtx * new_ctx, ctx_t * ctxp, const KFuncLoc * func_loc )
     /* construct a local copy of ctx_t as return value
        allow compiler to zero trailing members more
        efficiently than by explicit initialization */
-    KCtx local_ctx;
+    KCtx local_ctx = {0};
     local_ctx.rsrc = ctx ->rsrc;
     local_ctx.loc = func_loc;
     local_ctx.caller = ctx;
