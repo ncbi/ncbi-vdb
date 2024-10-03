@@ -353,6 +353,66 @@ FIXTURE_TEST_CASE(KDBRManager_PathContents_kar, KDatabase_Fixture)
 
     KDBContentsWhack(contents);
 }
+
+FIXTURE_TEST_CASE(KDBRManager_PathContents_kar_shallow, KDatabase_Fixture)
+{
+    auto const name = std::string("testdb.kar");
+    KDBContents const *contents = NULL;
+    
+    // Set levelOfDetail to shallow
+    REQUIRE_RC(KDBRManagerPathContents(m_mgr, &contents, 1, "%s", name.c_str()));
+    REQUIRE_NOT_NULL(contents);
+    REQUIRE_EQ(name, string(contents->name));
+    
+    REQUIRE_EQ((int)(contents->fstype | kptAlias), (int)(kptFile | kptAlias));
+    REQUIRE_EQ(contents->levelOfDetail, 1);
+    
+    REQUIRE_EQ((int)contents->dbtype, (int)kptDatabase);
+    // shallow does not check for errors
+    REQUIRE_EQ((int)(contents->attributes & cca_HasErrors), 0);
+
+    auto const db_dummy = findChildNamed(contents, "dummy");
+    REQUIRE_NOT_NULL(db_dummy);
+
+    auto const tbl_SEQUENCE = findChildNamed(contents, "SEQUENCE");
+    REQUIRE_NOT_NULL(tbl_SEQUENCE);
+
+    auto const col_dummy = findChildNamed(tbl_SEQUENCE, "dummy");
+    REQUIRE_NOT_NULL(col_dummy);
+
+    auto const col_READ = findChildNamed(tbl_SEQUENCE, "READ");
+    REQUIRE_NOT_NULL(col_READ);
+
+    // check parent/child and sibling pointers
+    REQUIRE_EQ(db_dummy->parent, contents);
+    REQUIRE_EQ(tbl_SEQUENCE->parent, contents);
+
+    REQUIRE(tbl_SEQUENCE->nextSibling == db_dummy || db_dummy->nextSibling == tbl_SEQUENCE);
+    REQUIRE(tbl_SEQUENCE->prevSibling == db_dummy || db_dummy->prevSibling == tbl_SEQUENCE);
+
+    REQUIRE_EQ(col_dummy->parent, tbl_SEQUENCE);
+    REQUIRE_EQ(col_READ->parent, tbl_SEQUENCE);
+    REQUIRE(col_dummy->nextSibling == col_READ || col_READ->nextSibling == col_dummy);
+    REQUIRE(col_dummy->prevSibling == col_READ || col_READ->prevSibling == col_dummy);
+
+    // check file system types
+    REQUIRE_EQ((int)(db_dummy->fstype | kptAlias), (int)(kptFile | kptAlias));
+    REQUIRE_EQ((int)(col_dummy->fstype | kptAlias), (int)(kptFile | kptAlias));
+    REQUIRE_EQ((int)(tbl_SEQUENCE->fstype | kptAlias), (int)(kptDir | kptAlias));
+    REQUIRE_EQ((int)(col_READ->fstype | kptAlias), (int)(kptDir | kptAlias));
+
+    // check KDB types
+    REQUIRE_EQ((int)tbl_SEQUENCE->dbtype, (int)kptTable);
+    REQUIRE_EQ((int)col_READ->dbtype, (int)kptColumn);
+    // REQUIRE_EQ((int)col_dummy->dbtype, (int)kptFile);
+    // REQUIRE_EQ((int)db_dummy->dbtype, (int)kptFile);
+
+    // shallow does not check for errors
+    REQUIRE_EQ((int)(col_READ->attributes & cca_HasErrors), 0);
+    REQUIRE_EQ((int)(tbl_SEQUENCE->attributes & cca_HasErrors), 0);
+
+    KDBContentsWhack(contents);
+}
 /*
 FIXTURE_TEST_CASE(KDBRManager_PathContents_SRR, KDatabase_Fixture)
 {
