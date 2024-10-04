@@ -435,12 +435,12 @@ KDBRManagerVPathTypeUnreliable ( const KDBManager * self, const char *path, va_l
 }
 
 /// @brief Get Path Contents, from VPath
-static rc_t KDBRManagerPathContentsVP_1(const KDBManager *self, KDBContents const **result, const VPath *vpath, KPathType type, const char *path, va_list args)
+static rc_t KDBRManagerPathContentsVP_1(const KDBManager *self, KDBContents const **result, int levelOfDetail, const VPath *vpath, KPathType type, const char *path, va_list args)
 {
     KDirectory const *dir = NULL;
     rc_t rc = VFSManagerOpenDirectoryReadDecryptUnreliable(self->vfsmgr, &dir, vpath);
     if (rc == 0) {
-        rc = KDBVGetPathContents(result, dir, type, path, args);
+        rc = KDBVGetPathContents(result, levelOfDetail, dir, type, path, args);
         KDirectoryRelease(dir);
     }
     return rc;
@@ -485,35 +485,35 @@ static KPathType VGetPathType(const KDBManager *self, const char *path, va_list 
 }
 
 /// @brief Get Path Contents, from va_list, unchecked
-static rc_t KDBRManagerVPathContents_1(const KDBManager *self, KDBContents const **result, const char *path, va_list args)
+static rc_t KDBRManagerVPathContents_1(const KDBManager *self, KDBContents const **result, int levelOfDetail, const char *path, va_list args)
 {
     rc_t rc = 0;
     VPath const *const vp = makeResolvedVPath(self, path, args, &rc); ///< NB. makes its own copy of args
 
     if (vp != NULL) {
-        rc = KDBRManagerPathContentsVP_1(self, result, vp, VGetPathType(self, path, args), path, args);
+        rc = KDBRManagerPathContentsVP_1(self, result, levelOfDetail, vp, VGetPathType(self, path, args), path, args);
         VPathRelease(vp);
     }
     return rc;
 }
 
 /// @brief Get Path Contents, from va_list
-rc_t KDBRManagerVPathContents(const KDBManager *self, KDBContents const **result, const char *path, va_list args)
+rc_t KDBRManagerVPathContents(const KDBManager *self, KDBContents const **result, int levelOfDetail, const char *path, va_list args)
 {
     if (self == NULL)
         return RC(rcDB, rcMgr, rcAccessing, rcSelf, rcNull);
     if (path == NULL)
         return RC(rcDB, rcMgr, rcAccessing, rcParam, rcNull);
-    return KDBRManagerVPathContents_1(self, result, path, args);
+    return KDBRManagerVPathContents_1(self, result, levelOfDetail, path, args);
 }
 
 /// @brief Get Path Contents, from var_args
-rc_t KDBRManagerPathContents(const KDBManager *self, KDBContents const **result, const char *path, ...)
+rc_t KDBRManagerPathContents(const KDBManager *self, KDBContents const **result, int levelOfDetail, const char *path, ...)
 {
     rc_t rc = 0;
     va_list ap;
     va_start(ap, path);
-    rc = KDBRManagerVPathContents(self, result, path, ap);
+    rc = KDBRManagerVPathContents(self, result, levelOfDetail, path, ap);
     va_end(ap);
     return rc;
 }

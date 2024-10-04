@@ -426,12 +426,12 @@ rc_t CC KDBCmnManagerGetVFSManager ( const KDBManager *self, const struct VFSMan
     }
 }
 
-LIB_EXPORT rc_t CC KDBManagerPathContents(const KDBManager *self, KDBContents const **result, const char *path, ...)
+LIB_EXPORT rc_t CC KDBManagerPathContents(const KDBManager *self, KDBContents const **result, int levelOfDetail, const char *path, ...)
 {
     rc_t rc = 0;
     va_list ap;
     va_start(ap, path);
-    rc = KDBRManagerVPathContents(self, result, path, ap);
+    rc = KDBRManagerVPathContents(self, result, levelOfDetail, path, ap);
     va_end(ap);
     return rc;
 }

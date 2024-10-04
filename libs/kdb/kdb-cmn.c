@@ -366,6 +366,7 @@ static KDBContents *KDBContentsInit(KDBContents *const result
         result->prevSibling = previous;
         result->dbtype = (result->fstype = fstype) ^ (fstype & kptAlias);
         result->attributes = 0;
+        result->levelOfDetail = parent ? parent->levelOfDetail : lod_Full;
     }
     return result;
 }
@@ -515,34 +516,36 @@ static void KDBGetPathContents_Column(KDBContents *node, const struct KDirectory
     uint32_t const bits = KDBGetPathContents_ScanBitsAndSubtype(node, dir, NULL);
 
     if (scanBitsIsColumn(bits)) {
-        struct KRColumn const *colp = NULL;
-        rc_t rc = KRColumnMakeRead((struct KRColumn **)&colp, dir, node->name);
-        if (rc == 0) {
-            bool reversed = false;
+        if (node->levelOfDetail == lod_Full) {
+            struct KRColumn const *colp = NULL;
+            rc_t rc = KRColumnMakeRead((struct KRColumn **)&colp, dir, node->name);
+            if (rc == 0) {
+                bool reversed = false;
 
-            KColumnByteOrder((KColumn const *)colp, &reversed);
-            if (reversed)
-                node->attributes |= cca_ReversedByteOrder;
+                KColumnByteOrder((KColumn const *)colp, &reversed);
+                if (reversed)
+                    node->attributes |= cca_ReversedByteOrder;
 
-            switch (colp->checksum) {
-            case kcsCRC32:
-                node->attributes |= cca_HasChecksum_CRC;
-                break;
-            case kcsMD5:
-                node->attributes |= cca_HasChecksum_MD5;
-                break;
-            case kcsNone:
-                break;
-            default:
-                node->attributes |= cca_HasChecksum_CRC;
-                node->attributes |= cca_HasChecksum_MD5;
-                break;
+                switch (colp->checksum) {
+                case kcsCRC32:
+                    node->attributes |= cca_HasChecksum_CRC;
+                    break;
+                case kcsMD5:
+                    node->attributes |= cca_HasChecksum_MD5;
+                    break;
+                case kcsNone:
+                    break;
+                default:
+                    node->attributes |= cca_HasChecksum_CRC;
+                    node->attributes |= cca_HasChecksum_MD5;
+                    break;
+                }
+                KDirectoryAddRef(dir); ///< KColumnRelease is unbalanced!!!!
+                KColumnRelease((KColumn const *)colp);
             }
-            KDirectoryAddRef(dir); ///< KColumnRelease is unbalanced!!!!
-            KColumnRelease((KColumn const *)colp);
-        }
-        else {
-            node->attributes |= cca_HasErrors;
+            else {
+                node->attributes |= cca_HasErrors;
+            }
         }
         node->dbtype = kptColumn;
     }
@@ -550,32 +553,34 @@ static void KDBGetPathContents_Column(KDBContents *node, const struct KDirectory
 
 static void KDBGetPathContents_Index(KDBContents *result, KDBContents *node, const struct KDirectory *const dir, char const *fmt)
 {
-    struct KFile const *fh = NULL;
-    rc_t rc = KDirectoryOpenFileRead(dir, &fh, fmt, node->name);
-    if (rc == 0) {
-        char buffer[sizeof(KIndexFileHeader_v3_v4)];
-        size_t nread = 0;
-        bool reversed = false;
-        uint32_t type = 0;
+    if (result->levelOfDetail == lod_Full) {
+        struct KFile const *fh = NULL;
+        rc_t rc = KDirectoryOpenFileRead(dir, &fh, fmt, node->name);
+        if (rc == 0) {
+            char buffer[sizeof(KIndexFileHeader_v3_v4)];
+            size_t nread = 0;
+            bool reversed = false;
+            uint32_t type = 0;
 
-        rc = KFileRead(fh, 0, buffer, sizeof(buffer), &nread);
-        KFileRelease(fh);
+            rc = KFileRead(fh, 0, buffer, sizeof(buffer), &nread);
+            KFileRelease(fh);
 
-        rc = KIndexValidateHeader(&reversed, &type, buffer, nread);
-        if (rc)
-            goto HAS_ERRORS;
+            rc = KIndexValidateHeader(&reversed, &type, buffer, nread);
+            if (rc)
+                goto HAS_ERRORS;
 
-        if (type == kitText)
-            node->attributes |= cia_IsTextIndex;
-        else
-            node->attributes |= cia_IsIdIndex;
+            if (type == kitText)
+                node->attributes |= cia_IsTextIndex;
+            else
+                node->attributes |= cia_IsIdIndex;
 
-        if (reversed)
-            node->attributes |= cia_ReversedByteOrder;
-    }
-    else {
+            if (reversed)
+                node->attributes |= cia_ReversedByteOrder;
+        }
+        else {
 HAS_ERRORS:
-        result->attributes |= cca_HasErrors;
+            result->attributes |= cca_HasErrors;
+        }
     }
     node->dbtype = kptIndex;
     result->attributes |= cta_HasIndices;
@@ -735,7 +740,7 @@ static void KDBGetPathContents_Databases(KDBContents *result, const struct KDire
     }
 }
 
-static rc_t KDBVGetPathContents_1(KDBContents const **presult, const struct KDirectory *const dir, KPathType fstype, char const *const path, va_list args)
+static rc_t KDBVGetPathContents_1(KDBContents const **presult, int levelOfDetail, const struct KDirectory *const dir, KPathType fstype, char const *const path, va_list args)
 {
     KDBContents *result = NULL;
     KPathType type = KDirectoryPathType(dir, ".");
@@ -744,6 +749,7 @@ static rc_t KDBVGetPathContents_1(KDBContents const **presult, const struct KDir
     if (result == NULL)
         return RC(rcDB, rcDirectory, rcVisiting, rcMemory, rcExhausted);
 
+    result->levelOfDetail = levelOfDetail;
     if ((type | kptAlias) == (kptDir | kptAlias)) {
         rc_t rc = 0;
         uint32_t const bits = KDBGetPathContents_ScanBitsAndSubtype(result, dir, &rc);
@@ -774,20 +780,20 @@ static rc_t KDBVGetPathContents_1(KDBContents const **presult, const struct KDir
     return 0;
 }
 
-rc_t KDBVGetPathContents(KDBContents const **presult, const struct KDirectory *const dir, KPathType type, char const *const path, va_list args)
+rc_t KDBVGetPathContents(KDBContents const **presult, int levelOfDetail, const struct KDirectory *const dir, KPathType type, char const *const path, va_list args)
 {
     if (presult == NULL || dir == NULL || path == NULL)
         return RC(rcDB, rcDirectory, rcVisiting, rcParam, rcNull);
 
-    return KDBVGetPathContents_1(presult, dir, type, path, args);
+    return KDBVGetPathContents_1(presult, levelOfDetail, dir, type, path, args);
 }
 
-rc_t KDBGetPathContents(KDBContents const **presult, const struct KDirectory *dir, KPathType type, char const *path, ...)
+rc_t KDBGetPathContents(KDBContents const **presult, int levelOfDetail, const struct KDirectory *dir, KPathType type, char const *path, ...)
 {
     rc_t rc = 0;
     va_list ap;
     va_start(ap, path);
-    rc = KDBVGetPathContents(presult, dir, type, path, ap);
+    rc = KDBVGetPathContents(presult, levelOfDetail, dir, type, path, ap);
     va_end(ap);
     return rc;
 }
