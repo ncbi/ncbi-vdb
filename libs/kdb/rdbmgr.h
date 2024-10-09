@@ -55,10 +55,10 @@ rc_t KDBRManagerOpenMetadataReadInt ( const KDBManager *self, struct KRMetadata 
 rc_t KDBRManagerOpenIndexReadInt ( const KDBManager *self, struct KRIndex **idxp, const KDirectory *wd, const char *path );
 
 /// @brief Get Path Contents, from va_list
-rc_t KDBRManagerVPathContents(const KDBManager *self, KDBContents const **result, const char *path, va_list args);
+rc_t KDBRManagerVPathContents(const KDBManager *self, KDBContents const **result, int levelOfDetail, const char *path, va_list args);
 
 /// @brief Get Path Contents, from var_args
-rc_t KDBRManagerPathContents(const KDBManager *self, KDBContents const **result, const char *path, ...);
+rc_t KDBRManagerPathContents(const KDBManager *self, KDBContents const **result, int levelOfDetail, const char *path, ...);
 
 #ifdef __cplusplus
 }

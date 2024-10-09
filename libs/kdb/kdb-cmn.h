@@ -48,8 +48,8 @@ struct KDBManager;
  */
 
 struct KDBContents;
-rc_t KDBVGetPathContents(KDBContents const **result, const struct KDirectory *dir, KPathType type, char const *path, va_list args);
-rc_t KDBGetPathContents(KDBContents const **result, const struct KDirectory *dir, KPathType type, char const *path, ...);
+rc_t KDBVGetPathContents(KDBContents const **result, int levelOfDetail, const struct KDirectory *dir, KPathType type, char const *path, va_list args);
+rc_t KDBGetPathContents(KDBContents const **result, int levelOfDetail, const struct KDirectory *dir, KPathType type, char const *path, ...);
 
 /* PathType
  *  checks type of path
