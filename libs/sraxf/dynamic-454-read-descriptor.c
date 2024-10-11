@@ -35,6 +35,7 @@
 VTRANSFACT_IMPL ( NCBI_SRA__454__dynamic_read_desc, 1, 0, 0 ) ( const void *self,
     const VXfactInfo *info, VFuncDesc *rslt, const VFactoryParams *cp, const VFunctionParams *dp )
 {
+    abort();
     // moved to sra-tools
     return RC ( rcSRA, rcFunction, rcConstructing, rcItem, rcUnsupported );
 }
