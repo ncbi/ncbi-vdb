@@ -32,7 +32,6 @@ set( VDB_LIB_CMN_TARGETS
     kns
     kfg
     krypto
-    ksrch
     kfs
     klib
     judy
