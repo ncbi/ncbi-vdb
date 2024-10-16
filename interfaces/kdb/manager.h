@@ -176,6 +176,11 @@ KDB_EXTERN int CC KDBManagerPathType   ( const KDBManager * self, const char *pa
 KDB_EXTERN int CC KDBManagerVPathType  ( const KDBManager * self, const char *path, va_list args );
 #define KDBManagerPathTypeVPath KDBManagerPathTypeVP
 
+enum KDBContents_LevelOfDetail {
+    lod_Full,                       ///< Open column and index files to check for checksums, byte order, or errors.
+    lod_Lite                        ///< Don't open columns and indices.
+};
+
 typedef struct KDBContents_struct KDBContents;
 
 struct KDBContents_struct {
@@ -187,6 +192,7 @@ struct KDBContents_struct {
     KPathType dbtype;               ///< apparent type from KDB's PoV, like KDBPathType would give
     KPathType fstype;               ///< from KFS's PoV, like KDirectoryPathType would give
     int attributes;
+    int levelOfDetail;              ///< Note, LoD affects which attributes are valid.
 };
 
 enum KDBContents_Common_Attributes {
@@ -215,10 +221,10 @@ enum KDBContents_Database_Attributes {
 };
 
 enum KDBContents_Index_Attributes {
-    cia_HasChecksum_MD5 = 16,
-    cia_IsTextIndex = 32,
-    cia_IsIdIndex = 64,
-    cia_ReversedByteOrder = 128,
+    cia_HasChecksum_MD5 = 2,        ///< NB. this is a synonym for cca_HasMD5_File; the MD5 file is `<index>.md5`
+    cia_IsTextIndex = 16,
+    cia_IsIdIndex = 32,
+    cia_ReversedByteOrder = 64,
 };
 
 void KDBContentsWhack(KDBContents const *self);
