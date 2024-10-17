@@ -169,7 +169,7 @@ char * CC rewrite_arg_as_path ( const wchar_t *arg, bool before_kmane )
 {
     char *utf8;
     bool has_drive = false;
-    size_t i, src_size, dst_size;
+    size_t i, dst_size;
     DWORD len;
 
     /* detect drive or full path */
@@ -248,7 +248,7 @@ char * CC rewrite_arg_as_path ( const wchar_t *arg, bool before_kmane )
 int __cdecl wmain ( int argc, wchar_t *wargv [], wchar_t *envp [] )
 {
     char **argv;
-    int i, status;
+    int i, status = 0;
 
     /* must initialize COM... must initialize COM... */
     /* CoInitializeEx ( NULL, COINIT_MULTITHREADED ); */
