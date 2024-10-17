@@ -164,7 +164,7 @@ rc_t CC illumina_extract_coordinates ( void *self, const VXformInfo *info, int64
     uint32_t coords [ 4 ];
 
     const char *skey = argv [ 0 ] . u . data . base;
-    uint32_t i, count = argv [ 0 ] . u . data . elem_count;
+    uint32_t i, count = (uint32_t) argv [ 0 ] . u . data . elem_count;
     skey += argv [ 0 ] . u . data . first_elem;
 
     common_extract_coordinates ( skey, count, coords );
@@ -212,7 +212,7 @@ rc_t CC abi_extract_coordinates ( void *self, const VXformInfo *info, int64_t ro
     uint32_t coords [ 4 ];
 
     const char *skey = argv [ 0 ] . u . data . base;
-    uint32_t i, count = argv [ 0 ] . u . data . elem_count;
+    uint32_t i, count = (uint32_t) argv [ 0 ] . u . data . elem_count;
     skey += argv [ 0 ] . u . data . first_elem;
 
     common_extract_coordinates ( skey, count, coords );
@@ -257,7 +257,7 @@ rc_t CC _454_extract_coordinates ( void *self, const VXformInfo *info, int64_t r
     KDataBuffer *dst = rslt -> data;
 
     const char *skey = argv [ 0 ] . u . data . base;
-    uint32_t i, count = argv [ 0 ] . u . data . elem_count;
+    uint32_t i, count = (uint32_t) argv [ 0 ] . u . data . elem_count;
     skey += argv [ 0 ] . u . data . first_elem;
 
     /* advance skey to coordinates */

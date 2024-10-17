@@ -111,8 +111,8 @@ rc_t CC tokenize_spot_name_Illumina ( void *self, const VXformInfo *info, int64_
             }
             tok--;
             spot_name_tok[tok].s.token_type = types[tok];
-            spot_name_tok[tok].s.position = c - name;
-            spot_name_tok[tok].s.length = last_end - c;
+            spot_name_tok[tok].s.position = (uint16_t)(c - name);
+            spot_name_tok[tok].s.length = (uint16_t)(last_end - c);
             if( spot_name_tok[tok].s.length == 0 ) {
                 rc = RC(rcSRA, rcFormatter, rcReading, rcName, rcInvalid);
             }
@@ -126,7 +126,7 @@ rc_t CC tokenize_spot_name_Illumina ( void *self, const VXformInfo *info, int64_
     if( rc != 0 ) {
         spot_name_tok[0].s.token_type = nt_unrecognized;
         spot_name_tok[0].s.position = 0;
-        spot_name_tok[0].s.length = argv[0].u.data.elem_count;
+        spot_name_tok[0].s.length = (uint16_t)argv[0].u.data.elem_count;
         rslt->elem_count = 1;
     } else {
         rslt->elem_count = EXPECTED_NUMBER_OF_TOKENS;

@@ -178,7 +178,7 @@ rc_t CC dynamic_read_desc_with_linker ( void *xself, const VXformInfo *info, int
     textlen = (uint32_t)argv[0].u.data.elem_count;
 
     text += argv[1].u.data.elem_count;
-    textlen -= argv[1].u.data.elem_count;
+    textlen -= (uint32_t)argv[1].u.data.elem_count;
 
     agrepflags = AGREP_TEXT_EXPANDED_2NA 
         | AGREP_PATTERN_4NA
