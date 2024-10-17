@@ -50,7 +50,7 @@ rc_t CC tokenize_var_id ( void *data, const VXformInfo *info, int64_t row_id,
 {
     rc_t rc = 0;
     int pos = 0;
-    unsigned const var_id_len = argv[0].u.data.elem_count;
+    unsigned const var_id_len = (unsigned) argv[0].u.data.elem_count;
     struct
     {
         uint16_t token_type;
@@ -79,9 +79,9 @@ rc_t CC tokenize_var_id ( void *data, const VXformInfo *info, int64_t row_id,
             }
         }
     }
-    dst [ 1 ] . position = pos;
-    dst [ 1 ] . length = var_id_len - pos;
-    dst [ 0 ] . length = var_id_len - dst [ 1 ] . length;
+    dst [ 1 ] . position = (uint16_t) pos;
+    dst [ 1 ] . length = (uint16_t) (var_id_len - pos);
+    dst [ 0 ] . length = (uint16_t) (var_id_len - dst [ 1 ] . length);
 
     return rc;
 }

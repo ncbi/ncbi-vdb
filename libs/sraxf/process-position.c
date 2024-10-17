@@ -46,7 +46,7 @@ void process_position ( uint16_t *dst, const uint16_t *src, uint32_t count )
             cur = ( uint8_t ) cur;
         while ( prev > cur )
             cur += 256;
-        dst [ i ] = cur;
+        dst [ i ] = (uint16_t) cur;
     }
 }
 
@@ -57,7 +57,7 @@ rc_t CC process_position1 ( void *self, const VXformInfo *info,
 {
     uint16_t *dst = rslt -> base;
     const uint16_t *src = argv [ 0 ] . u . data . base;
-    uint32_t count = argv [ 0 ] . u . data . elem_count;
+    uint32_t count = (uint32_t) argv [ 0 ] . u . data . elem_count;
 
     dst += rslt -> first_elem;
     src += argv [ 0 ] . u . data . first_elem;
@@ -74,11 +74,11 @@ rc_t CC process_position2 ( void *self, const VXformInfo *info,
 {
     /* position row data */
     const uint16_t *src = argv [ 0 ] . u . data . base;
-    uint32_t count = argv [ 0 ] . u . data . elem_count;
+    uint32_t count = (uint32_t) argv [ 0 ] . u . data . elem_count;
 
     /* filter row data */
     const SRAReadFilter *rd_filt = argv [ 1 ] . u . data . base;
-    uint32_t i, nreads = argv [ 1 ] . u . data . elem_count;
+    uint32_t i, nreads = (uint32_t) argv [ 1 ] . u . data . elem_count;
 
     /* output buffer */
     uint16_t *dst;
@@ -119,11 +119,11 @@ rc_t CC process_position3 ( void *self, const VXformInfo *info,
 {
     /* position row data */
     const uint16_t *src = argv [ 0 ] . u . data . base;
-    uint32_t count = argv [ 0 ] . u . data . elem_count;
+    uint32_t count = (uint32_t) argv [ 0 ] . u . data . elem_count;
 
     /* filter row data */
     const SRAReadFilter *rd_filt = argv [ 1 ] . u . data . base;
-    uint32_t i, nreads = argv [ 1 ] . u . data . elem_count;
+    uint32_t i, nreads = (uint32_t) argv [ 1 ] . u . data . elem_count;
 
     /* signal row data */
     const uint16_t *sig = argv [ 2 ] . u . data . base;
@@ -151,7 +151,7 @@ rc_t CC process_position3 ( void *self, const VXformInfo *info,
     {
         if ( rd_filt [ i ] == SRA_READ_FILTER_REDACTED )
         {
-            uint32_t scount = argv [ 2 ] . u . data . elem_count;
+            uint32_t scount = (uint32_t) argv [ 2 ] . u . data . elem_count;
             for ( i = 0; i < scount; ++ i )
             {
                 if ( sig [ i ] != 0 )
