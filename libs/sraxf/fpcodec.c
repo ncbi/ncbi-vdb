@@ -220,7 +220,7 @@ rc_t CC fp_extend ( void *self, const VXformInfo *info,
         if(tkey.sign==0)
         {
             for (fdst=(float*)dst, i = 0; i < count; ++ i )
-                fdst[i]=ldexpf(dst[i],dexp[i]-tkey.mbits);/*** the highest bit is not a sign ***/
+                fdst[i]=ldexpf((float)dst[i],dexp[i]-tkey.mbits);/*** the highest bit is not a sign ***/
         }
         else
         {
