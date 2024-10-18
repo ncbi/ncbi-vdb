@@ -35,6 +35,7 @@
 
 #include "schema-priv.h"
 #include "linker-priv.h"
+#include "schema-parse.h"
 
 #include <vdb/manager.h>
 #include <vdb/database.h>
@@ -55,6 +56,7 @@
 #include <klib/log.h>
 #include <klib/text.h>
 #include <klib/rc.h>
+#include <klib/symtab.h>
 
 #include <vfs/manager.h> /* VFSManager */
 #include <vfs/manager-priv.h> /* VFSManagerSetResolver */
@@ -1098,4 +1100,22 @@ LIB_EXPORT rc_t CC VDBManagerPreferZeroQuality(VDBManager * self) {
     const char * quality = VDBManagerGetQuality(self);
     fillPrefQual(quality);
     return VDBManagerSetQualityString(self, s_ZeroQuality);
+}
+
+LIB_EXPORT rc_t CC VDBManagerAddFactories ( const VDBManager * self,
+    const VLinkerIntFactory *fact, uint32_t count )
+{
+    KSymTable tbl;
+
+    /* create symbol table with no intrinsic scope */
+    rc_t rc = KSymTableInit ( & tbl, NULL );
+    if ( rc == 0 )
+    {
+        SchemaEnv env;
+        SchemaEnvInit ( & env, EXT_SCHEMA_LANG_VERSION );
+        rc = VLinkerAddFactories ( self -> linker, fact, count, & tbl, NULL );
+        KSymTableWhack ( & tbl );
+    }
+
+    return rc;
 }
