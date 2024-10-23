@@ -296,10 +296,9 @@ LIB_EXPORT rc_t CC KDyldHomeDirectory ( const KDyld *self, const KDirectory **di
         {
             Dl_info info;
             memset ( & info, 0, sizeof info );
-            if ( dladdr ( ( void* ) func, & info ) == 0 )
+            if ( dladdr ( ( void* ) func, & info ) == 0 ) {
                 rc = RC ( rcFS, rcDylib, rcSearching, rcFunction, rcNotFound );
-            else
-            {
+            } else {
                 KDirectory *wd;
                 rc = KDirectoryNativeDir ( & wd );
                 if ( rc == 0 )
@@ -379,20 +378,26 @@ LIB_EXPORT rc_t CC KDyldHomeDirectory ( const KDyld *self, const KDirectory **di
                                     /* exit if no more paths */
                                     if ( path_end == NULL )
                                         break;
-                                }
-                            }
-                        }
+                                } /* for loop */
+                            } /* if ( PATH != NULL ) */
+                        } /* if last_slash == NULL */
 
                         if ( rc == 0 )
                         {
                             char real [ PATH_MAX ];
-                            rc = KSysDirRealPath ( sdir, real, sizeof real, "%.*s"
-                                , ( int ) ( last_slash - dli_fname ), dli_fname );
+                            int len = ( int ) ( last_slash - dli_fname );
+                            rc = KSysDirRealPath ( sdir, real, sizeof real, "%.*s", len, dli_fname );
 
-                            if ( rc == 0 )
+                            if ( rc == 0 ) {
                                 rc = KDirectoryOpenDirRead ( wd, dir, false, "%s", real );
-
-                            DBGMSG(DBG_KFS, DBG_FLAG(DBG_KFS_DIR), ("%s: %R path is '%s'\n", __func__, rc, real));
+                                DBGMSG(DBG_KFS, DBG_FLAG(DBG_KFS_DIR), ("%s: %R path is '%s'\n", __func__, rc, real));
+                            } else {
+                                /* if the client-application has changed the current working dir, the call to
+                                 * KDirectoryOpenDirRead() will fail, in this case we just return 'wd' as 'dir'
+                                 */
+                                rc = KDirectoryAddRef( wd );
+                                *dir = wd;
+                            }
                         }
                     }
 
