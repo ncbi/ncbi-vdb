@@ -441,7 +441,7 @@ LIB_EXPORT rc_t CC SRAMgrSingleFileArchiveExt(const SRAMgr *self, const char* sp
         rc = RC(rcSRA, rcFile, rcConstructing, rcParam, rcNull);
     } else {
         char buf[4096];
-        va_list args;
+        va_list args = NULL;
 
         if( (rc = ResolveTablePath(self, buf, sizeof(buf), spec, args)) == 0 ) {
             const KDBManager* kmgr;
