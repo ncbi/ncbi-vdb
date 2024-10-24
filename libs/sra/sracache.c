@@ -62,19 +62,19 @@ LIB_EXPORT
 bool CC
 SRACacheMetricsLessThan(const SRACacheMetrics* a, const SRACacheMetrics* b)
 {
-    if (a->bytes >= 0 && b->bytes >= 0 && a->bytes > b->bytes)
+    if (a->bytes > b->bytes)
         return false;
-    if (a->elements >= 0 && b->elements >= 0 && a->elements > b->elements)
+    if (a->elements > b->elements)
         return false;
-    if (a->threads >= 0 && b->threads >= 0 && a->threads > b->threads)
+    if (a->threads > b->threads)
         return false;
-    if (a->fds >= 0 && b->fds >= 0 && a->fds > b->fds)
+    if (a->fds > b->fds)
         return false;
         
-    if (a->bytes    >= 0 && b->bytes    >= 0 && a->bytes    == b->bytes && 
-        a->elements >= 0 && b->elements >= 0 && a->elements == b->elements &&
-        a->threads  >= 0 && b->threads  >= 0 && a->threads  == b->threads &&
-        a->fds      >= 0 && b->fds      >= 0 && a->fds      == b->fds)
+    if (a->bytes    == b->bytes &&
+        a->elements == b->elements &&
+        a->threads  == b->threads &&
+        a->fds      == b->fds)
         return false;
         
     return true;
@@ -231,23 +231,23 @@ LIB_EXPORT rc_t CC SRACacheInit(SRACache** self, struct KConfig* kfg)
     else
     {
         uint64_t v;
-#define LOAD_VALUE(target, path, default)                       \
+#define LOAD_VALUE(target_type, target, path, default)          \
         if (rc == 0)                                            \
         {                                                       \
             rc = ReadValue(kfg, path, &v, default);             \
             if ( rc == 0 )                                      \
-                target = v;                                    \
+                target = (target_type)v;                        \
         }
 
-        LOAD_VALUE((*self)->softThreshold.bytes,    "/openserver/thresholds/soft/bytes",    SRACacheThresholdSoftBytesDefault);
-        LOAD_VALUE((*self)->softThreshold.elements, "/openserver/thresholds/soft/elements", SRACacheThresholdSoftElementsDefault);
-        LOAD_VALUE((*self)->softThreshold.threads,  "/openserver/thresholds/soft/threads",  SRACacheThresholdSoftThreadsDefault);
-        LOAD_VALUE((*self)->softThreshold.fds,      "/openserver/thresholds/soft/fds",      SRACacheThresholdSoftFdsDefault);
+        LOAD_VALUE(uint64_t, (*self)->softThreshold.bytes,    "/openserver/thresholds/soft/bytes",    SRACacheThresholdSoftBytesDefault);
+        LOAD_VALUE(uint32_t, (*self)->softThreshold.elements, "/openserver/thresholds/soft/elements", SRACacheThresholdSoftElementsDefault);
+        LOAD_VALUE(uint32_t, (*self)->softThreshold.threads,  "/openserver/thresholds/soft/threads",  SRACacheThresholdSoftThreadsDefault);
+        LOAD_VALUE(uint32_t, (*self)->softThreshold.fds,      "/openserver/thresholds/soft/fds",      SRACacheThresholdSoftFdsDefault);
             
-        LOAD_VALUE((*self)->hardThreshold.bytes,    "/openserver/thresholds/hard/bytes",    SRACacheThresholdHardBytesDefault);
-        LOAD_VALUE((*self)->hardThreshold.elements, "/openserver/thresholds/hard/elements", SRACacheThresholdHardElementsDefault);
-        LOAD_VALUE((*self)->hardThreshold.threads,  "/openserver/thresholds/hard/threads",  SRACacheThresholdHardThreadsDefault);
-        LOAD_VALUE((*self)->hardThreshold.fds,      "/openserver/thresholds/hard/fds",      SRACacheThresholdHardFdsDefault);
+        LOAD_VALUE(uint64_t, (*self)->hardThreshold.bytes,    "/openserver/thresholds/hard/bytes",    SRACacheThresholdHardBytesDefault);
+        LOAD_VALUE(uint32_t, (*self)->hardThreshold.elements, "/openserver/thresholds/hard/elements", SRACacheThresholdHardElementsDefault);
+        LOAD_VALUE(uint32_t, (*self)->hardThreshold.threads,  "/openserver/thresholds/hard/threads",  SRACacheThresholdHardThreadsDefault);
+        LOAD_VALUE(uint32_t, (*self)->hardThreshold.fds,      "/openserver/thresholds/hard/fds",      SRACacheThresholdHardFdsDefault);
 #undef LOAD_VALUE
     
         if (rc == 0)
@@ -384,7 +384,7 @@ ParseAccessionName(const char *acc, String* prefix, uint32_t* key)
     size_t prefLen = 0;
     while (acc[prefLen] != 0 && isalpha(acc[prefLen]))
         ++prefLen;
-    StringInit(prefix, acc, prefLen, prefLen);
+    StringInit(prefix, acc, prefLen, (uint32_t)prefLen);
     
     {   /* the numeric key will be the rest of the accession's name, if fully numeric */
         char *end;
