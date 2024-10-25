@@ -29,7 +29,6 @@
 #include <stdint.h>
 
 #define MASK_PROHIBITED_BITS_INT  ( ~((uint64_t)( (unsigned int)~0 >> 1 )) )
-#define MASK_PROHIBITED_BITS_CHAR  ( ~((uint64_t)( (unsigned char)~0 >> 1 )) )
 #define MASK_PROHIBITED_BITS_INT32  ( ~((uint64_t)( (uint32_t)~0 >> 1 )) )
 #define MASK_PROHIBITED_BITS_INT16  ( ~((uint64_t)( (uint16_t)~0 >> 1 )) )
 #define MASK_PROHIBITED_BITS_INT8  ( ~((uint64_t)( (uint8_t)~0 >> 1 )) )
@@ -39,7 +38,6 @@
 
 /* v can have bits set only for int32_t/size_t [0, 0x7f..ff] */
 #define FITS_INTO_INT(v) ( 0 == ((v) & MASK_PROHIBITED_BITS_INT ) )
-#define FITS_INTO_CHAR(v) ( 0 == ((v) & MASK_PROHIBITED_BITS_CHAR ) )
 #define FITS_INTO_INT32(v) ( 0 == ((v) & MASK_PROHIBITED_BITS_INT32 ) )
 #define FITS_INTO_INT16(v) ( 0 == ((v) & MASK_PROHIBITED_BITS_INT16 ) )
 #define FITS_INTO_INT8(v) ( 0 == ((v) & MASK_PROHIBITED_BITS_INT8 ) )
