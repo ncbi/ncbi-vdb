@@ -164,7 +164,7 @@ LIB_EXPORT rc_t CC SFFReaderHeader(const SFFReader* self, spotid_t spots, char* 
     }
     memset(&h, 0, sizeof(SFFCommonHeader));
     memmove(&h, ".sff\0\0\0\1", 8);
-    h.number_of_reads = spots != 0 ? spots : (self->dad.maxSpotId - me->dad.minSpotId + 1);
+    h.number_of_reads = (uint32_t)( spots != 0 ? spots : (self->dad.maxSpotId - me->dad.minSpotId + 1) );
     h.key_length = (uint16_t)self->key_seq->size;
     h.num_flows_per_read = (uint16_t)self->flow_chars->size;
     h.flowgram_format_code = SFFFormatCodeUI16Hundreths;
@@ -210,16 +210,16 @@ LIB_EXPORT rc_t CC SFFReaderReadHeader(const SFFReader* self, char* data, size_t
         return rc;
     }
     if( self->clip_q_left != NULL && *self->clip_q_left != NULL ) {
-        h.clip_quality_left = **self->clip_q_left;
+        h.clip_quality_left = (uint16_t)**self->clip_q_left;
     }
     if( self->clip_q_right != NULL && *self->clip_q_right != NULL ) {
-        h.clip_quality_right = **self->clip_q_right;
+        h.clip_quality_right = (uint16_t)**self->clip_q_right;
     }
     if( self->clip_adapter_left != NULL && *self->clip_adapter_left != NULL ) {
-        h.clip_adapter_left = **self->clip_adapter_left;
+        h.clip_adapter_left = (uint16_t)**self->clip_adapter_left;
     }
     if( self->clip_adapter_right != NULL && *self->clip_adapter_right != NULL ) {
-        h.clip_adapter_right = **self->clip_adapter_right;
+        h.clip_adapter_right = (uint16_t)**self->clip_adapter_right;
     }
     if( spotname_sz == 0 ) {
         spotname = self->dad.accession;
@@ -259,17 +259,17 @@ LIB_EXPORT rc_t CC SFFReaderReadData(const SFFReader* self, char* data, size_t d
     size_t flows, len, padding;
     uint32_t spot_len;
     /* SFF type defining vars, not used */
-    const uint16_t sff_signal;
-    const uint8_t sff_position;
-    const char sff_bases;
-    const uint8_t sff_quality;
+    const uint16_t sff_signal = 0;
+    const uint8_t sff_position = 0;
+    const char sff_bases = 0;
+    const uint8_t sff_quality = 0;
 
     CHECK_SELF(SFFReader);
     CHECK_SPOT(me->dad);
 
     /* if for some reason READ, QUAL and POSITION rows are uneqaul in size,
        base their length on actual READ size */
-    spot_len = self->read->size / sizeof(INSDC_dna_text);
+    spot_len = (uint32_t)( self->read->size / sizeof(INSDC_dna_text) );
     /* this size if fixed across the file */
     flows = self->flow_chars->size / sizeof(INSDC_dna_text);
 
