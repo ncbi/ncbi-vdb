@@ -37,6 +37,8 @@
 #include <string.h>
 #include <ctype.h>
 
+#include "../klib/int_checks-priv.h"
+
 typedef enum FastqReaderOptions_enum {
     eBaseSpace   = 0x02,
     eColorSpace  = 0x04,
@@ -110,7 +112,8 @@ rc_t FastqReaderInit(const FastqReader* self,
         (rc = SRAReader_FindColData(&self->dad, &FastqReader_master_columns_desc[6], NULL, (const void***)&self->trim_len)) == 0 ) {
         memset(me->q2ascii, '~', sizeof(self->q2ascii));
         for(options = 0; options < 256; options++) {
-            me->q2ascii[options] = options + self->offset;
+            assert ( FITS_INTO_CHAR ( options + self->offset ) );
+            me->q2ascii[options] = (char)(options + self->offset);
             if( self->q2ascii[options] == '~' ) {
                 break;
             }
@@ -462,7 +465,8 @@ LIB_EXPORT rc_t CC FastqReaderQuality(const FastqReader* self, uint32_t readId, 
 
         if ( print_quality_for_cskey ) /* changed Jan 15th 2014 ( a new fastq-variation! ) */
         {
-            *d++ = me->offset;
+            assert ( FITS_INTO_CHAR ( me->offset ) );
+            *d++ = (char) me->offset;
             --read_len;
         }
         /* read end */
