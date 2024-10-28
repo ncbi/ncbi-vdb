@@ -1385,3 +1385,215 @@ const String * VFSManagerExtNoqualOld(const struct VFSManager * self) {
 
     return &xNoqual;
 }
+
+LIB_EXPORT rc_t CC VFSManagerResolve(const VFSManager * self,
+    const char * in, const VPath ** out)
+{
+    rc_t rc = 0;
+    KService * s = NULL;
+    const KSrvResponse * r = NULL;
+    const KSrvRespObj * obj = NULL;
+    KSrvRespObjIterator * it = NULL;
+    KSrvRespFile * file = NULL;
+    KSrvRespFileIterator * fi = NULL;
+    bool ok = false;
+    KSrvRunIterator * ri = NULL;
+    const KSrvRun * run = NULL;
+    String vdbcache;
+
+    if (out == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
+    if (self == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcSelf, rcNull);
+
+    CONST_STRING(&vdbcache, "vdbcache");
+    rc = KServiceMakeWithMgr(&s, self, NULL, NULL);
+    if (rc == 0)
+        rc = KServiceAddId(s, in);
+    if (rc == 0) {
+        const char * ngc = KConfigGetNgcFile();
+        if (ngc != NULL)
+            rc = KServiceSetNgcFile(s, ngc);
+    }
+    if (rc == 0)
+        rc = KServiceNamesQuery(s, eProtocolHttps, &r);
+    if (rc == 0)
+        rc = KSrvResponseMakeRunIterator(r, &ri);
+    if (rc == 0)
+        rc = KSrvRunIteratorNextRun(ri, &run);
+    if (rc == 0 && run != NULL) {
+        const VPath * local = NULL;
+        const VPath * remote = NULL;
+        rc = KSrvRunQuery(run, &local, &remote, NULL, NULL);
+        if (rc == 0) {
+            if (local != NULL) {
+                *out = local;
+                RELEASE(VPath, remote);
+            }
+            else if (remote != NULL) {
+                *out = remote;
+                RELEASE(VPath, local);
+            }
+        }
+        ok = true;
+    }
+    if (rc == 0 && ! ok) {
+        uint32_t n = KSrvResponseLength(r);
+        if (n != 1)
+            rc = RC(rcVFS, rcQuery, rcExecuting, rcRow, rcIncorrect);
+    }
+    if (rc == 0 && !ok)
+        rc = KSrvResponseGetObjByIdx(r, 0, &obj);
+    if (rc == 0 && !ok)
+        rc = KSrvRespObjMakeIterator(obj, &it);
+    while (rc == 0 && !ok) {
+        RELEASE(KSrvRespFile, file);
+        rc = KSrvRespObjIteratorNextFile(it, &file);
+        if (rc == 0) {
+            if (file != NULL)
+                rc = KSrvRespFileMakeIterator(file, &fi);
+            else {
+                rc = RC(
+                    rcVFS, rcQuery, rcResolving, rcName, rcNotFound);
+                break;
+            }
+        }
+        if (rc == 0) {
+            const VPath * tmp = NULL;
+            String type;
+            rc = KSrvRespFileIteratorNextPath(fi, &tmp);
+            if (rc == 0 && tmp != NULL) {
+                rc = VPathGetType(tmp, &type);
+                if (rc == 0)
+                    if (!StringEqual(&type, &vdbcache))
+                        ok = true;
+            }
+            if (ok)
+                *out = tmp;
+            else
+                RELEASE(VPath, tmp);
+        }
+    }
+    RELEASE(KSrvRunIterator, ri);
+    RELEASE(KSrvRun, run);
+    RELEASE(KSrvRespFileIterator, fi);
+    RELEASE(KSrvRespFile, file);
+    RELEASE(KSrvRespObjIterator, it);
+    RELEASE(KSrvRespObj, obj);
+    RELEASE(KService, s);
+    RELEASE(KSrvResponse, r);
+    return rc;
+}
+
+LIB_EXPORT rc_t CC VFSManagerResolveVPathAll(const VFSManager * self,
+    const VPath * in, const VPath ** local,
+    const VPath ** remote, const VPath ** cache)
+{
+    VResolver * resolver = NULL;
+    rc_t rc = VFSManagerGetResolver(self, &resolver);
+    if (rc == 0)
+        rc = VResolverQuery(resolver, 0, in, local, remote, cache);
+    if (rc == 0 && *remote == NULL)
+        // ignore rc
+        VResolverQuery(resolver, 0, in, NULL, remote, cache);
+    RELEASE(VResolver, resolver);
+    return rc;
+}
+
+VFS_EXTERN rc_t CC VFSManagerResolveVPathRemote(const VFSManager * self,
+    const struct VPath * in,
+    const struct VPath ** remote, const struct VPath ** cache)
+{
+    return VFSManagerResolveVPathAll(self, in, NULL, remote, cache);
+}
+
+VFS_EXTERN rc_t CC VFSManagerResolveRemote(const VFSManager * self,
+    const char * in,
+    const struct VPath ** remote, const struct VPath ** cache)
+{
+    return VFSManagerResolveAll(self, in, NULL, remote, cache);
+}
+
+LIB_EXPORT rc_t CC VFSManagerResolveVPathLocal(const VFSManager * self,
+    const VPath * in, const VPath ** out)
+{
+    VResolver * resolver = NULL;
+    rc_t rc = VFSManagerGetResolver(self, &resolver);
+    if (rc == 0)
+        rc = VResolverQuery(resolver, 0, in, out, NULL, NULL);
+    RELEASE(VResolver, resolver);
+    return rc;
+}
+
+LIB_EXPORT rc_t CC VFSManagerResolveLocal(const VFSManager * self,
+    const char * in, const struct VPath ** out)
+{
+    VPath * path = NULL;
+    rc_t rc = VFSManagerMakePath(self, &path, "%s", in);
+    if (rc == 0)
+        rc = VFSManagerResolveVPathLocal(self, path, out);
+    RELEASE(VPath, path);
+    return rc;
+}
+
+LIB_EXPORT rc_t CC VFSManagerResolveAll(const VFSManager * self,
+    const char * in, const VPath ** local,
+    const VPath ** remote, const VPath ** cache)
+{
+    rc_t rc = 0;
+    VPath * path = NULL;
+    if (in == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
+    rc = VFSManagerMakePath(self, &path, "%s", in);
+    if (rc == 0)
+        rc = VFSManagerResolveVPathAll(self, path, local, remote, cache);
+    RELEASE(VPath, path);
+    return rc;
+}
+
+LIB_EXPORT rc_t CC VFSManagerResolveVPathWithCache(const VFSManager * self,
+    const VPath * in, const VPath ** out, const VPath ** cache)
+{
+    rc_t rc = 0;
+    VResolver * resolver = NULL;
+    const VPath * local = NULL;
+    const VPath * remote = NULL;
+    if (out == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
+    *out = NULL;
+    rc = VFSManagerGetResolver(self, &resolver);
+    if (rc == 0)
+        rc = VResolverQuery(resolver, 0, in, &local, &remote, cache);
+    if (rc == 0) {
+        if (local != NULL) {
+            *out = local;
+            RELEASE(VPath, remote);
+        }
+        else if (remote != NULL) {
+            *out = remote;
+            RELEASE(VPath, local);
+        }
+    }
+    RELEASE(VResolver, resolver);
+    return rc;
+}
+
+LIB_EXPORT rc_t CC VFSManagerResolveWithCache(const VFSManager * self,
+    const char * in, const VPath ** out, const VPath ** cache)
+{
+    rc_t rc = 0;
+    VPath * path = NULL;
+    if (in == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
+    rc = VFSManagerMakePath(self, &path, "%s", in);
+    if (rc == 0)
+        rc = VFSManagerResolveVPathWithCache(self, path, out, cache);
+    RELEASE(VPath, path);
+    return rc;
+}
+
+LIB_EXPORT rc_t CC VFSManagerResolveVPath(const VFSManager * self,
+    const struct VPath * in, const struct VPath ** out)
+{
+    return VFSManagerResolveVPathWithCache(self, in, out, NULL);
+}
