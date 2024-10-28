@@ -24,6 +24,8 @@
 *
 */
 
+#include <vfs/extern.h>
+
 #include <kfg/config.h> /* KConfigRelease */
 
 #include <kfs/directory.h> /* KDirectoryNativeDir */
