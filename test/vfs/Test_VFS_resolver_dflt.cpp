@@ -43,9 +43,10 @@
 #include <vfs/manager.h>
 #include <vfs/manager-priv.h> /* VFSManagerMakeFromKfg */
 #include <vfs/resolver.h>
-#include <vfs/path.h>
 
+#include "../../libs/vfs/manager-priv.h" // VFSManagerSdlCacheClear
 #include "../../libs/vfs/resolver-cgi.h" /* RESOLVER_CGI */
+#include "../../libs/vfs/path-priv.h" // VPathEqual
 
 #include <cstdlib>
 #include <fstream>
@@ -127,6 +128,13 @@ FIXTURE_TEST_CASE ( VDB_2936_resolve_local_WGS_without_version, ResolverFixture 
         rc_t rc2 = VResolverQuery ( resolver, eProtocolHttp, query, & local, 0, 0 );
         if ( rc2 == 0 )
         {
+            const VPath * pc2(0);
+            REQUIRE_RC(VFSManagerResolveLocal(vfs, "JBBO01", &pc2));
+            int notequal(-1);
+            REQUIRE_RC(VPathEqual(local, pc2, &notequal));
+            REQUIRE(notequal == 0);
+            REQUIRE_RC(VPathRelease(pc2));
+
             try
             {
                 String path;
@@ -169,6 +177,13 @@ FIXTURE_TEST_CASE ( VDB_2936_resolve_local_WGS_with_version, ResolverFixture )
         rc_t rc2 = VResolverQuery ( resolver, eProtocolHttp, query, & local, 0, 0 );
         if ( rc2 == 0 )
         {
+            const VPath * pc2(0);
+            REQUIRE_RC(VFSManagerResolveLocal(vfs, "JBBO01.1", &pc2));
+            int notequal(-1);
+            REQUIRE_RC(VPathEqual(local, pc2, &notequal));
+            REQUIRE(notequal == 0);
+            REQUIRE_RC(VPathRelease(pc2));
+            
             try
             {
                 String path;
@@ -205,6 +220,13 @@ FIXTURE_TEST_CASE(WGS_with_6letter_prefix, ResolverFixture)
     REQUIRE_RC(VFSManagerMakePath(vfs, &query, "AAAAAA01"));
     REQUIRE_RC(VResolverQuery(resolver, 0, query, &local, &remote, 0));
     REQUIRE(local || remote);
+    const VPath * pc2(NULL);
+    REQUIRE_RC(VFSManagerResolve(vfs, "AAAAAA01", &pc2));
+    int notequal(-1);
+    REQUIRE_RC(VPathEqual(local == NULL ? remote : local,
+        pc2, &notequal));
+    REQUIRE(notequal == 0);
+    REQUIRE_RC(VPathRelease(pc2));
     VPathRelease(query); query = 0;
     VPathRelease(local); local = 0;
     VPathRelease(remote); remote = 0;
@@ -215,6 +237,13 @@ FIXTURE_TEST_CASE(WGS_with_6letter_prefix_and_version, ResolverFixture)
     REQUIRE_RC(VFSManagerMakePath(vfs, &query, "AAAAAA01.1"));
     REQUIRE_RC(VResolverQuery(resolver, 0, query, &local, &remote, 0));
     REQUIRE(local || remote);
+    const VPath * pc2(NULL);
+    REQUIRE_RC(VFSManagerResolve(vfs, "AAAAAA01.1", &pc2));
+    int notequal(-1);
+    REQUIRE_RC(VPathEqual(local == NULL ? remote : local,
+        pc2, &notequal));
+    REQUIRE(notequal == 0);
+    REQUIRE_RC(VPathRelease(pc2));
     VPathRelease(query); query = 0;
     VPathRelease(local); local = 0;
     VPathRelease(remote); remote = 0;
@@ -292,6 +321,16 @@ public:
         {
             if ( VResolverQuery ( resolver, eProtocolHttp, query, & local, 0, 0 ) )
                 throw logic_error ( "ResolverFixtureCustomConfig::Resolve: VResolverQuery failed" );
+            else{
+                const VPath * pc2(0);
+                rc_t rc(VFSManagerResolveLocal(vfs, p_accession.c_str(), &pc2));
+                if (rc) throw rc;
+                int notequal(-1);
+                rc = VPathEqual(local, pc2, &notequal);
+                if (rc) throw rc;
+                if (notequal) throw notequal;
+                VPathRelease(pc2);
+            }
             try
             {
                 result = ToString(local);
@@ -341,6 +380,9 @@ FIXTURE_TEST_CASE(vdbcache_only, ResolverFixture)
 
     REQUIRE_RC(VFSManagerMakePath(vfs, &query, ACC));
     REQUIRE_RC_FAIL(VResolverRemote(resolver, 0, query, &remote));
+    REQUIRE_RC(VFSManagerSdlCacheClear(vfs));
+    const VPath * pc2(0);
+    REQUIRE_RC_FAIL(VFSManagerResolveAll(vfs, ACC, NULL, &pc2, NULL));
 
     putenv(const_cast<char*>(ACC "="));
 #undef ACC
@@ -401,17 +443,39 @@ TEST_CASE(Remote_vrAlwaysEnable_vs_not) {
     const VPath * remote = NULL;
 
     REQUIRE_RC(VResolverQuery(resolver, 0, run, NULL, &remote, NULL));
+    const VPath * pc2(0);
+    int notequal(-1);
+    REQUIRE_RC(VFSManagerResolveAll(vfs,
+        "SRR619505", NULL, &pc2, NULL));
+    REQUIRE_RC(VPathEqual(remote, pc2, &notequal));
+    REQUIRE(notequal == 0);
+    REQUIRE_RC(VPathRelease(pc2));
     REQUIRE_RC(VPathRelease(remote)); remote = NULL;
 
     REQUIRE_RC(VResolverQuery(resolver, 0, refseq, NULL, &remote, NULL));
+    REQUIRE_RC(VFSManagerResolveAll(vfs,
+        "NC_000005.8", NULL, &pc2, NULL));
+    REQUIRE_RC(VPathEqual(remote, pc2, &notequal));
+    REQUIRE(notequal == 0);
+    REQUIRE_RC(VPathRelease(pc2));
     REQUIRE_RC(VPathRelease(remote)); remote = NULL;
 
     VResolverRemoteEnable(resolver, vrAlwaysEnable);
 
     REQUIRE_RC(VResolverQuery(resolver, 0, run, NULL, &remote, NULL));
+    REQUIRE_RC(VFSManagerResolveAll(vfs,
+        "SRR619505", NULL, &pc2, NULL));
+    REQUIRE_RC(VPathEqual(remote, pc2, &notequal));
+    REQUIRE(notequal == 0);
+    REQUIRE_RC(VPathRelease(pc2));
     REQUIRE_RC(VPathRelease(remote)); remote = NULL;
 
     REQUIRE_RC(VResolverQuery(resolver, 0, refseq, NULL, &remote, NULL));
+    REQUIRE_RC(VFSManagerResolveAll(vfs,
+        "NC_000005.8", NULL, &pc2, NULL));
+    REQUIRE_RC(VPathEqual(remote, pc2, &notequal));
+    REQUIRE(notequal == 0);
+    REQUIRE_RC(VPathRelease(pc2));
     REQUIRE_RC(VPathRelease(remote)); remote = NULL;
 
     REQUIRE_RC(VPathRelease(refseq));
@@ -480,6 +544,8 @@ extern "C"
 
     rc_t CC KMain ( int argc, char *argv [] )
     {
+        putenv((char*)"NCBI_VDB_NO_CACHE_SDL_RESPONSE=1");
+
         if (
 0) assert(!KDbgSetString("VFS"));
 
