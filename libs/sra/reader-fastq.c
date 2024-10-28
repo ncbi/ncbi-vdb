@@ -250,8 +250,8 @@ rc_t FastqReader_Header(const FastqReader* self, bool* label,
     int spotname_sz;
     uint32_t spot_len;
     uint32_t num_reads;
-    INSDC_coord_len read_len, read_label_sz = 0;
-    const char* read_label;
+    INSDC_coord_len read_len = 0, read_label_sz = 0;
+    const char* read_label = NULL;
     bool addLabel = label ? *label : (self->dad.options & ePrintLabel);
 
     if( (rc = FastqReader_SpotInfo(self, &spotname, &x, NULL, NULL, &spot_len, &num_reads)) != 0 ) {
