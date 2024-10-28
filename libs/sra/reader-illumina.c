@@ -45,6 +45,8 @@
 #include <string.h>
 #include <math.h>
 
+#include "../klib/int_checks-priv.h"
+
 typedef enum IlluminaReaderOptions_enum {
     eRead = 0x02,
     eQual1 = 0x04,
@@ -184,13 +186,13 @@ LIB_EXPORT rc_t CC IlluminaReader_SpotInfo(const IlluminaReader* self,
             *lane = (self->lane && *self->lane) ? **self->lane : 0;
         }
         if( tile ) {
-            *tile = (self->tile && *self->tile) ? **self->tile : ((self->dad.spot / 10001) + 1);
+            *tile = (INSDC_coord_val)( (self->tile && *self->tile) ? **self->tile : ((self->dad.spot / 10001) + 1) );
         }
         if( x ) {
             *x = (self->x && *self->x) ? **self->x : 0;
         }
         if( y ) {
-            *y = (self->y && *self->y) ? **self->y : self->dad.spot;
+            *y = (INSDC_coord_val)( (self->y && *self->y) ? **self->y : self->dad.spot );
         }
     }
     return rc;
@@ -320,17 +322,17 @@ rc_t IlluminaReader_4floats(const IlluminaReader* self, const float** col_data, 
 #endif
             } else {
                 for(i = 0; rc == 0 && i < spot_len; i++, f += 4) {
-                    int x = sz >= (int)dsize ? 0 : sz;
-                    x = snprintf(&data[x], dsize - x, "\t%.*f %.*f %.*f %.*f", f[0] ? 1 : 0, f[0], f[1] ? 1 : 0, f[1],
+                    int x2 = sz >= (int)dsize ? 0 : sz;
+                    x2 = snprintf(&data[x2], dsize - x2, "\t%.*f %.*f %.*f %.*f", f[0] ? 1 : 0, f[0], f[1] ? 1 : 0, f[1],
                                  f[2] ? 1 : 0,  f[2], f[3] ? 1 : 0,  f[3]);
-                    if( x < 0 ) {
+                    if( x2 < 0 ) {
 #if SNPRINTF_ACTUALLY_WORKED_THE_WAY_YOU_THINK
                         rc = RC(rcSRA, rcString, rcConstructing, rcNoObj, rcUnknown);
 #else
                         rc = RC(rcSRA, rcString, rcConstructing, rcMemory, rcInsufficient);
 #endif
                     }
-                    sz += x;
+                    sz += x2;
                 }
                 if( rc == 0 && written != NULL ) {
                     *written = sz;
@@ -506,7 +508,8 @@ LIB_EXPORT rc_t CC IlluminaReaderQSeq(const IlluminaReader* self, uint32_t readI
             }
             if( spot_group && self->spot_group && self->spot_group->size > 0 ) {
                 sg = self->spot_group->base;
-                sg_sz = self->spot_group->size;
+                assert ( FITS_INTO_INT ( self->spot_group->size ) );
+                sg_sz = (int)self->spot_group->size;
             }
             i = snprintf(data, dsize, "%.*s\t%.*s\t%d\t%d\t%d\t%d\t%.*s\t%d\t",
                 (int)spotname_sz, spotname, (int)runid_sz, runid, lane, tile, x, y, sg_sz, sg, readId > 0 ? readId : 1);
@@ -535,7 +538,7 @@ LIB_EXPORT rc_t CC IlluminaReaderQSeq(const IlluminaReader* self, uint32_t readI
                         if( readId > 0 && (*self->rfilter)[readId - 1] != SRA_READ_FILTER_PASS ) {
                             flt = '0';
                         } else {
-                            for(i = 0; i < nreads; i++) {
+                            for(i = 0; i < (int)nreads; i++) {
                                 if( (*self->rfilter)[i] != SRA_READ_FILTER_PASS ) {
                                     flt = '0';
                                     break;
@@ -543,7 +546,7 @@ LIB_EXPORT rc_t CC IlluminaReaderQSeq(const IlluminaReader* self, uint32_t readI
                             }
                         }
                     }
-                    for(i = 0; i < read_len; i++) {
+                    for(i = 0; i < (int)read_len; i++) {
                         data[sz + i] = b[read_start + i];
                         if( data[sz + i] == 'N' ) {
                             data[sz + i] = '.';
@@ -553,7 +556,7 @@ LIB_EXPORT rc_t CC IlluminaReaderQSeq(const IlluminaReader* self, uint32_t readI
                     data[sz++] = '\t';
                     if( self->qual1 && self->qual1->size ) {
                         const uint8_t* p = self->qual1->base;
-                        for(i = 0; i < read_len; i++) {
+                        for(i = 0; i < (int)read_len; i++) {
                             data[sz + i] = p[read_start + i] + 64;
                         }
                         sz += read_len;
