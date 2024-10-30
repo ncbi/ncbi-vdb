@@ -53,7 +53,7 @@ add_subdirectory(ncbi-vdb)
 if ( SINGLE_CONFIG OR _NCBIVDB_CFG_PACKAGING )
     #
     # Install header files
-    set( HEADERS align  cloud  insdc  kdb  kfg  klib  kproc   ktst  os     search  sra   vfs
+    set( HEADERS align  cloud  insdc  kdb  kfg  klib  kproc   ktst  os sra   vfs
     cc     csra2  ext  kapp   kfc  kfs  kns   krypto  ncbi  vdb  )
 
     foreach( h IN ITEMS ${HEADERS} )
