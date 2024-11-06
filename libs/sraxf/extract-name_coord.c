@@ -160,12 +160,12 @@ rc_t CC extract_name_coordinate ( void *Self, const VXformInfo *info, int64_t ro
 
     /* name string */
     name = argv [ 0 ] . u . data . base;
-    name_len = argv [ 0 ] . u . data . elem_count;
+    name_len = (uint32_t) argv [ 0 ] . u . data . elem_count;
     name += argv [ 0 ] . u . data . first_elem;
 
     /* tokens */
     token = argv [ 1 ] . u . data . base;
-    num_tokens = argv [ 1 ] . u . data . elem_count;
+    num_tokens = (uint32_t) argv [ 1 ] . u . data . elem_count;
     token += argv [ 1 ] . u . data . first_elem;
 
     for ( i = j = 0; i < num_tokens; ++ i )
@@ -184,7 +184,7 @@ rc_t CC extract_name_coordinate ( void *Self, const VXformInfo *info, int64_t ro
             }
         }
 
-        if ( ++ j == self->position )
+        if ( ++ j == (uint32_t)self->position )
         {
             /* check bounds */
             if ( (uint32_t)( token [ i ] . s . position + token [ i ] . s . length ) > name_len )

@@ -219,8 +219,8 @@ static int check_dna(self_t const *self
         {
             unsigned iupac = 0;
             for (j = 0; j < 16; ++j) {
-                char const K[16] = ".ACMGRSVTWYHKDBN";
-                char const k[16] = ".acmgrsvtwyhkdbn";
+                char const K[16] = {'.','A','C','M','G','R','S','V','T','W','Y','H','K','D','B','N'};
+                char const k[16] = {'.','a','c','m','g','r','s','v','t','w','y','h','k','d','b','n'};
                 iupac += count[(int)(K[j])] + count[(int)(k[j])];
             }
             if (iupac != readLen) return badBaseValue; ///< all bases must be one of ACGT or UIPAC ambiguity codes
