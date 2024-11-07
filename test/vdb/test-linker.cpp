@@ -21,17 +21,49 @@
 //  Please cite the author in any work or product based on this material.
 //
 // ===========================================================================
-#include <klib/rc.h>
-
-#include <ktst/unit_test.hpp> // TEST_CASE
 
 #include "WVDB_Fixture.hpp"
+
+#include <bitstr.h>
 
 using namespace std;
 
 TEST_SUITE( LinkerTestSuite )
 
-FIXTURE_TEST_CASE ( CallIntrinsic, WVDB_Fixture )
+class TestLinkerFicture : public WVDB_Fixture
+{
+public:
+    const char* TableName = "tbl";
+    const char* ColumnName = "label";
+
+    void MakeEmptyTable( const string & caseName, const string & schemaText )
+    {
+        MakeDatabase ( caseName, schemaText, "db" );
+        VCursor* cursor = CreateTable ( TableName );
+        THROW_ON_RC ( VCursorOpen ( cursor ) );
+        THROW_ON_RC ( VCursorCommit ( cursor ) );
+        THROW_ON_RC ( VCursorRelease ( cursor ) );
+    }
+
+    string ReadRow()
+    {
+        const VCursor* cursor = OpenTable ( TableName );
+
+        uint32_t column_idx;
+        THROW_ON_RC ( VCursorAddColumn ( cursor, & column_idx, ColumnName ) );
+        THROW_ON_RC ( VCursorOpen ( cursor ) );
+
+        char buf[1024];
+        uint32_t rowLen = 0;
+        THROW_ON_RC( VCursorReadDirect ( cursor, 1, column_idx, 8, buf, sizeof ( buf ), & rowLen ) );
+
+        THROW_ON_RC ( VCursorRelease ( cursor ) );
+
+        return string( buf, rowLen );
+    }
+};
+
+FIXTURE_TEST_CASE ( CallIntrinsic, TestLinkerFicture )
 {
     const string schemaText =
 "function < type T > T echo #1.0 < T val > ( * any row_len ) = vdb:echo;\n"
@@ -44,36 +76,13 @@ FIXTURE_TEST_CASE ( CallIntrinsic, WVDB_Fixture )
 "    table T #1 tbl;\n"
 "};\n"
 ;
-    const char* TableName = "tbl";
-    const char* ColumnName = "label";
 
-    MakeDatabase ( GetName(), schemaText, "db" );
-
-    {
-        VCursor* cursor = CreateTable ( TableName );
-        REQUIRE_RC ( VCursorOpen ( cursor ) );
-        REQUIRE_RC ( VCursorCommit ( cursor ) );
-        REQUIRE_RC ( VCursorRelease ( cursor ) );
-    }
-    {   // reopen
-        const VCursor* cursor = OpenTable ( TableName );
-
-        uint32_t column_idx;
-        REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx, ColumnName ) );
-        REQUIRE_RC ( VCursorOpen ( cursor ) );
-
-        char buf[1024];
-        uint32_t rowLen = 0;
-        REQUIRE_RC( VCursorReadDirect ( cursor, 1, column_idx, 8, buf, sizeof ( buf ), & rowLen ) );
-        REQUIRE_EQ( 5, (int)rowLen );
-        REQUIRE_EQ( string("label"), string( buf, rowLen ) );
-
-        REQUIRE_RC ( VCursorRelease ( cursor ) );
-    }
+    MakeEmptyTable ( GetName(), schemaText );
+    REQUIRE_EQ( string("label"), ReadRow() );
 }
 
 static
-rc_t CC echo_func(
+rc_t CC newecho_func(
                  void *Self,
                  const VXformInfo *info,
                  int64_t row_id,
@@ -82,33 +91,93 @@ rc_t CC echo_func(
                  const VRowData argv[]
 )
 {
-    KDataBufferWhack(rslt->data);
-    rslt->elem_count = 2;
-    rslt->elem_bits = 8;
-    KDataBufferResize ( rslt->data, 2 );
-    ((char*)rslt->data->base)[0]='@';
-    ((char*)rslt->data->base)[1]=0;
-    return 0;
+    rc_t rc = KDataBufferResize ( rslt->data, 2 );
+    if ( rc == 0 )
+    {
+        ((char*)rslt->data->base)[0]='@';
+        ((char*)rslt->data->base)[1]='#';
+        rslt -> elem_count = 2;
+    }
+    return rc;
 }
 
-VTRANSFACT_IMPL ( user_echo, 1, 0, 0 ) ( const void *self, const VXfactInfo *info,
+struct self_t {
+    KDataBuffer val;
+    bitsz_t csize;
+    bitsz_t dsize;
+    int count;
+};
+
+static void CC self_free( void *Self ) {
+    struct self_t *self = (struct self_t *)Self;
+
+    KDataBufferWhack(&self->val);
+    free(self);
+}
+
+rc_t newecho_row_0 ( const VXfactInfo *info,
+    VFuncDesc *rslt, const VFactoryParams *cp )
+{
+    rc_t rc;
+    struct self_t *self = (struct self_t *) malloc ( sizeof *self );
+    if ( self == NULL )
+        return RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted);
+
+    self->dsize = VTypedescSizeof ( & cp->argv[0].desc );
+    self->csize = self->dsize * cp->argv[0].count;
+    self->count = 1;
+
+    rc = KDataBufferMake(&self->val, self->dsize, cp->argv[0].count);
+    if (rc == 0) {
+        bitcpy(self->val.base, 0, cp->argv[0].data.u8, 0, self->csize);
+
+        rslt->self = self;
+        rslt->whack = self_free;
+        rslt->variant = vftRow;
+        rslt->u.rf = newecho_func;
+        return 0;
+    }
+    free(self);
+    return rc;
+}
+
+VTRANSFACT_IMPL ( user_newecho, 1, 0, 0 ) ( const void *self, const VXfactInfo *info,
     VFuncDesc *rslt, const VFactoryParams *cp, const VFunctionParams *dp )
 {
-    rslt->self = nullptr;
-    rslt->whack = nullptr;
-    rslt->variant = vftRow;
-    rslt->u.rf = echo_func;
-    return 0;
+    return newecho_row_0 ( info, rslt, cp );
 }
 
-FIXTURE_TEST_CASE ( OverrideIntrinsic, WVDB_Fixture )
-{   // insert our own version of vdb:echo
+FIXTURE_TEST_CASE ( AddIntrinsic, TestLinkerFicture )
+{   // define user's own schema function
 
-    VTRANSFACT_DECL ( user_echo );
+    VTRANSFACT_DECL ( user_newecho );
 
-    VLinkerIntFactory fact = {  user_echo, "vdb:echo" };
+    VLinkerIntFactory fact = {  user_newecho, "newecho" };
 
-    REQUIRE_RC( VDBManagerAddFactories ( m_mgr,  &fact, 0 ) );
+    REQUIRE_RC( VDBManagerAddFactories ( m_mgr,  &fact, 1 ) );
+
+    const string schemaText =
+"function < type T > T echo #1.0 < T val > ( * any row_len ) = newecho;\n"
+"table T #1 \n"
+"{\n"
+"    column ascii label = < ascii > echo < 'label' > ();\n"
+"};\n"
+"database db #1\n"
+"{\n"
+"    table T #1 tbl;\n"
+"};\n"
+;
+    MakeEmptyTable ( GetName(), schemaText );
+    REQUIRE_EQ( string("@#"), ReadRow() );
+}
+
+FIXTURE_TEST_CASE ( OverrideIntrinsic, TestLinkerFicture )
+{   // VDB-5737: trying to override an intrinsic schema function. will quietly ignore the new definition.
+    VTRANSFACT_DECL ( user_newecho );
+
+    VLinkerIntFactory fact = {  user_newecho, "vdb:echo" }; // ignored since vdb_echo already exists
+
+    REQUIRE_RC( VDBManagerAddFactories ( m_mgr,  &fact, 1 ) );
 
     const string schemaText =
 "function < type T > T echo #1.0 < T val > ( * any row_len ) = vdb:echo;\n"
@@ -121,33 +190,9 @@ FIXTURE_TEST_CASE ( OverrideIntrinsic, WVDB_Fixture )
 "    table T #1 tbl;\n"
 "};\n"
 ;
-    const char* TableName = "tbl";
-    const char* ColumnName = "label";
 
-    MakeDatabase ( GetName(), schemaText, "db" );
-
-    {
-        VCursor* cursor = CreateTable ( TableName );
-        REQUIRE_RC ( VCursorOpen ( cursor ) );
-        REQUIRE_RC ( VCursorCommit ( cursor ) );
-        REQUIRE_RC ( VCursorRelease ( cursor ) );
-    }
-    {   // reopen
-        const VCursor* cursor = OpenTable ( TableName );
-
-        uint32_t column_idx;
-        REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx, ColumnName ) );
-        REQUIRE_RC ( VCursorOpen ( cursor ) );
-
-        char buf[1024];
-        uint32_t rowLen = 0;
-        REQUIRE_RC( VCursorReadDirect ( cursor, 1, column_idx, 8, buf, sizeof ( buf ), & rowLen ) );
-        REQUIRE_EQ( 2, (int)rowLen );
-        REQUIRE_EQ( string("@"), string( buf, rowLen ) );
-
-        REQUIRE_RC ( VCursorRelease ( cursor ) );
-    }
-
+    MakeEmptyTable ( GetName(), schemaText );
+    REQUIRE_EQ( string("label"), ReadRow() );   // same as directly calling vdb:echo
 }
 
 //////////////////////////////////////////// Main
