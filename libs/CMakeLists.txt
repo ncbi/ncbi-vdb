@@ -42,7 +42,6 @@ add_subdirectory(kns)
 add_subdirectory(kproc)
 add_subdirectory(krypto) # TODO: to be replaced with calls to mbedtls
 add_subdirectory(schema)
-add_subdirectory(search)
 add_subdirectory(sra)
 add_subdirectory(sraxf) # same as axf
 add_subdirectory(vdb)
