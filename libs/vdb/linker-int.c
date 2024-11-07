@@ -81,7 +81,7 @@ VTRANSFACT_BUILTIN_IMPL ( vdb_stub_function, 1, 0, 0 ) ( const void *self,
 
     /* pass-through functions MUST have exactly one argument */
     assert(dp->argc == 1);
-    
+
     /* This is where to implement logic to determine if pass-through is wanted
      */
 
@@ -89,7 +89,7 @@ VTRANSFACT_BUILTIN_IMPL ( vdb_stub_function, 1, 0, 0 ) ( const void *self,
     if (shouldPassThru) {
         /* set function pointer to non-NULL */
         rslt -> u . rf = fake_stub_func;
-        
+
         /* this is the magic that causes VFunctionProdRead to pass the Read
          * message on to the first argument of this function */
         rslt -> variant = vftPassThrough;
@@ -241,7 +241,6 @@ rc_t CC VLinkerEnterFactory ( KSymTable *tbl, const SchemaEnv *env,
     return rc;
 }
 
-
 rc_t VLinkerAddFactories ( VLinker *self,
     const VLinkerIntFactory *fact, uint32_t count,
     KSymTable *tbl, const SchemaEnv *env )
@@ -282,7 +281,11 @@ rc_t VLinkerAddFactories ( VLinker *self,
             void *ignore;
             VectorSwap ( & self -> fact, lfact -> id, NULL, & ignore );
             LFactoryWhack ( lfact, NULL );
-            return rc;
+            // if there is an earlier definition, ignore the new one
+            if ( rc != SILENT_RC( rcVDB,rcSchema,rcParsing,rcToken,rcExists ) )
+            {
+                return rc;
+            }
         }
     }
 

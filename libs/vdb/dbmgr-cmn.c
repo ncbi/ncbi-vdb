@@ -1113,7 +1113,13 @@ LIB_EXPORT rc_t CC VDBManagerAddFactories ( const VDBManager * self,
     {
         SchemaEnv env;
         SchemaEnvInit ( & env, EXT_SCHEMA_LANG_VERSION );
-        rc = VLinkerAddFactories ( self -> linker, fact, count, & tbl, NULL );
+
+        /* make intrinsic scope modifiable */
+        rc = KSymTablePushScope ( & tbl, & self -> linker -> scope );
+        if ( rc == 0 )
+        {
+            rc = VLinkerAddFactories ( self -> linker, fact, count, & tbl, NULL );
+        }
         KSymTableWhack ( & tbl );
     }
 
