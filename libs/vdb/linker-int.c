@@ -245,16 +245,15 @@ rc_t VLinkerAddFactories ( VLinker *self,
     const VLinkerIntFactory *fact, uint32_t count,
     KSymTable *tbl, const SchemaEnv *env )
 {
-    uint32_t i;
-    for ( i = 0; i < count; ++ i )
+    rc_t ret = 0;
+    for ( uint32_t i = 0; i < count; ++ i )
     {
-        rc_t rc;
         LFactory *lfact = malloc ( sizeof * lfact );
         if ( lfact == NULL )
             return RC ( rcVDB, rcFunction, rcRegistering, rcMemory, rcExhausted );
 
         /* invoke factory to get description */
-        rc = ( * fact [ i ] . f ) ( & lfact -> desc );
+        rc_t rc = ( * fact [ i ] . f ) ( & lfact -> desc );
         if ( rc != 0 )
         {
             free ( lfact );
@@ -282,14 +281,18 @@ rc_t VLinkerAddFactories ( VLinker *self,
             VectorSwap ( & self -> fact, lfact -> id, NULL, & ignore );
             LFactoryWhack ( lfact, NULL );
             // if there is an earlier definition, ignore the new one
-            if ( rc != SILENT_RC( rcVDB,rcSchema,rcParsing,rcToken,rcExists ) )
+            if ( rc == SILENT_RC( rcVDB,rcSchema,rcParsing,rcToken,rcExists ) )
+            {
+                ret = rc;
+            }
+            else
             {
                 return rc;
             }
         }
     }
 
-    return 0;
+    return ret;
 }
 
 

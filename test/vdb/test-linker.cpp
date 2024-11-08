@@ -177,7 +177,8 @@ FIXTURE_TEST_CASE ( OverrideIntrinsic, TestLinkerFicture )
 
     VLinkerIntFactory fact = {  user_newecho, "vdb:echo" }; // ignored since vdb_echo already exists
 
-    REQUIRE_RC( VDBManagerAddFactories ( m_mgr,  &fact, 1 ) );
+    rc_t rc = VDBManagerAddFactories ( m_mgr,  &fact, 1 );
+    REQUIRE_EQ( SILENT_RC( rcVDB,rcSchema,rcParsing,rcToken,rcExists ), rc );
 
     const string schemaText =
 "function < type T > T echo #1.0 < T val > ( * any row_len ) = vdb:echo;\n"
