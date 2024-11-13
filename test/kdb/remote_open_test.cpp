@@ -43,6 +43,8 @@
 #include <klib/text.h>
 #include <kfg/config.h>
 
+#include "../../libs/vfs/path-priv.h" // VPathEqual
+
 #define ALL
 
 using namespace std;
@@ -185,6 +187,8 @@ public:
 
     void Resolve(const string& p_accession)
     {
+        putenv((char*)"NCBI_VDB_NO_CACHE_SDL_RESPONSE=1");
+
         struct VResolver * resolver;
         if(VFSManagerGetResolver(m_vfsmgr, & resolver))
             throw logic_error ( "RemoteDBFixture::Resolve: VFSManagerGetResolver failed" );
@@ -195,6 +199,20 @@ public:
 
         if (VResolverQuery( resolver, 0, accession, NULL, &m_path, &m_cache))
             throw logic_error ( "RemoteDBFixture::Resolve: VResolverQuery failed" );
+
+        const VPath * pc2(0), *cs2(0);
+        rc_t rc(VFSManagerResolveAll(m_vfsmgr,
+            p_accession.c_str(), NULL, &pc2, &cs2));
+        if (rc) throw rc;
+        int notequal(-1);
+        rc = VPathEqual(m_path, pc2, &notequal);
+        if (rc) throw rc;
+        if (notequal) throw notequal;
+        VPathRelease(pc2);
+        rc = VPathEqual(m_cache, cs2, &notequal);
+        if (rc) throw rc;
+        if (notequal) throw notequal;
+        VPathRelease(cs2);
 
         //cout << ToString(m_path) << endl;
         //cout << ToString(m_cache) << endl;

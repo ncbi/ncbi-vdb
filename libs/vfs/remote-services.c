@@ -43,6 +43,7 @@
 
 #include <kfg/config.h> /* KConfigRelease */
 #include <kfg/kart-priv.h> /* KartItemMake2 */
+#include <kfg/kfg-priv.h> /* KConfigGetNgcFile */
 #include <kfg/properties.h> /* KConfig_Get_User_Accept_Aws_Charges */
 #include <kfg/repository.h> /* KRepositoryMgrRelease */
 
@@ -61,7 +62,6 @@
 #include <vfs/manager-priv.h> /* VFSManagerMakeFromKfg */
 #include <vfs/services.h> /* KServiceMake */
 
-#include "../kfg/kfg-priv.h" /* KConfigGetNgcFile */
 #include "../kns/mgr-priv.h" /* KNSManagerGetCloudLocation */
 #include "json-response.h" /* Response4 */
 #include "jwt.h" /* JwtKartValidateFile */
