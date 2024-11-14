@@ -722,8 +722,6 @@ FIXTURE_TEST_CASE(Alias_Redefinition_Benign_FromParent, AST_Fixture)
 
     string child_source = "alias ts1 ats;";
     REQUIRE_RC ( VSchemaParseText ( child, 0, child_source . c_str (), child_source . size () ) );
-
-    REQUIRE_RC ( VSchemaRelease ( child ) );
 }
 
 FIXTURE_TEST_CASE(Alias_Redefinition_DifferentSource, AST_Fixture)
