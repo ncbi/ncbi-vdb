@@ -31,7 +31,6 @@
 #include <../libs/vdb/schema-priv.h>
 #include <../libs/vdb/schema-parse.h>
 #include <../libs/vdb/dbmgr-priv.h>
-#include <../libs/vdb/linker-priv.h>
 
 #include <kdb/manager.h>
 #include <kdb/meta.h>

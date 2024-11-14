@@ -129,11 +129,21 @@ VDB_EXTERN rc_t CC VDBManagerMakeWithVFSManager ( struct VDBManager const **mgr,
 VDB_EXTERN rc_t CC VDBManagerSetResolver
     ( struct VDBManager const * self, struct VResolver * resolver );
 
-
 /** Unreliable object: do not report occured erros */
 VDB_EXTERN int CC VDBManagerPathTypeUnreliable ( const struct VDBManager * self,
      const char *object, ... );
 
+/** Add  caller-defined schema function factories */
+typedef struct VLinkerIntFactory VLinkerIntFactory;
+struct VTransDesc; // see vdb/xform.h
+struct VLinkerIntFactory
+{
+    rc_t ( CC * f ) ( struct VTransDesc *desc );
+    const char *name;
+};
+
+VDB_EXTERN rc_t CC VDBManagerAddFactories ( const struct VDBManager * self,
+    const VLinkerIntFactory *fact, uint32_t count );
 
 /*--------------------------------------------------------------------------
  * VSchema

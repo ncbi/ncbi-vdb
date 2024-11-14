@@ -40,7 +40,8 @@
 #include <../libs/vdb/schema-priv.h>
 #include <../libs/vdb/schema-parse.h>
 #include <../libs/vdb/dbmgr-priv.h>
-#include <../libs/vdb/linker-priv.h>
+#include <../libs/vdb/column-priv.h>
+#include <../libs/vdb/cursor-priv.h>
 
 #include <sra/sraschema.h> // VDBManagerMakeSRASchema
 
@@ -51,10 +52,6 @@
 
 #include <kfg/config.h>
 
-#include <../../libs/vdb/schema-priv.h>
-#include <../../libs/vdb/schema-parse.h>
-#include <../../libs/vdb/column-priv.h>
-#include <../../libs/vdb/cursor-priv.h>
 
 #include "WVDB_Fixture.hpp"
 
