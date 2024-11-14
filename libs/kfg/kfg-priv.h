@@ -35,8 +35,6 @@ struct KConfig;
 
 extern void add_aws_nodes ( struct KConfig *self );
 
-const char * KConfigGetNgcFile(void);
-
 bool KConfigDisabledUserSettings(void);
 bool KConfigSetUserSettingsDisabled(bool disable);
 

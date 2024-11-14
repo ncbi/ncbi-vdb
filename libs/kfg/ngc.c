@@ -26,6 +26,7 @@
 
 #include <kfg/extern.h>
 
+#include <kfg/kfg-priv.h> /* KConfigGetNgcFile */
 #include <kfg/ngc.h> /* KNgcObjRelease */
 
 #include <klib/rc.h>
@@ -43,7 +44,6 @@
 
 #include <strtol.h>
 
-#include "kfg-priv.h" /* KConfigGetNgcFile */
 #include "ngc-priv.h"
 
 #include <string.h>

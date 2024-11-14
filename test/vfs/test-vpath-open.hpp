@@ -83,6 +83,9 @@ struct Common {
     Common()
         : vdb(0), vfs(0), kdb(0)
     {
+        /* Keep SDL caching - some tests rely on that.
+        putenv((char*)"NCBI_VDB_NO_CACHE_SDL_RESPONSE=1"); */
+
         KConfigDisableUserSettings();
 
         rc_t rc(VDBManagerMake_FUNC(&vdb, 0));
@@ -134,6 +137,7 @@ struct Common {
 
         VPath * pathR(0);
         const VPath * pc(0);
+        const VPath * pc2(0);
         String s;
 
         rc = LegacyVPathMake(&pathR, AccTR);
@@ -142,6 +146,19 @@ struct Common {
         rc = VResolverQuery(r, 0, pathR, NULL, &pc, NULL);
         if (rc != 0)
             throw rc;
+        int notequal(-1);
+        rc = VFSManagerResolveAll(vfs, AccTR, NULL, &pc2, NULL);
+        if (rc != 0)
+            throw rc;
+        rc = VPathEqual(pc, pc2, &notequal);
+        if (rc != 0)
+            throw rc;
+        if (notequal)
+            throw notequal;
+        rc = VPathRelease(pc2);
+        if (rc != 0)
+            throw rc;
+
         rc = VPathRelease(pathR);
         if (rc != 0)
             throw rc;
@@ -157,6 +174,17 @@ struct Common {
         if (rc != 0)
             throw rc;
         rc = VResolverQuery(r, 0, pathR, NULL, &pc, NULL);
+        if (rc != 0)
+            throw rc;
+        rc = VFSManagerResolveAll(vfs, AccDR, NULL, &pc2, NULL);
+        if (rc != 0)
+            throw rc;
+        rc = VPathEqual(pc, pc2, &notequal);
+        if (rc != 0)
+            throw rc;
+        if (notequal)
+            throw notequal;
+        rc = VPathRelease(pc2);
         if (rc != 0)
             throw rc;
         rc = VPathRelease(pathR);
@@ -176,6 +204,17 @@ struct Common {
         rc = VResolverQuery(r, 0, pathR, &pc, NULL, NULL);
         if (rc != 0)
             throw rc;
+        rc = VFSManagerResolveLocal(vfs, AccDL, &pc2);
+        if (rc != 0)
+            throw rc;
+        rc = VPathEqual(pc, pc2, &notequal);
+        if (rc != 0)
+            throw rc;
+        if (notequal)
+            throw notequal;
+        rc = VPathRelease(pc2);
+        if (rc != 0)
+            throw rc;
         rc = VPathRelease(pathR);
         if (rc != 0)
             throw rc;
@@ -191,6 +230,17 @@ struct Common {
         if (rc != 0)
             throw rc;
         rc = VResolverQuery(r, 0, pathR, &pc, NULL, NULL);
+        if (rc != 0)
+            throw rc;
+        rc = VFSManagerResolveLocal(vfs, AccTL, &pc2);
+        if (rc != 0)
+            throw rc;
+        rc = VPathEqual(pc, pc2, &notequal);
+        if (rc != 0)
+            throw rc;
+        if (notequal)
+            throw notequal;
+        rc = VPathRelease(pc2);
         if (rc != 0)
             throw rc;
         rc = VPathRelease(pathR);

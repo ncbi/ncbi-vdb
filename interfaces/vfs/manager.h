@@ -352,6 +352,79 @@ VFS_EXTERN rc_t CC VFSManagerLogNamesServiceErrors(struct VFSManager* self,
 VFS_EXTERN rc_t CC VFSManagerGetLogNamesServiceErrors(VFSManager * self,
     bool * enabled);
 
+/*****************************************************************************/
+/* Resolving of accessions/files/path-s */
+/*****************************************************************************/
+
+/* Resolve, ResolveVPath
+ * Use these functions if you just need to resolve input to VPath
+ *
+ * Input is resolved to local path (if found locally),
+ *      otherwise remote.
+ * If you need to know if a path is local or remote - use VPathIsRemote(out).
+ * N.B. there is no attempt of remote resolution if input is found locally.
+ */
+VFS_EXTERN rc_t CC VFSManagerResolve(const VFSManager * self,
+    const char * in, const struct VPath ** out);
+VFS_EXTERN rc_t CC VFSManagerResolveVPath(const VFSManager * self,
+    const struct VPath * in, const struct VPath ** out);
+
+/* ResolveWithCache, ResolveVPathWithCache
+ * Use these functions:
+ * if local location if enough (if found),
+ * otherwise you need to have remote and cache locations.
+ *
+ * If input if found locally - local path is returned,
+ *      otherwise remote and cache location are returned.
+ *      Returned cache location will be NULL if input is found locally.
+ *      Returned cache location can be NULL if caching is disabled.
+ * If you need to know if a path is local or remote - use VPathIsRemote(out).
+ * N.B. there is no attempt of remote resolution if input is found locally.
+ */
+VFS_EXTERN rc_t CC VFSManagerResolveWithCache(const VFSManager * self,
+    const char * in, const struct VPath ** out, const struct VPath ** cache);
+VFS_EXTERN rc_t CC VFSManagerResolveVPathWithCache(const VFSManager * self,
+    const struct VPath * in,
+    const struct VPath ** out, const struct VPath ** cache);
+
+/* ResolveLocal, ResolveVPathLocal
+ * Use these functions:
+ * if you require input to be found locally.
+ */
+ VFS_EXTERN rc_t CC VFSManagerResolveLocal(const VFSManager * self,
+    const char * in, const struct VPath ** out);
+VFS_EXTERN rc_t CC VFSManagerResolveVPathLocal(const VFSManager * self,
+    const struct VPath * in, const struct VPath ** out);
+
+/* ResolveRemote, ResolveVPathRemote
+ * Use these functions:
+ * if you require input to be found remotely
+ * e.g., for prefetching.
+ *
+ * cache output parameted can be NULL
+ */
+VFS_EXTERN rc_t CC VFSManagerResolveRemote(const VFSManager * self,
+    const char * in,
+    const struct VPath ** remote, const struct VPath ** cache);
+VFS_EXTERN rc_t CC VFSManagerResolveVPathRemote(const VFSManager * self,
+    const struct VPath * in,
+    const struct VPath ** remote, const struct VPath ** cache);
+
+/* ResolveAll, ResolveVPathAll
+ * Use these functions:
+ * if you require to have local and remote resolution
+ * e.g., for reporting.
+ *
+ * cache output parameted can be NULL
+ */
+VFS_EXTERN rc_t CC VFSManagerResolveAll(const VFSManager * self,
+    const char * in, const struct VPath ** local,
+    const struct VPath ** remote, const struct VPath ** cache);
+VFS_EXTERN rc_t CC VFSManagerResolveVPathAll(const VFSManager * self,
+    const struct VPath * in, const struct VPath ** local,
+    const struct VPath ** remote, const struct VPath ** cache);
+
+/*****************************************************************************/
 
 #ifdef __cplusplus
 }

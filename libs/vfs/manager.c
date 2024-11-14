@@ -4083,7 +4083,7 @@ static rc_t VFSManagerResolveAcc( const VFSManager * self,
 }
 
 
-static rc_t VFSManagerResolveLocal( const VFSManager * self,
+static rc_t VFSManagerResolveLocally( const VFSManager * self,
                                     const char * local_path,
                                     struct VPath ** path_to_build )
 {
@@ -4111,7 +4111,7 @@ static rc_t VFSManagerResolvePathOrAcc( const VFSManager * self,
         {
             /* we can now assume that the source is a filesystem-path :
                we build a new VPath and prepend with 'ncbi-file:' */
-            rc = VFSManagerResolveLocal( self, buffer, path_to_build );
+            rc = VFSManagerResolveLocally( self, buffer, path_to_build );
         }
         else if ( resolve_acc )
         {
@@ -4120,7 +4120,7 @@ static rc_t VFSManagerResolvePathOrAcc( const VFSManager * self,
             if ( GetRCState( rc ) == rcNotFound )
             {
                 /* if we were not able to find the source as accession, we assume it is a local path */
-                rc = VFSManagerResolveLocal( self, buffer, path_to_build );
+                rc = VFSManagerResolveLocally( self, buffer, path_to_build );
             }
         }
         else
@@ -4132,7 +4132,7 @@ static rc_t VFSManagerResolvePathOrAcc( const VFSManager * self,
 }
 
 
-static rc_t VFSManagerResolveRemote( const VFSManager * self,
+static rc_t VFSManagerResolveRemotely( const VFSManager * self,
                                      struct VPath ** source,
                                      struct VPath ** path_to_build,
                                      const struct KFile ** remote_file,
@@ -4216,7 +4216,7 @@ LIB_EXPORT rc_t CC VFSManagerResolveSpec ( const VFSManager * self,
 
                 case vpuri_http          : /* !! fall through !! */
                 case vpuri_https:
-                case vpuri_ftp           : rc = VFSManagerResolveRemote( self, &temp, path_to_build, remote_file, local_cache );
+                case vpuri_ftp           : rc = VFSManagerResolveRemotely( self, &temp, path_to_build, remote_file, local_cache );
                                            break;
 
                 case vpuri_ncbi_legrefseq: /* ??? */
