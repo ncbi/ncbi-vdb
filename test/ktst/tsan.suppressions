@@ -1,0 +1,2 @@
+# "signal-unsafe call inside of a signal" whenever we raise a signal from a test case
+signal:KMane
