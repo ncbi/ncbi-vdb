@@ -1086,6 +1086,8 @@ rc_t KSrvResponseGetPath ( const KSrvResponse * self, uint32_t idx,
                                 }
                                 if (found)
                                     break;
+                                else
+                                    RELEASE(VPath, path);
                             }
                         }
                         else
