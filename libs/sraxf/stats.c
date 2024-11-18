@@ -275,7 +275,7 @@ static rc_t group_stats_write_node(KMDataNode *const node,
     return rc;
 }
 
-#define RC_THROW(STMT) do { rc_t const rc = (STMT); if (rc) return rc; } while(0)
+#define RC_THROW(STMT) do { rc_t const rc_throw = (STMT); if (rc_throw) return rc_throw; } while(0)
 
 static rc_t group_stats_write_stats(group_stats_t const *const self,
                                 stats_data_t const *const parent,
