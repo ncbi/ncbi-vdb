@@ -60,6 +60,7 @@
 
 #include <vfs/manager.h> /* VFSManager */
 #include <vfs/manager-priv.h> /* VFSManagerSetResolver */
+#include <vfs/path.h> /* VPathRelease */
 
 #include <sysalloc.h>
 
@@ -651,12 +652,22 @@ LIB_EXPORT rc_t CC VDBManagerGetObjVersion ( const VDBManager *self, ver_t * ver
             const KTable *tbl;
             const KDatabase *db;
             const KMetadata *meta = NULL;
+            VFSManager *vfs = NULL;
+            VPath *vp = NULL;
+            rc = KDBManagerGetVFSManager(self->kmgr, &vfs);
+            if (rc != 0)
+                return rc;
+            rc = VFSManagerMakePath(vfs, &vp, "%s", path);
+            if (rc != 0)
+                return rc;
+            VFSManagerRelease(vfs); vfs = NULL;
 
-            int path_type = KDBManagerPathType ( self -> kmgr, "%s", path ) & ~ kptAlias;
+            int path_type
+                = KDBManagerPathTypeVP ( self -> kmgr, vp ) & ~ kptAlias;
             switch ( path_type )
             {
             case kptDatabase:
-                rc = KDBManagerOpenDBRead ( self -> kmgr, & db, "%s", path );
+                rc = KDBManagerOpenDBReadVPath ( self -> kmgr, & db, vp  );
                 if ( rc == 0 )
                 {
                     rc = KDatabaseOpenMetadataRead ( db, & meta );
@@ -664,7 +675,7 @@ LIB_EXPORT rc_t CC VDBManagerGetObjVersion ( const VDBManager *self, ver_t * ver
                 }
                 break;
             case kptTable:
-                rc = KDBManagerOpenTableRead ( self -> kmgr, & tbl, "%s", path );
+                rc = KDBManagerOpenTableReadVPath ( self -> kmgr, & tbl, vp );
                 if ( rc == 0 )
                 {
                     rc = KTableOpenMetadataRead ( tbl, & meta );
@@ -680,6 +691,8 @@ LIB_EXPORT rc_t CC VDBManagerGetObjVersion ( const VDBManager *self, ver_t * ver
                 rc = RC ( rcVDB, rcMgr, rcAccessing, rcPath, rcIncorrect );
             }
 
+            VPathRelease(vp); vp = NULL;
+ 
             if ( rc == 0 )
             {
                 * version = VDBManagerGetVersFromMeta ( meta, path_type == kptDatabase );
