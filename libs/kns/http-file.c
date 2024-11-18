@@ -747,14 +747,18 @@ rc_t KHttpFileTimedReadLocked ( const KHttpFile * self,
     uint64_t pos, void * buf, size_t bsize, size_t * num_read,
     struct timeout_t * tm, uint32_t * http_status )
 {
-    rc_t rc = KLockAcquire ( self -> lock );
+    rc_t rc = 0;
+    assert(self && num_read && http_status);
+    rc = KLockAcquire(self->lock);
     if ( rc == 0 )
     {
 #if SUPPORT_CHUNKED_READ
         /* moved the request boundary processing here.
            first, check trivial case of read beyond EOF. */
-        if ( pos >= self -> file_size )
+        if ( pos >= self -> file_size ) {
             * num_read = 0;
+            * http_status = 200;
+        }
         else
         {
             /* limit read request to amount available in file */

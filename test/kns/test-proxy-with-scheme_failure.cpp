@@ -41,6 +41,8 @@
 
 #include <ktst/unit_test.hpp> // TEST_SUITE
 
+#include "../../libs/vfs/path-priv.h" // VPathEqual
+
 #define RELEASE( type, obj ) do { rc_t rc2 = type##Release ( obj ); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while ( false )
 
@@ -94,6 +96,12 @@ TEST_CASE ( test ) {
         const VPath * rmt = NULL;
         std::cerr << x << "\n";
         REQUIRE_RC(VResolverQuery(resolver, 0, query, 0, &rmt, 0));
+        const VPath * pc2(0);
+        int notequal(-1);
+        REQUIRE_RC(VFSManagerResolveAll(vfs, "SRR000001", NULL, &pc2, NULL));
+        REQUIRE_RC(VPathEqual(rmt, pc2, &notequal));
+        REQUIRE(notequal == 0);
+        REQUIRE_RC(VPathRelease(pc2));
 
         std::cerr << x << "\n";
 
@@ -137,6 +145,8 @@ extern "C" {
     ver_t CC KAppVersion ( void ) { return 0; }
 
     rc_t CC KMain ( int argc, char * argv [] ) {
+        putenv((char*)"NCBI_VDB_NO_CACHE_SDL_RESPONSE=1");
+     
         //assert(!KDbgSetString("VFS"));
         assert(!KDbgSetString("KNS"));
         return TestProxySchemeSuite ( argc, argv );

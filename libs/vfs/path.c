@@ -2668,6 +2668,20 @@ LIB_EXPORT bool CC VPathFromUri ( const VPath * self )
 }
 
 
+LIB_EXPORT bool CC VPathIsRemote(const VPath * self) {
+    if (self == NULL)
+        return false;
+    else if (VPathFromUri(self))
+        return true;
+    else if (VPathIsFSCompatible(self))
+        return false;
+    else {
+        assert(0);
+        return false;
+    }
+}
+
+
 /* Read*
  *  read the various parts
  *  copies out data into user-supplied buffer
@@ -3938,16 +3952,7 @@ rc_t LegacyVPathResolveAccession ( VFSManager * aMgr,
         rc = VFSManagerMake ( & mgr );
     if ( rc == 0 )
     {
-        VResolver * resolver;
-        rc = VFSManagerGetResolver ( mgr, & resolver );
-        if ( rc == 0 )
-        {
-            rc = VResolverLocal ( resolver, path, ( const VPath** ) new_path );
-            if ( GetRCState ( rc ) == rcNotFound )
-                rc = VResolverRemote ( resolver, 0, path, ( const VPath** ) new_path );
-
-            VResolverRelease ( resolver );
-        }
+        rc = VFSManagerResolveVPath(mgr, path, (const VPath**)new_path);
 
         if (aMgr == NULL)
             VFSManagerRelease ( mgr );

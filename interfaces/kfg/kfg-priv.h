@@ -112,6 +112,7 @@ KConfigParse ( KConfig * self, const char* path, const char * src );
 
 
 bool KRepositoryFromNgc(const struct KRepository * self);
+const char * KConfigGetNgcFile(void);
 
 #ifdef __cplusplus
 }
