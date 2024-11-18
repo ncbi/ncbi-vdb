@@ -1,42 +1,10 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from vdb import *
-
-#these libs are not in the repository, they have to be downloaded an put in place
-#by the user...
-
-lib_262_rd = "./2.6.2/libncbi-vdb.so.2.6.2"
-lib_262_wr = "./2.6.2/libncbi-wvdb.so.2.6.2"
-
-lib_263_rd = "./2.6.3/libncbi-vdb.so.2.6.3"
-lib_263_wr = "./2.6.3/libncbi-wvdb.so.2.6.3"
-
-lib_270_rd = "./2.7.0/libncbi-vdb.so.2.7.0"
-lib_270_wr = "./2.7.0/libncbi-wvdb.so.2.7.0"
-
-lib_280_rd = "./2.8.0/libncbi-vdb.so.2.8.0"
-lib_280_wr = "./2.8.0/libncbi-wvdb.so.2.8.0"
 
 acc = "SRR000001"
 
 if __name__ == '__main__' :
-
-    rd_libs = [ lib_262_rd, lib_263_rd, lib_270_rd, lib_280_rd ]
-    wr_libs = [ lib_262_wr, lib_263_wr, lib_270_wr, lib_280_wr ]
-    
-    for lib in rd_libs :
-        try :
-            mgr = manager( OpenMode.Read, lib )
-            print( "%s\tmgr.Version() = %s\tmgr.writable() = %r"%( lib, mgr.Version(), mgr.writable() ) )
-        except vdb_error as e :
-            print( e )
-
-    for lib in wr_libs :
-        try :
-            mgr = manager( OpenMode.Write, lib )
-            print( "%s\tmgr.Version() = %s\tmgr.writable() = %r"%( lib, mgr.Version(), mgr.writable() ) )
-        except vdb_error as e :
-            print( e )
 
     try :
         # if the lib is omitted, the manager is looking for a lib itself
@@ -44,11 +12,10 @@ if __name__ == '__main__' :
         # if no lib can be found or the lib cannot be loaded, then the constructor throws an exception
         mgr = manager()
 
-        mv = mgr.Version()
-        pt = mgr.PathType( acc )
-        ov = mgr.GetObjVersion( acc )
-        ot = mgr.GetObjModDate( acc )
-        print( "mgr.vers\t%s\t%s\t%s\t Version %s\tObjModDate %s"%( mv, acc, pt, ov, ot ) )
+        print( f"mgr.vers = {mgr.Version()}" )
+        print( f"mgr.PathType( {acc} ) = {mgr.PathType( acc )}" )
+#        print( f"mgr.GetObjVersion( {acc} ) = {mgr.GetObjVersion( acc )}" )
+#        print( f"mgr.GetObjModDate( {acc} ) = {mgr.GetObjModDate( acc )}" )
 
         repo_mgr = mgr.MakeKConfig().MakeRepositoryMgr()
         print( "repo_mgr.HasRemoteAccess ... %r"%( repo_mgr.HasRemoteAccess() ) )

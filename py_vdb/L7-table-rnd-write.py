@@ -1,10 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from vdb import *
 
-#for this to work you need:
-#at $HOME/.ncbi/lib64 : libncbi-wvdb.so
-# --- and ---
 #for included schema to be found:
 #assuming we have vdb.vschema at $HOME/devel/ncbi-vdb/interfaces/vdb_error
 #we need this line in $HOME/.ncbi/user-settings.mkfg:
@@ -49,7 +46,7 @@ if __name__ == '__main__' :
         mgr = manager( OpenMode.Write )
     
         make_table( mgr, schematxt, table_name )
-        #mgr.OpenTable( table_name ).print_rows()
+        mgr.OpenTable( table_name ).print_rows()
 
     except vdb_error as e :
         print( e )
