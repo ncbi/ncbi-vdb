@@ -1886,6 +1886,9 @@ class manager :
         writable = mode == OpenMode.Write
         found = finder.find_at( path, writable ) if path else finder.find( writable )
         if found == None :
+            env = os.environ.get('VDB_LIBRARY_PATH', '')
+            found = finder.find_at( env, writable )
+        if found == None :
             raise vdb_error( 0, "cannot find library", None )
 			
         try :
