@@ -831,7 +831,7 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *self,
 
         if (rc == 0)
         {
-            String str;
+          /*String str;
             const char * p = tblpath;
             if (p == NULL) {
                 if (path2 != NULL) {
@@ -844,9 +844,9 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *self,
                     if (rc == 0)
                         p = str.addr;
                 }
-            }
+            }*/
 
-            rc = KRTableMake ( & tbl, dir, p, self, prerelease );
+            rc = KRTableMake ( & tbl, dir, tblpath, self, prerelease );
             if ( rc == 0 )
             {
                 * tblp = & tbl -> dad;
