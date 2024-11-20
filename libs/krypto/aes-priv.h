@@ -59,15 +59,19 @@ struct AES_KEY
     uint32_t rounds;
 };
 
-
+static
 int AES_set_encrypt_key(const uint8_t *userKey, const uint32_t bits,
                         AES_KEY *key);
 
+static
 int AES_set_decrypt_key(const uint8_t *userKey, const uint32_t bits,
                         AES_KEY *key);
 
+static
 void AES_encrypt(const uint8_t *in, uint8_t *out,
                  const AES_KEY *key);
+
+static
 void AES_decrypt(const uint8_t *in, uint8_t *out,
                  const AES_KEY *key);
 

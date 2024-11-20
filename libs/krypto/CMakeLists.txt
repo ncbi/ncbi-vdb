@@ -45,7 +45,6 @@ set( LIB_SRC
     encfile
     encfilev2
     cipher
-    aes_core
     aes-byte
     cipher-byte
     key
