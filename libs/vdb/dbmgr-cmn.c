@@ -529,9 +529,9 @@ LIB_EXPORT rc_t CC VDBManagerOpenKDBManagerRead ( const VDBManager *self, const 
 static
 ver_t VDBManagerGetLoaderVersFromMeta ( const KMetadata * meta )
 {
+    ver_t result = 0;
     const KMDataNode *node = NULL;
     rc_t rc = KMetadataOpenNodeRead ( meta, & node, "SOFTWARE/loader" );
-    KMDataNodeRelease ( node );
     if ( rc == 0 )
     {
         size_t num_read;
@@ -542,8 +542,6 @@ ver_t VDBManagerGetLoaderVersFromMeta ( const KMetadata * meta )
             char *end, *start = vers_string;
             unsigned long maj = strtoul ( start, & end, 10 );
 
-            KMDataNodeRelease ( node );
-
             if ( end > start && end [ 0 ] == '.' )
             {
                 unsigned long min = strtoul ( start = end + 1, & end, 10 );
@@ -551,12 +549,13 @@ ver_t VDBManagerGetLoaderVersFromMeta ( const KMetadata * meta )
                 {
                     unsigned long rel = strtoul ( start = end + 1, & end, 10 );
                     if ( end > start )
-                        return ( maj << 24 ) | ( min << 16 ) | rel;
+                        result = ( maj << 24 ) | ( min << 16 ) | rel;
                 }
             }
         }
+        KMDataNodeRelease ( node );
     }
-    return 0;
+    return result;
 }
 
 
