@@ -701,7 +701,8 @@ LIB_EXPORT rc_t CC VDBManagerGetObjVersion ( const VDBManager *self, ver_t * ver
             }
         }
 
-        * version = 0;
+        if (version != NULL)
+            * version = 0;
     }
 
     return rc;
