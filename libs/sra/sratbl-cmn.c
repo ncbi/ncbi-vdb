@@ -205,8 +205,8 @@ static
 rc_t VCursor_ReadPseudoMeta(rc_t rc, const VCursor *self,
     const char *name, void *buffer, uint32_t blen, State *state)
 {
-    uint32_t idx = ~0;
-    uint32_t row_len = ~0;
+    uint32_t idx = (uint32_t)~0;
+    uint32_t row_len = (uint32_t)~0;
 
     assert(state);
     state->rc = 0;
@@ -309,7 +309,7 @@ rc_t PseudoMetaFix(PseudoMeta *self)
     else if (self->SPOT_COUNT.state.state == eRead) {
         if (self->MAX_SPOT_ID.state.state != eRead) {
             self->MAX_SPOT_ID.value
-                = self->MIN_SPOT_ID.value + self->SPOT_COUNT.value - 1;
+                = self->MIN_SPOT_ID.value + (uint32_t)(self->SPOT_COUNT.value - 1);
         }
         else if (self->MAX_SPOT_ID.value >= self->MIN_SPOT_ID.value) {
 	    uint32_t delta = (uint32_t) (self->SPOT_COUNT.value - (self->MAX_SPOT_ID.value - self->MIN_SPOT_ID.value + 1)); /** SPOT_COUNT is 64 bit, but M*_SPOT_ID is 32; anticipate rollover **/
@@ -738,7 +738,7 @@ LIB_EXPORT rc_t CC SRATableGetSpotId ( const SRATable *self,
                             rc = VCursorAddColumn(self->curs, &y_idx, "Y");
                             if(rc == 0 || GetRCState(rc) == rcExists){
                                 spotid_t rowid;
-                                for(rowid = out.start_id; rowid < out.start_id + out.id_count; rowid ++){
+                                for(rowid = out.start_id; (uint64_t)rowid < out.start_id + out.id_count; rowid ++){
                                     int32_t x,y;
                                     rc = VCursorReadDirect(self->curs,rowid,x_idx,32,&x,1, &len);
                                     if(rc == 0){

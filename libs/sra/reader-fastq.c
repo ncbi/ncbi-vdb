@@ -37,6 +37,7 @@
 #include <string.h>
 #include <ctype.h>
 
+
 typedef enum FastqReaderOptions_enum {
     eBaseSpace   = 0x02,
     eColorSpace  = 0x04,
@@ -110,7 +111,7 @@ rc_t FastqReaderInit(const FastqReader* self,
         (rc = SRAReader_FindColData(&self->dad, &FastqReader_master_columns_desc[6], NULL, (const void***)&self->trim_len)) == 0 ) {
         memset(me->q2ascii, '~', sizeof(self->q2ascii));
         for(options = 0; options < 256; options++) {
-            me->q2ascii[options] = options + self->offset;
+            me->q2ascii[options] = (char)(options + self->offset);
             if( self->q2ascii[options] == '~' ) {
                 break;
             }
@@ -249,8 +250,8 @@ rc_t FastqReader_Header(const FastqReader* self, bool* label,
     int spotname_sz;
     uint32_t spot_len;
     uint32_t num_reads;
-    INSDC_coord_len read_len, read_label_sz = 0;
-    const char* read_label;
+    INSDC_coord_len read_len = 0, read_label_sz = 0;
+    const char* read_label = NULL;
     bool addLabel = label ? *label : (self->dad.options & ePrintLabel);
 
     if( (rc = FastqReader_SpotInfo(self, &spotname, &x, NULL, NULL, &spot_len, &num_reads)) != 0 ) {
@@ -462,7 +463,7 @@ LIB_EXPORT rc_t CC FastqReaderQuality(const FastqReader* self, uint32_t readId, 
 
         if ( print_quality_for_cskey ) /* changed Jan 15th 2014 ( a new fastq-variation! ) */
         {
-            *d++ = me->offset;
+            *d++ = (char) me->offset;
             --read_len;
         }
         /* read end */

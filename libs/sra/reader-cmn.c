@@ -329,7 +329,7 @@ rc_t SRAReader_SpotInfo( const SRAReader* self, const char** spotname, size_t* s
         *spot_len = **self->spot_len;
     }
     if( num_reads ) {
-        *num_reads = (*self->read_len_size) / sizeof(**self->read_len);
+        *num_reads = (uint32_t)((*self->read_len_size) / sizeof(**self->read_len));
     }
     return 0;
 }
