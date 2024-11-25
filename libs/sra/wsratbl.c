@@ -340,7 +340,7 @@ LIB_EXPORT rc_t CC SRATableOpenColumnWrite ( SRATable *self,
 {
     rc_t rc;
     SRAColumn *rslt;
-    uint32_t ndx, cndx;
+    uint32_t ndx, cndx = 0;
     
     if (self == NULL)
         return RC(RC_MODULE, RC_TARGET, rcOpening, rcSelf, rcNull);

@@ -533,11 +533,13 @@ rc_t KDBManagerVOpenDBReadInt ( const KDBManager *self, const KDatabase **dbp,
                                 const char *path, va_list args,
                                 const VPath *vpath )
 {
+    bool tryEnvAndAd = true;
     rc_t rc = 0;
 
     /* MUST use vsnprintf because the documented behavior of "path"
        is that of stdc library's printf, not vdb printf */
-    char dbpath [ 4096 ] = "";
+    char aDbpath [ 4096 ] = "";
+    char * dbpath = aDbpath;
 
     if ( vpath == NULL )
     {
@@ -546,18 +548,68 @@ rc_t KDBManagerVOpenDBReadInt ( const KDBManager *self, const KDatabase **dbp,
       /*( args == NULL ) ?
         snprintf ( dbpath, sizeof dbpath, "%s", path ):*/
       if ( path != NULL )
-        z = vsnprintf ( dbpath, sizeof dbpath, path, args );
-      if ( z < 0 || ( size_t ) z >= sizeof dbpath )
+        z = vsnprintf ( aDbpath, sizeof aDbpath, path, args );
+      if ( z < 0 || ( size_t ) z >= sizeof aDbpath )
         rc = RC ( rcDB, rcMgr, rcOpening, rcPath, rcExcessive );
     }
 
     if ( rc == 0 )
     {
         const KDirectory *dir;
+        const VPath *path2 = NULL;
+
+        {
+            VPath *path = NULL;
+            if (vpath == NULL)
+                rc = VFSManagerMakePath(self->vfsmgr, &path, "%s", aDbpath);
+            if (rc == 0) {
+                const String * str = NULL;
+                if (tryEnvAndAd)
+                    VFSManagerCheckEnvAndAd(self->vfsmgr,
+                        path != NULL ? path : vpath, &path2);
+                if (path2 != NULL) {
+                    rc = VPathMakeString(path2, &str);
+                    if (rc == 0) {
+                        assert(str);
+                        dbpath = calloc(1, str->size + 1);
+                        if (dbpath != NULL)
+                            string_printf(dbpath, str->size + 1, NULL,
+                                "%S", str);
+                        StringWhack(str);
+                    }
+                }
+                else {
+                    rc = VPathMakeString(path != NULL ? path : vpath, &str);
+                    if (rc == 0) {
+                        assert(str);
+                        dbpath = calloc(1, str->size + 1);
+                        if (dbpath != NULL)
+                            string_printf(dbpath, str->size + 1, NULL,
+                                "%S", str);
+                        StringWhack(str);
+                    }
+                }
+                VPathRelease(path);
+            }
+        }
 
         /* open the directory if its a database */
-        rc = KDBManagerOpenPathTypeRead ( self, wd, dbpath, &dir, kptDatabase,
-            NULL, try_srapath, vpath );
+        rc = KDBManagerOpenPathTypeRead ( self, wd, dbpath, &dir,
+            kptDatabase, NULL, try_srapath, path2 != NULL ? path2 : vpath );
+
+        if (vpath != NULL && path2 != NULL) {
+            rc_t r = VPathCopyDirectoryIfEmpty((VPath*)vpath, path2);
+            if (rc == 0 && r != 0)
+                rc = r;
+        }
+
+        {
+            rc_t r = VPathRelease(path2);
+            if (rc == 0 && r != 0)
+                rc = r;
+            path2 = NULL;
+        }
+
         if ( rc == 0 )
         {
             const KDatabase *db;
@@ -573,6 +625,9 @@ rc_t KDBManagerVOpenDBReadInt ( const KDBManager *self, const KDatabase **dbp,
             KDirectoryRelease ( dir );
         }
     }
+    if (aDbpath != dbpath)
+        free(dbpath);
+
     return rc;
 }
 
@@ -776,7 +831,7 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *self,
 
         if (rc == 0)
         {
-            String str;
+          /*String str;
             const char * p = tblpath;
             if (p == NULL) {
                 if (path2 != NULL) {
@@ -789,9 +844,9 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *self,
                     if (rc == 0)
                         p = str.addr;
                 }
-            }
+            }*/
 
-            rc = KRTableMake ( & tbl, dir, p, self, prerelease );
+            rc = KRTableMake ( & tbl, dir, tblpath, self, prerelease );
             if ( rc == 0 )
             {
                 * tblp = & tbl -> dad;
