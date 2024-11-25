@@ -524,12 +524,12 @@ rc_t CC stats_data_trigger(void *data, const VXformInfo *info, int64_t row_id,
         col_READ_TYPE,
         col_SPOT_GROUP
     };
-    unsigned const spot_len = SAFE_COUNT(col_READ);
-    unsigned const nreads = SAFE_COUNT(col_READ_LEN);
+    unsigned const spot_len = (unsigned)SAFE_COUNT(col_READ);
+    unsigned const nreads = (unsigned)SAFE_COUNT(col_READ_LEN);
     BIND_COLUMN(col_READ_LEN, INSDC_coord_len, read_len);
     BIND_COLUMN(col_READ_TYPE, INSDC_SRA_xread_type, read_type);
     BIND_COLUMN(col_SPOT_GROUP, char, grp);
-    unsigned const len = SAFE_COUNT(col_SPOT_GROUP);
+    unsigned const len = (unsigned)SAFE_COUNT(col_SPOT_GROUP);
 
     return stats_data_update(data, row_id, spot_len, bioSpotLength(nreads, read_type, read_len), 0, grp, len);
 }
@@ -545,13 +545,13 @@ rc_t CC stats_data_cmp_trigger(void *data, const VXformInfo *info, int64_t row_i
         col_READ_TYPE,
         col_SPOT_GROUP
     };
-    unsigned const cmp_spot_len = SAFE_COUNT(col_CMP_READ);
-    unsigned const spot_len = SAFE_COUNT(col_QUALITY);
-    unsigned const nreads = SAFE_COUNT(col_READ_LEN);
+    unsigned const cmp_spot_len = (unsigned)SAFE_COUNT(col_CMP_READ);
+    unsigned const spot_len = (unsigned)SAFE_COUNT(col_QUALITY);
+    unsigned const nreads = (unsigned)SAFE_COUNT(col_READ_LEN);
     BIND_COLUMN(col_READ_LEN, INSDC_coord_len, read_len);
     BIND_COLUMN(col_READ_TYPE, INSDC_SRA_xread_type, read_type);
     BIND_COLUMN(col_SPOT_GROUP, char, grp);
-    unsigned const len = SAFE_COUNT(col_SPOT_GROUP);
+    unsigned const len = (unsigned)SAFE_COUNT(col_SPOT_GROUP);
 
     return stats_data_update(data, row_id, spot_len, bioSpotLength(nreads, read_type, read_len), cmp_spot_len, grp, len);
 }
@@ -567,13 +567,13 @@ rc_t CC stats_data_cmpf_trigger(void *data, const VXformInfo *info, int64_t row_
         col_READ_TYPE,
         col_SPOT_GROUP
     };
-    unsigned const cmp_spot_len = SAFE_COUNT(col_CMP_READ);
-    unsigned const nreads = SAFE_COUNT(col_READ_LEN);
+    unsigned const cmp_spot_len = (unsigned)SAFE_COUNT(col_CMP_READ);
+    unsigned const nreads = (unsigned)SAFE_COUNT(col_READ_LEN);
     BIND_COLUMN(col_SPOT_LEN, uint32_t, spot_len);
     BIND_COLUMN(col_READ_LEN, INSDC_coord_len, read_len);
     BIND_COLUMN(col_READ_TYPE, INSDC_SRA_xread_type, read_type);
     BIND_COLUMN(col_SPOT_GROUP, char, grp);
-    unsigned const len = SAFE_COUNT(col_SPOT_GROUP);
+    unsigned const len = (unsigned)SAFE_COUNT(col_SPOT_GROUP);
 
     return stats_data_update(data, row_id, spot_len[0], bioSpotLength(nreads, read_type, read_len), cmp_spot_len, grp, len);
 }
@@ -586,9 +586,9 @@ rc_t CC stats_data_cmpb_trigger(void *data, const VXformInfo *info, int64_t row_
         col_CMP_READ,
         col_SPOT_GROUP
     };
-    unsigned const cmp_spot_len = SAFE_COUNT(col_CMP_READ);
+    unsigned const cmp_spot_len = (unsigned)SAFE_COUNT(col_CMP_READ);
     BIND_COLUMN(col_SPOT_GROUP, char, phys_grp);
-    unsigned const phys_len = SAFE_COUNT(col_SPOT_GROUP);
+    unsigned const phys_len = (unsigned)SAFE_COUNT(col_SPOT_GROUP);
     stats_data_t *const self = data;
     char const *grp = phys_grp;
     unsigned len = phys_len;
@@ -616,8 +616,8 @@ rc_t CC stats_data_csra2_trigger(void *data, const VXformInfo *info, int64_t row
         col_READ,
         col_SPOT_GROUP
     };
-    unsigned const read_len = SAFE_COUNT(col_READ);
-    unsigned const len = SAFE_COUNT(col_SPOT_GROUP);
+    unsigned const read_len = (unsigned)SAFE_COUNT(col_READ);
+    unsigned const len = (unsigned)SAFE_COUNT(col_SPOT_GROUP);
     BIND_COLUMN(col_SPOT_GROUP, char, grp);
 
     return stats_data_update(data, row_id, read_len, read_len, 0, grp, len);
