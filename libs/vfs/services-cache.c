@@ -2810,6 +2810,7 @@ rc_t KSrvRunQuery(const KRun * self, const VPath ** local,
                         rc = KSrvRespFileIteratorNextPath(fi, &path);
                     if (rc == 0)
                         rc = VPathAttachVdbcache((VPath*)*remote, path);
+                    RELEASE(VPath, path);
                     RELEASE(KSrvRespFileIterator, fi);
                 }
                 if (cache != NULL && *cache != NULL) {
@@ -2817,6 +2818,7 @@ rc_t KSrvRunQuery(const KRun * self, const VPath ** local,
                     if (rc == 0)
                         rc = VPathAttachVdbcache((VPath*)*cache, path);
                 }
+                RELEASE(KSrvRespFile, vcFile);
             }
             RELEASE(KSrvRespObjIterator, it);
             RELEASE(KSrvRespObj, obj);
