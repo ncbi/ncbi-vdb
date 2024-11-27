@@ -22,25 +22,29 @@
 #
 # ===========================================================================
 
-set ( UNIX_SRC unix/args-conv-os.c unix/sysmain.c )
+set ( UNIX_SRC unix/args-conv-os.c )
 # FIXME: Maybe mac/ram.c should be moved to bsd/ram.c. FreeBSD, mac, and
 # NetBSD are the same, except for the specific sysctl variable.
 set ( BSD_SRC ${UNIX_SRC} mac/ram.c )
 set ( LINUX_SRC ${UNIX_SRC} linux/ram.c )
 set ( MAC_SRC ${UNIX_SRC} mac/ram.c )
-set ( WIN_SRC win/args-conv-os.c win/ram.c win/sysmain.c )
+set ( WIN_SRC win/args-conv-os.c win/ram.c )
 
 if( "bsd" STREQUAL ${OS} )
     set ( OS_SPECIFIC_SRC ${BSD_SRC} )
+    set ( SYSMAIN unix/sysmain.c )
 elseif( "linux" STREQUAL ${OS} )
     set ( OS_SPECIFIC_SRC ${LINUX_SRC} )
+    set ( SYSMAIN unix/sysmain.c )
 elseif( "mac" STREQUAL ${OS} )
     set ( OS_SPECIFIC_SRC ${MAC_SRC} )
+    set ( SYSMAIN unix/sysmain.c )
 elseif ( "windows" STREQUAL ${OS} )
     set ( OS_SPECIFIC_SRC ${WIN_SRC} )
+    set ( SYSMAIN win/sysmain.c )
 endif()
 
-set( KAPP_CMN
+set( APP_CMN
     args
     args-conv
     tokenizer
@@ -49,7 +53,8 @@ set( KAPP_CMN
 
 set( KAPP_SRC
     main
-    ${KAPP_CMN}
+    ${SYSMAIN}
+    ${APP_CMN}
 )
 
 set( SRC ${KAPP_SRC} ${OS_SPECIFIC_SRC} )
@@ -58,5 +63,8 @@ GenerateStaticLibs( kapp "${SRC}" )
 ExportStatic( kapp true )
 
 GenerateStaticLibsWithDefs( kapp-norsrc "${SRC}" "NO_KRSRC=1" )
+
+GenerateStaticLibs( vdbapp "${APP_CMN};${OS_SPECIFIC_SRC}" )
+ExportStatic( vdbapp true )
 
 add_compile_definitions (__mod__="libs/kapp")

@@ -33,7 +33,9 @@ endif()
 
 add_subdirectory(kfc)
 
-set( COMMON_LINK_LIBRARIES ktst kapp )
+set( COMMON_LINK_LIBRARIES ktst
+#kapp
+)
 set( ADDITIONAL_LIBS "" )
 
 # for the tests that link against libncbi-[w]vdb

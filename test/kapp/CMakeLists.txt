@@ -31,3 +31,5 @@ endif()
 add_compile_definitions( __mod__="test/kapp" )
 
 AddExecutableTest( Test_KAPP_args "kapp-test" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" )
+
+AddExecutableTest( Test_VDBAPP "vdbapp-test" "ktst;ncbi-vdb;${ADDITIONAL_LIBS}" )
