@@ -700,6 +700,11 @@ rc_t Response4InitSdl(Response4 * self, const char * input, const char * phid)
         }
     }
 
+    name = "NCBI-PHID";
+    value = KJsonObjectGetMember(object, name);
+    if (value != NULL && phid == NULL)
+        rc = StrSet(&phid, value, name, &path);
+
     name = "result";
     value = KJsonObjectGetMember(object, name);
     if (value == NULL) {
@@ -792,6 +797,10 @@ rc_t Response4MakeSdlExt(Response4 ** self, const struct VFSManager * vfs,
         r = *self;
 
     rc = Response4InitSdl(r, input, phid);
+
+/*  if (rc == SILENT_RC(rcCont, rcNode, rcParsing, rcFormat, rcUnrecognized))
+        PLOGERR(klogInt, (klogInt, rc,
+            "Received '$(json)'.", "json=%s", input)); */
 
     if (*self == NULL) {
         if (rc != 0)
