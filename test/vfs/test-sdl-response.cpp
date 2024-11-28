@@ -434,10 +434,12 @@ TEST_SUITE ( TestResolverSdl )
 extern "C" {
     ver_t CC KAppVersion ( void ) { return 0; }
     rc_t CC KMain ( int argc, char * argv [] ) {
-if (
-0 ) assert ( ! KDbgSetString ( "VFS" ) );
-if (
-0 ) assert ( ! KDbgSetString ( "VFS-JSON" ) );
+        if (
+0 )
+            assert ( ! KDbgSetString ( "VFS" ) );
+        if (
+0 )
+            assert ( ! KDbgSetString ( "VFS-JSON" ) );
     KConfigDisableUserSettings();
     return TestSdlResolver( argc, argv );
     }
