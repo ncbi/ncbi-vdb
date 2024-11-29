@@ -1042,6 +1042,7 @@ rc_t KSrvResponseGetPath ( const KSrvResponse * self, uint32_t idx,
             return rc;
         rc = KSrvRespObjGetError(obj, & rx, & code, & msg);
         if (rx != 0) {
+            RELEASE(KSrvRespObj, obj);
             if (error == NULL)
                 return RC(rcVFS, rcQuery, rcExecuting, rcError, rcExists);
             else
