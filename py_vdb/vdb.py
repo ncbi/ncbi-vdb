@@ -1839,6 +1839,8 @@ class lib_find :
 			libname = self.__wr if writable else self.__rd
 			if not libname : return None
 			return self.__pick_1st( location, libname )
+		if os.path.isfile( location ) :
+			return location;
 		return None
 
 #------------------------------------------------------------------------------------------------------------
@@ -1886,7 +1888,7 @@ class manager :
         writable = mode == OpenMode.Write
         found = finder.find_at( path, writable ) if path else finder.find( writable )
         if found == None :
-            env = os.environ.get('VDB_LIBRARY_PATH', '')
+            env = os.environ.get( "VDB_LIBRARY_PATH", '')
             found = finder.find_at( env, writable )
         if found == None :
             raise vdb_error( 0, "cannot find library", None )
