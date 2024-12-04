@@ -86,6 +86,8 @@
 #define MAX_CONN_WRITE_LIMIT ( 10 * 60 * 1000 )
 #endif
 
+#define TELEMETRY
+
 static KLock *kns_manager_lock = NULL; /* Protects below */
 static KDataBuffer kns_manager_user_agent;
 
