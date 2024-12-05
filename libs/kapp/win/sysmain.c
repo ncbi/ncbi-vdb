@@ -35,13 +35,13 @@
 #include <klib/debug.h>
 #include <klib/rc.h>
 #include <klib/text.h>
-#include <klib/report.h> 
+#include <klib/report.h>
 #include <atomic32.h>
 
 /* #define _WIN32_WINNT 0x0500 */
 /* commented out: 10/21/2010 by wolfgang
    reason: Kurt introduced in sysdll.c a new functionality
-   which requires a newer windows-version 
+   which requires a newer windows-version
    (i realized it as compiler parameter in build/Makefile.vc++) */
 
 #include <WINDOWS.H>
@@ -58,67 +58,14 @@
  * Main
  */
 
-static bool no_hup;
-static atomic32_t hangup;
-static atomic32_t quitting;
-
 static bool convert_args_paths = true;
-
-/* Quitting
- *  is the program supposed to exit
- */
-rc_t CC Quitting ( void )
-{
-    if ( atomic32_read ( & quitting ) == 0 )
-        return 0;
-    LOGMSG ( klogInfo, "EXITING..." );
-    return RC ( rcExe, rcProcess, rcExecuting, rcProcess, rcCanceled );
-}
-
-/* SignalQuit
- *  tell the program to quit
- */
-rc_t CC SignalQuit ( void )
-{
-    return RC ( rcExe, rcProcess, rcSignaling, rcNoObj, rcUnknown );
-}
-
-/* Hangup
- *  has the program received a SIGHUP
- */
-rc_t CC Hangup ( void )
-{
-    if ( atomic32_read ( & hangup ) == 0 )
-        return 0;
-    LOGMSG ( klogInfo, "HANGUP...\n" );
-    return RC ( rcExe, rcProcess, rcExecuting, rcProcess, rcIncomplete );
-}
-
-/* SignalHup
- *  send the program a SIGHUP
- */
-rc_t CC SignalHup ( void )
-{
-    return RC ( rcExe, rcProcess, rcSignaling, rcNoObj, rcUnknown );
-}
-
-/* SignalNoHup
- *  tell the program to stay alive even after SIGHUP
- */
-rc_t CC SignalNoHup ( void )
-{
-    no_hup = true;
-    return 0;
-}
-
 
 BOOL CC Our_HandlerRoutine( DWORD dwCtrlType )
 {
     BOOL res = FALSE;
     switch( dwCtrlType )
     {
-    case CTRL_C_EVENT : ReportSilence ();
-                        atomic32_inc ( & quitting );
+    case CTRL_C_EVENT : SetQuitting();
                         res = TRUE;
                         break;
     }
@@ -149,7 +96,7 @@ char * convert_arg_utf8( const wchar_t *arg )
     char * utf8;
     /* measure the string */
     wchar_cvt_string_measure ( arg, & src_size, & dst_size );
-    
+
     /* allocate a UTF-8 buffer */
     utf8 = malloc ( dst_size + 1 );
     if ( utf8 != NULL )
@@ -157,11 +104,11 @@ char * convert_arg_utf8( const wchar_t *arg )
         /* copy the wide argument to utf8 */
         wchar_cvt_string_copy ( utf8, dst_size + 1,
                                arg, src_size );
-        
+
         /* terminate the string */
         utf8 [ dst_size ] = 0;
     }
-    
+
     return utf8;
 }
 
@@ -174,8 +121,8 @@ char * CC rewrite_arg_as_path ( const wchar_t *arg, bool before_kmane )
 
     /* detect drive or full path */
     wchar_t rewrit [ MAX_PATH ];
-    /* 
-       we don't want to rewrite twice, 
+    /*
+       we don't want to rewrite twice,
        so if we rewrote first time
            from wmain (before_kmane = true, convert_args_paths = true),
        then we skip second rewrite by checking convert_args_paths to be true
@@ -195,9 +142,9 @@ char * CC rewrite_arg_as_path ( const wchar_t *arg, bool before_kmane )
                     arg += sizeof "/cygdrive" - 1;
                 else
                     rewrite = true;
-             
+
             }
-            
+
         }
         /* look for drive path */
         else if ( isalpha ( arg [ 0 ] ) && arg [ 1 ] == ':' )
@@ -228,7 +175,7 @@ char * CC rewrite_arg_as_path ( const wchar_t *arg, bool before_kmane )
     if ( utf8 != NULL )
     {
         dst_size = string_size(utf8);
-        if (has_drive) 
+        if (has_drive)
         {
             utf8 [ 1 ] = utf8 [ 0 ];
             utf8 [ 0 ] = '/';
@@ -272,7 +219,7 @@ int __cdecl wmain ( int argc, wchar_t *wargv [], wchar_t *envp [] )
             {
                 argv [ i ] = convert_arg_utf8 ( wargv [ i ] );
             }
-            
+
             if ( argv [ i ] == NULL )
                 break;
         }

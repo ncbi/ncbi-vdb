@@ -31,28 +31,29 @@ set ( MAC_SRC ${UNIX_SRC} mac/ram.c )
 set ( WIN_SRC win/args-conv-os.c win/ram.c )
 
 if( "bsd" STREQUAL ${OS} )
-    set ( OS_SPECIFIC_SRC ${BSD_SRC} )
+    set ( OS_SPECIFIC_SRC ${BSD_SRC} unix/sysapp.c )
     set ( SYSMAIN unix/sysmain.c )
 elseif( "linux" STREQUAL ${OS} )
-    set ( OS_SPECIFIC_SRC ${LINUX_SRC} )
+    set ( OS_SPECIFIC_SRC ${LINUX_SRC} unix/sysapp.c )
     set ( SYSMAIN unix/sysmain.c )
 elseif( "mac" STREQUAL ${OS} )
-    set ( OS_SPECIFIC_SRC ${MAC_SRC} )
+    set ( OS_SPECIFIC_SRC ${MAC_SRC} unix/sysapp.c )
     set ( SYSMAIN unix/sysmain.c )
 elseif ( "windows" STREQUAL ${OS} )
-    set ( OS_SPECIFIC_SRC ${WIN_SRC} )
+    set ( OS_SPECIFIC_SRC ${WIN_SRC} win/sysapp.c )
     set ( SYSMAIN win/sysmain.c )
 endif()
 
 set( APP_CMN
-    args
-    args-conv
-    tokenizer
-    log-xml
+    args.c
+    args-conv.c
+    tokenizer.c
+    log-xml.c
+    vdbapp.c
 )
 
 set( KAPP_SRC
-    main
+    main.c
     ${SYSMAIN}
     ${APP_CMN}
 )

@@ -95,7 +95,7 @@ fi
 # them in background. Lets start it normally and run
 # `kill` command in background.
 killFromBackground $$ &
-$BINARY_PATH 
+$BINARY_PATH
 
 # Wait for `kill` job
 wait
@@ -107,9 +107,9 @@ rm killed.pid
 if [ "$HOST_OS" = "bsd" ]; then
     CORE_FILE="${CORE_FOLDER}${BINARY_PATH##*/}.core"
 else
-    CORE_FILE="${CORE_FOLDER}core.${BINARY_PID}"
+    CORE_FILE="${CORE_FOLDER}core"
 fi
-
+echo $CORE_FILE
 if [ "$BUILD_TYPE" = "dbg" ]; then
    if [ -f $CORE_FILE ]; then
        rm $CORE_FILE
@@ -121,12 +121,12 @@ if [ "$BUILD_TYPE" = "dbg" ]; then
    fi
 else
    if [ -f $CORE_FILE ]; then
-       rm $CORE_FILE 
+       rm $CORE_FILE
        echo "Failed: Core file generated while shouldn't and was removed" 1>&2
        exit 4
     else
        echo "Success: No core file detected"
        exit 0
-    fi 
+    fi
 fi
 

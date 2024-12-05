@@ -24,30 +24,20 @@
 *
 */
 
-#include "../main-priv.h"
-
 #include <klib/rc.h>
-#include <kapp/vdbapp.h>
 
-#include <signal.h>
-#include <errno.h>
-
-/* main
- *  Unix specific main entrypoint
+/* SignalQuit
+ *  tell the program to quit
  */
-int main ( int argc, char *argv [] )
+rc_t CC SignalQuit ( void )
 {
-    int ret = VdbInitialize();
-    if ( ret != 0 )
-    {
-        return ret;
-    }
-
-    /* run this guy */
-    rc_t rc = KMane ( argc, argv );
-
-    VdbTerminate();
-
-    return ( rc == 0 ) ? 0 : IF_EXITCODE(rc, 3);
+    return RC ( rcExe, rcProcess, rcSignaling, rcNoObj, rcUnknown );
 }
 
+/* SignalHup
+ *  send the program a SIGHUP
+ */
+rc_t CC SignalHup ( void )
+{
+    return RC ( rcExe, rcProcess, rcSignaling, rcNoObj, rcUnknown );
+}

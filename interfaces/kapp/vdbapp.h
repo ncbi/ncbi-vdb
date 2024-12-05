@@ -24,68 +24,39 @@
 *
 */
 
-#ifndef _h_main_priv_
-#define _h_main_priv_
+#pragma once
 
-#ifndef _h_klib_defs_
-#include <klib/defs.h>
-#endif
+#include <klib/rc.h>
 
-#ifndef _h_kapp_extern_
- #include <kapp/extern.h>
-#endif
+/*--------------------------------------------------------------------------
+ * Vdb initialization/termination API
+ */
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+rc_t VdbInitialize();
 
-/*--------------------------------------------------------------------------
- * KMane
- *  invoked by platform specific "main" entrypoint
- */
-
-/* KMane
- *  executable entrypoint "main" is implemented by
- *  an OS-specific wrapper that takes care of establishing
- *  signal handlers, logging, etc.
- *
- *  in turn, OS-specific "main" will invoke "KMain" as
- *  platform independent main entrypoint.
- *
- *  "argc" [ IN ] - the number of textual parameters in "argv"
- *  should never be < 0, but has been left as a signed int
- *  for reasons of tradition.
- *
- *  "argv" [ IN ] - array of NUL terminated strings expected
- *  to be in the shell-native character set: ASCII or UTF-8
- *  element 0 is expected to be executable identity or path.
- */
-rc_t KMane ( int argc, char *argv [] );
-
-/*KAppGetTotalRam
- * returns total physical RAM installed in the system
- * in bytes
- */
-rc_t KAppGetTotalRam ( uint64_t * totalRam );
-
-/* SetQuitting
- *  set the quitting flag (for internal use in this library)
- */
-void SetQuitting();
-
-/* VdbInitializeSystem
- *  OS-specific VDB initialization
- */
-int VdbInitializeSystem();
-
-/* VdbTerminateSystem
- *  OS-specific VDB termination
- */
-void VdbTerminateSystem();
+void VdbTerminate();
 
 #ifdef __cplusplus
+//TBD
+    namespace VDB;
+
+    class VdbApp
+    {
+    public:
+        VdbApp() { m_rc = VdbInitialize(); }
+        ~VdbApp() { VdbTerminate(); }
+
+        bool isOk() const { return m_rc == 0; }
+        operator bool() const { return isOk(); }
+        rc_t getRc() const { return m_rc; }
+
+    private:
+        rc_t m_rc;
+    }
 }
 #endif
 
-#endif /* _h_main_priv_ */

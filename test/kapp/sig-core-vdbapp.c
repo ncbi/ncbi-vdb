@@ -24,17 +24,11 @@
 *
 */
 
-#include "../main-priv.h"
-
 #include <klib/rc.h>
 #include <kapp/vdbapp.h>
 
-#include <signal.h>
-#include <errno.h>
+#include <unistd.h>
 
-/* main
- *  Unix specific main entrypoint
- */
 int main ( int argc, char *argv [] )
 {
     int ret = VdbInitialize();
@@ -43,11 +37,12 @@ int main ( int argc, char *argv [] )
         return ret;
     }
 
-    /* run this guy */
-    rc_t rc = KMane ( argc, argv );
+    do {
+        while ( true ) {
+            sleep ( 1000 );
+        }
+    } while (false);
 
     VdbTerminate();
-
-    return ( rc == 0 ) ? 0 : IF_EXITCODE(rc, 3);
+    return 0;
 }
-

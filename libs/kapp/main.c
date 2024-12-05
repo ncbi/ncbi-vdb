@@ -27,7 +27,10 @@
 #include <kapp/extern.h>
 #include "main-priv.h"
 #include <sysalloc.h>
+
 #include <kapp/main.h>
+#include <kapp/vdbapp.h>
+
 #include <kfg/config.h>
 #include <kproc/procmgr.h>
 #include <klib/report.h>
@@ -81,7 +84,7 @@ rc_t CC KAppCheckEnvironment ( bool require64Bits, uint64_t requireRamSize )
     if ( requireRamSize && totalRam < requireRamSize )
     {
         rc = RC ( rcApp, rcNoTarg, rcInitializing, rcResources, rcUnsupported );
-        PLOGERR ( klogFatal, ( klogFatal, rc,  "there is not enough RAM in the system." 
+        PLOGERR ( klogFatal, ( klogFatal, rc,  "there is not enough RAM in the system."
                                            " required size: $(REQUIRED) B, present: $(PRESENT) B"
                               , "REQUIRED=%lu,PRESENT=%lu"
                               , requireRamSize
@@ -263,11 +266,11 @@ rc_t LogLevelRelative ( const char * string )
         case '+':
             ++ adjust;
             break;
-            
+
         case '-':
             -- adjust;
             break;
-            
+
         default:
             return RC ( rcApp, rcArgv, rcParsing, rcToken, rcUnrecognized );
         }
@@ -313,7 +316,12 @@ void CC atexit_task ( void )
 
 rc_t KMane ( int argc, char *argv [] )
 {
-    rc_t rc = 0;
+    rc_t rc = VdbInitialize();
+    if ( rc != 0 )
+    {
+        return rc;
+    }
+
     KNSManager * kns = NULL;
 #if NO_KRSRC
     int status;
@@ -428,6 +436,8 @@ rc_t KMane ( int argc, char *argv [] )
 #if ! NO_KRSRC
     KRsrcGlobalWhack ( ctx );
 #endif
+
+    VdbTerminate();
 
     return rc;
 }

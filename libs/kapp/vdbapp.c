@@ -24,30 +24,66 @@
 *
 */
 
-#include "../main-priv.h"
-
+#include <klib/log.h>
+#include <klib/debug.h>
 #include <klib/rc.h>
-#include <kapp/vdbapp.h>
+#include <klib/report.h>
 
-#include <signal.h>
-#include <errno.h>
+#include <atomic32.h>
 
-/* main
- *  Unix specific main entrypoint
+#include "main-priv.h"
+
+static atomic32_t hangup;
+static atomic32_t quitting;
+
+/* Hangup
+ *  has the program received a SIGHUP
  */
-int main ( int argc, char *argv [] )
+rc_t Hangup ( void )
 {
-    int ret = VdbInitialize();
-    if ( ret != 0 )
-    {
-        return ret;
-    }
-
-    /* run this guy */
-    rc_t rc = KMane ( argc, argv );
-
-    VdbTerminate();
-
-    return ( rc == 0 ) ? 0 : IF_EXITCODE(rc, 3);
+    if ( atomic32_read ( & hangup ) == 0 )
+        return 0;
+    LOGMSG ( klogInfo, "HANGUP...\n" );
+    return RC ( rcExe, rcProcess, rcExecuting, rcProcess, rcIncomplete );
 }
 
+/* SignalNoHup
+ *  tell the program to stay alive even after SIGHUP
+ */
+rc_t CC SignalNoHup ( void )
+{   // not implemented
+    return 0;
+}
+
+/* Quitting
+ *  is the program supposed to exit
+ */
+rc_t CC Quitting ( void )
+{
+    if ( atomic32_read ( & quitting ) == 0 )
+        return 0;
+    LOGMSG ( klogInfo, "EXITING..." );
+    return RC ( rcExe, rcProcess, rcExecuting, rcProcess, rcCanceled );
+}
+
+/* SetQuitting
+ *  set the quitting flag (for internal use in this library)
+ */
+void SetQuitting()
+{
+    ReportSilence ();
+    atomic32_inc ( & quitting );
+}
+
+rc_t
+VdbInitialize()
+{
+    int ret = VdbInitializeSystem();
+    return ret == 0 ? 0 : RC( rcExe, rcProcess, rcInitializing, rcLibrary, rcFailed );
+}
+
+void
+VdbTerminate()
+{
+    VdbTerminateSystem();
+}

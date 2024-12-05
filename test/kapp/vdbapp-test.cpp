@@ -38,6 +38,22 @@ TEST_CASE(NotQuitting)
     REQUIRE( ! Quitting() );
 }
 
+TEST_CASE(NoHangUp)
+{
+    REQUIRE_RC( Hangup() );
+}
+TEST_CASE(SignalNoHup_ignored)
+{
+    REQUIRE_RC( SignalNoHup() );
+}
+
+#if WIN32
+TEST_CASE(SignalHup_ignored)
+{
+    REQUIRE_RC_FAIL( SignalHup() ); // would not return on Unix
+}
+#endif
+
 int main ( int argc, char *argv [] )
 {
     rc_t rc=VDBAppTestSuite(argc, argv);
