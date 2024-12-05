@@ -36,26 +36,28 @@
 extern "C" {
 #endif
 
-rc_t VdbInitialize();
+rc_t VdbInitialize( int argc, char *argv [], ver_t vers );
 
 void VdbTerminate();
 
 #ifdef __cplusplus
-//TBD
-    namespace VDB;
 
-    class VdbApp
+    namespace VDB
     {
-    public:
-        VdbApp() { m_rc = VdbInitialize(); }
-        ~VdbApp() { VdbTerminate(); }
 
-        bool isOk() const { return m_rc == 0; }
-        operator bool() const { return isOk(); }
-        rc_t getRc() const { return m_rc; }
+        class VdbApp
+        {
+        public:
+            VdbApp( int argc, char *argv [], ver_t vers = 0 ) { m_rc = VdbInitialize( argc, argv, vers ); }
+            ~VdbApp() { VdbTerminate(); }
 
-    private:
-        rc_t m_rc;
+            operator bool() const { return m_rc == 0; }
+            rc_t getRc() const { return m_rc; }
+
+        private:
+            rc_t m_rc;
+        };
+
     }
 }
 #endif

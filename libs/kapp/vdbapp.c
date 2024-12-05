@@ -24,10 +24,19 @@
 *
 */
 
+#if ! NO_KRSRC
+// #include <kfc/except.h>
+// #include <kfc/rsrc.h>
+// #include <kfc/rsrc-global.h>
+#include <kfc/ctx.h>
+#endif
+
 #include <klib/log.h>
 #include <klib/debug.h>
 #include <klib/rc.h>
 #include <klib/report.h>
+
+#include <kns/manager.h>
 
 #include <atomic32.h>
 
@@ -75,15 +84,119 @@ void SetQuitting()
     atomic32_inc ( & quitting );
 }
 
+static KNSManager * kns = NULL;
+
 rc_t
-VdbInitialize()
+VdbInitialize( int argc, char *argv [], ver_t vers )
 {
     int ret = VdbInitializeSystem();
-    return ret == 0 ? 0 : RC( rcExe, rcProcess, rcInitializing, rcLibrary, rcFailed );
+    if ( ret != 0 )
+    {
+        return RC( rcExe, rcProcess, rcInitializing, rcLibrary, rcFailed );
+    }
+
+#if NO_KRSRC
+    int status;
+#else
+    static KCtx local_ctx, * ctx = & local_ctx;
+    DECLARE_FUNC_LOC ( rcExe, rcProcess, rcExecuting );
+#endif
+
+    rc_t rc = 0;
+
+//     /* get application version */
+//     ver_t vers = KAppVersion ();
+
+//     /* initialize error reporting */
+//     ReportInit ( argc, argv, vers );
+
+// #if NO_KRSRC
+//     /* initialize cleanup tasks */
+//     status = atexit ( atexit_task );
+//     if ( status != 0 )
+//         return SILENT_RC ( rcApp, rcNoTarg, rcInitializing, rcFunction, rcNotAvailable );
+
+//     /* initialize proc mgr */
+//     rc = KProcMgrInit ();
+//     if ( rc != 0 )
+//         return rc;
+
+//     kns = NULL;
+// #else
+//     ON_FAIL ( KRsrcGlobalInit ( & local_ctx, & s_func_loc, false ) )
+//     {
+//         assert ( ctx -> rc != 0 );
+//         return ctx -> rc;
+//     }
+
+//     kns = ctx -> rsrc -> kns;
+// #endif
+
+//     /* initialize the default User-Agent in the kns-manager to default value - using "vers" and argv[0] above strrchr '/' */
+//     {
+//         const char * tool = argv[ 0 ];
+//         size_t tool_size = string_size ( tool );
+
+//         const char * sep = string_rchr ( tool, tool_size, '/' );
+//         if ( sep ++ == NULL )
+//             sep = tool;
+//         else
+//             tool_size -= sep - tool;
+
+//         sep = string_chr ( tool = sep, tool_size, '.' );
+//         if ( sep != NULL )
+//             tool_size = sep - tool;
+
+//         KNSManagerSetUserAgent ( kns, PKGNAMESTR " sra-toolkit %.*s.%V", ( uint32_t ) tool_size, tool, vers );
+//     }
+
+//     KNSManagerSetQuitting ( kns, Quitting );
+
+    /* initialize logging */
+    rc = KWrtInit(argv[0], vers);
+    if ( rc == 0 )
+        rc = KLogLibHandlerSetStdErr ();
+    if ( rc == 0 )
+        rc = KStsLibHandlerSetStdOut ();
+
+// #if KFG_COMMON_CREATION
+//     if ( rc == 0 )
+//     {
+//         KConfig *kfg;
+//         rc = KConfigMake ( & kfg );
+//     }
+// #endif
+
+    return rc;
 }
 
 void
 VdbTerminate()
 {
+//     {
+//         rc_t r2 = 0;
+//         if ( kns != NULL )
+//             r2 = KNSManagerRelease ( kns );
+//         else
+//             r2 = KNSManagerSetUserAgent ( kns, NULL );
+//         if ( rc == 0 && r2 != 0 )
+//             rc = r2;
+//         kns = NULL;
+//     }
+
+// #if KFG_COMMON_CREATION
+//             KConfigRelease ( kfg );
+//         }
+// #endif
+//     }
+
+//     /* finalize error reporting */
+//     ReportSilence ();
+//     ReportFinalize ( rc );
+
+// #if ! NO_KRSRC
+//     KRsrcGlobalWhack ( ctx );
+// #endif
+
     VdbTerminateSystem();
 }

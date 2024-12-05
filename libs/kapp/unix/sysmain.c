@@ -27,27 +27,14 @@
 #include "../main-priv.h"
 
 #include <klib/rc.h>
-#include <kapp/vdbapp.h>
-
-#include <signal.h>
-#include <errno.h>
 
 /* main
  *  Unix specific main entrypoint
  */
 int main ( int argc, char *argv [] )
 {
-    int ret = VdbInitialize();
-    if ( ret != 0 )
-    {
-        return ret;
-    }
-
     /* run this guy */
     rc_t rc = KMane ( argc, argv );
-
-    VdbTerminate();
-
     return ( rc == 0 ) ? 0 : IF_EXITCODE(rc, 3);
 }
 

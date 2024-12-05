@@ -30,6 +30,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kapp/vdbapp.h>
+
 #include <klib/data-buffer.h>
 #include <klib/log.h>
 #include <klib/misc.h> /* is_user_admin() */
@@ -1078,7 +1080,7 @@ TEST_CASE(GetUnreadRCInfo_LogRC)
 #endif
 
 TEST_CASE(TimeRoundTrip)
-{ 
+{
     KTime_t t1 = KTimeStamp(); // UTC
     char str1[100];
     KTimeIso8601(t1, str1, sizeof str1);
@@ -1127,17 +1129,16 @@ extern "C" {
 #include <kapp/args.h>
 #include <kfg/config.h>
 
-ver_t CC KAppVersion(void) { return 0x1000000; }
-rc_t CC UsageSummary(const char* progname) { return 0; }
-
-rc_t CC Usage(const Args* args) { return 0; }
-
-const char UsageDefaultName[] = "test-klib";
-
-rc_t CC KMain(int argc, char* argv[])
+int main(int argc, char* argv[])
 {
+    VDB::VdbApp app( argc, argv );
+    if (!app)
+    {
+        return 1;
+    }
     KConfigDisableUserSettings();
     rc_t rc = KlibTestSuite(argc, argv);
-    return rc;
+    return rc == 0 ? 0 : 3;
 }
+
 }
