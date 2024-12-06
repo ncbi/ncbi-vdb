@@ -1138,6 +1138,7 @@ int main(int argc, char* argv[])
     }
     KConfigDisableUserSettings();
     rc_t rc = KlibTestSuite(argc, argv);
+    //TODO: app.setRc
     return rc == 0 ? 0 : 3;
 }
 

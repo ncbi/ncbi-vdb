@@ -74,6 +74,7 @@ TEST_CASE(UserAgentInitialized)
     const char * agent = nullptr;
     REQUIRE_RC( KNSManagerGetUserAgent( & agent ) );
     REQUIRE_NOT_NULL( agent );
+    //cout<<agent;
     REQUIRE_NE( string::npos, string(agent).find("sra-toolkit Test_VDBAPP") );
 }
 

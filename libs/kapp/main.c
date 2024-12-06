@@ -39,14 +39,6 @@
 #include <klib/text.h>
 #include <klib/status.h>
 #include <klib/rc.h>
-//#include <kns/manager.h>
-
-// #if ! NO_KRSRC
-// #include <kfc/except.h>
-// #include <kfc/rsrc.h>
-// #include <kfc/rsrc-global.h>
-// #include <kfc/ctx.h>
-// #endif
 
 #include <strtol.h>
 
