@@ -40,7 +40,7 @@ TEST_CASE(Report_InitFini)
 {
     char * argv[] = { (char*)"exe" };
     ReportInit( 1, argv, (ver_t)0 );
-    REQUIRE_RC( ReportFinalize(0 ) );
+    REQUIRE_RC( ReportFinalize( 0 ) );
 }
 
 //////////////////////////////////////////////////// Main

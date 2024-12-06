@@ -24,9 +24,15 @@
  *
  */
 
+#include <kapp/vdbapp.h>
+
 #include <ktst/unit_test.hpp>
 
 #include <kapp/main.h>
+
+#include <kproc/procmgr.h>
+#include <klib/klib-priv.h>
+#include <kns/manager.h>
 
 using namespace std;
 using namespace ncbi::NK;
@@ -47,6 +53,35 @@ TEST_CASE(SignalNoHup_ignored)
     REQUIRE_RC( SignalNoHup() );
 }
 
+const ver_t AppVersion = 12;
+TEST_CASE(ReportInitialized)
+{   // main() initialized report module
+    ver_t version = 0;
+    ReportGetVersion( & version );
+    REQUIRE_EQ( AppVersion, version );
+}
+
+TEST_CASE(ProcMgrInitialized)
+{
+    KProcMgr * mgr = nullptr;
+    REQUIRE_RC( KProcMgrMakeSingleton( & mgr ) );
+    REQUIRE_NOT_NULL( mgr );
+    REQUIRE_RC( KProcMgrRelease( mgr ) );
+}
+
+TEST_CASE(UserAgentInitialized)
+{
+    const char * agent = nullptr;
+    REQUIRE_RC( KNSManagerGetUserAgent( & agent ) );
+    REQUIRE_NOT_NULL( agent );
+    REQUIRE_NE( string::npos, string(agent).find("sra-toolkit Test_VDBAPP") );
+}
+
+TEST_CASE(KnsQuittingInitialized)
+{
+    REQUIRE_NOT_NULL( (void*)KNSManagerGetQuitting( nullptr ) );
+}
+
 #if WIN32
 TEST_CASE(SignalHup_ignored)
 {
@@ -56,7 +91,7 @@ TEST_CASE(SignalHup_ignored)
 
 int main ( int argc, char *argv [] )
 {
-    rc_t rc=VDBAppTestSuite(argc, argv);
+    VDB::VdbApp app( argc, argv, AppVersion );
+    rc_t rc = VDBAppTestSuite(argc, argv);
     return rc;
 }
-

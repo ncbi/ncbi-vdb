@@ -25,9 +25,9 @@
 */
 
 #if ! NO_KRSRC
-// #include <kfc/except.h>
-// #include <kfc/rsrc.h>
-// #include <kfc/rsrc-global.h>
+#include <kfc/except.h>
+//#include <kfc/rsrc.h>
+#include <kfc/rsrc-global.h>
 #include <kfc/ctx.h>
 #endif
 
@@ -35,8 +35,10 @@
 #include <klib/debug.h>
 #include <klib/rc.h>
 #include <klib/report.h>
+#include <klib/text.h>
 
 #include <kns/manager.h>
+#include <kproc/procmgr.h>
 
 #include <atomic32.h>
 
@@ -85,6 +87,14 @@ void SetQuitting()
 }
 
 static KNSManager * kns = NULL;
+#if ! NO_KRSRC
+static KCtx local_ctx, * ctx = & local_ctx;
+#else
+void CC atexit_task ( void )
+{
+    KProcMgrWhack ();
+}
+#endif
 
 rc_t
 VdbInitialize( int argc, char *argv [], ver_t vers )
@@ -98,59 +108,56 @@ VdbInitialize( int argc, char *argv [], ver_t vers )
 #if NO_KRSRC
     int status;
 #else
-    static KCtx local_ctx, * ctx = & local_ctx;
     DECLARE_FUNC_LOC ( rcExe, rcProcess, rcExecuting );
+    //UNUSED(s_func_loc);
 #endif
 
     rc_t rc = 0;
 
-//     /* get application version */
-//     ver_t vers = KAppVersion ();
+    /* initialize error reporting */
+    ReportInit ( argc, argv, vers );
 
-//     /* initialize error reporting */
-//     ReportInit ( argc, argv, vers );
+#if NO_KRSRC
+    /* initialize cleanup tasks */
+    status = atexit ( atexit_task );
+    if ( status != 0 )
+        return SILENT_RC ( rcApp, rcNoTarg, rcInitializing, rcFunction, rcNotAvailable );
 
-// #if NO_KRSRC
-//     /* initialize cleanup tasks */
-//     status = atexit ( atexit_task );
-//     if ( status != 0 )
-//         return SILENT_RC ( rcApp, rcNoTarg, rcInitializing, rcFunction, rcNotAvailable );
+    /* initialize proc mgr */
+    rc = KProcMgrInit ();
+    if ( rc != 0 )
+        return rc;
 
-//     /* initialize proc mgr */
-//     rc = KProcMgrInit ();
-//     if ( rc != 0 )
-//         return rc;
+    kns = NULL;
+#else
+    ON_FAIL ( KRsrcGlobalInit ( & local_ctx, & s_func_loc, false ) )
+    {
+        assert ( ctx -> rc != 0 );
+        return ctx -> rc;
+    }
 
-//     kns = NULL;
-// #else
-//     ON_FAIL ( KRsrcGlobalInit ( & local_ctx, & s_func_loc, false ) )
-//     {
-//         assert ( ctx -> rc != 0 );
-//         return ctx -> rc;
-//     }
+    kns = ctx -> rsrc -> kns;
+#endif
 
-//     kns = ctx -> rsrc -> kns;
-// #endif
+    /* initialize the default User-Agent in the kns-manager to default value - using "vers" and argv[0] above strrchr '/' */
+    {
+        const char * tool = argv[ 0 ];
+        size_t tool_size = string_size ( tool );
 
-//     /* initialize the default User-Agent in the kns-manager to default value - using "vers" and argv[0] above strrchr '/' */
-//     {
-//         const char * tool = argv[ 0 ];
-//         size_t tool_size = string_size ( tool );
+        const char * sep = string_rchr ( tool, tool_size, '/' );
+        if ( sep ++ == NULL )
+            sep = tool;
+        else
+            tool_size -= sep - tool;
 
-//         const char * sep = string_rchr ( tool, tool_size, '/' );
-//         if ( sep ++ == NULL )
-//             sep = tool;
-//         else
-//             tool_size -= sep - tool;
+        sep = string_chr ( tool = sep, tool_size, '.' );
+        if ( sep != NULL )
+            tool_size = sep - tool;
 
-//         sep = string_chr ( tool = sep, tool_size, '.' );
-//         if ( sep != NULL )
-//             tool_size = sep - tool;
+        KNSManagerSetUserAgent ( kns, PKGNAMESTR " sra-toolkit %.*s.%V", ( uint32_t ) tool_size, tool, vers );
+    }
 
-//         KNSManagerSetUserAgent ( kns, PKGNAMESTR " sra-toolkit %.*s.%V", ( uint32_t ) tool_size, tool, vers );
-//     }
-
-//     KNSManagerSetQuitting ( kns, Quitting );
+    KNSManagerSetQuitting ( kns, Quitting );
 
     /* initialize logging */
     rc = KWrtInit(argv[0], vers);
@@ -159,44 +166,42 @@ VdbInitialize( int argc, char *argv [], ver_t vers )
     if ( rc == 0 )
         rc = KStsLibHandlerSetStdOut ();
 
-// #if KFG_COMMON_CREATION
-//     if ( rc == 0 )
-//     {
-//         KConfig *kfg;
-//         rc = KConfigMake ( & kfg );
-//     }
-// #endif
+#if KFG_COMMON_CREATION
+    if ( rc == 0 )
+    {
+        KConfig *kfg;
+        rc = KConfigMake ( & kfg );
+    }
+#endif
 
     return rc;
 }
 
 void
-VdbTerminate()
+VdbTerminate( rc_t rc )
 {
-//     {
-//         rc_t r2 = 0;
-//         if ( kns != NULL )
-//             r2 = KNSManagerRelease ( kns );
-//         else
-//             r2 = KNSManagerSetUserAgent ( kns, NULL );
-//         if ( rc == 0 && r2 != 0 )
-//             rc = r2;
-//         kns = NULL;
-//     }
+    {
+        rc_t r2 = 0;
+        if ( kns != NULL )
+            r2 = KNSManagerRelease ( kns );
+        else
+            r2 = KNSManagerSetUserAgent ( kns, NULL );
+        if ( rc == 0 && r2 != 0 )
+            rc = r2;
+        kns = NULL;
+    }
 
-// #if KFG_COMMON_CREATION
-//             KConfigRelease ( kfg );
-//         }
-// #endif
-//     }
+#if KFG_COMMON_CREATION
+    KConfigRelease ( kfg );
+#endif
 
-//     /* finalize error reporting */
-//     ReportSilence ();
-//     ReportFinalize ( rc );
+    /* finalize error reporting */
+    ReportSilence ();
+    ReportFinalize ( rc );
 
-// #if ! NO_KRSRC
-//     KRsrcGlobalWhack ( ctx );
-// #endif
+#if ! NO_KRSRC
+    KRsrcGlobalWhack ( ctx );
+#endif
 
     VdbTerminateSystem();
 }

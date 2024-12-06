@@ -306,13 +306,6 @@ rc_t CC NextLogLevelCommon ( const char * level_parameter )
  *  to be in the shell-native character set: ASCII or UTF-8
  *  element 0 is expected to be executable identity or path.
  */
-#if NO_KRSRC
-static
-void CC atexit_task ( void )
-{
-    KProcMgrWhack ();
-}
-#endif
 
 rc_t KMane ( int argc, char *argv [] )
 {
@@ -341,7 +334,7 @@ rc_t KMane ( int argc, char *argv [] )
 #endif
     }
 
-    VdbTerminate();
+    VdbTerminate( rc );
 
     return rc;
 }

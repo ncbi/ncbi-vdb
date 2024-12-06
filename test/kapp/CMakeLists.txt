@@ -30,13 +30,13 @@ endif()
 
 add_compile_definitions( __mod__="test/kapp" )
 
-AddExecutableTest( Test_KAPP_args "kapp-test" "ktst;kapp;${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" )
+AddExecutableTest( Test_KAPP_args "kapp-test" "ktst;${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" )
 
-AddExecutableTest( Test_VDBAPP "vdbapp-test" "ktst;vdbapp;ncbi-vdb;${ADDITIONAL_LIBS}" )
+AddExecutableTest( Test_VDBAPP "vdbapp-test" "ktst;vdbapp;ncbi-vdb;${COMMON_LIBS_READ};${ADDITIONAL_LIBS}" )
 
 if ( NOT WIN32 )
 
-    BuildExecutableForTest( sig-core-kapp "sig-core-kapp.c" "kapp;ncbi-vdb;${COMMON_LIBS_READ}" )
+    BuildExecutableForTest( sig-core-kapp "sig-core-kapp.c" "ncbi-vdb;${COMMON_LIBS_READ}" )
     BuildExecutableForTest( sig-core-vdbapp "sig-core-vdbapp.c" "vdbapp;ncbi-vdb;${COMMON_LIBS_READ}" )
 
     if ( "${CMAKE_BUILD_TYPE}" STREQUAL "Debug" )

@@ -38,7 +38,7 @@ extern "C" {
 
 rc_t VdbInitialize( int argc, char *argv [], ver_t vers );
 
-void VdbTerminate();
+void VdbTerminate( rc_t rc );
 
 #ifdef __cplusplus
 
@@ -49,10 +49,11 @@ void VdbTerminate();
         {
         public:
             VdbApp( int argc, char *argv [], ver_t vers = 0 ) { m_rc = VdbInitialize( argc, argv, vers ); }
-            ~VdbApp() { VdbTerminate(); }
+            ~VdbApp() { VdbTerminate( m_rc ); }
 
             operator bool() const { return m_rc == 0; }
             rc_t getRc() const { return m_rc; }
+            void setRc( rc_t p_rc ) { m_rc = p_rc; }
 
         private:
             rc_t m_rc;

@@ -31,7 +31,7 @@
 
 int main ( int argc, char *argv [] )
 {
-    int ret = VdbInitialize();
+    int ret = VdbInitialize( argc, argv, 0 );
     if ( ret != 0 )
     {
         return ret;
@@ -43,6 +43,6 @@ int main ( int argc, char *argv [] )
         }
     } while (false);
 
-    VdbTerminate();
+    VdbTerminate( 0 );
     return 0;
 }
