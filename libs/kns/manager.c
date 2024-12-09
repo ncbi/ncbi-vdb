@@ -1268,7 +1268,11 @@ LIB_EXPORT rc_t CC KNSManagerSetUserAgent (
 
     rc_t rc = 0;
     if ( fmt == NULL ) {
-        return KDataBufferWhack ( &kns_manager_user_agent );
+        rc_t rc = KDataBufferWhack ( &kns_manager_user_agent );
+        rc_t r2 = KDataBufferWhack ( &kns_manager_guid );
+        if (rc == 0 && r2 != 0)
+            rc = r2;
+        return rc;
     }
 
     KDataBufferResize ( &kns_manager_user_agent, 0 );
