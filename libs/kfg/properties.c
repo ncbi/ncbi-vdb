@@ -1183,6 +1183,7 @@ LIB_EXPORT rc_t CC KConfig_Get_SendTelemetry(const KConfig *self, bool *value) {
         return RC ( rcKFG, rcNode, rcReading, rcParam, rcNull );
     } else {
         *value = true;
+        *value = false;
         KConfigReadBool ( self, TELEMETRY_KEY, value );
         return 0;
     }
