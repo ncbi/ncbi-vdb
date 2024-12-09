@@ -411,8 +411,9 @@ FIXTURE_TEST_CASE( GetSet_Telemetry, KfgFixture ) {
     bool value = false;
     REQUIRE(!value);
 
+    value = true;
     REQUIRE_RC(KConfig_Get_SendTelemetry(kfg, &value));
-    REQUIRE(value);
+    REQUIRE(!value);
 
     REQUIRE_RC(KConfig_Set_SendTelemetry(kfg, false));
     REQUIRE_RC(KConfig_Get_SendTelemetry(kfg, &value));
