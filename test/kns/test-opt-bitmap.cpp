@@ -81,6 +81,7 @@ TEST_CASE(TestTelemetry) {
     putenv(const_cast<char*>("VDB_OPT_BITMAP="));
     ua = nullptr;
     REQUIRE_RC(KNSManagerGetUserAgent(&ua));
+    std::cerr << "UA='" << ua << "'\n";
     REQUIRE(ends_with(ua, ",libc=,bmap=)"));
 
     putenv(const_cast<char*>("VDB_OPT_BITMAP=101"));
@@ -91,7 +92,6 @@ TEST_CASE(TestTelemetry) {
     putenv(const_cast<char*>("VDB_OPT_BITMAP=0"));
     ua = nullptr;
     REQUIRE_RC(KNSManagerGetUserAgent(&ua));
-    // std::cerr << "UA='" << ua << "'\n";
     REQUIRE(ends_with(ua, ",libc=,bmap=0)"));
 
     // DISABLE SENDING TELEMETRY IN CONFIGURATION
