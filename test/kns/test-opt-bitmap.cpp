@@ -72,10 +72,11 @@ TEST_CASE(TestTelemetry) {
 
     REQUIRE_RC(KConfigWriteString(kfg, "libs/kns/send-telemetry", "true"));
     
+#ifndef WINDOWS
     unsetenv("VDB_OPT_BITMAP");
-
     REQUIRE_RC(KNSManagerGetUserAgent(&ua));
     REQUIRE(ends_with(ua, ",libc=,bmap=nob)"));
+#endif
 
     putenv(const_cast<char*>("VDB_OPT_BITMAP="));
     ua = nullptr;
@@ -97,10 +98,11 @@ TEST_CASE(TestTelemetry) {
 
     REQUIRE_RC(KConfigWriteString(kfg, "libs/kns/send-telemetry", "false"));
 
+#ifndef WINDOWS
     unsetenv("VDB_OPT_BITMAP");
-
     REQUIRE_RC(KNSManagerGetUserAgent(&ua));
     REQUIRE_EQ(string::npos, string(ua).find("bmap"));
+#endif
 
     putenv(const_cast<char*>("VDB_OPT_BITMAP="));
     ua = nullptr;
