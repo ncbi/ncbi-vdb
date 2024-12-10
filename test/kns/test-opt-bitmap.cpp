@@ -48,27 +48,31 @@ TEST_CASE(TestTelemetry) {
     REQUIRE_RC_FAIL(KNSManagerGetUserAgent(nullptr));
     const char * ua(nullptr);
 
-    // SENDING TELEMETRY IS DISABLED BY DEFAULT
+    // SENDING TELEMETRY IS ALWAYS ENABLED
 
     REQUIRE_RC(KNSManagerGetUserAgent(&ua));
-    REQUIRE_EQ(string::npos, string(ua).find("bmap"));
+    REQUIRE(ends_with(ua, ",libc=,bmap=nob)"));
 
     putenv(const_cast<char*>("VDB_OPT_BITMAP="));
     ua = nullptr;
     REQUIRE_RC(KNSManagerGetUserAgent(&ua));
-    REQUIRE_EQ(string::npos, string(ua).find("bmap"));
+#ifndef WINDOWS
+    REQUIRE(ends_with(ua, ",libc=,bmap=)"));
+#else
+    REQUIRE(ends_with(ua, ",libc=,bmap=nob)"));
+#endif
 
     putenv(const_cast<char*>("VDB_OPT_BITMAP=0"));
     ua = nullptr;
     REQUIRE_RC(KNSManagerGetUserAgent(&ua));
-    REQUIRE_EQ(string::npos, string(ua).find("bmap"));
+    REQUIRE(ends_with(ua, ",libc=,bmap=0)"));
 
     putenv(const_cast<char*>("VDB_OPT_BITMAP=1"));
     ua = nullptr;
     REQUIRE_RC(KNSManagerGetUserAgent(&ua));
-    REQUIRE_EQ(string::npos, string(ua).find("bmap"));
+    REQUIRE(ends_with(ua, ",libc=,bmap=1)"));
 
-    // ENABLE SENDING TELEMETRY IN CONFIGURATION
+    // ENABLE SENDING TELEMETRY IN CONFIGURATION: IT IS IGNORED
 
     REQUIRE_RC(KConfigWriteString(kfg, "libs/kns/send-telemetry", "true"));
     
@@ -88,40 +92,44 @@ TEST_CASE(TestTelemetry) {
     REQUIRE(ends_with(ua, ",libc=,bmap=nob)"));
 #endif
 
-    putenv(const_cast<char*>("VDB_OPT_BITMAP=101"));
-    ua = nullptr;
-    REQUIRE_RC(KNSManagerGetUserAgent(&ua));
-    REQUIRE(ends_with(ua, ",libc=,bmap=101)"));
-
     putenv(const_cast<char*>("VDB_OPT_BITMAP=0"));
     ua = nullptr;
     REQUIRE_RC(KNSManagerGetUserAgent(&ua));
     REQUIRE(ends_with(ua, ",libc=,bmap=0)"));
 
-    // DISABLE SENDING TELEMETRY IN CONFIGURATION
+    putenv(const_cast<char*>("VDB_OPT_BITMAP=101"));
+    ua = nullptr;
+    REQUIRE_RC(KNSManagerGetUserAgent(&ua));
+    REQUIRE(ends_with(ua, ",libc=,bmap=101)"));
+
+    // DISABLE SENDING TELEMETRY IN CONFIGURATION: IT IS IGNORED
 
     REQUIRE_RC(KConfigWriteString(kfg, "libs/kns/send-telemetry", "false"));
 
 #ifndef WINDOWS
     unsetenv("VDB_OPT_BITMAP");
     REQUIRE_RC(KNSManagerGetUserAgent(&ua));
-    REQUIRE_EQ(string::npos, string(ua).find("bmap"));
+    REQUIRE(ends_with(ua, ",libc=,bmap=nob)"));
 #endif
 
     putenv(const_cast<char*>("VDB_OPT_BITMAP="));
     ua = nullptr;
     REQUIRE_RC(KNSManagerGetUserAgent(&ua));
-    REQUIRE_EQ(string::npos, string(ua).find("bmap"));
+#ifndef WINDOWS
+    REQUIRE(ends_with(ua, ",libc=,bmap=)"));
+#else
+    REQUIRE(ends_with(ua, ",libc=,bmap=nob)"));
+#endif
 
     putenv(const_cast<char*>("VDB_OPT_BITMAP=0"));
     ua = nullptr;
     REQUIRE_RC(KNSManagerGetUserAgent(&ua));
-    REQUIRE_EQ(string::npos, string(ua).find("bmap"));
+    REQUIRE(ends_with(ua, ",libc=,bmap=0)"));
 
     putenv(const_cast<char*>("VDB_OPT_BITMAP=1"));
     ua = nullptr;
     REQUIRE_RC(KNSManagerGetUserAgent(&ua));
-    REQUIRE_EQ(string::npos, string(ua).find("bmap"));
+    REQUIRE(ends_with(ua, ",libc=,bmap=1)"));
 
     REQUIRE_RC(KConfigRelease(kfg));
 }
