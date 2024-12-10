@@ -81,8 +81,12 @@ TEST_CASE(TestTelemetry) {
     putenv(const_cast<char*>("VDB_OPT_BITMAP="));
     ua = nullptr;
     REQUIRE_RC(KNSManagerGetUserAgent(&ua));
-    std::cerr << "UA='" << ua << "'\n";
+ // std::cerr << "UA='" << ua << "'\n";
+#ifndef WINDOWS
     REQUIRE(ends_with(ua, ",libc=,bmap=)"));
+#else
+    REQUIRE(ends_with(ua, ",libc=,bmap=nob)"));
+#endif
 
     putenv(const_cast<char*>("VDB_OPT_BITMAP=101"));
     ua = nullptr;
