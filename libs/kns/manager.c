@@ -86,8 +86,6 @@
 #define MAX_CONN_WRITE_LIMIT ( 10 * 60 * 1000 )
 #endif
 
-#define TELEMETRY
-
 static KLock *kns_manager_lock = NULL; /* Protects below */
 static KDataBuffer kns_manager_user_agent;
 
@@ -1288,7 +1286,7 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
 {
     rc_t rc = 0;
 
-    bool telemetry = true;
+    const bool telemetry = true; /* always send telemetry bits */
 
     if ( user_agent == NULL ) {
         rc = RC ( rcNS, rcMgr, rcAccessing, rcParam, rcNull );
@@ -1388,8 +1386,6 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
         KConfig *kfg = NULL;
         KConfigMake ( &kfg, NULL );
 
-        KConfig_Get_SendTelemetry(kfg, &telemetry); /* ignore rc */
-
         /* Sometimes called before KNSManagerMake */
         if ( ( KDataBufferBytes ( &kns_manager_guid ) == 0 )
             || ( strlen ( kns_manager_guid.base ) == 0 ) )
@@ -1417,10 +1413,6 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
 
     KDataBuffer phid;
     KDataBufferMakeBytes ( &phid, 0 );
-
-#ifndef TELEMETRY
-    telemetry = false;
-#endif
 
     if ( telemetry )
       rc = KDataBufferPrintf (
