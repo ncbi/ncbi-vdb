@@ -24,12 +24,10 @@
 *
 */
 
-#ifndef _h_kapp_main_
-#define _h_kapp_main_
+#pragma once
 
-#ifndef _h_klib_defs_
 #include <klib/defs.h>
-#endif
+#include <kapp/vdbapp.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -61,5 +59,3 @@ rc_t CC KMain ( int argc, char *argv [] );
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* _h_kapp_main_ */
