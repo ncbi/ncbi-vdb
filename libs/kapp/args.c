@@ -40,7 +40,7 @@
 #include <klib/vector.h>
 
 #include <kfg/config.h>
-#include <kapp/main.h>
+#include <kapp/vdbapp.h>
 #include <kapp/args.h>
 #include <kapp/args-conv.h>
 

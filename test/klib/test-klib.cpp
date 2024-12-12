@@ -42,6 +42,8 @@
 #include <klib/vector.h>
 #include <klib/time.h>
 
+#include <kfg/config.h>
+
 #include <cstdlib>
 #include <cstring>
 #include <set>
@@ -1125,9 +1127,6 @@ TEST_CASE(KnowIfTheFunctionExistsAtCompileTime) {
 
 //////////////////////////////////////////////////// Main
 extern "C" {
-
-#include <kapp/args.h>
-#include <kfg/config.h>
 
 int main(int argc, char* argv[])
 {
