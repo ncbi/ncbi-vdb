@@ -72,21 +72,22 @@ rc_t CC SignalNoHup ( void );
  *      mm = minor release
  *    rrrr = bug-fix release
  */
-ver_t CC KAppVersion ( void );
+//ver_t CC KAppVersion ( void );
+ver_t SetKAppVersion ( ver_t ver );
 
 
 /* Usage - EXTERN
  *  This function is called when the command line argument
  *  handling sees -? -h or --help
  */
-rc_t CC Usage ( struct Args const * args );
-
+typedef rc_t CC (*Usage_t) ( const Args * args );
+Usage_t SetUsage ( Usage_t func );
 
 /* Version - EXTERN
  *  Obsolete: formerly called when the command line option handler
  *  saw -V or --version
  */
-rc_t CC Version ( struct Args const * args );
+//rc_t CC Version ( struct Args const * args );
 
 
 /* Usage - EXTERN

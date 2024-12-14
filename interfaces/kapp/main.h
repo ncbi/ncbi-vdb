@@ -56,6 +56,14 @@ extern "C" {
  */
 rc_t CC KMain ( int argc, char *argv [] );
 
+/* Version  EXTERN
+ *  return 4-part version code: 0xMMmmrrrr, where
+ *      MM = major release
+ *      mm = minor release
+ *    rrrr = bug-fix release
+ */
+ver_t CC KAppVersion ( void );
+
 #ifdef __cplusplus
 }
 #endif

@@ -71,6 +71,40 @@
 #define LEGACY_Q_ALIAS_ERROR      0
 #endif
 
+static const char * UsageDefaultName = "";
+static Usage_t Usage = NULL;
+static UsageSummary_t UsageSummary = NULL;
+static ver_t KAppVersion = 0;
+
+void SetUsageDefaultName( const char* str )
+{
+    if ( str != NULL  )
+    {
+        UsageDefaultName = str;
+    }
+}
+
+Usage_t SetUsage ( Usage_t func )
+{
+    Usage_t ret = Usage;
+    Usage = func;
+    return ret;
+}
+
+UsageSummary_t SetUsageSummary ( UsageSummary_t func )
+{
+    UsageSummary_t ret = UsageSummary;
+    UsageSummary = func;
+    return ret;
+}
+
+ver_t SetKAppVersion ( ver_t ver )
+{
+    ver_t ret = KAppVersion;
+    KAppVersion = ver;
+    return ret;
+}
+
 bool CC is_valid_name (const char * string)
 {
     /* we do not allow leading - or empty names */
@@ -1858,7 +1892,7 @@ rc_t CC ArgsHandleVersion (Args * self)
             if (self)
                 rc = ArgsProgram (self, &fullpath, &progname);
 
-            HelpVersion (fullpath, KAppVersion());
+            HelpVersion (fullpath, KAppVersion);
 
             ArgsWhack (self);
             exit (0);

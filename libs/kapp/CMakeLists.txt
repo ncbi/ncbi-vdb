@@ -60,10 +60,10 @@ set( KAPP_SRC
 
 set( SRC ${KAPP_SRC} ${OS_SPECIFIC_SRC} )
 
-GenerateStaticLibs( kapp "${SRC}" )
+GenerateStaticLibs( kapp "${KAPP_SRC}" )
 ExportStatic( kapp true )
 
-GenerateStaticLibsWithDefs( kapp-norsrc "${SRC}" "NO_KRSRC=1" )
+GenerateStaticLibsWithDefs( kapp-norsrc "${KAPP_SRC}" "NO_KRSRC=1" )
 
 GenerateStaticLibs( vdbapp "${APP_CMN};${OS_SPECIFIC_SRC}" )
 ExportStatic( vdbapp true )
