@@ -120,7 +120,7 @@ FIXTURE_TEST_CASE(HttpRequest_PUT_sra, HttpRequestFixture)
 
     char version[16] = "";
     REQUIRE_RC(string_printf(
-        version, sizeof version, NULL, "%V", VDB_RELEASE_VERSION));
+        version, sizeof version, NULL, "%.3V", VDB_RELEASE_VERSION));
     assert(m_req && m_req->http);
     string expected("PUT ");
     if (m_req->http->uf == eUFAbsolute)
