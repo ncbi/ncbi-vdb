@@ -24,9 +24,10 @@
 *
 */
 
+#include <kapp/extern.h>
+
 #if ! NO_KRSRC
 #include <kfc/except.h>
-//#include <kfc/rsrc.h>
 #include <kfc/rsrc-global.h>
 #include <kfc/ctx.h>
 #endif
@@ -100,6 +101,7 @@ void CC atexit_task ( void )
 }
 #endif
 
+LIB_EXPORT
 rc_t
 VdbInitialize( int argc, char *argv [], ver_t vers )
 {
@@ -189,6 +191,7 @@ VdbInitialize( int argc, char *argv [], ver_t vers )
     return rc;
 }
 
+LIB_EXPORT
 void
 VdbTerminate( rc_t rc )
 {

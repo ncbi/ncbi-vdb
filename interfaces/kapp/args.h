@@ -358,7 +358,7 @@ rc_t CC ArgsCheckRequired (Args * args);
  *
  * More than one example line can be present if desired.
  */
-typedef rc_t CC (*UsageSummary_t) (const char * prog_name);
+typedef rc_t (CC *UsageSummary_t) (const char * prog_name);
 UsageSummary_t SetUsageSummary ( UsageSummary_t func );
 
 /*

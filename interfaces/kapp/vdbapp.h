@@ -26,6 +26,8 @@
 
 #pragma once
 
+#include <kapp/extern.h>
+
 #include <klib/rc.h>
 #include <kapp/args.h>
 
@@ -37,9 +39,9 @@
 extern "C" {
 #endif
 
-rc_t VdbInitialize( int argc, char *argv [], ver_t vers );
+KAPP_EXTERN rc_t VdbInitialize( int argc, char *argv [], ver_t vers );
 
-void VdbTerminate( rc_t rc );
+KAPP_EXTERN void VdbTerminate( rc_t rc );
 
 /* Quitting
  *  is the program supposed to exit
@@ -80,7 +82,7 @@ ver_t SetKAppVersion ( ver_t ver );
  *  This function is called when the command line argument
  *  handling sees -? -h or --help
  */
-typedef rc_t CC (*Usage_t) ( const Args * args );
+typedef rc_t (CC *Usage_t) ( const Args * args );
 Usage_t SetUsage ( Usage_t func );
 
 /* Version - EXTERN

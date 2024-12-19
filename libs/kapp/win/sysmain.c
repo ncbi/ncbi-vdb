@@ -60,35 +60,6 @@
 
 static bool convert_args_paths = true;
 
-BOOL CC Our_HandlerRoutine( DWORD dwCtrlType )
-{
-    BOOL res = FALSE;
-    switch( dwCtrlType )
-    {
-    case CTRL_C_EVENT : SetQuitting();
-                        res = TRUE;
-                        break;
-    }
-    return res;
-}
-
-
-/* main
- *  Windows specific main entrypoint
- */
-static
-int main2 ( int argc, char *argv [] )
-{
-    rc_t rc;
-
-    SetConsoleCtrlHandler( ( PHANDLER_ROUTINE ) Our_HandlerRoutine, TRUE );
-
-    /* run this guy */
-    rc = KMane ( argc, argv );
-
-    return ( rc == 0 ) ? 0 : IF_EXITCODE(rc, 3);
-}
-
 static
 char * convert_arg_utf8( const wchar_t *arg )
 {
@@ -226,7 +197,11 @@ int __cdecl wmain ( int argc, wchar_t *wargv [], wchar_t *envp [] )
 
         /* perform normal main operations on UTF-8 with POSIX-style paths */
         if ( i == argc )
-            status = main2 ( argc, argv );
+        {
+            rc_t rc = KMane(argc, argv);
+            status = (rc == 0) ? 0 : IF_EXITCODE(rc, 3);
+        }
+
 
         /* tear down argv */
         while ( -- i >= 0 )
@@ -238,10 +213,4 @@ int __cdecl wmain ( int argc, wchar_t *wargv [], wchar_t *envp [] )
     CoUninitialize ();
 
     return status;
-}
-
-void  __declspec( dllexport ) __stdcall wmainCRTStartupNoPathConversion()
-{
-    convert_args_paths = false;
-    wmainCRTStartup();
 }

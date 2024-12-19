@@ -25,6 +25,11 @@
 */
 
 #include <klib/rc.h>
+#include "../main-priv.h"
+
+#include <WINDOWS.H>
+
+static char** argv = NULL;
 
 /* SignalQuit
  *  tell the program to quit
@@ -40,4 +45,35 @@ rc_t CC SignalQuit ( void )
 rc_t CC SignalHup ( void )
 {
     return RC ( rcExe, rcProcess, rcSignaling, rcNoObj, rcUnknown );
+}
+
+BOOL CC Our_HandlerRoutine(DWORD dwCtrlType)
+{
+    BOOL res = FALSE;
+    switch (dwCtrlType)
+    {
+    case CTRL_C_EVENT: SetQuitting();
+        res = TRUE;
+        break;
+    }
+    return res;
+}
+
+int
+VdbInitializeSystem()
+{
+    /* must initialize COM... must initialize COM... */
+    /* CoInitializeEx ( NULL, COINIT_MULTITHREADED ); */
+    CoInitialize(NULL);
+
+    SetConsoleCtrlHandler((PHANDLER_ROUTINE)Our_HandlerRoutine, TRUE);
+
+    return 0;
+}
+
+void
+VdbTerminateSystem()
+{
+    /* balance the COM initialization */
+    CoUninitialize();
 }

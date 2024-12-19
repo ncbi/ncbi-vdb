@@ -26,6 +26,8 @@
 
 #pragma once
 
+#include <kapp/extern.h>
+
 #include <klib/defs.h>
 #include <kapp/vdbapp.h>
 
