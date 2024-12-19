@@ -30,6 +30,7 @@ AddExecutableTest( Test_KNS_google-proxy "test-google-proxy" "${COMMON_LIBS_READ
 AddExecutableTest( Test_KNS_test200for-whole-file "test200for-whole-file" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_KNS_dflt "knstest" "${COMMON_LIBS_READ}" )
 AddExecutableTest( SlowTest_KNS_ipc "test-ipc" "${COMMON_LIBS_READ}" )
+AddExecutableTest( Test_KNS_opt-bitmap "test-opt-bitmap" "${COMMON_LIBS_READ}" )
 AddExecutableTest( SlowTest_KNS_http "HttpFixture;httptest" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_KNS_http-dropconn "http_dropconnection_test" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_KNS_http_request "HttpFixture;test-http-request" "${COMMON_LIBS_READ}" )

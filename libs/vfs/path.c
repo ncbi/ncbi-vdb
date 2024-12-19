@@ -4716,10 +4716,16 @@ rc_t VPathSetAccOfParentDb(
     rc_t rc = 0;
 
     if (self != NULL) {
-        if (acc != NULL)
+        if (acc != NULL) {
+            StringWhack(self->accOfParentDb);
             rc = StringCopy(&self->accOfParentDb, acc);
-        if (dir != NULL)
-            rc = StringCopy(&self->dirOfParentDb, dir);
+        }
+        if (dir != NULL) {
+            StringWhack(self->dirOfParentDb);
+            rc_t r = StringCopy(&self->dirOfParentDb, dir);
+            if (r != 0 && rc == 0)
+                rc = r;
+        }
     }
 
     return rc;
