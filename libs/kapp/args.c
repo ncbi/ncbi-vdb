@@ -1856,7 +1856,10 @@ rc_t CC ArgsHandleHelp (Args * self)
         if (count)
         {
             /* this is a call into the main program code */
-            Usage(self);
+            if ( Usage )
+            {
+                Usage(self);
+            }
             ArgsWhack (self);
             exit (0);
         }
@@ -2419,7 +2422,10 @@ rc_t CC MiniUsage (const Args * args)
     if (rc)
         progname = UsageDefaultName;
     KOutHandlerSetStdErr();
-    UsageSummary (progname);
+    if ( UsageSummary )
+    {
+        UsageSummary (progname);
+    }
     KOutMsg ("\nUse option --help for more information.\n\n");
 
     KOutHandlerSet (w,d);
