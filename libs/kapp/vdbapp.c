@@ -38,7 +38,7 @@
 #include <klib/rc.h>
 #include <klib/report.h>
 #include <klib/text.h>
-#include <klib/ncbi-vdb-version.h>
+#include <klib/sra-release-version.h>
 
 #include <kns/manager.h>
 #include <kproc/procmgr.h>
@@ -120,8 +120,10 @@ VdbInitialize( int argc, char *argv [], ver_t vers )
 
     if ( vers == 0 )
     {   // by default, use the version # of the library
-        vers = GetPackageVersion();
-        SetKAppVersion( vers );
+        SraReleaseVersion v;
+        memset(&v, 0, sizeof v);
+        SraReleaseVersionGet( &v );
+        SetKAppVersion( v . version );
     }
 
     /* initialize error reporting */

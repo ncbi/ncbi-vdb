@@ -28,7 +28,7 @@ AddExecutableTest( Test_KNS_allow_all_certificates "test_allow_all_certificates"
 AddExecutableTest( Test_KNS_dis_allow_all_certificates "test_dis_allow_all_certificates" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_KNS_google-proxy "test-google-proxy" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_KNS_test200for-whole-file "test200for-whole-file" "${COMMON_LIBS_READ}" )
-AddExecutableTest( Test_KNS "knstest" "${COMMON_LIBS_READ}" )
+AddExecutableTest( Test_KNS_dflt "knstest" "${COMMON_LIBS_READ}" )
 AddExecutableTest( SlowTest_KNS_ipc "test-ipc" "${COMMON_LIBS_READ}" )
 AddExecutableTest( SlowTest_KNS_http "HttpFixture;httptest" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_KNS_http-dropconn "http_dropconnection_test" "${COMMON_LIBS_READ}" )

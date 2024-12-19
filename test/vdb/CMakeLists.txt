@@ -42,6 +42,11 @@ AddExecutableTest(
 AddExecutableTest(
            Test_VDB_dependencies_wgs "Test_VDB_dependencies_wgs" "${COMMON_LIBS_READ}" )
 
+BuildExecutableForTest( test-VDBManagerGetObjVersion
+    "test-VDBManagerGetObjVersion" "${COMMON_LIBS_READ}" )
+add_test( NAME Test_VDBManagerGetObjVersion COMMAND test-VDBManagerGetObjVersion
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../vfs )
+
 AddExecutableTest( Test_VDB_sparse_col_rw "test-sparse-col" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" )
 set_tests_properties( Test_VDB_sparse_col_rw PROPERTIES FIXTURES_SETUP SPARSE_COL )
 
