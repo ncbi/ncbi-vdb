@@ -33,17 +33,10 @@ extern "C" {
     
 /*
  * Windows function to convert arguments from wchar_t string to utf-8 string
- * Also checks and converts path from Windows to POSIX format
- *
- * "arg" windows command line argument
- *
- * "known_as_path" indicates whether we need a path conversion path.
- * If it set to false, then rewrite_arg will only convert argument to utf-8.
- * 
- * "after_main" indicates whether rewrite happens before or inside calling KMane
+ * Also checks and converts paths from Windows to POSIX format
  */
-char * CC rewrite_arg_as_path ( const wchar_t *arg, bool before_kmane );
-    
+int ConvertWArgsToUtf8(int argc, wchar_t* wargv[], char** argv[]);
+
 #ifdef __cplusplus
 }
 #endif

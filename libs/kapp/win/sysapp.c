@@ -24,12 +24,12 @@
 *
 */
 
-#include <klib/rc.h>
 #include "../main-priv.h"
 
-#include <WINDOWS.H>
+#include <klib/rc.h>
+#include <klib/text.h>
 
-static char** argv = NULL;
+#include <WINDOWS.H>
 
 /* SignalQuit
  *  tell the program to quit
@@ -77,3 +77,4 @@ VdbTerminateSystem()
     /* balance the COM initialization */
     CoUninitialize();
 }
+

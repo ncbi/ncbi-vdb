@@ -340,7 +340,11 @@ static rc_t argsHandler(int argc, char * argv[]) {
 extern "C"
 {
 
-int main ( int argc, char *argv [] )
+#if WINDOWS && UNICODE
+    int wmain(int argc, wchar_t* argv[])
+#else
+    int main(int argc, char* argv[])
+#endif
 {
     VDB::VdbApp app( argc, argv );
     if (!app)

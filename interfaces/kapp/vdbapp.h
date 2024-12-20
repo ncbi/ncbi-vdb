@@ -157,6 +157,9 @@ rc_t CC NextLogLevelCommon ( const char * level_parameter );
         {
         public:
             VdbApp( int argc, char *argv [], ver_t vers = 0 ) { m_rc = VdbInitialize( argc, argv, vers ); }
+#if WINDOWS && UNICODE
+            VdbApp( int argc, wchar_t* argv[] );
+#endif
             ~VdbApp() { VdbTerminate( m_rc ); }
 
             operator bool() const { return m_rc == 0; }

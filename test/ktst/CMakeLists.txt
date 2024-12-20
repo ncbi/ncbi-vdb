@@ -24,7 +24,7 @@
 
 add_compile_definitions( __mod__="test/ktst" )
 
-AddExecutableTest( Test_KTST "ktsttest" "${COMMON_LIBS_READ}" )
+AddExecutableTest( Test_KTST "ktsttest" "kapp;${COMMON_LIBS_READ}" )
 if( TARGET Test_KTST_tsan )
     set_property(TEST Test_KTST_tsan PROPERTY ENVIRONMENT "TSAN_OPTIONS=suppressions=tsan.suppressions")
 endif()
