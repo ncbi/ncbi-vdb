@@ -88,11 +88,32 @@ TEST_CASE(SignalHup_ignored)
 {
     REQUIRE_RC_FAIL( SignalHup() ); // would not return on Unix
 }
+
+TEST_CASE(WCharConversion)
+{
+    wchar_t * wargv[] = {L"wide string 0", L"wide string 1"};
+    int wargc = 2;
+    VDB::VdbApp app(wargc, wargv);
+    REQUIRE_EQ( string("wide string 0"), string(app.GetArgV()[0]) );
+    REQUIRE_EQ( string("wide string 1"), string(app.GetArgV()[1]) );
+}
+
+TEST_CASE(WCharConversion_BadArgs)
+{
+    wchar_t* wargv[] = { L"wide string 0", L"wide string 1", NULL };
+    int wargc = 20;
+    VDB::VdbApp app(wargc, wargv);
+    REQUIRE_RC_FAIL( app.getRc() );
+}
+
 #endif
 
-int main ( int argc, char *argv [] )
+#if WINDOWS && UNICODE
+int wmain(int argc, wchar_t* argv[])
+#else
+int main(int argc, char* argv[])
+#endif
 {
     VDB::VdbApp app( argc, argv, AppVersion );
-    rc_t rc = VDBAppTestSuite(argc, argv);
-    return rc;
+    return VDBAppTestSuite(argc, app.GetArgV());
 }

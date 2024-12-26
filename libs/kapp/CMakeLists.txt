@@ -50,15 +50,15 @@ set( APP_CMN
     tokenizer.c
     log-xml.c
     vdbapp.c
+    vdbapp.cpp
 )
 
 set( KAPP_SRC
     main.c
     ${SYSMAIN}
     ${APP_CMN}
+    ${OS_SPECIFIC_SRC}
 )
-
-set( SRC ${KAPP_SRC} ${OS_SPECIFIC_SRC} )
 
 GenerateStaticLibs( kapp "${KAPP_SRC}" )
 ExportStatic( kapp true )

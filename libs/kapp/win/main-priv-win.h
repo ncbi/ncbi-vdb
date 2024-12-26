@@ -35,7 +35,7 @@ extern "C" {
  * Windows function to convert arguments from wchar_t string to utf-8 string
  * Also checks and converts paths from Windows to POSIX format
  */
-int ConvertWArgsToUtf8(int argc, wchar_t* wargv[], char** argv[]);
+int ConvertWArgsToUtf8(int argc, wchar_t* wargv[], char** argv[], bool convert_args_paths);
 
 #ifdef __cplusplus
 }

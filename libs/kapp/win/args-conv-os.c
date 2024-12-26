@@ -54,16 +54,21 @@ char* convert_arg_utf8(const wchar_t* arg)
     return utf8;
 }
 
-char* CC rewrite_arg_as_path(const wchar_t* arg)
+char* CC rewrite_arg_as_path(const wchar_t* arg, bool convert_args_paths)
 {
     char* utf8;
     bool has_drive = false;
     size_t i, dst_size;
     DWORD len;
 
+    if (arg == NULL)
+    {
+        return NULL;
+    }
+
     /* detect drive or full path */
     wchar_t rewrit[MAX_PATH];
-    if (arg[0] < 128)
+    if (arg[0] < 128 && convert_args_paths)
     {
         bool rewrite = false;
 
@@ -128,7 +133,7 @@ char* CC rewrite_arg_as_path(const wchar_t* arg)
     return utf8;
 }
 
-int ConvertWArgsToUtf8(int argc, wchar_t* wargv[], char** argv[])
+int ConvertWArgsToUtf8(int argc, wchar_t* wargv[], char** argv[], bool convert_args_paths)
 {
     int status = 0;
     /* create a copy of args */
@@ -142,13 +147,19 @@ int ConvertWArgsToUtf8(int argc, wchar_t* wargv[], char** argv[])
            rewriting anything that looks like a path */
         for (i = 0; i < argc; ++i)
         {
-            (*argv)[i] = rewrite_arg_as_path(wargv[i]);
+            if (convert_args_paths)
+            {
+                argv[i] = rewrite_arg_as_path(wargv[i], true);
+            }
+            else
+            {
+                argv[i] = convert_arg_utf8(wargv[i]);
+            }
 
             if ((*argv)[i] == NULL)
                 break;
         }
 
-        /* perform normal main operations on UTF-8 with POSIX-style paths */
         if (i != argc)
         {
             status = 6;
@@ -164,7 +175,7 @@ rc_t ArgsConvFilepath(const Args* args, uint32_t arg_index, const char* arg, siz
 
     string_cvt_wchar_copy(arg_wide, MAX_PATH, arg, arg_len);
 
-    res = rewrite_arg_as_path(arg_wide);
+    res = rewrite_arg_as_path(arg_wide, false);
     if (!res)
         return RC(rcRuntime, rcArgv, rcConstructing, rcMemory, rcExhausted);
 

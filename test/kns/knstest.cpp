@@ -359,7 +359,7 @@ extern "C"
 
     KConfigDisableUserSettings();
 
-    return KnsTestSuite(argc, argv);
+    return KnsTestSuite(argc, app.GetArgV());
 }
 
 }

@@ -1128,17 +1128,14 @@ TEST_CASE(KnowIfTheFunctionExistsAtCompileTime) {
 //////////////////////////////////////////////////// Main
 extern "C" {
 
-int main(int argc, char* argv[])
-{
-    VDB::VdbApp app( argc, argv );
-    if (!app)
+#if WINDOWS && UNICODE
+    int wmain(int argc, wchar_t* argv[])
+#else
+    int main(int argc, char* argv[])
+#endif
     {
-        return 1;
+        VDB::VdbApp app(argc, argv);
+        return KlibTestSuite(argc, app.GetArgV());
     }
-    KConfigDisableUserSettings();
-    rc_t rc = KlibTestSuite(argc, argv);
-    //TODO: app.setRc
-    return rc == 0 ? 0 : 3;
-}
 
 }

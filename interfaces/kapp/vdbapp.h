@@ -156,17 +156,20 @@ rc_t CC NextLogLevelCommon ( const char * level_parameter );
         class VdbApp
         {
         public:
-            VdbApp( int argc, char *argv [], ver_t vers = 0 ) { m_rc = VdbInitialize( argc, argv, vers ); }
+            VdbApp(int argc, char* argv[], ver_t vers = 0);
 #if WINDOWS && UNICODE
-            VdbApp( int argc, wchar_t* argv[] );
+            VdbApp( int argc, wchar_t* argv[], ver_t vers = 0);
 #endif
-            ~VdbApp() { VdbTerminate( m_rc ); }
+            ~VdbApp();
 
             operator bool() const { return m_rc == 0; }
             rc_t getRc() const { return m_rc; }
             void setRc( rc_t p_rc ) { m_rc = p_rc; }
 
+            char** GetArgV() const;
+
         private:
+            char** m_argv; // not owned
             rc_t m_rc;
         };
 
