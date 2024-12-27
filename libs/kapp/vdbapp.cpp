@@ -29,7 +29,7 @@
 using namespace VDB;
 
 VdbApp::VdbApp(int argc, char* argv[], ver_t vers) 
-    : m_argv( argv )
+    : m_argc( argc ), m_argv( argv ), m_argvOwned ( false )
 { 
     m_rc = VdbInitialize(argc, argv, vers); 
 }
@@ -37,7 +37,7 @@ VdbApp::VdbApp(int argc, char* argv[], ver_t vers)
 #if WINDOWS && UNICODE
 #include "win/main-priv-win.h"
 VdbApp::VdbApp(int argc, wchar_t* argv[], ver_t vers)
-    : m_argv(nullptr)
+    : m_argc( argc ), m_argv( argv ), m_argvOwned ( false )
 {
     int status = ConvertWArgsToUtf8(argc, argv, &m_argv, true);
     if (status != 0)
@@ -46,6 +46,7 @@ VdbApp::VdbApp(int argc, wchar_t* argv[], ver_t vers)
     }
     else
     {
+        m_argvOwned = true;
         m_rc = VdbInitialize(argc, m_argv, vers);
     }
 }
@@ -54,15 +55,13 @@ VdbApp::VdbApp(int argc, wchar_t* argv[], ver_t vers)
 VdbApp::~VdbApp() 
 { 
     VdbTerminate(m_rc); 
-    if (m_argv)
+    if (m_argvOwned)
     {
-        free(m_argv);
+        int i = m_argc;
+        while ( -- i >= 0 )
+        {
+            free ( m_argv [ i ] );
+        }
+        free ( m_argv );        
     }
 }
-
-char** 
-VdbApp::GetArgV() const
-{
-    return m_argv;
-}
-

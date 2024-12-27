@@ -166,10 +166,13 @@ rc_t CC NextLogLevelCommon ( const char * level_parameter );
             rc_t getRc() const { return m_rc; }
             void setRc( rc_t p_rc ) { m_rc = p_rc; }
 
-            char** GetArgV() const;
+            int GetArgC() const { return m_argc; } 
+            char** GetArgV() const { return m_argv; } 
 
         private:
-            char** m_argv; // not owned
+            int m_argc;
+            char** m_argv;
+            bool m_argvOwned; // true if args have been rewritten
             rc_t m_rc;
         };
 
