@@ -149,11 +149,11 @@ int ConvertWArgsToUtf8(int argc, wchar_t* wargv[], char** argv[], bool convert_a
         {
             if (convert_args_paths)
             {
-                argv[i] = rewrite_arg_as_path(wargv[i], true);
+                (*argv)[i] = rewrite_arg_as_path(wargv[i], true);
             }
             else
             {
-                argv[i] = convert_arg_utf8(wargv[i]);
+                (*argv)[i] = convert_arg_utf8(wargv[i]);
             }
 
             if ((*argv)[i] == NULL)
