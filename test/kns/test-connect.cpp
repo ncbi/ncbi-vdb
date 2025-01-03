@@ -99,7 +99,7 @@ uint32_t tries = 0;
 FIXTURE_TEST_CASE(Connect_OK, ConnectFixture)
 {   //VDB-3754: asynch connnection, success
     return_val = 1; /* epoll_wait: success */
-    InitEP("www.google.com", 500);
+    InitEP("www.google.com", 999);
     rc_t rc = KNSManagerMakeRetryTimedConnection( m_mgr, & socket, & tm, 0, 0, NULL, & ep );
     REQUIRE_RC ( rc );
 }
