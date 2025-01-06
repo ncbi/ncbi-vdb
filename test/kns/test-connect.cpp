@@ -119,6 +119,7 @@ FIXTURE_TEST_CASE(Connect_OK, ConnectFixture)
         else
             REQUIRE_RC(rc);
         LOG(l, "...successfully connected to " << h << "\n");
+        break;
     }
 }
 
