@@ -99,11 +99,12 @@ uint32_t tries = 0;
 FIXTURE_TEST_CASE(Connect_OK, ConnectFixture)
 {   //VDB-3754: asynch connnection, success
     return_val = 1; /* epoll_wait: success */
-    LOG(LogLevel::e_error, "Trying www.google.com...\n");
-    InitEP("www.google.com", 2000);
+    string h("www.google.com");
+    LOG(LogLevel::e_error, "Trying " << h << "...\n");
+    InitEP(h.c_str(), 2000);
     rc_t rc = KNSManagerMakeRetryTimedConnection( m_mgr, & socket, & tm, 0, 0, NULL, & ep );
     REQUIRE_RC ( rc );
-    LOG(LogLevel::e_error, "...successfully connected to www.google.com\n");
+    LOG(LogLevel::e_error, "...successfully connected to " << h << "\n");
 }
 
 FIXTURE_TEST_CASE(Connect_Timeout, ConnectFixture)
