@@ -59,12 +59,12 @@ public:
     {
     }
 
-    void InitEP(const char* p_url, uint32_t timeoutMs)
+    void InitEP(const char* p_url, uint32_t timeoutMs, uint16_t port = 80)
     {
         TimeoutInit(&tm, timeoutMs);
         String url;
         CONST_STRING(&url, p_url);
-        THROW_ON_RC(KNSManagerInitDNSEndpoint(m_mgr, &ep, &url, 80));
+        THROW_ON_RC(KNSManagerInitDNSEndpoint(m_mgr, &ep, &url, port));
     }
 
     ~ConnectFixture()
@@ -98,15 +98,28 @@ uint32_t tries = 0;
 
 FIXTURE_TEST_CASE(Connect_OK, ConnectFixture)
 {   //VDB-3754: asynch connnection, success
-    return_val = 1; /* epoll_wait: success */
-    string h("www.nlm.nih.gov");
+
+    // Somehow we can connect just to one of those hosts in our test environment
+    string hh[] = { "www.google.com", "www.nlm.nih.gov" };
+
     LogLevel::E l(LogLevel::e_error);
     l = LogLevel::e_warning;
-    LOG(l, "Trying " << h << "...\n");
-    InitEP(h.c_str(), 500);
-    rc_t rc = KNSManagerMakeRetryTimedConnection( m_mgr, & socket, & tm, 0, 0, NULL, & ep );
-    REQUIRE_RC ( rc );
-    LOG(l, "...successfully connected to " << h << "\n");
+    for (auto i = 0; i < sizeof hh / sizeof hh[0]; ++i) {
+        string& h(hh[i]);
+        return_val = 1; /* epoll_wait: success */
+        LOG(l, "Trying " << h << "...\n");
+        InitEP(h.c_str(), 500);
+        rc_t rc = KNSManagerMakeRetryTimedConnection(m_mgr, &socket, &tm, 0, 0,
+            NULL, &ep);
+        if (i == 0 && rc != 0) {
+            LOG(l, "...cannot connect to " << h << ", trying " << hh[1]
+                << "...\n");
+            continue;
+        }
+        else
+            REQUIRE_RC(rc);
+        LOG(l, "...successfully connected to " << h << "\n");
+    }
 }
 
 FIXTURE_TEST_CASE(Connect_Timeout, ConnectFixture)
