@@ -174,6 +174,8 @@ struct KPTrieIndex_v2
     uint8_t byteswap;
 };
 
+rc_t KIndexValidateHeader(bool *reversedByteOrder, uint32_t *type, void const *data, size_t size);
+
 #ifdef __cplusplus
 }
 #endif

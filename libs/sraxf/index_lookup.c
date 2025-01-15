@@ -188,12 +188,12 @@ static rc_t CC index_lookup_impl(
     if (rc == 0)
     {
         char *qptr = ((char *)query_buf->base) + (query_buf->bit_offset >> 3);
-        uint32_t qlen = query_buf->elem_count;
+        uint32_t qlen = (uint32_t) query_buf->elem_count;
 
         if (argc > 0)
         {
             char *pptr = ((char *)argv[0].u.data.base) + argv[0].u.data.first_elem;
-            uint32_t plen = argv[0].u.data.elem_count;
+            uint32_t plen = (uint32_t) argv[0].u.data.elem_count;
             while (plen > 0 && qlen > 0 && *pptr == *qptr)
             {
                 pptr++;
@@ -217,14 +217,25 @@ static rc_t CC index_lookup_impl(
                     qptr++;
                     qlen--;
                 }
+#ifdef WINDOWS
+#pragma warning( push )
+#pragma warning( disable : 4996) /*sscanf is not different from sscanf_s for %d */
+#endif
                 sscanf(qptr, "%d:%d:%d:%d", &lane, &tile, &x, &y);
+#ifdef WINDOWS
+#pragma warning( pop )
+#endif
                 if (lane < 0 || lane > 0xF || tile < 0 || tile > 0xFFF || x < 0 || x > 0xFFF || y < 0 || y > 0xFFF)
                 {
                     rc = RC(rcVDB, rcIndex, rcSearching, rcData, rcNotFound);
                 }
                 else
                 {
+#ifdef WINDOWS
+                    sprintf_s(query, sizeof(query), "%1X%03X%03X%03X", lane, tile, x, y);
+#else
                     sprintf(query, "%1X%03X%03X%03X", lane, tile, x, y);
+#endif
                 }
             }
             if (rc == 0)

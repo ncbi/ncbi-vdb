@@ -29,6 +29,7 @@
 #include "wtable.h"
 
 #include <kdb/namelist.h>
+#include <kdb/kdb-priv.h>
 
 #include "database-cmn.h"
 #include "wdbmgr.h"
@@ -187,7 +188,8 @@ rc_t KWTableMake ( KWTable **tblp, const KDirectory *dir, const char *path,
     assert ( tblp != NULL );
     assert ( path != NULL );
 
-    tbl = malloc ( sizeof * tbl + strlen ( path ) );
+    size_t path_size = strlen(path);
+    tbl = malloc ( sizeof * tbl + path_size);
     if ( tbl == NULL )
     {
         * tblp = NULL;
@@ -203,7 +205,7 @@ rc_t KWTableMake ( KWTable **tblp, const KDirectory *dir, const char *path,
     KMD5SumFmtAddRef ( md5 );
     tbl -> use_md5 = ( md5 == NULL ) ? false : true;
     tbl -> read_only = read_only;
-    strcpy ( tbl -> path, path );
+    string_copy ( tbl -> path, path_size + 1, path, path_size );
 
     tbl->sym.u.obj = tbl;
     StringInitCString (&tbl->sym.name, tbl->path);
@@ -382,7 +384,7 @@ rc_t KTableLockInt (const KWTable  * self, char * path, size_t path_size,
             break;
         case kptColumn:
         case kptIndex:
-            rc = KDBVMakeSubPath (self->dir, path, path_size, ns, strlen (ns),
+            rc = KDBVMakeSubPath (self->dir, path, path_size, ns, (uint32_t) strlen (ns),
                                   name, args);
             break;
         }

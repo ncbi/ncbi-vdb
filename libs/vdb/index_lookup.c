@@ -28,7 +28,6 @@
 
 #include "blob.h"
 #include "blob-headers.h"
-#include "page-map.h"
 #include "blob-priv.h"
 #include "xform-priv.h"
 
@@ -37,6 +36,7 @@
 #include <vdb/vdb-priv.h>
 #include <vdb/vdb.h>
 #include <kdb/index.h>
+#include <kdb/page-map.h>
 #include <klib/rc.h>
 #include <klib/text.h>
 #include <klib/pbstree.h>
@@ -64,7 +64,7 @@ typedef struct tag_self_t {
 static void CC self_whack( void *Self )
 {
     self_t *self = Self;
-    
+
     KIndexRelease( self->ndx );
     free( self );
 }
@@ -83,10 +83,10 @@ rc_t CC index_lookup_impl(
     rc_t rc;
     const self_t *self = Self;
     KDataBuffer *query_buf = NULL;
-    
+
     rslt->elem_count = 0;
     rslt->no_cache = 1;
-    
+
     rc = VCursorParamsGet(self->parms, self->query_key, &query_buf);
     if (GetRCState(rc) == rcNotFound && GetRCObject(rc) == rcName) {
         rc = KDataBufferResize(rslt->data, 0);
@@ -98,7 +98,7 @@ rc_t CC index_lookup_impl(
         char *query = squery;
         uint64_t id_count;
         int64_t start_id;
-        
+
         if (query_buf->elem_count >= sizeof(squery)) {
             hquery = malloc(query_buf->elem_count + 1);
             if (hquery == NULL)
@@ -126,7 +126,7 @@ rc_t CC index_lookup_impl(
             rc = KDataBufferResize ( rslt -> data, 1 );
             if( rc == 0) {
                 int64_t *out = rslt -> data->base;
-                
+
                 out[0] = start_id;
                 out[1] = start_id + id_count - 1;
 
@@ -151,7 +151,7 @@ VTRANSFACT_BUILTIN_IMPL(idx_text_lookup, 1, 1, 0) (
     rc_t rc;
     const KIndex *ndx;
     KIdxType type;
-    
+
     rc = VTableOpenIndexRead(info->tbl, &ndx, "%.*s", (int)cp->argv[0].count, cp->argv[0].data.ascii);
     if ( rc != 0 )
     {
@@ -159,12 +159,12 @@ VTRANSFACT_BUILTIN_IMPL(idx_text_lookup, 1, 1, 0) (
             PLOGERR (klogErr, (klogErr, rc, "Failed to open index '$(index)'", "index=%.*s", (int)cp->argv[0].count, cp->argv[0].data.ascii));
         return rc;
     }
-    
+
     rc = KIndexType(ndx, &type);
     if (rc == 0) {
         if (type == kitProj + kitText) {
             self_t *self;
-            
+
             self = malloc(sizeof(*self));
             if (self) {
                 self->ndx = ndx;
@@ -174,7 +174,7 @@ VTRANSFACT_BUILTIN_IMPL(idx_text_lookup, 1, 1, 0) (
                 self->query_key[self->query_key_len] = '\0';
                 self->parms = info->parms;
                 self->case_sensitivity = cp->argc >= 3 ? *cp->argv[2].data.u8 : CASE_SENSITIVE;
-                
+
                 rslt->self = self;
                 rslt->whack = self_whack;
                 rslt->variant = vftNonDetRow;

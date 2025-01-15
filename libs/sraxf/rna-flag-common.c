@@ -65,7 +65,7 @@ static rc_t copyRNA_to_DNA(struct Self *const self
     ((void)(self));
     for (i = 0; i < length; ++i) {
         int const base = src[i];
-        dst[i] = (base != 'U') ? base : 'T';
+        dst[i] = (base != 'U') ? (uint8_t)base : (uint8_t)'T';
     }
     return 0;
 }
@@ -80,7 +80,7 @@ static rc_t copyDNA_to_RNA(struct Self *const self
     ((void)(self));
     for (i = 0; i < length; ++i) {
         int const base = src[i];
-        dst[i] = (base != 'T') ? base : 'U';
+        dst[i] = (base != 'T') ? (uint8_t)base : (uint8_t)'U';
     }
     return 0;
 }

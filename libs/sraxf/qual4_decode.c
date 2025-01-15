@@ -69,7 +69,7 @@ static size_t qual4_decode(
 		switch (st) {
 		case 0:
             if (src[i] < known_bad) {
-                dst[j][0] = val;
+                dst[j][0] = (int8_t)val;
                 st = 1;
             }
             else if (src[i] == known_bad)
@@ -82,72 +82,72 @@ static size_t qual4_decode(
             }
 			break;
 		case 1:
-			dst[j][1] = val;
+			dst[j][1] = (int8_t)val;
 			++st;
 			break;
 		case 2:
-			dst[j][2] = val;
+			dst[j][2] = (int8_t)val;
 			++st;
 			break;
 		case 3:
-			dst[j][3] = val;
+			dst[j][3] = (int8_t)val;
 			st = 0;
 			break;
         case 4:
             switch (st2) {
             case pattern_a_1:
-                dst[j][0] = val;
-				dst[j][1] = -val;
+                dst[j][0] = (int8_t)val;
+				dst[j][1] = (int8_t)(-val);
 				dst[j][2] = qmin;
 				dst[j][3] = qmin;
                 break;
             case pattern_a_2:
-                dst[j][0] = val;
+                dst[j][0] = (int8_t)val;
 				dst[j][1] = qmin;
-				dst[j][2] = -val;
+				dst[j][2] = (int8_t)(-val);
 				dst[j][3] = qmin;
                 break;
             case pattern_a_3:
-                dst[j][0] = val;
+                dst[j][0] = (int8_t)val;
 				dst[j][1] = qmin;
 				dst[j][2] = qmin;
-				dst[j][3] = -val;
+				dst[j][3] = (int8_t)(-val);
                 break;
             case pattern_b_1:
-                dst[j][0] = val;
-				dst[j][1] = -val + 1;
+                dst[j][0] = (int8_t)val;
+				dst[j][1] = (int8_t)(-val + 1);
 				dst[j][2] = qmin;
 				dst[j][3] = qmin;
                 break;
             case pattern_b_2:
-                dst[j][0] = val;
+                dst[j][0] = (int8_t)val;
 				dst[j][1] = qmin;
-				dst[j][2] = -val + 1;
+				dst[j][2] = (int8_t)(-val + 1);
 				dst[j][3] = qmin;
                 break;
             case pattern_b_3:
-                dst[j][0] = val;
+                dst[j][0] = (int8_t)val;
 				dst[j][1] = qmin;
 				dst[j][2] = qmin;
-				dst[j][3] = -val + 1;
+				dst[j][3] = (int8_t)(-val + 1);
                 break;
             case pattern_c_1:
-                dst[j][0] = val;
-				dst[j][1] = -val - 1;
+                dst[j][0] = (int8_t)val;
+				dst[j][1] = (int8_t)(-val - 1);
 				dst[j][2] = qmin;
 				dst[j][3] = qmin;
                 break;
             case pattern_c_2:
-                dst[j][0] = val;
+                dst[j][0] = (int8_t)val;
 				dst[j][1] = qmin;
-				dst[j][2] = -val - 1;
+				dst[j][2] = (int8_t)(-val - 1);
 				dst[j][3] = qmin;
                 break;
             case pattern_c_3:
-                dst[j][0] = val;
+                dst[j][0] = (int8_t)val;
 				dst[j][1] = qmin;
 				dst[j][2] = qmin;
-				dst[j][3] = -val - 1;
+				dst[j][3] = (int8_t)(-val - 1);
                 break;
             default:
                 return 0;
@@ -190,7 +190,7 @@ rc_t CC qual4_decode_func(
     rcount = qual4_decode( dst->data, dst->elem_count,
                            src->data, 
 						   ( ( (size_t)src->elem_count * src->elem_bits + 7 ) >> 3 ),
-                           qmin, qmax );
+                           (int8_t)qmin, (int8_t)qmax );
     
     if (rcount == dst->elem_count) {
         dst->byte_order = vboNone;

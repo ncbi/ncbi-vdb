@@ -1,23 +1,14 @@
 from ctypes import *
 from enum import Enum
-import datetime, string, random, sys, os, platform
-
-PY3 = sys.version_info[ 0 ] == 3
-
-if PY3 :
-    def xrange( *args, **kwargs ) :
-        return iter( range( *args, **kwargs ) )
+import datetime, string, random, sys, os, platform, glob
 
 def to_bytes( s ) :
-    if PY3 and ( type( s ) == str ) :
-        return str.encode( s )
+    if type( s ) == str : return str.encode( s )
     return s
 
 def to_char_p( s ) :
-    if PY3  and ( type( s ) == str ) :
-        return c_char_p( str.encode( s ) )
+    if type( s ) == str : return c_char_p( str.encode( s ) )
     return c_char_p( s )
-
 
 class CreateMode( Enum ) :
     Open = 0
@@ -32,12 +23,12 @@ class TypeDomain( Enum ) :
     Float = 4
     Ascii = 5
     Unicode = 6
-    
+
 class CursorMode( Enum ) :
     Update = 0
     Replace = 1
     Insert = 2
-    
+
 class OpenMode( Enum ) :
     Read = 0
     Write = 1
@@ -47,19 +38,19 @@ class RepoCat( Enum ) :
     User = 1
     Site = 2
     Remote = 3
-    
+
 class RepoSubCat( Enum ) :
     Bad = 0
     Main = 1
     Aux = 2
     Protected = 3
-    
+
 class RemoteProto( Enum ) :
     Http = 0
     Fasp = 1
     FaspHttp = 2
     HttpFasp = 3
-    
+
 class ResolvEnable( Enum ) :
     UseConfig = 0
     AlwaysEnable = 1
@@ -107,7 +98,7 @@ def RepoSubCat2String( cat ) :
 
 class vdb_string( Structure ) :
     _fields_ = [ ( "addr", c_char_p ), ( "size", c_int ), ( "len", c_int ) ]
-    
+
     def __str__( self ) :
         return self.addr.value
 
@@ -120,12 +111,9 @@ class version :
     major = 0
     minor = 0
     release = 0
-    
+
     def __init__( self, s ) :
-        if PY3 :
-            string_types = str
-        else :
-            string_types = basestring        
+        string_types = str
         if isinstance( s, string_types ) :
             a = s.split( '.' )
             l = len( a )
@@ -139,7 +127,7 @@ class version :
             self.major = ( s & 0xFF000000 ) >> 24
             self.minor = ( s & 0xFF0000 ) >> 16
             self.release = s & 0xFFFF
-            
+
     def __str__( self ) :
         return "%d.%d.%d"%( self.major, self.minor, self.release )
 
@@ -158,9 +146,9 @@ class version :
 #------------------------------------------------------------------------------------------------------------
 class vdb_error( Exception ) :
     """Exception thrown by vdb-objects like mananger, schema, database, table, cursor, column
-    
+
     Args:
-        rc  (int)      :    rc-code from vdb-library call 
+        rc  (int)      :    rc-code from vdb-library call
         msg ( string ) :    explanation of error
         obj            :    object that caused the error ( manager, schema, database, table, cursor, column )
     """
@@ -190,35 +178,32 @@ class KNamelist :
 
     def to_list( self ) :
         res = list()
-        for idx in xrange( 0, self.count() ) :
+        for idx in range( 0, self.count() ) :
             name = c_char_p()
             rc = self.__mgr.KNamelistGet( self.__ptr, idx, byref( name ) )
             if rc != 0 :
                 self.__mgr.raise_rc( rc, "KNamelistGet( %d )"%( idx ), self )
-            if PY3 :
-                res.append( name.value.decode( "utf-8" ) )
-            else :
-                res.append( name.value )
+            res.append( name.value.decode( "utf-8" ) )
         return res
 
 
 #------------------------------------------------------------------------------------------------------------
 def random_string( size = 12, chars = string.ascii_uppercase + string.ascii_lowercase + string.digits ) :
-    return ''.join( random.choice( chars ) for _ in xrange( size ) )
+    return ''.join( random.choice( chars ) for _ in range( size ) )
 
 def random_data( count, min_value, max_value ) :
     res = list()
-    for _ in xrange( count ) :
+    for _ in range( count ) :
         res.append( random.randint( min_value, max_value ) )
     return res
 
 #------------------------------------------------------------------------------------------------------------
 class typedecl( Structure ) :
     _fields_ = [ ( "type_id", c_int ), ( "dim", c_int ) ]
-    
+
     def __str__( self ) :
         return "( type_id=%d, dim=%d )"%( self.type_id, self.dim )
-    
+
 class typedesc( Structure ) :
     _fields_ = [ ( "bits", c_int ), ( "dim", c_int ), ( "domain", c_int ) ]
 
@@ -271,7 +256,7 @@ class VColumn :
         self.column_type = None
         self.min_value = None
         self.max_value = None
-        
+
     def __str__( self ) :
         return "%s.%s: (%d) %s %s"%( self.tabname, self.name, self.__id, self.tdec, self.tdes )
 
@@ -292,13 +277,13 @@ class VColumn :
 
     def domain( self ) :
         return TypeDomain( self.__tdes.domain )
-        
+
     def bits( self ) :
         return self.__tdes.bits
 
     def dim( self ) :
         return self.__tdes.dim
-        
+
     def Read( self, row ) :
         """read values from a column
         returns either a string or a list of integer, float, boolean values
@@ -317,21 +302,17 @@ class VColumn :
             self.__mgr.raise_rc( rc, "VCursorCellDataDirect( '%s.%s', #%d )"%( self.tabname, self.name, row ), self )
         if self.column_type == c_char :
             tmp = string_at( data, row_len.value )
-            if PY3 and isinstance( tmp, bytes ) :
-                return tmp.decode( "utf-8" )
+            if isinstance( tmp, bytes ) : return tmp.decode( "utf-8" )
             return tmp
         else :
             typed_ptr = cast( data, POINTER( self.column_type ) )
             e_count = row_len.value
             if elem_bits.value < 8 :
                 e_count *= elem_bits.value
-                if PY3 :
-                    e_count //= 8
-                else :
-                    e_count /= 8
+                e_count //= 8
             l = list()
-            for idx in xrange( 0, e_count ) :
-                l.append( typed_ptr[ idx ] )        
+            for idx in range( 0, e_count ) :
+                l.append( typed_ptr[ idx ] )
             return l
 
     def __write_values( self, data ) :
@@ -400,7 +381,7 @@ class VColumn :
             t = self.column_type * l
             arr = t()
             arr[ 0 ] = data
-        
+
         bits = c_int( self.__tdes.bits )
         rc = self.__mgr.VCursorDefault( self.__cur._VCursor__ptr, self.__id, bits, arr, c_int( 0 ), c_int( l ) )
         if rc != 0 :
@@ -430,16 +411,16 @@ class VColumn :
 
     def range( self ) :
         ( first, count ) = self.row_range()
-        return xrange( first, first + count )
+        return range( first, first + count )
 
     def next_row( self, current_row ) :
         res = c_longlong( 0 )
-        rc = self.__mgr.VCursorFindNextRowIdDirect( self.__cur._VCursor__ptr, self.__id, c_longlong( current_row ), byref( res ) ) 
+        rc = self.__mgr.VCursorFindNextRowIdDirect( self.__cur._VCursor__ptr, self.__id, c_longlong( current_row ), byref( res ) )
         if rc != 0 :
             return None
         else :
             return res.value
-    
+
 
 #------------------------------------------------------------------------------------------------------------
 class ReferenceObj :
@@ -463,7 +444,7 @@ class ReferenceObj :
         if rc != 0 :
             self.__mgr.raise_rc( rc, "ReferenceObj_Idx()", self )
         return res.value
-        
+
     def IdRange( self ) :
         start = c_longlong()
         stop = c_longlong()
@@ -471,7 +452,7 @@ class ReferenceObj :
         if rc != 0 :
             self.__mgr.raise_rc( rc, "ReferenceObj_IdRange()", self )
         return ( start.value, stop.value )
-        
+
     def Bin( self ) :
         res = c_int()
         rc = self.__mgr.ReferenceObj_Bin( self.__ptr, byref( res ) )
@@ -485,7 +466,7 @@ class ReferenceObj :
         if rc != 0 :
             self.__mgr.raise_rc( rc, "ReferenceObj_SeqId()", self )
         return res.value
-        
+
     def Name( self ) :
         res = c_char_p()
         rc = self.__mgr.ReferenceObj_Name( self.__ptr, byref( res ) )
@@ -506,7 +487,7 @@ class ReferenceObj :
         if rc != 0 :
             self.__mgr.raise_rc( rc, "ReferenceObj_Circular()", self )
         return res.value
-        
+
     def External( self ) :
         res = c_bool()
         rc = self.__mgr.ReferenceObj_External( self.__ptr, byref( res ), c_void_p( 0 ) )
@@ -520,10 +501,8 @@ class ReferenceObj :
         rc = self.__mgr.ReferenceObj_Read( self.__ptr, c_int( offs ), c_int( len ), buffer, byref( written ) )
         if rc != 0 :
             self.__mgr.raise_rc( rc, "ReferenceObj_Read( %d.%d )" % ( offs, len ), self )
-        if PY3 :
-            return buffer.value.decode( "utf-8" )
-        return buffer.value
-        
+        return buffer.value.decode( "utf-8" )
+
     def GetIdCount( self, row_id ) :
         res = c_int()
         rc = self.__mgr.ReferenceObj_GetIdCount( self.__ptr, c_longlong( row_id ), byref( res ) )
@@ -556,7 +535,7 @@ class ReferenceList :
         if rc != 0 :
             self.__mgr.raise_rc( rc, "ReferenceList_Find( '%s' )" % name, self )
         return ReferenceObj( self.__mgr, ptr )
-        
+
     def get( self, idx ) :
         ptr = c_void_p()
         rc = self.mgr.ReferenceList_Get( self.__ptr, byref( ptr ), c_int( idx ) )
@@ -589,7 +568,7 @@ def first_none_static_col( cols ) :
         if res == None and rr[ 1 ] > 0 :
             res = c
     return res
-    
+
 
 #------------------------------------------------------------------------------------------------------------
 def row_gen( cols, row_range = None ) :
@@ -673,14 +652,14 @@ class VCursor :
             return c
         else :
             raise vdb_error( 0, "cursor.open( x ) x is not list or string", self )
-            
+
     def AddColumn( self, name ) :
         idx = c_int()
         rc = self.__mgr.VCursorAddColumn( self.__ptr, byref( idx ), to_char_p( name ) )
         if rc != 0 :
             self.__mgr.raise_rc( rc, "VCursorAddColumn( %s.%s )"%( self.__tab.name, name ), self )
         return VColumn( self.__mgr, self, idx.value, name, self.__tab._VTable__name )
-        
+
     def Open( self ) :
         rc = self.__mgr.VCursorOpen( self.__ptr )
         if rc != 0 :
@@ -695,7 +674,7 @@ class VCursor :
         rc = self.__mgr.VCursorOpenRow( self.__ptr )
         if rc != 0 :
             self.__mgr.raise_rc( rc, "VCursorOpenRow( '%s' )"%( self.__tab._VTable__name ), self )
-        
+
     def CommitRow( self ) :
         rc = self.__mgr.VCursorCommitRow( self.__ptr )
         if rc != 0 :
@@ -734,7 +713,7 @@ class VCursor :
         if rc != 0 :
             self.__mgr.raise_rc( rc, "ReferenceList_MakeCursor()", self )
         return ReferenceList( self.__mgr, reflist_ptr )
-    
+
 
 def max_colname_len( cols, colnames ) :
     res = 0
@@ -759,7 +738,7 @@ def max_colname_len( cols, colnames ) :
 
 #------------------------------------------------------------------------------------------------------------
 # cols ....... dictionay : key = colname, value = column-object
-# rowrange ... a xrange - iterator ( None: all rows )
+# rowrange ... a range - iterator ( None: all rows )
 # colnames ... a list of string ( None: all columns )
 # prefix ..... a string printed at the beginning of each line
 def print_cols( cols, rowrange, colnames = None, prefix = "" ) :
@@ -787,7 +766,7 @@ def print_cols( cols, rowrange, colnames = None, prefix = "" ) :
                     if column != None :
                         print( '{0}{1:<{width}}.{2} : {3}'.format( prefix, name, row_id, column.Read( row_id ), width = w ) )
             print( "%s."%( prefix ) )
- 
+
 
 #------------------------------------------------------------------------------------------------------------
 class KIndex :
@@ -800,7 +779,7 @@ class KIndex :
         rc = self.__mgr.KIndexRelease( self.__ptr )
         if rc != 0 :
             self.__mgr.raise_rc( rc, "KIndexRelease( '%s' )"%( self.__name ), self )
-        
+
     def Version( self ) :
         vers = c_int()
         rc = self.__mgr.KIndexVersion( self.__ptr, byref( vers ) )
@@ -814,7 +793,7 @@ class KIndex :
         if rc != 0 :
             self.__mgr.raise_rc( rc, "KIndexType( '%s' )"%( self.__name ), self )
         return IndexType( type.value )
- 
+
     def Locked( self ) :
         return self.__mgr.KIndexLocked( self.__ptr )
 
@@ -834,10 +813,8 @@ class KIndex :
         rc = self.__mgr.KIndexProjectText( self.__ptr, c_longlong( row_id ), byref( start_id ), byref( id_count ), buffer, c_int( bufsize ), byref( num_writ ) )
         if rc != 0 :
             self.__mgr.raise_rc( rc, "KIndexProjectText( %s, %d )"%( self.__name, row_id ), self )
-        if PY3 :            
-            return ( buffer.value.decode( "utf-8" ), start_id.value, id_count.value )
-        return ( buffer.value, start_id.value, id_count.value )
-        
+        return ( buffer.value.decode( "utf-8" ), start_id.value, id_count.value )
+
     def Commit( self ) :
         rc = self.__mgr.KIndexCommit( self.__ptr )
         if rc != 0 :
@@ -863,7 +840,7 @@ class KIndex :
         if rc != 0 :
             self.__mgr.raise_rc( rc, "KIndexDeleteU64( %s, k=%d )"%( self.__name, key ), self )
 
-            
+
 #------------------------------------------------------------------------------------------------------------
 class KMDataNode :
     def __init__( self, mgr, ptr ) :
@@ -924,11 +901,11 @@ class KMDataNode :
         return num_read.value + remaining.value
 
     def to_read( self, req_len ) :
-        ns = self.size() 
+        ns = self.size()
         if req_len > 0 :
             return min( req_len, ns )
         return ns
-        
+
     def Read( self, buffer_size, to_read, offset ) :
         buffer = create_string_buffer( int( buffer_size ) )
         num_read = c_size_t()
@@ -936,9 +913,7 @@ class KMDataNode :
         rc = self.__mgr.KMDataNodeRead( self.__ptr, c_size_t( offset ), buffer, c_size_t( to_read ), byref( num_read ), byref( remaining ) )
         if rc != 0 :
             self.__mgr.raise_rc( rc, "KMDataNodeRead( offset = %d )"%( offset ), self )
-        if PY3 :
-            return buffer.value.decode( "utf-8" )
-        return buffer.value
+        return buffer.value.decode( "utf-8" )
 
     def as_string( self, req_len = 0, offset = 0 ) :
         n_bytes = self.to_read( req_len )
@@ -952,24 +927,21 @@ class KMDataNode :
             return []
         n_values = n_bytes
         if align > 1 :
-            if PY3 :
-                n_values = n_bytes / align
-            else :
-                n_values = n_bytes // align
+            n_values = n_bytes / align
             if n_bytes > ( n_values * align ) :
                 n_values += 1
         buffer = self.Read( n_values * align, n_bytes, offset )
         ptr = cast( buffer, POINTER( t ) )
         l = list()
-        for idx in xrange( 0, int( n_values ) ) :
+        for idx in range( 0, int( n_values ) ) :
             l.append( ptr[ idx ] )
         return l
 
     def as_uint8( self, req_len = 0, offset = 0 ) :
         return self.read_buffer_as( c_ubyte, 1, req_len, offset )
-        
+
     def as_int8( self, req_len = 0, offset = 0 ) :
-        return self.read_buffer_as( c_byte, 1, req_len, offset )    
+        return self.read_buffer_as( c_byte, 1, req_len, offset )
 
     def as_uint16( self, req_len = 0, offset = 0 ) :
         return self.read_buffer_as( c_ushort, 2, req_len, offset )
@@ -1085,7 +1057,7 @@ class KMetadata :
         if rc != 0 :
             self.__mgr.raise_rc( rc, "KMetadataRevision()", self )
         return rev.value
-        
+
     def MaxRevision( self ) :
         rev = c_int()
         rc = self.__mgr.KMetadataMaxRevision( self.__ptr, byref( rev ) )
@@ -1109,14 +1081,14 @@ class KMetadata :
         if rc != 0 :
             self.__mgr.raise_rc( rc, "KMetadataOpenRevision( %d )"%rev_nr, self )
         return KMetadata( self.__mgr, k_meta )
-        
+
     def GetSequence( self, name ) :
         value = c_longlong()
         rc = self.__mgr.KMetadataGetSequence( self.__ptr, to_char_p( name ), byref( value ) )
         if rc != 0 :
             self.__mgr.raise_rc( rc, "KMetadataGetSequence( %s )"%name, self )
         return value.value
-        
+
     def SetSequence( self, name, value ) :
         rc = self.__mgr.KMetadataSetSequence( self.__ptr, to_char_p( name ), c_longlong( value ) )
         if rc != 0 :
@@ -1151,7 +1123,7 @@ class VTable :
         self.__name = name
         self.p_cur = None
         self.p_cols = None
-        
+
     def __del__( self ) :
         rc = self.__mgr.VTableRelease( self.__ptr )
         if rc != 0 :
@@ -1199,7 +1171,7 @@ class VTable :
         if rc == 0 :
             return KNamelist( self.__mgr, l ).to_list()
         return []
-        
+
     def OpenIndexRead( self, name ) :
         if self.__kdb_ptr == None :
             self.__OpenKTableUpdate__()
@@ -1250,7 +1222,7 @@ class VTable :
         if rc != 0 :
             self.__mgr.raise_rc( rc, "VTableCreateCachedCursorRead( %s, %d )"%( self.__name, cache_size ), self )
         return VCursor( self, c )
-        
+
     def Locked( self ) :
         return self.__mgr.VTableLocked( self.__ptr )
 
@@ -1296,7 +1268,7 @@ class VDatabase :
         rc = self.__mgr.VDatabaseRelease( self.__ptr )
         if rc != 0 :
             self.__mgr.raise_rc( rc, "VDatabaseRelease( %s )"%( self.__name ), self )
-        
+
     def __enter__( self ) :
         return self
 
@@ -1406,11 +1378,11 @@ class VSchema :
         rc = self.__mgr.VSchemaParseText( self.__ptr, c_char_p( 0 ), txt, c_int( l ) )
         if rc != 0 :
             self.__mgr.raise_rc( rc, "VSchemaParseText()", self )
-        
+
     def ParseFile( self, schema_file ) :
         rc = self.__mgr.VSchemaParseFile( self.__ptr, to_char_p( schema_file ) )
         if rc != 0 :
-            self.mgr.raise_rc( rc, "VSchemaParseFile( '%s' )"%schema_file, self )
+            self.__mgr.raise_rc( rc, "VSchemaParseFile( '%s' )"%schema_file, self )
 
     def AddIncludePath( self, path ) :
         rc = self.__mgr.VSchemaAddIncludePath( self.__ptr, to_char_p( path ) )
@@ -1454,7 +1426,7 @@ class KRepository :
     def Category( self ) :
         res = self.__mgr.KRepositoryCategory( self.__ptr )
         return res;
-        
+
     def SubCategory( self ) :
         return self.__mgr.KRepositorySubCategory( self.__ptr )
 
@@ -1464,9 +1436,7 @@ class KRepository :
         rc = self.__mgr.KRepositoryName( self.__ptr, p, sizeof( p ), byref( n ) )
         if rc != 0 :
             self.__mgr.raise_rc( rc, "KRepositoryName()", self )
-        if PY3 :
-            return p.value.decode( "utf-8" )
-        return p.value
+        return p.value.decode( "utf-8" )
 
     def DisplayName( self ) :
         p = create_string_buffer( 1024 )
@@ -1474,19 +1444,14 @@ class KRepository :
         rc = self.__mgr.KRepositoryDisplayName( self.__ptr, p, sizeof( p ), byref( n ) )
         if rc != 0 :
             self.__mgr.raise_rc( rc, "KRepositoryDisplayName()", self )
-        if PY3 :
-            return p.value.decode( "utf-8" )
-        return p.value
+        return p.value.decode( "utf-8" )
 
     def Root( self ) :
         p = create_string_buffer( 1024 )
         n = c_int( 0 )
         rc = self.__mgr.KRepositoryRoot( self.__ptr, p, sizeof( p ), byref( n ) )
-        if rc != 0 :
-            return ""
-        if PY3 :
-            return p.value.decode( "utf-8" )
-        return p.value
+        if rc != 0 : return ""
+        return p.value.decode( "utf-8" )
 
     def SetRoot( self, root ) :
         rc = self.__mgr.KRepositorySetRoot( self.__ptr, to_char_p( root ), c_int( len( root ) ) )
@@ -1499,13 +1464,11 @@ class KRepository :
         rc = self.__mgr.KRepositoryResolver( self.__ptr, p, sizeof( p ), byref( n ) )
         if rc != 0 :
             return ""
-        if PY3 :
-            return p.value.decode( "utf-8" )
-        return p.value
+        return p.value.decode( "utf-8" )
 
     def Disabled( self ) :
         return self.__mgr.KRepositoryDisabled( self.__ptr )
-        
+
     def SetDisabled( self, value ) :
         rc = self.__mgr.KRepositorySetDisabled( self.__ptr, c_bool( value ) )
         if rc != 0 :
@@ -1513,7 +1476,7 @@ class KRepository :
 
     def CacheEnabled( self ) :
         return self.__mgr.KRepositoryCacheEnabled( self.__ptr )
-        
+
 
 #------------------------------------------------------------------------------------------------------------
 class KRepositoryMgr :
@@ -1537,13 +1500,13 @@ class KRepositoryMgr :
 
     def __vector_2_list__( self, v ) :
         res = list()
-        for i in xrange( v.start, v.start + v.len ) :
+        for i in range( v.start, v.start + v.len ) :
             r = KRepository( self.__mgr, self.__mgr.VectorGet( byref( v ), c_int( i ) ) )
             r.AddRef()
             res.append( r )
         self.__mgr.KRepositoryVectorWhack( byref( v ) )
         return res
-    
+
     def UserRepositories( self ) :
         v = vdb_vector()
         rc = self.__mgr.KRepositoryMgrUserRepositories( self.__ptr, byref( v ) )
@@ -1579,12 +1542,12 @@ class KConfig :
     def __init__( self, mgr, ptr ) :
         self.__mgr = mgr
         self.__ptr = ptr
-        
+
     def __del__( self ) :
         rc = self.__mgr.KConfigRelease( self.__ptr )
         if rc != 0 :
             self.__mgr.raise_rc( rc, "KConfigRelease()", self )
-            
+
     def __enter__( self ) :
         return self
 
@@ -1761,7 +1724,7 @@ class VFSManager :
         if rc != 0 :
             self.__mgr.raise_rc( rc, "VFSManagerMakeResolver()", self )
         return VResolver( self.__mgr, ptr )
-        
+
     def MakePath( self, s_path ) :
         path = c_void_p()
         rc = self.__mgr.VFSManagerMakePath( self.__ptr, byref( path ), to_char_p( s_path ) )
@@ -1795,7 +1758,7 @@ class RefVariation :
         if rc != 0 :
             self.__mgr.raise_rc( rc, "RefVariationGetIUPACSearchQuery()", self )
         return ( txt.value, len.value, start.value )
-        
+
     def GetSearchQueryLenOnRef( self ) :
         len = c_int()
         rc = self.__mgr.RefVariationGetSearchQueryLenOnRef( self.__ptr, byref( len ) )
@@ -1811,7 +1774,7 @@ class RefVariation :
         if rc != 0 :
             self.__mgr.raise_rc( rc, "RefVariationGetAllele()", self )
         return ( txt.value, len.value, start.value )
-        
+
     def GetAlleleLenOnRef( self ) :
         len = c_int()
         rc = self.__mgr.RefVariationGetAlleleLenOnRef( self.__ptr, byref( len ) )
@@ -1819,6 +1782,66 @@ class RefVariation :
             self.__mgr.raise_rc( rc, "RefVariationGetAlleleLenOnRef()", self )
         return len.value
 
+
+#------------------------------------------------------------------------------------------------------------
+class lib_find :
+	def __init__( self ) :
+		self.__home = os.path.expanduser( "~" )
+		self.__platform = platform.system()
+		d1 = { "Linux":self.__find_linux, "Darwin":self.__find_mac, "Windows":self.__find_win }
+		self.__f = d1 . get( self.__platform )
+		dr = { "Linux":"libncbi-vdb.so", "Darwin":"libncbi-vdb.dylib", "Windows":"ncbi-vdb.dll" }
+		dw = { "Linux":"libncbi-wvdb.so", "Darwin":"libncbi-wvdb.dylib", "Windows":"ncbi-wvdb.dll" }
+		self.__rd = dr . get( self.__platform )
+		self.__wr = dw . get( self.__platform )
+
+	def __pick_1st( self, p, libname ) :
+		pattern = os.path.join( os.path.sep, p, f"{libname}*" )
+		files = glob.glob( pattern )
+		f = files[ 0 ] if files else None
+		if f : return f if os.path.isfile( f ) else None
+		return None
+
+	def __probe( self, lst_of_lst, writable ) :
+		libname = self.__wr if writable else self.__rd
+		if not libname : return None
+		for lst in lst_of_lst :
+			l = [ self.__home ] + lst
+			p = os.path.join( os.path.sep, *l )
+			if os.path.isdir( p ) :
+				file = self.__pick_1st( p, libname )
+				if file : return file
+		return None
+
+	def __find_linux( self, writable ) :
+		l = [ [ ".ncbi", "lib64" ],
+			[ "ncbi-outdir", "ncbi-vdb", "linux", "gcc", "x86_64", "rel", "lib" ],
+			[ "ncbi-outdir", "ncbi-vdb", "linux", "gcc", "x86_64", "dbg", "lib" ] ]
+		return self . __probe( l, writable )
+	
+	def __find_mac( self, writable ) :
+		l = [ [ ".ncbi", "lib64" ],
+			[ "ncbi-outdir", "ncbi-vdb", "mac", "clang", "x86_64", "rel", "lib" ],
+			[ "ncbi-outdir", "ncbi-vdb", "mac", "clang", "x86_64", "dbg", "lib" ] ]
+		return self . __probe( l, writable )
+	
+	def __find_win( self, writable ) :
+		l = [ [ ".ncbi", "lib64" ],
+			[ "OUTDIR", "ncbi-vdb", "Debug" ],
+			[ "OUTDIR", "ncbi-vdb", "Release" ] ]
+		return self . __probe( l, writable )
+
+	def find( self, writable = False ) :
+		return self.__f( writable ) if self.__f else None
+	
+	def find_at( self, location, writable = False ) :
+		if os.path.isdir( location ) :
+			libname = self.__wr if writable else self.__rd
+			if not libname : return None
+			return self.__pick_1st( location, libname )
+		if os.path.isfile( location ) :
+			return location;
+		return None
 
 #------------------------------------------------------------------------------------------------------------
 def make_lib_name( mode, prefix = None ) :
@@ -1861,18 +1884,26 @@ class manager :
         self.__dir = None
         self.__ptr = None
 
-        p = check_lib_path( mode, path )
+        finder = lib_find()
+        writable = mode == OpenMode.Write
+        found = finder.find_at( path, writable ) if path else finder.find( writable )
+        if found == None :
+            env = os.environ.get( "VDB_LIBRARY_PATH", '')
+            found = finder.find_at( env, writable )
+        if found == None :
+            raise vdb_error( 0, "cannot find library", None )
+			
         try :
-            self.__lib = cdll.LoadLibrary( p )
+            self.__lib = cdll.LoadLibrary( found )
         except :
-            raise vdb_error( 0, "cannot load library '%s'"%p, None )
+            raise vdb_error( 0, "cannot load library '%s'"%found, None )
 
         #we need this one first, because we need it to throw a vdb-error ( used in manager.explain() )
         self.string_printf = self.__func__( "string_printf", [ c_void_p, c_int, c_void_p, c_char_p, c_int ] )
-        
+
         self.KDirectoryNativeDir = self.__func__( "KDirectoryNativeDir_v1", [ c_void_p ] )
         self.KDirectoryRelease = self.__func__( "KDirectoryRelease_v1", [ c_void_p ] )
-        
+
         self.VDBManagerRelease = self.__func__( "VDBManagerRelease", [ c_void_p ] )
         self.VDBManagerVersion = self.__func__( "VDBManagerVersion", [ c_void_p, c_void_p ] )
         self.VDBManagerPathType = self.__func__( "VDBManagerPathType", [ c_void_p, c_char_p ] )
@@ -1881,14 +1912,14 @@ class manager :
         self.VDBManagerOpenDBRead = self.__func__( "VDBManagerOpenDBRead", [ c_void_p, c_void_p, c_void_p, c_char_p ] )
         self.VDBManagerOpenTableRead = self.__func__( "VDBManagerOpenTableRead", [ c_void_p, c_void_p, c_void_p, c_char_p ] )
         self.VDBManagerMakeSchema = self.__func__( "VDBManagerMakeSchema", [ c_void_p, c_void_p ] )
-        
+
         self.VDatabaseOpenDBRead = self.__func__( "VDatabaseOpenDBRead", [ c_void_p, c_void_p, c_char_p ] )
         self.VDatabaseRelease = self.__func__( "VDatabaseRelease", [ c_void_p ] )
         self.VDatabaseOpenTableRead = self.__func__( "VDatabaseOpenTableRead", [ c_void_p, c_void_p, c_char_p ] )
         self.VDatabaseListTbl = self.__func__( "VDatabaseListTbl", [ c_void_p, c_void_p ] )
         self.VDatabaseListDB = self.__func__( "VDatabaseListDB", [ c_void_p, c_void_p ] )
         self.VDatabaseLocked = self.__func__( "VDatabaseLocked", [ c_void_p ], c_bool )
-        
+
         self.VTableRelease = self.__func__( "VTableRelease", [ c_void_p ] )
         self.VTableListCol = self.__func__( "VTableListCol", [ c_void_p, c_void_p ] )
         self.VTableCreateCursorRead = self.__func__( "VTableCreateCursorRead", [ c_void_p, c_void_p ] )
@@ -1907,7 +1938,7 @@ class manager :
         self.VSchemaParseFile = self.__func__( "VSchemaParseFile", [ c_void_p, c_char_p ] )
         self.VSchemaAddIncludePath = self.__func__( "VSchemaAddIncludePath", [ c_void_p, c_char_p ] )
 
-        self.VCursorRelease = self.__func__( "VCursorRelease", [ c_void_p ] )            
+        self.VCursorRelease = self.__func__( "VCursorRelease", [ c_void_p ] )
         self.VCursorAddColumn = self.__func__( "VCursorAddColumn", [ c_void_p, c_void_p, c_char_p ] )
         self.VCursorOpen = self.__func__( "VCursorOpen", [ c_void_p ] )
         self.VCursorDatatype = self.__func__( "VCursorDatatype", [ c_void_p, c_int, c_void_p, c_void_p ] )
@@ -1923,7 +1954,7 @@ class manager :
         self.KTableListIdx = self.__func__( "KTableListIdx", [ c_void_p, c_void_p ] )
         self.KTableOpenIndexRead = self.__func__( "KTableOpenIndexRead", [ c_void_p, c_void_p, c_char_p ] )
         self.KTableOpenMetadataRead = self.__func__( "KTableOpenMetadataRead", [ c_void_p, c_void_p ] )
-        
+
         self.KIndexRelease = self.__func__( "KIndexRelease", [ c_void_p ] )
         self.KIndexVersion = self.__func__( "KIndexVersion", [ c_void_p, c_void_p ] )
         self.KIndexType = self.__func__( "KIndexType", [ c_void_p, c_void_p ] )
@@ -1991,10 +2022,10 @@ class manager :
             self.KMDataNodeOpenNodeUpdate = self.__func__( "KMDataNodeOpenNodeUpdate", [ c_void_p, c_void_p, c_char_p ] )
             self.KMDataNodeWrite = self.__func__( "KMDataNodeWrite", [ c_void_p, c_void_p, c_size_t ] )
             self.KMDataNodeAppend = self.__func__( "KMDataNodeAppend", [ c_void_p, c_void_p, c_size_t ] )
-            
+
         else :
             self.VDBManagerMakeRead = self.__func__( "VDBManagerMakeRead", [ c_void_p, c_void_p ] )
-            
+
         self.KConfigMake = self.__func__( "KConfigMake", [ c_void_p, c_void_p ] )
         self.KConfigRelease = self.__func__( "KConfigRelease", [ c_void_p ] )
         self.KConfigCommit = self.__func__( "KConfigCommit", [ c_void_p ] )
@@ -2071,7 +2102,7 @@ class manager :
         self.VPathMakeString = self.__func__( "VPathMakeString", [ c_void_p, c_void_p ] )
         self.VectorGet = self.__func__( "VectorGet", [ c_void_p, c_int ], c_void_p )
         self.StringWhack = self.__func__( "StringWhack", [ c_void_p ] )
-        
+
         self.__dir = self.__make_native_dir__()
         self.__ptr = self.__make_mgr__( mode )
 
@@ -2098,7 +2129,7 @@ class manager :
 
     def string_whack( self, str ) :
         self.StringWhack( byref( str ) )
-        
+
     def __make_native_dir__( self ) :
         res = c_void_p()
         if self.KDirectoryNativeDir == None :
@@ -2134,9 +2165,7 @@ class manager :
         num_writ = c_int( 0 )
         fmt = create_string_buffer( to_bytes( "%R" ) )
         if self.string_printf( buffer, c_int( 1024 ), byref( num_writ ), fmt, c_int( rc ) ) == 0 :
-            if PY3 :
-                return buffer.value.decode( "utf-8" )
-            return buffer.value
+            return buffer.value.decode( "utf-8" )
         return "cannot explain %d"%( rc )
 
     def raise_rc( self, rc, funcname, obj ) :
@@ -2152,17 +2181,19 @@ class manager :
 
     def writable( self ) :
         return self.__mode == OpenMode.Write
-        
+
     def PathType( self, path ) :
         return PathType( self.VDBManagerPathType( self.__ptr, to_char_p( path ) ) )
-        
+
     def GetObjVersion( self, path ) :
-        vers = c_int()
-        rc = self.VDBManagerGetObjVersion( self.__ptr, byref( vers ), to_char_p( path ) )
-        if rc != 0 :
-            self.raise_rc( rc, "obj_vers( '%s' )"%( path ), self )
-        return version( vers.value )
-            
+        if self.VDBManagerGetObjVersion :
+            vers = c_int()
+            rc = self.VDBManagerGetObjVersion( self.__ptr, byref( vers ), to_char_p( path ) )
+            if rc != 0 :
+                self.raise_rc( rc, "obj_vers( '%s' )"%( path ), self )
+            return version( vers.value )
+        return None
+
     def GetObjModDate( self, path ) :
         t = c_int()
         rc = self.VDBManagerGetObjModDate( self.__ptr, byref( t ), to_char_p( path ) )

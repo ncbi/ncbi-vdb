@@ -128,7 +128,7 @@ rc_t CC align_ref_name ( void *data, const VXformInfo *info,
     rc_t rc;
     RefName const *self = ( void const * )data;
     char const *name = NULL;
-    uint32_t name_len;
+    uint32_t name_len = 0;
 
     /* get start and length of reference segment */
     int64_t const *ref_id = argv[REF_ID].u.data.base;

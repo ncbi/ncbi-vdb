@@ -127,11 +127,11 @@ LIB_EXPORT rc_t CC KDatabaseRelease ( const KDatabase *self )
 }
 LIB_EXPORT bool CC KDatabaseLocked ( const KDatabase *self )
 {
-    DISPATCH( locked( self ) );
+    DISPATCH_BOOL( locked( self ) );
 }
 LIB_EXPORT bool CC KDatabaseVExists ( const KDatabase *self, uint32_t type, const char *name, va_list args )
 {
-    DISPATCH( vExists( self, type, name, args ) );
+    DISPATCH_BOOL( vExists( self, type, name, args ) );
 }
 LIB_EXPORT bool CC KDatabaseExists ( const KDatabase *self, uint32_t type, const char *name, ... )
 {
@@ -148,7 +148,7 @@ LIB_EXPORT bool CC KDatabaseExists ( const KDatabase *self, uint32_t type, const
 }
 LIB_EXPORT bool CC KDatabaseIsAlias ( const KDatabase *self, uint32_t type, char *resolved, size_t rsize, const char *name )
 {
-    DISPATCH( isAlias ( self, type, resolved, rsize, name ) );
+    DISPATCH_BOOL( isAlias ( self, type, resolved, rsize, name ) );
 }
 LIB_EXPORT rc_t CC KDatabaseVWritable ( const KDatabase *self, uint32_t type, const char *name, va_list args )
 {

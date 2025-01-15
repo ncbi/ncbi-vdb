@@ -26,6 +26,8 @@
 
 #pragma once
 
+#include "coldata.h"
+
 #include <kfs/directory.h>
 #include <klib/checksum.h>
 
@@ -88,12 +90,6 @@ rc_t KWColumnDataOpenUpdate ( KWColumnData *self, KDirectory *dir,
  */
 rc_t KWColumnDataWhack ( KWColumnData *self );
 
-/* Read
- *  reads from the data fork using a blob map
- */
-rc_t KWColumnDataRead ( const KWColumnData *self, const KWColumnPageMap *pm,
-    size_t offset, void *buffer, size_t bsize, size_t *num_read );
-
 /* Write
  *  writes to the data fork using a blob map
  */
@@ -146,11 +142,6 @@ rc_t KWColumnPageMapCreate (  KWColumnPageMap *self, KWColumnData *cd );
  */
 rc_t KWColumnPageMapOpen ( KWColumnPageMap *pm,
     KWColumnData *cd, uint64_t pg, size_t sz );
-
-/* Whack
- *  disposes of memory in the case of a page array
- */
-void KWColumnPageMapWhack ( KWColumnPageMap *self, const KWColumnData *cd );
 
 /* Id
  *  captures id of initial page

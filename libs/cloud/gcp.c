@@ -93,10 +93,23 @@ rc_t CC GCPDestroy(GCP * self)
  *
  * NB. this is a one-shot function, but atomic is not important
  */
-static char const *envCE()
+static char const *envCE(char* buf, size_t buf_size)
 {
     static bool firstTime = true;
+#ifdef WINDOWS
+    char const* env = NULL;
+    if ( firstTime )
+    {
+        size_t buf_count = 0;
+        errno_t err = getenv_s ( & buf_count, buf, buf_size, ENV_MAGIC_CE_TOKEN);
+        assert ( buf_count <= buf_size );
+        assert ( err != ERANGE );
+        if ( !err && buf_count != 0 )
+            env = buf;
+    }
+#else
     char const *const env = firstTime ? getenv(ENV_MAGIC_CE_TOKEN) : NULL;
+#endif
     firstTime = false;
     if (env != NULL)
         DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_CE), (
@@ -131,7 +144,8 @@ rc_t CC GCPMakeComputeEnvironmentToken ( const GCP * self, const String ** ce_to
         return RC(rcCloud, rcProvider, rcIdentifying,
                   rcCondition, rcUnauthorized);
     else {
-        char const *const env = envCE();
+        char buf_env[4096];
+        char const *const env = envCE(buf_env, sizeof(buf_env));
         char location[4096] = "";
         rc_t rc = 0;
         if (CloudGetCachedComputeEnvironmentToken(&self->dad, ce_token))
@@ -580,7 +594,7 @@ rc_t GetAccessToken(const GCP * self, const char * jwt, struct KStream * opt_con
     rc_t rc;
     rc_t rc2;
     KClientHttp * client;
-    KClientHttpRequest * req;
+    KClientHttpRequest * req = NULL;
     char jsonResponse[4096];
 
     String host;
@@ -952,7 +966,18 @@ rc_t PopulateCredentials(GCP * self, KConfig * aKfg)
 
     char *jsonCredentials = NULL, *jsonCredentialsOrig = NULL;;
 
+#ifdef WINDOWS
+    char pathToJsonFileBuf[4096];
+    size_t buf_count = 0;
+    char* pathToJsonFile = NULL;
+    errno_t err = getenv_s ( & buf_count, pathToJsonFileBuf, sizeof(pathToJsonFileBuf), "GOOGLE_APPLICATION_CREDENTIALS" );
+    assert ( buf_count <= sizeof(pathToJsonFileBuf));
+    assert ( err != ERANGE );
+    if ( !err && buf_count != 0 )
+        pathToJsonFile = pathToJsonFileBuf;
+#else
     const char *pathToJsonFile = getenv("GOOGLE_APPLICATION_CREDENTIALS");
+#endif
 
     assert(self);
 

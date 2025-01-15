@@ -152,17 +152,10 @@ rc_t VLinkerInitFactoriesRead ( VLinker *self,
  *
  *  "env" [ IN ] - default schema parser environment
  */
-typedef struct VLinkerIntFactory VLinkerIntFactory;
-struct VLinkerIntFactory
-{
-    rc_t ( CC * f ) ( struct VTransDesc *desc );
-    const char *name;
-};
 
 rc_t VLinkerAddFactories ( VLinker *self,
     const VLinkerIntFactory *fact, uint32_t count,
     struct KSymTable *tbl, struct SchemaEnv const *env );
-
 
 /* Release
  */

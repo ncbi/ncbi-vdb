@@ -53,7 +53,7 @@ WGS_ListEntry *WGS_Insert(WGS_List *list, unsigned const qlen, char const *qry, 
 void WGS_ListInit(WGS_List *list, unsigned openLimit);
 void WGS_ListFree(WGS_List *list);
 char const *WGS_Scheme(void);
-unsigned WGS_splitName(int64_t *prow, unsigned const namelen, char const *name);
+unsigned WGS_splitName(int64_t *prow, unsigned namelen, char const *name);
 unsigned WGS_getBases(WGS *self, uint8_t *dst, unsigned start, unsigned len, int64_t row);
 void WGS_close(WGS *self);
 rc_t WGS_reopen(WGS *self, VDBManager const *mgr, unsigned seq_id_len, char const *seq_id);

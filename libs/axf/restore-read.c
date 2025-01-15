@@ -541,11 +541,11 @@ WGS_FROM_LAST:
         wgs_namelen = WGS_splitName(&wgs_row, id_len, seq_id);
         if (wgs_namelen > 0 && (self->last.u.w = WGS_Find(&self->shared->wgs, wgs_namelen, seq_id)) != NULL) {
             if (self->last.u.w->object->curs == NULL) {
-                rc_t rc = 0;
+                rc_t rc2 = 0;
 
                 WGS_limitOpen(&self->shared->wgs);
-                rc = WGS_reopen(self->last.u.w->object, self->mgr, wgs_namelen, seq_id);
-                if (rc) return rc;
+                rc2 = WGS_reopen(self->last.u.w->object, self->mgr, wgs_namelen, seq_id);
+                if (rc2) return rc2;
                 ++self->shared->wgs.openCount;
             }
             self->last.count = self->shared->wgs.entries;

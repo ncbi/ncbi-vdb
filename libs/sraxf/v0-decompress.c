@@ -349,7 +349,7 @@ int sra_decompress_prb_454 ( KDataBuffer *dst, KDataBuffer *alt, const void* src
     _get_long (peprb, nbits, &offset, &rbpos, &lval, 0, (ssize << 3));
 
 #if SRA_DECOMPRESS_USE_REVERSE_LOOKUP
-    indx = gv_local.rlookup_454_prb [lval>>16];
+    indx = (uchar_t) gv_local.rlookup_454_prb [lval>>16];
 #else
     iptr = (uint16_t*) kbsearch (&lval, gv_local.idx_454_prb,
                                 PRB_454_HUFF_TREESIZE, sizeof(uint16_t), _s_cmp_key, gv_local.lookup_454_prb);

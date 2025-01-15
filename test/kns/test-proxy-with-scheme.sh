@@ -23,7 +23,7 @@ fi
 # good proxy in configuration: success
 output=$(ping -c1 webproxy > /dev/null)
 res=$?
-if [ "$res" == "0" ]
+if [ "$res" = "0" ]
 then
 	output=$($test_proxy_with_scheme =webproxy.ncbi.nlm.nih.gov  SUCCESS);
 	res=$?
@@ -47,7 +47,7 @@ fi
 # good proxy in environment: success
 output=$(ping -c1 webproxy > /dev/null)
 res=$?
-if [ "$res" == "0" ]
+if [ "$res" = "0" ]
 then
 	output=$(all_proxy=webproxy.ncbi.nlm.nih.gov $test_proxy_with_scheme SUCCESS)
 	res=$?
@@ -63,7 +63,7 @@ fi
 # good proxy with schema in environment: success
 output=$(ping -c1 webproxy > /dev/null)
 res=$?
-if [ "$res" == "0" ]
+if [ "$res" = "0" ]
 then
 	output=$(ALL_PROXY=http://webproxy.ncbi.nlm.nih.gov  $test_proxy_with_scheme SUCCESS)
 	res=$?
@@ -78,7 +78,7 @@ fi
 # good proxy with schema and port in environment: success
 output=$(ping -c1 webproxy > /dev/null)
 res=$?
-if [ "$res" == "0" ]
+if [ "$res" = "0" ]
 then
 	output=$(http_proxy=http://webproxy.ncbi.nlm.nih.gov:3128  $test_proxy_with_scheme SUCCESS)
 	res=$?
@@ -93,7 +93,7 @@ fi
 # good proxy with any schema in environment: success
 output=$(ping -c1 webproxy > /dev/null)
 res=$?
-if [ "$res" == "0" ]
+if [ "$res" = "0" ]
 then
 	output=$(HTTP_PROXY=anySchemaWillBeIgnored://webproxy.ncbi.nlm.nih.gov $test_proxy_with_scheme SUCCESS)
 	res=$?
@@ -166,7 +166,7 @@ fi
 # VDB-3329: http_proxy specification with trailing slash
 output=$(ping -c1 webproxy > /dev/null)
 res=$?
-if [ "$res" == "0" ]
+if [ "$res" = "0" ]
 then
 	output=$(http_proxy=http://webproxy.ncbi.nlm.nih.gov:3128/ $test_proxy_with_scheme SUCCESS)
 	res=$?
@@ -181,7 +181,7 @@ fi
 
 output=$(ping -c1 webproxy > /dev/null)
 res=$?
-if [ "$res" == "0" ]
+if [ "$res" = "0" ]
 then
 	output=$(http_proxy=http://webproxy.ncbi.nlm.nih.gov:3128/// $test_proxy_with_scheme SUCCESS)
 	res=$?
@@ -195,7 +195,7 @@ fi
 
 output=$(ping -c1 webproxy > /dev/null)
 res=$?
-if [ "$res" == "0" ]
+if [ "$res" = "0" ]
 then
 	output=$(http_proxy=http://webproxy.ncbi.nlm.nih.gov:3128/: $test_proxy_with_scheme SUCCESS)
 	res=$?
@@ -209,7 +209,7 @@ fi
 
 output=$(ping -c1 webproxy > /dev/null)
 res=$?
-if [ "$res" == "0" ]
+if [ "$res" = "0" ]
 then
 	output=$(http_proxy=http://webproxy.ncbi.nlm.nih.gov:3128???XY $test_proxy_with_scheme SUCCESS)
 	res=$?

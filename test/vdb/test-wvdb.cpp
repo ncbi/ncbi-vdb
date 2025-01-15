@@ -40,7 +40,8 @@
 #include <../libs/vdb/schema-priv.h>
 #include <../libs/vdb/schema-parse.h>
 #include <../libs/vdb/dbmgr-priv.h>
-#include <../libs/vdb/linker-priv.h>
+#include <../libs/vdb/column-priv.h>
+#include <../libs/vdb/cursor-priv.h>
 
 #include <sra/sraschema.h> // VDBManagerMakeSRASchema
 
@@ -51,10 +52,6 @@
 
 #include <kfg/config.h>
 
-#include <../../libs/vdb/schema-priv.h>
-#include <../../libs/vdb/schema-parse.h>
-#include <../../libs/vdb/column-priv.h>
-#include <../../libs/vdb/cursor-priv.h>
 
 #include "WVDB_Fixture.hpp"
 
@@ -904,78 +901,7 @@ FIXTURE_TEST_CASE ( KDBManager_Leak, WVDB_Fixture )
     }
 }
 
-FIXTURE_TEST_CASE ( PlatformNames, WVDB_Fixture )
-{
-    const char * schemaText =
-        "include 'ncbi/sra.vschema';"
-        "table foo #1 = NCBI:SRA:tbl:sra #2 {"
-        "   INSDC:SRA:platform_id out_platform = < INSDC:SRA:platform_id > echo < %s > ();"
-        "};";
-
-    static const char *platform_symbolic_names[] = { INSDC_SRA_PLATFORM_SYMBOLS };
-    size_t platform_count = sizeof( platform_symbolic_names ) / sizeof( * platform_symbolic_names );
-    for ( size_t platformId = 0; platformId < platform_count; ++ platformId )
-    {
-        char schema[4096];
-        string_printf( schema, sizeof( schema ), nullptr, schemaText, platform_symbolic_names[ platformId ] );
-        {
-            REQUIRE_RC ( VDBManagerMakeUpdate ( & m_mgr, NULL ) );
-            REQUIRE_RC ( VDBManagerAddSchemaIncludePath ( m_mgr, "../../interfaces" ) );
-
-            REQUIRE_RC ( VDBManagerMakeSchema ( m_mgr, & m_schema ) );
-            ParseSchema ( m_schema, schema );
-
-            VTable * table;
-            REQUIRE_RC ( VDBManagerCreateTable ( m_mgr,
-                                                & table,
-                                                m_schema,
-                                                "foo",
-                                                kcmInit + kcmMD5 + kcmParents,
-                                                "%s%u",
-                                                (ScratchDir + GetName()).c_str(), platformId ) );
-
-            {
-                VCursor * cursor;
-                REQUIRE_RC ( VTableCreateCursorWrite ( table, & cursor, kcmInsert ) );
-                uint32_t column_idx;
-                REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx, "LABEL" ) );
-                REQUIRE_RC ( VCursorOpen ( cursor ) );
-
-                WriteRow ( cursor, column_idx, "L1" );
-                WriteRow ( cursor, column_idx, "L2" );
-
-                REQUIRE_RC ( VCursorCommit ( cursor ) );
-                REQUIRE_RC ( VCursorRelease ( cursor ) );
-            }
-            REQUIRE_RC ( VTableRelease ( table ) );
-        }
-
-        {   // reopen
-            VDBManager * mgr;
-            REQUIRE_RC ( VDBManagerMakeUpdate ( & mgr, NULL ) );
-            const VTable * table;
-            REQUIRE_RC ( VDBManagerOpenTableRead ( mgr, & table, NULL, "%s%u",
-                                                (ScratchDir + GetName()).c_str(), platformId ) );
-            const VCursor* cursor;
-            REQUIRE_RC ( VTableCreateCursorRead ( table, & cursor ) );
-
-            uint32_t column_idx;
-            REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx, "PLATFORM" ) );
-            REQUIRE_RC ( VCursorOpen ( cursor ) );
-
-            // verify platform id
-            INSDC_SRA_platform_id id = SRA_PLATFORM_UNDEFINED;
-            uint32_t row_len = 0;
-            REQUIRE_RC ( VCursorReadDirect(cursor, 1, column_idx, 8, (void*) & id, 1, & row_len ) );
-            REQUIRE_EQ ( 1u, row_len );
-            REQUIRE_EQ ( platformId, (size_t)id );
-
-            REQUIRE_RC ( VCursorRelease ( cursor ) );
-            REQUIRE_RC ( VTableRelease ( table ) );
-            REQUIRE_RC ( VDBManagerRelease ( mgr ) );
-        }
-    }
-}
+//NB Test cases PlatformNames and ProductionSchema moved to sra-tools/test/vdb/test-wvdb.cpp because of their dependency on the SRA schema
 
 FIXTURE_TEST_CASE ( BlobChecksumON, WVDB_Fixture)
 {
@@ -999,7 +925,6 @@ FIXTURE_TEST_CASE ( BlobChecksumON, WVDB_Fixture)
         REQUIRE_RC ( VCursorRelease ( cursor ) );
     }
     REQUIRE_RC ( ValidateBlob(TableName, ColumnName, 1) );
-    REQUIRE_RC ( VDatabaseRelease ( m_db ) );
 }
 
 FIXTURE_TEST_CASE ( BlobChecksum_ON_ByDefault, WVDB_Fixture)
@@ -1024,7 +949,6 @@ FIXTURE_TEST_CASE ( BlobChecksum_ON_ByDefault, WVDB_Fixture)
         REQUIRE_RC ( VCursorRelease ( cursor ) );
     }
     REQUIRE_RC ( ValidateBlob(TableName, ColumnName, 1) );
-    REQUIRE_RC ( VDatabaseRelease ( m_db ) );
 }
 
 FIXTURE_TEST_CASE ( BlobChecksumOFF, WVDB_Fixture)
@@ -1049,14 +973,12 @@ FIXTURE_TEST_CASE ( BlobChecksumOFF, WVDB_Fixture)
         REQUIRE_RC ( VCursorCommit ( cursor ) );
         REQUIRE_RC ( VCursorRelease ( cursor ) );
     }
-    
+
     auto const valid = ValidateBlob(TableName, ColumnName, 1);
     auto const object = (enum RCObject)GetRCObject(valid);
     auto const state = (enum RCState)GetRCState(valid);
     REQUIRE_EQ(object, rcChecksum);
     REQUIRE_EQ(state, rcNotFound);
-
-    REQUIRE_RC ( VDatabaseRelease ( m_db ) );
 }
 
 //////////////////////////////////////////// Main

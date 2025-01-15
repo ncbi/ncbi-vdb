@@ -126,7 +126,7 @@ rc_t CC normal_drvr (
     rslt->elem_count = rslt->data->elem_count;
     rslt->data->bit_offset = 0;
     
-    self->f(rslt->data->base, src, cntrl, rslt->elem_count);
+    self->f(rslt->data->base, src, cntrl, (uint32_t)rslt->elem_count);
     
     return 0;
 }

@@ -27,12 +27,13 @@
 #include <vdb/extern.h>
 
 #include <vdb/xform.h>
+#include <kdb/page-map.h>
 #include <klib/rc.h>
 
 #include "xform-priv.h"
 #include "blob-priv.h"
 #include "blob.h"
-#include "page-map.h"
+
 
 #include <assert.h>
 

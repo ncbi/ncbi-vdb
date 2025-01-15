@@ -50,7 +50,8 @@ const char * TestColumn = R"({"name":"col",
             "data":
                 [
                     {"row":1,"value":"AGCT"},
-                    {"row":2,"value":"AGCT"}
+                    {"row":3,"count":2, "value":"TAGC"},
+                    {"start":7,"count":3,"value":["A", "AG", "AGCT"] }
                 ]})";
 
 class KTextColumn_Fixture
@@ -108,44 +109,13 @@ FIXTURE_TEST_CASE(KTextColumn_Make_DataNotArray, KTextColumn_Fixture)
     // cout << m_error << endl;
 }
 
-FIXTURE_TEST_CASE(KTextColumn_Make_CellNotObject, KTextColumn_Fixture)
-{
-    Setup(R"({"name":"col","type":"text","data":[1]})");
-    REQUIRE_RC_FAIL( m_col -> inflate( m_error, sizeof m_error ) );
-    // cout << m_error << endl;
-}
-FIXTURE_TEST_CASE(KTextColumn_CellMake_RowMissing, KTextColumn_Fixture)
-{
-    Setup(R"({"name":"col","type":"text","data":[{}]})");
-    REQUIRE_RC_FAIL( m_col -> inflate( m_error, sizeof m_error ) );
-    // cout << m_error << endl;
-}
-FIXTURE_TEST_CASE(KTextColumn_CellMake_RowBad, KTextColumn_Fixture)
-{
-    Setup(R"({"name":"col","type":"text","data": [ {"row":"a","value":"q"} ] })");
-    REQUIRE_RC_FAIL( m_col -> inflate( m_error, sizeof m_error ) );
-    //cout << m_error << endl;
-}
-FIXTURE_TEST_CASE(KTextColumn_CellMake_ValueBad, KTextColumn_Fixture)
-{
-    Setup(R"({"name":"col","type":"text","data": [ {"row":1,"value":null} ] })");
-    REQUIRE_RC_FAIL( m_col -> inflate( m_error, sizeof m_error ) );
-    //cout << m_error << endl;
-}
-FIXTURE_TEST_CASE(KTextColumn_CellMake_ValueMissing, KTextColumn_Fixture)
-{
-    Setup(R"({"name":"col","type":"text","data": [ {"row":"1"} ] })");
-    REQUIRE_RC_FAIL( m_col -> inflate( m_error, sizeof m_error ) );
-    //cout << m_error << endl;
-}
-
 FIXTURE_TEST_CASE(KTextColumn_IdRange, KTextColumn_Fixture)
 {
     Setup(TestColumn);
     REQUIRE_RC( m_col -> inflate( m_error, sizeof m_error ) );
     auto r = m_col->idRange();
     REQUIRE_EQ( (int64_t)1, r . first );
-    REQUIRE_EQ( (uint64_t)2, r . second );
+    REQUIRE_EQ( (uint64_t)9, r . second );
 }
 
 // API
@@ -159,8 +129,8 @@ const char * FullTable = R"({"type": "table", "name": "testtbl",
                 [
                     {"row":1,"value":"AGCT"},
                     {"row":2,"value":"AGCT"},
-                    {"row":11,"value":"AGCT"},
-                    {"row":22,"value":"AGCT"}
+                    {"start":11,"count":2,"value":["AGCT", [1, 2, 3] ]},
+                    {"start":22,"value":"AGCT"}
                 ],
             "metadata":{"name":"", "value":"blah"}
         }
@@ -179,11 +149,11 @@ public:
         KTableRelease( m_tbl );
         KDBManagerRelease( m_mgr );
     }
-    void Setup( const char * input, const char * col )
+    void Setup( const string & input, const char * col )
     {
         try
         {
-            THROW_ON_RC( KDBManagerMakeText ( & m_mgr, input, m_error, sizeof m_error ) );
+            THROW_ON_RC( KDBManagerMakeText ( & m_mgr, input.c_str(), m_error, sizeof m_error ) );
             THROW_ON_RC( KDBManagerOpenTableRead( m_mgr, & m_tbl, "%s", "testtbl" ) );
             THROW_ON_RC( KTableOpenColumnRead( m_tbl, & m_col, "%s", col ) );
         }
@@ -240,12 +210,25 @@ FIXTURE_TEST_CASE(KColumn_IdRange, KTextColumn_ApiFixture)
     REQUIRE_EQ( (uint64_t)22, count );
 }
 
-FIXTURE_TEST_CASE(KColumn_FindFirstRowId, KTextColumn_ApiFixture)
+FIXTURE_TEST_CASE(KColumn_FindFirstRowId_NextBlob, KTextColumn_ApiFixture)
 {
     Setup(FullTable, "col");
     int64_t found = 0;
     REQUIRE_RC( KColumnFindFirstRowId ( m_col, & found, 4 ) );
     REQUIRE_EQ( (int64_t)11, found );
+}
+FIXTURE_TEST_CASE(KColumn_FindFirstRowId_Same, KTextColumn_ApiFixture)
+{
+    Setup(FullTable, "col");
+    int64_t found = 0;
+    REQUIRE_RC( KColumnFindFirstRowId ( m_col, & found, 12 ) );
+    REQUIRE_EQ( (int64_t)22, found );
+}
+FIXTURE_TEST_CASE(KColumn_FindFirstRowId_NotFound, KTextColumn_ApiFixture)
+{
+    Setup(FullTable, "col");
+    int64_t found = 0;
+    REQUIRE_RC_FAIL( KColumnFindFirstRowId ( m_col, & found, 23 ) );
 }
 
 FIXTURE_TEST_CASE(KColumn_OpenManagerRead, KTextColumn_ApiFixture)
@@ -285,6 +268,54 @@ FIXTURE_TEST_CASE(KColumn_OpenBlobRead, KTextColumn_ApiFixture)
     REQUIRE_NOT_NULL( blob );
     REQUIRE_RC( KColumnBlobRelease( blob ) );
 }
+
+const char * FullTableFmt = R"({"type": "table", "name": "testtbl",
+    "columns":[
+        {
+            "name":"col",
+            "type":"%t",
+            "data":
+                [
+                    {"row":1,"value":%v}
+                ],
+            "metadata":{"name":"", "value":"blah"}
+        }
+    ]
+})";
+static
+string
+FormatSchema( const char * type, const char * value )
+{
+    string schema = FullTableFmt;
+    schema.replace(schema.find("%t"), 2, type);
+    schema.replace(schema.find("%v"), 2, value);
+    return schema;
+}
+
+FIXTURE_TEST_CASE(KColumn_OpenBlobRead_Int, KTextColumn_ApiFixture)
+{
+    Setup( FormatSchema( "U32", "12345" ), "col" );
+    const KColumnBlob * blob = nullptr;
+    REQUIRE_RC( KColumnOpenBlobRead ( m_col, & blob, 1 ) );
+    REQUIRE_NOT_NULL( blob );
+
+    uint8_t buffer[1024];
+    size_t num_read = 0;
+    size_t remaining = 0;
+
+    REQUIRE_RC( KColumnBlobRead ( blob, 0, buffer, sizeof( buffer ), &num_read, &remaining ) );
+    REQUIRE_EQ( 5, (int)num_read );
+    REQUIRE_EQ( 0, (int)remaining );
+
+    // 1-element header:
+    // 1st byte: length = 1element (011), no extra bits (000), little endian (10)
+    REQUIRE_EQ( 0b01100010, (int)buffer[0] );
+    // bytes 3-5: data
+    REQUIRE_EQ( (uint32_t)12345, ((uint32_t*)(buffer + 1))[0] );
+
+    REQUIRE_RC( KColumnBlobRelease( blob ) );
+}
+
 
 //////////////////////////////////////////// Main
 extern "C"

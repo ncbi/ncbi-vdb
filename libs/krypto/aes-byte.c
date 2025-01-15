@@ -42,6 +42,8 @@
 static const char KAESByteBlockCipherClassName[] = "KAESCipherByte";
 #endif
 
+#include "aes_core.c"
+
 static
 void KAESBlockCipherByteDestroy (const KAESBlockCipherByte * self)
 {

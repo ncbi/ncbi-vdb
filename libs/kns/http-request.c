@@ -1321,9 +1321,16 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
     return rc;
 }
 
+rc_t VdbVersionPrint( ver_t self, char *buffer, size_t size,
+    const char *prefix, const char *suffix )
+{
+    return string_printf(buffer, size, NULL, "%s%.3V%s", prefix, self, suffix);
+}
+
+
 static
 rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
-    struct KDataBuffer * buffer, const char *method,
+    struct KDataBuffer *buffer, const char *method,
     uint32_t uriForm, bool format_sra )
 {
     rc_t rc;
@@ -1402,6 +1409,10 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
 
     if ( format_sra )
     {
+        char buf[512] = "";
+        SraReleaseVersion version;
+        rc_t rs = SraReleaseVersionGet(&version);
+
         /* add an Accept header if we did not find one already in the header tree */
         if (!have_accept) {
             r2 = KDataBufferPrintf(buffer, "Accept: */*\r\n");
@@ -1412,27 +1423,27 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
         /* add a X-SRA-Release header if we did not find one
         already in the header tree */
         if (!have_sra_release) {
-            SraReleaseVersion version;
-            r2 = SraReleaseVersionGet(&version);
-            if (r2 == 0) {
-                r2 = KDataBufferPrintf(buffer, "X-SRA-Release: %V\r\n",
-                    version.version);
+            if (rs == 0) {
+                r2 = VdbVersionPrint(version.version, buf, sizeof buf,
+                    "X-SRA-Release: ", "\r\n");
+                if (r2 == 0)
+                    r2 = KDataBufferPrintf(buffer, "%s", buf);
+                if (rc == 0 && r2 != 0)
+                    rc = r2;
             }
-            if (rc == 0 && r2 != 0)
-                rc = r2;
         }
 
         /* add a X-VDB-Release header if we did not find one
         already in the header tree */
         if (!have_vdb_release) {
-            SraReleaseVersion version;
-            r2 = SraReleaseVersionGet(&version);
-            if (r2 == 0) {
-                r2 = KDataBufferPrintf(buffer, "X-VDB-Release: %V\r\n",
-                    version.version);
+            if (rs == 0) {
+                r2 = VdbVersionPrint(version.version, buf, sizeof buf,
+                    "X-VDB-Release: ", "\r\n");
+                if (r2 == 0)
+                    r2 = KDataBufferPrintf(buffer, "%s", buf);
+                if (rc == 0 && r2 != 0)
+                    rc = r2;
             }
-            if (rc == 0 && r2 != 0)
-                rc = r2;
         }
 
         /* add an User-Agent header from the kns-manager if we did not find one already in the header tree */

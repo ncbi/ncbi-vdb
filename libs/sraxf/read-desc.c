@@ -51,7 +51,7 @@ rc_t CC make_read_desc ( void *self, const VXformInfo *info, int64_t row_id,
     const INSDC_coord_zero *lbl_start     = argv[6].u.data.base;
     const INSDC_coord_len *lbl_len        = argv[7].u.data.base;
     const char *label                     = argv[8].u.data.base;
-    uint32_t label_max                    = argv[8].u.data.elem_count;
+    uint32_t label_max                    = (uint32_t) argv[8].u.data.elem_count;
 
     num_reads += argv[0].u.data.first_elem; /* valid for argv[0].u.data.elem_count */
     assert( argv[0].u.data.elem_bits == (sizeof( *num_reads ) * 8 ) );

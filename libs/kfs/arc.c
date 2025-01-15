@@ -515,7 +515,7 @@ static rc_t KArcListingInit (KArcListing *self,
             }
             else
             {
-                void *r;
+                void *r = NULL;
                 const char *name;
 
                 /* -----
@@ -566,8 +566,16 @@ static rc_t KArcListingInit (KArcListing *self,
                      * now that we have our list and know how big it should have been we'll shrink it
                      * if the count was zero this a effectively just a free()
                      */
-                    r = realloc ( ( void* )self->namelist,
-                                  self->cnt * sizeof ( self->namelist[0] ) );
+                    if ( self->cnt == 0 )
+                    {
+                        free( r );
+                        r = NULL;
+                    }
+                    else
+                    {
+                        r = realloc ( ( void* )self->namelist,
+                                      self->cnt * sizeof ( self->namelist[0] ) );
+                    }
                     /* -----
                      * if we have a new non-NULL pointer we know we have a list of non-zero length
                      * store the pointer and sort the list
@@ -2306,7 +2314,7 @@ rc_t CC KArcDirVisit (const KArcDir *self,
 	rc = KArcDirResolvePathNode(self, rcListing, full_path, true, &pnode, &type);
 	if (rc != 0)
 	{
-	    PLOGERR (klogInt, (klogInt, rc, "failed to resolve path $(P) in Visit", "P=%s", full_path));
+	    PLOGERR (klogInfo, (klogInfo, rc, "failed to resolve path $(P) in Visit", "P=%s", full_path));
 	}
 	else
 	{

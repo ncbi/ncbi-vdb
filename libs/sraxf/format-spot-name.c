@@ -94,7 +94,7 @@ rc_t CC format_spot_name ( void *self,
         const char *name_fmt = ((char*)argv[0].u.data.base) + argv[0].u.data.first_elem;
         uint32_t i, j, x = 0, y = 0;
         bool have_x = false, have_y = false;
-        const uint32_t fmt_size = argv [ 0 ] . u . data . elem_count;
+        const uint32_t fmt_size = (uint32_t) argv [ 0 ] . u . data . elem_count;
 
         /* the coordinates to substitute */
         have_x = argv [ 1 ] . u . data . elem_count > 0
@@ -121,7 +121,11 @@ rc_t CC format_spot_name ( void *self,
                             x += 24*1024*(name_fmt [ i+1 ]-'0');
                             i+=2;
                         }
+#ifdef WINDOWS
+                        j+= sprintf_s(sname+j, sizeof(sname) - j,"%d",x);
+#else
                         j+=sprintf(sname+j,"%d",x);
+#endif
                     }
                     else
                         return RC ( rcXF, rcFunction, rcDecoding,
@@ -136,7 +140,11 @@ rc_t CC format_spot_name ( void *self,
                             y += 24*1024*(name_fmt [ i+1 ]-'0');
                             i+=2;
                         }
+#ifdef WINDOWS
+                        j+=sprintf_s(sname+j, sizeof(sname) - j, "%d",y);
+#else
                         j+=sprintf(sname+j,"%d",y);
+#endif
                     }
                     else
                         return RC ( rcXF, rcFunction, rcDecoding,
@@ -210,7 +218,7 @@ rc_t CC format_spot_name ( void *self,
     if( argc == 4 && argv[3].u.data.elem_count != 0 ) {
         const char *sname = ((char*)argv[3].u.data.base) + argv[3].u.data.first_elem;
         /* output size */
-        elem_count = argv[3].u.data.elem_count;
+        elem_count = (uint32_t)argv[3].u.data.elem_count;
 
         /* resize output */
         if( dst -> elem_count <= elem_count ) {
@@ -252,7 +260,7 @@ rc_t CC format_spot_name_no_coord ( void *self,
         char sname[1024]; /** name on stack **/
         const char *name_fmt = ((char*)argv[0].u.data.base) + argv[0].u.data.first_elem;
         uint32_t i, j;
-        const uint32_t fmt_size = argv [ 0 ] . u . data . elem_count;
+        const uint32_t fmt_size = (uint32_t) argv [ 0 ] . u . data . elem_count;
 
         for ( i=j=0; i < fmt_size -1;){
             if( name_fmt [ i ] == '$' ){
@@ -309,7 +317,7 @@ rc_t CC format_spot_name_no_coord ( void *self,
     if( argc == 2 && argv[1].u.data.elem_count != 0 ) {
         const char *sname = ((char*)argv[1].u.data.base) + argv[1].u.data.first_elem;
         /* output size */
-        elem_count = argv[1].u.data.elem_count;
+        elem_count = (uint32_t)argv[1].u.data.elem_count;
 
         /* resize output */
         if( dst -> elem_count <= elem_count ) {

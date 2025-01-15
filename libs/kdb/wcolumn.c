@@ -43,9 +43,6 @@
 #include <stdio.h>
 #include <byteswap.h>
 
-#define KCOLUMNBLOB_IMPL KColumnBlob
-#include "columnblob-base.h"
-
 /*--------------------------------------------------------------------------
  * KWColumn (formerly KWColumn)
  *  a read-write collection of blobs indexed by oid; file system-based
@@ -182,7 +179,8 @@ rc_t KWColumnMake ( KWColumn **colp, const KDirectory *dir, const char *path,
 		   KMD5SumFmt * md5, bool read_only )
 {
     rc_t rc;
-    KWColumn *col = malloc ( sizeof * col + strlen ( path ) );
+    size_t path_size = strlen(path);
+    KWColumn *col = malloc ( sizeof * col + path_size);
     if ( col == NULL )
     {
 	* colp = NULL;
@@ -201,7 +199,7 @@ rc_t KWColumnMake ( KWColumn **colp, const KDirectory *dir, const char *path,
     col -> commit_freq = 1;
     col -> read_only = read_only;
 
-    strcpy ( col -> path, path );
+    string_copy ( col -> path, path_size + 1, path, path_size );
 
     col->sym.u.obj = col;
     StringInitCString (&col->sym.name, col->path);
@@ -466,7 +464,7 @@ static bool CC KWColumnLocked ( const KWColumn *self )
  *  "path" [ IN ] - NUL terminated path
  */
 static
-rc_t KColumnLockInt (const KWColumn  * self, char * path, size_t path_size,
+rc_t KColumnLockInt (const KWColumn  * self, char * unused, size_t path_size,
                         int type, const char * name, va_list args )
 {
     rc_t rc;
@@ -492,7 +490,7 @@ rc_t KColumnLockInt (const KWColumn  * self, char * path, size_t path_size,
         case kptIndex:
         case kptMetadata:
 /*         case kptIndex: */
-            rc = KDBVMakeSubPath (self->dir, path, sizeof path, ns, strlen (ns),
+            rc = KDBVMakeSubPath (self->dir, path, sizeof path, ns, (uint32_t) strlen (ns),
                                   name, args);
             break;
         }
@@ -970,7 +968,7 @@ rc_t CC
 KWColumnOpenBlobRead ( const KWColumn *self, const KColumnBlob **blobp, int64_t id )
 {
     rc_t rc;
-    KWColumnBlob *blob;
+    KColumnBlob *blob;
 
     if ( blobp == NULL )
         return RC ( rcDB, rcColumn, rcOpening, rcParam, rcNull );
@@ -982,13 +980,11 @@ KWColumnOpenBlobRead ( const KWColumn *self, const KColumnBlob **blobp, int64_t 
         rc = KWColumnBlobOpenRead ( blob, self, id );
         if ( rc == 0 )
         {
-            blob -> col = KColumnAttach ( self );
-            blob -> read_only = true;
             * blobp = (const KColumnBlob *) blob;
             return 0;
         }
 
-        free ( blob );
+        KColumnBlobRelease ( (const KColumnBlob *)blob );
     }
 
     return rc;
@@ -1009,19 +1005,18 @@ LIB_EXPORT rc_t CC KColumnOpenBlobUpdate ( KColumn *bself, KColumnBlob **blobp, 
     if ( self -> read_only )
         return RC ( rcDB, rcColumn, rcOpening, rcColumn, rcReadonly );
 
-    KWColumnBlob * blob;
+    KColumnBlob * blob;
     rc = KWColumnBlobMake ( &blob, self -> idx . idx1 . bswap );
     if ( rc == 0 )
     {
         rc = KWColumnBlobOpenUpdate ( blob, self, id );
         if ( rc == 0 )
         {
-            blob -> col = KColumnAttach ( self );
-            * blobp = & blob -> dad;
+            * blobp = (KColumnBlob *) blob;
             return 0;
         }
 
-        free ( blob );
+        KColumnBlobRelease ( (const KColumnBlob *)blob );
     }
 
     return rc;
@@ -1045,19 +1040,18 @@ LIB_EXPORT rc_t CC KColumnCreateBlob ( KColumn *bself, KColumnBlob **blobp )
     if ( self -> read_only )
         return RC ( rcDB, rcColumn, rcOpening, rcColumn, rcReadonly );
 
-    KWColumnBlob * blob;
+    KColumnBlob * blob;
     rc = KWColumnBlobMake ( & blob, self -> idx . idx1 . bswap );
     if ( rc == 0 )
     {
         rc = KWColumnBlobCreate ( blob, self );
         if ( rc == 0 )
         {
-            blob -> col = KColumnAttach ( self );
-            * blobp = & blob -> dad;
+            * blobp = (KColumnBlob *) blob;
             return 0;
         }
 
-        free ( blob );
+        KColumnBlobRelease ( (const KColumnBlob *)blob );
     }
 
     return rc;

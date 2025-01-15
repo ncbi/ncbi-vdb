@@ -678,7 +678,7 @@ rc_t KDBMgrVDrop ( KDirectory * dir, const KDBManager * mgr, uint32_t obj_type,
                                   path, args );
     if (rc == 0)
     {
-        int pt = KDBPathType ( /*mgr,*/ dir, NULL, full_path );
+        uint32_t pt = KDBPathType ( /*mgr,*/ dir, NULL, full_path );
         switch ( pt )
         {
         case kptNotFound:
@@ -745,7 +745,7 @@ rc_t KDBVDrop ( KDirectory *dir, const KDBManager * mgr,
         path, sizeof path, ns, ns_size, name, args );
     if ( rc == 0 )
     {
-        int pt = KDBPathType ( /*mgr,*/ dir, NULL, path );
+        uint32_t pt = KDBPathType ( /*mgr,*/ dir, NULL, path );
         switch ( pt )
         {
         case kptNotFound:
@@ -832,7 +832,7 @@ rc_t KDBRename ( KDirectory *dir, KDBManager *mgr, uint32_t type, bool force,
     if ( rc == 0 )
     {
         char dst [ 256 ];
-        int pt = KDBPathType ( /*mgr,*/ dir, NULL, src );
+        uint32_t pt = KDBPathType ( /*mgr,*/ dir, NULL, src );
         switch ( pt )
         {
         case kptNotFound:
@@ -925,7 +925,7 @@ rc_t KDBAlias ( KDirectory *dir, uint32_t type,
     if ( rc == 0 )
     {
         char dst [ 256 ];
-        int pt = KDBPathType ( /*NULL,*/ dir, NULL, src );
+        uint32_t pt = KDBPathType ( /*NULL,*/ dir, NULL, src );
         switch ( pt )
         {
         case kptNotFound:

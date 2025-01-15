@@ -159,7 +159,11 @@ rc_t CC illumina_rewrite_spot_name ( void *data, const VXformInfo *info, int64_t
     }
 
     /* generate coordinates */
+#ifdef WINDOWS
+    coord_len = sprintf_s ( buffer, sizeof(buffer), ":%d:%d:%d:%d", a, b, c, d );
+#else
     coord_len = sprintf ( buffer, ":%d:%d:%d:%d", a, b, c, d );
+#endif
 
     /* get size of prefix */
     if ( argc == 1 )
@@ -187,10 +191,17 @@ rc_t CC illumina_rewrite_spot_name ( void *data, const VXformInfo *info, int64_t
         return rc;
 
     /* copy in prefix, name prefix, coordinates */
+#ifdef WINDOWS
+    rslt -> elem_count = sprintf_s ( dst -> base, dst -> elem_count, "%.*s%.*s%s"
+        , ( int ) prefix_len, prefix
+        , ( int ) i, skey
+        , buffer );
+#else
     rslt -> elem_count = sprintf ( dst -> base, "%.*s%.*s%s"
         , ( int ) prefix_len, prefix
         , ( int ) i, skey
         , buffer );
+#endif
 
     return 0;
 }

@@ -56,6 +56,14 @@ struct AWS;
 #include "cloud-cmn.h" /* KNSManager_Read */
 #include "cloud-priv.h" /* CloudGetCachedComputeEnvironmentToken */
 
+#ifdef WINDOWS
+#pragma warning(disable:4127)
+/*
+to suppress the following condition warning:
+sizeof buf_size < sizeof file_size && ( uint64_t ) buf_size != file_size
+*/
+#endif
+
 static rc_t PopulateCredentials ( AWS * self, KConfig * kfg );
 
 /* Destroy
@@ -114,12 +122,12 @@ AWSInitAccess( AWS * self )
 
 static
 rc_t
-GetInstanceInfo( const AWS * cself, const char * url, char *buffer, size_t bsize )
+GetInstanceInfo( const AWS * cself, const char * url, char *buffer_ext, size_t bsize )
 {
     switch ( cself -> IMDS_version )
     {
     case 1:
-        return KNSManager_Read( cself -> dad . kns, buffer, bsize, url, HttpMethod_Get, NULL, NULL );
+        return KNSManager_Read( cself -> dad . kns, buffer_ext, bsize, url, HttpMethod_Get, NULL, NULL );
     case 2:
         {
             /* see if cached access_token has to be generated/refreshed */
@@ -128,25 +136,25 @@ GetInstanceInfo( const AWS * cself, const char * url, char *buffer, size_t bsize
                 AWS * self = (AWS *)cself;
                 free( self -> dad . access_token );
                 self -> dad . access_token = NULL;
-                char buffer[4096];
-                rc_t rc = KNSManager_Read( self -> dad . kns, buffer, sizeof( buffer ),
+                char buf[4096];
+                rc_t rc = KNSManager_Read( self -> dad . kns, buf, sizeof( buf),
                           INSTANCE_URL_PREFIX "api/token", HttpMethod_Put,
                           "X-aws-ec2-metadata-token-ttl-seconds", "%u", AccessTokenLifetime_sec );
                 if ( rc != 0 )
                 {
                     return rc;
                 }
-                self -> dad . access_token = string_dup ( buffer, string_size ( buffer ) );
+                self -> dad . access_token = string_dup ( buf, string_size ( buf) );
                 self -> dad . access_token_expiration = KTimeStamp() + AccessTokenLifetime_sec;
             }
 
             // curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/availability-zone
-            return KNSManager_Read( cself -> dad . kns, buffer, bsize, url, HttpMethod_Get,
+            return KNSManager_Read( cself -> dad . kns, buffer_ext, bsize, url, HttpMethod_Get,
                                     "X-aws-ec2-metadata-token", "%s", cself -> dad . access_token );
         }
     default:
         // on AWS; the object can still be useful for  testing
-        buffer[ 0 ] = 0;
+        buffer_ext[ 0 ] = 0;
         return 0;
     }
 }
@@ -163,10 +171,23 @@ KNSManager_GetAWSLocation( const AWS * self, char *buffer, size_t bsize )
  *
  * NB. this is a one-shot function, but atomic is not important
  */
-static char const *envCE()
+static char const *envCE(char* buf, size_t buf_size)
 {
     static bool firstTime = true;
+#ifdef WINDOWS
+    char const* env = NULL;
+    if ( firstTime )
+    {
+        size_t buf_count = 0;
+        errno_t err = getenv_s ( & buf_count, buf, buf_size, ENV_MAGIC_CE_TOKEN );
+        assert ( buf_count <= buf_size );
+        assert ( err != ERANGE );
+        if ( !err && buf_count != 0 )
+            env = buf;
+    }
+#else
     char const *const env = firstTime ? getenv(ENV_MAGIC_CE_TOKEN) : NULL;
+#endif
     firstTime = false;
     if ( env != NULL && *env != 0 )
         DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_CE),
@@ -213,7 +234,8 @@ rc_t CC AWSMakeComputeEnvironmentToken ( const AWS * self, const String ** ce_to
         return RC(rcCloud, rcProvider, rcIdentifying,
                   rcCondition, rcUnauthorized);
     else {
-        char const *const env = envCE();
+        char env_buf[4096];
+        char const *const env = envCE(env_buf, sizeof(env_buf));
         char location[4096] = "";
         rc_t rc = 0;
         if (CloudGetCachedComputeEnvironmentToken(&self->dad, ce_token))
@@ -457,7 +479,7 @@ rc_t aws_parse_csv_file(AWS * self, const char * start, size_t buf_size,
 
     int idxID = -1, idxSecret = -1;
 
-    String ID, Secret, string, id, secret;
+    String ID, Secret, string, id = {0}, secret = { 0 };
     CONST_STRING(&ID, "Access key ID");
     CONST_STRING(&Secret, "Secret access key");
 
@@ -657,7 +679,7 @@ static void aws_parse_file ( AWS * self, const KFile * cred_file,
         }
         else
           for ( ; start < end; start = sep + 1 ) {
-            rc_t rc;
+            rc_t rc2;
             String string, trim;
             String key, value;
             String access_key_id, secret_access_key;
@@ -693,8 +715,8 @@ static void aws_parse_file ( AWS * self, const KFile * cred_file,
             if ( !in_profile ) continue;
 
             /* check for key/value pairs and skip if none found */
-            rc = aws_extract_key_value_pair ( &trim, &key, &value );
-            if ( rc != 0 ) continue;
+            rc2 = aws_extract_key_value_pair ( &trim, &key, &value );
+            if ( rc2 != 0 ) continue;
 
             /* now check keys we are looking for and populate the node*/
 
@@ -751,7 +773,7 @@ static void aws_parse_file ( AWS * self, const KFile * cred_file,
 static void make_home_node ( char *path, size_t path_size, KConfig * aKfg )
 {
     size_t num_read;
-    const char *home;
+    char *home = NULL;
 
     rc_t rc = 0;
     KConfig * kfg = aKfg;
@@ -765,20 +787,48 @@ static void make_home_node ( char *path, size_t path_size, KConfig * aKfg )
         rc = KConfigOpenNodeRead ( kfg, &home_node, "HOME" );
         if ( home_node == NULL ) {
             /* just grab the HOME env variable */
+#ifdef WINDOWS
+            size_t buf_count = 0;
+            errno_t err = _dupenv_s(&home, &buf_count, "HOME");
+            if (!err && home != NULL)
+            {
+                if (*home != 0)
+                {
+                    num_read = string_copy_measure ( path, path_size, home );
+                    if ( num_read >= path_size ) path[0] = 0;
+                }
+                free ( home );
+            }
+#else
             home = getenv ( "HOME" );
             if ( home != NULL && *home != 0 ) {
                 num_read = string_copy_measure ( path, path_size, home );
                 if ( num_read >= path_size ) path[0] = 0;
             }
+#endif
         } else {
             /* if it exists check for a path */
             rc = KConfigNodeRead ( home_node, 0, path, path_size, &num_read, NULL );
             if ( rc != 0 ) {
+#ifdef WINDOWS
+                size_t buf_count = 0;
+                errno_t err = _dupenv_s(&home, &buf_count, "HOME");
+                if (!err && home != NULL)
+                {
+                    if (*home != 0)
+                    {
+                        num_read = string_copy_measure ( path, path_size, home );
+                        if ( num_read >= path_size ) path[0] = 0;
+                    }
+                    free ( home );
+                }
+#else
                 home = getenv ( "HOME" );
                 if ( home != NULL && *home != 0 ) {
                     num_read = string_copy_measure ( path, path_size, home );
                     if ( num_read >= path_size ) path[0] = 0;
                 }
+#endif
             }
 
             KConfigNodeRelease ( home_node );
@@ -791,9 +841,27 @@ static void make_home_node ( char *path, size_t path_size, KConfig * aKfg )
 
 static rc_t LoadCredentials ( AWS * self, KConfig * kfg )
 {
+#ifdef WINDOWS
+    char buf_conf_env[4096], buf_cred_env[4096];
+    const char *conf_env = NULL;
+    const char *cred_env = NULL;
+    size_t buf_count = 0;
+    errno_t err = getenv_s ( & buf_count, buf_conf_env, sizeof ( buf_conf_env ), "AWS_CONFIG_FILE" );
+    assert ( err != ERANGE );
+    assert ( buf_count <= sizeof(buf_conf_env) );
+    if (!err)
+        conf_env = buf_conf_env;
+
+    buf_count = 0;
+    err = getenv_s ( & buf_count, buf_cred_env, sizeof ( buf_cred_env ), "AWS_SHARED_CREDENTIAL_FILE" );
+    assert ( err != ERANGE );
+    assert ( buf_count <= sizeof(buf_cred_env) );
+    if (!err)
+        cred_env = buf_cred_env;
+#else
     const char *conf_env = getenv ( "AWS_CONFIG_FILE" );
     const char *cred_env = getenv ( "AWS_SHARED_CREDENTIAL_FILE" );
-
+#endif
     KDirectory *wd = NULL;
     rc_t rc = KDirectoryNativeDir ( &wd );
     if ( rc ) return rc;
@@ -901,10 +969,29 @@ static
 rc_t PopulateCredentials ( AWS * self, KConfig * aKfg )
 {
     /* Check Environment first */
-    const char * profile = NULL;
+    char * profile = NULL;
 
+#ifdef WINDOWS
+    char buf_aws_access_key_id[4096], buf_aws_secret_access_key[4096];
+    const char *aws_access_key_id = NULL;
+    const char *aws_secret_access_key = NULL;
+    size_t buf_count = 0;
+    errno_t err = getenv_s ( & buf_count, buf_aws_access_key_id, sizeof (buf_aws_access_key_id), "AWS_ACCESS_KEY_ID" );
+    assert ( err != ERANGE );
+    assert ( buf_count <= sizeof(buf_aws_access_key_id) );
+    if (!err)
+        aws_access_key_id = buf_aws_access_key_id;
+
+    buf_count = 0;
+    err = getenv_s ( & buf_count, buf_aws_secret_access_key, sizeof (buf_aws_secret_access_key), "AWS_SECRET_ACCESS_KEY" );
+    assert ( err != ERANGE );
+    assert ( buf_count <= sizeof(buf_aws_secret_access_key) );
+    if (!err)
+        aws_secret_access_key = buf_aws_secret_access_key;
+#else
     const char * aws_access_key_id = getenv ( "AWS_ACCESS_KEY_ID" );
     const char * aws_secret_access_key = getenv ( "AWS_SECRET_ACCESS_KEY" );
+#endif
 
     if ( aws_access_key_id != NULL && aws_secret_access_key != NULL
         && strlen ( aws_access_key_id ) > 0
@@ -918,12 +1005,21 @@ rc_t PopulateCredentials ( AWS * self, KConfig * aKfg )
     }
 
     /* Get Profile */
+#ifdef WINDOWS
+    buf_count = 0;
+    err = _dupenv_s(&profile, &buf_count, "AWS_PROFILE");
+#else
     profile = getenv("AWS_PROFILE");
+#endif
     if ( profile != NULL && *profile != 0 )
     {
         self -> profile = string_dup ( profile, string_size ( profile ) );
         PLOGMSG ( klogInfo, ( klogInfo, "Got AWS_PROFILE '$(P)' from environment",
                                         "P=%s", self->profile ) );
+#ifdef WINDOWS
+        free(profile);
+        profile = NULL;
+#endif
     }
     else
     {

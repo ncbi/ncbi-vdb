@@ -100,8 +100,8 @@ rc_t CC tokenize_spot_name_IonTorrent( void *self, const VXformInfo *info, int64
            due to oddities, exclude leading zeros from numeral */
         -- tok;
         spot_name_tok[tok].s.token_type = types[tok];
-        spot_name_tok[tok].s.position = num_start - name;
-        spot_name_tok[tok].s.length = num_end - num_start;
+        spot_name_tok[tok].s.position = (uint16_t)(num_start - name);
+        spot_name_tok[tok].s.length = (uint16_t)(num_end - num_start);
     }
 
     /* if all tokens were seen, the parse was good */
@@ -112,7 +112,7 @@ rc_t CC tokenize_spot_name_IonTorrent( void *self, const VXformInfo *info, int64
         /* otherwise, treat entire string as unrecognized */
         spot_name_tok[0].s.token_type = nt_unrecognized;
         spot_name_tok[0].s.position = 0;
-        spot_name_tok[0].s.length = argv[0].u.data.elem_count;
+        spot_name_tok[0].s.length = (uint16_t)argv[0].u.data.elem_count;
         rslt->elem_count = 1;
     }
 

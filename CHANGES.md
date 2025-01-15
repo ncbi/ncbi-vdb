@@ -1,6 +1,27 @@
 # NCBI External Developer Release:
 
 
+## NCBI VDB 3.2.0
+**January 14, 2025**
+
+  **align-info, prefetch, vdb, vfs**: prints an error message when unable to resolve an external reference  
+  **bam-load, vdb**: the load process is terminated when background flush terminates with an error  
+  **blast**: added missed include  
+  **fastq-dump, kfs**: fixed infinite loop  
+  **kapp, kns, sra-tools**: always use 3 part tool version in User-Agent request header  
+  **kdb, kdbtext, vdb, vfs**: keep resolved KDirectory in VPath  
+  **kdb, vdb-validate**: will find corruption via the MD5 sums  
+  **kdb, vdb, vdb-dump**: fixed request of vdb-version on AD (Accession-as-Directory)  
+  **kfs**: fixed misuse of allocator  
+  **krypto**: removed external visibility of AES functions that were causing link problems  
+  **ncbi-vdb, ngs-tools, sra-tools**: fixed error message asking to run configure  
+  **sra**: added sequencing platform SINGULAR_GENOMICS  
+  **sra-tools, vfs**: fixed resolving of WGS references in AD when not running in the same directory  
+  **sra-tools, vfs**: fixed VDB version headers to always include patch version  
+  **sra-tools, vfs**: simplified name resolving  
+  **vdb**: fixed a use-after-free error  
+
+
 ## NCBI VDB 3.1.1
 **May 21, 2024**
 

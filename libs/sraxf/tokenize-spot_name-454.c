@@ -62,7 +62,7 @@ rc_t CC tokenize_spot_name_454 ( void *self, const VXformInfo *info, int64_t row
     
     spot_name_tok[0].s.token_type = nt_unrecognized;
     spot_name_tok[0].s.position = 0;
-    spot_name_tok[0].s.length = argv[0].u.data.elem_count;
+    spot_name_tok[0].s.length = (uint16_t) argv[0].u.data.elem_count;
     rslt->elem_count = 1;
     
     /* /^(.{7})([0-9]{2})([A-Z0-9]{5})$/ = (name, region, XY_q) = ($1, $2, $3); */
@@ -71,7 +71,7 @@ rc_t CC tokenize_spot_name_454 ( void *self, const VXformInfo *info, int64_t row
     }
     
     name = &((const char *)argv[0].u.data.base)[argv[0].u.data.first_elem];
-    q_start = argv[0].u.data.elem_count - 5;
+    q_start = (unsigned) argv[0].u.data.elem_count - 5;
     region_start = q_start - 2;
     
     /* validate that XY_q =~ /[A-Z0-9]{5}/ */
@@ -86,11 +86,11 @@ rc_t CC tokenize_spot_name_454 ( void *self, const VXformInfo *info, int64_t row
         return 0;
     }
     spot_name_tok[0].s.token_type = nt_T;
-    spot_name_tok[0].s.position = region_start;
+    spot_name_tok[0].s.position = (uint16_t) region_start;
     spot_name_tok[0].s.length = 2;
     
     spot_name_tok[1].s.token_type = nt_Q;
-    spot_name_tok[1].s.position = q_start;
+    spot_name_tok[1].s.position = (uint16_t) q_start;
     spot_name_tok[1].s.length = 5;
 
     rslt->elem_count = EXPECTED_NUMBER_OF_TOKENS;

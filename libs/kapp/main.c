@@ -51,6 +51,14 @@
 #include <assert.h>
 #include <string.h>
 
+#ifdef WINDOWS
+#pragma warning(disable:4127)
+/*
+to suppress the following condition warning:
+sizeof i == sizeof ( int32_t ) and so on
+*/
+#endif
+
 rc_t CC KAppCheckEnvironment ( bool require64Bits, uint64_t requireRamSize )
 {
     rc_t rc;
@@ -357,7 +365,8 @@ rc_t KMane ( int argc, char *argv [] )
         if ( sep != NULL )
             tool_size = sep - tool;
 
-        KNSManagerSetUserAgent ( kns, PKGNAMESTR " sra-toolkit %.*s.%V", ( uint32_t ) tool_size, tool, vers );
+        KNSManagerSetUserAgent ( kns, PKGNAMESTR " sra-toolkit %.*s.%.3V",
+            ( uint32_t ) tool_size, tool, vers );
     }
 
     KNSManagerSetQuitting ( kns, Quitting );

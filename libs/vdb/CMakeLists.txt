@@ -53,7 +53,6 @@ set( VDBCMN_SRC
     phys-load
     blob
     blob-headers
-    page-map
     row-id
     row-len
     fixed-row-len

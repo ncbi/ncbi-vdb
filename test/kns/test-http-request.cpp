@@ -120,7 +120,7 @@ FIXTURE_TEST_CASE(HttpRequest_PUT_sra, HttpRequestFixture)
 
     char version[16] = "";
     REQUIRE_RC(string_printf(
-        version, sizeof version, NULL, "%V", VDB_RELEASE_VERSION));
+        version, sizeof version, NULL, "%.3V", VDB_RELEASE_VERSION));
     assert(m_req && m_req->http);
     string expected("PUT ");
     if (m_req->http->uf == eUFAbsolute)
@@ -515,6 +515,39 @@ TEST_CASE(Test_urlEncodePluses) {
     CONST_STRING(&d, "%2b%2f");
     REQUIRE_EQ(StringCompare(encoding, &d), 0);
     StringWhack(encoding);
+}
+
+// Tests of Version Headers
+TEST_CASE(TestVersionHeaders) {
+    char b[99]("");
+
+    ver_t v(0);
+    REQUIRE_RC(VdbVersionPrint(v, b, sizeof b, "", ""));
+    REQUIRE_EQ(string(b), string("0.0.0"));
+
+    v = 0x01000000;
+    REQUIRE_RC(VdbVersionPrint(v, b, sizeof b, "", ""));
+    REQUIRE_EQ(string(b), string("1.0.0"));
+
+    v = 0x01020000;
+    REQUIRE_RC(VdbVersionPrint(v, b, sizeof b, "", ""));
+    REQUIRE_EQ(string(b), string("1.2.0"));
+
+    v = 0x01020003;
+    REQUIRE_RC(VdbVersionPrint(v, b, sizeof b, "", ""));
+    REQUIRE_EQ(string(b), string("1.2.3"));
+
+    v = 0x0A0B000C;
+    REQUIRE_RC(VdbVersionPrint(v, b, sizeof b, "", ""));
+    REQUIRE_EQ(string(b), string("10.11.12"));
+
+    v = 0x03010000;
+    REQUIRE_RC(VdbVersionPrint(v, b, sizeof b, "X-SRA-Release: ", "\r\n"));
+    REQUIRE_EQ(string(b), string("X-SRA-Release: 3.1.0\r\n"));
+
+    v = 0x04000000;
+    REQUIRE_RC(VdbVersionPrint(v, b, sizeof b, "X-VDB-Release: ", "\r\n"));
+    REQUIRE_EQ(string(b), string("X-VDB-Release: 4.0.0\r\n"));
 }
 
 //////////////////////////////////////////// Main

@@ -1,9 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from vdb import *
-
-#for this to work you need:
-#at $HOME/.ncbi/lib64 : libncbi-wvdb.so
 
 schematxt = '''
 version 1;
@@ -54,7 +51,7 @@ if __name__ == '__main__' :
         mgr = manager( OpenMode.Write )
     
         make_table( mgr, schematxt, table_spec, table_name )
-        #mgr.OpenTable( table_name ).print_rows()
+        mgr.OpenTable( table_name ).print_rows()
 
     except vdb_error as e :
         print( e )

@@ -35,11 +35,26 @@ AddExecutableTest( Test_VFS_cache_sdl "test_VFS_cache_sdl" "${COMMON_LIBS_READ}"
 AddExecutableTest( Test_VFS_caching "test-caching" "${COMMON_LIBS_READ}" )
 # AddExecutableTest( Test_VFS_names-30 "test-names-30" "${COMMON_LIBS_READ}" )
 AddExecutableTest(Test_VFS_no-nm-cgi "Test_VFS_no-nm-cgi" "${COMMON_LIBS_READ}")
+AddExecutableTest(
+    Test_VFS_vfs_resolve "test-vfs-resolve" "${COMMON_LIBS_READ}")
 AddExecutableTest( Test_VFS_path "pathtest" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_VFS_path-c "path-test" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_VFS_perm "test-perm" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_VFS_resolve "test-resolve" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_VFS_resolver_dflt "Test_VFS_resolver_dflt" "${COMMON_LIBS_READ}" )
+
+AddExecutableTest(
+ Test_VFS_VPATH_open-read-read   test-vpath-open-read    "${COMMON_LIBS_READ}" )
+AddExecutableTest(
+ Test_VFS_VPATH_open-read-update test-vpath-open-read-update "${COMMON_LIBS_READ}"
+)
+AddExecutableTest(
+ Test_VFS_VPATH_open-update-read test-vpath-open-update-read "${COMMON_LIBS_WRITE}"
+)
+AddExecutableTest(
+ Test_VFS_VPATH_open-update-update test-vpath-open-update-update "${COMMON_LIBS_WRITE}"
+)
+
 AddExecutableTest( Test_VFS_vfsmanager "managertest" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_VFS_json-response "test-json-response" "${COMMON_LIBS_READ}" )
 # AddExecutableTest( Test_VFS_resolver4 "test-resolver4" "${COMMON_LIBS_READ}" )

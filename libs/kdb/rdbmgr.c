@@ -55,6 +55,8 @@
 #include "rmeta.h"
 #undef KONST
 
+#include "../vfs/path-priv.h" /* VPathSetDirectory */
+
 #include <klib/checksum.h>
 #include <klib/rc.h>
 #include <klib/printf.h>
@@ -77,7 +79,8 @@ static rc_t CC KDBRManagerRunPeriodicTasks ( const KDBManager *self );
 static int CC KDBRManagerPathTypeVP ( const KDBManager * self, const VPath * path );
 static int CC KDBRManagerVPathType ( const KDBManager * self, const char *path, va_list args );
 static int CC KDBRManagerVPathTypeUnreliable ( const KDBManager * self, const char *path, va_list args );
-static rc_t CC KDBRManagerVOpenDBRead ( const KDBManager *self, const KDatabase **db, const char *path, va_list args );
+static rc_t CC KDBRManagerVOpenDBRead ( const KDBManager *self,
+    const KDatabase **db, const char *path, va_list args, const VPath *vpath );
 static rc_t CC KDBRManagerVOpenTableRead ( const KDBManager *self, const KTable **tbl, const char *path, va_list args );
 static rc_t CC KDBRManagerOpenTableReadVPath ( const KDBManager *self, const KTable **tbl, const struct VPath *path );
 static rc_t CC KDBRManagerVOpenColumnRead ( const KDBManager *self, const KColumn **col, const char *path, va_list args );
@@ -306,7 +309,7 @@ static int CC KDBManagerPathTypeVPImpl ( const KDBManager * self,
     const VPath * aPath, bool reliable )
 {
     const VPath * path = aPath;
-    VPath * rpath;
+    VPath * rpath = NULL;
     int path_type;
     rc_t rc;
 
@@ -315,44 +318,46 @@ static int CC KDBManagerPathTypeVPImpl ( const KDBManager * self,
     path_type = kptBadPath;
     if ((self != NULL) && (path != NULL))
     {
-        /*
-         * resolve the possible relative path or accession into
-         * a final path we can open directly
-         */
-        rc = KDBManagerResolveVPathInt (self, false, &rpath, path);
-        if (rc == 0)
-        {
-            const KDirectory * dir;
-
-            /*
-             * Most KDBPathType values are based on 'directories'
-             * so try to open the resolved path as a directory
-             */
-            if ( reliable )
+        const KDirectory * dir = NULL;
+        rc = VPathGetDirectory(aPath, &dir);
+        if (rc != 0 || dir == NULL) {
+          /*
+           * resolve the possible relative path or accession into
+           * a final path we can open directly
+           */
+          rc = KDBManagerResolveVPathInt (self, false, &rpath, path);
+          if (rc == 0)
+          {
+               /*
+               * Most KDBPathType values are based on 'directories'
+               * so try to open the resolved path as a directory
+               */
+              if ( reliable )
                 rc = VFSManagerOpenDirectoryReadDecrypt           (self->vfsmgr,
                     &dir, rpath);
-            else
+              else
                 rc = VFSManagerOpenDirectoryReadDecryptUnreliable (self->vfsmgr,
                     &dir, rpath);
-            if (rc == 0)
-            {
-                path_type = KDBPathTypeDir (dir, kptDir, NULL, ".");
-                KDirectoryRelease (dir);
             }
-            /*
-             * If we couldn't open the path as a directory we 'might'
-             * have a KDB idx but we will only try that for a limited
-             * set of uri schemes.
-             */
-            else
-            {
+        }
+        if (rc == 0) {
+                path_type = KDBPathTypeDir (dir, kptDir, NULL, ".");
+                VPathSetDirectory((VPath*)aPath, dir);
+                KDirectoryRelease (dir);
+        }
+        /*
+         * If we couldn't open the path as a directory we 'might'
+         * have a KDB idx but we will only try that for a limited
+         * set of uri schemes.
+         */
+         else {
 #if 1
                 if ( VPathIsFSCompatible ( rpath ) )
                 {
                     char buffer [ 4096 ];
                     rc = VPathReadPath ( rpath, buffer, sizeof buffer, NULL );
                     if ( rc == 0 )
-                        path_type = KDBPathType ( self -> wd, false, buffer );
+                        path_type = KDBPathType ( self -> wd, NULL, buffer );
                 }
 #else
                 VPUri_t t;
@@ -377,9 +382,8 @@ static int CC KDBManagerPathTypeVPImpl ( const KDBManager * self,
                     }}
                 }
 #endif
-            }
-            VPathRelease (rpath);
-        }
+         }
+         VPathRelease (rpath);
     }
 
     if (aPath != path)
@@ -430,6 +434,90 @@ KDBRManagerVPathTypeUnreliable ( const KDBManager * self, const char *path, va_l
     return KDBManagerVPathTypeImpl ( self, path, args, false );
 }
 
+/// @brief Get Path Contents, from VPath
+static rc_t KDBRManagerPathContentsVP_1(const KDBManager *self, KDBContents const **result, int levelOfDetail, const VPath *vpath, KPathType type, const char *path, va_list args)
+{
+    KDirectory const *dir = NULL;
+    rc_t rc = VFSManagerOpenDirectoryReadDecryptUnreliable(self->vfsmgr, &dir, vpath);
+    if (rc == 0) {
+        rc = KDBVGetPathContents(result, levelOfDetail, dir, type, path, args);
+        KDirectoryRelease(dir);
+    }
+    return rc;
+}
+
+/// @brief copy va_list, make a VPath from copy, check env. and AD, and resolve it.
+static VPath *makeResolvedVPath(const KDBManager *self, const char *path, va_list args, rc_t *prc)
+{
+    VPath *result = NULL;
+
+    va_list copy;
+    va_copy(copy, args);
+    *prc = VFSManagerVMakePath(self->vfsmgr, &result, path, copy);
+    va_end(copy);
+
+    if (result != NULL) {
+        VPath const *checked = NULL;
+        if (VFSManagerCheckEnvAndAd(self->vfsmgr, result, &checked) && checked != NULL) {
+            VPathRelease(result);
+            result = (VPath *)checked;
+        }
+    }
+    if (result != NULL) {
+        VPath *resolved = NULL;
+        *prc = KDBManagerResolveVPathInt(self, false, &resolved, result);
+        if (resolved) {
+            VPathRelease(result);
+            result = resolved;
+        }
+    }
+    return result;
+}
+
+static KPathType VGetPathType(const KDBManager *self, const char *path, va_list args)
+{
+    KPathType result = 0;
+    va_list copy;
+    va_copy(copy, args);
+    result = KDirectoryVPathType(self->wd, path, copy);
+    va_end(copy);
+    return result;
+}
+
+/// @brief Get Path Contents, from va_list, unchecked
+static rc_t KDBRManagerVPathContents_1(const KDBManager *self, KDBContents const **result, int levelOfDetail, const char *path, va_list args)
+{
+    rc_t rc = 0;
+    VPath const *const vp = makeResolvedVPath(self, path, args, &rc); ///< NB. makes its own copy of args
+
+    if (vp != NULL) {
+        rc = KDBRManagerPathContentsVP_1(self, result, levelOfDetail, vp, VGetPathType(self, path, args), path, args);
+        VPathRelease(vp);
+    }
+    return rc;
+}
+
+/// @brief Get Path Contents, from va_list
+rc_t KDBRManagerVPathContents(const KDBManager *self, KDBContents const **result, int levelOfDetail, const char *path, va_list args)
+{
+    if (self == NULL)
+        return RC(rcDB, rcMgr, rcAccessing, rcSelf, rcNull);
+    if (path == NULL)
+        return RC(rcDB, rcMgr, rcAccessing, rcParam, rcNull);
+    return KDBRManagerVPathContents_1(self, result, levelOfDetail, path, args);
+}
+
+/// @brief Get Path Contents, from var_args
+rc_t KDBRManagerPathContents(const KDBManager *self, KDBContents const **result, int levelOfDetail, const char *path, ...)
+{
+    rc_t rc = 0;
+    va_list ap;
+    va_start(ap, path);
+    rc = KDBRManagerVPathContents(self, result, levelOfDetail, path, ap);
+    va_end(ap);
+    return rc;
+}
+
 /* OpenDBRead
  * VOpenDBRead
  *  open a database for read
@@ -442,28 +530,86 @@ KDBRManagerVPathTypeUnreliable ( const KDBManager * self, const char *path, va_l
 static
 rc_t KDBManagerVOpenDBReadInt ( const KDBManager *self, const KDatabase **dbp,
                                 const KDirectory *wd, bool try_srapath,
-                                const char *path, va_list args )
+                                const char *path, va_list args,
+                                const VPath *vpath )
 {
-    rc_t rc;
+    bool tryEnvAndAd = true;
+    rc_t rc = 0;
 
     /* MUST use vsnprintf because the documented behavior of "path"
        is that of stdc library's printf, not vdb printf */
-    char dbpath [ 4096 ];
-    /* VDB-4386: cannot treat va_list as a pointer! */
-    int z = 0;
-    /*( args == NULL ) ?
+    char aDbpath [ 4096 ] = "";
+    char * dbpath = aDbpath;
+
+    if ( vpath == NULL )
+    {
+      /* VDB-4386: cannot treat va_list as a pointer! */
+      int z = 0;
+      /*( args == NULL ) ?
         snprintf ( dbpath, sizeof dbpath, "%s", path ):*/
-    if ( path != NULL )
-        z = vsnprintf ( dbpath, sizeof dbpath, path, args );
-    if ( z < 0 || ( size_t ) z >= sizeof dbpath )
+      if ( path != NULL )
+        z = vsnprintf ( aDbpath, sizeof aDbpath, path, args );
+      if ( z < 0 || ( size_t ) z >= sizeof aDbpath )
         rc = RC ( rcDB, rcMgr, rcOpening, rcPath, rcExcessive );
-    else
+    }
+
+    if ( rc == 0 )
     {
         const KDirectory *dir;
+        const VPath *path2 = NULL;
+
+        {
+            VPath *path = NULL;
+            if (vpath == NULL)
+                rc = VFSManagerMakePath(self->vfsmgr, &path, "%s", aDbpath);
+            if (rc == 0) {
+                const String * str = NULL;
+                if (tryEnvAndAd)
+                    VFSManagerCheckEnvAndAd(self->vfsmgr,
+                        path != NULL ? path : vpath, &path2);
+                if (path2 != NULL) {
+                    rc = VPathMakeString(path2, &str);
+                    if (rc == 0) {
+                        assert(str);
+                        dbpath = calloc(1, str->size + 1);
+                        if (dbpath != NULL)
+                            string_printf(dbpath, str->size + 1, NULL,
+                                "%S", str);
+                        StringWhack(str);
+                    }
+                }
+                else {
+                    rc = VPathMakeString(path != NULL ? path : vpath, &str);
+                    if (rc == 0) {
+                        assert(str);
+                        dbpath = calloc(1, str->size + 1);
+                        if (dbpath != NULL)
+                            string_printf(dbpath, str->size + 1, NULL,
+                                "%S", str);
+                        StringWhack(str);
+                    }
+                }
+                VPathRelease(path);
+            }
+        }
 
         /* open the directory if its a database */
-        rc = KDBManagerOpenPathTypeRead ( self, wd, dbpath, &dir, kptDatabase, NULL,
-            try_srapath, NULL );
+        rc = KDBManagerOpenPathTypeRead ( self, wd, dbpath, &dir,
+            kptDatabase, NULL, try_srapath, path2 != NULL ? path2 : vpath );
+
+        if (vpath != NULL && path2 != NULL) {
+            rc_t r = VPathCopyDirectoryIfEmpty((VPath*)vpath, path2);
+            if (rc == 0 && r != 0)
+                rc = r;
+        }
+
+        {
+            rc_t r = VPathRelease(path2);
+            if (rc == 0 && r != 0)
+                rc = r;
+            path2 = NULL;
+        }
+
         if ( rc == 0 )
         {
             const KDatabase *db;
@@ -479,6 +625,9 @@ rc_t KDBManagerVOpenDBReadInt ( const KDBManager *self, const KDatabase **dbp,
             KDirectoryRelease ( dir );
         }
     }
+    if (aDbpath != dbpath)
+        free(dbpath);
+
     return rc;
 }
 
@@ -490,7 +639,8 @@ rc_t KDBRManagerVOpenDBReadInt_noargs ( const KDBManager *self, const KDatabase 
     va_list args;
 
     va_start ( args, path );
-    rc = KDBManagerVOpenDBReadInt ( self, dbp, wd, try_srapath, path, args );
+    rc = KDBManagerVOpenDBReadInt ( self, dbp, wd, try_srapath, path, args,
+        NULL );
     va_end ( args );
 
     return rc;
@@ -498,14 +648,16 @@ rc_t KDBRManagerVOpenDBReadInt_noargs ( const KDBManager *self, const KDatabase 
 
 static
 rc_t CC
-KDBRManagerVOpenDBRead ( const KDBManager *self, const KDatabase **db, const char *path, va_list args )
+KDBRManagerVOpenDBRead ( const KDBManager *self, const KDatabase **db,
+    const char *path, va_list args, const VPath *vpath )
 {
     if ( db == NULL )
         return RC ( rcDB, rcMgr, rcOpening, rcParam, rcNull );
 
     * db = NULL;
 
-    return KDBManagerVOpenDBReadInt ( self, db, self -> wd, true, path, args );
+    return KDBManagerVOpenDBReadInt ( self, db, self -> wd, true, path, args,
+        vpath );
 }
 
 static
@@ -595,10 +747,10 @@ KDBRManagerVPathOpenRemoteDBRead ( struct KDBManager const * self, struct KDatab
 static
 rc_t KDBManagerVOpenTableReadInt ( const KDBManager *self,
     const KTable **tblp, const KDirectory *wd, bool try_srapath,
-    const char *path, va_list args, const struct VPath *vpath,
+    const char *p_path, va_list args, const struct VPath *vpath,
     bool tryEnvAndAd )
 {
-    rc_t rc;
+    rc_t rc = 0;
     char aTblpath[4096] = "";
     char * tblpath = aTblpath;
     int z = 0;
@@ -608,8 +760,8 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *self,
             z = snprintf(aTblpath, sizeof aTblpath, "%s", path);
     }
     else*/
-    if (path != NULL)
-        z = vsnprintf ( aTblpath, sizeof aTblpath, path, args );
+    if (p_path != NULL)
+        z = vsnprintf ( aTblpath, sizeof aTblpath, p_path, args );
     if ( z < 0 || ( size_t ) z >= sizeof aTblpath )
         rc = RC ( rcDB, rcMgr, rcOpening, rcPath, rcExcessive );
     else
@@ -620,7 +772,6 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *self,
         const VPath *path2 = NULL;
 
         {
-            rc_t rc = 0;
             VPath *path = NULL;
             if (vpath == NULL)
                 rc = VFSManagerMakePath(self->vfsmgr, &path, "%s", aTblpath);
@@ -655,37 +806,47 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *self,
             }
         }
 
-        rc = KDBManagerOpenPathTypeRead ( self, wd, tblpath, &dir, kptTable, NULL,
-            try_srapath, path2 != NULL ? path2 : vpath );
-        if ( rc != 0 )
+        rc = KDBManagerOpenPathTypeRead(self, wd, tblpath, &dir, kptTable, NULL,
+            try_srapath, path2 != NULL ? path2 : vpath);
+        if (rc != 0)
         {
             prerelease = true;
-            rc = KDBManagerOpenPathTypeRead ( self, wd, tblpath, &dir,
+            rc = KDBManagerOpenPathTypeRead(self, wd, tblpath, &dir,
                 kptPrereleaseTbl, NULL,
                 try_srapath, path2 != NULL ? path2 : vpath);
         }
 
+        if (vpath != NULL && path2 != NULL) {
+            rc_t r = VPathCopyDirectoryIfEmpty((VPath*)vpath, path2);
+            if (rc == 0 && r != 0)
+                rc = r;
+        }
+
+        {
+            rc_t r = VPathRelease(path2);
+            if (rc == 0 && r != 0)
+                rc = r;
+            path2 = NULL;
+        }
+
         if (rc == 0)
         {
-            String str;
+          /*String str;
             const char * p = tblpath;
             if (p == NULL) {
                 if (path2 != NULL) {
-                    rc_t rc = VPathGetPath(vpath, &str);
+                    rc = VPathGetPath(vpath, &str);
                     if (rc == 0)
                         p = str.addr;
                 }
                 else if (vpath != NULL) {
-                    rc_t rc = VPathGetPath(vpath, &str);
+                    rc = VPathGetPath(vpath, &str);
                     if (rc == 0)
                         p = str.addr;
                 }
-            }
+            }*/
 
-            VPathRelease(path2);
-            path2 = NULL;
-
-            rc = KRTableMake ( & tbl, dir, p, self, prerelease );
+            rc = KRTableMake ( & tbl, dir, tblpath, self, prerelease );
             if ( rc == 0 )
             {
                 * tblp = & tbl -> dad;

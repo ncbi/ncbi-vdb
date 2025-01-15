@@ -41,7 +41,7 @@ rc_t CC use_rna_flag ( void *Self, const VXformInfo *info, int64_t row_id,
        meta<RNA_FLAG> == "1": translate 'T' to 'U' */
     struct Self *const self = Self;
     rc_t rc;
-    uint32_t row_len = argv [ 0 ] . u . data . elem_count;
+    uint32_t row_len = (uint32_t) argv [ 0 ] . u . data . elem_count;
     uint8_t const *seq = argv [ 0 ] . u . data . base;
 
     assert(argv[0].u.data.elem_bits == 8);

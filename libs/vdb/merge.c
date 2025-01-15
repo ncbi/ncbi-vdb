@@ -29,12 +29,12 @@
 #include "blob.h"
 
 #include "blob-headers.h"
-#include "page-map.h"
 #include "blob-priv.h"
 #include "xform-priv.h"
 
 #include <vdb/xform.h>
 #include <vdb/schema.h>
+#include <kdb/page-map.h>
 #include <klib/rc.h>
 #include <sysalloc.h>
 
@@ -51,7 +51,7 @@ static unsigned uniq_list( unsigned dst[], void **list, unsigned N ) {
     void *on_stack[16];
     void **uniq = on_stack;
     void **on_heap = 0;
-    
+
     if (N > sizeof(on_stack) / sizeof(on_stack[0])) {
         on_heap = malloc(N * sizeof(on_heap[0]));
         uniq = on_heap;
@@ -82,7 +82,7 @@ rc_t CC VBlobCreateMerged( VBlob **lhs, uint32_t num_inputs, const VBlob *input[
     rc_t rc;
     uint64_t sz = 0;
     uint32_t bsize;
-    
+
 /*
      headers:
          args:
@@ -97,16 +97,16 @@ rc_t CC VBlobCreateMerged( VBlob **lhs, uint32_t num_inputs, const VBlob *input[
          header[num_inputs]
          data_blob[num_inputs]
  */
-    
+
     for (i = 1; i != num_inputs; ++i) {
         if (input[0]->start_id != input[i]->start_id || input[0]->stop_id != input[i]->stop_id)
             return RC(rcVDB, rcBlob, rcConstructing, rcParam, rcInvalid);
     }
-    
+
     rc = BlobHeadersCreate(&headers);
     if (rc)
         return rc;
-    
+
     hdr = BlobHeadersGetHdrWrite(headers);
     if (hdr == NULL) {
         BlobHeadersRelease(headers);
@@ -120,14 +120,14 @@ rc_t CC VBlobCreateMerged( VBlob **lhs, uint32_t num_inputs, const VBlob *input[
     }
     VBlobHeaderSetFormat(hdr, 0); /* TBD: set format id to correct value for merged or do it in caller */
     VBlobHeaderSetVersion(hdr, 1);
-    
+
     VBlobHeaderArgPushTail(hdr, num_inputs);
-    
+
     {
         unsigned *v;
         PageMap **pm;
         unsigned n;
-		
+
         v = malloc(num_inputs * sizeof(*v));
         pm = malloc(num_inputs * sizeof(*pm));
         for (i = 0; i != num_inputs; ++i) {
@@ -145,7 +145,7 @@ rc_t CC VBlobCreateMerged( VBlob **lhs, uint32_t num_inputs, const VBlob *input[
         }
         free(pm);
     }
-    
+
     for (i = 0; rc == 0 && i != num_inputs; ++i) {
         if (input[i]->headers) {
             rc = BlobHeadersSerialize(input[i]->headers, &buffer, bsize, &sz);
@@ -155,10 +155,10 @@ rc_t CC VBlobCreateMerged( VBlob **lhs, uint32_t num_inputs, const VBlob *input[
         else
             VBlobHeaderArgPushTail(hdr, 0);
     }
-    
+
     for (i = 0; rc == 0 && i != num_inputs; ++i) {
         const VBlob *o = input[i];
-        
+
         sz = (uint32_t)BlobBufferBits( o );
         rc = VBlobHeaderArgPushTail( hdr, sz );
         sz = (sz + 7) >> 3;
@@ -173,12 +173,12 @@ rc_t CC VBlobCreateMerged( VBlob **lhs, uint32_t num_inputs, const VBlob *input[
     VBlobHeaderRelease(hdr);
     if (rc == 0) {
         VBlob *y;
-        
+
         rc = VBlobNew(&y, input[0]->start_id, input[0]->stop_id, "merge");
         if (rc == 0) {
             y->headers = headers;
             KDataBufferSub(&buffer, &y->data, 0, UINT64_MAX);
-            
+
 #if __BYTE_ORDER == __LITTLE_ENDIAN
             y->byte_order = vboLittleEndian;
 #else
@@ -192,7 +192,7 @@ rc_t CC VBlobCreateMerged( VBlob **lhs, uint32_t num_inputs, const VBlob *input[
     }
     KDataBufferWhack(&buffer);
     BlobHeadersRelease(headers);
-    
+
     return rc;
 }
 
