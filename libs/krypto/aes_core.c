@@ -648,6 +648,7 @@ static const uint32_t rcon[] = {
 /**
  * Expand the cipher key into the encryption key schedule.
  */
+static
 int AES_set_encrypt_key(const uint8_t *userKey, const uint32_t bits,
 			AES_KEY *key) {
 
@@ -749,6 +750,7 @@ int AES_set_encrypt_key(const uint8_t *userKey, const uint32_t bits,
 /**
  * Expand the cipher key into the decryption key schedule.
  */
+static 
 int AES_set_decrypt_key(const uint8_t *userKey, const uint32_t bits,
                         AES_KEY *key) {
 
@@ -801,6 +803,7 @@ int AES_set_decrypt_key(const uint8_t *userKey, const uint32_t bits,
  * Encrypt a single block
  * in and out can overlap
  */
+static 
 void AES_encrypt(const uint8_t *in, uint8_t *out,
 		 const AES_KEY *key) {
 
@@ -992,6 +995,7 @@ void AES_encrypt(const uint8_t *in, uint8_t *out,
  * Decrypt a single block
  * in and out can overlap
  */
+static 
 void AES_decrypt(const uint8_t *in, uint8_t *out,
 		 const AES_KEY *key) {
 

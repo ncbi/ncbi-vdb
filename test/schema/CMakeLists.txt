@@ -48,25 +48,4 @@ if( SINGLE_CONFIG )
     add_test( NAME Test_SCHEMA_schema-diff COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test-schema-diff.sh ${CMAKE_TEST_OUTPUT_DIRECTORY}/Test_SCHEMA_schema-diff ${CMAKE_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 endif()
 
-if (Python3_EXECUTABLE)
-    add_custom_target(Build-wso ALL )
-    add_dependencies(Build-wso ncbi-wvdb-shared)
-
-    add_test( NAME Test_SCHEMA_454_db
-        COMMAND ${Python3_EXECUTABLE} test_VDB-5250.py
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    )
-    set_tests_properties( Test_SCHEMA_454_db
-        PROPERTIES
-        ENVIRONMENT VDB_LIBRARY_PATH=${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
-    )
-
-    add_test( NAME Test_SCHEMA_IonTorrent_db
-        COMMAND ${Python3_EXECUTABLE} test_VDB-5251.py
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    )
-    set_tests_properties( Test_SCHEMA_IonTorrent_db
-        PROPERTIES
-        ENVIRONMENT VDB_LIBRARY_PATH=${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
-    )
-endif()
+# Test_SCHEMA_454_db and Test_SCHEMA_IonTorrent_db moved to sra-tools/test/schema because of their dependemcy on the SRA schema. VDB-4792

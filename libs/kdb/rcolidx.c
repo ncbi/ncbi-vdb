@@ -102,7 +102,7 @@ rc_t KRColumnIdxOpenRead ( KRColumnIdx *self, const KDirectory *dir,
         KRColumnIdx1Whack ( & self -> idx1 );
     }
 
-    return 0;
+    return rc;
 }
 
 /* Whack

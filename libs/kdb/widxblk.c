@@ -336,8 +336,8 @@ int64_t KColBlockLocInfoMerge ( KColBlockLocInfo *a, const KColBlockLocInfo *b )
     a -> end_id = b -> end_id;
     a -> end_pg = b -> end_pg;
     a -> count += b -> count;
-    a -> id_type = id_type;
-    a -> pg_type = pg_type;
+    a -> id_type = (uint16_t) id_type;
+    a -> pg_type = (uint16_t) pg_type;
 
     /* the resultant block cannot be too large */
     if ( ( ( a -> end_id - a -> start_id ) >> 32 ) == 0 )

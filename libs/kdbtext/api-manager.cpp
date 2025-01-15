@@ -58,7 +58,7 @@ static rc_t CC KTextManagerRunPeriodicTasks ( const KDBManager *self );
 static int CC KTextManagerPathTypeVP( const KDBManager * self, const VPath * path );
 static int CC KTextManagerVPathType ( const KDBManager * self, const char *path, va_list args );
 static int CC KTextManagerVPathTypeUnreliable ( const KDBManager * self, const char *path, va_list args );
-static rc_t CC KTextManagerVOpenDBRead ( const KDBManager *self, const KDatabase **db, const char *path, va_list args );
+static rc_t CC KTextManagerVOpenDBRead ( const KDBManager *self, const KDatabase **db, const char *path, va_list args, const VPath * );
 static rc_t CC KTextManagerVOpenTableRead ( const KDBManager *self, const KTable **tbl, const char *path, va_list args );
 static rc_t CC KTextManagerOpenTableReadVPath(const KDBManager *self, const KTable **tbl, const struct VPath *path);
 static rc_t CC KTextManagerVOpenColumnRead ( const KDBManager *self, const KColumn **col, const char *path, va_list args );
@@ -93,8 +93,9 @@ using namespace KDBText;
 
 static
 rc_t CC
-KTextManagerWhack ( KDBManager *self )
+KTextManagerWhack ( KDBManager *bself )
 {
+    CAST();
     assert( self -> dad . vt == & KTextManager_vt );
     delete self;
     return 0;
@@ -208,7 +209,7 @@ KTextManagerVPathTypeUnreliable ( const KDBManager * self, const char *path, va_
 
 static
 rc_t CC
-KTextManagerVOpenDBRead ( const KDBManager *bself, const KDatabase **p_db, const char *fmt, va_list args )
+KTextManagerVOpenDBRead ( const KDBManager *bself, const KDatabase **p_db, const char *fmt, va_list args, const VPath *vpath )
 {
     CAST();
 

@@ -612,7 +612,7 @@ static void printOptionDefinition(OptDef const *const def)
         char const *const aliases = def->aliases ? def->aliases : "";
         char const *const *const help = def->help ? def->help : no_help;
         int i;
-        char buffer[4] = "\\\0\0\0";
+        char buffer[4] = {'\\','\0','\0','\0'};
 
         fprintf(dumpOptionDefs, "    TOOL_ARG(\"%s\", \"%s\", %s, TOOL_HELP(", def->name, aliases, def->needs_value ? "true" : "false");
         for (i = 0; help[i]; ++i) {
@@ -625,7 +625,7 @@ static void printOptionDefinition(OptDef const *const def)
                     int const ch = helptext[j];
                     char const *const out = (ch == '\\' || ch == '"') ? buffer : (buffer + 1);
 
-                    buffer[1] = ch;
+                    buffer[1] = (char)ch;
                     buffer[2] = '\0';
                     fprintf(dumpOptionDefs, "%s", out);
                 }
@@ -660,7 +660,7 @@ static bool cleaned(unsigned const max, char *result, char const *name)
             *result = '\0';
             return true;
         }
-        *result++ = isalnum(ch) ? toupper(ch) : '_';
+        *result++ = isalnum(ch) ? (char)toupper(ch) : '_';
     }
     assert(!"not enough space in result string!!!");
     return false;
@@ -768,7 +768,7 @@ rc_t CC ArgsAddOption (Args * self, const OptDef * option)
     return ArgsAddOption_int(self, false, option);
 }
 
-static rc_t ArgsAddOption_int(Args *const self, bool isStandardOption, const OptDef *const option)
+static rc_t ArgsAddOption_int(Args *const self, bool isStandardOption, const OptDef * option)
 {
     rc_t rc = 0;
     Option * node;
@@ -921,7 +921,7 @@ rc_t CC ArgsAddLongOption ( Args * self, const char * opt_short_names, const cha
         return RC ( rcExe, rcArgv, rcConstructing, rcParam, rcExcessive );
 
     memset ( & opt, 0, sizeof opt );
-    memset ( help, 0, sizeof help );
+    memset ( (void*)help, 0, sizeof help );
 
     help [ 0 ] = help_text;
 
@@ -1700,7 +1700,11 @@ void CC gen_log_usage (const char ** _buffers)
         }
         pc += used;
         rem -= used;
+#ifdef WINDOWS
+        strcpy_s(pc, USAGE_MAX_SIZE - (pc - buffv), div);
+#else
         strcpy (pc, div);
+#endif
         pc += sizeof div - 1;
         rem -= sizeof div - 1;
     }
@@ -1844,9 +1848,9 @@ rc_t CC ArgsHandleVersion (Args * self)
             SraReleaseVersion sraVersion;
             memset ( & sraVersion, 0, sizeof sraVersion );
             {
-                rc_t rc = SraReleaseVersionGet ( & sraVersion );
-                if ( rc == 0 ) {
-                    rc = SraReleaseVersionPrint
+                rc_t rc2 = SraReleaseVersionGet ( & sraVersion );
+                if ( rc2 == 0 ) {
+                    rc2 = SraReleaseVersionPrint
                         ( & sraVersion, cSra, sizeof cSra, NULL );
                 }
             }

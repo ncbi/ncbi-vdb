@@ -45,15 +45,26 @@
 #endif
 #endif
 
+/// @brief Shim for refcounting; See `RETAIN_RELEASE` convenience macro
+/// @tparam KOBJ klib object type
 template <class KOBJ>
 struct RetainRelease {
     using ConstPointer = KOBJ const *;
     using Pointer = KOBJ *;
-    void retain(ConstPointer) const;
-    void release(ConstPointer) const noexcept;
+    void retain(ConstPointer) const { static_assert(false, "purely devirtual!"); };
+    void release(ConstPointer) const noexcept { static_assert(false, "purely devirtual!"); };
 };
+#define RETAIN_RELEASE(KTYPE) template <> struct RetainRelease<KTYPE> {         \
+    using ConstPointer = KTYPE const *;                                         \
+    using Pointer = KTYPE *;                                                    \
+    void retain(ConstPointer const p) const { KTYPE ## AddRef(p); }             \
+    void release(ConstPointer const p) const noexcept { KTYPE ## Release(p); }  \
+}
 
 namespace Klib {
+
+    /// @brief A `Klib::Object` class can declare that it is a `Consumer` of some other `Klib::Object` class to get raw acccess to its inner pointer.
+    /// @tparam OBJ klib object type
     template < class OBJ >
     struct Consumer {
     protected:
@@ -67,12 +78,16 @@ namespace Klib {
         }
     };
 
+    /// @brief a smart pointer for klib objects
+    /// @tparam KOBJ klib object type
+    /// @tparam RR the refcounting shim for the klib object
     template < class KOBJ, typename RR = RetainRelease<KOBJ> >
     class Object {
     public:
         using ConstPointer = typename RR::ConstPointer;
         using Pointer = typename RR::Pointer;
     private:
+        /// @brief the smart pointer implementation
         struct P : private RR {
             Pointer p;
 
@@ -107,12 +122,25 @@ namespace Klib {
                 p = q;
             }
         } p;
+        
+        /// @brief shares ownership.
+        /// @return retained
         Pointer share() const { return p.retain(); }
+
+        /// @brief loses ownership.
+        /// @return the raw pointer, unretained.
         Pointer give() { return p.give(); }
     protected:
+
+        /// @brief shares ownership.
+        /// @return the raw pointer, unretained.
         Pointer get() const { return p.p; }
     public:
+
+        /// @brief assumes ownership.
         Object(Pointer q) : p(q) {}
+
+        /// @brief assumes ownership, casts off const-ness.
         Object(ConstPointer q) : p(const_cast<Pointer>(q)) {}
 
         using KType = KOBJ;
@@ -122,29 +150,36 @@ namespace Klib {
             static_assert(sizeof(*this) == sizeof(void *), "I AM NOT A POINTER!?");
             p.release();
         }
+
+        /// @brief shares ownership.
         Object(Object const &rhs)
         : p(rhs.share())
         {}
+
+        /// @brief assumes ownership.
+        /// @param rhs loses ownership.
         Object(Object &&rhs)
         : p(rhs.give())
         {}
+
+        /// @brief shares ownership.
         Object const &operator =(Object const &rhs) {
             p.take(rhs.share());
         }
+
+        /// @brief is inner pointer the same?
+        /// @tparam U a klib object type.
+        /// @param other KLib::Object.
+        /// @return true if inner pointers of the same.
         template <class U>
         bool isSame(Object<U> const &other) const {
             return reinterpret_cast<void const *>(p.p) == reinterpret_cast<void const *>(other.p.p);
         }
+
+        // A Consumer of Self is a friend of self.
         friend Consumer<Object>;
         using Consumer = Consumer<Object>;
     };
-}
-
-#define RETAIN_RELEASE(KTYPE) template <> struct RetainRelease<KTYPE> {         \
-using ConstPointer = KTYPE const *;                                         \
-using Pointer = KTYPE *;                                                    \
-void retain(ConstPointer const p) const { KTYPE ## AddRef(p); }             \
-void release(ConstPointer const p) const noexcept { KTYPE ## Release(p); }  \
 }
 
 #define KlibObject(KTYPE, TYPE) class TYPE : public Klib::Object<KTYPE>
@@ -152,16 +187,18 @@ void release(ConstPointer const p) const noexcept { KTYPE ## Release(p); }  \
 #include <klib/rc.h>
 
 namespace Klib {
+    /// @brief A simple value type for result codes that are returned by klib functions.
     struct ResultCode {
     private:
+        /// @brief Used for conveying the exitcode of a child process that exited normally.
         struct ExitCodeRC {
             unsigned module: 5
-            , target: 6
-            , context: 7
-            , padding: 6
-            , exitCode: 8;
+                    , target: 6
+                    , context: 7
+                    , padding: 6
+                    , exitCode: 8;
 
-            ExitCodeRC(uint8_t exitCode)
+            explicit ExitCodeRC(uint8_t exitCode)
             : module(rcExitCode)
             , target(rcProcess)
             , context(rcClosing)
@@ -170,13 +207,13 @@ namespace Klib {
             {}
         };
         struct NormalRC {
-            unsigned module: 5;
-            unsigned target: 6;
-            unsigned context: 7;
-            unsigned object: 8;
-            unsigned state: 6;
+            unsigned module: 5
+                    , target: 6
+                    , context: 7
+                    , object: 8
+                    , state: 6;
 
-            NormalRC(rc_t rc)
+            explicit NormalRC(rc_t rc)
             : module(GetRCModule(rc))
             , target(GetRCTarget(rc))
             , context(GetRCContext(rc))
@@ -190,11 +227,14 @@ namespace Klib {
             uint32_t raw;
         } value;
     public:
+        bool is_exit_code_rc() const {
+            return value.rc.module == rcExitCode;
+        }
         bool isState(enum RCState st) const {
             return is_exit_code_rc() ? false : ((unsigned)st == value.rc.state);
         }
         explicit ResultCode(rc_t rc)
-        : value({.rc = rc})
+        : value({.rc = NormalRC(rc)})
         {
         }
         operator rc_t() const {
@@ -205,9 +245,6 @@ namespace Klib {
                              , value.rc.state);
         }
         operator bool() const { return 0 == value.raw; }
-        bool is_exit_code_rc() const {
-            return value.rc.module == rcExitCode;
-        }
         operator std::string() const {
             auto result = std::string();
 
@@ -234,6 +271,8 @@ namespace Klib {
 #include <stdexcept>
 
 namespace Klib {
+
+    /// @brief Exception class for RCs
     class ResultCodeException
     : public std::runtime_error
     {
@@ -881,6 +920,10 @@ namespace KDB {
             Table::ConstPointer p = nullptr;
             THROW_IF(KDBManagerOpenTableRead, (get(), &p, "%s", name.c_str()));
             return p;
+        }
+
+        int pathType(std::string const &path) const {
+            return KDBManagerPathType(get(), "%.*s", path.length(), path.data());
         }
 
     protected:

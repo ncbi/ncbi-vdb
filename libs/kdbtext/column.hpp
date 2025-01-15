@@ -34,6 +34,7 @@
 
 #include <string>
 #include <map>
+#include <memory>
 
 typedef struct KTextColumn KTextColumn;
 struct KTextColumn
@@ -64,7 +65,8 @@ namespace KDBText
         const Table * getParent() const { return m_parent; }
         const std::string & getName() const { return m_name; }
 
-        std::pair< int64_t, uint64_t > idRange() const; // { first, last - first + 1 }; { 0, 0 } if empty
+        typedef std::pair< int64_t, uint64_t > IdRange;
+        IdRange idRange() const; // { first, last - first + 1 }; { 0, 0 } if empty
 
         int64_t findFirst( int64_t row ) const;
 
@@ -80,7 +82,10 @@ namespace KDBText
         std::string m_name;
         std::string m_type;
 
-        std::map< uint64_t, KDataBuffer > m_data;
+        typedef std::map< IdRange, std::shared_ptr<ColumnBlob> > BlobMap;
+        BlobMap::const_iterator findBlob( int64_t row ) const;
+        BlobMap m_data;
+
         const Metadata * m_meta = nullptr;
     };
 }

@@ -25,18 +25,28 @@
 */
 
 #include <kdb/extern.h>
+#include <kdb/kdb-priv.h>
 
 #include <kdb/manager.h>
 
 #include "dbmgr.h"
+#include "../vfs/path-priv.h" /* VPathSetDirectory */
 
 #include <kfs/directory.h>
 #include <kfs/sra.h>
 
-#include <vfs/path.h>
 #include <vfs/manager.h>
 #include <vfs/manager-priv.h>
+#include <vfs/path-priv.h> /* VPathGetDirectory */
 
+#include <kdb/column.h>
+#include <kdb/index.h>
+#include "rcolumn.h"
+#include "index-cmn.h"
+
+#include <klib/data-buffer.h>
+#include <kfs/file.h>
+#include <klib/printf.h>
 #include <klib/text.h>
 #include <klib/rc.h>
 
@@ -64,7 +74,9 @@ enum ScanBits
     scan_meta   = ( 1 << 13 ),
     scan_skey   = ( 1 << 14 ),
     scan_sealed = ( 1 << 15 ),
-    scan_zombie = ( 1 << 16 )
+    scan_zombie = ( 1 << 16 ),
+    scan_MD5    = ( 1 << 17 ),
+    scan_alias  = ( 1 << 18 )
 };
 
 static
@@ -72,7 +84,10 @@ rc_t CC scan_dbdir ( const KDirectory *dir, uint32_t type, const char *name, voi
 {
     uint32_t *bits = data;
 
-    type &= kptAlias - 1;
+    if ((type & kptAlias) != 0) {
+        *bits |= scan_alias;
+        type ^= kptAlias;
+    }
 
     if ( type == kptDir )
     {
@@ -137,6 +152,8 @@ rc_t CC scan_dbdir ( const KDirectory *dir, uint32_t type, const char *name, voi
         case 'm':
             if ( strcmp ( name, "meta" ) == 0 )
             { * bits |= scan_meta; return 0; }
+            if ( strcmp ( name, "md5"  ) == 0 )
+            { * bits |= scan_MD5; return 0; }
             break;
         case 's':
             if ( strcmp ( name, "skey" ) == 0 )
@@ -305,6 +322,481 @@ int KDBPathType ( const KDirectory *dir, bool *pHasZombies, const char *path )
     return type;
 }
 
+void KDBContentsWhack(KDBContents const *const self)
+{
+    if (self) {
+        KDBContentsWhack(self->firstChild);
+        KDBContentsWhack(self->nextSibling);
+        free((void *)self);
+    }
+}
+
+static KDBContents *KDBContentsAlloc(size_t const namelen)
+{
+    size_t const n = namelen + 1;
+    struct Layout {
+        KDBContents result;
+        char name[1];
+    } *result = malloc(offsetof(struct Layout, name[n]));
+    if (result) {
+        result->result.name = &result->name[0];
+        return &result->result;
+    }
+    return NULL;
+}
+
+static KDBContents *KDBContentsInit(KDBContents *const result
+                                    , char const *const name
+                                    , size_t const namelen
+                                    , KPathType const fstype
+                                    , KDBContents const *const parent
+                                    , KDBContents const *const previous)
+{
+    if (result) {
+        char *rname = (char *)result->name;
+        char const *const endp = name + namelen;
+        char const *cp = name;
+
+        while (cp != endp)
+            *rname++ = *cp++;
+        *rname = '\0';
+
+        result->parent = parent;
+        result->firstChild = result->nextSibling = NULL;
+        result->prevSibling = previous;
+        result->dbtype = (result->fstype = fstype) ^ (fstype & kptAlias);
+        result->attributes = 0;
+        result->levelOfDetail = parent ? parent->levelOfDetail : lod_Full;
+    }
+    return result;
+}
+
+static KDBContents *KDBContentsMake(char const *const name
+                                    , KPathType const fstype
+                                    , KDBContents const *const parent
+                                    , KDBContents const *const previous)
+{
+    size_t const n = strlen(name);
+    return KDBContentsInit(KDBContentsAlloc(n), name, n, fstype, parent, previous);
+}
+
+static KDBContents *KDBContentsVMake(KPathType const fstype
+                                    , KDBContents const *const parent
+                                    , KDBContents const *const previous
+                                    , char const *const name
+                                    , va_list args)
+{
+    rc_t rc = 0;
+    KDBContents *result = NULL;
+    KDataBuffer buffer;
+
+    KDataBufferMakeBytes(&buffer, 0);
+    rc = KDataBufferVPrintf(&buffer, name, args);
+    if (rc == 0) {
+        result = KDBContentsInit(KDBContentsAlloc(buffer.elem_count), buffer.base, buffer.elem_count, fstype, parent, previous);
+        KDataBufferWhack(&buffer);
+    }
+    return result;
+}
+
+struct KDBGetPathContents_Gather_context {
+    KDBContents const *parent;
+    KDBContents const *previous;
+    KDBContents **target;
+};
+
+static
+struct KDBGetPathContents_Gather_context makeContext(KDBContents *const contents)
+{
+    struct KDBGetPathContents_Gather_context result = {
+        contents,
+        NULL,
+        (KDBContents **)&contents->firstChild
+    };
+    assert(contents->firstChild == NULL);
+    return result;
+}
+
+static rc_t CC KDBGetPathContents_Gather_cb(const KDirectory *const dir
+                                            , uint32_t const type
+                                            , char const *const name
+                                            , void *const vp)
+{
+    struct KDBGetPathContents_Gather_context *const ctx = vp;
+    KDBContents *const content = KDBContentsMake(name, type, ctx->parent, ctx->previous);
+    if (content == NULL)
+        return RC(rcDB, rcDirectory, rcVisiting, rcMemory, rcExhausted);
+    ctx->previous = *ctx->target = content;
+    ctx->target = (KDBContents **)&content->nextSibling;
+
+    return 0;
+}
+
+static rc_t KDBGetPathContents_GatherChildren(KDBContents *result, const KDirectory *const dir, char const *sub)
+{
+    struct KDBGetPathContents_Gather_context context = makeContext(result);
+    return KDirectoryVisit(dir, false, KDBGetPathContents_Gather_cb, &context, sub);
+}
+
+static KDBContents *KDBContents_UnlinkDeadNode(KDBContents *node)
+{
+    while (node && node->dbtype == 0) {
+        KDBContents *prev = (KDBContents *)node->prevSibling;
+        KDBContents *next = (KDBContents *)node->nextSibling;
+        if (next)
+            next->prevSibling = node->prevSibling;
+        if (prev)
+            prev->nextSibling = node->nextSibling;
+        node->nextSibling = NULL;
+        KDBContentsWhack(node);
+        node = next;
+    }
+    return node;
+}
+
+// NB: Ownership is transferred to `result`
+static void KDBContents_appendChildren(KDBContents *result, KDBContents *node)
+{
+    node = KDBContents_UnlinkDeadNode(node);
+    if (result->firstChild) {
+        KDBContents *dst = (KDBContents *)result->firstChild;
+        while (dst->nextSibling)
+            dst = (KDBContents *)dst->nextSibling;
+        dst->nextSibling = node;
+        node->prevSibling = dst;
+    }
+    else
+        result->firstChild = node;
+
+    while (node) {
+        node->parent = result;
+        node = KDBContents_UnlinkDeadNode((KDBContents *)node->nextSibling);
+    }
+}
+
+static uint32_t KDBGetPathContents_ScanBitsAndSubtype(KDBContents *node, const KDirectory *const dir, rc_t *prc)
+{
+    rc_t dummy = 0;
+    uint32_t bits = 0;
+
+    if (prc == NULL)
+        prc = &dummy;
+
+    *prc = KDirectoryVisit(dir, false, scan_dbdir, &bits, ".");
+    if (*prc == 0) {
+        if ((bits & scan_lock) != 0)
+            node->attributes |= cca_HasLock;
+        if ((bits & scan_sealed) != 0)
+            node->attributes |= cca_HasSealed;
+        if ((bits & scan_MD5) != 0)
+            node->attributes |= cca_HasMD5_File;
+        if ((bits & scan_md) != 0) {
+            rc_t rc = KDirectoryVisit(dir, false, scan_dbdir, &bits, "md");
+            if (rc == 0 && (bits & scan_cur) != 0)
+                node->attributes |= cca_HasMetadata;
+        }
+    }
+    return bits;
+}
+
+static bool scanBitsIsColumn(uint32_t const bits)
+{
+    bool const has_idx = (bits & scan_idxN) != 0;
+    bool const has_data = (bits & (scan_data | scan_dataN)) != 0;
+    bool const has_no_db = (bits & scan_db) == 0;
+    bool const has_no_tbl = (bits & scan_tbl) == 0;
+    bool const has_no_idx = (bits & scan_idx) == 0;
+    bool const has_no_col = (bits & scan_col) == 0;
+
+    return (has_idx && has_data && has_no_db && has_no_tbl && has_no_idx && has_no_col);
+}
+
+static void KDBGetPathContents_Column(KDBContents *node, const struct KDirectory *const dir)
+{
+    uint32_t const bits = KDBGetPathContents_ScanBitsAndSubtype(node, dir, NULL);
+
+    if (scanBitsIsColumn(bits)) {
+        if (node->levelOfDetail == lod_Full) {
+            struct KRColumn const *colp = NULL;
+            rc_t rc = KRColumnMakeRead((struct KRColumn **)&colp, dir, node->name);
+            if (rc == 0) {
+                bool reversed = false;
+
+                KColumnByteOrder((KColumn const *)colp, &reversed);
+                if (reversed)
+                    node->attributes |= cca_ReversedByteOrder;
+
+                switch (colp->checksum) {
+                case kcsCRC32:
+                    node->attributes |= cca_HasChecksum_CRC;
+                    break;
+                case kcsMD5:
+                    node->attributes |= cca_HasChecksum_MD5;
+                    break;
+                case kcsNone:
+                    break;
+                default:
+                    node->attributes |= cca_HasChecksum_CRC;
+                    node->attributes |= cca_HasChecksum_MD5;
+                    break;
+                }
+                KDirectoryAddRef(dir); ///< KColumnRelease is unbalanced!!!!
+                KColumnRelease((KColumn const *)colp);
+            }
+            else {
+                node->attributes |= cca_HasErrors;
+            }
+        }
+        node->dbtype = kptColumn;
+    }
+}
+
+static void KDBGetPathContents_Index(KDBContents *result, KDBContents *node, const struct KDirectory *const dir, char const *fmt)
+{
+    if (result->levelOfDetail == lod_Full) {
+        struct KFile const *fh = NULL;
+        rc_t rc = KDirectoryOpenFileRead(dir, &fh, fmt, node->name);
+        if (rc == 0) {
+            char buffer[sizeof(KIndexFileHeader_v3_v4)];
+            size_t nread = 0;
+            bool reversed = false;
+            uint32_t type = 0;
+
+            rc = KFileRead(fh, 0, buffer, sizeof(buffer), &nread);
+            KFileRelease(fh);
+
+            rc = KIndexValidateHeader(&reversed, &type, buffer, nread);
+            if (rc)
+                goto HAS_ERRORS;
+
+            if (type == kitText)
+                node->attributes |= cia_IsTextIndex;
+            else
+                node->attributes |= cia_IsIdIndex;
+
+            if (reversed)
+                node->attributes |= cia_ReversedByteOrder;
+        }
+        else {
+HAS_ERRORS:
+            result->attributes |= cca_HasErrors;
+        }
+    }
+    node->dbtype = kptIndex;
+    result->attributes |= cta_HasIndices;
+}
+
+/// @brief Traverse a table hierarchy and gather the columns found.
+static void KDBGetPathContents_GatherColumns(KDBContents *result, const struct KDirectory *const dir)
+{
+    rc_t rc = 0;
+    KDBContents *added = NULL, *save = (KDBContents *)result->firstChild;
+
+    result->firstChild = NULL;
+    rc = KDBGetPathContents_GatherChildren(result, dir, "col");
+    added = (KDBContents *)result->firstChild;
+    result->firstChild = save;
+    if (rc == 0) {
+        KDBContents *node = added;
+        while (node) {
+            if (node->fstype == kptDir) {
+                struct KDirectory const *node_dir = NULL;
+                rc = KDirectoryOpenDirRead(dir, &node_dir, false, "col/%s", node->name);
+                assert(rc == 0);
+
+                KDBGetPathContents_Column(node, node_dir);
+                KDirectoryRelease(node_dir);
+
+                if ((node->attributes & cca_HasErrors) != 0)
+                    result->attributes |= cca_HasErrors;
+                if (node->dbtype == kptColumn)
+                    result->attributes |= cta_HasColumns;
+            }
+            node = (KDBContents *)node->nextSibling;
+        }
+        KDBContents_appendChildren(result, added);
+    }
+}
+
+/// @brief Traverse a table hierarchy and gather the indices found.
+static void KDBGetPathContents_GatherIndices(KDBContents *result, const struct KDirectory *const dir)
+{
+    rc_t rc = 0;
+    KDBContents *added = NULL, *save = (KDBContents *)result->firstChild;
+
+    result->firstChild = NULL;
+    rc = KDBGetPathContents_GatherChildren(result, dir, "idx");
+    added = (KDBContents *)result->firstChild;
+    result->firstChild = save;
+    if (rc == 0) {
+        KDBContents *node;
+
+        // find checksum files
+        for (node = added; node; node = (KDBContents *)node->nextSibling) {
+            if (node->fstype == kptFile) {
+                char const *dot = NULL;
+                char const *cp;
+                for (cp = node->name; *cp; ++cp) {
+                    if (*cp == '.')
+                        dot = cp;
+                }
+                if (dot && strcmp(dot, ".md5") == 0) {
+                    KDBContents *idx;
+                    for (idx = added; idx; idx = (KDBContents *)node->nextSibling) {
+                        if (idx->fstype == kptFile && strncmp(idx->name, node->name, dot - node->name) == 0) {
+                            idx->attributes |= cia_HasChecksum_MD5;
+                            node->dbtype = 0; // mark node as dead
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        for (node = added; node; node = (KDBContents *)node->nextSibling) {
+            if (node->fstype == kptFile && node->dbtype != 0)
+                KDBGetPathContents_Index(result, node, dir, "idx/%s");
+        }
+        KDBContents_appendChildren(result, added);
+    }
+}
+
+/// @brief Traverse a table hierarchy and gather the columns found.
+static void KDBGetPathContents_Table(KDBContents *result, const struct KDirectory *const dir)
+{
+    KDBGetPathContents_GatherColumns(result, dir);
+    KDBGetPathContents_GatherIndices(result, dir);
+}
+
+/// @brief Descend a database hierarchy and gather the tables found.
+static void KDBGetPathContents_Tables(KDBContents *result, const struct KDirectory *const dir)
+{
+    rc_t rc = 0;
+    KDBContents *added = NULL, *save = (KDBContents *)result->firstChild;
+
+    result->firstChild = NULL;
+    rc = KDBGetPathContents_GatherChildren(result, dir, "tbl");
+
+    added = (KDBContents *)result->firstChild;
+    result->firstChild = save;
+
+    if (rc == 0) {
+        KDBContents *node = added;
+        while (node) {
+            if (node->fstype == kptDir) {
+                struct KDirectory const *node_dir = NULL;
+                rc = KDirectoryOpenDirRead(dir, &node_dir, false, "tbl/%s", node->name);
+                assert(rc == 0);
+
+                KDBGetPathContents_ScanBitsAndSubtype(node, node_dir, NULL);
+                KDBGetPathContents_Table(node, node_dir);
+                KDirectoryRelease(node_dir);
+
+                if ((node->attributes & cca_HasErrors) != 0)
+                    result->attributes |= cca_HasErrors;
+
+                node->dbtype = kptTable;
+                result->attributes |= cda_HasTables;
+            }
+            node = (KDBContents *)node->nextSibling;
+        }
+        KDBContents_appendChildren(result, added);
+    }
+}
+
+/// @brief Descend a database hierarchy and gather the databases found.
+static void KDBGetPathContents_Databases(KDBContents *result, const struct KDirectory *const dir)
+{
+    rc_t rc = 0;
+    KDBContents *added = NULL, *save = (KDBContents *)result->firstChild;
+
+    result->firstChild = NULL;
+    rc = KDBGetPathContents_GatherChildren(result, dir, "db");
+
+    added = (KDBContents *)result->firstChild;
+    result->firstChild = save;
+
+    if (rc == 0) {
+        KDBContents *node = added;
+        while (node) {
+            if (node->fstype == kptDir) {
+                struct KDirectory const *node_dir = NULL;
+                rc = KDirectoryOpenDirRead(dir, &node_dir, false, "db/%s", node->name);
+                assert(rc == 0);
+
+                KDBGetPathContents_ScanBitsAndSubtype(node, node_dir, NULL);
+                KDBGetPathContents_Tables(node, node_dir);
+                KDBGetPathContents_Databases(node, node_dir);
+                KDirectoryRelease(node_dir);
+
+                if ((node->attributes & cca_HasErrors) != 0)
+                    result->attributes |= cca_HasErrors;
+
+                node->dbtype = kptDatabase;
+                result->attributes |= cda_HasDatabases;
+            }
+            node = (KDBContents *)node->nextSibling;
+        }
+        KDBContents_appendChildren(result, added);
+    }
+}
+
+static rc_t KDBVGetPathContents_1(KDBContents const **presult, int levelOfDetail, const struct KDirectory *const dir, KPathType fstype, char const *const path, va_list args)
+{
+    KDBContents *result = NULL;
+    KPathType type = KDirectoryPathType(dir, ".");
+
+    *presult = (result = KDBContentsVMake(fstype, NULL, NULL, path, args));
+    if (result == NULL)
+        return RC(rcDB, rcDirectory, rcVisiting, rcMemory, rcExhausted);
+
+    result->levelOfDetail = levelOfDetail;
+    if ((type | kptAlias) == (kptDir | kptAlias)) {
+        rc_t rc = 0;
+        uint32_t const bits = KDBGetPathContents_ScanBitsAndSubtype(result, dir, &rc);
+        if (rc) return rc;
+
+        if ((bits & scan_col) != 0) {
+            // tables only contain columns
+            if ((bits & (scan_db | scan_tbl)) == 0) {
+                KDBGetPathContents_Table(result, dir);
+                result->dbtype = kptTable;
+            }
+        }
+        else {
+            // Maybe it is a database.
+            // Descend `tbl` trees first
+            if ((bits & scan_tbl) != 0) {
+                KDBGetPathContents_Tables(result, dir);
+                result->dbtype = kptDatabase;
+            }
+
+            // unlikely to happen in RL
+            if ((bits & scan_db) != 0) {
+                KDBGetPathContents_Databases(result, dir);
+                result->dbtype = kptDatabase;
+            }
+        }
+    }
+    return 0;
+}
+
+rc_t KDBVGetPathContents(KDBContents const **presult, int levelOfDetail, const struct KDirectory *const dir, KPathType type, char const *const path, va_list args)
+{
+    if (presult == NULL || dir == NULL || path == NULL)
+        return RC(rcDB, rcDirectory, rcVisiting, rcParam, rcNull);
+
+    return KDBVGetPathContents_1(presult, levelOfDetail, dir, type, path, args);
+}
+
+rc_t KDBGetPathContents(KDBContents const **presult, int levelOfDetail, const struct KDirectory *dir, KPathType type, char const *path, ...)
+{
+    rc_t rc = 0;
+    va_list ap;
+    va_start(ap, path);
+    rc = KDBVGetPathContents(presult, levelOfDetail, dir, type, path, ap);
+    va_end(ap);
+    return rc;
+}
 
 /* GetObjModDate
  *  extract mod date from a path
@@ -443,30 +935,6 @@ rc_t KDBMakeSubPath ( struct KDirectory const *dir,
     return rc;
 }
 
-
-/* KDBIsPathUri
- * A hack to get some of VFS into KDB that is too tightly bound to KFS
- */
-
-bool KDBIsPathUri (const char * path)
-{
-    const char * pc;
-    size_t z;
-
-    z = string_size (path);
-
-    if (NULL != (pc = string_chr (path, z, ':')))
-        return true;
-
-    if (NULL != (pc = string_chr (path, z, '?')))
-        return true;
-
-    if (NULL != (pc = string_chr (path, z, '#')))
-        return true;
-
-    return false;
-}
-
 static rc_t KDBOpenPathTypeReadInt ( const KDBManager * mgr, const KDirectory * dir, const char * path,
                                      const KDirectory ** pdir, int * type,
                                      int pathtype, uint32_t rcobj, bool try_srapath,
@@ -487,17 +955,25 @@ static rc_t KDBOpenPathTypeReadInt ( const KDBManager * mgr, const KDirectory * 
     {
         VPath * vpath = ( VPath * ) aVpath;
 
-        /*
-         * We've got to decide if the path coming in is a full or relative
-         * path and if relative make it relative to dir or possibly its a srapath
-         * accession
-         *
-         */
-        rc = VFSManagerMakeDirectoryRelativeVPath (vmgr,
+        rc = VPathGetDirectory(vpath, &ldir);
+        if (rc != 0 || ldir == NULL)
+          /*
+           * We've got to decide if the path coming in is a full or relative
+           * path and if relative make it relative to dir or possibly its
+           * a srapath accession
+           *
+           */
+          rc = VFSManagerMakeDirectoryRelativeVPath (vmgr,
             &vpath, dir, path, vpath );
         if ( rc == 0 )
         {
-            rc = VFSManagerOpenDirectoryReadDirectoryRelativeDecrypt ( vmgr, dir, &ldir, vpath );
+            if (ldir == NULL)
+            {
+                rc = VFSManagerOpenDirectoryReadDirectoryRelativeDecrypt ( vmgr,
+                    dir, &ldir, vpath );
+                if (rc == 0)
+                    VPathSetDirectory((VPath*)aVpath, ldir);
+            }
 
             if ( rc == 0 )
             {
@@ -524,10 +1000,11 @@ static rc_t KDBOpenPathTypeReadInt ( const KDBManager * mgr, const KDirectory * 
                 VPathRelease ( vpath );
         }
     }
+
     return rc;
 }
 
-rc_t KDBManagerOpenPathTypeRead ( const KDBManager * mgr, const KDirectory * dir, const char * path,
+LIB_EXPORT rc_t KDBManagerOpenPathTypeRead ( const KDBManager * mgr, const KDirectory * dir, const char * path,
     const KDirectory ** pdir, int pathtype, int * ppathtype, bool try_srapath,
     const VPath * vpath )
 {

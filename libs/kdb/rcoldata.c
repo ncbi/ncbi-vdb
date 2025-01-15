@@ -112,29 +112,6 @@ rc_t KRColumnDataWhack ( KRColumnData *self )
     return rc;
 }
 
-/* Read
- *  reads from the data fork using a blob map
- */
-rc_t KRColumnDataRead ( const KRColumnData *self, const KRColumnPageMap *pm,
-    size_t offset, void *buffer, size_t bsize, size_t *num_read )
-{
-    uint64_t pos;
-
-    assert ( self != NULL );
-    assert ( pm != NULL );
-
-    if ( bsize == 0 )
-    {
-        assert ( num_read != NULL );
-        * num_read = 0;
-        return 0;
-    }
-
-    pos = pm -> pg * self -> pgsize;
-    return KFileRead ( self -> f, pos + offset, buffer, bsize, num_read );
-}
-
-
 /*--------------------------------------------------------------------------
  * KRColumnPageMap
  *  map of pages involved in column blob
@@ -166,15 +143,6 @@ rc_t KRColumnPageMapOpen ( KRColumnPageMap *self,
     self -> pg = pg;
 
     return 0;
-}
-
-/* Whack
- *  disposes of memory in the case of a page array
- */
-void KRColumnPageMapWhack ( KRColumnPageMap *self, const KRColumnData *cd )
-{
-    assert ( self != NULL );
-    assert ( cd != NULL );
 }
 
 /* Id

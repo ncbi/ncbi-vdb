@@ -195,6 +195,11 @@ VFS_EXTERN bool CC VPathIsFSCompatible ( const VPath * self );
  */
 VFS_EXTERN bool CC VPathFromUri ( const VPath * self );
 
+/* IsRemote
+ *  asks if the path is remote, not local
+ */
+VFS_EXTERN bool CC VPathIsRemote(const VPath * self);
+
 
 /* MarkHighReliability
  *  mark a path as representing either a reliable URL

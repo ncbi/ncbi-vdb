@@ -35,15 +35,17 @@ AddExecutableTest( SlowTest_VDB_vdb "test-vdb" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_VDB_wvdb "test-wvdb" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" )
 set_tests_properties(Test_VDB_wvdb PROPERTIES ENVIRONMENT VDB_CONFIG=${CMAKE_CURRENT_SOURCE_DIR}/kfg/empty)
 
-# temp disable test
-AddExecutableTest( Test_VDB_pagemap "test-pagemap" "${COMMON_LIBS_WRITE}" )
-
 AddExecutableTest(
          SlowTest_VDB_dependencies_dflt "test-dependencies_dflt" "${COMMON_LIBS_READ}" )
 AddExecutableTest(
  Test_VDB_dependencies_404first "Test_VDB_dependencies_404first" "${COMMON_LIBS_READ}" )
 AddExecutableTest(
            Test_VDB_dependencies_wgs "Test_VDB_dependencies_wgs" "${COMMON_LIBS_READ}" )
+
+BuildExecutableForTest( test-VDBManagerGetObjVersion
+    "test-VDBManagerGetObjVersion" "${COMMON_LIBS_READ}" )
+add_test( NAME Test_VDBManagerGetObjVersion COMMAND test-VDBManagerGetObjVersion
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../vfs )
 
 AddExecutableTest( Test_VDB_sparse_col_rw "test-sparse-col" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" )
 set_tests_properties( Test_VDB_sparse_col_rw PROPERTIES FIXTURES_SETUP SPARSE_COL )
@@ -71,6 +73,7 @@ AddExecutableTest( Test_VDB_META_CMP_COPY "test-vdb-meta-cmp-copy" "${COMMON_LIB
 AddExecutableTest( Test_VDB_schema_priv "Test-VDB_schema_priv" "${COMMON_LIBS_READ};${ADDITIONAL_LIBS}" )
 AddExecutableTest( Test_VDB_link "test-link" "${COMMON_LIBS_READ}" )
 AddExecutableTest( Test_VDB_text "test-textvdb" "${COMMON_LIBS_READ};kdbtext" )
+AddExecutableTest( Test_VDB_linker "test-linker" "${COMMON_LIBS_WRITE}" )
 
 # Slow tests
 AddExecutableTest( SlowTest_VDB_tablecursor "test-tablecursor" "${COMMON_LIBS_READ}" )

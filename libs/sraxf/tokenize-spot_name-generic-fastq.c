@@ -58,7 +58,7 @@ rc_t CC tokenize_spot_name_genericFastq ( void *self, const VXformInfo *info, in
     
     spot_name_tok[0].s.token_type = nt_recognized;
     spot_name_tok[0].s.position = 0;
-    spot_name_tok[0].s.length = argv[0].u.data.elem_count;
+    spot_name_tok[0].s.length = (uint16_t)argv[0].u.data.elem_count;
     rslt->elem_count = 1;
     
 	return 0;

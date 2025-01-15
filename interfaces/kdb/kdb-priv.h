@@ -37,6 +37,8 @@
 
 #include <stdarg.h> /* va_list */
 
+#include <kdb/manager.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -103,9 +105,14 @@ KDB_EXTERN int CC KDBManagerVPathTypeUnreliable (
  * archive that is of the requested type.  An archive will have been opened
  * but reshut if dpdir is NULL.
  */
-rc_t KDBManagerOpenPathTypeRead ( const struct KDBManager * mgr, const struct KDirectory * dir, const char * path,
+KDB_EXTERN rc_t KDBManagerOpenPathTypeRead ( const struct KDBManager * mgr, const struct KDirectory * dir, const char * path,
     const struct KDirectory ** dpdir, int pathtype, int * realpathtype,
     bool try_srapath, const struct VPath * vpath );
+
+/*--------------------------------------------------------------------------
+ * KDBManagerPathContents
+ */
+KDB_EXTERN rc_t CC KDBManagerPathContents(const KDBManager *self, KDBContents const **result, int levelOfDetail, const char *path, ...);
 
 /*--------------------------------------------------------------------------
  * KDatabase

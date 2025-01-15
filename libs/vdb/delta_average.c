@@ -27,13 +27,13 @@
 #include <vdb/extern.h>
 
 #include <vdb/xform.h>
+#include <kdb/page-map.h>
 #include <klib/rc.h>
 
 #include "xform-priv.h"
 #include "blob-priv.h"
 #include "blob-headers.h"
 #include "blob.h"
-#include "page-map.h"
 
 #include <sysalloc.h>
 
@@ -208,7 +208,7 @@ rc_t CC delta_average ( void *self, const VXformInfo *info, int64_t row_id,
     rc_t rc;
     /* input blob - schema assures us that it is ready to go */
     const VBlob *in = argv [ 0 ];
-    const PageMap *pm = in->pm; 
+    const PageMap *pm = in->pm;
     uint8_t     *src;
     elem_count_t   min_row_len,max_row_len;
     uint64_t	/*min_rl_bytes,*/ max_rl_bytes;
@@ -262,7 +262,7 @@ rc_t CC delta_average ( void *self, const VXformInfo *info, int64_t row_id,
 	avg[i] = 0;
 	for(j=1;j<256;j++){
 		if(cnts[256*i+j] > cnts[256*i+avg[i]]){
-			avg[i]=j; 
+			avg[i]=j;
 		}
 	}
     }

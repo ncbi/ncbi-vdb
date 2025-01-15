@@ -80,7 +80,7 @@ rc_t CC KIndexBaseRelease ( const KIndex *self )
         return false;
 #define DISPATCH_VOID(call)  \
     if ( self != NULL && self -> vt != NULL )   \
-        return self -> vt -> call;
+        self -> vt -> call;
 
 LIB_EXPORT rc_t CC KIndexWhack ( KIndex *self )
 {
@@ -99,7 +99,7 @@ LIB_EXPORT rc_t CC KIndexRelease ( const KIndex *self )
 }
 LIB_EXPORT bool CC KIndexLocked ( const KIndex *self )
 {
-    DISPATCH( locked( self ) );
+    DISPATCH_BOOL( locked( self ) );
 }
 LIB_EXPORT rc_t CC KIndexVersion ( const KIndex *self, uint32_t *version )
 {

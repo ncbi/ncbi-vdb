@@ -35,6 +35,7 @@
 
 #include "schema-priv.h"
 #include "linker-priv.h"
+#include "schema-parse.h"
 
 #include <vdb/manager.h>
 #include <vdb/database.h>
@@ -55,9 +56,11 @@
 #include <klib/log.h>
 #include <klib/text.h>
 #include <klib/rc.h>
+#include <klib/symtab.h>
 
 #include <vfs/manager.h> /* VFSManager */
 #include <vfs/manager-priv.h> /* VFSManagerSetResolver */
+#include <vfs/path.h> /* VPathRelease */
 
 #include <sysalloc.h>
 
@@ -527,9 +530,9 @@ LIB_EXPORT rc_t CC VDBManagerOpenKDBManagerRead ( const VDBManager *self, const 
 static
 ver_t VDBManagerGetLoaderVersFromMeta ( const KMetadata * meta )
 {
+    ver_t result = 0;
     const KMDataNode *node = NULL;
     rc_t rc = KMetadataOpenNodeRead ( meta, & node, "SOFTWARE/loader" );
-    KMDataNodeRelease ( node );
     if ( rc == 0 )
     {
         size_t num_read;
@@ -540,8 +543,6 @@ ver_t VDBManagerGetLoaderVersFromMeta ( const KMetadata * meta )
             char *end, *start = vers_string;
             unsigned long maj = strtoul ( start, & end, 10 );
 
-            KMDataNodeRelease ( node );
-
             if ( end > start && end [ 0 ] == '.' )
             {
                 unsigned long min = strtoul ( start = end + 1, & end, 10 );
@@ -549,12 +550,13 @@ ver_t VDBManagerGetLoaderVersFromMeta ( const KMetadata * meta )
                 {
                     unsigned long rel = strtoul ( start = end + 1, & end, 10 );
                     if ( end > start )
-                        return ( maj << 24 ) | ( min << 16 ) | rel;
+                        result = ( maj << 24 ) | ( min << 16 ) | rel;
                 }
             }
         }
+        KMDataNodeRelease ( node );
     }
-    return 0;
+    return result;
 }
 
 
@@ -649,12 +651,22 @@ LIB_EXPORT rc_t CC VDBManagerGetObjVersion ( const VDBManager *self, ver_t * ver
             const KTable *tbl;
             const KDatabase *db;
             const KMetadata *meta = NULL;
+            VFSManager *vfs = NULL;
+            VPath *vp = NULL;
+            rc = KDBManagerGetVFSManager(self->kmgr, &vfs);
+            if (rc != 0)
+                return rc;
+            rc = VFSManagerMakePath(vfs, &vp, "%s", path);
+            if (rc != 0)
+                return rc;
+            VFSManagerRelease(vfs); vfs = NULL;
 
-            int path_type = KDBManagerPathType ( self -> kmgr, "%s", path ) & ~ kptAlias;
+            int path_type
+                = KDBManagerPathTypeVP ( self -> kmgr, vp ) & ~ kptAlias;
             switch ( path_type )
             {
             case kptDatabase:
-                rc = KDBManagerOpenDBRead ( self -> kmgr, & db, "%s", path );
+                rc = KDBManagerOpenDBReadVPath ( self -> kmgr, & db, vp  );
                 if ( rc == 0 )
                 {
                     rc = KDatabaseOpenMetadataRead ( db, & meta );
@@ -662,7 +674,7 @@ LIB_EXPORT rc_t CC VDBManagerGetObjVersion ( const VDBManager *self, ver_t * ver
                 }
                 break;
             case kptTable:
-                rc = KDBManagerOpenTableRead ( self -> kmgr, & tbl, "%s", path );
+                rc = KDBManagerOpenTableReadVPath ( self -> kmgr, & tbl, vp );
                 if ( rc == 0 )
                 {
                     rc = KTableOpenMetadataRead ( tbl, & meta );
@@ -678,6 +690,8 @@ LIB_EXPORT rc_t CC VDBManagerGetObjVersion ( const VDBManager *self, ver_t * ver
                 rc = RC ( rcVDB, rcMgr, rcAccessing, rcPath, rcIncorrect );
             }
 
+            VPathRelease(vp); vp = NULL;
+ 
             if ( rc == 0 )
             {
                 * version = VDBManagerGetVersFromMeta ( meta, path_type == kptDatabase );
@@ -825,6 +839,15 @@ LIB_EXPORT int CC VDBManagerVPathType ( const VDBManager * self,
 {
     if ( self != NULL )
         return KDBManagerVPathType ( self -> kmgr, path, args );
+
+    return kptBadPath;
+}
+
+LIB_EXPORT int CC VDBManagerPathTypeVP ( const VDBManager * self,
+    const struct VPath * path )
+{
+    if ( self != NULL )
+        return KDBManagerPathTypeVP ( self -> kmgr, path );
 
     return kptBadPath;
 }
@@ -1089,4 +1112,28 @@ LIB_EXPORT rc_t CC VDBManagerPreferZeroQuality(VDBManager * self) {
     const char * quality = VDBManagerGetQuality(self);
     fillPrefQual(quality);
     return VDBManagerSetQualityString(self, s_ZeroQuality);
+}
+
+LIB_EXPORT rc_t CC VDBManagerAddFactories ( const VDBManager * self,
+    const VLinkerIntFactory *fact, uint32_t count )
+{
+    KSymTable tbl;
+
+    /* create symbol table with no intrinsic scope */
+    rc_t rc = KSymTableInit ( & tbl, NULL );
+    if ( rc == 0 )
+    {
+        SchemaEnv env;
+        SchemaEnvInit ( & env, EXT_SCHEMA_LANG_VERSION );
+
+        /* make intrinsic scope modifiable */
+        rc = KSymTablePushScope ( & tbl, & self -> linker -> scope );
+        if ( rc == 0 )
+        {
+            rc = VLinkerAddFactories ( self -> linker, fact, count, & tbl, NULL );
+        }
+        KSymTableWhack ( & tbl );
+    }
+
+    return rc;
 }

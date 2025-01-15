@@ -1,9 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import vdb, csv, os
-
-#for this to work you need:
-#at $HOME/.ncbi/lib64 : libncbi-wvdb.so
 
 schematxt = '''
 version 1;

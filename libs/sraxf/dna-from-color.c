@@ -78,8 +78,8 @@ rc_t CC dna_from_color_drvr ( void *self, const VXformInfo *info, int64_t row_id
     rc_t rc;
     uint8_t *dnabin;
 
-    uint32_t i, row_len = argv [ 0 ] . u . data . elem_count;
-    uint32_t out_len, nreads = argv [ 1 ] . u . data . elem_count;
+    uint32_t i, row_len = (uint32_t) argv [ 0 ] . u . data . elem_count;
+    uint32_t out_len, nreads = (uint32_t) argv [ 1 ] . u . data . elem_count;
 
     const uint8_t *csbin = argv [ 0 ] . u . data . base;
     const uint32_t *read_start = argv [ 1 ] . u . data . base;

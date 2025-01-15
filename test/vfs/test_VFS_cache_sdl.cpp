@@ -26,7 +26,12 @@
 
 #include <kapp/args.h> /* ArgsMakeAndHandle */
 
+#include <kdb/kdb-priv.h> /* KDBManagerMakeReadWithVFSManager */
+#include <kdb/manager.h> /* KDBManagerRelease */
+
 #include <kfg/config.h> /* KConfigDisableUserSettings */
+
+#include <kfs/directory.h> /* KDirectoryRelease */
 
 #include <klib/debug.h> /* KDbgSetString */
 #include <klib/time.h> /* KSleep */
@@ -35,7 +40,7 @@
 
 #include <ktst/unit_test.hpp> /* KMain */
 
-#include <vfs/path.h> /* VFSMaVPathReleasenager */
+#include <vfs/path-priv.h> /* VPathGetDirectory */
 #include <vfs/manager.h> /* VFSManager */
 #include <vfs/resolver.h> /* VResolverRelease */
 
@@ -46,6 +51,11 @@
 
 #include<string>
 
+#include <limits.h> /* PATH_MAX */
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
+
 #define ALL
 
 static rc_t argsHandler(int argc, char * argv[]) {
@@ -55,7 +65,10 @@ TEST_SUITE_WITH_ARGS_HANDLER(Test_VFS_cache_sdlSuite, argsHandler)
 
 using std::string;
 
+extern "C" { rc_t LegacyVPathMake(VPath ** new_path, const char * posix_path); }
+
 class CachingFixture {
+    char path[PATH_MAX];
 protected:
     const VPath * remote;
 
@@ -65,6 +78,7 @@ protected:
         , resolver(0)
         , query(0)
     {
+        path[0] = '\0';
         if (caching)
             unsetenv("NCBI_VDB_NO_CACHE_SDL_RESPONSE");
         else
@@ -89,6 +103,10 @@ protected:
     }
 
     rc_t ResetQuery(const char * path_str) {
+        if (strcmp(path, path_str) == 0)
+            return 0;
+
+        strcpy(path, path_str);
         rc_t rc(VPathRelease(query));
         query = NULL;
 
@@ -158,7 +176,7 @@ protected:
 // Caching by default
 FIXTURE_TEST_CASE(CountCaching, CachingFixture) {
     const char acc[] = "SRR000001";
-    string json(MkSdlJson(acc, "http://a1/"));
+    string json(MkSdlJson(acc, "https://sra-pub-run-odp.s3.amazonaws.com/sra/SRR053325/SRR053325"));
     putenv((char*)json.c_str());
 
     const char acc2[] = "SRR000002";
@@ -172,6 +190,18 @@ FIXTURE_TEST_CASE(CountCaching, CachingFixture) {
     REQUIRE_NOT_NULL(remote);
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 1);
 
+    const KDirectory * dir(0);
+    REQUIRE_RC(VPathGetDirectory(query, &dir));
+    REQUIRE_NULL(dir);
+    const KDBManager * kdb(0);
+    REQUIRE_RC(KDBManagerMakeReadWithVFSManager(&kdb, 0, mgr));
+    REQUIRE(KDBManagerPathTypeVPath(kdb, query) == kptTable);
+    REQUIRE_RC(VPathGetDirectory(query, &dir));
+    REQUIRE_NOT_NULL(dir);
+    REQUIRE_RC(VPathGetDirectory(query, &dir));
+    REQUIRE_RC(KDirectoryRelease(dir));
+    REQUIRE_RC(KDBManagerRelease(kdb));
+
     REQUIRE_RC(QueryRemote(acc2));
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 2);
 }
@@ -181,7 +211,7 @@ FIXTURE_TEST_CASE(CountCaching, CachingFixture) {
 // Caching can be disabled
 FIXTURE_TEST_CASE(CountNotCaching, NotCachingFixture) {
     const char acc[] = "SRR000001";
-    string json(MkSdlJson(acc, "http://a1/"));
+    string json(MkSdlJson(acc, "https://sra-pub-run-odp.s3.amazonaws.com/sra/SRR053325/SRR053325"));
     putenv((char*)json.c_str());
 
     const char acc2[]("SRR000002");
@@ -268,7 +298,7 @@ FIXTURE_TEST_CASE(ExpirationCaching, CachingFixture) {
 
     // will expire in 61 seconds;
     // removed from cache in 60 seconds before expiration
-    string json(MkSdlJson(acc, "http://a1/", 61));
+    string json(MkSdlJson(acc, "https://sra-pub-run-odp.s3.amazonaws.com/sra/SRR053325/SRR053325", 61));
     putenv((char*)json.c_str());
 
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 0);
@@ -276,21 +306,34 @@ FIXTURE_TEST_CASE(ExpirationCaching, CachingFixture) {
     
     REQUIRE_RC(QueryRemote(acc));
     // not expired
-    REQUIRE_RC(RemoteEquals("http://a1/"));
+    REQUIRE_RC(RemoteEquals("https://sra-pub-run-odp.s3.amazonaws.com/sra/SRR053325/SRR053325"));
     
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 1);
-    json = MkSdlJson(acc, "http://a2/");
+    json = MkSdlJson(acc, "https://ncbi.nlm.nih.gov/sos5/sra/SRR000/SRR000002");
     putenv((char*)json.c_str());
     REQUIRE_RC(QueryRemote(acc));
     // not expired; still use old result
-    REQUIRE_RC(RemoteEquals("http://a1/"));
+    REQUIRE_RC(RemoteEquals("https://sra-pub-run-odp.s3.amazonaws.com/sra/SRR053325/SRR053325"));
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 1);
+    const KDirectory * dir(0);
+    REQUIRE_RC(VPathGetDirectory(query, &dir));
+    REQUIRE_NULL(dir);
+    const KDBManager * kdb(0);
+    REQUIRE_RC(KDBManagerMakeReadWithVFSManager(&kdb, 0, mgr));
+    REQUIRE(KDBManagerPathTypeVPath(kdb, query) == kptTable);
+    REQUIRE_RC(VPathGetDirectory(query, &dir));
+    REQUIRE_NOT_NULL(dir);
+    REQUIRE_RC(KDirectoryRelease(dir));
 
     KSleep(2);
     REQUIRE_RC(QueryRemote(acc));
     // expired; use new result
-    REQUIRE_RC(RemoteEquals("http://a2/"));
+    REQUIRE_RC(RemoteEquals("https://ncbi.nlm.nih.gov/sos5/sra/SRR000/SRR000002"));
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 1);
+    REQUIRE_RC(VPathGetDirectory(query, &dir));
+    REQUIRE_NULL(dir);
+
+    REQUIRE_RC(KDBManagerRelease(kdb));
 }
 
 #ifdef ALL
@@ -398,6 +441,8 @@ FIXTURE_TEST_CASE(ThreadsCaching, CachingFixture) {
 
 // stress test; calling from multiple threads; not caching
 FIXTURE_TEST_CASE(ThreadsNotCaching, NotCachingFixture) {
+    REQUIRE_RC(VFSManagerSdlCacheClear(mgr));
+
     const char acc[] = "SRR000001";
     string json(MkSdlJson(acc, "http://a1/"));
     putenv((char*)json.c_str());

@@ -35,8 +35,8 @@
 #include <vfs/path.h> /* VPathRelease */
 #include <vfs/resolver.h> /* VResolverRelease */
 
+#include "../../libs/vfs/path-priv.h" // VPathEqual
 #include "../../libs/vfs/resolver-cgi.h" /* RESOLVER_CGI */
-
 #include "../../libs/vfs/resolver-priv.h" /* VResolverSetVersion */
 
 TEST_SUITE ( VResolverWithLogTestSuite );
@@ -90,47 +90,79 @@ FIXTURE_TEST_CASE ( AFVF01, Fixture ) {
     REQUIRE_RC ( VFSManagerMakePath ( _mgr, & _query, "AFVF01.1" ) );
     REQUIRE_RC ( VResolverQuery
         ( _resolver, eProtocolHttpHttps, _query, NULL, & _remote, NULL ) );
+    const VPath * pc2(0);
+    int notequal(-1);
+    REQUIRE_RC(VFSManagerResolveAll(_mgr,
+        "AFVF01.1", NULL, &pc2, NULL));
+    REQUIRE_RC(VPathEqual(_remote, pc2, &notequal));
+    REQUIRE(notequal == 0);
+    REQUIRE_RC(VPathRelease(pc2));
 }
 
 FIXTURE_TEST_CASE ( AAAB01, Fixture ) {
     REQUIRE_RC ( VFSManagerMakePath ( _mgr, & _query, "AAAB01" ) );
     REQUIRE_RC ( VResolverQuery
         ( _resolver, eProtocolHttps, _query, NULL, & _remote, NULL ) );
+    const VPath * pc2(0);
+    int notequal(-1);
+    REQUIRE_RC(VFSManagerResolveAll(_mgr,
+        "AAAB01", NULL, &pc2, NULL));
+    REQUIRE_RC(VPathEqual(_remote, pc2, &notequal));
+    REQUIRE(notequal == 0);
+    REQUIRE_RC(VPathRelease(pc2));
 }
 
 FIXTURE_TEST_CASE ( AAAB01008846, Fixture ) {
     REQUIRE_RC ( VFSManagerMakePath ( _mgr, & _query, "AAAB01008846.1" ) );
     REQUIRE_RC ( VResolverQuery
         ( _resolver, eProtocolHttpHttps, _query, NULL, & _remote, NULL ) );
+    const VPath * pc2(0);
+    int notequal(-1);
+    REQUIRE_RC(VFSManagerResolveAll(_mgr,
+        "AAAB01008846.1", NULL, &pc2, NULL));
+    REQUIRE_RC(VPathEqual(_remote, pc2, &notequal));
+    REQUIRE(notequal == 0);
+    REQUIRE_RC(VPathRelease(pc2));
 }
 
 FIXTURE_TEST_CASE ( SRR1008846, Fixture ) {
     REQUIRE_RC ( VFSManagerMakePath ( _mgr, & _query, "SRR1008846" ) );
     REQUIRE_RC ( VResolverQuery
         ( _resolver, eProtocolHttps    , _query, NULL, & _remote, NULL ) );
-//      ( _resolver, eProtocolFaspHttps, _query, NULL, & _remote, NULL ) );
+    const VPath * pc2(0);
+    int notequal(-1);
+    REQUIRE_RC(VFSManagerResolveAll(_mgr, "SRR1008846", NULL, &pc2, NULL));
+    REQUIRE_RC(VPathEqual(_remote, pc2, &notequal));
+    REQUIRE(notequal == 0);
+    REQUIRE_RC(VPathRelease(pc2));
 
     char buffer [ 9 ];
     REQUIRE_RC ( VPathReadScheme ( _remote, buffer, sizeof buffer, NULL ) );
-    REQUIRE_EQ ( string ( buffer ), string ( "https" /* TODO: find fasp run "fasp"*/ ) );
+    REQUIRE_EQ ( string ( buffer ), string ( "https" ) );
 }
 
 FIXTURE_TEST_CASE ( SRR100884612, Fixture ) {
-  //REQUIRE_RC ( VResolverSetVersion ( _resolver, "1.2" ));
-
     REQUIRE_RC ( VFSManagerMakePath ( _mgr, & _query, "SRR1008846" ) );
     REQUIRE_RC ( VResolverQuery
         ( _resolver, eProtocolFaspHttps, _query, NULL, & _remote, NULL ) );
+    const VPath * pc2(0);
+    int notequal(-1);
+    REQUIRE_RC(VFSManagerResolveAll(_mgr, "SRR1008846", NULL, &pc2, NULL));
+    REQUIRE_RC(VPathEqual(_remote, pc2, &notequal));
+    REQUIRE(notequal == 0);
+    REQUIRE_RC(VPathRelease(pc2));
 
     char buffer [ 9 ];
     REQUIRE_RC ( VPathReadScheme ( _remote, buffer, sizeof buffer, NULL ) );
-    REQUIRE_EQ ( string ( buffer ), string ( "https" /* TODO: find fasp run "fasp"*/ ) );
+    REQUIRE_EQ ( string ( buffer ), string ( "https" ) );
 }
 
 FIXTURE_TEST_CASE ( AAAA09, Fixture ) {
     REQUIRE_RC ( VFSManagerMakePath ( _mgr, & _query, "AAAA09" ) );
     REQUIRE_RC_FAIL ( VResolverQuery
         ( _resolver, eProtocolFaspHttps, _query, NULL, & _remote, NULL ) );
+    const VPath * pc2(0);
+    REQUIRE_RC_FAIL(VFSManagerResolveAll(_mgr, "AAAA09", NULL, &pc2, NULL));
 }
 
 FIXTURE_TEST_CASE ( AAAA0912, Fixture ) {
@@ -139,6 +171,9 @@ FIXTURE_TEST_CASE ( AAAA0912, Fixture ) {
     REQUIRE_RC ( VFSManagerMakePath ( _mgr, & _query, "AAAA09" ) );
     REQUIRE_RC_FAIL ( VResolverQuery
         ( _resolver, eProtocolFaspHttps, _query, NULL, & _remote, NULL ) );
+
+    const VPath * pc2(0);
+    REQUIRE_RC_FAIL(VFSManagerResolveAll(_mgr, "AAAA09", NULL, &pc2, NULL));
 }
 
 FIXTURE_TEST_CASE ( ZZZZ99, Fixture ) {
@@ -177,6 +212,8 @@ extern "C" {
                 "repository/user/main/public/apps/wgs/volumes/wgsFlat", "wgs" );
 
         std::cerr << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n\n";
+
+        putenv((char*)"NCBI_VDB_NO_CACHE_SDL_RESPONSE=1");
 
         if ( rc == 0 )
             rc = VResolverWithLogTestSuite ( argc, argv );

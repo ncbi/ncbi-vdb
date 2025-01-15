@@ -26,6 +26,8 @@
 
 #include "rtable.h"
 
+#include <kdb/kdb-priv.h>
+
 #include "rdbmgr.h"
 #include "database-cmn.h"
 #include "kdb-cmn.h"
@@ -165,7 +167,8 @@ rc_t KRTableMake ( const KRTable **tblp, const KDirectory *dir, const char *path
     assert ( tblp != NULL );
     assert ( path != NULL );
 
-    tbl = malloc ( sizeof * tbl + strlen ( path ) );
+    size_t path_size = strlen(path);
+    tbl = malloc ( sizeof * tbl + path_size);
     if ( tbl == NULL )
     {
         * tblp = NULL;
@@ -176,7 +179,7 @@ rc_t KRTableMake ( const KRTable **tblp, const KDirectory *dir, const char *path
     tbl -> dad . vt = & KRTable_vt;
     KRefcountInit ( & tbl -> dad . refcount, 1, "KTable", "make", path );
     tbl -> dir = dir;
-    strcpy ( tbl -> path, path );
+    string_copy ( tbl -> path, path_size + 1, path, path_size );
 
     /* YES,
       DBG_VFS should be used here to be printed along with other VFS messages */
@@ -339,7 +342,7 @@ rc_t CC
 KRTableVWritable ( const KTable *self, uint32_t type, const char *name, va_list args )
 {
     /* TBD */
-    return -1;
+    return (rc_t) - 1;
 }
 
 /* OpenManager

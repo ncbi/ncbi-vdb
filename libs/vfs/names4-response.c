@@ -1994,7 +1994,7 @@ void ContainerProcessStatus(Container * self, const Data * data) {
         if (logError)
             PLOGERR(lvl, (lvl, self->rc,
                 "failed to resolve accession '$(acc)' - $(msg) ( $(code) ); "
-                "ncbi_phid=$(phid)",
+                "ncbi_phid='$(phid)'",
                 "acc=%s,msg=%s,code=%u,phid=%s",
                 data->acc, self->status.msg, self->status.code, data->phid));
     }

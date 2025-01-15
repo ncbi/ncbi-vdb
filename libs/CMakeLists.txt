@@ -42,7 +42,6 @@ add_subdirectory(kns)
 add_subdirectory(kproc)
 add_subdirectory(krypto) # TODO: to be replaced with calls to mbedtls
 add_subdirectory(schema)
-add_subdirectory(search)
 add_subdirectory(sra)
 add_subdirectory(sraxf) # same as axf
 add_subdirectory(vdb)
@@ -54,7 +53,7 @@ add_subdirectory(ncbi-vdb)
 if ( SINGLE_CONFIG OR _NCBIVDB_CFG_PACKAGING )
     #
     # Install header files
-    set( HEADERS align  cloud  insdc  kdb  kfg  klib  kproc   ktst  os     search  sra   vfs
+    set( HEADERS align  cloud  insdc  kdb  kfg  klib  kproc   ktst  os sra   vfs
     cc     csra2  ext  kapp   kfc  kfs  kns   krypto  ncbi  vdb  )
 
     foreach( h IN ITEMS ${HEADERS} )

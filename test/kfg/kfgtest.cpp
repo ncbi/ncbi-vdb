@@ -82,6 +82,7 @@ FIXTURE_TEST_CASE(testKConfigPrint, KfgFixture)
 FIXTURE_TEST_CASE(KConfigLoadFile_should_report_null_inputs, KfgFixture)
 {
     KFile file;
+    memset(&file, 0, sizeof file);
     REQUIRE_RC_FAIL(KConfigLoadFile ( 0, "qweert", &file));
     REQUIRE_RC_FAIL(KConfigLoadFile ( kfg, "qweert", 0));
 }

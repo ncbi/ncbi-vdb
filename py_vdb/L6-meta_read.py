@@ -1,9 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from vdb import *
-
-#for this to work you need:
-#at $HOME/.ncbi/lib64 : libncbi-vdb.so
 
 # ------------------------------------------------------------------------
         

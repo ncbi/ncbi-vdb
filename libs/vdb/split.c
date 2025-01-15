@@ -28,13 +28,13 @@
 #include "blob.h"
 
 #include "blob-headers.h"
-#include "page-map.h"
 #include "blob-priv.h"
 #include "prod-priv.h"
 #include "xform-priv.h"
 
 #include <vdb/xform.h>
 #include <vdb/schema.h>
+#include <kdb/page-map.h>
 #include <klib/data-buffer.h>
 #include <klib/rc.h>
 #include <sysalloc.h>
@@ -52,7 +52,7 @@ int64_t read_64(const uint8_t **Src, const uint8_t *end, int scale, rc_t *rc) {
 	uint8_t c;
 	const uint8_t *src = *Src;
 	int n = 0;
-	
+
 	switch (scale) {
 	case 1:
 		scale = 2;
@@ -79,14 +79,14 @@ int64_t read_64(const uint8_t **Src, const uint8_t *end, int scale, rc_t *rc) {
 			*rc = RC(rcVDB, rcBlob, rcConstructing, rcData, rcInvalid);
 			return 0;
 		}
-		
+
 		c = *src++;
 		if ((c & 0x80) != 0)
 			break;
 		x <<= 7;
 		x |= c;
 	} while (1);
-    
+
 	c &= 0x7F;
 	if ((c & 0x40) != 0) {
 		c &= 0x3F;
@@ -105,7 +105,7 @@ int64_t read_64(const uint8_t **Src, const uint8_t *end, int scale, rc_t *rc) {
 static rc_t VBlobSplit_v1_validate_header(const uint8_t *inp, const uint8_t *in_end, unsigned n, const uint8_t **data) {
     rc_t rc;
     unsigned i;
-    
+
     for (i = 0; i != n; ++i) {
         read_64(&inp, in_end, 4, &rc);
         if (rc != 0)
@@ -123,21 +123,21 @@ static rc_t VBlobSplit_v1(VBlob **lhs, const VBlob *self, uint32_t index, uint32
     rc_t rc;
     unsigned block_count;
     unsigned i;
-    
+
     inp = self->data.base;
     assert(self->data.bit_offset == 0);
     insize = KDataBufferBytes(&self->data);
     assert(insize > 0);
     in_end = inp + insize;
-    
+
     block_count = (unsigned int)read_64(&inp, in_end, 1, &rc);
     if (rc != 0)
         return rc;
-    
+
     rc = VBlobSplit_v1_validate_header(inp, in_end, block_count, &data);
     if (rc != 0)
         return rc;
-    
+
     for (i = 0; i != block_count; ++i) {
         unsigned block_size = (unsigned int)read_64(&inp, in_end, 4, &rc);
         uint8_t bits;
@@ -146,47 +146,47 @@ static rc_t VBlobSplit_v1(VBlob **lhs, const VBlob *self, uint32_t index, uint32
         int64_t start_id;
         uint32_t id_span;
         const char *datatype;
-        
+
         if (data >= in_end || data + 1 >= in_end)
             return RC(rcVDB, rcBlob, rcConstructing, rcData, rcInsufficient);
         bits = data[0];
         byte_order = data[1];
         data += 2;
-        
+
         row_len = (uint16_t)read_64(&data, in_end, 2, &rc);
         if (rc != 0)
             return rc;
-        
+
         start_id = read_64(&data, in_end, 8, &rc);
         if (rc != 0)
             return rc;
-        
+
         id_span = (uint32_t)read_64(&data, in_end, 4, &rc);
         if (rc != 0)
             return rc;
-        
+
         if (data + block_size >= in_end)
             return RC(rcVDB, rcBlob, rcConstructing, rcData, rcInsufficient);
-        
+
         datatype = (const char *)data;
         data = memchr(datatype, 0, block_size);
         if (data == NULL)
             return RC(rcVDB, rcBlob, rcConstructing, rcData, rcInvalid);
-        
+
         ++data;
         if (data >= in_end)
             return RC(rcVDB, rcBlob, rcConstructing, rcData, rcInsufficient);
-        
+
         if (i == index) {
             if (((block_size * 8) - bits) % elem_bits != 0)
                 rc = RC(rcVDB, rcBlob, rcConstructing, rcData, rcInvalid);
             else {
                 VBlob *y;
-                
+
                 rc = VBlobNew(&y, start_id, start_id + id_span, "split");
                 if (rc == 0) {
                     KDataBuffer temp;
-                    
+
                     y->byte_order = byte_order;
                     rc = KDataBufferCast(&self->data, &temp, 8, false);
                     if (rc == 0) {
@@ -226,20 +226,20 @@ static rc_t VBlobSplit_v2(VBlob **lhs, const VBlob *self, uint32_t index, uint32
     VBlob *y;
     PageMap *pm;
     BlobHeaders *headers;
-    
+
     rc = VBlobHeaderArgPopHead(hdr, &val);
     if (rc)
         return rc;
     num_inputs = (unsigned)val;
-    
+
     if ( (unsigned)index > num_inputs )
         return RC(rcVDB, rcBlob, rcConstructing, rcParam, rcInvalid);
-    
+
     rc = VBlobHeaderArgPopHead(hdr, &val);
     if (rc)
         return rc;
     num_maps = (unsigned)val;
-    
+
     for (map = 0, i = 0; i != num_inputs; ++i) {
         rc = VBlobHeaderArgPopHead(hdr, &val);
         if (rc)
@@ -251,7 +251,7 @@ static rc_t VBlobSplit_v2(VBlob **lhs, const VBlob *self, uint32_t index, uint32
         return rc;
     if (map > num_maps || map < 0)
         return RC(rcVDB, rcBlob, rcConstructing, rcData, rcInvalid);
-    
+
     if (self->spmc == 0) {
         ((VBlob *)self)->spmc = malloc(sizeof(*self->spmc) - sizeof(self->spmc->pm) + num_maps * sizeof(self->spmc->pm[0]));
         if (self->spmc) {
@@ -280,7 +280,7 @@ static rc_t VBlobSplit_v2(VBlob **lhs, const VBlob *self, uint32_t index, uint32
     if (rc)
         return rc;
     pm = self->spmc->pm[map];
-    
+
     for (i = 0; rc == 0 && i != num_inputs; ++i) {
         rc = VBlobHeaderArgPopHead(hdr, &val);
         if ( rc )
@@ -293,7 +293,7 @@ static rc_t VBlobSplit_v2(VBlob **lhs, const VBlob *self, uint32_t index, uint32
         }
         doffset += (unsigned)val;
     }
-    
+
     for (dlength = 0, i = 0; rc == 0 && i != num_inputs; ++i) {
         rc = VBlobHeaderArgPopHead(hdr, &val);
         if (rc)
@@ -307,11 +307,11 @@ static rc_t VBlobSplit_v2(VBlob **lhs, const VBlob *self, uint32_t index, uint32
     if (rc)
         return rc;
     assert(dlength != 0);
-    
+
     rc = VBlobNew(&y, self->start_id, self->stop_id, "split");
     if (rc == 0) {
         KDataBuffer buffer;
-        
+
         rc = KDataBufferCast(&self->data, &buffer, 8, false);
         if (rc == 0) {
             KDataBufferSub( &buffer, &buffer, (uint32_t)doffset, (uint32_t)( (dlength + 7) >> 3 ) );
@@ -323,7 +323,7 @@ static rc_t VBlobSplit_v2(VBlob **lhs, const VBlob *self, uint32_t index, uint32
                 y->pm = pm;
                 PageMapAddRef(y->pm);
                 y->headers = (BlobHeaders *)headers;
-                
+
                 *lhs = y;
                 return 0;
             }
@@ -336,10 +336,10 @@ static rc_t VBlobSplit_v2(VBlob **lhs, const VBlob *self, uint32_t index, uint32
 
 LIB_EXPORT rc_t CC VBlobBufferSplit(VBlob **lhs, const VBlob *self, uint32_t index, uint32_t elem_bits) {
     rc_t rc;
-    
+
     if (self->headers) {
         const VBlobHeader *hdr = BlobHeadersGetHeader(self->headers);
-		
+
         if (hdr) {
             switch (VBlobHeaderVersion(hdr)) {
             case 1:

@@ -47,6 +47,7 @@ struct col_check_ctx {
 static
 rc_t CC col_check_report(const CCReportInfoBlock *nfo, void *Ctx)
 {
+    rc_t rc = 0;
     struct col_check_ctx *ctx = Ctx;
 
     if (nfo->type == ccrpt_MD5) {
@@ -66,12 +67,15 @@ rc_t CC col_check_report(const CCReportInfoBlock *nfo, void *Ctx)
             ctx->rc = nfo->info.MD5.rc;
         }
     }
-    else if (nfo->type == ccrpt_Done && nfo->info.done.rc != 0 && !ctx->failed) {
-        ctx->failed = true;
-        ctx->rc = nfo->info.done.rc;
+    else if (nfo->type == ccrpt_Done && nfo->info.done.rc != 0) {
+        if (!ctx->failed) {
+            ctx->failed = true;
+            ctx->rc = nfo->info.done.rc;
+        }
+        rc = ctx->rc;
     }
 
-    return 0;
+    return rc;
 }
 
 static
@@ -216,13 +220,13 @@ rc_t CC KColumnConsistencyCheck(const KColumn *bself,
     const KRColumn * self = (const KRColumn *)bself;
     rc_t rc = 0;
 
-    bool indexOnly = level & CC_INDEX_ONLY;
+    bool indexOnly = (bool)( level & CC_INDEX_ONLY );
     if (indexOnly) {
         level &= ~CC_INDEX_ONLY;
     }
 
     if (KDirectoryPathType(self->dir, "md5") != kptNotFound)
-        rc = level == 0 ? KColumnCheckMD5(self, nfo, report, ctx) : 0;
+        rc = KColumnCheckMD5(self, nfo, report, ctx);
     else {
         nfo->type = ccrpt_Done;
         nfo->info.done.mesg = "missing md5 file";

@@ -1,15 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import sys, argparse, vdb
-
-#for this to work you need:
-#at $HOME/.ncbi/lib64 : libncbi-vdb.so
-
-PY3 = sys.version_info[ 0 ] == 3
-
-if PY3 :
-    def xrange( *args, **kwargs ) :
-        return iter( range( *args, **kwargs ) )
 
 def fastq_from_tbl( args, tbl ) :
     acc = args.accession[ 0 ]
@@ -36,19 +27,14 @@ def fastq_from_tbl( args, tbl ) :
 
     if args.split :
         fastq = '@{0}.{1}.{2} length={3}\n{4}\n+{0}.{1}.{2} length={3}\n{5}'
-        for row in xrange( first, first + count ) :
-            if PY3 :
-                name = c_name.Read( row ).decode( "utf-8" )
-                read = c_read.Read( row ).decode( "utf-8" )
-                qual = c_qual.Read( row ).decode( "utf-8" )
-            else :
-                name = c_name.Read( row )
-                read = c_read.Read( row )
-                qual = c_qual.Read( row )
+        for row in range( first, first + count ) :
+            name = c_name.Read( row ).encode( "utf-8" )
+            read = c_read.Read( row ).encode( "utf-8" )
+            qual = c_qual.Read( row ).encode( "utf-8" )
 
             rd_start = c_read_start.Read( row )
             rd_len   = c_read_len.Read( row )
-            for x in xrange( 0, len( rd_start ) ) :
+            for x in range( 0, len( rd_start ) ) :
                 rlen  = rd_len[ x ]
                 if rlen > 0 :
                     start = rd_start[ x ]
@@ -56,16 +42,10 @@ def fastq_from_tbl( args, tbl ) :
                     print( fastq.format( acc, name, x+1, rlen, read[ start:end ], qual[ start:end ] ) )
     else :
         fastq = '@{0}.{1} length={2}\n{3}\n+{0}.{1} length={2}\n{4}'
-        for row in xrange( first, first + count ) :
-            if PY3 :
-                name = c_name.Read( row ).decode( "utf-8" )
-                read = c_read.Read( row ).decode( "utf-8" )
-                qual = c_qual.Read( row ).decode( "utf-8" )
-            else :
-                name = c_name.Read( row )
-                read = c_read.Read( row )
-                qual = c_qual.Read( row )
-
+        for row in range( first, first + count ) :
+            name = c_name.Read( row ).encode( "utf-8" )
+            read = c_read.Read( row ).encode( "utf-8" )
+            qual = c_qual.Read( row ).encode( "utf-8" )
             print( fastq.format( acc, name, len( read ), read, qual ) )
 
     

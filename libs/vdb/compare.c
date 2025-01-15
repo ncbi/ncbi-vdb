@@ -27,13 +27,13 @@
 
 #include "blob.h"
 #include "blob-headers.h"
-#include "page-map.h"
 #include "blob-priv.h"
 #include "xform-priv.h"
 #include "prod-priv.h"
 
 #include <vdb/xform.h>
 #include <vdb/schema.h>
+#include <kdb/page-map.h>
 #include <klib/defs.h>
 #include <klib/rc.h>
 #include <klib/debug.h>
@@ -82,9 +82,9 @@ rc_t CC blob_compare(
 static bool equal_f32( const float A[], const float B[], uint64_t elem_count, unsigned sig_bits ) {
     unsigned i;
     const int shift = 24 - sig_bits;
-    
+
     assert(shift > 0);
-    
+
     for (i = 0; i != elem_count; ++i) {
         int expa;
         int expb;
@@ -93,7 +93,7 @@ static bool equal_f32( const float A[], const float B[], uint64_t elem_count, un
         float a = A[i];
         float b = B[i];
         int diff;
-        
+
         if (a < 0) {
             a = -a;
             b = -b;
@@ -103,7 +103,7 @@ static bool equal_f32( const float A[], const float B[], uint64_t elem_count, un
 
         a = frexpf(a, &expa);
         b = frexpf(b, &expb);
-        
+
         if (expa < expb) {
             ++expa;
             a /= 2.0;
@@ -114,10 +114,10 @@ static bool equal_f32( const float A[], const float B[], uint64_t elem_count, un
         }
         if (expa != expb)
             return false;
-        
+
         mana = (uint32_t)ldexpf( a, 24 );
         manb = (uint32_t)ldexpf( b, 24 );
-        
+
         diff = (mana >> shift) - (manb >> shift);
 
         if (-1 > diff || diff > 1)
@@ -133,7 +133,7 @@ rc_t CC blob_compare_f32(
                       const VRowData *test
 ) {
     float_compare_t *self = Self;
-    
+
     if (!equal_f32(
                    &((const float *)orig->u.data.base)[orig->u.data.first_elem],
                    &((const float *)test->u.data.base)[test->u.data.first_elem],
@@ -143,7 +143,7 @@ rc_t CC blob_compare_f32(
     {
         return RC_NOT_SAME;
     }
-    
+
     return 0;
 }
 
@@ -159,13 +159,13 @@ VTRANSFACT_BUILTIN_IMPL(vdb_compare, 1, 0, 0) (
                                        VFuncDesc *rslt,
                                        const VFactoryParams *cp,
                                        const VFunctionParams *dp
-) 
+)
 {
     VTypedesc type;
     assert ( dp->argc == 2 );
 
     rslt->variant = prodFuncBuiltInCompare;
-    
+
 #if 0
     if (dp->argv[0].desc.domain != dp->argv[1].desc.domain ||
         dp->argv[0].desc.intrinsic_dim != dp->argv[1].desc.intrinsic_dim ||
@@ -175,7 +175,7 @@ VTRANSFACT_BUILTIN_IMPL(vdb_compare, 1, 0, 0) (
     }
 #endif
     type = dp->argv[0].desc;
-    
+
     if (type.domain == vtdFloat) {
         if (cp->argc > 0) {
             unsigned sig_bits = cp->argv[0].data.u32[0];
@@ -199,13 +199,13 @@ VTRANSFACT_BUILTIN_IMPL(vdb_compare, 1, 0, 0) (
             }
             if (VFUNCDESC_INTERNAL_FUNCS(rslt)->cf) {
                 float_compare_t *Self;
-            
+
                 Self = malloc(sizeof *Self);
                 if (Self == NULL)
                     return RC(rcVDB, rcFunction, rcConstructing, rcMemory, rcExhausted);
 
                 Self->sig_bits = sig_bits;
-            
+
                 rslt->self = Self;
                 rslt->whack = vfunc_free;
                 return 0;
@@ -234,7 +234,7 @@ VTRANSFACT_BUILTIN_IMPL(vdb_no_compare, 1, 0, 0) (
                                        VFuncDesc *rslt,
                                        const VFactoryParams *cp,
                                        const VFunctionParams *dp
-) 
+)
 {
     rslt->variant = prodFuncBuiltInCompare;
     VFUNCDESC_INTERNAL_FUNCS(rslt)->cf = true_func;

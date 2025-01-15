@@ -641,14 +641,19 @@ static rc_t VDBManagerOpenDBReadVPathImpl ( const VDBManager *self,
                     if ( rc == 0 )
                     {
                         /* now open the principal database */
-                        if ( plocal != NULL )
+                        if ( plocal != NULL ) {
                             rc = VDBManagerVPathOpenLocalDBRead ( self, dbp, schema, plocal );
-                        else if ( premote != NULL )
-                            rc = VDBManagerVPathOpenRemoteDBRead ( self, dbp, schema, premote, pcache );
+                            VPathCopyDirectoryIfEmpty((VPath*)path, plocal);
+                        }
+                        else if ( premote != NULL ) {
+                            rc = VDBManagerVPathOpenRemoteDBRead ( self, dbp,
+                                schema, premote, pcache );
+                            VPathCopyDirectoryIfEmpty((VPath*)path, premote);
+                        }
                         else
                         {
-                            /* resolver was unable to resolve this, so perhaps it was
-                                not an accession or OID, but a simple file name */
+                       /* resolver was unable to resolve this, so perhaps it was
+                              not an accession or OID, but a simple file name */
                             rc = VPathAddRef ( orig );
                             if ( rc == 0 )
                             {
@@ -661,7 +666,9 @@ static rc_t VDBManagerOpenDBReadVPathImpl ( const VDBManager *self,
                                     pcache = NULL;
                                 }
 #endif
-                                rc = VDBManagerVPathOpenLocalDBRead ( self, dbp, schema, plocal );
+                                rc = VDBManagerVPathOpenLocalDBRead ( self, dbp,
+                                    schema, plocal );
+                                VPathCopyDirectoryIfEmpty((VPath*)path, plocal);
                             }
                         }
                         if ( rc == 0 )
@@ -695,6 +702,12 @@ static rc_t VDBManagerOpenDBReadVPathImpl ( const VDBManager *self,
                         VPathRelease ( plocal );
                         VPathRelease ( premote );
                         VPathRelease ( pcache );
+
+                        if ( orig != path ) {
+                            rc_t r = VPathRelease ( orig );
+                            if ( rc == 0 && r != 0 )
+                                rc = r;
+                        }
                     }
 
                     VResolverRelease ( resolver );

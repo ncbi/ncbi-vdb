@@ -61,6 +61,7 @@ public:
         m_db ( 0 ),
         m_keepDb ( false )
     {
+        THROW_ON_RC ( VDBManagerMakeUpdate ( & m_mgr, NULL ) );
     }
     ~WVDB_Fixture()
     {
@@ -113,7 +114,6 @@ public:
         m_databaseName = ScratchDir + p_testName;
         RemoveDatabase();
 
-        THROW_ON_RC ( VDBManagerMakeUpdate ( & m_mgr, NULL ) );
         if ( includes != nullptr )
         {
             THROW_ON_RC ( VDBManagerAddSchemaIncludePath ( m_mgr, "%s", includes ) );
@@ -247,7 +247,7 @@ public:
     {
         KDatabase const *kdb = nullptr;
         THROW_ON_RC(VDatabaseOpenKDatabaseRead(m_db, &kdb));
-        
+
         KTable const *ktbl = nullptr;
         THROW_ON_RC(KDatabaseOpenTableRead(kdb, &ktbl, "%s", p_tableName));
         THROW_ON_RC ( KDatabaseRelease(kdb) );

@@ -85,10 +85,6 @@ Column::~Column()
     Metadata::release( m_meta );
     Manager::release( m_mgr );
 
-    for( auto d : m_data )
-    {
-        KDataBufferWhack( & d.second );
-    }
     KRefcountWhack ( & dad . refcount, "KDBText::Column" );
 }
 
@@ -110,6 +106,55 @@ Column::release( const Column * col )
     }
 }
 
+//
+// map of type sizes. Size 0 will only accept string values
+// any other size wil only accept unsigned integer value, encoded in 'size' bits
+// (will error out if the value does not fit)
+//
+// based on dt[] in vdb/schema-int.c:179
+//
+static const map< string, size_t > TypeSizes = {
+    { "any", 0 },
+    { "void", 0 },
+    { "opaque", 0 },
+
+    /* bundles of bits in machine native order */
+    { "B1", 1 },
+    { "B8", 8 },
+    { "B16", 16 },
+    { "B32", 32 },
+    { "B64", 64 },
+
+    /* the basic unsigned integer types */
+    { "U1", 1 },
+    { "U8", 8 },
+    { "U16", 16 },
+    { "U32", 32 },
+    { "U64", 64 },
+
+    /* the basic signed integer types */
+    /*TODO: support negative */
+    { "I8", 8 },
+    { "I16", 16 },
+    { "I32", 32 },
+    { "I64", 64 },
+
+    // /*TODO: floating point */
+    // { "F32", 32 },
+    // { "F64", 64 },
+
+    /* bool is typed to reflect C/C++ */
+    { "bool", 8 }, // for now, 0 or 1 only; TODO: support true/false
+
+    { "utf8", 8 },
+    { "utf16", 16 },
+    { "utf32", 32 },
+
+    { "ascii", 0 },
+    { "text", 0 },
+};
+
+
 rc_t
 Column::inflate( char * p_error, size_t p_error_size )
 {
@@ -124,6 +169,7 @@ Column::inflate( char * p_error, size_t p_error_size )
         {
             m_name = nameStr;
         }
+        //TODO: error
     }
     else
     {
@@ -132,14 +178,26 @@ Column::inflate( char * p_error, size_t p_error_size )
     }
 
     const KJsonValue * type = KJsonObjectGetMember ( m_json, "type" );
+    size_t typeSize = 0;
     if ( type != nullptr )
     {
         const char * typeStr = nullptr;
         rc = KJsonGetString ( type, & typeStr );
         if ( rc == 0 )
-        {
-            m_type = typeStr;
+        {   // look up intrinsic types, extract value size
+            auto i = TypeSizes.find( typeStr );
+            if ( i == TypeSizes.end() )
+            {
+                string_printf ( p_error, p_error_size, nullptr, "Unknown column type" );
+                return SILENT_RC( rcDB, rcDatabase, rcCreating, rcParam, rcInvalid );
+            }
+            else
+            {
+                typeSize = i -> second;
+                m_type = typeStr;
+            }
         }
+        //TODO: error
     }
     else
     {
@@ -163,57 +221,12 @@ Column::inflate( char * p_error, size_t p_error_size )
         {
             const KJsonValue * v = KJsonArrayGetElement ( dataarr, i );
             assert( v != nullptr );
-            const KJsonObject * obj = KJsonValueToObject ( v );
-            if( obj != nullptr )
+
+            shared_ptr<ColumnBlob> b ( new ColumnBlob( v ) );
+            rc = b->inflate( p_error, p_error_size, typeSize );
+            if ( rc == 0 )
             {
-                const KJsonValue * id = KJsonObjectGetMember ( obj, "row" );
-                if ( id == nullptr )
-                {
-                    string_printf ( p_error, p_error_size, nullptr, "%s.data[%i].row is missing", m_name.c_str(), i );
-                    return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
-                }
-                const KJsonValue * value = KJsonObjectGetMember ( obj, "value" );
-                if ( value == nullptr )
-                {
-                    string_printf ( p_error, p_error_size, nullptr, "%s.data[%i].value is missing", m_name.c_str(), i );
-                    return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
-                }
-
-                int64_t rowId;
-                rc = KJsonGetNumber ( id, &rowId );
-                if ( rc == 0 )
-                {
-                    if ( m_data.find( rowId ) != m_data . end() )
-                    {
-                        string_printf ( p_error, p_error_size, nullptr, "Duplicate row id: %s", rowId );
-                        return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
-                    }
-
-                    const char * valueStr = nullptr;
-                    rc = KJsonGetString ( value, & valueStr );
-                    if ( rc == 0 )
-                    {
-                        KDataBuffer b;
-                        KDataBufferMakeBytes( & b, strlen( valueStr ) ); // teminator excluded
-                        strcpy( (char*)b.base, valueStr );
-                        m_data [ rowId ] = b;
-                    }
-                    else
-                    {   // invalid value
-                        string_printf ( p_error, p_error_size, nullptr, "%s.data[%i].value is invalid", m_name.c_str(), i );
-                        return rc;
-                    }
-                }
-                else
-                {   // not an object
-                    string_printf ( p_error, p_error_size, nullptr, "%s.data[%i].row is not an integer", m_name.c_str(), i );
-                    return rc;
-                }
-            }
-            else
-            {   // not an object
-                string_printf ( p_error, p_error_size, nullptr, "%s.data[%i] is not an object", m_name.c_str(), i );
-                return SILENT_RC( rcDB, rcColumn, rcCreating, rcParam, rcInvalid );
+                m_data [ b->getIdRange() ] = b;
             }
         }
     }
@@ -252,27 +265,50 @@ Column::idRange() const
     {
         return make_pair( 0, 0 );
     }
-    return make_pair( m_data.begin()->first, m_data.rbegin()->first - m_data.begin()->first + 1 );
+    int64_t startRow = m_data.begin()->first.first;
+    int64_t endRow = m_data.rbegin()->first.first + m_data.rbegin()->first.second;
+    return make_pair( startRow, (uint64_t)endRow - (uint64_t)startRow );
+}
+
+Column::BlobMap::const_iterator
+Column::findBlob( int64_t row ) const
+{   // linear search, until proven too slow
+    for( Column::BlobMap::const_iterator d = m_data.begin(); d != m_data.end(); ++d )
+    {
+        if ( row >= d->first.first && row < d->first.first + (int64_t)d->first.second )
+        {
+            return d;
+        }
+    }
+
+    return m_data.end();
 }
 
 int64_t
-Column::findFirst( int64_t row ) const
-{
-    auto it = m_data . lower_bound( row );
-    if ( it == m_data.end() )
+Column::findFirst( int64_t rowId ) const // the first valid row-id starting from the given id.
+{   // linear search, until proven too slow
+    for( Column::BlobMap::const_iterator d = m_data.begin(); d != m_data.end(); ++d )
     {
-        return 0;
+        if ( rowId >= d->first.first && rowId < d->first.first + (int64_t)d->first.second )
+        {
+            return rowId;
+        }
+        if ( rowId < d->first.first )
+        {
+            return d->first.first;
+        }
     }
-    return it -> first;
+    return 0;
 }
 
 const ColumnBlob *
 Column::openBlob( int64_t id ) const
 {
-    auto it = m_data.find( id );
+    auto it = findBlob( id );
     if ( it != m_data.end() )
     {
-        return new ColumnBlob( it -> second . base, it -> second . elem_count, this, id, 1 );
+        it->second.get()->addRef();
+        return it->second.get();
     }
     return nullptr;
 }
