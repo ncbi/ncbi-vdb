@@ -104,15 +104,15 @@ rc_t CC KMain ( int argc, char *argv [] )
         bool requireAmd64 = false;
         uint64_t requireRam = 0;
 
-        rc = ArgsMakeAndHandle ( & args, argc, argv, 1, 
+        rc = ArgsMakeAndHandle ( & args, argc, argv, 1,
                Options, sizeof Options / sizeof (OptDef) );
         if ( rc != 0 )
         {
             LogErr ( klogErr, rc, "failed to parse arguments" );
             break;
         }
-        
-        // TODO: cehck if we need it
+
+        // TODO: check if we need it
         rc = ArgsParamCount ( args, & paramc );
         if ( rc != 0 ) {
             LogErr ( klogInt, rc, "failed to obtain param count" );
@@ -149,7 +149,7 @@ rc_t CC KMain ( int argc, char *argv [] )
 
                 rc = sscanf(dummy, "%llu", &sscanf_param);
                 requireRam = ( uint64_t ) sscanf_param;
-                if ( rc != 1) 
+                if ( rc != 1)
                 {
                     LOGMSG(klogErr, "Failure to parse '" OPTION_RAM "' argument value");
                     break;
@@ -157,13 +157,13 @@ rc_t CC KMain ( int argc, char *argv [] )
             }
 
         }
-       
+
         {
             rc = KAppCheckEnvironment(requireAmd64, requireRam);
             if (rc != 0 )
                 printf("Invalid environment\n");
             else
-                printf("Enviroment is fine!\n"); 
+                printf("Enviroment is fine!\n");
         }
     } while (false);
 

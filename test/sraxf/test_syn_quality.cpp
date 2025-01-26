@@ -25,7 +25,8 @@
  */
 
 #include <ktst/unit_test.hpp> /* TEST_SUITE */
-#include <kapp/main.h> /* KAppVersion */
+#include <kapp/vdbapp.h> /* KAppVersion */
+#include <kapp/main.h>
 
 #include <kfs/directory.h>
 #include <vdb/manager.h>
@@ -34,7 +35,7 @@
 #include <insdc/insdc.h>
 
 /*****************************************************************************
-    This test 
+    This test
 *****************************************************************************/
 
 extern "C" {

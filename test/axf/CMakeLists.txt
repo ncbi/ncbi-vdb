@@ -32,4 +32,4 @@ else()
     set_source_files_properties(test-RestoreRead PROPERTIES COMPILE_FLAGS "/wd5039")
 endif()
 
-AddExecutableTest( Test_Axf_RestoreRead "test-RestoreRead" "${COMMON_LINK_LIBRARIES};${COMMON_LIBS_READ};${ADDITIONAL_LIBS}" )
+AddExecutableTest( Test_Axf_RestoreRead "test-RestoreRead" "kapp;${COMMON_LINK_LIBRARIES};${COMMON_LIBS_READ};${ADDITIONAL_LIBS}" )

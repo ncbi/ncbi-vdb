@@ -23,7 +23,7 @@
  * ===========================================================================
  *
  */
-#include <kapp/main.h>
+#include <kapp/vdbapp.h>
 #include <kapp/args.h>
 
 #include <krypto/ciphermgr.h>
@@ -48,17 +48,17 @@
 #define OPTION_TIMER  "timer"
 #define ALIAS_TIMER   "t"
 
-const char * timer_usage[] = 
+const char * timer_usage[] =
 { "time per function in seconds", "Default is 5 seconds", NULL };
 
-OptDef Options[] = 
+OptDef Options[] =
 {
     { OPTION_TIMER, ALIAS_TIMER, NULL, timer_usage, 1, true, false }
 };
 
 struct KBlockCipher;
 
-const char * cipher_subtypes[] = 
+const char * cipher_subtypes[] =
 {
     "byte",
     "vector",
@@ -71,7 +71,7 @@ const char * cipher_subtypes[] =
 };
 
 
-const char * cipher_types[] = 
+const char * cipher_types[] =
 {
     "null",
     "AES"
@@ -79,7 +79,7 @@ const char * cipher_types[] =
 /*     "AES cipher" */
 };
 
-rc_t ((* make_functions[4])(KCipher **, kcipher_type)) = 
+rc_t ((* make_functions[4])(KCipher **, kcipher_type)) =
 {
     KCipherTestByteMake,
     KCipherTestVecMake,
@@ -97,7 +97,7 @@ void random_cipher_block ()
     unsigned ix;
 
     srand (1);
-    
+
     for (ix = 0; ix < sizeof cipher_block; ++ix)
         cipher_block[ix] = (char)rand();
 }
@@ -135,7 +135,7 @@ rc_t set_encrypt_key_function_128 (KCipher * cipher)
     /* just getting some random data - value shouldn't matter much */
     if (++ix > sizeof cipher_block - 16)
         ix = 0;
-   
+
     memmove (user_key, cipher_block + ix, sizeof user_key);
     return KCipherSetEncryptKey (cipher, user_key, 16);
 }
@@ -174,7 +174,7 @@ rc_t set_decrypt_key_function_128 (KCipher * cipher)
     /* just getting some random data - value shouldn't matter much */
     if (++ix > sizeof cipher_block - 16)
         ix = 0;
-   
+
     memmove (user_key, cipher_block + ix, sizeof user_key);
     return KCipherSetDecryptKey (cipher, user_key, 16);
 }
@@ -213,7 +213,7 @@ rc_t encrypt_function (KCipher * cipher)
     /* just getting some random data - value shouldn't matter much */
     if (++ix > sizeof cipher_block - 16)
         ix = 0;
-   
+
     return KCipherEncrypt (cipher, cipher_block + ix, cipher_block + ix);
 }
 
@@ -225,7 +225,7 @@ rc_t decrypt_function (KCipher * cipher)
     /* just getting some random data - value shouldn't matter much */
     if (++ix > sizeof cipher_block - 16)
         ix = 0;
-   
+
     return KCipherDecrypt (cipher, cipher_block + ix, cipher_block + ix);
 }
 
@@ -237,7 +237,7 @@ rc_t ecb_encrypt_function (KCipher * cipher)
     /* just getting some random data - value shouldn't matter much */
     if (++ix > sizeof cipher_block - 16)
         ix = 0;
-   
+
     return KCipherEncryptECB (cipher, cipher_block, cipher_block, sizeof (cipher_block) / 16);
 }
 
@@ -249,7 +249,7 @@ rc_t ecb_decrypt_function (KCipher * cipher)
     /* just getting some random data - value shouldn't matter much */
     if (++ix > sizeof cipher_block - 16)
         ix = 0;
-   
+
     return KCipherDecryptECB (cipher, cipher_block, cipher_block, sizeof (cipher_block) / 16);
 }
 
@@ -261,7 +261,7 @@ rc_t cbc_encrypt_function (KCipher * cipher)
     /* just getting some random data - value shouldn't matter much */
     if (++ix > sizeof cipher_block - 16)
         ix = 0;
-   
+
     return KCipherEncryptCBC (cipher, cipher_block, cipher_block, sizeof (cipher_block) / 16);
 }
 
@@ -273,7 +273,7 @@ rc_t cbc_decrypt_function (KCipher * cipher)
     /* just getting some random data - value shouldn't matter much */
     if (++ix > sizeof cipher_block - 16)
         ix = 0;
-   
+
     return KCipherDecryptCBC (cipher, cipher_block, cipher_block, sizeof (cipher_block) / 16);
 }
 
@@ -479,7 +479,7 @@ rc_t run_one (KCipher * ciphers[16], clock_t timer, unsigned ix)
                     else
                     {
 
-                        KStsMsg ("ecb_decrypt_function\n");  
+                        KStsMsg ("ecb_decrypt_function\n");
                         rc = function_timer(ecb_decrypt_function, ciphers, ecb_decrypt_256+ix, timer);
                         if (rc)
                             KStsMsg ("failed to run ecb_decrypt_function\n");

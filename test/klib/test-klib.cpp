@@ -30,6 +30,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kapp/vdbapp.h>
+
 #include <klib/data-buffer.h>
 #include <klib/log.h>
 #include <klib/misc.h> /* is_user_admin() */
@@ -39,6 +41,8 @@
 #include <klib/text.h>
 #include <klib/vector.h>
 #include <klib/time.h>
+
+#include <kfg/config.h>
 
 #include <cstdlib>
 #include <cstring>
@@ -1078,7 +1082,7 @@ TEST_CASE(GetUnreadRCInfo_LogRC)
 #endif
 
 TEST_CASE(TimeRoundTrip)
-{ 
+{
     KTime_t t1 = KTimeStamp(); // UTC
     char str1[100];
     KTimeIso8601(t1, str1, sizeof str1);
@@ -1124,20 +1128,14 @@ TEST_CASE(KnowIfTheFunctionExistsAtCompileTime) {
 //////////////////////////////////////////////////// Main
 extern "C" {
 
-#include <kapp/args.h>
-#include <kfg/config.h>
+#if WINDOWS && UNICODE
+    int wmain(int argc, wchar_t* argv[])
+#else
+    int main(int argc, char* argv[])
+#endif
+    {
+        VDB::VdbApp app(argc, argv);
+        return KlibTestSuite(argc, app.GetArgV());
+    }
 
-ver_t CC KAppVersion(void) { return 0x1000000; }
-rc_t CC UsageSummary(const char* progname) { return 0; }
-
-rc_t CC Usage(const Args* args) { return 0; }
-
-const char UsageDefaultName[] = "test-klib";
-
-rc_t CC KMain(int argc, char* argv[])
-{
-    KConfigDisableUserSettings();
-    rc_t rc = KlibTestSuite(argc, argv);
-    return rc;
-}
 }

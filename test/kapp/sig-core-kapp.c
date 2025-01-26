@@ -49,7 +49,7 @@ rc_t CC UsageSummary ( const char *progname )
                      "\n"
                      "Summary:\n"
                      "  Test core generation by killing it with signal.\n"
-		     "  The tool enter into infinite loop after start .\n"
+		             "  The tool enter into infinite loop after start .\n"
                      , progname
         );
 }
@@ -89,7 +89,7 @@ rc_t CC KMain ( int argc, char *argv [] )
             LogErr ( klogErr, rc, "failed to parse arguments" );
             break;
         }
-        
+
         while ( true ) {
             sleep ( 1000 );
         }

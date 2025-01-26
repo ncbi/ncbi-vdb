@@ -886,6 +886,25 @@ LIB_EXPORT void CC ReportInit(int argc, char* argv[], ver_t tool_version)
     }
 }
 
+LIB_EXPORT
+rc_t
+ReportGetVersion( ver_t * version )
+{
+    rc_t rc = 0;
+    Report* self = NULL;
+    ReportGet(&self);
+    if ( self == NULL )
+    {
+        rc = RC(rcApp, rcQuery, rcAccessing, rcData, rcUndefined);
+    }
+    else
+    {
+        *version = self -> tool_ver;
+        return 0;
+    }
+    return rc;
+}
+
 
 /* BuildDate
  *  set the build date of the tool

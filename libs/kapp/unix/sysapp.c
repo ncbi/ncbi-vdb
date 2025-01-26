@@ -25,51 +25,21 @@
 */
 
 #include "../main-priv.h"
-#include <sysalloc.h>
-#include <kapp/main.h>
-#include <klib/log.h>
+
 #include <klib/report.h>
 #include <klib/rc.h>
-#include <atomic32.h>
+#include <klib/log.h>
 
-#undef __XOPEN_OR_POSIX
-#define __XOPEN_OR_POSIX 1
-
-#undef __EXTENSIONS__
-#define __EXTENSIONS__ 1
-
-#include <unistd.h>
 #include <signal.h>
-#include <sys/signal.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdarg.h>
 #include <errno.h>
-#include <assert.h>
 
 #if ! _DEBUGGING && ! defined CATCH_SIGSEGV
 #define CATCH_SIGSEGV 1
 #endif
 
-/*--------------------------------------------------------------------------
- * Main
- */
-
-static bool no_hup;
-static atomic32_t hangup;
-static atomic32_t quitting;
-
-/* Quitting
- *  is the program supposed to exit
- */
-rc_t Quitting ( void )
-{
-    if ( atomic32_read ( & quitting ) == 0 )
-        return 0;
-    LOGMSG ( klogInfo, "EXITING..." );
-    return RC ( rcExe, rcProcess, rcExecuting, rcProcess, rcCanceled );
-}
+#if _DEBUGGING && ! defined PRODUCE_CORE
+#define PRODUCE_CORE 1
+#endif
 
 /* SignalQuit
  *  tell the program to quit
@@ -77,7 +47,7 @@ rc_t Quitting ( void )
 rc_t SignalQuit ( void )
 {
     ReportSilence ();
-    
+
     if ( kill ( 0, SIGTERM ) != 0 ) switch ( errno )
     {
     case EINVAL:
@@ -90,20 +60,6 @@ rc_t SignalQuit ( void )
     return 0;
 }
 
-/* Hangup
- *  has the program received a SIGHUP
- */
-rc_t Hangup ( void )
-{
-    if ( atomic32_read ( & hangup ) == 0 )
-        return 0;
-    LOGMSG ( klogInfo, "HANGUP...\n" );
-    return RC ( rcExe, rcProcess, rcExecuting, rcProcess, rcIncomplete );
-}
-
-/* SignalHup
- *  send the program a SIGHUP
- */
 rc_t SignalHup ( void )
 {
     if ( kill ( 0, SIGHUP ) != 0 ) switch ( errno )
@@ -118,27 +74,6 @@ rc_t SignalHup ( void )
     return 0;
 }
 
-/* SignalNoHup
- *  tell the program to stay alive even after SIGHUP
- */
-rc_t SignalNoHup ( void )
-{
-    no_hup = true;
-    return 0;
-}
-
-/* SigHupHandler
- */
-static
-void SigHupHandler ( int sig )
-{
-    ( ( void ) sig );
-    atomic32_inc ( & hangup );
-    if ( ! no_hup )
-        atomic32_inc ( & quitting );
-    PLOGMSG ( klogInfo, ( klogInfo, "SIGNAL - $(sig)\n", "sig=HUP" ));
-}
-
 /* SigQuitHandler
  */
 static
@@ -146,9 +81,8 @@ void SigQuitHandler ( int sig )
 {
     const char *msg;
 
-    ReportSilence ();
-    
-    atomic32_inc ( & quitting );
+    SetQuitting();
+
     switch ( sig )
     {
     case SIGINT:
@@ -165,8 +99,19 @@ void SigQuitHandler ( int sig )
         return;
     }
 
-    PLOGMSG ( klogInfo, ( klogInfo, "SIGNAL - $(sig)", "sig=%s", msg ) );
+    PLOGMSG ( klogInfo, ( klogInfo, "SIGNAL - $(sig)", "sig=%s", msg ));
 }
+
+/* SigCoreHandler
+ */
+#if ! PRODUCE_CORE
+static
+void SigCoreHandler ( int sig )
+{
+    PLOGMSG ( klogFatal, ( klogFatal, "SIGNAL - $(sig)\n", "sig=%d", sig ));
+    exit ( 1 );
+}
+#endif
 
 /* SigSegvHandler
  */
@@ -176,40 +121,48 @@ void SigSegvHandler ( int sig )
 {
     ( ( void ) sig );
     PLOGMSG ( klogFatal, ( klogFatal, "SIGNAL - $(sig)\n", "sig=Segmentation fault" ));
+#if PRODUCE_CORE
     abort ();
+#endif
     exit ( 1 );
 }
 #endif
 
-/* main
- *  Unix specific main entrypoint
- */
-int main ( int argc, char *argv [] )
+static struct
 {
-    static struct
-    {
-        void ( * handler ) ( int );
-        int sig;
-    } sigs [] =
-    {
-        { SigHupHandler, SIGHUP },
-        { SigQuitHandler, SIGINT },
-        { SigQuitHandler, SIGQUIT },
-#if CATCH_SIGSEGV        
-        { SigSegvHandler, SIGSEGV },
-#endif        
-        { SigQuitHandler, SIGTERM }
-    };
+    void ( * handler ) ( int );
+    int sig;
+} sigs [] =
+{
+    { SigQuitHandler, SIGINT },
+#if CATCH_SIGSEGV
+    { SigSegvHandler, SIGSEGV },
+#endif
+    { SigQuitHandler, SIGTERM }
+}
+#if ! PRODUCE_CORE
+, core_sigs [] =
+{
+#if ! CATCH_SIGSEGV
+    { SigCoreHandler, SIGSEGV },
+#endif
+    { SigCoreHandler, SIGQUIT },
+    { SigCoreHandler, SIGILL },
+    { SigCoreHandler, SIGABRT },
+    { SigCoreHandler, SIGFPE }
+}
+#endif
+;
 
-    rc_t rc;
+struct sigaction sig_saves [ sizeof sigs / sizeof sigs [ 0 ] ];
+#if ! PRODUCE_CORE
+struct sigaction core_sig_saves [ sizeof core_sigs / sizeof core_sigs [ 0 ] ];
+#endif
+
+int
+VdbInitializeSystem()
+{
     int i, status;
-    struct sigaction sig_saves [ sizeof sigs / sizeof sigs [ 0 ] ];
-
-    /* get application version */
-    uint32_t vers = KAppVersion ();
-
-    /* initialize logging to default values */
-    KLogInit ();
 
     /* install signal handlers */
     for ( i = 0; i < sizeof sigs / sizeof sigs [ 0 ]; ++ i )
@@ -223,21 +176,43 @@ int main ( int argc, char *argv [] )
         if ( status < 0 )
         {
             PLOGMSG ( klogFatal, ( klogFatal,
-                                   "failed to install handler for signal $(sig) - $(msg)"
-                                   , "sig=%d,msg='%s'"
-                                   , sigs [ i ] . sig
-                                   , strerror ( errno )
+                     "failed to install handler for signal $(sig) - $(msg)"
+                     , "sig=%d,msg='%s'"
+                     , sigs [ i ] . sig
+                     , strerror ( errno )
                           ));
             return 2;
         }
     }
 
-    /* run this guy */
-    rc = KMane ( argc, argv );
+    /* install signal handlers to prevent generating core files */
+#if ! PRODUCE_CORE
+    for ( i = 0; i < sizeof core_sigs / sizeof core_sigs [ 0 ]; ++ i )
+    {
+        struct sigaction act;
+        memset ( & act, 0, sizeof act );
+        act . sa_handler = core_sigs [ i ] . handler;
 
+        status = sigaction ( core_sigs [ i ] . sig, & act, & core_sig_saves [ i ] );
+        if ( status < 0 )
+        {
+            PLOGMSG ( klogFatal, ( klogFatal,
+                     "failed to install handler for signal $(sig) - $(msg)"
+                     , "sig=%d,msg='%s'"
+                     , core_sigs [ i ] . sig
+                     , strerror ( errno )
+                          ));
+            return 4;
+        }
+    }
+#endif
+    return 0;
+}
+
+void
+VdbTerminateSystem()
+{
     /* remove handlers, for what it's worth */
-    for ( i = 0; i < sizeof sigs / sizeof sigs [ 0 ]; ++ i )
+    for ( size_t i = 0; i < sizeof sigs / sizeof sigs [ 0 ]; ++ i )
         sigaction ( sigs [ i ] . sig, & sig_saves [ i ], NULL );
-
-    return ( rc == 0 ) ? 0 : 3;
 }

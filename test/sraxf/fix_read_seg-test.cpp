@@ -3,6 +3,7 @@
 #include <math.h>
 
 #include <ktst/unit_test.hpp> /* TEST_SUITE */
+#include <kapp/vdbapp.h>
 #include <kapp/main.h> /* KAppVersion */
 
 #include <os-native.h> /* lround on Windows, uint16_t */

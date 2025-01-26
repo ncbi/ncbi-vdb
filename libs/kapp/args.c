@@ -40,7 +40,7 @@
 #include <klib/vector.h>
 
 #include <kfg/config.h>
-#include <kapp/main.h>
+#include <kapp/vdbapp.h>
 #include <kapp/args.h>
 #include <kapp/args-conv.h>
 
@@ -70,6 +70,40 @@
 #define LEGACY_Q_ALIAS_DEPRECATED 1
 #define LEGACY_Q_ALIAS_ERROR      0
 #endif
+
+static const char * UsageDefaultName = "";
+static Usage_t Usage = NULL;
+static UsageSummary_t UsageSummary = NULL;
+static ver_t KAppVersion = 0;
+
+void SetUsageDefaultName( const char* str )
+{
+    if ( str != NULL  )
+    {
+        UsageDefaultName = str;
+    }
+}
+
+Usage_t SetUsage ( Usage_t func )
+{
+    Usage_t ret = Usage;
+    Usage = func;
+    return ret;
+}
+
+UsageSummary_t SetUsageSummary ( UsageSummary_t func )
+{
+    UsageSummary_t ret = UsageSummary;
+    UsageSummary = func;
+    return ret;
+}
+
+ver_t SetKAppVersion ( ver_t ver )
+{
+    ver_t ret = KAppVersion;
+    KAppVersion = ver;
+    return ret;
+}
 
 bool CC is_valid_name (const char * string)
 {
@@ -1822,7 +1856,10 @@ rc_t CC ArgsHandleHelp (Args * self)
         if (count)
         {
             /* this is a call into the main program code */
-            Usage(self);
+            if ( Usage )
+            {
+                Usage(self);
+            }
             ArgsWhack (self);
             exit (0);
         }
@@ -1858,7 +1895,7 @@ rc_t CC ArgsHandleVersion (Args * self)
             if (self)
                 rc = ArgsProgram (self, &fullpath, &progname);
 
-            HelpVersion (fullpath, KAppVersion());
+            HelpVersion (fullpath, KAppVersion);
 
             ArgsWhack (self);
             exit (0);
@@ -2385,7 +2422,10 @@ rc_t CC MiniUsage (const Args * args)
     if (rc)
         progname = UsageDefaultName;
     KOutHandlerSetStdErr();
-    UsageSummary (progname);
+    if ( UsageSummary )
+    {
+        UsageSummary (progname);
+    }
     KOutMsg ("\nUse option --help for more information.\n\n");
 
     KOutHandlerSet (w,d);

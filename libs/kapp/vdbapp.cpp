@@ -24,53 +24,44 @@
 *
 */
 
-#define UNICODE 1
-#define _UNICODE 1
+#include <kapp/vdbapp.h>
 
-#include "../main-priv.h"
-#include "main-priv-win.h"
-#include <klib/rc.h>
+using namespace VDB;
 
-#include <WINDOWS.H>
-
-/*--------------------------------------------------------------------------
- * Main
- */
-
-static bool convert_args_paths = true;
-
-int __cdecl wmain ( int argc, wchar_t *wargv [], wchar_t *envp [] )
-{
-    char **argv = NULL;
-    int status = 0;
-
-    /* must initialize COM... must initialize COM... */
-    /* CoInitializeEx ( NULL, COINIT_MULTITHREADED ); */
-    CoInitialize(NULL);
-
-    status = ConvertWArgsToUtf8(argc, wargv, &argv, convert_args_paths);
-
-    if ( status == 0 )
-    {
-        /* perform normal main operations on UTF-8 with POSIX-style paths */
-        rc_t rc = KMane(argc, argv);
-        status = (rc == 0) ? 0 : IF_EXITCODE(rc, 3);
-
-        /* tear down argv */
-        int i = argc;
-        while ( -- i >= 0 )
-            free ( argv [ i ] );
-        free ( argv );
-    }
-
-    /* balance the COM initialization */
-    CoUninitialize ();
-
-    return status;
+VdbApp::VdbApp(int argc, char* argv[], ver_t vers) 
+    : m_argc( argc ), m_argv( argv ), m_argvOwned ( false )
+{ 
+    m_rc = VdbInitialize(argc, argv, vers); 
 }
 
-void  __declspec(dllexport) __stdcall wmainCRTStartupNoPathConversion()
+#if WINDOWS && UNICODE
+#include "win/main-priv-win.h"
+VdbApp::VdbApp(int argc, wchar_t* argv[], ver_t vers)
+    : m_argc( argc ), m_argvOwned ( false )
 {
-    convert_args_paths = false;
-    wmainCRTStartup();
+    int status = ConvertWArgsToUtf8(argc, argv, &m_argv, true);
+    if (status != 0)
+    {
+        m_rc = RC(rcApp, rcArgv, rcParsing, rcParam, rcFailed);
+    }
+    else
+    {
+        m_argvOwned = true;
+        m_rc = VdbInitialize(argc, m_argv, vers);
+    }
+}
+#endif
+
+VdbApp::~VdbApp() 
+{ 
+    VdbTerminate(m_rc); 
+    if (m_argvOwned)
+    {
+        int i = m_argc;
+        while ( -- i >= 0 )
+        {
+            free ( m_argv [ i ] );
+        }
+        free ( m_argv );        
+    }
 }
