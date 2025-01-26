@@ -1149,6 +1149,15 @@ rc_t VPathCheckFromNamesCGI ( const VPath * path,
                         rcMessage, rcCorrupt);
             }
             else {
+              CONST_STRING(&req, "?debu");
+              if (StringEqual(&name, &req)) {
+                String e;
+                CONST_STRING(&e, "g=not-found");
+                if (!StringEqual(&val, &e))
+                    return RC(rcVFS, rcResolver, rcResolving,
+                        rcMessage, rcCorrupt);
+              }
+              else {
                 CONST_STRING(&req, "?pId=");
                 if (!StringEqual(&name, &req))
                     return RC(rcVFS, rcResolver, rcResolving,
@@ -1167,6 +1176,8 @@ rc_t VPathCheckFromNamesCGI ( const VPath * path,
                         return RC(rcVFS, rcResolver, rcResolving,
                             rcMessage, rcCorrupt);
                 }
+            
+              }
             }
         }
     }
