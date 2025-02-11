@@ -1266,7 +1266,11 @@ LIB_EXPORT rc_t CC KNSManagerSetUserAgent (
 
     rc_t rc = 0;
     if ( fmt == NULL ) {
-        return KDataBufferWhack ( &kns_manager_user_agent );
+        rc_t rc = KDataBufferWhack ( &kns_manager_user_agent );
+        rc_t r2 = KDataBufferWhack ( &kns_manager_guid );
+        if (rc == 0 && r2 != 0)
+            rc = r2;
+        return rc;
     }
 
     KDataBufferResize ( &kns_manager_user_agent, 0 );
@@ -1282,7 +1286,7 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
 {
     rc_t rc = 0;
 
-    bool telemetry = true;
+    const bool telemetry = true; /* always send telemetry bits */
 
     if ( user_agent == NULL ) {
         rc = RC ( rcNS, rcMgr, rcAccessing, rcParam, rcNull );
@@ -1382,8 +1386,6 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
         KConfig *kfg = NULL;
         KConfigMake ( &kfg, NULL );
 
-        KConfig_Get_SendTelemetry(kfg, &telemetry); /* ignore rc */
-
         /* Sometimes called before KNSManagerMake */
         if ( ( KDataBufferBytes ( &kns_manager_guid ) == 0 )
             || ( strlen ( kns_manager_guid.base ) == 0 ) )
@@ -1411,10 +1413,6 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
 
     KDataBuffer phid;
     KDataBufferMakeBytes ( &phid, 0 );
-
-#ifndef TELEMETRY
-    telemetry = false;
-#endif
 
     if ( telemetry )
       rc = KDataBufferPrintf (

@@ -43,12 +43,22 @@ static rc_t argsHandler(int argc, char* argv[]) {
 TEST_SUITE_WITH_ARGS_HANDLER(TestResolveSuite, argsHandler);
 
 TEST_CASE(VPathTest) {
+    const String * ps(NULL);
+    String s;
     VPath * out(NULL);
+
+    REQUIRE_RC_FAIL(VPathMakeString(out, &ps));
+    REQUIRE_NULL(ps);
+    REQUIRE_RC_FAIL(VPathGetPath(out, &s));
 
     REQUIRE_RC(LegacyVPathMake(&out, "http://h"));
     REQUIRE(VPathFromUri(out));
     REQUIRE(!VPathIsFSCompatible(out));
     REQUIRE(VPathIsRemote(out));
+    REQUIRE_RC(VPathMakeString(out, &ps));
+    REQUIRE_RC(VPathGetPath(out, &s));
+    REQUIRE(!StringEqual(&s, ps));
+    StringWhack(ps);
     REQUIRE_RC(VPathRelease(out));
 
     REQUIRE_RC(LegacyVPathMake(&out, "http://h/"));
@@ -91,6 +101,10 @@ TEST_CASE(VPathTest) {
     REQUIRE(!VPathFromUri(out));
     REQUIRE(VPathIsFSCompatible(out));
     REQUIRE(!VPathIsRemote(out));
+    REQUIRE_RC(VPathMakeString(out, &ps));
+    REQUIRE_RC(VPathGetPath(out, &s));
+    REQUIRE(StringEqual(&s, ps));
+    StringWhack(ps);
     REQUIRE_RC(VPathRelease(out));
 
     REQUIRE_RC(LegacyVPathMake(&out, "./h"));
@@ -103,6 +117,10 @@ TEST_CASE(VPathTest) {
     REQUIRE(!VPathFromUri(out));
     REQUIRE(VPathIsFSCompatible(out));
     REQUIRE(!VPathIsRemote(out));
+    REQUIRE_RC(VPathMakeString(out, &ps));
+    REQUIRE_RC(VPathGetPath(out, &s));
+    REQUIRE(StringEqual(&s, ps));
+    StringWhack(ps);
     REQUIRE_RC(VPathRelease(out));
 
     REQUIRE_RC(LegacyVPathMake(&out, "/SRR000001"));

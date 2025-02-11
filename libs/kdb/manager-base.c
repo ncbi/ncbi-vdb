@@ -207,10 +207,26 @@ LIB_EXPORT rc_t CC KDBManagerOpenDBRead ( const KDBManager *self, const KDatabas
 
     return rc;
 }
+static rc_t openDBReadVPath(const KDBManager *self
+                            , const KDatabase **db
+                            , const struct VPath *path
+                            , ... )
+{
+    if (self) {
+        rc_t rc = 0;
+        va_list va;
+        va_start(va, path);
+        rc = self->vt->vOpenDBRead(self, db, NULL, va, path);
+        va_end(va);
+        return rc;
+    }
+    else
+        return RC ( rcDB, rcMgr, rcAccessing, rcSelf, rcNull );
+}
 LIB_EXPORT rc_t CC KDBManagerOpenDBReadVPath ( const KDBManager *self,
     const KDatabase **db, const struct VPath *path )
 {
-    DISPATCH( vOpenDBRead( self, db, NULL, NULL, path ) );
+    return openDBReadVPath(self, db, path);
 }
 LIB_EXPORT rc_t CC KDBManagerVOpenTableRead ( const KDBManager *self, const struct KTable **tbl, const char *path, va_list args )
 {

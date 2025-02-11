@@ -365,7 +365,8 @@ rc_t KMane ( int argc, char *argv [] )
         if ( sep != NULL )
             tool_size = sep - tool;
 
-        KNSManagerSetUserAgent ( kns, PKGNAMESTR " sra-toolkit %.*s.%V", ( uint32_t ) tool_size, tool, vers );
+        KNSManagerSetUserAgent ( kns, PKGNAMESTR " sra-toolkit %.*s.%.3V",
+            ( uint32_t ) tool_size, tool, vers );
     }
 
     KNSManagerSetQuitting ( kns, Quitting );

@@ -24,4 +24,4 @@
 *
 */
 
-#define LIBVDB_VERS 0x03010001
+#define LIBVDB_VERS 0x03020000
