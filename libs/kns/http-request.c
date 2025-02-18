@@ -1708,7 +1708,7 @@ rc_t KClientHttpRequestSendReceiveNoBody ( KClientHttpRequest *self, KClientHttp
 
     KHttpRetrier retrier;
 
-    if (self == NULL) {
+    if (self == NULL)
         return RC(rcNS, rcNoTarg, rcReading, rcSelf, rcNull);
 
     rc = KHttpRetrierInit ( & retrier,
@@ -2052,6 +2052,7 @@ typedef enum {
     eUPSHost,
     eUPSDone,
 } EUrlParseState;
+
 static bool GovSiteByHttp ( const char * path ) {
     if ( path != NULL ) {
         size_t path_size = string_measure ( path, NULL );
