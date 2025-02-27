@@ -64,7 +64,7 @@ static rc_t openCursor(Object* self, VDatabase const *db)
     if (rc == 0) {
         rc = VCursorOpen(self->curs);
         if (rc == 0) {
-            rc = KLockMake((KLock **)&self->lock);
+            rc = KLockMake(&self->lock);
             assert(rc == 0);
             WGS_stamp(self);
             return 0;
