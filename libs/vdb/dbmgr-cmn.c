@@ -727,7 +727,7 @@ LIB_EXPORT rc_t CC VDBManagerGetObjModDate ( const VDBManager *self, KTime_t *ti
         {
             const KTable *tbl;
             const KDatabase *db;
-            const KMetadata *meta;
+            const KMetadata *meta = NULL;
 
             int path_type = KDBManagerPathType ( self -> kmgr, "%s", path ) & ~ kptAlias;
             switch ( path_type )
@@ -1059,7 +1059,7 @@ bool fillPrefQual1(char * dst, const char * src, size_t sz, char q)
     if (dst[0] != '\0')
         return false;
     else {
-        int i = 0, j = 0;
+        size_t i = 0, j = 0;
 
         dst[i++] = q;
 
