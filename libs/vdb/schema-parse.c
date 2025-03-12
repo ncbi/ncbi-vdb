@@ -134,11 +134,11 @@ bool CC SConstantDefDump ( void *item, void *data )
 
     if ( SDumperMode ( b ) == sdmCompact )
     {
-        return SDumperPrint ( b, "const %T %N=%E;",
+        return (bool) SDumperPrint ( b, "const %T %N=%E;",
             & self -> td, self -> name, self -> expr );
     }
 
-    return SDumperPrint ( b, "const %T %N = %E;\n",
+    return (bool) SDumperPrint ( b, "const %T %N = %E;\n",
         & self -> td, self -> name, self -> expr );
 }
 
@@ -233,6 +233,9 @@ const void *resolve_object ( const KSymTable *tbl,
 
     SchemaEnv env;
     SchemaEnvInit ( & env, EXT_SCHEMA_LANG_VERSION );
+
+    td.dim = 0;
+    td.type_id = 0;
 
     KTokenTextInitCString ( & tt, expr, ctx );
     KTokenSourceInit ( & src, & tt );
@@ -384,7 +387,7 @@ const void *resolve_object ( const KSymTable *tbl,
                         pb . scol = NULL;
                         pb . schema = self;
                         pb . td = td;
-                        pb . distance = -1;
+                        pb . distance = (uint32_t)-1;
 
                         VectorForEach ( & name -> items, false, SColumnBestFit, & pb );
                         obj = pb . scol;
@@ -496,7 +499,7 @@ KToken *next_shallow_token ( const KSymTable *tbl, KTokenSource *src, KToken *t,
 rc_t expect ( const KSymTable *tbl, KTokenSource *src, KToken *t,
     int id, const char *expected, bool required )
 {
-    if ( t -> id == id )
+    if ( t -> id == (uint32_t)id )
         next_token ( tbl, src, t );
     else if ( ! required )
         KTokenExpected ( t, klogWarn, expected );
