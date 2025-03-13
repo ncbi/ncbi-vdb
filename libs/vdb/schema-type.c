@@ -633,6 +633,9 @@ bool STypesetdecl2Typedecl ( const STypeset *self, uint32_t sdim,
     VTypedecl btd;
     uint32_t i, count, best;
 
+    btd.dim = 0;
+    btd.type_id = 0;
+
     /* ambiguous if casting to "any" */
     if ( ancestor -> type_id == 0 )
         return false;
@@ -796,6 +799,9 @@ bool VTypesetdeclToTypesetdecl ( const VTypedecl *self,
     VTypedecl btd, td;
     uint32_t i, count, best;
     const STypeset * src, *dst;
+
+    btd.dim = 0;
+    btd.type_id = 0;
 
     /* find source typeset */
     src = VSchemaFindTypesetid ( schema, self -> type_id );
@@ -982,6 +988,9 @@ bool STypesetdecl2Type ( const STypeset *self, uint32_t sdim,
     VTypedecl btd;
     uint32_t i, count, best;
 
+    btd.dim = 0;
+    btd.type_id = 0;
+
     /* ambiguous if casting to "any" */
     if ( gramps == 0 )
         return false;
@@ -1162,6 +1171,9 @@ bool VTypedeclSTypesetdeclCmn ( const VTypedecl *self, const VSchema *schema,
     VTypedecl btd;
     uint32_t i, count, best;
 
+    btd.dim = 0;
+    btd.type_id = 0;
+
     early = ( ancestor == NULL && distance == NULL ) ? true : false;
 
     for ( best = ~ 0U, count = peer -> count, i = 0; i < count; ++ i )
@@ -1234,6 +1246,9 @@ bool VTypesetTypesetCmn ( const VTypedecl *self, const VSchema *schema,
     uint32_t i, count, best;
     const STypeset *ats, *bts;
 
+    btd.dim = 0;
+    btd.type_id = 0;
+
     /* find self typeset */
     ats = VSchemaFindTypesetid ( schema, self -> type_id );
     if ( ats == NULL || ats -> count == 0 )
@@ -1268,7 +1283,7 @@ bool VTypesetTypesetCmn ( const VTypedecl *self, const VSchema *schema,
 
     for ( best = ~ 0U, count = ats -> count, i = 0; i < count; ++ i )
     {
-        uint32_t dist = ~ 0;
+        uint32_t dist = (uint32_t) ~ 0;
 
         td = ats -> td [ i ];
         td . dim *= self -> dim;
@@ -1403,7 +1418,7 @@ LIB_EXPORT rc_t CC VFormatdeclToText ( const VFormatdecl *self,
     const VSchema *schema, char *buffer, size_t bsize )
 {
     PLOGMSG ( klogWarn, ( klogWarn, "TDB: $(msg)", "msg=handle VFormatdeclToText " ));    
-    return -1;
+    return (rc_t)-1;
 }
 
 /* ToFormatdecl
