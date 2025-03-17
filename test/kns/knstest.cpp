@@ -31,6 +31,7 @@
 #include <os-native.h>
 
 #include <kapp/args.h> /* ArgsMakeAndHandle */
+#include <kapp/vdbapp.h>
 #include <kfg/config.h>
 
 #include <klib/base64.h>
@@ -78,6 +79,7 @@ public:
     {
         const char * ua = nullptr;
         KNSManagerGetUserAgent( & ua );
+//cout << ua << endl;
         return string::npos != string( ua ) . find( str );
     }
 
@@ -104,7 +106,7 @@ FIXTURE_TEST_CASE(KNSManagerGetUserAgent_Default, SessionIdFixture)
 {
     const char * ua = nullptr;
     KNSManagerGetUserAgent(&ua);
-    const string ua_contains = "sra-toolkit Test_KNS_dflt.1.0.0 (phid=noc";
+    const string ua_contains = "sra-toolkit Test_KNS_dflt.0.0.0 (phid=noc";
     //fprintf(stderr,"Got: '%s', expected '%s'\n", ua, ua_contains.data());
     REQUIRE_NE( string::npos, string(ua).find(ua_contains) );
     // VDB-4896: no double quotes inside UA
@@ -174,14 +176,14 @@ FIXTURE_TEST_CASE(KNSManagerSetUserAgentSuffix_Get, SessionIdFixture)
     REQUIRE_RC(KNSManagerGetUserAgentSuffix( & s ));
     REQUIRE_EQ( suffix, string( s ) );
     REQUIRE( UserAgent_Contains(
-        "sra-toolkit Test_KNS_dflt.1.0.0suffix (phid=noc" ) );
+        "sra-toolkit Test_KNS_dflt.0.0.0suffix (phid=noc" ) );
 }
 
 FIXTURE_TEST_CASE(KNSManagerSetUserAgentSuffix_Restore, SessionIdFixture)
 {
     REQUIRE_RC(KNSManagerSetUserAgentSuffix("suffix1"));
     REQUIRE( UserAgent_Contains(
-        "sra-toolkit Test_KNS_dflt.1.0.0suffix1 (phid=noc" ) );
+        "sra-toolkit Test_KNS_dflt.0.0.0suffix1 (phid=noc" ) );
 
     REQUIRE_RC(KNSManagerSetUserAgentSuffix(""));
     const char * ua = nullptr;
@@ -338,23 +340,18 @@ static rc_t argsHandler(int argc, char * argv[]) {
 extern "C"
 {
 
-ver_t CC KAppVersion ( void )
+#if WINDOWS && UNICODE
+    int wmain(int argc, wchar_t* argv[])
+#else
+    int main(int argc, char* argv[])
+#endif
 {
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
-}
+    VDB::VdbApp app( argc, argv );
+    if (!app)
+    {
+        return 1;
+    }
 
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-const char UsageDefaultName[] = "Test_KNS.1";
-
-rc_t CC KMain ( int argc, char *argv [] )
-{
     // make sure to use singleton, otherwise some tests fail
     KNSManagerUseSingleton(true);
 
@@ -362,7 +359,7 @@ rc_t CC KMain ( int argc, char *argv [] )
 
     KConfigDisableUserSettings();
 
-    return KnsTestSuite(argc, argv);
+    return KnsTestSuite(argc, app.GetArgV());
 }
 
 }

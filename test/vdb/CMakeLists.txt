@@ -30,27 +30,30 @@ else()
     set( ADDITIONAL_LIBS "" )
 endif()
 
-AddExecutableTest( SlowTest_VDB_vdb "test-vdb" "${COMMON_LIBS_READ}" )
+set( LIBS_READ kapp "${COMMON_LIBS_READ}")
+set( LIBS_WRITE kapp "${COMMON_LIBS_WRITE}" "${ADDITIONAL_LIBS}")
 
-AddExecutableTest( Test_VDB_wvdb "test-wvdb" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" )
+AddExecutableTest( SlowTest_VDB_vdb "test-vdb" "${LIBS_READ}" )
+
+AddExecutableTest( Test_VDB_wvdb "test-wvdb" "${LIBS_WRITE}" )
 set_tests_properties(Test_VDB_wvdb PROPERTIES ENVIRONMENT VDB_CONFIG=${CMAKE_CURRENT_SOURCE_DIR}/kfg/empty)
 
 AddExecutableTest(
-         SlowTest_VDB_dependencies_dflt "test-dependencies_dflt" "${COMMON_LIBS_READ}" )
+         SlowTest_VDB_dependencies_dflt "test-dependencies_dflt" "${LIBS_READ}" )
 AddExecutableTest(
- Test_VDB_dependencies_404first "Test_VDB_dependencies_404first" "${COMMON_LIBS_READ}" )
+ Test_VDB_dependencies_404first "Test_VDB_dependencies_404first" "${LIBS_READ}" )
 AddExecutableTest(
-           Test_VDB_dependencies_wgs "Test_VDB_dependencies_wgs" "${COMMON_LIBS_READ}" )
+           Test_VDB_dependencies_wgs "Test_VDB_dependencies_wgs" "${LIBS_READ}" )
 
 BuildExecutableForTest( test-VDBManagerGetObjVersion
-    "test-VDBManagerGetObjVersion" "${COMMON_LIBS_READ}" )
+    "test-VDBManagerGetObjVersion" "${LIBS_READ}" )
 add_test( NAME Test_VDBManagerGetObjVersion COMMAND test-VDBManagerGetObjVersion
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../vfs )
 
-AddExecutableTest( Test_VDB_sparse_col_rw "test-sparse-col" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" )
+AddExecutableTest( Test_VDB_sparse_col_rw "test-sparse-col" "${LIBS_WRITE}" )
 set_tests_properties( Test_VDB_sparse_col_rw PROPERTIES FIXTURES_SETUP SPARSE_COL )
 
-AddExecutableTest( Test_VDB_sparse_col_rd "test-sparse-col" "${COMMON_LIBS_READ}" )
+AddExecutableTest( Test_VDB_sparse_col_rd "test-sparse-col" "${LIBS_READ}" )
 target_compile_definitions(Test_VDB_sparse_col_rd PUBLIC READ_ONLY)
 set_tests_properties(Test_VDB_sparse_col_rd PROPERTIES FIXTURES_REQUIRED SPARSE_COL )
 if( RUN_SANITIZER_TESTS )
@@ -60,25 +63,25 @@ if( RUN_SANITIZER_TESTS )
     set_tests_properties(Test_VDB_sparse_col_rd_tsan PROPERTIES FIXTURES_REQUIRED SPARSE_COL)
 endif()
 
-AddExecutableTest( Test_VDB_blob_val "test-blob-val" "${COMMON_LIBS_READ}" )
-AddExecutableTest( Test_VDB_VDB-3060 "test-VDB-3060" "${COMMON_LIBS_READ}" )
-AddExecutableTest( Test_VDB_VDB-3061 "test-VDB-3061" "${COMMON_LIBS_READ}" )
-AddExecutableTest( Test_VDB_bytecode "test-bytecode" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" )
-AddExecutableTest( Test_VDB_database_cmn "test-database-cmn" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" )
-AddExecutableTest( Test_VDB_view "test-view" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS};schema" )
-AddExecutableTest( Test_VDB_wtablecursor "test-wtablecursor" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" )
-AddExecutableTest( Test_VDB_view_cursor "test-view-cursor" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS};schema" )
-AddExecutableTest( Test_VDB_VDB-4156 "test-VDB-4156" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" )
-AddExecutableTest( Test_VDB_META_CMP_COPY "test-vdb-meta-cmp-copy" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" )
-AddExecutableTest( Test_VDB_schema_priv "Test-VDB_schema_priv" "${COMMON_LIBS_READ};${ADDITIONAL_LIBS}" )
-AddExecutableTest( Test_VDB_link "test-link" "${COMMON_LIBS_READ}" )
-AddExecutableTest( Test_VDB_text "test-textvdb" "${COMMON_LIBS_READ};kdbtext" )
-AddExecutableTest( Test_VDB_linker "test-linker" "${COMMON_LIBS_WRITE}" )
+AddExecutableTest( Test_VDB_blob_val "test-blob-val" "${LIBS_READ}" )
+AddExecutableTest( Test_VDB_VDB-3060 "test-VDB-3060" "${LIBS_READ}" )
+AddExecutableTest( Test_VDB_VDB-3061 "test-VDB-3061" "${LIBS_READ}" )
+AddExecutableTest( Test_VDB_bytecode "test-bytecode" "${LIBS_WRITE}" )
+AddExecutableTest( Test_VDB_database_cmn "test-database-cmn" "${LIBS_WRITE}" )
+AddExecutableTest( Test_VDB_view "test-view" "${LIBS_WRITE};schema" )
+AddExecutableTest( Test_VDB_wtablecursor "test-wtablecursor" "${LIBS_WRITE}" )
+AddExecutableTest( Test_VDB_view_cursor "test-view-cursor" "${LIBS_WRITE};schema" )
+AddExecutableTest( Test_VDB_VDB-4156 "test-VDB-4156" "${LIBS_WRITE}" )
+AddExecutableTest( Test_VDB_META_CMP_COPY "test-vdb-meta-cmp-copy" "${LIBS_WRITE}" )
+AddExecutableTest( Test_VDB_schema_priv "Test-VDB_schema_priv" "${LIBS_READ}" )
+AddExecutableTest( Test_VDB_link "test-link" "${LIBS_READ}" )
+AddExecutableTest( Test_VDB_text "test-textvdb" "${LIBS_READ};kdbtext" )
+AddExecutableTest( Test_VDB_linker "test-linker" "${LIBS_WRITE}" )
 
 # Slow tests
-AddExecutableTest( SlowTest_VDB_tablecursor "test-tablecursor" "${COMMON_LIBS_READ}" )
-AddExecutableTest( SlowTest_VDB_vdb-slow "test-vdb-slow" "${COMMON_LIBS_READ}" )
-AddExecutableTest( SlowTest_VDB_wvdb-slow "test-wvdb-slow" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" )
+AddExecutableTest( SlowTest_VDB_tablecursor "test-tablecursor" "${LIBS_READ}" )
+AddExecutableTest( SlowTest_VDB_vdb-slow "test-vdb-slow" "${LIBS_READ}" )
+AddExecutableTest( SlowTest_VDB_wvdb-slow "test-wvdb-slow" "${LIBS_WRITE}" )
 
 # TODO: make sure runs are not cached in the user repository when running tests
 

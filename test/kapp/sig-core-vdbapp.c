@@ -24,53 +24,25 @@
 *
 */
 
-#define UNICODE 1
-#define _UNICODE 1
-
-#include "../main-priv.h"
-#include "main-priv-win.h"
 #include <klib/rc.h>
+#include <kapp/vdbapp.h>
 
-#include <WINDOWS.H>
+#include <unistd.h>
 
-/*--------------------------------------------------------------------------
- * Main
- */
-
-static bool convert_args_paths = true;
-
-int __cdecl wmain ( int argc, wchar_t *wargv [], wchar_t *envp [] )
+int main ( int argc, char *argv [] )
 {
-    char **argv = NULL;
-    int status = 0;
-
-    /* must initialize COM... must initialize COM... */
-    /* CoInitializeEx ( NULL, COINIT_MULTITHREADED ); */
-    CoInitialize(NULL);
-
-    status = ConvertWArgsToUtf8(argc, wargv, &argv, convert_args_paths);
-
-    if ( status == 0 )
+    int ret = VdbInitialize( argc, argv, 0 );
+    if ( ret != 0 )
     {
-        /* perform normal main operations on UTF-8 with POSIX-style paths */
-        rc_t rc = KMane(argc, argv);
-        status = (rc == 0) ? 0 : IF_EXITCODE(rc, 3);
-
-        /* tear down argv */
-        int i = argc;
-        while ( -- i >= 0 )
-            free ( argv [ i ] );
-        free ( argv );
+        return ret;
     }
 
-    /* balance the COM initialization */
-    CoUninitialize ();
+    do {
+        while ( true ) {
+            sleep ( 1000 );
+        }
+    } while (false);
 
-    return status;
-}
-
-void  __declspec(dllexport) __stdcall wmainCRTStartupNoPathConversion()
-{
-    convert_args_paths = false;
-    wmainCRTStartup();
+    VdbTerminate( 0 );
+    return 0;
 }

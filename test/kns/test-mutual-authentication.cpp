@@ -25,6 +25,7 @@
 #include <cmath>
 
 #include <kapp/main.h> // KMain
+#include <kapp/vdbapp.h>
 
 #include <kfs/directory.h> /* KDirectoryRelease */
 #include <kfs/file.h> /* KFileRelease */

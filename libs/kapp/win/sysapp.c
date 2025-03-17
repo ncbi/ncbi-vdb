@@ -24,53 +24,57 @@
 *
 */
 
-#define UNICODE 1
-#define _UNICODE 1
-
 #include "../main-priv.h"
-#include "main-priv-win.h"
+
 #include <klib/rc.h>
+#include <klib/text.h>
 
 #include <WINDOWS.H>
 
-/*--------------------------------------------------------------------------
- * Main
+/* SignalQuit
+ *  tell the program to quit
  */
-
-static bool convert_args_paths = true;
-
-int __cdecl wmain ( int argc, wchar_t *wargv [], wchar_t *envp [] )
+rc_t CC SignalQuit ( void )
 {
-    char **argv = NULL;
-    int status = 0;
+    return RC ( rcExe, rcProcess, rcSignaling, rcNoObj, rcUnknown );
+}
 
+/* SignalHup
+ *  send the program a SIGHUP
+ */
+rc_t CC SignalHup ( void )
+{
+    return RC ( rcExe, rcProcess, rcSignaling, rcNoObj, rcUnknown );
+}
+
+BOOL CC Our_HandlerRoutine(DWORD dwCtrlType)
+{
+    BOOL res = FALSE;
+    switch (dwCtrlType)
+    {
+    case CTRL_C_EVENT: SetQuitting();
+        res = TRUE;
+        break;
+    }
+    return res;
+}
+
+int
+VdbInitializeSystem()
+{
     /* must initialize COM... must initialize COM... */
     /* CoInitializeEx ( NULL, COINIT_MULTITHREADED ); */
     CoInitialize(NULL);
 
-    status = ConvertWArgsToUtf8(argc, wargv, &argv, convert_args_paths);
+    SetConsoleCtrlHandler((PHANDLER_ROUTINE)Our_HandlerRoutine, TRUE);
 
-    if ( status == 0 )
-    {
-        /* perform normal main operations on UTF-8 with POSIX-style paths */
-        rc_t rc = KMane(argc, argv);
-        status = (rc == 0) ? 0 : IF_EXITCODE(rc, 3);
-
-        /* tear down argv */
-        int i = argc;
-        while ( -- i >= 0 )
-            free ( argv [ i ] );
-        free ( argv );
-    }
-
-    /* balance the COM initialization */
-    CoUninitialize ();
-
-    return status;
+    return 0;
 }
 
-void  __declspec(dllexport) __stdcall wmainCRTStartupNoPathConversion()
+void
+VdbTerminateSystem()
 {
-    convert_args_paths = false;
-    wmainCRTStartup();
+    /* balance the COM initialization */
+    CoUninitialize();
 }
+
