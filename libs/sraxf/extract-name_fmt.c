@@ -183,7 +183,7 @@ rc_t extract_name_fmt_2 (KIndex *ndx, const VXformInfo *info, int64_t row_id,
     if ( rc != 0 )
     {
         /* insert failed for whatever reason - return name_fmt */
-        fmtsize = strlen(name_fmt);
+        fmtsize = (uint32_t)strlen(name_fmt);
         if ( name_fmt == sbuf )
         {
             rc = KDataBufferResize ( rslt -> data, fmtsize );
@@ -207,7 +207,7 @@ rc_t CC extract_name_fmt( void *self, const VXformInfo *info, int64_t row_id,
     const spot_name_token_t *tokens;
 
     tokens = argv [ 1 ] . u . data . base;
-    num_tokens = argv [ 1 ] . u . data . elem_count;
+    num_tokens = (uint32_t) argv [ 1 ] . u . data . elem_count;
     tokens += argv [ 1 ] . u . data . first_elem;
 
     rslt -> elem_count = 0;
@@ -215,7 +215,7 @@ rc_t CC extract_name_fmt( void *self, const VXformInfo *info, int64_t row_id,
         return 0;
 
     name = argv [ 0 ] . u . data . base;
-    name_len = argv [ 0 ] . u . data . elem_count;
+    name_len = (uint32_t) argv [ 0 ] . u . data . elem_count;
     name += argv [ 0 ] . u . data . first_elem;
 
     return extract_name_fmt_2(self, info, row_id, rslt,

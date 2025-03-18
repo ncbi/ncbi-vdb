@@ -142,7 +142,7 @@ FIXTURE_TEST_CASE(KRColumn_OpenMetadataRead, KColumn_Fixture)
 }
 
 FIXTURE_TEST_CASE(KRColumn_OpenBlobRead, KColumn_Fixture)
-{
+{   // VDB-5877 valgrind shows "new vs free" if the requested row is missing
     Setup( GetName() );
     const KColumnBlob * blob = nullptr;
     rc_t rc = SILENT_RC ( rcDB,rcColumn,rcSelecting,rcBlob,rcNotFound );

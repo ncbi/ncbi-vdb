@@ -179,7 +179,7 @@ typedef struct SRALocal
       _byte = (unsigned char)((data) & 0xFF); \
       *(_dst+_shift+1) = _byte; \
     } \
-    *(shift)=_shift+2; \
+    *(shift)=(uint16_t)(_shift+2); \
   } while(0)
 /*      
  */   
@@ -193,7 +193,7 @@ typedef struct SRALocal
       *(byte) |= *((src)+_shift+1)>>(8-(bitpos)); \
     } \
     else *(byte) = *((src)+_shift); \
-    if(update) *(shift)=_shift+1; \
+    if(update) *(shift)=(uint16_t)(_shift+1); \
   } while(0)
 
 /*
@@ -215,7 +215,7 @@ typedef struct SRALocal
       _data |= (*((src)+_shift+1) & 0xFF); \
     } \
     *(data) = _data; \
-    if(update) *(shift)=_shift+2; \
+    if(update) *(shift)=(uint16_t)(_shift+2); \
   } while(0)
     
 /*
@@ -230,7 +230,7 @@ typedef struct SRALocal
         int _bits_done = 0;						\
         int _nbits = nbits;						\
                                                                         \
-        if (_bitpos + _nbits + (_shift << 3) > max_bits) {              \
+        if (_bitpos + _nbits + (_shift << 3) > (unsigned int)max_bits) {\
             fprintf(stderr, "legacy code trying to read %u bits beyond end of data at %s, line %d.\n", _bitpos + _nbits + (_shift << 3) - max_bits, __FILE__, __LINE__); \
             _nbits = max_bits - (_bitpos + (_shift << 3));              \
         }                                                               \
@@ -268,8 +268,8 @@ typedef struct SRALocal
         *ldata = _l;                                                    \
                                                                         \
         if(update) {                                                    \
-            *(shift) =_shift;                                           \
-            *(bitpos)=_bitpos;                                          \
+            *(shift) =(uint32_t)_shift;                                 \
+            *(bitpos)=(uint16_t)_bitpos;                                \
         }								\
     } while(0)
 #else
@@ -282,7 +282,7 @@ typedef struct SRALocal
         int _bits_done = 0;						\
         int _nbits = nbits;						\
                                                                         \
-        if (_bitpos + _nbits + (_shift << 3) > max_bits) {              \
+        if (_bitpos + _nbits + (_shift << 3) > (unsigned int)max_bits) {\
             _nbits = max_bits - (_bitpos + (_shift << 3));              \
         }                                                               \
         while (_nbits > 0) {                                            \

@@ -64,7 +64,7 @@ rc_t CC extract_spot_name ( void *self, const VXformInfo *info, int64_t row_id,
     bool name_copy;
 
     const spot_name_token_t *token = argv [ TOK ] . u . data . base;
-    uint32_t num_tokens = argv [ TOK ] . u . data . elem_count;
+    uint64_t num_tokens = argv [ TOK ] . u . data . elem_count;
     token += argv [ TOK ] . u . data . first_elem;
 
     for ( name_copy = false, i = 0; i < num_tokens; ++ i )
@@ -82,7 +82,7 @@ rc_t CC extract_spot_name ( void *self, const VXformInfo *info, int64_t row_id,
     if ( name_copy || num_tokens == 0 )
     {
         const char *name = argv [ NAM ] . u . data . base;
-        uint32_t name_len = argv [ NAM ] . u . data . elem_count;
+        uint64_t name_len = argv [ NAM ] . u . data . elem_count;
 
         rc_t rc = KDataBufferResize ( rslt -> data, name_len );
         if ( rc != 0 )

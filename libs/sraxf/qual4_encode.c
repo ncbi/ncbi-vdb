@@ -54,7 +54,7 @@ static size_t qual4_encode(
 	static const qual4 all_bad = { -5, -5, -5, -5 };
 	uint8_t *dst = Dst;
     const uint8_t * const dend = & ( ( uint8_t* ) Dst ) [ dsize ];
-	int i;
+	size_t i;
 	qual4 
         pat_a_1, pat_a_2, pat_a_3,
         pat_b_1, pat_b_2, pat_b_3,
@@ -191,14 +191,14 @@ rc_t CC qual4_encode_func(
     if (qmin < -40)
         qmin = -40;
     
-    rc = VBlobHeaderOpPushTail(hdr, qmin + 40);
+    rc = VBlobHeaderOpPushTail(hdr, (uint8_t)(qmin + 40));
     if (rc == 0) {
-        rc = VBlobHeaderOpPushTail(hdr, qmax + 40);
+        rc = VBlobHeaderOpPushTail(hdr, (uint8_t)(qmax + 40));
         if (rc == 0) {
             n = qual4_encode(dst->data, (dst->elem_count * dst->elem_bits + 7) >> 3,
                              (const qual4 *)src, 
                              n / 4,
-                             qmin, qmax );
+                             (uint8_t)qmin, (uint8_t)qmax );
             
             if (n > (dst->elem_count * dst->elem_bits + 7) >> 3)
                 return RC(rcXF, rcFunction, rcExecuting, rcBuffer, rcInsufficient);
