@@ -53,7 +53,9 @@ include 'ncbi/clip.vschema';
  *  all bases following "key" into mate pair biological reads
  *
  *  returns a trio for each identified read, with read type, start and length
- */
+ * /
+
+******** moved to sra-tools: VDB-4799 ********
 typeset NCBI:SRA:_454_:drdparam_set { ascii, U8, INSDC:2na:packed };
 extern function
 U32 [ 3 ] NCBI:SRA:_454_:dynamic_read_desc #1 < * U32 edit_distance >
@@ -63,7 +65,7 @@ U32 [ 3 ] NCBI:SRA:_454_:dynamic_read_desc #1 < * U32 edit_distance >
 const U32 NCBI:SRA:_454_:dyn_read_type  = 0;
 const U32 NCBI:SRA:_454_:dyn_read_start = 1;
 const U32 NCBI:SRA:_454_:dyn_read_len   = 2;
-
+*/
 
 /* tokenize_spot_name
  *  scans name on input
