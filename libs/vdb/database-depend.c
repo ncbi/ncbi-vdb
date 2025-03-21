@@ -413,11 +413,12 @@ static rc_t FindRef(Ctx* ctx, const char* seqId, Resolved* resolved,
     VPath* acc = NULL;
     size_t num_writ = 0;
     char ncbiAcc[512] = "";
+    VResolverEnableState oldState = vrUninitialized;
 
     assert(ctx && resolved);
 
     if (cacheState != -1) {
-        VResolverCacheEnable(ctx->resolver, cacheState);
+        oldState = VResolverCacheEnable(ctx->resolver, cacheState);
     }
 
     if (rc == 0) {
@@ -508,8 +509,8 @@ static rc_t FindRef(Ctx* ctx, const char* seqId, Resolved* resolved,
 
     RELEASE(VPath, acc);
 
-    if (cacheState != -1)
-        VResolverCacheEnable(ctx->resolver, vrAlwaysDisable);
+    if (cacheState != -1 && oldState != vrUninitialized)
+        VResolverCacheEnable(ctx->resolver, oldState);
 
     return rc;
 }
