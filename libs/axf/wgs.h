@@ -31,6 +31,7 @@ typedef struct WGS_List WGS_List;
 struct WGS {
     struct VPath const *url;
     struct VCursor const *curs;
+    struct KLock *lock;
     uint32_t colID;
     uint64_t lastAccessStamp;
 };

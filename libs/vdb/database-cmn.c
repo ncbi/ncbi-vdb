@@ -324,21 +324,6 @@ rc_t VDBManagerVPathOpenRemoteDBRead ( const VDBManager *self,
     return rc;
 }
 
-typedef enum {
-    eCheckExistFalse,
-    eCheckExistTrue,
-} ECheckExist;
-
-typedef enum {
-    eCheckFilePathFalse,
-    eCheckFilePathTrue,
-} ECheckFilePath;
-
-typedef enum {
-    eCheckUrlFalse,
-    eCheckUrlTrue,
-} ECheckUrl;
-
 /* Returned rc != 0: env-var was set but somehow invalid
                      or it is eet to empty string == query returns not found
  *  rc == 0:

@@ -33,6 +33,8 @@
 #include <vdb/table.h>
 #include <vdb/cursor.h>
 #include <vfs/path.h>
+#include <atomic.h>
+#include <kproc/lock.h>
 
 #include "wgs.h"
 
@@ -62,6 +64,8 @@ static rc_t openCursor(Object* self, VDatabase const *db)
     if (rc == 0) {
         rc = VCursorOpen(self->curs);
         if (rc == 0) {
+            rc = KLockMake(&self->lock);
+            assert(rc == 0);
             WGS_stamp(self);
             return 0;
         }
@@ -93,6 +97,7 @@ void WGS_close(Object *self)
 
 static void whack(Object *self)
 {
+    KLockRelease(self->lock);
     VCursorRelease(self->curs);
     VPathRelease(self->url);
     free(self);
@@ -112,7 +117,8 @@ static rc_t init(Object *self, VPath const *url, VDatabase const *db)
     return rc;
 }
 
-unsigned WGS_getBases(Object *self, uint8_t *dst, unsigned start, unsigned len, int64_t row)
+static 
+unsigned locked_getBases(Object *self, uint8_t *dst, unsigned start, unsigned len, int64_t row)
 {
     void const *value = NULL;
     uint32_t length = 0;
@@ -126,6 +132,19 @@ unsigned WGS_getBases(Object *self, uint8_t *dst, unsigned start, unsigned len, 
         return n;
     }
     return 0;
+}
+
+unsigned WGS_getBases(Object *self, uint8_t *dst, unsigned start, unsigned len, int64_t row)
+{
+    rc_t rc = KLockAcquire(self->lock);
+    unsigned const result = locked_getBases(self, dst, start, len, row);
+
+    assert(rc == 0);
+    
+    rc = KLockUnlock(self->lock);
+    assert(rc == 0);
+    
+    return result;
 }
 
 unsigned WGS_splitName(int64_t *prow, unsigned namelen, char const *name)

@@ -1432,7 +1432,8 @@ static rc_t KNSManagerVMakeHttpFileIntUnstableImpl( const KNSManager *self,
                                     rc = RC ( rcNS, rcFile, rcOpening, rcFile, rcNotFound );
                                     break;
                                 default:
-                                    rc = RC ( rcNS, rcFile, rcValidating, rcNoObj, rcEmpty );
+                                    rc = RC ( rcNS, rcFile, rcOpening, rcFile,
+                                        rcUnexpected );
                                 }
 
                                 if ( rc == 0 )

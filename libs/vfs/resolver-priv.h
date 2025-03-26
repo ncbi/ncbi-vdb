@@ -299,6 +299,26 @@ void LogNamesServiceErrorsInit(bool enabled);
 void LogNamesServiceErrorsReset();
 
 
+typedef enum {
+    eCheckUrlFalse,
+    eCheckUrlTrue,
+} ECheckUrl;
+
+typedef enum {
+    eCheckFilePathFalse,
+    eCheckFilePathTrue,
+} ECheckFilePath;
+
+typedef enum {
+    eCheckExistFalse,
+    eCheckExistTrue,
+} ECheckExist;
+
+rc_t KDirectoryMagicResolve(const struct KDirectory * dir, const VPath ** path,
+    const String * accession, VResolverAppID app, const char * name,
+    ECheckExist checkExist, ECheckFilePath checkPath, ECheckUrl checkUrl,
+    bool * checkAd);
+
 #ifdef __cplusplus
 }
 #endif

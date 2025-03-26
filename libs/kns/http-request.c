@@ -1704,8 +1704,14 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
 static
 rc_t KClientHttpRequestSendReceiveNoBody ( KClientHttpRequest *self, KClientHttpResult **_rslt, const char *method, bool format_sra )
 {
+    rc_t rc = 0;
+
     KHttpRetrier retrier;
-    rc_t rc = KHttpRetrierInit ( & retrier,
+
+    if (self == NULL)
+        return RC(rcNS, rcNoTarg, rcReading, rcSelf, rcNull);
+
+    rc = KHttpRetrierInit ( & retrier,
         (char *) self -> url_buffer . base, self -> http -> mgr );
 
     if ( rc == 0 )
@@ -2046,6 +2052,7 @@ typedef enum {
     eUPSHost,
     eUPSDone,
 } EUrlParseState;
+
 static bool GovSiteByHttp ( const char * path ) {
     if ( path != NULL ) {
         size_t path_size = string_measure ( path, NULL );

@@ -40,7 +40,7 @@ rc_t CC set_rna_flag(void *Self, const VXformInfo *info, int64_t row_id,
 {
     struct Self *const self = Self;
     rc_t rc = 0;
-    uint32_t const row_len = argv[0]. u . data . elem_count;
+    uint32_t const row_len = (uint32_t) argv[0]. u . data . elem_count;
     uint8_t const *seq = argv[0]. u . data . base;
 
     assert(argv[0].u.data.elem_bits == 8);

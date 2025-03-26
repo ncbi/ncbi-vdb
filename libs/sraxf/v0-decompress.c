@@ -243,10 +243,12 @@ int sra_decompress_pos ( KDataBuffer *dst, KDataBuffer *alt, const void* src, in
   pos = 0;
   while (pos < osize)
   {
+    uint32_t offset32 = offset;
     if (ssize-offset > 4) nbits = 32;
     else                  nbits = ((ssize-offset)==4?32:((ssize-offset)==3?24:((ssize-offset)==2?16:8)))-rbpos;
 
-    _get_long ( pepos, nbits, &offset, &rbpos, &lval, 0, (ssize << 3) );
+    _get_long ( pepos, nbits, &offset32, &rbpos, &lval, 0, (ssize << 3) );
+    offset = (uint16_t)offset32;
 
     iptr = (uchar_t*) kbsearch ( &lval, gv_local.idx_454_pos,
                                  POS_454_HUFF_TREESIZE, sizeof(uint16_t), _s_cmp_key, gv_local.lookup_454_pos );
@@ -340,13 +342,15 @@ int sra_decompress_prb_454 ( KDataBuffer *dst, KDataBuffer *alt, const void* src
   pos = 0;
   while (pos < osize)
   {
+    uint32_t offset32 = offset;
     if (ssize-offset > 4) nbits = 32;
     else                  nbits = ((ssize-offset)==4?32:((ssize-offset)==3?24:((ssize-offset)==2?16:8)))-rbpos;
 
     if ((offset > (uint32_t)ssize) || (nbits == 0))
       return 1;
 
-    _get_long (peprb, nbits, &offset, &rbpos, &lval, 0, (ssize << 3));
+    _get_long (peprb, nbits, &offset32, &rbpos, &lval, 0, (ssize << 3));
+    offset = (uint16_t)offset32;
 
 #if SRA_DECOMPRESS_USE_REVERSE_LOOKUP
     indx = (uchar_t) gv_local.rlookup_454_prb [lval>>16];
@@ -461,10 +465,12 @@ int sra_decompress_sig_454 ( KDataBuffer *dst, KDataBuffer *alt, const void* src
   wbpos = 0; /* write bit position */
   while (pos < osize)
   {
+    uint32_t offset32 = offset;
     if (ssize-offset > 4) nbits = 32;
     else                  nbits = ((ssize-offset)==4?32:((ssize-offset)==3?24:((ssize-offset)==2?16:8)))-rbpos;
 
-    _get_long (pesig, nbits, &offset, &rbpos, &lval, 0, (ssize << 3));
+    _get_long (pesig, nbits, &offset32, &rbpos, &lval, 0, (ssize << 3));
+    offset = (uint16_t)offset32;
 
 #if SRA_DECOMPRESS_USE_REVERSE_LOOKUP
     indx = gv_local.rlookup_454_sig [lval>>16];

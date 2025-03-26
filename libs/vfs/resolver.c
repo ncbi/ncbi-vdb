@@ -1149,6 +1149,15 @@ rc_t VPathCheckFromNamesCGI ( const VPath * path,
                         rcMessage, rcCorrupt);
             }
             else {
+              CONST_STRING(&req, "?debu");
+              if (StringEqual(&name, &req)) {
+                String e;
+                CONST_STRING(&e, "g=not-found");
+                if (!StringEqual(&val, &e))
+                    return RC(rcVFS, rcResolver, rcResolving,
+                        rcMessage, rcCorrupt);
+              }
+              else {
                 CONST_STRING(&req, "?pId=");
                 if (!StringEqual(&name, &req))
                     return RC(rcVFS, rcResolver, rcResolving,
@@ -1167,6 +1176,8 @@ rc_t VPathCheckFromNamesCGI ( const VPath * path,
                         return RC(rcVFS, rcResolver, rcResolving,
                             rcMessage, rcCorrupt);
                 }
+            
+              }
             }
         }
     }
@@ -2987,22 +2998,8 @@ static rc_t VResolverCheckAD(const VResolver *self, const VPath ** path,
     return RC(rcVFS, rcResolver, rcResolving, rcName, rcNotFound);
 }
 
-typedef enum {
-    eCheckExistFalse,
-    eCheckExistTrue,
-} ECheckExist;
 
-typedef enum {
-    eCheckFilePathFalse,
-    eCheckFilePathTrue,
-} ECheckFilePath;
-
-typedef enum {
-    eCheckUrlFalse,
-    eCheckUrlTrue,
-} ECheckUrl;
-
-static rc_t KDirectoryMagicResolve(const KDirectory * dir, const VPath ** path,
+rc_t KDirectoryMagicResolve(const KDirectory * dir, const VPath ** path,
     const String * accession, VResolverAppID app, const char * name,
     ECheckExist checkExist,
     ECheckFilePath checkPath,

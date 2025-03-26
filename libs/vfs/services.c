@@ -38,6 +38,7 @@
 #include <klib/debug.h> /* DBGMSG */
 #include <klib/printf.h> /* string_printf */
 #include <klib/rc.h> /* RC */
+#include <klib/strings.h> /* ENV_MAGIC_LOCAL */
 
 #include <kns/manager.h> /* KNSManagerRelease */
 
@@ -46,6 +47,7 @@
 #include <vfs/resolver-priv.h> /* VResolverQueryWithDir */
 #include <vfs/services-priv.h> /* KServiceNamesExecuteExt */
 
+#include "manager-priv.h" /* VFSManager */
 #include "path-priv.h" /* EVPathInitError */
 #include "resolver-priv.h" /* VResolverResolveName */
 #include "services-cache.h" /* ServicesCacheWhack */
@@ -1388,6 +1390,63 @@ const String * VFSManagerExtNoqualOld(const struct VFSManager * self) {
     return &xNoqual;
 }
 
+static rc_t KDirectoryLocalMagicResolve(const KDirectory * self,
+    const String * accession, const VPath ** path,
+    VResolverAppID app, const struct VResolverAccToken * tok,
+    bool legacy_wgs_refseq, const char * dir)
+{
+    const VPath * magic = NULL;
+    bool checkAd = false;
+    rc_t rc = 0;
+
+    assert(path && self);
+    *path = NULL;
+
+    rc = KDirectoryMagicResolve(self, &magic, accession, app,
+        ENV_MAGIC_LOCAL,
+        eCheckExistTrue, eCheckFilePathTrue, eCheckUrlFalse, &checkAd);
+    if (rc != 0)
+        return rc;
+
+    if (!checkAd) {
+        const VPath * vdbcache = NULL;
+        rc = KDirectoryMagicResolve(self, &vdbcache, accession, app,
+            "VDB_LOCAL_VDBCACHE",
+            eCheckExistTrue, eCheckFilePathTrue, eCheckUrlFalse, &checkAd);
+        if (rc == 0) {
+            if (vdbcache == NULL && magic != NULL) {
+                rc = VFSManagerMakePathWithExtension((VFSManager*)1,
+                    (VPath**)&vdbcache, magic, ".vdbcache");
+                if (rc == 0) {
+                    assert(vdbcache);
+                    if ((KDirectoryPathType(self, vdbcache->path.addr)
+                        & ~kptAlias) != kptFile)
+                    {
+                        RELEASE(VPath, vdbcache);
+                    }
+                }
+            }
+            VPathAttachVdbcache((VPath*)magic, vdbcache);
+            RELEASE(VPath, vdbcache);
+        }
+        *path = magic;
+        return rc;
+    }
+    else {
+        assert(0);
+        /* When LOCAL magic env.var. is found and it refers to AD
+           (the same as accession but it's a directory in cwd)
+           - we still need to resolve it to real path.
+        const VPath * local = NULL;
+        rc = VResolverCheckAD(self, &local, app, tok, legacy_wgs_refseq, dir);
+        if (rc == 0)
+            *path = local;
+        RELEASE(VPath, magic);
+
+        return rc; */
+    }
+}
+
 LIB_EXPORT rc_t CC VFSManagerResolve(const VFSManager * self,
     const char * in, const VPath ** out)
 {
@@ -1407,6 +1466,23 @@ LIB_EXPORT rc_t CC VFSManagerResolve(const VFSManager * self,
         return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
     if (self == NULL)
         return RC(rcVFS, rcQuery, rcExecuting, rcSelf, rcNull);
+
+    {
+        String s;
+        StringInitCString(&s, in);
+        VResolverAppID app = get_accession_app(&s, false, NULL, NULL,
+            false, NULL, NULL, NULL, -1, false);
+        rc = KDirectoryLocalMagicResolve(
+            self->cwd, &s, out, app, NULL, false, NULL);
+        if (rc != 0 || *out != NULL)
+            return rc;
+
+        rc = KDirectoryMagicResolve(self->cwd, out, &s, app,
+            ENV_MAGIC_REMOTE,
+            eCheckExistFalse, eCheckFilePathFalse, eCheckUrlTrue, NULL);
+        if (rc != 0 || *out != NULL)
+            return rc;
+    }
 
     CONST_STRING(&vdbcache, "vdbcache");
     rc = KServiceMakeWithMgr(&s, self, NULL, NULL);

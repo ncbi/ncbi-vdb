@@ -413,7 +413,7 @@ KRColumnOpenBlobRead ( const KRColumn *self, const KColumnBlob **blobp, int64_t 
             return 0;
         }
 
-        free ( (KColumnBlob *)blob );
+        KColumnBlobRelease( (KColumnBlob *)blob );
     }
 
     return rc;
