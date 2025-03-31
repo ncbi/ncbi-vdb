@@ -1049,7 +1049,7 @@ rc_t formal_signature ( KSymTable *tbl, KTokenSource *src, KToken *t,
     rc_t rc = formal_params ( tbl, src, t, env, self, sig, formal_param );
 
     /* remember the number of mandatory params seen */
-    sig -> mand = VectorLength ( & sig -> parms );
+    sig -> mand = (uint16_t) VectorLength ( & sig -> parms );
 
     /* read optional parameters */
     if ( rc == 0 && t -> id == eAsterisk )
