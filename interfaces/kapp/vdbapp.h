@@ -153,14 +153,14 @@ rc_t CC NextLogLevelCommon ( const char * level_parameter );
     namespace VDB
     {
 
-        class VdbApp
+        class Application
         {
         public:
-            VdbApp(int argc, char* argv[], ver_t vers = 0);
+            Application(int argc, char* argv[], ver_t vers = 0);
 #if WINDOWS && UNICODE
-            VdbApp( int argc, wchar_t* argv[], ver_t vers = 0);
+            Application( int argc, wchar_t* argv[], ver_t vers = 0);
 #endif
-            ~VdbApp();
+            ~Application();
 
             operator bool() const { return m_rc == 0; }
             rc_t getRc() const { return m_rc; }

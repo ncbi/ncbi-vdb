@@ -1134,7 +1134,7 @@ extern "C" {
     int main(int argc, char* argv[])
 #endif
     {
-        VDB::VdbApp app(argc, argv);
+        VDB::Application app(argc, argv);
         return KlibTestSuite(argc, app.GetArgV());
     }
 
