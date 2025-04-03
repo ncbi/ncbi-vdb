@@ -388,12 +388,10 @@ void CC HelpOptionsStandard (void);
 
 
 /*
- * This Macro creates a default short form usage output typically
+ * Default short form usage output typically
  * used when no options/parameters are given for a program
  *
- * It requires 'void summary (const char * program_name)' that is also
- * used in 'rc_t Usage (const Args* args)' that is the usage function
- * called when -? -h or --help is given as an option on the command line
+ * It calls 'void UsageSummary (const char * program_name)' if it was set with SetUsageSummary()
  */
 
 rc_t CC MiniUsage ( const Args * args );

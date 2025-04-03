@@ -305,11 +305,6 @@ TEST_CASE(SraReleaseVersionTest) {
 
 //////////////////////////////////////////////////// Main
 extern "C" {
-    ver_t CC KAppVersion(void) { return 0; }
-    rc_t CC Usage(const Args *args) { return 0; }
-    const char UsageDefaultName[] = "test-SraReleaseVersion";
-    rc_t CC UsageSummary(const char *progname) { return 0; }
-
     rc_t CC KMain(int argc, char *argv[]) {
         return SraReleaseVersionTestSuite(argc, argv);
     }

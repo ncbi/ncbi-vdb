@@ -105,6 +105,11 @@ ver_t SetKAppVersion ( ver_t ver )
     return ret;
 }
 
+ver_t GetKAppVersion ()
+{
+    return KAppVersion;
+}
+
 bool CC is_valid_name (const char * string)
 {
     /* we do not allow leading - or empty names */

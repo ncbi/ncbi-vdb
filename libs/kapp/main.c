@@ -50,7 +50,7 @@
 
 rc_t KMane ( int argc, char *argv [] )
 {
-    rc_t rc = VdbInitialize( argc, argv, KAppVersion () );
+    rc_t rc = VdbInitialize( argc, argv, GetKAppVersion () );
     if ( rc != 0 )
     {
         return rc;

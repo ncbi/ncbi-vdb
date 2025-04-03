@@ -35,9 +35,6 @@
 #include <utility>
 #include <cstdio>
 
-TEST_SUITE( KlibTestSuite );
-
-
 TEST_SUITE( TestRCEnumSuite );
 
 TEST_CASE( test )
@@ -322,7 +319,6 @@ TEST_CASE( test )
 }
 
 extern "C" {
-    ver_t CC KAppVersion( void ) { return 0; }
     rc_t CC KMain( int argc, char * argv[] )
     {
         return TestRCEnumSuite( argc, argv );

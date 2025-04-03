@@ -47,7 +47,7 @@ TEST_SUITE( ProgressbarTestSuite );
 TEST_CASE ( Progress1 )
 {
     progressbar * pb;
-    
+
     REQUIRE_RC( make_progressbar( &pb, 0 ) );
     REQUIRE_RC( destroy_progressbar( pb ) );
 }
@@ -55,7 +55,7 @@ TEST_CASE ( Progress1 )
 TEST_CASE ( Progress2 )
 {
     progressbar * pb;
-    
+
     REQUIRE_RC( make_progressbar( &pb, 0 ) );
     REQUIRE_RC( update_progressbar( pb, 75 ) );
     REQUIRE_RC( destroy_progressbar( pb ) );
@@ -64,7 +64,7 @@ TEST_CASE ( Progress2 )
 TEST_CASE ( Progress3 )
 {
     progressbar * pb;
-    
+
     REQUIRE_RC( make_progressbar( &pb, 1 ) );
     REQUIRE_RC( update_progressbar( pb, 780 ) );
     REQUIRE_RC( destroy_progressbar( pb ) );
@@ -73,7 +73,7 @@ TEST_CASE ( Progress3 )
 TEST_CASE ( Progress4 )
 {
     progressbar * pb;
-    
+
     REQUIRE_RC( make_progressbar( &pb, 2 ) );
     REQUIRE_RC( update_progressbar( pb, 7950 ) );
     REQUIRE_RC( destroy_progressbar( pb ) );
@@ -82,7 +82,7 @@ TEST_CASE ( Progress4 )
 TEST_CASE ( Progress5 )
 {
     progressbar * pb;
-    
+
     REQUIRE_RC( make_progressbar_stderr( &pb, 0 ) );
     REQUIRE_RC( update_progressbar( pb, 70 ) );
     REQUIRE_RC( destroy_progressbar( pb ) );
@@ -91,7 +91,7 @@ TEST_CASE ( Progress5 )
 TEST_CASE ( Progress6 )
 {
     progressbar * pb;
-    
+
     REQUIRE_RC( make_progressbar_stderr( &pb, 1 ) );
     REQUIRE_RC( update_progressbar( pb, 720 ) );
     REQUIRE_RC( destroy_progressbar( pb ) );
@@ -100,7 +100,7 @@ TEST_CASE ( Progress6 )
 TEST_CASE ( Progress7 )
 {
     progressbar * pb;
-    
+
     REQUIRE_RC( make_progressbar_stderr( &pb, 2 ) );
     REQUIRE_RC( update_progressbar( pb, 7300 ) );
     REQUIRE_RC( destroy_progressbar( pb ) );
@@ -109,7 +109,7 @@ TEST_CASE ( Progress7 )
 TEST_CASE ( Progress8 )
 {
     progressbar * pb;
-    
+
     REQUIRE_RC( make_progressbar( &pb, 0 ) );
     uint32_t x;
     for ( x = 0; x <= 100; ++x )
@@ -123,7 +123,7 @@ TEST_CASE ( Progress8 )
 TEST_CASE ( Progress9 )
 {
     progressbar * pb;
-    
+
     REQUIRE_RC( make_progressbar( &pb, 1 ) );
     uint32_t x;
     for ( x = 0; x <= 1000; ++x )
@@ -137,7 +137,7 @@ TEST_CASE ( Progress9 )
 TEST_CASE ( Progress10 )
 {
     progressbar * pb;
-    
+
     REQUIRE_RC( make_progressbar( &pb, 2 ) );
     uint32_t x;
     for ( x = 0; x <= 10000; ++x )
@@ -152,24 +152,7 @@ TEST_CASE ( Progress10 )
 extern "C"
 {
 
-#include <kapp/args.h>
 #include <kfg/config.h>
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-
-const char UsageDefaultName[] = "test-progressbar";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {

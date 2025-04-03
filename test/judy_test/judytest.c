@@ -1814,6 +1814,7 @@ rc_t perform_test( const uint32_t count )
 rc_t CC KMain ( int argc, char *argv [] )
 {
     Args * args;
+    SetUsage( Usage );
 
     rc_t rc = ArgsMakeAndHandle ( &args, argc, argv, 1,
                 JudyTestOptions, sizeof ( JudyTestOptions ) / sizeof ( OptDef ) );

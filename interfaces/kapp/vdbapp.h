@@ -73,10 +73,11 @@ rc_t CC SignalNoHup ( void );
  *      MM = major release
  *      mm = minor release
  *    rrrr = bug-fix release
+ * default 0
  */
 //ver_t CC KAppVersion ( void );
+ver_t GetKAppVersion ();
 ver_t SetKAppVersion ( ver_t ver );
-
 
 /* Usage - EXTERN
  *  This function is called when the command line argument
@@ -166,8 +167,8 @@ rc_t CC NextLogLevelCommon ( const char * level_parameter );
             rc_t getRc() const { return m_rc; }
             void setRc( rc_t p_rc ) { m_rc = p_rc; }
 
-            int GetArgC() const { return m_argc; } 
-            char** GetArgV() const { return m_argv; } 
+            int GetArgC() const { return m_argc; }
+            char** GetArgV() const { return m_argv; }
 
         private:
             int m_argc;

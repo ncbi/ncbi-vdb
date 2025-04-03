@@ -56,7 +56,7 @@ static rc_t fill_file_with_random_data( KFile * file, size_t file_size )
             uint32_t data[ 512 ];
             uint32_t i;
             size_t to_write, num_writ;
-            
+
             for ( i = 0; i < 512; ++i ) data[ i ] = rand_32( 0, 0xFFFFFFFF - 1 );
             to_write = ( file_size - total );
             if ( to_write > sizeof data ) to_write = sizeof data;
@@ -137,17 +137,17 @@ void seed_random_number_generator( void )
 TEST_SUITE( LRU_Cache_Test );
 
 #define PAGE_SIZE 128 * 1024
-#define PAGE_COUNT 1024 
+#define PAGE_COUNT 1024
 
 TEST_CASE( LRU_Cache_Test_Basic )
 {
     KOutMsg( "Test: LRU-Cache-Test-Basic\n" );
-    
+
     REQUIRE_RC_FAIL( MakeRRCached ( NULL, NULL, 0, 0 ) );
     REQUIRE_RC_FAIL( MakeRRCached ( NULL, NULL, PAGE_SIZE, PAGE_COUNT ) );
     REQUIRE_RC_FAIL( MakeRRCached ( NULL, NULL, 0, PAGE_COUNT ) );
     REQUIRE_RC_FAIL( MakeRRCached ( NULL, NULL, PAGE_SIZE, 0 ) );
-    
+
     KDirectory * dir;
     REQUIRE_RC( KDirectoryNativeDir( &dir ) );
 
@@ -160,23 +160,23 @@ TEST_CASE( LRU_Cache_Test_Basic )
 
     const KFile * org;
     REQUIRE_RC( KDirectoryOpenFileRead( dir, &org, "%s", filename ) );
-    
+
     REQUIRE_RC_FAIL( MakeRRCached ( NULL, org, 0, 0L ) );
     REQUIRE_RC_FAIL( MakeRRCached ( NULL, org, PAGE_SIZE, PAGE_COUNT ) );
     REQUIRE_RC_FAIL( MakeRRCached ( NULL, org, 0, PAGE_COUNT ) );
     REQUIRE_RC_FAIL( MakeRRCached ( NULL, org, PAGE_SIZE, 0 ) );
-    
+
     const KFile * cache;
     REQUIRE_RC_FAIL( MakeRRCached ( &cache, org, 0, 0 ) );
     REQUIRE_RC_FAIL( MakeRRCached ( &cache, org, 0, PAGE_COUNT ) );
     REQUIRE_RC_FAIL( MakeRRCached ( &cache, org, PAGE_SIZE, 0 ) );
 
     REQUIRE_RC( MakeRRCached ( &cache, org, PAGE_SIZE, PAGE_COUNT ) );
-    
+
     KFileRelease( org );
     KFileRelease( cache );
     KDirectoryRemove ( dir, true, "%s", filename );
-    
+
     REQUIRE_RC( KDirectoryRelease( dir ) );
 }
 
@@ -203,7 +203,7 @@ void on_event( void * data, enum cache_event event, uint64_t pos, size_t len, ui
             case CE_ENTER   : ev -> enter++;
                               //KOutMsg( "E %lx.%lx (%u)\n", pos, len, block_nr );
                               break;
-                              
+
             case CE_DISCARD : ev -> discard++;
                               //KOutMsg( "D %lx.%lx (%u)\n", pos, len, block_nr );
                               break;
@@ -225,7 +225,7 @@ void print_events( events * events )
 TEST_CASE( LRU_Cache_Test_Linear_Reading )
 {
     KOutMsg( "Test: LRU-Cache-Test-Linear-Reading\n" );
-    
+
 	KDirectory * dir;
 	REQUIRE_RC( KDirectoryNativeDir( &dir ) );
 
@@ -241,7 +241,7 @@ TEST_CASE( LRU_Cache_Test_Linear_Reading )
 
     const KFile * cache;
     REQUIRE_RC( MakeRRCached ( &cache, org, 64 * 1024, 22 ) );
-    
+
     uint64_t file_size;
     REQUIRE_RC( KFileSize ( cache, &file_size ) );
     REQUIRE( ( file_size == ( PAGE_SIZE * 10 ) ) );
@@ -249,7 +249,7 @@ TEST_CASE( LRU_Cache_Test_Linear_Reading )
     events events;
     memset( &events, 0, sizeof events );
     REQUIRE_RC( SetRRCachedEventHandler( cache, &events, on_event ) );
-   
+
     REQUIRE_RC( compare_file_content( org, cache, 0, file_size ) );
     REQUIRE_RC( compare_file_content( org, cache, 0, file_size ) );
 
@@ -260,12 +260,12 @@ TEST_CASE( LRU_Cache_Test_Linear_Reading )
     // print_events( &events );
     REQUIRE( events . requests == 21 );
     REQUIRE( events . found == 20 );
-    REQUIRE( events . enter == 20 );    
+    REQUIRE( events . enter == 20 );
     REQUIRE( events . discard == 0 );
     REQUIRE( events . failed == 0 );
 #endif
 
-    REQUIRE_RC( KDirectoryOpenFileRead( dir, &org, "%s", filename ) );    
+    REQUIRE_RC( KDirectoryOpenFileRead( dir, &org, "%s", filename ) );
     REQUIRE_RC( MakeRRCached ( &cache, org, 64 * 1024, 20 ) );
     memset( &events, 0, sizeof events );
     REQUIRE_RC( SetRRCachedEventHandler( cache, &events, on_event ) );
@@ -277,7 +277,7 @@ TEST_CASE( LRU_Cache_Test_Linear_Reading )
     //print_events( &events );
     REQUIRE( events . requests == 21 );
     REQUIRE( events . found == 20 );
-    REQUIRE( events . enter == 20 );    
+    REQUIRE( events . enter == 20 );
     REQUIRE( events . discard == 0 );
     REQUIRE( events . failed == 0 );
 #endif
@@ -295,7 +295,7 @@ TEST_CASE( LRU_Cache_Test_Random_Reading )
 	KDirectory * dir;
 	REQUIRE_RC( KDirectoryNativeDir( &dir ) );
 
-    const char * filename = "./LRU_Cache_Test_Random_Reading.txt";    
+    const char * filename = "./LRU_Cache_Test_Random_Reading.txt";
     KFile * file;
 
     size_t file_size = PAGE_SIZE * 10;
@@ -330,7 +330,7 @@ TEST_CASE( LRU_Cache_Test_Random_Reading )
     //print_events( &events );
     REQUIRE( events . requests >= loops );
     REQUIRE( events . found >= loops );
-    REQUIRE( events . enter = page_count );    
+    REQUIRE( events . enter = page_count );
     REQUIRE( events . failed == 0 );
 #endif
 
@@ -344,25 +344,7 @@ TEST_CASE( LRU_Cache_Test_Random_Reading )
 extern "C"
 {
 
-#include <kapp/args.h>
 #include <kfg/config.h>
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-
-rc_t CC UsageSummary ( const char * progname )
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-
-const char UsageDefaultName[] = "lru-cache-test";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {

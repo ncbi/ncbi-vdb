@@ -34,11 +34,6 @@
 #include <stdio.h>
 #include <unistd.h>
 
-ver_t CC KAppVersion ( void )
-{
-    return 0;
-}
-
 const char UsageDefaultName[] = "sig-core";
 
 rc_t CC UsageSummary ( const char *progname )
@@ -72,7 +67,7 @@ rc_t CC Usage ( const Args *args )
     KOutMsg ("Options:\n");
 
     HelpOptionsStandard ();
-    HelpVersion ( fullpath, KAppVersion () );
+    HelpVersion ( fullpath, GetKAppVersion () );
 
     return rc;
 }
@@ -81,6 +76,8 @@ rc_t CC Usage ( const Args *args )
 rc_t CC KMain ( int argc, char *argv [] )
 {
     Args *args;
+    SetUsage( Usage );
+    SetUsageSummary( UsageSummary );
     rc_t rc;
     do {
         rc = ArgsMakeAndHandle ( & args, argc, argv, 0 );

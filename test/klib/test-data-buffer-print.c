@@ -47,14 +47,14 @@ static
 rc_t run ( const char *progname )
 {
     rc_t rc = 0;
-    
+
     char const *const cicero = "Sed ut perspiciatis, unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam eaque ipsa, quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt, explicabo. Nemo enim ipsam voluptatem, quia voluptas sit, aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos, qui ratione voluptatem sequi nesciunt, neque porro quisquam est, qui dolorem ipsum, quia dolor sit amet consectetur adipisci[ng]velit, sed quia non-numquam [do] eius modi tempora inci[di]dunt, ut labore et dolore magnam aliquam quaerat voluptatem. Ut enim ad minima veniam, quis nostrum[d] exercitationem ullam corporis suscipitlaboriosam, nisi ut aliquid ex ea commodi consequatur? Quis autem vel eum iure reprehenderit, qui inea voluptate velit esse, quam nihil molestiae consequatur, vel illum, qui dolorem eum fugiat, quo voluptas nulla pariatur?";
     size_t const orig_length = strlen(cicero);
     int const replicount = (int)( (5000 + orig_length - 1) / orig_length ); /* allocation is in 4k chunks; pick a repeat count so that the buffer has to grow at least once */
     size_t const final_length = (orig_length + 1) * replicount + 1;
     KDataBuffer buffer;
     int i;
-    
+
     memset(&buffer, 0, sizeof buffer);
     for (i = 0; i < replicount; ++i) {
         rc = KDataBufferPrintf(&buffer, "%s", cicero);
@@ -95,60 +95,6 @@ rc_t run ( const char *progname )
     return rc;
 }
 
-
-/* Version  EXTERN
- *  return 4-part version code: 0xMMmmrrrr, where
- *      MM = major release
- *      mm = minor release 
- *    rrrr = bug-fix release
- */
-ver_t CC KAppVersion ( void )
-{
-    return 0;
-}
-
-
-/* Usage
- *  This function is called when the command line argument
- *  handling sees -? -h or --help
- */
-rc_t CC UsageSummary ( const char *progname )
-{
-    return KOutMsg (
-        "\n"
-        "Usage:\n"
-        "  %s [Options]\n"
-        "\n"
-        "Summary:\n"
-        "  Simple test of printf.\n"
-        , progname );
-}
-
-const char UsageDefaultName[] = "time-data-buffer-print";
-
-rc_t CC Usage ( const Args *args )
-{
-    const char * progname = UsageDefaultName;
-    const char * fullpath = UsageDefaultName;
-    rc_t rc;
-
-    if (args == NULL)
-        rc = RC (rcApp, rcArgv, rcAccessing, rcSelf, rcNull);
-    else
-        rc = ArgsProgram (args, &fullpath, &progname);
-
-    UsageSummary (progname);
-
-    KOutMsg ("Options:\n");
-
-    HelpOptionsStandard();
-
-    HelpVersion (fullpath, KAppVersion());
-
-    return rc;
-}
-
-    
 /* KMain
  */
 rc_t CC KMain ( int argc, char *argv [] )

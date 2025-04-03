@@ -43,31 +43,6 @@ using namespace ncbi::NK;
 
 TEST_SUITE(KAppTestSuite);
 
-const char UsageDefaultName[] = "args-test";
-
-#if ! ALLOW_TESTING_CODE_TO_RELY_UPON_CODE_BEING_TESTED
-extern "C"
-{
-    rc_t CC UsageSummary ( const char *progname )
-    {
-        return TestEnv::UsageSummary ( progname );
-    }
-
-    rc_t CC Usage ( const Args *args )
-    {
-        const char* progname = UsageDefaultName;
-        const char* fullpath = UsageDefaultName;
-
-        rc_t rc = (args == NULL) ?
-            RC (rcApp, rcArgv, rcAccessing, rcSelf, rcNull):
-            ArgsProgram(args, &fullpath, &progname);
-        if ( rc == 0 )
-            rc = TestEnv::Usage ( progname );
-        return rc;
-    }
-}
-#endif
-
 #define OPTION_TEST "test"
 
 static char arg_append_string[] = "__T__";
@@ -77,13 +52,13 @@ rc_t TestArgConvAppender(const Args * args, uint32_t arg_index, const char * arg
 {
     char * res = (char *)malloc(arg_len + arg_append_string_len + 1);
     assert(res);
-    
+
     memmove(res, arg, arg_len);
     memmove(res + arg_len, arg_append_string, arg_append_string_len);
     res[arg_len + arg_append_string_len] = 0;
-    
+
     *result = res;
-    
+
     return 0;
 }
 
@@ -97,9 +72,9 @@ rc_t TestArgConvFileCreator(const Args * args, uint32_t arg_index, const char * 
     rc_t rc;
     KDirectory * dir;
     KFile * file;
-    
+
     char * file_path = const_cast<char *>(arg);
-    
+
     rc = KDirectoryNativeDir( &dir );
     if (rc == 0)
     {
@@ -109,18 +84,18 @@ rc_t TestArgConvFileCreator(const Args * args, uint32_t arg_index, const char * 
         {
             char buffer[4] = { 'a', 'b', 'c', 'd' };
             size_t num_written;
-            
+
             rc = KFileWriteAll(file, 0, buffer, sizeof buffer / sizeof buffer[0], &num_written);
             if (rc == 0)
             {
                 assert(num_written == sizeof buffer / sizeof buffer[0]);
-                
+
                 *result = file;
                 *whack = WhackArgFile;
                 KDirectoryRelease( dir );
                 return 0;
             }
-            
+
             fprintf(stderr, "cannot write test buffer to create file: %s\n", file_path);
             KFileRelease(file);
         }
@@ -130,7 +105,7 @@ rc_t TestArgConvFileCreator(const Args * args, uint32_t arg_index, const char * 
         }
         KDirectoryRelease( dir );
     }
-    
+
     return rc;
 }
 
@@ -181,26 +156,26 @@ TEST_CASE(KApp_ArgsMakeParamsConvAppend)
     };
     int argc;
     const char * argv[16];
-    
+
     /* testing params */
     argc = 2;
     argv[0] = "test_1";
     argv[1] = "abcd";
-    
+
     Args * args;
     REQUIRE_RC(ArgsMake (&args));
     REQUIRE_RC(ArgsAddParamArray (args, Parameters, sizeof Parameters / sizeof Parameters[0]));
     REQUIRE_RC(ArgsParse (args, argc, (char**)argv));
-    
+
     {
         const char * value;
         uint32_t param_count;
-        
+
         REQUIRE_RC(ArgsParamCount (args, &param_count));
         REQUIRE_EQ(param_count, (uint32_t)argc-1);
-        
+
         REQUIRE_RC(ArgsParamValue (args, 0, reinterpret_cast<const void**>(&value)));
-        
+
         REQUIRE(memcmp(value, argv[1], 4) == 0);
         REQUIRE(memcmp(value + 4, arg_append_string, arg_append_string_len + 1) == 0);
     }
@@ -215,28 +190,28 @@ TEST_CASE(KApp_ArgsMakeOptions)
     };
     int argc;
     const char * argv[16];
-    
+
     /* testing params */
     argc = 3;
     argv[0] = "test_2";
     argv[1] = "--test";
     argv[2] = "abcd";
-    
+
     Args * args;
     REQUIRE_RC(ArgsMake (&args));
     REQUIRE_RC(ArgsAddOptionArray (args, Options, sizeof Options / sizeof Options[0]));
     REQUIRE_RC(ArgsParse (args, argc, (char**)argv));
-    
+
     {
         const char * value;
         uint32_t count;
-        
+
         REQUIRE_RC(ArgsParamCount (args, &count));
         REQUIRE_EQ(count, (uint32_t)0);
-        
+
         REQUIRE_RC(ArgsOptionCount (args, OPTION_TEST, &count));
         REQUIRE_EQ(count, (uint32_t)1);
-        
+
         REQUIRE_RC(ArgsOptionValue (args, OPTION_TEST, 0, reinterpret_cast<const void**>(&value)));
         REQUIRE_EQ(std::string(value), std::string(argv[2]));
     }
@@ -252,37 +227,37 @@ TEST_CASE(KApp_ArgsMakeOptionsConversion)
     int argc;
     const char * argv[16];
     KDirectory * dir;
-    
+
     /* testing params */
     argc = 3;
     argv[0] = "test_2";
     argv[1] = "--test";
     argv[2] = "file.test";
-    
+
     Args * args;
     REQUIRE_RC(ArgsMake (&args));
     REQUIRE_RC(ArgsAddOptionArray (args, Options, sizeof Options / sizeof Options[0]));
     REQUIRE_RC(ArgsParse (args, argc, (char**)argv));
-    
+
     {
         const KFile * file;
         uint32_t count;
         uint64_t file_size;
-        
+
         REQUIRE_RC(ArgsParamCount (args, &count));
         REQUIRE_EQ(count, (uint32_t)0);
-        
+
         REQUIRE_RC(ArgsOptionCount (args, OPTION_TEST, &count));
         REQUIRE_EQ(count, (uint32_t)1);
-        
+
         REQUIRE_RC(ArgsOptionValue (args, OPTION_TEST, 0, reinterpret_cast<const void**>(&file)));
-        
+
         REQUIRE_RC(KFileSize (file, &file_size));
-        
+
         REQUIRE_EQ(file_size, (uint64_t)4);
     }
     REQUIRE_RC(ArgsWhack (args));
-    
+
     REQUIRE_RC(KDirectoryNativeDir ( &dir ));
     REQUIRE_RC(KDirectoryRemove(dir, true, "%s", argv[2]));
     REQUIRE_RC(KDirectoryRelease (dir));
@@ -291,17 +266,6 @@ TEST_CASE(KApp_ArgsMakeOptionsConversion)
 
 extern "C"
 {
-
-/* Version  EXTERN
- *  return 4-part version code: 0xMMmmrrrr, where
- *      MM = major release
- *      mm = minor release
- *    rrrr = bug-fix release
- */
-ver_t CC KAppVersion (void)
-{
-    return 0;
-}
 
 /* KMain - EXTERN
  *  executable entrypoint "main" is implemented by

@@ -172,23 +172,6 @@ TEST_CASE(KRamFileWrite_shift_right)
 extern "C"
 {
 
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-
-rc_t CC UsageSummary (const char * prog_name)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args)
-{
-    return 0;
-}
-
-const char UsageDefaultName[] = "test-kfg";
-
 rc_t CC KMain ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();

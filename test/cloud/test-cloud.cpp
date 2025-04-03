@@ -146,7 +146,7 @@ public:
     {
         CreateFile(p_name, p_content, p_content2, p_content3, true);
     }
-    
+
     CloudMgr * m_mgr;
     CloudProviderId m_id;
     Cloud * m_cloud;
@@ -1012,19 +1012,6 @@ static rc_t argsHandler(int argc, char * argv[]) {
 #include <klib/log.h> /* KLogLevelSet */
 
 extern "C" {
-    ver_t CC KAppVersion ( void )
-    {
-        return 0x1000000;
-    }
-    rc_t CC UsageSummary (const char * progname)
-    {
-        return 0;
-    }
-    rc_t CC Usage ( const Args * args )
-    {
-        return 0;
-    }
-    const char UsageDefaultName[] = "test-kns";
     rc_t CC KMain ( int argc, char *argv [] )
     {
         setenv("HOME", ".", 1);

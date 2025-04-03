@@ -55,7 +55,7 @@ public:
             KDirectoryRelease( m_dir );
         }
     }
-    
+
     char m_resolved[ 4 * 1024 ];
     KDirectory *m_dir;
 };
@@ -73,7 +73,7 @@ FIXTURE_TEST_CASE( ResolveTest_Simple, ResolveFixture )
 FIXTURE_TEST_CASE( ResolveTest_DoubleLeading, ResolveFixture )
 {
     REQUIRE_RC( KDirectoryResolvePath ( m_dir, true, m_resolved, sizeof m_resolved, "//1/22/333" ) );
-#ifdef WINDOWS    
+#ifdef WINDOWS
     REQUIRE_RESOLVE( "//1/22/333", "//1/22/333");
 #else
     REQUIRE_RESOLVE( "//1/22/333", "/1/22/333");
@@ -122,11 +122,11 @@ FIXTURE_TEST_CASE( ResolveTest_TrailingTripleSlash, ResolveFixture )
 
 FIXTURE_TEST_CASE( ResolveTest_ShortTrailingTripleSlash, ResolveFixture )
 {
-#ifdef WINDOWS    
+#ifdef WINDOWS
     REQUIRE_RESOLVE( "/a///", "/a/" ); // should not drop the '/' after the drive letter since it is significant
 #else
-    REQUIRE_RESOLVE( "/a///", "/a" ); 
-#endif    
+    REQUIRE_RESOLVE( "/a///", "/a" );
+#endif
 }
 
 FIXTURE_TEST_CASE( ResolveTest_DotsAgogo, ResolveFixture )
@@ -141,23 +141,23 @@ FIXTURE_TEST_CASE( ResolveTest_DoubleDotsAgogo, ResolveFixture )
 
 FIXTURE_TEST_CASE( ResolveTest_LeadingDoubleSlash, ResolveFixture )
 {
-#ifdef WINDOWS    
+#ifdef WINDOWS
     REQUIRE_RESOLVE( "//pqrst/pon1", "//pqrst/pon1" );
 #else
     REQUIRE_RESOLVE( "//pqrst/pon1", "/pqrst/pon1" );
-#endif    
+#endif
 }
 
 FIXTURE_TEST_CASE( ResolveTest_LeadingTripleSlash, ResolveFixture )
 {
-#ifdef WINDOWS    
+#ifdef WINDOWS
     REQUIRE_RESOLVE( "///pqrst/pon1", "//pqrst/pon1" );
 #else
     REQUIRE_RESOLVE( "///pqrst/pon1", "/pqrst/pon1" );
-#endif    
+#endif
 }
 
-#ifndef WINDOWS    
+#ifndef WINDOWS
 FIXTURE_TEST_CASE( ResolveTest_Relative, ResolveFixture )
 {
     REQUIRE_RC( KDirectoryResolvePath ( m_dir, false, m_resolved, sizeof m_resolved, "/" ) );
@@ -169,23 +169,6 @@ FIXTURE_TEST_CASE( ResolveTest_Relative, ResolveFixture )
 
 extern "C"
 {
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-
-rc_t CC UsageSummary (const char * prog_name)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args)
-{
-    return 0;
-}
-
-const char UsageDefaultName[] = "test-resolve";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {

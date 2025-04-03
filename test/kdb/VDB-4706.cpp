@@ -58,8 +58,6 @@ using namespace std;
 
 TEST_SUITE ( KdbTestSuite );
 
-const char UsageDefaultName[] = "VDB-4706";
-
 class KDB_ColumnCopyFixture {
 public:
     void createTable ( const char *tblname )
@@ -329,14 +327,7 @@ FIXTURE_TEST_CASE ( CopyMeta, KDB_ColumnCopyFixture )
 
 extern "C" {
 
-#include <kapp/args.h>
 #include <kfg/config.h>
-#include <klib/debug.h> // KDbgSetString
-
-ver_t CC KAppVersion ( void ) { return 0x1000000; }
-rc_t CC UsageSummary ( const char *progname ) { return 0; }
-
-rc_t CC Usage ( const Args *args ) { return 0; }
 
 rc_t CC KMain ( int argc, char *argv[] )
 {

@@ -90,8 +90,6 @@ TEST_CASE ( TEST_PROXY_FROM_ENV ) {
 }
 
 extern "C" {
-    ver_t CC KAppVersion ( void ) { return 0; }
-
 #define TODO -1
 
     rc_t CC KMain ( int argc, char * argv [] )  {

@@ -66,7 +66,7 @@ static rc_t fill_file_with_random_data( KFile * file, size_t file_size )
 			uint32_t data[ 512 ];
 			uint32_t i;
 			size_t to_write, num_writ;
-			
+
 			for ( i = 0; i < 512; ++i ) data[ i ] = rand_32( 0, 0xFFFFFFFF - 1 );
 			to_write = ( file_size - total );
 			if ( to_write > sizeof data ) to_write = sizeof data;
@@ -134,7 +134,7 @@ static rc_t remove_file( KDirectory * dir, const char * filename )
 TEST_CASE( CacheTee_out_of_space )
 {
 	KOutMsg( "Test: CacheTee_out_of_space\n" );
-	
+
     KDirectory * dir;
     REQUIRE_RC( KDirectoryNativeDir( &dir ) );
 
@@ -145,31 +145,31 @@ TEST_CASE( CacheTee_out_of_space )
     // we open this file with random-data, created above
 	const KFile * org;
     REQUIRE_RC( KDirectoryOpenFileRead( dir, &org, "%s", DATAFILE ) );
-	
+
     // we wrap this data-file into a cache-file
 	const KFile * tee;
 	REQUIRE_RC( KDirectoryMakeCacheTee ( dir, &tee, org, BLOCKSIZE, "%s", CACHEFILE ) );
 
     // now we can release the original data-file, the tee-file holds a reference to it...
 	REQUIRE_RC( KFileRelease( org ) );
-	
+
     // this is the part that should not fail: we are reading the whole content of the tee-file.
     // because we have created the tee-file in a directory that has a quota...
     // the tee-file cannot grow to the necessary size, it should internally switch into
     // a passtrough-mode and just read the org-file instead of trying to cache...
     REQUIRE_RC( read_all( tee, ( 1024 * 7 ) ) );
-    
+
     // we clean up, by releasing the tee-file, and removing all the temp. files we created
 	REQUIRE_RC( KFileRelease( tee ) );
     REQUIRE_RC( remove_file( dir, CACHEFILE ) );
     REQUIRE_RC( remove_file( dir, DATAFILE ) );
 	REQUIRE_RC( KDirectoryRelease( dir ) );
-}                                 
+}
 
 TEST_CASE( CacheTee_v2_out_of_space )
 {
 	KOutMsg( "Test: CacheTee_v2_out_of_space\n" );
-	
+
     KDirectory * dir;
     REQUIRE_RC( KDirectoryNativeDir( &dir ) );
 
@@ -180,31 +180,31 @@ TEST_CASE( CacheTee_v2_out_of_space )
     // we open this file with random-data, created above
 	const KFile * org;
     REQUIRE_RC( KDirectoryOpenFileRead( dir, &org, "%s", DATAFILE ) );
-	
+
     // we wrap this data-file into a cache-file
 	const KFile * tee;
     REQUIRE_RC( KDirectoryMakeCacheTee2 ( dir, &tee, org, BLOCKSIZE, "%s", CACHEFILE ) );
-    
+
     // now we can release the original data-file, the tee-file holds a reference to it...
 	REQUIRE_RC( KFileRelease( org ) );
-	
+
     // this is the part that should not fail: we are reading the whole content of the tee-file.
     // because we have created the tee-file in a directory that has a quota...
     // the tee-file cannot grow to the necessary size, it should internally switch into
     // a passtrough-mode and just read the org-file instead of trying to cache...
     REQUIRE_RC( read_all( tee, ( 1024 * 7 ) ) );
-    
+
     // we clean up, by releasing the tee-file, and removing all the temp. files we created
 	REQUIRE_RC( KFileRelease( tee ) );
     REQUIRE_RC( remove_file( dir, CACHEFILE ) );
     REQUIRE_RC( remove_file( dir, DATAFILE ) );
 	REQUIRE_RC( KDirectoryRelease( dir ) );
-}                                 
+}
 
 TEST_CASE( CacheTee_v3_out_of_space )
 {
 	KOutMsg( "Test: CacheTee_v3_out_of_space\n" );
-	
+
     KDirectory * dir;
     REQUIRE_RC( KDirectoryNativeDir( &dir ) );
 
@@ -215,38 +215,32 @@ TEST_CASE( CacheTee_v3_out_of_space )
     // we open this file with random-data, created above
 	const KFile * org;
     REQUIRE_RC( KDirectoryOpenFileRead( dir, &org, "%s", DATAFILE ) );
-	
+
     // we wrap this data-file into a cache-file
 	const KFile * tee;
     REQUIRE_RC( KDirectoryMakeKCacheTeeFile_v3 ( dir, &tee, org, BLOCKSIZE, 2, 0, false, false, "%s", CACHEFILE ) );
-    
+
     // now we can release the original data-file, the tee-file holds a reference to it...
 	REQUIRE_RC( KFileRelease( org ) );
-	
+
     // this is the part that should not fail: we are reading the whole content of the tee-file.
     // because we have created the tee-file in a directory that has a quota...
     // the tee-file cannot grow to the necessary size, it should internally switch into
     // a passtrough-mode and just read the org-file instead of trying to cache...
     REQUIRE_RC( read_all( tee, ( 1024 * 7 ) ) );
-    
+
     // we clean up, by releasing the tee-file, and removing all the temp. files we created
 	REQUIRE_RC( KFileRelease( tee ) );
     REQUIRE_RC( remove_file( dir, CACHEFILE ) );
     REQUIRE_RC( remove_file( dir, DATAFILE ) );
 	REQUIRE_RC( KDirectoryRelease( dir ) );
-}                                 
+}
 
 //////////////////////////////////////////// Main
 extern "C"
 {
 
-#include <kapp/args.h>
 #include <kfg/config.h>
-
-    ver_t CC KAppVersion ( void ) { return 0x1000000; }
-    rc_t CC UsageSummary ( const char * progname ) { return 0; }
-    rc_t CC Usage ( const Args * args ) { return 0; }
-    const char UsageDefaultName[] = "test-cachetee-out-of-space";
 
     rc_t CC KMain ( int argc, char *argv [] )
     {

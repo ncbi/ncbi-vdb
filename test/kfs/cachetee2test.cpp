@@ -76,7 +76,7 @@ static rc_t fill_file_with_random_data( KFile * file, size_t file_size )
             uint32_t data[ 512 ];
             uint32_t i;
             size_t to_write, num_writ;
-            
+
             for ( i = 0; i < 512; ++i ) data[ i ] = rand_32( 0, 0xFFFFFFFF - 1 );
             to_write = ( file_size - total );
             if ( to_write > sizeof data ) to_write = sizeof data;
@@ -251,47 +251,47 @@ static void finish_cachetee_tests( void )
 TEST_CASE( CacheTee2_Basic )
 {
     KOutMsg( "Test: CacheTee2_Basic\n" );
-    
+
     KDirectory * dir;
     REQUIRE_RC( KDirectoryNativeDir( &dir ) );
 
     const KFile * org;
     REQUIRE_RC( KDirectoryOpenFileRead( dir, &org, "%s", DATAFILE ) );
-    
+
     const KFile * tee;
     REQUIRE_RC( KDirectoryMakeCacheTee2 ( dir, &tee, org, BLOCKSIZE, "%s", CACHEFILE ) );
 
     REQUIRE_RC( KFileRelease( tee ) );
     REQUIRE_RC( KFileRelease( org ) );
-    
+
     const KFile * cache;
     REQUIRE_RC( KDirectoryOpenFileRead( dir, &cache, "%s.cache", CACHEFILE ) );
-    
+
     bool is_complete;
-    REQUIRE_RC( IsCacheTee2FileComplete( cache, &is_complete ) );    
+    REQUIRE_RC( IsCacheTee2FileComplete( cache, &is_complete ) );
     REQUIRE( !is_complete );
-    
+
     float percent;
     uint64_t bytes_in_cache;
     REQUIRE_RC( GetCacheTee2FileCompleteness( cache, &percent, &bytes_in_cache ) );
     REQUIRE( ( percent == 0.0 ) );
     REQUIRE( ( bytes_in_cache == 0 ) );
-    
+
     REQUIRE_RC( KFileRelease( cache ) );
     REQUIRE_RC( KDirectoryRelease( dir ) );
-}                                 
+}
 
 
 TEST_CASE( CacheTee2_Read )
 {
     KOutMsg( "Test: CacheTee2_Read\n" );
-    
+
     KDirectory * dir;
     REQUIRE_RC( KDirectoryNativeDir( &dir ) );
 
     const KFile * org;
     REQUIRE_RC( KDirectoryOpenFileRead( dir, &org, "%s", DATAFILE ) );
-    
+
     const KFile * tee;
     REQUIRE_RC( KDirectoryMakeCacheTee2 ( dir, &tee, org, BLOCKSIZE, "%s", CACHEFILE ) );
 
@@ -301,7 +301,7 @@ TEST_CASE( CacheTee2_Read )
 
     REQUIRE_RC( compare_file_content( org, tee, 0, 100 ) );         // do it again, now from the cache
     REQUIRE_RC( compare_file_content( org, tee, 10, 100 ) );
-    
+
     REQUIRE_RC( compare_file_content( org, tee, 1024 * BLOCKSIZE, 100 ) );    // small read at block boundary
     REQUIRE_RC( compare_file_content( org, tee, 1024 * BLOCKSIZE, 100 ) );    // do it again, now from cache
 
@@ -315,13 +315,13 @@ TEST_CASE( CacheTee2_Read )
 
     REQUIRE_RC( compare_file_content( org, tee, 200, 1024 * BLOCKSIZE * 3 ) );    // very large read at pos 200
     REQUIRE_RC( compare_file_content( org, tee, 1024 * BLOCKSIZE * 2 + 10, 100 ) );   // small read after block boundary
-    REQUIRE_RC( compare_file_content( org, tee, 1024 * BLOCKSIZE * 2 - 10, 100 ) );   // small read crossing block boundary    
+    REQUIRE_RC( compare_file_content( org, tee, 1024 * BLOCKSIZE * 2 - 10, 100 ) );   // small read crossing block boundary
 
     REQUIRE_RC( compare_file_content( org, tee, DATAFILESIZE - 100, 300 ) );    // small read crossing EOF
     REQUIRE_RC( compare_file_content( org, tee, DATAFILESIZE - 100, BLOCKSIZE * 10 ) );    // big read crossing EOF
     REQUIRE_RC( compare_file_content( org, tee, DATAFILESIZE - 10000, 10000 ) );    // big read right at EOF
-    
-    REQUIRE_RC( KFileRelease( tee ) );    
+
+    REQUIRE_RC( KFileRelease( tee ) );
     REQUIRE_RC( KFileRelease( org ) );
     REQUIRE_RC( KDirectoryRelease( dir ) );
 }
@@ -330,7 +330,7 @@ TEST_CASE( CacheTee2_Read )
 TEST_CASE( CacheTee2_Promoting )
 {
     KOutMsg( "Test: CacheTee2_Promoting\n" );
-    
+
     remove_file( CACHEFILE );    // to start with a clean slate on caching...
     remove_file( CACHEFILE1 );
 
@@ -339,18 +339,18 @@ TEST_CASE( CacheTee2_Promoting )
 
     const KFile * org;
     REQUIRE_RC( KDirectoryOpenFileRead( dir, &org, "%s", DATAFILE ) );
-    
+
     const KFile * tee;
     REQUIRE_RC( KDirectoryMakeCacheTee2 ( dir, &tee, org, BLOCKSIZE, "%s", CACHEFILE ) );
 
     REQUIRE_RC( read_partial( tee, 1024 * 32, DATAFILESIZE / 2 ) );
     REQUIRE_RC( KFileRelease( tee ) );
-    
+
     const KFile * cache;
     REQUIRE_RC( KDirectoryOpenFileRead( dir, &cache, "%s.cache", CACHEFILE ) );
 
     bool is_complete;
-    REQUIRE_RC( IsCacheTee2FileComplete( cache, &is_complete ) );    
+    REQUIRE_RC( IsCacheTee2FileComplete( cache, &is_complete ) );
     REQUIRE( !is_complete );
 
     float percent;
@@ -363,12 +363,12 @@ TEST_CASE( CacheTee2_Promoting )
 
     REQUIRE_RC( KDirectoryMakeCacheTee2 ( dir, &tee, org, BLOCKSIZE, "%s", CACHEFILE ) );
     REQUIRE_RC( read_all( tee, 1024 * 32 ) );    // this should trigger the promotion of the cache file from cache.dat.cache to cache.dat
-    REQUIRE_RC( KFileRelease( tee ) );    
-    
+    REQUIRE_RC( KFileRelease( tee ) );
+
     REQUIRE_RC( KDirectoryOpenFileRead( dir, &cache, "%s", CACHEFILE ) ); // if we can open this file then, it was promoted...
     REQUIRE_RC( KFileRelease( cache ) );
-    
-    REQUIRE_RC( KFileRelease( org ) );    
+
+    REQUIRE_RC( KFileRelease( org ) );
     REQUIRE_RC( KDirectoryRelease( dir ) );
 }
 
@@ -401,7 +401,7 @@ static rc_t cache_access( int tid, int num_threads, const KFile * origfile, cons
         KOutMsg( "Test: Thread #%d OK\n", tid );
     else
         KOutMsg( "Test: Thread #%d failed\n", tid );
-                    
+
     return rc;
 }
 
@@ -461,7 +461,7 @@ TEST_CASE( CacheTee2_Multiple_Users_Multiple_Inst )
         rc = KThreadMake ( &( t[ i ] ), thread_func, &( td[ i ] ) );
         REQUIRE_RC( rc );
     }
-    
+
     for ( int i = 0; i < n && rc == 0; ++i )
     {
         rc_t rc_thread;
@@ -534,7 +534,7 @@ TEST_CASE( CacheTee2_ReadOnly )
     REQUIRE_RC( KFileRelease( tee ) );
 
     REQUIRE_RC( KDirectorySetAccess ( dir, false, 0, 0222, "%s", CACHEFILE1 ) );
-    
+
     /* make a second cache-tee and read all from it... */
     REQUIRE_RC( KDirectoryMakeCacheTee2( dir, &tee, org, BLOCKSIZE, "%s", CACHEFILE ) );
     REQUIRE_RC( read_all( tee, 1024 * 32 )    );
@@ -543,11 +543,11 @@ TEST_CASE( CacheTee2_ReadOnly )
     /* we read all from the tee-file that should have promoted it on Release,
        but we made it read only before the creation of the 2nd tee-file
        because of that it should not be promoted and not complete */
-    
+
     const KFile * cache;
     REQUIRE_RC_FAIL( KDirectoryOpenFileRead( dir, &cache, "%s", CACHEFILE ) );
     REQUIRE_RC( KDirectoryOpenFileRead( dir, &cache, "%s", CACHEFILE1 ) );
-    
+
 	/* make a second cache-tee and read all from it... */
 	REQUIRE_RC( KDirectoryMakeCacheTee2 ( dir, &tee, org, BLOCKSIZE, "%s", CACHEFILE ) );
 
@@ -558,18 +558,18 @@ TEST_CASE( CacheTee2_ReadOnly )
 	/* we read all from the tee-file that should have promoted it on Release,
 	   but we made it read only before the creation of the 2nd tee-file
 	   because of that it should not be promoted and not complete */
-	
+
 	REQUIRE_RC_FAIL( KDirectoryOpenFileRead( dir, &cache, "%s", CACHEFILE ) );
 	REQUIRE_RC( KDirectoryOpenFileRead( dir, &cache, "%s", CACHEFILE1 ) );
-	
+
 	bool is_complete;
-	REQUIRE_RC( IsCacheTee2FileComplete( cache, &is_complete ) );	
+	REQUIRE_RC( IsCacheTee2FileComplete( cache, &is_complete ) );
 	REQUIRE( !is_complete );
 
-	REQUIRE_RC( KFileRelease( cache ) );		
-	REQUIRE_RC( KFileRelease( org ) );	
+	REQUIRE_RC( KFileRelease( cache ) );
+	REQUIRE_RC( KFileRelease( org ) );
 	REQUIRE_RC( KDirectoryRelease( dir ) );
-  
+
 }
 #endif
 
@@ -595,7 +595,7 @@ TEST_CASE( CacheTee2_Multiple_Users_with_Promoting )
     REQUIRE_RC( read_all( tee1, 1024 * 32 ) );
     REQUIRE_RC( KFileRelease( tee1 ) );
 
-    /* read a little bit from tee2 and release it, will it corrupt the cache? */    
+    /* read a little bit from tee2 and release it, will it corrupt the cache? */
     REQUIRE_RC( read_partial( tee2, 100, 100 ) );
     REQUIRE_RC( KFileRelease( tee2 ) );
 
@@ -609,7 +609,7 @@ TEST_CASE( CacheTee2_Multiple_Users_with_Promoting )
     REQUIRE( pt == kptNotFound );
 #endif
 
-    REQUIRE_RC( KFileRelease( org ) );    
+    REQUIRE_RC( KFileRelease( org ) );
     REQUIRE_RC( KDirectoryRelease( dir ) );
 }
 
@@ -617,25 +617,7 @@ TEST_CASE( CacheTee2_Multiple_Users_with_Promoting )
 extern "C"
 {
 
-#include <kapp/args.h>
 #include <kfg/config.h>
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-
-rc_t CC UsageSummary ( const char * progname )
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-
-const char UsageDefaultName[] = "cachetee2-test";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {

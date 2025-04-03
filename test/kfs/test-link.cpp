@@ -136,7 +136,6 @@ FIXTURE_TEST_CASE(Test_Link, Fixture) {
 }
 
 extern "C" {
-    ver_t CC KAppVersion(void) { return 0; }
     rc_t CC KMain(int argc, char *argv[]) {
         return LinkSuite(argc, argv);
     }

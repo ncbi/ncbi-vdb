@@ -43,13 +43,13 @@ static rc_t argsHandler(int argc, char* argv[]);
 TEST_SUITE_WITH_ARGS_HANDLER(KtstTestSuite, argsHandler);
 
 static
-rc_t 
+rc_t
 RcSuccess()
 {
     return 0;
 }
 static
-rc_t 
+rc_t
 RcFail()
 {
     return 1;
@@ -72,7 +72,7 @@ TEST_CASE(Requires)
     CHECK_CLOSE(1.0, 2.0, 1.99);
     REQUIRE_CLOSE(1.0, -1.0, 2.01);
 
-    CHECK_EQUAL(1, 1);    
+    CHECK_EQUAL(1, 1);
     CHECK_EQ(2.0, 2.0);
     REQUIRE_EQUAL(-1, -1);
     REQUIRE_EQ(-11.0f, -11.0f);
@@ -131,7 +131,7 @@ PROCESS_TEST_CASE(ChildProcessAbort, SIGFPE, 0)
 }
 
 PROCESS_TEST_CASE(ChildProcessTimeout, TestEnv::TEST_CASE_TIMED_OUT, 1)
-{   
+{
     TEST_MESSAGE("ChildProcessTimeout: sleeping in the child process");
     TestEnv::Sleep(2);
     TEST_MESSAGE("ChildProcessTimeout: did not time out!!");
@@ -139,7 +139,7 @@ PROCESS_TEST_CASE(ChildProcessTimeout, TestEnv::TEST_CASE_TIMED_OUT, 1)
 }
 
 static bool argHandlerCalled = false;
-static rc_t argsHandler(int argc, char* argv[]) 
+static rc_t argsHandler(int argc, char* argv[])
 {
     argHandlerCalled = true;
     return 0;
@@ -220,12 +220,6 @@ rc_t CC UsageSummary (const char * progname)
 {
     return 0;
 }
-
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-
 
 const char UsageDefaultName[] = "test-kfg";
 
