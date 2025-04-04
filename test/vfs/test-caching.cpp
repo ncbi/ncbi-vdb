@@ -633,9 +633,6 @@ TEST_CASE ( REFSEQ_APP_CACHE_DISABLE ) {
 ////////////////////////////////////////////////////////////////////////////////
 
 extern "C" {
-    ver_t CC KAppVersion ( void ) {
-        return 0;
-    }
     rc_t CC KMain ( int argc, char * argv [] ) {
         setenv("HOME", ".", 1);
         KConfigDisableUserSettings ();

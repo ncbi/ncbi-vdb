@@ -72,19 +72,19 @@ const char *VPathGetAccTypeStr ( const VPath * self )
     case 0x039:
         if ( ( (self -> acc_code >> 4) & 0xF ) == 0 )
             return " ( appSRA )";
-            
+
         {
             const char pileup_ext[] = ".pileup";
             size_t pileup_ext_size = sizeof( pileup_ext ) / sizeof( pileup_ext[0] ) - 1;
             size_t path_size = self -> path . size;
-            
-            
+
+
             if ( path_size > pileup_ext_size && memcmp(&self -> path . addr[path_size - pileup_ext_size], pileup_ext, pileup_ext_size) == 0)
             {
                 return " ( appSRAPileup )";
             }
         }
-            
+
         return " ( appAny )";
 
     case 0x042:
@@ -246,7 +246,7 @@ rc_t ParseUrlTest ( const VFSManager * vfs )
 {
     rc_t rc;
     size_t i;
-    
+
     static const char *test_urls [] =
     {
         /* accessions */
@@ -333,8 +333,8 @@ rc_t ParseUrlTest ( const VFSManager * vfs )
         "/path/10315_3#63.bam"
     };
     const size_t num_urls = sizeof test_urls / sizeof test_urls [ 0 ];
-    
-    static const char *fail_url [] = 
+
+    static const char *fail_url [] =
     {
         /*<scheme>:/<path>*/
         /*0*/ "http:/library/index.html",
@@ -358,12 +358,12 @@ rc_t ParseUrlTest ( const VFSManager * vfs )
         /*8*/ "ftp://www.abc.com",
 
         /*9*/ "https:#bad",
-        
-            
+
+
     };
     const size_t num_fail_urls = sizeof fail_url / sizeof fail_url [ 0 ];
-    
-    static const char *sys_path [] = 
+
+    static const char *sys_path [] =
     {
 #if WINDOWS
         "C:\\Program Files\\Wonderful\\Bob-o-matic",
@@ -372,14 +372,14 @@ rc_t ParseUrlTest ( const VFSManager * vfs )
         "SRR000123"
     };
     const size_t num_sys_paths = sizeof sys_path / sizeof sys_path [ 0 ];
-    
+
     for ( i = 0; i < num_urls; ++ i )
     {
         VPath *vpath;
-        
+
         String url;
         StringInitCString ( & url, test_urls [ i ] );
-        
+
         rc  = VFSManagerMakePath ( vfs, & vpath, "%S", & url );
         if ( rc == 0 )
         {
@@ -399,15 +399,15 @@ rc_t ParseUrlTest ( const VFSManager * vfs )
             return rc;
         }
     }
-    
-    
+
+
     for ( i = 0; i < num_fail_urls; ++ i )
     {
         VPath *vpath;
-        
+
         String url;
         StringInitCString ( & url, fail_url [ i ] );
-        
+
         rc  = VFSManagerMakePath ( vfs, & vpath, "%S", & url );
         if ( rc != 0 )
         {
@@ -430,10 +430,10 @@ rc_t ParseUrlTest ( const VFSManager * vfs )
 
         size_t num_read;
         char buffer [ 4096 ];
-        
+
         String sys;
         StringInitCString ( & sys, sys_path [ i ] );
-        
+
         rc  = VFSManagerMakeSysPath ( vfs, & vpath, sys_path [ i ] );
         if ( rc == 0 )
         {
@@ -458,7 +458,7 @@ rc_t ParseUrlTest ( const VFSManager * vfs )
             return rc;
         }
     }
-    
+
     return 0;
 }
 
@@ -502,7 +502,7 @@ rc_t ModifyPathTest ( const VFSManager * vfs )
     };
     const size_t num_urls = sizeof test_urls / sizeof test_urls [ 0 ];
 
-    static const char *fail_url [] = 
+    static const char *fail_url [] =
     {
         /* host */
         "http://www.abc.com",
@@ -519,14 +519,14 @@ rc_t ModifyPathTest ( const VFSManager * vfs )
         NULL
     };
     const size_t num_ext = sizeof test_ext / sizeof test_ext [ 0 ];
-    
+
     for ( i = 0; i < num_urls; ++ i )
     {
         VPath * orig;
-        
+
         String url;
         StringInitCString ( & url, test_urls [ i ] );
-        
+
         rc  = VFSManagerMakePath ( vfs, & orig, "%S", & url );
         if ( rc == 0 )
         {
@@ -554,14 +554,14 @@ rc_t ModifyPathTest ( const VFSManager * vfs )
             VPathRelease ( orig );
         }
     }
-    
+
     for ( i = 0; i < num_fail_urls; ++ i )
     {
         VPath * orig;
-        
+
         String url;
         StringInitCString ( & url, fail_url [ i ] );
-        
+
         rc  = VFSManagerMakePath ( vfs, & orig, "%S", & url );
         if ( rc == 0 )
         {
@@ -628,7 +628,7 @@ rc_t ExtractAccessionTest ( const VFSManager * vfs )
     };
     const size_t num_urls = sizeof test_urls / sizeof test_urls [ 0 ];
 
-    static const char *fail_url [] = 
+    static const char *fail_url [] =
     {
         /* urls */
         "http://www.abc.com/library/index.html",
@@ -644,7 +644,7 @@ rc_t ExtractAccessionTest ( const VFSManager * vfs )
         "/path/10315_3#63.bam"
     };
     const size_t num_fail_urls = sizeof fail_url / sizeof fail_url [ 0 ];
-    
+
     for ( i = 0; i < num_urls; ++ i )
     {
         VPath * orig;
@@ -710,36 +710,6 @@ rc_t ExtractAccessionTest ( const VFSManager * vfs )
     return 0;
 }
 
-
-/* Version  EXTERN
- *  return 4-part version code: 0xMMmmrrrr, where
- *      MM = major release
- *      mm = minor release 
- *    rrrr = bug-fix release
- */
-ver_t CC KAppVersion ( void )
-{
-    return 0;
-}
-
-
-/* Usage
- *  This function is called when the command line argument
- *  handling sees -? -h or --help
- */
-rc_t CC UsageSummary ( const char *progname )
-{
-    return 0;
-}
-
-const char UsageDefaultName[] = "path-test";
-
-rc_t CC Usage ( const Args *args )
-{
-    return 0;
-}
-
-    
 static
 rc_t run ( const char *progname )
 {

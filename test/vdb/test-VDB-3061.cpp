@@ -28,13 +28,13 @@
 #include <ktst/unit_test.hpp> // TEST_CASE
 #include <vfs/path.h>
 #include <vfs/manager.h>
-#include <klib/text.h> 
-#include <klib/out.h> 
+#include <klib/text.h>
+#include <klib/out.h>
 #include <klib/printf.h>
-#include <klib/time.h> 
+#include <klib/time.h>
 #include <kfs/directory.h>
-#include <kfs/file.h> 
-#include <kfg/config.h> 
+#include <kfs/file.h>
+#include <kfg/config.h>
 
 #include <sysalloc.h>
 #include <cstdlib>
@@ -55,7 +55,7 @@ static rc_t create_cache_file( KDirectory * dir, const char * path, const char *
     if ( rc == 0 )
     {
         KFileRelease( f );
-        
+
         KTime_t date = KTimeStamp() - age_in_seconds;
         rc = KDirectorySetDate ( dir, false, date, "%s/ncbi/%s/%s", path, sub, name );
     }
@@ -104,7 +104,7 @@ static void clear_out( const char * path )
 TEST_CASE( CLEAR_CACHE_1 )
 {
 	REQUIRE_RC( KOutMsg( "running: CLEAR_CACHE_1\n" ) );
-    
+
     /* create a repository-structure equivalent to the config-values, with 3 files in it */
     KDirectory * dir;
     REQUIRE_RC( KDirectoryNativeDir( &dir ) );
@@ -112,7 +112,7 @@ TEST_CASE( CLEAR_CACHE_1 )
     REQUIRE_RC( create_repo_dirs( dir, new_home, "dbGaP-2956", 4, 0 ) ); /* 4 days old */
     REQUIRE_RC( create_repo_dirs( dir, new_home, "dbGaP-4831", 5, -5 ) ); /* 5 days - 5 seconds old */
     REQUIRE_RC( KDirectoryRelease ( dir ) );
-    
+
     /* we run the new function VDBManagerDeleteCacheOlderThan() with a 5-day threshold */
     const VDBManager * vdb_mgr;
     REQUIRE_RC( VDBManagerMakeRead( &vdb_mgr, NULL ) );
@@ -128,7 +128,7 @@ TEST_CASE( CLEAR_CACHE_1 )
     uint32_t pt3 = KDirectoryPathType( dir, "%s/ncbi/dbGaP-4831/sra/file1.txt", new_home );
     REQUIRE_EQ( pt3, (uint32_t)kptFile );
     REQUIRE_RC( KDirectoryRelease ( dir ) );
-    
+
 	REQUIRE_RC( KOutMsg( "done: CLEAR_CACHE_1\n" ) );
 }
 
@@ -272,13 +272,6 @@ void finish_test( const char * sub )
 //////////////////////////////////////////// Main
 extern "C"
 {
-
-#include <kapp/args.h>
-
-ver_t CC KAppVersion ( void ) { return 0x1000000; }
-rc_t CC UsageSummary ( const char * progname ) { return 0; }
-rc_t CC Usage ( const Args * args ) { return 0; }
-const char UsageDefaultName[] = "test-VDB-3060";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {

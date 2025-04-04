@@ -43,11 +43,6 @@ extern "C" {
     #include "../../libs/sraxf/syn_quality.c"
 }
 
-ver_t CC KAppVersion( void ) { return 0; }
-rc_t CC Usage( const Args * args ) { return 0; }
-const char UsageDefaultName[] = "";
-rc_t UsageSummary( const char * progname ) { return 0; }
-
 TEST_SUITE( SynQualityTestSuite );
 
 TEST_CASE( NoInput ) {

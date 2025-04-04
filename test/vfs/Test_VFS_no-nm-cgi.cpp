@@ -238,8 +238,6 @@ FIXTURE_TEST_CASE(ResolverSucceedsWithCustomSdl, Fixture) {
 #endif
 
 extern "C" {
-    ver_t CC KAppVersion(void) { return 0; }
-
     rc_t CC KMain(int argc, char* argv[]) {
         putenv((char*)"NCBI_VDB_NO_ETC_NCBI_KFG=1"); // ignore /etc/ncbi
 #ifndef NEED_TO_TRACK_DOWN_CONFIG_REFCOUNT

@@ -210,19 +210,6 @@ TEST_CASE ( SharedSucceedInBlock ) {
 extern "C"
 {
 
-#include <kapp/args.h>
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
-}
-
-const char UsageDefaultName[] = "test-kfg";
-
 rc_t CC KMain ( int argc, char *argv [] )
 {
     rc_t rc=KtstTestSuite(argc, argv);

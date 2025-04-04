@@ -862,17 +862,13 @@ rc_t CC Usage (const Args * args)
     return rc;
 }
 
-
-ver_t CC KAppVersion (void)
-{
-    return 0;
-}
-
-
 rc_t CC KMain ( int argc, char *argv [] )
 {
     Args * args;
     rc_t rc;
+
+    SetUsageSummary( UsageSummary );
+    SetUsage( Usage );
 
     rc = KStsHandlerSetStdErr();
     if (rc == 0)

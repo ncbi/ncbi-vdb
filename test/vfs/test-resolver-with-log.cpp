@@ -191,8 +191,6 @@ FIXTURE_TEST_CASE ( ZZZZ99, Fixture ) {
 }
 
 extern "C" {
-    ver_t CC KAppVersion ( void ) { return 0; }
-
     rc_t CC KMain ( int argc, char * argv [] ) {
 #if _DEBUGGING
         KDbgSetString ( "VFS" );

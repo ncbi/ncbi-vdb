@@ -224,13 +224,7 @@ TEST_CASE(TestJwtKartValidateStringWhiteSections) {
     REQUIRE_RC(JwtKartValidateString(&s, NULL));
 }
 
-const char UsageDefaultName[] = "test";
-rc_t CC UsageSummary(const char * progname) { return 0; }
-rc_t CC Usage(const Args * args) { return 0; }
-
 extern "C" {
-
-    ver_t CC KAppVersion(void) { return 0; }
 
     int KMain(int argc, char *argv[]) {
         KConfigDisableUserSettings(); // ignore ~/.ncbi/user-settings.mkfg

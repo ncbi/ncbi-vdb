@@ -735,12 +735,6 @@ rc_t run ()
 }
 
 
-rc_t CC UsageSummary  (const char * progname)
-{
-    return 0;
-}
-
-
 const char UsageDefaultName[] = "test-aes_ciphers";
 rc_t CC Usage (const Args * args)
 {
@@ -755,16 +749,12 @@ rc_t CC Usage (const Args * args)
                     UsageDefaultName);
 }
 
-
-ver_t CC KAppVersion (void)
-{
-    return 0;
-}
 rc_t CC KMain ( int argc, char *argv [] )
 {
     Args * args;
     rc_t rc;
 
+    SetUsage( Usage );
 
     rc = ArgsMakeAndHandle (&args, argc, argv, 0);
     if (rc == 0)

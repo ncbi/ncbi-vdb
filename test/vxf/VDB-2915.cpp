@@ -125,25 +125,25 @@ public:
         , m_tableName( "RANDOM_DATA" ), m_table( 0 ), m_cursor( 0 )
     {
         THROW_ON_RC( KDirectoryNativeDir( &_wd ) );
-        
+
         const KDirectory * dir = NULL;
         THROW_ON_RC
             ( KDirectoryOpenDirRead ( _wd, &dir, false, "local_config" ) );
-        
+
         THROW_ON_RC( KConfigMake ( &_cfg, dir ) );
-        
+
         KConfigPrint( _cfg, 0 ); /* for test */
 
         THROW_ON_RC( KDirectoryRelease( dir ) );
     }
-    
+
     ~WVDB_Fixture()
     {
         if ( m_cursor ) { VCursorRelease( m_cursor ); }
         if ( m_table ) { VTableRelease( m_table ); }
         if ( m_remove ) { RemoveTable(); }
         KConfigRelease( _cfg );
-        KDirectoryRelease( _wd );        
+        KDirectoryRelease( _wd );
     }
 
     void RemoveTable()
@@ -160,11 +160,11 @@ public:
 
         struct VFSManager * vfs_mgr;
         THROW_ON_RC( VFSManagerMakeFromKfg ( &vfs_mgr, _cfg ) );
-        
+
         VDBManager * mgr;
         THROW_ON_RC
             ( VDBManagerMakeUpdateWithVFSManager ( &mgr, _wd, vfs_mgr ) );
-        
+
         VSchema *schema;
         THROW_ON_RC( VDBManagerMakeSchema ( mgr, &schema ) );
         THROW_ON_RC( VSchemaParseText( schema, NULL, p_schemaText.c_str(), p_schemaText.size() ) );
@@ -193,7 +193,7 @@ public:
         THROW_ON_RC( VTableCreateCursorRead( m_table, ( const VCursor ** )&m_cursor ) );
         THROW_ON_RC( VDBManagerRelease( mgr ) );
     }
-    
+
     bool m_remove;
     string m_tableName;
     VTable * m_table;
@@ -208,7 +208,7 @@ public:
 FIXTURE_TEST_CASE ( LOAD_RANDOM_DATA, WVDB_Fixture )
 {
     RemoveTable();
-    
+
     string schemaText = "version 1;"
                         "include 'vdb/vdb.vschema';"
                         "table A_TABLE #1.0"
@@ -221,9 +221,9 @@ FIXTURE_TEST_CASE ( LOAD_RANDOM_DATA, WVDB_Fixture )
                         "   column U32 RU3;"
                         "   column < U64 > izip_encoding CU4;"
                         "   column U64 RU4;"
-                        
+
                         "   column < I8 > izip_encoding CI1;"
-                        "   column I8 RI1;"                        
+                        "   column I8 RI1;"
                         "   column < I16 > izip_encoding CI2;"
                         "   column I16 RI2;"
                         "   column < I32 > izip_encoding CI3;"
@@ -233,9 +233,9 @@ FIXTURE_TEST_CASE ( LOAD_RANDOM_DATA, WVDB_Fixture )
                         "};";
 
     REQUIRE_RC( KOutMsg( "creating table '%s'\n", m_tableName.c_str() ) );
-    
+
     MakeTable ( schemaText, "A_TABLE" );
-    
+
     uint32_t cu1, cu2, cu3 /*, cu4 */;
     uint32_t ru1, ru2, ru3 /*, ru4 */;
 
@@ -263,19 +263,19 @@ FIXTURE_TEST_CASE ( LOAD_RANDOM_DATA, WVDB_Fixture )
     REQUIRE_RC ( VCursorOpen ( m_cursor ) );
 
     srand( 123456 );
-    
+
     size_t i, j;
     for ( i = 1; i <= 512; ++i )
     {
         REQUIRE_RC ( VCursorOpenRow ( m_cursor ) );
-        
+
         {
             uint8_t b[ 1024 ];
             for ( j = 0; j < 1024; ++j ) b[ j ] = rand() & 0xFF;
             REQUIRE_RC ( VCursorWrite ( m_cursor, cu1, 8, b, 0, 1024 ) );
             REQUIRE_RC ( VCursorWrite ( m_cursor, ru1, 8, b, 0, 1024 ) );
         }
-        
+
         {
             int8_t b[ 1024 ];
             for ( j = 0; j < 1024; ++j ) b[ j ] = rand() & 0xFF;
@@ -303,7 +303,7 @@ FIXTURE_TEST_CASE ( LOAD_RANDOM_DATA, WVDB_Fixture )
             REQUIRE_RC ( VCursorWrite ( m_cursor, cu3, 32, b, 0, 1024 ) );
             REQUIRE_RC ( VCursorWrite ( m_cursor, ru3, 32, b, 0, 1024 ) );
         }
-        
+
         {
             int32_t b[ 1024 ];
             for ( j = 0; j < 1024; ++j ) b[ j ] = rand_int32();
@@ -326,7 +326,7 @@ FIXTURE_TEST_CASE ( LOAD_RANDOM_DATA, WVDB_Fixture )
             REQUIRE_RC ( VCursorWrite ( m_cursor, ri4, 64, b, 0, 1024 ) );
         }
         */
-        
+
         REQUIRE_RC ( VCursorCommitRow ( m_cursor ) );
         REQUIRE_RC ( VCursorCloseRow ( m_cursor ) );
     }
@@ -338,7 +338,7 @@ FIXTURE_TEST_CASE ( CHECK_RANDOM_DATA, WVDB_Fixture )
     OpenTable();
 
     REQUIRE_RC( KOutMsg( "verify table '%s'\n", m_tableName.c_str() ) );
-    
+
     uint32_t cu1, cu2, cu3 /*, cu4 */;
     uint32_t ru1, ru2, ru3 /*, ru4 */;
     REQUIRE_RC ( VCursorAddColumn ( m_cursor, &cu1, "%s", "CU1" ) );
@@ -362,7 +362,7 @@ FIXTURE_TEST_CASE ( CHECK_RANDOM_DATA, WVDB_Fixture )
     /* REQUIRE_RC ( VCursorAddColumn ( m_cursor, &ri4, "%s", "RI4" ) ); */
 
     REQUIRE_RC ( VCursorOpen ( m_cursor ) );
-    
+
     for ( int64_t i = 1; i <= 512; ++i )
     {
         uint32_t c_bits, r_bits, c_boff, r_boff, c_len, r_len;
@@ -393,7 +393,7 @@ FIXTURE_TEST_CASE ( CHECK_RANDOM_DATA, WVDB_Fixture )
             REQUIRE_EQ ( r_len, ( uint32_t )1024 );
             REQUIRE ( std::equal( c, c + 1024, r ) );
         }
-        
+
         {
             uint16_t * c;
             uint16_t * r;
@@ -407,7 +407,7 @@ FIXTURE_TEST_CASE ( CHECK_RANDOM_DATA, WVDB_Fixture )
             REQUIRE_EQ ( r_len, ( uint32_t )1024 );
             REQUIRE ( std::equal( c, c + 1024, r ) );
         }
-        
+
         {
             int16_t * c;
             int16_t * r;
@@ -480,7 +480,7 @@ FIXTURE_TEST_CASE ( CHECK_RANDOM_DATA, WVDB_Fixture )
         }
         */
     }
-    
+
     m_remove = true;
 }
 
@@ -489,14 +489,7 @@ FIXTURE_TEST_CASE ( CHECK_RANDOM_DATA, WVDB_Fixture )
 extern "C"
 {
 
-#include <kapp/args.h>
 #include <kfg/config.h>
-
-ver_t CC KAppVersion ( void ) { return 0x1000000; }
-rc_t CC UsageSummary ( const char * progname ) { return 0; }
-rc_t CC Usage ( const Args * args ){ return 0; }
-
-const char UsageDefaultName[] = "vdb_2915_testwb-test-vxf";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
