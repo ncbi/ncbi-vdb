@@ -37,23 +37,22 @@
 #include <stdarg.h>
 #include <assert.h>
 
-/**
- * Returns the offset of the first ' ' or the end of the string.
- *
- * Equivalent to `strchrnul(str, ' ') - str`
+/* Copied from interfaces/os/mac/os-native.h
+ * and then removed from there
  */
+static
+char *str_chr_nul ( const char *str, int c )
+{
+    int i;
+    for ( i = 0; str [ i ] != 0 && str [ i ] != c; ++i )
+        ( void ) 0;
+    return & ( ( char* ) str ) [ i ];
+}
+
 static size_t measure(char const *const str)
 {
-    size_t result = 0;
-
     assert(str != NULL);
-    for ( ; ; ) {
-        char const ch = str[result];
-        if (ch == ' ' || ch == '\0')
-            break;
-        ++result;
-    }
-    return result;
+    return (size_t)(str_chr_nul(str, ' ') - str);
 }
 
 static char const *const INVALID = "INVALID";
