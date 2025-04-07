@@ -67,18 +67,6 @@ char *strndup ( const char *str, size_t n )
 #endif
 
 /*--------------------------------------------------------------------------
- * strchrnul - implemented inline here
- */
-static __inline__
-char *strchrnul ( const char *str, int c )
-{
-    int i;
-    for ( i = 0; str [ i ] != 0 && str [ i ] != c; ++i )
-        ( void ) 0;
-    return & ( ( char* ) str ) [ i ];
-}
-
-/*--------------------------------------------------------------------------
  * memchr - implemented inline here
  */
 static __inline__
