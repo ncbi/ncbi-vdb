@@ -109,11 +109,43 @@ rc_t TestArgConvFileCreator(const Args * args, uint32_t arg_index, const char * 
     return rc;
 }
 
-TEST_CASE(KApp_ArgsMakeParams)
+TEST_CASE( KApp_ArgsMakeWhack )
 {
+    Args * args = nullptr;
+    REQUIRE_RC( ArgsMake( & args ) );
+
+    REQUIRE_NOT_NULL( args );
+    uint32_t count = 100;
+    REQUIRE_RC( ArgsArgvCount( args, & count ) );
+    REQUIRE_EQ( 0, (int)count );
+
+    count = 100;
+    REQUIRE_RC( ArgsArgc( args, & count ) );
+    REQUIRE_EQ( 0, (int)count );
+
+    REQUIRE_RC(ArgsWhack (args));
+}
+
+class ArgsFixture
+{
+public:
     int argc;
     const char * argv[16];
+    Args * args = nullptr;
 
+    ArgsFixture()
+    {
+        THROW_ON_RC(ArgsMake (&args));
+    }
+    ~ArgsFixture()
+    {
+        ArgsWhack (args);
+    }
+
+};
+
+FIXTURE_TEST_CASE(KApp_ArgsMakeParams, ArgsFixture)
+{
     /* testing params */
     argc = 6;
     argv[0] = "test_1";
@@ -123,47 +155,33 @@ TEST_CASE(KApp_ArgsMakeParams)
     argv[4] = "3";
     argv[5] = "4";
 
-    Args * args;
-    REQUIRE_RC(ArgsMake (&args));
     REQUIRE_RC(ArgsParse (args, argc, (char**)argv));
 
-    {
-        uint32_t param_count;
-        uint32_t ix;
+    uint32_t param_count;
+    uint32_t ix;
 
-        REQUIRE_RC(ArgsParamCount (args, &param_count));
-        REQUIRE_EQ(param_count, (uint32_t)argc-1);
-        for (ix = 0; ix < param_count; ix++)
-        {
-            const char * value;
-            REQUIRE_RC(ArgsParamValue (args, ix, reinterpret_cast<const void**>(&value)));
-            {
-                /* valgrind whines about the line below.  I can't see
-                 * the problem with a uninitialized variable used for
-                 * a conditional jump unless its in libc */
-                REQUIRE_EQ(atoi(value), (int)ix);
-            }
-        }
+    REQUIRE_RC(ArgsParamCount (args, &param_count));
+    REQUIRE_EQ(param_count, (uint32_t)argc-1);
+    for (ix = 0; ix < param_count; ix++)
+    {
+        const char * value;
+        REQUIRE_RC(ArgsParamValue (args, ix, reinterpret_cast<const void**>(&value)));
+        REQUIRE_EQ(atoi(value), (int)ix);
     }
-    REQUIRE_RC(ArgsWhack (args));
 }
 
-TEST_CASE(KApp_ArgsMakeParamsConvAppend)
+FIXTURE_TEST_CASE(KApp_ArgsMakeParamsConvAppend, ArgsFixture)
 {
     ParamDef Parameters[] =
     {
         { TestArgConvAppender }
     };
-    int argc;
-    const char * argv[16];
 
     /* testing params */
     argc = 2;
     argv[0] = "test_1";
     argv[1] = "abcd";
 
-    Args * args;
-    REQUIRE_RC(ArgsMake (&args));
     REQUIRE_RC(ArgsAddParamArray (args, Parameters, sizeof Parameters / sizeof Parameters[0]));
     REQUIRE_RC(ArgsParse (args, argc, (char**)argv));
 
@@ -179,17 +197,14 @@ TEST_CASE(KApp_ArgsMakeParamsConvAppend)
         REQUIRE(memcmp(value, argv[1], 4) == 0);
         REQUIRE(memcmp(value + 4, arg_append_string, arg_append_string_len + 1) == 0);
     }
-    REQUIRE_RC(ArgsWhack (args));
 }
 
-TEST_CASE(KApp_ArgsMakeOptions)
+FIXTURE_TEST_CASE(KApp_ArgsMakeOptions, ArgsFixture)
 {
     OptDef Options[] =
     {                                         /* needs_value, required */
         { OPTION_TEST, NULL, NULL, NULL, 1, true, false }
     };
-    int argc;
-    const char * argv[16];
 
     /* testing params */
     argc = 3;
@@ -197,8 +212,6 @@ TEST_CASE(KApp_ArgsMakeOptions)
     argv[1] = "--test";
     argv[2] = "abcd";
 
-    Args * args;
-    REQUIRE_RC(ArgsMake (&args));
     REQUIRE_RC(ArgsAddOptionArray (args, Options, sizeof Options / sizeof Options[0]));
     REQUIRE_RC(ArgsParse (args, argc, (char**)argv));
 
@@ -215,17 +228,14 @@ TEST_CASE(KApp_ArgsMakeOptions)
         REQUIRE_RC(ArgsOptionValue (args, OPTION_TEST, 0, reinterpret_cast<const void**>(&value)));
         REQUIRE_EQ(std::string(value), std::string(argv[2]));
     }
-    REQUIRE_RC(ArgsWhack (args));
 }
 
-TEST_CASE(KApp_ArgsMakeOptionsConversion)
+FIXTURE_TEST_CASE(KApp_ArgsMakeOptionsConversion, ArgsFixture)
 {
     OptDef Options[] =
     {                                         /* needs_value, required */
         { OPTION_TEST, NULL, NULL, NULL, 1, true, false, TestArgConvFileCreator }
     };
-    int argc;
-    const char * argv[16];
     KDirectory * dir;
 
     /* testing params */
@@ -234,8 +244,6 @@ TEST_CASE(KApp_ArgsMakeOptionsConversion)
     argv[1] = "--test";
     argv[2] = "file.test";
 
-    Args * args;
-    REQUIRE_RC(ArgsMake (&args));
     REQUIRE_RC(ArgsAddOptionArray (args, Options, sizeof Options / sizeof Options[0]));
     REQUIRE_RC(ArgsParse (args, argc, (char**)argv));
 
@@ -256,12 +264,56 @@ TEST_CASE(KApp_ArgsMakeOptionsConversion)
 
         REQUIRE_EQ(file_size, (uint64_t)4);
     }
-    REQUIRE_RC(ArgsWhack (args));
 
     REQUIRE_RC(KDirectoryNativeDir ( &dir ));
     REQUIRE_RC(KDirectoryRemove(dir, true, "%s", argv[2]));
     REQUIRE_RC(KDirectoryRelease (dir));
 }
+
+FIXTURE_TEST_CASE(KApp_ArgsMakeOptions_FilePathConversion, ArgsFixture)
+{
+    OptDef Options[] =
+    {                                         /* needs_value, required */
+        { OPTION_TEST, NULL, NULL, NULL, 1, true, false, TestArgConvFileCreator }
+    };
+    KDirectory * dir;
+
+    /* testing params */
+    argc = 3;
+    argv[0] = "test_2";
+    argv[1] = "--test";
+#if WIN32
+    argv[2] = ".\\\\file.test";
+#else
+    argv[2] = "./file.test";
+#endif
+
+    REQUIRE_RC(ArgsAddOptionArray (args, Options, sizeof Options / sizeof Options[0]));
+    REQUIRE_RC(ArgsParse (args, argc, (char**)argv));
+
+    {
+        const KFile * file;
+        uint32_t count;
+        uint64_t file_size;
+
+        REQUIRE_RC(ArgsParamCount (args, &count));
+        REQUIRE_EQ(count, (uint32_t)0);
+
+        REQUIRE_RC(ArgsOptionCount (args, OPTION_TEST, &count));
+        REQUIRE_EQ(count, (uint32_t)1);
+
+        REQUIRE_RC(ArgsOptionValue (args, OPTION_TEST, 0, reinterpret_cast<const void**>(&file)));
+
+        REQUIRE_RC(KFileSize (file, &file_size));
+
+        REQUIRE_EQ(file_size, (uint64_t)4);
+    }
+
+    REQUIRE_RC(KDirectoryNativeDir ( &dir ));
+    REQUIRE_RC(KDirectoryRemove(dir, true, "%s", argv[2]));
+    REQUIRE_RC(KDirectoryRelease (dir));
+}
+
 //////////////////////////////////////////// Main
 
 extern "C"

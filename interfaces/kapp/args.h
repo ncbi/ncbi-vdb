@@ -65,7 +65,7 @@ typedef struct Args Args;
  * Structure to define a command line option
  *
  * these are fed in one by one or through arrays to build up the
- * tables used to parse the caommand line argc/argv
+ * tables used to parse the command line argc/argv
  */
 
 typedef void (CC * WhackParamFnP) (void * object);
