@@ -145,9 +145,9 @@ public:
     static void rmdir( const char * d )
     {
         KDirectory * dir;
-        THROW_ON_RC(KDirectoryNativeDir ( &dir ));
-        THROW_ON_RC(KDirectoryRemove(dir, true, "%s", d));
-        THROW_ON_RC(KDirectoryRelease (dir));
+        KDirectoryNativeDir ( &dir );
+        KDirectoryRemove(dir, true, "%s", d);
+        KDirectoryRelease (dir);
     }
 };
 
@@ -250,6 +250,8 @@ FIXTURE_TEST_CASE(KApp_ArgsMakeOptionsConversion, ArgsFixture)
     argv[1] = "--test";
     argv[2] = "file.test";
 
+    rmdir(argv[2]);
+
     REQUIRE_RC(ArgsAddOptionArray (args, Options, sizeof Options / sizeof Options[0]));
     REQUIRE_RC(ArgsParse (args, argc, (char**)argv));
 
@@ -270,40 +272,37 @@ FIXTURE_TEST_CASE(KApp_ArgsMakeOptionsConversion, ArgsFixture)
 
         REQUIRE_EQ(file_size, (uint64_t)4);
     }
-
-    rmdir( argv[2] );
 }
 
-FIXTURE_TEST_CASE(KApp_ArgsMakeOptions_FilePathConversion, ArgsFixture)
-{
+FIXTURE_TEST_CASE(KApp_ArgsMakeOptions_ArgsConvFilepath, ArgsFixture)
+{   // conversion from platform-dependent UTF8 to POSIX UTF8
     OptDef Options[] =
     {                                         /* needs_value, required */
         { OPTION_TEST, NULL, NULL, NULL, 1, true, false, ArgsConvFilepath }
     };
 
+#if WIN32
+    const string input = ".\\файл.test";
+#else
+    const string input = "./файл.test";
+#endif
+    const string expected = "./файл.test";
+
     /* testing params */
     argc = 3;
     argv[0] = "test_2";
     argv[1] = "--test";
-#if WIN32
-    argv[2] = ".\\\\file.test";
-#else
-    argv[2] = "./file.test";
-#endif
+    argv[2] = input.c_str();
 
     REQUIRE_RC(ArgsAddOptionArray (args, Options, sizeof Options / sizeof Options[0]));
     REQUIRE_RC(ArgsParse (args, argc, (char**)argv));
 
-    {
-        const char * file;
+    const char * file;
 
-        REQUIRE_RC(ArgsOptionValue (args, OPTION_TEST, 0, reinterpret_cast<const void**>(&file)));
+    REQUIRE_RC(ArgsOptionValue (args, OPTION_TEST, 0, reinterpret_cast<const void**>(&file)));
 
-        REQUIRE_NOT_NULL( file );
-        REQUIRE_EQ(string(argv[2]), string(file));
-    }
-
-    rmdir( argv[2] );
+    REQUIRE_NOT_NULL( file );
+    REQUIRE_EQ(expected, string(file));
 }
 
 //////////////////////////////////////////// Main

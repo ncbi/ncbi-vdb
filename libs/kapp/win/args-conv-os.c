@@ -34,21 +34,24 @@
 static
 char* convert_arg_utf8(const wchar_t* arg)
 {
-    size_t src_size, dst_size;
-    char* utf8;
-    /* measure the string */
-    wchar_cvt_string_measure(arg, &src_size, &dst_size);
+    /* measure the string; assumes NUL-termination, the resulting size includes NUL */
+    //wchar_cvt_string_measure(arg, &src_size, &dst_size);
+    int dst_size = WideCharToMultiByte(CP_UTF8, 0, arg, -1, NULL, 0, NULL, FALSE);
+    if (dst_size <= 0)
+    {
+        return NULL;
+    }
 
     /* allocate a UTF-8 buffer */
-    utf8 = malloc(dst_size + 1);
+    char* utf8 = malloc(dst_size);
     if (utf8 != NULL)
     {
-        /* copy the wide argument to utf8 */
-        wchar_cvt_string_copy(utf8, dst_size + 1,
-            arg, src_size);
-
-        /* terminate the string */
-        utf8[dst_size] = 0;
+        int ret = WideCharToMultiByte(CP_UTF8, 0, arg, -1, utf8, dst_size, NULL, FALSE);
+        if (ret != dst_size)
+        {
+            free(utf8);
+            return NULL;
+        }
     }
 
     return utf8;
@@ -173,7 +176,11 @@ rc_t ArgsConvFilepath(const Args* args, uint32_t arg_index, const char* arg, siz
     wchar_t arg_wide[MAX_PATH];
     char* res;
 
-    string_cvt_wchar_copy(arg_wide, MAX_PATH, arg, arg_len);
+    //string_cvt_wchar_copy(arg_wide, MAX_PATH, arg, arg_len);
+    int size = MultiByteToWideChar(CP_UTF8, 0, arg, (int)arg_len, arg_wide, sizeof(arg_wide)-1); // reserve 1 byte for NUL
+    if ( size == 0 )
+        return RC(rcRuntime, rcArgv, rcConverting, rcFunction, rcFailed);
+    arg_wide[size] = 0;
 
     res = rewrite_arg_as_path(arg_wide, false);
     if (!res)
