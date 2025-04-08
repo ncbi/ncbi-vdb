@@ -32,7 +32,7 @@
 #include <klib/out.h>
 #include <klib/rc.h>
 #include <kapp/main.h>
-#include <kapp/args.h>
+#include <kapp/args-conv.h>
 #include <kfs/directory.h>
 #include <kfs/file.h>
 #include <kfs/impl.h>
@@ -142,6 +142,13 @@ public:
         ArgsWhack (args);
     }
 
+    static void rmdir( const char * d )
+    {
+        KDirectory * dir;
+        THROW_ON_RC(KDirectoryNativeDir ( &dir ));
+        THROW_ON_RC(KDirectoryRemove(dir, true, "%s", d));
+        THROW_ON_RC(KDirectoryRelease (dir));
+    }
 };
 
 FIXTURE_TEST_CASE(KApp_ArgsMakeParams, ArgsFixture)
@@ -236,7 +243,6 @@ FIXTURE_TEST_CASE(KApp_ArgsMakeOptionsConversion, ArgsFixture)
     {                                         /* needs_value, required */
         { OPTION_TEST, NULL, NULL, NULL, 1, true, false, TestArgConvFileCreator }
     };
-    KDirectory * dir;
 
     /* testing params */
     argc = 3;
@@ -265,18 +271,15 @@ FIXTURE_TEST_CASE(KApp_ArgsMakeOptionsConversion, ArgsFixture)
         REQUIRE_EQ(file_size, (uint64_t)4);
     }
 
-    REQUIRE_RC(KDirectoryNativeDir ( &dir ));
-    REQUIRE_RC(KDirectoryRemove(dir, true, "%s", argv[2]));
-    REQUIRE_RC(KDirectoryRelease (dir));
+    rmdir( argv[2] );
 }
 
 FIXTURE_TEST_CASE(KApp_ArgsMakeOptions_FilePathConversion, ArgsFixture)
 {
     OptDef Options[] =
     {                                         /* needs_value, required */
-        { OPTION_TEST, NULL, NULL, NULL, 1, true, false, TestArgConvFileCreator }
+        { OPTION_TEST, NULL, NULL, NULL, 1, true, false, ArgsConvFilepath }
     };
-    KDirectory * dir;
 
     /* testing params */
     argc = 3;
@@ -292,26 +295,15 @@ FIXTURE_TEST_CASE(KApp_ArgsMakeOptions_FilePathConversion, ArgsFixture)
     REQUIRE_RC(ArgsParse (args, argc, (char**)argv));
 
     {
-        const KFile * file;
-        uint32_t count;
-        uint64_t file_size;
-
-        REQUIRE_RC(ArgsParamCount (args, &count));
-        REQUIRE_EQ(count, (uint32_t)0);
-
-        REQUIRE_RC(ArgsOptionCount (args, OPTION_TEST, &count));
-        REQUIRE_EQ(count, (uint32_t)1);
+        const char * file;
 
         REQUIRE_RC(ArgsOptionValue (args, OPTION_TEST, 0, reinterpret_cast<const void**>(&file)));
 
-        REQUIRE_RC(KFileSize (file, &file_size));
-
-        REQUIRE_EQ(file_size, (uint64_t)4);
+        REQUIRE_NOT_NULL( file );
+        REQUIRE_EQ(string(argv[2]), string(file));
     }
 
-    REQUIRE_RC(KDirectoryNativeDir ( &dir ));
-    REQUIRE_RC(KDirectoryRemove(dir, true, "%s", argv[2]));
-    REQUIRE_RC(KDirectoryRelease (dir));
+    rmdir( argv[2] );
 }
 
 //////////////////////////////////////////// Main
