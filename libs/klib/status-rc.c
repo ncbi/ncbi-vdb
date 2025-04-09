@@ -24,11 +24,6 @@
 *
 */
 
-// need for strchrnul
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-
 #include <klib/extern.h>
 #include "writer-priv.h"
 #include <klib/writer.h>
@@ -36,17 +31,28 @@
 #include <klib/printf.h>
 #include <klib/rc.h>
 #include <sysalloc.h>
-#include <os-native.h> /* for strchrnul on non-linux */
 
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
 #include <assert.h>
 
+/* Copied from interfaces/os/mac/os-native.h
+ * and then removed from there
+ */
+static
+char *str_chr_nul ( const char *str, int c )
+{
+    int i;
+    for ( i = 0; str [ i ] != 0 && str [ i ] != c; ++i )
+        ( void ) 0;
+    return & ( ( char* ) str ) [ i ];
+}
+
 static size_t measure(char const *const str)
 {
     assert(str != NULL);
-    return (size_t)(strchrnul(str, ' ') - str);
+    return (size_t)(str_chr_nul(str, ' ') - str);
 }
 
 static char const *const INVALID = "INVALID";
