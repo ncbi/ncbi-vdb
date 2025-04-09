@@ -39,7 +39,7 @@
 extern "C" {
 #endif
 
-    
+
 /*--------------------------------------------------------------------------
  * KMane
  *  invoked by platform specific "main" entrypoint
@@ -68,6 +68,21 @@ rc_t KMane ( int argc, char *argv [] );
  * in bytes
  */
 rc_t KAppGetTotalRam ( uint64_t * totalRam );
+
+/* SetQuitting
+ *  set the quitting flag (for internal use in this library)
+ */
+void SetQuitting();
+
+/* VdbInitializeSystem
+ *  OS-specific VDB initialization
+ */
+int VdbInitializeSystem();
+
+/* VdbTerminateSystem
+ *  OS-specific VDB termination
+ */
+void VdbTerminateSystem();
 
 #ifdef __cplusplus
 }

@@ -114,7 +114,7 @@ rc_t	runtest (KDirectory * kdir,const char *  filename)
         return rc;
     }
     file = KMD5FileToKFile ( md5file );
-    
+
     c = ' ';
     memset (buff, c, sizeof (buff));
     OUTMSG (("write to file %lu\n", iteration));
@@ -140,7 +140,7 @@ rc_t	runtest (KDirectory * kdir,const char *  filename)
         OUTMSG (("unable to close md5 formatter: %d\n", rc));
         return rc;
     }
-    
+
 #if 1
     for (iteration = 1; iteration < 1024; ++iteration)
     {
@@ -189,44 +189,6 @@ rc_t	runtest (KDirectory * kdir,const char *  filename)
 #endif
     return rc;
 }
-
-uint32_t CC KAppVersion ( void )
-{
-    return  0;
-}
-
-const char UsageDefaultName[] = "md5appendtest";
-
-rc_t CC UsageSummary (const char * name)
-{
-    return KOutMsg (
-        "Usage:\n"
-        " %s <file>\n"
-        "\n"
-        "    run a test of the KMD5File in append mode\n"
-        "\n", name);
-}
-
-
-rc_t CC Usage ( const Args * args )
-{
-    const char * progname = UsageDefaultName;
-    const char * fullpath = UsageDefaultName;
-    rc_t rc;
-
-    if (args == NULL)
-        rc = RC (rcApp, rcArgv, rcAccessing, rcSelf, rcNull);
-    else
-        rc = ArgsProgram (args, &fullpath, &progname);
-    UsageSummary (progname);
-
-    KOutMsg ("Options:\n");
-
-    HelpOptionsStandard();
- 
-    return rc;
-}
-
 
 rc_t CC KMain ( int argc, char *argv [] )
 {

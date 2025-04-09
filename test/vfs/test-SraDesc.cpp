@@ -242,7 +242,6 @@ FIXTURE_TEST_CASE(LoalObsoleteQualityTest, SraDescTestFixture) {
 #endif
 
 extern "C" {
-    ver_t CC KAppVersion(void) { return 0; }
     rc_t CC KMain(int argc, char * argv[]) {
         KConfigDisableUserSettings();
         return SraDescTestSuite(argc, argv);

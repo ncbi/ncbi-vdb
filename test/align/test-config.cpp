@@ -70,7 +70,7 @@ public:
         ErrorCode::throwIf(ArgsMakeAndHandle(&args, argc, argv, 1, table, tableSize));
     }
     #define ARGS(DEFS) cArgs{ argc, argv, sizeof(DEFS)/sizeof(OptDef), DEFS }
-    
+
     unsigned countOf(char const *name) const {
         uint32_t count = 0;
         ErrorCode::throwIf(ArgsOptionCount(args, name, &count));
@@ -115,7 +115,7 @@ struct CommandLine {
             { "ref-list"   , NULL, NULL, ref_list_help   , 1, true, false, NULL },
         };
         auto args = ARGS(defs);
-        
+
         opt_skip_verify = args.countOf(defs[0]) > 0;
         opt_only_verify = args.countOf(defs[1]) > 0;
         opt_config_file = args.valueOf(defs[2]);
@@ -132,8 +132,8 @@ struct CommandLine {
         }
         args_p = args.take();
     }
-    ~CommandLine() { 
-        delete references; 
+    ~CommandLine() {
+        delete references;
         ArgsWhack(args_p);
     }
 
@@ -148,11 +148,11 @@ struct CommandLine {
     std::istream &references_file() const {
         return references ? *references : std::cin;
     }
-    
-    /// is `--skip-verify` on   
+
+    /// is `--skip-verify` on
     bool skip_verify() const { return opt_skip_verify; }
-    
-    /// is `--only-verify` on   
+
+    /// is `--only-verify` on
     bool only_verify() const { return opt_only_verify; }
 
 private:
@@ -171,12 +171,12 @@ struct ConfigFile {
     	std::string name;
         std::string seqId;
         std::string extra;
-        
+
         Entry() = default;
         Entry(std::string const &line)
         {
             std::istringstream strm(line);
-            
+
             strm >> name >> seqId;
             if (strm) {
                 strm >> std::ws;
@@ -199,10 +199,10 @@ struct ConfigFile {
         }
     };
     std::vector<Entry> entries;
-    
+
     ConfigFile(char const *filePath) {
         auto file = std::ifstream{ filePath };
-        
+
         file >> std::ws;
         for (std::string line; std::getline(file, line); file >> std::ws) {
 #if ALLOW_COMMENT_LINES
@@ -249,7 +249,7 @@ struct Fixture {
     Fixture()
     : mgr(referenceManager("db/empty.config"))
     {}
-    
+
     Fixture(CommandLine const &cmdline)
     : mgr(referenceManager(cmdline.config_file()))
     {
@@ -260,7 +260,7 @@ struct Fixture {
                 throw ErrorCode{ rc };
         }
     }
-    
+
     ~Fixture() {
         ReferenceMgr_Release(mgr, false, nullptr, false, nullptr);
     }
@@ -331,7 +331,7 @@ TEST_SUITE(LoaderTestSuite);
 TEST_CASE ( LoadNoConfig )
 {
     auto const h = Fixture{ };
-    
+
     // not a valid RefSeq accession
     REQUIRE_NULL(h.findSeq("NC_000000"));
     REQUIRE_NOT_NULL(h.getSeq("NC_000001.11"));
@@ -341,15 +341,15 @@ TEST_CASE ( LoadConfig )
 {
     if (arguments == nullptr)
         throw std::logic_error("no command line arguments!?");
-    
+
     auto const &args = *arguments;
     auto const configFile = args.config_file();
     if (configFile == nullptr)
         throw test_skipped{ "no config file" };
-    
+
     auto const fixture = Fixture{ args };
     auto const config = ConfigFile{ configFile };
-    
+
     for (auto & entry : config.entries) {
         auto const seq = fixture.findSeq(entry.name);
         bool circular = false;
@@ -366,12 +366,12 @@ TEST_CASE ( VerifyConfig )
 {
     if (arguments == nullptr)
         throw std::logic_error("no command line arguments!?");
-    
+
     auto const &args = *arguments;
     auto const configFile = args.config_file();
     if (configFile == nullptr)
         throw test_skipped{ "no config file" };
-    
+
     auto const references = referenceList(args);
     if (references.empty())
         throw test_skipped{ "no reference list" };
@@ -401,30 +401,10 @@ TEST_CASE ( VerifyConfig )
 }
 
 //////////////////////////////////////////// Main
-#include <kapp/main.h>
-#include <kapp/args.h>
-#include <klib/out.h>
 #include <kfg/config.h>
 
 extern "C"
 {
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-
-const char UsageDefaultName[] = "test-loader";
-
-rc_t CC UsageSummary (const char * progname)
-{
-    return KOutMsg ( "Usage:\n" "\t%s [options]\n\n", progname );
-}
-
-rc_t CC Usage( const Args* args )
-{
-    return 0;
-}
 
 rc_t CC KMain ( int argc, char *argv [] )
 {

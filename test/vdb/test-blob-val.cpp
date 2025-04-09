@@ -25,9 +25,9 @@
 #include <cmath>
 
 #include <vdb/manager.h> // VDBManager
-#include <vdb/database.h> 
-#include <vdb/table.h> 
-#include <vdb/cursor.h> 
+#include <vdb/database.h>
+#include <vdb/table.h>
+#include <vdb/cursor.h>
 #include <vdb/schema.h> /* VSchemaRelease */
 #include <vdb/vdb-priv.h>
 
@@ -158,24 +158,7 @@ FIXTURE_TEST_CASE ( BlobValidationEnabled, VDB_Fixture)
 extern "C"
 {
 
-#include <kapp/args.h>
-#include <kfg/config.h> 
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-
-const char UsageDefaultName[] = "test-blob-val";
+#include <kfg/config.h>
 
 rc_t CC KMain ( int argc, char *argv [] )
 {

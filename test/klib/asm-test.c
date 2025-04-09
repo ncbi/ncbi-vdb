@@ -44,60 +44,6 @@ rc_t run ( uint32_t x, uint32_t expected_result )
     return 0;
 }
 
-
-/* Version  EXTERN
- *  return 4-part version code: 0xMMmmrrrr, where
- *      MM = major release
- *      mm = minor release
- *    rrrr = bug-fix release
- */
-ver_t CC KAppVersion ( void )
-{
-    return 0;
-}
-
-
-/* Usage
- *  This function is called when the command line argument
- *  handling sees -? -h or --help
- */
-rc_t CC UsageSummary ( const char *progname )
-{
-    return KOutMsg (
-        "\n"
-        "Usage:\n"
-        "  %s [Options]\n"
-        "\n"
-        "Summary:\n"
-        "  Simple test of functions potentially impemented using asm.\n"
-        , progname );
-}
-
-const char UsageDefaultName[] = "asm-test";
-
-rc_t CC Usage ( const Args *args )
-{
-    const char * progname = UsageDefaultName;
-    const char * fullpath = UsageDefaultName;
-    rc_t rc;
-
-    if (args == NULL)
-        rc = RC (rcApp, rcArgv, rcAccessing, rcSelf, rcNull);
-    else
-        rc = ArgsProgram (args, &fullpath, &progname);
-
-    UsageSummary (progname);
-
-    KOutMsg ("Options:\n");
-
-    HelpOptionsStandard();
-
-    HelpVersion (fullpath, KAppVersion());
-
-    return rc;
-}
-
-    
 /* KMain
  */
 rc_t CC KMain ( int argc, char *argv [] )

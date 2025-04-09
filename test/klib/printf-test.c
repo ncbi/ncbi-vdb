@@ -313,7 +313,7 @@ static rc_t sign_flag ( int32_t *field_width, int32_t *precision,
 
     /* with forces + */
     flags [ 0 ] = '+';
-    flags [ 1 ] = 0; 
+    flags [ 1 ] = 0;
     rc = alignment_flag ( flags, 1, field_width, precision, size_modifier, storage_class, args );
     if ( rc != 0 )
         return rc;
@@ -332,7 +332,7 @@ static rc_t do_field_width ( int32_t *field_width, int32_t *precision,
                              char size_modifier, char storage_class, va_list args)
 {
     rc_t rc;
-    uint32_t i; 
+    uint32_t i;
 
     rc = sign_flag ( NULL, precision, size_modifier, storage_class, args );
 
@@ -398,7 +398,7 @@ static rc_t make_initial_test (  int32_t *field_width, int32_t *precision,
     va_start ( args, storage_class );
 
     rc = do_storage_class ( field_width, precision, size_modifier, storage_class, args );
- 
+
     va_end ( args );
     return rc;
 }
@@ -422,21 +422,21 @@ rc_t run ( const char *progname )
     {
         /* create random number */
         srand ( (unsigned int) time ( NULL ) );
-        
-        
+
+
         /* signed integer */
         if ( rc == 0 )
         {
             randValue = rand ();
             randValue_2 = rand () % 10;
             randValue_3 = rand () % 5;
-            
+
             rc = make_initial_test ( field_width, precision, " ht", "di", randValue );
             if ( rc == 0 )
                 rc = make_initial_test ( ext_value, precision, " ht", "di", randValue_2, randValue );
             if ( rc == 0 )
                 rc = make_initial_test ( field_width, ext_value, " ht", "di", randValue_3, randValue );
-            
+
             if ( rc == 0 )
                 rc = make_initial_test ( field_width, precision, "l", "di", ( int64_t ) randValue );
             if ( rc == 0 )
@@ -444,7 +444,7 @@ rc_t run ( const char *progname )
             if ( rc == 0 )
                 rc = make_initial_test ( field_width, ext_value, "l", "di", randValue_3, ( int64_t ) randValue );
         }
-        
+
         /* unsigned integer */
         if ( rc == 0 )
         {
@@ -453,14 +453,14 @@ rc_t run ( const char *progname )
                 rc = make_initial_test ( ext_value, precision, " ht", "uxXo", randValue_2, randValue );
             if ( rc == 0 )
                 rc = make_initial_test ( field_width, ext_value, " ht", "uxXo", randValue_3, randValue );
-            
+
             if ( rc == 0 )
                 rc = make_initial_test ( field_width, precision, "l", "uxXo", ( uint64_t ) randValue );
             if ( rc == 0 )
                 rc = make_initial_test ( ext_value, precision, "l", "uxXo", randValue_2, ( uint64_t )randValue );
             if ( rc == 0 )
                 rc = make_initial_test ( field_width, ext_value, "l", "uxXo", randValue_3, ( uint64_t ) randValue );
-            
+
             if ( rc == 0 )
                 rc = make_initial_test ( field_width, precision, "z", "uxXo", ( size_t ) randValue );
             if ( rc == 0 )
@@ -468,21 +468,21 @@ rc_t run ( const char *progname )
             if ( rc == 0 )
                 rc = make_initial_test ( field_width, ext_value, "z", "uxXo", randValue_3, ( size_t ) randValue );
         }
-        
+
         /* float */
         if ( rc == 0 )
         {
-            
+
             randValue_f = ( double ) randValue / ( ( randValue % 100 ) + 1 );
-            
+
             /*** could use some floating point random numbers here */
-#if 0            
+#if 0
             rc = make_initial_test ( field_width, precision, " ", "feg", randValue );
             if ( rc == 0 )
                 rc = make_initial_test ( ext_value, precision, " ", "feg", randValue_2, randValue );
             if ( rc == 0 )
                 rc = make_initial_test ( field_width, ext_value, " ", "feg", randValue_3, randValue );
-#endif            
+#endif
 
             if ( rc == 0 )
                 rc = make_initial_test ( field_width, precision, " ", "feg", randValue_f );
@@ -491,7 +491,7 @@ rc_t run ( const char *progname )
             if ( rc == 0 )
                 rc = make_initial_test ( field_width, ext_value, " ", "feg", randValue_3, randValue_f );
         }
-        
+
         /* character */
         if ( rc == 0 )
         {
@@ -499,7 +499,7 @@ rc_t run ( const char *progname )
             if ( rc == 0 )
                 rc = test_printf ( "I like 1 embedded % character", "I like %u embedded %% character", 1 );
         }
-        
+
         /* text string */
         if ( rc == 0 )
         {
@@ -510,19 +510,19 @@ rc_t run ( const char *progname )
             /* The standard says this result is undefined, we shouldn't test for it, it is not consistent */
             rc = make_initial_test ( field_width, precision, " ", "s", NULL );
 #endif
-#endif            
+#endif
             rc = make_initial_test ( field_width, precision, " ", "s", "" );
             rc = make_initial_test ( field_width, precision, " ", "s", "OK" );
             rc = make_initial_test ( field_width, precision, " ", "s", "1234567890" );
             rc = make_initial_test ( field_width, precision, " ", "s", "\"`~!@#$%^&*()-_=+[]{}|\\';:?/.,<>" );
         }
-        
-    } 
-  
+
+    }
+
     /* hand written tests */
 
     {
-    
+
         int8_t t [ ] = { -128, -67, 0, 4, 56, 100, 127 };
         int16_t h  [ ] = { -32768, -2546, -398, -89, 0, 34, 123, 5736, 32767 };
         int32_t v [ ] = { -2147483648, -45287957, -100001, 45, 0, 106, 7234, 546963874, 2147483647 };
@@ -533,9 +533,9 @@ rc_t run ( const char *progname )
              which is in fact 64 bits on this machine. on a 32-bit machine,
              you need type "long long int".
 
-             you can make use of a pre-processor symbol to do this properly - I'll do it below. 
+             you can make use of a pre-processor symbol to do this properly - I'll do it below.
              */
-        int64_t l [ ] = { INT64_C(-9223372036854775807) - INT64_C(1), INT64_C(-67283678467328376), INT64_C(-2837640198), INT64_C(0),  INT64_C(187267509872), INT64_C(9223372036854775807) }; 
+        int64_t l [ ] = { INT64_C(-9223372036854775807) - INT64_C(1), INT64_C(-67283678467328376), INT64_C(-2837640198), INT64_C(0),  INT64_C(187267509872), INT64_C(9223372036854775807) };
 
         /* d, i */
 
@@ -575,7 +575,7 @@ rc_t run ( const char *progname )
         test_printf ( "00000000187267509872"    , "%020:4ld", l );
         test_printf ( "9223372036854775807"     , "%.2:5ld", l );
 
-    } 
+    }
 
 
     {
@@ -617,11 +617,11 @@ rc_t run ( const char *progname )
 
 
     {
-        /* float */ 
+        /* float */
 
         float f [ ] = { -2.1474836, -45.287957, -10000.1, 0.45, 0, 1.06 };
         double lf [ ] = { -9223372036854775808.0, -28.37640198 };
-        
+
         /* 32 bit */
         test_printf ( "  -2.15"             , "%7.2:0hf", f );
         test_printf ( "-00045.288"          , "%010.3:1hf" , f );
@@ -757,7 +757,7 @@ rc_t run ( const char *progname )
         else
         {
             rc = 0;
-        }        
+        }
     }
 
 #if LINUX
@@ -766,63 +766,9 @@ rc_t run ( const char *progname )
 #endif
 
     return rc;
-    
+
 }
 
-
-/* Version  EXTERN
- *  return 4-part version code: 0xMMmmrrrr, where
- *      MM = major release
- *      mm = minor release 
- *    rrrr = bug-fix release
- */
-ver_t CC KAppVersion ( void )
-{
-    return 0;
-}
-
-
-/* Usage
- *  This function is called when the command line argument
- *  handling sees -? -h or --help
- */
-rc_t CC UsageSummary ( const char *progname )
-{
-    return KOutMsg (
-        "\n"
-        "Usage:\n"
-        "  %s [Options]\n"
-        "\n"
-        "Summary:\n"
-        "  Simple test of printf.\n"
-        , progname );
-}
-
-const char UsageDefaultName[] = "time-test";
-
-rc_t CC Usage ( const Args *args )
-{
-    const char * progname = UsageDefaultName;
-    const char * fullpath = UsageDefaultName;
-    rc_t rc;
-
-    if (args == NULL)
-        rc = RC (rcApp, rcArgv, rcAccessing, rcSelf, rcNull);
-    else
-        rc = ArgsProgram (args, &fullpath, &progname);
-
-    UsageSummary (progname);
-
-    KOutMsg ("Options:\n");
-
-    HelpOptionsStandard();
-
-    HelpVersion (fullpath, KAppVersion());
-
-    return rc;
-}
-
-    
 /* KMain
  */
 rc_t CC KMain ( int argc, char *argv [] )

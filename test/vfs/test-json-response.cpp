@@ -381,9 +381,8 @@ TEST_CASE(testLive) {
 TEST_SUITE ( TestResolver4 )
 
 extern "C" {
-    ver_t CC KAppVersion ( void ) { return 0; }
     rc_t CC KMain ( int argc, char * argv [] ) {
-        if ( 
+        if (
 0 )
             assert ( ! KDbgSetString ( "VFS-JSON" ) );
     return TestResolver4 ( argc, argv );

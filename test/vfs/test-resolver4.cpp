@@ -205,7 +205,6 @@ TEST_CASE ( Test ) {
 #endif
 
 extern "C" {
-    ver_t CC KAppVersion ( void ) { return 0; }
     rc_t CC KMain ( int argc, char * argv [] ) {
         KConfigDisableUserSettings ();
 if (

@@ -26,14 +26,6 @@
 
 #include <ktst/unit_test.hpp>
 
-#if ALLOW_TESTING_CODE_TO_RELY_UPON_CODE_BEING_TESTED
-
-#include <kapp/main.h> // KAppVersion
-#include <kapp/args.h> // ArgsWhack
-#include <klib/out.h> // KOutMsg
-
-#endif
-
 #include <klib/rc.h>
 #include <klib/text.h>
 #include <sstream>
@@ -49,10 +41,6 @@ using std::string;
 //const int TestEnv::TEST_CASE_FAILED=255;
 
 bool TestEnv::in_child_process = false;
-
-#if ALLOW_TESTING_CODE_TO_RELY_UPON_CODE_BEING_TESTED
-struct Args* TestEnv::args = 0;
-#endif
 
 TestEnv::TestEnv(int argc, char* argv[], ArgsHandler* argsHandler)
     : catch_system_errors(true)
@@ -74,11 +62,6 @@ TestEnv::~TestEnv ()
         }
         free(argv2);
     }
-
-#if ALLOW_TESTING_CODE_TO_RELY_UPON_CODE_BEING_TESTED
-    ArgsWhack(args);
-    args = NULL;
-#endif
 }
 
 string TestEnv::lastLocation = "<init>";
@@ -121,38 +104,6 @@ void CC TestEnv::SigHandler(int sig) noexcept
     exit(sig);
 }
 
-
-#if ALLOW_TESTING_CODE_TO_RELY_UPON_CODE_BEING_TESTED
-
-#define OPTION_DBG "verbose_cmd_line"
-#define ALIAS_DBG "a"
-static const char * dbg_usage[] = { "print command line argument processing information", NULL };
-
-#define OPTION_CSE "catch_system_errors"
-#define ALIAS_CSE "c"
-static const char * cse_usage[] = { "[yes|y|no|n] catch system errors, default is yes", NULL };
-
-#define OPTION_LOG "test_log_level"
-#define ALIAS_LOG "t"
-static const char * log_usage[] = { "test log level, one of:",
-    "'all':       report all log messages",
-    "             including the passed test notification;",
-    "'test_suite': show test suite messages;",
-    "'message':   show user messages",
-    "'warning':   report warnings issued by user;",
-    "'error':     report all error conditions (default);",
-    "'fatal_error': report user or system originated fatal errors",
-    "             (for example, memory access violation);",
-    "'nothing':   do not report any information", NULL };
-
-OptDef Options[] = {
-      { OPTION_DBG, ALIAS_DBG, NULL, dbg_usage, 1, false, false }
-    , { OPTION_CSE, ALIAS_CSE, NULL, cse_usage, 1, true , false }
-    , { OPTION_LOG, ALIAS_LOG, NULL, log_usage, 1, true , false }
-};
-
-#endif
-
 rc_t TestEnv::process_args(int argc, char* argv[], ArgsHandler* argsHandler)
 {
     size_t arg2 = 9;
@@ -163,97 +114,6 @@ rc_t TestEnv::process_args(int argc, char* argv[], ArgsHandler* argsHandler)
     if (argv2[argc2] == NULL)
     {   return RC (rcApp, rcArgv, rcAccessing, rcMemory, rcExhausted); }
     ++argc2;
-
-#if ALLOW_TESTING_CODE_TO_RELY_UPON_CODE_BEING_TESTED
-
-    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 1,
-        Options, sizeof Options / sizeof (OptDef));
-    if (rc)
-    {   return rc; }
-
-    bool debug = false;
-    LogLevel::E detected = LogLevel::e_undefined;
-    do {
-        uint32_t pcount = 0;
-
-        rc = ArgsOptionCount(args, OPTION_DBG, &pcount);
-        if (rc)
-        {   return rc; }
-        if (pcount) {
-            debug = true;
-            LOG(LogLevel::e_nothing, "debug: debug was set to true\n");
-        }
-
-        rc = ArgsOptionCount(args, OPTION_CSE, &pcount);
-        if (rc)
-        {   return rc; }
-        if (pcount) {
-            const char* pc = NULL;
-            rc = ArgsOptionValue(args, OPTION_CSE, 0, (const void **)&pc);
-            if (rc)
-            {   return rc; }
-            if (!strcmp(pc, "n") || !strcmp(pc, "no")) {
-                catch_system_errors = false;
-                if (debug) {
-                    LOG(LogLevel::e_nothing,
-                       "debug: arg_catch_system_errors was set to false\n");
-                }
-            }
-            else {
-                if (debug) {
-                    LOG(LogLevel::e_nothing,
-                       "debug: arg_catch_system_errors was set to true\n");
-                }
-            }
-        }
-
-        rc = ArgsOptionCount(args, OPTION_LOG, &pcount);
-        if (rc)
-        {   return rc; }
-        if (pcount) {
-            const char* a = NULL;
-            rc = ArgsOptionValue(args, OPTION_LOG, 0, (const void **)&a);
-            if (rc)
-            {   return rc; }
-            if (!strcmp(a, "test_suite"))
-            { detected = LogLevel::e_test_suite; }
-            else if (strcmp(a, "all"    ) == 0)
-            { detected = LogLevel::e_all; }
-            else if (strcmp(a, "message") == 0)
-            { detected = LogLevel::e_message; }
-            else if (strcmp(a, "warning") == 0)
-            { detected = LogLevel::e_warning; }
-            else if (strcmp(a, "error"  ) == 0)
-            { detected = LogLevel::e_error; }
-            else if (strcmp(a, "nothing") == 0)
-            { detected = LogLevel::e_nothing; }
-            else if (strcmp(a, "fatal_error") == 0)
-            { detected = LogLevel::e_fatal_error; }
-            if (detected != LogLevel::e_undefined) {
-                verbosity = detected;
-                if (debug) {
-                    LOG(LogLevel::e_nothing,
-                        "debug: log_level was set to " << a << std::endl);
-                }
-            }
-            else {
-                verbosity = LogLevel::e_error;
-                if (debug) {
-                    LOG(LogLevel::e_nothing,
-                        "debug: log_level was set to error\n");
-                }
-            }
-        }
-    } while (0);
-
-    if (verbosity == LogLevel::e_undefined) {
-        verbosity = LogLevel::e_error;
-        if (debug) {
-            LOG(LogLevel::e_nothing,
-                "debug: log_level was set to error\n");
-        }
-    }
-#else
 
     rc_t rc = 0;
 
@@ -419,7 +279,6 @@ rc_t TestEnv::process_args(int argc, char* argv[], ArgsHandler* argsHandler)
                 "debug: log_level was set to error\n");
         }
     }
-#endif
 
     if (rc == 0) {
         if (argsHandler)
@@ -463,48 +322,14 @@ ncbi::NK::GetTestSuite(void)
 }
 
 rc_t CC TestEnv::UsageSummary(const char* progname) {
-#if ALLOW_TESTING_CODE_TO_RELY_UPON_CODE_BEING_TESTED
-    return KOutMsg(
-        "Usage:\n"
-        "  %s [--verbose_cmd_line] [--catch_system_errors [yes|y|no|n]] "
-        "[-t <value>] [-h] [...]\n", progname);
-#else
     std::cout
         << "Usage:\n"
         << progname
         << " [-debug] [-catch_system_errors=[yes|y|no|n]] "
         "[-l=<value>] [-h] [...]\n";
     return 0;
-#endif
 }
 
-#if ALLOW_TESTING_CODE_TO_RELY_UPON_CODE_BEING_TESTED
-rc_t CC TestEnv::Usage(const Args* args)
-{
-    const char* progname = UsageDefaultName;
-    const char* fullpath = UsageDefaultName;
-
-    rc_t rc = (args == NULL) ?
-        RC (rcApp, rcArgv, rcAccessing, rcSelf, rcNull):
-        ArgsProgram(args, &fullpath, &progname);
-
-    if (rc != 0)
-        progname = fullpath = UsageDefaultName;
-
-    UsageSummary(progname);
-
-    KOutMsg("\nOptions:\n");
-
-    HelpOptionLine(ALIAS_DBG, OPTION_DBG, NULL, dbg_usage);
-    HelpOptionLine(ALIAS_CSE, OPTION_CSE, NULL, cse_usage);
-    HelpOptionLine(ALIAS_LOG, OPTION_LOG, NULL, log_usage);
-    KOutMsg("\n");
-    HelpOptionsStandard();
-    HelpVersion(fullpath, KAppVersion());
-
-    return rc;
-}
-#else
 rc_t CC TestEnv::Usage(const char *progname)
 {
     UsageSummary ( progname );
@@ -526,7 +351,6 @@ rc_t CC TestEnv::Usage(const char *progname)
         "h (help) - this help message\n";
     return 0;
 }
-#endif
 
 bool TestEnv::Sleep(unsigned int seconds)
 {

@@ -53,23 +53,6 @@ typedef struct ErrorReport ErrorReport;
 extern "C"
 {
 
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-
-const char UsageDefaultName[] = "test-schema-scan";
-
-rc_t CC UsageSummary (const char * progname)
-{
-    return KOutMsg ( "Usage:\n" "\t%s [options] schema-file\n\n", progname );
-}
-
-rc_t CC Usage( const Args* args )
-{
-    return 0;
-}
-
 static
 bool
 MatchStrings ( const string& p_source, const string p_print )

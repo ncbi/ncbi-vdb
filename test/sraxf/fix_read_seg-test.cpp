@@ -3,17 +3,13 @@
 #include <math.h>
 
 #include <ktst/unit_test.hpp> /* TEST_SUITE */
+#include <kapp/vdbapp.h>
 #include <kapp/main.h> /* KAppVersion */
 
 #include <os-native.h> /* lround on Windows, uint16_t */
 #include <string.h> /* memset */
 
 #include "../../libs/sraxf/fix_read_seg_impl.h"
-
-ver_t CC KAppVersion ( void ) { return 0; }
-rc_t CC Usage ( const Args * args ) { return 0; }
-const char UsageDefaultName[] = "";
-rc_t UsageSummary (const char * progname) { return 0; }
 
 TEST_SUITE(FixReadSegTestSuite);
 

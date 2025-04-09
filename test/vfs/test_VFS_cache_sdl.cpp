@@ -275,10 +275,10 @@ FIXTURE_TEST_CASE(ExpirationNotCaching, NotCachingFixture) {
 
     string json(MkSdlJson(acc, "http://a1/", 99)); // will expire in 99 seconds
     putenv((char*)json.c_str());
-    
+
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 0);
     REQUIRE_NULL(remote);
-    
+
     REQUIRE_RC(QueryRemote(acc));
     REQUIRE_RC(RemoteEquals("http://a1/"));
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 0);
@@ -303,11 +303,11 @@ FIXTURE_TEST_CASE(ExpirationCaching, CachingFixture) {
 
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 0);
     REQUIRE_NULL(remote);
-    
+
     REQUIRE_RC(QueryRemote(acc));
     // not expired
     REQUIRE_RC(RemoteEquals("https://sra-pub-run-odp.s3.amazonaws.com/sra/SRR053325/SRR053325"));
-    
+
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 1);
     json = MkSdlJson(acc, "https://ncbi.nlm.nih.gov/sos5/sra/SRR000/SRR000002");
     putenv((char*)json.c_str());
@@ -349,14 +349,14 @@ FIXTURE_TEST_CASE(WgsNotCaching, NotCachingFixture) {
 
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 0);
     REQUIRE_NULL(remote);
-    
+
     REQUIRE_RC(QueryRemote(acc));
     REQUIRE_RC(RemoteEquals("http://a1/"));
-    
+
     // use 2 SDL calls for the same WGS file when not caching
     REQUIRE_RC(QueryRemote(acc2));
     REQUIRE_RC(RemoteEquals("http://a2/"));
-    
+
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 0);
 }
 
@@ -469,11 +469,6 @@ FIXTURE_TEST_CASE(ThreadsNotCaching, NotCachingFixture) {
 #endif
 
 extern "C" {
-    const char UsageDefaultName[] = "Test_VFS_cache_sdl";
-    rc_t CC UsageSummary(const char * progname) { return 0; }
-    rc_t CC Usage(const struct Args * args) { return 0; }
-    ver_t CC KAppVersion(void) { return 0; }
- 
     rc_t CC KMain(int argc, char * argv[]) {
 if(0) { KDbgSetString("VFS"); }
         KConfigDisableUserSettings();

@@ -183,7 +183,7 @@ FIXTURE_TEST_CASE ( VDB_2936_resolve_local_WGS_with_version, ResolverFixture )
             REQUIRE_RC(VPathEqual(local, pc2, &notequal));
             REQUIRE(notequal == 0);
             REQUIRE_RC(VPathRelease(pc2));
-            
+
             try
             {
                 String path;
@@ -511,25 +511,7 @@ FIXTURE_TEST_CASE(noqual_vdbcache, ResolverFixture) {
 extern "C"
 {
 
-#include <kapp/args.h>
 #include <klib/rc.h>
-
-    ver_t CC KAppVersion ( void )
-    {
-        return 0x1000000;
-    }
-
-    rc_t CC UsageSummary (const char * progname)
-    {
-        return 0;
-    }
-
-    rc_t CC Usage ( const Args * args )
-    {
-        return 0;
-    }
-
-    const char UsageDefaultName[] = "test-resolver";
 
     static void clear_recorded_errors ( void )
     {

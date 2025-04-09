@@ -41,15 +41,15 @@ TEST_CASE(VDB_2877) {
     KNSManager *mgr = NULL;
     KNSManager *mgr2 = NULL;
 
-    REQUIRE_EQ(mgr, mgr2); 
+    REQUIRE_EQ(mgr, mgr2);
 
-    REQUIRE_RC(KNSManagerMake(&mgr)); 
-    REQUIRE(mgr); 
-    REQUIRE_NE(mgr, mgr2); 
+    REQUIRE_RC(KNSManagerMake(&mgr));
+    REQUIRE(mgr);
+    REQUIRE_NE(mgr, mgr2);
 
     VFSManager *vmgr = NULL;
     REQUIRE_RC(VFSManagerMake(&vmgr));
-    REQUIRE(vmgr); 
+    REQUIRE(vmgr);
 
     REQUIRE_RC(VFSManagerGetKNSMgr(vmgr, &mgr2));
 
@@ -64,13 +64,12 @@ TEST_CASE(VDB_2877) {
     RELEASE(VFSManager, vmgr);
 
     RELEASE(KNSManager, mgr);
-    REQUIRE_EQ(mgr, mgr2); 
+    REQUIRE_EQ(mgr, mgr2);
 
     REQUIRE(!rc);
 }
 
 extern "C" {
-    ver_t CC KAppVersion ( void ) { return 0; }
     rc_t CC KMain ( int argc, char *argv [] )
     {    return KNSManagerSingletonTestSuite(argc, argv); }
 }

@@ -46,16 +46,16 @@ TEST_CASE ( KBase64_encodeBase64 )
     rc_t rc = 0;
     const String *encoded;
     const char *data = "Test for basic Base64 encoding";
-    
+
     rc = encodeBase64 ( &encoded, data, strlen (data) );
-    
+
     REQUIRE_RC ( rc );
-    
+
     std :: string expected ( "VGVzdCBmb3IgYmFzaWMgQmFzZTY0IGVuY29kaW5n" );
     std :: string result ( encoded -> addr, encoded -> size );
-    
+
     REQUIRE_EQ ( expected, result );
-    
+
     StringWhack ( encoded );
 }
 
@@ -67,14 +67,14 @@ TEST_CASE ( KBase64_decodeBase64 )
     StringInitCString ( &str, "VGVzdCBmb3IgYmFzaWMgQmFzZTY0IGVuY29kaW5n" );
     const String *encoding;
     StringCopy ( &encoding, &str );
-    
+
     rc = decodeBase64 ( &decoded, encoding );
     StringWhack ( encoding );
     REQUIRE_RC ( rc );
 
     std :: string expected ( "Test for basic Base64 encoding" );
     std :: string result ( ( char * ) decoded . base, decoded . elem_count );
-    
+
     REQUIRE_EQ ( expected, result );
 
     rc = KDataBufferWhack ( &decoded );
@@ -87,16 +87,16 @@ TEST_CASE ( KBase64_encodeBase64_rfc1 )
     rc_t rc = 0;
     const String *encoded;
     const char *data = "";
-    
+
     rc = encodeBase64 ( &encoded, data, strlen (data) );
-    
+
     REQUIRE_RC ( rc );
-    
+
     std :: string expected ( "" );
     std :: string result ( encoded -> addr, encoded -> size );
-    
+
     REQUIRE_EQ ( expected, result );
-    
+
     StringWhack ( encoded );
 }
 
@@ -108,14 +108,14 @@ TEST_CASE ( KBase64_decodeBase64_rfc1 )
     StringInitCString ( &str, "" );
     const String *encoding;
     StringCopy ( &encoding, &str );
-    
+
     rc = decodeBase64 ( &decoded, encoding );
     StringWhack ( encoding );
     REQUIRE_RC ( rc );
 
     std :: string expected ( "" );
     std :: string result ( ( char * ) decoded . base, decoded . elem_count );
-    
+
     REQUIRE_EQ ( expected, result );
 
     rc = KDataBufferWhack ( &decoded );
@@ -128,20 +128,20 @@ TEST_CASE ( KBase64_encodeBase64_rfc2 )
     rc_t rc = 0;
     const String *encoded;
     const char *data = "f";
-    
+
     rc = encodeBase64 ( &encoded, data, strlen (data) );
-    
+
     REQUIRE_RC ( rc );
-    
+
 #if BASE64_PAD_ENCODING
     std :: string expected ( "Zg==" );
 #else
     std :: string expected ( "Zg" );
 #endif
     std :: string result ( encoded -> addr, encoded -> size );
-    
+
     REQUIRE_EQ ( expected, result );
-    
+
     StringWhack ( encoded );
 }
 
@@ -153,14 +153,14 @@ TEST_CASE ( KBase64_decodeBase64_rfc2 )
     StringInitCString ( &str, "Zg==" );
     const String *encoding;
     StringCopy ( &encoding, &str );
-    
+
     rc = decodeBase64 ( &decoded, encoding );
     StringWhack ( encoding );
     REQUIRE_RC ( rc );
 
     std :: string expected ( "f" );
     std :: string result ( ( char * ) decoded . base, decoded . elem_count );
-    
+
     REQUIRE_EQ ( expected, result );
 
     rc = KDataBufferWhack ( &decoded );
@@ -173,20 +173,20 @@ TEST_CASE ( KBase64_encodeBase64_rfc3 )
     rc_t rc = 0;
     const String *encoded;
     const char *data = "fo";
-    
+
     rc = encodeBase64 ( &encoded, data, strlen (data) );
-    
+
     REQUIRE_RC ( rc );
-    
+
 #if BASE64_PAD_ENCODING
     std :: string expected ( "Zm8=" );
 #else
     std :: string expected ( "Zm8" );
 #endif
     std :: string result ( encoded -> addr, encoded -> size );
-    
+
     REQUIRE_EQ ( expected, result );
-    
+
     StringWhack ( encoded );
 }
 
@@ -198,14 +198,14 @@ TEST_CASE ( KBase64_decodeBase64_rfc3 )
     StringInitCString ( &str, "Zm8=" );
     const String *encoding;
     StringCopy ( &encoding, &str );
-    
+
     rc = decodeBase64 ( &decoded, encoding );
     StringWhack ( encoding );
     REQUIRE_RC ( rc );
 
     std :: string expected ( "fo" );
     std :: string result ( ( char * ) decoded . base, decoded . elem_count );
-    
+
     REQUIRE_EQ ( expected, result );
 
     rc = KDataBufferWhack ( &decoded );
@@ -218,16 +218,16 @@ TEST_CASE ( KBase64_encodeBase64_rfc4 )
     rc_t rc = 0;
     const String *encoded;
     const char *data = "foo";
-    
+
     rc = encodeBase64 ( &encoded, data, strlen (data) );
-    
+
     REQUIRE_RC ( rc );
-    
+
     std :: string expected ( "Zm9v" );
     std :: string result ( encoded -> addr, encoded -> size );
-    
+
     REQUIRE_EQ ( expected, result );
-    
+
     StringWhack ( encoded );
 }
 
@@ -239,14 +239,14 @@ TEST_CASE ( KBase64_decodeBase64_rfc4 )
     StringInitCString ( &str, "Zm9v" );
     const String *encoding;
     StringCopy ( &encoding, &str );
-    
+
     rc = decodeBase64 ( &decoded, encoding );
     StringWhack ( encoding );
     REQUIRE_RC ( rc );
 
     std :: string expected ( "foo" );
     std :: string result ( ( char * ) decoded . base, decoded . elem_count );
-    
+
     REQUIRE_EQ ( expected, result );
 
     rc = KDataBufferWhack ( &decoded );
@@ -259,20 +259,20 @@ TEST_CASE ( KBase64_encodeBase64_rfc5 )
     rc_t rc = 0;
     const String *encoded;
     const char *data = "foob";
-    
+
     rc = encodeBase64 ( &encoded, data, strlen (data) );
-    
+
     REQUIRE_RC ( rc );
-    
+
 #if BASE64_PAD_ENCODING
     std :: string expected ( "Zm9vYg==" );
 #else
     std :: string expected ( "Zm9vYg" );
 #endif
     std :: string result ( encoded -> addr, encoded -> size );
-    
+
     REQUIRE_EQ ( expected, result );
-    
+
     StringWhack ( encoded );
 }
 
@@ -284,14 +284,14 @@ TEST_CASE ( KBase64_decodeBase64_rfc5 )
     StringInitCString ( &str, "Zm9vYg==" );
     const String *encoding;
     StringCopy ( &encoding, &str );
-    
+
     rc = decodeBase64 ( &decoded, encoding );
     StringWhack ( encoding );
     REQUIRE_RC ( rc );
 
     std :: string expected ( "foob" );
     std :: string result ( ( char * ) decoded . base, decoded . elem_count );
-    
+
     REQUIRE_EQ ( expected, result );
 
     rc = KDataBufferWhack ( &decoded );
@@ -304,20 +304,20 @@ TEST_CASE ( KBase64_encodeBase64_rfc6 )
     rc_t rc = 0;
     const String *encoded;
     const char *data = "fooba";
-    
+
     rc = encodeBase64 ( &encoded, data, strlen (data) );
-    
+
     REQUIRE_RC ( rc );
-    
+
 #if BASE64_PAD_ENCODING
     std :: string expected ( "Zm9vYmE=" );
 #else
     std :: string expected ( "Zm9vYmE" );
 #endif
     std :: string result ( encoded -> addr, encoded -> size );
-    
+
     REQUIRE_EQ ( expected, result );
-    
+
     StringWhack ( encoded );
 }
 
@@ -329,14 +329,14 @@ TEST_CASE ( KBase64_decodeBase64_rfc6 )
     StringInitCString ( &str, "Zm9vYmE=" );
     const String *encoding;
     StringCopy ( &encoding, &str );
-    
+
     rc = decodeBase64 ( &decoded, encoding );
     StringWhack ( encoding );
     REQUIRE_RC ( rc );
 
     std :: string expected ( "fooba" );
     std :: string result ( ( char * ) decoded . base, decoded . elem_count );
-    
+
     REQUIRE_EQ ( expected, result );
 
     rc = KDataBufferWhack ( &decoded );
@@ -349,16 +349,16 @@ TEST_CASE ( KBase64_encodeBase64_rfc7 )
     rc_t rc = 0;
     const String *encoded;
     const char *data = "foobar";
-    
+
     rc = encodeBase64 ( &encoded, data, strlen (data) );
-    
+
     REQUIRE_RC ( rc );
-    
+
     std :: string expected ( "Zm9vYmFy" );
     std :: string result ( encoded -> addr, encoded -> size );
-    
+
     REQUIRE_EQ ( expected, result );
-    
+
     StringWhack ( encoded );
 }
 
@@ -370,14 +370,14 @@ TEST_CASE ( KBase64_decodeBase64_rfc7 )
     StringInitCString ( &str, "Zm9vYmFy" );
     const String *encoding;
     StringCopy ( &encoding, &str );
-    
+
     rc = decodeBase64 ( &decoded, encoding );
     StringWhack ( encoding );
     REQUIRE_RC ( rc );
 
     std :: string expected ( "foobar" );
     std :: string result ( ( char * ) decoded . base, decoded . elem_count );
-    
+
     REQUIRE_EQ ( expected, result );
 
     rc = KDataBufferWhack ( &decoded );
@@ -387,15 +387,7 @@ TEST_CASE ( KBase64_decodeBase64_rfc7 )
 //////////////////////////////////////////////////// Main
 extern "C" {
 
-#include <kapp/args.h>
 #include <kfg/config.h>
-
-ver_t CC KAppVersion(void) { return 0x1000000; }
-rc_t CC UsageSummary(const char* progname) { return 0; }
-
-rc_t CC Usage(const Args* args) { return 0; }
-
-const char UsageDefaultName[] = "test-base64";
 
 rc_t CC KMain(int argc, char* argv[])
 {

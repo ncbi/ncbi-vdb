@@ -75,7 +75,7 @@ TEST_CASE(TestTelemetry) {
     // ENABLE SENDING TELEMETRY IN CONFIGURATION: IT IS IGNORED
 
     REQUIRE_RC(KConfigWriteString(kfg, "libs/kns/send-telemetry", "true"));
-    
+
 #ifndef WINDOWS
     unsetenv("VDB_OPT_BITMAP");
     REQUIRE_RC(KNSManagerGetUserAgent(&ua));
@@ -135,8 +135,6 @@ TEST_CASE(TestTelemetry) {
 }
 
 extern "C" {
-    ver_t CC KAppVersion(void) { return 0; }
-
     rc_t CC KMain(int argc, char *argv[]) {
         KConfigDisableUserSettings();
         return KNS_opt_bitmapTestSuite(argc, argv);

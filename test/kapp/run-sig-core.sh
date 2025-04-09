@@ -76,15 +76,20 @@ elif [ "$HOST_OS" = "bsd" ]; then
 
    CORE_FOLDER="./"
 elif [ "$HOST_OS" = "linux" ]; then
-   if [ "`ulimit -c`" = "0" ]; then
-       echo "Core files are disabled. Skipping core file tests"
-       exit 0
-   fi
+    if [ "$OS_DISTRIBUTOR" = "Ubuntu" ]; then
+        if [ "`ulimit -c`" = "0" ]; then
+            echo "Core files are disabled. Skipping core file tests"
+            exit 0
+        fi
 
-   if [ "`cat /proc/sys/kernel/core_pattern`" != "core" ]; then
-       echo "Unknown core file pattern" 1>&2
-       exit 2
-   fi
+        if [ "`cat /proc/sys/kernel/core_pattern`" != "core" ]; then
+            echo "Unknown core file pattern. Skipping core file tests" 1>&2
+            exit 0
+        fi
+    else
+        echo "Non-Ubuntu Linux. Skipping core file tests"
+        exit 0
+    fi
    CORE_FOLDER="./"
 else
    echo "Should be run from unix-compatible OS" 1>&2
@@ -95,7 +100,7 @@ fi
 # them in background. Lets start it normally and run
 # `kill` command in background.
 killFromBackground $$ &
-$BINARY_PATH 
+$BINARY_PATH
 
 # Wait for `kill` job
 wait
@@ -107,26 +112,26 @@ rm killed.pid
 if [ "$HOST_OS" = "bsd" ]; then
     CORE_FILE="${CORE_FOLDER}${BINARY_PATH##*/}.core"
 else
-    CORE_FILE="${CORE_FOLDER}core.${BINARY_PID}"
+    CORE_FILE="${CORE_FOLDER}core"
 fi
 
 if [ "$BUILD_TYPE" = "dbg" ]; then
    if [ -f $CORE_FILE ]; then
        rm $CORE_FILE
-       echo "Success: Core file was generated and was removed"
+       echo "Success: Core file $CORE_FILE was generated and was removed"
        exit 0
    else
-       echo "Failed: No core file detected" 1>&2
+       echo "Failed: No core file $CORE_FILE detected" 1>&2
        exit 3
    fi
 else
    if [ -f $CORE_FILE ]; then
-       rm $CORE_FILE 
-       echo "Failed: Core file generated while shouldn't and was removed" 1>&2
+       rm $CORE_FILE
+       echo "Failed: Core file $CORE_FILE generated while shouldn't and was removed" 1>&2
        exit 4
     else
-       echo "Success: No core file detected"
+       echo "Success: No core file $CORE_FILE detected"
        exit 0
-    fi 
+    fi
 fi
 

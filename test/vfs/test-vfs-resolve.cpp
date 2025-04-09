@@ -441,10 +441,6 @@ FIXTURE_TEST_CASE(ResolveTestLocalPath, Fixture) {
 }
 
 extern "C" {
-    const char UsageDefaultName[] = "vfs-test-resolve";
-    rc_t CC UsageSummary(const char * progname) { return 0; }
-    rc_t CC Usage(const struct Args * args) { return 0; }
-    ver_t CC KAppVersion(void) { return 0; }
     rc_t CC KMain(int argc, char * argv[]) {
         putenv((char*)"NCBI_VDB_NO_CACHE_SDL_RESPONSE=1");
 #if 0

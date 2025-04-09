@@ -172,7 +172,7 @@ TEST_CASE(TEST) {
     Test ( "Called over HTTPS to Gov: got 200", this, e200, "https to Gov",
        "https://" RESOLVER_CGI_HEAD "GoV/Traces/names/names.cgi" );
 
-#if NOW_NAMES_CGI_ALWAYS_RETURNS_403_WHEN_ASKED_FOR_HTTP 
+#if NOW_NAMES_CGI_ALWAYS_RETURNS_403_WHEN_ASKED_FOR_HTTP
     Test (
         "Called over HTTP: fail after 403 - not retrying non-government sites",
         this, e403, "HTTP, not government",
@@ -219,10 +219,6 @@ static bool out_of_ncbi() {
 }
 
 extern "C" {
-    ver_t CC KAppVersion ( void                     ) { return 0; }
-    rc_t CC UsageSummary ( const char     * progname) { return 0; }
-    rc_t CC Usage        ( const struct Args * args ) { return 0; }
-    const char UsageDefaultName[] = "redirect-rejected-names-cgi-http-to-https";
     rc_t CC KMain ( int argc, char *argv [] ) {
         if ( 0 ) assert ( ! KDbgSetString ( "VFS" ) );
         KConfigDisableUserSettings ();

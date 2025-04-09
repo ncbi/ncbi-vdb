@@ -542,11 +542,6 @@ static rc_t argsHandler ( int argc, char * argv [] ) {
 }
 
 extern "C" {
-    const char UsageDefaultName[] = "test-refresh-expired";
-    rc_t CC UsageSummary ( const char     * progname) { return 0; }
-    rc_t CC Usage        ( const struct Args * args ) { return 0; }
-    ver_t CC KAppVersion ( void ) { return 0; }
-
     rc_t CC KMain ( int argc, char * argv [] )
     {
         //if ( 1 ) assert ( ! KDbgSetString ( "KNS-HTTP" ) );

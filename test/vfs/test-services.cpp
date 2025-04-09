@@ -340,8 +340,6 @@ TEST_CASE(TestKSrvResponseGetLocationCacheInADLeak) {
 #endif
 
 extern "C" {
-    ver_t CC KAppVersion ( void ) { return 0; }
-
     rc_t CC KMain ( int argc, char * argv [] ) {
         KConfigDisableUserSettings(); // ignore ~/.ncbi/user-settings.mkfg
 

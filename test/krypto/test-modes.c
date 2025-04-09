@@ -139,8 +139,8 @@ uint8_t  AES_ECB_192_cipher[4][16] =
         0xfb, 0x16, 0x69, 0x16, 0x03, 0xc1, 0x8e, 0x0e
     }
 };
- 
-uint8_t AES_ECB_256_key[32] = 
+
+uint8_t AES_ECB_256_key[32] =
 {
     0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe,
     0x2b, 0x73, 0xae, 0xf0, 0x85, 0x7d, 0x77, 0x81,
@@ -148,7 +148,7 @@ uint8_t AES_ECB_256_key[32] =
     0x2d, 0x98, 0x10, 0xa3, 0x09, 0x14, 0xdf, 0xf4
 };
 
-uint8_t AES_ECB_256_test[4][16] = 
+uint8_t AES_ECB_256_test[4][16] =
 {
     {
         0x6b, 0xc1, 0xbe, 0xe2, 0x2e, 0x40, 0x9f, 0x96,
@@ -158,7 +158,7 @@ uint8_t AES_ECB_256_test[4][16] =
         0xae, 0x2d, 0x8a, 0x57, 0x1e, 0x03, 0xac, 0x9c,
         0x9e, 0xb7, 0x6f, 0xac, 0x45, 0xaf, 0x8e, 0x51
     },
-    {   
+    {
         0x30, 0xc8, 0x1c, 0x46, 0xa3, 0x5c, 0xe4, 0x11,
         0xe5, 0xfb, 0xc1, 0x19, 0x1a, 0x0a, 0x52, 0xef
     },
@@ -168,7 +168,7 @@ uint8_t AES_ECB_256_test[4][16] =
     }
 };
 
-uint8_t AES_ECB_256_cipher[4][16] = 
+uint8_t AES_ECB_256_cipher[4][16] =
 {
     {
         0xf3, 0xee, 0xd1, 0xbd, 0xb5, 0xd2, 0xa0, 0x3c,
@@ -304,7 +304,7 @@ uint8_t AES_CBC_192_cipher[4][16] =
         0x71, 0x78, 0x18, 0x3a, 0x9f, 0xa0, 0x71, 0xe8
     },
     {
-        0xb4, 0xd9, 0xad, 0xa9, 0xad, 0x7d, 0xed, 0xf4, 
+        0xb4, 0xd9, 0xad, 0xa9, 0xad, 0x7d, 0xed, 0xf4,
         0xe5, 0xe7, 0x38, 0x76, 0x3f, 0x69, 0x14, 0x5a
     },
     {
@@ -485,7 +485,7 @@ uint8_t AES_CFB_192_test[4][16] =
         0x9e, 0xb7, 0x6f, 0xac, 0x45, 0xaf, 0x8e, 0x51
     },
     {
-        0x30, 0xc8, 0x1c, 0x46, 0xa3, 0x5c, 0xe4, 0x11, 
+        0x30, 0xc8, 0x1c, 0x46, 0xa3, 0x5c, 0xe4, 0x11,
         0xe5, 0xfb, 0xc1, 0x19, 0x1a, 0x0a, 0x52, 0xef
     },
     {
@@ -914,15 +914,15 @@ uint8_t AES_CTR_256_cipher[4][16] =
         0x60, 0x1e, 0xc3, 0x13, 0x77, 0x57, 0x89, 0xa5,
         0xb7, 0xa7, 0xf5, 0x04, 0xbb, 0xf3, 0xd2, 0x28
     },
-    {   
+    {
         0xf4, 0x43, 0xe3, 0xca, 0x4d, 0x62, 0xb5, 0x9a,
         0xca, 0x84, 0xe9, 0x90, 0xca, 0xca, 0xf5, 0xc5
     },
-    {   
+    {
         0x2b, 0x09, 0x30, 0xda, 0xa2, 0x3d, 0xe9, 0x4c,
         0xe8, 0x70, 0x17, 0xba, 0x2d, 0x84, 0x98, 0x8d
     },
-    {   
+    {
         0xdf, 0xc9, 0xc5, 0x8d, 0xb6, 0x7a, 0xad, 0xa6,
         0x13, 0xc2, 0xdd, 0x08, 0x45, 0x79, 0x41, 0xa6
     }
@@ -976,7 +976,7 @@ rc_t run ()
                         }
                     }
                 }
-            }           
+            }
 
             /* AES ECB 192 */
             KOutMsg ("AES ECB 192\n");
@@ -1013,7 +1013,7 @@ rc_t run ()
                         }
                     }
                 }
-            }           
+            }
 
             /* AES ECB 256 */
             KOutMsg ("AES ECB 256\n");
@@ -1050,7 +1050,7 @@ rc_t run ()
                         }
                     }
                 }
-            }           
+            }
 
 
             /* AES CBC 128 */
@@ -1096,7 +1096,7 @@ rc_t run ()
                         }
                     }
                 }
-            }           
+            }
 
             /* AES CBC 192 */
             KOutMsg ("AES CBC 192\n");
@@ -1141,7 +1141,7 @@ rc_t run ()
                         }
                     }
                 }
-            }           
+            }
 
             /* AES CBC 256 */
             KOutMsg ("AES CBC 256\n");
@@ -1186,7 +1186,7 @@ rc_t run ()
                         }
                     }
                 }
-            }           
+            }
 
             KCipherRelease (cipher);
         }
@@ -1206,37 +1206,13 @@ rc_t CC UsageSummary  (const char * progname)
                     "  Test the KXTocDir type.\n",
                     progname);
 }
-const char UsageDefaultName[] = "test-modes";
-rc_t CC Usage (const Args * args)
-{
-    return 0;
-}
-/* { */
-/*     const char * progname = UsageDefaultName; */
-/*     const char * fullpath = UsageDefaultName; */
-/*     rc_t rc = 0; */
 
-/*     rc = ArgsProgram (args, &fullpath, &progname); */
-/*     if (rc == 0) */
-/*     { */
-/*         assert (args); */
-/*         summary (UsageDefaultName); */
-/*         HelpOptionsStandard (); */
-/*     } */
-/*     return rc; */
-/* } */
-
-/* MINIUSAGE(def_name) */
-
-
-ver_t CC KAppVersion (void)
-{
-    return 0;
-}
 rc_t CC KMain ( int argc, char *argv [] )
 {
     Args * args;
     rc_t rc;
+
+    SetUsageSummary( UsageSummary );
 
     rc = ArgsMakeAndHandle (&args, argc, argv, 0);
     if (rc == 0)
@@ -1249,7 +1225,7 @@ rc_t CC KMain ( int argc, char *argv [] )
     {
         rc = RC(rcKrypto, rcBuffer, rcValidating, rcEncryption, rcIncorrect);
     }
-    
+
     if (rc)
         LOGERR (klogErr, rc, "Exiting status");
     else

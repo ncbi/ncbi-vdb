@@ -32,13 +32,9 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <unistd.h>
 
-ver_t CC KAppVersion ( void )
-{
-    return 0;
-}
-
-const char UsageDefaultName[] = "append-arg-test";
+const char UsageDefaultName[] = "sig-core";
 
 rc_t CC UsageSummary ( const char *progname )
 {
@@ -47,7 +43,8 @@ rc_t CC UsageSummary ( const char *progname )
                      "  %s [Options]\n"
                      "\n"
                      "Summary:\n"
-                     "  Test append argument. [-h for help]\n"
+                     "  Test core generation by killing it with signal.\n"
+		             "  The tool enter into infinite loop after start .\n"
                      , progname
         );
 }
@@ -70,7 +67,7 @@ rc_t CC Usage ( const Args *args )
     KOutMsg ("Options:\n");
 
     HelpOptionsStandard ();
-    HelpVersion ( fullpath, KAppVersion () );
+    HelpVersion ( fullpath, GetKAppVersion () );
 
     return rc;
 }
@@ -79,42 +76,23 @@ rc_t CC Usage ( const Args *args )
 rc_t CC KMain ( int argc, char *argv [] )
 {
     Args *args;
+    SetUsage( Usage );
+    SetUsageSummary( UsageSummary );
     rc_t rc;
-    bool Jojoba = false;
-
-    if ( argc != 2 && argc != 1 ) {
-        if ( argc == 3 && strcmp ( argv [ 2 ], "jojoba" ) == 0 ) {
-            Jojoba = true;
-        }
-        else {
-            printf ( "INVALID ARGUMENTS\n" );
-            UsageSummary ( UsageDefaultName );
-            return 22;
-        }
-    }
-
-    rc = ArgsMakeStandardOptions ( & args );
-    if ( rc == 0 ) {
-        if ( ! Jojoba ) {
-            rc = ArgsAddAppendModeOption ( args );
-        }
-        if ( rc == 0 ) {
-            rc = ArgsParse ( args, argc, argv );
-            if ( rc == 0 ) {
-                ArgsHandleHelp ( args );
-
-                rc = ArgsHandleAppendMode ( args );
-                if ( rc == 0 ) {
-                    printf (
-                            "APPEND_MODE: %s\n",
-                            ( ArgsIsAppendModeSet () ? "Y" : "N" )
-                            );
-                }
-            }
+    do {
+        rc = ArgsMakeAndHandle ( & args, argc, argv, 0 );
+        if ( rc != 0 )
+        {
+            LogErr ( klogErr, rc, "failed to parse arguments" );
+            break;
         }
 
-        ArgsWhack ( args );
-    }
+        while ( true ) {
+            sleep ( 1000 );
+        }
+    } while (false);
+
+    ArgsWhack ( args );
 
     return rc;
 }

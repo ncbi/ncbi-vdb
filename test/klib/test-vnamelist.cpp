@@ -26,9 +26,9 @@
 #include <vdb/vdb-priv.h>
 
 #include <ktst/unit_test.hpp> // TEST_CASE
-#include <klib/text.h> 
-#include <klib/out.h> 
-#include <klib/namelist.h> 
+#include <klib/text.h>
+#include <klib/out.h>
+#include <klib/namelist.h>
 
 #include <sysalloc.h>
 #include <cstdlib>
@@ -75,7 +75,7 @@ rc_t test_String( const char * to_test, const char ** v, int count )
     struct on_part_ctx ctx;
     ctx.v = v;
     ctx.idx = 0;
-    
+
     StringInitCString( &s, to_test );
     rc_t rc = foreach_String_part( &s, ':', on_part, &ctx );
     if ( rc == 0 && ctx.idx != count ) rc = -1;
@@ -88,7 +88,7 @@ rc_t test_pchar( const char * to_test, const char ** v, int count )
     struct on_part_ctx ctx;
     ctx.v = v;
     ctx.idx = 0;
-    
+
     rc_t rc = foreach_Str_part( to_test, ':', on_part, &ctx );
     if ( rc == 0 && ctx.idx != count ) rc = -1;
     return rc;
@@ -117,7 +117,7 @@ static const int n5 = 4;
 TEST_CASE( StringSplit )
 {
     std::cout << "testing String-splitting by callback" << std::endl;
-    
+
     rc_t rc = test_String( s1, t1, n1 );
     if ( rc != 0 )
         FAIL( "FAIL: foreach_String_part( #1 ) failed" );
@@ -221,7 +221,7 @@ rc_t test_split_string( const char * to_test, const char ** v, uint32_t count )
 TEST_CASE( SplitIntoVNamelist )
 {
     std::cout << "testing String-splitting into existing VNamelist " << std::endl;
-    
+
     rc_t rc = test_split_string( s1, t1, n1 );
     if ( rc != 0 )
         FAIL( "FAIL: test_split_string( #1 )" );
@@ -241,7 +241,7 @@ TEST_CASE( SplitIntoVNamelist )
     rc = test_split_string( s5, t5, n5 );
     if ( rc != 0 )
         FAIL( "FAIL: test_split_string( #5 )" );
-        
+
 }
 
 
@@ -257,7 +257,7 @@ rc_t test_make_from_string( const char * to_test, const char ** v, uint32_t coun
         rc = check_list( list, v, count );
         VNamelistRelease ( list );
     }
-    
+
     if ( rc == 0 )
     {
         rc = VNamelistFromStr( &list, to_test, ':' );
@@ -274,7 +274,7 @@ rc_t test_make_from_string( const char * to_test, const char ** v, uint32_t coun
 TEST_CASE( MakeVNamelistFromString )
 {
     std::cout << "testing String-splitting into new VNamelist " << std::endl;
-    
+
     rc_t rc = test_make_from_string( s1, t1, n1 );
     if ( rc != 0 )
         FAIL( "FAIL: test_make_from_string( #1 )" );
@@ -349,11 +349,6 @@ extern "C"
 {
 
 #include <kapp/args.h>
-
-ver_t CC KAppVersion ( void ) { return 0x1000000; }
-rc_t CC UsageSummary ( const char * progname ) { return 0; }
-rc_t CC Usage ( const Args * args ) { return 0; }
-const char UsageDefaultName[] = "test-VDB-3060";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
