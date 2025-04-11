@@ -136,7 +136,7 @@ rc_t final ( const char *flags, int32_t *field_width, int32_t *precision,
     rc_t rc;
     uint32_t i, j;
     va_list arg_copy;
-    char stdcfmt [ 32 ], fmt [ 32 ], expected [ 4096 ];
+    char stdcfmt [ 256 ], fmt [ 256 ], expected [ 4096 ];
 
     /* initialize counters */
     i = 0;
@@ -145,13 +145,13 @@ rc_t final ( const char *flags, int32_t *field_width, int32_t *precision,
     fmt [ i ++ ] = '%';
 
     if ( flags != NULL )
-        i += sprintf ( & fmt [ i ], "%s", flags );
+        i += snprintf ( & fmt [ i ], sizeof(fmt) - i, "%s", flags );
     if ( field_width != NULL )
     {
         if ( field_width [ 0 ] == -1 )
             fmt [ i ++ ] = '*';
         else
-            i += sprintf ( & fmt [ i ], "%u", field_width [ 0 ] );
+            i += snprintf ( & fmt [ i ], sizeof(fmt) - i, "%u", field_width [ 0 ] );
     }
     if ( precision != NULL )
     {
@@ -160,7 +160,7 @@ rc_t final ( const char *flags, int32_t *field_width, int32_t *precision,
         if ( precision [ 0 ] == -1 )
             fmt [ i ++ ] = '*';
         else
-            i += sprintf ( & fmt [ i ], "%u", precision [ 0 ]  );
+            i += snprintf ( & fmt [ i ], sizeof(fmt) - i, "%u", precision [ 0 ]  );
     }
     fmt[i]=0;
 
