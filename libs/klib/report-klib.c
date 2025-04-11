@@ -441,7 +441,7 @@ static void CC reportError3Str(uint32_t indent, rc_t rc, const char* function,
 #ifdef WINDOWS
         sprintf_s(buffer, buffer_size, "%s%s%s", v1, v2, v3);
 #else
-        sprintf(buffer, "%s%s%s", v1, v2, v3);
+        snprintf(buffer, buffer_size, "%s%s%s", v1, v2, v3);
 #endif
         reportErrorStrImpl(indent, rc, function, name, buffer, eol);
         free(buffer);
